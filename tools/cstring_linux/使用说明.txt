@@ -1,0 +1,2 @@
+g++ main.cpp cstring.cpp fixalloc.cpp -lpthread进行编译
+使用时直接包含cstring.h就可以

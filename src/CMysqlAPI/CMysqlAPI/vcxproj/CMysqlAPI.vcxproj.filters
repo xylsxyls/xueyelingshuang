@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="CMysql">
+      <UniqueIdentifier>{bb1134af-5ad3-42c9-8077-a951aed1d415}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CMysql\CMysqlManager">
+      <UniqueIdentifier>{a2afc8c9-07aa-47a9-b20b-3815bb139ffe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CIp">
+      <UniqueIdentifier>{a074259a-9f4f-4ef2-8f08-b6b3dd258b28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CUser">
+      <UniqueIdentifier>{9b5d2a0b-2236-40ef-8404-7e9702ab6098}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CDataBase">
+      <UniqueIdentifier>{edc096c4-71e9-4b19-b9a7-15b20e4bcde2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CTable">
+      <UniqueIdentifier>{29ad2fe2-fa85-48a3-87b8-1e4865763431}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Record">
+      <UniqueIdentifier>{028fdf67-8cad-4720-91b9-4a9502a7e775}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Record\CRecord">
+      <UniqueIdentifier>{faa3bc92-8c35-4870-abea-00f0ac1e3e79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Record\CFieldValue">
+      <UniqueIdentifier>{8cbff01e-7a2f-4d61-8233-fa9cf4e378c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Record\CField">
+      <UniqueIdentifier>{c8786142-f912-4693-94ad-efead26ed2dd}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CMysqlManager.cpp">
+      <Filter>CMysql\CMysqlManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CMysql.cpp">
+      <Filter>CMysql</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CIp.cpp">
+      <Filter>CIp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CUser.cpp">
+      <Filter>CUser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CDataBase.cpp">
+      <Filter>CDataBase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CTable.cpp">
+      <Filter>CTable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CRecord.cpp">
+      <Filter>Record\CRecord</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CField.cpp">
+      <Filter>Record\CField</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CFieldValue.cpp">
+      <Filter>Record\CFieldValue</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CMysqlManager.h">
+      <Filter>CMysql\CMysqlManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CMysql.h">
+      <Filter>CMysql</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CIp.h">
+      <Filter>CIp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CUser.h">
+      <Filter>CUser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CDataBase.h">
+      <Filter>CDataBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CTable.h">
+      <Filter>CTable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CRecord.h">
+      <Filter>Record\CRecord</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CField.h">
+      <Filter>Record\CField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CFieldValue.h">
+      <Filter>Record\CFieldValue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CMysqlAPI.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\vec.inl" />
+  </ItemGroup>
+</Project>

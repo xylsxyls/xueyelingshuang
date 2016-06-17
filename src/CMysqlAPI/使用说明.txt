@@ -1,0 +1,5 @@
+新工程里引用这个库的时候，需要
+1.先把属性表复制过去并加载，此属性表不分debug和release
+2.包含头文件，src目录，不分debug和release
+3.包含引用库目录，dll_lib目录，不分debug和release
+4.包含导出库目录，export_lib目录，不分debug和release
