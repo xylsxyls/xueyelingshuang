@@ -4,12 +4,13 @@
 #include "mysql.h"
 #include "CMysqlManager.h"
 #include "CDataBase.h"
+#include "API.h"
 #include "vec.inl"
 
 class CMysqlManager;
 class CDataBase;
 
-class __declspec(dllexport) CUser{
+class API CUser{
 	//用户管数据库
 	//CUser被创建时必须初始化所有成员变量
 public:

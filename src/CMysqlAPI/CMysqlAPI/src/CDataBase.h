@@ -4,13 +4,14 @@
 #include "mysql.h"
 #include "CMysqlManager.h"
 #include "CTable.h"
+#include "API.h"
 #include "vec.inl"
 
 class CTable;
 class CMysqlManager;
 
 
-class __declspec(dllexport) CDataBase{
+class API CDataBase{
 	//数据库管表
 public:
 	MYSQL* mysql;

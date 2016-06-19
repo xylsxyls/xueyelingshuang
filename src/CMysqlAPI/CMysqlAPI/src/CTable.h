@@ -6,6 +6,7 @@
 #include "CField.h"
 #include "CRecord.h"
 #include "vec.inl"
+#include "API.h"
 #include <vector>
 using namespace std;
 
@@ -13,7 +14,7 @@ class CMysqlManager;
 class CField;
 class CRecord;
 
-class __declspec(dllexport) CTable{
+class API CTable{
 	//表有两个功能，分别管字段和记录
 public:
 	MYSQL *mysql;

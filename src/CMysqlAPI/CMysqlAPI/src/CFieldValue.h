@@ -1,11 +1,12 @@
 #pragma once
 #include <SDKDDKVer.h>
 #include <afx.h>
+#include "API.h"
 #include <windows.h>
 #include "CField.h"
 
 class CField;
-class __declspec(dllexport) CFieldValue{
+class API CFieldValue{
 public:
 	CString strValue;
 	int nValue;

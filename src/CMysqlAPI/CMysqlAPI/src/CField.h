@@ -1,8 +1,9 @@
 #pragma once
 #include <SDKDDKVer.h>
 #include <afx.h>
+#include "API.h"
 
-class __declspec(dllexport) CField{
+class API CField{
 	//字段管具体信息
 public:
 	CString FieldName;

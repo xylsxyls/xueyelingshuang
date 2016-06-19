@@ -5,13 +5,14 @@
 #include "CMysqlManager.h"
 #include "CUser.h"
 #include "CDataBase.h"
+#include "API.h"
 #include "vec.inl"
 
 class CUser;
 class CDataBase;
 class CMysqlManager;
 
-class __declspec(dllexport) CIp{
+class API CIp{
 	//Ip管用户
 	//在CIp被创建的时候管理者Ip和port就必须被初始化，内部的连接线也必须被初始化
 public:
