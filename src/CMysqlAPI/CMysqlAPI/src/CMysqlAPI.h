@@ -1,4 +1,5 @@
 #pragma once
+#define _CMysqlAPI
 #include "CMysql.h"
 #include "CIp.h"
 #include "CUser.h"
@@ -8,7 +9,6 @@
 #include "CFieldValue.h"
 #include "CRecord.h"
 
-#pragma comment(lib,"libmysql.lib")
 #ifdef _DEBUG
 	#pragma comment(lib,"CMysqlAPId.lib")
 #else

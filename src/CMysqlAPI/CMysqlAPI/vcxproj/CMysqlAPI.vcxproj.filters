@@ -90,6 +90,7 @@
       <Filter>Record\CFieldValue</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CMysqlAPI.h" />
+    <ClInclude Include="..\src\API.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\vec.inl" />
