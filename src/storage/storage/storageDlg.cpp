@@ -55,6 +55,11 @@ CstorageDlg::CstorageDlg(CWnd* pParent /*=NULL*/)
 }
 
 CstorageDlg::~CstorageDlg(){
+	//析构前先导出该表
+	CString MYSQL_ROOT = "";
+	MYSQL_ROOT = getenv("MYSQL_ROOT");
+	pTable->ExportTable(MYSQL_ROOT + "\\bin\\mysqldump.exe",exePath() + "..\\data\\storage.sql");
+	//结束进程
 	system("TASKKILL /F /IM mysqld.exe");
 }
 
@@ -169,7 +174,14 @@ HCURSOR CstorageDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-
+CString CstorageDlg::exePath(){
+	CString temp = "",result = "";
+	TCHAR szFilePath[MAX_PATH + 1] = {};
+	GetModuleFileName(NULL, szFilePath, MAX_PATH);
+	temp = szFilePath;
+	result = temp.Left(temp.ReverseFind('\\') + 1);
+	return result;
+}
 
 
 void CstorageDlg::OnBnClickedButton1()

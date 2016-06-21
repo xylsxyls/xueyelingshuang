@@ -54,4 +54,7 @@ public:
 	afx_msg void OnBnClickedButton4();
 	//设置字段，在构造函数cpp内用:初始化
 	CField field;
+
+	//返回本进程所在路径，带\符号
+	CString exePath();
 };

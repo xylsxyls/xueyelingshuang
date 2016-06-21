@@ -250,3 +250,16 @@ vector<CField> CTable::GetField(){
 	return vecField;
 }
 
+void CTable::ExportTable(CString mysqldump_exe_path,CString sqlpath){
+	if(pMysqlManager->MysqlSucceed != 1) return;
+	
+	CString para = "";
+	CString strPasswd = mysql->passwd;
+	if(strPasswd == "") para = para + " -u " + mysql->user + " " + mysql->db + " " + TableName + " > " + sqlpath + "";
+	else para = para + " -u " + mysql->user + " -p " + strPasswd + " " + mysql->db + " " + TableName + " > " + sqlpath + "";
+
+	//执行程序，ShellExecute不行
+	system("\"" + mysqldump_exe_path + "\"" + para);
+	//ShellExecute(NULL,_T("open"),_T(mysqldump_exe_path),para,NULL,SW_SHOWNORMAL);
+	return;
+}
