@@ -9,8 +9,8 @@
 #include "CFieldValue.h"
 #include "CRecord.h"
 
-#ifdef _DEBUG
-	#pragma comment(lib,"CMysqlAPId.lib")
-#else
+#ifdef NDEBUG
 	#pragma comment(lib,"CMysqlAPI.lib")
+#else
+	#pragma comment(lib,"CMysqlAPId.lib")
 #endif
