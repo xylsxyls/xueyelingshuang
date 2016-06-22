@@ -250,14 +250,36 @@ vector<CField> CTable::GetField(){
 	return vecField;
 }
 
+void CTable::ImportTable(CString mysql_exe_path,CString sqlpath){
+	if(pMysqlManager->MysqlSucceed != 1) return;
+
+	CString para = "";
+	CString strPasswd = mysql->passwd;
+	//首先是主机和用户名
+	para = para + " -h" + mysql->host + " -u" + mysql->user;
+	//如果有密码加上密码
+	if(strPasswd != "")  para = para + " -p" + strPasswd;
+	//最后是需要导入的数据库名
+	para = para + " " + mysql->db + " < " + sqlpath;
+
+	//执行程序，ShellExecute不行
+	system("\"" + mysql_exe_path + "\"" + para);
+	//ShellExecute(NULL,_T("open"),_T(mysql_exe_path),para,NULL,SW_SHOWNORMAL);
+	return;
+}
+
 void CTable::ExportTable(CString mysqldump_exe_path,CString sqlpath){
 	if(pMysqlManager->MysqlSucceed != 1) return;
 	
 	CString para = "";
 	CString strPasswd = mysql->passwd;
-	if(strPasswd == "") para = para + " -u " + mysql->user + " " + mysql->db + " " + TableName + " > " + sqlpath + "";
-	else para = para + " -u " + mysql->user + " -p " + strPasswd + " " + mysql->db + " " + TableName + " > " + sqlpath + "";
-
+	//首先是主机和用户名
+	para = para + " -h" + mysql->host + " -u" + mysql->user;
+	//如果有密码加上密码
+	if(strPasswd != "")  para = para + " -p" + strPasswd;
+	//最后是需要导出的数据库和表名
+	para = para + " " + mysql->db + " " + TableName + " > " + sqlpath;
+	
 	//执行程序，ShellExecute不行
 	system("\"" + mysqldump_exe_path + "\"" + para);
 	//ShellExecute(NULL,_T("open"),_T(mysqldump_exe_path),para,NULL,SW_SHOWNORMAL);

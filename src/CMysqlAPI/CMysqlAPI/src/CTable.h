@@ -50,6 +50,8 @@ public:
 	//获取字段信息，由于mysql提供的API内部存在静态变量，由于不知道有没有加锁，可能会线程不安全
 	vector<CField> GetField();
 
+	//将整张表导入，导入表结构和数据
+	void ImportTable(CString mysql_exe_path,CString sqlpath);
 	//将整张表导出，导出表结构和数据
 	void ExportTable(CString mysqldump_exe_path,CString sqlpath);
 	

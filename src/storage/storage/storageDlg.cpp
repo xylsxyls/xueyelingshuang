@@ -122,6 +122,9 @@ BOOL CstorageDlg::OnInitDialog()
 	pTable = pMysql->OpenTableInterface(TableName);
 	m_OldText = "";
 
+	//启动前先导入该表
+	pTable->ImportTable(MYSQL_ROOT + "\\bin\\mysql.exe",exePath() + "..\\data\\storage.sql");
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
