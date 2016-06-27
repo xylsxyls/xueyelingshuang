@@ -57,8 +57,8 @@ CstorageDlg::CstorageDlg(CWnd* pParent /*=NULL*/)
 CstorageDlg::~CstorageDlg(){
 	//析构前先导出该表
 	CString MYSQL_ROOT = "";
-	MYSQL_ROOT = getenv("MYSQL_ROOT");
-	pTable->ExportTable(MYSQL_ROOT + "\\bin\\mysqldump.exe",exePath() + "..\\data\\storage.sql");
+	MYSQL_ROOT = getenv(MysqlEnvironment);
+	pTable->ExportTable(MYSQL_ROOT + "\\bin\\mysqldump.exe",exePath() + sqlPathWithExe);
 	//结束进程
 	system("TASKKILL /F /IM mysqld.exe");
 }
@@ -115,7 +115,7 @@ BOOL CstorageDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 	//首先启动mysql
 	CString MYSQL_ROOT = "";
-	MYSQL_ROOT = getenv("MYSQL_ROOT");
+	MYSQL_ROOT = getenv(MysqlEnvironment);
 	ShellExecute(NULL, _T("open"), _T(MYSQL_ROOT + "\\bin\\mysqld.exe"), NULL, NULL, SW_SHOW);
 	//system("..\\storage\\dos\\startdb.bat"); //使用此方法会导致打开的exe无法自动关闭
 	pMysql = new CMysql(Ip,User,PassWord,dbName,port);
@@ -123,7 +123,7 @@ BOOL CstorageDlg::OnInitDialog()
 	m_OldText = "";
 
 	//启动前先导入该表
-	pTable->ImportTable(MYSQL_ROOT + "\\bin\\mysql.exe",exePath() + "..\\data\\storage.sql");
+	pTable->ImportTable(MYSQL_ROOT + "\\bin\\mysql.exe",exePath() + sqlPathWithExe);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }

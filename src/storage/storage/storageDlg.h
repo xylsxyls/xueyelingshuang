@@ -16,6 +16,8 @@
 #define FieldName           "gushi"
 #define FieldType           "varchar"
 #define FieldValueMaxLength 767
+#define sqlPathWithExe      "..\\data\\storage.sql"
+#define MysqlEnvironment    "MYSQL_ROOT"
 
 // CstorageDlg ¶Ô»°¿ò
 class CstorageDlg : public CDialogEx
