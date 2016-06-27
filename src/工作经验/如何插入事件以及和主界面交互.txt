@@ -1,0 +1,17 @@
+在一个控件里插入事件，需要先自己写一个派生类继承控件类，然后到类向导中，选择自己写的这个类，在消息中插入需要的消息，双击生成代码，在对应的地方添加代码即可，如果需要和主界面交互，则使用
+::PostMessage(::GetParent(m_hWnd),MSG_ListDoubleClick,NULL,(LPARAM)pList);
+第一个是发送到的窗口句柄，::PostMessage只是把消息放到消息队列中，如果是SendMessage，则必须收到返回值才会继续向下走
+第二个是消息号，是unsigned int型
+第三个是16比特位的数
+第四个是32比特位的数，常用于存放需要带走的消息地址，可以new一个空间用于传送
+
+在主函数中的MAP里添加 ON_MESSAGE(MSG_ListDoubleClick,&CHYFilePlayerDlg::OnListDoubleClick)
+
+BEGIN_MESSAGE_MAP(CHYFilePlayerDlg, CDialogEx)
+	ON_MESSAGE(MSG_ListDoubleClick,&CHYFilePlayerDlg::OnListDoubleClick)
+END_MESSAGE_MAP()
+
+这时候当主窗口接收到消息之后就会自动转到CHYFilePlayerDlg::OnListDoubleClick函数内部，此时主窗口类被激活，所以可以执行主窗口类里的成员函数
+
+函数为
+LRESULT CHYFilePlayerDlg::OnListDoubleClick(WPARAM wParam,LPARAM lParam);，返回值和入参类型都不能变

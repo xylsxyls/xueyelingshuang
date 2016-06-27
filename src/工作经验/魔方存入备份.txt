@@ -1,0 +1,93 @@
+int RunOrStop = 1;
+
+void solve_1(char *strSolve){
+	int x = 0;
+	while(*(strSolve + x)){
+		if(strSolve[x] == 65 || strSolve[x] == 66 || strSolve[x] == 97 || strSolve[x] == 98){
+			strSolve[x] % 2 == 1 ? strSolve[x]++ : strSolve[x]--;
+			x++;
+			continue;
+		}
+		strSolve[x] % 2 == 1 ? strSolve[x]-- : strSolve[x]++;
+		x++;
+	}
+	return;
+}
+
+DWORD __stdcall show(void *p_this){
+	CMagicSquareSaveToOracle11gDlg *pthis = (CMagicSquareSaveToOracle11gDlg *)p_this;
+	CMagicSquare MagicSquare;
+	CRadixTool RadixTool(12);
+	char strIn[50] = {};
+	char strOut[55] = {};
+	char strSolve[50] = {};
+	char strShowNowRadix[50] = {};
+	char strTimes[3] = {};
+	int times = 0;
+	char strBegin[50] = {};
+	char strEnd[50] = {};
+	char strNow[50] = {};
+	pthis->m_EditTimes.GetWindowTextA(strTimes,3);
+	times = atoi(strTimes);
+	pthis->m_EditBegin.GetWindowTextA(strBegin,50);
+	pthis->m_EditEnd.GetWindowTextA(strEnd,50);
+	pthis->m_EditNow.GetWindowTextA(strNow,50);
+	if(*strBegin == 0) while(times--!=0) strBegin[times] = 48;
+	times = atoi(strTimes);
+	if(*strEnd == 0) while(times--!=0) strEnd[times] = 98;
+	RadixTool = strBegin;
+	DWORD ThreadID = 0;
+	CStopWatch StopWatch;
+	SQL_Connect("xylsxyls/yangnan@oracle11g");
+	while(RunOrStop){
+		if(StopWatch.GetSeconds() > 0.01){
+			RadixTool.StringSequence(strShowNowRadix,atoi(strTimes));
+			pthis->m_EditNow.SetWindowTextA(strShowNowRadix);
+			pthis->m_EditNow.UpdateWindow();
+			StopWatch.SetWatchTime(0);
+		}
+		//从进制器得到变化方案写入strIn
+		RadixTool.StringSequence(strIn,atoi(strTimes));
+		//初始化魔方
+		MagicSquare.init();
+		//魔方接收变化方案进行变化
+		MagicSquare.MagicSquareIn(strIn);
+		//魔方将变化完成之后的6面以字符串输出到strOut
+		MagicSquare.MagicSquareOut(strOut);
+		//得到解决方案
+		RadixTool.StringInvert(strSolve,atoi(strTimes));
+		//处理回放时的左转变右转，右转变左转
+		solve_1(strSolve);
+		//将解决方案和魔方变化之后的字符串存入数据库，strOut必须唯一
+		SaveToOracle(strSolve,strOut);
+		//进制器+1
+		RadixTool++;
+		if(RadixTool > strEnd){
+			break;
+		}
+	}
+	SQL_Commit_Release();
+	RunOrStop = 0;
+	(RadixTool - 1).StringSequence(strNow);
+	CString strExit = strNow;
+	pthis->m_EditNow.SetWindowTextA(strExit + "结束");
+	return 0;
+}
+void CMagicSquareSaveToOracle11gDlg::OnBnClickedButtonSavetooracle11g()
+{
+	DWORD ThreadID = 0;
+	RunOrStop = 1;
+	Create_Thread(show,this,ThreadID);
+	CMagicSquare MagicSquare;
+	MagicSquare = "123456789123456789123456789123456789123456789123456789";
+	int xx = 3;
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CMagicSquareSaveToOracle11gDlg::OnBnClickedButtonStop()
+{
+	RunOrStop = 0;
+	return;
+	// TODO: 在此添加控件通知处理程序代码
+}

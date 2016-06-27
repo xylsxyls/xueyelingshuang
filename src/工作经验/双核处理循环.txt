@@ -1,0 +1,38 @@
+#include <omp.h>
+void CMFCApplication55Dlg::OnBnClickedButton1()
+{
+	CStopWatch bb;
+	CBigNumber sum = 0;
+	int i = 0;
+	printf("&i = %p\n",&i);
+    //int a[10] = {1,2,3,4,5,6,7,8,9,10};
+    int coreNum = omp_get_num_procs();//获得处理器个数
+	CBigNumber* sumArray = new CBigNumber[coreNum];//对应处理器个数，先生成一个数组
+    for (i=0;i<coreNum;i++)//将数组各元素初始化为0
+        sumArray[i] = 0;
+#pragma omp parallel for
+    for (i=1;i<=50000000;i++)
+    {
+        int k = omp_get_thread_num();//获得每个线程的ID
+        sumArray[k] = sumArray[k] + i;
+		printf("k = %d , &i = %p\n",k,&i);
+		//运行情况如下，每个核的分配个数会有变化，这只是一个例子
+		//sumArray[0] = sumArray[0] + i; sumArray[1] = sumArray[1] + i; sumArray[2] = sumArray[2] + i; sumArray[3] = sumArray[3] + i;
+		//sumArray[0] = sumArray[0] + i; sumArray[1] = sumArray[1] + i; sumArray[2] = sumArray[2] + i;
+		//sumArray[0] = sumArray[0] + i; sumArray[1] = sumArray[1] + i; sumArray[2] = sumArray[2] + i;
+		//但是这里不可以用sum来代替，因为如果是sum，sum = sum + i;和sum = sum + i;由于两个核都在操作同一个内存地址sum，会互相影响
+		//但是i不会相互影响，openmp已经为i需要循环的量分成4分并且重新开了4个地址用来存放i，所以不同核里的i地址不一样，一共有5个i的地址
+    }
+    for (int i = 0;i<coreNum;i++)
+        sum = sum + sumArray[i];
+	char tempstr[50] = {};
+	sum.Sequence(tempstr);
+	str.SetWindowTextA(tempstr);
+	double b = bb.GetSeconds();
+	char aa[50] = {};
+	sprintf_s(aa,"%lf",b);
+	Edit.SetWindowTextA(aa);
+	AfxMessageBox("完成");
+	
+	// TODO: 在此添加控件通知处理程序代码
+}

@@ -1,0 +1,20 @@
+GetModuleFileName获得的是当前进程exe的路径，网页加载的话就是浏览器的路径
+
+下面代码获得的是ocx的注册路径，是ocx文件所在路径，最后带\
+
+CString GetRegOcxPath(CString classid){
+	CString strSubKey;
+	HKEY hKey;
+	LPBYTE lpData;
+	strSubKey.Format(_T("CLSID\\{%s}\\InprocServer32"),classid);
+	RegOpenKeyEx(HKEY_CLASSES_ROOT,strSubKey,0,KEY_READ,&hKey);
+	DWORD dwType = REG_SZ;
+	lpData = new BYTE[1024];
+	memset(lpData,0,1024);
+	DWORD cbData;
+	RegQueryValueEx(hKey,_T(""),NULL,&dwType,lpData,&cbData);
+	CString temp;
+	temp = lpData;
+	CString result = temp.Left(temp.ReverseFind('\\') + 1);
+	return result;
+}

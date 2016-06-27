@@ -1,0 +1,22 @@
+首先把WindowsMediaPlayer引入，之后在头文件里添加
+
+public:
+	CWMPPlayer4   m_Video;
+	CWMPControls  m_VideoControl;  //控制按钮关联  
+    CWMPSettings  m_VideoSetting;  //设置按钮关联  
+    CWMPMedia     m_VideoMedia;    //媒体  
+    CProgressCtrl m_VideoProgress; //进度条
+
+
+在对应cpp里添加，放在初始化函数里或者触发函数里
+
+//设置视频区域大小
+	m_Video.Create("Video",3,CRect(20,20,300,323),this,IDC_MYVIDEO);//这句是关联
+
+	//设置路径
+	m_Video.put_URL("D:\\123.mp4");
+
+	//控件设置进入类
+	m_VideoControl = m_Video.get_controls();  
+    m_VideoSetting = m_Video.get_settings();
+

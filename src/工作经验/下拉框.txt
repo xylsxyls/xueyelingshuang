@@ -1,0 +1,19 @@
+ComboBox1.AddString(_T("鸡啄米"));
+// 为组合框控件的列表框添加列表项“百度”   
+ComboBox1.AddString(_T("百度"));   
+// 在组合框控件的列表框中索引为1的位置插入列表项“新浪”   
+ComboBox1.InsertString(1, _T("新浪"));   
+
+// 默认选择第一项   
+ComboBox1.SetCurSel(0);   
+// 编辑框中默认显示第一项的文字“鸡啄米”   
+SetDlgItemText(IDC_COMBO1, _T("鸡啄米")); 
+
+
+    // 根据选中项索引获取该项字符串   
+    ComboBox1.GetLBText(ComboBox1.GetCurSel(),strElement[0]);
+    // 将组合框中选中的字符串显示到IDC_COMBO1编辑框中   
+    SetDlgItemText(IDC_COMBO1,strElement[0]);
+
+如果要设置下拉框的初始值
+在函数CXMLReadWriteDlg::OnInitDialog()里写AddString

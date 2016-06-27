@@ -1,0 +1,1 @@
+使用Unicode之后CString里的getbuff只能返回首个值

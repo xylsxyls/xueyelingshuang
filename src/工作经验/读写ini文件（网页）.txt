@@ -1,0 +1,162 @@
+http://blog.csdn.net/lingxiu0613/article/details/7303224
+
+VC读写INI文件
+分类： c/c++ 2012-02-28 18:08 438人阅读 评论(0) 收藏 举报
+iniwinapifilepathnetworkc
+一.将信息写入.INI文件中.
+1.所用的WINAPI函数原型为:
+  BOOL WritePrivateProfileString(
+  LPCTSTR lpAppName,
+  LPCTSTR lpKeyName,
+  LPCTSTR lpString,
+  LPCTSTR lpFileName
+  );
+其中各参数的意义:
+　　　LPCTSTR lpAppName 是INI文件中的一个字段名.
+　　　LPCTSTR lpKeyName 是lpAppName下的一个键名,通俗讲就是变量名.
+　　　LPCTSTR lpString 是键值,也就是变量的值,不过必须为LPCTSTR型或CString型的.
+      LPCTSTR lpFileName 是完整的INI文件名.
+
+
+2.具体使用方法:设现有一名学生,需把他的姓名和年龄写入 c:\stud\student.ini 文件中.
+CString strName,strTemp;
+int nAge;
+strName="张三";
+nAge=12;
+::WritePrivateProfileString("StudentInfo","Name",strName,"c:\\stud\\student.ini");
+
+
+此时c:\stud\student.ini文件中的内容如下:
+[StudentInfo]
+Name=张三
+　　
+3.要将学生的年龄保存下来,只需将整型的值变为字符型即可:
+strTemp.Format("%d",nAge);
+::WritePrivateProfileString("StudentInfo","Age",strTemp,"c:\\stud\\student.ini");
+
+
+二.将信息从INI文件中读入程序中的变量.
+1.所用的WINAPI函数原型为:
+DWORD GetPrivateProfileString(
+LPCTSTR lpAppName,
+LPCTSTR lpKeyName,
+LPCTSTR lpDefault,
+LPTSTR lpReturnedString,
+DWORD nSize,
+LPCTSTR lpFileName
+);
+　　其中各参数的意义:
+　　　前二个参数与 WritePrivateProfileString中的意义一样.
+
+
+　　　lpDefault : 如果INI文件中没有前两个参数指定的字段名或键名,则将此值赋给变量.
+　　　lpReturnedString : 接收INI文件中的值的CString对象,即目的缓存器.
+　　　nSize : 目的缓存器的大小.
+　　　lpFileName : 是完整的INI文件名.
+2.具体使用方法:现要将上一步中写入的学生的信息读入程序中.
+CString strStudName;
+int nStudAge;
+GetPrivateProfileString("StudentInfo","Name","默认姓名",strStudName.GetBuffer(MAX_PATH),MAX_PATH,"c:\\stud\\student.ini");
+　　执行后 strStudName 的值为:"张三",若前两个参数有误,其值为:"默认姓名".
+
+
+3.读入整型值要用另一个WINAPI函数:
+UINT GetPrivateProfileInt(
+LPCTSTR lpAppName,
+LPCTSTR lpKeyName,
+INT nDefault,
+LPCTSTR lpFileName
+);
+　　这里的参数意义与上相同.使用方法如下:
+
+
+nStudAge=GetPrivateProfileInt("StudentInfo","Age",10,"c:\\stud\\student.ini");
+三.循环写入多个值,设现有一程序,要将最近使用的几个文件名保存下来,具体程序如下:
+1.写入:
+CString strTemp,strTempA;
+int i;
+int nCount=6;
+file://共有6个文件名需要保存
+
+
+for(i=0;i {strTemp.Format("%d",i);
+strTempA=文件名;
+file://文件名可以从数组,列表框等处取得.
+::WritePrivateProfileString("UseFileName","FileName"+strTemp,strTempA,"c:\\usefile\\usefile.ini");
+}
+strTemp.Format("%d",nCount);
+::WritePrivateProfileString("FileCount","Count",strTemp,"c:\\usefile\\usefile.ini");
+file://将文件总数写入,以便读出.
+
+
+2.读出:
+nCount=::GetPrivateProfileInt("FileCount","Count",0,"c:\\usefile\\usefile.ini");
+for(i=0;i {strTemp.Format("%d",i);
+ 
+strTemp="FileName"+strTemp;
+::GetPrivateProfileString("CurrentIni",strTemp,"default.fil", strTempA.GetBuffer(MAX_PATH),MAX_PATH,"c:\\usefile\\usefile.ini");
+
+
+file://使用strTempA中的内容.
+}
+补充四点:
+1.INI文件的路径必须完整,文件名前面的各级目录必须存在,否则写入不成功,该函数返回 FALSE 值.
+2.文件名的路径中必须为 \\ ,因为在VC++中, \\ 才表示一个 \ .
+3.也可将INI文件放在程序所在目录,此时 lpFileName 参数为: ".\\student.ini".
+4.从网页中粘贴源代码时,最好先粘贴至记事本中,再往VC中粘贴,否则易造成编译错误,开始时我也十分不解,好好的代码怎么就不对呢?后来才找到这个方法.还有一些代码中使用了全角字符如:＜，＼等,也会造成编译错误.
+
+
+例：
+
+ftp.ini文件里面的内容：
+[FTP]
+ftpIpAddress=192.168.1.251
+userName=user
+pwdName=""
+ftpFileAddress=.\\
+localAddress =.\\
+
+code：
+
+[cpp] view plaincopy
+#include <iostream>  
+using namespace std;  
+#include <Windows.h>  
+  
+int main()  
+{  
+    cout<<"this is read the ini file"<<endl;  
+    char ip[16];  
+    DWORD num = 0;  
+    num = GetPrivateProfileStringA("FTP", "ftpIpAddress", "", ip, sizeof(ip),".\\ftp.ini");  
+    //num=GetPrivateProfileString("NETWORK","ServerIP","", ip,sizeof(ip), ".\\Server.ini");  
+    cout<<num<<endl;  
+    cout<<ip<<endl;  
+    char userName[16];  
+    char pwdName[16];  
+    char ftpFileAddress[128];  
+    char loadAddress[128];  
+    num = GetPrivateProfileStringA("FTP", "userName", "", userName, sizeof(userName),".\\ftp.ini");  
+    cout<<userName<<endl;  
+    num = GetPrivateProfileStringA("FTP", "pwdName", "", pwdName, sizeof(pwdName),".\\ftp.ini");  
+    num = GetPrivateProfileStringA("FTP", "ftpFileAddress", "", ftpFileAddress, sizeof(ftpFileAddress),".\\ftp.ini");  
+    num = GetPrivateProfileStringA("FTP", "loadAddress", "", loadAddress, sizeof(loadAddress),".\\ftp.ini");  
+      
+    cout<<pwdName<<endl;  
+    cout<<ftpFileAddress<<endl;  
+    cout<<loadAddress<<endl;  
+    return 0;  
+}  
+
+输出：
+this is read the ini file
+
+13
+
+192.168.1.251
+
+user
+
+
+.\\
+

@@ -1,0 +1,3 @@
+只要依次执行以下两个命令即可完美解决Ubuntu下vi编辑器方向键变字母的问题。
+　　一.执行命令 sudo apt-get remove vim-common
+　　二.执行命令 sudo apt-get install vim

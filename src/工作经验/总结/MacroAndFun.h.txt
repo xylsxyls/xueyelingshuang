@@ -1,0 +1,764 @@
+#pragma once
+#include "stdafx.h"
+
+#define OnlyUsedInMFC //有些函数只能用于MFC，当用于编写dll的时候需要注释掉这个定义
+//#define UseXml        //需要用到Xml自定义函数时定义
+//#define UseJson
+//#define WindowsMediaPlayer
+//#define AssistHeadFile
+//#define msword
+
+#ifdef AssistHeadFile
+//必须写在宏定义的底下，这样包含template之后宏在其他文件里才能起作用
+#include "template.h"
+#endif
+
+//注释宏,需要日志的话就把NOTE和NOTEIF后的都注释掉，##做强制连接作用
+#define NOTE     /##/
+#define NOTEIF  ;/##/
+
+//多线程
+//需定义DWORD dwThreadId = NULL;函数实现为DWORD WINAPI add1_fun(LPVOID lpParam)
+//DWORD WINAPI add1_fun(LPVOID lpParam){},DWORD WINAPI不可变
+//变量只能定义一个，如果有多个需要打包
+#define Create_Thread(FunName,ParameterName,ThreadID) CreateThread(NULL, 0, FunName, (LPVOID)ParameterName, 0, &ThreadID)
+
+//事件
+#define Create_NoName_Event_Choke(signal) CreateEvent(NULL, TRUE, signal, NULL) //signal里写FALSE表示初始化时为阻塞状态，返回Handle
+#define Remove_Event_Choke(Handle) SetEvent(Handle)
+#define Set_Event_Choke(Handle,WaitTime) WaitForSingleObject(Handle,WaitTime) //等待时间单位为毫秒
+#define Set_Event_Choke_Again(Handle) ResetEvent(Handle)
+
+#ifdef OnlyUsedInMFC
+
+//浏览窗口选取文件获取文件路径，成功返回绝对路径，失败返回CString字符串-1
+CString Obtain_File_Path();
+
+#endif
+
+//读出，将路径strFilePath的文件中在Head下，KeyName下读出KeyName=右边的字符串，存入CStringOut中
+#define FileReadString(Head,KeyName,CStringOut,strFilePath) GetPrivateProfileString(Head,KeyName,"FailReturn",CStringOut.GetBuffer(MAX_PATH),MAX_PATH,strFilePath);\
+	CStringOut.ReleaseBuffer()
+
+//写入，将CStringIn里的字符串写入路径strFilePath的文件中在Head下，KeyName下，KeyName=的右边
+#define FileWriteString(Head,KeyName,CStringIn,strFilePath) WritePrivateProfileString(Head,KeyName,CStringIn,strFilePath)
+
+#include <vector>
+using namespace std;
+typedef int MultiBool;
+//递归查找文件或文件后缀名并返回文件绝对路径，放到返回值的vector里，不查找文件夹
+//如果不传路径，查找范围为当前进程及以下
+//flag = 1表示查找文件，2表示查找文件后缀名
+vector<CString> Find_And_Get_Absolute_Path(CString FileStr,CString strPath = "",MultiBool flag = 1);
+
+#ifdef AssistHeadFile
+//x表示要存入的数，number表示计数器，代表数组中现有多少个数，Array表示存入的数组
+//返回0表示成功存入，返回-1表示长度不够，返回n>0表示没成功存入，因为和数组中第n个相同
+template<typename T>int AddNewX(T x,int *number,int length,T Array[]);
+#endif
+
+#ifdef UseXml
+
+#include "xml.h"
+
+//Xml的所有函数返回值是BOOL的都是成功返回1，失败返回0
+//只有声明不带变长参数，Insert类函数除了属性是3个外其他都是最少2个，Read类函数都是最少1个
+
+//读或者写都需要这句话，两个宏包住头尾
+#define XmlNewDocument(Document) TiXmlDocument *Document = new TiXmlDocument()
+#define XmlDeleteDocument(Document) \
+	delete Document;\
+	Document = NULL
+
+//加载
+BOOL XmlLoad(TiXmlDocument *Document,CString strPath);
+//x = XmlLoad(myDocument,"D:\\XML.xml");
+
+//写声明
+//如果已经有声明则会把原来的声明删除再重新插入现在的声明
+//本函数不会因语句位置决定声明位置，一律插入到文本开头
+BOOL XmlWriteDeclaration(TiXmlDocument *Document,CString strVersion,CString strEncoding,CString strStandalone);
+//x = XmlWriteDeclaration(myDocument,"1.0","utf-8","yes");
+
+//添加元素
+//变长参数中至少要有2个字符串
+//变长参数里第一个字符串为指示性字符串
+//如果第一个字符串为""表示创建之后的所有元素，有则继续找下一个，无则创建
+//如果第一个字符串不为空，表示在之后所有节点下，且在第一个字符串所指的节点上添加平级元素，节点名不对则返回0
+BOOL XmlInsertElement(int number,TiXmlDocument *Document,...);
+//x = XmlInsertElement(6,myDocument,"","Persons","Person","Age","A1","A2");//直接添加5个父子关系元素
+//x = XmlInsertElement(4,myDocument,"Name","Persons","Person","Age");//在Age前添加Name元素
+
+//给元素设置属性
+//由于属性依赖于元素，变长参数里至少要有3个字符串
+//前两个字符串分别为属性的名字和值，后面为属性的路径，路径名字出错则返回0
+//如果要设多个属性，多次调用即可，同名属性会覆盖
+//如果第一个和第二个字符串同时设为""，表示删除当前元素的第一个属性
+BOOL XmlInsertAttribute(int number,TiXmlDocument *Document,...);
+//x = XmlInsertAttribute(5,myDocument,"t1","4","Persons","Person","Name");
+//x = XmlInsertAttribute(5,myDocument,"","","Persons","Person","Name");//删除Name下第一个属性
+
+//添加注释
+//变长参数中至少要有2个字符串，当两个字符串时表示在文本的最外层插入注释或在末尾添加注释
+//变长参数中第一个为需要添加的注释
+//第二个为指示性字符串，""表示正常添加到节点下层末尾，如果不为空则表示添加在当前路径节点上面，节点为元素，文本，注释均可
+//后面为注释路径，路径名错误返回0
+//因删除注释实现较为复杂且不常用，暂不写
+BOOL XmlInsertComment(int number,TiXmlDocument *Document,...);
+//x = XmlInsertComment(5,myDocument,"A1前注释","A1","Persons","Person","Age");//在A1节点前添加注释
+//x = XmlInsertComment(5,myDocument,"注释","","Persons","Person","Age");//正常添加
+
+//添加文本
+//变长参数中至少要有2个字符串
+//第一个为需要添加的文本，后面为文本路径
+//同一个节点多次调用此函数会发生覆盖，覆盖只覆盖节点下的第一个文本
+//如果第一个字符串为""，表示删除当前节点下的第一个文本
+BOOL XmlInsertText(int number,TiXmlDocument *Document,...);
+//x = XmlInsertText(6,myDocument,"96","Persons","Person","Age","A1","A2");//A2里添加文本96
+//x = XmlInsertText(6,myDocument,"","Persons","Person","Age","A1","A2");//清空A2下第一个文本
+
+//以下为读取
+
+//读取声明
+//默认读取xml中的第一个节点，如果没有声明，返回0
+//出参[0]Version，[1]Encoding,[2]Standalone
+BOOL XmlReadDeclaration(OUT CString DeclarationArr[],TiXmlDocument *Document);
+//x = XmlReadDeclaration(DeclarationArr,myDocument);
+
+//读取元素属性
+//变长参数为元素属性路径，至少有1个
+//如果路径错误返回-1，如果没有属性返回0，有则返回属性个数
+//出参[][0]属性名字，[][1]属性值，前框为第几个属性
+int XmlReadAttribute(int number,OUT CString CStringTwo[][2],TiXmlDocument *Document,...);
+//int AttributeNumber = XmlReadAttribute(3,CStringTwo,myDocument,"Persons","Person","Name");
+
+//读取注释，返回路径前的注释
+//注释与所指路径必须紧靠，否则返回0
+//必须需要一个同级节点为过渡，所以变长参数至少要有1个，变长参数为路径
+//路径错误返回"-1"，成功返回注释
+CString XmlReadCommentReturnPre(int number,TiXmlDocument *Document,...);
+//CString comment = XmlReadCommentReturnPre(4,myDocument,"Persons","Person","Age","A1");
+
+//读取注释，返回路径后的注释
+//注释与所指路径必须紧靠，否则返回0
+//必须需要一个同级节点为过渡，所以变长参数至少要有1个，变长参数为路径
+//路径错误返回"-1"，成功返回注释
+CString XmlReadCommentReturnNext(int number,TiXmlDocument *Document,...);
+//CString comment1 = XmlReadCommentReturnNext(4,myDocument,"Persons","Person","Age","A1");
+
+//读取元素文本
+//变长参数为元素路径，至少有1个
+//如果路径错误返回"-1"，如果没有文本返回""，成功则返回读取到的文本
+CString XmlReadText(int number,TiXmlDocument *Document,...);
+//CString text = XmlReadText(3,myDocument,"Persons","Person","Age");
+
+//删除父节点元素
+//变长参数中至少要有1个元素
+//递归删除元素下所有内容
+//路径错误返回0
+BOOL XmlDeleteElement(int number,TiXmlDocument *Document,...);
+//x = XmlDeleteElement(2,myDocument,"Persons","Person");
+
+//返回路径节点指针
+//因为不支持重名，为处理重名情况特地加写一函数返回路径节点指针
+//如果路径中已经存在重名的情况则一律返回重名中的第一个
+TiXmlElement* XmlReturnElement(int number,TiXmlDocument *Document,...);
+//TiXmlElement *p = XmlReturnElement(6,myDocument,"HejiaPoster","Apprise","Pages","Page","AreaList","Area");
+
+//返回节点所有属性
+//为支持重名特加函数，二级函数
+//必须确保传入的节点指针是元素类型，但是可以无属性
+//返回属性个数，[][0]名字，[][1]值
+int XmlReadAttributeUseElement(OUT CString CStringTwo[][2],TiXmlElement *TempElement);
+//int XmlReadAttributeUseElement = XmlReadAttribute(CStringTwo,TempElement);
+
+//返回节点属性值
+//当属性有多个要找特定某个属性的值时的函数，二级函数
+//CStringTwo必须是由函数产生
+//如果名字没有对应的则返回"-1"
+//传入的CStringTwo必须是过长的，至少比需要的多1，且初始化过的，也就是保证当出现空字符串名字时，其对应及以后都为空字符串
+CString XmlAttributeFind(IN CString CStringTwo[][2],CString AttributeName);
+//CString AttributeValue = XmlAttributeFind(CStringTwo,"model");
+
+#endif
+
+#ifdef UseJson
+
+#include <fstream>
+#include "json.h"
+using namespace std;
+using namespace Json;
+
+ifstream JsonLoad(CString strPath);
+//ifstream file = JsonLoad("D:\\123.json");
+
+//获得格式输出的字符串
+string JsonStyled(Value *root);
+//string strStyled = JsonStyled(&root);
+
+//直接格式输出到文件
+void JsonStyledSave(Value *root,char *strPath);
+//JsonStyledSave(&root,"D:\\123.json");
+
+//获得快速输出字符串
+string JsonFast(Value *root);
+//string strFast = JsonStyled(&root);
+
+//直接快速输出到文件
+void JsonFastSave(Value *root,char *strPath);
+//JsonFastSave(&root,"D:\\123.json");
+
+//number为1的时候表示添加属性，为2的时候表示添加数组，node表示子节点
+//如果是添加属性，名字相同时会覆盖，如果是数组则会继续添加，数组中可以出现两个完全相同的值
+//value可以为任意类型
+template<typename T>void JsonAdd(int number,char *name,T value,Value *root,string node = "");
+//JsonAdd(2,"abc_name",true,&root);
+//JsonAdd(2,"paartner1_name","1Galatea",&root);
+//JsonAdd(1,"abc_name",1,&root);
+//JsonAdd(2,"abc_name","1Gal2atea",&root,"333");
+
+//输入最开始ifstream定义的文件变量地址
+void JsonClose(ifstream *file);
+//JsonClose(&file);
+
+//读取直接调用就可以了，从左到右依次是根，子节点，如果是数组的话加上数组第几个，中间无点，最后确定value的类型
+//如果读取的时候没有输入的节点最后会返回空字符串，但是如果给的节点底下是数组却当属性读取的话会报错
+//string name2 = root["name"].asString();
+//string abc_name2 = root["partner"]["abc_name"].asString();
+//int abc_nameint2 = root["par1tner"]["abc_name"].asInt();
+//string out2  = root["achievem1ent"][(unsigned int)0].asString();
+//string A22 = root["p333"]["achievem1ent"][(unsigned int)1].asString();
+#endif
+
+class CStopWatch{
+public:
+	CStopWatch();
+public:
+	unsigned long time;
+	unsigned long StopTime;
+	unsigned long RunTime;
+	unsigned long StopSecondsTime;
+public:
+	//凡是unsigned long的都是毫秒为单位，int的是分钟或者小时的整形，double是秒为单位
+
+	//秒表是否在走
+	bool StopOrRun;
+
+	//时分秒是连一起的，如果是1小时1分1秒的时间，秒数返回的就是1秒，不是总秒数
+
+	//查看走的小时数
+	int GetHour();
+	//查看走的分钟数
+	int GetMinute();
+	//查看走的秒数
+	double GetSeconds();
+
+	//查看走的毫秒数，总毫秒数
+	unsigned long GetWatchTime();
+
+	//设置秒表走的起始时间，传入的是总毫秒数
+	void SetWatchTime(unsigned long SetTime);
+
+	//停止走时间
+	void Stop();
+
+	//停止走一定的时间，过了这个时间自动继续走，传入总毫秒数
+	void Stop(unsigned long StopSecondsTime);
+
+	//继续走时间
+	void Run();
+};
+
+#ifdef WindowsMediaPlayer
+
+#include "CWMPPlayer4.h"
+#include "CWMPControls.h"   //控制头文件  
+#include "CWMPSettings.h"   //设置头文件  
+#include "CWMPMedia.h"      //媒体头文件
+
+#endif
+
+#ifdef AssistHeadFile
+typedef struct{
+	unsigned int PictureID;
+	CString strPath;
+	CRect WindowRect;
+	CRect PictureRect;
+}IDAttribute;
+class CDrawPicture{
+
+public:
+	CDrawPicture(CWnd *ParentThis);
+
+public:
+
+	CWnd *ParentThis;
+	unsigned int PictureID;
+	int layer;
+	CString strPath;
+	CRect WindowRect;
+	CRect PictureRect;
+	POINT EndPoint;
+
+public:
+	int number;
+	unsigned int Array[50]; //控件总数，数组长度基本不影响运行速度
+	POINT IDPoint[50];
+	IDAttribute AttributeArray[50][50]; //前一个表示层数，后一个表示一层内有几个不同的图 + 1
+
+public:
+	//记录或更新控件属性并返回当前控件所在点
+	POINT RecordAttribute();
+
+	//根据点找到属性组中的属性，并根据这些属性进行绘图，绘一张图
+	void DrawOnePicture(unsigned int PictureID,CString strPath,CRect WindowRect,CRect PictureRect);
+
+	//循环绘图，以EndPoint为结束点，从AttributeArray数组第一行第一个到最后进行依次绘图
+	void LoopDrawPicture();
+
+	//调用接口，真正的绘图子函数
+public:
+	//放置图片
+	void SetPicture(unsigned int PictureID,int layer,CString Path,CRect WindowRect,CRect PictureRect = CRect(0,0,0,0));
+
+	//绘图
+	void Draw();
+
+	//删图
+	void ReMovePicture(unsigned int PictureID);
+
+};
+
+#endif
+
+#include <afxinet.h>
+
+class CAmHttpSocket
+{
+public:
+	bool Download(const CString& strFileURLInServer/*待下载文件的URL*/,const CString & strFileLocalFullPath/*存放到本地的路径*/);
+	INT GetFile(const CString strUrl,const CString strSavePath);
+
+public:
+	int GetPageStatusCode(); //get the HTTP statuscode for the last received page
+	TCHAR* GetHeaders(const TCHAR *url); //return a pointer th the headers from an url
+	CAmHttpSocket();
+	~CAmHttpSocket();
+	char* GetPage(const TCHAR *url, bool Post = false, const char *PostData = NULL, int PostDataLength = -1); 
+	//get a page, if post is false, HTTP GET is used othervise HTTP POST is used. 
+	//if PostDataLength is -1 the data must be NULL terminated...
+public:
+	bool PostUrl(const TCHAR *url, const char *PostData, int PostDataLength = -1); 
+	//open a page using http post
+	TCHAR* GetHeaderLine(TCHAR *s); //get a specific line from the headers
+	bool OpenUrl(const TCHAR *url); //open a page using http get
+	HINTERNET hIO, hIS, hCO;
+	char *ReceivedData; //the internal databuffer
+	TCHAR *Headers; //the internal headerbuffer
+	int LastError; //internal statuscode...
+};
+
+
+#define V(NewFunName) (void **)(&(NewFunName)) //调用时用的到，老版
+#define CLOAD_FunNumber 1000
+
+#define V_str(NewFunName) FunName((void **)(&NewFunName),#NewFunName) //更新版
+
+typedef struct FunName{
+	void **TempFunAddr;
+	CString strTempFun ;
+	struct FunName(void **TempFunAddr,const char szTempFun[]);
+}FunName;
+
+class CLOAD
+{
+private:
+	HINSTANCE FPI_DllHinstance;
+	void *FunArr[CLOAD_FunNumber];
+
+public:
+	CLOAD(CString DllPath);
+	~CLOAD(void);
+
+	int ErrorFunNumber;
+	CString ErrorFunName;
+
+public:
+	//老版，dll内的名字和自定义名字可以不同，需依次调用两个函数，外包用V，受CLOAD_FunNumber上限控制
+	MultiBool Check_Fun(int number,...);//返回-1表示加载路径错误，返回1表示所有函数都存在，返回0表示有函数不存在
+	void Load_Fun(int number,...);
+
+public:
+	//更新版，dll内的名字和自定义名字必须相同，外包用V_str，加载个数不受CLOAD_FunNumber上限控制
+	MultiBool LoadFun(int number,...);
+};
+
+//第一个参数为底数，第二个为指数，返回int型
+int Power(int BaseNumber,int power);
+//int x = Power(2,3);//结果为8
+
+//大数运算，不支持负数，出现负数或除数为0等特殊情况一律返回-1
+class CBigNumber;
+//进制器，基于大数，所有结果和大数相同，输出时需要加输出位数
+class CRadixTool;
+#define BigNumberLength 100
+//幂运算^符号必须加括号声明优先级
+//只有在确保a和b都不是-1的情况下才能利用a - b == -1来判断是否为负数
+//MutilBool值为1时表示判断成立，为0时表示反向成立
+//除了-1 == -1的值为1，单边为-1的情况下值为0，其他只要有-1参与的判断都为-1
+//在输入正常的情况下，a - b，a / 0，a % 0会得到-1
+class CBigNumber{
+
+public:
+	char number[BigNumberLength];
+
+public:
+	CBigNumber(                        );
+	CBigNumber(int           InitNumber);
+	CBigNumber(char*      strInitNumber);
+	CBigNumber(CRadixTool    InitNumber);
+
+public:
+	CBigNumber operator = (int           InitNumber);
+	CBigNumber operator = (char*      strInitNumber);
+	CBigNumber operator = (CRadixTool    InitNumber);
+
+public:
+	friend CBigNumber operator + (CBigNumber x,CBigNumber y);
+	friend CBigNumber operator - (CBigNumber x,CBigNumber y);
+	friend CBigNumber operator * (CBigNumber x,CBigNumber y);
+	friend CBigNumber operator ^ (CBigNumber x,CBigNumber y);
+	friend CBigNumber operator / (CBigNumber x,CBigNumber y);
+	friend CBigNumber operator % (CBigNumber x,CBigNumber y);
+
+	//扩展
+public:
+	friend CBigNumber operator + (int        x,CBigNumber y);
+	friend CBigNumber operator - (int        x,CBigNumber y);
+	friend CBigNumber operator * (int        x,CBigNumber y);
+	friend CBigNumber operator ^ (int        x,CBigNumber y);
+	friend CBigNumber operator / (int        x,CBigNumber y);
+	friend CBigNumber operator % (int        x,CBigNumber y);
+
+	friend CBigNumber operator + (CBigNumber x,int        y);
+	friend CBigNumber operator - (CBigNumber x,int        y);
+	friend CBigNumber operator * (CBigNumber x,int        y);
+	friend CBigNumber operator ^ (CBigNumber x,int        y);
+	friend CBigNumber operator / (CBigNumber x,int        y);
+	friend CBigNumber operator % (CBigNumber x,int        y);
+
+	friend CBigNumber operator + (char*      x,CBigNumber y);
+	friend CBigNumber operator - (char*      x,CBigNumber y);
+	friend CBigNumber operator * (char*      x,CBigNumber y);
+	friend CBigNumber operator ^ (char*      x,CBigNumber y);
+	friend CBigNumber operator / (char*      x,CBigNumber y);
+	friend CBigNumber operator % (char*      x,CBigNumber y);
+
+	friend CBigNumber operator + (CBigNumber x,char*      y);
+	friend CBigNumber operator - (CBigNumber x,char*      y);
+	friend CBigNumber operator * (CBigNumber x,char*      y);
+	friend CBigNumber operator ^ (CBigNumber x,char*      y);
+	friend CBigNumber operator / (CBigNumber x,char*      y);
+	friend CBigNumber operator % (CBigNumber x,char*      y);
+
+public:
+	friend MultiBool operator == (CBigNumber x,CBigNumber y);
+	friend MultiBool operator != (CBigNumber x,CBigNumber y);
+	friend MultiBool operator >  (CBigNumber x,CBigNumber y);
+	friend MultiBool operator >= (CBigNumber x,CBigNumber y);
+	friend MultiBool operator <  (CBigNumber x,CBigNumber y);
+	friend MultiBool operator <= (CBigNumber x,CBigNumber y);
+
+	friend MultiBool operator == (CBigNumber x,int        y);
+	friend MultiBool operator != (CBigNumber x,int        y);
+	friend MultiBool operator >  (CBigNumber x,int        y);
+	friend MultiBool operator >= (CBigNumber x,int        y);
+	friend MultiBool operator <  (CBigNumber x,int        y);
+	friend MultiBool operator <= (CBigNumber x,int        y);
+
+	friend MultiBool operator == (int        x,CBigNumber y);
+	friend MultiBool operator != (int        x,CBigNumber y);
+	friend MultiBool operator >  (int        x,CBigNumber y);
+	friend MultiBool operator >= (int        x,CBigNumber y);
+	friend MultiBool operator <  (int        x,CBigNumber y);
+	friend MultiBool operator <= (int        x,CBigNumber y);
+
+	friend MultiBool operator == (CBigNumber x,char*      y);
+	friend MultiBool operator != (CBigNumber x,char*      y);
+	friend MultiBool operator >  (CBigNumber x,char*      y);
+	friend MultiBool operator >= (CBigNumber x,char*      y);
+	friend MultiBool operator <  (CBigNumber x,char*      y);
+	friend MultiBool operator <= (CBigNumber x,char*      y);
+
+	friend MultiBool operator == (char*      x,CBigNumber y);
+	friend MultiBool operator != (char*      x,CBigNumber y);
+	friend MultiBool operator >  (char*      x,CBigNumber y);
+	friend MultiBool operator >= (char*      x,CBigNumber y);
+	friend MultiBool operator <  (char*      x,CBigNumber y);
+	friend MultiBool operator <= (char*      x,CBigNumber y);
+
+public:
+	CBigNumber operator ++ (   );//前++
+	CBigNumber operator -- (   );//前--
+	CBigNumber operator ++ (int);//后++
+	CBigNumber operator -- (int);//后--
+
+private:
+	//把x内的最高位取出压入y.number[0]内，并删除x的最高位，y.number内原有数字向后移
+	void HighNumberInto(CBigNumber* x,CBigNumber* y);
+public:
+	int InvertOut(char* OutString = NULL);
+	int Sequence (char* OutString = NULL);
+
+};
+
+//针对系统自带的sprintf_s等函数在使用后会把多余的数变为-2，函数使其变为自定义数字，传入数组名和数组大小，用strlen计算，如果用sizeof计算的话当第二次传参的时候会传入指针，则计算出4，会出错
+//_strrev();不需要使用，sprintf_s需要使用
+void UnnecessaryToXA(char *arr,int size,int number);
+#define UnnecessaryToX(ArrayName,number) UnnecessaryToXA(ArrayName,strlen(ArrayName) + 1,number)
+//UnnecessaryToX(temp,0);//宏写法
+
+//brr存入arr，其余全部重置为0
+#define strcpy_x(arr,brr,number) strcpy_s(arr,strlen(brr) + 1,brr);UnnecessaryToX(arr,number)
+
+
+#define RadixToolLength 100
+class CRadixTool{
+
+public:
+	CRadixTool(int radix);
+
+public:
+	int radix;
+	int NumberArray[RadixToolLength];
+
+public:
+	//进制是在定义的时候就输入，类=类，含进制转换，类 = int，按10进制存入，含转换，类=char*，以原进制输入，必须遵守进制规则
+	//录入都是以正向录入
+	CRadixTool operator = (CRadixTool    InitNumber);
+	CRadixTool operator = (int           InitNumber);
+	CRadixTool operator = (char*      strInitNumber);
+	CRadixTool operator = (CBigNumber    InitNumber);
+
+	//尾数加减，"123456b"，"1234569"，加类则以左边的进制数为准，但是不会影响 = 的赋值，如c(10) = b(8) + a(4);加数字的是以十进制操作，加字符串的是以同进制操作
+	//出现负数一律返回-1
+	friend CRadixTool operator + (CRadixTool x,CRadixTool y);
+	friend CRadixTool operator - (CRadixTool x,CRadixTool y);
+
+	friend CRadixTool operator + (CRadixTool x,int        y);
+	friend CRadixTool operator - (CRadixTool x,int        y);
+
+	friend CRadixTool operator + (int        x,CRadixTool y);
+	friend CRadixTool operator - (int        x,CRadixTool y);
+
+	friend CRadixTool operator + (CRadixTool x,char*      y);
+	friend CRadixTool operator - (CRadixTool x,char*      y);
+
+	friend CRadixTool operator + (char*      x,CRadixTool y);
+	friend CRadixTool operator - (char*      x,CRadixTool y);
+
+public:
+	//和CBigNumber的判断结果一致
+	friend MultiBool operator == (CRadixTool x,CRadixTool y);
+	friend MultiBool operator != (CRadixTool x,CRadixTool y);
+	friend MultiBool operator >  (CRadixTool x,CRadixTool y);
+	friend MultiBool operator >= (CRadixTool x,CRadixTool y);
+	friend MultiBool operator <  (CRadixTool x,CRadixTool y);
+	friend MultiBool operator <= (CRadixTool x,CRadixTool y);
+
+	friend MultiBool operator == (CRadixTool x,int        y);
+	friend MultiBool operator != (CRadixTool x,int        y);
+	friend MultiBool operator >  (CRadixTool x,int        y);
+	friend MultiBool operator >= (CRadixTool x,int        y);
+	friend MultiBool operator <  (CRadixTool x,int        y);
+	friend MultiBool operator <= (CRadixTool x,int        y);
+
+	friend MultiBool operator == (int        x,CRadixTool y);
+	friend MultiBool operator != (int        x,CRadixTool y);
+	friend MultiBool operator >  (int        x,CRadixTool y);
+	friend MultiBool operator >= (int        x,CRadixTool y);
+	friend MultiBool operator <  (int        x,CRadixTool y);
+	friend MultiBool operator <= (int        x,CRadixTool y);
+
+	friend MultiBool operator == (CRadixTool x,char*      y);
+	friend MultiBool operator != (CRadixTool x,char*      y);
+	friend MultiBool operator >  (CRadixTool x,char*      y);
+	friend MultiBool operator >= (CRadixTool x,char*      y);
+	friend MultiBool operator <  (CRadixTool x,char*      y);
+	friend MultiBool operator <= (CRadixTool x,char*      y);
+
+	friend MultiBool operator == (char*      x,CRadixTool y);
+	friend MultiBool operator != (char*      x,CRadixTool y);
+	friend MultiBool operator >  (char*      x,CRadixTool y);
+	friend MultiBool operator >= (char*      x,CRadixTool y);
+	friend MultiBool operator <  (char*      x,CRadixTool y);
+	friend MultiBool operator <= (char*      x,CRadixTool y);
+
+public:
+	//自增自减
+	CRadixTool operator ++ (   );//前++
+	CRadixTool operator -- (   );//前--
+	CRadixTool operator ++ (int);//后++
+	CRadixTool operator -- (int);//后--
+
+public:
+	//如果数的长度大于bit定义的长度，那么字符串被重置为"-1"，数组先以定义的X重置，再将[0] = -1
+	//char* strlen内会初始化
+	//"123056a"逆向输出，bit为总位数，用0补全，如果bit为9，则输出"a65032100"，bit不填时表示全位数输出
+	BOOL StringInvert(char *StringOut,int bit = 0);
+	//"123056a"正向输出，bit为总位数，用0补全，如果bit为9，则输出"00123056a"，bit不填时表示全位数输出
+	BOOL StringSequence(char *StringOut,int bit = 0);
+
+	//数组逆向输出，XRange为初始化位数，X为初始化成的值，如-3，bit为总位数，如9，用0补全，"123056a"输出，为10 6 5 0 3 2 1 0 0 -3 -3...
+	BOOL NumberInvert(int XRange,int X,int *NumberOut,int bit = 0);
+	//数组正向输出，XRange为初始化位数，X为初始化成的值，如-3，bit为总位数，如9，用0补全，"123056a"输出，为0 0 1 2 3 0 5 6 10 -3 -3...
+	BOOL NumberSequence(int XRange,int X,int *NumberOut,int bit = 0);
+
+};
+
+#include <string>
+using namespace std;
+#include <algorithm>
+#include <functional>
+//string里删除所有指定字符
+string RemoveAll(string &str,char c);
+//string a = "12.345.6";string b = RemoveAll(a,'.');
+
+#ifdef msword
+
+#include "msword.h"
+#include <ATLBASE.H>
+
+
+//保存Word类型
+/*
+wdFormatDocument  标准的doc文档
+wdFormatWebArchiv 单个文件网页
+wdFormatHTML    网页
+wdFormatFilteredHTML    去掉一些微软信息的网页
+wdFormatTemplate    模版
+*/
+
+enum SaveType{
+	wdFormatDocument=0,
+	wdFormatWebArchive=9,
+	wdFormatHTML=8,
+	wdFormatFilteredHTML=10,
+	wdFormatTemplate=1
+};
+
+//出现合并单元格的时候，左对齐和居中合并会变成居中，所以如果表格里有文字的话应该先合并再设置对齐
+//创建表格的时候，表格内的字体或者对齐格式是根据之前的文字决定的，如果想整体改就必须在创建之前先写一个需要的格式，输入空字符串就可以，这个不影响文字输入，只是影响空格里的对齐方式
+class CWord
+{
+	//默认都是左对齐，修改之后只是当次有效，第二次输入还是左对齐，字体默认大小为9.0，默认字体为宋体，可以通过SetFont来修改，修改后永久生效
+	//字体的设置必须先设置好，之后打印出的字体才是想要的
+	//设置表格宽高的时候是一格一格设置的，每行的高度是统一的，以最后一次设置为标准，列的宽度可以不一样，合并单元格之后以合并之后来数列数
+
+public:
+	_Application app;//创建word
+	Documents docs;//word文档集合
+	_Document doc;//一个word文件
+	_Font font;//字体对象
+	Selection sel;//选择编辑对象 没有对象的时候就是插入点
+	Table tab;//表格对象
+	Range range;
+	Borders borders;
+
+public:
+	CWord();//构造函数
+	virtual ~CWord();//析构函数
+
+	void ShowApp(BOOL flag);
+	void CloseApp();
+	BOOL InitCOM();//对COM进行初始化
+	BOOL CreateApp(bool Visible);//创建一个word程序，打开word软件
+	BOOL CreateDocument(bool Visible);//创建word文档，新建文档
+	BOOL Create(bool Visible = 1);//创建一个word程序和Word文档，这个是入口
+
+
+	BOOL Open(CString FileName,bool Visible = 1,BOOL ReadOnly = FALSE,BOOL  AddToRecentFiles = FALSE);//打开一个word文档;
+	BOOL Save();//保存文档
+	BOOL SaveAs(CString FileName,int SaveType=0);//保存类型
+	BOOL Close(BOOL SaveChange=FALSE);//关闭一个word文档
+
+
+
+	//初始化
+
+	void init();
+
+	//////////////////////////文件写操作操作/////////////////////////////////////////////
+
+	void WriteText(CString Text,int Align = 0);//写入文本,Align = 0表示左对齐，1表示居中，2右对齐，4左右占满整行或整格
+	void NewLine(int nCount = 1);//回车换N行
+	void WriteTextNewLineText(CString Text,int Align = 0,int nCount=1);//回测换N行写入文字
+	void WritePicture(CString PicturePath,int Align = 0);
+
+	//////////////////////////////////////////////////////////////////////////
+
+	//////////////////////////字体设置////////////////////////////////////////
+
+	void SetFont(CString FontName,float FontSize = 10.5,long FontColor = 0,long FontBackColor = 0);
+	void SetFont(BOOL Bold,BOOL Italic = FALSE,BOOL UnderLine = FALSE);
+	void SetTableFont(int Row,int Column,CString FontName,float FontSize = 10.5,long FontColor = 0,long FontBackColor = 0);
+
+	//void SetTableFont();//统一对表格的文字做出处理.
+
+	/////////////////////////表格操作/////////////////////////////////////
+
+	void CreateTable(int Row,int Column,bool visible = 1);
+	void SetBorderVisible(bool Visible);//隐藏0或显示1表框
+	void SetTableHeightWidth(int Row,int Column,float Height,float Width);
+	void MergeCell(int Row1,int Column1,int Row2,int Column2);
+	void WriteCellText(int Row,int Column,CString Text,int Align = 0);
+	void WriteTablePicture(int Row,int Column,CString PicturePath,int Align = 0);
+
+	/////////////////////////////设置对齐属性///////////////////////////////////////
+
+	void SetParaphformat(int Align);//Alignment = 0表示左对齐，1表示居中，2右对齐，4左右占满整行或整格
+
+	/////////////////////////////一些常用操作///////////////////////////////////////
+
+	//查找字符串 然后全部替换
+	void FindWord(CString FindW,CString RelWord);
+
+	//获取Word 纯文本内容
+	void GetWordText(CString &Text);
+
+	//光标移至末尾
+	void CursorEnd();
+
+	//Word 打印
+	void PrintWord();
+
+};
+
+#endif
+
+//通过窗口获取文件夹路径，不能获取文件路径
+CString GetSelectFolder(HWND hWnd);
+
+//分割字符串
+vector<string> split(const string& src, string separate_character);
+//vector<string> vec = split("123,234,345,456,",","); //得到5个字符串
+//vector<string> vec2 = split("123,,234,,345,,456",",,"); //得到4个字符串
+
+string ToString(CString str);
+
+CString ToCString(string str);
+
+//logPath必须是绝对路径，只会创建日志文件，但是不会创建目录，MaxSize控制日志大小，-1不控制，后面相当于fprintf
+void OutPutLog(CString logPath,int MaxSize,CString PrintStr,...);
+
+//返回本进程所在路径，带\符号
+CString exePath();
+
+//传入ocx的classid，返回ocx所在路径，带\符号
+CString GetRegOcxPath(CString classid);
+
+//取出的信息默认1024最大长度，如果key不存在，默认返回"-1"，路径传绝对路径，strSection默认为Section
+CString ReadIni(CString key,CString iniPath,CString strSection = "Section");
+
+//路径传绝对路径，strSection默认为Section，key不存在则创建，存在则修改，文件可以不存在路径必须存在
+void WriteIni(CString key,CString text,CString iniPath,CString strSection = "Section");

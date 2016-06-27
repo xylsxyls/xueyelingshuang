@@ -1,0 +1,11 @@
+1.检测设备 FPIDevDetect()
+2.采集指纹模板 FPITemplate(nDevType, cpFingerMB, &iLenOfMB);
+3.采集指纹特征 FPIFeature(nDevType, cpFingerTZ, &iLenOfTZ);
+4.指纹比对 FPIMatch(cpFingerMB, cpFingerTZ, 3);
+5.采集指纹图像 FPIGetImageData(nDevType, &iImageWidth, &iImageHeight, szImageBuf)
+6.指纹图像转特征 FPIExtract(szImageBuf, cpFingerTZ, &iLenOfTZ);
+7.采集指纹图像 FPIGetImageData(nDevType, &iImageWidth, &iImageHeight, szImageBuf1);
+8.指纹图像转模板 FPIEnroll(szImageBuf1, szImageBuf2, szImageBuf3, cpFingerMB, &iLenOfMB);
+9.IMG转BMP FPIImg2Bmp(szImgBuf, szBmpBuf);
+10.循环检测手指 FPICheckFinger(nDevType);
+11.采集图像 FPIExtract(szImageBuf[i], szTZ[i], &iLen);

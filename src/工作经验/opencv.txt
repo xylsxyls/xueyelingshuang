@@ -1,0 +1,3 @@
+image的create对应一个release或者load对应release，cvQueryFrame(capture);不能release
+窗口只要被创建，不管是imageshow还是namedwindow都需要distroy
+releasecapture就是关闭摄像头

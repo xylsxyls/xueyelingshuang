@@ -1,0 +1,27 @@
+	ALL_FUN
+
+	load->FPI_DllHinstance = load->FPI_DllHinstance;
+
+	nPort = FPIDevDetect();//得到端口号
+	FPIGetVersion (nPort,psOutversion,&lpLength_psOutversion);//读取指纹仪的设备描述符信息，描述符信息的格式为厂家信息+产品型号信息+颁布信息，信息直接以逗号分割，如：Wellcom,JZT_998A,V1.0.0
+
+	FPITemplate (nPort,psMB,&lpLength_psMB);//用户录入3次指纹，生成指纹模板并上传
+	Template.SetWindowTextA((LPCTSTR)psMB);
+	//FPIFeature (nPort,psTZ,&lpLength_psTZ);//采集指纹图像，生成指纹特征值，并上传。
+	/*
+	int x = FPIMatch (psMB,psTZ,3);//指纹对比
+	if(x == 1){
+		TRACE("一样");
+	}
+	else{
+		TRACE("不一样");
+	}
+	*/
+	/*
+	FPIGetImageData(nPort,&lpImageWidth,&lpImageHeight,psImage);//采集指纹图像，并上传指纹图像数据。
+	FPIImg2Bmp(nPort,psImgPath);//采集指纹图像，生成BMP文件。
+	FPIBmp2Feature(nPort,psImgPath,psTZ,&lpLength_psTZ); //传入BMP指纹图像文件路径，生成指纹特征数据
+	FPIBmp2Template(nPort,psImgPath1,psImgPath2,psImgPath3,psMB,&lpLength_psMB); //传入三幅BMP指纹图像文件路径，合成指纹模板数据。
+	FPIExtract (psImgData,psTZ,&lpLength_psTZ);//传入一幅指纹图像数据，生成指纹特征数据。
+	FPIEnroll (psImg1,psImg2,psImg3,psMB,&lpLength_psMB);//传入三幅指纹图像数据，合成指纹模板数据
+	IfDown = FPICheckFinger (nPort);//检测手指是否按下 0：手指按下 1：手指抬起

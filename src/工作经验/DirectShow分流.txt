@@ -1,0 +1,121 @@
+//COM口初始化
+	CoInitialize(NULL);
+
+	//创建一个Filter Graph Manager，并初始化视频捕获滤波器链表管理器
+	IGraphBuilder *pGB = NULL;
+	HRESULT hr = CoCreateInstance(CLSID_FilterGraph,NULL,CLSCTX_INPROC,IID_IGraphBuilder,(void **)&pGB);
+	
+	//先定义两个源滤波器，分别用于管视频和音频，然后通过BindFilter把设备和滤波器捆绑，如果捆绑成功则在管理者中加上这个滤波器
+	int DTypeVideo = 0;
+	IBaseFilter *pVideoCap;
+	if(BindFilter(EnumDevice(this->GetSafeHwnd(),DTypeVideo),&pVideoCap,DTypeVideo)) hr = pGB->AddFilter(pVideoCap, L"Video Capture Filter");
+
+	int DTypeAudio = 1;
+	IBaseFilter *pAudioCap;
+    if(BindFilter(EnumDevice(this->GetSafeHwnd(),DTypeAudio), &pAudioCap, DTypeAudio)) hr = pGB->AddFilter(pAudioCap, L"Audio Capture Filter");
+
+	AM_MEDIA_TYPE mediaType;
+    ZeroMemory(&mediaType, sizeof(AM_MEDIA_TYPE));
+	
+	VIDEOINFOHEADER vih;
+	vih.bmiHeader.biWidth = 640;
+	vih.bmiHeader.biHeight = 480;  
+    vih.bmiHeader.biSizeImage = 640*480*3;
+    mediaType.pbFormat = (BYTE *)(&vih);  
+    mediaType.cbFormat = sizeof(VIDEOINFOHEADER);
+    mediaType.subtype = MEDIASUBTYPE_YUY2;//MEDIASUBTYPE_YUY2 MEDIASUBTYPE_MJPG
+	//mediaType.subtype = MEDIASUBTYPE_MPEG1Video;
+	mediaType.majortype = MEDIATYPE_Video;
+	//mediaType.formattype = FORMAT_MPEGVideo;
+    mediaType.formattype = FORMAT_VideoInfo;
+	
+	//把设置好的属性结构体通过IAMStreamConfig设置，设置的是设备进入滤波器的格式，查找IAMStreamConfig接口需要音视频组件ICaptureGraphBuilder2
+	IAMStreamConfig* pConfig = NULL;
+
+	//创建ICaptureGraphBuilder2接口（增强型捕获滤波器链表管理器）pCapGB，并初始化，音视频组件
+	ICaptureGraphBuilder2 *pCapGB;
+    hr = CoCreateInstance(CLSID_CaptureGraphBuilder2,NULL,CLSCTX_INPROC,IID_ICaptureGraphBuilder2,(void **)&pCapGB);
+	//这个是管理者的应用层接口，也需要和管理者对接，对接过程中有初始化
+    pCapGB->SetFiltergraph(pGB);
+	
+    pCapGB->FindInterface(&PIN_CATEGORY_CAPTURE,&MEDIATYPE_Video,pVideoCap,IID_IAMStreamConfig,(void**)&pConfig);
+    hr = pConfig->SetFormat(&mediaType);
+
+	//渲染媒体，管理者上层的音视频组件ICaptureGraphBuilder2连接链表中的滤波器，过了这步就把设备获得到的数据和应用层连接到了一起
+    //hr = pCapGB->RenderStream(&PIN_CATEGORY_PREVIEW,&MEDIATYPE_Audio,pAudioCap,NULL,NULL);
+
+    //hr = pCapGB->RenderStream(&PIN_CATEGORY_PREVIEW,&MEDIATYPE_Video,pVideoCap,NULL,NULL);
+	if(SUCCEEDED(hr)){
+		int x = 3;
+	}
+
+	//创建 Sample Grabber.  
+	IBaseFilter *pSG = NULL;  
+	ISampleGrabber *pGrabber = NULL;  
+	hr = CoCreateInstance(CLSID_SampleGrabber,NULL,CLSCTX_INPROC_SERVER,IID_IBaseFilter,(void **)(&pSG));  
+	hr = pSG->QueryInterface(IID_ISampleGrabber,(void **)(&pGrabber));
+	hr = pGB->AddFilter(pSG,L"SampleGrabber");
+
+	//创建分流infinite pin tee filter
+	IBaseFilter *pTee;
+	hr = CoCreateInstance(CLSID_InfTee,NULL,CLSCTX_ALL,IID_IBaseFilter,(LPVOID *)&pTee);
+	hr = pGB->AddFilter(pTee,L"Infinite Pin Tee");
+	
+
+	hr = ConnectFilters(pGB,pVideoCap,pTee);
+	hr = ConnectFilters(pGB,GetOutPin(pTee,0),pSG);
+
+	hr = pGrabber->SetBufferSamples(TRUE);
+	hr = pGrabber->SetMediaType(&mediaType);//关联接口
+
+	
+    hr = pGrabber->GetConnectedMediaType(&mediaType);
+    //VIDEOINFOHEADER *pVih;
+    //if(mt.formattype == FORMAT_VideoInfo) pVih = (VIDEOINFOHEADER*)(mt.pbFormat);
+    //else return ; // Something went wrong
+    //pVih->bmiHeader 这个参数是BITMAPINFOHEADER 结构，是每一桢的图形信息.
+
+	hr = pGB->Render(GetOutPin(pTee,1));
+	//hr = pCapGB->RenderStream(&PIN_CATEGORY_PREVIEW,&MEDIATYPE_Video,GetOutPin(pTee,2),NULL,NULL);
+
+	
+	
+
+	
+	//查询视频窗口接口，这个只是设置窗口显示的位置，如弹出窗或者内嵌在界面内
+	IVideoWindow *pVW;
+    hr = pGB->QueryInterface(IID_IVideoWindow,(LPVOID *)&pVW);
+
+	//设置视频显示窗口
+	hr = pVW->put_Visible(OAFALSE); //先关闭弹出窗，然后才能设置窗口显示位置
+	hr = pVW->put_Owner((OAHWND)this->GetSafeHwnd()); //设置视频窗口
+    hr = pVW->put_WindowStyle(WS_CHILD | WS_CLIPCHILDREN); //设置窗口类型
+    // 更改窗口大小  
+	if(pVW){
+        //让图像充满整个指定窗口
+        CRect rc;  
+		::GetClientRect(this->GetSafeHwnd(),&rc);  
+        pVW->SetWindowPosition(0,0,rc.right,rc.bottom);  
+    }
+    hr = pVW->put_Visible(OATRUE); //显示视频窗口，这是就在设置的位置显示了
+	
+
+
+	//查询媒体控制接口，这个是管理者的上层，用于让整个链路运行
+	IMediaControl *pMC;
+    hr = pGB->QueryInterface(IID_IMediaControl,(void **)&pMC);
+    hr = pMC->Run(); //开始采集、预览视频，并在指定窗口显示  
+
+	Sleep(2000);
+	
+	long cbBuffer = 0;
+    hr = pGrabber->GetCurrentBuffer(&cbBuffer, NULL);
+    char *pBuffer = new char[cbBuffer];
+	hr = pGrabber->GetCurrentBuffer(&cbBuffer,(long *)(pBuffer));
+
+	
+         
+    //释放格式块
+    //FreeMediaType(mt);
+
+	pMC->Stop();

@@ -1,0 +1,49 @@
+如果ocx不提升权限会导致网页打开时调用不了ocx，所以需要自我提升权限
+需要把LED_HJCtrl.cpp里的函数改为下面的，个别参数需要根据实际情况修改
+头文件增加
+#include <objsafe.h>
+#include "helpers.h"
+
+BOOL CLED_HJCtrl::CLED_HJCtrlFactory::UpdateRegistry(BOOL bRegister)
+{
+	// TODO: 验证您的控件是否符合单元模型线程处理规则。
+	// 有关更多信息，请参考 MFC 技术说明 64。
+	// 如果您的控件不符合单元模型规则，则
+	// 必须修改如下代码，将第六个参数从
+	// afxRegApartmentThreading 改为 0。
+
+	if (bRegister){
+		BOOL retval = AfxOleRegisterControlClass(
+			AfxGetInstanceHandle(),
+			m_clsid,
+			m_lpszProgID,
+			IDS_LED_HJ,
+			IDB_LED_HJ,
+			afxRegApartmentThreading,
+			_dwLED_HJOleMisc,
+			_tlid,
+			_wVerMajor,
+			_wVerMinor);
+
+		// mark as safe for scripting--failure OK
+		HRESULT hr = CreateComponentCategory(CATID_SafeForScripting, 
+			L"Controls that are safely scriptable");
+
+		if (SUCCEEDED(hr))
+			// only register if category exists
+				RegisterCLSIDInCategory(m_clsid, CATID_SafeForScripting);
+		// don't care if this call fails
+	
+		// mark as safe for data initialization
+		hr = CreateComponentCategory(CATID_SafeForInitializing, 
+			L"Controls safely initializable from persistent data");
+
+		if (SUCCEEDED(hr))
+			// only register if category exists
+				RegisterCLSIDInCategory(m_clsid, CATID_SafeForInitializing);
+		// don't care if this call fails
+		return retval;
+	}
+	else
+		return AfxOleUnregisterClass(m_clsid, m_lpszProgID);
+}

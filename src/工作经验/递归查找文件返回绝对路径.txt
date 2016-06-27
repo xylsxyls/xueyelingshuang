@@ -1,0 +1,40 @@
+CString Recursion_Find_File(CString strPath,CString FileName){
+	CFileFind finder;
+    finder.FindFile(strPath + "\\*.*");//_T()的作用是使系统支持Unicode编码
+
+	CString TempFileName   = ""  ; //当前寻找到的文件或文件夹名
+	BOOL    IfNeedKeepFind = 1   ; //判断是否把当前路径全部找完，自然退出while
+	CString PathOrNull     = "-1"; //需要寻找的路径
+    while(IfNeedKeepFind){
+		//如果是0说明已经全部找完，但是GetFileName();会返回倒数第二个找到的文件名，之后继续得到最后一个，但是FindNextFile();就一直返回0了
+		IfNeedKeepFind = finder.FindNextFile();
+		TempFileName = finder.GetFileName();
+		if(TempFileName == "."||TempFileName == "..") continue;
+		//if内为判断是否为文件夹
+		if(FILE_ATTRIBUTE_DIRECTORY == (GetFileAttributes(finder.GetFilePath()) & FILE_ATTRIBUTE_DIRECTORY)){
+			//如果确实为文件夹则把文件夹绝对路径和需要找的文件名传进去
+			PathOrNull = Recursion_Find_File(finder.GetFilePath(),FileName);
+			if(PathOrNull == "-1") continue;
+			else break;
+		}
+		//只有在确定不是文件夹之后才可以判断是否为需要寻找的文件，避免文件与文件夹重名，只要进了上面的if要么continue，要么break
+		if(TempFileName == FileName){
+			PathOrNull = finder.GetFilePath();
+			break;
+		}
+    }
+	return PathOrNull;
+}
+
+CString Find_And_Get_Absolute_Path(CString FileName){
+	
+	char strPath[MAX_PATH] = {};
+	GetModuleFileName(NULL,strPath,MAX_PATH);
+	char *temp = _tcsrchr(strPath,'\\'); //从右向左数第一次出现指向'\\'的指针
+    memset(temp,0,50);
+	return Recursion_Find_File(strPath,FileName);//strPath为当前进程路径的上层目录
+    
+}
+
+调用
+CString strPath = Find_And_Get_Absolute_Path("Lib_MsrIc.dll");

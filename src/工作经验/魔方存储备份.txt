@@ -1,0 +1,56 @@
+12
+127
+1195
+11206
+105046
+
+CMagicSquare MagicSquare;
+	CRadixTool RadixTool(12);
+	char strIn[50] = {};
+	char strOut[55] = {};
+	char strSolve[50] = {};
+	char strShowNowRadix[50] = {};
+	char strTimes[3] = {};
+	int times = 0;
+	char strBegin[50] = {};
+	char strEnd[50] = {};
+	char strNow[50] = {};
+	m_EditTimes.GetWindowTextA(strTimes,3);
+	times = atoi(strTimes);
+	m_EditBegin.GetWindowTextA(strBegin,50);
+	m_EditEnd.GetWindowTextA(strEnd,50);
+	m_EditNow.GetWindowTextA(strNow,50);
+	if(*strBegin == 0) while(times--!=0) strBegin[times] = 48;
+	times = atoi(strTimes);
+	if(*strEnd == 0) while(times--!=0) strEnd[times] = 98;
+	RadixTool = strBegin;
+	DWORD ThreadID = 0;
+	CStopWatch StopWatch;
+	while(RunOrStop){
+		if(StopWatch.GetSeconds() > 0.01){
+			RadixTool.StringSequence(strShowNowRadix,atoi(strTimes));
+			m_EditNow.SetWindowTextA(strShowNowRadix);
+			m_EditNow.UpdateWindow();
+			StopWatch.SetWatchTime(0);
+		}
+		//从进制器得到变化方案写入strIn
+		RadixTool.StringSequence(strIn,atoi(strTimes));
+		//初始化魔方
+		MagicSquare.init();
+		//魔方接收变化方案进行变化
+		MagicSquare.MagicSquareIn(strIn);
+		//魔方将变化完成之后的6面以字符串输出到strOut
+		MagicSquare.MagicSquareOut(strOut);
+		//得到解决方案
+		RadixTool.StringInvert(strSolve,atoi(strTimes));
+		//将解决方案和魔方变化之后的字符串存入数据库，strOut必须唯一
+		SaveToOracle(strSolve,strOut);
+		//进制器+1
+		RadixTool++;
+		if(RadixTool > strEnd){
+			break;
+		}
+	}
+	RunOrStop = 0;
+	(RadixTool - 1).StringSequence(strNow);
+	m_EditNow.SetWindowTextA(strNow);

@@ -1,0 +1,4 @@
+alert(typeof x);检测javascript里的变量类型
+var x = player.GetPlaySession();
+var xx = alert(typeof x);
+执行到第二句之后会在网页中弹出对话框，里面会有类型说明

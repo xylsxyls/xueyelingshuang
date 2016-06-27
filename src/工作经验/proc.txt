@@ -1,0 +1,123 @@
+http://www.myexception.cn/program/1226187.html
+
+parse=full
+include="C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include"
+include="D:\oracle_11g\Administrator\product\11.2.0\dbhome_1\precomp\public"
+include="D:\oracle_11g\Administrator\product\11.2.0\dbhome_1\OCI\include"
+
+
+error LNK2019: 无法解析的外部符号 _sqlcxt，该符号在函数 _main 中被引用解决
+
+
+proc编译出错解决：
+环境：
+win7 64
+vs2010
+oracle 64
+1、首先安装oracle11g和oracle client11g，注意oracle11g的两个下载包要解压到一个文件夹(datebase)中才能安装成功。
+
+2、用vs2010创建一个空项目，在左边的解决方案资源管理器的源文件目录下添加需要编译.pc文件，右击该文件->属性->项类型 修改为自定义生成工具->应用->自定义生成工具->常规->命令行(proc $(TargetName)->输出($(IntDir)$(TargetName).c))。
+
+3、右键点击.pc文件，点击编译，生成.c文件在$(IntDir)目录下。
+
+4、在源文件目录添加该刚刚生成的.c文件。
+
+5、右键点击.pc文件->常规->从生成中排出（是）。(为了避免反复生成其对应的.c文件提示覆盖)
+
+6、右键点击项目->属性->vc++目录->包含目录中添加头文件目录：oracle\product\11.1.0\client_1\precomp\public
+
+      库目录中添加.lib目录：
+
+    oracle\product\11.1.0\client_1\precomp\LIB
+    oracle\product\11.1.0\client_1\RDBMS\XA
+    oracle\product\11.1.0\client_1\oci\lib\msvc
+    oracle\product\11.1.0\client_1\precomp\LIB\msvc
+
+7、右键点击项目->属性->配置属性->链接器->输入->附加依赖项添加.lib文件：
+    orasql11.lib;oraxa11.lib;oci.lib;orasqx11.lib
+
+在64位系统下出现：
+error LNK2019: 无法解析的外部符号 _sqlcxt，该符号在函数 _main 中被引用错误
+用以下解决办法
+项目右键->属性->配置属性->右上角配置管理器->活动解决方案平台->新建->键入或选择新平台->X64->确定，然后编译，解决问题
+以上编译出的文件只能在64位系统使用，需要在32位系统上使用的程序需要安装oracle32位客户端，在配置时注意文件路径
+
+@http://blog.csdn.net/digu/article/details/8755380
+
+
+
+
+由于一些很特殊的要求，需要在win7下面使用orcale 11g数据库，开发的是一个C/C++的项目。在网上查到资料说：使用Pro*C/C++的方式来使用orcale数据库比较方便。但是网上对应的资料很少，出现了问题基本没有人回答和帮助，所以将自己成功搭建出来的编译环境的过程再此记录下来。
+
+
+    首先，在win7下面安装orcale 11g，vs2010，这类的资料网上比较多，就不详细的介绍了，主要介绍如何在vs2010里面使用proc预编译.pc文件的说明和配置过程以及最后实现的截图。我在使用的是scott用户（密码是dragonwake）来登录orcl数据库的，里面需要创建我们测试用的数据库表和数据，对应的SQL脚本我放在了我的资源文件里面了。使用SQL Plus工具来执行SQL脚本。命令为：@：\d:\sql\create_e_emp.sql和@：\d:\sql\insert_e_emp.sql（我的脚本是放在d:\sql里面的）。
+
+
+    用VS2010创建一个空项目，项目名为ProcDemo，右键ProcDemo项目里面的源文件->添加->新建项，选择txt文档，在项目名填上ProcDemo.pc，点击完成，就可以看到源文件夹里面有了一个ProcDemo.pc的文件。右键ProcDemo.pc，选择属性->常规->项类型->自定义生成工具，点击完成之后。
+再次右键ProcDemo.pc，选择属性->自定义生成工具->常规，命令行：
+proc INAME=$(TargetName).pc PARSE=FULL（对应的是.c文件）
+proc INAME=$(TargetName).pc PARSE=NONE CODE=CPP（对应的是.cpp文件），
+输出：
+$(IntDir)$(TargetName).c（对应的是.c文件）
+$(IntDir)$(TargetName).cpp（对应的是.cpp文件）。
+
+    
+
+    如果是要生成.c文件，在.pc文件里面填写：
+
+#include <stdio.h>
+exec sql include sqlca;
+int  main()
+
+{
+    char  userpwd[30]="scott/dragonwake";
+    char  var_name[30];
+    exec sql connect:userpwd;
+    exec sql select first_name into 
+    :var_name from s_emp where id=1;
+    printf("var_name:%s\n",var_name); 
+    exec sql commit work release; 
+
+    getchar();
+
+}
+
+    如果要生成.cpp文件，在.pc文件里面填写：
+
+#include <iostream>
+using namespace std;
+exec sql include sqlca;
+int  main()
+
+{
+    exec sql  begin  declare section;
+    char  userpwd[30]="scott/dragonwake";
+    char  var_name[30];
+    exec sql  end    declare section; 
+    exec sql connect:userpwd;
+    exec sql select first_name into 
+    :var_name from s_emp where id=1;
+    cout<<"var_name:"<<var_name<<endl; 
+    exec sql commit work release; 
+
+    getchar();
+}
+    右键ProcDemo.pc文件->编译,如果没有错误，下面会显示生成成功。再次右键源文件->添加->现有项，找到生成的ProcDemo.cpp或者（ProcDemo.c），这样源文件夹里面就有了两个文件了。
+右键工程->属性,选择C/C++->常规->附加包含目录，添加E:\app\q\product\11.2.0\dbhome_1\precomp\public（orcale的头文件），
+我的D:\oracle_11g\Administrator\product\11.2.0\dbhome_1\precomp\public;%(AdditionalIncludeDirectories)
+选择链接器->输入->附加依赖项，添加orasql11.lib;oraxa11.lib;oci.lib;orasqx11.lib;%(AdditionalDependencies)，
+在选择链接器->常规->附加库目录，添加E:\app\q\product\11.2.0\dbhome_1\precomp\LIB;E:\app\q\product\11.2.0\dbhome_1\precomp\LIB\msvc;E:\app\q\product\11.2.0\dbhome_1\OCI\lib\MSVC;E:\app\q\product\11.2.0\dbhome_1\RDBMS\XA;%(AdditionalLibraryDirectories)。
+
+我的D:\oracle_11g\Administrator\product\11.2.0\dbhome_1\precomp\LIB;D:\oracle_11g\Administrator\product\11.2.0\dbhome_1\precomp\LIB\msvc;D:\oracle_11g\Administrator\product\11.2.0\dbhome_1\OCI\lib\MSVC;D:\oracle_11g\Administrator\product\11.2.0\dbhome_1\RDBMS\XA;%(AdditionalLibraryDirectories)
+
+
+    右键工程->生成,如果没有错误，选择调试里面的执行，就可以看到结果了！！！有问题的请联系Q：905568425！！！
+
+
+
+create table MagicTable
+(
+	solve varchar2(30),
+	MagicSquare varchar2(55) PRIMARY KEY
+);
+commit;

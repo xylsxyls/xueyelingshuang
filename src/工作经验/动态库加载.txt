@@ -1,0 +1,81 @@
+#define NONETYPE char            //因缺省值参数不可以为void类型，所以统一为char，具体使用几个是由ParameterNumber控制
+template<typename T  = void    , //返回值
+	     typename T1 = NONETYPE, //以下为参数列表
+		 typename T2 = NONETYPE,
+		 typename T3 = NONETYPE,
+		 typename T4 = NONETYPE,
+		 typename T5 = NONETYPE,
+		 typename T6 = NONETYPE,
+		 typename T7 = NONETYPE,
+		 typename T8 = NONETYPE,
+		 typename T9 = NONETYPE
+         >
+         class CLASS_DLL_LOAD{
+public:
+	static void DLL_OPEN(HINSTANCE *DllHinstance,CString DllPath){
+		*DllHinstance=LoadLibraryEx(DllPath,0,LOAD_WITH_ALTERED_SEARCH_PATH);
+	}
+	static void LOAD(HINSTANCE DllHinstance,void **NewFunName,CString DllFunName,int ParameterNumber){
+		if(ParameterNumber == 0) *((T(__stdcall **)(                          ))NewFunName) = (T(__stdcall *)(                          ))GetProcAddress(DllHinstance,DllFunName);
+		if(ParameterNumber == 1) *((T(__stdcall **)(T1                        ))NewFunName) = (T(__stdcall *)(T1                        ))GetProcAddress(DllHinstance,DllFunName);
+		if(ParameterNumber == 2) *((T(__stdcall **)(T1,T2                     ))NewFunName) = (T(__stdcall *)(T1,T2                     ))GetProcAddress(DllHinstance,DllFunName);
+		if(ParameterNumber == 3) *((T(__stdcall **)(T1,T2,T3                  ))NewFunName) = (T(__stdcall *)(T1,T2,T3                  ))GetProcAddress(DllHinstance,DllFunName);
+		if(ParameterNumber == 4) *((T(__stdcall **)(T1,T2,T3,T4               ))NewFunName) = (T(__stdcall *)(T1,T2,T3,T4               ))GetProcAddress(DllHinstance,DllFunName);
+		if(ParameterNumber == 5) *((T(__stdcall **)(T1,T2,T3,T4,T5            ))NewFunName) = (T(__stdcall *)(T1,T2,T3,T4,T5            ))GetProcAddress(DllHinstance,DllFunName);
+		if(ParameterNumber == 6) *((T(__stdcall **)(T1,T2,T3,T4,T5,T6         ))NewFunName) = (T(__stdcall *)(T1,T2,T3,T4,T5,T6         ))GetProcAddress(DllHinstance,DllFunName);
+		if(ParameterNumber == 7) *((T(__stdcall **)(T1,T2,T3,T4,T5,T6,T7      ))NewFunName) = (T(__stdcall *)(T1,T2,T3,T4,T5,T6,T7      ))GetProcAddress(DllHinstance,DllFunName);
+		if(ParameterNumber == 8) *((T(__stdcall **)(T1,T2,T3,T4,T5,T6,T7,T8   ))NewFunName) = (T(__stdcall *)(T1,T2,T3,T4,T5,T6,T7,T8   ))GetProcAddress(DllHinstance,DllFunName);
+		if(ParameterNumber == 9) *((T(__stdcall **)(T1,T2,T3,T4,T5,T6,T7,T8,T9))NewFunName) = (T(__stdcall *)(T1,T2,T3,T4,T5,T6,T7,T8,T9))GetProcAddress(DllHinstance,DllFunName);
+	}
+	static void DLL_CLOSE(HINSTANCE *DllHinstance){
+		FreeLibrary(*DllHinstance);
+		*DllHinstance = NULL;
+	}
+};
+
+
+调用
+	HINSTANCE TextHinstance; //定义一个加载dll的句柄，用于释放dll
+	CLASS_DLL_LOAD<>::DLL_OPEN(&TextHinstance,"DLL_TEXT_PLUS.dll");//加载，得到句柄
+
+	int (_stdcall * NewFunName)(int,int,int);//定义一个和函数指针，接动态库里的函数
+	CLASS_DLL_LOAD<int,int,int,int>::LOAD(TextHinstance,(void **)&NewFunName,"DllFunName",3);//句柄，函数指针，动态库内函数名，参数个数，<>内第一个为返回值，后面为参数列表
+
+	int (_stdcall * plus2)(int,int);
+	CLASS_DLL_LOAD<int,int,int>::LOAD(TextHinstance,(void **)&plus2,"p_plus",2);
+
+	int m = NewFunName(333,444,1);//调用时和普通函数一样
+	m = plus2(333,444);
+	m = m;
+
+	CLASS_DLL_LOAD<>::DLL_CLOSE(&TextHinstance);//open一次对应close一次，close完句柄被重置为0
+
+
+
+
+
+
+
+宏
+#define DLL_LOAD_0(DllHinstance,NewFunName,DllFunName,Return                           ) Return(__stdcall * NewFunName )(                          ) = (Return(__stdcall *)(                          ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_1(DllHinstance,NewFunName,DllFunName,Return,T1                        ) Return(__stdcall * NewFunName )(T1                        ) = (Return(__stdcall *)(T1                        ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_2(DllHinstance,NewFunName,DllFunName,Return,T1,T2                     ) Return(__stdcall * NewFunName )(T1,T2                     ) = (Return(__stdcall *)(T1,T2                     ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_3(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3                  ) Return(__stdcall * NewFunName )(T1,T2,T3                  ) = (Return(__stdcall *)(T1,T2,T3                  ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_4(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4               ) Return(__stdcall * NewFunName )(T1,T2,T3,T4               ) = (Return(__stdcall *)(T1,T2,T3,T4               ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_5(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5            ) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5            ) = (Return(__stdcall *)(T1,T2,T3,T4,T5            ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_6(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5,T6         ) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5,T6         ) = (Return(__stdcall *)(T1,T2,T3,T4,T5,T6         ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_7(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5,T6,T7      ) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5,T6,T7      ) = (Return(__stdcall *)(T1,T2,T3,T4,T5,T6,T7      ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_8(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5,T6,T7,T8   ) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5,T6,T7,T8   ) = (Return(__stdcall *)(T1,T2,T3,T4,T5,T6,T7,T8   ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_9(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5,T6,T7,T8,T9) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5,T6,T7,T8,T9) = (Return(__stdcall *)(T1,T2,T3,T4,T5,T6,T7,T8,T9))GetProcAddress(DllHinstance,DllFunName);
+
+#define DLL_OPEN(DllPath) LoadLibraryEx(DllPath,0,LOAD_WITH_ALTERED_SEARCH_PATH);
+#define DLL_CLOSE(DllPath) ::FreeLibrary(DllPath);
+
+
+调用
+	HINSTANCE TestHinstance=DLL_OPEN("DLL_TEXT_PLUS.dll");//动态加载Dll
+	DLL_LOAD_3(TestHinstance,plus3,"pp_plus",int,int,int,int);//句柄，自定义函数名，返回值，参数列表
+	DLL_LOAD_2(TestHinstance,plus2,"p_plus",int,int,int);
+	int m = plus3(3,4,5);
+	m = plus2(3,4);
+	DLL_CLOSE(TestHinstance);

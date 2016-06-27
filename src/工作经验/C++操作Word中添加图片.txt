@@ -1,0 +1,228 @@
+在.h文件中的窗口类里添加
+CString	m_strPicPath;
+	CString	m_strWordPath;
+	BOOL m_bIsCreateTable;
+需要包含头文件msword.h
+
+
+
+
+
+
+
+UpdateData(true);
+	// TODO: Add your control notification handler code here
+	const int wdPreferredWidthPoints = 3;
+	COleVariant vTrue((short)TRUE),vFalse((short)FALSE),vOpt((long)DISP_E_PARAMNOTFOUND, VT_ERROR);
+	
+	_Application app;
+	Documents oDocs;
+	_Document oDoc, oActiveDoc;
+	Selection oSel;
+	
+	InlineShapes iShaps;
+	InlineShape iShap;
+
+	Columns      WordCols;  
+	Rows         WordRows;
+
+	_ParagraphFormat pf;
+	
+	//定义要忽略的参数
+	VARIANT vt ;
+	vt.vt =VT_ERROR;
+	vt.scode =DISP_E_PARAMNOTFOUND;
+
+	//退出
+	VARIANT v;
+	v.vt =VT_BOOL;
+	v.boolVal =VARIANT_FALSE;
+
+	try{	
+		
+		app.m_bAutoRelease=true;
+	
+		if(!app.CreateDispatch("Word.Application",NULL))
+		{
+			AfxMessageBox("CreateDispatch failed.", MB_OK | MB_SETFOREGROUND);
+			return;
+		}
+		app.SetVisible(false);
+		
+		COleVariant varFilePath(m_strWordPath);
+		COleVariant varPicPath(m_strPicPath);
+		COleVariant varstrNull("");
+		COleVariant varZero((short)0,VT_BOOL);
+		COleVariant varTrue((short)1,VT_BOOL);
+		COleVariant varFalse((short)0,VT_BOOL);
+		oDocs.AttachDispatch(app.GetDocuments());
+		
+		oDocs.Open(varFilePath,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt,vOpt);
+		
+		oDoc=app.GetActiveDocument();
+		oSel.AttachDispatch(app.GetSelection());
+		
+
+		oSel=app.GetSelection();
+
+		oSel.EndKey(COleVariant(short(6)), COleVariant(short(0)));//获得文档的最后位置
+ 
+		
+		Tables tabs = oDoc.GetTables();
+		Table  tab;
+		long lCount = tabs.GetCount();
+		if(lCount == 0)    //word中没有表格
+		{
+			oSel.TypeParagraph();   //换行
+			oSel.TypeParagraph();
+			oSel.TypeParagraph();
+			oSel.TypeParagraph();
+			
+
+			tab = tabs.Add(oSel.GetRange(),1,1,&vTrue,&vFalse);	 //添加表格
+			tab.Select();
+			pf = oSel.GetParagraphFormat();
+			pf.SetAlignment(0);   //左对齐
+
+
+			Borders borders;
+			borders=tab.GetBorders(); 
+			borders.SetEnable(0);//隐藏表框
+
+
+			WordCols.AttachDispatch(tab.GetColumns());  
+			WordRows.AttachDispatch(tab.GetRows()); 
+
+			tab.SetAllowAutoFit(false);   //去掉自适应功能，可调整表格宽高
+
+			WordRows.SetLeftIndent(235.0, 0);   //设置表格的位置
+
+			tab.SetPreferredWidthType(wdPreferredWidthPoints);//设置表格宽度的单位wdPreferredWidthPoints是WORD通用的属性，在VB中可以直接用，在VC中最好在调用Word开头进行定义const int wdPreferredWidthPoints = 3;
+			tab.SetPreferredWidth(50);     //设置表格宽度
+			WordCols.SetPreferredWidthType(wdPreferredWidthPoints);   //设置表格列宽的单位 
+			WordCols.SetPreferredWidth(10);    //设置表格列宽
+			WordCols.SetWidth(180.0, 0); //去掉表格的“自动重调尺寸以适应内容”项，这样可以手动设置表格的行高和列宽
+			WordRows.SetHeight(50.0, 1);
+
+			oSel.GetTables();
+		
+			oSel.TypeText("签名：");
+			iShaps=oSel.GetInlineShapes();	
+			iShap=iShaps.AddPicture(m_strPicPath,COleVariant((short)TRUE),COleVariant((short)TRUE),vOpt);
+			
+			oSel.TypeParagraph();
+			oSel.TypeText("日期： 2013-03-21 14:35");
+		}
+		else
+		{
+			m_bIsCreateTable = FALSE;
+			int i;	
+			for(i=1; i<=lCount; i++)
+			{
+				tab.AttachDispatch(tabs.Item(i));  
+				WordCols.AttachDispatch(tab.GetColumns());  
+				WordRows.AttachDispatch(tab.GetRows());  
+				int nCols=WordCols.GetCount();  
+				int nRows=WordRows.GetCount();  
+				float fWidth = WordCols.GetWidth();
+				float fHeight = WordRows.GetHeight();
+				if( (nCols == 1) && (nRows == 1) && (fWidth<= 200.0) && (fWidth >= 100)\
+					&&( fHeight<= 80) && (fHeight >=40) ) 
+				{
+					Cell cel=tab.Cell(1,1);
+					cel.Select();
+					oSel.GetRange();
+				
+					oSel.Delete(&vOpt, &vOpt); //先删除，后添加图片
+					
+					tab.Select();
+					pf = oSel.GetParagraphFormat();
+					pf.SetAlignment(0);   //左对齐
+
+					oSel.TypeText("签名：");
+					iShaps=oSel.GetInlineShapes();	
+					iShap=iShaps.AddPicture(m_strPicPath,COleVariant((short)TRUE),COleVariant((short)TRUE),vOpt);
+					
+					oSel.TypeParagraph();
+					oSel.TypeText("日期：2013-03-21 14:35");
+					m_bIsCreateTable = true;
+				}
+			}
+			if(!m_bIsCreateTable)   //没有符合的表格，则自己添加表格
+			{
+				oSel.TypeParagraph();
+				oSel.TypeParagraph();
+				oSel.TypeParagraph();
+				oSel.TypeParagraph();
+					
+				tab = tabs.Add(oSel.GetRange(),1,1,&vTrue,&vFalse);	 //添加表格
+				
+				tab.Select();
+				pf = oSel.GetParagraphFormat();     
+				pf.SetAlignment(0);   //左对齐
+
+				Borders borders;
+				borders=tab.GetBorders(); 
+				borders.SetEnable(0);//隐藏表框
+				
+				WordCols.AttachDispatch(tab.GetColumns());  
+				WordRows.AttachDispatch(tab.GetRows()); 
+				tab.SetAllowAutoFit(false);
+				
+				WordRows.SetLeftIndent(235.0, 0);
+
+				tab.SetPreferredWidthType(wdPreferredWidthPoints);     
+				tab.SetPreferredWidth(50);     
+				WordCols.SetPreferredWidthType(wdPreferredWidthPoints);    
+				WordCols.SetPreferredWidth(10);    
+				WordCols.SetWidth(180.0, 0); 
+				WordRows.SetHeight(50.0, 1);
+				
+				oSel.GetTables();
+				
+				oSel.TypeText("签名：");
+				iShaps=oSel.GetInlineShapes();	
+				iShap=iShaps.AddPicture(m_strPicPath,COleVariant((short)TRUE),COleVariant((short)TRUE),vOpt);
+				
+				oSel.TypeParagraph();
+				oSel.TypeText("日期： 2013-03-21 14:35");
+			}
+			
+		}	
+			
+		oDoc=app.GetActiveDocument(); 
+	
+		oDoc.SaveAs(COleVariant(m_strWordPath),COleVariant((short)0),vFalse,COleVariant(""),vTrue,COleVariant(""),vFalse,vFalse,vFalse,vFalse,vFalse,vFalse,vFalse,vFalse,vFalse,vFalse);
+
+		tab.ReleaseDispatch();
+		tabs.ReleaseDispatch();
+		oDocs.ReleaseDispatch();
+		oDoc.ReleaseDispatch();
+		oSel.ReleaseDispatch();
+
+		if(oDoc != NULL)
+		{
+			oDocs.Close(&v, &vt, &vt);
+		}
+
+		app.Quit(&v,&vt,&vt);
+ 		app.ReleaseDispatch();
+
+		AfxMessageBox("签名成功！", MB_OK | MB_SETFOREGROUND);	
+	}
+	catch(...)
+	{
+
+		if(oDoc != NULL)
+		{
+			oDocs.ReleaseDispatch();
+			oDoc.ReleaseDispatch();
+			oSel.ReleaseDispatch();
+
+			oDocs.Close(&v, &vt, &vt);
+			app.Quit(&v,&vt,&vt);
+			app.ReleaseDispatch();
+		}
+
+		AfxMessageBox("签名失败！", MB_OK | MB_SETFOREGROUND);
+	} 

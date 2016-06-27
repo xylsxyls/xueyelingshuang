@@ -1,0 +1,11 @@
+gcc -shared -FPID .c生成.o文件，这个文件就是动态库，一般重命名为.so文件，为
+gcc -shared -FPID .c -o .so
+生成之后和调用文件一起联合编译就可以了，但是动态库内的函数不会被编译到可执行文件中，而静态库会吧库里的函数编译到可执行文件里
+如果要统一编译命令，可以使用Linux里自带的函数库dlfcn.h，编译的时候需要在结尾加 -ldl
+
+int (*AddNewX)(int x,int *number,int length,int Array[]);
+
+void *handle = dlopen("./hello.so",RTLD_NOW);
+if(handle == 0) return -1;
+AddNewX = dlsym(handle,"AddNewX");
+dlclose(handle);

@@ -1,0 +1,121 @@
+#pragma once
+#include <dlfcn.h>
+#include <string>
+#include <string.h>
+#include <algorithm>
+#include <functional>
+#include <stdarg.h>
+using namespace std;
+
+typedef int MultiBool;
+#define CLinuxDllLoad_FunNumber 100
+#define CLinuxDllLoad_NameNumber 50
+#define V(NewFunName) (void **)(&(NewFunName)) //调用时用的到，老版
+#define V_str(NewFunName) FunName((void **)(&NewFunName),#NewFunName) //更新版
+
+class FunName{
+public:
+	void **TempFunAddr;
+	char strTempFun[CLinuxDllLoad_NameNumber];
+	FunName(void **TempFunAddr,string strTempFun);
+};
+
+class CLinuxDllLoad{
+private:
+	void *handle;
+	void *FunArr[CLinuxDllLoad_FunNumber];
+
+public:
+	CLinuxDllLoad(string DllPath);
+	~CLinuxDllLoad(void);
+
+	int ErrorFunNumber;
+	string ErrorFunName;
+
+public:
+	//老版，dll内的名字和自定义名字可以不同，需依次调用两个函数，外包用V，受CLOAD_FunNumber上限控制
+	MultiBool Check_Fun(int number,...);//返回-1表示加载路径错误，返回1表示所有函数都存在，返回0表示有函数不存在
+	void Load_Fun(int number,...);
+
+public:
+	//更新版，dll内的名字和自定义名字必须相同，外包用V_str，加载个数不受CLinuxDllLoad_FunNumber上限控制
+	MultiBool LoadFun(int number,...);
+	
+};
+
+
+string RemoveAll(string &str,char c)
+{
+	string::iterator new_end = remove_if(str.begin(),str.end(),bind2nd(equal_to<char>(),c));
+	str.erase(new_end, str.end());
+	return str;
+}
+
+FunName::FunName(void **TempFunAddr,string strTempFun){
+	this->TempFunAddr = TempFunAddr;
+	RemoveAll(strTempFun,'(');
+	RemoveAll(strTempFun,')');
+	RemoveAll(strTempFun,' ');
+	strcpy(this->strTempFun,strTempFun.c_str());
+};
+
+CLinuxDllLoad::CLinuxDllLoad(string DllPath)
+{
+	handle = dlopen(DllPath.c_str(),RTLD_NOW);
+	memset(FunArr,0,sizeof(FunArr));
+	string ErrorFunName = "";
+	ErrorFunNumber = 0;
+}
+
+CLinuxDllLoad::~CLinuxDllLoad()
+{
+	if(handle != 0) dlclose(handle); //释放DLL
+}
+
+MultiBool CLinuxDllLoad::Check_Fun(int number,...){
+	if(handle == NULL) return -1;
+	va_list list;
+	va_start(list,number);
+	int n = 0;
+	int AllRight = 1;
+	while(n != number){
+		char *TempFun = va_arg(list,char *);
+		FunArr[n++] = (void *)dlsym(handle,TempFun);
+		if(FunArr[n - 1] == 0){
+			ErrorFunName = ErrorFunName + TempFun + " ";
+			ErrorFunNumber++;
+			AllRight = 0;
+		}
+	}
+	va_end(list);
+	return AllRight;
+}
+
+void CLinuxDllLoad::Load_Fun(int number,...){
+	va_list list;
+	va_start(list,number);
+	int n = 0;
+	while(n != number){
+		*(va_arg(list,void **)) = FunArr[n++];
+	}
+	va_end(list);
+	return ;
+}
+
+MultiBool CLinuxDllLoad::LoadFun(int number,...){
+	if(handle == NULL) return -1;
+	va_list list;
+	va_start(list,number);
+	int AllRight = 1;
+	while(number-- != 0){
+		FunName AddrAndName = (va_arg(list,FunName));
+		*(AddrAndName.TempFunAddr) = (void *)dlsym(handle,AddrAndName.strTempFun);
+		if(*AddrAndName.TempFunAddr == 0){
+			ErrorFunName = ErrorFunName + AddrAndName.strTempFun + " ";
+			ErrorFunNumber++;
+			AllRight = 0;
+		}
+	}
+	va_end(list);
+	return AllRight;
+}

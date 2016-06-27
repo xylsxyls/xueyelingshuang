@@ -1,0 +1,2751 @@
+#include "stdafx.h"
+#include "MacroAndFun.h"
+
+
+#ifdef OnlyUsedInMFC
+
+CString Obtain_File_Path(){
+	CFileDialog dlg(1,NULL,NULL,OFN_HIDEREADONLY ,"All Files(*.*)|*.*||");
+	int x = dlg.DoModal();
+	if(x != IDOK) return "-1";
+	return dlg.GetPathName();
+}
+
+#endif
+
+void Recursion_Find_File(CString strPath,CString FileStr,vector<CString> *pPathVector,MultiBool flag){
+	CFileFind finder;
+	BOOL IsVisit = finder.FindFile(strPath + _T("\\*.*")) ; //_T()的作用是使系统支持Unicode编码
+	//系统中有些文件无法访问，会使finder变成0，那么当进入下面的循环时就会报错，返回之后上层的finder还是有值的，所以直接返回就行
+	if(IsVisit == 0) return;
+
+	CString         TempFileName   = ""; //当前寻找到的文件或文件夹名
+	BOOL            IfNeedKeepFind = 1 ; //判断是否把当前路径全部找完，自然退出while
+	
+	while(IfNeedKeepFind){
+		//如果是0说明已经全部找完，但是GetFileName();会返回倒数第二个找到的文件名，之后继续得到最后一个，但是FindNextFile();就一直返回0了
+		IfNeedKeepFind = finder.FindNextFile();
+		TempFileName = finder.GetFileName();
+		if(TempFileName == "" || TempFileName == "." || TempFileName == "..") continue;
+		//if内为判断是否为文件夹
+		if(FILE_ATTRIBUTE_DIRECTORY == (GetFileAttributes(finder.GetFilePath()) & FILE_ATTRIBUTE_DIRECTORY)){
+			//如果确实为文件夹则把文件夹绝对路径和需要找的文件名传进去
+			Recursion_Find_File(finder.GetFilePath(),FileStr,pPathVector,flag);
+			//递归结束之后应该直接进入下一次查询
+			continue;
+		}
+		//只有在确定不是文件夹之后才可以判断是否为需要寻找的文件，避免文件与文件夹重名
+		//1表示找文件全名
+		if(flag == 1){
+			if(TempFileName == FileStr){
+				pPathVector->push_back(finder.GetFilePath());
+			}
+		}
+		//2表示找文件后缀名
+		else if(flag == 2){
+			if(TempFileName.Mid(TempFileName.ReverseFind('.') + 1) == FileStr) pPathVector->push_back(finder.GetFilePath());
+		}
+	}
+	return;
+}
+
+vector<CString> Find_And_Get_Absolute_Path(CString FileStr,CString strPath,MultiBool flag){
+	if(strPath == ""){
+		char szPath[MAX_PATH] = {};
+		GetModuleFileName(NULL,szPath,MAX_PATH);//这里得到的是进程目录，末尾是exe
+		char *temp = _tcsrchr(szPath,'\\'); //从右向左数第一次出现指向'\\'的指针
+		memset(temp,0,50);
+		strPath = szPath;
+	}
+	int x = 0;
+	vector<CString> VecPath;
+	Recursion_Find_File(strPath,FileStr,&VecPath,flag);//strPath为当前进程路径的上层目录
+	return VecPath;//strPath为当前进程路径的上层目录
+}
+
+#ifdef UseXml
+
+BOOL XmlLoad(TiXmlDocument *Document,CString strPath){
+	return Document->LoadFile(strPath);
+}
+
+BOOL XmlWriteDeclaration(TiXmlDocument *Document,CString strVersion,CString strEncoding,CString strStandalone){
+	//先把声明放在末尾，如果发现第一个子节点有东西说明需要插在他前面
+	TiXmlNode *FirstNode = Document->FirstChild();
+	TiXmlDeclaration *DeclarationVariable = new TiXmlDeclaration(strVersion,strEncoding,strStandalone);
+	Document->LinkEndChild(DeclarationVariable);
+	TiXmlNode *DeclarationNode = Document->LastChild();
+	if(FirstNode != 0){
+		if(FirstNode->ToDeclaration() != 0){
+			TiXmlNode *SecondNode = FirstNode->NextSibling();
+			if(SecondNode != 0){
+				Document->InsertBeforeChild(SecondNode,*DeclarationNode);
+				Document->RemoveChild(Document->LastChild());
+			}
+			Document->RemoveChild(FirstNode);//如果没有第二个节点说明前面只有一个声明节点，删掉就行了
+			return 1;
+		}
+		Document->InsertBeforeChild(FirstNode,*DeclarationNode);
+		Document->RemoveChild(Document->LastChild());
+	}
+	return 1;
+}
+
+BOOL XmlInsertElement(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	char *strInsertElement = va_arg(parameterlist,char *);
+	number--;
+	number--;
+	if(*strInsertElement == 0){
+		char *parameter1 = va_arg(parameterlist,char *);
+		TiXmlElement *TempElement = Document->FirstChildElement(parameter1);
+		if(TempElement == 0){
+			TempElement = new TiXmlElement(parameter1);
+			Document->LinkEndChild(TempElement);
+		}
+		while(number--!=0){
+			char *TempParameter = va_arg(parameterlist,char *);
+			TiXmlElement *preElement = TempElement;
+			TempElement = TempElement->FirstChildElement(TempParameter);
+			if(TempElement == 0){
+				TempElement = new TiXmlElement(TempParameter);
+				preElement->LinkEndChild(TempElement);
+			}
+		}
+	}
+	else{
+		char *parameter1 = va_arg(parameterlist,char *);
+		TiXmlNode *TempNode = Document->FirstChildElement(parameter1);
+		if(TempNode == 0) return 0;
+		TiXmlNode *preNode = NULL;
+		char *TempParameter = NULL;
+		if(number == 0){
+			TiXmlElement *TempDelete = new TiXmlElement(strInsertElement);
+			Document->LinkEndChild(TempDelete);
+			TiXmlNode *BeforeElement = Document->FirstChild(strInsertElement);
+			Document->InsertBeforeChild(TempNode,*BeforeElement);
+			Document->RemoveChild(Document->LastChild());
+			va_end(parameterlist);
+			return 1;
+		}
+		while(number--!=0){
+			TempParameter = va_arg(parameterlist,char *);
+			preNode = TempNode;
+			TempNode = TempNode->FirstChild(TempParameter);
+			if(TempNode == 0) return 0;
+		}
+		//此处采用先在父节点的子节点尾部加上一个需要添加的节点，再由此获得TiXmlNode，之后再移除尾节点，原因是无法直接用TiXmlNode定义变量
+		TiXmlElement *TempDelete = new TiXmlElement(strInsertElement);
+		preNode->LinkEndChild(TempDelete);
+		TiXmlNode *BeforeElement = preNode->FirstChild(strInsertElement);
+		preNode->InsertBeforeChild(TempNode,*BeforeElement);
+		preNode->RemoveChild(preNode->LastChild());
+	}
+	va_end(parameterlist);
+	return 1;
+}
+
+BOOL XmlInsertAttribute(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	char *strInsertAttributeName  = va_arg(parameterlist,char *);
+	char *strInsertAttributeValue = va_arg(parameterlist,char *);
+	TiXmlElement *TempParameter = Document->FirstChildElement(va_arg(parameterlist,char *));
+	if(TempParameter == 0) return 0;
+	number--;
+	number--;
+	number--;
+	while(number--!=0){
+		TempParameter = TempParameter->FirstChildElement(va_arg(parameterlist,char *));
+		if(TempParameter == 0) return 0;
+	}
+	if(*strInsertAttributeName == 0 && *strInsertAttributeValue != 0) return 0;
+	if(*strInsertAttributeName == 0 && *strInsertAttributeValue == 0){
+		TiXmlAttribute *FirstAttribute = TempParameter->FirstAttribute();
+		if(FirstAttribute == 0) return 0;
+		TempParameter->RemoveAttribute(FirstAttribute->Name());
+		return 1;
+	}
+	TempParameter->SetAttribute(strInsertAttributeName,strInsertAttributeValue);
+	va_end(parameterlist);
+	return 1;
+}
+
+BOOL XmlInsertComment(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	char *strInsertComment = va_arg(parameterlist,char *);
+	char *strInsertedElement = va_arg(parameterlist,char *);
+	TiXmlElement *TempElement = NULL;
+	number--;
+	number--;
+	if(*strInsertedElement == 0){
+		if(number == 0){
+			TiXmlComment *CommentVariable = new TiXmlComment(strInsertComment);
+			Document->LinkEndChild(CommentVariable);
+			return 1;
+		}
+		TempElement = Document->FirstChildElement(va_arg(parameterlist,char *));
+		number--;
+		if(TempElement == 0) return 0;
+		while(number--!=0){
+			TempElement = TempElement->FirstChildElement(va_arg(parameterlist,char *));
+			if(TempElement == 0) return 0;
+		}
+		TiXmlComment *CommentVariable = new TiXmlComment(strInsertComment);
+		TempElement->LinkEndChild(CommentVariable);
+	}
+	else{
+		//在某个节点前添加注释
+		if(number == 0){
+			//在最外层的节点上添加注释
+			TiXmlNode *InsertedNode = Document->FirstChild(strInsertedElement);
+			if(InsertedNode == 0) return 0;
+			TiXmlComment *CommentVariable = new TiXmlComment(strInsertComment);
+			Document->LinkEndChild(CommentVariable);
+			Document->InsertBeforeChild(InsertedNode,*(Document->LastChild()));
+			Document->RemoveChild(Document->LastChild());
+			return 1;
+		}
+		TempElement = Document->FirstChildElement(va_arg(parameterlist,char *));
+		number--;
+		if(TempElement == 0) return 0;
+		while(number--!=0){
+			TempElement = TempElement->FirstChildElement(va_arg(parameterlist,char *));
+			if(TempElement == 0) return 0;
+		}
+		TiXmlNode *InsertedNode = TempElement->FirstChild(strInsertedElement);
+		if(InsertedNode == 0) return 0;
+		TiXmlComment *CommentVariable = new TiXmlComment(strInsertComment);
+		TempElement->LinkEndChild(CommentVariable);
+		TiXmlNode *InsertNode = TempElement->FirstChild(strInsertComment);
+		TempElement->InsertBeforeChild(InsertedNode,*InsertNode);
+		TempElement->RemoveChild(TempElement->LastChild());
+	}
+	va_end(parameterlist);
+	return 1;
+}
+
+BOOL XmlInsertText(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	char *strInsertText = va_arg(parameterlist,char *);
+	TiXmlElement *TempParameter = Document->FirstChildElement(va_arg(parameterlist,char *));
+	if(TempParameter == 0) return 0;
+	number--;
+	number--;
+	while(number--!=0){
+		TempParameter = TempParameter->FirstChildElement(va_arg(parameterlist,char *));
+		if(TempParameter == 0) return 0;
+	}
+	TiXmlNode *temp = TempParameter->FirstChild();
+	if(temp != 0){
+		//当同级下一个为空时说明同级内全部找完
+		while(temp){
+			TiXmlText *text = temp->ToText();
+			if(text == 0) temp = temp->NextSibling();//=0说明没有文本节点，就同级找下一个
+			//一旦!=0说明找到文本节点
+			if(text != 0){
+				if(*strInsertText != 0){
+					TiXmlText *TextVariable = new TiXmlText(strInsertText);
+					TempParameter->LinkEndChild(TextVariable);
+					TiXmlNode *TempNode = TempParameter->FirstChild(strInsertText);
+					TempParameter->ReplaceChild(temp,*TempNode);
+					TempParameter->RemoveChild(TempParameter->LastChild(strInsertText));
+					va_end(parameterlist);
+					return 1;
+				}
+				if(*strInsertText == 0){
+					TempParameter->RemoveChild(temp);
+					return 1;
+				}
+			}
+		}
+	}
+	TiXmlText *TextVariable = new TiXmlText(strInsertText);
+	TempParameter->LinkEndChild(TextVariable);
+	va_end(parameterlist);
+	return 1;
+}
+
+//以下为读取
+
+BOOL XmlReadDeclaration(CString DeclarationArr[],TiXmlDocument *Document){
+	TiXmlNode *FirstNode = Document->FirstChild();
+	if(FirstNode == 0) return 0;
+	TiXmlDeclaration* Declaration = FirstNode->ToDeclaration();
+	if(Declaration == 0) return 0;
+	DeclarationArr[0] = Declaration->Version();
+	DeclarationArr[1] = Declaration->Encoding();
+	DeclarationArr[2] = Declaration->Standalone();
+	return 1;
+}
+
+int XmlReadAttribute(int number,OUT CString CStringTwo[][2],TiXmlDocument *Document,...){
+	int n = 0;
+	while(CStringTwo[n++][0] != "") CStringTwo[n - 1][0] = CStringTwo[n - 1][1] = "";
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlHandle docHandle(Document);
+	char *p = va_arg(parameterlist,char *);
+	TiXmlElement *temp = docHandle.FirstChildElement(p).ToElement();
+	if(temp == 0) return -1;
+	number--;
+	while(number--!=0){
+		temp = temp->FirstChildElement(va_arg(parameterlist,char *));
+		if(temp == 0) return -1;
+	}
+	TiXmlAttribute *Attribute = temp->FirstAttribute();
+	n = 0;
+	while(1){
+		if(Attribute == 0) break;
+		CStringTwo[n  ][0] = Attribute->Name ();
+		CStringTwo[n++][1] = Attribute->Value();
+		Attribute = Attribute->Next();
+	}
+	va_end(parameterlist);
+	return n;
+}
+
+CString XmlReadCommentReturnPre(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlElement *temp = Document->FirstChildElement(va_arg(parameterlist,char *));
+	if(temp == 0) return "-1";
+	number--;
+	while(number--!=0){
+		temp = temp->FirstChildElement(va_arg(parameterlist,char *));
+		if(temp == 0) return "-1";
+	}
+	TiXmlNode *CommentNode = temp->PreviousSibling();
+	if(CommentNode == 0) return "-1";
+	TiXmlComment *comment = CommentNode->ToComment();
+	if(comment == 0) return "-1";
+	CString XmlComment = comment->Value();
+	va_end(parameterlist);
+	return XmlComment;
+}
+
+CString XmlReadCommentReturnNext(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlElement *temp = Document->FirstChildElement(va_arg(parameterlist,char *));
+	if(temp == 0) return "-1";
+	number--;
+	while(number--!=0){
+		temp = temp->FirstChildElement(va_arg(parameterlist,char *));
+		if(temp == 0) return "-1";
+	}
+	TiXmlNode *CommentNode = temp->NextSibling();
+	if(CommentNode == 0) return "-1";
+	TiXmlComment *comment = CommentNode->ToComment();
+	if(comment == 0) return "-1";
+	CString XmlComment = comment->Value();
+	va_end(parameterlist);
+	return XmlComment;
+}
+
+CString XmlReadText(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlHandle docHandle(Document);
+	TiXmlElement *temp = docHandle.FirstChild(va_arg(parameterlist,char *)).ToElement();
+	if(temp == 0) return "-1";
+	number--;
+	while(number--!=0){
+		temp = temp->FirstChildElement(va_arg(parameterlist,char *));
+		if(temp == 0) return "-1";
+	}
+	TiXmlNode *TextNode = temp->FirstChild();
+	TiXmlText *Text = NULL;
+	if(TextNode == 0) return "-1";
+	while(TextNode){
+		Text = TextNode->ToText();
+		if(Text != 0) break;
+		TextNode = TextNode->NextSibling();
+	}
+	CString text = "-1";
+	if(Text != 0) text = Text->Value();
+	va_end(parameterlist);
+	return text;
+}
+
+BOOL XmlDeleteElement(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlNode *Temp = Document->FirstChild(va_arg(parameterlist,char *));
+	if(Temp == 0) return 0;
+	TiXmlNode *preTemp = NULL;
+	number--;
+	if(number == 0){
+		Document->RemoveChild(Temp);
+		return 1;
+	}
+	while(number-- != 0){
+		preTemp = Temp;
+		Temp = Temp->FirstChild(va_arg(parameterlist,char *));
+		if(Temp == 0) return 0;
+	}
+	preTemp->RemoveChild(Temp);
+	va_end(parameterlist);
+	return 1;	
+}
+
+TiXmlElement* XmlReturnElement(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlHandle docHandle(Document);
+	TiXmlElement *temp = docHandle.FirstChild(va_arg(parameterlist,char *)).ToElement();
+	if(temp == 0) return 0;
+	number--;
+	while(number--!=0){
+		temp = temp->FirstChildElement(va_arg(parameterlist,char *));
+		if(temp == 0) return 0;
+	}
+	va_end(parameterlist);
+	return temp;
+}
+
+int XmlReadAttributeUseElement(OUT CString CStringTwo[][2],TiXmlElement *TempElement){
+	int n = 0;
+	while(CStringTwo[n++][0] != "") CStringTwo[n - 1][0] = CStringTwo[n - 1][1] = "";
+	TiXmlAttribute *Attribute = TempElement->FirstAttribute();
+	n = 0;
+	while(1){
+		if(Attribute == 0) break;
+		CStringTwo[n  ][0] = Attribute->Name ();
+		CStringTwo[n++][1] = Attribute->Value();
+		Attribute = Attribute->Next();
+	}
+	return n;
+}
+
+CString XmlAttributeFind(IN CString CStringTwo[][2],CString AttributeName){
+	int n = 0;
+	while(CStringTwo[n][0] != AttributeName && CStringTwo[n++][0] != "");
+	if(CStringTwo[n][0] == "") return "-1";
+	return CStringTwo[n][1];
+}
+
+#endif
+
+
+#ifdef UseJson
+#ifdef AssistHeadFile
+
+ifstream JsonLoad(CString strPath){
+	ifstream file;
+	file.open(strPath.GetBuffer(),ios::binary);
+	strPath.ReleaseBuffer();
+	return file;
+}
+
+string JsonStyled(Value *root){
+	StyledWriter styledwriter;
+	string str = "";
+    return styledwriter.write(*root);
+}
+
+void JsonStyledSave(Value *root,char *strPath){
+	StyledWriter styledwriter;
+    ofstream OutputFileStream;
+    OutputFileStream.open(strPath);
+    OutputFileStream << styledwriter.write(*root);
+    OutputFileStream.close();
+}
+
+string JsonFast(Value *root){
+	FastWriter fastwriter;
+	string str = "";
+    return fastwriter.write(*root);
+}
+
+void JsonFastSave(Value *root,char *strPath){
+	FastWriter fastwriter;
+    ofstream OutputFileStream;
+    OutputFileStream.open(strPath);
+    OutputFileStream << fastwriter.write(*root);
+    OutputFileStream.close();
+}
+
+Value  RootPacket::Node[1000] = {};
+string RootPacket::stringNode[1000] = {};
+int    RootPacket::n = 0;
+
+void JsonClose(ifstream *file){
+	(*file).close();
+}
+
+#endif
+#endif
+
+CStopWatch::CStopWatch(){
+	time = GetTickCount();
+	StopTime = 0;
+	RunTime = 0;
+	StopOrRun = 1;
+	StopSecondsTime = 0;
+}
+
+unsigned long CStopWatch::GetWatchTime(){
+	if(StopOrRun == 0) return StopTime       - time;
+	else               return GetTickCount() - time;
+}
+
+void CStopWatch::SetWatchTime(unsigned long SetTime){
+	time = time - (SetTime - GetWatchTime());
+}
+
+void CStopWatch::Stop(){
+	if(StopOrRun == 0) return;
+	StopOrRun = 0;
+	StopTime = GetTickCount();
+}
+
+
+
+DWORD WINAPI StopThread(LPVOID lparam){
+	CStopWatch *p_StopWatch = (CStopWatch *)lparam;
+	unsigned long temp = GetTickCount();
+	
+	while(GetTickCount() - temp <= p_StopWatch->StopSecondsTime);
+	
+	p_StopWatch->Run();
+	p_StopWatch->StopOrRun = 1;
+	p_StopWatch->StopSecondsTime = 0;
+	return 0;
+}
+
+void CStopWatch::Stop(unsigned long StopSecondsTime){
+	Stop();
+	this->StopSecondsTime = StopSecondsTime;
+	DWORD ThreadID = NULL;
+	Create_Thread(StopThread,this,ThreadID);
+	//StopThread(this);
+}
+
+void CStopWatch::Run(){
+	if(StopOrRun == 1) return;
+	StopOrRun = 1;
+	RunTime = GetTickCount();
+	time = time + RunTime - StopTime;
+}
+
+int CStopWatch::GetHour(){
+	return GetWatchTime()/3600000;
+}
+
+int CStopWatch::GetMinute(){
+	return (GetWatchTime() - GetHour() * 3600000) / 60000;
+}
+
+double CStopWatch::GetSeconds(){
+	return (GetWatchTime() - GetHour() * 3600000 - GetMinute() * 60000) / 1000.0;
+}
+
+#ifdef AssistHeadFile
+
+CDrawPicture::CDrawPicture(CWnd *ParentThis){
+	this->ParentThis = ParentThis;
+	PictureID = 0;
+	layer = 0;
+	strPath = "";
+	WindowRect  = CRect(0,0,0,0);
+	PictureRect = CRect(0,0,0,0);
+	EndPoint.x = EndPoint.y = 0;
+
+	number = 0;
+	memset(Array,0,sizeof(Array));
+	memset(IDPoint,0,sizeof(IDPoint));
+	int n = 0;
+	int m = 0;
+	for(n = 0;n < 50;n++){
+		for(m = 0;m < 50;m++){
+			AttributeArray[n][m].PictureID   = 0             ;
+			AttributeArray[n][m].strPath     = ""            ;
+			AttributeArray[n][m].WindowRect  = CRect(0,0,0,0);
+			AttributeArray[n][m].PictureRect = CRect(0,0,0,0);
+		}
+	}
+}
+void CDrawPicture::SetPicture(unsigned int PictureID,int layer,CString strPath,CRect WindowRect,CRect PictureRect){
+	this->PictureID   = PictureID  ;
+	this->layer       = layer      ;
+	this->strPath     = strPath    ;
+	this->WindowRect  = WindowRect ;
+	this->PictureRect = PictureRect;
+
+	//把数据存入结构体数组，并且返回属性结尾点
+	EndPoint = RecordAttribute();
+
+}
+
+void CDrawPicture::Draw(){
+	//清屏
+	ParentThis->Invalidate();
+
+	//循环绘图
+	LoopDrawPicture();
+}
+
+POINT CDrawPicture::RecordAttribute(){
+	unsigned int IDNumber = AddNewX(PictureID,&number,50,Array);
+	if(IDNumber == 0){
+		IDPoint[number - 1].x = layer;
+		
+		//循环寻找IDPoint数组中所有.x为layer的个数，然后将这个个数 + 1 - 1后存入.y，并且按照.x和.y存入结构体数组中
+		int n = -1;
+		int m = 0;
+		while(n++ != number - 2){
+			if(IDPoint[n].x == layer) m++;
+		}
+		IDPoint[number - 1].y = m;
+
+		//出现同层新控件之后，尾点.y = m
+		EndPoint.y = m;
+
+		//存入
+		AttributeArray[IDPoint[number - 1].x][IDPoint[number - 1].y].PictureID   = this->PictureID  ;
+		AttributeArray[IDPoint[number - 1].x][IDPoint[number - 1].y].strPath     = this->strPath    ;
+		AttributeArray[IDPoint[number - 1].x][IDPoint[number - 1].y].WindowRect  = this->WindowRect ;
+		AttributeArray[IDPoint[number - 1].x][IDPoint[number - 1].y].PictureRect = this->PictureRect;
+
+	}
+	else{
+		//存入
+		AttributeArray[IDPoint[IDNumber - 1].x][IDPoint[IDNumber - 1].y].PictureID   = this->PictureID  ;
+		AttributeArray[IDPoint[IDNumber - 1].x][IDPoint[IDNumber - 1].y].strPath     = this->strPath    ;
+		AttributeArray[IDPoint[IDNumber - 1].x][IDPoint[IDNumber - 1].y].WindowRect  = this->WindowRect ;
+		AttributeArray[IDPoint[IDNumber - 1].x][IDPoint[IDNumber - 1].y].PictureRect = this->PictureRect;
+	}
+
+	//处理EndPoint
+	if(layer > EndPoint.x){
+		EndPoint.x = layer;
+		EndPoint.y = 0;
+	}
+	return EndPoint;
+	
+}
+
+void CDrawPicture::DrawOnePicture(unsigned int PictureID,CString strPath,CRect WindowRect,CRect PictureRect){
+
+	CImage img;
+	CStatic pic;
+	pic.Create("",WS_CHILD|WS_VISIBLE,CRect(0,0,0,0),ParentThis,PictureID);
+	CDC *pDC = ParentThis->GetDlgItem(PictureID)->GetDC();
+	//ParentThis->InvalidateRect(WindowRect);
+	HRESULT ret = img.Load(strPath); //wuziqi.png是我要加载的图片名称，包含路径
+
+
+	//处理缺省情况以及-1情况
+
+	//窗口和图片同时缺省
+	if((WindowRect.right == -1 && WindowRect.bottom == -1) && (PictureRect == CRect(0,0,0,0))){
+		WindowRect.right  = img.GetWidth()  + WindowRect.left;
+		WindowRect.bottom = img.GetHeight() + WindowRect.top ;
+
+		PictureRect.left = 0;
+		PictureRect.top  = 0;
+		PictureRect.right  = img.GetWidth ();
+		PictureRect.bottom = img.GetHeight();
+	}
+	//窗口限定，图片缺省，也就是缩小化或放大化
+	else if((!(WindowRect.right == -1 && WindowRect.bottom == -1)) && (PictureRect == CRect(0,0,0,0))){
+		PictureRect.left = 0;
+		PictureRect.top  = 0;
+		PictureRect.right  = img.GetWidth ();
+		PictureRect.bottom = img.GetHeight();
+	}
+	//窗口缺省，图片限定，属于按原大小展现图片的某个区域
+	else if((WindowRect.right == -1 && WindowRect.bottom == -1) && (!(PictureRect == CRect(0,0,0,0)))){
+		WindowRect.right  = PictureRect.right  - PictureRect.left + WindowRect.left;
+		WindowRect.bottom = PictureRect.bottom - PictureRect.top  + WindowRect.top ;
+	}
+	
+	HBITMAP hbitmap = img.Detach();
+	//像操作 BMP 图片一样处理图片 ,下面是显示图片的操作
+	CBitmap cBitmap;
+	BITMAP bitmap;
+	CDC memdc;
+	cBitmap.Attach(hbitmap);
+	memdc.CreateCompatibleDC(pDC);
+	memdc.SelectObject(hbitmap);
+	cBitmap.GetBitmap(&bitmap);
+
+	//函数要求传入的CRect中第三四个参数是宽和高，而我们传入的是右下角，所以需要相减
+	pDC->StretchBlt(WindowRect.left,WindowRect.top,WindowRect.right - WindowRect.left,WindowRect.bottom - WindowRect.top,&memdc,PictureRect.left,PictureRect.top,PictureRect.right - PictureRect.left,PictureRect.bottom - PictureRect.top,SRCCOPY);
+}
+
+void CDrawPicture::LoopDrawPicture(){
+	int n = 0;
+	for(n = 0;n <= EndPoint.x;n++){
+		int m = -1;
+		while(1){
+			m++;
+			if(AttributeArray[n][m].strPath == ""  ) break   ;
+			if(AttributeArray[n][m].strPath == "-1") continue;
+			DrawOnePicture(AttributeArray[n][m].PictureID,AttributeArray[n][m].strPath,AttributeArray[n][m].WindowRect,AttributeArray[n][m].PictureRect);
+		}
+	}
+}
+
+void CDrawPicture::ReMovePicture(unsigned int PictureID){
+	unsigned int IDNumber = AddNewX(PictureID,&number,50,Array);
+	if(IDNumber == 0){
+		Array[number - 1] = 0;
+		number--;
+		return;
+	}
+	AttributeArray[IDPoint[IDNumber - 1].x][IDPoint[IDNumber - 1].y].strPath = "-1";
+}
+
+#endif
+
+bool CAmHttpSocket::Download(const CString& strFileURLInServer/*待下载文件的URL*/,const CString & strFileLocalFullPath/*存放到本地的路径*/)
+{
+	ASSERT(strFileURLInServer != "");
+	ASSERT(strFileLocalFullPath != "");
+	CInternetSession session;
+	CHttpConnection* pHttpConnection = NULL;
+	CHttpFile* pHttpFile = NULL;
+	CString strServer, strObject;
+	INTERNET_PORT wPort;
+
+	DWORD dwType;
+	const int nTimeOut = 2000;
+	session.SetOption(INTERNET_OPTION_CONNECT_TIMEOUT, nTimeOut); //重试之间的等待延时
+	session.SetOption(INTERNET_OPTION_CONNECT_RETRIES, 1);   //重试次数
+	char* pszBuffer = NULL;  
+	try
+	{
+		AfxParseURL(strFileURLInServer, dwType, strServer, strObject, wPort);
+		pHttpConnection = session.GetHttpConnection(strServer, wPort);
+		pHttpFile = pHttpConnection->OpenRequest(CHttpConnection::HTTP_VERB_GET,strObject);
+		if(pHttpFile->SendRequest() == FALSE) return false;
+		DWORD dwStateCode;
+		pHttpFile->QueryInfoStatusCode(dwStateCode);
+		if(dwStateCode == HTTP_STATUS_OK)
+		{
+			HANDLE hFile = CreateFile(strFileLocalFullPath,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL); //创建本地文件
+			if(hFile == INVALID_HANDLE_VALUE)
+			{
+				pHttpFile->Close();
+				pHttpConnection->Close();
+				session.Close();
+				return false;
+			}
+
+			char szInfoBuffer[1000];  //返回消息
+			DWORD dwFileSize = 0;   //文件长度
+			DWORD dwInfoBufferSize = sizeof(szInfoBuffer);
+			BOOL bResult = FALSE;
+			bResult = pHttpFile->QueryInfo(HTTP_QUERY_CONTENT_LENGTH,(void*)szInfoBuffer,&dwInfoBufferSize,NULL);
+
+			dwFileSize = atoi(szInfoBuffer);
+			const int BUFFER_LENGTH = 1024 * 10;
+			pszBuffer = new char[BUFFER_LENGTH];  //读取文件的缓冲
+			DWORD dwWrite, dwTotalWrite;
+			dwWrite = dwTotalWrite = 0;
+			UINT nRead = pHttpFile->Read(pszBuffer, BUFFER_LENGTH); //读取服务器上数据
+
+			while(nRead > 0)
+			{
+				WriteFile(hFile, pszBuffer, nRead, &dwWrite, NULL);  //写到本地文件
+				dwTotalWrite += dwWrite;
+				nRead = pHttpFile->Read(pszBuffer, BUFFER_LENGTH);
+			}
+
+			delete[]pszBuffer;
+			pszBuffer = NULL;
+			CloseHandle(hFile);
+		}
+		else
+		{
+			delete[]pszBuffer;
+			pszBuffer = NULL;
+			if(pHttpFile != NULL)
+			{
+				pHttpFile->Close();
+				delete pHttpFile;
+				pHttpFile = NULL;
+			}
+			if(pHttpConnection != NULL)
+			{
+				pHttpConnection->Close();
+				delete pHttpConnection;
+				pHttpConnection = NULL;
+			}
+			session.Close();
+			return false;
+		}
+	}
+	catch(...)
+	{
+		delete[]pszBuffer;
+		pszBuffer = NULL;
+		if(pHttpFile != NULL)
+		{
+			pHttpFile->Close();
+			delete pHttpFile;
+			pHttpFile = NULL;
+		}
+		if(pHttpConnection != NULL)
+		{
+			pHttpConnection->Close();
+			delete pHttpConnection;
+			pHttpConnection = NULL;
+		}
+		session.Close();
+		return false;
+	}
+
+	if(pHttpFile != NULL) pHttpFile->Close();
+	if(pHttpConnection != NULL)
+	pHttpConnection->Close();
+	session.Close();
+	return true;
+}
+
+
+#define AgentName _T("Nimo Software HTTP Retriever 1.0")
+
+//case insensitive search functions...
+#ifdef UNICODE
+#define _tcsustr wcsustr
+#else
+#define _tcsustr strustr
+#endif
+
+char* strustr(char *source, char *s);
+wchar_t* wcsustr(wchar_t *source, wchar_t *s);
+
+char* strustr(char *source, char *s)
+{
+	//make an uppercase copy af source and s
+	char *csource = _strdup(source);
+	char *cs = _strdup(s);
+	_strdup(csource);
+	_strdup(cs);
+	//find cs in csource...
+	char *result = strstr(csource, cs);
+	if(result != NULL)
+	{
+		//cs is somewhere in csource
+		int pos = result - csource;
+		result = source;
+		result += pos;
+	}
+	//clean up
+	free(csource);
+	free(cs);
+	return result;
+}
+
+wchar_t* wcsustr(wchar_t *source, wchar_t *s)
+{
+	//make an uppercase copy af source and s
+	wchar_t *csource = _wcsdup(source);
+	wchar_t *cs = _wcsdup(s);
+#ifdef _CRT_SECURE_NO_WARNINGS
+#endif
+	_wcsupr_s(csource,wcslen(csource) + 1);
+	_wcsupr_s(cs,wcslen(cs) + 1);
+	//find cs in csource...
+	wchar_t *result = wcsstr(csource, cs);
+	if(result != NULL)
+	{
+		//cs is somewhere in csource
+		int pos = result - csource;
+		result = source;
+		result += pos;
+	}
+	//clean up
+	free(csource);
+	free(cs);
+	return result;
+}
+
+INT CAmHttpSocket::GetFile(const CString strUrl,const CString strSavePath)  
+{
+    //检查传入的两个参数  
+    if (strUrl.IsEmpty())  
+        return -5;  
+    if (strSavePath.IsEmpty())  
+        return -6;  
+  
+    unsigned short nPort;       //用于保存目标HTTP服务端口  
+    CString strServer, strObject;   //strServer用于保存服务器地址，strObject用于保存文件对象名称  
+    DWORD dwServiceType,dwRet;      //dwServiceType用于保存服务类型，dwRet用于保存提交GET请求返回的状态号  
+  
+    //解析URL，获取信息  
+    if(!AfxParseURL(strUrl, dwServiceType, strServer, strObject, nPort))  
+    {  
+        //解析失败，该Url不正确  
+        return -1;  
+    }  
+    //创建网络连接对象，HTTP连接对象指针和用于该连接的HttpFile文件对象指针，注意delete  
+    CInternetSession intsess;  
+    CHttpFile *pHtFile = NULL;  
+    //建立网络连接  
+    CHttpConnection *pHtCon = intsess.GetHttpConnection(strServer,nPort);  
+    if(pHtCon == NULL)  
+    {  
+        //建立网络连接失败  
+        intsess.Close();  
+        return -2;  
+    }  
+    //发起GET请求  
+    pHtFile = pHtCon->OpenRequest(CHttpConnection::HTTP_VERB_GET,strObject);  
+    if(pHtFile == NULL)  
+    {  
+        //发起GET请求失败  
+        intsess.Close();  
+        delete pHtCon;pHtCon = NULL;  
+        return -3;  
+    }  
+    //提交请求  
+    pHtFile->SendRequest();  
+    //获取服务器返回的状态号  
+    pHtFile->QueryInfoStatusCode(dwRet);  
+    if (dwRet != HTTP_STATUS_OK)  
+    {  
+        //服务器不接受请求  
+        intsess.Close();  
+        delete pHtCon;pHtCon = NULL;  
+        delete pHtFile;pHtFile = NULL;  
+        return -4;  
+    }  
+    //获取文件大小  
+    UINT nFileLen = (UINT)pHtFile->GetLength();  
+    DWORD dwRead = 1;       //用于标识读了多少，为1是为了进入循环  
+    //创建缓冲区  
+    CHAR *szBuffer = new CHAR[nFileLen+1];  
+    TRY   
+    {  
+        //创建文件  
+        CFile PicFile(strSavePath,CFile::modeCreate|CFile::modeWrite|CFile::shareExclusive);  
+        while(dwRead>0)  
+        {    
+            //清空缓冲区  
+            memset(szBuffer,0,(size_t)(nFileLen+1));  
+            //读取到缓冲区  
+            dwRead = pHtFile->Read(szBuffer,nFileLen);   
+            //写入到文件  
+            PicFile.Write(szBuffer,dwRead);  
+        }  
+        //关闭文件  
+        PicFile.Close();  
+        //释放内存  
+        delete []szBuffer;  
+        delete pHtFile;  
+        delete pHtCon;  
+        //关闭网络连接  
+        intsess.Close();  
+    }  
+    CATCH(CFileException,e)  
+    {  
+        //释放内存  
+        delete []szBuffer;  
+        delete pHtFile;  
+        delete pHtCon;  
+        //关闭网络连接  
+        intsess.Close();  
+        return -7;          //读写文件异常  
+    }  
+    END_CATCH  
+        return 0;  
+}
+
+CAmHttpSocket::CAmHttpSocket()
+{
+	LastError = 0;
+	ReceivedData = NULL;
+	Headers = NULL;
+	hIO = NULL;
+	hIS = NULL;
+	hCO = NULL;
+	hIO = InternetOpen(AgentName,INTERNET_OPEN_TYPE_DIRECT,NULL,NULL,0);
+}
+
+CAmHttpSocket::~CAmHttpSocket()
+{
+	if(ReceivedData != NULL) free               (ReceivedData);
+	if(Headers      != NULL) free               (Headers     );
+	if(hIO          != NULL) InternetCloseHandle(hIO         );
+	if(hIS          != NULL) InternetCloseHandle(hIS         );
+	if(hCO          != NULL) InternetCloseHandle(hCO         );
+}
+
+bool CAmHttpSocket::OpenUrl(const TCHAR *url)
+{
+	if(hIS != NULL) InternetCloseHandle(hIS);
+	hIS = InternetOpenUrl(hIO, url, NULL, 0, HTTP_QUERY_DATE, 0);
+	if(hIS != NULL) return true;
+	else
+	{
+		LastError = GetLastError();
+		return false;
+	}
+}
+
+bool CAmHttpSocket::PostUrl(const TCHAR *url, const char *PostData, int PostDataLength)
+{
+	//check length of postdata
+	if(PostDataLength == -1)
+	PostDataLength = strlen(PostData);
+	//some variable that we need...
+	URL_COMPONENTS uc;
+	//let's split the url...
+	uc.dwStructSize = sizeof(uc);
+	uc.lpszScheme = NULL;
+	uc.dwSchemeLength = 0;
+	uc.lpszHostName = NULL;
+	uc.dwHostNameLength = 1;
+	uc.nPort = 0;
+	uc.lpszUserName = NULL;
+	uc.dwUserNameLength = 0;
+	uc.lpszPassword = NULL;
+	uc.dwPasswordLength = 0;
+	uc.lpszUrlPath = NULL;
+	uc.dwUrlPathLength = 1;
+	uc.lpszExtraInfo = NULL;
+	uc.dwExtraInfoLength = 0;
+	InternetCrackUrl(url, _tcslen(url), 0, &uc);
+	//post the data...
+	if(hCO != NULL) InternetCloseHandle(hCO);
+	TCHAR *HostName = _tcsdup(uc.lpszHostName);
+	HostName[uc.dwHostNameLength] = '\0';
+	TCHAR *FileName = _tcsdup(uc.lpszUrlPath);
+	FileName[uc.dwUrlPathLength] = '\0';
+	if(hIS != NULL) InternetCloseHandle(hIS); //if open, close the handle to the connection
+	DWORD flags;
+	if(uc.nPort == 80)
+	{
+		//we are talking plain http
+		flags = INTERNET_FLAG_NO_CACHE_WRITE;
+	}
+	else
+	{
+		//we are talking secure https
+		flags = INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_SECURE |
+		INTERNET_FLAG_IGNORE_CERT_CN_INVALID | INTERNET_FLAG_IGNORE_CERT_DATE_INVALID;
+	}
+	TCHAR headers[] = _T("Content-Type: application/x-www-form-urlencoded"); //content type for post...
+	TCHAR szAccept[] = _T("*/*"); //we accept everything...
+	LPTSTR AcceptTypes[2]={0};
+	AcceptTypes[0]=szAccept;
+	hCO = InternetConnect(hIO, HostName, uc.nPort, _T(""), _T(""), INTERNET_SERVICE_HTTP, INTERNET_FLAG_NO_CACHE_WRITE, 0);
+	hIS = HttpOpenRequest(hCO, _T("POST"), FileName, NULL, NULL, (LPCTSTR*)AcceptTypes, flags, 0);
+	if(!HttpSendRequest(hIS, headers, _tcslen(headers), (TCHAR*)PostData, PostDataLength))
+	{
+		LastError = GetLastError();
+		free(HostName);
+		free(FileName);
+		return false;
+	}
+	free(HostName);
+	free(FileName);
+	return true;
+}
+
+TCHAR* CAmHttpSocket::GetHeaders(const TCHAR *url)
+{
+	//did we get an url?
+	if(url == NULL)
+	{
+		LastError = -1;
+		return NULL;
+	}
+	//open the url...
+	OpenUrl(url);
+	//delete old headers...
+	if(Headers != NULL) free(Headers);
+	Headers = (TCHAR*)calloc(1, sizeof(TCHAR));
+	//get the size headers
+	DWORD d = 1, d2 = 0;
+	int i = HttpQueryInfo(hIS, HTTP_QUERY_RAW_HEADERS, Headers, &d, &d2);
+	//alloc some space for the headers
+	Headers = (TCHAR*)realloc(Headers, d * sizeof(TCHAR));
+	if(!HttpQueryInfo(hIS, HTTP_QUERY_RAW_HEADERS, Headers, &d, &d2)) return NULL;
+	return Headers;
+}
+
+char* CAmHttpSocket::GetPage(const TCHAR *url, bool Post, const char *PostData, int PostDataLength)
+{
+	//did we get an url?
+	if(url == NULL)
+	{
+		LastError = -1;
+		return NULL;
+	}
+	//get the page and store it in ReceivedData...
+	if(Post)
+	{
+		//use http post...
+		if(!PostUrl(url, PostData, PostDataLength)) return NULL;
+	}
+	else
+	{
+		//use http get
+		if(!OpenUrl(url)) return NULL;
+	}
+	const int rdsize = 8192;
+	char mr[rdsize];
+	DWORD rd;
+	int curpos = 0;
+	if(ReceivedData != NULL) free(ReceivedData);
+	ReceivedData = (char*)calloc(rdsize + 1, sizeof(char));
+	while(InternetReadFile(hIS, mr, rdsize - 1, &rd))
+	{
+		if(rd == 0) break;
+		mr[rd] = '\0';
+		curpos += rd;
+		ReceivedData[curpos] = '\0';
+		strcat_s(ReceivedData,curpos,mr);
+		ReceivedData = (char*)realloc(ReceivedData, curpos + rdsize);
+	}
+	return ReceivedData;
+}
+
+TCHAR* CAmHttpSocket::GetHeaderLine(TCHAR *s)
+{
+	//find a line in the headers that contains s, and return a pointer to the line...
+	if(Headers == NULL) return NULL;
+	TCHAR *ts = Headers;
+	if(_tcsustr(ts, s) != NULL) return ts;
+	while(1)
+	{
+		if(*ts == '\0' && ts[1] == '\0') break;
+		if(*ts == '\0')
+		{
+			ts++;
+			if(_tcsustr(ts, s) != NULL) return ts;
+		}
+		else ts++;
+	}
+	return NULL;
+}
+
+int CAmHttpSocket::GetPageStatusCode()
+{
+	//get the correct header line
+	TCHAR *s = GetHeaderLine(_T("http"));
+	if(s == NULL) return 0; //no headers
+	//find the 3 digit code...
+	if(_tcslen(s) < 3) return 0; //some error,  the string is too short...
+	while(!(isdigit(s[0]) && isdigit(s[1]) && isdigit(s[2])))
+	{
+		if(s[3] == '\0') return 0; //we have reached the end of the string, without finding the number...
+		s++;
+	}
+	//make a copy of s, and return the code
+	TCHAR *code = _tcsdup(s);
+	code[3] = '\0'; //remove all text after the 3 digit response code
+	int result = _ttoi(code);
+	free(code);
+	return result;
+}
+
+CLOAD::CLOAD(CString DllPath)
+{
+	FPI_DllHinstance = LoadLibraryEx(DllPath,0,LOAD_WITH_ALTERED_SEARCH_PATH); //动态加载DLL
+	memset(FunArr,0,CLOAD_FunNumber);
+	CString ErrorFunName = "";
+	ErrorFunNumber = 0;
+}
+
+CLOAD::~CLOAD()
+{
+	::FreeLibrary(FPI_DllHinstance); //释放DLL
+}
+
+MultiBool CLOAD::Check_Fun(int number,...){
+	if(FPI_DllHinstance == NULL) return -1;
+	va_list list;
+	va_start(list,number);
+	int n = 0;
+	int AllRight = 1;
+	while(n != number){
+		char *TempFun = va_arg(list,char *);
+		FunArr[n++] = (void *)(void(__stdcall *)())GetProcAddress(FPI_DllHinstance,TempFun);
+		if(FunArr[n - 1] == 0){
+			ErrorFunName = ErrorFunName + TempFun + " ";
+			ErrorFunNumber++;
+			AllRight = 0;
+		}
+	}
+	va_end(list);
+	return AllRight;
+}
+
+void CLOAD::Load_Fun(int number,...){
+	va_list list;
+	va_start(list,number);
+	int n = 0;
+	while(n != number){
+		*(va_arg(list,void **)) = FunArr[n++];
+	}
+	va_end(list);
+	return ;
+}
+
+FunName::FunName(void **TempFunAddr,const char szTempFun[]){
+	this->TempFunAddr = TempFunAddr;
+	this->strTempFun = szTempFun;
+	strTempFun.Replace("(","");
+	strTempFun.Replace(")","");
+	strTempFun.Replace(" ","");
+};
+
+MultiBool CLOAD::LoadFun(int number,...){
+	if(FPI_DllHinstance == NULL) return -1;
+	va_list list;
+	va_start(list,number);
+	int AllRight = 1;
+	while(number-- != 0){
+		FunName AddrAndName = (va_arg(list,FunName));
+		*AddrAndName.TempFunAddr = (void *)(void(__stdcall *)())GetProcAddress(FPI_DllHinstance,AddrAndName.strTempFun);
+		if(*AddrAndName.TempFunAddr == 0){
+			ErrorFunName = ErrorFunName + AddrAndName.strTempFun + " ";
+			ErrorFunNumber++;
+			AllRight = 0;
+		}
+	}
+	va_end(list);
+	return AllRight;
+}
+
+int Power(int BaseNumber,int power){
+    int BackupBaseNumber = BaseNumber;
+    if(power == 0) return 1;
+    else if(BaseNumber == 0 && power != 0) return 0;
+	int i = 0;
+    for(i = 1;i < power;i++){
+       BaseNumber = BaseNumber * BackupBaseNumber;
+    }
+    return BaseNumber;
+}
+
+
+CBigNumber::CBigNumber(){
+	memset(number,0,BigNumberLength);
+}
+
+CBigNumber::CBigNumber(int InitNumber){
+	memset(number,0,BigNumberLength);
+	*this = InitNumber;
+}
+
+CBigNumber::CBigNumber(char* strInitNumber){
+	memset(number,0,BigNumberLength);
+	*this = strInitNumber;
+}
+
+CBigNumber::CBigNumber(CRadixTool InitNumber){
+	memset(number,0,BigNumberLength);
+	*this = InitNumber;
+}
+
+CBigNumber CBigNumber::operator = (int InitNumber){
+	char temp[15] = {};
+	sprintf_s(temp,"%d",InitNumber);
+	UnnecessaryToX(temp,0);
+	*this = temp;
+	return *this;
+}
+
+CBigNumber CBigNumber::operator = (char *strInitNumber){
+	strcpy_x(number,strInitNumber,0);
+	_strrev(number);
+	return *this;
+}
+
+CBigNumber CBigNumber::operator = (CRadixTool InitNumber){
+	if(InitNumber.NumberArray[0] == -1){
+		*this = -1;
+		return *this;
+	}
+	CBigNumber BigNumberRadix = InitNumber.radix;
+	CBigNumber AllNumber = 0;
+	int x = 0;
+	while(InitNumber.NumberArray[x] != -2){
+		AllNumber = AllNumber + InitNumber.NumberArray[x] * (BigNumberRadix ^ x);
+		x++;
+	}
+	*this = AllNumber;//这句话使=左边的值变为AllNumber
+	return *this;//这句话使(a = b)的值为a的值，如果在调用的时候只写a = b;则这句话没用到
+	
+}
+
+CBigNumber operator + (CBigNumber x,CBigNumber y){
+	CBigNumber z;
+	if(x == -1 || y == -1) return -1;
+	int temp = 0;
+	int i = -1;
+	while(1){
+		i++;
+		if(x.number[i] == 0 && y.number[i] == 0){
+			if(z.number[i] == 1) z.number[i] = 49;
+			break;
+		}
+		z.number[i] = z.number[i] + (x.number[i] == 0 ? x.number[i] : x.number[i] - 48) + (y.number[i] == 0 ? y.number[i] : y.number[i] - 48) + 48;
+		if(z.number[i] > 57){
+			z.number[i] = z.number[i] - 10;
+			z.number[i + 1]++;
+		}
+	}
+	return z;
+}
+
+CBigNumber operator - (CBigNumber x,CBigNumber y){
+	CBigNumber z;
+	if(x == -1 ||y == -1) return z = -1;
+	if(strlen(x.number) < strlen(y.number)) return z = "-1";
+	int temp = 0;
+	int i = -1;
+	while(1){
+		i++;
+		if(x.number[i] == 0 && y.number[i] == 0){
+			int n = strlen(z.number);
+			while(n-- != 0){
+				if(n == 0) return z;
+				if(z.number[n] == 48) z.number[n] = 0;
+				else return z;
+			}
+		}
+		if(x.number[i] >= y.number[i]){
+			z.number[i] = z.number[i] + (x.number[i] == 0 ? x.number[i] : x.number[i] - 48) - (y.number[i] == 0 ? y.number[i] : y.number[i] - 48) + 48;
+		}
+		else{
+			z.number[i] = z.number[i] + 10 + (x.number[i] == 0 ? x.number[i] : x.number[i] - 48) - (y.number[i] == 0 ? y.number[i] : y.number[i] - 48) + 48 ;
+			x.number[i + 1]--;
+			int n = i;
+			while(x.number[n + 1] == 47){
+				x.number[n + 1] = 57;
+				x.number[n + 2]--;
+				n++;
+			}
+			if(x.number[i + 1] == -1) return z = "-1";
+		}
+	}
+}
+
+CBigNumber operator * (CBigNumber x,CBigNumber y){
+	CBigNumber z;
+	if(x == -1 ||y == -1) return -1;
+	int i = 0,j = 0;
+	int xLength = strlen(x.number);
+	int yLength = strlen(y.number);
+	for(i = 0;i < xLength;i++){
+		for(j = 0;j < yLength;j++){
+			z.number[i + j] = (z.number[i + j] == 0 ? z.number[i + j] : z.number[i + j] - 48) + (x.number[i] - 48) * (y.number[j] - 48);
+			if(z.number[i + j] / 10 != 0){
+				z.number[i + j + 1] = (z.number[i + j + 1] == 0 ? z.number[i + j + 1] : z.number[i + j + 1] - 48) + z.number[i + j] / 10 + 48;
+			}
+			z.number[i + j] = z.number[i + j] % 10 + 48;
+		}
+	}
+	i = strlen(z.number);
+	while(i-- != 1){
+		if(z.number[i] == 48) z.number[i] = 0;
+		else break;
+	}
+	return z;
+}
+
+CBigNumber operator ^ (CBigNumber x,CBigNumber y){
+	CBigNumber z;
+	if(x == -1 ||y == -1) return -1;
+	CBigNumber temp;
+	temp = "1";
+	z = "1";
+	while(1){
+		if(y == "0") break;
+		y = y - temp;
+		z = z * x;
+	}
+	return z;
+}
+
+void CBigNumber::HighNumberInto(CBigNumber *x,CBigNumber *y){
+	int yLengthTemp = strlen((*y).number);
+	while(yLengthTemp-- != 0) (*y).number[yLengthTemp + 1] = (*y).number[yLengthTemp];
+	(*y).number[0] = (*x).number[strlen((*x).number) - 1];
+	(*x).number[strlen((*x).number) - 1] = 0;
+}
+
+CBigNumber operator / (CBigNumber x,CBigNumber y){
+	CBigNumber z;
+	if(x == -1 ||y == -1) return -1;
+	int xLength = strlen(x.number);
+	int yLength = strlen(y.number);
+	if(y == "0") return z = "-1";
+	if((x - y) == "-1") return z = "0";
+	CBigNumber TempDividend;
+	while(1){
+		x.HighNumberInto(&x,&TempDividend);
+		if(strlen(TempDividend.number) == yLength) break;
+	}
+	CBigNumber ResultNumber;
+	int ResultTemp = 0;
+	while(1){
+		ResultNumber = "1";
+		while(1){
+			if((TempDividend - y * ResultNumber) == "-1") break;
+			ResultNumber.number[0]++;
+		}
+		ResultNumber.number[0]--;
+		z.number[ResultTemp++] = ResultNumber.number[0];
+		if(z.number[0] == 48){
+			z.number[0] = 0;
+			ResultTemp--;
+		}
+		TempDividend = TempDividend - y * ResultNumber;
+		if(strlen(x.number) == 0) break;
+		x.HighNumberInto(&x,&TempDividend);
+		if(TempDividend.number[1] == 48 && strlen(TempDividend.number) == 2) TempDividend.number[1] = 0;
+	}
+	_strrev(z.number);
+	return z;
+}
+
+CBigNumber operator % (CBigNumber x,CBigNumber y){
+	CBigNumber z;
+	if(x == -1 ||y == -1) return -1;
+	if(y == 0) return -1;
+	z = x - x / y * y;
+	return z;
+}
+
+CBigNumber operator + (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp + y;
+}
+
+CBigNumber operator - (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp - y;
+}
+
+CBigNumber operator * (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp * y;
+}
+
+CBigNumber operator ^ (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp ^ y;
+}
+
+CBigNumber operator / (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp / y;
+}
+
+CBigNumber operator % (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp % y;
+}
+
+CBigNumber operator + (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x + temp;
+}
+
+CBigNumber operator - (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x - temp;
+}
+
+CBigNumber operator * (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x * temp;
+}
+
+CBigNumber operator ^ (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x ^ temp;
+}
+
+CBigNumber operator / (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x / temp;
+}
+
+CBigNumber operator % (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x % temp;
+}
+
+CBigNumber operator + (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp + y;
+}
+
+CBigNumber operator - (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp - y;
+}
+
+CBigNumber operator * (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp * y;
+}
+
+CBigNumber operator ^ (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp ^ y;
+}
+
+CBigNumber operator / (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp / y;
+}
+
+CBigNumber operator % (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp % y;
+}
+
+CBigNumber operator + (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x + temp;
+}
+
+CBigNumber operator - (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x - temp;
+}
+
+CBigNumber operator * (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x * temp;
+}
+
+CBigNumber operator ^ (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x ^ temp;
+}
+
+CBigNumber operator / (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x / temp;
+}
+
+CBigNumber operator % (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x % temp;
+}
+
+MultiBool operator == (CBigNumber x,CBigNumber y){
+	int i = 0,result = 1;
+	while(1){
+		if(x.number[i] == 0 && y.number[i] == 0) break;
+		result = result && (x.number[i] == y.number[i]);
+		if(result == 0) break;
+		i++;
+	}
+	return result;
+}
+
+MultiBool operator != (CBigNumber x,CBigNumber y){
+	if(x == -1 || y == -1) return -1;
+	return !(x == y);
+}
+
+MultiBool operator > (CBigNumber x,CBigNumber y){
+	if(x == -1 || y == -1) return -1;
+	return ((y - x) == -1);
+}
+
+MultiBool operator >= (CBigNumber x,CBigNumber y){
+	if(x == -1 || y == -1) return -1;
+	return (!((x - y) == -1));
+}
+
+MultiBool operator < (CBigNumber x,CBigNumber y){
+	if(x == -1 || y == -1) return -1;
+	return ((x - y) == -1);
+}
+
+MultiBool operator <= (CBigNumber x,CBigNumber y){
+	if(x == -1 || y == -1) return -1;
+	return (!((y - x) == -1));
+}
+
+MultiBool operator == (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x == temp;
+}
+
+MultiBool operator != (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x != temp;
+}
+
+MultiBool operator > (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x > temp;
+}
+
+MultiBool operator >= (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x >= temp;
+}
+
+MultiBool operator < (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x < temp;
+}
+
+MultiBool operator <= (CBigNumber x,int y){
+	CBigNumber temp = y;
+	return x <= temp;
+}
+
+MultiBool operator == (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp == y;
+}
+
+MultiBool operator != (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp != y;
+}
+
+MultiBool operator > (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp > y;
+}
+
+MultiBool operator >= (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp >= y;
+}
+
+MultiBool operator < (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp < y;
+}
+
+MultiBool operator <= (int x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp <= y;
+}
+
+MultiBool operator == (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x == temp;
+}
+
+MultiBool operator != (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x != temp;
+}
+
+MultiBool operator > (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x > temp;
+}
+
+MultiBool operator >= (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x >= temp;
+}
+
+MultiBool operator < (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x < temp;
+}
+
+MultiBool operator <= (CBigNumber x,char* y){
+	CBigNumber temp = y;
+	return x <= temp;
+}
+
+MultiBool operator == (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp == y;
+}
+
+MultiBool operator != (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp != y;
+}
+
+MultiBool operator > (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp > y;
+}
+
+MultiBool operator >= (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp >= y;
+}
+
+MultiBool operator < (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp < y;
+}
+
+MultiBool operator <= (char* x,CBigNumber y){
+	CBigNumber temp = x;
+	return temp <= y;
+}
+
+CBigNumber CBigNumber::operator ++ (){
+	*this = *this + 1;
+	return *this;
+}
+
+CBigNumber CBigNumber::operator -- (){
+	*this = *this - 1;
+	return *this;
+}
+
+CBigNumber CBigNumber::operator ++ (int){
+	CBigNumber temp = *this;
+	*this = *this + 1;
+	return temp;
+}
+
+CBigNumber CBigNumber::operator -- (int){
+	CBigNumber temp = *this;
+	*this = *this - 1;
+	if(temp == 0) return -1;
+	return temp;
+}
+
+int CBigNumber::InvertOut(char *OutString){
+	if(OutString != NULL){
+		memset(OutString,0,strlen(OutString));
+		strcpy_x(OutString,number,0);
+	}
+	if(*this <= 2147483647) return atoi(number);
+	else return -1;
+}
+
+int CBigNumber::Sequence(char *OutString){
+	if(OutString != NULL){
+		memset(OutString,0,strlen(OutString));
+		strcpy_x(OutString,number,0);
+		_strrev(OutString);
+	}
+	if(*this == -1) return -1;
+	if(*this <= 2147483647){
+		int length = strlen(number);
+		int Result = 0;
+		while(length-- != 0) Result = Result + (number[length] - 48) * Power(10,length);
+		return Result;
+	}
+	else return -1;
+}
+
+void UnnecessaryToXA(char *arr,int size,int number){
+	int length = strlen(arr);
+	while(size-- != length + 1) *(arr + size) = number;
+}
+
+
+CRadixTool::CRadixTool(int radix){
+	this->radix = radix;
+	int x = sizeof(this->NumberArray) / 4;
+	while(x-- != 0) this->NumberArray[x] = -2;
+}
+
+CRadixTool CRadixTool::operator = (CRadixTool InitNumber){
+	CBigNumber temp = InitNumber;
+	*this = temp;
+	return *this;
+}
+
+CRadixTool CRadixTool::operator = (int InitNumber){
+	CBigNumber temp = InitNumber;
+	*this = temp;
+	return *this;
+}
+
+CRadixTool CRadixTool::operator = (char* strInitNumber){
+	char strTempInitNumber[RadixToolLength] = {};
+	int x = 0;
+	while(1){
+		if(strInitNumber[x] == 48) x++;
+		else if(strInitNumber[x] == 0){
+			x--;
+			break;
+		}
+		else break;
+	}
+	strcpy_x(strTempInitNumber,(strInitNumber + x),0);
+	x = sizeof(this->NumberArray) / 4;
+	while(x-- != 0) this->NumberArray[x] = -2;
+	if(!strcmp(strTempInitNumber,"-1")){
+		this->NumberArray[0] = -1;
+		return *this;
+	}
+	int length = strlen(strTempInitNumber);
+	x = 0;
+	while(length-- != 0){
+		if(*(strTempInitNumber + length) >= 48 && *(strTempInitNumber + length) <=  57) this->NumberArray[x++] = *(strTempInitNumber + length) - 48;
+		if(*(strTempInitNumber + length) >= 65 && *(strTempInitNumber + length) <=  90) this->NumberArray[x++] = *(strTempInitNumber + length) - 55;
+		if(*(strTempInitNumber + length) >= 97 && *(strTempInitNumber + length) <= 122) this->NumberArray[x++] = *(strTempInitNumber + length) - 87;
+	}
+	return *this;
+}
+
+CRadixTool CRadixTool::operator = (CBigNumber InitNumber){
+	if(InitNumber == -1){
+		*this = "-1";
+		return *this;
+	}
+	int x = sizeof(this->NumberArray) / 4;
+	while(x-- != 0) this->NumberArray[x] = -2;
+	x = 0;
+	while(1){
+		this->NumberArray[x++] = (InitNumber % this->radix).Sequence();
+		InitNumber = InitNumber / this->radix;
+		if(InitNumber == 0) break;
+	}
+	return *this;
+}
+
+CRadixTool operator + (CRadixTool x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	CRadixTool temp(x.radix);
+	temp = X + Y;
+	return temp;
+}
+
+CRadixTool operator - (CRadixTool x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	CRadixTool temp(x.radix);
+	temp = X - Y;
+	return temp;
+}
+
+CRadixTool operator + (CRadixTool x,int y){
+	CBigNumber X = x,Y = y;
+	CRadixTool temp(x.radix);
+	temp = X + Y;
+	return temp;
+}
+
+CRadixTool operator - (CRadixTool x,int y){
+	CBigNumber X = x,Y = y;
+	CRadixTool temp(x.radix);
+	temp = X - Y;
+	return temp;
+}
+
+CRadixTool operator + (int x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	CRadixTool temp(y.radix);
+	temp = X + Y;
+	return temp;
+}
+
+CRadixTool operator - (int x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	CRadixTool temp(y.radix);
+	temp = X - Y;
+	return temp;
+}
+
+CRadixTool operator + (CRadixTool x,char* y){
+	CRadixTool b(x.radix);
+	b = y;
+	return x + b;
+}
+
+CRadixTool operator - (CRadixTool x,char* y){
+	CRadixTool b(x.radix);
+	b = y;
+	return x - b;
+}
+
+CRadixTool operator + (char* x,CRadixTool y){
+	CRadixTool a(y.radix);
+	a = x;
+	return a + y;
+}
+
+CRadixTool operator - (char* x,CRadixTool y){
+	CRadixTool a(y.radix);
+	a = x;
+	return a - y;
+}
+
+MultiBool operator == (CRadixTool x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X == Y;
+}
+
+MultiBool operator != (CRadixTool x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X != Y;
+}
+
+MultiBool operator > (CRadixTool x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X > Y;
+}
+
+MultiBool operator >= (CRadixTool x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X >= Y;
+}
+
+MultiBool operator < (CRadixTool x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X < Y;
+}
+
+MultiBool operator <= (CRadixTool x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X <= Y;
+}
+
+MultiBool operator == (CRadixTool x,int y){
+	CBigNumber X = x,Y = y;
+	return X == Y;
+}
+
+MultiBool operator != (CRadixTool x,int y){
+	CBigNumber X = x,Y = y;
+	return X != Y;
+}
+
+MultiBool operator > (CRadixTool x,int y){
+	CBigNumber X = x,Y = y;
+	return X > Y;
+}
+
+MultiBool operator >= (CRadixTool x,int y){
+	CBigNumber X = x,Y = y;
+	return X >= Y;
+}
+
+MultiBool operator < (CRadixTool x,int y){
+	CBigNumber X = x,Y = y;
+	return X < Y;
+}
+
+MultiBool operator <= (CRadixTool x,int y){
+	CBigNumber X = x,Y = y;
+	return X <= Y;
+}
+
+MultiBool operator == (int x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X == Y;
+}
+
+MultiBool operator != (int x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X != Y;
+}
+
+MultiBool operator > (int x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X > Y;
+}
+
+MultiBool operator >= (int x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X >= Y;
+}
+
+MultiBool operator < (int x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X < Y;
+}
+
+MultiBool operator <= (int x,CRadixTool y){
+	CBigNumber X = x,Y = y;
+	return X <= Y;
+}
+
+MultiBool operator == (CRadixTool x,char* y){
+	CRadixTool b(x.radix);
+	b = y;
+	return x == b;
+}
+
+MultiBool operator != (CRadixTool x,char* y){
+	CRadixTool b(x.radix);
+	b = y;
+	return x != b;
+}
+
+MultiBool operator > (CRadixTool x,char* y){
+	CRadixTool b(x.radix);
+	b = y;
+	return x > b;
+}
+
+MultiBool operator >= (CRadixTool x,char* y){
+	CRadixTool b(x.radix);
+	b = y;
+	return x >= b;
+}
+
+MultiBool operator < (CRadixTool x,char* y){
+	CRadixTool b(x.radix);
+	b = y;
+	return x < b;
+}
+
+MultiBool operator <= (CRadixTool x,char* y){
+	CRadixTool b(x.radix);
+	b = y;
+	return x <= b;
+}
+
+MultiBool operator == (char* x,CRadixTool y){
+	CRadixTool a(y.radix);
+	a = x;
+	return a == y;
+}
+
+MultiBool operator != (char* x,CRadixTool y){
+	CRadixTool a(y.radix);
+	a = x;
+	return a != y;
+}
+
+MultiBool operator > (char* x,CRadixTool y){
+	CRadixTool a(y.radix);
+	a = x;
+	return a > y;
+}
+
+MultiBool operator >= (char* x,CRadixTool y){
+	CRadixTool a(y.radix);
+	a = x;
+	return a >= y;
+}
+
+MultiBool operator < (char* x,CRadixTool y){
+	CRadixTool a(y.radix);
+	a = x;
+	return a < y;
+}
+
+MultiBool operator <= (char* x,CRadixTool y){
+	CRadixTool a(y.radix);
+	a = x;
+	return a <= y;
+}
+
+CRadixTool CRadixTool::operator ++ (){
+	*this = *this + 1;
+	return *this;
+}
+
+CRadixTool CRadixTool::operator -- (){
+	*this = *this - 1;
+	return *this;
+}
+
+CRadixTool CRadixTool::operator ++ (int){
+	CRadixTool temp(this->radix);
+	temp = *this;
+	*this = *this + 1;
+	return temp;
+}
+
+CRadixTool CRadixTool::operator -- (int){
+	CRadixTool temp(this->radix);
+	temp = *this;
+	*this = *this - 1;
+	if(temp == 0) temp = -1;
+	return temp;
+}
+
+BOOL CRadixTool::StringInvert(char *StringOut,int bit){
+	memset(StringOut,0,strlen(StringOut));
+	int x = 0;
+	while(NumberArray[x] != -2) x++;
+	if(bit == 0) bit = x;
+	if(x > bit || radix > 35 || *this == -1 || NumberArray[0] == -2){
+		*StringOut = '-';
+		*(StringOut + 1) = '1';
+		return 0;
+	}
+	x = 0;
+	while(bit-- != 0){
+		if(NumberArray[x] == -2){
+			*(StringOut + x) = 48;
+			x++;
+			continue;
+		}
+		*(StringOut + x) = (NumberArray[x] > 9 ? NumberArray[x] + 87 : NumberArray[x] + 48);
+		x++;
+	}
+	return 1;
+}
+
+BOOL CRadixTool::StringSequence(char *StringOut,int bit){
+	BOOL x = StringInvert(StringOut,bit);
+	if(x == 1){
+		_strrev(StringOut);
+		return 1;
+	}
+	return 0;
+}
+
+BOOL CRadixTool::NumberInvert(int XRange,int X,int *NumberOut,int bit){
+	while(XRange--!=0) NumberOut[XRange] = X;
+	int x = 0;
+	while(NumberArray[x] != -2) x++;
+	if(bit == 0) bit = x;
+	if(x > bit || *this == -1 || NumberArray[0] == -2){
+		*NumberOut = -1;
+		return 0;
+	}
+	x = 0;
+	while(bit-- != 0){
+		if(NumberArray[x] == -2){
+			*(NumberOut + x) = 0;
+			x++;
+			continue;
+		}
+		*(NumberOut + x) = NumberArray[x];
+		x++;
+	}
+	return 1;
+}
+
+BOOL CRadixTool::NumberSequence(int XRange,int X,int *NumberOut,int bit){
+	BOOL x = NumberInvert(XRange,X,NumberOut,bit);
+	if(x == 1){
+		int temp = bit - 1;
+		while(bit-- != temp / 2 + 1){
+			int swap = NumberOut[temp - bit];
+			NumberOut[temp - bit] = NumberOut[bit];
+			NumberOut[bit] = swap;
+		}
+		return 1;
+	}
+	return 0;
+}
+
+string RemoveAll(string &str,char c)
+{
+    string::iterator new_end = remove_if(str.begin(), str.end(), bind2nd(equal_to<char>(),c));
+    str.erase(new_end, str.end());
+    return str;
+}
+
+#ifdef msword
+ 
+//声明 vOpt 
+//COleVariant vOpt(( long )DISP_E_PARAMNOTFOUND,  VT_ERROR);
+
+CWord::CWord(){
+	CString FontName = "宋体";
+	float FontSize = 10.5;
+	long FontColor = 0;
+	BOOL Bold = 0;
+	BOOL Italic = 0;
+	BOOL UnderLine = 0;
+    InitCOM();
+}
+ 
+CWord::~CWord(){
+    //释放资源最好从 小到大的顺序来释放。这个和c里面一些释放资源的道理是一样的
+    //和c+= 先析构儿子 再析构父亲是一样的。
+	CoUninitialize();
+	font.ReleaseDispatch();
+	range.ReleaseDispatch();
+	borders.ReleaseDispatch();
+	tab.ReleaseDispatch();
+	doc.ReleaseDispatch();
+	docs.ReleaseDispatch();
+	app.ReleaseDispatch();
+	sel.ReleaseDispatch();
+}
+ 
+BOOL CWord::InitCOM(){
+    if(CoInitialize(NULL)!=S_OK){
+        AfxMessageBox("初始化com库失败");
+        return 0;
+    }
+    else return TRUE;
+}
+ 
+BOOL CWord::CreateApp(bool Visible){
+    if(!app.CreateDispatch("Word.Application")){
+        AfxMessageBox("你没有安装OFFICE");
+        return FALSE;
+    }
+    else{
+        app.SetVisible(Visible);
+        return TRUE;
+    }
+}
+ 
+//我的类默认是打开的，而Word 中默认看不见的。
+void CWord::ShowApp(BOOL flag){
+    if(!app.m_lpDispatch){
+        AfxMessageBox("你还没有获得Word对象");
+        return;
+    }
+    else app.SetVisible(flag);
+}
+BOOL CWord::CreateDocument(bool Visible)
+{
+    if(!app.m_lpDispatch){
+        AfxMessageBox("Application为空,Documents创建失败!", MB_OK|MB_ICONWARNING);
+        return FALSE;
+    }
+    else{
+        docs=app.GetDocuments();
+        if(docs.m_lpDispatch==NULL){
+            AfxMessageBox("创建DOCUMENTS 失败");
+            return FALSE;
+        }
+        else{
+            CComVariant Template(_T(""));//创建一个空的模版
+            CComVariant NewTemplate(false);
+            CComVariant DocumentType(0);
+            CComVariant visible = Visible;//不处理 用默认值
+			doc = docs.Add(&Template,&NewTemplate,&DocumentType,&visible);
+            if(!doc.m_lpDispatch){
+                AfxMessageBox("创建word失败");
+                return FALSE;
+            }
+            else{
+                sel = app.GetSelection();//获得当前Word操作。开始认为是在doc获得selection。仔细想一下确实应该是Word的接口点
+                if(!sel.m_lpDispatch){
+                    AfxMessageBox("selection 获取失败");
+                    return FALSE;
+                }
+                else return TRUE;
+            }
+        }
+    }
+}
+ 
+BOOL CWord::Create(bool Visible){
+    if(CreateApp(Visible)){
+		if(CreateDocument(Visible)){
+			init();
+			return TRUE;
+		}
+        else return FALSE;
+    }
+    else return FALSE;
+}
+ 
+BOOL CWord::Open(CString FileName,bool Visible/* = 1 */,BOOL ReadOnly /* = FALSE */,BOOL AddToRecentFiles /* = FALSE */){
+    CComVariant Read(ReadOnly);
+    CComVariant AddToR(AddToRecentFiles);
+    CComVariant Name(FileName);
+ 
+    COleVariant vTrue((short)TRUE), vFalse((short)FALSE);
+    COleVariant varstrNull("");
+    COleVariant varZero((short)0);
+    COleVariant varTrue(short(1),VT_BOOL);
+    COleVariant varFalse(short(0),VT_BOOL);
+    COleVariant vOpt((long)DISP_E_PARAMNOTFOUND, VT_ERROR);
+ 
+    if(!app.m_lpDispatch){
+        if(CreateApp(Visible)==FALSE) return FALSE;
+    }
+    if(!docs.m_lpDispatch){
+        docs=app.GetDocuments();
+        if(!docs.m_lpDispatch){
+            AfxMessageBox("DocuMent 对象创建失败");
+            return FALSE;
+        }
+    }
+    CComVariant format(0);//打开方式 0 为doc的打开方式
+    doc=docs.Open(&Name,varFalse,&Read,&AddToR,vOpt,vOpt,
+        vFalse,vOpt,vOpt,&format,vOpt,vTrue,vOpt,vOpt,vOpt,vOpt);
+    if(!doc.m_lpDispatch){
+        AfxMessageBox("文件打开失败");
+        return FALSE;
+    }
+    else{
+        sel=app.GetSelection();
+        if(!sel.m_lpDispatch){
+            AfxMessageBox("打开失败");
+            return FALSE;
+        }
+        return TRUE;
+    }
+}
+ 
+BOOL CWord::Save(){
+    if(!doc.m_lpDispatch){
+        AfxMessageBox("Documents 对象都没有建立 保存失败");
+        return FALSE;
+    }
+    else{
+        doc.Save();
+        return TRUE;
+    }
+}
+ 
+BOOL CWord::SaveAs(CString FileName,int SaveType/* =0 */){
+    CComVariant vTrue(TRUE);
+    CComVariant vFalse(FALSE);
+    CComVariant vOpt;
+    CComVariant cFileName(FileName);
+    CComVariant FileFormat(SaveType);
+    doc=app.GetActiveDocument();
+    if(!doc.m_lpDispatch){
+        AfxMessageBox("Document 对象没有建立 另存为失败");
+        return FALSE;
+    }
+    else{  
+        //最好按照宏来写 不然可能出现问题、 毕竟这个是微软写的
+        /*ActiveDocument.SaveAs FileName:="xiaoyuer.doc", FileFormat:= _
+    wdFormatDocument, LockComments:=False, Password:="", AddToRecentFiles:= _
+    True, WritePassword:="", ReadOnlyRecommended:=False, EmbedTrueTypeFonts:= _
+    False, SaveNativePictureFormat:=False, SaveFormsData:=False, _
+        SaveAsAOCELetter:=False*/
+
+        doc.SaveAs(&cFileName,&FileFormat,&vFalse,COleVariant(""),&vTrue,COleVariant(""),&vFalse,&vFalse,&vFalse,&vFalse,&vFalse,&vOpt,&vOpt,&vOpt,&vOpt,&vOpt);   
+    }
+    return TRUE;
+}
+ 
+BOOL CWord::Close(BOOL SaveChange/* =FALSE */){
+    CComVariant vTrue(TRUE);
+    CComVariant vFalse(FALSE);
+    CComVariant vOpt;
+    CComVariant cSavechage(SaveChange);
+    if(!doc.m_lpDispatch){
+        AfxMessageBox("_Document 对象获取失败,关闭操作失败");
+        return FALSE;
+    }
+    else{
+		if(TRUE == SaveChange) Save();
+
+		//下面第一个参数填vTrue 会出现错误，可能是后面的参数也要对应的变化
+		//但vba 没有给对应参数 我就用这种方法来保存
+        doc.Close(&vFalse,&vOpt,&vOpt);
+    }
+    return TRUE;
+}
+
+void CWord::init(){
+	font = sel.GetFont();
+	return;
+}
+
+void CWord::WriteText(CString Text,int Align/* = 0 */){
+	SetParaphformat(Align);
+	//sel.SetFont(font);
+    sel.TypeText(Text);
+	SetParaphformat(Align);
+	return;
+}
+ 
+void CWord::NewLine(int nCount/* =1 */){
+    if(nCount<=0) nCount = 0;
+	else while(nCount-- != 0) sel.TypeParagraph();
+	return;
+}
+ 
+void CWord::WriteTextNewLineText(CString Text,int Align/* = 0 */,int nCount/* =1 */){
+    NewLine(nCount);
+	SetParaphformat(Align);
+	//sel.SetFont(font);
+    WriteText(Text,Align);
+	return;
+}
+
+void CWord::WritePicture(CString PicturePath,int Align){
+	SetParaphformat(Align);
+	InlineShapes iShaps;
+	InlineShape iShap;
+	iShaps = sel.GetInlineShapes();	
+	COleVariant vTrue((short)TRUE),vFalse((short)FALSE),vOpt((long)DISP_E_PARAMNOTFOUND, VT_ERROR);
+
+	//sel.SetFont(font);
+
+	iShap = iShaps.AddPicture(PicturePath,COleVariant((short)TRUE),COleVariant((short)TRUE),vOpt);
+
+	iShap.ReleaseDispatch();
+	iShaps.ReleaseDispatch();
+	return;
+}
+ 
+void CWord::SetFont(CString FontName,float FontSize/* =10.5 */,long FontColor/* =0 */,long FontBackColor/* =0 */){
+    if(!sel.m_lpDispatch){
+        AfxMessageBox("Select 为空,字体设置失败!");
+        return;
+    }
+    //这里只是为了获得一个对象，因为没有对象你哪里来的设置呢.
+    //因为是用GetFont来获取的对象的。
+    //所以用SetText来获得字体属性
+
+	//sel.GetParagraphFormat();
+	//font = sel.GetFont();//获取字体对象
+    //font = sel.GetFont();
+ 
+	font.SetName(FontName);
+	font.SetSize(FontSize);
+    font.SetColor(FontColor);
+	//font.DetachDispatch();
+	
+	//_ParagraphFormat p = sel.GetParagraphFormat();
+	
+	//sel.SetParagraphFormat(p);
+
+    //sel.SetFont(font);//选择对象
+	//sel.TypeText("aaa");
+	return;
+}
+
+void CWord::SetFont(BOOL Bold,BOOL Italic/* =FALSE */,BOOL UnderLine/* =FALSE */){
+    if(!sel.m_lpDispatch){
+        AfxMessageBox("编辑对象失败,导致字体不能设置");
+        return;
+    }
+    else{
+        font.SetBold(Bold);
+        font.SetItalic(Italic);
+        font.SetUnderline(UnderLine);
+		//font.DetachDispatch();//不可以添加
+    }
+}
+ 
+void CWord::SetTableFont(int Row,int Column,CString FontName,float FontSize/* =10.5 */,long FontColor/* =0 */,long FontBackColor/* =0 */){
+    Cell c = tab.Cell(Row,Column);
+    c.Select();
+    font.SetName(FontName);
+    font.SetSize(FontSize);
+    font.SetColor(FontColor);
+	c.ReleaseDispatch();
+	Range r = sel.GetRange();
+	r.SetHighlightColorIndex(FontBackColor);
+	r.ReleaseDispatch();
+	return;
+}
+
+void CWord::CreateTable(int Row,int Column,bool visible){
+    doc = app.GetActiveDocument();
+    Tables tbs = doc.GetTables(); 
+    CComVariant Vopt;
+    if(!tbs.m_lpDispatch){
+        AfxMessageBox("创建表格对象失败");
+        return;
+    }
+    else{
+        tbs.Add(sel.GetRange(),Row,Column,&Vopt,&Vopt);
+        tab = tbs.Item(1);//如果有多个表格可以通过这个来找到表格对象。
+		tbs.ReleaseDispatch();
+	}
+}
+
+void CWord::SetBorderVisible(bool Visible){
+	borders = tab.GetBorders();
+	borders.SetEnable(Visible);
+	return;
+}
+
+void CWord::SetTableHeightWidth(int Row1,int Column1,float Height,float Width){
+	/*
+	Column WordCol;  
+	Row    WordRow;
+	*/
+	Cell c = tab.Cell(Row1,Column1);
+	tab.SetAllowAutoFit(false);   //去掉自适应功能，可调整表格宽高
+	c.SetHeight(Height);
+	c.SetWidth(Width);
+	c.ReleaseDispatch();
+	return;
+}
+
+void CWord::MergeCell(int Row1,int Column1,int Row2,int Column2){
+	Cell c1 = tab.Cell(Row1,Column1);
+	Cell c2 = tab.Cell(Row2,Column2);
+	c1.Merge(c2);//合并单元格
+	c1.ReleaseDispatch();
+	c2.ReleaseDispatch();
+	return;
+}
+
+void CWord::WriteCellText(int Row,int Column,CString Text,int Align/* = 0 */){
+    Cell c = tab.Cell(Row,Column);
+    c.Select();//选择表格中的单元格
+	SetParaphformat(Align);
+	//sel.SetFont(font);
+    sel.TypeText(Text);
+	c.ReleaseDispatch();
+	return;
+}
+
+void CWord::WriteTablePicture(int Row,int Column,CString PicturePath,int Align/* = 0 */){
+	SetParaphformat(Align);
+	Cell c = tab.Cell(Row,Column);
+    c.Select();//选择表格中的单元格
+	InlineShapes iShaps;
+	InlineShape iShap;
+	iShaps = sel.GetInlineShapes();	
+	COleVariant vTrue((short)TRUE),vFalse((short)FALSE),vOpt((long)DISP_E_PARAMNOTFOUND, VT_ERROR);
+
+	//sel.SetFont(font);
+	WriteText("",Align);
+	iShap = iShaps.AddPicture(PicturePath,COleVariant((short)TRUE),COleVariant((short)TRUE),vOpt);
+
+	c.ReleaseDispatch();
+	iShap.ReleaseDispatch();
+	iShaps.ReleaseDispatch();
+	return;
+}
+ 
+void CWord::SetParaphformat(int Align){
+	_ParagraphFormat p1 = sel.GetParagraphFormat();
+	p1.SetAlignment(Align);
+	p1.DetachDispatch();
+	p1.ReleaseDispatch();
+	//p.ReleaseDispatch();
+	return;
+}
+ 
+ 
+void CWord::FindWord(CString FindW,CString RelWord){
+    sel=app.GetSelection();
+    Find myFind=sel.GetFind();
+    if(!myFind.m_lpDispatch){
+        AfxMessageBox("获取Find 对象失败");
+        return;
+    }
+    else{
+        //下面三行是按照vba 写的
+        myFind.ClearFormatting();
+        Replacement repla=myFind.GetReplacement();
+        repla.ClearFormatting();
+ 
+        COleVariant Text(FindW);
+        COleVariant re(RelWord);
+        COleVariant vTrue((short)TRUE), vFalse((short)FALSE);
+        COleVariant vOpt((long)DISP_E_PARAMNOTFOUND, VT_ERROR);
+        CComVariant v(1);
+        CComVariant v2(2);
+        CComVariant v3(_T(""));
+        //下面的Replace 对应的替换的范围是哪里.
+        // 1 代表一个 2 代表整个文档
+        //myFind.Execute(Text,vFalse,vFalse,vFalse,vFalse,vFalse,vTrue,&v,vFalse,re,&v2,vOpt,vOpt,vOpt,vOpt);
+        myFind.Execute(Text,vFalse,vFalse,vFalse,vFalse,vFalse,vTrue,&v,vFalse,&re,&v2,vOpt,vOpt,vOpt,vOpt);
+		repla.ReleaseDispatch();
+    }
+	myFind.ReleaseDispatch();
+	return;
+}
+ 
+void CWord::GetWordText(CString &Text){
+    //CComVariant vOpt;
+    COleVariant vOpt(( long )DISP_E_PARAMNOTFOUND,  VT_ERROR); 
+    doc = app.GetActiveDocument();//获得当前激活文档 就是当前正在编辑文档
+    if(!doc.m_lpDispatch){
+        AfxMessageBox("获取激活文档对象失败");
+        return;
+    }
+    else{
+        range = doc.Range(vOpt,vOpt);
+        Text = range.GetText();
+        AfxMessageBox(Text);
+    }
+}
+
+void CWord::CursorEnd(){
+	sel.MoveDown(COleVariant((short)5),COleVariant(short(1)),COleVariant(short(0)));//下移，输入点到页末
+	return;
+}
+ 
+void CWord::PrintWord(){
+    doc = app.GetActiveDocument();
+    if(!doc.m_lpDispatch){
+        AfxMessageBox("获取激活文档对象失败");
+        return;
+    }
+    else{
+        COleVariant covTrue((short)TRUE),
+        covFalse((short)FALSE),
+        covOptional((long)DISP_E_PARAMNOTFOUND, VT_ERROR);
+ 
+        doc.PrintOut(covFalse   ,           // Background.
+                     covOptional,           // Append.
+                     covOptional,           // Range.
+                     covOptional,           // OutputFileName.
+                     covOptional,           // From.
+                     covOptional,           // To.
+                     covOptional,           // Item.
+                     COleVariant((long)1),  // Copies.
+                     covOptional,           // Pages.
+                     covOptional,           // PageType.
+                     covOptional,           // PrintToFile.
+                     covOptional,           // Collate.
+                     covOptional,           // ActivePrinterMacGX.
+                     covOptional,           // ManualDuplexPrint.
+                     covOptional,           // PrintZoomColumn  New with Word 2002
+                     covOptional,           // PrintZoomRow          ditto
+                     covOptional,           // PrintZoomPaperWidth   ditto
+                     covOptional);          // PrintZoomPaperHeight  ditto*/
+    }
+}
+
+void CWord::CloseApp(){
+    COleVariant vOpt((long)DISP_E_PARAMNOTFOUND,VT_ERROR);
+    if(!app.m_lpDispatch){
+        AfxMessageBox("获取Word 对象失败,关闭操作失败");
+        return;
+    }
+    else app.Quit(vOpt,vOpt,vOpt);
+}
+
+#endif
+
+CString GetSelectFolder(HWND hWnd)
+{
+
+	CString cstrSelectPath;
+
+
+	BROWSEINFO stBrowseInfo;
+
+	memset(&stBrowseInfo, 0, sizeof(stBrowseInfo));
+
+	stBrowseInfo.hwndOwner = hWnd;
+
+	stBrowseInfo.lpszTitle = _T("请选择文件夹");
+
+	stBrowseInfo.ulFlags = BIF_NEWDIALOGSTYLE;
+
+	LPITEMIDLIST pidl = SHBrowseForFolder(&stBrowseInfo);
+
+	if (pidl)
+{
+
+		TCHAR szfolderPath[MAX_PATH];
+
+		SHGetPathFromIDList(pidl, szfolderPath);
+
+
+		cstrSelectPath.Format(_T("%s"), szfolderPath);
+
+
+		LPMALLOC lpMalloc;
+
+		if (SUCCEEDED(SHGetMalloc(&lpMalloc)))
+{
+
+			lpMalloc->Free(pidl);
+
+			lpMalloc->Release();
+
+		}
+
+	}
+
+	return cstrSelectPath;
+
+}
+
+vector<string> split(string src,string separate_character){
+	vector<string> strs;
+
+	int separate_characterLen = separate_character.size();//分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
+	int lastPosition = 0,index = -1;
+	while (-1 != (index = src.find(separate_character,lastPosition))){
+		strs.push_back(src.substr(lastPosition,index - lastPosition));   
+		lastPosition = index + separate_characterLen;   
+	}
+	string lastString = src.substr(lastPosition);//截取最后一个分隔符后的内容   
+	//if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
+	strs.push_back(lastString);
+	return strs;
+}
+
+string ToString(CString str){
+	string strResult = str.GetBuffer();
+	str.ReleaseBuffer();
+	return strResult;
+}
+
+CString ToCString(string str){
+	CString strResult = str.c_str();
+	return strResult;
+} 
+
+void OutPutLog(CString logPath,int MaxSize,CString PrintStr,...){
+	FILE *pFile = NULL;
+	CString strLogPath = logPath;
+	pFile = fopen(strLogPath,"a"); //创建文件
+	if(pFile == NULL){
+		AfxMessageBox("日志文件打开失败");
+		return;
+	}
+	//先判断日志文件的大小，大于MaxSize则清除日志，传入-1就不清除
+	fseek(pFile,0,SEEK_END);
+	int num = ftell(pFile);
+	if(num > MaxSize && MaxSize != -1){
+		fclose(pFile);
+		pFile = NULL;
+		pFile = fopen(strLogPath,"w"); //创建文件
+		if(pFile == NULL){
+			AfxMessageBox("日志文件打开失败");
+			return;
+		}
+	}
+	time_t t = time(0); 
+	char time[64] = {}; 
+	strftime(time,sizeof(time),"%Y/%m/%d %X %A",localtime(&t));
+	fprintf(pFile,"日志输入时间%s，",time);
+	va_list parameterlist;
+	va_start(parameterlist,PrintStr);
+	char *pBuf = new char[MaxSize];
+	_vsnprintf(pBuf,MaxSize,PrintStr,parameterlist);
+	va_end(parameterlist);
+	fprintf(pFile,pBuf);
+	delete pBuf; pBuf = 0;
+	fprintf(pFile,"\n");
+	fclose(pFile);
+	pFile = NULL;
+	return;
+}
+
+CString exePath(){
+	CString temp = "",result = "";
+	TCHAR szFilePath[MAX_PATH + 1] = {};
+	GetModuleFileName(NULL, szFilePath, MAX_PATH);
+	temp = szFilePath;
+	result = temp.Left(temp.ReverseFind('\\') + 1);
+	return result;
+}
+
+CString GetRegOcxPath(CString classid){
+	CString strSubKey;
+	HKEY hKey;
+	LPBYTE lpData;
+	strSubKey.Format(_T("CLSID\\{%s}\\InprocServer32"),classid);
+	RegOpenKeyEx(HKEY_CLASSES_ROOT,strSubKey,0,KEY_READ,&hKey);
+	DWORD dwType = REG_SZ;
+	lpData = new BYTE[1024];
+	memset(lpData,0,1024);
+	DWORD cbData;
+	RegQueryValueEx(hKey,_T(""),NULL,&dwType,lpData,&cbData);
+	CString temp;
+	temp = lpData;
+	CString result = temp.Left(temp.ReverseFind('\\') + 1);
+	return result;
+}
+
+CString ReadIni(CString key,CString iniPath,CString strSection){
+	char szTemp[1024] = {};
+	GetPrivateProfileString(strSection,key,"-1",szTemp,1024,iniPath);
+	return szTemp;
+}
+
+void WriteIni(CString key,CString text,CString iniPath,CString strSection){
+	WritePrivateProfileString(strSection,key,text,iniPath);
+	return;
+}

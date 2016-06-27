@@ -1,0 +1,10 @@
+//如果该路径不存在则创建，如果路径最后有\表示判断最后一个一定为文件夹
+    if (!PathFileExists(strPathFolder))
+    {
+		//如果创建失败
+        if (!CreateDirectory(strPathFolder, NULL))
+        {
+            SDP_RUN_LOG_ERROR("TAG[%p]hyword ocx can not create directory %s", this, strPathFolder);
+            return "";
+        }
+    }

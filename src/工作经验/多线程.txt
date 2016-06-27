@@ -1,0 +1,10 @@
+第三个参数为线程转到的函数名，第四个参数为传的参数，如果需要多个参数就传结构体指针，统一转为void*
+
+#define Create_Thread(FunName,ParameterName,ThreadID) CreateThread(NULL, 0, FunName, (LPVOID)ParameterName, 0, &ThreadID);
+
+DWORD dwThreadId = NULL;
+//CreateThread(NULL, 0, add1_fun, (LPVOID)p_add1, 0, &dwThreadId);
+Create_Thread(add1_fun,p_add1,dwThreadId);//结束后会得到线程ID
+DWORD WINAPI add1_fun(LPVOID lpParam)
+
+DWORD WINAPI不可变

@@ -1,0 +1,6 @@
+CString strBuffer;
+CString strPath;
+//第一个为大类，第二个为小类，第三个是没找到时的返回值
+GetPrivateProfileString("REG","REGCODE","FailReturn",strBuffer.GetBuffer(MAX),MAX,strPath.GetBuffer());
+strBuffer.ReleaseBuffer();
+strPath  .ReleaseBuffer();

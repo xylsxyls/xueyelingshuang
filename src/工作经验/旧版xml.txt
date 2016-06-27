@@ -1,0 +1,162 @@
+//xml新建写入，统一第一是参数为挂着的节点或文档，第二个是为当前操作所定义的变量，第三个是写入xml中的字符串
+//节点strElement第一个字符不能为数字
+#define XmlWriteElement(preElement,ElementVariable,strElement) \
+	TiXmlElement *ElementVariable = new TiXmlElement(strElement);\
+	preElement->LinkEndChild(ElementVariable)
+
+#define XmlWriteText(preElement,TextVariable,strText) \
+	TiXmlText *TextVariable = new TiXmlText(strText); \
+	preElement->LinkEndChild(TextVariable)
+
+//属性名字strAttributeName第一个字符不能为数字
+#define XmlWriteElementAttribute(PreElement,strAttributeName,strAttributeValue) PreElement->SetAttribute(strAttributeName,strAttributeValue)
+
+//<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+//#define XmlWriteDeclaration(preElementOrDocument,DeclarationVariable,strVersion,strEncoding,strStandalone) \
+	TiXmlDeclaration * DeclarationVariable = new TiXmlDeclaration(strVersion,strEncoding,strStandalone);\
+	preElementOrDocument->LinkEndChild(DeclarationVariable)
+
+//注释是挂在节点下一层的
+#define XmlWriteComment(preElement,CommentVariable,strComment) \
+	TiXmlComment *CommentVariable = new TiXmlComment(strComment);\
+	preElement->LinkEndChild(CommentVariable)
+
+#define XmlNewDocument(Document) TiXmlDocument *Document = new TiXmlDocument()
+
+//保存时绝对路径相对路径都可以
+#define XmlDocumentSave(Document,strPath) \
+	Document->SaveFile(strPath);\
+	delete Document
+
+//以下为加载查看XML内容
+typedef TiXmlDocument XmlReadDocument;
+
+//返回0失败，返回1成功
+#define XmlReadLoad(Document,strPath) Document.LoadFile(strPath)
+
+//读取失败返回"-1"，成功返回节点间的字符串
+CString XmlReadElementText(int number,TiXmlDocument *Document,...);
+
+//成功返回属性个数，失败返回-1，属性名字和值通过CStringTwo带出，[][0]为名字，[][1]为值，前[]为第几个属性
+int XmlReadElementAttribute(int number,OUT CString CStringTwo[][2],TiXmlDocument *Document,...);
+
+//失败返回-1，Pre需要注释同层的上个元素节点名字，Next需要注释同层下一个元素节点的名字，必须是同层
+CString XmlReadCommentNeedPre(int number,TiXmlDocument *Document,...);
+CString XmlReadCommentNeedNext(int number,TiXmlDocument *Document,...);
+
+//返回0没有找到声明，返回1成功，[0]是Version，[1]是Encoding，[2]是Standalone
+BOOL XmlReadDeclarationNeedPreOrNone(OUT CString DeclarationArr[],TiXmlDocument *Document,CString Element = "");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CString XmlReadElementText(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlHandle docHandle(Document);
+	//const char *a = va_arg(parameterlist,char *);
+	TiXmlElement *temp = docHandle.FirstChild(va_arg(parameterlist,char *)).ToElement();
+	if(temp == 0) return "-1";
+	number--;
+	while(number--!=0){
+		temp = temp->FirstChildElement(va_arg(parameterlist,char *));
+		if(temp == 0) return "-1";
+	}
+	CString text = temp->GetText();
+	va_end(parameterlist);
+	return text;	
+}
+
+int XmlReadElementAttribute(int number,CString CStringTwo[][2],TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlHandle docHandle(Document);
+	TiXmlElement *temp = docHandle.FirstChild(va_arg(parameterlist,char *)).ToElement();
+	if(temp == 0) return -1;
+	number--;
+	while(number--!=0){
+		temp = temp->FirstChildElement(va_arg(parameterlist,char *));
+		if(temp == 0) return -1;
+	}
+	TiXmlAttribute *Attribute = temp->FirstAttribute();
+	int n = 0;
+	while(1){
+		if(Attribute == 0) break;
+		CStringTwo[n  ][0] = Attribute->Name ();
+		CStringTwo[n++][1] = Attribute->Value();
+		Attribute = Attribute->Next();
+	}
+	va_end(parameterlist);
+	return n;
+}
+
+CString XmlReadCommentNeedPre(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlElement *temp = Document->FirstChildElement(va_arg(parameterlist,char *));
+	if(temp == 0) return "-1";
+	number--;
+	while(number--!=0){
+		temp = temp->FirstChildElement(va_arg(parameterlist,char *));
+		if(temp == 0) return "-1";
+	}
+	TiXmlNode *CommentNode = temp->PreviousSibling();
+	if(CommentNode == 0) return "-1";
+	TiXmlComment *comment = CommentNode->ToComment();
+	if(comment == 0) return "-1";
+	CString XmlComment = comment->Value();
+	va_end(parameterlist);
+	return XmlComment;
+}
+
+CString XmlReadCommentNeedNext(int number,TiXmlDocument *Document,...){
+	va_list parameterlist;
+	va_start(parameterlist,Document);
+	TiXmlElement *temp = Document->FirstChildElement(va_arg(parameterlist,char *));
+	if(temp == 0) return "-1";
+	number--;
+	while(number--!=0){
+		temp = temp->FirstChildElement(va_arg(parameterlist,char *));
+		if(temp == 0) return "-1";
+	}
+	TiXmlNode *CommentNode = temp->NextSibling();
+	if(CommentNode == 0) return "-1";
+	TiXmlComment *comment = CommentNode->ToComment();
+	if(comment == 0) return "-1";
+	CString XmlComment = comment->Value();
+	va_end(parameterlist);
+	return XmlComment;
+}
+
+BOOL XmlReadDeclarationNeedPreOrNone(CString DeclarationArr[],TiXmlDocument *Document,CString Element){
+	TiXmlDeclaration* Declaration = NULL;
+	if(Element == ""){
+		Declaration = Document->FirstChild()->ToDeclaration();
+	}
+	else{
+		TiXmlElement* DeclarationPreElement = Document->FirstChildElement(Element);
+		if(DeclarationPreElement == 0) return 0;
+		TiXmlNode *DeclarationNode = DeclarationPreElement->NextSibling();
+		if(DeclarationNode == 0) return 0;
+		Declaration = DeclarationNode->ToDeclaration();
+	}
+	if(Declaration == 0) return 0;
+	DeclarationArr[0] = Declaration->Version();
+	DeclarationArr[1] = Declaration->Encoding();
+	DeclarationArr[2] = Declaration->Standalone();
+	return 1;
+}

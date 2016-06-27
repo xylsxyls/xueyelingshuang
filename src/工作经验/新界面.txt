@@ -1,0 +1,19 @@
+在资源视图中的Dialog中右键添加资源，之后双击出现对话框为类起名，会自动生成.h和.cpp，然后用这个生成的类名定义一个类
+在全局中写
+CLook * dlg = NULL;
+在触发函数中写
+	dlg = new CLook;
+	dlg->deleteDlg = dlg;
+	dlg->Create(CLook::IDD,dlg);
+	dlg->EditJsonShow.SetWindowTextA("1");
+	dlg->ShowWindow(SW_SHOW);
+
+在.h的public下添加
+CLook *lookdlg;
+在.cpp的析构函数里添加
+delete deleteDlg;
+
+然后在需要用到CLook的地方加头文件
+#include "Look.h"
+
+那么在点了这个触发之后就会新生成一个界面

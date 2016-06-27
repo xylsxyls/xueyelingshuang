@@ -1,0 +1,58 @@
+#pragma once
+
+#include "stdafx.h"
+
+template<typename T>int AddNewX(T x,int *number,int length,T Array[]){
+    int i = 0;
+    for(i = 0;i < *number;i++){
+       if(x == Array[i]) break;
+    }
+    if(i == *number){
+       (*number)++;
+	   if(*number > length) return -1;
+       Array[*number - 1] = x;
+	   return 0;
+    }
+	else{
+		return i + 1;
+	}
+}
+
+#ifdef UseJson
+
+#include "json.h"
+using namespace Json;
+
+typedef struct{
+	static Value Node[1000];
+	static string stringNode[1000];
+	static int n;
+}RootPacket;
+template<typename T>void JsonAdd(int number,char *name,T value,Value *root,string node){
+	//strRoot[0]对应packet[0]
+	static Value *strRoot[1000] = {};
+	static RootPacket packet[1000] = {};
+	static int nPacket = 0;
+	
+	int AddRootValue = AddNewX(root,&nPacket,1000,strRoot);
+	int strRootx = AddRootValue == 0 ? nPacket - 1 : AddRootValue - 1;//packet[strRootx]代表第几个不同的根
+
+	if(number == 0){
+		memset(packet[strRootx].Node      ,0,1000);
+		memset(packet[strRootx].stringNode,0,1000);
+		packet[strRootx].n = 0;
+	}
+
+	if(node == ""){
+		if(number == 1) (*strRoot[strRootx])[name] = Value(value);
+		if(number == 2) (*strRoot[strRootx])[name].append(value);
+	}
+	else{
+		int AddValue = AddNewX(node,&((packet[strRootx]).n),1000,(packet[strRootx]).stringNode);
+		if(number == 1) ((packet[strRootx]).Node[AddValue == 0 ? ((packet[strRootx]).n - 1) : AddValue - 1])[name] = Value(value);
+		if(number == 2) (packet[strRootx].Node[AddValue == 0 ? packet[strRootx].n - 1 : AddValue - 1])[name].append(value);
+		(*strRoot[strRootx])[node] = Value(packet[strRootx].Node[AddValue == 0 ? packet[strRootx].n - 1 : AddValue - 1]);
+	}
+}
+
+#endif

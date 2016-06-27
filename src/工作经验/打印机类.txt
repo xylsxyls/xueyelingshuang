@@ -1,0 +1,106 @@
+要使用打印机首先要创建一个指向打印机设备的环境句柄，打印结束后需删除句柄
+在Windows的启动配置文件Win.ini中，device=后有3个参数，以逗号隔开，分别为设备名，驱动程序名，输出端口
+GetProfileString（）可以获得device设备字符串
+原型为
+DWORD GetProfileString( LPCTSTR lpAppName/*检索的Win.ini文件中的字段名*/, LPCTSTR lpKeyName/*字段中的关键字名*/, LPCTSTR lpDefault/*默认的字符串*/, LPTSTR lpReturnedString/*检索到的字符串*/, DWORD nSize/*返回字符串的长度*/)
+如果没有从关键字名中检索到字符串则返回默认字符串
+截取参数用
+std::vector<CString> vecData = SplitString(strData, "<");
+	for (UINT i = 0; i < vecData.size(); i++)
+使用循环获得3个参数
+使用CreateDC（）为默认打印机创建一个设备环境句柄，失败返回空
+原型为
+HDC CreateDC(LPCTSTR lpszDriver,LPCTSTR lpszDevice,LPCTSTR lpszOutput,CONST DEVMODE *lpinitData)
+前3个参数和前面一一对应，分别为设备名，驱动程序名，输出端口，最后一个默认设为空
+int StartDoc( HDC hdc, CONST DOCINFO *lpdi )来开始打印任务
+DOCINFO参数的指针为以下结构体的指针
+typedef struct { 
+　int cbSize; //结构的尺寸大小； 
+　LPCTSTR lpszDocName; //文档的名字； 
+　LPCTSTR lpszOutput; //输出文档名，一般情况下为NULL； 
+　LPCTSTR lpszDatatype;//用来记录打印过程的数据类型，一般情况下为NULL； 
+　DWORD fwType; //用来支持打印工作的额外信息，一般情况下为NULL； 
+} DOCINFO, *LPDOCINFO; 
+让打印机走纸
+StartPage(hdcprint)
+
+使用RestoreDC(hdcprint,-1)函数恢复打印机设备句柄、
+EndPage(hdcprint)函数让打印机停止打印，
+最后调用EndDoc(hdcprint)函数结束上述的打印作业。
+
+
+
+循环以<为分隔得到的每段再以>为分隔
+如果size==2，[0]=格式，[1]=打印内容
+如果size==1，[0]=格式
+在格式中以：为分隔符，[0]=为大类[1]=小类
+[1]中循环以；为分隔符，通过size得到具体指令
+
+
+
+
+
+#define FONT_BOLD_ON      1
+#define FONT_BOLD_OFF     0
+#define FONT_SLANT_ON     1
+#define FONT_SLANT_OFF    0
+#define FONT_SIZE_NORMAL  0
+#define FONT_SIZE_LARGE   2
+#define FONT_SIZE_SMALL   1
+
+#define TEXT_ALIGN_LEFT   0 
+#define TEXT_ALIGN_CENTER 1
+#define TEXT_ALIGN_RIGHT  2
+#define TEXT_AUTOWARP_ON  1
+#define TEXT_AUTOWARP_OFF 0
+
+#define CTRL_CRLF         1
+#define CTRL_LT           1
+#define CTRL_GT           1
+#define CTRL_LOGO         1
+#define CTRL_INIT         1
+
+#define BARCODE_ON        1
+#define BARCODE_OFF       0
+
+        BOOL Font_Bold     = 0;
+	BOOL Font_Slant    = 0;
+	BOOL Font_Size     = 0;
+	BOOL Text_Align    = 0;
+	BOOL Text_Autowarp = 0;
+	BOOL Ctrl_Crlf     = 0;
+	BOOL Ctrl_Lt       = 0;
+	BOOL Ctrl_Gt       = 0;
+	BOOL Ctrl_Logo     = 0;
+	BOOL Ctrl_Init     = 0;
+	BOOL Barcode       = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

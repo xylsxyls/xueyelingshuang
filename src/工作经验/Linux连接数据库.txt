@@ -1,0 +1,86 @@
+查看环境变量 vi /home/oracle/.profile
+在当前用户底下
+
+查看历史命令
+vi /home/oracle/.bash_history
+
+vi Makefile
+
+all:clear bin
+
+INCLUDE=/home/oracle/app/oracle/product/11.2.0/dbhome_1/precomp/public
+#LD_ORACLE_LIB=/home/oracle/app/oracle/product/11.2.0/dbhome_1/lib
+LD_ORACLE_LIB=${ORACLE_HOME}/lib
+
+bin:dd.c
+        gcc dd.c -I$(INCLUDE) -L$(LD_ORACLE_LIB) -lclntsh
+
+dd.c:
+        proc dd.pc
+
+clear:
+        rm -rf *.lis *.c
+
+Makefile文件只会执行第一句话，all:clear bin
+先执行clear，然后goto到clear:，在终端执行命令rm -rf *.lis *.c，
+之后执行bin，bin跳转到bin:dd.c，bin依赖于dd.c所以先执行dd.c
+执行proc dd.pc，然后执行bin:dd.c底下的gcc dd.c -I$(INCLUDE) -L$(LD_ORACLE_LIB) -lclntsh
+$()里表示宏变量，
+INCLUDE=右边表示宏内容，会直接替代$()
+$()里是被自己定义的宏代替
+${}里是被系统里的环境变量代替
+#表示注释
+连编译的时候在后面需要加g++ dd.cpp -I/home/oracle/app/oracle/product/11.2.0/dbhome_1/precomp/public -L/home/oracle/app/oracle/product/11.2.0/dbhome_1/lib -lclntsh
+
+//下次编译其他的.pc文件只需要修改FileName后面的名字即可，不能带.pc，直接得到a.out里面含有main
+all:ClearPre Out ClearNext
+
+FileName=ddd
+
+INCLUDE=/home/oracle/app/oracle/product/11.2.0/dbhome_1/precomp/public
+#LD_ORACLE_LIB=/home/oracle/app/oracle/product/11.2.0/dbhome_1/lib
+LD_ORACLE_LIB=${ORACLE_HOME}/lib
+
+Out:x.c
+	g++ $(FileName).c -I$(INCLUDE) -L$(LD_ORACLE_LIB) -lclntsh
+
+x.c:
+	proc $(FileName).pc parse=none code=cpp
+
+ClearPre:
+	rm -rf $(FileName).lis $(FileName).c
+
+ClearNext:
+	rm -rf $(FileName).lis $(FileName).c 
+
+
+//得到cpp文件
+all:ClearPre x.c rename ClearNext
+
+FileName=ddd
+
+x.c:
+	proc $(FileName).pc parse=none code=cpp
+
+rename:
+	mv $(FileName).c $(FileName).cpp
+
+ClearPre:
+	rm -rf $(FileName).lis $(FileName).cpp
+
+ClearNext:
+	rm -rf $(FileName).lis
+
+//得到.c文件
+all:ClearPre x.c ClearNext
+
+FileName=ddd
+
+x.c:
+	proc $(FileName).pc
+
+ClearPre:
+	rm -rf $(FileName).lis $(FileName).c
+
+ClearNext:
+	rm -rf $(FileName).lis

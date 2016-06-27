@@ -1,0 +1,27 @@
+客户端
+#include "ace/SOCK_Stream.h"
+#include "ace/SOCK_Connector.h"
+#include "ace/INET_Addr.h"
+#include "ace/Time_Value.h"   
+
+ACE_SOCK_Connector.connect(ACE_SOCK_Stream,ACE_INET_Addr(端口号,"127.0.0.1"),&ACE_Time_Value timeout(等待秒数,0));
+返回值为0表示连接成功，连接成功之后就可以使用recv和send互发了
+ACE_SOCK_Stream.send("123456",长度);
+发送给服务端，送到队列里
+ACE_SOCK_Stream.recv(缓冲区,缓冲区长度,&ACE_Time_Value timeout(等待秒数,0));
+返回接收到的字节量，执行到此函数时进程卡死，接收到数据之后继续
+一旦客户端执行ACE_SOCK_Stream.close();卡死的recv返回0
+recv会根据缓冲区大小拿队列里的数据，从流里拿，所以可能send多次，recv一次，或者send一次，recv多次
+
+服务端
+#include "ace/SOCK_Acceptor.h"  
+#include "ace/SOCK_Stream.h"  
+#include "ace/INET_Addr.h"  
+#include "ace/Time_Value.h"
+
+ACE_SOCK_Acceptor.open (ACE_INET_Addr(同样的端口号), 1)
+返回-1表示失败
+ACE_SOCK_Acceptor.accept(ACE_SOCK_Stream);
+卡死，在收到connect之后继续，返回-1表示开启失败
+ACE_SOCK_Stream.get_local_addr(ACE_INET_Addr);
+获得通路信息，然后根据ACE_INET_Addr.get_host_name()和ACE_INET_Addr.get_port_number()获得IP和端口

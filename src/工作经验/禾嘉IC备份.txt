@@ -1,0 +1,115 @@
+#include "stdafx.h"
+#include "COMMFCN.h"
+#include "LOAD.h"
+#include "MacroAndFun.h"
+
+//禾嘉走的是USB，波特率115200,不需要读取XML文件了,COM口写的是-5，表示不需要
+
+
+int(WINAPI *ICC_getIcCardNo)(int,char,unsigned long,char,int,char *,char *);
+
+CLOAD DllLoad(Find_And_Get_Absolute_Path("Lib_MsrIc.dll"));
+
+
+char CardNumber[1024] = {};
+char psErrInfo[1024] = {};
+
+BOOL BeginReadOrNot      = 0;
+BOOL HaveCardNumberOrNot = 0;
+BOOL ThreadOnly = 0;
+DWORD WINAPI ReadCardThread(LPVOID lpParam){
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入线程唯一");
+	if(ThreadOnly == 1){
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"线程已经存在");
+		return 0;
+	}
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入线程");
+	ThreadOnly = 1;
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"ThreadOnly = %d",ThreadOnly);
+	while(BeginReadOrNot){
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入线程循环");
+		char CardNo[1024] = {};//不把CardNo作为全局变量的原因是ICC_getIcCardNo会把它初始化，如果作为全局就得不到值了
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"初始CardNo = %s",CardNo);
+		ICC_getIcCardNo(-5,'3',115200,'3',3600,CardNo,psErrInfo);//cExternPort和ICFlag的作用未知，需要波特率但不需要COM口，走的是USB
+		CString Info = psErrInfo;
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"psErrInfo = %s",psErrInfo);
+		memset(psErrInfo,0,1024);
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"执行完ICC_getIcCardNo，CardNo = %s",CardNo);
+		if(Info == "0|执行成功"){
+			LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入Info == 0|执行成功");
+			strcpy(CardNumber,CardNo);
+			HaveCardNumberOrNot = 1;
+			ThreadOnly = 0;
+			Info = "";
+			LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"离开Info == 0|执行成功");
+			break;
+		}
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"结束一轮线程循环");
+	}
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"离开线程");
+	
+	return 0;
+}
+
+//初始化
+PB_RESULT PB_API ICCR_Initialize(IN LPCSTR lpszConfigXml){
+	
+	LOG_LEVEL(LOGTYPE_DEBUG|LOGTYPE_ERROR|LOGTYPE_SPECIAL);
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入初始化");
+	MultiBool x = DllLoad.Check_Fun(1,"ICC_getIcCardNo");
+	if(x != 1) return PB_ICCR_INTERNAL_ERROR;
+	if(x == 1) DllLoad.Load_Fun(1,V(ICC_getIcCardNo));
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"离开初始化");
+	return PB_OK;
+}
+//开始读卡
+PB_RESULT PB_API ICCR_BeginRead(void){
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入开始读卡函数");
+	BeginReadOrNot     = 1   ;
+	DWORD dwThreadId   = NULL;
+	int *ParameterName = NULL;
+	Create_Thread(ReadCardThread,ParameterName,dwThreadId);
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"离开开始读卡函数");
+	return PB_OK;
+}
+//检查驱动缓冲区内是否有IC卡数据可供读取，有传出TRUE
+PB_RESULT PB_API ICCR_DataAvailable(OUT BOOL *lpAvailable){
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入检查缓冲区函数");
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"HaveCardNumberOrNot的值 = %d",HaveCardNumberOrNot);
+	*lpAvailable = HaveCardNumberOrNot;
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"离开检查缓冲区函数");
+	return PB_OK;
+}
+
+//读取驱动缓冲区内的IC卡数据
+PB_RESULT PB_API ICCR_ReadData(IN DWORD dwIndex, OUT LPVOID lpBuffer, IN DWORD dwBufferSize, OUT DWORD * lpNumberOfBytesRead){
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入读取数据函数");
+	memset(lpBuffer,0,dwBufferSize); //初始化传进来的缓冲区
+	if(dwIndex == PB_ICCR_IDX_ACCOUNT){
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入dwIndex == PB_ICCR_IDX_ACCOUNT");
+		if(strlen(CardNumber) >= dwBufferSize) return PB_ICCR_INSUFFICIENT_BUFFER; //缓冲区过小
+		if(BeginReadOrNot == 0               ) return PB_ICCR_INVALID_OPERATION  ; //未点开始读卡或者点了取消读卡
+		
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"CardNumber = %s",CardNumber);
+		strcpy((char *)lpBuffer,CardNumber); //把缓冲区内的数据传出去
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"lpBuffer = %s",(char *)lpBuffer);
+		*lpNumberOfBytesRead = strlen(CardNumber); //把缓冲区内的数据长度传出去
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"*lpNumberOfBytesRead = %lu",(unsigned long)*lpNumberOfBytesRead);
+		memset(CardNumber,0,1024);
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"CardNumber = %s",CardNumber);
+		LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"离开dwIndex == PB_ICCR_IDX_ACCOUNT");
+	}
+	if(dwIndex == PB_ICCR_IDX_NAME   );
+	if(dwIndex == PB_ICCR_IDX_ID_TYPE);
+	if(dwIndex == PB_ICCR_IDX_ID     );
+	
+	return PB_OK;
+}
+//中止IC卡读卡器的数据读取过程
+PB_RESULT PB_API ICCR_CancelRead(void){
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"进入终止读卡函数");
+	BeginReadOrNot = 0;
+	LOG_JSRCB(LOGTYPE_DEBUG,ICCRLOG,"离开终止读卡函数");
+	return PB_OK;
+}
+

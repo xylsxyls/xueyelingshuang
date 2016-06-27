@@ -1,0 +1,23 @@
+TiXmlDocument *pDoc = new TiXmlDocument("D:\\VS2012\\MFCApplication20\\Debug\\XML.xml");
+	int x = pDoc->LoadFile();//加了Age->SetAttribute("1","4");这句话之后就一直返回0了
+	TiXmlHandle docHandle(pDoc);
+	TiXmlElement* child2 = docHandle.FirstChild("Persons").FirstChild("Person").FirstChild("Age").ToElement();
+	const char *str = child2->GetText();
+	const char *str1 = child2->Value();
+	TiXmlAttribute *AddrAttr = child2->FirstAttribute();
+	const char* a = AddrAttr->Value();
+	const char* b = AddrAttr->Name();
+	AddrAttr = AddrAttr->Next();
+	TiXmlElement *nd_comment = docHandle.FirstChild("Persons").FirstChild("Person").FirstChild("Age").ToElement();
+	TiXmlComment *xx = nd_comment->FirstChild("A1")->NextSibling()->ToComment();
+    CString comment = "";
+    comment = xx->Value();
+	TiXmlDeclaration* decl = pDoc->FirstChild("Persons")->NextSibling()->ToDeclaration();  
+    CString aa = decl->Version();
+	CString bb = decl->Encoding();
+	CString cc = decl->Standalone();
+    delete pDoc;
+	
+	//const char* a = AddrAttr->();
+	const char *p = pDoc->ErrorDesc();
+	TiXmlElement *d = pDoc->FirstChild()->ToElement();

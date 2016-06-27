@@ -1,0 +1,15 @@
+.h
+#include "stdafx.h"
+
+#ifndef PB_API_EXPORTS
+    #define PB_API __declspec(dllexport) WINAPI 
+#else
+    #define PB_API __declspec(dllimport) WINAPI 
+#endif
+
+.cpp
+#include "stdafx.h"
+#include "plus.h"
+int PB_API p_plus(int a,int b){
+	return a+b;
+}

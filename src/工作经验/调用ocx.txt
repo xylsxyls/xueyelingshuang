@@ -1,0 +1,14 @@
+ocx有界面和无界面是两种调用方法
+有界面的ocx需要在资源视图里添加ActiveX控件，然后直接调用方法即可，不需要Create不需要初始化
+无界面的调用方法
+	//注册
+	CString WinExecPath = "";
+	WinExecPath = WinExecPath + "regsvr32 " + DM_DLL_PATH + " -s";
+	WinExec(WinExecPath,SW_SHOW);//大漠的位置路径你放在哪儿就写哪儿吧，不写也行，写了也不多余
+	CoInitialize(NULL);
+	CLSID clsid;
+	HRESULT hr=CLSIDFromProgID(OLESTR("tw.twsoft"),&clsid);//利用“根名称.类名”获取CLSID，&就是把指针给函数，也就是传址。
+	tw.CreateDispatch(clsid);
+
+其中tw.twsoft是ocx中"初始化类工厂和 guid"下的字符串
+tw是导入的ocx类实例

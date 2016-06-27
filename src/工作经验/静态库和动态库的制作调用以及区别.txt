@@ -1,0 +1,39 @@
+先写静态库文件 选择的时候选静态库
+1.在头文件中写需要编写的函数声明
+#ifndef DLL02_H
+#define DLL02_H
+#ifdef DLL02_API
+#else
+#define DLL02_API _declspec(dllexport)
+#endif //DLL02_API
+DLL02_API int addfun(int x, int y);
+DLL02_API int subtract(int x, int y);
+#endif //DLL02_H
+2在源文件中写函数实现
+#include "stdafx.h"
+#include "20130527_Dll02.h"
+int addfun(int x, int y)
+{
+    return x+y;
+}
+int subtract(int x, int y)
+{
+    return x-y;
+} 
+3.在静态库项目的属性常规中，平台工具集改为v110_xp，需要安装update4，“http://www.ithome.com/html/soft/58419.htm#commentDiv”，字符集改为使用多字节字符集
+4.默认的生成路径在D:\VS2012\ConsoleApplication2\Debug下
+5.调用的时候先开一个win32控制台。
+6.在头文件中需要添加静态库中自定义的头文件
+7.在需要使用静态库函数的源文件中添加自定义的头文件和#pragma comment(lib,"ConsoleApplication2.lib")两句话，注意修改lib的文件名，之后就可以直接调用静态库中的函数了
+8.在项目属性中常规一样改，在VC++目录中包含目录写自定义函数头文件的目录，库目录写生成的lib文件的目录，或者直接把头文件和静态库文件拷贝到项目文件夹下。
+
+
+
+
+
+动态库和静态库的制作方法基本一样，有一些区别
+1.创建动态库的时候要选dll，同时底下需要选择空项目而静态库是选择预编译头的，动态库中预编译头是不可选的。
+2.动态库在生成之后debug文件夹下会生成5个文件，而静态库中只会生成一个lib文件。
+3.不论是静态库或者动态库都需要把自定义函数的头文件以及自定义函数的lib文件拷到使用的工程文件夹下，但是在新工程编译通过产生debug文件夹之后，如果使用的是动态库，那么必须把原来动态库自定义函数生成的dll文件拷到新工程debug文件夹之下才可以执行程序，而静态库不需要。
+4.在使用静态库的新工程下，debug内会有自动生成的5个文件，分别是exe，exp，lib，dll，ilk，而在使用动态库的新工程下，只会自动生成3个文件，分别是exe，ilk，pdb，最后的dll是手动拷进去的。
+5.动态库中的dll文件的文件名必须是开始在制作动态库时使用的文件名，一旦确立不可更改，即便重命名和在相应程序包含或调用中更改后也不可使用。

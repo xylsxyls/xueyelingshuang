@@ -1,0 +1,69 @@
+http://blog.csdn.net/zhao_fu_lu/article/details/41846265?utm_source=tuicool&utm_medium=referral
+
+
+
+ MFC控件Microsoft Web Browser简单浏览器实现
+分类： MFC 2014-12-10 15:46 536人阅读 评论(1) 收藏 举报
+浏览器MFCMicrosoft Web BrowseNavigate
+环境：VS2013
+
+新建工程：基于对话框
+
+①在对话框添加控件Microsoft Web Browser（说明：VS2013上控件的名字是Microsoft Web Browser，其它的编译器额就不知道了）
+
+②头函数：
+
+[cpp] view plaincopyprint?在CODE上查看代码片派生到我的代码片
+#include <afxinet.h>       //for WinInet   
+②对所添加的控件设置环境变量（在此我把环境变量设置为m_sa）
+
+③在OnInitDialog()里设定你想要打开的网页
+
+[cpp] view plaincopyprint?在CODE上查看代码片派生到我的代码片
+m_sa.Navigate("http://www.baidu.com", NULL, NULL, NULL, NULL);  
+ 做到这时一个网页就可以显示出来了，但是你会发现有很多的毛病，待我们一一解决
+④问题一：打开网页也打开了，但是再点击其中的一条新闻时，就会制动调回IE浏览器。
+
+    解决：这时我们需要再添加一个消息函数（NewWindow3），制止它跳转为IE。
+
+                (打开类向导，在命令下的 对象ID(B):中找到你所添加控件的ID号，再找右面的消息(S):中找到NewWindow3消息函数)
+
+[cpp] view plaincopyprint?在CODE上查看代码片派生到我的代码片
+void CMFCApplication1Dlg::OnNewwindow3Explorer1(LPDISPATCH* ppDisp, BOOL* Cancel, unsigned long dwFlags, LPCTSTR bstrUrlContext, LPCTSTR bstrUrl)  
+{  
+    // TODO:  在此处添加消息处理程序代码  
+    /* 
+    //  只在一个对话框中操作网页 
+    *Cancel = TRUE; 
+    CString strUrl; 
+    strUrl = bstrUrl;  
+    VARIANT vInfo; 
+    VariantInit(&vInfo); 
+    this->m_sa.Navigate(strUrl, &vInfo, &vInfo, &vInfo, &vInfo); 
+    this->ShowWindow(SW_SHOW); 
+    */  
+  
+  
+    //***************************************两种方法要求***********************************************  
+      
+  
+    //  在多个对话框中进行网页操作  
+    *Cancel = TRUE;  
+    CString strUrl;  
+    strUrl = bstrUrl;  
+    // 新建对话框    
+    CMFCApplication1Dlg *pNewDlg = new CMFCApplication1Dlg;  
+    pNewDlg->Create(IDD_MFCAPPLICATION1_DIALOG, this);  
+    pNewDlg->ShowWindow(SW_SHOW);  
+    // 网页导航,新的对话框中的webbrowser控件!    
+    VARIANT vInfo;  
+    VariantInit(&vInfo);  
+    pNewDlg->m_sa.Navigate(strUrl, &vInfo, &vInfo, &vInfo, &vInfo);  
+}  
+
+⑤最后再解决个小问题：打开网页时会有下图警示
+
+解决办法：找到控件的属性，把Silent的值改成True就行了
+
+
+后记：本人才疏学浅，欢迎提出BUG

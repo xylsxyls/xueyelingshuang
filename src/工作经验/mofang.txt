@@ -1,0 +1,347 @@
+#include<iostream>
+#include<cstdio>
+using namespace std;
+class zhengfangti{
+    public:
+    char a1,a2,a3,a4,a5,a6;
+};
+//负责输入
+class mofang{
+    public:
+    zhengfangti arr[3][3][3];
+    mofang(){
+        int a,b,c;
+        for(a=0;a<3;a++){
+            for(b=0;b<3;b++){
+                for(c=0;c<3;c++){
+                    arr[a][b][c].a1=1;
+                    arr[a][b][c].a2=2;
+                    arr[a][b][c].a3=3;
+                    arr[a][b][c].a4=4;
+                    arr[a][b][c].a5=5;
+                    arr[a][b][c].a6=6;
+                }
+            }
+        }
+    }
+};
+
+#define yi arr[0][a][b]
+#define er arr[2-b][a][0]
+#define sa arr[2-a][0][b]
+#define si arr[2][a][2-b]
+#define wu arr[b][a][2]
+#define li arr[a][2][b]
+#define YI yi.a1
+#define ER er.a2
+#define SA sa.a3
+#define SI si.a4
+#define WU wu.a5
+#define LI li.a6
+class shuru:public mofang{
+    public:
+    mofang *p;
+    shuru(mofang *x):p(x){
+    }
+    void luru(){
+        int a,b;
+        int x=1;
+        while(x!=7){
+            printf("请输入第%d面\n",x);
+            for(a=0;a<3;a++){
+                for(b=0;b<3;b++){
+                    switch (x){
+                        case 1:scanf("%hhd",&(p->YI));break;
+                        case 2:scanf("%hhd",&(p->ER));break;
+                        case 3:scanf("%hhd",&(p->SA));break;
+                        case 4:scanf("%hhd",&(p->SI));break;
+                        case 5:scanf("%hhd",&(p->WU));break;
+                        case 6:scanf("%hhd",&(p->LI));break;
+                    }
+                }
+            }
+            x++;
+        }
+    }
+};
+class dayin:public mofang{
+    public:
+    mofang *p;
+    dayin(mofang *x):p(x){
+    }
+    void dayinhanshu(){
+        int a,b,c,n=1;
+        for(a=0;a<3;a++){
+            for(b=0;b<3;b++){
+                for(c=0;c<3;c++){
+                    printf("%d : ",n++);
+                    printf("%hhd",p->arr[a][b][c].a1);
+                    printf("%hhd",p->arr[a][b][c].a2);
+                    printf("%hhd",p->arr[a][b][c].a3);
+                    printf("%hhd",p->arr[a][b][c].a4);
+                    printf("%hhd",p->arr[a][b][c].a5);
+                    printf("%hhd\n",p->arr[a][b][c].a6);
+                }
+            }
+        }
+    }
+    void zhumiandayin(){
+        int a,b,n=1;
+        while(n!=7){
+            printf("第%d面\n*******\n",n);
+            for(a=0;a<3;a++){
+                for(b=0;b<3;b++){
+                    switch (n){
+                        case 1:printf("%hhd ",p->YI);break;
+                        case 2:printf("%hhd ",p->ER);break;
+                        case 3:printf("%hhd ",p->SA);break;
+                        case 4:printf("%hhd ",p->SI);break;
+                        case 5:printf("%hhd ",p->WU);break;
+                        case 6:printf("%hhd ",p->LI);break;
+                    }
+                }
+                printf("\n");
+            }
+            printf("*******\n");
+            n++;
+        }
+    }
+};
+class duibi:public mofang{
+    public:
+    mofang *x,*y;
+    duibi(mofang *X,mofang *Y):x(X),y(Y){
+    }
+    char zhumianduibi(){
+        int a,b,n=1;
+        while(n!=7){
+            for(a=0;a<3;a++){
+                for(b=0;b<3;b++){
+                switch (n){
+                case 1:if(!(x->YI==y->YI||x->YI==7||y->YI==7))return 0;break;
+                case 2:if(!(x->ER==y->ER||x->ER==7||y->ER==7))return 0;break;
+                case 3:if(!(x->SA==y->SA||x->SA==7||y->SA==7))return 0;break;
+                case 4:if(!(x->SI==y->SI||x->SI==7||y->SI==7))return 0;break;
+                case 5:if(!(x->WU==y->WU||x->WU==7||y->WU==7))return 0;break;
+                case 6:if(!(x->LI==y->LI||x->LI==7||y->LI==7))return 0;break;
+                }
+                }
+            }
+            n++;
+        }
+        return 1;
+    }
+    void duibihanshu(){
+        if(zhumianduibi()){
+            printf("一样\n");
+        }
+        else{
+            printf("不一样\n");
+        }
+    }
+};
+#define zhu_shun  1
+#define zhb_ni    zhu_shun
+#define zhu_ni   -1
+#define zhb_shun  zhu_ni
+#define zuo_shun  2
+#define zub_ni    zuo_shun
+#define zuo_ni   -2
+#define zub_shun  zuo_ni
+#define fu_shun   3
+#define fub_ni    fu_shun
+#define fu_ni    -3
+#define fub_shun  fu_ni
+#define buzhou(A,B,C,D) t=x->D;x->D=x->C;x->C=x->B;x->B=x->A;x->A=t;
+class XuanZhuan{
+    public:
+    mofang *m;
+    XuanZhuan(mofang *M):m(M){
+    }
+    void zhuan(zhengfangti *x,char n){
+        char t;
+        switch (n){
+            case  4:n=-1;break;
+            case -4:n= 1;break;
+            case  5:n=-2;break;
+            case -5:n= 2;break;
+            case  6:n=-3;break;
+            case -6:n= 3;break;
+        }
+        switch (n){
+            case zhu_shun:buzhou(a3,a5,a6,a2);break;
+            case zhu_ni  :buzhou(a2,a6,a5,a3);break;
+            case zuo_shun:buzhou(a3,a1,a6,a4);break;
+            case zuo_ni  :buzhou(a4,a6,a1,a3);break;
+            case fu_shun :buzhou(a1,a2,a4,a5);break;
+            case fu_ni   :buzhou(a5,a4,a2,a1);break;
+        }
+    }
+    void show(zhengfangti *x){
+        printf("%hhd",x->a1);
+        printf("%hhd",x->a2);
+        printf("%hhd",x->a3);
+        printf("%hhd",x->a4);
+        printf("%hhd",x->a5);
+        printf("%hhd\n",x->a6);
+    }
+#define Sn(x) *(s+n+(x))-48
+    void BUZHOU(const char *s){
+        zhengfangti t;
+        int n;
+        for(n=28;n>=0;n=n-4){
+            if(n==28){
+                t=m->arr[Sn(0)][Sn(1)][Sn(2)];
+            }
+            if(n>=4){
+                m->arr[Sn(0)][Sn(1)][Sn(2)]=m->arr[Sn(-4)][Sn(-3)][Sn(-2)];
+            }
+            else if(n==0){
+                m->arr[Sn(0)][Sn(1)][Sn(2)]=t;
+            }
+        }
+    }
+    void BUZHOU2(const char *s){
+        int n=2;
+        while(n--!=0){
+            BUZHOU(s);
+        }
+    }
+#define ZHU_SHUN  1
+#define ZHU_NI   -1
+#define ZUO_SHUN  2
+#define ZUO_NI   -2
+#define FU_SHUN   3
+#define FU_NI    -3
+#define ZHB_SHUN  4
+#define ZHB_NI   -4
+#define ZUB_SHUN  5
+#define ZUB_NI   -5
+#define FUB_SHUN  6
+#define FUB_NI   -6
+    void xuan(char n){
+        switch (n){
+            case ZHU_SHUN:BUZHOU2("000,001,002,012,022,021,020,010");break;
+            case ZHU_NI  :BUZHOU2("000,010,020,021,022,012,002,001");break;
+            case ZUO_SHUN:BUZHOU2("200,100,000,010,020,120,220,210");break;
+            case ZUO_NI  :BUZHOU2("200,210,220,120,020,010,000,100");break;
+            case FU_SHUN :BUZHOU2("200,201,202,102,002,001,000,100");break;
+            case FU_NI   :BUZHOU2("200,100,000,001,002,102,202,201");break;
+            case ZHB_SHUN:BUZHOU2("202,201,200,210,220,221,222,212");break;
+            case ZHB_NI  :BUZHOU2("202,212,222,221,220,210,200,201");break;
+            case ZUB_SHUN:BUZHOU2("002,102,202,212,222,122,022,012");break;
+            case ZUB_NI  :BUZHOU2("002,012,022,122,222,212,202,102");break;
+            case FUB_SHUN:BUZHOU2("020,021,022,122,222,221,220,120");break;
+            case FUB_NI  :BUZHOU2("020,120,220,221,222,122,022,021");break;
+        }
+    }
+    void zhuan8(char n){
+        int a,b;
+        for(a=0;a<3;a++){
+            for(b=0;b<3;b++){
+                if(a==1&&b==1){
+                    continue;
+                }
+                switch (n){
+                    case ZHU_SHUN:zhuan(&(m->yi),n);break;
+                    case ZHU_NI  :zhuan(&(m->yi),n);break;
+                    case ZUO_SHUN:zhuan(&(m->er),n);break;
+                    case ZUO_NI  :zhuan(&(m->er),n);break;
+                    case FU_SHUN :zhuan(&(m->sa),n);break;
+                    case FU_NI   :zhuan(&(m->sa),n);break;
+                    case ZHB_SHUN:zhuan(&(m->si),n);break;
+                    case ZHB_NI  :zhuan(&(m->si),n);break;
+                    case ZUB_SHUN:zhuan(&(m->wu),n);break;
+                    case ZUB_NI  :zhuan(&(m->wu),n);break;
+                    case FUB_SHUN:zhuan(&(m->li),n);break;
+                    case FUB_NI  :zhuan(&(m->li),n);break;
+                }
+            }
+        }
+    }
+    void xuanzhuan(char n){
+        switch (n){
+            case ZHU_SHUN:zhuan8(n);xuan(n);break;
+            case ZHU_NI  :zhuan8(n);xuan(n);break;
+            case ZUO_SHUN:zhuan8(n);xuan(n);break;
+            case ZUO_NI  :zhuan8(n);xuan(n);break;
+            case FU_SHUN :zhuan8(n);xuan(n);break;
+            case FU_NI   :zhuan8(n);xuan(n);break;
+            case ZHB_SHUN:zhuan8(n);xuan(n);break;
+            case ZHB_NI  :zhuan8(n);xuan(n);break;
+            case ZUB_SHUN:zhuan8(n);xuan(n);break;
+            case ZUB_NI  :zhuan8(n);xuan(n);break;
+            case FUB_SHUN:zhuan8(n);xuan(n);break;
+            case FUB_NI  :zhuan8(n);xuan(n);break;
+        }
+    }
+};
+class GongNeng:public shuru,public dayin,public XuanZhuan{
+    public:
+    GongNeng(mofang *x):shuru(x),dayin(x),XuanZhuan(x){
+    }
+};
+#include<cstdlib>
+#include<ctime>
+char suiji(){
+    char r1;
+    r1=rand()%6;
+    char r2;
+    r2=rand()%2;
+    if(r2==0){
+        return -(r1+1);
+    }
+    else{
+        return r1+1;
+    }
+}
+class fangan{
+    public:
+    int n;
+    char frr[n];
+    fangan(int x):n(x){
+        memset(frr,0,n);
+    }
+
+    
+};
+/*
+int main(){
+    srand(time(0));
+    mofang x;
+    GongNeng gongneng(&x);
+    mofang *p=(mofang *)new mofang[20000];
+    int n=4,t=1,i,h=500;
+    while(1){
+        n=4;
+        mofang s;
+        GongNeng gn(&s);
+        while(n--!=0){
+            gn.xuanzhuan(suiji());
+        }
+        for(i=0;i<t;i++){
+            duibi db(&s,&p[i]);
+            if(db.zhumianduibi()){
+                break;
+            }
+        }
+        if(i==t){
+            p[t++]=s;
+        }
+            printf("t=%d\n",t-1);
+    }
+    gongneng.zhumiandayin();
+    return 0;
+}
+*/
+int main(){
+    mofang a,b;
+    duibi db(&a,&b);
+    int n=2;
+    int m=0;
+    while(n++!=3200000){
+        db.zhumianduibi();
+    }
+    printf("%d\n",n);
+    return 0;
+}

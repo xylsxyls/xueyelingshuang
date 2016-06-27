@@ -1,0 +1,16 @@
+重载运算符不能改变原有运算符的优先级
+
+int operator + (CRadixTool x);
+和CRadixTool operator + (int x);
+分别代表int + CRadixTool和CRadixTool + int，但是如果不加friend那么返回值必须和左边的加数类型相同
+如果加了friend可以有3个类型定义，则可以有其他类型的返回值
+
+=重载运算符的左边必须是本类类名，因为重载符号相当于类的成员函数，所以返回的一定是本类
+在调用函数里写的a = b;
+在.cpp中所写的return并不是把返回的值给a，(a = b)本身也是一个类，类型就是a的类型，return里返回的值给的是(a = b)所以如果要得到return里的值应该写a = (a = b);而如果要操作a的值应该使用this指针改变a的值
+
+所以在A operator ++ (int);中可以A a = *this;*this = *this + 1;return a;因为返回局部变量的时候是把局部变量值完全拷贝到返回区里，所以在b = a++;时给b的值是a原来的值，而a自加了1。
+
+A a = 1;和函数传参的时候调用的不是=重载运算符，而是构造函数
+
+string的构造函数里和=重载运算符里都有CString

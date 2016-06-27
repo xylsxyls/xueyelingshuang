@@ -1,0 +1,42 @@
+XmlNewDocument(myDocument);
+	XmlWriteDeclaration(myDocument,"1.0","utf-8","yes");
+	BOOL x = 0;
+	x = XmlInsertElement  (6,myDocument,"","Persons","Person","Age","A1","A2");
+	x = XmlInsertElement  (4,myDocument,"Name","Persons","Person","Age");
+	x = XmlInsertComment  (5,myDocument,"注释1","","Persons","Person","Name");
+	x = XmlInsertText     (4,myDocument,"周星星","Persons","Person","Name");//覆盖第一个文本节点字段
+	x = XmlInsertComment  (5,myDocument,"注释2","","Persons","Person","Name");
+	x = XmlInsertComment  (5,myDocument,"注释3","注释2","Persons","Person","Name");
+	x = XmlInsertComment  (5,myDocument,"名字前注释","周星星","Persons","Person","Name");
+	x = XmlInsertText     (4,myDocument,"22","Persons","Person","Name");
+	x = XmlInsertText     (4,myDocument,"33","Persons","Person","Name");
+	x = XmlInsertAttribute(5,myDocument,"t1","4","Persons","Person","Name");
+	x = XmlInsertAttribute(5,myDocument,"t1","5","Persons","Person","Name");
+	x = XmlInsertAttribute(5,myDocument,"t2","4","Persons","Person","Name");
+	x = XmlWriteDeclaration( myDocument,"1.0","utf-8","y1es");
+	x = XmlInsertComment  (5,myDocument,"注释","","Persons","Person","Age");
+	x = XmlInsertComment  (5,myDocument,"A1前注释","A1","Persons","Person","Age");
+	x = XmlInsertComment  (2,myDocument,"后注释","");
+	x = XmlInsertComment  (2,myDocument,"前注释","Persons");
+	x = XmlInsertText     (6,myDocument,"96","Persons","Person","Age","A1","A2");
+	x = XmlInsertText     (6,myDocument,"","Persons","Person","Age","A1","A2");
+	myDocument->SaveFile("D:\\XML.xml");
+
+	x = XmlLoad(myDocument,"D:\\XML.xml");
+	CString text = XmlReadText(3,myDocument,"Persons","Person","Age");
+	CString CStringTwo[1000][2] = {};//CStringTwo[5][0]第六个属性的名字 CStringTwo[5][1]第六个属性的值
+	int AttributeNumber = XmlReadAttribute(3,CStringTwo,myDocument,"Persons","Person","Name");
+	CString FirstAttributeName   = CStringTwo[0][0];
+	CString FirstAttributeValue  = CStringTwo[0][1];
+	CString SecondAttributeName  = CStringTwo[1][0];
+	CString SecondAttributeValue = CStringTwo[1][1];
+	CString comment = XmlReadCommentReturnPre(4,myDocument,"Persons","Person","Age","A1");
+	CString comment1 = XmlReadCommentReturnNext(4,myDocument,"Persons","Person","Age","A1");
+	CString DeclarationArr[3] = {};
+	x = XmlReadDeclaration(DeclarationArr,myDocument);
+	CString Version    = DeclarationArr[0];
+	CString Encoding   = DeclarationArr[1];
+	CString Standalone = DeclarationArr[2];
+	x = XmlDeleteElement(2,myDocument,"Persons","Person");
+	myDocument->SaveFile("D:\\XML.xml");
+	XmlDeleteDocument(myDocument);

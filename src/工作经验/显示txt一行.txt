@@ -1,0 +1,16 @@
+	CString strFile = "D:\\XML.xml";
+	CFile File;
+	File.Open(strFile, CFile::modeRead);
+	char* strShow = new char[(int)File.GetLength()+1];
+	memset(strShow,0,(int)File.GetLength()+1);
+	File.Read(strShow,(unsigned int)File.GetLength());
+	
+	File.Close();
+
+	//GetDlgItem(IDC_EDIT_VALUE)->SetWindowText(strShow);
+
+	delete[] strShow;
+
+
+
+new 和 delete、new[] 和 delete[] 对应使用。

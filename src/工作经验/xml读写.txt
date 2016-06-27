@@ -1,0 +1,84 @@
+//xml新建写入，统一第一是参数为挂着的节点或文档，第二个是为当前操作所定义的变量，第三个是写入xml中的字符串
+#define XmlElement(preElement,ElementVariable,strElement) \
+	TiXmlElement *ElementVariable = new TiXmlElement(strElement);\
+	preElement->LinkEndChild(ElementVariable)
+#define XmlText(preElement,TextVariable,strText) \
+	TiXmlText *TextVariable = new TiXmlText(strText); \
+	preElement->LinkEndChild(TextVariable)
+#define XmlElementAttribute(PreElement,strAttribute,strAttributeValue) PreElement->SetAttribute(_T(strAttribute),_T(strAttributeValue))
+#define XmlDeclaration(preElementOrDocument,DeclarationVariable,strVersion,strEncoding,strStandalone) \
+	TiXmlDeclaration * DeclarationVariable = new TiXmlDeclaration(strVersion,strEncoding,strStandalone);\
+	preElementOrDocument->LinkEndChild(DeclarationVariable)
+#define XmlComment(preElement,CommentVariable,strComment) \
+	TiXmlComment *CommentVariable = new TiXmlComment(strComment);\
+	preElement->LinkEndChild(CommentVariable)
+#define XmlNewDocument(Document) TiXmlDocument *Document = new TiXmlDocument
+#define XmlDocumentSave(Document,strPath) \
+	Document->SaveFile(strPath);\
+	delete Document
+
+调用
+	XmlNewDocument(myDocument);
+	XmlWriteDeclaration(myDocument,declaration,"1.0","utf-8","yes");
+	XmlWriteElement(myDocument,Persons,"Persons");
+	XmlWriteElement(Persons,Person,"Person");
+	XmlWriteElement(Person,Age,"Age");
+	XmlWriteElement(Person,Name,"Name");
+	XmlWriteText(Name,NameContent,"周星星");
+	XmlWriteText(Age,AgeContent,"22");
+	XmlWriteElementAttribute(Age,"t1","4");
+	XmlWriteElementAttribute(Age,"t2","4");
+	XmlWriteElement(Age,A1,"A1");
+	XmlWriteComment(Age,AgeComment,"注释");
+	XmlDocumentSave(myDocument,"D:\\XML.xml");
+
+
+元素函数总结
+ValueStr     //返回元素名称
+SetValue     //设置元素名称
+Parent     //返回父节点对象
+
+FirstChild    //返回第一个子节点
+LastChild     //返回最后一个子节点
+IterateChildren   //返回下一个子节点
+
+InsertEndChild   //在最后一个子节点后插入子节点
+InsertBeforeChild   //在指定的子节点前插入子节点
+InsertAfterChild   //在指定的子节点后插入子节点
+ReplaceChild    //替换指定的子节点
+RemoveChild    //删除指定的子节点
+Clear     //删除所有的子节点
+
+PreviousSibling   //返回同级中前一个节点
+NextSibling    //返回同级中后一个节点
+
+NextSiblingElement   //返回同级中后一个元素
+FirstChildElement   //返回第一个子元素节点
+Attribute     //返回元素中的属性值
+QueryValueAttribute //返回元素中的属性值
+SetAttribute    //设置元素中的属性值
+FirstAttribute   //返回元素中第一个属性对象
+LastAttribute    //返回元素中最后一个属性对象
+RemoveAttribute   //删除元素中指定的属性对象
+
+属性类
+属性为名称="值"对，元素可以具有属性值，但名称必须唯一。
+你可以通过
++const std::string& NameTStr() const
+返回属性名称
+
+也可以通过下面三个函数返回属性值：
++const std::string& ValueStr() const
++int     IntValue() const;
++double    DoubleValue() const;
+
+当然你也可以设置属性值，它们的函数声明如下：
++void SetName( const std::string& _name )
++void SetIntValue( int _value ); 
++void SetDoubleValue( double _value );
++void SetValue( const std::string& _value )
+以上函数与元素类中的相关函数类似，这里不重复介绍了。
+
+在元素属性中，通常具有许多属性，你可以通过Next函数返回下一个属性对象的指针，也可以通过Previous函数获得上一个属性对象的指针。它们的函数声明如下：
++TiXmlAttribute* Next()
++TiXmlAttribute* Previous()

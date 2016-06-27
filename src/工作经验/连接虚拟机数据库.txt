@@ -1,0 +1,14 @@
+先将虚拟机左下角电脑里的NetWork连起来，密码是root，进去之后编辑Overview和Routing
+Overview进去之后Address里的ip改为虚拟机的ip，Routing里写192.168.1.1
+destart和deshut分别为启动和关闭oracle服务
+windows底下连接虚拟机为sqlplus xylsxyls/yangnan@192.168.1.15:1521/ora11g，没有分号
+
+windows底下无法启动时执行
+SQL> startup nomount;
+
+SQL> startup force;
+
+启动监听服务，在oracle账户下执行
+lsnrctl start
+启动数据库服务，通过as sysdba进入数据库中执行
+startup;

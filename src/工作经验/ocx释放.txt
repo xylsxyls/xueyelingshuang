@@ -1,0 +1,1 @@
+ocx在释放的时候不会调用ocx里的CLED_HJCtrl析构函数

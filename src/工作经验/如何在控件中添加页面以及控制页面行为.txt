@@ -1,0 +1,18 @@
+在控件的.h中添加成员
+CABCPropPage m_dlgPro;
+这是一个窗口类，继承CWnd
+在.cpp中的int CABCCtrl::OnCreate(LPCREATESTRUCT lpCreateStruct)中添加
+m_dlgPro.Create(IDD_PROPPAGE_MFCACTIVEXCONTROL1, this);
+到此一个新的页面被添加
+可以在资源视图中看到
+可以在资源视图中添加需要的按键
+这两个类中发消息可以通过::postmessage
+第一个句柄用this->m_dlgPro.GetSafeHwnd()表示
+::PostMessage(this->m_dlgPro.GetSafeHwnd(),10000,0,(LPARAM)"123");
+在CABCPropPage类中本类和父类之间的消息添加ON_MESSAGE(10000,&CABCPropPage::OnBnClickedButton1_c)
+BEGIN_MESSAGE_MAP(CABCPropPage, COlePropertyPage)
+	ON_MESSAGE(10000,&CABCPropPage::OnBnClickedButton1_c)
+END_MESSAGE_MAP()
+对函数OnBnClickedButton1_c的要求是必须为
+LRESULT OnBnClickedButton1_c(WPARAM wParam = 0, LPARAM lParam = 0);
+到此可以通过控件提供的接口函数通过发消息的方式给成员窗口类发指令，让成员窗口类执行特定的函数

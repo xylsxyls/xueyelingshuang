@@ -1,0 +1,30 @@
+#define ALL_FUN \
+	DLL_LOAD_0(load->FPI_DllHinstance,FPIDevDetect   ,"FPIDevDetect"   ,int                                                                                      );\
+	DLL_LOAD_3(load->FPI_DllHinstance,FPIGetVersion  ,"FPIGetVersion"  ,int,int            ,unsigned char *,int  *                                               );\
+	DLL_LOAD_3(load->FPI_DllHinstance,FPITemplate    ,"FPITemplate"    ,int,int            ,unsigned char *,int  *                                               );\
+	DLL_LOAD_3(load->FPI_DllHinstance,FPIFeature     ,"FPIFeature"     ,int,int            ,unsigned char *,int  *                                               );\
+	DLL_LOAD_3(load->FPI_DllHinstance,FPIMatch       ,"FPIMatch"       ,int,unsigned char *,unsigned char *,int                                                  );\
+	DLL_LOAD_4(load->FPI_DllHinstance,FPIGetImageData,"FPIGetImageData",int,int            ,int  *         ,int  *         ,unsigned char *                      );\
+	DLL_LOAD_2(load->FPI_DllHinstance,FPIImg2Bmp     ,"FPIImg2Bmp"     ,CString,double        ,char *                                                               );\
+	DLL_LOAD_4(load->FPI_DllHinstance,FPIBmp2Feature ,"FPIBmp2Feature" ,int,int            ,char *         ,unsigned char *,int  *                               );\
+	DLL_LOAD_6(load->FPI_DllHinstance,FPIBmp2Template,"FPIBmp2Template",int,int            ,char *         ,char *         ,char *         ,unsigned char *,int *);\
+	DLL_LOAD_3(load->FPI_DllHinstance,FPIExtract     ,"FPIExtract"     ,int,char *         ,unsigned char *,int  *                                               );\
+	DLL_LOAD_5(load->FPI_DllHinstance,FPIEnroll      ,"FPIEnroll"      ,int,char *         ,char *         ,char *         ,unsigned char *,int *                );\
+	DLL_LOAD_1(load->FPI_DllHinstance,FPICheckFinger ,"FPICheckFinger" ,int,int                                                                                  );\
+	DLL_LOAD_3(load->FPI_DllHinstance,FPITemplateB64 ,"FPITemplateB64" ,int,int            ,unsigned char *,int  *                                               );\
+	DLL_LOAD_3(load->FPI_DllHinstance,FPIFeatureB64  ,"FPIFeatureB64"  ,int,int            ,unsigned char *,int  *                                               );\
+	DLL_LOAD_3(load->FPI_DllHinstance,FPIFpMatchB64  ,"FPIFpMatchB64"  ,int,unsigned char *,unsigned char *,int                                                  );
+
+#define DLL_LOAD_0(DllHinstance,NewFunName,DllFunName,Return                           ) Return(__stdcall * NewFunName )(                          ) = (Return(__stdcall *)(                          ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_1(DllHinstance,NewFunName,DllFunName,Return,T1                        ) Return(__stdcall * NewFunName )(T1                        ) = (Return(__stdcall *)(T1                        ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_2(DllHinstance,NewFunName,DllFunName,Return,T1,T2                     ) Return(__stdcall * NewFunName )(T1,T2                     ) = (Return(__stdcall *)(T1,T2                     ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_3(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3                  ) Return(__stdcall * NewFunName )(T1,T2,T3                  ) = (Return(__stdcall *)(T1,T2,T3                  ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_4(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4               ) Return(__stdcall * NewFunName )(T1,T2,T3,T4               ) = (Return(__stdcall *)(T1,T2,T3,T4               ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_5(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5            ) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5            ) = (Return(__stdcall *)(T1,T2,T3,T4,T5            ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_6(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5,T6         ) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5,T6         ) = (Return(__stdcall *)(T1,T2,T3,T4,T5,T6         ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_7(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5,T6,T7      ) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5,T6,T7      ) = (Return(__stdcall *)(T1,T2,T3,T4,T5,T6,T7      ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_8(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5,T6,T7,T8   ) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5,T6,T7,T8   ) = (Return(__stdcall *)(T1,T2,T3,T4,T5,T6,T7,T8   ))GetProcAddress(DllHinstance,DllFunName);
+#define DLL_LOAD_9(DllHinstance,NewFunName,DllFunName,Return,T1,T2,T3,T4,T5,T6,T7,T8,T9) Return(__stdcall * NewFunName )(T1,T2,T3,T4,T5,T6,T7,T8,T9) = (Return(__stdcall *)(T1,T2,T3,T4,T5,T6,T7,T8,T9))GetProcAddress(DllHinstance,DllFunName);
+
+#define DLL_OPEN(DllPath) LoadLibraryEx(DllPath,0,LOAD_WITH_ALTERED_SEARCH_PATH);
+#define DLL_CLOSE(DllHinstance) ::FreeLibrary(DllHinstance);

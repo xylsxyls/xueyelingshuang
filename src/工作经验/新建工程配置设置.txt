@@ -1,0 +1,21 @@
+常规中
+
+输出目录改为    $(SolutionDir)BIN\Drivers\REIN\
+平台工具集改为        xp
+字符集改为            使用多字节
+
+
+VC++目录中
+
+包含目录改为    $(SolutionDir)INCLUDE\
+                $(SolutionDir)COMM\
+                $(SolutionDir)INTERFACE\
+                $(SolutionDir)DEVICE\类名\
+                .\
+$(SolutionDir)INCLUDE\;$(SolutionDir)COMM\;$(SolutionDir)INTERFACE\;$(SolutionDir)DEVICE\类名\;.\;$(IncludePath)
+库目录改为      $(SolutionDir)LIB\;$(LibraryPath)
+
+
+C/C++中
+
+预处理器定义    WIN32;_WINDOWS;NDEBUG;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)

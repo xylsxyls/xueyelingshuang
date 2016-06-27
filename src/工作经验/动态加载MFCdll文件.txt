@@ -1,0 +1,30 @@
+制造MFCdll文件的时候和之前的一样，但需要加一个步骤，需要把需要使用的函数名列在源文件中.def的文件中，一个一行
+动态加载MFCdll文件
+1.在需要调用的源文件中写
+#include "stdafx.h"
+#include "afx.h"
+
+int _tmain(int argc, _TCHAR* argv[])
+{
+    typedef int (_cdecl * AddProc)(int , int );//定义函数指针类型
+
+    HINSTANCE hInst;
+
+    hInst=LoadLibraryEx("MFCLibrary5.dll",0,LOAD_WITH_ALTERED_SEARCH_PATH);//动态加载Dll
+
+    AddProc Add=(AddProc)GetProcAddress(hInst,"addfun");//获取Dll的导出函数
+ 
+    if(!Add)
+    {
+        printf("获取Add函数地址失败！");
+    }
+
+    printf("%d\n",Add(8,9));
+
+    ::FreeLibrary(hInst);//释放Dll函数
+
+    return 0;
+}
+2.项目属性中改两个默认配置。
+3.在配置属性中的C/C++中的代码生成里运行库改为MTd
+4.最后把dll文件拷贝到debug下。

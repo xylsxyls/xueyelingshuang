@@ -1,0 +1,2 @@
+变长参直接传递可以使用宏
+#define logPrintf(pFile,PrintStr,...) fprintf(pFile,PrintStr,##__VA_ARGS__)

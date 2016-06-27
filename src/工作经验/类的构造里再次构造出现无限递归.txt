@@ -1,0 +1,9 @@
+不可以在类的构造函数内出现以返回类类型且用相同构造函数定义的类
+CBigNumber::CBigNumber(CRadixTool InitNumber){
+	memset(number,0,BigNumberLength);
+	CBigNumber temp = InitNumber;//无限递归
+	*this = InitNumber;
+}
+这个是错的
+
+最好的解决办法就是不要在类的构造函数里调用成员函数

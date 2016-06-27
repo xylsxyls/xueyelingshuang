@@ -1,0 +1,37 @@
+int              i                                 布尔值变量一律用B
+long             l                                 MultiBool变量一律用M
+char             c                                 for循环变量一律用i,j,k
+unsigned int     ui                                while循环变量一律用a,b
+unsigned char    uc                                数组内变量一律用x,y
+double           d                                 控制递归层数变量一律用C
+float            f                                 计数器一律用n,m
+CString          cstr                              
+string           str
+struct           tag
+class            cls
+int*             pi
+long*            pl
+char*字符指针    pc
+char*数组指针    sz
+unsigned int*    pui
+unsigned char*   puc
+double*          pd
+float*           pf
+CString*         pcstr
+string*          pstr
+struct*          ptag
+class*           pcls
+void*            pv
+goto             r
+局部变量不需要加
+所有入参变量在前面加IN宏
+所有出参变量在前面加OUT宏
+所有成员变量都在前面加m_
+所有全局变量都在前面加g_
+所有静态变量都在前面加s_
+所有枚举变量都在前面加e_
+所有宏都在前面加MACRO_
+所有自定义函数指针变量都在前面加pf_
+所有因为接动态库内函数的指针直接定义为动态库内的原型
+所有无实际意义，且仅在5行之内会用到的变量都在前面加temp
+

@@ -1,0 +1,3 @@
+static CFont m_Font;
+	m_Font.CreatePointFont(200, "Arial", NULL);
+	TextDeclaration.SetFont(&m_Font,true);

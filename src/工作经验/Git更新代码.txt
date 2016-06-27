@@ -1,0 +1,8 @@
+192.168.1.9:9000
+1.拉取
+2.把不能提交的拷出来，然后通过右键点击Git Bash Here输入git checkout hywordocxCtrl.cpp hywordocxCtrl.h进行还原
+3.右键点击设置，进入设置用户名和邮箱，然后在远端里点击origin然后选择秘钥
+
+4.拉取
+5.提交
+6.推送

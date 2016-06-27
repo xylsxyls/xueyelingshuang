@@ -1,0 +1,13 @@
+va_list parameterlist;
+va_start(parameterlist,number);
+char pBuf[100]={};
+//用于可变长参数的传递，pBuf和BUFF_LENGTH为接收转换后的缓冲区
+//lpszFormat为含%的字符串
+_vsnprintf(pBuf,BUFF_LENGTH,lpszFormat,parameterlist);
+
+type里的值 = va_arg(parameterlist,type);
+/*
+int i = va_arg(parameterlist,int);//3个不同的int值，多次调用能够依次得到对应的值
+*/
+
+va_end(parameterlist);

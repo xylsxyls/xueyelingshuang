@@ -1,0 +1,1 @@
+mysql -u hs_sst -p hs_sst_cms_sst -h 192.168.1.19

@@ -1,0 +1,1 @@
+ocx的classid是idl文件里的CLED_HJCtrl 的类信息

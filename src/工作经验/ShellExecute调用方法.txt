@@ -1,0 +1,8 @@
+//打开网页
+ShellExecute(NULL, _T("open"), _T("http://www.vckbase.com"), NULL, NULL, SW_SHOW);
+
+//打开文件
+ShellExecute(NULL, _T("open"), _T("D:\\test.txt"), NULL, NULL, SW_SHOW);
+
+//执行程序
+ShellExecute(NULL, _T("open"), _T("cmd.exe"), NULL, NULL, SW_SHOW);

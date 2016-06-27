@@ -1,0 +1,7 @@
+配置DirectShow流程
+VS2013右键点击项目名->属性-》VC++目录-》包含目录加上DirectShow->include
+VS2013右键点击项目名->属性-》VC++目录-》库目录加上DirectShow->lib
+VS2013右键点击项目名->属性-》VC++目录-》库目录加上DirectShow->Debug
+VS2013右键点击项目名->属性-》VC++目录-》库目录加上DirectShow->Release
+
+其他版本的VS在工具-》设置-》VC++目录-》中实现上述操作即可

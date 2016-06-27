@@ -1,0 +1,7 @@
+事件是肯定开在两个线程里的，子线程先被阻塞，当主线程释放阻塞后子线程运行事件内容，最后看情况重置阻塞
+
+#define Create_NoName_Event_Choke(signal) CreateEvent(NULL, TRUE, signal, NULL);
+HANDLE ReadCardEvent = Create_NoName_Event_Choke(FALSE);//初始为无信号
+WaitForSingleObject(ReadCardEvent, INFINITE);
+SetEvent(g_hDeviceReadEvent);
+ResetEvent(g_hDevicePollingEvent);

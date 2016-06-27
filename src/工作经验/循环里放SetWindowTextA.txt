@@ -1,0 +1,5 @@
+如果直接在循环里放SetWindowTextA是不能有值显示出来的，需要加m_Edit.RedrawWindow();
+如果是自定义的线程void __stdcall FunName();放在循环里不加m_Edit.RedrawWindow();也是无法显示的
+如果是CreateThread开的线程即便不加也可以直接显示。
+
+使用m_Edit.UpdateWindow();也可以

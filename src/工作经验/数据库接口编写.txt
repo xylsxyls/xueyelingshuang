@@ -1,0 +1,49 @@
+新建一个Win32控制台空项目，项目名必须和之后建立的.pc文件名一致
+新建一个.pc文件，用txt转
+点.pc文件的属性，改为自定义生成工具，关了重新打开在命令行输入
+
+proc INAME=$(TargetName).pc PARSE=NONE CODE=CPP
+
+输出输入
+
+$(IntDir)$(TargetName).cpp
+
+在.pc里写
+exec sql include sqlca;
+数据库里用到的变量需要在前后加
+EXEC SQL BEGIN DECLARE SECTION;
+EXEC SQL END   DECLARE SECTION;
+正常使用语句需要在语句前加
+EXEC SQL
+写完之后.pc编译会出现.cpp，把.cpp文件内容复制到需要使用数据库接口的地方即可
+在需要使用数据库的地方需要添加头文件库文件
+在C/C++里附加包含目录里写
+
+C:\Users\Administrator\Desktop\工作经验\总结\oracle11g\public
+
+警告改为等级2
+
+在链接器的常规的附加库目录里写
+
+C:\Users\Administrator\Desktop\工作经验\总结\oracle11g
+
+在输入的附加依赖项里写
+
+orasql11.lib;oraxa11.lib;oci.lib;orasqx11.lib
+
+平台改为x64
+
+void SQL_Connect(char *connect){
+	EXEC SQL BEGIN DECLARE SECTION;
+	char *connect_11g = connect;
+	EXEC SQL END   DECLARE SECTION;
+	EXEC SQL CONNECT :connect_11g;
+}
+
+void SQL_Commit(){
+	EXEC SQL commit work;
+}
+
+void SQL_Commit_Release(){
+	EXEC SQL commit work release;
+}

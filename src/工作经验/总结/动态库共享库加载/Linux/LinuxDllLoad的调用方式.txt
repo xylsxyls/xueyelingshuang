@@ -1,0 +1,31 @@
+#include <stdio.h>
+#include "LinuxLoad.h"
+int (*add2)(int a,int b);
+int (*add3)(int a,int b,int c);
+int (*add4)(int a,int b,int c,int d);
+int main(){
+    CLinuxDllLoad LinuxDllLoad("./dd.so");
+    MultiBool x = LinuxDllLoad.LoadFun(3,V_str(add2),V_str(add3),V_str(add4));
+    //MultiBool x = LinuxDllLoad.Check_Fun(3,"add2","add3","add4");
+    if(x == -1) printf("路径错误\n");
+    if(x ==  0) printf("函数错误\n");
+    if(x ==  1) printf("加载成功\n");
+    if(x ==  1){
+        //LinuxDllLoad.Load_Fun(3,V(add2),V(add3),V(add4));
+        add2(1,2);
+        add3(1,2,3);
+        add4(1,2,3,4);
+    }
+    return 0;
+}
+
+//如果函数出现错误
+/*
+if(x ==  0){
+	printf("函数错误\n");
+	string ErrorFun = LinuxDllLoad.ErrorFunName;
+	int ErrorNumber = LinuxDllLoad.ErrorFunNumber;
+	printf("number = %d,fun = %s",ErrorNumber,ErrorFun.c_str());
+	return -1;
+}
+*/

@@ -1,0 +1,10 @@
+p_Dlg->SetTimer(0,3000,NULL);表示过了3秒开始运行底下的函数，NULL是函数指针，在运行完底下的函数运行后面的函数，是多线程
+
+void CresponseDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	KillTimer(nIDEvent);//一定要有，否则会循环运行OnTimer函数
+	AfxMessageBox("1");
+	NoPeopleTime = 0;
+	CDialogEx::OnTimer(nIDEvent);
+}
