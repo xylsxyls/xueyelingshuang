@@ -118,7 +118,13 @@ BOOL CstorageDlg::OnInitDialog()
 	MYSQL_ROOT = getenv(MysqlEnvironment);
 	ShellExecute(NULL, _T("open"), _T(MYSQL_ROOT + "\\bin\\mysqld.exe"), NULL, NULL, SW_SHOW);
 	//system("..\\storage\\dos\\startdb.bat"); //使用此方法会导致打开的exe无法自动关闭
-	pMysql = new CMysql(Ip,User,PassWord,dbName,port);
+	pMysql = new CMysql(Ip,User,PassWordroot,dbName,port);
+	//密码可能会出现两种，如果一个不成功试另一个
+	if(pMysql->pMysqlManager->MysqlSucceed == 0){
+		//即便不成功也必须删了重来，不可以直接再次赋值
+		delete pMysql;
+		pMysql = new CMysql(Ip,User,PassWordNULL,dbName,port);
+	}
 	pTable = pMysql->OpenTableInterface(TableName);
 	m_OldText = "";
 

@@ -1,0 +1,261 @@
+
+D:\xueyelingshuang\data>git help
+'git' 不是内部或外部命令，也不是可运行的程序
+或批处理文件。
+
+D:\xueyelingshuang\data>git
+'git' 不是内部或外部命令，也不是可运行的程序
+或批处理文件。
+
+D:\xueyelingshuang\data>C:\Program Files (x86)\Git\bin\git.exe help
+'C:\Program' 不是内部或外部命令，也不是可运行的程序
+或批处理文件。
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" help
+usage: git [--version] [--help] [-C <path>] [-c name=value]
+           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]
+           [-p|--paginate|--no-pager] [--no-replace-objects] [--bare]
+           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]
+           <command> [<args>]
+
+The most commonly used git commands are:
+   add        Add file contents to the index
+   bisect     Find by binary search the change that introduced a bug
+   branch     List, create, or delete branches
+   checkout   Checkout a branch or paths to the working tree
+   clone      Clone a repository into a new directory
+   commit     Record changes to the repository
+   diff       Show changes between commits, commit and working tree, etc
+   fetch      Download objects and refs from another repository
+   grep       Print lines matching a pattern
+   init       Create an empty Git repository or reinitialize an existing one
+   log        Show commit logs
+   merge      Join two or more development histories together
+   mv         Move or rename a file, a directory, or a symlink
+   pull       Fetch from and integrate with another repository or a local branch
+
+   push       Update remote refs along with associated objects
+   rebase     Forward-port local commits to the updated upstream head
+   reset      Reset current HEAD to the specified state
+   rm         Remove files from the working tree and from the index
+   show       Show various types of objects
+   status     Show the working tree status
+   tag        Create, list, delete or verify a tag object signed with GPG
+
+'git help -a' and 'git help -g' lists available subcommands and some
+concept guides. See 'git help <command>' or 'git help <concept>'
+to read about a specific subcommand or concept.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" add D:\xueyelin
+gshuang\data\storage.sql
+
+D:\xueyelingshuang\data>git commit
+'git' 不是内部或外部命令，也不是可运行的程序
+或批处理文件。
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit
+Aborting commit due to empty commit message.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit#
+git: 'commit#' is not a git command. See 'git --help'.
+
+Did you mean this?
+        commit
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit
+Aborting commit due to empty commit message.
+
+D:\xueyelingshuang\data>#"C:\Program Files (x86)\Git\bin\git.exe" commit
+文件名、目录名或卷标语法不正确。
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" #commit
+git: '#commit' is not a git command. See 'git --help'.
+
+Did you mean this?
+        commit
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit
+Aborting commit due to empty commit message.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" status
+On branch master
+Your branch is up-to-date with 'origin/master'.
+
+Changes to be committed:
+  (use "git reset HEAD <file>..." to unstage)
+
+        modified:   storage.sql
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working directory)
+
+        modified:   ../src/storage/storage/storageDlg.cpp
+        modified:   ../src/storage/storage/storageDlg.h
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+
+        ../include/CMysqlAPI/
+        ../lib/CMysqlAPId.dll
+        ../lib/CMysqlAPId.exp
+        ../lib/CMysqlAPId.ilk
+        ../lib/CMysqlAPId.lib
+        ../lib/CMysqlAPId.pdb
+        ../lib/libmysql.dll
+        ../lib/libmysql.lib
+        ../lib/storaged.exe
+        ../lib/storaged.ilk
+        ../lib/storaged.pdb
+        ../props/CMysqlAPI.props
+        ../src/CMysqlAPI/CMysqlAPI.sdf
+        ../src/CMysqlAPI/CMysqlAPI.v11.suo
+        ../src/CMysqlAPI/CMysqlAPI/vcxproj/Debug/
+        ../src/CMysqlAPI/scripts/@AutomationLog.txt
+        ../src/CMysqlAPI/scripts/msbuild.log
+        ../src/storage/@AutomationLog.txt
+        ../src/storage/ipch/
+        ../src/storage/scripts/@AutomationLog.txt
+        ../src/storage/scripts/msbuild.log
+        ../src/storage/storage.sdf
+        ../src/storage/storage.v11.suo
+        ../src/storage/storage/debug/
+
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit
+Aborting commit due to empty commit message.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit D:\xueye
+lingshuang\data\storage.sql
+Aborting commit due to empty commit message.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit master
+error: pathspec 'master' did not match any file(s) known to git.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit --amend
+[master 494472e] Merge branch 'master' of https://github.com/xylsxyls/xueyelings
+huang
+ Author: yangnan <yangnan@huaiye.com>
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit origin/m
+aster
+error: pathspec 'origin/master' did not match any file(s) known to git.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" commit
+On branch master
+Your branch and 'origin/master' have diverged,
+and have 1 and 1 different commit each, respectively.
+  (use "git pull" to merge the remote branch into yours)
+
+Changes not staged for commit:
+        modified:   ../src/storage/storage/storageDlg.cpp
+        modified:   ../src/storage/storage/storageDlg.h
+
+Untracked files:
+        ../include/CMysqlAPI/
+        ../lib/CMysqlAPId.dll
+        ../lib/CMysqlAPId.exp
+        ../lib/CMysqlAPId.ilk
+        ../lib/CMysqlAPId.lib
+        ../lib/CMysqlAPId.pdb
+        ../lib/libmysql.dll
+        ../lib/libmysql.lib
+        ../lib/storaged.exe
+        ../lib/storaged.ilk
+        ../lib/storaged.pdb
+        ../props/CMysqlAPI.props
+        ../src/CMysqlAPI/CMysqlAPI.sdf
+        ../src/CMysqlAPI/CMysqlAPI.v11.suo
+        ../src/CMysqlAPI/CMysqlAPI/vcxproj/Debug/
+        ../src/CMysqlAPI/scripts/@AutomationLog.txt
+        ../src/CMysqlAPI/scripts/msbuild.log
+        ../src/storage/@AutomationLog.txt
+        ../src/storage/ipch/
+        ../src/storage/scripts/@AutomationLog.txt
+        ../src/storage/scripts/msbuild.log
+        ../src/storage/storage.sdf
+        ../src/storage/storage.v11.suo
+        ../src/storage/storage/debug/
+
+no changes added to commit
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" push origin/mas
+ter
+warning: push.default is unset; its implicit value is changing in
+Git 2.0 from 'matching' to 'simple'. To squelch this message
+and maintain the current behavior after the default changes, use:
+
+  git config --global push.default matching
+
+To squelch this message and adopt the new behavior now, use:
+
+  git config --global push.default simple
+
+When push.default is set to 'matching', git will push local branches
+to the remote branches that already exist with the same name.
+
+In Git 2.0, Git will default to the more conservative 'simple'
+behavior, which only pushes the current branch to the corresponding
+remote branch that 'git pull' uses to update the current branch.
+
+See 'git help config' and search for 'push.default' for further information.
+(the 'simple' mode was introduced in Git 1.7.11. Use the similar mode
+'current' instead of 'simple' if you sometimes use older versions of Git)
+
+fatal: 'origin/master' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" pull
+Already up-to-date!
+Merge made by the 'recursive' strategy.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" push origin<mas
+ter>
+命令语法不正确。
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" push origin/mas
+ter
+warning: push.default is unset; its implicit value is changing in
+Git 2.0 from 'matching' to 'simple'. To squelch this message
+and maintain the current behavior after the default changes, use:
+
+  git config --global push.default matching
+
+To squelch this message and adopt the new behavior now, use:
+
+  git config --global push.default simple
+
+When push.default is set to 'matching', git will push local branches
+to the remote branches that already exist with the same name.
+
+In Git 2.0, Git will default to the more conservative 'simple'
+behavior, which only pushes the current branch to the corresponding
+remote branch that 'git pull' uses to update the current branch.
+
+See 'git help config' and search for 'push.default' for further information.
+(the 'simple' mode was introduced in Git 1.7.11. Use the similar mode
+'current' instead of 'simple' if you sometimes use older versions of Git)
+
+fatal: 'origin/master' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+
+D:\xueyelingshuang\data>"C:\Program Files (x86)\Git\bin\git.exe" push -u origin
+master
+Username for 'https://github.com': xylsxyls
+Password for 'https://xylsxyls@github.com':
+Counting objects: 12, done.
+Delta compression using up to 4 threads.
+Compressing objects: 100% (5/5), done.
+Writing objects: 100% (5/5), 690 bytes | 0 bytes/s, done.
+Total 5 (delta 2), reused 0 (delta 0)
+To https://github.com/xylsxyls/xueyelingshuang.git
+   78e272b..0e14393  master -> master
+Branch master set up to track remote branch master from origin.
+
+D:\xueyelingshuang\data>

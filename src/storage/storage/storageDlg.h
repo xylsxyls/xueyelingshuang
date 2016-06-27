@@ -9,7 +9,8 @@
 
 #define Ip                  "127.0.0.1"
 #define User                "root"
-#define PassWord            ""
+#define PassWordNULL        ""
+#define PassWordroot        "root"
 #define dbName              "storagedb"
 #define port                3306
 #define TableName           "storage"
