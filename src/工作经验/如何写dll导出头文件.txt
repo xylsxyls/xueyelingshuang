@@ -1,0 +1,34 @@
+首先新建一个不会在dll内部使用到的头文件，以API结尾
+这个API头文件就是给别人用的
+在dll内部必须包含一个API.h文件，这个文件里写
+#pragma once
+
+#ifdef _...API
+	#define ...API _declspec(dllimport)
+#else
+	#define ...API _declspec(dllexport)
+#endif
+
+根据情况把...改成dll的文字+API
+然后在对外的API结尾的头文件中包含需要对外的头文件，然后在这些头文件前加上
+#define _...API
+最后写一个debug和release版本的预处理
+#ifdef NDEBUG
+	#pragma comment(lib,"....lib")
+#else
+	#pragma comment(lib,"....lib")
+#endif
+
+这样以后只需要包含头文件路径和库目录就行
+
+debug
+在工程输出目录里写$(ProjectDir)\..\..\..\..\lib\
+中间目录$(ProjectDir)\Debug\
+目标$(ProjectName)d
+
+release
+在工程输出目录里写$(ProjectDir)\..\..\..\..\lib\
+中间目录$(ProjectDir)\Release\
+目标$(ProjectName)
+
+支持xp和改为多字节字符集
