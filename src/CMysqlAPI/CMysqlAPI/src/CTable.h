@@ -14,7 +14,7 @@ class CMysqlManager;
 class CField;
 class CRecord;
 
-class API CTable{
+class CMysqlAPI CTable{
 	//表有两个功能，分别管字段和记录
 public:
 	MYSQL *mysql;

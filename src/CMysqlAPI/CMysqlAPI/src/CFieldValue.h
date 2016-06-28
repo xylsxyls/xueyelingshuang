@@ -6,7 +6,7 @@
 #include "CField.h"
 
 class CField;
-class API CFieldValue{
+class CMysqlAPI CFieldValue{
 public:
 	CString strValue;
 	int nValue;

@@ -12,7 +12,7 @@ class CField;
 class CFieldValue;
 //多个字段值组成一条，每个字段值都有自己的字段属性
 
-class API CRecord{
+class CMysqlAPI CRecord{
 public:
 	//用来记录各个进来的字段值
 	vector<CFieldValue> vecFieldValue;

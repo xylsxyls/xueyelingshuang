@@ -3,7 +3,7 @@
 #include <afx.h>
 #include "API.h"
 
-class API CField{
+class CMysqlAPI CField{
 	//字段管具体信息
 public:
 	CString FieldName;

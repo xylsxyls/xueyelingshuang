@@ -10,7 +10,7 @@
 class CMysqlManager;
 class CDataBase;
 
-class API CUser{
+class CMysqlAPI CUser{
 	//用户管数据库
 	//CUser被创建时必须初始化所有成员变量
 public:

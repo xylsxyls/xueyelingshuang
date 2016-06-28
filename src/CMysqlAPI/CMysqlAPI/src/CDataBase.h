@@ -11,7 +11,7 @@ class CTable;
 class CMysqlManager;
 
 
-class API CDataBase{
+class CMysqlAPI CDataBase{
 	//数据库管表
 public:
 	MYSQL* mysql;

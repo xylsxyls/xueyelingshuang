@@ -19,7 +19,7 @@ class CUser;
 class CDataBase;
 class CTable;
 
-class API CMysql{
+class CMysqlAPI CMysql{
 	//所有BOOL为返回值的函数，1表示成功，0表示失败
 	//MysqlSucceed为关键判断值，一旦出现错误则变为0，之后所有成员语句不执行
 	//在删除表之后必须紧接着转到另一张表再进行操作，否则会报错
