@@ -1,10 +1,10 @@
-CLOAD *LoadDll = NULL;
+CLoadDLL *LoadDll = NULL;
 const char* (*GetMAC    )(int a           ,int b,char* c,int d        );
 BOOL        (*CheckLegal)(char* strRegCode,int a,char* b,int c,char* d);
 const char* (*GetLastErr)(                                            );
 void CiniReadDlg::OnBnClickedButtonLoaddll()
 {
-	LoadDll = new CLOAD("REG.dll");
+	LoadDll = new CLoadDLL("REG.dll");
 	MultiBool x = LoadDll->Check_Fun(3,"GetMAC","CheckLegal","GetLastErr");
 	if(x == -1) EditLoadDll.SetWindowTextA("路径错误");
 	if(x ==  0) EditLoadDll.SetWindowTextA("函数错误");
@@ -12,7 +12,7 @@ void CiniReadDlg::OnBnClickedButtonLoaddll()
 	if(x ==  1) LoadDll->Load_Fun(3,V(GetMAC),V(CheckLegal),V(GetLastErr));
 
 //更新版
-	LoadDll = new CLOAD("REG.dll");
+	LoadDll = new CLoadDLL("REG.dll");
 	MultiBool x = LoadDll->LoadFun(3,V_str(GetMAC),V_str(CheckLegal),V_str(GetLastErr));
 	if(x == -1) EditLoadDll.SetWindowTextA("路径错误");
 	if(x ==  0) EditLoadDll.SetWindowTextA("函数错误");
