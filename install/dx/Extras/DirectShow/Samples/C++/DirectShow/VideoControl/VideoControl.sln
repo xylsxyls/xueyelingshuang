@@ -1,0 +1,31 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPVideoControl", "CPP\CPPVideoControl.vcxproj", "{539563A4-9D9A-4805-9058-692FE7BE2D61}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release MinDependency|Win32 = Release MinDependency|Win32
+		Release MinSize|Win32 = Release MinSize|Win32
+		Unicode Debug|Win32 = Unicode Debug|Win32
+		Unicode Release MinDependency|Win32 = Unicode Release MinDependency|Win32
+		Unicode Release MinSize|Win32 = Unicode Release MinSize|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Debug|Win32.ActiveCfg = Debug|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Debug|Win32.Build.0 = Debug|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Release MinDependency|Win32.ActiveCfg = Release MinDependency|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Release MinDependency|Win32.Build.0 = Release MinDependency|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Release MinSize|Win32.ActiveCfg = Release MinSize|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Release MinSize|Win32.Build.0 = Release MinSize|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Unicode Debug|Win32.ActiveCfg = Unicode Debug|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Unicode Debug|Win32.Build.0 = Unicode Debug|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Unicode Release MinDependency|Win32.ActiveCfg = Unicode Release MinDependency|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Unicode Release MinDependency|Win32.Build.0 = Unicode Release MinDependency|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Unicode Release MinSize|Win32.ActiveCfg = Unicode Release MinSize|Win32
+		{539563A4-9D9A-4805-9058-692FE7BE2D61}.Unicode Release MinSize|Win32.Build.0 = Unicode Release MinSize|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

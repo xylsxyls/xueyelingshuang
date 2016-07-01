@@ -1,0 +1,5 @@
+This file should be deleted before creating your DVD-ROM.  
+It exists merely as a placeholder to aid in installation,
+due to a limitation of the tools we use to build the SDK.
+
+Do not ship a DVD-ROM with this file.
