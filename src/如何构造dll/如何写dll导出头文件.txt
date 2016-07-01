@@ -1,0 +1,42 @@
+首先新建一个不会在dll内部使用到的头文件，以API结尾
+这个API头文件就是给别人用的
+在dll内部必须包含一个API.h文件，用于导入导出区分
+根据情况把...改成dll的文字+API
+然后在对外的API结尾的头文件中包含需要对外的头文件，然后在这些头文件前加上
+#define _...API
+最后写一个debug和release版本的预处理
+这样以后只需要包含头文件路径和库目录就行
+
+首先把新建工程的原文件放到src底下，工程放到vcxproj底下
+
+1.先把..proj...h和API.h拷贝到工程下
+2.然后在工程内群替换..proj..到类名，.h文件名也换成类名API
+3.把类的.h文件里加上#include "API.h"
+4.在类前加上“类名API”宏
+5.debug
+在工程输出目录里写$(ProjectDir)\..\..\..\..\lib\
+中间目录$(ProjectDir)\Debug\
+目标$(ProjectName)d
+支持xp
+多字节字符集
+看情况 在共享 DLL 中使用 MFC
+如果需要依赖其他dll
+附加包含目录$(ProjectDir)\..\..\..\..\include\
+附加库目录$(ProjectDir)\..\..\..\..\lib\
+
+6.release
+在工程输出目录里写$(ProjectDir)\..\..\..\..\lib\
+中间目录$(ProjectDir)\Release\
+目标$(ProjectName)
+支持xp
+多字节字符集
+看情况 在共享 DLL 中使用 MFC
+如果需要依赖其他dll
+附加包含目录$(ProjectDir)\..\..\..\..\include\
+附加库目录$(ProjectDir)\..\..\..\..\lib\
+
+7.把python拷贝到工程scripts下，并把文件名中..proj..换成本工程类名
+8.把python中..proj..群替换成本工程类名
+
+9.把version脚本中..relyproj..换成依赖的类名，..proj..换成本工程类名
+10.把version分为version_debug和version_release放到工程最外目录

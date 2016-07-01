@@ -1,0 +1,1 @@
+"C:\Program Files\Git\bin\git.exe" commit "D:\xueyelingshuang\data\storage.sql" -m "hello"
