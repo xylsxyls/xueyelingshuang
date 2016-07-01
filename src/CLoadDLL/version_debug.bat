@@ -10,4 +10,3 @@ set xueyelingshuang=%bat%..\..\
 
 ::向公共部分提供文件
 xcopy /y /i /r /s "%bat%CLoadDLL\src\*.h" "%xueyelingshuang%include\CLoadDLL\"
-pause
