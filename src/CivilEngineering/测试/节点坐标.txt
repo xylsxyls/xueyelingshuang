@@ -1,0 +1,10 @@
+Coordinates of node 1 :  	 50.,	 6.,	 6.
+Coordinates of node 2 :	         40.,	 5.,	 5.
+Coordinates of node 3 :	         30.,	 4.,	 4.
+Coordinates of node 4 :  	 20.,	 3.,	 3.
+Coordinates of node 5 :	         10.,	 2.,	 2.
+Coordinates of node 6 :	         0.,	 1.,	 1.
+Coordinates of node 7 : 	 -10.,	 0.,	 0.
+Coordinates of node 8 :   	 -20.,	 -1.,	 -1.
+Coordinates of node 9 :	         -30.,	 -2.,	 -2.
+Coordinates of node 10 :	 -40.,	 -3.,	 -3.
