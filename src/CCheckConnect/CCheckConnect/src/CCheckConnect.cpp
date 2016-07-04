@@ -1,6 +1,7 @@
 #include "CCheckConnect.h"
 #include "CStopWatch/CStopWatchAPI.h"
 #include <WinSock2.h>
+#include <afxmt.h>
 
 DWORD WINAPI ThreadFun(LPVOID lpParam){
 	CCheckConnect * pThis = (CCheckConnect *)lpParam;
@@ -17,8 +18,11 @@ DWORD WINAPI ThreadFun(LPVOID lpParam){
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(pThis->port);
 	int x = connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
+	CMutex mutex;
+	mutex.Lock();
 	if(x == 0) pThis->IfConnect = 1;
 	else pThis->IfConnect = 0;
+	mutex.Unlock();
 	closesocket(sockClient);
 	WSACleanup();
 	return 0;
