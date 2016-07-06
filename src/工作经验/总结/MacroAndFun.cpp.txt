@@ -2731,7 +2731,7 @@ CString GetRegOcxPath(CString classid){
 	DWORD dwType = REG_SZ;
 	lpData = new BYTE[1024];
 	memset(lpData,0,1024);
-	DWORD cbData;
+	DWORD cbData = 1024;
 	RegQueryValueEx(hKey,_T(""),NULL,&dwType,lpData,&cbData);
 	CString temp;
 	temp = lpData;

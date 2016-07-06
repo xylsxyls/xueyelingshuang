@@ -155,6 +155,9 @@ HCURSOR CCivilEngineeringDlg::OnQueryDragIcon()
 
 void CCivilEngineeringDlg::OnBnClickedButton1()
 {
+	double aa = 0;
+	CString strr = " 1.53061E-105";
+	aa = atof(strr);
 	double a = 1.53061E-105;
 	double b = a * a;
 	double c = 1.53062E-106;

@@ -9,9 +9,9 @@
 
 首先把新建工程的原文件放到src底下，工程放到vcxproj底下
 
-1.先把..proj...h和API.h拷贝到工程下
-2.然后在工程内群替换..proj..到类名，.h文件名也换成类名API
-3.把类的.h文件里加上#include "API.h"
+1.先把..proj...h和..proj..Macro.h拷贝到工程下
+2.把类的.h文件里加上#include "..proj..Macro.h"
+3.然后在工程内群替换..proj..到类名，.h文件名也换成类名API
 4.在类前加上“类名API”宏
 5.debug
 在工程输出目录里写$(ProjectDir)\..\..\..\..\lib\
