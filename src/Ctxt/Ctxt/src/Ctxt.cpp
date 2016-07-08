@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 using namespace std;
+#include <stdarg.h>
 
 vector<string> split(string src,string separate_character){
 	vector<string> strs;
@@ -58,5 +59,20 @@ void Ctxt::LoadTxt(CString strPath,BOOL flag,CString strSplit){
 			vectxt.push_back(vecLine2);
 		}
 	}
+	return;
+}
+
+void Ctxt::AddWriteLine(CString strPath,int MaxLength,CString format,...){
+	FILE *pFile = fopen(strPath,"a+");
+	va_list parameterlist;
+	va_start(parameterlist,format);
+	char *pBuf = new char[MaxLength];
+	_vsnprintf(pBuf,MaxLength,format,parameterlist);
+	va_end(parameterlist);
+	fprintf(pFile,pBuf);
+	delete pBuf; pBuf = 0;
+	fprintf(pFile,"\r\n");
+	fclose(pFile);
+	pFile = NULL;
 	return;
 }

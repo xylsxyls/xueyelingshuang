@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "afxwin.h"
 
 
 // CCivilEngineeringDlg ¶Ô»°¿ò
@@ -31,4 +32,16 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnBnClickedButton1();
+	CEdit m_BallPositionAndRadius;
+	CEdit m_PointPosition;
+	CEdit m_PointSpeed;
+	afx_msg void OnBnClickedButton2();
+	afx_msg void OnBnClickedButton3();
+	afx_msg void OnBnClickedButton4();
+	CEdit m_x;
+	CEdit m_y;
+	CEdit m_z;
+	CEdit m_biggestx;
+	CEdit m_OsmoticCoefficient;
+	CEdit m_NowNumber;
 };
