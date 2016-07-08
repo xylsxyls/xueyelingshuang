@@ -5,6 +5,11 @@
 using namespace std;
 #include <stdarg.h>
 
+Ctxt::Ctxt(CString strPath){
+	this->strPath = strPath;
+	pFile = NULL;
+}
+
 vector<string> split(string src,string separate_character){
 	vector<string> strs;
 
@@ -20,7 +25,7 @@ vector<string> split(string src,string separate_character){
 	return strs;
 }
 
-void Ctxt::LoadTxt(CString strPath,BOOL flag,CString strSplit){
+void Ctxt::LoadTxt(BOOL flag,CString strSplit){
 	ifstream myfile(strPath);
 	string strLine = "";
 	int iLine = -1;
@@ -39,7 +44,7 @@ void Ctxt::LoadTxt(CString strPath,BOOL flag,CString strSplit){
 				if(vecPoint.size() >= 2){
 					int begin = atoi(vecPoint.at(0).c_str());
 					int end   = atoi(vecPoint.at(1).c_str());
-					vecLine1.push_back(cstrLine.Mid(begin,end - begin));
+					vecLine1.push_back(cstrLine.Mid(begin - 1,end - begin + 1));
 				}
 				//如果是传入了空字符串就把一行插入
 				else{
@@ -59,11 +64,18 @@ void Ctxt::LoadTxt(CString strPath,BOOL flag,CString strSplit){
 			vectxt.push_back(vecLine2);
 		}
 	}
+	myfile.close();
+	myfile.clear();
 	return;
 }
 
-void Ctxt::AddWriteLine(CString strPath,int MaxLength,CString format,...){
-	FILE *pFile = fopen(strPath,"a+");
+bool Ctxt::OpenFile_a(){
+	pFile = fopen(strPath,"a+");
+	if(pFile == NULL) return 0;
+	return 1;
+}
+
+void Ctxt::AddWriteLine(int MaxLength,CString format,...){
 	va_list parameterlist;
 	va_start(parameterlist,format);
 	char *pBuf = new char[MaxLength];
@@ -72,6 +84,10 @@ void Ctxt::AddWriteLine(CString strPath,int MaxLength,CString format,...){
 	fprintf(pFile,pBuf);
 	delete pBuf; pBuf = 0;
 	fprintf(pFile,"\r\n");
+	return;
+}
+
+void Ctxt::CloseFile(){
 	fclose(pFile);
 	pFile = NULL;
 	return;
