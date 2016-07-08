@@ -110,11 +110,11 @@ BOOL CCivilEngineeringDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
-	m_OsmoticCoefficient.SetWindowTextA("1");
-	m_x.SetWindowTextA("0");
-	m_y.SetWindowTextA("0");
-	m_z.SetWindowTextA("0");
-	m_biggestx.SetWindowTextA("8");
+	m_OsmoticCoefficient.SetWindowTextA("7e-5");
+	m_x.SetWindowTextA("150");
+	m_y.SetWindowTextA("25");
+	m_z.SetWindowTextA("25");
+	m_biggestx.SetWindowTextA("50");
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -170,89 +170,144 @@ HCURSOR CCivilEngineeringDlg::OnQueryDragIcon()
 
 #include "CtxtAPI.h"
 #include "CGetPathAPI.h"
+#include "CiniAPI.h"
+#include <afxmt.h>
 
-void CCivilEngineeringDlg::OnBnClickedButton1()
-{
-	CString strPointSpeed            = ""; m_PointSpeed.GetWindowTextA(strPointSpeed);
-	CString strPointPosition         = ""; m_PointPosition.GetWindowTextA(strPointPosition);
-	CString strBallPositionAndRadius = ""; m_BallPositionAndRadius.GetWindowTextA(strBallPositionAndRadius);
-	Ctxt txtPointSpeed;
-	//分别得到 节点编号，jx，jy，jz
-	txtPointSpeed.LoadTxt(strPointSpeed,1,"11-16,20-32,36-48,52-64");
-	Ctxt txtPointPosition;
-	//分别得到 节点编号，x，y，z，分别为at 3，6,，8，10
-	txtPointPosition.LoadTxt(strPointPosition,2," ");
-	Ctxt txtBallPositionAndRadius;
-	//分别得到 球编号，球半径，x，y，z
-	txtBallPositionAndRadius.LoadTxt(strBallPositionAndRadius,1,"1-8,9-22,48-61,62-75,76-89");
-	AfxMessageBox("初始化完毕，点击确定开始计算");
-	//写入文件
-	Ctxt printFile;
+#define Create_Thread(FunName,ParameterName,ThreadID) CreateThread(NULL, 0, FunName, (LPVOID)ParameterName, 0, &ThreadID)
+
+DWORD WINAPI MakeFun(LPVOID lpParam){
+	CCivilEngineeringDlg *pThis = (CCivilEngineeringDlg *)lpParam;
+
+	CMutex mutex;
+	mutex.Lock();
+	CString strPointSpeed            = ""; pThis->m_PointSpeed.GetWindowTextA(strPointSpeed);
+	CString strPointPosition         = ""; pThis->m_PointPosition.GetWindowTextA(strPointPosition);
+	CString strBallPositionAndRadius = ""; pThis->m_BallPositionAndRadius.GetWindowTextA(strBallPositionAndRadius);
+	//获取渗透系数
+	CString strOsmoticCoefficient = ""; pThis->m_OsmoticCoefficient.GetWindowTextA(strOsmoticCoefficient); double OsmoticCoefficient = atof(strOsmoticCoefficient);
+	//获得x比较的最大值
+	CString strBiggestX = 0; pThis->m_biggestx.GetWindowTextA(strBiggestX); double biggestx = atof(strBiggestX);
+	//加上平移量
+	CString strx = ""; pThis->m_x.GetWindowTextA(strx); double movex = atof(strx);
+	CString stry = ""; pThis->m_y.GetWindowTextA(stry); double movey = atof(stry);
+	CString strz = ""; pThis->m_z.GetWindowTextA(strz); double movez = atof(strz);
+	mutex.Unlock();
+
+	//获得配置文件里节点坐标的4个量
 	CGetPath getpath;
-	printFile.AddWriteLine(getpath.GetCurrentExePath() + "123456.txt",2000,"球编号                         坐标                         Fx            Fy           Fz");
+	Cini setini(getpath.GetCurrentExePath() + "set.ini");
+	int node = atoi(setini.ReadIni("PointPosition_node"));
+	int nodex = atoi(setini.ReadIni("PointPosition_nodex"));
+	int nodey = atoi(setini.ReadIni("PointPosition_nodey"));
+	int nodez = atoi(setini.ReadIni("PointPosition_nodez"));
+	//打开测试文件
+	Ctxt txttest(getpath.GetCurrentExePath() + "test.txt");
+	
+
+	Ctxt txtBallPositionAndRadius(strBallPositionAndRadius);
+	//分别得到 球编号，球半径，x，y，z
+	txtBallPositionAndRadius.LoadTxt(1,setini.ReadIni("BallPositionAndRadius"));
+	txttest.OpenFile_a();
+	txttest.AddWriteLine(100,"球编号=%s,半径=%s,x=%s,y=%s,z=%s",txtBallPositionAndRadius.vectxt.at(2).at(0),txtBallPositionAndRadius.vectxt.at(2).at(1),txtBallPositionAndRadius.vectxt.at(2).at(2),txtBallPositionAndRadius.vectxt.at(2).at(3),txtBallPositionAndRadius.vectxt.at(2).at(4));
+	txttest.AddWriteLine(100,"球编号=%s,半径=%s,x=%s,y=%s,z=%s",txtBallPositionAndRadius.vectxt.at(3).at(0),txtBallPositionAndRadius.vectxt.at(3).at(1),txtBallPositionAndRadius.vectxt.at(3).at(2),txtBallPositionAndRadius.vectxt.at(3).at(3),txtBallPositionAndRadius.vectxt.at(3).at(4));
+	txttest.AddWriteLine(100,"球编号=%s,半径=%s,x=%s,y=%s,z=%s",txtBallPositionAndRadius.vectxt.at(4).at(0),txtBallPositionAndRadius.vectxt.at(4).at(1),txtBallPositionAndRadius.vectxt.at(4).at(2),txtBallPositionAndRadius.vectxt.at(4).at(3),txtBallPositionAndRadius.vectxt.at(4).at(4));
+	txttest.AddWriteLine(100,"球编号=%s,半径=%s,x=%s,y=%s,z=%s",txtBallPositionAndRadius.vectxt.at(5).at(0),txtBallPositionAndRadius.vectxt.at(5).at(1),txtBallPositionAndRadius.vectxt.at(5).at(2),txtBallPositionAndRadius.vectxt.at(5).at(3),txtBallPositionAndRadius.vectxt.at(5).at(4));
+	txttest.AddWriteLine(100,"球编号=%s,半径=%s,x=%s,y=%s,z=%s",txtBallPositionAndRadius.vectxt.at(6).at(0),txtBallPositionAndRadius.vectxt.at(6).at(1),txtBallPositionAndRadius.vectxt.at(6).at(2),txtBallPositionAndRadius.vectxt.at(6).at(3),txtBallPositionAndRadius.vectxt.at(6).at(4));
+	txttest.CloseFile();
+	AfxMessageBox("PFC数据加载完毕");
+
+	Ctxt txtPointPosition(strPointPosition);
+	//分别得到 节点编号，x，y，z，分别为at 3，6,，8，10
+	txtPointPosition.LoadTxt(2," ");
+	bool x = txttest.OpenFile_a();
+	txttest.AddWriteLine(100,"节点编号=%s,x=%s,y=%s,z=%s",txtPointPosition.vectxt.at(0).at(node),txtPointPosition.vectxt.at(0).at(nodex),txtPointPosition.vectxt.at(0).at(nodey),txtPointPosition.vectxt.at(0).at(nodez));
+	txttest.AddWriteLine(100,"节点编号=%s,x=%s,y=%s,z=%s",txtPointPosition.vectxt.at(1).at(node),txtPointPosition.vectxt.at(1).at(nodex),txtPointPosition.vectxt.at(1).at(nodey),txtPointPosition.vectxt.at(1).at(nodez));
+	txttest.AddWriteLine(100,"节点编号=%s,x=%s,y=%s,z=%s",txtPointPosition.vectxt.at(2).at(node),txtPointPosition.vectxt.at(2).at(nodex),txtPointPosition.vectxt.at(2).at(nodey),txtPointPosition.vectxt.at(2).at(nodez));
+	txttest.AddWriteLine(100,"节点编号=%s,x=%s,y=%s,z=%s",txtPointPosition.vectxt.at(3).at(node),txtPointPosition.vectxt.at(3).at(nodex),txtPointPosition.vectxt.at(3).at(nodey),txtPointPosition.vectxt.at(3).at(nodez));
+	txttest.AddWriteLine(100,"节点编号=%s,x=%s,y=%s,z=%s",txtPointPosition.vectxt.at(4).at(node),txtPointPosition.vectxt.at(4).at(nodex),txtPointPosition.vectxt.at(4).at(nodey),txtPointPosition.vectxt.at(4).at(nodez));
+	txttest.CloseFile();
+	AfxMessageBox("ABAQUS节点坐标加载完毕");
+
+	Ctxt txtPointSpeed(strPointSpeed);
+	//分别得到 节点编号，jx，jy，jz
+	txtPointSpeed.LoadTxt(1,setini.ReadIni("PointSpeed"));
+	txttest.OpenFile_a();
+	txttest.AddWriteLine(100,"节点编号=%s,jx=%s,jy=%s,jz=%s",txtPointSpeed.vectxt.at(3).at(0),txtPointSpeed.vectxt.at(3).at(1),txtPointSpeed.vectxt.at(3).at(2),txtPointSpeed.vectxt.at(3).at(3));
+	txttest.AddWriteLine(100,"节点编号=%s,jx=%s,jy=%s,jz=%s",txtPointSpeed.vectxt.at(4).at(0),txtPointSpeed.vectxt.at(4).at(1),txtPointSpeed.vectxt.at(4).at(2),txtPointSpeed.vectxt.at(4).at(3));
+	txttest.AddWriteLine(100,"节点编号=%s,jx=%s,jy=%s,jz=%s",txtPointSpeed.vectxt.at(5).at(0),txtPointSpeed.vectxt.at(5).at(1),txtPointSpeed.vectxt.at(5).at(2),txtPointSpeed.vectxt.at(5).at(3));
+	txttest.AddWriteLine(100,"节点编号=%s,jx=%s,jy=%s,jz=%s",txtPointSpeed.vectxt.at(6).at(0),txtPointSpeed.vectxt.at(6).at(1),txtPointSpeed.vectxt.at(6).at(2),txtPointSpeed.vectxt.at(6).at(3));
+	txttest.AddWriteLine(100,"节点编号=%s,jx=%s,jy=%s,jz=%s",txtPointSpeed.vectxt.at(7).at(0),txtPointSpeed.vectxt.at(7).at(1),txtPointSpeed.vectxt.at(7).at(2),txtPointSpeed.vectxt.at(7).at(3));
+	txttest.AddWriteLine(100,"\r\n");
+	txttest.CloseFile();
+	AfxMessageBox("ABAQUS节点流速加载完毕，点击确定开始计算");
+
+	//写入文件
+	Ctxt printFile(getpath.GetCurrentExePath() + "渗透力.txt");
+	printFile.OpenFile_a();
+	printFile.AddWriteLine(2000,"球编号                         坐标                         Fx            Fy           Fz");
 	//从球坐标及半径的第一行开始处理
 	int iLine = 0;
 	while(iLine++ != txtBallPositionAndRadius.vectxt.size() - 2){
 		//存储最小距离的坐标
-		double ShortestDistance = 10000;
+		double ShortestDistance = 512000;
 		int ShortestNumber = 0;
 		//先获得第一行的坐标
 		double x = atof(txtBallPositionAndRadius.vectxt.at(iLine + 1).at(2));
 		double y = atof(txtBallPositionAndRadius.vectxt.at(iLine + 1).at(3));
 		double z = atof(txtBallPositionAndRadius.vectxt.at(iLine + 1).at(4));
 		//加上平移量
-		CString strx = ""; m_x.GetWindowTextA(strx); x = x + atof(strx);
-		CString stry = ""; m_y.GetWindowTextA(stry); y = y + atof(stry);
-		CString strz = ""; m_z.GetWindowTextA(strz); z = z + atof(strz);
-		//获得x比较的最大值
-		CString strBiggestX = 0; m_biggestx.GetWindowTextA(strBiggestX); double biggestx = atof(strBiggestX);
+		x = x + movex;
+		y = y + movey;
+		z = z + movez;
+		//开始从节点坐标中依次寻找坐标比较两点距离
 		int iSize = txtPointPosition.vectxt.size();
-		while(iSize-- != 0){
+		int iNum = -1;
+		while(iNum++ != iSize - 1){
 			//如果x坐标相差过大就不比较了
-			if(abs(x - atof(txtPointPosition.vectxt.at(iSize).at(6))) > biggestx) break;
-			//先去掉.和,
-			txtPointPosition.vectxt.at(iSize).at(6).Replace(".",""); txtPointPosition.vectxt.at(iSize).at(6).Replace(",","");
-			txtPointPosition.vectxt.at(iSize).at(8).Replace(".",""); txtPointPosition.vectxt.at(iSize).at(8).Replace(",","");
-			txtPointPosition.vectxt.at(iSize).at(10).Replace(".",""); txtPointPosition.vectxt.at(iSize).at(10).Replace(",","");
+			if(abs(x - atof(txtPointPosition.vectxt.at(iNum).at(nodex))) > biggestx) continue;
+			//先去掉,
+			txtPointPosition.vectxt.at(iNum).at(nodex).Replace(",","");
+			txtPointPosition.vectxt.at(iNum).at(nodey).Replace(",","");
+			txtPointPosition.vectxt.at(iNum).at(nodez).Replace(",","");
 			//从最后一行开始得到节点编号里的数据
-			double tempx = atof(txtPointPosition.vectxt.at(iSize).at(6));
-			double tempy = atof(txtPointPosition.vectxt.at(iSize).at(8));
-			double tempz = atof(txtPointPosition.vectxt.at(iSize).at(10));
+			double tempx = atof(txtPointPosition.vectxt.at(iNum).at(nodex));
+			double tempy = atof(txtPointPosition.vectxt.at(iNum).at(nodey));
+			double tempz = atof(txtPointPosition.vectxt.at(iNum).at(nodez));
 			//得到距离的平方
 			double distance = (x - tempx) * (x - tempx) + (y - tempy) * (y - tempy) + (z - tempz) * (z - tempz);
 			if(distance < ShortestDistance){
 				ShortestDistance = distance;
-				ShortestNumber = atoi(txtPointPosition.vectxt.at(iSize).at(3));
+				ShortestNumber = atoi(txtPointPosition.vectxt.at(iNum).at(node));
 			}
 		}
 		//从节点坐标得到的最短距离节点编号去节点流速中寻找
 		double jx = atof(txtPointSpeed.vectxt.at(ShortestNumber + 2).at(1));
 		double jy = atof(txtPointSpeed.vectxt.at(ShortestNumber + 2).at(2));
 		double jz = atof(txtPointSpeed.vectxt.at(ShortestNumber + 2).at(3));
-		//获取渗透系数
-		CString strOsmoticCoefficient = ""; m_OsmoticCoefficient.GetWindowTextA(strOsmoticCoefficient); double OsmoticCoefficient = atof(strOsmoticCoefficient);
 		//得到球半径
 		double Radius = atof(txtBallPositionAndRadius.vectxt.at(iLine + 1).at(1));
 		//得到Fx，Fy，Fz
 		double Fx = 4 / 3 * 3.1416 * Radius * Radius * Radius * jx / OsmoticCoefficient;
 		double Fy = 4 / 3 * 3.1416 * Radius * Radius * Radius * jy / OsmoticCoefficient;
 		double Fz = 4 / 3 * 3.1416 * Radius * Radius * Radius * jz / OsmoticCoefficient;
-		printFile.AddWriteLine(getpath.GetCurrentExePath() + "123456.txt",2000,"%s  (%s %s %s)  %e %e %e",
-			txtBallPositionAndRadius.vectxt.at(iLine + 1).at(0),
+		printFile.AddWriteLine(200,"%s  (%s %s %s)  %e %e %e",txtBallPositionAndRadius.vectxt.at(iLine + 1).at(0),
 			txtBallPositionAndRadius.vectxt.at(iLine + 1).at(2),txtBallPositionAndRadius.vectxt.at(iLine + 1).at(3),txtBallPositionAndRadius.vectxt.at(iLine + 1).at(4),Fx,Fy,Fz);
-		m_NowNumber.SetWindowTextA(txtBallPositionAndRadius.vectxt.at(iLine + 1).at(0));
+
+		mutex.Lock();
+		CString percentage = "";
+		percentage.Format("%lf",(iLine + 1.0) / txtBallPositionAndRadius.vectxt.size() * 100);
+		pThis->m_NowNumber.SetWindowTextA(percentage.Mid(0,4) + "%");
+		if(iLine == txtBallPositionAndRadius.vectxt.size() - 2) pThis->m_NowNumber.SetWindowTextA("100%");
+		mutex.Unlock();
 	}
-	/*
-	double aa = 0;
-	CString strr = " 1.53061E-105";
-	aa = atof(strr);
-	double a = 1.53061E-105;
-	double b = a * a;
-	double c = 1.53062E-106;
-	double d = c * c;
-	CString str = "";
-	str.Format("%lf",b);
-	if(b < d) AfxMessageBox(str);*/
+	printFile.CloseFile();
+	return 0;
+}
+
+void CCivilEngineeringDlg::OnBnClickedButton1()
+{
+	DWORD ThreadID = 0;
+	Create_Thread(MakeFun,this,ThreadID);
 	// TODO: 在此添加控件通知处理程序代码
 }
 
