@@ -7,6 +7,13 @@
 #include "CivilEngineeringDlg.h"
 #include "afxdialogex.h"
 
+#include "CtxtAPI.h"
+#include "CGetPathAPI.h"
+#include "CiniAPI.h"
+#include <afxmt.h>
+#include "CDumpAPI.h"
+#define Create_Thread(FunName,ParameterName,ThreadID) CreateThread(NULL, 0, FunName, (LPVOID)ParameterName, 0, &ThreadID)
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -110,6 +117,9 @@ BOOL CCivilEngineeringDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+	CDump dump;
+	CGetPath getpath;
+	dump.DeclareDumpFile(getpath.GetCurrentExePath() + "CrashDumpFile.dmp");
 	m_OsmoticCoefficient.SetWindowTextA("7e-5");
 	m_x.SetWindowTextA("150");
 	m_y.SetWindowTextA("25");
@@ -167,13 +177,6 @@ HCURSOR CCivilEngineeringDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
-
-#include "CtxtAPI.h"
-#include "CGetPathAPI.h"
-#include "CiniAPI.h"
-#include <afxmt.h>
-
-#define Create_Thread(FunName,ParameterName,ThreadID) CreateThread(NULL, 0, FunName, (LPVOID)ParameterName, 0, &ThreadID)
 
 DWORD WINAPI MakeFun(LPVOID lpParam){
 	CCivilEngineeringDlg *pThis = (CCivilEngineeringDlg *)lpParam;
