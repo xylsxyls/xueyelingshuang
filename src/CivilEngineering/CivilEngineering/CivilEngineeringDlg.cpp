@@ -290,9 +290,9 @@ DWORD WINAPI MakeFun(LPVOID lpParam){
 		//得到球半径
 		double Radius = atof(txtBallPositionAndRadius.vectxt.at(iLine + 1).at(1));
 		//得到Fx，Fy，Fz
-		double Fx = 4 / 3 * 3.1416 * Radius * Radius * Radius * jx / OsmoticCoefficient;
-		double Fy = 4 / 3 * 3.1416 * Radius * Radius * Radius * jy / OsmoticCoefficient;
-		double Fz = 4 / 3 * 3.1416 * Radius * Radius * Radius * jz / OsmoticCoefficient;
+		double Fx = 4 / 3.0 * 3.1416 * Radius * Radius * Radius * jx / OsmoticCoefficient;
+		double Fy = 4 / 3.0 * 3.1416 * Radius * Radius * Radius * jy / OsmoticCoefficient;
+		double Fz = 4 / 3.0 * 3.1416 * Radius * Radius * Radius * jz / OsmoticCoefficient;
 		printFile.AddWriteLine(200,"%s  (%s %s %s)  %e %e %e",txtBallPositionAndRadius.vectxt.at(iLine + 1).at(0),
 			txtBallPositionAndRadius.vectxt.at(iLine + 1).at(2),txtBallPositionAndRadius.vectxt.at(iLine + 1).at(3),txtBallPositionAndRadius.vectxt.at(iLine + 1).at(4),Fx,Fy,Fz);
 
