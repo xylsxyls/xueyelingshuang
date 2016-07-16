@@ -1,0 +1,19 @@
+// 主窗口最小化
+void CTrialTerminalDlg::OnBnClickedButtonMainMinimize()
+{
+	if (this->IsIconic()) 
+	{
+		this->ShowWindow(SW_SHOWNORMAL);
+	}
+	else 
+	{
+		this->ShowWindow(SW_MINIMIZE);
+	}
+}
+
+// 关闭主窗口，退出主程序
+void CTrialTerminalDlg::OnBnClickedButtonMainClose()
+{
+    //发送退出程序的请求
+    this->PostMessage(WM_QUIT, NULL, NULL);
+}

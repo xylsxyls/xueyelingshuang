@@ -1,0 +1,5 @@
+//n为索引，不可以反过来找
+			map<int,int> pair;
+			pair[n] = nRight;
+			pair.find(n) != pair.end();
+			pair.find(n)->second;

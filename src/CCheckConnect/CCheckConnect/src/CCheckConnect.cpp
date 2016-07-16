@@ -1,7 +1,9 @@
+#include <SDKDDKVer.h>
 #include "CCheckConnect.h"
 #include "CStopWatch/CStopWatchAPI.h"
 #include <WinSock2.h>
 #include <afxmt.h>
+#include "Ctxt/CtxtAPI.h"
 
 DWORD WINAPI ThreadFun(LPVOID lpParam){
 	CCheckConnect * pThis = (CCheckConnect *)lpParam;
@@ -40,4 +42,22 @@ bool CCheckConnect::Connect(CString IP,int port,unsigned int WaitTime){
 		if(stopwatch.GetWatchTime() > WaitTime) return 0;
 	}
 	return 1;
+}
+
+bool CCheckConnect::ConnectWithPing(CString IP,int WaitTime){
+	IfConnect = 0;
+	Ctxt *ptxt = new Ctxt;
+	ShellExecute(NULL, _T("open"), _T("cmd.exe"), "/C ping " + IP + " -n 1 > C:\\connect.txt", NULL, SW_HIDE);
+	Sleep(WaitTime);
+	ptxt->LoadTxt("C:\\connect.txt",2,"ms");
+	if(ptxt->vectxt.size() >= 3){
+		if(ptxt->vectxt.at(2).size() == 2) IfConnect = 1;
+	}
+	ShellExecute(NULL, _T("open"), _T("cmd.exe"), "/C TASKKILL /F /IM PING.exe", NULL, SW_HIDE);
+	ShellExecute(NULL, _T("open"), _T("cmd.exe"), "/C TASKKILL /F /IM cmd.exe", NULL, SW_HIDE);
+	rem:
+	int nResult = remove("C:\\connect.txt");
+	if(nResult != 0) goto rem;
+	delete ptxt;
+	return !!IfConnect;
 }
