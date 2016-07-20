@@ -1,0 +1,2 @@
+把下拉菜单所有数据清空用m_Combo.ResetContent();
+不是Clear();
