@@ -21,12 +21,42 @@
     <ClInclude Include="DynBase.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Cjson.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CstrValue.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CszOneValue.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CszValue.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CTypeValue.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TestCpp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="DynBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Cjson.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CstrValue.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CszOneValue.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CszValue.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CTypeValue.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

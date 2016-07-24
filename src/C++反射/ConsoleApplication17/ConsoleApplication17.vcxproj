@@ -20,7 +20,8 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v110</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -78,10 +79,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Cjson.h" />
+    <ClInclude Include="CstrValue.h" />
+    <ClInclude Include="CszOneValue.h" />
+    <ClInclude Include="CszValue.h" />
+    <ClInclude Include="CTypeValue.h" />
     <ClInclude Include="DynBase.h" />
     <ClInclude Include="TestCpp.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Cjson.cpp" />
+    <ClCompile Include="CstrValue.cpp" />
+    <ClCompile Include="CszOneValue.cpp" />
+    <ClCompile Include="CszValue.cpp" />
+    <ClCompile Include="CTypeValue.cpp" />
     <ClCompile Include="DynBase.cpp" />
     <ClCompile Include="TestCpp.cpp" />
   </ItemGroup>
