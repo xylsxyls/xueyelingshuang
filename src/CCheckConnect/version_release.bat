@@ -4,7 +4,7 @@ set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 
 ::如果需要获取依赖dll-----------------------------------------------------------
-call %xueyelingshuang%src\CStopWatch\version_release.bat
+call %xueyelingshuang%src\CLoadDLL\version_release.bat
 
 ::call完之后都需要重新set
 set bat=%~dp0

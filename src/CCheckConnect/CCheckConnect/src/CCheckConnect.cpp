@@ -1,63 +1,85 @@
 #include <SDKDDKVer.h>
 #include "CCheckConnect.h"
-#include "CStopWatch/CStopWatchAPI.h"
-#include <WinSock2.h>
-#include <afxmt.h>
-#include "Ctxt/CtxtAPI.h"
+#include "CLoadDLL/CLoadDLLAPI.h"
 
-DWORD WINAPI ThreadFun(LPVOID lpParam){
-	CCheckConnect * pThis = (CCheckConnect *)lpParam;
-	WSADATA wsd;
-	SOCKET sockClient;                                            //客户端socket
-	SOCKADDR_IN addrSrv;
-	if(WSAStartup(MAKEWORD(2,2),&wsd)!=0)
+HANDLE (WINAPI *IcmpCreateFile)();
+DWORD
+	(WINAPI
+	*IcmpSendEcho)(
+	__in                       HANDLE                   IcmpHandle,
+	__in                       IPAddr                   DestinationAddress,
+	__in_bcount(RequestSize)   LPVOID                   RequestData,
+	__in                       WORD                     RequestSize,
+	__in_opt                   PIP_OPTION_INFORMATION   RequestOptions,
+	__out_bcount(ReplySize)    LPVOID                   ReplyBuffer,
+	__in                       DWORD                    ReplySize,
+	__in                       DWORD                    Timeout
+	);
+BOOL (WINAPI *IcmpCloseHandle)(__in HANDLE  IcmpHandle);
+
+bool CCheckConnect::CheckWithIP(CString IP,int CheckTimes,unsigned int WaitTimeForOne){
+	CLoadDLL dll("icmp.dll");
+	BOOL x = dll.LoadFun(3,V_str(IcmpCreateFile),V_str(IcmpSendEcho),V_str(IcmpCloseHandle));
+	HANDLE icmphandle = IcmpCreateFile();
+	char reply[sizeof(icmp_echo_reply) + 8] = {};
+	icmp_echo_reply* iep = (icmp_echo_reply*)&reply;
+	int i = 0;
+	for(i = 0;i < CheckTimes;i++) // ping the web server three times for its availability
 	{
-		AfxMessageBox("start WSAStartup failed!\n");
-		return 0;
+		iep->RoundTripTime = 0xffffffff;
+		IcmpSendEcho(icmphandle,inet_addr(IP),0,0,NULL,reply,sizeof(icmp_echo_reply) + 8,WaitTimeForOne);
+		if(reply[0] && iep->RoundTripTime <= 1){
+			IcmpCloseHandle(icmphandle);
+			return 1;
+		}
 	}
-	sockClient = socket(AF_INET,SOCK_STREAM,0);                    //创建socket
-	addrSrv.sin_addr.S_un.S_addr = inet_addr(pThis->IP);
-	addrSrv.sin_family = AF_INET;
-	addrSrv.sin_port = htons(pThis->port);
-	int x = connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
-	CMutex mutex;
-	mutex.Lock();
-	if(x == 0) pThis->IfConnect = 1;
-	else pThis->IfConnect = 0;
-	mutex.Unlock();
-	closesocket(sockClient);
-	WSACleanup();
+	IcmpCloseHandle(icmphandle);
 	return 0;
 }
 
-bool CCheckConnect::Connect(CString IP,int port,unsigned int WaitTime){
-	IfConnect = 0;
-	this->IP = IP;
-	this->port = port;
-	DWORD ThreadID = 0;
-	Create_Thread(ThreadFun,this,ThreadID);
-	CStopWatch stopwatch;
-	while(IfConnect != 1){
-		//如果秒表超过等待时间就直接返回0
-		if(stopwatch.GetWatchTime() > WaitTime) return 0;
+bool CCheckConnect::CheckWithIPPort(CString IP,int Port,unsigned int WaitTime){
+	AfxSocketInit();
+	//设置非阻塞方式连接
+	unsigned long ulNoneBlock = 1;
+	SOCKET sock;
+	sock = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	int iRet = ::ioctlsocket(sock, FIONBIO, (unsigned long *)&ulNoneBlock);
+	if(iRet == SOCKET_ERROR)
+	{
+		::closesocket(sock);
+		return FALSE;
 	}
-	return 1;
-}
+	//关闭连接时，未发送的数据不再发送。清除此标记，可保证连接彻底断开
+	BOOL cValue = 0;
+	iRet = setsockopt(sock, SOL_SOCKET, SO_DONTLINGER, (char *)&cValue, sizeof(BOOL));
+	if(iRet != 0)
+	{
+		::closesocket(sock);
+		return FALSE;
+	}
+	//连接
+	struct sockaddr_in server;
+	server.sin_family = AF_INET;
+	server.sin_port = ::htons(Port);
+	server.sin_addr.s_addr = inet_addr(IP);
+	if(server.sin_addr.s_addr == INADDR_NONE)
+	{
+		::closesocket(sock);
+		return FALSE;	
+	}
+	::connect(sock, (const struct sockaddr *)&server, sizeof(server));
 
-bool CCheckConnect::ConnectWithPing(CString IP,int WaitTime){
-	IfConnect = 0;
-	Ctxt *ptxt = new Ctxt;
-	ShellExecute(NULL, _T("open"), _T("cmd.exe"), "/C ping " + IP + " -n 1 > C:\\connect.txt", NULL, SW_HIDE);
-	Sleep(WaitTime);
-	ptxt->LoadTxt("C:\\connect.txt",2,"ms");
-	if(ptxt->vectxt.size() >= 3){
-		if(ptxt->vectxt.at(2).size() == 2) IfConnect = 1;
-	}
-	ShellExecute(NULL, _T("open"), _T("cmd.exe"), "/C TASKKILL /F /IM PING.exe", NULL, SW_HIDE);
-	ShellExecute(NULL, _T("open"), _T("cmd.exe"), "/C TASKKILL /F /IM cmd.exe", NULL, SW_HIDE);
-	rem:
-	int nResult = remove("C:\\connect.txt");
-	if(nResult != 0) goto rem;
-	delete ptxt;
-	return !!IfConnect;
+	//select 模型，即设置超时
+	struct timeval tmo ;
+	fd_set r;
+
+	FD_ZERO(&r);
+	FD_SET(sock, &r);
+	tmo.tv_sec = 0;			// 连接超时0秒+500毫秒
+	tmo.tv_usec = WaitTime * 1000;
+	iRet = ::select(0, 0, &r, 0, &tmo);
+	::closesocket(sock);
+	AfxSocketTerm();
+	if(iRet <= 0) return FALSE;
+	else return TRUE;
 }

@@ -1,16 +1,11 @@
 #pragma once
-#include <afxwin.h>
-#include "API.h"
+#include <afxsock.h>
+#include "CCheckConnectMacro.h"
 
 class CCheckConnectAPI CCheckConnect{
 public:
-	int IfConnect;
-	CString IP;
-	int port;
-
-public:
-	//只判断网络是否通畅，WaitTime为最大等待时间单位毫秒，如果连接成功则立即返回1，失败返回0
-	bool Connect(CString IP,int port,unsigned int WaitTime);
-	//通过ping检测
-	bool ConnectWithPing(CString IP,int WaitTime);
+	//只通过IP检查是否连接
+	bool CheckWithIP(CString IP,int CheckTimes = 3,unsigned int WaitTimeForOne = 10);
+	//通过IP和端口检查
+	bool CheckWithIPPort(CString IP,int Port,unsigned int WaitTime = 300);
 };

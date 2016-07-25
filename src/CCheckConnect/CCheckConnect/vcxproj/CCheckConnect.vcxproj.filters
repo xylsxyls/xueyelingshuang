@@ -23,10 +23,10 @@
     <ClInclude Include="..\src\CCheckConnect.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\API.h">
+    <ClInclude Include="..\src\CCheckConnectAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CCheckConnectAPI.h">
+    <ClInclude Include="..\src\CCheckConnectMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -15,7 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CCheckConnectAPI.h" />
-    <ClInclude Include="..\src\API.h" />
+    <ClInclude Include="..\src\CCheckConnectMacro.h" />
     <ClInclude Include="..\src\CCheckConnect.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
