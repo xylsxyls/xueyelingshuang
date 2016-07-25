@@ -11,14 +11,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{67C85C08-37B9-42AC-A1C9-3D3E3A10A1D5}</ProjectGuid>
-    <RootNamespace>Project3</RootNamespace>
+    <ProjectGuid>{6D77B677-9164-4BC4-A7EF-0CECE75EAC38}</ProjectGuid>
+    <RootNamespace>Cjson</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v110_xp</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
@@ -65,18 +65,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Cjson.h" />
-    <ClInclude Include="CstrValue.h" />
-    <ClInclude Include="CszOneValue.h" />
-    <ClInclude Include="CszValue.h" />
-    <ClInclude Include="CTypeValue.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="Cjson.cpp" />
     <ClCompile Include="CstrValue.cpp" />
     <ClCompile Include="CszOneValue.cpp" />
     <ClCompile Include="CszValue.cpp" />
     <ClCompile Include="CTypeValue.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Cjson.h" />
+    <ClInclude Include="CstrValue.h" />
+    <ClInclude Include="CszOneValue.h" />
+    <ClInclude Include="CszValue.h" />
+    <ClInclude Include="CTypeValue.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

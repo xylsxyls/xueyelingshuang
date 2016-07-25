@@ -23,6 +23,10 @@ public:
 	map<CString,CTypeValue> mapdata;
 
 public:
+	Cjson();
+	~Cjson();
+
+public:
 	void LoadJson(CString strJson);
 
 private:

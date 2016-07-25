@@ -11,5 +11,7 @@ public:
 public:
 	CstrValue();
 	CstrValue(CString strValue);
+	CstrValue(const CstrValue& x);
+	CstrValue operator = (const CstrValue& x);
 	~CstrValue();
 };

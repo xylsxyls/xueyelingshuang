@@ -14,34 +14,17 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="CstrValue">
-      <UniqueIdentifier>{f4829889-9bf8-4571-91c1-2ac6f02b6b9e}</UniqueIdentifier>
+      <UniqueIdentifier>{cb0e737d-d4d0-4c44-b6e3-d75c30489888}</UniqueIdentifier>
     </Filter>
     <Filter Include="CszOneValue">
-      <UniqueIdentifier>{b3d3fbb8-87aa-4c75-8834-da4316c89357}</UniqueIdentifier>
+      <UniqueIdentifier>{adc14e4a-9086-458f-9cab-da64e259c5d2}</UniqueIdentifier>
     </Filter>
     <Filter Include="CszValue">
-      <UniqueIdentifier>{f2e31d17-fcbb-4071-9124-8748c4a2784a}</UniqueIdentifier>
+      <UniqueIdentifier>{5abbcb8a-985e-4c1d-b923-3cb9a8dc11b8}</UniqueIdentifier>
     </Filter>
     <Filter Include="CTypeValue">
-      <UniqueIdentifier>{1aaedfc1-a616-4c51-8d1f-c3c5dc41cbde}</UniqueIdentifier>
+      <UniqueIdentifier>{dc8393a9-4777-4086-a219-1274bf65a7b5}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Cjson.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="CstrValue.h">
-      <Filter>CstrValue</Filter>
-    </ClInclude>
-    <ClInclude Include="CszOneValue.h">
-      <Filter>CszOneValue</Filter>
-    </ClInclude>
-    <ClInclude Include="CszValue.h">
-      <Filter>CszValue</Filter>
-    </ClInclude>
-    <ClInclude Include="CTypeValue.h">
-      <Filter>CTypeValue</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Cjson.cpp">
@@ -59,5 +42,22 @@
     <ClCompile Include="CTypeValue.cpp">
       <Filter>CTypeValue</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Cjson.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CstrValue.h">
+      <Filter>CstrValue</Filter>
+    </ClInclude>
+    <ClInclude Include="CszOneValue.h">
+      <Filter>CszOneValue</Filter>
+    </ClInclude>
+    <ClInclude Include="CszValue.h">
+      <Filter>CszValue</Filter>
+    </ClInclude>
+    <ClInclude Include="CTypeValue.h">
+      <Filter>CTypeValue</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

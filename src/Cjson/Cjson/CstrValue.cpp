@@ -27,6 +27,21 @@ CstrValue::CstrValue(CString strValue){
 	}
 }
 
+CstrValue::CstrValue(const CstrValue& x){
+	this->dValue = x.dValue;
+	this->nValue = x.nValue;
+	this->strValue = x.strValue;
+	this->type = x.type;
+}
+
+CstrValue CstrValue::operator = (const CstrValue& x){
+	this->dValue = x.dValue;
+	this->nValue = x.nValue;
+	this->strValue = x.strValue;
+	this->type = x.type;
+	return *this;
+}
+
 CstrValue::~CstrValue(){
 
 }

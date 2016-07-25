@@ -8,6 +8,7 @@ using namespace std;
 
 class Cjson;
 class CTypeValue;
+class CszOneValue;
 class CszValue{
 public:
 	vector<CszOneValue> vecszOneValue;
@@ -18,4 +19,5 @@ public:
 public:
 	CszValue();
 	CszValue(CString strValue);
+	~CszValue();
 };

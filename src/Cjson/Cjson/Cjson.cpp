@@ -6,6 +6,14 @@ using namespace std;
 #include "CstrValue.h"
 #include "CszValue.h" 
 
+Cjson::Cjson(){
+
+}
+
+Cjson::~Cjson(){
+
+}
+
 BOOL GetOneModule(CString* strJson,BOOL* flag,CString* strName,CString *strValue){
 
 	int nNameLeft = strJson->Find('\"');
@@ -86,20 +94,16 @@ void Cjson::LoadOneModule(CString strName,CString strValue,BOOL flag){
 		vecstr.push_back(strName);
 		CstrValue strValueTemp = strValue;
 		mapstr[strName] = strValueTemp;
-		CTypeValue strTypeValueTemp;
-		strTypeValueTemp.fill(strValueTemp);
+		CTypeValue strTypeValueTemp = strValueTemp;
 		mapdata[strName] = strTypeValueTemp;
-		strTypeValueTemp.free();
 	}
 	//如果找到了一个数组
 	if(flag == 2){
 		vecsz.push_back(strName);
 		CszValue szValueTemp = strValue;
 		mapsz[strName] = szValueTemp;
-		CTypeValue szTypeValueTemp;
-		szTypeValueTemp.fill(szValueTemp);
+		CTypeValue szTypeValueTemp = szValueTemp;
 		mapdata[strName] = szTypeValueTemp;
-		szTypeValueTemp.free();
 	}
 	//如果找到了一个json
 	if(flag == 3){
@@ -107,10 +111,8 @@ void Cjson::LoadOneModule(CString strName,CString strValue,BOOL flag){
 		Cjson jsonTemp;
 		jsonTemp.LoadJson(strValue);
 		mapjson[strName] = jsonTemp;
-		CTypeValue jsonTypeValueTemp;
-		jsonTypeValueTemp.fill(jsonTemp);
+		CTypeValue jsonTypeValueTemp = jsonTemp;
 		mapdata[strName] = jsonTypeValueTemp;
-		jsonTypeValueTemp.free();
 	}
 }
 
@@ -160,72 +162,21 @@ void Cjson::LoadJson(CString strJson){
 int main(){
 	int x = atoi("  \t\t \r\n   1");
 	CString str = "123456";
-	
+
+	Cjson json1;
+	json1.LoadJson("{\"a\":1}");
+	Cjson json2;
+	json2 = json1;
 	while(1){
 		Cjson json;
-		json.LoadJson("{\"sieipaddr\" : \"192.168.1.1\" ,\"sieport\" : 9000,\"recordList\" : [{\"nodeid\" : 1,\"nodename\" : \"XXX案件\",\"domaincode\" : \"域ID\",\"devicecode\" : \"设备ID\",\"channlecode\" : \"通道ID\",\"streamcode\" : \"码流ID\"}]}");
+		static int x = 0;
+		x++;
+		if(x > 500) break;
+		json.LoadJson("{\"key1\": 123,\"key2\": \"hhhh\",\"key3\": 1232.332,\"key4\": [],\"key5\": {\"key51\": \"KKKKKK\",\"key52\": [\"hhhhhh\", 99, {\"name\": \"zhangsan\"}]}}");
+		CString strkey1 = json.mapdata["key1"].type;
+		//CString key1 = (((CstrValue *)json.mapdata["key1"]).type);
+		int skey1 = ((CstrValue*)json.mapdata["key1"].pClass)->nValue;
+
 	}
-	/*
-	auto it = json.mapdata.begin();
-	it++;
-	it++;
-	it++;
-	it++;
-	auto key5it = ((Cjson *)it->second.pClass)->mapdata.begin();
-	CString kkk = ((CstrValue *)key5it->second.pClass)->strValue;
-	key5it++;
-	CString hhh = ((CstrValue *)((CszValue *)key5it->second.pClass)->vecszValue.at(0).pClass)->strValue;
-	int n99 = ((CstrValue *)((CszValue *)key5it->second.pClass)->vecszValue.at(1).pClass)->nValue;
-	auto nameit = ((Cjson *)((CszValue *)key5it->second.pClass)->vecszValue.at(2).pClass)->mapdata.begin();
-	CString zhangsan = ((CstrValue *)nameit->second.pClass)->strValue;
-	*/
-	/*
-	int xx = ((CstrValue *)json.mapdata["key1"])->nValue;
-
-	
-
-	auto it = json.mapdata.begin();
-	CString onefirst = it->first;
-	int onesecond = ((CstrValue*)it->second)->nValue;
-
-	it++;
-	CString twofirst = it->first;
-	CString twosecond = ((CstrValue*)it->second)->strValue;
-
-	it++;
-	CString thirdfirst = it->first;
-	double thirdsecond = ((CstrValue*)it->second)->dValue;
-
-	it++;
-	CString forthfirst = it->first;
-	//CString forthsecond = ((CszValue*)it->second);
-
-	it++;
-	CString fifthfirst = it->first;
-	auto fifthsecondit = ((Cjson*)it->second)->mapdata.begin();
-
-	CString fifthsecondOneFirst = fifthsecondit->first;
-	CString fifthsecondOnesecond = ((CstrValue *)fifthsecondit->second)->strValue;
-
-	fifthsecondit++;
-	CString fifthsecondTwoFirst   = fifthsecondit->first;
-	CString fifthsecondTwosecond0 = ((CszValue *)fifthsecondit->second)->vecszOneValue.at(0).strValue.strValue;
-	int     fifthsecondTwosecond1 = ((CszValue *)fifthsecondit->second)->vecszOneValue.at(1).strValue.nValue;
-	auto  fifthsecondTwosecond2it = ((CszValue *)fifthsecondit->second)->vecjson.at(0).mapdata.begin();
-
-	CString fifthsecondTwosecond2OneFirst = fifthsecondTwosecond2it->first;
-	CString fifthsecondTwosecond2OneSecond = ((CstrValue *)fifthsecondTwosecond2it->second)->strValue;*/
-	/*
-	CString strFirstJsonName = json.vecjson.at(0);
-	Cjson strJson = json.mapjson.find(strFirstJsonName)->second;
-	CString szName = strJson.vecsz.at(0);
-	CszValue strszValue = strJson.mapsz.find(szName)->second;
-	CString xxx = strszValue.vecszOneValue.at(0).strValue.strValue;
-	int xx = json.mapjson.find(json.vecjson.at(0))->second.mapsz.find(json.mapjson.find(json.vecjson.at(0))->second.vecsz.at(0))->second.vecszOneValue.at(1).strValue.nValue;
-	
-	CString str2 = (++(json.mapstr.begin()))->first;
-	auto it = json.mapstr.begin();
-	it++;
-	CString str3 = it->first;*/
 	return 0;
 }

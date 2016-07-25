@@ -20,11 +20,8 @@ CszValue::CszValue(CString strValue){
 			CszOneValue szOneValueTemp(num,strValueTemp);
 			vecszOneValue.push_back(szOneValueTemp);
 			//
-			//CstrValue strValueTemp = new CstrValue(strValue.Mid(begin,i - begin));
-			CTypeValue strTypeValue;
-			strTypeValue.fill(strValueTemp);
+			CTypeValue strTypeValue = strValueTemp;
 			vecszValue.push_back(strTypeValue);
-			strTypeValue.free();
 			num++;
 			//取逗号后的位置作为开始，因为i会在循环开始做++，所以不需要动
 			begin = i + 1;
@@ -38,10 +35,8 @@ CszValue::CszValue(CString strValue){
 			json.LoadJson(strJsonTemp);
 			vecjson.push_back(json);
 			//
-			CTypeValue jsonTypeValue;
-			jsonTypeValue.fill(json);
+			CTypeValue jsonTypeValue = json;
 			vecszValue.push_back(jsonTypeValue);
-			jsonTypeValue.free();
 			num++;
 			//取逗号后的位置作为开始
 			while(1){
@@ -58,4 +53,8 @@ CszValue::CszValue(CString strValue){
 			}
 		}
 	}
+}
+
+CszValue::~CszValue(){
+
 }
