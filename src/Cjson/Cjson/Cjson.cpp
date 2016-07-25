@@ -176,6 +176,8 @@ int main(){
 		CString strkey1 = json.mapdata["key1"].type;
 		//CString key1 = (((CstrValue *)json.mapdata["key1"]).type);
 		int skey1 = ((CstrValue*)json.mapdata["key1"].pClass)->nValue;
+		CString key2 = ((CstrValue*)json.mapdata["key2"].pClass)->strValue;
+		double key3 = ((CstrValue*)json.mapdata["key3"].pClass)->dValue;
 
 	}
 	return 0;
