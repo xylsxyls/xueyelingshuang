@@ -18,10 +18,10 @@
     <ClInclude Include="..\src\CLoadDLL.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\API.h">
+    <ClInclude Include="..\src\CLoadDLLAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CLoadDLLAPI.h">
+    <ClInclude Include="..\src\CLoadDLLMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

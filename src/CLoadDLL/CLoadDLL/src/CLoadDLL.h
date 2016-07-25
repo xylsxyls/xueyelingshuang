@@ -1,6 +1,6 @@
 #pragma once
 #include <afx.h>
-#include "API.h"
+#include "CLoadDLLMacro.h"
 
 typedef int MultiBool;
 #define V(NewFunName) (void **)(&(NewFunName)) //调用时用的到，老版
