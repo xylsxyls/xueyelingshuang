@@ -22,5 +22,12 @@ public:
 
 	CTypeValue(const CTypeValue& x);
 	CTypeValue operator = (const CTypeValue& x);
+	CTypeValue operator[] (CString field);
+	CTypeValue operator[] (int num);
+
+public:
+	CstrValue toValue();
+	CszValue tosz();
+	Cjson toJson();
 	~CTypeValue();
 };

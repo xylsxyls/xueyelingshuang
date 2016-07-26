@@ -12,8 +12,16 @@ CszValue::CszValue(CString strValue){
 	int i = -1;
 	while(1){
 		i++;
-		//如果到了末尾就退出
-		if(strValue[i] == 0) break;
+		//如果到了末尾先取出最后一个再退出
+		if(strValue[i] == 0){
+			CstrValue strValueTemp = strValue.Mid(begin,i - begin);
+			CszOneValue szOneValueTemp(num,strValueTemp);
+			vecszOneValue.push_back(szOneValueTemp);
+
+			CTypeValue strTypeValue = strValueTemp;
+			vecszValue.push_back(strTypeValue);
+			break;
+		}
 		//如果先找到了逗号说明遇到了一个字段值
 		if(strValue[i] == ','){
 			CstrValue strValueTemp = strValue.Mid(begin,i - begin);
@@ -43,7 +51,7 @@ CszValue::CszValue(CString strValue){
 				//防止在结束时，因为没找到逗号导致i还是原来左括号的位置，先把i放到右括号的位置，循环开始的时候会做++，寻找下一位
 				i = nRight;
 				nRight++;
-				if(strValue[nRight] == 0) break;
+				if(strValue[nRight] == 0) return;
 				if(strValue[nRight] == ','){
 					begin = nRight + 1;
 					//i现在取逗号的位置，循环开始的时候会先做++
@@ -57,4 +65,8 @@ CszValue::CszValue(CString strValue){
 
 CszValue::~CszValue(){
 
+}
+
+int CszValue::size(){
+	return vecszValue.size();
 }

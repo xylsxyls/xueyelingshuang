@@ -159,26 +159,114 @@ void Cjson::LoadJson(CString strJson){
 	return;
 }
 
-int main(){
-	int x = atoi("  \t\t \r\n   1");
-	CString str = "123456";
+vector<CString> Cjson::GetField(){
+	vector<CString> vecField;
+	auto it = mapdata.begin();
+	for(;it != mapdata.end();it++){
+		vecField.push_back(it->first);
+	}
+	return vecField;
+}
 
-	Cjson json1;
-	json1.LoadJson("{\"a\":1}");
-	Cjson json2;
-	json2 = json1;
+int Cjson::size(){
+	return mapdata.size();
+}
+
+CString Cjson::toCString(CString NewLineSign,CString FormatSign,int FormatLength){
+	CString strResult = "{}";
+	int nInsert = strResult.GetLength() - 1;
+	int i = -1;
+	auto it = mapdata.begin();
+	for(;it != mapdata.end();it++){
+		i++;
+		CString strFieldTemp = it->first;
+		CTypeValue TypeValueTemp = it->second;
+		strResult = AddTypeValue(strResult,&nInsert,!i,strFieldTemp,TypeValueTemp,NewLineSign,FormatSign,FormatLength);
+	}
+	CString strt = "";
+	int lengthtemp = FormatLength - 1;
+	while(lengthtemp--!=0){
+		strt = strt + FormatSign;
+	}
+	strResult.Insert(strResult.GetLength() - 1,NewLineSign + strt);
+	return strResult;
+}
+
+CString Cjson::AddTypeValue(CString strResult,int *nInsert,BOOL ifFirst,CString strField,CTypeValue TypeValue,CString NewLineSign,CString FormatSign,int FormatLength){
+	int length = FormatLength;
+	CString strFormatSign = "";
+	while(length--!=0){
+		strFormatSign = strFormatSign + FormatSign;
+	}
+	CString strOne = strFormatSign + "\"" + strField + "\"";
+	if(TypeValue.type == "class CstrValue"){
+		CstrValue strValueTemp = TypeValue.toValue();
+		//字符串
+		if(strValueTemp.type == 1){
+			strOne = strOne + " : \"" + strValueTemp.strValue + "\"";
+		}
+		//整数和小数
+		if(strValueTemp.type == 2 || strValueTemp.type == 3){
+			strOne = strOne + " : " + strValueTemp.strValue;
+		}
+	}
+	if(TypeValue.type == "class CszValue"){
+		CszValue szValue = TypeValue.tosz();
+		CString strszValue = "";
+		int i = -1;
+		while(i++ != szValue.size() - 1){
+			if(i != 0) strszValue = strszValue + ",";
+			CTypeValue TypeValueTemp = szValue.vecszValue.at(i);
+			if(TypeValueTemp.type == "class CstrValue"){
+				CstrValue strValueTemp = TypeValueTemp.toValue();
+				//字符串
+				if(strValueTemp.type == 1){
+					strszValue = strszValue + "\"" + strValueTemp.strValue + "\"";
+				}
+				//整数和小数
+				if(strValueTemp.type == 2 || strValueTemp.type == 3){
+					strszValue = strszValue + strValueTemp.strValue;
+				}
+			}
+			if(TypeValueTemp.type == "class Cjson"){
+				Cjson jsonTemp = TypeValueTemp.toJson();
+				CString strResultTemp = jsonTemp.toCString(NewLineSign,FormatSign,FormatLength + 1);
+				strszValue = strszValue + strResultTemp;
+			}
+		}
+		strOne = strOne + " : [" + strszValue + "]";
+	}
+	if(TypeValue.type == "class Cjson"){
+		Cjson jsonTemp = TypeValue.toJson();
+		CString strResultTemp = jsonTemp.toCString(NewLineSign,FormatSign,FormatLength + 1);
+		strOne = strOne + strResultTemp;
+	}
+	if(ifFirst == 1){
+		strOne = NewLineSign + strOne;
+	}
+	else{
+		strOne = "," + NewLineSign + strOne;
+	}
+	strResult.Insert(*nInsert,strOne);
+	*nInsert = *nInsert + strOne.GetLength();
+	return strResult;
+}
+
+int main(){
+	
+	Cjson json;
 	while(1){
-		Cjson json;
+		
 		static int x = 0;
 		x++;
-		if(x > 500) break;
-		json.LoadJson("{\"key1\": 123,\"key2\": \"hhhh\",\"key3\": 1232.332,\"key4\": [],\"key5\": {\"key51\": \"KKKKKK\",\"key52\": [\"hhhhhh\", 99, {\"name\": \"zhangsan\"}]}}");
-		CString strkey1 = json.mapdata["key1"].type;
-		//CString key1 = (((CstrValue *)json.mapdata["key1"]).type);
-		int skey1 = ((CstrValue*)json.mapdata["key1"].pClass)->nValue;
-		CString key2 = ((CstrValue*)json.mapdata["key2"].pClass)->strValue;
-		double key3 = ((CstrValue*)json.mapdata["key3"].pClass)->dValue;
-
+		//if(x > 500) break;
+		json.LoadJson("{\"sieipaddr\" : \"192.168.1.1\" ,\"sieport\" : 9000,\"recordList\" : [{\"nodeid\" : 1,\"nodename\" : \"XXX案件\",\"domaincode\" : \"域ID\",\"devicecode\" : \"设备ID\",\"channlecode\" : \"通道ID\",\"streamcode\" : \"码流ID\"},{\"nodeid\" : 1,\"nodename\" : \"XXX案件\",\"domaincode\" : \"域ID\",\"devicecode\" : \"设备ID\",\"channlecode\" : \"通道ID\",\"streamcode\" : \"码流ID\"}]}");
+		json.toCString("\r\n","\t");
+		//AfxMessageBox(json.toCString("\r\n","\t"));
+		CTypeValue xxxx = json;
+		CString zhangsan = xxxx["key5"]["key52"][2]["name"].toValue().strValue;
 	}
+	CTypeValue xxxx = json;
+	int x1 = xxxx["key4"][2].toValue().nValue;
 	return 0;
 }

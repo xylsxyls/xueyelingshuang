@@ -28,8 +28,12 @@ public:
 
 public:
 	void LoadJson(CString strJson);
-
+	vector<CString> GetField();
+	int size();
+	//FormatLength指的是里面的\t个数
+	CString toCString(CString NewLineSign = "\r\n",CString FormatSign = "\t",int FormatLength = 1);
 private:
 	void LoadOneModule(CString strName,CString strValue,BOOL flag);
 	void OnlyLoadOneJson(CString strJson);
+	CString AddTypeValue(CString strResult,int *nInsert,BOOL ifFirst,CString strField,CTypeValue TypeValue,CString NewLineSign,CString FormatSign,int FormatLength);
 };

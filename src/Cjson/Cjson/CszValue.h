@@ -20,4 +20,7 @@ public:
 	CszValue();
 	CszValue(CString strValue);
 	~CszValue();
+
+public:
+	int size();
 };

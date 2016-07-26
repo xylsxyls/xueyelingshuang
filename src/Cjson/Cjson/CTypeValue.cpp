@@ -72,6 +72,60 @@ CTypeValue CTypeValue::operator = (const CTypeValue& x){
 	return *this;
 }
 
+CTypeValue CTypeValue::operator[] (CString field){
+	if(type == "class CstrValue"){
+		
+	}
+	if(type == "class CszValue"){
+		
+	}
+	if(type == "class Cjson"){
+		return ((Cjson*)pClass)->mapdata[field];
+	}
+	return *this;
+}
+
+CTypeValue CTypeValue::operator[] (int num){
+	if(type == "class CstrValue"){
+		
+	}
+	if(type == "class CszValue"){
+		return ((CszValue*)pClass)->vecszValue.at(num);
+	}
+	if(type == "class Cjson"){
+		
+	}
+	return *this;
+}
+
+CstrValue CTypeValue::toValue(){
+	if(type == "class CstrValue"){
+		return *((CstrValue *)pClass);
+	}
+	CstrValue error;
+	error.dValue = -1;
+	error.nValue = -1;
+	error.strValue = "-1";
+	error.type = -1;
+	return error;
+}
+
+CszValue CTypeValue::tosz(){
+	if(type == "class CszValue"){
+		return *((CszValue *)pClass);
+	}
+	CszValue error;
+	return error;
+}
+
+Cjson CTypeValue::toJson(){
+	if(type == "class Cjson"){
+		return *((Cjson *)pClass);
+	}
+	Cjson error;
+	return error;
+}
+
 CTypeValue::~CTypeValue(){
 	if(type == "class CstrValue"){
 		if(this->pClass != NULL){
