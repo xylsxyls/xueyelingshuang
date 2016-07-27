@@ -6,6 +6,7 @@ using namespace std;
 #include "CstrValue.h"
 #include "CszValue.h"
 #include "CTypeValue.h"
+#include "CFieldType.h"
 
 class CszValue;
 class CTypeValue;
@@ -21,6 +22,10 @@ public:
 	map<CString,Cjson    > mapjson; //´æ´¢×Ö¶Î½Ójson
 
 	map<CString,CTypeValue> mapdata;
+
+public:
+	vector<CFieldType> vecField;
+	vector<CTypeValue*> vecTypeValue;
 
 public:
 	Cjson();

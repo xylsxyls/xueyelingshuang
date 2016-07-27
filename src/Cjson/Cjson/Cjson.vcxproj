@@ -65,6 +65,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CFieldType.cpp" />
     <ClCompile Include="Cjson.cpp" />
     <ClCompile Include="CstrValue.cpp" />
     <ClCompile Include="CszOneValue.cpp" />
@@ -72,6 +73,7 @@
     <ClCompile Include="CTypeValue.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CFieldType.h" />
     <ClInclude Include="Cjson.h" />
     <ClInclude Include="CstrValue.h" />
     <ClInclude Include="CszOneValue.h" />

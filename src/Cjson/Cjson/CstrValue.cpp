@@ -8,6 +8,13 @@ CstrValue::CstrValue(){
 	dValue = 0;
 }
 
+CstrValue::CstrValue(BOOL type,CString strValue,int nValue,double dValue){
+	this->type = type;
+	this->strValue = strValue;
+	this->nValue = nValue;
+	this->dValue = dValue;
+}
+
 CstrValue::CstrValue(CString strValue){
 	//先初始化
 	CstrValue();
@@ -32,7 +39,7 @@ CstrValue::CstrValue(CString strValue){
 		strValue.Replace("\r","");
 		strValue.Replace("\t","");
 		while(i++ != strValue.GetLength() - 1){
-			if(strValue[i] < 48 || strValue[i] > 57) break;
+			if((strValue[i] < 48 || strValue[i] > 57) && strValue[i] != '.' && strValue[i] != '-') break;
 		}
 		//如果不等说明出现了其他符号，则是运算表达式，不能处理
 		if(i != strValue.GetLength()){

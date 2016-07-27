@@ -234,12 +234,12 @@ CString Cjson::AddTypeValue(CString strResult,int *nInsert,BOOL ifFirst,CString 
 				strszValue = strszValue + strResultTemp;
 			}
 		}
-		strOne = strOne + " : [" + strszValue + "]";
+		strOne = strOne + " : [" + strszValue + "]";//空数组
 	}
 	if(TypeValue.type == "class Cjson"){
 		Cjson jsonTemp = TypeValue.toJson();
 		CString strResultTemp = jsonTemp.toCString(NewLineSign,FormatSign,FormatLength + 1);
-		strOne = strOne + strResultTemp;
+		strOne = strOne + " : " + strResultTemp;
 	}
 	if(ifFirst == 1){
 		strOne = NewLineSign + strOne;
@@ -254,19 +254,38 @@ CString Cjson::AddTypeValue(CString strResult,int *nInsert,BOOL ifFirst,CString 
 
 int main(){
 	
+	map<int,int> map;
+	map[0] = 1;
+
 	Cjson json;
 	while(1){
 		
 		static int x = 0;
 		x++;
 		//if(x > 500) break;
-		json.LoadJson("{\"sieipaddr\" : \"192.168.1.1\" ,\"sieport\" : 9000,\"recordList\" : [{\"nodeid\" : 1,\"nodename\" : \"XXX案件\",\"domaincode\" : \"域ID\",\"devicecode\" : \"设备ID\",\"channlecode\" : \"通道ID\",\"streamcode\" : \"码流ID\"},{\"nodeid\" : 1,\"nodename\" : \"XXX案件\",\"domaincode\" : \"域ID\",\"devicecode\" : \"设备ID\",\"channlecode\" : \"通道ID\",\"streamcode\" : \"码流ID\"}]}");
-		json.toCString("\r\n","\t");
-		//AfxMessageBox(json.toCString("\r\n","\t"));
+		
+		json.LoadJson("{\"layout\": 1,\"videoList\": [{\"wid\": 0,\"isAudioValid\":	1,\"fileList\": [{\"fileName\": \"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1.mp4\",\"startTime\": 0,\"stopTime\": 3200},{\"fileName\": \"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1_1.mp4\",\"startTime\": 3200,\"stopTime\": 6201},{\"fileName\": \"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_2.mp4\",\"startTime\": 6231,\"stopTime\": 6889}]}]}");
+		json.toCString("\r\n","    ");
+		//AfxMessageBox(json.toCString("\r\n","    "));
+		CTypeValue xxxxx;
 		CTypeValue xxxx = json;
-		CString zhangsan = xxxx["key5"]["key52"][2]["name"].toValue().strValue;
+		//CString zhangsan = xxxx["key8"]["key52"][2]["name"].toValue().strValue;
+		//CTypeValue ssss = xxxx.toJson().mapdata["key10"];
+		//xxxx.toJson().mapdata["key10"] = CstrValue("124");
+		//xxxx.toJson().mapdata["key11"] = CszValue("124,\"456\"");
+		xxxx["layout"]["123"]["456"] = 1.1;
+		xxxx["layout"][0]["123"]["789"] = 1.2;
+		//AfxMessageBox(json.toCString());
+		//xxxx = json;
+		//xxxx["key33"][0] = "delete";
+		//CszValue szValue = xxxx.toJson().mapdata["key9"].tosz();
+		//CString strrrrrr = szValue.vecszValue.at(0).toValue().strValue;
+		//xxxx.toJson().mapdata["key9"].tosz().vecszValue.push_back(CstrValue("123456"));
+		//CTypeValue strrr = xxxx.toJson().mapdata["key10"];
+		AfxMessageBox(xxxx.toJson().toCString());
 	}
 	CTypeValue xxxx = json;
+	
 	int x1 = xxxx["key4"][2].toValue().nValue;
 	return 0;
 }

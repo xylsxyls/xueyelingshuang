@@ -25,6 +25,9 @@
     <Filter Include="CTypeValue">
       <UniqueIdentifier>{dc8393a9-4777-4086-a219-1274bf65a7b5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CFieldType">
+      <UniqueIdentifier>{cf08648a-00f4-4332-9e97-047af57a2a9e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Cjson.cpp">
@@ -42,6 +45,9 @@
     <ClCompile Include="CTypeValue.cpp">
       <Filter>CTypeValue</Filter>
     </ClCompile>
+    <ClCompile Include="CFieldType.cpp">
+      <Filter>CFieldType</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cjson.h">
@@ -58,6 +64,9 @@
     </ClInclude>
     <ClInclude Include="CTypeValue.h">
       <Filter>CTypeValue</Filter>
+    </ClInclude>
+    <ClInclude Include="CFieldType.h">
+      <Filter>CFieldType</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
