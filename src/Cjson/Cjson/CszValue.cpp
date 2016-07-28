@@ -1,6 +1,9 @@
 #include <SDKDDKVer.h>
 #include "CszValue.h"
 #include "CStringManagerAPI.h"
+#include "CTypeValue.h"
+#include "CstrValue.h"
+#include "Cjson.h"
 
 CszValue::CszValue(){
 
@@ -14,22 +17,21 @@ CszValue::CszValue(CString strValue){
 		i++;
 		//如果到了末尾先取出最后一个再退出
 		if(strValue[i] == 0){
-			CstrValue strValueTemp = strValue.Mid(begin,i - begin);
-			CszOneValue szOneValueTemp(num,strValueTemp);
-			vecszOneValue.push_back(szOneValueTemp);
-
-			CTypeValue strTypeValue = strValueTemp;
-			vecszValue.push_back(strTypeValue);
+			//由于在数组中只会出现json和数字，出现json时，在下面的循环中遇到0退出，所以这里只要处理遇到逗号的情况
+			CString strTemp = strValue.Mid(begin,i - begin);
+			int j = -1;
+			while(j++ != strTemp.GetLength() - 1){
+				if(strTemp[j] >= '0' && strTemp[j] <= '9') break;
+			}
+			//如果不相等则有数字出现，默认当数字处理，如果相等说明没有数字出现，等于空字符串，空字符串不处理
+			if(j != strTemp.GetLength()){
+				vecszValue.push_back((CstrValue)strTemp);
+			}
 			break;
 		}
 		//如果先找到了逗号说明遇到了一个字段值
 		if(strValue[i] == ','){
-			CstrValue strValueTemp = strValue.Mid(begin,i - begin);
-			CszOneValue szOneValueTemp(num,strValueTemp);
-			vecszOneValue.push_back(szOneValueTemp);
-			//
-			CTypeValue strTypeValue = strValueTemp;
-			vecszValue.push_back(strTypeValue);
+			vecszValue.push_back((CstrValue)strValue.Mid(begin,i - begin));
 			num++;
 			//取逗号后的位置作为开始，因为i会在循环开始做++，所以不需要动
 			begin = i + 1;
@@ -38,13 +40,9 @@ CszValue::CszValue(CString strValue){
 		if(strValue[i] == '{'){
 			CStringManager manager = strValue;
 			int nRight = manager.FindOther('{','}',i);
-			CString strJsonTemp = strValue.Mid(i,nRight - i + 1);
 			Cjson json;
-			json.LoadJson(strJsonTemp);
-			vecjson.push_back(json);
-			//
-			CTypeValue jsonTypeValue = json;
-			vecszValue.push_back(jsonTypeValue);
+			json.LoadJson(strValue.Mid(i,nRight - i + 1));
+			vecszValue.push_back(json);
 			num++;
 			//取逗号后的位置作为开始
 			while(1){

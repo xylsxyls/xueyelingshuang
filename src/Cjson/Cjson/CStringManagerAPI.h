@@ -5,5 +5,5 @@
 #ifdef NDEBUG
 #pragma comment(lib,"CStringManager.lib")
 #else
-#pragma comment(lib,"CStringManager.lib")
+#pragma comment(lib,"CStringManagerd.lib")
 #endif

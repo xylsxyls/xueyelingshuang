@@ -1,10 +1,8 @@
 #pragma once
 #include <afxwin.h>
-#include <typeinfo>
-#include "Cjson.h"
-#include "CszValue.h"
 #include "CstrValue.h"
-
+#include "CszValue.h"
+#include "Cjson.h"
 
 class CstrValue;
 class CszValue;
@@ -18,6 +16,11 @@ public:
 public:
 	//存放json指针，用于寻找vecField和vecTypeValue
 	Cjson *pJson;
+
+	//存放错误值
+	CstrValue strValueError;
+	CszValue szValueError;
+	Cjson jsonError;
 
 public:
 	CTypeValue();

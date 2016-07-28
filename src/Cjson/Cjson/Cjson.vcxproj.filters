@@ -16,9 +16,6 @@
     <Filter Include="CstrValue">
       <UniqueIdentifier>{cb0e737d-d4d0-4c44-b6e3-d75c30489888}</UniqueIdentifier>
     </Filter>
-    <Filter Include="CszOneValue">
-      <UniqueIdentifier>{adc14e4a-9086-458f-9cab-da64e259c5d2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="CszValue">
       <UniqueIdentifier>{5abbcb8a-985e-4c1d-b923-3cb9a8dc11b8}</UniqueIdentifier>
     </Filter>
@@ -36,9 +33,6 @@
     <ClCompile Include="CstrValue.cpp">
       <Filter>CstrValue</Filter>
     </ClCompile>
-    <ClCompile Include="CszOneValue.cpp">
-      <Filter>CszOneValue</Filter>
-    </ClCompile>
     <ClCompile Include="CszValue.cpp">
       <Filter>CszValue</Filter>
     </ClCompile>
@@ -55,9 +49,6 @@
     </ClInclude>
     <ClInclude Include="CstrValue.h">
       <Filter>CstrValue</Filter>
-    </ClInclude>
-    <ClInclude Include="CszOneValue.h">
-      <Filter>CszOneValue</Filter>
     </ClInclude>
     <ClInclude Include="CszValue.h">
       <Filter>CszValue</Filter>

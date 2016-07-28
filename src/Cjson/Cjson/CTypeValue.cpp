@@ -1,31 +1,66 @@
 #include <SDKDDKVer.h>
 #include "CTypeValue.h"
+#include <typeinfo>
 
+#include "CFieldType.h"
+
+vector<void *> vecp;
+void freevec(void* freep){
+	auto it = vecp.begin();
+	for(;it != vecp.end();it++){
+		if(*it == freep){
+			vecp.erase(it);
+			break;
+		}
+	}
+}
 
 CTypeValue::CTypeValue(){
 	type = "";
 	pClass = NULL;
 	pJson = NULL;
+	this->strValueError.dValue = -1;
+	this->strValueError.nValue = -1;
+	this->strValueError.strValue = "-1";
+	this->strValueError.type = -1;
 }
 
 CTypeValue::CTypeValue(const CstrValue& Class){
 	type = typeid(Class).name();
 	CstrValue *pNewClass = new CstrValue;
+	//vecp.push_back(pNewClass);
 	*pNewClass = Class;
 	pClass = pNewClass;
+
+	this->strValueError.dValue = -1;
+	this->strValueError.nValue = -1;
+	this->strValueError.strValue = "-1";
+	this->strValueError.type = -1;
 }
 
 CTypeValue::CTypeValue(const CszValue& Class){
 	type = typeid(Class).name();
 	CszValue *pNewClass = new CszValue;
+	//vecp.push_back(pNewClass);
 	*pNewClass = Class;
 	pClass = pNewClass;
+
+	this->strValueError.dValue = -1;
+	this->strValueError.nValue = -1;
+	this->strValueError.strValue = "-1";
+	this->strValueError.type = -1;
 }
 CTypeValue::CTypeValue(const Cjson& Class){
 	type = typeid(Class).name();
 	Cjson *pNewClass = new Cjson;
+	//vecp.push_back(pNewClass);
 	*pNewClass = Class;
 	pClass = pNewClass;
+
+	this->strValueError.dValue = -1;
+	this->strValueError.nValue = -1;
+	this->strValueError.strValue = "-1";
+	this->strValueError.type = -1;
 
 	//pJson采取手动传的方式，使用浅拷贝
 	pJson = pNewClass;
@@ -34,46 +69,74 @@ CTypeValue::CTypeValue(const Cjson& Class){
 CTypeValue::CTypeValue(const CTypeValue& x){
 	type = x.type;
 
-	if(type == "class CstrValue"){
+	this->strValueError.dValue = x.strValueError.dValue;
+	this->strValueError.nValue = x.strValueError.nValue;
+	this->strValueError.strValue = x.strValueError.strValue;
+	this->strValueError.type = x.strValueError.type;
+
+	if(type == ""){
+		pClass = x.pClass;
+	}
+	else if(type == "class CstrValue"){
 		//pClass必须新new一个
 		CstrValue *pNewClass = new CstrValue;
+		//vecp.push_back(pNewClass);
 		*pNewClass = *((CstrValue *)(x.pClass));
 		pClass = pNewClass;
 	}
-	if(type == "class CszValue"){
+	else if(type == "class CszValue"){
 		//pClass必须新new一个
 		CszValue *pNewClass = new CszValue();
+		//vecp.push_back(pNewClass);
 		*pNewClass = *((CszValue *)(x.pClass));
 		pClass = pNewClass;
 	}
-	if(type == "class Cjson"){
+	else if(type == "class Cjson"){
 		//pClass必须新new一个
 		Cjson *pNewClass = new Cjson();
+		//vecp.push_back(pNewClass);
 		*pNewClass = *((Cjson *)(x.pClass));
 		pClass = pNewClass;
+	}
+	else{
+		AfxMessageBox("拷贝构造传入类型出错，类型为：" + type);
 	}
 }
 
 CTypeValue& CTypeValue::operator = (const CTypeValue& x){
 	type = x.type;
 
-	if(type == "class CstrValue"){
+	this->strValueError.dValue = x.strValueError.dValue;
+	this->strValueError.nValue = x.strValueError.nValue;
+	this->strValueError.strValue = x.strValueError.strValue;
+	this->strValueError.type = x.strValueError.type;
+
+	if(type == ""){
+		pClass = x.pClass;
+	}
+	else if(type == "class CstrValue"){
 		//pClass必须新new一个
 		CstrValue *pNewClass = new CstrValue;
+		//vecp.push_back(pNewClass);
 		*pNewClass = *((CstrValue *)(x.pClass));
 		pClass = pNewClass;
 	}
-	if(type == "class CszValue"){
+	else if(type == "class CszValue"){
 		//pClass必须新new一个
 		CszValue *pNewClass = new CszValue();
+		//vecp.push_back(pNewClass);
 		*pNewClass = *((CszValue *)(x.pClass));
 		pClass = pNewClass;
 	}
-	if(type == "class Cjson"){
+	else if(type == "class Cjson"){
 		//pClass必须新new一个
 		Cjson *pNewClass = new Cjson();
+		//vecp.push_back(pNewClass);
 		*pNewClass = *((Cjson *)(x.pClass));
 		pClass = pNewClass;
+	}
+	else{
+		AfxMessageBox("拷贝重载等号传入类型出错，类型为：" + type);
 	}
 	return *this;
 }
@@ -87,10 +150,10 @@ CTypeValue& CTypeValue::operator[] (CString field){
 	if(type == "class CstrValue"){
 		
 	}
-	if(type == "class CszValue"){
+	else if(type == "class CszValue"){
 		
 	}
-	if(type == "class Cjson"){
+	else if(type == "class Cjson"){
 		//如果有这个字段再返回
 		auto it = ((Cjson*)pClass)->mapdata.begin();
 		for(;it != ((Cjson*)pClass)->mapdata.end();it++){
@@ -100,6 +163,9 @@ CTypeValue& CTypeValue::operator[] (CString field){
 				return ((Cjson*)pClass)->mapdata[field];
 			}
 		}
+	}
+	else{
+		AfxMessageBox("重载[field]时本身类型出错，类型为：" + type);
 	}
 	return *this;
 }
@@ -113,15 +179,18 @@ CTypeValue& CTypeValue::operator[] (int num){
 	if(type == "class CstrValue"){
 		
 	}
-	if(type == "class CszValue"){
+	else if(type == "class CszValue"){
 		//如果数组中有这么长再返回
 		if(((CszValue*)pClass)->vecszValue.size() > (unsigned int)num){
 			((CszValue*)pClass)->vecszValue.at(num).pJson = this->pJson;
 			return ((CszValue*)pClass)->vecszValue.at(num);
 		}
 	}
-	if(type == "class Cjson"){
+	else if(type == "class Cjson"){
 		
+	}
+	else{
+		AfxMessageBox("重载[num]时本身类型出错，类型为：" + type);
 	}
 	return *this;
 }
@@ -259,50 +328,49 @@ CTypeValue& CTypeValue::operator = (CString str){
 	return *this;
 }
 
-CstrValue strValueError(-1,"-1",-1,-1);
-
 CstrValue& CTypeValue::toValue(){
 	if(type == "class CstrValue"){
 		return *((CstrValue *)pClass);
 	}
+	//如果要访问的类型不是本身的类型则直接返回错误
 	return strValueError;
 }
-
-CszValue szValueError;
 
 CszValue& CTypeValue::tosz(){
 	if(type == "class CszValue"){
 		return *((CszValue *)pClass);
 	}
+	//如果要访问的类型不是本身的类型则直接返回空
 	return szValueError;
 }
-
-Cjson jsonError;
 
 Cjson& CTypeValue::toJson(){
 	if(type == "class Cjson"){
 		return *((Cjson *)pClass);
 	}
+	//如果要访问的类型不是本身的类型则直接返回空
 	return jsonError;
 }
 
 CTypeValue::~CTypeValue(){
-	if(type == "class CstrValue"){
-		if(this->pClass != NULL){
-			delete (CstrValue *)(this->pClass);
-			this->pClass = NULL;
+	if(type == ""){
+		if(pClass != NULL){
+			AfxMessageBox("出错");
 		}
 	}
-	if(type == "class CszValue"){
-		if(this->pClass != NULL){
-			delete (CszValue *)(this->pClass);
-			this->pClass = NULL;
-		}
+	else if(type == "class CstrValue"){
+		//freevec(pClass);
+		delete (CstrValue *)pClass;
 	}
-	if(type == "class Cjson"){
-		if(this->pClass != NULL){
-			delete (Cjson *)(this->pClass);
-			this->pClass = NULL;
-		}
+	else if(type == "class CszValue"){
+		//freevec(pClass);
+		delete (CszValue *)pClass;
+	}
+	else if(type == "class Cjson"){
+		//freevec(pClass);
+		delete (Cjson *)pClass;
+	}
+	else{
+		AfxMessageBox("释放类型出错，类型为：" + type);
 	}
 }

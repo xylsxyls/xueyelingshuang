@@ -1,10 +1,13 @@
 #include <SDKDDKVer.h>
 #include "Cjson.h"
-#include <map>
-using namespace std;
-#include "CStringManagerAPI.h"
 #include "CstrValue.h"
-#include "CszValue.h" 
+#include "CszValue.h"
+#include "CTypeValue.h"
+#include "CFieldType.h"
+#include "CStringManagerAPI.h"
+
+
+extern vector<void *> vecp;
 
 Cjson::Cjson(){
 
@@ -91,28 +94,17 @@ BOOL GetOneModule(CString* strJson,BOOL* flag,CString* strName,CString *strValue
 void Cjson::LoadOneModule(CString strName,CString strValue,BOOL flag){
 	//如果找到了一个字段
 	if(flag == 1){
-		vecstr.push_back(strName);
-		CstrValue strValueTemp = strValue;
-		mapstr[strName] = strValueTemp;
-		CTypeValue strTypeValueTemp = strValueTemp;
-		mapdata[strName] = strTypeValueTemp;
+		mapdata[strName] = (CstrValue)strValue;
 	}
 	//如果找到了一个数组
 	if(flag == 2){
-		vecsz.push_back(strName);
-		CszValue szValueTemp = strValue;
-		mapsz[strName] = szValueTemp;
-		CTypeValue szTypeValueTemp = szValueTemp;
-		mapdata[strName] = szTypeValueTemp;
+		mapdata[strName] = (CszValue)strValue;
 	}
 	//如果找到了一个json
 	if(flag == 3){
-		vecjson.push_back(strName);
 		Cjson jsonTemp;
 		jsonTemp.LoadJson(strValue);
-		mapjson[strName] = jsonTemp;
-		CTypeValue jsonTypeValueTemp = jsonTemp;
-		mapdata[strName] = jsonTypeValueTemp;
+		mapdata[strName] = jsonTemp;
 	}
 }
 
@@ -142,20 +134,14 @@ BOOL GetOneJson(CString *strJson,CString* strOneJson){
 
 void Cjson::LoadJson(CString strJson){
 	//先把内部清空
-	vecstr.clear();
-	vecsz.clear();
-	vecjson.clear();
 	mapdata.clear();
-	mapjson.clear();
-	mapstr.clear();
-	mapsz.clear();
 	//先取出第一块json，同时去掉取出的部分
-	while(1){
+	//while(1){
 		CString strOneJson = "";
 		BOOL nNext = GetOneJson(&strJson,&strOneJson);
-		if(nNext == 0) break;
+		//if(nNext == 0) break;
 		OnlyLoadOneJson(strOneJson);
-	}
+	//}
 	return;
 }
 
@@ -252,6 +238,8 @@ CString Cjson::AddTypeValue(CString strResult,int *nInsert,BOOL ifFirst,CString 
 	return strResult;
 }
 
+
+
 int main(){
 	
 	map<int,int> map;
@@ -259,20 +247,21 @@ int main(){
 
 	
 	Cjson json;
-	json.LoadJson("{\"layout\":1,\"videoList\":[{\"wid\":0,\"isAudioValid\":1,\"fileList\":[{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1.mp4\",\"startTime\":0,\"stopTime\":3200},{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1_1.mp4\",\"startTime\":3200,\"stopTime\":6201},{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_2.mp4\",\"startTime\":6231,\"stopTime\":6889}]}]}");
+	json.LoadJson("{\"1\":[],\"layout\":1,\"videoList\":[{\"wid\":0,\"isAudioValid\":1,\"fileList\":[{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1.mp4\",\"startTime\":0,\"stopTime\":3200},{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1_1.mp4\",\"startTime\":3200,\"stopTime\":6201},{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_2.mp4\",\"startTime\":6231,\"stopTime\":6889}  ]     }   ]  }");
+	vecp = vecp;
 	int x = 0;
-	Sleep(15000);
+	AfxMessageBox(json.toCString());
 	while(1){
 		x++;
-		if(x >200000){
-			break;
+		if(x >2000){
+			//break;
 		}
 		//"{   \"videoList\":[   {\"fileList\":[  {},{}  ]}   ]   }"
-		json.LoadJson("{\"layout\":1,\"videoList\":[{\"wid\":0,\"isAudioValid\":1,\"fileList\":[{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1.mp4\",\"startTime\":0,\"stopTime\":3200},{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1_1.mp4\",\"startTime\":3200,\"stopTime\":6201},{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_2.mp4\",\"startTime\":6231,\"stopTime\":6889}]}]}");
-		//json.toCString("\r\n","    ");
+		json.LoadJson("{\"a\":1}");
+		json.toCString("\r\n","    ");
 		//AfxMessageBox(json.toCString("\r\n","    "));
 		//CTypeValue xxxxx;
-		//CTypeValue xxxx = json;
+		CTypeValue xxxx = json;
 		//CString zhangsan = xxxx["key8"]["key52"][2]["name"].toValue().strValue;
 		//CTypeValue ssss = xxxx.toJson().mapdata["key10"];
 		//xxxx.toJson().mapdata["key10"] = CstrValue("124");
@@ -286,13 +275,14 @@ int main(){
 		//CString strrrrrr = szValue.vecszValue.at(0).toValue().strValue;
 		//xxxx.toJson().mapdata["key9"].tosz().vecszValue.push_back(CstrValue("123456"));
 		//CTypeValue strrr = xxxx.toJson().mapdata["key10"];
+		//CString strjson = xxxx.toJson().toCString();
 		//AfxMessageBox(xxxx.toJson().toCString());
 	}
-	while(1){
-
-	}
+	AfxMessageBox("2");
 	CTypeValue xxxx = json;
 	
 	int x1 = xxxx["key4"][2].toValue().nValue;
+	
+
 	return 0;
 }

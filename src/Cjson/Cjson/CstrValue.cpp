@@ -16,8 +16,13 @@ CstrValue::CstrValue(BOOL type,CString strValue,int nValue,double dValue){
 }
 
 CstrValue::CstrValue(CString strValue){
+	//需要改动，防止用户乱输的情况，-"123".6
 	//先初始化
-	CstrValue();
+	type = 0;
+	this->strValue = "";
+	nValue = 0;
+	dValue = 0;
+
 	//如果有引号说明是字符串
 	if(strValue.Find('\"') >= 0){
 		int nLeft = strValue.Find('\"');
