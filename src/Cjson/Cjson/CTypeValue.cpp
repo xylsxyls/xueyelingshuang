@@ -134,6 +134,11 @@ void CTypeValue::TypeEqual(CString strTemp){
 	while(i++ != pJson->vecField.size() - 1){
 		//表示当前层数
 		level++;
+		//如果field是空并且数字小于0说明用户填错
+		if(pJson->vecField.at(i).field == "" && pJson->vecField.at(i).num < 0){
+			//跳到结尾
+			goto rem;
+		}
 		//如果field不是空说明此处是字段
 		if(pJson->vecField.at(i).field != ""){
 			//如果当前层是最后一层则说明现在应该创建或覆盖字段
@@ -220,6 +225,7 @@ void CTypeValue::TypeEqual(CString strTemp){
 		}
 	}
 
+	rem:
 	//使用过一次就清空
 	pJson->vecField.clear();
 	pJson->vecTypeValue.clear();
