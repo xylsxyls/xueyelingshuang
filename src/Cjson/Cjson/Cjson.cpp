@@ -267,7 +267,18 @@ int main(){
 		//xxxx.toJson().mapdata["key10"] = CstrValue("124");
 		//xxxx.toJson().mapdata["key11"] = CszValue("124,\"456\"");
 		//xxxx[""] = 1.1;
-		//xxxx["layout1"][0]["123"]["1"] = 1.2;
+		//xxxx["layout1"][0] = 1.2;
+		//xxxx["layout1"][1] = 1.3;
+		//xxxx["layout1"][2] = 1.4;
+		//xxxx["layout1"][3] = 1.5;
+		//xxxx["layout1"][2] = "delete";
+		//xxxx["layout1"][1] = "insert";
+		xxxx["layout1"][0] = "insert";
+		xxxx["layout1"] = "delete";
+		xxxx["layout1"][0] = 1.2;
+		xxxx["layout1"][0][3][7] = 1.3;
+		xxxx["layout1"][2] = 1.4;
+		xxxx["layout1"][3] = 1.5;
 		//AfxMessageBox(json.toCString());
 		//xxxx = json;
 		//xxxx["key33"][0] = "delete";
@@ -276,7 +287,7 @@ int main(){
 		//xxxx.toJson().mapdata["key9"].tosz().vecszValue.push_back(CstrValue("123456"));
 		//CTypeValue strrr = xxxx.toJson().mapdata["key10"];
 		//CString strjson = xxxx.toJson().toCString();
-		//AfxMessageBox(xxxx.toJson().toCString());
+		AfxMessageBox(xxxx.toJson().toCString());
 	}
 	AfxMessageBox("2");
 	CTypeValue xxxx = json;

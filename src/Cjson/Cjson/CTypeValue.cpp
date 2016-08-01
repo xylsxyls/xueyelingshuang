@@ -212,8 +212,25 @@ void CTypeValue::TypeEqual(CString strTemp){
 		if(pJson->vecField.at(i).field != ""){
 			//如果当前层是最后一层则说明现在应该创建或覆盖字段
 			if(i == pJson->vecField.size() - 1){
-				//退回上一层添加或覆盖字段
-				pTypeValueTemp->toJson().mapdata[pJson->vecField.at(i).field] = (CstrValue)strTemp;
+				//如果发现是"\"delete\""则把当前字段删除
+				if(strTemp == "\"delete\""){
+					auto it = pTypeValueTemp->toJson().mapdata.begin();
+					for(;it!=pTypeValueTemp->toJson().mapdata.end();it++){
+						if(it->first == pJson->vecField.at(i).field){
+							//在释放之后pJson值会丢失，因为释放的是本层CTypeValue，所以pJson会被重置，所以先取出来
+							Cjson *pJsonTemp = pJson;
+							pTypeValueTemp->toJson().mapdata.erase(it);
+							//这里使用pJsonTemp来清空
+							pJsonTemp->vecField.clear();
+							pJsonTemp->vecTypeValue.clear();
+							return;
+						}
+					}
+				}
+				else{
+					//退回上一层添加或覆盖字段
+					pTypeValueTemp->toJson().mapdata[pJson->vecField.at(i).field] = (CstrValue)strTemp;
+				}
 				break;
 			}
 			//如果当前层根本不是json说明用户改变了当前层的性质，且不会是最后一层，因为如果是则在上面跳出循环了
@@ -259,16 +276,26 @@ void CTypeValue::TypeEqual(CString strTemp){
 			if(pJson->vecField.at(i).num >= (int)pTypeValueTemp->tosz().vecszValue.size()){
 				//如果本层是最后一层则追加一个字段
 				if(i == pJson->vecField.size() - 1){
-					pTypeValueTemp->tosz().vecszValue.push_back(CstrValue(strTemp));
+					//如果是"\"delete\""
+					if(strTemp == "\"delete\""){
+						pTypeValueTemp->tosz().vecszValue.pop_back();
+					}
+					//如果是"\"insert\""
+					else if(strTemp == "\"insert\""){
+						pTypeValueTemp->tosz().vecszValue.push_back(CstrValue(strTemp));
+					}
+					else{
+						pTypeValueTemp->tosz().vecszValue.push_back(CstrValue(strTemp));
+					}
 					break;
 				}
 				//如果下一层是field则追加一个json
 				else if(pJson->vecField.at(i + 1).field != ""){
 					pTypeValueTemp->tosz().vecszValue.push_back(Cjson());
 				}
-				//如果下一层是数字则追加一个数组
+				//如果下一层是数字说明用户填错，因为数组中是不可以直接添加数组的
 				else{
-					pTypeValueTemp->tosz().vecszValue.push_back(CszValue());
+					goto rem;
 				}
 				//写size - 1的原因是当用户输入的数字过大时也采用最后一个
 				pTypeValueTemp = &(pTypeValueTemp->tosz().vecszValue.at(pTypeValueTemp->tosz().vecszValue.size() - 1));
@@ -277,16 +304,26 @@ void CTypeValue::TypeEqual(CString strTemp){
 			else{
 				//如果本层是最后一层则覆盖字段
 				if(i == pJson->vecField.size() - 1){
-					pTypeValueTemp->tosz().vecszValue.at(pJson->vecField.at(i).num) = (CstrValue(strTemp));
+					//如果是"\"delete\""
+					if(strTemp == "\"delete\""){
+						pTypeValueTemp->tosz().vecszValue.erase(pTypeValueTemp->tosz().vecszValue.begin() + pJson->vecField.at(i).num);
+					}
+					//如果是"\"insert\""
+					else if(strTemp == "\"insert\""){
+						pTypeValueTemp->tosz().vecszValue.insert(pTypeValueTemp->tosz().vecszValue.begin() + pJson->vecField.at(i).num,CstrValue(strTemp));
+					}
+					else{
+						pTypeValueTemp->tosz().vecszValue.at(pJson->vecField.at(i).num) = (CstrValue(strTemp));
+					}
 					break;
 				}
 				//如果下一层是field则覆盖一个空json
 				else if(pJson->vecField.at(i + 1).field != ""){
 					pTypeValueTemp->tosz().vecszValue.at(pJson->vecField.at(i).num) = Cjson();
 				}
-				//如果下一层是数字则覆盖一个空数组
+				//如果下一层是数字说明用户填错，因为数组中是不可以直接添加数组的
 				else{
-					pTypeValueTemp->tosz().vecszValue.at(pJson->vecField.at(i).num) = CszValue();
+					goto rem;
 				}
 				//给下一层指针
 				pTypeValueTemp = &(pTypeValueTemp->tosz().vecszValue.at(pJson->vecField.at(i).num));
