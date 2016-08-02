@@ -43,7 +43,7 @@ CstrValue::CstrValue(CString strValue){
 	i = -1;
 	while(i++ != strValueTemp.GetLength() - 1){
 		//遇到无效字符则跳过
-		if(strValueTemp[i] == ' ' || (strValueTemp[i] == '\n' && strValueTemp[i + 1] == '\r') || strValueTemp[i] == '\n' || strValueTemp[i] == '\t') continue;
+		if(strValueTemp[i] == ' ' || strValueTemp[i] == '\r' || strValueTemp[i] == '\n' || strValueTemp[i] == '\t') continue;
 		else break;
 	}
 	//从有效字符开始取到末尾
@@ -55,6 +55,12 @@ CstrValue::CstrValue(CString strValue){
 	if(strValueTemp[0] == '\"' && strValueTemp[strValueTemp.GetLength() - 1] == '\"'){
 		type = 1;
 		this->strValue = strValueTemp.Mid(1,strValueTemp.GetLength() - 2);
+	}
+	//说明这里是一个空字段值，默认转成数字0
+	else if(strValueTemp == "null"){
+		type = 2;
+		this->strValue = strValueTemp;
+		this->nValue = 0;
 	}
 	//如果是负小数，符号在首位，且只有一个小数点
 	else if((strValueTemp.Replace("-","-") == 1 && strValueTemp.Find('-') == 0) && strValueTemp.Replace(".",".") == 1){

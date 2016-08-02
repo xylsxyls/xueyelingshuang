@@ -19,7 +19,16 @@ CjsonA::~CjsonA(){
 BOOL CjsonA::GetOneModule(CString* strJson,BOOL* flag,CString* strName,CString *strValue){
 	int nNameLeft = strJson->Find('{');
 	nNameLeft++;
-	int nNameRight = strJson->Find('\"',nNameLeft + 1);
+	int nNameRight = nNameLeft;
+	//第一次找到的是字段名左侧引号位置
+	nNameRight = strJson->Find('\"',nNameRight);
+	if(nNameRight >= 0){
+		name:
+		//第二次找到的是右侧引号
+		nNameRight = strJson->Find('\"',nNameRight);
+		if((*strJson)[nNameRight - 1] == '\\') goto name;
+	}
+	//这时nNameRight的位置是引号
 	//寻找双引号之后的冒号
 	int nColon = strJson->Find(':',nNameRight + 1);
 	//如果无字段名无冒号则有可能全部是无效字符是一个空json，应该返回0
@@ -32,8 +41,13 @@ BOOL CjsonA::GetOneModule(CString* strJson,BOOL* flag,CString* strName,CString *
 		if(strJsonTemp != "{}") mapError[*strJson] = "不可识别的部分字符串";
 		return 0;
 	}
+	//如果找不到右侧引号但有冒号
+	if(nNameRight == -1 && nColon >= 0){
+		mapError[*strJson] = "字段值只有左侧有引号";
+		return 0;
+	}
 	//如果找不到
-	if(nColon < 0){
+	if(nColon == -1 && nNameRight >= 0){
 		mapError[*strJson] = "有字段名但无冒号";
 		return 0;
 	}
@@ -48,7 +62,34 @@ BOOL CjsonA::GetOneModule(CString* strJson,BOOL* flag,CString* strName,CString *
 	int temp = nColon;
 	while(1){
 		temp++;
-		//如果第一个发现逗号或者大括号说明这个找到的是一个字段
+		//如果第一个发现引号说明找到了一个字段
+		if((*strJson)[temp] == '\"'){
+			*flag = 1;
+			rem:
+			temp = strJson->Find("\"",temp + 1);
+			if((*strJson)[temp - 1] == '\\') goto rem;
+			//这时temp的值时右侧引号的位置，从这里到逗号必须都是无效字符
+			*strValue = strJson->Mid(nColon + 1,temp - nColon);
+			while(1){
+				temp++;
+				if((*strJson)[temp] == '\t' || ((*strJson)[temp] == '\r' && (*strJson)[temp + 1] == '\n') || (*strJson)[temp] == '\n' || (*strJson)[temp] == ' ') continue;
+				else if((*strJson)[temp] == ','){
+					strJson->Delete(nNameLeft,temp - nNameLeft + 1);
+					return 1;
+				}
+				//说明到了结尾
+				else if((*strJson)[temp] == '}'){
+					strJson->Delete(nNameLeft,temp - nNameLeft);
+					return 1;
+				}
+				else if((*strJson)[temp] == 0){
+					mapError[*strJson] = "字段值后无大括号";
+					return 0;
+				}
+				else mapError[*strJson] = "字符串字段值后有多余字符";
+			}
+		}
+		//如果第一个发现逗号说明这个找到的是一个字段
 		if((*strJson)[temp] == ','){
 			*strValue = strJson->Mid(nColon + 1,temp - nColon - 1);
 			//删掉找到的部分，包括逗号
@@ -308,19 +349,4 @@ CString CjsonA::AddTypeValue(CString strResult,int *nInsert,BOOL ifFirst,CString
 	strResult.Insert(*nInsert,strOne);
 	*nInsert = *nInsert + strOne.GetLength();
 	return strResult;
-}
-
-
-
-int main(){
-	Cjson sa;
-	map<CString,CString> aaa = sa.LoadJson("{\"layout\":1,\"videoList\":[{\"wid\":0,\"isAudioValid\":1,\"fileList\":[{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1.mp4\",\"startTime\":0,\"stopTime\": 3200},{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_1_1.mp4\",\"startTime\":3200,\"stopTime\":6201},{\"fileName\":\"F:\\1111\\(2015)苏民终字第00596号\\(2015)苏民终字第00596号_【合成】2016-04-13 16.33.53\\A00_218_2.mp4\",\"startTime\":6231,\"stopTime\":6889}   ]    }   ]  }");
-	sa["wid"] = 3;
-	sa["4"][56] = "234";
-	sa["rty"][0][5] = 3;
-	sa["eww "][987]["wer"]["as"] = 2.1;
-	AfxMessageBox(sa.toCString());
-	//int xxx = sa["rty"].size();
-	int xxxxxxxvxx = sa["rty"].size();
-	return 0;
 }

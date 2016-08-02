@@ -19,16 +19,17 @@ CszValue::CszValue(CString strValue){
 		if(strValue[i] == 0){
 			//由于在数组中只会出现json和值，出现json时，在下面的循环中遇到0退出，所以这里只要处理遇到逗号的情况
 			CString strTemp = strValue.Mid(begin,i - begin);
+			CString strEmpty = strTemp;
+			strEmpty.Replace("\t","");
+			strEmpty.Replace("\r\n","");
+			strEmpty.Replace("\n","");
+			strEmpty.Replace(" ","");
+			//说明是空数组
+			if(strEmpty == "") break;
+			//如果不是空数组则开始传入CstrValue分析
 			CstrValue strValueTemp = strTemp;
 			if(strValueTemp.type == -1){
-				//如果是空数组，那么传进来的字符串为无效字符
-				strTemp.Replace("\t","");
-				strTemp.Replace("\r\n","");
-				strTemp.Replace("\n","");
-				strTemp.Replace(" ","");
-				//说明是空数组
-				if(strTemp == "") break;
-				else mapszError[strTemp] = "不可识别的数组值";
+				mapszError[strTemp] = "不可识别的数组值";
 			}
 			vecszValue.push_back(strValueTemp);
 			break;
