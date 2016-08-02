@@ -27,37 +27,37 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Cjson.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="CstrValue.cpp">
       <Filter>CstrValue</Filter>
     </ClCompile>
     <ClCompile Include="CszValue.cpp">
       <Filter>CszValue</Filter>
     </ClCompile>
-    <ClCompile Include="CTypeValue.cpp">
-      <Filter>CTypeValue</Filter>
-    </ClCompile>
     <ClCompile Include="CFieldType.cpp">
       <Filter>CFieldType</Filter>
     </ClCompile>
+    <ClCompile Include="CjsonA.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Cjson.cpp">
+      <Filter>CTypeValue</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Cjson.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="CstrValue.h">
       <Filter>CstrValue</Filter>
     </ClInclude>
     <ClInclude Include="CszValue.h">
       <Filter>CszValue</Filter>
     </ClInclude>
-    <ClInclude Include="CTypeValue.h">
-      <Filter>CTypeValue</Filter>
-    </ClInclude>
     <ClInclude Include="CFieldType.h">
       <Filter>CFieldType</Filter>
+    </ClInclude>
+    <ClInclude Include="CjsonA.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Cjson.h">
+      <Filter>CTypeValue</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

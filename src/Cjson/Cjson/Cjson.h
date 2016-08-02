@@ -1,29 +1,28 @@
 #pragma once
-#include <map>
-#include <vector>
-using namespace std;
 #include <afxwin.h>
+#include "CstrValue.h"
+#include "CszValue.h"
+#include "CjsonA.h"
 
 class CstrValue;
 class CszValue;
-class CTypeValue;
-class CFieldType;
+class CjsonA;
+
 class Cjson{
 public:
-	map<CString,CTypeValue> mapdata;
+	CString type;
+	void *pClass;
+
+	CjsonA *pJsonA;
 
 public:
-	//给new出来的空间用，这里一直为空
-	vector<CFieldType> vecField;
-	vector<CTypeValue*> vecTypeValue;
+	//存放json指针，用于寻找vecField和veCjson
+	CjsonA *pJson;
 
-public:
-	//第一个是不可识别的字符串，第二个是说明
-	map<CString,CString> mapError;
-
-public:
-	Cjson();
-	~Cjson();
+	//存放错误值
+	CstrValue strValueError;
+	CszValue szValueError;
+	CjsonA jsonError;
 
 public:
 	map<CString,CString> LoadJson(CString strJson);
@@ -31,10 +30,27 @@ public:
 	int size();
 	//FormatLength指的是里面的\t个数
 	CString toCString(CString NewLineSign = "\r\n",CString FormatSign = "\t",int FormatLength = 1);
-private:
-	BOOL GetOneModule(CString* strJson,BOOL* flag,CString* strName,CString *strValue);
-	void GetOneJson(CString *strJson,CString* strOneJson);
-	void LoadOneModule(CString strName,CString strValue,BOOL flag);
-	void OnlyLoadOneJson(CString strJson);
-	CString AddTypeValue(CString strResult,int *nInsert,BOOL ifFirst,CString strField,CTypeValue TypeValue,CString NewLineSign,CString FormatSign,int FormatLength);
+
+public:
+	Cjson();
+	Cjson(const CstrValue& Class);
+	Cjson(const CszValue& Class);
+	Cjson(const CjsonA& Class);
+
+	Cjson(const Cjson& x);
+	Cjson& operator = (const Cjson& x);
+	Cjson& operator[] (CString field);
+	Cjson& operator[] (int num);
+
+	void TypeEqual(CString strTemp);
+
+	Cjson& operator = (int nNum);
+	Cjson& operator = (double dNum);
+	Cjson& operator = (CString str);
+
+public:
+	CstrValue& toValue();
+	CszValue& tosz();
+	CjsonA& toJson();
+	~Cjson();
 };

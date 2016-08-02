@@ -4,10 +4,10 @@
 using namespace std;
 #include <afxwin.h>
 
-class CTypeValue;
+class Cjson;
 class CszValue{
 public:
-	vector<CTypeValue> vecszValue; //只存放两种，CstrValue和Cjson
+	vector<Cjson> vecszValue; //只存放两种，CstrValue和CjsonA
 
 public:
 	map<CString,CString> mapszError;

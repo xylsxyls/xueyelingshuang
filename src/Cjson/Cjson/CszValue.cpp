@@ -1,9 +1,9 @@
 #include <SDKDDKVer.h>
 #include "CszValue.h"
 #include "CStringManagerAPI.h"
-#include "CTypeValue.h"
-#include "CstrValue.h"
 #include "Cjson.h"
+#include "CstrValue.h"
+#include "CjsonA.h"
 
 CszValue::CszValue(){
 
@@ -58,7 +58,7 @@ CszValue::CszValue(CString strValue){
 			CStringManager manager = strValue;
 			int nRight = manager.FindOther('{','}',i);
 			if(nRight == -1) mapszError[strValue] = "{}≤ª∆•≈‰";
-			Cjson json;
+			CjsonA json;
 			map<CString,CString> mapJsonError = json.LoadJson(strValue.Mid(i,nRight - i + 1));
 
 			if(mapJsonError.size() != 0){

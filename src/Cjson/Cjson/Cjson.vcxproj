@@ -67,17 +67,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CFieldType.cpp" />
-    <ClCompile Include="Cjson.cpp" />
+    <ClCompile Include="CjsonA.cpp" />
     <ClCompile Include="CstrValue.cpp" />
     <ClCompile Include="CszValue.cpp" />
-    <ClCompile Include="CTypeValue.cpp" />
+    <ClCompile Include="Cjson.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFieldType.h" />
-    <ClInclude Include="Cjson.h" />
+    <ClInclude Include="CjsonA.h" />
     <ClInclude Include="CstrValue.h" />
     <ClInclude Include="CszValue.h" />
-    <ClInclude Include="CTypeValue.h" />
+    <ClInclude Include="Cjson.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
