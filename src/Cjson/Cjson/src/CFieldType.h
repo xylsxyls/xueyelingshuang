@@ -1,7 +1,8 @@
 #pragma once
 #include <afxwin.h>
+#include "CjsonMacro.h"
 
-class CFieldType{
+class CjsonAPI CFieldType{
 public:
 	CString field;
 	int num;

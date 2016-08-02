@@ -3,12 +3,13 @@
 #include "CstrValue.h"
 #include "CszValue.h"
 #include "CjsonA.h"
+#include "CjsonMacro.h"
 
 class CstrValue;
 class CszValue;
 class CjsonA;
 
-class Cjson{
+class CjsonAPI Cjson{
 public:
 	CString type;
 	void *pClass;

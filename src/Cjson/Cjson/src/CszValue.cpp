@@ -1,6 +1,6 @@
 #include <SDKDDKVer.h>
 #include "CszValue.h"
-#include "CStringManagerAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "Cjson.h"
 #include "CstrValue.h"
 #include "CjsonA.h"

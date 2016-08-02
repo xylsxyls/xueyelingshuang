@@ -1,6 +1,6 @@
 #include <SDKDDKVer.h>
 #include "CstrValue.h"
-#include "CStringManagerAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 CstrValue::CstrValue(){
 	type = 0;

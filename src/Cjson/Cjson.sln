@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cjson", "Cjson\Cjson.vcxproj", "{6D77B677-9164-4BC4-A7EF-0CECE75EAC38}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cjson", "Cjson\vcxproj\Cjson.vcxproj", "{6D77B677-9164-4BC4-A7EF-0CECE75EAC38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

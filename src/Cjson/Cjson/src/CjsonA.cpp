@@ -4,7 +4,7 @@
 #include "CszValue.h"
 #include "Cjson.h"
 #include "CFieldType.h"
-#include "CStringManagerAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 extern vector<void *> vecp;
 

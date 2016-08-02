@@ -3,9 +3,10 @@
 #include <map>
 using namespace std;
 #include <afxwin.h>
+#include "CjsonMacro.h"
 
 class Cjson;
-class CszValue{
+class CjsonAPI CszValue{
 public:
 	vector<Cjson> vecszValue; //只存放两种，CstrValue和CjsonA
 

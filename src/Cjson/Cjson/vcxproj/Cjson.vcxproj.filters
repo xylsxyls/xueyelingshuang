@@ -27,37 +27,43 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CstrValue.cpp">
-      <Filter>CstrValue</Filter>
-    </ClCompile>
-    <ClCompile Include="CszValue.cpp">
-      <Filter>CszValue</Filter>
-    </ClCompile>
-    <ClCompile Include="CFieldType.cpp">
-      <Filter>CFieldType</Filter>
-    </ClCompile>
-    <ClCompile Include="CjsonA.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Cjson.cpp">
-      <Filter>CTypeValue</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="CstrValue.h">
-      <Filter>CstrValue</Filter>
-    </ClInclude>
-    <ClInclude Include="CszValue.h">
-      <Filter>CszValue</Filter>
-    </ClInclude>
-    <ClInclude Include="CFieldType.h">
-      <Filter>CFieldType</Filter>
-    </ClInclude>
-    <ClInclude Include="CjsonA.h">
+    <ClInclude Include="..\src\CjsonA.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Cjson.h">
+    <ClInclude Include="..\src\CFieldType.h">
+      <Filter>CFieldType</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CstrValue.h">
+      <Filter>CstrValue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CszValue.h">
+      <Filter>CszValue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Cjson.h">
       <Filter>CTypeValue</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\CjsonAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CjsonMacro.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CjsonA.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CFieldType.cpp">
+      <Filter>CFieldType</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CstrValue.cpp">
+      <Filter>CstrValue</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CszValue.cpp">
+      <Filter>CszValue</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Cjson.cpp">
+      <Filter>CTypeValue</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

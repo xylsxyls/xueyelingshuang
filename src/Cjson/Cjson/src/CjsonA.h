@@ -3,12 +3,15 @@
 #include <vector>
 using namespace std;
 #include <afxwin.h>
+#include "CjsonMacro.h"
+#include "CFieldType.h"
 
 class CstrValue;
 class CszValue;
 class Cjson;
 class CFieldType;
-class CjsonA{
+
+class CjsonAPI CjsonA{
 public:
 	map<CString,Cjson> mapdata;
 
