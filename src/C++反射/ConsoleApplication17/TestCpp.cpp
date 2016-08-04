@@ -2,7 +2,6 @@
 #include<cstring>
 #include "DynBase.h"
 using namespace std;
-#include "Cjson.h"
 
 class A : public Object
 {
@@ -54,16 +53,10 @@ public:\
 IMPLEMENT_CLASS(COTYPE)
 
 #define CONew(COTYPE,strTYPE,object) (*((COTYPE*)(Object::CreateObject(strTYPE)))->object);
+//COCreateMacro(COjson,Cjson,json);
 
-COCreateMacro(COjson,Cjson,json);
+int main(){
 
-	int main()
-{
-	CString strType = "Cjson";
-	Cjson json = CONew(COjson,"COjson",json);
-
-	//COjson* pOjsin = (COjson*)Object::CreateObject("COjson");
-	json.LoadJson("{\"a\":1}");
 	system("pause");
 	return 0;
 }
