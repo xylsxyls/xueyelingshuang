@@ -6,9 +6,10 @@ class CCheckUSBAPI CCheckUSB{
 public:
 	HWND h_CheckIn;
 	HWND h_CheckOut;
+	BOOL ifCheckIn;
+	BOOL ifCheckOut;
 
 public:
-	void init(CCheckUSB *pSon);
 	CCheckUSB();
 	~CCheckUSB();
 
