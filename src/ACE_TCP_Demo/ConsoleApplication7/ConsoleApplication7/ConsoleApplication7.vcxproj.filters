@@ -13,10 +13,30 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="CAceClient">
+      <UniqueIdentifier>{d0d95c8b-45fa-42c7-a1c2-b94e51d8d20c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CLocalIPPort">
+      <UniqueIdentifier>{88a9eb48-d0b5-4a24-a38a-6e48a563f982}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="1.cpp">
+    <ClCompile Include="CAceClient.cpp">
+      <Filter>CAceClient</Filter>
+    </ClCompile>
+    <ClCompile Include="CLocalIPPort.cpp">
+      <Filter>CLocalIPPort</Filter>
+    </ClCompile>
+    <ClCompile Include="2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CAceClient.h">
+      <Filter>CAceClient</Filter>
+    </ClInclude>
+    <ClInclude Include="CLocalIPPort.h">
+      <Filter>CLocalIPPort</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 	string s="hello world";  
 	peer.send(s.c_str(),s.length());    //发送数据  
 	peer.send(s.c_str(),s.length());    //发送数据  
-	cout<<endl<<"send:\t"<<s<<endl;  
+	cout<<endl<<"send:\t"<<s<<endl;
 
 	ssize_t bc=0;            //接收的字节数  
 

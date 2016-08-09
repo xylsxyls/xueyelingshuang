@@ -13,10 +13,39 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="CAceServer">
+      <UniqueIdentifier>{6a9935dd-b9b4-48e6-a934-76e62ad63a64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CLocalIPPort">
+      <UniqueIdentifier>{c4ab3692-7970-4829-b4c8-6416774e5284}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CMessage">
+      <UniqueIdentifier>{2dc64628-99ab-4843-9863-846aac88c9e7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="1.cpp">
+    <ClCompile Include="CAceServer.cpp">
+      <Filter>CAceServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CLocalIPPort.cpp">
+      <Filter>CLocalIPPort</Filter>
+    </ClCompile>
+    <ClCompile Include="2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="CMessage.cpp">
+      <Filter>CMessage</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CAceServer.h">
+      <Filter>CAceServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CLocalIPPort.h">
+      <Filter>CLocalIPPort</Filter>
+    </ClInclude>
+    <ClInclude Include="CMessage.h">
+      <Filter>CMessage</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
