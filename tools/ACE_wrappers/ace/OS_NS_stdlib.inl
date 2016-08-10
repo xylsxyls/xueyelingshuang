@@ -342,7 +342,7 @@ ACE_OS::putenv (const char *string)
 #elif defined (ACE_PUTENV_EQUIVALENT)
   ACE_OSCALL_RETURN (ACE_PUTENV_EQUIVALENT (const_cast <char *> (string)), int, -1);
 #else /* ! ACE_HAS_WINCE */
-  ACE_OSCALL_RETURN (ACE_STD_NAMESPACE::putenv (const_cast <char *> (string)), int, -1);
+  ACE_OSCALL_RETURN (ACE_STD_NAMESPACE::_putenv (const_cast <char *> (string)), int, -1);
 #endif /* ACE_LACKS_PUTENV && ACE_HAS_SETENV */
 }
 

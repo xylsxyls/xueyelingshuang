@@ -57,7 +57,7 @@ ACE_OS::access (const char *path, int amode)
 #  if defined (ACE_ACCESS_EQUIVALENT)
      ACE_OSCALL_RETURN (ACE_ACCESS_EQUIVALENT (path, amode & 6), int, -1);
 #  else
-     ACE_OSCALL_RETURN (::access (path, amode & 6), int, -1);
+     ACE_OSCALL_RETURN (::_access (path, amode & 6), int, -1);
 #  endif
 #else
   ACE_OSCALL_RETURN (::access (path, amode), int, -1);
@@ -131,7 +131,7 @@ ACE_OS::chdir (const char *path)
 #elif defined (ACE_CHDIR_EQUIVALENT)
   ACE_OSCALL_RETURN (ACE_CHDIR_EQUIVALENT (path), int, -1);
 #else
-  ACE_OSCALL_RETURN (::chdir (path), int, -1);
+  ACE_OSCALL_RETURN (::_chdir (path), int, -1);
 #endif /* ACE_HAS_NONCONST_CHDIR */
 }
 
@@ -160,7 +160,7 @@ ACE_OS::rmdir (const char *path)
 #elif defined (ACE_RMDIR_EQUIVALENT)
   ACE_OSCALL_RETURN (ACE_RMDIR_EQUIVALENT (path), int, -1);
 #else
-  ACE_OSCALL_RETURN (::rmdir (path), int, -1);
+  ACE_OSCALL_RETURN (::_rmdir (path), int, -1);
 #endif /* ACE_WIN32 */
 }
 
@@ -414,7 +414,7 @@ ACE_OS::getcwd (char *buf, size_t size)
 #  if defined (ACE_GETCWD_EQUIVALENT)
   return ACE_GETCWD_EQUIVALENT (buf, static_cast<int> (size));
 #  else
-  return ::getcwd (buf, static_cast<int> (size));
+  return ::_getcwd (buf, static_cast<int> (size));
 #  endif
 #else
   ACE_OSCALL_RETURN (::getcwd (buf, size), char *, 0);
@@ -1026,7 +1026,7 @@ ACE_OS::swab (const void *src,
 #    if defined (ACE_SWAB_EQUIVALENT)
   ACE_SWAB_EQUIVALENT (from, to, ilength);
 #    else
-  ::swab (from, to, ilength);
+  ::_swab (from, to, ilength);
 #    endif
 #  else
   ::swab (from, to, length);
@@ -1184,7 +1184,7 @@ ACE_OS::unlink (const char *path)
 # elif defined (ACE_UNLINK_EQUIVALENT)
   ACE_OSCALL_RETURN (ACE_UNLINK_EQUIVALENT (path), int, -1);
 # else
-  ACE_OSCALL_RETURN (::unlink (path), int, -1);
+  ACE_OSCALL_RETURN (::_unlink (path), int, -1);
 # endif /* ACE_HAS_NONCONST_UNLINK */
 }
 

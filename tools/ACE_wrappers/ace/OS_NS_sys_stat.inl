@@ -151,7 +151,7 @@ namespace ACE_OS
 #  if defined (ACE_MKDIR_EQUIVALENT)
     ACE_OSCALL_RETURN (ACE_MKDIR_EQUIVALENT (path), int, -1);
 #  else
-    ACE_OSCALL_RETURN (::mkdir (path), int, -1);
+    ACE_OSCALL_RETURN (::_mkdir (path), int, -1);
 #  endif
 #else
     ACE_OSCALL_RETURN (::mkdir (path, mode), int, -1);

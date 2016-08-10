@@ -969,7 +969,7 @@ ACE_OS::tempnam (const char *dir, const char *pfx)
 #elif defined (ACE_TEMPNAM_EQUIVALENT)
   ACE_OSCALL_RETURN (ACE_TEMPNAM_EQUIVALENT (dir, pfx), char *, 0);
 #else /* ACE_LACKS_TEMPNAM */
-  ACE_OSCALL_RETURN (ACE_STD_NAMESPACE::tempnam (dir, pfx), char *, 0);
+  ACE_OSCALL_RETURN (ACE_STD_NAMESPACE::_tempnam (dir, pfx), char *, 0);
 #endif /* ACE_LACKS_TEMPNAM */
 }
 

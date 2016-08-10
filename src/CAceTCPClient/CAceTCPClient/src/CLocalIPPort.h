@@ -1,7 +1,8 @@
 #pragma once
 #include <afxwin.h>
+#include "CAceTCPClientMacro.h"
 
-class CLocalIPPort{
+class CAceTCPClientAPI CLocalIPPort{
 public:
 	CString IP;
 	int port;
