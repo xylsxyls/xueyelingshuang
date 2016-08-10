@@ -31,7 +31,8 @@ public:
 	//打开端口成功之后会有一个线程后台等待客户端连接
 	//一旦有客户端连接则立刻在线程中开子线程用于处理发送的信息，保证一直有一个线程等待连接
 	BOOL init(int port,int RecvMaxLength);
-	virtual void Receive(char* pData,int length) = 0;
+	//最后一个是当前发来消息的客户端通路地址
+	virtual void Receive(char* pData,int length,ACE_SOCK_Stream* ppeer) = 0;
 	//发送内容首地址，发送长度，通路地址通过vecIPPeer获取，返回实际发送出去的长度
 	int Send(char* pData,int length,ACE_SOCK_Stream* ppeer);
 	CLocalIPPort GetLocalIPPort(ACE_SOCK_Stream* ppeer);

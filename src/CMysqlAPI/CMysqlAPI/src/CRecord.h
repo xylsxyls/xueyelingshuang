@@ -28,17 +28,17 @@ public:
 	CRecord operator = (CField      x);
 	CRecord operator = (CFieldValue x);
 
-	friend CRecord operator + (CRecord     x,CFieldValue y);
-	friend CRecord operator + (CFieldValue x,CRecord     y);
-	friend CRecord operator + (CRecord     x,CRecord     y);
+	friend CRecord CMysqlAPI operator + (CRecord     x,CFieldValue y);
+	friend CRecord CMysqlAPI operator + (CFieldValue x,CRecord     y);
+	friend CRecord CMysqlAPI operator + (CRecord     x,CRecord     y);
 	//这里没有办法完全屏蔽掉错误情况，需要函数来进行判断
-	friend CRecord operator + (CRecord     x,CString     y);
-	friend CRecord operator + (CFieldValue x,CString     y);
-	friend CRecord operator + (CFieldValue x,CFieldValue y);
+	friend CRecord CMysqlAPI operator + (CRecord     x,CString     y);
+	friend CRecord CMysqlAPI operator + (CFieldValue x,CString     y);
+	friend CRecord CMysqlAPI operator + (CFieldValue x,CFieldValue y);
 
-	friend CRecord operator + (CRecord     x,CField      y);
-	friend CRecord operator + (CField      x,CRecord     y);
-	friend CRecord operator + (CField      x,CField      y);
+	friend CRecord CMysqlAPI operator + (CRecord     x,CField      y);
+	friend CRecord CMysqlAPI operator + (CField      x,CRecord     y);
+	friend CRecord CMysqlAPI operator + (CField      x,CField      y);
 
 public:
 	//从CTable中一次性获得表里的所有字段属性，然后一一对应输入对应的值

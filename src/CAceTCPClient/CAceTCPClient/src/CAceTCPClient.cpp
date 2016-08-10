@@ -37,6 +37,7 @@ DWORD WINAPI ThreadRecv(LPVOID lpParam){
 }
 
 BOOL CAceTCPClient::init(CString strIP,int port,int ConnectWaitTime,int RecvMaxLength){
+
 	ACE_INET_Addr addr(port,strIP);
 	pconnector = new ACE_SOCK_Connector;
 	ACE_Time_Value timeout(ConnectWaitTime,0);

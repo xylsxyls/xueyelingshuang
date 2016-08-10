@@ -1,0 +1,2 @@
+在MFC中使用socket的时候必须要先加AfxSocketInit();
+程序结束时加上::closesocket();

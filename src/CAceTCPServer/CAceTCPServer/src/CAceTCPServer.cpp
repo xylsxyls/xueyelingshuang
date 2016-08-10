@@ -32,7 +32,7 @@ DWORD WINAPI ThreadClient(LPVOID lpParam){
 		if(nReceiveLength != 0){
 			//用户处理的虚函数上锁
 			ClientPackage.pmutex->Lock();
-			ClientPackage.pThis->Receive(pbuf,nReceiveLength);
+			ClientPackage.pThis->Receive(pbuf,nReceiveLength,ClientPackage.ppeer);
 			ClientPackage.pmutex->Unlock();
 			//在虚函数处理完pBuf缓冲区数据之后则把缓冲区重置
 			memset(pbuf,0,nReceiveLength);
