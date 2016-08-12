@@ -16,6 +16,21 @@ CjsonA::~CjsonA(){
 
 }
 
+CjsonA::CjsonA(const CjsonA& json){
+	this->mapdata = json.mapdata;
+	this->vecField = json.vecField;
+	this->vecCjson = json.vecCjson;
+	this->mapError = json.mapError;
+}
+
+CjsonA CjsonA::operator = (const CjsonA& json){
+	this->mapdata = json.mapdata;
+	this->vecField = json.vecField;
+	this->vecCjson = json.vecCjson;
+	this->mapError = json.mapError;
+	return *this;
+}
+
 BOOL CjsonA::GetOneModule(CString* strJson,BOOL* flag,CString* strName,CString *strValue){
 	int nNameLeft = strJson->Find('{');
 	nNameLeft++;

@@ -16,7 +16,7 @@ vector<CString> Cjson::GetField(){
 
 int Cjson::size(){
 	//先获得最原始的Cjson地址
-	Cjson *TypeValueTemp = pJson->veCjson.at(0);
+	Cjson *TypeValueTemp = pJson->vecCjson.at(0);
 	int i = -1;
 	while(i++ != pJson->vecField.size() - 1){
 		//如果用户输入错误则直接返回-1
@@ -157,9 +157,15 @@ Cjson::Cjson(const Cjson& x){
 	else{
 		AfxMessageBox("拷贝构造传入类型出错，类型为：" + type);
 	}
+
+	pJsonA = (CjsonA*)pClass;
+	pJson = pJsonA;
+	strValueError = x.strValueError;
+	szValueError = x.szValueError;
+	jsonError = x.jsonError;
 }
 
-Cjson& Cjson::operator = (const Cjson& x){
+Cjson Cjson::operator = (const Cjson& x){
 	if(type == ""){
 
 	}
@@ -209,6 +215,12 @@ Cjson& Cjson::operator = (const Cjson& x){
 	else{
 		AfxMessageBox("拷贝重载等号传入类型出错，类型为：" + type);
 	}
+
+	pJsonA = (CjsonA*)pClass;
+	pJson = pJsonA;
+	strValueError = x.strValueError;
+	szValueError = x.szValueError;
+	jsonError = x.jsonError;
 	return *this;
 }
 
@@ -216,7 +228,7 @@ Cjson& Cjson::operator[] (CString field){
 	//不论当前是什么类型都先把字段存进去，因为存的时候之前的类型是没有意义的
 	pJson->vecField.push_back(CFieldType(field,-1));
 	//把本层的地址传入pvec并带下去，方便后面取之前的地址和清空vector
-	pJson->veCjson.push_back(this);
+	pJson->vecCjson.push_back(this);
 
 	if(type == "class CstrValue"){
 		
@@ -245,7 +257,7 @@ Cjson& Cjson::operator[] (int num){
 	//不论是什么类型先把数字存进去，因为在存的时候最初定义的类型都是CjsonA
 	pJson->vecField.push_back(CFieldType("",num));
 	//把本层的地址传入pvec并带下去，方便后面取之前的地址和清空vector
-	pJson->veCjson.push_back(this);
+	pJson->vecCjson.push_back(this);
 
 	if(type == "class CstrValue"){
 		
@@ -269,7 +281,7 @@ Cjson& Cjson::operator[] (int num){
 void Cjson::TypeEqual(CString strTemp){
 	//把传进来的field循环查看，如果有则修改，无则创建
 	int level = -1;
-	Cjson *pTypeValueTemp = pJson->veCjson.at(0);
+	Cjson *pTypeValueTemp = pJson->vecCjson.at(0);
 	int i = -1;
 	while(i++ != pJson->vecField.size() - 1){
 		//表示当前层数
@@ -293,7 +305,7 @@ void Cjson::TypeEqual(CString strTemp){
 							pTypeValueTemp->toJson().mapdata.erase(it);
 							//这里使用pJsonTemp来清空
 							pJsonTemp->vecField.clear();
-							pJsonTemp->veCjson.clear();
+							pJsonTemp->vecCjson.clear();
 							return;
 						}
 					}
@@ -309,11 +321,11 @@ void Cjson::TypeEqual(CString strTemp){
 				//如果下一层是field说明需要创建一个json，以便下面使用
 				if(pJson->vecField.at(i + 1).field != ""){
 					//重新给上一层赋值新的空数组，以便下面使用
-					pJson->veCjson.at(level - 1)->toJson().mapdata[pJson->vecField.at(i - 1).field] = CjsonA();
+					pJson->vecCjson.at(level - 1)->toJson().mapdata[pJson->vecField.at(i - 1).field] = CjsonA();
 				}
 				//如果下一层是数字说明需要创建一个数组，以便下面使用
 				else{
-					pJson->veCjson.at(level - 1)->toJson().mapdata[pJson->vecField.at(i - 1).field] = CszValue();
+					pJson->vecCjson.at(level - 1)->toJson().mapdata[pJson->vecField.at(i - 1).field] = CszValue();
 				}
 			}
 			//如果当前层能找到
@@ -341,7 +353,7 @@ void Cjson::TypeEqual(CString strTemp){
 			if(pTypeValueTemp->type != "class CszValue"){
 				//map在改数据的时候会先执行这个类的析构，所以不用管节点内存泄漏
 				//重新给上一层赋值新的空数组，以便下面使用
-				pJson->veCjson.at(level - 1)->toJson().mapdata[pJson->vecField.at(i - 1).field] = CszValue();
+				pJson->vecCjson.at(level - 1)->toJson().mapdata[pJson->vecField.at(i - 1).field] = CszValue();
 			}
 			//如果vec中的数字比数组实际大小大则追加在末尾
 			if(pJson->vecField.at(i).num >= (int)pTypeValueTemp->tosz().vecszValue.size()){
@@ -405,11 +417,11 @@ void Cjson::TypeEqual(CString strTemp){
 	rem:
 	//使用过一次就清空
 	pJson->vecField.clear();
-	pJson->veCjson.clear();
+	pJson->vecCjson.clear();
 	return;
 }
 
-Cjson& Cjson::operator = (int nNum){
+Cjson Cjson::operator = (int nNum){
 	CString strTemp = "";
 	strTemp.Format("%d",nNum);
 
@@ -418,7 +430,7 @@ Cjson& Cjson::operator = (int nNum){
 	return *this;
 }
 
-Cjson& Cjson::operator = (double dNum){
+Cjson Cjson::operator = (double dNum){
 	CString strTemp = "";
 	strTemp.Format("%lf",dNum);
 
@@ -427,7 +439,7 @@ Cjson& Cjson::operator = (double dNum){
 	return *this;
 }
 
-Cjson& Cjson::operator = (CString str){
+Cjson Cjson::operator = (CString str){
 	CString strTemp = "";
 	strTemp.Format("\"%s\"",str);
 

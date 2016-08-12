@@ -18,7 +18,7 @@ public:
 public:
 	//给new出来的空间用，这里一直为空
 	vector<CFieldType> vecField;
-	vector<Cjson*> veCjson;
+	vector<Cjson*> vecCjson;
 
 public:
 	//第一个是不可识别的字符串，第二个是说明
@@ -27,6 +27,9 @@ public:
 public:
 	CjsonA();
 	~CjsonA();
+
+	CjsonA(const CjsonA& json);
+	CjsonA operator = (const CjsonA& json);
 
 public:
 	map<CString,CString> LoadJson(CString strJson);

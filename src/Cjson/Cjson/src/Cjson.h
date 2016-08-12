@@ -17,7 +17,7 @@ public:
 	CjsonA *pJsonA;
 
 public:
-	//存放json指针，用于寻找vecField和veCjson
+	//存放json指针，用于寻找vecField和vecCjson
 	CjsonA *pJson;
 
 	//存放错误值
@@ -39,15 +39,15 @@ public:
 	Cjson(const CjsonA& Class);
 
 	Cjson(const Cjson& x);
-	Cjson& operator = (const Cjson& x);
+	Cjson operator = (const Cjson& x);
 	Cjson& operator[] (CString field);
 	Cjson& operator[] (int num);
 
 	void TypeEqual(CString strTemp);
 
-	Cjson& operator = (int nNum);
-	Cjson& operator = (double dNum);
-	Cjson& operator = (CString str);
+	Cjson operator = (int nNum);
+	Cjson operator = (double dNum);
+	Cjson operator = (CString str);
 
 public:
 	CstrValue& toValue();

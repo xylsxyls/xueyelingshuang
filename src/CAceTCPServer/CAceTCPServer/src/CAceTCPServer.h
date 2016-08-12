@@ -6,8 +6,10 @@
 #include "ace/Time_Value.h"
 #include <afxmt.h>
 #include <vector>
+#include <map>
 using namespace std;
 #include "CAceTCPServerMacro.h"
+#include "Cjson/CjsonAPI.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"ACEd.lib")
@@ -22,6 +24,11 @@ public:
 	ACE_SOCK_Acceptor* pacceptor;
 	vector<ACE_SOCK_Stream*> vecIPPeer;
 	CMutex mutex;
+	//如果使用json，增加寄存模块，存入map
+	BOOL ifUseJson;
+	int CheckKeyServer;
+	int CheckKeyReqTemp;
+	map<int,Cjson> mapCheck;
 
 public:
 	CAceTCPServer();
@@ -30,10 +37,20 @@ public:
 public:
 	//打开端口成功之后会有一个线程后台等待客户端连接
 	//一旦有客户端连接则立刻在线程中开子线程用于处理发送的信息，保证一直有一个线程等待连接
-	BOOL init(int port,int RecvMaxLength);
-	//最后一个是当前发来消息的客户端通路地址
-	virtual void Receive(char* pData,int length,ACE_SOCK_Stream* ppeer) = 0;
+	BOOL init(int port,int RecvMaxLength,int ifUseJson = 0);
 	//发送内容首地址，发送长度，通路地址通过vecIPPeer获取，返回实际发送出去的长度
-	int Send(char* pData,int length,ACE_SOCK_Stream* ppeer);
+	int send(char* pData,int length,ACE_SOCK_Stream* ppeer,int sendTimes = 3);
+	//最后一个是当前发来消息的客户端通路地址
+	virtual void receive(char* pData,int length,ACE_SOCK_Stream* ppeer) = 0;
+	
+
+	int SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cjson jsonCheckPackage = Cjson(),int sendTimes = 3);
+	int SendRspJson(Cjson jsonRsp,int MsgID,int CheckKeyClient,ACE_SOCK_Stream* ppeer,int sendTimes = 3);
+	virtual Cjson ReceiveReqJson(Cjson jsonReq) = 0;
+	virtual void ReceiveRspJson(Cjson jsonReq,Cjson jsonCheckPackage) = 0;
+	
 	CLocalIPPort GetLocalIPPort(ACE_SOCK_Stream* ppeer);
+
+
+	void DeleteMap(int CheckKeyServer);
 };
