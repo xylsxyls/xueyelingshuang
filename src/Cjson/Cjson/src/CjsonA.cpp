@@ -9,7 +9,7 @@
 extern vector<void *> vecp;
 
 CjsonA::CjsonA(){
-
+	
 }
 
 CjsonA::~CjsonA(){
@@ -17,14 +17,14 @@ CjsonA::~CjsonA(){
 }
 
 CjsonA::CjsonA(const CjsonA& json){
-	this->mapdata = json.mapdata;
+	this->mapdata  = json.mapdata;
 	this->vecField = json.vecField;
 	this->vecCjson = json.vecCjson;
 	this->mapError = json.mapError;
 }
 
 CjsonA CjsonA::operator = (const CjsonA& json){
-	this->mapdata = json.mapdata;
+	this->mapdata  = json.mapdata;
 	this->vecField = json.vecField;
 	this->vecCjson = json.vecCjson;
 	this->mapError = json.mapError;

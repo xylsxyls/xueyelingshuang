@@ -18,6 +18,7 @@ public:
 public:
 	//给new出来的空间用，这里一直为空
 	vector<CFieldType> vecField;
+	//一定需要把所有层全部存下，因为会出现用户改变当前层属性的情况，全部存下才能找到出错前的上一层
 	vector<Cjson*> vecCjson;
 
 public:
