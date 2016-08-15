@@ -7,14 +7,19 @@ typedef struct Threadpackage{
 	CAceTCPClient* pThis;
 	ACE_SOCK_Stream* ppeer;
 	int RecvMaxLength;
+	int ReconnectTime;
 	CMutex* pmutex;
 	BOOL ifUseJson;
+	ACE_INET_Addr* paddr;
+	ACE_Time_Value* ptimeout;
 }Threadpackage;
 
 CAceTCPClient::~CAceTCPClient(){
 	ppeer->close();
 	delete pconnector;
 	delete ppeer;
+	delete ptimeout;
+	delete paddr;
 }
 
 DWORD WINAPI ThreadRecv(LPVOID lpParam){
@@ -56,22 +61,31 @@ DWORD WINAPI ThreadRecv(LPVOID lpParam){
 			package.pmutex->Unlock();
 		}
 		//如果服务器与客户端断连recv立刻取消阻塞返回-1
-		else break;
+		else{
+			Sleep(package.ReconnectTime * 1000);
+			//如果断连则循环断线重连，一旦断线ppeer不可复用，需要重新申请
+			package.pmutex->Lock();
+			delete package.pThis->ppeer;
+			package.pThis->ppeer = new ACE_SOCK_Stream;
+			package.ppeer = package.pThis->ppeer;
+			package.pThis->pconnector->connect(*(package.ppeer),*(package.paddr),package.ptimeout);
+			package.pmutex->Unlock();
+		}
 	}
 	free(pbuf);
 	return 0;
 }
 
-BOOL CAceTCPClient::init(CString strIP,int port,int ConnectWaitTime,int RecvMaxLength,int ifUseJson){
+BOOL CAceTCPClient::init(CString strIP,int port,int ConnectWaitTime,int RecvMaxLength,int ReconnectTime,int ifUseJson){
 
-	ACE_INET_Addr addr(port,strIP);
+	paddr = new ACE_INET_Addr(port,strIP);
 	pconnector = new ACE_SOCK_Connector;
-	ACE_Time_Value timeout(ConnectWaitTime,0);
+	ptimeout = new ACE_Time_Value(ConnectWaitTime,0);
 	ppeer = new ACE_SOCK_Stream;
 	this->ifUseJson = ifUseJson;
 	CheckKeyClient = 0;
 
-	int nResult = pconnector->connect(*ppeer,addr,&timeout);
+	int nResult = pconnector->connect(*ppeer,*paddr,ptimeout);
 	if(nResult != 0){
 		AfxMessageBox("连接失败");
 		return 0;
@@ -83,6 +97,9 @@ BOOL CAceTCPClient::init(CString strIP,int port,int ConnectWaitTime,int RecvMaxL
 	ppackage->pThis = this;
 	ppackage->RecvMaxLength = RecvMaxLength;
 	ppackage->ifUseJson = ifUseJson;
+	ppackage->paddr = paddr;
+	ppackage->ptimeout = ptimeout;
+	ppackage->ReconnectTime = ReconnectTime;
 	//进入线程，用于后台接收服务器发来的数据
 	DWORD ThreadID = 0;
 	Create_Thread(ThreadRecv,ppackage,ThreadID);

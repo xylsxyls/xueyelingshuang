@@ -127,9 +127,10 @@ Cjson::Cjson(const CjsonA& Class){
 	this->strValueError.type = -1;
 
 	//pJson采取手动传的方式，使用浅拷贝
-	pJson = pNewClass;
-
-	pJsonA = pNewClass;
+	//pJson = pNewClass;
+	//pJsonA = pNewClass;
+	pJson = NULL;
+	pJsonA = NULL;
 }
 
 Cjson::Cjson(const Cjson& x){
@@ -140,11 +141,14 @@ Cjson::Cjson(const Cjson& x){
 	this->strValueError.nValue = x.strValueError.nValue;
 	this->strValueError.strValue = x.strValueError.strValue;
 	this->strValueError.type = x.strValueError.type;
+	this->vecHwnd = x.vecHwnd;
 
 	if(type == ""){
 		pClass = x.pClass;
 		//pJsonA是不透传的，用于代表主体，所以应该赋值，pJson是透传的，如果赋值会导致主体的pJson丢失
 		pJsonA = x.pJsonA;
+		//在构造函数里全部传过来
+		pJson = x.pJson;
 	}
 	else if(type == "class CstrValue"){
 		//pClass必须新new一个
@@ -153,6 +157,7 @@ Cjson::Cjson(const Cjson& x){
 		*pNewClass = *((CstrValue *)(x.pClass));
 		pClass = pNewClass;
 		pJsonA = x.pJsonA;
+		pJson = x.pJson;
 	}
 	else if(type == "class CszValue"){
 		//pClass必须新new一个
@@ -161,6 +166,7 @@ Cjson::Cjson(const Cjson& x){
 		*pNewClass = *((CszValue *)(x.pClass));
 		pClass = pNewClass;
 		pJsonA = x.pJsonA;
+		pJson = x.pJson;
 	}
 	else if(type == "class CjsonA"){
 		//pClass必须新new一个
@@ -169,6 +175,7 @@ Cjson::Cjson(const Cjson& x){
 		*pNewClass = *((CjsonA *)(x.pClass));
 		pClass = pNewClass;
 		pJsonA = (CjsonA*)pClass;
+		pJson = pJsonA;
 	}
 	else{
 		AfxMessageBox("拷贝构造传入类型出错，类型为：" + type);
@@ -201,10 +208,14 @@ Cjson Cjson::operator = (const Cjson& x){
 	this->strValueError.nValue = x.strValueError.nValue;
 	this->strValueError.strValue = x.strValueError.strValue;
 	this->strValueError.type = x.strValueError.type;
+	this->vecHwnd = x.vecHwnd;
 
 	if(type == ""){
 		pClass = x.pClass;
 		pJsonA = x.pJsonA;
+		//只有对面是主体的时候才可以把pJson赋值进来，否则会出现对面pJsonA和pJson都为空的情况
+		//赋值pJson会出现两种情况，一种是在json添加子节点时传值，一种是把CstrValue等子类传给一整个Cjson处理
+		if(x.pJsonA != NULL) pJson = x.pJson;
 	}
 	else if(type == "class CstrValue"){
 		//pClass必须新new一个
@@ -213,6 +224,7 @@ Cjson Cjson::operator = (const Cjson& x){
 		*pNewClass = *((CstrValue *)(x.pClass));
 		pClass = pNewClass;
 		pJsonA = x.pJsonA;
+		if(x.pJsonA != NULL) pJson = x.pJson;
 	}
 	else if(type == "class CszValue"){
 		//pClass必须新new一个
@@ -221,6 +233,7 @@ Cjson Cjson::operator = (const Cjson& x){
 		*pNewClass = *((CszValue *)(x.pClass));
 		pClass = pNewClass;
 		pJsonA = x.pJsonA;
+		if(x.pJsonA != NULL) pJson = x.pJson;
 	}
 	else if(type == "class CjsonA"){
 		//pClass必须新new一个
@@ -229,6 +242,7 @@ Cjson Cjson::operator = (const Cjson& x){
 		*pNewClass = *((CjsonA *)(x.pClass));
 		pClass = pNewClass;
 		pJsonA = (CjsonA*)pClass;
+		pJson = pJsonA;
 	}
 	else{
 		AfxMessageBox("拷贝重载等号传入类型出错，类型为：" + type);
@@ -487,6 +501,9 @@ Cjson Cjson::operator = (CString str){
 }
 
 CstrValue& Cjson::toValue(){
+	//使用过一次就清空，如果不为空说明是用户使用
+	if(pJson != NULL) pJson->vecField.clear();
+	if(pJson != NULL) pJson->vecCjson.clear();
 	if(type == "class CstrValue"){
 		return *((CstrValue *)pClass);
 	}
@@ -508,6 +525,21 @@ CjsonA& Cjson::toJson(){
 	}
 	//如果要访问的类型不是本身的类型则直接返回空
 	return jsonError;
+}
+
+void Cjson::ClearHwnd(){
+	vecHwnd.clear();
+	return;
+}
+
+void Cjson::SaveHwnd(HWND hwnd){
+	vecHwnd.push_back(hwnd);
+	return;
+}
+
+HWND Cjson::GetHwnd(int num){
+	if(vecHwnd.size() < num) return 0;
+	return vecHwnd.at(num - 1);
 }
 
 void Cjson::FreeCJson(){

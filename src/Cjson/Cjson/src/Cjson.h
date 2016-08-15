@@ -57,6 +57,12 @@ public:
 	CszValue& tosz();
 	CjsonA& toJson();
 
+public:
+	vector<HWND> vecHwnd;
+	void ClearHwnd();
+	void SaveHwnd(HWND hwnd);
+	HWND GetHwnd(int num);
+
 	void FreeCJson();
 	~Cjson();
 };

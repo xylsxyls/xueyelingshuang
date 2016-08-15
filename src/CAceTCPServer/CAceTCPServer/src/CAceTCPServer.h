@@ -11,6 +11,9 @@ using namespace std;
 #include "CAceTCPServerMacro.h"
 #include "Cjson/CjsonAPI.h"
 
+#define MsgIDReq jsonReq["MsgID"].toValue().nValue
+#define MsgIDRsp jsonRsp["MsgID"].toValue().nValue
+
 #ifdef _DEBUG
 #pragma comment(lib,"ACEd.lib")
 #else
@@ -47,7 +50,7 @@ public:
 	int SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cjson jsonCheckPackage = Cjson(),int sendTimes = 3);
 	int SendRspJson(Cjson jsonRsp,int MsgID,int CheckKeyClient,ACE_SOCK_Stream* ppeer,int sendTimes = 3);
 	virtual Cjson ReceiveReqJson(Cjson jsonReq) = 0;
-	virtual void ReceiveRspJson(Cjson jsonReq,Cjson jsonCheckPackage) = 0;
+	virtual void ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage) = 0;
 	
 	CLocalIPPort GetLocalIPPort(ACE_SOCK_Stream* ppeer);
 
