@@ -50,8 +50,19 @@ DWORD WINAPI ThreadClient(LPVOID lpParam){
 				int CheckKeyServer = json["CheckKeyServer"].toValue().nValue;
 				//如果是客户端主动发来的包，需要给响应
 				if(CheckKeyClient >= 0 && CheckKeyServer == -1){
-					ClientPackage.pThis->SendRspJson(ClientPackage.pThis->ReceiveReqJson(json),
-						json["MsgID"].toValue().nValue,CheckKeyClient,ClientPackage.ppeer);
+					vector<ACE_SOCK_Stream*> vecSendIPPeer = ClientPackage.pThis->vecIPPeer;
+					Cjson jsonRsp = ClientPackage.pThis->ReceiveReqJson(json,&vecSendIPPeer);
+					int MsgID = json["MsgID"].toValue().nValue;
+					//如果vector被用户清空则只回复
+					if(vecSendIPPeer.size() == 0){
+						ClientPackage.pThis->SendRspJson(jsonRsp,MsgID,CheckKeyClient,ClientPackage.ppeer);
+					}
+					else{
+						int i = -1;
+						while(i++ != vecSendIPPeer.size() - 1){
+							ClientPackage.pThis->SendRspJson(jsonRsp,MsgID,CheckKeyClient,vecSendIPPeer.at(i));
+						}
+					}
 				}
 				//如果是客户端响应服务器发来的包
 				else if(CheckKeyClient == -1 && CheckKeyServer >= 0){

@@ -153,6 +153,6 @@ void CAceTCPClient::DeleteMap(int CheckKeyClient){
 			return;
 		}
 	}
-	AfxMessageBox("在map中找不到对应的包裹钥匙");
+	//可能会出现找不到的情况，如果服务端回复变成群发的话
 	return;
 }

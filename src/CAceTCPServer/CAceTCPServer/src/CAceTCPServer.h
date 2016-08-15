@@ -46,10 +46,10 @@ public:
 	//最后一个是当前发来消息的客户端通路地址
 	virtual void receive(char* pData,int length,ACE_SOCK_Stream* ppeer) = 0;
 	
-
 	int SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cjson jsonCheckPackage = Cjson(),int sendTimes = 3);
 	int SendRspJson(Cjson jsonRsp,int MsgID,int CheckKeyClient,ACE_SOCK_Stream* ppeer,int sendTimes = 3);
-	virtual Cjson ReceiveReqJson(Cjson jsonReq) = 0;
+	//虚函数把所有的通路信息传入，如果设置为空则默认为回复
+	virtual Cjson ReceiveReqJson(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer) = 0;
 	virtual void ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage) = 0;
 	
 	CLocalIPPort GetLocalIPPort(ACE_SOCK_Stream* ppeer);
