@@ -1,0 +1,29 @@
+//设置风格
+	DWORD dwStyle = m_ListCtrl.GetExtendedStyle();
+	dwStyle |= LVS_EX_FULLROWSELECT;//选中某行使整行高亮（只适用与report风格的listctrl）
+	dwStyle |= LVS_EX_GRIDLINES;//网格线（只适用与report风格的listctrl）
+	m_ListCtrl.SetExtendedStyle(dwStyle); //设置扩展风格
+
+	//添加List
+	m_ListCtrl.InsertColumn(0,"",LVCFMT_CENTER,0);//插入列
+	m_ListCtrl.InsertColumn(1,"案件列表",LVCFMT_CENTER,rcClient.Width() / 4 - 4);//插入列
+	m_ListCtrl.InsertColumn(2,"路径"    ,LVCFMT_CENTER,0);//插入列
+
+	m_ListCtrl.DeleteAllItems();
+	m_ListCtrl.InsertItem(0,"");
+	m_ListCtrl.SetItemText(0,1,"正在搜索载入，请稍候...");
+
+获取行列
+int nLine = m_List.GetItemCount();
+int nColumnCount = m_List.GetHeaderCtrl()->GetItemCount();
+
+插入行的时候开始必须现有InsertItem
+this->m_ListCtrl.InsertItem(i,"");
+this->m_ListCtrl.SetItemText(i,1,strName.at(strName.size() - 2).c_str());
+this->m_ListCtrl.SetItemText(i,2,pParaIn->at(i));
+
+双击事件
+ON_NOTIFY(NM_DBLCLK, IDC_LIST2, &CMainDlg::OnDblclkList)
+
+获取内容
+CString st = m_myList.GetItemText(nItem,0);
