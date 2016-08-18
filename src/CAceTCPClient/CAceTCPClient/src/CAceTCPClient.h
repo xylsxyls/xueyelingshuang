@@ -46,7 +46,7 @@ public:
 
 	/////////////////////////使用json//////////////////////
 	//如果从虚函数中回复则使用Rsp，主动发使用Req
-	int SendJsonReq(Cjson jsonRsp,int MsgID,Cjson jsonCheckPackage = Cjson(),int sendTimes = 3);
+	int SendJsonReq(Cjson jsonReq,int MsgID,Cjson jsonCheckPackage = Cjson(),int sendTimes = 3);
 	
 	//接收虚函数
 	virtual Cjson ReceiveReqJson(Cjson jsonReq) = 0;
