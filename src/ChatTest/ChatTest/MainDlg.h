@@ -1,6 +1,8 @@
 #pragma once
 #include "afxwin.h"
 #include "afxcmn.h"
+#include <map>
+using namespace std;
 
 
 // CMainDlg ¶Ô»°¿ò
@@ -32,6 +34,7 @@ public:
 	LPARAM AddList(WPARAM wparam,LPARAM lparam);
 	LPARAM ShowFriendList(WPARAM wparam,LPARAM lparam);
 	LPARAM DeleteFriendList(WPARAM wparam,LPARAM lparam);
+	LPARAM OpenNewWindow(WPARAM wparam,LPARAM lparam);
 	void OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult);
 	CString strUser;
 	CEdit m_Text;
@@ -41,3 +44,4 @@ public:
 };
 
 extern CMainDlg* pMainDlg;
+extern map<CString,HWND> mapChatHwnd;

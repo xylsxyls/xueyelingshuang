@@ -12,6 +12,8 @@ typedef struct Threadpackage{
 	ACE_SOCK_Acceptor* pacceptor;
 	vector<ACE_SOCK_Stream*>* pvecIPPeer;
 	BOOL ifUseJson;
+	char* pbuf;
+	int nReceiveLength;
 }Threadpackage;
 
 CAceTCPServer::CAceTCPServer(){
@@ -25,6 +27,62 @@ CAceTCPServer::~CAceTCPServer(){
 	delete pacceptor;
 }
 
+DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
+	Threadpackage* pClientPackage = new Threadpackage;
+	Threadpackage ClientPackage = *((Threadpackage *)lpParam);
+
+	//用户处理的虚函数上锁
+	ClientPackage.pmutex->Lock();
+	//不使用json模式
+	if(ClientPackage.ifUseJson == 0){
+		ClientPackage.pThis->receive(ClientPackage.pbuf,ClientPackage.nReceiveLength,ClientPackage.ppeer);
+	}
+	//使用json模式
+	else if(ClientPackage.ifUseJson == 1){
+		Cjson json;
+		json.LoadJson(ClientPackage.pbuf);
+		int CheckKeyClient = json["CheckKeyClient"].toValue().nValue;
+		int CheckKeyServer = json["CheckKeyServer"].toValue().nValue;
+		//如果是客户端主动发来的包，需要给响应
+		if(CheckKeyClient >= 0 && CheckKeyServer == -1){
+			vector<ACE_SOCK_Stream*> vecSendIPPeer;
+			int i = -1;
+			while(i++ != ClientPackage.pThis->vecIPPeer.size() - 1){
+				if(ClientPackage.pThis->vecIPPeer.at(i) != ClientPackage.ppeer){
+					vecSendIPPeer.push_back(ClientPackage.pThis->vecIPPeer.at(i));
+				}
+			}
+			vecSendIPPeer.push_back(ClientPackage.ppeer);
+			Cjson jsonRsp = ClientPackage.pThis->ReceiveReqJson(json,&vecSendIPPeer);
+			int MsgID = json["MsgID"].toValue().nValue;
+			//根据vector里的通路来发
+			i = -1;
+			while(i++ != vecSendIPPeer.size() - 1){
+				ClientPackage.pThis->SendRspJson(jsonRsp,MsgID,CheckKeyClient,vecSendIPPeer.at(i));
+			}
+		}
+		//如果是客户端响应服务器发来的包
+		else if(CheckKeyClient == -1 && CheckKeyServer >= 0){
+			//把响应json和寄存json传给虚函数
+			ClientPackage.pThis->ReceiveRspJson(json,ClientPackage.pThis->mapCheck[CheckKeyServer]);
+			//删除map中的寄存包裹
+			ClientPackage.pThis->DeleteMap(CheckKeyServer);
+		}
+		else{
+			CString strError = "";
+			strError.Format("Key值出错，CheckKeyClient = %d，CheckKeyServer = %d",CheckKeyClient,CheckKeyServer);
+			AfxMessageBox(strError);
+		}
+	}
+	else{
+		CString strError = "";
+		strError.Format("是否使用json值出错，值为%d",ClientPackage.ifUseJson);
+		AfxMessageBox(strError);
+	}
+	ClientPackage.pmutex->Unlock();
+	return 0;
+}
+
 DWORD WINAPI ThreadClient(LPVOID lpParam){
 	Threadpackage* pClientPackage = new Threadpackage;
 	Threadpackage ClientPackage = *((Threadpackage *)lpParam);
@@ -36,53 +94,13 @@ DWORD WINAPI ThreadClient(LPVOID lpParam){
 		//如果传过来一个空数据则不处理，在断连时会传一个空数据
 		if(nReceiveLength != 0){
 			pbuf[nReceiveLength] = 0;
-			//用户处理的虚函数上锁
-			ClientPackage.pmutex->Lock();
-			//不使用json模式
-			if(ClientPackage.ifUseJson == 0){
-				ClientPackage.pThis->receive(pbuf,nReceiveLength,ClientPackage.ppeer);
-			}
-			//使用json模式
-			else if(ClientPackage.ifUseJson == 1){
-				Cjson json;
-				json.LoadJson(pbuf);
-				int CheckKeyClient = json["CheckKeyClient"].toValue().nValue;
-				int CheckKeyServer = json["CheckKeyServer"].toValue().nValue;
-				//如果是客户端主动发来的包，需要给响应
-				if(CheckKeyClient >= 0 && CheckKeyServer == -1){
-					vector<ACE_SOCK_Stream*> vecSendIPPeer = ClientPackage.pThis->vecIPPeer;
-					Cjson jsonRsp = ClientPackage.pThis->ReceiveReqJson(json,&vecSendIPPeer);
-					int MsgID = json["MsgID"].toValue().nValue;
-					//如果vector被用户清空则只回复
-					if(vecSendIPPeer.size() == 0){
-						ClientPackage.pThis->SendRspJson(jsonRsp,MsgID,CheckKeyClient,ClientPackage.ppeer);
-					}
-					else{
-						int i = -1;
-						while(i++ != vecSendIPPeer.size() - 1){
-							ClientPackage.pThis->SendRspJson(jsonRsp,MsgID,CheckKeyClient,vecSendIPPeer.at(i));
-						}
-					}
-				}
-				//如果是客户端响应服务器发来的包
-				else if(CheckKeyClient == -1 && CheckKeyServer >= 0){
-					//把响应json和寄存json传给虚函数
-					ClientPackage.pThis->ReceiveRspJson(json,ClientPackage.pThis->mapCheck[CheckKeyServer]);
-					//删除map中的寄存包裹
-					ClientPackage.pThis->DeleteMap(CheckKeyServer);
-				}
-				else{
-					CString strError = "";
-					strError.Format("Key值出错，CheckKeyClient = %d，CheckKeyServer = %d",CheckKeyClient,CheckKeyServer);
-					AfxMessageBox(strError);
-				}
-			}
-			else{
-				CString strError = "";
-				strError.Format("是否使用json值出错，值为%d",ClientPackage.ifUseJson);
-				AfxMessageBox(strError);
-			}
-			ClientPackage.pmutex->Unlock();
+			//一旦接收到内容则放入线程中处理，防止因为虚函数的处理内容卡死或等待
+			Threadpackage* pClientPackage = new Threadpackage;
+			ClientPackage.pbuf = pbuf;
+			ClientPackage.nReceiveLength = nReceiveLength;
+			*pClientPackage = ClientPackage;
+			DWORD ThreadID = 0;
+			Create_Thread(ThreadClientHandling,pClientPackage,ThreadID);
 			//在虚函数处理完pBuf缓冲区数据之后则把接收值
 			nReceiveLength = 0;
 		}
@@ -91,6 +109,7 @@ DWORD WINAPI ThreadClient(LPVOID lpParam){
 	}
 	//一旦和客户端断开则该通路的recv默认都会返回-1了，所以直接关闭通路
 	ClientPackage.ppeer->close();
+	//加锁把类中保存通路的vector里删掉断掉的通路
 	ClientPackage.pmutex->Lock();
 	int i = -1;
 	while(i++ != ClientPackage.pvecIPPeer->size() - 1){
@@ -101,6 +120,7 @@ DWORD WINAPI ThreadClient(LPVOID lpParam){
 	}
 	else AfxMessageBox("通路已被释放");
 	ClientPackage.pmutex->Unlock();
+	free(pbuf);
 	delete ClientPackage.ppeer;
 	return 0;
 }
@@ -171,7 +191,7 @@ int CAceTCPServer::SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cj
 	}
 	//设置消息号
 	jsonReq["MsgID"] = MsgID;
-	//如果客户端主动发包则加上寄存钥匙
+	//如果服务端主动发包则加上寄存钥匙
 	jsonReq["CheckKeyServer"] = ++CheckKeyServer;
 	//根据钥匙把包裹存入map中
 	mapCheck[CheckKeyServer] = jsonCheckPackage;
@@ -192,6 +212,17 @@ int CAceTCPServer::SendRspJson(Cjson jsonRsp,int MsgID,int CheckKeyClient,ACE_SO
 	//发送回复包
 	CString strSendJson = jsonRsp.toCString("","");
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据
+}
+
+ACE_SOCK_Stream* CAceTCPServer::GetReqPeer(vector<ACE_SOCK_Stream*>* pvecSendIPPeer){
+	return pvecSendIPPeer->at(pvecSendIPPeer->size() - 1);
+}
+
+void CAceTCPServer::OnlyRspToReq(vector<ACE_SOCK_Stream*>* pvecSendIPPeer){
+	ACE_SOCK_Stream* ppeer = GetReqPeer(pvecSendIPPeer);
+	pvecSendIPPeer->clear();
+	pvecSendIPPeer->push_back(ppeer);
+	return;
 }
 
 CLocalIPPort CAceTCPServer::GetLocalIPPort(ACE_SOCK_Stream* ppeer){

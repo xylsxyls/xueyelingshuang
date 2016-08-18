@@ -17,3 +17,5 @@ delete deleteDlg;
 #include "Look.h"
 
 那么在点了这个触发之后就会新生成一个界面
+
+必须在主线程里才能创建新界面

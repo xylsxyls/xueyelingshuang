@@ -12,6 +12,8 @@ typedef struct Threadpackage{
 	BOOL ifUseJson;
 	ACE_INET_Addr* paddr;
 	ACE_Time_Value* ptimeout;
+	char* pbuf;
+	int RecvLength;
 }Threadpackage;
 
 CAceTCPClient::~CAceTCPClient(){
@@ -20,6 +22,40 @@ CAceTCPClient::~CAceTCPClient(){
 	delete ppeer;
 	delete ptimeout;
 	delete paddr;
+}
+
+DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
+	Threadpackage package = *((Threadpackage *)lpParam);
+	delete (Threadpackage *)lpParam;
+
+	package.pmutex->Lock();
+	//判断是否使用json
+	if(package.ifUseJson == 1){
+		//接收的是服务端主动发来的数据，会有两种情况，一种是回复，一种是主动发送
+		Cjson json;
+		json.LoadJson(package.pbuf);
+		int CheckKeyClient = json["CheckKeyClient"].toValue().nValue;
+		int CheckKeyServer = json["CheckKeyServer"].toValue().nValue;
+		//如果是回复客户端，得到回应，不需要继续Send
+		if(CheckKeyClient >= 0 && CheckKeyServer == -1){
+			//把响应json和寄存json传给虚函数
+			package.pThis->ReceiveRspJson(json,package.pThis->mapCheck[CheckKeyClient]);
+			//删除map中的寄存包裹
+			package.pThis->DeleteMap(CheckKeyClient);
+		}
+		//如果是服务端主动发送，则需要给响应
+		else if(CheckKeyClient == -1 && CheckKeyServer >= 0){
+			package.pThis->SendJsonRsp(package.pThis->ReceiveReqJson(json),json["MsgID"].toValue().nValue,CheckKeyServer,3);
+		}
+		else{
+			CString strError = "";
+			strError.Format("key值出错，CheckKeyClient = %d，CheckKeyServer = %d",CheckKeyClient,CheckKeyServer);
+			AfxMessageBox(strError);
+		}
+	}
+	else package.pThis->receive(package.pbuf,package.RecvLength);
+	package.pmutex->Unlock();
+	return 0;
 }
 
 DWORD WINAPI ThreadRecv(LPVOID lpParam){
@@ -32,33 +68,14 @@ DWORD WINAPI ThreadRecv(LPVOID lpParam){
 		//可能在结束的时候会有一个空字符串发过来
 		if(RecvLength >= 0){
 			pbuf[RecvLength] = 0;
-			package.pmutex->Lock();
-			//判断是否使用json
-			if(package.ifUseJson == 1){
-				//接收的是服务端主动发来的数据，会有两种情况，一种是回复，一种是主动发送
-				Cjson json;
-				json.LoadJson(pbuf);
-				int CheckKeyClient = json["CheckKeyClient"].toValue().nValue;
-				int CheckKeyServer = json["CheckKeyServer"].toValue().nValue;
-				//如果是回复客户端，得到回应，不需要继续Send
-				if(CheckKeyClient >= 0 && CheckKeyServer == -1){
-					//把响应json和寄存json传给虚函数
-					package.pThis->ReceiveRspJson(json,package.pThis->mapCheck[CheckKeyClient]);
-					//删除map中的寄存包裹
-					package.pThis->DeleteMap(CheckKeyClient);
-				}
-				//如果是服务端主动发送，则需要给响应
-				else if(CheckKeyClient == -1 && CheckKeyServer >= 0){
-					package.pThis->SendJsonRsp(package.pThis->ReceiveReqJson(json),json["MsgID"].toValue().nValue,CheckKeyServer,3);
-				}
-				else{
-					CString strError = "";
-					strError.Format("key值出错，CheckKeyClient = %d，CheckKeyServer = %d",CheckKeyClient,CheckKeyServer);
-					AfxMessageBox(strError);
-				}
-			}
-			else package.pThis->receive(pbuf,RecvLength);
-			package.pmutex->Unlock();
+			//一旦接受到信息之后应该让处理活动在线程中执行，主线程依然等待接收，线程内加锁
+			//好处是如果虚函数内有等待卡死等操作时不会影响其他消息的接收
+			DWORD ThreadID = 0;
+			package.pbuf = pbuf;
+			package.RecvLength = RecvLength;
+			Threadpackage *ppackage = new Threadpackage;
+			*ppackage = package;
+			Create_Thread(ThreadRecvHandling,ppackage,ThreadID);
 		}
 		//如果服务器与客户端断连recv立刻取消阻塞返回-1
 		else{

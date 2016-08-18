@@ -8,6 +8,7 @@ class CTCPServer : public CAceTCPServer{
 public:
 	CMysql* pMysql;
 	CTable* pTable;
+	map<CString,ACE_SOCK_Stream*> mapPeer;
 	CTCPServer();
 	~CTCPServer();
 	virtual void receive(char* pData,int length,ACE_SOCK_Stream* ppeer);
@@ -20,5 +21,6 @@ public:
 	Cjson MessageUserToAll(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
 	Cjson MessageRefreshList(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
 	Cjson MessageDeleteList(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
+	Cjson MessageChat(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
 	
 };

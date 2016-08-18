@@ -48,6 +48,7 @@ Cjson CTCPServer::ReceiveReqJson(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSen
 	else if(MsgIDReq == 10003) return MessageUserToAll(jsonReq,pvecSendIPPeer);
 	else if(MsgIDReq == 10004) return MessageRefreshList(jsonReq,pvecSendIPPeer);
 	else if(MsgIDReq == 10005) return MessageDeleteList(jsonReq,pvecSendIPPeer);
+	else if(MsgIDReq == 10006) return MessageChat(jsonReq,pvecSendIPPeer);
 	else return Cjson();
 }
 
@@ -57,10 +58,13 @@ void CTCPServer::ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage){
 
 Cjson CTCPServer::MessageLoginReq(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer){
 	//单个回复
-	pvecSendIPPeer->clear();
+	OnlyRspToReq(pvecSendIPPeer);
 
 	CString strUser = jsonReq["User"].toValue().strValue;
 	CString strPassWord = jsonReq["PassWord"].toValue().strValue;
+
+	//把User和通路保存在map里
+	mapPeer[strUser] = pvecSendIPPeer->at(0);
 
 	//查看mysql里是否有该用户名，以及密码是否正确
 	CRecord select = CField("User") + CField("PassWord");
@@ -87,7 +91,7 @@ Cjson CTCPServer::MessageLoginReq(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSe
 
 Cjson CTCPServer::MessageRegisterReq(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer){
 	//单个回复
-	pvecSendIPPeer->clear();
+	OnlyRspToReq(pvecSendIPPeer);
 
 	CString strNewUser = jsonReq["NewUser"].toValue().strValue;
 	CString strNewPassWord = jsonReq["NewPassWord"].toValue().strValue;
@@ -136,7 +140,8 @@ Cjson CTCPServer::MessageUserToAll(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecS
 }
 
 Cjson CTCPServer::MessageRefreshList(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer){
-	pvecSendIPPeer->clear();
+	OnlyRspToReq(pvecSendIPPeer);
+
 	CRecord FieldRecord = CField("User") + CField("NickName");
 	CRecord ConditionRecord = CFieldValue(CField("IsOnline"),"=","1") + "and" + CFieldValue(CField("User"),"!=",jsonReq["User"].toValue().strValue);
 	vector<CRecord> vecRecord = pTable->SelectRecord(&ConditionRecord,0,0,&FieldRecord);
@@ -162,7 +167,39 @@ Cjson CTCPServer::MessageDeleteList(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvec
 	CRecord SetRecord = CFieldValue(CField("IsOnline"),"=","0");
 	CRecord Condition = CFieldValue(CField("User"),"=",strUser);
 	pTable->ReviseRecord(&SetRecord,&Condition);
+
+	mapPeer.erase(strUser);
+
 	Cjson jsonRsp;
 	jsonRsp["User"] = strUser;
+	return jsonRsp;
+}
+
+Cjson CTCPServer::MessageChat(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer){
+	OnlyRspToReq(pvecSendIPPeer);
+
+	CString strUser = jsonReq["User"].toValue().strValue;
+	CString strChatUser = jsonReq["ChatUser"].toValue().strValue;
+	CString strText = jsonReq["text"].toValue().strValue;
+
+	//让对方开一个窗口，并显示信息，10007
+	Cjson jsonOpenShowReq;
+	jsonOpenShowReq["User"] = strChatUser;
+	jsonOpenShowReq["ChatUser"] = strUser;
+	jsonOpenShowReq["text"] = strText;
+	CRecord FieldRecord = CField("NickName");
+	CRecord ConditionRecord = CFieldValue(CField("User"),"=",strUser);
+	vector<CRecord> vecRecord = pTable->SelectRecord(&ConditionRecord,0,0,&FieldRecord);
+	CString strNickName = vecRecord.at(0).vecFieldValue.at(0).strValue;
+	strNickName = strNickName.Mid(1,strNickName.GetLength() - 2);
+	jsonOpenShowReq["NickName"] = strNickName;
+	ACE_SOCK_Stream* ppeer = mapPeer[strChatUser];
+	//可能出现对面下线了但是这边的单聊窗口没有关的情况
+	if(ppeer == 0) return Cjson();
+	SendReqJson(jsonOpenShowReq,10007,mapPeer[strChatUser]);
+
+	Cjson jsonRsp;
+	jsonRsp["text"] = strText;
+	jsonRsp["NickName"] = strNickName;
 	return jsonRsp;
 }

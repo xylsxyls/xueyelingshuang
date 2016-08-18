@@ -52,6 +52,8 @@ public:
 	virtual Cjson ReceiveReqJson(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer) = 0;
 	virtual void ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage) = 0;
 	
+	ACE_SOCK_Stream* GetReqPeer(vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
+	void OnlyRspToReq(vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
 	CLocalIPPort GetLocalIPPort(ACE_SOCK_Stream* ppeer);
 
 

@@ -55,6 +55,7 @@ BEGIN_MESSAGE_MAP(CMainDlg, CDialogEx)
 	ON_MESSAGE(10003,&CMainDlg::AddList)
 	ON_MESSAGE(10004,&CMainDlg::ShowFriendList)
 	ON_MESSAGE(10005,&CMainDlg::DeleteFriendList)
+	ON_MESSAGE(10008,&CMainDlg::OpenNewWindow)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST2, &CMainDlg::OnDblclkList)
 END_MESSAGE_MAP()
 
@@ -66,6 +67,7 @@ BOOL CMainDlg::OnInitDialog(){
 
 	MainHwnd = m_hWnd;
 	nWindows++;
+	pClient = &client;
 
 	DWORD dwStyle = m_List.GetExtendedStyle();
 	dwStyle |= LVS_EX_FULLROWSELECT;//选中某行使整行高亮（只适用与report风格的listctrl）
@@ -152,10 +154,24 @@ LPARAM CMainDlg::DeleteFriendList(WPARAM wparam,LPARAM lparam){
 	return 0;
 }
 
+LPARAM CMainDlg::OpenNewWindow(WPARAM wparam,LPARAM lparam){
+	Cjson jsonReq = *(Cjson*)wparam;
+	CString strUser = jsonReq["User"].toValue().strValue;
+	CString strChatUser = jsonReq["ChatUser"].toValue().strValue;
+	//如果找不到则创建一个非模式窗口
+	if(mapChatHwnd.find(strUser) == mapChatHwnd.end()){
+		CChatDlg* pDlg = new CChatDlg;
+		pDlg->strUser = strUser;
+		pDlg->strChatUser = strChatUser;
+		pDlg->Create(CChatDlg::IDD,pDlg);
+		pDlg->SetWindowTextA(pDlg->strChatUser);
+		pDlg->ShowWindow(SW_SHOW);
+	}
+	return 0;
+}
+
 void CMainDlg::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult){
 	CChatDlg* pDlg = new CChatDlg(NULL);
-	nWindows++;
-	pDlg->pClient = &client;
 	pDlg->strUser = strUser;
 	pDlg->strChatUser = m_List.GetItemText(m_List.GetSelectionMark(),0);
 	pDlg->Create(CChatDlg::IDD,pDlg);

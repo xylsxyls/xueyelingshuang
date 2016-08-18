@@ -2,6 +2,7 @@
 #include "CTCPClient.h"
 #include "ChatTestDlg.h"
 #include "RegDlg.h"
+#include "ChatDlg.h"
 
 void CTCPClient::receive(char *pData,int length){
 	/*
@@ -31,6 +32,7 @@ void CTCPClient::receive(char *pData,int length){
 }
 
 Cjson CTCPClient::ReceiveReqJson(Cjson jsonReq){
+	if(MsgIDReq == 10007) return MessageOpenChatWindowAndShow(jsonReq);
 	return Cjson();
 }
 
@@ -43,6 +45,7 @@ void CTCPClient::ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage){
 	else if(MsgIDRsp == 10003) MessageAddList(jsonRsp,jsonCheckPackage);
 	else if(MsgIDRsp == 10004) MessageShowFriendList(jsonRsp,jsonCheckPackage);
 	else if(MsgIDRsp == 10005) MessageDeleteFriendList(jsonRsp,jsonCheckPackage);
+	else if(MsgIDRsp == 10006) MessageShowOne(jsonRsp,jsonCheckPackage);
 	return;
 }
 
@@ -80,4 +83,26 @@ void CTCPClient::MessageShowFriendList(Cjson jsonRsp,Cjson jsonCheckPackage){
 void CTCPClient::MessageDeleteFriendList(Cjson jsonRsp,Cjson jsonCheckPackage){
 	::SendMessage(MainHwnd,10005,(WPARAM)&jsonRsp,0);
 	return;
+}
+
+void CTCPClient::MessageShowOne(Cjson jsonRsp,Cjson jsonCheckPackage){
+	::SendMessage(jsonCheckPackage.GetHwnd(1),10006,(WPARAM)&jsonRsp,0);
+	return;
+}
+
+map<CString,HWND> mapChatHwnd;
+
+Cjson CTCPClient::MessageOpenChatWindowAndShow(Cjson jsonReq){
+	CString strUser = jsonReq["User"].toValue().strValue;
+	CString strChatUser = jsonReq["ChatUser"].toValue().strValue;
+	CString strNickName = jsonReq["NickName"].toValue().strValue;
+	CString strText = jsonReq["text"].toValue().strValue;
+	//必须会主线程才能创建界面
+	::SendMessage(MainHwnd,10008,(WPARAM)&jsonReq,0);
+	//创建窗口之后
+	Cjson json;
+	json["NickName"] = strNickName;
+	json["text"] = strText;
+	::SendMessage(mapChatHwnd[strUser],10006,(WPARAM)&json,0);
+	return Cjson();
 }

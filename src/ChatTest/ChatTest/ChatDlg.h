@@ -15,6 +15,7 @@ public:
 
 // 对话框数据
 	enum { IDD = IDD_CHATDLG };
+	BOOL OnInitDialog();
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
@@ -28,4 +29,8 @@ public:
 	void OnCancel();
 	CString strUser; //自己
 	CString strChatUser; //对面
+	LPARAM ChatShow(WPARAM wparam,LPARAM lparam);
 };
+
+extern int nWindows;
+extern map<CString,HWND> mapChatHwnd;

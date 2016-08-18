@@ -191,7 +191,6 @@ void CChatTestDlg::OnBnClickedButton1()
 void CChatTestDlg::OnBnClickedButton2()
 {
 	CRegDlg dlg;
-	dlg.pClient = &client;
 	dlg.DoModal();
 	// TODO: 在此添加控件通知处理程序代码
 }
@@ -204,7 +203,6 @@ LPARAM CChatTestDlg::OpenMainDlg(WPARAM wparam,LPARAM lparam){
 	if(jsonRsp["strRsp"].toValue().strValue == "登录成功"){
 		this->OnOK();
 		CMainDlg dlg;
-		dlg.pClient = &client;
 		dlg.strUser = jsonPackage["User"].toValue().strValue;
 		dlg.DoModal();
 	}

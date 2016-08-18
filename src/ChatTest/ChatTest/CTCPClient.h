@@ -4,6 +4,7 @@
 using namespace std;
 
 
+
 class CTCPClient : public CAceTCPClient{
 	virtual void receive(char *pData,int length);
 	virtual Cjson ReceiveReqJson(Cjson jsonReq);
@@ -15,6 +16,9 @@ class CTCPClient : public CAceTCPClient{
 	void MessageAddList(Cjson jsonRsp,Cjson jsonCheckPackage);
 	void MessageShowFriendList(Cjson jsonRsp,Cjson jsonCheckPackage);
 	void MessageDeleteFriendList(Cjson jsonRsp,Cjson jsonCheckPackage);
+	void MessageShowOne(Cjson jsonRsp,Cjson jsonCheckPackage);
+
+	Cjson MessageOpenChatWindowAndShow(Cjson jsonReq);
 	
 	
 };
