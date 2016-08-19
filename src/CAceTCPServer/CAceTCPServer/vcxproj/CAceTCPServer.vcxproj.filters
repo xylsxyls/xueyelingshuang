@@ -13,12 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="CLocalIPPort">
+      <UniqueIdentifier>{3f8ebc66-7de9-4198-a713-37ed619bf595}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CDeleteMapWatch">
+      <UniqueIdentifier>{af85e86f-febc-4741-a1fa-d9016161604e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CAceTCPServer.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CLocalIPPort.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CAceTCPServerAPI.h">
@@ -27,13 +30,22 @@
     <ClInclude Include="..\src\CAceTCPServerMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\CLocalIPPort.h">
+      <Filter>CLocalIPPort</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CDeleteMapWatch.h">
+      <Filter>CDeleteMapWatch</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CAceTCPServer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CLocalIPPort.cpp">
-      <Filter>源文件</Filter>
+      <Filter>CLocalIPPort</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CDeleteMapWatch.cpp">
+      <Filter>CDeleteMapWatch</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

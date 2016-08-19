@@ -1,8 +1,6 @@
 #include <SDKDDKVer.h>
 #include "CAceTCPServer.h"
-
-
-#define Create_Thread(FunName,ParameterName,ThreadID) CreateThread(NULL, 0, FunName, (LPVOID)ParameterName, 0, &ThreadID);
+#include "CDeleteMapWatch.h"
 
 typedef struct Threadpackage{
 	CAceTCPServer* pThis;
@@ -12,7 +10,7 @@ typedef struct Threadpackage{
 	ACE_SOCK_Acceptor* pacceptor;
 	vector<ACE_SOCK_Stream*>* pvecIPPeer;
 	BOOL ifUseJson;
-	char* pbuf;
+	char* pBuf;
 	int nReceiveLength;
 }Threadpackage;
 
@@ -28,19 +26,19 @@ CAceTCPServer::~CAceTCPServer(){
 }
 
 DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
-	Threadpackage* pClientPackage = new Threadpackage;
 	Threadpackage ClientPackage = *((Threadpackage *)lpParam);
+	delete (Threadpackage *)lpParam;
 
 	//用户处理的虚函数上锁
 	ClientPackage.pmutex->Lock();
 	//不使用json模式
 	if(ClientPackage.ifUseJson == 0){
-		ClientPackage.pThis->receive(ClientPackage.pbuf,ClientPackage.nReceiveLength,ClientPackage.ppeer);
+		ClientPackage.pThis->receive(ClientPackage.pBuf,ClientPackage.nReceiveLength,ClientPackage.ppeer);
 	}
 	//使用json模式
 	else if(ClientPackage.ifUseJson == 1){
 		Cjson json;
-		json.LoadJson(ClientPackage.pbuf);
+		json.LoadJson(ClientPackage.pBuf);
 		int CheckKeyClient = json["CheckKeyClient"].toValue().nValue;
 		int CheckKeyServer = json["CheckKeyServer"].toValue().nValue;
 		//如果是客户端主动发来的包，需要给响应
@@ -84,7 +82,6 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 }
 
 DWORD WINAPI ThreadClient(LPVOID lpParam){
-	Threadpackage* pClientPackage = new Threadpackage;
 	Threadpackage ClientPackage = *((Threadpackage *)lpParam);
 	delete (Threadpackage *)lpParam;
 	int nReceiveLength = 0;
@@ -96,7 +93,9 @@ DWORD WINAPI ThreadClient(LPVOID lpParam){
 			pbuf[nReceiveLength] = 0;
 			//一旦接收到内容则放入线程中处理，防止因为虚函数的处理内容卡死或等待
 			Threadpackage* pClientPackage = new Threadpackage;
-			ClientPackage.pbuf = pbuf;
+			char* pBuf = (char *)calloc(nReceiveLength + 1,1);
+			memcpy(pBuf,pbuf,nReceiveLength);
+			ClientPackage.pBuf = pBuf;
 			ClientPackage.nReceiveLength = nReceiveLength;
 			*pClientPackage = ClientPackage;
 			DWORD ThreadID = 0;
@@ -184,7 +183,7 @@ int CAceTCPServer::send(char* pData,int length,ACE_SOCK_Stream* ppeer,int sendTi
 	return ppeer->send(pData,length);
 }
 
-int CAceTCPServer::SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cjson jsonCheckPackage,int sendTimes){
+int CAceTCPServer::SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cjson jsonCheckPackage,int nDeleteTime,int sendTimes){
 	if(ifUseJson == 0){
 		AfxMessageBox("未设置使用json模式");
 		return 0;
@@ -195,6 +194,12 @@ int CAceTCPServer::SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cj
 	jsonReq["CheckKeyServer"] = ++CheckKeyServer;
 	//根据钥匙把包裹存入map中
 	mapCheck[CheckKeyServer] = jsonCheckPackage;
+	//定时器，过一定时间之后把对应的包裹删除，防止出现因为网络不好对面不会信息的情况
+	//CDeleteMapWatch* pWatch = new CDeleteMapWatch;
+	//WatchPac* ppackage = new WatchPac;
+	//ppackage->CheckKeyServer = CheckKeyServer;
+	//ppackage->pThis = this;
+	//pWatch->Stop(nDeleteTime * 1000,ppackage);
 	//发送
 	CString strSendJson = jsonReq.toCString("","");
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据
@@ -235,6 +240,7 @@ CLocalIPPort CAceTCPServer::GetLocalIPPort(ACE_SOCK_Stream* ppeer){
 }
 
 void CAceTCPServer::DeleteMap(int CheckKeyServer){
+	mutexDeleteMap.Lock();
 	auto it = mapCheck.begin();
 	for(;it != mapCheck.end();++it){
 		if(it->first == CheckKeyServer){
@@ -242,6 +248,6 @@ void CAceTCPServer::DeleteMap(int CheckKeyServer){
 			return;
 		}
 	}
-	AfxMessageBox("在map中找不到对应的包裹钥匙");
+	mutexDeleteMap.Unlock();
 	return;
 }

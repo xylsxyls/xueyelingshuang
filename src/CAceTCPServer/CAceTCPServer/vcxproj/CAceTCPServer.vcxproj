@@ -82,10 +82,12 @@
     <ClInclude Include="..\src\CAceTCPServerAPI.h" />
     <ClInclude Include="..\src\CAceTCPServerMacro.h" />
     <ClInclude Include="..\src\CAceTCPServer.h" />
+    <ClInclude Include="..\src\CDeleteMapWatch.h" />
     <ClInclude Include="..\src\CLocalIPPort.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CAceTCPServer.cpp" />
+    <ClCompile Include="..\src\CDeleteMapWatch.cpp" />
     <ClCompile Include="..\src\CLocalIPPort.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
