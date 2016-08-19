@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\API.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\CStopWatch.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CStopWatchAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CStopWatchMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,5 @@
 #pragma once
-#include "API.h"
+#include "CStopWatchMacro.h"
 
 #define Create_Thread(FunName,ParameterName,ThreadID) CreateThread(NULL, 0, FunName, (LPVOID)ParameterName, 0, &ThreadID)
 
@@ -10,7 +10,6 @@ public:
 	unsigned long time;
 	unsigned long StopTime;
 	unsigned long RunTime;
-	unsigned long StopSecondsTime;
 public:
 	//凡是unsigned long的都是毫秒为单位，int的是分钟或者小时的整形，double是秒为单位
 
@@ -35,8 +34,9 @@ public:
 	//停止走时间
 	void Stop();
 
-	//停止走一定的时间，过了这个时间自动继续走，传入总毫秒数，这个函数不支持在停止的时候再次调用
-	void Stop(unsigned long StopSecondsTime);
+	//停止走一定的时间，过了这个时间执行虚函数并接着走，传入总毫秒数，如果在停止状态下执行此函数则以当前为准过一定秒数接着走并执行虚函数
+	void Stop(unsigned long StopSecondsTime,void *pDo);
+	virtual void Do(void *pDo);
 
 	//继续走时间
 	void Run();

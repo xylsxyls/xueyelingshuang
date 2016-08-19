@@ -7,7 +7,6 @@ CStopWatch::CStopWatch(){
 	StopTime = 0;
 	RunTime = 0;
 	StopOrRun = 1;
-	StopSecondsTime = 0;
 }
 
 unsigned long CStopWatch::GetWatchTime(){
@@ -25,24 +24,35 @@ void CStopWatch::Stop(){
 	StopTime = GetTickCount();
 }
 
+typedef struct StopThreadPac{
+	CStopWatch* pThis;
+	unsigned long nStopSeconds;
+	void *pDo;
+}StopThreadPac;
+
 DWORD WINAPI StopThread(LPVOID lparam){
-	CStopWatch *p_StopWatch = (CStopWatch *)lparam;
-	unsigned long temp = GetTickCount();
+	StopThreadPac package = *(StopThreadPac *)lparam;
+	delete (StopThreadPac *)lparam;
 
-	while(GetTickCount() - temp <= p_StopWatch->StopSecondsTime);
-
-	p_StopWatch->Run();
-	p_StopWatch->StopOrRun = 1;
-	p_StopWatch->StopSecondsTime = 0;
+	//不可以用循环，这样消耗cpu太高
+	Sleep(package.nStopSeconds);
+	package.pThis->Run();
+	package.pThis->Do(package.pDo);
 	return 0;
 }
 
-void CStopWatch::Stop(unsigned long StopSecondsTime){
+void CStopWatch::Stop(unsigned long nStopSeconds,void *pDo){
 	Stop();
-	this->StopSecondsTime = StopSecondsTime;
+	StopThreadPac* ppackage = new StopThreadPac;
+	ppackage->nStopSeconds = nStopSeconds;
+	ppackage->pThis = this;
+	ppackage->pDo = pDo;
 	DWORD ThreadID = NULL;
-	Create_Thread(StopThread,this,ThreadID);
-	//StopThread(this);
+	Create_Thread(StopThread,ppackage,ThreadID);
+}
+
+void CStopWatch::Do(void *pDo){
+	return;
 }
 
 void CStopWatch::Run(){

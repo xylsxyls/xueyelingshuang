@@ -195,11 +195,11 @@ int CAceTCPServer::SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cj
 	//根据钥匙把包裹存入map中
 	mapCheck[CheckKeyServer] = jsonCheckPackage;
 	//定时器，过一定时间之后把对应的包裹删除，防止出现因为网络不好对面不会信息的情况
-	//CDeleteMapWatch* pWatch = new CDeleteMapWatch;
-	//WatchPac* ppackage = new WatchPac;
-	//ppackage->CheckKeyServer = CheckKeyServer;
-	//ppackage->pThis = this;
-	//pWatch->Stop(nDeleteTime * 1000,ppackage);
+	CDeleteMapWatch* pWatch = new CDeleteMapWatch;
+	WatchPac* ppackage = new WatchPac;
+	ppackage->CheckKeyServer = CheckKeyServer;
+	ppackage->pThis = this;
+	pWatch->Stop(nDeleteTime * 1000,ppackage);
 	//发送
 	CString strSendJson = jsonReq.toCString("","");
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据

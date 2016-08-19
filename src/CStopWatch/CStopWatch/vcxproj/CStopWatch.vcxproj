@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\API.h" />
+    <ClInclude Include="..\src\CStopWatchMacro.h" />
     <ClInclude Include="..\src\CStopWatch.h" />
     <ClInclude Include="..\src\CStopWatchAPI.h" />
   </ItemGroup>

@@ -1,7 +1,6 @@
 #include <SDKDDKVer.h>
 #include "CAceTCPClient.h"
-
-#define Create_Thread(FunName,ParameterName,ThreadID) CreateThread(NULL, 0, FunName, (LPVOID)ParameterName, 0, &ThreadID);
+#include "CDeleteMapWatch.h"
 
 typedef struct Threadpackage{
 	CAceTCPClient* pThis;
@@ -12,7 +11,7 @@ typedef struct Threadpackage{
 	BOOL ifUseJson;
 	ACE_INET_Addr* paddr;
 	ACE_Time_Value* ptimeout;
-	char* pbuf;
+	char* pBuf;
 	int RecvLength;
 }Threadpackage;
 
@@ -33,7 +32,7 @@ DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
 	if(package.ifUseJson == 1){
 		//接收的是服务端主动发来的数据，会有两种情况，一种是回复，一种是主动发送
 		Cjson json;
-		json.LoadJson(package.pbuf);
+		json.LoadJson(package.pBuf);
 		int CheckKeyClient = json["CheckKeyClient"].toValue().nValue;
 		int CheckKeyServer = json["CheckKeyServer"].toValue().nValue;
 		//如果是回复客户端，得到回应，不需要继续Send
@@ -53,8 +52,9 @@ DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
 			AfxMessageBox(strError);
 		}
 	}
-	else package.pThis->receive(package.pbuf,package.RecvLength);
+	else package.pThis->receive(package.pBuf,package.RecvLength);
 	package.pmutex->Unlock();
+	free(package.pBuf);
 	return 0;
 }
 
@@ -71,7 +71,9 @@ DWORD WINAPI ThreadRecv(LPVOID lpParam){
 			//一旦接受到信息之后应该让处理活动在线程中执行，主线程依然等待接收，线程内加锁
 			//好处是如果虚函数内有等待卡死等操作时不会影响其他消息的接收
 			DWORD ThreadID = 0;
-			package.pbuf = pbuf;
+			char* pBuf = (char *)calloc(RecvLength + 1,1);
+			memcpy(pBuf,pbuf,RecvLength);
+			package.pBuf = pBuf;
 			package.RecvLength = RecvLength;
 			Threadpackage *ppackage = new Threadpackage;
 			*ppackage = package;
@@ -132,7 +134,7 @@ int CAceTCPClient::send(char *pData,int length,int sendTimes){
 	return ppeer->send(pData,length); //发送数据
 }
 
-int CAceTCPClient::SendJsonReq(Cjson jsonReq,int MsgID,Cjson jsonCheckPackage,int sendTimes){
+int CAceTCPClient::SendJsonReq(Cjson jsonReq,int MsgID,Cjson jsonCheckPackage,int nDeleteTime,int sendTimes){
 	if(ifUseJson == 0){
 		AfxMessageBox("未设置使用json模式");
 		return 0;
@@ -143,6 +145,12 @@ int CAceTCPClient::SendJsonReq(Cjson jsonReq,int MsgID,Cjson jsonCheckPackage,in
 	jsonReq["CheckKeyClient"] = ++CheckKeyClient;
 	//根据钥匙把包裹存入map中
 	mapCheck[CheckKeyClient] = jsonCheckPackage;
+	//定时器，过一定时间之后把对应的包裹删除，防止出现因为网络不好对面不会信息的情况
+	CDeleteMapWatch* pWatch = new CDeleteMapWatch;
+	WatchPac* ppackage = new WatchPac;
+	ppackage->CheckKeyClient = CheckKeyClient;
+	ppackage->pThis = this;
+	pWatch->Stop(nDeleteTime * 1000,ppackage);
 	//发送
 	CString strSendJson = jsonReq.toCString("","");
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据
@@ -163,6 +171,7 @@ int CAceTCPClient::SendJsonRsp(Cjson jsonRsp,int MsgID,int CheckKeyServer,int se
 }
 
 void CAceTCPClient::DeleteMap(int CheckKeyClient){
+	mutexDeleteMap.Lock();
 	auto it = mapCheck.begin();
 	for(;it != mapCheck.end();++it){
 		if(it->first == CheckKeyClient){
@@ -170,6 +179,7 @@ void CAceTCPClient::DeleteMap(int CheckKeyClient){
 			return;
 		}
 	}
+	mutexDeleteMap.Unlock();
 	//可能会出现找不到的情况，如果服务端回复变成群发的话
 	return;
 }

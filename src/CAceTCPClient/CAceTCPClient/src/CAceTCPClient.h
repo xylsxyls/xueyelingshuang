@@ -27,6 +27,7 @@ public:
 	ACE_INET_Addr* paddr;
 	ACE_Time_Value* ptimeout;
 	CMutex mutex;
+	CMutex mutexDeleteMap;
 	//是否使用json，如果使用则增加寄存模块，把寄存钥匙号跟着网络跑一圈，然后回来从map中拿寄存信息
 	BOOL ifUseJson;
 	int CheckKeyClient;
@@ -46,7 +47,7 @@ public:
 
 	/////////////////////////使用json//////////////////////
 	//如果从虚函数中回复则使用Rsp，主动发使用Req
-	int SendJsonReq(Cjson jsonReq,int MsgID,Cjson jsonCheckPackage = Cjson(),int sendTimes = 3);
+	int SendJsonReq(Cjson jsonReq,int MsgID,Cjson jsonCheckPackage = Cjson(),int nDeleteTime = 10,int sendTimes = 3);
 	
 	//接收虚函数
 	virtual Cjson ReceiveReqJson(Cjson jsonReq) = 0;
