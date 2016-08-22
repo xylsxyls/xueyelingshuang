@@ -1,0 +1,5 @@
+进度条Progress Control
+选择时间，Date Time Picker
+多选页面，Tab Control
+选择字体，MFC FontComboBox Control
+选择颜色，MFC ColorButton Control

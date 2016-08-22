@@ -1,0 +1,19 @@
+双击控件生成代码，在主类中重载函数，在把控件的插入标签和标签页面全部创建和隐藏，在重载函数内显示一个页面
+标签页面去标题把属性中的Border设为None
+m_Tab.InsertItem(0,"222");
+m_Tab.InsertItem(1,"111");
+void CMFCApplication23Dlg::OnTcnSelchangeTab2(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	// TODO: 在此添加控件通知处理程序代码
+	int CurSel = m_Tab.GetCurSel();
+	switch(CurSel)
+	{
+	case 0:
+		//dlg.Create(IDD_DIALOG1,GetDlgItem(IDC_TAB2));
+		dlg.ShowWindow(true);
+		break;
+
+	default:;
+	}
+	*pResult = 0;
+}

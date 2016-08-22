@@ -1,0 +1,11 @@
+在InitInstance函数中写
+
+CWinApp::InitInstance();
+VERIFY( 1 == InitSkinMagicLib(AfxGetInstanceHandle(), NULL, NULL, NULL));
+LoadSkinFile("D:\\vs2012\\MFCApplication23\\Debug\\Untitled.smf");
+
+在OnInitDialog函数中写，引号部分是smf文件中的路径，如果是最外层路径填空，Dlg如果要换背景SkinClient要设为TRUE
+VERIFY(1 == SetSingleDialogSkin(m_hWnd,"Dlg"));
+SetControlSkin(m_Button.GetSafeHwnd(),"Button1","Dlg");
+SetControlSkin(m_Button2.GetSafeHwnd(),"Button2","Dlg");
+SetControlSkin(m_Button3.GetSafeHwnd(),"Button","");
