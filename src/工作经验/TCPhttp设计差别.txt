@@ -1,0 +1,2 @@
+TCP在init里和服务器连接通路，所以Send是异步的，里面的CheckKeyClient必须过网络，如果Send内部也有线程接返回的话，那么客户端和服务端就存在两条通路，耗资源，如果不管资源问题，在Send内部开线程接返回消息，CheckKeyClient也不需要过网络，这样的话init里一条线程接服务端主动发送，Send里开的线程接回复
+Http在Send里开线程接返回消息，所以CheckKeyClient不需要过网络，而且没有长连通路，只会在发的时候有一条通路

@@ -12,8 +12,8 @@ public:
 	CTCPServer();
 	~CTCPServer();
 	virtual void receive(char* pData,int length,ACE_SOCK_Stream* ppeer);
-	virtual Cjson ReceiveReqJson(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
-	virtual void ReceiveRspJson(Cjson jsonReq,Cjson jsonCheckPackage);
+	virtual Cjson ReceiveReqJson(Cjson jsonReq,int MsgID,vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
+	virtual void ReceiveRspJson(Cjson jsonRsp,int MsgID,Cjson jsonCheckPackage);
 
 	Cjson MessageLoginReq(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
 	Cjson MessageRegisterReq(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer);

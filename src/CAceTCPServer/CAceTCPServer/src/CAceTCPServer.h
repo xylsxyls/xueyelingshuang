@@ -50,8 +50,8 @@ public:
 	int SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cjson jsonCheckPackage = Cjson(),int nDeleteTime = 10,int sendTimes = 3);
 	int SendRspJson(Cjson jsonRsp,int MsgID,int CheckKeyClient,ACE_SOCK_Stream* ppeer,int sendTimes = 3);
 	//虚函数把所有的通路信息传入，如果设置为空则默认为回复
-	virtual Cjson ReceiveReqJson(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer) = 0;
-	virtual void ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage) = 0;
+	virtual Cjson ReceiveReqJson(Cjson jsonReq,int MsgID,vector<ACE_SOCK_Stream*>* pvecSendIPPeer) = 0;
+	virtual void ReceiveRspJson(Cjson jsonRsp,int MsgID,Cjson jsonCheckPackage) = 0;
 	
 	ACE_SOCK_Stream* GetReqPeer(vector<ACE_SOCK_Stream*>* pvecSendIPPeer);
 	void OnlyRspToReq(vector<ACE_SOCK_Stream*>* pvecSendIPPeer);

@@ -1,0 +1,23 @@
+#error WINDOWS.H already included. MFC apps must not #include <windows.h>
+标签： mfcwindows
+2012-08-29 12:22 15389人阅读 评论(2) 收藏 举报
+ 分类： C++（3）  
+错误提示：
+
+afxv_w32.h文件：
+
+#ifdef _WINDOWS_ 
+    #error WINDOWS.H already included.  MFC apps must not #include  <windows.h> 
+#endif
+
+原因：多次包含<windows.h>
+
+但是：我查找了，自己并未写这条语句，后来Project，General 属性中Use of MFC是可以用的，因此程序会自动调用吧。。。（I’m not sure…）
+
+我因为要用到MFC中的CArray类，因此需要包含：#include "afxtempl.h"
+
+先调<windows.h>，再调"afxtempl.h"，引起了冲突。
+
+ 
+
+解决方法：把#include "afxtempl.h"放到程序所包含的所有头文件的前面

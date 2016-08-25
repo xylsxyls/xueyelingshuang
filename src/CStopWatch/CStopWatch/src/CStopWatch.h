@@ -1,11 +1,16 @@
 #pragma once
 #include "CStopWatchMacro.h"
+#include <afxwin.h>
 
 #define Create_Thread(FunName,ParameterName,ThreadID) CreateThread(NULL, 0, FunName, (LPVOID)ParameterName, 0, &ThreadID)
+#define CreateStopWatch(Type,Name) Type* Name = new Type
 
+class CMutex;
+//typedef void* HANDLE;
 class CStopWatchAPI CStopWatch{
 public:
 	CStopWatch();
+	~CStopWatch();
 public:
 	unsigned long time;
 	unsigned long StopTime;
@@ -15,6 +20,13 @@ public:
 
 	//秒表是否在走
 	bool StopOrRun;
+
+	//事件
+	HANDLE handle;
+	HANDLE ReturnHandle;
+	unsigned long CountDownSeconds;
+	CMutex* pMutex;
+	CMutex* pMutexDo;
 
 	//时分秒是连一起的，如果是1小时1分1秒的时间，秒数返回的就是1秒，不是总秒数
 
@@ -34,9 +46,10 @@ public:
 	//停止走时间
 	void Stop();
 
-	//停止走一定的时间，过了这个时间执行虚函数并接着走，传入总毫秒数，如果在停止状态下执行此函数则以当前为准过一定秒数接着走并执行虚函数
-	void Stop(unsigned long StopSecondsTime,void *pDo);
-	virtual void Do(void *pDo);
+	//倒计时做一件事，再次调用则重置倒计时时间，该函数可以在多线程中调用，已加锁，但是必须保证线程运行的时候类存在
+	void CountDown(unsigned long CountDownSeconds,void *pDo);
+	//可以在虚函数内delete this，但是必须在delete前加上*nDelete = 1;
+	virtual void Do(void *pDo,BOOL* nDelete);
 
 	//继续走时间
 	void Run();

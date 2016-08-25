@@ -1,14 +1,16 @@
 #pragma once
 #include "CStopWatch/CStopWatchAPI.h"
-#include "CAceTCPClientMacro.h"
 
-class CAceTCPClientAPI CDeleteMapWatch : public CStopWatch{
+class CDeleteMapWatch : public CStopWatch{
 public:
 	void Do(void *pDo,BOOL* nDelete);
 };
 
-class CAceTCPClient;
+class CAceHttpClient;
+class ACE_SOCK_Stream;
 typedef struct WatchPac{
-	CAceTCPClient* pThis;
+	CAceHttpClient* pThis;
 	int CheckKeyClient;
+	ACE_SOCK_Stream* ppeer;
+	BOOL* pifPeerExist;
 }WatchPac;

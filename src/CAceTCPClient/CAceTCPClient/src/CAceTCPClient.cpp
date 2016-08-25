@@ -33,18 +33,25 @@ DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
 		//接收的是服务端主动发来的数据，会有两种情况，一种是回复，一种是主动发送
 		Cjson json;
 		json.LoadJson(package.pBuf);
+		int MsgID = json["MsgID"].toValue().nValue;
 		int CheckKeyClient = json["CheckKeyClient"].toValue().nValue;
 		int CheckKeyServer = json["CheckKeyServer"].toValue().nValue;
 		//如果是回复客户端，得到回应，不需要继续Send
 		if(CheckKeyClient >= 0 && CheckKeyServer == -1){
+			Cjson jsonRsp = json;
+			jsonRsp["MsgID"] = "delete";
+			jsonRsp["CheckKeyClient"] = "delete";
 			//把响应json和寄存json传给虚函数
-			package.pThis->ReceiveRspJson(json,package.pThis->mapCheck[CheckKeyClient]);
+			package.pThis->ReceiveRspJson(jsonRsp,MsgID,package.pThis->mapCheck[CheckKeyClient]);
 			//删除map中的寄存包裹
 			package.pThis->DeleteMap(CheckKeyClient);
 		}
 		//如果是服务端主动发送，则需要给响应
 		else if(CheckKeyClient == -1 && CheckKeyServer >= 0){
-			package.pThis->SendJsonRsp(package.pThis->ReceiveReqJson(json),json["MsgID"].toValue().nValue,CheckKeyServer,3);
+			Cjson jsonReq = json;
+			jsonReq["MsgID"] = "delete";
+			jsonReq["CheckKeyServer"] = "delete";
+			package.pThis->SendJsonRsp(package.pThis->ReceiveReqJson(jsonReq,MsgID),MsgID,CheckKeyServer,3);
 		}
 		else{
 			CString strError = "";
@@ -145,12 +152,12 @@ int CAceTCPClient::SendJsonReq(Cjson jsonReq,int MsgID,Cjson jsonCheckPackage,in
 	jsonReq["CheckKeyClient"] = ++CheckKeyClient;
 	//根据钥匙把包裹存入map中
 	mapCheck[CheckKeyClient] = jsonCheckPackage;
-	//定时器，过一定时间之后把对应的包裹删除，防止出现因为网络不好对面不会信息的情况
+	//定时器，过一定时间之后把对应的包裹删除，防止出现因为网络不好对面不回信息的情况
 	CDeleteMapWatch* pWatch = new CDeleteMapWatch;
 	WatchPac* ppackage = new WatchPac;
 	ppackage->CheckKeyClient = CheckKeyClient;
 	ppackage->pThis = this;
-	pWatch->Stop(nDeleteTime * 1000,ppackage);
+	pWatch->CountDown(nDeleteTime * 1000,ppackage);
 	//发送
 	CString strSendJson = jsonReq.toCString("","");
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据

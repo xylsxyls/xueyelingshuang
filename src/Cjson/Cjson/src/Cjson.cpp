@@ -57,6 +57,11 @@ int Cjson::size(){
 }
 
 CString Cjson::toCString(CString NewLineSign,CString FormatSign,int FormatLength){
+	//如果是个空的CTypeValue，那么需要先初始化，判断时必须用pJson来判断，因为只有pJson是透传的
+	if(pJson == NULL){
+		//说明还未初始化
+		LoadJson("{}");
+	}
 	if(type == "class CjsonA") return pJsonA->toCString(NewLineSign,FormatSign,FormatLength);
 	else return "";
 }

@@ -50,10 +50,8 @@ public:
 	int SendJsonReq(Cjson jsonReq,int MsgID,Cjson jsonCheckPackage = Cjson(),int nDeleteTime = 10,int sendTimes = 3);
 	
 	//接收虚函数
-	virtual Cjson ReceiveReqJson(Cjson jsonReq) = 0;
-	virtual void ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage) = 0;
-	
-
+	virtual Cjson ReceiveReqJson(Cjson jsonReq,int MsgID) = 0;
+	virtual void ReceiveRspJson(Cjson jsonRsp,int MsgID,Cjson jsonCheckPackage) = 0;
 
 	//以下函数用户不可使用
 	int SendJsonRsp(Cjson jsonRsp,int MsgID,int CheckKeyServer,int sendTimes = 3);

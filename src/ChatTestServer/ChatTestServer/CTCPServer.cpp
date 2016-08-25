@@ -39,20 +39,20 @@ void CTCPServer::receive(char* pData,int length,ACE_SOCK_Stream* ppeer){
 	return;
 }
 
-Cjson CTCPServer::ReceiveReqJson(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIPPeer){
+Cjson CTCPServer::ReceiveReqJson(Cjson jsonReq,int MsgID,vector<ACE_SOCK_Stream*>* pvecSendIPPeer){
 	//µÇÂ¼
-	if(MsgIDReq == 10000) return MessageLoginReq(jsonReq,pvecSendIPPeer);
+	if(MsgID == 10000) return MessageLoginReq(jsonReq,pvecSendIPPeer);
 	//×¢²á
-	else if(MsgIDReq == 10001) return MessageRegisterReq(jsonReq,pvecSendIPPeer);
-	else if(MsgIDReq == 10002) return MessageSendTextToAll(jsonReq,pvecSendIPPeer);
-	else if(MsgIDReq == 10003) return MessageUserToAll(jsonReq,pvecSendIPPeer);
-	else if(MsgIDReq == 10004) return MessageRefreshList(jsonReq,pvecSendIPPeer);
-	else if(MsgIDReq == 10005) return MessageDeleteList(jsonReq,pvecSendIPPeer);
-	else if(MsgIDReq == 10006) return MessageChat(jsonReq,pvecSendIPPeer);
+	else if(MsgID == 10001) return MessageRegisterReq(jsonReq,pvecSendIPPeer);
+	else if(MsgID == 10002) return MessageSendTextToAll(jsonReq,pvecSendIPPeer);
+	else if(MsgID == 10003) return MessageUserToAll(jsonReq,pvecSendIPPeer);
+	else if(MsgID == 10004) return MessageRefreshList(jsonReq,pvecSendIPPeer);
+	else if(MsgID == 10005) return MessageDeleteList(jsonReq,pvecSendIPPeer);
+	else if(MsgID == 10006) return MessageChat(jsonReq,pvecSendIPPeer);
 	else return Cjson();
 }
 
-void CTCPServer::ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage){
+void CTCPServer::ReceiveRspJson(Cjson jsonRsp,int MsgID,Cjson jsonCheckPackage){
 	return;
 }
 

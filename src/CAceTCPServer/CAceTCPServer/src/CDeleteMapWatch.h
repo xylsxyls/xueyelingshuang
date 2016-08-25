@@ -4,7 +4,7 @@
 
 class CAceTCPServerAPI CDeleteMapWatch : public CStopWatch{
 public:
-	void Do(void *pDo);
+	void Do(void *pDo,BOOL* nDelete);
 };
 
 class CAceTCPServer;

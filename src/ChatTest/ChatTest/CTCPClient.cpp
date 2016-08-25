@@ -31,21 +31,21 @@ void CTCPClient::receive(char *pData,int length){
 	}*/
 }
 
-Cjson CTCPClient::ReceiveReqJson(Cjson jsonReq){
-	if(MsgIDReq == 10007) return MessageOpenChatWindowAndShow(jsonReq);
+Cjson CTCPClient::ReceiveReqJson(Cjson jsonReq,int MsgID){
+	if(MsgID == 10007) return MessageOpenChatWindowAndShow(jsonReq);
 	return Cjson();
 }
 
-void CTCPClient::ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage){
+void CTCPClient::ReceiveRspJson(Cjson jsonRsp,int MsgID,Cjson jsonCheckPackage){
 	//登录反馈消息号10002
-	if(MsgIDRsp == 10000) MessageLoginRsp(jsonRsp,jsonCheckPackage);
+	if(MsgID == 10000) MessageLoginRsp(jsonRsp,jsonCheckPackage);
 	//注册反馈消息号10003
-	else if(MsgIDRsp == 10001) MessageRegisterRsp(jsonRsp,jsonCheckPackage);
-	else if(MsgIDRsp == 10002) MessageShowText(jsonRsp,jsonCheckPackage);
-	else if(MsgIDRsp == 10003) MessageAddList(jsonRsp,jsonCheckPackage);
-	else if(MsgIDRsp == 10004) MessageShowFriendList(jsonRsp,jsonCheckPackage);
-	else if(MsgIDRsp == 10005) MessageDeleteFriendList(jsonRsp,jsonCheckPackage);
-	else if(MsgIDRsp == 10006) MessageShowOne(jsonRsp,jsonCheckPackage);
+	else if(MsgID == 10001) MessageRegisterRsp(jsonRsp,jsonCheckPackage);
+	else if(MsgID == 10002) MessageShowText(jsonRsp,jsonCheckPackage);
+	else if(MsgID == 10003) MessageAddList(jsonRsp,jsonCheckPackage);
+	else if(MsgID == 10004) MessageShowFriendList(jsonRsp,jsonCheckPackage);
+	else if(MsgID == 10005) MessageDeleteFriendList(jsonRsp,jsonCheckPackage);
+	else if(MsgID == 10006) MessageShowOne(jsonRsp,jsonCheckPackage);
 	return;
 }
 

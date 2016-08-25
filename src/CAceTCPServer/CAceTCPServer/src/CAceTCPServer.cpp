@@ -39,10 +39,12 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 	else if(ClientPackage.ifUseJson == 1){
 		Cjson json;
 		json.LoadJson(ClientPackage.pBuf);
+		int MsgID = json["MsgID"].toValue().nValue;
 		int CheckKeyClient = json["CheckKeyClient"].toValue().nValue;
 		int CheckKeyServer = json["CheckKeyServer"].toValue().nValue;
 		//如果是客户端主动发来的包，需要给响应
 		if(CheckKeyClient >= 0 && CheckKeyServer == -1){
+			//重置顺序，方便获得返回通路
 			vector<ACE_SOCK_Stream*> vecSendIPPeer;
 			int i = -1;
 			while(i++ != ClientPackage.pThis->vecIPPeer.size() - 1){
@@ -51,8 +53,10 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 				}
 			}
 			vecSendIPPeer.push_back(ClientPackage.ppeer);
-			Cjson jsonRsp = ClientPackage.pThis->ReceiveReqJson(json,&vecSendIPPeer);
-			int MsgID = json["MsgID"].toValue().nValue;
+			Cjson jsonReq = json;
+			jsonReq["MsgID"] = "delete";
+			jsonReq["CheckKeyClient"] = "delete";
+			Cjson jsonRsp = ClientPackage.pThis->ReceiveReqJson(jsonReq,MsgID,&vecSendIPPeer);
 			//根据vector里的通路来发
 			i = -1;
 			while(i++ != vecSendIPPeer.size() - 1){
@@ -61,8 +65,11 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 		}
 		//如果是客户端响应服务器发来的包
 		else if(CheckKeyClient == -1 && CheckKeyServer >= 0){
+			Cjson jsonRsp = json;
+			jsonRsp["MsgID"] = "delete";
+			jsonRsp["CheckKeyClient"] = "delete";
 			//把响应json和寄存json传给虚函数
-			ClientPackage.pThis->ReceiveRspJson(json,ClientPackage.pThis->mapCheck[CheckKeyServer]);
+			ClientPackage.pThis->ReceiveRspJson(jsonRsp,MsgID,ClientPackage.pThis->mapCheck[CheckKeyServer]);
 			//删除map中的寄存包裹
 			ClientPackage.pThis->DeleteMap(CheckKeyServer);
 		}
@@ -199,7 +206,7 @@ int CAceTCPServer::SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cj
 	WatchPac* ppackage = new WatchPac;
 	ppackage->CheckKeyServer = CheckKeyServer;
 	ppackage->pThis = this;
-	pWatch->Stop(nDeleteTime * 1000,ppackage);
+	pWatch->CountDown(nDeleteTime * 1000,ppackage);
 	//发送
 	CString strSendJson = jsonReq.toCString("","");
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据
