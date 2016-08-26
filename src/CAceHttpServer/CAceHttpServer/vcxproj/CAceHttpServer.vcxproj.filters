@@ -13,14 +13,29 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="CHttpString">
+      <UniqueIdentifier>{90d536d7-2144-4703-a0ce-1dbf84f4c89e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CAceHttpServer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CHttpString.cpp">
+      <Filter>CHttpString</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CAceHttpServer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CHttpString.h">
+      <Filter>CHttpString</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CAceHttpServerAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CAceHttpServerMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

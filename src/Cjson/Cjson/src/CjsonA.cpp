@@ -82,6 +82,11 @@ BOOL CjsonA::GetOneModule(CString* strJson,BOOL* flag,CString* strName,CString *
 			*flag = 1;
 			rem:
 			temp = strJson->Find("\"",temp + 1);
+			//如果找不到引号，说明出错并且一定到了最后
+			if(temp == -1){
+				mapError[*strJson] = "无右侧引号";
+				return 0;
+			}
 			if((*strJson)[temp - 1] == '\\') goto rem;
 			//这时temp的值时右侧引号的位置，从这里到逗号必须都是无效字符
 			*strValue = strJson->Mid(nColon + 1,temp - nColon);

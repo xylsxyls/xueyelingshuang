@@ -78,9 +78,8 @@ DWORD WINAPI ThreadRecv(LPVOID lpParam){
 			//一旦接受到信息之后应该让处理活动在线程中执行，主线程依然等待接收，线程内加锁
 			//好处是如果虚函数内有等待卡死等操作时不会影响其他消息的接收
 			DWORD ThreadID = 0;
-			char* pBuf = (char *)calloc(RecvLength + 1,1);
-			memcpy(pBuf,pbuf,RecvLength);
-			package.pBuf = pBuf;
+			package.pBuf = (char *)calloc(RecvLength + 1,1);
+			memcpy(package.pBuf,pbuf,RecvLength);
 			package.RecvLength = RecvLength;
 			Threadpackage *ppackage = new Threadpackage;
 			*ppackage = package;

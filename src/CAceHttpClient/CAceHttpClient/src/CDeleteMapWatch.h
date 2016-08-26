@@ -1,7 +1,8 @@
 #pragma once
 #include "CStopWatch/CStopWatchAPI.h"
+#include "CAceHttpClientMacro.h"
 
-class CDeleteMapWatch : public CStopWatch{
+class CAceHttpClientAPI CDeleteMapWatch : public CStopWatch{
 public:
 	void Do(void *pDo,BOOL* nDelete);
 };

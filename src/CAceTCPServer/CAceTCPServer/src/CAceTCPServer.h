@@ -31,7 +31,6 @@ public:
 	//如果使用json，增加寄存模块，存入map
 	BOOL ifUseJson;
 	int CheckKeyServer;
-	int CheckKeyReqTemp;
 	map<int,Cjson> mapCheck;
 
 public:

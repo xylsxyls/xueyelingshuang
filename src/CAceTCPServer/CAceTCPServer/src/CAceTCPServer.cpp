@@ -18,7 +18,6 @@ CAceTCPServer::CAceTCPServer(){
 	pacceptor = new ACE_SOCK_Acceptor;
 	ifUseJson = 0;
 	CheckKeyServer = 0;
-	CheckKeyReqTemp = 0;
 }
 
 CAceTCPServer::~CAceTCPServer(){
@@ -96,19 +95,16 @@ DWORD WINAPI ThreadClient(LPVOID lpParam){
 	//接收客户端发送的数据，会在这里阻塞，一旦和客户端断开则立刻取消阻塞返回0，再运行则返回-1
 	while((nReceiveLength = ClientPackage.ppeer->recv(pbuf,ClientPackage.RecvMaxLength)) != -1){
 		//如果传过来一个空数据则不处理，在断连时会传一个空数据
-		if(nReceiveLength != 0){
+		if(nReceiveLength > 0){
 			pbuf[nReceiveLength] = 0;
 			//一旦接收到内容则放入线程中处理，防止因为虚函数的处理内容卡死或等待
 			Threadpackage* pClientPackage = new Threadpackage;
-			char* pBuf = (char *)calloc(nReceiveLength + 1,1);
-			memcpy(pBuf,pbuf,nReceiveLength);
-			ClientPackage.pBuf = pBuf;
+			ClientPackage.pBuf = (char *)calloc(nReceiveLength + 1,1);
+			memcpy(ClientPackage.pBuf,pbuf,nReceiveLength);
 			ClientPackage.nReceiveLength = nReceiveLength;
 			*pClientPackage = ClientPackage;
 			DWORD ThreadID = 0;
 			Create_Thread(ThreadClientHandling,pClientPackage,ThreadID);
-			//在虚函数处理完pBuf缓冲区数据之后则把接收值
-			nReceiveLength = 0;
 		}
 		//如果发送了空数据则必须向客户端发送一条任意数据才能让通路知道已经断连返回-1退出循环
 		else ClientPackage.ppeer->send("",1);

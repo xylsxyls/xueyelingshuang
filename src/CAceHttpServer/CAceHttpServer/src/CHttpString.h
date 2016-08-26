@@ -1,11 +1,11 @@
 #pragma once
 #include "Cjson/CjsonAPI.h"
+#include "CAceHttpServerMacro.h"
 #include <afxwin.h>
-#include "CAceHttpClientMacro.h"
 
 //默认报头有两个，Content-Type和Content-Length
 class Cjson;
-class CAceHttpClientAPI CHttpString{
+class CHttpString{
 public:
 	CString str;
 

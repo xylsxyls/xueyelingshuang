@@ -11,6 +11,7 @@ typedef struct Threadpackage{
 	ACE_INET_Addr* paddr;
 	ACE_Time_Value* ptimeout;
 	int CheckKeyClient;
+	char* pBuf;
 	CString strProtocol;
 }Threadpackage;
 
@@ -32,6 +33,26 @@ void CAceHttpClient::init(CString strIP,int port,int ConnectWaitTime,int RecvMax
 	return;
 }
 
+DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
+	Threadpackage package = *((Threadpackage *)lpParam);
+	delete (Threadpackage *)lpParam;
+
+	package.pmutex->Lock();
+	//判断数据类型
+	if(package.DataStyle == 1){
+		CHttpString str;
+		str.str = package.pBuf;
+		//把收到的返回信息传给虚函数
+		package.pThis->ReceiveRspJson(str.GetJsonData(),package.strProtocol,package.pThis->mapCheck[package.CheckKeyClient],str);
+		//删除map中的寄存包裹
+		package.pThis->DeleteMap(package.CheckKeyClient);
+	}
+	package.pmutex->Unlock();
+
+	free(package.pBuf);
+	return 0;
+}
+
 DWORD WINAPI ThreadRecv(LPVOID lpParam){
 	Threadpackage package = *((Threadpackage *)lpParam);
 	delete (Threadpackage *)lpParam;
@@ -42,17 +63,15 @@ DWORD WINAPI ThreadRecv(LPVOID lpParam){
 	//有值才处理
 	if(RecvLength >= 0){
 		pbuf[RecvLength] = 0;
-		package.pmutex->Lock();
-		//判断数据类型
-		if(package.DataStyle == 1){
-			CHttpString str;
-			str.str = pbuf;
-			//把收到的返回信息传给虚函数
-			package.pThis->ReceiveRspJson(str.GetJsonData(),package.pThis->mapCheck[package.CheckKeyClient],package.strProtocol,str);
-			//删除map中的寄存包裹
-			package.pThis->DeleteMap(package.CheckKeyClient);
-		}
-		package.pmutex->Unlock();
+
+		DWORD ThreadID = 0;
+		package.pBuf = (char *)calloc(RecvLength + 1,1);
+		memcpy(package.pBuf,pbuf,RecvLength);
+		Threadpackage *ppackage = new Threadpackage;
+		*ppackage = package;
+		Create_Thread(ThreadRecvHandling,ppackage,ThreadID);
+
+		
 	}
 	//使用之后释放，在定时器里释放
 	//delete package.ppeer;
@@ -95,7 +114,7 @@ int CAceHttpClient::SendJsonReq(Cjson jsonReq,CString strProtocol,Cjson jsonChec
 	
 	//发送
 	CHttpString strSendString;
-	strSendString.init(strIP,port);
+	strSendString.InitClient(strIP,port);
 	strSendString.ProtocolStyle(strProtocol,1);
 	strSendString.SetJson(jsonReq);
 	int nResult = ppeer->send((LPSTR)(LPCTSTR)strSendString.str,strSendString.str.GetLength()); //发送数据
@@ -133,9 +152,24 @@ void CAceHttpClient::DeleteMap(int CheckKeyClient){
 	//可能会出现找不到的情况，如果服务端回复变成群发的话
 	return;
 }
-
+/*
 class CClient : public CAceHttpClient{
-	void ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage,CString strProtocol,CHttpString str){
+	void ReceiveRspJson(Cjson jsonRsp,CString strProtocol,Cjson jsonCheckPackage,CHttpString str){
+		if(strProtocol == "/TCWeb/httpweb/getRoomList.do"){
+			AfxMessageBox(jsonRsp.toCString());
+			int x = jsonRsp["result"].size();
+			AfxMessageBox(jsonCheckPackage.toCString());
+		}
 		return;
 	}
 };
+
+int main(int argc,char* argv[]){
+	CClient client;
+	client.init("192.168.1.46",8280,3,10240);
+	Cjson jsonpackage;
+	jsonpackage["2"] = 2;
+	client.SendJsonReq(Cjson(),"/TCWeb/httpweb/getRoomList.do",jsonpackage);
+	getchar();
+	return 0;
+}*/

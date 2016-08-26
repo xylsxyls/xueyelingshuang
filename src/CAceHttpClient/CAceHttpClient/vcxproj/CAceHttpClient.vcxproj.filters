@@ -41,5 +41,11 @@
     <ClInclude Include="..\src\CDeleteMapWatch.h">
       <Filter>CDeleteMapWatch</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\CAceHttpClientAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CAceHttpClientMacro.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

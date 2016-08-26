@@ -543,7 +543,7 @@ void Cjson::SaveHwnd(HWND hwnd){
 }
 
 HWND Cjson::GetHwnd(int num){
-	if(vecHwnd.size() < num) return 0;
+	if(vecHwnd.size() < (unsigned int)num) return 0;
 	return vecHwnd.at(num - 1);
 }
 

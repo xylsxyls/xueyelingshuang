@@ -8,6 +8,7 @@
 #include "CDeleteMapWatch.h"
 #include <map>
 using namespace std;
+#include "CAceHttpClientMacro.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"ACEd.lib")
@@ -15,7 +16,7 @@ using namespace std;
 #pragma comment(lib,"ACE.lib")
 #endif
 
-class CAceHttpClient{
+class CAceHttpClientAPI CAceHttpClient{
 public:
 	ACE_SOCK_Connector* pconnector;
 	ACE_SOCK_Stream* ppeer;
@@ -41,7 +42,7 @@ public:
 	//发送json请求，nDeleteTime为删除map和通路时间
 	int SendJsonReq(Cjson jsonReq,CString strProtocol,Cjson jsonCheckPackage = Cjson(),int nDeleteTime = 10,int sendTimes = 3);
 	//接收返回json
-	virtual void ReceiveRspJson(Cjson jsonRsp,Cjson jsonCheckPackage,CString strProtocol,CHttpString str) = 0;
+	virtual void ReceiveRspJson(Cjson jsonRsp,CString strProtocol,Cjson jsonCheckPackage,CHttpString str) = 0;
 	//删除map
 	void DeleteMap(int CheckKeyClient);
 };
