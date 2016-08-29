@@ -9,6 +9,7 @@
 #include <map>
 using namespace std;
 #include "CAceHttpClientMacro.h"
+#include "Cjson/CjsonAPI.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"ACEd.lib")
@@ -33,13 +34,15 @@ public:
 	int DataStyle;
 	int ifPeerExist;
 	CDeleteMapWatch Watch;
+	int nCharset;
+
 public:
 	~CAceHttpClient();
 
 public:
-	//1表示使用json
-	void init(CString strIP,int port,int ConnectWaitTime,int RecvMaxLength,int DataStyle = 1);
-	//发送json请求，nDeleteTime为删除map和通路时间
+	//1表示使用json，1表示使用ANSI
+	void init(CString strIP,int port,int ConnectWaitTime,int RecvMaxLength,int DataStyle = 1,int nCharset = 1);
+	//发送json请求，nDeleteTime为删除map和通路时间，如果写0的话则表示发一个收到后再删一个，可能同时存在多条通路
 	int SendJsonReq(Cjson jsonReq,CString strProtocol,Cjson jsonCheckPackage = Cjson(),int nDeleteTime = 10,int sendTimes = 3);
 	//接收返回json
 	virtual void ReceiveRspJson(Cjson jsonRsp,CString strProtocol,Cjson jsonCheckPackage,CHttpString str) = 0;

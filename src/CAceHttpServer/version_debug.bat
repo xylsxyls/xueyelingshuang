@@ -12,6 +12,12 @@ call %xueyelingshuang%src\Cjson\version_debug.bat
 set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 ::如果需要获取依赖dll-----------------------------------------------------------
+call %xueyelingshuang%src\CCharset\version_debug.bat
+
+::call完之后都需要重新set
+set bat=%~dp0
+set xueyelingshuang=%bat%..\..\
+::如果需要获取依赖dll-----------------------------------------------------------
 
 ::编译工程
 call "%bat%scripts\rebuild_CAceHttpServer.py" debug

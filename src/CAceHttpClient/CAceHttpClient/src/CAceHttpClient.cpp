@@ -1,6 +1,7 @@
 #include <SDKDDKVer.h>
 #include "CAceHttpClient.h"
 #include "CDeleteMapWatch.h"
+#include "CCharset/CCharsetAPI.h"
 
 typedef struct Threadpackage{
 	CAceHttpClient* pThis;
@@ -13,6 +14,7 @@ typedef struct Threadpackage{
 	int CheckKeyClient;
 	char* pBuf;
 	CString strProtocol;
+	int nDeleteTime;
 }Threadpackage;
 
 CAceHttpClient::~CAceHttpClient(){
@@ -21,7 +23,7 @@ CAceHttpClient::~CAceHttpClient(){
 	delete ptimeout;
 }
 
-void CAceHttpClient::init(CString strIP,int port,int ConnectWaitTime,int RecvMaxLength,int DataStyle){
+void CAceHttpClient::init(CString strIP,int port,int ConnectWaitTime,int RecvMaxLength,int DataStyle,int nCharset){
 	paddr = new ACE_INET_Addr(port,strIP);
 	pconnector = new ACE_SOCK_Connector;
 	ptimeout = new ACE_Time_Value(ConnectWaitTime,0);
@@ -30,6 +32,7 @@ void CAceHttpClient::init(CString strIP,int port,int ConnectWaitTime,int RecvMax
 	this->RecvMaxLength   = RecvMaxLength;
 	this->DataStyle       = DataStyle    ;
 	CheckKeyClient        = 0            ;
+	this->nCharset        = nCharset     ;
 	return;
 }
 
@@ -42,6 +45,10 @@ DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
 	if(package.DataStyle == 1){
 		CHttpString str;
 		str.str = package.pBuf;
+		int nResult = str.GetCharset();
+		if(nResult == 1);
+		else if(nResult == 2) str.str = CCharset::Utf8ToAnsi((LPSTR)(LPCTSTR)str.str).c_str();
+		else AfxMessageBox("字符集出错" + str.str);
 		//把收到的返回信息传给虚函数
 		package.pThis->ReceiveRspJson(str.GetJsonData(),package.strProtocol,package.pThis->mapCheck[package.CheckKeyClient],str);
 		//删除map中的寄存包裹
@@ -70,11 +77,9 @@ DWORD WINAPI ThreadRecv(LPVOID lpParam){
 		Threadpackage *ppackage = new Threadpackage;
 		*ppackage = package;
 		Create_Thread(ThreadRecvHandling,ppackage,ThreadID);
-
-		
 	}
 	//使用之后释放，在定时器里释放
-	//delete package.ppeer;
+	if(package.nDeleteTime == 0) delete package.ppeer;
 	free(pbuf);
 	return 0;
 }
@@ -88,18 +93,35 @@ int CAceHttpClient::SendJsonReq(Cjson jsonReq,CString strProtocol,Cjson jsonChec
 	//根据钥匙把包裹存入map中
 	mapCheck[++CheckKeyClient] = jsonCheckPackage;
 
-	WatchPac* pWatchPackage = new WatchPac;
-	pWatchPackage->CheckKeyClient = CheckKeyClient;
-	pWatchPackage->pThis = this;
-	pWatchPackage->ppeer = ppeer;
-	pWatchPackage->pifPeerExist = &ifPeerExist;
-	
-	//如果没有通路
-	if(ifPeerExist != 1){
+	WatchPac* pWatchPackage = NULL;
+	//如果需要启定时器
+	if(nDeleteTime > 0){
+		pWatchPackage = new WatchPac;
+		pWatchPackage->CheckKeyClient = CheckKeyClient;
+		pWatchPackage->pThis = this;
+		pWatchPackage->ppeer = ppeer;
+		pWatchPackage->pifPeerExist = &ifPeerExist;
+		//如果没有通路
+		if(ifPeerExist != 1){
+			//创建一条通路
+			ppeer = new ACE_SOCK_Stream;
+			ifPeerExist = 1;
+			pWatchPackage->ppeer = ppeer;
+			//连接
+			int nResult = pconnector->connect(*ppeer,*paddr,ptimeout);
+			if(nResult != 0){
+				AfxMessageBox("连接失败");
+				return -1;
+			}
+		}
+		//定时器重置
+		else{
+			Watch.CountDown(nDeleteTime * 1000,pWatchPackage);
+		}
+	}
+	else{
 		//创建一条通路
 		ppeer = new ACE_SOCK_Stream;
-		ifPeerExist = 1;
-		pWatchPackage->ppeer = ppeer;
 		//连接
 		int nResult = pconnector->connect(*ppeer,*paddr,ptimeout);
 		if(nResult != 0){
@@ -107,16 +129,13 @@ int CAceHttpClient::SendJsonReq(Cjson jsonReq,CString strProtocol,Cjson jsonChec
 			return -1;
 		}
 	}
-	//定时器重置
-	else{
-		Watch.CountDown(nDeleteTime * 1000,pWatchPackage);
-	}
 	
 	//发送
 	CHttpString strSendString;
-	strSendString.InitClient(strIP,port);
+	strSendString.InitClient(strIP,port,DataStyle,nCharset);
 	strSendString.ProtocolStyle(strProtocol,1);
-	strSendString.SetJson(jsonReq);
+	if(nCharset == 1) strSendString.SetData(jsonReq.toCString("",""));
+	else if(nCharset == 2) strSendString.SetData(CCharset::AnsiToUtf8((LPSTR)(LPCTSTR)jsonReq.toCString("","")).c_str());
 	int nResult = ppeer->send((LPSTR)(LPCTSTR)strSendString.str,strSendString.str.GetLength()); //发送数据
 
 	//线程参数
@@ -130,12 +149,13 @@ int CAceHttpClient::SendJsonReq(Cjson jsonReq,CString strProtocol,Cjson jsonChec
 	ppackage->ptimeout = ptimeout;
 	ppackage->CheckKeyClient = CheckKeyClient;
 	ppackage->strProtocol = strProtocol;
+	ppackage->nDeleteTime = nDeleteTime;
 	//进入线程，用于后台接收服务器发来的数据
 	DWORD ThreadID = 0;
 	Create_Thread(ThreadRecv,ppackage,ThreadID);
 
 	//定时器，过一定时间之后把对应的包裹删除，防止出现因为网络不好对面不回信息的情况
-	Watch.CountDown(nDeleteTime * 1000,pWatchPackage);
+	if(nDeleteTime > 0) Watch.CountDown(nDeleteTime * 1000,pWatchPackage);
 	return nResult;
 }
 

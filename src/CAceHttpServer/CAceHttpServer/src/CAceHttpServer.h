@@ -23,6 +23,7 @@ public:
 	CMutex mutex;
 	//数据格式
 	int DataStyle;
+	int nCharset;
 
 public:
 	CAceHttpServer();
@@ -31,7 +32,7 @@ public:
 public:
 	//打开端口成功之后会有一个线程后台等待客户端连接
 	//一旦有客户端连接则立刻在线程中开子线程用于处理发送的信息，保证一直有一个线程等待连接
-	BOOL init(int port,int RecvMaxLength,int DataStyle = 1);
+	BOOL init(int port,int RecvMaxLength,int DataStyle = 1,int nCharset = 1);
 
 	int SendRspJson(Cjson jsonRsp,CString strProtocol,ACE_SOCK_Stream* ppeer,int sendTimes = 3);
 	//虚函数把所有的通路信息传入，如果设置为空则默认为回复

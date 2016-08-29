@@ -1,5 +1,6 @@
 #include <SDKDDKVer.h>
 #include "CAceHttpServer.h"
+#include "CCharset/CCharsetAPI.h"
 
 typedef struct Threadpackage{
 	CAceHttpServer* pThis;
@@ -30,6 +31,10 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 	if(ClientPackage.DataStyle == 1){
 		CHttpString str;
 		str.str = ClientPackage.pBuf;
+		int nCharset = str.GetCharset();
+		if(nCharset == 1);
+		else if(nCharset == 2) str.str = CCharset::Utf8ToAnsi((LPSTR)(LPCTSTR)str.str).c_str();
+		else AfxMessageBox("字符集出错" + str.str);
 		Cjson jsonRsp = ClientPackage.pThis->ReceiveReqJson(str.GetJsonData(),str.GetProtocol(),str);
 		ClientPackage.pThis->SendRspJson(jsonRsp,str.GetProtocol(),ClientPackage.ppeer);
 	}
@@ -92,7 +97,7 @@ DWORD WINAPI ThreadRecv(LPVOID lpParam){
 	}
 }
 
-BOOL CAceHttpServer::init(int port,int RecvMaxLength,int DataStyle){
+BOOL CAceHttpServer::init(int port,int RecvMaxLength,int DataStyle,int nCharset){
 	ACE_INET_Addr port_to_listen(port); //绑定的端口
 
 	if(pacceptor->open(port_to_listen,1) == -1){ //绑定端口
@@ -100,6 +105,7 @@ BOOL CAceHttpServer::init(int port,int RecvMaxLength,int DataStyle){
 		return 0;
 	}
 	this->DataStyle = DataStyle;
+	this->nCharset  = nCharset ;
 
 	//开一个线程用于阻塞接收
 	//添加一个锁，用户处理的虚函数必须要上锁，当多个客户端连接的时候，必须先处理完一个客户端的数据才能处理第二个
@@ -120,8 +126,9 @@ int CAceHttpServer::SendRspJson(Cjson jsonRsp,CString strProtocol,ACE_SOCK_Strea
 	if(DataStyle == 1){
 		//发送回复包
 		CHttpString strSendString;
-		strSendString.InitServer(1);
-		strSendString.SetJson(jsonRsp);
+		strSendString.InitServer(1,DataStyle,nCharset);
+		if(nCharset == 1) strSendString.SetData(jsonRsp.toCString("",""));
+		else if(nCharset == 2) strSendString.SetData(CCharset::AnsiToUtf8((LPSTR)(LPCTSTR)jsonRsp.toCString("","")).c_str());
 		return ppeer->send((LPSTR)(LPCTSTR)strSendString.str,strSendString.str.GetLength()); //发送数据
 	}
 	return -1;
