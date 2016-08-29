@@ -108,6 +108,7 @@ vector<CRecord> CTable::SelectRecord(CRecord* pCondition,int LineBegin,int LineE
 	
 	int nIsSucceed = mysql_query(mysql,SQL);
 
+	const char *s = mysql_error(mysql);
 	//存储得到的结果
 	MYSQL_RES* result = mysql_store_result(mysql);
 	

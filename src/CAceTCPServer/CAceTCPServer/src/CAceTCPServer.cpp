@@ -28,8 +28,8 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 	Threadpackage ClientPackage = *((Threadpackage *)lpParam);
 	delete (Threadpackage *)lpParam;
 
-	//用户处理的虚函数上锁
-	ClientPackage.pmutex->Lock();
+	//用户处理的虚函数不能上锁，如果一旦有一条线程Sleep则所有的都会被卡住
+	//ClientPackage.pmutex->Lock();
 	//不使用json模式
 	if(ClientPackage.ifUseJson == 0){
 		ClientPackage.pThis->receive(ClientPackage.pBuf,ClientPackage.nReceiveLength,ClientPackage.ppeer);
@@ -45,6 +45,8 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 		if(CheckKeyClient >= 0 && CheckKeyServer == -1){
 			//重置顺序，方便获得返回通路
 			vector<ACE_SOCK_Stream*> vecSendIPPeer;
+			//操作vector加锁
+			ClientPackage.pmutex->Lock();
 			int i = -1;
 			while(i++ != ClientPackage.pThis->vecIPPeer.size() - 1){
 				if(ClientPackage.pThis->vecIPPeer.at(i) != ClientPackage.ppeer){
@@ -52,6 +54,7 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 				}
 			}
 			vecSendIPPeer.push_back(ClientPackage.ppeer);
+			ClientPackage.pmutex->Unlock();
 			Cjson jsonReq = json;
 			jsonReq["MsgID"] = "delete";
 			jsonReq["CheckKeyClient"] = "delete";
@@ -83,7 +86,7 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 		strError.Format("是否使用json值出错，值为%d",ClientPackage.ifUseJson);
 		AfxMessageBox(strError);
 	}
-	ClientPackage.pmutex->Unlock();
+	//ClientPackage.pmutex->Unlock();
 	return 0;
 }
 

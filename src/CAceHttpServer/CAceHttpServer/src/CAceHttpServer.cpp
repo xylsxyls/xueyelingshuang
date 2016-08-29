@@ -25,8 +25,8 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 	Threadpackage ClientPackage = *((Threadpackage *)lpParam);
 	delete (Threadpackage *)lpParam;
 
-	//用户处理的虚函数上锁
-	ClientPackage.pmutex->Lock();
+	//用户处理的虚函数不能上锁，因为一旦有一条因为Sleep等卡住则所有的都被卡住
+	//ClientPackage.pmutex->Lock();
 	//使用json模式
 	if(ClientPackage.DataStyle == 1){
 		CHttpString str;
@@ -43,7 +43,7 @@ DWORD WINAPI ThreadClientHandling(LPVOID lpParam){
 		strError.Format("模式值出错，值为%d",ClientPackage.DataStyle);
 		AfxMessageBox(strError);
 	}
-	ClientPackage.pmutex->Unlock();
+	//ClientPackage.pmutex->Unlock();
 	return 0;
 }
 

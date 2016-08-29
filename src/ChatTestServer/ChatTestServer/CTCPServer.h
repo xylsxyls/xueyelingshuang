@@ -8,6 +8,7 @@ class CTCPServer : public CAceTCPServer{
 public:
 	CMysql* pMysql;
 	CTable* pTable;
+	CMutex mutex;
 	map<CString,ACE_SOCK_Stream*> mapPeer;
 	CTCPServer();
 	~CTCPServer();

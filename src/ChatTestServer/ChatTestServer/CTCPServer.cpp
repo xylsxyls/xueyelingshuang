@@ -64,12 +64,16 @@ Cjson CTCPServer::MessageLoginReq(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSe
 	CString strPassWord = jsonReq["PassWord"].toValue().strValue;
 
 	//把User和通路保存在map里
+	mutex.Lock();
 	mapPeer[strUser] = pvecSendIPPeer->at(0);
+	mutex.Unlock();
 
 	//查看mysql里是否有该用户名，以及密码是否正确
 	CRecord select = CField("User") + CField("PassWord");
 	CRecord condition = CFieldValue(CField("User"),"=",strUser);
+	mutex.Lock();
 	vector<CRecord> record = pTable->SelectRecord(&condition,0,99999,&select);
+	mutex.Unlock();
 
 	Cjson jsonRsp;
 	if(record.size() == 0){
@@ -111,7 +115,9 @@ Cjson CTCPServer::MessageSendTextToAll(Cjson jsonReq,vector<ACE_SOCK_Stream*>* p
 	CString strUser = jsonReq["User"].toValue().strValue;
 	CRecord FieldRecord = CField("NickName");
 	CRecord ConditionRecord = CFieldValue(CField("User"),"=",strUser);
+	mutex.Lock();
 	vector<CRecord> vecRecord = pTable->SelectRecord(&ConditionRecord,0,0,&FieldRecord);
+	mutex.Unlock();
 	if(vecRecord.size() != 1) AfxMessageBox("数据库有多个相同User");
 	Cjson jsonRsp;
 	CString strNickName = vecRecord.at(0).vecFieldValue.at(0).strValue;
@@ -126,10 +132,14 @@ Cjson CTCPServer::MessageUserToAll(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecS
 	CRecord SetRecord = CFieldValue(CField("IsOnline"),"=","1");
 	CRecord Condition = CFieldValue(CField("User"),"=",strUser);
 
+	mutex.Lock();
 	pTable->ReviseRecord(&SetRecord,&Condition);
+	mutex.Unlock();
 	CRecord FieldRecord = CField("NickName");
 	CRecord ConditionRecord = CFieldValue(CField("User"),"=",strUser);
+	mutex.Lock();
 	vector<CRecord> vecRecord = pTable->SelectRecord(&ConditionRecord,0,0,&FieldRecord);
+	mutex.Unlock();
 	if(vecRecord.size() != 1) AfxMessageBox("数据库中有两个同名");
 	CString NickName = vecRecord.at(0).vecFieldValue.at(0).strValue;
 	NickName = NickName.Mid(1,NickName.GetLength() - 2);
@@ -144,7 +154,9 @@ Cjson CTCPServer::MessageRefreshList(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pve
 
 	CRecord FieldRecord = CField("User") + CField("NickName");
 	CRecord ConditionRecord = CFieldValue(CField("IsOnline"),"=","1") + "and" + CFieldValue(CField("User"),"!=",jsonReq["User"].toValue().strValue);
+	mutex.Lock();
 	vector<CRecord> vecRecord = pTable->SelectRecord(&ConditionRecord,0,0,&FieldRecord);
+	mutex.Unlock();
 	Cjson jsonRsp;
 	jsonRsp["NameCount"] = (int)vecRecord.size();
 	int i = -1;
@@ -166,9 +178,13 @@ Cjson CTCPServer::MessageDeleteList(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvec
 	CString strUser = jsonReq["User"].toValue().strValue;
 	CRecord SetRecord = CFieldValue(CField("IsOnline"),"=","0");
 	CRecord Condition = CFieldValue(CField("User"),"=",strUser);
+	mutex.Lock();
 	pTable->ReviseRecord(&SetRecord,&Condition);
+	mutex.Unlock();
 
+	mutex.Lock();
 	mapPeer.erase(strUser);
+	mutex.Unlock();
 
 	Cjson jsonRsp;
 	jsonRsp["User"] = strUser;
@@ -189,7 +205,9 @@ Cjson CTCPServer::MessageChat(Cjson jsonReq,vector<ACE_SOCK_Stream*>* pvecSendIP
 	jsonOpenShowReq["text"] = strText;
 	CRecord FieldRecord = CField("NickName");
 	CRecord ConditionRecord = CFieldValue(CField("User"),"=",strUser);
+	mutex.Lock();
 	vector<CRecord> vecRecord = pTable->SelectRecord(&ConditionRecord,0,0,&FieldRecord);
+	mutex.Unlock();
 	CString strNickName = vecRecord.at(0).vecFieldValue.at(0).strValue;
 	strNickName = strNickName.Mid(1,strNickName.GetLength() - 2);
 	jsonOpenShowReq["NickName"] = strNickName;

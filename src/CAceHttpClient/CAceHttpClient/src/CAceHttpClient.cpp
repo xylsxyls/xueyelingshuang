@@ -40,7 +40,7 @@ DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
 	Threadpackage package = *((Threadpackage *)lpParam);
 	delete (Threadpackage *)lpParam;
 
-	package.pmutex->Lock();
+	//package.pmutex->Lock();
 	//判断数据类型
 	if(package.DataStyle == 1){
 		CHttpString str;
@@ -54,7 +54,7 @@ DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
 		//删除map中的寄存包裹
 		package.pThis->DeleteMap(package.CheckKeyClient);
 	}
-	package.pmutex->Unlock();
+	//package.pmutex->Unlock();
 
 	free(package.pBuf);
 	return 0;

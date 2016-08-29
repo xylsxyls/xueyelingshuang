@@ -16,6 +16,7 @@ class CRecord;
 
 class CMysqlAPI CTable{
 	//表有两个功能，分别管字段和记录
+	//多线程时所有操作外部调用的时候必须上锁，否则底层会返回错误
 public:
 	MYSQL *mysql;
 	CMysqlManager *pMysqlManager;

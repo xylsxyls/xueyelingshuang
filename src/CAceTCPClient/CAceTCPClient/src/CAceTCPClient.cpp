@@ -27,7 +27,7 @@ DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
 	Threadpackage package = *((Threadpackage *)lpParam);
 	delete (Threadpackage *)lpParam;
 
-	package.pmutex->Lock();
+	//package.pmutex->Lock();
 	//判断是否使用json
 	if(package.ifUseJson == 1){
 		//接收的是服务端主动发来的数据，会有两种情况，一种是回复，一种是主动发送
@@ -60,7 +60,7 @@ DWORD WINAPI ThreadRecvHandling(LPVOID lpParam){
 		}
 	}
 	else package.pThis->receive(package.pBuf,package.RecvLength);
-	package.pmutex->Unlock();
+	//package.pmutex->Unlock();
 	free(package.pBuf);
 	return 0;
 }
