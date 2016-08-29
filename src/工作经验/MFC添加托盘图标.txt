@@ -1,0 +1,93 @@
+             托盘图标绘制的函数：
+-------------------------------------------------
+WINSHELLAPI BOOL WINAPI Shell_NotifyIcon(
+DWORD dwMessage,
+PNOTIFYICONDATA pnid
+);
+第一个参数就是负责向系统传递消息的
+　　NIM_ADD
+　　向托盘区域添加一个图标。此时第二个参数lpdata指向的NOTIFYICONDATA结构体中的hWnd和uID成员用来标示这个图标，以便以后再次使用Shell_NotifyIcon对此图标操作。
+　　NIM_DELETE
+　　删除托盘区域的一个图标。此时第二个参数lpdata指向的NOTIFYICONDATA结构体中的hWnd和uID成员用来标示需要被删除的这个图标。
+　　NIM_MODIFY
+　　修改托盘区域的一个图标。此时第二个参数lpdata指向的NOTIFYICONDATA结构体中的hWnd和uID成员用来标示需要被修改的这个图标。
+ 
+ 
+第二个参数是一个NOTIFYIONDATA结构体！
+　　typedef struct _NOTIFYICONDATA {
+　　DWORD cbSize;  //结构体大小
+　　HWND hWnd;  //句柄
+　　UINT uID;
+　　UINT uFlags;      //此成员表明具体哪些其他成员为合法数据（即哪些成员起作用）。
+　　UINT uCallbackMessage;   //应用程序定义的消息标示。
+　　HICON hIcon;
+　　TCHAR szTip[64];
+　　DWORD dwState;
+　　DWORD dwStateMask;
+　　TCHAR szInfo[256];
+　　union {
+　　UINT uTimeout;
+　　UINT uVersion;
+　　};
+
+1.先定义一个消息标示（可以定义于头文件的开头）
+#define MYWM_NOTIFYICON WM_USER+5
+ 
+2.按钮响应消息
+void CMyPlayerDlg::CreateNotifyIcon()
+{
+ NOTIFYICONDATA nd;
+//赋值-----
+ nd.cbSize = sizeof(NOTIFYICONDATA);
+ nd.hWnd = m_hWnd;
+ nd.uID = IDI_ICON;
+ nd.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+ nd.uCallbackMessage = MYWM_NOTIFYICON;       //消息标示
+ nd.hIcon = m_hIcon;
+ strcpy(nd.szTip, "星空旋律");
+ Shell_NotifyIcon(NIM_ADD, &nd);
+}
+ 
+3.OnInitDialog()函数中调用CreateNotifyIcon()
+BOOL CMyPlayerDlg::OnInitDialog()
+{
+     ....
+ 
+  CreateNotifyIcon()
+    ....
+}
+ 
+ 
+4.添加一个按钮响应隐藏窗口消息
+void CMyPlayerDlg::OnBtnHide()
+{
+ // TODO: Add your control notification handler code here
+ ShowWindow(SW_HIDE);
+}
+ 
+==============================================================
+                 响应鼠标点击托盘图标消息
+==============================================================
+5.在 头文件中添加消息函数
+//{{AFX_MSG(CMyPlayerDlg)
+ afx_msg void OnNotifyIcon(WPARAM wParam, LPARAM lParam);
+//}}AFX_MSG
+ 
+6.在源文件中 添加消息映射
+BEGIN_MESSAGE_MAP(CMyPlayerDlg, CDialog)
+ //{{AFX_MSG_MAP(CMyPlayerDlg)
+ ON_MESSAGE(MYWM_NOTIFYICON,OnNotifyIcon)
+ //}}AFX_MSG_MAP
+END_MESSAGE_MAP()
+ 
+7.添加消息响应函数具体内容
+void CMyPlayerDlg::OnNotifyIcon(WPARAM wParam, LPARAM lParam)
+{
+ if (lParam == WM_LBUTTONDBLCLK)
+ {
+  UINT MODE;
+  MODE = IsWindowVisible() ? SW_HIDE : SW_SHOW;  //判断窗口是否显示
+  ShowWindow(MODE);
+ }
+
+}

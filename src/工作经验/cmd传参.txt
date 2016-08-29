@@ -1,0 +1,2 @@
+/C 是外部调cmd时的传参
+ShellExecute(NULL, _T("open"), _T("cmd.exe"), _T("/C TASKKILL /F /IM Tip.exe"), NULL, SW_HIDE);
