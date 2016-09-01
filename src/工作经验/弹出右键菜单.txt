@@ -1,0 +1,13 @@
+::TrackPopupMenu
+
+CMenu menu;
+menu.CreatePopupMenu();
+menu.AppendMenu(MF_DEFAULT,10001,"ÍË³ö");
+::SetForegroundWindow(this->GetSafeHwnd());
+CPoint ptCur;
+::GetCursorPos(&ptCur);
+int nSelect = ::TrackPopupMenu(menu.GetSafeHmenu(), TPM_LEFTALIGN|TPM_RETURNCMD, ptCur.x, ptCur.y, 0, this->GetSafeHwnd(), NULL);
+if(nSelect == 10001){
+	::SendMessage(this->GetSafeHwnd(),DELETEICON,NULL,NULL);
+this->OnOK();
+}

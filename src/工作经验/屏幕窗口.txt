@@ -1,0 +1,7 @@
+获取宽高
+int iWidth = GetSystemMetrics(SM_CXSCREEN);
+	int iHeight = GetSystemMetrics(SM_CYSCREEN);
+移动窗口
+	MoveWindow(iWidth / 2 - 125,iHeight / 2 - 150,250,300);
+让窗口最前
+	SetWindowPos(&CWnd::wndTopMost, 0, 0, 0, 0,  SWP_NOMOVE|SWP_NOSIZE);

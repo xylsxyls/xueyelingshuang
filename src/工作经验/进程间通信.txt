@@ -1,0 +1,26 @@
+获取句柄然后，post也可以
+::SendMessage(hwnd,10003,NULL,NULL);
+接收方
+ON_MESSAGE(10003,Exit)
+LRESULT CTipDlg::Exit(WPARAM wParam, LPARAM lParam)
+
+发送字符串
+CGetPath get;
+	HWND hwnd = get.GetHwndByProcessId(get.GetProcessID("Tip.exe").at(0));
+	int length = strlen(strText);
+	char* pszText = (char*)calloc(length + 1,1);
+	memcpy(pszText,strText,strlen(strText));
+	COPYDATASTRUCT cpd; // 给COPYDATASTRUCT结构赋值
+	cpd.dwData = 0;
+	cpd.cbData = length + 1;
+	cpd.lpData = pszText;
+	::SendMessage(hwnd,WM_COPYDATA,NULL,(LPARAM)&cpd);
+	free(pszText);
+
+接收方
+ON_MESSAGE(WM_COPYDATA,ShowText)
+LRESULT CTipDlg::ShowText(WPARAM wParam, LPARAM lParam){
+	COPYDATASTRUCT cpd = *(COPYDATASTRUCT*)lParam;
+	CString strText = (char*)cpd.lpData;
+	return 0;
+}

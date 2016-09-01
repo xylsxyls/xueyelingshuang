@@ -1,0 +1,14 @@
+int CurrentPid = GetCurrentProcessId();
+	CGetPath get;
+	vector<int> vecPid = get.GetProcessID("Tip.exe");
+	int i = -1;
+	while(i++ != vecPid.size() - 1){
+		if(vecPid.at(i) != CurrentPid){
+			//先去除右下角的图标
+			::SendMessage(get.GetHwndByProcessId(vecPid.at(i)),DELETEICON,NULL,NULL);
+			//结束进程
+			CString strPid = "";
+			strPid.Format("%d",vecPid.at(i));
+			WinExec("ntsd -c q -p " + strPid, SW_HIDE);
+		}
+	}

@@ -18,4 +18,8 @@ public:
 	//strPath如果传必须传文件夹，寻找文件夹以下，如果不传则寻找当前路径及以下的所有文件夹
 	//flag = 1表示查找文件，2表示查找文件后缀名
 	vector<CString> FindFilePath(CString FileStr,CString strPath = "",BOOL flag = 1);
+	//获取进程pid，传入进程名
+	vector<int> GetProcessID(CString strProcessName);
+	//根据pid获取窗口句柄
+	HWND GetHwndByProcessId(DWORD dwProcessId);
 };

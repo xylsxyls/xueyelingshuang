@@ -2,6 +2,7 @@
 #include "CGetPath.h"
 #include <shlobj.h>
 #include <afxdlgs.h>
+#include<Tlhelp32.h>
 
 CString CGetPath::GetRegOcxPath(CString classid){
 	CString strSubKey;
@@ -104,4 +105,46 @@ vector<CString> CGetPath::FindFilePath(CString FileStr,CString strPath,BOOL flag
 	vector<CString> VecPath;
 	RecursionFindFile(strPath,FileStr,&VecPath,flag); //strPath为当前进程路径的上层目录
 	return VecPath;
+}
+
+vector<int> CGetPath::GetProcessID(CString strProcessName){
+	HANDLE myhProcess;
+	PROCESSENTRY32 mype;
+	mype.dwSize = sizeof(PROCESSENTRY32); 
+	BOOL mybRet;
+	//进行进程快照
+	myhProcess = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0); //TH32CS_SNAPPROCESS快照所有进程
+	//开始进程查找
+	mybRet = Process32First(myhProcess,&mype);
+	vector<int> vec;
+	//循环比较，得出ProcessID
+	while(mybRet){
+		if(strProcessName == mype.szExeFile) vec.push_back(mype.th32ProcessID);
+		mybRet = Process32Next(myhProcess,&mype);
+	}
+	return vec;
+}
+
+typedef struct{
+	HWND  hWnd ;
+	DWORD dwPid;
+}WNDINFO;
+
+BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam){   
+	WNDINFO* pInfo = (WNDINFO*)lParam;
+	DWORD dwProcessId = 0;
+	GetWindowThreadProcessId(hWnd, &dwProcessId);
+	if(dwProcessId == pInfo->dwPid){
+		pInfo->hWnd = hWnd;
+		return FALSE;
+	}
+	return TRUE;
+}
+
+HWND CGetPath::GetHwndByProcessId(DWORD dwProcessId){
+	WNDINFO info = {0};
+	info.hWnd = NULL;
+	info.dwPid = dwProcessId;
+	EnumWindows(EnumWindowsProc,(LPARAM)&info);
+	return info.hWnd;
 }

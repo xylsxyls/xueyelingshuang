@@ -1,0 +1,2 @@
+最后一个参数是时间
+notifu.exe /p "提示" /m "DireceX功能未启用" /d 3

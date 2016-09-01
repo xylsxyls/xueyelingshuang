@@ -1,0 +1,3 @@
+操作静态文本获取指针
+pStatic = (CStatic*)GetDlgItem(IDC_STATIC);
+	pStatic->SetWindowText("");
