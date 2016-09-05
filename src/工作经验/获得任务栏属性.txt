@@ -1,0 +1,3 @@
+HWND h = ::FindWindow("Shell_TrayWnd","");
+	RECT r;
+	::GetWindowRect(h,&r);
