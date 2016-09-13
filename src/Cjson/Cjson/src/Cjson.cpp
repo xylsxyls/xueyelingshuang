@@ -31,9 +31,9 @@ int Cjson::size(){
 			//如果有这个字段再返回
 			auto it = ((CjsonA*)TypeValueTemp->pClass)->mapdata.begin();
 			for(;it != ((CjsonA*)TypeValueTemp->pClass)->mapdata.end();it++){
-				if(it->first == pJson->vecField.at(i).field){
+				if(it->first.c_str() == pJson->vecField.at(i).field){
 					//pJson值在[]重载时已经带下去了
-					TypeValueTemp =  &((CjsonA*)TypeValueTemp->pClass)->mapdata[pJson->vecField.at(i).field];
+					TypeValueTemp =  &((CjsonA*)TypeValueTemp->pClass)->mapdata[(LPSTR)(LPCTSTR)(pJson->vecField.at(i).field)];
 					goto rem;
 				}
 			}
@@ -281,10 +281,10 @@ Cjson& Cjson::operator[] (CString field){
 		//如果有这个字段再返回
 		auto it = ((CjsonA*)pClass)->mapdata.begin();
 		for(;it != ((CjsonA*)pClass)->mapdata.end();it++){
-			if(it->first == field){
+			if(it->first.c_str() == field){
 				//返回之前先把pJson的值带下去，因为如果出现不存在的情况，return *this能保证pJson肯定有值
-				((CjsonA*)pClass)->mapdata[field].pJson = this->pJson;
-				return ((CjsonA*)pClass)->mapdata[field];
+				((CjsonA*)pClass)->mapdata[(LPSTR)(LPCTSTR)field].pJson = this->pJson;
+				return ((CjsonA*)pClass)->mapdata[(LPSTR)(LPCTSTR)field];
 			}
 		}
 	}
@@ -346,7 +346,7 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 				if(strTemp == "\"delete\""){
 					auto it = pTypeValueTemp->toJson().mapdata.begin();
 					for(;it!=pTypeValueTemp->toJson().mapdata.end();it++){
-						if(it->first == pTypeValueReturn->pJson->vecField.at(i).field){
+						if(it->first.c_str() == pTypeValueReturn->pJson->vecField.at(i).field){
 							//在释放之后pJson值会丢失，因为释放的是本层Cjson，所以pJson会被重置，所以先取出来
 							//CjsonA *pJsonTemp = pJson;
 							pTypeValueTemp->toJson().mapdata.erase(it);
@@ -363,11 +363,11 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 					//如果找到了一个数组但是用户指定当前层为字段的话说明用户要把数组改为json，应该先到上一层创建一个json，然后再获得创建层map进行赋值
 					if(pTypeValueTemp->type == "class CszValue"){
 						//重新给上一层赋值新的json，以便下面使用
-						pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[pTypeValueReturn->pJson->vecField.at(i - 1).field] = CjsonA();
-						pTypeValueTemp = &(pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[pTypeValueReturn->pJson->vecField.at(i - 1).field]);
+						pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CjsonA();
+						pTypeValueTemp = &(pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)]);
 					}
 					//退回上一层添加或覆盖字段
-					pTypeValueTemp->toJson().mapdata[pTypeValueReturn->pJson->vecField.at(i).field] = (CstrValue)strTemp;
+					pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)] = (CstrValue)strTemp;
 				}
 				break;
 			}
@@ -376,31 +376,31 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 				//如果下一层是field说明需要创建一个json，以便下面使用
 				if(pTypeValueReturn->pJson->vecField.at(i + 1).field != ""){
 					//重新给上一层赋值新的json，以便下面使用
-					pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[pTypeValueReturn->pJson->vecField.at(i - 1).field] = CjsonA();
+					pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CjsonA();
 				}
 				//如果下一层是数字说明需要创建一个数组，以便下面使用
 				else{
-					pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[pTypeValueReturn->pJson->vecField.at(i - 1).field] = CszValue();
+					pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CszValue();
 				}
 			}
 			//如果当前层能找到
 			auto it = pTypeValueTemp->toJson().mapdata.begin();
 			for(;it != pTypeValueTemp->toJson().mapdata.end();it++){
 				//如果能找到，直接跳出，因为只是取下一层指针所以此处不需要操作
-				if(it->first == pTypeValueReturn->pJson->vecField.at(i).field) break;
+				if(it->first.c_str() == pTypeValueReturn->pJson->vecField.at(i).field) break;
 			}
 			if(it == pTypeValueTemp->toJson().mapdata.end()){
 				//如果下一层是field说明需要创建一个json
 				if(pTypeValueReturn->pJson->vecField.at(i + 1).field != ""){
-					pTypeValueTemp->toJson().mapdata[pTypeValueReturn->pJson->vecField.at(i).field] = CjsonA();
+					pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)] = CjsonA();
 				}
 				//如果下一层是数字说明需要创建一个数组
 				else{
-					pTypeValueTemp->toJson().mapdata[pTypeValueReturn->pJson->vecField.at(i).field] = CszValue();
+					pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)] = CszValue();
 				}
 			}
 			//把找到的下一层Cjson传给指针
-			pTypeValueTemp = &(pTypeValueTemp->toJson().mapdata[pTypeValueReturn->pJson->vecField.at(i).field]);
+			pTypeValueTemp = &(pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)]);
 		}
 		//否则是数字
 		else{
@@ -408,7 +408,7 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 			if(pTypeValueTemp->type != "class CszValue"){
 				//map在改数据的时候会先执行这个类的析构，所以不用管节点内存泄漏
 				//重新给上一层赋值新的空数组，以便下面使用
-				pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[pTypeValueReturn->pJson->vecField.at(i - 1).field] = CszValue();
+				pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CszValue();
 			}
 			//如果vec中的数字比数组实际大小大则追加在末尾
 			if(pTypeValueReturn->pJson->vecField.at(i).num >= (int)pTypeValueTemp->tosz().vecszValue.size()){

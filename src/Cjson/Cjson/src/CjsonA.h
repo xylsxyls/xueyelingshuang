@@ -1,6 +1,8 @@
 #pragma once
+#include <unordered_map>
 #include <map>
 #include <vector>
+#include <string>
 using namespace std;
 #include <afxwin.h>
 #include "CjsonMacro.h"
@@ -13,7 +15,7 @@ class CFieldType;
 
 class CjsonAPI CjsonA{
 public:
-	map<CString,Cjson> mapdata;
+	unordered_map<string,Cjson> mapdata;
 
 public:
 	//给new出来的空间用，这里一直为空

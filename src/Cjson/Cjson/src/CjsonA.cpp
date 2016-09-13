@@ -199,12 +199,12 @@ void CjsonA::LoadOneModule(CString strName,CString strValue,BOOL flag){
 		if(strValueTemp.type == -1){
 			mapError[strValue] = "不可识别的字段值";
 		}
-		mapdata[strName] = (Cjson)strValueTemp;
+		mapdata[(LPSTR)(LPCTSTR)strName] = (Cjson)strValueTemp;
 	}
 	//如果找到了一个数组
 	if(flag == 2){
 		CszValue szValueTemp = strValue;
-		mapdata[strName] = szValueTemp;
+		mapdata[(LPSTR)(LPCTSTR)strName] = szValueTemp;
 		if(szValueTemp.mapszError.size() != 0){
 			auto it = szValueTemp.mapszError.begin();
 			for(;it != szValueTemp.mapszError.end();it++){
@@ -216,7 +216,7 @@ void CjsonA::LoadOneModule(CString strName,CString strValue,BOOL flag){
 	if(flag == 3){
 		CjsonA jsonTemp;
 		map<CString,CString> mapJsonError = jsonTemp.LoadJson(strValue);
-		mapdata[strName] = jsonTemp;
+		mapdata[(LPSTR)(LPCTSTR)strName] = jsonTemp;
 
 		if(mapJsonError.size() != 0){
 			auto it = mapJsonError.begin();
@@ -282,7 +282,7 @@ vector<CString> CjsonA::GetField(){
 	vector<CString> vecField;
 	auto it = mapdata.begin();
 	for(;it != mapdata.end();it++){
-		vecField.push_back(it->first);
+		vecField.push_back(it->first.c_str());
 	}
 	return vecField;
 }
@@ -298,7 +298,7 @@ CString CjsonA::toCString(CString NewLineSign,CString FormatSign,int FormatLengt
 	auto it = mapdata.begin();
 	for(;it != mapdata.end();it++){
 		i++;
-		CString strFieldTemp = it->first;
+		CString strFieldTemp = it->first.c_str();
 		Cjson TypeValueTemp = it->second;
 		strResult = AddTypeValue(strResult,&nInsert,!i,strFieldTemp,TypeValueTemp,NewLineSign,FormatSign,FormatLength);
 	}
