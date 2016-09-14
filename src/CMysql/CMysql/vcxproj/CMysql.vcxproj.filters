@@ -1,0 +1,129 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="CAttri">
+      <UniqueIdentifier>{bb64c313-a667-4b70-a197-88512a7bc8cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CCondition">
+      <UniqueIdentifier>{f5153bbb-0240-4176-9f42-deae0c8a85ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CMysql">
+      <UniqueIdentifier>{d76724aa-7b0d-4402-99d9-1f58dbb3b087}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CDataBase">
+      <UniqueIdentifier>{8a8a59e7-7e1a-41b0-b781-dfd11b70eff1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CIP">
+      <UniqueIdentifier>{6254c77a-650b-4b8f-b93a-cda6437307a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CRecord">
+      <UniqueIdentifier>{2bfa43c7-6164-4135-a768-6fa40d5079c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CSelect">
+      <UniqueIdentifier>{6e08dadb-f3c3-4173-97dc-e6b6b9907083}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CTable">
+      <UniqueIdentifier>{b901289b-2628-477f-a524-37955ded7d1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CUpdate">
+      <UniqueIdentifier>{7c6e9cf5-031e-49be-a79d-6c8508e358d6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CUser">
+      <UniqueIdentifier>{8a817020-f07f-4a1c-992d-d790d1e3e0c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CValue">
+      <UniqueIdentifier>{2da5888b-0bfb-4ae2-8df8-5ca853764e1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CTableField">
+      <UniqueIdentifier>{eae97128-c806-428a-8bc3-57f5d50ed42c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\CAttri.cpp">
+      <Filter>CAttri</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CCondition.cpp">
+      <Filter>CCondition</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CMysql.cpp">
+      <Filter>CMysql</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CDataBase.cpp">
+      <Filter>CDataBase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CIP.cpp">
+      <Filter>CIP</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CRecord.cpp">
+      <Filter>CRecord</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CSelect.cpp">
+      <Filter>CSelect</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CTable.cpp">
+      <Filter>CTable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CUpdate.cpp">
+      <Filter>CUpdate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CUser.cpp">
+      <Filter>CUser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CValue.cpp">
+      <Filter>CValue</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CTableField.cpp">
+      <Filter>CTableField</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CAttri.h">
+      <Filter>CAttri</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CCondition.h">
+      <Filter>CCondition</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CMysql.h">
+      <Filter>CMysql</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CDataBase.h">
+      <Filter>CDataBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CIP.h">
+      <Filter>CIP</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CRecord.h">
+      <Filter>CRecord</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CSelect.h">
+      <Filter>CSelect</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CTable.h">
+      <Filter>CTable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CUpdate.h">
+      <Filter>CUpdate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CUser.h">
+      <Filter>CUser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CValue.h">
+      <Filter>CValue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CTableField.h">
+      <Filter>CTableField</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

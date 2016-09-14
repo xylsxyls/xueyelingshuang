@@ -1,0 +1,4 @@
+½øÈëmysqlÖ´ÐÐ
+mysql> set global table_open_cache=16384;
+
+mysql> set global table_definition_cache=16384;

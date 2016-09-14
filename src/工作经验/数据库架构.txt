@@ -1,0 +1,52 @@
+表里有很多组记录，记录.字段名=字段值
+给的结果也是一张表
+
+class CTable{
+public:
+list<CRecord> listRecord;
+int HowManyRecord();
+}
+
+class CRecord{
+public:
+//一条记录中字段名对应字段值
+map<CString,CValue> mapValue;
+//一条记录中字段名对应字段属性
+map<CString,CAttri> mapAttri;
+}
+
+CTable table;
+table[0]["ID"]来访问，如果访问失败各项返回-1
+
+AddRecord
+CRecord record;
+record["ID"] = 3;
+如果要填入空值
+record["ID"] = "null";
+record.mapAttri["ID"].PrimaryKey = 1;进行设置字段属性
+pTable->AddRecord(&record);//剩余根据缺省值情况进行填充
+如果ID不存在则动态添加ID字段值，其余按缺省值填充
+如果一整条记录全是空值则不添加此记录
+
+Delete
+CCondition condition;
+pTable->Delete(&condition);
+根据条件删除记录
+
+class CUpdate{
+public:
+//一条记录中字段名对应字段值
+map<CString,CValue> mapValue;
+}
+
+UpdateRecord
+CCondition condition;
+CUpdate update;
+update["ID"] = 1;
+pTable->UpdateRecord(&update,&condition);
+
+SelectRecord
+CSelect select;
+select.Add("User","ID");
+select.Add("User","Name");
+table = pTable->SelectRecord(&select,&condition);

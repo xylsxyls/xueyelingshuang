@@ -1,0 +1,43 @@
+#include <unordered_map>
+#include <string>
+#include <iostream>
+using namespace std;
+
+class Key{
+public:
+	std::string first;
+	std::string second;
+	bool operator==(const Key& k)const{
+		return k.first == first && k.second == second;
+	}
+};
+
+struct KeyHash{
+	//这个函数的意义是把不同的Key转换为不同的值，可以通过hash里的内置算法也可以自定义一个把不同的Key转换成不同值的算法
+	std::size_t operator()(const Key& k) const{
+		//return strlen(k.first.c_str()) + strlen(k.second.c_str());
+		return std::hash<std::string>()(k.first + k.second);
+	}
+};
+
+int main(){
+	//如果通过strlen的算法则会出现两个Key转换出了相同数字的情况，则需要进一步调Key==重载来判断是不是相等
+	std::unordered_map<Key, std::string, KeyHash> m6;
+	Key a;
+	a.first = "123456";
+	a.second = "234567";
+	Key b;
+	b.first = "567891";
+	b.second = "567890";
+	Key c;
+	c.first = "22222";
+	c.second = "33333";
+	m6[a] = "123456";
+	m6[b] = "456789";
+	m6[c] = "456222";
+	cout<<m6[a]<<endl;
+	cout<<m6[b]<<endl;
+	cout<<m6[c]<<endl;
+	getchar();
+	return 0;
+}
