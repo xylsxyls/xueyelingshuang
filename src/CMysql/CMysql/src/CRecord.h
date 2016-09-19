@@ -1,6 +1,5 @@
 #pragma once
-#include <SDKDDKVer.h>
-#include <afx.h>
+#include <afxwin.h>
 #include <map>
 using namespace std;
 #include "CValue.h"
@@ -9,8 +8,9 @@ using namespace std;
 class CAttri;
 class CRecord{
 public:
+	//使用table中的字段名
 	map<CString,CValue> mapValue;
-	map<CString,CAttri> mapAttri;
+
 	CString strCurrentField;
 public:
 	CRecord();
@@ -18,6 +18,8 @@ public:
 	CRecord operator=(const CRecord& record);
 
 public:
-	CAttri& operator[](CString Field);
-	CAttri operator=(const CAttri& attri);
+	CValue operator[](CString Field);
+
+public:
+	CString ToCString();
 };

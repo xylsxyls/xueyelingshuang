@@ -1,3 +1,4 @@
+#include <SDKDDKVer.h>
 #include "CUpdate.h"
 
 CUpdate::CUpdate(){
@@ -23,4 +24,13 @@ CUpdate CUpdate::operator=(const CValue& value){
 CUpdate CUpdate::operator[](CString Field){
 	strCurrentField = Field;
 	return *this;
+}
+
+CString CUpdate::ToCString(){
+	CString strResult;
+	for(auto it = mapValue.begin();it != mapValue.end();it++){
+		strResult = strResult + it->first + "=" + it->second.strValue + ",";
+	}
+	strResult.Delete(strResult.GetLength() - 1,1);
+	return strResult;
 }

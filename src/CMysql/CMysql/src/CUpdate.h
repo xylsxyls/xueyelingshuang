@@ -1,6 +1,5 @@
 #pragma once
-#include <SDKDDKVer.h>
-#include <afx.h>
+#include <afxwin.h>
 #include <map>
 using namespace std;
 #include "CValue.h"
@@ -19,4 +18,7 @@ public:
 public:
 	CUpdate operator=(const CValue& value);
 	CUpdate operator[](CString Field);
+	
+public:
+	CString ToCString();
 };

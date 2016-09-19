@@ -1,13 +1,13 @@
 #pragma once
-#include <SDKDDKVer.h>
-#include <afx.h>
+#include <afxwin.h>
 #include <list>
 #include "CTableField.h"
 using namespace std;
 
 class CSelect{
 public:
-	list<CTableField> list;
+	//先传入tf然后传入list
+	list<CTableField> listTf;
 	CTableField tf;
 
 public:
@@ -19,4 +19,7 @@ public:
 	CSelect();
 	CSelect(const CSelect& sel);
 	CSelect operator=(const CSelect& sel);
+
+public:
+	CString ToCString();
 };

@@ -1,3 +1,4 @@
+#include <SDKDDKVer.h>
 #include "CRecord.h"
 
 CRecord::CRecord(){
@@ -5,23 +6,24 @@ CRecord::CRecord(){
 }
 
 CRecord::CRecord(const CRecord& record){
-	this->mapAttri = record.mapAttri;
 	this->mapValue = record.mapValue;
 }
 
 CRecord CRecord::operator=(const CRecord& record){
-	this->mapAttri = record.mapAttri;
 	this->mapValue = record.mapValue;
 	return *this;
 }
 
-CAttri& CRecord::operator[](CString Field){
+CValue CRecord::operator[](CString Field){
 	this->strCurrentField = Field;
-	//把this指针带过去
-	mapAttri[Field].pRecord = this;
-	return mapAttri[Field];
+	return mapValue[Field];
 }
 
-CAttri CRecord::operator=(const CAttri& attri){
-	return mapAttri[strCurrentField];
+CString CRecord::ToCString(){
+	CString strResult;
+	for(auto it = mapValue.begin();it != mapValue.end();it++){
+		strResult = strResult + it->first + "=" + it->second.strValue + ",";
+	}
+	strResult.Delete(strResult.GetLength() - 1,1);
+	return strResult;
 }

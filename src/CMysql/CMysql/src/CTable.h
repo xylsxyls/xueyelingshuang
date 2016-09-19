@@ -1,22 +1,19 @@
 #pragma once
-#include <SDKDDKVer.h>
-#include <afx.h>
-#include "mysql.h"
-#include "CMysqlManager.h"
-#include "CField.h"
+#include <afxwin.h>
+#include "CCondition.h"
 #include "CRecord.h"
-#include "vec.inl"
-#include "API.h"
+#include "CUpdate.h"
+#include "CSelect.h"
+#include "mysql.h"
 #include <vector>
 using namespace std;
 
 class CMysqlManager;
 class CField;
 class CRecord;
-
-class CMysqlAPI CTable{
+class CTable{
 	//表有两个功能，分别管字段和记录
-	//多线程时所有操作外部调用的时候必须上锁，否则底层会返回错误
+	//表里有字段名和字段属性的map，记录里有字段名和字段值的map
 public:
 	MYSQL *mysql;
 	CMysqlManager *pMysqlManager;
@@ -24,36 +21,34 @@ public:
 public:
 	CString TableName;
 	//记录是否存在test默认字段
-	BOOL IfHasT_e_s_t;
+	bool IfHasT_e_s_t;
+
+	map<CString,CAttri> mapAttri;
 
 public:
-	CTable(CMysqlManager *pMysqlManager,CString TableName,BOOL IfHasT_e_s_t = 0);
-	~CTable();
+	CTable(CMysqlManager *pMysqlManager,CString TableName,bool IfHasT_e_s_t = 0);
+	void Close();
+
+public:
+	CRecord operator[](int num);
 
 public:
 	//AddRecord和DeleteRecord传参中的CRecord含义不同
 	//添加记录，CRecord中记录有一组字段属性和字段值，这些合成一条记录
-	//BOOL的返回值原因是如果设置了主键，可能出现插不进的情况
-	BOOL AddRecord(CRecord* pSetRecord);
+	//bool的返回值原因是如果设置了主键，可能出现插不进的情况
+	int Add(CRecord* pRecord);
 	//删除记录，CRecord中记录有一组字段属性和字段值，作为查询条件，符合即删除，AndOr为1表示and，为0表示or，默认为and
-	void DeleteRecord(CRecord* pConditionRecord);
+	int Delete(CCondition* pCondition);
 	//修改记录
-	void ReviseRecord(CRecord* pSetRecord,CRecord* pConditionRecord);
+	int UpdateRecord(CUpdate* pUpdate,CCondition* pCondition);
 	//查询记录
-	vector<CRecord> SelectRecord(CRecord* pCondition = NULL,int LineBegin = 0,int LineEnd = 0,CRecord* pSelectField = NULL,CRecord *pOrderField = NULL,int AscDesc = 1);
+	vector<CRecord> SelectRecord(CSelect *pSelect,CCondition* pCondition);
+
 	//搜索关键词
 	vector<CRecord> SearchKey(CString FieldName,CString KeyName);
-
-	//添加字段
-	void AddField(CField *pField,BOOL ifExists = 1);
-	//删除字段
-	BOOL DropField(CField *pField,BOOL ifExists = 1);
-	//获取字段信息，由于mysql提供的API内部存在静态变量，由于不知道有没有加锁，可能会线程不安全
-	vector<CField> GetField();
 
 	//将整张表导入，导入表结构和数据
 	void ImportTable(CString mysql_exe_path,CString sqlpath);
 	//将整张表导出，导出表结构和数据
 	void ExportTable(CString mysqldump_exe_path,CString sqlpath);
-	
 };

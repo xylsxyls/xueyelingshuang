@@ -1,3 +1,4 @@
+#include <SDKDDKVer.h>
 #include "CCondition.h"
 
 CCondition CCondition::operator&&(CCondition con){

@@ -1,3 +1,4 @@
+#include <SDKDDKVer.h>
 #include "CAttri.h"
 
 CAttri::CAttri(){
@@ -7,7 +8,6 @@ CAttri::CAttri(){
 	bNotNull = 0;
 	nAutoIncrement = 0;
 	bZeroFill = 0;
-	pRecord = NULL;
 }
 
 CAttri::CAttri(const CAttri& attri){
@@ -20,7 +20,6 @@ CAttri::CAttri(const CAttri& attri){
 	nAutoIncrement = attri.nAutoIncrement;
 	bZeroFill = attri.bZeroFill;
 	strComment = attri.strComment;
-	pRecord = attri.pRecord;
 }
 
 CAttri CAttri::operator = (const CAttri& attri){
@@ -33,11 +32,5 @@ CAttri CAttri::operator = (const CAttri& attri){
 	nAutoIncrement = attri.nAutoIncrement;
 	bZeroFill = attri.bZeroFill;
 	strComment = attri.strComment;
-	pRecord = attri.pRecord;
 	return *this;
-}
-
-CRecord& CAttri::operator=(const CValue& value){
-	this->pRecord->mapValue[Name] = value;
-	return *(this->pRecord);
 }

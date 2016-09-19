@@ -49,6 +49,9 @@
     <Filter Include="CTableField">
       <UniqueIdentifier>{eae97128-c806-428a-8bc3-57f5d50ed42c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CMysqlManager">
+      <UniqueIdentifier>{385bf239-12af-4bc2-8053-5723261d722a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CAttri.cpp">
@@ -87,6 +90,9 @@
     <ClCompile Include="..\src\CTableField.cpp">
       <Filter>CTableField</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CMysqlManager.cpp">
+      <Filter>CMysqlManager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CAttri.h">
@@ -124,6 +130,9 @@
     </ClInclude>
     <ClInclude Include="..\src\CTableField.h">
       <Filter>CTableField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CMysqlManager.h">
+      <Filter>CMysqlManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,16 +1,13 @@
 #pragma once
-#include <SDKDDKVer.h>
-#include <afx.h>
+#include <afxwin.h>
 #include "mysql.h"
 #include "CMysqlManager.h"
 #include "CDataBase.h"
-#include "API.h"
-#include "vec.inl"
 
 class CMysqlManager;
 class CDataBase;
 
-class CMysqlAPI CUser{
+class CUser{
 	//用户管数据库
 	//CUser被创建时必须初始化所有成员变量
 public:
@@ -18,22 +15,22 @@ public:
 	CMysqlManager* pMysqlManager;
 
 public:
-	CString Ip;
+	CString IP;
 	int port;
 	CString User;
 	CString PassWord;
 
 public:
-	CUser(CMysqlManager *pMysqlManager,CString Ip,int port,CString User,CString PassWord);
-	~CUser();
+	CUser(CMysqlManager *pMysqlManager,CString IP,int port,CString User,CString PassWord);
+	void Close();
 
 public:
 
 	//创建数据库，返回1表示成功，ifExists = 1表示无论存不存在都创建，ifExists = 0表示，如果不存在则创建，存在则返回错误
 	//创建之后自动转到这个数据库
-	CDataBase* CreateDataBase(CString NewdbName,BOOL ifExists = 1);
+	CDataBase* CreateDataBase(CString NewdbName,bool ifExists = 1);
 	//销毁数据库，同时释放pDataBase空间
-	void DropDataBase(CDataBase *pDataBase);
+	int DropDataBase(CDataBase *pDataBase);
 	//打开需要操作的数据库
 	CDataBase* OpenDataBaseInterface(CString dbName);
 	//关闭数据库

@@ -1,24 +1,12 @@
+#include <SDKDDKVer.h>
 #include "CMysql.h"
 
-CMysql::CMysql(CString IP,CString User,CString PassWord,CString dbName,int port){
+CMysql::CMysql(CString IP,int port,CString User,CString PassWord,CString dbName){
 	//初始化管理者
 	pMysqlManager = new CMysqlManager;
-
-	//初始化数据库
-	mysql = mysql_init(NULL);
-	//默认连接到本机mysql的test数据库，连接之后就默认开始读这个数据库
-	MYSQL *IsSucceed = mysql_real_connect(mysql,IP,User,PassWord,dbName,port,NULL,0);
-	//如果连接失败则释放，但是不释放管理者，管理者只有在CMysql被释放时才会释放
-	if(IsSucceed == NULL){
-		//释放空间
-		mysql_close(mysql);
-		mysql = 0;
-		//所有成员函数的执行条件改为0
-		pMysqlManager->MysqlSucceed = 0;
-	}
 	
 	//把初始化的参数传给类中的记录参数类
-	this->Ip = IP;
+	this->IP = IP;
 	this->port = port;
 	this->User = User;
 	this->PassWord = PassWord;
@@ -27,22 +15,16 @@ CMysql::CMysql(CString IP,CString User,CString PassWord,CString dbName,int port)
 
 CMysql::~CMysql(){
 	delete pMysqlManager;
-	pMysqlManager = 0;
-	//释放空间，判断不等于0是因为有可能开始就没连接上直接被置为0了
-	if(mysql != 0){
-		mysql_close(mysql);
-		mysql = 0;
-	}
 }
 
-//只是将Ip和port的记录存入新开的类
-CIp* CMysql::OpenIpInterface(){
-	return OpenIpInterface(Ip,port);
+//只是将IP和port的记录存入新开的类
+CIP* CMysql::OpenIPInterface(){
+	return OpenIPInterface(IP,port);
 }
 
-CIp* CMysql::OpenIpInterface(CString Ip,int port){
+CIP* CMysql::OpenIPInterface(CString IP,int port){
 	//在创建时内存所有成员变量均被初始化
-	return new CIp(pMysqlManager,Ip,port);
+	return new CIP(pMysqlManager,IP,port);
 }
 
 CUser* CMysql::OpenUserInterface(){
@@ -51,7 +33,7 @@ CUser* CMysql::OpenUserInterface(){
 
 CUser* CMysql::OpenUserInterface(CString User,CString PassWord){
 	//在创建时内存所有成员变量均被初始化
-	return new CUser(pMysqlManager,Ip,port,User,PassWord);
+	return new CUser(pMysqlManager,IP,port,User,PassWord);
 }
 
 CDataBase* CMysql::OpenDataBaseInterface(){
@@ -59,33 +41,22 @@ CDataBase* CMysql::OpenDataBaseInterface(){
 }
 
 CDataBase* CMysql::OpenDataBaseInterface(CString dbName){
-	//在创建时内存所有成员变量均被初始化
-	CDataBase* pDataBase = new CDataBase(pMysqlManager,dbName);
-
-	//将新开的CDataBase里的连接线进行连接
-	MYSQL *IsSucceed = mysql_real_connect(pDataBase->mysql,Ip,User,PassWord,dbName,port,NULL,0);
-	//如果连接失败则释放，但是不释放管理者，管理者只有在CMysql被释放时才会释放
-	if(IsSucceed == NULL){
-		delete pDataBase;
-		pDataBase = 0;
-		//所有成员函数的执行条件改为0
-		pMysqlManager->MysqlSucceed = 0;
-	}
+	bool bSucceed = 0;
+	CDataBase* pDataBase = new CDataBase(&bSucceed,pMysqlManager,IP,port,User,PassWord,dbName);
+	if(bSucceed == 0) pDataBase = 0;
 	return pDataBase;
 }
 
-CTable* CMysql::OpenTableInterface(CString TableName,BOOL AutoCommit){
+CTable* CMysql::OpenTableInterface(CString TableName,bool AutoCommit){
 	//在创建时内存所有成员变量均被初始化
 	CTable* pTable = new CTable(pMysqlManager,TableName);
 
 	//将新开的CDataBase里的连接线进行连接
-	MYSQL *IsSucceed = mysql_real_connect(pTable->mysql,Ip,User,PassWord,dbName,port,NULL,0);
+	MYSQL *IsSucceed = mysql_real_connect(pTable->mysql,IP,User,PassWord,dbName,port,NULL,0);
 	//如果连接失败则释放，但是不释放管理者，管理者只有在CMysql被释放时才会释放
 	if(IsSucceed == NULL){
 		delete pTable;
 		pTable = 0;
-		//所有成员函数的执行条件改为0
-		pMysqlManager->MysqlSucceed = 0;
 	}
 	return pTable;
 }
@@ -108,8 +79,6 @@ void CMysql::SelectOtherIPDataBase(CString IP,CString User,CString PassWord,CStr
 	else MysqlSucceed = 0;
 	return;
 }
-
-
 
 void CMysql::SelectTable(CString TableName){
 	if(MysqlSucceed != 1) return;

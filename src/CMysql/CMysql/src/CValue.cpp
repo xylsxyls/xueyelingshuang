@@ -1,4 +1,6 @@
+#include <SDKDDKVer.h>
 #include "CValue.h"
+#include "CAttri.h"
 
 CValue::CValue(){
 	this->Type = 0;

@@ -34,20 +34,28 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\props\CMysql.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\props\CMysql.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(ProjectDir)\..\..\..\..\lib\</OutDir>
+    <IntDir>$(ProjectDir)\Debug\</IntDir>
+    <TargetName>$(ProjectName)d</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir)\..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -70,6 +78,7 @@
     <ClCompile Include="..\src\CDataBase.cpp" />
     <ClCompile Include="..\src\CIP.cpp" />
     <ClCompile Include="..\src\CMysql.cpp" />
+    <ClCompile Include="..\src\CMysqlManager.cpp" />
     <ClCompile Include="..\src\CRecord.cpp" />
     <ClCompile Include="..\src\CSelect.cpp" />
     <ClCompile Include="..\src\CTable.cpp" />
@@ -84,6 +93,7 @@
     <ClInclude Include="..\src\CDataBase.h" />
     <ClInclude Include="..\src\CIP.h" />
     <ClInclude Include="..\src\CMysql.h" />
+    <ClInclude Include="..\src\CMysqlManager.h" />
     <ClInclude Include="..\src\CRecord.h" />
     <ClInclude Include="..\src\CSelect.h" />
     <ClInclude Include="..\src\CTable.h" />

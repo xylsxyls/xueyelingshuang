@@ -1,6 +1,5 @@
 #pragma once
-#include <SDKDDKVer.h>
-#include <afx.h>
+#include <afxwin.h>
 #include "CValue.h"
 #include "CCondition.h"
 
