@@ -1,0 +1,2 @@
+È¥ÖØ£¬Ç¶Ì×²éÑ¯
+select count(*) from (select distinct xing, name from B) AS M;
