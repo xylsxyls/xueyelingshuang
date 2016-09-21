@@ -61,14 +61,13 @@ int CTable::Add(CRecord* pRecord){
 int CTable::Delete(CCondition* pCondition){
 	CString SQL = "DELETE FROM " + TableName + " WHERE " + pCondition->strSQL;
 
-
 	//return mysql_query(pDataBase->mysql,SQL);
 	return 0;
 }
 
 int CTable::UpdateRecord(CUpdate* pUpdate,CCondition* pCondition){
 	CString SQL = "UPDATE " + TableName + " SET " + pUpdate->ToCString() + " WHERE " + pCondition->strSQL;
-	AfxMessageBox(SQL);
+	//AfxMessageBox(SQL);
 	//return mysql_query(pDataBase->mysql,SQL);
 	return 0;
 }

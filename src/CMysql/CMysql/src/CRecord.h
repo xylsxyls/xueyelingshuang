@@ -16,8 +16,10 @@ public:
 	CRecord operator=(const CRecord& record);
 
 public:
-	CValue& operator[](CString Field);
+	//这里不能用引用，因为如果是引用则引用了局部变量
+	CValue operator[](CString Field);
 
 public:
 	CString ToCString();
+
 };

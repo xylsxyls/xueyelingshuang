@@ -1,6 +1,9 @@
 #include <SDKDDKVer.h>
 #include "CValue.h"
 #include "CAttri.h"
+#include "CTable.h"
+
+CTable* CValue::pTable = NULL;
 
 CValue::CValue(){
 	this->Type = 0;
@@ -71,4 +74,8 @@ bool CValue::operator!= (const CValue& value){
 		this->nValue != value.nValue &&
 		this->dValue != value.dValue &&
 		this->strValue != value.strValue;
+}
+
+CAttri* CValue::operator->(){
+	return &(this->pTable->mapAttri["User"]);
 }

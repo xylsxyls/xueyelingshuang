@@ -17,4 +17,7 @@ public:
 	CAttri();
 	CAttri(const CAttri& attri);
 	CAttri operator= (const CAttri& attri);
+
+	void operator->();
+	void a();
 };

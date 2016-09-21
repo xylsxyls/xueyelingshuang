@@ -64,6 +64,7 @@ CTable* CMysql::OpenTableInterface(CString TableName,bool AutoCommit){
 		delete pTable;
 		pTable = 0;
 	}
+	CValue::pTable = pTable;
 	return pTable;
 }
 
@@ -118,5 +119,8 @@ int main(){
 	rec["ID"] = 3;
 	pTable->Add(&rec);
 	pTable->Delete(&con);
+	//rec["User"].pTable->mapAttri["User"].Name = "123456";
+	rec["User"]->Name = "123456";
+	pTable->Add(&rec);
 	return 0;
 }
