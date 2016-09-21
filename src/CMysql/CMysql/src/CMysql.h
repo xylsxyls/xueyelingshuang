@@ -1,22 +1,11 @@
 #pragma once
 #include <afxwin.h>
-#include "mysql.h"
-#include "CIP.h"
-#include "CUser.h"
-#include "CDataBase.h"
-#include "CTable.h"
-#include "CMysqlManager.h"
-#include <vector>
-using namespace std;
-
-typedef int MultiBool;
 
 class CMysqlManager;
 class CIP;
 class CUser;
 class CDataBase;
 class CTable;
-
 class CMysql{
 	//在删除表之后必须紧接着转到另一张表再进行操作，否则会报错
 	//bool ifExists = 1，表示默认必定创建或销毁，如果手动赋值0，则带有是否存在的判断，并根据情况返回相应错误值
@@ -62,6 +51,3 @@ public:
 	//void SelectTable(CString TableName);
 };
 
-int main(){
-	return 0;
-}

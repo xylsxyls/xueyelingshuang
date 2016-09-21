@@ -1,12 +1,9 @@
 #pragma once
 #include <afxwin.h>
 #include "mysql.h"
-#include "CMysqlManager.h"
-#include "CDataBase.h"
 
 class CMysqlManager;
 class CDataBase;
-
 class CUser{
 	//用户管数据库
 	//CUser被创建时必须初始化所有成员变量

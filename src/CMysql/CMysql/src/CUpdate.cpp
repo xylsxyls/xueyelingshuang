@@ -21,7 +21,7 @@ CUpdate CUpdate::operator=(const CValue& value){
 	return *this;
 }
 
-CUpdate CUpdate::operator[](CString Field){
+CUpdate& CUpdate::operator[](CString Field){
 	strCurrentField = Field;
 	return *this;
 }

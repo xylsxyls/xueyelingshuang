@@ -12,8 +12,8 @@ public:
 
 public:
 	//sel("User")["ID"];
-	CSelect operator()(CString Table);
-	CSelect operator[](CString Field);
+	CSelect& operator()(CString Table);
+	CSelect& operator[](CString Field);
 
 public:
 	CSelect();

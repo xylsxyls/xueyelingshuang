@@ -1,5 +1,7 @@
 #include <SDKDDKVer.h>
 #include "CDataBase.h"
+#include "CMysqlManager.h"
+#include "CTable.h"
 
 CDataBase::CDataBase(bool* bSucceed,CMysqlManager* pMysqlManager,CString IP,int port,CString User,CString PassWord,CString dbName){
 	//从外部导入管理者指针
@@ -38,9 +40,9 @@ CTable* CDataBase::CreateTable(CString TableName,CString FieldName,BOOL type,int
 	CTable* pTable = NULL;
 	if(nIsSucceed == 0){
 		//新开一个表接口并为他的内部建立一个连接线
-		pTable = new CTable(pMysqlManager,TableName,1);
+		pTable = new CTable(pMysqlManager,this,TableName,1);
 		//把数据库里的内部连接线重新再制造一个放进CTable内
-		mysql_real_connect(pTable->mysql,IP,User,PassWord,dbName,port,NULL,0);
+		mysql_real_connect(pTable->pDataBase->mysql,IP,User,PassWord,dbName,port,NULL,0);
 	}
 	return pTable;
 }
@@ -61,9 +63,9 @@ CTable* CDataBase::OpenTableInterface(CString TableName,bool AutoCommit){
 	//结果中如果行数 == 1说明确实有这张表
 	if(mysql_store_result(mysql)->row_count == 1){
 		//新开一个表接口并为他的内部建立一个连接线
-		pTable = new CTable(pMysqlManager,TableName);
+		pTable = new CTable(pMysqlManager,this,TableName);
 		//把数据库里的内部连接线重新再制造一个放进CTable内
-		mysql_real_connect(pTable->mysql,IP,User,PassWord,dbName,port,NULL,0);
+		mysql_real_connect(pTable->pDataBase->mysql,IP,User,PassWord,dbName,port,NULL,0);
 	}
 	return pTable;
 }

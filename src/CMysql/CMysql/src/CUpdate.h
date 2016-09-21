@@ -17,7 +17,7 @@ public:
 	CUpdate operator=(const CUpdate& upd);
 public:
 	CUpdate operator=(const CValue& value);
-	CUpdate operator[](CString Field);
+	CUpdate& operator[](CString Field);
 	
 public:
 	CString ToCString();

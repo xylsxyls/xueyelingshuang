@@ -1,12 +1,12 @@
 #include <SDKDDKVer.h>
 #include "CSelect.h"
 
-CSelect CSelect::operator()(CString Table){
+CSelect& CSelect::operator()(CString Table){
 	tf.Table = Table;
 	return *this;
 }
 
-CSelect CSelect::operator[](CString Field){
+CSelect& CSelect::operator[](CString Field){
 	tf.Field = Field;
 	listTf.push_back(tf);
 	return *this;

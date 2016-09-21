@@ -1,6 +1,9 @@
 #include <SDKDDKVer.h>
 #include "CMysqlManager.h"
-#include <typeinfo>
+#include "CIP.h"
+#include "CUser.h"
+#include "CDataBase.h"
+#include "CTable.h"
 
 CMysqlManager::CMysqlManager(){
 
@@ -88,8 +91,8 @@ bool CMysqlManager::DeleteOne(CDataBase* pDelete){
 
 bool CMysqlManager::DeleteOne(CTable* pDelete){
 	//关闭类内连接线
-	if(pDelete->mysql != 0){
-		mysql_close(pDelete->mysql);
+	if(pDelete->pDataBase->mysql != 0){
+		mysql_close(pDelete->pDataBase->mysql);
 	}
 	for(auto itTable = listTable.begin();itTable != listTable.end();itTable++){
 		if(*itTable == pDelete){

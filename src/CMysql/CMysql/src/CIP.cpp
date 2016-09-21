@@ -1,5 +1,7 @@
 #include <SDKDDKVer.h>
 #include "CIP.h"
+#include "CDataBase.h"
+#include "CMysqlManager.h"
 
 CIP::CIP(CMysqlManager *pMysqlManager,CString IP,int port){
 	//从外部导入管理者指针

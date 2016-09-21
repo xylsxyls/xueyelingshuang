@@ -1,10 +1,6 @@
 #pragma once
 #include <list>
 using namespace std;
-#include "CIP.h"
-#include "CUser.h"
-#include "CDataBase.h"
-#include "CTable.h"
 
 class CIP;
 class CUser;

@@ -1,5 +1,7 @@
 #include <SDKDDKVer.h>
 #include "CUser.h"
+#include "CMysqlManager.h"
+#include "CDataBase.h"
 
 CUser::CUser(CMysqlManager *pMysqlManager,CString IP,int port,CString User,CString PassWord){
 	//从外部导入管理者指针

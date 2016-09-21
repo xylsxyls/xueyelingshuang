@@ -14,7 +14,7 @@ CRecord CRecord::operator=(const CRecord& record){
 	return *this;
 }
 
-CValue CRecord::operator[](CString Field){
+CValue& CRecord::operator[](CString Field){
 	this->strCurrentField = Field;
 	return mapValue[Field];
 }

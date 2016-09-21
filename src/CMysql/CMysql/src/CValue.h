@@ -1,5 +1,7 @@
 #pragma once
 #include <afxwin.h>
+#include <string>
+using namespace std;
 
 class CAttri;
 class CValue{
@@ -15,6 +17,8 @@ public:
 public:
 	CValue();
 	CValue(CString strValue);
+	CValue(char* szValue);
+	CValue(string strValue);
 	CValue(int nValue);
 	CValue(double dValue);
 

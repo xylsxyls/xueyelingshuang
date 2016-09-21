@@ -1,8 +1,20 @@
 #include <SDKDDKVer.h>
 #include "CTable.h"
 #include "CMysqlManager.h"
+#include "CDataBase.h"
+#include "CCondition.h"
+#include "CUpdate.h"
+#include "CSelect.h"
 
-CTable::CTable(CMysqlManager *pMysqlManager,CString TableName,bool IfHasT_e_s_t){
+
+CTable::CTable(){
+	//从外部导入管理者指针
+	this->pMysqlManager = NULL;
+	this->IfHasT_e_s_t = 0;
+	this->pDataBase = NULL;
+}
+
+CTable::CTable(CMysqlManager *pMysqlManager,CDataBase *pDataBase,CString TableName,bool IfHasT_e_s_t){
 	//从外部导入管理者指针
 	this->pMysqlManager = pMysqlManager;
 	//先把新开的指针放到容器里
@@ -10,7 +22,7 @@ CTable::CTable(CMysqlManager *pMysqlManager,CString TableName,bool IfHasT_e_s_t)
 
 	this->TableName = TableName;
 	this->IfHasT_e_s_t = IfHasT_e_s_t;
-	mysql = mysql_init(NULL);
+	this->pDataBase = pDataBase;
 }
 
 void CTable::Close(){
@@ -20,11 +32,21 @@ void CTable::Close(){
 	pMysqlManager->DeleteOne(this);
 }
 
+CRecord CTable::operator[](int num){
+	int n = 0;
+	for(auto it = listRecord.begin();it != listRecord.end();it++){
+		if(n == num) return *it;
+		n++;
+	}
+	return CRecord();
+}
+
 int CTable::Add(CRecord* pRecord){
 	//有强转，不需要判断是否为设置记录
-	CString SQL = "insert into " + TableName + " set " + pRecord->ToCString();
+	CString SQL = "INSERT INTO " + TableName + " SET " + pRecord->ToCString();
 	
-	int nIsSucceed = mysql_query(mysql,SQL);
+	int nIsSucceed = 0;
+	//nIsSucceed = mysql_query(pDataBase->mysql,SQL);
 	//CString error = mysql_error(mysql);
 	
 	//if(nIsSucceed != 0){
@@ -37,19 +59,27 @@ int CTable::Add(CRecord* pRecord){
 }
 
 int CTable::Delete(CCondition* pCondition){
-	CString SQL = "delete from " + TableName + " where " + pCondition->strSQL;
-	return mysql_query(mysql,SQL);
+	CString SQL = "DELETE FROM " + TableName + " WHERE " + pCondition->strSQL;
+
+
+	//return mysql_query(pDataBase->mysql,SQL);
+	return 0;
 }
 
 int CTable::UpdateRecord(CUpdate* pUpdate,CCondition* pCondition){
-	CString SQL = "update " + TableName + " set " + pUpdate->ToCString() + " where " + pCondition->strSQL;
-	return mysql_query(mysql,SQL);
+	CString SQL = "UPDATE " + TableName + " SET " + pUpdate->ToCString() + " WHERE " + pCondition->strSQL;
+	AfxMessageBox(SQL);
+	//return mysql_query(pDataBase->mysql,SQL);
+	return 0;
 }
 
-vector<CRecord> CTable::SelectRecord(CSelect *pSelect,CCondition* pCondition){
+CTable CTable::SelectRecord(CSelect *pSelect,CCondition* pCondition){
 	//用于存放查询到的记录
 	
-	vector<CRecord> vecRecord;/*
+	CTable vecRecord;
+	CString SQL = "SELECT " + pSelect->ToCString() + " FROM " + TableName + " WHERE " + pCondition->strSQL;
+	int x = 3;
+	/*
 	//行数
 	//CString strBeginEndLine = "";
 	//if(LineEnd > LineBegin && LineBegin >= 0) strBeginEndLine.Format("%d,%d",LineBegin,LineEnd);
@@ -108,56 +138,15 @@ vector<CRecord> CTable::SelectRecord(CSelect *pSelect,CCondition* pCondition){
 	return vecRecord;
 }
 
-vector<CRecord> CTable::SearchKey(CString FieldName,CString KeyName){
-	
-	//用于存放查询到的记录
-	vector<CRecord> vecRecord;/*
-	if(pMysqlManager->MysqlSucceed != 1) return vecRecord;
-
-	CString SQL = "select * from " + TableName + " where " + FieldName + " like '" + KeyName + "'";
-
-	int nIsSucceed = mysql_query(mysql,SQL);
-
-	//存储得到的结果
-	MYSQL_RES* result = mysql_store_result(mysql);
-
-	int i = -1;
-	//行数
-	while(i++ != result->row_count - 1){
-		int j = -1;
-		//先找到第一行的值，然后根据当前行数转next找到对应的行
-		MYSQL_ROWS* pRow = result->data->data;
-		int temp = i;
-		while(temp-- != 0) pRow = pRow->next;
-		//准备一个空记录
-		CRecord record;
-		//列数循环，把有效值循环加到记录中
-		while(j++ != result->field_count - 1){
-			//字段和字段值是根据列数来循环的，所以同用一个变量
-			CString FieldName = ((result->fields) + j)->name; //分别获得每行的字段名
-			int nType = ((result->fields) + j)->type; //类型
-			int length = ((result->fields) + j)->length; //长度
-			CField field(FieldName,nType,length);
-			CString strValue = pRow->data[j];
-			CFieldValue FieldValue(field,strValue);
-			record = record + FieldValue;
-		}
-		vecRecord.push_back(record);
-	}
-
-	if(nIsSucceed != 0) pMysqlManager->MysqlSucceed = 0;*/
-	return vecRecord;
-}
-
 void CTable::ImportTable(CString mysql_exe_path,CString sqlpath){
 	CString para = "";
-	CString strPasswd = mysql->passwd;
+	CString strPasswd = pDataBase->mysql->passwd;
 	//首先是主机和用户名
-	para = para + " -h" + mysql->host + " -u" + mysql->user;
+	para = para + " -h" + pDataBase->mysql->host + " -u" + pDataBase->mysql->user;
 	//如果有密码加上密码
 	if(strPasswd != "")  para = para + " -p" + strPasswd;
 	//最后是需要导入的数据库名
-	para = para + " " + mysql->db + " < " + sqlpath;
+	para = para + " " + pDataBase->mysql->db + " < " + sqlpath;
 
 	//执行程序，ShellExecute不行
 	system("\"" + mysql_exe_path + "\"" + para);
@@ -167,13 +156,13 @@ void CTable::ImportTable(CString mysql_exe_path,CString sqlpath){
 
 void CTable::ExportTable(CString mysqldump_exe_path,CString sqlpath){
 	CString para = "";
-	CString strPasswd = mysql->passwd;
+	CString strPasswd = pDataBase->mysql->passwd;
 	//首先是主机和用户名
-	para = para + " -h" + mysql->host + " -u" + mysql->user;
+	para = para + " -h" + pDataBase->mysql->host + " -u" + pDataBase->mysql->user;
 	//如果有密码加上密码
 	if(strPasswd != "")  para = para + " -p" + strPasswd;
 	//最后是需要导出的数据库和表名
-	para = para + " " + mysql->db + " " + TableName + " > " + sqlpath;
+	para = para + " " + pDataBase->mysql->db + " " + TableName + " > " + sqlpath;
 	
 	//执行程序，ShellExecute不行
 	system("\"" + mysqldump_exe_path + "\"" + para);

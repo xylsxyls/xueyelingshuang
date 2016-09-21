@@ -1,5 +1,10 @@
 #include <SDKDDKVer.h>
 #include "CMysql.h"
+#include "CMysqlManager.h"
+#include "CDataBase.h"
+#include "CTable.h"
+#include "CIP.h"
+#include "CUser.h"
 
 CMysql::CMysql(CString IP,int port,CString User,CString PassWord,CString dbName){
 	//初始化管理者
@@ -48,11 +53,12 @@ CDataBase* CMysql::OpenDataBaseInterface(CString dbName){
 }
 
 CTable* CMysql::OpenTableInterface(CString TableName,bool AutoCommit){
+	CDataBase* pDataBase = OpenDataBaseInterface(dbName);
 	//在创建时内存所有成员变量均被初始化
-	CTable* pTable = new CTable(pMysqlManager,TableName);
+	CTable* pTable = new CTable(pMysqlManager,pDataBase,TableName);
 
 	//将新开的CDataBase里的连接线进行连接
-	MYSQL *IsSucceed = mysql_real_connect(pTable->mysql,IP,User,PassWord,dbName,port,NULL,0);
+	MYSQL *IsSucceed = mysql_real_connect(pTable->pDataBase->mysql,IP,User,PassWord,dbName,port,NULL,0);
 	//如果连接失败则释放，但是不释放管理者，管理者只有在CMysql被释放时才会释放
 	if(IsSucceed == NULL){
 		delete pTable;
@@ -86,3 +92,31 @@ void CMysql::SelectTable(CString TableName){
 	ConnectParameter.TableName = TableName;
 	return;
 }*/
+
+#include "CTableField.h"
+#include "CCondition.h"
+#include "CUpdate.h"
+#include "CSelect.h"
+int main(){
+	CCondition con;
+	con && (CTableField()("User")["Name"] && CTableField()("Department")["strName"]);
+	con || (CTableField()("User")["ID"] || CTableField()("User")["ID"]);
+	!con;
+	CUpdate upd;
+	upd["User"] = "a";
+	upd["departID"] = 3;
+	CSelect sel;
+	CSelect s;
+	s = sel("User");sel["ID"];
+	sel("Depart")["Name"];
+	CMysql mysql;
+	CTable* pTable = mysql.OpenTableInterface("test",1);
+	pTable->UpdateRecord(&upd,&con);
+	pTable->SelectRecord(&sel,&con);
+	CRecord rec;
+	rec["User"] = "3";
+	rec["ID"] = 3;
+	pTable->Add(&rec);
+	pTable->Delete(&con);
+	return 0;
+}

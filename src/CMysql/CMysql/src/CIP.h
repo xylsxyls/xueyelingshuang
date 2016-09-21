@@ -1,11 +1,7 @@
 #pragma once
 #include <afxwin.h>
 #include "mysql.h"
-#include "CMysqlManager.h"
-#include "CUser.h"
-#include "CDataBase.h"
 
-class CUser;
 class CDataBase;
 class CMysqlManager;
 class CIP{

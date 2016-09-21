@@ -1,5 +1,7 @@
 #include <SDKDDKVer.h>
 #include "CTableField.h"
+#include "CValue.h"
+#include "CCondition.h"
 
 CTableField CTableField::operator()(CString Table){
 	this->Table = Table;

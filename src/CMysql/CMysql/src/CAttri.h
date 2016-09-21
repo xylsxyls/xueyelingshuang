@@ -1,9 +1,7 @@
 #pragma once
 #include <afxwin.h>
 #include "CValue.h"
-#include "CRecord.h"
 
-class CRecord;
 class CAttri{
 public:
 	bool Type;

@@ -1,8 +1,8 @@
 #pragma once
 #include <afxwin.h>
-#include "CValue.h"
-#include "CCondition.h"
 
+class CValue;
+class CCondition;
 class CTableField{
 public:
 	CString Table;

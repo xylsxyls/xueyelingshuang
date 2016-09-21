@@ -13,7 +13,21 @@ CValue::CValue(CString strValue){
 	this->Type = 1;
 	this->nValue = 0;
 	this->dValue = 0;
-	this->strValue = strValue;
+	this->strValue = "'" + strValue + "'";
+}
+
+CValue::CValue(char* szValue){
+	this->Type = 1;
+	this->nValue = 0;
+	this->dValue = 0;
+	this->strValue = this->strValue + "'" + szValue + "'";
+}
+
+CValue::CValue(string strValue){
+	this->Type = 1;
+	this->nValue = 0;
+	this->dValue = 0;
+	this->strValue = ("'" + strValue + "'").c_str();
 }
 
 CValue::CValue(int nValue){

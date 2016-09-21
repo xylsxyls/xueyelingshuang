@@ -1,13 +1,9 @@
 #pragma once
 #include <afxwin.h>
 #include "mysql.h"
-#include "CMysqlManager.h"
-#include "CTable.h"
 
 class CTable;
 class CMysqlManager;
-
-
 class CDataBase{
 	//数据库管表
 public:
