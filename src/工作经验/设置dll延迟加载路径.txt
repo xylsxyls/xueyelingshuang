@@ -1,0 +1,57 @@
+头文件
+
+#include <vector>
+using namespace std;
+typedef int MultiBool;
+//递归查找文件或文件后缀名并返回文件绝对路径，放到返回值的vector里，不查找文件夹
+//如果不传路径，查找范围为当前进程及以下
+//flag = 1表示查找文件，2表示查找文件后缀名
+vector<CString> Find_And_Get_Absolute_Path(CString FileStr,CString strPath = "",MultiBool flag = 1);
+
+//设置dll加载路径，必须是相对路径，相对于运行的exe
+int SetDllPath(int number,...);
+//变长参数只传入名字，没有后缀名，默认不带d，函数会根据是否是debug自动设置动态库路径
+int SetDllPath(int number,...);
+
+调用方式int x = SetDllPath(3,"ACE","activate_sdp","sdp_mcd");
+
+
+CString SetOneDllPath(CString strDllName){
+	CString error = "";
+	vector<CString> vecPath = Find_And_Get_Absolute_Path(strDllName);
+	//如果当前进程路径下出现一个或多个同名dll
+	if(vecPath.size() != 1){
+		if(vecPath.size() == 0) error = "当前进程下找不到" + strDllName;
+		else{
+			error = "当前进程下找到多个" + strDllName + "，绝对路径分别为";
+			int i = -1;
+			while(i++ != vecPath.size()){
+				if(i != 0) error = error + "，";
+				error = error + vecPath.at(i);
+			}
+		}
+		return error;
+	}
+	SetDllDirectory(vecPath.at(0));
+	return "1";
+}
+
+int SetDllPath(int number,...){
+	va_list parameterlist;
+	va_start(parameterlist,number);
+	while(number-- != 0){
+		//取出设置的相对路径
+		CString strDllName = va_arg(parameterlist,char*);
+#if _DEBUG
+		strDllName = strDllName + "d.dll";
+#else
+		strDllName = strDllName + ".dll";
+#endif
+		//设置路径，失败返回说明
+		CString result = SetOneDllPath(strDllName);
+		if(result != "1") AfxMessageBox(result);
+		SetDllDirectory(strDllName);
+	}
+	va_end(parameterlist);
+	return 0;
+}

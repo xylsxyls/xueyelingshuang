@@ -1,0 +1,327 @@
+ <ocx_player> : invoke method ( ResetLayOut ) with arguments (  ) ... 
+ <ocx_player> : invoke method ( SetLayOut ) with arguments ( 1 ) ... 
+ <ocx_player> : receive response message: <{"cmd":"set_layout_ack","msgtype":"response","func_id":"","params":{"code":1,"desc":"","total":0,"curpage":0,"result":[]}}>. 
+ receive play response message: <{"cmd":"set_layout_ack","msgtype":"response","func_id":"","params":{"code":1,"desc":"","total":0,"curpage":0,"result":[]}}>. 
+ send cmd to sie : {"json_msg":{"json_id":"268_sierequest","cmd":"uer_login_req","func_id":"tc_1470122125606","session_id":1},"params":{"strUserID":"admin","strPassword":"1234","strServiceIP":"192.168.2.46","nServicePort":9100}} 
+ <ocx_player> : invoke method ( StopPlayByWinID ) with arguments ( -1 ) ... 
+ <ocx_player> : invoke method ( GetPlayState ) with arguments ( -1 ) ... 
+ <ocx_player> : invoke method ( ResetLayOut ) with arguments (  ) ... 
+ <ocx_player> : invoke method ( SetLayOut ) with arguments ( 67 ) ... 
+ <ocx_player> : receive response message: <{"cmd":"set_layout_ack","msgtype":"response","func_id":"","params":{"code":3,"desc":"","total":0,"curpage":0,"result":[]}}>. 
+ receive play response message: <{"cmd":"set_layout_ack","msgtype":"response","func_id":"","params":{"code":3,"desc":"","total":0,"curpage":0,"result":[]}}>. 
+ <ocx_player> : invoke method ( GetPlaySession ) with arguments (  ) ... 
+ <Player Get Session List > :[313] 
+ <ocx_player> : invoke method ( StartRealPlaybyServiceUrl ) with arguments ( 313, 'A00-A001130000001-A001310000001-A000000001', '法官', '192.168.2.46', '9000', 0, 1, 1 ) ... 
+ <ocx_player> : invoke method ( GetPlaySession ) with arguments (  ) ... 
+ <Player Get Session List > :[313,314] 
+ <ocx_player> : invoke method ( StartRealPlaybyServiceUrl ) with arguments ( 314, 'A00-A001130000002-A001310000002-A000000003', '原告(公诉人,检查机关)', '192.168.2.46', '9000', 1, 1, 1 ) ... 
+ <ocx_player> : invoke method ( GetPlaySession ) with arguments (  ) ... 
+ <Player Get Session List > :[313,314,315] 
+ <ocx_player> : invoke method ( StartRealPlaybyServiceUrl ) with arguments ( 315, 'A00-A001130000003-A001310000003-A000000005', '被告(辩护人,执行机关)', '192.168.2.46', '9000', 2, 1, 1 ) ... 
+ <ocx_player> : receive response message: <{"cmd":"set_active_wnd_rsp","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"nCWinID":0,"nSWinID":-1,"nComWin":0,"nAlertWin":0,"nVideoState":0,"serviceUrl":"A00-A001130000001-A001310000001-A000000001","cameraName":"法官","nEventType":0,"nEventValue":0}]}}>. 
+ receive play response message: <{"cmd":"set_active_wnd_rsp","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"nCWinID":0,"nSWinID":-1,"nComWin":0,"nAlertWin":0,"nVideoState":0,"serviceUrl":"A00-A001130000001-A001310000001-A000000001","cameraName":"法官","nEventType":0,"nEventValue":0}]}}>. 
+ <sie_ocx> : receive response message: <{"json_msg":{"json_id":"268_sierequest","cmd":"uer_login_req","func_id":"tc_1470122125606","session_id":400},"params":{"nResultCode":0,"strResultDescribe":"OK","userInfo":{"nRoleID":1,"strUserID":"admin","strUserName":"管理员","strLocalDomain":"A00","rolePrivilegeListInfo":{"rolePrivilegeList":[2,3,4,16,17,18,19,20,21]}}}}>. 
+ <sie_ocx> id : 269  <sie_ocx> response : {"json_msg":{"json_id":"268_sierequest","cmd":"uer_login_req","func_id":"tc_1470122125606","session_id":400},"params":{"nResultCode":0,"strResultDescribe":"OK","userInfo":{"nRoleID":1,"strUserID":"admin","strUserName":"管理员","strLocalDomain":"A00","rolePrivilegeListInfo":{"rolePrivilegeList":[2,3,4,16,17,18,19,20,21]}}}} 
+ <ocx_player> : receive response message: <{"cmd":"set_active_wnd_rsp","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"nCWinID":0,"nSWinID":-1,"nComWin":0,"nAlertWin":0,"nVideoState":0,"serviceUrl":"A00-A001130000001-A001310000001-A000000001","cameraName":"法官","nEventType":0,"nEventValue":0}]}}>. 
+ receive play response message: <{"cmd":"set_active_wnd_rsp","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"nCWinID":0,"nSWinID":-1,"nComWin":0,"nAlertWin":0,"nVideoState":0,"serviceUrl":"A00-A001130000001-A001310000001-A000000001","cameraName":"法官","nEventType":0,"nEventValue":0}]}}>. 
+ <ocx_player> : receive response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":1,"session_id":314}]}}>. 
+ receive play response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":1,"session_id":314}]}}>. 
+ <ocx_player> : receive response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":2,"session_id":315}]}}>. 
+ receive play response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":2,"session_id":315}]}}>. 
+ <ocx_player> : receive response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":0,"session_id":313}]}}>. 
+ receive play response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":0,"session_id":313}]}}>. 
+ ocx id 【 ocx_player】 ==》 classid 【clsid:A48CA6A2-D901-4E82-BF51-CDAFDAD78045】 
+ <ocx_player> : invoke method ( StopPlayByWinID ) with arguments ( -1 ) ... 
+ <ocx_player> : receive response message: <{"cmd":"stop_play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"rtsp mtn succeed.","total":0,"curpage":0,"result":[{"win_id":0,"session_id":313}]}}>. 
+ receive play response message: <{"cmd":"stop_play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"rtsp mtn succeed.","total":0,"curpage":0,"result":[{"win_id":0,"session_id":313}]}}>. 
+ <ocx_player> : receive response message: <{"cmd":"stop_play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"rtsp mtn succeed.","total":0,"curpage":0,"result":[{"win_id":1,"session_id":314}]}}>. 
+ receive play response message: <{"cmd":"stop_play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"rtsp mtn succeed.","total":0,"curpage":0,"result":[{"win_id":1,"session_id":314}]}}>. 
+ <ocx_player> : receive response message: <{"cmd":"stop_play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"rtsp mtn succeed.","total":0,"curpage":0,"result":[{"win_id":2,"session_id":315}]}}>. 
+ receive play response message: <{"cmd":"stop_play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"rtsp mtn succeed.","total":0,"curpage":0,"result":[{"win_id":2,"session_id":315}]}}>. 
+ <ocx_player> : invoke method ( Uninit ) with arguments (  ) ... 
+ ocx id 【 ocx_player】 ==》 remove.... 
+ ocx id 【 sie_ocx】 ==》 classid 【clsid:07B96960-EA87-4705-82F5-4353856DA859】 
+ ocx id 【 sie_ocx】 ==》 remove.... 
+ <tcocx> : receive response message: <{"cmd":"push_reception_info","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":1021,"sie_ip":"192.168.2.46","sie_port":9000,"reception_id":2,"start_date":"1970-01-01","start_time":"00:00:00","end_time":"00:00:00","case_list":[{"case_id":1,"case_code":"(2016)苏07130001号","case_name":"无因管理纠纷"}],"roomnode_list":[{"id":72,"node_name":"法官","room_id":2,"court_code":"A00","court_name":"江苏省高级人民法院","link_room_id":2,"link_room_name":"2网段的IPC","node_type":0,"sdomain_code":"A00","dev_code":"A001130000001","video_channel_code":"A001310000001","video_stream_code":"A000000001","video_stream_type":1,"seat":0,"synthesis_flag":0,"voice_flag":1,"trans_protocol":0},{"id":100,"node_name":"原告(公诉人,检查机关)","room_id":2,"court_code":"A00","court_name":"江苏省高级人民法院","link_room_id":2,"link_room_name":"2网段的IPC","node_type":0,"sdomain_code":"A00","dev_code":"A001130000002","video_channel_code":"A001310000002","video_stream_code":"A000000003","video_stream_type":1,"seat":1,"synthesis_flag":0,"voice_flag":1,"trans_protocol":0},{"id":101,"node_name":"被告(辩护人,执行机关)","room_id":2,"court_code":"A00","court_name":"江苏省高级人民法院","link_room_id":2,"link_room_name":"2网段的IPC","node_type":0,"sdomain_code":"A00","dev_code":"A001130000003","video_channel_code":"A001310000003","video_stream_code":"A000000005","video_stream_type":1,"seat":2,"synthesis_flag":0,"voice_flag":1,"trans_protocol":0}],"roomnode_list_bak":[]}}>. 
+ receive response message: <{"cmd":"push_reception_info","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":1021,"sie_ip":"192.168.2.46","sie_port":9000,"reception_id":2,"start_date":"1970-01-01","start_time":"00:00:00","end_time":"00:00:00","case_list":[{"case_id":1,"case_code":"(2016)苏07130001号","case_name":"无因管理纠纷"}],"roomnode_list":[{"id":72,"node_name":"法官","room_id":2,"court_code":"A00","court_name":"江苏省高级人民法院","link_room_id":2,"link_room_name":"2网段的IPC","node_type":0,"sdomain_code":"A00","dev_code":"A001130000001","video_channel_code":"A001310000001","video_stream_code":"A000000001","video_stream_type":1,"seat":0,"synthesis_flag":0,"voice_flag":1,"trans_protocol":0},{"id":100,"node_name":"原告(公诉人,检查机关)","room_id":2,"court_code":"A00","court_name":"江苏省高级人民法院","link_room_id":2,"link_room_name":"2网段的IPC","node_type":0,"sdomain_code":"A00","dev_code":"A001130000002","video_channel_code":"A001310000002","video_stream_code":"A000000003","video_stream_type":1,"seat":1,"synthesis_flag":0,"voice_flag":1,"trans_protocol":0},{"id":101,"node_name":"被告(辩护人,执行机关)","room_id":2,"court_code":"A00","court_name":"江苏省高级人民法院","link_room_id":2,"link_room_name":"2网段的IPC","node_type":0,"sdomain_code":"A00","dev_code":"A001130000003","video_channel_code":"A001310000003","video_stream_code":"A000000005","video_stream_type":1,"seat":2,"synthesis_flag":0,"voice_flag":1,"trans_protocol":0}],"roomnode_list_bak":[]}}>. 
+ <tcocx> : receive response message: <{"cmd":"push_reception_status","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":1,"reception_id":2,"reception_status":1}}>. 
+ receive response message: <{"cmd":"push_reception_status","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":1,"reception_id":2,"reception_status":1}}>. 
+ <tcocx> : receive response message: <{"cmd":"push_user_login_info","msgtype":"push","func_id":"tc_1470121366746","params":{"reception_id":2,"user_list":[]}}>. 
+ receive response message: <{"cmd":"push_user_login_info","msgtype":"push","func_id":"tc_1470121366746","params":{"reception_id":2,"user_list":[]}}>. 
+ <tcocx> : receive response message: <{"cmd":"push_excitated_state","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":0,"reception_id":2,"isexcitated":1}}>. 
+ receive response message: <{"cmd":"push_excitated_state","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":0,"reception_id":2,"isexcitated":1}}>. 
+ <tcocx> : receive response message: <{"cmd":"push_current_caseinfo","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":0,"reception_id":2,"current_case_code":"(2016)苏07130001号"}}>. 
+ receive response message: <{"cmd":"push_current_caseinfo","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":0,"reception_id":2,"current_case_code":"(2016)苏07130001号"}}>. 
+ <tcocx> : receive response message: <{"cmd":"push_record_state","msgtype":"push","func_id":"","params":{"reception_id":2,"record_state":1,"seat":0,"sdomain_code":"","device_code":"","channel_code":"","stream_code":""}}>. 
+ receive response message: <{"cmd":"push_record_state","msgtype":"push","func_id":"","params":{"reception_id":2,"record_state":1,"seat":0,"sdomain_code":"","device_code":"","channel_code":"","stream_code":""}}>. 
+ <tcocx> : receive response message: <{"cmd":"push_reception_status","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":4222451713,"reception_id":2,"reception_status":9}}>. 
+ receive response message: <{"cmd":"push_reception_status","msgtype":"push","func_id":"","params":{"pcuser_ip":"","pcuser_port":4222451713,"reception_id":2,"reception_status":9}}>. 
+ <tcocx> : receive response message: <{"cmd":"push_record_state","msgtype":"push","func_id":"","params":{"reception_id":2,"record_state":0,"seat":0,"sdomain_code":"","device_code":"","channel_code":"","stream_code":""}}>. 
+ receive response message: <{"cmd":"push_record_state","msgtype":"push","func_id":"","params":{"reception_id":2,"record_state":0,"seat":0,"sdomain_code":"","device_code":"","channel_code":"","stream_code":""}}>. 
+  <tc_case_video_player> : invoke method ( StopPlayByWinID ) with arguments ( -1 ) ... 
+ <tc_case_video_player> : invoke method ( ResetLayOut ) with arguments (  ) ... 
+ <tc_case_video_player> : invoke method ( ResetLayOut ) with arguments (  ) ... 
+ <tc_case_video_player> : invoke method ( SetLayOut ) with arguments ( 3 ) ... 
+ <tc_case_video_player> : receive response message: <{"cmd":"set_layout_ack","msgtype":"response","func_id":"","params":{"code":4,"desc":"","total":0,"curpage":0,"result":[]}}>. 
+ receive play response message: <{"cmd":"set_layout_ack","msgtype":"response","func_id":"","params":{"code":4,"desc":"","total":0,"curpage":0,"result":[]}}>. 
+ <tc_case_video_player> : invoke method ( StartMultiSyncPlayBack ) with arguments ( '{
+	"domainIP": "192.168.2.46",
+	"port": 9000,
+	"videoStartTime": "2016-08-02 15:00:48",
+	"videoList": [{
+		"wid": 0,
+		"seat": 0,
+		"isAudioValid": 1,
+		"recordList": [{
+			"recordId": 240,
+			"rdomainCode": "A00",
+			"startTime": 0,
+			"stopTime": 1188,
+			"speed": 1,
+			"isAudioValid": 1,
+			"ntype": 1,
+			"offset": 0
+		}],
+		"layOutInfo": {
+			
+		}
+	},
+	{
+		"wid": 1,
+		"seat": 1,
+		"isAudioValid": 1,
+		"recordList": [{
+			"recordId": 241,
+			"rdomainCode": "A00",
+			"startTime": 0,
+			"stopTime": 1188,
+			"speed": 1,
+			"isAudioValid": 1,
+			"ntype": 1,
+			"offset": 0
+		}],
+		"layOutInfo": {
+			
+		}
+	},
+	{
+		"wid": 2,
+		"seat": 2,
+		"isAudioValid": 1,
+		"recordList": [{
+			"recordId": 242,
+			"rdomainCode": "A00",
+			"startTime": 0,
+			"stopTime": 1188,
+			"speed": 1,
+			"isAudioValid": 1,
+			"ntype": 1,
+			"offset": 0
+		}],
+		"layOutInfo": {
+			
+		}
+	}]
+}' ) ... 
+ <tc_case_video_player> : receive response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":2,"session_id":318}]}}>. 
+ receive play response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":2,"session_id":318}]}}>. 
+ <tc_case_video_player> : receive response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":0,"session_id":316}]}}>. 
+ receive play response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":0,"session_id":316}]}}>. 
+ <tc_case_video_player> : receive response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":1,"session_id":317}]}}>. 
+ receive play response message: <{"cmd":"play_ack","msgtype":"response","func_id":"","params":{"code":0,"desc":"setup rsp succeed.","total":0,"curpage":0,"result":[{"win_id":1,"session_id":317}]}}>. 
+ <tc_case_video_player> : receive response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":0,"session_id":316,"cur_play_time":1}]}}>. 
+ receive play response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":0,"session_id":316,"cur_play_time":1}]}}>. 
+ <tc_case_video_player> : receive response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":1,"session_id":317,"cur_play_time":1}]}}>. 
+ receive play response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":1,"session_id":317,"cur_play_time":1}]}}>. 
+ <tc_case_video_player> : receive response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":2,"session_id":318,"cur_play_time":1}]}}>. 
+ receive play response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":2,"session_id":318,"cur_play_time":1}]}}>. 
+ <tc_case_video_player> : receive response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":0,"session_id":316,"cur_play_time":1}]}}>. 
+ receive play response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":0,"session_id":316,"cur_play_time":1}]}}>. 
+ <tc_case_video_player> : receive response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":1,"session_id":317,"cur_play_time":1}]}}>. 
+ receive play response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":1,"session_id":317,"cur_play_time":1}]}}>. 
+ <tc_case_video_player> : receive response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":0,"session_id":316,"cur_play_time":2}]}}>. 
+ receive play response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":0,"session_id":316,"cur_play_time":2}]}}>. 
+ <tc_case_video_player> : receive response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":1,"session_id":317,"cur_play_time":2}]}}>. 
+ receive play response message: <{"cmd":"played_time_notify","msgtype":"response","func_id":"","params":{"code":0,"desc":"","total":0,"curpage":0,"result":[{"win_id":1,"session_id":317,"cur_play_time":2}]}}>. 
+ <tc_case_video_player> : receive response message: 
+
+  clear show msg..... 
+ <tcocx> : invoke method ( SendCmdReq ) with arguments ( 1800001, '{"cmd":"connect_service","msgtype":"request","params":{"tc_ip":"192.168.2.46","tc_port":7001,"login_name":"root"},"func_id":"tc_1470123174271"}' ) ... 
+ send cmd to sie : {"json_msg":{"json_id":"268","cmd":"uer_login_req","func_id":"func_100001","session_id":1},"params":{"strUserID":"admin","strPassword":"1234","strServiceIP":"192.168.2.46","nServicePort":9100}} 
+ <tcocx [mcocx]>  id: 137219 data: {"cmd":"connect_service_ack","msgtype":"response","func_id":"tc_1470123174271","params":{"code":0,"desc":"connect service succeed","total":0,"curpage":0,"result":[]}} 
+ <sie_ocx messid> :269 || <sie_ocx message> : {"json_msg":{"json_id":"268","cmd":"uer_login_req","func_id":"func_100001","session_id":406},"params":{"nResultCode":0,"strResultDescribe":"OK","userInfo":{"nRoleID":1,"strUserID":"admin","strUserName":"管理员","strLocalDomain":"A00","rolePrivilegeListInfo":{"rolePrivilegeList":[2,3,4,16,17,18,19,20,21]}}}} 
+ {
+	"result": "0",
+	"descri": "操作成功",
+	"obj": null,
+	"list": [{
+		"id": 2,
+		"name": "(2016)苏07130001号",
+		"namePath": "(2016)苏07130001号",
+		"startDate": "2016-08-02",
+		"startTime": "09:00:00",
+		"endTime": "17:30:00",
+		"departmentId": 1,
+		"departmentName": "本院",
+		"chiefJudgeId": 2,
+		"chiefJudgeName": "法官(默认)",
+		"clerkId": 3,
+		"clerkName": "书记员(默认)",
+		"receptionType": 0,
+		"receptionTypeName": "普通庭审",
+		"sessionKind": 0,
+		"status": 9,
+		"statusName": "闭庭",
+		"isRecord": 0,
+		"roomStyle": 0,
+		"roomStyleName": "本地庭室",
+		"roomId": 2,
+		"roomName": "2网段的IPC",
+		"localRoomId": 2,
+		"localRoomName": "2网段的IPC",
+		"roomDesc": "2网段的IPC",
+		"litigant": "",
+		"combineAct": "",
+		"info": "",
+		"openFlag": 1,
+		"openFlagName": "公开",
+		"recordTypeFlag": 0,
+		"recordTypeFlagName": "非",
+		"isSign": 0,
+		"isDel": 0,
+		"fzSyncNo": null,
+		"updateTime": null,
+		"caseId": null,
+		"authorUserNum": 0,
+		"noteCount": 1,
+		"isVideoRecord": "20",
+		"isVideoRecording": "0",
+		"authorizeType": -1,
+		"doubleViewFlag": 0,
+		"isVoiceRecord": 0,
+		"sdVideoPlantformLiveID": null
+	},
+	{
+		"id": 5,
+		"name": "xiaoxiaotest",
+		"namePath": "xiaoxiaotest",
+		"startDate": "2016-08-02",
+		"startTime": "09:00:00",
+		"endTime": "17:30:00",
+		"departmentId": 1,
+		"departmentName": "本院",
+		"chiefJudgeId": 2,
+		"chiefJudgeName": "法官(默认)",
+		"clerkId": 3,
+		"clerkName": "书记员(默认)",
+		"receptionType": 0,
+		"receptionTypeName": "普通庭审",
+		"sessionKind": 0,
+		"status": 9,
+		"statusName": "闭庭",
+		"isRecord": 0,
+		"roomStyle": 0,
+		"roomStyleName": "本地庭室",
+		"roomId": 3,
+		"roomName": "配电器测试庭",
+		"localRoomId": 3,
+		"localRoomName": "配电器测试庭",
+		"roomDesc": "配电器测试庭",
+		"litigant": "",
+		"combineAct": "",
+		"info": "",
+		"openFlag": 1,
+		"openFlagName": "公开",
+		"recordTypeFlag": 0,
+		"recordTypeFlagName": "非",
+		"isSign": 0,
+		"isDel": 0,
+		"fzSyncNo": null,
+		"updateTime": null,
+		"caseId": null,
+		"authorUserNum": 0,
+		"noteCount": 1,
+		"isVideoRecord": "2",
+		"isVideoRecording": "0",
+		"authorizeType": -1,
+		"doubleViewFlag": 0,
+		"isVoiceRecord": 0,
+		"sdVideoPlantformLiveID": null
+	},
+	{
+		"id": 6,
+		"name": "5个案件",
+		"namePath": "5个案件",
+		"startDate": "2016-08-02",
+		"startTime": "09:00:00",
+		"endTime": "17:30:00",
+		"departmentId": 2,
+		"departmentName": "审判部门",
+		"chiefJudgeId": 2,
+		"chiefJudgeName": "法官(默认)",
+		"clerkId": 3,
+		"clerkName": "书记员(默认)",
+		"receptionType": 0,
+		"receptionTypeName": "普通庭审",
+		"sessionKind": 2,
+		"status": 1,
+		"statusName": "开庭",
+		"isRecord": 1,
+		"roomStyle": 0,
+		"roomStyleName": "本地庭室",
+		"roomId": 22,
+		"roomName": "测试测试",
+		"localRoomId": 22,
+		"localRoomName": "测试测试",
+		"roomDesc": "测试测试",
+		"litigant": "",
+		"combineAct": "",
+		"info": "",
+		"openFlag": 1,
+		"openFlagName": "公开",
+		"recordTypeFlag": 0,
+		"recordTypeFlagName": "非",
+		"isSign": 0,
+		"isDel": 0,
+		"fzSyncNo": null,
+		"updateTime": null,
+		"caseId": null,
+		"authorUserNum": 0,
+		"noteCount": 5,
+		"isVideoRecord": "4",
+		"isVideoRecording": "1",
+		"authorizeType": -1,
+		"doubleViewFlag": 0,
+		"isVoiceRecord": 0,
+		"sdVideoPlantformLiveID": null
+	},
+	{
+		"id": 165,
+		"name": "ceshitingshengbuyao",
+		"namePath": "ceshitingshengbuyao",
+		"startDate": "2016-08-02",
+		"startTime": "09:00:00",
+		"endTime": "17:30:00",
+		"departmentId": 10,
+		"departmentName": "法警总队",
+		"chiefJudgeId": 21,
+		"chiefJudgeName": "褚红军",
+		"clerkId": 712,
+		"clerkName": "刘雪莹",
+		"receptionType": 0,
+		"receptionTypeName": "普通庭审",
+		"sessionKind": 1,
+		"status": 1,
+		"statusName": "开庭",
+		"isRecord": 1,
+		"roomStyle": 0,
+		"roomStyleName": "本地庭室",
+		"roomId": 5,
+		"roomName": "中法庭",
+		"localRoomId": 5,
+		"localRoomName": "中法庭",
+		"roomDesc": "中法庭",
+		"litigant": "江苏荣耀房地产，投资有限公司与付万跃商品房销售合同纠纷江苏荣耀房地产投资有限公司***与付万跃商品房销售合同纠纷江苏荣耀房地产投资有限公司与付万跃商品%房销售合同纠纷江苏荣耀房地产投￥￥资有限公司与付万跃商品\r\n\r\n\"\"@&#@&#(@&$)#$*_)@^#&@#*@!(@#!@21212","combineAct":"江苏荣耀房地产投资有限公司与付万跃商品房销售合同纠纷江苏荣耀房地产投资有限公司~~~与付万跃商品房销售合同纠纷江苏荣耀房地产投资有限公司与付万跃商^^^^^品房销售合同纠纷江苏荣耀房地产投资有限公司与付万跃商品房销售合同纠纷","info":"江苏荣耀房地产投资有限公司与付万跃商品房销售合同纠纷江苏荣耀房地产投资有限公司与付万跃商品房销售合同纠纷江苏荣耀房地产投资有限公司与付万跃商品房销售合同纠纷江苏荣耀房地产投资有限公司与付万跃商品房销售合同纠纷\r\n\r\n132123","openFlag":1,"openFlagName":"公开","recordTypeFlag":0,"recordTypeFlagName":"非","isSign":0,"isDel":0,"fzSyncNo":null,"updateTime":null,"caseId":null,"authorUserNum":0,"noteCount":0,"isVideoRecord":"0","isVideoRecording":"2","authorizeType":-1,"doubleViewFlag":0,"isVoiceRecord":0,"sdVideoPlantformLiveID":null},{"id":166,"name":"212&12","namePath":"212&12","startDate":"2016-08-02","startTime":"09: 00: 00","endTime":"17: 30: 00","departmentId":2,"departmentName":"审判部门","chiefJudgeId":2,"chiefJudgeName":"法官(默认)","clerkId":3,"clerkName":"书记员(默认)","receptionType":0,"receptionTypeName":"普通庭审","sessionKind":2,"status":9,"statusName":"闭庭","isRecord":0,"roomStyle":0,"roomStyleName":"本地庭室","roomId":28,"roomName":"212&12","localRoomId":28,"localRoomName":"212&12","roomDesc":"212&12","litigant":"","combineAct":"","info":"","openFlag":1,"openFlagName":"公开","recordTypeFlag":0,"recordTypeFlagName":"非","isSign":0,"isDel":0,"fzSyncNo":null,"updateTime":null,"caseId":null,"authorUserNum":0,"noteCount":1,"isVideoRecord":"3","isVideoRecording":"0","authorizeType":-1,"doubleViewFlag":0,"isVoiceRecord":0,"sdVideoPlantformLiveID":null},{"id":178,"name":"8787","namePath":"8787","startDate":"2016-08-02","startTime":"09: 00: 00","endTime":"17: 30: 00","departmentId":1,"departmentName":"本院","chiefJudgeId":2,"chiefJudgeName":"法官(默认)","clerkId":3,"clerkName":"书记员(默认)","receptionType":0,"receptionTypeName":"普通庭审","sessionKind":2,"status":9,"statusName":"闭庭","isRecord":0,"roomStyle":0,"roomStyleName":"本地庭室","roomId":35,"roomName":"87_v6法庭","localRoomId":35,"localRoomName":"87_v6法庭","roomDesc":"87_v6法庭","litigant":"","combineAct":"","info":"","openFlag":1,"openFlagName":"公开","recordTypeFlag":1,"recordTypeFlagName":"是","isSign":0,"isDel":0,"fzSyncNo":null,"updateTime":null,"caseId":null,"authorUserNum":0,"noteCount":3,"isVideoRecord":"5","isVideoRecording":"0","authorizeType":-1,"doubleViewFlag":0,"isVoiceRecord":0,"sdVideoPlantformLiveID":null},{"id":179,"name":"(2016)苏刑二终字第00052号号","namePath":"(2016)苏刑二终字第00052号号","startDate":"2016-08-02","startTime":"09: 00: 00","endTime":"17: 30: 00","departmentId":1,"departmentName":"本院","chiefJudgeId":2,"chiefJudgeName":"法官(默认)","clerkId":3,"clerkName":"书记员(默认)","receptionType":0,"receptionTypeName":"普通庭审","sessionKind":1,"status":9,"statusName":"闭庭","isRecord":0,"roomStyle":0,"roomStyleName":"本地庭室","roomId":2,"roomName":"2网段的IPC","localRoomId":2,"localRoomName":"2网段的IPC","roomDesc":"2网段的IPC","litigant":"","combineAct":"","info":"","openFlag":1,"openFlagName":"公开","recordTypeFlag":0,"recordTypeFlagName":"非","isSign":0,"isDel":0,"fzSyncNo":null,"updateTime":null,"caseId":null,"authorUserNum":0,"noteCount":0,"isVideoRecord":"1","isVideoRecording":"0","authorizeType":-1,"doubleViewFlag":0,"isVoiceRecord":0,"sdVideoPlantformLiveID":null},{"id":180,"name":"gogogo调解个","namePath":"gogogo调解个","startDate":"2016-08-02","startTime":"09: 00: 00","endTime":"17: 30: 00","departmentId":1,"departmentName":"本院","chiefJudgeId":55,"chiefJudgeName":"蔡绍刚","clerkId":683,"clerkName":"龚晨悦","receptionType":2,"receptionTypeName":"远程提讯","sessionKind":1,"status":9,"statusName":"闭庭","isRecord":0,"roomStyle":0,"roomStyleName":"本地庭室","roomId":2,"roomName":"2网段的IPC","localRoomId":2,"localRoomName":"2网段的IPC","roomDesc":"2网段的IPC","litigant":"","combineAct":"","info":"","openFlag":1,"openFlagName":"公开","recordTypeFlag":0,"recordTypeFlagName":"非","isSign":0,"isDel":0,"fzSyncNo":null,"updateTime":null,"caseId":null,"authorUserNum":0,"noteCount":4,"isVideoRecord":"1","isVideoRecording":"0","authorizeType":-1,"doubleViewFlag":0,"isVoiceRecord":0,"sdVideoPlantformLiveID":null}],"rows":null,"othlist":null} 
+
+ 
+ 

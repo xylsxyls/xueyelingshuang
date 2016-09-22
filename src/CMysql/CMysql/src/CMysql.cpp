@@ -113,8 +113,6 @@ int main(){
 	//条件not
 	!con;
 
-	//定义一个存储值的类，基于某张表
-
 	//增
 	//设置记录
 	CRecord rec(pTable);
