@@ -3,7 +3,7 @@
 #include "CAttri.h"
 #include "CTable.h"
 
-CTable* CValue::pTable = NULL;
+//CTable* CValue::pTable = NULL;
 
 CValue::CValue(){
 	this->Type = 0;
@@ -52,6 +52,7 @@ CValue::CValue(const CValue& value){
 	this->nValue = value.nValue;
 	this->dValue = value.dValue;
 	this->strValue = value.strValue;
+	this->strCurrentField = value.strCurrentField;
 }
 
 CValue CValue::operator = (const CValue& value){
@@ -59,6 +60,7 @@ CValue CValue::operator = (const CValue& value){
 	this->nValue = value.nValue;
 	this->dValue = value.dValue;
 	this->strValue = value.strValue;
+	this->strCurrentField = value.strCurrentField;
 	return *this;
 }
 
@@ -76,6 +78,23 @@ bool CValue::operator!= (const CValue& value){
 		this->strValue != value.strValue;
 }
 
-CAttri* CValue::operator->(){
-	return &(this->pTable->mapAttri["User"]);
+CValue::operator int(){
+	return nValue;
 }
+
+CValue::operator char*(){
+	return (LPSTR)(LPCTSTR)strValue;
+}
+
+CValue::operator double(){
+	return dValue;
+}
+
+//void CValue::init(CTable* pTable){
+//	this->pTable = pTable;
+//	return;
+//}
+
+//CAttri* CValue::operator->(){
+//	return &(pTable->mapAttri[strCurrentField]);
+//}

@@ -17,6 +17,9 @@ public:
 	CTableField operator=(const CTableField& tf);
 
 public:
+	CTableField(CString Table,CString Field);
+
+public:
 	CCondition operator==(const CValue& value);
 	CCondition operator!=(const CValue& value);
 	CCondition operator<(const CValue& value);

@@ -6,7 +6,7 @@ class CAttri{
 public:
 	bool Type;
 	CString Name;
-	int nlength;
+	int nLength;
 	CValue vDefault;
 	bool bPrimaryKey;
 	bool bNotNull;
@@ -18,6 +18,6 @@ public:
 	CAttri(const CAttri& attri);
 	CAttri operator= (const CAttri& attri);
 
-	void operator->();
+	//CAttri& operator->();
 	void a();
 };

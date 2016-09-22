@@ -28,6 +28,11 @@ CTableField CTableField::operator=(const CTableField& tf){
 	return *this;
 }
 
+CTableField::CTableField(CString Table,CString Field){
+	this->Table = Table;
+	this->Field = Field;
+}
+
 CCondition CTableField::operator==(const CValue& value){
 	CCondition con;
 	con.strSQL.Format("%s where %s.%s=%s",Table,Table,Field,value.strValue);

@@ -13,7 +13,8 @@ public:
 	int nValue;
 	double dValue;
 	//转到表中的map字段
-	static CTable* pTable;
+	//static CTable* pTable;
+	CString strCurrentField;
 	
 public:
 	CValue();
@@ -24,10 +25,18 @@ public:
 	CValue(double dValue);
 
 	CValue(const CValue& value);
-	CValue operator = (const CValue& value);
+	CValue operator= (const CValue& value);
 	bool operator== (const CValue& value);
 	bool operator!= (const CValue& value);
 
+	operator int();
+	operator char*();
+	operator double();
+
 public:
-	CAttri* operator->();
+	//如果要多线程操作的话需要先init才能使用CValue
+	//void init(CTable* pTable);
+
+public:
+	//CAttri* operator->();
 };

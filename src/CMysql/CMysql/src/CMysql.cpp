@@ -64,7 +64,6 @@ CTable* CMysql::OpenTableInterface(CString TableName,bool AutoCommit){
 		delete pTable;
 		pTable = 0;
 	}
-	CValue::pTable = pTable;
 	return pTable;
 }
 
@@ -98,29 +97,53 @@ void CMysql::SelectTable(CString TableName){
 #include "CCondition.h"
 #include "CUpdate.h"
 #include "CSelect.h"
+
+class CV : public CValue{};
 int main(){
-	CCondition con;
-	con && (CTableField()("User")["Name"] && CTableField()("Department")["strName"]);
-	con || (CTableField()("User")["ID"] || CTableField()("User")["ID"]);
-	!con;
-	CUpdate upd;
-	upd["User"] = "a";
-	upd["departID"] = 3;
-	CSelect sel;
-	CSelect s;
-	s = sel("User");sel["ID"];
-	sel("Depart")["Name"];
+	//打开表接口
 	CMysql mysql;
 	CTable* pTable = mysql.OpenTableInterface("test",1);
-	pTable->UpdateRecord(&upd,&con);
-	pTable->SelectRecord(&sel,&con);
-	CRecord rec;
+
+	//定义条件
+	CCondition con;
+	//条件and
+	con && (CTableField("User","Name") && CTableField("Department","strName"));
+	con && (CTableField("User","Ent_ID") == 20046);
+	//条件or，左联合
+	con || (CTableField("User","ID") >= CTableField("Department","UserID"));
+	//条件not
+	!con;
+
+	//定义一个存储值的类，基于某张表
+
+	//增
+	//设置记录
+	CRecord rec(pTable);
 	rec["User"] = "3";
 	rec["ID"] = 3;
 	pTable->Add(&rec);
+
+	//删
 	pTable->Delete(&con);
+
+	//改
+	CUpdate upd;
+	upd["User"] = "a";
+	upd["departID"] = 3;
+	pTable->UpdateRecord(&upd,&con);
+
+	//查
+	CSelect sel;
+	sel("User")["ID"];
+	sel("Depart")["Name"];
+	CTable table = pTable->SelectRecord(&sel,&con);
+	CString strDepartName = table[0]["Depart"].toValue();
+	int nUserID = table[0]["User"].toValue();
+	
 	//rec["User"].pTable->mapAttri["User"].Name = "123456";
-	rec["User"]->Name = "123456";
+	//修改字段属性
+	rec["User"]->nLength = 256;
 	pTable->Add(&rec);
+
 	return 0;
 }

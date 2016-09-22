@@ -1,8 +1,13 @@
 #include <SDKDDKVer.h>
 #include "CRecord.h"
+#include "CTable.h"
 
 CRecord::CRecord(){
 	
+}
+
+CRecord::CRecord(CTable* pTable){
+	this->pTable = pTable;
 }
 
 CRecord::CRecord(const CRecord& record){
@@ -14,9 +19,22 @@ CRecord CRecord::operator=(const CRecord& record){
 	return *this;
 }
 
-CValue CRecord::operator[](CString Field){
+CRecord& CRecord::operator[](CString Field){
 	this->strCurrentField = Field;
-	return mapValue[Field];
+	return *this;
+}
+
+CRecord CRecord::operator=(const CValue& value){
+	mapValue[strCurrentField] = value;
+	return *this;
+}
+
+CAttri* CRecord::operator->(){
+	return &(pTable->mapAttri[strCurrentField]);
+}
+
+CValue CRecord::toValue(){
+	return mapValue[strCurrentField];
 }
 
 CString CRecord::ToCString(){
