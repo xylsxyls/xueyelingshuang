@@ -38,7 +38,7 @@ CRecord CTable::operator[](int num){
 		if(n == num) return *it;
 		n++;
 	}
-	return CRecord();
+	return CRecord(NULL);
 }
 
 int CTable::Add(CRecord* pRecord){

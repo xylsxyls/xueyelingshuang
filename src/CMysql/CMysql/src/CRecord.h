@@ -13,7 +13,6 @@ public:
 	CString strCurrentField;
 	CTable* pTable;
 public:
-	CRecord();
 	CRecord(CTable* pTable);
 	CRecord(const CRecord& record);
 	CRecord operator=(const CRecord& record);

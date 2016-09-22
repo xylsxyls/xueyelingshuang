@@ -2,10 +2,6 @@
 #include "CRecord.h"
 #include "CTable.h"
 
-CRecord::CRecord(){
-	
-}
-
 CRecord::CRecord(CTable* pTable){
 	this->pTable = pTable;
 }

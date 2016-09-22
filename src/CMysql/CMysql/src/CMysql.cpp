@@ -98,7 +98,6 @@ void CMysql::SelectTable(CString TableName){
 #include "CUpdate.h"
 #include "CSelect.h"
 
-class CV : public CValue{};
 int main(){
 	//打开表接口
 	CMysql mysql;
