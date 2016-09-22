@@ -15,6 +15,13 @@ public:
 	CstrValue(BOOL type,CString strValue,int nValue,double dValue);
 	CstrValue(CString strValue);
 	CstrValue(const CstrValue& x);
-	CstrValue operator = (const CstrValue& x);
+	CstrValue operator= (const CstrValue& x);
+
+public:
+	operator int();
+	operator char*();
+	operator double();
+
+public:
 	~CstrValue();
 };

@@ -189,6 +189,18 @@ CstrValue CstrValue::operator = (const CstrValue& x){
 	return *this;
 }
 
+CstrValue::operator int(){
+	return nValue;
+}
+
+CstrValue::operator char*(){
+	return (LPSTR)(LPCTSTR)strValue;
+}
+
+CstrValue::operator double(){
+	return dValue;
+}
+
 CstrValue::~CstrValue(){
 
 }

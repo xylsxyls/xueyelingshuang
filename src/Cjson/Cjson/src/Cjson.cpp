@@ -367,7 +367,7 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 						pTypeValueTemp = &(pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)]);
 					}
 					//退回上一层添加或覆盖字段
-					pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)] = (CstrValue)strTemp;
+					pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)] = (Cjson)(CstrValue)strTemp;
 				}
 				break;
 			}
