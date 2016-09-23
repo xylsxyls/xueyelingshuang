@@ -8,10 +8,14 @@ CRecord::CRecord(CTable* pTable){
 
 CRecord::CRecord(const CRecord& record){
 	this->mapValue = record.mapValue;
+	this->strCurrentField = record.strCurrentField;
+	this->pTable = record.pTable;
 }
 
 CRecord CRecord::operator=(const CRecord& record){
 	this->mapValue = record.mapValue;
+	this->strCurrentField = record.strCurrentField;
+	this->pTable = record.pTable;
 	return *this;
 }
 
@@ -30,7 +34,15 @@ CAttri* CRecord::operator->(){
 }
 
 CValue CRecord::toValue(){
-	return mapValue[strCurrentField];
+	//不能直接return，这样会返回一个空CValue，需要返回一个错误CValue，如果是直接定义CRecord则会添加一个错误字段
+	//return mapValue[strCurrentField];
+	
+	//如果有才返回
+	auto it = mapValue.find(strCurrentField);
+	if(it != mapValue.end()){
+		return it->second;
+	}
+	else return CValue();
 }
 
 CString CRecord::ToCString(){

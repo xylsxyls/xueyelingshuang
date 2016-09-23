@@ -45,7 +45,7 @@ CDataBase* CMysql::OpenDataBaseInterface(){
 	return OpenDataBaseInterface(dbName);
 }
 
-CDataBase* CMysql::OpenDataBaseInterface(CString dbName){
+CDataBase* CMysql::OpenDataBaseInterface(CString dbName,bool AutoCommit){
 	bool bSucceed = 0;
 	CDataBase* pDataBase = new CDataBase(&bSucceed,pMysqlManager,IP,port,User,PassWord,dbName);
 	if(bSucceed == 0) pDataBase = 0;
@@ -64,6 +64,7 @@ CTable* CMysql::OpenTableInterface(CString TableName,bool AutoCommit){
 		delete pTable;
 		pTable = 0;
 	}
+	pTable->Refresh();
 	return pTable;
 }
 
@@ -103,22 +104,22 @@ int main(){
 	CMysql mysql;
 	CTable* pTable = mysql.OpenTableInterface("test",1);
 
-	//定义条件
-	CCondition con;
-	//条件and
-	con && (CTableField("User","Name") && CTableField("Department","strName"));
-	con && (CTableField("User","Ent_ID") == 20046);
-	//条件or，左联合
-	con || (CTableField("User","ID") >= CTableField("Department","UserID"));
-	//条件not
-	!con;
-
 	//增
 	//设置记录
 	CRecord rec(pTable);
 	rec["User"] = "3";
 	rec["ID"] = 3;
 	pTable->Add(&rec);
+
+	//定义条件
+	CCondition con;
+	//条件and
+	con && (CTableField("User","Name") && CTableField("Department","strName"));
+	con && (CTableField("User","Ent_ID") == 20046);
+	//条件or，左联合
+	con || (CTableField("User","ID") <= CTableField("Department","UserID"));
+	//条件not
+	!con;
 
 	//删
 	pTable->Delete(&con);
@@ -134,8 +135,8 @@ int main(){
 	sel("User")["ID"];
 	sel("Depart")["Name"];
 	CTable table = pTable->SelectRecord(&sel,&con);
-	CString strDepartName = table[0]["Depart"].toValue();
-	int nUserID = table[0]["User"].toValue();
+	CString strDepartName = table[0]["Depart.Name"].toValue();
+	int nUserID = table[0]["User.ID"].toValue();
 	
 	//rec["User"].pTable->mapAttri["User"].Name = "123456";
 	//修改字段属性

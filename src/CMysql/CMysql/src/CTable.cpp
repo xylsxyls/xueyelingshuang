@@ -45,8 +45,10 @@ int CTable::Add(CRecord* pRecord){
 	//有强转，不需要判断是否为设置记录
 	CString SQL = "INSERT INTO " + TableName + " SET " + pRecord->ToCString();
 	
+	//首先尝试添加，如果添加成功说明用户的目的为添加记录
 	int nIsSucceed = 0;
-	//nIsSucceed = mysql_query(pDataBase->mysql,SQL);
+	nIsSucceed = mysql_query(pDataBase->mysql,SQL);
+
 	//CString error = mysql_error(mysql);
 	
 	//if(nIsSucceed != 0){
@@ -166,5 +168,67 @@ void CTable::ExportTable(CString mysqldump_exe_path,CString sqlpath){
 	//执行程序，ShellExecute不行
 	system("\"" + mysqldump_exe_path + "\"" + para);
 	//ShellExecute(NULL,_T("open"),_T(mysqldump_exe_path),para,NULL,SW_SHOWNORMAL);
+	return;
+}
+
+void CTable::Refresh(){
+	mysql_query(pDataBase->mysql,"SELECT * FROM " + TableName);
+
+	//存储得到的结果，必须先有这步才可以查询字段属性信息
+	MYSQL_RES* result = mysql_store_result(pDataBase->mysql);
+	//先取出字段属性信息
+	MYSQL_RES* resField = mysql_list_fields(pDataBase->mysql,TableName,"%");
+	
+	//先存字段属性
+	int j = -1;
+	while(j++ != resField->field_count - 1){
+		CString strFieldName = ((resField->fields) + j)->name;
+		//存储
+		mapAttri[strFieldName].Type = ((resField->fields) + j)->type;
+		mapAttri[strFieldName].nLength = ((resField->fields) + j)->length;
+		mapAttri[strFieldName].strFieldName = strFieldName;
+		//得到属性集
+		int flags = ((resField->fields) + j)->flags;
+		if((flags & NOT_NULL_FLAG      ) == NOT_NULL_FLAG      ) mapAttri[strFieldName].bNotNull       = 1;
+		if((flags & PRI_KEY_FLAG       ) == PRI_KEY_FLAG       ) mapAttri[strFieldName].bPrimaryKey    = 1;
+		if((flags & UNIQUE_KEY_FLAG    ) == UNIQUE_KEY_FLAG    ) mapAttri[strFieldName].bUniqueKey     = 1;
+		if((flags & BLOB_FLAG          ) == BLOB_FLAG          ) mapAttri[strFieldName].bBlob          = 1;
+		if((flags & ZEROFILL_FLAG      ) == ZEROFILL_FLAG      ) mapAttri[strFieldName].bZeroFill      = 1;
+		if((flags & AUTO_INCREMENT_FLAG) == AUTO_INCREMENT_FLAG) mapAttri[strFieldName].bAutoIncrement = 1;
+		//如果有默认值获取默认值
+		if((CString)((resField->fields) + j)->def != ""){
+			mapAttri[strFieldName].bHasDefault = 1;
+			mapAttri[strFieldName].vDefault = (CString)((resField->fields) + j)->def;
+		}
+	}
+
+	//开始获取字段值
+	int i = -1;
+	//行数
+	while(i++ != result->row_count - 1){
+		int j = -1;
+		//先找到第一行的值，然后根据当前行数转next找到对应的行
+		MYSQL_ROWS* pRow = result->data->data;
+		int temp = i;
+		while(temp-- != 0) pRow = pRow->next;
+		//准备一个空记录
+		CRecord record(this);
+		//列数循环，把有效值循环加到记录中
+		while(j++ != result->field_count - 1){
+			//分别获得每列的字段名
+			CString FieldName = ((result->fields) + j)->name;
+			//字段值
+			CString strValue = pRow->data[j];
+			//形成一个记录
+			record[FieldName] = strValue;
+		}
+		listRecord.push_back(record);
+	}
+	CRecord rec(this);
+	if((int)rec["ssss"].toValue() == 2){
+		;
+	}
+	CString xx = (*this)[0]["I12D"].toValue();
+	int x = 3;
 	return;
 }

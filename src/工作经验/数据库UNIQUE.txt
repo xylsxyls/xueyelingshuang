@@ -1,0 +1,2 @@
+UNIQUE KEY每列可以有一个空值，一张表里可以有多列是UNIQUE KEY
+PRIMARY KEY不可以有空值，一张表里只能有一个

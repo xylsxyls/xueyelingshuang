@@ -39,8 +39,8 @@ public:
 	CUser* OpenUserInterface(CString User,CString PassWord);
 	//开数据库接口，用于管理表
 	CDataBase* OpenDataBaseInterface();
-	CDataBase* OpenDataBaseInterface(CString dbName);
-	//开表接口，用于管理字段和记录
+	CDataBase* OpenDataBaseInterface(CString dbName,bool AutoCommit = 1);
+	//打开表接口，打开的时候会把该表的所有信息全部放到内存中，如果不想全部取出，可以使用数据库接口
 	CTable* OpenTableInterface(CString TableName,bool AutoCommit = 1);
 
 public:

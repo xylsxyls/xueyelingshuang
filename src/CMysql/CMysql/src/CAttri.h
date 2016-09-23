@@ -4,15 +4,17 @@
 
 class CAttri{
 public:
-	bool Type;
-	CString Name;
+	BOOL Type;
+	CString strFieldName;
 	int nLength;
+	bool bHasDefault;
 	CValue vDefault;
 	bool bPrimaryKey;
+	bool bUniqueKey;
 	bool bNotNull;
-	int nAutoIncrement;
+	bool bAutoIncrement;
+	bool bBlob;
 	bool bZeroFill;
-	CString strComment;
 public:
 	CAttri();
 	CAttri(const CAttri& attri);

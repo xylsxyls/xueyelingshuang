@@ -22,7 +22,7 @@ public:
 	CMysqlManager *pMysqlManager;
 
 public:
-	//作为返回值时放在list中
+	//内存中的表内容
 	list<CRecord> listRecord;
 
 public:
@@ -58,4 +58,7 @@ public:
 	void ImportTable(CString mysql_exe_path,CString sqlpath);
 	//将整张表导出，导出表结构和数据
 	void ExportTable(CString mysqldump_exe_path,CString sqlpath);
+
+	//更新内存
+	void Refresh();
 };

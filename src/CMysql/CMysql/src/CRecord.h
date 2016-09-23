@@ -18,18 +18,14 @@ public:
 	CRecord operator=(const CRecord& record);
 
 public:
-	//只能使用返回本身的方式，如果返回CValue则必须在CValue设置CTable的静态变量
-	//CRecord& operator[](CString Field);
+	//查询了错误的字段名不会导致记录里的字段增加
 	CRecord& operator[](CString Field);
-	//给记录赋值字段值
+	//给记录赋值字段值，不存在则添加
 	CRecord operator=(const CValue& value);
-	
-	
-	
-public:
-	CAttri* operator->();
 
 public:
+	//一旦设置属性则添加属性，即便字段名不存在
+	CAttri* operator->();
 	CValue toValue();
 
 public:
