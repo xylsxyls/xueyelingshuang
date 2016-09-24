@@ -1,5 +1,6 @@
 #pragma once
 #include <afxwin.h>
+#include <list>
 #include <map>
 using namespace std;
 #include "CValue.h"
@@ -9,6 +10,8 @@ class CRecord{
 public:
 	//不使用table中定义字段名的模式，因为无法添加新字段
 	map<CString,CValue> mapValue;
+	//存储修改的字段名，在Add执行之后清空
+	list<CString> listReviseAttri;
 
 	CString strCurrentField;
 	CTable* pTable;

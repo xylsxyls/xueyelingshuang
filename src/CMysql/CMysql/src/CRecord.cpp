@@ -10,12 +10,14 @@ CRecord::CRecord(const CRecord& record){
 	this->mapValue = record.mapValue;
 	this->strCurrentField = record.strCurrentField;
 	this->pTable = record.pTable;
+	this->listReviseAttri = record.listReviseAttri;
 }
 
 CRecord CRecord::operator=(const CRecord& record){
 	this->mapValue = record.mapValue;
 	this->strCurrentField = record.strCurrentField;
 	this->pTable = record.pTable;
+	this->listReviseAttri = record.listReviseAttri;
 	return *this;
 }
 
@@ -30,6 +32,7 @@ CRecord CRecord::operator=(const CValue& value){
 }
 
 CAttri* CRecord::operator->(){
+	listReviseAttri.push_back(strCurrentField);
 	return &(pTable->mapAttri[strCurrentField]);
 }
 

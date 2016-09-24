@@ -122,7 +122,7 @@ int main(){
 	!con;
 
 	//É¾
-	pTable->Delete(&con);
+	int x = pTable->Delete(&con);
 
 	//¸Ä
 	CUpdate upd;

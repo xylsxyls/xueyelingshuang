@@ -4,7 +4,7 @@
 class CCondition{
 public:
 	CString strSQL;
-	CCondition operator&&(CCondition con);
-	CCondition operator||(CCondition con);
-	CCondition operator!();
+	CCondition& operator&&(CCondition con);
+	CCondition& operator||(CCondition con);
+	CCondition& operator!();
 };

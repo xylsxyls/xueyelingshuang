@@ -42,29 +42,43 @@ CRecord CTable::operator[](int num){
 }
 
 int CTable::Add(CRecord* pRecord){
-	//有强转，不需要判断是否为设置记录
+	//因为Add函数会多次操作数据库，所以不论在外部有没有设置回滚，函数内部都要设置回滚
+	
+	//查看是否有新字段添加，但是不为新字段设置属性
+	for(auto itFieldInRecord = pRecord->mapValue.begin();itFieldInRecord != pRecord->mapValue.end();itFieldInRecord++){
+		for(auto itFieldInTable = mapAttri.begin();itFieldInTable != mapAttri.end();itFieldInTable++){
+			//如果记录中有一个字段和Table中的相等了说明不是新字段
+			if(itFieldInRecord->first == itFieldInTable->first) goto Next;
+		}
+		//如果自然退出则说明全都不相等则说明该字段是新字段
+		int nResult = AddNewFieldWithNoAttri(itFieldInRecord->first);
+		//如果添加新字段失败则返回
+		if(nResult != 0) return nResult;
+		Next:;
+	}
+
+	//根据listReviseAttri提供的修改属性的字段名进行属性修改
+	if(pRecord->listReviseAttri.size() != 0){
+		for(auto itRevise = pRecord->listReviseAttri.begin();itRevise != pRecord->listReviseAttri.end();itRevise++){
+			int nResult = ReviseAttri(&mapAttri[*itRevise]);
+			//说明有属性修改不成功
+			if(nResult != 0) return nResult;
+		}
+	}
+	//修改完清空
+	pRecord->listReviseAttri.clear();
+
+	//在属性和字段添加全部成功之后添加记录
 	CString SQL = "INSERT INTO " + TableName + " SET " + pRecord->ToCString();
 	
 	//首先尝试添加，如果添加成功说明用户的目的为添加记录
-	int nIsSucceed = 0;
-	nIsSucceed = mysql_query(pDataBase->mysql,SQL);
-
-	//CString error = mysql_error(mysql);
-	
-	//if(nIsSucceed != 0){
-		//进入这个分支说明可能是主键重复的错误和真的错误，都应该返回0
-		//如果找不到primary说明不是主键重复的错误，则为真的错误
-		//if(error.Find("'PRIMARY'") < 0) pMysqlManager->MysqlSucceed = 0;
-		//return 0;
-	//}
-	return nIsSucceed;
+	return mysql_query(pDataBase->mysql,SQL);
 }
 
 int CTable::Delete(CCondition* pCondition){
 	CString SQL = "DELETE FROM " + TableName + " WHERE " + pCondition->strSQL;
 
-	//return mysql_query(pDataBase->mysql,SQL);
-	return 0;
+	return mysql_query(pDataBase->mysql,SQL);
 }
 
 int CTable::UpdateRecord(CUpdate* pUpdate,CCondition* pCondition){
@@ -137,6 +151,14 @@ CTable CTable::SelectRecord(CSelect *pSelect,CCondition* pCondition){
 
 	if(nIsSucceed != 0) pMysqlManager->MysqlSucceed = 0;*/
 	return vecRecord;
+}
+
+int CTable::ReviseAttri(CAttri* pAttri){
+	return 0;
+}
+
+int CTable::AddNewFieldWithNoAttri(CString strFieldName){
+	return 0;
 }
 
 void CTable::ImportTable(CString mysql_exe_path,CString sqlpath){
@@ -224,11 +246,5 @@ void CTable::Refresh(){
 		}
 		listRecord.push_back(record);
 	}
-	CRecord rec(this);
-	if((int)rec["ssss"].toValue() == 2){
-		;
-	}
-	CString xx = (*this)[0]["I12D"].toValue();
-	int x = 3;
 	return;
 }

@@ -54,6 +54,11 @@ public:
 	//查询记录
 	CTable SelectRecord(CSelect *pSelect,CCondition* pCondition);
 
+	//修改字段属性
+	int ReviseAttri(CAttri* pAttri);
+	//添加新字段
+	int AddNewFieldWithNoAttri(CString strFieldName);
+
 	//将整张表导入，导入表结构和数据
 	void ImportTable(CString mysql_exe_path,CString sqlpath);
 	//将整张表导出，导出表结构和数据

@@ -29,9 +29,9 @@ public:
 	//内联
 	CCondition operator&&(const CTableField& tf);
 	//左联合，左边的数据量大于等于右边的数据量
-	CCondition operator>=(const CTableField& tf);
-	//右联合，左边的数据量小于等于右边的数据量
 	CCondition operator<=(const CTableField& tf);
+	//右联合，左边的数据量小于等于右边的数据量
+	CCondition operator>=(const CTableField& tf);
 	//全联
 	CCondition operator||(const CTableField& tf);
 };
