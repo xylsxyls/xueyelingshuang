@@ -193,8 +193,8 @@ CstrValue::operator int(){
 	return nValue;
 }
 
-CstrValue::operator char*(){
-	return (LPSTR)(LPCTSTR)strValue;
+CstrValue::operator CString(){
+	return strValue;
 }
 
 CstrValue::operator double(){

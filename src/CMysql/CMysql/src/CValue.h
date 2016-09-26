@@ -30,7 +30,7 @@ public:
 	bool operator!= (const CValue& value);
 
 	operator int();
-	operator char*();
+	operator CString();
 	operator double();
 
 public:

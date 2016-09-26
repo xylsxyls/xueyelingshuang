@@ -103,37 +103,37 @@ int main(){
 	//打开表接口
 	CMysql mysql;
 	CTable* pTable = mysql.OpenTableInterface("test",1);
+	CString xxx = (*pTable)[0]["name"].toValue();
 
 	//增
 	//设置记录
 	CRecord rec(pTable);
-	rec["User"] = "3";
-	rec["ID"] = 3;
-	pTable->Add(&rec);
+	rec["name"] = "e";
+	rec["number"] = 5;
+	//pTable->Add(&rec);
 
 	//定义条件
 	CCondition con;
 	//条件and
-	con && (CTableField("User","Name") && CTableField("Department","strName"));
-	con && (CTableField("User","Ent_ID") == 20046);
+	con && (CTableField("test","name") == "d");
+	con && (CTableField("test","number") == 4);
 	//条件or，左联合
-	con || (CTableField("User","ID") <= CTableField("Department","UserID"));
+	//con || (CTableField("User","ID") <= CTableField("Department","UserID"));
 	//条件not
-	!con;
+	//!con;
 
 	//删
-	int x = pTable->Delete(&con);
+	//int x = pTable->Delete(&con);
 
 	//改
 	CUpdate upd;
-	upd["User"] = "a";
-	upd["departID"] = 3;
+	upd["ID"] = 10005;
 	pTable->UpdateRecord(&upd,&con);
 
 	//查
 	CSelect sel;
-	sel("User")["ID"];
-	sel("Depart")["Name"];
+	sel("test")["name"];
+	sel("test")["ID"];
 	CTable table = pTable->SelectRecord(&sel,&con);
 	CString strDepartName = table[0]["Depart.Name"].toValue();
 	int nUserID = table[0]["User.ID"].toValue();

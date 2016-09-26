@@ -82,8 +82,8 @@ CValue::operator int(){
 	return nValue;
 }
 
-CValue::operator char*(){
-	return (LPSTR)(LPCTSTR)strValue;
+CValue::operator CString(){
+	return strValue.Mid(1,strValue.GetLength() - 2);
 }
 
 CValue::operator double(){

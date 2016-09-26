@@ -19,7 +19,7 @@ public:
 
 public:
 	operator int();
-	operator char*();
+	operator CString();
 	operator double();
 
 public:

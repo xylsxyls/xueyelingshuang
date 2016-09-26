@@ -30,7 +30,7 @@ CSelect CSelect::operator=(const CSelect& sel){
 CString CSelect::ToCString(){
 	CString strResult;
 	for(auto it = listTf.begin();it != listTf.end();it++){
-		strResult = strResult + it->Table + " " + it->Field + ",";
+		strResult = strResult + it->Table + "." + it->Field + ",";
 	}
 	strResult.Delete(strResult.GetLength() - 1,1);
 	return strResult;

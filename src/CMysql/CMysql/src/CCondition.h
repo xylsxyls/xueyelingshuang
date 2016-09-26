@@ -7,4 +7,6 @@ public:
 	CCondition& operator&&(CCondition con);
 	CCondition& operator||(CCondition con);
 	CCondition& operator!();
+
+	void Clear();
 };

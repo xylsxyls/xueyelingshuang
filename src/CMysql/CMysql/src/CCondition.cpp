@@ -29,3 +29,8 @@ CCondition& CCondition::operator!(){
 	strSQL = "( not " + strSQL + ")";;
 	return *this;
 }
+
+void CCondition::Clear(){
+	strSQL = "";
+	return;
+}
