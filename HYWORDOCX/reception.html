@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="gbk">
+<meta http-equiv="Content-Type" content="text/html;">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=10,IE=9,IE=8">
+<link rel="stylesheet" type="text/css" href='preset/preset-controller.css'/>
+<script language="javascript" type="text/javascript" src='preset/jquery.min.js'></script>
+<script language="javascript" type="text/javascript" src='preset/json2.js'></script>
+<script language="javascript" type="text/javascript" src='preset/utils.js'></script>
+<script language="javascript" type="text/javascript" src='preset/McOcx.js'></script>
+</head>
+<body>
+	<div class="tc_ocx">
+		<div class="ocx" style="margin-left: 8px; margin-top: 8px; float: left; width: 810px;">
+			<OBJECT id="tc_ocx" name="tc_ocx" classid="clsid:A7D222A1-8C4D-41CF-AC24-E8A914C61102"style="position:absolute;top:-1000px;"></OBJECT>
+			<OBJECT id="hyword_ocx" name="hyword_ocx" classid="clsid:8509CC7D-7A8E-4AA7-B818-DD75A025B441" style="width:800px;height:800px;"></OBJECT>
+		</div>
+		
+		<div class="video_control" style="margin-top: 8px; float: right; width: 450px;">
+			<div>
+				<span><label>庭审ID:</label><input name="TrialID" type="text" value="178"></span>
+				<span><label>caseID:</label><input name="caseID" type="text" value=""></span>
+				<br/><br/>
+				<button class = "btn_PreparationTrial"           onclick = "PreparationTrial()"           > 庭审准备     </button>
+				<button class = "btn_CourtSession"               onclick = "CourtSession()"               > 开庭         </button>
+				<button class = "btn_Adjourn"                    onclick = "Adjourn()"                    > 休庭         </button>
+				<button class = "btn_CloseCourt"                 onclick = "CloseCourt()"                 > 闭庭         </button>
+				<button class = "btn_OpenWord"                   onclick = "OpenWord()"                   > 打开word     </button>
+				<button class = "btn_ImportNotes"                onclick = "ImportNotes()"                > 导入笔录     </button>
+				<button class = "btn_DownloadNotes"              onclick = "DownloadNotes()"              > 下载笔录     </button>
+				<button class = "btn_UploadNotes"                onclick = "UploadNotes()"                > 上传笔录     </button>
+				<button class = "btn_TextSynchronizing"          onclick = "TextSynchronization()"        > 文本同步     </button>
+				<button class = "btn_IncrementalSynchronization" onclick = "IncrementalSynchronization()" > 增量同步     </button>
+				<button class = "btn_QuickFormat"                onclick = "QuickFormat()"                > 一键排版     </button>
+				<button class = "btn_WitnessTestimonyPrint"      onclick = "WitnessTestimonyPrint()"      > 证人证言打印 </button>
+				<button class = "btn_RecordManagement"           onclick = "RecordManagement()"           > 笔录打点     </button>
+			</div>
+		</div>
+	</div>
+</body>
+<script type="text/javascript">
+
+	var tcocx = "";
+
+	$(function(){
+		tcocx = document.getElementById("tc_ocx");
+		hywordocx = document.getElementById("hyword_ocx");
+	});
+	
+	function PreparationTrial(){
+		var cmd = "{\"cmd\": \"prepare_reception\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\": {\"user_id\": 1,\"reception_id\":" + $('input[name="TrialID"]').val() + "}}";
+		tcocx.SendCmdReq(1100005,cmd);
+	}
+	
+	function CourtSession(){
+		var cmd = "{\"cmd\": \"begin_reception\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\": {\"reception_id\":" + $('input[name="TrialID"]').val() + ",\"isrecord\":1}}";
+		tcocx.SendCmdReq(1100006,cmd);
+	}
+	
+	function Adjourn(){
+		var cmd = "{\"cmd\": \"break_reception\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\": {\"reception_id\":" + $('input[name="TrialID"]').val() + "}}";
+		tcocx.SendCmdReq(1100007,cmd);
+
+		//上传笔录
+		var uploadcmd = "{\"cmd\": \"upload_reception_container_block\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\": {\"reception_id\":" + $('input[name="TrialID"]').val() + ",\"upload_type\":0,\"localfile_name_list\":[{\"localfile_name\":\"\",\"localfile_type\":0},{\"localfile_name\":\"\",\"localfile_type\":1}]}}";
+		tcocx.SendCmdReq(2100003,uploadcmd);
+
+		//退出登录
+		var regcmd = "{\"cmd\": \"reg_note_user_info\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\": {\"reception_id\":" + $('input[name="TrialID"]').val() + ",\"user_role\":1,\"reg_flag\":2}}";
+		tcocx.SendCmdReq(2100015,regcmd);  
+
+		//反注册消息订阅者或发布者
+		hywordocx.SetWordType(0);
+		//停止自动打点
+		hywordocx.StopAutoMarkNotesVideo();
+	}
+	
+	function CloseCourt(){
+		var cmd = "{\"cmd\": \"end_reception\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\": {\"reception_id\":" + $('input[name="TrialID"]').val() + "}}";
+        tcocx.SendCmdReq(1100008,cmd);
+
+		//上传笔录
+		var uploadcmd = "{\"cmd\": \"upload_reception_container_block\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\": {\"reception_id\":" + $('input[name="TrialID"]').val() + ",\"upload_type\":0,\"localfile_name_list\":[{\"localfile_name\":\"\",\"localfile_type\":0},{\"localfile_name\":\"\",\"localfile_type\":1}]}}";
+		tcocx.SendCmdReq(2100003,uploadcmd);
+		
+		//退出登录
+		var regcmd = "{\"cmd\": \"reg_note_user_info\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\": {\"reception_id\":" + $('input[name="TrialID"]').val() + ",\"user_role\":1,\"reg_flag\":2}}";
+		tcocx.SendCmdReq(2100015,regcmd);  
+		
+		//反注册消息订阅者或发布者
+		hywordocx.SetWordType(0);
+		//停止自动打点
+		hywordocx.StopAutoMarkNotesVideo();
+	}
+	
+	function OpenWord(){
+		hywordocx.SetTrialInfo($('input[name="TrialID"]').val()*1);
+		hywordocx.SetWordType(1);
+		hywordocx.DownloadNote($('input[name="TrialID"]').val()*1,$('input[name="caseID"]').val()*1,"");
+	}
+	
+	function ImportNotes(){
+		hywordocx.SetTrialInfo($('input[name="TrialID"]').val()*1);
+		hywordocx.SetWordType(1);
+		hywordocx.ImportNoteByUser($('input[name="TrialID"]').val()*1,1);
+	}
+	
+	function DownloadNotes(){
+		hywordocx.SetTrialInfo($('input[name="TrialID"]').val()*1);
+		hywordocx.DownloadNote($('input[name="TrialID"]').val()*1,$('input[name="caseID"]').val()*1,"s12d4g.doc");
+	}
+	
+	function UploadNotes(){
+		hywordocx.UploadNote($('input[name="TrialID"]').val()*1,$('input[name="caseID"]').val()*1);
+	}
+	
+	function TextSynchronization(){
+		hywordocx.SetSyncType(0);
+		hywordocx.StartAutoSendWholeNote(0);
+	}
+	
+	function IncrementalSynchronization(){
+		hywordocx.SetSyncType(2);
+	}
+	
+	function QuickFormat(){
+		hywordocx.QuickFormat();
+	}
+	
+	function WitnessTestimonyPrint(){
+		hywordocx.EvidencePrint();
+	}
+	
+	function RecordManagement(){
+		hywordocx.StartAutoMarkNotesVideo(0);
+	}
+	
+</script>
+<script language="javascript" for="tc_ocx" event="MCComEvent(id,ocxresultJson,nSize)">
+	$._log("<tc_ocx> : receive response message: <" + ocxresultJson + ">.");
+	//如果接到正确的消息则进入main页面，window.location.href为跳转页面，slice为截取字符串
+	//if(JSON2.parse(ocxresultJson).cmd == "user_login_ack"){
+	//	if(JSON2.parse(ocxresultJson).params.code == "0") window.location.href = (window.location.href.slice(8,-10) + "main.html");
+	//	else alert("参数错误");
+	//}
+</script>
+
+</html>

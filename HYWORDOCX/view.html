@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="gbk">
+<meta http-equiv="Content-Type" content="text/html;">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=10,IE=9,IE=8">
+<link rel="stylesheet" type="text/css" href='preset/preset-controller.css'/>
+<script language="javascript" type="text/javascript" src='preset/jquery.min.js'></script>
+<script language="javascript" type="text/javascript" src='preset/json2.js'     ></script>
+<script language="javascript" type="text/javascript" src='preset/utils.js'     ></script>
+<script language="javascript" type="text/javascript" src='preset/McOcx.js'     ></script>
+</head>
+<body>
+	<div class="tc_ocx">
+		<div class="ocx" style="margin-left: 8px; margin-top: 8px; float: left; width: 750px;">
+			<OBJECT id = "hyword_ocx" name = "hyword_ocx" classid = "clsid:8509CC7D-7A8E-4AA7-B818-DD75A025B441" style = "width:750px;height:750px;"></OBJECT>
+		</div>	
+		<div class="ocx" style="margin-left: 0px; margin-top: 8px; float: right;"><div>
+			<span><label>庭审ID:</label><input name="ReceptionID" type="text" style = "width:40px;" value="183"></span>
+			<button class = "btn_BeginViewReception" onclick = "BeginViewReception()"> 开始观摩 </button>
+			<button class = "btn_Sign"   onclick = "Sign()"  > 签字完成 </button>
+			<button class = "btn_End"   onclick = "End()"  > 关闭页面 </button>
+		</div>
+		<div class="ocx" style="margin-left: 8px; margin-top: 8px; float: right; width: 500;">
+			<OBJECT id = "tc_ocx" name = "tc_ocx" classid = "clsid:A7D222A1-8C4D-41CF-AC24-E8A914C61102" style = "width:500px;height:720px;" ></OBJECT>
+		</div>
+		<br/><br/>
+		
+	</div>
+</body>
+<script type="text/javascript">
+
+var UserID = "";
+var Ip = "";
+var Port = "";
+
+	$(function(){
+		tcocx     = document.getElementById("tc_ocx"    );
+		hywordocx = document.getElementById("hyword_ocx");
+		UserID    = (document.location.href.split("?"))[1];
+		Ip        = (document.location.href.split("?"))[2];
+		Port      = (document.location.href.split("?"))[3];
+		tcocx.SetIpAddr(Ip,Port*1);
+	});
+	
+	function BeginViewReception(){
+		var strViewReceptionCmd = "{\"cmd\": \"view_reception_login\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\": {\"user_id\":" + UserID + ",\"reception_id\":" + $('input[name="ReceptionID"]').val() + ",\"user_org_flag\":0,\"message_show_name\":\"test\",\"isauthorized\":1}}";
+			
+		tcocx.SendCmdReq(1100017, strViewReceptionCmd);
+	
+		hywordocx.SetTrialInfo($('input[name="ReceptionID"]').val()*1);
+		hywordocx.SetWordType(2);
+	
+		tcocx.IsUpdateNote(true);
+	}
+	
+	function Sign(){
+		hywordocx.SignComplete();
+	}
+	
+	function End(){
+		hywordocx.SetWordType(0);
+		var strViewReceptionLogOutCmd = "{\"cmd\": \"view_reception_logout\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\":{\"user_id\":" + UserID + ",\"reception_id\":}}";
+		tcocx.SendCmdReq(1100018,strViewReceptionLogOutCmd);
+		window.location.href = (window.location.href.slice(8,-29) + "main.html");
+	}
+	
+</script>
+<script language="javascript" for="tc_ocx" event="MCComEvent(id,ocxresultJson,nSize)">
+	$._log("<tc_ocx> : receive response message: <" + ocxresultJson + ">.");
+</script>
+<script language="javascript" for="hyword_ocx" event="MCComEvent(id,ocxresultJson,nSize)">
+	$._log("<hyword_ocx> : receive response message: <" + ocxresultJson + ">.");
+</script>
+
+</html>

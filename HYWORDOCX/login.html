@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=10,IE=9,IE=8">
+<link rel="stylesheet" type="text/css" href='preset/preset-controller.css'/>
+<script language="javascript" type="text/javascript" src='preset/jquery.min.js'></script>
+<script language="javascript" type="text/javascript" src='preset/json2.js'></script>
+<script language="javascript" type="text/javascript" src='preset/utils.js'></script>
+<script language="javascript" type="text/javascript" src='preset/McOcx.js'></script>
+</head>
+<body>
+	<div class="tc_ocx">
+		<div class="video_control" style="margin-top: 8px;">
+			<div class="ctro_1">
+				登录设置==========================================================================
+				<br/><br/>
+				<span style="margin-left: 0px;"><label>用户名:</label><input name="Account" type="text" value="root"></span>
+				<span><label>密码:</label><input name="PassWord" type="text" style="margin-left: 15px;" value="rootroot"></span>
+				<span style="margin-left: 20px;">
+					<label>角色：</label>
+					<select name="voiceflag" style="width: 60px;">
+						<option value="0">管理员</option>
+						<option value="1">法官</option>
+						<option value="2">书记员</option>
+					</select>
+				</span>
+				<br/><br/>
+				服务器设置==========================================================================
+				<br/><br/>
+				<span style="margin-left: 0px;"><label>服务器地址:</label><input name="Ip" type="text" value="192.168.1.46"></span>
+				<span><label>端口:</label><input name="Port" type="text" style="margin-left: 15px;" value="7001"></span>
+				<button class="btn_login" onclick="login()">登录</button>
+			</div>
+		</div>
+	</div>
+	
+	<OBJECT id="tc_ocx" name="tc_ocx" classid="clsid:A7D222A1-8C4D-41CF-AC24-E8A914C61102" style="position:absolute;top:-1000px;"></OBJECT>
+</body>
+<script type="text/javascript">
+
+	var tcocx = "";
+
+	$(function(){
+		tcocx = document.getElementById("tc_ocx");
+		$.Ip = $('input[name="Ip"]').val();
+		$.Port = $('input[name="Port"]').val()*1;
+	});
+	
+	function login(){
+		tcocx.SetIpAddr($('input[name="Ip"]').val(),$('input[name="Port"]').val()*1);
+		tcocx.SendCmdReq(100001,"{\"cmd\": \"user_login\",\"msgtype\": \"request\",\"func_id\": \"1000\",\"params\":{\"login_name\": \"" + $('input[name="Account"]').val()+"\",\"password\": \""+$('input[name="PassWord"]').val()+"\"}}");
+	// CODE  
+	//window.location.href="C:/Users/xylsxyls/Desktop/MCOCX/MCOCX/login.html";
+		
+	}
+	
+</script>
+<script language="javascript" for="tc_ocx" event="MCComEvent(id,ocxresultJson,nSize)">
+	$._log("<tc_ocx> : receive response message: <" + ocxresultJson + ">.");
+	//如果接到正确的消息则进入main页面，window.location.href为跳转页面，slice为截取字符串，JSON2.parse(ocxresultJson)可以当做json对象
+	if(JSON2.parse(ocxresultJson).cmd == "user_login_ack"){
+		if(JSON2.parse(ocxresultJson).params.code == "0"){
+			var UserID = (JSON2.parse(ocxresultJson).params.result)[0].id;
+			var Ip = $('input[name="Ip"]').val();
+			var Port = $('input[name="Port"]').val();
+			window.location.href = (window.location.href.slice(8,-10) + "main.html" + "?" + UserID + "?" + Ip + "?" + Port);
+		}
+		else alert("参数错误");
+	}
+</script>
+
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="gbk">
+<meta http-equiv="Content-Type" content="text/html;">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=10,IE=9,IE=8">
+<link rel="stylesheet" type="text/css" href='preset/preset-controller.css'/>
+<script language="javascript" type="text/javascript" src='preset/jquery.min.js'></script>
+<script language="javascript" type="text/javascript" src='preset/json2.js'     ></script>
+<script language="javascript" type="text/javascript" src='preset/utils.js'     ></script>
+<script language="javascript" type="text/javascript" src='preset/McOcx.js'     ></script>
+</head>
+<body>
+	<div class="tc_ocx">
+		<div class="ocx" style="margin-left: 8px; margin-top: 8px; float: left; width: 750px;">
+			<OBJECT id = "hyword_ocx" name = "hyword_ocx" classid = "clsid:8509CC7D-7A8E-4AA7-B818-DD75A025B441" style = "width:750px;height:750px;"      ></OBJECT>
+			<OBJECT id = "tc_ocx"     name = "tc_ocx"     classid = "clsid:A7D222A1-8C4D-41CF-AC24-E8A914C61102" style = "position:absolute;top:-1000px;" ></OBJECT>
+		</div>	
+		<div class="ocx" style="margin-left: 8px; margin-top: 8px; float: right; width: 500;">
+			<OBJECT id = "mc_ocx"     name = "mc_ocx"     classid = "clsid:A48CA6A2-D901-4E82-BF51-CDAFDAD78045" style = "width:500px;height:500px;" VIEWASTEXT>
+				<PARAM name = "ShowPlayBar"      value = "1" >
+				<PARAM name = "ShowProgressBar"  value = "1" >
+				<PARAM name = "ShowAudioBar"     value = "1" >
+				<PARAM name = "ShowPlayPauseBtn" value = "1" >
+				<PARAM name = "ShowLayoutBtn"    value = "1" >
+				<PARAM NAME = "ShowStretchBtn"   value = "1" >
+			</OBJECT>
+		</div>
+		<br/><br/>
+		<div class="video_control" style="margin-top: 8px;"><div>
+			<span><label>请输入ReceptionID:</label><input name="ReceptionID" type="text" style = "width:40px;" value="183"></span>
+			<span><label>请输入CaseVideoID:</label><input name="CaseVideoID" type="text" style = "width:40px;" value="190"></span>
+			<span><label>请输入CaseID:     </label><input name="CaseID"      type="text" style = "width:40px;" value="152"></span>
+			<span><label>SIEIp:            </label><input name="SIEIp"       type="text" style = "width:40px;" value="192.168.1.70"></span>
+			<span style="margin-left: 20px;">
+				<label>播放方式：</label>
+				<select name="PlayWay" style="width: 60px;">
+					<option value="0">合成</option>
+					<option value="1">高清</option>
+				</select>
+			</span>
+			<button class = "btn_BeginCompare" onclick = "BeginCompare()"> 开始校对 </button>
+			<button class = "btn_EndCompare"   onclick = "EndCompare()"  > 结束校对 </button>
+		</div>
+	</div>
+</body>
+<script type="text/javascript">
+	var UserID = "";
+	var Ip = "";
+	var Port = "";
+	$(function(){
+		mcocx     = document.getElementById("mc_ocx"    );
+		tcocx     = document.getElementById("tc_ocx"    );
+		hywordocx = document.getElementById("hyword_ocx");
+		mcocx.SetLayout(1);
+		UserID    = (document.location.href.split("?"))[1];
+		Ip        = (document.location.href.split("?"))[2];
+		Port      = (document.location.href.split("?"))[3];
+	});
+	
+	function BeginCompare(){
+		var VideoPlayBackcmd = "{\"cmd\":\"video_playback\",\"msgtype\":\"request\",\"func_id\":\"1000\",\"params\":{\"court_code\":\"A00\",\"case_video_id\":" + $('input[name="CaseVideoID"]').val() + ",\"synthesis_flag\":" + $("select[name='PlayWay']").val() + " }}";
+		tcocx.SendCmdReq(1200002,VideoPlayBackcmd);
+		hywordocx.SetTrialInfo($('input[name="ReceptionID"]').val()*1);
+		hywordocx.SetWordType(4);
+		hywordocx.DownloadNote($('input[name="ReceptionID"]').val()*1,$('input[name="CaseID"]').val()*1,"");
+
+		mcocx.StopPlayByWinID(-1);
+		mcocx.ResetLayOut();
+		mcocx.ResetLayOut();
+		
+		//属性设置在js中不可以这样设置，这些函数是MFC自动生成的函数，不是类里的函数
+		//mcocx.SetShowPlayBar(1);
+		//mcocx.SetShowAudioBar    (1);
+		//mcocx.SetShowPlayPauseBtn(1);
+		//mcocx.SetShowProgressBar (1);
+		//mcocx.SetShowPlayPauseBtn(1);
+		//mcocx.SetShowStretchBtn  (1);
+		//mcocx.SetShowViewType    (1);
+	}
+	
+	function EndCompare(){
+		window.location.href = (window.location.href.slice(8,-32) + "main.html" + "?" + UserID + "?" + Ip + "?" + Port);
+	}
+	
+</script>
+<script language="javascript" for="tc_ocx" event="MCComEvent(id,ocxresultJson,nSize)">
+	$._log("<tc_ocx> : receive response message: <" + ocxresultJson + ">.");
+	
+	if(id == 135690 && JSON2.parse(ocxresultJson).params.code == 0){
+		var SyncPlayBackJson = {
+			"domainIP": $('input[name="SIEIp"]').val(),
+			"port": 9000,
+			"videoStartTime": JSON2.parse(ocxresultJson).params.result[0].start_time,
+			"videoList": []
+		};
+	
+		var PlayCount = JSON2.parse(ocxresultJson).params.result.length;
+	
+		//json定义的时候定义的变量是局部的，但是存放json的是堆空间，有自动回收机制，传值时传的都是引用，所以新定义的对象=对象传的也是引用，push进去的也是引用
+		//所以这里不可以直接对PlayCount改造然后传入，因为这样传入的只是引用，最后会导致拉进去的全是同一个json对象
+		for(var i = 0; i < PlayCount; i++){
+			var temp = {
+				"wid": i,
+				"seat": JSON2.parse(ocxresultJson).params.result[0].seat,
+				"isAudioValid": 1,
+				"recordList": [{
+					"recordId": JSON2.parse(ocxresultJson).params.result[i].relate_record[0].record_id,
+					"rdomainCode": JSON2.parse(ocxresultJson).params.result[i].rdomain_code,
+					"startTime": JSON2.parse(ocxresultJson).params.result[i].relate_record[0].begin_bs,
+					"stopTime": JSON2.parse(ocxresultJson).params.result[i].relate_record[0].end_bs,
+					"speed": 1,
+					"isAudioValid": 1,
+					"ntype": 1,
+					"offset": 0
+				}],
+				"layOutInfo": {}
+			};
+			SyncPlayBackJson.videoList.push(temp);
+		}
+	
+		mcocx.SetLayout(PlayCount);
+		hywordocx.SetPlayBackVideoInfo($('input[name="CaseVideoID"]').val()*1, SyncPlayBackJson.videoStartTime);
+		mcocx.StartMultiSyncPlayBack(JSON.stringify(SyncPlayBackJson));
+	}
+	else if(id == 135690 && JSON2.parse(ocxresultJson).params.code != 0) alert("参数错误");
+	
+</script>
+
+</html>

@@ -1,0 +1,180 @@
+@CHARSET "UTF-8";
+
+
+.player_pannel > div{
+	float: left;
+	position: absolute;
+	top: 0px;
+	
+}
+.ocx_player{
+	left: 0px;
+}
+.video_control{
+	left: 650px;
+}
+.preset_pannel{
+	width: 350px;
+	height: 620px;
+	float: left;
+	border: 1px solid #ddd;
+}
+.ocx_player{
+	width: 650px;
+	height: 480px;
+}
+.code_pannel{
+	width: 660px;
+	height: 60px;
+	margin: 20px 5px;
+	font-size: 14px;
+}
+.code_pannel span {
+	margin: 2px;
+}
+.code_pannel label {
+	width: 50px;
+	height: 20px;
+	text-align: right;
+}
+.code_pannel input {
+	width: 120px;
+	height: 20px;
+	text-align: left;
+	border: 1px solid #cdcdcd;
+}
+.code_pannel input:focus{
+	border: 1px solid #23d3c9;
+}
+.btns_pannel{
+	width: 660px;
+	height: 35px;
+	text-align: center;
+}
+.btns_pannel button{
+	width: 160px;
+	height: 30px;
+	line-height: 26px;
+	font-size: 13px;
+	margin: 0px 10px;
+}
+.video_control{
+	width: 660px;
+	height: 35px;
+	font-size: 14px;
+}
+.video_control select {
+	width: 120px;
+	height: 26px;
+}
+
+.preset_title{
+	font-size: 17px; 
+	display: block; 
+	font-weight: bold; 
+	margin-top: 15px;
+	padding: 0px 0px 5px 10px; 
+	border-bottom: 3px solid #0097cc; 
+}
+.channel_info{
+	width: inherit;
+	height: 85px;
+	padding: 10px 0px;
+}
+.channel_info label{
+	font-size: 14px;
+	margin-left: 28px;
+}
+span#room_name, span#channel_name{
+	font-size: 14px;
+	margin-left: 3px;
+}
+.preset_info{
+	width: inherit;
+	height: 185px;
+	margin-top: -15px;
+	padding: 10px 0px;
+}
+.preset_info table{
+	float: left;
+	height: 90px;
+	width: 90px;
+	margin-left: 28px;
+	margin-top: 10px;
+}
+.preset_info table tr{
+	width: inherit;
+	height: 30px;
+	border: none;
+}
+.preset_info table tr th{
+	width: 40px;
+	height: 40px;
+	margin: 0px;
+	padding: 0px;
+	min-width: 40px;
+	background-color: #ddd;
+}
+.preset_info i {
+	width: inherit;
+	height: inherit;
+	text-align: center;
+	color: #888;
+	padding-top: 4px;
+	cursor: pointer;
+}
+.preset_left i {
+	font-size: 30px;
+}
+.preset_right i {
+	font-size: 20px;
+}
+.preset_right {
+	border-collapse: collapse;
+}
+.preset_right tr {
+	background-color: #ddd;
+	border: 2px solid #fff !important;
+}
+.preset_right tr th{
+	border-left-width: 0px;
+	border-right-width: 0px;
+	margin-top: 1px 0px;
+}
+.preset_right tr th.font{
+	font-family: "微软雅黑",Verdana,sans-serif,"宋体",serif;
+	font-size: 14px;
+	color: #666;
+	line-height: 36px;
+}
+.preset_list{
+	width: inherit;
+	height: 220px;
+	max-height: 220px;
+	margin-top: -15px;
+	padding: 10px 0px;
+}
+.preset_name{
+	border: 1px solid #7698be;
+	height: 18px;
+	line-height: 18px;
+	width: 120px;
+}
+.preset_btn_add{
+	float: right;
+	width: 79px;
+	height: 26px;
+	line-height: 15px;
+	text-align: center;
+	border-radius: 8px;
+	margin-right: 25px;
+	margin-top: -5px;
+	color: #FFF;
+	font-weight: bold;
+	border: 0px;
+	cursor: pointer;
+	background-image: url("../preset/image/normal_btn_bg_hover.png");
+}
+.preset_btn_add:HOVER{
+	background-image: url("../preset/image/normal_btn_bg_hover.png");
+}

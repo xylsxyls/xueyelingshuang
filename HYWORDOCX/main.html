@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=gbk>
+<meta http-equiv="Content-Type" content="text/html;">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=10,IE=9,IE=8">
+<link rel="stylesheet" type="text/css" href='preset/preset-controller.css'/>
+<script language="javascript" type="text/javascript" src='preset/jquery.min.js'></script>
+<script language="javascript" type="text/javascript" src='preset/json2.js'></script>
+<script language="javascript" type="text/javascript" src='preset/utils.js'></script>
+<script language="javascript" type="text/javascript" src='preset/McOcx.js'></script>
+</head>
+<body>
+	<div class="tc_ocx">
+		<div class="video_control" style="margin-top: 8px;">
+			<div class="ctro_1">
+				<button class="btn_ReceptionManage" onclick="ReceptionManage()">庭审管理</button>
+				<button class="btn_ContainerCompare" onclick="ContainerCompare()">领导观摩</button>
+				<button class="btn_NotesProofread" onclick="NotesProofread()">笔录校对</button>
+			</div>
+		</div>
+	</div>
+	
+	<OBJECT id="tc_ocx" name="tc_ocx" classid="clsid:A7D222A1-8C4D-41CF-AC24-E8A914C61102" style="position:absolute;top:-1000px;"></OBJECT>
+</body>
+<script type="text/javascript">
+
+	var tcocx = "";
+	var UserID = "";
+	var Ip = "";
+	var Port = "";
+
+	$(function(){
+		tcocx = document.getElementById("tc_ocx");
+		UserID    = (document.location.href.split("?"))[1];
+		Ip        = (document.location.href.split("?"))[2];
+		Port      = (document.location.href.split("?"))[3];
+	});
+	
+	function ReceptionManage(){
+		window.location.href = (window.location.href.slice(8,-29) + "reception.html");
+	}
+	
+	function ContainerCompare(){
+		window.location.href = (window.location.href.slice(8,-29) + "view.html" + "?" + UserID + "?" + Ip + "?" + Port);
+	}
+	
+	function NotesProofread(){
+		window.location.href = (window.location.href.slice(8,-29) + "compare.html" + "?" + UserID + "?" + Ip + "?" + Port);
+	}
+	
+</script>
+<script language="javascript" for="tc_ocx" event="MCComEvent(id,ocxresultJson,nSize)">
+	$._log("<tc_ocx> : receive response message: <" + ocxresultJson + ">.");
+</script>
+
+</html>

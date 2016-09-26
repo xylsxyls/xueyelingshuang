@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=10,IE=9,IE=8">
+<link rel="stylesheet" type="text/css" href='preset/preset-controller.css' />
+<script language="javascript" type="text/javascript" src='preset/jquery.min.js' ></script>
+<script language="javascript" type="text/javascript" src='preset/utils.js' ></script>
+<script language="javascript" type="text/javascript" src='preset/McOcx.js' ></script>
+</head>
+<body>
+	<div class="player_pannel">
+		<div class="ocx_player">
+			<OBJECT id="ocx_player" name="mc_ocx" height="100%" width="100%" 
+				classid="clsid:A48CA6A2-D901-4E82-BF51-CDAFDAD78045" VIEWASTEXT>
+				<PARAM name="ShowPlayBar" value="1">
+				<PARAM name="ShowProgressBar" value="0">
+				<PARAM name="ShowAudioBar" value="0">
+				<PARAM name="ShowPlayPauseBtn" value="0">
+				<PARAM name="ShowLayoutBtn" value="1">
+				<PARAM NAME="ShowStretchBtn" VALUE="1" >
+			</OBJECT>
+		</div>
+		<div class="code_pannel">
+			<span><label>SIE服务器IP:</label><input name="domainIP" type="text" value="192.168.1.46"></span>&nbsp;&nbsp;&nbsp;
+			<span><label>SIE服务器PORT:</label><input name="domainPort" type="text" value="9000"></span>&nbsp;&nbsp;
+			<span><label>播放器布局:</label>
+				<select name="layout" style="width: 90px; height: 24px;">
+					<option value="1">1</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4">4</option>
+					<option value="5">5</option>
+					<option value="6">6</option>
+					<option value="7">7</option>
+					<option value="8">8</option>
+					<option value="9">9</option>
+				</select>
+			</span></br></br>
+			
+			<span><label>域:</label><input name="domainCode" type="text" value="A00"></span>
+			<span><label>设备:</label><input name="devCode" type="text" value="A001130000012"></span>
+			<span><label>通道:</label><input name="channelCode" type="text" value="A001310000094"></span>
+			<span><label>码流:</label><input name="streamCode" type="text" value="A000000149"></span>
+		</div>
+		<div class="video_control">
+			<span>
+				<label>坐席：</label>
+				<select name="seat">
+					<option value="0">法官</option>
+					<option value="1">原告</option>
+					<option value="2">被告</option>
+				</select>
+			</span>
+			
+			<span style="margin-left: 28px;">
+				<label>声音：</label>
+				<select name="voiceflag">
+					<option value="0">静音</option>
+					<option value="1">播放</option>
+				</select>
+			</span>
+			
+			<span style="margin-left: 28px;">
+				<label>协议：</label>
+				<select name="transProtocol">
+					<option value="0">UDP</option>
+					<option value="1">TCP</option>
+				</select>
+			</span>
+		</div>
+		<div class="btns_pannel">
+			<button class="btn_start" onclick="playOcx()">播放</button>
+			<button class="btn_stop" onclick="stopOcx()">暂停</button>
+		</div>
+	</div>
+	</div>
+</body>
+<script type="text/javascript">
+
+	$(function(){
+		init();
+	});
+
+	function playOcx(){
+		var player = document.getElementById("ocx_player");
+		if(player){	
+			$.StopPalyer(player, -1, function(){
+				$._invoke(player,'SetLayout', $("select[name='layout']").val()*1);
+				$._invoke(player, 'StartRealPlaybyServiceUrl', 
+					//'A00-A001130000012-A001310000094-A000000149',
+					$(".btn_start").data("url"), 
+					$(".btn_start").data("name"), 
+					'192.168.1.46', 9000, 0,
+					 $(".btn_start").data("voiceflag")*1, 
+					 $(".btn_start").data("transProtocol")*1
+				);
+			});
+		}
+	}
+
+	function stopOcx(){
+		var player = document.getElementById("ocx_player");
+		if(player){
+			$.StopPalyer(player, -1, function(){
+				$._invoke(player,'SetLayout', 1);
+			});
+		}
+		
+	}
+
+	function init(){
+
+		var domainCode = $('input[name="domainCode"').val();
+		var devCode =  $('input[name="devCode"]').val();
+		var channelCode =  $('input[name="channelCode"').val();
+		var streamCode =  $('input[name="streamCode"').val();
+
+		$(".btn_start").removeData("url").data("url", domainCode + '-' + devCode + '-' + channelCode + '-' + streamCode);
+		$(".btn_start").removeData("name").data("name", $("select[name='seat']").find("option:selected").text());
+		$(".btn_start").removeData("voiceflag").data("voiceflag", $("select[name='voiceflag']").val());
+		$(".btn_start").removeData("transProtocol").data("transProtocol", $("select[name='transProtocol']").val());
+	}
+
+</script>
+<script language="javascript" for="ocx_player" event="MCComEvent(id,ocxresultJson,nSize)">
+	$._log("<ocx_player> : receive response message: <" + ocxresultJson + ">.");
+</script>
+
+</html>
