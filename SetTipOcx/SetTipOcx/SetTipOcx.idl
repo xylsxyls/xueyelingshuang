@@ -1,0 +1,54 @@
+// SetTipOcx.idl : ActiveX 控件项目的类型库源。
+
+// 此文件将由 MIDL 编译器工具处理以
+// 产生类型库(SetTipOcx.tlb)，该类型库将成为
+// SetTipOcx.ocx.
+
+#include <olectl.h>
+#include <idispids.h>
+
+[ uuid(2EA857A6-6F8A-45A4-B7F1-1237948950FC), version(1.0),
+  control ]
+library SetTipOcxLib
+{
+	importlib(STDOLE_TLB);
+
+	//  CSetTipOcxCtrl 的主调度接口
+	[ 
+		uuid(6C149F97-4F38-437D-8EE3-8734302A6F99)	
+	]
+	dispinterface _DSetTipOcx
+	{
+		properties:
+		methods:
+
+			[id(DISPID_ABOUTBOX)] void AboutBox();
+			[id(1)] void init(void);
+			[id(2)] void show(BSTR strText);
+			[id(3)] void uninit(void);
+	};
+
+	//  CSetTipOcxCtrl 的事件调度接口
+
+	[ 
+		uuid(D80C0124-0300-4DC4-9D1C-55640235FFB4)	
+	]
+	dispinterface _DSetTipOcxEvents
+	{
+		properties:
+			//  事件接口没有任何属性
+
+		methods:
+	};
+
+	//  CSetTipOcxCtrl 的类信息
+	[
+		uuid(93BA3E69-5E03-4AEA-AC5B-99FC4E02B12F)
+	]
+	coclass SetTipOcx
+	{
+		[default] dispinterface _DSetTipOcx;
+		[default, source] dispinterface _DSetTipOcxEvents;
+	};
+
+};

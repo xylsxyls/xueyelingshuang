@@ -1,0 +1,51 @@
+
+<html>
+<head>
+
+<script type="text/javascript">
+	function testfunc()
+	{
+		var locx = document.getElementById("ledset_ocx");
+		locx.init();
+		//locx.show("123456");
+		//locx.show("456789");
+		//locx.show("45678911");
+		//locx.SetSeatInfo(1,"法官");
+		//locx.ShowSeatDialog();
+	}
+	function testfunc1()
+	{
+		var locx = document.getElementById("ledset_ocx");
+		//locx.init();
+		//locx.show("123456");
+		//locx.show("456789");
+		locx.show("测试测试1");
+        locx.show("测试测试2");
+        locx.show("测试测试3");
+        locx.show("测试测试4");
+		//locx.uninit();
+		//locx.SetSeatInfo(1,"法官");
+		//locx.ShowSeatDialog();
+	}
+	function testfunc2()
+	{
+		var locx = document.getElementById("ledset_ocx");
+		//locx.init();
+		//locx.show("123456");
+		//locx.show("456789");
+		//locx.show("456789121");
+		locx.uninit();
+		//locx.SetSeatInfo(1,"法官");
+		//locx.ShowSeatDialog();
+	}
+</script>
+	
+</head>
+
+	<object id="ledset_ocx"  classid="clsid:93BA3E69-5E03-4AEA-AC5B-99FC4E02B12F"></object>
+	</br>
+	<input type="button" value="test" onclick="testfunc()">
+	<input type="button" value="test1" onclick="testfunc1()">
+	<input type="button" value="test2" onclick="testfunc2()">
+
+</html>
