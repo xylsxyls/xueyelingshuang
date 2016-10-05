@@ -26,7 +26,7 @@ CUpdate& CUpdate::operator[](CString Field){
 	return *this;
 }
 
-CString CUpdate::ToCString(){
+CString CUpdate::toCString(){
 	CString strResult;
 	for(auto it = mapValue.begin();it != mapValue.end();it++){
 		strResult = strResult + it->first + "=" + it->second.strValue + ",";

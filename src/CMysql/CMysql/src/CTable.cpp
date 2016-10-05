@@ -82,7 +82,7 @@ int CTable::Delete(CCondition* pCondition){
 }
 
 int CTable::UpdateRecord(CUpdate* pUpdate,CCondition* pCondition){
-	CString SQL = "UPDATE " + TableName + " SET " + pUpdate->ToCString() + " WHERE " + pCondition->strSQL;
+	CString SQL = "UPDATE " + TableName + " SET " + pUpdate->toCString() + " WHERE " + pCondition->strSQL;
 	return mysql_query(pDataBase->mysql,SQL);
 }
 
@@ -90,7 +90,8 @@ CTable CTable::SelectRecord(CSelect *pSelect,CCondition* pCondition){
 	//用于存放查询到的记录
 	
 	CTable vecRecord;
-	CString SQL = "SELECT " + pSelect->ToCString() + " WHERE " + pCondition->strSQL;
+	
+	CString SQL = "SELECT " + pSelect->toCString() + " FROM " + pSelect->toTableString() + " WHERE " + pCondition->strSQL;
 	int x = 3;
 	/*
 	//行数

@@ -20,5 +20,5 @@ public:
 	CUpdate& operator[](CString Field);
 	
 public:
-	CString ToCString();
+	CString toCString();
 };

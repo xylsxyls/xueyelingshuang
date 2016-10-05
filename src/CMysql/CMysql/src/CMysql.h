@@ -27,7 +27,7 @@ public:
 	CString dbName;
 
 public:
-	CMysql(CString IP = "127.0.0.1",int port = 3306,CString User = "root",CString PassWord = "root",CString dbName = "test");
+	CMysql(CString IP = "127.0.0.1",int port = 3306,CString User = "root",CString PassWord = "",CString dbName = "test");
 	~CMysql();
 
 public:

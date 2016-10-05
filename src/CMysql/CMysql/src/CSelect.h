@@ -21,5 +21,6 @@ public:
 	CSelect operator=(const CSelect& sel);
 
 public:
-	CString ToCString();
+	CString toCString();
+	CString toTableString();
 };
