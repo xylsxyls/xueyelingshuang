@@ -135,6 +135,7 @@ int main(){
 	sel("test")["name"];
 	sel("test")["ID"];
 	CTable table = pTable->SelectRecord(&sel,&con);
+	int xxxx = table.size();
 	CString strDepartName = table[0]["Depart.Name"].toValue();
 	int nUserID = table[0]["User.ID"].toValue();
 	

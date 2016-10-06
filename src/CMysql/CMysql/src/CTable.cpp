@@ -244,3 +244,7 @@ void CTable::Refresh(){
 	}
 	return;
 }
+
+int CTable::size(){
+	return listRecord.size();
+}

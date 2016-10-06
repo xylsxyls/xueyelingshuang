@@ -66,4 +66,7 @@ public:
 
 	//更新内存
 	void Refresh();
+
+	//获得记录条数
+	int size();
 };
