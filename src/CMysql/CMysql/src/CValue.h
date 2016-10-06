@@ -23,6 +23,7 @@ public:
 	CValue(string strValue);
 	CValue(int nValue);
 	CValue(double dValue);
+	CValue(BOOL Type,CString strValue,int nValue,double dValue);
 
 	CValue(const CValue& value);
 	CValue operator= (const CValue& value);

@@ -47,6 +47,13 @@ CValue::CValue(double dValue){
 	this->strValue.Format("%lf",dValue);
 }
 
+CValue::CValue(BOOL Type,CString strValue,int nValue,double dValue){
+	this->Type = -1;
+	this->nValue = -1;
+	this->dValue = -1;
+	this->strValue = "-1";
+}
+
 CValue::CValue(const CValue& value){
 	this->Type = value.Type;
 	this->nValue = value.nValue;
@@ -83,6 +90,7 @@ CValue::operator int(){
 }
 
 CValue::operator CString(){
+	if(strValue == "-1") return "-1";
 	return strValue.Mid(1,strValue.GetLength() - 2);
 }
 

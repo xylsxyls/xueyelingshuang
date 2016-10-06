@@ -45,7 +45,7 @@ CValue CRecord::toValue(){
 	if(it != mapValue.end()){
 		return it->second;
 	}
-	else return CValue();
+	else return CValue(-1,"-1",-1,-1);
 }
 
 CString CRecord::ToCString(){
