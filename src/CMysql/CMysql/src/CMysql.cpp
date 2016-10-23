@@ -116,7 +116,10 @@ int main(){
 	CCondition con;
 	//条件and
 	con && (CTableField("test","name") == "d");
-	con && (CTableField("test","number") == 4);
+	con || (CTableField("test","name") == "e");
+	con && (CTableField("test","number") <= 5);
+	con(0,4);
+	con["test.name"]--;
 	//条件or，左联合
 	//con || (CTableField("User","ID") <= CTableField("Department","UserID"));
 	//条件not
@@ -134,9 +137,12 @@ int main(){
 	CSelect sel;
 	sel("test")["name"];
 	sel("test")["ID"];
+	sel("Depart")["name"];
 	CTable table = pTable->SelectRecord(&sel,&con);
+	CTable *pTable1 = mysql.OpenTableInterface("Depart");
+	CString strr = (*pTable1)[0]["depart.name"].toValue();
 	int xxxx = table.size();
-	CString strDepartName = table[0]["Depart.Name"].toValue();
+	CString strDepartName = table[0]["depart.name"].toValue();
 	int nUserID = table[0]["User.ID"].toValue();
 	
 	//rec["User"].pTable->mapAttri["User"].Name = "123456";

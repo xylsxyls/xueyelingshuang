@@ -67,6 +67,7 @@ CTable* CDataBase::OpenTableInterface(CString TableName,bool AutoCommit){
 		//把数据库里的内部连接线重新再制造一个放进CTable内
 		mysql_real_connect(pTable->pDataBase->mysql,IP,User,PassWord,dbName,port,NULL,0);
 	}
+	pTable->Refresh();
 	return pTable;
 }
 

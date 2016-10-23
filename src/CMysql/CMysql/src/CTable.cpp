@@ -76,13 +76,13 @@ int CTable::Add(CRecord* pRecord){
 }
 
 int CTable::Delete(CCondition* pCondition){
-	CString SQL = "DELETE FROM " + TableName + " WHERE " + pCondition->strSQL;
+	CString SQL = "DELETE FROM " + TableName + " WHERE " + pCondition->toCString();
 
 	return mysql_query(pDataBase->mysql,SQL);
 }
 
 int CTable::UpdateRecord(CUpdate* pUpdate,CCondition* pCondition){
-	CString SQL = "UPDATE " + TableName + " SET " + pUpdate->toCString() + " WHERE " + pCondition->strSQL;
+	CString SQL = "UPDATE " + TableName + " SET " + pUpdate->toCString() + " WHERE " + pCondition->toCString();
 	return mysql_query(pDataBase->mysql,SQL);
 }
 
@@ -91,20 +91,23 @@ CTable CTable::SelectRecord(CSelect *pSelect,CCondition* pCondition){
 	
 	CTable ResultTable;
 	
-	CString SQL = "SELECT " + pSelect->toCString() + " FROM " + pSelect->toTableString() + " WHERE " + pCondition->strSQL;
+	CString SQL = "SELECT " + pSelect->toCString() + " FROM " + pSelect->toTableString() + " WHERE " + pCondition->toCString();
 
 	int nResult = mysql_query(pDataBase->mysql,SQL);
 	if(nResult != 0) return CTable();
-
+	 
 	//存储得到的结果，必须先有这步才可以查询字段属性信息
 	MYSQL_RES* result = mysql_store_result(pDataBase->mysql);
 	//先取出字段属性信息
 	MYSQL_RES* resField = mysql_list_fields(pDataBase->mysql,TableName,"%");
 	
+	//从pSelect中获取字段名
+	auto itSelect = pSelect->listTf.begin();
 	//先存字段属性
 	int j = -1;
 	while(j++ != resField->field_count - 1){
-		CString strFieldName = ((resField->fields) + j)->name;
+		CString strFieldName = itSelect->Table + "." + itSelect->Field;
+		itSelect++;
 		//存储
 		ResultTable.mapAttri[strFieldName].Type = ((resField->fields) + j)->type;
 		ResultTable.mapAttri[strFieldName].nLength = ((resField->fields) + j)->length;
@@ -135,10 +138,13 @@ CTable CTable::SelectRecord(CSelect *pSelect,CCondition* pCondition){
 		while(temp-- != 0) pRow = pRow->next;
 		//准备一个空记录
 		CRecord record(&ResultTable);
+		//从pSelect中获取字段名
+		auto itSelect = pSelect->listTf.begin();
 		//列数循环，把有效值循环加到记录中
 		while(j++ != result->field_count - 1){
 			//分别获得每列的字段名
-			CString FieldName = ((result->fields) + j)->name;
+			CString FieldName = itSelect->Table + "." + itSelect->Field;
+			itSelect++;
 			//字段值
 			CString strValue = pRow->data[j];
 			//形成一个记录
@@ -200,7 +206,7 @@ void CTable::Refresh(){
 	//先存字段属性
 	int j = -1;
 	while(j++ != resField->field_count - 1){
-		CString strFieldName = ((resField->fields) + j)->name;
+		CString strFieldName = TableName + "." + ((resField->fields) + j)->name;
 		//存储
 		mapAttri[strFieldName].Type = ((resField->fields) + j)->type;
 		mapAttri[strFieldName].nLength = ((resField->fields) + j)->length;
@@ -234,7 +240,7 @@ void CTable::Refresh(){
 		//列数循环，把有效值循环加到记录中
 		while(j++ != result->field_count - 1){
 			//分别获得每列的字段名
-			CString FieldName = ((result->fields) + j)->name;
+			CString FieldName = TableName + "." + ((result->fields) + j)->name;
 			//字段值
 			CString strValue = pRow->data[j];
 			//形成一个记录
