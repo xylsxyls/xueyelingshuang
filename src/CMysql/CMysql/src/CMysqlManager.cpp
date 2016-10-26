@@ -1,6 +1,6 @@
 #include <SDKDDKVer.h>
 #include "CMysqlManager.h"
-#include "CIP.h"
+#include "CHostIP.h"
 #include "CUser.h"
 #include "CDataBase.h"
 #include "CTable.h"
@@ -35,7 +35,7 @@ CMysqlManager::~CMysqlManager(){
 	listTable.clear();
 }
 
-bool CMysqlManager::DeleteOne(CIP* pDelete){
+bool CMysqlManager::DeleteOne(CHostIP* pDelete){
 	//关闭类内连接线
 	if(pDelete->mysql != 0){
 		mysql_close(pDelete->mysql);

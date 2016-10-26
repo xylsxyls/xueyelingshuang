@@ -3,7 +3,7 @@
 #include "CMysqlManager.h"
 #include "CDataBase.h"
 #include "CTable.h"
-#include "CIP.h"
+#include "CHostIP.h"
 #include "CUser.h"
 
 CMysql::CMysql(CString IP,int port,CString User,CString PassWord,CString dbName){
@@ -23,13 +23,13 @@ CMysql::~CMysql(){
 }
 
 //只是将IP和port的记录存入新开的类
-CIP* CMysql::OpenIPInterface(){
-	return OpenIPInterface(IP,port);
+CHostIP* CMysql::OpenHostIPInterface(){
+	return OpenHostIPInterface(IP,port);
 }
 
-CIP* CMysql::OpenIPInterface(CString IP,int port){
+CHostIP* CMysql::OpenHostIPInterface(CString IP,int port){
 	//在创建时内存所有成员变量均被初始化
-	return new CIP(pMysqlManager,IP,port);
+	return new CHostIP(pMysqlManager,IP,port);
 }
 
 CUser* CMysql::OpenUserInterface(){

@@ -3,12 +3,12 @@
 #include "CValue.h"
 #include "CCondition.h"
 
-CTableField CTableField::operator()(CString Table){
+CTableField& CTableField::operator()(CString Table){
 	this->Table = Table;
 	return *this;
 }
 
-CTableField CTableField::operator[](CString Field){
+CTableField& CTableField::operator[](CString Field){
 	this->Field = Field;
 	return *this;
 }

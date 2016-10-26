@@ -10,8 +10,8 @@ public:
 	CString Field;
 public:
 	//tf("User")["ID"];
-	CTableField operator()(CString Table);
-	CTableField operator[](CString Field);
+	CTableField& operator()(CString Table);
+	CTableField& operator[](CString Field);
 public:
 	CTableField();
 	CTableField(const CTableField& tf);

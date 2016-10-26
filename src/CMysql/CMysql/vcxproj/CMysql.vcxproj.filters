@@ -22,9 +22,6 @@
     <Filter Include="CDataBase">
       <UniqueIdentifier>{00324c9d-b687-4b2a-b9b4-d1a3128c439b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="CIP">
-      <UniqueIdentifier>{83652946-001b-48d3-a483-183306793462}</UniqueIdentifier>
-    </Filter>
     <Filter Include="CMysql">
       <UniqueIdentifier>{a9575505-d658-47b9-80c3-fae45a8bb0f6}</UniqueIdentifier>
     </Filter>
@@ -52,6 +49,9 @@
     <Filter Include="CValue">
       <UniqueIdentifier>{8f5a2382-6060-4277-862c-6b102c002331}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CIPHost">
+      <UniqueIdentifier>{83652946-001b-48d3-a483-183306793462}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CAttri.cpp">
@@ -62,9 +62,6 @@
     </ClCompile>
     <ClCompile Include="..\src\CDataBase.cpp">
       <Filter>CDataBase</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\CIP.cpp">
-      <Filter>CIP</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CMysql.cpp">
       <Filter>CMysql</Filter>
@@ -93,6 +90,9 @@
     <ClCompile Include="..\src\CValue.cpp">
       <Filter>CValue</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CHostIP.cpp">
+      <Filter>CIPHost</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CMysqlAPI.h">
@@ -109,9 +109,6 @@
     </ClInclude>
     <ClInclude Include="..\src\CDataBase.h">
       <Filter>CDataBase</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CIP.h">
-      <Filter>CIP</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CMysql.h">
       <Filter>CMysql</Filter>
@@ -139,6 +136,9 @@
     </ClInclude>
     <ClInclude Include="..\src\CValue.h">
       <Filter>CValue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CHostIP.h">
+      <Filter>CIPHost</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

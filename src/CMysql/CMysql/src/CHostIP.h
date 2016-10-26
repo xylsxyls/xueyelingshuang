@@ -5,7 +5,7 @@
 
 class CDataBase;
 class CMysqlManager;
-class CMysqlAPI CIP{
+class CMysqlAPI CHostIP{
 	//IP管用户
 	//在CIP被创建的时候管理者IP和port就必须被初始化，内部的连接线也必须被初始化
 public:
@@ -18,7 +18,7 @@ public:
 	int port;
 
 public:
-	CIP(CMysqlManager *pMysqlManager,CString IP,int port);
+	CHostIP(CMysqlManager *pMysqlManager,CString IP,int port);
 
 public:
 	//转到另一个用户的数据库

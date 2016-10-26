@@ -3,7 +3,7 @@
 #include "CMysqlMacro.h"
 
 class CMysqlManager;
-class CIP;
+class CHostIP;
 class CUser;
 class CDataBase;
 class CTable;
@@ -33,8 +33,8 @@ public:
 
 public:
 	//开IP的接口，并初始化CIP，用于管理User
-	CIP* OpenIPInterface();
-	CIP* OpenIPInterface(CString IP,int port = 3306);
+	CHostIP* OpenHostIPInterface();
+	CHostIP* OpenHostIPInterface(CString IP,int port = 3306);
 	//开User的接口，用于管理数据库
 	CUser* OpenUserInterface();
 	CUser* OpenUserInterface(CString User,CString PassWord);

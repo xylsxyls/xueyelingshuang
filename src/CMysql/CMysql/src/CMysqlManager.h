@@ -3,16 +3,16 @@
 using namespace std;
 #include "CMysqlMacro.h"
 
-class CIP;
+class CHostIP;
 class CUser;
 class CDataBase;
 class CTable;
 
-template class CMysqlAPI std::allocator<CIP      *>;
+template class CMysqlAPI std::allocator<CHostIP      *>;
 template class CMysqlAPI std::allocator<CUser    *>;
 template class CMysqlAPI std::allocator<CDataBase*>;
 template class CMysqlAPI std::allocator<CTable   *>;
-template class CMysqlAPI std::list<CIP      *,std::allocator<CIP      *>>;
+template class CMysqlAPI std::list<CHostIP      *,std::allocator<CHostIP      *>>;
 template class CMysqlAPI std::list<CUser    *,std::allocator<CUser    *>>;
 template class CMysqlAPI std::list<CDataBase*,std::allocator<CDataBase*>>;
 template class CMysqlAPI std::list<CTable   *,std::allocator<CTable   *>>;
@@ -22,12 +22,12 @@ class CMysqlAPI CMysqlManager{
 public:
 	
 	//用来记录内存开辟情况，所有开辟的内存地址都会在这里记录
-	list<CIP      *> listIP      ;
+	list<CHostIP      *> listIP      ;
 	list<CUser    *> listUser    ;
 	list<CDataBase*> listDataBase;
 	list<CTable   *> listTable   ;
 
-	bool DeleteOne(CIP      * pDelete);
+	bool DeleteOne(CHostIP      * pDelete);
 	bool DeleteOne(CUser    * pDelete);
 	bool DeleteOne(CDataBase* pDelete);
 	bool DeleteOne(CTable   * pDelete);

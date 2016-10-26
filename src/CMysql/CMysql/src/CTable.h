@@ -32,6 +32,7 @@ public:
 	bool IfHasT_e_s_t;
 
 	map<CString,CAttri> mapAttri;
+	CRecord recordError;
 
 public:
 	//用于给栈变量
@@ -41,7 +42,7 @@ public:
 	void Close();
 
 public:
-	CRecord operator[](int num);
+	CRecord& operator[](int num);
 
 public:
 	//AddRecord和DeleteRecord传参中的CRecord含义不同

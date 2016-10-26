@@ -7,14 +7,14 @@
 #include "CSelect.h"
 
 
-CTable::CTable(){
+CTable::CTable() : recordError(NULL){
 	//从外部导入管理者指针
 	this->pMysqlManager = NULL;
 	this->IfHasT_e_s_t = 0;
 	this->pDataBase = NULL;
 }
 
-CTable::CTable(CMysqlManager *pMysqlManager,CDataBase *pDataBase,CString TableName,bool IfHasT_e_s_t){
+CTable::CTable(CMysqlManager *pMysqlManager,CDataBase *pDataBase,CString TableName,bool IfHasT_e_s_t) : recordError(NULL){
 	//从外部导入管理者指针
 	this->pMysqlManager = pMysqlManager;
 	//先把新开的指针放到容器里
@@ -32,13 +32,13 @@ void CTable::Close(){
 	pMysqlManager->DeleteOne(this);
 }
 
-CRecord CTable::operator[](int num){
+CRecord& CTable::operator[](int num){
 	int n = 0;
 	for(auto it = listRecord.begin();it != listRecord.end();it++){
 		if(n == num) return *it;
 		n++;
 	}
-	return CRecord(NULL);
+	return recordError;
 }
 
 int CTable::Add(CRecord* pRecord){
@@ -147,8 +147,17 @@ CTable CTable::SelectRecord(CSelect *pSelect,CCondition* pCondition){
 			itSelect++;
 			//字段值
 			CString strValue = pRow->data[j];
-			//形成一个记录
-			record[FieldName] = strValue;
+			//把字符串根据类型做转换
+			if(mapAttri[FieldName].Type == 253){
+				//形成一个记录
+				record[FieldName] = strValue;
+			}
+			else if(mapAttri[FieldName].Type == 3){
+				record[FieldName] = atoi(strValue);
+			}
+			else if(mapAttri[FieldName].Type == 5){
+				record[FieldName] = (double)atof(strValue);
+			}
 		}
 		ResultTable.listRecord.push_back(record);
 	}
@@ -243,8 +252,17 @@ void CTable::Refresh(){
 			CString FieldName = TableName + "." + ((result->fields) + j)->name;
 			//字段值
 			CString strValue = pRow->data[j];
-			//形成一个记录
-			record[FieldName] = strValue;
+			//把字符串根据类型做转换
+			if(mapAttri[FieldName].Type == 253){
+				//形成一个记录
+				record[FieldName] = strValue;
+			}
+			else if(mapAttri[FieldName].Type == 3){
+				record[FieldName] = atoi(strValue);
+			}
+			else if(mapAttri[FieldName].Type == 5){
+				record[FieldName] = (double)atof(strValue);
+			}
 		}
 		listRecord.push_back(record);
 	}

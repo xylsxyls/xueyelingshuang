@@ -83,7 +83,7 @@
     <ClCompile Include="..\src\CAttri.cpp" />
     <ClCompile Include="..\src\CCondition.cpp" />
     <ClCompile Include="..\src\CDataBase.cpp" />
-    <ClCompile Include="..\src\CIP.cpp" />
+    <ClCompile Include="..\src\CHostIP.cpp" />
     <ClCompile Include="..\src\CMysql.cpp" />
     <ClCompile Include="..\src\CMysqlManager.cpp" />
     <ClCompile Include="..\src\CRecord.cpp" />
@@ -98,7 +98,7 @@
     <ClInclude Include="..\src\CAttri.h" />
     <ClInclude Include="..\src\CCondition.h" />
     <ClInclude Include="..\src\CDataBase.h" />
-    <ClInclude Include="..\src\CIP.h" />
+    <ClInclude Include="..\src\CHostIP.h" />
     <ClInclude Include="..\src\CMysql.h" />
     <ClInclude Include="..\src\CMysqlAPI.h" />
     <ClInclude Include="..\src\CMysqlMacro.h" />
