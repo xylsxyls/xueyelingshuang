@@ -36,3 +36,19 @@ int CStringManager::FindOther(char cLeft,char cRight,int nSelect){
 	}
 	return -1;
 }
+
+vector<CString> CStringManager::split(CString separate_character){
+	string strTemp = str;
+	vector<CString> strs;
+
+	int separate_characterLen = separate_character.GetLength();//分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
+	int lastPosition = 0,index = -1;
+	while (-1 != (index = strTemp.find(separate_character,lastPosition))){
+		strs.push_back(strTemp.substr(lastPosition,index - lastPosition).c_str());   
+		lastPosition = index + separate_characterLen;   
+	}
+	string lastString = strTemp.substr(lastPosition);//截取最后一个分隔符后的内容   
+	//if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
+	strs.push_back(lastString.c_str());
+	return strs;
+}
