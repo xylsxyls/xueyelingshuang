@@ -73,9 +73,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\CNoteData.cpp" />
     <ClCompile Include="..\src\Cxml.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\CNoteData.h" />
     <ClInclude Include="..\src\Cxml.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

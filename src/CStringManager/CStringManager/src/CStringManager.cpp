@@ -24,13 +24,14 @@ int CStringManager::FindOther(char cLeft,char cRight,int nSelect){
 		}
 		if(str[n] == cRight){
 			if(nSelect == n){
-				return vecn.at(vecn.size() - 1);
+				if(vecn.size() > 0) return vecn.at(vecn.size() - 1);
+				else return -1;
 			}
 			//如果弹出之前发现size大小等于之前记录的，说明找到了对应的右侧
-			if(vecn.size() == nSelectSize){
+			if(vecn.size() == nSelectSize && nSelectSize > 0){
 				return n;
 			}
-			vecn.pop_back();
+			if(vecn.size() > 0) vecn.pop_back();
 		}
 		n++;
 	}
