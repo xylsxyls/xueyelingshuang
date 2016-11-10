@@ -1,0 +1,9 @@
+HBITMAP hBitmap;
+	hBitmap = (HBITMAP)::LoadImage(::AfxGetInstanceHandle(), "E:\\select.bmp", IMAGE_BITMAP, 0,0,LR_LOADFROMFILE|LR_CREATEDIBSECTION);
+	CBitmap cBitmap; 
+	cBitmap.Attach(hBitmap);
+
+
+
+DeleteObject(hBitmap);
+cBitmap.DeleteObject();

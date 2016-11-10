@@ -1,0 +1,12 @@
+必须取出来作入参，不能直接放进去
+这样是错的
+InitMarketSellAsk(va_arg(parameterlist,CString),va_arg(parameterlist,int));
+
+必须拿出来
+CString strTemp = va_arg(parameterlist,char*);
+int nTemp = va_arg(parameterlist,int);
+InitMarketSellAsk(strTemp,nTemp);
+
+CString类型必须换做char*来读取
+
+在入参时作强转或开临时变量存入也不行

@@ -1,0 +1,6 @@
+在dlg中添加
+BEGIN_MESSAGE_MAP(CDlg, CDialogEx)
+	ON_BN_CLICKED(1000, &CDlg::OnBnClicked)
+END_MESSAGE_MAP()
+对应添加void OnBnClicked();
+1000是init中button的ID号

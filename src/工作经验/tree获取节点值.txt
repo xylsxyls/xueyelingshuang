@@ -1,0 +1,20 @@
+CPoint point;
+  GetCursorPos(&point);//获得鼠标点击的位置
+  m_videotree.ScreenToClient(&point);//转化为客户坐标
+  UINT uFlags;
+
+  HTREEITEM CurrentItem;
+  CurrentItem=m_videotree.HitTest(point,&uFlags);//获得当前点击节点的ITEM
+ //获得该节点的父节点
+// HTREEITEM ParentItem=m_videotree.GetParentItem(CurrentItem);
+ CurrentVideo=m_videotree.GetItemText(CurrentItem) ;//获得节点值
+
+
+
+
+
+
+HTREEITEM hItem = CTreeCtrl.GetSelectedItem();
+这样就可以得到选中项的节点了
+要得到它的内容
+CString Text = CTreeCtrl.GetItemText(hItem);

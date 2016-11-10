@@ -1,0 +1,34 @@
+int nWidth = DlgWidth;
+	int nHeight = DlgHeight;
+	int screenwidth = GetSystemMetrics(SM_CXFULLSCREEN);
+	int screenheight = GetSystemMetrics(SM_CYFULLSCREEN);
+	MoveWindow(screenwidth / 2 - nWidth / 2,screenheight / 2 - nHeight / 2,nWidth,nHeight);
+	list<CString> listPath;
+
+	listPath.clear();
+	listPath.push_back("E:\\question.bmp");
+	pPic->init(CRect(24,26,72,80),PIC,this,listPath);
+
+	listPath.clear();
+	listPath.push_back("E:\\OK.bmp");
+	listPath.push_back("E:\\OK.bmp");
+	listPath.push_back("E:\\OKmove.bmp");
+	pOK->init(CRect(154,115,232,140),OK,this,listPath);
+
+	listPath.clear();
+	listPath.push_back("E:\\cancel.bmp");
+	listPath.push_back("E:\\cancel.bmp");
+	listPath.push_back("E:\\cancelmove.bmp");
+	pCancel->init(CRect(250,115,328,140),CANCEL,this,listPath);
+
+	listPath.clear();
+	listPath.push_back("E:\\back.bmp");
+	list<list<CString>> listlistText;
+	list<list<COLORREF>> listlistColor;
+	list<CString> listText;
+	listText.push_back("确认要退出交易吗？");
+	listlistText.push_back(listText);
+	list<COLORREF> listColor;
+	listColor.push_back(RGB(0,0,255));
+	listlistColor.push_back(listColor);
+	pText->init(CRect(101,46,nWidth - 5,70),TEXT,this,listPath,list<CRect>(),list<CRect>(),listlistText,listlistColor);

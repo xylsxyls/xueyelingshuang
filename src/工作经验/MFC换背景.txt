@@ -1,0 +1,17 @@
+在消息ON_WM_PAINT中写
+
+CRect   rect;
+	GetClientRect(&rect);
+	RectF rectf;
+	rectf.X = 0;
+	rectf.Y = 0;
+	rectf.Width = (float)rect.Width();
+	rectf.Height = (float)rect.Height();
+	Image img(L"E:\\pop1.bmp");
+	
+	Gdiplus::Graphics bmpGraphics(GetDC()->m_hDC);
+	TextureBrush brush(&img);
+	bmpGraphics.FillRectangle(&brush,rectf);
+	bmpGraphics.DrawImage(&img,rectf,0,0,(float)img.GetWidth(),(float)img.GetHeight(),UnitPixel);
+
+	// 不为绘图消息调用 CDialogEx::OnPaint();

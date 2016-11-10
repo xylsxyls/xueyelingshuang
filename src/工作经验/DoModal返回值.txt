@@ -1,0 +1,2 @@
+EndDialog(nRet);
+nRet设定关闭时给DoModal的返回值

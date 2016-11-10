@@ -1,0 +1,105 @@
+准备:
+1、VS 2005之后已经包含的GDI支持文件：
+l  动态链接库文件 gdiplus.dll 
+l  静态链接库文件 gdiplus.lib 
+l  代码中所需要的头文件 gdiplus.h 
+l  帮助文档gdicpp.chm 和gdicpp.chi 
+
+（gdiplus.dll 一般位于操作系统的 WinSxS（Windows side-by-side assembly，视窗并行程序集）目录中。而 GDI的动态链接库gdi32.dll，却一般在操作系统的 32位系统目录中\WINDOWS\system32\gdi32.dll）
+
+2、VS设置：
+配置属性/链接器/输入/附加依赖项：GdiPlus.lib  （或使用#pragma comment(lib, "gdiplus.lib"); ）
+
+3、using namespace Gdiplus; 
+
+4、添加App类成员变量：
+ULONG_PTR m_gdiplusToken; // ULONG PTR 为int64 类型 
+
+5、在App::InitInstance()函数中，在CWinApp:: InitInstance ();语句之前添加：
+GdiplusStartupInput gdiplusStartupInput; 
+GdiplusStartup(&m_gdiplusToken, &gdiplusStartupInput, NULL);
+
+6、App::ExitInstance() 函数中添加：
+GdiplusShutdown(m_gdiplusToken); 
+
+
+使用：
+
+Graphics类的构造函数有如下4 种： 
+Graphics(Image* image); // 用于绘制图像 
+Graphics(HDC hdc); // 用于在当前窗口中绘图 
+Graphics(HDC hdc, HANDLE hdevice); // 用于在制定设备上绘制图形 
+// 用于在指定窗口中绘图可以进行颜色调整 
+Graphics(HWND hwnd, BOOL icm = FALSE);   
+
+其中，最常用的是第二种——在当前视图窗口中绘图的图形类构造函数。
+，该构造函数的输入参数，是设备上下文的句柄，而不是CDC 类对象的指针。一
+般可以由CDC 对象得到（CDC类含有公用数据成员HDC m_hDC;） ： 
+l  在 OnDraw 函数中，利用输入参数CDC *pDC，就可直接得到DC句柄。例如： 
+Graphics graph(pDC->m_hDC); 
+l 在视图类的其他函数中，可先利用 GetDC 函数得到 CDC 指针，然后再利用它去获
+取 DC的句柄。例如：  // 视图类的其他函数——GetDC()_陈宝楷 
+Graphics graph(GetDC()->m_hDC);    
+
+例：画饼图：
+void CDrawingTestDlg::OnBnClickedBtnTest()
+{
+	Graphics graph(GetDC()->m_hDC);
+
+	Color cols[] = {Color::Red, Color::Green, Color::Blue, Color::Aqua}; 
+	float data[] = {0.2f, 0.4f, 0.1f, 0.3f}; 
+	DrawPies(graph, cols, Point(200, 200), 100, data, 4); 
+}
+
+void CDrawingTestDlg::DrawPies(Graphics &graph, const Color cols[], Point &O,  int  r, const  float data[], int n) 
+{                                         
+	Rect rect(O.X - r, O.Y - r, 2 * r, 2 * r); 
+	float startAngle = 0, sweepAngle; 
+	for (int i = 0; i < n; i++) { 
+		sweepAngle = data[i] * 360.0f; 
+		graph.FillPie(&SolidBrush(cols[i]), rect, startAngle, sweepAngle); 
+		startAngle += sweepAngle; 
+	} 
+} 
+
+//画位图：
+void  CDrawingTestDlg::DrawTest()
+{
+	Graphics graph(GetDC()->m_hDC); 
+	Image img(L"D:\\1.png"); 
+	TextureBrush brush(&img, WrapModeTile/*FlipXY*/ ); // WrapModeClamp 
+	RECT rect; 
+	GetClientRect(&rect); 
+	graph.FillRectangle(&brush,  RectF(0.0f,  0.0f,  REAL(rect.right), REAL(rect.bottom))); 
+}
+***注意界面刷新时（WM_PAINT消息）要重新执行此函数。
+
+//画文字
+void CDrawingTestDlg::DrawTest7()
+{
+	Graphics graph(GetDC()->m_hDC); 
+	Pen pen(Color::Black); 
+	SolidBrush textBrush(Color::Black); 
+	REAL w = 150.0f, h = 120.0f, d = 10.0f; 
+	REAL x1 = d, x2 = x1 + w + d; 
+	REAL y1 = d, y2 = y1 + h + d; 
+	SizeF size(w, h); 
+	RectF rect1(PointF(x1, y1), size), rect2(PointF(x2, y1), size), 
+		rect3(PointF(x1, y2), size), rect4(PointF(x2, y2), size); 
+	Gdiplus::Font font(L"宋体", 12); 
+	CString str = L"床前明月光，\r\n 疑是地上霜。\r\n 举头望明月，\r\n 低头思故乡。"; 
+	graph.DrawRectangle(&pen, rect1); 
+	StringFormat stringFormat1; // 缺省为从左到右水平输出 
+	graph.DrawString(str, str.GetLength(), &font, rect1, &stringFormat1, &textBrush); 
+	graph.DrawRectangle(&pen, rect2); //构造函数  StringFormatFlagsDirection   
+	StringFormat stringFormat2(StringFormatFlagsDirectionRightToLeft);   
+	graph.DrawString(str, str.GetLength(), &font, rect2, &stringFormat2, &textBrush); 
+	graph.DrawRectangle(&pen, rect3); 
+	StringFormat stringFormat3(StringFormatFlagsDirectionVertical); 
+	graph.DrawString(str, str.GetLength(), &font, rect3, &stringFormat3, &textBrush); 
+	graph.DrawRectangle(&pen, rect4); 
+	StringFormat stringFormat4(StringFormatFlagsDirectionRightToLeft |   
+		StringFormatFlagsDirectionVertical);    // 使用或操作 
+	graph.DrawString(str, str.GetLength(), &font, rect4, &stringFormat4, &textBrush); 
+
+}

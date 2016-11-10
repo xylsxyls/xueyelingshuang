@@ -1,0 +1,5 @@
+在Dialog中添加消息
+ON_WM_NCHITTEST
+在函数内添加
+UINT uRet = CDialog::OnNcHitTest(point);
+return (HTCLIENT == uRet) ? HTCAPTION : uRet;
