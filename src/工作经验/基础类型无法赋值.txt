@@ -1,0 +1,108 @@
+float x = 0.0f;
+无法赋值，有可能是因为在成员函数中有了x这个变量，在之后引用的时候引用不到x值
+换一个变量名即可
+
+void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
+	/*
+	Gdiplus::Graphics pGDIBmp(GetDC()->m_hDC);
+
+	Gdiplus::RectF rc;                // 背景区域
+	rc.X = 0;
+	rc.Y = 0;
+	rc.Width = 100;
+	rc.Height = 100;
+	WCHAR szLineText[256];    // 打印行
+	wsprintfW(szLineText, L"文本1111111111111111");
+	Gdiplus::PointF ptStar(0,0); // 启始点
+	//pGDIBmp->DrawString(L"");
+
+	LOGFONTW lfont;  
+	memset( &lfont, 0, sizeof(lfont) );  
+
+	lfont.lfHeight = -15, //   nHeight   注意使用负值，表示character height,  正值表示 cell height  
+		lfont.lfWidth  = 0,  //   nWidth  
+		//0,     //   nEscapement  
+		//0,     //   nOrientation  
+		lfont.lfWeight      = FW_NORMAL,  //nWeight  
+		lfont.lfItalic      = FALSE,      //bItalic  
+		lfont.lfUnderline   = FALSE,   //   bUnderline  
+		lfont.lfStrikeOut   = 0,         //   cStrikeOut  
+		lfont.lfCharSet     = DEFAULT_CHARSET,   //   nCharSet  
+		lfont.lfOutPrecision    = OUT_DEFAULT_PRECIS,//   nOutPrecision  
+		lfont.lfClipPrecision   = CLIP_DEFAULT_PRECIS,  //   nClipPrecision  
+		lfont.lfQuality         = CLEARTYPE_QUALITY,      //   nQuality  
+		lfont.lfPitchAndFamily  = DEFAULT_PITCH | FF_SWISS,//   nPitchAndFamily  
+		wcscpy_s( lfont.lfFaceName, (L"微软雅黑") );  //   lpszFacename  
+
+	//HDC hHDC = ::GetDC(NULL);  
+	Gdiplus::Font hf( GetDC()->m_hDC, &lfont );  
+	//::ReleaseDC( NULL, hHDC );
+
+	SolidBrush textBrush(Gdiplus::Color(255,0,0));
+	SolidBrush bkBrush(Gdiplus::Color(100,0,0));
+	*/
+	//System.DrawString(L"123456",&hf,&bkBrush,ptStar);
+	//MyDrawText(&pGDIBmp/*gdi对像*/,szLineText/*文本*/,
+	//	ptStar/*启始点*/, &hf/*字体*/, &textBrush/*字体颜色*/,
+	//	1/*是否背景*/, &bkBrush/*背景颜色*/, rc/*输出此文本背景区域*/);
+	
+	Gdiplus::Graphics bmpGraphics(GetDC()->m_hDC);;
+
+	//因为是满屏显示，所以以行为单位先定义一个缓冲区
+	CString strOneLine;
+	float xx = 0.0f;
+	float yy = 0.0f;
+	//Gdiplus::PointF origin(0.0f,0.0f);
+
+	auto itlistText = listText.begin();
+	auto itlistColor = listColor.begin();
+	while(itlistText != listText.end()){
+		//文字
+		CStringW strWide = CT2CW(*itlistText);
+		//字体
+		FontFamily fontFamily(L"宋体");
+		Gdiplus::Font font(&fontFamily,14);
+		
+		//格式
+		StringFormat stringFormat = Gdiplus::StringFormatFlagsNoWrap;
+		//stringFormat.SetAlignment(Gdiplus::StringAlignmentCenter);
+		//stringFormat.SetLineAlignment(Gdiplus::StringAlignmentCenter);
+		//文字颜色
+		SolidBrush TextBrush(Gdiplus::Color(GetRValue(*itlistColor),GetGValue(*itlistColor),GetBValue(*itlistColor)));
+
+		Gdiplus::PointF origin(xx,yy);
+		
+		//Gdiplus::PointF origin(Gdiplus::REAL(x),Gdiplus::REAL(y));
+		//写文字
+		int x = bmpGraphics.DrawString(strWide,-1,&font,origin,&stringFormat,&TextBrush);
+
+		//转出HFONT
+		LOGFONTA logfont;
+		font.GetLogFontA(&bmpGraphics,&logfont);
+		HFONT hFont;
+		HDC hDC = GetDC()->m_hDC;
+		hFont=CreateFont(logfont.lfHeight,logfont.lfWidth,0,0,FW_THIN,true,false,false,
+			CHINESEBIG5_CHARSET,OUT_CHARACTER_PRECIS,CLIP_CHARACTER_PRECIS,DEFAULT_QUALITY,FF_MODERN,"宋体");
+		SelectObject(hDC,hFont);
+
+		//存入缓冲区
+		strOneLine = strOneLine + *itlistText;
+		//获取一个字符串的长宽
+		SIZE size;
+		GetTextExtentPoint32(hDC,strOneLine,strlen(strOneLine),&size);
+		CRect rcRectTemp;
+		this->GetClientRect(&rcRectTemp);
+		if(size.cx >= rcRectTemp.Width()){
+			xx = 0;
+			yy = yy + size.cy;
+		}
+		else{
+			xx = xx + size.cx;
+			//y = y + size.cy;
+		}
+
+		itlistText++;
+		itlistColor++;
+	}
+	return;
+}

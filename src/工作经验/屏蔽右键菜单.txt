@@ -1,0 +1,2 @@
+屏蔽右键菜单 在Dlg中重载消息
+消息OnContextMenu直接return
