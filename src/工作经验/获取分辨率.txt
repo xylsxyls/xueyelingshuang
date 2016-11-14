@@ -1,0 +1,7 @@
+ //以下两个函数获取的是显示屏幕的大小，不包括任务栏等区域
+ int screenwidth=GetSystemMetrics(SM_CXFULLSCREEN);
+ int screenheight=GetSystemMetrics(SM_CYFULLSCREEN);
+ //以下两个函数获取的是真正屏幕的大小，即实际的大小
+ int screenwidth_real=GetSystemMetrics(SM_CXSCREEN);
+ int screenheight_real=GetSystemMetrics(SM_CYSCREEN);
+ //前两个函数获取的大小可能是1440*844 ，后两个获取的就是1440*900
