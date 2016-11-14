@@ -253,26 +253,34 @@ void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 	if(itlistText != listText.end()) strOneLine = *itlistText;
 	auto itlistColor = listColor.begin();
 	while(itlistText != listText.end()){
+		bool bWrap = 0;
+		CStringW strWide;
+		//使用方框换行输出
 		//文字
-		CStringW strWide = CT2CW(*itlistText);
+		if((*itlistText)[0] == '#'){
+			bWrap = 1;
+			strWide = CT2CW(itlistText->Mid(1,itlistText->GetLength() - 1));
+		}
+		else strWide = CT2CW(*itlistText);
 		//字体
 		CStringW strFontForm = CT2CW(FontForm);
 		FontFamily fontFamily(strFontForm);
 		Gdiplus::Font font(&fontFamily,FontSize);
 		
 		//格式
-		StringFormat stringFormat = Gdiplus::StringFormatFlagsNoWrap;
+		StringFormat stringFormat;
 		//stringFormat.SetAlignment(Gdiplus::StringAlignmentCenter);
 		//stringFormat.SetLineAlignment(Gdiplus::StringAlignmentCenter);
 		//文字颜色
 		SolidBrush TextBrush(Gdiplus::Color(GetRValue(*itlistColor),GetGValue(*itlistColor),GetBValue(*itlistColor)));
-
 		Gdiplus::PointF origin(xx,yy);
 
-		
+		CRect rcRectTemp;
+		this->GetClientRect(&rcRectTemp);
+		RectF rectf(0.0f,0.0f,(float)rcRectTemp.Width(),(float)rcRectTemp.Height());
 		//写文字
-		int x = bmpGraphics.DrawString(strWide,-1,&font,origin,&stringFormat,&TextBrush);
-		
+		if(bWrap == 1) bmpGraphics.DrawString(strWide,-1,&font,rectf,&stringFormat,&TextBrush);
+		else bmpGraphics.DrawString(strWide,-1,&font,origin,&TextBrush);
 		
 		//转出HFONT
 		LOGFONTA logfont;
@@ -288,7 +296,7 @@ void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 		//	CHINESEBIG5_CHARSET,OUT_CHARACTER_PRECIS,CLIP_CHARACTER_PRECIS,DEFAULT_QUALITY,FF_MODERN,FontForm);
 		SelectObject(hDC,cFont);
 
-		
+		CString strText = *itlistText;
 		//获取一个字符串的长宽
 		SIZE size;
 		GetTextExtentPoint32(hDC,strOneLine,strlen(strOneLine),&size);
@@ -298,9 +306,7 @@ void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 		if(itlistText != listText.end()) strOneLine = strOneLine + *itlistText;
 		GetTextExtentPoint32(hDC,strOneLine,strlen(strOneLine),&size);
 		int nOneLineAdd = size.cx;
-		CRect rcRectTemp;
-		this->GetClientRect(&rcRectTemp);
-		if(nOneLineAdd >= rcRectTemp.Width()){
+		if(nOneLineAdd >= rcRectTemp.Width() || (strText.GetLength() >= 1 && strText[strText.GetLength() - 1] == '\n')){
 			if(itlistText != listText.end()) strOneLine = *itlistText;
 			xx = 0;
 			yy = yy + size.cy;
