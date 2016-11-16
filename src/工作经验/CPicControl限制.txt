@@ -1,0 +1,1 @@
+必须一次性到界面，不能在中途有阻塞，例如AfxMessageBox，DoModal等
