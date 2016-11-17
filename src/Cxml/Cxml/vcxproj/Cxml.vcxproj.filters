@@ -1,36 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="源文件">
-      <UniqueIdentifier>{451a3f7d-051b-4ddb-8764-08a09087ee27}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="头文件">
-      <UniqueIdentifier>{ba23201e-e6f5-4ee1-b853-ea0ede516fab}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="资源文件">
-      <UniqueIdentifier>{0a126ddd-141c-4e33-a900-39ce1f50336e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="CNoteData">
-      <UniqueIdentifier>{b36847b7-bcd0-4f23-88da-b06bd82a97ad}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Cxml">
-      <UniqueIdentifier>{c7fa3ba8-0843-4195-9e29-bdd8bd45fe3b}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\src\CNoteData.h">
-      <Filter>CNoteData</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Cxml.h">
-      <Filter>Cxml</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\src\CNoteData.cpp">
-      <Filter>CNoteData</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\Cxml.cpp">
       <Filter>Cxml</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CNoteData.cpp">
+      <Filter>CNoteData</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\Cxml.h">
+      <Filter>Cxml</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CNoteData.h">
+      <Filter>CNoteData</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CNoteData">
+      <UniqueIdentifier>{9702a220-99e1-4a37-90cb-424333e58861}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Cxml">
+      <UniqueIdentifier>{d9c30921-1b75-4319-98cc-0676cba6774a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
