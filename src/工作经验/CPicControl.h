@@ -7,11 +7,19 @@
 using namespace Gdiplus;
 using namespace std;
 
-#define FontForm "楷体"
-#define FontSize 13
+#define DlgOnPaintMessage(pPicControl) \
+	if(pPicControl->nInit >= 0){\
+		pPicControl->bifHasPaintMessage = 1;\
+		pPicControl->Invalidate();\
+		pPicControl->RedrawWindow();\
+	}
+
 
 class CPicControl : public CButton{
 public:
+	CPicControl();
+	CString FontForm;
+	int FontSize;
 	
 	list<CString> listPath;
 	list<CRect> listPicRect;
@@ -26,10 +34,9 @@ public:
 	list<COLORREF> prelistColor;
 
 	bool bDown;
-	//是否是改过状态
-	bool status;
 	//0表示初始化，1表示进入虚函数，需要鉴定，2表示刚改过，直接重画
-	int ninit;
+	int nInit;
+	bool bifHasPaintMessage;
 	//list的顺序是常规按下移动
 	void init(CRect rcRect,UINT nID,CWnd* pParentWnd,
 		list<CString> listPath = list<CString>(),list<CRect> listPicRect = list<CRect>(),list<CRect> listRcRect = list<CRect>(),

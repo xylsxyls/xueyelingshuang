@@ -1,6 +1,14 @@
 #include "stdafx.h"
 #include "CPicControl.h"
 
+CPicControl::CPicControl(){
+	FontForm = g_UIConfig.ReadString("config.app_ui.poptip.font").c_str();
+	//#define FontForm "楷体"
+	FontSize = g_UIConfig.ReadInt("config.app_ui.poptip.size");
+	//#define FontSize 13
+	this->nInit = -1;
+}
+
 void CPicControl::init(CRect rcRect,UINT nID,CWnd* pParentWnd,list<CString> listPath,list<CRect> listPicRect,list<CRect> listRcRect,list<list<CString>> listlistText,list<list<COLORREF>> listlistColor){
 	Create("",/////按钮上显示的文本  
 		WS_CHILD|WS_VISIBLE|BS_OWNERDRAW,///如果没有制定WS_VISIBLE还要调用ShowWindow将其显示出来  WS_CHILD|
@@ -9,7 +17,8 @@ void CPicControl::init(CRect rcRect,UINT nID,CWnd* pParentWnd,list<CString> list
 		nID);
 	
 	this->bDown = 0;
-	this->ninit = 0;
+	this->nInit = 0;
+	this->bifHasPaintMessage = 0;
 	ChangePicAndText(listPath,listPicRect,listRcRect,listlistText,listlistColor);
 	return;
 }
@@ -44,7 +53,7 @@ void CPicControl::ChangePicAndText(list<CString> listPath,list<CRect> listPicRec
 	
 	DrawPicCDC(*(this->listPath.begin()),*(this->listPicRect.begin()),*(this->listRcRect.begin()));
 	DrawTextCDC(*(this->listlistText.begin()),*(this->listlistColor.begin()));
-	if(ninit == 2) ninit = 1;
+	if(nInit == 2) nInit = 1;
 	return;
 }
 
@@ -52,7 +61,7 @@ int i = 0;
 
 void CPicControl::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
-	ninit = 1;
+	nInit = 1;
 	CString strDownPath = *(++listPath.begin());
 	//如果是按下状态，且按下状态路径不为空那么显示按下状态，其余情况显示常规状态
 	if(bDown == 1 && strDownPath != ""){
@@ -69,18 +78,19 @@ void CPicControl::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	else{
 		DrawTextCDC(*(listlistText.begin()),*(listlistColor.begin()));
 	}
-	ninit = 1;
+	nInit = 1;
+	bifHasPaintMessage = 0;
 	// TODO:  添加您的代码以绘制指定项
 }
 
 void CPicControl::DrawPicCDC(CString strPath,CRect picRect,CRect rcRect){
 	//return;
-	if(ninit == 0) return;
-	else if(ninit == 1){
-		if(this->strPath == strPath && this->picRect == picRect && this->rcRect == rcRect) return;
+	if(nInit == 0) return;
+	else if(nInit == 1){
+		if(bifHasPaintMessage == 0 && (this->strPath == strPath && this->picRect == picRect && this->rcRect == rcRect)) return;
 	}
 	if(strPath == "") return;
-	ninit = 2;
+	nInit = 2;
 	this->strPath = strPath;
 	this->picRect = picRect;
 	this->rcRect = rcRect;
@@ -160,29 +170,6 @@ void CPicControl::DrawPicCDC(CString strPath,CRect picRect,CRect rcRect){
 	ImageCDC.DeleteDC();
 	*/
 }
-
-
-
-
-void MyDrawText(Gdiplus::Graphics *pGDI, WCHAR* szText, Gdiplus::PointF& pt,Gdiplus::Font* pFont,SolidBrush* pTextColor, BOOL IsGround, SolidBrush* pGroundColor, RectF &rc)
-{
-	if(szText[0] == 0) return;
-
-	INT len = (INT)wcslen(szText);   
-
-	pGDI->MeasureString(szText, len, pFont, pt, &rc);
-	//while(res != 0)
-	//{
-	//	res = pGDI->MeasureString(szText, len, pFont, pt, &rc);
-	//}
-	if(IsGround)
-	{           
-		pGDI->FillRectangle(pGroundColor, rc);//gdi绘图失败重新绘
-		
-	}
-	int x = pGDI->DrawString(szText, len, pFont, pt, pTextColor);
-}
-
 void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 	//return;
 	/*
@@ -228,12 +215,12 @@ void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 	//	ptStar/*启始点*/, &hf/*字体*/, &textBrush/*字体颜色*/,
 	//	1/*是否背景*/, &bkBrush/*背景颜色*/, rc/*输出此文本背景区域*/);
 	
-	if(ninit == 0) return;
-	else if(ninit == 1){
+	if(nInit == 0) return;
+	else if(nInit == 1){
 		//记录上一次参数，如果相同就直接返回
-		if(prelistText == listText && prelistColor == listColor) return;
+		if(bifHasPaintMessage == 0 && (prelistText == listText && prelistColor == listColor)) return;
 	}
-	ninit = 2;
+	nInit = 2;
 	prelistText = listText;
 	prelistColor = listColor;
 
@@ -311,10 +298,7 @@ void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 			xx = 0;
 			yy = yy + size.cy;
 		}
-		else{
-			xx = (float)nOneLine;
-			//y = y + size.cy;
-		}
+		else xx = (float)nOneLine;
 		itlistColor++;
 	}
 	return;
@@ -359,7 +343,7 @@ void CPicControl::OnMouseLeave()
 	
 	DrawPicCDC(*(listPath.begin()),*(listPicRect.begin()),*(listRcRect.begin()));
 	DrawTextCDC(*(listlistText.begin()),*(listlistColor.begin()));
-	if(ninit == 2) ninit = 1;
+	if(nInit == 2) nInit = 1;
 	CButton::OnMouseLeave();
 }
 
@@ -396,7 +380,7 @@ void CPicControl::OnMouseHover(UINT nFlags, CPoint point)
 	else{
 		DrawTextCDC(*(listlistText.begin()),*(listlistColor.begin()));
 	}
-	if(ninit == 2) ninit = 1;
+	if(nInit == 2) nInit = 1;
 	CButton::OnMouseHover(nFlags, point);
 }
 
