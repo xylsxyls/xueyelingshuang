@@ -249,7 +249,7 @@ begin:
 
 		CRect rcRectTemp;
 		this->GetClientRect(&rcRectTemp);
-		RectF rectf(0.0f,0.0f,(float)rcRectTemp.Width(),(float)rcRectTemp.Height());
+		RectF rectf(xx,yy,(float)rcRectTemp.Width(),(float)rcRectTemp.Height());
 		//Ð´ÎÄ×Ö
 		if(bWrap == 1) TextGraphics.DrawString(strWide,-1,&font,rectf,&stringFormat,&TextBrush);
 		else TextGraphics.DrawString(strWide,-1,&font,origin,&TextBrush);
