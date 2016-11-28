@@ -2,23 +2,25 @@
 #include "CPicControl.h"
 
 CPicControl::CPicControl(){
-	FontForm = g_UIConfig.ReadString("config.app_ui.poptip.font").c_str();
+	FontForm = "宋体";
 	//#define FontForm "楷体"
-	FontSize = g_UIConfig.ReadInt("config.app_ui.poptip.size");
+	FontSize = 13;
 	//#define FontSize 13
 	this->nInit = -1;
 }
 
-void CPicControl::init(CRect rcRect,UINT nID,CWnd* pParentWnd,list<CString> listPath,list<CRect> listPicRect,list<CRect> listRcRect,list<list<CString>> listlistText,list<list<COLORREF>> listlistColor){
+void CPicControl::init(CRect rcRectInClient,UINT nID,CWnd* pParentWnd,list<CString> listPath,list<CRect> listPicRect,list<CRect> listRcRect,list<list<CString>> listlistText,list<list<COLORREF>> listlistColor){
 	Create("",/////按钮上显示的文本  
 		WS_CHILD|WS_VISIBLE|BS_OWNERDRAW,///如果没有制定WS_VISIBLE还要调用ShowWindow将其显示出来  WS_CHILD|
-		rcRect,/////左上角的坐标(0，0),长度为100，100  
+		rcRectInClient,/////左上角的坐标(0，0),长度为100，100  
 		pParentWnd,//父窗口  
 		nID);
-	
+
+	this->rcRectInClient = rcRectInClient;
 	this->bDown = 0;
 	this->nInit = 0;
 	this->bifHasPaintMessage = 0;
+	GetClientRect(&rcClient);
 	ChangePicAndText(listPath,listPicRect,listRcRect,listlistText,listlistColor);
 	return;
 }
@@ -50,177 +52,156 @@ void CPicControl::ChangePicAndText(list<CString> listPath,list<CRect> listPicRec
 		int i = listlistColor.size();
 		while(i++ != 3) this->listlistColor.push_back(list<COLORREF>());
 	}
-	
-	DrawPicCDC(*(this->listPath.begin()),*(this->listPicRect.begin()),*(this->listRcRect.begin()));
-	DrawTextCDC(*(this->listlistText.begin()),*(this->listlistColor.begin()));
+
+	//必须要给内存一张画布，没有这步GDI+无法绘图，画布大小应设置为Client大小
+	Bitmap memBitmap(rcClient.Width(),rcClient.Height());
+
+	DrawPicCDC(&memBitmap,*(this->listPath.begin()),*(this->listPicRect.begin()),*(this->listRcRect.begin()));
+	DrawTextCDC(&memBitmap,*(this->listlistText.begin()),*(this->listlistColor.begin()));
+	Draw(GetDC()->m_hDC,&memBitmap,0,0);
 	if(nInit == 2) nInit = 1;
 	return;
 }
 
-int i = 0;
-
 void CPicControl::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
 	nInit = 1;
+	//必须要给内存一张画布，没有这步GDI+无法绘图，画布大小应设置为Client大小
+	Bitmap memBitmap(rcClient.Width(),rcClient.Height());
+	DrawPicAndText(&memBitmap);
+	Draw(GetDC()->m_hDC,&memBitmap,0,0);
+	nInit = 1;
+	// TODO:  添加您的代码以绘制指定项
+}
+
+void CPicControl::ClearBitmap(Bitmap* pmemBitmap){
+	Graphics emptyMemGraphics(pmemBitmap);
+	SolidBrush brush(TRANSPARENT);
+	emptyMemGraphics.FillRectangle(&brush,rcClient.left,rcClient.top,rcClient.Width(),rcClient.Height());
+}
+
+void CPicControl::DrawInDlgOnPaint(HDC hdc,CString strPath,CRect picRect,CRect rcRect,int number,...){
+	va_list parameterlist;
+	va_start(parameterlist,number);
+	if(picRect == CRect() && strPath != ""){
+		CStringW strWide = CT2CW(strPath);
+		Image image(strWide);
+		picRect.SetRect(0,0,image.GetWidth(),image.GetHeight());
+	}
+
+	CPicControl* pPicControlFirst = NULL;
+	if(number > 0 && rcRect == CRect()){
+		//如果有控件并且显示区为空CRect那么获取父窗口的大小
+		pPicControlFirst = va_arg(parameterlist,CPicControl*);
+		if(pPicControlFirst->nInit != -1) pPicControlFirst->GetParent()->GetClientRect(&rcRect);
+	}
+	Bitmap memBitmap(rcRect.Width(),rcRect.Height());
+	//画背景
+	if(strPath != "") DrawOnePic(&memBitmap,strPath,picRect,rcRect);
+	//如果不为空，说明确实有取到第一个控件，必须画在背景之后
+	if(pPicControlFirst->nInit != -1){
+		pPicControlFirst->DrawPicCDC(&memBitmap,*pPicControlFirst->listPath.begin(),
+			*pPicControlFirst->listPicRect.begin(),pPicControlFirst->rcRectInClient,TRUE);
+		pPicControlFirst->DrawTextCDC(&memBitmap,*pPicControlFirst->listlistText.begin(),
+			*pPicControlFirst->listlistColor.begin(),TRUE);
+		number--;
+	}
+	//开始画或者画剩余的
+	while(number-- != 0){
+		CPicControl* pPicControl = va_arg(parameterlist,CPicControl*);
+		if(pPicControl->nInit != -1){
+			pPicControl->DrawPicCDC(&memBitmap,*pPicControl->listPath.begin(),*pPicControl->listPicRect.begin(),pPicControl->rcRectInClient,TRUE);
+			pPicControl->DrawTextCDC(&memBitmap,*pPicControl->listlistText.begin(),*pPicControl->listlistColor.begin(),TRUE);
+		}
+	}
+	Draw(hdc,&memBitmap,0,0);
+	va_end(parameterlist);
+	return;
+}
+
+void CPicControl::DrawPicAndText(Bitmap* pmemBitmap){
+
 	CString strDownPath = *(++listPath.begin());
 	//如果是按下状态，且按下状态路径不为空那么显示按下状态，其余情况显示常规状态
 	if(bDown == 1 && strDownPath != ""){
-		DrawPicCDC(*(++listPath.begin()),*(++listPicRect.begin()),*(++listRcRect.begin()));
+		DrawPicCDC(pmemBitmap,*(++listPath.begin()),*(++listPicRect.begin()),*(++listRcRect.begin()));
 	}
 	else if(*(listPath.begin()) != ""){
-		DrawPicCDC(*(listPath.begin()),*(listPicRect.begin()),*(listRcRect.begin()));
+		DrawPicCDC(pmemBitmap,*(listPath.begin()),*(listPicRect.begin()),*(listRcRect.begin()));
 	}
 
 	//如果有文字需要显示
 	if(bDown == 1 && (++listlistText.begin())->size() != 0){
-		DrawTextCDC(*(++listlistText.begin()),*(++listlistColor.begin()));
+		DrawTextCDC(pmemBitmap,*(++listlistText.begin()),*(++listlistColor.begin()));
 	}
 	else{
-		DrawTextCDC(*(listlistText.begin()),*(listlistColor.begin()));
+		DrawTextCDC(pmemBitmap,*(listlistText.begin()),*(listlistColor.begin()));
 	}
-	nInit = 1;
-	bifHasPaintMessage = 0;
-	// TODO:  添加您的代码以绘制指定项
+	return;
 }
 
-void CPicControl::DrawPicCDC(CString strPath,CRect picRect,CRect rcRect){
-	//return;
+void CPicControl::DrawOnePic(Bitmap* pmemBitmap,CString strPath,CRect picRect,CRect rcRect){
+	//这里可以通过memGraphics在memBitmap上绘制多个图元
+	Graphics memGraphics(pmemBitmap);
+
+	CStringW strWide = CT2CW(strPath);
+	Image image(strWide);
+	memGraphics.DrawImage(&image,RectF((float)rcRect.left,(float)rcRect.top,(float)rcRect.Width(),(float)rcRect.Height()),
+		Gdiplus::REAL(picRect == CRect() ? 0 : picRect.left),
+		Gdiplus::REAL(picRect == CRect() ? 0 : picRect.top),
+		Gdiplus::REAL(picRect == CRect() ? image.GetWidth() : picRect.Width()),
+		Gdiplus::REAL(picRect == CRect() ? image.GetHeight() : picRect.Height()),Gdiplus::UnitPixel);
+}
+
+void CPicControl::Draw(HDC hdc,Bitmap* pmemBitmap,int x,int y){
+	Graphics gr(hdc);
+	gr.DrawImage(pmemBitmap,x,y);
+	return;
+}
+
+void CPicControl::DrawPicCDC(Bitmap* pmemBitmap,CString strPath,CRect picRect,CRect rcRect,bool ifOnPaint){
+	//如果是在OnPaint中除了路径全部跳过检查
+	if(ifOnPaint){
+		if(strPath == "") return;
+		goto begin;
+	}
 	if(nInit == 0) return;
 	else if(nInit == 1){
-		if(bifHasPaintMessage == 0 && (this->strPath == strPath && this->picRect == picRect && this->rcRect == rcRect)) return;
+		if(this->strPath == strPath && this->picRect == picRect && this->rcRect == rcRect) return;
 	}
 	if(strPath == "") return;
 	nInit = 2;
+
+begin:
+	//OnPaint中画的位置会有偏移
+	if(ifOnPaint == 1){
+		this->rcRect = CRect(rcRect.left - rcRectInClient.left,rcRect.top - rcRectInClient.top,
+			rcRect.Width() - rcRectInClient.Width(),rcRect.Height() - rcRectInClient.Height());
+	}
+	else this->rcRect = rcRect;
 	this->strPath = strPath;
 	this->picRect = picRect;
-	this->rcRect = rcRect;
 
-	CStringW strWide = CT2CW(strPath);
 
-	HBITMAP hBitmap;
-	hBitmap = (HBITMAP)::LoadImage(::AfxGetInstanceHandle(),strPath,IMAGE_BITMAP,0,0,LR_LOADFROMFILE | LR_CREATEDIBSECTION);
-	CBitmap cBitmap;
-	cBitmap.Attach(hBitmap);
-	BITMAP bitmap;
-	cBitmap.GetBitmap(&bitmap);
-	int nWidth = bitmap.bmWidth;
-	int nHeight = bitmap.bmHeight;
-
-	CRect rcRectTemp;
-	if(rcRect == CRect(0,0,0,0)) this->GetClientRect(&rcRectTemp);
-	else rcRectTemp = rcRect;
-	CRect picRectTemp;
-	if(picRect == CRect(0,0,0,0)){
-		picRectTemp.right = nWidth;
-		picRectTemp.bottom = nHeight;
-	}
-	else picRectTemp = picRect;
-
-	CDC ImageCDC;
-	ImageCDC.CreateCompatibleDC(NULL);
-	ImageCDC.SelectObject(&cBitmap);
-
-	GetDC()->StretchBlt(rcRectTemp.left,rcRectTemp.top,rcRectTemp.Width(),rcRectTemp.Height(),&ImageCDC,
-		picRectTemp.left,picRectTemp.top,picRectTemp.Width(),picRectTemp.Height(),SRCCOPY);
-
-	DeleteObject(hBitmap);
-	cBitmap.DeleteObject();
-	//删除位图
-	DeleteObject(&bitmap);
-	/*
-	if(strPath == "") return;
-	//创建临时设备上下文
-	CDC* pDC = this->GetDC();
-	CDC ImageCDC;
-	ImageCDC.CreateCompatibleDC(pDC);
-
-	//加载图片到bitmap获取宽高
-	HBITMAP hBitmap;
-	hBitmap = (HBITMAP)::LoadImage(::AfxGetInstanceHandle(), strPath, IMAGE_BITMAP, 0,0,LR_LOADFROMFILE|LR_CREATEDIBSECTION);
-	CBitmap cBitmap;
-	cBitmap.Attach(hBitmap);
-	BITMAP bitmap;
-	cBitmap.GetBitmap(&bitmap);
-	int nWidth = bitmap.bmWidth;
-	int nHeight = bitmap.bmHeight;
-
-	//临时设备上下文选择CBitmap
-	CBitmap* pOld = ImageCDC.SelectObject(&cBitmap);
-
-	CRect rcRectTemp;
-	if(rcRect == CRect(0,0,0,0)) this->GetClientRect(&rcRectTemp);
-	else rcRectTemp = rcRect;
-	CRect picRectTemp;
-	if(picRect == CRect(0,0,0,0)){
-		picRectTemp.right = nWidth;
-		picRectTemp.bottom = nHeight;
-	}
-	else picRectTemp = picRect;
-
-	//前面是相对坐标，后面是图片坐标
-	pDC->StretchBlt(rcRectTemp.left,rcRectTemp.top,rcRectTemp.Width(),rcRectTemp.Height(),&ImageCDC,picRectTemp.left,picRectTemp.top,picRectTemp.Width(),picRectTemp.Height(),SRCCOPY);
-
-	DeleteObject(hBitmap);
-	cBitmap.DeleteObject();
-	//恢复临时DC的位图
-	ImageCDC.SelectObject(pOld);
-	//删除位图
-	DeleteObject(&bitmap);
-	//删除后台DC
-	ImageCDC.DeleteDC();
-	*/
+	DrawOnePic(pmemBitmap,strPath,picRect,rcRect == CRect() ? rcClient : rcRect);
+	return;
 }
-void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
-	//return;
-	/*
-	Gdiplus::Graphics pGDIBmp(GetDC()->m_hDC);
 
-	Gdiplus::RectF rc;                // 背景区域
-	rc.X = 0;
-	rc.Y = 0;
-	rc.Width = 100;
-	rc.Height = 100;
-	WCHAR szLineText[256];    // 打印行
-	wsprintfW(szLineText, L"文本1111111111111111");
-	Gdiplus::PointF ptStar(0,0); // 启始点
-	//pGDIBmp->DrawString(L"");
-
-	LOGFONTW lfont;  
-	memset( &lfont, 0, sizeof(lfont) );  
-
-	lfont.lfHeight = -15, //   nHeight   注意使用负值，表示character height,  正值表示 cell height  
-		lfont.lfWidth  = 0,  //   nWidth  
-		//0,     //   nEscapement  
-		//0,     //   nOrientation  
-		lfont.lfWeight      = FW_NORMAL,  //nWeight  
-		lfont.lfItalic      = FALSE,      //bItalic  
-		lfont.lfUnderline   = FALSE,   //   bUnderline  
-		lfont.lfStrikeOut   = 0,         //   cStrikeOut  
-		lfont.lfCharSet     = DEFAULT_CHARSET,   //   nCharSet  
-		lfont.lfOutPrecision    = OUT_DEFAULT_PRECIS,//   nOutPrecision  
-		lfont.lfClipPrecision   = CLIP_DEFAULT_PRECIS,  //   nClipPrecision  
-		lfont.lfQuality         = CLEARTYPE_QUALITY,      //   nQuality  
-		lfont.lfPitchAndFamily  = DEFAULT_PITCH | FF_SWISS,//   nPitchAndFamily  
-		wcscpy_s( lfont.lfFaceName, (L"微软雅黑") );  //   lpszFacename  
-
-	//HDC hHDC = ::GetDC(NULL);  
-	Gdiplus::Font hf( GetDC()->m_hDC, &lfont );  
-	//::ReleaseDC( NULL, hHDC );
-
-	SolidBrush textBrush(Gdiplus::Color(255,0,0));
-	SolidBrush bkBrush(Gdiplus::Color(100,0,0));
-	*/
-	//System.DrawString(L"123456",&hf,&bkBrush,ptStar);
-	//MyDrawText(&pGDIBmp/*gdi对像*/,szLineText/*文本*/,
-	//	ptStar/*启始点*/, &hf/*字体*/, &textBrush/*字体颜色*/,
-	//	1/*是否背景*/, &bkBrush/*背景颜色*/, rc/*输出此文本背景区域*/);
-	
+void CPicControl::DrawTextCDC(Bitmap* pmemBitmap,list<CString> listText,list<COLORREF> listColor,bool ifOnPaint){
+	//如果是在OnPaint中全部跳过检查
+	if(ifOnPaint){
+		goto begin;
+	}
 	if(nInit == 0) return;
 	else if(nInit == 1){
 		//记录上一次参数，如果相同就直接返回
-		if(bifHasPaintMessage == 0 && (prelistText == listText && prelistColor == listColor)) return;
+		if(prelistText == listText && prelistColor == listColor) return;
 	}
 	nInit = 2;
+
+begin:
+	//如果没有内容要输入则直接返回
+	if(listText.size() == 0) return;
 	prelistText = listText;
 	prelistColor = listColor;
 
@@ -229,13 +210,18 @@ void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 		while(i++ != listText.size()) listColor.push_back(COLORREF());
 	}
 
-	Gdiplus::Graphics bmpGraphics(GetDC()->m_hDC);
-	//bmpGraphics.Clear(Color::White);
-	//因为是满屏显示，所以以行为单位先定义一个缓冲区
+	Gdiplus::Graphics TextGraphics(pmemBitmap);
+	
+	//文字去毛边，在透明或默认背景下文字边缘会有黑色
+	TextGraphics.SetTextRenderingHint(TextRenderingHint(TextRenderingHintAntiAlias));
+	
 	CString strOneLine;
 	float xx = 0.0f;
 	float yy = 0.0f;
-
+	if(ifOnPaint == 1){
+		xx = xx + rcRectInClient.left;
+		yy = yy + rcRectInClient.top;
+	}
 	auto itlistText = listText.begin();
 	if(itlistText != listText.end()) strOneLine = *itlistText;
 	auto itlistColor = listColor.begin();
@@ -252,8 +238,7 @@ void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 		//字体
 		CStringW strFontForm = CT2CW(FontForm);
 		FontFamily fontFamily(strFontForm);
-		Gdiplus::Font font(&fontFamily,FontSize);
-		
+		Gdiplus::Font font(&fontFamily,(float)FontSize);
 		//格式
 		StringFormat stringFormat;
 		//stringFormat.SetAlignment(Gdiplus::StringAlignmentCenter);
@@ -266,19 +251,15 @@ void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 		this->GetClientRect(&rcRectTemp);
 		RectF rectf(0.0f,0.0f,(float)rcRectTemp.Width(),(float)rcRectTemp.Height());
 		//写文字
-		if(bWrap == 1) bmpGraphics.DrawString(strWide,-1,&font,rectf,&stringFormat,&TextBrush);
-		else bmpGraphics.DrawString(strWide,-1,&font,origin,&TextBrush);
-		
+		if(bWrap == 1) TextGraphics.DrawString(strWide,-1,&font,rectf,&stringFormat,&TextBrush);
+		else TextGraphics.DrawString(strWide,-1,&font,origin,&TextBrush);
 		//转出HFONT
 		LOGFONTA logfont;
-		font.GetLogFontA(&bmpGraphics,&logfont);
-
+		font.GetLogFontA(&TextGraphics,&logfont);
 		CFont cFont;
 		cFont.CreateFontIndirect(&logfont);
-		
-
-		//必须提在一个变量里获取长度的时候才有效，直接使用GetDC()->m_hDC不行
-		HDC hDC = GetDC()->m_hDC;
+		//如果要获取的是GetDC()->m_hDC，必须提在一个变量里获取长度的时候才有效，直接使用GetDC()->m_hDC不行
+		HDC hDC = TextGraphics.GetHDC();
 		//hFont = CreateFont(logfont.lfHeight,logfont.lfWidth,0,0,FW_THIN,true,false,false,
 		//	CHINESEBIG5_CHARSET,OUT_CHARACTER_PRECIS,CLIP_CHARACTER_PRECIS,DEFAULT_QUALITY,FF_MODERN,FontForm);
 		SelectObject(hDC,cFont);
@@ -295,10 +276,16 @@ void CPicControl::DrawTextCDC(list<CString> listText,list<COLORREF> listColor){
 		int nOneLineAdd = size.cx;
 		if(nOneLineAdd >= rcRectTemp.Width() || (strText.GetLength() >= 1 && strText[strText.GetLength() - 1] == '\n')){
 			if(itlistText != listText.end()) strOneLine = *itlistText;
-			xx = 0;
+			if(ifOnPaint == 1) xx = (float)rcRectInClient.left;
+			else xx = 0;
 			yy = yy + size.cy;
 		}
-		else xx = (float)nOneLine;
+		else{
+			if(ifOnPaint == 1) xx = (float)nOneLine + rcRectInClient.left;
+			else xx = (float)nOneLine;
+		}
+		//必须有对应释放否则会出现ObjectBusy，把获取句柄放在循环外也不行
+		TextGraphics.ReleaseHDC(hDC);
 		itlistColor++;
 	}
 	return;
@@ -310,6 +297,7 @@ BEGIN_MESSAGE_MAP(CPicControl, CButton)
 	ON_WM_MOUSELEAVE()
 	ON_WM_MOUSEHOVER()
 	ON_WM_LBUTTONUP()
+	ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
 
@@ -340,9 +328,14 @@ void CPicControl::OnLButtonDown(UINT nFlags, CPoint point)
 void CPicControl::OnMouseLeave()
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	
-	DrawPicCDC(*(listPath.begin()),*(listPicRect.begin()),*(listRcRect.begin()));
-	DrawTextCDC(*(listlistText.begin()),*(listlistColor.begin()));
+
+	//必须要给内存一张画布，没有这步GDI+无法绘图，画布大小应设置为Client大小
+	Bitmap memBitmap(rcClient.Width(),rcClient.Height());
+
+
+	DrawPicCDC(&memBitmap,*(listPath.begin()),*(listPicRect.begin()),*(listRcRect.begin()));
+	DrawTextCDC(&memBitmap,*(listlistText.begin()),*(listlistColor.begin()));
+	Draw(GetDC()->m_hDC,&memBitmap,0,0);
 	if(nInit == 2) nInit = 1;
 	CButton::OnMouseLeave();
 }
@@ -351,35 +344,39 @@ void CPicControl::OnMouseLeave()
 void CPicControl::OnMouseHover(UINT nFlags, CPoint point)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	//必须要给内存一张画布，没有这步GDI+无法绘图，画布大小应设置为Client大小
+	Bitmap memBitmap(rcClient.Width(),rcClient.Height());
+
 	CString strDownPath = *(++listPath.begin());
 	CString strMovePath = *(++++listPath.begin());
 	//如果是按下状态，且按下状态路径不为空则显示按下状态
 	if(bDown == 1 && strDownPath != ""){
-		DrawPicCDC(*(++listPath.begin()),*(++listPicRect.begin()),*(++listRcRect.begin()));
-		
+		DrawPicCDC(&memBitmap,*(++listPath.begin()),*(++listPicRect.begin()),*(++listRcRect.begin()));
+
 	}
 	//如果是弹起状态，且移动状态路径不为空则显示移动状态
 	else if(bDown == 0 && strMovePath != ""){
-		DrawPicCDC(*(++++listPath.begin()),*(++++listPicRect.begin()),*(++++listRcRect.begin()));
-		
+		DrawPicCDC(&memBitmap,*(++++listPath.begin()),*(++++listPicRect.begin()),*(++++listRcRect.begin()));
+
 	}
 	//其余全部显示常规状态
 	else{
-		DrawPicCDC(*(listPath.begin()),*(listPicRect.begin()),*(listRcRect.begin()));
+		DrawPicCDC(&memBitmap,*(listPath.begin()),*(listPicRect.begin()),*(listRcRect.begin()));
 	}
 
 	//如果是按下状态，且按下状态路径不为空则显示按下状态
 	if(bDown == 1 && (++listlistText.begin())->size() != 0){
-		DrawTextCDC(*(++listlistText.begin()),*(++listlistColor.begin()));
+		DrawTextCDC(&memBitmap,*(++listlistText.begin()),*(++listlistColor.begin()));
 	}
 	//如果是弹起状态，且移动状态路径不为空则显示移动状态
 	else if(bDown == 0 && (++++listlistText.begin())->size() != 0){
-		DrawTextCDC(*(++++listlistText.begin()),*(++++listlistColor.begin()));
+		DrawTextCDC(&memBitmap,*(++++listlistText.begin()),*(++++listlistColor.begin()));
 	}
 	//其余全部显示常规状态
 	else{
-		DrawTextCDC(*(listlistText.begin()),*(listlistColor.begin()));
+		DrawTextCDC(&memBitmap,*(listlistText.begin()),*(listlistColor.begin()));
 	}
+	Draw(GetDC()->m_hDC,&memBitmap,0,0);
 	if(nInit == 2) nInit = 1;
 	CButton::OnMouseHover(nFlags, point);
 }
@@ -390,4 +387,11 @@ void CPicControl::OnLButtonUp(UINT nFlags, CPoint point)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	bDown = 0;
 	CWnd::OnLButtonUp(nFlags, point);
+}
+
+BOOL CPicControl::OnEraseBkgnd(CDC* pDC)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	return TRUE;
+	return CButton::OnEraseBkgnd(pDC);
 }
