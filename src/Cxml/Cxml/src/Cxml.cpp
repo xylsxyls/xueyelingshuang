@@ -172,8 +172,10 @@ void Cxml::LoadOneModule(int flag,CString strXmlName,CString strXmlAttri,CString
 		Cxml nullXml;
 		nullXml.strOneXmlName = strXmlName;
 		nullXml.strOneXmlValue = strXmlText;
+		//nullXml.pPreXml = this;
 		if(strXmlAttri != "") nullXml.mapAttri = nullXml.LoadAttri(strXmlAttri);
 		listXml.push_back(nullXml);
+		//listXml.back().pPreXml = &(listXml.back());
 	}
 	else if(flag == XML){
 		//如果内容中没有<说明是单个节点
@@ -181,18 +183,22 @@ void Cxml::LoadOneModule(int flag,CString strXmlName,CString strXmlAttri,CString
 			Cxml xmlTempOne;
 			xmlTempOne.strOneXmlName = strXmlName;
 			xmlTempOne.strOneXmlValue = strXmlText;
+			//xmlTempOne.pPreXml = this;
 			if(strXmlAttri != "") xmlTempOne.mapAttri = xmlTempOne.LoadAttri(strXmlAttri);
 			listXml.push_back(xmlTempOne);
+			//listXml.back().pPreXml = &(listXml.back());
 		}
 		//有<则递归
 		else{
 			Cxml xmlTemp;
 			xmlTemp.strOneXmlName = strXmlName;
+			//xmlTemp.pPreXml = this;
 			if(strXmlAttri != "") xmlTemp.mapAttri = xmlTemp.LoadAttri(strXmlAttri);
 			map<CString,CString> mapChildError = xmlTemp.Load(strXmlText);
 			//合并错误map
 			AddErrorMap(mapChildError);
 			listXml.push_back(xmlTemp);
+			//listXml.back().pPreXml = &(listXml.back());
 		}
 	}
 	return;
@@ -321,7 +327,7 @@ void Cxml::AddXml(CString* strXmlResult,int* pInsert,CString NewLineSign,CString
 	auto itXml = listXml.begin();
 	int i = -1;
 	//循环次数根据listXml决定
-	while(itXml != listXml.end()){
+	while(itNote != listNote.end() || itData != listCDATA.end() || itXml != listXml.end()){
 		//第几次循环的标识位
 		i++;
 		//得到strFormatSignTemp，带格式个数的格式标识位
@@ -341,10 +347,12 @@ void Cxml::AddXml(CString* strXmlResult,int* pInsert,CString NewLineSign,CString
 			*pInsert = *pInsert + strData.GetLength();
 			itData++;
 		}
-		CString strXmlTemp = NewLineSign + itXml->toCString(NewLineSign,FormatSign,FormatLength);
-		strXmlResult->Insert(*pInsert,strXmlTemp);
-		*pInsert = *pInsert + strXmlTemp.GetLength();
-		itXml++;
+		if(itXml != listXml.end()){
+			CString strXmlTemp = NewLineSign + itXml->toCString(NewLineSign,FormatSign,FormatLength);
+			strXmlResult->Insert(*pInsert,strXmlTemp);
+			*pInsert = *pInsert + strXmlTemp.GetLength();
+			itXml++;
+		}
 	}
 	strXmlResult->Insert(*pInsert,NewLineSign);
 	*pInsert = *pInsert + NewLineSign.GetLength();
@@ -439,18 +447,25 @@ Cxml& Cxml::operator()(CString strNOTECDATA,int nFlag){
 	return *this;
 }
 
+
+
 Cxml Cxml::operator=(CString strValue){
 	//如果访问路径出错则直接返回
 	if(bVisit == 0) return *this;
 	//建立一个指针池，存放符合可能的所有指针，先存入第一层中listXml的指针
 	list<list<Cxml>*> listplistXml;
+	//上层指针
+	Cxml* pPreXmlTemp = this;
+	//上层指针池
+	list<Cxml*> listpPrelistXml;
 	listplistXml.push_back(&listXml);
+	listpPrelistXml.push_back(this);
 	//建立两个临时变量，一个存储上一个节点路径，一个存储CString
 	list<int> listVisitTemp;
 	list<CString> listCStringStorageTemp;
 	list<Cxml> listXmlTemp;
 	listXmlTemp.push_back(*this);
-	//上层指针
+	//本层指针
 	list<Cxml>* plistXmlTemp = &listXmlTemp;
 	//取出listVisit中最后一个，用于最后赋值判断
 	int nLast = listVisit.back();
@@ -479,11 +494,14 @@ Cxml Cxml::operator=(CString strValue){
 			plistXmlTemp = *listplistXml.begin();
 			//取出第一个之后就清空，方便后面存入下层的多个指针
 			listplistXml.clear();
+			listpPrelistXml.clear();
 			for(auto itXml = plistXmlTemp->begin();itXml != plistXmlTemp->end();itXml++){
 				//如果能找到该节点
 				if(itXml->strOneXmlName == strNode){
 					//把下一个Cxml指针赋值给临时变量
 					listplistXml.push_back(&(itXml->listXml));
+					listpPrelistXml.push_back(&(*itXml));
+					pPreXmlTemp = &(*(plistXmlTemp->begin()));
 				}
 			}
 			//如果为空说明是写入
@@ -491,26 +509,38 @@ Cxml Cxml::operator=(CString strValue){
 				Cxml xmlTemp;
 				xmlTemp.strOneXmlName = strNode;
 				xmlTemp.strOneXmlValue = "AddNewTemp";
+				//xmlTemp.pPreXml = pPreXmlTemp;
 				plistXmlTemp->push_back(xmlTemp);
 				//必须进入list才能给到真正的指针，把新开的空list指针传给指针池
 				listplistXml.push_back(&(plistXmlTemp->back().listXml));
+				listpPrelistXml.push_back(&(plistXmlTemp->back()));
+				pPreXmlTemp = &(plistXmlTemp->back());
 			}
 		}
 		else if(listVisit.front() == 2){
 			//取出并弹出存储数据
 			int n = *listintStorage.begin();
 			listintStorage.pop_front();
+
 			//如果只有一个，并且是上层添加进去的
-			if(listplistXml.size() == 1 && ((*listplistXml.begin())->begin()->strOneXmlValue == "AddNewTemp")){
-				(*listplistXml.begin())->begin()->strOneXmlValue = "";
-				goto rem;
+			if(listplistXml.size() == 1){
+				list<Cxml>* plistXmlFirst = (*listplistXml.begin());
+				for(auto itplistXmlTemp = plistXmlTemp->begin();itplistXmlTemp != plistXmlTemp->end();itplistXmlTemp++){
+					if(itplistXmlTemp->strOneXmlValue == "AddNewTemp"){
+						if(++listVisit.begin() != listVisit.end() && *(++listVisit.begin()) == 5) itplistXmlTemp->strOneXmlValue = "AddNewTemp";
+						else itplistXmlTemp->strOneXmlValue = "";
+						goto rem;
+					}
+				}
 			}
+			
 			//如果指针池内没有该位置的指针
 			if(listplistXml.size() <= (unsigned int)n){
 				//添加一个新的Cxml并给出其中listXml的指针
 				Cxml xmlTemp;
 				xmlTemp.strOneXmlName = *listCStringStorageTemp.begin();
 				xmlTemp.strOneXmlValue = "AddNewTemp";
+				//xmlTemp.pPreXml = pPreXmlTemp;
 				listCStringStorageTemp.pop_front();
 				while(listCStringStorageTemp.size() != 0){
 					xmlTemp.mapAttri[*listCStringStorageTemp.begin()] = *(++listCStringStorageTemp.begin());
@@ -519,19 +549,26 @@ Cxml Cxml::operator=(CString strValue){
 				}
 				//存入临时Cxml，清空指针池，并把list中的指针放入指针池中
 				plistXmlTemp->push_back(xmlTemp);
+				pPreXmlTemp = &(plistXmlTemp->back());
 				listplistXml.clear();
+				listpPrelistXml.clear();
 				listplistXml.push_back(&(plistXmlTemp->back().listXml));
+				listpPrelistXml.push_back(&(plistXmlTemp->back()));	
 			}
 			else{
 				int nTemp = n;
 				auto itlistplistXml = listplistXml.begin();
+				auto itlistpPrelistXml = listpPrelistXml.begin();
 				while(nTemp-- != 0){
 					itlistplistXml++;
+					itlistpPrelistXml++;
 				}
 				//取出指针池中指定的那个指针，再清空指针池，再放入指定的那个
 				list<Cxml>* plistXmlTemp = *itlistplistXml;
 				listplistXml.clear();
+				listpPrelistXml.clear();
 				listplistXml.push_back(plistXmlTemp);
+				listpPrelistXml.push_back(&(plistXmlTemp->back()));
 			}
 		}
 		else if(listVisit.front() == 3){
@@ -552,26 +589,41 @@ Cxml Cxml::operator=(CString strValue){
 			listCStringStorageTemp.push_back(strAttriName);
 			listCStringStorageTemp.push_back(strAttriValue);
 			//如果指针池中只有一个指针，先判断是不是新添加的，如果是，那么直接添加一条属性即可
-			if(listplistXml.size() == 1 && ((*listplistXml.begin())->begin()->strOneXmlValue == "AddNewTemp")){
-				(*listplistXml.begin())->begin()->mapAttri[strAttriName] = strAttriValue;
-				goto rem;
+			if(listplistXml.size() == 1){
+				auto itlistplistXml = (*listplistXml.begin())->begin();
+				for(;itlistplistXml != (*listplistXml.begin())->end();itlistplistXml++){
+					if(itlistplistXml->strOneXmlValue == "AddNewTemp"){
+						itlistplistXml->mapAttri[strAttriName] = strAttriValue;
+						goto rem;
+					}
+				}
 			}
 			//建立一个临时指针池
 			list<list<Cxml>*> listplistXmlTemp;
+			//建立一个临时上层指针池
+			list<Cxml*> listpPrelistTemp;
+			//auto itlistpPrelistXml = listpPrelistXml.begin();
 			for(auto itlistplistXml = listplistXml.begin();itlistplistXml != listplistXml.end();itlistplistXml++){
-				map<CString,CString>* pmapAttriTemp = &((*itlistplistXml)->begin()->mapAttri);
+				//从上层指针的map中进行比较
+				map<CString,CString>* pmapAttriTemp = &((*listpPrelistXml.begin())->mapAttri);
 				//如果找到这条属性则把当前的指针放到临时指针池中
 				if(pmapAttriTemp->find(strAttriName) != pmapAttriTemp->end() && (*pmapAttriTemp)[strAttriName] == strAttriValue){
 					listplistXmlTemp.push_back(*itlistplistXml);
+					//发现有相等的就把上层指针中的第一个放进临时上层指针池中
+					listpPrelistTemp.push_back(listpPrelistXml.front());
 				}
+				//不符合的上层指针弹出
+				listpPrelistXml.pop_front();
 			}
 			//将临时指针池赋值给指针池
 			listplistXml = listplistXmlTemp;
-			//如果此时指针池依然为空，说明没有指定的指针
-			if(listplistXml.size() == 0){
+			listpPrelistXml = listpPrelistTemp;
+			//如果此时指针池依然为空，并且后面不继续是4，说明没有指定的指针需要增加
+			if(listplistXml.size() == 0 && (*(++listVisit.begin()) != 4)){
 				Cxml xmlTemp;
 				xmlTemp.strOneXmlName = *listCStringStorageTemp.begin();
 				xmlTemp.strOneXmlValue = "AddNewTemp";
+				//xmlTemp.pPreXml = pPreXmlTemp;
 				listCStringStorageTemp.pop_front();
 				while(listCStringStorageTemp.size() != 0){
 					xmlTemp.mapAttri[*listCStringStorageTemp.begin()] = *(++listCStringStorageTemp.begin());
@@ -580,8 +632,11 @@ Cxml Cxml::operator=(CString strValue){
 				}
 				//存入临时Cxml，清空指针池，并把list中的指针放入指针池中
 				plistXmlTemp->push_back(xmlTemp);
+				pPreXmlTemp = &(plistXmlTemp->back());
 				listplistXml.clear();
+				listpPrelistXml.clear();
 				listplistXml.push_back(&(plistXmlTemp->back().listXml));
+				listpPrelistXml.push_back(&(plistXmlTemp->back()));	
 			}
 		}
 		else if(listVisit.front() == 5){
@@ -589,97 +644,97 @@ Cxml Cxml::operator=(CString strValue){
 			int nFlag = *listintStorage.begin();
 			if(strNOTECDATA == "NOTE"){
 				if(nFlag == -1){
-					//先看指针池中的第一个指针是上层指针下listXml中的第几个，然后添加在上层指针下
+					//在注释或CDATA中指针池里的指针都是下层指针
 					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlNOTE = FindPrepXml(FindPrepXml(plistXmlFirst));
 					int nPositionTemp = 0;
-					for(auto itlistXml = plistXmlTemp->begin();itlistXml != plistXmlTemp->end();itlistXml++){
-						if(plistXmlFirst == &(itlistXml->listXml)){
+					for(auto itlistXml = pxmlNOTE->listXml.begin();itlistXml != pxmlNOTE->listXml.end();itlistXml++){
+						if(FindPrepXml(plistXmlFirst) == &(*itlistXml)){
+							if(itlistXml->strOneXmlValue == "AddNewTemp") itlistXml->strOneXmlValue = "null";
 							CNoteData NoteDataTemp;
-							NoteDataTemp.nPosition = nPositionTemp;
+							NoteDataTemp.nPosition = nPositionTemp;//不加1其他都一样
 							NoteDataTemp.strNoteData = strValue;
-							itlistXml->listNote.push_back(NoteDataTemp);
+							pxmlNOTE->listNote.push_back(NoteDataTemp);
 							goto rem;
 						}
 						nPositionTemp++;
 					}
 				}
 				else if(nFlag == 1){
-					//先看指针池中的第一个指针是上层指针下listXml中的第几个，然后添加在上层指针下
+					//在注释或CDATA中指针池里的指针都是下层指针
 					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlNOTE = FindPrepXml(FindPrepXml(plistXmlFirst));
 					int nPositionTemp = 0;
-					for(auto itlistXml = plistXmlTemp->begin();itlistXml != plistXmlTemp->end();itlistXml++){
-						if(plistXmlFirst == &(itlistXml->listXml)){
+					for(auto itlistXml = pxmlNOTE->listXml.begin();itlistXml != pxmlNOTE->listXml.end();itlistXml++){
+						if(FindPrepXml(plistXmlFirst) == &(*itlistXml)){
+							if(itlistXml->strOneXmlValue == "AddNewTemp") itlistXml->strOneXmlValue = "null";
 							CNoteData NoteDataTemp;
-							NoteDataTemp.nPosition = nPositionTemp + 1;
+							NoteDataTemp.nPosition = nPositionTemp + 1;//加1
 							NoteDataTemp.strNoteData = strValue;
-							itlistXml->listNote.push_back(NoteDataTemp);
+							pxmlNOTE->listNote.push_back(NoteDataTemp);//如果是CDATA就把这里换成listCDATA其他都一样
 							goto rem;
 						}
 						nPositionTemp++;
 					}
 				}
 				else if(nFlag == 0){
-					//先看指针池中的第一个指针是上层指针下listXml中的第几个，然后添加在本层指针下
+					//在注释或CDATA中指针池里的指针都是下层指针
 					list<Cxml>* plistXmlFirst = *listplistXml.begin();
-					int nPositionTemp = 0;
-					for(auto itlistXml = plistXmlTemp->begin();itlistXml != plistXmlTemp->end();itlistXml++){
-						if(plistXmlFirst == &(itlistXml->listXml)){
-							CNoteData NoteDataTemp;
-							NoteDataTemp.nPosition = 0;
-							NoteDataTemp.strNoteData = strValue;
-							plistXmlFirst->begin()->listNote.push_back(NoteDataTemp);
-							goto rem;
-						}
-						nPositionTemp++;
-					}
+					Cxml* pxmlNOTE = FindPrepXml(plistXmlFirst);
+					if(pxmlNOTE->strOneXmlValue == "AddNewTemp") pxmlNOTE->strOneXmlValue = "";
+					CNoteData NoteDataTemp;
+					NoteDataTemp.nPosition = 0;//0
+					NoteDataTemp.strNoteData = strValue;
+					pxmlNOTE->listNote.push_back(NoteDataTemp);//如果是CDATA就把这里换成listCDATA其他都一样
+					goto rem;
 				}
 				else AfxMessageBox("标识出错，分别为-1，0，1");
 			}
 			else if(strNOTECDATA == "CDATA"){
 				if(nFlag == -1){
-					//先看指针池中的第一个指针是上层指针下listXml中的第几个，然后添加在上层指针下
+					//在注释或CDATA中指针池里的指针都是下层指针
 					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlCDATA = FindPrepXml(FindPrepXml(plistXmlFirst));
 					int nPositionTemp = 0;
-					for(auto itlistXml = plistXmlTemp->begin();itlistXml != plistXmlTemp->end();itlistXml++){
-						if(plistXmlFirst == &(itlistXml->listXml)){
+					for(auto itlistXml = pxmlCDATA->listXml.begin();itlistXml != pxmlCDATA->listXml.end();itlistXml++){
+						if(FindPrepXml(plistXmlFirst) == &(*itlistXml)){
+							if(itlistXml->strOneXmlValue == "AddNewTemp") itlistXml->strOneXmlValue = "null";
 							CNoteData NoteDataTemp;
-							NoteDataTemp.nPosition = nPositionTemp;
+							NoteDataTemp.nPosition = nPositionTemp;//不加1其他都一样
 							NoteDataTemp.strNoteData = strValue;
-							itlistXml->listCDATA.push_back(NoteDataTemp);
+							pxmlCDATA->listCDATA.push_back(NoteDataTemp);
 							goto rem;
 						}
 						nPositionTemp++;
 					}
 				}
 				else if(nFlag == 1){
-					//先看指针池中的第一个指针是上层指针下listXml中的第几个，然后添加在上层指针下
+					//在注释或CDATA中指针池里的指针都是下层指针
 					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlCDATA = FindPrepXml(FindPrepXml(plistXmlFirst));
 					int nPositionTemp = 0;
-					for(auto itlistXml = plistXmlTemp->begin();itlistXml != plistXmlTemp->end();itlistXml++){
-						if(plistXmlFirst == &(itlistXml->listXml)){
+					for(auto itlistXml = pxmlCDATA->listXml.begin();itlistXml != pxmlCDATA->listXml.end();itlistXml++){
+						if(FindPrepXml(plistXmlFirst) == &(*itlistXml)){
+							if(itlistXml->strOneXmlValue == "AddNewTemp") itlistXml->strOneXmlValue = "null";
 							CNoteData NoteDataTemp;
 							NoteDataTemp.nPosition = nPositionTemp + 1;
 							NoteDataTemp.strNoteData = strValue;
-							itlistXml->listCDATA.push_back(NoteDataTemp);
+							pxmlCDATA->listCDATA.push_back(NoteDataTemp);
 							goto rem;
 						}
 						nPositionTemp++;
 					}
 				}
 				else if(nFlag == 0){
-					//先看指针池中的第一个指针是上层指针下listXml中的第几个，然后添加在本层指针下
+					//在注释或CDATA中指针池里的指针都是下层指针
 					list<Cxml>* plistXmlFirst = *listplistXml.begin();
-					int nPositionTemp = 0;
-					for(auto itlistXml = plistXmlTemp->begin();itlistXml != plistXmlTemp->end();itlistXml++){
-						if(plistXmlFirst == &(itlistXml->listXml)){
-							CNoteData NoteDataTemp;
-							NoteDataTemp.nPosition = 0;
-							NoteDataTemp.strNoteData = strValue;
-							plistXmlFirst->begin()->listCDATA.push_back(NoteDataTemp);
-							goto rem;
-						}
-						nPositionTemp++;
-					}
+					Cxml* pxmlCDATA = FindPrepXml(plistXmlFirst);
+					if(pxmlCDATA->strOneXmlValue == "AddNewTemp") pxmlCDATA->strOneXmlValue = "";
+					CNoteData NoteDataTemp;
+					NoteDataTemp.nPosition = 0;//0
+					NoteDataTemp.strNoteData = strValue;
+					pxmlCDATA->listCDATA.push_back(NoteDataTemp);//如果是CDATA就把这里换成listCDATA其他都一样
+					goto rem;
 				}
 				else AfxMessageBox("标识出错，分别为-1，0，1");
 			}
@@ -725,14 +780,57 @@ CString Cxml::toValue(){
 	return "";
 }
 
+Cxml* Cxml::FindPrepXmlFromXml(Cxml* pxml,list<Cxml>* plistXml){
+	Cxml* xmlResult = pxml;
+	if(&(xmlResult->listXml) == plistXml) return xmlResult;
+	else{
+		if(xmlResult->listXml.size() == 0) return NULL;
+		for(auto itlistXml = xmlResult->listXml.begin();itlistXml != xmlResult->listXml.end();itlistXml++){
+			Cxml* xmlTemp = FindPrepXmlFromXml(&(*itlistXml),plistXml);
+			if(xmlTemp != NULL) return xmlTemp;
+		}
+	}
+	return NULL;
+}
+
+Cxml* Cxml::FindPrepXml(list<Cxml>* plistXml){
+	return FindPrepXmlFromXml(this,plistXml);
+}
+
+Cxml* Cxml::FindPrepXmlFromXml(Cxml* pxml,Cxml* pFindXml){
+	Cxml* xmlResult = pxml;
+	if(xmlResult->listXml.size() == 0) return NULL;
+	for(auto itlistXml = xmlResult->listXml.begin();itlistXml != xmlResult->listXml.end();itlistXml++){
+		if(&(*itlistXml) == pFindXml) return xmlResult;
+		else{
+			Cxml* xmlTemp = FindPrepXmlFromXml(&(*itlistXml),pFindXml);
+			if(xmlTemp != NULL) return xmlTemp;
+		}
+	}
+	return NULL;
+}
+
+Cxml* Cxml::FindPrepXml(Cxml* pFindXml){
+	if(this == pFindXml) return NULL;
+	return FindPrepXmlFromXml(this,pFindXml);
+}
+
 
 int main(){
 	//double a = 0;
 	//if(a != 0) AfxMessageBox("1");
-	//CString str = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><!--by months--> <class_list a=\'1\' b=\"2\">  		<student a=\"3\" b=\'\"6\"\'>  		<!--Shdds--><name/>  <!--Shs--><![CDATA[123456<<<>>>789]]><grade>A</grade>  		</student>  		</class_list>";
+	//
 	Cxml xml;
 	xml["aaa"]["bbb"] = 1;
-	xml["aaa"]["ccc"] = 1;
+	xml["aaa"]("a","1")["ccc"](2)["ddd"]["eee"] = 1;
+	xml["aaa"]("a","1")("b","2")["ccc"](2)["ddd"]["eee"] = 1;
+	xml["aaa"]("a","1")("b","2")["ccc"](2)["ddd"]["eee"] = 1;
+	xml["aaa"]("a","1")("b","2")["ccc"](2)["ddd"]["eee"] = 1;
+	xml["aaa"]("a","1")("b","2")["ccc"](2)["ddd"]("n","3.4")["eee"] = 2;
+	xml["aaa"]("a","1")("b","2")("c","3")(2)("CDATA",0) = "1";
+
+	//CString str = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><!--by months--> <class_list a=\'1\' b=\"2\">  		<student a=\"3\" b=\'\"6\"\'>  		<!--Shdds--><name/>  <!--Shs--><![CDATA[123456<<<>>>789]]><grade>A</grade>  		</student>  		</class_list>";
+	//xml["aaa"] = 1;
 	//xml.Load(str);
 	CString strXml = xml.toCString();
 	AfxMessageBox(strXml);

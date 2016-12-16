@@ -28,6 +28,9 @@ public:
 	map<CString,CString> mapAttri;
 	list<Cxml> listXml;
 
+	//…œ≤„÷∏’Î
+	//Cxml* pPreXml;
+
 	//¥ÌŒÛ
 	map<CString,CString> mapError;
 
@@ -68,6 +71,11 @@ public:
 	Cxml operator=(int nValue);
 	Cxml operator=(double dValue);
 	CString toValue();
+	Cxml* FindPrepXmlFromXml(Cxml* pxml,list<Cxml>* plistXml);
+	Cxml* FindPrepXml(list<Cxml>* plistXml);
+	Cxml* FindPrepXmlFromXml(Cxml* pxml,Cxml* pFindXml);
+	Cxml* FindPrepXml(Cxml* pFindXml);
+	
 
 };
 
