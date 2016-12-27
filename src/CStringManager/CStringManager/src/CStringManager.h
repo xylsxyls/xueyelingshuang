@@ -20,4 +20,6 @@ public:
 	vector<CString> split(CString separate_character);
 	//vector<CString> vec = split("123,234,345,456,",","); //得到5个字符串
 	//vector<CString> vec2 = split("123,,234,,345,,456",",,"); //得到4个字符串
+
+	string Randomstring(int nMin,int nMax,vector<char> vecCharacter);
 };

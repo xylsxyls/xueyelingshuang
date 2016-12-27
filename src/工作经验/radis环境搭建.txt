@@ -1,0 +1,6 @@
+redis.windows.conf中找到# requirepass foobared 改为 requirepass 我的密码
+在当前窗口dos下执行
+redis-server.exe redis.windows.conf --maxmemory 200M
+先打开服务端再开客户端，再开一个当前窗口的dos执行
+redis-server --service-install redis.windows.conf --loglevel verbose
+手动启动服务，以后不需要再打开服务端dos窗口了

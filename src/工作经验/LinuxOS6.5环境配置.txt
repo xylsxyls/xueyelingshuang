@@ -1,0 +1,29 @@
+vmvare12秘钥
+5A02H-AU243-TZJ49-GTC7K-3C61N
+
+wget http://gcc.skazkaforyou.com/releases/gcc-4.8.2/gcc-4.8.2.tar.gz
+tar -xf gcc-4.8.2.tar.gz
+./contrib/download_prerequisites
+mkdir gcc-build-4.8.2
+cd gcc-build-4.8.2
+../configure --enable-checking=release --enable-languages=c,c++ --disable-multilib
+make
+make install
+
+cd ..
+yum install gcc gcc-c++ bzip2 bzip2-devel bzip2-libs python-devel -y
+从root下进入到用户桌面
+tar --bzip2 -xvf boost_1_58_0.tar.bz2
+cd boost_1_58_0
+./bootstrap.sh
+./bjam
+./bjam install
+
+
+
+编译C++11在g++后面加上-std=c++11
+g++ -std=c++11 a.cpp
+
+安装CMake
+sudo yum install cmake
+Ubuntu用apt-get

@@ -1,0 +1,2 @@
+std::thread* pThread;
+pThread = new std::thread(std::bind(&CEverydayTimeCaller::WaitToCallThread,this,vecTimeAndFlag,spi));

@@ -1,0 +1,1 @@
+在对话框的析构函数内写AfxMessageBox有可能失效

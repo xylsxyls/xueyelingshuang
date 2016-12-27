@@ -1,0 +1,3 @@
+CString sIID;
+m_combCID.GetLBText(m_combCID.GetCurSel(),sIID);
+如果未设置m_combCID.GetCurSel()得到的是-1，会出现参数错误的报告，是MFC内部try catch

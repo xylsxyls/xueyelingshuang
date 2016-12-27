@@ -1,0 +1,28 @@
+int i = -1;
+auto itListComboID = listComboID.begin();
+while(i++ != listComboID.size() - 1){
+	//*itListComboID为每次要访问的内容，i为下标
+	//如果要访问第25个则写if(i == 24)
+	
+	itListComboID++;
+}
+
+//函数
+template<typename T>
+T ListVisit(list<T> listTemp,int number){
+	int i = -1;
+	auto itListTemp = listTemp.begin();
+	while(i++ != listTemp.size() - 1){
+		if(i == number) return *itListTemp;
+		itListTemp++;
+	}
+	return T();
+}
+
+	//使用
+	list<CString> liststr;
+	liststr.push_back("1");
+	liststr.push_back("2");
+	liststr.push_back("3");
+	liststr.push_back("4");
+	AfxMessageBox(ListVisit(liststr,2));

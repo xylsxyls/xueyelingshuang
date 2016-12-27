@@ -1,0 +1,1 @@
+使用GetWindowRect获取到的是屏幕的绝对坐标，如果希望得到在当前窗口中的相对坐标应该用ScreenToClient

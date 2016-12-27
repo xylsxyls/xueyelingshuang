@@ -1,0 +1,81 @@
+本文讲述在普通对话框上添加标签的简单示例
+
+第一步拖一个Tab Control到对话框上并添加变量m_tabCtrl;
+
+  
+
+第二步添加两个对话框资源IDD_DIALOG1,IDD_DIALOG2并将style为Child, Border为None,再分别为其添加对应的基于CDialog m_page1,m_page2
+
+第三步在OnInitDialog()添加如下代码
+
+　　
+
+ 
+
+ 
+
+复制代码
+代码
+//添加选项卡名称
+m_tabCtl.InsertItem(0,L"选项卡1");
+m_tabCtl.InsertItem(1,L"选项卡2");
+    
+//设置IDC_TAB1为父窗口
+m_page1.Create(IDD_DIALOG1,GetDlgItem(IDC_TAB1));
+m_page2.Create(IDD_DIALOG2,GetDlgItem(IDC_TAB1));
+    
+//获得IDC_TABTEST客户区大小
+CRect rc;
+m_tabCtl.GetClientRect(&rc);
+    
+//调整子对话框在父窗口中的位置
+rc.top += 30;
+rc.bottom -= 8;
+rc.left += 8;
+rc.right -= 8;
+
+//设置子对话框尺寸并移动到指定位置
+m_page1.MoveWindow(&rc);
+m_page2.MoveWindow(&rc);
+
+//分别设置隐藏和显示
+m_page1.ShowWindow(true);
+m_page2.ShowWindow(false);
+
+//设置默认的选项卡
+m_tabCtl.SetCurSel(0);
+复制代码
+ 
+
+ 
+
+第四步 添加Tab Control控件的TCN_SELCHANGE事件响应函数OnSelchangeTabtest(NMHDR* pNMHDR, LRESULT* pResult) ,函数体代码如下:
+
+ 
+
+复制代码
+代码
+void CProPageDlg::OnTcnSelchangeTab1(NMHDR *pNMHDR, LRESULT *pResult)
+{
+    // TODO: 在此添加控件通知处理程序代
+    int CurSel = m_tabCtl.GetCurSel();
+
+    switch(CurSel)
+    {
+    case 0:
+        m_page1.ShowWindow(true);
+        m_page2.ShowWindow(false);
+        break;
+    case 1:
+        m_page1.ShowWindow(false);
+        m_page2.ShowWindow(true);
+        break;
+    }
+    *pResult = 0;
+}
+复制代码
+ 
+
+然后自己慢慢调整对话框的合适位置咯....
+
+ 

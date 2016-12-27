@@ -1,0 +1,5 @@
+#include <mmsystem.h>
+#pragma comment(lib,"winmm.lib")
+
+sndPlaySound("c:\\sound\\music.wav",SND_ASYNC);//找不到文件则播放默认声音，就是右下角点击音量时的声音
+PlaySound("c:\\sound\\music.wav",NULL, SND_ASYNC|SND_NODEFAULT );//找不到不会播放声音

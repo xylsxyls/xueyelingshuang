@@ -53,3 +53,17 @@ vector<CString> CStringManager::split(CString separate_character){
 	strs.push_back(lastString.c_str());
 	return strs;
 }
+
+string CStringManager::Randomstring(int nMin,int nMax,vector<char> vecCharacter){
+	if(nMin < 0 || nMax < 0 || nMax - nMin < 0) return "";
+	srand((unsigned int)time(0));
+	int nLength = rand() % (nMax - nMin + 1) + nMin;
+	int nSize = vecCharacter.size();
+	string strResult = "";
+	while(strResult.length() < (unsigned int)nLength){
+		char sz[2] = {};
+		sz[0] = vecCharacter.at(rand() % nSize);
+		strResult = strResult.append(sz);
+	}
+	return strResult;
+}

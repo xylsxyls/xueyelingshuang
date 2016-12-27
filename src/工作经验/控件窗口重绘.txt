@@ -1,0 +1,2 @@
+控件重绘走DrawItem
+窗口重绘走OnPaint，当窗口到屏幕外侧之后会进入OnPaint

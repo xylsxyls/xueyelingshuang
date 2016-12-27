@@ -1,0 +1,2 @@
+ON_EN_KILLFOCUS(IDC_EDIT_JG, &CDlgOrder::OnKillfocusEditJg)
+void OnKillfocusEditJg();
