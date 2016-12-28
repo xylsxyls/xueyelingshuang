@@ -1,0 +1,5 @@
+建一个Edit，把文本复制进去，断点调试，执行以下几句之后选择HTML查看
+strPassword.Replace("\"","\\\"");
+	strPassword.Replace("\r","\\r");
+	strPassword.Replace("\n","\\n");
+	strPassword.Replace("\t","\\t");
