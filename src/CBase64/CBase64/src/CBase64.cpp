@@ -3,7 +3,7 @@
 #include <string>
 using namespace std;
 
-CString CBase64::Encode(const unsigned char* Data,int DataByte)  
+string CBase64::Encode(const unsigned char* Data,int DataByte)  
 {  
 	//±àÂë±í
 	const char EncodeTable[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";  
@@ -41,10 +41,10 @@ CString CBase64::Encode(const unsigned char* Data,int DataByte)
 		strEncode+= "=";  
 	}  
 
-	return strEncode.c_str();  
+	return strEncode;
 }  
 
-CString CBase64::Decode(const char* Data,int DataByte,int* pOutByte)  
+string CBase64::Decode(const char* Data,int DataByte,int* pOutByte)  
 {  
 	//½âÂë±í  
 	const char DecodeTable[] =  
@@ -94,5 +94,5 @@ CString CBase64::Decode(const char* Data,int DataByte,int* pOutByte)
 			i++;  
 		}  
 	}  
-	return strDecode.c_str();  
+	return strDecode;  
 }

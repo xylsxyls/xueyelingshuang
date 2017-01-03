@@ -1,12 +1,11 @@
-#include <SDKDDKVer.h>
 #include "CLoadDLL.h"
+#include "CStringManager/CStringManagerAPI.h"
 
-
-CLoadDLL::CLoadDLL(CString DllPath)
+CLoadDLL::CLoadDLL(string DllPath)
 {
-	FPI_DllHinstance = LoadLibraryEx(DllPath,0,LOAD_WITH_ALTERED_SEARCH_PATH); //动态加载DLL
+	FPI_DllHinstance = LoadLibraryEx(DllPath.c_str(),0,LOAD_WITH_ALTERED_SEARCH_PATH); //动态加载DLL
 	memset(FunArr,0,CLOAD_FunNumber);
-	CString ErrorFunName = "";
+	string ErrorFunName = "";
 	ErrorFunNumber = 0;
 }
 
@@ -48,9 +47,15 @@ void CLoadDLL::Load_Fun(int number,...){
 FunName::FunName(void **TempFunAddr,const char szTempFun[]){
 	this->TempFunAddr = TempFunAddr;
 	this->strTempFun = szTempFun;
-	strTempFun.Replace("(","");
-	strTempFun.Replace(")","");
-	strTempFun.Replace(" ","");
+
+	CStringManager str = strTempFun;
+	str.ReplaceEvery("(","");
+	str.ReplaceEvery(")","");
+	str.ReplaceEvery(" ","");
+	this->strTempFun = str.strInside;
+	//strTempFun.Replace("(","");
+	//strTempFun.Replace(")","");
+	//strTempFun.Replace(" ","");
 };
 
 MultiBool CLoadDLL::LoadFun(int number,...){
@@ -60,7 +65,7 @@ MultiBool CLoadDLL::LoadFun(int number,...){
 	int AllRight = 1;
 	while(number-- != 0){
 		FunName AddrAndName = (va_arg(list,FunName));
-		*AddrAndName.TempFunAddr = (void *)(void(__stdcall *)())GetProcAddress(FPI_DllHinstance,AddrAndName.strTempFun);
+		*AddrAndName.TempFunAddr = (void *)(void(__stdcall *)())GetProcAddress(FPI_DllHinstance,AddrAndName.strTempFun.c_str());
 		if(*AddrAndName.TempFunAddr == 0){
 			ErrorFunName = ErrorFunName + AddrAndName.strTempFun + " ";
 			ErrorFunNumber++;

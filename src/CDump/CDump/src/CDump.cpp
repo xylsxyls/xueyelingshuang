@@ -1,5 +1,7 @@
 #include <SDKDDKVer.h>
 #include "CDump.h"
+#include <tchar.h>
+#include <Windows.h>
 #include <Dbghelp.h>
 
 void CreateDumpFile(LPCSTR lpstrDumpFilePathName, EXCEPTION_POINTERS *pException){  
@@ -38,10 +40,10 @@ BOOL PreventSetUnhandledExceptionFilter(){
 	return bRet;
 }
 
-CString szMbsFile = "";
+string szMbsFile = "";
 
 LONG WINAPI UnhandledExceptionFilterEx(struct _EXCEPTION_POINTERS *pException){
-	CreateDumpFile(szMbsFile, pException);
+	CreateDumpFile(szMbsFile.c_str(), pException);
 	// TODO: MiniDumpWriteDump
 	FatalAppExit(-1, _T("Fatal Error"));
 	return EXCEPTION_CONTINUE_SEARCH;
@@ -53,7 +55,7 @@ void RunCrashHandler(){
 	return;
 }
 
-void CDump::DeclareDumpFile(CString DumpFilePath){
+void CDump::DeclareDumpFile(string DumpFilePath){
 	szMbsFile = DumpFilePath;
 	RunCrashHandler();
 	return;

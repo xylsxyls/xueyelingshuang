@@ -5,3 +5,4 @@
 #else
 	#define CStringManagerAPI _declspec(dllexport)
 #endif
+

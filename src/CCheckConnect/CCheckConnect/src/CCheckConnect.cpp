@@ -17,7 +17,7 @@ DWORD
 	);
 BOOL (WINAPI *IcmpCloseHandle)(__in HANDLE  IcmpHandle);
 
-bool CCheckConnect::CheckWithIP(CString IP,int CheckTimes,unsigned int WaitTimeForOne){
+bool CCheckConnect::CheckWithIP(string IP,int CheckTimes,unsigned int WaitTimeForOne){
 	CLoadDLL dll("icmp.dll");
 	BOOL x = dll.LoadFun(3,V_str(IcmpCreateFile),V_str(IcmpSendEcho),V_str(IcmpCloseHandle));
 	HANDLE icmphandle = IcmpCreateFile();
@@ -27,7 +27,7 @@ bool CCheckConnect::CheckWithIP(CString IP,int CheckTimes,unsigned int WaitTimeF
 	for(i = 0;i < CheckTimes;i++) // ping the web server three times for its availability
 	{
 		iep->RoundTripTime = 0xffffffff;
-		IcmpSendEcho(icmphandle,inet_addr(IP),0,0,NULL,reply,sizeof(icmp_echo_reply) + 8,WaitTimeForOne);
+		IcmpSendEcho(icmphandle,inet_addr(IP.c_str()),0,0,NULL,reply,sizeof(icmp_echo_reply) + 8,WaitTimeForOne);
 		if(reply[0] && iep->RoundTripTime <= 1){
 			IcmpCloseHandle(icmphandle);
 			return 1;
@@ -37,7 +37,7 @@ bool CCheckConnect::CheckWithIP(CString IP,int CheckTimes,unsigned int WaitTimeF
 	return 0;
 }
 
-bool CCheckConnect::CheckWithIPPort(CString IP,int Port,unsigned int WaitTime){
+bool CCheckConnect::CheckWithIPPort(string IP,int Port,unsigned int WaitTime){
 	AfxSocketInit();
 	//设置非阻塞方式连接
 	unsigned long ulNoneBlock = 1;
@@ -61,7 +61,7 @@ bool CCheckConnect::CheckWithIPPort(CString IP,int Port,unsigned int WaitTime){
 	struct sockaddr_in server;
 	server.sin_family = AF_INET;
 	server.sin_port = ::htons(Port);
-	server.sin_addr.s_addr = inet_addr(IP);
+	server.sin_addr.s_addr = inet_addr(IP.c_str());
 	if(server.sin_addr.s_addr == INADDR_NONE)
 	{
 		::closesocket(sock);

@@ -1,6 +1,8 @@
 #pragma once
-#include <afx.h>
 #include "CLoadDLLMacro.h"
+#include <Windows.h>
+#include <string>
+using namespace std;
 
 typedef int MultiBool;
 #define V(NewFunName) (void **)(&(NewFunName)) //调用时用的到，老版
@@ -10,8 +12,17 @@ typedef int MultiBool;
 
 class CLoadDLLAPI FunName{
 public:
-	void**  TempFunAddr;
-	CString strTempFun ;
+	void** TempFunAddr;
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	string strTempFun;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 	FunName(void **TempFunAddr,const char szTempFun[]);
 };
 
@@ -22,12 +33,20 @@ private:
 	void *FunArr[CLOAD_FunNumber];
 
 public:
-	CLoadDLL(CString DllPath);
+	CLoadDLL(string DllPath);
 	~CLoadDLL(void);
 
-	int     ErrorFunNumber;
-	CString ErrorFunName  ;
+	int ErrorFunNumber;
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	string ErrorFunName;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	
 public:
 	//老版，dll内的名字和自定义名字可以不同，需依次调用两个函数，外包用V，受CLOAD_FunNumber上限控制
 	MultiBool Check_Fun(int number,...); //返回-1表示加载路径错误，返回1表示所有函数都存在，返回0表示有函数不存在

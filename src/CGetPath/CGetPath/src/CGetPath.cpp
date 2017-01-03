@@ -1,37 +1,40 @@
 #include <SDKDDKVer.h>
 #include "CGetPath.h"
 #include <shlobj.h>
+#include <Tlhelp32.h>
+#include "CStringManager/CStringManagerAPI.h"
 #include <afxdlgs.h>
-#include<Tlhelp32.h>
 
-CString CGetPath::GetRegOcxPath(CString classid){
-	CString strSubKey;
+string CGetPath::GetRegOcxPath(string classid){
+	string strSubKey;
 	HKEY hKey;
 	LPBYTE lpData;
-	strSubKey.Format(_T("CLSID\\{%s}\\InprocServer32"),classid);
-	RegOpenKeyEx(HKEY_CLASSES_ROOT,strSubKey,0,KEY_READ,&hKey);
+	CStringManager manager = strSubKey;
+	manager.Format(_T("CLSID\\{%s}\\InprocServer32"),classid);
+	strSubKey = manager.strInside;
+	RegOpenKeyEx(HKEY_CLASSES_ROOT,strSubKey.c_str(),0,KEY_READ,&hKey);
 	DWORD dwType = REG_SZ;
 	lpData = new BYTE[1024];
 	memset(lpData,0,1024);
 	DWORD cbData = 1024;
 	RegQueryValueEx(hKey,_T(""),NULL,&dwType,lpData,&cbData);
-	CString temp = "";
-	temp = lpData;
-	CString result = temp.Left(temp.ReverseFind('\\') + 1);
+	string temp = "";
+	temp = (char*)lpData;
+	string result = temp.substr(temp.find_last_of('\\') + 1);
 	return result;
 }
 
-CString CGetPath::GetCurrentExePath(){
-	CString temp = "",result = "";
+string CGetPath::GetCurrentExePath(){
+	string temp = "",result = "";
 	TCHAR szFilePath[MAX_PATH + 1] = {};
 	GetModuleFileName(NULL, szFilePath, MAX_PATH);
 	temp = szFilePath;
-	result = temp.Left(temp.ReverseFind('\\') + 1);
+	result = temp.substr(temp.find_last_of('\\') + 1);
 	return result;
 }
 
-CString CGetPath::GetFolderFromWindow(HWND hWnd){
-	CString cstrSelectPath;
+string CGetPath::GetFolderFromWindow(HWND hWnd){
+	string cstrSelectPath;
 	BROWSEINFO stBrowseInfo;
 	memset(&stBrowseInfo, 0, sizeof(stBrowseInfo));
 	stBrowseInfo.hwndOwner = hWnd;
@@ -41,7 +44,9 @@ CString CGetPath::GetFolderFromWindow(HWND hWnd){
 	if(pidl){
 		TCHAR szfolderPath[MAX_PATH] = {};
 		SHGetPathFromIDList(pidl, szfolderPath);
-		cstrSelectPath.Format(_T("%s"), szfolderPath);
+		CStringManager manager = cstrSelectPath;
+		manager.Format(_T("%s"), szfolderPath);
+		cstrSelectPath = manager.strInside;
 		LPMALLOC lpMalloc;
 		if(SUCCEEDED(SHGetMalloc(&lpMalloc))){
 			lpMalloc->Free(pidl);
@@ -51,20 +56,20 @@ CString CGetPath::GetFolderFromWindow(HWND hWnd){
 	return cstrSelectPath;
 }
 
-CString CGetPath::GetFileFromWindow(){
+string CGetPath::GetFileFromWindow(){
 	CFileDialog dlg(1,NULL,NULL,OFN_HIDEREADONLY ,"All Files(*.*)|*.*||");
 	int x = dlg.DoModal();
 	if(x != IDOK) return "-1";
-	return dlg.GetPathName();
+	return (LPSTR)(LPCTSTR)dlg.GetPathName();
 }
 
-void RecursionFindFile(CString strPath,CString FileStr,vector<CString> *pPathVector,BOOL flag){
+void RecursionFindFile(string strPath,string FileStr,vector<string> *pPathVector,BOOL flag){
 	CFileFind finder;
-	BOOL IsVisit = finder.FindFile(strPath + _T("\\*.*")) ; //_T()的作用是使系统支持Unicode编码
+	BOOL IsVisit = finder.FindFile((strPath + "\\*.*").c_str()); //_T()的作用是使系统支持Unicode编码
 	//系统中有些文件无法访问，会使finder变成0，那么当进入下面的循环时就会报错，返回之后上层的finder还是有值的，所以直接返回就行
 	if(IsVisit == 0) return;
 
-	CString         TempFileName   = ""; //当前寻找到的文件或文件夹名
+	string          TempFileName   = ""; //当前寻找到的文件或文件夹名
 	BOOL            IfNeedKeepFind = 1 ; //判断是否把当前路径全部找完，自然退出while
 
 	while(IfNeedKeepFind){
@@ -75,7 +80,7 @@ void RecursionFindFile(CString strPath,CString FileStr,vector<CString> *pPathVec
 		//if内为判断是否为文件夹
 		if(FILE_ATTRIBUTE_DIRECTORY == (GetFileAttributes(finder.GetFilePath()) & FILE_ATTRIBUTE_DIRECTORY)){
 			//如果确实为文件夹则把文件夹绝对路径和需要找的文件名传进去
-			RecursionFindFile(finder.GetFilePath(),FileStr,pPathVector,flag);
+			RecursionFindFile((LPSTR)(LPCTSTR)finder.GetFilePath(),FileStr,pPathVector,flag);
 			//递归结束之后应该直接进入下一次查询
 			continue;
 		}
@@ -83,18 +88,18 @@ void RecursionFindFile(CString strPath,CString FileStr,vector<CString> *pPathVec
 		//1表示找文件全名
 		if(flag == 1){
 			if(TempFileName == FileStr){
-				pPathVector->push_back(finder.GetFilePath());
+				pPathVector->push_back((LPSTR)(LPCTSTR)finder.GetFilePath());
 			}
 		}
 		//2表示找文件后缀名
 		else if(flag == 2){
-			if(TempFileName.Mid(TempFileName.ReverseFind('.') + 1) == FileStr) pPathVector->push_back(finder.GetFilePath());
+			if(TempFileName.substr(TempFileName.find_last_of('.') + 1,TempFileName.length() - TempFileName.find_last_of('.') - 2) == FileStr) pPathVector->push_back((LPSTR)(LPCTSTR)finder.GetFilePath());
 		}
 	}
 	return;
 }
 
-vector<CString> CGetPath::FindFilePath(CString FileStr,CString strPath,BOOL flag){
+vector<string> CGetPath::FindFilePath(string FileStr,string strPath,BOOL flag){
 	if(strPath == ""){
 		char szPath[MAX_PATH] = {};
 		GetModuleFileName(NULL,szPath,MAX_PATH);//这里得到的是进程目录，末尾是exe
@@ -102,12 +107,12 @@ vector<CString> CGetPath::FindFilePath(CString FileStr,CString strPath,BOOL flag
 		memset(temp,0,50);
 		strPath = szPath;
 	}
-	vector<CString> VecPath;
+	vector<string> VecPath;
 	RecursionFindFile(strPath,FileStr,&VecPath,flag); //strPath为当前进程路径的上层目录
 	return VecPath;
 }
 
-vector<int> CGetPath::GetProcessID(CString strProcessName){
+vector<int> CGetPath::GetProcessID(string strProcessName){
 	HANDLE myhProcess;
 	PROCESSENTRY32 mype;
 	mype.dwSize = sizeof(PROCESSENTRY32); 
