@@ -89,7 +89,7 @@ bool Cxml::GetOneModule(CString* pstrXml,int* flag,CString* strXmlName,CString* 
 			return 0;
 		}
 	}
-	CStringManager strManager = *pstrXml;
+	CStringManager strManager = (LPSTR)(LPCTSTR)(*pstrXml);
 	int nRight = strManager.FindOther('<','>',nLeft);
 	if(nRight == -1){
 		mapError[*pstrXml] = "找不到对应右侧括号\">\"，解析中断";
@@ -206,12 +206,12 @@ void Cxml::LoadOneModule(int flag,CString strXmlName,CString strXmlAttri,CString
 
 map<CString,CString> Cxml::LoadAttri(CString strXmlAttri){
 	map<CString,CString> mapAttri;
-	CStringManager strManager = strXmlAttri;
-	vector<CString> vecHead = strManager.split(" ");
+	CStringManager strManager = (LPSTR)(LPCTSTR)strXmlAttri;
+	vector<string> vecHead = strManager.split(" ");
 	int i = -1;
 	while(i++ != vecHead.size() - 1){
 		CStringManager strOneManager = vecHead.at(i);
-		vector<CString> vecOneAttri = strOneManager.split("=");
+		vector<string> vecOneAttri = strOneManager.split("=");
 		if(vecOneAttri.size() == 1){
 			mapError[strXmlAttri] = "属性之间有多个空格或出现无等号属性";
 		}
@@ -219,9 +219,9 @@ map<CString,CString> Cxml::LoadAttri(CString strXmlAttri){
 			mapError[strXmlAttri] = "属性之间有多个等号";
 		}
 		else{
-			CString strAttriValue = vecOneAttri.at(1);
+			CString strAttriValue = vecOneAttri.at(1).c_str();
 			if((strAttriValue[0] == '\"' && strAttriValue[strAttriValue.GetLength() - 1] == '\"') || (strAttriValue[0] == '\'' && strAttriValue[strAttriValue.GetLength() - 1] == '\'')){
-				mapAttri[vecOneAttri.at(0)] = strAttriValue.Mid(1,strAttriValue.GetLength() - 2);
+				mapAttri[vecOneAttri.at(0).c_str()] = strAttriValue.Mid(1,strAttriValue.GetLength() - 2);
 			}
 			else{
 				mapError[strXmlAttri] = "属性值周围无引号，或有空格";
