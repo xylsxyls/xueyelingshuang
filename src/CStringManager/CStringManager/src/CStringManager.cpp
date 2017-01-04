@@ -98,18 +98,117 @@ string CStringManager::ReplaceEvery(const string& old_value,const string& new_va
 	return strInside;
 }
 
-void CStringManager::Format(LPCTSTR szFormat,...){
+/*
+void CStringManager::Format(string &str,LPCTSTR szFormat,...){
 	va_list argptr = NULL;
 	va_start(argptr,szFormat);
 	int bufsize = _vscprintf(szFormat,argptr) + 2;
 	TCHAR* buf = (TCHAR*)calloc(bufsize,sizeof(TCHAR));
 	vsprintf_s(buf,bufsize,szFormat,argptr);
-	this->strInside = buf;
+	str = buf;
 	free(buf);
 	va_end(argptr);
 	return;
+}*/
+
+std::string CStringManager::Mid(const std::string & str, size_t offset, size_t count)
+{
+	return str.substr(offset, count);
 }
 
-void CStringManager::Left(){
-	return ;
+std::string CStringManager::Left(const std::string & str, size_t count)
+{
+	return Mid(str, 0, count);
+}
+
+std::string CStringManager::Right(const std::string & str, size_t count)
+{
+	return Mid(str, str.size() - count, count);
+}
+
+size_t CStringManager::Find(const std::string & str, const std::string & right, size_t offset)
+{
+	return str.find(right, offset);
+}
+
+size_t CStringManager::Find(const std::string & str, char ch, size_t offset)
+{
+	return str.find(ch, offset);
+}
+
+size_t CStringManager::ReserveFind(const std::string & str, const std::string & right, size_t offset)
+{
+	return str.rfind(right, offset);
+}
+
+size_t CStringManager::ReserveFind(const std::string & str, char ch, size_t offset)
+{
+	return str.rfind(ch, offset);
+}
+
+size_t CStringManager::GetLength(const std::string & str)
+{
+	return str.length();
+}
+
+size_t CStringManager::Delete(std::string & str, size_t offset, size_t count)
+{
+	return str.erase(offset, count).length();
+}
+
+size_t CStringManager::Insert(std::string & str, size_t offset, const std::string & right)
+{
+	return str.insert(offset, right).length();
+}
+
+size_t CStringManager::Insert(std::string & str, size_t offset, char ch)
+{
+	return str.insert(offset, &ch, 1).length();
+}
+
+size_t CStringManager::Replace(std::string & str, const std::string & oldstr, const std::string & newstr)
+{
+	size_t count = 0;
+	size_t pos = 0;
+	while (true)
+	{
+		pos = str.find(oldstr, pos);
+		if (pos != std::string::npos)
+		{
+			str.replace(pos, oldstr.length(), newstr);
+			pos += newstr.length();
+			++count;
+		}
+		else
+			break;
+	}
+	return count;
+}
+
+size_t CStringManager::Replace(std::string & str, char ch1, char ch2)
+{
+	size_t count = 0;
+	for (size_t pos = 0; pos != str.size(); ++pos)
+	{
+		if (str[pos] == ch1)
+		{
+			str[pos] = ch2;
+			++count;
+		}
+	}
+	return count;
+}
+
+void CStringManager::Format(std::string & str, const char * fmt, ...)
+{
+	std::string result;
+	va_list args = NULL;
+
+	va_start(args, fmt);
+	int size = _vscprintf(fmt, args) + 2;
+	result.resize(size);
+	size = vsprintf_s(&result[0], size, fmt, args);
+	result.resize(size);
+	str = result;
+	va_end(args);
 }

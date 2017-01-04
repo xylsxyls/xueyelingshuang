@@ -38,7 +38,35 @@ public:
 	string ReplaceEvery(const string& old_value,const string& new_value);
 
 	//格式化字符串
-	void Format(LPCTSTR szFormat,...);
+	//static void Format(string &str,LPCTSTR szFormat,...);
 	//取左边的N个字符形成一个新的字符串
-	void Left();
+	//void Left();
+
+	static std::string Mid(const std::string & str, size_t offset, size_t count);
+
+	static std::string Left(const std::string & str, size_t count);
+
+	static std::string Right(const std::string & str, size_t count);
+
+	static size_t Find(const std::string & str, const std::string & right, size_t offset = 0);
+
+	static size_t Find(const std::string & str, char ch, size_t offset = 0);
+
+	static size_t ReserveFind(const std::string & str, const std::string & right, size_t offset = 0);
+
+	static size_t ReserveFind(const std::string & str, char ch, size_t offset = 0);
+
+	static size_t GetLength(const std::string & str);
+
+	static size_t Delete(std::string & str, size_t offset, size_t count);
+
+	static size_t Insert(std::string & str, size_t offset, const std::string & right);
+
+	static size_t Insert(std::string & str, size_t offset, char ch);
+
+	static size_t Replace(std::string & str, const std::string & oldstr, const std::string & newstr);
+
+	static size_t Replace(std::string & str, char ch1, char ch2);
+
+	static void Format(std::string & str, const char * fmt, ...);
 };
