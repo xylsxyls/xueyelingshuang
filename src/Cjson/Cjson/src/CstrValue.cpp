@@ -9,14 +9,14 @@ CstrValue::CstrValue(){
 	dValue = 0;
 }
 
-CstrValue::CstrValue(BOOL type,CString strValue,int nValue,double dValue){
+CstrValue::CstrValue(BOOL type,string strValue,int nValue,double dValue){
 	this->type = type;
 	this->strValue = strValue;
 	this->nValue = nValue;
 	this->dValue = dValue;
 }
 
-CstrValue::CstrValue(CString strValue){
+CstrValue::CstrValue(string strValue){
 	//需要改动，防止用户乱输的情况，-"123".6
 	//先初始化
 	type = 0;
@@ -25,36 +25,36 @@ CstrValue::CstrValue(CString strValue){
 	dValue = 0;
 
 	//先去掉左右两边的无效字符，为了防止是不可识别字符串先保存
-	CString strValueTemp = strValue;
+	string strValueTemp = strValue;
 	int i = -1;
-	while(i++ != strValueTemp.GetLength() - 1){
+	while(i++ != CStringManager::GetLength(strValueTemp) - 1){
 		//遇到无效字符则跳过
 		if(strValueTemp[i] == ' ' || (strValueTemp[i] == '\r' && strValueTemp[i + 1] == '\n') || strValueTemp[i] == '\n' || strValueTemp[i] == '\t') continue;
 		else break;
 	}
 	//从有效字符开始取到末尾
-	strValueTemp = strValueTemp.Mid(i,strValueTemp.GetLength() - i);
+	strValueTemp = CStringManager::Mid(strValueTemp, i, CStringManager::GetLength(strValueTemp) - i);
 	//如果取出来是空字符串说明整条都是无效字符则说明这是不可识别字符串
 	if(strValueTemp == ""){
 		goto rem;
 	}
 	//水平翻转
-	strValueTemp.MakeReverse();
+	CStringManager::MakeReverse(strValueTemp);
 	i = -1;
-	while(i++ != strValueTemp.GetLength() - 1){
+	while (i++ != CStringManager::GetLength(strValueTemp) - 1){
 		//遇到无效字符则跳过
 		if(strValueTemp[i] == ' ' || strValueTemp[i] == '\r' || strValueTemp[i] == '\n' || strValueTemp[i] == '\t') continue;
 		else break;
 	}
 	//从有效字符开始取到末尾
-	strValueTemp = strValueTemp.Mid(i,strValueTemp.GetLength() - i);
+	strValueTemp = CStringManager::Mid(strValueTemp, i, CStringManager::GetLength(strValueTemp) - i);
 	//水平翻转
-	strValueTemp.MakeReverse();
+	CStringManager::MakeReverse(strValueTemp);
 
 	//如果去掉头尾的无效字符之后第一个和最后一个都是引号说明是字符串
-	if(strValueTemp[0] == '\"' && strValueTemp[strValueTemp.GetLength() - 1] == '\"'){
+	if (strValueTemp[0] == '\"' && strValueTemp[CStringManager::GetLength(strValueTemp) - 1] == '\"'){
 		type = 1;
-		this->strValue = strValueTemp.Mid(1,strValueTemp.GetLength() - 2);
+		this->strValue = CStringManager::Mid(strValueTemp, 1, CStringManager::GetLength(strValueTemp) - 2);
 	}
 	//说明这里是一个空字段值，默认转成数字0
 	else if(strValueTemp == "null"){
@@ -63,10 +63,10 @@ CstrValue::CstrValue(CString strValue){
 		this->nValue = 0;
 	}
 	//如果是负小数，符号在首位，且只有一个小数点
-	else if((strValueTemp.Replace("-","-") == 1 && strValueTemp.Find('-') == 0) && strValueTemp.Replace(".",".") == 1){
+	else if ((CStringManager::Replace(strValueTemp, "-", "-") == 1 && CStringManager::Find(strValueTemp, '-') == 0) && CStringManager::Replace(strValueTemp,".", ".") == 1){
 		//如果其他全部是数字则说明这是小数
 		i = -1;
-		while(i++ != strValueTemp.GetLength() - 1){
+		while (i++ != CStringManager::GetLength(strValueTemp) - 1){
 			if((strValueTemp[i] >= '0' && strValueTemp[i] <= '9') || strValueTemp[i] == '-' || strValueTemp[i] == '.') continue;
 			else{
 				//如果还有其他字符则说明这条字符串不可识别
@@ -76,13 +76,13 @@ CstrValue::CstrValue(CString strValue){
 		//如果是自然退出循环则说明这是一条负小数数据
 		type = 3;
 		this->strValue = strValueTemp;
-		dValue = atof(this->strValue);
+		dValue = atof(this->strValue.c_str());
 	}
 	//如果是负整数
-	else if((strValueTemp.Replace("-","-") == 1 && strValueTemp.Find('-') == 0) && strValueTemp.Replace(".",".") == 0){
+	else if ((CStringManager::Replace(strValueTemp, "-", "-") == 1 && CStringManager::Find(strValueTemp, '-') == 0) && CStringManager::Replace(strValueTemp,".", ".") == 0){
 		//如果其他全部是数字则说明这是整数
 		i = -1;
-		while(i++ != strValueTemp.GetLength() - 1){
+		while (i++ != CStringManager::GetLength(strValueTemp) - 1){
 			if((strValueTemp[i] >= '0' && strValueTemp[i] <= '9') || strValueTemp[i] == '-') continue;
 			else{
 				//如果还有其他字符则说明这条字符串不可识别
@@ -92,12 +92,12 @@ CstrValue::CstrValue(CString strValue){
 		//如果是自然退出循环则说明这是一条负整数数据
 		type = 2;
 		this->strValue = strValueTemp;
-		nValue = atoi(this->strValue);
+		nValue = atoi(this->strValue.c_str());
 	}
-	else if(strValueTemp.Replace("-","-") == 0 && strValueTemp.Replace(".",".") == 1){
+	else if (CStringManager::Replace(strValueTemp, "-", "-") == 0 && CStringManager::Replace(strValueTemp,".", ".") == 1){
 		//如果其他全部是数字则说明这是小数
 		i = -1;
-		while(i++ != strValueTemp.GetLength() - 1){
+		while (i++ != CStringManager::GetLength(strValueTemp) - 1){
 			if((strValueTemp[i] >= '0' && strValueTemp[i] <= '9') || strValueTemp[i] == '.') continue;
 			else{
 				//如果还有其他字符则说明这条字符串不可识别
@@ -107,13 +107,13 @@ CstrValue::CstrValue(CString strValue){
 		//如果是自然退出循环则说明这是一条正小数数据
 		type = 3;
 		this->strValue = strValueTemp;
-		dValue = atof(this->strValue);
+		dValue = atof(this->strValue.c_str());
 	}
 	//如果是正整数或0
-	else if(strValueTemp.Replace("-","-") == 0 && strValueTemp.Replace(".",".") == 0){
+	else if (CStringManager::Replace(strValueTemp, "-", "-") == 0 && CStringManager::Replace(strValueTemp,".", ".") == 0){
 		//如果其他全部是数字则说明这是整数
 		i = -1;
-		while(i++ != strValueTemp.GetLength() - 1){
+		while (i++ != CStringManager::GetLength(strValueTemp) - 1){
 			if(strValueTemp[i] >= '0' && strValueTemp[i] <= '9') continue;
 			else{
 				//如果还有其他字符则说明这条字符串不可识别
@@ -123,7 +123,7 @@ CstrValue::CstrValue(CString strValue){
 		//如果是自然退出循环则说明这是一条正小数数据
 		type = 2;
 		this->strValue = strValueTemp;
-		nValue = atoi(this->strValue);
+		nValue = atoi(this->strValue.c_str());
 	}
 	//除此之外都是不可识别字符串
 	else{
@@ -193,7 +193,7 @@ CstrValue::operator int(){
 	return nValue;
 }
 
-CstrValue::operator CString(){
+CstrValue::operator string(){
 	return strValue;
 }
 

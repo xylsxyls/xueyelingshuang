@@ -3,7 +3,6 @@
 #include "CStringManagerMacro.h"
 using namespace std;
 #include <string>
-#include <Windows.h>
 
 class CStringManagerAPI CStringManager{
 public:
@@ -25,7 +24,7 @@ public:
 	//两侧个数不匹配的时候会根据左侧开始返回对应的右侧
 	int FindOther(char cLeft,char cRight,int nSelect);
 	//分割字符串
-	vector<string> split(string separate_character);
+	static vector<string> split(string splitString, string separate_character);
 	//vector<CString> vec = split("123,234,345,456,",","); //得到5个字符串
 	//vector<CString> vec2 = split("123,,234,,345,,456",",,"); //得到4个字符串
 
@@ -52,9 +51,9 @@ public:
 
 	static size_t Find(const std::string & str, char ch, size_t offset = 0);
 
-	static size_t ReserveFind(const std::string & str, const std::string & right, size_t offset = 0);
+	static size_t ReserveFind(const std::string & str, const std::string & right);
 
-	static size_t ReserveFind(const std::string & str, char ch, size_t offset = 0);
+	static size_t ReserveFind(const std::string & str, char ch);
 
 	static size_t GetLength(const std::string & str);
 
@@ -69,4 +68,6 @@ public:
 	static size_t Replace(std::string & str, char ch1, char ch2);
 
 	static void Format(std::string & str, const char * fmt, ...);
+
+	static void MakeReverse(std::string & str);
 };

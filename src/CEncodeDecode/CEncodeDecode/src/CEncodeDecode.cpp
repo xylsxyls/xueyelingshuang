@@ -54,6 +54,7 @@ string Randomstring(int nMin,int nMax,vector<char> vecCharacter){
 	return strResult;
 }
 
+/*
 int main(){
 	vector<char> vecCharacter;
 	char i = 64;
@@ -81,3 +82,4 @@ int main(){
 	}
 	return 0;
 }
+*/

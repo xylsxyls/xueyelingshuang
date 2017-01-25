@@ -1,10 +1,10 @@
 #include <SDKDDKVer.h>
 #include "Cjson.h"
 #include <typeinfo>
-
+#include "CStringManager/CStringManagerAPI.h"
 #include "CFieldType.h"
 
-map<CString,CString> Cjson::LoadJson(CString strJson){
+map<string,string> Cjson::LoadJson(string strJson){
 	FreeCJson();
 	//初始化
 	pJsonA = new CjsonA;
@@ -14,9 +14,9 @@ map<CString,CString> Cjson::LoadJson(CString strJson){
 	return pJsonA->LoadJson(strJson);
 }
 
-vector<CString> Cjson::GetField(){
+vector<string> Cjson::GetField(){
 	if(type == "class CjsonA") return pJsonA->GetField();
-	else return vector<CString>();
+	else return vector<string>();
 }
 
 int Cjson::size(){
@@ -33,7 +33,7 @@ int Cjson::size(){
 			for(;it != ((CjsonA*)TypeValueTemp->pClass)->mapdata.end();it++){
 				if(it->first.c_str() == pJson->vecField.at(i).field){
 					//pJson值在[]重载时已经带下去了
-					TypeValueTemp =  &((CjsonA*)TypeValueTemp->pClass)->mapdata[(LPSTR)(LPCTSTR)(pJson->vecField.at(i).field)];
+					TypeValueTemp =  &((CjsonA*)TypeValueTemp->pClass)->mapdata[(pJson->vecField.at(i).field)];
 					goto rem;
 				}
 			}
@@ -56,13 +56,13 @@ int Cjson::size(){
 	else return -1;
 }
 
-CString Cjson::toCString(CString NewLineSign,CString FormatSign,int FormatLength){
+string Cjson::tostring(string NewLineSign,string FormatSign,int FormatLength){
 	//如果是个空的CTypeValue，那么需要先初始化，判断时必须用pJson来判断，因为只有pJson是透传的
 	if(pJson == NULL){
 		//说明还未初始化
 		LoadJson("{}");
 	}
-	if(type == "class CjsonA") return pJsonA->toCString(NewLineSign,FormatSign,FormatLength);
+	if(type == "class CjsonA") return pJsonA->tostring(NewLineSign,FormatSign,FormatLength);
 	else return "";
 }
 
@@ -139,14 +139,16 @@ Cjson::Cjson(const CjsonA& Class){
 }
 
 Cjson::Cjson(const Cjson& x){
-	if(type != "") AfxMessageBox("拷贝构造时原type不为空，type=" + type);
+	if (type != ""){
+		;//AfxMessageBox("拷贝构造时原type不为空，type=" + type);
+	}
 	type = x.type;
 
 	this->strValueError.dValue = x.strValueError.dValue;
 	this->strValueError.nValue = x.strValueError.nValue;
 	this->strValueError.strValue = x.strValueError.strValue;
 	this->strValueError.type = x.strValueError.type;
-	this->vecHwnd = x.vecHwnd;
+	//this->vecHwnd = x.vecHwnd;
 
 	if(type == ""){
 		pClass = x.pClass;
@@ -183,7 +185,7 @@ Cjson::Cjson(const Cjson& x){
 		pJson = pJsonA;
 	}
 	else{
-		AfxMessageBox("拷贝构造传入类型出错，类型为：" + type);
+		;//AfxMessageBox("拷贝构造传入类型出错，类型为：" + type);
 	}
 
 	strValueError = x.strValueError;
@@ -205,7 +207,7 @@ Cjson Cjson::operator = (const Cjson& x){
 		delete (CjsonA *)pClass;
 	}
 	else{
-		AfxMessageBox("重载等于是原类型出错，type=" + type);
+		;//AfxMessageBox("重载等于是原类型出错，type=" + type);
 	}
 	type = x.type;
 
@@ -213,7 +215,7 @@ Cjson Cjson::operator = (const Cjson& x){
 	this->strValueError.nValue = x.strValueError.nValue;
 	this->strValueError.strValue = x.strValueError.strValue;
 	this->strValueError.type = x.strValueError.type;
-	this->vecHwnd = x.vecHwnd;
+	//this->vecHwnd = x.vecHwnd;
 
 	if(type == ""){
 		pClass = x.pClass;
@@ -250,7 +252,7 @@ Cjson Cjson::operator = (const Cjson& x){
 		pJson = pJsonA;
 	}
 	else{
-		AfxMessageBox("拷贝重载等号传入类型出错，类型为：" + type);
+		;//AfxMessageBox("拷贝重载等号传入类型出错，类型为：" + type);
 	}
 
 	strValueError = x.strValueError;
@@ -259,7 +261,7 @@ Cjson Cjson::operator = (const Cjson& x){
 	return *this;
 }
 
-Cjson& Cjson::operator[] (CString field){
+Cjson& Cjson::operator[] (string field){
 	//如果是个空的CTypeValue，那么需要先初始化，判断时必须用pJson来判断，因为只有pJson是透传的
 	if(pJson == NULL){
 		//说明还未初始化
@@ -283,13 +285,13 @@ Cjson& Cjson::operator[] (CString field){
 		for(;it != ((CjsonA*)pClass)->mapdata.end();it++){
 			if(it->first.c_str() == field){
 				//返回之前先把pJson的值带下去，因为如果出现不存在的情况，return *this能保证pJson肯定有值
-				((CjsonA*)pClass)->mapdata[(LPSTR)(LPCTSTR)field].pJson = this->pJson;
-				return ((CjsonA*)pClass)->mapdata[(LPSTR)(LPCTSTR)field];
+				((CjsonA*)pClass)->mapdata[field].pJson = this->pJson;
+				return ((CjsonA*)pClass)->mapdata[field];
 			}
 		}
 	}
 	else{
-		AfxMessageBox("重载[field]时本身类型出错，类型为：" + type);
+		;//AfxMessageBox("重载[field]时本身类型出错，类型为：" + type);
 	}
 	return *this;
 }
@@ -319,12 +321,12 @@ Cjson& Cjson::operator[] (int num){
 		
 	}
 	else{
-		AfxMessageBox("重载[num]时本身类型出错，类型为：" + type);
+		;//AfxMessageBox("重载[num]时本身类型出错，类型为：" + type);
 	}
 	return *this;
 }
 
-Cjson* Cjson::TypeEqual(CString strTemp){
+Cjson* Cjson::TypeEqual(string strTemp){
 	//把传进来的field循环查看，如果有则修改，无则创建
 	int level = -1;
 	Cjson* pTypeValueReturn = pJson->vecCjson.at(0);
@@ -363,11 +365,11 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 					//如果找到了一个数组但是用户指定当前层为字段的话说明用户要把数组改为json，应该先到上一层创建一个json，然后再获得创建层map进行赋值
 					if(pTypeValueTemp->type == "class CszValue"){
 						//重新给上一层赋值新的json，以便下面使用
-						pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CjsonA();
-						pTypeValueTemp = &(pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)]);
+						pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CjsonA();
+						pTypeValueTemp = &(pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(pTypeValueReturn->pJson->vecField.at(i - 1).field)]);
 					}
 					//退回上一层添加或覆盖字段
-					pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)] = (Cjson)(CstrValue)strTemp;
+					pTypeValueTemp->toJson().mapdata[(pTypeValueReturn->pJson->vecField.at(i).field)] = (Cjson)(CstrValue)strTemp;
 				}
 				break;
 			}
@@ -376,11 +378,11 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 				//如果下一层是field说明需要创建一个json，以便下面使用
 				if(pTypeValueReturn->pJson->vecField.at(i + 1).field != ""){
 					//重新给上一层赋值新的json，以便下面使用
-					pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CjsonA();
+					pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CjsonA();
 				}
 				//如果下一层是数字说明需要创建一个数组，以便下面使用
 				else{
-					pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CszValue();
+					pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CszValue();
 				}
 			}
 			//如果当前层能找到
@@ -392,15 +394,15 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 			if(it == pTypeValueTemp->toJson().mapdata.end()){
 				//如果下一层是field说明需要创建一个json
 				if(pTypeValueReturn->pJson->vecField.at(i + 1).field != ""){
-					pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)] = CjsonA();
+					pTypeValueTemp->toJson().mapdata[(pTypeValueReturn->pJson->vecField.at(i).field)] = CjsonA();
 				}
 				//如果下一层是数字说明需要创建一个数组
 				else{
-					pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)] = CszValue();
+					pTypeValueTemp->toJson().mapdata[(pTypeValueReturn->pJson->vecField.at(i).field)] = CszValue();
 				}
 			}
 			//把找到的下一层Cjson传给指针
-			pTypeValueTemp = &(pTypeValueTemp->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i).field)]);
+			pTypeValueTemp = &(pTypeValueTemp->toJson().mapdata[(pTypeValueReturn->pJson->vecField.at(i).field)]);
 		}
 		//否则是数字
 		else{
@@ -408,7 +410,7 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 			if(pTypeValueTemp->type != "class CszValue"){
 				//map在改数据的时候会先执行这个类的析构，所以不用管节点内存泄漏
 				//重新给上一层赋值新的空数组，以便下面使用
-				pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(LPSTR)(LPCTSTR)(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CszValue();
+				pTypeValueReturn->pJson->vecCjson.at(level - 1)->toJson().mapdata[(pTypeValueReturn->pJson->vecField.at(i - 1).field)] = CszValue();
 			}
 			//如果vec中的数字比数组实际大小大则追加在末尾
 			if(pTypeValueReturn->pJson->vecField.at(i).num >= (int)pTypeValueTemp->tosz().vecszValue.size()){
@@ -485,22 +487,22 @@ Cjson* Cjson::TypeEqual(CString strTemp){
 }
 
 Cjson Cjson::operator = (int nNum){
-	CString strTemp = "";
-	strTemp.Format("%d",nNum);
+	string strTemp = "";
+	CStringManager::Format(strTemp,"%d",nNum);
 
 	return *(TypeEqual(strTemp));
 }
 
 Cjson Cjson::operator = (double dNum){
-	CString strTemp = "";
-	strTemp.Format("%lf",dNum);
+	string strTemp = "";
+	CStringManager::Format(strTemp,"%lf", dNum);
 
 	return *(TypeEqual(strTemp));
 }
 
-Cjson Cjson::operator = (CString str){
-	CString strTemp = "";
-	strTemp.Format("\"%s\"",str);
+Cjson Cjson::operator = (string str){
+	string strTemp = "";
+	CStringManager::Format(strTemp,"\"%s\"", str);
 
 	return *(TypeEqual(strTemp));
 }
@@ -532,6 +534,7 @@ CjsonA& Cjson::toJson(){
 	return jsonError;
 }
 
+/*
 void Cjson::ClearHwnd(){
 	vecHwnd.clear();
 	return;
@@ -546,11 +549,11 @@ HWND Cjson::GetHwnd(int num){
 	if(vecHwnd.size() < (unsigned int)num) return 0;
 	return vecHwnd.at(num - 1);
 }
-
+*/
 void Cjson::FreeCJson(){
 	if(type == ""){
 		if(pClass != NULL){
-			AfxMessageBox("出错");
+			;//AfxMessageBox("出错");
 		}
 	}
 	else if(type == "class CstrValue"){
@@ -566,7 +569,7 @@ void Cjson::FreeCJson(){
 		delete (CjsonA *)pClass;
 	}
 	else{
-		AfxMessageBox("释放类型出错，类型为：" + type);
+		;//AfxMessageBox("释放类型出错，类型为：" + type);
 	}
 }
 

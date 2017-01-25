@@ -1,0 +1,1 @@
+if (IDYES == AfxMessageBox("ÊÇ·ñ¹Ø±Õ?", MB_YESNO))

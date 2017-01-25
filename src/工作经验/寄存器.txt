@@ -1,0 +1,2 @@
+register int *i = new int;
+i指针变量在寄存器中

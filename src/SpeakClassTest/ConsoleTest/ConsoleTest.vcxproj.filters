@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="A">
+      <UniqueIdentifier>{8085cfdd-d2e2-489d-a9d7-def667f02fb7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="B">
+      <UniqueIdentifier>{0ad5f1bc-42c5-4ba5-b1a3-9592107c027f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C">
+      <UniqueIdentifier>{4b2af75b-9794-421f-803f-ae61a6a69173}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SpeakClass">
+      <UniqueIdentifier>{01e163fd-a90d-460e-a72a-1152af0eb919}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestSpeakClass">
+      <UniqueIdentifier>{9347d5ce-dcc6-4176-b54c-a6e41a93d3c9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ConsoleTest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="A.h">
+      <Filter>A</Filter>
+    </ClInclude>
+    <ClInclude Include="B.h">
+      <Filter>B</Filter>
+    </ClInclude>
+    <ClInclude Include="C.h">
+      <Filter>C</Filter>
+    </ClInclude>
+    <ClInclude Include="SpeakClass.h">
+      <Filter>SpeakClass</Filter>
+    </ClInclude>
+    <ClInclude Include="TestSpeakClass.h">
+      <Filter>TestSpeakClass</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ConsoleTest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="A.cpp">
+      <Filter>A</Filter>
+    </ClCompile>
+    <ClCompile Include="B.cpp">
+      <Filter>B</Filter>
+    </ClCompile>
+    <ClCompile Include="C.cpp">
+      <Filter>C</Filter>
+    </ClCompile>
+    <ClCompile Include="SpeakClass.cpp">
+      <Filter>SpeakClass</Filter>
+    </ClCompile>
+    <ClCompile Include="TestSpeakClass.cpp">
+      <Filter>TestSpeakClass</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

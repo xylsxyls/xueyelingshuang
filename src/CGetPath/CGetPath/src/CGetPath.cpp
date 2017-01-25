@@ -9,9 +9,7 @@ string CGetPath::GetRegOcxPath(string classid){
 	string strSubKey;
 	HKEY hKey;
 	LPBYTE lpData;
-	CStringManager manager = strSubKey;
-	manager.Format(_T("CLSID\\{%s}\\InprocServer32"),classid);
-	strSubKey = manager.strInside;
+	CStringManager::Format(strSubKey,_T("CLSID\\{%s}\\InprocServer32"), classid);
 	RegOpenKeyEx(HKEY_CLASSES_ROOT,strSubKey.c_str(),0,KEY_READ,&hKey);
 	DWORD dwType = REG_SZ;
 	lpData = new BYTE[1024];
@@ -44,15 +42,14 @@ string CGetPath::GetFolderFromWindow(HWND hWnd){
 	if(pidl){
 		TCHAR szfolderPath[MAX_PATH] = {};
 		SHGetPathFromIDList(pidl, szfolderPath);
-		CStringManager manager = cstrSelectPath;
-		manager.Format(_T("%s"), szfolderPath);
-		cstrSelectPath = manager.strInside;
+		CStringManager::Format(cstrSelectPath, _T("%s"), szfolderPath);
 		LPMALLOC lpMalloc;
 		if(SUCCEEDED(SHGetMalloc(&lpMalloc))){
 			lpMalloc->Free(pidl);
 			lpMalloc->Release();
 		}
 	}
+	if (cstrSelectPath != "") cstrSelectPath = cstrSelectPath + "\\";
 	return cstrSelectPath;
 }
 
@@ -93,7 +90,7 @@ void RecursionFindFile(string strPath,string FileStr,vector<string> *pPathVector
 		}
 		//2表示找文件后缀名
 		else if(flag == 2){
-			if(TempFileName.substr(TempFileName.find_last_of('.') + 1,TempFileName.length() - TempFileName.find_last_of('.') - 2) == FileStr) pPathVector->push_back((LPSTR)(LPCTSTR)finder.GetFilePath());
+			if(TempFileName.substr(TempFileName.find_last_of('.') + 1,TempFileName.length() - TempFileName.find_last_of('.') - 1) == FileStr) pPathVector->push_back((LPSTR)(LPCTSTR)finder.GetFilePath());
 		}
 	}
 	return;

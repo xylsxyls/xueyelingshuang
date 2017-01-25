@@ -2,20 +2,36 @@
 #include <vector>
 #include <map>
 using namespace std;
-#include <afxwin.h>
+
 #include "CjsonMacro.h"
 
 class Cjson;
 class CjsonAPI CszValue{
 public:
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
 	vector<Cjson> vecszValue; //只存放两种，CstrValue和CjsonA
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	
 
 public:
-	map<CString,CString> mapszError;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	map<string, string> mapszError;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	
 
 public:
 	CszValue();
-	CszValue(CString strValue);
+	CszValue(string strValue);
 	~CszValue();
 
 public:

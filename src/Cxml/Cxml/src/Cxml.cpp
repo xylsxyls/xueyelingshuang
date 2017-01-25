@@ -451,7 +451,10 @@ Cxml& Cxml::operator()(CString strNOTECDATA,int nFlag){
 
 Cxml Cxml::operator=(CString strValue){
 	//如果访问路径出错则直接返回
-	if(bVisit == 0) return *this;
+	if(bVisit == 0){
+		bVisit = 1;
+		return *this;
+	}
 	//建立一个指针池，存放符合可能的所有指针，先存入第一层中listXml的指针
 	list<list<Cxml>*> listplistXml;
 	//上层指针
@@ -759,6 +762,10 @@ Cxml Cxml::operator=(CString strValue){
 	}
 	else if(nLast == 3 || nLast == 5);
 	else AfxMessageBox("访问路径被篡改");
+
+	listVisit.clear();
+	listintStorage.clear();
+	listCStringStorage.clear();
 	return *this;
 }
 
@@ -777,7 +784,260 @@ Cxml Cxml::operator=(double dValue){
 }
 
 CString Cxml::toValue(){
-	return "";
+	//如果访问路径出错则直接返回
+	if(bVisit == 0){
+		bVisit = 1;
+		return "-1";
+	}
+	//存放结果
+	CString strResult = "-1";
+	//建立一个指针池，存放符合可能的所有指针，先存入第一层中listXml的指针
+	list<list<Cxml>*> listplistXml;
+	//上层指针
+	Cxml* pPreXmlTemp = this;
+	//上层指针池
+	list<Cxml*> listpPrelistXml;
+	listplistXml.push_back(&listXml);
+	listpPrelistXml.push_back(this);
+	//建立两个临时变量，一个存储上一个节点路径，一个存储CString
+	list<int> listVisitTemp;
+	list<CString> listCStringStorageTemp;
+	list<Cxml> listXmlTemp;
+	listXmlTemp.push_back(*this);
+	//本层指针
+	list<Cxml>* plistXmlTemp = &listXmlTemp;
+	//取出listVisit中最后一个，用于最后赋值判断
+	int nLast = listVisit.back();
+	//循环到路径没有为止
+	while(listVisit.size() != 0){
+		//如果是节点
+		if(listVisit.front() == 1){
+			//取出节点名存入临时变量并弹出节点名
+			CString strNode = *listCStringStorage.begin();
+			listCStringStorage.pop_front();
+			listVisitTemp.clear();
+			listVisitTemp.push_back(1);
+			listCStringStorageTemp.clear();
+			listCStringStorageTemp.push_back(strNode);
+
+			//取出指针list中第一个指针，循环从第一个指针指的list中查找
+			plistXmlTemp = *listplistXml.begin();
+			//取出第一个之后就清空，方便后面存入下层的多个指针
+			listplistXml.clear();
+			listpPrelistXml.clear();
+			for(auto itXml = plistXmlTemp->begin();itXml != plistXmlTemp->end();itXml++){
+				//如果能找到该节点
+				if(itXml->strOneXmlName == strNode){
+					//把下一个Cxml指针赋值给临时变量
+					listplistXml.push_back(&(itXml->listXml));
+					listpPrelistXml.push_back(&(*itXml));
+					pPreXmlTemp = &(*(plistXmlTemp->begin()));
+				}
+			}
+			//如果为空说明没找到该节点，返回错误
+			if(listplistXml.size() == 0) goto Exit;
+		}
+		else if(listVisit.front() == 2){
+			//取出并弹出存储数据
+			int n = *listintStorage.begin();
+			listintStorage.pop_front();
+
+			//如果指针池内没有该位置的指针
+			if(listplistXml.size() <= (unsigned int)n) goto Exit;
+			else{
+				int nTemp = n;
+				auto itlistplistXml = listplistXml.begin();
+				auto itlistpPrelistXml = listpPrelistXml.begin();
+				while(nTemp-- != 0){
+					itlistplistXml++;
+					itlistpPrelistXml++;
+				}
+				//取出指针池中指定的那个指针，再清空指针池，再放入指定的那个
+				list<Cxml>* plistXmlTemp = *itlistplistXml;
+				listplistXml.clear();
+				listpPrelistXml.clear();
+				listplistXml.push_back(plistXmlTemp);
+				listpPrelistXml.push_back(&(plistXmlTemp->back()));
+			}
+		}
+		else if(listVisit.front() == 3){
+			//取出属性名，并弹出
+			CString strAttriName = *listCStringStorage.begin();
+			listCStringStorage.pop_front();
+			//默认按照第一个读
+			auto itAttriName = (*listplistXml.begin())->begin()->mapAttri.find(strAttriName);
+			if(itAttriName != (*listplistXml.begin())->begin()->mapAttri.end()){
+				strResult = itAttriName->second;
+				goto Exit;
+			}
+		}
+		else if(listVisit.front() == 4){
+			//取出属性名和属性值
+			CString strAttriName = *listCStringStorage.begin();
+			CString strAttriValue = *(++listCStringStorage.begin());
+			listCStringStorage.pop_front();
+			listCStringStorage.pop_front();
+			//从指针池中寻找是否有符合这个条件的节点，如果没有则全部重新建立
+			//先把属性名和属性值存入临时list中
+			listCStringStorageTemp.push_back(strAttriName);
+			listCStringStorageTemp.push_back(strAttriValue);
+			//建立一个临时指针池
+			list<list<Cxml>*> listplistXmlTemp;
+			//建立一个临时上层指针池
+			list<Cxml*> listpPrelistTemp;
+			//auto itlistpPrelistXml = listpPrelistXml.begin();
+			for(auto itlistplistXml = listplistXml.begin();itlistplistXml != listplistXml.end();itlistplistXml++){
+				//从上层指针的map中进行比较
+				map<CString,CString>* pmapAttriTemp = &((*listpPrelistXml.begin())->mapAttri);
+				//如果找到这条属性则把当前的指针放到临时指针池中
+				if(pmapAttriTemp->find(strAttriName) != pmapAttriTemp->end() && (*pmapAttriTemp)[strAttriName] == strAttriValue){
+					listplistXmlTemp.push_back(*itlistplistXml);
+					//发现有相等的就把上层指针中的第一个放进临时上层指针池中
+					listpPrelistTemp.push_back(listpPrelistXml.front());
+				}
+				//不符合的上层指针弹出
+				listpPrelistXml.pop_front();
+			}
+			//将临时指针池赋值给指针池
+			listplistXml = listplistXmlTemp;
+			listpPrelistXml = listpPrelistTemp;
+			//如果此时指针池依然为空，说明访问错误
+			if(listplistXml.size() == 0) goto Exit;
+		}
+		else if(listVisit.front() == 5){
+			CString strNOTECDATA = *listCStringStorage.begin();
+			int nFlag = *listintStorage.begin();
+			if(strNOTECDATA == "NOTE"){
+				if(nFlag == -1){
+					//在注释或CDATA中指针池里的指针都是下层指针
+					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlNOTE = FindPrepXml(FindPrepXml(plistXmlFirst));
+					int nPositionTemp = 0;
+					for(auto itlistXml = pxmlNOTE->listXml.begin();itlistXml != pxmlNOTE->listXml.end();itlistXml++){
+						if(FindPrepXml(plistXmlFirst) == &(*itlistXml)){
+							for(auto itlistNote = pxmlNOTE->listNote.begin();itlistNote != pxmlNOTE->listNote.end();itlistNote++){
+								if(itlistNote->nPosition == nPositionTemp){
+									strResult = itlistNote->strNoteData;
+									goto Exit;
+								}
+							}
+							goto rem;
+						}
+						nPositionTemp++;
+					}
+				}
+				else if(nFlag == 1){
+					//在注释或CDATA中指针池里的指针都是下层指针
+					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlNOTE = FindPrepXml(FindPrepXml(plistXmlFirst));
+					int nPositionTemp = 0;
+					for(auto itlistXml = pxmlNOTE->listXml.begin();itlistXml != pxmlNOTE->listXml.end();itlistXml++){
+						if(FindPrepXml(plistXmlFirst) == &(*itlistXml)){
+							for(auto itlistNote = pxmlNOTE->listNote.begin();itlistNote != pxmlNOTE->listNote.end();itlistNote++){
+								if(itlistNote->nPosition == nPositionTemp + 1){
+									strResult = itlistNote->strNoteData;
+									itlistNote->strNoteData;
+								}
+							}
+							goto rem;
+						}
+						nPositionTemp++;
+					}
+				}
+				else if(nFlag == 0){
+					//在注释或CDATA中指针池里的指针都是下层指针
+					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlNOTE = FindPrepXml(plistXmlFirst);
+
+					for(auto itlistNote = pxmlNOTE->listNote.begin();itlistNote != pxmlNOTE->listNote.end();itlistNote++){
+						if(itlistNote->nPosition == 0){
+							strResult = itlistNote->strNoteData;
+							goto Exit;
+						}
+					}
+
+					goto rem;
+				}
+				else AfxMessageBox("标识出错，分别为-1，0，1");
+			}
+			else if(strNOTECDATA == "CDATA"){
+				if(nFlag == -1){
+					//在注释或CDATA中指针池里的指针都是下层指针
+					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlCDATA = FindPrepXml(FindPrepXml(plistXmlFirst));
+					int nPositionTemp = 0;
+					for(auto itlistXml = pxmlCDATA->listXml.begin();itlistXml != pxmlCDATA->listXml.end();itlistXml++){
+						if(FindPrepXml(plistXmlFirst) == &(*itlistXml)){
+							for(auto itlistNote = pxmlCDATA->listCDATA.begin();itlistNote != pxmlCDATA->listCDATA.end();itlistNote++){
+								if(itlistNote->nPosition == nPositionTemp){
+									strResult = itlistNote->strNoteData;
+									goto Exit;
+								}
+							}
+							goto rem;
+						}
+						nPositionTemp++;
+					}
+				}
+				else if(nFlag == 1){
+					//在注释或CDATA中指针池里的指针都是下层指针
+					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlCDATA = FindPrepXml(FindPrepXml(plistXmlFirst));
+					int nPositionTemp = 0;
+					for(auto itlistXml = pxmlCDATA->listXml.begin();itlistXml != pxmlCDATA->listXml.end();itlistXml++){
+						if(FindPrepXml(plistXmlFirst) == &(*itlistXml)){
+							for(auto itlistNote = pxmlCDATA->listCDATA.begin();itlistNote != pxmlCDATA->listCDATA.end();itlistNote++){
+								if(itlistNote->nPosition == nPositionTemp + 1){
+									strResult = itlistNote->strNoteData;
+									goto Exit;
+								}
+							}
+							goto rem;
+						}
+						nPositionTemp++;
+					}
+				}
+				else if(nFlag == 0){
+					//在注释或CDATA中指针池里的指针都是下层指针
+					list<Cxml>* plistXmlFirst = *listplistXml.begin();
+					Cxml* pxmlCDATA = FindPrepXml(plistXmlFirst);
+					for(auto itlistNote = pxmlCDATA->listCDATA.begin();itlistNote != pxmlCDATA->listCDATA.end();itlistNote++){
+						if(itlistNote->nPosition == 0){
+							strResult = itlistNote->strNoteData;
+							goto Exit;
+						}
+					}
+					goto rem;
+				}
+				else AfxMessageBox("标识出错，分别为-1，0，1");
+			}
+			else AfxMessageBox("注释或CDATA存入标识出错，分别为NOTE和CDATA");
+		}
+		else AfxMessageBox("访问路径被篡改");
+rem:
+		//取出一个路径弹出一个路径
+		listVisit.pop_front();
+	}
+	//取出指针池中的第一个进行赋值
+	if(nLast == 1 || nLast == 2 || nLast == 4){
+		//把指针池中第一个指针所指list清空，然后从上层指针中循环寻找第一个指针所在的Cxml，然后修改赋值
+		list<Cxml>* plistXmlFirst = (*listplistXml.begin());
+		plistXmlFirst->clear();
+		for(auto itplistXmlTemp = plistXmlTemp->begin();itplistXmlTemp != plistXmlTemp->end();itplistXmlTemp++){
+			if(&(itplistXmlTemp->listXml) == plistXmlFirst){
+				strResult = itplistXmlTemp->strOneXmlValue;
+				goto Exit;
+			}
+		}
+	}
+	else if(nLast == 3 || nLast == 5);
+	else AfxMessageBox("访问路径被篡改");
+
+Exit:
+	listVisit.clear();
+	listintStorage.clear();
+	listCStringStorage.clear();
+	return strResult;
 }
 
 Cxml* Cxml::FindPrepXmlFromXml(Cxml* pxml,list<Cxml>* plistXml){
@@ -828,6 +1088,8 @@ int main(){
 	xml["aaa"]("a","1")("b","2")["ccc"](2)["ddd"]["eee"] = 1;
 	xml["aaa"]("a","1")("b","2")["ccc"](2)["ddd"]("n","3.4")["eee"] = 2;
 	xml["aaa"]("a","1")("b","2")("c","3")(2)("CDATA",0) = "1";
+
+	CString str = xml["aaa"]["bbb"].toValue();
 
 	//CString str = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><!--by months--> <class_list a=\'1\' b=\"2\">  		<student a=\"3\" b=\'\"6\"\'>  		<!--Shdds--><name/>  <!--Shs--><![CDATA[123456<<<>>>789]]><grade>A</grade>  		</student>  		</class_list>";
 	//xml["aaa"] = 1;

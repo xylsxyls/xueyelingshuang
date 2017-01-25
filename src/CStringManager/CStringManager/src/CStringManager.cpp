@@ -3,7 +3,6 @@
 #include <vector>
 using namespace std;
 #include <time.h>
-
 #include <shlobj.h>
 
 CStringManager::CStringManager(string str){
@@ -41,17 +40,16 @@ int CStringManager::FindOther(char cLeft,char cRight,int nSelect){
 	return -1;
 }
 
-vector<string> CStringManager::split(string separate_character){
-	string strTemp = strInside;
+vector<string> CStringManager::split(string splitString,string separate_character){
 	vector<string> strs;
 
 	int separate_characterLen = separate_character.length();//分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
 	int lastPosition = 0,index = -1;
-	while (-1 != (index = strTemp.find(separate_character,lastPosition))){
-		strs.push_back(strTemp.substr(lastPosition,index - lastPosition).c_str());   
+	while (-1 != (index = splitString.find(separate_character, lastPosition))){
+		strs.push_back(splitString.substr(lastPosition, index - lastPosition).c_str());
 		lastPosition = index + separate_characterLen;   
 	}
-	string lastString = strTemp.substr(lastPosition);//截取最后一个分隔符后的内容   
+	string lastString = splitString.substr(lastPosition);//截取最后一个分隔符后的内容   
 	//if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
 	strs.push_back(lastString.c_str());
 	return strs;
@@ -136,14 +134,14 @@ size_t CStringManager::Find(const std::string & str, char ch, size_t offset)
 	return str.find(ch, offset);
 }
 
-size_t CStringManager::ReserveFind(const std::string & str, const std::string & right, size_t offset)
+size_t CStringManager::ReserveFind(const std::string & str, const std::string & right)
 {
-	return str.rfind(right, offset);
+	return str.rfind(right);
 }
 
-size_t CStringManager::ReserveFind(const std::string & str, char ch, size_t offset)
+size_t CStringManager::ReserveFind(const std::string & str, char ch)
 {
-	return str.rfind(ch, offset);
+	return str.rfind(ch);
 }
 
 size_t CStringManager::GetLength(const std::string & str)
@@ -201,14 +199,16 @@ size_t CStringManager::Replace(std::string & str, char ch1, char ch2)
 
 void CStringManager::Format(std::string & str, const char * fmt, ...)
 {
-	std::string result;
 	va_list args = NULL;
-
 	va_start(args, fmt);
-	int size = _vscprintf(fmt, args) + 2;
-	result.resize(size);
-	size = vsprintf_s(&result[0], size, fmt, args);
-	result.resize(size);
-	str = result;
+	int size = _vscprintf(fmt, args);
+	//resize分配后string类会自动在最后分配\0，resize(5)则总长6
+	str.resize(size);
+	//即便分配了足够内存，长度必须加1，否则会崩溃
+	vsprintf_s(&str[0], size + 1, fmt, args);
 	va_end(args);
+}
+
+void CStringManager::MakeReverse(std::string & str){
+	reverse(str.begin(),str.end());
 }

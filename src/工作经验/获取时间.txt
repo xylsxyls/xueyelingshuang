@@ -9,6 +9,18 @@ strftime( tmp, sizeof(tmp), "%Y/%m/%d %X %A 本年第%j天 %z",localtime(&t) );
 puts( tmp );
 return 0;
 }
+
+
+/*
+char *wday[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+    time_t timep;
+    struct tm *p;
+    time(&timep);
+    p = localtime(&timep); //取得当地时间
+    printf ("%d%d%d ", (1900+p->tm_year), (1+p->tm_mon), p->tm_mday);
+    printf("%s%d:%d:%d\n", wday[p->tm_wday], p->tm_hour, p->tm_min, p->tm_sec);
+*/
+
 size_t strftime(char *strDest, size_t maxsize, const char *format, const struct tm *timeptr);
 size_t strftime(_Out_z_cap_(_SizeInBytes) char * _Buf, _In_ size_t _SizeInBytes, _In_z_ _Printf_format_string_ const char * _Format, _In_ const struct tm * _Tm);
 //变量分别为输出的字符，字符串的长度，输出的格式，输入的变量

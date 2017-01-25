@@ -1,0 +1,4 @@
+不能在$(ProjectDir)后面加\否则在传递$(OutDir)宏的时候会抵消后面一层目录
+即$(ProjectDir)\..\=$(ProjectDir)
+
+调试的时候直接写$(OutDir)

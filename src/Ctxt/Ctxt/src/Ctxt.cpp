@@ -5,7 +5,7 @@
 using namespace std;
 #include <stdarg.h>
 
-Ctxt::Ctxt(CString strPath){
+Ctxt::Ctxt(string strPath){
 	this->strPath = strPath;
 	pFile = NULL;
 }
@@ -25,26 +25,26 @@ vector<string> split(string src,string separate_character){
 	return strs;
 }
 
-void Ctxt::LoadTxt(BOOL flag,CString strSplit){
+void Ctxt::LoadTxt(int flag,string strSplit){
 	ifstream myfile(strPath);
 	string strLine = "";
 	int iLine = -1;
-	while(getline(myfile,strLine) != 0){
+	while(getline(myfile,strLine)){
 		iLine++;
-		//转换成CString具体处理每一行
-		CString cstrLine = strLine.c_str();
+		//转换成string具体处理每一行
+		string cstrLine = strLine.c_str();
 		if(flag == 1){
-			vector<string> vecPart = split(strSplit.GetBuffer(),","); strSplit.ReleaseBuffer();
+			vector<string> vecPart = split(strSplit,",");
 			int iPart1 = -1;
 			int size = vecPart.size();
-			vector<CString> vecLine1;
+			vector<string> vecLine1;
 			//分出得到第一对截取点，第0个和第2个就是首和尾
 			while(iPart1++ != size - 1){
 				vector<string> vecPoint = split(vecPart.at(iPart1).c_str(),"-");
 				if(vecPoint.size() >= 2){
 					int begin = atoi(vecPoint.at(0).c_str());
 					int end   = atoi(vecPoint.at(1).c_str());
-					vecLine1.push_back(cstrLine.Mid(begin - 1,end - begin + 1));
+					vecLine1.push_back(cstrLine.substr(begin - 1, end - begin + 1));
 				}
 				//如果是传入了空字符串就把一行插入
 				else{
@@ -54,9 +54,9 @@ void Ctxt::LoadTxt(BOOL flag,CString strSplit){
 			vectxt.push_back(vecLine1);
 		}
 		if(flag == 2){
-			vector<string> vecPart = split(strLine,strSplit.GetBuffer()); strSplit.ReleaseBuffer();
+			vector<string> vecPart = split(strLine,strSplit);
 			int sizePart = vecPart.size();
-			vector<CString> vecLine2;
+			vector<string> vecLine2;
 			int iPart2 = -1;
 			while(iPart2++ != sizePart - 1){
 				vecLine2.push_back(vecPart.at(iPart2).c_str());
@@ -69,21 +69,48 @@ void Ctxt::LoadTxt(BOOL flag,CString strSplit){
 	return;
 }
 
+void Ctxt::Save(){
+	OpenFile_w();
+	int i = -1;
+	string strLine;
+	while (i++ != vectxt.size() - 1){
+		strLine = "";
+		int j = -1;
+		while (j++ != vectxt.at(i).size() - 1){
+			strLine = strLine + vectxt.at(i).at(j);
+		}
+		if (i == vectxt.size() - 1) break;
+		AddWriteLine("%s", strLine.c_str());
+	}
+	fprintf(pFile, "%s", strLine.c_str());
+	CloseFile();
+	return;
+}
+
+bool Ctxt::OpenFile_w(){
+	pFile = fopen(strPath.c_str(), "w+");
+	if (pFile == NULL) return 0;
+	return 1;
+}
+
 bool Ctxt::OpenFile_a(){
-	pFile = fopen(strPath,"a+");
+	pFile = fopen(strPath.c_str(),"a+");
 	if(pFile == NULL) return 0;
 	return 1;
 }
 
-void Ctxt::AddWriteLine(int MaxLength,CString format,...){
-	va_list parameterlist;
-	va_start(parameterlist,format);
-	char *pBuf = new char[MaxLength];
-	_vsnprintf(pBuf,MaxLength,format,parameterlist);
+void Ctxt::AddWriteLine(string format,...){
+	std::string result;
+	va_list parameterlist = NULL;
+
+	va_start(parameterlist, format);
+	int size = _vscprintf(format.c_str(), parameterlist) + 2;
+	result.resize(size);
+	size = vsprintf_s(&result[0], size, format.c_str(), parameterlist);
+	result.resize(size + 1);
+	result[size] = 0;
 	va_end(parameterlist);
-	fprintf(pFile,pBuf);
-	delete pBuf; pBuf = 0;
-	fprintf(pFile,"\r\n");
+	fprintf(pFile, "%s\n", result.c_str());
 	return;
 }
 

@@ -1,5 +1,4 @@
 #pragma once
-#include <afxwin.h>
 #include "CstrValue.h"
 #include "CszValue.h"
 #include "CjsonA.h"
@@ -11,7 +10,15 @@ class CjsonA;
 
 class CjsonAPI Cjson{
 public:
-	CString type;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	string type;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	
 	void *pClass;
 
 	//这个代表的是现在这个CTypeValue是不是使用主体
@@ -28,11 +35,18 @@ public:
 	CjsonA jsonError;
 
 public:
-	map<CString,CString> LoadJson(CString strJson);
-	vector<CString> GetField();
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	map<string, string> LoadJson(string strJson);
+	vector<string> GetField();
 	int size();
 	//FormatLength指的是里面的\t个数
-	CString toCString(CString NewLineSign = "\r\n",CString FormatSign = "\t",int FormatLength = 1);
+	string tostring(string NewLineSign = "\r\n", string FormatSign = "\t", int FormatLength = 1);
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 public:
 	Cjson();
@@ -42,15 +56,15 @@ public:
 
 	Cjson(const Cjson& x);
 	Cjson operator = (const Cjson& x);
-	Cjson& operator[] (CString field);
+	Cjson& operator[] (string field);
 	Cjson& operator[] (int num);
 
 	//返回最外层指针用于等于的传值
-	Cjson* TypeEqual(CString strTemp);
+	Cjson* TypeEqual(string strTemp);
 
 	Cjson operator = (int nNum);
 	Cjson operator = (double dNum);
-	Cjson operator = (CString str);
+	Cjson operator = (string str);
 
 public:
 	CstrValue& toValue();
@@ -58,10 +72,18 @@ public:
 	CjsonA& toJson();
 
 public:
-	vector<HWND> vecHwnd;
-	void ClearHwnd();
-	void SaveHwnd(HWND hwnd);
-	HWND GetHwnd(int num);
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	//vector<HWND> vecHwnd;
+	//void ClearHwnd();
+	//void SaveHwnd(HWND hwnd);
+	//HWND GetHwnd(int num);
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	
 
 	void FreeCJson();
 	~Cjson();

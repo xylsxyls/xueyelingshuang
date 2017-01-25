@@ -9,7 +9,7 @@ CszValue::CszValue(){
 
 }
 
-CszValue::CszValue(CString strValue){
+CszValue::CszValue(string strValue){
 	int num = 0;
 	int begin = 0;
 	int i = -1;
@@ -18,12 +18,12 @@ CszValue::CszValue(CString strValue){
 		//如果到了末尾先取出最后一个再退出
 		if(strValue[i] == 0){
 			//由于在数组中只会出现json和值，出现json时，在下面的循环中遇到0退出，所以这里只要处理遇到逗号的情况
-			CString strTemp = strValue.Mid(begin,i - begin);
-			CString strEmpty = strTemp;
-			strEmpty.Replace("\t","");
-			strEmpty.Replace("\r\n","");
-			strEmpty.Replace("\n","");
-			strEmpty.Replace(" ","");
+			string strTemp = CStringManager::Mid(strValue,begin,i - begin);
+			string strEmpty = strTemp;
+			CStringManager::Replace(strEmpty,"\t", "");
+			CStringManager::Replace(strEmpty,"\r\n", "");
+			CStringManager::Replace(strEmpty,"\n", "");
+			CStringManager::Replace(strEmpty," ", "");
 			//说明是空数组
 			if(strEmpty == "") break;
 			//如果不是空数组则开始传入CstrValue分析
@@ -36,9 +36,9 @@ CszValue::CszValue(CString strValue){
 		}
 		//如果先找到了逗号说明遇到了一个字段值
 		if(strValue[i] == ','){
-			CstrValue strValueTemp = strValue.Mid(begin,i - begin);
+			CstrValue strValueTemp = CStringManager::Mid(strValue,begin, i - begin);
 			if(strValueTemp.type == -1){
-				mapszError[strValue.Mid(begin,i - begin)] = "不可识别的数组值";
+				mapszError[CStringManager::Mid(strValue,begin, i - begin)] = "不可识别的数组值";
 			}
 			vecszValue.push_back(strValueTemp);
 			num++;
@@ -47,20 +47,20 @@ CszValue::CszValue(CString strValue){
 		}
 		//如果找到了一个{说明找到了一个json
 		if(strValue[i] == '{'){
-			CString strValueTemp = strValue.Mid(0,i);
-			int nPre = strValueTemp.ReverseFind(',');
-			strValueTemp = strValueTemp.Mid(nPre + 1,i - nPre - 1);
-			strValueTemp.Replace("\t","");
-			strValueTemp.Replace("\r\n","");
-			strValueTemp.Replace("\n","");
-			strValueTemp.Replace(" ","");
-			if(strValueTemp != "") mapszError[strValue.Mid(nPre + 1,i - nPre - 1)] = "在数组中json元素前有多余字符";
+			string strValueTemp = CStringManager::Mid(strValue,0, i);
+			int nPre = CStringManager::ReserveFind(strValueTemp,',');
+			strValueTemp = CStringManager::Mid(strValueTemp,nPre + 1, i - nPre - 1);
+			CStringManager::Replace(strValueTemp,"\t", "");
+			CStringManager::Replace(strValueTemp,"\r\n", "");
+			CStringManager::Replace(strValueTemp,"\n", "");
+			CStringManager::Replace(strValueTemp," ", "");
+			if (strValueTemp != "") mapszError[CStringManager::Mid(strValue,nPre + 1, i - nPre - 1)] = "在数组中json元素前有多余字符";
 
 			CStringManager manager = strValue;
 			int nRight = manager.FindOther('{','}',i);
 			if(nRight == -1) mapszError[strValue] = "{}不匹配";
 			CjsonA json;
-			map<CString,CString> mapJsonError = json.LoadJson(strValue.Mid(i,nRight - i + 1));
+			map<string, string> mapJsonError = json.LoadJson(CStringManager::Mid(strValue,i, nRight - i + 1));
 
 			if(mapJsonError.size() != 0){
 				auto it = mapJsonError.begin();
