@@ -1,0 +1,26 @@
+1._stdcall和_cdecl的区别，什么时候必须使用_cdecl
+2.在使用map.erase的时候需要注意什么
+3.什么时候需要用到拷贝构造函数
+4.多线程操作同一块内存需要注意什么
+5.遍历二叉树不用递归怎么做
+6.A{B b;}; B{A a;};需要达到相互包含的功能，这段代码怎么改
+7.A *pa = new A[20];delete pa;会出现什么情况？
+8.引入纯虚函数的特别意义
+9.定义基类的时候析构函数为什么要设为virtual，如果忘记设为虚函数怎样调用会导致出错
+10.跨进程发送字符串怎么做
+11.debug正常，release崩溃，一般问题出在哪，release发布版本崩溃怎么查错
+12.为什么空类的大小为1
+
+1.计算字符串长度，要求：不允许在函数内定义任何变量（例如局部变量，静态变量，全局变量），pStr为字符串首地址
+int MyStrlen(char* pStr);
+
+2.日志输出函数
+//logPath为日志路径，写入类型为追加，MaxSize为日志最大大小，超过这个大小则清空一次日志，第三个参数类似于printf中第一个参数
+void OutPutLog(string logPath,int MaxSize,string PrintStr,...);
+
+3.大数减法，暂时只考虑十进制下的整数
+class CBigNumber{
+	public:
+	string strNumber;
+	friend CBigNumber operator-(CBigNumber minuend,CBigNumber subtrahend);
+};
