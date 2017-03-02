@@ -1,4 +1,3 @@
-#include <SDKDDKVer.h>
 #include "CFieldType.h"
 
 CFieldType::CFieldType(){

@@ -1,4 +1,3 @@
-#include <SDKDDKVer.h>
 #include "CjsonA.h"
 #include "CstrValue.h"
 #include "CszValue.h"
@@ -128,8 +127,7 @@ BOOL CjsonA::GetOneModule(string* strJson,BOOL* flag,string* strName,string *str
 			CStringManager::Replace(strTemp," ", "");
 			if(strTemp != "") mapError[CStringManager::Mid(*strJson,nColon + 1,temp - nColon - 1)] = "冒号和数组间有多余字符";
 
-			CStringManager manager = *strJson;
-			int nszRight = manager.FindOther('[',']',temp);
+			int nszRight = CStringManager::FindOther(*strJson, '[', ']', temp);
 			if(nszRight == -1) mapError[*strJson] = "[]不匹配";
 			*strValue = CStringManager::Mid(*strJson,temp + 1, nszRight - temp - 1);
 			//先找到后面的逗号然后再删，如果遇到}说明模块结束了则取}之前的位置
@@ -168,8 +166,7 @@ BOOL CjsonA::GetOneModule(string* strJson,BOOL* flag,string* strName,string *str
 			CStringManager::Replace(strTemp," ", "");
 			if (strTemp != "") mapError[CStringManager::Mid(*strJson,nColon + 1, temp - nColon - 1)] = "冒号和json间有多余字符";
 
-			CStringManager manager = *strJson;
-			int nszRight = manager.FindOther('{','}',temp);
+			int nszRight = CStringManager::FindOther(*strJson, '{', '}', temp);
 			if(nszRight == -1) mapError[*strJson] = "{}不匹配";
 			*strValue = CStringManager::Mid(*strJson,temp, nszRight - temp + 1);
 			//先找到后面的逗号然后再删，如果遇到}说明模块结束了则取}之前的位置
@@ -252,8 +249,7 @@ void CjsonA::GetOneJson(string *strJson,string* strOneJson){
 		CStringManager::Replace(strTemp," ", "");
 		if(strTemp != "") mapError[*strJson] = "json前有多余字符";
 	}
-	CStringManager manager = *strJson;
-	int nRight = manager.FindOther('{','}',nLeft);
+	int nRight = CStringManager::FindOther(*strJson, '{', '}', nLeft);
 	if(nRight == -1) mapError[*strJson] = "{}不匹配";
 	else{
 		string strJsonNext = CStringManager::Mid(*strJson, nRight + 1, CStringManager::GetLength(*strJson) - nRight - 1);

@@ -1,4 +1,3 @@
-#include <SDKDDKVer.h>
 #include "Cjson.h"
 #include <typeinfo>
 #include "CStringManager/CStringManagerAPI.h"

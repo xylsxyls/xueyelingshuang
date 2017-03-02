@@ -1,4 +1,3 @@
-#include <SDKDDKVer.h>
 #include "CszValue.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "Cjson.h"
@@ -56,8 +55,7 @@ CszValue::CszValue(string strValue){
 			CStringManager::Replace(strValueTemp," ", "");
 			if (strValueTemp != "") mapszError[CStringManager::Mid(strValue,nPre + 1, i - nPre - 1)] = "在数组中json元素前有多余字符";
 
-			CStringManager manager = strValue;
-			int nRight = manager.FindOther('{','}',i);
+			int nRight = CStringManager::FindOther(strValue, '{', '}', i);
 			if(nRight == -1) mapszError[strValue] = "{}不匹配";
 			CjsonA json;
 			map<string, string> mapJsonError = json.LoadJson(CStringManager::Mid(strValue,i, nRight - i + 1));

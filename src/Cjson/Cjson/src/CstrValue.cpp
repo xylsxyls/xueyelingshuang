@@ -1,4 +1,3 @@
-#include <SDKDDKVer.h>
 #include "CstrValue.h"
 #include "CStringManager/CStringManagerAPI.h"
 
