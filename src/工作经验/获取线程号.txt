@@ -1,0 +1,9 @@
+std::this_thread::get_id()
+±ØĞëÊ¹ÓÃ<<
+std::cout << ::GetCurrentThreadId() << endl;
+	std::cout << std::this_thread::get_id() << "," << std::hex << std::this_thread::get_id() << endl;
+	std::stringstream strstream;
+	strstream << std::hex << std::this_thread::get_id() << "," << std::hex << std::this_thread::get_id();
+	string str;
+	strstream >> str;
+	printf("%s", str.c_str());

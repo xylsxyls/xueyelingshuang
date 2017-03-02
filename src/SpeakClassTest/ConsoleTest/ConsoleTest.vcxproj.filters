@@ -22,9 +22,6 @@
     <Filter Include="C">
       <UniqueIdentifier>{4b2af75b-9794-421f-803f-ae61a6a69173}</UniqueIdentifier>
     </Filter>
-    <Filter Include="SpeakClass">
-      <UniqueIdentifier>{01e163fd-a90d-460e-a72a-1152af0eb919}</UniqueIdentifier>
-    </Filter>
     <Filter Include="TestSpeakClass">
       <UniqueIdentifier>{9347d5ce-dcc6-4176-b54c-a6e41a93d3c9}</UniqueIdentifier>
     </Filter>
@@ -42,9 +39,6 @@
     <ClInclude Include="C.h">
       <Filter>C</Filter>
     </ClInclude>
-    <ClInclude Include="SpeakClass.h">
-      <Filter>SpeakClass</Filter>
-    </ClInclude>
     <ClInclude Include="TestSpeakClass.h">
       <Filter>TestSpeakClass</Filter>
     </ClInclude>
@@ -61,9 +55,6 @@
     </ClCompile>
     <ClCompile Include="C.cpp">
       <Filter>C</Filter>
-    </ClCompile>
-    <ClCompile Include="SpeakClass.cpp">
-      <Filter>SpeakClass</Filter>
     </ClCompile>
     <ClCompile Include="TestSpeakClass.cpp">
       <Filter>TestSpeakClass</Filter>

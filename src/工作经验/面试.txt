@@ -10,6 +10,7 @@
 10.跨进程发送字符串怎么做
 11.debug正常，release崩溃，一般问题出在哪，release发布版本崩溃怎么查错
 12.为什么空类的大小为1
+13.多继承排第一个和第二个有什么区别
 
 1.计算字符串长度，要求：不允许在函数内定义任何变量（例如局部变量，静态变量，全局变量），pStr为字符串首地址
 int MyStrlen(char* pStr);
@@ -18,9 +19,4 @@ int MyStrlen(char* pStr);
 //logPath为日志路径，写入类型为追加，MaxSize为日志最大大小，超过这个大小则清空一次日志，第三个参数类似于printf中第一个参数
 void OutPutLog(string logPath,int MaxSize,string PrintStr,...);
 
-3.大数减法，暂时只考虑十进制下的整数
-class CBigNumber{
-	public:
-	string strNumber;
-	friend CBigNumber operator-(CBigNumber minuend,CBigNumber subtrahend);
-};
+3.有两颗A药丸，两颗B药丸，AB两种药丸颜色形状味道完全一样，现在4颗药丸混在一起了，要求上午吃一颗A一颗B，下午吃一颗A一颗B，怎么做

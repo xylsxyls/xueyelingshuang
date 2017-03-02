@@ -2,7 +2,7 @@
 #include "A.h"
 #include "B.h"
 #include "C.h"
-#include "SpeakClass.h"
+#include "SpeakClass/SpeakClassAPI.h"
 #include "TestSpeakClass.h"
 using namespace std;
 

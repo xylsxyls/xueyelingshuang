@@ -4,7 +4,7 @@
 void SpeakClass::ReleaseClass(){
 	stdmutex->lock();
 	for (auto itlistRoom = listRoom.begin(); itlistRoom != listRoom.end();){
-		string className = (*itlistRoom)->FindName(this);
+		string className = (*itlistRoom)->FindName(sonThis);
 		//?如果找不到自己的名字说明已经移除则返回空
 		if (className == "-1"){
 			printf("出错，已经被移除");
@@ -21,7 +21,7 @@ void SpeakClass::ReleaseClass(){
 			Room* room = *itlistRoom;
 			auto itTemp = itlistRoom;
 			itlistRoom++;
-			this->RemoveRoom(*itTemp);
+			RemoveRoom(*itTemp);
 			room->FindClassAndErase(className);
 			continue;
 		}
@@ -82,3 +82,5 @@ void* Room::FindClassAndErase(const string& name){
 	}
 	return NULL;
 }
+
+int main(){ return 0; }

@@ -1,0 +1,69 @@
+外层模式
+
+bool DataToMysql::GetNecessaryInfo(){
+	setAutoCommit(false);
+	try
+	{
+		bool result = true;
+		result = result && GetUnit();
+		result = result && GetFee();
+		result = result && GetClearTime();
+		//?如果失败
+		if (result == false){
+			rollback();
+			return false;
+		}
+		commit();
+		return true;
+	}
+	catch (...)
+	{
+		rollback();
+		return false;
+	}
+}
+
+内层模式select
+
+bool DataToMysql::GetUnit(){
+	//?获取最小单位
+	std::unique_ptr<sql::PreparedStatement> prestmt(con->prepareStatement("select CONTRACT_ID,UNIT from tb_contract"));
+	std::unique_ptr<sql::ResultSet> result(prestmt->executeQuery());
+	if (result->rowsCount() > 0){
+		while (result->next()){
+			mapUnit[result->getString("CONTRACT_ID")] = result->getDouble("UNIT");
+		}
+		return true;
+	}
+	return false;
+}
+
+try
+	{
+		std::unique_ptr<sql::PreparedStatement> prestmt(con->prepareStatement("select FROZEN_MARGIN from ttm_account_fund where ACCOUNT = ?"));
+		prestmt->setString(1, orderInfoEx->orderInfo.accountId.c_str());
+		std::unique_ptr<sql::ResultSet> result(prestmt->executeQuery());
+		if (result->rowsCount() > 0){
+			while (result->next()){
+				frozenMoney = atoi(result->getString("FROZEN_MARGIN").c_str());
+			}
+			return true;
+		}
+		return false;
+	}
+	catch (...)
+	{
+		return false;
+	}
+
+内层模式update
+
+bool DataToMysql::ChangeTradedOrder(const string& account, const string& ordersn, const int& orderStatus, const double& tradePrice, const string& tradeTime){
+	std::unique_ptr<sql::PreparedStatement> prestmt(con->prepareStatement("update tb_order set ORDER_STATE = ?,TRADE_PRICE = ?,TRADE_TIME = ? where ACCOUNT = ? and ORDER_SN = ?"));
+	prestmt->setInt(1, orderStatus);
+	prestmt->setDouble(2, tradePrice);
+	prestmt->setString(3, tradeTime.c_str());
+	prestmt->setString(4, account.c_str());
+	prestmt->setString(5, ordersn.c_str());
+	return prestmt->executeUpdate() > 0;
+}

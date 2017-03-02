@@ -1,5 +1,5 @@
 #pragma once
-#include "SpeakClass.h"
+#include "SpeakClass/SpeakClassAPI.h"
 
 class A : public SpeakClass{
 public:

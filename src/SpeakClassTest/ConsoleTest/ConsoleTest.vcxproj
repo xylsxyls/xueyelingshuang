@@ -84,7 +84,6 @@
     <ClInclude Include="B.h" />
     <ClInclude Include="C.h" />
     <ClInclude Include="ConsoleTest.h" />
-    <ClInclude Include="SpeakClass.h" />
     <ClInclude Include="TestSpeakClass.h" />
   </ItemGroup>
   <ItemGroup>
@@ -92,7 +91,6 @@
     <ClCompile Include="B.cpp" />
     <ClCompile Include="C.cpp" />
     <ClCompile Include="ConsoleTest.cpp" />
-    <ClCompile Include="SpeakClass.cpp" />
     <ClCompile Include="TestSpeakClass.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

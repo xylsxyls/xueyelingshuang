@@ -1,0 +1,1 @@
+数据库事务中不能select和update一起用，select不存在事务，如果取出来判断再update多线程访问时数据会出错

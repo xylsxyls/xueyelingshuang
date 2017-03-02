@@ -1,0 +1,59 @@
+在基类中不可以使用this来表示子类，不同类在继承的时候会出现不同的this情况，在继承类和子类有虚函数的时候可能会出现第一继承类和子类的地址不同，但如果都没有虚函数则会第一继承类和子类地址相同，基类有无虚函数都会改变基类和子类的this值 
+
+当前例子子类和第一继承基类this不同
+
+但是虚函数一定会执行子类的虚函数，除非在子类还没有构造出来的时候会执行基类的虚函数，例子为去掉注释
+
+多继承子类构造函数执行顺序，先执行第一继承基类的第一继承基类的第一继承基类...，然后执行倒数第二个第一继承基类的第二继承基类，...，然后再到下层继续执行下层的第二继承基类，直到结束，申请空间时是顺序申请的，所有的this代表空间是连续的
+
+class D{
+public:
+	D(){
+		auto it = this;
+	}
+	virtual void b(){
+		printf("3");
+	}
+	virtual void a(){
+		printf("1");
+		this->b();
+	}
+};
+
+class E{
+public:
+	E(){
+		auto it = this;
+	}
+};
+
+class C : public E{
+public:
+	C(){
+		auto it = this;
+		//c();
+	}
+	//virtual void c(){
+		//this->d();
+	//}
+	//virtual void d(){
+	//	printf("5");
+	//}
+};
+
+
+
+class B : public C, public D{
+public:
+	B(){
+		auto it = this;
+		a();
+		//c();
+	}
+	virtual void b(){
+		printf("4");
+	}
+	virtual void d(){
+		printf("6");
+	}
+};

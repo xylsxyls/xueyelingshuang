@@ -14,26 +14,26 @@
 3.然后在工程内群替换..proj..到类名，.h文件名也换成类名API
 4.在类前加上“类名API”宏
 5.debug
-在工程输出目录里写$(ProjectDir)\..\..\..\..\lib\
-中间目录$(ProjectDir)\Debug\
+在工程输出目录里写$(ProjectDir)..\..\..\..\lib\
+中间目录$(ProjectDir)Debug\
 目标$(ProjectName)d
 支持xp
 多字节字符集
 看情况 在共享 DLL 中使用 MFC
 如果需要依赖其他dll
-附加包含目录$(ProjectDir)\..\..\..\..\include\
-附加库目录$(ProjectDir)\..\..\..\..\lib\
+附加包含目录$(ProjectDir)..\..\..\..\include\
+附加库目录$(ProjectDir)..\..\..\..\lib\
 
 6.release
-在工程输出目录里写$(ProjectDir)\..\..\..\..\lib\
-中间目录$(ProjectDir)\Release\
+在工程输出目录里写$(ProjectDir)..\..\..\..\lib\
+中间目录$(ProjectDir)Release\
 目标$(ProjectName)
 支持xp
 多字节字符集
 看情况 在共享 DLL 中使用 MFC
 如果需要依赖其他dll
-附加包含目录$(ProjectDir)\..\..\..\..\include\
-附加库目录$(ProjectDir)\..\..\..\..\lib\
+附加包含目录$(ProjectDir)..\..\..\..\include\
+附加库目录$(ProjectDir)..\..\..\..\lib\
 
 7.把python拷贝到工程scripts下，并把文件名中..proj..换成本工程类名
 8.把python中..proj..群替换成本工程类名

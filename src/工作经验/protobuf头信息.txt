@@ -1,0 +1,4 @@
+NetProtoMessage netIHear;
+			netIHear.setValue("1", "");
+			string strMsg;
+			ProtoMsgUtility::makeMessage(strMsg, netIHear, PROTOID_I_HEARED_FROM_TRADE, 0, 0);

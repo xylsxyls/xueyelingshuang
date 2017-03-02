@@ -1,0 +1,10 @@
+在客户端的onConnected中写上自己的登陆信息，然后服务端根据登陆情况发保存sessionID来发消息
+
+服务端
+
+else if (protoId == PROTOID_TRADE_SERVER_LOGIN){
+			*(this->TradeSessionId_) = sessionId;
+			string strMsgRsp;
+			MsgConverter::makeMessage(strMsgRsp, PROTOID_TRADE_SERVER_LOGINED);
+			GetNetServerManager(port)->send(strMsgRsp, sessionId);
+		}

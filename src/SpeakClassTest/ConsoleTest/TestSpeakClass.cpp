@@ -1,5 +1,4 @@
 #include "TestSpeakClass.h"
-#include "CStringManager/CStringManagerAPI.h"
 
 TestSpeakClass::TestSpeakClass(){
 	x = 1;
