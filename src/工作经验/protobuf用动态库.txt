@@ -1,0 +1,2 @@
+需要加上宏
+PROTOBUF_USE_DLLS
