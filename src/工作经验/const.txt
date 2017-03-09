@@ -1,0 +1,7 @@
+去const
+const int* x;
+const_cast<int*>(x)
+
+const int x;
+static_cast<int>x;
+直接强转也行

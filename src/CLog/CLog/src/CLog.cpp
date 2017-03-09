@@ -5,22 +5,38 @@
 #include <thread>
 #include <sys/stat.h>
 #include <fstream>
+#include <tchar.h>
+
+CLog* logThis = NULL;
+
+int CLog::PrivateCreateLogApi(int loglevel, const string& moduleName, int sizekb){
+	if (logThis == NULL) logThis = new CLog(loglevel, moduleName, sizekb);
+	return (int)logThis;
+}
+
+string wstring2string(const wstring& wstr){
+	string result;
+	//?获取缓冲区大小，并申请空间，缓冲区大小事按字节计算的
+	int len = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), wstr.size(), NULL, 0, NULL, NULL);
+	char* buffer = new char[len + 1];
+	//?宽字节编码转换成多字节编码
+	WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), wstr.size(), buffer, len, NULL, NULL);
+	buffer[len] = '\0';
+	//?删除缓冲区并返回值
+	result.append(buffer);
+	delete[] buffer;
+	return result;
+}
 
 CLog::CLog(int loglevel, const string& moduleName, int sizekb){
-	this->loglevel = loglevel;
-	this->sizekb = sizekb;
-#ifdef _UNICODE
-	CreateDirectory(L"log", NULL);
-#else
-	CreateDirectory("log", NULL);
-#endif
-	fileName = moduleName;
-	if (sizekb == -1) fileNumber = -1;
-	else fileNumber = 1;
+	SaveLogLevel(loglevel);
+	SaveModuleName(moduleName);
+	SaveSizekb(sizekb);
 	string strPath = ChooseLogFile();
 	log = new ofstream(strPath, ios::app);
 	*((ofstream*)log) << "[" + IntDateTime().timeToString() + "] begin" << endl;
-	delete (ofstream*)log;
+	strPathPre = strPath;
+	//delete (ofstream*)log;
 }
 
 CLog::CLog(const string& logPath, int loglevel){
@@ -31,7 +47,38 @@ CLog::CLog(const string& logPath, int loglevel){
 	fileNumber = -1;
 	log = new ofstream(filePath, ios::app);
 	*((ofstream*)log) << "[" + IntDateTime().timeToString() + "] begin" << endl;
-	delete (ofstream*)log;
+	//delete (ofstream*)log;
+}
+
+void CLog::SaveLogLevel(int loglevel){
+	this->loglevel = loglevel;
+}
+
+void CLog::SaveModuleName(const string& moduleName){
+#ifdef _UNICODE
+	CreateDirectory(L"log", NULL);
+#else
+	CreateDirectory("log", NULL);
+#endif
+	if (moduleName == ""){
+		string temp = "";
+		TCHAR szFilePath[MAX_PATH + 1] = {};
+		GetModuleFileName(NULL, szFilePath, MAX_PATH);
+#ifdef _UNICODE
+		temp = wstring2string(wstring(szFilePath));
+#else
+		temp = szFilePath;
+#endif
+		int nTemp = temp.find_last_of("/\\");
+		fileName = temp.substr(nTemp + 1, temp.length() - nTemp - 1);
+	}
+	else fileName = moduleName;
+}
+
+void CLog::SaveSizekb(int sizekb){
+	this->sizekb = sizekb;
+	if (sizekb == -1) fileNumber = -1;
+	else fileNumber = 1;
 }
 
 string CLog::ChooseLogFile(){
@@ -41,21 +88,17 @@ string CLog::ChooseLogFile(){
 		//?说明不限制大小
 		if (sizekb == -1){
 			string strPath;
-			IntDateTime currentTime;
 			string date;
-			CStringManager::Format(date, "%d", currentTime.getDate());
+			CStringManager::Format(date, "%d", IntDateTime().getDate());
 			CStringManager::Format(strPath, "%s.log", ("log/" + fileName + date).c_str());
 			return strPath;
 		}
 		else{
 			string strPath;
-			mutex.lock();
 			int fileNumberTemp = fileNumber;
-			mutex.unlock();
 			while (true){
-				IntDateTime currentTime;
 				string date;
-				CStringManager::Format(date, "%d", currentTime.getDate());
+				CStringManager::Format(date, "%d", IntDateTime().getDate());
 				CStringManager::Format(strPath, "%s%d.log", ("log/" + fileName + date + "_").c_str(), fileNumberTemp);
 				long fileSize;
 				struct stat stat_buf;
@@ -64,17 +107,27 @@ string CLog::ChooseLogFile(){
 				if (fileSize > sizekb * 1024) fileNumberTemp++;
 				else break;
 			}
-			mutex.lock();
 			fileNumber = fileNumberTemp;
-			mutex.unlock();
 			return strPath;
 		}
 	}
 }
 
+void CLog::CheckAndChangeLogFile(const string& strPath){
+	if (strPath == strPathPre) return;
+	else{
+		delete (ofstream*)log;
+		log = new ofstream(strPath, ios::app);
+		strPathPre = strPath;
+	}
+}
+
 void CLog::Print(logLevel logFlag, const string& fileMacro, int lineMacro, const char* format, ...){
 	string strPath = ChooseLogFile();
-	if ((loglevel & logFlag) == 0) return;
+	mutex.lock();
+	CheckAndChangeLogFile(strPath);
+	mutex.unlock();
+	if ((this->loglevel & logFlag) == 0) return;
 	string strFlag;
 	if (logFlag == INFO) strFlag = " INFO";
 	if (logFlag == DBG) strFlag = "DEBUG";
@@ -90,13 +143,12 @@ void CLog::Print(logLevel logFlag, const string& fileMacro, int lineMacro, const
 	//?即便分配了足够内存，长度必须加1，否则会崩溃
 	vsprintf_s(&str[0], size + 1, format, args);
 	va_end(args);
-	mutex.lock();
-	log = new ofstream(strPath, ios::app);
-	int nRight = fileMacro.find_last_of("/\\");
 	string fileMacroTemp;
+	int nRight = fileMacro.find_last_of("/\\");
 	fileMacroTemp = CStringManager::Mid(fileMacro, nRight + 1, fileMacro.length() - nRight - 1);
+	mutex.lock();
 	//?这里str就是要打印的日志
 	*((ofstream*)log) << "[" + IntDateTime().timeToString() + "][" + strFlag + "][ThreadID:" << std::this_thread::get_id() << "][" << fileMacroTemp << "][" << lineMacro << "] : " << str << endl;
-	delete (ofstream*)log;
 	mutex.unlock();
+	this;
 }

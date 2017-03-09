@@ -1,1 +1,8 @@
 使用Unicode之后CString里的getbuff只能返回首个值
+
+不能已str.GetBuffer();作为返回值，在CString析构之后申请的内存会被释放，string也一样
+
+while(1){
+	str.GetBuffer();
+}
+不会出现内存泄漏

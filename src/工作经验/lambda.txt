@@ -1,0 +1,4 @@
+thread thread([参数](){
+	函数();
+});
+如果thread会立刻释放掉那么需要在后面写thread.detach();

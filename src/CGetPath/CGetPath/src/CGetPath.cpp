@@ -24,10 +24,10 @@ string CGetPath::GetRegOcxPath(string classid){
 
 string CGetPath::GetCurrentExePath(){
 	string temp = "",result = "";
-	TCHAR szFilePath[MAX_PATH + 1] = {};
+	char szFilePath[MAX_PATH + 1] = {};
 	GetModuleFileName(NULL, szFilePath, MAX_PATH);
 	temp = szFilePath;
-	result = temp.substr(temp.find_last_of('\\') + 1);
+	result = temp.substr(temp.find_last_of("/\\") + 1);
 	return result;
 }
 
