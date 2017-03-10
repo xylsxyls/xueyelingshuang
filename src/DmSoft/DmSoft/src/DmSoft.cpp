@@ -5,7 +5,7 @@
 Cdmsoft dmSoft;
 DmSoft dmsoft;
 DmSoft::DmSoft(){
-	WinExec("regsvr32 dm.dll", SW_HIDE);
+	WinExec("regsvr32 /s dm.dll", SW_HIDE);
 	//?зЂВс
 	CoInitialize(NULL);
 	CLSID clsid;

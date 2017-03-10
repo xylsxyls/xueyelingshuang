@@ -15,27 +15,27 @@ public:
 public:
 	CRandom();
 	//?从以下数中随机产生一个数
-	int RandomInt(const vector<int>& vecInt);
+	static int Int(const vector<int>& vecInt);
 	//?从以下范围中产生一个随机数，包含头尾，产生不出返回-1，范围上限21亿
-	int RandomInt(int min, int max);
+	static int Int(int min, int max);
 	//?从以下数中产生一个随机小数
-	double RandomDouble(const vector<double>& vecDouble);
+	static double Double(const vector<double>& vecDouble);
 	//?产生一个浮点数，传入的小数最多六位，最后一个传小数位，包含头尾，产生不出则返回-1
-	double RandomDouble(double min, double max, int decimal);
+	static double Double(double min, double max, int decimal);
 	//?随机选出一个字符串
-	string RandomString(const vector<string>& vecString);
+	static string String(const vector<string>& vecString);
 	//?从所有字符中随机出一串，默认生成字符串中含0
-	string RandomString(int nMin, int nMax, bool ifHasZero = true);
+	static string String(int nMin, int nMax, bool ifHasZero = true);
 	//?产生一个随机字符串，最小长度，最大长度，字符串中可能出现的字符，如果不传则为任何字符
-	string RandomString(int nMin, int nMax, const vector<char>& vecCharacter);
+	static string String(int nMin, int nMax, const vector<char>& vecCharacter);
 	//?产生一个字符串，用|符号来合并可能出现的字符，见enum
-	string RandomString(int nMin, int nMax, int enumFlag);
+	static string String(int nMin, int nMax, int enumFlag);
 
 private:
-	string toBit(unsigned int number);
-	unsigned int toUnsignedInt(const string& bit);
-	int GetBigBit(const string& bit1, const string& bit2);
-	int GetSmallBit(const string& bit1, const string& bit2);
-	string RandomBitString(int nBit);
-	unsigned int Rand();
+	static string toBit(unsigned int number);
+	static unsigned int toUnsignedInt(const string& bit);
+	static int GetBigBit(const string& bit1, const string& bit2);
+	static int GetSmallBit(const string& bit1, const string& bit2);
+	static string RandomBitString(int nBit);
+	static unsigned int Rand();
 };

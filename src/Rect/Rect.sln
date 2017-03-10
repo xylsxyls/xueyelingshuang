@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CMouse", "CMouse\vcxproj\CMouse.vcxproj", "{6E6B086A-09E3-4C3F-8764-EA9333C6734C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rect", "Rect\vcxproj\Rect.vcxproj", "{246A413B-22CA-4AE3-89AA-90731C5FBAFC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +11,10 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6E6B086A-09E3-4C3F-8764-EA9333C6734C}.Debug|Win32.ActiveCfg = Debug|Win32
-		{6E6B086A-09E3-4C3F-8764-EA9333C6734C}.Debug|Win32.Build.0 = Debug|Win32
-		{6E6B086A-09E3-4C3F-8764-EA9333C6734C}.Release|Win32.ActiveCfg = Release|Win32
-		{6E6B086A-09E3-4C3F-8764-EA9333C6734C}.Release|Win32.Build.0 = Release|Win32
+		{246A413B-22CA-4AE3-89AA-90731C5FBAFC}.Debug|Win32.ActiveCfg = Debug|Win32
+		{246A413B-22CA-4AE3-89AA-90731C5FBAFC}.Debug|Win32.Build.0 = Debug|Win32
+		{246A413B-22CA-4AE3-89AA-90731C5FBAFC}.Release|Win32.ActiveCfg = Release|Win32
+		{246A413B-22CA-4AE3-89AA-90731C5FBAFC}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

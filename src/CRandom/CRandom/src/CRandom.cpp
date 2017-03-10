@@ -5,24 +5,23 @@ CRandom::CRandom(){
 	srand(GetTickCount());
 }
 
-int CRandom::RandomInt(const vector<int>& vecInt){
-	CRandom random;
-	return vecInt.at(random.Rand() % vecInt.size());
+int CRandom::Int(const vector<int>& vecInt){
+	return vecInt.at(Rand() % vecInt.size());
 }
 
-int CRandom::RandomInt(int min, int max){
+int CRandom::Int(int min, int max){
 	if (max - min < 0) return -1;
 	return Rand() % (max - min + 1) + min;
 }
 
-double CRandom::RandomDouble(const vector<double>& vecDouble){
+double CRandom::Double(const vector<double>& vecDouble){
 	CRandom random;
 	return vecDouble.at(random.Rand() % vecDouble.size());
 }
 
-double CRandom::RandomDouble(double min, double max, int decimal){
+double CRandom::Double(double min, double max, int decimal){
 	if (decimal > 6 || max < min) return -1;
-	int integer = RandomInt((int)min, (int)max);
+	int integer = Int((int)min, (int)max);
 	double minDecimal = min - (int)min;
 	int minDecimalInt = (int)(minDecimal * 1000000);
 	double maxDecimal = max - (int)max;
@@ -37,7 +36,7 @@ double CRandom::RandomDouble(double min, double max, int decimal){
 		maxRandomDecimal = maxDecimalInt;
 	}
 	//?最终的随机小数
-	int randomDecimal = RandomInt(minRandomDecimal, maxRandomDecimal);
+	int randomDecimal = Int(minRandomDecimal, maxRandomDecimal);
 	if (decimal == 5) randomDecimal = randomDecimal / 10;
 	else if (decimal == 4) randomDecimal = randomDecimal / 100;
 	else if (decimal == 3) randomDecimal = randomDecimal / 1000;
@@ -53,11 +52,11 @@ double CRandom::RandomDouble(double min, double max, int decimal){
 	return result;
 }
 
-string CRandom::RandomString(const vector<string>& vecString){
+string CRandom::String(const vector<string>& vecString){
 	return vecString.at(Rand() % vecString.size());
 }
 
-string CRandom::RandomString(int nMin, int nMax, bool ifHasZero){
+string CRandom::String(int nMin, int nMax, bool ifHasZero){
 	if (nMin < 0 || nMax < 0 || nMax - nMin < 0) return "";
 	vector<char> vecCharacter;
 	char i = -128;
@@ -66,10 +65,10 @@ string CRandom::RandomString(int nMin, int nMax, bool ifHasZero){
 		vecCharacter.push_back(i);
 	}
 	vecCharacter.push_back(-128);
-	return RandomString(nMin, nMax, vecCharacter);
+	return String(nMin, nMax, vecCharacter);
 }
 
-string CRandom::RandomString(int nMin, int nMax, const vector<char>& vecCharacter){
+string CRandom::String(int nMin, int nMax, const vector<char>& vecCharacter){
 	if (nMin < 0 || nMax < 0 || nMax - nMin < 0) return "";
 
 	CRandom random;
@@ -84,7 +83,7 @@ string CRandom::RandomString(int nMin, int nMax, const vector<char>& vecCharacte
 	return strResult;
 }
 
-string CRandom::RandomString(int nMin, int nMax, int enumFlag){
+string CRandom::String(int nMin, int nMax, int enumFlag){
 	vector<char> vecChar;
 	//?说明有小写参与
 	if ((enumFlag & 0x00000001) == 0x00000001){
@@ -108,7 +107,7 @@ string CRandom::RandomString(int nMin, int nMax, int enumFlag){
 	if ((enumFlag & 0x00001000) == 0x00001000){
 		vecChar.push_back(48);
 	}
-	string strResult = RandomString(nMin, nMax, vecChar);
+	string strResult = String(nMin, nMax, vecChar);
 	if ((enumFlag & 0x00010000) == 0x00010000){
 		for (auto itvec = vecChar.begin(); itvec != vecChar.end(); itvec++){
 			if (*itvec == 48){
@@ -116,7 +115,7 @@ string CRandom::RandomString(int nMin, int nMax, int enumFlag){
 				break;
 			}
 		}
-		strResult[0] = RandomString(1, 1, vecChar)[0];
+		strResult[0] = String(1, 1, vecChar)[0];
 	}
 	return strResult;
 }
