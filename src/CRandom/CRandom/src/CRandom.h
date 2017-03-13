@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include "CRandomMacro.h"
 using namespace std;
 
@@ -13,7 +14,6 @@ public:
 		firstNoZero = 0x00010000
 	};
 public:
-	CRandom();
 	//?从以下数中随机产生一个数
 	static int Int(const vector<int>& vecInt);
 	//?从以下范围中产生一个随机数，包含头尾，产生不出返回-1，范围上限21亿
@@ -30,6 +30,10 @@ public:
 	static string String(int nMin, int nMax, const vector<char>& vecCharacter);
 	//?产生一个字符串，用|符号来合并可能出现的字符，见enum
 	static string String(int nMin, int nMax, int enumFlag);
+	//?发牌
+	static vector<string> Deal(const map<string, int>& mapCard);
+	//?散列
+	static vector<int> Hash(int hashNumber, int size);
 
 private:
 	static string toBit(unsigned int number);

@@ -4,7 +4,19 @@ set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 
 ::如果需要获取依赖dll-----------------------------------------------------------
-call %xueyelingshuang%src\..relyproj..\version_release.bat
+call %xueyelingshuang%src\DmSoft\version_release.bat
+
+::call完之后都需要重新set
+set bat=%~dp0
+set xueyelingshuang=%bat%..\..\
+::如果需要获取依赖dll-----------------------------------------------------------
+call %xueyelingshuang%src\CRandom\version_release.bat
+
+::call完之后都需要重新set
+set bat=%~dp0
+set xueyelingshuang=%bat%..\..\
+::如果需要获取依赖dll-----------------------------------------------------------
+call %xueyelingshuang%src\Rect\version_release.bat
 
 ::call完之后都需要重新set
 set bat=%~dp0

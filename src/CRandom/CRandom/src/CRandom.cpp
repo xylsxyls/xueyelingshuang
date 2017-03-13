@@ -1,9 +1,14 @@
 #include "CRandom.h"
 #include <windows.h>
 
-CRandom::CRandom(){
-	srand(GetTickCount());
-}
+class CRandomInit{
+public:
+	CRandomInit(){
+		srand(GetTickCount());
+	}
+};
+
+CRandomInit init;
 
 int CRandom::Int(const vector<int>& vecInt){
 	return vecInt.at(Rand() % vecInt.size());
@@ -15,8 +20,7 @@ int CRandom::Int(int min, int max){
 }
 
 double CRandom::Double(const vector<double>& vecDouble){
-	CRandom random;
-	return vecDouble.at(random.Rand() % vecDouble.size());
+	return vecDouble.at(Rand() % vecDouble.size());
 }
 
 double CRandom::Double(double min, double max, int decimal){
@@ -71,14 +75,13 @@ string CRandom::String(int nMin, int nMax, bool ifHasZero){
 string CRandom::String(int nMin, int nMax, const vector<char>& vecCharacter){
 	if (nMin < 0 || nMax < 0 || nMax - nMin < 0) return "";
 
-	CRandom random;
-	int nLength = random.Rand() % (nMax - nMin + 1) + nMin;
+	int nLength = Rand() % (nMax - nMin + 1) + nMin;
 	int nSize = vecCharacter.size();
 	string strResult;
 	strResult.resize(nLength);
 	int i = -1;
 	while (i++ != nLength){
-		strResult[i] = vecCharacter.at(random.Rand() % nSize);
+		strResult[i] = vecCharacter.at(Rand() % nSize);
 	}
 	return strResult;
 }
@@ -118,6 +121,41 @@ string CRandom::String(int nMin, int nMax, int enumFlag){
 		strResult[0] = String(1, 1, vecChar)[0];
 	}
 	return strResult;
+}
+
+vector<string> CRandom::Deal(const map<string, int>& mapCard){
+	vector<string> vecResult;
+	vector<string> vecCard;
+	for (auto itmapCard = mapCard.begin(); itmapCard != mapCard.end(); itmapCard++){
+		int i = itmapCard->second;
+		while (i-- != 0){
+			vecCard.push_back(itmapCard->first);
+		}
+	}
+	int i = vecCard.size();
+	while (i-- != 0){
+		string card = String(vecCard);
+		vecResult.push_back(card);
+		for (auto itvecCard = vecCard.begin(); itvecCard != vecCard.end(); itvecCard++){
+			if (*itvecCard == card){
+				vecCard.erase(itvecCard);
+				break;
+			}
+		}
+	}
+	return vecResult;
+}
+
+vector<int> CRandom::Hash(int hashNumber, int size){
+	vector<int> vecResult;
+	int i = -1;
+	while (i++ != size - 1){
+		vecResult.push_back(0);
+	}
+	while (hashNumber-- != 0){
+		vecResult.at(Int(0, size - 1))++;
+	}
+	return vecResult;
 }
 
 string CRandom::toBit(unsigned int number){

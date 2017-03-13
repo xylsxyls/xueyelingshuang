@@ -1,11 +1,11 @@
 #pragma once
 #include <windows.h>
 #include <vector>
-#include "Point/PointAPI.h"
+#include "Rect/RectAPI.h"
 #include "CMouseMacro.h"
 using namespace std;
 
-class CMouse{
+class CMouseAPI CMouse{
 	//? sleepTime 0表示立刻到达， - 1表示随机时间，默认随机，单位是毫秒
 public:
 	//?按下鼠标左键
@@ -23,7 +23,7 @@ public:
 	//?单击右键
 	static bool RightClick(int sleepTime = -1);
 	//?单击中键
-	//?双击左键，间隔时间范围为100 - 500毫秒
+	//?双击左键，间隔时间范围为100 - 300毫秒
 	static bool LeftDoubleClick(int sleepTime1 = -1, int sleepTime2 = -1, int sleepTime3 = -1);
 	//?双击右键
 	static bool RightDoubleClick(int sleepTime1 = -1, int sleepTime2 = -1, int sleepTime3 = -1);
@@ -33,11 +33,11 @@ public:
 	//?多击右键
 	static bool RightManyClick(int times, vector<int> vecSleepTime = vector<int>());
 	//?多击中键
-	//?移动鼠标从点到点，绝对坐标，完成时间，有轨迹，范围为0 - 5秒钟的一种
-	static bool MoveAbsolute(Point point, int sleepTime = -1);
+	//?移动鼠标从点到点，绝对坐标，完成时间，有轨迹，范围为50 - 1000毫秒中的一种，如果有出入，实际完成时间大于预设完成时间
+	static bool MoveAbsolute(Rect rect, int sleepTime = -1);
 	//?移动鼠标从点到点，相对坐标，完成时间，有轨迹
-	static bool MoveOpposite(Point point, int sleepTime = -1);
-	//?鼠标中键向下滚动
+	static bool MoveOpposite(Rect rect, int sleepTime = -1);
+	//?鼠标中键向下滚动，滚动中键一格
 	static bool MidWheelDown();
 	//?鼠标中键向上滚动
 	static bool MidWheelUp();
