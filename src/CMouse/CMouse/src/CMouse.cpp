@@ -45,58 +45,49 @@ bool CMouse::RightClick(int sleepTime){
 	return result;
 }
 
-bool CMouse::LeftDoubleClick(int sleepTime1, int sleepTime2, int sleepTime3){
+bool CMouse::LeftDoubleClick(int sleepTime){
+	//?ªÒ»°…¢¡–
+	if (sleepTime == -1) sleepTime = CRandom::Int(ClickTimeMin, ClickTimeMax);
+	vector<int> vecSleepTime = CRandom::Hash(sleepTime, 3);
 	bool result = true;
-	result = result && LeftClick(sleepTime1);
-	if (sleepTime2 == -1) sleepTime2 = CRandom::Int(ClickTimeMin, ClickTimeMax);
-	Sleep(sleepTime2);
-	result = result && LeftClick(sleepTime3);
+	result = result && LeftClick(vecSleepTime.at(0));
+	Sleep(vecSleepTime.at(1));
+	result = result && LeftClick(vecSleepTime.at(2));
 	return result;
 }
 
-bool CMouse::RightDoubleClick(int sleepTime1, int sleepTime2, int sleepTime3){
+bool CMouse::RightDoubleClick(int sleepTime){
+	if (sleepTime == -1) sleepTime = CRandom::Int(ClickTimeMin, ClickTimeMax);
+	vector<int> vecSleepTime = CRandom::Hash(sleepTime, 3);
 	bool result = true;
-	result = result && RightClick(sleepTime1);
-	if (sleepTime2 == -1) sleepTime2 = CRandom::Int(ClickTimeMin, ClickTimeMax);
-	Sleep(sleepTime2);
-	result = result && RightClick(sleepTime3);
+	result = result && RightClick(vecSleepTime.at(0));
+	Sleep(vecSleepTime.at(1));
+	result = result && RightClick(vecSleepTime.at(2));
 	return result;
 }
 
-bool CMouse::LeftManyClick(int times, vector<int> vecSleepTime){
-	if (vecSleepTime.size() != 0 && times * 2 - 1 != vecSleepTime.size()) return false;
-	if (vecSleepTime.size() == 0){
-		int timesTemp = times * 2 - 1;
-		while (timesTemp-- != 0){
-			vecSleepTime.push_back(-1);
-		}
-	}
+bool CMouse::LeftManyClick(int times, int sleepTime){
+	if (sleepTime == -1) sleepTime = CRandom::Int(ClickTimeMin, ClickTimeMax);
+	vector<int> vecSleepTime = CRandom::Hash(sleepTime, times * 2 - 1);
 	bool result = true;
 	int i = -1;
 	while (i++ != vecSleepTime.size() - 2){
 		result = result && LeftClick(vecSleepTime.at(i));
 		i++;
-		if (vecSleepTime.at(i) == -1) vecSleepTime.at(i) = CRandom::Int(ClickTimeMin, ClickTimeMax);
 		Sleep(vecSleepTime.at(i));
 	}
 	result = result && LeftClick(vecSleepTime.at(i));
 	return result;
 }
 
-bool CMouse::RightManyClick(int times, vector<int> vecSleepTime){
-	if (vecSleepTime.size() != 0 && times * 2 - 1 != vecSleepTime.size()) return false;
-	if (vecSleepTime.size() == 0){
-		int timesTemp = times * 2 - 1;
-		while (timesTemp-- != 0){
-			vecSleepTime.push_back(-1);
-		}
-	}
+bool CMouse::RightManyClick(int times, int sleepTime){
+	if (sleepTime == -1) sleepTime = CRandom::Int(ClickTimeMin * (times * 2 - 1), ClickTimeMax * (times * 2 - 1));
+	vector<int> vecSleepTime = CRandom::Hash(sleepTime, times * 2 - 1);
 	bool result = true;
 	int i = -1;
 	while (i++ != vecSleepTime.size() - 2){
 		result = result && RightClick(vecSleepTime.at(i));
 		i++;
-		if (vecSleepTime.at(i) == -1) vecSleepTime.at(i) = CRandom::Int(ClickTimeMin, ClickTimeMax);
 		Sleep(vecSleepTime.at(i));
 	}
 	result = result && RightClick(vecSleepTime.at(i));
@@ -159,7 +150,7 @@ Point CMouse::GetCurrentPos(){
 int main(){
 	printf("1");
 	Sleep(2000);
-	bool xx = CMouse::MidWheelDown();
+	bool xx = CMouse::LeftManyClick(3);
 	printf("%d",xx);
 	getchar();
 	int x = 3;

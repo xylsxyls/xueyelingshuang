@@ -80,11 +80,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="1.h" />
     <ClInclude Include="ConsoleTest.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="1.cpp" />
     <ClCompile Include="ConsoleTest.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

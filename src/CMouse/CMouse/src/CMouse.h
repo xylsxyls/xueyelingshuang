@@ -18,20 +18,20 @@ public:
 	//?弹起鼠标右键
 	static bool RightUp();
 	//?弹起鼠标中键
-	//?单击左键，随机范围100-500毫秒
+	//?单击左键，随机范围100-300毫秒
 	static bool LeftClick(int sleepTime = -1);
 	//?单击右键
 	static bool RightClick(int sleepTime = -1);
 	//?单击中键
 	//?双击左键，间隔时间范围为100 - 300毫秒
-	static bool LeftDoubleClick(int sleepTime1 = -1, int sleepTime2 = -1, int sleepTime3 = -1);
+	static bool LeftDoubleClick(int sleepTime = -1);
 	//?双击右键
-	static bool RightDoubleClick(int sleepTime1 = -1, int sleepTime2 = -1, int sleepTime3 = -1);
+	static bool RightDoubleClick(int sleepTime = -1);
 	//?双击中键
 	//?多击左键
-	static bool LeftManyClick(int times, vector<int> vecSleepTime = vector<int>());
+	static bool LeftManyClick(int times, int sleepTime = -1);
 	//?多击右键
-	static bool RightManyClick(int times, vector<int> vecSleepTime = vector<int>());
+	static bool RightManyClick(int times, int sleepTime = -1);
 	//?多击中键
 	//?移动鼠标从点到点，绝对坐标，完成时间，有轨迹，范围为50 - 1000毫秒中的一种，如果有出入，实际完成时间大于预设完成时间
 	static bool MoveAbsolute(Rect rect, int sleepTime = -1);
