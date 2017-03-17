@@ -1,0 +1,6 @@
+auto itlist = list.end();
+	while (true){
+		itlist--;
+		printf("%d", *itlist);
+		if (itlist == list.begin()) break;
+	}
