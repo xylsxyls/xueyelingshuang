@@ -1,5 +1,6 @@
 #include "CSystem.h"
 #include <thread>
+#include <objbase.h>
 
 double CSystem::GetCPUSpeedGHz(){
 	//?先是存放计时次数，后存放固定时间间隔值
@@ -123,6 +124,21 @@ int CSystem::GetVisibleHeight(){
 void CSystem::Sleep(long long milliseconds){
 	std::chrono::milliseconds dura(milliseconds);
 	std::this_thread::sleep_for(dura);
+}
+
+string CSystem::uuid(int flag){
+	char buffer[64] = { 0 };
+	GUID guid;
+	if (CoCreateGuid(&guid)) return "";
+	string strFormat = "%08X-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X";
+	if (flag == 0) strFormat = "%08X%04X%04x%02X%02X%02X%02X%02X%02X%02X%02X";
+	_snprintf(buffer, sizeof(buffer),
+		strFormat.c_str(),
+		guid.Data1, guid.Data2, guid.Data3,
+		guid.Data4[0], guid.Data4[1], guid.Data4[2],
+		guid.Data4[3], guid.Data4[4], guid.Data4[5],
+		guid.Data4[6], guid.Data4[7]);
+	return buffer;
 }
 
 /*

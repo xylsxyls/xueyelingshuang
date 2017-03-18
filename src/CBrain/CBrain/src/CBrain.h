@@ -8,19 +8,29 @@
 #include "CTask/CTaskAPI.h"
 using namespace std;
 
-class CBrain{
+class CBrainAPI CBrain{
 public:
 	enum{
 		RUN,
 		SUSPEND,
 		END
 	};
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
 	map<int, atomic<bool>> ctrl;
 	map<int, list<CTask>> mapTask;
 	list<CTask> listTaskBack;
 	mutex mutex;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	
 	thread* workThread;
 	thread* backThread;
+	int currentLevel;
 	CTask currentTask;
 public:
 	CBrain();
@@ -32,12 +42,24 @@ public:
 	void Run();
 	//?暂停执行任务
 	void SuspendRun();
+	//?恢复执行任务
+	void RecoveryRun();
 	//?结束执行任务
 	void EndRun();
 	//?工作线程
 	void ThreadWork();
 	//?后台线程
 	void ThreadBack();
+	//?删除前台执行，函数内部无锁
+	void DeleteTask(const CTask& task);
+	//?删除后台监测，函数内部无锁
+	void DeleteBack(const CTask& task);
+	//?取出最高优先级的任务，并将当前任务移动至当前优先级的队尾
+	void GetCurrentTask();
+	//?把任务添加进后台检测列表
+	void AddBack(const CTask& task);
+	//?移动到队尾
+	void MoveToEnd(const CTask& task);
 	//?执行任务，等待时间
 	//?暂停任务，等待时间
 	//?终止任务，等待时间

@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
+#include <string>
 #include "CSystemMacro.h"
+using namespace std;
 
 class CSystemAPI CSystem{
 public:
@@ -14,4 +16,7 @@ public:
 	static int GetVisibleHeight();
 	//?跨平台Sleep，毫秒
 	static void Sleep(long long milliseconds);
+	//?生成UUID，传入1表示带-，传0表示不带
+	static string uuid(int flag = 1);
+
 };
