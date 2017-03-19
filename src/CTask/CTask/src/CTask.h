@@ -12,7 +12,8 @@ public:
 		INITSUCCESS = 1,
 		RUNSUCCESS = 1,
 		RUNBACK = 0,
-		RUNSUSPEND = 2
+		RUNSUSPEND = 2,
+		NOEXCEPTION = 0
 	};
 public:
 #ifdef _MSC_VER

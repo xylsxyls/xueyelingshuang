@@ -13,6 +13,7 @@ public:
 	enum{
 		RUN,
 		SUSPEND,
+		SUSPENDED,
 		END
 	};
 

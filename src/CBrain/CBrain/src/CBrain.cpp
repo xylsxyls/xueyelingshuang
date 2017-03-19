@@ -27,6 +27,8 @@ void CBrain::SuspendRun(){
 	currentTask.SuspendRun();
 	//?暂停
 	ctrl[SUSPEND] = true;
+	//?阻塞等待当前任务的节点结束
+	while (ctrl[SUSPENDED] == false) Sleep(1);
 }
 
 void CBrain::RecoveryRun(){
@@ -40,7 +42,11 @@ void CBrain::EndRun(){
 void CBrain::ThreadWork(){
 	while (ctrl[RUN] == false) Sleep(1);
 	while (ctrl[END] == false){
-		while (ctrl[SUSPEND] == true) Sleep(1);
+		while (ctrl[SUSPEND] == true){
+			ctrl[SUSPENDED] = true;
+			Sleep(1);
+		}
+		ctrl[SUSPENDED] = false;
 		Sleep(1);
 		//?首先获取最优先任务到成员变量currentTask中
 		GetCurrentTask();
@@ -82,7 +88,13 @@ void CBrain::ThreadBack(){
 		mutex.lock();
 		for (auto itlistTaskBack = listTaskBack.begin(); itlistTaskBack != listTaskBack.end(); itlistTaskBack++){
 			if (itlistTaskBack->ifExceptionRun == true){
-				itlistTaskBack->ExceptionRun(itlistTaskBack->CheckException());
+				int exceptionResult = itlistTaskBack->CheckException();
+				if (exceptionResult != CTask::NOEXCEPTION){
+					//?发现异常之后先暂停当前任务
+					SuspendRun();
+					itlistTaskBack->ExceptionRun(exceptionResult);
+					RecoveryRun();
+				}
 			}
 		}
 		mutex.unlock();
