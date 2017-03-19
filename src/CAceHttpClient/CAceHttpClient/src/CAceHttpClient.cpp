@@ -134,8 +134,8 @@ int CAceHttpClient::SendJsonReq(Cjson jsonReq,CString strProtocol,Cjson jsonChec
 	CHttpString strSendString;
 	strSendString.InitClient(strIP,port,DataStyle,nCharset);
 	strSendString.ProtocolStyle(strProtocol,1);
-	if(nCharset == 1) strSendString.SetData(jsonReq.toCString("",""));
-	else if(nCharset == 2) strSendString.SetData(CCharset::AnsiToUtf8((LPSTR)(LPCTSTR)jsonReq.toCString("","")).c_str());
+	if(nCharset == 1) strSendString.SetData(jsonReq.tostring("","").c_str());
+	else if(nCharset == 2) strSendString.SetData(CCharset::AnsiToUtf8(jsonReq.tostring("","")).c_str());
 	int nResult = ppeer->send((LPSTR)(LPCTSTR)strSendString.str,strSendString.str.GetLength()); //发送数据
 
 	//线程参数

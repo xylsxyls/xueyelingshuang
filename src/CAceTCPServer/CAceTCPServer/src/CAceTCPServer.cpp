@@ -207,7 +207,7 @@ int CAceTCPServer::SendReqJson(Cjson jsonReq,int MsgID,ACE_SOCK_Stream* ppeer,Cj
 	ppackage->pThis = this;
 	pWatch->CountDown(nDeleteTime * 1000,ppackage);
 	//发送
-	CString strSendJson = jsonReq.toCString("","");
+	CString strSendJson = jsonReq.tostring("","").c_str();
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据
 }
 
@@ -221,7 +221,7 @@ int CAceTCPServer::SendRspJson(Cjson jsonRsp,int MsgID,int CheckKeyClient,ACE_SO
 	//如果客户端回复发包
 	jsonRsp["CheckKeyClient"] = CheckKeyClient;
 	//发送回复包
-	CString strSendJson = jsonRsp.toCString("","");
+	CString strSendJson = jsonRsp.tostring("","").c_str();
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据
 }
 

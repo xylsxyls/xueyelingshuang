@@ -6,19 +6,19 @@ xcopy /y /i /r /s "%xueyelingshuang%tools\ACE_wrappers\ace\*"      "%xueyelingsh
 xcopy /y /i /r /s "%xueyelingshuang%tools\ACE_wrappers\lib\vc11\*" "%xueyelingshuang%lib\"
 
 ::如果需要获取依赖dll-----------------------------------------------------------
-call %xueyelingshuang%src\Cjson\version_debug.bat
+call "%xueyelingshuang%src\Cjson\version_debug.bat"
 
 ::call完之后都需要重新set
 set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 ::如果需要获取依赖dll-----------------------------------------------------------
-call %xueyelingshuang%src\CStopWatch\version_debug.bat
+call "%xueyelingshuang%src\CStopWatch\version_debug.bat"
 
 ::call完之后都需要重新set
 set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 ::如果需要获取依赖dll-----------------------------------------------------------
-call %xueyelingshuang%src\CCharset\version_debug.bat
+call "%xueyelingshuang%src\CCharset\version_debug.bat"
 
 ::call完之后都需要重新set
 set bat=%~dp0
@@ -36,4 +36,12 @@ set xueyelingshuang=%bat%..\..\
 xcopy /y /i /r /s "%bat%CAceHttpClient\src\*.h"   "%xueyelingshuang%include\CAceHttpClient\"
 xcopy /y /i /r /s "%bat%CAceHttpClient\src\*.inl" "%xueyelingshuang%include\CAceHttpClient\"
 
+::删除临时文件
+del "%bat%@AutomationLog.txt"
+del "%bat%scripts\@AutomationLog.txt"
+del "%bat%scripts\msbuild.log"
+rmdir /q /s "%bat%CAceHttpClient\vcxproj\Debug\"
 
+::删除ilk，exp
+del "%xueyelingshuang%lib\CAceHttpClientd.ilk"
+del "%xueyelingshuang%lib\CAceHttpClientd.exp"

@@ -48,11 +48,9 @@ FunName::FunName(void **TempFunAddr,const char szTempFun[]){
 	this->TempFunAddr = TempFunAddr;
 	this->strTempFun = szTempFun;
 
-	CStringManager str = strTempFun;
-	str.ReplaceEvery("(","");
-	str.ReplaceEvery(")","");
-	str.ReplaceEvery(" ","");
-	this->strTempFun = str.strInside;
+	CStringManager::Replace(strTempFun, "(", "");
+	CStringManager::Replace(strTempFun, ")", "");
+	CStringManager::Replace(strTempFun, " ", "");
 	//strTempFun.Replace("(","");
 	//strTempFun.Replace(")","");
 	//strTempFun.Replace(" ","");

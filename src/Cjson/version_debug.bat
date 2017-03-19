@@ -2,7 +2,7 @@ set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 
 ::如果需要获取依赖dll-----------------------------------------------------------
-call %xueyelingshuang%src\CStringManager\version_debug.bat
+call "%xueyelingshuang%src\CStringManager\version_debug.bat"
 
 ::call完之后都需要重新set
 set bat=%~dp0
@@ -20,4 +20,12 @@ set xueyelingshuang=%bat%..\..\
 xcopy /y /i /r /s "%bat%Cjson\src\*.h"   "%xueyelingshuang%include\Cjson\"
 xcopy /y /i /r /s "%bat%Cjson\src\*.inl" "%xueyelingshuang%include\Cjson\"
 
+::删除临时文件
+del "%bat%@AutomationLog.txt"
+del "%bat%scripts\@AutomationLog.txt"
+del "%bat%scripts\msbuild.log"
+rmdir /q /s "%bat%Cjson\vcxproj\Debug\"
 
+::删除ilk，exp
+del "%xueyelingshuang%lib\Cjsond.ilk"
+del "%xueyelingshuang%lib\Cjsond.exp"

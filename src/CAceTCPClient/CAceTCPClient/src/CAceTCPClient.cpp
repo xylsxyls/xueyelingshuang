@@ -158,7 +158,7 @@ int CAceTCPClient::SendJsonReq(Cjson jsonReq,int MsgID,Cjson jsonCheckPackage,in
 	ppackage->pThis = this;
 	pWatch->CountDown(nDeleteTime * 1000,ppackage);
 	//发送
-	CString strSendJson = jsonReq.toCString("","");
+	CString strSendJson = jsonReq.tostring("","").c_str();
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据
 }
 
@@ -172,7 +172,7 @@ int CAceTCPClient::SendJsonRsp(Cjson jsonRsp,int MsgID,int CheckKeyServer,int se
 	//如果客户端回复发包
 	jsonRsp["CheckKeyServer"] = CheckKeyServer;
 	//发送回复包
-	CString strSendJson = jsonRsp.toCString("","");
+	CString strSendJson = jsonRsp.tostring("","").c_str();
 	return ppeer->send((LPSTR)(LPCTSTR)strSendJson,strSendJson.GetLength()); //发送数据
 }
 

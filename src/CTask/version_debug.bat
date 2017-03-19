@@ -2,7 +2,7 @@ set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 
 ::如果需要获取依赖dll-----------------------------------------------------------
-call %xueyelingshuang%src\CSystem\version_debug.bat
+call "%xueyelingshuang%src\CSystem\version_debug.bat"
 
 ::call完之后都需要重新set
 set bat=%~dp0
@@ -20,4 +20,12 @@ set xueyelingshuang=%bat%..\..\
 xcopy /y /i /r /s "%bat%CTask\src\*.h"   "%xueyelingshuang%include\CTask\"
 xcopy /y /i /r /s "%bat%CTask\src\*.inl" "%xueyelingshuang%include\CTask\"
 
+::删除临时文件
+del "%bat%@AutomationLog.txt"
+del "%bat%scripts\@AutomationLog.txt"
+del "%bat%scripts\msbuild.log"
+rmdir /q /s "%bat%CTask\vcxproj\Debug\"
 
+::删除ilk，exp
+del "%xueyelingshuang%lib\CTaskd.ilk"
+del "%xueyelingshuang%lib\CTaskd.exp"

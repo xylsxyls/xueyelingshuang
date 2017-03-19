@@ -127,8 +127,8 @@ int CAceHttpServer::SendRspJson(Cjson jsonRsp,CString strProtocol,ACE_SOCK_Strea
 		//发送回复包
 		CHttpString strSendString;
 		strSendString.InitServer(1,DataStyle,nCharset);
-		if(nCharset == 1) strSendString.SetData(jsonRsp.toCString("",""));
-		else if(nCharset == 2) strSendString.SetData(CCharset::AnsiToUtf8((LPSTR)(LPCTSTR)jsonRsp.toCString("","")).c_str());
+		if(nCharset == 1) strSendString.SetData(jsonRsp.tostring("","").c_str());
+		else if(nCharset == 2) strSendString.SetData(CCharset::AnsiToUtf8(jsonRsp.tostring("","")).c_str());
 		return ppeer->send((LPSTR)(LPCTSTR)strSendString.str,strSendString.str.GetLength()); //发送数据
 	}
 	return -1;

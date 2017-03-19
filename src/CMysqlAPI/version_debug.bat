@@ -20,3 +20,13 @@ xcopy /y /i /r /s "%bat%CMysqlAPI\src\*.h" "%xueyelingshuang%include\CMysqlAPI\"
 xcopy /y /i /r /s "%bat%CMysqlAPI\src\*.inl" "%xueyelingshuang%include\CMysqlAPI\"
 
 xcopy /y /i /r /s "%bat%CMysqlAPI\props\*.props" "%xueyelingshuang%props\"
+
+::É¾³ýÁÙÊ±ÎÄ¼þ
+del "%bat%@AutomationLog.txt"
+del "%bat%scripts\@AutomationLog.txt"
+del "%bat%scripts\msbuild.log"
+rmdir /q /s "%bat%CMysqlAPI\vcxproj\Debug\"
+
+::É¾³ýilk£¬exp
+del "%xueyelingshuang%lib\CMysqlAPId.ilk"
+del "%xueyelingshuang%lib\CMysqlAPId.exp"

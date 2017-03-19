@@ -2,7 +2,7 @@ set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 
 ::如果需要获取依赖dll-----------------------------------------------------------
-call %xueyelingshuang%src\..relyproj..\version_debug.bat
+call "%xueyelingshuang%src\..relyproj..\version_debug.bat"
 
 ::call完之后都需要重新set
 set bat=%~dp0
@@ -20,4 +20,12 @@ set xueyelingshuang=%bat%..\..\
 xcopy /y /i /r /s "%bat%CSystem\src\*.h"   "%xueyelingshuang%include\CSystem\"
 xcopy /y /i /r /s "%bat%CSystem\src\*.inl" "%xueyelingshuang%include\CSystem\"
 
+::删除临时文件
+del "%bat%@AutomationLog.txt"
+del "%bat%scripts\@AutomationLog.txt"
+del "%bat%scripts\msbuild.log"
+rmdir /q /s "%bat%CSystem\vcxproj\Debug\"
 
+::删除ilk，exp
+del "%xueyelingshuang%lib\CSystemd.ilk"
+del "%xueyelingshuang%lib\CSystemd.exp"

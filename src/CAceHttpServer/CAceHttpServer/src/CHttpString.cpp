@@ -94,7 +94,7 @@ Cjson CHttpString::GetJsonData(){
 	int nLeft = str.Find("\r\n\r\n");
 	nLeft = nLeft + 4;
 	Cjson json;
-	json.LoadJson(str.Mid(nLeft,str.GetLength() - nLeft));
+	json.LoadJson((LPSTR)(LPCTSTR)str.Mid(nLeft,str.GetLength() - nLeft));
 	return json;
 }
 

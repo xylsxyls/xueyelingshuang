@@ -4,7 +4,7 @@ set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 
 ::如果需要获取依赖dll-----------------------------------------------------------
-call %xueyelingshuang%src\..relyproj..\version_release.bat
+call "%xueyelingshuang%src\..relyproj..\version_release.bat"
 
 ::call完之后都需要重新set
 set bat=%~dp0
@@ -21,3 +21,13 @@ set xueyelingshuang=%bat%..\..\
 ::向公共部分提供文件，有的时候可能没有inl文件
 xcopy /y /i /r /s "%bat%SpeakClass\src\*.h"   "%xueyelingshuang%include\SpeakClass\"
 xcopy /y /i /r /s "%bat%SpeakClass\src\*.inl" "%xueyelingshuang%include\SpeakClass\"
+
+::删除临时文件
+del "%bat%@AutomationLog.txt"
+del "%bat%scripts\@AutomationLog.txt"
+del "%bat%scripts\msbuild.log"
+rmdir /q /s "%bat%SpeakClass\vcxproj\Release\"
+
+::删除ilk，exp
+del "%xueyelingshuang%lib\SpeakClass.ilk"
+del "%xueyelingshuang%lib\SpeakClass.exp"
