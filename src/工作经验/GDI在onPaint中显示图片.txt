@@ -1,0 +1,16 @@
+在else{后写
+
+CPaintDC dc(this);  
+BITMAP bm;  
+CBitmap bmp;  
+bmp.LoadBitmap(IDB_BITMAP1);  
+CDC memdc;        
+memdc.CreateCompatibleDC(&dc);    //创建与显示DC相兼容的内存DC  
+bmp.GetBitmap(&bm);                       //填充BITMAP结构  
+CRect rectClient;  
+GetClientRect(&rectClient);  
+CBitmap *pOldBmp=memdc.SelectObject(&bmp);   //将选定的位图选入内存DC               
+dc.TransparentBlt(0,0,rectClient.Width(),rectClient.Height(),&memdc,0,0,bm.bmWidth,bm.bmHeight,SRCCOPY);  
+memdc.SelectObject(pOldBmp);  
+memdc.DeleteDC();  
+bmp.DeleteObject();

@@ -60,14 +60,30 @@ string CGetPath::GetFileFromWindow(){
 	return (LPSTR)(LPCTSTR)dlg.GetPathName();
 }
 
+#ifdef WTL
+std::string RCGetPath::GetFileFromWindow(HWND hwnd){
+    wchar_t* filter = L"image files (*.png)\0*.png\0All Files (*.*)\0*.*\0\0";
+    CFileDialog dlg(true, 0, 0, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST, filter, hwnd);
+    if (dlg.DoModal() == IDOK){
+        std::wstring ss = dlg.m_szFileName;
+        UnicodeToAnsi(ss);
+        return UnicodeToAnsi(ss);
+    }
+    else return "";
+}
+#endif
+
 void RecursionFindFile(string strPath,string FileStr,vector<string> *pPathVector,BOOL flag){
 	CFileFind finder;
-	BOOL IsVisit = finder.FindFile((strPath + "\\*.*").c_str()); //_T()的作用是使系统支持Unicode编码
+    //_T()的作用是使系统支持Unicode编码
+	BOOL IsVisit = finder.FindFile((strPath + "\\*.*").c_str());
 	//系统中有些文件无法访问，会使finder变成0，那么当进入下面的循环时就会报错，返回之后上层的finder还是有值的，所以直接返回就行
 	if(IsVisit == 0) return;
 
-	string          TempFileName   = ""; //当前寻找到的文件或文件夹名
-	BOOL            IfNeedKeepFind = 1 ; //判断是否把当前路径全部找完，自然退出while
+    //当前寻找到的文件或文件夹名
+	string TempFileName   = "";
+    //判断是否把当前路径全部找完，自然退出while
+	BOOL   IfNeedKeepFind = 1 ;
 
 	while(IfNeedKeepFind){
 		//如果是0说明已经全部找完，但是GetFileName();会返回倒数第二个找到的文件名，之后继续得到最后一个，但是FindNextFile();就一直返回0了
@@ -99,13 +115,16 @@ void RecursionFindFile(string strPath,string FileStr,vector<string> *pPathVector
 vector<string> CGetPath::FindFilePath(string FileStr,string strPath,BOOL flag){
 	if(strPath == ""){
 		char szPath[MAX_PATH] = {};
-		GetModuleFileName(NULL,szPath,MAX_PATH);//这里得到的是进程目录，末尾是exe
-		char *temp = _tcsrchr(szPath,'\\'); //从右向左数第一次出现指向'\\'的指针
+        //这里得到的是进程目录，末尾是exe
+		GetModuleFileName(NULL,szPath,MAX_PATH);
+        //从右向左数第一次出现指向'\\'的指针
+		char *temp = _tcsrchr(szPath,'\\');
 		memset(temp,0,50);
 		strPath = szPath;
 	}
 	vector<string> VecPath;
-	RecursionFindFile(strPath,FileStr,&VecPath,flag); //strPath为当前进程路径的上层目录
+    //strPath为当前进程路径的上层目录
+	RecursionFindFile(strPath,FileStr,&VecPath,flag);
 	return VecPath;
 }
 
@@ -115,7 +134,8 @@ vector<int> CGetPath::GetProcessID(string strProcessName){
 	mype.dwSize = sizeof(PROCESSENTRY32); 
 	BOOL mybRet;
 	//进行进程快照
-	myhProcess = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0); //TH32CS_SNAPPROCESS快照所有进程
+    //TH32CS_SNAPPROCESS快照所有进程
+	myhProcess = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0);
 	//开始进程查找
 	mybRet = Process32First(myhProcess,&mype);
 	vector<int> vec;

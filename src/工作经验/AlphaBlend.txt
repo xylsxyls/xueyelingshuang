@@ -1,0 +1,2 @@
+AlphaBlend只可以绘制带有透明图层的图片，不是32位的都不能绘制，所以所有FillSolidRect MoveTo LineTo等都不可以绘制，24位的图片也不能绘制
+如果要通用必须在最后的结构体中设置0，设置成0之后就等于BitBlt了

@@ -1,10 +1,10 @@
 #include "Rect.h"
 
 Rect::Rect(){
-	this->left = 0;
-	this->top = 0;
-	this->right = 0;
-	this->bottom = 0;
+	left = 0;
+	top = 0;
+	right = 0;
+	bottom = 0;
 }
 
 Rect::Rect(int left, int top, int right, int bottom){
@@ -14,11 +14,20 @@ Rect::Rect(int left, int top, int right, int bottom){
 	this->bottom = bottom;
 }
 
+#ifdef _WIN32
+Rect::Rect(const RECT& rect){
+    left = rect.left;
+    top = rect.top;
+    right = rect.right;
+    bottom = rect.bottom;
+}
+#endif
+
 Rect::Rect(const Point& point){
-	this->left = point.x;
-	this->top = point.y;
-	this->right = point.x;
-	this->bottom = point.y;
+	left = point.x;
+	top = point.y;
+	right = point.x;
+	bottom = point.y;
 }
 
 void Rect::SetRect(int left, int top, int right, int bottom){
@@ -50,3 +59,14 @@ bool Rect::isPoint(){
 bool Rect::isLine(){
 	return ((left == right) + (top == bottom)) == 1;
 }
+
+#ifdef _WIN32
+Rect::operator RECT(){
+    RECT rect;
+    rect.left = left;
+    rect.right = right;
+    rect.top = top;
+    rect.bottom = bottom;
+    return rect;
+}
+#endif
