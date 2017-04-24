@@ -18,6 +18,10 @@ string ColorCast::toString()const{
 	return RC + GC + BC;
 }
 
+Color::Color(){
+
+}
+
 Color::Color(const string& strColor){
 	//?说明没有传入偏色
 	if (CStringManager::Find(strColor, "-") == -1){
@@ -46,6 +50,10 @@ Color::Color(const string& strRGB, const string& strRCGCBC){
 
 string Color::toString()const{
 	return R + G + B + "-" + colorCast.RC + colorCast.GC + colorCast.BC;
+}
+
+string Color::toReserveString()const{
+	return B + G + R + "-" + colorCast.BC + colorCast.GC + colorCast.RC;
 }
 
 /*
@@ -99,31 +107,25 @@ bool CScreen::ComparePointColor(const Point& point, const vector<Color>& vecColo
 }
 
 bool CScreen::FindColor(const Rect& rect, const Color& color, int& x, int& y, double sim, int dir){
-	VARIANT vx;
-	VARIANT vy;
-	bool result = (DmSoft::FindColor(rect.left, rect.top, rect.right, rect.bottom, color.toString().c_str(), sim, dir, &vx, &vy) == 1);
-	if (result == true){
-		x = vx.intVal;
-		y = vy.intVal;
-	}
-	return result;
+	string result = DmSoft::FindColorE(rect.left, rect.top, rect.right, rect.bottom, color.toReserveString().c_str(), sim, dir);
+	x = atoi(result.substr(0, result.find("|")).c_str());
+	y = atoi(result.substr(result.find("|") + 1, result.length() - result.find("|") - 1).c_str());
+	if (x == -1 && y == -1) return false;
+	return true;
 }
 
 bool CScreen::FindColor(const Rect& rect, const vector<Color>& vecColor, int& x, int& y, double sim, int dir){
-	VARIANT vx;
-	VARIANT vy;
 	string strColor;
 	int i = -1;
 	while (i++ != (vecColor.size() > 10 ? 10 : vecColor.size()) - 1){
-		strColor = strColor + vecColor.at(i).toString() + "|";
+		strColor = strColor + vecColor.at(i).toReserveString() + "|";
 	}
 	CStringManager::Delete(strColor, strColor.length() - 1, 1);
-	bool result = (DmSoft::FindColor(rect.left, rect.top, rect.right, rect.bottom, strColor.c_str(), sim, dir, &vx, &vy) == 1);
-	if (result == true){
-		x = vx.intVal;
-		y = vy.intVal;
-	}
-	return result;
+	string result = DmSoft::FindColorE(rect.left, rect.top, rect.right, rect.bottom, strColor.c_str(), sim, dir);
+	x = atoi(result.substr(0, result.find("|")).c_str());
+	y = atoi(result.substr(result.find("|") + 1, result.length() - result.find("|") - 1).c_str());
+	if (x == -1 && y == -1) return false;
+	return true;
 }
 
 bool CScreen::FindPic(const Rect& rect, const string& picPath, int& x, int& y, const ColorCast& colorCast, double sim, int dir){

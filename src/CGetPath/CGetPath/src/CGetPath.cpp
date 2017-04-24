@@ -27,7 +27,7 @@ string CGetPath::GetCurrentExePath(){
 	char szFilePath[MAX_PATH + 1] = {};
 	GetModuleFileName(NULL, szFilePath, MAX_PATH);
 	temp = szFilePath;
-	result = temp.substr(temp.find_last_of("/\\") + 1);
+	result = temp.substr(0, temp.find_last_of("/\\") + 1);
 	return result;
 }
 

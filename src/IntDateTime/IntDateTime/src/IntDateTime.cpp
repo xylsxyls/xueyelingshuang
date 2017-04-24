@@ -311,6 +311,12 @@ string IntDateTime::dateToString(){
 	return result;
 }
 
+string IntDateTime::dateNumToString(){
+	string result;
+	CStringManager::Format(result, "%d%02d%02d", date_ / 10000, (date_ % 10000) / 100, (date_ % 10000) % 100);
+	return result;
+}
+
 string IntDateTime::timeToString(){
 	string result;
 	CStringManager::Format(result, "%02d:%02d:%02d", time_ / 10000000, (time_ % 10000000) / 100000, (time_ % 100000) / 1000);

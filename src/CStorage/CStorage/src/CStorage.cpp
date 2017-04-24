@@ -1,35 +1,34 @@
 #include <SDKDDKVer.h>
 #include "CStorage.h"
 
+CStorage::CStorage(){
+	changeString = false;
+	changeInt = false;
+	nCurrentKey = 0;
+}
+
 CStorage& CStorage::operator[](CString key){
 	strCurrentKey = key;
+	changeString = true;
+	return *this;
+}
+
+CStorage& CStorage::operator[](int key){
+	nCurrentKey = key;
+	changeInt = true;
 	return *this;
 }
 
 CStorage CStorage::operator=(any anyValue){
-	mapData[strCurrentKey] = anyValue;
+	if (changeString == true){
+		mapData[strCurrentKey] = anyValue;
+		changeString = false;
+	}
+	if (changeInt == true){
+		mapDataInt[nCurrentKey] = anyValue;
+		changeInt = false;
+	}
 	return *this;
-}
-
-template<typename T>
-T CStorage::toValue(){
-	auto it = mapData.find(strCurrentKey);
-	any anyValue;
-	CString strError;
-	try{
-		if(it != mapData.end()){
-			anyValue = it->second;
-			return any_cast<T>(anyValue);
-		}
-		strError.Format("key值：%s，不存在",strCurrentKey.c_str());
-		AfxMessageBox(strError);
-		return T();
-	}
-	catch (boost::bad_any_cast &e){
-		strError.Format("错误，类型为:%s，\nboost解释：%s",it->second.type().name(),e.what());
-		AfxMessageBox(strError);
-		return T();
-	}
 }
 
 /*

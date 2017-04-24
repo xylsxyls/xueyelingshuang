@@ -31,7 +31,12 @@ public:
 	//?是否启用检测异常任务
 	bool ifExceptionRun;
 	//?任务初始化
-	void init(int level, bool ifExceptionRun = 0);
+	//void init(int level, bool ifExceptionRun = 0);
+	//?创建任务
+	template<typename T>
+	static T* CreateApi(){
+		return new T();
+	}
 	//?检测是否可以运行以及初始化当前节点，返回1表示可以运行
 	virtual int initRun();
 	//?具体执行内容，返回RUNSUCCESS表示终止任务，后台检测线程一起关闭，返回RUNBACK表示后台检测一直运行，返回RUNSUSPEND表示手动正常暂停

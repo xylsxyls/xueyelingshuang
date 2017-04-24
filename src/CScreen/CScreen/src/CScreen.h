@@ -27,6 +27,7 @@ public:
 
 class CScreenAPI Color{
 public:
+	Color();
 	Color(const string& strColor);
 	Color(const string& strRGB, const string& strRCGCBC);
 
@@ -43,6 +44,7 @@ public:
 	
 	ColorCast colorCast;
 	string toString()const;
+	string toReserveString()const;
 };
 
 class CScreenAPI CScreen{

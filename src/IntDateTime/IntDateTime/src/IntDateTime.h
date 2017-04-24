@@ -49,5 +49,6 @@ public:
 
 	string toString();
 	string dateToString();
+	string dateNumToString();
 	string timeToString();
 };

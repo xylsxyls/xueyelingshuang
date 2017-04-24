@@ -8,6 +8,7 @@ public:
 	int top;
 	int right;
 	int bottom;
+	Rect();
 	Rect(int left, int top, int right, int bottom);
 	Rect(const Point& point);
 	void SetRect(int left, int top, int right, int bottom);

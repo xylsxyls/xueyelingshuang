@@ -5,9 +5,16 @@
 using namespace std;
 #include <stdarg.h>
 
+ofstream* oftxt = NULL;
+
 Ctxt::Ctxt(string strPath){
 	this->strPath = strPath;
+	oftxt = new ofstream(strPath.c_str(), ios::app);
 	pFile = NULL;
+}
+
+Ctxt::~Ctxt(){
+	delete oftxt;
 }
 
 vector<string> split(string src,string separate_character){
@@ -117,5 +124,19 @@ void Ctxt::AddWriteLine(string format,...){
 void Ctxt::CloseFile(){
 	fclose(pFile);
 	pFile = NULL;
+	return;
+}
+
+void Ctxt::AddLine(string format, ...){
+	std::string result;
+	va_list parameterlist = NULL;
+
+	va_start(parameterlist, format);
+	int size = _vscprintf(format.c_str(), parameterlist);
+	result.resize(size + 1);
+	vsprintf_s(&result[0], size + 1, format.c_str(), parameterlist);
+	result.resize(size);
+	va_end(parameterlist);
+	*oftxt << result << endl;
 	return;
 }
