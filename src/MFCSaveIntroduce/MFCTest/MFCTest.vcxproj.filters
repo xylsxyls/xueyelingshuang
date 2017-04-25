@@ -31,6 +31,9 @@
     <Filter Include="ConfigInfo">
       <UniqueIdentifier>{7c2f958d-303d-4068-9a86-acf3b1b37467}</UniqueIdentifier>
     </Filter>
+    <Filter Include="PicDlg">
+      <UniqueIdentifier>{0197ecbd-536c-4ec3-b82f-ff43e6781143}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -69,6 +72,9 @@
     <ClInclude Include="ConfigInfo.h">
       <Filter>ConfigInfo</Filter>
     </ClInclude>
+    <ClInclude Include="PicDlg.h">
+      <Filter>PicDlg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MFCTest.cpp">
@@ -97,6 +103,9 @@
     </ClCompile>
     <ClCompile Include="ConfigInfo.cpp">
       <Filter>ConfigInfo</Filter>
+    </ClCompile>
+    <ClCompile Include="PicDlg.cpp">
+      <Filter>PicDlg</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

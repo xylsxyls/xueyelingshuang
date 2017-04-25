@@ -1,0 +1,27 @@
+从备注可知，该函数只能创建一级目录，当根目录或者中间目录不存在时，该函数将不起作用。所以假如我们要创建二级以上目录时，应该分开来一步步创建。
+例如：我们要创建：D:\\一级文件夹\\二级文件夹\\...
+CString str = "D:\\一级文件夹";
+CreateDirectory(str, NULL);
+str += "\\二级文件夹";
+CreateDirectory(str, NULL);
+以此类推。
+在创建新的目录之前，我们也可以先判断该目录是否已经存在，例如：
+CString str = "D:\\一级文件夹";
+if (!PathIsDirectory(str))
+{
+    ::CreateDirectory(str, NULL);
+}
+str += "\\二级文件夹";
+if (!PathIsDirectory(str))
+{
+    ::CreateDirectory(str, NULL);
+}
+在调用PathIsDirectory()函数时，需要包含以下头文件与库函数：
+#include "shlwapi.h"
+#pragma comment(lib,"shlwapi.lib")
+
+例子
+string path = CGetPath::GetCurrentExePath() + "picture/";
+    if (!PathIsDirectory(path.c_str())){
+        ::CreateDirectory(path.c_str(), NULL);
+    }

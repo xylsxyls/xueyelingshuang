@@ -1,0 +1,3 @@
+BITMAP bi = {0};
+	GetObject(hBmp,sizeof(BITMAP),&bi);//获取位图信息，包括深度，宽高，步长等
+	width = bi.bmWidth;height = bi.bmHeight;//保存宽高

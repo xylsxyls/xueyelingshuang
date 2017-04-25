@@ -4,11 +4,13 @@
 
 class Collect{
 public:
-	int GetPersonInfo(Person* person,HWND hwnd);
+	static int GetPersonInfo(Person* person,HWND hwnd);
+    static int GetQueryInfo(Person* person, HWND hwnd);
+    static void ShowPerson(Person* person, HWND hwnd);
 private:
-	int CheckName(Person* person);
-	int CheckBirth(Person* person);
-	int CheckSex(Person* person);
-	int CheckMarriage(Person* person);
-	int CheckEducation(Person* person);
+    static int CheckName(Person* person);
+    static int CheckBirth(Person* person);
+    static int CheckSex(Person* person);
+    static int CheckMarriage(Person* person);
+    static int CheckEducation(Person* person);
 };

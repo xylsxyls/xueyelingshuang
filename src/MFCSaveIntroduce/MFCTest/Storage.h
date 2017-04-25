@@ -3,7 +3,8 @@
 
 class Storage{
 public:
-	void SaveTotxt(Person* person);
+	static void SaveTotxt(Person* person);
+    static void GetFromtxt(Person* person);
 };
 
 class storage_{

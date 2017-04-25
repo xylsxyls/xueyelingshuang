@@ -5,9 +5,33 @@ class ConfigInfo{
 public:
 	enum{
 		FillPersonInt,
+        ShowPersonInt,
 		Split,
 		txtPath
 	};
+    enum{
+        name,
+        birth,
+        sex,
+        marriage,
+        education,
+        tall,
+        weight,
+        jobName,
+        jobNature,
+        salary,
+        mobile,
+        qq,
+        weChat,
+        fatherJob,
+        fatherPension,
+        motherJob,
+        motherPension,
+        picture1,
+        picture2,
+        picture3,
+        introduce
+    };
 public:
 	ConfigInfo();
 	CStorage storage;

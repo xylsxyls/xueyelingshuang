@@ -45,5 +45,7 @@ public:
 
 	static void Format(std::string & str, const char * fmt, ...);
 
+    static std::string Format(const char * fmt, ...);
+
 	static void MakeReverse(std::string & str);
 };

@@ -34,6 +34,7 @@ protected:
 public:
 	afx_msg void OnBnClickedButton1();
 	afx_msg LRESULT OnSetPerson(WPARAM wparam, LPARAM lparam);
+    afx_msg LRESULT OnShowPerson(WPARAM wparam, LPARAM lparam);
 	CEdit name;
 	CComboBox year;
 	CComboBox month;
@@ -54,8 +55,6 @@ public:
 	CEdit introduce;
 	CButton check;
 
-	//?π‹¿Ì’ﬂ
-	Manager manager;
 	CComboBox tall;
 	CComboBox weight;
 	CEdit mobile;
@@ -64,4 +63,6 @@ public:
 	afx_msg void OnBnClickedButton2();
 	afx_msg void OnBnClickedButton3();
 	afx_msg void OnBnClickedButton4();
+    afx_msg void OnBnClickedButton5();
+    afx_msg void OnBnClickedButton6();
 };

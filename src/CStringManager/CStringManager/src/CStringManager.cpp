@@ -151,6 +151,19 @@ void CStringManager::Format(std::string & str, const char * fmt, ...)
 	va_end(args);
 }
 
+std::string CStringManager::Format(const char * fmt, ...){
+    string result;
+    va_list args = NULL;
+    va_start(args, fmt);
+    int size = _vscprintf(fmt, args);
+    //?resize分配后string类会自动在最后分配\0，resize(5)则总长6
+    result.resize(size);
+    //?即便分配了足够内存，长度必须加1，否则会崩溃
+    vsprintf_s(&result[0], size + 1, fmt, args);
+    va_end(args);
+    return result;
+}
+
 void CStringManager::MakeReverse(std::string & str){
 	reverse(str.begin(),str.end());
 }

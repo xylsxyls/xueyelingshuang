@@ -9,6 +9,9 @@
 #include "Person.h"
 #include "ConfigInfo.h"
 #include "CGetPath/CGetPathAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
+#include "PicDlg.h"
+#include "CScreen/CScreenAPI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -88,9 +91,12 @@ BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CMFCTestDlg::OnBnClickedButton1)
 	ON_MESSAGE(configInfo.storage[ConfigInfo::FillPersonInt].toValue<int>(), &CMFCTestDlg::OnSetPerson)
+    ON_MESSAGE(configInfo.storage[ConfigInfo::ShowPersonInt].toValue<int>(), &CMFCTestDlg::OnShowPerson)
 	ON_BN_CLICKED(IDC_BUTTON2, &CMFCTestDlg::OnBnClickedButton2)
 	ON_BN_CLICKED(IDC_BUTTON3, &CMFCTestDlg::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON4, &CMFCTestDlg::OnBnClickedButton4)
+    ON_BN_CLICKED(IDC_BUTTON5, &CMFCTestDlg::OnBnClickedButton5)
+    ON_BN_CLICKED(IDC_BUTTON6, &CMFCTestDlg::OnBnClickedButton6)
 END_MESSAGE_MAP()
 
 
@@ -127,24 +133,18 @@ BOOL CMFCTestDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	int nYear = 1950;
-	CString strYear;
 	while (nYear != 2010){
-		strYear.Format("%d", nYear);
-		year.AddString(strYear);
+        year.AddString(CStringManager::Format("%d", nYear).c_str());
 		nYear++;
 	}
 	int nMonth = 1;
-	CString strMonth;
 	while (nMonth != 13){
-		strMonth.Format("%02d", nMonth);
-		month.AddString(strMonth);
+        month.AddString(CStringManager::Format("%02d", nMonth).c_str());
 		nMonth++;
 	}
 	int nDay = 1;
-	CString strDay;
 	while (nDay != 32){
-		strDay.Format("%02d", nDay);
-		day.AddString(strDay);
+        day.AddString(CStringManager::Format("%02d", nDay).c_str());
 		nDay++;
 	}
 
@@ -171,18 +171,14 @@ BOOL CMFCTestDlg::OnInitDialog()
 	education.AddString("博士海外留学");
 	
 	int nTall = 140;
-	CString strTall;
 	while (nTall != 220){
-		strTall.Format("%d", nTall);
-		tall.AddString(strTall);
+        tall.AddString(CStringManager::Format("%d", nTall).c_str());
 		nTall++;
 	}
 
 	int nWeight = 40;
-	CString strWeight;
 	while (nWeight != 120){
-		strWeight.Format("%d", nWeight);
-		weight.AddString(strWeight);
+        weight.AddString(CStringManager::Format("%d", nWeight).c_str());
 		nWeight++;
 	}
 
@@ -264,10 +260,13 @@ HCURSOR CMFCTestDlg::OnQueryDragIcon()
 void CMFCTestDlg::OnBnClickedButton1()
 {
 	Person person;
-	int error = manager.Check(m_hWnd, &person);
-	manager.ShowError(error);
+    int error = Manager::Check(m_hWnd, &person);
+    Manager::ShowError(error);
 	if (error != 0) return;
-	manager.Save(&person);
+    Manager::SavePerson(&person);
+    picture1 = person.picture1.c_str();
+    picture2 = person.picture2.c_str();
+    picture3 = person.picture3.c_str();
 	// TODO: 在此添加控件通知处理程序代码
 }
 
@@ -317,16 +316,16 @@ LRESULT CMFCTestDlg::OnSetPerson(WPARAM wparam, LPARAM lparam){
 	person->weChat = (LPSTR)(LPCTSTR)strWeChat;
 	CString strFatherJob;
 	fatherJob.GetWindowTextA(strFatherJob);
-	person->fatherJob = atoi((LPSTR)(LPCTSTR)strFatherJob);
+	person->fatherJob = (LPSTR)(LPCTSTR)strFatherJob;
 	CString strFatherPension;
 	fatherPension.GetWindowTextA(strFatherPension);
-	person->fatherPension = atoi((LPSTR)(LPCTSTR)strFatherPension);
+	person->fatherPension = (LPSTR)(LPCTSTR)strFatherPension;
 	CString strMotherJob;
 	motherJob.GetWindowTextA(strMotherJob);
-	person->motherJob = atoi((LPSTR)(LPCTSTR)strMotherJob);
+	person->motherJob = (LPSTR)(LPCTSTR)strMotherJob;
 	CString strMotherPension;
 	motherPension.GetWindowTextA(strMotherPension);
-	person->motherPension = atoi((LPSTR)(LPCTSTR)strMotherPension);
+	person->motherPension = (LPSTR)(LPCTSTR)strMotherPension;
 	person->picture1 = (LPSTR)(LPCTSTR)picture1;
 	person->picture2 = (LPSTR)(LPCTSTR)picture2;
 	person->picture3 = (LPSTR)(LPCTSTR)picture3;
@@ -336,25 +335,70 @@ LRESULT CMFCTestDlg::OnSetPerson(WPARAM wparam, LPARAM lparam){
 	return 0;
 }
 
+LRESULT CMFCTestDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
+    Person* person = (Person*)lparam;
+    name.SetWindowTextA(person->name.c_str());
+    year.SelectString(0, CStringManager::Format("%d", person->birth.getYear()).c_str());
+    month.SelectString(0, CStringManager::Format("%d", person->birth.getMonth()).c_str());
+    day.SelectString(0, CStringManager::Format("%d", person->birth.getDay()).c_str());
+    sex.SelectString(0, person->sex.c_str());
+    marriage.SelectString(0, person->marriage.c_str());
+    education.SelectString(0, person->education.c_str());
+    tall.SelectString(0, person->tall.c_str());
+    weight.SelectString(0, person->weight.c_str());
+    jobName.SetWindowTextA(person->jobName.c_str());
+    jobNature.SelectString(0, person->jobNature.c_str());
+    salary.SetWindowTextA(CStringManager::Format("%d", person->salary).c_str());
+    mobile.SetWindowTextA(person->mobile.c_str());
+    qq.SetWindowTextA(person->qq.c_str());
+    weChat.SetWindowTextA(person->weChat.c_str());
+    fatherJob.SelectString(0, person->fatherJob.c_str());
+    fatherPension.SelectString(0, person->fatherPension.c_str());
+    motherJob.SelectString(0, person->motherJob.c_str());
+    motherPension.SelectString(0, person->motherPension.c_str());
+    picture1 = person->picture1.c_str();
+    picture2 = person->picture2.c_str();
+    picture3 = person->picture3.c_str();
+    introduce.SetWindowTextA(person->introduce.c_str());
+    return 0;
+}
+
 void CMFCTestDlg::OnBnClickedButton2()
 {
-	CGetPath getpath;
-	picture1 = getpath.GetFileFromWindow().c_str();
+    picture1 = CGetPath::GetFileFromWindow().c_str();
 	// TODO:  在此添加控件通知处理程序代码
 }
 
 
 void CMFCTestDlg::OnBnClickedButton3()
 {
-	CGetPath getpath;
-	picture2 = getpath.GetFileFromWindow().c_str();
+    picture2 = CGetPath::GetFileFromWindow().c_str();
 	// TODO:  在此添加控件通知处理程序代码
 }
 
 
 void CMFCTestDlg::OnBnClickedButton4()
 {
-	CGetPath getpath;
-	picture3 = getpath.GetFileFromWindow().c_str();
+    picture3 = CGetPath::GetFileFromWindow().c_str();
 	// TODO:  在此添加控件通知处理程序代码
+}
+
+
+void CMFCTestDlg::OnBnClickedButton5()
+{
+    Person person;
+    int error = Manager::Query(m_hWnd, &person);
+    Manager::ShowError(error);
+    if (error != 0) return;
+    Manager::ShowPerson(m_hWnd, &person);
+    // TODO:  在此添加控件通知处理程序代码
+}
+
+
+void CMFCTestDlg::OnBnClickedButton6()
+{
+    CPicDlg picDlg;
+    picDlg.init(CGetPath::GetCurrentExePath() + (LPSTR)(LPCTSTR)picture1);
+    picDlg.DoModal();
+    // TODO:  在此添加控件通知处理程序代码
 }

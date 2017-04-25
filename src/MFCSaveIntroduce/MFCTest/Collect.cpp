@@ -1,3 +1,4 @@
+#include <SDKDDKVer.h>
 #include "Collect.h"
 #include <afx.h>
 #include "ConfigInfo.h"
@@ -7,8 +8,25 @@ int Collect::GetPersonInfo(Person* person,HWND hwnd){
 	//?发送消息让界面吧person填满
 	::SendMessage(hwnd, configInfo.storage[ConfigInfo::FillPersonInt].toValue<int>(), NULL, (LPARAM)person);
 	int result = 0;
-	(result = CheckName(person)) || (result = CheckBirth(person)) || (result = CheckSex(person)) || (result = CheckMarriage(person)) || (result = CheckEducation(person));
+    (result = Collect::CheckName(person)) ||
+        (result = Collect::CheckBirth(person)) ||
+        (result = Collect::CheckSex(person)) ||
+        (result = Collect::CheckMarriage(person)) ||
+        (result = Collect::CheckEducation(person));
 	return result;
+}
+
+int Collect::GetQueryInfo(Person* person, HWND hwnd){
+    //?发送消息让界面把person填满
+    ::SendMessage(hwnd, configInfo.storage[ConfigInfo::FillPersonInt].toValue<int>(), NULL, (LPARAM)person);
+    int result = 0;
+    (result = Collect::CheckName(person)) || (result = Collect::CheckBirth(person));
+    return result;
+}
+
+void Collect::ShowPerson(Person* person, HWND hwnd){
+    //?发送消息把person信息送到界面
+    ::SendMessage(hwnd, configInfo.storage[ConfigInfo::ShowPersonInt].toValue<int>(), NULL, (LPARAM)person);
 }
 
 int Collect::CheckName(Person* person){

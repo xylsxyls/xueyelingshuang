@@ -1,3 +1,4 @@
+#include <SDKDDKVer.h>
 #include "ErrorInfo.h"
 
 ErrorInfo errorInfo;
