@@ -65,4 +65,11 @@ public:
 	afx_msg void OnBnClickedButton4();
     afx_msg void OnBnClickedButton5();
     afx_msg void OnBnClickedButton6();
+    CButton picture1show;
+    CButton picture2show;
+    CButton picture3show;
+
+    void ShowPicture(const CString& picture);
+    afx_msg void OnBnClickedButton7();
+    afx_msg void OnBnClickedButton8();
 };

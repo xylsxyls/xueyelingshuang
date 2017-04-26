@@ -1,0 +1,5 @@
+CImage.Save不能重复告诉保存同一个HBITMAP
+CImage img;
+img.Attach(HBITMAP);
+img.Save("D:\\1.bmp");
+只要是同一个HBITMAP就不行

@@ -23,13 +23,12 @@ protected:
 public:
     afx_msg void OnPaint();
 public:
-    void init(string picture);
+    bool init(string picture);
 public:
     HBITMAP picHBITMAP;
     string picture;
     int width;
     int height;
     virtual BOOL OnInitDialog();
-    afx_msg BOOL OnEraseBkgnd(CDC* pDC);
-    afx_msg void OnSize(UINT nType, int cx, int cy);
+    afx_msg void OnDestroy();
 };

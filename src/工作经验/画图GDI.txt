@@ -44,6 +44,6 @@
     ::TransparentBlt(dstHDC, rectClient.m_left, rectClient.m_top, rectClient.m_right, rectClient.m_bottom, memDC.m_hDC, rectClient.m_left, rectClient.m_top, rectClient.m_right, rectClient.m_bottom, SRCCOPY);
 
     m_isDraw = true;
-    //不释放会有内存泄漏
+    //不释放会有内存泄漏，必须使用DeleteDC不能用ReleaseDC，否则后面的同HBITMAP绘图都上不去，但是重新加载图片是可以的
     ::DeleteDC(memDC.m_hDC);
     ::DeleteDC(picHDC);

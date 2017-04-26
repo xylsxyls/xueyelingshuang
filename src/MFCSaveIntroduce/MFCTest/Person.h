@@ -5,8 +5,6 @@ using namespace std;
 
 class Person{
 public:
-	Person();
-public:
 	string name;
 	IntDateTime birth;
 	string sex;
@@ -16,7 +14,7 @@ public:
 	string weight;
 	string jobName;
 	string jobNature;
-	int salary;
+	int salary = 0;
 	string mobile;
 	string qq;
 	string weChat;

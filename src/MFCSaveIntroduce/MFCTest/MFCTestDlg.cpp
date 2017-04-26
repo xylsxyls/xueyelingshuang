@@ -61,28 +61,31 @@ CMFCTestDlg::CMFCTestDlg(CWnd* pParent /*=NULL*/)
 
 void CMFCTestDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialogEx::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_EDIT1, name);
-	DDX_Control(pDX, IDC_COMBO1, year);
-	DDX_Control(pDX, IDC_COMBO2, month);
-	DDX_Control(pDX, IDC_COMBO3, day);
-	DDX_Control(pDX, IDC_COMBO4, sex);
-	DDX_Control(pDX, IDC_COMBO5, marriage);
-	DDX_Control(pDX, IDC_COMBO6, education);
-	DDX_Control(pDX, IDC_EDIT3, jobName);
-	DDX_Control(pDX, IDC_COMBO7, jobNature);
-	DDX_Control(pDX, IDC_EDIT4, salary);
-	DDX_Control(pDX, IDC_COMBO8, fatherJob);
-	DDX_Control(pDX, IDC_COMBO9, fatherPension);
-	DDX_Control(pDX, IDC_COMBO10, motherJob);
-	DDX_Control(pDX, IDC_COMBO11, motherPension);
-	DDX_Control(pDX, IDC_EDIT5, introduce);
-	DDX_Control(pDX, IDC_BUTTON1, check);
-	DDX_Control(pDX, IDC_COMBO12, tall);
-	DDX_Control(pDX, IDC_COMBO13, weight);
-	DDX_Control(pDX, IDC_EDIT6, mobile);
-	DDX_Control(pDX, IDC_EDIT7, qq);
-	DDX_Control(pDX, IDC_EDIT8, weChat);
+    CDialogEx::DoDataExchange(pDX);
+    DDX_Control(pDX, IDC_EDIT1, name);
+    DDX_Control(pDX, IDC_COMBO1, year);
+    DDX_Control(pDX, IDC_COMBO2, month);
+    DDX_Control(pDX, IDC_COMBO3, day);
+    DDX_Control(pDX, IDC_COMBO4, sex);
+    DDX_Control(pDX, IDC_COMBO5, marriage);
+    DDX_Control(pDX, IDC_COMBO6, education);
+    DDX_Control(pDX, IDC_EDIT3, jobName);
+    DDX_Control(pDX, IDC_COMBO7, jobNature);
+    DDX_Control(pDX, IDC_EDIT4, salary);
+    DDX_Control(pDX, IDC_COMBO8, fatherJob);
+    DDX_Control(pDX, IDC_COMBO9, fatherPension);
+    DDX_Control(pDX, IDC_COMBO10, motherJob);
+    DDX_Control(pDX, IDC_COMBO11, motherPension);
+    DDX_Control(pDX, IDC_EDIT5, introduce);
+    DDX_Control(pDX, IDC_BUTTON1, check);
+    DDX_Control(pDX, IDC_COMBO12, tall);
+    DDX_Control(pDX, IDC_COMBO13, weight);
+    DDX_Control(pDX, IDC_EDIT6, mobile);
+    DDX_Control(pDX, IDC_EDIT7, qq);
+    DDX_Control(pDX, IDC_EDIT8, weChat);
+    DDX_Control(pDX, IDC_BUTTON6, picture1show);
+    DDX_Control(pDX, IDC_BUTTON7, picture2show);
+    DDX_Control(pDX, IDC_BUTTON8, picture3show);
 }
 
 BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)
@@ -97,6 +100,8 @@ BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON4, &CMFCTestDlg::OnBnClickedButton4)
     ON_BN_CLICKED(IDC_BUTTON5, &CMFCTestDlg::OnBnClickedButton5)
     ON_BN_CLICKED(IDC_BUTTON6, &CMFCTestDlg::OnBnClickedButton6)
+    ON_BN_CLICKED(IDC_BUTTON7, &CMFCTestDlg::OnBnClickedButton7)
+    ON_BN_CLICKED(IDC_BUTTON8, &CMFCTestDlg::OnBnClickedButton8)
 END_MESSAGE_MAP()
 
 
@@ -202,6 +207,10 @@ BOOL CMFCTestDlg::OnInitDialog()
 
 	motherPension.AddString("是");
 	motherPension.AddString("否");
+
+    picture1show.EnableWindow(FALSE);
+    picture2show.EnableWindow(FALSE);
+    picture3show.EnableWindow(FALSE);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -360,12 +369,21 @@ LRESULT CMFCTestDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
     picture2 = person->picture2.c_str();
     picture3 = person->picture3.c_str();
     introduce.SetWindowTextA(person->introduce.c_str());
+
+    if (picture1 != "") picture1show.EnableWindow(TRUE);
+    else picture1show.EnableWindow(FALSE);
+    if (picture2 != "") picture2show.EnableWindow(TRUE);
+    else picture2show.EnableWindow(FALSE);
+    if (picture3 != "") picture3show.EnableWindow(TRUE);
+    else picture3show.EnableWindow(FALSE);
     return 0;
 }
 
 void CMFCTestDlg::OnBnClickedButton2()
 {
     picture1 = CGetPath::GetFileFromWindow().c_str();
+    if (picture1 != "") picture1show.EnableWindow(TRUE);
+    else picture1show.EnableWindow(FALSE);
 	// TODO:  在此添加控件通知处理程序代码
 }
 
@@ -373,6 +391,8 @@ void CMFCTestDlg::OnBnClickedButton2()
 void CMFCTestDlg::OnBnClickedButton3()
 {
     picture2 = CGetPath::GetFileFromWindow().c_str();
+    if (picture2 != "") picture2show.EnableWindow(TRUE);
+    else picture2show.EnableWindow(FALSE);
 	// TODO:  在此添加控件通知处理程序代码
 }
 
@@ -380,6 +400,8 @@ void CMFCTestDlg::OnBnClickedButton3()
 void CMFCTestDlg::OnBnClickedButton4()
 {
     picture3 = CGetPath::GetFileFromWindow().c_str();
+    if (picture3 != "") picture3show.EnableWindow(TRUE);
+    else picture3show.EnableWindow(FALSE);
 	// TODO:  在此添加控件通知处理程序代码
 }
 
@@ -397,8 +419,27 @@ void CMFCTestDlg::OnBnClickedButton5()
 
 void CMFCTestDlg::OnBnClickedButton6()
 {
+    ShowPicture(picture1);
+    // TODO:  在此添加控件通知处理程序代码
+}
+
+void CMFCTestDlg::ShowPicture(const CString& picture){
     CPicDlg picDlg;
-    picDlg.init(CGetPath::GetCurrentExePath() + (LPSTR)(LPCTSTR)picture1);
-    picDlg.DoModal();
+    bool result = false;
+    if (picture.Find(":") != -1) result = picDlg.init((LPSTR)(LPCTSTR)picture);
+    else result = picDlg.init(CGetPath::GetCurrentExePath() + (LPSTR)(LPCTSTR)picture);
+    if (result == true) picDlg.DoModal();
+}
+
+void CMFCTestDlg::OnBnClickedButton7()
+{
+    ShowPicture(picture2);
+    // TODO:  在此添加控件通知处理程序代码
+}
+
+
+void CMFCTestDlg::OnBnClickedButton8()
+{
+    ShowPicture(picture3);
     // TODO:  在此添加控件通知处理程序代码
 }

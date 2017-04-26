@@ -1,0 +1,2 @@
+执行了Detach之后得到的HBITMAP是被new出来的，需要使用DeleteObject(HBITMAP)进行释放
+CImage在执行析构的时候会调用Destroy，不用手动调用

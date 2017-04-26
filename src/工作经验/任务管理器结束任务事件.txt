@@ -1,0 +1,12 @@
+1.任务管理器的“结束任务”实际上就是强制终止进程，它所使用的是一个叫做TerminateProcess()的Win32 API函数以下是此函数的定义：BOOL TerminateProcess(
+HANDLE hProcess; // 将被结束进程的句柄
+UINT uExitCode; // 指定进程的退出码
+);2.为了得到要杀掉的进程的句柄，首先要取得该进程的句柄，即采用以下函数获取进程的句柄：
+HANDLE OpenProcess(
+DWORD dwDesiredAccess, // 希望获得的访问权限
+BOOL bInheritHandle, // 指明是否希望所获得的句柄可以继承
+DWORD dwProcessId // 要访问的进程ID
+);
+在调用TerminateProcess()之前，必先调用OpenProcess()，而OpenProcess()的参数表中的 dwProcessId是在系统范围内唯一确定的。
+3.在每次调用OpenProcess()的时候，先检查dwProcessId是否为要防被关闭的进程的ID(利用进程间通讯机制)，如果是的话就简单地 返回一个错误码就可以了，任务管理器拿进程的句柄，自然无法关闭该进程了。
+4.至于实现就采用全局HOOK的办法，《windows核心编程》对此讲述了好几种方法，有兴趣的可以参照。在C#中hook api可以使用easyhook这个类库,这是一个开源项目,你可以参考 http://easyhook.codeplex.com/上面的例子hook API
