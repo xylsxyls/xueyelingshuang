@@ -1,0 +1,2 @@
+CMemoryDC dcMem(dc.m_hDC, dc.m_ps.rcPaint);
+在析构函数中有具体绘画函数
