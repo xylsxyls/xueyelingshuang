@@ -382,6 +382,7 @@ LRESULT CMFCTestDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
 void CMFCTestDlg::OnBnClickedButton2()
 {
     picture1 = CGetPath::GetFileFromWindow().c_str();
+    if (picture1 == "-1") picture1 = "";
     if (picture1 != "") picture1show.EnableWindow(TRUE);
     else picture1show.EnableWindow(FALSE);
 	// TODO:  在此添加控件通知处理程序代码
@@ -391,6 +392,7 @@ void CMFCTestDlg::OnBnClickedButton2()
 void CMFCTestDlg::OnBnClickedButton3()
 {
     picture2 = CGetPath::GetFileFromWindow().c_str();
+    if (picture2 == "-1") picture2 = "";
     if (picture2 != "") picture2show.EnableWindow(TRUE);
     else picture2show.EnableWindow(FALSE);
 	// TODO:  在此添加控件通知处理程序代码
@@ -400,6 +402,7 @@ void CMFCTestDlg::OnBnClickedButton3()
 void CMFCTestDlg::OnBnClickedButton4()
 {
     picture3 = CGetPath::GetFileFromWindow().c_str();
+    if (picture3 == "-1") picture3 = "";
     if (picture3 != "") picture3show.EnableWindow(TRUE);
     else picture3show.EnableWindow(FALSE);
 	// TODO:  在此添加控件通知处理程序代码
