@@ -1,0 +1,29 @@
+虚函数想通过基类调子类函数必须通过指针，
+
+
+class A{
+public:
+	virtual void aa(){
+		int x = 3;
+	}
+};
+
+class B : public A{
+public:
+	void aa(){
+		int x = 4;
+	}
+};
+
+int main(){
+	B b;
+	A* sss = &b;
+	A* a = sss;
+	a->aa();
+	return 0;
+}
+
+这样是可行的，但是如果是
+A sss = b;
+	A* a = &sss;
+则调的是基类函数
