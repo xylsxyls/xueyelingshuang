@@ -61,31 +61,36 @@ CMFCTestDlg::CMFCTestDlg(CWnd* pParent /*=NULL*/)
 
 void CMFCTestDlg::DoDataExchange(CDataExchange* pDX)
 {
-    CDialogEx::DoDataExchange(pDX);
-    DDX_Control(pDX, IDC_EDIT1, name);
-    DDX_Control(pDX, IDC_COMBO1, year);
-    DDX_Control(pDX, IDC_COMBO2, month);
-    DDX_Control(pDX, IDC_COMBO3, day);
-    DDX_Control(pDX, IDC_COMBO4, sex);
-    DDX_Control(pDX, IDC_COMBO5, marriage);
-    DDX_Control(pDX, IDC_COMBO6, education);
-    DDX_Control(pDX, IDC_EDIT3, jobName);
-    DDX_Control(pDX, IDC_COMBO7, jobNature);
-    DDX_Control(pDX, IDC_EDIT4, salary);
-    DDX_Control(pDX, IDC_COMBO8, fatherJob);
-    DDX_Control(pDX, IDC_COMBO9, fatherPension);
-    DDX_Control(pDX, IDC_COMBO10, motherJob);
-    DDX_Control(pDX, IDC_COMBO11, motherPension);
-    DDX_Control(pDX, IDC_EDIT5, introduce);
-    DDX_Control(pDX, IDC_BUTTON1, check);
-    DDX_Control(pDX, IDC_COMBO12, tall);
-    DDX_Control(pDX, IDC_COMBO13, weight);
-    DDX_Control(pDX, IDC_EDIT6, mobile);
-    DDX_Control(pDX, IDC_EDIT7, qq);
-    DDX_Control(pDX, IDC_EDIT8, weChat);
-    DDX_Control(pDX, IDC_BUTTON6, picture1show);
-    DDX_Control(pDX, IDC_BUTTON7, picture2show);
-    DDX_Control(pDX, IDC_BUTTON8, picture3show);
+	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_EDIT1, name);
+	DDX_Control(pDX, IDC_COMBO1, year);
+	DDX_Control(pDX, IDC_COMBO2, month);
+	DDX_Control(pDX, IDC_COMBO3, day);
+	DDX_Control(pDX, IDC_COMBO4, sex);
+	DDX_Control(pDX, IDC_COMBO5, marriage);
+	DDX_Control(pDX, IDC_COMBO6, education);
+	DDX_Control(pDX, IDC_EDIT3, jobName);
+	DDX_Control(pDX, IDC_COMBO7, jobNature);
+	DDX_Control(pDX, IDC_EDIT4, salary);
+	DDX_Control(pDX, IDC_COMBO8, fatherJob);
+	DDX_Control(pDX, IDC_COMBO9, fatherPension);
+	DDX_Control(pDX, IDC_COMBO10, motherJob);
+	DDX_Control(pDX, IDC_COMBO11, motherPension);
+	DDX_Control(pDX, IDC_EDIT5, introduce);
+	DDX_Control(pDX, IDC_BUTTON1, check);
+	DDX_Control(pDX, IDC_COMBO12, tall);
+	DDX_Control(pDX, IDC_COMBO13, weight);
+	DDX_Control(pDX, IDC_EDIT6, mobile);
+	DDX_Control(pDX, IDC_EDIT7, qq);
+	DDX_Control(pDX, IDC_EDIT8, weChat);
+	DDX_Control(pDX, IDC_BUTTON6, picture1show);
+	DDX_Control(pDX, IDC_BUTTON7, picture2show);
+	DDX_Control(pDX, IDC_BUTTON8, picture3show);
+	DDX_Control(pDX, IDC_COMBO14, house);
+	DDX_Control(pDX, IDC_COMBO15, car);
+	DDX_Control(pDX, IDC_EDIT9, household);
+	DDX_Control(pDX, IDC_COMBO16, houseAttri);
+	DDX_Control(pDX, IDC_EDIT10, houseAddr);
 }
 
 BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)
@@ -186,6 +191,17 @@ BOOL CMFCTestDlg::OnInitDialog()
         weight.AddString(CStringManager::Format("%d", nWeight).c_str());
 		nWeight++;
 	}
+
+	house.AddString("无房");
+	house.AddString("有房有贷款");
+	house.AddString("有房无贷款");
+
+	car.AddString("无车");
+	car.AddString("有车");
+
+	houseAttri.AddString("本地");
+	houseAttri.AddString("外地城镇");
+	houseAttri.AddString("外地农村");
 
 	jobNature.AddString("民营企业");
 	jobNature.AddString("上市公司");
@@ -305,6 +321,21 @@ LRESULT CMFCTestDlg::OnSetPerson(WPARAM wparam, LPARAM lparam){
 	CString strWeight;
 	weight.GetWindowTextA(strWeight);
 	person->weight = (LPSTR)(LPCTSTR)strWeight;
+	CString strHouse;
+	house.GetWindowTextA(strHouse);
+	person->house = (LPSTR)(LPCTSTR)strHouse;
+	CString strCar;
+	car.GetWindowTextA(strCar);
+	person->car = (LPSTR)(LPCTSTR)strCar;
+	CString strHousehold;
+	household.GetWindowTextA(strHousehold);
+	person->household = (LPSTR)(LPCTSTR)strHousehold;
+	CString strHouseAttri;
+	houseAttri.GetWindowTextA(strHouseAttri);
+	person->houseAttri = (LPSTR)(LPCTSTR)strHouseAttri;
+	CString strHouseAddr;
+	houseAddr.GetWindowTextA(strHouseAddr);
+	person->houseAddr = (LPSTR)(LPCTSTR)strHouseAddr;
 	CString strJobName;
 	jobName.GetWindowTextA(strJobName);
 	person->jobName = (LPSTR)(LPCTSTR)strJobName;
@@ -348,13 +379,18 @@ LRESULT CMFCTestDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
     Person* person = (Person*)lparam;
     name.SetWindowTextA(person->name.c_str());
     year.SelectString(0, CStringManager::Format("%d", person->birth.getYear()).c_str());
-    month.SelectString(0, CStringManager::Format("%d", person->birth.getMonth()).c_str());
-    day.SelectString(0, CStringManager::Format("%d", person->birth.getDay()).c_str());
+    month.SelectString(0, CStringManager::Format("%02d", person->birth.getMonth()).c_str());
+    day.SelectString(0, CStringManager::Format("%02d", person->birth.getDay()).c_str());
     sex.SelectString(0, person->sex.c_str());
     marriage.SelectString(0, person->marriage.c_str());
     education.SelectString(0, person->education.c_str());
     tall.SelectString(0, person->tall.c_str());
     weight.SelectString(0, person->weight.c_str());
+	house.SelectString(0, person->house.c_str());
+	car.SelectString(0, person->car.c_str());
+	household.SetWindowTextA(person->household.c_str());
+	houseAttri.SelectString(0, person->houseAttri.c_str());
+	houseAddr.SetWindowTextA(person->houseAddr.c_str());
     jobName.SetWindowTextA(person->jobName.c_str());
     jobNature.SelectString(0, person->jobNature.c_str());
     salary.SetWindowTextA(CStringManager::Format("%d", person->salary).c_str());

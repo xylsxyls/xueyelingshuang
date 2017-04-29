@@ -50,6 +50,11 @@ void Storage::SaveTotxt(Person* person){
 		+ person->education + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
 		+ person->tall + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
 		+ person->weight + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
+		+ person->house + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
+		+ person->car + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
+		+ person->household + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
+		+ person->houseAttri + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
+		+ person->houseAddr + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
 		+ person->jobName + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
 		+ person->jobNature + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
 		+ CStringManager::Format("%d", person->salary) + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
@@ -82,6 +87,11 @@ void Storage::GetFromtxt(Person* person){
     person->education = vecValue[ConfigInfo::education];
     person->tall = vecValue[ConfigInfo::tall];
     person->weight = vecValue[ConfigInfo::weight];
+	person->house = vecValue[ConfigInfo::house];
+	person->car = vecValue[ConfigInfo::car];
+	person->household = vecValue[ConfigInfo::household];
+	person->houseAttri = vecValue[ConfigInfo::houseAttri];
+	person->houseAddr = vecValue[ConfigInfo::houseAddr];
     person->jobName = vecValue[ConfigInfo::jobName];
     person->jobNature = vecValue[ConfigInfo::jobNature];
     person->salary = atoi(vecValue[ConfigInfo::salary].c_str());

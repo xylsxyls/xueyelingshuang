@@ -5,7 +5,6 @@
 #pragma once
 #include "afxwin.h"
 #include "Manager.h"
-#include "ConfigInfo.h"
 
 // CMFCTestDlg ¶Ô»°¿ò
 class CMFCTestDlg : public CDialogEx
@@ -72,4 +71,9 @@ public:
     void ShowPicture(const CString& picture);
     afx_msg void OnBnClickedButton7();
     afx_msg void OnBnClickedButton8();
+	CComboBox house;
+	CComboBox car;
+	CEdit household;
+	CComboBox houseAttri;
+	CEdit houseAddr;
 };

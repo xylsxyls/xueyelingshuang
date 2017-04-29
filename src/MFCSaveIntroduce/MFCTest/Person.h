@@ -12,6 +12,11 @@ public:
 	string education;
 	string tall;
 	string weight;
+	string house;
+	string car;
+	string household;
+	string houseAttri;
+	string houseAddr;
 	string jobName;
 	string jobNature;
 	int salary = 0;
