@@ -7,6 +7,11 @@
 #include "MFCTestDlg.h"
 #include "afxdialogex.h"
 #include "resource.h"
+#include "Manager.h"
+#include "Person.h"
+#include "Search.h"
+#include "CStringManager/CStringManagerAPI.h"
+#include "ConfigInfo.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -63,6 +68,15 @@ void CMFCTestDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO4, yearBig);
 	DDX_Control(pDX, IDC_COMBO5, monthBig);
 	DDX_Control(pDX, IDC_COMBO6, dayBig);
+	DDX_Control(pDX, IDC_COMBO7, sex);
+	DDX_Control(pDX, IDC_COMBO13, merriage);
+	DDX_Control(pDX, IDC_COMBO8, tallSmall);
+	DDX_Control(pDX, IDC_COMBO9, tallBig);
+	DDX_Control(pDX, IDC_COMBO14, house);
+	DDX_Control(pDX, IDC_COMBO10, weightSmall);
+	DDX_Control(pDX, IDC_COMBO11, weightBig);
+	DDX_Control(pDX, IDC_COMBO12, education);
+	DDX_Control(pDX, IDC_EDIT1, salary);
 }
 
 BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)
@@ -70,6 +84,7 @@ BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CMFCTestDlg::OnBnClickedButton1)
+	ON_MESSAGE(configInfo.storage[ConfigInfo::FillSearchInt].toValue<int>(), &CMFCTestDlg::OnSetSearchInfo)
 END_MESSAGE_MAP()
 
 
@@ -164,4 +179,66 @@ void CMFCTestDlg::OnBnClickedButton1()
 {
 	//::SendMessage(GetDlgItem(IDC_STATIC1)->m_hWnd, WM_SETTEXT, 0, (LPARAM)"shit");
 	// TODO: 在此添加控件通知处理程序代码
+
+	Search search;
+	Manager::SearchInfo(m_hWnd, &search);
+	vector<Person> vecPerson = Manager::Find(search);
+	AfxMessageBox(CStringManager::Format("一共找到%d张",vecPerson.size()).c_str());
+	Manager::ShowDlg(vecPerson);
+}
+
+LRESULT CMFCTestDlg::OnSetSearchInfo(WPARAM wparam, LPARAM lparam){
+	Search* search = (Search*)lparam;
+	CString strYearSmall;
+	yearSmall.GetWindowTextA(strYearSmall);
+	CString strMonthSmall;
+	monthSmall.GetWindowTextA(strMonthSmall);
+	CString strDaySmall;
+	daySmall.GetWindowTextA(strDaySmall);
+	search->smallBirth = IntDateTime(atoi(CStringManager::Format("%d%02d%02d", atoi(strYearSmall), atoi(strMonthSmall), atoi(strDaySmall)).c_str()), 0);
+
+	CString strYearBig;
+	yearBig.GetWindowTextA(strYearBig);
+	CString strMonthBig;
+	monthBig, GetWindowTextA(strMonthBig);
+	CString strDayBig;
+	dayBig.GetWindowTextA(strDayBig);
+	search->bigBirth = IntDateTime(atoi(CStringManager::Format("%d%02d%02d", atoi(strYearBig), atoi(strMonthBig), atoi(strDayBig)).c_str()), 0);
+
+	CString strSex;
+	sex.GetWindowTextA(strSex);
+	search->sex = (LPSTR)(LPCTSTR)strSex;
+
+	CString strMerriage;
+	merriage.GetWindowTextA(strMerriage);
+	search->marriage = (LPSTR)(LPCTSTR)strMerriage;
+
+	CString strTallSmall;
+	tallSmall.GetWindowTextA(strTallSmall);
+	search->smallTall = atoi(strTallSmall);
+
+	CString strTallBig;
+	tallBig.GetWindowTextA(strTallBig);
+	search->bigTall = atoi(strTallBig);
+
+	CString strHouse;
+	house.GetWindowTextA(strHouse);
+	search->house = (LPSTR)(LPCTSTR)strHouse;
+
+	CString strWeightSmall;
+	weightSmall.GetWindowTextA(strWeightSmall);
+	search->smallWeight = atoi(strWeightSmall);
+
+	CString strWeightBig;
+	weightBig.GetWindowTextA(strWeightBig);
+	search->bigWeight = atoi(strWeightBig);
+
+	CString strEducation;
+	education.GetWindowTextA(strEducation);
+	search->education = (LPSTR)(LPCTSTR)strEducation;
+
+	CString strSalary;
+	salary.GetWindowTextA(strSalary);
+	search->salary = atoi(strSalary);
+	return 0;
 }

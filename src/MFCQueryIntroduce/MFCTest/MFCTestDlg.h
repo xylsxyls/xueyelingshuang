@@ -38,4 +38,15 @@ public:
 	CComboBox yearBig;
 	CComboBox monthBig;
 	CComboBox dayBig;
+
+	afx_msg LRESULT OnSetSearchInfo(WPARAM wparam, LPARAM lparam);
+	CComboBox sex;
+	CComboBox merriage;
+	CComboBox tallSmall;
+	CComboBox tallBig;
+	CComboBox house;
+	CComboBox weightSmall;
+	CComboBox weightBig;
+	CComboBox education;
+	CEdit salary;
 };

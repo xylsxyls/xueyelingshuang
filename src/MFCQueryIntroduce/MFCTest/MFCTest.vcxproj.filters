@@ -13,6 +13,30 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ErrorInfo">
+      <UniqueIdentifier>{3627deda-789a-416e-bef0-20bc258dc0b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ConfigInfo">
+      <UniqueIdentifier>{78789721-a8d2-470a-add1-094daaafb141}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Manager">
+      <UniqueIdentifier>{04ad8244-891d-4b8c-baa9-15a1c0bdc723}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Person">
+      <UniqueIdentifier>{6aa37f1b-641d-48f8-a3d0-7794ce967ab4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Manager\Storage">
+      <UniqueIdentifier>{eb66a391-e62c-47f4-85fa-bae73fb259a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Manager\Collect">
+      <UniqueIdentifier>{041ca1ff-5d94-43fa-8d06-4e2edb6fae6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Search">
+      <UniqueIdentifier>{0b0beb7e-ec20-4d0d-8a09-618e3000ebce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PicDlgQuery">
+      <UniqueIdentifier>{e88f1a4c-9600-49b5-8828-1729832609cd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -33,6 +57,30 @@
     <ClInclude Include="Resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ErrorInfo.h">
+      <Filter>ErrorInfo</Filter>
+    </ClInclude>
+    <ClInclude Include="Collect.h">
+      <Filter>Manager\Collect</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigInfo.h">
+      <Filter>ConfigInfo</Filter>
+    </ClInclude>
+    <ClInclude Include="Manager.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="Person.h">
+      <Filter>Person</Filter>
+    </ClInclude>
+    <ClInclude Include="Storage.h">
+      <Filter>Manager\Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="Search.h">
+      <Filter>Search</Filter>
+    </ClInclude>
+    <ClInclude Include="PicDlgQuery.h">
+      <Filter>PicDlgQuery</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MFCTest.cpp">
@@ -43,6 +91,30 @@
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ErrorInfo.cpp">
+      <Filter>ErrorInfo</Filter>
+    </ClCompile>
+    <ClCompile Include="Collect.cpp">
+      <Filter>Manager\Collect</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigInfo.cpp">
+      <Filter>ConfigInfo</Filter>
+    </ClCompile>
+    <ClCompile Include="Manager.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="Person.cpp">
+      <Filter>Person</Filter>
+    </ClCompile>
+    <ClCompile Include="Storage.cpp">
+      <Filter>Manager\Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="Search.cpp">
+      <Filter>Search</Filter>
+    </ClCompile>
+    <ClCompile Include="PicDlgQuery.cpp">
+      <Filter>PicDlgQuery</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

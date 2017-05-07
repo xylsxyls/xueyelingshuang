@@ -317,10 +317,10 @@ LRESULT CMFCTestDlg::OnSetPerson(WPARAM wparam, LPARAM lparam){
 	person->education = (LPSTR)(LPCTSTR)strEducation;
 	CString strTall;
 	tall.GetWindowTextA(strTall);
-	person->tall = (LPSTR)(LPCTSTR)strTall;
+	person->tall = atoi(strTall);
 	CString strWeight;
 	weight.GetWindowTextA(strWeight);
-	person->weight = (LPSTR)(LPCTSTR)strWeight;
+	person->weight = atoi(strWeight);
 	CString strHouse;
 	house.GetWindowTextA(strHouse);
 	person->house = (LPSTR)(LPCTSTR)strHouse;
@@ -384,8 +384,8 @@ LRESULT CMFCTestDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
     sex.SelectString(0, person->sex.c_str());
     marriage.SelectString(0, person->marriage.c_str());
     education.SelectString(0, person->education.c_str());
-    tall.SelectString(0, person->tall.c_str());
-    weight.SelectString(0, person->weight.c_str());
+	tall.SelectString(0, CStringManager::Format("%d", person->tall).c_str());
+	weight.SelectString(0, CStringManager::Format("%d", person->weight).c_str());
 	house.SelectString(0, person->house.c_str());
 	car.SelectString(0, person->car.c_str());
 	household.SetWindowTextA(person->household.c_str());
