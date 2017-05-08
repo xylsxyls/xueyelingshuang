@@ -8,7 +8,6 @@
 #include "afxdialogex.h"
 #include <string>
 #include <afxwin.h>
-#include "Controller/ControllerAPI.h"
 using namespace std;
 
 #ifdef _DEBUG
