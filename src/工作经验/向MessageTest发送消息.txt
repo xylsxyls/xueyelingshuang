@@ -1,0 +1,19 @@
+bool SendToMessageTest(const char* fmt, ...)
+{
+    std::string str;
+    va_list args = NULL;
+    va_start(args, fmt);
+    int size = _vscprintf(fmt, args);
+    str.resize(size);
+    vsprintf_s(&str[0], size + 1, fmt, args);
+    va_end(args);
+    std::string window = "MessageTest";
+    HWND receiveWindow = ::FindWindow(NULL, CString(window.c_str()));
+    if (receiveWindow == NULL) return false;
+    COPYDATASTRUCT copyData = { 0 };
+    copyData.lpData = (PVOID)str.c_str();
+    copyData.cbData = str.length();
+    return ::SendMessage(receiveWindow, WM_COPYDATA, (WPARAM)NULL/*m_hWnd*/, (LPARAM)&copyData) == 1;
+}
+
+bool x = SendToMessageTest("%d,%d", 4, 5);

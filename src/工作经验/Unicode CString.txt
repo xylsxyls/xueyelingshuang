@@ -1,4 +1,13 @@
-使用Unicode之后CString里的getbuff只能返回首个值
+使用Unicode之后CString里的getbuff如果再经过强转只能返回首个值（copydata工具可以验证）
+(LPSTR)(LPCTSTR)在Unicode下也不可以使用，只会返回首个字符
+
+如果要转换使用
+CString strLast;
+    m_edit.GetWindowText(strLast);
+    USES_CONVERSION;
+    //调用函数，T2A和W2A均支持ATL和MFC中的字符转换
+    char* szLast = T2A(strLast);
+
 
 不能已str.GetBuffer();作为返回值，在CString析构之后申请的内存会被释放，string也一样
 

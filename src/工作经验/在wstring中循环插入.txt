@@ -1,0 +1,19 @@
+每隔几个插入一个字符
+如果是空字符串则不插，如果正好是整数倍则最后一个不插
+std::wstring InsertLoop(const std::wstring& wstr, int number, const wchar_t insert){
+    std::wstring wstrTemp = wstr;
+    int i = wstrTemp.length() - 1;
+    auto lastcount = 1;
+    for (auto itwstr = (wstrTemp.begin() == wstrTemp.end() ? (--lastcount, wstrTemp.begin()) : (--(wstrTemp.end()))); itwstr != wstrTemp.begin() || lastcount-- != 0; lastcount != 0 ? --itwstr : itwstr){
+        if (i % number == 0){
+            itwstr = wstrTemp.insert(itwstr, insert);
+            i--;
+            continue;
+        }
+        i--;
+    }
+    if (wstrTemp.begin() != wstrTemp.end()){
+        wstrTemp.erase(wstrTemp.begin());
+    }
+    return wstrTemp;
+}

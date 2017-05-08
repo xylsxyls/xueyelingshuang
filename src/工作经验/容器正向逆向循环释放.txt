@@ -1,0 +1,37 @@
+正向循环带释放和逆向循环带释放
+list<string> vec;
+for (auto itvec = vec.begin(); itvec != vec.end(); itvec++){
+        if (*itvec == "444"){
+            //itvec为555
+            itvec = vec.erase(itvec);
+            //--后得到333，顺序循环下次itvec为555
+            itvec--;
+            continue;
+        }
+        if (*itvec == "555"){
+            itvec = vec.insert(itvec, "999");
+            //
+            //在这里添加具体处理内容，itvec为999，顺序循环下次itvec为666
+            //
+            itvec++;
+            continue;
+        }
+    }
+
+逆向循环带释放
+list<string> vec;
+auto lastcount = 1;
+    for (auto iter = (vec.begin() == vec.end() ? (--lastcount, vec.begin()) : (--(vec.end()))); iter != vec.begin() || lastcount-- != 0; lastcount != 0 ? --iter : iter){
+        if (*iter == "444"){
+            //iter为555，倒序循环下次iter为333
+            iter = vec.erase(iter);
+            continue;
+        }
+        if (*iter == "666"){
+            iter = vec.insert(iter, "999");
+            //
+            //在这里添加具体处理内容，iter为999，倒序循环下次iter就是555
+            //
+            continue;
+        }
+    }

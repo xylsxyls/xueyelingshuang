@@ -1,0 +1,15 @@
+REFLECTED_NOTIFY_CODE_HANDLER(TVN_GETINFOTIP, OnGetInfoTip)
+
+LRESULT RCBookmarkWnd::OnGetInfoTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
+{
+    //该函数在鼠标移动到新节点上会进来两次
+    bHandled = FALSE;
+    LPNMTVGETINFOTIP pGetInfoTip = (LPNMTVGETINFOTIP)pnmh;
+    TCHAR* pText = new TCHAR[pGetInfoTip->cchTextMax];
+    BOOL result = GetItemText(pGetInfoTip->hItem, pText, pGetInfoTip->cchTextMax);
+    RCString newText = InsertLoop(pText, 30, '\n');
+    delete pText;
+    _tcsncpy(pGetInfoTip->pszText, newText.c_str(), min((int)newText.length(), pGetInfoTip->cchTextMax));
+    bool x = SendToMessageTest("%s,%d", TCHAR2STRING(newText.c_str()).c_str(), 5);
+    return 0;
+}

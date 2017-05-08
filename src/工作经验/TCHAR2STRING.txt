@@ -1,4 +1,4 @@
-std::string TCHAR2STRING(TCHAR *STR)
+﻿std::string TCHAR2STRING(TCHAR *STR)
 {
     int iLen = ::WideCharToMultiByte(CP_ACP, 0, STR, -1, NULL, 0, NULL, NULL);
     char* chRtn = new char[iLen * sizeof(char)];
@@ -6,4 +6,29 @@ std::string TCHAR2STRING(TCHAR *STR)
     std::string str(chRtn);
     delete chRtn;
     return str;
+}
+
+string转tchar
+std::wstring STR_A2W(const char* p)
+{
+    std::wstring   ws;
+    if (p)
+    {
+#if (defined(_WIN32) || defined(__WIN32__))
+        int   nCount = MultiByteToWideChar(CP_THREAD_ACP, 0, p, -1, NULL, 0);
+        if (nCount)
+        {
+            std::vector<wchar_t>   wps(nCount + 1);
+            MultiByteToWideChar(CP_THREAD_ACP, 0, p, -1, &wps[0], nCount);
+            ws = &wps[0];
+        }
+#else
+        size_t   nCount = strlen(p);
+        std::vector<wchar_t>   wps(nCount + 1);
+        setlocale(LC_CTYPE, "");
+        mbstowcs(&wps[0], p, nCount);
+        ws = &wps[0];
+#endif
+    }
+    return ws;
 }

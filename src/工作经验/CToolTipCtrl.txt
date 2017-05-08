@@ -1,0 +1,1 @@
+CToolTipCtrl的Activate一旦设置成false之后所有行为失效，即便立即设成true也之后也必须经过系统在第二次转到这里的时候才生效
