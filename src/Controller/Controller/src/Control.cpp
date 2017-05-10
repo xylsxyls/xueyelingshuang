@@ -24,22 +24,20 @@ void Control::Set(){
     //?如果有就优先选择插入
     if (strNextControlTemp != ""){
         numNext++;
-        if ((unsigned int)numNext > strNextControlTemp.length()){
+        if (strNextControlTemp[numNext] == '1') current = true;
+        else if (strNextControlTemp[numNext] == '0') current = false;
+        else{
             mutex.lock();
             strNextControl = "";
             mutex.unlock();
             numNext = -1;
             goto rem;
         }
-        else{
-            if (strNextControlTemp[numNext] == '1') current = true;
-            else current = false;
-        }
     }
     else{
         rem:
         num++;
-        if ((unsigned int)num <= strControl.length()){
+        if ((unsigned int)num < strControl.length()){
             if (strControl[num] == '1') current = true;
             else current = false;
         }

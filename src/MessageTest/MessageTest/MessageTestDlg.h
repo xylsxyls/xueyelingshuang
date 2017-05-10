@@ -36,7 +36,7 @@ public:
     afx_msg BOOL OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCopyDataStruct);
     CEdit m_edit;
     int current = 0;
-    int maxData = 50;
+    int maxData = 1024;
     int maxSize = 1024;
     vector<string> vecCopyData;
     afx_msg void OnTimer(UINT_PTR nIDEvent);

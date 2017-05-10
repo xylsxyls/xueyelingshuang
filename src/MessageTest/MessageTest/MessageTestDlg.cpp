@@ -192,7 +192,16 @@ BOOL CMessageTestDlg::OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCopyDataStruct)
     // TODO:  在此添加消息处理程序代码和/或调用默认值
     //pWnd为发送方窗口
     if (current >= maxData){
-        AfxMessageBox(L"缓冲区过小");
+        CString strCurrent;
+        strCurrent.Format(L"缓冲区已超过%.2lfM", vecCopyData.capacity() * vecCopyData[0].capacity() / 1024.0 / 1024.0);
+        AfxMessageBox(strCurrent);
+        int i = -1;
+        while (i++ != maxData - 1){
+            string str;
+            str.resize(maxSize);
+            vecCopyData.push_back(str);
+        }
+        maxData = maxData * 2;
     }
 
     if (vecCopyData.at(current).length() <= pCopyDataStruct->cbData){
