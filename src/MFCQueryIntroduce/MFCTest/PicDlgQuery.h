@@ -27,13 +27,8 @@ protected:
 public:
     afx_msg void OnPaint();
 public:
-    bool init(string picture);
+    void init(const vector<Person>& vecPerson);
 public:
-    HBITMAP picHBITMAP;
-    string picture;
-    int width;
-    int height;
     virtual BOOL OnInitDialog();
-    afx_msg void OnDestroy();
     vector<Person> vecPerson;
 };

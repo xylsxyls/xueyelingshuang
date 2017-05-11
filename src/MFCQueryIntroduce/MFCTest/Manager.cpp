@@ -15,7 +15,7 @@ vector<Person> Manager::Find(const Search& search){
 
 void Manager::ShowDlg(vector<Person> vecPerson){
     CPicDlgQuery picDlgQuery;
-    picDlgQuery.vecPerson = vecPerson;
+    picDlgQuery.init(vecPerson);
     picDlgQuery.DoModal();
 }
 

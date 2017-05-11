@@ -21,6 +21,7 @@ public:
 
 	CStorage& operator[](int key);
 	CStorage& operator[](CString key);
+    CStorage operator=(const char* value);
 	CStorage operator=(any anyValue);
 
 	template<typename T>

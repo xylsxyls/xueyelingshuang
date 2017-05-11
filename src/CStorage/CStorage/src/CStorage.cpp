@@ -19,6 +19,18 @@ CStorage& CStorage::operator[](int key){
 	return *this;
 }
 
+CStorage CStorage::operator=(const char* value){
+    if (changeString == true){
+        mapData[strCurrentKey] = string(value);
+        changeString = false;
+    }
+    if (changeInt == true){
+        mapDataInt[nCurrentKey] = string(value);
+        changeInt = false;
+    }
+    return *this;
+}
+
 CStorage CStorage::operator=(any anyValue){
 	if (changeString == true){
 		mapData[strCurrentKey] = anyValue;

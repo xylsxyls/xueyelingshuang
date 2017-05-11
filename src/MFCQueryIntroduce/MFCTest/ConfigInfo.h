@@ -7,10 +7,16 @@ public:
 		FillSearchInt,
         ShowPersonInt,
 		Split,
-		txtPath
+		txtPath,
+        notMarriage,
+        marriaged,
+        hasHouse,
+        notHasHouse
 	};
     enum{
-		name,
+        txtPerson = 0,
+        txtOffset = 1,
+		name = 0,
 		birth,
 		sex,
 		marriage,
@@ -37,16 +43,6 @@ public:
         picture3,
         introduce
     };
-	enum{
-		txtPerson,
-		txtOffset
-	};
-	enum{
-		notMarriage,
-		marriaged,
-		hasHouse,
-		notHasHouse
-	};
 public:
 	ConfigInfo();
 	CStorage storage;
