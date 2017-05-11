@@ -1,7 +1,10 @@
 #pragma once
 #include "resource.h"
 #include <string>
+#include <vector>
 #include "resource.h"
+#include <afxdialogex.h>
+#include "Person.h"
 using namespace std;
 
 // CPicDlg ¶Ô»°¿ò
@@ -32,4 +35,5 @@ public:
     int height;
     virtual BOOL OnInitDialog();
     afx_msg void OnDestroy();
+    vector<Person> vecPerson;
 };

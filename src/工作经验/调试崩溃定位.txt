@@ -1,0 +1,19 @@
+当调用堆栈中没有可用的定位时可以点重试中断停止
+在输出栏会显示
+点击统计:x55
+Assertion failed!
+
+Program: E:\RCImage\bin\Win32\Debug\2345PdfApp.dll
+File: e:\rcimage\src\pdfapp\manage\rcpdfuimanager.cpp
+Line: 333
+
+Expression: 0
+
+For information on how your program can cause an assertion
+failure, see the Visual C++ documentation on asserts
+
+(Press Retry to debug the application - JIT must be enabled)2345PdfReader.exe 已触发了一个断点。
+
+程序“[10192] 2345PdfReader.exe”已退出，返回值为 0 (0x0)。
+
+根据提供的File和Line确定崩溃地点

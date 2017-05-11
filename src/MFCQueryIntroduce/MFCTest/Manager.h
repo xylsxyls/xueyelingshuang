@@ -13,6 +13,4 @@ public:
 	static vector<Person> Find(const Search& search);
 	static void ShowDlg(vector<Person> vecPerson);
     static void ShowError(int error);
-    static void ShowPerson(HWND hwnd, Person* person);
-    static void SavePerson(Person* person);
 };

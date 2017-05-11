@@ -3,6 +3,7 @@
 #include "Collect.h"
 #include "ErrorInfo.h"
 #include "Storage.h"
+#include "PicDlgQuery.h"
 
 void Manager::SearchInfo(HWND hwnd, Search* search){
 	Collect::GetSearchInfo(search, hwnd);
@@ -13,18 +14,11 @@ vector<Person> Manager::Find(const Search& search){
 }
 
 void Manager::ShowDlg(vector<Person> vecPerson){
-
+    CPicDlgQuery picDlgQuery;
+    picDlgQuery.vecPerson = vecPerson;
+    picDlgQuery.DoModal();
 }
 
 void Manager::ShowError(int error){
 	AfxMessageBox(errorInfo.storage[error].toValue<string>().c_str());
-}
-
-void Manager::ShowPerson(HWND hwnd, Person* person){
-    Storage::GetFromtxt(person);
-    Collect::ShowPerson(person, hwnd);
-}
-
-void Manager::SavePerson(Person* person){
-    Storage::SaveTotxt(person);
 }

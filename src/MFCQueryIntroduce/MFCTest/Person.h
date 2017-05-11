@@ -10,8 +10,8 @@ public:
 	string sex;
 	string marriage;
 	string education;
-	string tall;
-	string weight;
+	int tall;
+	int weight;
 	string house;
 	string car;
 	string household;

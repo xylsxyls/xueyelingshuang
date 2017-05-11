@@ -13,18 +13,26 @@ rmdir /q /s "%~dp0src\MessageTest\MessageTest\Debug\"
 rmdir /q /s "%~dp0src\MessageTest\MessageTest\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\MFCQueryIntroduce\ipch\"
-rmdir /q /s "%~dp0src\MFCQueryIntroduce\MFCQueryIntroduce\Debug\"
-rmdir /q /s "%~dp0src\MFCQueryIntroduce\MFCQueryIntroduce\Release\"
+rmdir /q /s "%~dp0src\MFCQueryIntroduce\MFCTest\Debug\"
+rmdir /q /s "%~dp0src\MFCQueryIntroduce\MFCTest\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\MFCSaveIntroduce\ipch\"
-rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCSaveIntroduce\Debug\"
-rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCSaveIntroduce\Release\"
+rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCTest\Debug\"
+rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCTest\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\MFCTest\ipch\"
 rmdir /q /s "%~dp0src\MFCTest\MFCTest\Debug\"
 rmdir /q /s "%~dp0src\MFCTest\MFCTest\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\MFCTest1\ipch\"
-rmdir /q /s "%~dp0src\MFCTest1\MFCTest1\Debug\"
-rmdir /q /s "%~dp0src\MFCTest1\MFCTest1\Release\"
+rmdir /q /s "%~dp0src\MFCTest1\MFCTest\Debug\"
+rmdir /q /s "%~dp0src\MFCTest1\MFCTest\Release\"
+::------------------------------------------------------------
+
+::-------------------删除控制台临时文件-----------------------
+rmdir /q /s "%~dp0src\ConsoleTest\ConsoleTest\Debug\"
+rmdir /q /s "%~dp0src\ConsoleTest\ConsoleTest\Release\"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\ConsoleTest1\ConsoleTest\Debug\"
+rmdir /q /s "%~dp0src\ConsoleTest1\ConsoleTest\Release\"
 ::------------------------------------------------------------
