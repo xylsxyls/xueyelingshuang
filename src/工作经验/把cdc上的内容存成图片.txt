@@ -17,7 +17,7 @@ HBITMAP GetSrcBit(HDC hDC, DWORD BitWidth, DWORD BitHeight)
       ::DeleteDC(hBufDC);
       return hBitmap;
   }
-  BOOL SaveBmp(HBITMAP hBitmap, CString FileName)
+  BOOL SaveBmp(HBITMAP hBitmap, CString FileName)有问题
   {
       //设备描述表
       HDC hDC;

@@ -16,6 +16,7 @@ public:
     enum{
         txtPerson = 0,
         txtOffset = 1,
+        firstPerson = 0,
 		name = 0,
 		birth,
 		sex,

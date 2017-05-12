@@ -38,3 +38,4 @@ int nWidth = DlgWidth;
 CPicControl::DrawInDlgOnPaint(GetDC()->m_hDC,"img\\pop1.bmp",CRect(),CRect(),5,pOK,pPic,pCancel,pText,pText2);
 
 背景设为透明，直接return TRUE;
+背景设置可以不设，但是必须配置GDI+环境,使用控件的时候#include "CPicControl.h"必须放在cpp中，.h中用class

@@ -141,7 +141,7 @@ size_t CStringManager::Replace(std::string & str, char ch1, char ch2)
 
 void CStringManager::Format(std::string & str, const char * fmt, ...)
 {
-	va_list args = NULL;
+	va_list args;
 	va_start(args, fmt);
 	int size = _vscprintf(fmt, args);
 	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
@@ -153,7 +153,7 @@ void CStringManager::Format(std::string & str, const char * fmt, ...)
 
 std::string CStringManager::Format(const char * fmt, ...){
     string result;
-    va_list args = NULL;
+    va_list args;
     va_start(args, fmt);
     int size = _vscprintf(fmt, args);
     //?resize分配后string类会自动在最后分配\0，resize(5)则总长6

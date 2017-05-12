@@ -5,10 +5,12 @@
 #include "resource.h"
 #include <afxdialogex.h>
 #include "Person.h"
+#include "afxwin.h"
 using namespace std;
 
 // CPicDlg ¶Ô»°¿ò
 
+class CPicControl;
 class CPicDlgQuery : public CDialogEx
 {
 	DECLARE_DYNAMIC(CPicDlgQuery)
@@ -30,5 +32,17 @@ public:
     void init(const vector<Person>& vecPerson);
 public:
     virtual BOOL OnInitDialog();
+    void ChangeText(int IDC, string text);
+    void ShowPerson(int num);
     vector<Person> vecPerson;
+    CPicControl* m_pic;
+    CButton m_picPre;
+    CButton m_picNext;
+    CButton m_personPre;
+    CButton m_personNext;
+    int m_currentPerson;
+    afx_msg void OnBnClickedButton4();
+    afx_msg void OnBnClickedButton5();
+    afx_msg void OnBnClickedButtonpic();
+    CButton m_picRc;
 };

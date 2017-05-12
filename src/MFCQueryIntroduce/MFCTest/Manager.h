@@ -2,7 +2,6 @@
 #include <afx.h>
 #include "Person.h"
 #include <vector>
-
 #include "Search.h"
 using namespace std;
 

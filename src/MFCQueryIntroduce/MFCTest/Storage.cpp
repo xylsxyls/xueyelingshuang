@@ -70,7 +70,7 @@ vector<Person> Storage::FindFromtxt(const Search& search){
 					? person.education == "博士" || person.education == "博士海外留学"
 					: 0)
 			&& (person.salary >= search.salary);
-		if (personResult == true) result.push_back(person);
+		if (personResult == false) result.push_back(person);
 	}
 	return result;
 }

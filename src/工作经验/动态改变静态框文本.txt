@@ -1,0 +1,1 @@
+::SendMessage(GetDlgItem(IDC_STATICNAME)->m_hWnd, WM_SETTEXT, 0, (LPARAM)vecPerson.at(num).name.c_str());

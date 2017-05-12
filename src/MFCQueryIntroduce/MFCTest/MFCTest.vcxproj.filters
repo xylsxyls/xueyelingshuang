@@ -37,6 +37,9 @@
     <Filter Include="PicDlgQuery">
       <UniqueIdentifier>{e88f1a4c-9600-49b5-8828-1729832609cd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CPicButton">
+      <UniqueIdentifier>{925c466c-79aa-4844-ad58-13cbb9cacc6d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -81,6 +84,9 @@
     <ClInclude Include="PicDlgQuery.h">
       <Filter>PicDlgQuery</Filter>
     </ClInclude>
+    <ClInclude Include="CPicControl.h">
+      <Filter>CPicButton</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MFCTest.cpp">
@@ -115,6 +121,9 @@
     </ClCompile>
     <ClCompile Include="PicDlgQuery.cpp">
       <Filter>PicDlgQuery</Filter>
+    </ClCompile>
+    <ClCompile Include="CPicControl.cpp">
+      <Filter>CPicButton</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
