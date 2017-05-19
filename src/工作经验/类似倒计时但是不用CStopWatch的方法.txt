@@ -1,0 +1,44 @@
+设置一个bool变量，当需要开始倒计时时设置为true
+另一处执行逻辑时判断bool是否为true，如果是true再做
+当执行了某个较长时间的逻辑后再次判断是否为true，是true再做
+
+static int x = 0;
+    if (x == 0){
+        x++;
+        DWORD threadId = 0;
+        Create_Thread(LoadThread, (LPVOID)this, threadId);
+    }
+    bThread = true;
+
+
+
+DWORD WINAPI LoadThread(LPVOID lparam){
+    RCPdfPreviewWnd* pThis = (RCPdfPreviewWnd*)lparam;
+    while (true)
+    {
+        if (pThis->bThread == true)
+        {
+            pThis->bThread = false;
+            
+            std::vector<tagPageRect> vecPageRect;
+            LRESULT pvecPageRect = ::SendMessage(pThis->m_hWnd, WM_LOAD, WM_LOADINIT, (LPARAM)&vecPageRect);
+            
+            RCPdfPreviewData::SetHBITMAP(*(std::vector<tagPageRect>*)pvecPageRect, 0.2);
+            
+            ::SendMessage(pThis->m_hWnd, WM_LOAD, WM_LOADED, pvecPageRect);
+            static CStopWatch stopwatch;
+            stopwatch.Run();
+            stopwatch.Stop();
+            unsigned int xxxxx = stopwatch.GetWatchTime();
+            //CRect rcRect;
+            //pThis->GetWindowRect(rcRect);
+            //::InvalidateRect(pThis->m_hWnd, rcRect, TRUE);
+            if (pThis->bThread == false)
+            {
+                pThis->Invalidate(FALSE);
+            }
+        }
+    }
+    
+    return 0;
+}

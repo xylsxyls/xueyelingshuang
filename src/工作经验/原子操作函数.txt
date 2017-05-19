@@ -1,0 +1,23 @@
+//增减
+　　（1） LONG InterlockedIncrement(IN OUT LONG volatile *lpAddend);
+　　lpAddend为长整型变量的地址，返回值为原始值。这个函数的主要作用是原子性自增(相当于++操作)。
+　　（2） LONG InterlockedDecrement(IN OUT LONG volatile *lpAddend);
+　　lpAddend为长整型变量的地址，返回值为原始值。这个函数的主要作用是原子性自减(相当于--操作)。
+　　（3） LONG InterlockedExchangeAdd ( LPLONG Addend, LONG Increment );
+　　Addend为长整型变量的地址，Increment为想要在Addend指向的长整型变量上增加的数值（可以是负数）。这个函数的主要作用是保证这个加操作为一个原子访问。
+//交换
+　　（4） LONG InterlockedExchange( LPLONG Target, LONG Value );
+　　用第二个参数的值取代第一个参数指向的值。函数返回值为原始值。
+　　（5） PVOID InterlockedExchangePointer( PVOID *Target, PVOID Value );
+　　用第二个参数的值取代第一个参数指向的值。函数返回值为原始值。
+//比较交换
+　　（6） LONG InterlockedCompareExchange(
+　　LPLONG Destination, LONG Exchange, LONG Comperand );
+　　如果第三个参数与第一个参数指向的值相同，那么用第二个参数取代第一个参数指向的值。函数返回值为原始值。
+　　（7） PVOID InterlockedCompareExchangePointer (
+　　PVOID *Destination, PVOID Exchange, PVOID Comperand );
+　　如果第三个参数与第一个参数指向的值相同，那么用第二个参数取代第一个参数指向的值。函数返回值为原始值。
+
+
+#define GetAtomicInt(inter) (::InterlockedExchangeAdd((LONG*)&(inter), 0))
+#define SetAtomicInt(inter,value) (::InterlockedExchange((LONG*)&(inter), (value)))

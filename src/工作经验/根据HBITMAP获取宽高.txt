@@ -1,0 +1,2 @@
+BITMAP bmp;
+        GetObject(picHBITMAP, sizeof(BITMAP), &bmp);

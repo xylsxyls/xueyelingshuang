@@ -1,0 +1,2 @@
+&dc.m_ps.rcPaint
+获得的是rcPaint的地址，.符号优先运算

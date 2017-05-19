@@ -1,0 +1,17 @@
+BitBlt能够从图片的任意一点画到图片底端
+TransparentBlt函数在使用的时候，如果src的起始点不是0,0那么在填写后面的宽度和高度时写需要部分的宽高度，如果长度超过原图片则显示到原图片尾部，
+如果想画上面部分那么后面的宽高度写具体的绘画部分矩形宽高度
+
+绘画失败重编译
+StretchBlt
+
+BitBlt函数是4个点，不是宽高
+::BitBlt(hdc,
+                realPoint.x,
+                realPoint.y,
+                realPoint.x + vecPageRect[i].rect.Width(),
+                realPoint.y + vecPageRect[i].rect.Height(),
+                picHDC,
+                0,
+                top,
+                SRCCOPY);

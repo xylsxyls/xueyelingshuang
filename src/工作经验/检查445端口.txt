@@ -1,0 +1,1 @@
+netstat -ano -p tcp | find "445" >nul 2>nul && echo 445端口已开启 || echo 445未开启

@@ -1,0 +1,2 @@
+CWindowImpl<RCPdfPreviewWnd>可以在create中使用 | WS_HSCROLL | WS_VSCROLL加载滚动条
+但是CWindowImpl<RCPdfPreviewWnd, CTreeViewCtrlEx>不能加载滚动条

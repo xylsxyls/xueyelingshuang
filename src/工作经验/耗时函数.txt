@@ -1,0 +1,7 @@
+CreateCompatibleDC 500´Î 50
+SelectObject  500 30
+DeleteDC      500 15
+TransparentBlt   500 141
+LoadImage   212
+CMemoryDC dcMem   500 171
+dcMem.FillSolidRect  500 341
