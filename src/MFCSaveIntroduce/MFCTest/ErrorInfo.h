@@ -1,19 +1,20 @@
 #pragma once
 #include "CStorage/CStorageAPI.h"
+#define GetError(error, T) errorInfo.storage[error].toValue<T>()
 
 class ErrorInfo{
 public:
-	enum{
-		Success = 0,
-		Name = 1,
-		Birth,
-		Sex,
-		Marriage,
-		Education
-	};
-public:
 	ErrorInfo();
 	CStorage storage;
+};
+
+enum{
+    Success = 0,
+    NameError = 1,
+    BirthError,
+    SexError,
+    MarriageError,
+    EducationError
 };
 
 extern ErrorInfo errorInfo;

@@ -259,8 +259,10 @@ void CjsonA::GetOneJson(string *strJson,string* strOneJson){
 		CStringManager::Replace(strJsonNext," ", "");
 		if(strJsonNext != "") mapError[*strJson] = "jsonºóÓÐ¶àÓà×Ö·û";
 	}
-	*strOneJson = CStringManager::Mid(*strJson,nLeft, nRight - nLeft + 1);
-	*strJson = CStringManager::Mid(*strJson, nRight + 1, CStringManager::GetLength(*strJson) - nRight);
+    if (nLeft != -1 && nRight != -1){
+        *strOneJson = CStringManager::Mid(*strJson, nLeft, nRight - nLeft + 1);
+        *strJson = CStringManager::Mid(*strJson, nRight + 1, CStringManager::GetLength(*strJson) - nRight);
+    }
 }
 
 map<string,string> CjsonA::LoadJson(string strJson){

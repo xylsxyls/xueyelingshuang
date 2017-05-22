@@ -16,6 +16,7 @@ public:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+    void* txt;
 
 public:
 	Ctxt(string strPath);

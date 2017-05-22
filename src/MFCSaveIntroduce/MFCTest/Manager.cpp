@@ -14,7 +14,7 @@ int Manager::Query(HWND hwnd, Person* person){
 }
 
 void Manager::ShowError(int error){
-	AfxMessageBox(errorInfo.storage[error].toValue<string>().c_str());
+    AfxMessageBox(GetError(error, string).c_str());
 }
 
 void Manager::ShowPerson(HWND hwnd, Person* person){

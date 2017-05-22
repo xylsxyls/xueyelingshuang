@@ -5,22 +5,52 @@
 #include "CScreen/CScreenAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CGetPath/CGetPathAPI.h"
+#include "CStopWatch/CStopWatchAPI.h"
+#include "Cini/CiniAPI.h"
+
+#define SetPersonString(person, strKey) storage.ini->WriteIni(#strKey, person->strKey, person->name + person->birth.dateNumToString())
+#define SetPersonBirth(person, strKey) storage.ini->WriteIni(#strKey, person->strKey.dateNumToString(), person->name + person->birth.dateNumToString())
+#define SetPersonInt(person, strKey) storage.ini->WriteIni(#strKey, CStringManager::Format("%d", person->strKey), person->name + person->birth.dateNumToString())
+
+#define GetPersonString(person, strKey) person->strKey = storage.ini->ReadIni(#strKey, 1024, person->name + person->birth.dateNumToString())
+#define GetPersonBirth(person, strKey) person->strKey = IntDateTime(atoi(storage.ini->ReadIni(#strKey, 1024, person->name + person->birth.dateNumToString()).c_str()), 0)
+#define GetPersonInt(person, strKey) person->strKey = atoi(storage.ini->ReadIni(#strKey, 1024, person->name + person->birth.dateNumToString()).c_str())
 
 map<string, string> mapData;
 storage_ storage;
 
 storage_::storage_(){
-	Ctxt txt(configInfo.storage[ConfigInfo::txtPath].toValue<string>());
-	txt.LoadTxt(2, "~!@#$%^&*()");
+    ini = new Cini(GetConfig(txtPath, string));
+    /*
+    Ctxt txt(GetConfig(txtPath, string));
+    txt.OpenFile_a();
+    string data;
+    int readresult = -1;
+    int readsize = 100;
+    int size = 0;
+    while (true){
+        data.resize(size + 100);
+        readresult = fread(&data[size], 1, 100, txt.pFile);
+        if (readresult != readsize){
+            data.resize(size + readresult);
+            break;
+        }
+        size = size + 100;
+    }
+    static CStopWatch stopwatch;
+    //json.LoadJson(data);
+    int xxx = stopwatch.GetWatchTime();
+    txt.CloseFile();*/
+    /*
 	int n = -1;
 	while (n++ != txt.vectxt.size() - 1){
 		int i = 0;
 		string strValue;
 		while (i++ != txt.vectxt.at(n).size() - 1){
-			strValue = strValue + txt.vectxt.at(n).at(i) + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str();
+            strValue = strValue + txt.vectxt.at(n).at(i) + GetConfig(Split, string).c_str();
 		}
 		mapData[txt.vectxt.at(n).at(0)] = strValue;
-	}
+	}*/
 }
 
 void Storage::SaveTotxt(Person* person){
@@ -30,79 +60,89 @@ void Storage::SaveTotxt(Person* person){
     }
 
 	string strPerson;
+    string personKey = person->name + person->birth.dateNumToString();
 	if (person->picture1 != ""){
-        bool x = CScreen::ChangeToBmp(path + person->name + person->birth.dateNumToString() + "1.bmp", person->picture1);
-		person->picture1 = "picture/" + person->name + person->birth.dateNumToString() + "1.bmp";
+        bool x = CScreen::ChangeToBmp(path + personKey + "1.bmp", person->picture1);
+        person->picture1 = "picture/" + personKey + "1.bmp";
 	}
 	if (person->picture2 != ""){
-        CScreen::ChangeToBmp(path + person->name + person->birth.dateNumToString() + "2.bmp", person->picture2);
-		person->picture2 = "picture/" + person->name + person->birth.dateNumToString() + "2.bmp";
+        CScreen::ChangeToBmp(path + personKey + "2.bmp", person->picture2);
+        person->picture2 = "picture/" + personKey + "2.bmp";
 	}
 	if (person->picture3 != ""){
-        CScreen::ChangeToBmp(path + person->name + person->birth.dateNumToString() + "3.bmp", person->picture3);
-		person->picture3 = "picture/" + person->name + person->birth.dateNumToString() + "3.bmp";
+        CScreen::ChangeToBmp(path + personKey + "3.bmp", person->picture3);
+        person->picture3 = "picture/" + personKey + "3.bmp";
 	}
-	strPerson = person->name + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->birth.dateNumToString() + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->sex + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->marriage + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->education + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ CStringManager::Format("%d", person->tall).c_str() + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ CStringManager::Format("%d", person->weight).c_str() + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->house + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->car + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->household + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->houseAttri + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->houseAddr + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->jobName + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->jobNature + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ CStringManager::Format("%d", person->salary) + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->mobile + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->qq + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->weChat + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->fatherJob + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->fatherPension + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->motherJob + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->motherPension + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->picture1 + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->picture2 + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->picture3 + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str()
-		+ person->introduce + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str();
-
-    mapData[person->name + person->birth.dateNumToString()] = strPerson;
-	Ctxt txt(configInfo.storage[ConfigInfo::txtPath].toValue<string>());
-	txt.AddLine("%s", (person->name + person->birth.dateNumToString() + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str() + strPerson).c_str());
+    
+    //Cini ini("");
+    
+    SetPersonString(person, name         );
+    SetPersonBirth (person, birth        );
+    SetPersonString(person, sex          );
+    SetPersonString(person, marriage     );
+    SetPersonString(person, education    );
+    SetPersonInt   (person, tall         );
+    SetPersonInt   (person, weight       );
+    SetPersonString(person, house        );
+    SetPersonString(person, car          );
+    SetPersonString(person, household    );
+    SetPersonString(person, houseAttri   );
+    SetPersonString(person, houseAddr    );
+    SetPersonString(person, jobName      );
+    SetPersonString(person, jobNature    );
+    SetPersonInt   (person, salary       );
+    SetPersonString(person, mobile       );
+    SetPersonString(person, qq           );
+    SetPersonString(person, weChat       );
+    SetPersonString(person, fatherJob    );
+    SetPersonString(person, fatherPension);
+    SetPersonString(person, motherJob    );
+    SetPersonString(person, motherPension);
+    SetPersonString(person, picture1     );
+    SetPersonString(person, picture2     );
+    SetPersonString(person, picture3     );
+    SetPersonString(person, introduce    );
+    //mapData[person->name + person->birth.dateNumToString()] = strPerson;
+    /*
+	Ctxt txt(GetConfig(txtPath, string));
+    txt.OpenFile_w();
+    fwrite(data.c_str(), 1, data.length(), txt.pFile);
+    txt.CloseFile();
+    Ctxt txtBk(GetConfig(txtPathBk, string));
+    txtBk.OpenFile_w();
+    fwrite(data.c_str(), 1, data.length(), txtBk.pFile);
+    txtBk.CloseFile();*/
+	//txt.AddLine("%s", (person->name + person->birth.dateNumToString() + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str() + strPerson).c_str());
 }
 
 void Storage::GetFromtxt(Person* person){
-    auto itmapData = mapData.find(person->name + person->birth.dateNumToString());
-    if (itmapData == mapData.end()) return;
-    string value = itmapData->second;
-    vector<string> vecValue = CStringManager::split(value, configInfo.storage[ConfigInfo::Split].toValue<string>().c_str());
-    person->name = vecValue[ConfigInfo::name];
-    person->birth = IntDateTime(atoi(vecValue[ConfigInfo::birth].c_str()), 0);
-    person->sex = vecValue[ConfigInfo::sex];
-    person->marriage = vecValue[ConfigInfo::marriage];
-    person->education = vecValue[ConfigInfo::education];
-    person->tall = atoi(vecValue[ConfigInfo::tall].c_str());
-    person->weight = atoi(vecValue[ConfigInfo::weight].c_str());
-	person->house = vecValue[ConfigInfo::house];
-	person->car = vecValue[ConfigInfo::car];
-	person->household = vecValue[ConfigInfo::household];
-	person->houseAttri = vecValue[ConfigInfo::houseAttri];
-	person->houseAddr = vecValue[ConfigInfo::houseAddr];
-    person->jobName = vecValue[ConfigInfo::jobName];
-    person->jobNature = vecValue[ConfigInfo::jobNature];
-    person->salary = atoi(vecValue[ConfigInfo::salary].c_str());
-    person->mobile = vecValue[ConfigInfo::mobile];
-    person->qq = vecValue[ConfigInfo::qq];
-    person->weChat = vecValue[ConfigInfo::weChat];
-    person->fatherJob = vecValue[ConfigInfo::fatherJob];
-    person->fatherPension = vecValue[ConfigInfo::fatherPension];
-    person->motherJob = vecValue[ConfigInfo::motherJob];
-    person->motherPension = vecValue[ConfigInfo::motherPension];
-    person->picture1 = vecValue[ConfigInfo::picture1];
-    person->picture2 = vecValue[ConfigInfo::picture2];
-    person->picture3 = vecValue[ConfigInfo::picture3];
-    person->introduce = vecValue[ConfigInfo::introduce];
+    static CStopWatch so;
+    GetPersonString(person, name         );
+    GetPersonBirth (person, birth        );
+    GetPersonString(person, sex          );
+    GetPersonString(person, marriage     );
+    GetPersonString(person, education    );
+    GetPersonInt   (person, tall         );
+    GetPersonInt   (person, weight       );
+    GetPersonString(person, house        );
+    GetPersonString(person, car          );
+    GetPersonString(person, household    );
+    GetPersonString(person, houseAttri   );
+    GetPersonString(person, houseAddr    );
+    GetPersonString(person, jobName      );
+    GetPersonString(person, jobNature    );
+    GetPersonInt   (person, salary       );
+    GetPersonString(person, mobile       );
+    GetPersonString(person, qq           );
+    GetPersonString(person, weChat       );
+    GetPersonString(person, fatherJob    );
+    GetPersonString(person, fatherPension);
+    GetPersonString(person, motherJob    );
+    GetPersonString(person, motherPension);
+    GetPersonString(person, picture1     );
+    GetPersonString(person, picture2     );
+    GetPersonString(person, picture3     );
+    GetPersonString(person, introduce    );
+    int xxx = so.GetWatchTime();
+    int x = 3;
 }

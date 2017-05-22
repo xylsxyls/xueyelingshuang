@@ -501,7 +501,7 @@ Cjson Cjson::operator = (double dNum){
 
 Cjson Cjson::operator = (string str){
 	string strTemp = "";
-	CStringManager::Format(strTemp,"\"%s\"", str);
+	CStringManager::Format(strTemp,"\"%s\"", str.c_str());
 
 	return *(TypeEqual(strTemp));
 }
