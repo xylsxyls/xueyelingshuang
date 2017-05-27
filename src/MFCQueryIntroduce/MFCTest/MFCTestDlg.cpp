@@ -84,7 +84,7 @@ BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CMFCTestDlg::OnBnClickedButton1)
-	ON_MESSAGE(configInfo.storage[ConfigInfo::FillSearchInt].toValue<int>(), &CMFCTestDlg::OnSetSearchInfo)
+    ON_MESSAGE(GetConfig(FillSearchInt, int), &CMFCTestDlg::OnSetSearchInfo)
 END_MESSAGE_MAP()
 
 

@@ -66,7 +66,7 @@ BOOL CPicDlgQuery::OnInitDialog()
     // TODO:  在此添加额外的初始化
     //m_pic->pThis = this;
     
-    m_currentPerson = ConfigInfo::firstPerson;
+    m_currentPerson = firstPerson;
     ShowPerson(m_currentPerson);
     return TRUE;  // return TRUE unless you set the focus to a control
     // 异常:  OCX 属性页应返回 FALSE
@@ -101,7 +101,6 @@ void CPicDlgQuery::ShowPerson(int num){
     ChangeText(IDC_STATICHOUSEHOLD , vecPerson.at(num).household);
     ChangeText(IDC_STATICHOUSEATTRI, vecPerson.at(num).houseAttri);
     
-    //Invalidate(TRUE);
     list<CString> listPath;
     listPath.push_back((CGetPath::GetCurrentExePath() + vecPerson.at(num).picture1).c_str());
     CRect picRect;
@@ -112,7 +111,7 @@ void CPicDlgQuery::ShowPerson(int num){
     m_picPre.EnableWindow(FALSE);
     if (vecPerson.at(num).picture2 == "") m_picNext.EnableWindow(FALSE);
     else m_picNext.EnableWindow(TRUE);
-    if (num == ConfigInfo::firstPerson) m_personPre.EnableWindow(FALSE);
+    if (num == firstPerson) m_personPre.EnableWindow(FALSE);
     else m_personPre.EnableWindow(TRUE);
     if (num == vecPerson.size() - 1) m_personNext.EnableWindow(FALSE);
     else m_personNext.EnableWindow(TRUE);

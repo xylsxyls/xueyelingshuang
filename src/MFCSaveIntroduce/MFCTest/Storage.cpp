@@ -12,9 +12,9 @@
 #define SetPersonBirth(person, strKey) storage.ini->WriteIni(#strKey, person->strKey.dateNumToString(), person->name + person->birth.dateNumToString())
 #define SetPersonInt(person, strKey) storage.ini->WriteIni(#strKey, CStringManager::Format("%d", person->strKey), person->name + person->birth.dateNumToString())
 
-#define GetPersonString(person, strKey) person->strKey = storage.ini->ReadIni(#strKey, 1024, person->name + person->birth.dateNumToString())
-#define GetPersonBirth(person, strKey) person->strKey = IntDateTime(atoi(storage.ini->ReadIni(#strKey, 1024, person->name + person->birth.dateNumToString()).c_str()), 0)
-#define GetPersonInt(person, strKey) person->strKey = atoi(storage.ini->ReadIni(#strKey, 1024, person->name + person->birth.dateNumToString()).c_str())
+#define GetPersonString(person, strKey) person->strKey = storage.ini->ReadIni(#strKey, person->name + person->birth.dateNumToString(), 1024)
+#define GetPersonBirth(person, strKey) person->strKey = IntDateTime(atoi(storage.ini->ReadIni(#strKey, person->name + person->birth.dateNumToString(), 1024).c_str()), 0)
+#define GetPersonInt(person, strKey) person->strKey = atoi(storage.ini->ReadIni(#strKey, person->name + person->birth.dateNumToString(), 1024).c_str())
 
 map<string, string> mapData;
 storage_ storage;

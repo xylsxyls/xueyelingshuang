@@ -1,6 +1,7 @@
 #pragma once
 #include "Person.h"
 #include <vector>
+#include "Cini/CiniAPI.h"
 using namespace std;
 
 class Search;
@@ -11,5 +12,6 @@ public:
 
 class storage_{
 public:
+    Cini* ini;
 	storage_();
 };

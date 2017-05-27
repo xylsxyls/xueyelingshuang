@@ -7,11 +7,22 @@
 #include "CGetPath/CGetPathAPI.h"
 #include "Search.h"
 
+#define SetPersonString(person, strKey) storage.ini->WriteIni(#strKey, person->strKey, person->name + person->birth.dateNumToString())
+#define SetPersonBirth(person, strKey) storage.ini->WriteIni(#strKey, person->strKey.dateNumToString(), person->name + person->birth.dateNumToString())
+#define SetPersonInt(person, strKey) storage.ini->WriteIni(#strKey, CStringManager::Format("%d", person->strKey), person->name + person->birth.dateNumToString())
+
+#define GetPersonString(person, strKey) person->strKey = storage.ini->ReadIni(#strKey, person->name + person->birth.dateNumToString(), 1024)
+#define GetPersonBirth(person, strKey) person->strKey = IntDateTime(atoi(storage.ini->ReadIni(#strKey, person->name + person->birth.dateNumToString(), 1024).c_str()), 0)
+#define GetPersonInt(person, strKey) person->strKey = atoi(storage.ini->ReadIni(#strKey, person->name + person->birth.dateNumToString(), 1024).c_str())
+
+
 map<string, Person> mapData;
 storage_ storage;
 
 storage_::storage_(){
-	Ctxt txt(configInfo.storage[ConfigInfo::txtPath].toValue<string>());
+    ini = new Cini(GetConfig(txtPath, string));
+    /*
+    Ctxt txt(GetConfig(txtPath, string));
 	txt.LoadTxt(2, "~!@#$%^&*()");
 	int n = -1;
 	while (n++ != txt.vectxt.size() - 1){
@@ -44,6 +55,7 @@ storage_::storage_(){
 		person.introduce = txt.vectxt.at(n).at(ConfigInfo::introduce + ConfigInfo::txtOffset);
 		mapData[txt.vectxt.at(n).at(ConfigInfo::txtPerson)] = person;
 	}
+    */
 }
 
 vector<Person> Storage::FindFromtxt(const Search& search){
@@ -52,8 +64,8 @@ vector<Person> Storage::FindFromtxt(const Search& search){
 		Person person = itmapData->second;
 		bool personResult = (person.birth <= search.bigBirth && person.birth >= search.smallBirth)
 			&& (person.sex == search.sex)
-			&& (search.marriage == configInfo.storage[ConfigInfo::notMarriage].toValue<string>()
-					? person.marriage == configInfo.storage[ConfigInfo::notMarriage].toValue<string>()
+			&& (search.marriage == configInfo.storage[notMarriage].toValue<string>()
+					? person.marriage == configInfo.storage[notMarriage].toValue<string>()
 					: person.marriage != configInfo.storage[ConfigInfo::notMarriage].toValue<string>())
 			&& (person.tall <= search.bigTall && person.tall >= search.smallTall)
 			&& (search.house == configInfo.storage[ConfigInfo::notHasHouse].toValue<string>()
