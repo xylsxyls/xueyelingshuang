@@ -1,0 +1,13 @@
+int oldMode = ::SetStretchBltMode(hdc, HALFTONE);
+            bDraw = ::StretchBlt(hdc,
+                vecPageRect[i].m_rect.GetLeft(),
+                vecPageRect[i].m_rect.GetTop(),
+                vecPageRect[i].m_rect.Width(),
+                vecPageRect[i].m_rect.Height(),
+                picHDC,
+                0,
+                vecPageRect[i].m_rect.GetTop() != 0 ? 0 : bmp.bmHeight * (1 - vecPageRect[i].m_ratio),
+                bmp.bmWidth,
+                bmp.bmHeight * vecPageRect[i].m_ratio,
+                SRCCOPY);
+            ::SetStretchBltMode(hdc, oldMode);

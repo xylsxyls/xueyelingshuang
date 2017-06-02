@@ -1,0 +1,4 @@
+DWORD pos = GetMessagePos();
+    POINT point;
+    point.x = GET_X_LPARAM(pos);
+    point.y = GET_Y_LPARAM(pos);

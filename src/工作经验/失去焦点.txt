@@ -1,0 +1,7 @@
+void RCPdfPreviewWnd::OnKillFocus(CWindow wndOld)
+{
+    return;
+}
+
+void OnKillFocus(CWindow wndOld);
+MSG_WM_KILLFOCUS(OnKillFocus)

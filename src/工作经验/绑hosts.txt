@@ -1,0 +1,5 @@
+C:\Windows\System32\drivers\etc: hosts
+
+在文件中输入
+
+172.16.0.64 t.pic.2345.com

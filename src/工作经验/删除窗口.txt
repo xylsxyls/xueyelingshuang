@@ -1,0 +1,1 @@
+如果要删除窗口指针，必须先执行DestroyWindow

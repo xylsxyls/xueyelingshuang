@@ -1,0 +1,41 @@
+void RCPdfPreviewWnd::LoadThread(LPVOID lparam)
+{
+    RCPdfPreviewWnd* pWnd = (RCPdfPreviewWnd*)lparam;
+
+    HANDLE handle[2];
+    handle[0] = pWnd->m_eventThread.GetHandle();
+    handle[1] = pWnd->m_event.GetHandle();
+
+    bool bQuit = false;
+    while (!bQuit)
+    {
+        DWORD waitResult = ::WaitForMultipleObjects(2, handle, FALSE, INFINITE);
+        switch (waitResult)
+        {
+            case WAIT_OBJECT_0:
+            {
+                bQuit = true;
+                break;
+            }
+            case WAIT_OBJECT_0 + 1:
+            {
+                LoadHBITMAP(pWnd);
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+    return;
+}
+
+
+´´½¨
+m_event.Create(_T(""), false, false);
+    m_eventThread.Create(_T(""), true, false);
+
+Ïú»Ù
+m_eventThread.SetEvent();
+    m_loadThread->Join();
