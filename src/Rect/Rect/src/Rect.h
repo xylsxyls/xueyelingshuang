@@ -27,6 +27,11 @@ public:
 	bool isPoint()const;
 	bool isLine()const;
 
+    //?是否是水平线
+    bool isHorizontalLine()const;
+    //?是否是垂直线
+    bool isVerticalLine()const;
+
 	//? 居中适应放入背景bkRect中
 	//? param [in] bkRect 背景矩形
 	//? return 返回适应之后的矩形，如果过小会放大适应
@@ -47,6 +52,6 @@ public:
 	double Gettan()const;
 
 #ifdef _WIN32
-    operator RECT();
+    operator RECT()const;
 #endif
 };
