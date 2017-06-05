@@ -1,3 +1,4 @@
+#include <SDKDDKVer.h>
 #include "ConfigInfo.h"
 #include "Point/PointAPI.h"
 #include "Rect/RectAPI.h"

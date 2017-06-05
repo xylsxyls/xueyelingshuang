@@ -11,78 +11,123 @@
 #define SetPersonBirth(person, strKey) storage.ini->WriteIni(#strKey, person->strKey.dateNumToString(), person->name + person->birth.dateNumToString())
 #define SetPersonInt(person, strKey) storage.ini->WriteIni(#strKey, CStringManager::Format("%d", person->strKey), person->name + person->birth.dateNumToString())
 
-#define GetPersonString(person, strKey) person->strKey = storage.ini->ReadIni(#strKey, person->name + person->birth.dateNumToString(), 1024)
-#define GetPersonBirth(person, strKey) person->strKey = IntDateTime(atoi(storage.ini->ReadIni(#strKey, person->name + person->birth.dateNumToString(), 1024).c_str()), 0)
-#define GetPersonInt(person, strKey) person->strKey = atoi(storage.ini->ReadIni(#strKey, person->name + person->birth.dateNumToString(), 1024).c_str())
+#define GetPersonString(section, strKey, person) person.strKey = storage.ini->ReadIni(#strKey, section, 1024)
+#define GetPersonBirth(section, strKey, person) person.strKey = IntDateTime(atoi(storage.ini->ReadIni(#strKey, section).c_str()), 0)
+#define GetPersonInt(section, strKey, person) person.strKey = atoi(storage.ini->ReadIni(#strKey, section).c_str())
 
-
-map<string, Person> mapData;
+vector<Person> vecData;
 storage_ storage;
 
 storage_::storage_(){
     ini = new Cini(GetConfig(txtPath, string));
-    /*
-    Ctxt txt(GetConfig(txtPath, string));
-	txt.LoadTxt(2, "~!@#$%^&*()");
-	int n = -1;
-	while (n++ != txt.vectxt.size() - 1){
+	vector<string> vecSection = ini->GetSection(GetConfig(maxPeople, int));
+	int i = -1;
+	while (i++ != vecSection.size() - 1)
+	{
 		Person person;
-		person.name = txt.vectxt.at(n).at(ConfigInfo::name + ConfigInfo::txtOffset);
-		person.birth = IntDateTime(atoi(txt.vectxt.at(n).at(ConfigInfo::birth + ConfigInfo::txtOffset).c_str()), 0);
-		person.sex = txt.vectxt.at(n).at(ConfigInfo::sex + ConfigInfo::txtOffset);
-		person.marriage = txt.vectxt.at(n).at(ConfigInfo::marriage + ConfigInfo::txtOffset);
-		person.education = txt.vectxt.at(n).at(ConfigInfo::education + ConfigInfo::txtOffset);
-		person.tall = atoi(txt.vectxt.at(n).at(ConfigInfo::tall + ConfigInfo::txtOffset).c_str());
-		person.weight = atoi(txt.vectxt.at(n).at(ConfigInfo::weight + ConfigInfo::txtOffset).c_str());
-		person.house = txt.vectxt.at(n).at(ConfigInfo::house + ConfigInfo::txtOffset);
-		person.car = txt.vectxt.at(n).at(ConfigInfo::car + ConfigInfo::txtOffset);
-		person.household = txt.vectxt.at(n).at(ConfigInfo::household + ConfigInfo::txtOffset);
-		person.houseAttri = txt.vectxt.at(n).at(ConfigInfo::houseAttri + ConfigInfo::txtOffset);
-		person.houseAddr = txt.vectxt.at(n).at(ConfigInfo::houseAddr + ConfigInfo::txtOffset);
-		person.jobName = txt.vectxt.at(n).at(ConfigInfo::jobName + ConfigInfo::txtOffset);
-		person.jobNature = txt.vectxt.at(n).at(ConfigInfo::jobNature + ConfigInfo::txtOffset);
-		person.salary = atoi(txt.vectxt.at(n).at(ConfigInfo::salary + ConfigInfo::txtOffset).c_str());
-		person.mobile = txt.vectxt.at(n).at(ConfigInfo::mobile + ConfigInfo::txtOffset);
-		person.qq = txt.vectxt.at(n).at(ConfigInfo::qq + ConfigInfo::txtOffset);
-		person.weChat = txt.vectxt.at(n).at(ConfigInfo::weChat);
-		person.fatherJob = txt.vectxt.at(n).at(ConfigInfo::fatherJob + ConfigInfo::txtOffset);
-		person.fatherPension = txt.vectxt.at(n).at(ConfigInfo::fatherPension + ConfigInfo::txtOffset);
-		person.motherJob = txt.vectxt.at(n).at(ConfigInfo::motherJob + ConfigInfo::txtOffset);
-		person.motherPension = txt.vectxt.at(n).at(ConfigInfo::motherPension + ConfigInfo::txtOffset);
-		person.picture1 = txt.vectxt.at(n).at(ConfigInfo::picture1 + ConfigInfo::txtOffset);
-		person.picture2 = txt.vectxt.at(n).at(ConfigInfo::picture2 + ConfigInfo::txtOffset);
-		person.picture3 = txt.vectxt.at(n).at(ConfigInfo::picture3 + ConfigInfo::txtOffset);
-		person.introduce = txt.vectxt.at(n).at(ConfigInfo::introduce + ConfigInfo::txtOffset);
-		mapData[txt.vectxt.at(n).at(ConfigInfo::txtPerson)] = person;
+		GetPersonString(vecSection.at(i), name,          person);
+		GetPersonBirth (vecSection.at(i), birth,         person);
+		GetPersonString(vecSection.at(i), sex,           person);
+		GetPersonString(vecSection.at(i), marriage,      person);
+		GetPersonString(vecSection.at(i), education,     person);
+		GetPersonInt   (vecSection.at(i), tall,          person);
+		GetPersonInt   (vecSection.at(i), weight,        person);
+		GetPersonString(vecSection.at(i), house,         person);
+		GetPersonString(vecSection.at(i), car,           person);
+		GetPersonString(vecSection.at(i), household,     person);
+		GetPersonString(vecSection.at(i), houseAttri,    person);
+		GetPersonString(vecSection.at(i), houseAddr,     person);
+		GetPersonString(vecSection.at(i), jobName,       person);
+		GetPersonString(vecSection.at(i), jobNature,     person);
+		GetPersonInt   (vecSection.at(i), salary,        person);
+		GetPersonString(vecSection.at(i), mobile,        person);
+		GetPersonString(vecSection.at(i), qq,            person);
+		GetPersonString(vecSection.at(i), weChat,        person);
+		GetPersonString(vecSection.at(i), fatherJob,     person);
+		GetPersonString(vecSection.at(i), fatherPension, person);
+		GetPersonString(vecSection.at(i), motherJob,     person);
+		GetPersonString(vecSection.at(i), motherPension, person);
+		GetPersonString(vecSection.at(i), picture1,      person);
+		GetPersonString(vecSection.at(i), picture2,      person);
+		GetPersonString(vecSection.at(i), picture3,      person);
+		GetPersonString(vecSection.at(i), introduce,     person);
+		vecData.push_back(person);
 	}
-    */
 }
 
 vector<Person> Storage::FindFromtxt(const Search& search){
     vector<Person> result;
-	for (auto itmapData = mapData.begin(); itmapData != mapData.end(); itmapData++){
-		Person person = itmapData->second;
+	int i = -1;
+	while (i++ != vecData.size() - 1)
+	{
+		Person person = vecData.at(i);
 		bool personResult = (person.birth <= search.bigBirth && person.birth >= search.smallBirth)
 			&& (person.sex == search.sex)
-			&& (search.marriage == configInfo.storage[notMarriage].toValue<string>()
-					? person.marriage == configInfo.storage[notMarriage].toValue<string>()
-					: person.marriage != configInfo.storage[ConfigInfo::notMarriage].toValue<string>())
 			&& (person.tall <= search.bigTall && person.tall >= search.smallTall)
-			&& (search.house == configInfo.storage[ConfigInfo::notHasHouse].toValue<string>()
-					? person.house == configInfo.storage[ConfigInfo::notHasHouse].toValue<string>()
-					: person.house != configInfo.storage[ConfigInfo::notHasHouse].toValue<string>())
 			&& (person.weight <= search.bigWeight && person.weight >= search.smallWeight)
-			&& (search.education == "本科以上"
-					? person.education != "中专" && person.education != "大专"
-					: search.education == "硕士以上"
-					? person.education == "学硕" || person.education == "专硕"
-							|| person.education == "硕士双学位" || person.education == "硕士海外留学"
-							|| person.education == "博士" || person.education == "博士海外留学"
-					: search.education == "博士"
-					? person.education == "博士" || person.education == "博士海外留学"
-					: 0)
 			&& (person.salary >= search.salary);
-		if (personResult == false) result.push_back(person);
+		if (personResult == false)
+		{
+			continue;
+		}
+		ChangePersonToSearch(person);
+		personResult = (search.marriage == GetConfig(noMatter, string) || person.marriage == search.marriage)
+			&& (search.marriage == GetConfig(noMatter, string) || person.house == search.house)
+			&& (search.marriage == GetConfig(noMatter, string) || person.education == search.education);
+		if (personResult == true)
+		{
+			result.push_back(vecData.at(i));
+		}
 	}
 	return result;
+}
+
+void Storage::ChangePersonToSearch(Person& person)
+{
+	if (person.marriage == GetConfig(notMarriage1, string))
+	{
+		person.marriage = GetConfig(notMarriage, string);
+	}
+	else if (person.marriage == GetConfig(hasMarriage1, string)
+		|| person.marriage == GetConfig(hasMarriage2, string))
+	{
+		person.marriage = GetConfig(hasMarriage, string);
+	}
+
+	if (person.house == GetConfig(noHouse1, string))
+	{
+		person.house = GetConfig(noHouse, string);
+	}
+	else if (person.house == GetConfig(hasHouse1, string)
+		|| person.house == GetConfig(hasHouse2, string))
+	{
+		person.house = GetConfig(hasHouse, string);
+	}
+
+	if (person.education == GetConfig(junior1, string)
+		|| person.education == GetConfig(junior2, string))
+	{
+		person.education = GetConfig(junior, string);
+	}
+	else if (person.education == GetConfig(college1, string)
+		|| person.education == GetConfig(college2, string)
+		|| person.education == GetConfig(college3, string)
+		|| person.education == GetConfig(college4, string)
+		|| person.education == GetConfig(college5, string)
+		|| person.education == GetConfig(college6, string))
+	{
+		person.education = GetConfig(college, string);
+	}
+	else if (person.education == GetConfig(graduate1, string)
+		|| person.education == GetConfig(graduate2, string)
+		|| person.education == GetConfig(graduate3, string)
+		|| person.education == GetConfig(graduate4, string))
+	{
+		person.education = GetConfig(graduate, string);
+	}
+	else if (person.education == GetConfig(philosophy1, string)
+		|| person.education == GetConfig(philosophy2, string))
+	{
+		person.education = GetConfig(philosophy, string);
+	}
 }

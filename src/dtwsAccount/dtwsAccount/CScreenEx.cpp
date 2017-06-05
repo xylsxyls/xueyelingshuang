@@ -1,5 +1,4 @@
 #include "CScreenEx.h"
-#include <windows.h>
 
 bool CScreenEx::ChokeFindPic(const Rect& rect, const string& picPath, int& x, int& y, int splitTime, int times, string error, const ColorCast& colorCast, double sim, int dir){
 	int n = 0;

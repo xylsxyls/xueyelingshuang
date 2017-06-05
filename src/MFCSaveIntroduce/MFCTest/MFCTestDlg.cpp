@@ -165,6 +165,7 @@ BOOL CMFCTestDlg::OnInitDialog()
 	marriage.AddString("短婚未育");
 	marriage.AddString("已婚已育");
 
+	education.AddString("中专以下");
 	education.AddString("中专");
 	education.AddString("大专");
 	education.AddString("自考大学");

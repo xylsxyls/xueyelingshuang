@@ -8,6 +8,7 @@ class Search;
 class Storage{
 public:
 	static vector<Person> FindFromtxt(const Search& search);
+	static void ChangePersonToSearch(Person& person);
 };
 
 class storage_{

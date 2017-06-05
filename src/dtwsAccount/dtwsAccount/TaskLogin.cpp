@@ -1,3 +1,4 @@
+#include <SDKDDKVer.h>
 #include "TaskLogin.h"
 #include "Ctxt/CtxtAPI.h"
 #include "ConfigInfo.h"

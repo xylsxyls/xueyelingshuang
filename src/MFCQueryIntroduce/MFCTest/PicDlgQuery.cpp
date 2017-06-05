@@ -107,7 +107,6 @@ void CPicDlgQuery::ShowPerson(int num){
     m_picRc.GetWindowRect(picRect);
     ScreenToClient(picRect);
     m_pic->init(picRect, IDC_BUTTONPIC, this, listPath);
-    //if (hBitmap != nullptr) m_pic.SetBitmap(hBitmap);
     m_picPre.EnableWindow(FALSE);
     if (vecPerson.at(num).picture2 == "") m_picNext.EnableWindow(FALSE);
     else m_picNext.EnableWindow(TRUE);

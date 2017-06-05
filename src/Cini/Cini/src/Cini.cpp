@@ -35,6 +35,7 @@ std::vector<string> Cini::GetSection(int MaxSectionNum,int MaxLength){
     {
         if (chSectionNames[i] == 0)
         {
+			chSection[iLength] = 0;
             vecSection.push_back(chSection);
             if (chSectionNames[i] == chSectionNames[i + 1])
             {

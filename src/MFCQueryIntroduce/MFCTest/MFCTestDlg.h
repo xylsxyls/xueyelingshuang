@@ -41,7 +41,7 @@ public:
 
 	afx_msg LRESULT OnSetSearchInfo(WPARAM wparam, LPARAM lparam);
 	CComboBox sex;
-	CComboBox merriage;
+	CComboBox marriage;
 	CComboBox tallSmall;
 	CComboBox tallBig;
 	CComboBox house;

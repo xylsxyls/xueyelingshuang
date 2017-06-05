@@ -8,14 +8,6 @@ void Collect::GetSearchInfo(Search* search,HWND hwnd){
 	//?发送消息让界面吧person填满
     ::SendMessage(hwnd, GetConfig(FillSearchInt, int), NULL, (LPARAM)search);
 }
-/*
-int Collect::GetQueryInfo(Person* person, HWND hwnd){
-    //?发送消息让界面把person填满
-    ::SendMessage(hwnd, configInfo.storage[ConfigInfo::FillPersonInt].toValue<int>(), NULL, (LPARAM)person);
-    int result = 0;
-    (result = Collect::CheckName(person)) || (result = Collect::CheckBirth(person));
-    return result;
-}*/
 
 void Collect::ShowPerson(Person* person, HWND hwnd){
     //?发送消息把person信息送到界面

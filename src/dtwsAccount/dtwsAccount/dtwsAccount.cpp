@@ -1,4 +1,5 @@
 #include "dtwsAccount.h"
+#include <afx.h>
 #include "CBrain/CBrainAPI.h"
 #include "TaskLogin.h"
 #include "TaskCreateAccount.h"
@@ -6,7 +7,6 @@
 #include "CScreenEx.h"
 #include "ConfigInfo.h"
 #include "DmSoft/DmSoftAPI.h"
-#include <windows.h>
 
 
 int main(){

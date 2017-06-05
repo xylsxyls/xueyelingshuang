@@ -1,3 +1,4 @@
+#include <afx.h>
 #include "TaskIntoGame.h"
 #include "CScreenEx.h"
 #include "ConfigInfo.h"

@@ -44,20 +44,182 @@ void Rect::SetRect(Point point){
 	this->bottom = point.y;
 }
 
-int Rect::GetWidth(){
+int Rect::GetWidth()const{
 	return right - left;
 }
 
-int Rect::GetHeight(){
+int Rect::GetHeight()const{
 	return bottom - top;
 }
 
-bool Rect::isPoint(){
+bool Rect::isPoint()const{
 	return (left == right) && (top == bottom);
 }
 
-bool Rect::isLine(){
+bool Rect::isLine()const{
 	return ((left == right) + (top == bottom)) == 1;
+}
+
+Rect Rect::Adapt(const Rect& bkRect)
+{
+	if (isPoint() == true)
+	{
+		if (bkRect.isPoint() == true)
+		{
+			return bkRect;
+		}
+		else if (bkRect.isLine() == true)
+		{
+			return Rect();
+		}
+		else
+		{
+			return Rect();
+		}
+	}
+	else if (isLine() == true)
+	{
+		if (bkRect.isPoint() == true)
+		{
+			return bkRect;
+		}
+		else if (bkRect.isLine() == true)
+		{
+			return bkRect;
+		}
+		else
+		{
+			if (left == right)
+			{
+				int leftright = (bkRect.left + bkRect.right) / 2;
+				return Rect(leftright, bkRect.top, leftright, bkRect.bottom);
+			}
+			else
+			{
+				int topbottom = (bkRect.top + bkRect.bottom) / 2;
+				return Rect(bkRect.left, topbottom, bkRect.right, topbottom);
+			}
+		}
+	}
+	else
+	{
+		if (bkRect.isPoint() == true)
+		{
+			return bkRect;
+		}
+		else if (bkRect.isLine() == true)
+		{
+			return bkRect;
+		}
+		else
+		{
+			if (Gettan() < bkRect.Gettan())
+			{
+				int height = GetHeight() * (double)bkRect.GetWidth() / GetWidth();
+				int heightChange = (bkRect.GetHeight() - height) / 2.0;
+				return Rect(bkRect.left, bkRect.top + heightChange, bkRect.right, bkRect.bottom - heightChange);
+			}
+			else
+			{
+				int width = GetWidth() * (double)bkRect.GetHeight() / GetHeight();
+				int widthChange = (bkRect.GetWidth() - width) / 2.0;
+				return Rect(bkRect.left + widthChange, bkRect.top, bkRect.right - widthChange, bkRect.bottom);
+			}
+		}
+	}
+}
+
+Rect Rect::SetIn(const Rect& bkRect)
+{
+	if (isPoint() == true)
+	{
+		if (bkRect.isPoint() == true)
+		{
+			return bkRect;
+		}
+		else if (bkRect.isLine() == true)
+		{
+			if (bkRect.left == bkRect.right)
+			{
+				int leftright = bkRect.left;
+				int topbottom = (bkRect.top + bkRect.bottom) / 2.0;
+				return Rect(leftright, topbottom, leftright, topbottom);
+			}
+			else
+			{
+				int topbottom = bkRect.top;
+				int leftright = (bkRect.left + bkRect.right) / 2.0;
+				return Rect(leftright, topbottom, leftright, topbottom);
+			}
+		}
+		else
+		{
+			int leftright = (bkRect.left + bkRect.right) / 2.0;
+			int topbottom = (bkRect.top + bkRect.bottom) / 2.0;
+			return Rect(leftright, topbottom, leftright, topbottom);
+		}
+	}
+	///////////
+	else if (isLine() == true)
+	{
+		if (bkRect.isPoint() == true)
+		{
+			return bkRect;
+		}
+		else if (bkRect.isLine() == true)
+		{
+			return bkRect;
+		}
+		else
+		{
+			if (left == right)
+			{
+				int leftright = (bkRect.left + bkRect.right) / 2;
+				return Rect(leftright, bkRect.top, leftright, bkRect.bottom);
+			}
+			else
+			{
+				int topbottom = (bkRect.top + bkRect.bottom) / 2;
+				return Rect(bkRect.left, topbottom, bkRect.right, topbottom);
+			}
+		}
+	}
+	else
+	{
+		if (bkRect.isPoint() == true)
+		{
+			return bkRect;
+		}
+		else if (bkRect.isLine() == true)
+		{
+			return bkRect;
+		}
+		else
+		{
+			if (Gettan() < bkRect.Gettan())
+			{
+				int height = GetHeight() * (double)bkRect.GetWidth() / GetWidth();
+				int heightChange = (bkRect.GetHeight() - height) / 2.0;
+				return Rect(bkRect.left, bkRect.top + heightChange, bkRect.right, bkRect.bottom - heightChange);
+			}
+			else
+			{
+				int width = GetWidth() * (double)bkRect.GetHeight() / GetHeight();
+				int widthChange = (bkRect.GetWidth() - width) / 2.0;
+				return Rect(bkRect.left + widthChange, bkRect.top, bkRect.right - widthChange, bkRect.bottom);
+			}
+		}
+	}
+}
+
+Rect Rect::Over(const Rect& bkRect)
+{
+
+}
+
+double Rect::Gettan()const
+{
+	return GetHeight() / (double)GetWidth();
 }
 
 #ifdef _WIN32
