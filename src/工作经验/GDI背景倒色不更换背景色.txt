@@ -1,0 +1,20 @@
+void RCThumbnailDocument::FillBmpBkColor(HDC hDrawDC, HBITMAP hBmp, COLORREF color)
+{
+    int32_t DcWidth = GetDrawBmpSize(hBmp).cx;
+    int32_t DcHeight = GetDrawBmpSize(hBmp).cy;
+    COLORREF clrOld = ::SetBkColor(hDrawDC, color);
+    if (clrOld != CLR_INVALID)
+    {
+        RECT rc = { 0, 0, DcWidth, DcHeight };
+        ::ExtTextOut(hDrawDC, 0, 0, ETO_OPAQUE, &rc, NULL, 0, NULL);
+        ::SetBkColor(hDrawDC, clrOld);
+    }
+}
+
+SIZE RCThumbnailDocument::GetDrawBmpSize(HBITMAP hBmp)
+{
+    BITMAP bi = { 0 };
+    GetObject(hBmp, sizeof(BITMAP), &bi);
+    SIZE size = { bi.bmWidth, bi.bmHeight };
+    return size;
+}

@@ -1,0 +1,1 @@
+在申请HBITMAP使用完要释放的时候，要调用DeleteObject，如果HBITMAP被SelectObject到设备中则释放不起作用，所以必须先SelectObject oldHBITMAP才能让申请的HBITMAP释放掉
