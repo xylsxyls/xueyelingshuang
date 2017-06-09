@@ -11,11 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\Control.cpp" />
+    <ClCompile Include="..\src\Obstacles.cpp" />
     <ClCompile Include="..\src\Controller.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\Control.h" />
+    <ClInclude Include="..\src\Obstacles.h" />
     <ClInclude Include="..\src\Controller.h" />
     <ClInclude Include="..\src\ControllerAPI.h" />
     <ClInclude Include="..\src\ControllerMacro.h" />

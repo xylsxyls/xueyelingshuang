@@ -1,4 +1,4 @@
-bool SendToMessageTest(const char* fmt, ...)
+static bool SendToMessageTest(const char* fmt, ...)
 {
     std::string str;
     va_list args = NULL;
@@ -7,12 +7,15 @@ bool SendToMessageTest(const char* fmt, ...)
     str.resize(size);
     vsprintf_s(&str[0], size + 1, fmt, args);
     va_end(args);
-    std::string window = "MessageTest";
-    HWND receiveWindow = ::FindWindow(NULL, CString(window.c_str()));
+#ifdef _UNICODE
+    HWND receiveWindow = ::FindWindow(NULL, L"MessageTest");
+#else
+    HWND receiveWindow = ::FindWindow(NULL, "MessageTest");
+#endif
     if (receiveWindow == NULL) return false;
     COPYDATASTRUCT copyData = { 0 };
     copyData.lpData = (PVOID)str.c_str();
-    copyData.cbData = str.length();
+    copyData.cbData = (DWORD)str.length();
     return ::SendMessage(receiveWindow, WM_COPYDATA, (WPARAM)NULL/*m_hWnd*/, (LPARAM)&copyData) == 1;
 }
 
