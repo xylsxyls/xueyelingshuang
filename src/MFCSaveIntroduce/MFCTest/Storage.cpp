@@ -1,7 +1,6 @@
 #include <SDKDDKVer.h>
 #include "Storage.h"
 #include "ConfigInfo.h"
-#include "Ctxt/CtxtAPI.h"
 #include "CScreen/CScreenAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CGetPath/CGetPathAPI.h"
