@@ -2,7 +2,7 @@
 //
 
 #include "stdafx.h"
-#include "MFCTest.h"
+#include "MFCSaveIntroduce.h"
 #include "PicDlg.h"
 #include "afxdialogex.h"
 

@@ -1,10 +1,10 @@
 
-// MFCTestDlg.cpp : 实现文件
+// MFCSaveIntroduceDlg.cpp : 实现文件
 //
 
 #include "stdafx.h"
-#include "MFCTest.h"
-#include "MFCTestDlg.h"
+#include "MFCSaveIntroduce.h"
+#include "MFCSaveIntroduceDlg.h"
 #include "afxdialogex.h"
 #include "Person.h"
 #include "ConfigInfo.h"
@@ -49,17 +49,17 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// CMFCTestDlg 对话框
+// CMFCSaveIntroduceDlg 对话框
 
 
 
-CMFCTestDlg::CMFCTestDlg(CWnd* pParent /*=NULL*/)
-	: CDialogEx(CMFCTestDlg::IDD, pParent)
+CMFCSaveIntroduceDlg::CMFCSaveIntroduceDlg(CWnd* pParent /*=NULL*/)
+	: CDialogEx(CMFCSaveIntroduceDlg::IDD, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
-void CMFCTestDlg::DoDataExchange(CDataExchange* pDX)
+void CMFCSaveIntroduceDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_EDIT1, name);
@@ -93,26 +93,26 @@ void CMFCTestDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT10, houseAddr);
 }
 
-BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)
+BEGIN_MESSAGE_MAP(CMFCSaveIntroduceDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDC_BUTTON1, &CMFCTestDlg::OnBnClickedButton1)
-    ON_MESSAGE(GetConfig(FillPersonInt, int), &CMFCTestDlg::OnSetPerson)
-    ON_MESSAGE(GetConfig(ShowPersonInt, int), &CMFCTestDlg::OnShowPerson)
-	ON_BN_CLICKED(IDC_BUTTON2, &CMFCTestDlg::OnBnClickedButton2)
-	ON_BN_CLICKED(IDC_BUTTON3, &CMFCTestDlg::OnBnClickedButton3)
-	ON_BN_CLICKED(IDC_BUTTON4, &CMFCTestDlg::OnBnClickedButton4)
-    ON_BN_CLICKED(IDC_BUTTON5, &CMFCTestDlg::OnBnClickedButton5)
-    ON_BN_CLICKED(IDC_BUTTON6, &CMFCTestDlg::OnBnClickedButton6)
-    ON_BN_CLICKED(IDC_BUTTON7, &CMFCTestDlg::OnBnClickedButton7)
-    ON_BN_CLICKED(IDC_BUTTON8, &CMFCTestDlg::OnBnClickedButton8)
+	ON_BN_CLICKED(IDC_BUTTON1, &CMFCSaveIntroduceDlg::OnBnClickedButton1)
+    ON_MESSAGE(GetConfig(FillPersonInt, int), &CMFCSaveIntroduceDlg::OnSetPerson)
+    ON_MESSAGE(GetConfig(ShowPersonInt, int), &CMFCSaveIntroduceDlg::OnShowPerson)
+	ON_BN_CLICKED(IDC_BUTTON2, &CMFCSaveIntroduceDlg::OnBnClickedButton2)
+	ON_BN_CLICKED(IDC_BUTTON3, &CMFCSaveIntroduceDlg::OnBnClickedButton3)
+	ON_BN_CLICKED(IDC_BUTTON4, &CMFCSaveIntroduceDlg::OnBnClickedButton4)
+    ON_BN_CLICKED(IDC_BUTTON5, &CMFCSaveIntroduceDlg::OnBnClickedButton5)
+    ON_BN_CLICKED(IDC_BUTTON6, &CMFCSaveIntroduceDlg::OnBnClickedButton6)
+    ON_BN_CLICKED(IDC_BUTTON7, &CMFCSaveIntroduceDlg::OnBnClickedButton7)
+    ON_BN_CLICKED(IDC_BUTTON8, &CMFCSaveIntroduceDlg::OnBnClickedButton8)
 END_MESSAGE_MAP()
 
 
-// CMFCTestDlg 消息处理程序
+// CMFCSaveIntroduceDlg 消息处理程序
 
-BOOL CMFCTestDlg::OnInitDialog()
+BOOL CMFCSaveIntroduceDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
@@ -232,7 +232,7 @@ BOOL CMFCTestDlg::OnInitDialog()
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
-void CMFCTestDlg::OnSysCommand(UINT nID, LPARAM lParam)
+void CMFCSaveIntroduceDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
 	{
@@ -249,7 +249,7 @@ void CMFCTestDlg::OnSysCommand(UINT nID, LPARAM lParam)
 //  来绘制该图标。对于使用文档/视图模型的 MFC 应用程序，
 //  这将由框架自动完成。
 
-void CMFCTestDlg::OnPaint()
+void CMFCSaveIntroduceDlg::OnPaint()
 {
 	if (IsIconic())
 	{
@@ -276,14 +276,14 @@ void CMFCTestDlg::OnPaint()
 
 //当用户拖动最小化窗口时系统调用此函数取得光标
 //显示。
-HCURSOR CMFCTestDlg::OnQueryDragIcon()
+HCURSOR CMFCSaveIntroduceDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
 
 
-void CMFCTestDlg::OnBnClickedButton1()
+void CMFCSaveIntroduceDlg::OnBnClickedButton1()
 {
 	Person person;
     int error = Manager::Check(m_hWnd, &person);
@@ -297,7 +297,7 @@ void CMFCTestDlg::OnBnClickedButton1()
 }
 
 
-LRESULT CMFCTestDlg::OnSetPerson(WPARAM wparam, LPARAM lparam){
+LRESULT CMFCSaveIntroduceDlg::OnSetPerson(WPARAM wparam, LPARAM lparam){
 	Person* person = (Person*)lparam;
 	CString strName;
 	name.GetWindowTextA(strName);
@@ -376,7 +376,7 @@ LRESULT CMFCTestDlg::OnSetPerson(WPARAM wparam, LPARAM lparam){
 	return 0;
 }
 
-LRESULT CMFCTestDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
+LRESULT CMFCSaveIntroduceDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
     Person* person = (Person*)lparam;
     name.SetWindowTextA(person->name.c_str());
     year.SelectString(0, CStringManager::Format("%d", person->birth.getYear()).c_str());
@@ -416,7 +416,7 @@ LRESULT CMFCTestDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
     return 0;
 }
 
-void CMFCTestDlg::OnBnClickedButton2()
+void CMFCSaveIntroduceDlg::OnBnClickedButton2()
 {
     picture1 = CGetPath::GetFileFromWindow().c_str();
     if (picture1 == "-1") picture1 = "";
@@ -426,7 +426,7 @@ void CMFCTestDlg::OnBnClickedButton2()
 }
 
 
-void CMFCTestDlg::OnBnClickedButton3()
+void CMFCSaveIntroduceDlg::OnBnClickedButton3()
 {
     picture2 = CGetPath::GetFileFromWindow().c_str();
     if (picture2 == "-1") picture2 = "";
@@ -436,7 +436,7 @@ void CMFCTestDlg::OnBnClickedButton3()
 }
 
 
-void CMFCTestDlg::OnBnClickedButton4()
+void CMFCSaveIntroduceDlg::OnBnClickedButton4()
 {
     picture3 = CGetPath::GetFileFromWindow().c_str();
     if (picture3 == "-1") picture3 = "";
@@ -446,7 +446,7 @@ void CMFCTestDlg::OnBnClickedButton4()
 }
 
 
-void CMFCTestDlg::OnBnClickedButton5()
+void CMFCSaveIntroduceDlg::OnBnClickedButton5()
 {
     Person person;
     int error = Manager::Query(m_hWnd, &person);
@@ -457,13 +457,13 @@ void CMFCTestDlg::OnBnClickedButton5()
 }
 
 
-void CMFCTestDlg::OnBnClickedButton6()
+void CMFCSaveIntroduceDlg::OnBnClickedButton6()
 {
     ShowPicture(picture1);
     // TODO:  在此添加控件通知处理程序代码
 }
 
-void CMFCTestDlg::ShowPicture(const CString& picture){
+void CMFCSaveIntroduceDlg::ShowPicture(const CString& picture){
     CPicDlg picDlg;
     bool result = false;
     if (picture.Find(":") != -1) result = picDlg.init((LPSTR)(LPCTSTR)picture);
@@ -471,14 +471,14 @@ void CMFCTestDlg::ShowPicture(const CString& picture){
     if (result == true) picDlg.DoModal();
 }
 
-void CMFCTestDlg::OnBnClickedButton7()
+void CMFCSaveIntroduceDlg::OnBnClickedButton7()
 {
     ShowPicture(picture2);
     // TODO:  在此添加控件通知处理程序代码
 }
 
 
-void CMFCTestDlg::OnBnClickedButton8()
+void CMFCSaveIntroduceDlg::OnBnClickedButton8()
 {
     ShowPicture(picture3);
     // TODO:  在此添加控件通知处理程序代码

@@ -12,7 +12,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BFE482E3-5AE5-4897-942F-5F6FBC9BB95D}</ProjectGuid>
-    <RootNamespace>MFCTest</RootNamespace>
+    <RootNamespace>MFCSaveIntroduce</RootNamespace>
     <Keyword>MFCProj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -120,8 +120,8 @@
     <ClInclude Include="ConfigInfo.h" />
     <ClInclude Include="ErrorInfo.h" />
     <ClInclude Include="Manager.h" />
-    <ClInclude Include="MFCTest.h" />
-    <ClInclude Include="MFCTestDlg.h" />
+    <ClInclude Include="MFCSaveIntroduce.h" />
+    <ClInclude Include="MFCSaveIntroduceDlg.h" />
     <ClInclude Include="Person.h" />
     <ClInclude Include="PicDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -146,8 +146,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="MFCTest.cpp" />
-    <ClCompile Include="MFCTestDlg.cpp" />
+    <ClCompile Include="MFCSaveIntroduce.cpp" />
+    <ClCompile Include="MFCSaveIntroduceDlg.cpp" />
     <ClCompile Include="Person.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -163,20 +163,20 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="MFCTest.rc" />
+    <ResourceCompile Include="MFCSaveIntroduce.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\MFCTest.rc2" />
+    <None Include="res\MFCSaveIntroduce.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\MFCTest.ico" />
+    <Image Include="res\MFCSaveIntroduce.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties RESOURCE_FILE="MFCTest.rc" />
+      <UserProperties RESOURCE_FILE="MFCSaveIntroduce.rc" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>

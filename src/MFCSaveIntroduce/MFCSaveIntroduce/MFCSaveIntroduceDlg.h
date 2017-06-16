@@ -1,20 +1,20 @@
 
-// MFCTestDlg.h : 头文件
+// MFCSaveIntroduceDlg.h : 头文件
 //
 
 #pragma once
 #include "afxwin.h"
 #include "Manager.h"
 
-// CMFCTestDlg 对话框
-class CMFCTestDlg : public CDialogEx
+// CMFCSaveIntroduceDlg 对话框
+class CMFCSaveIntroduceDlg : public CDialogEx
 {
 // 构造
 public:
-	CMFCTestDlg(CWnd* pParent = NULL);	// 标准构造函数
+	CMFCSaveIntroduceDlg(CWnd* pParent = NULL);	// 标准构造函数
 
 // 对话框数据
-	enum { IDD = IDD_MFCTEST_DIALOG };
+    enum { IDD = IDD_MFCSAVEINTRODUCE_DIALOG };
 
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持

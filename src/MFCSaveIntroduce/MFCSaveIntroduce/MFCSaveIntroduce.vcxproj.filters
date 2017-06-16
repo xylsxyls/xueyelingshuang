@@ -39,10 +39,10 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MFCTest.h">
+    <ClInclude Include="MFCSaveIntroduce.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MFCTestDlg.h">
+    <ClInclude Include="MFCSaveIntroduceDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
@@ -77,10 +77,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MFCTest.cpp">
+    <ClCompile Include="MFCSaveIntroduce.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="MFCTestDlg.cpp">
+    <ClCompile Include="MFCSaveIntroduceDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
@@ -109,17 +109,17 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="MFCTest.rc">
+    <ResourceCompile Include="MFCSaveIntroduce.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\MFCTest.rc2">
+    <None Include="res\MFCSaveIntroduce.rc2">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\MFCTest.ico">
+    <Image Include="res\MFCSaveIntroduce.ico">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>
