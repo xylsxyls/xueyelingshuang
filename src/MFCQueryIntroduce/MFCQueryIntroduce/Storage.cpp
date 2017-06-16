@@ -18,7 +18,7 @@ vector<Person> vecData;
 storage_ storage;
 
 storage_::storage_(){
-    ini = new Cini(GetConfig(txtPath, string));
+    ini = ::new Cini(GetConfig(txtPath, string));
 	vector<string> vecSection = ini->GetSection(GetConfig(maxPeople, int));
 	int i = -1;
 	while (i++ != vecSection.size() - 1)

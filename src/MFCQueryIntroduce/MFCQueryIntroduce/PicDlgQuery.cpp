@@ -2,7 +2,7 @@
 //
 
 #include "stdafx.h"
-#include "MFCTest.h"
+#include "MFCQueryIntroduce.h"
 #include "PicDlgQuery.h"
 #include "afxdialogex.h"
 #include "ConfigInfo.h"

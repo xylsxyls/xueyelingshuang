@@ -1,5 +1,5 @@
 
-// MFCTest.h : PROJECT_NAME 应用程序的主头文件
+// MFCQueryIntroduce.h : PROJECT_NAME 应用程序的主头文件
 //
 
 #pragma once
@@ -13,14 +13,14 @@
 #pragma comment(lib, "gdiplus.lib")
 using namespace Gdiplus;
 
-// CMFCTestApp:
-// 有关此类的实现，请参阅 MFCTest.cpp
+// CMFCQueryIntroduceApp:
+// 有关此类的实现，请参阅 MFCQueryIntroduce.cpp
 //
 
-class CMFCTestApp : public CWinApp
+class CMFCQueryIntroduceApp : public CWinApp
 {
 public:
-	CMFCTestApp();
+	CMFCQueryIntroduceApp();
 
 // 重写
 public:
@@ -31,4 +31,4 @@ public:
 	DECLARE_MESSAGE_MAP()
 };
 
-extern CMFCTestApp theApp;
+extern CMFCQueryIntroduceApp theApp;

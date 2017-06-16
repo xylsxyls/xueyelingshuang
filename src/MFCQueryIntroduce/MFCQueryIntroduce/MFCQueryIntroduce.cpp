@@ -1,26 +1,26 @@
 
-// MFCTest.cpp : 定义应用程序的类行为。
+// MFCQueryIntroduce.cpp : 定义应用程序的类行为。
 //
 
 #include "stdafx.h"
-#include "MFCTest.h"
-#include "MFCTestDlg.h"
+#include "MFCQueryIntroduce.h"
+#include "MFCQueryIntroduceDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 
-// CMFCTestApp
+// CMFCQueryIntroduceApp
 
-BEGIN_MESSAGE_MAP(CMFCTestApp, CWinApp)
+BEGIN_MESSAGE_MAP(CMFCQueryIntroduceApp, CWinApp)
 	ON_COMMAND(ID_HELP, &CWinApp::OnHelp)
 END_MESSAGE_MAP()
 
 
-// CMFCTestApp 构造
+// CMFCQueryIntroduceApp 构造
 
-CMFCTestApp::CMFCTestApp()
+CMFCQueryIntroduceApp::CMFCQueryIntroduceApp()
 {
 	// 支持重新启动管理器
 	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
@@ -30,14 +30,14 @@ CMFCTestApp::CMFCTestApp()
 }
 
 
-// 唯一的一个 CMFCTestApp 对象
+// 唯一的一个 CMFCQueryIntroduceApp 对象
 
-CMFCTestApp theApp;
+CMFCQueryIntroduceApp theApp;
 
 
-// CMFCTestApp 初始化
+// CMFCQueryIntroduceApp 初始化
 
-BOOL CMFCTestApp::InitInstance()
+BOOL CMFCQueryIntroduceApp::InitInstance()
 {
 	// 如果一个运行在 Windows XP 上的应用程序清单指定要
 	// 使用 ComCtl32.dll 版本 6 或更高版本来启用可视化方式，
@@ -71,7 +71,7 @@ BOOL CMFCTestApp::InitInstance()
 	// 例如修改为公司或组织名
 	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
 
-	CMFCTestDlg dlg;
+	CMFCQueryIntroduceDlg dlg;
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)

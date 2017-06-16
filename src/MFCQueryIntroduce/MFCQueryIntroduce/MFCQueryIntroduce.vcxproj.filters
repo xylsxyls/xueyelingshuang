@@ -45,10 +45,10 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MFCTest.h">
+    <ClInclude Include="MFCQueryIntroduce.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MFCTestDlg.h">
+    <ClInclude Include="MFCQueryIntroduceDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
@@ -89,10 +89,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MFCTest.cpp">
+    <ClCompile Include="MFCQueryIntroduce.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="MFCTestDlg.cpp">
+    <ClCompile Include="MFCQueryIntroduceDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
@@ -127,17 +127,17 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="MFCTest.rc">
+    <ResourceCompile Include="MFCQueryIntroduce.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\MFCTest.rc2">
+    <None Include="res\MFCQueryIntroduce.rc2">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\MFCTest.ico">
+    <Image Include="res\MFCQueryIntroduce.ico">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>

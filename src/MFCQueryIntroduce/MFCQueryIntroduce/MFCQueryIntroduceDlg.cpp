@@ -1,10 +1,10 @@
 
-// MFCTestDlg.cpp : 实现文件
+// MFCQueryIntroduceDlg.cpp : 实现文件
 //
 
 #include "stdafx.h"
-#include "MFCTest.h"
-#include "MFCTestDlg.h"
+#include "MFCQueryIntroduce.h"
+#include "MFCQueryIntroduceDlg.h"
 #include "afxdialogex.h"
 #include "resource.h"
 #include "Manager.h"
@@ -49,17 +49,17 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// CMFCTestDlg 对话框
+// CMFCQueryIntroduceDlg 对话框
 
 
 
-CMFCTestDlg::CMFCTestDlg(CWnd* pParent /*=NULL*/)
-	: CDialogEx(CMFCTestDlg::IDD, pParent)
+CMFCQueryIntroduceDlg::CMFCQueryIntroduceDlg(CWnd* pParent /*=NULL*/)
+	: CDialogEx(CMFCQueryIntroduceDlg::IDD, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
-void CMFCTestDlg::DoDataExchange(CDataExchange* pDX)
+void CMFCQueryIntroduceDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_COMBO1, yearSmall);
@@ -79,18 +79,18 @@ void CMFCTestDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT1, salary);
 }
 
-BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)
+BEGIN_MESSAGE_MAP(CMFCQueryIntroduceDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDC_BUTTON1, &CMFCTestDlg::OnBnClickedButton1)
-    ON_MESSAGE(GetConfig(FillSearchInt, int), &CMFCTestDlg::OnSetSearchInfo)
+	ON_BN_CLICKED(IDC_BUTTON1, &CMFCQueryIntroduceDlg::OnBnClickedButton1)
+    ON_MESSAGE(GetConfig(FillSearchInt, int), &CMFCQueryIntroduceDlg::OnSetSearchInfo)
 END_MESSAGE_MAP()
 
 
-// CMFCTestDlg 消息处理程序
+// CMFCQueryIntroduceDlg 消息处理程序
 
-BOOL CMFCTestDlg::OnInitDialog()
+BOOL CMFCQueryIntroduceDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
@@ -173,7 +173,7 @@ BOOL CMFCTestDlg::OnInitDialog()
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
-void CMFCTestDlg::OnSysCommand(UINT nID, LPARAM lParam)
+void CMFCQueryIntroduceDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
 	{
@@ -190,7 +190,7 @@ void CMFCTestDlg::OnSysCommand(UINT nID, LPARAM lParam)
 //  来绘制该图标。对于使用文档/视图模型的 MFC 应用程序，
 //  这将由框架自动完成。
 
-void CMFCTestDlg::OnPaint()
+void CMFCQueryIntroduceDlg::OnPaint()
 {
 	if (IsIconic())
 	{
@@ -217,14 +217,14 @@ void CMFCTestDlg::OnPaint()
 
 //当用户拖动最小化窗口时系统调用此函数取得光标
 //显示。
-HCURSOR CMFCTestDlg::OnQueryDragIcon()
+HCURSOR CMFCQueryIntroduceDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
 
 
-void CMFCTestDlg::OnBnClickedButton1()
+void CMFCQueryIntroduceDlg::OnBnClickedButton1()
 {
 	//::SendMessage(GetDlgItem(IDC_STATIC1)->m_hWnd, WM_SETTEXT, 0, (LPARAM)"shit");
 	// TODO: 在此添加控件通知处理程序代码
@@ -236,7 +236,7 @@ void CMFCTestDlg::OnBnClickedButton1()
 	Manager::ShowDlg(vecPerson);
 }
 
-LRESULT CMFCTestDlg::OnSetSearchInfo(WPARAM wparam, LPARAM lparam){
+LRESULT CMFCQueryIntroduceDlg::OnSetSearchInfo(WPARAM wparam, LPARAM lparam){
 	Search* search = (Search*)lparam;
 	CString strYearSmall;
 	yearSmall.GetWindowTextA(strYearSmall);
