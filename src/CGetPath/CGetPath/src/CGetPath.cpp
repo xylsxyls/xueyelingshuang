@@ -108,6 +108,11 @@ void RecursionFindFile(string strPath,string FileStr,vector<string> *pPathVector
 		else if(flag == 2){
 			if(TempFileName.substr(TempFileName.find_last_of('.') + 1,TempFileName.length() - TempFileName.find_last_of('.') - 1) == FileStr) pPathVector->push_back((LPSTR)(LPCTSTR)finder.GetFilePath());
 		}
+        //3表示查找所有文件，不做过滤全部添加进来
+        else if (flag == 3)
+        {
+            pPathVector->push_back((LPSTR)(LPCTSTR)finder.GetFilePath());
+        }
 	}
 	return;
 }

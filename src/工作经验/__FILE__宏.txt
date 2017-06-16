@@ -1,0 +1,1 @@
+__FILE__宏固定是const char*的，不会在unicode环境下变成const wchar*

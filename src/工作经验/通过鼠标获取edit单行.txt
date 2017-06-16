@@ -1,0 +1,10 @@
+//ÐÐºÅ
+    int nLineIndex = HIWORD(CharFromPos(pt));
+
+    int nBegin;
+    int nEnd;
+    if ((nBegin = LineIndex(nLineIndex)) != -1)
+    {
+        nEnd = nBegin + LineLength(nBegin);
+        SetSel(nBegin, nEnd);
+    }

@@ -141,6 +141,26 @@ string CSystem::uuid(int flag){
 	return buffer;
 }
 
+void CSystem::OpenFolder(const string& folder)
+{
+    ShellExecute(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
+}
+
+void CSystem::OpenFolderAndSelectFile(const string& file)
+{
+    ShellExecute(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
+}
+
+void CSystem::OpenFile(const string& file)
+{
+    ShellExecute(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
+}
+
+void CSystem::OpenWebPage(const string& webPage)
+{
+    ShellExecute(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
+}
+
 /*
 int main(){
 	//CSystem system;

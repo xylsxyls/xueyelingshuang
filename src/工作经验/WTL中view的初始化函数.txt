@@ -1,0 +1,7 @@
+#include <atlwin.h>
+#include <atlframe.h>
+#include <atlmisc.h>
+#include <atlcrack.h>
+
+MSG_WM_CREATE(OnCreate)
+LRESULT OnCreate(LPCREATESTRUCT lpcs);

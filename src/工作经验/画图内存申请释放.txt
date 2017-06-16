@@ -1,0 +1,6 @@
+Create对应Delete
+Get对应Release
+
+CreateDC DeleteDC
+GetDC ReleaseDC
+CreateCompatibleBitmap DeleteObject

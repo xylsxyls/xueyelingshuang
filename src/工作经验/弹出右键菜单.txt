@@ -11,3 +11,4 @@ if(nSelect == 10001){
 	::SendMessage(this->GetSafeHwnd(),DELETEICON,NULL,NULL);
 this->OnOK();
 }
+menu.DestroyMenu();

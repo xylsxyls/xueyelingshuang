@@ -1,0 +1,4 @@
+pButton = new CButton;
+    DWORD dwStyle = WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON;
+    pButton->Create(_T("¶¯Ì¬°´Å¥"), dwStyle, CRect(20 + 80, 20, 80 + 80, 60), this, 1001);
+    pButton->SetParent(&m_find);

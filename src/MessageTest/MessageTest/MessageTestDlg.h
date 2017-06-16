@@ -8,8 +8,71 @@
 #include <list>
 #include <thread>
 #include <atomic>
-#include "Controller/ControllerAPI.h"
+#include <mutex>
+//#include "Controller/ControllerAPI.h"
 using namespace std;
+
+typedef struct tagList
+{
+    tagList* next;
+    string str;
+}tagList;
+
+class CListMessage
+{
+public:
+    void push_back(string str)
+    {
+        tagList* ptagList = new tagList;
+        ptagList->next = 0;
+        ptagList->str = str;
+        int last = m_last;
+        if (last == 0)
+        {
+            m_first = (int)ptagList;
+            m_last = (int)ptagList;
+        }
+        else
+        {
+            ((tagList*)last)->next = ptagList;
+            m_last = (int)ptagList;
+            if (m_first == 0)
+            {
+                m_first = (int)m_last;
+            }
+        }
+        ++m_size;
+    }
+    string pop_front()
+    {
+        if (m_size >= 2)
+        {
+            int first = m_first;
+            if (first != 0)
+            {
+                m_first = (int)(((tagList*)first)->next);
+                string data = ((tagList*)first)->str;
+                delete (tagList*)first;
+                --m_size;
+                return data;
+            }
+            return "";
+        }
+        return "";
+    }
+    int size()
+    {
+        return m_size;
+    }
+    bool empty()
+    {
+        return m_size == 0;
+    }
+private:
+    atomic<int> m_size;
+    atomic<int> m_first;
+    atomic<int> m_last;
+};
 
 // CMessageTestDlg ¶Ô»°¿ò
 class CMessageTestDlg : public CDialogEx
@@ -56,13 +119,13 @@ public:
     string showString;
     thread* threadWork = nullptr;
     atomic<bool> bWorkThread = 1;
-    Controller controller;
-    Obstacles* threadObs = controller.CreateObstacles(stringover, false);
+    //Controller controller;
+    //Obstacles* threadObs = controller.CreateObstacles(stringover, false);
     
     char* szData = nullptr;
     int curDataSize = 0;
     atomic<bool> bShowString = false;
-    mutex mu;
+    std::mutex mu;
     CEvent* m_event;
     atomic<int> lines;
     atomic<bool> bFile = false;
@@ -72,4 +135,6 @@ public:
     afx_msg void OnBnClickedButton2();
     afx_msg void OnBnClickedButton3();
     CButton m_fileBtn;
+    CEdit m_editToFile;
+    afx_msg void OnBnClickedButton4();
 };

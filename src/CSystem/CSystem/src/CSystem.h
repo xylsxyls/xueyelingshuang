@@ -18,5 +18,12 @@ public:
 	static void Sleep(long long milliseconds);
 	//?生成UUID，传入1表示带-，传0表示不带
 	static string uuid(int flag = 1);
-
+    //?打开系统文件夹
+    static void OpenFolder(const string& folder);
+    //?打开系统文件夹并选择文件
+    static void OpenFolderAndSelectFile(const string& file);
+    //?外部打开文件
+    static void OpenFile(const string& file);
+    //?外部打开网页
+    static void OpenWebPage(const string& webPage);
 };

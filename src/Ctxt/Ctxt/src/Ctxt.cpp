@@ -37,7 +37,6 @@ void Ctxt::LoadTxt(int flag,string strSplit){
 	while(getline(myfile,strLine)){
 		iLine++;
 		//转换成string具体处理每一行
-		string cstrLine = strLine.c_str();
 		if(flag == 1){
 			vector<string> vecPart = split(strSplit,",");
 			int iPart1 = -1;
@@ -45,15 +44,15 @@ void Ctxt::LoadTxt(int flag,string strSplit){
 			vector<string> vecLine1;
 			//分出得到第一对截取点，第0个和第2个就是首和尾
 			while(iPart1++ != size - 1){
-				vector<string> vecPoint = split(vecPart.at(iPart1).c_str(),"-");
+				vector<string> vecPoint = split(vecPart.at(iPart1),"-");
 				if(vecPoint.size() >= 2){
 					int begin = atoi(vecPoint.at(0).c_str());
 					int end   = atoi(vecPoint.at(1).c_str());
-					vecLine1.push_back(cstrLine.substr(begin - 1, end - begin + 1));
+                    vecLine1.push_back(strLine.substr(begin - 1, end - begin + 1));
 				}
 				//如果是传入了空字符串就把一行插入
 				else{
-					vecLine1.push_back(cstrLine);
+                    vecLine1.push_back(strLine);
 				}
 			}
 			vectxt.push_back(vecLine1);
@@ -64,7 +63,7 @@ void Ctxt::LoadTxt(int flag,string strSplit){
 			vector<string> vecLine2;
 			int iPart2 = -1;
 			while(iPart2++ != sizePart - 1){
-				vecLine2.push_back(vecPart.at(iPart2).c_str());
+				vecLine2.push_back(vecPart.at(iPart2));
 			}
 			vectxt.push_back(vecLine2);
 		}

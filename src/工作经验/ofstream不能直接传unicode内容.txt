@@ -1,0 +1,2 @@
+file << L"begin to file" << endl;
+这种写法是错的，在文件中只会有一个指针地址数字串
