@@ -6,6 +6,8 @@ attrib -a -h -s -r "%~dp0*.user" /s
 del "%~dp0*.user" /s
 attrib -a -h -s -r "%~dp0*.aps" /s
 del "%~dp0*.aps" /s
+attrib -a -h -s -r "%~dp0*.opensdf" /s
+del "%~dp0*.opensdf" /s
 
 ::-------------------É¾³ıMFCÁÙÊ±ÎÄ¼ş--------------------------
 rmdir /q /s "%~dp0src\MessageTest\ipch\"
