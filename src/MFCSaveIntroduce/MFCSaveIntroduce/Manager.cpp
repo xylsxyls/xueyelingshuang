@@ -4,6 +4,7 @@
 #include "ErrorInfo.h"
 #include <afxwin.h>
 #include "Storage.h"
+#include "CCharset/CCharsetAPI.h"
 
 int Manager::Check(HWND hwnd, Person* person){
     return Collect::GetPersonInfo(person, hwnd);
@@ -14,7 +15,7 @@ int Manager::Query(HWND hwnd, Person* person){
 }
 
 void Manager::ShowError(int error){
-    AfxMessageBox(GetError(error, string).c_str());
+    AfxMessageBox(CCharset::AnsiToUnicode(GetError(error, string)).c_str());
 }
 
 void Manager::ShowPerson(HWND hwnd, Person* person){

@@ -13,8 +13,8 @@ enum{
     FillPersonInt,
     ShowPersonInt,
     Split,
-    txtPath,
-    txtPathBk
+    iniPath,
+	iniPathBk
 };
 enum{
     name,

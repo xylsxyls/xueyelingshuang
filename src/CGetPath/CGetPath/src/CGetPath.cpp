@@ -4,6 +4,7 @@
 #include <Tlhelp32.h>
 #include "CStringManager/CStringManagerAPI.h"
 #include <afxdlgs.h>
+#include <afxdisp.h>
 
 string CGetPath::GetRegOcxPath(string classid){
 	string strSubKey;
@@ -53,11 +54,22 @@ string CGetPath::GetFolderFromWindow(HWND hWnd){
 	return cstrSelectPath;
 }
 
-string CGetPath::GetFileFromWindow(){
-	CFileDialog dlg(1,NULL,NULL,OFN_HIDEREADONLY ,"All Files(*.*)|*.*||");
-	int x = dlg.DoModal();
-	if(x != IDOK) return "-1";
-	return (LPSTR)(LPCTSTR)dlg.GetPathName();
+#define NDEBUG
+
+string CGetPath::GetFileFromWindow(HWND hwnd)
+{
+	TCHAR szBuffer[MAX_PATH] = { 0 };
+	OPENFILENAME ofn = { 0 };
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFilter = _T("所有文件(*.*)*.*");//"Exe文件(*.exe)*.exe所有文件(*.*)*.*"
+	ofn.lpstrInitialDir = _T("");//默认的文件路径 
+	ofn.lpstrFile = szBuffer;//存放文件的缓冲区 
+	ofn.nMaxFile = sizeof(szBuffer) / sizeof(*szBuffer);
+	ofn.nFilterIndex = 0;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER;//标志如果是多选要加上OFN_ALLOWMULTISELECT
+	BOOL bSel = GetOpenFileName(&ofn);
+	return string(szBuffer);
 }
 
 #ifdef WTL

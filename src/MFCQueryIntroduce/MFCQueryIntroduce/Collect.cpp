@@ -1,4 +1,5 @@
 #include <SDKDDKVer.h>
+#include "stdafx.h"
 #include "Collect.h"
 #include <afx.h>
 #include "ConfigInfo.h"

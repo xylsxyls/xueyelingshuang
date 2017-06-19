@@ -161,6 +161,11 @@ void CSystem::OpenWebPage(const string& webPage)
     ShellExecute(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
 }
 
+void CSystem::CopyFileOver(const string& dstFile, const string& srcFile, bool over)
+{
+	::CopyFile(srcFile.c_str(), dstFile.c_str(), over == false);
+}
+
 /*
 int main(){
 	//CSystem system;

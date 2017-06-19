@@ -76,27 +76,27 @@ bool CScreen::initDict(const map<int, string>& mapDict, int use){
 	return result;
 }
 
-bool CScreen::SaveBmp(const Rect& rect, const string& path){
+bool CScreen::SaveBmp(const MulRect& rect, const string& path){
 	return DmSoft::Capture(rect.left, rect.top, rect.right, rect.bottom, path.c_str()) == 1;
 }
 
-bool CScreen::SaveGif(const Rect& rect, int delay, int time, const string& path){
+bool CScreen::SaveGif(const MulRect& rect, int delay, int time, const string& path){
 	return DmSoft::CaptureGif(rect.left, rect.top, rect.right, rect.bottom, path.c_str(), delay, time) == 1;
 }
 
-bool CScreen::SaveJpg(const Rect& rect, int quality, const string& path){
+bool CScreen::SaveJpg(const MulRect& rect, int quality, const string& path){
 	return DmSoft::CaptureJpg(rect.left, rect.top, rect.right, rect.bottom, path.c_str(), quality) == 1;
 }
 
-bool CScreen::SavePng(const Rect& rect, const string& path){
+bool CScreen::SavePng(const MulRect& rect, const string& path){
 	return DmSoft::CapturePng(rect.left, rect.top, rect.right, rect.bottom, path.c_str()) == 1;
 }
 
-bool CScreen::ComparePointColor(const Point& point, const Color& color, double sim){
+bool CScreen::ComparePointColor(const MulPoint& point, const Color& color, double sim){
 	return DmSoft::CmpColor(point.x, point.y, color.toString().c_str(), sim) == 0;
 }
 
-bool CScreen::ComparePointColor(const Point& point, const vector<Color>& vecColor, double sim){
+bool CScreen::ComparePointColor(const MulPoint& point, const vector<Color>& vecColor, double sim){
 	string strColor;
 	int i = -1;
 	while (i++ != (vecColor.size() > 10 ? 10 : vecColor.size()) - 1){
@@ -106,7 +106,7 @@ bool CScreen::ComparePointColor(const Point& point, const vector<Color>& vecColo
 	return DmSoft::CmpColor(point.x, point.y, strColor.c_str(), sim) == 0;
 }
 
-bool CScreen::FindColor(const Rect& rect, const Color& color, int& x, int& y, double sim, int dir){
+bool CScreen::FindColor(const MulRect& rect, const Color& color, int& x, int& y, double sim, int dir){
 	string result = DmSoft::FindColorE(rect.left, rect.top, rect.right, rect.bottom, color.toReserveString().c_str(), sim, dir);
 	x = atoi(result.substr(0, result.find("|")).c_str());
 	y = atoi(result.substr(result.find("|") + 1, result.length() - result.find("|") - 1).c_str());
@@ -114,7 +114,7 @@ bool CScreen::FindColor(const Rect& rect, const Color& color, int& x, int& y, do
 	return true;
 }
 
-bool CScreen::FindColor(const Rect& rect, const vector<Color>& vecColor, int& x, int& y, double sim, int dir){
+bool CScreen::FindColor(const MulRect& rect, const vector<Color>& vecColor, int& x, int& y, double sim, int dir){
 	string strColor;
 	int i = -1;
 	while (i++ != (vecColor.size() > 10 ? 10 : vecColor.size()) - 1){
@@ -128,7 +128,7 @@ bool CScreen::FindColor(const Rect& rect, const vector<Color>& vecColor, int& x,
 	return true;
 }
 
-bool CScreen::FindPic(const Rect& rect, const string& picPath, int& x, int& y, const ColorCast& colorCast, double sim, int dir){
+bool CScreen::FindPic(const MulRect& rect, const string& picPath, int& x, int& y, const ColorCast& colorCast, double sim, int dir){
 	VARIANT vx;
 	VARIANT vy;
 	bool result = (DmSoft::FindPic(rect.left, rect.top, rect.right, rect.bottom, picPath.c_str(), colorCast.toString().c_str(), sim, dir, &vx, &vy) != -1);
@@ -139,7 +139,7 @@ bool CScreen::FindPic(const Rect& rect, const string& picPath, int& x, int& y, c
 	return result;
 }
 
-bool CScreen::FindPic(const Rect& rect, const vector<string>& vecPicPath, int& x, int& y, const ColorCast& colorCast, double sim, int dir){
+bool CScreen::FindPic(const MulRect& rect, const vector<string>& vecPicPath, int& x, int& y, const ColorCast& colorCast, double sim, int dir){
 	VARIANT vx;
 	VARIANT vy;
 	string strPicPath;
@@ -156,8 +156,8 @@ bool CScreen::FindPic(const Rect& rect, const vector<string>& vecPicPath, int& x
 	return result;
 }
 
-Rect CScreen::GetPicSize(const string& picPath){
-	Rect rect(0, 0, 0, 0);
+MulRect CScreen::GetPicSize(const string& picPath){
+	MulRect rect(0, 0, 0, 0);
 	string strWidthHeight = DmSoft::GetPicSize(picPath.c_str());
 	vector<string>vecWidthHeight = CStringManager::split(strWidthHeight, ",");
 	if (vecWidthHeight.size() == 2){
@@ -175,7 +175,7 @@ vector<string> CScreen::MatchPicName(const string& picPath){
 	return CStringManager::split(DmSoft::MatchPicName(picPath.c_str()), "|");
 }
 
-bool CScreen::FindStr(const Rect& rect, const string& str, const Color& color, int& x, int& y, double sim){
+bool CScreen::FindStr(const MulRect& rect, const string& str, const Color& color, int& x, int& y, double sim){
 	VARIANT vx;
 	VARIANT vy;
 	bool result = (DmSoft::FindStrFast(rect.left, rect.top, rect.right, rect.bottom, str.c_str(), color.toString().c_str(), sim, &vx, &vy) != -1);

@@ -10,7 +10,7 @@ CPicControl::CPicControl(){
 }
 
 void CPicControl::init(CRect rcRectInClient,UINT nID,CWnd* pParentWnd,list<CString> listPath,list<CRect> listPicRect,list<CRect> listRcRect,list<list<CString>> listlistText,list<list<COLORREF>> listlistColor){
-	Create("",/////按钮上显示的文本  
+	Create(_T(""),/////按钮上显示的文本  
 		WS_CHILD|WS_VISIBLE|BS_OWNERDRAW,///如果没有制定WS_VISIBLE还要调用ShowWindow将其显示出来  WS_CHILD|
 		rcRectInClient,/////左上角的坐标(0，0),长度为100，100  
 		pParentWnd,//父窗口  
@@ -34,7 +34,7 @@ void CPicControl::ChangePicAndText(list<CString> listPath,list<CRect> listPicRec
 
 	if(listPath.size() < 3){
 		int i = listPath.size();
-		while(i++ != 3) this->listPath.push_back("");
+		while(i++ != 3) this->listPath.push_back(_T(""));
 	}
 	if(listPicRect.size() < 3){
 		int i = listPicRect.size();
@@ -93,7 +93,10 @@ void CPicControl::DrawInDlgOnPaint(HDC hdc,CString strPath,CRect picRect,CRect r
 	if(number > 0 && rcRect == CRect()){
 		//如果有控件并且显示区为空CRect那么获取父窗口的大小
 		pPicControlFirst = va_arg(parameterlist,CPicControl*);
-		if(pPicControlFirst->nInit != -1) pPicControlFirst->GetParent()->GetClientRect(&rcRect);
+		if (pPicControlFirst->nInit != -1)
+		{
+			pPicControlFirst->GetParent()->GetClientRect(&rcRect);
+		}
 	}
 	Bitmap memBitmap(rcRect.Width(),rcRect.Height());
 	//画背景
@@ -254,8 +257,12 @@ begin:
 		if(bWrap == 1) TextGraphics.DrawString(strWide,-1,&font,rectf,&stringFormat,&TextBrush);
 		else TextGraphics.DrawString(strWide,-1,&font,origin,&TextBrush);
 		//转出HFONT
-		LOGFONTA logfont;
-		font.GetLogFontA(&TextGraphics,&logfont);
+		LOGFONT logfont;
+#ifdef _UNICODE
+		font.GetLogFontW(&TextGraphics,&logfont);
+#else
+		font.GetLogFontA(&TextGraphics, &logfont);
+#endif
 		CFont cFont;
 		cFont.CreateFontIndirect(&logfont);
 		//如果要获取的是GetDC()->m_hDC，必须提在一个变量里获取长度的时候才有效，直接使用GetDC()->m_hDC不行
@@ -267,12 +274,12 @@ begin:
 		CString strText = *itlistText;
 		//获取一个字符串的长宽
 		SIZE size;
-		GetTextExtentPoint32(hDC,strOneLine,strlen(strOneLine),&size);
+		GetTextExtentPoint32(hDC,strOneLine,strOneLine.GetLength(),&size);
 		int nOneLine = size.cx;
 		//加上下一条字符串存入缓冲区
 		itlistText++;
 		if(itlistText != listText.end()) strOneLine = strOneLine + *itlistText;
-		GetTextExtentPoint32(hDC,strOneLine,strlen(strOneLine),&size);
+		GetTextExtentPoint32(hDC,strOneLine,strOneLine.GetLength(),&size);
 		int nOneLineAdd = size.cx;
 		if(nOneLineAdd >= rcRectTemp.Width() || (strText.GetLength() >= 1 && strText[strText.GetLength() - 1] == '\n')){
 			if(itlistText != listText.end()) strOneLine = *itlistText;

@@ -6,7 +6,6 @@ class Search;
 class Collect{
 public:
 	static void GetSearchInfo(Search* search,HWND hwnd);
-    //static int GetQueryInfo(Person* person, HWND hwnd);
     static void ShowPerson(Person* person, HWND hwnd);
 private:
     static int CheckName(Person* person);

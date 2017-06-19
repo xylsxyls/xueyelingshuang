@@ -12,6 +12,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "PicDlg.h"
 #include "CScreen/CScreenAPI.h"
+#include "CCharset/CCharsetAPI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -144,86 +145,86 @@ BOOL CMFCSaveIntroduceDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 	int nYear = 1950;
 	while (nYear != 2010){
-        year.AddString(CStringManager::Format("%d", nYear).c_str());
+        year.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nYear)).c_str());
 		nYear++;
 	}
 	int nMonth = 1;
 	while (nMonth != 13){
-        month.AddString(CStringManager::Format("%02d", nMonth).c_str());
+        month.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%02d", nMonth)).c_str());
 		nMonth++;
 	}
 	int nDay = 1;
 	while (nDay != 32){
-        day.AddString(CStringManager::Format("%02d", nDay).c_str());
+		day.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%02d", nDay)).c_str());
 		nDay++;
 	}
 
-	sex.AddString("男");
-	sex.AddString("女");
+	sex.AddString(L"男");
+	sex.AddString(L"女");
 
-	marriage.AddString("未婚");
-	marriage.AddString("短婚未育");
-	marriage.AddString("已婚已育");
+	marriage.AddString(L"未婚");
+	marriage.AddString(L"短婚未育");
+	marriage.AddString(L"已婚已育");
 
-	education.AddString("中专以下");
-	education.AddString("中专");
-	education.AddString("大专");
-	education.AddString("自考大学");
-	education.AddString("三本");
-	education.AddString("二本");
-	education.AddString("一本");
-	education.AddString("本科海外留学");
-	education.AddString("本科双学位");
-	education.AddString("学硕");
-	education.AddString("专硕");
-	education.AddString("硕士双学位");
-	education.AddString("硕士海外留学");
-	education.AddString("博士");
-	education.AddString("博士海外留学");
+	education.AddString(L"中专以下");
+	education.AddString(L"中专");
+	education.AddString(L"大专");
+	education.AddString(L"自考大学");
+	education.AddString(L"三本");
+	education.AddString(L"二本");
+	education.AddString(L"一本");
+	education.AddString(L"本科海外留学");
+	education.AddString(L"本科双学位");
+	education.AddString(L"学硕");
+	education.AddString(L"专硕");
+	education.AddString(L"硕士双学位");
+	education.AddString(L"硕士海外留学");
+	education.AddString(L"博士");
+	education.AddString(L"博士海外留学");
 	
 	int nTall = 140;
 	while (nTall != 220){
-        tall.AddString(CStringManager::Format("%d", nTall).c_str());
+        tall.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nTall)).c_str());
 		nTall++;
 	}
 
 	int nWeight = 40;
 	while (nWeight != 120){
-        weight.AddString(CStringManager::Format("%d", nWeight).c_str());
+        weight.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nWeight)).c_str());
 		nWeight++;
 	}
 
-	house.AddString("无房");
-	house.AddString("有房有贷款");
-	house.AddString("有房无贷款");
+	house.AddString(L"无房");
+	house.AddString(L"有房有贷款");
+	house.AddString(L"有房无贷款");
 
-	car.AddString("无车");
-	car.AddString("有车");
+	car.AddString(L"无车");
+	car.AddString(L"有车");
 
-	houseAttri.AddString("本地");
-	houseAttri.AddString("外地城镇");
-	houseAttri.AddString("外地农村");
+	houseAttri.AddString(L"本地");
+	houseAttri.AddString(L"外地城镇");
+	houseAttri.AddString(L"外地农村");
 
-	jobNature.AddString("民营企业");
-	jobNature.AddString("上市公司");
-	jobNature.AddString("外资企业");
-	jobNature.AddString("国有企业");
+	jobNature.AddString(L"民营企业");
+	jobNature.AddString(L"上市公司");
+	jobNature.AddString(L"外资企业");
+	jobNature.AddString(L"国有企业");
 
-	fatherJob.AddString("在职");
-	fatherJob.AddString("退休");
-	fatherJob.AddString("自营");
-	fatherJob.AddString("农民");
+	fatherJob.AddString(L"在职");
+	fatherJob.AddString(L"退休");
+	fatherJob.AddString(L"自营");
+	fatherJob.AddString(L"农民");
 
-	fatherPension.AddString("是");
-	fatherPension.AddString("否");
+	fatherPension.AddString(L"是");
+	fatherPension.AddString(L"否");
 
-	motherJob.AddString("在职");
-	motherJob.AddString("退休");
-	motherJob.AddString("自营");
-	motherJob.AddString("农民");
+	motherJob.AddString(L"在职");
+	motherJob.AddString(L"退休");
+	motherJob.AddString(L"自营");
+	motherJob.AddString(L"农民");
 
-	motherPension.AddString("是");
-	motherPension.AddString("否");
+	motherPension.AddString(L"是");
+	motherPension.AddString(L"否");
 
     picture1show.EnableWindow(FALSE);
     picture2show.EnableWindow(FALSE);
@@ -300,112 +301,122 @@ void CMFCSaveIntroduceDlg::OnBnClickedButton1()
 LRESULT CMFCSaveIntroduceDlg::OnSetPerson(WPARAM wparam, LPARAM lparam){
 	Person* person = (Person*)lparam;
 	CString strName;
-	name.GetWindowTextA(strName);
-	person->name = (LPSTR)(LPCTSTR)strName;
+	name.GetWindowText(strName);
+	person->name = ToString(strName);
 	CString strYear, strMonth, strDay;
-	year.GetWindowTextA(strYear);
-	month.GetWindowTextA(strMonth);
-	day.GetWindowTextA(strDay);
-	person->birth.setTime((LPSTR)(LPCTSTR)(strYear + "-" + strMonth + "-" + strDay + " 00:00:00"));
+	year.GetWindowText(strYear);
+	month.GetWindowText(strMonth);
+	day.GetWindowText(strDay);
+	CString bitrhResult = strYear + "-" + strMonth + "-" + strDay + " 00:00:00";
+	person->birth.setTime(ToString(bitrhResult));
 	CString strSex;
-	sex.GetWindowTextA(strSex);
-	person->sex = (LPSTR)(LPCTSTR)strSex;
+	sex.GetWindowText(strSex);
+	person->sex = ToString(strSex);
 	CString strMarriage;
-	marriage.GetWindowTextA(strMarriage);
-	person->marriage = (LPSTR)(LPCTSTR)strMarriage;
+	marriage.GetWindowText(strMarriage);
+	person->marriage = ToString(strMarriage);
 	CString strEducation;
-	education.GetWindowTextA(strEducation);
-	person->education = (LPSTR)(LPCTSTR)strEducation;
+	education.GetWindowText(strEducation);
+	person->education = ToString(strEducation);
 	CString strTall;
-	tall.GetWindowTextA(strTall);
-	person->tall = atoi(strTall);
+	tall.GetWindowText(strTall);
+	person->tall = atoi(CCharset::UnicodeToAnsi(strTall.GetBuffer()).c_str());
+	strTall.ReleaseBuffer();
 	CString strWeight;
-	weight.GetWindowTextA(strWeight);
-	person->weight = atoi(strWeight);
+	weight.GetWindowText(strWeight);
+	person->weight = atoi(CCharset::UnicodeToAnsi(strWeight.GetBuffer()).c_str());
+	strWeight.ReleaseBuffer();
 	CString strHouse;
-	house.GetWindowTextA(strHouse);
-	person->house = (LPSTR)(LPCTSTR)strHouse;
+	house.GetWindowText(strHouse);
+	person->house = ToString(strHouse);
 	CString strCar;
-	car.GetWindowTextA(strCar);
-	person->car = (LPSTR)(LPCTSTR)strCar;
+	car.GetWindowText(strCar);
+	person->car = ToString(strCar);
 	CString strHousehold;
-	household.GetWindowTextA(strHousehold);
-	person->household = (LPSTR)(LPCTSTR)strHousehold;
+	household.GetWindowText(strHousehold);
+	person->household = ToString(strHousehold);
 	CString strHouseAttri;
-	houseAttri.GetWindowTextA(strHouseAttri);
-	person->houseAttri = (LPSTR)(LPCTSTR)strHouseAttri;
+	houseAttri.GetWindowText(strHouseAttri);
+	person->houseAttri = ToString(strHouseAttri);
 	CString strHouseAddr;
-	houseAddr.GetWindowTextA(strHouseAddr);
-	person->houseAddr = (LPSTR)(LPCTSTR)strHouseAddr;
+	houseAddr.GetWindowText(strHouseAddr);
+	person->houseAddr = ToString(strHouseAddr);
 	CString strJobName;
-	jobName.GetWindowTextA(strJobName);
-	person->jobName = (LPSTR)(LPCTSTR)strJobName;
+	jobName.GetWindowText(strJobName);
+	person->jobName = ToString(strJobName);
 	CString strJobNature;
-	jobNature.GetWindowTextA(strJobNature);
-	person->jobNature = (LPSTR)(LPCTSTR)strJobNature;
+	jobNature.GetWindowText(strJobNature);
+	person->jobNature = ToString(strJobNature);
 	CString strSalary;
-	salary.GetWindowTextA(strSalary);
-	person->salary = atoi((LPSTR)(LPCTSTR)strSalary);
+	salary.GetWindowText(strSalary);
+	person->salary = atoi(ToString(strSalary).c_str());
 	CString strMobile;
-	mobile.GetWindowTextA(strMobile);
-	person->mobile = (LPSTR)(LPCTSTR)strMobile;
+	mobile.GetWindowText(strMobile);
+	person->mobile = ToString(strMobile);
 	CString strQq;
-	qq.GetWindowTextA(strQq);
-	person->qq = (LPSTR)(LPCTSTR)strQq;
+	qq.GetWindowText(strQq);
+	person->qq = ToString(strQq);
 	CString strWeChat;
-	weChat.GetWindowTextA(strWeChat);
-	person->weChat = (LPSTR)(LPCTSTR)strWeChat;
+	weChat.GetWindowText(strWeChat);
+	person->weChat = ToString(strWeChat);
 	CString strFatherJob;
-	fatherJob.GetWindowTextA(strFatherJob);
-	person->fatherJob = (LPSTR)(LPCTSTR)strFatherJob;
+	fatherJob.GetWindowText(strFatherJob);
+	person->fatherJob = ToString(strFatherJob);
 	CString strFatherPension;
-	fatherPension.GetWindowTextA(strFatherPension);
-	person->fatherPension = (LPSTR)(LPCTSTR)strFatherPension;
+	fatherPension.GetWindowText(strFatherPension);
+	person->fatherPension = ToString(strFatherPension);
 	CString strMotherJob;
-	motherJob.GetWindowTextA(strMotherJob);
-	person->motherJob = (LPSTR)(LPCTSTR)strMotherJob;
+	motherJob.GetWindowText(strMotherJob);
+	person->motherJob = ToString(strMotherJob);
 	CString strMotherPension;
-	motherPension.GetWindowTextA(strMotherPension);
-	person->motherPension = (LPSTR)(LPCTSTR)strMotherPension;
-	person->picture1 = (LPSTR)(LPCTSTR)picture1;
-	person->picture2 = (LPSTR)(LPCTSTR)picture2;
-	person->picture3 = (LPSTR)(LPCTSTR)picture3;
+	motherPension.GetWindowText(strMotherPension);
+	person->motherPension = ToString(strMotherPension);
+	person->picture1 = ToString(picture1);
+	person->picture2 = ToString(picture2);
+	person->picture3 = ToString(picture3);
 	CString strIntroduce;
-	introduce.GetWindowTextA(strIntroduce);
-	person->introduce = (LPSTR)(LPCTSTR)strIntroduce;
+	introduce.GetWindowText(strIntroduce);
+	person->introduce = ToString(strIntroduce);
 	return 0;
 }
 
 LRESULT CMFCSaveIntroduceDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
     Person* person = (Person*)lparam;
-    name.SetWindowTextA(person->name.c_str());
-    year.SelectString(0, CStringManager::Format("%d", person->birth.getYear()).c_str());
-    month.SelectString(0, CStringManager::Format("%02d", person->birth.getMonth()).c_str());
-    day.SelectString(0, CStringManager::Format("%02d", person->birth.getDay()).c_str());
-    sex.SelectString(0, person->sex.c_str());
-    marriage.SelectString(0, person->marriage.c_str());
-    education.SelectString(0, person->education.c_str());
-	tall.SelectString(0, CStringManager::Format("%d", person->tall).c_str());
-	weight.SelectString(0, CStringManager::Format("%d", person->weight).c_str());
-	house.SelectString(0, person->house.c_str());
-	car.SelectString(0, person->car.c_str());
-	household.SetWindowTextA(person->household.c_str());
-	houseAttri.SelectString(0, person->houseAttri.c_str());
-	houseAddr.SetWindowTextA(person->houseAddr.c_str());
-    jobName.SetWindowTextA(person->jobName.c_str());
-    jobNature.SelectString(0, person->jobNature.c_str());
-    salary.SetWindowTextA(CStringManager::Format("%d", person->salary).c_str());
-    mobile.SetWindowTextA(person->mobile.c_str());
-    qq.SetWindowTextA(person->qq.c_str());
-    weChat.SetWindowTextA(person->weChat.c_str());
-    fatherJob.SelectString(0, person->fatherJob.c_str());
-    fatherPension.SelectString(0, person->fatherPension.c_str());
-    motherJob.SelectString(0, person->motherJob.c_str());
-    motherPension.SelectString(0, person->motherPension.c_str());
+    name.SetWindowText(CCharset::AnsiToUnicode(person->name).c_str());
+	year.SelectString(0, CCharset::AnsiToUnicode(CStringManager::Format("%d", person->birth.getYear())).c_str());
+	month.SelectString(0, CCharset::AnsiToUnicode(CStringManager::Format("%02d", person->birth.getMonth())).c_str());
+	day.SelectString(0, CCharset::AnsiToUnicode(CStringManager::Format("%02d", person->birth.getDay())).c_str());
+	sex.SelectString(0, CCharset::AnsiToUnicode(person->sex).c_str());
+	marriage.SelectString(0, CCharset::AnsiToUnicode(person->marriage).c_str());
+	education.SelectString(0, CCharset::AnsiToUnicode(person->education).c_str());
+	tall.SelectString(0, CCharset::AnsiToUnicode(CStringManager::Format("%d", person->tall)).c_str());
+	weight.SelectString(0, CCharset::AnsiToUnicode(CStringManager::Format("%d", person->weight)).c_str());
+	house.SelectString(0, CCharset::AnsiToUnicode(person->house).c_str());
+	car.SelectString(0, CCharset::AnsiToUnicode(person->car).c_str());
+	household.SetWindowText(CCharset::AnsiToUnicode(person->household).c_str());
+	houseAttri.SelectString(0, CCharset::AnsiToUnicode(person->houseAttri).c_str());
+	houseAddr.SetWindowText(CCharset::AnsiToUnicode(person->houseAddr).c_str());
+	jobName.SetWindowText(CCharset::AnsiToUnicode(person->jobName).c_str());
+	jobNature.SelectString(0, CCharset::AnsiToUnicode(person->jobNature).c_str());
+	if (person->salary == 0)
+	{
+		salary.SetWindowText(L"");
+	}
+	else
+	{
+		salary.SetWindowText(CCharset::AnsiToUnicode(CStringManager::Format("%d", person->salary)).c_str());
+	}
+	mobile.SetWindowText(CCharset::AnsiToUnicode(person->mobile).c_str());
+	qq.SetWindowText(CCharset::AnsiToUnicode(person->qq).c_str());
+	weChat.SetWindowText(CCharset::AnsiToUnicode(person->weChat).c_str());
+	fatherJob.SelectString(0, CCharset::AnsiToUnicode(person->fatherJob).c_str());
+	fatherPension.SelectString(0, CCharset::AnsiToUnicode(person->fatherPension).c_str());
+	motherJob.SelectString(0, CCharset::AnsiToUnicode(person->motherJob).c_str());
+	motherPension.SelectString(0, CCharset::AnsiToUnicode(person->motherPension).c_str());
     picture1 = person->picture1.c_str();
     picture2 = person->picture2.c_str();
     picture3 = person->picture3.c_str();
-    introduce.SetWindowTextA(person->introduce.c_str());
+	introduce.SetWindowText(CCharset::AnsiToUnicode(person->introduce).c_str());
 
     if (picture1 != "") picture1show.EnableWindow(TRUE);
     else picture1show.EnableWindow(FALSE);
@@ -416,9 +427,16 @@ LRESULT CMFCSaveIntroduceDlg::OnShowPerson(WPARAM wparam, LPARAM lparam){
     return 0;
 }
 
+string CMFCSaveIntroduceDlg::ToString(CString& str)
+{
+	string result = CCharset::UnicodeToAnsi(str.GetBuffer());
+	str.ReleaseBuffer();
+	return result;
+}
+
 void CMFCSaveIntroduceDlg::OnBnClickedButton2()
 {
-    picture1 = CGetPath::GetFileFromWindow().c_str();
+    picture1 = CCharset::AnsiToUnicode(CGetPath::GetFileFromWindow(m_hWnd)).c_str();
     if (picture1 == "-1") picture1 = "";
     if (picture1 != "") picture1show.EnableWindow(TRUE);
     else picture1show.EnableWindow(FALSE);
@@ -428,7 +446,7 @@ void CMFCSaveIntroduceDlg::OnBnClickedButton2()
 
 void CMFCSaveIntroduceDlg::OnBnClickedButton3()
 {
-    picture2 = CGetPath::GetFileFromWindow().c_str();
+	picture2 = CCharset::AnsiToUnicode(CGetPath::GetFileFromWindow(m_hWnd)).c_str();
     if (picture2 == "-1") picture2 = "";
     if (picture2 != "") picture2show.EnableWindow(TRUE);
     else picture2show.EnableWindow(FALSE);
@@ -438,7 +456,7 @@ void CMFCSaveIntroduceDlg::OnBnClickedButton3()
 
 void CMFCSaveIntroduceDlg::OnBnClickedButton4()
 {
-    picture3 = CGetPath::GetFileFromWindow().c_str();
+	picture3 = CCharset::AnsiToUnicode(CGetPath::GetFileFromWindow(m_hWnd)).c_str();
     if (picture3 == "-1") picture3 = "";
     if (picture3 != "") picture3show.EnableWindow(TRUE);
     else picture3show.EnableWindow(FALSE);
@@ -466,8 +484,17 @@ void CMFCSaveIntroduceDlg::OnBnClickedButton6()
 void CMFCSaveIntroduceDlg::ShowPicture(const CString& picture){
     CPicDlg picDlg;
     bool result = false;
-    if (picture.Find(":") != -1) result = picDlg.init((LPSTR)(LPCTSTR)picture);
-    else result = picDlg.init(CGetPath::GetCurrentExePath() + (LPSTR)(LPCTSTR)picture);
+	CString pic = picture;
+	if (picture.Find(L":") != -1)
+	{
+		result = picDlg.init(CCharset::UnicodeToAnsi(pic.GetBuffer()));
+		pic.ReleaseBuffer();
+	}
+	else
+	{
+		result = picDlg.init(CGetPath::GetCurrentExePath() + CCharset::UnicodeToAnsi(pic.GetBuffer()));
+		pic.ReleaseBuffer();
+	}
     if (result == true) picDlg.DoModal();
 }
 

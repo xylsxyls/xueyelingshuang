@@ -23,7 +23,7 @@ MulRect::MulRect(const RECT& rect){
 }
 #endif
 
-MulRect::MulRect(const Point& point){
+MulRect::MulRect(const MulPoint& point){
 	left = point.x;
 	top = point.y;
 	right = point.x;
@@ -37,7 +37,7 @@ void MulRect::SetMulRect(int left, int top, int right, int bottom){
 	this->bottom = bottom;
 }
 
-void MulRect::SetMulRect(Point point){
+void MulRect::SetMulRect(MulPoint point){
 	this->left = point.x;
 	this->top = point.y;
 	this->right = point.x;
@@ -193,14 +193,14 @@ MulRect MulRect::SetIn(const MulRect& bkMulRect)
                 }
                 else
                 {
-                    return MulRect(Point((int)((bkMulRect.left + bkMulRect.right) / 2.0), bkMulRect.top));
+                    return MulRect(MulPoint((int)((bkMulRect.left + bkMulRect.right) / 2.0), bkMulRect.top));
                 }
             }
             else
             {
                 if (bkMulRect.isVerticalLine())
                 {
-                    return MulRect(Point(bkMulRect.left, (int)((bkMulRect.top + bkMulRect.bottom) / 2.0)));
+                    return MulRect(MulPoint(bkMulRect.left, (int)((bkMulRect.top + bkMulRect.bottom) / 2.0)));
                 }
                 else
                 {

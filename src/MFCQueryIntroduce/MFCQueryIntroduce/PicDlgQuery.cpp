@@ -10,6 +10,9 @@
 #include "CGetPath/CGetPathAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CPicControl.h"
+#include "CSystem/CSystemAPI.h"
+#include "CCharset/CCharsetAPI.h"
+
 
 // CPicDlg 对话框
 
@@ -42,6 +45,8 @@ BEGIN_MESSAGE_MAP(CPicDlgQuery, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTON4, &CPicDlgQuery::OnBnClickedButton4)
     ON_BN_CLICKED(IDC_BUTTON5, &CPicDlgQuery::OnBnClickedButton5)
     ON_BN_CLICKED(IDC_BUTTONPIC, &CPicDlgQuery::OnBnClickedButtonpic)
+	ON_BN_CLICKED(IDC_BUTTON2, &CPicDlgQuery::OnBnClickedButton2)
+	ON_BN_CLICKED(IDC_BUTTON3, &CPicDlgQuery::OnBnClickedButton3)
 END_MESSAGE_MAP()
 
 
@@ -51,8 +56,8 @@ END_MESSAGE_MAP()
 void CPicDlgQuery::OnPaint()
 {
     CPaintDC dc(this);
-    CPicControl::DrawInDlgOnPaint(dc.m_hDC, vecPerson.at(m_currentPerson).picture1.c_str(), CRect(), CRect(), 1, IDC_BUTTONPIC);
-    
+	CString strPicPath = CCharset::AnsiToUnicode(vecPerson.at(m_currentPerson).picture1).c_str();
+	CPicControl::DrawInDlgOnPaint(dc.m_hDC, L"", CRect(), CRect(), 1, m_pic);
 }
 
 void CPicDlgQuery::init(const vector<Person>& vecPerson){
@@ -67,70 +72,180 @@ BOOL CPicDlgQuery::OnInitDialog()
     //m_pic->pThis = this;
     
     m_currentPerson = firstPerson;
-    ShowPerson(m_currentPerson);
+    ShowPerson();
     return TRUE;  // return TRUE unless you set the focus to a control
     // 异常:  OCX 属性页应返回 FALSE
 }
 
-void CPicDlgQuery::ChangeText(int IDC, string text){
+void CPicDlgQuery::ChangeText(int IDC, wstring text){
     ::SendMessage(GetDlgItem(IDC)->m_hWnd, WM_SETTEXT, 0, (LPARAM)text.c_str());
 }
 
-void CPicDlgQuery::ShowPerson(int num){
-    if (num >= (int)vecPerson.size()) return;
-    m_currentPerson = num;
-    ChangeText(IDC_STATICNAME      , vecPerson.at(num).name);
-    ChangeText(IDC_STATICBIRTH     , vecPerson.at(num).birth.dateNumToString());
-    ChangeText(IDC_STATICSEX       , vecPerson.at(num).sex);
-    ChangeText(IDC_STATICMARRIAGE  , vecPerson.at(num).marriage);
-    ChangeText(IDC_STATICEDUCATION , vecPerson.at(num).education);
-    ChangeText(IDC_STATICTALL      , CStringManager::Format("%d", vecPerson.at(num).tall));
-    ChangeText(IDC_STATICWEIGHT    , CStringManager::Format("%d", vecPerson.at(num).weight));
-    ChangeText(IDC_STATICHOUSE     , vecPerson.at(num).house);
-    ChangeText(IDC_STATICJOBNAME   , vecPerson.at(num).jobName);
-    ChangeText(IDC_STATICFATHERJOB , vecPerson.at(num).fatherJob + "，" + vecPerson.at(num).fatherPension);
-    ChangeText(IDC_STATICMOTHERJOB , vecPerson.at(num).motherJob + "，" + vecPerson.at(num).motherPension);
-    ChangeText(IDC_STATICHOUSEADDR , vecPerson.at(num).houseAddr);
-    ChangeText(IDC_STATICINTRODUCE , vecPerson.at(num).introduce);
-    ChangeText(IDC_STATICJOBNATURE , vecPerson.at(num).jobNature);
-    ChangeText(IDC_STATICCAR       , vecPerson.at(num).car);
-    ChangeText(IDC_STATICSALARY    , CStringManager::Format("%d", vecPerson.at(num).salary));
-    ChangeText(IDC_STATICMOBILE    , vecPerson.at(num).mobile);
-    ChangeText(IDC_STATICQQ        , vecPerson.at(num).qq);
-    ChangeText(IDC_STATICWECHAT    , vecPerson.at(num).weChat);
-    ChangeText(IDC_STATICHOUSEHOLD , vecPerson.at(num).household);
-    ChangeText(IDC_STATICHOUSEATTRI, vecPerson.at(num).houseAttri);
+void CPicDlgQuery::ShowPerson(){
+	Person& person = vecPerson.at(m_currentPerson);
+    ChangeText(IDC_STATICNAME      , CCharset::AnsiToUnicode(person.name));
+    ChangeText(IDC_STATICBIRTH     , CCharset::AnsiToUnicode(person.birth.dateNumToString()));
+    ChangeText(IDC_STATICSEX       , CCharset::AnsiToUnicode(person.sex));
+    ChangeText(IDC_STATICMARRIAGE  , CCharset::AnsiToUnicode(person.marriage));
+    ChangeText(IDC_STATICEDUCATION , CCharset::AnsiToUnicode(person.education));
+    ChangeText(IDC_STATICTALL      , CCharset::AnsiToUnicode(CStringManager::Format("%d", person.tall)));
+    ChangeText(IDC_STATICWEIGHT    , CCharset::AnsiToUnicode(CStringManager::Format("%d", person.weight)));
+    ChangeText(IDC_STATICHOUSE     , CCharset::AnsiToUnicode(person.house));
+    ChangeText(IDC_STATICJOBNAME   , CCharset::AnsiToUnicode(person.jobName));
+	string split;
+	string fatherPension;
+	if (person.fatherPension != "")
+	{
+		fatherPension = "是否有养老金：" + person.fatherPension;
+	}
+	if (person.fatherJob != "" && person.fatherPension != "")
+	{
+		split = "，";
+	}
+	ChangeText(IDC_STATICFATHERJOB , CCharset::AnsiToUnicode(person.fatherJob + split + fatherPension));
+	split = "";
+	string motherPension;
+	if (person.motherJob != "" && person.motherPension != "")
+	{
+		split = "，";
+	}
+	if (person.motherPension != "")
+	{
+		motherPension = "是否有养老金：" + person.motherPension;
+	}
+	ChangeText(IDC_STATICMOTHERJOB , CCharset::AnsiToUnicode(person.motherJob + split + motherPension));
+    ChangeText(IDC_STATICHOUSEADDR , CCharset::AnsiToUnicode(person.houseAddr));
+    ChangeText(IDC_STATICINTRODUCE , CCharset::AnsiToUnicode(person.introduce));
+    ChangeText(IDC_STATICJOBNATURE , CCharset::AnsiToUnicode(person.jobNature));
+    ChangeText(IDC_STATICCAR       , CCharset::AnsiToUnicode(person.car));
+	if (person.salary != 0)
+	{
+		ChangeText(IDC_STATICSALARY, CCharset::AnsiToUnicode(CStringManager::Format("%d", person.salary)));
+	}
+	else
+	{
+		ChangeText(IDC_STATICSALARY, L"");
+	}
+    ChangeText(IDC_STATICMOBILE    , CCharset::AnsiToUnicode(person.mobile));
+    ChangeText(IDC_STATICQQ        , CCharset::AnsiToUnicode(person.qq));
+    ChangeText(IDC_STATICWECHAT    , CCharset::AnsiToUnicode(person.weChat));
+    ChangeText(IDC_STATICHOUSEHOLD , CCharset::AnsiToUnicode(person.household));
+    ChangeText(IDC_STATICHOUSEATTRI, CCharset::AnsiToUnicode(person.houseAttri));
     
-    list<CString> listPath;
-    listPath.push_back((CGetPath::GetCurrentExePath() + vecPerson.at(num).picture1).c_str());
-    CRect picRect;
-    m_picRc.GetWindowRect(picRect);
-    ScreenToClient(picRect);
-    m_pic->init(picRect, IDC_BUTTONPIC, this, listPath);
-    m_picPre.EnableWindow(FALSE);
-    if (vecPerson.at(num).picture2 == "") m_picNext.EnableWindow(FALSE);
-    else m_picNext.EnableWindow(TRUE);
-    if (num == firstPerson) m_personPre.EnableWindow(FALSE);
+	picCur = 0;
+	ShowPersonPic();
+
+	if (m_currentPerson == firstPerson) m_personPre.EnableWindow(FALSE);
     else m_personPre.EnableWindow(TRUE);
-    if (num == vecPerson.size() - 1) m_personNext.EnableWindow(FALSE);
+	if (m_currentPerson == vecPerson.size() - 1) m_personNext.EnableWindow(FALSE);
     else m_personNext.EnableWindow(TRUE);
+	
+}
+
+MulRect CPicDlgQuery::GetWidthHeight(const string& path)
+{
+	CImage img;
+	HRESULT hr = img.Load(CCharset::AnsiToUnicode(path).c_str());
+	if (hr == S_OK)
+	{
+		MulRect rect = { 0, 0, img.GetWidth(), img.GetHeight() };
+		img.Destroy();
+		return rect;
+	}
+	return MulRect();
 }
 
 void CPicDlgQuery::OnBnClickedButton4()
 {
-    ShowPerson(--m_currentPerson);
+	--m_currentPerson;
+    ShowPerson();
     // TODO:  在此添加控件通知处理程序代码
 }
 
 
 void CPicDlgQuery::OnBnClickedButton5()
 {
-    ShowPerson(++m_currentPerson);
+	++m_currentPerson;
+    ShowPerson();
     // TODO:  在此添加控件通知处理程序代码
 }
 
 void CPicDlgQuery::OnBnClickedButtonpic()
 {
-    AfxMessageBox("1");
+	Person& person = vecPerson.at(m_currentPerson);
+	string picPath;
+	if (picCur == 1)
+	{
+		picPath = person.picture1;
+	}
+	else if (picCur == 2)
+	{
+		picPath = person.picture2;
+	}
+	else if (picCur == 3)
+	{
+		picPath = person.picture3;
+	}
+	CSystem::OpenFile(picPath);
     // TODO:  在此添加控件通知处理程序代码
+}
+
+void CPicDlgQuery::ShowPersonPic()
+{
+	string picPath;
+	Person& person = vecPerson.at(m_currentPerson);
+	if (picCur == 0)
+	{
+		if (person.picture1 == "")
+		{
+			m_picPre.EnableWindow(FALSE);
+			m_picNext.EnableWindow(FALSE);
+			return;
+		}
+		picCur = 1;
+	}
+	if (picCur == 1)
+	{
+		picPath = person.picture1;
+		m_picPre.EnableWindow(FALSE);
+		m_picNext.EnableWindow(person.picture2 != "");
+	}
+	else if (picCur == 2)
+	{
+		picPath = person.picture2;
+		m_picPre.EnableWindow(TRUE);
+		m_picNext.EnableWindow(person.picture3 != "");
+	}
+	else if (picCur == 3)
+	{
+		picPath = person.picture3;
+		m_picPre.EnableWindow(TRUE);
+		m_picNext.EnableWindow(FALSE);
+	}
+	list<CString> listPath;
+	listPath.push_back(CCharset::AnsiToUnicode(picPath).c_str());
+	CRect picRect;
+	m_picRc.GetWindowRect(picRect);
+	ScreenToClient(picRect);
+	MulRect adaptRect = GetWidthHeight(picPath);
+	adaptRect = adaptRect.SetIn(picRect);
+	delete m_pic;
+	m_pic = new CPicControl;
+	m_pic->init((RECT)adaptRect, IDC_BUTTONPIC, this, listPath);
+}
+
+
+void CPicDlgQuery::OnBnClickedButton2()
+{
+	picCur++;
+	ShowPersonPic();
+	// TODO:  在此添加控件通知处理程序代码
+}
+
+
+void CPicDlgQuery::OnBnClickedButton3()
+{
+	picCur--;
+	ShowPersonPic();
+	// TODO:  在此添加控件通知处理程序代码
 }

@@ -1,6 +1,6 @@
 #pragma once
 #include "MulRectMacro.h"
-#include "Point/PointAPI.h"
+#include "MulPoint/MulPointAPI.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -19,9 +19,9 @@ public:
 #endif
 
 	MulRect(int left, int top, int right, int bottom);
-	MulRect(const Point& point);
+	MulRect(const MulPoint& point);
 	void SetMulRect(int left, int top, int right, int bottom);
-	void SetMulRect(Point point);
+	void SetMulRect(MulPoint point);
 	int GetWidth()const;
 	int GetHeight()const;
 	bool isPoint()const;

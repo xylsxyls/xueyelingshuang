@@ -1,4 +1,5 @@
 #include <SDKDDKVer.h>
+#include "stdafx.h"
 #include "Storage.h"
 #include "ConfigInfo.h"
 #include "CScreen/CScreenAPI.h"
@@ -62,17 +63,17 @@ vector<Person> Storage::FindFromtxt(const Search& search){
 		Person person = vecData.at(i);
 		bool personResult = (person.birth <= search.bigBirth && person.birth >= search.smallBirth)
 			&& (person.sex == search.sex)
-			&& (person.tall <= search.bigTall && person.tall >= search.smallTall)
-			&& (person.weight <= search.bigWeight && person.weight >= search.smallWeight)
+			&& ((search.bigTall == 0 || person.tall <= search.bigTall) && (person.tall >= search.smallTall))
+			&& ((search.bigWeight == 0 || person.weight <= search.bigWeight) && (person.weight >= search.smallWeight))
 			&& (person.salary >= search.salary);
 		if (personResult == false)
 		{
 			continue;
 		}
 		ChangePersonToSearch(person);
-		personResult = (search.marriage == GetConfig(noMatter, string) || person.marriage == search.marriage)
-			&& (search.marriage == GetConfig(noMatter, string) || person.house == search.house)
-			&& (search.marriage == GetConfig(noMatter, string) || person.education == search.education);
+		personResult = (search.marriage == "" || search.marriage == GetConfig(noMatter, string) || person.marriage == search.marriage)
+			&& (search.house == "" || search.house == GetConfig(noMatter, string) || person.house == search.house)
+			&& (search.education == "" || search.education == GetConfig(noMatter, string) || person.education == search.education);
 		if (personResult == true)
 		{
 			result.push_back(vecData.at(i));

@@ -1,4 +1,5 @@
 #include <SDKDDKVer.h>
+#include "stdafx.h"
 #include "ConfigInfo.h"
 #include "CGetPath/CGetPathAPI.h"
 

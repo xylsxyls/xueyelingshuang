@@ -23,7 +23,7 @@ protected:
 public:
     afx_msg void OnPaint();
 public:
-    bool init(string picture);
+    bool init(const string& picture);
 public:
     HBITMAP picHBITMAP;
     string picture;

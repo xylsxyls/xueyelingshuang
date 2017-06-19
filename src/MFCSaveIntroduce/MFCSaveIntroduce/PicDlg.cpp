@@ -5,6 +5,7 @@
 #include "MFCSaveIntroduce.h"
 #include "PicDlg.h"
 #include "afxdialogex.h"
+#include "CCharset/CCharsetAPI.h"
 
 
 // CPicDlg 对话框
@@ -48,13 +49,13 @@ void CPicDlg::OnPaint()
     ::DeleteDC(picHDC);
 }
 
-bool CPicDlg::init(string picture){
+bool CPicDlg::init(const string& picture){
     this->picture = picture;
     if (picture != ""){
         CImage img;
-        img.Load(picture.c_str());
+        HRESULT hr = img.Load(CCharset::AnsiToUnicode(picture).c_str());
+		if (hr == E_FAIL) return false;
         picHBITMAP = img.Detach();
-        if (picHBITMAP == nullptr) return false;
         //picHBITMAP = (HBITMAP)::LoadImage(::AfxGetInstanceHandle(), picture.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
         BITMAP bi = { 0 };
         //获取位图信息，包括深度，宽高，步长等
@@ -86,6 +87,6 @@ void CPicDlg::OnDestroy()
 {
     CDialogEx::OnDestroy();
 
-    if (picHBITMAP != nullptr) DeleteObject(picHBITMAP);
+    if (picHBITMAP != nullptr) ::DeleteObject(picHBITMAP);
     // TODO:  在此处添加消息处理程序代码
 }

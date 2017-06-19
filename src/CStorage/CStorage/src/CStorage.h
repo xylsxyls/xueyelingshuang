@@ -36,12 +36,20 @@ public:
 					anyValue = it->second;
 					return any_cast<T>(anyValue);
 				}
+#ifdef _UNICODE
+				strError.Format(L"key值：%s，不存在", strCurrentKey.c_str());
+#else
 				strError.Format("key值：%s，不存在", strCurrentKey.c_str());
+#endif
 				AfxMessageBox(strError);
 				return T();
 			}
 			catch (boost::bad_any_cast &e){
+#ifdef _UNICODE
+				strError.Format(L"错误，类型为:%s，\nboost解释：%s", it->second.type().name(), e.what());
+#else
 				strError.Format("错误，类型为:%s，\nboost解释：%s", it->second.type().name(), e.what());
+#endif
 				AfxMessageBox(strError);
 				return T();
 			}
@@ -56,12 +64,20 @@ public:
 					anyValue = it->second;
 					return any_cast<T>(anyValue);
 				}
+#ifdef _UNICODE
+				strError.Format(L"key值：%d，不存在", nCurrentKey);
+#else
 				strError.Format("key值：%d，不存在", nCurrentKey);
+#endif
 				AfxMessageBox(strError);
 				return T();
 			}
 			catch (boost::bad_any_cast &e){
+#ifdef _UNICODE
+				strError.Format(L"错误，类型为:%s，\nboost解释：%s", it->second.type().name(), e.what());
+#else
 				strError.Format("错误，类型为:%s，\nboost解释：%s", it->second.type().name(), e.what());
+#endif
 				AfxMessageBox(strError);
 				return T();
 			}

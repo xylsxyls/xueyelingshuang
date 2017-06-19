@@ -6,6 +6,7 @@
 #include <afxdialogex.h>
 #include "Person.h"
 #include "afxwin.h"
+#include "MulRect/MulRectAPI.h"
 using namespace std;
 
 // CPicDlg ¶Ô»°¿ò
@@ -32,8 +33,8 @@ public:
     void init(const vector<Person>& vecPerson);
 public:
     virtual BOOL OnInitDialog();
-    void ChangeText(int IDC, string text);
-    void ShowPerson(int num);
+    void ChangeText(int IDC, wstring text);
+    void ShowPerson();
     vector<Person> vecPerson;
     CPicControl* m_pic;
     CButton m_picPre;
@@ -45,4 +46,9 @@ public:
     afx_msg void OnBnClickedButton5();
     afx_msg void OnBnClickedButtonpic();
     CButton m_picRc;
+	MulRect GetWidthHeight(const string& path);
+	void ShowPersonPic();
+	afx_msg void OnBnClickedButton2();
+	afx_msg void OnBnClickedButton3();
+	int picCur;
 };

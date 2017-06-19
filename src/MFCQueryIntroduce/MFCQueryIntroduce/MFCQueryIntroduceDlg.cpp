@@ -12,6 +12,7 @@
 #include "Search.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "ConfigInfo.h"
+#include "CCharset/CCharsetAPI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -122,53 +123,53 @@ BOOL CMFCQueryIntroduceDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 	int nYear = 1950;
 	while (nYear != 2010){
-		yearSmall.AddString(CStringManager::Format("%d", nYear).c_str());
-		yearBig.AddString(CStringManager::Format("%d", nYear).c_str());
+		yearSmall.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nYear)).c_str());
+		yearBig.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nYear)).c_str());
 		nYear++;
 	}
 	int nMonth = 1;
 	while (nMonth != 13){
-		monthSmall.AddString(CStringManager::Format("%02d", nMonth).c_str());
-		monthBig.AddString(CStringManager::Format("%02d", nMonth).c_str());
+		monthSmall.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%02d", nMonth)).c_str());
+		monthBig.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%02d", nMonth)).c_str());
 		nMonth++;
 	}
 	int nDay = 1;
 	while (nDay != 32){
-		daySmall.AddString(CStringManager::Format("%02d", nDay).c_str());
-		dayBig.AddString(CStringManager::Format("%02d", nDay).c_str());
+		daySmall.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%02d", nDay)).c_str());
+		dayBig.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%02d", nDay)).c_str());
 		nDay++;
 	}
 
-	sex.AddString("男");
-	sex.AddString("女");
+	sex.AddString(L"男");
+	sex.AddString(L"女");
 
-	marriage.AddString(GetConfig(noMatter, string).c_str());
-	marriage.AddString(GetConfig(notMarriage, string).c_str());
-	marriage.AddString(GetConfig(hasMarriage, string).c_str());
+	marriage.AddString(CCharset::AnsiToUnicode(GetConfig(noMatter, string)).c_str());
+	marriage.AddString(CCharset::AnsiToUnicode(GetConfig(notMarriage, string)).c_str());
+	marriage.AddString(CCharset::AnsiToUnicode(GetConfig(hasMarriage, string)).c_str());
 
-	education.AddString(GetConfig(noMatter, string).c_str());
-	education.AddString(GetConfig(junior, string).c_str());
-	education.AddString(GetConfig(college, string).c_str());
-	education.AddString(GetConfig(graduate, string).c_str());
-	education.AddString(GetConfig(philosophy, string).c_str());
+	education.AddString(CCharset::AnsiToUnicode(GetConfig(noMatter, string)).c_str());
+	education.AddString(CCharset::AnsiToUnicode(GetConfig(junior, string)).c_str());
+	education.AddString(CCharset::AnsiToUnicode(GetConfig(college, string)).c_str());
+	education.AddString(CCharset::AnsiToUnicode(GetConfig(graduate, string)).c_str());
+	education.AddString(CCharset::AnsiToUnicode(GetConfig(philosophy, string)).c_str());
 
 	int nTall = 140;
 	while (nTall != 220){
-		tallSmall.AddString(CStringManager::Format("%d", nTall).c_str());
-		tallBig.AddString(CStringManager::Format("%d", nTall).c_str());
+		tallSmall.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nTall)).c_str());
+		tallBig.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nTall)).c_str());
 		nTall++;
 	}
 
 	int nWeight = 40;
 	while (nWeight != 120){
-		weightSmall.AddString(CStringManager::Format("%d", nWeight).c_str());
-		weightBig.AddString(CStringManager::Format("%d", nWeight).c_str());
+		weightSmall.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nWeight)).c_str());
+		weightBig.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nWeight)).c_str());
 		nWeight++;
 	}
 
-	house.AddString(GetConfig(noMatter, string).c_str());
-	house.AddString(GetConfig(noHouse, string).c_str());
-	house.AddString(GetConfig(hasHouse, string).c_str());
+	house.AddString(CCharset::AnsiToUnicode(GetConfig(noMatter, string)).c_str());
+	house.AddString(CCharset::AnsiToUnicode(GetConfig(noHouse, string)).c_str());
+	house.AddString(CCharset::AnsiToUnicode(GetConfig(hasHouse, string)).c_str());
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -232,62 +233,83 @@ void CMFCQueryIntroduceDlg::OnBnClickedButton1()
 	Search search;
 	Manager::SearchInfo(m_hWnd, &search);
 	vector<Person> vecPerson = Manager::Find(search);
-	AfxMessageBox(CStringManager::Format("一共找到%d张",vecPerson.size()).c_str());
+	AfxMessageBox(CCharset::AnsiToUnicode(CStringManager::Format("一共找到%d张", vecPerson.size())).c_str());
 	Manager::ShowDlg(vecPerson);
 }
 
 LRESULT CMFCQueryIntroduceDlg::OnSetSearchInfo(WPARAM wparam, LPARAM lparam){
 	Search* search = (Search*)lparam;
 	CString strYearSmall;
-	yearSmall.GetWindowTextA(strYearSmall);
+	yearSmall.GetWindowText(strYearSmall);
 	CString strMonthSmall;
-	monthSmall.GetWindowTextA(strMonthSmall);
+	monthSmall.GetWindowText(strMonthSmall);
 	CString strDaySmall;
-	daySmall.GetWindowTextA(strDaySmall);
-	search->smallBirth = IntDateTime(atoi(CStringManager::Format("%d%02d%02d", atoi(strYearSmall), atoi(strMonthSmall), atoi(strDaySmall)).c_str()), 0);
+	daySmall.GetWindowText(strDaySmall);
+	search->smallBirth = IntDateTime(atoi(CStringManager::Format("%d%02d%02d", 
+		atoi(CCharset::UnicodeToAnsi(strYearSmall.GetBuffer()).c_str()),
+		atoi(CCharset::UnicodeToAnsi(strMonthSmall.GetBuffer()).c_str()),
+		atoi(CCharset::UnicodeToAnsi(strDaySmall.GetBuffer()).c_str())).c_str()), 0);
+	strYearSmall.ReleaseBuffer();
+	strMonthSmall.ReleaseBuffer();
+	strDaySmall.ReleaseBuffer();
 
 	CString strYearBig;
-	yearBig.GetWindowTextA(strYearBig);
+	yearBig.GetWindowText(strYearBig);
 	CString strMonthBig;
-	monthBig.GetWindowTextA(strMonthBig);
+	monthBig.GetWindowText(strMonthBig);
 	CString strDayBig;
-	dayBig.GetWindowTextA(strDayBig);
-	search->bigBirth = IntDateTime(atoi(CStringManager::Format("%d%02d%02d", atoi(strYearBig), atoi(strMonthBig), atoi(strDayBig)).c_str()), 0);
+	dayBig.GetWindowText(strDayBig);
+	search->bigBirth = IntDateTime(atoi(CStringManager::Format("%d%02d%02d",
+		atoi(CCharset::UnicodeToAnsi(strYearBig.GetBuffer()).c_str()),
+		atoi(CCharset::UnicodeToAnsi(strMonthBig.GetBuffer()).c_str()),
+		atoi(CCharset::UnicodeToAnsi(strDayBig.GetBuffer()).c_str())).c_str()), 0);
+	strYearBig.ReleaseBuffer();
+	strMonthBig.ReleaseBuffer();
+	strDayBig.ReleaseBuffer();
 
 	CString strSex;
-	sex.GetWindowTextA(strSex);
-	search->sex = (LPSTR)(LPCTSTR)strSex;
+	sex.GetWindowText(strSex);
+	search->sex = CCharset::UnicodeToAnsi(strSex.GetBuffer());
+	strSex.ReleaseBuffer();
 
 	CString strMerriage;
-	marriage.GetWindowTextA(strMerriage);
-	search->marriage = (LPSTR)(LPCTSTR)strMerriage;
+	marriage.GetWindowText(strMerriage);
+	search->marriage = CCharset::UnicodeToAnsi(strMerriage.GetBuffer());
+	strMerriage.ReleaseBuffer();
 
 	CString strTallSmall;
-	tallSmall.GetWindowTextA(strTallSmall);
-	search->smallTall = atoi(strTallSmall);
+	tallSmall.GetWindowText(strTallSmall);
+	search->smallTall = atoi(CCharset::UnicodeToAnsi(strTallSmall.GetBuffer()).c_str());
+	strTallSmall.ReleaseBuffer();
 
 	CString strTallBig;
-	tallBig.GetWindowTextA(strTallBig);
-	search->bigTall = atoi(strTallBig);
+	tallBig.GetWindowText(strTallBig);
+	search->bigTall = atoi(CCharset::UnicodeToAnsi(strTallBig.GetBuffer()).c_str());
+	strTallBig.ReleaseBuffer();
 
 	CString strHouse;
-	house.GetWindowTextA(strHouse);
-	search->house = (LPSTR)(LPCTSTR)strHouse;
+	house.GetWindowText(strHouse);
+	search->house = CCharset::UnicodeToAnsi(strHouse.GetBuffer());
+	strHouse.ReleaseBuffer();
 
 	CString strWeightSmall;
-	weightSmall.GetWindowTextA(strWeightSmall);
-	search->smallWeight = atoi(strWeightSmall);
+	weightSmall.GetWindowText(strWeightSmall);
+	search->smallWeight = atoi(CCharset::UnicodeToAnsi(strWeightSmall.GetBuffer()).c_str());
+	strWeightSmall.ReleaseBuffer();
 
 	CString strWeightBig;
-	weightBig.GetWindowTextA(strWeightBig);
-	search->bigWeight = atoi(strWeightBig);
+	weightBig.GetWindowText(strWeightBig);
+	search->bigWeight = atoi(CCharset::UnicodeToAnsi(strWeightBig.GetBuffer()).c_str());
+	strWeightBig.ReleaseBuffer();
 
 	CString strEducation;
-	education.GetWindowTextA(strEducation);
-	search->education = (LPSTR)(LPCTSTR)strEducation;
+	education.GetWindowText(strEducation);
+	search->education = CCharset::UnicodeToAnsi(strEducation.GetBuffer());
+	strEducation.ReleaseBuffer();
 
 	CString strSalary;
-	salary.GetWindowTextA(strSalary);
-	search->salary = atoi(strSalary);
+	salary.GetWindowText(strSalary);
+	search->salary = atoi(CCharset::UnicodeToAnsi(strSalary.GetBuffer()).c_str());
+	strSalary.ReleaseBuffer();
 	return 0;
 }

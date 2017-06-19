@@ -7,6 +7,6 @@ ConfigInfo configInfo;
 ConfigInfo::ConfigInfo(){
 	storage[FillPersonInt] = 10000;
     storage[ShowPersonInt] = 10001;
-	storage[txtPath] = CGetPath::GetCurrentExePath() + "save.data";
-    storage[txtPathBk] = CGetPath::GetCurrentExePath() + "savebk.data";
+	storage[iniPath] = CGetPath::GetCurrentExePath() + "save.data";
+	storage[iniPathBk] = CGetPath::GetCurrentExePath() + "savebk.data";
 }

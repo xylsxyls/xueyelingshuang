@@ -4,8 +4,10 @@
 #include "CScreen/CScreenAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CGetPath/CGetPathAPI.h"
-#include "CStopWatch/CStopWatchAPI.h"
 #include "Cini/CiniAPI.h"
+#include <atlimage.h>
+#include "CSystem/CSystemAPI.h"
+#include "CCharset/CCharsetAPI.h"
 
 #define SetPersonString(person, strKey) storage.ini->WriteIni(#strKey, person->strKey, person->name + person->birth.dateNumToString())
 #define SetPersonBirth(person, strKey) storage.ini->WriteIni(#strKey, person->strKey.dateNumToString(), person->name + person->birth.dateNumToString())
@@ -19,62 +21,48 @@ map<string, string> mapData;
 storage_ storage;
 
 storage_::storage_(){
-    ini = new Cini(GetConfig(txtPath, string));
-    /*
-    Ctxt txt(GetConfig(txtPath, string));
-    txt.OpenFile_a();
-    string data;
-    int readresult = -1;
-    int readsize = 100;
-    int size = 0;
-    while (true){
-        data.resize(size + 100);
-        readresult = fread(&data[size], 1, 100, txt.pFile);
-        if (readresult != readsize){
-            data.resize(size + readresult);
-            break;
-        }
-        size = size + 100;
-    }
-    static CStopWatch stopwatch;
-    //json.LoadJson(data);
-    int xxx = stopwatch.GetWatchTime();
-    txt.CloseFile();*/
-    /*
-	int n = -1;
-	while (n++ != txt.vectxt.size() - 1){
-		int i = 0;
-		string strValue;
-		while (i++ != txt.vectxt.at(n).size() - 1){
-            strValue = strValue + txt.vectxt.at(n).at(i) + GetConfig(Split, string).c_str();
-		}
-		mapData[txt.vectxt.at(n).at(0)] = strValue;
-	}*/
+    ini = new Cini(GetConfig(iniPath, string));
 }
 
 void Storage::SaveTotxt(Person* person){
     string path = CGetPath::GetCurrentExePath() + "picture/";
-    if (!PathIsDirectory(path.c_str())){
-        ::CreateDirectory(path.c_str(), NULL);
+    if (!PathIsDirectory(CCharset::AnsiToUnicode(path).c_str())){
+		::CreateDirectory(CCharset::AnsiToUnicode(path).c_str(), NULL);
     }
 
 	string strPerson;
     string personKey = person->name + person->birth.dateNumToString();
 	if (person->picture1 != ""){
-        bool x = CScreen::ChangeToBmp(path + personKey + "1.bmp", person->picture1);
-        person->picture1 = "picture/" + personKey + "1.bmp";
+		string dstPathBmp1 = path + personKey + "1.bmp";
+		bool x = CScreen::ChangeToBmp(dstPathBmp1, person->picture1);
+		CImage img;
+		img.Load(CCharset::AnsiToUnicode(dstPathBmp1).c_str());
+		string dstPathJpg1 = path + personKey + "1.jpg";
+		img.Save(CCharset::AnsiToUnicode(dstPathJpg1).c_str());
+		person->picture1 = dstPathJpg1;
+		::remove(dstPathBmp1.c_str());
 	}
 	if (person->picture2 != ""){
-        CScreen::ChangeToBmp(path + personKey + "2.bmp", person->picture2);
-        person->picture2 = "picture/" + personKey + "2.bmp";
+		string dstPathBmp2 = path + personKey + "2.bmp";
+		CScreen::ChangeToBmp(dstPathBmp2, person->picture2);
+		CImage img;
+		img.Load(CCharset::AnsiToUnicode(dstPathBmp2).c_str());
+		string dstPathJpg2 = path + personKey + "2.jpg";
+		img.Save(CCharset::AnsiToUnicode(dstPathJpg2).c_str());
+		person->picture2 = dstPathJpg2;
+		::remove(dstPathBmp2.c_str());
 	}
 	if (person->picture3 != ""){
-        CScreen::ChangeToBmp(path + personKey + "3.bmp", person->picture3);
-        person->picture3 = "picture/" + personKey + "3.bmp";
+		string dstPathBmp3 = path + personKey + "3.bmp";
+		CScreen::ChangeToBmp(dstPathBmp3, person->picture3);
+		CImage img;
+		img.Load(CCharset::AnsiToUnicode(dstPathBmp3).c_str());
+		string dstPathJpg3 = path + personKey + "3.jpg";
+		img.Save(CCharset::AnsiToUnicode(dstPathJpg3).c_str());
+		person->picture3 = dstPathJpg3;
+		::remove(dstPathBmp3.c_str());
 	}
-    
-    //Cini ini("");
-    
+
     SetPersonString(person, name         );
     SetPersonBirth (person, birth        );
     SetPersonString(person, sex          );
@@ -101,21 +89,11 @@ void Storage::SaveTotxt(Person* person){
     SetPersonString(person, picture2     );
     SetPersonString(person, picture3     );
     SetPersonString(person, introduce    );
-    //mapData[person->name + person->birth.dateNumToString()] = strPerson;
-    /*
-	Ctxt txt(GetConfig(txtPath, string));
-    txt.OpenFile_w();
-    fwrite(data.c_str(), 1, data.length(), txt.pFile);
-    txt.CloseFile();
-    Ctxt txtBk(GetConfig(txtPathBk, string));
-    txtBk.OpenFile_w();
-    fwrite(data.c_str(), 1, data.length(), txtBk.pFile);
-    txtBk.CloseFile();*/
-	//txt.AddLine("%s", (person->name + person->birth.dateNumToString() + configInfo.storage[ConfigInfo::Split].toValue<string>().c_str() + strPerson).c_str());
+
+	CSystem::CopyFileOver(GetConfig(iniPathBk, string), GetConfig(iniPath, string), true);
 }
 
 void Storage::GetFromtxt(Person* person){
-    static CStopWatch so;
     GetPersonString(person, name         );
     GetPersonBirth (person, birth        );
     GetPersonString(person, sex          );
@@ -142,6 +120,4 @@ void Storage::GetFromtxt(Person* person){
     GetPersonString(person, picture2     );
     GetPersonString(person, picture3     );
     GetPersonString(person, introduce    );
-    int xxx = so.GetWatchTime();
-    int x = 3;
 }

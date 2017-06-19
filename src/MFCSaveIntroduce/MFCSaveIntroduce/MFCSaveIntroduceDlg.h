@@ -34,6 +34,7 @@ public:
 	afx_msg void OnBnClickedButton1();
 	afx_msg LRESULT OnSetPerson(WPARAM wparam, LPARAM lparam);
     afx_msg LRESULT OnShowPerson(WPARAM wparam, LPARAM lparam);
+	string ToString(CString& str);
 	CEdit name;
 	CComboBox year;
 	CComboBox month;

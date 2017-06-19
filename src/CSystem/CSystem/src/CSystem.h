@@ -26,4 +26,6 @@ public:
     static void OpenFile(const string& file);
     //?外部打开网页
     static void OpenWebPage(const string& webPage);
-};
+	//?复制文件
+	static void CopyFileOver(const string& dstFile, const string& srcFile, bool over);
+};;
