@@ -1,0 +1,2 @@
+::SendMessage(m_hWnd, DM_SETDEFID, (WPARAM)IDC_BUTTON1, NULL);
+¸ÄIDC_BUTTON1¼´¿É

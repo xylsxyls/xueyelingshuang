@@ -18,6 +18,4 @@ public:
 
 private:
     string selText;
-public:
-    afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 };

@@ -51,7 +51,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)Release\</IntDir>
-    <TargetName>$(ProjectName)1.0</TargetName>
+    <TargetName>$(ProjectName)1.1</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

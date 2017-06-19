@@ -44,4 +44,6 @@ public:
     string m_strFind;
     CButton m_case;
     bool IsOutFormat(const string& path, const vector<string>& vecOutFormat);
+    afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
+    CButton m_btnFind;
 };

@@ -1,0 +1,11 @@
+set DLLNAME=2345ImageThumb64.dll
+
+reg Query "HKLM\Hardware\Description\System\CentralProcessor\0" | find /i "x86" > NUL && set OS=32BIT || set OS=64BIT
+
+if %OS%==32BIT "%windir%\system32\regsvr32.exe" /u "%~dp0%DLLNAME%"
+if %OS%==64BIT "%windir%\syswow64\regsvr32.exe" /u "%~dp0%DLLNAME%"
+
+::if %OS%==32BIT "%windir%\system32\regsvr32.exe" "%~dp0%DLLNAME%"
+::if %OS%==64BIT "%windir%\syswow64\regsvr32.exe" "%~dp0%DLLNAME%"
+
+pause

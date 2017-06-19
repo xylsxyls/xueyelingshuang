@@ -10,6 +10,7 @@
 #include "CCharset/CCharsetAPI.h"
 #include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include <Winuser.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -65,6 +66,7 @@ void CFindTextDlg::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_EDIT1, m_text);
     DDX_Control(pDX, IDC_EDIT4, m_find);
     DDX_Control(pDX, IDC_CHECK1, m_case);
+    DDX_Control(pDX, IDC_BUTTON1, m_btnFind);
 }
 
 BEGIN_MESSAGE_MAP(CFindTextDlg, CDialogEx)
@@ -73,6 +75,7 @@ BEGIN_MESSAGE_MAP(CFindTextDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CFindTextDlg::OnBnClickedButton1)
     ON_BN_CLICKED(IDC_BUTTON2, &CFindTextDlg::OnBnClickedButton2)
+    ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
 
 
@@ -114,7 +117,10 @@ BOOL CFindTextDlg::OnInitDialog()
     m_outFormat.SetWindowText(CCharset::AnsiToUnicode(m_strOutFormat).c_str());
     m_case.SetCheck(1);
     m_case.EnableWindow(FALSE);
-	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
+    ::SetFocus(m_text.m_hWnd);
+    ModifyStyle(0, WS_MINIMIZEBOX);
+    ::SendMessage(m_hWnd, DM_SETDEFID, (WPARAM)IDC_BUTTON1, NULL);
+	return FALSE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
 void CFindTextDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -171,7 +177,8 @@ HCURSOR CFindTextDlg::OnQueryDragIcon()
 void CFindTextDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
-    m_find.SetWindowText(L"");
+    //m_find.SetWindowText(L"搜索中...");
+    //m_find.UpdateWindow();
     m_strFind = "";
 
     CString text;
@@ -243,6 +250,10 @@ void CFindTextDlg::OnBnClickedButton1()
             m_strFind.append("\r\n\r\n");
         }
     }
+    if (m_strFind == "")
+    {
+        m_strFind = "无";
+    }
     m_find.SetWindowText(CCharset::AnsiToUnicode(m_strFind).c_str());
 }
 
@@ -264,4 +275,17 @@ bool CFindTextDlg::IsOutFormat(const string& path, const vector<string>& vecOutF
         }
     }
     return false;
+}
+
+BOOL CFindTextDlg::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
+{
+    // TODO:  在此添加消息处理程序代码和/或调用默认值
+    RECT findRect;
+    ::GetWindowRect(m_find.m_hWnd, &findRect);
+    BOOL isInFindRect = ::PtInRect(&findRect,pt);
+    if (isInFindRect == 1)
+    {
+        ::SendMessage(m_find.m_hWnd, WM_MOUSEWHEEL, MAKEWPARAM(nFlags, zDelta), MAKELPARAM(pt.x, pt.y));
+    }
+    return CDialogEx::OnMouseWheel(nFlags, zDelta, pt);
 }

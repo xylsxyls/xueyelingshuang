@@ -1,0 +1,1 @@
+如果要在OnInitDialog中添加SetFocus到具体控件则OnInitDialog必须返回FALSE，默认返回TRUE

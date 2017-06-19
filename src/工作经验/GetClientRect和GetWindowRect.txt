@@ -1,0 +1,1 @@
+::GetWindowRect获取的Rect是基于全屏的点，::GetClientRect获取的是0，0开头的矩形

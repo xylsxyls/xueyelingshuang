@@ -6,7 +6,6 @@
 BEGIN_MESSAGE_MAP(CMyEdit, CEdit)
     ON_WM_LBUTTONDBLCLK()
     ON_WM_RBUTTONUP()
-    ON_WM_MOUSEMOVE()
 END_MESSAGE_MAP()
 
 
@@ -75,11 +74,4 @@ void CMyEdit::SetSelText(const string& text)
 string CMyEdit::GetSelText()const
 {
     return selText;
-}
-
-void CMyEdit::OnMouseMove(UINT nFlags, CPoint point)
-{
-    // TODO:  在此添加消息处理程序代码和/或调用默认值
-    ::SetFocus(m_hWnd);
-    CEdit::OnMouseMove(nFlags, point);
 }
