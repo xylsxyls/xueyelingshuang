@@ -64,6 +64,7 @@ void CMessageTestDlg::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_EDIT1, m_edit);
     DDX_Control(pDX, IDC_BUTTON3, m_fileBtn);
     DDX_Control(pDX, IDC_EDIT2, m_editToFile);
+    DDX_Control(pDX, IDC_BUTTON2, m_btnChange);
 }
 
 BEGIN_MESSAGE_MAP(CMessageTestDlg, CDialogEx)
@@ -77,6 +78,7 @@ BEGIN_MESSAGE_MAP(CMessageTestDlg, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTON2, &CMessageTestDlg::OnBnClickedButton2)
     ON_BN_CLICKED(IDC_BUTTON3, &CMessageTestDlg::OnBnClickedButton3)
     ON_BN_CLICKED(IDC_BUTTON4, &CMessageTestDlg::OnBnClickedButton4)
+    ON_BN_CLICKED(IDC_BUTTON5, &CMessageTestDlg::OnBnClickedButton5)
 END_MESSAGE_MAP()
 
 
@@ -112,7 +114,10 @@ BOOL CMessageTestDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
-    m_editToFile.SetWindowText(L"D:\\123.txt");
+    ModifyStyle(0, WS_MINIMIZEBOX);
+    m_edit.EnableWindow(bChangeScreen);
+    m_editToFile.SetWindowText(_T("D:\\123.txt"));
+    bWorkThreadRunAmc = 1;
     threadWork = new thread(std::bind(&CMessageTestDlg::WorkThread, this));
     SetTimer(10000, 100, NULL);
 
@@ -177,11 +182,7 @@ static bool SendToMessageTest(const char* fmt, ...)
     str.resize(size);
     vsprintf_s(&str[0], size + 1, fmt, args);
     va_end(args);
-#ifdef _UNICODE
-    HWND receiveWindow = ::FindWindow(NULL, L"MessageTest");
-#else
-    HWND receiveWindow = ::FindWindow(NULL, "MessageTest");
-#endif
+    HWND receiveWindow = ::FindWindow(NULL, _T("MessageTest1.2"));
     if (receiveWindow == NULL) return false;
     COPYDATASTRUCT copyData = { 0 };
     copyData.lpData = (PVOID)str.c_str();
@@ -189,19 +190,14 @@ static bool SendToMessageTest(const char* fmt, ...)
     return ::SendMessage(receiveWindow, WM_COPYDATA, (WPARAM)NULL/*m_hWnd*/, (LPARAM)&copyData) == 1;
 }
 
+//清空按钮
 void CMessageTestDlg::OnBnClickedButton1()
 {
     windowtext.Empty();
-    m_edit.SetWindowText(CString());
-    mu.lock();
-    int size = listCopyData.size();
-    mu.unlock();
-    lines = 0;
-    CString strSize;
-    strSize.Format(L"当前缓冲区剩余展示量：%d", size);
-    ::SendMessage(GetDlgItem(IDC_STATIC_LIST)->m_hWnd, WM_SETTEXT, 0, (LPARAM)(LPSTR)(LPCTSTR)strSize);
-    strSize.Format(L"当前屏幕容量：%d", 0);
-    ::SendMessage(GetDlgItem(IDC_STATIC_SCREEN)->m_hWnd, WM_SETTEXT, 0, (LPARAM)(LPSTR)(LPCTSTR)strSize);
+    m_edit.SetWindowText(_T(""));
+    linesAmc = 0;
+    UpdateBufferSize();
+    UpdateScreenSize();
 	// TODO: 在此添加控件通知处理程序代码
 }
 
@@ -220,10 +216,7 @@ BOOL CMessageTestDlg::OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCopyDataStruct)
     }
     memcpy(szData, (char *)pCopyDataStruct->lpData, dataSize);
     szData[dataSize] = 0;
-    mu.lock();
-    listCopyData.push_back(szData);
-    //m_event->SetEvent();
-    mu.unlock();
+    AddListDataLock(szData);
 
     return true;
     return CDialogEx::OnCopyData(pWnd, pCopyDataStruct);
@@ -232,141 +225,183 @@ BOOL CMessageTestDlg::OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCopyDataStruct)
 void CMessageTestDlg::OnTimer(UINT_PTR nIDEvent)
 {
     // TODO:  在此添加消息处理程序代码和/或调用默认值
-    if (bFile == true && bShowString == true)
+    if (bListChangeAmc == true)
     {
-        bShowString = false;
-        mu.lock();
-        int size = listCopyData.size();
-        mu.unlock();
-        CString strSize;
-        strSize.Format(L"当前缓冲区剩余展示量：%d", size);
-        ::SendMessage(GetDlgItem(IDC_STATIC_LIST)->m_hWnd, WM_SETTEXT, 0, (LPARAM)(LPSTR)(LPCTSTR)strSize);
-        return;
-    }
-    if (bShowString == true)
-    {
-        bShowString = false;
-        mu.lock();
-        windowtext = CString(showString.c_str()) + windowtext;
-        showString.clear();
-        mu.unlock();
-        //int showstringlength = showString.length();
-        //等待单个字符串加完
-        //controller.ChokeSetChoke(stringover);
-        //这里高速循环时有几率失败，但是下次进入时会把上次未成功显示的内容显示
-        m_edit.SetWindowText(windowtext);
-        
-        mu.lock();
-        int size = listCopyData.size();
-        mu.unlock();
-        //controller.SetUnChoke(stringover);
-        CString strSize;
-        strSize.Format(L"当前缓冲区剩余展示量：%d", size);
-        ::SendMessage(GetDlgItem(IDC_STATIC_LIST)->m_hWnd, WM_SETTEXT, 0, (LPARAM)(LPSTR)(LPCTSTR)strSize);
-        strSize.Format(L"当前屏幕容量：%d", lines);
-        ::SendMessage(GetDlgItem(IDC_STATIC_SCREEN)->m_hWnd, WM_SETTEXT, 0, (LPARAM)(LPSTR)(LPCTSTR)strSize);
+        if (bToFileAmc == true)
+        {
+            bListChangeAmc = false;
+            UpdateBufferSize();
+            return;
+        }
+        else
+        {
+            bListChangeAmc = false;
+            mu.lock();
+            windowtext = CString(showString.c_str()) + windowtext;
+            showString.clear();
+            mu.unlock();
+
+            //这里高速循环时有几率失败，但是下次进入时会把上次未成功显示的内容显示
+            m_edit.SetWindowText(windowtext);
+            m_edit.UpdateWindow();
+
+            UpdateBufferSize();
+            UpdateScreenSize();
+        }
     }
     CDialogEx::OnTimer(nIDEvent);
 }
 
 void CMessageTestDlg::WorkThread()
 {
-    while (bWorkThread)
+    while (bWorkThreadRunAmc == true)
     {
-        //Sleep(1);
-        mu.lock();
-        bool isEmpty = listCopyData.empty();
-        mu.unlock();
-        if (isEmpty == true)
+        if (IsListEmptyLock() == true)
         {
             Sleep(1);
-            //::WaitForSingleObject(m_event->m_hObject, INFINITE);
             continue;
-        }
-        bShowString = true;
-        //mu.lock();
-        //auto& it = listCopyData.begin();
-        //string oneData = listCopyData.front();
-        //if (oneData == "")
-        //{
-        //    continue;
-        //}
-        //listCopyData.erase(it);
-        mu.lock();
-        string oneData = listCopyData.front();
-        listCopyData.pop_front();
-        mu.unlock();
-        if (oneData == "")
-        {
-            continue;
-        }
-        if (bFile == true)
-        {
-            *((ofstream*)file) << oneData << endl;
         }
         else
         {
-            mu.lock();
-            showString.insert(0, oneData + "\r\n");
-            mu.unlock();
-            ++lines;
+            bListChangeAmc = true;
+            string oneData = GetPopFrontLock();
+            if (bToFileAmc == true)
+            {
+                *((ofstream*)file) << oneData << endl;
+            }
+            else
+            {
+                ShowStringInsertLock(oneData);
+                ++linesAmc;
+            }
         }
-        //threadObs->Set();
     }
 }
 
 void CMessageTestDlg::OnDestroy()
 {
     CDialogEx::OnDestroy();
-    bWorkThread = false;
+    bWorkThreadRunAmc = false;
     threadWork->join();
-    //controller.ReleaseObstacles();
-    delete m_event;
     // TODO:  在此处添加消息处理程序代码
 }
 
-
+//添加文本时需点更改屏幕按钮
 void CMessageTestDlg::OnBnClickedButton2()
 {
     // TODO:  在此添加控件通知处理程序代码
-    m_edit.GetWindowText(windowtext);
-    mu.lock();
-    int size = listCopyData.size();
-    mu.unlock();
-    lines = windowtext.Replace(L"\r\n", L"\r\n");
-    //controller.SetUnChoke(stringover);
-    CString strSize;
-    strSize.Format(L"当前缓冲区剩余展示量：%d", size);
-    ::SendMessage(GetDlgItem(IDC_STATIC_LIST)->m_hWnd, WM_SETTEXT, 0, (LPARAM)(LPSTR)(LPCTSTR)strSize);
-    strSize.Format(L"当前屏幕容量：%d", lines);
-    ::SendMessage(GetDlgItem(IDC_STATIC_SCREEN)->m_hWnd, WM_SETTEXT, 0, (LPARAM)(LPSTR)(LPCTSTR)strSize);
+    bChangeScreen = !bChangeScreen;
+    if (bChangeScreen == true)
+    {
+        m_btnChange.SetWindowText(_T("更改完毕"));
+    }
+    else
+    {
+        m_edit.GetWindowText(windowtext);
+        linesAmc = windowtext.Replace(_T("\r\n"), _T("\r\n"));
+        UpdateBufferSize();
+        UpdateScreenSize();
+        m_btnChange.SetWindowText(_T("更改屏幕"));
+    }
+    m_edit.EnableWindow(bChangeScreen);
 }
 
-
+//文件屏幕互转按钮
 void CMessageTestDlg::OnBnClickedButton3()
 {
     // TODO:  在此添加控件通知处理程序代码
-    bFile = !bFile;
+    bToFileAmc = !bToFileAmc;
     if (file == nullptr)
     {
-        file = ::new ofstream(L"MessageTestFile.txt", ios::app);
+        file = ::new ofstream(_T("MessageTestFile.txt"), ios::app);
     }
-    if (bFile == false)
+    if (bToFileAmc == false)
     {
         if (file != nullptr)
         {
             delete (ofstream*)file;
         }
         file = nullptr;
-        m_fileBtn.SetWindowText(L"转为写入文件");
+        m_fileBtn.SetWindowText(_T("转为写入文件"));
     }
     else
     {
-        m_fileBtn.SetWindowText(L"转为写入屏幕");
+        m_fileBtn.SetWindowText(_T("转为写入屏幕"));
     }
 }
 
-std::string TCHAR2STRING(TCHAR *STR)
+//将屏幕中的内容一次性写入文件
+void CMessageTestDlg::OnBnClickedButton4()
+{
+    // TODO:  在此添加控件通知处理程序代码
+    CString strToFileName;
+    m_editToFile.GetWindowText(strToFileName);
+    ofstream file(strToFileName, ios::app);
+    file << string("begin to file") << endl;
+    windowtext.Replace(_T("\r"), _T(""));
+    file << TCHAR2STRING(windowtext.GetBuffer()) << endl;
+    windowtext.ReleaseBuffer();
+    windowtext.Replace(_T("\n"), _T("\r\n"));
+    AfxMessageBox(_T("写入完成"));
+}
+
+//刷新按钮
+void CMessageTestDlg::OnBnClickedButton5()
+{
+    // TODO:  在此添加控件通知处理程序代码
+    m_edit.SetWindowText(windowtext);
+}
+
+//以下为私有函数
+void CMessageTestDlg::AddListDataLock(const char* szData)
+{
+    std::unique_lock<std::mutex> umutex(mu);
+    listCopyData.push_back(szData);
+}
+
+void CMessageTestDlg::UpdateBufferSize()
+{
+    CString strSend;
+    strSend.Format(_T("当前缓冲区剩余展示量：%d"), GetListSizeLock());
+    ::SendMessage(GetDlgItem(IDC_STATIC_LIST)->m_hWnd, WM_SETTEXT, 0, (LPARAM)strSend.GetBuffer());
+    strSend.ReleaseBuffer();
+}
+
+void CMessageTestDlg::UpdateScreenSize()
+{
+    CString strSend;
+    strSend.Format(_T("当前屏幕容量：%d"), linesAmc);
+    ::SendMessage(GetDlgItem(IDC_STATIC_SCREEN)->m_hWnd, WM_SETTEXT, 0, (LPARAM)strSend.GetBuffer());
+    strSend.ReleaseBuffer();
+}
+
+int32_t CMessageTestDlg::GetListSizeLock()
+{
+    std::unique_lock<std::mutex> umutex(mu);
+    return listCopyData.size();
+}
+
+bool CMessageTestDlg::IsListEmptyLock()
+{
+    std::unique_lock<std::mutex> umutex(mu);
+    return listCopyData.empty();
+}
+
+string CMessageTestDlg::GetPopFrontLock()
+{
+    std::unique_lock<std::mutex> umutex(mu);
+    string oneData = listCopyData.front();
+    listCopyData.pop_front();
+    return oneData;
+}
+
+void CMessageTestDlg::ShowStringInsertLock(const string& insertData)
+{
+    std::unique_lock<std::mutex> umutex(mu);
+    showString.insert(0, insertData + "\r\n");
+}
+
+std::string CMessageTestDlg::TCHAR2STRING(TCHAR *STR)
 {
     int iLen = ::WideCharToMultiByte(CP_ACP, 0, STR, -1, NULL, 0, NULL, NULL);
     char* chRtn = new char[iLen * sizeof(char)];
@@ -374,19 +409,4 @@ std::string TCHAR2STRING(TCHAR *STR)
     std::string str(chRtn);
     delete chRtn;
     return str;
-}
-
-
-void CMessageTestDlg::OnBnClickedButton4()
-{
-    // TODO:  在此添加控件通知处理程序代码
-    CString strToFileName;
-    m_editToFile.GetWindowText(strToFileName);
-    ofstream file(strToFileName,ios::app);
-    file << string("begin to file") << endl;
-    windowtext.Replace(L"\r", L"");
-    file << TCHAR2STRING(windowtext.GetBuffer());
-    windowtext.ReleaseBuffer();
-    windowtext.Replace(L"\n", L"\r\n");
-    AfxMessageBox(L"写入完成");
 }

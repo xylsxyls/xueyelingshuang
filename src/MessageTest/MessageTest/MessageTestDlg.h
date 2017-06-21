@@ -106,35 +106,53 @@ public:
 public:
 	afx_msg void OnBnClickedButton1();
     afx_msg BOOL OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCopyDataStruct);
-    CEdit m_edit;
-    int current = 0;
-    int maxData = 1024;
-    int maxSize = 1024;
-    vector<string> vecCopyData;
     afx_msg void OnTimer(UINT_PTR nIDEvent);
-    CString windowtext;
-    CString strLastText;
-
-    list<string> listCopyData;
-    string showString;
-    thread* threadWork = nullptr;
-    atomic<bool> bWorkThread = 1;
-    //Controller controller;
-    //Obstacles* threadObs = controller.CreateObstacles(stringover, false);
-    
-    char* szData = nullptr;
-    int curDataSize = 0;
-    atomic<bool> bShowString = false;
-    std::mutex mu;
-    CEvent* m_event;
-    atomic<int> lines;
-    atomic<bool> bFile = false;
-    void* file;
-    void WorkThread();
     afx_msg void OnDestroy();
     afx_msg void OnBnClickedButton2();
     afx_msg void OnBnClickedButton3();
+    afx_msg void OnBnClickedButton4();
+    afx_msg void OnBnClickedButton5();
+
+public:
+    void WorkThread();
+
+public:
+    CEdit m_edit;
     CButton m_fileBtn;
     CEdit m_editToFile;
-    afx_msg void OnBnClickedButton4();
+
+public:
+    //屏幕文本显示容器
+    CString windowtext;
+    //缓冲区
+    list<string> listCopyData;
+    //缓冲区转换出的字符串
+    string showString;
+    //缓冲区是否有变动，可能是存入文件，可能是存入屏幕显示容器
+    atomic<bool> bListChangeAmc = false;
+    //整合字符串线程
+    thread* threadWork = nullptr;
+    //线程是否运行
+    atomic<bool> bWorkThreadRunAmc = 0;
+    
+private:
+    void AddListDataLock(const char* szData);
+    void UpdateBufferSize();
+    void UpdateScreenSize();
+    int32_t GetListSizeLock();
+    bool IsListEmptyLock();
+    string GetPopFrontLock();
+    void ShowStringInsertLock(const string& insertData);
+    std::string TCHAR2STRING(TCHAR *STR);
+
+private:
+    char* szData = nullptr;
+    int curDataSize = 0;
+    std::mutex mu;
+    atomic<int> linesAmc;
+    atomic<bool> bToFileAmc = false;
+    void* file;
+    bool bChangeScreen = false;
+public:
+    CButton m_btnChange;
 };
