@@ -30,6 +30,10 @@ rmdir /q /s "%~dp0src\MFCTest1\ipch\"
 rmdir /q /s "%~dp0src\MFCTest1\MFCTest\Debug\"
 rmdir /q /s "%~dp0src\MFCTest1\MFCTest\Release\"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\FindText\ipch\"
+rmdir /q /s "%~dp0src\FindText\FindText\Debug\"
+rmdir /q /s "%~dp0src\FindText\FindText\Release\"
+::------------------------------------------------------------
 
 ::-------------------删除控制台临时文件-----------------------
 rmdir /q /s "%~dp0src\ConsoleTest\ConsoleTest\Debug\"
@@ -37,4 +41,7 @@ rmdir /q /s "%~dp0src\ConsoleTest\ConsoleTest\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\ConsoleTest1\ConsoleTest\Debug\"
 rmdir /q /s "%~dp0src\ConsoleTest1\ConsoleTest\Release\"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\CloudRebuild\CloudRebuild\Debug\"
+rmdir /q /s "%~dp0src\CloudRebuild\CloudRebuild\Release\"
 ::------------------------------------------------------------

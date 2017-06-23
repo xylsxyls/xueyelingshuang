@@ -187,3 +187,31 @@ HWND CGetPath::GetHwndByProcessId(DWORD dwProcessId){
 	EnumWindows(EnumWindowsProc,(LPARAM)&info);
 	return info.hWnd;
 }
+
+string CGetPath::GetName(const string& path, int flag)
+{
+    int left = path.find_last_of("/\\");
+    string name = CStringManager::Mid(path, left + 1, path.length() - left - 1);
+    int point = name.find_last_of(".");
+    switch (flag)
+    {
+        case 1:
+        {
+            return name;
+        }
+        case 2:
+        {
+            return CStringManager::Mid(name, point + 1, point == -1 ? 0 : name.length() - point - 1);
+        }
+        case 3:
+        {
+            return CStringManager::Mid(name, 0, point == -1 ? name.length() : point);
+        }
+        case 4:
+        {
+            return CStringManager::Mid(path, 0, left + 1);
+        }
+        default:
+            return "";
+    }
+}

@@ -25,4 +25,6 @@ public:
     static vector<int> GetProcessID(string strProcessName);
 	//根据pid获取窗口句柄
     static HWND GetHwndByProcessId(DWORD dwProcessId);
+    //获取文件相关信息，flag1表示获取文件全名，flag2表示获取文件后缀名，flag3表示获取文件名，flag4表示获取前面的路径带\\符号
+    static string GetName(const string& path, int flag);
 };
