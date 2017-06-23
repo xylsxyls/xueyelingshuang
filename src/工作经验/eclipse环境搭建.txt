@@ -1,0 +1,22 @@
+先安装jdk，根据项目需求安装1.6或1.7或1.8，不同版本不能混用
+把eclipse绿色包放到C:\local\eclipse
+在系统环境变量中写
+JAVA_HOME
+C:\Program Files\Java\jdk1.6.0_45
+Path
+%JAVA_HOME%\bin;%JAVA_HOME%\jre\bin;
+classpath
+.;%JAVA_HOME%\lib\dt.jar;%JAVA_HOME%\lib\tools.jar;
+设置完环境变量后重开cmd
+执行
+java -version
+如果显示
+java version "1.8.0_31"
+Java(TM) SE Runtime Environment (build 1.8.0_31-b13)
+Java HotSpot(TM) 64-Bit Server VM (build 25.31-b07, mixed mode)
+表示配置正确完成
+
+修改eclipse运行选择的jre
+在eclipse中编译Java程序的jdk，你可以在项目属性中设置项目的jdk，当然也可以在首选项里配置默认的编译jdk
+设置选项为：Window －－> Preferences -- >Java --> Installed JREs,然后添加jdk的路径，再打上勾。
+设置选项：Window-->Preferences-->Java-->Compiler，然后选择所需jdk版本好，点apply-->OK。

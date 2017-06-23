@@ -1,0 +1,44 @@
+将maven绿色包解压放到D:\Server\maven下，需要重命名apache-maven-3.0.4为maven
+设置环境变量
+MAVEN_HOME
+D:\Server\maven
+path
+%MAVEN_HOME%\bin
+设置完后打开cmd执行
+mvn -version
+如果显示
+Apache Maven 3.0.4 (r1232337; 2012-01-17 16:44:56+0800)
+Maven home: D:\Server\maven\bin\..
+Java version: 1.6.0_45, vendor: Sun Microsystems Inc.
+Java home: C:\Program Files\Java\jdk1.6.0_45\jre
+Default locale: zh_CN, platform encoding: GBK
+OS name: "windows 7", version: "6.1", arch: "amd64", family: "windows"
+说明搭建成功
+将D:\Server\maven\conf\settings.xml中第53行内容复制到55行，中间改下路径
+<localRepository>D:\Repositories\Maven</localRepository>
+然后在D盘下手动创建这两个文件夹
+保存完xml之后打开cmd执行
+mvn help:system
+后面开始设置eclipse
+先改eclipse目录下的配置文件C:\local\eclipse\eclipse.ini
+在
+--launcher.XXMaxPermSize
+256m
+后面加上
+-vm
+C:\Program Files\Java\jdk1.6.0_45\bin
+jdk要根据项目选择
+保存后打开eclipse
+点击菜单栏的Help->Install New Software->Add
+在弹出的对话框中写
+m2e
+http://m2eclipse.sonatype.org/sites/m2e
+next和finish完成maven插件安装
+点击菜单栏Window->Preferences->Maven->Installations->Add
+选择D:\Server\maven路径
+确定后再次进到这里
+选择User Settings->Browse选择xml文件
+D:\Server\maven\conf\settings.xml
+配置完成
+之后导入项目可以直接选择Maven->Existing Maven Projects来进行导入
+点开java文件右击Run As->Java Application来进行单个文件编译执行，在底下的Console选项中有控制台输出
