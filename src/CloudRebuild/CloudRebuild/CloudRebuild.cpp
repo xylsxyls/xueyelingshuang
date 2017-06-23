@@ -22,6 +22,8 @@ int main(){
     if (strFile == "")
     {
         printf("·Ç·¨Ö´ÐÐ£¡");
+        getchar();
+        return -1;
     }
     Ctxt txt(strFile);
     txt.LoadTxt(2, "~!@#$%^&*()");
