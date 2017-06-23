@@ -1,0 +1,5 @@
+for (int i=0;i<__argc;i++)
+{
+__argv[i];
+将依次得到C:/test/app.exe  -1  -2
+}
