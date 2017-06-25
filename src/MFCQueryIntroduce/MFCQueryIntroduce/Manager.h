@@ -11,4 +11,5 @@ public:
 	static vector<Person> Find(const Search& search);
 	static void ShowDlg(const vector<Person>& vecPerson);
     static void ShowError(int error);
+	static void Refresh();
 };

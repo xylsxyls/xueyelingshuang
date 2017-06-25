@@ -172,25 +172,29 @@ int IntDateTime::getSeconds()const{
 	return (time_ % 100000) / 1000;
 }
 
-string IntDateTime::toString(){
+string IntDateTime::toString()const
+{
 	string result;
 	CStringManager::Format(result, "%d-%02d-%02d %02d:%02d:%02d", date_ / 10000, (date_ % 10000) / 100, (date_ % 10000) % 100, time_ / 10000000, (time_ % 10000000) / 100000, (time_ % 100000) / 1000);
 	return result;
 }
 
-string IntDateTime::dateToString(){
+string IntDateTime::dateToString()const
+{
 	string result;
 	CStringManager::Format(result, "%d-%02d-%02d", date_ / 10000, (date_ % 10000) / 100, (date_ % 10000) % 100);
 	return result;
 }
 
-string IntDateTime::dateNumToString(){
+string IntDateTime::dateNumToString()const
+{
 	string result;
 	CStringManager::Format(result, "%d%02d%02d", date_ / 10000, (date_ % 10000) / 100, (date_ % 10000) % 100);
 	return result;
 }
 
-string IntDateTime::timeToString(){
+string IntDateTime::timeToString()const
+{
 	string result;
 	CStringManager::Format(result, "%02d:%02d:%02d", time_ / 10000000, (time_ % 10000000) / 100000, (time_ % 100000) / 1000);
 	return result;

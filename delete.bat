@@ -15,12 +15,12 @@ rmdir /q /s "%~dp0src\MessageTest\MessageTest\Debug\"
 rmdir /q /s "%~dp0src\MessageTest\MessageTest\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\MFCQueryIntroduce\ipch\"
-rmdir /q /s "%~dp0src\MFCQueryIntroduce\MFCTest\Debug\"
-rmdir /q /s "%~dp0src\MFCQueryIntroduce\MFCTest\Release\"
+rmdir /q /s "%~dp0src\MFCQueryIntroduce\MFCQueryIntroduce\Debug\"
+rmdir /q /s "%~dp0src\MFCQueryIntroduce\MFCQueryIntroduce\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\MFCSaveIntroduce\ipch\"
-rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCTest\Debug\"
-rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCTest\Release\"
+rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCSaveIntroduce\Debug\"
+rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCSaveIntroduce\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\MFCTest\ipch\"
 rmdir /q /s "%~dp0src\MFCTest\MFCTest\Debug\"

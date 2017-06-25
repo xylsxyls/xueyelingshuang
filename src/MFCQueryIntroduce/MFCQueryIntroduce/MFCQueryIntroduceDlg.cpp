@@ -86,6 +86,7 @@ BEGIN_MESSAGE_MAP(CMFCQueryIntroduceDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CMFCQueryIntroduceDlg::OnBnClickedButton1)
     ON_MESSAGE(GetConfig(FillSearchInt, int), &CMFCQueryIntroduceDlg::OnSetSearchInfo)
+	ON_WM_COPYDATA()
 END_MESSAGE_MAP()
 
 
@@ -121,6 +122,12 @@ BOOL CMFCQueryIntroduceDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+	ModifyStyle(0, WS_MINIMIZEBOX);
+	//ModifyStyle(0, WS_MAXIMIZEBOX);
+	GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_MINIMIZE, _T("最小化"));
+	//GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_MAXIMIZE, _T("最大化"));
+	GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_RESTORE, _T("还原"));
+
 	int nYear = 1950;
 	while (nYear != 2010){
 		yearSmall.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nYear)).c_str());
@@ -312,4 +319,11 @@ LRESULT CMFCQueryIntroduceDlg::OnSetSearchInfo(WPARAM wparam, LPARAM lparam){
 	search->salary = atoi(CCharset::UnicodeToAnsi(strSalary.GetBuffer()).c_str());
 	strSalary.ReleaseBuffer();
 	return 0;
+}
+
+BOOL CMFCQueryIntroduceDlg::OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCopyDataStruct)
+{
+	// TODO:  在此添加消息处理程序代码和/或调用默认值
+	Manager::Refresh();
+	return CDialogEx::OnCopyData(pWnd, pCopyDataStruct);
 }

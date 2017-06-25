@@ -15,14 +15,43 @@ int Manager::Query(HWND hwnd, Person* person){
 }
 
 void Manager::ShowError(int error){
-    AfxMessageBox(CCharset::AnsiToUnicode(GetError(error, string)).c_str());
+	if (error != 0)
+	{
+		AfxMessageBox(CCharset::AnsiToUnicode(GetError(error, string)).c_str());
+	}
 }
 
 void Manager::ShowPerson(HWND hwnd, Person* person){
     Storage::GetFromtxt(person);
-    Collect::ShowPerson(person, hwnd);
+	if (person->name == "-1")
+	{
+		AfxMessageBox(_T("查无此人"));
+	}
+	else
+	{
+		Collect::ShowPerson(person, hwnd);
+	}
 }
 
 void Manager::SavePerson(Person* person){
     Storage::SaveTotxt(person);
+	AfxMessageBox(_T("存储成功"));
+	Manager::SendToQueryRefresh();
+}
+
+void Manager::DeletePerson(const Person& person)
+{
+	Storage::DeleteIntxt(person);
+	AfxMessageBox(_T("此人已被删除"));
+	Manager::SendToQueryRefresh();
+}
+
+void Manager::SendToQueryRefresh()
+{
+	HWND receiveWindow = ::FindWindow(NULL, _T("查询1.0"));
+	if (receiveWindow == NULL)
+	{
+		return;
+	}
+	::SendMessage(receiveWindow, WM_COPYDATA, (WPARAM)NULL/*m_hWnd*/, (LPARAM)&COPYDATASTRUCT());
 }

@@ -9,4 +9,6 @@ public:
     static void ShowError(int error);
     static void ShowPerson(HWND hwnd, Person* person);
     static void SavePerson(Person* person);
+	static void DeletePerson(const Person& person);
+	static void SendToQueryRefresh();
 };

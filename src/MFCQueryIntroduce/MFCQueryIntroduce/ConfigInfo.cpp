@@ -40,4 +40,5 @@ ConfigInfo::ConfigInfo(){
 	storage[philosophy2] = "博士海外留学";
 	storage[noMatter] = "无所谓";
 	storage[maxPeople] = 10000;
+	storage[secret] = "该信息不可见";
 }

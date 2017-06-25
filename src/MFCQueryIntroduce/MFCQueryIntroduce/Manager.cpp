@@ -28,3 +28,8 @@ void Manager::ShowDlg(const vector<Person>& vecPerson){
 void Manager::ShowError(int error){
 	AfxMessageBox(CCharset::AnsiToUnicode(errorInfo.storage[error].toValue<string>()).c_str());
 }
+
+void Manager::Refresh()
+{
+	Storage::Refresh();
+}

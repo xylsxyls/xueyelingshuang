@@ -51,4 +51,7 @@
 #endif
 #endif
 
-
+#undef WINVER
+#define WINVER          _WIN32_WINNT_WINXP
+#undef _WIN32_WINNT
+#define _WIN32_WINNT    _WIN32_WINNT_WINXP

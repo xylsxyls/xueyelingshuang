@@ -6,6 +6,7 @@ class Storage{
 public:
 	static void SaveTotxt(Person* person);
     static void GetFromtxt(Person* person);
+	static void DeleteIntxt(const Person& person);
 };
 
 class storage_{

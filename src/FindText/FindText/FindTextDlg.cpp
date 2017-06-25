@@ -118,7 +118,11 @@ BOOL CFindTextDlg::OnInitDialog()
     m_case.SetCheck(1);
     m_case.EnableWindow(FALSE);
     ::SetFocus(m_text.m_hWnd);
-    ModifyStyle(0, WS_MINIMIZEBOX);
+	ModifyStyle(0, WS_MINIMIZEBOX);
+	//ModifyStyle(0, WS_MAXIMIZEBOX);
+	GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_MINIMIZE, _T("最小化"));
+	//GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_MAXIMIZE, _T("最大化"));
+	GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_RESTORE, _T("还原"));
     ::SendMessage(m_hWnd, DM_SETDEFID, (WPARAM)IDC_BUTTON1, NULL);
 	return FALSE;  // 除非将焦点设置到控件，否则返回 TRUE
 }

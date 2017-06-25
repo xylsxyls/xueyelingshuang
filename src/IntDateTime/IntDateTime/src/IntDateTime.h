@@ -157,8 +157,8 @@ public:
 	int getMin()const;
 	int getSeconds()const;
 
-	string toString();
-	string dateToString();
-	string dateNumToString();
-	string timeToString();
+	string toString()const;
+	string dateToString()const;
+	string dateNumToString()const;
+	string timeToString()const;
 };

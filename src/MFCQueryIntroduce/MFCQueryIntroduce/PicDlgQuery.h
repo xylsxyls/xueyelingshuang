@@ -51,4 +51,6 @@ public:
 	afx_msg void OnBnClickedButton2();
 	afx_msg void OnBnClickedButton3();
 	int picCur;
+	bool bSecretShow = false;
+	afx_msg void OnBnClickedButton6();
 };

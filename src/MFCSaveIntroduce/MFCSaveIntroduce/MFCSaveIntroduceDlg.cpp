@@ -108,6 +108,7 @@ BEGIN_MESSAGE_MAP(CMFCSaveIntroduceDlg, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTON6, &CMFCSaveIntroduceDlg::OnBnClickedButton6)
     ON_BN_CLICKED(IDC_BUTTON7, &CMFCSaveIntroduceDlg::OnBnClickedButton7)
     ON_BN_CLICKED(IDC_BUTTON8, &CMFCSaveIntroduceDlg::OnBnClickedButton8)
+	ON_BN_CLICKED(IDC_BUTTON9, &CMFCSaveIntroduceDlg::OnBnClickedButton9)
 END_MESSAGE_MAP()
 
 
@@ -143,6 +144,13 @@ BOOL CMFCSaveIntroduceDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+
+	ModifyStyle(0, WS_MINIMIZEBOX);
+	//ModifyStyle(0, WS_MAXIMIZEBOX);
+	GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_MINIMIZE, _T("最小化"));
+	//GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_MAXIMIZE, _T("最大化"));
+	GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_RESTORE, _T("还原"));
+
 	int nYear = 1950;
 	while (nYear != 2010){
         year.AddString(CCharset::AnsiToUnicode(CStringManager::Format("%d", nYear)).c_str());
@@ -283,7 +291,7 @@ HCURSOR CMFCSaveIntroduceDlg::OnQueryDragIcon()
 }
 
 
-
+//存储
 void CMFCSaveIntroduceDlg::OnBnClickedButton1()
 {
 	Person person;
@@ -463,14 +471,14 @@ void CMFCSaveIntroduceDlg::OnBnClickedButton4()
 	// TODO:  在此添加控件通知处理程序代码
 }
 
-
+//调取
 void CMFCSaveIntroduceDlg::OnBnClickedButton5()
 {
     Person person;
     int error = Manager::Query(m_hWnd, &person);
     Manager::ShowError(error);
     if (error != 0) return;
-    Manager::ShowPerson(m_hWnd, &person);
+	Manager::ShowPerson(m_hWnd, &person);
     // TODO:  在此添加控件通知处理程序代码
 }
 
@@ -509,4 +517,15 @@ void CMFCSaveIntroduceDlg::OnBnClickedButton8()
 {
     ShowPicture(picture3);
     // TODO:  在此添加控件通知处理程序代码
+}
+
+//删除
+void CMFCSaveIntroduceDlg::OnBnClickedButton9()
+{
+	Person person;
+	int error = Manager::Query(m_hWnd, &person);
+	Manager::ShowError(error);
+	if (error != 0) return;
+	Manager::DeletePerson(person);
+	// TODO:  在此添加控件通知处理程序代码
 }

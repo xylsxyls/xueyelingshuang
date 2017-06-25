@@ -77,4 +77,5 @@ public:
 	CEdit household;
 	CComboBox houseAttri;
 	CEdit houseAddr;
+	afx_msg void OnBnClickedButton9();
 };

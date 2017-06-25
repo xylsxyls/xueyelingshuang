@@ -2,11 +2,12 @@
 #include <windows.h>
 #include <vector>
 
-Cini::Cini(string iniPath){
+Cini::Cini(const string& iniPath){
 	this->iniPath = iniPath;
 }
 
-string Cini::ReadIni(string key, string strSection, int MaxLength){
+string Cini::ReadIni(const string& key, const string& strSection, int MaxLength)const
+{
 	char *szText = new char[MaxLength];
 	GetPrivateProfileString(strSection.c_str(),key.c_str(),"-1",szText,MaxLength,iniPath.c_str());
 	string strText = szText;
@@ -14,12 +15,14 @@ string Cini::ReadIni(string key, string strSection, int MaxLength){
 	return strText;
 }
 
-void Cini::WriteIni(string key,string text,string strSection){
+void Cini::WriteIni(const string& key, const string& text, const string& strSection)const
+{
 	WritePrivateProfileString(strSection.c_str(),key.c_str(),text.c_str(),iniPath.c_str());
 	return;
 }
 
-std::vector<string> Cini::GetSection(int MaxSectionNum,int MaxLength){
+std::vector<string> Cini::GetSection(int MaxSectionNum, int MaxLength)const
+{
     std::vector<string> vecSection;
     int iLength = 0;
     int iPos = 0;
@@ -56,7 +59,8 @@ std::vector<string> Cini::GetSection(int MaxSectionNum,int MaxLength){
     return vecSection;
 }
 
-string Cini::GetFirstKey(string section, int MaxLength){
+string Cini::GetFirstKey(const string& section, int MaxLength)const
+{
     TCHAR* strBuffer = new TCHAR[MaxLength];
     GetPrivateProfileString(section.c_str(), NULL, "-1", strBuffer, MaxLength, iniPath.c_str());
     string result = strBuffer;
@@ -64,11 +68,13 @@ string Cini::GetFirstKey(string section, int MaxLength){
     return result;
 }
 
-void Cini::DeleteKey(string key, string section){
+void Cini::DeleteKey(const string& key, const string& section)const
+{
     WritePrivateProfileString(section.c_str(), key.c_str(), NULL, iniPath.c_str());
 }
 
-void Cini::DeleteSection(string section){
+void Cini::DeleteSection(const string& section)const
+{
     WritePrivateProfileSection(section.c_str(), NULL, iniPath.c_str());
 }
 

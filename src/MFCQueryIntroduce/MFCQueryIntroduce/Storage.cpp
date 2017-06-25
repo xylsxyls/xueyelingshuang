@@ -18,7 +18,18 @@
 vector<Person> vecData;
 storage_ storage;
 
-storage_::storage_(){
+storage_::storage_()
+{
+	GetInfo();
+}
+
+void storage_::GetInfo()
+{
+	if (ini != nullptr)
+	{
+		delete ini;
+	}
+	vecData.clear();
     ini = ::new Cini(GetConfig(txtPath, string));
 	vector<string> vecSection = ini->GetSection(GetConfig(maxPeople, int));
 	int i = -1;
@@ -72,11 +83,14 @@ vector<Person> Storage::FindFromtxt(const Search& search){
 		}
 		ChangePersonToSearch(person);
 		personResult = (search.marriage == "" || search.marriage == GetConfig(noMatter, string) || person.marriage == search.marriage)
-			&& (search.house == "" || search.house == GetConfig(noMatter, string) || person.house == search.house)
-			&& (search.education == "" || search.education == GetConfig(noMatter, string) || person.education == search.education);
+			&& (search.house == "" || search.house == GetConfig(noMatter, string) || person.house == search.house);
 		if (personResult == true)
 		{
-			result.push_back(vecData.at(i));
+			bool isPass = IsEducationPass(person.education, search.education);
+			if (isPass == true)
+			{
+				result.push_back(vecData.at(i));
+			}
 		}
 	}
 	return result;
@@ -130,4 +144,29 @@ void Storage::ChangePersonToSearch(Person& person)
 	{
 		person.education = GetConfig(philosophy, string);
 	}
+}
+
+void Storage::Refresh()
+{
+	storage.GetInfo();
+}
+
+bool Storage::IsEducationPass(const string& personEdu, const string& searchEdu)
+{
+	int searchNum = 0;
+	int personNum = 0;
+	int szEducation[4] = { junior, college, graduate, philosophy };
+	int i = -1;
+	while (i++ != 3)
+	{
+		if (personEdu == GetConfig(szEducation[i], string))
+		{
+			personNum = szEducation[i];
+		}
+		if (searchEdu == GetConfig(szEducation[i], string))
+		{
+			searchNum = szEducation[i];
+		}
+	}
+	return personNum >= searchNum;
 }

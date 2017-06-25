@@ -8,7 +8,7 @@ call "%xueyelingshuang%src\DmSoft\version_debug.bat"
 set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 ::如果需要获取依赖dll-----------------------------------------------------------
-call "%xueyelingshuang%src\Rect\version_debug.bat"
+call "%xueyelingshuang%src\MulRect\version_debug.bat"
 
 ::call完之后都需要重新set
 set bat=%~dp0

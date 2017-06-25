@@ -1,1 +1,5 @@
 ModifyStyle(0, WS_MINIMIZEBOX);
+	//ModifyStyle(0, WS_MAXIMIZEBOX);
+	GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_MINIMIZE, _T("最小化"));
+	//GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_MAXIMIZE, _T("最大化"));
+	GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_RESTORE, _T("还原"));

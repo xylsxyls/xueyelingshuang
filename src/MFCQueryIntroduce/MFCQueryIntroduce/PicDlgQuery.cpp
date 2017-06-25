@@ -47,6 +47,7 @@ BEGIN_MESSAGE_MAP(CPicDlgQuery, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTONPIC, &CPicDlgQuery::OnBnClickedButtonpic)
 	ON_BN_CLICKED(IDC_BUTTON2, &CPicDlgQuery::OnBnClickedButton2)
 	ON_BN_CLICKED(IDC_BUTTON3, &CPicDlgQuery::OnBnClickedButton3)
+	ON_BN_CLICKED(IDC_BUTTON6, &CPicDlgQuery::OnBnClickedButton6)
 END_MESSAGE_MAP()
 
 
@@ -83,7 +84,7 @@ void CPicDlgQuery::ChangeText(int IDC, wstring text){
 
 void CPicDlgQuery::ShowPerson(){
 	Person& person = vecPerson.at(m_currentPerson);
-    ChangeText(IDC_STATICNAME      , CCharset::AnsiToUnicode(person.name));
+    
     ChangeText(IDC_STATICBIRTH     , CCharset::AnsiToUnicode(person.birth.dateNumToString()));
     ChangeText(IDC_STATICSEX       , CCharset::AnsiToUnicode(person.sex));
     ChangeText(IDC_STATICMARRIAGE  , CCharset::AnsiToUnicode(person.marriage));
@@ -91,7 +92,7 @@ void CPicDlgQuery::ShowPerson(){
     ChangeText(IDC_STATICTALL      , CCharset::AnsiToUnicode(CStringManager::Format("%d", person.tall)));
     ChangeText(IDC_STATICWEIGHT    , CCharset::AnsiToUnicode(CStringManager::Format("%d", person.weight)));
     ChangeText(IDC_STATICHOUSE     , CCharset::AnsiToUnicode(person.house));
-    ChangeText(IDC_STATICJOBNAME   , CCharset::AnsiToUnicode(person.jobName));
+	
 	string split;
 	string fatherPension;
 	if (person.fatherPension != "")
@@ -126,11 +127,27 @@ void CPicDlgQuery::ShowPerson(){
 	{
 		ChangeText(IDC_STATICSALARY, L"");
 	}
-    ChangeText(IDC_STATICMOBILE    , CCharset::AnsiToUnicode(person.mobile));
-    ChangeText(IDC_STATICQQ        , CCharset::AnsiToUnicode(person.qq));
-    ChangeText(IDC_STATICWECHAT    , CCharset::AnsiToUnicode(person.weChat));
+	
     ChangeText(IDC_STATICHOUSEHOLD , CCharset::AnsiToUnicode(person.household));
     ChangeText(IDC_STATICHOUSEATTRI, CCharset::AnsiToUnicode(person.houseAttri));
+
+	if (bSecretShow == false)
+	{
+		wstring strSecret = CCharset::AnsiToUnicode(GetConfig(secret, string));
+		ChangeText(IDC_STATICNAME,    person.name    == "" ? _T("") : strSecret.c_str());
+		ChangeText(IDC_STATICJOBNAME, person.jobName == "" ? _T("") : strSecret.c_str());
+		ChangeText(IDC_STATICMOBILE,  person.mobile  == "" ? _T("") : strSecret.c_str());
+		ChangeText(IDC_STATICQQ,      person.qq      == "" ? _T("") : strSecret.c_str());
+		ChangeText(IDC_STATICWECHAT,  person.weChat  == "" ? _T("") : strSecret.c_str());
+	}
+	else
+	{
+		ChangeText(IDC_STATICNAME,    CCharset::AnsiToUnicode(person.name));
+		ChangeText(IDC_STATICJOBNAME, CCharset::AnsiToUnicode(person.jobName));
+		ChangeText(IDC_STATICMOBILE,  CCharset::AnsiToUnicode(person.mobile));
+		ChangeText(IDC_STATICQQ,      CCharset::AnsiToUnicode(person.qq));
+		ChangeText(IDC_STATICWECHAT,  CCharset::AnsiToUnicode(person.weChat));
+	}
     
 	picCur = 0;
 	ShowPersonPic();
@@ -247,5 +264,13 @@ void CPicDlgQuery::OnBnClickedButton3()
 {
 	picCur--;
 	ShowPersonPic();
+	// TODO:  在此添加控件通知处理程序代码
+}
+
+
+void CPicDlgQuery::OnBnClickedButton6()
+{
+	bSecretShow = !bSecretShow;
+	ShowPerson();
 	// TODO:  在此添加控件通知处理程序代码
 }

@@ -121,3 +121,26 @@ void Storage::GetFromtxt(Person* person){
     GetPersonString(person, picture3     );
     GetPersonString(person, introduce    );
 }
+
+void Storage::DeleteIntxt(const Person& person)
+{
+	void* vp = (void*)&person;
+	Person* pPerson = (Person*)vp;
+	GetPersonString(pPerson, picture1);
+	GetPersonString(pPerson, picture2);
+	GetPersonString(pPerson, picture3);
+	if (pPerson->picture1 != "")
+	{
+		::remove(pPerson->picture1.c_str());
+	}
+	if (pPerson->picture2 != "")
+	{
+		::remove(pPerson->picture2.c_str());
+	}
+	if (pPerson->picture3 != "")
+	{
+		::remove(pPerson->picture3.c_str());
+	}
+	storage.ini->DeleteSection(person.name + person.birth.dateNumToString());
+	CSystem::CopyFileOver(GetConfig(iniPathBk, string), GetConfig(iniPath, string), true);
+}

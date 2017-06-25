@@ -49,4 +49,5 @@ public:
 	CComboBox weightBig;
 	CComboBox education;
 	CEdit salary;
+	afx_msg BOOL OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCopyDataStruct);
 };

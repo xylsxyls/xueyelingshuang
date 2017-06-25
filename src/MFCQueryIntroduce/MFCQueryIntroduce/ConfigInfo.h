@@ -44,7 +44,8 @@ enum{
 	philosophy2,
     notHasHouse,
 	noMatter,
-	maxPeople
+	maxPeople,
+	secret
 };
 enum{
     txtPerson = 0,
