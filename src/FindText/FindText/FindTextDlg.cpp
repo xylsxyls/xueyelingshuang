@@ -67,6 +67,8 @@ void CFindTextDlg::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_EDIT4, m_find);
     DDX_Control(pDX, IDC_CHECK1, m_case);
     DDX_Control(pDX, IDC_BUTTON1, m_btnFind);
+    DDX_Control(pDX, IDC_CHECK2, m_fileNameCheck);
+    DDX_Control(pDX, IDC_CHECK3, m_suffixCheck);
 }
 
 BEGIN_MESSAGE_MAP(CFindTextDlg, CDialogEx)
@@ -112,6 +114,9 @@ BOOL CFindTextDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
     
+    strLineFlag = "-------------------------------------------------"
+                  "-------------------------------------------------"
+                  "-----------------------------------------------------\r\n";
     m_strOutFormat = ".exe";
     m_strPath = "D:\\xueyelingshuang\\src\\工作经验\\";
     m_outFormat.SetWindowText(CCharset::AnsiToUnicode(m_strOutFormat).c_str());
@@ -183,30 +188,99 @@ void CFindTextDlg::OnBnClickedButton1()
 	// TODO: 在此添加控件通知处理程序代码
     //m_find.SetWindowText(L"搜索中...");
     //m_find.UpdateWindow();
-    m_strFind = "";
+    GetInfoFromWindow();
+    Search();
+    ShowSearchResult();
+}
 
-    CString text;
-    m_text.GetWindowText(text);
-    string strText = CCharset::UnicodeToAnsi(text.GetBuffer());
-    text.ReleaseBuffer();
-    bool bCase = m_case.GetCheck() == 1;
-    CString strPath;
-    m_path.GetWindowText(strPath);
-    if (strPath != "")
+void CFindTextDlg::OnBnClickedButton2()
+{
+    // TODO:  在此添加控件通知处理程序代码
+    m_strPath = CGetPath::GetFolderFromWindow(m_hWnd);
+    m_path.SetWindowText(CCharset::AnsiToUnicode(m_strPath).c_str());
+}
+
+void CFindTextDlg::OpenFileFind(const string& path, const string& key, bool& bAddFileName)
+{
+    Ctxt txt(path);
+    txt.LoadTxt(2, "~!@#$%^&*()");
+
+    int line = -1;
+    while (line++ != txt.vectxt.size() - 1)
     {
-        m_strPath = CCharset::UnicodeToAnsi(strPath.GetBuffer());
-        strPath.ReleaseBuffer();
+        string& oneLine = txt.vectxt.at(line).at(0);
+        string str0;
+        str0.resize(1);
+        str0[0] = '\0';
+        CStringManager::Replace(oneLine, str0, "");
+        //如果能在一行中找到关键词
+        if (oneLine.find(key) != -1)
+        {
+            if (bAddFileName == false)
+            {
+                bAddFileName = true;
+                //首先添加文件名和一行空行
+                m_strFind.append(strLineFlag + path + "\r\n\r\n");
+            }
+            //再添加这一行
+            m_strFind.append(oneLine + "\r\n");
+        }
     }
-    CString strOutPath;
-    m_outFormat.GetWindowText(strOutPath);
-    m_strOutFormat = CCharset::UnicodeToAnsi(strOutPath.GetBuffer());
-    strOutPath.ReleaseBuffer();
-    vector<string>vecOutFormat = CStringManager::split(m_strOutFormat,".");
+}
 
-    string strLineFlag = "-------------------------------------------------"
-                         "-------------------------------------------------"
-                         "-----------------------------------------------------\r\n";
-    vector<string> vecPath = CGetPath::FindFilePath("", m_strPath, 3);
+void CFindTextDlg::FindFromFileName(const string& path, const string& key, bool& bAddFileName)
+{
+    //先看文件名
+    string strName = CGetPath::GetName(path, bsuffixCheck == true ? 1 : 3);
+    if (strName.find(key) != -1)
+    {
+        bAddFileName = true;
+        //首先添加文件名和一行空行
+        m_strFind.append(strLineFlag + path + "\r\n\r\n");
+    }
+}
+
+void CFindTextDlg::FindFromPath(const string& path, const string& key)
+{
+    bool bAddFileName = false;
+    FindFromFileName(path, key, bAddFileName);
+    //?不勾选的时候才透视查找
+    if (bFileNameCheck == false)
+    {
+        OpenFileFind(path, key, bAddFileName);
+    }
+    FindEnd(bAddFileName);
+}
+
+void CFindTextDlg::FindEnd(bool& bAddFileName)
+{
+    //找完一个有信息的文件添加两行空行
+    if (bAddFileName == true)
+    {
+        m_strFind.append("\r\n\r\n");
+    }
+}
+
+void CFindTextDlg::GetInfoFromWindow()
+{
+    m_strFind = "";
+    strKey = GetCEditString(m_text);
+    bBigSmallCheck = GetCButtonBool(m_case);
+    bFileNameCheck = GetCButtonBool(m_fileNameCheck);
+    bsuffixCheck = GetCButtonBool(m_suffixCheck);
+    string strTemp = GetCEditString(m_path);
+    if (strTemp != "")
+    {
+        m_strPath = strTemp;
+    }
+    m_strOutFormat = GetCEditString(m_outFormat);
+}
+
+void CFindTextDlg::Search()
+{
+    vector<string> vecOutFormat = CStringManager::split(m_strOutFormat, ".");
+    vector<string> vecUnVisitPath;
+    vector<string> vecPath = CGetPath::FindFilePath("", m_strPath, 3, &vecUnVisitPath);
     int i = -1;
     while (i++ != vecPath.size() - 1)
     {
@@ -215,57 +289,17 @@ void CFindTextDlg::OnBnClickedButton1()
         {
             continue;
         }
-        Ctxt txt(vecPath.at(i));
-        txt.LoadTxt(2, "~!@#$%^&*()");
-        bool bAddFileName = false;
-
-        //先看文件名
-        if (vecPath.at(i).find(strText) != -1)
-        {
-            bAddFileName = true;
-            //首先添加文件名和一行空行
-            m_strFind.append(strLineFlag + vecPath.at(i) + "\r\n\r\n");
-        }
-
-        int line = -1;
-        while (line++ != txt.vectxt.size() - 1)
-        {
-            string& oneLine = txt.vectxt.at(line).at(0);
-            string str0;
-            str0.resize(1);
-            str0[0] = '\0';
-            CStringManager::Replace(oneLine, str0, "");
-            //如果能在一行中找到关键词
-            if (oneLine.find(strText) != -1)
-            {
-                if (bAddFileName == false)
-                {
-                    bAddFileName = true;
-                    //首先添加文件名和一行空行
-                    m_strFind.append(strLineFlag + vecPath.at(i) + "\r\n\r\n");
-                }
-                //再添加这一行
-                m_strFind.append(oneLine + "\r\n");
-            }
-        }
-        //找完一个有信息的文件添加两行空行
-        if (bAddFileName == true)
-        {
-            m_strFind.append("\r\n\r\n");
-        }
+        FindFromPath(vecPath.at(i), strKey);
     }
+}
+
+void CFindTextDlg::ShowSearchResult()
+{
     if (m_strFind == "")
     {
         m_strFind = "无";
     }
     m_find.SetWindowText(CCharset::AnsiToUnicode(m_strFind).c_str());
-}
-
-void CFindTextDlg::OnBnClickedButton2()
-{
-    // TODO:  在此添加控件通知处理程序代码
-    m_strPath = CGetPath::GetFolderFromWindow(m_hWnd);
-    m_path.SetWindowText(CCharset::AnsiToUnicode(m_strPath).c_str());
 }
 
 bool CFindTextDlg::IsOutFormat(const string& path, const vector<string>& vecOutFormat)
@@ -279,6 +313,20 @@ bool CFindTextDlg::IsOutFormat(const string& path, const vector<string>& vecOutF
         }
     }
     return false;
+}
+
+string CFindTextDlg::GetCEditString(const CEdit& m_edit)
+{
+    CString text;
+    m_edit.GetWindowText(text);
+    string strEdit = CCharset::UnicodeToAnsi(text.GetBuffer());
+    text.ReleaseBuffer();
+    return strEdit;
+}
+
+bool CFindTextDlg::GetCButtonBool(const CButton& m_button)
+{
+    return m_button.GetCheck() == 1;
 }
 
 BOOL CFindTextDlg::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)

@@ -28,4 +28,14 @@ public:
     static void OpenWebPage(const string& webPage);
 	//?复制文件
 	static void CopyFileOver(const string& dstFile, const string& srcFile, bool over);
+    //?获取当前操作系统位数
+    static int GetSystemBits();
+    //?禁用重定向
+    static void ForbidRedir();
+    //?恢复重定向
+    static void RecoveryRedir();
+
+public:
+    static bool ifRedirFrobid;
+    static PVOID oldValue;
 };;

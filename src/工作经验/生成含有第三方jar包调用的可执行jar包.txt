@@ -1,0 +1,11 @@
+首先把jar包拖到工程内，选择拷贝
+右键项目->Properties->Java Build Path->Libraries->Add JARs...->选择复制到工程内部的jar包
+添加完成后选择右侧的Order and Export->选择所有jar包->OK
+右键项目->Export->Java->Runnable JAR file->Next
+在Launch configuration中选择运行的主类
+在Export destination中选择生成的jar包路径，到文件
+Finish后会有警告，一路确定即可
+运行jar包的时候
+java -jar xx.jar
+不需要再把第三方jar包的classpath放进去，如果jar包有参数则
+java -jar xx.jar 参数1 参数2

@@ -143,27 +143,89 @@ string CSystem::uuid(int flag){
 
 void CSystem::OpenFolder(const string& folder)
 {
+    CSystem::ForbidRedir();
     ShellExecute(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
+    CSystem::RecoveryRedir();
 }
 
 void CSystem::OpenFolderAndSelectFile(const string& file)
 {
+    CSystem::ForbidRedir();
     ShellExecute(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
+    CSystem::RecoveryRedir();
 }
 
 void CSystem::OpenFile(const string& file)
 {
+    CSystem::ForbidRedir();
     ShellExecute(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    CSystem::RecoveryRedir();
 }
 
 void CSystem::OpenWebPage(const string& webPage)
 {
+    CSystem::ForbidRedir();
     ShellExecute(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    CSystem::RecoveryRedir();
 }
 
 void CSystem::CopyFileOver(const string& dstFile, const string& srcFile, bool over)
 {
+    CSystem::ForbidRedir();
 	::CopyFile(srcFile.c_str(), dstFile.c_str(), over == false);
+    CSystem::RecoveryRedir();
+}
+
+//安全的取得真实系统信息  
+VOID SafeGetNativeSystemInfo(__out LPSYSTEM_INFO lpSystemInfo)
+{
+    if (NULL == lpSystemInfo)
+    {
+        return;
+    }
+    typedef VOID(WINAPI *LPFN_GetNativeSystemInfo)(LPSYSTEM_INFO lpSystemInfo);
+    LPFN_GetNativeSystemInfo fnGetNativeSystemInfo = (LPFN_GetNativeSystemInfo)GetProcAddress(GetModuleHandle("kernel32"), "GetNativeSystemInfo");
+    if (NULL != fnGetNativeSystemInfo)
+    {
+        fnGetNativeSystemInfo(lpSystemInfo);
+    }
+    else
+    {
+        GetSystemInfo(lpSystemInfo);
+    }
+}
+
+int CSystem::GetSystemBits()
+{
+    SYSTEM_INFO si;
+    SafeGetNativeSystemInfo(&si);
+    if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 ||
+        si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64)
+    {
+        return 64;
+    }
+    return 32;
+}
+
+bool CSystem::ifRedirFrobid = false;
+PVOID CSystem::oldValue = nullptr;
+
+void CSystem::ForbidRedir()
+{
+    if (ifRedirFrobid == false && GetSystemBits() == 64)
+    {
+        Wow64DisableWow64FsRedirection(&oldValue);
+        ifRedirFrobid = true;
+    }
+}
+
+void CSystem::RecoveryRedir()
+{
+    if (ifRedirFrobid == true && GetSystemBits() == 64)
+    {
+        Wow64RevertWow64FsRedirection(oldValue);
+        ifRedirFrobid = false;
+    }
 }
 
 /*

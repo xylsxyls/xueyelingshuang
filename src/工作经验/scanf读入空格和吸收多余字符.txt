@@ -1,0 +1,6 @@
+char pathJar[1024] = {};
+    scanf("%[^\n]", pathJar);
+    scanf("%*[^\n]");
+    scanf("%*c");
+
+必须加上后面几句，这样在不输入空格的时候下次的scanf可以继续读入
