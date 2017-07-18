@@ -1,0 +1,8 @@
+//在内存中建立一个Image的派生类Bitma对象做为"画布"
+        Gdiplus::Bitmap* memBitmap = new Gdiplus::Bitmap(width, height);
+        //获取这块内存画布的Graphics引用
+        Gdiplus::Graphics memGr(memBitmap);
+        memGr.DrawImage(m_spImages[state].get(), 0, 0, 0, 0, mainWidth, height, Gdiplus::UnitPixel);
+        memGr.DrawImage(m_spColorImages[state].get(), mainWidth, 0, 0, 0, moreWidth, height, Gdiplus::UnitPixel);
+        
+        m_spMultiImages[state].reset(memBitmap);

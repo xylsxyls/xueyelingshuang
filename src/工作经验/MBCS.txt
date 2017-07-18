@@ -1,1 +1,2 @@
+MBCS_Support_Deprecated_In_MFC
 NO_WARN_MBCS_MFC_DEPRECATION

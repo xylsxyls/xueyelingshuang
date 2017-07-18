@@ -7,7 +7,7 @@ using namespace std;
 class CGetPathAPI CGetPath{
 public:
 	//返回ocx所在路径，带\符号
-	static string GetRegOcxPath(string classid);
+    static string GetRegOcxPath(const string& classid);
 	//返回本进程所在路径，带\符号
     static string GetCurrentExePath();
 	//通过窗口获取文件夹路径，不能获取文件路径，带\符号，传入MFC句柄
@@ -21,7 +21,7 @@ public:
 	//strPath如果传必须传文件夹，寻找文件夹以下，如果不传则寻找当前路径及以下的所有文件夹，带不带\\都可以
 	//flag = 1表示查找文件，2表示查找文件后缀名，3表示查找所有文件，FileStr不起作用
     //pUnVisitPath把当前文件夹下不可访问的文件夹列出来，传空代表不存储，所有文件夹路径带\符号
-    static vector<string> FindFilePath(string FileStr, string strPath = "", BOOL flag = 1, vector<string> *pUnVisitPath = NULL);
+    static vector<string> FindFilePath(const string& FileStr, const string& strPath = "", BOOL flag = 1, vector<string> *pUnVisitPath = NULL);
 	//获取进程pid，传入进程名
     static vector<int> GetProcessID(string strProcessName);
 	//根据pid获取窗口句柄

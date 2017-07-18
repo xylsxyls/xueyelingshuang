@@ -1,0 +1,2 @@
+List<Entry<String, Double>>[] treeNR = new ArrayList[1];
+		treeNR[0] = learn.getTopTree(0, Nature.NW);

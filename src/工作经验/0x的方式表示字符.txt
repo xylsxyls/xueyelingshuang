@@ -1,0 +1,2 @@
+如果用0x的方式表示字符，要注意要表示的类型是否是char型或unsigned char型，需要进行强转
+(char)0xEF

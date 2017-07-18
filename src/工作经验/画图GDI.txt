@@ -4,6 +4,8 @@
     memDC.CreateCompatibleDC(dstHDC);
     //创建一个内屏幕dc兼容的画板
     HBITMAP picBoard = ::CreateCompatibleBitmap(dstHDC, rectClient.GetWidth(), rectClient.GetHeight());
+    //这里如果没有可传的dstHDC传NULL时，创建的兼容画板位深度是1，是不能用的，应该换用下面这行指定位深度32或24
+    //HBITMAP picBoard = ::CreateBitmap(width, height, 1, 32, NULL);
     //显示设备选择画板
     HBITMAP OldBit = memDC.SelectBitmap(picBoard);
     //必须在选择了画板之后才可以画

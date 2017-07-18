@@ -38,10 +38,22 @@ void CMyEdit::SelectPosLine(const CPoint& point)
     if ((nBegin = LineIndex(nLineIndex)) != -1)
     {
         nEnd = nBegin + LineLength(nBegin);
-        SetSel(nBegin, nEnd);
         CString strSelText;
         GetWindowText(strSelText);
         strSelText = strSelText.Mid(nBegin, nEnd - nBegin);
+        int offset = 0;
+        if (strSelText[0] == 'l')
+        {
+            string line = CCharset::UnicodeToAnsi(strSelText.GetBuffer()).c_str();
+            int x = atoi((&line[0]) + 5);
+            int findLine = atoi(CCharset::UnicodeToAnsi(strSelText.GetBuffer()).c_str() + 5);
+            strSelText.ReleaseBuffer();
+            CString strLine;
+            strLine.Format(_T("line:%d£¬GBK£º"), findLine);
+            offset = strLine.GetLength();
+        }
+        strSelText = strSelText.Mid(offset, strSelText.GetLength() - offset);
+        SetSel(nBegin + offset, nEnd);
         SetSelText(CCharset::UnicodeToAnsi(wstring(strSelText.GetBuffer())));
         strSelText.ReleaseBuffer();
     }

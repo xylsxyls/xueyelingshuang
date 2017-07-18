@@ -7,7 +7,7 @@
 #include <afxdisp.h>
 #include "CSystem/CSystemAPI.h"
 
-string CGetPath::GetRegOcxPath(string classid)
+string CGetPath::GetRegOcxPath(const string& classid)
 {
 	string strSubKey;
 	HKEY hKey;
@@ -95,7 +95,7 @@ std::string RCGetPath::GetFileFromWindow(HWND hwnd){
 }
 #endif
 
-void RecursionFindFile(string strPath, string FileStr, vector<string> *pPathVector, BOOL flag, vector<string> *pUnVisitPath)
+void RecursionFindFile(const string& strPath, const string& FileStr, vector<string> *pPathVector, BOOL flag, vector<string> *pUnVisitPath)
 {
 	CFileFind finder;
     //_T()的作用是使系统支持Unicode编码
@@ -169,17 +169,19 @@ void RecursionFindFile(string strPath, string FileStr, vector<string> *pPathVect
 	return;
 }
 
-vector<string> CGetPath::FindFilePath(string FileStr, string strPath, BOOL flag, vector<string> *pUnVisitPath){
-	if(strPath == "")
+vector<string> CGetPath::FindFilePath(const string& FileStr, const string& strPath, BOOL flag, vector<string> *pUnVisitPath)
+{
+    string path = strPath;
+    if (path == "")
     {
-        strPath = CGetPath::GetCurrentExePath();
-        strPath.erase(--strPath.end());
+        path = CGetPath::GetCurrentExePath();
+        path.erase(--path.end());
 	}
     //禁用系统重定向，防止64位系统访问System32时进入到SysWOW64中
     CSystem::ForbidRedir();
 	vector<string> VecPath;
     //strPath为当前进程路径的上层目录
-    RecursionFindFile(strPath, FileStr, &VecPath, flag, pUnVisitPath);
+    RecursionFindFile(path, FileStr, &VecPath, flag, pUnVisitPath);
     //恢复重定向
     CSystem::RecoveryRedir();
 	return VecPath;

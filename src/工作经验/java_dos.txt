@@ -1,0 +1,10 @@
+javac -encoding UTF-8 -classpath C:\Users\yangn\workspace\go\lib\ansj_seg-20130808.jar;C:\Users\yangn\workspace\go\lib\tree_split-1.1.1.jar -d C:\Users\yangn\workspace\go\src go.java
+
+
+javac -encoding UTF-8 -classpath .;C:\Users\yangn\Desktop\java-doc\nlp-lang-1.7.2.jar;C:\Users\yangn\Desktop\java-doc\ansj_seg-5.1.2.jar -d E:\ansj_seg\src\test\java\org\ansj Test.java
+
+java -classpath nlp-lang-1.7.2.jar;ansj_seg-5.1.2.jar; org.ansj.demo.NewWordFindDemo C:/Users/yangn/Desktop/java-doc/18届三中全会.TXT C:/Users/yangn/Desktop/java-doc/18届三中全会新词2.TXT
+
+java -jar NewWordFindDemo.jar C:/Users/yangn/Desktop/java-doc/18届三中全会.TXT C:/Users/yangn/Desktop/java-doc/18届三中全会新词2.TXT GBK
+
+java -jar NewWordFindDemo.jar C:/Users/yangn/Desktop/java-doc/18届三中全会.TXT C:/Users/yangn/Desktop/java-doc/18届三中全会新词2.TXT GBK
