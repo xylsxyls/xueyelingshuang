@@ -1,0 +1,4 @@
+string在push_back之后开始取的首地址有可能会失效需要重取
+char* p = &string[0];
+string.push_back(0);
+这时候p不能继续用了

@@ -217,7 +217,7 @@ void CFindTextDlg::OpenFileFind(const string& path, const string& key, bool& bAd
         string& oneLine = txt.vectxt.at(line).at(0);
         char* szOneLine = &oneLine[0];
         string oneLineUtf8 = CCharset::Utf8ToAnsi(szOneLine + GetUtf8Offset(line, oneLine));
-        string oneLineUnicode = CCharset::UnicodeToAnsi((WCHAR*)(szOneLine + GetUnicodeOffset(line, oneLine)));
+        string oneLineUnicode = CCharset::UnicodeToAnsi((WCHAR*)&oneLine[GetUnicodeOffset(line, oneLine)]);
         oneLine.erase(--oneLine.end());
         //如果能在一行中找到关键词
         string gbkAddString;
