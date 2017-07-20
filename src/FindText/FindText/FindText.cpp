@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "FindText.h"
 #include "FindTextDlg.h"
+#include "CDump/CDumpAPI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -17,7 +18,7 @@ BEGIN_MESSAGE_MAP(CFindTextApp, CWinApp)
 	ON_COMMAND(ID_HELP, &CWinApp::OnHelp)
 END_MESSAGE_MAP()
 
-
+CDump dump;
 // CMFCTestApp ππ‘Ï
 
 CFindTextApp::CFindTextApp()
@@ -50,7 +51,7 @@ BOOL CFindTextApp::InitInstance()
 	InitCommonControlsEx(&InitCtrls);
 
 	CWinApp::InitInstance();
-
+    dump.DeclareDumpFile();
 
 	AfxEnableControlContainer();
 
