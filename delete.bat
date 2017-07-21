@@ -22,6 +22,10 @@ rmdir /q /s "%~dp0src\MFCSaveIntroduce\ipch\"
 rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCSaveIntroduce\Debug\"
 rmdir /q /s "%~dp0src\MFCSaveIntroduce\MFCSaveIntroduce\Release\"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\CalcTest\ipch\"
+rmdir /q /s "%~dp0src\CalcTest\CalcTest\Debug\"
+rmdir /q /s "%~dp0src\CalcTest\CalcTest\Release\"
+::------------------------------------------------------------
 rmdir /q /s "%~dp0src\MFCTest\ipch\"
 rmdir /q /s "%~dp0src\MFCTest\MFCTest\Debug\"
 rmdir /q /s "%~dp0src\MFCTest\MFCTest\Release\"
