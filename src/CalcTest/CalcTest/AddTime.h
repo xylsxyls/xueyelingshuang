@@ -24,4 +24,6 @@ public:
     afx_msg void OnBnClickedButton1();
     IntDateTime* editTime;
     void SetEditTime(IntDateTime* editTime);
+    virtual BOOL OnInitDialog();
+    CButton m_ok;
 };

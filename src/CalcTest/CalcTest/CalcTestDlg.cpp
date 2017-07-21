@@ -255,7 +255,7 @@ void CCalcTestDlg::OnBnClickedButton2()
             CAddTime addTimeDlg;
             addTimeDlg.SetEditTime(&editTime);
             int result = addTimeDlg.DoModal();
-            if (result == 98)
+            if (result == 98 && cur - editTime < 86400)
             {
                 txt.AddLine("1%s", editTime.toString().c_str());
                 txt.AddLine("0%s", write.c_str());
@@ -451,7 +451,7 @@ void CCalcTestDlg::OnBnClickedButton4()
             CAddTime addTimeDlg;
             addTimeDlg.SetEditTime(&editTime);
             int result = addTimeDlg.DoModal();
-            if (result == 98)
+            if (result == 98 && cur - editTime < 86400)
             {
                 txt.AddLine("1%s", editTime.toString().c_str());
                 txt.AddLine("0%s", write.c_str());

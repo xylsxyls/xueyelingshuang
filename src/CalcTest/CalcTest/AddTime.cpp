@@ -26,6 +26,7 @@ void CAddTime::DoDataExchange(CDataExchange* pDX)
 {
     CDialogEx::DoDataExchange(pDX);
     DDX_Control(pDX, IDC_EDIT1, m_time);
+    DDX_Control(pDX, IDC_BUTTON1, m_ok);
 }
 
 
@@ -67,4 +68,14 @@ void CAddTime::OnBnClickedButton1()
 void CAddTime::SetEditTime(IntDateTime* editTime)
 {
     this->editTime = editTime;
+}
+
+BOOL CAddTime::OnInitDialog()
+{
+    CDialogEx::OnInitDialog();
+
+    // TODO:  在此添加额外的初始化
+    ::SetFocus(m_time.m_hWnd);
+    return FALSE;  // return TRUE unless you set the focus to a control
+    // 异常:  OCX 属性页应返回 FALSE
 }
