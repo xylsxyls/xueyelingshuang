@@ -71,6 +71,8 @@ BEGIN_MESSAGE_MAP(CCalcTestDlg, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTON5, &CCalcTestDlg::OnBnClickedButton5)
     ON_BN_CLICKED(IDC_BUTTON3, &CCalcTestDlg::OnBnClickedButton3)
     ON_BN_CLICKED(IDC_BUTTON4, &CCalcTestDlg::OnBnClickedButton4)
+    ON_BN_CLICKED(IDC_BUTTON6, &CCalcTestDlg::OnBnClickedButton6)
+    ON_BN_CLICKED(IDC_BUTTON7, &CCalcTestDlg::OnBnClickedButton7)
 END_MESSAGE_MAP()
 
 
@@ -250,6 +252,12 @@ void CCalcTestDlg::OnBnClickedButton2()
             editTime = cur;
             editTime.time_ = 180000000;
         }
+        if (result == 97)
+        {
+            result = 100;
+            editTime = cur;
+            editTime.time_ = 182000000;
+        }
         if (result == 100)
         {
             CAddTime addTimeDlg;
@@ -356,8 +364,26 @@ void CCalcTestDlg::OnBnClickedButton5()
     }
     double myDay = myAllTime / 3600.0 / 8.0;
 
+    Ctxt myowntxt(curPath + myOwnFileName);
+    myowntxt.LoadTxt(2, "~!@#$%^&*()");
+    int myOwnAllTime = 0;
+    i = -1;
+    while (i++ != myowntxt.vectxt.size() - 1)
+    {
+        if (i + 1 == myowntxt.vectxt.size())
+        {
+            break;
+        }
+        string beginTime = myowntxt.vectxt.at(i).at(0);
+        string endTime = myowntxt.vectxt.at(++i).at(0);
+        IntDateTime begin(&beginTime[1]);
+        IntDateTime end(&endTime[1]);
+        myOwnAllTime = myOwnAllTime + (end - begin);
+    }
+    double myOwnDay = myOwnAllTime / 3600.0 / 8.0;
+
     CString strDay;
-    strDay.Format(_T("代码已清理，剩余需要%lf天改完\n代码已清理，自测部分需要%lf天改完"), day, myDay);
+    strDay.Format(_T("代码已清理，剩余需要%lf天改完\n代码已清理，自测部分需要%lf天改完\n代码已清理，后台自测部分需要%lf天改完"), day, myDay, myOwnDay);
     AfxMessageBox(strDay);
     // TODO:  在此添加控件通知处理程序代码
 }
@@ -439,6 +465,151 @@ void CCalcTestDlg::OnBnClickedButton4()
     string write = cur.toString();
 
     Ctxt txt(curPath + myFileName);
+    txt.LoadTxt(2, "~!@#$%^&*()");
+    int size = txt.vectxt.size();
+    if (size == 0)
+    {
+        CAddTime addTimeDlg;
+        addTimeDlg.SetEditTime(&editTime);
+        int result = addTimeDlg.DoModal();
+        if (result == 100)
+        {
+            CAddTime addTimeDlg;
+            addTimeDlg.SetEditTime(&editTime);
+            int result = addTimeDlg.DoModal();
+            if (result == 98 && cur - editTime < 86400)
+            {
+                txt.AddLine("1%s", editTime.toString().c_str());
+                txt.AddLine("0%s", write.c_str());
+                AfxMessageBox(_T("成功"));
+                return;
+            }
+        }
+        return;
+    }
+    //先找出最后一条是不是开始时间，如果是则直接添加，如果不是则要求填入开始时间
+    string strLastTime = txt.vectxt.at(size - 1).at(0);
+    if (strLastTime[0] == '1' && cur - strLastTime < 86400)
+    {
+        CAddTime addTimeDlg;
+        addTimeDlg.SetEditTime(&editTime);
+        int result = addTimeDlg.DoModal();
+        if (result == 98)
+        {
+            txt.AddLine("0%s", write.c_str());
+            AfxMessageBox(_T("成功"));
+            return;
+        }
+    }
+    else
+    {
+        CAddTime addTimeDlg;
+        addTimeDlg.SetEditTime(&editTime);
+        int result = addTimeDlg.DoModal();
+        if (result == 100)
+        {
+            IntDateTime lastTime(&strLastTime[1]);
+            //如果填入的时间比最后一次时间早或者比当前时间晚或者当前时间和开始时间差距大于一天
+            if (editTime < lastTime || editTime > cur || cur - editTime > 86400)
+            {
+                AfxMessageBox(_T("输入有误"));
+            }
+            //如果正确则填入时间
+            else
+            {
+                CAddTime addTimeDlg;
+                addTimeDlg.SetEditTime(&editTime);
+                int result = addTimeDlg.DoModal();
+                if (result == 98)
+                {
+                    txt.AddLine("1%s", editTime.toString().c_str());
+                    txt.AddLine("0%s", write.c_str());
+                    AfxMessageBox(_T("成功"));
+                    return;
+                }
+            }
+        }
+    }
+    // TODO:  在此添加控件通知处理程序代码
+}
+
+
+void CCalcTestDlg::OnBnClickedButton6()
+{
+    //获取开始时间
+    IntDateTime cur;
+    //存入文件
+    string write = cur.toString();
+    Ctxt txt(curPath + myOwnFileName);
+    txt.LoadTxt(2, "~!@#$%^&*()");
+    int size = txt.vectxt.size();
+    if (size == 0)
+    {
+        CAddTime addTimeDlg;
+        addTimeDlg.SetEditTime(&editTime);
+        int result = addTimeDlg.DoModal();
+        if (result == 98)
+        {
+            txt.AddLine("1%s", write.c_str());
+            AfxMessageBox(_T("成功"));
+            return;
+        }
+    }
+    //先找出最后一条是不是结束时间，如果是则直接添加，如果不是则要求填入结束时间
+    string strLastTime = txt.vectxt.at(size - 1).at(0);
+    if (strLastTime[0] == '0')
+    {
+        CAddTime addTimeDlg;
+        addTimeDlg.SetEditTime(&editTime);
+        int result = addTimeDlg.DoModal();
+        if (result == 98)
+        {
+            txt.AddLine("1%s", write.c_str());
+            AfxMessageBox(_T("成功"));
+            return;
+        }
+    }
+    else
+    {
+        CAddTime addTimeDlg;
+        addTimeDlg.SetEditTime(&editTime);
+        int result = addTimeDlg.DoModal();
+        if (result == 100)
+        {
+            IntDateTime lastTime(&strLastTime[1]);
+            //如果填入的时间和上次的开始时间超过一天或比上次开始时间早则说明填入有误
+            if (editTime - lastTime > 86400 || editTime < lastTime || write < editTime)
+            {
+                AfxMessageBox(_T("输入有误"));
+            }
+            //如果正确则填入时间
+            else
+            {
+                CAddTime addTimeDlg;
+                addTimeDlg.SetEditTime(&editTime);
+                int result = addTimeDlg.DoModal();
+                if (result == 98)
+                {
+                    txt.AddLine("0%s", editTime.toString().c_str());
+                    txt.AddLine("1%s", write.c_str());
+                    AfxMessageBox(_T("成功"));
+                    return;
+                }
+            }
+        }
+    }
+    // TODO:  在此添加控件通知处理程序代码
+}
+
+
+void CCalcTestDlg::OnBnClickedButton7()
+{
+    //获取当前时间
+    IntDateTime cur;
+    //存入文件
+    string write = cur.toString();
+
+    Ctxt txt(curPath + myOwnFileName);
     txt.LoadTxt(2, "~!@#$%^&*()");
     int size = txt.vectxt.size();
     if (size == 0)

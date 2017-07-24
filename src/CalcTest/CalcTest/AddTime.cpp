@@ -52,6 +52,11 @@ void CAddTime::OnBnClickedButton1()
         EndDialog(99);
         return;
     }
+    if (text == _T("д╛хо©шЁЩ"))
+    {
+        EndDialog(97);
+        return;
+    }
     string strTime = CCharset::UnicodeToAnsi(text.GetBuffer());
     IntDateTime preTime(strTime);
     text.ReleaseBuffer();
