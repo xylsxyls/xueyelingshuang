@@ -34,6 +34,8 @@ public:
     static void ForbidRedir();
     //?恢复重定向
     static void RecoveryRedir();
+    //?获取当前系统用户名，类似Administrator
+    static string GetSysUserName();
 
 public:
     static bool ifRedirFrobid;

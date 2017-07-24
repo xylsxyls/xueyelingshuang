@@ -228,6 +228,14 @@ void CSystem::RecoveryRedir()
     }
 }
 
+string CSystem::GetSysUserName()
+{
+    DWORD size = 1024;
+    TCHAR szName[1024] = {};
+    ::GetUserName(szName, &size);
+    return szName;
+}
+
 /*
 int main(){
 	//CSystem system;
