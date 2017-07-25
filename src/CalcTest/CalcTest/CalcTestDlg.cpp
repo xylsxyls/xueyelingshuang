@@ -298,6 +298,12 @@ void CCalcTestDlg::OnBnClickedButton2()
             editTime = cur;
             editTime.time_ = 180000000;
         }
+        if (result == 97)
+        {
+            result = 100;
+            editTime = cur;
+            editTime.time_ = 182000000;
+        }
         if (result == 100)
         {
             IntDateTime lastTime(&strLastTime[1]);
