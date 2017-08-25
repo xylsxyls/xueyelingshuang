@@ -1,0 +1,5 @@
+DrawText
+画文字不耗时，但是计算文字所占区域耗时
+如果不涉及多行可以用
+GetTextExtentPoint32
+这个函数不耗时

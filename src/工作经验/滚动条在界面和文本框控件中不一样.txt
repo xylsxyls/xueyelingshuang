@@ -1,0 +1,2 @@
+SCROLLINFO在界面中page和npos，nmax都是指的像素
+在文本框中page是一页最大行数nmax是总函数-1，npos指当前行数，文本框中顶部显示最新一行，不会出现显示半行的情况

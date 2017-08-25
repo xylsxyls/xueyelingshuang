@@ -1,0 +1,2 @@
+::BeginPaint和::EndPaint必须放在绘画的开头和结尾
+当使用CMemoryDC之后在它的构造和析构中已经写了这两个函数，不该继续使用

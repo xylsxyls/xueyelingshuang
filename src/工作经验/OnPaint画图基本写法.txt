@@ -1,0 +1,5 @@
+CPaintDC dc(m_hWnd);
+    {
+        CMemoryDC dcMem(dc.m_hDC, dc.m_ps.rcPaint);
+        HDC hdc = dcMem.m_hDC;
+    }

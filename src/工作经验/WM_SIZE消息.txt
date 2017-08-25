@@ -1,0 +1,1 @@
+WM_SIZE消息在触发后会自动进入WM_PAINT消息

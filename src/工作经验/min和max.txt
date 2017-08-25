@@ -1,0 +1,6 @@
+std::min和std::max的使用的时候必须两个参数都用int，如果不是需要手动强转，因为min,max实际上是模板std::min<int>，不支持自动转换
+
+限制一个数字在某两个数字之间
+
+sipos = std::min(pos, maxPos);
+        sipos = std::max(pos, minPos);

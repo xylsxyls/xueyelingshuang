@@ -1,0 +1,98 @@
+MESSAGE_RANGE_HANDLER(WM_MOUSEFIRST, WM_MOUSELAST, OnMouse)
+
+LRESULT RCAnnotPopWnd::OnMouse(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+    bHandled = TRUE;
+    POINT point;
+    point.x = GET_X_LPARAM(lParam);
+    point.y = GET_Y_LPARAM(lParam);
+    uint32_t flags = (uint32_t)wParam;
+    switch (uMsg)
+    {
+        case WM_LBUTTONDOWN:
+        {
+            ProcessMousePressed(point, flags, false);
+
+            break;
+        }
+        case WM_LBUTTONDBLCLK:
+        {
+            ProcessMousePressed(point, flags, true);
+            break;
+        }
+        case WM_LBUTTONUP:
+        {
+            ProcessMouseReleased(point, flags);
+            break;
+        }
+        case WM_MOUSEMOVE:
+        {
+            ProcessMouseMoved(point, flags);
+            bHandled = FALSE;
+            break;
+        }
+        default:
+        {
+            bHandled = FALSE;
+            break;
+        }
+    }
+
+    SetMsgHandled(bHandled);
+
+    return 0;
+}
+
+然后才能使用WM_MOUSEMOVE等消息
+wnd类需要继承RCWidgetWindow，要重写纯虚函数
+
+鼠标消息先走MESSAGE_HANDLER(WM_NCHITTEST, OnNcHitTest)
+bHandle进来的时候是FALSE，需要转成TRUE返回
+然后才能进入到OnMouse消息
+WM_NCHITTEST不能返回HTCAPITON
+如果没有WM_NCHITTEST消息也可以进到OnMouse消息
+
+不要RCWidgetWindow
+LRESULT RCAnnotPopWnd::OnMouse(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+    bHandled = FALSE;
+    POINT point;
+    point.x = GET_X_LPARAM(lParam);
+    point.y = GET_Y_LPARAM(lParam);
+    uint32_t flags = (uint32_t)wParam;
+    switch (uMsg)
+    {
+        case WM_LBUTTONDOWN:
+        {
+            ::PostMessage(m_hWnd, WM_LBUTTONDOWN, wParam, lParam);
+            break;
+        }
+        case WM_LBUTTONDBLCLK:
+        {
+            ::PostMessage(m_hWnd, WM_LBUTTONDBLCLK, wParam, lParam);
+            break;
+        }
+        case WM_LBUTTONUP:
+        {
+            ::PostMessage(m_hWnd, WM_LBUTTONUP, wParam, lParam);
+            break;
+        }
+        case WM_MOUSEMOVE:
+        {
+            ::PostMessage(m_hWnd, WM_MOUSEMOVE, wParam, lParam);
+            break;
+        }
+        default:
+        {
+            bHandled = FALSE;
+            break;
+        }
+    }
+
+    SetMsgHandled(bHandled);
+
+    return 0;
+}
+
+
+直接使用WM_MOUSEMOVE也可以收到

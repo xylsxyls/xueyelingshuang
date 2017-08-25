@@ -1,0 +1,6 @@
+HDC hdc = GetDC();
+        HFONT oldfont = (HFONT)::SelectObject(hdc, m_hfont);
+        SIZE size;
+        ::GetTextExtentPoint32(hdc, text.c_str(), text.length(), &size);
+        ::SelectObject(hdc, oldfont);
+        ::ReleaseDC(m_hWnd, hdc);

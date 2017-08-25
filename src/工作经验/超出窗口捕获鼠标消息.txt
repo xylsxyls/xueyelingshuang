@@ -1,0 +1,2 @@
+::SetCapture(GetHWND());
+前提是鼠标必须按下

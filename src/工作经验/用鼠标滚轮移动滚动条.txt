@@ -1,0 +1,17 @@
+LRESULT RCAnnotPopWnd::OnMouseWheel(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+    POINT pt;
+    pt.x = GET_X_LPARAM(lParam);
+    pt.y = GET_Y_LPARAM(lParam);
+    ScreenToClient(&pt);
+    short delta = GET_WHEEL_DELTA_WPARAM(wParam);
+    if (delta > 0)
+    {
+        ::PostMessage(m_hWnd, WM_VSCROLL, SB_LINEUP, 0);
+    }
+    else
+    {
+        ::PostMessage(m_hWnd, WM_VSCROLL, SB_LINEDOWN, 0);
+    }
+    return 0;
+}

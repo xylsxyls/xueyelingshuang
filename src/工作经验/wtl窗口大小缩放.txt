@@ -1,0 +1,62 @@
+LRESULT RCAnnotPopWnd::OnNcHitTest(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+    bHandled = TRUE;
+
+    if (RCPdfUIManager::Instance().IsFullScreen() || GetWindowLong(GWL_STYLE) & WS_MAXIMIZE)
+    {
+        bHandled = FALSE;
+        return 0;
+    }
+
+    POINT pt;
+    pt.x = GET_X_LPARAM(lParam);
+    pt.y = GET_Y_LPARAM(lParam);
+    ::ScreenToClient(m_hWnd, &pt);
+
+    RECT rcClient;
+    ::GetClientRect(m_hWnd, &rcClient);
+
+    if ((pt.x < rcClient.left + RC_PDF_DRAG_WIDTH * 2 && pt.y < rcClient.top + RC_PDF_DRAG_WIDTH) ||
+        (pt.x < rcClient.left + RC_PDF_DRAG_WIDTH && pt.y < rcClient.top + RC_PDF_DRAG_WIDTH * 2))
+    {
+        //左上角,判断是不是在左上角，就是看当前坐标是不是即在左边拖动的范围内，又在上边拖动的范围内，其它角判断方法类似  
+        return HTTOPLEFT;
+    }
+    else if ((pt.x > rcClient.right - RC_PDF_DRAG_WIDTH * 2 && pt.y < rcClient.top + RC_PDF_DRAG_WIDTH) ||
+        (pt.x > rcClient.right - RC_PDF_DRAG_WIDTH && pt.y < rcClient.top + RC_PDF_DRAG_WIDTH * 2))//右上角
+    {
+        return HTTOPRIGHT;
+    }
+    else if ((pt.x < rcClient.left + RC_PDF_DRAG_WIDTH * 2 && pt.y > rcClient.bottom - RC_PDF_DRAG_WIDTH) ||
+        (pt.x < rcClient.left + RC_PDF_DRAG_WIDTH && pt.y > rcClient.bottom - RC_PDF_DRAG_WIDTH * 2))//左下角
+    {
+        return HTBOTTOMLEFT;
+    }
+    else if ((pt.x > rcClient.right - RC_PDF_DRAG_WIDTH * 2 && pt.y > rcClient.bottom - RC_PDF_DRAG_WIDTH) ||
+        (pt.x > rcClient.right - RC_PDF_DRAG_WIDTH && pt.y > rcClient.bottom - RC_PDF_DRAG_WIDTH * 2))//右下角
+    {
+        return HTBOTTOMRIGHT;
+    }
+    else if (pt.x < rcClient.left + RC_PDF_DRAG_WIDTH)
+    {
+        return HTLEFT;
+    }
+    else if (pt.x > rcClient.right - RC_PDF_DRAG_WIDTH)
+    {
+        return HTRIGHT;
+    }
+    else if (pt.y < rcClient.top + RC_PDF_DRAG_WIDTH)
+    {
+        return HTTOP;
+    }
+    else if (pt.y > rcClient.bottom - RC_PDF_DRAG_WIDTH)
+    {
+        return HTBOTTOM;          //以上这四个是上、下、左、右四个边
+    }
+    else
+    {
+        return HTCLIENT;
+    }
+
+    return HTCAPTION;
+}

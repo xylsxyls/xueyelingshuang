@@ -1,0 +1,6 @@
+namespace Gdiplus
+{
+    class Bitmap;
+    class Point;
+    class SolidBrush;
+}

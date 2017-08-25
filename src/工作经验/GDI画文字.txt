@@ -1,0 +1,22 @@
+RCRect rect;
+        rect.SetOrigin(18 + 10 + 8, beginHeight + 10 + 16 + 10);
+        rect.SetSize(textWidth, 16 * 3 - 1);
+        ::DrawText(hdc, text.c_str(), text.length(), &rect.ToRECT(), DT_WORDBREAK | DT_INTERNAL | DT_END_ELLIPSIS);
+DT_WORDBREAK 自动换行显示文本
+DT_INTERNAL 系统默认字体格式
+DT_END_ELLIPSIS 如果指定矩形显示不下在末尾显示省略号
+高度必须不足一行末尾才会显示...，必须是16 * 3 - 1，没有 - 1则不会显示...
+
+
+int32_t originX = 10;
+    int32_t originY = 10;
+
+    RCString title(_T("笔记-") + m_userName);
+    SIZE size;
+    ::GetTextExtentPoint32(hdc, title.c_str(), title.length(), &size);
+    CRect rect;
+    rect.left = originX;
+    rect.top = originY;
+    rect.right = rect.left + size.cx;
+    rect.bottom = rect.top + size.cy;
+    ::DrawText(hdc, title.c_str(), title.length(), rect, DT_SINGLELINE);

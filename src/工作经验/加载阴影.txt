@@ -1,0 +1,20 @@
+/* ÒõÓ°´°¿Ú
+    */
+    RCNoteShadow m_shadow;
+
+bool RCAnnotPopWnd::InitShadowDPI()
+{
+    ShowWindow(SW_SHOW);
+    m_shadow.SetShadowBitmap(RCWidgetImageUtil::LoadFromID(IDI_PNG_MENU_SKIN_BG));
+    int leftDPI = PDF_DPI_SCALE_X(21);
+    int topDPI = PDF_DPI_SCALE_Y(11);
+    int rightDPI = PDF_DPI_SCALE_X(21);
+    int bottomDPI = PDF_DPI_SCALE_Y(28);
+    m_shadow.SetShadowMargin(leftDPI, rightDPI, topDPI, bottomDPI, 0);
+
+    RCNoteShadow::Initialize((HINSTANCE)GetModuleHandle(NULL));
+    m_shadow.Create(m_hWnd);
+    m_shadow.EnableShadow(true);
+    m_shadow.Show(m_hWnd);
+    return true;
+}

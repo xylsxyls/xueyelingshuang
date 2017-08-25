@@ -1,0 +1,12 @@
+如果需要使用WM_MOUSELEAVE消息必须在WM_MOUSEMOVE消息中写
+if (!m_bMouseTracking)
+    {
+        TRACKMOUSEEVENT tme;
+        tme.cbSize = sizeof(TRACKMOUSEEVENT);
+        tme.dwFlags = TME_LEAVE;
+        tme.hwndTrack = m_hWnd;
+        if (::_TrackMouseEvent(&tme))
+        {
+            m_bMouseTracking = true;
+        }
+    }

@@ -1,0 +1,12 @@
+在SetFont后必须使用Init函数
+在父窗口中重载消息 COMMAND_HANDLER(IDC_EDIT_ANNOT_POP_WINDOW, EN_CHANGE, OnEnEditChange)
+LRESULT RCAnnotPopWnd::OnEnEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled)
+{
+    bHandled = FALSE;
+    ::PostMessage(m_textEdit.m_hWnd, WM_SIZE, 0, 0);
+    Invalidate(FALSE);
+    return 0;
+}
+定义成员变量RCPdfEdit m_textEdit;
+需要Create
+HWND hwnd2 = m_textEdit.Create(m_hWnd, editRect, 0, ES_AUTOVSCROLL | ES_MULTILINE | WS_VISIBLE | WS_VSCROLL | WS_CHILD | WS_BORDER, 0, IDC_EDIT_ANNOT_POP_WINDOW);

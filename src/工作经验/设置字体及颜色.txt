@@ -1,0 +1,5 @@
+HGDIOBJ hOldFont = ::SelectObject(hdc, m_titlehFont);
+    COLORREF oldColor = ::SetTextColor(hdc, RGB(0x99, 0x99, 0x99));
+
+    ::SelectObject(hdc, hOldFont);
+    ::SetTextColor(hdc, oldColor);

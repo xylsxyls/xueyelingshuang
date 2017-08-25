@@ -1,0 +1,3 @@
+HBRUSH red = ::CreateSolidBrush(RGB(255, 0, 0));
+    ::FillRect(dc.m_hDC, GetClientCRectDPI(), red);
+    ::DeleteObject(red);

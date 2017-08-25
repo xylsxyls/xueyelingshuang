@@ -1,0 +1,3 @@
+Gdiplus::Graphics g(hdc);
+    Gdiplus::Rect rclt(10, beginHeight + 6, pBitmap->GetWidth(), pBitmap->GetHeight());
+    g.DrawImage(pBitmap, rclt, 0, 0, pBitmap->GetWidth(), pBitmap->GetHeight(), Gdiplus::UnitPixel);
