@@ -80,7 +80,7 @@ string CRandom::String(int nMin, int nMax, const vector<char>& vecCharacter){
 	string strResult;
 	strResult.resize(nLength);
 	int i = -1;
-	while (i++ != nLength){
+	while (i++ != nLength - 1){
 		strResult[i] = vecCharacter.at(Rand() % nSize);
 	}
 	return strResult;
