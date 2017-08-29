@@ -21,8 +21,8 @@
 多字节字符集
 看情况 在共享 DLL 中使用 MFC
 如果需要依赖其他dll
-附加包含目录$(ProjectDir)..\..\..\..\include\
-附加库目录$(ProjectDir)..\..\..\..\lib\
+附加包含目录$(ProjectDir)..\..\..\..\include\;%(AdditionalLibraryDirectories)
+附加库目录$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)
 
 6.release
 在工程输出目录里写$(ProjectDir)..\..\..\..\lib\
@@ -32,8 +32,8 @@
 多字节字符集
 看情况 在共享 DLL 中使用 MFC
 如果需要依赖其他dll
-附加包含目录$(ProjectDir)..\..\..\..\include\
-附加库目录$(ProjectDir)..\..\..\..\lib\
+附加包含目录$(ProjectDir)..\..\..\..\include\;%(AdditionalLibraryDirectories)
+附加库目录$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)
 
 7.把python拷贝到工程scripts下，并把文件名中..proj..换成本工程类名
 8.把python中..proj..群替换成本工程类名
