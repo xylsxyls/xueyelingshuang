@@ -31,6 +31,10 @@ private:
 
     std::map<__int32, std::shared_ptr<CTaskThread>> m_spThreadMap;
 
+    /* Ïß³Ì³ØËø
+    */
+    std::mutex m_mutex;
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

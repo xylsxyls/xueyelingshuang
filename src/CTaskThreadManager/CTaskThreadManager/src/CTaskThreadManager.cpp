@@ -23,8 +23,12 @@ bool CTaskThreadManager::Init(__int32 threadId)
     {
         return false;
     }
-    auto itThread = m_spThreadMap.find(threadId);
-    if (itThread == m_spThreadMap.end())
+    bool threadExist = false;
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        threadExist = (m_spThreadMap.find(threadId) != m_spThreadMap.end());
+    }
+    if (!threadExist)
     {
         CTaskThread* pTaskThread = new CTaskThread(threadId);
         if (pTaskThread != nullptr)
@@ -33,6 +37,7 @@ bool CTaskThreadManager::Init(__int32 threadId)
             spTaskThread.reset(pTaskThread);
             if (pTaskThread->CreateThread())
             {
+                std::unique_lock<std::mutex> lock(m_mutex);
                 m_spThreadMap[threadId] = spTaskThread;
                 return true;
             }
@@ -47,14 +52,23 @@ void CTaskThreadManager::Uninit(__int32 threadId)
     {
         return;
     }
-    auto itThread = m_spThreadMap.find(threadId);
-    if (itThread != m_spThreadMap.end())
+    std::shared_ptr<CTaskThread>* pTaskThread = NULL;
     {
-        std::shared_ptr<CTaskThread>& taskThread = itThread->second;
-        if (taskThread != NULL)
+        std::unique_lock<std::mutex> lock(m_mutex);
+        auto itThread = m_spThreadMap.find(threadId);
+        if (itThread != m_spThreadMap.end())
         {
-            taskThread->DeleteThread();
-            m_spThreadMap.erase(itThread);
+            pTaskThread = &(itThread->second);
+        }
+    }
+    if (pTaskThread != NULL)
+    {
+        std::shared_ptr<CTaskThread>& spTaskThread = *pTaskThread;
+        if (spTaskThread != NULL)
+        {
+            spTaskThread->DeleteThread();
+            std::unique_lock<std::mutex> lock(m_mutex);
+            m_spThreadMap.erase(m_spThreadMap.find(threadId));
         }
         else
         {
@@ -65,15 +79,94 @@ void CTaskThreadManager::Uninit(__int32 threadId)
 
 void CTaskThreadManager::UninitAll()
 {
-    for (auto itThread = m_spThreadMap.begin(); itThread != m_spThreadMap.end(); ++itThread)
+    std::map<__int32, std::shared_ptr<CTaskThread>>::iterator itThread;
     {
-        std::shared_ptr<CTaskThread>& taskThread = itThread->second;
-        if (taskThread != NULL)
+        std::unique_lock<std::mutex> lock(m_mutex);
+        itThread = m_spThreadMap.begin();
+    }
+    bool inWhile = true;
+    while (inWhile)
+    {
+        std::shared_ptr<CTaskThread>* pTaskThread = NULL;
         {
-            taskThread->DeleteThread();
+            std::unique_lock<std::mutex> lock(m_mutex);
+            if (itThread == m_spThreadMap.end())
+            {
+                break;
+            }
+            pTaskThread = &(itThread->second);
+        }
+        
+        if (pTaskThread != NULL)
+        {
+            std::shared_ptr<CTaskThread>& taskThread = *pTaskThread;
+            if (taskThread != NULL)
+            {
+                taskThread->m_hasExitSignal = true;
+                if (taskThread->m_spCurTask != NULL)
+                {
+                    taskThread->m_spCurTask->StopTask(false);
+                }
+                //taskThread->StopAllTask();
+                /*std::unique_lock<std::mutex> lock(m_mutex);
+                itThread = m_spThreadMap.erase(itThread);
+                continue;*/
+            }
+        }
+        {
+            std::unique_lock<std::mutex> lock(m_mutex);
+            ++itThread;
         }
     }
-    m_spThreadMap.clear();
+
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        itThread = m_spThreadMap.begin();
+    }
+    while (inWhile)
+    {
+        std::shared_ptr<CTaskThread>* pTaskThread = NULL;
+        {
+            std::unique_lock<std::mutex> lock(m_mutex);
+            if (itThread == m_spThreadMap.end())
+            {
+                break;
+            }
+            pTaskThread = &(itThread->second);
+        }
+
+        if (pTaskThread != NULL)
+        {
+            std::shared_ptr<CTaskThread>& taskThread = *pTaskThread;
+            if (taskThread != NULL)
+            {
+                //taskThread->DeleteThread();
+
+                //如果线程正常启动
+                if (taskThread->m_spWorkThread != NULL)
+                {
+                    taskThread->m_spWorkThread->join();
+
+                    std::map<__int32, __int32> taskCountMap;
+                    taskThread->GetWaitTaskCount(taskCountMap);
+                    if (taskCountMap.size() != 0)
+                    {
+                        int x = 3;
+                        x = 3;
+                    }
+                    taskThread->m_spWorkThread.reset(NULL);
+                }
+
+                std::unique_lock<std::mutex> lock(m_mutex);
+                itThread = m_spThreadMap.erase(itThread);
+                continue;
+            }
+        }
+        {
+            std::unique_lock<std::mutex> lock(m_mutex);
+            ++itThread;
+        }
+    }
 }
 
 std::shared_ptr<CTaskThread> CTaskThreadManager::GetThreadInterface(__int32 threadId)
@@ -82,6 +175,7 @@ std::shared_ptr<CTaskThread> CTaskThreadManager::GetThreadInterface(__int32 thre
     {
         return std::shared_ptr<CTaskThread>();
     }
+    std::unique_lock<std::mutex> lock(m_mutex);
     auto itThread = m_spThreadMap.find(threadId);
     if (itThread != m_spThreadMap.end())
     {

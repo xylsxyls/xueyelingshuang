@@ -5,6 +5,7 @@
 #include <thread>
 #include <memory>
 #include <mutex>
+#include <atomic>
 
 class CTaskThreadManagerAPI CTaskThread
 {
@@ -12,7 +13,7 @@ class CTaskThreadManagerAPI CTaskThread
 public:
     /* 添加任务，任务优先级必须大于1
     */
-    void AddTask(const std::shared_ptr<CTask>& task, __int32 taskLevel);
+    void PostTask(const std::shared_ptr<CTask>& task, __int32 taskLevel);
 
     /* 同步执行任务，当任务没结束是发送线程卡住，但是任务仍然是在线程中执行
     */
@@ -48,6 +49,10 @@ private:
     //工作线程做三件事，执行当前任务，执行完后看任务队列里是否有任务，如果有则提出放到当前任务中，如果当前任务没有则跳过
     void WorkThread();
 
+    void StopAllTaskUnlock();
+
+    bool HasTaskUnlock();
+
 private:
 
 #ifdef _MSC_VER
@@ -74,6 +79,10 @@ private:
     /* 线程锁
     */
     std::mutex m_mutex;
+
+    /* 线程是否有退出信号
+    */
+    std::atomic<bool> m_hasExitSignal = false;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -81,10 +90,6 @@ private:
     /* 正在执行任务的优先级
     */
     __int32 m_curTaskLevel = 0;
-
-    /* 线程是否运行
-    */
-    bool m_isRunning = false;
 
     /* 线程ID
     */
