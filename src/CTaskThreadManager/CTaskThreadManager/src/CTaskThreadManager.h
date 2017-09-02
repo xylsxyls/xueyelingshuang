@@ -12,15 +12,15 @@ private:
 public:
     static CTaskThreadManager& Instance();
 
-    bool Init(__int32 threadId);
+    bool Init(int32_t threadId);
 
-    void Uninit(__int32 threadId);
+    void Uninit(int32_t threadId);
 
     void UninitAll();
 
     /* 在这里取出线程操作指针，不要长久保存该指针，否则即便线程停止也不会释放资源
     */
-    std::shared_ptr<CTaskThread> GetThreadInterface(__int32 threadId);
+    std::shared_ptr<CTaskThread> GetThreadInterface(int32_t threadId);
 
 private:
 
@@ -29,7 +29,7 @@ private:
 #pragma warning(disable:4251)
 #endif
 
-    std::map<__int32, std::shared_ptr<CTaskThread>> m_spThreadMap;
+    std::map<int32_t, std::shared_ptr<CTaskThread>> m_spThreadMap;
 
     /* 线程池锁
     */

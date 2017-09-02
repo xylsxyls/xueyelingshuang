@@ -1,7 +1,7 @@
 #include "CTaskThread.h"
 #include <assert.h>
 
-CTaskThread::CTaskThread(__int32 threadId) :
+CTaskThread::CTaskThread(int32_t threadId) :
 m_threadId(threadId)
 {
 
@@ -20,27 +20,42 @@ bool CTaskThread::CreateThread()
     return true;
 }
 
-void CTaskThread::DeleteThread()
+void CTaskThread::DestroyThread()
+{
+    SetExitSignal();
+    WaitForExit();
+}
+
+void CTaskThread::SetExitSignal()
+{
+    m_hasExitSignal = true;
+    //设置了提出信号就立即把当前任务停止
+    if (m_spCurTask != nullptr)
+    {
+        m_spCurTask->StopTask(false);
+    }
+}
+
+void CTaskThread::WaitForExit()
 {
     //如果线程正常启动
     if (m_spWorkThread != NULL)
     {
-        {
-            std::unique_lock<std::mutex> lock(m_mutex);
-            m_hasExitSignal = true;
-            StopAllTaskUnlock();
-        }
         m_spWorkThread->join();
-        
-        std::map<__int32, __int32> taskCountMap;
+        std::map<int32_t, int32_t> taskCountMap;
         GetWaitTaskCount(taskCountMap);
+        if (taskCountMap.size() != 0 || m_spCurTask != NULL)
+        {
+            int x = 3;
+            x = 3;
+        }
         m_spWorkThread.reset(NULL);
     }
 }
 
-void CTaskThread::PostTask(const std::shared_ptr<CTask>& task, __int32 taskLevel)
+void CTaskThread::PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
 {
-    if (task == NULL || taskLevel < 1 || m_hasExitSignal)
+    if (spTask == NULL || taskLevel < 1 || m_hasExitSignal)
     {
         return;
     }
@@ -49,7 +64,7 @@ void CTaskThread::PostTask(const std::shared_ptr<CTask>& task, __int32 taskLevel
     {
         return;
     }
-    m_taskMap[taskLevel].push_back(task);
+    m_taskMap[taskLevel].push_back(spTask);
     //如果添加任务的优先级高于当前任务则当前任务停止
     if (m_spCurTask != NULL && taskLevel > m_curTaskLevel)
     {
@@ -63,16 +78,16 @@ void CTaskThread::PostTask(const std::shared_ptr<CTask>& task, __int32 taskLevel
     }
 }
 
-void CTaskThread::SendTask(const std::shared_ptr<CTask>& task, __int32 taskLevel)
+void CTaskThread::SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
 {
-    if (task == NULL || taskLevel < 1 || m_hasExitSignal)
+    if (spTask == NULL || taskLevel < 1 || m_hasExitSignal)
     {
         return;
     }
 
-    PostTask(task, taskLevel);
+    PostTask(spTask, taskLevel);
     
-    while (!task->HasExecuted())
+    while (!spTask->HasExecuted())
     {
         std::chrono::milliseconds dura(50);
         std::this_thread::sleep_for(dura);
@@ -181,7 +196,7 @@ void CTaskThread::PopToCurTask()
     }
 }
 
-void CTaskThread::StopTask(__int32 taskId, bool ifChoke, __int32 taskLevel)
+void CTaskThread::StopTask(int32_t taskId, bool ifChoke, int32_t taskLevel)
 {
     if (taskLevel != 0)
     {
@@ -202,7 +217,7 @@ void CTaskThread::StopTask(__int32 taskId, bool ifChoke, __int32 taskLevel)
     }
 }
 
-void CTaskThread::StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, __int32 taskId, bool ifChoke)
+void CTaskThread::StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId, bool ifChoke)
 {
     for (auto itTask = taskList.begin(); itTask != taskList.end(); ++itTask)
     {
@@ -219,7 +234,7 @@ void CTaskThread::StopAllTask()
     StopAllTaskUnlock();
 }
 
-void CTaskThread::GetWaitTaskCount(std::map<__int32, __int32>& taskCountMap)
+void CTaskThread::GetWaitTaskCount(std::map<int32_t, int32_t>& taskCountMap)
 {
     taskCountMap.clear();
     {

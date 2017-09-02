@@ -1,12 +1,12 @@
 #include "CTask.h"
 
-CTask::CTask(__int32 taskId) :
+CTask::CTask(int32_t taskId) :
 m_taskId(taskId)
 {
 
 }
 
-__int32 CTask::GetTaskId()
+int32_t CTask::GetTaskId()
 {
     return m_taskId;
 }
