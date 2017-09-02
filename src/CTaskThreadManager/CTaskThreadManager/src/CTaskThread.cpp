@@ -43,6 +43,7 @@ void CTaskThread::WaitForExit()
     //如果线程正常启动
     if (m_spWorkThread != NULL)
     {
+        ::SetEvent(m_waitEvent);
         m_spWorkThread->join();
         std::map<int32_t, int32_t> taskCountMap;
         GetWaitTaskCount(taskCountMap);
@@ -92,8 +93,16 @@ void CTaskThread::SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLev
 	HANDLE waitForSend = ::CreateEvent(NULL, TRUE, FALSE, NULL);
 	spTask->SetWaitForSendHandle(waitForSend);
     PostTask(spTask, taskLevel);
-
-	::WaitForSingleObject(waitForSend, INFINITE);
+    
+    bool inWhile = true;
+    while (inWhile)
+    {
+        if (spTask.use_count() == 1)
+        {
+            break;
+        }
+        ::WaitForSingleObject(waitForSend, 50);
+    }
 	::CloseHandle(waitForSend);
 	spTask->SetWaitForSendHandle(nullptr);
 }
