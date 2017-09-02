@@ -1,5 +1,6 @@
 #include "CTaskThread.h"
 #include <assert.h>
+#include <windows.h>
 
 CTaskThread::CTaskThread(int32_t threadId) :
 m_threadId(threadId)
@@ -17,6 +18,7 @@ bool CTaskThread::CreateThread()
         return false;
     }
     m_spWorkThread.reset(pThread);
+	m_waitEvent = ::CreateEvent(NULL, TRUE, FALSE, NULL);
     return true;
 }
 
@@ -50,6 +52,7 @@ void CTaskThread::WaitForExit()
             x = 3;
         }
         m_spWorkThread.reset(NULL);
+		::CloseHandle(m_waitEvent);
     }
 }
 
@@ -64,6 +67,7 @@ void CTaskThread::PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLev
     {
         return;
     }
+	::SetEvent(m_waitEvent);
     m_taskMap[taskLevel].push_back(spTask);
     //如果添加任务的优先级高于当前任务则当前任务停止
     if (m_spCurTask != NULL && taskLevel > m_curTaskLevel)
@@ -85,13 +89,13 @@ void CTaskThread::SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLev
         return;
     }
 
+	HANDLE waitForSend = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+	spTask->SetWaitForSendHandle(waitForSend);
     PostTask(spTask, taskLevel);
-    
-    while (!spTask->HasExecuted())
-    {
-        std::chrono::milliseconds dura(50);
-        std::this_thread::sleep_for(dura);
-    }
+
+	::WaitForSingleObject(waitForSend, INFINITE);
+	::CloseHandle(waitForSend);
+	spTask->SetWaitForSendHandle(nullptr);
 }
 
 void CTaskThread::WorkThread()
@@ -113,6 +117,11 @@ void CTaskThread::WorkThread()
         if (m_spCurTask != NULL)
         {
             m_spCurTask->DoTask();
+			HANDLE waitForSend = m_spCurTask->GetWaitForSendHandle();
+			if (waitForSend != nullptr)
+			{
+				::SetEvent(waitForSend);
+			}
         }
         {
             std::unique_lock<std::mutex> lock(m_mutex);
@@ -131,8 +140,7 @@ void CTaskThread::WorkThread()
         //无退出信号，且在弹出任务之后当前任务仍然为空时跳过
         if (!m_hasExitSignal && m_spCurTask == NULL)
         {
-            std::chrono::milliseconds dura(50);
-            std::this_thread::sleep_for(dura);
+			::WaitForSingleObject(m_waitEvent, INFINITE);
         }
     }
 }
@@ -193,6 +201,7 @@ void CTaskThread::PopToCurTask()
         m_spCurTask = NULL;
         m_spCurTaskBk = NULL;
         m_curTaskLevel = 0;
+		::ResetEvent(m_waitEvent);
     }
 }
 

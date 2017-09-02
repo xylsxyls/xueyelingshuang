@@ -102,4 +102,8 @@ private:
     /* 线程ID
     */
     int32_t m_threadId = 0;
+
+	/* 等待事件
+	*/
+	HANDLE m_waitEvent;
 };

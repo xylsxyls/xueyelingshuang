@@ -10,3 +10,13 @@ int32_t CTask::GetTaskId()
 {
     return m_taskId;
 }
+
+void CTask::SetWaitForSendHandle(HANDLE waitForSend)
+{
+	m_waitForSend = waitForSend;
+}
+
+HANDLE CTask::GetWaitForSendHandle()
+{
+	return m_waitForSend;
+}
