@@ -1,139 +1,246 @@
-#include <SDKDDKVer.h>
 #include "Ctxt.h"
 #include <string>
 #include <fstream>
-using namespace std;
 #include <stdarg.h>
 
-Ctxt::Ctxt(string strPath){
-	this->strPath = strPath;
-	txt = new ofstream(strPath.c_str(), ios::app);
-	pFile = NULL;
+Ctxt::Ctxt(const std::string& strPath)
+{
+	this->m_strPath = strPath;
+	m_txt = new std::ofstream(strPath.c_str(), std::ios::app);
+	m_pFile = NULL;
 }
 
-Ctxt::~Ctxt(){
-    delete (ofstream*)txt;
+Ctxt::~Ctxt()
+{
+	delete (std::ofstream*)m_txt;
 }
 
-vector<string> split(string src,string separate_character){
-	vector<string> strs;
-
-	int separate_characterLen = separate_character.size();//分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
-	int lastPosition = 0,index = -1;
-	while (-1 != (index = src.find(separate_character,lastPosition))){
+void Split(const std::string& src, const std::string& separate_character, std::vector<std::string>& strs)
+{
+	strs.clear();
+	//分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
+	int32_t separate_characterLen = (int32_t)separate_character.size();
+	int32_t lastPosition = 0;
+	int32_t index = -1;
+	while (-1 != (index = src.find(separate_character,lastPosition)))
+	{
 		strs.push_back(src.substr(lastPosition,index - lastPosition));   
 		lastPosition = index + separate_characterLen;   
 	}
-	string lastString = src.substr(lastPosition);//截取最后一个分隔符后的内容   
+	//截取最后一个分隔符后的内容
+	std::string lastString = src.substr(lastPosition);
 	//if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
 	strs.push_back(lastString);
-	return strs;
-}
-
-void Ctxt::LoadTxt(int flag,string strSplit){
-	ifstream myfile(strPath);
-	string strLine = "";
-	int iLine = -1;
-	while(getline(myfile,strLine)){
-		iLine++;
-		//转换成string具体处理每一行
-		if(flag == 1){
-			vector<string> vecPart = split(strSplit,",");
-			int iPart1 = -1;
-			int size = vecPart.size();
-			vector<string> vecLine1;
-			//分出得到第一对截取点，第0个和第2个就是首和尾
-			while(iPart1++ != size - 1){
-				vector<string> vecPoint = split(vecPart.at(iPart1),"-");
-				if(vecPoint.size() >= 2){
-					int begin = atoi(vecPoint.at(0).c_str());
-					int end   = atoi(vecPoint.at(1).c_str());
-                    vecLine1.push_back(strLine.substr(begin - 1, end - begin + 1));
-				}
-				//如果是传入了空字符串就把一行插入
-				else{
-                    vecLine1.push_back(strLine);
-				}
-			}
-			vectxt.push_back(vecLine1);
-		}
-		if(flag == 2){
-			vector<string> vecPart = split(strLine,strSplit);
-			int sizePart = vecPart.size();
-			vector<string> vecLine2;
-			int iPart2 = -1;
-			while(iPart2++ != sizePart - 1){
-				vecLine2.push_back(vecPart.at(iPart2));
-			}
-			vectxt.push_back(vecLine2);
-		}
-	}
-	myfile.close();
-	myfile.clear();
 	return;
 }
 
-void Ctxt::Save(){
+void Ctxt::LoadTxt(int32_t flag, const std::string& strSplit)
+{
+	m_vectxt.clear();
+	switch (flag)
+	{
+	case POINT_TO_POINT:
+	{
+		LoadTxtWithPointToPoint(strSplit);
+		break;
+	}
+	case SPLIT:
+	{
+		LoadTxtWithSplit(strSplit);
+		break;
+	}
+	case ONE_LINE:
+	{
+		LoadTxtWithOneLine();
+		break;
+	}
+	default:
+		break;
+	}
+	
+	return;
+}
+
+void Ctxt::Save()
+{
 	OpenFile_w();
-	int i = -1;
-	string strLine;
-	while (i++ != vectxt.size() - 1){
-		strLine = "";
-		int j = -1;
-		while (j++ != vectxt.at(i).size() - 1){
-			strLine = strLine + vectxt.at(i).at(j);
+	bool inWhile = true;
+	int32_t lineIndex = -1;
+	int32_t partIndex = -1;
+	std::string strLine;
+	while (inWhile)
+	{
+		++lineIndex;
+		strLine.clear();
+		partIndex = -1;
+		std::vector<std::string>& vecLine = m_vectxt[lineIndex];
+		while (partIndex++ != (int32_t)vecLine.size() - 1)
+		{
+			strLine.append(vecLine[partIndex]);
 		}
-		if (i == vectxt.size() - 1) break;
+		if (lineIndex == (int32_t)m_vectxt.size() - 1)
+		{
+			break;
+		}
 		AddWriteLine("%s", strLine.c_str());
 	}
-	fprintf(pFile, "%s", strLine.c_str());
+	::fprintf(m_pFile, "%s", strLine.c_str());
 	CloseFile();
 	return;
 }
 
-bool Ctxt::OpenFile_w(){
-	pFile = fopen(strPath.c_str(), "w+");
-	if (pFile == NULL) return 0;
+bool Ctxt::OpenFile_w()
+{
+	m_pFile = ::fopen(m_strPath.c_str(), "w+");
+	if (m_pFile == NULL) return 0;
 	return 1;
 }
 
-bool Ctxt::OpenFile_a(){
-	pFile = fopen(strPath.c_str(),"a+");
-	if(pFile == NULL) return 0;
+bool Ctxt::OpenFile_a()
+{
+	m_pFile = ::fopen(m_strPath.c_str(), "a+");
+	if(m_pFile == NULL) return 0;
 	return 1;
 }
 
-void Ctxt::AddWriteLine(string format,...){
+void Ctxt::AddWriteLine(const char* fmt, ...)
+{
 	std::string result;
-	va_list parameterlist = NULL;
-
-	va_start(parameterlist, format);
-	int size = _vscprintf(format.c_str(), parameterlist) + 2;
+	va_list args;
+	va_start(args, fmt);
+	int size = _vscprintf(fmt, args);
+	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
 	result.resize(size);
-	size = vsprintf_s(&result[0], size, format.c_str(), parameterlist);
-	result.resize(size + 1);
-	result[size] = 0;
-	va_end(parameterlist);
-	fprintf(pFile, "%s\n", result.c_str());
+	//?即便分配了足够内存，长度必须加1，否则会崩溃
+	vsprintf_s(&result[0], size + 1, fmt, args);
+	va_end(args);
+
+	::fprintf(m_pFile, "%s\n", result.c_str());
+
 	return;
 }
 
-void Ctxt::CloseFile(){
-	fclose(pFile);
-	pFile = NULL;
+void Ctxt::CloseFile()
+{
+	::fclose(m_pFile);
+	m_pFile = NULL;
 	return;
 }
 
-void Ctxt::AddLine(string format, ...){
+void Ctxt::AddLine(const char* fmt, ...)
+{
 	std::string result;
-	va_list parameterlist = NULL;
-
-	va_start(parameterlist, format);
-	int size = _vscprintf(format.c_str(), parameterlist);
-	result.resize(size + 1);
-	vsprintf_s(&result[0], size + 1, format.c_str(), parameterlist);
+	va_list args;
+	va_start(args, fmt);
+	int size = _vscprintf(fmt, args);
+	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
 	result.resize(size);
-	va_end(parameterlist);
-    *(ofstream*)txt << result << endl;
+	//?即便分配了足够内存，长度必须加1，否则会崩溃
+	vsprintf_s(&result[0], size + 1, fmt, args);
+	va_end(args);
+
+    *(std::ofstream*)m_txt << result << std::endl;
 	return;
+}
+
+void Ctxt::SaveAs(const std::string& path)
+{
+	m_pFile = ::fopen(path.c_str(), "w+");
+	bool inWhile = true;
+	int32_t lineIndex = -1;
+	int32_t partIndex = -1;
+	std::string strLine;
+	while (inWhile)
+	{
+		++lineIndex;
+		strLine.clear();
+		partIndex = -1;
+		std::vector<std::string>& vecLine = m_vectxt[lineIndex];
+		while (partIndex++ != (int32_t)vecLine.size() - 1)
+		{
+			strLine.append(vecLine[partIndex]);
+		}
+		if (lineIndex == (int32_t)m_vectxt.size() - 1)
+		{
+			break;
+		}
+		AddWriteLine("%s", strLine.c_str());
+	}
+	::fprintf(m_pFile, "%s", strLine.c_str());
+	::fclose(m_pFile);
+	m_pFile = NULL;
+}
+
+void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
+{
+	std::vector<std::vector<int32_t>> vecSplit;
+	std::vector<std::string> vecPoint1ToPoint2;
+	Split(strSplit, ",", vecPoint1ToPoint2);
+	std::vector<int32_t> vecPointInt;
+	std::vector<std::string> vecPoint;
+	//分出得到第一对截取点，第0个和第2个就是首和尾
+	int32_t iPart1 = -1;
+	while (iPart1++ != (int32_t)vecPoint1ToPoint2.size() - 1)
+	{
+		Split(vecPoint1ToPoint2.at(iPart1), "-", vecPoint);
+		if (vecPoint.size() == 2)
+		{
+			vecPointInt.clear();
+			vecPointInt.push_back(atoi(vecPoint[0].c_str()));
+			vecPointInt.push_back(atoi(vecPoint[1].c_str()));
+			vecSplit.push_back(vecPointInt);
+		}
+	}
+	int32_t vecSplitSize = vecSplit.size();
+
+	std::ifstream myfile(m_strPath);
+	std::string strLine;
+	int32_t pointToPointIndex = -1;
+	int32_t begin = 0;
+	int32_t end = 0;
+	std::vector<std::string> vecLine;
+	while (getline(myfile, strLine))
+	{
+		vecLine.clear();
+		//分出得到第一对截取点，第0个和第2个就是首和尾
+		pointToPointIndex = -1;
+		while (pointToPointIndex++ != vecSplitSize - 1)
+		{
+			begin = vecSplit[pointToPointIndex][0];
+			end = vecSplit[pointToPointIndex][1];
+			vecLine.push_back(strLine.substr(begin - 1, end - begin + 1));
+		}
+		m_vectxt.push_back(vecLine);
+	}
+	myfile.close();
+	myfile.clear();
+}
+
+void Ctxt::LoadTxtWithSplit(const std::string& strSplit)
+{
+	std::ifstream myfile(m_strPath);
+	std::string strLine;
+	std::vector<std::string> vecLine;
+	while (getline(myfile, strLine))
+	{
+		Split(strLine, strSplit, vecLine);
+		m_vectxt.push_back(vecLine);
+	}
+	myfile.close();
+	myfile.clear();
+}
+
+void Ctxt::LoadTxtWithOneLine()
+{
+	std::ifstream myfile(m_strPath);
+	std::string strLine;
+	std::vector<std::string> vecLine;
+	while (getline(myfile, strLine))
+	{
+		vecLine.clear();
+		vecLine.push_back(strLine);
+		m_vectxt.push_back(vecLine);
+	}
+	myfile.close();
+	myfile.clear();
 }
