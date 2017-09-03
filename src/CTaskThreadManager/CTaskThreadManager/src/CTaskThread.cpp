@@ -45,13 +45,6 @@ void CTaskThread::WaitForExit()
     {
         ::SetEvent(m_waitEvent);
         m_spWorkThread->join();
-        std::map<int32_t, int32_t> taskCountMap;
-        GetWaitTaskCount(taskCountMap);
-        if (taskCountMap.size() != 0 || m_spCurTask != NULL)
-        {
-            int x = 3;
-            x = 3;
-        }
         m_spWorkThread.reset(NULL);
 		::CloseHandle(m_waitEvent);
     }
