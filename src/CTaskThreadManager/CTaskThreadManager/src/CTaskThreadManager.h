@@ -12,6 +12,7 @@ private:
 public:
     static CTaskThreadManager& Instance();
 
+	//Ïß³ÌID±ØÐë>=1
     bool Init(int32_t threadId);
 
     void Uninit(int32_t threadId);
