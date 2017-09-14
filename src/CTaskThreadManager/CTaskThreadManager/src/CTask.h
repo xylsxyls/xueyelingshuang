@@ -8,16 +8,18 @@ class CTaskThreadManagerAPI CTask
 {
 	friend class CTaskThread;
 public:
+	CTask();
     CTask(int32_t taskId);
 
 public:
     virtual void DoTask() = 0;
-    virtual void StopTask(bool ifChoke) = 0;
-    /* 当任务被优先级更高的任务顶掉时是否重做
-    */
-    virtual bool ReExecute() = 0;
-    virtual CTask* Clone() = 0;
-    virtual bool HasExecuted() = 0;
+	//当需要中断时加上
+    virtual void StopTask();
+	//当需要顶掉后重做逻辑时加上
+    virtual bool ReExecute();
+    virtual CTask* Clone();
+
+	//此ID号并非唯一ID，意思是一个类别，用于停止一个类别的任务
     int32_t GetTaskId();
 
 private:

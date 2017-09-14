@@ -34,7 +34,7 @@ void CTaskThread::SetExitSignal()
     //设置了提出信号就立即把当前任务停止
     if (m_spCurTask != nullptr)
     {
-        m_spCurTask->StopTask(false);
+        m_spCurTask->StopTask();
     }
 }
 
@@ -72,7 +72,7 @@ void CTaskThread::PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLev
             m_taskMap[m_curTaskLevel].push_front(m_spCurTaskBk);
             m_spCurTaskBk = NULL;
         }
-        m_spCurTask->StopTask(false);
+        m_spCurTask->StopTask();
     }
 }
 
@@ -110,7 +110,7 @@ void CTaskThread::WorkThread()
         {
             if (m_spCurTask != NULL)
             {
-                m_spCurTask->StopTask(false);
+                m_spCurTask->StopTask();
             }
             std::unique_lock<std::mutex> lock(m_mutex);
             m_taskMap.clear();
@@ -154,13 +154,13 @@ void CTaskThread::StopAllTaskUnlock()
         auto listTask = itListTask->second;
         for (auto itTask = listTask.begin(); itTask != listTask.end(); ++itTask)
         {
-            (*itTask)->StopTask(false);
+            (*itTask)->StopTask();
         }
     }
     //如果有还未执行完毕的任务
     if (m_spCurTask != NULL)
     {
-        m_spCurTask->StopTask(false);
+        m_spCurTask->StopTask();
     }
 }
 
@@ -207,7 +207,7 @@ void CTaskThread::PopToCurTask()
     }
 }
 
-void CTaskThread::StopTask(int32_t taskId, bool ifChoke, int32_t taskLevel)
+void CTaskThread::StopTask(int32_t taskId, int32_t taskLevel)
 {
     if (taskLevel != 0)
     {
@@ -215,7 +215,7 @@ void CTaskThread::StopTask(int32_t taskId, bool ifChoke, int32_t taskLevel)
         auto itListTask = m_taskMap.find(taskLevel);
         if (itListTask != m_taskMap.end())
         {
-            StopTaskInList(itListTask->second, taskId, ifChoke);
+            StopTaskInList(itListTask->second, taskId);
         }
     }
     else
@@ -223,18 +223,18 @@ void CTaskThread::StopTask(int32_t taskId, bool ifChoke, int32_t taskLevel)
         std::unique_lock<std::mutex> lock(m_mutex);
         for (auto itListTask = m_taskMap.begin(); itListTask != m_taskMap.end(); ++itListTask)
         {
-            StopTaskInList(itListTask->second, taskId, ifChoke);
+            StopTaskInList(itListTask->second, taskId);
         }
     }
 }
 
-void CTaskThread::StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId, bool ifChoke)
+void CTaskThread::StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId)
 {
     for (auto itTask = taskList.begin(); itTask != taskList.end(); ++itTask)
     {
         if ((*itTask)->GetTaskId() == taskId)
         {
-            (*itTask)->StopTask(ifChoke);
+            (*itTask)->StopTask();
         }
     }
 }
@@ -255,4 +255,9 @@ void CTaskThread::GetWaitTaskCount(std::map<int32_t, int32_t>& taskCountMap)
             taskCountMap[itTaskList->first] = itTaskList->second.size();
         }
     }
+}
+
+int32_t CTaskThread::GetCurTaskLevel()
+{
+	return m_curTaskLevel;
 }

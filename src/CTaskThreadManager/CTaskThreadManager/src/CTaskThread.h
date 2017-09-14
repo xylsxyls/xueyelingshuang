@@ -23,7 +23,7 @@ public:
     */
     bool HasTask();
 
-    void StopTask(int32_t taskId, bool ifChoke, int32_t taskLevel = 0);
+    void StopTask(int32_t taskId, int32_t taskLevel = 0);
 
     void StopAllTask();
 
@@ -31,6 +31,10 @@ public:
     @param [out] taskCountMap 左边是任务优先级，右边是当前优先级的任务个数
     */
     void GetWaitTaskCount(std::map<int32_t, int32_t>& taskCountMap);
+
+	/** 获取正在执行的任务优先级
+	*/
+	int32_t GetCurTaskLevel();
 
 private:
     CTaskThread(int32_t threadId);
@@ -52,7 +56,7 @@ private:
     */
     void PopToCurTask();
 
-    void StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId, bool ifChoke);
+    void StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId);
 
     //工作线程做三件事，执行当前任务，执行完后看任务队列里是否有任务，如果有则提出放到当前任务中，如果当前任务没有则跳过
     void WorkThread();
@@ -91,14 +95,14 @@ private:
     /* 线程是否有退出信号
     */
     std::atomic<bool> m_hasExitSignal = false;
+
+	/* 正在执行任务的优先级
+	*/
+	std::atomic<int32_t> m_curTaskLevel = 0;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
     
-    /* 正在执行任务的优先级
-    */
-    int32_t m_curTaskLevel = 0;
-
     /* 线程ID
     */
     int32_t m_threadId = 0;

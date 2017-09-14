@@ -141,61 +141,61 @@ std::shared_ptr<CTaskThread> CTaskThreadManager::GetThreadInterface(int32_t thre
     return std::shared_ptr<CTaskThread>();
 }
 
-class CPrintTask : public CTask
-{
-public:
-    CPrintTask(int32_t taskId) :
-        CTask(taskId)
-    {
-
-    }
-    virtual void DoTask()
-    {
-        printf("DoTaskBegin\n");
-        std::chrono::milliseconds dura(5000);
-        std::this_thread::sleep_for(dura);
-        printf("DoTaskEnd\n");
-    }
-    virtual void StopTask(bool ifChoke)
-    {
-        ifChoke = ifChoke;
-        printf("StopTask\n");
-        return;
-    }
-    virtual bool ReExecute()
-    {
-        printf("ReExecute\n");
-        return true;
-    }
-};
-
-class CPrintTask2 : public CTask
-{
-public:
-    CPrintTask2(int32_t taskId) :
-        CTask(taskId)
-    {
-
-    }
-    virtual void DoTask()
-    {
-        printf("DoTaskBegin2\n");
-        std::chrono::milliseconds dura(5000);
-        std::this_thread::sleep_for(dura);
-        printf("DoTaskEnd2\n");
-    }
-    virtual void StopTask(bool ifChoke)
-    {
-        ifChoke = ifChoke;
-        printf("StopTask2\n");
-        return;
-    }
-    virtual bool ReExecute()
-    {
-        printf("ReExecute2\n");
-        return true;
-    }
-};
+//class CPrintTask : public CTask
+//{
+//public:
+//    CPrintTask(int32_t taskId) :
+//        CTask(taskId)
+//    {
+//
+//    }
+//    virtual void DoTask()
+//    {
+//        printf("DoTaskBegin\n");
+//        std::chrono::milliseconds dura(5000);
+//        std::this_thread::sleep_for(dura);
+//        printf("DoTaskEnd\n");
+//    }
+//    virtual void StopTask(bool ifChoke)
+//    {
+//        ifChoke = ifChoke;
+//        printf("StopTask\n");
+//        return;
+//    }
+//    virtual bool ReExecute()
+//    {
+//        printf("ReExecute\n");
+//        return true;
+//    }
+//};
+//
+//class CPrintTask2 : public CTask
+//{
+//public:
+//    CPrintTask2(int32_t taskId) :
+//        CTask(taskId)
+//    {
+//
+//    }
+//    virtual void DoTask()
+//    {
+//        printf("DoTaskBegin2\n");
+//        std::chrono::milliseconds dura(5000);
+//        std::this_thread::sleep_for(dura);
+//        printf("DoTaskEnd2\n");
+//    }
+//    virtual void StopTask(bool ifChoke)
+//    {
+//        ifChoke = ifChoke;
+//        printf("StopTask2\n");
+//        return;
+//    }
+//    virtual bool ReExecute()
+//    {
+//        printf("ReExecute2\n");
+//        return true;
+//    }
+//};
 
 int main(){
 	/*CTaskThreadManager::Instance().Init(1);
