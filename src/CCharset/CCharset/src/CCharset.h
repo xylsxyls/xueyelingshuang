@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-using namespace std;
+#include <stdint.h>
 #include "CCharsetMacro.h"
 
 class CCharsetAPI CCharset{
@@ -144,4 +144,17 @@ public:
 	//* remark     : NA
 	//***********************************************************************************/
 	//static std::string BSTRToUtf8 ( const BSTR& bstrSrc );
+
+    /** URL路径转码，只能转码搜索关键词部分，比如中文，该转码会替换问号之类的符号，不能传一整串URL
+    @param [in, out] unicodeUrl 需要进行转码的部分url
+    */
+    static void EncodeUnicodeUrl(std::wstring& unicodeUrl);
+
+    /** URLEncode编码
+    */
+    static std::string UrlEncode(const std::string& str);
+
+    /** 字符转换为16进制
+    */
+    static std::string Char2Hex(unsigned char c);
 };

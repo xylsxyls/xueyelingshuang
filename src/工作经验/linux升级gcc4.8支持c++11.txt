@@ -1,0 +1,23 @@
+先进入root，执行成功之后使用g++ -std=c++11 a.cpp来编译文件
+
+目标：升级GCC到4.8.2，以支持C++11。
+
+1. 获取GCC 4.8.2包：wget http://gcc.skazkaforyou.com/releases/gcc-4.8.2/gcc-4.8.2.tar.gz；
+
+2. 解压缩：tar -xf gcc-4.8.2.tar.gz；
+
+3. 进入到目录gcc-4.8.2，运行：./contrib/download_prerequisites。这个神奇的脚本文件会帮我们下载、配置、安装依赖库，可以节约我们大量的时间和精力。
+
+4. 编译安装 gcc
+
+gcc 编译参数说明:
+--prefix                        //默认 gcc 的安装目录，CentOS-6.5 下面最好安装到 /usr 下，不然可能会有问题
+--enable-languages        //指定 gcc 能编译哪些语言的文件，每种语言用逗号分隔, 例如 c,c++,java
+--disable-multilib           //默认gcc 能在32位系统上将代码编译成64位程序，或者在64位系统上编译成32位程序，如果加上这个编译选项则表示关闭这个gcc的交叉编译功能。
+
+# tar -zxvf gcc-4.8.2.tar.gz
+# cd gcc-4.8.2
+# mkdir build
+# cd build
+# ../configure --prefix=/usr
+# make && make install

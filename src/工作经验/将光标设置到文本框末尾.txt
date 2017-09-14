@@ -1,0 +1,3 @@
+int32_t length = m_richEdit.GetWindowTextLength();
+    m_richEdit.SetFocus();
+    m_richEdit.SetSel(length, length);
