@@ -1,0 +1,38 @@
+Windows中的WaitForSingleObject()函数对应在Linux中的sem_wait()，SetEvent对应sem_post()，
+参考下面的Linux程序：
+#include
+#include
+#include
+#include
+#include
+#include
+char tem[10]; //读写公共区
+sem_t sem;
+void* thread_fun(void*);
+int main()
+{
+int counter=0;
+pthread_t mythread;
+sem_init(&sem,0,0);
+pthread_create(&mythread,NULL,thread_fun,NULL);
+while(counter<10) //往读写区里写10次'f'
+{
+tem[counter]='f';
+counter++;
+sem_post(&sem);
+}
+pthread_join(mythread,NULL); //等待子线程
+sem_destroy(&sem);
+exit(0);
+}
+void* thread_fun(void* arg) //子线程函数
+{
+int counter=0;
+while(counter<10&&sem_wait(&sem)==0)
+{
+printf("%c",tem[counter]); //读出来显示
+counter++;
+//sem_wait(&sem);
+}
+pthread_exit(NULL);
+}
