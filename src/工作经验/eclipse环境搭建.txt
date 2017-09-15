@@ -18,5 +18,6 @@ Java HotSpot(TM) 64-Bit Server VM (build 25.31-b07, mixed mode)
 
 修改eclipse运行选择的jre
 在eclipse中编译Java程序的jdk，你可以在项目属性中设置项目的jdk，当然也可以在首选项里配置默认的编译jdk
-设置选项为：Window －－> Preferences -- >Java --> Installed JREs,然后添加jdk的路径，再打上勾。
+设置选项为：Window －－> Preferences -- >Java --> Installed JREs,然后添加jdk的路径，再打上勾，默认是jdk1.6，如果有需要其他的jdk，点旁边的search选择jdk路径再勾上确定。
 设置选项：Window-->Preferences-->Java-->Compiler，然后选择所需jdk版本好，点apply-->OK。
+
