@@ -1,0 +1,4 @@
+windows传到linux
+pscp D:\SendToMessageTest.h root@192.168.183.131:/home/tarena/
+linux传到windows
+pscp root@xxx.xxx.xxx.xx:/usr/javafiles/jdk-8u111-linux-x64.tar.gz d:/
