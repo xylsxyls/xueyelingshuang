@@ -51,7 +51,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)Release\</IntDir>
-    <TargetName>$(ProjectName)1.3</TargetName>
+    <TargetName>$(ProjectName)1.4</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -111,6 +111,8 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CEndTask.h" />
+    <ClInclude Include="CFindTextTask.h" />
     <ClInclude Include="CMyEdit.h" />
     <ClInclude Include="FindText.h" />
     <ClInclude Include="FindTextDlg.h" />
@@ -119,6 +121,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CEndTask.cpp" />
+    <ClCompile Include="CFindTextTask.cpp" />
     <ClCompile Include="CMyEdit.cpp" />
     <ClCompile Include="FindText.cpp" />
     <ClCompile Include="FindTextDlg.cpp" />

@@ -36,6 +36,8 @@ public:
     static void RecoveryRedir();
     //?获取当前系统用户名，类似Administrator
     static string GetSysUserName();
+	//?获得本机中处理器的数量
+	static int GetCPUCount();
 
 public:
     static bool ifRedirFrobid;
