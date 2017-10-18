@@ -10,6 +10,10 @@
 #include "CCharset/CCharsetAPI.h"
 #include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
+#include "CFindTextTask.h"
+#include "CEndTask.h"
 #include <Winuser.h>
 
 #ifdef _DEBUG
@@ -79,6 +83,7 @@ BEGIN_MESSAGE_MAP(CFindTextDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON1, &CFindTextDlg::OnBnClickedButton1)
     ON_BN_CLICKED(IDC_BUTTON2, &CFindTextDlg::OnBnClickedButton2)
     ON_WM_MOUSEWHEEL()
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
 
@@ -114,7 +119,16 @@ BOOL CFindTextDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
-    
+
+	m_cpuCount = CSystem::GetCPUCount();
+	szEnd = new atomic<bool>[m_cpuCount * 2];
+	//根据CPU个数开双倍线程
+	int i = 0;
+	while (i++ != m_cpuCount * 2)
+	{
+		CTaskThreadManager::Instance().Init(i);
+	}
+
     strLineFlag = "-------------------------------------------------"
                   "-------------------------------------------------"
                   "-----------------------------------------------------\r\n";
@@ -128,6 +142,7 @@ BOOL CFindTextDlg::OnInitDialog()
     m_chara.AddString(_T("UTF-8"));
     m_chara.SelectString(0, _T("GBK"));
     showChara = GBK;
+	m_suffixCheck.SetCheck(1);
     ::SetFocus(m_text.m_hWnd);
 	ModifyStyle(0, WS_MINIMIZEBOX);
 	//ModifyStyle(0, WS_MAXIMIZEBOX);
@@ -196,7 +211,7 @@ void CFindTextDlg::OnBnClickedButton1()
     //m_find.UpdateWindow();
     GetInfoFromWindow();
     Search();
-    ShowSearchResult();
+    //ShowSearchResult();
 }
 
 void CFindTextDlg::OnBnClickedButton2()
@@ -206,94 +221,9 @@ void CFindTextDlg::OnBnClickedButton2()
     m_path.SetWindowText(CCharset::AnsiToUnicode(m_strPath).c_str());
 }
 
-void CFindTextDlg::OpenFileFind(const string& path, const string& key, bool& bAddFileName)
-{
-    Ctxt txt(path);
-    txt.LoadTxt(2, "~!@#$%^&*()");
-
-    int line = -1;
-    while (line++ != txt.vectxt.size() - 1)
-    {
-        string& oneLine = txt.vectxt.at(line).at(0);
-        char* szOneLine = &oneLine[0];
-        string oneLineUtf8 = CCharset::Utf8ToAnsi(szOneLine + GetUtf8Offset(line, oneLine));
-        string oneLineUnicode = CCharset::UnicodeToAnsi((WCHAR*)&oneLine[GetUnicodeOffset(line, oneLine)]);
-        oneLine.erase(--oneLine.end());
-        //如果能在一行中找到关键词
-        string gbkAddString;
-        int gbkFindOffset = FindAdd(oneLine, path, key, bAddFileName, line + 1, gbkAddString, "GBK");
-        string utf8AddString;
-        int utf8FindOffset = FindAdd(oneLineUtf8, path, key, bAddFileName, line + 1, utf8AddString, "UTF");
-        string unicodeAddString;
-        int unicodeFindOffset = FindAdd(oneLineUnicode, path, key, bAddFileName, line + 1, unicodeAddString, "uni");
-        
-        switch (showChara)
-        {
-            case GBK:
-            {
-                bool ifCurAdd = false;
-                CompareShowAdd(gbkFindOffset, gbkAddString, -1, path, bAddFileName, ifCurAdd);
-                CompareShowAdd(utf8FindOffset, utf8AddString, gbkFindOffset, path, bAddFileName, ifCurAdd);
-                CompareShowAdd(unicodeFindOffset, unicodeAddString, gbkFindOffset, path, bAddFileName, ifCurAdd);
-                break;
-            }
-            case Unicode:
-            {
-                bool ifCurAdd = false;
-                CompareShowAdd(unicodeFindOffset, unicodeAddString, -1, path, bAddFileName, ifCurAdd);
-                CompareShowAdd(gbkFindOffset, gbkAddString, unicodeFindOffset, path, bAddFileName, ifCurAdd);
-                CompareShowAdd(utf8FindOffset, utf8AddString, unicodeFindOffset, path, bAddFileName, ifCurAdd);
-                break;
-            }
-            case UTF8:
-            {
-                bool ifCurAdd = false;
-                CompareShowAdd(utf8FindOffset, utf8AddString, -1, path, bAddFileName, ifCurAdd);
-                CompareShowAdd(gbkFindOffset, gbkAddString, utf8FindOffset, path, bAddFileName, ifCurAdd);
-                CompareShowAdd(unicodeFindOffset, unicodeAddString, utf8FindOffset, path, bAddFileName, ifCurAdd);
-                break;
-            }
-            default:
-                break;
-        }
-    }
-}
-
-void CFindTextDlg::FindFromFileName(const string& path, const string& key, bool& bAddFileName)
-{
-    //先看文件名
-    string strName = CGetPath::GetName(path, bsuffixCheck == true ? 1 : 3);
-    if (strName.find(key) != -1)
-    {
-        bAddFileName = true;
-        //首先添加文件名和一行空行
-        m_strFind.append(strLineFlag + path + "\r\n\r\n");
-    }
-}
-
-void CFindTextDlg::FindFromPath(const string& path, const string& key)
-{
-    bool bAddFileName = false;
-    FindFromFileName(path, key, bAddFileName);
-    //?不勾选的时候才透视查找
-    if (bFileNameCheck == false)
-    {
-        OpenFileFind(path, key, bAddFileName);
-    }
-    FindEnd(bAddFileName);
-}
-
-void CFindTextDlg::FindEnd(bool& bAddFileName)
-{
-    //找完一个有信息的文件添加两行空行
-    if (bAddFileName == true)
-    {
-        m_strFind.append("\r\n\r\n");
-    }
-}
-
 void CFindTextDlg::GetInfoFromWindow()
 {
+	m_btnFind.EnableWindow(false);
     m_strFind = "";
     strKey = GetCEditString(m_text);
     bBigSmallCheck = GetCButtonBool(m_case);
@@ -311,9 +241,16 @@ void CFindTextDlg::GetInfoFromWindow()
 void CFindTextDlg::Search()
 {
     vector<string> vecOutFormat = CStringManager::split(m_strOutFormat, ".");
+	//不可访问的文件集合
     vector<string> vecUnVisitPath;
     vector<string> vecPath = CGetPath::FindFilePath("", m_strPath, 3, &vecUnVisitPath);
-    int i = -1;
+	int i = -1;
+	while (i++ != m_cpuCount * 2 - 1)
+	{
+		szEnd[i] = false;
+	}
+	int threadId = -1;
+    i = -1;
     while (i++ != vecPath.size() - 1)
     {
         bool isOutFormat = IsOutFormat(vecPath.at(i), vecOutFormat);
@@ -321,29 +258,43 @@ void CFindTextDlg::Search()
         {
             continue;
         }
-        FindFromPath(vecPath.at(i), strKey);
+		//将具体操作内容发送到线程执行
+		auto taskThread = CTaskThreadManager::Instance().GetThreadInterface((++threadId) % (m_cpuCount * 2) + 1);
+		std::shared_ptr<CFindTextTask> spTask;
+		spTask.reset(new CFindTextTask(vecPath.at(i), strKey, this));
+		taskThread->PostTask(spTask, 1);
+        //FindFromPath(vecPath.at(i), strKey);
     }
+
+	//发送结束任务
+	i = 0;
+	while (i++ != m_cpuCount * 2)
+	{
+		auto taskThread = CTaskThreadManager::Instance().GetThreadInterface(i);
+		std::shared_ptr<CEndTask> spTask;
+		spTask.reset(new CEndTask(i, this));
+		taskThread->PostTask(spTask, 1);
+		std::map<int32_t, int32_t> taskCountMap;
+		taskThread->GetWaitTaskCount(taskCountMap);
+	}
 }
 
 void CFindTextDlg::ShowSearchResult()
 {
+	int i = -1;
+	while (i++ != m_cpuCount * 2 - 1)
+	{
+		if (szEnd[i] == false)
+		{
+			return;
+		}
+	}
     if (m_strFind == "")
     {
         m_strFind = "无";
     }
     m_find.SetWindowText(CCharset::AnsiToUnicode(m_strFind).c_str());
-}
-
-int CFindTextDlg::FindAdd(const string& oneLine, const string& path, const string& key, bool& bAddFileName, int line, string& addString, const string& format)
-{
-    addString = "";
-    int findResult;
-    if ((findResult = oneLine.find(key)) != -1)
-    {
-        //再添加这一行
-        addString.append(CStringManager::Format("line:%d，%s：", line, format.c_str()) + oneLine + "\r\n");
-    }
-    return findResult;
+	m_btnFind.EnableWindow(true);
 }
 
 bool CFindTextDlg::IsOutFormat(const string& path, const vector<string>& vecOutFormat)
@@ -392,78 +343,6 @@ bool CFindTextDlg::GetCButtonBool(const CButton& m_button)
     return m_button.GetCheck() == 1;
 }
 
-int CFindTextDlg::GetUtf8Offset(int line, const string& oneLine)
-{
-    if (line == 0 
-        && oneLine.length() >= 3 
-        && oneLine[0] == (char)0xEF 
-        && oneLine[1] == (char)0xBB 
-        && oneLine[2] == (char)0xBF)
-    {
-        return 3;
-    }
-    return 0;
-}
-
-int CFindTextDlg::GetUnicodeOffset(int line, string& oneLine)
-{
-    oneLine.push_back(0);
-    if (line == 0)
-    {
-        if (oneLine.length() >= 2)
-        {
-            if ((oneLine[0] == (char)0xFE && oneLine[1] == (char)0xFF)
-                || (oneLine[0] == (char)0xFF && oneLine[1] == (char)0xFE))
-            {
-                return 2;
-            }
-        }
-        if (oneLine.length() >= 4)
-        {
-            if ((oneLine[0] == 0 && oneLine[1] == 0 && oneLine[2] == (char)0xFE && oneLine[3] == (char)0xFF)
-                || (oneLine[0] == 0 && oneLine[1] == 0 && oneLine[2] == (char)0xFF && oneLine[3] == (char)0xFE))
-            {
-                return 4;
-            }
-        }
-    }
-    else
-    {
-        if (oneLine.length() >= 1)
-        {
-            if (oneLine[0] == 0)
-            {
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-
-void CFindTextDlg::CompareShowAdd(int addOffset, const string& addString, int showOffset, const string& path, bool& bAddFileName, bool& ifCurAdd)
-{
-    if (addOffset == -1)
-    {
-        return;//' false;
-    }
-    if (addOffset != showOffset || ifCurAdd == 0)
-    {
-        if (strlen(addString.c_str()) == addString.size())
-        {
-            if (bAddFileName == false)
-            {
-                bAddFileName = true;
-                //首先添加文件名和一行空行
-                m_strFind.append(strLineFlag + path + "\r\n\r\n");
-            }
-            m_strFind.append(addString.c_str());
-            ifCurAdd = 1;
-            //return true;
-        }
-    }
-    //return false;
-}
-
 BOOL CFindTextDlg::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 {
     // TODO:  在此添加消息处理程序代码和/或调用默认值
@@ -475,4 +354,12 @@ BOOL CFindTextDlg::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
         ::SendMessage(m_find.m_hWnd, WM_MOUSEWHEEL, MAKEWPARAM(nFlags, zDelta), MAKELPARAM(pt.x, pt.y));
     }
     return CDialogEx::OnMouseWheel(nFlags, zDelta, pt);
+}
+
+void CFindTextDlg::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+
+	// TODO:  在此处添加消息处理程序代码
+	CTaskThreadManager::Instance().UninitAll();
 }

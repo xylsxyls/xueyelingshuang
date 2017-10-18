@@ -236,6 +236,13 @@ string CSystem::GetSysUserName()
     return szName;
 }
 
+int CSystem::GetCPUCount()
+{
+	SYSTEM_INFO si;
+	::GetSystemInfo(&si);
+	return si.dwNumberOfProcessors;
+}
+
 /*
 int main(){
 	//CSystem system;

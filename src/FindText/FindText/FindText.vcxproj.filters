@@ -16,6 +16,12 @@
     <Filter Include="CMyEdit">
       <UniqueIdentifier>{bd525cea-fca0-41b2-86b3-2cf8ad612c19}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CFindTextTask">
+      <UniqueIdentifier>{e0282f90-2715-4008-b54e-166811ca8db8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CEndTask">
+      <UniqueIdentifier>{21453049-8964-4041-a572-88194332d037}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -39,6 +45,12 @@
     <ClInclude Include="FindText.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CFindTextTask.h">
+      <Filter>CFindTextTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CEndTask.h">
+      <Filter>CEndTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -52,6 +64,12 @@
     </ClCompile>
     <ClCompile Include="FindTextDlg.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CFindTextTask.cpp">
+      <Filter>CFindTextTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CEndTask.cpp">
+      <Filter>CEndTask</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
