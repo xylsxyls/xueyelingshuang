@@ -252,7 +252,7 @@ void CTaskThread::GetWaitTaskCount(std::map<int32_t, int32_t>& taskCountMap)
         std::unique_lock<std::mutex> lock(m_mutex);
         for (auto itTaskList = m_taskMap.begin(); itTaskList != m_taskMap.end(); ++itTaskList)
         {
-            taskCountMap[itTaskList->first] = itTaskList->second.size();
+            taskCountMap[itTaskList->first] = (int32_t)itTaskList->second.size();
         }
     }
 }

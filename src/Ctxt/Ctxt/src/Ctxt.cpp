@@ -22,7 +22,7 @@ void Split(const std::string& src, const std::string& separate_character, std::v
 	int32_t separate_characterLen = (int32_t)separate_character.size();
 	int32_t lastPosition = 0;
 	int32_t index = -1;
-	while (-1 != (index = src.find(separate_character,lastPosition)))
+	while (-1 != (index = (int32_t)src.find(separate_character,lastPosition)))
 	{
 		strs.push_back(src.substr(lastPosition,index - lastPosition));   
 		lastPosition = index + separate_characterLen;   
@@ -191,7 +191,7 @@ void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
 			vecSplit.push_back(vecPointInt);
 		}
 	}
-	int32_t vecSplitSize = vecSplit.size();
+	int32_t vecSplitSize = (int32_t)vecSplit.size();
 
 	std::ifstream myfile(m_strPath);
 	std::string strLine;

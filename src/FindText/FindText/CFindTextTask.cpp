@@ -5,6 +5,7 @@
 #include "Ctxt/CtxtAPI.h"
 #include "CCharset/CCharsetAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include <afxwin.h>
 
 CFindTextTask::CFindTextTask(const std::string& path, const std::string& key, CFindTextDlg* pFindTextDlg):
 m_path(path),
@@ -28,7 +29,18 @@ void CFindTextTask::PostToClient()
 	}
 	std::unique_lock<std::mutex> lock(m_pFindTextDlg->m_mutex);
 	{
-		m_pFindTextDlg->m_strFind.append(m_strFind);
+		try
+		{
+			m_pFindTextDlg->m_strFind.append(m_strFind);
+		}
+		catch (CMemoryException* e)
+		{
+			AfxMessageBox(_T("内存不足"));
+		}
+		catch (...)
+		{
+			AfxMessageBox(_T("其他异常"));
+		}
 	}
 }
 
@@ -180,7 +192,7 @@ int CFindTextTask::FindAdd(const string& oneLine, const string& path, const stri
 {
 	addString = "";
 	int findResult;
-	if ((findResult = oneLine.find(key)) != -1)
+	if ((findResult = (int)oneLine.find(key)) != -1)
 	{
 		//再添加这一行
 		addString.append(CStringManager::Format("line:%d，%s：", line, format.c_str()) + oneLine + "\r\n");
