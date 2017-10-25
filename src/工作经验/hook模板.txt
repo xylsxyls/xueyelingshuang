@@ -1,0 +1,32 @@
+LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	// 请在这里添加消息处理代码
+	KBDLLHOOKSTRUCT *pkbhs = (KBDLLHOOKSTRUCT *)lParam;
+	DWORD& vkCode = pkbhs->vkCode;
+
+	switch (nCode)
+	{
+	case HC_ACTION:
+	{
+		switch (wParam)
+		{
+		case WM_KEYUP:
+		{
+			break;
+		}
+		case WM_KEYDOWN:
+		{
+			break;
+		}
+		default:
+			break;
+		}
+		break;
+	}
+	default:
+		break;
+	}
+
+	// 将事件传递到下一个钩子
+	return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
+}
