@@ -48,4 +48,7 @@ public:
     static std::string Format(const char * fmt, ...);
 
 	static void MakeReverse(std::string & str);
+
+	//取出两个字符串中间的字符串，不包括头尾
+	static std::string GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString);
 };

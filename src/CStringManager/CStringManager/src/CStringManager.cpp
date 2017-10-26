@@ -164,6 +164,14 @@ std::string CStringManager::Format(const char * fmt, ...){
     return result;
 }
 
-void CStringManager::MakeReverse(std::string & str){
+void CStringManager::MakeReverse(std::string & str)
+{
 	reverse(str.begin(),str.end());
+}
+
+std::string CStringManager::GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString)
+{
+	int left = src.find(leftString);
+	int right = src.find(rightString);
+	return Mid(src, left + 1, right - left - 1);
 }

@@ -94,16 +94,16 @@ bool CMouse::RightManyClick(int times, int sleepTime){
 	return result;
 }
 
-bool CMouse::MoveAbsolute(Rect rect, int sleepTime){
+bool CMouse::MoveAbsolute(xyls::Rect rect, int sleepTime){
 	if (sleepTime == -1) sleepTime = CRandom::Int(MoveTimeMin, MoveTimeMax);
 	//?生成一个点
-	Point pointResult(CRandom::Int(rect.left, rect.right), CRandom::Int(rect.top, rect.bottom));
+	xyls::Point pointResult(CRandom::Int(rect.left, rect.right), CRandom::Int(rect.top, rect.bottom));
 	//?是否立即到达
 	if (sleepTime == 0) return DmSoft::MoveTo(pointResult.x, pointResult.y) == 1;
 	//?不是立即到达
 	else{
 		//?当前位置
-		Point currentPoint = GetCurrentPos();
+		xyls::Point currentPoint = GetCurrentPos();
 		int step = abs(currentPoint.x - pointResult.x) + abs(currentPoint.y - pointResult.y);
 		map<string, int> mapCard;
 		mapCard[currentPoint.x < pointResult.x ? "1,0" : "-1,0"] = abs(currentPoint.x - pointResult.x);
@@ -126,9 +126,9 @@ bool CMouse::MoveAbsolute(Rect rect, int sleepTime){
 	}
 }
 
-bool CMouse::MoveOpposite(Rect rect, int sleepTime){
-	Point currentPoint = GetCurrentPos();
-	Rect rectAbsolute(currentPoint.x + rect.left, currentPoint.y + rect.top, currentPoint.x + rect.right, currentPoint.y + rect.bottom);
+bool CMouse::MoveOpposite(xyls::Rect rect, int sleepTime){
+	xyls::Point currentPoint = GetCurrentPos();
+	xyls::Rect rectAbsolute(currentPoint.x + rect.left, currentPoint.y + rect.top, currentPoint.x + rect.right, currentPoint.y + rect.bottom);
 	return MoveAbsolute(rectAbsolute, sleepTime);
 }
 
@@ -140,10 +140,10 @@ bool CMouse::MidWheelUp(){
 	return DmSoft::WheelUp() == 1;
 }
 
-Point CMouse::GetCurrentPos(){
+xyls::Point CMouse::GetCurrentPos(){
 	VARIANT x, y;
 	DmSoft::GetCursorPos(&x, &y);
-	return Point(x.intVal,y.intVal);
+	return xyls::Point(x.intVal, y.intVal);
 }
 
 /*

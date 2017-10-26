@@ -24,6 +24,10 @@ public:
 	static void Init(int32_t hookId, HOOKPROC hookFun);
 	static void Uninit();
 
+	static const DWORD& GetVkCode(LPARAM lParam);
+	static bool IsKeyUp(WPARAM wParam);
+	static bool IsKeyDown(WPARAM wParam);
+
 	static HHOOK s_hHook;
 	static HINSTANCE s_hInstDLL;
 };

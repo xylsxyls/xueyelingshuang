@@ -21,3 +21,19 @@ void CHook::Uninit()
 {
 	UnhookWindowsHookEx(CHook::s_hHook);
 }
+
+const DWORD& CHook::GetVkCode(LPARAM lParam)
+{
+	KBDLLHOOKSTRUCT *pkbhs = (KBDLLHOOKSTRUCT *)lParam;
+	return pkbhs->vkCode;
+}
+
+bool CHook::IsKeyUp(WPARAM wParam)
+{
+	return wParam == WM_KEYUP;
+}
+
+bool CHook::IsKeyDown(WPARAM wParam)
+{
+	return wParam == WM_KEYDOWN;
+}

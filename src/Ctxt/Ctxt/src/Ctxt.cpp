@@ -61,6 +61,44 @@ void Ctxt::LoadTxt(int32_t flag, const std::string& strSplit)
 	return;
 }
 
+void Ctxt::ToMap()
+{
+	int32_t beginLine = -1;
+	int32_t endLine = -1;
+	std::vector<int32_t> vecLineNum;
+	int32_t index = -1;
+	while (index++ != (int32_t)m_vectxt.size() - 1)
+	{
+		int32_t beginLineBegin = m_vectxt[index].front().find("[");
+		int32_t endLineBegin = m_vectxt[index].front().find("[/");
+		if (beginLineBegin != -1)
+		{
+			beginLine = index;
+		}
+		if (endLineBegin != -1)
+		{
+			endLine = index;
+		}
+		if (beginLine != -1 && endLine >= beginLine + 2)
+		{
+			int32_t beginLineEnd = m_vectxt[beginLine].front().find("]");
+			int32_t endLineEnd = m_vectxt[endLine].front().find("]");
+			if (beginLineEnd >= beginLineBegin + 2 && endLineEnd >= endLineBegin + 3)
+			{
+				std::string keyBegin = m_vectxt[beginLine].front().substr(beginLineBegin + 1, beginLineEnd - beginLineBegin - 1);
+				std::string keyEnd = m_vectxt[endLine].front().substr(endLineBegin + 2, endLineEnd - endLineBegin - 2);
+				if (keyBegin == keyEnd)
+				{
+					vecLineNum.clear();
+					vecLineNum.push_back(beginLine);
+					vecLineNum.push_back(endLine);
+					m_maptxt[keyBegin] = vecLineNum;
+				}
+			}
+		}
+	}
+}
+
 void Ctxt::Save()
 {
 	OpenFile_w();

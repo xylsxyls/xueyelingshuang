@@ -1,3 +1,25 @@
+LRESULT WINAPI HookFun2(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	// 请在这里添加消息处理代码
+	RCSend("nCode2 = %d,wParam2 = %d,lParam2 = %d", nCode, wParam, lParam);
+
+	if (CHook::IsKeyDown(wParam))
+	{
+		const DWORD& vkCode = CHook::GetVkCode(lParam);
+		if (vkCode == 'D')
+		{
+			if (stopWatch.GetWatchTime() > 3000)
+			{
+				stopWatch.SetWatchTime(0);
+				RCSend("开始触发");
+			}
+		}
+	}
+
+	// 将事件传递到下一个钩子
+	return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
+}
+
 LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	// 请在这里添加消息处理代码
