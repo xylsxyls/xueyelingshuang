@@ -9,7 +9,6 @@
 #include "CHook/CHookAPI.h"
 #include "D:\\SendToMessageTest.h"
 #include "CStopWatch/CStopWatchAPI.h"
-#include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CKeyBoard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
@@ -81,35 +80,65 @@ class CSendTask : public CTask
 public:
 	void DoTask()
 	{
-		CKeyboard::KeyDown('`');
+		CKeyboard::InputString("d", 0);
+		CKeyboard::KeyDown('N');
 		CKeyboard::KeyDown('Q');
-		CKeyboard::KeyUp('`');
+		CKeyboard::KeyUp('N');
 		CKeyboard::KeyUp('Q');
-		Sleep(200);
+		Sleep(300);
 		CKeyboard::InputString("r", 0);
-		CMouse::RightManyClick(4, 200);
+		Sleep(40);
+		CMouse::RightManyClick(2, 100);
+		CKeyboard::InputString("q", 0);
+		CMouse::RightClick(40);
+		CKeyboard::InputString("q", 0);
+		CMouse::RightClick(150);
+		CMouse::RightManyClick(2, 100);
+		Sleep(500);
+		CKeyboard::InputString("q", 0);
+		CMouse::RightManyClick(6, 200);
 	}
 };
+
+bool wDown = false;
+bool eDown = false;
 
 LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	// 请在这里添加消息处理代码
+	const DWORD& vkCode = CHook::GetVkCode(lParam);
 	if (CHook::IsKeyDown(wParam))
 	{
-		const DWORD& vkCode = CHook::GetVkCode(lParam);
-		if (vkCode == 'D')
+		if (vkCode == 'W')
 		{
-			if (stopWatch.GetWatchTime() > 3000)
+			wDown = true;
+		}
+		else if (vkCode == 'E')
+		{
+			eDown = true;
+		}
+
+		if (wDown && eDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CSendTask> spTask;
+			spTask.reset(new CSendTask);
+			auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(1);
+			if (taskThread != nullptr)
 			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CSendTask> spTask;
-				spTask.reset(new CSendTask);
-				auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(1);
-				if (taskThread != nullptr)
-				{
-					taskThread->PostTask(spTask, 1);
-				}
+				taskThread->PostTask(spTask, 1);
 			}
+		}
+	}
+	else if (CHook::IsKeyUp(wParam))
+	{
+		if (vkCode == 'W')
+		{
+			wDown = false;
+		}
+		else if (vkCode == 'E')
+		{
+			eDown = false;
 		}
 	}
 
@@ -220,4 +249,5 @@ void COneKeyDlg::OnDestroy()
 
 	// TODO:  在此处添加消息处理程序代码
 	CHook::Uninit();
+	CTaskThreadManager::Instance().UninitAll();
 }
