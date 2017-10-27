@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="CTask">
+      <UniqueIdentifier>{9df822df-2f04-4c93-a6ef-a722ce559223}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -33,6 +36,12 @@
     <ClInclude Include="Resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CFlashTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CNoFlashTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -43,6 +52,12 @@
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CFlashTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CNoFlashTask.cpp">
+      <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

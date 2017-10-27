@@ -7,17 +7,20 @@
 #include "OneKeyDlg.h"
 #include "afxdialogex.h"
 #include "CHook/CHookAPI.h"
-#include "D:\\SendToMessageTest.h"
 #include "CStopWatch/CStopWatchAPI.h"
-#include "CStringManager/CStringManagerAPI.h"
-#include "CKeyBoard/CKeyboardAPI.h"
-#include "CMouse/CMouseAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "CFlashTask.h"
+#include "CNoFlashTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+CStopWatch stopWatch;
+
+bool wDown = false;
+bool eDown = false;
+bool qDown = false;
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
@@ -73,40 +76,13 @@ BEGIN_MESSAGE_MAP(COneKeyDlg, CDialogEx)
 	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
-CStopWatch stopWatch;
 
-class CSendTask : public CTask
-{
-public:
-	void DoTask()
-	{
-		CKeyboard::InputString("d", 0);
-		CKeyboard::KeyDown('N');
-		CKeyboard::KeyDown('Q');
-		CKeyboard::KeyUp('N');
-		CKeyboard::KeyUp('Q');
-		Sleep(300);
-		CKeyboard::InputString("r", 0);
-		Sleep(40);
-		CMouse::RightManyClick(2, 100);
-		CKeyboard::InputString("q", 0);
-		CMouse::RightClick(40);
-		CKeyboard::InputString("q", 0);
-		CMouse::RightClick(150);
-		CMouse::RightManyClick(2, 100);
-		Sleep(500);
-		CKeyboard::InputString("q", 0);
-		CMouse::RightManyClick(6, 200);
-	}
-};
-
-bool wDown = false;
-bool eDown = false;
 
 LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	// 请在这里添加消息处理代码
 	const DWORD& vkCode = CHook::GetVkCode(lParam);
+
 	if (CHook::IsKeyDown(wParam))
 	{
 		if (vkCode == 'W')
@@ -117,17 +93,9 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			eDown = true;
 		}
-
-		if (wDown && eDown && stopWatch.GetWatchTime() > 500)
+		else if (vkCode == 'Q')
 		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CSendTask> spTask;
-			spTask.reset(new CSendTask);
-			auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(1);
-			if (taskThread != nullptr)
-			{
-				taskThread->PostTask(spTask, 1);
-			}
+			qDown = true;
 		}
 	}
 	else if (CHook::IsKeyUp(wParam))
@@ -140,8 +108,34 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			eDown = false;
 		}
+		else if (vkCode == 'Q')
+		{
+			qDown = false;
+		}
 	}
 
+	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(1);
+	if (taskThread == nullptr)
+	{
+		goto Exit;
+	}
+
+	if (wDown && eDown && stopWatch.GetWatchTime() > 500)
+	{
+		stopWatch.SetWatchTime(0);
+		std::shared_ptr<CFlashTask> spTask;
+		spTask.reset(new CFlashTask);
+		taskThread->PostTask(spTask, 1);
+	}
+	else if (wDown && qDown && stopWatch.GetWatchTime() > 500)
+	{
+		stopWatch.SetWatchTime(0);
+		std::shared_ptr<CNoFlashTask> spTask;
+		spTask.reset(new CNoFlashTask);
+		taskThread->PostTask(spTask, 1);
+	}
+
+	Exit:
 	// 将事件传递到下一个钩子
 	return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
 }
@@ -181,7 +175,6 @@ BOOL COneKeyDlg::OnInitDialog()
 
 	CTaskThreadManager::Instance().Init(1);
 	CHook::Init(WH_KEYBOARD_LL, HookFun);
-	//CHook::Init(WH_KEYBOARD_LL, HookFun);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
