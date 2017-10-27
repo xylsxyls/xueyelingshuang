@@ -1,0 +1,2 @@
+ui.contactTreeWidget->setStyleSheet("QTreeWidget::item:hover{background-image:url(D:\\11.png)}"
+		"QTreeView::item:selected{background-color:rgb(255,0,0,100)}");

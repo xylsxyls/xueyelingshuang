@@ -1,0 +1,9 @@
+ui.contactTreeWidget->setSelectionMode(QTreeWidget::NoSelection);
+	ui.contactTreeWidget->setRootIsDecorated(false);
+	ui.contactTreeWidget->setFrameStyle(QFrame::NoFrame);
+	ui.contactTreeWidget->setStyleSheet("QTreeView::item:branch {image:none;}"
+		"QTreeView::focus{outline:none;}"
+		);
+
+
+pItem->setData(0, Qt::DecorationRole, QPixmap("D:\\44.png").scaled(QSize(187, 45), Qt::KeepAspectRatio, Qt::SmoothTransformation));

@@ -1,0 +1,4 @@
+QPainter p(roomItem.m_spPlatFormEscape.get());
+	QFontMetrics fm = p.fontMetrics();
+	int width = fm.width(QString::fromLocal8Bit(strPlatformEscape.c_str()));
+	int height = fm.ascent() + fm.descent();

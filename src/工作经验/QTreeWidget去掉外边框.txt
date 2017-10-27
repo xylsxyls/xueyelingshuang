@@ -1,0 +1,1 @@
+m_treeSongCategoryWidget->setFrameStyle(QFrame::NoFrame);  //È¥µô±ß¿ò

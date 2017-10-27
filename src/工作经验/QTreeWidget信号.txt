@@ -1,0 +1,3 @@
+QObject::connect(m_pTreeWidget, SIGNAL(itemPressed(QTreeWidgetItem*, int)), this, SLOT(Changed(QTreeWidgetItem*, int)));
+	QObject::connect(m_pTreeWidget, SIGNAL(itemEntered(QTreeWidgetItem*, int)), this, SLOT(Hover(QTreeWidgetItem*, int)));
+	QObject::connect(m_pTreeWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), this, SLOT(DoubleC(QTreeWidgetItem*, int)));

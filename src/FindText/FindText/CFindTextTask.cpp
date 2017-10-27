@@ -7,7 +7,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include <afxwin.h>
 
-CFindTextTask::CFindTextTask(const std::string& path, const std::string& key, CFindTextDlg* pFindTextDlg):
+CFindTextTask::CFindTextTask(const std::string& path, const std::string& key, CFindTextDlg* pFindTextDlg) :
 m_path(path),
 m_key(key),
 m_pFindTextDlg(pFindTextDlg)
@@ -35,6 +35,7 @@ void CFindTextTask::PostToClient()
 		}
 		catch (CMemoryException* e)
 		{
+			e = e;
 			AfxMessageBox(_T("ÄÚ´æ²»×ã"));
 		}
 		catch (...)
@@ -184,7 +185,7 @@ int CFindTextTask::GetUnicodeOffset(int line, const string& oneLine)
 			}
 		}
 	}
-	RN:
+RN:
 	return offset;
 }
 
@@ -204,7 +205,7 @@ void CFindTextTask::CompareShowAdd(int addOffset, const string& addString, int s
 {
 	if (addOffset == -1)
 	{
-		return;//' false;
+		return;
 	}
 	if (addOffset != showOffset || ifCurAdd == 0)
 	{
@@ -218,8 +219,6 @@ void CFindTextTask::CompareShowAdd(int addOffset, const string& addString, int s
 			}
 			m_strFind.append(addString.c_str());
 			ifCurAdd = 1;
-			//return true;
 		}
 	}
-	//return false;
 }

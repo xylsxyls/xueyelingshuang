@@ -1,0 +1,5 @@
+string内部的字符串不能直接给外部使用，string不允许内部字符串随意改变
+wstring str = (wchar_t*)&string[0];
+这种是错误的
+需要重新拷贝一份再给外面
+即便在string申请部分，也不能动

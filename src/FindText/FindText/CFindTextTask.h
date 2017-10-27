@@ -66,5 +66,5 @@ private:
 	std::string m_key;
 	std::string m_strFind;
 	CFindTextDlg* m_pFindTextDlg = nullptr;
-	
+
 };

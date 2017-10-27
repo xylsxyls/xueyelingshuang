@@ -1,0 +1,4 @@
+roomItem.m_spRoomName->setText(QString::fromLocal8Bit(roomInfo.m_roomName.c_str()));
+	QPalette pe;
+	pe.setColor(QPalette::Text, QColor(197, 212, 248));
+	roomItem.m_spRoomName->setPalette(pe);

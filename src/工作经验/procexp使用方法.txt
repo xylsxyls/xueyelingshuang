@@ -1,0 +1,1 @@
+进入后点击右键Create Dump->Create Full Dump

@@ -1,0 +1,2 @@
+QRect buttonRect(mapToGlobal(rect().topLeft()), mapToGlobal(rect().bottomRight()));
+	QPoint po = mouseEvent->globalPos();

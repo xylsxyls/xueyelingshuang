@@ -1,0 +1,1 @@
+ui.contactTreeWidget->setStyleSheet("QTreeWidget{background-image:url(D:/11.png);}");

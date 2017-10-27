@@ -1,0 +1,2 @@
+topItem.m_spBackGround->setStyleSheet("background-color:rgba(34, 43, 66, 100%);");
+	topItem.m_spBackGround->setGeometry(QRect(QPoint(), m_areaTreeSize));

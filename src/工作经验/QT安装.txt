@@ -1,0 +1,5 @@
+选组件的时候全选
+安装完两个安装包之后打开vs工具栏上有QT5了
+点QT5->QT Options->Add
+Name 5.5.1
+Path C:\Qt\Qt5.5.1\5.5\msvc2010

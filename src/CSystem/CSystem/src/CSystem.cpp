@@ -5,7 +5,7 @@
 double CSystem::GetCPUSpeedGHz(){
 #ifdef _WIN64
 	return 0;
-#elif WIN32
+#elif _WIN32
 	//?先是存放计时次数，后存放固定时间间隔值
 	unsigned long int       ticks;
 	//?存放两固定时刻的CPU内置时钟值，值的含意为计数

@@ -1,0 +1,22 @@
+异常类
+含义
+CMemoryException
+内存不足
+CFileException
+文件异常
+CArchiveException
+存档/序列化异常
+CNotSupportedException
+响应对不支持服务的请求
+CResourceException
+Windows 资源分配异常
+CDaoException
+数据库异常（DAO类）
+CDBException
+数据库异常（ODBC类）
+COleException
+OLE 异常
+COleDispatchException
+调度（自动化）异常
+CUserException
+用消息框警告用户然后引发一般 CException的异常

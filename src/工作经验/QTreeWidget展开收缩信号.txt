@@ -1,0 +1,33 @@
+//展开和收缩时信号，以达到变更我三角图片；
+	connect(pTreeWidget, SIGNAL(itemExpanded(QTreeWidgetItem *)), this, SLOT(onItemExpanded(QTreeWidgetItem *)));
+	connect(pTreeWidget, SIGNAL(itemCollapsed(QTreeWidgetItem *)), this, SLOT(onItemCollapsed(QTreeWidgetItem *)));
+
+void qtdemo::onItemExpanded(QTreeWidgetItem *pItem)
+{
+	bool bIsChild = pItem->data(0, Qt::UserRole).toBool();
+	if (!bIsChild)
+	{
+		QWidget *pWidget = pTreeWidget->itemWidget(pItem, 0);
+		QTreeWidgetItem* pItem = pTreeWidget->currentItem();
+		if (pWidget)
+		{
+			
+			pWidget->setVisible(false);
+			pItem->setData(0, Qt::BackgroundRole, QPixmap("D:\\11.png").scaled(QSize(187, 45), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+			//pWidget->setStyleSheet("border-image: url(:/qtdemo/Resources/11.png);border-width:0 0 0 20;");
+		}
+	}
+}
+
+void qtdemo::onItemCollapsed(QTreeWidgetItem *pItem)
+{
+	bool bIsChild = pItem->data(0, Qt::UserRole).toBool();
+	if (!bIsChild)
+	{
+		QWidget *pWidget = pTreeWidget->itemWidget(pItem, 0);
+		if (pWidget)
+		{
+			pWidget->setStyleSheet("border-image: url(:/qtdemo/Resources/11.png);border-width:0 0 0 20;");
+		}
+	}
+}
