@@ -1,0 +1,6 @@
+".QCheckBox::indicator:unchecked"
+		"{"
+			"border-image:url(D:/net.png) 0 0 33 0 stretch stretch;"
+		"}";
+
+后面4个数字的意思是距离上左下右的距离，相对于原图片，取出来之后会自动放大

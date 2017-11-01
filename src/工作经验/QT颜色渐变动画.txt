@@ -1,0 +1,160 @@
+.h
+#ifndef QTTAB_H
+#define QTTAB_H
+
+#include <QtWidgets/QMainWindow>
+#include "ui_qttab.h"
+
+class QLabel;
+class qttab : public QMainWindow
+{
+	Q_OBJECT
+	Q_PROPERTY(int alpha WRITE setAlpha)
+
+public:
+	qttab(QWidget *parent = 0);
+	~qttab();
+
+private:
+	Ui::qttabClass ui;
+	QTabWidget *tabWidget;
+
+private slots:
+	void start2();
+
+private:
+	//int alpha() const;
+	void setAlpha(const int alpha);
+
+private:
+	int m_nAlpha;
+	QLabel *m_pLabel;
+};
+
+#endif // QTTAB_H
+
+
+
+
+
+
+.cpp
+
+
+
+#include "qttab.h"
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QVBoxLayout>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QLabel>
+#include <QtCore/QPropertyAnimation>
+#include "D:\\SendToMessageTest.h"
+
+QPropertyAnimation *pAnimation = nullptr;
+
+qttab::qttab(QWidget *parent)
+	: QMainWindow(parent)
+{
+	ui.setupUi(this);
+
+	tabWidget = new QTabWidget();
+
+	//新建第一个页面的部件  
+	QWidget *widget = new QWidget();
+	QLineEdit *lineEdit = new QLineEdit();
+	QPushButton *pushButton = new QPushButton("Test");
+	QVBoxLayout *vLayout = new QVBoxLayout();
+	vLayout->addWidget(lineEdit);
+	vLayout->addWidget(pushButton);
+	widget->setLayout(vLayout);
+
+
+	//新建第二个页面的部件  
+	QLabel *label = new QLabel("Hello Qt");
+
+	//新建第三个页面的部件  
+	QPushButton *pushButton3 = new QPushButton("Click Me2");
+
+	//向QTabWidget中添加第一个页面  
+	QIcon icon1("D:\\FindText.ico");
+	tabWidget->addTab(widget, icon1, "Tab1");
+
+	//向QTabWidget中添加第二个页面  
+	QIcon icon2(":/new/icon/images/2.ico");
+	tabWidget->addTab(label, icon2, "Tab2");
+
+	//向QTabWidget中添加第三个页面  
+	QIcon icon3(":/new/icon/images/3.ico");
+	tabWidget->addTab(pushButton3, icon3, "Tab3");
+
+	pushButton3->setStyleSheet("QPushButton{  "
+"	background:qlineargradient(spread : pad, x1 : 0.460227, y1 : 0, x2 : 0.465818, y2 : 0.875, stop : 0.5 rgba(170, 255, 255, 255), stop : 1 rgba(255, 255, 255, 255));"
+"	border - radius:8px;"
+"border:2px solid rgb(0, 170, 255)"
+"}"
+"QPushButton:hover{"
+"background:qlineargradient(spread : pad, x1 : 0.460227, y1 : 0, x2 : 0.443091, y2 : 0.898, stop : 0.5 rgba(0, 255, 255, 255), stop : 1 rgba(255, 255, 255, 255))"
+"}"
+"QPushButton:hover : pressed{ "
+"		background:qlineargradient(spread : pad, x1 : 0.460227, y1 : 0, x2 : 0.465818, y2 : 0.875, stop : 0.5 rgba(170, 255, 255, 255), stop : 1 rgba(255, 255, 255, 255));"
+"} ");
+
+	QPushButton *pStartButton = new QPushButton(this);
+	pStartButton->setText(QString::fromLocal8Bit("开始动画"));
+	pStartButton->setGeometry(200, 200, 100, 100);
+
+	m_pLabel = new QLabel(this);
+	m_pLabel->setText(QString::fromLocal8Bit("一去丶二三里"));
+	m_pLabel->setAlignment(Qt::AlignCenter);
+	m_pLabel->setStyleSheet("color: rgb(0, 160, 230);");
+	m_pLabel->setGeometry(50, 50, 100, 100);
+
+	pAnimation = new QPropertyAnimation();
+	pAnimation->setTargetObject(this);
+	pAnimation->setPropertyName("alpha");
+	//一秒内完成
+	pAnimation->setDuration(1000);
+	//0表示开始，1表示结束，0.5表示中间，这3句的意思是从开始255到100再到255
+	pAnimation->setKeyValueAt(0, 255);
+	pAnimation->setKeyValueAt(0.5, 100);
+	pAnimation->setKeyValueAt(1, 255);
+	pAnimation->setLoopCount(-1);  //永远运行，直到stop
+
+	connect(pStartButton, SIGNAL(clicked()), pAnimation, SLOT(start()));
+	//pAnimation->start();
+	QHBoxLayout *layout = new QHBoxLayout();
+	layout->addWidget(tabWidget);
+
+	this->setLayout(layout);
+	this->resize(300, 100);
+	this->setWindowTitle("QTabWidgetDemo");
+
+	tabWidget->setVisible(true);
+}
+
+qttab::~qttab()
+{
+
+}
+
+//int qttab::alpha() const
+//{
+//	return m_nAlpha;
+//}
+
+void qttab::setAlpha(const int alpha)
+{
+	//return;
+	RCSend("%d", alpha);
+	m_nAlpha = alpha;
+	QString strQSS = QString("color: rgb(0, 160, 230); background-color: rgba(10, 160, 105, %1);").arg(m_nAlpha);
+	m_pLabel->setStyleSheet(strQSS);
+}
+
+void qttab::start2()
+{
+	if (pAnimation != nullptr)
+	{
+		pAnimation->start();
+	}
+}
