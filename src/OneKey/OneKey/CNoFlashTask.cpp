@@ -9,13 +9,13 @@ void CNoFlashTask::DoTask()
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('N');
 	CKeyboard::KeyUp('Q');
-	Sleep(200);
+	Sleep(250);
 	CKeyboard::InputString("r", 0);
 	Sleep(40);
 	CMouse::RightManyClick(2, 100);
-	CKeyboard::InputString("q", 0);
-	CMouse::RightClick(40);
-	CKeyboard::InputString("q", 0);
+	//CKeyboard::InputString("q", 0);
+	//CMouse::RightClick(40);
+	//CKeyboard::InputString("q", 0);
 	CMouse::RightClick(150);
 	CMouse::RightManyClick(2, 100);
 	Sleep(500);
