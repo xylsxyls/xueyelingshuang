@@ -38,6 +38,10 @@ rmdir /q /s "%~dp0src\FindText\ipch\"
 rmdir /q /s "%~dp0src\FindText\FindText\Debug\"
 rmdir /q /s "%~dp0src\FindText\FindText\Release\"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\OneKey\ipch\"
+rmdir /q /s "%~dp0src\OneKey\OneKey\Debug\"
+rmdir /q /s "%~dp0src\OneKey\OneKey\Release\"
+::------------------------------------------------------------
 
 ::-------------------删除控制台临时文件-----------------------
 rmdir /q /s "%~dp0src\ConsoleTest\ConsoleTest\Debug\"

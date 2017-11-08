@@ -5,7 +5,6 @@
 
 void CFlashTask::DoTask()
 {
-	CKeyboard::InputString("d", 0);
 	Sleep(50);
 	CKeyboard::KeyDown('N');
 	CKeyboard::KeyDown('Q');
