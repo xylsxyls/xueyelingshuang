@@ -1,0 +1,2 @@
+QT用setStyleSheet设置样式的时候如果图片是绝对路径必须用正斜杠
+D:/image.png
