@@ -51,6 +51,14 @@ public:
 
 	static void MakeReverse(std::string & str);
 
+	static std::string MakeUpper(const std::string& src);
+
+	static std::string MakeLower(const std::string& src);
+
+	static std::wstring MakeUpper(const std::wstring& src);
+
+	static std::wstring MakeLower(const std::wstring& src);
+
 	//取出两个字符串中间的字符串，不包括头尾
 	static std::string GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString);
 };

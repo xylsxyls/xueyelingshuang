@@ -61,7 +61,7 @@ public:
 	afx_msg void OnDestroy();
 private:
     //?是否是排除在外的后缀
-    bool IsOutFormat(const string& path, const vector<string>& vecOutFormat);
+    bool IsUselessFormat(const string& path, const vector<string>& vecOutFormat);
     //?获取编辑框字符串到string
     string GetCEditString(const CEdit& m_edit);
     //?获取下拉框中字符串到int
@@ -81,14 +81,16 @@ private:
     CButton m_fileNameCheck;
     
     string strKey;
-    bool bBigSmallCheck;
     
     CButton m_suffixCheck;
+	CButton m_searchWay;
     
     CComboBox m_chara;
 	int m_cpuCount = 0;
     
 public:
+	bool bBigSmallCheck;
+
 	atomic<bool> bFileNameCheck;
 	atomic<bool> bsuffixCheck;
 	int showChara;
@@ -96,4 +98,7 @@ public:
 	string strLineFlag;
 	atomic<bool>* szEnd = nullptr;
 	std::mutex m_mutex;
+	bool m_isOutFormatWay;
+	
+	afx_msg void OnBnClickedButton3();
 };

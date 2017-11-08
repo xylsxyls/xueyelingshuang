@@ -64,16 +64,17 @@ CFindTextDlg::CFindTextDlg(CWnd* pParent /*=NULL*/)
 
 void CFindTextDlg::DoDataExchange(CDataExchange* pDX)
 {
-    CDialogEx::DoDataExchange(pDX);
-    DDX_Control(pDX, IDC_EDIT3, m_path);
-    DDX_Control(pDX, IDC_EDIT2, m_outFormat);
-    DDX_Control(pDX, IDC_EDIT1, m_text);
-    DDX_Control(pDX, IDC_EDIT4, m_find);
-    DDX_Control(pDX, IDC_CHECK1, m_case);
-    DDX_Control(pDX, IDC_BUTTON1, m_btnFind);
-    DDX_Control(pDX, IDC_CHECK2, m_fileNameCheck);
-    DDX_Control(pDX, IDC_CHECK3, m_suffixCheck);
-    DDX_Control(pDX, IDC_COMBO1, m_chara);
+	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_EDIT3, m_path);
+	DDX_Control(pDX, IDC_EDIT2, m_outFormat);
+	DDX_Control(pDX, IDC_EDIT1, m_text);
+	DDX_Control(pDX, IDC_EDIT4, m_find);
+	DDX_Control(pDX, IDC_CHECK1, m_case);
+	DDX_Control(pDX, IDC_BUTTON1, m_btnFind);
+	DDX_Control(pDX, IDC_CHECK2, m_fileNameCheck);
+	DDX_Control(pDX, IDC_CHECK3, m_suffixCheck);
+	DDX_Control(pDX, IDC_COMBO1, m_chara);
+	DDX_Control(pDX, IDC_BUTTON3, m_searchWay);
 }
 
 BEGIN_MESSAGE_MAP(CFindTextDlg, CDialogEx)
@@ -84,6 +85,7 @@ BEGIN_MESSAGE_MAP(CFindTextDlg, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTON2, &CFindTextDlg::OnBnClickedButton2)
     ON_WM_MOUSEWHEEL()
 	ON_WM_DESTROY()
+	ON_BN_CLICKED(IDC_BUTTON3, &CFindTextDlg::OnBnClickedButton3)
 END_MESSAGE_MAP()
 
 
@@ -135,14 +137,15 @@ BOOL CFindTextDlg::OnInitDialog()
     m_strOutFormat = ".exe";
     m_strPath = "D:\\xueyelingshuang\\src\\工作经验\\";
     m_outFormat.SetWindowText(CCharset::AnsiToUnicode(m_strOutFormat).c_str());
-    m_case.SetCheck(1);
-    m_case.EnableWindow(FALSE);
+    m_case.SetCheck(0);
     m_chara.AddString(_T("GBK"));
     m_chara.AddString(_T("unicode"));
     m_chara.AddString(_T("UTF-8"));
     m_chara.SelectString(0, _T("GBK"));
     showChara = GBK;
 	m_suffixCheck.SetCheck(1);
+	m_isOutFormatWay = true;
+
     ::SetFocus(m_text.m_hWnd);
 	ModifyStyle(0, WS_MINIMIZEBOX);
 	//ModifyStyle(0, WS_MAXIMIZEBOX);
@@ -253,7 +256,7 @@ void CFindTextDlg::Search()
     i = -1;
     while (i++ != vecPath.size() - 1)
     {
-        bool isOutFormat = IsOutFormat(vecPath.at(i), vecOutFormat);
+        bool isOutFormat = IsUselessFormat(vecPath.at(i), vecOutFormat);
         if (isOutFormat == true)
         {
             continue;
@@ -297,17 +300,17 @@ void CFindTextDlg::ShowSearchResult()
 	m_btnFind.EnableWindow(true);
 }
 
-bool CFindTextDlg::IsOutFormat(const string& path, const vector<string>& vecOutFormat)
+bool CFindTextDlg::IsUselessFormat(const string& path, const vector<string>& vecOutFormat)
 {
     int i = 0;
     while (i++ != vecOutFormat.size() - 1)
     {
         if (CStringManager::Right(path, vecOutFormat.at(i).size() + 1) == ("." + vecOutFormat.at(i)))
         {
-            return true;
+			return m_isOutFormatWay;
         }
     }
-    return false;
+	return !m_isOutFormatWay;
 }
 
 string CFindTextDlg::GetCEditString(const CEdit& m_edit)
@@ -363,4 +366,21 @@ void CFindTextDlg::OnDestroy()
 	// TODO:  在此处添加消息处理程序代码
 	CTaskThreadManager::Instance().UninitAll();
 	delete[] szEnd;
+}
+
+
+void CFindTextDlg::OnBnClickedButton3()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	m_isOutFormatWay = !m_isOutFormatWay;
+	if (m_isOutFormatWay)
+	{
+		m_searchWay.SetWindowText(_T("不搜索的格式："));
+		m_outFormat.SetWindowText(_T(".exe"));
+	}
+	else
+	{
+		m_searchWay.SetWindowText(_T("只搜索的格式："));
+		m_outFormat.SetWindowText(_T(".h.cpp.cc.hcc.c.hpp.hh"));
+	}
 }

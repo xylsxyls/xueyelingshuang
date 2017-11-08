@@ -1,5 +1,6 @@
 #include "CStringManager.h"
 #include <stdarg.h>
+#include <algorithm>
 
 int CStringManager::FindOther(const string& str, char cLeft, char cRight, int nSelect){
 	vector<int> vecn;
@@ -180,7 +181,36 @@ std::wstring CStringManager::Format(const wchar_t * fmt, ...)
 
 void CStringManager::MakeReverse(std::string & str)
 {
-	reverse(str.begin(),str.end());
+	::reverse(str.begin(),str.end());
+}
+
+std::string CStringManager::MakeUpper(const std::string& src)
+{
+	std::string dst;
+	//如果dst是有值的话则第三个参数传dst.begin()，从头开始覆盖
+	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::toupper);
+	return dst;
+}
+
+std::string CStringManager::MakeLower(const std::string& src)
+{
+	std::string dst;
+	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::tolower);
+	return dst;
+}
+
+std::wstring CStringManager::MakeUpper(const std::wstring& src)
+{
+	std::wstring dst;
+	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::toupper);
+	return dst;
+}
+
+std::wstring CStringManager::MakeLower(const std::wstring& src)
+{
+	std::wstring dst;
+	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::tolower);
+	return dst;
 }
 
 std::string CStringManager::GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString)

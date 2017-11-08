@@ -48,11 +48,17 @@ void CFindTextTask::PostToClient()
 void CFindTextTask::FindFromPath(const std::string& path, const std::string& key)
 {
 	bool bAddFileName = false;
-	FindFromFileName(path, key, bAddFileName);
+	std::string keyBk = key;
+	//?如果不区分大小写则全部转化为小写进行搜索
+	if (m_pFindTextDlg->bBigSmallCheck == false)
+	{
+		keyBk = CStringManager::MakeLower(keyBk);
+	}
+	FindFromFileName(path, keyBk, bAddFileName);
 	//?不勾选的时候才透视查找
 	if (m_pFindTextDlg->bFileNameCheck == false)
 	{
-		OpenFileFind(path, key, bAddFileName);
+		OpenFileFind(path, keyBk, bAddFileName);
 	}
 	FindEnd(bAddFileName);
 }
@@ -61,6 +67,11 @@ void CFindTextTask::FindFromFileName(const std::string& path, const std::string&
 {
 	//先看文件名
 	string strName = CGetPath::GetName(path, m_pFindTextDlg->bsuffixCheck == true ? 1 : 3);
+	//如果不区分大小写
+	if (m_pFindTextDlg->bBigSmallCheck == false)
+	{
+		strName = CStringManager::MakeLower(strName);
+	}
 	if (strName.find(key) != -1)
 	{
 		bAddFileName = true;
@@ -192,8 +203,14 @@ RN:
 int CFindTextTask::FindAdd(const string& oneLine, const string& path, const string& key, bool& bAddFileName, int line, string& addString, const string& format)
 {
 	addString = "";
+	//如果不区分大小写
+	std::string oneLineBk = oneLine;
+	if (m_pFindTextDlg->bBigSmallCheck == false)
+	{
+		oneLineBk = CStringManager::MakeLower(oneLineBk);
+	}
 	int findResult;
-	if ((findResult = (int)oneLine.find(key)) != -1)
+	if ((findResult = (int)oneLineBk.find(key)) != -1)
 	{
 		//再添加这一行
 		addString.append(CStringManager::Format("line:%d，%s：", line, format.c_str()) + oneLine + "\r\n");
