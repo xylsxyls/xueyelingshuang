@@ -1,0 +1,5 @@
+QGraphicsDropShadowEffect *shadow_effect = new QGraphicsDropShadowEffect(this);
+	shadow_effect->setOffset(-5, 5);
+	shadow_effect->setColor(Qt::gray);
+	shadow_effect->setBlurRadius(8);
+	pBox->setGraphicsEffect(shadow_effect);

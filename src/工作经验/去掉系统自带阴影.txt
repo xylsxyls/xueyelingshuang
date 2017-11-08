@@ -1,0 +1,2 @@
+SystemParametersInfo(SPI_SETDROPSHADOW, 0, (PVOID)false, SPIF_UPDATEINIFILE);
+只去掉自带阴影，不影响自己设定的阴影

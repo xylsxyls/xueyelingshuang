@@ -47,6 +47,8 @@ public:
 
     static std::string Format(const char * fmt, ...);
 
+	static std::wstring Format(const wchar_t * fmt, ...);
+
 	static void MakeReverse(std::string & str);
 
 	//取出两个字符串中间的字符串，不包括头尾

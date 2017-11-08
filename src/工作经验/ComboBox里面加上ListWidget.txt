@@ -1,0 +1,3 @@
+QListWidget* m_listWidget = new QListWidget(this);
+	pBox->setModel(m_listWidget->model());
+	pBox->setView(m_listWidget);

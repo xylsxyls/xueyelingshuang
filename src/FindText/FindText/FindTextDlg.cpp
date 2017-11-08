@@ -362,4 +362,5 @@ void CFindTextDlg::OnDestroy()
 
 	// TODO:  在此处添加消息处理程序代码
 	CTaskThreadManager::Instance().UninitAll();
+	delete[] szEnd;
 }
