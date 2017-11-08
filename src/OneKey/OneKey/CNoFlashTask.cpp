@@ -5,6 +5,7 @@
 
 void CNoFlashTask::DoTask()
 {
+	Sleep(50);
 	CKeyboard::KeyDown('N');
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('N');

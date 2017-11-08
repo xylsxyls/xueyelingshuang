@@ -20,6 +20,7 @@ CStopWatch stopWatch;
 
 bool wDown = false;
 bool eDown = false;
+bool dDown = false;
 bool qDown = false;
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -93,6 +94,10 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			eDown = true;
 		}
+		else if (vkCode == 'D')
+		{
+			dDown = true;
+		}
 		else if (vkCode == 'Q')
 		{
 			qDown = true;
@@ -107,6 +112,10 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (vkCode == 'E')
 		{
 			eDown = false;
+		}
+		else if (vkCode == 'D')
+		{
+			dDown = false;
 		}
 		else if (vkCode == 'Q')
 		{
@@ -123,8 +132,8 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	if (wDown && eDown && stopWatch.GetWatchTime() > 500)
 	{
 		stopWatch.SetWatchTime(0);
-		std::shared_ptr<CFlashTask> spTask;
-		spTask.reset(new CFlashTask);
+		std::shared_ptr<CNoFlashTask> spTask;
+		spTask.reset(new CNoFlashTask);
 		taskThread->PostTask(spTask, 1);
 	}
 	else if (wDown && qDown && stopWatch.GetWatchTime() > 500)
@@ -132,6 +141,13 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		stopWatch.SetWatchTime(0);
 		std::shared_ptr<CNoFlashTask> spTask;
 		spTask.reset(new CNoFlashTask);
+		taskThread->PostTask(spTask, 1);
+	}
+	else if (wDown && dDown && stopWatch.GetWatchTime() > 500)
+	{
+		stopWatch.SetWatchTime(0);
+		std::shared_ptr<CFlashTask> spTask;
+		spTask.reset(new CFlashTask);
 		taskThread->PostTask(spTask, 1);
 	}
 
