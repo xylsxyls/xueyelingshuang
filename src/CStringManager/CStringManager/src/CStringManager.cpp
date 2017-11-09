@@ -10,7 +10,7 @@ int CStringManager::FindOther(const string& str, char cLeft, char cRight, int nS
 		if (str[n] == cLeft){
 			vecn.push_back(n);
 			//?nSelect在左，记下现在的nSelectSize
-			if(nSelect == n) nSelectSize = vecn.size();
+			if(nSelect == n) nSelectSize = (int)vecn.size();
 		}
 		if (str[n] == cRight){
 			if(nSelect == n){
@@ -31,9 +31,9 @@ int CStringManager::FindOther(const string& str, char cLeft, char cRight, int nS
 vector<string> CStringManager::split(string splitString,string separate_character){
 	vector<string> strs;
 	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
-	int separate_characterLen = separate_character.length();
+	int separate_characterLen = (int)separate_character.length();
 	int lastPosition = 0,index = -1;
-	while (-1 != (index = splitString.find(separate_character, lastPosition))){
+	while (-1 != (index = (int)splitString.find(separate_character, lastPosition))){
 		strs.push_back(splitString.substr(lastPosition, index - lastPosition).c_str());
 		lastPosition = index + separate_characterLen;   
 	}
@@ -215,7 +215,7 @@ std::wstring CStringManager::MakeLower(const std::wstring& src)
 
 std::string CStringManager::GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString)
 {
-	int left = src.find(leftString);
-	int right = src.find(rightString);
+	int left = (int)src.find(leftString);
+	int right = (int)src.find(rightString);
 	return Mid(src, left + 1, right - left - 1);
 }
