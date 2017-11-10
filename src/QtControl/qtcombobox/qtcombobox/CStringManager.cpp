@@ -1,53 +1,62 @@
 #include "CStringManager.h"
 #include <stdarg.h>
-#include <algorithm>
 
-int CStringManager::FindOther(const std::string& str, char cLeft, char cRight, int nSelect){
-	std::vector<int> vecn;
+int CStringManager::FindOther(const string& str, char cLeft, char cRight, int nSelect)
+{
+	vector<int> vecn;
 	int nSelectSize = 0;
 	int n = 0;
-	while (str[n]){
-		if (str[n] == cLeft){
+	while (str[n])
+	{
+		if (str[n] == cLeft)
+		{
 			vecn.push_back(n);
 			//?nSelect在左，记下现在的nSelectSize
-			if(nSelect == n) nSelectSize = (int)vecn.size();
+			if (nSelect == n) nSelectSize = vecn.size();
 		}
-		if (str[n] == cRight){
-			if(nSelect == n){
-				if(vecn.size() > 0) return vecn.at(vecn.size() - 1);
+		if (str[n] == cRight)
+		{
+			if (nSelect == n)
+			{
+				if (vecn.size() > 0) return vecn.at(vecn.size() - 1);
 				else return -1;
 			}
 			//?如果弹出之前发现size大小等于之前记录的，说明找到了对应的右侧
-			if(vecn.size() == nSelectSize && nSelectSize > 0){
+			if (vecn.size() == nSelectSize && nSelectSize > 0)
+			{
 				return n;
 			}
-			if(vecn.size() > 0) vecn.pop_back();
+			if (vecn.size() > 0) vecn.pop_back();
 		}
 		n++;
 	}
 	return -1;
 }
 
-std::vector<std::string> CStringManager::split(std::string splitString, std::string separate_character){
-	std::vector<std::string> strs;
+vector<string> CStringManager::split(string splitString, string separate_character)
+{
+	vector<string> strs;
 	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
-	int separate_characterLen = (int)separate_character.length();
-	int lastPosition = 0,index = -1;
-	while (-1 != (index = (int)splitString.find(separate_character, lastPosition))){
+	int separate_characterLen = separate_character.length();
+	int lastPosition = 0, index = -1;
+	while (-1 != (index = splitString.find(separate_character, lastPosition)))
+	{
 		strs.push_back(splitString.substr(lastPosition, index - lastPosition).c_str());
-		lastPosition = index + separate_characterLen;   
+		lastPosition = index + separate_characterLen;
 	}
 	//?截取最后一个分隔符后的内容
-	std::string lastString = splitString.substr(lastPosition);
+	string lastString = splitString.substr(lastPosition);
 	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
 	strs.push_back(lastString.c_str());
 	return strs;
 }
 
-void CStringManager::ReplaceAll(std::string& str, const std::string& old_value, const std::string& new_value){
-	while(true){
-		std::string::size_type pos(0);
-		if ((pos = str.find(old_value)) != std::string::npos) str.replace(pos, old_value.length(), new_value);
+void CStringManager::ReplaceAll(string& str, const string& old_value, const string& new_value)
+{
+	while (true)
+	{
+		string::size_type pos(0);
+		if ((pos = str.find(old_value)) != string::npos) str.replace(pos, old_value.length(), new_value);
 		else break;
 	}
 }
@@ -152,22 +161,23 @@ void CStringManager::Format(std::string & str, const char * fmt, ...)
 	va_end(args);
 }
 
-std::string CStringManager::Format(const char * fmt, ...){
-	std::string result;
-    va_list args;
-    va_start(args, fmt);
-    int size = _vscprintf(fmt, args);
-    //?resize分配后string类会自动在最后分配\0，resize(5)则总长6
-    result.resize(size);
-    //?即便分配了足够内存，长度必须加1，否则会崩溃
-    vsprintf_s(&result[0], size + 1, fmt, args);
-    va_end(args);
-    return result;
+std::string CStringManager::Format(const char * fmt, ...)
+{
+	string result;
+	va_list args;
+	va_start(args, fmt);
+	int size = _vscprintf(fmt, args);
+	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
+	result.resize(size);
+	//?即便分配了足够内存，长度必须加1，否则会崩溃
+	vsprintf_s(&result[0], size + 1, fmt, args);
+	va_end(args);
+	return result;
 }
 
 std::wstring CStringManager::Format(const wchar_t * fmt, ...)
 {
-	std::wstring result;
+	wstring result;
 	va_list args;
 	va_start(args, fmt);
 	int size = _vscwprintf(fmt, args);
@@ -181,41 +191,5 @@ std::wstring CStringManager::Format(const wchar_t * fmt, ...)
 
 void CStringManager::MakeReverse(std::string & str)
 {
-	std::reverse(str.begin(),str.end());
-}
-
-std::string CStringManager::MakeUpper(const std::string& src)
-{
-	std::string dst;
-	//如果dst是有值的话则第三个参数传dst.begin()，从头开始覆盖
-	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::toupper);
-	return dst;
-}
-
-std::string CStringManager::MakeLower(const std::string& src)
-{
-	std::string dst;
-	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::tolower);
-	return dst;
-}
-
-std::wstring CStringManager::MakeUpper(const std::wstring& src)
-{
-	std::wstring dst;
-	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::toupper);
-	return dst;
-}
-
-std::wstring CStringManager::MakeLower(const std::wstring& src)
-{
-	std::wstring dst;
-	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::tolower);
-	return dst;
-}
-
-std::string CStringManager::GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString)
-{
-	int left = (int)src.find(leftString);
-	int right = (int)src.find(rightString);
-	return Mid(src, left + 1, right - left - 1);
+	reverse(str.begin(), str.end());
 }

@@ -9,6 +9,8 @@ del "%~dp0*.aps" /s
 attrib -a -h -s -r "%~dp0*.opensdf" /s
 del "%~dp0*.opensdf" /s
 
+rmdir /q /s "%~dp0src\temp\"
+
 ::-------------------É¾³ıMFCÁÙÊ±ÎÄ¼ş--------------------------
 rmdir /q /s "%~dp0src\MessageTest\ipch\"
 rmdir /q /s "%~dp0src\MessageTest\MessageTest\Debug\"

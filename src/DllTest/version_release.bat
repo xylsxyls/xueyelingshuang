@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" DllTest 32 dll release same

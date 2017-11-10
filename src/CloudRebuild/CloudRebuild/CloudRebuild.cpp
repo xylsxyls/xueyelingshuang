@@ -1,67 +1,103 @@
-#include <SDKDDKVer.h>
 #include "CloudRebuild.h"
 #include <string>
-#include "CGetPath/CGetPathAPI.h"
-#include "CStringManager/CStringManagerAPI.h"
-#include "Ctxt/CtxtAPI.h"
-#include <afxwin.h>
-using namespace std;
 
-int main(){
-    DWORD begin = ::GetTickCount();
-    string strFile;
-    //第二个是真正的执行文件
-    for (int i = 0; i < __argc; i++)
-    {
-        if (i == 0)
-        {
-            continue;
-        }
-        strFile = __argv[i];
-    }
-    if (strFile == "")
-    {
-        printf("非法执行！");
-        getchar();
-        return -1;
-    }
-    Ctxt txt(strFile);
-    txt.LoadTxt(2, "~!@#$%^&*()");
-    string pathPre = CGetPath::GetName(strFile, 4);
-    CStringManager::Delete(pathPre, pathPre.length() - 1, 1);
-    pathPre = CGetPath::GetName(pathPre, 4);
-    string strName = CGetPath::GetName(strFile, 3);
-    if (strName[strName.length() - 1] == 'g')
-    {
-        int i = -1;
-        while (i++ != txt.vectxt.size() - 1)
-        {
-            string dllname = txt.vectxt.at(i).at(0);
-            CStringManager::Replace(dllname, "\r", "");
-            CStringManager::Replace(dllname, "\n", "");
-            CStringManager::Replace(dllname, "\t", "");
-            CStringManager::Replace(dllname, " ", "");
-            string strCall = "call \"" + pathPre + dllname + "\\version_debug.bat\"";
-            system(strCall.c_str());
-        }
-    }
-    else if (strName[strName.length() - 1] == 'e')
-    {
-        int i = -1;
-        while (i++ != txt.vectxt.size() - 1)
-        {
-            string dllname = txt.vectxt.at(i).at(0);
-            CStringManager::Replace(dllname, "\r", "");
-            CStringManager::Replace(dllname, "\n", "");
-            CStringManager::Replace(dllname, "\t", "");
-            CStringManager::Replace(dllname, " ", "");
-            string strCall = "call \"" + pathPre + dllname + "\\version_release.bat\"";
-            system(strCall.c_str());
-        }
-    }
-    ::DeleteFile("@AutomationLog.txt");
-    DWORD end = ::GetTickCount();
-    printf("编译完成，耗时：%f秒", (end - begin) / 1000.0);
-    getchar();
+#define SPACE std::string(" ")
+#define MARK(src) ("\"" + src + "\"")
+
+int main()
+{
+	std::string projectName;
+	std::string bit;
+	std::string dlllib;
+	std::string debugRelease;
+	std::string allSame;
+
+	if (__argc == 5)
+	{
+		projectName = __argv[1];
+		bit = __argv[2];
+		dlllib = __argv[3];
+		debugRelease = __argv[4];
+	}
+	else if (__argc == 6)
+	{
+		projectName = __argv[1];
+		bit = __argv[2];
+		dlllib = __argv[3];
+		debugRelease = __argv[4];
+		allSame = __argv[5];
+	}
+	
+	//dev路径
+	std::string devExe = getenv("DEVENV_EXE");
+	//xueyelingshuang路径
+	std::string xueyePath = getenv("XUEYELINGSHUANG");
+	//工程路径
+	std::string projectPath = std::string() + xueyePath + "src\\" + projectName + "\\";
+
+	//准备脚本路径
+	std::string beforeBatPath = projectPath + "scripts\\before_" + projectName + ".bat";
+	//后期脚本路径
+	std::string afterBatPath = projectPath + "scripts\\after_" + projectName + ".bat";
+	//32位自动化编译python脚本路径
+	std::string pyPath = projectPath + "scripts\\rebuild_" + dlllib + "_" + projectName + ".py";
+
+	std::string srcPath = projectPath + projectName + "\\src\\";
+	std::string includePath = xueyePath + "include\\" + projectName + "\\";
+
+	//执行准备脚本（准备脚本中有依赖库的调用）
+	system(("call" + SPACE + MARK(beforeBatPath) + SPACE + bit + SPACE + dlllib + SPACE + debugRelease + (allSame == "" ? "" : (SPACE + allSame))).c_str());
+	
+	//编译工程
+	if (bit == "32")
+	{
+		system(("call" + SPACE + MARK(pyPath) + SPACE + debugRelease).c_str());
+	}
+	else if (bit == "64")
+	{
+		std::string hasLib;
+		if (dlllib == "lib")
+		{
+			hasLib = "_lib";
+		}
+		system(("call" + SPACE + MARK(devExe) + SPACE + MARK(projectPath + projectName + hasLib + ".sln") + SPACE + " /rebuild" + SPACE + MARK(debugRelease + "|x64")).c_str());
+	}
+	//向公共部分提供文件，有的时候可能没有inl文件
+	
+	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.h") + SPACE + MARK(includePath)).c_str());
+	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.inl") + SPACE + MARK(includePath)).c_str());
+
+	//删除宏文件，并且替换特定的宏文件
+	if (dlllib == "lib")
+	{
+		system(("del" + SPACE + MARK(includePath + projectName + "Macro.h")).c_str());
+		system(("del" + SPACE + MARK(includePath + projectName + "MacroDll.h")).c_str());
+		rename((includePath + projectName + "MacroLib.h").c_str(), (includePath + projectName + "Macro.h").c_str());
+	}
+	else if (dlllib == "dll")
+	{
+		system(("del" + SPACE + MARK(includePath + projectName + "Macro.h")).c_str());
+		system(("del" + SPACE + MARK(includePath + projectName + "MacroLib.h")).c_str());
+		rename((includePath + projectName + "MacroDll.h").c_str(), (includePath + projectName + "Macro.h").c_str());
+	}
+
+	//删除临时文件
+	system(("del" + SPACE + MARK(projectPath + "@AutomationLog.txt")).c_str());
+	system(("del" + SPACE + MARK(projectPath + "scripts\\@AutomationLog.txt")).c_str());
+	system(("del" + SPACE + MARK(projectPath + "scripts\\msbuild.log")).c_str());
+	std::string d;
+	if (debugRelease != "release")
+	{
+		d = "d";
+	}
+	system(("del" + SPACE + MARK(xueyePath + "lib\\" + projectName + d + ".ilk")).c_str());
+	system(("del" + SPACE + MARK(xueyePath + "lib\\" + projectName + d + ".exp")).c_str());
+
+	//恢复macro文件
+	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(projectPath + "scripts\\" + projectName + "Macro.h") + SPACE + MARK(srcPath)).c_str());
+	system(("del" + SPACE + MARK(projectPath + "scripts\\" + projectName + "Macro.h")).c_str());
+	
+	//执行后期脚本
+	system(("call" + SPACE + MARK(afterBatPath)).c_str());
 	return 0;
 }

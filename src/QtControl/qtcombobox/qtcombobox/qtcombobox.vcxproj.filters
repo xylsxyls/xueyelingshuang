@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;cxx;c;def</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>moc;h;cpp</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug">
+      <UniqueIdentifier>{858fd352-9fdb-4c4f-a65b-fce5f132c428}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release">
+      <UniqueIdentifier>{753d657c-628b-4d94-959f-ed019e05a052}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="CStringManager">
+      <UniqueIdentifier>{f64a13c8-59c9-472a-a1d0-005204690605}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ComboBox">
+      <UniqueIdentifier>{2426806f-5940-4ed9-b78f-f98f99159164}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QssString">
+      <UniqueIdentifier>{5f150465-4398-4f78-bb0f-1d9904ea0362}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckBox">
+      <UniqueIdentifier>{017e38ad-4ba5-48e4-b28c-ebf55396bb84}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ListWidget">
+      <UniqueIdentifier>{cfd4c733-0ac1-40f5-be6d-9ae3d6993e35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NoFocusFrameDelegate">
+      <UniqueIdentifier>{d7501777-f35f-4fa6-a318-e8972130bc95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QssHelper">
+      <UniqueIdentifier>{b6ea808e-8a91-4e03-86d5-d5f9aa75ccf5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="qtcombobox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_qtcombobox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_qtcombobox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_qtcombobox.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CStringManager.cpp">
+      <Filter>CStringManager</Filter>
+    </ClCompile>
+    <ClCompile Include="QssString.cpp">
+      <Filter>QssString</Filter>
+    </ClCompile>
+    <ClCompile Include="CheckBox.cpp">
+      <Filter>CheckBox</Filter>
+    </ClCompile>
+    <ClCompile Include="ComboBox.cpp">
+      <Filter>ComboBox</Filter>
+    </ClCompile>
+    <ClCompile Include="ListWidget.cpp">
+      <Filter>ListWidget</Filter>
+    </ClCompile>
+    <ClCompile Include="NoFocusFrameDelegate.cpp">
+      <Filter>NoFocusFrameDelegate</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QssHelper.cpp">
+      <Filter>QssHelper</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="qtcombobox.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="qtcombobox.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="qtcombobox.qrc">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="NoFocusFrameDelegate.h">
+      <Filter>NoFocusFrameDelegate</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ListWidget.h">
+      <Filter>ListWidget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GeneratedFiles\ui_qtcombobox.h">
+      <Filter>Generated Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CStringManager.h">
+      <Filter>CStringManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ComboBox.h">
+      <Filter>ComboBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="QssString.h">
+      <Filter>QssString</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CheckBox.h">
+      <Filter>CheckBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="QssHelper.h">
+      <Filter>QssHelper</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

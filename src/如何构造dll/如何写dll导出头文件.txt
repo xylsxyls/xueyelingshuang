@@ -8,6 +8,7 @@
 这样以后只需要包含头文件路径和库目录就行
 
 首先把新建工程的原文件放到src底下，工程放到vcxproj底下
+x64下一致
 
 1.先把..proj...h和..proj..Macro.h拷贝到工程下
 2.把类的.h文件里加上#include "..proj..Macro.h"
@@ -15,7 +16,7 @@
 4.在类前加上“类名API”宏
 5.debug
 在工程输出目录里写$(ProjectDir)..\..\..\..\lib\
-中间目录$(ProjectDir)Debug\
+中间目录$(ProjectDir)..\..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\
 目标$(ProjectName)d
 支持xp
 多字节字符集
@@ -26,7 +27,7 @@
 
 6.release
 在工程输出目录里写$(ProjectDir)..\..\..\..\lib\
-中间目录$(ProjectDir)Release\
+中间目录$(ProjectDir)..\..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\
 目标$(ProjectName)
 支持xp
 多字节字符集
