@@ -27,8 +27,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setBorderWidth(0);
 
 	pBox->setBorderImage("D:/dropdown.png", 4, 1, 2, 3, 4);
-	pBox->setDropDownWidth(0);
-	pBox->setDropDownHeight(26);
+	pBox->setDropDownSize(0, 26);
 	pBox->setDropDownBorderWidth(0);
 	pBox->setTextColor(QColor(255, 0, 0, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255), QColor(255, 0, 0, 255));
 	pBox->setFontFace(QString::fromLocal8Bit("ºÚÌå"));
@@ -36,22 +35,19 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setTextOrigin(20);
 	pBox->setListOrigin(1);
 
-	pBox->m_listWidget->setBorderWidth(1);
-	pBox->m_listWidget->setBorderColor(QColor(67, 132, 251, 255));
+	pBox->setListBorderWidth(1);
+	pBox->setListBorderColor(QColor(67, 132, 251, 255));
 
-	pBox->m_listWidget->setItemBorderWidth(0);
-	pBox->m_listWidget->setItemBorderImage("D:/item.png", 4, 1, 2, 4);
-	pBox->m_listWidget->setItemHeight(22);
-	pBox->m_listWidget->setBackgroundColor(QColor(18, 23, 31));
+	pBox->setListItemBorderWidth(0);
+	pBox->setListItemBorderImage("D:/item.png", 4, 1, 2, 4);
+	pBox->setListItemHeight(22);
+	pBox->setListBackgroundColor(QColor(18, 23, 31));
 
-	pBox->m_listWidget->setTextColor(QColor(255, 0, 255, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255));
-	pBox->m_listWidget->setFontFace(QString::fromLocal8Bit("ºÚÌå"));
-	pBox->m_listWidget->setFontSize(15);
-	pBox->m_listWidget->setTextOrigin(16);
-	pBox->m_listWidget->setItemLeftOrigin(5);
-	pBox->m_listWidget->setItemTopOrigin(5);
-	pBox->m_listWidget->setItemRightOrigin(5);
-	pBox->m_listWidget->setItemBottomOrigin(5);
+	pBox->setListTextColor(QColor(255, 0, 255, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255));
+	pBox->setListFontFace(QString::fromLocal8Bit("ºÚÌå"));
+	pBox->setListFontSize(15);
+	pBox->setListTextOrigin(16);
+	pBox->setListItemOrigin(5, 5, 5, 5);
 
 	pBox->addItem("123456");
 	pBox->addItem("123457");

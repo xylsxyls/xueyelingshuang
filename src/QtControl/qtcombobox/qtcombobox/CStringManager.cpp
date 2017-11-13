@@ -175,6 +175,18 @@ std::string CStringManager::Format(const char * fmt, ...)
 	return result;
 }
 
+void CStringManager::Format(std::wstring& str, const wchar_t * fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int size = _vscwprintf(fmt, args);
+	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
+	str.resize(size);
+	//?即便分配了足够内存，长度必须加1，否则会崩溃
+	vswprintf_s(&str[0], size + 1, fmt, args);
+	va_end(args);
+}
+
 std::wstring CStringManager::Format(const wchar_t * fmt, ...)
 {
 	wstring result;

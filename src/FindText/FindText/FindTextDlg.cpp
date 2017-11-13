@@ -381,6 +381,6 @@ void CFindTextDlg::OnBnClickedButton3()
 	else
 	{
 		m_searchWay.SetWindowText(_T("只搜索的格式："));
-		m_outFormat.SetWindowText(_T(".h.cpp.cc.hcc.c.hpp.hh"));
+		m_outFormat.SetWindowText(_T(".h.cpp.cc.hcc.c.hpp.hh.inl.java"));
 	}
 }

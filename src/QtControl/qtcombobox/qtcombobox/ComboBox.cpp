@@ -5,26 +5,14 @@
 #include <qglobal.h>
 #include "QssHelper.h"
 #include "NoFocusFrameDelegate.h"
+#include "ListWidget.h"
 
 ComboBox::ComboBox(QWidget* parent) :
-QComboBox(parent),
-m_hasSetBorderRadius(false),
-m_hasSetBackgroundColor(false),
-m_hasSetBorderWidth(false),
-m_hasSetBorderImg(false),
-m_hasSetBorderColor(false),
-m_loadBorderImgSuccess(false),
-m_hasSetDropDownWidth(false),
-m_dropDownWidth(false),
-m_hasSetDropDownHeight(false),
-m_hasSetDropDownImg(false),
-m_hasSetDropDownBorderWidth(false),
-m_hasSetTextColor(false),
-m_hasSetFontName(false),
-m_hasSetFontSize(false),
-m_hasSetTextOrigin(false),
-m_hasSetListOrigin(false)
+ControlBase(parent)
 {
+	init(L"QComboBox", L"drop-down");
+	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
+	m_controlStyle[m_className](1, L"QAbstractItemView").AddKeyValue(L"border", L"none");
 	m_listWidget = new ListWidget;
 	setModel(m_listWidget->model());
 	setView(m_listWidget);
@@ -33,12 +21,7 @@ m_hasSetListOrigin(false)
 
 void ComboBox::setBorderRadius(int32_t radius, bool rePaint)
 {
-	m_hasSetBorderRadius = true;
-	m_borderRadius = radius;
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	ControlBase::setPxValue(L"border-radius", radius, false, rePaint);
 }
 
 void ComboBox::setBackgroundColor(const QColor& normalColor,
@@ -47,27 +30,17 @@ void ComboBox::setBackgroundColor(const QColor& normalColor,
 								  const QColor& disabledColor,
 								  bool rePaint)
 {
-	m_hasSetBackgroundColor = true;
-
-	m_backgroundColorMap[NORMAL] = normalColor;
-	m_backgroundColorMap[HOVER] = hoverColor;
-	m_backgroundColorMap[PRESSED] = pressedColor;
-	m_backgroundColorMap[DISABLED] = disabledColor;
-
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	colorStateMap[NORMAL][NORMAL] = normalColor;
+	colorStateMap[NORMAL][HOVER] = hoverColor;
+	colorStateMap[NORMAL][PRESSED] = pressedColor;
+	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	ControlBase::setColorStateMap(colorStateMap, L"background-color", false, rePaint);
 }
 
 void ComboBox::setBorderWidth(int32_t width, bool rePaint)
 {
-	m_hasSetBorderWidth = true;
-	m_borderWidth = width;
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	ControlBase::setPxSolidValue(L"border", width, false, rePaint);
 }
 
 void ComboBox::setBorderColor(const QColor& normalColor,
@@ -76,17 +49,12 @@ void ComboBox::setBorderColor(const QColor& normalColor,
 							  const QColor& disabledColor,
 							  bool rePaint)
 {
-	m_hasSetBorderColor = true;
-
-	m_borderColorMap[NORMAL] = normalColor;
-	m_borderColorMap[HOVER] = hoverColor;
-	m_borderColorMap[PRESSED] = pressedColor;
-	m_borderColorMap[DISABLED] = disabledColor;
-
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	colorStateMap[NORMAL][NORMAL] = normalColor;
+	colorStateMap[NORMAL][HOVER] = hoverColor;
+	colorStateMap[NORMAL][PRESSED] = pressedColor;
+	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	ControlBase::setColorStateMap(colorStateMap, L"border-color", false, rePaint);
 }
 
 void ComboBox::setBorderImage(const QString& borderImgPath,
@@ -97,73 +65,32 @@ void ComboBox::setBorderImage(const QString& borderImgPath,
 							  int32_t borderImgDisabled,
 							  bool rePaint)
 {
-	if (borderImgNormal > borderImgStateCount ||
-		borderImgHover > borderImgStateCount ||
-		borderImgPressed > borderImgStateCount ||
-		borderImgDisabled > borderImgStateCount)
-	{
-		return;
-	}
-
-	m_hasSetBorderImg = true;
-
-	m_loadBorderImgSuccess = QssHelper::GetPicHeight(borderImgPath.toStdWString(), borderImgStateCount, m_vecBorderImgHeight);
-	m_borderImgStateCount = borderImgStateCount;
-
-	m_borderImgPath = borderImgPath.toStdWString();
-	m_borderImgMap[NORMAL] = borderImgNormal;
-	m_borderImgMap[HOVER] = borderImgHover;
-	m_borderImgMap[PRESSED] = borderImgPressed;
-	m_borderImgMap[DISABLED] = borderImgDisabled;
-
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	imageStateMap[NORMAL][NORMAL] = borderImgNormal;
+	imageStateMap[NORMAL][HOVER] = borderImgHover;
+	imageStateMap[NORMAL][PRESSED] = borderImgPressed;
+	imageStateMap[NORMAL][DISABLED] = borderImgDisabled;
+	std::wstring wstrImgPath = borderImgPath.toStdWString();
+	ControlBase::setImageStateMap(imageStateMap, wstrImgPath, borderImgStateCount, L"border-image", false, rePaint);
 }
 
-void ComboBox::setDropDownWidth(int32_t width, bool rePaint)
+void ComboBox::setDropDownSize(int32_t width, int32_t height, bool rePaint)
 {
-	m_hasSetDropDownWidth = true;
-	m_dropDownWidth = width;
-
-	if (rePaint)
-	{
-		updateStyle();
-	}
-}
-
-void ComboBox::setDropDownHeight(int32_t width, bool rePaint)
-{
-	m_hasSetDropDownHeight = true;
-	m_dropDownHeight = width;
-
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	ControlBase::setPxValue(L"width", width, true, false);
+	ControlBase::setPxValue(L"height", width, true, rePaint);
 }
 
 void ComboBox::setDropDownBorderWidth(int32_t width, bool rePaint)
 {
-	m_hasSetDropDownBorderWidth = true;
-	m_dropDownBorderWidth = width;
-
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	ControlBase::setPxSolidValue(L"border", width, true, rePaint);
 }
 
 void ComboBox::setDropDownImage(const QString& dropDownImgPath, bool rePaint)
 {
-	m_hasSetDropDownImg = true;
-	m_dropDownImgPath = dropDownImgPath.toStdWString();
-
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	imageStateMap[NORMAL][NORMAL] = 1;
+	std::wstring wstrImgPath = dropDownImgPath.toStdWString();
+	ControlBase::setImageStateMap(imageStateMap, wstrImgPath, 1, L"image", L"down-arrow", rePaint);
 }
 
 void ComboBox::setTextColor(const QColor& normalColor,
@@ -172,53 +99,33 @@ void ComboBox::setTextColor(const QColor& normalColor,
 							const QColor& disabledColor,
 							bool rePaint)
 {
-	m_hasSetTextColor = true;
-
-	m_itemTextColorMap[NORMAL] = normalColor;
-	m_itemTextColorMap[HOVER] = hoverColor;
-	m_itemTextColorMap[PRESSED] = pressedColor;
-	m_itemTextColorMap[DISABLED] = disabledColor;
-
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	colorStateMap[NORMAL][NORMAL] = normalColor;
+	colorStateMap[NORMAL][HOVER] = hoverColor;
+	colorStateMap[NORMAL][PRESSED] = pressedColor;
+	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	ControlBase::setColorStateMap(colorStateMap, L"color", false, rePaint);
 }
 
 void ComboBox::setFontFace(const QString& fontName, bool rePaint)
 {
-	m_hasSetFontName = true;
-	m_fontName = fontName.toStdWString();
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	ControlBase::setFontFace(fontName.toStdWString(), false, rePaint);
 }
 
 void ComboBox::setFontSize(int32_t fontSize, bool rePaint)
 {
-	m_hasSetFontSize = true;
-	m_fontSize = fontSize;
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	ControlBase::setPxValue(L"font-size", fontSize, false, rePaint);
 }
 
 void ComboBox::setTextOrigin(int32_t origin, bool rePaint)
 {
-	m_hasSetTextOrigin = true;
-	m_textOrigin = origin;
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	ControlBase::setPxValue(L"padding-left", origin, false, rePaint);
 }
 
 void ComboBox::setListOrigin(int32_t origin, bool rePaint)
 {
-	m_hasSetListOrigin = true;
-	m_listOrigin = origin;
+	std::wstring wstrOrigin = CStringManager::Format(L"%dpx", origin);
+	m_controlStyle[m_className](1, L"QAbstractItemView").AddKeyValue(L"margin-top", wstrOrigin);
 	if (rePaint)
 	{
 		updateStyle();
@@ -231,123 +138,84 @@ void ComboBox::addItem(const QString& text)
 	widgetItem->setText(text);
 }
 
-void ComboBox::updateStyle()
+void ComboBox::setListBackgroundColor(const QColor& color, bool rePaint)
 {
-	QssString buttonStyle;
-	std::wstring className = L"QComboBox";
+	m_listWidget->setBackgroundColor(color, rePaint);
+}
 
-	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
-	buttonStyle[className](L" ", L"QAbstractItemView").AddKeyValue(L"border", L"none");
+void ComboBox::setListBorderWidth(int32_t width, bool rePaint)
+{
+	m_listWidget->setBorderWidth(width, rePaint);
+}
 
-	//圆角半径
-	if (m_hasSetBorderRadius)
-	{
-		buttonStyle[className].AddKeyValue(L"border-radius", CStringManager::Format(L"%dpx", m_borderRadius));
-	}
+void ComboBox::setListBorderColor(const QColor& color, bool rePaint)
+{
+	m_listWidget->setBorderColor(color, rePaint);
+}
 
-	//背景颜色
-	if (m_hasSetBackgroundColor)
-	{
-		for (int32_t index = NORMAL; index <= DISABLED; ++index)
-		{
-			buttonStyle[className](index).AddKeyValue(L"background-color", QssHelper::QColorToWString(m_backgroundColorMap[index]));
-		}
-	}
+void ComboBox::setListItemBorderColor(const QColor& normalColor,
+									const QColor& hoverColor,
+									const QColor& disabledColor,
+									bool rePaint)
+{
+	m_listWidget->setItemBorderColor(normalColor, hoverColor, disabledColor, rePaint);
+}
 
-	//设置边框粗度
-	if (m_hasSetBorderWidth)
-	{
-		buttonStyle[className].AddKeyValue(L"border", CStringManager::Format(L"%dpx solid", m_borderWidth));
-	}
+void ComboBox::setListItemBorderWidth(int32_t width, bool rePaint)
+{
+	m_listWidget->setItemBorderWidth(width, rePaint);
+}
 
-	//设置边框颜色
-	if (m_hasSetBorderColor)
-	{
-		for (int32_t index = NORMAL; index <= DISABLED; ++index)
-		{
-			buttonStyle[className](index).AddKeyValue(L"border-color", QssHelper::QColorToWString(m_borderColorMap[index]));
-		}
-	}
+void ComboBox::setListItemBorderImage(const QString& borderImgPath,
+									int32_t borderImgStateCount,
+									int32_t borderImgNormal,
+									int32_t borderImgHover,
+									int32_t borderImgDisabled,
+									bool rePaint)
+{
+	m_listWidget->setItemBorderImage(borderImgPath, borderImgStateCount, borderImgNormal, borderImgHover, borderImgDisabled, rePaint);
+}
 
-	//设置背景颜色
-	if (m_hasSetBorderImg && m_loadBorderImgSuccess)
-	{
-		for (int32_t itemIndex = NORMAL; itemIndex <= DISABLED; ++itemIndex)
-		{
-			std::wstring imageUrl = CStringManager::Format(L"url(%s) %d 0 %d 0 stretch stretch",
-				m_borderImgPath.c_str(),
-				m_vecBorderImgHeight[qMax(m_borderImgMap[itemIndex] - 1, 0)],
-				m_vecBorderImgHeight[qMin(m_borderImgStateCount - m_borderImgMap[itemIndex], m_borderImgStateCount - 1)]);
-			buttonStyle[className](itemIndex).AddKeyValue(L"border-image", imageUrl);
-		}
-	}
+void ComboBox::setListItemHeight(int32_t height, bool rePaint)
+{
+	m_listWidget->setItemHeight(height, rePaint);
+}
 
-	//设置下拉箭头宽度
-	if (m_hasSetDropDownWidth)
-	{
-		buttonStyle[className][L"drop-down"].AddKeyValue(L"width", CStringManager::Format(L"%dpx", m_dropDownWidth));
-	}
+void ComboBox::setListTextColor(const QColor& normalColor,
+							  const QColor& hoverColor,
+							  const QColor& disabledColor,
+							  bool rePaint)
+{
+	m_listWidget->setTextColor(normalColor, hoverColor, disabledColor, rePaint);
+}
 
-	//设置下拉箭头高度
-	if (m_hasSetDropDownHeight)
-	{
-		buttonStyle[className][L"drop-down"].AddKeyValue(L"height", CStringManager::Format(L"%dpx", m_dropDownHeight));
-	}
+void ComboBox::setListFontFace(const QString& fontName, bool rePaint)
+{
+	m_listWidget->setFontFace(fontName, rePaint);
+}
 
-	//设置下拉箭头边框宽度
-	if (m_hasSetDropDownBorderWidth)
-	{
-		buttonStyle[className][L"drop-down"].AddKeyValue(L"border", CStringManager::Format(L"%dpx solid", m_dropDownBorderWidth));
-	}
+void ComboBox::setListFontSize(int32_t fontSize, bool rePaint)
+{
+	m_listWidget->setFontSize(fontSize, rePaint);
+}
 
-	//设置下拉箭头图片
-	if (m_hasSetDropDownImg)
-	{
-		std::wstring imageUrl = CStringManager::Format(L"url(%s)", m_dropDownImgPath.c_str());
-		buttonStyle[className][L"down-arrow"].AddKeyValue(L"image", imageUrl);
-	}
+void ComboBox::setListTextOrigin(int32_t origin, bool rePaint)
+{
+	m_listWidget->setTextOrigin(origin, rePaint);
+}
 
-	//文字颜色
-	if (m_hasSetTextColor)
-	{
-		for (int32_t itemIndex = NORMAL; itemIndex <= DISABLED; ++itemIndex)
-		{
-			QColor& color = m_itemTextColorMap[itemIndex];
-			buttonStyle[className](itemIndex).AddKeyValue(L"color", QssHelper::QColorToWString(color));
-		}
-	}
-
-	//设置字体
-	if (m_hasSetFontName)
-	{
-		buttonStyle[className].AddKeyValue(L"font-family", CStringManager::Format(L"'%s'", m_fontName.c_str()));
-	}
-
-	//字体大小
-	if (m_hasSetFontSize)
-	{
-		buttonStyle[className].AddKeyValue(L"font-size", CStringManager::Format(L"%dpx", m_fontSize));
-	}
-
-	//文字偏移量
-	if (m_hasSetTextOrigin)
-	{
-		buttonStyle[className].AddKeyValue(L"padding-left", CStringManager::Format(L"%dpx", m_textOrigin));
-	}
-
-	//下拉菜单纵向偏移量
-	if (m_hasSetListOrigin)
-	{
-		buttonStyle[className](L" ", L"QAbstractItemView").AddKeyValue(L"margin-top", CStringManager::Format(L"%dpx", m_listOrigin));
-	}
-	
-	setStyleSheet(QString::fromStdWString(buttonStyle.toWString()));
+void ComboBox::setListItemOrigin(int32_t leftOrigin,
+								 int32_t topOrigin,
+								 int32_t rightOrigin,
+								 int32_t bottomOrigin,
+								 bool rePaint)
+{
+	m_listWidget->setItemOrigin(leftOrigin, topOrigin, rightOrigin, bottomOrigin, rePaint);
 }
 
 void ComboBox::showEvent(QShowEvent* eve)
 {
-	updateStyle();
-	m_listWidget->repaint();
+	repaint();
 }
 
 void ComboBox::repaint()

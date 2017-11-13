@@ -1,13 +1,12 @@
-#ifndef COMBOBOX_H
-#define COMBOBOX_H
+#ifndef COMBOBOX_H__
+#define COMBOBOX_H__
 
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QPushButton>
 #include <stdint.h>
-#include <string>
-#include "ListWidget.h"
+#include "ControlBase.h"
 
-class ComboBox : public QComboBox
+class ListWidget;
+class ComboBox : public ControlBase<QComboBox>
 {
 public:
 	/** 构造函数
@@ -71,17 +70,12 @@ public:
 						int32_t borderImgDisabled = 4,
 						bool rePaint = false);
 
-	/** 设置下拉箭头的宽度
+	/** 设置下拉箭头的尺寸
 	@param [in] width 下拉箭头宽度
-	@param [in] rePaint 是否立即重画
-	*/
-	void setDropDownWidth(int32_t width, bool rePaint = false);
-
-	/** 设置下拉箭头的高度
 	@param [in] height 下拉箭头高度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setDropDownHeight(int32_t height, bool rePaint = false);
+	void setDropDownSize(int32_t width, int32_t height, bool rePaint = false);
 
 	/** 设置下拉箭头的边框宽度
 	@param [in] width 下拉箭头宽度
@@ -137,63 +131,113 @@ public:
 	*/
 	void addItem(const QString& text);
 
+	/** 设置背景颜色
+	@param [in] color 背景颜色
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListBackgroundColor(const QColor& color, bool rePaint = false);
+
+	/** 设置边框粗度
+	@param [in] width 边框粗度
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListBorderWidth(int32_t width, bool rePaint = false);
+
+	/** 设置边框颜色
+	@param [in] color 常态
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListBorderColor(const QColor& color, bool rePaint = false);
+
+	/** 设置节点背景颜色（list控件没有按下属性）
+	@param [in] normalColor 常态颜色
+	@param [in] hoverColor 悬停颜色
+	@param [in] disabledColor 禁用颜色
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListItemBorderColor(const QColor& normalColor,
+								const QColor& hoverColor,
+								const QColor& disabledColor,
+								bool rePaint = false);
+
+	/** 设置节点边框粗度
+	@param [in] width 边框粗度
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListItemBorderWidth(int32_t width, bool rePaint = false);
+
+	/** 设置节点背景图片，和边框颜色不用存
+	@param [in] borderImgPath 背景图片路径，如果路径中必须使用正斜杠
+	@param [in] borderImgStateCount 上下平分几份
+	@param [in] borderImgNormal 非选中常态图片，如果填1表示将图片纵向分割4份或8份，选最上面的第一份
+	@param [in] borderImgHover 非选中悬停图片
+	@param [in] borderImgDisabled 非选中禁用图片
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListItemBorderImage(const QString& borderImgPath,
+								int32_t borderImgStateCount = 4,
+								int32_t borderImgNormal = 1,
+								int32_t borderImgHover = 2,
+								int32_t borderImgDisabled = 4,
+								bool rePaint = false);
+
+	/** 设置节点高度
+	@param [in] height 节点高度
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListItemHeight(int32_t height, bool rePaint = false);
+
+	/** 设置文字颜色
+	@param [in] normalColor 常态颜色
+	@param [in] hoverColor 悬停颜色
+	@param [in] disabledColor 禁用颜色
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListTextColor(const QColor& normalColor,
+						  const QColor& hoverColor,
+						  const QColor& disabledColor,
+						  bool rePaint = false);
+
+	/** 设置字体
+	@param [in] fontName 字体名
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListFontFace(const QString& fontName, bool rePaint = false);
+
+	/** 设置字体大小
+	@param [in] fontSize 字体大小
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListFontSize(int32_t fontSize, bool rePaint = false);
+
+	/** 设置文本偏移量
+	@param [in] origin 文本偏移量
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListTextOrigin(int32_t origin, bool rePaint = false);
+
+	/** 节点到窗口的四个外边距
+	@param [in] leftOrigin 左侧偏移量
+	@param [in] topOrigin 上侧偏移量
+	@param [in] rightOrigin 右侧偏移量
+	@param [in] bottomOrigin 下侧偏移量
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListItemOrigin(int32_t leftOrigin,
+						   int32_t topOrigin,
+						   int32_t rightOrigin,
+						   int32_t bottomOrigin,
+						   bool rePaint = false);
+
 	/** 重画
 	*/
 	void repaint();
 
 private:
-	void updateStyle();
-	void showEvent(QShowEvent* eve);
-
-public:
-	ListWidget* m_listWidget;
+	virtual void showEvent(QShowEvent* eve);
 
 private:
-	bool m_hasSetBorderRadius;
-	int32_t m_borderRadius;
-
-	bool m_hasSetBackgroundColor;
-	std::map<int32_t, QColor> m_backgroundColorMap;
-
-	bool m_hasSetBorderWidth;
-	int32_t m_borderWidth;
-
-	bool m_hasSetBorderColor;
-	std::map<int32_t, QColor> m_borderColorMap;
-
-	bool m_hasSetBorderImg;
-	bool m_loadBorderImgSuccess;
-	int32_t m_borderImgStateCount;
-	std::wstring m_borderImgPath;
-	std::vector<int32_t> m_vecBorderImgHeight;
-	std::map<int32_t, int32_t> m_borderImgMap;
-
-	bool m_hasSetDropDownWidth;
-	int32_t m_dropDownWidth;
-
-	bool m_hasSetDropDownHeight;
-	int32_t m_dropDownHeight;
-
-	bool m_hasSetDropDownBorderWidth;
-	int32_t m_dropDownBorderWidth;
-
-	bool m_hasSetDropDownImg;
-	std::wstring m_dropDownImgPath;
-
-	bool m_hasSetTextColor;
-	std::map<int32_t, QColor> m_itemTextColorMap;
-
-	bool m_hasSetFontName;
-	std::wstring m_fontName;
-
-	bool m_hasSetFontSize;
-	int32_t m_fontSize;
-
-	bool m_hasSetTextOrigin;
-	int32_t m_textOrigin;
-
-	bool m_hasSetListOrigin;
-	int32_t m_listOrigin;
+	ListWidget* m_listWidget;
 };
 
 #endif

@@ -10,10 +10,7 @@ enum
 	NORMAL,
 	HOVER,
 	PRESSED,
-	DISABLED,
-	LIST_NORMAL,
-	LIST_HOVER,
-	LIST_DISABLED
+	DISABLED
 };
 
 class QssString
@@ -25,7 +22,12 @@ public:
 	
 public:
 	QssString& operator[](const std::wstring& name);
-	QssString& operator()(const std::wstring& flag, const std::wstring& name);
+	QssString& operator()(int32_t flag, const std::wstring& name);
+	/** 判断式添加节点名
+	@param [in] hasItemName 是否有节点名
+	@param [in] itemName 节点名
+	*/
+	QssString& operator()(bool hasItemName, const std::wstring& itemName);
 	QssString& operator()(const std::wstring& state);
 	QssString& operator()(int32_t enumFlag);
 	void AddKeyValue(const std::wstring& key, const std::wstring& value);

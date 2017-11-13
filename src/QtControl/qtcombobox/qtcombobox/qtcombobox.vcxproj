@@ -78,6 +78,7 @@
   <ItemGroup>
     <ClCompile Include="CheckBox.cpp" />
     <ClCompile Include="ComboBox.cpp" />
+    <ClCompile Include="ControlBase.inl" />
     <ClCompile Include="CStringManager.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_qtcombobox.cpp">
@@ -266,6 +267,9 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ControlBase.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

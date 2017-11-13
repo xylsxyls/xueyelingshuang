@@ -45,7 +45,9 @@ public:
 
 	static void Format(std::string & str, const char * fmt, ...);
 
-    static std::string Format(const char * fmt, ...);
+	static std::string Format(const char * fmt, ...);
+
+	static void Format(std::wstring& str, const wchar_t * fmt, ...);
 
 	static std::wstring Format(const wchar_t * fmt, ...);
 

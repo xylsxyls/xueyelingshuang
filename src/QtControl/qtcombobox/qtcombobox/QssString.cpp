@@ -8,9 +8,6 @@ QssString::QssString()
 	m_mapEnum[HOVER] = L"hover";
 	m_mapEnum[PRESSED] = L"pressed";
 	m_mapEnum[DISABLED] = L"disabled";
-	m_mapEnum[LIST_NORMAL] = L"";
-	m_mapEnum[LIST_HOVER] = L"hover";
-	m_mapEnum[LIST_DISABLED] = L"disabled";
 }
 
 QssString& QssString::operator[](const std::wstring& name)
@@ -28,10 +25,22 @@ QssString& QssString::operator[](const std::wstring& name)
 	return *this;
 }
 
-QssString& QssString::operator()(const std::wstring& flag, const std::wstring& name)
+
+
+QssString& QssString::operator()(int32_t flag, const std::wstring& name)
 {
-	m_keyString.append(flag);
+	m_keyString.append(L" ");
 	m_keyString.append(name);
+	return *this;
+}
+
+QssString& QssString::operator()(bool hasItemName, const std::wstring& itemName)
+{
+	if (hasItemName)
+	{
+		m_keyString.append(L"::");
+		m_keyString.append(itemName);
+	}
 	return *this;
 }
 

@@ -1,8 +1,9 @@
 #pragma once
 #include <QtWidgets/QListWidget>
 #include <stdint.h>
+#include "ControlBase.h"
 
-class ListWidget : public QListWidget
+class ListWidget : public ControlBase<QListWidget>
 {
 public:
 	/** 构造函数
@@ -96,85 +97,20 @@ public:
 	*/
 	void setTextOrigin(int32_t origin, bool rePaint = false);
 
-	/** 节点到窗口的左侧外边距
-	@param [in] origin 左侧偏移量
+	/** 节点到窗口的四个外边距
+	@param [in] leftOrigin 左侧偏移量
+	@param [in] topOrigin 上侧偏移量
+	@param [in] rightOrigin 右侧偏移量
+	@param [in] bottomOrigin 下侧偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setItemLeftOrigin(int32_t origin, bool rePaint = false);
-
-	/** 节点到窗口的上侧外边距
-	@param [in] origin 上侧偏移量
-	@param [in] rePaint 是否立即重画
-	*/
-	void setItemTopOrigin(int32_t origin, bool rePaint = false);
-
-	/** 节点到窗口的右侧外边距
-	@param [in] origin 右侧偏移量
-	@param [in] rePaint 是否立即重画
-	*/
-	void setItemRightOrigin(int32_t origin, bool rePaint = false);
-
-	/** 节点到窗口的下侧外边距
-	@param [in] origin 下侧偏移量
-	@param [in] rePaint 是否立即重画
-	*/
-	void setItemBottomOrigin(int32_t origin, bool rePaint = false);
+	void setItemOrigin(int32_t leftOrigin,
+					   int32_t topOrigin,
+					   int32_t rightOrigin,
+					   int32_t bottomOrigin,
+					   bool rePaint = false);
 
 	/** 重画
 	*/
 	void repaint();
-
-private:
-	void updateStyle();
-	void showEvent(QShowEvent* eve);
-
-private:
-	bool m_hasSetBackgroundColor;
-	QColor m_backgroundColor;
-
-	bool m_hasSetBorderWidth;
-	int32_t m_borderWidth;
-
-	bool m_hasSetBorderColor;
-	QColor m_borderColor;
-
-	bool m_hasSetItemBorderColor;
-	std::map<int32_t, QColor> m_itemBorderColorMap;
-
-	bool m_hasSetItemBorderWidth;
-	int32_t m_itemBorderWidth;
-
-	bool m_hasSetItemBorderImg;
-	bool m_loadItemBorderImgSuccess;
-	int32_t m_itemBorderImgStateCount;
-	std::wstring m_itemBorderImgPath;
-	std::vector<int32_t> m_vecItemBorderImgHeight;
-	std::map<int32_t, int32_t> m_itemBorderImgMap;
-
-	bool m_hasSetItemHeight;
-	int32_t m_itemHeight;
-
-	bool m_hasSetTextColor;
-	std::map<int32_t, QColor> m_itemTextColorMap;
-
-	bool m_hasSetFontName;
-	std::wstring m_fontName;
-
-	bool m_hasSetFontSize;
-	int32_t m_fontSize;
-
-	bool m_hasSetTextOrigin;
-	int32_t m_textOrigin;
-
-	bool m_hasSetItemLeftOrigin;
-	int32_t m_itemLeftOrgin;
-
-	bool m_hasSetItemTopOrigin;
-	int32_t m_itemTopOrgin;
-
-	bool m_hasSetItemRightOrigin;
-	int32_t m_itemRightOrgin;
-
-	bool m_hasSetItemBottomOrigin;
-	int32_t m_itemBottomOrgin;
 };

@@ -1,12 +1,11 @@
-#ifndef CHECKBOX_H
-#define CHECKBOX_H
+#ifndef CHECKBOX_H__
+#define CHECKBOX_H__
 
 #include <QtWidgets/QCheckBox>
-#include <QtWidgets/QPushButton>
 #include <stdint.h>
-#include <string>
+#include "ControlBase.h"
 
-class CheckBox : public QCheckBox
+class CheckBox : public ControlBase<QCheckBox>
 {
 public:
 	/** 构造函数
@@ -114,40 +113,6 @@ public:
 	/** 重画
 	*/
 	void repaint();
-
-private:
-	void updateStyle();
-	void showEvent(QShowEvent* eve);
-
-private:
-	bool m_hasSetIndicatorImg;
-	bool m_loadIndicatorImgSuccess;
-	std::wstring m_indicatorImgPath;
-	int32_t m_indicatorImgStateCount;
-	std::vector<int32_t> m_vecIndicatorImgHeight;
-	std::map<int32_t,std::map<int32_t,int32_t>> m_indicatorImgMap;
-
-	bool m_hasSetBackgroundImg;
-	bool m_loadBackgroundImgSuccess;
-	std::wstring m_backgroundImgPath;
-	int32_t m_backgroundImgStateCount;
-	std::vector<int32_t> m_vecBackgroundImgHeight;
-	std::map<int32_t,std::map<int32_t,int32_t>> m_backgroundImgMap;
-
-	bool m_hasSetFontFace;
-	std::wstring m_fontName;
-
-	bool m_hasSetFontSize;
-	int32_t m_fontSize;
-
-	bool m_hasSetTextColor;
-	std::map<int32_t,std::map<int32_t,QColor>> m_textColorMap;
-
-	bool m_hasSetBackgroundColor;
-	std::map<int32_t,std::map<int32_t,QColor>> m_backgroundColorMap;
-
-	bool m_hasSetTextOrigin;
-	int32_t m_textOrigin;
 };
 
 #endif

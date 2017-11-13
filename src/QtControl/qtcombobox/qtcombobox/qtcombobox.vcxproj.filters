@@ -54,6 +54,9 @@
     <Filter Include="QssHelper">
       <UniqueIdentifier>{b6ea808e-8a91-4e03-86d5-d5f9aa75ccf5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ControlBase">
+      <UniqueIdentifier>{34699273-aaf7-45e8-9afd-b4e45b4fedb2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -95,6 +98,9 @@
     <ClCompile Include="QssHelper.cpp">
       <Filter>QssHelper</Filter>
     </ClCompile>
+    <ClCompile Include="ControlBase.inl">
+      <Filter>ControlBase</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -130,5 +136,10 @@
     <CustomBuild Include="QssHelper.h">
       <Filter>QssHelper</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ControlBase.h">
+      <Filter>ControlBase</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

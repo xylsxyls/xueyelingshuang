@@ -1,1 +1,1 @@
-call "%CLOUD_REBUILD%" CStringManager 64 lib debug same
+call "%CLOUD_REBUILD%" CStringManager 32 dll debug same
