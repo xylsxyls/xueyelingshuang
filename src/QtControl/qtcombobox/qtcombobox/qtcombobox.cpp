@@ -5,6 +5,7 @@
 #include "NoFocusFrameDelegate.h"
 #include <Windows.h>
 #include "CheckBox.h"
+#include "RadioButton.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -54,6 +55,18 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->addItem("123458");
 	pBox->addItem("123459");
 	pBox->addItem("123450");
+
+	RadioButton* pButton = new RadioButton(this);
+	pButton->setText("123456789");
+	pButton->setGeometry(400, 100, 80, 50);
+	pButton->setBackgroundColor(QColor(255, 0, 255, 1), QColor(255, 255, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1));
+	pButton->setIndicatorImage(QString::fromLocal8Bit("D:/hot.png"), 8, 1, 2, 3, 4, 5, 6, 7, 8);
+	
+	pButton->setText(QString::fromLocal8Bit("ÖÐ¹ú"));
+	pButton->setTextColor(QColor(255, 0, 0, 1), QColor(0, 0, 255, 1), QColor(255, 0, 255, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1));
+	pButton->setFontFace(QString::fromLocal8Bit("ºÚÌå"));
+	pButton->setFontSize(18);
+	pButton->setTextOrigin(20);
 }
 
 qtcombobox::~qtcombobox()

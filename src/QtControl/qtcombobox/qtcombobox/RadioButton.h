@@ -1,19 +1,16 @@
-#ifndef CHECKBOX_H__
-#define CHECKBOX_H__
-
-#include <QtWidgets/QCheckBox>
-#include <stdint.h>
+#pragma once
+#include <QtWidgets/QRadioButton>
 #include "ControlBase.h"
 
-class CheckBox : public ControlBase < QCheckBox >
+class QWidget;
+class RadioButton : public ControlBase < QRadioButton >
 {
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	CheckBox(QWidget* parent = NULL);
+	RadioButton(QWidget* parent = NULL);
 
-public:
 	/** 设置CheckBox指示器图片
 	@param [in] indicatorImg 背景图片路径，如果路径中必须使用正斜杠
 	@param [in] indicatorImgStateCount 只能填4或8，表示4态按钮或8态按钮
@@ -114,5 +111,3 @@ public:
 	*/
 	void repaint();
 };
-
-#endif

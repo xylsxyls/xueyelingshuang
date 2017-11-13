@@ -6,7 +6,7 @@
 #include "ControlBase.h"
 
 class ListWidget;
-class ComboBox : public ControlBase<QComboBox>
+class ComboBox : public ControlBase < QComboBox >
 {
 public:
 	/** ¹¹Ôìº¯Êý

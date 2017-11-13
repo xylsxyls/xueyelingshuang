@@ -10,20 +10,18 @@ class QWidget;
 template <class QBase>
 class ControlBase : public QBase
 {
-public:
+protected:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
 	ControlBase(QWidget* parent = NULL);
 
-public:
 	/** 初始化
 	@param [in] className 类名
 	@param [in] itemName 节点名
 	*/
 	void init(const std::wstring& className, const std::wstring& itemName);
 
-protected:
 	/** 设置字体
 	@param [in] fontName 字体名
 	@param [in] isItem 该项是否为节点

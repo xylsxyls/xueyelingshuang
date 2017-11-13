@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "ControlBase.h"
 
-class ListWidget : public ControlBase<QListWidget>
+class ListWidget : public ControlBase < QListWidget >
 {
 public:
 	/** ¹¹Ôìº¯Êý
