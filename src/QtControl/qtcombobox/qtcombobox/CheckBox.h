@@ -41,7 +41,7 @@ public:
 
 	/** 设置CheckBox指示器和文字整体的背景图片
 	@param [in] backgroundImg 背景图片路径，如果路径中必须使用正斜杠
-	@param [in] backgroundImgStateCount 只能填4或8，表示4态按钮或8态按钮
+	@param [in] backgroundImgStateCount 图片纵向切割个数
 	@param [in] backgroundImgNormal 非选中常态图片，如果填1表示将图片纵向分割4份或8份，选最上面的第一份
 	@param [in] backgroundImgHover 非选中悬停图片
 	@param [in] backgroundImgPressed 非选中按下图片

@@ -89,7 +89,7 @@ void ListWidget::setTextOrigin(int32_t origin, bool rePaint)
 	ControlBase::setPxValue(L"padding-left", origin, true, rePaint);
 }
 
-void ListWidget::setItemOrigin(int32_t leftOrigin,
+void ListWidget::setItemAroundOrigin(int32_t leftOrigin,
 							   int32_t topOrigin,
 							   int32_t rightOrigin,
 							   int32_t bottomOrigin,

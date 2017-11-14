@@ -6,6 +6,7 @@
 #include <Windows.h>
 #include "CheckBox.h"
 #include "RadioButton.h"
+#include "Label.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -48,7 +49,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setListFontFace(QString::fromLocal8Bit("黑体"));
 	pBox->setListFontSize(15);
 	pBox->setListTextOrigin(16);
-	pBox->setListItemOrigin(5, 5, 5, 5);
+	pBox->setListItemAroundOrigin(5, 5, 5, 5);
 
 	pBox->addItem("123456");
 	pBox->addItem("123457");
@@ -67,6 +68,18 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pButton->setFontFace(QString::fromLocal8Bit("黑体"));
 	pButton->setFontSize(18);
 	pButton->setTextOrigin(20);
+
+	Label* pLabel = new Label(this);
+	
+	pLabel->setGeometry(200, 300, 80, 50);
+	pLabel->setBackgroundImage(QString::fromLocal8Bit("D:/hot.png"), 4, 1, 2, 4);
+	pLabel->setFontFace(QString::fromLocal8Bit("黑体"));
+	pLabel->setFontSize(18);
+	pLabel->setTextColor(QColor(255, 0, 255, 1), QColor(255, 255, 0, 1), QColor(255, 0, 0, 1));
+	pLabel->setBackgroundColor(QColor(255, 255, 255, 1), QColor(255, 0, 255, 1), QColor(255, 0, 0, 1));
+	pLabel->setTextOrigin(3);
+	pLabel->setText(QString::fromLocal8Bit("中国123456789789789798798"));
+	QString str = pLabel->text();
 }
 
 qtcombobox::~qtcombobox()

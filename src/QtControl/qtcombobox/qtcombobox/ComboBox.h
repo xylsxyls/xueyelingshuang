@@ -223,11 +223,11 @@ public:
 	@param [in] bottomOrigin 下侧偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListItemOrigin(int32_t leftOrigin,
-						   int32_t topOrigin,
-						   int32_t rightOrigin,
-						   int32_t bottomOrigin,
-						   bool rePaint = false);
+	void setListItemAroundOrigin(int32_t leftOrigin,
+								 int32_t topOrigin,
+								 int32_t rightOrigin,
+								 int32_t bottomOrigin,
+								 bool rePaint = false);
 
 	/** 重画
 	*/

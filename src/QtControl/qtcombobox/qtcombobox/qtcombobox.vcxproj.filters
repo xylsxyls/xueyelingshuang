@@ -60,6 +60,9 @@
     <Filter Include="RadioButton">
       <UniqueIdentifier>{998a499a-57a8-4c6f-847f-1f61a9a305d8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Label">
+      <UniqueIdentifier>{dcf75ab5-eb90-43c2-b105-8ff286e46aba}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -107,6 +110,9 @@
     <ClCompile Include="RadioButton.cpp">
       <Filter>RadioButton</Filter>
     </ClCompile>
+    <ClCompile Include="Label.cpp">
+      <Filter>Label</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -149,6 +155,9 @@
     </ClInclude>
     <ClInclude Include="RadioButton.h">
       <Filter>RadioButton</Filter>
+    </ClInclude>
+    <ClInclude Include="Label.h">
+      <Filter>Label</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

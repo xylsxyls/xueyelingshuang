@@ -204,13 +204,13 @@ void ComboBox::setListTextOrigin(int32_t origin, bool rePaint)
 	m_listWidget->setTextOrigin(origin, rePaint);
 }
 
-void ComboBox::setListItemOrigin(int32_t leftOrigin,
+void ComboBox::setListItemAroundOrigin(int32_t leftOrigin,
 								 int32_t topOrigin,
 								 int32_t rightOrigin,
 								 int32_t bottomOrigin,
 								 bool rePaint)
 {
-	m_listWidget->setItemOrigin(leftOrigin, topOrigin, rightOrigin, bottomOrigin, rePaint);
+	m_listWidget->setItemAroundOrigin(leftOrigin, topOrigin, rightOrigin, bottomOrigin, rePaint);
 }
 
 void ComboBox::showEvent(QShowEvent* eve)
