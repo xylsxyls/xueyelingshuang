@@ -1,7 +1,12 @@
 #pragma once
 
 #ifdef _CTaskThreadManagerAPI
-	#define CTaskThreadManagerAPI _declspec(dllimport)
+#define CTaskThreadManagerAPI _declspec(dllimport)
 #else
-	#define CTaskThreadManagerAPI _declspec(dllexport)
+#define CTaskThreadManagerAPI _declspec(dllexport)
+#endif
+
+#if defined(STATIC_LIB)
+#undef CTaskThreadManagerAPI
+#define CTaskThreadManagerAPI 
 #endif

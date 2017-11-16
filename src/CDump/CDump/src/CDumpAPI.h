@@ -2,8 +2,8 @@
 #define _CDumpAPI
 #include "CDump.h"
 
-#ifdef NDEBUG
-#pragma comment(lib,"CDump.lib")
-#else
+#ifdef _DEBUG
 #pragma comment(lib,"CDumpd.lib")
+#else
+#pragma comment(lib,"CDump.lib")
 #endif
