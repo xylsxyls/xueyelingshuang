@@ -1,0 +1,1 @@
+用ifndef的形式，pragma once没用，但是用pragma once可以让vs识别，显示各变量颜色

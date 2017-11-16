@@ -1,0 +1,1 @@
+在xcopy前加上echo f | 
