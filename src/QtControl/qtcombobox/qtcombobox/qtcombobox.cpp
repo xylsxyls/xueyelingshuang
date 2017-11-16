@@ -7,6 +7,7 @@
 #include "CheckBox.h"
 #include "RadioButton.h"
 #include "Label.h"
+#include "Menu.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -25,15 +26,19 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pCheckBox->setTextOrigin(20);
 
 	ComboBox* pBox = new ComboBox(this);
+	pBox->installEventFilter(pBox);
+	pBox->setMouseTracking(true);
 	pBox->setGeometry(100, 100, 124, 104 / 4 + 1);
-	pBox->setBorderWidth(0);
-
-	pBox->setBorderImage("D:/dropdown.png", 4, 1, 2, 3, 4);
-	pBox->setDropDownSize(0, 26);
+	pBox->setBorderWidth(1);
+	pBox->setBorderRadius(8);
+	//pBox->setBorderImage("D:/dropdown.png", 4, 1, 2, 3, 4);
+	pBox->setDropDownSize(20, 26);
+	pBox->setDropDownImage("D:/hot.png", 8, 1, 2, 4, 5, 8);
+	pBox->setTextColor(QColor(255, 0, 0, 1),
+					   QColor(0, 0, 255, 1),
+					   QColor(255, 0, 255, 1),
+					   QColor(255, 0, 0, 1));
 	pBox->setDropDownBorderWidth(0);
-	pBox->setTextColor(QColor(255, 0, 0, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255), QColor(255, 0, 0, 255));
-	pBox->setFontFace(QString::fromLocal8Bit("黑体"));
-	pBox->setFontSize(18);
 	pBox->setTextOrigin(20);
 	pBox->setListOrigin(1);
 
@@ -50,6 +55,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setListFontSize(15);
 	pBox->setListTextOrigin(16);
 	pBox->setListItemAroundOrigin(5, 5, 5, 5);
+	pBox->setDropDownTopRightOrigin(10, 20);
 
 	pBox->addItem("123456");
 	pBox->addItem("123457");
@@ -80,6 +86,36 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pLabel->setTextOrigin(3);
 	pLabel->setText(QString::fromLocal8Bit("中国123456789789789798798"));
 	QString str = pLabel->text();
+
+	auto item1 = new QAction( "&item1...", this);
+	auto itme2 = new QAction("&item2...", this);
+	auto item3 = new QAction("&itme3...", this);
+	auto item4 = new QAction( "&item4...", this);
+
+	Menu* menu = new Menu;
+	menu->addAction(item1);
+	menu->addAction(itme2);
+	menu->addSeparator();
+	auto pSubMenu = menu->addMenu( "sub menu");
+	pSubMenu->addAction(item3);
+	pSubMenu->addAction(item4);
+	menu->setBackgroundColor(QColor(255, 0, 0, 255));
+	auto ss = menu->exec(QPoint(50,50));
+	int x = 3;
+}
+
+void qtcombobox::OnMenuTriggered(QAction* p)
+{
+	wchar_t wbuf[512] = { 0 };
+	auto text = p->text().toStdString();
+
+	MultiByteToWideChar(CP_UTF8, 0, text.c_str(), text.length(), wbuf, 512);
+	auto pWan = wcschr(wbuf, L'万');
+	if (pWan != NULL)
+	{
+		*pWan = 0;
+		//ui.m_editMoney->setText(QString("%1").arg(_wtoi(wbuf) * 10000));
+	}
 }
 
 qtcombobox::~qtcombobox()

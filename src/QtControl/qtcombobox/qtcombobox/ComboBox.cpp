@@ -17,6 +17,7 @@ ControlBase(parent)
 	setModel(m_listWidget->model());
 	setView(m_listWidget);
 	setItemDelegate(new NoFocusFrameDelegate);
+	//setMouseTracking(true);
 }
 
 void ComboBox::setBorderRadius(int32_t radius, bool rePaint)
@@ -77,7 +78,7 @@ void ComboBox::setBorderImage(const QString& borderImgPath,
 void ComboBox::setDropDownSize(int32_t width, int32_t height, bool rePaint)
 {
 	ControlBase::setPxValue(L"width", width, true, false);
-	ControlBase::setPxValue(L"height", width, true, rePaint);
+	ControlBase::setPxValue(L"height", height, true, rePaint);
 }
 
 void ComboBox::setDropDownBorderWidth(int32_t width, bool rePaint)
@@ -85,12 +86,36 @@ void ComboBox::setDropDownBorderWidth(int32_t width, bool rePaint)
 	ControlBase::setPxSolidValue(L"border", width, true, rePaint);
 }
 
-void ComboBox::setDropDownImage(const QString& dropDownImgPath, bool rePaint)
+void ComboBox::setDropDownImage(const QString& dropDownImgPath,
+								int32_t dropDownImgStateCount,
+								int32_t dropDownImgNormal,
+								int32_t dropDownImgHover,
+								int32_t dropDownImgDisabled,
+								int32_t dropDownImgExpandNormal,
+								int32_t dropDownImgExpandDisabled,
+								bool rePaint)
 {
 	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
-	imageStateMap[NORMAL][NORMAL] = 1;
+	imageStateMap[NORMAL][NORMAL] = dropDownImgNormal;
+	imageStateMap[NORMAL][HOVER] = dropDownImgHover;
+	imageStateMap[NORMAL][PRESSED] = dropDownImgExpandNormal;
+	imageStateMap[NORMAL][DISABLED] = dropDownImgDisabled;
 	std::wstring wstrImgPath = dropDownImgPath.toStdWString();
-	ControlBase::setImageStateMap(imageStateMap, wstrImgPath, 1, L"image", L"down-arrow", rePaint);
+
+	m_imagePath = wstrImgPath;
+	m_dropDownImgStateCount = dropDownImgStateCount;
+	m_dropDownImgNormal = dropDownImgNormal;
+	m_dropDownImgDisabled = dropDownImgDisabled;
+	m_dropDownImgExpandNormal = dropDownImgExpandNormal;
+	m_dropDownImgExpandDisabled = dropDownImgExpandDisabled;
+	
+	ControlBase::setImageStateMap(imageStateMap, wstrImgPath, dropDownImgStateCount, L"border-image", L"down-arrow", rePaint);
+}
+
+void ComboBox::setDropDownTopRightOrigin(int32_t topOrigin, int32_t rightOrigin, bool rePaint)
+{
+	ControlBase::setPxValue(L"margin-top", topOrigin, true, false);
+	ControlBase::setPxValue(L"margin-right", rightOrigin, true, rePaint);
 }
 
 void ComboBox::setTextColor(const QColor& normalColor,
@@ -216,6 +241,29 @@ void ComboBox::setListItemAroundOrigin(int32_t leftOrigin,
 void ComboBox::showEvent(QShowEvent* eve)
 {
 	repaint();
+}
+
+void ComboBox::mouseReleaseEvent(QMouseEvent* eve)
+{
+	return;
+}
+
+void ComboBox::showPopup()
+{
+	m_imageStateMap[NORMAL][NORMAL] = m_dropDownImgExpandNormal;
+	m_imageStateMap[NORMAL][DISABLED] = m_dropDownImgExpandDisabled;
+	ControlBase::setImageStateMap(m_imageStateMap, m_imagePath, m_dropDownImgStateCount, L"border-image", L"down-arrow", true);
+	QComboBox::showPopup();
+	return;
+}
+
+void ComboBox::hidePopup()
+{
+	m_imageStateMap[NORMAL][NORMAL] = m_dropDownImgNormal;
+	m_imageStateMap[NORMAL][DISABLED] = m_dropDownImgDisabled;
+	ControlBase::setImageStateMap(m_imageStateMap, m_imagePath, m_dropDownImgStateCount, L"border-image", L"down-arrow", true);
+	QComboBox::hidePopup();
+	return;
 }
 
 void ComboBox::repaint()

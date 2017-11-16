@@ -2,8 +2,8 @@
 #define _CtxtAPI
 #include "Ctxt.h"
 
-#ifdef NDEBUG
-#pragma comment(lib,"Ctxt.lib")
-#else
+#ifdef _DEBUG
 #pragma comment(lib,"Ctxtd.lib")
+#else
+#pragma comment(lib,"Ctxt.lib")
 #endif

@@ -63,6 +63,9 @@
     <Filter Include="Label">
       <UniqueIdentifier>{dcf75ab5-eb90-43c2-b105-8ff286e46aba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Menu">
+      <UniqueIdentifier>{89dbc6da-c6e3-41ea-8a43-f78671cd1616}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -113,6 +116,9 @@
     <ClCompile Include="Label.cpp">
       <Filter>Label</Filter>
     </ClCompile>
+    <ClCompile Include="Menu.cpp">
+      <Filter>Menu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -158,6 +164,9 @@
     </ClInclude>
     <ClInclude Include="Label.h">
       <Filter>Label</Filter>
+    </ClInclude>
+    <ClInclude Include="Menu.h">
+      <Filter>Menu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

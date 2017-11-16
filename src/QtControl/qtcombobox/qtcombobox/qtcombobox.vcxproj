@@ -96,6 +96,7 @@
     <ClCompile Include="Label.cpp" />
     <ClCompile Include="ListWidget.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Menu.cpp" />
     <ClCompile Include="NoFocusFrameDelegate.cpp" />
     <ClCompile Include="QssHelper.cpp" />
     <ClCompile Include="QssString.cpp" />
@@ -273,6 +274,7 @@
   <ItemGroup>
     <ClInclude Include="ControlBase.h" />
     <ClInclude Include="Label.h" />
+    <ClInclude Include="Menu.h" />
     <ClInclude Include="RadioButton.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

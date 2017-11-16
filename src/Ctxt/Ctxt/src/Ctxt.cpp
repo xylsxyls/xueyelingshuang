@@ -106,7 +106,7 @@ void Ctxt::Save()
 	int32_t lineIndex = -1;
 	int32_t partIndex = -1;
 	std::string strLine;
-	while (inWhile)
+	while (inWhile && (m_vectxt.size() > 0))
 	{
 		++lineIndex;
 		strLine.clear();

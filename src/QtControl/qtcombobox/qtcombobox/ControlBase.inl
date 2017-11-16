@@ -40,9 +40,9 @@ void ControlBase<QBase>::setPxSolidValue(const std::wstring& keyWord, int32_t va
 
 template<class QBase>
 void ControlBase<QBase>::setKeyValue(const std::wstring& keyWord,
-										  const std::wstring& value,
-										  bool isItem,
-										  bool rePaint)
+									 const std::wstring& value,
+									 bool isItem,
+									 bool rePaint)
 {
 	m_controlStyle[m_className](isItem, m_itemName).AddKeyValue(keyWord, value);
 	if (rePaint)

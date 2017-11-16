@@ -18,28 +18,28 @@ public:
 	static void Sleep(long long milliseconds);
 	//?生成UUID，传入1表示带-，传0表示不带
 	static string uuid(int flag = 1);
-    //?打开系统文件夹
-    static void OpenFolder(const string& folder);
-    //?打开系统文件夹并选择文件
-    static void OpenFolderAndSelectFile(const string& file);
-    //?外部打开文件
-    static void OpenFile(const string& file);
-    //?外部打开网页
-    static void OpenWebPage(const string& webPage);
+	//?打开系统文件夹
+	static void OpenFolder(const string& folder);
+	//?打开系统文件夹并选择文件
+	static void OpenFolderAndSelectFile(const string& file);
+	//?外部打开文件
+	static void OpenFile(const string& file);
+	//?外部打开网页
+	static void OpenWebPage(const string& webPage);
 	//?复制文件
 	static void CopyFileOver(const string& dstFile, const string& srcFile, bool over);
-    //?获取当前操作系统位数
-    static int GetSystemBits();
-    //?禁用重定向
-    static void ForbidRedir();
-    //?恢复重定向
-    static void RecoveryRedir();
-    //?获取当前系统用户名，类似Administrator
-    static string GetSysUserName();
+	//?获取当前操作系统位数
+	static int GetSystemBits();
+	//?禁用重定向
+	static void ForbidRedir();
+	//?恢复重定向
+	static void RecoveryRedir();
+	//?获取当前系统用户名，类似Administrator
+	static string GetSysUserName();
 	//?获得本机中处理器的数量
 	static int GetCPUCount();
 
 public:
     static bool ifRedirFrobid;
     static PVOID oldValue;
-};;
+};

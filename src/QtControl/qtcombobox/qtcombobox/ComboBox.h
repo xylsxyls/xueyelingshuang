@@ -85,9 +85,29 @@ public:
 
 	/** 设置下拉箭头的图片
 	@param [in] dropDownImgPath 背景图片路径，如果路径中必须使用正斜杠
+	@param [in] dropDownImgStateCount 上下平分几份
+	@param [in] dropDownImgNormal 非选中常态图片，如果填1表示将图片纵向分割4份或8份，选最上面的第一份
+	@param [in] dropDownImgHover 非选中悬停图片
+	@param [in] dropDownImgDisabled 非选中禁用图片
+	@param [in] dropDownImgCkNormal 选中常态图片
+	@param [in] dropDownImgCkDisabled 选中禁用图片
 	@param [in] rePaint 是否立即重画
 	*/
-	void setDropDownImage(const QString& dropDownImgPath, bool rePaint = false);
+	void setDropDownImage(const QString& dropDownImgPath,
+						  int32_t dropDownImgStateCount = 8,
+						  int32_t dropDownImgNormal = 1,
+						  int32_t dropDownImgHover = 2,
+						  int32_t dropDownImgDisabled = 4,
+						  int32_t dropDownImgExpandNormal = 5,
+						  int32_t dropDownImgExpandDisabled = 8,
+						  bool rePaint = false);
+
+	/** 设置下拉箭头距离右上角的边距
+	@param [in] topOrigin 上侧偏移量
+	@param [in] rightOrigin 右侧偏移量
+	@param [in] rePaint 是否立即重画
+	*/
+	void setDropDownTopRightOrigin(int32_t topOrigin, int32_t rightOrigin, bool rePaint = false);
 
 	/** 设置文字颜色
 	@param [in] normalColor 常态颜色
@@ -235,9 +255,19 @@ public:
 
 private:
 	virtual void showEvent(QShowEvent* eve);
+	virtual void mouseReleaseEvent(QMouseEvent* eve);
+	virtual void showPopup();
+	virtual void hidePopup();
 
 private:
 	ListWidget* m_listWidget;
+	int32_t m_dropDownImgNormal;
+	int32_t m_dropDownImgDisabled;
+	int32_t m_dropDownImgExpandNormal;
+	int32_t m_dropDownImgExpandDisabled;
+	int32_t m_dropDownImgStateCount;
+	std::map<int32_t, std::map<int32_t, int32_t>> m_imageStateMap;
+	std::wstring m_imagePath;
 };
 
 #endif

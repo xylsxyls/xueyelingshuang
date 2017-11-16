@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\CGetPathAPI.h">
+    <ClInclude Include="..\src\CGetPath.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CGetPath.h">
+    <ClInclude Include="..\src\CGetPathAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CGetPathMacro.h">

@@ -25,12 +25,12 @@ IncrediBuild = None
 UseMSBuild = True #默认用MSBuild编译，如果为False则用IncrediBuild编译
 
 #不同项目只需修改下面5个变量
-SlnFile = '../Ctxt.sln' #相对于本py脚本路径的相对路径
+SlnFile = '../CGetPath_lib.sln' #相对于本py脚本路径的相对路径
 UpdateDir = [] #相对于本py脚本路径的相对路径，填空不更新
 ExecBatList = [] #相对于本py脚本路径的相对路径，编译前调用的脚本，可填空，执行bat会先cd到bat目录再执行
-MSBuildFirstProjects = [r'Ctxt'] #使用MSBuild需要工程文件在解决方案sln中的路径
+MSBuildFirstProjects = [r'CGetPath_lib'] #使用MSBuild需要工程文件在解决方案sln中的路径
      # MSBuild首先编译的项目，填空不指定顺序
-IncrediBuildFirstProjects = ['Ctxt'] #使用IncrediBuild只需工程名字
+IncrediBuildFirstProjects = ['CGetPath_lib'] #使用IncrediBuild只需工程名字
      #IncrediBuild首先编译的项目，填空不指定顺序
 
 class ConsoleColor():

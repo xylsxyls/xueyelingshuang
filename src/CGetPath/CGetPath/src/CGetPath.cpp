@@ -7,9 +7,9 @@
 #include <afxdisp.h>
 #include "CSystem/CSystemAPI.h"
 
-string CGetPath::GetRegOcxPath(const string& classid)
+std::string CGetPath::GetRegOcxPath(const std::string& classid)
 {
-	string strSubKey;
+	std::string strSubKey;
 	HKEY hKey;
 	LPBYTE lpData;
     CStringManager::Format(strSubKey, _T("CLSID\\{%s}\\InprocServer32"), classid);
@@ -19,22 +19,22 @@ string CGetPath::GetRegOcxPath(const string& classid)
     memset(lpData, 0, 1024);
 	DWORD cbData = 1024;
     RegQueryValueEx(hKey, _T(""), NULL, &dwType, lpData, &cbData);
-	string temp;
+	std::string temp;
 	temp = (char*)lpData;
-    string result = temp.substr(temp.find_last_of('\\') + 1);
+    std::string result = temp.substr(temp.find_last_of('\\') + 1);
 	return result;
 }
 
-string CGetPath::GetCurrentExePath()
+std::string CGetPath::GetCurrentExePath()
 {
 	char szFilePath[1024] = {};
 	GetModuleFileName(NULL, szFilePath, 1024);
     return CGetPath::GetName(szFilePath, 4);
 }
 
-string CGetPath::GetFolderFromWindow(HWND hWnd)
+std::string CGetPath::GetFolderFromWindow(HWND hWnd)
 {
-	string cstrSelectPath;
+	std::string cstrSelectPath;
 	BROWSEINFO stBrowseInfo;
 	memset(&stBrowseInfo, 0, sizeof(stBrowseInfo));
 	stBrowseInfo.hwndOwner = hWnd;
@@ -62,7 +62,7 @@ string CGetPath::GetFolderFromWindow(HWND hWnd)
 
 #define NDEBUG
 
-string CGetPath::GetFileFromWindow(HWND hwnd)
+std::string CGetPath::GetFileFromWindow(HWND hwnd)
 {
 	TCHAR szBuffer[MAX_PATH] = { 0 };
 	OPENFILENAME ofn = { 0 };
@@ -79,15 +79,15 @@ string CGetPath::GetFileFromWindow(HWND hwnd)
     //标志如果是多选要加上OFN_ALLOWMULTISELECT
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER;
 	BOOL bSel = GetOpenFileName(&ofn);
-	return string(szBuffer);
+	return std::string(szBuffer);
 }
 
 #ifdef WTL
-std::string RCGetPath::GetFileFromWindow(HWND hwnd){
+std::std::string RCGetPath::GetFileFromWindow(HWND hwnd){
     wchar_t* filter = L"image files (*.png)\0*.png\0All Files (*.*)\0*.*\0\0";
     CFileDialog dlg(true, 0, 0, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST, filter, hwnd);
     if (dlg.DoModal() == IDOK){
-        std::wstring ss = dlg.m_szFileName;
+        std::wstd::string ss = dlg.m_szFileName;
         UnicodeToAnsi(ss);
         return UnicodeToAnsi(ss);
     }
@@ -95,7 +95,7 @@ std::string RCGetPath::GetFileFromWindow(HWND hwnd){
 }
 #endif
 
-void RecursionFindFile(const string& strPath, const string& FileStr, vector<string> *pPathVector, BOOL flag, vector<string> *pUnVisitPath)
+void RecursionFindFile(const std::string& strPath, const std::string& FileStr, vector<std::string> *pPathVector, BOOL flag, vector<std::string> *pUnVisitPath)
 {
 	CFileFind finder;
     //_T()的作用是使系统支持Unicode编码
@@ -111,9 +111,9 @@ void RecursionFindFile(const string& strPath, const string& FileStr, vector<stri
     }
 
     //当前寻找到的文件或文件夹名
-	string tempFileName;
+	std::string tempFileName;
     //当前寻找到的文件或文件夹路径
-    string tempFilePath;
+    std::string tempFilePath;
     //判断是否把当前路径全部找完，自然退出while
 	BOOL   ifNeedKeepFind = 1;
 
@@ -169,9 +169,9 @@ void RecursionFindFile(const string& strPath, const string& FileStr, vector<stri
 	return;
 }
 
-vector<string> CGetPath::FindFilePath(const string& FileStr, const string& strPath, BOOL flag, vector<string> *pUnVisitPath)
+std::vector<std::string> CGetPath::FindFilePath(const std::string& FileStr, const std::string& strPath, BOOL flag, std::vector<std::string> *pUnVisitPath)
 {
-    string path = strPath;
+    std::string path = strPath;
     if (path == "")
     {
         path = CGetPath::GetCurrentExePath();
@@ -179,7 +179,7 @@ vector<string> CGetPath::FindFilePath(const string& FileStr, const string& strPa
 	}
     //禁用系统重定向，防止64位系统访问System32时进入到SysWOW64中
     CSystem::ForbidRedir();
-	vector<string> VecPath;
+	std::vector<std::string> VecPath;
     //strPath为当前进程路径的上层目录
     RecursionFindFile(path, FileStr, &VecPath, flag, pUnVisitPath);
     //恢复重定向
@@ -187,7 +187,7 @@ vector<string> CGetPath::FindFilePath(const string& FileStr, const string& strPa
 	return VecPath;
 }
 
-vector<int> CGetPath::GetProcessID(string strProcessName)
+std::vector<int> CGetPath::GetProcessID(std::string strProcessName)
 {
 	HANDLE myhProcess;
 	PROCESSENTRY32 mype;
@@ -198,7 +198,7 @@ vector<int> CGetPath::GetProcessID(string strProcessName)
     myhProcess = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	//开始进程查找
     mybRet = Process32First(myhProcess, &mype);
-	vector<int> vec;
+	std::vector<int> vec;
 	//循环比较，得出ProcessID
 	while(mybRet)
     {
@@ -239,10 +239,10 @@ HWND CGetPath::GetHwndByProcessId(DWORD dwProcessId)
 	return info.hWnd;
 }
 
-string CGetPath::GetName(const string& path, int flag)
+std::string CGetPath::GetName(const std::string& path, int flag)
 {
     int left = path.find_last_of("/\\");
-    string name = CStringManager::Mid(path, left + 1, path.length() - left - 1);
+    std::string name = CStringManager::Mid(path, left + 1, path.length() - left - 1);
     int point = name.find_last_of(".");
     switch (flag)
     {
