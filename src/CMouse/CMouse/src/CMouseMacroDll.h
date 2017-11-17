@@ -5,8 +5,3 @@
 #else
 #define CMouseAPI _declspec(dllexport)
 #endif
-
-#if defined(STATIC_LIB)
-#undef CMouseAPI
-#define CMouseAPI 
-#endif

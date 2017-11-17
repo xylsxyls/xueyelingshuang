@@ -5,8 +5,3 @@
 #else
 #define CScreenAPI _declspec(dllexport)
 #endif
-
-#if defined(STATIC_LIB)
-#undef CScreenAPI
-#define CScreenAPI 
-#endif

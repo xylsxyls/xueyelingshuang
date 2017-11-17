@@ -5,8 +5,3 @@
 #else
 #define CKeyboardAPI _declspec(dllexport)
 #endif
-
-#if defined(STATIC_LIB)
-#undef CKeyboardAPI
-#define CKeyboardAPI 
-#endif

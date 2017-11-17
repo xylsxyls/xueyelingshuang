@@ -2,80 +2,82 @@
 #include <string>
 #include <map>
 #include <vector>
-#include "MulRect/MulRectAPI.h"
+#include "Rect/RectAPI.h"
 #include "CScreenMacro.h"
-using namespace std;
 
-class CScreenAPI ColorCast{
+class CScreenAPI ColorCast
+{
 public:
 	ColorCast();
-	ColorCast(const string& strColorCast);
+	ColorCast(const std::string& strColorCast);
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	string RC;
-	string GC;
-	string BC;
+	std::string RC;
+	std::string GC;
+	std::string BC;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 	
-	string toString()const;
+	std::string toString()const;
 };
 
-class CScreenAPI Color{
+class CScreenAPI Color
+{
 public:
 	Color();
-	Color(const string& strColor);
-	Color(const string& strRGB, const string& strRCGCBC);
+	Color(const std::string& strColor);
+	Color(const std::string& strRGB, const std::string& strRCGCBC);
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	string R;
-	string G;
-	string B;
+	std::string R;
+	std::string G;
+	std::string B;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 	
 	ColorCast colorCast;
-	string toString()const;
-	string toReserveString()const;
+	std::string toString()const;
+	std::string toReserveString()const;
 };
 
-class CScreenAPI CScreen{
+class CScreenAPI CScreen
+{
 public:
 	//?设置字库和使用字库，字库编号和字库路径，设置使用的字库编号
-	static bool initDict(const map<int, string>& mapDict, int use);
+	static bool initDict(const std::map<int, std::string>& mapDict, int use);
 	//?屏幕区域截图为BMP
-	static bool SaveBmp(const MulRect& MulRect, const string& path);
+	static bool SaveBmp(const xyls::Rect& rect, const std::string& path);
 	//?屏幕区域截图为GIF，动画间隔，总时间，单位都是毫秒，实际上就是把多张图片保存在一个GIF动画中
-	static bool SaveGif(const MulRect& MulRect, int delay, int time, const string& path);
+	static bool SaveGif(const xyls::Rect& rect, int delay, int time, const std::string& path);
 	//?屏幕区域截图为JPG，压缩比例1-100，1为最大压缩程度
-	static bool SaveJpg(const MulRect& MulRect, int quality, const string& path);
+	static bool SaveJpg(const xyls::Rect& rect, int quality, const std::string& path);
 	//?屏幕区域截图为PNG
-	static bool SavePng(const MulRect& MulRect, const string& path);
+	static bool SavePng(const xyls::Rect& rect, const std::string& path);
 	//?比较绝对坐标颜色，颜色集合最多10个，相似度0.1-1.0
-	static bool ComparePointColor(const MulPoint& point, const Color& color, double sim = 1.0);
-	static bool ComparePointColor(const MulPoint& point, const vector<Color>& color, double sim = 1.0);
+	static bool ComparePointColor(const xyls::Point& point, const Color& color, double sim = 1.0);
+	static bool ComparePointColor(const xyls::Point& point, const std::vector<Color>& color, double sim = 1.0);
 	//?在指定区域内查找指定颜色，找到返回x，y值
 	//?dir，0：左右上下，1：左右下上，2：右左上下，3：右左下上，4：中心向外，5：上下左右，6：上下右左，7：下上左右，8：下上右左
-	static bool FindColor(const MulRect& MulRect, const Color& color, int& x, int& y, double sim = 1.0, int dir = 0);
-	static bool FindColor(const MulRect& MulRect, const vector<Color>& vecColor, int& x, int& y, double sim = 1.0, int dir = 0);
+	static bool FindColor(const xyls::Rect& rect, const Color& color, int& x, int& y, double sim = 1.0, int dir = 0);
+	static bool FindColor(const xyls::Rect& rect, const std::vector<Color>& vecColor, int& x, int& y, double sim = 1.0, int dir = 0);
 	//?检测当前区域是否有本地图片，图片格式为bmp，图片上下左右4个点颜色一样的话则该图片默认处理为透明色
 	//?dir，0：左右上下，1：左右下上，2：右左上下，3：右左下上
-	static bool FindPic(const MulRect& MulRect, const string& picPath, int& x, int& y, const ColorCast& colorCast = string("000000"), double sim = 1.0, int dir = 0);
-	static bool FindPic(const MulRect& MulRect, const vector<string>& vecPicPath, int& x, int& y, const ColorCast& colorCast = string("000000"), double sim = 1.0, int dir = 0);
+	static bool FindPic(const xyls::Rect& rect, const std::string& picPath, int& x, int& y, const ColorCast& colorCast = std::string("000000"), double sim = 1.0, int dir = 0);
+	static bool FindPic(const xyls::Rect& rect, const std::vector<std::string>& vecPicPath, int& x, int& y, const ColorCast& colorCast = std::string("000000"), double sim = 1.0, int dir = 0);
 	//?获取图片大小，使用GetWidth和GetHeight来获取长宽
-	static MulRect GetPicSize(const string& picPath);
+	static xyls::Rect GetPicSize(const std::string& picPath);
 	//?转换图片格式
-	static bool ChangeToBmp(const string& picPathDst, const string& picPathSrc);
+	static bool ChangeToBmp(const std::string& picPathDst, const std::string& picPathSrc);
 	//?查找图片路径，返回相对路径
-	static vector<string> MatchPicName(const string& picPath);
+	static std::vector<std::string> MatchPicName(const std::string& picPath);
 	//?检测当前区域是否有文字，相似度，如果有则在x，y中返回坐标
-	static bool FindStr(const MulRect& MulRect, const string& str, const Color& color, int& x, int& y, double sim = 1.0);
+	static bool FindStr(const xyls::Rect& rect, const std::string& str, const Color& color, int& x, int& y, double sim = 1.0);
 };
