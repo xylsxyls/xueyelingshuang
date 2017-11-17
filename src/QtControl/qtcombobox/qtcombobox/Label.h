@@ -75,10 +75,6 @@ public:
 	*/
 	QString text();
 
-	/** ÖØ»­
-	*/
-	void repaint();
-
 private:
 	std::wstring m_str;
 	int32_t m_leftOrigin;

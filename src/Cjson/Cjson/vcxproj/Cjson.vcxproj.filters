@@ -13,34 +13,10 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="CstrValue">
-      <UniqueIdentifier>{cb0e737d-d4d0-4c44-b6e3-d75c30489888}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="CszValue">
-      <UniqueIdentifier>{5abbcb8a-985e-4c1d-b923-3cb9a8dc11b8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="CTypeValue">
-      <UniqueIdentifier>{dc8393a9-4777-4086-a219-1274bf65a7b5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="CFieldType">
-      <UniqueIdentifier>{cf08648a-00f4-4332-9e97-047af57a2a9e}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\CjsonA.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CFieldType.h">
-      <Filter>CFieldType</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CstrValue.h">
-      <Filter>CstrValue</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CszValue.h">
-      <Filter>CszValue</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Cjson.h">
-      <Filter>CTypeValue</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CjsonAPI.h">
       <Filter>头文件</Filter>
@@ -48,22 +24,34 @@
     <ClInclude Include="..\src\CjsonMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\CFieldType.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CjsonA.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CstrValue.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CszValue.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\CjsonA.cpp">
+    <ClCompile Include="..\src\Cjson.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CFieldType.cpp">
-      <Filter>CFieldType</Filter>
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CjsonA.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CstrValue.cpp">
-      <Filter>CstrValue</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CszValue.cpp">
-      <Filter>CszValue</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\Cjson.cpp">
-      <Filter>CTypeValue</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -96,26 +96,16 @@ qtcombobox::qtcombobox(QWidget *parent)
 	menu->addAction(item1);
 	menu->addAction(itme2);
 	menu->addSeparator();
-	auto pSubMenu = menu->addMenu( "sub menu");
+	auto pSubMenu = menu->addMenu("sub menu");
 	pSubMenu->addAction(item3);
 	pSubMenu->addAction(item4);
 	menu->setBackgroundColor(QColor(255, 0, 0, 255));
-	auto ss = menu->exec(QPoint(50,50));
+	menu->setBorderWidth(5);
+	menu->setBorderColor(QColor(255, 0, 255, 255));
+	menu->setItemBorderColor(QColor(255, 156, 255, 255), QColor(0, 100, 255, 255), QColor(255, 0, 255, 255));
+	menu->setItemBorderWidth(3);
+	auto ss = menu->exec(QPoint(50, 50));
 	int x = 3;
-}
-
-void qtcombobox::OnMenuTriggered(QAction* p)
-{
-	wchar_t wbuf[512] = { 0 };
-	auto text = p->text().toStdString();
-
-	MultiByteToWideChar(CP_UTF8, 0, text.c_str(), text.length(), wbuf, 512);
-	auto pWan = wcschr(wbuf, L'Íò');
-	if (pWan != NULL)
-	{
-		*pWan = 0;
-		//ui.m_editMoney->setText(QString("%1").arg(_wtoi(wbuf) * 10000));
-	}
 }
 
 qtcombobox::~qtcombobox()

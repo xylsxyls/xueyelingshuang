@@ -106,8 +106,4 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setTextOrigin(int32_t origin, bool rePaint = false);
-
-	/** 重画
-	*/
-	void repaint();
 };

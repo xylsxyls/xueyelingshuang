@@ -94,8 +94,3 @@ QString Label::text()
 {
 	return QString::fromStdWString(m_str);
 }
-
-void Label::repaint()
-{
-	updateStyle();
-}

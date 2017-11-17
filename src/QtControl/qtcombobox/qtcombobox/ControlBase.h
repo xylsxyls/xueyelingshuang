@@ -10,6 +10,11 @@ class QWidget;
 template <class QBase>
 class ControlBase : public QBase
 {
+public:
+	/** 重画
+	*/
+	virtual void repaint();
+
 protected:
 	/** 构造函数
 	@param [in] parent 父窗口指针

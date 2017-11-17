@@ -100,8 +100,3 @@ void ListWidget::setItemAroundOrigin(int32_t leftOrigin,
 	ControlBase::setPxValue(L"margin-right", rightOrigin, true, false);
 	ControlBase::setPxValue(L"margin-bottom", bottomOrigin, true, rePaint);
 }
-
-void ListWidget::repaint()
-{
-	updateStyle();
-}

@@ -3,7 +3,8 @@
 using namespace std;
 #include "CEncodeDecodeMacro.h"
 
-class CEncodeDecodeAPI CEncodeDecode{
+class CEncodeDecodeAPI CEncodeDecode
+{
 public:
 	//返回经过MD5转换后的字符串
 	static string MD5Decode(string src);

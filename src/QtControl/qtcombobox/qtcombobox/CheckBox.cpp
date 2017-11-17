@@ -130,8 +130,3 @@ void CheckBox::setTextOrigin(int32_t origin, bool rePaint)
 {
 	ControlBase::setPxValue(L"spacing", origin, false, rePaint);
 }
-
-void CheckBox::repaint()
-{
-	updateStyle();
-}

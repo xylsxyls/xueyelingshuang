@@ -11,7 +11,6 @@ class qtcombobox : public QMainWindow
 public:
 	qtcombobox(QWidget *parent = 0);
 	~qtcombobox();
-	void OnMenuTriggered(QAction* p);
 
 private:
 	Ui::qtcomboboxClass ui;

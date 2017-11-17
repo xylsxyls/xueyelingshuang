@@ -109,8 +109,4 @@ public:
 						     int32_t rightOrigin,
 						     int32_t bottomOrigin,
 						     bool rePaint = false);
-
-	/** ÖØ»­
-	*/
-	void repaint();
 };

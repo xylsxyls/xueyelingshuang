@@ -251,7 +251,7 @@ public:
 
 	/** ÖØ»­
 	*/
-	void repaint();
+	virtual void repaint();
 
 private:
 	virtual void showEvent(QShowEvent* eve);

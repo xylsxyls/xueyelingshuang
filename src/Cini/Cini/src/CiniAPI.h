@@ -2,8 +2,8 @@
 #define _CiniAPI
 #include "Cini.h"
 
-#ifdef NDEBUG
-#pragma comment(lib,"Cini.lib")
-#else
+#ifdef _DEBUG
 #pragma comment(lib,"Cinid.lib")
+#else
+#pragma comment(lib,"Cini.lib")
 #endif

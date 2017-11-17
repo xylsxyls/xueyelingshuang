@@ -7,6 +7,12 @@
 #include "QssHelper.h"
 
 template<class QBase>
+void ControlBase<QBase>::repaint()
+{
+	updateStyle();
+}
+
+template<class QBase>
 ControlBase<QBase>::ControlBase(QWidget* parent) :
 QBase(parent)
 {

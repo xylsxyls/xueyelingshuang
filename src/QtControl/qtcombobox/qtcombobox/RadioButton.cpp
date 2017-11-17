@@ -130,8 +130,3 @@ void RadioButton::setTextOrigin(int32_t origin, bool rePaint)
 {
 	ControlBase::setPxValue(L"spacing", origin, false, rePaint);
 }
-
-void RadioButton::repaint()
-{
-	updateStyle();
-}
