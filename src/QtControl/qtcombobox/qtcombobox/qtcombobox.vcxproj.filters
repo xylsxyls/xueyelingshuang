@@ -66,6 +66,18 @@
     <Filter Include="Menu">
       <UniqueIdentifier>{89dbc6da-c6e3-41ea-8a43-f78671cd1616}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ControlFont">
+      <UniqueIdentifier>{2274c276-9e1d-4fd5-9b33-e01ccf737ec4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ControlItem">
+      <UniqueIdentifier>{90c5a3ff-7ff1-4bbb-8962-18f5f946102a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ControlSelf">
+      <UniqueIdentifier>{973f9eb2-49ed-4ff4-94b9-2d06e7cbac2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ControlBorder">
+      <UniqueIdentifier>{7c3d55e3-8064-40fa-9d5f-664ebe7584cf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -119,6 +131,9 @@
     <ClCompile Include="Menu.cpp">
       <Filter>Menu</Filter>
     </ClCompile>
+    <ClCompile Include="ControlFont.inl">
+      <Filter>ControlFont</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -168,5 +183,28 @@
     <ClInclude Include="Menu.h">
       <Filter>Menu</Filter>
     </ClInclude>
+    <ClInclude Include="ControlFont.h">
+      <Filter>ControlFont</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlItem.h">
+      <Filter>ControlItem</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlSelf.h">
+      <Filter>ControlSelf</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlBorder.h">
+      <Filter>ControlBorder</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ControlItem.inl">
+      <Filter>ControlItem</Filter>
+    </None>
+    <None Include="ControlSelf.inl">
+      <Filter>ControlSelf</Filter>
+    </None>
+    <None Include="ControlBorder.inl">
+      <Filter>ControlBorder</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -79,6 +79,7 @@
     <ClCompile Include="CheckBox.cpp" />
     <ClCompile Include="ComboBox.cpp" />
     <ClCompile Include="ControlBase.inl" />
+    <ClCompile Include="ControlFont.inl" />
     <ClCompile Include="CStringManager.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_qtcombobox.cpp">
@@ -273,9 +274,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlBase.h" />
+    <ClInclude Include="ControlBorder.h" />
+    <ClInclude Include="ControlFont.h" />
+    <ClInclude Include="ControlItem.h" />
+    <ClInclude Include="ControlSelf.h" />
     <ClInclude Include="Label.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="RadioButton.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ControlBorder.inl" />
+    <None Include="ControlItem.inl" />
+    <None Include="ControlSelf.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

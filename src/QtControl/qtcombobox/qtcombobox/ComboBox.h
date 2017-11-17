@@ -3,10 +3,15 @@
 
 #include <QtWidgets/QComboBox>
 #include <stdint.h>
-#include "ControlBase.h"
+#include "ControlFont.h"
+#include "ControlSelf.h"
+#include "ControlBorder.h"
 
 class ListWidget;
-class ComboBox : public ControlBase < QComboBox >
+class ComboBox : 
+	public ControlFont < QComboBox >,
+	public ControlSelf < QComboBox >,
+	public ControlBorderForNormalHoverPressedDisabled < QComboBox >
 {
 public:
 	/** 构造函数
@@ -15,12 +20,6 @@ public:
 	ComboBox(QWidget* parent = NULL);
 
 public:
-	/** 将点击框设为圆角，输入圆角半径，只有加入边框才会有圆角
-	@param [in] radius 圆角半径
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBorderRadius(int32_t radius, bool rePaint = false);
-
 	/** 设置点击框背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -33,42 +32,6 @@ public:
 							const QColor& pressedColor,
 							const QColor& disabledColor,
 							bool rePaint = false);
-
-	/** 设置边框粗度
-	@param [in] width 边框粗度
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBorderWidth(int32_t width, bool rePaint = false);
-
-	/** 设置点击框边框颜色
-	@param [in] normalColor 常态颜色
-	@param [in] hoverColor 悬停颜色
-	@param [in] pressedColor 按下颜色
-	@param [in] disabledColor 禁用颜色
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBorderColor(const QColor& normalColor,
-						const QColor& hoverColor,
-						const QColor& pressedColor,
-						const QColor& disabledColor,
-						bool rePaint = false);
-
-	/** 设置点击框边框图片，和边框颜色不用存
-	@param [in] borderImgPath 背景图片路径，如果路径中必须使用正斜杠
-	@param [in] borderImgStateCount 上下平分几份
-	@param [in] borderImgNormal 非选中常态图片，如果填1表示将图片纵向分割4份或8份，选最上面的第一份
-	@param [in] borderImgHover 非选中悬停图片
-	@param [in] borderImgPressed 非选中按下图片
-	@param [in] borderImgDisabled 非选中禁用图片
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBorderImage(const QString& borderImgPath,
-						int32_t borderImgStateCount = 4,
-						int32_t borderImgNormal = 1,
-						int32_t borderImgHover = 2,
-						int32_t borderImgPressed = 3,
-						int32_t borderImgDisabled = 4,
-						bool rePaint = false);
 
 	/** 设置下拉箭头的尺寸
 	@param [in] width 下拉箭头宽度
@@ -108,31 +71,6 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setDropDownTopRightOrigin(int32_t topOrigin, int32_t rightOrigin, bool rePaint = false);
-
-	/** 设置文字颜色
-	@param [in] normalColor 常态颜色
-	@param [in] hoverColor 悬停颜色
-	@param [in] pressedColor 按下颜色
-	@param [in] disabledColor 禁用颜色
-	@param [in] rePaint 是否立即重画
-	*/
-	void setTextColor(const QColor& normalColor,
-					  const QColor& hoverColor,
-					  const QColor& pressedColor,
-					  const QColor& disabledColor,
-					  bool rePaint = false);
-
-	/** 设置字体
-	@param [in] fontName 字体名
-	@param [in] rePaint 是否立即重画
-	*/
-	void setFontFace(const QString& fontName, bool rePaint = false);
-
-	/** 设置字体大小
-	@param [in] fontSize 字体大小
-	@param [in] rePaint 是否立即重画
-	*/
-	void setFontSize(int32_t fontSize, bool rePaint = false);
 
 	/** 设置文本偏移量
 	@param [in] origin 文本偏移量

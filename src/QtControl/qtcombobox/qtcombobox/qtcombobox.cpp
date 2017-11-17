@@ -78,7 +78,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	Label* pLabel = new Label(this);
 	
 	pLabel->setGeometry(200, 300, 80, 50);
-	pLabel->setBackgroundImage(QString::fromLocal8Bit("D:/hot.png"), 4, 1, 2, 4);
+	pLabel->setBorderImage(QString::fromLocal8Bit("D:/hot.png"), 4, 1, 2, 4);
 	pLabel->setFontFace(QString::fromLocal8Bit("ºÚÌå"));
 	pLabel->setFontSize(18);
 	pLabel->setTextColor(QColor(255, 0, 255, 1), QColor(255, 255, 0, 1), QColor(255, 0, 0, 1));
@@ -104,6 +104,10 @@ qtcombobox::qtcombobox(QWidget *parent)
 	menu->setBorderColor(QColor(255, 0, 255, 255));
 	menu->setItemBorderColor(QColor(255, 156, 255, 255), QColor(0, 100, 255, 255), QColor(255, 0, 255, 255));
 	menu->setItemBorderWidth(3);
+	menu->setFontFace(QString::fromLocal8Bit("ºÚÌå"));
+	menu->setFontSize(18);
+	menu->setItemHeight(40);
+	
 	auto ss = menu->exec(QPoint(50, 50));
 	int x = 3;
 }

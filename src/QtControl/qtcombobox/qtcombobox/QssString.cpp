@@ -6,6 +6,7 @@ QssString::QssString()
 	m_mapEnum[CHECK] = L"checked";
 	m_mapEnum[NORMAL] = L"";
 	m_mapEnum[HOVER] = L"hover";
+	m_mapEnum[SELECTED] = L"selected";
 	m_mapEnum[PRESSED] = L"pressed";
 	m_mapEnum[DISABLED] = L"disabled";
 }

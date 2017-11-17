@@ -6,51 +6,16 @@ ControlBase(parent)
 	ControlBase::init(L"QLabel", L"");
 }
 
-void Label::setBackgroundImage(const QString& backgroundImg,
-							   int32_t backgroundImgStateCount,
-							   int32_t backgroundImgNormal,
-							   int32_t backgroundImgHover,
-							   int32_t backgroundImgDisabled,
-							   bool rePaint)
-{
-	std::map<int32_t, std::map<int32_t, int32_t>> backgroundImgMap;
-
-	backgroundImgMap[NORMAL][NORMAL] = backgroundImgNormal;
-	backgroundImgMap[NORMAL][HOVER] = backgroundImgHover;
-	backgroundImgMap[NORMAL][DISABLED] = backgroundImgDisabled;
-
-	ControlBase::setImageStateMap(backgroundImgMap,
-								  backgroundImg.toStdWString(),
-								  backgroundImgStateCount,
-								  L"border-image",
-								  false,
-								  rePaint);
-}
-
 void Label::setFontFace(const QString& fontName, bool rePaint)
 {
 	m_fontName = fontName.toStdWString();
-	ControlBase::setFontFace(fontName.toStdWString(), false, rePaint);
+	ControlFont::setFontFace(fontName, rePaint);
 }
 
 void Label::setFontSize(int32_t fontSize, bool rePaint)
 {
 	m_fontSize = fontSize;
-	ControlBase::setPxValue(L"font-size", fontSize, false, rePaint);
-}
-
-void Label::setTextColor(const QColor& textNormalColor,
-	 	 		 		 const QColor& textHoverColor,
-						 const QColor& textDisabledColor,
-						 bool rePaint)
-{
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
-
-	textColorMap[NORMAL][NORMAL] = textNormalColor;
-	textColorMap[NORMAL][HOVER] = textHoverColor;
-	textColorMap[NORMAL][DISABLED] = textDisabledColor;
-
-	ControlBase::setColorStateMap(textColorMap, L"color", false, rePaint);
+	ControlFont::setFontSize(fontSize, rePaint);
 }
 
 void Label::setBackgroundColor(const QColor& backgroundNormalColor,

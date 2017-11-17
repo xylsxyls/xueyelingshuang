@@ -1,9 +1,12 @@
 #pragma once
 #include <QtWidgets/QRadioButton>
-#include "ControlBase.h"
+#include "ControlFont.h"
+#include "ControlBorder.h"
 
 class QWidget;
-class RadioButton : public ControlBase < QRadioButton >
+class RadioButton : 
+	public ControlFont < QRadioButton >,
+	public ControlBorderForNormalHoverPressedDisabledAndCheck < QRadioButton >
 {
 public:
 	/** 构造函数
@@ -35,57 +38,6 @@ public:
 						   int32_t indicatorImgCKPressed = 3,
 						   int32_t indicatorImgCKDisabled = 4,
 						   bool rePaint = false);
-
-	/** 设置CheckBox指示器和文字整体的背景图片
-	@param [in] backgroundImg 背景图片路径，如果路径中必须使用正斜杠
-	@param [in] backgroundImgStateCount 只能填4或8，表示4态按钮或8态按钮
-	@param [in] backgroundImgNormal 非选中常态图片，如果填1表示将图片纵向分割4份或8份，选最上面的第一份
-	@param [in] backgroundImgHover 非选中悬停图片
-	@param [in] backgroundImgPressed 非选中按下图片
-	@param [in] backgroundImgDisabled 非选中禁用图片
-	@param [in] backgroundImgCKNormal 选中常态图片
-	@param [in] backgroundImgCKHover 选中悬停图片
-	@param [in] backgroundImgCKPressed 选中按下图片
-	@param [in] backgroundImgCKDisabled 选中禁用图片
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBackgroundImage(const QString& backgroundImg,
-			   			    int32_t backgroundImgStateCount = 4,
-						    int32_t backgroundImgNormal = 1,
-						    int32_t backgroundImgHover = 2,
-						    int32_t backgroundImgPressed = 3,
-						    int32_t backgroundImgDisabled = 4,
-						    int32_t backgroundImgCKNormal = 1,
-						    int32_t backgroundImgCKHover = 2,
-						    int32_t backgroundImgCKPressed = 3,
-						    int32_t backgroundImgCKDisabled = 4,
-							bool rePaint = false);
-
-	/** 设置字体
-	@param [in] fontName 字体名
-	@param [in] rePaint 是否立即重画
-	*/
-	void setFontFace(const QString& fontName, bool rePaint = false);
-
-	/** 设置字体大小
-	@param [in] fontSize 字体大小
-	@param [in] rePaint 是否立即重画
-	*/
-	void setFontSize(int32_t fontSize, bool rePaint = false);
-
-	/** 设置字体颜色
-	@param [in] 同上，8态颜色
-	@param [in] rePaint 是否立即重画
-	*/
-	void setTextColor(const QColor& textNormalColor,
-	 	 		 	  const QColor& textHoverColor,
-					  const QColor& textPressedColor,
-					  const QColor& textDisabledColor,
-					  const QColor& textCkNormalColor,
-					  const QColor& textCkHoverColor,
-					  const QColor& textCkPressedColor,
-					  const QColor& textCkDisabledColor,
-					  bool rePaint = false);
 
 	/** 设置背景颜色，指示器和文字整体的背景颜色
 	@param [in] 同上，8态颜色

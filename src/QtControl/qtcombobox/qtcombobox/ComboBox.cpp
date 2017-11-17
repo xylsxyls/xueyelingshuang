@@ -20,11 +20,6 @@ ControlBase(parent)
 	//setMouseTracking(true);
 }
 
-void ComboBox::setBorderRadius(int32_t radius, bool rePaint)
-{
-	ControlBase::setPxValue(L"border-radius", radius, false, rePaint);
-}
-
 void ComboBox::setBackgroundColor(const QColor& normalColor,
 								  const QColor& hoverColor,
 								  const QColor& pressedColor,
@@ -37,42 +32,6 @@ void ComboBox::setBackgroundColor(const QColor& normalColor,
 	colorStateMap[NORMAL][PRESSED] = pressedColor;
 	colorStateMap[NORMAL][DISABLED] = disabledColor;
 	ControlBase::setColorStateMap(colorStateMap, L"background-color", false, rePaint);
-}
-
-void ComboBox::setBorderWidth(int32_t width, bool rePaint)
-{
-	ControlBase::setPxSolidValue(L"border", width, false, rePaint);
-}
-
-void ComboBox::setBorderColor(const QColor& normalColor,
-						      const QColor& hoverColor,
-							  const QColor& pressedColor,
-							  const QColor& disabledColor,
-							  bool rePaint)
-{
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
-	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][PRESSED] = pressedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
-	ControlBase::setColorStateMap(colorStateMap, L"border-color", false, rePaint);
-}
-
-void ComboBox::setBorderImage(const QString& borderImgPath,
-							  int32_t borderImgStateCount,
-							  int32_t borderImgNormal,
-							  int32_t borderImgHover,
-							  int32_t borderImgPressed,
-							  int32_t borderImgDisabled,
-							  bool rePaint)
-{
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
-	imageStateMap[NORMAL][NORMAL] = borderImgNormal;
-	imageStateMap[NORMAL][HOVER] = borderImgHover;
-	imageStateMap[NORMAL][PRESSED] = borderImgPressed;
-	imageStateMap[NORMAL][DISABLED] = borderImgDisabled;
-	std::wstring wstrImgPath = borderImgPath.toStdWString();
-	ControlBase::setImageStateMap(imageStateMap, wstrImgPath, borderImgStateCount, L"border-image", false, rePaint);
 }
 
 void ComboBox::setDropDownSize(int32_t width, int32_t height, bool rePaint)
@@ -116,30 +75,6 @@ void ComboBox::setDropDownTopRightOrigin(int32_t topOrigin, int32_t rightOrigin,
 {
 	ControlBase::setPxValue(L"margin-top", topOrigin, true, false);
 	ControlBase::setPxValue(L"margin-right", rightOrigin, true, rePaint);
-}
-
-void ComboBox::setTextColor(const QColor& normalColor,
-							const QColor& hoverColor,
-							const QColor& pressedColor,
-							const QColor& disabledColor,
-							bool rePaint)
-{
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
-	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][PRESSED] = pressedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
-	ControlBase::setColorStateMap(colorStateMap, L"color", false, rePaint);
-}
-
-void ComboBox::setFontFace(const QString& fontName, bool rePaint)
-{
-	ControlBase::setFontFace(fontName.toStdWString(), false, rePaint);
-}
-
-void ComboBox::setFontSize(int32_t fontSize, bool rePaint)
-{
-	ControlBase::setPxValue(L"font-size", fontSize, false, rePaint);
 }
 
 void ComboBox::setTextOrigin(int32_t origin, bool rePaint)

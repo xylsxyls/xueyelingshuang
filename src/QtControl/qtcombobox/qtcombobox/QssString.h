@@ -9,6 +9,7 @@ enum
 	CHECK,
 	NORMAL,
 	HOVER,
+	SELECTED,
 	PRESSED,
 	DISABLED
 };

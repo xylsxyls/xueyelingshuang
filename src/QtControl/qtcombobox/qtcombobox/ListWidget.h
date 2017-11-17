@@ -1,9 +1,14 @@
 #pragma once
 #include <QtWidgets/QListWidget>
 #include <stdint.h>
-#include "ControlBase.h"
+#include "ControlFont.h"
+#include "ControlItem.h"
+#include "ControlSelf.h"
 
-class ListWidget : public ControlBase < QListWidget >
+class ListWidget : 
+	public ControlFont < QListWidget >,
+	public ControlItem < QListWidget >,
+	public ControlSelf < QListWidget >
 {
 public:
 	/** 构造函数
@@ -17,12 +22,6 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundColor(const QColor& color, bool rePaint = false);
-
-	/** 设置边框粗度
-	@param [in] width 边框粗度
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBorderWidth(int32_t width, bool rePaint = false);
 
 	/** 设置边框颜色
 	@param [in] color 常态
@@ -41,12 +40,6 @@ public:
 							const QColor& disabledColor,
 							bool rePaint = false);
 
-	/** 设置节点边框粗度
-	@param [in] width 边框粗度
-	@param [in] rePaint 是否立即重画
-	*/
-	void setItemBorderWidth(int32_t width, bool rePaint = false);
-
 	/** 设置节点背景图片，和边框颜色不用存
 	@param [in] borderImgPath 背景图片路径，如果路径中必须使用正斜杠
 	@param [in] borderImgStateCount 上下平分几份
@@ -62,12 +55,6 @@ public:
 							int32_t borderImgDisabled = 4,
 							bool rePaint = false);
 
-	/** 设置节点高度
-	@param [in] height 节点高度
-	@param [in] rePaint 是否立即重画
-	*/
-	void setItemHeight(int32_t height, bool rePaint = false);
-
 	/** 设置文字颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -79,34 +66,9 @@ public:
 					  const QColor& disabledColor,
 					  bool rePaint = false);
 
-	/** 设置字体
-	@param [in] fontName 字体名
-	@param [in] rePaint 是否立即重画
-	*/
-	void setFontFace(const QString& fontName, bool rePaint = false);
-
-	/** 设置字体大小
-	@param [in] fontSize 字体大小
-	@param [in] rePaint 是否立即重画
-	*/
-	void setFontSize(int32_t fontSize, bool rePaint = false);
-
 	/** 设置文本偏移量
 	@param [in] origin 文本偏移量
 	@param [in] rePaint 是否立即重画
 	*/
 	void setTextOrigin(int32_t origin, bool rePaint = false);
-
-	/** 节点到窗口的四个外边距
-	@param [in] leftOrigin 左侧偏移量
-	@param [in] topOrigin 上侧偏移量
-	@param [in] rightOrigin 右侧偏移量
-	@param [in] bottomOrigin 下侧偏移量
-	@param [in] rePaint 是否立即重画
-	*/
-	void setItemAroundOrigin(int32_t leftOrigin,
-						     int32_t topOrigin,
-						     int32_t rightOrigin,
-						     int32_t bottomOrigin,
-						     bool rePaint = false);
 };
