@@ -13,6 +13,12 @@ public:
 	*/
 	void setItemBorderWidth(int32_t width, bool rePaint = false);
 
+	/** 设置节点宽度
+	@param [in] width 节点宽度
+	@param [in] rePaint 是否立即重画
+	*/
+	void setItemWidth(int32_t width, bool rePaint = false);
+
 	/** 设置节点高度
 	@param [in] height 节点高度
 	@param [in] rePaint 是否立即重画

@@ -18,6 +18,12 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setFontSize(int32_t fontSize, bool rePaint = false);
+
+	/** 设置字体粗体
+	@param [in] bold 是否为粗体
+	@param [in] rePaint 是否立即重画
+	*/
+	void setFontBold(bool bold, bool rePaint = false);
 };
 
 #include "ControlFont.inl"

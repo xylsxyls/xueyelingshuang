@@ -78,6 +78,12 @@
     <Filter Include="ControlBorder">
       <UniqueIdentifier>{7c3d55e3-8064-40fa-9d5f-664ebe7584cf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CustomStyle">
+      <UniqueIdentifier>{fc307ab2-3b9a-40a7-8f1e-f6f2014667c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CollapseMenu">
+      <UniqueIdentifier>{2dcc0fd5-1dd0-4f2a-94d9-7d5a8b5d8c5a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -119,9 +125,6 @@
     <ClCompile Include="QssHelper.cpp">
       <Filter>QssHelper</Filter>
     </ClCompile>
-    <ClCompile Include="ControlBase.inl">
-      <Filter>ControlBase</Filter>
-    </ClCompile>
     <ClCompile Include="RadioButton.cpp">
       <Filter>RadioButton</Filter>
     </ClCompile>
@@ -133,6 +136,21 @@
     </ClCompile>
     <ClCompile Include="ControlFont.inl">
       <Filter>ControlFont</Filter>
+    </ClCompile>
+    <ClCompile Include="ControlBase.inl">
+      <Filter>ControlBase</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomStyle.cpp">
+      <Filter>CustomStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CustomStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CustomStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CollapseMenu.cpp">
+      <Filter>CollapseMenu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -169,6 +187,9 @@
     <CustomBuild Include="QssHelper.h">
       <Filter>QssHelper</Filter>
     </CustomBuild>
+    <CustomBuild Include="CustomStyle.h">
+      <Filter>CustomStyle</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlBase.h">
@@ -194,6 +215,9 @@
     </ClInclude>
     <ClInclude Include="ControlBorder.h">
       <Filter>ControlBorder</Filter>
+    </ClInclude>
+    <ClInclude Include="CollapseMenu.h">
+      <Filter>CollapseMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

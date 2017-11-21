@@ -7,7 +7,8 @@
 #include "CheckBox.h"
 #include "RadioButton.h"
 #include "Label.h"
-#include "Menu.h"
+#include "CollapseMenu.h"
+#include "CustomStyle.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -87,28 +88,52 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pLabel->setText(QString::fromLocal8Bit("ÖÐ¹ú123456789789789798798"));
 	QString str = pLabel->text();
 
-	auto item1 = new QAction( "&item1...", this);
+	/*auto item1 = new QAction(QIcon("D:/more.png"),"&item1...", this);
 	auto itme2 = new QAction("&item2...", this);
 	auto item3 = new QAction("&itme3...", this);
-	auto item4 = new QAction( "&item4...", this);
+	auto item4 = new QAction("&item4...", this);*/
 
-	Menu* menu = new Menu;
-	menu->addAction(item1);
-	menu->addAction(itme2);
-	menu->addSeparator();
-	auto pSubMenu = menu->addMenu("sub menu");
-	pSubMenu->addAction(item3);
-	pSubMenu->addAction(item4);
-	menu->setBackgroundColor(QColor(255, 0, 0, 255));
-	menu->setBorderWidth(5);
-	menu->setBorderColor(QColor(255, 0, 255, 255));
+	CollapseMenu* menu = new CollapseMenu;
+	
+	menu->addAction(QString::fromLocal8Bit("123456"), "D:/hot.png", QSize(50, 50), "D:/more.png", QSize(50, 50));
+	menu->addAction(QString::fromLocal8Bit("123456"), "D:/hot.png", QSize(50, 50), "D:/more.png", QSize(50, 50));
+	menu->addAction(QString::fromLocal8Bit("123456"), "D:/hot.png", QSize(50, 50), "D:/more.png", QSize(50, 50));
+	menu->addAction(QString::fromLocal8Bit("123456"), "D:/hot.png", QSize(50, 50), "D:/more.png", QSize(50, 50));
+	menu->addAction(QString::fromLocal8Bit("123456"), "D:/hot.png", QSize(50, 50), "D:/more.png", QSize(50, 50));
 	menu->setItemBorderColor(QColor(255, 156, 255, 255), QColor(0, 100, 255, 255), QColor(255, 0, 255, 255));
-	menu->setItemBorderWidth(3);
+	//menu->addAction(itme2);
+	//menu->addSeparator();
+	CollapseMenu* pSubMenu = new CollapseMenu(QString::fromLocal8Bit("123456"), "D:/more.png", QSize(30, 30));
+	//auto pSubMenu = menu->addMenu("sub menu");
+	pSubMenu->addAction(QString::fromLocal8Bit("123456"), "D:/hot.png", QSize(50, 50), "D:/more.png", QSize(50, 50));
+	pSubMenu->addAction(QString::fromLocal8Bit("123456"), "D:/hot.png", QSize(50, 50), "D:/more.png", QSize(50, 50));
+	//menu->addMenu(pSubMenu);
+	menu->setSeparatorColor(QColor(255, 0, 0, 255));
+	menu->setSeparatorHeight(2);
+	menu->setItemIconOrigin(20);
+	//QAction* action;
+	//action->
+	menu->setBackgroundColor(QColor(255, 0, 0, 255));
+	menu->setBorderWidth(0);
+	menu->setFontBold(true);
+	menu->setBorderColor(QColor(255, 255, 255, 255));
+	menu->setItemTextColor(QColor(255, 255, 0, 255), QColor(255, 0, 0, 255), QColor(255, 255, 0, 255));
+	
+	
+
+	
+	menu->setItemBorderWidth(1);
 	menu->setFontFace(QString::fromLocal8Bit("ºÚÌå"));
 	menu->setFontSize(18);
-	menu->setItemHeight(40);
+	menu->setItemWidth(200);
+	menu->setItemHeight(80);
+	menu->setItemTextOrigin(50);
+	//menu->setIconSize(QSize(20, 20));
 	
+
 	auto ss = menu->exec(QPoint(50, 50));
+	ss = menu->exec(QPoint(80, 50));
+	ss = menu->exec(QPoint(80, 50));
 	int x = 3;
 }
 

@@ -10,6 +10,12 @@ void ControlItem<QBase>::setItemBorderWidth(int32_t width, bool rePaint)
 }
 
 template<class QBase>
+void ControlItem<QBase>::setItemWidth(int32_t width, bool rePaint)
+{
+	ControlBase::setPxValue(L"width", width, true, rePaint);
+}
+
+template<class QBase>
 void ControlItem<QBase>::setItemHeight(int32_t height, bool rePaint)
 {
 	ControlBase::setPxValue(L"height", height, true, rePaint);

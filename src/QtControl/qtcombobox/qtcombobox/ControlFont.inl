@@ -15,4 +15,13 @@ void ControlFont<QBase>::setFontSize(int32_t fontSize, bool rePaint)
 	ControlBase::setPxValue(L"font-size", fontSize, false, rePaint);
 }
 
+template<class QBase>
+void ControlFont<QBase>::setFontBold(bool bold, bool rePaint)
+{
+	if (bold)
+	{
+		ControlBase::setKeyValue(L"font-weight", L"bold", false, rePaint);
+	}
+}
+
 #endif
