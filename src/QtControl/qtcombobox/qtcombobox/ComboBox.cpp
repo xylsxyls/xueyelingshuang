@@ -8,7 +8,8 @@
 #include "ListWidget.h"
 
 ComboBox::ComboBox(QWidget* parent) :
-ControlBase(parent)
+ControlBase(parent),
+m_listOrigin(0)
 {
 	init(L"QComboBox", L"drop-down");
 	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
@@ -82,14 +83,9 @@ void ComboBox::setTextOrigin(int32_t origin, bool rePaint)
 	ControlBase::setPxValue(L"padding-left", origin, false, rePaint);
 }
 
-void ComboBox::setListOrigin(int32_t origin, bool rePaint)
+void ComboBox::setListOrigin(int32_t origin)
 {
-	std::wstring wstrOrigin = CStringManager::Format(L"%dpx", origin);
-	m_controlStyle[m_className](1, L"QAbstractItemView").AddKeyValue(L"margin-top", wstrOrigin);
-	if (rePaint)
-	{
-		updateStyle();
-	}
+	m_listOrigin = origin;
 }
 
 void ComboBox::addItem(const QString& text)
@@ -119,6 +115,14 @@ void ComboBox::setListItemBorderColor(const QColor& normalColor,
 									bool rePaint)
 {
 	m_listWidget->setItemBorderColor(normalColor, hoverColor, disabledColor, rePaint);
+}
+
+void ComboBox::setListItemBackgroundColor(const QColor& normalColor,
+										  const QColor& hoverColor,
+										  const QColor& disabledColor,
+										  bool rePaint)
+{
+	m_listWidget->setItemBackgroundColor(normalColor, hoverColor, disabledColor, rePaint);
 }
 
 void ComboBox::setListItemBorderWidth(int32_t width, bool rePaint)
@@ -188,7 +192,19 @@ void ComboBox::showPopup()
 	m_imageStateMap[NORMAL][NORMAL] = m_dropDownImgExpandNormal;
 	m_imageStateMap[NORMAL][DISABLED] = m_dropDownImgExpandDisabled;
 	ControlBase::setImageStateMap(m_imageStateMap, m_imagePath, m_dropDownImgStateCount, L"border-image", L"down-arrow", true);
-	QComboBox::showPopup();
+	if (m_listOrigin != 0)
+	{
+		QRect rect = geometry();
+		QRect moveRect = rect;
+		moveRect.setBottom(rect.bottom() + m_listOrigin);
+		setGeometry(moveRect);
+		QComboBox::showPopup();
+		setGeometry(rect);
+	}
+	else
+	{
+		QComboBox::showPopup();
+	}
 	return;
 }
 

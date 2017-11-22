@@ -1,2 +1,4 @@
-pWidget->setWindowFlags(Qt::FramelessWindowHint);//ÎÞ±ß¿ò
-	pWidget->setAttribute(Qt::WA_TranslucentBackground);//±³¾°Í¸Ã÷
+//ÎÞ±ß¿ò
+	pWidget->setWindowFlags(Qt::FramelessWindowHint);
+	//±³¾°Í¸Ã÷
+	pWidget->setAttribute(Qt::WA_TranslucentBackground);

@@ -32,6 +32,18 @@ void ListWidget::setItemBorderColor(const QColor& normalColor,
 	ControlBase::setColorStateMap(colorStateMap, L"border-color", true, rePaint);
 }
 
+void ListWidget::setItemBackgroundColor(const QColor& normalColor,
+										const QColor& hoverColor,
+										const QColor& disabledColor,
+										bool rePaint)
+{
+	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	colorStateMap[NORMAL][NORMAL] = normalColor;
+	colorStateMap[NORMAL][HOVER] = hoverColor;
+	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	ControlBase::setColorStateMap(colorStateMap, L"background-color", true, rePaint);
+}
+
 void ListWidget::setItemBorderImage(const QString& borderImgPath,
 									int32_t borderImgStateCount,
 									int32_t borderImgNormal,

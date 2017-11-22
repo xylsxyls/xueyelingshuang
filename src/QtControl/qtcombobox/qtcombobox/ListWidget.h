@@ -29,7 +29,7 @@ public:
 	*/
 	void setBorderColor(const QColor& color, bool rePaint = false);
 
-	/** 设置节点背景颜色（list控件没有按下属性）
+	/** 设置节点边框颜色（list控件没有按下属性）
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
 	@param [in] disabledColor 禁用颜色
@@ -39,6 +39,17 @@ public:
 							const QColor& hoverColor,
 							const QColor& disabledColor,
 							bool rePaint = false);
+
+	/** 设置节点背景颜色（list控件没有按下属性）
+	@param [in] normalColor 常态颜色
+	@param [in] hoverColor 悬停颜色
+	@param [in] disabledColor 禁用颜色
+	@param [in] rePaint 是否立即重画
+	*/
+	void setItemBackgroundColor(const QColor& normalColor,
+								const QColor& hoverColor,
+								const QColor& disabledColor,
+								bool rePaint = false);
 
 	/** 设置节点背景图片，和边框颜色不用存
 	@param [in] borderImgPath 背景图片路径，如果路径中必须使用正斜杠

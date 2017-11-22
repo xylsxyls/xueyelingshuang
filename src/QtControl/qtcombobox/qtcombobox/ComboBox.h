@@ -78,11 +78,10 @@ public:
 	*/
 	void setTextOrigin(int32_t origin, bool rePaint = false);
 
-	/** 下拉框距离点击框的纵向偏移量
+	/** 设置下拉框弹出时距离点击框的纵向偏移量
 	@param [in] origin 纵向偏移量
-	@param [in] rePaint 是否立即重画
 	*/
-	void setListOrigin(int32_t origin, bool rePaint = false);
+	void setListOrigin(int32_t origin);
 
 	/** 增加一行
 	@param [in] text 文本
@@ -107,7 +106,7 @@ public:
 	*/
 	void setListBorderColor(const QColor& color, bool rePaint = false);
 
-	/** 设置节点背景颜色（list控件没有按下属性）
+	/** 设置节点边框颜色（list控件没有按下属性）
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
 	@param [in] disabledColor 禁用颜色
@@ -117,6 +116,17 @@ public:
 								const QColor& hoverColor,
 								const QColor& disabledColor,
 								bool rePaint = false);
+
+	/** 设置节点背景颜色（list控件没有按下属性）
+	@param [in] normalColor 常态颜色
+	@param [in] hoverColor 悬停颜色
+	@param [in] disabledColor 禁用颜色
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListItemBackgroundColor(const QColor& normalColor,
+									const QColor& hoverColor,
+									const QColor& disabledColor,
+									bool rePaint = false);
 
 	/** 设置节点边框粗度
 	@param [in] width 边框粗度
@@ -206,6 +216,7 @@ private:
 	int32_t m_dropDownImgStateCount;
 	std::map<int32_t, std::map<int32_t, int32_t>> m_imageStateMap;
 	std::wstring m_imagePath;
+	int32_t m_listOrigin;
 };
 
 #endif

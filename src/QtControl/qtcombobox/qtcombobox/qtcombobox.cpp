@@ -14,7 +14,9 @@ qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
-
+	setWindowFlags(Qt::FramelessWindowHint);
+	//this->setAttribute(Qt::WA_TranslucentBackground);
+	this->setStyleSheet("QMainWindow{background-color:rgba(255,0,0,255);}");
 	CheckBox* pCheckBox = new CheckBox(this);
 	//pBox->SetBackgroundImage(QString::fromLocal8Bit("D:/hot.png"), 8, 1, 2, 3, 4, 5, 6, 7, 8);
 	pCheckBox->setBackgroundColor(QColor(255, 0, 255, 1), QColor(255, 255, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1));
@@ -46,17 +48,21 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setListBorderWidth(1);
 	pBox->setListBorderColor(QColor(67, 132, 251, 255));
 
-	pBox->setListItemBorderWidth(0);
-	pBox->setListItemBorderImage("D:/item.png", 4, 1, 2, 4);
+	pBox->setListItemBorderWidth(2);
+	//pBox->setListItemBorderImage("D:/item.png", 4, 1, 2, 4);
+	pBox->setListItemBackgroundColor(QColor(255, 50, 255, 255), QColor(255, 255, 50, 255), QColor(255, 0, 255, 255));
 	pBox->setListItemHeight(22);
 	pBox->setListBackgroundColor(QColor(18, 23, 31));
 
 	pBox->setListTextColor(QColor(255, 0, 255, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255));
 	pBox->setListFontFace(QString::fromLocal8Bit("ºÚÌå"));
 	pBox->setListFontSize(15);
-	pBox->setListTextOrigin(16);
+	pBox->setListTextOrigin(26);
 	pBox->setListItemAroundOrigin(5, 5, 5, 5);
 	pBox->setDropDownTopRightOrigin(10, 20);
+	pBox->setListOrigin(50);
+	pBox->setAttribute(Qt::WA_TranslucentBackground);
+	pBox->setWindowFlags(Qt::FramelessWindowHint);
 
 	pBox->addItem("123456");
 	pBox->addItem("123457");
@@ -132,8 +138,8 @@ qtcombobox::qtcombobox(QWidget *parent)
 	
 
 	auto ss = menu->exec(QPoint(50, 50));
-	ss = menu->exec(QPoint(80, 50));
-	ss = menu->exec(QPoint(80, 50));
+	/*ss = menu->exec(QPoint(80, 50));
+	ss = menu->exec(QPoint(80, 50));*/
 	int x = 3;
 }
 
