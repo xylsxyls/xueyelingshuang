@@ -10,7 +10,7 @@ CPasswordInputBox2::CPasswordInputBox2(QWidget *parent)
     ,mMaskButton(new COriginalButton2(this))
 {
     mMaskButton->setText("");
-    mMaskButton->setBkgImage(QString::fromStdWString(L"D:/GameInfoWidgetPic/SettingPasswordIcon.png"),6,4,5,6,6,1,2,3,3);
+	mMaskButton->setBkgImage(QString::fromStdWString(L"D:/GameInfoWidgetPic/SettingPasswordIcon.png"), 6, 4, 5, 6, 6, 1, 2, 3, 3);
     mMaskButton->resize(18,11);
     mMaskButton->setCursor(Qt::ClosedHandCursor);
     mMaskButton->setCheckable(true);
@@ -22,6 +22,7 @@ CPasswordInputBox2::CPasswordInputBox2(QWidget *parent)
 		"color:%2;border:1px solid;border-color:rgba(67,81,117,255);"
 		"border-radius:5px;"
 		"font-size:14px;"
+		"padding-left:4px;"
                                 "padding-right: 25;"
                                 "}").arg(CGeneralStyle2::instance()->war3lobbyResourcePath() + "/Image/Common/Setting/SettingBox.png")
                                                                                                      .arg(CGeneralStyle2::instance()->fontColor().name()));

@@ -42,50 +42,75 @@ public:
 	*/
 	QString getGamePassword();
 
-	/** 添加一条游戏局模式
+	/** 设置游戏局模式
+	@param [in] gameModeList 游戏局模式
+	*/
+	void setGameModeList(const QStringList& gameModeList);
+
+	/** 设置当前游戏局模式
 	@param [in] gameMode 游戏局模式
 	*/
-	void addGameMode(const QString& gameMode);
+	void setCurGameMode(const QString& gameMode);
 
 	/** 获取当前选择的游戏局模式
 	@return 返回当前选择的游戏局模式
 	*/
 	QString getCurGameMode();
 
-	/** 添加一条名将Lv限制
+	/** 设置名将Lv限制
+	@param [in] gameLvList 名将Lv限制
+	*/
+	void setGameLvList(const QStringList& gameLvList);
+
+	/** 设置当前名将Lv限制
 	@param [in] gameLv 名将Lv限制
 	*/
-	void addGameLv(const QString& gameLv);
+	void setCurGameLv(const QString& gameLv);
 
 	/** 获取当前选择的名将Lv限制
 	@return 返回当前选择的名将Lv限制
 	*/
 	QString getCurGameLv();
 
+	/** 设置MVP限制
+	@param [in] gameMVPList MVP限制
+	*/
+	void setGameMVPList(const QStringList& gameMVPList);
+
 	/** 添加一条MVP限制
 	@param [in] gameMVP MVP限制
 	*/
-	void addGameMVP(const QString& gameMVP);
+	void setCurGameMVP(const QString& gameMVP);
 
 	/** 获取当前选择的MVP限制
 	@return 返回当前选择的MVP限制
 	*/
 	QString getCurGameMVP();
 
-	/** 添加一条网速限制
+	/** 设置网速限制
+	@param [in] gameNetList 网速限制
+	*/
+	void setGameNetList(const QStringList& gameNetList);
+
+	/** 设置当前网速限制
 	@param [in] gameNet 网速限制
 	*/
-	void addGameNet(const QString& gameNet);
+	void setCurGameNet(const QString& gameNet);
 
 	/** 获取当前选择的网速限制
 	@return 返回当前选择的网速限制
 	*/
 	QString getCurGameNet();
 
-	/** 添加一条掉线率限制
+	/** 设置掉线率限制
+	@param [in] gameLeaveList 掉线率限制
+	*/
+	void setGameLeaveList(const QStringList& gameLeaveList);
+
+	/** 获取当前掉线率限制
 	@param [in] gameLeave 掉线率限制
 	*/
-	void addGameLeave(const QString& gameLeave);
+	void setCurGameLeave(const QString& gameLeave);
 
 	/** 获取当前选择的掉线率限制
 	@return 返回当前选择的掉线率限制
@@ -159,6 +184,22 @@ private:
 	Label* m_gameLeave;
 	COriginalButton2* m_save;
 
+	public:
+	//窗口整体高度
 	int32_t m_gameInfoWidgetHeight;
+
+	//按钮对应的widget高度
 	int32_t m_widgetHeight;
+
+	//游戏设置网页起始高度
+	int32_t m_gameSettingWebviewOrigin;
+
+	//邀请好友按钮起始高度
+	int32_t m_inviteFriendOrigin;
+
+	// 开始游戏按钮纵轴起始位置
+	int32_t m_startGameOrigin_y;
+
+	//退出按钮纵轴起始位置
+	int32_t m_exitOrigin_y;
 };

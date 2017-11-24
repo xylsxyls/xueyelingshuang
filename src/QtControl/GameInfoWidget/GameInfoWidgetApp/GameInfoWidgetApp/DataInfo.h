@@ -1,5 +1,9 @@
 #pragma once
 
+/** 空指针检查
+*/
+#define SAFE(p,method) if(p != nullptr){method;}
+
 /** 字条字体颜色
 */
 #define LABEL_TEXT_COLOR QColor(145, 169, 226)
@@ -26,10 +30,6 @@ enum
 	*/
 	GAME_INFO_WIDGET_WIDTH = 254,
 
-	/** 整体窗口高度
-	*/
-	GAME_INFO_WIDGET_HEIGHT = 681,
-
 	/** 上面3个按钮的高度
 	*/
 	WIDGET_BUTTON_HEIGHT = 29,
@@ -37,10 +37,6 @@ enum
 	/** 每个按钮对应widget的宽度
 	*/
 	WIDGET_WIDTH = GAME_INFO_WIDGET_WIDTH,
-
-	/** 每个按钮对应widget的高度
-	*/
-	WIDGET_HEIGHT = 550,
 
 	/** 每个字条的宽度
 	*/
@@ -114,13 +110,7 @@ enum
 	*/
 	GAME_SETTING_WEBVIEW_HEIGHT = 170,
 
-	/** 游戏设置网页起始高度
-	*/
-	GAME_SETTING_WEBVIEW_ORIGIN = WIDGET_HEIGHT - GAME_SETTING_WEBVIEW_HEIGHT,
-
-	/** 邀请好友按钮起始高度
-	*/
-	INVITE_FRIEND_ORIGIN = WIDGET_BUTTON_HEIGHT + WIDGET_HEIGHT,
+	
 
 	/** 邀请好友按钮宽度
 	*/
@@ -154,17 +144,13 @@ enum
 	*/
 	START_GAME_ORIGIN_X = (WIDGET_WIDTH - START_GAME_WIDTH - EXIT_WIDTH - BUTTONS_SPACING) / 2,
 
-	/** 开始游戏按钮纵轴起始位置
-	*/
-	START_GAME_ORIGIN_Y = GAME_INFO_WIDGET_HEIGHT - (GAME_INFO_WIDGET_HEIGHT - WIDGET_HEIGHT - WIDGET_BUTTON_HEIGHT - INVITE_FRIEND_HEIGHT - START_GAME_HEIGHT) / 2 - START_GAME_HEIGHT,
+	
 
 	/** 退出按钮横轴起始位置
 	*/
 	EXIT_ORIGIN_X = START_GAME_ORIGIN_X + BUTTONS_SPACING + START_GAME_WIDTH,
 
-	/** 退出按钮纵轴起始位置
-	*/
-	EXIT_ORIGIN_Y = START_GAME_ORIGIN_Y,
+	
 
 	/** 字体大小
 	*/

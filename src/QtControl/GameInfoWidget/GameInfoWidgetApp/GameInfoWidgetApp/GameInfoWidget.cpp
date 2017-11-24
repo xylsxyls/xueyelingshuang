@@ -13,6 +13,17 @@ QWidget(parent),
 m_gameInfoWidgetHeight(681),
 m_widgetHeight(550)
 {
+	m_gameSettingWebviewOrigin = m_widgetHeight - GAME_SETTING_WEBVIEW_HEIGHT;
+	m_inviteFriendOrigin = WIDGET_BUTTON_HEIGHT + m_widgetHeight;
+	m_startGameOrigin_y = m_gameInfoWidgetHeight - 
+						 (m_gameInfoWidgetHeight - 
+						  m_widgetHeight - 
+						  WIDGET_BUTTON_HEIGHT - 
+						  INVITE_FRIEND_HEIGHT - 
+						  START_GAME_HEIGHT) / 2 - 
+						  START_GAME_HEIGHT;
+	m_exitOrigin_y = m_startGameOrigin_y;
+
 	m_gameSetting = (new COriginalButton2(this));
 	m_personalRecord = (new COriginalButton2(this));
 	m_myTool = (new COriginalButton2(this));
@@ -44,7 +55,7 @@ m_widgetHeight(550)
 
 	//无边框
 	setWindowFlags(Qt::FramelessWindowHint);
-	setGeometry(0, 0, GAME_INFO_WIDGET_WIDTH, GAME_INFO_WIDGET_HEIGHT);
+	
 	setStyleSheet("QWidget{background-color:rgba(27,37,63,255);}");
 	
 	//头部3个button，后面会换成tab控件
@@ -55,23 +66,25 @@ m_widgetHeight(550)
 	//创建邀请好友按钮
 	if (m_inviteFriend != nullptr)
 	{
-		m_inviteFriend->setGeometry(0, INVITE_FRIEND_ORIGIN, INVITE_FRIEND_WIDTH, INVITE_FRIEND_HEIGHT);
+		
 		m_inviteFriend->setBkgImage("D:/GameInfoWidgetPic/BigInviteFriendButton.png", 3, 1, 2, 3);
 		m_inviteFriend->setText(QString::fromStdWString(L""));
 
 	}
 	if (m_startGame != nullptr)
 	{
-		m_startGame->setGeometry(START_GAME_ORIGIN_X, START_GAME_ORIGIN_Y, START_GAME_WIDTH, START_GAME_HEIGHT);
+		
 		m_startGame->setBkgImage("D:/GameInfoWidgetPic/StartGameButton.png", 4, 1, 2, 3, 4);
 		m_startGame->setText(QString::fromStdWString(L""));
 	}
 	if (m_exit != nullptr)
 	{
-		m_exit->setGeometry(EXIT_ORIGIN_X, EXIT_ORIGIN_Y, EXIT_WIDTH, EXIT_HEIGHT);
+		
 		m_exit->setBkgImage("D:/GameInfoWidgetPic/QuitButton.png", 4, 1, 2, 3, 4);
 		m_exit->setText(QString::fromStdWString(L""));
 	}
+
+	layout();
 
 	init();
 }
@@ -112,13 +125,14 @@ QString GameInfoWidget::getGamePassword()
 	return m_gamePasswordEdit->text();
 }
 
-void GameInfoWidget::addGameMode(const QString& gameMode)
+void GameInfoWidget::setGameModeList(const QStringList& gameModeList)
 {
-	if (m_gameModeComboBox == nullptr)
-	{
-		return;
-	}
-	m_gameModeComboBox->addItem(gameMode);
+	SAFE(m_gameModeComboBox, m_gameModeComboBox->addItems(gameModeList));
+}
+
+void GameInfoWidget::setCurGameMode(const QString& gameMode)
+{
+	SAFE(m_gameModeComboBox, m_gameModeComboBox->setCurrentText(gameMode));
 }
 
 QString GameInfoWidget::getCurGameMode()
@@ -130,13 +144,14 @@ QString GameInfoWidget::getCurGameMode()
 	return m_gameModeComboBox->currentText();
 }
 
-void GameInfoWidget::addGameLv(const QString& gameLv)
+void GameInfoWidget::setGameLvList(const QStringList& gameLvList)
 {
-	if (m_gameLvComboBox == nullptr)
-	{
-		return;
-	}
-	m_gameLvComboBox->addItem(gameLv);
+	SAFE(m_gameLvComboBox, m_gameLvComboBox->addItems(gameLvList));
+}
+
+void GameInfoWidget::setCurGameLv(const QString& gameLv)
+{
+	SAFE(m_gameLvComboBox, m_gameLvComboBox->setCurrentText(gameLv));
 }
 
 QString GameInfoWidget::getCurGameLv()
@@ -148,13 +163,14 @@ QString GameInfoWidget::getCurGameLv()
 	return m_gameLvComboBox->currentText();
 }
 
-void GameInfoWidget::addGameMVP(const QString& gameMVP)
+void GameInfoWidget::setGameMVPList(const QStringList& gameMVPList)
 {
-	if (m_gameMVPComboBox == nullptr)
-	{
-		return;
-	}
-	m_gameMVPComboBox->addItem(gameMVP);
+	SAFE(m_gameMVPComboBox, m_gameMVPComboBox->addItems(gameMVPList));
+}
+
+void GameInfoWidget::setCurGameMVP(const QString& gameMVP)
+{
+	SAFE(m_gameMVPComboBox, m_gameMVPComboBox->setCurrentText(gameMVP));
 }
 
 QString GameInfoWidget::getCurGameMVP()
@@ -166,13 +182,14 @@ QString GameInfoWidget::getCurGameMVP()
 	return m_gameMVPComboBox->currentText();
 }
 
-void GameInfoWidget::addGameNet(const QString& gameNet)
+void GameInfoWidget::setGameNetList(const QStringList& gameNetList)
 {
-	if (m_gameNetComboBox == nullptr)
-	{
-		return;
-	}
-	m_gameNetComboBox->addItem(gameNet);
+	SAFE(m_gameNetComboBox, m_gameNetComboBox->addItems(gameNetList));
+}
+
+void GameInfoWidget::setCurGameNet(const QString& gameNet)
+{
+	SAFE(m_gameNetComboBox, m_gameNetComboBox->setCurrentText(gameNet));
 }
 
 QString GameInfoWidget::getCurGameNet()
@@ -184,13 +201,14 @@ QString GameInfoWidget::getCurGameNet()
 	return m_gameNetComboBox->currentText();
 }
 
-void GameInfoWidget::addGameLeave(const QString& gameLeave)
+void GameInfoWidget::setGameLeaveList(const QStringList& gameLeaveList)
 {
-	if (m_gameLeaveComboBox == nullptr)
-	{
-		return;
-	}
-	m_gameLeaveComboBox->addItem(gameLeave);
+	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->addItems(gameLeaveList));
+}
+
+void GameInfoWidget::setCurGameLeave(const QString& gameLeave)
+{
+	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->setCurrentText(gameLeave));
 }
 
 QString GameInfoWidget::getCurGameLeave()
@@ -224,11 +242,11 @@ void GameInfoWidget::init()
 {
 	onGameSettingClicked();
 
-	addGameMode(QString::fromStdWString(L"进入游戏后手动选择"));
-	addGameLv(QString::fromStdWString(L"无限制"));
-	addGameMVP(QString::fromStdWString(L"无限制"));
-	addGameNet(QString::fromStdWString(L"无限制"));
-	addGameLeave(QString::fromStdWString(L"无限制"));
+	setGameModeList(QStringList(QString::fromStdWString(L"进入游戏后手动选择")));
+	setGameLvList(QStringList(QString::fromStdWString(L"无限制")));
+	setGameMVPList(QStringList(QString::fromStdWString(L"无限制")));
+	setGameNetList(QStringList(QString::fromStdWString(L"无限制")));
+	setGameLeaveList(QStringList(QString::fromStdWString(L"无限制")));
 	setJudge(false);
 }
 
@@ -250,7 +268,7 @@ void GameInfoWidget::initGameSettingButton()
 								QColor(255, 255, 255),
 								QColor(27, 37, 63),
 								QColor(0, 0, 0));
-	m_gameSetting->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 0, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT);
+	
 	//创建游戏设置界面
 	initGameSettingWidget();
 }
@@ -273,7 +291,7 @@ void GameInfoWidget::initPersonalRecordButton()
 								   QColor(255, 255, 255),
 								   QColor(27, 37, 63),
 								   QColor(0, 0, 0));
-	m_personalRecord->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 1, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT);
+	
 	//创建个人战绩界面
 	initPersonalRecordWidget();
 }
@@ -296,7 +314,7 @@ void GameInfoWidget::initMyToolButton()
 						   QColor(255, 255, 255),
 						   QColor(27, 37, 63),
 						   QColor(0, 0, 0));
-	m_myTool->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 2, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT);
+	
 	//创建个人战绩界面
 	initMyToolButtonWidget();
 }
@@ -308,13 +326,11 @@ void GameInfoWidget::initGameSettingWidget()
 		return;
 	}
 	//下面一行后面删掉
-	m_gameSettingWidget->setStyleSheet(".QWidget{background-color:rgba(27,37,78,255);}");
-	m_gameSettingWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, WIDGET_HEIGHT);
+	//m_gameSettingWidget->setStyleSheet(".QWidget{background-color:rgba(27,37,78,255);}");
 
 	//第一行
 	if (m_gameName != nullptr)
 	{
-		m_gameName->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT);
 		m_gameName->setText(QString::fromStdWString(L"游戏局名称"));
 		m_gameName->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
 		m_gameName->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -323,7 +339,6 @@ void GameInfoWidget::initGameSettingWidget()
 	}
 	if (m_gameNameEdit != nullptr)
 	{
-		m_gameNameEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y, CONTROL_WIDTH, CONTROL_HEIGHT);
 		m_gameNameEdit->setBorderRadius(CONTROL_RADIUS);
 		m_gameNameEdit->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
 		m_gameNameEdit->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR);
@@ -335,22 +350,16 @@ void GameInfoWidget::initGameSettingWidget()
 	//第二行
 	if (m_gamePassword != nullptr)
 	{
-		m_gamePassword->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING, LABEL_WIDTH, LABEL_HEIGHT);
 		m_gamePassword->setText(QString::fromStdWString(L"游戏局密码"));
 		m_gamePassword->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
 		m_gamePassword->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 		m_gamePassword->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gamePassword->setFontFace(GAME_INFO_FONT_FACE);
 	}
-	if (m_gamePasswordEdit != nullptr)
-	{
-		m_gamePasswordEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING, CONTROL_WIDTH, CONTROL_HEIGHT);
-	}
 
 	//第三行
 	if (m_gameMode != nullptr)
 	{
-		m_gameMode->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 2, LABEL_WIDTH, LABEL_HEIGHT);
 		m_gameMode->setText(QString::fromStdWString(L"游戏局模式"));
 		m_gameMode->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
 		m_gameMode->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -359,11 +368,12 @@ void GameInfoWidget::initGameSettingWidget()
 	}	
 	if (m_gameModeComboBox != nullptr)
 	{
-		m_gameModeComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 2, CONTROL_WIDTH, CONTROL_HEIGHT);
 		m_gameModeComboBox->setBorderRadius(CONTROL_RADIUS);
 		m_gameModeComboBox->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
 		m_gameModeComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR);
-		m_gameModeComboBox->setDropDownImage(QString::fromStdWString(L"D:/GameInfoWidgetPic/button_expand.png"), 6, 1, 2, 1, 6, 1);
+		m_gameModeComboBox->setDropDownImage(QString::fromStdWString(L"D:/GameInfoWidgetPic/SettingDropDownButton.png"), 3, 1, 2, 3, 1, 3);
+		m_gameModeComboBox->setDropDownSize(10, 5);
+		m_gameModeComboBox->setDropDownTopRightOrigin(7, 5);
 		m_gameModeComboBox->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gameModeComboBox->setFontFace(GAME_INFO_FONT_FACE);
 		m_gameModeComboBox->setTextOrigin(GAME_MODE_TEXT_ORIGIN);
@@ -372,7 +382,6 @@ void GameInfoWidget::initGameSettingWidget()
 	//第四行
 	if (m_gameLv != nullptr)
 	{
-		m_gameLv->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 3, LABEL_WIDTH, LABEL_HEIGHT);
 		m_gameLv->setText(QString::fromStdWString(L"名将Lv限制"));
 		m_gameLv->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
 		m_gameLv->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -382,12 +391,11 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameLvComboBox != nullptr)
 	{
 		m_gameLvComboBox->setEditable(true);
-		QRegExpValidator rep;
+		static QRegExpValidator rep;
 		QRegExp ex;
 		ex.setPattern("^(?!00)(?:[0-9]{1,3}|1000)$");
 		rep.setRegExp(ex);
 		m_gameLvComboBox->setValidator(&rep);
-		m_gameLvComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 3, CONTROL_WIDTH, CONTROL_HEIGHT);
 		m_gameLvComboBox->setBorderRadius(CONTROL_RADIUS);
 		m_gameLvComboBox->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
 		m_gameLvComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR);
@@ -400,7 +408,6 @@ void GameInfoWidget::initGameSettingWidget()
 	//第五行
 	if (m_gameMVP != nullptr)
 	{
-		m_gameMVP->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 4, LABEL_WIDTH, LABEL_HEIGHT);
 		m_gameMVP->setText(QString::fromStdWString(L"MVP限制"));
 		m_gameMVP->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
 		m_gameMVP->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -415,7 +422,6 @@ void GameInfoWidget::initGameSettingWidget()
 		ex.setPattern("^(?!00)(?:[0-9]{1,3}|1000)$");
 		rep.setRegExp(ex);
 		m_gameMVPComboBox->setValidator(&rep);
-		m_gameMVPComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, CONTROL_WIDTH, CONTROL_HEIGHT);
 		m_gameMVPComboBox->setBorderRadius(CONTROL_RADIUS);
 		m_gameMVPComboBox->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
 		m_gameMVPComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR);
@@ -428,7 +434,6 @@ void GameInfoWidget::initGameSettingWidget()
 	//第六行
 	if (m_gameNet != nullptr)
 	{
-		m_gameNet->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 5, LABEL_WIDTH, LABEL_HEIGHT);
 		m_gameNet->setText(QString::fromStdWString(L"网速限制"));
 		m_gameNet->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
 		m_gameNet->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -443,7 +448,6 @@ void GameInfoWidget::initGameSettingWidget()
 		ex.setPattern("^500|(?!00|[5-9][0-9]{2})(?:[0-9]{1,3})$");
 		rep.setRegExp(ex);
 		m_gameNetComboBox->setValidator(&rep);
-		m_gameNetComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 5, CONTROL_WIDTH, CONTROL_HEIGHT);
 		m_gameNetComboBox->setBorderRadius(CONTROL_RADIUS);
 		m_gameNetComboBox->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
 		m_gameNetComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR);
@@ -456,7 +460,6 @@ void GameInfoWidget::initGameSettingWidget()
 	//第七行
 	if (m_gameLeave != nullptr)
 	{
-		m_gameLeave->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 6, LABEL_WIDTH, LABEL_HEIGHT);
 		m_gameLeave->setText(QString::fromStdWString(L"掉线率限制"));
 		m_gameLeave->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
 		m_gameLeave->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -471,7 +474,6 @@ void GameInfoWidget::initGameSettingWidget()
 		ex.setPattern("^(?!00)(?:[0-9]{1,2})$");
 		rep.setRegExp(ex);
 		m_gameLeaveComboBox->setValidator(&rep);
-		m_gameLeaveComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 6, CONTROL_WIDTH, CONTROL_HEIGHT);
 		m_gameLeaveComboBox->setBorderRadius(CONTROL_RADIUS);
 		m_gameLeaveComboBox->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
 		m_gameLeaveComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR);
@@ -482,25 +484,24 @@ void GameInfoWidget::initGameSettingWidget()
 	}
 
 	//开启裁判位
-	if (m_judgeCheckBox != nullptr)
+	if(m_judgeCheckBox != nullptr)
 	{
-		m_judgeCheckBox->setGeometry(JUDGE_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 7, CONTROL_WIDTH, CONTROL_HEIGHT);
 		m_judgeCheckBox->setBackgroundColor(QColor(0, 0, 0, 0),
-									 QColor(0, 0, 0, 0),
-									 QColor(0, 0, 0, 0),
-									 QColor(0, 0, 0, 0),
-									 QColor(0, 0, 0, 0),
-									 QColor(0, 0, 0, 0),
-									 QColor(0, 0, 0, 0),
-									 QColor(0, 0, 0, 0));
+											QColor(0, 0, 0, 0),
+											QColor(0, 0, 0, 0),
+											QColor(0, 0, 0, 0),
+											QColor(0, 0, 0, 0),
+											QColor(0, 0, 0, 0),
+											QColor(0, 0, 0, 0),
+											QColor(0, 0, 0, 0));
 		m_judgeCheckBox->setTextColor(LABEL_TEXT_COLOR,
-							   LABEL_TEXT_COLOR,
-							   LABEL_TEXT_COLOR,
-							   LABEL_TEXT_COLOR,
-							   LABEL_TEXT_COLOR,
-							   LABEL_TEXT_COLOR,
-							   LABEL_TEXT_COLOR,
-							   LABEL_TEXT_COLOR);
+									  LABEL_TEXT_COLOR,
+									  LABEL_TEXT_COLOR,
+									  LABEL_TEXT_COLOR,
+									  LABEL_TEXT_COLOR,
+									  LABEL_TEXT_COLOR,
+									  LABEL_TEXT_COLOR,
+									  LABEL_TEXT_COLOR);
 		m_judgeCheckBox->setText(QString::fromStdWString(L"开启裁判位"));
 		m_judgeCheckBox->setIndicatorImage("D:/GameInfoWidgetPic/SettingCheckBox.png", 4, 1, 2, 3, 4, 3, 3, 4, 4);
 		m_judgeCheckBox->setFontSize(GAME_INFO_FONT_SIZE);
@@ -510,7 +511,6 @@ void GameInfoWidget::initGameSettingWidget()
 	//保存
 	if (m_save != nullptr)
 	{
-		m_save->setGeometry(SAVE_ORIGIN_X, SAVE_ORIGIN_Y, SAVE_WIDTH, SAVE_HEIGHT);
 		m_save->setBkgImage("D:/GameInfoWidgetPic/SaveButton.png");
 		m_save->setBorderColor(SAVE_BORDER_COLOR);
 		m_save->setBorderRadius(CONTROL_RADIUS);
@@ -518,78 +518,81 @@ void GameInfoWidget::initGameSettingWidget()
 	}
 
 	//网页
-	if (m_gameSettingWebView != nullptr)
-	{
-		m_gameSettingWebView->setGeometry(0, GAME_SETTING_WEBVIEW_ORIGIN, GAME_SETTING_WEBVIEW_WIDTH, GAME_SETTING_WEBVIEW_HEIGHT);
-		m_gameSettingWebView->load(QUrl("https://www.360.cn/"));
-		m_gameSettingWebView->show();
-	}
+	SAFE(m_gameSettingWebView, m_gameSettingWebView->load(QUrl("https://www.360.cn/")));
 }
 
 void GameInfoWidget::initPersonalRecordWidget()
 {
-	if (m_personalRecordWidget == nullptr)
-	{
-		return;
-	}
 	//下面一行后面删掉
-	m_personalRecordWidget->setStyleSheet(".QWidget{background-color:rgba(27,37,78,255);}");
-	m_personalRecordWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, WIDGET_HEIGHT);
+	SAFE(m_personalRecordWidget, m_personalRecordWidget->setStyleSheet(".QWidget{background-color:rgba(27,37,78,255);}"));
 
 	//网页
-	if (m_personalRecordWebView != nullptr)
-	{
-		m_personalRecordWebView->setGeometry(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT);
-		m_personalRecordWebView->load(QUrl("http://www.sougou.com/"));
-		m_personalRecordWebView->show();
-	}
+	SAFE(m_personalRecordWebView, m_personalRecordWebView->load(QUrl("http://www.sougou.com/")));
 }
 
 void GameInfoWidget::initMyToolButtonWidget()
 {
-	if (m_myToolWidget == nullptr)
-	{
-		return;
-	}
 	//下面一行后面删掉
-	m_myToolWidget->setStyleSheet(".QWidget{background-color:rgba(27,37,78,255);}");
-	m_myToolWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, WIDGET_HEIGHT);
-
+	SAFE(m_myToolWidget, m_myToolWidget->setStyleSheet(".QWidget{background-color:rgba(27,37,78,255);}"));
+	
 	//网页
-	if (m_myToolWebView != nullptr)
-	{
-		m_myToolWebView->setGeometry(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT);
-		m_myToolWebView->load(QUrl("https://www.360.cn/"));
-		m_myToolWebView->show();
-	}
+	SAFE(m_myToolWebView, m_myToolWebView->load(QUrl("https://www.360.cn/")));
 }
 
 void GameInfoWidget::resizeEvent(QResizeEvent* eve)
 {
-	m_widgetHeight += geometry().height() - m_gameInfoWidgetHeight;
-	m_gameInfoWidgetHeight = geometry().height();
-	layout();
+	int32_t gameInfoWidgetHeight = geometry().height();
+	int32_t resizeHeight = gameInfoWidgetHeight - m_gameInfoWidgetHeight;
+	if (resizeHeight != 0)
+	{
+		m_widgetHeight += resizeHeight;
+		m_gameInfoWidgetHeight = gameInfoWidgetHeight;
+		layout();
+	}
 }
 
 void GameInfoWidget::layout()
 {
-
+	setGeometry(0, 0, GAME_INFO_WIDGET_WIDTH, m_gameInfoWidgetHeight);
+	SAFE(m_inviteFriend, m_inviteFriend->setGeometry(0, m_inviteFriendOrigin, INVITE_FRIEND_WIDTH, INVITE_FRIEND_HEIGHT));
+	SAFE(m_inviteFriend, m_inviteFriend->setGeometry(0, m_inviteFriendOrigin, INVITE_FRIEND_WIDTH, INVITE_FRIEND_HEIGHT));
+	SAFE(m_startGame, m_startGame->setGeometry(START_GAME_ORIGIN_X, m_startGameOrigin_y, START_GAME_WIDTH, START_GAME_HEIGHT));
+	SAFE(m_exit, m_exit->setGeometry(EXIT_ORIGIN_X, m_exitOrigin_y, EXIT_WIDTH, EXIT_HEIGHT));
+	SAFE(m_gameSetting, m_gameSetting->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 0, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT));
+	SAFE(m_personalRecord, m_personalRecord->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 1, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT));
+	SAFE(m_myTool, m_myTool->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 2, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT));
+	SAFE(m_gameSettingWidget, m_gameSettingWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, m_widgetHeight));
+	SAFE(m_gameName, m_gameName->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameNameEdit, m_gameNameEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_gamePassword, m_gamePassword->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gamePasswordEdit, m_gamePasswordEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_gameMode, m_gameMode->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 2, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameModeComboBox, m_gameModeComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 2, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_gameLv, m_gameLv->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 3, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameLvComboBox, m_gameLvComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 3, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_gameMVP, m_gameMVP->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 4, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameMVPComboBox, m_gameMVPComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_gameNet, m_gameNet->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 5, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameNetComboBox, m_gameNetComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 5, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_gameLeave, m_gameLeave->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 6, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 6, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_judgeCheckBox, m_judgeCheckBox->setGeometry(JUDGE_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 7, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_save, m_save->setGeometry(SAVE_ORIGIN_X, SAVE_ORIGIN_Y, SAVE_WIDTH, SAVE_HEIGHT));
+	SAFE(m_gameSettingWebView, m_gameSettingWebView->setGeometry(0, m_gameSettingWebviewOrigin, GAME_SETTING_WEBVIEW_WIDTH, GAME_SETTING_WEBVIEW_HEIGHT));
+	SAFE(m_personalRecordWidget, m_personalRecordWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, m_widgetHeight));
+	SAFE(m_personalRecordWebView, m_personalRecordWebView->setGeometry(0, 0, WIDGET_WIDTH, m_widgetHeight));
+	SAFE(m_myToolWidget, m_myToolWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, m_widgetHeight));
+	SAFE(m_myToolWebView, m_myToolWebView->setGeometry(0, 0, WIDGET_WIDTH, m_widgetHeight));
 }
 
 void GameInfoWidget::onGameSettingClicked()
 {
-	if (m_gameSetting && m_personalRecord && m_myTool)
-	{
-		m_gameSetting->setChecked(true);
-		m_personalRecord->setChecked(false);
-		m_myTool->setChecked(false);
-		if (m_gameSettingWidget && m_personalRecordWidget && m_myToolWidget)
-		{
-			m_gameSettingWidget->show();
-			m_personalRecordWidget->hide();
-			m_myToolWidget->hide();
-		}
-	}
+	SAFE(m_gameSetting, m_gameSetting->setChecked(true));
+	SAFE(m_personalRecord, m_personalRecord->setChecked(false));
+	SAFE(m_myTool, m_myTool->setChecked(false));
+	SAFE(m_gameSettingWidget, m_gameSettingWidget->show());
+	SAFE(m_personalRecordWidget, m_personalRecordWidget->hide());
+	SAFE(m_myToolWidget, m_myToolWidget->hide());
 }
 
 void GameInfoWidget::onPersonalRecordClicked()
