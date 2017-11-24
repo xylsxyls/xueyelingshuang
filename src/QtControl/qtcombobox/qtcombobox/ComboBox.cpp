@@ -9,7 +9,13 @@
 
 ComboBox::ComboBox(QWidget* parent) :
 ControlBase(parent),
-m_listOrigin(0)
+m_listOrigin(0),
+m_listWidget(nullptr),
+m_dropDownImgNormal(1),
+m_dropDownImgDisabled(4),
+m_dropDownImgExpandNormal(5),
+m_dropDownImgExpandDisabled(8),
+m_dropDownImgStateCount(8)
 {
 	init(L"QComboBox", L"drop-down");
 	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
@@ -18,7 +24,7 @@ m_listOrigin(0)
 	setModel(m_listWidget->model());
 	setView(m_listWidget);
 	setItemDelegate(new NoFocusFrameDelegate);
-	//setMouseTracking(true);
+	setBorderWidth(1);
 }
 
 void ComboBox::setBackgroundColor(const QColor& normalColor,
@@ -76,11 +82,6 @@ void ComboBox::setDropDownTopRightOrigin(int32_t topOrigin, int32_t rightOrigin,
 {
 	ControlBase::setPxValue(L"margin-top", topOrigin, true, false);
 	ControlBase::setPxValue(L"margin-right", rightOrigin, true, rePaint);
-}
-
-void ComboBox::setTextOrigin(int32_t origin, bool rePaint)
-{
-	ControlBase::setPxValue(L"padding-left", origin, false, rePaint);
 }
 
 void ComboBox::setListOrigin(int32_t origin)

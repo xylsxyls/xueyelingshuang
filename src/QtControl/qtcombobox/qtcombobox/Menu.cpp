@@ -5,7 +5,8 @@
 #include <QMouseEvent>
 
 Menu::Menu(QWidget* parent) :
-ControlBase(parent)
+ControlBase(parent),
+m_pCustomStyle(nullptr)
 {
 	ControlBase::init(L"QMenu", L"item");
 	m_pCustomStyle = new CustomStyle;

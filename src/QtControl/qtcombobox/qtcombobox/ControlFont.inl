@@ -24,4 +24,10 @@ void ControlFont<QBase>::setFontBold(bool bold, bool rePaint)
 	}
 }
 
+template<class QBase>
+void ControlFont<QBase>::setTextOrigin(int32_t origin, bool rePaint)
+{
+	ControlBase::setPxValue(L"padding-left", origin, false, rePaint);
+}
+
 #endif

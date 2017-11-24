@@ -16,6 +16,8 @@ public:
 	*/
 	CheckBox(QWidget* parent = NULL);
 
+	virtual ~CheckBox(){};
+
 public:
 	/** 设置CheckBox指示器图片
 	@param [in] indicatorImg 背景图片路径，如果路径中必须使用正斜杠

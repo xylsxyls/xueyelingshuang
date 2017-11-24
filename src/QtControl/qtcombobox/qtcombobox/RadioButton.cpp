@@ -7,16 +7,16 @@ ControlBase(parent)
 }
 
 void RadioButton::setIndicatorImage(const QString& indicatorImg,
-								 int32_t indicatorImgStateCount,
-								 int32_t indicatorImgNormal,
-								 int32_t indicatorImgHover,
-								 int32_t indicatorImgPressed,
-								 int32_t indicatorImgDisabled,
-								 int32_t indicatorImgCkNormal,
-								 int32_t indicatorImgCkHover,
-								 int32_t indicatorImgCkPressed,
-								 int32_t indicatorImgCkDisabled,
-								 bool rePaint)
+									int32_t indicatorImgStateCount,
+									int32_t indicatorImgNormal,
+									int32_t indicatorImgHover,
+									int32_t indicatorImgPressed,
+									int32_t indicatorImgDisabled,
+									int32_t indicatorImgCkNormal,
+									int32_t indicatorImgCkHover,
+									int32_t indicatorImgCkPressed,
+									int32_t indicatorImgCkDisabled,
+									bool rePaint)
 {
 	std::map<int32_t, std::map<int32_t, int32_t>> indicatorImgMap;
 
@@ -38,14 +38,14 @@ void RadioButton::setIndicatorImage(const QString& indicatorImg,
 }
 
 void RadioButton::setBackgroundColor(const QColor& backgroundNormalColor,
-	 	 		 				  const QColor& backgroundHoverColor,
-								  const QColor& backgroundPressedColor,
-								  const QColor& backgroundDisabledColor,
-								  const QColor& backgroundCkNormalColor,
-								  const QColor& backgroundCkHoverColor,
-								  const QColor& backgroundCkPressedColor,
-								  const QColor& backgroundCkDisabledColor,
-								  bool rePaint)
+									 const QColor& backgroundHoverColor,
+									 const QColor& backgroundPressedColor,
+									 const QColor& backgroundDisabledColor,
+									 const QColor& backgroundCkNormalColor,
+									 const QColor& backgroundCkHoverColor,
+									 const QColor& backgroundCkPressedColor,
+									 const QColor& backgroundCkDisabledColor,
+									 bool rePaint)
 {
 	std::map<int32_t, std::map<int32_t, QColor>> backgroundColorMap;
 

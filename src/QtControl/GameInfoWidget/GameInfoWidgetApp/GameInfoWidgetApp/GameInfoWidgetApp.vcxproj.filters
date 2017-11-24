@@ -1,0 +1,243 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;cxx;c;def</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>moc;h;cpp</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug">
+      <UniqueIdentifier>{b18d3d48-fc7a-454c-a153-d93fd9cd4d12}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release">
+      <UniqueIdentifier>{6a454874-3edd-4257-8b1d-7ba26bd4e53a}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="GameInfoWidget">
+      <UniqueIdentifier>{06d6b5e4-3897-4f00-b3ea-d63e44f36e18}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="基础控件">
+      <UniqueIdentifier>{1fc838f8-53e5-41f1-9441-2886f059de33}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gameinfowidgetapp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_gameinfowidgetapp.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_gameinfowidgetapp.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_gameinfowidgetapp.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GameInfoWidget.cpp">
+      <Filter>GameInfoWidget</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\Menu.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\NoFocusFrameDelegate.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\QssHelper.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\QssString.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\RadioButton.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CheckBox.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CollapseMenu.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\ComboBox.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CStringManager.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CustomStyle.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CustomStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CustomStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\Label.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\ListWidget.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_GameInfoWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_GameInfoWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\LineEdit.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\COriginalButton2.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CPasswordInputBox2.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CPasswordInputBox2.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CPasswordInputBox2.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CGeneralStyle2.cpp">
+      <Filter>基础控件</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle2.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CGeneralStyle2.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="gameinfowidgetapp.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="gameinfowidgetapp.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="gameinfowidgetapp.qrc">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\qtcombobox\NoFocusFrameDelegate.h">
+      <Filter>基础控件</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\qtcombobox\CustomStyle.h">
+      <Filter>基础控件</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GameInfoWidget.h">
+      <Filter>GameInfoWidget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\qtcombobox\CPasswordInputBox2.h">
+      <Filter>基础控件</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\qtcombobox\CGeneralStyle2.h">
+      <Filter>基础控件</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="GeneratedFiles\ui_gameinfowidgetapp.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ListWidget.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\Menu.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\QssHelper.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\QssString.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\RadioButton.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\CheckBox.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\CollapseMenu.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ComboBox.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlBase.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlBorder.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlFont.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlItem.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlSelf.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\CStringManager.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\Label.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\LineEdit.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+    <ClInclude Include="DataInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\COriginalButton2.h">
+      <Filter>基础控件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\qtcombobox\qtcombobox\ControlBase.inl">
+      <Filter>基础控件</Filter>
+    </None>
+    <None Include="..\..\..\qtcombobox\qtcombobox\ControlBorder.inl">
+      <Filter>基础控件</Filter>
+    </None>
+    <None Include="..\..\..\qtcombobox\qtcombobox\ControlFont.inl">
+      <Filter>基础控件</Filter>
+    </None>
+    <None Include="..\..\..\qtcombobox\qtcombobox\ControlItem.inl">
+      <Filter>基础控件</Filter>
+    </None>
+    <None Include="..\..\..\qtcombobox\qtcombobox\ControlSelf.inl">
+      <Filter>基础控件</Filter>
+    </None>
+  </ItemGroup>
+</Project>

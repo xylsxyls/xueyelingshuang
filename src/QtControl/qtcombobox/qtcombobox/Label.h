@@ -13,6 +13,8 @@ public:
 	*/
 	Label(QWidget* parent = NULL);
 
+	virtual ~Label(){};
+
 	/** 设置字体
 	@param [in] fontName 字体名
 	@param [in] rePaint 是否立即重画

@@ -1,7 +1,9 @@
 #include "Label.h"
 
 Label::Label(QWidget* parent) :
-ControlBase(parent)
+ControlBase(parent),
+m_leftOrigin(0),
+m_fontSize(12)
 {
 	ControlBase::init(L"QLabel", L"");
 }

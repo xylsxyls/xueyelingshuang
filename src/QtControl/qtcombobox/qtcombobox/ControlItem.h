@@ -7,6 +7,7 @@ template <class QBase>
 class ControlItem : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlItem(){};
 	/** 设置节点边框粗度
 	@param [in] width 边框粗度
 	@param [in] rePaint 是否立即重画

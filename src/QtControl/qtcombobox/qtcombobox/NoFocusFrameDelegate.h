@@ -11,6 +11,7 @@ class NoFocusFrameDelegate : public QStyledItemDelegate
 	Q_OBJECT
 public:
 	explicit NoFocusFrameDelegate(QWidget *parent = 0);
+	virtual ~NoFocusFrameDelegate(){};
 
 	void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 

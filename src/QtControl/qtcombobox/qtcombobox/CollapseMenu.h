@@ -12,6 +12,8 @@ public:
 	*/
 	CollapseMenu(QWidget* parent = NULL);
 
+	virtual ~CollapseMenu(){};
+
 	/** 构造函数
 	@param [in] title 菜单标题
 	@param [in] icon 菜单图标

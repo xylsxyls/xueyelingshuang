@@ -7,6 +7,8 @@ template <class QBase>
 class ControlBorderForNormal : virtual public ControlBase < QBase >
 {
 public:
+
+	virtual ~ControlBorderForNormal(){};
 	/** 设置边框颜色
 	@param [in] color 常态
 	@param [in] rePaint 是否立即重画
@@ -30,6 +32,7 @@ template <class QBase>
 class ControlBorderForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlBorderForNormalHoverDisabled(){};
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -72,6 +75,7 @@ template <class QBase>
 class ControlBorderForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlBorderForNormalSelectedDisabled(){};
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] selectedColor 悬停颜色（用于list）
@@ -114,6 +118,7 @@ template <class QBase>
 class ControlBorderForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlBorderForNormalHoverPressedDisabled(){};
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -162,6 +167,7 @@ template <class QBase>
 class ControlBorderForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlBorderForNormalHoverPressedDisabledAndCheck(){};
 	/** 设置背景颜色
 	@param [in] normalColor 非选中常态颜色
 	@param [in] hoverColor 非选中悬停颜色
@@ -234,6 +240,7 @@ template <class QBase>
 class ControlItemBorderForNormal : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlItemBorderForNormal(){};
 	/** 设置边框颜色
 	@param [in] color 常态
 	@param [in] rePaint 是否立即重画
@@ -257,6 +264,7 @@ template <class QBase>
 class ControlItemBorderForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlItemBorderForNormalHoverDisabled(){};
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -299,6 +307,7 @@ template <class QBase>
 class ControlItemBorderForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlItemBorderForNormalSelectedDisabled(){};
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] selectedColor 悬停颜色（用于list）
@@ -341,6 +350,7 @@ template <class QBase>
 class ControlItemBorderForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlItemBorderForNormalHoverPressedDisabled(){};
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -389,6 +399,7 @@ template <class QBase>
 class ControlItemBorderForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
 public:
+	virtual ~ControlItemBorderForNormalHoverPressedDisabledAndCheck(){};
 	/** 设置背景颜色
 	@param [in] normalColor 非选中常态颜色
 	@param [in] hoverColor 非选中悬停颜色

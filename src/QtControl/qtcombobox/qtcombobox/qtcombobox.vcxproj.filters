@@ -84,6 +84,9 @@
     <Filter Include="CollapseMenu">
       <UniqueIdentifier>{2dcc0fd5-1dd0-4f2a-94d9-7d5a8b5d8c5a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="LineEdit">
+      <UniqueIdentifier>{3a86d31f-e656-4a63-a82b-20ff8647feba}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -152,6 +155,9 @@
     <ClCompile Include="CollapseMenu.cpp">
       <Filter>CollapseMenu</Filter>
     </ClCompile>
+    <ClCompile Include="LineEdit.cpp">
+      <Filter>LineEdit</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -218,6 +224,9 @@
     </ClInclude>
     <ClInclude Include="CollapseMenu.h">
       <Filter>CollapseMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="LineEdit.h">
+      <Filter>LineEdit</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

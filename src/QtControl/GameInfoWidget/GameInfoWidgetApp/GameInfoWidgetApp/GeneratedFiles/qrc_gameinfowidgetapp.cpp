@@ -26,21 +26,21 @@ namespace QT_NAMESPACE {
 }
 #endif
 
-int QT_RCC_MANGLE_NAMESPACE(qInitResources_qtcombobox)();
-int QT_RCC_MANGLE_NAMESPACE(qInitResources_qtcombobox)()
+int QT_RCC_MANGLE_NAMESPACE(qInitResources_gameinfowidgetapp)();
+int QT_RCC_MANGLE_NAMESPACE(qInitResources_gameinfowidgetapp)()
 {
     return 1;
 }
 
-int QT_RCC_MANGLE_NAMESPACE(qCleanupResources_qtcombobox)();
-int QT_RCC_MANGLE_NAMESPACE(qCleanupResources_qtcombobox)()
+int QT_RCC_MANGLE_NAMESPACE(qCleanupResources_gameinfowidgetapp)();
+int QT_RCC_MANGLE_NAMESPACE(qCleanupResources_gameinfowidgetapp)()
 {
     return 1;
 }
 
 namespace {
    struct initializer {
-       initializer() { QT_RCC_MANGLE_NAMESPACE(qInitResources_qtcombobox)(); }
-       ~initializer() { QT_RCC_MANGLE_NAMESPACE(qCleanupResources_qtcombobox)(); }
+       initializer() { QT_RCC_MANGLE_NAMESPACE(qInitResources_gameinfowidgetapp)(); }
+       ~initializer() { QT_RCC_MANGLE_NAMESPACE(qCleanupResources_gameinfowidgetapp)(); }
    } dummy;
 }

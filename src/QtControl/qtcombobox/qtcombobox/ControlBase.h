@@ -21,6 +21,8 @@ protected:
 	*/
 	ControlBase(QWidget* parent = NULL);
 
+	virtual ~ControlBase(){};
+
 	/** 初始化
 	@param [in] className 类名
 	@param [in] itemName 节点名
