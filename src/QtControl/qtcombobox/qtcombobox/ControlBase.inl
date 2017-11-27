@@ -141,7 +141,7 @@ void ControlBase<QBase>::updateStyle()
 }
 
 template<class QBase>
-void ControlBase<QBase>::showEvent(QShowEvent* eve)
+void ControlBase<QBase>::showEvent(QShowEvent*)
 {
 	updateStyle();
 }

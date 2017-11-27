@@ -24,6 +24,14 @@
 */
 #define GAME_INFO_FONT_FACE QString::fromStdWString(L"微软雅黑")
 
+/** 控件背景颜色
+*/
+#define CONTROL_BACKGROUND_COLOR QColor(39, 50, 83, 255)
+
+/** 下拉框hover颜色
+*/
+#define LIST_HOVER_COLOR QColor(80, 98, 146, 255)
+
 enum
 {
 	/** 整体窗口宽度
@@ -150,11 +158,13 @@ enum
 	*/
 	EXIT_ORIGIN_X = START_GAME_ORIGIN_X + BUTTONS_SPACING + START_GAME_WIDTH,
 
-	
-
 	/** 字体大小
 	*/
-	GAME_INFO_FONT_SIZE = 14,
+	GAME_INFO_FONT_SIZE = 13,
+
+	/** 下拉框字体大小
+	*/
+	LIST_FONT_SIZE = GAME_INFO_FONT_SIZE - 1,
 
 	/** 右侧控件文字偏移量
 	*/
@@ -163,4 +173,41 @@ enum
 	/** 游戏模式点击框文字偏移量
 	*/
 	GAME_MODE_TEXT_ORIGIN = 7,
+
+	/** 下拉框节点高度
+	*/
+	LIST_ITEM_HEIGHT = 17,
+
+	/** 下拉框最大高度
+	*/
+	LIST_MAX_HEIGHT = 36,
+
+	/** 下拉框偏移量
+	*/
+	LIST_ORIGIN = 2,
+
+	/** 下拉框边框粗度
+	*/
+	LIST_BORDER_WIDTH = 1,
+
+	/** 下拉框节点边框粗度
+	*/
+	LIST_ITEM_BORDER_WIDTH = 0,
+
+	/** 下拉箭头宽度
+	*/
+	DROP_DOWN_WIDTH = 10,
+
+	/** 下拉箭头高度
+	*/
+	DROP_DOWN_HEIGHT = 5,
+
+	/** 下拉箭头距离右上角横轴距离
+	*/
+	DROP_DOWN_ORIGIN_X = 7,
+
+	/** 下拉箭头距离右上角纵轴距离
+	*/
+	DROP_DOWN_ORIGIN_Y = 5,
+
 };

@@ -4,6 +4,7 @@ ListWidget::ListWidget(QWidget* parent) :
 ControlBase(parent)
 {
 	init(L"QListWidget", L"item");
+	//setToolTip()
 }
 
 void ListWidget::setBackgroundColor(const QColor& color, bool rePaint)
@@ -74,4 +75,9 @@ void ListWidget::setTextColor(const QColor& normalColor,
 void ListWidget::setTextOrigin(int32_t origin, bool rePaint)
 {
 	ControlBase::setPxValue(L"padding-left", origin, true, rePaint);
+}
+
+void ListWidget::setMaxHeight(int32_t maxHeight, bool rePaint)
+{
+	ControlBase::setPxValue(L"max-height", maxHeight, false, rePaint);
 }

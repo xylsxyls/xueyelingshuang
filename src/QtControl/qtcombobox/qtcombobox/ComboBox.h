@@ -84,6 +84,11 @@ public:
 	*/
 	void addItem(const QString& text);
 
+	/** 设置整串
+	@param [in] textList 文本
+	*/
+	void addItems(const QStringList& textList);
+
 	/** 设置背景颜色
 	@param [in] color 背景颜色
 	@param [in] rePaint 是否立即重画
@@ -193,6 +198,12 @@ public:
 								 int32_t bottomOrigin,
 								 bool rePaint = false);
 
+	/** 设置下拉框最大高度
+	@param [in] maxHeight 最大高度
+	*/
+	void setListMaxHeight(int32_t maxHeight);
+
+
 	/** 重画
 	*/
 	virtual void repaint();
@@ -202,6 +213,7 @@ private:
 	virtual void mouseReleaseEvent(QMouseEvent* eve);
 	virtual void showPopup();
 	virtual void hidePopup();
+	virtual void hideEvent(QHideEvent* eve);
 
 private:
 	ListWidget* m_listWidget;

@@ -65,3 +65,9 @@ void CheckBox::setTextOrigin(int32_t origin, bool rePaint)
 {
 	ControlBase::setPxValue(L"spacing", origin, false, rePaint);
 }
+
+void CheckBox::setIndicatorSize(int32_t width, int32_t height, bool rePaint)
+{
+	ControlBase::setPxValue(L"width", width, true, false);
+	ControlBase::setPxValue(L"height", height, true, rePaint);
+}

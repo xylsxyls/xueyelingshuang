@@ -3,7 +3,10 @@
 #include <QUrl>
 #include <QtWebKitWidgets/QWebView>
 #include <stdint.h>
+#include "ComboBox.h"
 
+class QEvent;
+class QObject;
 class Label;
 class QWebView;
 class LineEdit;
@@ -32,6 +35,11 @@ public:
 	*/
 	QString getGameName();
 
+	/** 设置游戏局名称是否可用
+	@param [in] enable 是否可用
+	*/
+	void setGameNameEnable(bool enable);
+
 	/** 设置游戏局密码
 	@param [in] gamePassword 游戏局密码
 	*/
@@ -41,6 +49,11 @@ public:
 	@return 返回游戏局密码
 	*/
 	QString getGamePassword();
+
+	/** 设置游戏局密码是否可用
+	@param [in] enable 是否可用
+	*/
+	void setGamePasswordEnable(bool enable);
 
 	/** 设置游戏局模式
 	@param [in] gameModeList 游戏局模式
@@ -57,6 +70,11 @@ public:
 	*/
 	QString getCurGameMode();
 
+	/** 设置游戏局模式是否可用
+	@param [in] enable 是否可用
+	*/
+	void setGameModeEnable(bool enable);
+
 	/** 设置名将Lv限制
 	@param [in] gameLvList 名将Lv限制
 	*/
@@ -71,6 +89,11 @@ public:
 	@return 返回当前选择的名将Lv限制
 	*/
 	QString getCurGameLv();
+
+	/** 设置名将Lv限制是否可用
+	@param [in] enable 是否可用
+	*/
+	void setGameLvEnable(bool enable);
 
 	/** 设置MVP限制
 	@param [in] gameMVPList MVP限制
@@ -87,6 +110,11 @@ public:
 	*/
 	QString getCurGameMVP();
 
+	/** 设置MVP限制是否可用
+	@param [in] enable 是否可用
+	*/
+	void setGameMVPEnable(bool enable);
+
 	/** 设置网速限制
 	@param [in] gameNetList 网速限制
 	*/
@@ -101,6 +129,11 @@ public:
 	@return 返回当前选择的网速限制
 	*/
 	QString getCurGameNet();
+
+	/** 设置网速限制是否可用
+	@param [in] enable 是否可用
+	*/
+	void setGameNetEnable(bool enable);
 
 	/** 设置掉线率限制
 	@param [in] gameLeaveList 掉线率限制
@@ -117,6 +150,11 @@ public:
 	*/
 	QString getCurGameLeave();
 
+	/** 设置掉线率限制是否可用
+	@param [in] enable 是否可用
+	*/
+	void setGameLeaveEnable(bool enable);
+
 	/** 设置是否开启裁判位
 	@param [in] judge 是否开启裁判位
 	*/
@@ -126,6 +164,31 @@ public:
 	@return 返回当前是否开启了裁判位
 	*/
 	bool getJudge();
+
+	/** 设置裁判位是否可用
+	@param [in] enable 是否可用
+	*/
+	void setJudgeEnable(bool enable);
+
+	/** 设置保存是否可用
+	@param [in] enable 是否可用
+	*/
+	void setSaveEnable(bool enable);
+
+	/** 设置邀请好友是否可用
+	@param [in] enable 是否可用
+	*/
+	void setInviteFriendEnable(bool enable);
+
+	/** 设置开始游戏是否可用
+	@param [in] enable 是否可用
+	*/
+	void setStartGameEnable(bool enable);
+
+	/** 设置退出是否可用
+	@param [in] enable 是否可用
+	*/
+	void setExitEnable(bool enable);
 	
 private:
 	/** 默认数据初始化
@@ -140,15 +203,40 @@ private:
 	void initPersonalRecordWidget();
 	void initMyToolButtonWidget();
 
+	//如果字符串传空则表示不设置正则表达式
+	void setComboBoxAttri(ComboBox* pBox, const std::wstring& pattern = L"", QRegExpValidator* rep = nullptr);
+
+	bool mouseInWithoutDropDown(ComboBox* pBox);
+
+	void setComboBoxEditAttri(ComboBox* pBox, std::wstring& curText);
+
+	void setComboBoxUnEditAttri(ComboBox* pBox, const std::wstring& flag, std::wstring& curText);
+
 	void resizeEvent(QResizeEvent* eve);
 	//所有控件统一布局
 	void layout();
+
+	bool eventFilter(QObject* target, QEvent* eve);
 
 private slots:
 	void onGameSettingClicked();
 	void onPersonalRecordClicked();
 	void onMyToolClicked();
 
+Q_SIGNALS:
+	void onSaveClicked();
+	void onInviteFriendClicked();
+	void onStartGameClicked();
+	void onExitClicked();
+	void onGameNameChanged(const QString &);
+	void onGamePasswordChanged(const QString &);
+	void onGameModeChanged(const QString&);
+	void onGameLvChanged(const QString &);
+	void onGameMVPChanged(const QString &);
+	void onGameNetChanged(const QString &);
+	void onGameLeaveChanged(const QString &);
+	void onJudgeChanged(int);
+	
 private:
 	COriginalButton2* m_gameSetting;
 	COriginalButton2* m_personalRecord;
@@ -184,7 +272,6 @@ private:
 	Label* m_gameLeave;
 	COriginalButton2* m_save;
 
-	public:
 	//窗口整体高度
 	int32_t m_gameInfoWidgetHeight;
 
@@ -202,4 +289,14 @@ private:
 
 	//退出按钮纵轴起始位置
 	int32_t m_exitOrigin_y;
+
+	QRegExpValidator m_lvRep;
+	QRegExpValidator m_MVPRep;
+	QRegExpValidator m_netRep;
+	QRegExpValidator m_leaveRep;
+
+	std::wstring m_gameLvCurText;
+	std::wstring m_gameMVPCurText;
+	std::wstring m_gameNetCurText;
+	std::wstring m_gameLeaveCurText;
 };

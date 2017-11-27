@@ -6,6 +6,8 @@
 #include "QssHelper.h"
 #include "NoFocusFrameDelegate.h"
 #include "ListWidget.h"
+#include <QtWidgets/QScrollBar>
+//#include "D:\\SendToMessageTest.h"
 
 ComboBox::ComboBox(QWidget* parent) :
 ControlBase(parent),
@@ -25,6 +27,65 @@ m_dropDownImgStateCount(8)
 	setView(m_listWidget);
 	setItemDelegate(new NoFocusFrameDelegate);
 	setBorderWidth(1);
+	setMouseTracking(true);
+
+	m_listWidget->verticalScrollBar()->setStyleSheet(
+		"QScrollBar:vertical"
+		"{"
+			"width:3px;"
+			"background:rgba(0,0,0,0%);"
+			"margin:0px,0px,0px,0px;"
+			"padding-top:0px;"
+			"padding-bottom:0px;"
+		"}"
+		"QScrollBar::handle:vertical"
+		"{"
+			"width:3px;"
+			"background:rgba(89,109,170,100%);"
+			"border-radius:1px;"
+			"min-height:10;"
+		"}"
+		"QScrollBar::handle:vertical:hover"
+		"{"
+			"width:3px;"
+			"background:rgba(110,139,229,100%);"
+			"border-radius:1px;"
+			"min-height:10;"
+		"}"
+		"QScrollBar::add-line:vertical"
+		"{"
+			"height:0px;"
+			"width:3px;"
+			"border-image:none;"
+			"subcontrol-position:bottom;"
+		"}"
+		"QScrollBar::sub-line:vertical"
+		"{"
+			"height:0px;"
+			"width:3px;"
+			"border-image:none;"
+			"subcontrol-position:top;"
+		"}"
+		"QScrollBar::add-line:vertical:hover"
+		"{"
+			"height:0px;"
+			"width:3px;"
+			"border-image:none;"
+			"subcontrol-position:bottom;"
+		"}"
+		"QScrollBar::sub-line:vertical:hover"
+		"{"
+			"height:0px;"
+			"width:3px;"
+			"border-image:none;"
+			"subcontrol-position:top;"
+		"}"
+		"QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical"
+		"{"
+			"background:rgba(54,68,111,100%);"
+			"border-radius:1px;"
+		"}"
+	);
 }
 
 void ComboBox::setBackgroundColor(const QColor& normalColor,
@@ -93,6 +154,19 @@ void ComboBox::addItem(const QString& text)
 {
 	QListWidgetItem* widgetItem = new QListWidgetItem(m_listWidget);
 	widgetItem->setText(text);
+	widgetItem->setToolTip(text);
+}
+
+void ComboBox::addItems(const QStringList& textList)
+{
+	int32_t index = -1;
+	int32_t size = textList.size();
+	while (index++ != size - 1)
+	{
+		QListWidgetItem* widgetItem = new QListWidgetItem(m_listWidget);
+		widgetItem->setText(textList[index]);
+		widgetItem->setToolTip(textList[index]);
+	}
 }
 
 void ComboBox::setListBackgroundColor(const QColor& color, bool rePaint)
@@ -178,6 +252,11 @@ void ComboBox::setListItemAroundOrigin(int32_t leftOrigin,
 	m_listWidget->setItemAroundOrigin(leftOrigin, topOrigin, rightOrigin, bottomOrigin, rePaint);
 }
 
+void ComboBox::setListMaxHeight(int32_t maxHeight)
+{
+	((QWidget*)(this->view()->parent()))->setStyleSheet(QString("max-height:%1px").arg(maxHeight));
+}
+
 void ComboBox::showEvent(QShowEvent* eve)
 {
 	repaint();
@@ -190,6 +269,11 @@ void ComboBox::mouseReleaseEvent(QMouseEvent* eve)
 
 void ComboBox::showPopup()
 {
+	if (count() == 0)
+	{
+		hidePopup();
+		return;
+	}
 	m_imageStateMap[NORMAL][NORMAL] = m_dropDownImgExpandNormal;
 	m_imageStateMap[NORMAL][DISABLED] = m_dropDownImgExpandDisabled;
 	ControlBase::setImageStateMap(m_imageStateMap, m_imagePath, m_dropDownImgStateCount, L"border-image", L"down-arrow", true);
@@ -215,6 +299,13 @@ void ComboBox::hidePopup()
 	m_imageStateMap[NORMAL][DISABLED] = m_dropDownImgDisabled;
 	ControlBase::setImageStateMap(m_imageStateMap, m_imagePath, m_dropDownImgStateCount, L"border-image", L"down-arrow", true);
 	QComboBox::hidePopup();
+	QComboBox::clearFocus();
+	return;
+}
+
+void ComboBox::hideEvent(QHideEvent* eve)
+{
+	QComboBox::hideEvent(eve);
 	return;
 }
 

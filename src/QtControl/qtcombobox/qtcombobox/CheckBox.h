@@ -63,6 +63,13 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setTextOrigin(int32_t origin, bool rePaint = false);
+
+	/** 设置指示器大小
+	@param [in] width 宽度
+	@param [in] height 高度
+	@param [in] rePaint 是否立即重画
+	*/
+	void setIndicatorSize(int32_t width, int32_t height, bool rePaint = false);
 };
 
 #endif

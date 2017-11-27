@@ -12,6 +12,10 @@ public:
 	GameInfoWidgetApp(QWidget *parent = 0);
 	~GameInfoWidgetApp();
 
+private slots:
+	void save();
+	void changed(const QString& str);
+
 private:
 	Ui::GameInfoWidgetAppClass ui;
 };
