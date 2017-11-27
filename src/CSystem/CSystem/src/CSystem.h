@@ -2,7 +2,6 @@
 #include <windows.h>
 #include <string>
 #include "CSystemMacro.h"
-using namespace std;
 
 class CSystemAPI CSystem{
 public:
@@ -17,17 +16,17 @@ public:
 	//?跨平台Sleep，毫秒
 	static void Sleep(long long milliseconds);
 	//?生成UUID，传入1表示带-，传0表示不带
-	static string uuid(int flag = 1);
+	static std::string uuid(int flag = 1);
 	//?打开系统文件夹
-	static void OpenFolder(const string& folder);
+	static void OpenFolder(const std::string& folder);
 	//?打开系统文件夹并选择文件
-	static void OpenFolderAndSelectFile(const string& file);
+	static void OpenFolderAndSelectFile(const std::string& file);
 	//?外部打开文件
-	static void OpenFile(const string& file);
+	static void OpenFile(const std::string& file);
 	//?外部打开网页
-	static void OpenWebPage(const string& webPage);
+	static void OpenWebPage(const std::string& webPage);
 	//?复制文件
-	static void CopyFileOver(const string& dstFile, const string& srcFile, bool over);
+	static void CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over);
 	//?获取当前操作系统位数
 	static int GetSystemBits();
 	//?禁用重定向
@@ -35,9 +34,11 @@ public:
 	//?恢复重定向
 	static void RecoveryRedir();
 	//?获取当前系统用户名，类似Administrator
-	static string GetSysUserName();
+	static std::string GetSysUserName();
 	//?获得本机中处理器的数量
 	static int GetCPUCount();
+	//?获取剪贴板内容
+	static std::string GetClipboardData(HWND hwnd);
 
 public:
     static bool ifRedirFrobid;

@@ -130,11 +130,11 @@ void CSystem::Sleep(long long milliseconds){
 	std::this_thread::sleep_for(dura);
 }
 
-string CSystem::uuid(int flag){
+std::string CSystem::uuid(int flag){
 	char buffer[64] = { 0 };
 	GUID guid;
 	if (CoCreateGuid(&guid)) return "";
-	string strFormat = "%08X-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X";
+	std::string strFormat = "%08X-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X";
 	if (flag == 0) strFormat = "%08X%04X%04x%02X%02X%02X%02X%02X%02X%02X%02X";
 	_snprintf(buffer, sizeof(buffer),
 		strFormat.c_str(),
@@ -145,35 +145,35 @@ string CSystem::uuid(int flag){
 	return buffer;
 }
 
-void CSystem::OpenFolder(const string& folder)
+void CSystem::OpenFolder(const std::string& folder)
 {
     CSystem::ForbidRedir();
     ShellExecute(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
     CSystem::RecoveryRedir();
 }
 
-void CSystem::OpenFolderAndSelectFile(const string& file)
+void CSystem::OpenFolderAndSelectFile(const std::string& file)
 {
     CSystem::ForbidRedir();
     ShellExecute(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
     CSystem::RecoveryRedir();
 }
 
-void CSystem::OpenFile(const string& file)
+void CSystem::OpenFile(const std::string& file)
 {
     CSystem::ForbidRedir();
     ShellExecute(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
     CSystem::RecoveryRedir();
 }
 
-void CSystem::OpenWebPage(const string& webPage)
+void CSystem::OpenWebPage(const std::string& webPage)
 {
     CSystem::ForbidRedir();
     ShellExecute(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
     CSystem::RecoveryRedir();
 }
 
-void CSystem::CopyFileOver(const string& dstFile, const string& srcFile, bool over)
+void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over)
 {
     CSystem::ForbidRedir();
 	::CopyFile(srcFile.c_str(), dstFile.c_str(), over == false);
@@ -232,7 +232,7 @@ void CSystem::RecoveryRedir()
     }
 }
 
-string CSystem::GetSysUserName()
+std::string CSystem::GetSysUserName()
 {
     DWORD size = 1024;
     TCHAR szName[1024] = {};
@@ -245,6 +245,30 @@ int CSystem::GetCPUCount()
 	SYSTEM_INFO si;
 	::GetSystemInfo(&si);
 	return si.dwNumberOfProcessors;
+}
+
+std::string CSystem::GetClipboardData(HWND hwnd)
+{
+	char* pBuf = nullptr;
+	//打开剪贴板
+	if (::OpenClipboard(hwnd))
+	{
+		//判断格式是否是我们所需要
+		if (IsClipboardFormatAvailable(CF_TEXT))
+		{
+			HANDLE hClip;
+			//读取数据  
+			hClip = ::GetClipboardData(CF_TEXT);
+			pBuf = (char*)::GlobalLock(hClip);
+			::GlobalUnlock(hClip);
+			::CloseClipboard();
+		}
+	}
+	if (pBuf == nullptr)
+	{
+		return std::string();
+	}
+	return pBuf;
 }
 
 /*

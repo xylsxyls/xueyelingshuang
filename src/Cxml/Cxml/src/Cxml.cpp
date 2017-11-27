@@ -89,8 +89,8 @@ bool Cxml::GetOneModule(CString* pstrXml,int* flag,CString* strXmlName,CString* 
 			return 0;
 		}
 	}
-	CStringManager strManager = (LPSTR)(LPCTSTR)(*pstrXml);
-	int nRight = strManager.FindOther('<','>',nLeft);
+	//CStringManager strManager = ;
+	int nRight = CStringManager::FindOther((LPSTR)(LPCTSTR)(*pstrXml), '<', '>', nLeft);
 	if(nRight == -1){
 		mapError[*pstrXml] = "找不到对应右侧括号\">\"，解析中断";
 		return 0;
@@ -206,12 +206,12 @@ void Cxml::LoadOneModule(int flag,CString strXmlName,CString strXmlAttri,CString
 
 map<CString,CString> Cxml::LoadAttri(CString strXmlAttri){
 	map<CString,CString> mapAttri;
-	CStringManager strManager = (LPSTR)(LPCTSTR)strXmlAttri;
-	vector<string> vecHead = strManager.split(" ");
+	//CStringManager strManager = (LPSTR)(LPCTSTR)strXmlAttri;
+	std::vector<string> vecHead = CStringManager::split((LPSTR)(LPCTSTR)strXmlAttri, " ");
 	int i = -1;
 	while(i++ != vecHead.size() - 1){
-		CStringManager strOneManager = vecHead.at(i);
-		vector<string> vecOneAttri = strOneManager.split("=");
+		//CStringManager strOneManager = vecHead.at(i);
+		vector<string> vecOneAttri = CStringManager::split(vecHead.at(i), "=");
 		if(vecOneAttri.size() == 1){
 			mapError[strXmlAttri] = "属性之间有多个空格或出现无等号属性";
 		}
@@ -1075,6 +1075,7 @@ Cxml* Cxml::FindPrepXml(Cxml* pFindXml){
 	return FindPrepXmlFromXml(this,pFindXml);
 }
 
+#include "Ctxt/CtxtAPI.h"
 
 int main(){
 	//double a = 0;
@@ -1095,6 +1096,13 @@ int main(){
 	//xml["aaa"] = 1;
 	//xml.Load(str);
 	CString strXml = xml.toCString();
+
+	Cxml xml2;
+	Ctxt txt("D:\\s.txt");
+	txt.LoadTxt(3, "");
+	map<CString, CString> maps = xml2.Load(txt.m_vectxt[0][0].c_str());
+	Ctxt txt2("D:\\s2.txt");
+	txt2.AddLine("%s", (LPSTR)(LPCTSTR)xml2.toCString());
 	AfxMessageBox(strXml);
 	int x = 3;
 	return 0;

@@ -6,6 +6,10 @@
 #include "FundInvest.h"
 #include "FundInvestDlg.h"
 #include "afxdialogex.h"
+#include "CSystem/CSystemAPI.h"
+#include "Ctxt/CtxtAPI.h"
+#include "CMouse/CMouseAPI.h"
+#include "CKeyboard/CKeyboardAPI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -156,4 +160,33 @@ HCURSOR CFundInvestDlg::OnQueryDragIcon()
 void CFundInvestDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	Ctxt txt110022("D:\\110022.txt");
+	txt110022.LoadTxt(2, "\t");
+	auto ss = txt110022.m_vectxt;
+	return;
+
+	Sleep(2000);
+	int32_t spacingTime = 5;
+	int i = 89;
+	while (i-- != 0)
+	{
+		CMouse::MoveAbsolute(xyls::Point(670, 405), 0);
+		CMouse::LeftClick(0);
+		CKeyboard::KeyDown(CKeyboard::Shift);
+		CMouse::MoveAbsolute(xyls::Point(1290, 970), 0);
+		CMouse::LeftClick(0);
+		CKeyboard::KeyUp(CKeyboard::Shift);
+		CKeyboard::KeyDown(CKeyboard::Ctrl);
+		CKeyboard::KeyDown('C');
+		CKeyboard::KeyUp(CKeyboard::Ctrl);
+		CKeyboard::KeyUp('C');
+
+		std::string str = CSystem::GetClipboardData(m_hWnd);
+		Ctxt txt("D:\\110022.txt");
+		txt.AddLine("%s\n", str.c_str());
+
+		CMouse::MoveAbsolute(xyls::Point(1085, 1000), spacingTime);
+		CMouse::LeftClick(spacingTime);
+		Sleep(500);
+	}
 }
