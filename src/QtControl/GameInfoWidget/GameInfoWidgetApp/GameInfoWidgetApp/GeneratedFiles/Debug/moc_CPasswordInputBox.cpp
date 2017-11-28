@@ -1,16 +1,16 @@
 /****************************************************************************
-** Meta object code from reading C++ file 'CPasswordInputBox2.h'
+** Meta object code from reading C++ file 'CPasswordInputBox.h'
 **
 ** Created by: The Qt Meta Object Compiler version 67 (Qt 5.5.1)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
-#include "../../../../../qtcombobox/qtcombobox/CPasswordInputBox2.h"
+#include "../../../../../qtcombobox/fromYangNan/CPasswordInputBox.h"
 #include <QtCore/qbytearray.h>
 #include <QtCore/qmetatype.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
-#error "The header file 'CPasswordInputBox2.h' doesn't include <QObject>."
+#error "The header file 'CPasswordInputBox.h' doesn't include <QObject>."
 #elif Q_MOC_OUTPUT_REVISION != 67
 #error "This file was generated using the moc from 5.5.1. It"
 #error "cannot be used with the include files from this version of Qt."
@@ -18,28 +18,28 @@
 #endif
 
 QT_BEGIN_MOC_NAMESPACE
-struct qt_meta_stringdata_CPasswordInputBox2_t {
+struct qt_meta_stringdata_CPasswordInputBox_t {
     QByteArrayData data[3];
-    char stringdata0[40];
+    char stringdata0[39];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
-    qptrdiff(offsetof(qt_meta_stringdata_CPasswordInputBox2_t, stringdata0) + ofs \
+    qptrdiff(offsetof(qt_meta_stringdata_CPasswordInputBox_t, stringdata0) + ofs \
         - idx * sizeof(QByteArrayData)) \
     )
-static const qt_meta_stringdata_CPasswordInputBox2_t qt_meta_stringdata_CPasswordInputBox2 = {
+static const qt_meta_stringdata_CPasswordInputBox_t qt_meta_stringdata_CPasswordInputBox = {
     {
-QT_MOC_LITERAL(0, 0, 18), // "CPasswordInputBox2"
-QT_MOC_LITERAL(1, 19, 19), // "onMaskButtonClicked"
-QT_MOC_LITERAL(2, 39, 0) // ""
+QT_MOC_LITERAL(0, 0, 17), // "CPasswordInputBox"
+QT_MOC_LITERAL(1, 18, 19), // "onMaskButtonClicked"
+QT_MOC_LITERAL(2, 38, 0) // ""
 
     },
-    "CPasswordInputBox2\0onMaskButtonClicked\0"
+    "CPasswordInputBox\0onMaskButtonClicked\0"
     ""
 };
 #undef QT_MOC_LITERAL
 
-static const uint qt_meta_data_CPasswordInputBox2[] = {
+static const uint qt_meta_data_CPasswordInputBox[] = {
 
  // content:
        7,       // revision
@@ -61,10 +61,10 @@ static const uint qt_meta_data_CPasswordInputBox2[] = {
        0        // eod
 };
 
-void CPasswordInputBox2::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+void CPasswordInputBox::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     if (_c == QMetaObject::InvokeMetaMethod) {
-        CPasswordInputBox2 *_t = static_cast<CPasswordInputBox2 *>(_o);
+        CPasswordInputBox *_t = static_cast<CPasswordInputBox *>(_o);
         Q_UNUSED(_t)
         switch (_id) {
         case 0: _t->onMaskButtonClicked(); break;
@@ -74,26 +74,26 @@ void CPasswordInputBox2::qt_static_metacall(QObject *_o, QMetaObject::Call _c, i
     Q_UNUSED(_a);
 }
 
-const QMetaObject CPasswordInputBox2::staticMetaObject = {
-    { &QLineEdit::staticMetaObject, qt_meta_stringdata_CPasswordInputBox2.data,
-      qt_meta_data_CPasswordInputBox2,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
+const QMetaObject CPasswordInputBox::staticMetaObject = {
+    { &QLineEdit::staticMetaObject, qt_meta_stringdata_CPasswordInputBox.data,
+      qt_meta_data_CPasswordInputBox,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
 };
 
 
-const QMetaObject *CPasswordInputBox2::metaObject() const
+const QMetaObject *CPasswordInputBox::metaObject() const
 {
     return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
 }
 
-void *CPasswordInputBox2::qt_metacast(const char *_clname)
+void *CPasswordInputBox::qt_metacast(const char *_clname)
 {
     if (!_clname) return Q_NULLPTR;
-    if (!strcmp(_clname, qt_meta_stringdata_CPasswordInputBox2.stringdata0))
-        return static_cast<void*>(const_cast< CPasswordInputBox2*>(this));
+    if (!strcmp(_clname, qt_meta_stringdata_CPasswordInputBox.stringdata0))
+        return static_cast<void*>(const_cast< CPasswordInputBox*>(this));
     return QLineEdit::qt_metacast(_clname);
 }
 
-int CPasswordInputBox2::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+int CPasswordInputBox::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
     _id = QLineEdit::qt_metacall(_c, _id, _a);
     if (_id < 0)

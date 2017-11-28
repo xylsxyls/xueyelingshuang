@@ -45,7 +45,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_WEBKITWIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;D:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox\;$(QTDIR)\include\QtWebKit;$(QTDIR)\include\QtWebkitWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;D:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox\;$(QTDIR)\include\QtWebKit;$(QTDIR)\include\QtWebkitWidgets;D:\xueyelingshuang\src\QtControl\qtcombobox\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -76,28 +76,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CGeneralStyle2.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CheckBox.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CollapseMenu.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\ComboBox.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\COriginalButton2.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CPasswordInputBox2.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CStringManager.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\CustomStyle.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\Label.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\LineEdit.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\ListWidget.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\Menu.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\NoFocusFrameDelegate.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\QssHelper.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\QssString.cpp" />
-    <ClCompile Include="..\..\..\qtcombobox\qtcombobox\RadioButton.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\CGeneralStyle.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\COriginalButton.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\CheckBox.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\CollapseMenu.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\ComboBox.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\CPasswordInputBox.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\CStringManager.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\CustomStyle.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\Label.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\LineEdit.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\ListWidget.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\Menu.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\NoFocusFrameDelegate.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\QssHelper.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\QssString.cpp" />
+    <ClCompile Include="..\..\..\qtcombobox\fromYangNan\RadioButton.cpp" />
     <ClCompile Include="GameInfoWidget.cpp" />
     <ClCompile Include="gameinfowidgetapp.cpp" />
-    <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle2.cpp">
+    <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_CPasswordInputBox2.cpp">
+    <ClCompile Include="GeneratedFiles\Debug\moc_CPasswordInputBox.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_CustomStyle.cpp">
@@ -118,10 +118,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
       </PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_CGeneralStyle2.cpp">
+    <ClCompile Include="GeneratedFiles\Release\moc_CGeneralStyle.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_CPasswordInputBox2.cpp">
+    <ClCompile Include="GeneratedFiles\Release\moc_CPasswordInputBox.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_CustomStyle.cpp">
@@ -163,64 +163,64 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\LineEdit.h" />
-    <ClInclude Include="DataInfo.h" />
-    <CustomBuild Include="..\..\..\qtcombobox\qtcombobox\CGeneralStyle2.h">
+    <CustomBuild Include="..\..\..\qtcombobox\CGeneralStyle.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing CGeneralStyle2.h...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing CGeneralStyle.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets"</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing CGeneralStyle2.h...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing CGeneralStyle.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets"</Command>
     </CustomBuild>
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\CheckBox.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\CollapseMenu.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ComboBox.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlBase.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlBorder.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlFont.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlItem.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ControlSelf.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\COriginalButton2.h" />
-    <CustomBuild Include="..\..\..\qtcombobox\qtcombobox\CPasswordInputBox2.h">
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing CPasswordInputBox2.h...</Message>
+    <ClInclude Include="..\..\..\qtcombobox\COriginalButton.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\CheckBox.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\CollapseMenu.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\ComboBox.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\ControlBase.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\ControlBorder.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\ControlFont.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\ControlItem.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\ControlSelf.h" />
+    <CustomBuild Include="..\..\..\qtcombobox\fromYangNan\CPasswordInputBox.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing CPasswordInputBox.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets"</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing CPasswordInputBox2.h...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing CPasswordInputBox.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets"</Command>
     </CustomBuild>
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\CStringManager.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\Label.h" />
-    <CustomBuild Include="..\..\..\qtcombobox\qtcombobox\CustomStyle.h">
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\CStringManager.h" />
+    <CustomBuild Include="..\..\..\qtcombobox\fromYangNan\CustomStyle.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing CustomStyle.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox"</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing CustomStyle.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets"</Command>
     </CustomBuild>
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\ListWidget.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\Menu.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\QssHelper.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\QssString.h" />
-    <ClInclude Include="..\..\..\qtcombobox\qtcombobox\RadioButton.h" />
-    <CustomBuild Include="..\..\..\qtcombobox\qtcombobox\NoFocusFrameDelegate.h">
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\Label.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\LineEdit.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\ListWidget.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\Menu.h" />
+    <CustomBuild Include="..\..\..\qtcombobox\fromYangNan\NoFocusFrameDelegate.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing NoFocusFrameDelegate.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox"</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing NoFocusFrameDelegate.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-ID:\xueyelingshuang\src\QtControl\qtcombobox\qtcombobox" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets"</Command>
     </CustomBuild>
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\QssHelper.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\QssString.h" />
+    <ClInclude Include="..\..\..\qtcombobox\fromYangNan\RadioButton.h" />
+    <ClInclude Include="GameInfoWidgetDataInfo.h" />
     <CustomBuild Include="GameInfoWidget.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing GameInfoWidget.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
@@ -246,11 +246,11 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\qtcombobox\qtcombobox\ControlBase.inl" />
-    <None Include="..\..\..\qtcombobox\qtcombobox\ControlBorder.inl" />
-    <None Include="..\..\..\qtcombobox\qtcombobox\ControlFont.inl" />
-    <None Include="..\..\..\qtcombobox\qtcombobox\ControlItem.inl" />
-    <None Include="..\..\..\qtcombobox\qtcombobox\ControlSelf.inl" />
+    <None Include="..\..\..\qtcombobox\fromYangNan\ControlBase.inl" />
+    <None Include="..\..\..\qtcombobox\fromYangNan\ControlBorder.inl" />
+    <None Include="..\..\..\qtcombobox\fromYangNan\ControlFont.inl" />
+    <None Include="..\..\..\qtcombobox\fromYangNan\ControlItem.inl" />
+    <None Include="..\..\..\qtcombobox\fromYangNan\ControlSelf.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

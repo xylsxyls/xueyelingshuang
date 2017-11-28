@@ -1,9 +1,9 @@
-#include "COriginalButton2.h"
+#include "COriginalButton.h"
 #include <QDebug>
 #include <QPainter>
 #include <QStyleOptionButton>
 
-COriginalButton2::COriginalButton2(QWidget *parent)
+COriginalButton::COriginalButton(QWidget *parent)
     :QPushButton(parent)
     ,mBkgImageStateCount (4)
     ,mBkgImageNormal     (1)
@@ -42,12 +42,12 @@ COriginalButton2::COriginalButton2(QWidget *parent)
     this->setToolTipDuration(2500);
 }
 
-COriginalButton2::~COriginalButton2()
+COriginalButton::~COriginalButton()
 {
 
 }
 
-void COriginalButton2::updateStyle()
+void COriginalButton::updateStyle()
 {
     QPixmap px;
     px.load(mBkgImage);
@@ -248,7 +248,7 @@ void COriginalButton2::updateStyle()
     this->setStyleSheet(buttonStyle);
 }
 
-void COriginalButton2::setBkgImage(const QString &bkgImage, const quint64 bkgImageStateCount, const quint64 bkgImageNormal, const quint64 bkgImageHover, const quint64 bkgImagePressed, const quint64 bkgImageDisabled, const quint64 bkgImageCKNormal, const quint64 bkgImageCKHover, const quint64 bkgImageCKPressed, const quint64 bkgImageCKDisabled)
+void COriginalButton::setBkgImage(const QString &bkgImage, const quint64 bkgImageStateCount, const quint64 bkgImageNormal, const quint64 bkgImageHover, const quint64 bkgImagePressed, const quint64 bkgImageDisabled, const quint64 bkgImageCKNormal, const quint64 bkgImageCKHover, const quint64 bkgImageCKPressed, const quint64 bkgImageCKDisabled)
 {
     mBkgImage             = bkgImage             ;
     mBkgImageStateCount   = bkgImageStateCount   ;
@@ -264,7 +264,7 @@ void COriginalButton2::setBkgImage(const QString &bkgImage, const quint64 bkgIma
     this->updateStyle();
 }
 
-void COriginalButton2::setBkgColor(const QColor &bkgColorNormal, const QColor &bkgColorHover, const QColor &bkgColorPressed, const QColor &bkgColorDisabled, const QColor &bkgColorCKNormal, const QColor &bkgColorCKHover, const QColor &bkgColorCKPressed, const QColor &bkgColorCKDisabled)
+void COriginalButton::setBkgColor(const QColor &bkgColorNormal, const QColor &bkgColorHover, const QColor &bkgColorPressed, const QColor &bkgColorDisabled, const QColor &bkgColorCKNormal, const QColor &bkgColorCKHover, const QColor &bkgColorCKPressed, const QColor &bkgColorCKDisabled)
 {
     mBkgColorNormal     = bkgColorNormal    ;
     mBkgColorHover      = bkgColorHover     ;
@@ -278,7 +278,7 @@ void COriginalButton2::setBkgColor(const QColor &bkgColorNormal, const QColor &b
     this->updateStyle();
 }
 
-void COriginalButton2::setFontColor(const QColor &fontColorNormal, const QColor &fontColorHover, const QColor &fontColorPressed, const QColor &fontColorDisabled, const QColor &fontColorCKNormal, const QColor &fontColorCKHover, const QColor &fontColorCKPressed, const QColor &fontColorCKDisabled)
+void COriginalButton::setFontColor(const QColor &fontColorNormal, const QColor &fontColorHover, const QColor &fontColorPressed, const QColor &fontColorDisabled, const QColor &fontColorCKNormal, const QColor &fontColorCKHover, const QColor &fontColorCKPressed, const QColor &fontColorCKDisabled)
 {
     mFontColorNormal     = fontColorNormal    ;
     mFontColorHover      = fontColorHover     ;
@@ -292,55 +292,55 @@ void COriginalButton2::setFontColor(const QColor &fontColorNormal, const QColor 
     this->updateStyle();
 }
 
-void COriginalButton2::setFontFace(const QString &v)
+void COriginalButton::setFontFace(const QString &v)
 {
     mFontFace = v;
     this->updateStyle();
 }
 
-void COriginalButton2::setFontSize(const quint32 &v)
+void COriginalButton::setFontSize(const quint32 &v)
 {
     mFontSize = v;
     this->updateStyle();
 }
 
-void COriginalButton2::setBold(const bool &v)
+void COriginalButton::setBold(const bool &v)
 {
     mBold = v;
     this->updateStyle();
 }
 
-void COriginalButton2::setItalic(const bool &v)
+void COriginalButton::setItalic(const bool &v)
 {
     mItalic = v;
     this->updateStyle();
 }
 
-void COriginalButton2::setUnderline(const bool &v)
+void COriginalButton::setUnderline(const bool &v)
 {
     mUnderline = v;
     this->updateStyle();
 }
 
-void COriginalButton2::setBorderWidth(const quint32 &v)
+void COriginalButton::setBorderWidth(const quint32 &v)
 {
     mBorderWidth = v;
     this->updateStyle();
 }
 
-void COriginalButton2::setBorderRadius(const quint32 &v)
+void COriginalButton::setBorderRadius(const quint32 &v)
 {
     mBorderRadius = v;
     this->updateStyle();
 }
 
-void COriginalButton2::setBorderStyle(const QString &v)
+void COriginalButton::setBorderStyle(const QString &v)
 {
     mBorderStyle = v;
     this->updateStyle();
 }
 
-void COriginalButton2::setBorderColor(const QColor &borderColorNormal, const QColor &borderColorHover, const QColor &borderColorPressed, const QColor &borderColorDisabled, const QColor &borderColorCKNormal, const QColor &borderColorCKHover, const QColor &borderColorCKPressed, const QColor &borderColorCKDisabled)
+void COriginalButton::setBorderColor(const QColor &borderColorNormal, const QColor &borderColorHover, const QColor &borderColorPressed, const QColor &borderColorDisabled, const QColor &borderColorCKNormal, const QColor &borderColorCKHover, const QColor &borderColorCKPressed, const QColor &borderColorCKDisabled)
 {
     mBorderColorNormal     = borderColorNormal     ;
     mBorderColorHover      = borderColorHover      ;
@@ -354,13 +354,13 @@ void COriginalButton2::setBorderColor(const QColor &borderColorNormal, const QCo
     this->updateStyle();
 }
 
-void COriginalButton2::setTextAlign(QString align)
+void COriginalButton::setTextAlign(QString align)
 {
     mTextAlign = align;
     this->updateStyle();
 }
 
-void COriginalButton2::setMargins(quint32 margins)
+void COriginalButton::setMargins(quint32 margins)
 {
     mMargins = margins;
     this->updateStyle();

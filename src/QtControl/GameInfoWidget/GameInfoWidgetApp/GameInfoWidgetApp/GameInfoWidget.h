@@ -3,7 +3,7 @@
 #include <QUrl>
 #include <QtWebKitWidgets/QWebView>
 #include <stdint.h>
-#include "ComboBox.h"
+#include "fromYangNan/ComboBox.h"
 
 class QEvent;
 class QObject;
@@ -11,9 +11,8 @@ class Label;
 class QWebView;
 class LineEdit;
 class CheckBox;
-class ComboBox;
-class COriginalButton2;
-class CPasswordInputBox2;
+class COriginalButton;
+class CPasswordInputBox;
 class GameInfoWidget : public QWidget
 {
 	Q_OBJECT
@@ -189,6 +188,21 @@ public:
 	@param [in] enable 是否可用
 	*/
 	void setExitEnable(bool enable);
+
+	/** 设置游戏设置界面网页内容
+	@param [in] web 网址
+	*/
+	void setGameSettingWebView(const QString& web);
+
+	/** 设置个人战绩界面网页内容
+	@param [in] web 网址
+	*/
+	void setPersonalRecordWebView(const QString& web);
+
+	/** 设置我的道具界面网页内容
+	@param [in] web 网址
+	*/
+	void setMyToolWebView(const QString& web);
 	
 private:
 	/** 默认数据初始化
@@ -222,6 +236,9 @@ private slots:
 	void onGameSettingClicked();
 	void onPersonalRecordClicked();
 	void onMyToolClicked();
+	void onGameSettingLinkClicked(const QUrl& url);
+	void onPersonalRecordLinkClicked(const QUrl& url);
+	void onMyToolLinkClicked(const QUrl& url);
 
 Q_SIGNALS:
 	void onSaveClicked();
@@ -236,18 +253,21 @@ Q_SIGNALS:
 	void onGameNetChanged(const QString &);
 	void onGameLeaveChanged(const QString &);
 	void onJudgeChanged(int);
+	void onGameSettingLinkClicked(const QString&);
+	void onPersonalRecordLinkClicked(const QString&);
+	void onMyToolLinkClicked(const QString&);
 	
 private:
-	COriginalButton2* m_gameSetting;
-	COriginalButton2* m_personalRecord;
-	COriginalButton2* m_myTool;
+	COriginalButton* m_gameSetting;
+	COriginalButton* m_personalRecord;
+	COriginalButton* m_myTool;
 
 	QWidget* m_gameSettingWidget;
 	QWidget* m_personalRecordWidget;
 	QWidget* m_myToolWidget;
 
 	LineEdit* m_gameNameEdit;
-	CPasswordInputBox2* m_gamePasswordEdit;
+	CPasswordInputBox* m_gamePasswordEdit;
 	ComboBox* m_gameModeComboBox;
 	ComboBox* m_gameLvComboBox;
 	ComboBox* m_gameMVPComboBox;
@@ -255,9 +275,9 @@ private:
 	ComboBox* m_gameLeaveComboBox;
 	CheckBox* m_judgeCheckBox;
 
-	COriginalButton2* m_inviteFriend;
-	COriginalButton2* m_startGame;
-	COriginalButton2* m_exit;
+	COriginalButton* m_inviteFriend;
+	COriginalButton* m_startGame;
+	COriginalButton* m_exit;
 
 	QWebView* m_myToolWebView;
 	QWebView* m_personalRecordWebView;
@@ -270,7 +290,7 @@ private:
 	Label* m_gameMVP;
 	Label* m_gameNet;
 	Label* m_gameLeave;
-	COriginalButton2* m_save;
+	COriginalButton* m_save;
 
 	//窗口整体高度
 	int32_t m_gameInfoWidgetHeight;
@@ -299,4 +319,6 @@ private:
 	std::wstring m_gameMVPCurText;
 	std::wstring m_gameNetCurText;
 	std::wstring m_gameLeaveCurText;
+
+	QString m_war3ResourcePath;
 };

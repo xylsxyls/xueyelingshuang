@@ -156,8 +156,11 @@ void CStringManager::Format(std::string & str, const char * fmt, ...)
 	int size = _vscprintf(fmt, args);
 	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
 	str.resize(size);
-	//?即便分配了足够内存，长度必须加1，否则会崩溃
-	vsprintf_s(&str[0], size + 1, fmt, args);
+	if (size != 0)
+	{
+		//?即便分配了足够内存，长度必须加1，否则会崩溃
+		vsprintf_s(&str[0], size + 1, fmt, args);
+	}
 	va_end(args);
 }
 
@@ -169,8 +172,12 @@ std::string CStringManager::Format(const char * fmt, ...)
 	int size = _vscprintf(fmt, args);
 	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
 	result.resize(size);
-	//?即便分配了足够内存，长度必须加1，否则会崩溃
-	vsprintf_s(&result[0], size + 1, fmt, args);
+	//?当size为0时无论长度+几都会崩溃
+	if (size != 0)
+	{
+		//?即便分配了足够内存，长度必须加1，否则会崩溃
+		vsprintf_s(&result[0], size + 1, fmt, args);
+	}
 	va_end(args);
 	return result;
 }
@@ -182,8 +189,11 @@ void CStringManager::Format(std::wstring& str, const wchar_t * fmt, ...)
 	int size = _vscwprintf(fmt, args);
 	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
 	str.resize(size);
-	//?即便分配了足够内存，长度必须加1，否则会崩溃
-	vswprintf_s(&str[0], size + 1, fmt, args);
+	if (size != 0)
+	{
+		//?即便分配了足够内存，长度必须加1，否则会崩溃
+		vswprintf_s(&str[0], size + 1, fmt, args);
+	}
 	va_end(args);
 }
 
@@ -195,8 +205,11 @@ std::wstring CStringManager::Format(const wchar_t * fmt, ...)
 	int size = _vscwprintf(fmt, args);
 	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
 	result.resize(size);
-	//?即便分配了足够内存，长度必须加1，否则会崩溃
-	vswprintf_s(&result[0], size + 1, fmt, args);
+	if (size != 0)
+	{
+		//?即便分配了足够内存，长度必须加1，否则会崩溃
+		vswprintf_s(&result[0], size + 1, fmt, args);
+	}
 	va_end(args);
 	return result;
 }

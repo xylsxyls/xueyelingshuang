@@ -1,18 +1,18 @@
-#ifndef CGENERALSTYLE2_H
-#define CGENERALSTYLE2_H
+#ifndef CGENERALSTYLE_H
+#define CGENERALSTYLE_H
 
 #include <QObject>
 #include <QColor>
 #include <QFont>
 
-class CGeneralStyle2 : public QObject
+class CGeneralStyle : public QObject
 {
     Q_OBJECT
 private:
-    CGeneralStyle2();
-    ~CGeneralStyle2();
+    CGeneralStyle();
+    ~CGeneralStyle();
 
-    static CGeneralStyle2* gInstance;
+    static CGeneralStyle* gInstance;
     QString mWar3LobbyResourcePath;
 
     QColor  mFontColr;
@@ -27,7 +27,7 @@ public:
         PingLevel_Bad     = 3,
     };
 
-    static CGeneralStyle2* instance();
+    static CGeneralStyle* instance();
     static void           release();
 
     QString war3lobbyResourcePath();

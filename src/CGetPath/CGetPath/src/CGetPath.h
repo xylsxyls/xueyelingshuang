@@ -2,8 +2,10 @@
 #include <afxwin.h>
 #include "CGetPathMacro.h"
 #include <vector>
+#include <stdint.h>
 
-class CGetPathAPI CGetPath{
+class CGetPathAPI CGetPath
+{
 public:
 	//返回ocx所在路径，带\符号
     static std::string GetRegOcxPath(const std::string& classid);
@@ -22,9 +24,9 @@ public:
     //pUnVisitPath把当前文件夹下不可访问的文件夹列出来，传空代表不存储，所有文件夹路径带\符号
 	static std::vector<std::string> FindFilePath(const std::string& FileStr, const std::string& strPath = "", BOOL flag = 1, std::vector<std::string> *pUnVisitPath = NULL);
 	//获取进程pid，传入进程名
-	static std::vector<int> GetProcessID(std::string strProcessName);
+	static std::vector<int32_t> GetProcessID(const std::string& strProcessName);
 	//根据pid获取窗口句柄
     static HWND GetHwndByProcessId(DWORD dwProcessId);
     //获取文件相关信息，flag1表示获取文件全名，flag2表示获取文件后缀名，flag3表示获取文件名，flag4表示获取前面的路径带\\符号
-    static std::string GetName(const std::string& path, int flag);
+    static std::string GetName(const std::string& path, int32_t flag);
 };

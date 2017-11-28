@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_GameInfoWidget_t {
-    QByteArrayData data[17];
-    char stringdata0[288];
+    QByteArrayData data[21];
+    char stringdata0[365];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -43,9 +43,13 @@ QT_MOC_LITERAL(10, 159, 16), // "onGameMVPChanged"
 QT_MOC_LITERAL(11, 176, 16), // "onGameNetChanged"
 QT_MOC_LITERAL(12, 193, 18), // "onGameLeaveChanged"
 QT_MOC_LITERAL(13, 212, 14), // "onJudgeChanged"
-QT_MOC_LITERAL(14, 227, 20), // "onGameSettingClicked"
-QT_MOC_LITERAL(15, 248, 23), // "onPersonalRecordClicked"
-QT_MOC_LITERAL(16, 272, 15) // "onMyToolClicked"
+QT_MOC_LITERAL(14, 227, 24), // "onGameSettingLinkClicked"
+QT_MOC_LITERAL(15, 252, 27), // "onPersonalRecordLinkClicked"
+QT_MOC_LITERAL(16, 280, 19), // "onMyToolLinkClicked"
+QT_MOC_LITERAL(17, 300, 20), // "onGameSettingClicked"
+QT_MOC_LITERAL(18, 321, 23), // "onPersonalRecordClicked"
+QT_MOC_LITERAL(19, 345, 15), // "onMyToolClicked"
+QT_MOC_LITERAL(20, 361, 3) // "url"
 
     },
     "GameInfoWidget\0onSaveClicked\0\0"
@@ -54,8 +58,11 @@ QT_MOC_LITERAL(16, 272, 15) // "onMyToolClicked"
     "onGamePasswordChanged\0onGameModeChanged\0"
     "onGameLvChanged\0onGameMVPChanged\0"
     "onGameNetChanged\0onGameLeaveChanged\0"
-    "onJudgeChanged\0onGameSettingClicked\0"
-    "onPersonalRecordClicked\0onMyToolClicked"
+    "onJudgeChanged\0onGameSettingLinkClicked\0"
+    "onPersonalRecordLinkClicked\0"
+    "onMyToolLinkClicked\0onGameSettingClicked\0"
+    "onPersonalRecordClicked\0onMyToolClicked\0"
+    "url"
 };
 #undef QT_MOC_LITERAL
 
@@ -65,31 +72,37 @@ static const uint qt_meta_data_GameInfoWidget[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-      15,   14, // methods
+      21,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-      12,       // signalCount
+      15,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    0,   89,    2, 0x06 /* Public */,
-       3,    0,   90,    2, 0x06 /* Public */,
-       4,    0,   91,    2, 0x06 /* Public */,
-       5,    0,   92,    2, 0x06 /* Public */,
-       6,    1,   93,    2, 0x06 /* Public */,
-       7,    1,   96,    2, 0x06 /* Public */,
-       8,    1,   99,    2, 0x06 /* Public */,
-       9,    1,  102,    2, 0x06 /* Public */,
-      10,    1,  105,    2, 0x06 /* Public */,
-      11,    1,  108,    2, 0x06 /* Public */,
-      12,    1,  111,    2, 0x06 /* Public */,
-      13,    1,  114,    2, 0x06 /* Public */,
+       1,    0,  119,    2, 0x06 /* Public */,
+       3,    0,  120,    2, 0x06 /* Public */,
+       4,    0,  121,    2, 0x06 /* Public */,
+       5,    0,  122,    2, 0x06 /* Public */,
+       6,    1,  123,    2, 0x06 /* Public */,
+       7,    1,  126,    2, 0x06 /* Public */,
+       8,    1,  129,    2, 0x06 /* Public */,
+       9,    1,  132,    2, 0x06 /* Public */,
+      10,    1,  135,    2, 0x06 /* Public */,
+      11,    1,  138,    2, 0x06 /* Public */,
+      12,    1,  141,    2, 0x06 /* Public */,
+      13,    1,  144,    2, 0x06 /* Public */,
+      14,    1,  147,    2, 0x06 /* Public */,
+      15,    1,  150,    2, 0x06 /* Public */,
+      16,    1,  153,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-      14,    0,  117,    2, 0x08 /* Private */,
-      15,    0,  118,    2, 0x08 /* Private */,
-      16,    0,  119,    2, 0x08 /* Private */,
+      17,    0,  156,    2, 0x08 /* Private */,
+      18,    0,  157,    2, 0x08 /* Private */,
+      19,    0,  158,    2, 0x08 /* Private */,
+      14,    1,  159,    2, 0x08 /* Private */,
+      15,    1,  162,    2, 0x08 /* Private */,
+      16,    1,  165,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void,
@@ -104,11 +117,17 @@ static const uint qt_meta_data_GameInfoWidget[] = {
     QMetaType::Void, QMetaType::QString,    2,
     QMetaType::Void, QMetaType::QString,    2,
     QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::QString,    2,
+    QMetaType::Void, QMetaType::QString,    2,
+    QMetaType::Void, QMetaType::QString,    2,
 
  // slots: parameters
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
+    QMetaType::Void, QMetaType::QUrl,   20,
+    QMetaType::Void, QMetaType::QUrl,   20,
+    QMetaType::Void, QMetaType::QUrl,   20,
 
        0        // eod
 };
@@ -131,9 +150,15 @@ void GameInfoWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 9: _t->onGameNetChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
         case 10: _t->onGameLeaveChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
         case 11: _t->onJudgeChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 12: _t->onGameSettingClicked(); break;
-        case 13: _t->onPersonalRecordClicked(); break;
-        case 14: _t->onMyToolClicked(); break;
+        case 12: _t->onGameSettingLinkClicked((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 13: _t->onPersonalRecordLinkClicked((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 14: _t->onMyToolLinkClicked((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 15: _t->onGameSettingClicked(); break;
+        case 16: _t->onPersonalRecordClicked(); break;
+        case 17: _t->onMyToolClicked(); break;
+        case 18: _t->onGameSettingLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
+        case 19: _t->onPersonalRecordLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
+        case 20: _t->onMyToolLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -211,6 +236,24 @@ void GameInfoWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
                 *result = 11;
             }
         }
+        {
+            typedef void (GameInfoWidget::*_t)(const QString & );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameSettingLinkClicked)) {
+                *result = 12;
+            }
+        }
+        {
+            typedef void (GameInfoWidget::*_t)(const QString & );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onPersonalRecordLinkClicked)) {
+                *result = 13;
+            }
+        }
+        {
+            typedef void (GameInfoWidget::*_t)(const QString & );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onMyToolLinkClicked)) {
+                *result = 14;
+            }
+        }
     }
 }
 
@@ -239,13 +282,13 @@ int GameInfoWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 15)
+        if (_id < 21)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 15;
+        _id -= 21;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 15)
+        if (_id < 21)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 15;
+        _id -= 21;
     }
     return _id;
 }
@@ -328,5 +371,26 @@ void GameInfoWidget::onJudgeChanged(int _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 11, _a);
+}
+
+// SIGNAL 12
+void GameInfoWidget::onGameSettingLinkClicked(const QString & _t1)
+{
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 12, _a);
+}
+
+// SIGNAL 13
+void GameInfoWidget::onPersonalRecordLinkClicked(const QString & _t1)
+{
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 13, _a);
+}
+
+// SIGNAL 14
+void GameInfoWidget::onMyToolLinkClicked(const QString & _t1)
+{
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 14, _a);
 }
 QT_END_MOC_NAMESPACE

@@ -1,14 +1,14 @@
-#ifndef CORIGINALBUTTON2_H
-#define CORIGINALBUTTON2_H
+#ifndef CORIGINALBUTTON_H
+#define CORIGINALBUTTON_H
 
 #include <QPushButton>
 
 
-class COriginalButton2 : public QPushButton
+class COriginalButton : public QPushButton
 {
 public:
-    COriginalButton2(QWidget* parent = NULL);
-    ~COriginalButton2();
+    COriginalButton(QWidget* parent = NULL);
+    ~COriginalButton();
 
 protected:
     QString  mBkgImage;

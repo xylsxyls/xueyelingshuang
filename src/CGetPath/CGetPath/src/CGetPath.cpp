@@ -95,7 +95,7 @@ std::std::string RCGetPath::GetFileFromWindow(HWND hwnd){
 }
 #endif
 
-void RecursionFindFile(const std::string& strPath, const std::string& FileStr, vector<std::string> *pPathVector, BOOL flag, vector<std::string> *pUnVisitPath)
+void RecursionFindFile(const std::string& strPath, const std::string& FileStr, std::vector<std::string> *pPathVector, BOOL flag, std::vector<std::string> *pUnVisitPath)
 {
 	CFileFind finder;
     //_T()的作用是使系统支持Unicode编码
@@ -187,7 +187,7 @@ std::vector<std::string> CGetPath::FindFilePath(const std::string& FileStr, cons
 	return VecPath;
 }
 
-std::vector<int> CGetPath::GetProcessID(std::string strProcessName)
+std::vector<int32_t> CGetPath::GetProcessID(const std::string& strProcessName)
 {
 	HANDLE myhProcess;
 	PROCESSENTRY32 mype;
@@ -198,7 +198,7 @@ std::vector<int> CGetPath::GetProcessID(std::string strProcessName)
     myhProcess = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	//开始进程查找
     mybRet = Process32First(myhProcess, &mype);
-	std::vector<int> vec;
+	std::vector<int32_t> vec;
 	//循环比较，得出ProcessID
 	while(mybRet)
     {
@@ -239,11 +239,11 @@ HWND CGetPath::GetHwndByProcessId(DWORD dwProcessId)
 	return info.hWnd;
 }
 
-std::string CGetPath::GetName(const std::string& path, int flag)
+std::string CGetPath::GetName(const std::string& path, int32_t flag)
 {
-    int left = path.find_last_of("/\\");
+    int32_t left = path.find_last_of("/\\");
     std::string name = CStringManager::Mid(path, left + 1, path.length() - left - 1);
-    int point = name.find_last_of(".");
+    int32_t point = name.find_last_of(".");
     switch (flag)
     {
         case 1:

@@ -127,7 +127,10 @@ public:
         va_start(args, fmt);
         int size = _vscprintf(fmt, args);
         str.resize(size);
-        vsprintf_s(&str[0], size + 1, fmt, args);
+		if (size != 0)
+		{
+			vsprintf_s(&str[0], size + 1, fmt, args);
+		}
         va_end(args);
         HWND receiveWindow = ::FindWindow(NULL, _T("MessageTest1.2"));
         if (receiveWindow == NULL) return false;

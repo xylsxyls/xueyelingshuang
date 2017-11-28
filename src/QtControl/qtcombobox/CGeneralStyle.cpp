@@ -1,32 +1,32 @@
-#include "CGeneralStyle2.h"
+#include "CGeneralStyle.h"
 
-CGeneralStyle2* CGeneralStyle2::gInstance = NULL;
+CGeneralStyle* CGeneralStyle::gInstance = NULL;
 
-CGeneralStyle2::CGeneralStyle2()
+CGeneralStyle::CGeneralStyle()
 {
     mFont.setFamily(QString::fromLocal8Bit("Î¢ÈíÑÅºÚ"));
     mFont.setPixelSize(14);
     mFontColr = "#abb3d3";
 
-    mWar3LobbyResourcePath = "D:/SVN/output/W3L/res";
+	mWar3LobbyResourcePath = "E:/newClient/output/W3L/res";// "D:/SVN/output/W3L/res";
 }
 
-CGeneralStyle2::~CGeneralStyle2()
+CGeneralStyle::~CGeneralStyle()
 {
 
 }
 
-CGeneralStyle2 *CGeneralStyle2::instance()
+CGeneralStyle *CGeneralStyle::instance()
 {
     if(gInstance == NULL)
     {
-        gInstance = new CGeneralStyle2;
+        gInstance = new CGeneralStyle;
     }
 
     return gInstance;
 }
 
-void CGeneralStyle2::release()
+void CGeneralStyle::release()
 {
     if(gInstance)
     {
@@ -35,12 +35,12 @@ void CGeneralStyle2::release()
     }
 }
 
-QString CGeneralStyle2::war3lobbyResourcePath()
+QString CGeneralStyle::war3lobbyResourcePath()
 {
     return mWar3LobbyResourcePath;
 }
 
-CGeneralStyle2::PingLevel CGeneralStyle2::getPingLevel(quint64 ping)
+CGeneralStyle::PingLevel CGeneralStyle::getPingLevel(quint64 ping)
 {
     PingLevel value;
     if((0 <= ping) && (ping < 200))
@@ -63,12 +63,12 @@ CGeneralStyle2::PingLevel CGeneralStyle2::getPingLevel(quint64 ping)
     return value;
 }
 
-QColor CGeneralStyle2::fontColor()
+QColor CGeneralStyle::fontColor()
 {
     return mFontColr;
 }
 
-QFont CGeneralStyle2::font()
+QFont CGeneralStyle::font()
 {
     return mFont;
 }

@@ -7,6 +7,7 @@
 #include "NoFocusFrameDelegate.h"
 #include "ListWidget.h"
 #include <QtWidgets/QScrollBar>
+#include <QKeyEvent>
 //#include "D:\\SendToMessageTest.h"
 
 ComboBox::ComboBox(QWidget* parent) :
@@ -307,6 +308,15 @@ void ComboBox::hideEvent(QHideEvent* eve)
 {
 	QComboBox::hideEvent(eve);
 	return;
+}
+
+void ComboBox::keyPressEvent(QKeyEvent* eve)
+{
+	if (eve->key() == 16777221 || eve->key() == 16777220)
+	{
+		return;
+	}
+	QComboBox::keyPressEvent(eve);
 }
 
 void ComboBox::repaint()

@@ -203,7 +203,6 @@ public:
 	*/
 	void setListMaxHeight(int32_t maxHeight);
 
-
 	/** ÖØ»­
 	*/
 	virtual void repaint();
@@ -214,6 +213,7 @@ private:
 	virtual void showPopup();
 	virtual void hidePopup();
 	virtual void hideEvent(QHideEvent* eve);
+	virtual void keyPressEvent(QKeyEvent* eve);
 
 private:
 	ListWidget* m_listWidget;
