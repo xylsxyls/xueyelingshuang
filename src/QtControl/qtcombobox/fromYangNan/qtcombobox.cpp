@@ -9,6 +9,8 @@
 #include "Label.h"
 #include "CollapseMenu.h"
 #include "CustomStyle.h"
+#include <QTextDocument>
+#include "HtmlComboBox.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -50,7 +52,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 
 	pBox->setListItemBorderWidth(2);
 	//pBox->setListItemBorderImage("D:/item.png", 4, 1, 2, 4);
-	pBox->setListItemBackgroundColor(QColor(255, 50, 255, 255), QColor(255, 255, 50, 255), QColor(255, 0, 255, 255));
+	pBox->setListItemBackgroundColor(QColor(0, 50, 255, 255), QColor(0, 255, 50, 255), QColor(255, 0, 255, 255));
 	pBox->setListItemHeight(22);
 	pBox->setListBackgroundColor(QColor(18, 23, 31));
 
@@ -69,6 +71,8 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->addItem("123458");
 	pBox->addItem("123459");
 	pBox->addItem("123450");
+
+	pBox->addItem("asdf<font color = \"red\">15ms</font>");
 
 	RadioButton* pButton = new RadioButton(this);
 	pButton->setText("123456789");
@@ -137,7 +141,19 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//menu->setIconSize(QSize(20, 20));
 	
 
-	auto ss = menu->exec(QPoint(50, 50));
+	//auto ss = menu->exec(QPoint(50, 50));
+
+	HtmlComboBox* box = new HtmlComboBox(this);
+	box->setGeometry(20, 20, 100, 30);
+	box->addItem("123456");
+	box->addItem("123454");
+	box->addItem("123455");
+
+	Label* lab = new Label(this);
+	lab->setGeometry(200, 10, 300, 30);
+	lab->setText("<font color=green>hello <b>world</b> </font>");
+	
+
 	/*ss = menu->exec(QPoint(80, 50));
 	ss = menu->exec(QPoint(80, 50));*/
 	int x = 3;

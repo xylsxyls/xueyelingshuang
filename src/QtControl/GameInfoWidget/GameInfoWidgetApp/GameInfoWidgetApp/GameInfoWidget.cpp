@@ -443,11 +443,11 @@ void GameInfoWidget::initGameSettingWidget()
 		m_gamePassword->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 		m_gamePassword->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gamePassword->setFontFace(GAME_INFO_FONT_FACE);
-		QObject::connect(m_gamePassword, SIGNAL(textChanged(const QString&)), this, SIGNAL(onGamePasswordChanged(const QString&)));
 	}
 	if (m_gamePasswordEdit != nullptr)
 	{
 		m_gamePasswordEdit->setContextMenuPolicy(Qt::NoContextMenu);
+		QObject::connect(m_gamePasswordEdit, SIGNAL(textChanged(const QString&)), this, SIGNAL(onGamePasswordChanged(const QString&)));
 	}
 
 	//µÚÈýÐÐ
@@ -827,30 +827,6 @@ bool GameInfoWidget::eventFilter(QObject* target, QEvent* eve)
 			setComboBoxUnEditAttri(m_gameMVPComboBox, L"¡Ý", m_gameMVPCurText);
 			setComboBoxUnEditAttri(m_gameNetComboBox, L"¡Ü", m_gameNetCurText);
 			setComboBoxUnEditAttri(m_gameLeaveComboBox, L"¡Ü", m_gameLeaveCurText);
-		}
-		break;
-	}
-	case QEvent::HoverMove:
-	{
-		if (target == m_gameModeComboBox)
-		{
-			m_gameModeComboBox->setToolTip(m_gameModeComboBox->currentText());
-		}
-		else if (target == m_gameLvComboBox)
-		{
-			m_gameLvComboBox->setToolTip(m_gameLvComboBox->currentText());
-		}
-		else if (target == m_gameMVPComboBox)
-		{
-			m_gameMVPComboBox->setToolTip(m_gameMVPComboBox->currentText());
-		}
-		else if (target == m_gameNetComboBox)
-		{
-			m_gameNetComboBox->setToolTip(m_gameNetComboBox->currentText());
-		}
-		else if (target == m_gameLeaveComboBox)
-		{
-			m_gameLeaveComboBox->setToolTip(m_gameLeaveComboBox->currentText());
 		}
 		break;
 	}

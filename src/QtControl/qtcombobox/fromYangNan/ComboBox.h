@@ -19,7 +19,7 @@ public:
 	*/
 	ComboBox(QWidget* parent = NULL);
 
-	virtual ~ComboBox(){};
+	virtual ~ComboBox(){}
 
 public:
 	/** ÉèÖÃµã»÷¿ò±³¾°ÑÕÉ«
@@ -210,6 +210,7 @@ public:
 private:
 	virtual void showEvent(QShowEvent* eve);
 	virtual void mouseReleaseEvent(QMouseEvent* eve);
+	virtual void mouseMoveEvent(QMouseEvent* eve);
 	virtual void showPopup();
 	virtual void hidePopup();
 	virtual void hideEvent(QHideEvent* eve);

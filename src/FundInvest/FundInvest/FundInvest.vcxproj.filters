@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="DataNeuron">
+      <UniqueIdentifier>{6418f3c0-f438-4fb3-959a-71b4470fdb80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FundHelper">
+      <UniqueIdentifier>{be03e146-24a5-429b-857a-6c8365476f16}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -33,6 +39,12 @@
     <ClInclude Include="Resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="DataNeuron.h">
+      <Filter>DataNeuron</Filter>
+    </ClInclude>
+    <ClInclude Include="FundHelper.h">
+      <Filter>FundHelper</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FundInvest.cpp">
@@ -43,6 +55,12 @@
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DataNeuron.cpp">
+      <Filter>DataNeuron</Filter>
+    </ClCompile>
+    <ClCompile Include="FundHelper.cpp">
+      <Filter>FundHelper</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

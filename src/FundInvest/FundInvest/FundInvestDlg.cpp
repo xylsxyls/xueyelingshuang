@@ -10,6 +10,10 @@
 #include "Ctxt/CtxtAPI.h"
 #include "CMouse/CMouseAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
+#include "CGetPath/CGetPathAPI.h"
+#include "Cini/CiniAPI.h"
+#include "DataNeuron.h"
+#include "FundHelper.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -67,6 +71,9 @@ BEGIN_MESSAGE_MAP(CFundInvestDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CFundInvestDlg::OnBnClickedButton1)
+	ON_BN_CLICKED(IDC_BUTTON2, &CFundInvestDlg::OnBnClickedButton2)
+	ON_BN_CLICKED(IDC_BUTTON3, &CFundInvestDlg::OnBnClickedButton3)
+	ON_BN_CLICKED(IDC_BUTTON4, &CFundInvestDlg::OnBnClickedButton4)
 END_MESSAGE_MAP()
 
 
@@ -102,6 +109,7 @@ BOOL CFundInvestDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+	FundHelper::init();
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -189,4 +197,90 @@ void CFundInvestDlg::OnBnClickedButton1()
 		CMouse::LeftClick(spacingTime);
 		Sleep(500);
 	}
+}
+
+
+void CFundInvestDlg::OnBnClickedButton2()
+{
+	// TODO:  在此添加控件通知处理程序代码
+
+	LoadFund();
+	/*int i = 1700 * 7000;
+	while (i-- != 0)
+	{
+		DataNeuron* newData = ::new DataNeuron("123456");
+	}
+	AfxMessageBox("1");*/
+}
+
+void CFundInvestDlg::LoadFund()
+{
+	std::vector<std::string> vecPath = CGetPath::FindFilePath("ini", m_fundPath, 2);
+	int32_t index = -1;
+	while (index++ != vecPath.size() - 1)
+	{
+		Cini ini(vecPath[index]);
+		std::vector<std::string> vecSection = ini.GetSection(10000);
+		int32_t sectionIndex = -1;
+		while (sectionIndex++ != vecSection.size() - 1)
+		{
+			DataNeuron dataNeuron;
+			std::string date = vecSection[sectionIndex];
+			std::string dstring = ini.ReadIni(GETINFO(DAY_CHG), date);
+			dataNeuron.m_dayChg = atof(dstring.c_str());
+			dataNeuron.m_time = IntDateTime(date + " 00:00:00");
+			m_mapDataNeuron["110022"][IntDateTime(date + " 00:00:00")] = dataNeuron;
+		}
+	}
+	
+	for (auto itFund = m_mapDataNeuron.begin(); itFund != m_mapDataNeuron.end(); ++itFund)
+	{
+		std::map<IntDateTime, DataNeuron>& mapNeuron = itFund->second;
+		DataNeuron* pNeuron = nullptr;
+		for (auto itNeuron = mapNeuron.begin(); itNeuron != mapNeuron.end(); ++itNeuron)
+		{
+			DataNeuron& neuron = itNeuron->second;
+			neuron.m_preData = pNeuron;
+			pNeuron = &neuron;
+		}
+	}
+}
+
+void CFundInvestDlg::OnBnClickedButton3()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	std::vector<std::string> vecPath = CGetPath::FindFilePath("txt", m_fundPath, 2);
+	int32_t index = -1;
+	while (index++ != vecPath.size() - 1)
+	{
+		Cini ini(m_fundPath + "110022.ini");
+		Ctxt txt(vecPath[index]);
+		txt.LoadTxt(2, "\t");
+		int32_t line = -1;
+		while (line++ != txt.m_vectxt.size() - 1)
+		{
+			if (txt.m_vectxt[line].size() <= 4)
+			{
+				continue;
+			}
+			ini.WriteIni(GETINFO(DAY_CHG), FundHelper::DoubleToString(atof(txt.m_vectxt[line][3].c_str()) / 100.0), txt.m_vectxt[line][0]);
+		}
+	}
+	AfxMessageBox("1");
+}
+
+
+void CFundInvestDlg::OnBnClickedButton4()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	std::vector<DataNeuron> vecAnaNeuron;
+	vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-20 00:00:00")]);
+	vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-17 00:00:00")]);
+	vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-16 00:00:00")]);
+	
+	int32_t index = 0;
+	double updata = 0;
+	std::map<double, IntDateTime> mapUpData;
+	m_mapDataNeuron["110022"][IntDateTime("2017-11-20 00:00:00")].AnalyzeData(vecAnaNeuron, 0, updata, mapUpData);
+	int x = 3;
 }

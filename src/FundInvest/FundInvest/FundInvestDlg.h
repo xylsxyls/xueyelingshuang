@@ -3,7 +3,11 @@
 //
 
 #pragma once
-
+#include <string>
+#include <map>
+#include <vector>
+#include "IntDateTime/IntDateTimeAPI.h"
+#include "DataNeuron.h"
 
 // CFundInvestDlg ¶Ô»°¿ò
 class CFundInvestDlg : public CDialogEx
@@ -31,4 +35,19 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnBnClickedButton1();
+	afx_msg void OnBnClickedButton2();
+
+private:
+	void LoadFund();
+
+private:
+	std::string m_fundPath = "D:\\Fund\\";
+	std::string m_fundName = "110022";
+	bool m_isOpenBuy = true;
+	bool m_isOpenSell = true;
+
+	std::map<std::string, std::map<IntDateTime, DataNeuron>> m_mapDataNeuron;
+public:
+	afx_msg void OnBnClickedButton3();
+	afx_msg void OnBnClickedButton4();
 };

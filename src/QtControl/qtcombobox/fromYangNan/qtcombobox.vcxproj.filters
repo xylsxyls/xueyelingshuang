@@ -87,6 +87,9 @@
     <Filter Include="LineEdit">
       <UniqueIdentifier>{3a86d31f-e656-4a63-a82b-20ff8647feba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="HtmlComboBox">
+      <UniqueIdentifier>{40905ac0-54f5-419c-9a74-2851317b6bbe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -158,6 +161,9 @@
     <ClCompile Include="LineEdit.cpp">
       <Filter>LineEdit</Filter>
     </ClCompile>
+    <ClCompile Include="HtmlComboBox.cpp">
+      <Filter>HtmlComboBox</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -227,6 +233,9 @@
     </ClInclude>
     <ClInclude Include="LineEdit.h">
       <Filter>LineEdit</Filter>
+    </ClInclude>
+    <ClInclude Include="HtmlComboBox.h">
+      <Filter>HtmlComboBox</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

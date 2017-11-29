@@ -49,6 +49,7 @@ void Label::setText(const QString& str)
 	//获取之前设置的字符串的像素大小
 	int32_t fontSize = fontMetrics.width(str);
 	QString strShow = str;
+	int32_t wid = width();
 	if (fontSize > width() - m_leftOrigin)
 	{
 		//返回一个带有省略号的字符串

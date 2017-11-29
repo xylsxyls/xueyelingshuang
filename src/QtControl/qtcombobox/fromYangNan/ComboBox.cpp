@@ -8,7 +8,8 @@
 #include "ListWidget.h"
 #include <QtWidgets/QScrollBar>
 #include <QKeyEvent>
-//#include "D:\\SendToMessageTest.h"
+#include <QTextDocument>
+#include "D:\\SendToMessageTest.h"
 
 ComboBox::ComboBox(QWidget* parent) :
 ControlBase(parent),
@@ -266,6 +267,12 @@ void ComboBox::showEvent(QShowEvent* eve)
 void ComboBox::mouseReleaseEvent(QMouseEvent* eve)
 {
 	return;
+}
+
+void ComboBox::mouseMoveEvent(QMouseEvent* eve)
+{
+	setToolTip(currentText());
+	QComboBox::mouseMoveEvent(eve);
 }
 
 void ComboBox::showPopup()
