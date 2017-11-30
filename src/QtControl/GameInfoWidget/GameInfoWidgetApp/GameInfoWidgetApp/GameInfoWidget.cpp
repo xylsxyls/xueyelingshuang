@@ -90,6 +90,11 @@ m_widgetHeight(550)
 	init();
 }
 
+GameInfoWidget::~GameInfoWidget()
+{
+
+}
+
 void GameInfoWidget::setGameName(const QString& gameName)
 {
 	if (m_gameNameEdit == nullptr)
@@ -432,7 +437,7 @@ void GameInfoWidget::initGameSettingWidget()
 		m_gameNameEdit->setTextOrigin(CONTROL_TEXT_ORIGIN);
 		m_gameNameEdit->setBackgroundColor(CONTROL_BACKGROUND_COLOR, CONTROL_BACKGROUND_COLOR, CONTROL_BACKGROUND_COLOR);
 		m_gameNameEdit->setContextMenuPolicy(Qt::NoContextMenu);
-		QObject::connect(m_gameNameEdit, SIGNAL(textChanged(const QString&)), this, SIGNAL(onGameNameChanged(const QString&)));
+		QObject::connect(m_gameNameEdit, &QLineEdit::textChanged, this, &GameInfoWidget::onGameNameChanged);
 	}
 
 	//第二行
@@ -447,7 +452,7 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gamePasswordEdit != nullptr)
 	{
 		m_gamePasswordEdit->setContextMenuPolicy(Qt::NoContextMenu);
-		QObject::connect(m_gamePasswordEdit, SIGNAL(textChanged(const QString&)), this, SIGNAL(onGamePasswordChanged(const QString&)));
+		QObject::connect(m_gamePasswordEdit, &QLineEdit::textChanged, this, &GameInfoWidget::onGamePasswordChanged);
 	}
 
 	//第三行
@@ -463,7 +468,7 @@ void GameInfoWidget::initGameSettingWidget()
 	{
 		setComboBoxAttri(m_gameModeComboBox);
 		m_gameModeComboBox->setTextOrigin(GAME_MODE_TEXT_ORIGIN);
-		QObject::connect(m_gameModeComboBox, SIGNAL(currentTextChanged(const QString&)), this, SIGNAL(onGameModeChanged(const QString&)));
+		QObject::connect(m_gameModeComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameModeChanged);
 	}
 
 	//第四行
@@ -478,7 +483,7 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameLvComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameLvComboBox, L"^(?!00)(?:[0-9]{1,3}|1000)$", &m_lvRep);
-		QObject::connect(m_gameLvComboBox, SIGNAL(currentTextChanged(const QString&)), this, SIGNAL(onGameLvChanged(const QString&)));
+		QObject::connect(m_gameLvComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameLvChanged);
 	}
 
 	//第五行
@@ -493,7 +498,7 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameMVPComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameMVPComboBox, L"^(?!00)(?:[0-9]{1,3}|1000)$", &m_MVPRep);
-		QObject::connect(m_gameMVPComboBox, SIGNAL(currentTextChanged(const QString&)), this, SIGNAL(onGameMVPChanged(const QString&)));
+		QObject::connect(m_gameMVPComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameMVPChanged);
 	}
 
 	//第六行
@@ -508,7 +513,7 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameNetComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameNetComboBox, L"^500|(?!00|[5-9][0-9]{2})(?:[0-9]{1,3})$", &m_netRep);
-		QObject::connect(m_gameNetComboBox, SIGNAL(currentTextChanged(const QString&)), this, SIGNAL(onGameNetChanged(const QString&)));
+		QObject::connect(m_gameNetComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameNetChanged);
 	}
 
 	//第七行
@@ -523,7 +528,7 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameLeaveComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameLeaveComboBox, L"^(?!00)(?:[0-9]{1,2})$", &m_leaveRep);
-		QObject::connect(m_gameLeaveComboBox, SIGNAL(currentTextChanged(const QString&)), this, SIGNAL(onGameLeaveChanged(const QString&)));
+		QObject::connect(m_gameLeaveComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameLeaveChanged);
 	}
 
 	//开启裁判位
@@ -550,7 +555,7 @@ void GameInfoWidget::initGameSettingWidget()
 		m_judgeCheckBox->setFontSize(GAME_INFO_FONT_SIZE);
 		m_judgeCheckBox->setFontFace(GAME_INFO_FONT_FACE);
 		m_judgeCheckBox->setIndicatorSize(18, 18);
-		QObject::connect(m_judgeCheckBox, SIGNAL(stateChanged(int)), this, SIGNAL(onJudgeChanged(int)));
+		QObject::connect(m_judgeCheckBox, &QCheckBox::stateChanged, this, &GameInfoWidget::onJudgeChanged);
 	}
 
 	//保存
@@ -560,7 +565,7 @@ void GameInfoWidget::initGameSettingWidget()
 		m_save->setBorderColor(SAVE_BORDER_COLOR);
 		m_save->setBorderRadius(CONTROL_RADIUS);
 		m_save->setText(QString::fromStdWString(L""));
-		QObject::connect(m_save, SIGNAL(clicked()), this, SIGNAL(onSaveClicked()));
+		QObject::connect(m_save, &QPushButton::clicked, this, &GameInfoWidget::onSaveClicked);
 	}
 
 	//网页
@@ -568,7 +573,7 @@ void GameInfoWidget::initGameSettingWidget()
 	{
 		m_gameSettingWebView->load(QUrl("http://www.sougou.com/"));
 		m_gameSettingWebView->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
-		QObject::connect(m_gameSettingWebView, SIGNAL(linkClicked(const QUrl&)), this, SLOT(onGameSettingLinkClicked(const QUrl&)));
+		QObject::connect(m_gameSettingWebView, &QWebView::linkClicked, this, &GameInfoWidget::onGameSettingUrlLinkClicked);
 	}
 }
 
@@ -582,7 +587,7 @@ void GameInfoWidget::initPersonalRecordWidget()
 	{
 		m_personalRecordWebView->load(QUrl("http://www.sougou.com/"));
 		m_personalRecordWebView->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
-		QObject::connect(m_personalRecordWebView, SIGNAL(linkClicked(const QUrl&)), this, SLOT(onPersonalRecordLinkClicked(const QUrl&)));
+		QObject::connect(m_personalRecordWebView, &QWebView::linkClicked, this, &GameInfoWidget::onPersonalRecordUrlLinkClicked);
 	}
 }
 
@@ -596,7 +601,7 @@ void GameInfoWidget::initMyToolButtonWidget()
 	{
 		m_myToolWebView->load(QUrl("http://www.sougou.com/"));
 		m_myToolWebView->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
-		QObject::connect(m_myToolWebView, SIGNAL(linkClicked(const QUrl&)), this, SLOT(onMyToolLinkClicked(const QUrl&)));
+		QObject::connect(m_myToolWebView, &QWebView::linkClicked, this, &GameInfoWidget::onMyToolUrlLinkClicked);
 	}
 }
 
@@ -878,17 +883,17 @@ void GameInfoWidget::onMyToolClicked()
 	}
 }
 
-void GameInfoWidget::onGameSettingLinkClicked(const QUrl& url)
+void GameInfoWidget::onGameSettingUrlLinkClicked(const QUrl& url)
 {
 	emit onGameSettingLinkClicked(url.toString());
 }
 
-void GameInfoWidget::onPersonalRecordLinkClicked(const QUrl& url)
+void GameInfoWidget::onPersonalRecordUrlLinkClicked(const QUrl& url)
 {
 	emit onPersonalRecordLinkClicked(url.toString());
 }
 
-void GameInfoWidget::onMyToolLinkClicked(const QUrl& url)
+void GameInfoWidget::onMyToolUrlLinkClicked(const QUrl& url)
 {
 	emit onMyToolLinkClicked(url.toString());
 }

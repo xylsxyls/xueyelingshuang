@@ -4,6 +4,12 @@
 #include "ControlItem.h"
 
 template<class QBase>
+ControlItem<QBase>::~ControlItem()
+{
+
+}
+
+template<class QBase>
 void ControlItem<QBase>::setItemBorderWidth(int32_t width, bool rePaint)
 {
 	ControlBase::setPxSolidValue(L"border", width, true, rePaint);
@@ -19,6 +25,12 @@ template<class QBase>
 void ControlItem<QBase>::setItemHeight(int32_t height, bool rePaint)
 {
 	ControlBase::setPxValue(L"height", height, true, rePaint);
+}
+
+template<class QBase>
+void ControlItem<QBase>::setItemTextOrigin(int32_t origin, bool rePaint)
+{
+	ControlBase::setPxValue(L"padding-left", origin, true, rePaint);
 }
 
 template<class QBase>

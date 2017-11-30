@@ -20,6 +20,12 @@ QBase(parent)
 }
 
 template<class QBase>
+ControlBase<QBase>::~ControlBase()
+{
+
+}
+
+template<class QBase>
 void ControlBase<QBase>::init(const std::wstring& className, const std::wstring& itemName)
 {
 	m_className = className;

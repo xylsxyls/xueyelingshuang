@@ -2,11 +2,13 @@
 #include <QtWidgets/QRadioButton>
 #include "ControlFont.h"
 #include "ControlBorder.h"
+#include "ControlBackground.h"
 
 class QWidget;
 class RadioButton : 
 	public ControlFont < QRadioButton >,
-	public ControlBorderForNormalHoverPressedDisabledAndCheck < QRadioButton >
+	public ControlBorderForNormalHoverPressedDisabledAndCheck < QRadioButton >,
+	public ControlBackgroundForNormalHoverPressedDisabledAndCheck < QRadioButton >
 {
 public:
 	/** 构造函数
@@ -14,8 +16,11 @@ public:
 	*/
 	RadioButton(QWidget* parent = NULL);
 
-	virtual ~RadioButton(){};
+	/** 析构函数
+	*/
+	virtual ~RadioButton();
 
+public:
 	/** 设置CheckBox指示器图片
 	@param [in] indicatorImg 背景图片路径，如果路径中必须使用正斜杠
 	@param [in] indicatorImgStateCount 只能填4或8，表示4态按钮或8态按钮
@@ -40,20 +45,6 @@ public:
 						   int32_t indicatorImgCKPressed = 3,
 						   int32_t indicatorImgCKDisabled = 4,
 						   bool rePaint = false);
-
-	/** 设置背景颜色，指示器和文字整体的背景颜色
-	@param [in] 同上，8态颜色
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBackgroundColor(const QColor& backgroundNormalColor,
-	 	 		 		    const QColor& backgroundHoverColor,
-						    const QColor& backgroundPressedColor,
-						    const QColor& backgroundDisabledColor,
-						    const QColor& backgroundCkNormalColor,
-						    const QColor& backgroundCkHoverColor,
-						    const QColor& backgroundCkPressedColor,
-						    const QColor& backgroundCkDisabledColor,
-							bool rePaint = false);
 
 	/** 设置文本偏移量
 	@param [in] origin 文本偏移量

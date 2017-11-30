@@ -241,6 +241,10 @@ void CFundInvestDlg::LoadFund()
 		{
 			DataNeuron& neuron = itNeuron->second;
 			neuron.m_preData = pNeuron;
+			if (pNeuron != nullptr)
+			{
+				pNeuron->m_nextData = &neuron;
+			}
 			pNeuron = &neuron;
 		}
 	}
@@ -272,15 +276,12 @@ void CFundInvestDlg::OnBnClickedButton3()
 
 void CFundInvestDlg::OnBnClickedButton4()
 {
-	// TODO:  在此添加控件通知处理程序代码
-	std::vector<DataNeuron> vecAnaNeuron;
-	vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-20 00:00:00")]);
-	vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-17 00:00:00")]);
-	vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-16 00:00:00")]);
+	//// TODO:  在此添加控件通知处理程序代码
+	//std::vector<DataNeuron> vecAnaNeuron;
+	//vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-20 00:00:00")]);
+	//vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-17 00:00:00")]);
+	//vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-16 00:00:00")]);
 	
-	int32_t index = 0;
-	double updata = 0;
-	std::map<double, IntDateTime> mapUpData;
-	m_mapDataNeuron["110022"][IntDateTime("2017-11-20 00:00:00")].AnalyzeData(vecAnaNeuron, 0, updata, mapUpData);
+	m_mapDataNeuron["110022"][IntDateTime("2017-11-24 00:00:00")].ForecastData(3);
 	int x = 3;
 }

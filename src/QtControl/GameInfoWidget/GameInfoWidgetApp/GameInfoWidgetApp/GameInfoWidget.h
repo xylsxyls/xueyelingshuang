@@ -22,7 +22,9 @@ public:
 	*/
 	GameInfoWidget(QWidget* parent = NULL);
 
-	virtual ~GameInfoWidget(){};
+	/** 析构函数
+	*/
+	virtual ~GameInfoWidget();
 
 	/** 设置游戏局名称
 	@param [in] gameName 游戏局名称
@@ -236,9 +238,9 @@ private slots:
 	void onGameSettingClicked();
 	void onPersonalRecordClicked();
 	void onMyToolClicked();
-	void onGameSettingLinkClicked(const QUrl& url);
-	void onPersonalRecordLinkClicked(const QUrl& url);
-	void onMyToolLinkClicked(const QUrl& url);
+	void onGameSettingUrlLinkClicked(const QUrl& url);
+	void onPersonalRecordUrlLinkClicked(const QUrl& url);
+	void onMyToolUrlLinkClicked(const QUrl& url);
 
 Q_SIGNALS:
 	void onSaveClicked();

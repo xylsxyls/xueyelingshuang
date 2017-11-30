@@ -18,6 +18,11 @@ m_pCustomStyle(nullptr)
 	setMouseTracking(true);
 }
 
+Menu::~Menu()
+{
+
+}
+
 Menu::Menu(const QString& title, const QString& icon, const QSize& size, QWidget* parent) :
 ControlBase(parent)
 {
@@ -32,18 +37,6 @@ ControlBase(parent)
 	}
 	installEventFilter(this);
 	setMouseTracking(true);
-}
-
-void Menu::setBackgroundColor(const QColor& color, bool rePaint)
-{
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
-	colorStateMap[NORMAL][NORMAL] = color;
-	ControlBase::setColorStateMap(colorStateMap, L"background-color", false, rePaint);
-}
-
-void Menu::setItemTextOrigin(int32_t origin, bool rePaint)
-{
-	ControlBase::setPxValue(L"padding-left", origin, true, rePaint);
 }
 
 QAction* Menu::addAction(const QString& text,

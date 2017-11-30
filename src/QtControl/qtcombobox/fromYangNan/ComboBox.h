@@ -6,12 +6,14 @@
 #include "ControlFont.h"
 #include "ControlSelf.h"
 #include "ControlBorder.h"
+#include "ControlBackground.h"
 
 class ListWidget;
 class ComboBox : 
 	public ControlFont < QComboBox >,
 	public ControlSelf < QComboBox >,
-	public ControlBorderForNormalHoverPressedDisabled < QComboBox >
+	public ControlBorderForNormalHoverPressedDisabled < QComboBox >,
+	public ControlBackgroundForNormalHoverPressedDisabled < QComboBox >
 {
 public:
 	/** 构造函数
@@ -19,22 +21,11 @@ public:
 	*/
 	ComboBox(QWidget* parent = NULL);
 
-	virtual ~ComboBox(){}
+	/** 析构函数
+	*/
+	virtual ~ComboBox();
 
 public:
-	/** 设置点击框背景颜色
-	@param [in] normalColor 常态颜色
-	@param [in] hoverColor 悬停颜色
-	@param [in] pressedColor 按下颜色
-	@param [in] disabledColor 禁用颜色
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBackgroundColor(const QColor& normalColor,
-							const QColor& hoverColor,
-							const QColor& pressedColor,
-							const QColor& disabledColor,
-							bool rePaint = false);
-
 	/** 设置下拉箭头的尺寸
 	@param [in] width 下拉箭头宽度
 	@param [in] height 下拉箭头高度
@@ -216,8 +207,10 @@ private:
 	virtual void hideEvent(QHideEvent* eve);
 	virtual void keyPressEvent(QKeyEvent* eve);
 
-private:
+protected:
 	ListWidget* m_listWidget;
+
+private:
 	int32_t m_dropDownImgNormal;
 	int32_t m_dropDownImgDisabled;
 	int32_t m_dropDownImgExpandNormal;

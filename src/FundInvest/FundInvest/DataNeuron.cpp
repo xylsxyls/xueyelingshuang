@@ -7,26 +7,117 @@ DataNeuron::DataNeuron()
 
 }
 
-double DataNeuron::ForecastData(int32_t days, double fluctuation)
+double DataNeuron::ForecastData(int32_t days)
 {
-	//起始点从昨天开始
+	if (m_preData == nullptr)
+	{
+		return 0;
+	}
+	std::vector<DataNeuron> vecDataNeuron;
+	int32_t dayBk = days;
+	DataNeuron* thisNeuron = this;
+	while (dayBk-- != 0)
+	{
+		vecDataNeuron.push_back(*thisNeuron);
+		if (thisNeuron->m_preData == nullptr)
+		{
+			return 0;
+		}
+		thisNeuron = thisNeuron->m_preData;
+	}
+
+	double updata = 0;
+	//获得的是当时预测的数据
+	std::map<double, std::vector<DataNeuron*>> mapUpData;
+	m_preData->AnalyzeData(vecDataNeuron, 0, updata, mapUpData);
+	double all = 0;
+	//取出1以下的方差
+	for (auto itUpdata = mapUpData.begin(); itUpdata != mapUpData.end(); ++itUpdata)
+	{
+		if (itUpdata->first < 5)
+		{
+			all += (1 / itUpdata->first) * itUpdata->second.size();
+		}
+	}
+
+	double forecast = 0;
+	for (auto itUpdata = mapUpData.begin(); itUpdata != mapUpData.end(); ++itUpdata)
+	{
+		if (itUpdata->first < 5)
+		{
+			std::vector<DataNeuron*>& vecNeuron = itUpdata->second;
+			int32_t index = -1;
+			while (index++ != vecNeuron.size() - 1)
+			{
+				forecast += vecNeuron[index]->m_dayChg * ((1 / itUpdata->first) / all);
+			}
+		}
+	}
+
+	/**/
+
+	AfxMessageBox("1");
+	int x = 3;
+	return 0;
 }
 
-void DataNeuron::AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron, int32_t index, double& updata, std::map<double, IntDateTime>& mapUpData)
+void DataNeuron::AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,
+							 int32_t index,
+							 double& updata,
+							 std::map<double, std::vector<DataNeuron*>>& mapUpData)
 {
-	updata += FundHelper::Square(vecDataNeuron[index].m_dayChg * 10000 - m_dayChg * 10000);
+	updata += FundHelper::Square(vecDataNeuron[index].m_dayChg * 100 - m_dayChg * 100);
 	++index;
-	if (index < (int32_t)vecDataNeuron.size() && m_preData != nullptr)
+	//如果到末尾了就上送
+	if (index == (int32_t)vecDataNeuron.size())
 	{
+		DataNeuron* upNeuron = GetNextNeuron((int32_t)vecDataNeuron.size());
+		if (upNeuron != nullptr)
+		{
+			mapUpData[updata].push_back(upNeuron);
+		}
+	}
+	//如果没到末尾就用上一个神经元来调用
+	else
+	{
+		if (m_preData == nullptr)
+		{
+			return;
+		}
 		m_preData->AnalyzeData(vecDataNeuron, index, updata, mapUpData);
+		//如果index是1，那么才传递到上一个神经元，让神经元从头算
+		if (index == 1)
+		{
+			double newUpdata = 0;
+			m_preData->AnalyzeData(vecDataNeuron, 0, newUpdata, mapUpData);
+		}
 	}
-	else if (index == vecDataNeuron.size())
+}
+
+DataNeuron* DataNeuron::GetPreNeuron(int32_t days)
+{
+	DataNeuron* thisNeuron = this;
+	while (days-- != 0)
 	{
-		mapUpData[updata] = m_time;
+		if (thisNeuron->m_preData == nullptr)
+		{
+			return nullptr;
+		}
+		thisNeuron = thisNeuron->m_preData;
 	}
-	if (m_preData != nullptr)
+	return thisNeuron;
+}
+
+DataNeuron* DataNeuron::GetNextNeuron(int32_t days)
+{
+	DataNeuron* thisNeuron = this;
+	while (days-- != 0)
 	{
-		double preUpdata = 0;
-		m_preData->AnalyzeData(vecDataNeuron, 0, preUpdata, mapUpData);
+		if (thisNeuron->m_nextData == nullptr)
+		{
+			return nullptr;
+		}
+		thisNeuron = thisNeuron->m_nextData;
 	}
+	return thisNeuron;
 }

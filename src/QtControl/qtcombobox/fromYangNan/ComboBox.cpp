@@ -90,18 +90,9 @@ m_dropDownImgStateCount(8)
 	);
 }
 
-void ComboBox::setBackgroundColor(const QColor& normalColor,
-								  const QColor& hoverColor,
-								  const QColor& pressedColor,
-								  const QColor& disabledColor,
-								  bool rePaint)
+ComboBox::~ComboBox()
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
-	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][PRESSED] = pressedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
-	ControlBase::setColorStateMap(colorStateMap, L"background-color", false, rePaint);
+
 }
 
 void ComboBox::setDropDownSize(int32_t width, int32_t height, bool rePaint)
@@ -223,11 +214,11 @@ void ComboBox::setListItemHeight(int32_t height, bool rePaint)
 }
 
 void ComboBox::setListTextColor(const QColor& normalColor,
-							  const QColor& hoverColor,
-							  const QColor& disabledColor,
-							  bool rePaint)
+								const QColor& hoverColor,
+								const QColor& disabledColor,
+								bool rePaint)
 {
-	m_listWidget->setTextColor(normalColor, hoverColor, disabledColor, rePaint);
+	m_listWidget->setItemTextColor(normalColor, hoverColor, disabledColor, rePaint);
 }
 
 void ComboBox::setListFontFace(const QString& fontName, bool rePaint)
@@ -242,7 +233,7 @@ void ComboBox::setListFontSize(int32_t fontSize, bool rePaint)
 
 void ComboBox::setListTextOrigin(int32_t origin, bool rePaint)
 {
-	m_listWidget->setTextOrigin(origin, rePaint);
+	m_listWidget->setItemTextOrigin(origin, rePaint);
 }
 
 void ComboBox::setListItemAroundOrigin(int32_t leftOrigin,

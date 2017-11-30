@@ -4,6 +4,12 @@
 #include "ControlFont.h"
 
 template<class QBase>
+ControlFont<QBase>::~ControlFont()
+{
+
+}
+
+template<class QBase>
 void ControlFont<QBase>::setFontFace(const QString& fontName, bool rePaint)
 {
 	ControlBase::setFontFace(fontName.toStdWString(), false, rePaint);

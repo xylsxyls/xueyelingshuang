@@ -7,7 +7,11 @@ template <class QBase>
 class ControlSelf : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlSelf(){};
+	/** 析构函数
+	*/
+	virtual ~ControlSelf();
+
+public:
 	/** 将点击框设为圆角，输入圆角半径，只有加入边框才会有圆角
 	@param [in] radius 圆角半径
 	@param [in] rePaint 是否立即重画

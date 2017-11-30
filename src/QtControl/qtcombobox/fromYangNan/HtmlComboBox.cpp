@@ -8,6 +8,11 @@ ControlBase(parent)
 
 }
 
+HtmlComboBox::~HtmlComboBox()
+{
+
+}
+
 void HtmlComboBox::paintEvent(QPaintEvent* eve)
 {
 	QComboBox::paintEvent(eve);

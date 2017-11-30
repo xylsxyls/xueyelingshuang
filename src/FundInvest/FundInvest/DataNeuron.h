@@ -12,10 +12,17 @@ public:
 	DataNeuron();
 
 public:
-	double ForecastData(int32_t days, double fluctuation);
+	double ForecastData(int32_t days);
 
 private:
-	void AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron, int32_t index, double& updata, std::map<double, IntDateTime>& mapUpData);
+	void AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,
+					 int32_t index,
+					 double& updata,
+					 std::map<double, std::vector<DataNeuron*>>& mapUpData);
+
+	DataNeuron* GetPreNeuron(int32_t days);
+
+	DataNeuron* GetNextNeuron(int32_t days);
 
 public:
 	double m_dayChg = 0;

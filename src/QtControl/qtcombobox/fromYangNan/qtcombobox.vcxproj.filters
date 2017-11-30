@@ -90,6 +90,12 @@
     <Filter Include="HtmlComboBox">
       <UniqueIdentifier>{40905ac0-54f5-419c-9a74-2851317b6bbe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ControlBackground">
+      <UniqueIdentifier>{a4413c6a-118b-4d70-ac98-0a62e881ee31}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IdItemComboBox">
+      <UniqueIdentifier>{8f0a6389-9e82-4c03-8387-fcdbd421f404}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -164,6 +170,9 @@
     <ClCompile Include="HtmlComboBox.cpp">
       <Filter>HtmlComboBox</Filter>
     </ClCompile>
+    <ClCompile Include="IdItemComboBox.cpp">
+      <Filter>IdItemComboBox</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -237,6 +246,12 @@
     <ClInclude Include="HtmlComboBox.h">
       <Filter>HtmlComboBox</Filter>
     </ClInclude>
+    <ClInclude Include="ControlBackground.h">
+      <Filter>ControlBackground</Filter>
+    </ClInclude>
+    <ClInclude Include="IdItemComboBox.h">
+      <Filter>IdItemComboBox</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ControlItem.inl">
@@ -247,6 +262,9 @@
     </None>
     <None Include="ControlBorder.inl">
       <Filter>ControlBorder</Filter>
+    </None>
+    <None Include="ControlBackground.inl">
+      <Filter>ControlBackground</Filter>
     </None>
   </ItemGroup>
 </Project>

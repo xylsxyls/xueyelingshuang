@@ -5,10 +5,12 @@
 #include <stdint.h>
 #include "ControlFont.h"
 #include "ControlBorder.h"
+#include "ControlBackground.h"
 
 class CheckBox : 
 	public ControlFont < QCheckBox >,
-	public ControlBorderForNormalHoverPressedDisabledAndCheck < QCheckBox >
+	public ControlBorderForNormalHoverPressedDisabledAndCheck < QCheckBox >,
+	public ControlBackgroundForNormalHoverPressedDisabledAndCheck < QCheckBox >
 {
 public:
 	/** 构造函数
@@ -16,7 +18,9 @@ public:
 	*/
 	CheckBox(QWidget* parent = NULL);
 
-	virtual ~CheckBox(){};
+	/** 析构函数
+	*/
+	virtual ~CheckBox();
 
 public:
 	/** 设置CheckBox指示器图片
@@ -43,20 +47,6 @@ public:
 						   int32_t indicatorImgCKPressed = 3,
 						   int32_t indicatorImgCKDisabled = 4,
 						   bool rePaint = false);
-
-	/** 设置背景颜色，指示器和文字整体的背景颜色
-	@param [in] 同上，8态颜色
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBackgroundColor(const QColor& backgroundNormalColor,
-	 	 		 		    const QColor& backgroundHoverColor,
-						    const QColor& backgroundPressedColor,
-						    const QColor& backgroundDisabledColor,
-						    const QColor& backgroundCkNormalColor,
-						    const QColor& backgroundCkHoverColor,
-						    const QColor& backgroundCkPressedColor,
-						    const QColor& backgroundCkDisabledColor,
-							bool rePaint = false);
 
 	/** 设置文本偏移量
 	@param [in] origin 文本偏移量

@@ -7,7 +7,11 @@ template <class QBase>
 class ControlItem : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlItem(){};
+	/** 析构函数
+	*/
+	virtual ~ControlItem();
+
+public:
 	/** 设置节点边框粗度
 	@param [in] width 边框粗度
 	@param [in] rePaint 是否立即重画
@@ -25,6 +29,12 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemHeight(int32_t height, bool rePaint = false);
+
+	/** 设置节点文本偏移量
+	@param [in] origin 节点文本偏移量
+	@param [in] rePaint 是否立即重画
+	*/
+	void setItemTextOrigin(int32_t origin, bool rePaint = false);
 
 	/** 节点到窗口的四个外边距
 	@param [in] leftOrigin 左侧偏移量

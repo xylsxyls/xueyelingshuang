@@ -18,7 +18,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	ui.setupUi(this);
 	setWindowFlags(Qt::FramelessWindowHint);
 	//this->setAttribute(Qt::WA_TranslucentBackground);
-	this->setStyleSheet("QMainWindow{background-color:rgba(255,0,0,255);}");
+	this->setStyleSheet("QMainWindow{background-color:rgba(100,0,0,255);}");
 	CheckBox* pCheckBox = new CheckBox(this);
 	//pBox->SetBackgroundImage(QString::fromLocal8Bit("D:/hot.png"), 8, 1, 2, 3, 4, 5, 6, 7, 8);
 	pCheckBox->setBackgroundColor(QColor(255, 0, 255, 1), QColor(255, 255, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1));
@@ -45,7 +45,6 @@ qtcombobox::qtcombobox(QWidget *parent)
 					   QColor(255, 0, 0, 1));
 	pBox->setDropDownBorderWidth(0);
 	pBox->setTextOrigin(20);
-	pBox->setListOrigin(1);
 
 	pBox->setListBorderWidth(1);
 	pBox->setListBorderColor(QColor(67, 132, 251, 255));

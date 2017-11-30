@@ -4,6 +4,7 @@
 #include "ControlItem.h"
 #include "ControlSelf.h"
 #include "ControlBorder.h"
+#include "ControlBackground.h"
 #include <vector>
 
 class QMouseEvent;
@@ -13,15 +14,21 @@ class Menu :
 	public ControlItem < QMenu >,
 	public ControlSelf < QMenu >,
 	public ControlBorderForNormal < QMenu >,
-	public ControlItemBorderForNormalSelectedDisabled < QMenu >
+	public ControlBackgroundForNormal < QMenu >,
+	public ControlItemBorderForNormalSelectedDisabled < QMenu >,
+	public ControlItemBackgroundForNormalSelectedDisabled < QMenu >
 {
 public:
-	virtual ~Menu(){};
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
 	Menu(QWidget* parent = NULL);
 
+	/** 析构函数
+	*/
+	virtual ~Menu();
+
+public:
 	/** 构造函数
 	@param [in] title 菜单标题
 	@param [in] icon 菜单图标
@@ -31,18 +38,6 @@ public:
 	Menu(const QString& title, const QString& icon = QString(), const QSize& size = QSize(), QWidget* parent = NULL);
 
 public:
-	/** 设置背景颜色
-	@param [in] color 背景颜色
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBackgroundColor(const QColor& color, bool rePaint = false);
-
-	/** 设置文本偏移量
-	@param [in] origin 文本偏移量
-	@param [in] rePaint 是否立即重画
-	*/
-	void setItemTextOrigin(int32_t origin, bool rePaint = false);
-
 	/** 添加节点
 	@param [in] text 文本
 	@param [in] uncheckIcon 未选择时的图片

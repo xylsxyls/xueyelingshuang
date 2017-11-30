@@ -26,6 +26,11 @@ m_hasSetTopLabel(false)
 	m_selectedLabelBottom = new Label(this);
 }
 
+CollapseMenu::~CollapseMenu()
+{
+
+}
+
 void CollapseMenu::setBorderCollapse()
 {
 	Menu::setBorderWidth(0);

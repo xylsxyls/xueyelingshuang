@@ -2,10 +2,12 @@
 #include <QtWidgets/QLabel>
 #include "ControlFont.h"
 #include "ControlBorder.h"
+#include "ControlBackground.h"
 
 class Label : 
 	public ControlFont < QLabel >,
-	public ControlBorderForNormalHoverDisabled < QLabel >
+	public ControlBorderForNormalHoverDisabled < QLabel >,
+	public ControlBackgroundForNormalHoverDisabled < QLabel >
 {
 public:
 	/** 构造函数
@@ -13,8 +15,11 @@ public:
 	*/
 	Label(QWidget* parent = NULL);
 
-	virtual ~Label(){};
+	/** 析构函数
+	*/
+	virtual ~Label();
 
+public:
 	/** 设置字体
 	@param [in] fontName 字体名
 	@param [in] rePaint 是否立即重画
@@ -26,17 +31,6 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setFontSize(int32_t fontSize, bool rePaint = false);
-
-	/** 设置背景颜色（没有按下效果）
-	@param [in] backgroundNormalColor 常态颜色
-	@param [in] backgroundHoverColor 悬停颜色
-	@param [in] backgroundDisabledColor 禁用颜色
-	@param [in] rePaint 是否立即重画
-	*/
-	void setBackgroundColor(const QColor& backgroundNormalColor,
-	 	 		 		    const QColor& backgroundHoverColor,
-						    const QColor& backgroundDisabledColor,
-							bool rePaint = false);
 
 	/** 设置文本偏移量
 	@param [in] origin 文本偏移量

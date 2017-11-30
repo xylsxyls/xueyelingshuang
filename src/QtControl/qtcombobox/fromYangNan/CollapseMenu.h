@@ -12,8 +12,6 @@ public:
 	*/
 	CollapseMenu(QWidget* parent = NULL);
 
-	virtual ~CollapseMenu(){};
-
 	/** 构造函数
 	@param [in] title 菜单标题
 	@param [in] icon 菜单图标
@@ -21,6 +19,10 @@ public:
 	@param [in] parent 父窗口指针
 	*/
 	CollapseMenu(const QString& title, const QString& icon = QString(), const QSize& size = QSize(), QWidget* parent = NULL);
+
+	/** 析构函数
+	*/
+	virtual ~CollapseMenu();
 
 public:
 	/** 设置背景颜色

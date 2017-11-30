@@ -9,7 +9,9 @@ public:
 	*/
 	HtmlComboBox(QWidget* parent = NULL);
 
-	virtual ~HtmlComboBox(){};
+	/** Îö¹¹º¯Êý
+	*/
+	virtual ~HtmlComboBox();
 
 private:
 	void paintEvent(QPaintEvent* eve);

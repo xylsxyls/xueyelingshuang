@@ -4,6 +4,12 @@
 #include "ControlSelf.h"
 
 template<class QBase>
+ControlSelf<QBase>::~ControlSelf()
+{
+
+}
+
+template<class QBase>
 void ControlSelf<QBase>::setBorderRadius(int32_t radius, bool rePaint)
 {
 	ControlBase::setPxValue(L"border-radius", radius, false, rePaint);

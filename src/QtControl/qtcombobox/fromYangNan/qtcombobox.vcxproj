@@ -103,6 +103,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="HtmlComboBox.cpp" />
+    <ClCompile Include="IdItemComboBox.cpp" />
     <ClCompile Include="Label.cpp" />
     <ClCompile Include="LineEdit.cpp" />
     <ClCompile Include="ListWidget.cpp" />
@@ -284,6 +285,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CollapseMenu.h" />
+    <ClInclude Include="ControlBackground.h" />
     <ClInclude Include="ControlBase.h" />
     <ClInclude Include="ControlBorder.h" />
     <ClInclude Include="ControlFont.h" />
@@ -300,12 +302,14 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets"</Command>
     </CustomBuild>
     <ClInclude Include="HtmlComboBox.h" />
+    <ClInclude Include="IdItemComboBox.h" />
     <ClInclude Include="Label.h" />
     <ClInclude Include="LineEdit.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="RadioButton.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ControlBackground.inl" />
     <None Include="ControlBorder.inl" />
     <None Include="ControlItem.inl" />
     <None Include="ControlSelf.inl" />

@@ -7,8 +7,11 @@ template <class QBase>
 class ControlBorderForNormal : virtual public ControlBase < QBase >
 {
 public:
+	/** 析构函数
+	*/
+	virtual ~ControlBorderForNormal();
 
-	virtual ~ControlBorderForNormal(){};
+public:
 	/** 设置边框颜色
 	@param [in] color 常态
 	@param [in] rePaint 是否立即重画
@@ -31,8 +34,13 @@ public:
 template <class QBase>
 class ControlBorderForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
+
 public:
-	virtual ~ControlBorderForNormalHoverDisabled(){};
+	/** 析构函数
+	*/
+	virtual ~ControlBorderForNormalHoverDisabled();
+
+public:
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -75,7 +83,11 @@ template <class QBase>
 class ControlBorderForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlBorderForNormalSelectedDisabled(){};
+	/** 析构函数
+	*/
+	virtual ~ControlBorderForNormalSelectedDisabled();
+
+public:
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] selectedColor 悬停颜色（用于list）
@@ -118,7 +130,11 @@ template <class QBase>
 class ControlBorderForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlBorderForNormalHoverPressedDisabled(){};
+	/** 析构函数
+	*/
+	virtual ~ControlBorderForNormalHoverPressedDisabled();
+
+public:
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -167,7 +183,11 @@ template <class QBase>
 class ControlBorderForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlBorderForNormalHoverPressedDisabledAndCheck(){};
+	/** 析构函数
+	*/
+	virtual ~ControlBorderForNormalHoverPressedDisabledAndCheck();
+
+public:
 	/** 设置背景颜色
 	@param [in] normalColor 非选中常态颜色
 	@param [in] hoverColor 非选中悬停颜色
@@ -240,7 +260,11 @@ template <class QBase>
 class ControlItemBorderForNormal : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlItemBorderForNormal(){};
+	/** 析构函数
+	*/
+	virtual ~ControlItemBorderForNormal();
+
+public:
 	/** 设置边框颜色
 	@param [in] color 常态
 	@param [in] rePaint 是否立即重画
@@ -264,7 +288,11 @@ template <class QBase>
 class ControlItemBorderForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlItemBorderForNormalHoverDisabled(){};
+	/** 析构函数
+	*/
+	virtual ~ControlItemBorderForNormalHoverDisabled();
+
+public:
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -307,7 +335,11 @@ template <class QBase>
 class ControlItemBorderForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlItemBorderForNormalSelectedDisabled(){};
+	/** 析构函数
+	*/
+	virtual ~ControlItemBorderForNormalSelectedDisabled();
+
+public:
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] selectedColor 悬停颜色（用于list）
@@ -350,7 +382,11 @@ template <class QBase>
 class ControlItemBorderForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlItemBorderForNormalHoverPressedDisabled(){};
+	/** 析构函数
+	*/
+	virtual ~ControlItemBorderForNormalHoverPressedDisabled();
+
+public:
 	/** 设置背景颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -359,10 +395,10 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBorderColor(const QColor& normalColor,
-						const QColor& hoverColor,
-						const QColor& pressedColor,
-						const QColor& disabledColor,
-						bool rePaint = false);
+							const QColor& hoverColor,
+							const QColor& pressedColor,
+							const QColor& disabledColor,
+							bool rePaint = false);
 
 	/** 设置节点背景图片，和边框颜色不用存
 	@param [in] borderImgPath 背景图片路径，如果路径中必须使用正斜杠
@@ -374,12 +410,12 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
-						int32_t borderImgStateCount = 4,
-						int32_t borderImgNormal = 1,
-						int32_t borderImgHover = 2,
-						int32_t borderImgPressed = 3,
-						int32_t borderImgDisabled = 4,
-						bool rePaint = false);
+							int32_t borderImgStateCount = 4,
+							int32_t borderImgNormal = 1,
+							int32_t borderImgHover = 2,
+							int32_t borderImgPressed = 3,
+							int32_t borderImgDisabled = 4,
+							bool rePaint = false);
 
 	/** 设置文字颜色
 	@param [in] textNormalColor 常态颜色
@@ -389,17 +425,21 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemTextColor(const QColor& textNormalColor,
-					  const QColor& textHoverColor,
-					  const QColor& textPressedColor,
-					  const QColor& textDisabledColor,
-					  bool rePaint = false);
+						  const QColor& textHoverColor,
+						  const QColor& textPressedColor,
+						  const QColor& textDisabledColor,
+						  bool rePaint = false);
 };
 
 template <class QBase>
 class ControlItemBorderForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlItemBorderForNormalHoverPressedDisabledAndCheck(){};
+	/** 析构函数
+	*/
+	virtual ~ControlItemBorderForNormalHoverPressedDisabledAndCheck();
+
+public:
 	/** 设置背景颜色
 	@param [in] normalColor 非选中常态颜色
 	@param [in] hoverColor 非选中悬停颜色
@@ -412,14 +452,14 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBorderColor(const QColor& normalColor,
-						const QColor& hoverColor,
-						const QColor& pressedColor,
-						const QColor& disabledColor,
-						const QColor& normalCkColor,
-						const QColor& hoverCkColor,
-						const QColor& pressedCkColor,
-						const QColor& disabledCkColor,
-						bool rePaint = false);
+							const QColor& hoverColor,
+							const QColor& pressedColor,
+							const QColor& disabledColor,
+							const QColor& normalCkColor,
+							const QColor& hoverCkColor,
+							const QColor& pressedCkColor,
+							const QColor& disabledCkColor,
+							bool rePaint = false);
 
 	/** 设置背景图片
 	@param [in] borderImgPath 背景图片路径，如果路径中必须使用正斜杠
@@ -435,16 +475,16 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
-						int32_t borderImgStateCount = 8,
-						int32_t borderImgNormal = 1,
-						int32_t borderImgHover = 2,
-						int32_t borderImgPressed = 3,
-						int32_t borderImgDisabled = 4,
-						int32_t borderImgCkNormal = 5,
-						int32_t borderImgCkHover = 6,
-						int32_t borderImgCkPressed = 7,
-						int32_t borderImgCkDisabled = 8,
-						bool rePaint = false);
+							int32_t borderImgStateCount = 8,
+							int32_t borderImgNormal = 1,
+							int32_t borderImgHover = 2,
+							int32_t borderImgPressed = 3,
+							int32_t borderImgDisabled = 4,
+							int32_t borderImgCkNormal = 5,
+							int32_t borderImgCkHover = 6,
+							int32_t borderImgCkPressed = 7,
+							int32_t borderImgCkDisabled = 8,
+							bool rePaint = false);
 
 	/** 设置字体颜色
 	@param [in] textNormalColor 非选中常态颜色
@@ -458,14 +498,14 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemTextColor(const QColor& textNormalColor,
-	 	 		 	  const QColor& textHoverColor,
-					  const QColor& textPressedColor,
-					  const QColor& textDisabledColor,
-					  const QColor& textCkNormalColor,
-					  const QColor& textCkHoverColor,
-					  const QColor& textCkPressedColor,
-					  const QColor& textCkDisabledColor,
-					  bool rePaint = false);
+	 	 		 		  const QColor& textHoverColor,
+						  const QColor& textPressedColor,
+						  const QColor& textDisabledColor,
+						  const QColor& textCkNormalColor,
+						  const QColor& textCkHoverColor,
+						  const QColor& textCkPressedColor,
+						  const QColor& textCkDisabledColor,
+						  bool rePaint = false);
 };
 
 #include "ControlBorder.inl"

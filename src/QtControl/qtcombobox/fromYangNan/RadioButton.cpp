@@ -6,6 +6,11 @@ ControlBase(parent)
 	ControlBase::init(L"QRadioButton", L"indicator");
 }
 
+RadioButton::~RadioButton()
+{
+
+}
+
 void RadioButton::setIndicatorImage(const QString& indicatorImg,
 									int32_t indicatorImgStateCount,
 									int32_t indicatorImgNormal,
@@ -35,30 +40,6 @@ void RadioButton::setIndicatorImage(const QString& indicatorImg,
 								  L"border-image",
 								  true,
 								  rePaint);
-}
-
-void RadioButton::setBackgroundColor(const QColor& backgroundNormalColor,
-									 const QColor& backgroundHoverColor,
-									 const QColor& backgroundPressedColor,
-									 const QColor& backgroundDisabledColor,
-									 const QColor& backgroundCkNormalColor,
-									 const QColor& backgroundCkHoverColor,
-									 const QColor& backgroundCkPressedColor,
-									 const QColor& backgroundCkDisabledColor,
-									 bool rePaint)
-{
-	std::map<int32_t, std::map<int32_t, QColor>> backgroundColorMap;
-
-	backgroundColorMap[UNCHECK][NORMAL] = backgroundNormalColor;
-	backgroundColorMap[UNCHECK][HOVER] = backgroundHoverColor;
-	backgroundColorMap[UNCHECK][PRESSED] = backgroundPressedColor;
-	backgroundColorMap[UNCHECK][DISABLED] = backgroundDisabledColor;
-	backgroundColorMap[CHECK][NORMAL] = backgroundCkNormalColor;
-	backgroundColorMap[CHECK][HOVER] = backgroundCkHoverColor;
-	backgroundColorMap[CHECK][PRESSED] = backgroundCkPressedColor;
-	backgroundColorMap[CHECK][DISABLED] = backgroundCkDisabledColor;
-
-	ControlBase::setColorStateMap(backgroundColorMap, L"background-color", false, rePaint);
 }
 
 void RadioButton::setTextOrigin(int32_t origin, bool rePaint)

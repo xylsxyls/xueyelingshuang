@@ -7,7 +7,11 @@ template <class QBase>
 class ControlFont : virtual public ControlBase < QBase >
 {
 public:
-	virtual ~ControlFont(){};
+	/** 析构函数
+	*/
+	virtual ~ControlFont();
+
+public:
 	/** 设置字体
 	@param [in] fontName 字体名
 	@param [in] rePaint 是否立即重画

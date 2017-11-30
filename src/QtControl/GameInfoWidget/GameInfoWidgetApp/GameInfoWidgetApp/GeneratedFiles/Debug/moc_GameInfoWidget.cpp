@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_GameInfoWidget_t {
-    QByteArrayData data[21];
-    char stringdata0[365];
+    QByteArrayData data[24];
+    char stringdata0[447];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -49,7 +49,10 @@ QT_MOC_LITERAL(16, 280, 19), // "onMyToolLinkClicked"
 QT_MOC_LITERAL(17, 300, 20), // "onGameSettingClicked"
 QT_MOC_LITERAL(18, 321, 23), // "onPersonalRecordClicked"
 QT_MOC_LITERAL(19, 345, 15), // "onMyToolClicked"
-QT_MOC_LITERAL(20, 361, 3) // "url"
+QT_MOC_LITERAL(20, 361, 27), // "onGameSettingUrlLinkClicked"
+QT_MOC_LITERAL(21, 389, 3), // "url"
+QT_MOC_LITERAL(22, 393, 30), // "onPersonalRecordUrlLinkClicked"
+QT_MOC_LITERAL(23, 424, 22) // "onMyToolUrlLinkClicked"
 
     },
     "GameInfoWidget\0onSaveClicked\0\0"
@@ -62,7 +65,9 @@ QT_MOC_LITERAL(20, 361, 3) // "url"
     "onPersonalRecordLinkClicked\0"
     "onMyToolLinkClicked\0onGameSettingClicked\0"
     "onPersonalRecordClicked\0onMyToolClicked\0"
-    "url"
+    "onGameSettingUrlLinkClicked\0url\0"
+    "onPersonalRecordUrlLinkClicked\0"
+    "onMyToolUrlLinkClicked"
 };
 #undef QT_MOC_LITERAL
 
@@ -100,9 +105,9 @@ static const uint qt_meta_data_GameInfoWidget[] = {
       17,    0,  156,    2, 0x08 /* Private */,
       18,    0,  157,    2, 0x08 /* Private */,
       19,    0,  158,    2, 0x08 /* Private */,
-      14,    1,  159,    2, 0x08 /* Private */,
-      15,    1,  162,    2, 0x08 /* Private */,
-      16,    1,  165,    2, 0x08 /* Private */,
+      20,    1,  159,    2, 0x08 /* Private */,
+      22,    1,  162,    2, 0x08 /* Private */,
+      23,    1,  165,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void,
@@ -125,9 +130,9 @@ static const uint qt_meta_data_GameInfoWidget[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QUrl,   20,
-    QMetaType::Void, QMetaType::QUrl,   20,
-    QMetaType::Void, QMetaType::QUrl,   20,
+    QMetaType::Void, QMetaType::QUrl,   21,
+    QMetaType::Void, QMetaType::QUrl,   21,
+    QMetaType::Void, QMetaType::QUrl,   21,
 
        0        // eod
 };
@@ -156,9 +161,9 @@ void GameInfoWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 15: _t->onGameSettingClicked(); break;
         case 16: _t->onPersonalRecordClicked(); break;
         case 17: _t->onMyToolClicked(); break;
-        case 18: _t->onGameSettingLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
-        case 19: _t->onPersonalRecordLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
-        case 20: _t->onMyToolLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
+        case 18: _t->onGameSettingUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
+        case 19: _t->onPersonalRecordUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
+        case 20: _t->onMyToolUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
