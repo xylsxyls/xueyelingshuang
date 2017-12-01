@@ -64,19 +64,19 @@ m_widgetHeight(550)
 	{
 		m_inviteFriend->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/BigInviteFriendButton.png", 3, 1, 2, 3);
 		m_inviteFriend->setText(QString::fromStdWString(L""));
-		QObject::connect(m_inviteFriend, SIGNAL(clicked()), this, SIGNAL(onInviteFriendClicked()));
+		QObject::connect(m_inviteFriend, &QPushButton::clicked, this, &GameInfoWidget::onInviteFriendClicked);
 	}
 	if (m_startGame != nullptr)
 	{
 		m_startGame->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/StartGameButton.png", 4, 1, 2, 3, 4);
 		m_startGame->setText(QString::fromStdWString(L""));
-		QObject::connect(m_startGame, SIGNAL(clicked()), this, SIGNAL(onStartGameClicked()));
+		QObject::connect(m_startGame, &QPushButton::clicked, this, &GameInfoWidget::onStartGameClicked);
 	}
 	if (m_exit != nullptr)
 	{
 		m_exit->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/QuitButton.png", 4, 1, 2, 3, 4);
 		m_exit->setText(QString::fromStdWString(L""));
-		QObject::connect(m_exit, SIGNAL(clicked()), this, SIGNAL(onExitClicked()));
+		QObject::connect(m_exit, &QPushButton::clicked, this, &GameInfoWidget::onExitClicked);
 	}
 
 	layout();
