@@ -96,9 +96,6 @@
     <Filter Include="Menu\CollapseMenu">
       <UniqueIdentifier>{2dcc0fd5-1dd0-4f2a-94d9-7d5a8b5d8c5a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="QSendWidget">
-      <UniqueIdentifier>{c6aba64f-983c-4d10-82d0-04bb10e8c144}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -176,15 +173,6 @@
     <ClCompile Include="IdItemComboBox.cpp">
       <Filter>ComboBox\IdItemComboBox</Filter>
     </ClCompile>
-    <ClCompile Include="QSendWidget.cpp">
-      <Filter>QSendWidget</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_QSendWidget.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_QSendWidget.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -225,9 +213,6 @@
     </CustomBuild>
     <CustomBuild Include="IdItemComboBox.h">
       <Filter>ComboBox\IdItemComboBox</Filter>
-    </CustomBuild>
-    <CustomBuild Include="QSendWidget.h">
-      <Filter>QSendWidget</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

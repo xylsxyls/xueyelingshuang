@@ -3,9 +3,9 @@
 #include <QPainter>
 #include <QStyle>
 
-CPasswordInputBox::CPasswordInputBox(QWidget *parent)
-    :QLineEdit(parent)
-    ,mMaskButton(new COriginalButton(this))
+CPasswordInputBox::CPasswordInputBox(QWidget *parent):
+QControlVir(parent),
+mMaskButton(new COriginalButton(this))
 {
     mMaskButton->setText("");
 	QString maskPath = CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/Common/Setting/SettingPasswordIcon.png";

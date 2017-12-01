@@ -1,13 +1,11 @@
 #include "IdItemComboBox.h"
 #include <QListWidgetItem>
 #include "ListWidget.h"
-#include "QSendWidget.h"
 #include <QDebug>
 
 IdItemComboBox::IdItemComboBox(QWidget* parent) :
 ControlBase(parent)
 {
-	m_pSendWidget = new QSendWidget(this);
 	//m_pSendWidget->hide();
 	const QObject* ss = (const QObject*)this;
 

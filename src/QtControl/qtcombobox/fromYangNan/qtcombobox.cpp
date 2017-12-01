@@ -12,7 +12,6 @@
 #include <QTextDocument>
 #include "HtmlComboBox.h"
 #include "IdItemComboBox.h"
-#include "QSendWidget.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -160,7 +159,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 
 	IdItemComboBox* idItemBox = new IdItemComboBox(this);
 	//QObject::connect(idItemBox->m_pSendWidget, &QSendWidget::currentTextChanged3, this, &qtcombobox::currentTextChanged6);
-	QObject::connect(idItemBox->m_pSendWidget, SIGNAL(currentTextChanged3(const QString&)), this, SLOT(currentTextChanged6(const QString&)));
+	//QObject::connect(idItemBox->m_pSendWidget, SIGNAL(currentTextChanged3(const QString&)), this, SLOT(currentTextChanged6(const QString&)));
 	idItemBox->setGeometry(200, 200, 100, 30);
 	idItemBox->addItem(5, "123");
 	idItemBox->addItem(6, "124");

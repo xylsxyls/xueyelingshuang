@@ -1,7 +1,6 @@
 #pragma once
 #include "ComboBox.h"
 
-class QSendWidget;
 /** 定做类，节点对应ID编号，当点击框内容改变时发射信号
 */
 class IdItemComboBox : virtual public ComboBox
@@ -41,6 +40,5 @@ signals:
 	void currentItemChanged5(qint64 id, const QString& text);
 
 public:
-	QSendWidget* m_pSendWidget;
 	std::map<void*, qint64> m_mapIndex;
 };
