@@ -1,10 +1,12 @@
 #pragma once
 #include "ComboBox.h"
 
+class QSendWidget;
 /** 定做类，节点对应ID编号，当点击框内容改变时发射信号
 */
-class IdItemComboBox : public ComboBox
+class IdItemComboBox : virtual public ComboBox
 {
+	
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
@@ -28,10 +30,17 @@ public:
 	*/
 	void addItems(const QList<qint64>& idList, const QStringList& textList);
 
-Q_SIGNALS:
+public slots:
+	void currentTextChanged4(const QString& str);
+
+signals:
 	/** 当点击框内文字发生改变时发送信号
 	@param [in] id 节点ID
 	@param [in] text 当前点击框内文本内容
 	*/
-	void currentItemChanged(qint64 id, const QString& text);
+	void currentItemChanged5(qint64 id, const QString& text);
+
+public:
+	QSendWidget* m_pSendWidget;
+	std::map<void*, qint64> m_mapIndex;
 };

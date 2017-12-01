@@ -12,6 +12,9 @@ public:
 	qtcombobox(QWidget *parent = 0);
 	~qtcombobox();
 
+private slots:
+	void currentTextChanged6(const QString& str);
+
 private:
 	Ui::qtcomboboxClass ui;
 };

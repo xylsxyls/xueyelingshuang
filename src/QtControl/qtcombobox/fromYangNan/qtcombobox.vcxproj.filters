@@ -66,35 +66,38 @@
     <Filter Include="Menu">
       <UniqueIdentifier>{89dbc6da-c6e3-41ea-8a43-f78671cd1616}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ControlFont">
-      <UniqueIdentifier>{2274c276-9e1d-4fd5-9b33-e01ccf737ec4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ControlItem">
-      <UniqueIdentifier>{90c5a3ff-7ff1-4bbb-8962-18f5f946102a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ControlSelf">
-      <UniqueIdentifier>{973f9eb2-49ed-4ff4-94b9-2d06e7cbac2c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ControlBorder">
-      <UniqueIdentifier>{7c3d55e3-8064-40fa-9d5f-664ebe7584cf}</UniqueIdentifier>
-    </Filter>
     <Filter Include="CustomStyle">
       <UniqueIdentifier>{fc307ab2-3b9a-40a7-8f1e-f6f2014667c6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="CollapseMenu">
-      <UniqueIdentifier>{2dcc0fd5-1dd0-4f2a-94d9-7d5a8b5d8c5a}</UniqueIdentifier>
     </Filter>
     <Filter Include="LineEdit">
       <UniqueIdentifier>{3a86d31f-e656-4a63-a82b-20ff8647feba}</UniqueIdentifier>
     </Filter>
-    <Filter Include="HtmlComboBox">
+    <Filter Include="ComboBox\HtmlComboBox">
       <UniqueIdentifier>{40905ac0-54f5-419c-9a74-2851317b6bbe}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ControlBackground">
+    <Filter Include="ComboBox\IdItemComboBox">
+      <UniqueIdentifier>{8f0a6389-9e82-4c03-8387-fcdbd421f404}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ControlBase\ControlBorder">
+      <UniqueIdentifier>{7c3d55e3-8064-40fa-9d5f-664ebe7584cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ControlBase\ControlBackground">
       <UniqueIdentifier>{a4413c6a-118b-4d70-ac98-0a62e881ee31}</UniqueIdentifier>
     </Filter>
-    <Filter Include="IdItemComboBox">
-      <UniqueIdentifier>{8f0a6389-9e82-4c03-8387-fcdbd421f404}</UniqueIdentifier>
+    <Filter Include="ControlBase\ControlFont">
+      <UniqueIdentifier>{2274c276-9e1d-4fd5-9b33-e01ccf737ec4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ControlBase\ControlItem">
+      <UniqueIdentifier>{90c5a3ff-7ff1-4bbb-8962-18f5f946102a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ControlBase\ControlSelf">
+      <UniqueIdentifier>{973f9eb2-49ed-4ff4-94b9-2d06e7cbac2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Menu\CollapseMenu">
+      <UniqueIdentifier>{2dcc0fd5-1dd0-4f2a-94d9-7d5a8b5d8c5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QSendWidget">
+      <UniqueIdentifier>{c6aba64f-983c-4d10-82d0-04bb10e8c144}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -147,7 +150,7 @@
       <Filter>Menu</Filter>
     </ClCompile>
     <ClCompile Include="ControlFont.inl">
-      <Filter>ControlFont</Filter>
+      <Filter>ControlBase\ControlFont</Filter>
     </ClCompile>
     <ClCompile Include="ControlBase.inl">
       <Filter>ControlBase</Filter>
@@ -162,16 +165,25 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="CollapseMenu.cpp">
-      <Filter>CollapseMenu</Filter>
+      <Filter>Menu\CollapseMenu</Filter>
     </ClCompile>
     <ClCompile Include="LineEdit.cpp">
       <Filter>LineEdit</Filter>
     </ClCompile>
     <ClCompile Include="HtmlComboBox.cpp">
-      <Filter>HtmlComboBox</Filter>
+      <Filter>ComboBox\HtmlComboBox</Filter>
     </ClCompile>
     <ClCompile Include="IdItemComboBox.cpp">
-      <Filter>IdItemComboBox</Filter>
+      <Filter>ComboBox\IdItemComboBox</Filter>
+    </ClCompile>
+    <ClCompile Include="QSendWidget.cpp">
+      <Filter>QSendWidget</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_QSendWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_QSendWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -211,6 +223,12 @@
     <CustomBuild Include="CustomStyle.h">
       <Filter>CustomStyle</Filter>
     </CustomBuild>
+    <CustomBuild Include="IdItemComboBox.h">
+      <Filter>ComboBox\IdItemComboBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="QSendWidget.h">
+      <Filter>QSendWidget</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlBase.h">
@@ -226,45 +244,42 @@
       <Filter>Menu</Filter>
     </ClInclude>
     <ClInclude Include="ControlFont.h">
-      <Filter>ControlFont</Filter>
+      <Filter>ControlBase\ControlFont</Filter>
     </ClInclude>
     <ClInclude Include="ControlItem.h">
-      <Filter>ControlItem</Filter>
+      <Filter>ControlBase\ControlItem</Filter>
     </ClInclude>
     <ClInclude Include="ControlSelf.h">
-      <Filter>ControlSelf</Filter>
+      <Filter>ControlBase\ControlSelf</Filter>
     </ClInclude>
     <ClInclude Include="ControlBorder.h">
-      <Filter>ControlBorder</Filter>
+      <Filter>ControlBase\ControlBorder</Filter>
     </ClInclude>
     <ClInclude Include="CollapseMenu.h">
-      <Filter>CollapseMenu</Filter>
+      <Filter>Menu\CollapseMenu</Filter>
     </ClInclude>
     <ClInclude Include="LineEdit.h">
       <Filter>LineEdit</Filter>
     </ClInclude>
     <ClInclude Include="HtmlComboBox.h">
-      <Filter>HtmlComboBox</Filter>
+      <Filter>ComboBox\HtmlComboBox</Filter>
     </ClInclude>
     <ClInclude Include="ControlBackground.h">
-      <Filter>ControlBackground</Filter>
-    </ClInclude>
-    <ClInclude Include="IdItemComboBox.h">
-      <Filter>IdItemComboBox</Filter>
+      <Filter>ControlBase\ControlBackground</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ControlItem.inl">
-      <Filter>ControlItem</Filter>
+      <Filter>ControlBase\ControlItem</Filter>
     </None>
     <None Include="ControlSelf.inl">
-      <Filter>ControlSelf</Filter>
+      <Filter>ControlBase\ControlSelf</Filter>
     </None>
     <None Include="ControlBorder.inl">
-      <Filter>ControlBorder</Filter>
+      <Filter>ControlBase\ControlBorder</Filter>
     </None>
     <None Include="ControlBackground.inl">
-      <Filter>ControlBackground</Filter>
+      <Filter>ControlBase\ControlBackground</Filter>
     </None>
   </ItemGroup>
 </Project>
