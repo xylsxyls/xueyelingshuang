@@ -165,7 +165,18 @@ qtcombobox::qtcombobox(QWidget *parent)
 	idItemBox->addItem(6, "124");
 	idItemBox->addItem(7, "125");
 	idItemBox->addItem(8, "125");
-	
+	QList<qint64> idList;
+	idList.push_back(14);
+	idList.push_back(15);
+	idList.push_back(16);
+	QStringList textList;
+	textList.push_back("12312");
+	textList.push_back("12313");
+	textList.push_back("12314");
+	idItemBox->addItems(idList, textList);
+	QObject::connect(idItemBox, &IdItemComboBox::currentItemChanged, this, &qtcombobox::idComboBoxItemChanged);
+	//idItemBox->setEditable(true);
+
 	QWidget* ss = 0;
 	ComboBox* ssss = (ComboBox*)ss;
 	ComboBox* sss = dynamic_cast<ComboBox*>(ss);
@@ -181,6 +192,11 @@ qtcombobox::~qtcombobox()
 }
 
 void qtcombobox::currentTextChanged6(const QString& str)
+{
+	int x = 3;
+}
+
+void qtcombobox::idComboBoxItemChanged(qint64 id, const QString& str)
 {
 	int x = 3;
 }

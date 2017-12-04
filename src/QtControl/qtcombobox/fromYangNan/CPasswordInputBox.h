@@ -1,23 +1,10 @@
 #ifndef CPASSWORDINPUTBOX_H
 #define CPASSWORDINPUTBOX_H
 
-#include "LineEdit.h"
+#include <QLineEdit.h>
 #include "../COriginalButton.h"
 
-class QControlVir : public QLineEdit
-{
-public:
-	/** 构造函数
-	@param [in] parent 父窗口指针
-	*/
-	QControlVir(QWidget* parent = NULL) :QLineEdit(parent){}
-};
-class QControlBase : virtual public QLineEdit{};
-class QControlFont : virtual public QControlBase{};
-class QControlSelf : virtual public QControlBase{};
-
-
-class CPasswordInputBox : public QControlVir,QControlFont, QControlSelf
+class CPasswordInputBox : public QLineEdit
 {
     Q_OBJECT
 public:

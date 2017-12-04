@@ -1,1 +1,2 @@
-用ifndef的形式，pragma once没用，但是用pragma once可以让vs识别，显示各变量颜色
+头文件用#pragma，然后在文件末尾包含inl文件
+inl文件中用ifndef的形式，.h自动有颜色，如果要看inl颜色，把ifndef后的宏换个不一样的就行

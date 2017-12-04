@@ -44,6 +44,14 @@ rmdir /q /s "%~dp0src\OneKey\ipch\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Debug\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Release\"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\QtControl\qtcombobox\Win32\"
+rmdir /q /s "%~dp0src\QtControl\qtcombobox\fromYangNan\Debug\"
+rmdir /q /s "%~dp0src\QtControl\qtcombobox\fromYangNan\Release\"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\Win32\"
+rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\GameInfoWidgetApp\Debug\"
+rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\GameInfoWidgetApp\Release\"
+::------------------------------------------------------------
 
 ::-------------------删除控制台临时文件-----------------------
 rmdir /q /s "%~dp0src\ConsoleTest\ConsoleTest\Debug\"

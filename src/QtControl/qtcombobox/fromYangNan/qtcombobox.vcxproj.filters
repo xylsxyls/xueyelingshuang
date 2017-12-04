@@ -99,6 +99,9 @@
     <Filter Include="ControlBase\ControlBackground">
       <UniqueIdentifier>{b785091a-e8e7-49d5-8046-8367f46c6f9d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ListWidget\ListWidgetIdItem">
+      <UniqueIdentifier>{0499b28e-c508-4b62-a5e2-624504f72f0b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -182,6 +185,9 @@
     <ClCompile Include="ControlBase.inl">
       <Filter>ControlBase</Filter>
     </ClCompile>
+    <ClCompile Include="ListWidgetIdItem.cpp">
+      <Filter>ListWidget\ListWidgetIdItem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -263,6 +269,9 @@
     </ClInclude>
     <ClInclude Include="ControlBackground.h">
       <Filter>ControlBase\ControlBackground</Filter>
+    </ClInclude>
+    <ClInclude Include="ListWidgetIdItem.h">
+      <Filter>ListWidget\ListWidgetIdItem</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

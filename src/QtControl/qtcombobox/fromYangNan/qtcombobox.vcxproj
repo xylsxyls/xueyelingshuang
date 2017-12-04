@@ -113,6 +113,7 @@
     <ClCompile Include="Label.cpp" />
     <ClCompile Include="LineEdit.cpp" />
     <ClCompile Include="ListWidget.cpp" />
+    <ClCompile Include="ListWidgetIdItem.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="NoFocusFrameDelegate.cpp" />
@@ -297,6 +298,7 @@
     <ClInclude Include="ControlSelf.h" />
     <ClInclude Include="Label.h" />
     <ClInclude Include="LineEdit.h" />
+    <ClInclude Include="ListWidgetIdItem.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="RadioButton.h" />
     <CustomBuild Include="CustomStyle.h">

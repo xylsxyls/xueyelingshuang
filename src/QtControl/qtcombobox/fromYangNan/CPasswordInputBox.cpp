@@ -4,7 +4,7 @@
 #include <QStyle>
 
 CPasswordInputBox::CPasswordInputBox(QWidget *parent):
-QControlVir(parent),
+QLineEdit(parent),
 mMaskButton(new COriginalButton(this))
 {
     mMaskButton->setText("");
@@ -24,6 +24,7 @@ mMaskButton(new COriginalButton(this))
 								"padding-left:4px;"
                                 "padding-right: 25;"
                                 "}").arg(CGeneralStyle::instance()->fontColor().name()));
+	
     this->setEchoMode(QLineEdit::Password);
     this->setMinimumSize(146,22);
     this->setMaximumSize(146,22);
