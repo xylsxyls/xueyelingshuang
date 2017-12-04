@@ -1,6 +1,4 @@
-#ifndef CONTROLBACKGROUND_H__
-#define CONTROLBACKGROUND_H__
-//#pragma once
+#pragma once
 #include "ControlBase.h"
 
 template <class QBase>
@@ -385,5 +383,3 @@ public:
 };
 
 #include "ControlBackground.inl"
-
-#endif
