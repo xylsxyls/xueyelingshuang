@@ -5,19 +5,7 @@
 #include "QssString.h"
 #include "CStringManager.h"
 #include "QssHelper.h"
-
-template<class QBase>
-void ControlBase<QBase>::repaint()
-{
-	updateStyle();
-}
-
-template<class QBase>
-ControlBase<QBase>::ControlBase(QWidget* parent) :
-QBase(parent)
-{
-	
-}
+#include "ControlShow.h"
 
 template<class QBase>
 ControlBase<QBase>::~ControlBase()
@@ -26,10 +14,14 @@ ControlBase<QBase>::~ControlBase()
 }
 
 template<class QBase>
-void ControlBase<QBase>::init(const std::wstring& className, const std::wstring& itemName)
+void ControlBase<QBase>::setControlShow(ControlShow<QBase>* show)
 {
-	m_className = className;
-	m_itemName = itemName;
+	//理论上不该出现传空的现象，但由于以下函数中没有判空，所以在这里统一判断一下
+	if (show == nullptr)
+	{
+		abort();
+	}
+	m_show = show;
 }
 
 template<class QBase>
@@ -56,10 +48,10 @@ void ControlBase<QBase>::setKeyValue(const std::wstring& keyWord,
 									 bool isItem,
 									 bool rePaint)
 {
-	m_controlStyle[m_className](isItem, m_itemName).AddKeyValue(keyWord, value);
+	m_show->m_controlStyle[m_show->m_className](isItem, m_show->m_itemName).AddKeyValue(keyWord, value);
 	if (rePaint)
 	{
-		updateStyle();
+		m_show->repaint();
 	}
 }
 
@@ -78,12 +70,12 @@ void ControlBase<QBase>::setColorStateMap(const std::map<int32_t, std::map<int32
 			auto& stateInMap = itColor->first;
 			const QColor& color = itColor->second;
 			std::wstring colorString = QssHelper::QColorToWString(color);
-			m_controlStyle[m_className](isItem, m_itemName)(state)(stateInMap).AddKeyValue(keyWord, colorString);
+			m_show->m_controlStyle[m_show->m_className](isItem, m_show->m_itemName)(state)(stateInMap).AddKeyValue(keyWord, colorString);
 		}
 	}
 	if (rePaint)
 	{
-		updateStyle();
+		m_show->repaint();
 	}
 }
 
@@ -117,12 +109,12 @@ void ControlBase<QBase>::setImageStateMap(const std::map<int32_t, std::map<int32
 														   imagePath.c_str(),
 														   vecHeight[imageNum - 1],
 														   vecHeight[stateCount - imageNum]);
-			m_controlStyle[m_className](isItem, m_itemName)(state)(stateInMap).AddKeyValue(keyWord, imageUrl);
+			m_show->m_controlStyle[m_show->m_className](isItem, m_show->m_itemName)(state)(stateInMap).AddKeyValue(keyWord, imageUrl);
 		}
 	}
 	if (rePaint)
 	{
-		updateStyle();
+		m_show->repaint();
 	}
 }
 
@@ -134,22 +126,10 @@ void ControlBase<QBase>::setImageStateMap(const std::map<int32_t, std::map<int32
 										  const std::wstring& itemName,
 										  bool rePaint)
 {
-	std::wstring itemNameBk = m_itemName;
-	m_itemName = itemName;
+	std::wstring itemNameBk = m_show->m_itemName;
+	m_show->m_itemName = itemName;
 	setImageStateMap(imageStateMap, imagePath, stateCount, keyWord, true, rePaint);
-	m_itemName = itemNameBk;
-}
-
-template<class QBase>
-void ControlBase<QBase>::updateStyle()
-{
-	QBase::setStyleSheet(QString::fromStdWString(m_controlStyle.toWString()));
-}
-
-template<class QBase>
-void ControlBase<QBase>::showEvent(QShowEvent*)
-{
-	updateStyle();
+	m_show->m_itemName = itemNameBk;
 }
 
 #endif

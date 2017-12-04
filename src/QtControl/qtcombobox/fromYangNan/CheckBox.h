@@ -1,13 +1,13 @@
-#ifndef CHECKBOX_H__
-#define CHECKBOX_H__
-
+#pragma once
 #include <QtWidgets/QCheckBox>
 #include <stdint.h>
+#include "ControlShow.h"
 #include "ControlFont.h"
 #include "ControlBorder.h"
 #include "ControlBackground.h"
 
 class CheckBox : 
+	public ControlShow < QCheckBox >,
 	public ControlFont < QCheckBox >,
 	public ControlBorderForNormalHoverPressedDisabledAndCheck < QCheckBox >,
 	public ControlBackgroundForNormalHoverPressedDisabledAndCheck < QCheckBox >
@@ -16,7 +16,7 @@ public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	CheckBox(QWidget* parent = NULL);
+	CheckBox(QWidget* parent = nullptr);
 
 	/** 析构函数
 	*/
@@ -61,5 +61,3 @@ public:
 	*/
 	void setIndicatorSize(int32_t width, int32_t height, bool rePaint = false);
 };
-
-#endif

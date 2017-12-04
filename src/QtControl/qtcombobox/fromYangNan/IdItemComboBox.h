@@ -3,14 +3,14 @@
 
 /** 定做类，节点对应ID编号，当点击框内容改变时发射信号
 */
-class IdItemComboBox : virtual public ComboBox
+class IdItemComboBox : public ComboBox
 {
-	
+	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	IdItemComboBox(QWidget* parent = NULL);
+	IdItemComboBox(QWidget* parent = nullptr);
 
 	/** 析构函数
 	*/
@@ -30,7 +30,7 @@ public:
 	void addItems(const QList<qint64>& idList, const QStringList& textList);
 
 public slots:
-	void currentTextChanged4(const QString& str);
+	void curIndexChanged(const QString& str);
 
 signals:
 	/** 当点击框内文字发生改变时发送信号

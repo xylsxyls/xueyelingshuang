@@ -1,10 +1,11 @@
 #include "LineEdit.h"
 
 LineEdit::LineEdit(QWidget* parent) :
-ControlBase(parent)
+ControlShow(parent)
 {
-	ControlBase::init(L"QLineEdit", L"");
-	init();
+	ControlBase::setControlShow(this);
+	init(L"QLineEdit", L"");
+	setDefault();
 }
 
 LineEdit::~LineEdit()
@@ -12,7 +13,7 @@ LineEdit::~LineEdit()
 
 }
 
-void LineEdit::init()
+void LineEdit::setDefault()
 {
 	setBorderWidth(1);
 }

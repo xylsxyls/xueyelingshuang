@@ -1,6 +1,4 @@
-#ifndef CONTROLITEM_H__
-#define CONTROLITEM_H__
-//#pragma once
+#pragma once
 #include "ControlBase.h"
 
 template <class QBase>
@@ -51,5 +49,3 @@ public:
 };
 
 #include "ControlItem.inl"
-
-#endif

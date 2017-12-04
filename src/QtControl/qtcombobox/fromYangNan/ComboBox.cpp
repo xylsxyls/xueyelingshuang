@@ -9,10 +9,9 @@
 #include <QtWidgets/QScrollBar>
 #include <QKeyEvent>
 #include <QTextDocument>
-#include "D:\\SendToMessageTest.h"
 
 ComboBox::ComboBox(QWidget* parent) :
-ControlBase(parent),
+ControlShow(parent),
 m_listOrigin(0),
 m_listWidget(nullptr),
 m_dropDownImgNormal(1),
@@ -21,6 +20,7 @@ m_dropDownImgExpandNormal(5),
 m_dropDownImgExpandDisabled(8),
 m_dropDownImgStateCount(8)
 {
+	ControlBase::setControlShow(this);
 	init(L"QComboBox", L"drop-down");
 	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
 	m_controlStyle[m_className](1, L"QAbstractItemView").AddKeyValue(L"border", L"none");
@@ -319,6 +319,6 @@ void ComboBox::keyPressEvent(QKeyEvent* eve)
 
 void ComboBox::repaint()
 {
-	updateStyle();
+	ControlShow::repaint();
 	m_listWidget->repaint();
 }

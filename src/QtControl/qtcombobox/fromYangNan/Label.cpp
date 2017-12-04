@@ -1,11 +1,12 @@
 #include "Label.h"
 
 Label::Label(QWidget* parent) :
-ControlBase(parent),
+ControlShow(parent),
 m_leftOrigin(0),
 m_fontSize(12)
 {
-	ControlBase::init(L"QLabel", L"");
+	ControlBase::setControlShow(this);
+	init(L"QLabel", L"");
 }
 
 Label::~Label()

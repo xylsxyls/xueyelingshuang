@@ -1,6 +1,4 @@
-#ifndef CONTROLFONT_H__
-#define CONTROLFONT_H__
-//#pragma once
+#pragma once
 #include "ControlBase.h"
 
 template <class QBase>
@@ -38,5 +36,3 @@ public:
 };
 
 #include "ControlFont.inl"
-
-#endif

@@ -1,4 +1,5 @@
 #pragma once
+#include "ControlShow.h"
 #include "ControlSelf.h"
 #include "ControlFont.h"
 #include "ControlBorder.h"
@@ -6,6 +7,7 @@
 #include <QtWidgets/QLineEdit>
 
 class LineEdit :
+	public ControlShow < QLineEdit >,
 	public ControlSelf < QLineEdit >,
 	public ControlFont < QLineEdit >,
 	public ControlBorderForNormalHoverDisabled < QLineEdit >,
@@ -15,7 +17,7 @@ public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	LineEdit(QWidget* parent = NULL);
+	LineEdit(QWidget* parent = nullptr);
 
 	/** 析构函数
 	*/
@@ -26,5 +28,5 @@ public:
 private:
 	/** 常用初始化
 	*/
-	void init();
+	void setDefault();
 };

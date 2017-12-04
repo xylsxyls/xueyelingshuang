@@ -4,17 +4,10 @@
 #include <QDebug>
 
 IdItemComboBox::IdItemComboBox(QWidget* parent) :
-ControlBase(parent)
+ComboBox(parent)
 {
-	//m_pSendWidget->hide();
-	const QObject* ss = (const QObject*)this;
-
-	QObject* ssss = this;
-
-	//QObject::connect(m_pSendWidget, &QSendWidget::currentTextChanged3, this, &IdItemComboBox::currentTextChanged4);
-	//QObject::connect(m_pSendWidget, SIGNAL(currentTextChanged3(const QString&)), this, SLOT(currentTextChanged4(const QString&)));
-	//QObject::connect(this, SIGNAL(currentTextChanged(const QString&)), this, SLOT(currentTextChanged4(const QString&)));
-	//QObject::connect(this, &QComboBox::currentTextChanged, this, &IdItemComboBox::currentTextChanged4);
+	setEditable(true);
+	QObject::connect(this, SIGNAL(currentIndexChanged(const QString &)), this, SLOT(curIndexChanged(const QString &)));
 	QAbstractItemView * tview = this->view();
 	/*QObject::connect(tview, &QAbstractItemView::clicked, [this](const QModelIndex& tindex){
 		qDebug() << tindex.data(Qt::DisplayRole).toString();
@@ -43,7 +36,7 @@ void IdItemComboBox::addItems(const QList<qint64>& idList, const QStringList& te
 
 }
 
-void IdItemComboBox::currentTextChanged4(const QString& str)
+void IdItemComboBox::curIndexChanged(const QString& str)
 {
 	//QObject::connect(id, &QComboBox::currentTextChanged, this, &QSendWidget::currentTextChanged2);
 	int x = 3;

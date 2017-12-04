@@ -1,9 +1,10 @@
 #include "CheckBox.h"
 
 CheckBox::CheckBox(QWidget* parent) :
-ControlBase(parent)
+ControlShow(parent)
 {
-	ControlBase::init(L"QCheckBox", L"indicator");
+	ControlBase::setControlShow(this);
+	init(L"QCheckBox", L"indicator");
 }
 
 CheckBox::~CheckBox()

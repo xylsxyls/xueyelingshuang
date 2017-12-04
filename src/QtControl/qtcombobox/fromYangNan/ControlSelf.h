@@ -1,6 +1,4 @@
-#ifndef CONTROLSELF_H__
-#define CONTROLSELF_H__
-//#pragma once
+#pragma once
 #include "ControlBase.h"
 
 template <class QBase>
@@ -26,5 +24,3 @@ public:
 };
 
 #include "ControlSelf.inl"
-
-#endif

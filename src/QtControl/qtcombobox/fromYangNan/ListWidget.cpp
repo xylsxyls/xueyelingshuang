@@ -1,8 +1,9 @@
 #include "ListWidget.h"
 
 ListWidget::ListWidget(QWidget* parent) :
-ControlBase(parent)
+ControlShow(parent)
 {
+	ControlBase::setControlShow(this);
 	init(L"QListWidget", L"item");
 }
 

@@ -50,9 +50,9 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setListBorderWidth(1);
 	pBox->setListBorderColor(QColor(67, 132, 251, 255));
 
-	pBox->setListItemBorderWidth(2);
-	//pBox->setListItemBorderImage("D:/item.png", 4, 1, 2, 4);
-	pBox->setListItemBackgroundColor(QColor(0, 50, 255, 255), QColor(0, 255, 50, 255), QColor(255, 0, 255, 255));
+	//pBox->setListItemBorderWidth(2);
+	pBox->setListItemBorderImage("D:/item.png", 4, 1, 2, 4);
+	//pBox->setListItemBackgroundColor(QColor(0, 50, 255, 255), QColor(0, 255, 50, 255), QColor(255, 0, 255, 255));
 	pBox->setListItemHeight(22);
 	pBox->setListBackgroundColor(QColor(18, 23, 31));
 
@@ -79,7 +79,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pButton->setGeometry(400, 100, 80, 50);
 	pButton->setBackgroundColor(QColor(255, 0, 255, 1), QColor(255, 255, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1));
 	pButton->setIndicatorImage(QString::fromLocal8Bit("D:/hot.png"), 8, 1, 2, 3, 4, 5, 6, 7, 8);
-	
+
 	pButton->setText(QString::fromLocal8Bit("中国"));
 	pButton->setTextColor(QColor(255, 0, 0, 1), QColor(0, 0, 255, 1), QColor(255, 0, 255, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1));
 	pButton->setFontFace(QString::fromLocal8Bit("黑体"));
@@ -87,7 +87,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pButton->setTextOrigin(20);
 
 	Label* pLabel = new Label(this);
-	
+
 	pLabel->setGeometry(200, 300, 80, 50);
 	pLabel->setBorderImage(QString::fromLocal8Bit("D:/hot.png"), 4, 1, 2, 4);
 	pLabel->setFontFace(QString::fromLocal8Bit("黑体"));
@@ -98,10 +98,10 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pLabel->setText(QString::fromLocal8Bit("中国123456789789789798798"));
 	QString str = pLabel->text();
 
-	/*auto item1 = new QAction(QIcon("D:/more.png"),"&item1...", this);
-	auto itme2 = new QAction("&item2...", this);
-	auto item3 = new QAction("&itme3...", this);
-	auto item4 = new QAction("&item4...", this);*/
+	///*auto item1 = new QAction(QIcon("D:/more.png"),"&item1...", this);
+	//auto itme2 = new QAction("&item2...", this);
+	//auto item3 = new QAction("&itme3...", this);
+	//auto item4 = new QAction("&item4...", this);*/
 
 	CollapseMenu* menu = new CollapseMenu;
 	
@@ -141,7 +141,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//menu->setIconSize(QSize(20, 20));
 	
 
-	//auto ss = menu->exec(QPoint(50, 50));
+	menu->exec(QPoint(50, 50));
 
 	HtmlComboBox* box = new HtmlComboBox(this);
 	box->setGeometry(20, 20, 100, 30);
@@ -149,9 +149,9 @@ qtcombobox::qtcombobox(QWidget *parent)
 	box->addItem("123454");
 	box->addItem("123455");
 
-	Label* lab = new Label(this);
+	/*Label* lab = new Label(this);
 	lab->setGeometry(200, 10, 300, 30);
-	lab->setText("<font color=green>hello <b>world</b> </font>");
+	lab->setText("<font color=green>hello <b>world</b> </font>");*/
 	
 
 	/*ss = menu->exec(QPoint(80, 50));
@@ -164,7 +164,12 @@ qtcombobox::qtcombobox(QWidget *parent)
 	idItemBox->addItem(5, "123");
 	idItemBox->addItem(6, "124");
 	idItemBox->addItem(7, "125");
+	idItemBox->addItem(8, "125");
 	
+	QWidget* ss = 0;
+	ComboBox* ssss = (ComboBox*)ss;
+	ComboBox* sss = dynamic_cast<ComboBox*>(ss);
+
 	//idItemBox->show();
 	
 	int x = 3;

@@ -1,9 +1,10 @@
 #include "RadioButton.h"
 
 RadioButton::RadioButton(QWidget* parent) :
-ControlBase(parent)
+ControlShow(parent)
 {
-	ControlBase::init(L"QRadioButton", L"indicator");
+	ControlBase::setControlShow(this);
+	init(L"QRadioButton", L"indicator");
 }
 
 RadioButton::~RadioButton()

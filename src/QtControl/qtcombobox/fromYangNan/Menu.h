@@ -1,5 +1,6 @@
 #pragma once
 #include <QMenu>
+#include "ControlShow.h"
 #include "ControlFont.h"
 #include "ControlItem.h"
 #include "ControlSelf.h"
@@ -10,6 +11,7 @@
 class QMouseEvent;
 class CustomStyle;
 class Menu : 
+	public ControlShow < QMenu >,
 	public ControlFont < QMenu >,
 	public ControlItem < QMenu >,
 	public ControlSelf < QMenu >,
@@ -22,7 +24,7 @@ public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	Menu(QWidget* parent = NULL);
+	Menu(QWidget* parent = nullptr);
 
 	/** 析构函数
 	*/
@@ -35,7 +37,7 @@ public:
 	@param [in] size 菜单图标大小
 	@param [in] parent 父窗口指针
 	*/
-	Menu(const QString& title, const QString& icon = QString(), const QSize& size = QSize(), QWidget* parent = NULL);
+	Menu(const QString& title, const QString& icon = QString(), const QSize& size = QSize(), QWidget* parent = nullptr);
 
 public:
 	/** 添加节点

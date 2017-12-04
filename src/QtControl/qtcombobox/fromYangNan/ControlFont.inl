@@ -12,13 +12,13 @@ ControlFont<QBase>::~ControlFont()
 template<class QBase>
 void ControlFont<QBase>::setFontFace(const QString& fontName, bool rePaint)
 {
-	ControlBase::setFontFace(fontName.toStdWString(), false, rePaint);
+	ControlBase<QBase>::setFontFace(fontName.toStdWString(), false, rePaint);
 }
 
 template<class QBase>
 void ControlFont<QBase>::setFontSize(int32_t fontSize, bool rePaint)
 {
-	ControlBase::setPxValue(L"font-size", fontSize, false, rePaint);
+	ControlBase<QBase>::setPxValue(L"font-size", fontSize, false, rePaint);
 }
 
 template<class QBase>
@@ -26,14 +26,14 @@ void ControlFont<QBase>::setFontBold(bool bold, bool rePaint)
 {
 	if (bold)
 	{
-		ControlBase::setKeyValue(L"font-weight", L"bold", false, rePaint);
+		ControlBase<QBase>::setKeyValue(L"font-weight", L"bold", false, rePaint);
 	}
 }
 
 template<class QBase>
 void ControlFont<QBase>::setTextOrigin(int32_t origin, bool rePaint)
 {
-	ControlBase::setPxValue(L"padding-left", origin, false, rePaint);
+	ControlBase<QBase>::setPxValue(L"padding-left", origin, false, rePaint);
 }
 
 #endif

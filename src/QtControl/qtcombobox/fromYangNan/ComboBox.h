@@ -1,6 +1,4 @@
-#ifndef COMBOBOX_H__
-#define COMBOBOX_H__
-
+#pragma once
 #include <QtWidgets/QComboBox>
 #include <stdint.h>
 #include "ControlFont.h"
@@ -10,6 +8,7 @@
 
 class ListWidget;
 class ComboBox : 
+	public ControlShow < QComboBox >,
 	public ControlFont < QComboBox >,
 	public ControlSelf < QComboBox >,
 	public ControlBorderForNormalHoverPressedDisabled < QComboBox >,
@@ -19,7 +18,7 @@ public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	ComboBox(QWidget* parent = NULL);
+	ComboBox(QWidget* parent = nullptr);
 
 	/** 析构函数
 	*/
@@ -220,5 +219,3 @@ private:
 	std::wstring m_imagePath;
 	int32_t m_listOrigin;
 };
-
-#endif

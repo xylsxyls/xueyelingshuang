@@ -10,7 +10,7 @@ public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	CollapseMenu(QWidget* parent = NULL);
+	CollapseMenu(QWidget* parent = nullptr);
 
 	/** 构造函数
 	@param [in] title 菜单标题
@@ -18,7 +18,7 @@ public:
 	@param [in] size 菜单图标大小
 	@param [in] parent 父窗口指针
 	*/
-	CollapseMenu(const QString& title, const QString& icon = QString(), const QSize& size = QSize(), QWidget* parent = NULL);
+	CollapseMenu(const QString& title, const QString& icon = QString(), const QSize& size = QSize(), QWidget* parent = nullptr);
 
 	/** 析构函数
 	*/

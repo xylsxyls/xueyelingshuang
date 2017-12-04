@@ -3,7 +3,7 @@
 #include <QTextDocument>
 
 HtmlComboBox::HtmlComboBox(QWidget* parent) :
-ControlBase(parent)
+ComboBox(parent)
 {
 
 }

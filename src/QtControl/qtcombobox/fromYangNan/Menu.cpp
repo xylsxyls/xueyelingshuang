@@ -5,10 +5,11 @@
 #include <QMouseEvent>
 
 Menu::Menu(QWidget* parent) :
-ControlBase(parent),
+ControlShow(parent),
 m_pCustomStyle(nullptr)
 {
-	ControlBase::init(L"QMenu", L"item");
+	ControlBase::setControlShow(this);
+	init(L"QMenu", L"item");
 	m_pCustomStyle = new CustomStyle;
 	if (m_pCustomStyle != nullptr)
 	{
@@ -24,9 +25,10 @@ Menu::~Menu()
 }
 
 Menu::Menu(const QString& title, const QString& icon, const QSize& size, QWidget* parent) :
-ControlBase(parent)
+ControlShow(parent)
 {
-	ControlBase::init(L"QMenu", L"item");
+	ControlBase::setControlShow(this);
+	init(L"QMenu", L"item");
 	QMenu::setTitle(title);
 
 	QMenu::setIcon(QPixmap(icon).scaled(size));

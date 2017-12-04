@@ -1,11 +1,13 @@
 #pragma once
 #include <QtWidgets/QRadioButton>
+#include "ControlShow.h"
 #include "ControlFont.h"
 #include "ControlBorder.h"
 #include "ControlBackground.h"
 
 class QWidget;
 class RadioButton : 
+	public ControlShow < QRadioButton >,
 	public ControlFont < QRadioButton >,
 	public ControlBorderForNormalHoverPressedDisabledAndCheck < QRadioButton >,
 	public ControlBackgroundForNormalHoverPressedDisabledAndCheck < QRadioButton >
@@ -14,7 +16,7 @@ public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	RadioButton(QWidget* parent = NULL);
+	RadioButton(QWidget* parent = nullptr);
 
 	/** 析构函数
 	*/

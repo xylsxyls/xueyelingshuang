@@ -1,36 +1,24 @@
-#ifndef CONTROLBASE_H__
-#define CONTROLBASE_H__
-//#pragma once
+#pragma once
 #include "QssString.h"
-#include <string>
 #include <QColor>
 
 class QShowEvent;
 class QWidget;
 template <class QBase>
-class ControlBase : public QBase
+class ControlShow;
+template <class QBase>
+class ControlBase
 {
-public:
-	/** 重画
-	*/
-	virtual void repaint();
-
 protected:
-	/** 构造函数
-	@param [in] parent 父窗口指针
-	*/
-	ControlBase(QWidget* parent = NULL);
-
 	/** 析构函数
 	*/
 	virtual ~ControlBase();
 
 protected:
-	/** 初始化
-	@param [in] className 类名
-	@param [in] itemName 节点名
+	/** 设置显示类指针
+	@param [in] show 显示类指针
 	*/
-	void init(const std::wstring& className, const std::wstring& itemName);
+	void setControlShow(ControlShow<QBase>* show);
 
 	/** 设置字体
 	@param [in] fontName 字体名
@@ -104,16 +92,8 @@ protected:
 						  const std::wstring& itemName,
 						  bool rePaint);
 
-protected:
-	virtual void updateStyle();
-	virtual void showEvent(QShowEvent* eve);
-
-protected:
-	QssString m_controlStyle;
-	std::wstring m_className;
-	std::wstring m_itemName;
+private:
+	ControlShow<QBase>* m_show;
 };
 
 #include "ControlBase.inl"
-
-#endif

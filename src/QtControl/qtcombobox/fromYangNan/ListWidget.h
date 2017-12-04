@@ -4,10 +4,12 @@
 #include "ControlFont.h"
 #include "ControlItem.h"
 #include "ControlSelf.h"
+#include "ControlShow.h"
 #include "ControlBorder.h"
 #include "ControlBackground.h"
 
-class ListWidget : 
+class ListWidget :
+	public ControlShow < QListWidget >,
 	public ControlFont < QListWidget >,
 	public ControlItem < QListWidget >,
 	public ControlSelf < QListWidget >,
@@ -20,7 +22,7 @@ public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	ListWidget(QWidget* parent = NULL);
+	ListWidget(QWidget* parent = nullptr);
 
 	/** 析构函数
 	*/

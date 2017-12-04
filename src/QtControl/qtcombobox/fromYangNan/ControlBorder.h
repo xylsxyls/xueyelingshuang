@@ -1,6 +1,4 @@
-#ifndef CONTROLBORDER_H__
-#define CONTROLBORDER_H__
-//#pragma once
+#pragma once
 #include "ControlBase.h"
 
 template <class QBase>
@@ -509,5 +507,3 @@ public:
 };
 
 #include "ControlBorder.inl"
-
-#endif
