@@ -42,4 +42,4 @@ public:
 	std::wstring m_itemName;
 };
 
-#include "ControlShow.cpp"
+#include "ControlShow.inl"
