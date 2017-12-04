@@ -155,9 +155,6 @@
     <ClCompile Include="IdItemComboBox.cpp">
       <Filter>ComboBox\IdItemComboBox</Filter>
     </ClCompile>
-    <ClCompile Include="ControlShow.cpp">
-      <Filter>ControlShow</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_IdItemComboBox.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -280,6 +277,9 @@
     </None>
     <None Include="ControlBackground.inl">
       <Filter>ControlBase\ControlBackground</Filter>
+    </None>
+    <None Include="ControlShow.inl">
+      <Filter>ControlShow</Filter>
     </None>
   </ItemGroup>
 </Project>

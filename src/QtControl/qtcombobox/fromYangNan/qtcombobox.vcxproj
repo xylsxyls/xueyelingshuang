@@ -81,7 +81,6 @@
     <ClCompile Include="ComboBox.cpp" />
     <ClCompile Include="ControlBase.inl" />
     <ClCompile Include="ControlFont.inl" />
-    <ClCompile Include="ControlShow.cpp" />
     <ClCompile Include="CStringManager.cpp" />
     <ClCompile Include="CustomStyle.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_CustomStyle.cpp">
@@ -328,6 +327,7 @@
     <None Include="ControlBorder.inl" />
     <None Include="ControlItem.inl" />
     <None Include="ControlSelf.inl" />
+    <None Include="ControlShow.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
