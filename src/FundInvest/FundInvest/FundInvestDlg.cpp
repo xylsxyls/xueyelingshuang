@@ -77,6 +77,7 @@ BEGIN_MESSAGE_MAP(CFundInvestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON4, &CFundInvestDlg::OnBnClickedButton4)
     ON_BN_CLICKED(IDC_BUTTON5, &CFundInvestDlg::OnBnClickedButton5)
 	ON_BN_CLICKED(IDC_BUTTON6, &CFundInvestDlg::OnBnClickedButton6)
+	ON_BN_CLICKED(IDC_BUTTON7, &CFundInvestDlg::OnBnClickedButton7)
 END_MESSAGE_MAP()
 
 
@@ -114,7 +115,7 @@ BOOL CFundInvestDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 	FundHelper::init();
 
-    LoadFund();
+	AfxMessageBox("需要加载");
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -209,7 +210,8 @@ void CFundInvestDlg::OnBnClickedButton2()
 {
 	// TODO:  在此添加控件通知处理程序代码
 
-	//LoadFund();
+	LoadFund();
+	AfxMessageBox("加载完成");
 	/*int i = 1700 * 7000;
 	while (i-- != 0)
 	{
@@ -234,6 +236,12 @@ void CFundInvestDlg::LoadFund()
 			std::string dstring = ini.ReadIni(GETINFO(DAY_CHG), date);
 			dataNeuron.m_dayChg = atof(dstring.c_str());
 			dataNeuron.m_time = IntDateTime(date + " 00:00:00");
+			std::string dforecast1 = ini.ReadIni(GETINFO(FORECAST1), date);
+			dataNeuron.m_forecast1 = atof(dforecast1.c_str());
+			std::string dforecast2 = ini.ReadIni(GETINFO(FORECAST2), date);
+			dataNeuron.m_forecast2 = atof(dforecast2.c_str());
+			std::string dforecast3 = ini.ReadIni(GETINFO(FORECAST3), date);
+			dataNeuron.m_forecast3 = atof(dforecast3.c_str());
 			m_mapDataNeuron["110022"][IntDateTime(date + " 00:00:00")] = dataNeuron;
 		}
 	}
@@ -396,5 +404,46 @@ void CFundInvestDlg::OnBnClickedButton6()
 		delete nextNeuron1;
 		delete nextNeuron2;
 		beginNeuron = beginNeuron->m_nextData;
+	}
+}
+
+
+void CFundInvestDlg::OnBnClickedButton7()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	double fund = 10000;
+	DataNeuron* beginNeuron = GetNeuron("110022", "2017-01-01");
+	DataNeuron* endNeuron = GetNeuron("110022", "2017-11-01");
+	DataNeuron* nowNeuron = beginNeuron;
+	int32_t state = WAIT;
+
+	while (nowNeuron != endNeuron)
+	{
+		switch (state)
+		{
+		case HOLD:
+		{
+			fund = fund * (1 + nowNeuron->m_dayChg);
+			if (!(nowNeuron->m_forecast1 >= 0 ||
+				nowNeuron->m_forecast1 + nowNeuron->m_forecast2 >= 0))
+			{
+				fund = fund * (1 - 0.5 / 100);
+				state = WAIT;
+			}
+			break;
+		}
+		case WAIT:
+		{
+			if (nowNeuron->m_forecast1 + nowNeuron->m_forecast2 > 0.65 / 100)
+			{
+				fund = fund * (1 - 0.15 / 100);
+				state = HOLD;
+			}
+			break;
+		}
+		default:
+			break;
+		}
+		nowNeuron = nowNeuron->m_nextData;
 	}
 }

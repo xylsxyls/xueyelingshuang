@@ -8,6 +8,7 @@
 #include <vector>
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "DataNeuron.h"
+#include "CSystem/CSystemAPI.h"
 
 // CFundInvestDlg ¶Ô»°¿ò
 class CFundInvestDlg : public CDialogEx
@@ -42,7 +43,7 @@ private:
 	DataNeuron* GetNeuron(const std::string& fundName, const std::string& time);
 
 private:
-	std::string m_fundPath = "D:\\Fund\\";
+	std::string m_fundPath = CSystem::GetEnvironment("xueyelingshuang") + "data\\Fund\\";
 	std::string m_fundName = "110022";
 	bool m_isOpenBuy = true;
 	bool m_isOpenSell = true;
@@ -53,4 +54,5 @@ public:
 	afx_msg void OnBnClickedButton4();
     afx_msg void OnBnClickedButton5();
 	afx_msg void OnBnClickedButton6();
+	afx_msg void OnBnClickedButton7();
 };

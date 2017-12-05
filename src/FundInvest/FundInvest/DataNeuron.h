@@ -9,9 +9,8 @@
 enum
 {
     FORECAST_DAYS = 3,
-	UP,
-	FLAT,
-	DOWN
+	HOLD,
+	WAIT,
 };
 
 class DataNeuron
