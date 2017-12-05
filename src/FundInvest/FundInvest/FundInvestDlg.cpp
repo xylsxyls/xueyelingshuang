@@ -115,7 +115,8 @@ BOOL CFundInvestDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 	FundHelper::init();
 
-	AfxMessageBox("需要加载");
+    LoadFund();
+	//AfxMessageBox("需要加载");
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -411,9 +412,10 @@ void CFundInvestDlg::OnBnClickedButton6()
 void CFundInvestDlg::OnBnClickedButton7()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	double fund = 10000;
-	DataNeuron* beginNeuron = GetNeuron("110022", "2017-01-01");
-	DataNeuron* endNeuron = GetNeuron("110022", "2017-11-01");
+	double fund = 50000;
+    double charge = 0;
+	DataNeuron* beginNeuron = GetNeuron("110022", "2016-11-26");
+	DataNeuron* endNeuron = GetNeuron("110022", "2017-11-26");
 	DataNeuron* nowNeuron = beginNeuron;
 	int32_t state = WAIT;
 
@@ -424,9 +426,11 @@ void CFundInvestDlg::OnBnClickedButton7()
 		case HOLD:
 		{
 			fund = fund * (1 + nowNeuron->m_dayChg);
-			if (!(nowNeuron->m_forecast1 >= 0 ||
-				nowNeuron->m_forecast1 + nowNeuron->m_forecast2 >= 0))
+            break;
+			if (!(nowNeuron->m_nextData->m_dayChg >= -0.0 ||
+                nowNeuron->m_nextData->m_dayChg + nowNeuron->m_nextData->m_nextData->m_dayChg >= -0.00))
 			{
+                charge += fund * 0.5 / 100;
 				fund = fund * (1 - 0.5 / 100);
 				state = WAIT;
 			}
@@ -434,8 +438,11 @@ void CFundInvestDlg::OnBnClickedButton7()
 		}
 		case WAIT:
 		{
-			if (nowNeuron->m_forecast1 + nowNeuron->m_forecast2 > 0.65 / 100)
+            state = HOLD;
+            break;
+            if (nowNeuron->m_nextData->m_dayChg > 0.0065)
 			{
+                charge += fund * 0.15 / 100;
 				fund = fund * (1 - 0.15 / 100);
 				state = HOLD;
 			}
@@ -446,4 +453,5 @@ void CFundInvestDlg::OnBnClickedButton7()
 		}
 		nowNeuron = nowNeuron->m_nextData;
 	}
+    double all = fund + charge;
 }
