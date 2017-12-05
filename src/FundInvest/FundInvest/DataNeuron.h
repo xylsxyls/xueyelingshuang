@@ -6,6 +6,11 @@
 #include <stdint.h>
 #include <map>
 
+enum
+{
+    FORECAST_DAYS = 3
+};
+
 class DataNeuron
 {
 public:
@@ -13,6 +18,8 @@ public:
 
 public:
 	double ForecastData(int32_t days);
+
+    bool Condition(double variance, DataNeuron* time);
 
 private:
 	void AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,

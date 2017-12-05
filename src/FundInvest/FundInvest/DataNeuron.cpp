@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "DataNeuron.h"
 #include "FundHelper.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 DataNeuron::DataNeuron()
 {
@@ -34,31 +35,42 @@ double DataNeuron::ForecastData(int32_t days)
 	//取出1以下的方差
 	for (auto itUpdata = mapUpData.begin(); itUpdata != mapUpData.end(); ++itUpdata)
 	{
-		if (itUpdata->first < 5)
-		{
-			all += (1 / itUpdata->first) * itUpdata->second.size();
-		}
+        std::vector<DataNeuron*>& vecNeuron = itUpdata->second;
+        int32_t index = -1;
+        while (index++ != vecNeuron.size() - 1)
+        {
+            if (Condition(itUpdata->first, vecNeuron[index]))
+            {
+                all += (1 / itUpdata->first) * itUpdata->second.size();
+            }
+        }
 	}
 
 	double forecast = 0;
 	for (auto itUpdata = mapUpData.begin(); itUpdata != mapUpData.end(); ++itUpdata)
 	{
-		if (itUpdata->first < 5)
-		{
-			std::vector<DataNeuron*>& vecNeuron = itUpdata->second;
-			int32_t index = -1;
-			while (index++ != vecNeuron.size() - 1)
-			{
-				forecast += vecNeuron[index]->m_dayChg * ((1 / itUpdata->first) / all);
-			}
-		}
+        std::vector<DataNeuron*>& vecNeuron = itUpdata->second;
+        int32_t index = -1;
+        while (index++ != vecNeuron.size() - 1)
+        {
+            if (Condition(itUpdata->first, vecNeuron[index]))
+            {
+                forecast += vecNeuron[index]->m_dayChg * ((1 / itUpdata->first) / all);
+            }
+        }
 	}
 
 	/**/
 
-	AfxMessageBox("1");
+    
+    //AfxMessageBox(CStringManager::Format("%.2lf%%", forecast * 100).c_str());
 	int x = 3;
-	return 0;
+    return forecast;
+}
+
+bool DataNeuron::Condition(double variance, DataNeuron* forecastNeuron)
+{
+    return variance < 1 && (forecastNeuron->m_time > IntDateTime("2013-01-01 00:00:00"));
 }
 
 void DataNeuron::AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,

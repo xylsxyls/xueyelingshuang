@@ -14,6 +14,7 @@
 #include "Cini/CiniAPI.h"
 #include "DataNeuron.h"
 #include "FundHelper.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -74,6 +75,7 @@ BEGIN_MESSAGE_MAP(CFundInvestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON2, &CFundInvestDlg::OnBnClickedButton2)
 	ON_BN_CLICKED(IDC_BUTTON3, &CFundInvestDlg::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON4, &CFundInvestDlg::OnBnClickedButton4)
+    ON_BN_CLICKED(IDC_BUTTON5, &CFundInvestDlg::OnBnClickedButton5)
 END_MESSAGE_MAP()
 
 
@@ -110,6 +112,8 @@ BOOL CFundInvestDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	FundHelper::init();
+
+    LoadFund();
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -204,7 +208,7 @@ void CFundInvestDlg::OnBnClickedButton2()
 {
 	// TODO:  在此添加控件通知处理程序代码
 
-	LoadFund();
+	//LoadFund();
 	/*int i = 1700 * 7000;
 	while (i-- != 0)
 	{
@@ -282,6 +286,55 @@ void CFundInvestDlg::OnBnClickedButton4()
 	//vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-17 00:00:00")]);
 	//vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-16 00:00:00")]);
 	
-	m_mapDataNeuron["110022"][IntDateTime("2017-11-24 00:00:00")].ForecastData(3);
+	double forcastNow = m_mapDataNeuron["110022"][IntDateTime("2017-12-01 00:00:00")].ForecastData(FORECAST_DAYS);
+    AfxMessageBox(CStringManager::Format("%.2lf%%", forcastNow).c_str());
 	int x = 3;
+}
+
+
+void CFundInvestDlg::OnBnClickedButton5()
+{
+    int32_t success = 0;
+    int32_t failed = 0;
+    // TODO:  在此添加控件通知处理程序代码
+    std::map<IntDateTime, DataNeuron>& mapNeuron = m_mapDataNeuron["110022"];
+    for (auto itNeuron = mapNeuron.begin(); itNeuron != mapNeuron.end(); ++itNeuron)
+    {
+        DataNeuron& neuron = itNeuron->second;
+        if (neuron.Condition(0, &neuron) && 
+            (neuron.m_time > IntDateTime("2017-11-01 00:00:00")))
+        {
+            double forcastData = neuron.ForecastData(FORECAST_DAYS);
+            //不为0才算
+            if (!(forcastData < 0.0001 && forcastData > -0.0001) && neuron.m_nextData != nullptr)
+            {
+                double nextChg = neuron.m_nextData->m_dayChg;
+                if (forcastData * nextChg > 0)
+                {
+                    if (forcastData > 0 && nextChg < 0.0065)
+                    {
+                        ++failed;
+                    }
+                    else
+                    {
+                        ++success;
+                    }
+                }
+                else if (forcastData * nextChg < 0)
+                {
+                    ++failed;
+                    /*if (nextChg < 0.0003 && nextChg > -0.0003)
+                    {
+                        ++success;
+                    }
+                    else
+                    {
+                        
+                    }*/
+                }
+            }
+        }
+    }
+
+    AfxMessageBox(CStringManager::Format("%lf", success / (double)(success + failed)).c_str());
 }
