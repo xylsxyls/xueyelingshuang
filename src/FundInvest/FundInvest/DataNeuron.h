@@ -8,7 +8,10 @@
 
 enum
 {
-    FORECAST_DAYS = 3
+    FORECAST_DAYS = 3,
+	UP,
+	FLAT,
+	DOWN
 };
 
 class DataNeuron
@@ -39,6 +42,10 @@ public:
 	DataNeuron* m_nextData = nullptr;
 	double m_unitNetValue = 0;
 	double m_allNetValue = 0;
+
+	double m_forecast1 = 0;
+	double m_forecast2 = 0;
+	double m_forecast3 = 0;
 
 private:
 	std::string m_fundName;

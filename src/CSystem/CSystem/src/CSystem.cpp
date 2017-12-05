@@ -271,6 +271,11 @@ std::string CSystem::GetClipboardData(HWND hwnd)
 	return pBuf;
 }
 
+std::string CSystem::GetEnvironment(const char* name)
+{
+	return ::getenv(name);
+}
+
 /*
 int main(){
 	//CSystem system;

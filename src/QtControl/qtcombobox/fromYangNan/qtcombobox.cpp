@@ -6,12 +6,13 @@
 #include <Windows.h>
 #include "CheckBox.h"
 #include "RadioButton.h"
-#include "Label.h"
+#include "PointLabel.h"
 #include "CollapseMenu.h"
 #include "CustomStyle.h"
 #include <QTextDocument>
 #include "HtmlComboBox.h"
 #include "IdItemComboBox.h"
+#include "D:\\SendToMessageTest.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -86,8 +87,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pButton->setFontSize(18);
 	pButton->setTextOrigin(20);
 
-	Label* pLabel = new Label(this);
-
+	PointLabel* pLabel = new PointLabel(this);
 	pLabel->setGeometry(200, 300, 80, 50);
 	pLabel->setBorderImage(QString::fromLocal8Bit("D:/hot.png"), 4, 1, 2, 4);
 	pLabel->setFontFace(QString::fromLocal8Bit("ºÚÌå"));
@@ -162,7 +162,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//QObject::connect(idItemBox->m_pSendWidget, SIGNAL(currentTextChanged3(const QString&)), this, SLOT(currentTextChanged6(const QString&)));
 	idItemBox->setGeometry(200, 200, 100, 30);
 	idItemBox->addItem(5, "123");
-	idItemBox->addItem(6, "124");
+	idItemBox->addItem(5, "124");
 	idItemBox->addItem(7, "125");
 	idItemBox->addItem(8, "125");
 	QList<qint64> idList;
@@ -175,7 +175,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	textList.push_back("12314");
 	idItemBox->addItems(idList, textList);
 	QObject::connect(idItemBox, &IdItemComboBox::currentItemChanged, this, &qtcombobox::idComboBoxItemChanged);
-	//idItemBox->setEditable(true);
+	idItemBox->setEditable(true);
 
 	QWidget* ss = 0;
 	ComboBox* ssss = (ComboBox*)ss;
@@ -198,5 +198,7 @@ void qtcombobox::currentTextChanged6(const QString& str)
 
 void qtcombobox::idComboBoxItemChanged(qint64 id, const QString& str)
 {
+	std::string ss = str.toStdString();
+	RCSend("id = %d,str = %s", (int32_t)id, ss.c_str());
 	int x = 3;
 }

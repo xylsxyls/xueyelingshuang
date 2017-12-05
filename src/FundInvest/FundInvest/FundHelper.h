@@ -2,6 +2,7 @@
 #include <string>
 #include <stdint.h>
 #include <map>
+#include "IntDateTime/IntDateTimeAPI.h"
 
 #define GETINFO FundHelper::GetInfo
 
@@ -13,7 +14,10 @@ enum
 	ALL_NET_VALUE,
 	FUND_NAME,
 	IS_OPEN_BUY,
-	IS_OPEN_SELL
+	IS_OPEN_SELL,
+	FORECAST1,
+	FORECAST2,
+	FORECAST3,
 };
 
 class FundHelper
@@ -25,6 +29,8 @@ public:
 	static std::string DoubleToString(const double& x);
 
 	static std::string BoolToString(const bool& x);
+
+	static std::string TimeToString(const IntDateTime& time);
 
 	static std::string GetInfo(int32_t infoNum);
 

@@ -39,6 +39,8 @@ public:
 	static int GetCPUCount();
 	//?获取剪贴板内容
 	static std::string GetClipboardData(HWND hwnd);
+	//?获取环境变量值
+	static std::string GetEnvironment(const char* name);
 
 public:
     static bool ifRedirFrobid;

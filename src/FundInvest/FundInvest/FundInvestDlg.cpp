@@ -76,6 +76,7 @@ BEGIN_MESSAGE_MAP(CFundInvestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON3, &CFundInvestDlg::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON4, &CFundInvestDlg::OnBnClickedButton4)
     ON_BN_CLICKED(IDC_BUTTON5, &CFundInvestDlg::OnBnClickedButton5)
+	ON_BN_CLICKED(IDC_BUTTON6, &CFundInvestDlg::OnBnClickedButton6)
 END_MESSAGE_MAP()
 
 
@@ -254,6 +255,24 @@ void CFundInvestDlg::LoadFund()
 	}
 }
 
+DataNeuron* CFundInvestDlg::GetNeuron(const std::string& fundName, const std::string& time)
+{
+	auto& mapNeuron = m_mapDataNeuron[fundName];
+	IntDateTime intTime = IntDateTime(time + " 00:00:00");
+
+	int32_t index = -1;
+	while (index++ != 100)
+	{
+		intTime = intTime + 24 * 60 * 60 * index;
+		auto itNeuron = mapNeuron.find(intTime);
+		if (itNeuron != mapNeuron.end())
+		{
+			return &(itNeuron->second);
+		}
+	}
+	return nullptr;
+}
+
 void CFundInvestDlg::OnBnClickedButton3()
 {
 	// TODO:  在此添加控件通知处理程序代码
@@ -287,7 +306,7 @@ void CFundInvestDlg::OnBnClickedButton4()
 	//vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-16 00:00:00")]);
 	
 	double forcastNow = m_mapDataNeuron["110022"][IntDateTime("2017-12-01 00:00:00")].ForecastData(FORECAST_DAYS);
-    AfxMessageBox(CStringManager::Format("%.2lf%%", forcastNow).c_str());
+    AfxMessageBox(CStringManager::Format("%.2lf%%", forcastNow * 100).c_str());
 	int x = 3;
 }
 
@@ -337,4 +356,45 @@ void CFundInvestDlg::OnBnClickedButton5()
     }
 
     AfxMessageBox(CStringManager::Format("%lf", success / (double)(success + failed)).c_str());
+}
+
+
+void CFundInvestDlg::OnBnClickedButton6()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	Cini ini(m_fundPath + "110022.ini");
+	DataNeuron* beginNeuron = GetNeuron("110022", "2010-08-20");
+
+	while (beginNeuron)
+	{
+		std::string timeSection = FundHelper::TimeToString(beginNeuron->m_time.toString());
+		
+		double nextForecast1 = beginNeuron->ForecastData(FORECAST_DAYS);
+		beginNeuron->m_forecast1 = nextForecast1;
+		ini.WriteIni(GETINFO(FORECAST1),
+					 FundHelper::DoubleToString(beginNeuron->m_forecast1),
+					 timeSection);
+
+		DataNeuron* nextNeuron1 = ::new DataNeuron;
+		nextNeuron1->m_dayChg = nextForecast1;
+		nextNeuron1->m_preData = beginNeuron;
+		double nextForecast2 = nextNeuron1->ForecastData(FORECAST_DAYS);
+		beginNeuron->m_forecast2 = nextForecast2;
+		ini.WriteIni(GETINFO(FORECAST2),
+					 FundHelper::DoubleToString(beginNeuron->m_forecast2),
+					 timeSection);
+
+		DataNeuron* nextNeuron2 = ::new DataNeuron;
+		nextNeuron2->m_dayChg = nextForecast2;
+		nextNeuron2->m_preData = nextNeuron1;
+		double nextForecast3 = nextNeuron2->ForecastData(FORECAST_DAYS);
+		beginNeuron->m_forecast3 = nextForecast3;
+		ini.WriteIni(GETINFO(FORECAST3),
+					 FundHelper::DoubleToString(beginNeuron->m_forecast3),
+					 timeSection);
+
+		delete nextNeuron1;
+		delete nextNeuron2;
+		beginNeuron = beginNeuron->m_nextData;
+	}
 }

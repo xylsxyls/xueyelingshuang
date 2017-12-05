@@ -19,6 +19,17 @@ std::string FundHelper::BoolToString(const bool& x)
 	return CStringManager::Format("%d", x);
 }
 
+std::string FundHelper::TimeToString(const IntDateTime& time)
+{
+	std::string result = time.toString();
+	int i = 9;
+	while (i-- != 0)
+	{
+		result.pop_back();
+	}
+	return result;
+}
+
 std::string FundHelper::GetInfo(int32_t infoNum)
 {
 	return s_mapData[infoNum];
@@ -33,4 +44,7 @@ void FundHelper::init()
 	s_mapData[FUND_NAME] = "fund_name";
 	s_mapData[IS_OPEN_BUY] = "is_open_buy";
 	s_mapData[IS_OPEN_SELL] = "is_open_sell";
+	s_mapData[FORECAST1] = "forecast_1";
+	s_mapData[FORECAST2] = "forecast_2";
+	s_mapData[FORECAST3] = "forecast_3";
 }

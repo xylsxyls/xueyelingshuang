@@ -74,7 +74,7 @@ public:
 	*/
 	void addItem(const QString& text);
 
-	/** 设置整串
+	/** 增加整串
 	@param [in] textList 文本
 	*/
 	void addItems(const QStringList& textList);
@@ -85,19 +85,19 @@ public:
 	*/
 	void setListBackgroundColor(const QColor& color, bool rePaint = false);
 
-	/** 设置边框粗度
+	/** 设置下拉框边框粗度
 	@param [in] width 边框粗度
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListBorderWidth(int32_t width, bool rePaint = false);
 
-	/** 设置边框颜色
+	/** 设置下拉框边框颜色
 	@param [in] color 常态
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListBorderColor(const QColor& color, bool rePaint = false);
 
-	/** 设置节点边框颜色（list控件没有按下属性）
+	/** 设置下拉框节点边框颜色（list控件没有按下属性）
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
 	@param [in] disabledColor 禁用颜色
@@ -108,7 +108,7 @@ public:
 								const QColor& disabledColor,
 								bool rePaint = false);
 
-	/** 设置节点背景颜色（list控件没有按下属性）
+	/** 设置下拉框节点背景颜色（list控件没有按下属性）
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
 	@param [in] disabledColor 禁用颜色
@@ -119,13 +119,13 @@ public:
 									const QColor& disabledColor,
 									bool rePaint = false);
 
-	/** 设置节点边框粗度
+	/** 设置下拉框节点边框粗度
 	@param [in] width 边框粗度
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListItemBorderWidth(int32_t width, bool rePaint = false);
 
-	/** 设置节点背景图片，和边框颜色不用存
+	/** 设置下拉框节点背景图片，和边框颜色不用存
 	@param [in] borderImgPath 背景图片路径，如果路径中必须使用正斜杠
 	@param [in] borderImgStateCount 上下平分几份
 	@param [in] borderImgNormal 非选中常态图片，如果填1表示将图片纵向分割4份或8份，选最上面的第一份
@@ -140,13 +140,13 @@ public:
 								int32_t borderImgDisabled = 4,
 								bool rePaint = false);
 
-	/** 设置节点高度
+	/** 设置下拉框节点高度
 	@param [in] height 节点高度
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListItemHeight(int32_t height, bool rePaint = false);
 
-	/** 设置文字颜色
+	/** 设置下拉框文字颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
 	@param [in] disabledColor 禁用颜色
@@ -157,25 +157,25 @@ public:
 						  const QColor& disabledColor,
 						  bool rePaint = false);
 
-	/** 设置字体
+	/** 设置下拉框字体
 	@param [in] fontName 字体名
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListFontFace(const QString& fontName, bool rePaint = false);
 
-	/** 设置字体大小
+	/** 设置下拉框字体大小
 	@param [in] fontSize 字体大小
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListFontSize(int32_t fontSize, bool rePaint = false);
 
-	/** 设置文本偏移量
+	/** 设置下拉框文本偏移量
 	@param [in] origin 文本偏移量
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListTextOrigin(int32_t origin, bool rePaint = false);
 
-	/** 节点到窗口的四个外边距
+	/** 节点到下拉框窗口的四个外边距
 	@param [in] leftOrigin 左侧偏移量
 	@param [in] topOrigin 上侧偏移量
 	@param [in] rightOrigin 右侧偏移量
