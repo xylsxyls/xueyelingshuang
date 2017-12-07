@@ -2,7 +2,6 @@
 #include <QPainter>
 #include <QTextDocument>
 #include "ListWidget.h"
-#include "Label.h"
 #include <QPainter>
 #include <QProxyStyle>
 #include <QAbstractTextDocumentLayout>
