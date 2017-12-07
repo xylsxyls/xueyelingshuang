@@ -60,7 +60,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setListTextColor(QColor(255, 0, 255, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255));
 	pBox->setListFontFace(QString::fromLocal8Bit("黑体"));
 	pBox->setListFontSize(15);
-	pBox->setListTextOrigin(26);
+	pBox->setListTextOrigin(25);
 	pBox->setListItemAroundOrigin(5, 5, 5, 5);
 	pBox->setDropDownTopRightOrigin(10, 20);
 	pBox->setListOrigin(50);
@@ -145,9 +145,47 @@ qtcombobox::qtcombobox(QWidget *parent)
 
 	HtmlComboBox* box = new HtmlComboBox(this);
 	box->setGeometry(20, 20, 100, 30);
+
+	box->installEventFilter(box);
+	box->setMouseTracking(true);
+	//box->setBorderWidth(1);
+	//box->setBorderRadius(8);
+	box->setBorderImage("D:/dropdown.png", 4, 1, 2, 3, 4);
+	box->setDropDownSize(20, 26);
+	box->setDropDownImage("D:/hot.png", 8, 1, 2, 4, 5, 8);
+	box->setTextColor(QColor(255, 0, 0, 255),
+					  QColor(0, 0, 255, 255),
+					  QColor(255, 0, 255, 255),
+					  QColor(255, 0, 0, 255));
+	box->setDropDownBorderWidth(0);
+	box->setTextOrigin(10);
+
+	box->setListBorderWidth(1);
+	box->setListBorderColor(QColor(67, 132, 251, 255));
+
+	//pBox->setListItemBorderWidth(2);
+	//box->setListItemBorderImage("D:/item.png", 4, 1, 2, 4);
+	//pBox->setListItemBackgroundColor(QColor(0, 50, 255, 255), QColor(0, 255, 50, 255), QColor(255, 0, 255, 255));
+	box->setListItemHeight(22);
+	box->setListBackgroundColor(QColor(18, 23, 31));
+
+	box->setListTextColor(QColor(255, 0, 255, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255));
+	box->setListFontFace(QString::fromLocal8Bit("黑体"));
+	box->setListFontSize(18);
+	box->setListTextOrigin(20);
+	box->setListItemAroundOrigin(5, 5, 5, 5);
+	box->setDropDownTopRightOrigin(10, 20);
+	box->setListItemBackgroundColor(QColor(0, 0, 100, 255), QColor(100, 100, 0, 255), QColor(255, 0, 255, 255));
+	box->setListOrigin(50);
+	box->setAttribute(Qt::WA_TranslucentBackground);
+	box->setWindowFlags(Qt::FramelessWindowHint);
+
 	box->addItem("123456");
-	box->addItem("123454");
+	box->addItem("12345222222222222222222222222224");
 	box->addItem("123455");
+	box->addItem("df<font color = \"red\">15m2</font>123sssd54fewwasf");
+	box->addItem(QString::fromStdWString(L"水电费"));
+	
 
 	/*Label* lab = new Label(this);
 	lab->setGeometry(200, 10, 300, 30);
@@ -180,6 +218,13 @@ qtcombobox::qtcombobox(QWidget *parent)
 	QWidget* ss = 0;
 	ComboBox* ssss = (ComboBox*)ss;
 	ComboBox* sss = dynamic_cast<ComboBox*>(ss);
+
+	Label* pLab = new Label(this);
+	pLab->setText("asdf<font color = \"red\">15ms</font>");
+	pLab->setGeometry(400, 50, 100, 30);
+	pLab->setFontSize(18);
+	pLab->setBackgroundColor(QColor(255, 255, 0, 255), QColor(0, 255, 0, 255), QColor(255, 255, 0, 255));
+	pLab->setTextColor(QColor(0, 255, 255, 255), QColor(255, 100, 0, 255), QColor(255, 255, 0, 255));
 
 	//idItemBox->show();
 	

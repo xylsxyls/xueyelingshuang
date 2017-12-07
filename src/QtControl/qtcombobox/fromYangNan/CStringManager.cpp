@@ -135,6 +135,25 @@ size_t CStringManager::Replace(std::string & str, const std::string & oldstr, co
 	return count;
 }
 
+size_t CStringManager::Replace(std::wstring & str, const std::wstring & oldstr, const std::wstring & newstr)
+{
+	size_t count = 0;
+	size_t pos = 0;
+	while (true)
+	{
+		pos = str.find(oldstr, pos);
+		if (pos != std::wstring::npos)
+		{
+			str.replace(pos, oldstr.length(), newstr);
+			pos += newstr.length();
+			++count;
+		}
+		else
+			break;
+	}
+	return count;
+}
+
 size_t CStringManager::Replace(std::string & str, char ch1, char ch2)
 {
 	size_t count = 0;

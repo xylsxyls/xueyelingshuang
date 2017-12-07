@@ -42,6 +42,8 @@ public:
 
 	static size_t Replace(std::string & str, const std::string & oldstr, const std::string & newstr);
 
+	static size_t Replace(std::wstring & str, const std::wstring & oldstr, const std::wstring & newstr);
+
 	static size_t Replace(std::string & str, char ch1, char ch2);
 
 	static void Format(std::string & str, const char * fmt, ...);
