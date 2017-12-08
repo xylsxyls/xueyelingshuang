@@ -30,24 +30,15 @@ public:
 											text.toStdWString().c_str());
 		doc.setHtml(QString::fromStdWString(htmlString));
 
-		//doc.setDefaultStyleSheet("");
-
-		QPen savedPen = painter->pen();
-		painter->setPen(QPen(pal.brush(QPalette::Text), savedPen.widthF()));
-		painter->setFont(painter->font());
-		//toption.widget->
-
 		QRect drawRect = rect;
 		drawRect.setLeft(rect.left() + m_htmlComboBox->m_comboBoxOrigin);
 		painter->translate(drawRect.topLeft());
-		//painter->set
 
 		doc.setDefaultFont(painter->font());
 
 		QAbstractTextDocumentLayout::PaintContext context;
 		doc.documentLayout()->draw(painter, context);
 
-		painter->setPen(savedPen);
 		painter->restore();
 	}
 

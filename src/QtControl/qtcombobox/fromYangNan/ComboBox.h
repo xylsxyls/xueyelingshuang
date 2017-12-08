@@ -75,7 +75,7 @@ public:
 	void addItem(const QString& text);
 
 	/** 增加整串
-	@param [in] textList 文本
+	@param [in] textList 文本列表
 	*/
 	void addItems(const QStringList& textList);
 

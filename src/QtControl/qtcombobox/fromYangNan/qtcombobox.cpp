@@ -13,6 +13,7 @@
 #include "HtmlComboBox.h"
 #include "IdItemComboBox.h"
 #include "D:\\SendToMessageTest.h"
+#include "HtmlLabelComboBox.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -226,6 +227,44 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pLab->setBackgroundColor(QColor(255, 255, 0, 255), QColor(0, 255, 0, 255), QColor(255, 255, 0, 255));
 	pLab->setTextColor(QColor(0, 255, 255, 255), QColor(255, 100, 0, 255), QColor(255, 255, 0, 255));
 
+	HtmlLabelComboBox* labelBox = new HtmlLabelComboBox(this);
+	labelBox->addItem("asdf<font color = \"red\">15ms</font>");
+	labelBox->addItem("1234562222222222222222");
+	labelBox->addItem("123454");
+	labelBox->addItem("asdf<font color = \"red\">15m22222222222222s</font>");
+	labelBox->addItem("123");
+
+	labelBox->setGeometry(400, 200, 100, 30);
+
+	labelBox->setBorderImage("D:/dropdown.png", 4, 1, 2, 3, 4);
+	labelBox->setDropDownSize(20, 26);
+	labelBox->setDropDownImage("D:/hot.png", 8, 1, 2, 4, 5, 8);
+	labelBox->setTextColor(QColor(255, 0, 0, 255),
+						   QColor(0, 0, 255, 255),
+						   QColor(255, 0, 255, 255),
+						   QColor(255, 0, 0, 255));
+	labelBox->setDropDownBorderWidth(0);
+	labelBox->setTextOrigin(10);
+
+	labelBox->setListBorderWidth(1);
+	labelBox->setListBorderColor(QColor(67, 132, 251, 255));
+
+	//pBox->setListItemBorderWidth(2);
+	//box->setListItemBorderImage("D:/item.png", 4, 1, 2, 4);
+	//pBox->setListItemBackgroundColor(QColor(0, 50, 255, 255), QColor(0, 255, 50, 255), QColor(255, 0, 255, 255));
+	labelBox->setListItemHeight(22);
+	labelBox->setListBackgroundColor(QColor(18, 23, 31));
+
+	labelBox->setListTextColor(QColor(255, 0, 255, 255), QColor(255, 0, 255, 255));
+	labelBox->setListFontFace(QString::fromLocal8Bit("ºÚÌå"));
+	labelBox->setListFontSize(18);
+	labelBox->setListTextOrigin(20);
+	labelBox->setListItemAroundOrigin(5, 5, 5, 5);
+	labelBox->setDropDownTopRightOrigin(10, 20);
+	labelBox->setListItemBackgroundColor(QColor(0, 0, 100, 255), QColor(100, 100, 0, 255), QColor(255, 0, 255, 255));
+	labelBox->setListOrigin(50);
+	labelBox->setAttribute(Qt::WA_TranslucentBackground);
+	labelBox->setWindowFlags(Qt::FramelessWindowHint);
 	//idItemBox->show();
 	
 	int x = 3;

@@ -105,6 +105,9 @@
     <Filter Include="Label\PointLabel">
       <UniqueIdentifier>{25eaaa47-6f34-4a93-af85-c76b95e90284}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ComboBox\HtmlLabelComboBox">
+      <UniqueIdentifier>{abdf5446-314d-4134-85e0-a786619d9544}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -194,6 +197,9 @@
     <ClCompile Include="PointLabel.cpp">
       <Filter>Label\PointLabel</Filter>
     </ClCompile>
+    <ClCompile Include="HtmlLabelComboBox.cpp">
+      <Filter>ComboBox\HtmlLabelComboBox</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -281,6 +287,9 @@
     </ClInclude>
     <ClInclude Include="PointLabel.h">
       <Filter>Label\PointLabel</Filter>
+    </ClInclude>
+    <ClInclude Include="HtmlLabelComboBox.h">
+      <Filter>ComboBox\HtmlLabelComboBox</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
