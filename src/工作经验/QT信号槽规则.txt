@@ -1,0 +1,9 @@
+QObject::connect(m_gameModeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onGameModeChanged(int)));
+
+两个都必须把形参类型带上，前一个不能写类名冒号 QComboBox::currentIndexChanged(int)是错的
+
+但是后一个的形参可以和前一个不一样，但不可以函数有形参，后一个写的时候没有
+
+也可以用这种方式
+QObject::connect(m_gameSettingWebView, &QWebView::linkClicked, this, &GameInfoWidget::onGameSettingLinkClicked);
+要求两个参数列表完全相同，编译器会检查，但是有个缺点，同名不同参的信号或槽函数无法区分，如果基类有同名不同参的信号必须用第一种方式

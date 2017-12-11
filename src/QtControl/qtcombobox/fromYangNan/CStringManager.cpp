@@ -135,6 +135,17 @@ size_t CStringManager::Replace(std::string & str, const std::string & oldstr, co
 	return count;
 }
 
+std::string CStringManager::Replace(const char * str, const std::string & oldstr, const std::string & newstr)
+{
+	if (str == nullptr)
+	{
+		return std::string();
+	}
+	std::string result = str;
+	Replace(result, oldstr, newstr);
+	return result;
+}
+
 size_t CStringManager::Replace(std::wstring & str, const std::wstring & oldstr, const std::wstring & newstr)
 {
 	size_t count = 0;

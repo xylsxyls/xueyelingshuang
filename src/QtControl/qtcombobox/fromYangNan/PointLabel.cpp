@@ -4,7 +4,7 @@ PointLabel::PointLabel(QWidget* parent) :
 Label(parent),
 m_leftOrigin(0)
 {
-
+	INIT(L"");
 }
 
 PointLabel::~PointLabel()

@@ -4,7 +4,7 @@ LineEdit::LineEdit(QWidget* parent) :
 ControlShow(parent)
 {
 	ControlBase::setControlShow(this);
-	init(L"QLineEdit", L"");
+	INIT(L"");
 	setDefault();
 }
 

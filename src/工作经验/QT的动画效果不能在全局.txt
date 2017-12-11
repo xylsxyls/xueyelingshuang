@@ -1,0 +1,28 @@
+QT动画效果如果要做parent为null的话，必须把该控件放到一个背景透明的QWidget上才有用，不能直接上控件
+
+m_listWidget->repaint();
+	QWidget* pWidget = new QWidget(NULL);
+	pWidget->setGeometry(0, 0, 1000, 1000);
+	m_listWidget->setParent(pWidget);
+	
+	pWidget->setWindowFlags(Qt::FramelessWindowHint);//无边框
+	pWidget->setAttribute(Qt::WA_TranslucentBackground);//背景透明
+
+	m_listWidget->setFrameShape(QFrame::NoFrame);
+	m_listWidget->setWindowFlags(Qt::FramelessWindowHint);//无边框
+	m_listWidget->setGeometry(100, 10, 100, 500);
+	m_listWidget->addItem("123456789");
+	m_listWidget->addItem("123456789");
+	//m_listWidget->show();
+	pWidget->show();
+	QPropertyAnimation *pAnimation = new QPropertyAnimation(m_listWidget, "geometry");
+
+	//int x = (m_listWidget->availableGeometry().width() - width()) / 2;
+	//int y = (m_listWidget->availableGeometry().height() - height()) / 2;
+
+	pAnimation->setDuration(1000);
+	pAnimation->setStartValue(QRect(100, 0, m_listWidget->width(), m_listWidget->height()));
+	pAnimation->setEndValue(QRect(100, 200, m_listWidget->width(), m_listWidget->height()));
+	pAnimation->setEasingCurve(QEasingCurve::OutElastic);
+	pAnimation->start(QAbstractAnimation::DeleteWhenStopped);
+	//m_listWidget->setGeometry(100, 10, 100, 500);

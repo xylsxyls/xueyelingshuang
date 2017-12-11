@@ -1,0 +1,32 @@
+QT中放在后面的可能被改为private
+
+class QControlVir : public QLineEdit
+{
+public:
+	/** 构造函数
+	@param [in] parent 父窗口指针
+	*/
+	QControlVir(QWidget* parent = NULL) :QLineEdit(parent){}
+};
+class QControlBase{};
+class QControlFont : public QControlBase{};
+class QControlSelf : public QControlBase{};
+
+//QControlVir必须放第一
+class CPasswordInputBox : public QControlVir,QControlFont, QControlSelf
+{
+    Q_OBJECT
+public:
+    CPasswordInputBox(QWidget* parent = NULL);
+    ~CPasswordInputBox();
+
+private:
+    COriginalButton* mMaskButton;
+
+    void layoutControl();
+    void resizeEvent(QResizeEvent *e);
+
+private slots:
+    void onMaskButtonClicked();
+
+};

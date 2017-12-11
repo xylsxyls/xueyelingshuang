@@ -1,0 +1,1 @@
+在view()->parent()的消息里，install之后到eventFilter中，QEvent::Leave

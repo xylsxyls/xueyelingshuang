@@ -9,7 +9,7 @@ ControlShow(parent),
 m_pCustomStyle(nullptr)
 {
 	ControlBase::setControlShow(this);
-	init(L"QMenu", L"item");
+	INIT(L"item");
 	m_pCustomStyle = new CustomStyle;
 	if (m_pCustomStyle != nullptr)
 	{

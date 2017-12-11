@@ -4,7 +4,7 @@ RadioButton::RadioButton(QWidget* parent) :
 ControlShow(parent)
 {
 	ControlBase::setControlShow(this);
-	init(L"QRadioButton", L"indicator");
+	INIT(L"indicator");
 }
 
 RadioButton::~RadioButton()

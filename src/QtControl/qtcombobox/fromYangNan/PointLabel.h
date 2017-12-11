@@ -5,6 +5,7 @@
 */
 class PointLabel : public Label
 {
+	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针

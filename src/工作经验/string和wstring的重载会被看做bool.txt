@@ -1,0 +1,4 @@
+如果两个函数重载只有string，wstring，bool不同，则传入的string，wstring会被看做bool
+void a(std::string x);
+void a(bool x);
+可以编译通过，但是传入string的时候进入到bool当中

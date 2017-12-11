@@ -5,6 +5,7 @@
 IdItemComboBox::IdItemComboBox(QWidget* parent) :
 ComboBox(parent)
 {
+	INIT(L"drop-down");
 	QObject::connect(this, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(curIndexChanged(const QString&)));
 }
 

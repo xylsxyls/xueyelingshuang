@@ -39,3 +39,15 @@ bool QssHelper::GetPicHeight(const std::wstring& path, int32_t count, std::vecto
 
 	return true;
 }
+
+template <typename QControl>
+void QssHelper::init(const std::wstring& itemName, QControl* control)
+{
+	control->m_className = typeid(QControl).name();
+	int32_t count = 6;
+	while (count-- != 0)
+	{
+		control->m_className.pop_front();
+	}
+	control->m_itemName = itemName;
+}

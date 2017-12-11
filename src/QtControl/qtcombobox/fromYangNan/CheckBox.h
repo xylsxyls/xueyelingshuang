@@ -12,6 +12,7 @@ class CheckBox :
 	public ControlBorderForNormalHoverPressedDisabledAndCheck < QCheckBox >,
 	public ControlBackgroundForNormalHoverPressedDisabledAndCheck < QCheckBox >
 {
+	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针

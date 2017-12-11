@@ -41,6 +41,8 @@ public:
 
 	static size_t Replace(std::string & str, const std::string & oldstr, const std::string & newstr);
 
+	static std::string Replace(const char * str, const std::string & oldstr, const std::string & newstr);
+
 	static size_t Replace(std::wstring & str, const std::wstring & oldstr, const std::wstring & newstr);
 
 	static size_t Replace(std::string & str, char ch1, char ch2);

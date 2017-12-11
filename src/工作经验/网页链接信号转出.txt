@@ -1,0 +1,3 @@
+m_myToolWebView->load(QUrl("http://www.sougou.com/"));
+		m_myToolWebView->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
+		QObject::connect(m_myToolWebView, SIGNAL(linkClicked(const QUrl&)), this, SIGNAL(onMyToolClicked(const QUrl&)));

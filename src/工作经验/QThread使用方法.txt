@@ -1,0 +1,55 @@
+class Dummy :public QObject
+{
+	Q_OBJECT
+public:
+	Dummy(QObject* parent = 0) :QObject(parent)     {}
+	public slots :
+		void emitsig()
+	{
+		emit sig();
+	}
+signals:
+	void sig();
+};
+
+class Object :public QObject
+{
+	Q_OBJECT
+public:
+	Object(QWebView* webView)
+	{
+		m_webView = webView;
+	}
+	public slots :
+		void slot()
+	{
+		//qDebug() << "from thread slot:" << QThread::currentThreadId();
+		RCSend("123456");
+		QWebView* p = new QWebView;
+		p->load(QUrl("http://www.baidu.com/"));
+		//m_webView->load(QUrl("http://www.baidu.com/"));
+		//m_webView->show();
+	}
+public:
+
+	QWebView* m_webView;
+};
+
+
+
+//网页
+	QWebView* webView = new QWebView(m_gameSettingWidget);
+
+	Dummy* dummy = new Dummy;
+	Object* obj = new Object(webView);
+	QThread* thread = new QThread;
+	
+	if (webView != nullptr)
+	{
+		webView->setGeometry(0, GAME_SETTING_WEBVIEW_ORIGIN, GAME_SETTING_WEBVIEW_WIDTH, GAME_SETTING_WEBVIEW_HEIGHT);
+
+		obj->moveToThread(thread);
+		QObject::connect(dummy, SIGNAL(sig()), obj, SLOT(slot())); // 这里的slot()函数，相当于run()函数的作用
+		thread->start();
+		dummy->emitsig();
+	}

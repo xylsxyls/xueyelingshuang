@@ -105,8 +105,8 @@
     <Filter Include="Label\PointLabel">
       <UniqueIdentifier>{25eaaa47-6f34-4a93-af85-c76b95e90284}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ComboBox\HtmlLabelComboBox">
-      <UniqueIdentifier>{abdf5446-314d-4134-85e0-a786619d9544}</UniqueIdentifier>
+    <Filter Include="ComboBox\HtmlLabelRenderComboBox">
+      <UniqueIdentifier>{3f0ed699-e2b4-4bb9-9173-9b6fc21a4fa5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -197,8 +197,53 @@
     <ClCompile Include="PointLabel.cpp">
       <Filter>Label\PointLabel</Filter>
     </ClCompile>
-    <ClCompile Include="HtmlLabelComboBox.cpp">
-      <Filter>ComboBox\HtmlLabelComboBox</Filter>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Label.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CheckBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RadioButton.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LineEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PointLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ListWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ListWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CollapseMenu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Menu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="HtmlLabelRenderComboBox.cpp">
+      <Filter>ComboBox\HtmlLabelRenderComboBox</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_HtmlLabelRenderComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -241,6 +286,30 @@
     <CustomBuild Include="IdItemComboBox.h">
       <Filter>ComboBox\IdItemComboBox</Filter>
     </CustomBuild>
+    <CustomBuild Include="Label.h">
+      <Filter>Label</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HtmlComboBox.h">
+      <Filter>ComboBox\HtmlComboBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RadioButton.h">
+      <Filter>RadioButton</Filter>
+    </CustomBuild>
+    <CustomBuild Include="LineEdit.h">
+      <Filter>LineEdit</Filter>
+    </CustomBuild>
+    <CustomBuild Include="PointLabel.h">
+      <Filter>Label\PointLabel</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CollapseMenu.h">
+      <Filter>Menu\CollapseMenu</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Menu.h">
+      <Filter>Menu</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HtmlLabelRenderComboBox.h">
+      <Filter>ComboBox\HtmlLabelRenderComboBox</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlFont.h">
@@ -252,29 +321,11 @@
     <ClInclude Include="ControlSelf.h">
       <Filter>ControlBase\ControlSelf</Filter>
     </ClInclude>
-    <ClInclude Include="HtmlComboBox.h">
-      <Filter>ComboBox\HtmlComboBox</Filter>
-    </ClInclude>
     <ClInclude Include="ControlShow.h">
       <Filter>ControlShow</Filter>
     </ClInclude>
     <ClInclude Include="ControlBase.h">
       <Filter>ControlBase</Filter>
-    </ClInclude>
-    <ClInclude Include="Label.h">
-      <Filter>Label</Filter>
-    </ClInclude>
-    <ClInclude Include="LineEdit.h">
-      <Filter>LineEdit</Filter>
-    </ClInclude>
-    <ClInclude Include="Menu.h">
-      <Filter>Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="CollapseMenu.h">
-      <Filter>Menu\CollapseMenu</Filter>
-    </ClInclude>
-    <ClInclude Include="RadioButton.h">
-      <Filter>RadioButton</Filter>
     </ClInclude>
     <ClInclude Include="ControlBorder.h">
       <Filter>ControlBase\ControlBorder</Filter>
@@ -284,12 +335,6 @@
     </ClInclude>
     <ClInclude Include="ListWidgetIdItem.h">
       <Filter>ListWidget\ListWidgetIdItem</Filter>
-    </ClInclude>
-    <ClInclude Include="PointLabel.h">
-      <Filter>Label\PointLabel</Filter>
-    </ClInclude>
-    <ClInclude Include="HtmlLabelComboBox.h">
-      <Filter>ComboBox\HtmlLabelComboBox</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

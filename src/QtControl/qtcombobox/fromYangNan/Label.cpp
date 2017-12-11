@@ -4,7 +4,7 @@ Label::Label(QWidget* parent) :
 ControlShow(parent)
 {
 	ControlBase::setControlShow(this);
-	init(L"QLabel", L"");
+	INIT(L"");
 }
 
 Label::~Label()

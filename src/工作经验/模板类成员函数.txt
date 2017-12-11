@@ -1,0 +1,8 @@
+如果当前类是模板类，父类不是模板类，那么在cpp中成员函数实现前加上
+template<class QBase>
+如果父类也是模板类，在cpp中成员函数实现时，本类也加上类模板
+template<class QBase>
+void ControlFont<QBase>::setFontFace(const QString& fontName, bool rePaint)
+{
+	ControlBase::setFontFace(fontName.toStdWString(), false, rePaint);
+}

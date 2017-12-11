@@ -4,7 +4,7 @@ ListWidget::ListWidget(QWidget* parent) :
 ControlShow(parent)
 {
 	ControlBase::setControlShow(this);
-	init(L"QListWidget", L"item");
+	INIT(L"item");
 }
 
 ListWidget::~ListWidget()

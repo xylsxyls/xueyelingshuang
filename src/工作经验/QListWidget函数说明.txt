@@ -1,0 +1,222 @@
+QListWidget
+翻译 2016年05月07日 02:02:36 标签：QT /QListWidget 3729
+
+隐藏滚动条：
+  list->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+
+横向排列
+ui->listWidget->setFlow(QListWidget::LeftToRight); 
+
+void addItem(const QString &label)
+在列表末尾插入字符串
+
+
+void addItem(QListWidgetItem *item)
+在列表末尾插入Item
+
+
+void addItems(const QStringList &labels)
+在列表末尾插入多个字符串
+
+
+void closePersistentEditor(QListWidgetItem *item)
+关闭列表文本编辑
+
+
+int count() const
+返回当前有count行
+
+
+QListWidgetItem *currentItem() const
+返回当前选择的Item
+
+
+int currentRow() const
+返回当前选择的行数
+
+
+void editItem(QListWidgetItem *item)
+如果该Item可以修改，那么对它进行修改
+
+
+QList<QListWidgetItem *> findItems(const QString &text, Qt::MatchFlags flags) const
+查找与给定标记的字符串匹配的Item
+
+
+void insertItem(int row, QListWidgetItem *item)
+把Item插入指定行
+
+
+void insertItem(int row, const QString &label)
+把字符串插入指定行
+
+
+void insertItems(int row, const QStringList &labels)
+把多个字符串插入指定行
+
+
+bool isSortingEnabled() const
+是否启用排序，默认false不启用
+
+
+QListWidgetItem *item(int row) const
+返回row行的Item
+
+
+QListWidgetItem *itemAt(const QPoint &p) const
+返回相对坐标 P 的Item
+
+
+QListWidgetItem *itemAt(int x, int y) const
+返回该X,Y坐标的Item
+
+
+QWidget *itemWidget(QListWidgetItem *item) const
+返回Item中的QWidget
+
+
+void openPersistentEditor(QListWidgetItem *item)
+打开该Item的编辑器，编辑后默认持续开启，可调用closePersistentEditor关闭
+
+
+void removeItemWidget(QListWidgetItem *item)
+移除该Item中的QWidget
+
+
+int row(const QListWidgetItem *item) const
+返回指定Item的行
+
+
+QList<QListWidgetItem *> selectedItems() const
+返回控件中所有QListWidgetItem
+
+
+void setCurrentItem(QListWidgetItem *item)
+设置Item为当前Item，除非除非模式为 NoSelection ，否则选择当前项目
+
+
+void setCurrentItem(QListWidgetItem *item, QItemSelectionModel::SelectionFlags command)
+使用指定模式把Item设置为当前项目
+
+
+void setCurrentRow(int row)
+根据模式设置当前行
+
+
+void setCurrentRow(int row, QItemSelectionModel::SelectionFlags command)
+根据给定模式设置当前行
+
+
+void setItemWidget(QListWidgetItem *item, QWidget *widget)
+把控件设置为给定的Item中显示
+该功能仅可用于列表控件 Item 的位置显示静态内容，如果想显示动态内容使用QListView和子类化QItemDelegate代替
+
+
+void setSortingEnabled(bool enable)
+设置是否启用排序功能，默认为false
+
+
+void sortItems(Qt::SortOrder order = Qt::AscendingOrder)
+按照指定顺序排列列表
+
+
+QListWidgetItem *takeItem(int row)
+删除指定行的Item，并返回该Item
+
+
+QRect visualItemRect(const QListWidgetItem *item) const
+返回Item所占的矩形
+
+
+
+Protected function:
+
+
+virtual bool dropMimeData(int index, const QMimeData *data, Qt::DropAction action)
+处理由外部拖放操作提供的数据，该数据以index中的action的操作结束，如果可以操作返回true
+
+
+QModelIndex indexFromItem(QListWidgetItem *item) const
+返回以Item相关的QModelIndex
+
+
+QListWidgetItem *itemFromIndex(const QModelIndex &index) const
+返回index相关的QListWidgetItem
+
+
+QList<QListWidgetItem *> items(const QMimeData *data) const
+返回同一进程在该列表创建的所有QListWidgetItem
+
+
+virtual QMimeData *mimeData(const QList<QListWidgetItem *> &items) const
+返回包含一系列数据Item，所用格式从mimeTypes()得到
+
+
+virtual QStringList mimeTypes() const
+返回字符串列
+
+
+virtual Qt::DropActions supportedDropActions() const
+返回该Item支持的拖放操作
+
+
+
+虚函数：
+virtual bool event(QEvent *e)
+接受一个对象的事件
+
+
+virtual void dropEvent(QDropEvent *event)
+拖拽控件
+
+
+槽：
+void clear()
+删除所有Item
+
+void scrollToItem(const QListWidgetItem *item, QAbstractItemView::ScrollHint hint = EnsureVisible)
+根据QAbstractItemView::ScrollHint枚举把该Item滚动到指定位置
+
+
+
+信号：
+void currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+当前Item改变时
+
+
+void currentRowChanged(int currentRow)
+当前行改变时
+
+
+void currentTextChanged(const QString &currentText)
+当前字符串改变时
+
+
+void itemActivated(QListWidgetItem *item)
+激活Item时
+
+
+void itemChanged(QListWidgetItem *item)
+Item改变时
+
+
+void itemClicked(QListWidgetItem *item)
+点击Item时
+
+
+void itemDoubleClicked(QListWidgetItem *item)
+双击Item时
+
+
+void itemEntered(QListWidgetItem *item)
+Item输入时
+
+
+void itemPressed(QListWidgetItem *item)
+Item按下时，即当该Item处于可更改状态，并更改完毕按下回车时
+
+
+void itemSelectionChanged()
+更改选择的Item时

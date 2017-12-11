@@ -3,6 +3,8 @@
 #include <string>
 #include <QColor>
 
+#define INIT(itemName) init(QString::fromStdString(CStringManager::Replace(typeid(*this).name(), "class ", "")).toStdWString(), itemName)
+
 class QShowEvent;
 class QWidget;
 template <class QBase>
@@ -28,7 +30,7 @@ protected:
 	@param [in] className 类名
 	@param [in] itemName 节点名
 	*/
-	void init(const std::wstring& className, const std::wstring& itemName);
+	bool init(const std::wstring& className, const std::wstring& itemName);
 
 private:
 	virtual void showEvent(QShowEvent* eve);

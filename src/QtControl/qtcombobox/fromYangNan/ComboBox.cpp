@@ -18,19 +18,20 @@ m_dropDownImgNormal(1),
 m_dropDownImgDisabled(4),
 m_dropDownImgExpandNormal(5),
 m_dropDownImgExpandDisabled(8),
-m_dropDownImgStateCount(8)
+m_dropDownImgStateCount(8),
+m_hoverIndex(-1)
 {
 	ControlBase::setControlShow(this);
-	init(L"QComboBox", L"drop-down");
-	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
-	m_controlStyle[m_className](1, L"QAbstractItemView").AddKeyValue(L"border", L"none");
+	INIT(L"drop-down");
 	m_listWidget = new ListWidget;
 	setModel(m_listWidget->model());
 	setView(m_listWidget);
 	setItemDelegate(new NoFocusFrameDelegate);
-	setBorderWidth(1);
+	
 	setMouseTracking(true);
-
+	QObject::connect(m_listWidget, &QListWidget::itemEntered, this, &ComboBox::listItemEntered);
+	QObject::connect(m_listWidget, &QListWidget::itemPressed, this, &ComboBox::listItemPressed);
+	setDefault();
 	m_listWidget->verticalScrollBar()->setStyleSheet(
 		"QScrollBar:vertical"
 		"{"
@@ -95,6 +96,13 @@ ComboBox::~ComboBox()
 
 }
 
+void ComboBox::setDefault()
+{
+	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
+	m_controlStyle[m_className](1, L"QAbstractItemView").AddKeyValue(L"border", L"none");
+	setBorderWidth(1);
+}
+
 void ComboBox::setDropDownSize(int32_t width, int32_t height, bool rePaint)
 {
 	ControlBase::setPxValue(L"width", width, true, false);
@@ -148,6 +156,8 @@ void ComboBox::addItem(const QString& text)
 	QListWidgetItem* widgetItem = new QListWidgetItem(m_listWidget);
 	widgetItem->setText(text);
 	widgetItem->setToolTip(text);
+
+	//QComboBox::addItem(text);
 }
 
 void ComboBox::addItems(const QStringList& textList)
@@ -247,7 +257,7 @@ void ComboBox::setListItemAroundOrigin(int32_t leftOrigin,
 
 void ComboBox::setListMaxHeight(int32_t maxHeight)
 {
-	((QWidget*)(this->view()->parent()))->setStyleSheet(QString("max-height:%1px").arg(maxHeight));
+	((QWidget*)(view()->parent()))->setStyleSheet(QString("max-height:%1px").arg(maxHeight));
 }
 
 void ComboBox::showEvent(QShowEvent* eve)
@@ -315,6 +325,31 @@ void ComboBox::keyPressEvent(QKeyEvent* eve)
 		return;
 	}
 	QComboBox::keyPressEvent(eve);
+}
+
+void ComboBox::listItemEntered(QListWidgetItem* item)
+{
+	int32_t index = -1;
+	while (index++ != m_listWidget->count() - 1)
+	{
+		if (m_listWidget->item(index) == item)
+		{
+			m_hoverIndex = index;
+		}
+	}
+}
+
+void ComboBox::listItemPressed(QListWidgetItem* item)
+{
+	int32_t index = -1;
+	while (index++ != m_listWidget->count() - 1)
+	{
+		if (m_listWidget->item(index) == item)
+		{
+			emit ComboBox::itemPressed(index);
+			break;
+		}
+	}
 }
 
 void ComboBox::repaint()

@@ -8,6 +8,7 @@ m_hasSetSelectedLabelTop(false),
 m_hasSetSelectedLabelBottom(false),
 m_hasSetTopLabel(false)
 {
+	INIT(L"item");
 	setBorderCollapse();
 	m_topLabel = new Label(this);
 	m_selectedLabelTop = new Label(this);
@@ -20,6 +21,7 @@ m_hasSetSelectedLabelTop(false),
 m_hasSetSelectedLabelBottom(false),
 m_hasSetTopLabel(false)
 {
+	INIT(L"item");
 	setBorderCollapse();
 	m_topLabel = new Label(this);
 	m_selectedLabelTop = new Label(this);

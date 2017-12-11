@@ -1,8 +1,12 @@
 #pragma once
 #include "ComboBox.h"
 
+class QListWidgetItem;
+/** 定做类，支持在addItem的时候输入html格式的文本
+*/
 class HtmlComboBox : public ComboBox
 {
+	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
@@ -49,6 +53,12 @@ public:
 								 int32_t bottomOrigin,
 								 bool rePaint = false);
 
+	/** 设置下拉框节点边框粗度
+	@param [in] width 边框粗度
+	@param [in] rePaint 是否立即重画
+	*/
+	void setListItemBorderWidth(int32_t width, bool rePaint = false);
+
 public:
 	QColor m_normalColor;
 	QColor m_selectedColor;
@@ -59,4 +69,5 @@ public:
 	int32_t m_topOrigin;
 	int32_t m_rightOrigin;
 	int32_t m_bottomOrigin;
+	int32_t m_itemBorderWidth;
 };

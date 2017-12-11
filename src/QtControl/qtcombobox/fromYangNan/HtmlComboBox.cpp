@@ -19,7 +19,6 @@ public:
 	{
 		//QProxyStyle::drawItemText(painter, rect, flags, pal, enabled, text, textRole);
 		//return;
-
 		painter->save();
 
 		QTextDocument doc;
@@ -30,9 +29,23 @@ public:
 											text.toStdWString().c_str());
 		doc.setHtml(QString::fromStdWString(htmlString));
 
+		doc.setDocumentMargin(0);
+
+		QTextOption textOption;
+		textOption.setWrapMode(QTextOption::NoWrap);
+		textOption.setAlignment(Qt::AlignVCenter);
+		doc.setDefaultTextOption(textOption);
+
 		QRect drawRect = rect;
 		drawRect.setLeft(rect.left() + m_htmlComboBox->m_comboBoxOrigin);
-		painter->translate(drawRect.topLeft());
+
+		int32_t itemHeight = rect.height();
+
+		QFontMetrics tfontM(painter->font());
+
+		int32_t fontHeight = tfontM.height();
+
+		painter->translate(drawRect.topLeft() + QPoint(0, (itemHeight - fontHeight - 3) / 2));
 
 		doc.setDefaultFont(painter->font());
 
@@ -57,34 +70,40 @@ public:
 		//QStyledItemDelegate::paint(painter, option, index);
 		//return;
 		painter->save();
-
+		
 		QStyleOptionViewItem toption = option;
 		initStyleOption(&toption, index);
 
 		toption.widget->style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &toption, painter, toption.widget);
 
 		QTextDocument doc;
+		QTextOption textOption;
+		textOption.setWrapMode(QTextOption::NoWrap);
+		textOption.setAlignment(Qt::AlignVCenter);
+		doc.setDefaultTextOption(textOption);
 
 		QColor drawColor;
 		if (!option.state.testFlag(QStyle::State_Enabled))
 		{
 			drawColor = m_htmlComboBox->m_disabledColor;
 		}
-		else if (option.state.testFlag(QStyle::State_Selected))
-		{
-			drawColor = m_htmlComboBox->m_selectedColor;
-		}
-		else if (option.state.testFlag(QStyle::State_MouseOver))
-		{
-			drawColor = m_htmlComboBox->m_selectedColor;
-		}
 		else
 		{
-			drawColor = m_htmlComboBox->m_normalColor;
+			if (option.state.testFlag(QStyle::State_MouseOver))
+			{
+				if (option.state.testFlag(QStyle::State_Selected))
+				{
+					drawColor = m_htmlComboBox->m_selectedColor;
+				}
+			}
+			else
+			{
+				drawColor = m_htmlComboBox->m_normalColor;
+			}
 		}
 		
 		doc.setHtml(toption.text);
-		//font:18px 'ºÚÌå'; 
+
 		std::wstring htmlString = L"<div style=\"color:%s;\">%s</div>";
 		htmlString = CStringManager::Format(htmlString.c_str(),
 											drawColor.name().toStdWString().c_str(),
@@ -100,11 +119,20 @@ public:
 		int32_t fontHeight = tfontM.height();
 		doc.setPageSize(QSize(toption.rect.width() - 
 							  m_htmlComboBox->m_origin - 
-							  m_htmlComboBox->m_leftOrigin - 
-							  m_htmlComboBox->m_rightOrigin,
+							  m_htmlComboBox->m_itemBorderWidth * 2,
 							  toption.rect.height()));
+		painter->setClipRect(option.rect.adjusted(m_htmlComboBox->m_leftOrigin + 
+												  m_htmlComboBox->m_itemBorderWidth,
+												  m_htmlComboBox->m_topOrigin,
+												  -m_htmlComboBox->m_rightOrigin - 
+												  m_htmlComboBox->m_itemBorderWidth,
+												  -m_htmlComboBox->m_bottomOrigin));
 
-		painter->translate(toption.rect.topLeft() + QPoint(m_htmlComboBox->m_origin, (itemHeight - fontHeight) / 2));
+		painter->translate(toption.rect.topLeft() + 
+						   QPoint(m_htmlComboBox->m_origin +
+								  m_htmlComboBox->m_leftOrigin +
+								  m_htmlComboBox->m_itemBorderWidth,
+								  (itemHeight - fontHeight - 3) / 2));
 
 		doc.setDefaultFont(toption.font);
 
@@ -121,6 +149,8 @@ public:
 HtmlComboBox::HtmlComboBox(QWidget* parent) :
 ComboBox(parent)
 {
+	INIT(L"drop-down");
+	ComboBox::setDefault();
 	m_normalColor = QColor(0, 0, 0, 0);
 	m_selectedColor = QColor(0, 0, 0, 0);
 	m_disabledColor = QColor(0, 0, 0, 0);
@@ -130,9 +160,12 @@ ComboBox(parent)
 	m_topOrigin = 0;
 	m_rightOrigin = 0;
 	m_bottomOrigin = 0;
+	m_itemBorderWidth = 0;
 
 	setStyle(new DIYStyle(this));
 	m_listWidget->setItemDelegate(new DIYDelegate(this));
+
+	setStyleSheet("QToolTip{text-align:center;}");
 }
 
 HtmlComboBox::~HtmlComboBox()
@@ -173,4 +206,10 @@ void HtmlComboBox::setListItemAroundOrigin(int32_t leftOrigin,
 	m_rightOrigin = rightOrigin;
 	m_bottomOrigin = bottomOrigin;
 	ComboBox::setListItemAroundOrigin(leftOrigin, topOrigin, rightOrigin, bottomOrigin, rePaint);
+}
+
+void HtmlComboBox::setListItemBorderWidth(int32_t width, bool rePaint)
+{
+	m_itemBorderWidth = width;
+	ComboBox::setListItemBorderWidth(width, rePaint);
 }

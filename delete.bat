@@ -40,6 +40,10 @@ rmdir /q /s "%~dp0src\FindText\ipch\"
 rmdir /q /s "%~dp0src\FindText\FindText\Debug\"
 rmdir /q /s "%~dp0src\FindText\FindText\Release\"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\FundInvest\ipch\"
+rmdir /q /s "%~dp0src\FundInvest\FundInvest\Debug\"
+rmdir /q /s "%~dp0src\FundInvest\FundInvest\Release\"
+::------------------------------------------------------------
 rmdir /q /s "%~dp0src\OneKey\ipch\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Debug\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Release\"

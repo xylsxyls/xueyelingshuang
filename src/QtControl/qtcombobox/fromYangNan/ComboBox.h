@@ -6,6 +6,7 @@
 #include "ControlBorder.h"
 #include "ControlBackground.h"
 
+class QListWidgetItem;
 class ListWidget;
 class ComboBox : 
 	public ControlShow < QComboBox >,
@@ -14,6 +15,7 @@ class ComboBox :
 	public ControlBorderForNormalHoverPressedDisabled < QComboBox >,
 	public ControlBackgroundForNormalHoverPressedDisabled < QComboBox >
 {
+	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
@@ -25,6 +27,10 @@ public:
 	virtual ~ComboBox();
 
 public:
+	/** 设置默认值
+	*/
+	void setDefault();
+
 	/** 设置下拉箭头的尺寸
 	@param [in] width 下拉箭头宽度
 	@param [in] height 下拉箭头高度
@@ -206,8 +212,16 @@ private:
 	virtual void hideEvent(QHideEvent* eve);
 	virtual void keyPressEvent(QKeyEvent* eve);
 
+Q_SIGNALS:
+	void itemPressed(int index);
+
+private slots:
+	void listItemEntered(QListWidgetItem* item);
+	void listItemPressed(QListWidgetItem* item);
+
 protected:
 	ListWidget* m_listWidget;
+	int32_t m_hoverIndex;
 
 private:
 	int32_t m_dropDownImgNormal;
