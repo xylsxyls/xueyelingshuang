@@ -61,7 +61,7 @@ void HtmlComboBox::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
 }
 
 const QMetaObject HtmlComboBox::staticMetaObject = {
-    { &ComboBox::staticMetaObject, qt_meta_stringdata_HtmlComboBox.data,
+    { &IdItemComboBox::staticMetaObject, qt_meta_stringdata_HtmlComboBox.data,
       qt_meta_data_HtmlComboBox,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
 };
 
@@ -76,12 +76,12 @@ void *HtmlComboBox::qt_metacast(const char *_clname)
     if (!_clname) return Q_NULLPTR;
     if (!strcmp(_clname, qt_meta_stringdata_HtmlComboBox.stringdata0))
         return static_cast<void*>(const_cast< HtmlComboBox*>(this));
-    return ComboBox::qt_metacast(_clname);
+    return IdItemComboBox::qt_metacast(_clname);
 }
 
 int HtmlComboBox::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
-    _id = ComboBox::qt_metacall(_c, _id, _a);
+    _id = IdItemComboBox::qt_metacall(_c, _id, _a);
     if (_id < 0)
         return _id;
     return _id;

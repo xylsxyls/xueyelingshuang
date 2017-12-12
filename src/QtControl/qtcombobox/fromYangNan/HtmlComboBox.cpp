@@ -147,7 +147,7 @@ public:
 };
 
 HtmlComboBox::HtmlComboBox(QWidget* parent) :
-ComboBox(parent)
+IdItemComboBox(parent)
 {
 	INIT(L"drop-down");
 	ComboBox::setDefault();

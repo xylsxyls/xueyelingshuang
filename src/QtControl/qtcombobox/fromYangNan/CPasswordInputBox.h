@@ -1,25 +1,34 @@
-#ifndef CPASSWORDINPUTBOX_H
-#define CPASSWORDINPUTBOX_H
+#pragma once
+#include "LineEdit.h"
 
-#include <QLineEdit.h>
-#include "../COriginalButton.h"
-
-class CPasswordInputBox : public QLineEdit
+class COriginalButton;
+/** 密码输入框
+*/
+class CPasswordInputBox : public LineEdit
 {
     Q_OBJECT
 public:
-    CPasswordInputBox(QWidget* parent = NULL);
+	/** 构造函数
+	@param [in] parent 父窗口指针
+	*/
+    CPasswordInputBox(QWidget* parent = nullptr);
+
+	/** 析构函数
+	*/
     ~CPasswordInputBox();
 
+public:
+	/** 设置默认值
+	*/
+	void setDefault();
+	
 private:
-    COriginalButton* mMaskButton;
-
     void layoutControl();
-    void resizeEvent(QResizeEvent *e);
+	void resizeEvent(QResizeEvent* eve);
 
 private slots:
-    void onMaskButtonClicked();
+	void onMaskButtonClicked();
 
+private:
+	COriginalButton* m_maskButton;
 };
-
-#endif // CPASSWORDINPUTBOX_H

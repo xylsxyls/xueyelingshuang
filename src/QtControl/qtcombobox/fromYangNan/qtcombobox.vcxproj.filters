@@ -36,14 +36,8 @@
     <Filter Include="CStringManager">
       <UniqueIdentifier>{f64a13c8-59c9-472a-a1d0-005204690605}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ComboBox">
-      <UniqueIdentifier>{2426806f-5940-4ed9-b78f-f98f99159164}</UniqueIdentifier>
-    </Filter>
     <Filter Include="QssString">
       <UniqueIdentifier>{5f150465-4398-4f78-bb0f-1d9904ea0362}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="CheckBox">
-      <UniqueIdentifier>{017e38ad-4ba5-48e4-b28c-ebf55396bb84}</UniqueIdentifier>
     </Filter>
     <Filter Include="ListWidget">
       <UniqueIdentifier>{cfd4c733-0ac1-40f5-be6d-9ae3d6993e35}</UniqueIdentifier>
@@ -72,12 +66,6 @@
     <Filter Include="LineEdit">
       <UniqueIdentifier>{3a86d31f-e656-4a63-a82b-20ff8647feba}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ComboBox\HtmlComboBox">
-      <UniqueIdentifier>{40905ac0-54f5-419c-9a74-2851317b6bbe}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ComboBox\IdItemComboBox">
-      <UniqueIdentifier>{8f0a6389-9e82-4c03-8387-fcdbd421f404}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ControlBase\ControlFont">
       <UniqueIdentifier>{2274c276-9e1d-4fd5-9b33-e01ccf737ec4}</UniqueIdentifier>
     </Filter>
@@ -105,8 +93,26 @@
     <Filter Include="Label\PointLabel">
       <UniqueIdentifier>{25eaaa47-6f34-4a93-af85-c76b95e90284}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ComboBox\HtmlLabelRenderComboBox">
-      <UniqueIdentifier>{3f0ed699-e2b4-4bb9-9173-9b6fc21a4fa5}</UniqueIdentifier>
+    <Filter Include="ComboBox">
+      <UniqueIdentifier>{2426806f-5940-4ed9-b78f-f98f99159164}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ComboBox\HtmlComboBox">
+      <UniqueIdentifier>{40905ac0-54f5-419c-9a74-2851317b6bbe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ComboBox\IdItemComboBox">
+      <UniqueIdentifier>{8f0a6389-9e82-4c03-8387-fcdbd421f404}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckBox">
+      <UniqueIdentifier>{017e38ad-4ba5-48e4-b28c-ebf55396bb84}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CPasswordInputBox">
+      <UniqueIdentifier>{4dbd4d2f-c9cc-45e7-b098-95ba4bd91c9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CGeneralStyle">
+      <UniqueIdentifier>{8e9ac672-b834-4b81-8637-9dac83866ac8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="COriginalButton">
+      <UniqueIdentifier>{1212dac7-9d6f-42c3-b84e-91550afc1b68}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -130,9 +136,6 @@
     </ClCompile>
     <ClCompile Include="QssString.cpp">
       <Filter>QssString</Filter>
-    </ClCompile>
-    <ClCompile Include="CheckBox.cpp">
-      <Filter>CheckBox</Filter>
     </ClCompile>
     <ClCompile Include="ComboBox.cpp">
       <Filter>ComboBox</Filter>
@@ -212,12 +215,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_HtmlComboBox.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_CheckBox.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_RadioButton.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -239,11 +236,35 @@
     <ClCompile Include="GeneratedFiles\Debug\moc_Menu.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="HtmlLabelRenderComboBox.cpp">
-      <Filter>ComboBox\HtmlLabelRenderComboBox</Filter>
+    <ClCompile Include="CheckBox.cpp">
+      <Filter>CheckBox</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_HtmlLabelRenderComboBox.cpp">
+    <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
       <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CheckBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CPasswordInputBox.cpp">
+      <Filter>CPasswordInputBox</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CGeneralStyle.cpp">
+      <Filter>CGeneralStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\COriginalButton.cpp">
+      <Filter>COriginalButton</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -273,9 +294,6 @@
     </CustomBuild>
     <CustomBuild Include="QssString.h">
       <Filter>QssString</Filter>
-    </CustomBuild>
-    <CustomBuild Include="CheckBox.h">
-      <Filter>CheckBox</Filter>
     </CustomBuild>
     <CustomBuild Include="QssHelper.h">
       <Filter>QssHelper</Filter>
@@ -307,8 +325,14 @@
     <CustomBuild Include="Menu.h">
       <Filter>Menu</Filter>
     </CustomBuild>
-    <CustomBuild Include="HtmlLabelRenderComboBox.h">
-      <Filter>ComboBox\HtmlLabelRenderComboBox</Filter>
+    <CustomBuild Include="CheckBox.h">
+      <Filter>CheckBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CPasswordInputBox.h">
+      <Filter>CPasswordInputBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\CGeneralStyle.h">
+      <Filter>CGeneralStyle</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -335,6 +359,9 @@
     </ClInclude>
     <ClInclude Include="ListWidgetIdItem.h">
       <Filter>ListWidget\ListWidgetIdItem</Filter>
+    </ClInclude>
+    <ClInclude Include="..\COriginalButton.h">
+      <Filter>COriginalButton</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

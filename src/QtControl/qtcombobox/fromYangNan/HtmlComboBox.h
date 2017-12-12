@@ -1,10 +1,10 @@
 #pragma once
-#include "ComboBox.h"
+#include "IdItemComboBox.h"
 
 class QListWidgetItem;
 /** 定做类，支持在addItem的时候输入html格式的文本
 */
-class HtmlComboBox : public ComboBox
+class HtmlComboBox : public IdItemComboBox
 {
 	Q_OBJECT
 public:

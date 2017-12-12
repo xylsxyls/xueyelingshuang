@@ -12,6 +12,7 @@
 #include <QTextDocument>
 #include "HtmlComboBox.h"
 #include "IdItemComboBox.h"
+#include "CPasswordInputBox.h"
 #include "D:\\SendToMessageTest.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
@@ -187,11 +188,13 @@ qtcombobox::qtcombobox(QWidget *parent)
 	box->setAttribute(Qt::WA_TranslucentBackground);
 	box->setWindowFlags(Qt::FramelessWindowHint);
 
-	box->addItem("123456");
-	box->addItem("12345222222222222222222222222224");
-	box->addItem("123455");
-	box->addItem("df<font color = \"red\">15m2</font>123sssd54fewwasf");
-	box->addItem(QString::fromStdWString(L"水电费"));
+	box->addItem(1, "123456");
+	box->addItem(2, "12345222222222222222222222222224");
+	box->addItem(2, "123455");
+	box->addItem(3, "df<font color = \"red\">15m2</font>123sssd54fewwasf");
+	box->addItem(4, QString::fromStdWString(L"水电费"));
+
+	QObject::connect(box, &IdItemComboBox::currentItemChanged, this, &qtcombobox::idComboBoxItemChanged);
 
 	QObject::connect(box, &HtmlComboBox::itemPressed, this, &qtcombobox::htmlItemPressed);
 	
@@ -243,6 +246,9 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pLab->setFontSize(18);
 	pLab->setBackgroundColor(QColor(255, 255, 0, 255), QColor(0, 255, 0, 255), QColor(255, 255, 0, 255));
 	pLab->setTextColor(QColor(0, 255, 255, 255), QColor(255, 100, 0, 255), QColor(255, 255, 0, 255));
+
+	CPasswordInputBox* password = new CPasswordInputBox(this);
+	password->setGeometry(400, 200, 100, 30);
 
 	int x = 3;
 }

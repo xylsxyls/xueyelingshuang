@@ -1,16 +1,16 @@
 /****************************************************************************
-** Meta object code from reading C++ file 'HtmlLabelRenderComboBox.h'
+** Meta object code from reading C++ file 'CGeneralStyle.h'
 **
 ** Created by: The Qt Meta Object Compiler version 67 (Qt 5.5.1)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
-#include "HtmlLabelRenderComboBox.h"
+#include "../../../CGeneralStyle.h"
 #include <QtCore/qbytearray.h>
 #include <QtCore/qmetatype.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
-#error "The header file 'HtmlLabelRenderComboBox.h' doesn't include <QObject>."
+#error "The header file 'CGeneralStyle.h' doesn't include <QObject>."
 #elif Q_MOC_OUTPUT_REVISION != 67
 #error "This file was generated using the moc from 5.5.1. It"
 #error "cannot be used with the include files from this version of Qt."
@@ -18,25 +18,25 @@
 #endif
 
 QT_BEGIN_MOC_NAMESPACE
-struct qt_meta_stringdata_HtmlLabelRenderComboBox_t {
+struct qt_meta_stringdata_CGeneralStyle_t {
     QByteArrayData data[1];
-    char stringdata0[24];
+    char stringdata0[14];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
-    qptrdiff(offsetof(qt_meta_stringdata_HtmlLabelRenderComboBox_t, stringdata0) + ofs \
+    qptrdiff(offsetof(qt_meta_stringdata_CGeneralStyle_t, stringdata0) + ofs \
         - idx * sizeof(QByteArrayData)) \
     )
-static const qt_meta_stringdata_HtmlLabelRenderComboBox_t qt_meta_stringdata_HtmlLabelRenderComboBox = {
+static const qt_meta_stringdata_CGeneralStyle_t qt_meta_stringdata_CGeneralStyle = {
     {
-QT_MOC_LITERAL(0, 0, 23) // "HtmlLabelRenderComboBox"
+QT_MOC_LITERAL(0, 0, 13) // "CGeneralStyle"
 
     },
-    "HtmlLabelRenderComboBox"
+    "CGeneralStyle"
 };
 #undef QT_MOC_LITERAL
 
-static const uint qt_meta_data_HtmlLabelRenderComboBox[] = {
+static const uint qt_meta_data_CGeneralStyle[] = {
 
  // content:
        7,       // revision
@@ -52,7 +52,7 @@ static const uint qt_meta_data_HtmlLabelRenderComboBox[] = {
        0        // eod
 };
 
-void HtmlLabelRenderComboBox::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+void CGeneralStyle::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     Q_UNUSED(_o);
     Q_UNUSED(_id);
@@ -60,28 +60,28 @@ void HtmlLabelRenderComboBox::qt_static_metacall(QObject *_o, QMetaObject::Call 
     Q_UNUSED(_a);
 }
 
-const QMetaObject HtmlLabelRenderComboBox::staticMetaObject = {
-    { &ComboBox::staticMetaObject, qt_meta_stringdata_HtmlLabelRenderComboBox.data,
-      qt_meta_data_HtmlLabelRenderComboBox,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
+const QMetaObject CGeneralStyle::staticMetaObject = {
+    { &QObject::staticMetaObject, qt_meta_stringdata_CGeneralStyle.data,
+      qt_meta_data_CGeneralStyle,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
 };
 
 
-const QMetaObject *HtmlLabelRenderComboBox::metaObject() const
+const QMetaObject *CGeneralStyle::metaObject() const
 {
     return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
 }
 
-void *HtmlLabelRenderComboBox::qt_metacast(const char *_clname)
+void *CGeneralStyle::qt_metacast(const char *_clname)
 {
     if (!_clname) return Q_NULLPTR;
-    if (!strcmp(_clname, qt_meta_stringdata_HtmlLabelRenderComboBox.stringdata0))
-        return static_cast<void*>(const_cast< HtmlLabelRenderComboBox*>(this));
-    return ComboBox::qt_metacast(_clname);
+    if (!strcmp(_clname, qt_meta_stringdata_CGeneralStyle.stringdata0))
+        return static_cast<void*>(const_cast< CGeneralStyle*>(this));
+    return QObject::qt_metacast(_clname);
 }
 
-int HtmlLabelRenderComboBox::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+int CGeneralStyle::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
-    _id = ComboBox::qt_metacall(_c, _id, _a);
+    _id = QObject::qt_metacall(_c, _id, _a);
     if (_id < 0)
         return _id;
     return _id;
