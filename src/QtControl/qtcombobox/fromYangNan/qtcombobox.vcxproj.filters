@@ -33,23 +33,8 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
-    <Filter Include="CStringManager">
-      <UniqueIdentifier>{f64a13c8-59c9-472a-a1d0-005204690605}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="QssString">
-      <UniqueIdentifier>{5f150465-4398-4f78-bb0f-1d9904ea0362}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ListWidget">
       <UniqueIdentifier>{cfd4c733-0ac1-40f5-be6d-9ae3d6993e35}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NoFocusFrameDelegate">
-      <UniqueIdentifier>{d7501777-f35f-4fa6-a318-e8972130bc95}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="QssHelper">
-      <UniqueIdentifier>{b6ea808e-8a91-4e03-86d5-d5f9aa75ccf5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ControlBase">
-      <UniqueIdentifier>{34699273-aaf7-45e8-9afd-b4e45b4fedb2}</UniqueIdentifier>
     </Filter>
     <Filter Include="RadioButton">
       <UniqueIdentifier>{998a499a-57a8-4c6f-847f-1f61a9a305d8}</UniqueIdentifier>
@@ -60,32 +45,11 @@
     <Filter Include="Menu">
       <UniqueIdentifier>{89dbc6da-c6e3-41ea-8a43-f78671cd1616}</UniqueIdentifier>
     </Filter>
-    <Filter Include="CustomStyle">
-      <UniqueIdentifier>{fc307ab2-3b9a-40a7-8f1e-f6f2014667c6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="LineEdit">
       <UniqueIdentifier>{3a86d31f-e656-4a63-a82b-20ff8647feba}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ControlBase\ControlFont">
-      <UniqueIdentifier>{2274c276-9e1d-4fd5-9b33-e01ccf737ec4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ControlBase\ControlItem">
-      <UniqueIdentifier>{90c5a3ff-7ff1-4bbb-8962-18f5f946102a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ControlBase\ControlSelf">
-      <UniqueIdentifier>{973f9eb2-49ed-4ff4-94b9-2d06e7cbac2c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Menu\CollapseMenu">
       <UniqueIdentifier>{2dcc0fd5-1dd0-4f2a-94d9-7d5a8b5d8c5a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ControlShow">
-      <UniqueIdentifier>{fdb62e1d-a271-4f26-b14a-146c9479bd14}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ControlBase\ControlBorder">
-      <UniqueIdentifier>{b984472c-9b8b-4055-8f27-3b924ca5f4e8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ControlBase\ControlBackground">
-      <UniqueIdentifier>{b785091a-e8e7-49d5-8046-8367f46c6f9d}</UniqueIdentifier>
     </Filter>
     <Filter Include="ListWidget\ListWidgetIdItem">
       <UniqueIdentifier>{0499b28e-c508-4b62-a5e2-624504f72f0b}</UniqueIdentifier>
@@ -95,9 +59,6 @@
     </Filter>
     <Filter Include="ComboBox">
       <UniqueIdentifier>{2426806f-5940-4ed9-b78f-f98f99159164}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ComboBox\HtmlComboBox">
-      <UniqueIdentifier>{40905ac0-54f5-419c-9a74-2851317b6bbe}</UniqueIdentifier>
     </Filter>
     <Filter Include="ComboBox\IdItemComboBox">
       <UniqueIdentifier>{8f0a6389-9e82-4c03-8387-fcdbd421f404}</UniqueIdentifier>
@@ -111,14 +72,59 @@
     <Filter Include="COriginalButton">
       <UniqueIdentifier>{1212dac7-9d6f-42c3-b84e-91550afc1b68}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ComboBox\HtmlComboBox\HtmlComboBoxStyle">
-      <UniqueIdentifier>{0f23648d-bfd3-44cb-8335-e9e40ca347f2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ComboBox\HtmlComboBox\HtmlComboBoxDelegate">
-      <UniqueIdentifier>{a0e8d20e-0218-40b8-8f00-e0d282ffeb35}</UniqueIdentifier>
-    </Filter>
     <Filter Include="LineEdit\CPasswordInputBox">
       <UniqueIdentifier>{4dbd4d2f-c9cc-45e7-b098-95ba4bd91c9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Menu\MenuCustomStyle">
+      <UniqueIdentifier>{fc307ab2-3b9a-40a7-8f1e-f6f2014667c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ComboBox\NoFocusFrameDelegate">
+      <UniqueIdentifier>{d7501777-f35f-4fa6-a318-e8972130bc95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib">
+      <UniqueIdentifier>{38eca791-2b1e-44d0-8dbd-cb4f5a148e67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\QssHelper">
+      <UniqueIdentifier>{b6ea808e-8a91-4e03-86d5-d5f9aa75ccf5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\QssString">
+      <UniqueIdentifier>{5f150465-4398-4f78-bb0f-1d9904ea0362}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\CStringManager">
+      <UniqueIdentifier>{f64a13c8-59c9-472a-a1d0-005204690605}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control">
+      <UniqueIdentifier>{8ed858cf-5421-4525-baed-ce60acf9bf76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control\ControlBase">
+      <UniqueIdentifier>{34699273-aaf7-45e8-9afd-b4e45b4fedb2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control\ControlBase\ControlFont">
+      <UniqueIdentifier>{2274c276-9e1d-4fd5-9b33-e01ccf737ec4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control\ControlBase\ControlItem">
+      <UniqueIdentifier>{90c5a3ff-7ff1-4bbb-8962-18f5f946102a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control\ControlBase\ControlSelf">
+      <UniqueIdentifier>{973f9eb2-49ed-4ff4-94b9-2d06e7cbac2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control\ControlBase\ControlBorder">
+      <UniqueIdentifier>{b984472c-9b8b-4055-8f27-3b924ca5f4e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control\ControlBase\ControlBackground">
+      <UniqueIdentifier>{b785091a-e8e7-49d5-8046-8367f46c6f9d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control\ControlShow">
+      <UniqueIdentifier>{fdb62e1d-a271-4f26-b14a-146c9479bd14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ComboBox\IdItemComboBox\HtmlComboBox">
+      <UniqueIdentifier>{40905ac0-54f5-419c-9a74-2851317b6bbe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle">
+      <UniqueIdentifier>{0f23648d-bfd3-44cb-8335-e9e40ca347f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate">
+      <UniqueIdentifier>{a0e8d20e-0218-40b8-8f00-e0d282ffeb35}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -138,10 +144,10 @@
       <Filter>Generated Files</Filter>
     </ClCompile>
     <ClCompile Include="CStringManager.cpp">
-      <Filter>CStringManager</Filter>
+      <Filter>lib\CStringManager</Filter>
     </ClCompile>
     <ClCompile Include="QssString.cpp">
-      <Filter>QssString</Filter>
+      <Filter>lib\QssString</Filter>
     </ClCompile>
     <ClCompile Include="ComboBox.cpp">
       <Filter>ComboBox</Filter>
@@ -150,25 +156,16 @@
       <Filter>ListWidget</Filter>
     </ClCompile>
     <ClCompile Include="NoFocusFrameDelegate.cpp">
-      <Filter>NoFocusFrameDelegate</Filter>
+      <Filter>ComboBox\NoFocusFrameDelegate</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QssHelper.cpp">
-      <Filter>QssHelper</Filter>
-    </ClCompile>
-    <ClCompile Include="CustomStyle.cpp">
-      <Filter>CustomStyle</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_CustomStyle.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_CustomStyle.cpp">
-      <Filter>Generated Files\Release</Filter>
+      <Filter>lib\QssHelper</Filter>
     </ClCompile>
     <ClCompile Include="HtmlComboBox.cpp">
-      <Filter>ComboBox\HtmlComboBox</Filter>
+      <Filter>ComboBox\IdItemComboBox\HtmlComboBox</Filter>
     </ClCompile>
     <ClCompile Include="IdItemComboBox.cpp">
       <Filter>ComboBox\IdItemComboBox</Filter>
@@ -195,10 +192,10 @@
       <Filter>RadioButton</Filter>
     </ClCompile>
     <ClCompile Include="ControlFont.inl">
-      <Filter>ControlBase\ControlFont</Filter>
+      <Filter>Control\ControlBase\ControlFont</Filter>
     </ClCompile>
     <ClCompile Include="ControlBase.inl">
-      <Filter>ControlBase</Filter>
+      <Filter>Control\ControlBase</Filter>
     </ClCompile>
     <ClCompile Include="ListWidgetIdItem.cpp">
       <Filter>ListWidget\ListWidgetIdItem</Filter>
@@ -242,15 +239,6 @@
     <ClCompile Include="GeneratedFiles\Debug\moc_Menu.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="CheckBox.cpp">
-      <Filter>CheckBox</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_CheckBox.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_CPasswordInputBox.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -273,10 +261,31 @@
       <Filter>COriginalButton</Filter>
     </ClCompile>
     <ClCompile Include="HtmlComboBoxDelegate.cpp">
-      <Filter>ComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
+      <Filter>ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
     </ClCompile>
     <ClCompile Include="HtmlComboBoxStyle.cpp">
-      <Filter>ComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+      <Filter>ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Menu.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="MenuCustomStyle.cpp">
+      <Filter>Menu\MenuCustomStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CheckBox.cpp">
+      <Filter>CheckBox</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CheckBox.cpp">
+      <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -290,7 +299,7 @@
       <Filter>Resource Files</Filter>
     </CustomBuild>
     <CustomBuild Include="NoFocusFrameDelegate.h">
-      <Filter>NoFocusFrameDelegate</Filter>
+      <Filter>ComboBox\NoFocusFrameDelegate</Filter>
     </CustomBuild>
     <CustomBuild Include="ListWidget.h">
       <Filter>ListWidget</Filter>
@@ -299,19 +308,16 @@
       <Filter>Generated Files</Filter>
     </CustomBuild>
     <CustomBuild Include="CStringManager.h">
-      <Filter>CStringManager</Filter>
+      <Filter>lib\CStringManager</Filter>
     </CustomBuild>
     <CustomBuild Include="ComboBox.h">
       <Filter>ComboBox</Filter>
     </CustomBuild>
     <CustomBuild Include="QssString.h">
-      <Filter>QssString</Filter>
+      <Filter>lib\QssString</Filter>
     </CustomBuild>
     <CustomBuild Include="QssHelper.h">
-      <Filter>QssHelper</Filter>
-    </CustomBuild>
-    <CustomBuild Include="CustomStyle.h">
-      <Filter>CustomStyle</Filter>
+      <Filter>lib\QssHelper</Filter>
     </CustomBuild>
     <CustomBuild Include="IdItemComboBox.h">
       <Filter>ComboBox\IdItemComboBox</Filter>
@@ -320,7 +326,7 @@
       <Filter>Label</Filter>
     </CustomBuild>
     <CustomBuild Include="HtmlComboBox.h">
-      <Filter>ComboBox\HtmlComboBox</Filter>
+      <Filter>ComboBox\IdItemComboBox\HtmlComboBox</Filter>
     </CustomBuild>
     <CustomBuild Include="RadioButton.h">
       <Filter>RadioButton</Filter>
@@ -337,37 +343,40 @@
     <CustomBuild Include="Menu.h">
       <Filter>Menu</Filter>
     </CustomBuild>
-    <CustomBuild Include="CheckBox.h">
-      <Filter>CheckBox</Filter>
-    </CustomBuild>
     <CustomBuild Include="CPasswordInputBox.h">
       <Filter>LineEdit\CPasswordInputBox</Filter>
     </CustomBuild>
     <CustomBuild Include="..\CGeneralStyle.h">
       <Filter>CGeneralStyle</Filter>
     </CustomBuild>
+    <CustomBuild Include="MenuCustomStyle.h">
+      <Filter>Menu\MenuCustomStyle</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CheckBox.h">
+      <Filter>CheckBox</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlFont.h">
-      <Filter>ControlBase\ControlFont</Filter>
+      <Filter>Control\ControlBase\ControlFont</Filter>
     </ClInclude>
     <ClInclude Include="ControlItem.h">
-      <Filter>ControlBase\ControlItem</Filter>
+      <Filter>Control\ControlBase\ControlItem</Filter>
     </ClInclude>
     <ClInclude Include="ControlSelf.h">
-      <Filter>ControlBase\ControlSelf</Filter>
+      <Filter>Control\ControlBase\ControlSelf</Filter>
     </ClInclude>
     <ClInclude Include="ControlShow.h">
-      <Filter>ControlShow</Filter>
+      <Filter>Control\ControlShow</Filter>
     </ClInclude>
     <ClInclude Include="ControlBase.h">
-      <Filter>ControlBase</Filter>
+      <Filter>Control\ControlBase</Filter>
     </ClInclude>
     <ClInclude Include="ControlBorder.h">
-      <Filter>ControlBase\ControlBorder</Filter>
+      <Filter>Control\ControlBase\ControlBorder</Filter>
     </ClInclude>
     <ClInclude Include="ControlBackground.h">
-      <Filter>ControlBase\ControlBackground</Filter>
+      <Filter>Control\ControlBase\ControlBackground</Filter>
     </ClInclude>
     <ClInclude Include="ListWidgetIdItem.h">
       <Filter>ListWidget\ListWidgetIdItem</Filter>
@@ -376,27 +385,27 @@
       <Filter>COriginalButton</Filter>
     </ClInclude>
     <ClInclude Include="HtmlComboBoxDelegate.h">
-      <Filter>ComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
+      <Filter>ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
     </ClInclude>
     <ClInclude Include="HtmlComboBoxStyle.h">
-      <Filter>ComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+      <Filter>ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ControlItem.inl">
-      <Filter>ControlBase\ControlItem</Filter>
+      <Filter>Control\ControlBase\ControlItem</Filter>
     </None>
     <None Include="ControlSelf.inl">
-      <Filter>ControlBase\ControlSelf</Filter>
+      <Filter>Control\ControlBase\ControlSelf</Filter>
     </None>
     <None Include="ControlBorder.inl">
-      <Filter>ControlBase\ControlBorder</Filter>
+      <Filter>Control\ControlBase\ControlBorder</Filter>
     </None>
     <None Include="ControlBackground.inl">
-      <Filter>ControlBase\ControlBackground</Filter>
+      <Filter>Control\ControlBase\ControlBackground</Filter>
     </None>
     <None Include="ControlShow.inl">
-      <Filter>ControlShow</Filter>
+      <Filter>Control\ControlShow</Filter>
     </None>
   </ItemGroup>
 </Project>

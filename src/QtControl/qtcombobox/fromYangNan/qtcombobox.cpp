@@ -8,7 +8,7 @@
 #include "RadioButton.h"
 #include "PointLabel.h"
 #include "CollapseMenu.h"
-#include "CustomStyle.h"
+#include "MenuCustomStyle.h"
 #include <QTextDocument>
 #include "HtmlComboBox.h"
 #include "IdItemComboBox.h"
@@ -190,7 +190,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 
 	box->addItem("123456",5);
 	box->addItem("12345222222222222222222222222224",2);
-	box->addItem("123455");
+	box->addItem("123455",2);
 	box->addItem("df<font color = \"red\">15m2</font>123sssd54fewwasf");
 	box->addItem(QString::fromStdWString(L"Ë®µç·Ñ"));
 
@@ -275,5 +275,6 @@ void qtcombobox::htmlItemPressed(int index)
 {
 	QString str = box->currentText();
 	auto ss = box->currentItemId();
+	int32_t sss = box->itemIndexByFirstId(2);
 	int x = 3;
 }

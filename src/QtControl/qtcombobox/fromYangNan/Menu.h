@@ -9,7 +9,7 @@
 #include <vector>
 
 class QMouseEvent;
-class CustomStyle;
+class MenuCustomStyle;
 class Menu : 
 	public ControlShow < QMenu >,
 	public ControlFont < QMenu >,
@@ -95,6 +95,6 @@ private:
 
 private:
 	std::map<QAction*, QIcon> m_mapIconData;
-	CustomStyle* m_pCustomStyle;
+	MenuCustomStyle* m_pCustomStyle;
 	std::vector<Menu*> m_vecMenu;
 };

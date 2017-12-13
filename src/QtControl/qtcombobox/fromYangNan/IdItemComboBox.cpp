@@ -47,6 +47,29 @@ void IdItemComboBox::addItems(const QStringList& textList, const QList<qint64>& 
 	}
 }
 
+void IdItemComboBox::setCurrentItemByFirstId(qint64 id)
+{
+	setCurrentIndex(itemIndexByFirstId(id));
+}
+
+int32_t IdItemComboBox::itemIndexByFirstId(qint64 id)
+{
+	int32_t index = -1;
+	while (index++ != m_listWidget->count() - 1)
+	{
+		ListWidgetIdItem* item = (ListWidgetIdItem*)m_listWidget->item(index);
+		if (item == nullptr)
+		{
+			continue;
+		}
+		if (item->getId() == id)
+		{
+			return index;
+		}
+	}
+	return -1;
+}
+
 qint64 IdItemComboBox::currentItemId()
 {
 	return itemId(currentIndex());

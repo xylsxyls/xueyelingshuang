@@ -29,6 +29,17 @@ public:
 	*/
 	void addItems(const QStringList& textList, const QList<qint64>& idList = QList<qint64>());
 
+	/** 设置第一个ID对应的index到点击框
+	@param [in] id ID值
+	*/
+	void setCurrentItemByFirstId(qint64 id);
+
+	/** 获取第一个ID对应索引值
+	@param [in] id ID值
+	@return 返回索引值
+	*/
+	int32_t itemIndexByFirstId(qint64 id);
+
 	/** 获取当前选择节点ID
 	@return 返回当前选择节点ID
 	*/

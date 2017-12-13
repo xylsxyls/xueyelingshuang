@@ -1,6 +1,6 @@
 #include "Menu.h"
 #include <QtWidgets/QWidgetAction>
-#include "CustomStyle.h"
+#include "MenuCustomStyle.h"
 #include <qglobal.h>
 #include <QMouseEvent>
 
@@ -10,7 +10,7 @@ m_pCustomStyle(nullptr)
 {
 	ControlBase::setControlShow(this);
 	INIT(L"item");
-	m_pCustomStyle = new CustomStyle;
+	m_pCustomStyle = new MenuCustomStyle;
 	if (m_pCustomStyle != nullptr)
 	{
 		setStyle(m_pCustomStyle);
@@ -32,7 +32,7 @@ ControlShow(parent)
 	QMenu::setTitle(title);
 
 	QMenu::setIcon(QPixmap(icon).scaled(size));
-	m_pCustomStyle = new CustomStyle;
+	m_pCustomStyle = new MenuCustomStyle;
 	if (m_pCustomStyle != nullptr)
 	{
 		setStyle(m_pCustomStyle);
