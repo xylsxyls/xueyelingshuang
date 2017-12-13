@@ -113,6 +113,7 @@
   <ItemGroup>
     <ClInclude Include="CFlashTask.h" />
     <ClInclude Include="CNoFlashTask.h" />
+    <ClInclude Include="CqNoFlashTask.h" />
     <ClInclude Include="OneKey.h" />
     <ClInclude Include="OneKeyDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -122,6 +123,7 @@
   <ItemGroup>
     <ClCompile Include="CFlashTask.cpp" />
     <ClCompile Include="CNoFlashTask.cpp" />
+    <ClCompile Include="CqNoFlashTask.cpp" />
     <ClCompile Include="OneKey.cpp" />
     <ClCompile Include="OneKeyDlg.cpp" />
     <ClCompile Include="stdafx.cpp">

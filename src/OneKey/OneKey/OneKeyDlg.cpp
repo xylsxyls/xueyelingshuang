@@ -11,6 +11,8 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CFlashTask.h"
 #include "CNoFlashTask.h"
+#include "CqNoFlashTask.h"
+#include "D:\\SendToMessageTest.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -22,6 +24,9 @@ bool wDown = false;
 bool eDown = false;
 bool dDown = false;
 bool qDown = false;
+bool rDown = false;
+
+std::atomic<bool> rightMouse = true;
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
@@ -77,9 +82,23 @@ BEGIN_MESSAGE_MAP(COneKeyDlg, CDialogEx)
 	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
+LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
+{
+    // 请在这里添加消息处理代码
+    //RCSend("%d,%d,%d", nCode, wParam, lParam);
+    if (wParam == 516 || wParam == 517)
+    {
+        //RCSend("pin");
+        //if (rightMouse == false)
+        {
+            return 1;
+        }
+    }
+    // 将事件传递到下一个钩子
+    return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
+}
 
-
-LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
+LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	// 请在这里添加消息处理代码
 	const DWORD& vkCode = CHook::GetVkCode(lParam);
@@ -102,6 +121,10 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			qDown = true;
 		}
+        else if (vkCode == 'R')
+        {
+            rDown = true;
+        }
 	}
 	else if (CHook::IsKeyUp(wParam))
 	{
@@ -121,6 +144,10 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			qDown = false;
 		}
+        else if (vkCode == 'R')
+        {
+            rDown = false;
+        }
 	}
 
 	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(1);
@@ -136,11 +163,11 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		spTask.reset(new CNoFlashTask);
 		taskThread->PostTask(spTask, 1);
 	}
-	else if (wDown && qDown && stopWatch.GetWatchTime() > 500)
+	else if (qDown && wDown && stopWatch.GetWatchTime() > 500)
 	{
 		stopWatch.SetWatchTime(0);
-		std::shared_ptr<CNoFlashTask> spTask;
-		spTask.reset(new CNoFlashTask);
+		std::shared_ptr<CqNoFlashTask> spTask;
+		spTask.reset(new CqNoFlashTask);
 		taskThread->PostTask(spTask, 1);
 	}
 	else if (wDown && dDown && stopWatch.GetWatchTime() > 500)
@@ -190,7 +217,8 @@ BOOL COneKeyDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 
 	CTaskThreadManager::Instance().Init(1);
-	CHook::Init(WH_KEYBOARD_LL, HookFun);
+	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);
+    //CHook::Init(WH_MOUSE_LL, MouseHookFun);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
