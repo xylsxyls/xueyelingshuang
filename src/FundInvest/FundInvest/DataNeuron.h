@@ -21,7 +21,15 @@ public:
 public:
 	double ForecastData(int32_t days);
 
-    bool Condition(double variance, DataNeuron* time);
+	bool Condition(double variance, DataNeuron* time, const IntDateTime& nowTime);
+	
+	double GetUpDownAccuracy(int32_t days, double base = 0);
+
+	double GetUpDown(int32_t days);
+
+	int32_t GetUpDownDays();
+
+	int32_t GetForecastFlatDays();
 
 private:
 	void AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,
@@ -45,6 +53,12 @@ public:
 	double m_forecast1 = 0;
 	double m_forecast2 = 0;
 	double m_forecast3 = 0;
+
+	double m_upDownWeek = 0;
+	double m_upDownForecast3 = 0;
+	double m_upDownForecast5 = 0;
+	int32_t m_upDownDays = 0;
+	int32_t m_forecastPlatDays = 0;
 
 private:
 	std::string m_fundName;

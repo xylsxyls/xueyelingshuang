@@ -29,6 +29,17 @@ public:
 	*/
 	void addItems(const QStringList& textList, const QList<qint64>& idList = QList<qint64>());
 
+	/** 获取当前选择节点ID
+	@return 返回当前选择节点ID
+	*/
+	qint64 currentItemId();
+
+	/** 获取指定节点ID
+	@param [in] index 节点索引值
+	@return 返回指定节点ID
+	*/
+	qint64 itemId(int32_t index);
+
 Q_SIGNALS:
 	/** 当选择了另一个id的下拉节点时发送信号（点击框设为可编辑，手动输入文字时不发送信号）
 	@param [in] id 节点ID

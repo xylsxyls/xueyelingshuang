@@ -5,8 +5,7 @@
 #include <QAbstractTextDocumentLayout>
 #include <QTextDocument>
 
-HtmlComboBoxStyle::HtmlComboBoxStyle(HtmlComboBox* htmlComboBox):
-m_htmlComboBox(htmlComboBox),
+HtmlComboBoxStyle::HtmlComboBoxStyle():
 doc(new QTextDocument)
 {
 	
@@ -29,8 +28,8 @@ void HtmlComboBoxStyle::drawItemText(QPainter* painter,
 
 	std::wstring htmlString = L"<div style='color:%s;'>%s</div>";
 	htmlString = CStringManager::Format(htmlString.c_str(),
-		pal.color(textRole).name().toStdWString().c_str(),
-		text.toStdWString().c_str());
+										pal.color(textRole).name().toStdWString().c_str(),
+										text.toStdWString().c_str());
 	doc->setHtml(QString::fromStdWString(htmlString));
 
 	doc->setDocumentMargin(0);
@@ -41,7 +40,7 @@ void HtmlComboBoxStyle::drawItemText(QPainter* painter,
 	doc->setDefaultTextOption(textOption);
 
 	QRect drawRect = rect;
-	drawRect.setLeft(rect.left() + m_htmlComboBox->m_comboBoxOrigin);
+	drawRect.setLeft(rect.left());
 
 	int32_t itemHeight = rect.height();
 

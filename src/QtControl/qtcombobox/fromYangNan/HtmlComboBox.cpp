@@ -11,7 +11,6 @@ IdItemComboBox(parent)
 	m_normalColor = QColor(0, 0, 0, 0);
 	m_selectedColor = QColor(0, 0, 0, 0);
 	m_disabledColor = QColor(0, 0, 0, 0);
-	m_comboBoxOrigin = 0;
 	m_origin = 0;
 	m_leftOrigin = 0;
 	m_topOrigin = 0;
@@ -19,7 +18,7 @@ IdItemComboBox(parent)
 	m_bottomOrigin = 0;
 	m_itemBorderWidth = 0;
 
-	setStyle(new HtmlComboBoxStyle(this));
+	setStyle(new HtmlComboBoxStyle);
 	m_listWidget->setItemDelegate(new HtmlComboBoxDelegate(this));
 
 	setStyleSheet("QToolTip{text-align:center;}");
@@ -28,11 +27,6 @@ IdItemComboBox(parent)
 HtmlComboBox::~HtmlComboBox()
 {
 
-}
-void HtmlComboBox::setTextOrigin(int32_t origin, bool rePaint)
-{
-	m_comboBoxOrigin = origin;
-	ComboBox::setTextOrigin(origin, rePaint);
 }
 
 void HtmlComboBox::setListTextColor(const QColor& normalColor,

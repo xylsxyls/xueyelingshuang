@@ -5,13 +5,11 @@
 #include "QssString.h"
 #include "CStringManager.h"
 #include "QssHelper.h"
-#include <QDebug>
 
 template<class QBase>
 void ControlShow<QBase>::repaint()
 {
 	QBase::setStyleSheet(QString::fromStdWString(m_controlStyle.toWString()));
-	qDebug() << QString::fromStdWString(m_controlStyle.toWString());
 }
 
 template<class QBase>

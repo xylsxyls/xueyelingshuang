@@ -18,6 +18,8 @@ enum
 	FORECAST1,
 	FORECAST2,
 	FORECAST3,
+	UPDOWN,
+	UPDOWNWEEK
 };
 
 class FundHelper

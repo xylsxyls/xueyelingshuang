@@ -165,7 +165,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 					  QColor(255, 0, 255, 255),
 					  QColor(255, 0, 0, 255));
 	box->setDropDownBorderWidth(0);
-	box->setTextOrigin(2);
+	box->setTextOrigin(12);
 	box->setFontSize(12);
 
 	box->setListBorderWidth(1);
@@ -180,7 +180,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	box->setListTextColor(QColor(255, 0, 255, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255));
 	box->setListFontFace(QString::fromLocal8Bit("黑体"));
 	box->setListFontSize(18);
-	box->setListTextOrigin(0);
+	box->setListTextOrigin(10);
 	box->setListItemAroundOrigin(5, 5, 5, 5);
 	box->setDropDownTopRightOrigin(10, 20);
 	box->setListItemBackgroundColor(QColor(0, 0, 100, 255), QColor(100, 100, 0, 255), QColor(255, 0, 255, 255));
@@ -188,8 +188,8 @@ qtcombobox::qtcombobox(QWidget *parent)
 	box->setAttribute(Qt::WA_TranslucentBackground);
 	box->setWindowFlags(Qt::FramelessWindowHint);
 
-	box->addItem("123456");
-	box->addItem("12345222222222222222222222222224");
+	box->addItem("123456",5);
+	box->addItem("12345222222222222222222222222224",2);
 	box->addItem("123455");
 	box->addItem("df<font color = \"red\">15m2</font>123sssd54fewwasf");
 	box->addItem(QString::fromStdWString(L"水电费"));
@@ -248,7 +248,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pLab->setTextColor(QColor(0, 255, 255, 255), QColor(255, 100, 0, 255), QColor(255, 255, 0, 255));
 
 	CPasswordInputBox* password = new CPasswordInputBox(this);
-	password->setGeometry(400, 200, 100, 30);
+	password->setGeometry(400, 200, 100, 60);
 
 	int x = 3;
 }
@@ -267,11 +267,13 @@ void qtcombobox::idComboBoxItemChanged(qint64 id, const QString& str)
 {
 	std::string ss = str.toStdString();
 	RCSend("id = %d,str = %s", (int32_t)id, ss.c_str());
+
 	int x = 3;
 }
 
 void qtcombobox::htmlItemPressed(int index)
 {
 	QString str = box->currentText();
+	auto ss = box->currentItemId();
 	int x = 3;
 }

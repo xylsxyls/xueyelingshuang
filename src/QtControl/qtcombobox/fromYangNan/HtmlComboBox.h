@@ -17,12 +17,7 @@ public:
 	*/
 	virtual ~HtmlComboBox();
 
-	/** 设置点击框文字偏移量
-	@param [in] origin 点击框文字偏移量
-	@param [in] rePaint 是否立即重画
-	*/
-	void setTextOrigin(int32_t origin, bool rePaint = false);
-
+public:
 	/** 设置下拉框文字颜色
 	@param [in] normalColor 常态颜色
 	@param [in] hoverColor 悬停颜色
@@ -63,7 +58,6 @@ public:
 	QColor m_normalColor;
 	QColor m_selectedColor;
 	QColor m_disabledColor;
-	int32_t m_comboBoxOrigin;
 	int32_t m_origin;
 	int32_t m_leftOrigin;
 	int32_t m_topOrigin;

@@ -47,4 +47,6 @@ void FundHelper::init()
 	s_mapData[FORECAST1] = "forecast_1";
 	s_mapData[FORECAST2] = "forecast_2";
 	s_mapData[FORECAST3] = "forecast_3";
+	s_mapData[UPDOWN] = "up_down";
+	s_mapData[UPDOWNWEEK] = "up_down_week";
 }

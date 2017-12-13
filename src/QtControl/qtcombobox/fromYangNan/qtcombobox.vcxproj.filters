@@ -105,9 +105,6 @@
     <Filter Include="CheckBox">
       <UniqueIdentifier>{017e38ad-4ba5-48e4-b28c-ebf55396bb84}</UniqueIdentifier>
     </Filter>
-    <Filter Include="CPasswordInputBox">
-      <UniqueIdentifier>{4dbd4d2f-c9cc-45e7-b098-95ba4bd91c9f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="CGeneralStyle">
       <UniqueIdentifier>{8e9ac672-b834-4b81-8637-9dac83866ac8}</UniqueIdentifier>
     </Filter>
@@ -119,6 +116,9 @@
     </Filter>
     <Filter Include="ComboBox\HtmlComboBox\HtmlComboBoxDelegate">
       <UniqueIdentifier>{a0e8d20e-0218-40b8-8f00-e0d282ffeb35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="LineEdit\CPasswordInputBox">
+      <UniqueIdentifier>{4dbd4d2f-c9cc-45e7-b098-95ba4bd91c9f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -258,7 +258,7 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="CPasswordInputBox.cpp">
-      <Filter>CPasswordInputBox</Filter>
+      <Filter>LineEdit\CPasswordInputBox</Filter>
     </ClCompile>
     <ClCompile Include="..\CGeneralStyle.cpp">
       <Filter>CGeneralStyle</Filter>
@@ -341,7 +341,7 @@
       <Filter>CheckBox</Filter>
     </CustomBuild>
     <CustomBuild Include="CPasswordInputBox.h">
-      <Filter>CPasswordInputBox</Filter>
+      <Filter>LineEdit\CPasswordInputBox</Filter>
     </CustomBuild>
     <CustomBuild Include="..\CGeneralStyle.h">
       <Filter>CGeneralStyle</Filter>

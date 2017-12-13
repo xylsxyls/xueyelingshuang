@@ -9,9 +9,8 @@ class HtmlComboBoxStyle : public QProxyStyle
 {
 public:
 	/** 构造函数
-	@param [in] htmlComboBox HtmlComboBox类指针
 	*/
-	HtmlComboBoxStyle(HtmlComboBox* htmlComboBox);
+	HtmlComboBoxStyle();
 
 	/** 析构函数
 	*/
@@ -36,6 +35,5 @@ private:
 							  QPalette::ColorRole textRole) const;
 	
 private:
-	HtmlComboBox* m_htmlComboBox;
 	QTextDocument* doc;
 };

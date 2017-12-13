@@ -36,4 +36,10 @@ void ControlFont<QBase>::setTextOrigin(int32_t origin, bool rePaint)
 	ControlBase<QBase>::setPxValue(L"padding-left", origin, false, rePaint);
 }
 
+template<class QBase>
+void ControlFont<QBase>::setTextRightOrigin(int32_t origin, bool rePaint)
+{
+	ControlBase<QBase>::setPxValue(L"padding-right", origin, false, rePaint);
+}
+
 #endif
