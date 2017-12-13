@@ -21,13 +21,13 @@ public:
 	@param [in] id 节点ID（ID不唯一，可以添加两个相同ID的节点）
 	@param [in] text 节点内容
 	*/
-	void addItem(qint64 id, const QString& text);
+	void addItem(const QString& text, qint64 id = 0);
 
 	/** 添加一组带有ID的节点（会检测两个list的size是否一样，不一样不添加，和原生addItems相似不具备覆盖效果）
 	@param [in] idList 节点ID列表
 	@param [in] textList 节点文字列表
 	*/
-	void addItems(const QList<qint64>& idList, const QStringList& textList);
+	void addItems(const QStringList& textList, const QList<qint64>& idList = QList<qint64>());
 
 Q_SIGNALS:
 	/** 当选择了另一个id的下拉节点时发送信号（点击框设为可编辑，手动输入文字时不发送信号）

@@ -14,7 +14,7 @@ IdItemComboBox::~IdItemComboBox()
 
 }
 
-void IdItemComboBox::addItem(qint64 id, const QString& text)
+void IdItemComboBox::addItem(const QString& text, qint64 id)
 {
 	ListWidgetIdItem* widgetItem = new ListWidgetIdItem;
 	widgetItem->setText(text);
@@ -23,19 +23,26 @@ void IdItemComboBox::addItem(qint64 id, const QString& text)
 	m_listWidget->addItem(widgetItem);
 }
 
-void IdItemComboBox::addItems(const QList<qint64>& idList, const QStringList& textList)
+void IdItemComboBox::addItems(const QStringList& textList, const QList<qint64>& idList)
 {
-	if (idList.size() != textList.size())
+	if ((idList.size() != textList.size()) && (idList.empty() == false))
 	{
 		return;
 	}
 	int32_t index = -1;
-	while (index++ != idList.size() - 1)
+	while (index++ != textList.size() - 1)
 	{
 		ListWidgetIdItem* widgetItem = new ListWidgetIdItem;
 		widgetItem->setText(textList[index]);
 		widgetItem->setToolTip(textList[index]);
-		widgetItem->setId(idList[index]);
+		if (idList.empty())
+		{
+			widgetItem->setId(0);
+		}
+		else
+		{
+			widgetItem->setId(idList[index]);
+		}
 		m_listWidget->addItem(widgetItem);
 	}
 }

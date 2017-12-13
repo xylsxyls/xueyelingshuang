@@ -188,11 +188,11 @@ qtcombobox::qtcombobox(QWidget *parent)
 	box->setAttribute(Qt::WA_TranslucentBackground);
 	box->setWindowFlags(Qt::FramelessWindowHint);
 
-	box->addItem(1, "123456");
-	box->addItem(2, "12345222222222222222222222222224");
-	box->addItem(2, "123455");
-	box->addItem(3, "df<font color = \"red\">15m2</font>123sssd54fewwasf");
-	box->addItem(4, QString::fromStdWString(L"水电费"));
+	box->addItem("123456");
+	box->addItem("12345222222222222222222222222224");
+	box->addItem("123455");
+	box->addItem("df<font color = \"red\">15m2</font>123sssd54fewwasf");
+	box->addItem(QString::fromStdWString(L"水电费"));
 
 	QObject::connect(box, &IdItemComboBox::currentItemChanged, this, &qtcombobox::idComboBoxItemChanged);
 
@@ -211,10 +211,10 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//QObject::connect(idItemBox->m_pSendWidget, &QSendWidget::currentTextChanged3, this, &qtcombobox::currentTextChanged6);
 	//QObject::connect(idItemBox->m_pSendWidget, SIGNAL(currentTextChanged3(const QString&)), this, SLOT(currentTextChanged6(const QString&)));
 	idItemBox->setGeometry(200, 200, 100, 30);
-	idItemBox->addItem(5, "123");
-	idItemBox->addItem(5, "124");
-	idItemBox->addItem(7, "125");
-	idItemBox->addItem(8, "125");
+	idItemBox->addItem("123", 5);
+	idItemBox->addItem("124", 5);
+	idItemBox->addItem("125", 7);
+	idItemBox->addItem("125", 8);
 	idItemBox->setBorderImage("D:/dropdown.png", 4, 1, 2, 3, 4);
 	idItemBox->setDropDownSize(20, 26);
 	idItemBox->setDropDownImage("D:/hot.png", 8, 1, 2, 4, 5, 8);
@@ -232,7 +232,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	textList.push_back("12312");
 	textList.push_back("12313");
 	textList.push_back("12314");
-	idItemBox->addItems(idList, textList);
+	idItemBox->addItems(textList);
 	QObject::connect(idItemBox, &IdItemComboBox::currentItemChanged, this, &qtcombobox::idComboBoxItemChanged);
 	idItemBox->setEditable(true);
 

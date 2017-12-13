@@ -83,6 +83,7 @@ int main()
 
 	//É¾³ýÁÙÊ±ÎÄ¼þ
 	system(("del" + SPACE + MARK(projectPath + "@AutomationLog.txt")).c_str());
+	system(("del" + SPACE + "@AutomationLog.txt").c_str());
 	system(("del" + SPACE + MARK(projectPath + "scripts\\@AutomationLog.txt")).c_str());
 	system(("del" + SPACE + MARK(projectPath + "scripts\\msbuild.log")).c_str());
 	std::string d;

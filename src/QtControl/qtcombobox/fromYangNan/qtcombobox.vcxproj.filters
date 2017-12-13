@@ -114,6 +114,12 @@
     <Filter Include="COriginalButton">
       <UniqueIdentifier>{1212dac7-9d6f-42c3-b84e-91550afc1b68}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ComboBox\HtmlComboBox\HtmlComboBoxStyle">
+      <UniqueIdentifier>{0f23648d-bfd3-44cb-8335-e9e40ca347f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ComboBox\HtmlComboBox\HtmlComboBoxDelegate">
+      <UniqueIdentifier>{a0e8d20e-0218-40b8-8f00-e0d282ffeb35}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -266,6 +272,12 @@
     <ClCompile Include="..\COriginalButton.cpp">
       <Filter>COriginalButton</Filter>
     </ClCompile>
+    <ClCompile Include="HtmlComboBoxDelegate.cpp">
+      <Filter>ComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
+    </ClCompile>
+    <ClCompile Include="HtmlComboBoxStyle.cpp">
+      <Filter>ComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -362,6 +374,12 @@
     </ClInclude>
     <ClInclude Include="..\COriginalButton.h">
       <Filter>COriginalButton</Filter>
+    </ClInclude>
+    <ClInclude Include="HtmlComboBoxDelegate.h">
+      <Filter>ComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
+    </ClInclude>
+    <ClInclude Include="HtmlComboBoxStyle.h">
+      <Filter>ComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
