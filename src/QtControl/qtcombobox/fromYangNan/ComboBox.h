@@ -85,6 +85,12 @@ public:
 	*/
 	void addItems(const QStringList& textList);
 
+	/** 设置指定节点文字
+	@param [in] index 索引值
+	@param [in] text 文本
+	*/
+	void setItemText(int32_t index, const QString& text);
+
 	/** 设置背景颜色
 	@param [in] color 背景颜色
 	@param [in] rePaint 是否立即重画

@@ -156,8 +156,6 @@ void ComboBox::addItem(const QString& text)
 	QListWidgetItem* widgetItem = new QListWidgetItem(m_listWidget);
 	widgetItem->setText(text);
 	widgetItem->setToolTip(text);
-
-	//QComboBox::addItem(text);
 }
 
 void ComboBox::addItems(const QStringList& textList)
@@ -170,6 +168,16 @@ void ComboBox::addItems(const QStringList& textList)
 		widgetItem->setText(textList[index]);
 		widgetItem->setToolTip(textList[index]);
 	}
+}
+
+void ComboBox::setItemText(int32_t index, const QString& text)
+{
+	QListWidgetItem* widgetItem = m_listWidget->item(index);
+	if (widgetItem != nullptr)
+	{
+		widgetItem->setToolTip(text);
+	}
+	QComboBox::setItemText(index, text);
 }
 
 void ComboBox::setListBackgroundColor(const QColor& color, bool rePaint)
