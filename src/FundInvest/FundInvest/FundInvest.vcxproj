@@ -203,6 +203,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DataNeuron.h" />
+    <ClInclude Include="DrawDlg.h" />
     <ClInclude Include="FundHelper.h" />
     <ClInclude Include="FundInvest.h" />
     <ClInclude Include="FundInvestDlg.h" />
@@ -212,6 +213,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DataNeuron.cpp" />
+    <ClCompile Include="DrawDlg.cpp" />
     <ClCompile Include="FundHelper.cpp" />
     <ClCompile Include="FundInvest.cpp" />
     <ClCompile Include="FundInvestDlg.cpp" />

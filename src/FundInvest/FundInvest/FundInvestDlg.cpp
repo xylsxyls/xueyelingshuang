@@ -15,6 +15,7 @@
 #include "DataNeuron.h"
 #include "FundHelper.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include "DrawDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -81,6 +82,8 @@ BEGIN_MESSAGE_MAP(CFundInvestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON8, &CFundInvestDlg::OnBnClickedButton8)
 	ON_BN_CLICKED(IDC_BUTTON9, &CFundInvestDlg::OnBnClickedButton9)
 	ON_BN_CLICKED(IDC_BUTTON9, &CFundInvestDlg::OnBnClickedButton10)
+	ON_BN_CLICKED(IDC_BUTTON11, &CFundInvestDlg::OnBnClickedButton11)
+	ON_BN_CLICKED(IDC_BUTTON12, &CFundInvestDlg::OnBnClickedButton12)
 END_MESSAGE_MAP()
 
 
@@ -116,6 +119,10 @@ BOOL CFundInvestDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+	
+	drawDlg = new CDrawDlg;
+	drawDlg->Create(CDrawDlg::IDD, drawDlg);
+
 	FundHelper::init();
 
     LoadFund();
@@ -270,7 +277,7 @@ void CFundInvestDlg::LoadFund()
 	DataNeuron* nowNeuron = firstNeuron;
 	while (nowNeuron)
 	{
-		nowNeuron->m_upDownWeek = nowNeuron->GetUpDown(-5);
+		nowNeuron->m_upDownWeek = nowNeuron->GetUpDown(-3);
 		nowNeuron->m_upDownDays = nowNeuron->GetUpDownDays();
 		nowNeuron->m_forecastPlatDays = nowNeuron->GetForecastFlatDays();
 		nowNeuron->m_upDownForecast3 = nowNeuron->GetUpDown(3);
@@ -430,8 +437,8 @@ void CFundInvestDlg::OnBnClickedButton7()
 	// TODO:  在此添加控件通知处理程序代码
 	double fund = 50000;
     double charge = 0;
-	DataNeuron* beginNeuron = GetNeuron("110022", "2016-11-26");
-	DataNeuron* endNeuron = GetNeuron("110022", "2017-11-26");
+	DataNeuron* beginNeuron = GetNeuron("110022", "2015-01-01");
+	DataNeuron* endNeuron = GetNeuron("110022", "2017-12-13");
 	DataNeuron* nowNeuron = beginNeuron;
 	int32_t state = WAIT;
 
@@ -443,8 +450,7 @@ void CFundInvestDlg::OnBnClickedButton7()
 		{
 			fund = fund * (1 + nowNeuron->m_dayChg);
             //break;
-			if (!(nowNeuron->m_forecast1 >= -0.0065 ||
-                nowNeuron->m_forecast1 + nowNeuron->m_forecast2 >= -0.0065))
+			if (nowNeuron->m_upDownWeek >= 0.057)
 			{
                 charge += fund * 0.5 / 100;
 				fund = fund * (1 - 0.5 / 100);
@@ -456,7 +462,7 @@ void CFundInvestDlg::OnBnClickedButton7()
 		{
             //state = HOLD;
             //break;
-            if (nowNeuron->m_forecast1 > -0.00)
+            if (nowNeuron->m_upDownWeek <= -0.007)
 			{
                 charge += fund * 0.15 / 100;
 				fund = fund * (1 - 0.15 / 100);
@@ -515,7 +521,7 @@ void CFundInvestDlg::OnBnClickedButton9()
 	std::map<int32_t, std::vector<DataNeuron*>> mapNeuron;
 	std::map<int32_t, std::vector<DataNeuron*>> mapDaysNeuron;
 	std::map<double, std::vector<DataNeuron*>> mapWeekNeuron;
-	DataNeuron* neuron = GetNeuron("110022", "2015-01-01");
+	DataNeuron* neuron = GetNeuron("110022", "2015-11-20");
 	mapNeuron[neuron->m_forecastPlatDays].push_back(neuron);
 	mapDaysNeuron[neuron->m_upDownDays].push_back(neuron);
 	mapWeekNeuron[neuron->m_upDownWeek].push_back(neuron);
@@ -534,4 +540,115 @@ void CFundInvestDlg::OnBnClickedButton10()
     // TODO:  在此添加控件通知处理程序代码
     double probability = GetNeuron("110022", "2017-12-01")->GetUpDownAccuracy(365, 1.0 / 100);
     AfxMessageBox(FundHelper::DoubleToString(probability).c_str());
+}
+
+
+void CFundInvestDlg::OnBnClickedButton11()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	DataNeuron* neuron = GetNeuron("110022", "2017-01-01");
+	
+	std::map<double, double> mapWeek;
+	mapWeek[neuron->m_upDownForecast3] = neuron->m_upDownWeek;
+	while (neuron->m_nextData)
+	{
+		neuron = neuron->m_nextData;
+		mapWeek[neuron->m_upDownForecast3] = neuron->m_upDownWeek;
+	}
+	
+	Draw(mapWeek);
+
+	int32_t count = 0;
+	double first = 0;
+	double second = 0;
+	for (auto itWeek = mapWeek.begin(); itWeek != mapWeek.end(); ++itWeek)
+	{
+		++count;
+		first += itWeek->first;
+		second += itWeek->second;
+	}
+	first = first / count;
+	second = second / count;
+}
+
+void CFundInvestDlg::Draw(const std::map<double, double>& mapData)
+{
+	Ctxt txt("draw.txt");
+	txt.AddLine("x\ty");
+	for (auto itData = mapData.begin(); itData != mapData.end(); ++itData)
+	{
+		txt.AddLine("%lf\t%lf", itData->second, itData->first);
+	}
+}
+
+void CFundInvestDlg::OnBnClickedButton12()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	double fundAlways = WeekBidSell("2017-11-13", "2017-12-13", 500.0, 500.0);
+	double highestFund = 0;
+	double highestBid = 0;
+	double highestSell = 0;
+	for (int32_t intBid = -500; intBid <= 500; ++intBid)
+	{
+		for (int32_t intSell = -500; intSell <= 500; ++intSell)
+		{
+			double fund = WeekBidSell("2017-11-13", "2017-12-13", intBid / 1000.0, intSell / 1000.0);
+			if (fund > highestFund)
+			{
+				highestFund = fund;
+				highestBid = intBid / 1000.0;
+				highestSell = intSell / 1000.0;
+			}
+		}
+	}
+	AfxMessageBox(CStringManager::Format("fundAlways = %lf,highestFund = %lf,highestBid = %lf,highestSell = %lf", fundAlways, highestFund, highestBid, highestSell).c_str());
+}
+
+double CFundInvestDlg::WeekBidSell(const std::string& beginTime,
+								   const std::string& endTime,
+								   double bid,
+								   double sell)
+{
+	double fund = 50000;
+    double charge = 0;
+	DataNeuron* beginNeuron = GetNeuron("110022", beginTime);
+	DataNeuron* endNeuron = GetNeuron("110022", endTime);
+	DataNeuron* nowNeuron = beginNeuron;
+	int32_t state = WAIT;
+
+	while (nowNeuron != endNeuron)
+	{
+		switch (state)
+		{
+		case HOLD:
+		{
+			fund = fund * (1 + nowNeuron->m_dayChg);
+            //break;
+			if (nowNeuron->m_upDownWeek >= sell)
+			{
+                charge += fund * 0.5 / 100;
+				fund = fund * (1 - 0.5 / 100);
+				state = WAIT;
+			}
+			break;
+		}
+		case WAIT:
+		{
+            //state = HOLD;
+            //break;
+			if (nowNeuron->m_upDownWeek <= bid)
+			{
+                charge += fund * 0.15 / 100;
+				fund = fund * (1 - 0.15 / 100);
+				state = HOLD;
+			}
+			break;
+		}
+		default:
+			break;
+		}
+		nowNeuron = nowNeuron->m_nextData;
+	}
+    double all = fund + charge;
+	return fund;
 }

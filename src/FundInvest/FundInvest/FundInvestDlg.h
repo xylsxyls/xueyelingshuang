@@ -10,6 +10,7 @@
 #include "DataNeuron.h"
 #include "CSystem/CSystemAPI.h"
 
+class CDrawDlg;
 // CFundInvestDlg ¶Ô»°¿ò
 class CFundInvestDlg : public CDialogEx
 {
@@ -58,4 +59,15 @@ public:
 	afx_msg void OnBnClickedButton8();
 	afx_msg void OnBnClickedButton9();
 	afx_msg void OnBnClickedButton10();
+	afx_msg void OnBnClickedButton11();
+
+	void Draw(const std::map<double,double>& mapData);
+
+	CDrawDlg * drawDlg = NULL;
+	afx_msg void OnBnClickedButton12();
+
+	double WeekBidSell(const std::string& beginTime,
+					   const std::string& endTime,
+					   double bid,
+					   double sell);
 };

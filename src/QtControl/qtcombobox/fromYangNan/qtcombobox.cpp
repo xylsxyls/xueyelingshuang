@@ -194,6 +194,8 @@ qtcombobox::qtcombobox(QWidget *parent)
 	box->addItem("df<font color = \"red\">15m2</font>123sssd54fewwasf");
 	box->addItem(QString::fromStdWString(L"Ë®µç·Ñ"));
 
+	box->setItemText(0, "2222");
+
 	QObject::connect(box, &IdItemComboBox::currentItemChanged, this, &qtcombobox::idComboBoxItemChanged);
 
 	QObject::connect(box, &HtmlComboBox::itemPressed, this, &qtcombobox::htmlItemPressed);

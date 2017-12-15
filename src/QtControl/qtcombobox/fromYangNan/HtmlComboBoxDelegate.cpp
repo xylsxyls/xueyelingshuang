@@ -39,12 +39,10 @@ void HtmlComboBoxDelegate::paint(QPainter *painter,
 	}
 	else
 	{
-		if (option.state.testFlag(QStyle::State_MouseOver))
+		if (option.state.testFlag(QStyle::State_MouseOver)
+			&& option.state.testFlag(QStyle::State_Selected))
 		{
-			if (option.state.testFlag(QStyle::State_Selected))
-			{
-				drawColor = m_htmlComboBox->m_selectedColor;
-			}
+			drawColor = m_htmlComboBox->m_selectedColor;
 		}
 		else
 		{

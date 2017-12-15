@@ -45,6 +45,9 @@
     <ClInclude Include="FundHelper.h">
       <Filter>FundHelper</Filter>
     </ClInclude>
+    <ClInclude Include="DrawDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FundInvest.cpp">
@@ -61,6 +64,9 @@
     </ClCompile>
     <ClCompile Include="FundHelper.cpp">
       <Filter>FundHelper</Filter>
+    </ClCompile>
+    <ClCompile Include="DrawDlg.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
