@@ -42,6 +42,7 @@ public:
 private:
 	void LoadFund();
 	DataNeuron* GetNeuron(const std::string& fundName, const std::string& time);
+    DataNeuron* GetNeuron(const std::string& fundName, const IntDateTime& time);
 
 private:
 	std::string m_fundPath = CSystem::GetEnvironment("xueyelingshuang") + "data\\Fund\\";
@@ -66,8 +67,13 @@ public:
 	CDrawDlg * drawDlg = NULL;
 	afx_msg void OnBnClickedButton12();
 
-	double WeekBidSell(const std::string& beginTime,
-					   const std::string& endTime,
+    double DaysBidSell(int32_t lookDays,
+                       const IntDateTime& beginTime,
+					   const IntDateTime& endTime,
 					   double bid,
 					   double sell);
+    afx_msg void OnBnClickedButton13();
+
+    //always£¬highest£¬bid£¬sell
+    std::vector<double> GetBidSellInfo(int32_t lookDays, const IntDateTime& time, int32_t days);
 };

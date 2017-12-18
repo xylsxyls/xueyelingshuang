@@ -31,6 +31,18 @@ public:
 
 	int32_t GetForecastFlatDays();
 
+    double GetMinChg(int32_t days);
+
+    double GetMaxChg(int32_t days);
+
+    double GetMinDays_5(int32_t days);
+
+    double GetMaxDays_5(int32_t days);
+
+    double GetBidAvg_5(int32_t days);
+
+    double GetSellAvg_5(int32_t days);
+
 private:
 	void AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,
 					 int32_t index,
@@ -54,10 +66,45 @@ public:
 	double m_forecast2 = 0;
 	double m_forecast3 = 0;
 
-	double m_upDownWeek = 0;
+    //3ÃÏ
+    double m_upDown_3 = 0;
+
+    double m_always_15days_3 = 0;
+    double m_highest_15days_3 = 0;
+    double m_bid_15days_3 = 0;
+    double m_sell_15days_3 = 0;
+    
+    double m_always_30days_3 = 0;
+    double m_highest_30days_3 = 0;
+    double m_bid_30days_3 = 0;
+    double m_sell_30days_3 = 0;
+    
+    double m_always_90days_3 = 0;
+    double m_highest_90days_3 = 0;
+    double m_bid_90days_3 = 0;
+    double m_sell_90days_3 = 0;
+    
+    //“ª÷‹
+    double m_upDown_5 = 0;
+
+    double m_always_15days_5 = 0;
+    double m_highest_15days_5 = 0;
+    double m_bid_15days_5 = 0;
+    double m_sell_15days_5 = 0;
+    
+    double m_always_30days_5 = 0;
+    double m_highest_30days_5 = 0;
+    double m_bid_30days_5 = 0;
+    double m_sell_30days_5 = 0;
+    
+    double m_always_90days_5 = 0;
+    double m_highest_90days_5 = 0;
+    double m_bid_90days_5 = 0;
+    double m_sell_90days_5 = 0;
+    
 	double m_upDownForecast3 = 0;
 	double m_upDownForecast5 = 0;
-	int32_t m_upDownDays = 0;
+	int32_t m_upDownInDays = 0;
 	int32_t m_forecastPlatDays = 0;
 
 private:

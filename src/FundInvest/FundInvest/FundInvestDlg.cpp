@@ -16,6 +16,7 @@
 #include "FundHelper.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "DrawDlg.h"
+#include "D:\\SendToMessageTest.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -84,6 +85,7 @@ BEGIN_MESSAGE_MAP(CFundInvestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON9, &CFundInvestDlg::OnBnClickedButton10)
 	ON_BN_CLICKED(IDC_BUTTON11, &CFundInvestDlg::OnBnClickedButton11)
 	ON_BN_CLICKED(IDC_BUTTON12, &CFundInvestDlg::OnBnClickedButton12)
+    ON_BN_CLICKED(IDC_BUTTON13, &CFundInvestDlg::OnBnClickedButton13)
 END_MESSAGE_MAP()
 
 
@@ -253,6 +255,41 @@ void CFundInvestDlg::LoadFund()
 			dataNeuron.m_forecast2 = atof(dforecast2.c_str());
 			std::string dforecast3 = ini.ReadIni(GETINFO(FORECAST3), date);
 			dataNeuron.m_forecast3 = atof(dforecast3.c_str());
+
+            //3天
+            dataNeuron.m_always_15days_3 = atof(ini.ReadIni(GETINFO(ALWAYS_15DAYS_3), date).c_str());
+            dataNeuron.m_always_30days_3 = atof(ini.ReadIni(GETINFO(ALWAYS_30DAYS_3), date).c_str());
+            dataNeuron.m_always_90days_3 = atof(ini.ReadIni(GETINFO(ALWAYS_90DAYS_3), date).c_str());
+
+            dataNeuron.m_highest_15days_3 = atof(ini.ReadIni(GETINFO(HIGHEST_15DAYS_3), date).c_str());
+            dataNeuron.m_highest_30days_3 = atof(ini.ReadIni(GETINFO(HIGHEST_30DAYS_3), date).c_str());
+            dataNeuron.m_highest_90days_3 = atof(ini.ReadIni(GETINFO(HIGHEST_90DAYS_3), date).c_str());
+
+            dataNeuron.m_bid_15days_3 = atof(ini.ReadIni(GETINFO(BID_15DAYS_3), date).c_str());
+            dataNeuron.m_bid_30days_3 = atof(ini.ReadIni(GETINFO(BID_30DAYS_3), date).c_str());
+            dataNeuron.m_bid_90days_3 = atof(ini.ReadIni(GETINFO(BID_90DAYS_3), date).c_str());
+
+            dataNeuron.m_sell_15days_3 = atof(ini.ReadIni(GETINFO(SELL_15DAYS_3), date).c_str());
+            dataNeuron.m_sell_30days_3 = atof(ini.ReadIni(GETINFO(SELL_30DAYS_3), date).c_str());
+            dataNeuron.m_sell_90days_3 = atof(ini.ReadIni(GETINFO(SELL_90DAYS_3), date).c_str());
+
+            //一周
+            dataNeuron.m_always_15days_5 = atof(ini.ReadIni(GETINFO(ALWAYS_15DAYS_5), date).c_str());
+            dataNeuron.m_always_30days_5 = atof(ini.ReadIni(GETINFO(ALWAYS_30DAYS_5), date).c_str());
+            dataNeuron.m_always_90days_5 = atof(ini.ReadIni(GETINFO(ALWAYS_90DAYS_5), date).c_str());
+
+            dataNeuron.m_highest_15days_5 = atof(ini.ReadIni(GETINFO(HIGHEST_15DAYS_5), date).c_str());
+            dataNeuron.m_highest_30days_5 = atof(ini.ReadIni(GETINFO(HIGHEST_30DAYS_5), date).c_str());
+            dataNeuron.m_highest_90days_5 = atof(ini.ReadIni(GETINFO(HIGHEST_90DAYS_5), date).c_str());
+
+            dataNeuron.m_bid_15days_5 = atof(ini.ReadIni(GETINFO(BID_15DAYS_5), date).c_str());
+            dataNeuron.m_bid_30days_5 = atof(ini.ReadIni(GETINFO(BID_30DAYS_5), date).c_str());
+            dataNeuron.m_bid_90days_5 = atof(ini.ReadIni(GETINFO(BID_90DAYS_5), date).c_str());
+
+            dataNeuron.m_sell_15days_5 = atof(ini.ReadIni(GETINFO(SELL_15DAYS_5), date).c_str());
+            dataNeuron.m_sell_30days_5 = atof(ini.ReadIni(GETINFO(SELL_30DAYS_5), date).c_str());
+            dataNeuron.m_sell_90days_5 = atof(ini.ReadIni(GETINFO(SELL_90DAYS_5), date).c_str());
+
 			m_mapDataNeuron["110022"][IntDateTime(date + " 00:00:00")] = dataNeuron;
 		}
 	}
@@ -277,8 +314,9 @@ void CFundInvestDlg::LoadFund()
 	DataNeuron* nowNeuron = firstNeuron;
 	while (nowNeuron)
 	{
-		nowNeuron->m_upDownWeek = nowNeuron->GetUpDown(-3);
-		nowNeuron->m_upDownDays = nowNeuron->GetUpDownDays();
+        nowNeuron->m_upDown_3 = nowNeuron->GetUpDown(-3);
+		nowNeuron->m_upDown_5 = nowNeuron->GetUpDown(-5);
+		nowNeuron->m_upDownInDays = nowNeuron->GetUpDownDays();
 		nowNeuron->m_forecastPlatDays = nowNeuron->GetForecastFlatDays();
 		nowNeuron->m_upDownForecast3 = nowNeuron->GetUpDown(3);
 		nowNeuron->m_upDownForecast5 = nowNeuron->GetUpDown(5);
@@ -295,7 +333,7 @@ DataNeuron* CFundInvestDlg::GetNeuron(const std::string& fundName, const std::st
 	int32_t index = -1;
 	while (index++ != 100)
 	{
-		intTime = intTime + 24 * 60 * 60 * index;
+        intTime = IntDateTime(time + " 00:00:00") + 24 * 60 * 60 * index;
 		auto itNeuron = mapNeuron.find(intTime);
 		if (itNeuron != mapNeuron.end())
 		{
@@ -303,6 +341,24 @@ DataNeuron* CFundInvestDlg::GetNeuron(const std::string& fundName, const std::st
 		}
 	}
 	return nullptr;
+}
+
+DataNeuron* CFundInvestDlg::GetNeuron(const std::string& fundName, const IntDateTime& time)
+{
+    auto& mapNeuron = m_mapDataNeuron[fundName];
+    IntDateTime intTime = time;
+
+    int32_t index = -1;
+    while (index++ != 100 - 1)
+    {
+        intTime = time + 24 * 60 * 60 * index;
+        auto itNeuron = mapNeuron.find(intTime);
+        if (itNeuron != mapNeuron.end())
+        {
+            return &(itNeuron->second);
+        }
+    }
+    return nullptr;
 }
 
 void CFundInvestDlg::OnBnClickedButton3()
@@ -437,8 +493,8 @@ void CFundInvestDlg::OnBnClickedButton7()
 	// TODO:  在此添加控件通知处理程序代码
 	double fund = 50000;
     double charge = 0;
-	DataNeuron* beginNeuron = GetNeuron("110022", "2015-01-01");
-	DataNeuron* endNeuron = GetNeuron("110022", "2017-12-13");
+	DataNeuron* beginNeuron = GetNeuron("110022", "2017-11-15");
+	DataNeuron* endNeuron = GetNeuron("110022", "2017-12-15");
 	DataNeuron* nowNeuron = beginNeuron;
 	int32_t state = WAIT;
 
@@ -450,7 +506,12 @@ void CFundInvestDlg::OnBnClickedButton7()
 		{
 			fund = fund * (1 + nowNeuron->m_dayChg);
             //break;
-			if (nowNeuron->m_upDownWeek >= 0.057)
+            double sell = nowNeuron->GetSellAvg_5(22);
+            if (sell > 100)
+            {
+                AfxMessageBox("1");
+            }
+            if (nowNeuron->m_upDown_5 >= 0.0319)
 			{
                 charge += fund * 0.5 / 100;
 				fund = fund * (1 - 0.5 / 100);
@@ -460,9 +521,16 @@ void CFundInvestDlg::OnBnClickedButton7()
 		}
 		case WAIT:
 		{
+            //charge += fund * 0.15 / 100;
+            //fund = fund * (1 - 0.15 / 100);
             //state = HOLD;
             //break;
-            if (nowNeuron->m_upDownWeek <= -0.007)
+            double bid = nowNeuron->GetBidAvg_5(22);
+            if (bid > 100)
+            {
+                AfxMessageBox("1");
+            }
+            if (nowNeuron->m_upDown_5 <= 0.0138)
 			{
                 charge += fund * 0.15 / 100;
 				fund = fund * (1 - 0.15 / 100);
@@ -475,7 +543,16 @@ void CFundInvestDlg::OnBnClickedButton7()
 		}
 		nowNeuron = nowNeuron->m_nextData;
 	}
+    if (state == HOLD)
+    {
+        fund = fund * (1 + nowNeuron->m_dayChg);
+        charge += fund * 0.5 / 100;
+        fund = fund * (1 - 0.5 / 100);
+        state = WAIT;
+    }
     double all = fund + charge;
+    double x = (fund - 50000) / 50000.0;
+    AfxMessageBox(FundHelper::DoubleToString(x).c_str());
 }
 
 
@@ -523,14 +600,14 @@ void CFundInvestDlg::OnBnClickedButton9()
 	std::map<double, std::vector<DataNeuron*>> mapWeekNeuron;
 	DataNeuron* neuron = GetNeuron("110022", "2015-11-20");
 	mapNeuron[neuron->m_forecastPlatDays].push_back(neuron);
-	mapDaysNeuron[neuron->m_upDownDays].push_back(neuron);
-	mapWeekNeuron[neuron->m_upDownWeek].push_back(neuron);
+	mapDaysNeuron[neuron->m_upDownInDays].push_back(neuron);
+	mapWeekNeuron[neuron->m_upDown_5].push_back(neuron);
 	while (neuron->m_nextData)
 	{
 		neuron = neuron->m_nextData;
 		mapNeuron[neuron->m_forecastPlatDays].push_back(neuron);
-		mapDaysNeuron[neuron->m_upDownDays].push_back(neuron);
-		mapWeekNeuron[neuron->m_upDownWeek].push_back(neuron);
+		mapDaysNeuron[neuron->m_upDownInDays].push_back(neuron);
+		mapWeekNeuron[neuron->m_upDown_5].push_back(neuron);
 	}
 	int x = 3;
 }
@@ -549,11 +626,11 @@ void CFundInvestDlg::OnBnClickedButton11()
 	DataNeuron* neuron = GetNeuron("110022", "2017-01-01");
 	
 	std::map<double, double> mapWeek;
-	mapWeek[neuron->m_upDownForecast3] = neuron->m_upDownWeek;
+	mapWeek[neuron->m_upDownForecast3] = neuron->m_upDown_5;
 	while (neuron->m_nextData)
 	{
 		neuron = neuron->m_nextData;
-		mapWeek[neuron->m_upDownForecast3] = neuron->m_upDownWeek;
+		mapWeek[neuron->m_upDownForecast3] = neuron->m_upDown_5;
 	}
 	
 	Draw(mapWeek);
@@ -584,15 +661,18 @@ void CFundInvestDlg::Draw(const std::map<double, double>& mapData)
 void CFundInvestDlg::OnBnClickedButton12()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	double fundAlways = WeekBidSell("2017-11-13", "2017-12-13", 500.0, 500.0);
+    
+    std::string strBid = "2017-11-11";
+    std::string strSell = "2017-12-11";
+    double fundAlways = DaysBidSell(5, strBid, strSell, 250.0, 250.0);
 	double highestFund = 0;
 	double highestBid = 0;
 	double highestSell = 0;
-	for (int32_t intBid = -500; intBid <= 500; ++intBid)
+	for (int32_t intBid = -250; intBid <= 250; ++intBid)
 	{
-		for (int32_t intSell = -500; intSell <= 500; ++intSell)
+		for (int32_t intSell = -250; intSell <= 250; ++intSell)
 		{
-			double fund = WeekBidSell("2017-11-13", "2017-12-13", intBid / 1000.0, intSell / 1000.0);
+            double fund = DaysBidSell(5, strBid, strSell, intBid / 1000.0, intSell / 1000.0);
 			if (fund > highestFund)
 			{
 				highestFund = fund;
@@ -604,8 +684,9 @@ void CFundInvestDlg::OnBnClickedButton12()
 	AfxMessageBox(CStringManager::Format("fundAlways = %lf,highestFund = %lf,highestBid = %lf,highestSell = %lf", fundAlways, highestFund, highestBid, highestSell).c_str());
 }
 
-double CFundInvestDlg::WeekBidSell(const std::string& beginTime,
-								   const std::string& endTime,
+double CFundInvestDlg::DaysBidSell(int32_t lookDays,
+                                   const IntDateTime& beginTime,
+								   const IntDateTime& endTime,
 								   double bid,
 								   double sell)
 {
@@ -624,7 +705,7 @@ double CFundInvestDlg::WeekBidSell(const std::string& beginTime,
 		{
 			fund = fund * (1 + nowNeuron->m_dayChg);
             //break;
-			if (nowNeuron->m_upDownWeek >= sell)
+            if (lookDays == 5 ? (nowNeuron->m_upDown_5 >= sell) : (nowNeuron->m_upDown_3 >= sell))
 			{
                 charge += fund * 0.5 / 100;
 				fund = fund * (1 - 0.5 / 100);
@@ -636,7 +717,7 @@ double CFundInvestDlg::WeekBidSell(const std::string& beginTime,
 		{
             //state = HOLD;
             //break;
-			if (nowNeuron->m_upDownWeek <= bid)
+            if (lookDays == 5 ? (nowNeuron->m_upDown_5 <= bid) : (nowNeuron->m_upDown_3 <= bid))
 			{
                 charge += fund * 0.15 / 100;
 				fund = fund * (1 - 0.15 / 100);
@@ -649,6 +730,109 @@ double CFundInvestDlg::WeekBidSell(const std::string& beginTime,
 		}
 		nowNeuron = nowNeuron->m_nextData;
 	}
+    if (state == HOLD)
+    {
+        fund = fund * (1 + nowNeuron->m_dayChg);
+        charge += fund * 0.5 / 100;
+        fund = fund * (1 - 0.5 / 100);
+        state = WAIT;
+    }
     double all = fund + charge;
 	return fund;
+}
+
+void CFundInvestDlg::OnBnClickedButton13()
+{
+    // TODO:  在此添加控件通知处理程序代码
+    Cini ini(m_fundPath + "110022.ini");
+	DataNeuron* beginNeuron = GetNeuron("110022", "2017-01-01");
+    DataNeuron* endNeuron = GetNeuron("110022", "2017-12-15");
+    DataNeuron* nowNeuron = beginNeuron;
+
+    int32_t lookDays = 5;
+
+    while (nowNeuron != endNeuron->m_nextData)
+	{
+		std::string timeSection = FundHelper::TimeToString(nowNeuron->m_time.toString());
+		
+        std::vector<double> vecBidSellInfo;
+        vecBidSellInfo = GetBidSellInfo(lookDays, nowNeuron->m_time, 15);
+        ini.WriteIni(GETINFO(ALWAYS_15DAYS_5),FundHelper::DoubleToString(vecBidSellInfo[0]),timeSection);
+        ini.WriteIni(GETINFO(HIGHEST_15DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[1]), timeSection);
+        ini.WriteIni(GETINFO(BID_15DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[2]), timeSection);
+        ini.WriteIni(GETINFO(SELL_15DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[3]), timeSection);
+
+        vecBidSellInfo = GetBidSellInfo(lookDays, nowNeuron->m_time, 30);
+        ini.WriteIni(GETINFO(ALWAYS_30DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[0]), timeSection);
+        ini.WriteIni(GETINFO(HIGHEST_30DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[1]), timeSection);
+        ini.WriteIni(GETINFO(BID_30DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[2]), timeSection);
+        ini.WriteIni(GETINFO(SELL_30DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[3]), timeSection);
+
+        vecBidSellInfo = GetBidSellInfo(lookDays, nowNeuron->m_time, 90);
+        ini.WriteIni(GETINFO(ALWAYS_90DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[0]), timeSection);
+        ini.WriteIni(GETINFO(HIGHEST_90DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[1]), timeSection);
+        ini.WriteIni(GETINFO(BID_90DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[2]), timeSection);
+        ini.WriteIni(GETINFO(SELL_90DAYS_5), FundHelper::DoubleToString(vecBidSellInfo[3]), timeSection);
+
+		nowNeuron = nowNeuron->m_nextData;
+        RCSend("%s处理完成", timeSection.c_str()); 
+	}
+    AfxMessageBox("完成");
+}
+
+std::vector<double> CFundInvestDlg::GetBidSellInfo(int32_t lookDays, const IntDateTime& time, int32_t days)
+{
+    IntDateTime timeBid = time - days * 24 * 60 * 60;
+    IntDateTime timeSell = time;
+    int32_t minNum = (int32_t)(GetNeuron("110022", time)->GetMinDays_5(days) * 10000) - 1;
+    int32_t maxNum = (int32_t)(GetNeuron("110022", time)->GetMaxDays_5(days) * 10000) + 1;
+
+    double fundAlways = DaysBidSell(lookDays, timeBid, timeSell, 10000, 10000);
+	double highestFund = 0;
+	double highestBid = 0;
+	double highestSell = 0;
+    for (int32_t intBid = minNum; intBid <= maxNum; ++intBid)
+	{
+        for (int32_t intSell = minNum; intSell <= maxNum; ++intSell)
+		{
+            double fund = DaysBidSell(lookDays, timeBid, timeSell, intBid / 10000.0, intSell / 10000.0);
+			if (fund > highestFund)
+			{
+				highestFund = fund;
+				highestBid = intBid / 10000.0;
+				highestSell = intSell / 10000.0;
+			}
+		}
+	}
+
+    std::vector<double> result;
+    result.push_back((fundAlways - 50000) / 50000.0);
+    result.push_back((highestFund - 50000) / 50000.0);
+    if ((int32_t)(highestBid * 10000) == minNum)
+    {
+        result.push_back(-10000.0);
+    }
+    else if ((int32_t)(highestBid * 10000) == maxNum)
+    {
+        result.push_back(10000.0);
+    }
+    else
+    {
+        result.push_back(highestBid);
+    }
+
+    if ((int32_t)(highestSell * 10000) == minNum)
+    {
+        result.push_back(-10000.0);
+    }
+    else if ((int32_t)(highestSell * 10000) == maxNum)
+    {
+        result.push_back(10000.0);
+    }
+    else
+    {
+        result.push_back(highestSell);
+    }
+    
+    return result;
 }
