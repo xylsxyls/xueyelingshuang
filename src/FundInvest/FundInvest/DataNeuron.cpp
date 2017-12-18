@@ -183,136 +183,139 @@ int32_t DataNeuron::GetForecastFlatDays()
 	return days;
 }
 
-double DataNeuron::GetMinChg(int32_t days)
+int32_t DataNeuron::GetDays(int32_t realDays)
 {
-    double min = 10000;
-    DataNeuron* nowNeuron = this;
-    while (days-- != 0)
-    {
-        if (nowNeuron->m_dayChg < min)
-        {
-            min = nowNeuron->m_dayChg;
-        }
-        if (nowNeuron->m_preData == nullptr)
-        {
-            break;
-        }
-        nowNeuron = nowNeuron->m_preData;
-    }
-    return min;
+	IntDateTime preTime = m_time - realDays * 24 * 60 * 60;
+	int32_t count = 1;
+	DataNeuron* nowNeuron = this;
+	while (nowNeuron->m_preData)
+	{
+		nowNeuron = nowNeuron->m_preData;
+		if (nowNeuron->m_time < preTime)
+		{
+			break;
+		}
+		++count;
+	}
+	return count;
 }
 
-double DataNeuron::GetMaxChg(int32_t days)
+double DataNeuron::GetMinMaxChg(int32_t days, bool isMin)
 {
+	double min = 10000;
     double max = -10000;
     DataNeuron* nowNeuron = this;
     while (days-- != 0)
     {
-        if (nowNeuron->m_dayChg > max)
-        {
-            max = nowNeuron->m_dayChg;
-        }
+		if (isMin)
+		{
+			if (nowNeuron->m_dayChg < min)
+			{
+				min = nowNeuron->m_dayChg;
+			}
+		}
+		else
+		{
+			if (nowNeuron->m_dayChg > max)
+			{
+				max = nowNeuron->m_dayChg;
+			}
+		}
+        
         if (nowNeuron->m_preData == nullptr)
         {
             break;
         }
         nowNeuron = nowNeuron->m_preData;
     }
-    return max;
+	if (isMin)
+	{
+		return min;
+	}
+	else
+	{
+		return max;
+	}
 }
 
-double DataNeuron::GetMinDays_5(int32_t days)
+double DataNeuron::GetMinMaxUpDown_5(int32_t realDays, bool isMin)
 {
-    double min = 10000;
-    DataNeuron* nowNeuron = this;
-    while (days-- != 0)
-    {
-        if (nowNeuron->m_upDown_5 < min)
-        {
-            min = nowNeuron->m_upDown_5;
-        }
-        if (nowNeuron->m_preData == nullptr)
-        {
-            break;
-        }
-        nowNeuron = nowNeuron->m_preData;
-    }
-    return min;
-}
-
-double DataNeuron::GetMaxDays_5(int32_t days)
-{
+	double min = 10000;
     double max = -10000;
     DataNeuron* nowNeuron = this;
+	int32_t days = GetDays(realDays);
     while (days-- != 0)
     {
-        if (nowNeuron->m_upDown_5 > max)
-        {
-            max = nowNeuron->m_upDown_5;
-        }
+		if (isMin)
+		{
+			if (nowNeuron->m_upDown_5 < min)
+			{
+				min = nowNeuron->m_upDown_5;
+			}
+		}
+		else
+		{
+			if (nowNeuron->m_upDown_5 > max)
+			{
+				max = nowNeuron->m_upDown_5;
+			}
+		}
         if (nowNeuron->m_preData == nullptr)
         {
             break;
         }
         nowNeuron = nowNeuron->m_preData;
     }
-    return max;
+	if (isMin)
+	{
+		return min;
+	}
+	else
+	{
+		return max;
+	}
 }
 
-double DataNeuron::GetBidAvg_5(int32_t days)
+double DataNeuron::GetBidSellAvg_5(int32_t type, int32_t bidSell)
 {
     DataNeuron* nowNeuron = this;
     double result = 0;
+	int32_t days = GetDays(type);
     int32_t dayCount = days;
-    int32_t daysCalc = days;
     while (dayCount-- != 0)
     {
-        if (days == 10)
+		if (type == 15)
         {
-            if (nowNeuron->m_bid_15days_5 == 10000)
-            {
-                result += nowNeuron->GetMaxDays_5(days);
-            }
-            else if (nowNeuron->m_bid_15days_5 == -10000)
-            {
-                result += nowNeuron->GetMinDays_5(days);
-            }
-            else
-            {
-                result += nowNeuron->m_bid_15days_5;
-            }
+			if (bidSell == 1)
+			{
+				result += nowNeuron->m_bid_15days_5;
+			}
+			else if (bidSell == 2)
+			{
+				result += nowNeuron->m_sell_15days_5;
+			}
         }
-        else if (days == 22)
+		else if (type == 30)
         {
-            if ((int32_t)(nowNeuron->m_bid_30days_5) > 1000)
-            {
-                //result += nowNeuron->GetMaxDays_5(days);
-                daysCalc--;
-            }
-            else if ((int32_t)(nowNeuron->m_bid_30days_5) < -1000)
-            {
-                //result += nowNeuron->GetMinDays_5(days);
-                daysCalc--;
-            }
-            else
-            {
-                result += nowNeuron->m_bid_30days_5;
-            }
+			if (bidSell == 1)
+			{
+				result += nowNeuron->m_bid_30days_5;
+			}
+			else if (bidSell == 2)
+			{
+				result += nowNeuron->m_sell_30days_5;
+			}
         }
         else
         {
-            if (nowNeuron->m_bid_90days_5 == 10000)
-            {
-                result += nowNeuron->GetMaxDays_5(days);
-            }
-            else if (nowNeuron->m_bid_90days_5 == -10000)
-            {
-                result += nowNeuron->GetMinDays_5(days);
-            }
-            else
-            {
-                result += nowNeuron->m_bid_90days_5;
-            }
+			if (bidSell == 1)
+			{
+				result += nowNeuron->m_bid_90days_5;
+			}
+			else if (bidSell == 2)
+			{
+				result += nowNeuron->m_sell_90days_5;
+			}
         }
         if (nowNeuron->m_preData == nullptr)
         {
@@ -320,71 +323,7 @@ double DataNeuron::GetBidAvg_5(int32_t days)
         }
         nowNeuron = nowNeuron->m_preData;
     }
-    return result / daysCalc;
-}
-
-double DataNeuron::GetSellAvg_5(int32_t days)
-{
-    DataNeuron* nowNeuron = this;
-    double result = 0;
-    int32_t dayCount = days;
-    int32_t daysCalc = days;
-    while (dayCount-- != 0)
-    {
-        if (days == 10)
-        {
-            if ((int32_t)(nowNeuron->m_sell_15days_5) == 10000)
-            {
-                result += nowNeuron->GetMaxDays_5(days);
-            }
-            else if ((int32_t)(nowNeuron->m_sell_15days_5) == -10000)
-            {
-                result += nowNeuron->GetMinDays_5(days);
-            }
-            else
-            {
-                result += nowNeuron->m_sell_15days_5;
-            }
-        }
-        else if (days == 22)
-        {
-            if ((int32_t)(nowNeuron->m_sell_30days_5) > 1000)
-            {
-                //result += nowNeuron->GetMaxDays_5(days);
-                daysCalc--;
-            }
-            else if ((int32_t)(nowNeuron->m_sell_30days_5) < -1000)
-            {
-                //result += nowNeuron->GetMinDays_5(days);
-                daysCalc--;
-            }
-            else
-            {
-                result += nowNeuron->m_sell_30days_5;
-            }
-        }
-        else
-        {
-            if (nowNeuron->m_sell_90days_5 != 10000)
-            {
-                result += nowNeuron->GetMaxDays_5(days);
-            }
-            else if (nowNeuron->m_sell_90days_5 == -10000)
-            {
-                result += nowNeuron->GetMinDays_5(days);
-            }
-            else
-            {
-                result += nowNeuron->m_sell_90days_5;
-            }
-        }
-        if (nowNeuron->m_preData == nullptr)
-        {
-            break;
-        }
-        nowNeuron = nowNeuron->m_preData;
-    }
-    return result / daysCalc;
+	return result / days;
 }
 
 void DataNeuron::AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,

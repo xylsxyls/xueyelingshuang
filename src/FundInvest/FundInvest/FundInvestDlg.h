@@ -76,4 +76,5 @@ public:
 
     //always£¬highest£¬bid£¬sell
     std::vector<double> GetBidSellInfo(int32_t lookDays, const IntDateTime& time, int32_t days);
+	afx_msg void OnBnClickedButton14();
 };

@@ -49,8 +49,8 @@ rmdir /q /s "%~dp0src\OneKey\OneKey\Debug\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\QtControl\qtcombobox\Win32\"
-rmdir /q /s "%~dp0src\QtControl\qtcombobox\fromYangNan\Debug\"
-rmdir /q /s "%~dp0src\QtControl\qtcombobox\fromYangNan\Release\"
+rmdir /q /s "%~dp0src\QtControl\qtcombobox\ExternalControls\Debug\"
+rmdir /q /s "%~dp0src\QtControl\qtcombobox\ExternalControls\Release\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\Win32\"
 rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\GameInfoWidgetApp\Debug\"

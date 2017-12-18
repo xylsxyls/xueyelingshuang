@@ -31,17 +31,14 @@ public:
 
 	int32_t GetForecastFlatDays();
 
-    double GetMinChg(int32_t days);
+	int32_t GetDays(int32_t realDays);
 
-    double GetMaxChg(int32_t days);
+	double GetMinMaxChg(int32_t days, bool isMin);
 
-    double GetMinDays_5(int32_t days);
+	double GetMinMaxUpDown_5(int32_t realDays, bool isMin);
 
-    double GetMaxDays_5(int32_t days);
-
-    double GetBidAvg_5(int32_t days);
-
-    double GetSellAvg_5(int32_t days);
+	//bid 1£¬sell 2
+	double GetBidSellAvg_5(int32_t type, int32_t bidSell);
 
 private:
 	void AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,
