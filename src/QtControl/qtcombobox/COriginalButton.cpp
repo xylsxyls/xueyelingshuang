@@ -5,6 +5,7 @@
 
 COriginalButton::COriginalButton(QWidget *parent)
     :QPushButton(parent)
+	,mClassName          ("QPushButton")
     ,mBkgImageStateCount (4)
     ,mBkgImageNormal     (1)
     ,mBkgImageHover      (2)
@@ -21,7 +22,10 @@ COriginalButton::COriginalButton(QWidget *parent)
     ,mBorderWidth        (0)
     ,mBorderRadius       (0)
     ,mTextAlign          ("center")
-    ,mMargins            (0)
+    ,mLeftMargin         (0)
+    ,mRightMargin        (0)
+    ,mTopMargin          (0)
+    ,mBottomMargin       (0)
 {
 
     this->setFontSize(14);
@@ -29,7 +33,7 @@ COriginalButton::COriginalButton(QWidget *parent)
     this->setBold(false);
     this->setItalic(false);
     this->setUnderline(false);
-    this->setFontFace(QString::fromLocal8Bit("Î¢ÈíÑÅºÚ"));
+    this->setFontFace(QStringLiteral("Î¢ÈíÑÅºÚ"));
 
     this->setBkgColor();
     this->setFontColor();
@@ -38,7 +42,7 @@ COriginalButton::COriginalButton(QWidget *parent)
     //this->setBorderStyle("solid");
     //this->setBorderColor("black","lightblue","lightgray","gray","black","lightblue","lightgray","gray");
     this->setTextAlign("center");
-    this->setMargins(0);
+    this->setMargins(0,0,0,0);
     this->setToolTipDuration(2500);
 }
 
@@ -82,165 +86,171 @@ void COriginalButton::updateStyle()
     int ckDisabledBottom = imgHeight - ckDisabledTop - stepHeight;
 //font: 75 italic bold 9pt "Agency FB";
     //text-decoration: underline;
-    QString buttonStyle = "\
-    .QPushButton:enabled{\n\
-        border-image:url(@placeBkgImage) @placeEnabledTop 0 @placeEnabledBottom 0 stretch stretch;\n\
-        background-color:@placeBkgColorEnabled;\n\
-        color:@placeFontColorEnabled;\n\
-        font: @placeItalic @placeBold @placeFontSize '@placeFontFace';\n\
-        text-decoration: @placeUnderline;\n\
-        border: @placeBorderWidth @placeBorderStyle @placeBorderColorNormal;\n\
-        border-radius: @placeBorderRadius;\n\
-        text-align: @placeTextAlign;\n\
-        padding-left: @placeMargins;\n\
-        padding-right: @placeMargins;\n\
-        padding-top: @placeMargins;\n\
-        padding-bottom: @placeMargins;\n\
-    }\n\
-    .QPushButton:hover{\n\
-        border-image:url(@placeBkgImage) @placeHoverTop 0 @placeHoverBottom 0 stretch stretch;\n\
-        background-color:@placeBkgColorHover;\n\
-        color:@placeFontColorHover;\n\
-        border: @placeBorderWidth @placeBorderStyle @placeBorderColorHover;\n\
-        border-radius: @placeBorderRadius;\n\
-        text-align: @placeTextAlign;\n\
-        padding-left: @placeMargins;\n\
-        padding-right: @placeMargins;\n\
-        padding-top: @placeMargins;\n\
-        padding-bottom: @placeMargins;\n\
-    }\n\
-    .QPushButton:pressed{\n\
-        border-image:url(@placeBkgImage) @placePressedTop 0 @placePressedBottom 0 stretch stretch;\n\
-        background-color:@placeBkgColorPressed;\n\
-        color:@placeFontColorPressed;\n\
-        border: @placeBorderWidth @placeBorderStyle @placeBorderColorPressed;\n\
-        border-radius: @placeBorderRadius;\n\
-        text-align: @placeTextAlign;\n\
-        padding-left: @placeMargins;\n\
-        padding-right: @placeMargins;\n\
-        padding-top: @placeMargins;\n\
-        padding-bottom: @placeMargins;\n\
-    }\n\
-    .QPushButton:disabled{\n\
-        border-image:url(@placeBkgImage) @placeDisabledTop 0 @placeDisabledBottom 0 stretch stretch;\n\
-        background-color:@placeBkgColorDisabled;\n\
-        color:@placeFontColorDisabled;\n\
-        border: @placeBorderWidth @placeBorderStyle @placeBorderColorDisabled;\n\
-        border-radius: @placeBorderRadius;\n\
-        text-align: @placeTextAlign;\n\
-        padding-left: @placeMargins;\n\
-        padding-right: @placeMargins;\n\
-        padding-top: @placeMargins;\n\
-        padding-bottom: @placeMargins;\n\
-    }\n\
-    .QPushButton:checked:enabled{\n\
-        border-image:url(@placeBkgImage) @placeCKEnabledTop 0 @placeCKEnabledBottom 0 stretch stretch;\n\
-        background-color:@placeBkgColorCKEnabled;\n\
-        color:@placeFontColorCKEnabled;\n\
-        border: none;\n\
-        border: @placeBorderWidth @placeBorderStyle @placeBorderColorCKNormal;\n\
-        border-radius: @placeBorderRadius;\n\
-        text-align: @placeTextAlign;\n\
-        padding-left: @placeMargins;\n\
-        padding-right: @placeMargins;\n\
-        padding-top: @placeMargins;\n\
-        padding-bottom: @placeMargins;\n\
-    }\n\
-    .QPushButton:checked:hover{\n\
-        border-image:url(@placeBkgImage) @placeCKHoverTop 0 @placeCKHoverBottom 0 stretch stretch;\n\
-        background-color:@placeBkgColorCKHover;\n\
-        color:@placeFontColorCKHover;\n\
-        border: none;\n\
-        border: @placeBorderWidth @placeBorderStyle @placeBorderColorCKHover;\n\
-        border-radius: @placeBorderRadius;\n\
-        text-align: @placeTextAlign;\n\
-        padding-left: @placeMargins;\n\
-        padding-right: @placeMargins;\n\
-        padding-top: @placeMargins;\n\
-        padding-bottom: @placeMargins;\n\
-    }\n\
-    .QPushButton:checked:pressed{\n\
-        border-image:url(@placeBkgImage) @placeCKPressedTop 0 @placeCKPressedBottom 0 stretch stretch;\n\
-        background-color:@placeBkgColorCKPressed;\n\
-        color:@placeFontColorCKPressed;\n\
-        border: none;\n\
-        border: @placeBorderWidth @placeBorderStyle @placeBorderColorCKPressed;\n\
-        border-radius: @placeBorderRadius;\n\
-        text-align: @placeTextAlign;\n\
-        padding-left: @placeMargins;\n\
-        padding-right: @placeMargins;\n\
-        padding-top: @placeMargins;\n\
-        padding-bottom: @placeMargins;\n\
-    }\n\
-    .QPushButton:checked:disabled{\n\
-        border-image:url(@placeBkgImage) @placeCKDisabledTop 0 @placeCKDisabledBottom 0 stretch stretch;\n\
-        background-color:@placeBkgColorCKDisabled;\n\
-        color:@placeFontColorCKDisabled;\n\
-        border: none;\n\
-        border: @placeBorderWidth @placeBorderStyle @placeBorderColorCKDisabled;\n\
-        border-radius: @placeBorderRadius;\n\
-        text-align: @placeTextAlign;\n\
-        padding-left: @placeMargins;\n\
-        padding-right: @placeMargins;\n\
-        padding-top: @placeMargins;\n\
-        padding-bottom: @placeMargins;\n\
-    }\n\
-    ";
+	QString buttonStyle = "\
+						  .@placeClassName:enabled{\n\
+						  border-image:url(@placeBkgImage) @placeEnabledTop 0 @placeEnabledBottom 0 stretch stretch;\n\
+						  background-color:@placeBkgColorEnabled;\n\
+						  color:@placeFontColorEnabled;\n\
+						  font: @placeItalic @placeBold @placeFontSize '@placeFontFace';\n\
+						  text-decoration: @placeUnderline;\n\
+						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorNormal;\n\
+						  border-radius: @placeBorderRadius;\n\
+						  text-align: @placeTextAlign;\n\
+						  padding-left: @placeLeftMargin;\n\
+						  padding-right: @placeRightMargin;\n\
+						  padding-top: @placeTopMargin;\n\
+						  padding-bottom: @placeBottomMargin;\n\
+						  }\n\
+						  .@placeClassName:hover{\n\
+						  border-image:url(@placeBkgImage) @placeHoverTop 0 @placeHoverBottom 0 stretch stretch;\n\
+						  background-color:@placeBkgColorHover;\n\
+						  color:@placeFontColorHover;\n\
+						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorHover;\n\
+						  border-radius: @placeBorderRadius;\n\
+						  text-align: @placeTextAlign;\n\
+						  padding-left: @placeLeftMargin;\n\
+						  padding-right: @placeRightMargin;\n\
+						  padding-top: @placeTopMargin;\n\
+						  padding-bottom: @placeBottomMargin;\n\
+						  }\n\
+						  .@placeClassName:pressed{\n\
+						  border-image:url(@placeBkgImage) @placePressedTop 0 @placePressedBottom 0 stretch stretch;\n\
+						  background-color:@placeBkgColorPressed;\n\
+						  color:@placeFontColorPressed;\n\
+						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorPressed;\n\
+						  border-radius: @placeBorderRadius;\n\
+						  text-align: @placeTextAlign;\n\
+						  padding-left: @placeLeftMargin;\n\
+						  padding-right: @placeRightMargin;\n\
+						  padding-top: @placeTopMargin;\n\
+						  padding-bottom: @placeBottomMargin;\n\
+						  }\n\
+						  .@placeClassName:disabled{\n\
+						  border-image:url(@placeBkgImage) @placeDisabledTop 0 @placeDisabledBottom 0 stretch stretch;\n\
+						  background-color:@placeBkgColorDisabled;\n\
+						  color:@placeFontColorDisabled;\n\
+						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorDisabled;\n\
+						  border-radius: @placeBorderRadius;\n\
+						  text-align: @placeTextAlign;\n\
+						  padding-left: @placeLeftMargin;\n\
+						  padding-right: @placeRightMargin;\n\
+						  padding-top: @placeTopMargin;\n\
+						  padding-bottom: @placeBottomMargin;\n\
+						  }\n\
+						  .@placeClassName:checked:enabled{\n\
+						  border-image:url(@placeBkgImage) @placeCKEnabledTop 0 @placeCKEnabledBottom 0 stretch stretch;\n\
+						  background-color:@placeBkgColorCKEnabled;\n\
+						  color:@placeFontColorCKEnabled;\n\
+						  border: none;\n\
+						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorCKNormal;\n\
+						  border-radius: @placeBorderRadius;\n\
+						  text-align: @placeTextAlign;\n\
+						  padding-left: @placeLeftMargin;\n\
+						  padding-right: @placeRightMargin;\n\
+						  padding-top: @placeTopMargin;\n\
+						  padding-bottom: @placeBottomMargin;\n\
+						  }\n\
+						  .@placeClassName:checked:hover{\n\
+						  border-image:url(@placeBkgImage) @placeCKHoverTop 0 @placeCKHoverBottom 0 stretch stretch;\n\
+						  background-color:@placeBkgColorCKHover;\n\
+						  color:@placeFontColorCKHover;\n\
+						  border: none;\n\
+						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorCKHover;\n\
+						  border-radius: @placeBorderRadius;\n\
+						  text-align: @placeTextAlign;\n\
+						  padding-left: @placeLeftMargin;\n\
+						  padding-right: @placeRightMargin;\n\
+						  padding-top: @placeTopMargin;\n\
+						  padding-bottom: @placeBottomMargin;\n\
+						  }\n\
+						  .@placeClassName:checked:pressed{\n\
+						  border-image:url(@placeBkgImage) @placeCKPressedTop 0 @placeCKPressedBottom 0 stretch stretch;\n\
+						  background-color:@placeBkgColorCKPressed;\n\
+						  color:@placeFontColorCKPressed;\n\
+						  border: none;\n\
+						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorCKPressed;\n\
+						  border-radius: @placeBorderRadius;\n\
+						  text-align: @placeTextAlign;\n\
+						  padding-left: @placeLeftMargin;\n\
+						  padding-right: @placeRightMargin;\n\
+						  padding-top: @placeTopMargin;\n\
+						  padding-bottom: @placeBottomMargin;\n\
+						  }\n\
+						  .@placeClassName:checked:disabled{\n\
+						  border-image:url(@placeBkgImage) @placeCKDisabledTop 0 @placeCKDisabledBottom 0 stretch stretch;\n\
+						  background-color:@placeBkgColorCKDisabled;\n\
+						  color:@placeFontColorCKDisabled;\n\
+						  border: none;\n\
+						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorCKDisabled;\n\
+						  border-radius: @placeBorderRadius;\n\
+						  text-align: @placeTextAlign;\n\
+						  padding-left: @placeLeftMargin;\n\
+						  padding-right: @placeRightMargin;\n\
+						  padding-top: @placeTopMargin;\n\
+						  padding-bottom: @placeBottomMargin;\n\
+						  }\n\
+						  @placeClassName:focus{outline:none;}\n\
+						  ";
 
-    buttonStyle = //BkgImage
-                buttonStyle.replace("@placeBkgImage", mBkgImage)
-               .replace("@placeEnabledTop", QString::number(enabledTop)).replace("@placeEnabledBottom", QString::number(enabledBottom))
-               .replace("@placeHoverTop", QString::number(hoverTop)).replace("@placeHoverBottom", QString::number(hoverBottom))
-               .replace("@placePressedTop", QString::number(pressedTop)).replace("@placePressedBottom", QString::number(pressedBottom))
-               .replace("@placeDisabledTop", QString::number(disabledTop)).replace("@placeDisabledBottom", QString::number(disabledBottom))
-               .replace("@placeCKEnabledTop", QString::number(ckEnabledTop)).replace("@placeCKEnabledBottom", QString::number(ckEnabledBottom))
-               .replace("@placeCKHoverTop", QString::number(ckHoverTop)).replace("@placeCKHoverBottom", QString::number(ckHoverBottom))
-               .replace("@placeCKPressedTop", QString::number(ckPressedTop)).replace("@placeCKPressedBottom", QString::number(ckPressedBottom))
-               .replace("@placeCKDisabledTop", QString::number(ckDisabledTop)).replace("@placeCKDisabledBottom", QString::number(ckDisabledBottom))
-                //BkgColor
-               .replace("@placeBkgColorEnabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorNormal.red()).arg(mBkgColorNormal.green()).arg(mBkgColorNormal.blue()).arg(mBkgColorNormal.alpha()))
-               .replace("@placeBkgColorHover", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorHover.red()).arg(mBkgColorHover.green()).arg(mBkgColorHover.blue()).arg(mBkgColorHover.alpha()))
-               .replace("@placeBkgColorPressed", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorPressed.red()).arg(mBkgColorPressed.green()).arg(mBkgColorPressed.blue()).arg(mBkgColorPressed.alpha()))
-               .replace("@placeBkgColorDisabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorDisabled.red()).arg(mBkgColorDisabled.green()).arg(mBkgColorDisabled.blue()).arg(mBkgColorDisabled.alpha()))
-               .replace("@placeBkgColorCKEnabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKNormal.red()).arg(mBkgColorCKNormal.green()).arg(mBkgColorCKNormal.blue()).arg(mBkgColorCKNormal.alpha()))
-               .replace("@placeBkgColorCKHover", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKHover.red()).arg(mBkgColorCKHover.green()).arg(mBkgColorCKHover.blue()).arg(mBkgColorCKHover.alpha()))
-               .replace("@placeBkgColorCKPressed", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKPressed.red()).arg(mBkgColorCKPressed.green()).arg(mBkgColorCKPressed.blue()).arg(mBkgColorCKPressed.alpha()))
-               .replace("@placeBkgColorCKDisabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKDisabled.red()).arg(mBkgColorCKDisabled.green()).arg(mBkgColorCKDisabled.blue()).arg(mBkgColorCKDisabled.alpha()))
-                //FontColor
-               .replace("@placeFontColorEnabled", mFontColorNormal.name())
-               .replace("@placeFontColorHover", mFontColorHover.name())
-               .replace("@placeFontColorPressed", mFontColorPressed.name())
-               .replace("@placeFontColorDisabled", mFontColorDisabled.name())
-               .replace("@placeFontColorCKEnabled", mFontColorCKNormal.name())
-               .replace("@placeFontColorCKHover", mFontColorCKHover.name())
-               .replace("@placeFontColorCKPressed", mFontColorCKPressed.name())
-               .replace("@placeFontColorCKDisabled", mFontColorCKDisabled.name())
-                //FontSize
-               .replace("@placeFontSize", QString::number(mFontSize)+ "px")
-                //FontFace
-               .replace("@placeFontFace", mFontFace)
-               //Bold
-               .replace("@placeBold", mBold ? "bold" : "")
-               //Italic
-               .replace("@placeItalic", mItalic ? "italic" : "")
-               //Underline
-               .replace("@placeUnderline", mUnderline ? "underline" : "none")
-               //Border
-               .replace("@placeBorderWidth", QString::number(mBorderWidth) + "px")
-               .replace("@placeBorderStyle", mBorderStyle)
-               .replace("@placeBorderRadius", QString::number(mBorderRadius) + "px")
-               .replace("@placeBorderColorNormal", mBorderColorNormal.name())
-               .replace("@placeBorderColorHover", mBorderColorHover.name())
-               .replace("@placeBorderColorPressed", mBorderColorPressed.name())
-               .replace("@placeBorderColorDisabled", mBorderColorDisabled.name())
-               .replace("@placeBorderColorCKNormal", mBorderColorNormal.name())
-               .replace("@placeBorderColorCKHover", mBorderColorHover.name())
-               .replace("@placeBorderColorCKPressed", mBorderColorPressed.name())
-               .replace("@placeBorderColorCKDisabled", mBorderColorDisabled.name())
-               //TextAlign
-               .replace("@placeTextAlign", mTextAlign)
-               //Margins
-               .replace("@placeMargins", QString::number(mMargins) + "px");
+	buttonStyle =
+		buttonStyle.replace("@placeClassName",mClassName)
+		//BkgImage
+		.replace("@placeBkgImage", mBkgImage)
+		.replace("@placeEnabledTop", QString::number(enabledTop)).replace("@placeEnabledBottom", QString::number(enabledBottom))
+		.replace("@placeHoverTop", QString::number(hoverTop)).replace("@placeHoverBottom", QString::number(hoverBottom))
+		.replace("@placePressedTop", QString::number(pressedTop)).replace("@placePressedBottom", QString::number(pressedBottom))
+		.replace("@placeDisabledTop", QString::number(disabledTop)).replace("@placeDisabledBottom", QString::number(disabledBottom))
+		.replace("@placeCKEnabledTop", QString::number(ckEnabledTop)).replace("@placeCKEnabledBottom", QString::number(ckEnabledBottom))
+		.replace("@placeCKHoverTop", QString::number(ckHoverTop)).replace("@placeCKHoverBottom", QString::number(ckHoverBottom))
+		.replace("@placeCKPressedTop", QString::number(ckPressedTop)).replace("@placeCKPressedBottom", QString::number(ckPressedBottom))
+		.replace("@placeCKDisabledTop", QString::number(ckDisabledTop)).replace("@placeCKDisabledBottom", QString::number(ckDisabledBottom))
+		//BkgColor
+		.replace("@placeBkgColorEnabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorNormal.red()).arg(mBkgColorNormal.green()).arg(mBkgColorNormal.blue()).arg(mBkgColorNormal.alpha()))
+		.replace("@placeBkgColorHover", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorHover.red()).arg(mBkgColorHover.green()).arg(mBkgColorHover.blue()).arg(mBkgColorHover.alpha()))
+		.replace("@placeBkgColorPressed", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorPressed.red()).arg(mBkgColorPressed.green()).arg(mBkgColorPressed.blue()).arg(mBkgColorPressed.alpha()))
+		.replace("@placeBkgColorDisabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorDisabled.red()).arg(mBkgColorDisabled.green()).arg(mBkgColorDisabled.blue()).arg(mBkgColorDisabled.alpha()))
+		.replace("@placeBkgColorCKEnabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKNormal.red()).arg(mBkgColorCKNormal.green()).arg(mBkgColorCKNormal.blue()).arg(mBkgColorCKNormal.alpha()))
+		.replace("@placeBkgColorCKHover", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKHover.red()).arg(mBkgColorCKHover.green()).arg(mBkgColorCKHover.blue()).arg(mBkgColorCKHover.alpha()))
+		.replace("@placeBkgColorCKPressed", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKPressed.red()).arg(mBkgColorCKPressed.green()).arg(mBkgColorCKPressed.blue()).arg(mBkgColorCKPressed.alpha()))
+		.replace("@placeBkgColorCKDisabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorCKDisabled.red()).arg(mBkgColorCKDisabled.green()).arg(mBkgColorCKDisabled.blue()).arg(mBkgColorCKDisabled.alpha()))
+		//FontColor
+		.replace("@placeFontColorEnabled", mFontColorNormal.name())
+		.replace("@placeFontColorHover", mFontColorHover.name())
+		.replace("@placeFontColorPressed", mFontColorPressed.name())
+		.replace("@placeFontColorDisabled", mFontColorDisabled.name())
+		.replace("@placeFontColorCKEnabled", mFontColorCKNormal.name())
+		.replace("@placeFontColorCKHover", mFontColorCKHover.name())
+		.replace("@placeFontColorCKPressed", mFontColorCKPressed.name())
+		.replace("@placeFontColorCKDisabled", mFontColorCKDisabled.name())
+		//FontSize
+		.replace("@placeFontSize", QString::number(mFontSize)+ "px")
+		//FontFace
+		.replace("@placeFontFace", mFontFace)
+		//Bold
+		.replace("@placeBold", mBold ? "bold" : "")
+		//Italic
+		.replace("@placeItalic", mItalic ? "italic" : "")
+		//Underline
+		.replace("@placeUnderline", mUnderline ? "underline" : "none")
+		//Border
+		.replace("@placeBorderWidth", QString::number(mBorderWidth) + "px")
+		.replace("@placeBorderStyle", mBorderStyle)
+		.replace("@placeBorderRadius", QString::number(mBorderRadius) + "px")
+		.replace("@placeBorderColorNormal", mBorderColorNormal.name())
+		.replace("@placeBorderColorHover", mBorderColorHover.name())
+		.replace("@placeBorderColorPressed", mBorderColorPressed.name())
+		.replace("@placeBorderColorDisabled", mBorderColorDisabled.name())
+		.replace("@placeBorderColorCKNormal", mBorderColorNormal.name())
+		.replace("@placeBorderColorCKHover", mBorderColorHover.name())
+		.replace("@placeBorderColorCKPressed", mBorderColorPressed.name())
+		.replace("@placeBorderColorCKDisabled", mBorderColorDisabled.name())
+		//TextAlign
+		.replace("@placeTextAlign", mTextAlign)
+		//Margins
+		.replace("@placeLeftMargin"  , QString::number(mLeftMargin)   + "px")
+		.replace("@placeTopMargin"   , QString::number(mRightMargin)  + "px")
+		.replace("@placeRightMargin" , QString::number(mTopMargin)    + "px")
+		.replace("@placeBottomMargin", QString::number(mBottomMargin) + "px");
 
 
 
@@ -354,15 +364,18 @@ void COriginalButton::setBorderColor(const QColor &borderColorNormal, const QCol
     this->updateStyle();
 }
 
-void COriginalButton::setTextAlign(QString align)
+void COriginalButton::setTextAlign(const QString &align)
 {
     mTextAlign = align;
     this->updateStyle();
 }
 
-void COriginalButton::setMargins(quint32 margins)
+void COriginalButton::setMargins(const quint32 &left, const quint32 &top, const quint32 &right, const quint32 &bottom)
 {
-    mMargins = margins;
+    mLeftMargin   = left;
+    mTopMargin    = top;
+    mRightMargin  = right;
+    mBottomMargin = bottom;
     this->updateStyle();
 }
 

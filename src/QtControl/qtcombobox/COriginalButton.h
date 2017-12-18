@@ -11,6 +11,8 @@ public:
     ~COriginalButton();
 
 protected:
+	QString  mClassName;
+
     QString  mBkgImage;
     quint32  mBkgImageStateCount;
     quint32  mBkgImageNormal;
@@ -60,7 +62,10 @@ protected:
 
     QString  mTextAlign;
 
-    quint32  mMargins;
+    quint32  mLeftMargin;
+    quint32  mTopMargin;
+    quint32  mRightMargin;
+    quint32  mBottomMargin;
 
     void updateStyle();
 
@@ -115,8 +120,11 @@ public:
                         const QColor& borderColorCKDisabled = QColor(0,0,0,0));
 
 
-    void setTextAlign(QString align);
-    void setMargins(quint32 margins);
+    void setTextAlign(const QString& align);
+    void setMargins(const quint32& left  ,
+                    const quint32& top   ,
+                    const quint32& right ,
+                    const quint32& bottom);
 
 
 };
