@@ -40,8 +40,8 @@ void ControlBackgroundForNormalHoverDisabled<QBase>::setBackgroundColor(const QC
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", false, rePaint);
 }
 
@@ -75,8 +75,8 @@ void ControlBackgroundForNormalSelectedDisabled<QBase>::setBackgroundColor(const
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][SELECTED] = selectedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][SELECTED] = GetQColor(selectedColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", false, rePaint);
 }
 
@@ -111,9 +111,9 @@ void ControlBackgroundForNormalHoverPressedDisabled<QBase>::setBackgroundColor(c
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][PRESSED] = pressedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[NORMAL][PRESSED] = GetQColor(pressedColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", false, rePaint);
 }
 
@@ -154,13 +154,13 @@ void ControlBackgroundForNormalHoverPressedDisabledAndCheck<QBase>::setBackgroun
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[UNCHECK][NORMAL] = normalColor;
-	colorStateMap[UNCHECK][HOVER] = hoverColor;
-	colorStateMap[UNCHECK][PRESSED] = pressedColor;
-	colorStateMap[UNCHECK][DISABLED] = disabledColor;
-	colorStateMap[CHECK][NORMAL] = normalCkColor;
-	colorStateMap[CHECK][HOVER] = hoverCkColor;
-	colorStateMap[CHECK][PRESSED] = pressedCkColor;
-	colorStateMap[CHECK][DISABLED] = disabledCkColor;
+	colorStateMap[UNCHECK][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[UNCHECK][PRESSED] = GetQColor(pressedColor, normalColor);
+	colorStateMap[UNCHECK][DISABLED] = GetQColor(disabledColor, normalColor);
+	colorStateMap[CHECK][NORMAL] = GetQColor(normalCkColor, normalColor);
+	colorStateMap[CHECK][HOVER] = GetQColor(hoverCkColor, GetQColor(normalCkColor, normalColor));
+	colorStateMap[CHECK][PRESSED] = GetQColor(pressedCkColor, GetQColor(normalCkColor, normalColor));
+	colorStateMap[CHECK][DISABLED] = GetQColor(disabledCkColor, GetQColor(normalCkColor, normalColor));
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", false, rePaint);
 }
 
@@ -227,8 +227,8 @@ void ControlItemBackgroundForNormalHoverDisabled<QBase>::setItemBackgroundColor(
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", true, rePaint);
 }
 
@@ -262,8 +262,8 @@ void ControlItemBackgroundForNormalSelectedDisabled<QBase>::setItemBackgroundCol
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][SELECTED] = selectedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][SELECTED] = GetQColor(selectedColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", true, rePaint);
 }
 
@@ -298,9 +298,9 @@ void ControlItemBackgroundForNormalHoverPressedDisabled<QBase>::setItemBackgroun
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][PRESSED] = pressedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[NORMAL][PRESSED] = GetQColor(pressedColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", true, rePaint);
 }
 
@@ -341,13 +341,13 @@ void ControlItemBackgroundForNormalHoverPressedDisabledAndCheck<QBase>::setItemB
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[UNCHECK][NORMAL] = normalColor;
-	colorStateMap[UNCHECK][HOVER] = hoverColor;
-	colorStateMap[UNCHECK][PRESSED] = pressedColor;
-	colorStateMap[UNCHECK][DISABLED] = disabledColor;
-	colorStateMap[CHECK][NORMAL] = normalCkColor;
-	colorStateMap[CHECK][HOVER] = hoverCkColor;
-	colorStateMap[CHECK][PRESSED] = pressedCkColor;
-	colorStateMap[CHECK][DISABLED] = disabledCkColor;
+	colorStateMap[UNCHECK][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[UNCHECK][PRESSED] = GetQColor(pressedColor, normalColor);
+	colorStateMap[UNCHECK][DISABLED] = GetQColor(disabledColor, normalColor);
+	colorStateMap[CHECK][NORMAL] = GetQColor(normalCkColor, normalColor);
+	colorStateMap[CHECK][HOVER] = GetQColor(hoverCkColor, GetQColor(normalCkColor, normalColor));
+	colorStateMap[CHECK][PRESSED] = GetQColor(pressedCkColor, GetQColor(normalCkColor, normalColor));
+	colorStateMap[CHECK][DISABLED] = GetQColor(disabledCkColor, GetQColor(normalCkColor, normalColor));
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", true, rePaint);
 }
 

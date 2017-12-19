@@ -25,7 +25,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	this->setStyleSheet("QMainWindow{background-color:rgba(100,0,0,255);}");
 	CheckBox* pCheckBox = new CheckBox(this);
 	//pBox->SetBackgroundImage(QString::fromLocal8Bit("D:/hot.png"), 8, 1, 2, 3, 4, 5, 6, 7, 8);
-	pCheckBox->setBackgroundColor(QColor(255, 0, 255, 1), QColor(255, 255, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1), QColor(255, 0, 0, 1));
+	pCheckBox->setBackgroundColor(QColor(255, 0, 255, 1));
 	pCheckBox->setIndicatorImage(QString::fromLocal8Bit("D:/hot.png"), 8, 1, 2, 3, 4, 5, 6, 7, 8);
 	pCheckBox->setGeometry(50, 100, 50, 20);
 	pCheckBox->setText(QString::fromLocal8Bit("ÖÐ¹ú"));

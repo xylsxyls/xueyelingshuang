@@ -169,7 +169,7 @@ QFont CGeneralStyle::font()
 
 void CGeneralStyle::drawHtmlTextByLabel(QPainter* painter,
 										const QRect& rect,
-										const QString& text,
+										const QString& html,
 										Qt::Alignment flag)
 {
 	painter->save();
@@ -179,7 +179,7 @@ void CGeneralStyle::drawHtmlTextByLabel(QPainter* painter,
 										painter->pen().color().name().toStdWString().c_str(),
 										painter->font().pixelSize(),
 										painter->font().family().toStdWString().c_str(),
-										text.toStdWString().c_str());
+										html.toStdWString().c_str());
 	m_htmlRender->setText(QString::fromStdWString(htmlString2));
 
 	m_htmlRender->setAlignment(flag);
@@ -194,13 +194,13 @@ void CGeneralStyle::drawHtmlTextByLabel(QPainter* painter,
 
 void CGeneralStyle::drawHtmlTextByQTextDocument(QPainter* painter,
 												const QRect& rect,
-												const QString& text)
+												const QString& html)
 {
 	painter->save();
 	std::wstring htmlString = L"<div style='color:%s;'>%s</div>";
 	htmlString = CStringManager::Format(htmlString.c_str(),
 										painter->pen().color().name().toStdWString().c_str(),
-										text.toStdWString().c_str());
+										html.toStdWString().c_str());
 	m_doc->setHtml(QString::fromStdWString(htmlString));
 
 	m_doc->setDocumentMargin(0);

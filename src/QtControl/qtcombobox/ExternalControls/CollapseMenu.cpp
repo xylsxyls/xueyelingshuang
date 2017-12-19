@@ -45,7 +45,7 @@ void CollapseMenu::setItemBorderColor(const QColor& normalColor,
 									  bool rePaint)
 {
 	m_normalColor = normalColor;
-	m_selectedColor = selectedColor;
+	m_selectedColor = GetQColor(selectedColor, normalColor);
 	Menu::setItemBorderColor(normalColor, selectedColor, disabledColor, rePaint);
 }
 

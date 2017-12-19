@@ -30,7 +30,7 @@ protected:
 	@param [in] className 类名
 	@param [in] itemName 节点名
 	*/
-	bool init(const std::wstring& className, const std::wstring& itemName);
+	bool init(const std::wstring& className, const std::wstring& itemName = L"");
 
 private:
 	virtual void showEvent(QShowEvent* eve);

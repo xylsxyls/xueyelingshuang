@@ -106,7 +106,7 @@ void ComboBox::setDefault()
 void ComboBox::setDropDownSize(int32_t width, int32_t height, bool rePaint)
 {
 	ControlBase::setPxValue(L"width", width, true, false);
-	ControlBase::setPxValue(L"height", height, true, rePaint);
+	ControlBase::setPxValue(L"height", GetInt(height, width), true, rePaint);
 }
 
 void ComboBox::setDropDownBorderWidth(int32_t width, bool rePaint)
@@ -143,7 +143,7 @@ void ComboBox::setDropDownImage(const QString& dropDownImgPath,
 void ComboBox::setDropDownTopRightOrigin(int32_t topOrigin, int32_t rightOrigin, bool rePaint)
 {
 	ControlBase::setPxValue(L"margin-top", topOrigin, true, false);
-	ControlBase::setPxValue(L"margin-right", rightOrigin, true, rePaint);
+	ControlBase::setPxValue(L"margin-right", GetInt(rightOrigin, topOrigin), true, rePaint);
 }
 
 void ComboBox::setListOrigin(int32_t origin)

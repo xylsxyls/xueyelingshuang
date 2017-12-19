@@ -40,8 +40,8 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundColor(const QColor& normalColor,
-							const QColor& hoverColor,
-							const QColor& disabledColor,
+							const QColor& hoverColor = QColor(0, 0, 0, 0),
+							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
 	/** 设置节点背景图片，和边框颜色不用存
@@ -76,8 +76,8 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundColor(const QColor& normalColor,
-							const QColor& selectedColor,
-							const QColor& disabledColor,
+							const QColor& selectedColor = QColor(0, 0, 0, 0),
+							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
 	/** 设置节点背景图片，和边框颜色不用存
@@ -113,9 +113,9 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundColor(const QColor& normalColor,
-							const QColor& hoverColor,
-							const QColor& pressedColor,
-							const QColor& disabledColor,
+							const QColor& hoverColor = QColor(0, 0, 0, 0),
+							const QColor& pressedColor = QColor(0, 0, 0, 0),
+							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
 	/** 设置节点背景图片，和边框颜色不用存
@@ -157,13 +157,13 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundColor(const QColor& normalColor,
-							const QColor& hoverColor,
-							const QColor& pressedColor,
-							const QColor& disabledColor,
-							const QColor& normalCkColor,
-							const QColor& hoverCkColor,
-							const QColor& pressedCkColor,
-							const QColor& disabledCkColor,
+							const QColor& hoverColor = QColor(0, 0, 0, 0),
+							const QColor& pressedColor = QColor(0, 0, 0, 0),
+							const QColor& disabledColor = QColor(0, 0, 0, 0),
+							const QColor& normalCkColor = QColor(0, 0, 0, 0),
+							const QColor& hoverCkColor = QColor(0, 0, 0, 0),
+							const QColor& pressedCkColor = QColor(0, 0, 0, 0),
+							const QColor& disabledCkColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
 	/** 设置背景图片
@@ -230,8 +230,8 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundColor(const QColor& normalColor,
-								const QColor& hoverColor,
-								const QColor& disabledColor,
+								const QColor& hoverColor = QColor(0, 0, 0, 0),
+								const QColor& disabledColor = QColor(0, 0, 0, 0),
 								bool rePaint = false);
 
 	/** 设置节点背景图片，和边框颜色不用存
@@ -266,8 +266,8 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundColor(const QColor& normalColor,
-								const QColor& selectedColor,
-								const QColor& disabledColor,
+								const QColor& selectedColor = QColor(0, 0, 0, 0),
+								const QColor& disabledColor = QColor(0, 0, 0, 0),
 								bool rePaint = false);
 
 	/** 设置节点背景图片，和边框颜色不用存
@@ -303,9 +303,9 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundColor(const QColor& normalColor,
-								const QColor& hoverColor,
-								const QColor& pressedColor,
-								const QColor& disabledColor,
+								const QColor& hoverColor = QColor(0, 0, 0, 0),
+								const QColor& pressedColor = QColor(0, 0, 0, 0),
+								const QColor& disabledColor = QColor(0, 0, 0, 0),
 								bool rePaint = false);
 
 	/** 设置节点背景图片，和边框颜色不用存
@@ -347,13 +347,13 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundColor(const QColor& normalColor,
-								const QColor& hoverColor,
-								const QColor& pressedColor,
-								const QColor& disabledColor,
-								const QColor& normalCkColor,
-								const QColor& hoverCkColor,
-								const QColor& pressedCkColor,
-								const QColor& disabledCkColor,
+								const QColor& hoverColor = QColor(0, 0, 0, 0),
+								const QColor& pressedColor = QColor(0, 0, 0, 0),
+								const QColor& disabledColor = QColor(0, 0, 0, 0),
+								const QColor& normalCkColor = QColor(0, 0, 0, 0),
+								const QColor& hoverCkColor = QColor(0, 0, 0, 0),
+								const QColor& pressedCkColor = QColor(0, 0, 0, 0),
+								const QColor& disabledCkColor = QColor(0, 0, 0, 0),
 								bool rePaint = false);
 
 	/** 设置背景图片

@@ -25,8 +25,8 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListTextColor(const QColor& normalColor,
-						  const QColor& hoverColor,
-						  const QColor& disabledColor,
+						  const QColor& hoverColor = QColor(0, 0, 0, 0),
+						  const QColor& disabledColor = QColor(0, 0, 0, 0),
 						  bool rePaint = false);
 
 	/** 设置下拉框文本偏移量
@@ -43,9 +43,9 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListItemAroundOrigin(int32_t leftOrigin,
-								 int32_t topOrigin,
-								 int32_t rightOrigin,
-								 int32_t bottomOrigin,
+								 int32_t topOrigin = -1,
+								 int32_t rightOrigin = -1,
+								 int32_t bottomOrigin = -1,
 								 bool rePaint = false);
 
 	/** 设置下拉框节点边框粗度

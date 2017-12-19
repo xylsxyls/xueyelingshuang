@@ -33,8 +33,8 @@ public:
 	@param [in] rePaint  «∑Ò¡¢º¥÷ÿª≠
 	*/
 	void setItemBorderColor(const QColor& normalColor,
-							const QColor& selectedColor,
-							const QColor& disabledColor,
+							const QColor& selectedColor = QColor(0, 0, 0, 0),
+							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
 private:

@@ -35,8 +35,8 @@ void HtmlComboBox::setListTextColor(const QColor& normalColor,
 									bool rePaint)
 {
 	m_normalColor = normalColor;
-	m_selectedColor = hoverColor;
-	m_disabledColor = disabledColor;
+	m_selectedColor = GetQColor(hoverColor, normalColor);
+	m_disabledColor = GetQColor(disabledColor, normalColor);
 	ComboBox::setListTextColor(normalColor, hoverColor, disabledColor, rePaint);
 }
 
@@ -53,9 +53,9 @@ void HtmlComboBox::setListItemAroundOrigin(int32_t leftOrigin,
 										   bool rePaint)
 {
 	m_leftOrigin = leftOrigin;
-	m_topOrigin = topOrigin;
-	m_rightOrigin = rightOrigin;
-	m_bottomOrigin = bottomOrigin;
+	m_topOrigin = GetInt(topOrigin, leftOrigin);
+	m_rightOrigin = GetInt(rightOrigin, leftOrigin);
+	m_bottomOrigin = GetInt(bottomOrigin, GetInt(topOrigin, leftOrigin));
 	ComboBox::setListItemAroundOrigin(leftOrigin, topOrigin, rightOrigin, bottomOrigin, rePaint);
 }
 

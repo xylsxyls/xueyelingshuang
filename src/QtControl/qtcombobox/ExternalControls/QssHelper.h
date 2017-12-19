@@ -3,6 +3,8 @@
 #include <QColor>
 #include <stdint.h>
 #include <vector>
+#define GetQColor QssHelper::GetQColorWithDefault
+#define GetInt QssHelper::GetIntWithDefault
 
 class QssHelper
 {
@@ -13,4 +15,8 @@ public:
 
 	template <typename QControl>
 	static void init(const std::wstring& itemName, QControl* control);
+
+	static QColor GetQColorWithDefault(const QColor& dstColor, const QColor& srcColor);
+
+	static int32_t GetIntWithDefault(const int32_t& dstInt, const int32_t& srcInt);
 };

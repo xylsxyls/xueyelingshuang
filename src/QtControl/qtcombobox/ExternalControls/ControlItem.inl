@@ -41,9 +41,9 @@ void ControlItem<QBase>::setItemAroundOrigin(int32_t leftOrigin,
 										     bool rePaint)
 {
 	ControlBase<QBase>::setPxValue(L"margin-left", leftOrigin, true, false);
-	ControlBase<QBase>::setPxValue(L"margin-top", topOrigin, true, false);
-	ControlBase<QBase>::setPxValue(L"margin-right", rightOrigin, true, false);
-	ControlBase<QBase>::setPxValue(L"margin-bottom", bottomOrigin, true, rePaint);
+	ControlBase<QBase>::setPxValue(L"margin-top", GetInt(topOrigin, leftOrigin), true, false);
+	ControlBase<QBase>::setPxValue(L"margin-right", GetInt(rightOrigin, leftOrigin), true, false);
+	ControlBase<QBase>::setPxValue(L"margin-bottom", GetInt(bottomOrigin, GetInt(topOrigin, leftOrigin)), true, rePaint);
 }
 
 #endif

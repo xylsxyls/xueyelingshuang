@@ -42,9 +42,9 @@ public:
 	@param [in] rePaint  «∑Ò¡¢º¥÷ÿª≠
 	*/
 	void setItemAroundOrigin(int32_t leftOrigin,
-						     int32_t topOrigin,
-						     int32_t rightOrigin,
-						     int32_t bottomOrigin,
+						     int32_t topOrigin = -1,
+							 int32_t rightOrigin = -1,
+							 int32_t bottomOrigin = -1,
 						     bool rePaint = false);
 };
 

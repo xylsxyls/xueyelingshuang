@@ -51,7 +51,7 @@ void CPasswordInputBox::setMaskSize(int32_t width, int32_t height)
 	{
 		return;
 	}
-	m_maskButton->resize(width, height);
+	m_maskButton->resize(width, GetInt(height, width));
 }
 
 void CPasswordInputBox::setMaskRightOrigin(int32_t rightOrigin)

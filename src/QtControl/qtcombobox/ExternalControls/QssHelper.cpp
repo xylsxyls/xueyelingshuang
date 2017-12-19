@@ -51,3 +51,13 @@ void QssHelper::init(const std::wstring& itemName, QControl* control)
 	}
 	control->m_itemName = itemName;
 }
+
+QColor QssHelper::GetQColorWithDefault(const QColor& dstColor, const QColor& srcColor)
+{
+	return (dstColor == QColor(0, 0, 0, 0)) ? srcColor : dstColor;
+}
+
+int32_t QssHelper::GetIntWithDefault(const int32_t& dstInt, const int32_t& srcInt)
+{
+	return (dstInt == -1) ? srcInt : dstInt;
+}

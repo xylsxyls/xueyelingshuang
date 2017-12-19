@@ -48,8 +48,8 @@ void ControlBorderForNormalHoverDisabled<QBase>::setBorderColor(const QColor& no
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", false, rePaint);
 }
 
@@ -78,8 +78,8 @@ void ControlBorderForNormalHoverDisabled<QBase>::setTextColor(const QColor& text
 	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
-	textColorMap[NORMAL][HOVER] = textHoverColor;
-	textColorMap[NORMAL][DISABLED] = textDisabledColor;
+	textColorMap[NORMAL][HOVER] = GetQColor(textHoverColor, textNormalColor);
+	textColorMap[NORMAL][DISABLED] = GetQColor(textDisabledColor, textNormalColor);
 
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", false, rePaint);
 }
@@ -98,8 +98,8 @@ void ControlBorderForNormalSelectedDisabled<QBase>::setBorderColor(const QColor&
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][SELECTED] = selectedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][SELECTED] = GetQColor(selectedColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", false, rePaint);
 }
 
@@ -128,8 +128,8 @@ void ControlBorderForNormalSelectedDisabled<QBase>::setTextColor(const QColor& t
 	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
-	textColorMap[NORMAL][SELECTED] = textSelectedColor;
-	textColorMap[NORMAL][DISABLED] = textDisabledColor;
+	textColorMap[NORMAL][SELECTED] = GetQColor(textSelectedColor, textNormalColor);
+	textColorMap[NORMAL][DISABLED] = GetQColor(textDisabledColor, textNormalColor);
 
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", false, rePaint);
 }
@@ -149,9 +149,9 @@ void ControlBorderForNormalHoverPressedDisabled<QBase>::setBorderColor(const QCo
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][PRESSED] = pressedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[NORMAL][PRESSED] = GetQColor(pressedColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", false, rePaint);
 }
 
@@ -183,9 +183,9 @@ void ControlBorderForNormalHoverPressedDisabled<QBase>::setTextColor(const QColo
 	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
-	textColorMap[NORMAL][HOVER] = textHoverColor;
-	textColorMap[NORMAL][PRESSED] = textPressedColor;
-	textColorMap[NORMAL][DISABLED] = textDisabledColor;
+	textColorMap[NORMAL][HOVER] = GetQColor(textHoverColor, textNormalColor);
+	textColorMap[NORMAL][PRESSED] = GetQColor(textPressedColor, textNormalColor);
+	textColorMap[NORMAL][DISABLED] = GetQColor(textDisabledColor, textNormalColor);
 
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", false, rePaint);
 }
@@ -209,13 +209,13 @@ void ControlBorderForNormalHoverPressedDisabledAndCheck<QBase>::setBorderColor(c
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[UNCHECK][NORMAL] = normalColor;
-	colorStateMap[UNCHECK][HOVER] = hoverColor;
-	colorStateMap[UNCHECK][PRESSED] = pressedColor;
-	colorStateMap[UNCHECK][DISABLED] = disabledColor;
-	colorStateMap[CHECK][NORMAL] = normalCkColor;
-	colorStateMap[CHECK][HOVER] = hoverCkColor;
-	colorStateMap[CHECK][PRESSED] = pressedCkColor;
-	colorStateMap[CHECK][DISABLED] = disabledCkColor;
+	colorStateMap[UNCHECK][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[UNCHECK][PRESSED] = GetQColor(pressedColor, normalColor);
+	colorStateMap[UNCHECK][DISABLED] = GetQColor(disabledColor, normalColor);
+	colorStateMap[CHECK][NORMAL] = GetQColor(normalCkColor, normalColor);
+	colorStateMap[CHECK][HOVER] = GetQColor(hoverCkColor, GetQColor(normalCkColor, normalColor));
+	colorStateMap[CHECK][PRESSED] = GetQColor(pressedCkColor, GetQColor(normalCkColor, normalColor));
+	colorStateMap[CHECK][DISABLED] = GetQColor(disabledCkColor, GetQColor(normalCkColor, normalColor));
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", false, rePaint);
 }
 
@@ -259,13 +259,13 @@ void ControlBorderForNormalHoverPressedDisabledAndCheck<QBase>::setTextColor(con
 	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
 
 	textColorMap[UNCHECK][NORMAL] = textNormalColor;
-	textColorMap[UNCHECK][HOVER] = textHoverColor;
-	textColorMap[UNCHECK][PRESSED] = textPressedColor;
-	textColorMap[UNCHECK][DISABLED] = textDisabledColor;
-	textColorMap[CHECK][NORMAL] = textCkNormalColor;
-	textColorMap[CHECK][HOVER] = textCkHoverColor;
-	textColorMap[CHECK][PRESSED] = textCkPressedColor;
-	textColorMap[CHECK][DISABLED] = textCkDisabledColor;
+	textColorMap[UNCHECK][HOVER] = GetQColor(textHoverColor, textNormalColor);
+	textColorMap[UNCHECK][PRESSED] = GetQColor(textPressedColor, textNormalColor);
+	textColorMap[UNCHECK][DISABLED] = GetQColor(textDisabledColor, textNormalColor);
+	textColorMap[CHECK][NORMAL] = GetQColor(textCkNormalColor, textNormalColor);
+	textColorMap[CHECK][HOVER] = GetQColor(textCkHoverColor, GetQColor(textCkNormalColor, textNormalColor));
+	textColorMap[CHECK][PRESSED] = GetQColor(textCkPressedColor, GetQColor(textCkNormalColor, textNormalColor));
+	textColorMap[CHECK][DISABLED] = GetQColor(textCkDisabledColor, GetQColor(textCkNormalColor, textNormalColor));
 
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", false, rePaint);
 }
@@ -315,8 +315,8 @@ void ControlItemBorderForNormalHoverDisabled<QBase>::setItemBorderColor(const QC
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", true, rePaint);
 }
 
@@ -345,8 +345,8 @@ void ControlItemBorderForNormalHoverDisabled<QBase>::setItemTextColor(const QCol
 	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
-	textColorMap[NORMAL][HOVER] = textHoverColor;
-	textColorMap[NORMAL][DISABLED] = textDisabledColor;
+	textColorMap[NORMAL][HOVER] = GetQColor(textHoverColor, textNormalColor);
+	textColorMap[NORMAL][DISABLED] = GetQColor(textDisabledColor, textNormalColor);
 
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", true, rePaint);
 }
@@ -365,8 +365,8 @@ void ControlItemBorderForNormalSelectedDisabled<QBase>::setItemBorderColor(const
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][SELECTED] = selectedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][SELECTED] = GetQColor(selectedColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", true, rePaint);
 }
 
@@ -395,8 +395,8 @@ void ControlItemBorderForNormalSelectedDisabled<QBase>::setItemTextColor(const Q
 	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
-	textColorMap[NORMAL][SELECTED] = textSelectedColor;
-	textColorMap[NORMAL][DISABLED] = textDisabledColor;
+	textColorMap[NORMAL][SELECTED] = GetQColor(textSelectedColor, textNormalColor);
+	textColorMap[NORMAL][DISABLED] = GetQColor(textDisabledColor, textNormalColor);
 
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", true, rePaint);
 }
@@ -416,9 +416,9 @@ void ControlItemBorderForNormalHoverPressedDisabled<QBase>::setItemBorderColor(c
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
-	colorStateMap[NORMAL][HOVER] = hoverColor;
-	colorStateMap[NORMAL][PRESSED] = pressedColor;
-	colorStateMap[NORMAL][DISABLED] = disabledColor;
+	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[NORMAL][PRESSED] = GetQColor(pressedColor, normalColor);
+	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", true, rePaint);
 }
 
@@ -450,9 +450,9 @@ void ControlItemBorderForNormalHoverPressedDisabled<QBase>::setItemTextColor(con
 	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
-	textColorMap[NORMAL][HOVER] = textHoverColor;
-	textColorMap[NORMAL][PRESSED] = textPressedColor;
-	textColorMap[NORMAL][DISABLED] = textDisabledColor;
+	textColorMap[NORMAL][HOVER] = GetQColor(textHoverColor, textNormalColor);
+	textColorMap[NORMAL][PRESSED] = GetQColor(textPressedColor, textNormalColor);
+	textColorMap[NORMAL][DISABLED] = GetQColor(textDisabledColor, textNormalColor);
 
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", true, rePaint);
 }
@@ -476,13 +476,13 @@ void ControlItemBorderForNormalHoverPressedDisabledAndCheck<QBase>::setItemBorde
 {
 	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
 	colorStateMap[UNCHECK][NORMAL] = normalColor;
-	colorStateMap[UNCHECK][HOVER] = hoverColor;
-	colorStateMap[UNCHECK][PRESSED] = pressedColor;
-	colorStateMap[UNCHECK][DISABLED] = disabledColor;
-	colorStateMap[CHECK][NORMAL] = normalCkColor;
-	colorStateMap[CHECK][HOVER] = hoverCkColor;
-	colorStateMap[CHECK][PRESSED] = pressedCkColor;
-	colorStateMap[CHECK][DISABLED] = disabledCkColor;
+	colorStateMap[UNCHECK][HOVER] = GetQColor(hoverColor, normalColor);
+	colorStateMap[UNCHECK][PRESSED] = GetQColor(pressedColor, normalColor);
+	colorStateMap[UNCHECK][DISABLED] = GetQColor(disabledColor, normalColor);
+	colorStateMap[CHECK][NORMAL] = GetQColor(normalCkColor, normalColor);
+	colorStateMap[CHECK][HOVER] = GetQColor(hoverCkColor, GetQColor(normalCkColor, normalColor));
+	colorStateMap[CHECK][PRESSED] = GetQColor(pressedCkColor, GetQColor(normalCkColor, normalColor));
+	colorStateMap[CHECK][DISABLED] = GetQColor(disabledCkColor, GetQColor(normalCkColor, normalColor));
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", true, rePaint);
 }
 
@@ -526,13 +526,13 @@ void ControlItemBorderForNormalHoverPressedDisabledAndCheck<QBase>::setItemTextC
 	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
 
 	textColorMap[UNCHECK][NORMAL] = textNormalColor;
-	textColorMap[UNCHECK][HOVER] = textHoverColor;
-	textColorMap[UNCHECK][PRESSED] = textPressedColor;
-	textColorMap[UNCHECK][DISABLED] = textDisabledColor;
-	textColorMap[CHECK][NORMAL] = textCkNormalColor;
-	textColorMap[CHECK][HOVER] = textCkHoverColor;
-	textColorMap[CHECK][PRESSED] = textCkPressedColor;
-	textColorMap[CHECK][DISABLED] = textCkDisabledColor;
+	textColorMap[UNCHECK][HOVER] = GetQColor(textHoverColor, textNormalColor);
+	textColorMap[UNCHECK][PRESSED] = GetQColor(textPressedColor, textNormalColor);
+	textColorMap[UNCHECK][DISABLED] = GetQColor(textDisabledColor, textNormalColor);
+	textColorMap[CHECK][NORMAL] = GetQColor(textCkNormalColor, textNormalColor);
+	textColorMap[CHECK][HOVER] = GetQColor(textCkHoverColor, GetQColor(textCkNormalColor, textNormalColor));
+	textColorMap[CHECK][PRESSED] = GetQColor(textCkPressedColor, GetQColor(textCkNormalColor, textNormalColor));
+	textColorMap[CHECK][DISABLED] = GetQColor(textCkDisabledColor, GetQColor(textCkNormalColor, textNormalColor));
 
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", true, rePaint);
 }

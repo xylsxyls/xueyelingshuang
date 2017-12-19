@@ -60,5 +60,5 @@ public:
 	@param [in] height 高度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setIndicatorSize(int32_t width, int32_t height, bool rePaint = false);
+	void setIndicatorSize(int32_t width, int32_t height = -1, bool rePaint = false);
 };

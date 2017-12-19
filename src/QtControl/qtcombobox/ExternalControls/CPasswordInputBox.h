@@ -26,7 +26,7 @@ public:
 	@param [in] width 图标宽度
 	@param [in] height 图标高度
 	*/
-	void setMaskSize(int32_t width, int32_t height);
+	void setMaskSize(int32_t width, int32_t height = -1);
 
 	/** 设置按钮图标大小
 	@param [in] rightOrigin 距离右侧宽度

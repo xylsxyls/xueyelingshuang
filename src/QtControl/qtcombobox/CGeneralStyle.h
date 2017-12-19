@@ -58,7 +58,7 @@ public:
 	*/
 	void drawHtmlTextByLabel(QPainter* painter,
 							 const QRect& rect,
-							 const QString& text,
+							 const QString& html,
 							 Qt::Alignment flag = Qt::AlignLeft | Qt::AlignTop);
 
 	/** 画html文本，使用Label控件，字体，字体大小等通过painter获取
@@ -68,7 +68,7 @@ public:
 	*/
 	void drawHtmlTextByQTextDocument(QPainter* painter,
 									 const QRect& rect,
-									 const QString& text);
+									 const QString& html);
 
 };
 

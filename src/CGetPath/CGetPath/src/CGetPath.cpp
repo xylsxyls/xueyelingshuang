@@ -241,9 +241,9 @@ HWND CGetPath::GetHwndByProcessId(DWORD dwProcessId)
 
 std::string CGetPath::GetName(const std::string& path, int32_t flag)
 {
-    int32_t left = path.find_last_of("/\\");
+    int32_t left = (int32_t)path.find_last_of("/\\");
     std::string name = CStringManager::Mid(path, left + 1, path.length() - left - 1);
-    int32_t point = name.find_last_of(".");
+	int32_t point = (int32_t)name.find_last_of(".");
     switch (flag)
     {
         case 1:
