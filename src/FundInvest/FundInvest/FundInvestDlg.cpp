@@ -744,8 +744,8 @@ void CFundInvestDlg::OnBnClickedButton13()
 {
     // TODO:  在此添加控件通知处理程序代码
     Cini ini(m_fundPath + "110022.ini");
-	DataNeuron* beginNeuron = GetNeuron("110022", "2017-12-14");
-    DataNeuron* endNeuron = GetNeuron("110022", "2017-12-20");
+	DataNeuron* beginNeuron = GetNeuron("110022", "2016-01-01");
+    DataNeuron* endNeuron = GetNeuron("110022", "2017-07-01");
     DataNeuron* nowNeuron = beginNeuron;
 
     int32_t lookDays = 5;
