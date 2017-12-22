@@ -26,6 +26,8 @@ COriginalButton::COriginalButton(QWidget *parent)
     ,mRightMargin        (0)
     ,mTopMargin          (0)
     ,mBottomMargin       (0)
+	,mBkgImageHMargin    (0)
+	,mBkgImageVMargin    (0)
 {
 
     this->setFontSize(14);
@@ -53,42 +55,70 @@ COriginalButton::~COriginalButton()
 
 void COriginalButton::updateStyle()
 {
-    QPixmap px;
-    px.load(mBkgImage);
+	QPixmap px;
+	px.load(mBkgImage);
 
-    int imgHeight  = px.height();
-    int stepHeight = px.height() / mBkgImageStateCount;
+	int imgWidth   = px.width();
+	int imgHeight  = px.height();
+	int stepHeight = px.height() / mBkgImageStateCount;
 
-    //normal
-    int enabledTop     = stepHeight * (mBkgImageNormal - 1);
-    int enabledBottom  = imgHeight - enabledTop - stepHeight;
+	//normal
+	int enabledTop     = stepHeight * (mBkgImageNormal - 1);
+	int enabledBottom  = imgHeight - enabledTop - stepHeight;
 
-    int hoverTop       = stepHeight * (mBkgImageHover - 1);
-    int hoverBottom    = imgHeight - hoverTop - stepHeight;
+	int hoverTop       = stepHeight * (mBkgImageHover - 1);
+	int hoverBottom    = imgHeight - hoverTop - stepHeight;
 
-    int pressedTop     = stepHeight * (mBkgImagePressed - 1);
-    int pressedBottom  = imgHeight - pressedTop - stepHeight;
+	int pressedTop     = stepHeight * (mBkgImagePressed - 1);
+	int pressedBottom  = imgHeight - pressedTop - stepHeight;
 
-    int disabledTop    = stepHeight * (mBkgImageDisabled - 1);
-    int disabledBottom = imgHeight - disabledTop - stepHeight;
+	int disabledTop    = stepHeight * (mBkgImageDisabled - 1);
+	int disabledBottom = imgHeight - disabledTop - stepHeight;
 
-    //checked
-    int ckEnabledTop     = stepHeight * (mBkgImageCKNormal - 1);
-    int ckEnabledBottom  = imgHeight - ckEnabledTop - stepHeight;
+	//checked
+	int ckEnabledTop     = stepHeight * (mBkgImageCKNormal - 1);
+	int ckEnabledBottom  = imgHeight - ckEnabledTop - stepHeight;
 
-    int ckHoverTop       = stepHeight * (mBkgImageCKHover - 1);
-    int ckHoverBottom    = imgHeight - ckHoverTop - stepHeight;
+	int ckHoverTop       = stepHeight * (mBkgImageCKHover - 1);
+	int ckHoverBottom    = imgHeight - ckHoverTop - stepHeight;
 
-    int ckPressedTop     = stepHeight * (mBkgImageCKPressed - 1);
-    int ckPressedBottom  = imgHeight - ckPressedTop - stepHeight;
+	int ckPressedTop     = stepHeight * (mBkgImageCKPressed - 1);
+	int ckPressedBottom  = imgHeight - ckPressedTop - stepHeight;
 
-    int ckDisabledTop    = stepHeight * (mBkgImageCKDisabled - 1);
-    int ckDisabledBottom = imgHeight - ckDisabledTop - stepHeight;
-//font: 75 italic bold 9pt "Agency FB";
-    //text-decoration: underline;
+	int ckDisabledTop    = stepHeight * (mBkgImageCKDisabled - 1);
+	int ckDisabledBottom = imgHeight - ckDisabledTop - stepHeight;
+
+
+	enabledTop     += mBkgImageVMargin;
+	enabledBottom  += mBkgImageVMargin;
+	hoverTop       += mBkgImageVMargin;
+	hoverBottom    += mBkgImageVMargin;
+	pressedTop     += mBkgImageVMargin;
+	pressedBottom  += mBkgImageVMargin;
+	disabledTop    += mBkgImageVMargin;
+	disabledBottom += mBkgImageVMargin;
+
+
+	ckEnabledTop     += mBkgImageVMargin;
+	ckEnabledBottom  += mBkgImageVMargin;
+	ckHoverTop       += mBkgImageVMargin;
+	ckHoverBottom    += mBkgImageVMargin;
+	ckPressedTop     += mBkgImageVMargin;
+	ckPressedBottom  += mBkgImageVMargin;
+	ckDisabledTop    += mBkgImageVMargin;
+	ckDisabledBottom += mBkgImageVMargin;
+
+
+	int left  =   mBkgImageHMargin;
+	int right =   mBkgImageHMargin;
+
+
+
+	//font: 75 italic bold 9pt "Agency FB";
+	//text-decoration: underline;
 	QString buttonStyle = "\
 						  .@placeClassName:enabled{\n\
-						  border-image:url(@placeBkgImage) @placeEnabledTop 0 @placeEnabledBottom 0 stretch stretch;\n\
+						  border-image:url(@placeBkgImage) @placeEnabledTop @placeImgRight @placeEnabledBottom @placeImgLeft stretch stretch;\n\
 						  background-color:@placeBkgColorEnabled;\n\
 						  color:@placeFontColorEnabled;\n\
 						  font: @placeItalic @placeBold @placeFontSize '@placeFontFace';\n\
@@ -102,7 +132,7 @@ void COriginalButton::updateStyle()
 						  padding-bottom: @placeBottomMargin;\n\
 						  }\n\
 						  .@placeClassName:hover{\n\
-						  border-image:url(@placeBkgImage) @placeHoverTop 0 @placeHoverBottom 0 stretch stretch;\n\
+						  border-image:url(@placeBkgImage) @placeHoverTop @placeImgRight @placeHoverBottom @placeImgLeft stretch stretch;\n\
 						  background-color:@placeBkgColorHover;\n\
 						  color:@placeFontColorHover;\n\
 						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorHover;\n\
@@ -114,7 +144,7 @@ void COriginalButton::updateStyle()
 						  padding-bottom: @placeBottomMargin;\n\
 						  }\n\
 						  .@placeClassName:pressed{\n\
-						  border-image:url(@placeBkgImage) @placePressedTop 0 @placePressedBottom 0 stretch stretch;\n\
+						  border-image:url(@placeBkgImage) @placePressedTop @placeImgRight @placePressedBottom @placeImgLeft stretch stretch;\n\
 						  background-color:@placeBkgColorPressed;\n\
 						  color:@placeFontColorPressed;\n\
 						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorPressed;\n\
@@ -126,7 +156,7 @@ void COriginalButton::updateStyle()
 						  padding-bottom: @placeBottomMargin;\n\
 						  }\n\
 						  .@placeClassName:disabled{\n\
-						  border-image:url(@placeBkgImage) @placeDisabledTop 0 @placeDisabledBottom 0 stretch stretch;\n\
+						  border-image:url(@placeBkgImage) @placeDisabledTop @placeImgRight @placeDisabledBottom @placeImgLeft stretch stretch;\n\
 						  background-color:@placeBkgColorDisabled;\n\
 						  color:@placeFontColorDisabled;\n\
 						  border: @placeBorderWidth @placeBorderStyle @placeBorderColorDisabled;\n\
@@ -138,7 +168,7 @@ void COriginalButton::updateStyle()
 						  padding-bottom: @placeBottomMargin;\n\
 						  }\n\
 						  .@placeClassName:checked:enabled{\n\
-						  border-image:url(@placeBkgImage) @placeCKEnabledTop 0 @placeCKEnabledBottom 0 stretch stretch;\n\
+						  border-image:url(@placeBkgImage) @placeCKEnabledTop @placeImgRight @placeCKEnabledBottom @placeImgLeft stretch stretch;\n\
 						  background-color:@placeBkgColorCKEnabled;\n\
 						  color:@placeFontColorCKEnabled;\n\
 						  border: none;\n\
@@ -151,7 +181,7 @@ void COriginalButton::updateStyle()
 						  padding-bottom: @placeBottomMargin;\n\
 						  }\n\
 						  .@placeClassName:checked:hover{\n\
-						  border-image:url(@placeBkgImage) @placeCKHoverTop 0 @placeCKHoverBottom 0 stretch stretch;\n\
+						  border-image:url(@placeBkgImage) @placeCKHoverTop @placeImgRight @placeCKHoverBottom @placeImgLeft stretch stretch;\n\
 						  background-color:@placeBkgColorCKHover;\n\
 						  color:@placeFontColorCKHover;\n\
 						  border: none;\n\
@@ -164,7 +194,7 @@ void COriginalButton::updateStyle()
 						  padding-bottom: @placeBottomMargin;\n\
 						  }\n\
 						  .@placeClassName:checked:pressed{\n\
-						  border-image:url(@placeBkgImage) @placeCKPressedTop 0 @placeCKPressedBottom 0 stretch stretch;\n\
+						  border-image:url(@placeBkgImage) @placeCKPressedTop @placeImgRight @placeCKPressedBottom @placeImgLeft stretch stretch;\n\
 						  background-color:@placeBkgColorCKPressed;\n\
 						  color:@placeFontColorCKPressed;\n\
 						  border: none;\n\
@@ -177,7 +207,7 @@ void COriginalButton::updateStyle()
 						  padding-bottom: @placeBottomMargin;\n\
 						  }\n\
 						  .@placeClassName:checked:disabled{\n\
-						  border-image:url(@placeBkgImage) @placeCKDisabledTop 0 @placeCKDisabledBottom 0 stretch stretch;\n\
+						  border-image:url(@placeBkgImage) @placeCKDisabledTop @placeImgRight @placeCKDisabledBottom @placeImgLeft stretch stretch;\n\
 						  background-color:@placeBkgColorCKDisabled;\n\
 						  color:@placeFontColorCKDisabled;\n\
 						  border: none;\n\
@@ -204,6 +234,7 @@ void COriginalButton::updateStyle()
 		.replace("@placeCKHoverTop", QString::number(ckHoverTop)).replace("@placeCKHoverBottom", QString::number(ckHoverBottom))
 		.replace("@placeCKPressedTop", QString::number(ckPressedTop)).replace("@placeCKPressedBottom", QString::number(ckPressedBottom))
 		.replace("@placeCKDisabledTop", QString::number(ckDisabledTop)).replace("@placeCKDisabledBottom", QString::number(ckDisabledBottom))
+		.replace("@placeImgLeft", QString::number(left)).replace("@placeImgRight", QString::number(right))
 		//BkgColor
 		.replace("@placeBkgColorEnabled", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorNormal.red()).arg(mBkgColorNormal.green()).arg(mBkgColorNormal.blue()).arg(mBkgColorNormal.alpha()))
 		.replace("@placeBkgColorHover", QString("rgba(%1,%2,%3,%4)").arg(mBkgColorHover.red()).arg(mBkgColorHover.green()).arg(mBkgColorHover.blue()).arg(mBkgColorHover.alpha()))
@@ -254,8 +285,8 @@ void COriginalButton::updateStyle()
 
 
 
-//    qDebug() << buttonStyle;
-    this->setStyleSheet(buttonStyle);
+	//    qDebug() << buttonStyle;
+	this->setStyleSheet(buttonStyle);
 }
 
 void COriginalButton::setBkgImage(const QString &bkgImage, const quint64 bkgImageStateCount, const quint64 bkgImageNormal, const quint64 bkgImageHover, const quint64 bkgImagePressed, const quint64 bkgImageDisabled, const quint64 bkgImageCKNormal, const quint64 bkgImageCKHover, const quint64 bkgImageCKPressed, const quint64 bkgImageCKDisabled)
@@ -377,5 +408,12 @@ void COriginalButton::setMargins(const quint32 &left, const quint32 &top, const 
     mRightMargin  = right;
     mBottomMargin = bottom;
     this->updateStyle();
+}
+
+void COriginalButton::setBkgMargins(const quint32& hMargin, const quint32& vMargin)
+{
+	mBkgImageHMargin = hMargin;
+	mBkgImageVMargin = vMargin;
+	this->updateStyle();
 }
 

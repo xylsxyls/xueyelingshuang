@@ -23,10 +23,10 @@ m_hoverIndex(-1)
 {
 	ControlBase::setControlShow(this);
 	INIT(L"drop-down");
-	m_listWidget = new ListWidget;
+	m_listWidget = new ListWidget(this);
 	setModel(m_listWidget->model());
 	setView(m_listWidget);
-	setItemDelegate(new NoFocusFrameDelegate);
+	setItemDelegate(new NoFocusFrameDelegate(this));
 	
 	setMouseTracking(true);
 	QObject::connect(m_listWidget, &QListWidget::itemEntered, this, &ComboBox::listItemEntered);
@@ -101,6 +101,7 @@ void ComboBox::setDefault()
 	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
 	m_controlStyle[m_className](1, L"QAbstractItemView").AddKeyValue(L"border", L"none");
 	setBorderWidth(1);
+	setTextOrigin(0);
 }
 
 void ComboBox::setDropDownSize(int32_t width, int32_t height, bool rePaint)

@@ -126,6 +126,15 @@
     <Filter Include="ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate">
       <UniqueIdentifier>{a0e8d20e-0218-40b8-8f00-e0d282ffeb35}</UniqueIdentifier>
     </Filter>
+    <Filter Include="DialogBase">
+      <UniqueIdentifier>{c19b6e57-4199-471d-89be-f9892f365ec4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DialogBase\DialogShow">
+      <UniqueIdentifier>{7c515d0b-9015-415b-9e70-9278603af8cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TipDialog">
+      <UniqueIdentifier>{4ee9da22-d5f5-4a3f-8aa8-c52bfcebd8d4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -290,6 +299,33 @@
     <ClCompile Include="GeneratedFiles\Release\moc_CollapseMenu.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogBase.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogBase.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogBase.cpp">
+      <Filter>DialogBase</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogShow.cpp">
+      <Filter>DialogBase\DialogShow</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogShow.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogShow.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="TipDialog.cpp">
+      <Filter>TipDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -357,6 +393,15 @@
     </CustomBuild>
     <CustomBuild Include="CheckBox.h">
       <Filter>CheckBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DialogBase.h">
+      <Filter>DialogBase</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DialogShow.h">
+      <Filter>DialogBase\DialogShow</Filter>
+    </CustomBuild>
+    <CustomBuild Include="TipDialog.h">
+      <Filter>TipDialog</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

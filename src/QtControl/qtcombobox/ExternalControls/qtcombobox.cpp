@@ -15,6 +15,9 @@
 #include "CPasswordInputBox.h"
 #include "../CGeneralStyle.h"
 #include "D:\\SendToMessageTest.h"
+#include "TipDialog.h"
+#include "../COriginalButton.h"
+#include <QWindow>
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -149,8 +152,8 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//box->setDefault();
 	box->setGeometry(20, 20, 100, 30);
 
-	box->installEventFilter(box);
-	box->setMouseTracking(true);
+	//box->installEventFilter(box);
+	//box->setMouseTracking(true);
 	box->setBorderWidth(1);
 	box->setBorderRadius(8);
 	box->setBackgroundColor(QColor(0, 255, 0, 255),
@@ -169,7 +172,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	box->setTextOrigin(12);
 	box->setFontSize(14);
 	box->setFontFace(QString::fromStdWString(L"楷体"));
-
+	
 	//box->setListBorderWidth(1);
 	box->setListBorderColor(QColor(67, 132, 251, 255));
 	
@@ -179,7 +182,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	box->setListItemBackgroundColor(QColor(0, 50, 255, 255), QColor(0, 255, 50, 255), QColor(255, 0, 255, 255));
 	box->setListItemHeight(22);
 	box->setListBackgroundColor(QColor(18, 23, 31));
-
+	
 	box->setListTextColor(QColor(255, 0, 255, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255));
 	box->setListFontFace(QString::fromLocal8Bit("黑体"));
 	box->setListFontSize(18);
@@ -345,6 +348,12 @@ qtcombobox::qtcombobox(QWidget *parent)
 	mMapVersionComboBox->setDropDownTopRightOrigin(7, 7);
 	mMapVersionComboBox->setListItemHeight(10);
 
+	COriginalButton* modalButton = new COriginalButton(this);
+	modalButton->setGeometry(50, 300, 100, 30);
+	QObject::connect(modalButton, &COriginalButton::clicked, this, &qtcombobox::modalPop);
+
+
+
 	int x = 3;
 }
 
@@ -371,5 +380,24 @@ void qtcombobox::htmlItemPressed(int index)
 	QString str = box->currentText();
 	auto ss = box->currentItemId();
 	int32_t sss = box->itemIndexByFirstId(2);
+	int x = 3;
+}
+QDialog* sss = nullptr;
+void qtcombobox::modalPop()
+{
+	sss = new QDialog;
+	sss->resize(500, 500);
+	
+	COriginalButton* ssd = new COriginalButton(sss);
+	QObject::connect(ssd, &COriginalButton::clicked, this, &qtcombobox::testDialog);
+	//sss->windowHandle()->setTransientParent(this->windowHandle());
+	sss->exec();
+}
+
+void qtcombobox::testDialog()
+{
+	int xx = TipDialog::popTipDialog(QString::fromStdWString(L"标题"), QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"), QString::fromStdWString(L"确定"), 1, sss, 3);
+	//dlg->windowHandle()->setTransientParent(this->windowHandle());
+	//dlg->show();
 	int x = 3;
 }

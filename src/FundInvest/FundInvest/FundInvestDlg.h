@@ -10,6 +10,8 @@
 #include "DataNeuron.h"
 #include "CSystem/CSystemAPI.h"
 
+#define FUND_NUM std::string("110022")
+
 class CDrawDlg;
 // CFundInvestDlg ¶Ô»°¿ò
 class CFundInvestDlg : public CDialogEx
@@ -46,7 +48,7 @@ private:
 
 private:
 	std::string m_fundPath = CSystem::GetEnvironment("xueyelingshuang") + "data\\Fund\\";
-	std::string m_fundName = "110022";
+	std::string m_fundName = FUND_NUM;
 	bool m_isOpenBuy = true;
 	bool m_isOpenSell = true;
 

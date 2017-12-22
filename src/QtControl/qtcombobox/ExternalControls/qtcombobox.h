@@ -17,7 +17,8 @@ private slots:
 	void currentTextChanged6(const QString& str);
 	void idComboBoxItemChanged(qint64 id, const QString& str);
 	void htmlItemPressed(int index);
-
+	void modalPop();
+	void testDialog();
 private:
 	Ui::qtcomboboxClass ui;
 	HtmlComboBox* box;

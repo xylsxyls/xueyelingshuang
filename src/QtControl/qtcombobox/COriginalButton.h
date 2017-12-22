@@ -67,6 +67,9 @@ protected:
     quint32  mRightMargin;
     quint32  mBottomMargin;
 
+	quint32  mBkgImageHMargin;
+	quint32  mBkgImageVMargin;
+
     void updateStyle();
 
 public:
@@ -126,6 +129,7 @@ public:
                     const quint32& right ,
                     const quint32& bottom);
 
+	void setBkgMargins(const quint32& hMargin, const quint32& vMargin);
 
 };
 

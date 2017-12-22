@@ -188,9 +188,9 @@ HCURSOR CFundInvestDlg::OnQueryDragIcon()
 void CFundInvestDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	Ctxt txt110022("D:\\110022.txt");
-	txt110022.LoadTxt(2, "\t");
-	auto ss = txt110022.m_vectxt;
+	Ctxt txtload("D:\\" + FUND_NUM + ".txt");
+	txtload.LoadTxt(2, "\t");
+	auto ss = txtload.m_vectxt;
 	return;
 
 	Sleep(2000);
@@ -210,7 +210,7 @@ void CFundInvestDlg::OnBnClickedButton1()
 		CKeyboard::KeyUp('C');
 
 		std::string str = CSystem::GetClipboardData(m_hWnd);
-		Ctxt txt("D:\\110022.txt");
+		Ctxt txt("D:\\" + FUND_NUM + ".txt");
 		txt.AddLine("%s\n", str.c_str());
 
 		CMouse::MoveAbsolute(xyls::Point(1085, 1000), spacingTime);
@@ -289,7 +289,7 @@ void CFundInvestDlg::LoadFund()
 			dataNeuron.m_bid_90days_5 = atof(ini.ReadIni(GETINFO(BID_90DAYS_5), date).c_str());
 			dataNeuron.m_sell_90days_5 = atof(ini.ReadIni(GETINFO(SELL_90DAYS_5), date).c_str());
 
-			m_mapDataNeuron["110022"][IntDateTime(date + " 00:00:00")] = dataNeuron;
+			m_mapDataNeuron[FUND_NUM][IntDateTime(date + " 00:00:00")] = dataNeuron;
 		}
 	}
 	
@@ -309,7 +309,7 @@ void CFundInvestDlg::LoadFund()
 		}
 	}
 
-	DataNeuron* firstNeuron = GetNeuron("110022", "2010-08-20");
+	DataNeuron* firstNeuron = GetNeuron(FUND_NUM, "2010-08-20");
 	DataNeuron* nowNeuron = firstNeuron;
 	while (nowNeuron)
 	{
@@ -319,6 +319,7 @@ void CFundInvestDlg::LoadFund()
 		nowNeuron->m_forecastPlatDays = nowNeuron->GetForecastFlatDays();
 		nowNeuron->m_upDownForecast3 = nowNeuron->GetUpDown(3);
 		nowNeuron->m_upDownForecast5 = nowNeuron->GetUpDown(5);
+		nowNeuron->m_upDownHighest5 = nowNeuron->GetUpDownHighest(5);
 		nowNeuron = nowNeuron->m_nextData;
 	}
 	
@@ -367,7 +368,7 @@ void CFundInvestDlg::OnBnClickedButton3()
 	int32_t index = -1;
 	while (index++ != vecPath.size() - 1)
 	{
-		Cini ini(m_fundPath + "110022.ini");
+		Cini ini(m_fundPath + FUND_NUM + ".ini");
 		Ctxt txt(vecPath[index]);
 		txt.LoadTxt(2, "\t");
 		int32_t line = -1;
@@ -388,11 +389,11 @@ void CFundInvestDlg::OnBnClickedButton4()
 {
 	//// TODO:  在此添加控件通知处理程序代码
 	//std::vector<DataNeuron> vecAnaNeuron;
-	//vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-20 00:00:00")]);
-	//vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-17 00:00:00")]);
-	//vecAnaNeuron.push_back(m_mapDataNeuron["110022"][IntDateTime("2017-11-16 00:00:00")]);
+	//vecAnaNeuron.push_back(m_mapDataNeuron[FUND_NUM][IntDateTime("2017-11-20 00:00:00")]);
+	//vecAnaNeuron.push_back(m_mapDataNeuron[FUND_NUM][IntDateTime("2017-11-17 00:00:00")]);
+	//vecAnaNeuron.push_back(m_mapDataNeuron[FUND_NUM][IntDateTime("2017-11-16 00:00:00")]);
 	
-	double forcastNow = m_mapDataNeuron["110022"][IntDateTime("2017-12-01 00:00:00")].ForecastData(FORECAST_DAYS);
+	double forcastNow = m_mapDataNeuron[FUND_NUM][IntDateTime("2017-12-01 00:00:00")].ForecastData(FORECAST_DAYS);
     AfxMessageBox(CStringManager::Format("%.2lf%%", forcastNow * 100).c_str());
 	int x = 3;
 }
@@ -403,11 +404,11 @@ void CFundInvestDlg::OnBnClickedButton5()
     int32_t success = 0;
     int32_t failed = 0;
     // TODO:  在此添加控件通知处理程序代码
-    std::map<IntDateTime, DataNeuron>& mapNeuron = m_mapDataNeuron["110022"];
+    std::map<IntDateTime, DataNeuron>& mapNeuron = m_mapDataNeuron[FUND_NUM];
     for (auto itNeuron = mapNeuron.begin(); itNeuron != mapNeuron.end(); ++itNeuron)
     {
         DataNeuron& neuron = itNeuron->second;
-        if (neuron.Condition(0, &neuron, m_mapDataNeuron["110022"][IntDateTime("2017-12-01 00:00:00")].m_time) &&
+        if (neuron.Condition(0, &neuron, m_mapDataNeuron[FUND_NUM][IntDateTime("2017-12-01 00:00:00")].m_time) &&
             (neuron.m_time > IntDateTime("2017-11-01 00:00:00")))
         {
             double forcastData = neuron.ForecastData(FORECAST_DAYS);
@@ -449,8 +450,8 @@ void CFundInvestDlg::OnBnClickedButton5()
 void CFundInvestDlg::OnBnClickedButton6()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	Cini ini(m_fundPath + "110022.ini");
-	DataNeuron* beginNeuron = GetNeuron("110022", "2010-08-20");
+	Cini ini(m_fundPath + FUND_NUM + ".ini");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2010-08-20");
 
 	while (beginNeuron)
 	{
@@ -492,8 +493,8 @@ void CFundInvestDlg::OnBnClickedButton7()
 	// TODO:  在此添加控件通知处理程序代码
 	double fund = 50000;
     double charge = 0;
-	DataNeuron* beginNeuron = GetNeuron("110022", "2017-10-15");
-	DataNeuron* endNeuron = GetNeuron("110022", "2017-11-15");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-10-15");
+	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-11-15");
 	DataNeuron* nowNeuron = beginNeuron;
 	int32_t state = WAIT;
 
@@ -560,8 +561,8 @@ void CFundInvestDlg::OnBnClickedButton8()
 	// TODO:  在此添加控件通知处理程序代码
 	double fundIn = 1000;
 	double everyFund = fundIn * (1 - 0.15 / 100);
-	DataNeuron* beginNeuron = GetNeuron("110022", "2017-08-01");
-	DataNeuron* endNeuron = GetNeuron("110022", "2017-11-28");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-08-01");
+	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-11-28");
 	DataNeuron* nowNeuron = beginNeuron->m_nextData;
 	double all = 0;
 	double fund = 0;
@@ -597,7 +598,7 @@ void CFundInvestDlg::OnBnClickedButton9()
 	std::map<int32_t, std::vector<DataNeuron*>> mapNeuron;
 	std::map<int32_t, std::vector<DataNeuron*>> mapDaysNeuron;
 	std::map<double, std::vector<DataNeuron*>> mapWeekNeuron;
-	DataNeuron* neuron = GetNeuron("110022", "2015-11-20");
+	DataNeuron* neuron = GetNeuron(FUND_NUM, "2015-11-20");
 	mapNeuron[neuron->m_forecastPlatDays].push_back(neuron);
 	mapDaysNeuron[neuron->m_upDownInDays].push_back(neuron);
 	mapWeekNeuron[neuron->m_upDown_5].push_back(neuron);
@@ -614,7 +615,7 @@ void CFundInvestDlg::OnBnClickedButton9()
 void CFundInvestDlg::OnBnClickedButton10()
 {
     // TODO:  在此添加控件通知处理程序代码
-    double probability = GetNeuron("110022", "2017-12-01")->GetUpDownAccuracy(365, 1.0 / 100);
+    double probability = GetNeuron(FUND_NUM, "2017-12-01")->GetUpDownAccuracy(365, 1.0 / 100);
     AfxMessageBox(FundHelper::DoubleToString(probability).c_str());
 }
 
@@ -622,7 +623,7 @@ void CFundInvestDlg::OnBnClickedButton10()
 void CFundInvestDlg::OnBnClickedButton11()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	DataNeuron* neuron = GetNeuron("110022", "2017-01-01");
+	DataNeuron* neuron = GetNeuron(FUND_NUM, "2017-01-01");
 	
 	std::map<double, double> mapWeek;
 	mapWeek[neuron->m_upDownForecast3] = neuron->m_upDown_5;
@@ -691,8 +692,8 @@ double CFundInvestDlg::DaysBidSell(int32_t lookDays,
 {
 	double fund = 50000;
     double charge = 0;
-	DataNeuron* beginNeuron = GetNeuron("110022", beginTime);
-	DataNeuron* endNeuron = GetNeuron("110022", endTime);
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, beginTime);
+	DataNeuron* endNeuron = GetNeuron(FUND_NUM, endTime);
 	DataNeuron* nowNeuron = beginNeuron;
 	int32_t state = WAIT;
 
@@ -743,9 +744,9 @@ double CFundInvestDlg::DaysBidSell(int32_t lookDays,
 void CFundInvestDlg::OnBnClickedButton13()
 {
     // TODO:  在此添加控件通知处理程序代码
-    Cini ini(m_fundPath + "110022.ini");
-	DataNeuron* beginNeuron = GetNeuron("110022", "2016-01-01");
-    DataNeuron* endNeuron = GetNeuron("110022", "2017-07-01");
+	Cini ini(m_fundPath + FUND_NUM + ".ini");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-01-01");
+    DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-07-01");
     DataNeuron* nowNeuron = beginNeuron;
 
     int32_t lookDays = 5;
@@ -783,8 +784,8 @@ std::vector<double> CFundInvestDlg::GetBidSellInfo(int32_t lookDays, const IntDa
 {
 	IntDateTime timeBid = time - realDays * 24 * 60 * 60;
     IntDateTime timeSell = time;
-	int32_t minNum = (int32_t)(GetNeuron("110022", time)->GetMinMaxUpDown_5(realDays, true) * 10000) - 1;
-	int32_t maxNum = (int32_t)(GetNeuron("110022", time)->GetMinMaxUpDown_5(realDays, false) * 10000) + 1;
+	int32_t minNum = (int32_t)(GetNeuron(FUND_NUM, time)->GetMinMaxUpDown_5(realDays, true) * 10000) - 1;
+	int32_t maxNum = (int32_t)(GetNeuron(FUND_NUM, time)->GetMinMaxUpDown_5(realDays, false) * 10000) + 1;
 
     double fundAlways = DaysBidSell(lookDays, timeBid, timeSell, 10000, 10000);
 	double highestFund = 0;
@@ -821,8 +822,8 @@ void CFundInvestDlg::OnBnClickedButton14()
 {
 	// TODO:  在此添加控件通知处理程序代码
 	std::string path = "D:\\xueyelingshuang\\data\\Fund\\draw_30.txt";
-	DataNeuron* beginNeuron = GetNeuron("110022", "2017-09-20");
-	DataNeuron* endNeuron = GetNeuron("110022", "2017-12-20");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2016-01-01");
+	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-12-20");
 	DataNeuron* nowNeuron = beginNeuron;
 	Ctxt txt(path);
 	txt.OpenFile_w();
@@ -839,8 +840,8 @@ void CFundInvestDlg::OnBnClickedButton14()
 	}
 
 	path = "D:\\xueyelingshuang\\data\\Fund\\draw_15.txt";
-	beginNeuron = GetNeuron("110022", "2017-09-20");
-	endNeuron = GetNeuron("110022", "2017-12-20");
+	beginNeuron = GetNeuron(FUND_NUM, "2016-01-01");
+	endNeuron = GetNeuron(FUND_NUM, "2017-12-20");
 	nowNeuron = beginNeuron;
 	Ctxt txt2(path);
 	txt2.OpenFile_w();
@@ -857,8 +858,8 @@ void CFundInvestDlg::OnBnClickedButton14()
 	}
 
 	path = "D:\\xueyelingshuang\\data\\Fund\\draw_week.txt";
-	beginNeuron = GetNeuron("110022", "2017-09-20");
-	endNeuron = GetNeuron("110022", "2017-12-20");
+	beginNeuron = GetNeuron(FUND_NUM, "2016-01-01");
+	endNeuron = GetNeuron(FUND_NUM, "2017-12-20");
 	nowNeuron = beginNeuron;
 	Ctxt txt3(path);
 	txt3.OpenFile_w();
@@ -867,6 +868,20 @@ void CFundInvestDlg::OnBnClickedButton14()
 	while (nowNeuron != endNeuron->m_nextData)
 	{
 		txt3.AddLine("%lf",nowNeuron->m_upDown_5);
+		nowNeuron = nowNeuron->m_nextData;
+	}
+
+	path = "D:\\xueyelingshuang\\data\\Fund\\draw_up_down_highest.txt";
+	beginNeuron = GetNeuron(FUND_NUM, "2016-01-01");
+	endNeuron = GetNeuron(FUND_NUM, "2017-12-20");
+	nowNeuron = beginNeuron;
+	Ctxt txt4(path);
+	txt4.OpenFile_w();
+	txt4.CloseFile();
+	txt4.AddLine("up_down_5\tup_down_highest_in_week");
+	while (nowNeuron != endNeuron->m_nextData)
+	{
+		txt4.AddLine("%lf\t%lf", nowNeuron->m_upDown_5, nowNeuron->m_upDownHighest5);
 		nowNeuron = nowNeuron->m_nextData;
 	}
 	AfxMessageBox("完成");
