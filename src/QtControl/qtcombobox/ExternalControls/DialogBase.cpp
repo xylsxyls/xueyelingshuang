@@ -31,11 +31,23 @@ Label* DialogBase::addLabel(const QString& text, const QRect& rect, const QColor
 	label->setGeometry(rect);
 	label->setAttribute(Qt::WA_TranslucentBackground);
 	label->setText(text);
-	label->setAlignment(Qt::AlignVCenter);
+	label->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
 	label->setTextColor(textColor);
 	label->setFontFace(QString::fromStdWString(L"ºÚÌå"));
 	label->setFontSize(14);
 	return label;
+}
+
+Label* DialogBase::addTip(const QString& text, const QRect& rect, const QColor& textColor)
+{
+	Label* tip = addLabel(text, rect, textColor);
+	if (tip == nullptr)
+	{
+		return nullptr;
+	}
+	tip->setWordWrap(true);
+	tip->setAlignment(tip->alignment() | Qt::AlignHCenter);
+	return tip;
 }
 
 COriginalButton* DialogBase::addButton(const QString& text, const QRect& rect, int32_t result)
@@ -85,6 +97,13 @@ LineEdit* DialogBase::addLineEdit(const QRect& rect, const QString& defaultText)
 	}
 	lineEdit->setText(defaultText);
 	lineEdit->setGeometry(rect);
+	lineEdit->setBorderWidth(1);
+	lineEdit->setBorderColor(QColor(31, 36, 51, 255));
+	lineEdit->setBorderRadius(4);
+	lineEdit->setFontSize(16);
+	lineEdit->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
+	lineEdit->setAlignment(Qt::AlignVCenter);
+	lineEdit->setTextOrigin(3);
 	return lineEdit;
 }
 
@@ -114,7 +133,9 @@ void DialogBase::endDialog()
 	auto itResult = m_mapResult.find(childAt(mapFromGlobal(QWidget::cursor().pos())));
 	if (itResult != m_mapResult.end())
 	{
+		reject();
 		done(itResult->second);
+		
 	}
 }
 

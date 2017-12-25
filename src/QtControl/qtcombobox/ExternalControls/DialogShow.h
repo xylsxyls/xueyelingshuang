@@ -26,6 +26,7 @@ private:
 	void mousePressEvent(QMouseEvent* eve);
 	void mouseMoveEvent(QMouseEvent* eve);
 	void mouseReleaseEvent(QMouseEvent* eve);
+	void keyPressEvent(QKeyEvent* eve);
 	void closeEvent(QCloseEvent* eve);
 	bool nativeEvent(const QByteArray& eventType, void* message, long* result);
 

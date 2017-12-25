@@ -1,7 +1,7 @@
 #pragma once
 #include "DialogShow.h"
 
-class TipDialog : public DialogShow
+class TipDialog : protected DialogShow
 {
 	Q_OBJECT
 public:

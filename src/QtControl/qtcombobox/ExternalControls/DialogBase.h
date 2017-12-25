@@ -29,6 +29,14 @@ public:
 	*/
 	Label* addLabel(const QString& text, const QRect& rect, const QColor& textColor);
 
+	/** 新增提示文字并设置（多行）
+	@param [in] text 文本内容
+	@param [in] rect 标签相对父窗口所在位置
+	@param [in] textColor 文字颜色
+	@return 返回标签指针
+	*/
+	Label* addTip(const QString& text, const QRect& rect, const QColor& textColor);
+
 	/** 新增按钮并设置，按钮点击后会关闭窗口
 	@param [in] text 按钮内文本内容
 	@param [in] rect 按钮相对父窗口所在位置

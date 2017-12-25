@@ -16,6 +16,9 @@
 #include "../CGeneralStyle.h"
 #include "D:\\SendToMessageTest.h"
 #include "TipDialog.h"
+#include "AskDialog.h"
+#include "InputDialog.h"
+#include "WaitDialog.h"
 #include "../COriginalButton.h"
 #include <QWindow>
 
@@ -396,7 +399,26 @@ void qtcombobox::modalPop()
 
 void qtcombobox::testDialog()
 {
-	int xx = TipDialog::popTipDialog(QString::fromStdWString(L"标题"), QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"), QString::fromStdWString(L"确定"), 1, sss, 3);
+	/*int xx = AskDialog::popAskDialog(QString::fromStdWString(L"标题"),
+									 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
+									 QString::fromStdWString(L"确定"),
+									 2,
+									 QString::fromStdWString(L"取消"),
+									 1,
+									 sss,
+									 3);*/
+	QString editText = QString::fromStdWString(L"剧毒术士");
+	int xx = InputDialog::popInputDialog(QString::fromStdWString(L"标题"),
+										 QString::fromStdWString(L"输入框提示："),
+										 QString::fromStdWString(L"确定"),
+										 1,
+										 editText,
+										 sss,
+										 3);
+	/*int xx = WaitDialog::popWaitDialog(QString::fromStdWString(L"标题"),
+									   QString::fromStdWString(L"输入框提示："),
+									   sss,
+									   3);*/
 	//dlg->windowHandle()->setTransientParent(this->windowHandle());
 	//dlg->show();
 	int x = 3;

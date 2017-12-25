@@ -4,6 +4,7 @@
 #include <QMouseEvent>
 #include "../COriginalButton.h"
 #include <QWindow>
+#include <Windows.h>
 #include "CStringManager.h"
 #include "D:\\SendToMessageTest.h"
 
@@ -23,10 +24,10 @@ void DialogShow::init()
 	m_exit->setBorderRadius(0);
 	m_exit->setBkgImage("E:/newClient/11UI/Resource/Image/PopupBox/PopupCloseButton.png");
 	m_title = addLabel("title", QRect(17, 4, 300, 27), QColor(163, 175, 191, 255));
-	m_title->setAlignment(m_title->alignment() | Qt::AlignHCenter);
 	m_separator = addSeparator(QPoint(13, 33), 308, true);
-	m_time = addLabel("", QRect(215, 133, 125, 32), QColor(255, 0, 0, 255));
+	m_time = addLabel("", QRect(215, 140, 125, 32), QColor(255, 0, 0, 255));
 	m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+	m_time->setFontSize(12);
 	QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::timeUpdate);
 	setAttribute(Qt::WA_NativeWindow);
 
@@ -35,14 +36,7 @@ void DialogShow::init()
 void DialogShow::setExitVisible(bool visible)
 {
 	m_exit->setVisible(visible);
-	if (visible == false)
-	{
-		m_cancelEscAltF4 = true;
-	}
-	else
-	{
-		m_cancelEscAltF4 = false;
-	}
+	m_cancelEscAltF4 = !visible;
 }
 
 void DialogShow::timeUpdate(int32_t timeOut)
@@ -102,16 +96,23 @@ void DialogShow::mouseReleaseEvent(QMouseEvent* eve)
 	m_bPressed = false;
 }
 
+void DialogShow::keyPressEvent(QKeyEvent* eve)
+{
+	if (m_cancelEscAltF4 && (eve->key() == Qt::Key_Escape))
+	{
+		return;
+	}
+	QDialog::keyPressEvent(eve);
+}
+
 void DialogShow::closeEvent(QCloseEvent* eve)
 {
 	if (m_cancelEscAltF4)
 	{
 		eve->ignore();
+		return;
 	}
-	else
-	{
-		eve->accept();
-	}
+	reject();
 	QDialog::closeEvent(eve);
 }
 

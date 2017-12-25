@@ -10,7 +10,7 @@
 #include "DataNeuron.h"
 #include "CSystem/CSystemAPI.h"
 
-#define FUND_NUM std::string("000457")
+#define FUND_NUM std::string("519606")
 
 class CDrawDlg;
 // CFundInvestDlg ¶Ô»°¿ò
@@ -43,6 +43,7 @@ public:
 
 private:
 	void LoadFund();
+	DataNeuron* GetFirstNeuron(const std::string& fundName);
 	DataNeuron* GetNeuron(const std::string& fundName, const std::string& time);
     DataNeuron* GetNeuron(const std::string& fundName, const IntDateTime& time);
 
@@ -80,4 +81,5 @@ public:
     std::vector<double> GetBidSellInfo(int32_t lookDays, const IntDateTime& time, int32_t days);
 	afx_msg void OnBnClickedButton14();
 	afx_msg void OnBnClickedButton15();
+	afx_msg void OnBnClickedButton16();
 };

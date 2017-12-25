@@ -135,6 +135,15 @@
     <Filter Include="TipDialog">
       <UniqueIdentifier>{4ee9da22-d5f5-4a3f-8aa8-c52bfcebd8d4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="AskDialog">
+      <UniqueIdentifier>{237d3997-b301-4c53-9f89-1f1f30657539}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="InputDialog">
+      <UniqueIdentifier>{9c8f96eb-e9dc-4554-9757-7cc3be3797f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WaitDialog">
+      <UniqueIdentifier>{5b68db52-4866-497c-aa28-210a136e3701}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -326,6 +335,33 @@
     <ClCompile Include="GeneratedFiles\Release\moc_TipDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="AskDialog.cpp">
+      <Filter>AskDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="InputDialog.cpp">
+      <Filter>InputDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_InputDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_InputDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="WaitDialog.cpp">
+      <Filter>WaitDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -402,6 +438,15 @@
     </CustomBuild>
     <CustomBuild Include="TipDialog.h">
       <Filter>TipDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="AskDialog.h">
+      <Filter>AskDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="InputDialog.h">
+      <Filter>InputDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="WaitDialog.h">
+      <Filter>WaitDialog</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
