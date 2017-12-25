@@ -87,6 +87,7 @@ BEGIN_MESSAGE_MAP(CFundInvestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON12, &CFundInvestDlg::OnBnClickedButton12)
     ON_BN_CLICKED(IDC_BUTTON13, &CFundInvestDlg::OnBnClickedButton13)
 	ON_BN_CLICKED(IDC_BUTTON14, &CFundInvestDlg::OnBnClickedButton14)
+	ON_BN_CLICKED(IDC_BUTTON15, &CFundInvestDlg::OnBnClickedButton15)
 END_MESSAGE_MAP()
 
 
@@ -128,7 +129,7 @@ BOOL CFundInvestDlg::OnInitDialog()
 
 	FundHelper::init();
 
-    LoadFund();
+    //LoadFund();
 	//AfxMessageBox("需要加载");
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -188,7 +189,7 @@ HCURSOR CFundInvestDlg::OnQueryDragIcon()
 void CFundInvestDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	Ctxt txtload("D:\\" + FUND_NUM + ".txt");
+	Ctxt txtload("D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + ".txt");
 	txtload.LoadTxt(2, "\t");
 	auto ss = txtload.m_vectxt;
 	return;
@@ -210,7 +211,7 @@ void CFundInvestDlg::OnBnClickedButton1()
 		CKeyboard::KeyUp('C');
 
 		std::string str = CSystem::GetClipboardData(m_hWnd);
-		Ctxt txt("D:\\" + FUND_NUM + ".txt");
+		Ctxt txt("D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + ".txt");
 		txt.AddLine("%s\n", str.c_str());
 
 		CMouse::MoveAbsolute(xyls::Point(1085, 1000), spacingTime);
@@ -885,4 +886,44 @@ void CFundInvestDlg::OnBnClickedButton14()
 		nowNeuron = nowNeuron->m_nextData;
 	}
 	AfxMessageBox("完成");
+}
+
+
+void CFundInvestDlg::OnBnClickedButton15()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	int32_t page = 46;
+
+	Sleep(2000);
+	CMouse::LeftClick(0);
+	int32_t spacingTime = 5;
+	int count = 6;
+	while (count-- != 0)
+	{
+		CMouse::MidWheelDown();
+	}
+	Sleep(500);
+	++page;
+	++page;
+	while (page-- != 0)
+	{
+		CMouse::MoveAbsolute(xyls::Point(670, 405), 0);
+		CMouse::LeftClick(0);
+		CKeyboard::KeyDown(CKeyboard::Shift);
+		CMouse::MoveAbsolute(xyls::Point(1290, 970), 0);
+		CMouse::LeftClick(0);
+		CKeyboard::KeyUp(CKeyboard::Shift);
+		CKeyboard::KeyDown(CKeyboard::Ctrl);
+		CKeyboard::KeyDown('C');
+		CKeyboard::KeyUp(CKeyboard::Ctrl);
+		CKeyboard::KeyUp('C');
+
+		std::string str = CSystem::GetClipboardData(m_hWnd);
+		Ctxt txt("D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + ".txt");
+		txt.AddLine("%s\n", str.c_str());
+
+		CMouse::MoveAbsolute(xyls::Point(1085, 1000), spacingTime);
+		CMouse::LeftClick(spacingTime);
+		Sleep(500);
+	}
 }
