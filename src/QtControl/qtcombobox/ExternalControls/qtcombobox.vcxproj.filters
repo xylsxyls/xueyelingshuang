@@ -33,116 +33,125 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
-    <Filter Include="ListWidget">
-      <UniqueIdentifier>{cfd4c733-0ac1-40f5-be6d-9ae3d6993e35}</UniqueIdentifier>
+    <Filter Include="QtControl">
+      <UniqueIdentifier>{4ad6196e-4ce5-402b-bb4a-ef35173728ed}</UniqueIdentifier>
     </Filter>
-    <Filter Include="RadioButton">
+    <Filter Include="QtControl\RadioButton">
       <UniqueIdentifier>{998a499a-57a8-4c6f-847f-1f61a9a305d8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Label">
-      <UniqueIdentifier>{dcf75ab5-eb90-43c2-b105-8ff286e46aba}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Menu">
+    <Filter Include="QtControl\Menu">
       <UniqueIdentifier>{89dbc6da-c6e3-41ea-8a43-f78671cd1616}</UniqueIdentifier>
     </Filter>
-    <Filter Include="LineEdit">
-      <UniqueIdentifier>{3a86d31f-e656-4a63-a82b-20ff8647feba}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Menu\CollapseMenu">
+    <Filter Include="QtControl\Menu\CollapseMenu">
       <UniqueIdentifier>{2dcc0fd5-1dd0-4f2a-94d9-7d5a8b5d8c5a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ListWidget\ListWidgetIdItem">
-      <UniqueIdentifier>{0499b28e-c508-4b62-a5e2-624504f72f0b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Label\PointLabel">
-      <UniqueIdentifier>{25eaaa47-6f34-4a93-af85-c76b95e90284}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ComboBox">
-      <UniqueIdentifier>{2426806f-5940-4ed9-b78f-f98f99159164}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ComboBox\IdItemComboBox">
-      <UniqueIdentifier>{8f0a6389-9e82-4c03-8387-fcdbd421f404}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="CheckBox">
-      <UniqueIdentifier>{017e38ad-4ba5-48e4-b28c-ebf55396bb84}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="CGeneralStyle">
-      <UniqueIdentifier>{8e9ac672-b834-4b81-8637-9dac83866ac8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="COriginalButton">
-      <UniqueIdentifier>{1212dac7-9d6f-42c3-b84e-91550afc1b68}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="LineEdit\CPasswordInputBox">
-      <UniqueIdentifier>{4dbd4d2f-c9cc-45e7-b098-95ba4bd91c9f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Menu\MenuCustomStyle">
+    <Filter Include="QtControl\Menu\MenuCustomStyle">
       <UniqueIdentifier>{fc307ab2-3b9a-40a7-8f1e-f6f2014667c6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ComboBox\NoFocusFrameDelegate">
-      <UniqueIdentifier>{d7501777-f35f-4fa6-a318-e8972130bc95}</UniqueIdentifier>
+    <Filter Include="QtControl\ListWidget">
+      <UniqueIdentifier>{cfd4c733-0ac1-40f5-be6d-9ae3d6993e35}</UniqueIdentifier>
     </Filter>
-    <Filter Include="lib">
+    <Filter Include="QtControl\ListWidget\ListWidgetIdItem">
+      <UniqueIdentifier>{0499b28e-c508-4b62-a5e2-624504f72f0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\lib">
       <UniqueIdentifier>{38eca791-2b1e-44d0-8dbd-cb4f5a148e67}</UniqueIdentifier>
     </Filter>
-    <Filter Include="lib\QssHelper">
+    <Filter Include="QtControl\lib\QssHelper">
       <UniqueIdentifier>{b6ea808e-8a91-4e03-86d5-d5f9aa75ccf5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="lib\QssString">
+    <Filter Include="QtControl\lib\QssString">
       <UniqueIdentifier>{5f150465-4398-4f78-bb0f-1d9904ea0362}</UniqueIdentifier>
     </Filter>
-    <Filter Include="lib\CStringManager">
+    <Filter Include="QtControl\lib\CStringManager">
       <UniqueIdentifier>{f64a13c8-59c9-472a-a1d0-005204690605}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Control">
+    <Filter Include="QtControl\LineEdit">
+      <UniqueIdentifier>{3a86d31f-e656-4a63-a82b-20ff8647feba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\LineEdit\CPasswordInputBox">
+      <UniqueIdentifier>{4dbd4d2f-c9cc-45e7-b098-95ba4bd91c9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Label">
+      <UniqueIdentifier>{dcf75ab5-eb90-43c2-b105-8ff286e46aba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Label\PointLabel">
+      <UniqueIdentifier>{25eaaa47-6f34-4a93-af85-c76b95e90284}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Control">
       <UniqueIdentifier>{8ed858cf-5421-4525-baed-ce60acf9bf76}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Control\ControlBase">
+    <Filter Include="QtControl\Control\ControlBase">
       <UniqueIdentifier>{34699273-aaf7-45e8-9afd-b4e45b4fedb2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Control\ControlBase\ControlFont">
+    <Filter Include="QtControl\Control\ControlBase\ControlFont">
       <UniqueIdentifier>{2274c276-9e1d-4fd5-9b33-e01ccf737ec4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Control\ControlBase\ControlItem">
+    <Filter Include="QtControl\Control\ControlBase\ControlItem">
       <UniqueIdentifier>{90c5a3ff-7ff1-4bbb-8962-18f5f946102a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Control\ControlBase\ControlSelf">
+    <Filter Include="QtControl\Control\ControlBase\ControlSelf">
       <UniqueIdentifier>{973f9eb2-49ed-4ff4-94b9-2d06e7cbac2c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Control\ControlBase\ControlBorder">
+    <Filter Include="QtControl\Control\ControlBase\ControlBorder">
       <UniqueIdentifier>{b984472c-9b8b-4055-8f27-3b924ca5f4e8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Control\ControlBase\ControlBackground">
+    <Filter Include="QtControl\Control\ControlBase\ControlBackground">
       <UniqueIdentifier>{b785091a-e8e7-49d5-8046-8367f46c6f9d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Control\ControlShow">
+    <Filter Include="QtControl\Control\ControlShow">
       <UniqueIdentifier>{fdb62e1d-a271-4f26-b14a-146c9479bd14}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ComboBox\IdItemComboBox\HtmlComboBox">
+    <Filter Include="QtControl\COriginalButton">
+      <UniqueIdentifier>{1212dac7-9d6f-42c3-b84e-91550afc1b68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ComboBox">
+      <UniqueIdentifier>{2426806f-5940-4ed9-b78f-f98f99159164}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ComboBox\IdItemComboBox">
+      <UniqueIdentifier>{8f0a6389-9e82-4c03-8387-fcdbd421f404}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ComboBox\IdItemComboBox\HtmlComboBox">
       <UniqueIdentifier>{40905ac0-54f5-419c-9a74-2851317b6bbe}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle">
+    <Filter Include="QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle">
       <UniqueIdentifier>{0f23648d-bfd3-44cb-8335-e9e40ca347f2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate">
+    <Filter Include="QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate">
       <UniqueIdentifier>{a0e8d20e-0218-40b8-8f00-e0d282ffeb35}</UniqueIdentifier>
     </Filter>
-    <Filter Include="DialogBase">
-      <UniqueIdentifier>{c19b6e57-4199-471d-89be-f9892f365ec4}</UniqueIdentifier>
+    <Filter Include="QtControl\ComboBox\NoFocusFrameDelegate">
+      <UniqueIdentifier>{d7501777-f35f-4fa6-a318-e8972130bc95}</UniqueIdentifier>
     </Filter>
-    <Filter Include="DialogBase\DialogShow">
-      <UniqueIdentifier>{7c515d0b-9015-415b-9e70-9278603af8cf}</UniqueIdentifier>
+    <Filter Include="QtControl\CheckBox">
+      <UniqueIdentifier>{017e38ad-4ba5-48e4-b28c-ebf55396bb84}</UniqueIdentifier>
     </Filter>
-    <Filter Include="TipDialog">
+    <Filter Include="QtDialog">
+      <UniqueIdentifier>{ae0d673c-8b55-470e-806b-3d8e70708b2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\WaitDialog">
+      <UniqueIdentifier>{5b68db52-4866-497c-aa28-210a136e3701}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\TipDialog">
       <UniqueIdentifier>{4ee9da22-d5f5-4a3f-8aa8-c52bfcebd8d4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="AskDialog">
+    <Filter Include="QtDialog\AskDialog">
       <UniqueIdentifier>{237d3997-b301-4c53-9f89-1f1f30657539}</UniqueIdentifier>
     </Filter>
-    <Filter Include="InputDialog">
+    <Filter Include="QtDialog\InputDialog">
       <UniqueIdentifier>{9c8f96eb-e9dc-4554-9757-7cc3be3797f8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="WaitDialog">
-      <UniqueIdentifier>{5b68db52-4866-497c-aa28-210a136e3701}</UniqueIdentifier>
+    <Filter Include="QtDialog\DialogManager">
+      <UniqueIdentifier>{062225db-0305-49b3-8c53-12af750b9efd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\CGeneralStyle">
+      <UniqueIdentifier>{8e9ac672-b834-4b81-8637-9dac83866ac8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\DialogBase">
+      <UniqueIdentifier>{c19b6e57-4199-471d-89be-f9892f365ec4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\DialogBase\DialogShow">
+      <UniqueIdentifier>{7c515d0b-9015-415b-9e70-9278603af8cf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -162,31 +171,31 @@
       <Filter>Generated Files</Filter>
     </ClCompile>
     <ClCompile Include="CStringManager.cpp">
-      <Filter>lib\CStringManager</Filter>
+      <Filter>QtControl\lib\CStringManager</Filter>
     </ClCompile>
     <ClCompile Include="QssString.cpp">
-      <Filter>lib\QssString</Filter>
+      <Filter>QtControl\lib\QssString</Filter>
     </ClCompile>
     <ClCompile Include="ComboBox.cpp">
-      <Filter>ComboBox</Filter>
+      <Filter>QtControl\ComboBox</Filter>
     </ClCompile>
     <ClCompile Include="ListWidget.cpp">
-      <Filter>ListWidget</Filter>
+      <Filter>QtControl\ListWidget</Filter>
     </ClCompile>
     <ClCompile Include="NoFocusFrameDelegate.cpp">
-      <Filter>ComboBox\NoFocusFrameDelegate</Filter>
+      <Filter>QtControl\ComboBox\NoFocusFrameDelegate</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QssHelper.cpp">
-      <Filter>lib\QssHelper</Filter>
+      <Filter>QtControl\lib\QssHelper</Filter>
     </ClCompile>
     <ClCompile Include="HtmlComboBox.cpp">
-      <Filter>ComboBox\IdItemComboBox\HtmlComboBox</Filter>
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox</Filter>
     </ClCompile>
     <ClCompile Include="IdItemComboBox.cpp">
-      <Filter>ComboBox\IdItemComboBox</Filter>
+      <Filter>QtControl\ComboBox\IdItemComboBox</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_IdItemComboBox.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -195,31 +204,31 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="Label.cpp">
-      <Filter>Label</Filter>
+      <Filter>QtControl\Label</Filter>
     </ClCompile>
     <ClCompile Include="LineEdit.cpp">
-      <Filter>LineEdit</Filter>
+      <Filter>QtControl\LineEdit</Filter>
     </ClCompile>
     <ClCompile Include="Menu.cpp">
-      <Filter>Menu</Filter>
+      <Filter>QtControl\Menu</Filter>
     </ClCompile>
     <ClCompile Include="CollapseMenu.cpp">
-      <Filter>Menu\CollapseMenu</Filter>
+      <Filter>QtControl\Menu\CollapseMenu</Filter>
     </ClCompile>
     <ClCompile Include="RadioButton.cpp">
-      <Filter>RadioButton</Filter>
+      <Filter>QtControl\RadioButton</Filter>
     </ClCompile>
     <ClCompile Include="ControlFont.inl">
-      <Filter>Control\ControlBase\ControlFont</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlFont</Filter>
     </ClCompile>
     <ClCompile Include="ControlBase.inl">
-      <Filter>Control\ControlBase</Filter>
+      <Filter>QtControl\Control\ControlBase</Filter>
     </ClCompile>
     <ClCompile Include="ListWidgetIdItem.cpp">
-      <Filter>ListWidget\ListWidgetIdItem</Filter>
+      <Filter>QtControl\ListWidget\ListWidgetIdItem</Filter>
     </ClCompile>
     <ClCompile Include="PointLabel.cpp">
-      <Filter>Label\PointLabel</Filter>
+      <Filter>QtControl\Label\PointLabel</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_Label.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -264,10 +273,10 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="CPasswordInputBox.cpp">
-      <Filter>LineEdit\CPasswordInputBox</Filter>
+      <Filter>QtControl\LineEdit\CPasswordInputBox</Filter>
     </ClCompile>
     <ClCompile Include="..\CGeneralStyle.cpp">
-      <Filter>CGeneralStyle</Filter>
+      <Filter>QtControl\CGeneralStyle</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -276,19 +285,19 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="..\COriginalButton.cpp">
-      <Filter>COriginalButton</Filter>
+      <Filter>QtControl\COriginalButton</Filter>
     </ClCompile>
     <ClCompile Include="HtmlComboBoxDelegate.cpp">
-      <Filter>ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
     </ClCompile>
     <ClCompile Include="HtmlComboBoxStyle.cpp">
-      <Filter>ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_Menu.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="MenuCustomStyle.cpp">
-      <Filter>Menu\MenuCustomStyle</Filter>
+      <Filter>QtControl\Menu\MenuCustomStyle</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_MenuCustomStyle.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -297,7 +306,7 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="CheckBox.cpp">
-      <Filter>CheckBox</Filter>
+      <Filter>QtControl\CheckBox</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -315,10 +324,10 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="DialogBase.cpp">
-      <Filter>DialogBase</Filter>
+      <Filter>QtDialog\DialogBase</Filter>
     </ClCompile>
     <ClCompile Include="DialogShow.cpp">
-      <Filter>DialogBase\DialogShow</Filter>
+      <Filter>QtDialog\DialogBase\DialogShow</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_DialogShow.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -327,7 +336,7 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="TipDialog.cpp">
-      <Filter>TipDialog</Filter>
+      <Filter>QtDialog\TipDialog</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_TipDialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -336,13 +345,13 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="AskDialog.cpp">
-      <Filter>AskDialog</Filter>
+      <Filter>QtDialog\AskDialog</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_AskDialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="InputDialog.cpp">
-      <Filter>InputDialog</Filter>
+      <Filter>QtDialog\InputDialog</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_InputDialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -354,13 +363,16 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="WaitDialog.cpp">
-      <Filter>WaitDialog</Filter>
+      <Filter>QtDialog\WaitDialog</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_WaitDialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_WaitDialog.cpp">
       <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogManager.cpp">
+      <Filter>QtDialog\DialogManager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -374,131 +386,134 @@
       <Filter>Resource Files</Filter>
     </CustomBuild>
     <CustomBuild Include="NoFocusFrameDelegate.h">
-      <Filter>ComboBox\NoFocusFrameDelegate</Filter>
+      <Filter>QtControl\ComboBox\NoFocusFrameDelegate</Filter>
     </CustomBuild>
     <CustomBuild Include="ListWidget.h">
-      <Filter>ListWidget</Filter>
+      <Filter>QtControl\ListWidget</Filter>
     </CustomBuild>
     <CustomBuild Include="GeneratedFiles\ui_qtcombobox.h">
       <Filter>Generated Files</Filter>
     </CustomBuild>
     <CustomBuild Include="CStringManager.h">
-      <Filter>lib\CStringManager</Filter>
+      <Filter>QtControl\lib\CStringManager</Filter>
     </CustomBuild>
     <CustomBuild Include="ComboBox.h">
-      <Filter>ComboBox</Filter>
+      <Filter>QtControl\ComboBox</Filter>
     </CustomBuild>
     <CustomBuild Include="QssString.h">
-      <Filter>lib\QssString</Filter>
+      <Filter>QtControl\lib\QssString</Filter>
     </CustomBuild>
     <CustomBuild Include="QssHelper.h">
-      <Filter>lib\QssHelper</Filter>
+      <Filter>QtControl\lib\QssHelper</Filter>
     </CustomBuild>
     <CustomBuild Include="IdItemComboBox.h">
-      <Filter>ComboBox\IdItemComboBox</Filter>
+      <Filter>QtControl\ComboBox\IdItemComboBox</Filter>
     </CustomBuild>
     <CustomBuild Include="Label.h">
-      <Filter>Label</Filter>
+      <Filter>QtControl\Label</Filter>
     </CustomBuild>
     <CustomBuild Include="HtmlComboBox.h">
-      <Filter>ComboBox\IdItemComboBox\HtmlComboBox</Filter>
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox</Filter>
     </CustomBuild>
     <CustomBuild Include="RadioButton.h">
-      <Filter>RadioButton</Filter>
+      <Filter>QtControl\RadioButton</Filter>
     </CustomBuild>
     <CustomBuild Include="LineEdit.h">
-      <Filter>LineEdit</Filter>
+      <Filter>QtControl\LineEdit</Filter>
     </CustomBuild>
     <CustomBuild Include="PointLabel.h">
-      <Filter>Label\PointLabel</Filter>
+      <Filter>QtControl\Label\PointLabel</Filter>
     </CustomBuild>
     <CustomBuild Include="CollapseMenu.h">
-      <Filter>Menu\CollapseMenu</Filter>
+      <Filter>QtControl\Menu\CollapseMenu</Filter>
     </CustomBuild>
     <CustomBuild Include="Menu.h">
-      <Filter>Menu</Filter>
+      <Filter>QtControl\Menu</Filter>
     </CustomBuild>
     <CustomBuild Include="CPasswordInputBox.h">
-      <Filter>LineEdit\CPasswordInputBox</Filter>
+      <Filter>QtControl\LineEdit\CPasswordInputBox</Filter>
     </CustomBuild>
     <CustomBuild Include="..\CGeneralStyle.h">
-      <Filter>CGeneralStyle</Filter>
+      <Filter>QtControl\CGeneralStyle</Filter>
     </CustomBuild>
     <CustomBuild Include="MenuCustomStyle.h">
-      <Filter>Menu\MenuCustomStyle</Filter>
+      <Filter>QtControl\Menu\MenuCustomStyle</Filter>
     </CustomBuild>
     <CustomBuild Include="CheckBox.h">
-      <Filter>CheckBox</Filter>
+      <Filter>QtControl\CheckBox</Filter>
     </CustomBuild>
     <CustomBuild Include="DialogBase.h">
-      <Filter>DialogBase</Filter>
+      <Filter>QtDialog\DialogBase</Filter>
     </CustomBuild>
     <CustomBuild Include="DialogShow.h">
-      <Filter>DialogBase\DialogShow</Filter>
+      <Filter>QtDialog\DialogBase\DialogShow</Filter>
     </CustomBuild>
     <CustomBuild Include="TipDialog.h">
-      <Filter>TipDialog</Filter>
+      <Filter>QtDialog\TipDialog</Filter>
     </CustomBuild>
     <CustomBuild Include="AskDialog.h">
-      <Filter>AskDialog</Filter>
+      <Filter>QtDialog\AskDialog</Filter>
     </CustomBuild>
     <CustomBuild Include="InputDialog.h">
-      <Filter>InputDialog</Filter>
+      <Filter>QtDialog\InputDialog</Filter>
     </CustomBuild>
     <CustomBuild Include="WaitDialog.h">
-      <Filter>WaitDialog</Filter>
+      <Filter>QtDialog\WaitDialog</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlFont.h">
-      <Filter>Control\ControlBase\ControlFont</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlFont</Filter>
     </ClInclude>
     <ClInclude Include="ControlItem.h">
-      <Filter>Control\ControlBase\ControlItem</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlItem</Filter>
     </ClInclude>
     <ClInclude Include="ControlSelf.h">
-      <Filter>Control\ControlBase\ControlSelf</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlSelf</Filter>
     </ClInclude>
     <ClInclude Include="ControlShow.h">
-      <Filter>Control\ControlShow</Filter>
+      <Filter>QtControl\Control\ControlShow</Filter>
     </ClInclude>
     <ClInclude Include="ControlBase.h">
-      <Filter>Control\ControlBase</Filter>
+      <Filter>QtControl\Control\ControlBase</Filter>
     </ClInclude>
     <ClInclude Include="ControlBorder.h">
-      <Filter>Control\ControlBase\ControlBorder</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlBorder</Filter>
     </ClInclude>
     <ClInclude Include="ControlBackground.h">
-      <Filter>Control\ControlBase\ControlBackground</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlBackground</Filter>
     </ClInclude>
     <ClInclude Include="ListWidgetIdItem.h">
-      <Filter>ListWidget\ListWidgetIdItem</Filter>
+      <Filter>QtControl\ListWidget\ListWidgetIdItem</Filter>
     </ClInclude>
     <ClInclude Include="..\COriginalButton.h">
-      <Filter>COriginalButton</Filter>
+      <Filter>QtControl\COriginalButton</Filter>
     </ClInclude>
     <ClInclude Include="HtmlComboBoxDelegate.h">
-      <Filter>ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
     </ClInclude>
     <ClInclude Include="HtmlComboBoxStyle.h">
-      <Filter>ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="DialogManager.h">
+      <Filter>QtDialog\DialogManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ControlItem.inl">
-      <Filter>Control\ControlBase\ControlItem</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlItem</Filter>
     </None>
     <None Include="ControlSelf.inl">
-      <Filter>Control\ControlBase\ControlSelf</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlSelf</Filter>
     </None>
     <None Include="ControlBorder.inl">
-      <Filter>Control\ControlBase\ControlBorder</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlBorder</Filter>
     </None>
     <None Include="ControlBackground.inl">
-      <Filter>Control\ControlBase\ControlBackground</Filter>
+      <Filter>QtControl\Control\ControlBase\ControlBackground</Filter>
     </None>
     <None Include="ControlShow.inl">
-      <Filter>Control\ControlShow</Filter>
+      <Filter>QtControl\Control\ControlShow</Filter>
     </None>
   </ItemGroup>
 </Project>

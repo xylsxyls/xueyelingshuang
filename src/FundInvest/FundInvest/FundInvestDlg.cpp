@@ -311,6 +311,7 @@ void CFundInvestDlg::LoadFund()
 	while (nowNeuron)
 	{
         nowNeuron->m_upDown_3 = nowNeuron->GetUpDown(-3);
+		nowNeuron->m_upDown_4 = nowNeuron->GetUpDown(-4);
 		nowNeuron->m_upDown_5 = nowNeuron->GetUpDown(-5);
 		nowNeuron->m_upDownInDays = nowNeuron->GetUpDownDays();
 		nowNeuron->m_forecastPlatDays = nowNeuron->GetForecastFlatDays();
@@ -748,8 +749,8 @@ void CFundInvestDlg::OnBnClickedButton13()
 {
     // TODO:  在此添加控件通知处理程序代码
 	Cini ini(m_fundPath + FUND_NUM + ".ini");
-	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-07-01");
-    DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-11-22");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-12-25");
+    DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-12-25");
     DataNeuron* nowNeuron = beginNeuron;
 
     int32_t lookDays = 5;
@@ -825,7 +826,7 @@ void CFundInvestDlg::OnBnClickedButton14()
 {
 	// TODO:  在此添加控件通知处理程序代码
 	std::string beginDay = "2017-07-01";
-	std::string endDay = "2017-12-22";
+	std::string endDay = "2017-12-25";
 	std::string path = "D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + "_draw_30.txt";
 	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, beginDay);
 	DataNeuron* endNeuron = GetNeuron(FUND_NUM, endDay);
@@ -883,10 +884,15 @@ void CFundInvestDlg::OnBnClickedButton14()
 	Ctxt txt4(path);
 	txt4.OpenFile_w();
 	txt4.CloseFile();
-	txt4.AddLine("up_down_5\tup_down_highest_in_week");
+	txt4.AddLine("up_down_5\tup_down_4\tup_down_3\tup_down_highest_in_week\tchg");
 	while (nowNeuron != endNeuron->m_nextData)
 	{
-		txt4.AddLine("%lf\t%lf", nowNeuron->m_upDown_5, nowNeuron->m_upDownHighest5);
+		txt4.AddLine("%lf\t%lf\t%lf\t%lf\t%lf",
+					 nowNeuron->m_upDown_5,
+					 nowNeuron->m_upDown_4,
+					 nowNeuron->m_upDown_3,
+					 nowNeuron->m_upDownHighest5,
+					 nowNeuron->m_dayChg);
 		nowNeuron = nowNeuron->m_nextData;
 	}
 

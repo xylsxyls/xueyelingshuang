@@ -7,6 +7,8 @@
 
 class QShowEvent;
 class QWidget;
+/** 控件通用样式模板
+*/
 template <class QBase>
 class ControlShow : public QBase
 {

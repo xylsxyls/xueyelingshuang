@@ -6,7 +6,6 @@
 #include <QWindow>
 #include <Windows.h>
 #include "CStringManager.h"
-#include "D:\\SendToMessageTest.h"
 
 DialogShow::DialogShow() :
 m_cancelEscAltF4(false),

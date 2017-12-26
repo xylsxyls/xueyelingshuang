@@ -1,6 +1,8 @@
 #pragma once
 #include "DialogShow.h"
 
+/** Ñ¯ÎÊµ¯³ö¿ò
+*/
 class AskDialog : protected DialogShow
 {
 	Q_OBJECT

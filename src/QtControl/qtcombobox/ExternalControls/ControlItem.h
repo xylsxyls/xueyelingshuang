@@ -1,6 +1,8 @@
 #pragma once
 #include "ControlBase.h"
 
+/** 管理节点相关功能
+*/
 template <class QBase>
 class ControlItem : virtual public ControlBase < QBase >
 {

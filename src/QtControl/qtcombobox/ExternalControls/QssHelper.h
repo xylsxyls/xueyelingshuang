@@ -6,6 +6,8 @@
 #define GetQColor QssHelper::GetQColorWithDefault
 #define GetInt QssHelper::GetIntWithDefault
 
+/** 设置QSS使用的类，该类只用于内部调用
+*/
 class QssHelper
 {
 public:

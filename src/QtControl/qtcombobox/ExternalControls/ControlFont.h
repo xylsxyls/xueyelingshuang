@@ -1,6 +1,8 @@
 #pragma once
 #include "ControlBase.h"
 
+/** 管理字体相关功能
+*/
 template <class QBase>
 class ControlFont : virtual public ControlBase < QBase >
 {

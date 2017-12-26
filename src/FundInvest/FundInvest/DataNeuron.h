@@ -108,6 +108,8 @@ public:
 	int32_t m_upDownInDays = 0;
 	int32_t m_forecastPlatDays = 0;
 
+	double m_upDown_4 = 0;
+
 private:
 	std::string m_fundName;
 	bool m_isOpenBuy;

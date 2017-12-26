@@ -1,6 +1,8 @@
 #pragma once
 #include "DialogShow.h"
 
+/** ÊäÈëµ¯³ö¿ò
+*/
 class InputDialog : protected DialogShow
 {
 	Q_OBJECT

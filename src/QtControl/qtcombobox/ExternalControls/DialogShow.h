@@ -1,6 +1,8 @@
 #pragma once
 #include "DialogBase.h"
 
+/** 弹出框基本模型，实现通用部分
+*/
 class DialogShow : public DialogBase
 {
 	Q_OBJECT

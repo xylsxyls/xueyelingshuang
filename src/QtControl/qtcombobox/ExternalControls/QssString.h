@@ -14,6 +14,8 @@ enum
 	DISABLED
 };
 
+/** 设置QSS使用的类，该类只用于内部调用
+*/
 class QssString
 {
 public:

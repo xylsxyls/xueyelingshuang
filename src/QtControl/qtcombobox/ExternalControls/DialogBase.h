@@ -7,6 +7,8 @@ class COriginalButton;
 class QSplitter;
 class LineEdit;
 class CPasswordInputBox;
+/** 弹出框基类，实现基础接口
+*/
 class DialogBase : public QDialog
 {
 	Q_OBJECT

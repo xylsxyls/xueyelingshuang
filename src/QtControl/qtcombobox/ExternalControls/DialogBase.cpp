@@ -5,6 +5,7 @@
 #include "LineEdit.h"
 #include <QWindow>
 #include "CPasswordInputBox.h"
+#include "DialogManager.h"
 
 DialogBase::DialogBase()
 {
@@ -18,7 +19,10 @@ int32_t DialogBase::exec(int32_t timeOut)
 	{
 		return 0;
 	}
-	return QDialog::exec();
+	int32_t dialogId = DialogManager::instance().setDialog(this);
+	int32_t result = QDialog::exec();
+	DialogManager::instance().removeDialog(dialogId);
+	return result;
 }
 
 Label* DialogBase::addLabel(const QString& text, const QRect& rect, const QColor& textColor)

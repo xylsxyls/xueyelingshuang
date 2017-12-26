@@ -1,6 +1,8 @@
 #pragma once
 #include "ControlBase.h"
 
+/**************该文件的类主要管理背景颜色相关部分**************/
+
 template <class QBase>
 class ControlBackgroundForNormal : virtual public ControlBase < QBase >
 {
