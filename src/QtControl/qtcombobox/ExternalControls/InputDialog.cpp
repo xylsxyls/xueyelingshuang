@@ -2,7 +2,8 @@
 #include "Label.h"
 #include "LineEdit.h"
 
-int32_t InputDialog::popInputDialog(const QString& title,
+int32_t InputDialog::popInputDialog(int32_t& dialogId,
+									const QString& title,
 									const QString& editTip,
 									const QString& buttonText,
 									int32_t done,
@@ -12,7 +13,7 @@ int32_t InputDialog::popInputDialog(const QString& title,
 {
 	InputDialog dlg(title, editTip, buttonText, done, editText);
 	dlg.setResponseHighlightDialog(parent);
-	return dlg.exec(timeOut);
+	return dlg.exec(dialogId, timeOut);
 }
 
 InputDialog::InputDialog(const QString& title,

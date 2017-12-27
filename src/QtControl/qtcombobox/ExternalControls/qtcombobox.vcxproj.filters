@@ -460,6 +460,9 @@
     <CustomBuild Include="WaitDialog.h">
       <Filter>QtDialog\WaitDialog</Filter>
     </CustomBuild>
+    <CustomBuild Include="DialogManager.h">
+      <Filter>QtDialog\DialogManager</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlFont.h">
@@ -494,9 +497,6 @@
     </ClInclude>
     <ClInclude Include="HtmlComboBoxStyle.h">
       <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
-    </ClInclude>
-    <ClInclude Include="DialogManager.h">
-      <Filter>QtDialog\DialogManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

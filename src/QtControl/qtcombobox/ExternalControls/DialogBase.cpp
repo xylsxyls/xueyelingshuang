@@ -12,14 +12,14 @@ DialogBase::DialogBase()
 	setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 }
 
-int32_t DialogBase::exec(int32_t timeOut)
+int32_t DialogBase::exec(int32_t& dialogId, int32_t timeOut)
 {
 	m_timeRest = timeOut;
 	if (m_timeRest == 0)
 	{
 		return 0;
 	}
-	int32_t dialogId = DialogManager::instance().setDialog(this);
+	dialogId = DialogManager::instance().setDialog(this);
 	int32_t result = QDialog::exec();
 	DialogManager::instance().removeDialog(dialogId);
 	return result;

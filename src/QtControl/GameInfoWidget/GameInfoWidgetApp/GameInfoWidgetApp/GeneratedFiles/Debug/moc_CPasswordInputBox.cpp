@@ -6,7 +6,7 @@
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
-#include "../../../../../qtcombobox/fromYangNan/CPasswordInputBox.h"
+#include "../../../../../qtcombobox/ExternalControls/CPasswordInputBox.h"
 #include <QtCore/qbytearray.h>
 #include <QtCore/qmetatype.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
@@ -75,7 +75,7 @@ void CPasswordInputBox::qt_static_metacall(QObject *_o, QMetaObject::Call _c, in
 }
 
 const QMetaObject CPasswordInputBox::staticMetaObject = {
-    { &QLineEdit::staticMetaObject, qt_meta_stringdata_CPasswordInputBox.data,
+    { &LineEdit::staticMetaObject, qt_meta_stringdata_CPasswordInputBox.data,
       qt_meta_data_CPasswordInputBox,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
 };
 
@@ -90,12 +90,12 @@ void *CPasswordInputBox::qt_metacast(const char *_clname)
     if (!_clname) return Q_NULLPTR;
     if (!strcmp(_clname, qt_meta_stringdata_CPasswordInputBox.stringdata0))
         return static_cast<void*>(const_cast< CPasswordInputBox*>(this));
-    return QLineEdit::qt_metacast(_clname);
+    return LineEdit::qt_metacast(_clname);
 }
 
 int CPasswordInputBox::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
-    _id = QLineEdit::qt_metacall(_c, _id, _a);
+    _id = LineEdit::qt_metacall(_c, _id, _a);
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {

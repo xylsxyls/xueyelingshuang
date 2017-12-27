@@ -1,16 +1,17 @@
 #include "TipDialog.h"
 #include "Label.h"
 
-int32_t TipDialog::popTipDialog(const QString& title,
-							 const QString& tip,
-							 const QString& buttonText,
-							 int32_t done,
-							 QDialog* parent,
-							 int32_t timeOut)
+int32_t TipDialog::popTipDialog(int32_t& dialogId,
+								const QString& title,
+								const QString& tip,
+								const QString& buttonText,
+								int32_t done,
+								QDialog* parent,
+								int32_t timeOut)
 {
 	TipDialog dlg(title, tip, buttonText, done);
 	dlg.setResponseHighlightDialog(parent);
-	return dlg.exec(timeOut);
+	return dlg.exec(dialogId, timeOut);
 }
 
 TipDialog::TipDialog(const QString& title,

@@ -1,11 +1,11 @@
 #include "GameInfoWidget.h"
 #include "COriginalButton.h"
 #include <stdint.h>
-#include "fromYangNan/ComboBox.h"
-#include "fromYangNan/Label.h"
-#include "fromYangNan/CPasswordInputBox.h"
-#include "fromYangNan/CheckBox.h"
-#include "fromYangNan/LineEdit.h"
+#include "ExternalControls/ComboBox.h"
+#include "ExternalControls/Label.h"
+#include "ExternalControls/CPasswordInputBox.h"
+#include "ExternalControls/CheckBox.h"
+#include "ExternalControls/LineEdit.h"
 #include "GameInfoWidgetDataInfo.h"
 #include <QEvent>
 #include <QMouseEvent>
@@ -36,6 +36,7 @@ m_widgetHeight(550)
 	m_judgeCheckBox = (new CheckBox(m_gameSettingWidget));
 	m_inviteFriend = (new COriginalButton(this));
 	m_startGame = (new COriginalButton(this));
+	m_prepareGame = (new COriginalButton(this));
 	m_exit = (new COriginalButton(this));
 	m_gameSettingWebView = (new QWebView(m_gameSettingWidget));
 	m_personalRecordWebView = (new QWebView(m_personalRecordWidget));
@@ -72,12 +73,21 @@ m_widgetHeight(550)
 		m_startGame->setText(QString::fromStdWString(L""));
 		QObject::connect(m_startGame, &QPushButton::clicked, this, &GameInfoWidget::onStartGameClicked);
 	}
+	if (m_prepareGame != nullptr)
+	{
+		m_prepareGame->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/prepare_button.png", 8, 1, 2, 3, 4, 5, 6, 7, 8);
+		m_prepareGame->setCheckable(true);
+		m_prepareGame->setText(QString::fromStdWString(L""));
+		QObject::connect(m_prepareGame, &QPushButton::clicked, this, &GameInfoWidget::prepareGameClicked);
+	}
 	if (m_exit != nullptr)
 	{
 		m_exit->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/QuitButton.png", 4, 1, 2, 3, 4);
 		m_exit->setText(QString::fromStdWString(L""));
 		QObject::connect(m_exit, &QPushButton::clicked, this, &GameInfoWidget::onExitClicked);
 	}
+
+	setLeader(false);
 
 	layout();
 
@@ -294,14 +304,39 @@ void GameInfoWidget::setInviteFriendEnable(bool enable)
 	m_inviteFriend->setEnabled(enable);
 }
 
+bool GameInfoWidget::isInviteFriendEnable()
+{
+	return m_inviteFriend->isEnabled();
+}
+
 void GameInfoWidget::setStartGameEnable(bool enable)
 {
 	m_startGame->setEnabled(enable);
 }
 
+bool GameInfoWidget::isStartGameEnable()
+{
+	return m_startGame->isEnabled();
+}
+
+void GameInfoWidget::setPrepareGameEnable(bool enable)
+{
+	m_prepareGame->setEnabled(enable);
+}
+
+bool GameInfoWidget::isPrepareGameEnable()
+{
+	return m_prepareGame->isEnabled();
+}
+
 void GameInfoWidget::setExitEnable(bool enable)
 {
 	m_exit->setEnabled(enable);
+}
+
+bool GameInfoWidget::isExitEnable()
+{
+	return m_exit->isEnabled();
 }
 
 void GameInfoWidget::setGameSettingWebView(const QString& web)
@@ -317,6 +352,41 @@ void GameInfoWidget::setPersonalRecordWebView(const QString& web)
 void GameInfoWidget::setMyToolWebView(const QString& web)
 {
 	SAFE(m_myToolWebView, m_myToolWebView->load(QUrl(web)));
+}
+
+void GameInfoWidget::resetSettings()
+{
+	m_gameNameEdit->setText("");
+	m_gameNameEdit->setEnabled(true);
+	m_gamePasswordEdit->setText("");
+	m_gamePasswordEdit->setEnabled(true);
+	m_gameModeComboBox->clear();
+	m_gameModeComboBox->addItem(QString::fromStdWString(L"进入游戏后手动选择"));
+	m_gameModeComboBox->setEnabled(true);
+	m_gameLvComboBox->clear();
+	m_gameLvComboBox->addItem(QString::fromStdWString(L"无限制"));
+	m_gameLvComboBox->setEnabled(true);
+	m_gameMVPComboBox->clear();
+	m_gameMVPComboBox->addItem(QString::fromStdWString(L"无限制"));
+	m_gameMVPComboBox->setEnabled(true);
+	m_gameNetComboBox->clear();
+	m_gameNetComboBox->addItem(QString::fromStdWString(L"无限制"));
+	m_gameNetComboBox->setEnabled(true);
+	m_gameLeaveComboBox->clear();
+	m_gameLeaveComboBox->addItem(QString::fromStdWString(L"无限制"));
+	m_gameLeaveComboBox->setEnabled(true);
+	m_judgeCheckBox->setCheckable(false);
+	m_judgeCheckBox->setEnabled(true);
+	m_inviteFriend->setEnabled(true);
+	m_startGame->setEnabled(true);
+	m_prepareGame->setEnabled(false);
+	m_exit->setEnabled(true);
+}
+
+void GameInfoWidget::setLeader(bool isLeader)
+{
+	m_startGame->setVisible(isLeader);
+	m_prepareGame->setVisible(!isLeader);
 }
 
 void GameInfoWidget::init()
@@ -717,6 +787,7 @@ void GameInfoWidget::layout()
 	SAFE(m_inviteFriend, m_inviteFriend->setGeometry(0, m_inviteFriendOrigin, INVITE_FRIEND_WIDTH, INVITE_FRIEND_HEIGHT));
 	SAFE(m_inviteFriend, m_inviteFriend->setGeometry(0, m_inviteFriendOrigin, INVITE_FRIEND_WIDTH, INVITE_FRIEND_HEIGHT));
 	SAFE(m_startGame, m_startGame->setGeometry(START_GAME_ORIGIN_X, m_startGameOrigin_y, START_GAME_WIDTH, START_GAME_HEIGHT));
+	SAFE(m_prepareGame, m_prepareGame->setGeometry(START_GAME_ORIGIN_X, m_startGameOrigin_y, START_GAME_WIDTH, START_GAME_HEIGHT));
 	SAFE(m_exit, m_exit->setGeometry(EXIT_ORIGIN_X, m_exitOrigin_y, EXIT_WIDTH, EXIT_HEIGHT));
 	SAFE(m_gameSetting, m_gameSetting->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 0, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT));
 	SAFE(m_personalRecord, m_personalRecord->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 1, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT));

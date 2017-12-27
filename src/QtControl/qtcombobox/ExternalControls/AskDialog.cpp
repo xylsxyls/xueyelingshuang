@@ -1,7 +1,8 @@
 #include "AskDialog.h"
 #include "Label.h"
 
-int32_t AskDialog::popAskDialog(const QString& title,
+int32_t AskDialog::popAskDialog(int32_t& dialogId,
+								const QString& title,
 								const QString& tip,
 								const QString& acceptText,
 								int32_t acceptDone,
@@ -12,7 +13,7 @@ int32_t AskDialog::popAskDialog(const QString& title,
 {
 	AskDialog dlg(title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
 	dlg.setResponseHighlightDialog(parent);
-	return dlg.exec(timeOut);
+	return dlg.exec(dialogId, timeOut);
 }
 
 AskDialog::AskDialog(const QString& title,

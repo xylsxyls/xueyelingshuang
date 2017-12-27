@@ -180,7 +180,7 @@ enum
 
 	/** 下拉框最大高度
 	*/
-	LIST_MAX_HEIGHT = 36,
+	LIST_MAX_HEIGHT = 145,
 
 	/** 下拉框偏移量
 	*/

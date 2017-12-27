@@ -1,14 +1,15 @@
 #include "WaitDialog.h"
 #include "Label.h"
 
-int32_t WaitDialog::popWaitDialog(const QString& title,
-							 const QString& tip,
-							 QDialog* parent,
-							 int32_t timeOut)
+int32_t WaitDialog::popWaitDialog(int32_t& dialogId,
+								  const QString& title,
+								  const QString& tip,
+								  QDialog* parent,
+								  int32_t timeOut)
 {
 	WaitDialog dlg(title, tip);
 	dlg.setResponseHighlightDialog(parent);
-	return dlg.exec(timeOut);
+	return dlg.exec(dialogId, timeOut);
 }
 
 WaitDialog::WaitDialog(const QString& title, const QString& tip)

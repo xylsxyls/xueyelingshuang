@@ -21,7 +21,7 @@ public:
 	@param [in] timeOut 自动关闭时间，单位秒，如果不填则表示不会自动关闭
 	@return 关闭窗口时给的返回值
 	*/
-	int32_t exec(int32_t timeOut = -1);
+	int32_t exec(int32_t& dialogId, int32_t timeOut = -1);
 
 	/** 新增标签文字并设置
 	@param [in] text 文本内容

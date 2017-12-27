@@ -3,7 +3,7 @@
 #include <QUrl>
 #include <QtWebKitWidgets/QWebView>
 #include <stdint.h>
-#include "fromYangNan/ComboBox.h"
+#include "ExternalControls/ComboBox.h"
 
 class QEvent;
 class QObject;
@@ -181,15 +181,40 @@ public:
 	*/
 	void setInviteFriendEnable(bool enable);
 
+	/** 邀请好友是否可用
+	@return 返回邀请好友是否可用
+	*/
+	bool isInviteFriendEnable();
+
 	/** 设置开始游戏是否可用
 	@param [in] enable 是否可用
 	*/
 	void setStartGameEnable(bool enable);
 
+	/** 开始游戏是否可用
+	@return 返回开始游戏是否可用
+	*/
+	bool isStartGameEnable();
+
+	/** 设置准备游戏是否可用
+	@param [in] enable 是否可用
+	*/
+	void setPrepareGameEnable(bool enable);
+
+	/** 准备游戏是否可用
+	@return 返回准备游戏是否可用
+	*/
+	bool isPrepareGameEnable();
+
 	/** 设置退出是否可用
 	@param [in] enable 是否可用
 	*/
 	void setExitEnable(bool enable);
+
+	/** 退出是否可用
+	@return 返回退出是否可用
+	*/
+	bool isExitEnable();
 
 	/** 设置游戏设置界面网页内容
 	@param [in] web 网址
@@ -205,6 +230,16 @@ public:
 	@param [in] web 网址
 	*/
 	void setMyToolWebView(const QString& web);
+
+	/** 重置页面中所有控件
+	*/
+	void resetSettings();
+
+	/** 设置是否为主机，主机显示开始游戏，非主机显示准备游戏
+	@param [in] isLeader 是否为主机
+	*/
+	void setLeader(bool isLeader);
+
 	
 private:
 	/** 默认数据初始化
@@ -246,6 +281,7 @@ Q_SIGNALS:
 	void onSaveClicked();
 	void onInviteFriendClicked();
 	void onStartGameClicked();
+	void prepareGameClicked(bool checked);
 	void onExitClicked();
 	void onGameNameChanged(const QString &);
 	void onGamePasswordChanged(const QString &);
@@ -279,6 +315,7 @@ private:
 
 	COriginalButton* m_inviteFriend;
 	COriginalButton* m_startGame;
+	COriginalButton* m_prepareGame;
 	COriginalButton* m_exit;
 
 	QWebView* m_myToolWebView;

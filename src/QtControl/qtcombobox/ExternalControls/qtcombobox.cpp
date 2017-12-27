@@ -408,7 +408,9 @@ void qtcombobox::testDialog()
 									 sss,
 									 3);*/
 	QString editText = QString::fromStdWString(L"剧毒术士");
-	int xx = InputDialog::popInputDialog(QString::fromStdWString(L"标题"),
+	int32_t dialogId = 0;
+	int xx = InputDialog::popInputDialog(dialogId,
+										 QString::fromStdWString(L"标题"),
 										 QString::fromStdWString(L"输入框提示："),
 										 QString::fromStdWString(L"确定"),
 										 1,
