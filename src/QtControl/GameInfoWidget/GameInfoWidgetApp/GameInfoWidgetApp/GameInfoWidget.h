@@ -245,6 +245,18 @@ public:
 	*/
 	void setLeader(bool isLeader);
 
+	/** 点击游戏设置界面
+	*/
+	void clickGameSetting();
+
+	/** 点击个人战绩界面
+	*/
+	void clickPersonalRecord();
+
+	/** 点击我的道具界面
+	*/
+	void clickMyTool();
+
 private:
 	/** 默认数据初始化
 	*/
@@ -264,11 +276,25 @@ private:
 						  QRegExp* ex = nullptr,
 						  QRegExpValidator* rep = nullptr);
 
-	bool mouseInWithoutDropDown(ComboBox* pBox);
+	void comboBoxTextChanged(const QString& text,
+							 ComboBox* pBox,
+							 const QRegExp& exp,
+							 const std::wstring& addString,
+							 std::wstring& curText);
 
-	void setComboBoxEditAttri(ComboBox* pBox, std::wstring& curText);
+	void comboBoxEditFinish(ComboBox* pBox, const std::wstring& addString, std::wstring& curText, bool& finish);
 
-	void setComboBoxUnEditAttri(ComboBox* pBox, const std::wstring& flag, std::wstring& curText);
+	void comboBoxPress(QObject* target,
+					   ComboBox* pBox,
+					   const std::wstring& addString,
+					   std::wstring& curText,
+					   bool& finish);
+
+	void comboBoxFocusOut(QObject* target,
+						  ComboBox* pBox,
+						  const std::wstring& addString,
+						  std::wstring& curText,
+						  bool& finish);
 
 	void resizeEvent(QResizeEvent* eve);
 	//所有控件统一布局
@@ -284,9 +310,14 @@ private slots:
 	void onPersonalRecordUrlLinkClicked(const QUrl& url);
 	void onMyToolUrlLinkClicked(const QUrl& url);
 	void onPrepareGameClicked(bool check);
-	void onEditText(const QString& text);
-	void onEditTextFin();
+	void onLvEditTextFinish();
+	void onMVPEditTextFinish();
+	void onNetEditTextFinish();
+	void onLeaveEditTextFinish();
 	void onGameLvTextChanged(const QString& text);
+	void onGameMVPTextChanged(const QString& text);
+	void onGameNetTextChanged(const QString& text);
+	void onGameLeaveTextChanged(const QString& text);
 
 Q_SIGNALS:
 	void onSaveClicked();
@@ -379,5 +410,8 @@ private:
 	QString m_war3ResourcePath;
 	bool m_isLeader;
 
-	bool m_lvFin;
+	bool m_lvFinish;
+	bool m_MVPFinish;
+	bool m_netFinish;
+	bool m_leaveFinish;
 };

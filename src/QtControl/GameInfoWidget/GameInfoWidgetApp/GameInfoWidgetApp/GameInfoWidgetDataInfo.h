@@ -16,6 +16,10 @@
 */
 #define CONTROL_TEXT_COLOR QColor(233, 234, 237, 255)
 
+/** 右侧控件禁用时文字颜色
+*/
+#define CONTROL_DISABLED_TEXT_COLOR QColor(82, 126, 185, 255)
+
 /** 保存按钮边框颜色
 */
 #define SAVE_BORDER_COLOR QColor(84, 97, 138, 255)

@@ -10,14 +10,16 @@
 #include <QEvent>
 #include <QMouseEvent>
 #include "CGeneralStyle.h"
-#include "D:\\SendToMessageTest.h"
 
 GameInfoWidget::GameInfoWidget(QWidget* parent) :
 QWidget(parent),
 m_gameInfoWidgetHeight(681),
 m_widgetHeight(550),
 m_isLeader(false),
-m_lvFin(true)
+m_lvFinish(true),
+m_MVPFinish(true),
+m_netFinish(true),
+m_leaveFinish(true)
 {
 	m_war3ResourcePath = CGeneralStyle::instance()->war3lobbyResourcePath();
 	setGeometry(0, 0, GAME_INFO_WIDGET_WIDTH, m_gameInfoWidgetHeight);
@@ -51,11 +53,6 @@ m_lvFin(true)
 	m_gameNet = (new Label(m_gameSettingWidget));
 	m_gameLeave = (new Label(m_gameSettingWidget));
 	m_save = (new COriginalButton(m_gameSettingWidget));
-	//LineEdit* edit = new LineEdit(m_gameLvComboBox);
-	//m_gameLvComboBox->setLineEdit(edit);
-	//m_gameLvComboBox->lineEdit()->installEventFilter(this);
-	QObject::connect(m_gameLvComboBox->lineEdit(), &QLineEdit::textEdited, this, &GameInfoWidget::onEditText);
-	QObject::connect(m_gameLvComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onEditTextFin);
 
 	//无边框
 	setWindowFlags(Qt::FramelessWindowHint);
@@ -94,7 +91,7 @@ m_lvFin(true)
 		QObject::connect(m_exit, &QPushButton::clicked, this, &GameInfoWidget::onExitClicked);
 	}
 
-	setLeader(false);
+	setLeader(true);
 
 	layout();
 
@@ -185,9 +182,6 @@ void GameInfoWidget::setGameModeEnable(bool enable)
 void GameInfoWidget::setGameLvList(const QStringList& gameLvList)
 {
 	SAFE(m_gameLvComboBox, m_gameLvComboBox->addItems(gameLvList));
-	m_gameLvComboBox->addItem(QString::fromStdWString(L"≥23"));
-	m_gameLvComboBox->addItem(QString::fromStdWString(L"≤233"));
-	m_gameLvComboBox->addItem(QString::fromStdWString(L"无限2制"));
 }
 
 void GameInfoWidget::setCurGameLv(const QString& gameLv)
@@ -390,7 +384,8 @@ void GameInfoWidget::resetSettings()
 	m_gameLeaveComboBox->clear();
 	m_gameLeaveComboBox->addItem(QString::fromStdWString(L"无限制"));
 	m_gameLeaveComboBox->setEnabled(true);
-	m_judgeCheckBox->setCheckable(false);
+	m_judgeCheckBox->setCheckable(true);
+	m_judgeCheckBox->setChecked(false);
 	m_judgeCheckBox->setEnabled(true);
 	m_inviteFriend->setEnabled(true);
 	setLeader(m_isLeader);
@@ -402,11 +397,55 @@ void GameInfoWidget::setLeader(bool isLeader)
 	m_isLeader = isLeader;
 	m_startGame->setVisible(isLeader);
 	m_prepareGame->setVisible(!isLeader);
+	
+	setGameNameEnable(isLeader);
+	setGamePasswordEnable(isLeader);
+	setGameModeEnable(isLeader);
+	setGameLvEnable(isLeader);
+	setGameMVPEnable(isLeader);
+	setGameNetEnable(isLeader);
+	setGameLeaveEnable(isLeader);
+	setJudgeEnable(isLeader);
+	m_save->setVisible(isLeader);
+
+	if (isLeader)
+	{
+		m_gameLvComboBox->setTextColor(CONTROL_TEXT_COLOR, true);
+		m_gameMVPComboBox->setTextColor(CONTROL_TEXT_COLOR, true);
+		m_gameNetComboBox->setTextColor(CONTROL_TEXT_COLOR, true);
+		m_gameLeaveComboBox->setTextColor(CONTROL_TEXT_COLOR, true);
+	}
+	else
+	{
+		m_gameLvComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, true);
+		m_gameMVPComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, true);
+		m_gameNetComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, true);
+		m_gameLeaveComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, true);
+	}
+}
+
+void GameInfoWidget::clickGameSetting()
+{
+	onGameSettingClicked();
+}
+
+void GameInfoWidget::clickPersonalRecord()
+{
+	onPersonalRecordClicked();
+}
+
+void GameInfoWidget::clickMyTool()
+{
+	onMyToolClicked();
 }
 
 void GameInfoWidget::init()
 {
 	onGameSettingClicked();
+	onPersonalRecordClicked();
+
+	setGameName(QString::fromStdWString(L"游戏名称"));
+	setGamePassword("123456");
 
 	QStringList list;
 	list.append(QString::fromStdWString(L"进入游戏后手动选择"));
@@ -511,7 +550,7 @@ void GameInfoWidget::initGameSettingWidget()
 	{
 		m_gameNameEdit->setBorderRadius(CONTROL_RADIUS);
 		m_gameNameEdit->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
-		m_gameNameEdit->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR);
+		m_gameNameEdit->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR);
 		m_gameNameEdit->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gameNameEdit->setFontFace(GAME_INFO_FONT_FACE);
 		m_gameNameEdit->setTextOrigin(CONTROL_TEXT_ORIGIN);
@@ -564,7 +603,7 @@ void GameInfoWidget::initGameSettingWidget()
 	{
 		setComboBoxAttri(m_gameLvComboBox, L"^(?!00)(?:[0-9]{1,3}|1000)$", &m_lvExp, &m_lvRep);
 		QObject::connect(m_gameLvComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameLvTextChanged);
-		QObject::connect(m_gameLvComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onEditTextFin);
+		QObject::connect(m_gameLvComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onLvEditTextFinish);
 	}
 
 	//第五行
@@ -579,7 +618,8 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameMVPComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameMVPComboBox, L"^(?!00)(?:[0-9]{1,3}|1000)$", &m_MVPExp, &m_MVPRep);
-		QObject::connect(m_gameMVPComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameMVPChanged);
+		QObject::connect(m_gameMVPComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameMVPTextChanged);
+		QObject::connect(m_gameMVPComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onMVPEditTextFinish);
 	}
 
 	//第六行
@@ -594,7 +634,8 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameNetComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameNetComboBox, L"^500|(?!00|[5-9][0-9]{2})(?:[0-9]{1,3})$", &m_netExp, &m_netRep);
-		QObject::connect(m_gameNetComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameNetChanged);
+		QObject::connect(m_gameNetComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameNetTextChanged);
+		QObject::connect(m_gameNetComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onNetEditTextFinish);
 	}
 
 	//第七行
@@ -609,7 +650,8 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameLeaveComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameLeaveComboBox, L"^(?!00)(?:[0-9]{1,2})$", &m_leaveExp, &m_leaveRep);
-		QObject::connect(m_gameLeaveComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameLeaveChanged);
+		QObject::connect(m_gameLeaveComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameLeaveTextChanged);
+		QObject::connect(m_gameLeaveComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onLeaveEditTextFinish);
 	}
 
 	//开启裁判位
@@ -632,7 +674,7 @@ void GameInfoWidget::initGameSettingWidget()
 									  LABEL_TEXT_COLOR,
 									  LABEL_TEXT_COLOR);
 		m_judgeCheckBox->setText(QString::fromStdWString(L"开启裁判位"));
-		m_judgeCheckBox->setIndicatorImage(m_war3ResourcePath + "/Image/Common/Setting/SettingCheckBox.png", 4, 1, 2, 3, 4, 3, 3, 4, 4);
+		m_judgeCheckBox->setIndicatorImage(m_war3ResourcePath + "/Image/Common/Setting/SettingCheckBox.png", 4, 1, 2, 3, 1, 3, 3, 4, 4);
 		m_judgeCheckBox->setFontSize(GAME_INFO_FONT_SIZE);
 		m_judgeCheckBox->setFontFace(GAME_INFO_FONT_FACE);
 		m_judgeCheckBox->setIndicatorSize(18, 18);
@@ -708,7 +750,7 @@ void GameInfoWidget::setComboBoxAttri(ComboBox* pBox, const std::wstring& patter
 							 CONTROL_BACKGROUND_COLOR);
 	pBox->setBorderRadius(CONTROL_RADIUS);
 	pBox->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
-	pBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR);
+	pBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR);
 	pBox->setDropDownImage(m_war3ResourcePath + "/Image/Common/Setting/combobox_indicator.png", 6, 1, 2, 3, 4, 6);
 	pBox->setDropDownSize(DROP_DOWN_WIDTH, DROP_DOWN_HEIGHT);
 	pBox->setDropDownTopRightOrigin(DROP_DOWN_ORIGIN_X, DROP_DOWN_ORIGIN_Y);
@@ -729,42 +771,171 @@ void GameInfoWidget::setComboBoxAttri(ComboBox* pBox, const std::wstring& patter
 	pBox->setContextMenuPolicy(Qt::NoContextMenu);
 }
 
-bool GameInfoWidget::mouseInWithoutDropDown(ComboBox* pBox)
+void GameInfoWidget::comboBoxTextChanged(const QString& text,
+										 ComboBox* pBox,
+										 const QRegExp& exp,
+										 const std::wstring& addString,
+										 std::wstring& curText)
 {
-    QPoint pos = m_gameSettingWidget->mapFromGlobal(QWidget::cursor().pos());
-    QRect comboBoxRect = pBox->geometry();
-    QRect dropDownRect = comboBoxRect;
-    dropDownRect.setLeft(comboBoxRect.right() - DROP_DOWN_ORIGIN_X - DROP_DOWN_WIDTH);
-    //RCSend("pos = %d,%d,RECT = %d,%d,%d,%d", pos.x(), pos.y(), dropDownRect.left, dropDownRect.top, dropDownRect.right, dropDownRect.bottom);
-    return (dropDownRect.contains(pos) == false) && (comboBoxRect.contains(pos) == true);
+	std::wstring wstrText = text.toStdWString();
+	CStringManager::Replace(wstrText, addString, L"");
+	QString qstrText = QString::fromStdWString(wstrText);
+
+	exp.indexIn(qstrText);
+	QStringList res = exp.capturedTexts();
+	QString capturedText;
+	int32_t index = -1;
+	while (index++ != res.size() - 1)
+	{
+		capturedText += res[index];
+	}
+	bool ok = (capturedText == qstrText);
+
+	index = -1;
+	while (index++ != pBox->count() - 1)
+	{
+		if (qstrText == pBox->itemText(index))
+		{
+			ok = true;
+		}
+	}
+
+	if (!ok && qstrText != "")
+	{
+		curText = pBox->itemText(0).toStdWString();
+		pBox->setCurrentIndex(0);
+	}
+	else if (qstrText != "")
+	{
+		if (pBox == m_gameLvComboBox)
+		{
+			emit onGameLvChanged(text);
+		}
+		else if (pBox == m_gameMVPComboBox)
+		{
+			emit onGameMVPChanged(text);
+		}
+		else if (pBox == m_gameNetComboBox)
+		{
+			emit onGameNetChanged(text);
+		}
+		else if (pBox == m_gameLeaveComboBox)
+		{
+			emit onGameLeaveChanged(text);
+		}
+	}
 }
 
-void GameInfoWidget::setComboBoxEditAttri(ComboBox* pBox, std::wstring& curText)
+void GameInfoWidget::comboBoxEditFinish(ComboBox* pBox, const std::wstring& addString, std::wstring& curText, bool& finish)
 {
-	curText = pBox->currentText().toStdWString();
-	pBox->setCurrentText(QString::fromStdWString(L""));
-	pBox->repaint();
+	finish = true;
+	std::wstring editedStr = pBox->currentText().toStdWString();
+	if (editedStr != L"")
+	{
+		CStringManager::Replace(editedStr, addString, L"");
+		curText = editedStr;
+	}
 }
 
-void GameInfoWidget::setComboBoxUnEditAttri(ComboBox* pBox, const std::wstring& flag, std::wstring& curText)
+void GameInfoWidget::comboBoxPress(QObject* target,
+								   ComboBox* pBox,
+								   const std::wstring& addString,
+								   std::wstring& curText,
+								   bool& finish)
 {
-	//RCSend("unedit");
-	if (curText == L"")
+	if (m_isLeader == false)
 	{
 		return;
 	}
-	if (pBox->currentText() == QString::fromStdWString(L""))
+	if (target == pBox->lineEdit() && finish)
 	{
-		pBox->setCurrentText(QString::fromStdWString(curText));
+		finish = false;
+		if (curText != L"" && pBox->currentText() != pBox->itemText(0))
+		{
+			pBox->setCurrentText(QString::fromStdWString(curText));
+		}
+		else
+		{
+			if (pBox->currentText().toStdWString() != L"")
+			{
+				curText = pBox->currentText().toStdWString();
+				CStringManager::Replace(curText, addString, L"");
+				pBox->setCurrentText(QString::fromStdWString(L""));
+			}
+		}
 	}
-	else
+}
+
+void GameInfoWidget::comboBoxFocusOut(QObject* target,
+									  ComboBox* pBox,
+									  const std::wstring& addString,
+									  std::wstring& curText,
+									  bool& finish)
+{
+	if (m_isLeader == false)
 	{
-		pBox->setCurrentText(QString::fromStdWString(flag) + pBox->currentText());
+		return;
 	}
-	curText = L"";
-	pBox->clearFocus();
-	//pBox->setEditable(false);
-	pBox->repaint();
+	if (target == pBox)
+	{
+		finish = true;
+		if (pBox->currentText() == QString::fromStdWString(L""))
+		{
+			if (curText != pBox->itemText(0).toStdWString())
+			{
+				bool add = true;
+				int32_t index = -1;
+				while (index++ != pBox->count() - 1)
+				{
+					if (curText == pBox->itemText(index).toStdWString())
+					{
+						add = false;
+					}
+				}
+				if (add && curText != L"")
+				{
+					pBox->setCurrentText(QString::fromStdWString(addString + curText));
+				}
+				else
+				{
+					pBox->setCurrentText(QString::fromStdWString(curText));
+				}
+			}
+			else
+			{
+				pBox->setCurrentText(QString::fromStdWString(curText));
+			}
+		}
+		else if (pBox->currentText() == pBox->itemText(0))
+		{
+			pBox->setCurrentText(pBox->itemText(0));
+		}
+		else
+		{
+			std::wstring curText = pBox->currentText().toStdWString();
+
+			bool add = true;
+			int32_t index = -1;
+			while (index++ != pBox->count() - 1)
+			{
+				if (curText == pBox->itemText(index).toStdWString())
+				{
+					add = false;
+				}
+			}
+			if (add && curText != L"")
+			{
+				CStringManager::Replace(curText, addString, L"");
+				pBox->setCurrentText(QString::fromStdWString(addString + curText));
+			}
+			else
+			{
+				pBox->setCurrentText(QString::fromStdWString(curText));
+			}
+		}
+		curText = L"";
+		pBox->clearFocus();
+	}
 }
 
 void GameInfoWidget::resizeEvent(QResizeEvent* eve)
@@ -831,138 +1002,32 @@ bool GameInfoWidget::eventFilter(QObject* target, QEvent* eve)
 	{
 	case QEvent::MouseButtonPress:
 	{
-		if (target == m_gameLvComboBox->lineEdit() && m_lvFin)
-		{
-			m_lvFin = false;
-			RCSend("lineedit");
-			if (m_gameLvCurText != L"" && m_gameLvComboBox->currentText() != m_gameLvComboBox->itemText(0))
-			{
-				qDebug() << QString::fromStdWString(m_gameLvCurText);
-				m_gameLvComboBox->setCurrentText(QString::fromStdWString(m_gameLvCurText));
-			}
-			else
-			{
-				if (m_gameLvComboBox->currentText().toStdWString() != L"")
-				{
-					m_gameLvCurText = m_gameLvComboBox->currentText().toStdWString();
-					qDebug() << QString::fromStdWString(L"1" + m_gameLvCurText);
-					CStringManager::Replace(m_gameLvCurText, L"≥", L"");
-					m_gameLvComboBox->setCurrentText(QString::fromStdWString(L""));
-					RCSend("11 = %s", m_gameLvComboBox->currentText().toStdString().c_str());
-				}
-			}
-		}
+		comboBoxPress(target, m_gameLvComboBox, L"≥", m_gameLvCurText, m_lvFinish);
+		comboBoxPress(target, m_gameMVPComboBox, L"≥", m_gameMVPCurText, m_MVPFinish);
+		comboBoxPress(target, m_gameNetComboBox, L"≤", m_gameNetCurText, m_netFinish);
+		comboBoxPress(target, m_gameLeaveComboBox, L"≤", m_gameLeaveCurText, m_leaveFinish);
+		
 		break;
 	}
 	case QEvent::FocusOut:
 	{
-		if (target == m_gameLvComboBox)
-		{
-			m_lvFin = true;
-			if (m_gameLvComboBox->currentText() == QString::fromStdWString(L""))
-			{
-				RCSend("22 = %s", QString::fromStdWString(m_gameLvCurText).toStdString().c_str());
-				if (m_gameLvCurText != m_gameLvComboBox->itemText(0).toStdWString())
-				{
-					bool add = true;
-					int32_t index = -1;
-					while (index++ != m_gameLvComboBox->count() - 1)
-					{
-						if (m_gameLvCurText == m_gameLvComboBox->itemText(index).toStdWString())
-						{
-							add = false;
-						}
-					}
-					if (add && m_gameLvCurText != L"")
-					{
-						m_gameLvComboBox->setCurrentText(QString::fromStdWString(L"≥" + m_gameLvCurText));
-					}
-					else
-					{
-						m_gameLvComboBox->setCurrentText(QString::fromStdWString(m_gameLvCurText));
-					}
-				}
-				else
-				{
-					m_gameLvComboBox->setCurrentText(QString::fromStdWString(m_gameLvCurText));
-				}
-			}
-			else if (m_gameLvComboBox->currentText() == m_gameLvComboBox->itemText(0))
-			{
-				m_gameLvComboBox->setCurrentText(m_gameLvComboBox->itemText(0));
-			}
-			else
-			{
-				std::wstring curText = m_gameLvComboBox->currentText().toStdWString();
-				
-				bool add = true;
-				int32_t index = -1;
-				while (index++ != m_gameLvComboBox->count() - 1)
-				{
-					if (curText == m_gameLvComboBox->itemText(index).toStdWString())
-					{
-						add = false;
-					}
-				}
-				if (add && curText != L"")
-				{
-					CStringManager::Replace(curText, L"≥", L"");
-					m_gameLvComboBox->setCurrentText(QString::fromStdWString(L"≥" + curText));
-				}
-				else
-				{
-					m_gameLvComboBox->setCurrentText(QString::fromStdWString(curText));
-				}
-			}
-			
-			m_gameLvCurText = L"";
-			qDebug() << QString::fromStdWString(L"2" + m_gameLvCurText);
-			m_gameLvComboBox->clearFocus();
-			RCSend("33 = %s", m_gameLvComboBox->currentText().toStdString().c_str());
-		}
-		//RCSend("focusout");
+		comboBoxFocusOut(target, m_gameLvComboBox, L"≥", m_gameLvCurText, m_lvFinish);
+		comboBoxFocusOut(target, m_gameMVPComboBox, L"≥", m_gameMVPCurText, m_MVPFinish);
+		comboBoxFocusOut(target, m_gameNetComboBox, L"≤", m_gameNetCurText, m_netFinish);
+		comboBoxFocusOut(target, m_gameLeaveComboBox, L"≤", m_gameLeaveCurText, m_leaveFinish);
+		
 		break;
 	}
 	case QEvent::MouseButtonRelease:
 	{
 		if (target == this)
 		{
-			this->setFocus();
-			//if (m_gameLvComboBox->currentText() == QString::fromStdWString(L""))
-			//{
-			//	RCSend("22 = %s", QString::fromStdWString(m_gameLvCurText).toStdString().c_str());
-			//
-			//	if (m_gameLvCurText != L"无限制")
-			//	{
-			//		m_gameLvComboBox->setCurrentText(QString::fromStdWString(L"≥" + m_gameLvCurText));
-			//	}
-			//	else
-			//	{
-			//		m_gameLvComboBox->setCurrentText(QString::fromStdWString(m_gameLvCurText));
-			//	}
-			//}
-			//else if (m_gameLvComboBox->currentText() == QString::fromStdWString(L"无限制"))
-			//{
-			//	m_gameLvComboBox->setCurrentText(QString::fromStdWString(L"无限制"));
-			//}
-			//else
-			//{
-			//	std::wstring curText = m_gameLvComboBox->currentText().toStdWString();
-			//	CStringManager::Replace(curText, L"≥", L"");
-			//	m_gameLvComboBox->setCurrentText(QString::fromStdWString(L"≥" + curText));
-			//}
-			//m_gameLvCurText = L"";
-			//m_gameLvComboBox->clearFocus();
+			setFocus();
 		}
 		break;
 	}
 	default:
 		break;
-	}
-	if (target == m_gameLvComboBox->lineEdit())
-	{
-		//RCSend("eve = %d", eve->type());
-		int x = 3;
 	}
 	return QWidget::eventFilter(target, eve);
 }
@@ -1036,67 +1101,42 @@ void GameInfoWidget::onPrepareGameClicked(bool check)
 	}
 }
 
-void GameInfoWidget::onEditText(const QString& text)
+void GameInfoWidget::onLvEditTextFinish()
 {
-	RCSend("text = %s", text.toStdString().c_str());
+	comboBoxEditFinish(m_gameLvComboBox, L"≥", m_gameLvCurText, m_lvFinish);
 }
 
-void GameInfoWidget::onEditTextFin()
+void GameInfoWidget::onMVPEditTextFinish()
 {
-	m_lvFin = true;
-	std::wstring editedStr = m_gameLvComboBox->currentText().toStdWString();
-	if (editedStr != L"")
-	{
-		CStringManager::Replace(editedStr, L"≥", L"");
-		m_gameLvCurText = editedStr;
-		qDebug() << QString::fromStdWString(L"4" + m_gameLvCurText);
-	}
-	
-	RCSend("fin");
+	comboBoxEditFinish(m_gameMVPComboBox, L"≥", m_gameMVPCurText, m_MVPFinish);
+}
+
+void GameInfoWidget::onNetEditTextFinish()
+{
+	comboBoxEditFinish(m_gameNetComboBox, L"≤", m_gameNetCurText, m_netFinish);
+}
+
+void GameInfoWidget::onLeaveEditTextFinish()
+{
+	comboBoxEditFinish(m_gameLeaveComboBox, L"≤", m_gameLeaveCurText, m_leaveFinish);
 }
 
 void GameInfoWidget::onGameLvTextChanged(const QString& text)
 {
-	std::wstring wstrText = text.toStdWString();
-	CStringManager::Replace(wstrText, L"≥", L"");
-	QString qstrText = QString::fromStdWString(wstrText);
+	comboBoxTextChanged(text, m_gameLvComboBox, m_lvExp, L"≥", m_gameLvCurText);
+}
 
-	m_lvExp.indexIn(qstrText);
-	QStringList res = m_lvExp.capturedTexts();
-	bool ok = false;
-	for each (QString var in res)
-	{
-		if (!var.isEmpty())
-		{
-			ok = true;
-		}
-	}
-	int32_t index = -1;
-	while (index++ != m_gameLvComboBox->count() - 1)
-	{
-		if (qstrText == m_gameLvComboBox->itemText(index))
-		{
-			ok = true;
-		}
-	}
+void GameInfoWidget::onGameMVPTextChanged(const QString& text)
+{
+	comboBoxTextChanged(text, m_gameMVPComboBox, m_MVPExp, L"≥", m_gameMVPCurText);
+}
 
-	if (!ok && qstrText != "")
-	{
-		m_gameLvComboBox->setCurrentIndex(0);
-		m_gameLvCurText = m_gameLvComboBox->itemText(0).toStdWString();
-		qDebug() << QString::fromStdWString(L"3" + m_gameLvCurText);
-	}
-	else if (qstrText == "")
-	{
+void GameInfoWidget::onGameNetTextChanged(const QString& text)
+{
+	comboBoxTextChanged(text, m_gameNetComboBox, m_netExp, L"≤", m_gameNetCurText);
+}
 
-	}
-	else
-	{
-		emit onGameLvChanged(text);
-		if (text != "")
-		{
-			//m_gameLvCurText = L"";
-			
-		}
-	}
+void GameInfoWidget::onGameLeaveTextChanged(const QString& text)
+{
+	comboBoxTextChanged(text, m_gameLeaveComboBox, m_leaveExp, L"≤", m_gameLeaveCurText);
 }
