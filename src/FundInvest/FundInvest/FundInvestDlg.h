@@ -82,4 +82,17 @@ public:
 	afx_msg void OnBnClickedButton14();
 	afx_msg void OnBnClickedButton15();
 	afx_msg void OnBnClickedButton16();
+    afx_msg void OnBnClickedButton17();
+
+    double GetReceive(const std::string& beginTime,
+                      const std::string& endTime,
+                      double bid,
+                      double sell,
+                      int32_t days);
+    std::map<double, double> GetReceiveMap(const std::string& beginTime,
+                                           const std::string& endTime,
+                                           double bidBegin,
+                                           double bidEnd,
+                                           double sell,
+                                           int32_t days);
 };
