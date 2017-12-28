@@ -43,6 +43,7 @@ void CPasswordInputBox::setDefault()
 	setFontSize(14);
 	setTextOrigin(4);
 	setTextRightOrigin(25);
+	setTextColor(QColor(255, 255, 255, 255));
 }
 
 void CPasswordInputBox::setMaskSize(int32_t width, int32_t height)

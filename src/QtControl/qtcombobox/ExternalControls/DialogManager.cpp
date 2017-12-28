@@ -71,8 +71,6 @@ int32_t DialogManager::popWaitDialog(int32_t& dialogId,
 	return WaitDialog::popWaitDialog(dialogId, title, tip, parent, timeOut);
 }
 
-
-
 void DialogManager::removeDialog(int32_t dialogId)
 {
 	auto itDialog = m_mapDialog.find(dialogId);

@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_GameInfoWidget_t {
-    QByteArrayData data[25];
-    char stringdata0[466];
+    QByteArrayData data[32];
+    char stringdata0[568];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -35,41 +35,50 @@ QT_MOC_LITERAL(2, 29, 0), // ""
 QT_MOC_LITERAL(3, 30, 21), // "onInviteFriendClicked"
 QT_MOC_LITERAL(4, 52, 18), // "onStartGameClicked"
 QT_MOC_LITERAL(5, 71, 18), // "prepareGameClicked"
-QT_MOC_LITERAL(6, 90, 13), // "onExitClicked"
-QT_MOC_LITERAL(7, 104, 17), // "onGameNameChanged"
-QT_MOC_LITERAL(8, 122, 21), // "onGamePasswordChanged"
-QT_MOC_LITERAL(9, 144, 17), // "onGameModeChanged"
-QT_MOC_LITERAL(10, 162, 15), // "onGameLvChanged"
-QT_MOC_LITERAL(11, 178, 16), // "onGameMVPChanged"
-QT_MOC_LITERAL(12, 195, 16), // "onGameNetChanged"
-QT_MOC_LITERAL(13, 212, 18), // "onGameLeaveChanged"
-QT_MOC_LITERAL(14, 231, 14), // "onJudgeChanged"
-QT_MOC_LITERAL(15, 246, 24), // "onGameSettingLinkClicked"
-QT_MOC_LITERAL(16, 271, 27), // "onPersonalRecordLinkClicked"
-QT_MOC_LITERAL(17, 299, 19), // "onMyToolLinkClicked"
-QT_MOC_LITERAL(18, 319, 20), // "onGameSettingClicked"
-QT_MOC_LITERAL(19, 340, 23), // "onPersonalRecordClicked"
-QT_MOC_LITERAL(20, 364, 15), // "onMyToolClicked"
-QT_MOC_LITERAL(21, 380, 27), // "onGameSettingUrlLinkClicked"
-QT_MOC_LITERAL(22, 408, 3), // "url"
-QT_MOC_LITERAL(23, 412, 30), // "onPersonalRecordUrlLinkClicked"
-QT_MOC_LITERAL(24, 443, 22) // "onMyToolUrlLinkClicked"
+QT_MOC_LITERAL(6, 90, 24), // "cancelPrepareGameClicked"
+QT_MOC_LITERAL(7, 115, 13), // "onExitClicked"
+QT_MOC_LITERAL(8, 129, 17), // "onGameNameChanged"
+QT_MOC_LITERAL(9, 147, 21), // "onGamePasswordChanged"
+QT_MOC_LITERAL(10, 169, 17), // "onGameModeChanged"
+QT_MOC_LITERAL(11, 187, 15), // "onGameLvChanged"
+QT_MOC_LITERAL(12, 203, 16), // "onGameMVPChanged"
+QT_MOC_LITERAL(13, 220, 16), // "onGameNetChanged"
+QT_MOC_LITERAL(14, 237, 18), // "onGameLeaveChanged"
+QT_MOC_LITERAL(15, 256, 14), // "onJudgeChanged"
+QT_MOC_LITERAL(16, 271, 24), // "onGameSettingLinkClicked"
+QT_MOC_LITERAL(17, 296, 27), // "onPersonalRecordLinkClicked"
+QT_MOC_LITERAL(18, 324, 19), // "onMyToolLinkClicked"
+QT_MOC_LITERAL(19, 344, 20), // "onGameSettingClicked"
+QT_MOC_LITERAL(20, 365, 23), // "onPersonalRecordClicked"
+QT_MOC_LITERAL(21, 389, 15), // "onMyToolClicked"
+QT_MOC_LITERAL(22, 405, 27), // "onGameSettingUrlLinkClicked"
+QT_MOC_LITERAL(23, 433, 3), // "url"
+QT_MOC_LITERAL(24, 437, 30), // "onPersonalRecordUrlLinkClicked"
+QT_MOC_LITERAL(25, 468, 22), // "onMyToolUrlLinkClicked"
+QT_MOC_LITERAL(26, 491, 20), // "onPrepareGameClicked"
+QT_MOC_LITERAL(27, 512, 5), // "check"
+QT_MOC_LITERAL(28, 518, 10), // "onEditText"
+QT_MOC_LITERAL(29, 529, 4), // "text"
+QT_MOC_LITERAL(30, 534, 13), // "onEditTextFin"
+QT_MOC_LITERAL(31, 548, 19) // "onGameLvTextChanged"
 
     },
     "GameInfoWidget\0onSaveClicked\0\0"
     "onInviteFriendClicked\0onStartGameClicked\0"
-    "prepareGameClicked\0onExitClicked\0"
-    "onGameNameChanged\0onGamePasswordChanged\0"
-    "onGameModeChanged\0onGameLvChanged\0"
-    "onGameMVPChanged\0onGameNetChanged\0"
-    "onGameLeaveChanged\0onJudgeChanged\0"
-    "onGameSettingLinkClicked\0"
+    "prepareGameClicked\0cancelPrepareGameClicked\0"
+    "onExitClicked\0onGameNameChanged\0"
+    "onGamePasswordChanged\0onGameModeChanged\0"
+    "onGameLvChanged\0onGameMVPChanged\0"
+    "onGameNetChanged\0onGameLeaveChanged\0"
+    "onJudgeChanged\0onGameSettingLinkClicked\0"
     "onPersonalRecordLinkClicked\0"
     "onMyToolLinkClicked\0onGameSettingClicked\0"
     "onPersonalRecordClicked\0onMyToolClicked\0"
     "onGameSettingUrlLinkClicked\0url\0"
     "onPersonalRecordUrlLinkClicked\0"
-    "onMyToolUrlLinkClicked"
+    "onMyToolUrlLinkClicked\0onPrepareGameClicked\0"
+    "check\0onEditText\0text\0onEditTextFin\0"
+    "onGameLvTextChanged"
 };
 #undef QT_MOC_LITERAL
 
@@ -79,40 +88,46 @@ static const uint qt_meta_data_GameInfoWidget[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-      22,   14, // methods
+      27,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-      16,       // signalCount
+      17,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    0,  124,    2, 0x06 /* Public */,
-       3,    0,  125,    2, 0x06 /* Public */,
-       4,    0,  126,    2, 0x06 /* Public */,
-       5,    0,  127,    2, 0x06 /* Public */,
-       6,    0,  128,    2, 0x06 /* Public */,
-       7,    1,  129,    2, 0x06 /* Public */,
-       8,    1,  132,    2, 0x06 /* Public */,
-       9,    1,  135,    2, 0x06 /* Public */,
-      10,    1,  138,    2, 0x06 /* Public */,
-      11,    1,  141,    2, 0x06 /* Public */,
-      12,    1,  144,    2, 0x06 /* Public */,
-      13,    1,  147,    2, 0x06 /* Public */,
-      14,    1,  150,    2, 0x06 /* Public */,
-      15,    1,  153,    2, 0x06 /* Public */,
-      16,    1,  156,    2, 0x06 /* Public */,
-      17,    1,  159,    2, 0x06 /* Public */,
+       1,    0,  149,    2, 0x06 /* Public */,
+       3,    0,  150,    2, 0x06 /* Public */,
+       4,    0,  151,    2, 0x06 /* Public */,
+       5,    0,  152,    2, 0x06 /* Public */,
+       6,    0,  153,    2, 0x06 /* Public */,
+       7,    0,  154,    2, 0x06 /* Public */,
+       8,    1,  155,    2, 0x06 /* Public */,
+       9,    1,  158,    2, 0x06 /* Public */,
+      10,    1,  161,    2, 0x06 /* Public */,
+      11,    1,  164,    2, 0x06 /* Public */,
+      12,    1,  167,    2, 0x06 /* Public */,
+      13,    1,  170,    2, 0x06 /* Public */,
+      14,    1,  173,    2, 0x06 /* Public */,
+      15,    1,  176,    2, 0x06 /* Public */,
+      16,    1,  179,    2, 0x06 /* Public */,
+      17,    1,  182,    2, 0x06 /* Public */,
+      18,    1,  185,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-      18,    0,  162,    2, 0x08 /* Private */,
-      19,    0,  163,    2, 0x08 /* Private */,
-      20,    0,  164,    2, 0x08 /* Private */,
-      21,    1,  165,    2, 0x08 /* Private */,
-      23,    1,  168,    2, 0x08 /* Private */,
-      24,    1,  171,    2, 0x08 /* Private */,
+      19,    0,  188,    2, 0x08 /* Private */,
+      20,    0,  189,    2, 0x08 /* Private */,
+      21,    0,  190,    2, 0x08 /* Private */,
+      22,    1,  191,    2, 0x08 /* Private */,
+      24,    1,  194,    2, 0x08 /* Private */,
+      25,    1,  197,    2, 0x08 /* Private */,
+      26,    1,  200,    2, 0x08 /* Private */,
+      28,    1,  203,    2, 0x08 /* Private */,
+      30,    0,  206,    2, 0x08 /* Private */,
+      31,    1,  207,    2, 0x08 /* Private */,
 
  // signals: parameters
+    QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -134,9 +149,13 @@ static const uint qt_meta_data_GameInfoWidget[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QUrl,   22,
-    QMetaType::Void, QMetaType::QUrl,   22,
-    QMetaType::Void, QMetaType::QUrl,   22,
+    QMetaType::Void, QMetaType::QUrl,   23,
+    QMetaType::Void, QMetaType::QUrl,   23,
+    QMetaType::Void, QMetaType::QUrl,   23,
+    QMetaType::Void, QMetaType::Bool,   27,
+    QMetaType::Void, QMetaType::QString,   29,
+    QMetaType::Void,
+    QMetaType::Void, QMetaType::QString,   29,
 
        0        // eod
 };
@@ -151,24 +170,29 @@ void GameInfoWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 1: _t->onInviteFriendClicked(); break;
         case 2: _t->onStartGameClicked(); break;
         case 3: _t->prepareGameClicked(); break;
-        case 4: _t->onExitClicked(); break;
-        case 5: _t->onGameNameChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 6: _t->onGamePasswordChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 7: _t->onGameModeChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 8: _t->onGameLvChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 9: _t->onGameMVPChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 10: _t->onGameNetChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 11: _t->onGameLeaveChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 12: _t->onJudgeChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 13: _t->onGameSettingLinkClicked((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 14: _t->onPersonalRecordLinkClicked((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 15: _t->onMyToolLinkClicked((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 16: _t->onGameSettingClicked(); break;
-        case 17: _t->onPersonalRecordClicked(); break;
-        case 18: _t->onMyToolClicked(); break;
-        case 19: _t->onGameSettingUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
-        case 20: _t->onPersonalRecordUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
-        case 21: _t->onMyToolUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
+        case 4: _t->cancelPrepareGameClicked(); break;
+        case 5: _t->onExitClicked(); break;
+        case 6: _t->onGameNameChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 7: _t->onGamePasswordChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 8: _t->onGameModeChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 9: _t->onGameLvChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 10: _t->onGameMVPChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 11: _t->onGameNetChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 12: _t->onGameLeaveChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 13: _t->onJudgeChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 14: _t->onGameSettingLinkClicked((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 15: _t->onPersonalRecordLinkClicked((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 16: _t->onMyToolLinkClicked((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 17: _t->onGameSettingClicked(); break;
+        case 18: _t->onPersonalRecordClicked(); break;
+        case 19: _t->onMyToolClicked(); break;
+        case 20: _t->onGameSettingUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
+        case 21: _t->onPersonalRecordUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
+        case 22: _t->onMyToolUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
+        case 23: _t->onPrepareGameClicked((*reinterpret_cast< bool(*)>(_a[1]))); break;
+        case 24: _t->onEditText((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 25: _t->onEditTextFin(); break;
+        case 26: _t->onGameLvTextChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -200,74 +224,80 @@ void GameInfoWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         }
         {
             typedef void (GameInfoWidget::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onExitClicked)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::cancelPrepareGameClicked)) {
                 *result = 4;
             }
         }
         {
-            typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameNameChanged)) {
+            typedef void (GameInfoWidget::*_t)();
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onExitClicked)) {
                 *result = 5;
             }
         }
         {
             typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGamePasswordChanged)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameNameChanged)) {
                 *result = 6;
             }
         }
         {
             typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameModeChanged)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGamePasswordChanged)) {
                 *result = 7;
             }
         }
         {
             typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameLvChanged)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameModeChanged)) {
                 *result = 8;
             }
         }
         {
             typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameMVPChanged)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameLvChanged)) {
                 *result = 9;
             }
         }
         {
             typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameNetChanged)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameMVPChanged)) {
                 *result = 10;
             }
         }
         {
             typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameLeaveChanged)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameNetChanged)) {
                 *result = 11;
+            }
+        }
+        {
+            typedef void (GameInfoWidget::*_t)(const QString & );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameLeaveChanged)) {
+                *result = 12;
             }
         }
         {
             typedef void (GameInfoWidget::*_t)(int );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onJudgeChanged)) {
-                *result = 12;
-            }
-        }
-        {
-            typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameSettingLinkClicked)) {
                 *result = 13;
             }
         }
         {
             typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onPersonalRecordLinkClicked)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onGameSettingLinkClicked)) {
                 *result = 14;
             }
         }
         {
             typedef void (GameInfoWidget::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onMyToolLinkClicked)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onPersonalRecordLinkClicked)) {
                 *result = 15;
+            }
+        }
+        {
+            typedef void (GameInfoWidget::*_t)(const QString & );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&GameInfoWidget::onMyToolLinkClicked)) {
+                *result = 16;
             }
         }
     }
@@ -298,13 +328,13 @@ int GameInfoWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 22)
+        if (_id < 27)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 22;
+        _id -= 27;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 22)
+        if (_id < 27)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 22;
+        _id -= 27;
     }
     return _id;
 }
@@ -334,85 +364,91 @@ void GameInfoWidget::prepareGameClicked()
 }
 
 // SIGNAL 4
-void GameInfoWidget::onExitClicked()
+void GameInfoWidget::cancelPrepareGameClicked()
 {
     QMetaObject::activate(this, &staticMetaObject, 4, Q_NULLPTR);
 }
 
 // SIGNAL 5
-void GameInfoWidget::onGameNameChanged(const QString & _t1)
+void GameInfoWidget::onExitClicked()
 {
-    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
-    QMetaObject::activate(this, &staticMetaObject, 5, _a);
+    QMetaObject::activate(this, &staticMetaObject, 5, Q_NULLPTR);
 }
 
 // SIGNAL 6
-void GameInfoWidget::onGamePasswordChanged(const QString & _t1)
+void GameInfoWidget::onGameNameChanged(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 6, _a);
 }
 
 // SIGNAL 7
-void GameInfoWidget::onGameModeChanged(const QString & _t1)
+void GameInfoWidget::onGamePasswordChanged(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 7, _a);
 }
 
 // SIGNAL 8
-void GameInfoWidget::onGameLvChanged(const QString & _t1)
+void GameInfoWidget::onGameModeChanged(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 8, _a);
 }
 
 // SIGNAL 9
-void GameInfoWidget::onGameMVPChanged(const QString & _t1)
+void GameInfoWidget::onGameLvChanged(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 9, _a);
 }
 
 // SIGNAL 10
-void GameInfoWidget::onGameNetChanged(const QString & _t1)
+void GameInfoWidget::onGameMVPChanged(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 10, _a);
 }
 
 // SIGNAL 11
-void GameInfoWidget::onGameLeaveChanged(const QString & _t1)
+void GameInfoWidget::onGameNetChanged(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 11, _a);
 }
 
 // SIGNAL 12
-void GameInfoWidget::onJudgeChanged(int _t1)
+void GameInfoWidget::onGameLeaveChanged(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 12, _a);
 }
 
 // SIGNAL 13
-void GameInfoWidget::onGameSettingLinkClicked(const QString & _t1)
+void GameInfoWidget::onJudgeChanged(int _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 13, _a);
 }
 
 // SIGNAL 14
-void GameInfoWidget::onPersonalRecordLinkClicked(const QString & _t1)
+void GameInfoWidget::onGameSettingLinkClicked(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 14, _a);
 }
 
 // SIGNAL 15
-void GameInfoWidget::onMyToolLinkClicked(const QString & _t1)
+void GameInfoWidget::onPersonalRecordLinkClicked(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 15, _a);
+}
+
+// SIGNAL 16
+void GameInfoWidget::onMyToolLinkClicked(const QString & _t1)
+{
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 16, _a);
 }
 QT_END_MOC_NAMESPACE

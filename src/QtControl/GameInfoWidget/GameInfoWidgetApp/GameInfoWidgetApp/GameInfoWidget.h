@@ -201,6 +201,11 @@ public:
 	*/
 	void setPrepareGameEnable(bool enable);
 
+	/** 设置准备游戏是否为按下状态
+	@param [in] check 是否为按下状态
+	*/
+	void setPrepareGameCheck(bool check);
+
 	/** 准备游戏是否可用
 	@return 返回准备游戏是否可用
 	*/
@@ -240,7 +245,6 @@ public:
 	*/
 	void setLeader(bool isLeader);
 
-	
 private:
 	/** 默认数据初始化
 	*/
@@ -255,7 +259,10 @@ private:
 	void initMyToolButtonWidget();
 
 	//如果字符串传空则表示不设置正则表达式
-	void setComboBoxAttri(ComboBox* pBox, const std::wstring& pattern = L"", QRegExpValidator* rep = nullptr);
+	void setComboBoxAttri(ComboBox* pBox,
+						  const std::wstring& pattern = L"",
+						  QRegExp* ex = nullptr,
+						  QRegExpValidator* rep = nullptr);
 
 	bool mouseInWithoutDropDown(ComboBox* pBox);
 
@@ -276,12 +283,17 @@ private slots:
 	void onGameSettingUrlLinkClicked(const QUrl& url);
 	void onPersonalRecordUrlLinkClicked(const QUrl& url);
 	void onMyToolUrlLinkClicked(const QUrl& url);
+	void onPrepareGameClicked(bool check);
+	void onEditText(const QString& text);
+	void onEditTextFin();
+	void onGameLvTextChanged(const QString& text);
 
 Q_SIGNALS:
 	void onSaveClicked();
 	void onInviteFriendClicked();
 	void onStartGameClicked();
-	void prepareGameClicked(bool checked);
+	void prepareGameClicked();
+	void cancelPrepareGameClicked();
 	void onExitClicked();
 	void onGameNameChanged(const QString &);
 	void onGamePasswordChanged(const QString &);
@@ -354,10 +366,18 @@ private:
 	QRegExpValidator m_netRep;
 	QRegExpValidator m_leaveRep;
 
+	QRegExp m_lvExp;
+	QRegExp m_MVPExp;
+	QRegExp m_netExp;
+	QRegExp m_leaveExp;
+
 	std::wstring m_gameLvCurText;
 	std::wstring m_gameMVPCurText;
 	std::wstring m_gameNetCurText;
 	std::wstring m_gameLeaveCurText;
 
 	QString m_war3ResourcePath;
+	bool m_isLeader;
+
+	bool m_lvFin;
 };

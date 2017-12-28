@@ -18,6 +18,7 @@ public:
 	DialogBase();
 
 	/** 展示窗口
+	@param [out] dialogId 窗口ID值
 	@param [in] timeOut 自动关闭时间，单位秒，如果不填则表示不会自动关闭
 	@return 关闭窗口时给的返回值
 	*/

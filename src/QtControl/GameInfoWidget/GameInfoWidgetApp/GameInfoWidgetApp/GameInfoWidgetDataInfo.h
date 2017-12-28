@@ -48,7 +48,7 @@ enum
 
 	/** 每个字条的宽度
 	*/
-	LABEL_WIDTH = 88,
+	LABEL_WIDTH = 77,
 
 	/** 每个字条的高度
 	*/
@@ -60,7 +60,7 @@ enum
 
 	/** 字条和右侧控件的间隔宽度
 	*/
-	LABEL_SPACING = 5,
+	LABEL_SPACING = 10,
 
 	/** 右侧控件横轴起始位置
 	*/
