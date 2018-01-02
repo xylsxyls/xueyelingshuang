@@ -18,7 +18,7 @@ public:
 	static int32_t popWaitDialog(int32_t& dialogId,
 								 const QString& title,
 								 const QString& tip,
-								 QDialog* parent = nullptr,
+								 QWidget* parent = nullptr,
 								 int32_t timeOut = -1,
 								 bool isCountDownVisible = false);
 private:

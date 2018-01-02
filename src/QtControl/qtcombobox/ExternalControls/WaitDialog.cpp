@@ -4,7 +4,7 @@
 int32_t WaitDialog::popWaitDialog(int32_t& dialogId,
 								  const QString& title,
 								  const QString& tip,
-								  QDialog* parent,
+								  QWidget* parent,
 								  int32_t timeOut,
 								  bool isCountDownVisible)
 {

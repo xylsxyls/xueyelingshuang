@@ -6,7 +6,7 @@ int32_t TipDialog::popTipDialog(int32_t& dialogId,
 								const QString& tip,
 								const QString& buttonText,
 								int32_t done,
-								QDialog* parent,
+								QWidget* parent,
 								int32_t timeOut,
 								bool isCountDownVisible)
 {

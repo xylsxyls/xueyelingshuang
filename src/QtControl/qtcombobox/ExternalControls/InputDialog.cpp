@@ -8,7 +8,7 @@ int32_t InputDialog::popInputDialog(int32_t& dialogId,
 									const QString& buttonText,
 									int32_t done,
 									QString& editText,
-									QDialog* parent,
+									QWidget* parent,
 									int32_t timeOut,
 									bool isCountDownVisible)
 {

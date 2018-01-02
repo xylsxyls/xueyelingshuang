@@ -22,7 +22,7 @@ public:
 								const QString& tip,
 								const QString& buttonText,
 								int32_t done,
-								QDialog* parent = nullptr,
+								QWidget* parent = nullptr,
 								int32_t timeOut = -1,
 								bool isCountDownVisible = false);
 private:

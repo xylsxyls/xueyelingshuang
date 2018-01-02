@@ -137,7 +137,7 @@ CPasswordInputBox* DialogBase::addPasswordInputBox(const QRect& rect, const QStr
 	return password;
 }
 
-void DialogBase::setResponseHighlightDialog(QDialog* parent)
+void DialogBase::setResponseHighlightDialog(QWidget* parent)
 {
 	if (parent == nullptr)
 	{

@@ -8,7 +8,7 @@ int32_t AskDialog::popAskDialog(int32_t& dialogId,
 								int32_t acceptDone,
 								const QString& ignoreText,
 								int32_t ignoreDone,
-								QDialog* parent,
+								QWidget* parent,
 								int32_t timeOut,
 								bool isCountDownVisible)
 {

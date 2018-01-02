@@ -80,7 +80,7 @@ public:
 	/** 设置点击外部时会响应高亮闪烁的父窗口
 	@param [in] parent 父窗口指针
 	*/
-	void setResponseHighlightDialog(QDialog* parent);
+	void setResponseHighlightDialog(QWidget* parent);
 
 Q_SIGNALS:
 	void timeRest(int32_t seconds);

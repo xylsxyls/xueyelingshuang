@@ -26,7 +26,7 @@ public:
 								int32_t acceptDone,
 								const QString& ignoreText,
 								int32_t ignoreDone,
-								QDialog* parent = nullptr,
+								QWidget* parent = nullptr,
 								int32_t timeOut = -1,
 								bool isCountDownVisible = false);
 private:

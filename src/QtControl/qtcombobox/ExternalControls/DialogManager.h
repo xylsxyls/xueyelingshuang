@@ -4,7 +4,7 @@
 #include <QString>
 
 class DialogBase;
-class QDialog;
+class QWidget;
 /** 单一实例，用于统一管理窗口创建关闭，该类的对外接口，销毁所有窗口
 DialogManager::instance().removeAll();
 */
@@ -36,7 +36,7 @@ public:
 						 int32_t acceptDone,
 						 const QString& ignoreText,
 						 int32_t ignoreDone,
-						 QDialog* parent = nullptr,
+						 QWidget* parent = nullptr,
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
 
@@ -55,7 +55,7 @@ public:
 						 const QString& tip,
 						 const QString& buttonText,
 						 int32_t done,
-						 QDialog* parent = nullptr,
+						 QWidget* parent = nullptr,
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
 
@@ -76,7 +76,7 @@ public:
 						   const QString& buttonText,
 						   int32_t done,
 						   QString& editText,
-						   QDialog* parent = nullptr,
+						   QWidget* parent = nullptr,
 						   int32_t timeOut = -1,
 						   bool isCountDownVisible = false);
 
@@ -91,7 +91,7 @@ public:
 	int32_t popWaitDialog(int32_t& dialogId,
 						  const QString& title,
 						  const QString& tip,
-						  QDialog* parent = nullptr,
+						  QWidget* parent = nullptr,
 						  int32_t timeOut = -1,
 						  bool isCountDownVisible = false);
 

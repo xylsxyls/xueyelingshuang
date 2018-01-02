@@ -385,17 +385,17 @@ void qtcombobox::htmlItemPressed(int index)
 	int32_t sss = box->itemIndexByFirstId(2);
 	int x = 3;
 }
-QDialog* sss = nullptr;
+QWidget* sss = nullptr;
 void qtcombobox::modalPop()
 {
-	sss = new QDialog;
+	sss = new QWidget;
 	sss->resize(500, 500);
 	sss->setStyleSheet("background-color:black");
 	
 	COriginalButton* ssd = new COriginalButton(sss);
 	QObject::connect(ssd, &COriginalButton::clicked, this, &qtcombobox::testDialog);
 	//sss->windowHandle()->setTransientParent(this->windowHandle());
-	sss->exec();
+	sss->show();
 }
 
 void qtcombobox::testDialog()
