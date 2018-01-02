@@ -44,10 +44,13 @@ protected:
 	Label* m_title;
 	Label* m_separator;
 	Label* m_time;
+	Label* m_titleBar;
+	Label* m_icon;
 
 private:
 	bool m_bPressed;
 	bool m_highLight;
 	QPoint m_point;
 	bool m_cancelEscAltF4;
+	bool m_isExec;
 };

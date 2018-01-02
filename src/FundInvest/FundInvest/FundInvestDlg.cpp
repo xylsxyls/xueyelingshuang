@@ -750,8 +750,8 @@ void CFundInvestDlg::OnBnClickedButton13()
 {
     // TODO:  在此添加控件通知处理程序代码
 	Cini ini(m_fundPath + FUND_NUM + ".ini");
-	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-12-26");
-    DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-12-28");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-12-29");
+    DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-12-29");
     DataNeuron* nowNeuron = beginNeuron;
 
     int32_t lookDays = 5;
@@ -827,7 +827,7 @@ void CFundInvestDlg::OnBnClickedButton14()
 {
 	// TODO:  在此添加控件通知处理程序代码
 	std::string beginDay = "2017-07-01";
-	std::string endDay = "2017-12-28";
+	std::string endDay = "2017-12-29";
 	std::string path = "D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + "_draw_30.txt";
 	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, beginDay);
 	DataNeuron* endNeuron = GetNeuron(FUND_NUM, endDay);

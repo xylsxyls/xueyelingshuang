@@ -57,11 +57,11 @@ public:
 
 	/** 添加分割线
 	@param [in] point 起始点
-	@param [in] width 宽度
+	@param [in] length 长度
 	@param [in] isHorizon 是否水平
 	@return 返回分割线指针
 	*/
-	Label* addSeparator(const QPoint& point, int32_t width, bool isHorizon);
+	Label* addSeparator(const QPoint& point, int32_t length, bool isHorizon);
 
 	/** 添加单行文本框
 	@param [in] rect 标签相对父窗口所在位置

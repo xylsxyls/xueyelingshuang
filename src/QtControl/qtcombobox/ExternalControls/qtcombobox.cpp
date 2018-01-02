@@ -400,7 +400,7 @@ void qtcombobox::modalPop()
 
 void qtcombobox::testDialog()
 {
-	int32_t dialogId1 = 0;
+	/*int32_t dialogId1 = 0;
 	int xx = TipDialog::popTipDialog(dialogId1,
 									 QString::fromStdWString(L"标题"),
 									 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
@@ -435,7 +435,13 @@ void qtcombobox::testDialog()
 									   QString::fromStdWString(L"标题"),
 									   QString::fromStdWString(L"输入框提示："),
 									   sss,
-									   3);
+									   3);*/
+
+	DialogShow* show = new DialogShow;
+	show->initForShow();
+	int32_t dialogId5 = 0;
+	show->show(dialogId5);
+
 	//dlg->windowHandle()->setTransientParent(this->windowHandle());
 	//dlg->show();
 	int x = 3;

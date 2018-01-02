@@ -48,7 +48,6 @@ Label* DialogBase::addLabel(const QString& text, const QRect& rect, const QColor
 		return nullptr;
 	}
 	label->setGeometry(rect);
-	label->setAttribute(Qt::WA_TranslucentBackground);
 	label->setText(text);
 	label->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
 	label->setTextColor(textColor);
@@ -88,21 +87,22 @@ COriginalButton* DialogBase::addButton(const QString& text, const QRect& rect, i
 	return button;
 }
 
-Label* DialogBase::addSeparator(const QPoint& point, int32_t width, bool isHorizon)
+Label* DialogBase::addSeparator(const QPoint& point, int32_t length, bool isHorizon)
 {
 	Label* label = new Label(this);
 	if (label == nullptr)
 	{
 		return nullptr;
 	}
-	label->setGeometry(point.x(), point.y(), width, 2);
+
+	label->setGeometry(point.x(), point.y(), isHorizon ? length : 2, isHorizon ? 2 : length);
 	label->setBackgroundColor(QColor(46, 52, 88, 255));
 	Label* lab = new Label(label);
 	if (lab == nullptr)
 	{
 		return nullptr;
 	}
-	lab->setGeometry(0, 0, width, 1);
+	lab->setGeometry(0, 0, isHorizon ? length : 1, isHorizon ? 1 : length);
 	lab->setBackgroundColor(QColor(16, 20, 31, 255));
 	return label;
 }

@@ -11,13 +11,15 @@
 DialogShow::DialogShow() :
 m_cancelEscAltF4(false),
 m_bPressed(false),
-m_highLight(false)
+m_highLight(false),
+m_isExec(false)
 {
 	
 }
 
 void DialogShow::initForExec()
 {
+	m_isExec = true;
 	resize(340, 165);
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
 	m_exit->setBkgMargins(0, 0);
@@ -30,13 +32,28 @@ void DialogShow::initForExec()
 	m_time->setFontSize(12);
 	QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::timeUpdate);
 	setAttribute(Qt::WA_NativeWindow);
-
 }
 
 void DialogShow::initForShow()
 {
-	resize(234, 130);
+	m_isExec = false;
 
+	setStyleSheet(".DialogShow{background-color:rgba(44, 52, 74, 255);border-top-left-radius:3px;border-top-right-radius:3px;border:1px solid;border-color:rgba(78, 146, 212, 255);}");
+
+	resize(234, 130);
+	m_titleBar = addLabel("", QRect(1, 1, width() - 2, 31), QColor(163, 175, 191, 255));
+	m_titleBar->setBackgroundColor(QColor(67, 81, 117, 255));
+	m_icon = addLabel("", QRect(6, 6, 13, 18), QColor(0, 0, 0, 0));
+	m_icon->setParent(m_titleBar);
+	m_icon->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/11Logo.png", 1, 1, 1, 1);
+	m_title = addLabel("title", QRect(23, 1, width() - 20, 31), QColor(163, 175, 191, 255));
+	m_title->setParent(m_titleBar);
+	m_title->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+	m_exit = addButton("", QRect(width() - 34, 1, 34, 31), 0);
+	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
+	m_exit->setBkgMargins(0, 0);
+	m_exit->setBorderRadius(0);
+	QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::timeUpdate);
 }
 
 void DialogShow::setExitVisible(bool visible)
@@ -56,25 +73,28 @@ void DialogShow::timeUpdate(int32_t timeOut)
 
 void DialogShow::paintEvent(QPaintEvent* eve)
 {
-	QLinearGradient gradient(QPointF(0, 0), QPoint(0, height()));
-	gradient.setColorAt(0.08, QColor(31, 37, 61, 255));
-	gradient.setColorAt(0.50, QColor(29, 33, 50, 255));
-	gradient.setColorAt(0.92, QColor(27, 29, 41, 255));
-
-	gradient.setSpread(QGradient::PadSpread);
-
-	QPainter painter(this);
-
-	painter.fillRect(QRect(0, 0, width(), height()), gradient);
-	if (m_highLight)
+	if (m_isExec)
 	{
-		painter.setPen(QColor("#373e60"));
+		QLinearGradient gradient(QPointF(0, 0), QPoint(0, height()));
+		gradient.setColorAt(0.08, QColor(31, 37, 61, 255));
+		gradient.setColorAt(0.50, QColor(29, 33, 50, 255));
+		gradient.setColorAt(0.92, QColor(27, 29, 41, 255));
+
+		gradient.setSpread(QGradient::PadSpread);
+
+		QPainter painter(this);
+
+		painter.fillRect(QRect(0, 0, width(), height()), gradient);
+		if (m_highLight)
+		{
+			painter.setPen(QColor("#373e60"));
+		}
+		else
+		{
+			painter.setPen(QColor("#4b5586"));
+		}
+		painter.drawRect(0, 0, width() - 1, height() - 1);
 	}
-	else
-	{
-		painter.setPen(QColor("#4b5586"));
-	}
-	painter.drawRect(0, 0, width() - 1, height() - 1);
 
 	QDialog::paintEvent(eve);
 }
