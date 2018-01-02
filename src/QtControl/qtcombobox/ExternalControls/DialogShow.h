@@ -13,7 +13,11 @@ public:
 
 	/** 设置默认控件，含有关闭按钮，标题，分割线，框大小，背景颜色，背景边框
 	*/
-	void init();
+	void initForExec();
+
+	/** 设置默认控件，含有标题栏
+	*/
+	void initForShow();
 
 	/** 设置关闭按钮是否可见，如果对话框中关闭按钮不可见则同时会取消Esc和Alt+F4的使用
 	@param [in] visible 是否可见

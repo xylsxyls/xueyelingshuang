@@ -69,29 +69,29 @@ m_leaveFinish(true)
 	{
 		m_inviteFriend->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/BigInviteFriendButton.png", 3, 1, 2, 3);
 		m_inviteFriend->setText(QString::fromStdWString(L""));
-		QObject::connect(m_inviteFriend, &QPushButton::clicked, this, &GameInfoWidget::onInviteFriendClicked);
+		QObject::connect(m_inviteFriend, &COriginalButton::clicked, this, &GameInfoWidget::onInviteFriendClicked);
 	}
 	if (m_startGame != nullptr)
 	{
 		m_startGame->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/StartGameButton.png", 4, 1, 2, 3, 4);
 		m_startGame->setText(QString::fromStdWString(L""));
-		QObject::connect(m_startGame, &QPushButton::clicked, this, &GameInfoWidget::onStartGameClicked);
+		QObject::connect(m_startGame, &COriginalButton::clicked, this, &GameInfoWidget::onStartGameClicked);
 	}
 	if (m_prepareGame != nullptr)
 	{
 		m_prepareGame->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/prepare_button.png", 8, 1, 2, 3, 4, 5, 6, 7, 8);
 		m_prepareGame->setCheckable(true);
 		m_prepareGame->setText(QString::fromStdWString(L""));
-		QObject::connect(m_prepareGame, &QPushButton::clicked, this, &GameInfoWidget::onPrepareGameClicked);
+		QObject::connect(m_prepareGame, &COriginalButton::clicked, this, &GameInfoWidget::onPrepareGameClicked);
 	}
 	if (m_exit != nullptr)
 	{
 		m_exit->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/QuitButton.png", 4, 1, 2, 3, 4);
 		m_exit->setText(QString::fromStdWString(L""));
-		QObject::connect(m_exit, &QPushButton::clicked, this, &GameInfoWidget::onExitClicked);
+		QObject::connect(m_exit, &COriginalButton::clicked, this, &GameInfoWidget::onExitClicked);
 	}
 
-	setLeader(true);
+	setLeader(false);
 
 	layout();
 
@@ -397,7 +397,7 @@ void GameInfoWidget::setLeader(bool isLeader)
 	m_isLeader = isLeader;
 	m_startGame->setVisible(isLeader);
 	m_prepareGame->setVisible(!isLeader);
-	
+
 	setGameNameEnable(isLeader);
 	setGamePasswordEnable(isLeader);
 	setGameModeEnable(isLeader);
@@ -410,17 +410,17 @@ void GameInfoWidget::setLeader(bool isLeader)
 
 	if (isLeader)
 	{
-		m_gameLvComboBox->setTextColor(CONTROL_TEXT_COLOR, true);
-		m_gameMVPComboBox->setTextColor(CONTROL_TEXT_COLOR, true);
-		m_gameNetComboBox->setTextColor(CONTROL_TEXT_COLOR, true);
-		m_gameLeaveComboBox->setTextColor(CONTROL_TEXT_COLOR, true);
+		m_gameLvComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, true);
+		m_gameMVPComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, true);
+		m_gameNetComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, true);
+		m_gameLeaveComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, true);
 	}
 	else
 	{
-		m_gameLvComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, true);
-		m_gameMVPComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, true);
-		m_gameNetComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, true);
-		m_gameLeaveComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, true);
+		m_gameLvComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, true);
+		m_gameMVPComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, true);
+		m_gameNetComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, true);
+		m_gameLeaveComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, true);
 	}
 }
 
@@ -556,7 +556,7 @@ void GameInfoWidget::initGameSettingWidget()
 		m_gameNameEdit->setTextOrigin(CONTROL_TEXT_ORIGIN);
 		m_gameNameEdit->setBackgroundColor(CONTROL_BACKGROUND_COLOR, CONTROL_BACKGROUND_COLOR, CONTROL_BACKGROUND_COLOR);
 		m_gameNameEdit->setContextMenuPolicy(Qt::NoContextMenu);
-		QObject::connect(m_gameNameEdit, &QLineEdit::textChanged, this, &GameInfoWidget::onGameNameChanged);
+		QObject::connect(m_gameNameEdit, &LineEdit::textChanged, this, &GameInfoWidget::onGameNameChanged);
 	}
 
 	//第二行
@@ -571,7 +571,7 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gamePasswordEdit != nullptr)
 	{
 		m_gamePasswordEdit->setContextMenuPolicy(Qt::NoContextMenu);
-		QObject::connect(m_gamePasswordEdit, &QLineEdit::textChanged, this, &GameInfoWidget::onGamePasswordChanged);
+		QObject::connect(m_gamePasswordEdit, &LineEdit::textChanged, this, &GameInfoWidget::onGamePasswordChanged);
 	}
 
 	//第三行
@@ -587,7 +587,7 @@ void GameInfoWidget::initGameSettingWidget()
 	{
 		setComboBoxAttri(m_gameModeComboBox);
 		m_gameModeComboBox->setTextOrigin(GAME_MODE_TEXT_ORIGIN);
-		QObject::connect(m_gameModeComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameModeChanged);
+		QObject::connect(m_gameModeComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameModeChanged);
 	}
 
 	//第四行
@@ -602,8 +602,8 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameLvComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameLvComboBox, L"^(?!00)(?:[0-9]{1,3}|1000)$", &m_lvExp, &m_lvRep);
-		QObject::connect(m_gameLvComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameLvTextChanged);
-		QObject::connect(m_gameLvComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onLvEditTextFinish);
+		QObject::connect(m_gameLvComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameLvTextChanged);
+		QObject::connect(m_gameLvComboBox->lineEdit(), &LineEdit::editingFinished, this, &GameInfoWidget::onLvEditTextFinish);
 	}
 
 	//第五行
@@ -618,8 +618,8 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameMVPComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameMVPComboBox, L"^(?!00)(?:[0-9]{1,3}|1000)$", &m_MVPExp, &m_MVPRep);
-		QObject::connect(m_gameMVPComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameMVPTextChanged);
-		QObject::connect(m_gameMVPComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onMVPEditTextFinish);
+		QObject::connect(m_gameMVPComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameMVPTextChanged);
+		QObject::connect(m_gameMVPComboBox->lineEdit(), &LineEdit::editingFinished, this, &GameInfoWidget::onMVPEditTextFinish);
 	}
 
 	//第六行
@@ -634,8 +634,8 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameNetComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameNetComboBox, L"^500|(?!00|[5-9][0-9]{2})(?:[0-9]{1,3})$", &m_netExp, &m_netRep);
-		QObject::connect(m_gameNetComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameNetTextChanged);
-		QObject::connect(m_gameNetComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onNetEditTextFinish);
+		QObject::connect(m_gameNetComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameNetTextChanged);
+		QObject::connect(m_gameNetComboBox->lineEdit(), &LineEdit::editingFinished, this, &GameInfoWidget::onNetEditTextFinish);
 	}
 
 	//第七行
@@ -650,8 +650,8 @@ void GameInfoWidget::initGameSettingWidget()
 	if (m_gameLeaveComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameLeaveComboBox, L"^(?!00)(?:[0-9]{1,2})$", &m_leaveExp, &m_leaveRep);
-		QObject::connect(m_gameLeaveComboBox, &QComboBox::currentTextChanged, this, &GameInfoWidget::onGameLeaveTextChanged);
-		QObject::connect(m_gameLeaveComboBox->lineEdit(), &QLineEdit::editingFinished, this, &GameInfoWidget::onLeaveEditTextFinish);
+		QObject::connect(m_gameLeaveComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameLeaveTextChanged);
+		QObject::connect(m_gameLeaveComboBox->lineEdit(), &LineEdit::editingFinished, this, &GameInfoWidget::onLeaveEditTextFinish);
 	}
 
 	//开启裁判位
@@ -674,7 +674,7 @@ void GameInfoWidget::initGameSettingWidget()
 									  LABEL_TEXT_COLOR,
 									  LABEL_TEXT_COLOR);
 		m_judgeCheckBox->setText(QString::fromStdWString(L"开启裁判位"));
-		m_judgeCheckBox->setIndicatorImage(m_war3ResourcePath + "/Image/Common/Setting/SettingCheckBox.png", 4, 1, 2, 3, 1, 3, 3, 4, 4);
+		m_judgeCheckBox->setIndicatorImage(m_war3ResourcePath + "/Image/Common/Setting/SettingCheckBox.png", 4, 1, 2, 3, 1, 3, 3, 4, 3);
 		m_judgeCheckBox->setFontSize(GAME_INFO_FONT_SIZE);
 		m_judgeCheckBox->setFontFace(GAME_INFO_FONT_FACE);
 		m_judgeCheckBox->setIndicatorSize(18, 18);
@@ -688,7 +688,7 @@ void GameInfoWidget::initGameSettingWidget()
 		m_save->setBorderColor(SAVE_BORDER_COLOR);
 		m_save->setBorderRadius(CONTROL_RADIUS);
 		m_save->setText(QString::fromStdWString(L""));
-		QObject::connect(m_save, &QPushButton::clicked, this, &GameInfoWidget::onSaveClicked);
+		QObject::connect(m_save, &COriginalButton::clicked, this, &GameInfoWidget::onSaveClicked);
 	}
 
 	//网页
@@ -1091,13 +1091,13 @@ void GameInfoWidget::onMyToolUrlLinkClicked(const QUrl& url)
 
 void GameInfoWidget::onPrepareGameClicked(bool check)
 {
-	if (check)
+	if (m_prepareGame->isChecked())
 	{
-		emit cancelPrepareGameClicked();
+		emit prepareGameClicked();
 	}
 	else
 	{
-		emit prepareGameClicked();
+		emit cancelPrepareGameClicked();
 	}
 }
 

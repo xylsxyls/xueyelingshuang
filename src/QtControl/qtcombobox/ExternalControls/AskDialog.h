@@ -27,7 +27,8 @@ public:
 								const QString& ignoreText,
 								int32_t ignoreDone,
 								QDialog* parent = nullptr,
-								int32_t timeOut = -1);
+								int32_t timeOut = -1,
+								bool isCountDownVisible = false);
 private:
 	AskDialog(const QString& title,
 			  const QString& tip,

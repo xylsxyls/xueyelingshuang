@@ -37,7 +37,8 @@ public:
 						 const QString& ignoreText,
 						 int32_t ignoreDone,
 						 QDialog* parent = nullptr,
-						 int32_t timeOut = -1);
+						 int32_t timeOut = -1,
+						 bool isCountDownVisible = false);
 
 	/** 弹出提示框
 	@param [out] dialogId 窗口ID值
@@ -55,7 +56,8 @@ public:
 						 const QString& buttonText,
 						 int32_t done,
 						 QDialog* parent = nullptr,
-						 int32_t timeOut = -1);
+						 int32_t timeOut = -1,
+						 bool isCountDownVisible = false);
 
 	/** 弹出输入框
 	@param [out] dialogId 窗口ID值
@@ -75,7 +77,8 @@ public:
 						   int32_t done,
 						   QString& editText,
 						   QDialog* parent = nullptr,
-						   int32_t timeOut = -1);
+						   int32_t timeOut = -1,
+						   bool isCountDownVisible = false);
 
 	/** 弹出等待框
 	@param [out] dialogId 窗口ID值
@@ -89,20 +92,21 @@ public:
 						  const QString& title,
 						  const QString& tip,
 						  QDialog* parent = nullptr,
-						  int32_t timeOut = -1);
+						  int32_t timeOut = -1,
+						  bool isCountDownVisible = false);
 
 	/** 根据ID号销毁窗口
 	@param [in] dialogId 窗口ID号
 	*/
-	void removeDialog(int32_t dialogId);
+	void destroyDialog(int32_t dialogId);
 
 	/** 销毁最后一个弹出的窗口
 	*/
-	void removeLastDialog();
+	void destroyLastDialog();
 
 	/** 销毁所有窗口
 	*/
-	void removeAll();
+	void destroyAll();
 
 private:
 	DialogManager();
@@ -112,6 +116,11 @@ private:
 	@return 返回窗口对应ID号
 	*/
 	int32_t setDialog(DialogBase* dialog);
+
+	/** 根据ID号销毁窗口
+	@param [in] dialogId 窗口ID号
+	*/
+	void removeDialog(int32_t dialogId);
 
 	int32_t getId();
 

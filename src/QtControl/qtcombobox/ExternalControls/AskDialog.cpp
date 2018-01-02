@@ -9,11 +9,12 @@ int32_t AskDialog::popAskDialog(int32_t& dialogId,
 								const QString& ignoreText,
 								int32_t ignoreDone,
 								QDialog* parent,
-								int32_t timeOut)
+								int32_t timeOut,
+								bool isCountDownVisible)
 {
 	AskDialog dlg(title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
 	dlg.setResponseHighlightDialog(parent);
-	return dlg.exec(dialogId, timeOut);
+	return dlg.exec(dialogId, timeOut, isCountDownVisible);
 }
 
 AskDialog::AskDialog(const QString& title,
@@ -23,6 +24,7 @@ AskDialog::AskDialog(const QString& title,
 					 const QString& ignoreText,
 					 int32_t ignoreDone)
 {
+	initForExec();
 	m_title->setText(title);
 	m_tip = addTip(tip, QRect(43, 51, width() - 43 * 2, 60), QColor(205, 213, 225, 255));
 	m_accept = addButton(acceptText, QRect((width() - 116 * 2) / 3, 127, 116, 22), acceptDone);

@@ -390,6 +390,7 @@ void qtcombobox::modalPop()
 {
 	sss = new QDialog;
 	sss->resize(500, 500);
+	sss->setStyleSheet("background-color:black");
 	
 	COriginalButton* ssd = new COriginalButton(sss);
 	QObject::connect(ssd, &COriginalButton::clicked, this, &qtcombobox::testDialog);
@@ -399,7 +400,18 @@ void qtcombobox::modalPop()
 
 void qtcombobox::testDialog()
 {
-	/*int xx = AskDialog::popAskDialog(QString::fromStdWString(L"标题"),
+	/*int32_t dialogId = 0;
+	int xx = TipDialog::popTipDialog(dialogId,
+									 QString::fromStdWString(L"标题"),
+									 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
+									 QString::fromStdWString(L"确定"),
+									 1,
+									 sss,
+									 3,
+									 true);*/
+	/*int32_t dialogId = 0;
+	int xx = AskDialog::popAskDialog(dialogId,
+									 QString::fromStdWString(L"标题"),
 									 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
 									 QString::fromStdWString(L"确定"),
 									 2,
@@ -407,7 +419,7 @@ void qtcombobox::testDialog()
 									 1,
 									 sss,
 									 3);*/
-	QString editText = QString::fromStdWString(L"剧毒术士");
+	/*QString editText = QString::fromStdWString(L"剧毒术士");
 	int32_t dialogId = 0;
 	int xx = InputDialog::popInputDialog(dialogId,
 										 QString::fromStdWString(L"标题"),
@@ -416,11 +428,14 @@ void qtcombobox::testDialog()
 										 1,
 										 editText,
 										 sss,
-										 3);
-	/*int xx = WaitDialog::popWaitDialog(QString::fromStdWString(L"标题"),
+										 3,
+										 true);*/
+	int32_t dialogId = 0;
+	int xx = WaitDialog::popWaitDialog(dialogId,
+									   QString::fromStdWString(L"标题"),
 									   QString::fromStdWString(L"输入框提示："),
 									   sss,
-									   3);*/
+									   3);
 	//dlg->windowHandle()->setTransientParent(this->windowHandle());
 	//dlg->show();
 	int x = 3;

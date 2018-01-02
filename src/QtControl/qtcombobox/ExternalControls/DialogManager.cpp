@@ -19,7 +19,8 @@ int32_t DialogManager::popAskDialog(int32_t& dialogId,
 									const QString& ignoreText,
 									int32_t ignoreDone,
 									QDialog* parent,
-									int32_t timeOut)
+									int32_t timeOut,
+									bool isCountDownVisible)
 {
 	return AskDialog::popAskDialog(dialogId,
 								   title,
@@ -29,7 +30,8 @@ int32_t DialogManager::popAskDialog(int32_t& dialogId,
 								   ignoreText,
 								   ignoreDone,
 								   parent,
-								   timeOut);
+								   timeOut,
+								   isCountDownVisible);
 }
 
 int32_t DialogManager::popTipDialog(int32_t& dialogId,
@@ -38,9 +40,10 @@ int32_t DialogManager::popTipDialog(int32_t& dialogId,
 									const QString& buttonText,
 									int32_t done,
 									QDialog* parent,
-									int32_t timeOut)
+									int32_t timeOut,
+									bool isCountDownVisible)
 {
-	return TipDialog::popTipDialog(dialogId, title, tip, buttonText, done, parent, timeOut);
+	return TipDialog::popTipDialog(dialogId, title, tip, buttonText, done, parent, timeOut, isCountDownVisible);
 }
 
 int32_t DialogManager::popInputDialog(int32_t& dialogId,
@@ -50,7 +53,8 @@ int32_t DialogManager::popInputDialog(int32_t& dialogId,
 									  int32_t done,
 									  QString& editText,
 									  QDialog* parent,
-									  int32_t timeOut)
+									  int32_t timeOut,
+									  bool isCountDownVisible)
 {
 	return InputDialog::popInputDialog(dialogId,
 									   title,
@@ -59,19 +63,21 @@ int32_t DialogManager::popInputDialog(int32_t& dialogId,
 									   done,
 									   editText,
 									   parent,
-									   timeOut);
+									   timeOut,
+									   isCountDownVisible);
 }
 
 int32_t DialogManager::popWaitDialog(int32_t& dialogId,
 									 const QString& title,
 									 const QString& tip,
 									 QDialog* parent,
-									 int32_t timeOut)
+									 int32_t timeOut,
+									 bool isCountDownVisible)
 {
-	return WaitDialog::popWaitDialog(dialogId, title, tip, parent, timeOut);
+	return WaitDialog::popWaitDialog(dialogId, title, tip, parent, timeOut, isCountDownVisible);
 }
 
-void DialogManager::removeDialog(int32_t dialogId)
+void DialogManager::destroyDialog(int32_t dialogId)
 {
 	auto itDialog = m_mapDialog.find(dialogId);
 	if (itDialog != m_mapDialog.end())
@@ -81,7 +87,7 @@ void DialogManager::removeDialog(int32_t dialogId)
 	}
 }
 
-void DialogManager::removeLastDialog()
+void DialogManager::destroyLastDialog()
 {
 	if (!m_mapDialog.empty())
 	{
@@ -91,7 +97,7 @@ void DialogManager::removeLastDialog()
 	}
 }
 
-void DialogManager::removeAll()
+void DialogManager::destroyAll()
 {
 	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
 	{
@@ -115,6 +121,15 @@ int32_t DialogManager::setDialog(DialogBase* dialog)
 	int32_t id = getId();
 	m_mapDialog[id] = dialog;
 	return id;
+}
+
+void DialogManager::removeDialog(int32_t dialogId)
+{
+	auto itDialog = m_mapDialog.find(dialogId);
+	if (itDialog != m_mapDialog.end())
+	{
+		m_mapDialog.erase(itDialog);
+	}
 }
 
 int32_t DialogManager::getId()

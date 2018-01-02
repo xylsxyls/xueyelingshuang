@@ -12,10 +12,10 @@ m_cancelEscAltF4(false),
 m_bPressed(false),
 m_highLight(false)
 {
-	init();
+	
 }
 
-void DialogShow::init()
+void DialogShow::initForExec()
 {
 	resize(340, 165);
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
@@ -24,11 +24,17 @@ void DialogShow::init()
 	m_exit->setBkgImage("E:/newClient/11UI/Resource/Image/PopupBox/PopupCloseButton.png");
 	m_title = addLabel("title", QRect(17, 4, 300, 27), QColor(163, 175, 191, 255));
 	m_separator = addSeparator(QPoint(13, 33), 308, true);
-	m_time = addLabel("", QRect(215, 140, 125, 32), QColor(255, 0, 0, 255));
+	m_time = addLabel("", QRect(205, 140, 125, 32), QColor("#abb3d3"));
 	m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 	m_time->setFontSize(12);
 	QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::timeUpdate);
 	setAttribute(Qt::WA_NativeWindow);
+
+}
+
+void DialogShow::initForShow()
+{
+	resize(234, 130);
 
 }
 
@@ -40,7 +46,7 @@ void DialogShow::setExitVisible(bool visible)
 
 void DialogShow::timeUpdate(int32_t timeOut)
 {
-	if (timeOut <= 0)
+	if (timeOut <= 0 || m_timeVisible == false)
 	{
 		m_time->setVisible(false);
 	}
@@ -61,11 +67,11 @@ void DialogShow::paintEvent(QPaintEvent* eve)
 	painter.fillRect(QRect(0, 0, width(), height()), gradient);
 	if (m_highLight)
 	{
-		painter.setPen(QColor(255, 0, 0, 255));
+		painter.setPen(QColor("#373e60"));
 	}
 	else
 	{
-		painter.setPen(QColor(75, 85, 134, 255));
+		painter.setPen(QColor("#4b5586"));
 	}
 	painter.drawRect(0, 0, width() - 1, height() - 1);
 
@@ -111,7 +117,7 @@ void DialogShow::closeEvent(QCloseEvent* eve)
 		eve->ignore();
 		return;
 	}
-	reject();
+	//reject();
 	QDialog::closeEvent(eve);
 }
 
@@ -137,6 +143,6 @@ bool DialogShow::nativeEvent(const QByteArray& eventType, void* message, long* r
 
 void DialogShow::ncActiveChanged(int32_t wParam)
 {
-	m_highLight = !wParam;
+	m_highLight = !!wParam;
 	QDialog::repaint();
 }

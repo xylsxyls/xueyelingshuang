@@ -19,7 +19,8 @@ public:
 								 const QString& title,
 								 const QString& tip,
 								 QDialog* parent = nullptr,
-								 int32_t timeOut = -1);
+								 int32_t timeOut = -1,
+								 bool isCountDownVisible = false);
 private:
 	WaitDialog(const QString& title, const QString& tip);
 

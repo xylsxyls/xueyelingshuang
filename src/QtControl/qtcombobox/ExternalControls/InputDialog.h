@@ -25,7 +25,8 @@ public:
 								  int32_t done,
 								  QString& editText,
 								  QDialog* parent = nullptr,
-								  int32_t timeOut = -1);
+								  int32_t timeOut = -1,
+								  bool isCountDownVisible = false);
 private:
 	InputDialog(const QString& title,
 				const QString& editTip,
@@ -33,7 +34,7 @@ private:
 				int32_t done,
 				QString& editText);
 
-	void reject();
+	void done(int result);
 
 private:
 	Label* m_editTip;

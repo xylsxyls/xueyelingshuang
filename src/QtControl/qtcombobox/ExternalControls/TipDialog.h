@@ -23,7 +23,8 @@ public:
 								const QString& buttonText,
 								int32_t done,
 								QDialog* parent = nullptr,
-								int32_t timeOut = -1);
+								int32_t timeOut = -1,
+								bool isCountDownVisible = false);
 private:
 	TipDialog(const QString& title,
 			  const QString& tip,

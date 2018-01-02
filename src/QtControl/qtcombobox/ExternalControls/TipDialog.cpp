@@ -7,11 +7,12 @@ int32_t TipDialog::popTipDialog(int32_t& dialogId,
 								const QString& buttonText,
 								int32_t done,
 								QDialog* parent,
-								int32_t timeOut)
+								int32_t timeOut,
+								bool isCountDownVisible)
 {
 	TipDialog dlg(title, tip, buttonText, done);
 	dlg.setResponseHighlightDialog(parent);
-	return dlg.exec(dialogId, timeOut);
+	return dlg.exec(dialogId, timeOut, isCountDownVisible);
 }
 
 TipDialog::TipDialog(const QString& title,
@@ -19,6 +20,7 @@ TipDialog::TipDialog(const QString& title,
 					 const QString& buttonText,
 					 int32_t done)
 {
+	initForExec();
 	m_title->setText(title);
 	m_tip = addTip(tip, QRect(43, 51, width() - 43 * 2, 60), QColor(205, 213, 225, 255));
 	m_accept = addButton(buttonText, QRect((width() - 116) / 2, 127, 116, 22), done);
