@@ -6,6 +6,7 @@
 #include <QWindow>
 #include "CPasswordInputBox.h"
 #include "DialogManager.h"
+#include "../CGeneralStyle.h"
 
 DialogBase::DialogBase():
 m_timeVisible(false)
@@ -77,7 +78,7 @@ COriginalButton* DialogBase::addButton(const QString& text, const QRect& rect, i
 	}
 	button->setText(text);
 	button->setGeometry(rect);
-	button->setBkgImage("E:/newClient/11UI/Resource/Image/PopupBox/PopupButton.png");
+	button->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupButton.png");
 	button->setBkgMargins(4, 0);
 	button->setBorderRadius(4);
 	button->setFontSize(13);
@@ -122,6 +123,7 @@ LineEdit* DialogBase::addLineEdit(const QRect& rect, const QString& defaultText)
 	lineEdit->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
 	lineEdit->setAlignment(Qt::AlignVCenter);
 	lineEdit->setTextOrigin(3);
+	lineEdit->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupInputBox.png", 1, 1, 1, 1);
 	return lineEdit;
 }
 

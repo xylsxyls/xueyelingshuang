@@ -400,17 +400,17 @@ void qtcombobox::modalPop()
 
 void qtcombobox::testDialog()
 {
-	/*int32_t dialogId = 0;
-	int xx = TipDialog::popTipDialog(dialogId,
+	int32_t dialogId1 = 0;
+	int xx = TipDialog::popTipDialog(dialogId1,
 									 QString::fromStdWString(L"标题"),
 									 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
 									 QString::fromStdWString(L"确定"),
 									 1,
 									 sss,
 									 3,
-									 true);*/
-	/*int32_t dialogId = 0;
-	int xx = AskDialog::popAskDialog(dialogId,
+									 true);
+	int32_t dialogId2 = 0;
+	int xxx = AskDialog::popAskDialog(dialogId2,
 									 QString::fromStdWString(L"标题"),
 									 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
 									 QString::fromStdWString(L"确定"),
@@ -418,10 +418,10 @@ void qtcombobox::testDialog()
 									 QString::fromStdWString(L"取消"),
 									 1,
 									 sss,
-									 3);*/
-	/*QString editText = QString::fromStdWString(L"剧毒术士");
-	int32_t dialogId = 0;
-	int xx = InputDialog::popInputDialog(dialogId,
+									 3);
+	QString editText = QString::fromStdWString(L"剧毒术士");
+	int32_t dialogId3 = 0;
+	int xxxx = InputDialog::popInputDialog(dialogId3,
 										 QString::fromStdWString(L"标题"),
 										 QString::fromStdWString(L"输入框提示："),
 										 QString::fromStdWString(L"确定"),
@@ -429,9 +429,9 @@ void qtcombobox::testDialog()
 										 editText,
 										 sss,
 										 3,
-										 true);*/
-	int32_t dialogId = 0;
-	int xx = WaitDialog::popWaitDialog(dialogId,
+										 true);
+	int32_t dialogId4 = 0;
+	int xxxxx = WaitDialog::popWaitDialog(dialogId4,
 									   QString::fromStdWString(L"标题"),
 									   QString::fromStdWString(L"输入框提示："),
 									   sss,

@@ -43,6 +43,7 @@ void CGeneralStyle::initPath()
 	{
 		mPlatformResourcePath = w3lDir.path();
 	}
+	mPlatformResourcePath = "E:/newClient/output/resource";
 }
 
 CGeneralStyle::CGeneralStyle()

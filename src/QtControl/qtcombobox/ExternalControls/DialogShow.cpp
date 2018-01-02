@@ -6,6 +6,7 @@
 #include <QWindow>
 #include <Windows.h>
 #include "CStringManager.h"
+#include "../CGeneralStyle.h"
 
 DialogShow::DialogShow() :
 m_cancelEscAltF4(false),
@@ -21,7 +22,7 @@ void DialogShow::initForExec()
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
 	m_exit->setBkgMargins(0, 0);
 	m_exit->setBorderRadius(0);
-	m_exit->setBkgImage("E:/newClient/11UI/Resource/Image/PopupBox/PopupCloseButton.png");
+	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupCloseButton.png");
 	m_title = addLabel("title", QRect(17, 4, 300, 27), QColor(163, 175, 191, 255));
 	m_separator = addSeparator(QPoint(13, 33), 308, true);
 	m_time = addLabel("", QRect(205, 140, 125, 32), QColor("#abb3d3"));
