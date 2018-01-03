@@ -309,7 +309,7 @@ private slots:
 	void onGameSettingUrlLinkClicked(const QUrl& url);
 	void onPersonalRecordUrlLinkClicked(const QUrl& url);
 	void onMyToolUrlLinkClicked(const QUrl& url);
-	void onPrepareGameClicked(bool check);
+	void onPrepareGameClicked();
 	void onLvEditTextFinish();
 	void onMVPEditTextFinish();
 	void onNetEditTextFinish();

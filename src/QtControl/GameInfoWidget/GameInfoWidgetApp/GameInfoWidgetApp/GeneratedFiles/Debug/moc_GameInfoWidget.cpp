@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_GameInfoWidget_t {
-    QByteArrayData data[37];
-    char stringdata0[689];
+    QByteArrayData data[36];
+    char stringdata0[683];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -56,16 +56,15 @@ QT_MOC_LITERAL(23, 433, 3), // "url"
 QT_MOC_LITERAL(24, 437, 30), // "onPersonalRecordUrlLinkClicked"
 QT_MOC_LITERAL(25, 468, 22), // "onMyToolUrlLinkClicked"
 QT_MOC_LITERAL(26, 491, 20), // "onPrepareGameClicked"
-QT_MOC_LITERAL(27, 512, 5), // "check"
-QT_MOC_LITERAL(28, 518, 18), // "onLvEditTextFinish"
-QT_MOC_LITERAL(29, 537, 19), // "onMVPEditTextFinish"
-QT_MOC_LITERAL(30, 557, 19), // "onNetEditTextFinish"
-QT_MOC_LITERAL(31, 577, 21), // "onLeaveEditTextFinish"
-QT_MOC_LITERAL(32, 599, 19), // "onGameLvTextChanged"
-QT_MOC_LITERAL(33, 619, 4), // "text"
-QT_MOC_LITERAL(34, 624, 20), // "onGameMVPTextChanged"
-QT_MOC_LITERAL(35, 645, 20), // "onGameNetTextChanged"
-QT_MOC_LITERAL(36, 666, 22) // "onGameLeaveTextChanged"
+QT_MOC_LITERAL(27, 512, 18), // "onLvEditTextFinish"
+QT_MOC_LITERAL(28, 531, 19), // "onMVPEditTextFinish"
+QT_MOC_LITERAL(29, 551, 19), // "onNetEditTextFinish"
+QT_MOC_LITERAL(30, 571, 21), // "onLeaveEditTextFinish"
+QT_MOC_LITERAL(31, 593, 19), // "onGameLvTextChanged"
+QT_MOC_LITERAL(32, 613, 4), // "text"
+QT_MOC_LITERAL(33, 618, 20), // "onGameMVPTextChanged"
+QT_MOC_LITERAL(34, 639, 20), // "onGameNetTextChanged"
+QT_MOC_LITERAL(35, 660, 22) // "onGameLeaveTextChanged"
 
     },
     "GameInfoWidget\0onSaveClicked\0\0"
@@ -82,7 +81,7 @@ QT_MOC_LITERAL(36, 666, 22) // "onGameLeaveTextChanged"
     "onGameSettingUrlLinkClicked\0url\0"
     "onPersonalRecordUrlLinkClicked\0"
     "onMyToolUrlLinkClicked\0onPrepareGameClicked\0"
-    "check\0onLvEditTextFinish\0onMVPEditTextFinish\0"
+    "onLvEditTextFinish\0onMVPEditTextFinish\0"
     "onNetEditTextFinish\0onLeaveEditTextFinish\0"
     "onGameLvTextChanged\0text\0onGameMVPTextChanged\0"
     "onGameNetTextChanged\0onGameLeaveTextChanged"
@@ -128,15 +127,15 @@ static const uint qt_meta_data_GameInfoWidget[] = {
       22,    1,  216,    2, 0x08 /* Private */,
       24,    1,  219,    2, 0x08 /* Private */,
       25,    1,  222,    2, 0x08 /* Private */,
-      26,    1,  225,    2, 0x08 /* Private */,
-      28,    0,  228,    2, 0x08 /* Private */,
-      29,    0,  229,    2, 0x08 /* Private */,
-      30,    0,  230,    2, 0x08 /* Private */,
-      31,    0,  231,    2, 0x08 /* Private */,
-      32,    1,  232,    2, 0x08 /* Private */,
-      34,    1,  235,    2, 0x08 /* Private */,
-      35,    1,  238,    2, 0x08 /* Private */,
-      36,    1,  241,    2, 0x08 /* Private */,
+      26,    0,  225,    2, 0x08 /* Private */,
+      27,    0,  226,    2, 0x08 /* Private */,
+      28,    0,  227,    2, 0x08 /* Private */,
+      29,    0,  228,    2, 0x08 /* Private */,
+      30,    0,  229,    2, 0x08 /* Private */,
+      31,    1,  230,    2, 0x08 /* Private */,
+      33,    1,  233,    2, 0x08 /* Private */,
+      34,    1,  236,    2, 0x08 /* Private */,
+      35,    1,  239,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void,
@@ -164,15 +163,15 @@ static const uint qt_meta_data_GameInfoWidget[] = {
     QMetaType::Void, QMetaType::QUrl,   23,
     QMetaType::Void, QMetaType::QUrl,   23,
     QMetaType::Void, QMetaType::QUrl,   23,
-    QMetaType::Void, QMetaType::Bool,   27,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QString,   33,
-    QMetaType::Void, QMetaType::QString,   33,
-    QMetaType::Void, QMetaType::QString,   33,
-    QMetaType::Void, QMetaType::QString,   33,
+    QMetaType::Void,
+    QMetaType::Void, QMetaType::QString,   32,
+    QMetaType::Void, QMetaType::QString,   32,
+    QMetaType::Void, QMetaType::QString,   32,
+    QMetaType::Void, QMetaType::QString,   32,
 
        0        // eod
 };
@@ -206,7 +205,7 @@ void GameInfoWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 20: _t->onGameSettingUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
         case 21: _t->onPersonalRecordUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
         case 22: _t->onMyToolUrlLinkClicked((*reinterpret_cast< const QUrl(*)>(_a[1]))); break;
-        case 23: _t->onPrepareGameClicked((*reinterpret_cast< bool(*)>(_a[1]))); break;
+        case 23: _t->onPrepareGameClicked(); break;
         case 24: _t->onLvEditTextFinish(); break;
         case 25: _t->onMVPEditTextFinish(); break;
         case 26: _t->onNetEditTextFinish(); break;

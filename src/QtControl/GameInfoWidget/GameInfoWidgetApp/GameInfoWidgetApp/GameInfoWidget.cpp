@@ -81,6 +81,7 @@ m_leaveFinish(true)
 	{
 		m_prepareGame->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/prepare_button.png", 8, 1, 2, 3, 4, 5, 6, 7, 8);
 		m_prepareGame->setCheckable(true);
+		m_prepareGame->setChecked(false);
 		m_prepareGame->setText(QString::fromStdWString(L""));
 		QObject::connect(m_prepareGame, &COriginalButton::clicked, this, &GameInfoWidget::onPrepareGameClicked);
 	}
@@ -330,7 +331,7 @@ void GameInfoWidget::setPrepareGameEnable(bool enable)
 
 void GameInfoWidget::setPrepareGameCheck(bool check)
 {
-	m_prepareGame->setCheckable(check);
+	m_prepareGame->setChecked(check);
 }
 
 bool GameInfoWidget::isPrepareGameEnable()
@@ -397,6 +398,8 @@ void GameInfoWidget::setLeader(bool isLeader)
 	m_isLeader = isLeader;
 	m_startGame->setVisible(isLeader);
 	m_prepareGame->setVisible(!isLeader);
+	m_prepareGame->setCheckable(true);
+	m_prepareGame->setChecked(false);
 
 	setGameNameEnable(isLeader);
 	setGamePasswordEnable(isLeader);
@@ -1089,7 +1092,7 @@ void GameInfoWidget::onMyToolUrlLinkClicked(const QUrl& url)
 	emit onMyToolLinkClicked(url.toString());
 }
 
-void GameInfoWidget::onPrepareGameClicked(bool check)
+void GameInfoWidget::onPrepareGameClicked()
 {
 	if (m_prepareGame->isChecked())
 	{

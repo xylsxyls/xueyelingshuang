@@ -16,6 +16,8 @@ private slots:
 	void save();
 	void changed(const QString& str);
 	void changed2(const QString& str);
+	void prepare();
+	void cancelPrepare();
 
 private:
 	Ui::GameInfoWidgetAppClass ui;

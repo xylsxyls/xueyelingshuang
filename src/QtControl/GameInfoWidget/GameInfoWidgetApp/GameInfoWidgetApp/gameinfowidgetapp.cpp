@@ -10,6 +10,8 @@ GameInfoWidgetApp::GameInfoWidgetApp(QWidget *parent)
 	QObject::connect(pWidget, SIGNAL(onGameModeChanged(const QString&)), this, SLOT(changed(const QString&)));
 	QObject::connect(pWidget, SIGNAL(onGameLvChanged()), this, SLOT(changed()));
 	QObject::connect(pWidget, SIGNAL(onGameSettingLinkClicked(const QString&)), this, SLOT(changed2(const QString&)));
+	QObject::connect(pWidget, &GameInfoWidget::prepareGameClicked, this, &GameInfoWidgetApp::prepare);
+	QObject::connect(pWidget, &GameInfoWidget::cancelPrepareGameClicked, this, &GameInfoWidgetApp::cancelPrepare);
 	pWidget->show();
 }
 
@@ -30,6 +32,16 @@ void GameInfoWidgetApp::changed(const QString& str)
 }
 
 void GameInfoWidgetApp::changed2(const QString& str)
+{
+	int x = 3;
+}
+
+void GameInfoWidgetApp::prepare()
+{
+	int x = 3;
+}
+
+void GameInfoWidgetApp::cancelPrepare()
 {
 	int x = 3;
 }
