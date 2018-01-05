@@ -21,6 +21,8 @@
 #include "WaitDialog.h"
 #include "../COriginalButton.h"
 #include <QWindow>
+#include "DialogManager.h"
+#include "ShowDialogManager.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -388,13 +390,15 @@ void qtcombobox::htmlItemPressed(int index)
 QWidget* sss = nullptr;
 void qtcombobox::modalPop()
 {
+	setAttribute(Qt::WA_NativeWindow);
 	sss = new QWidget;
 	sss->resize(500, 500);
 	sss->setStyleSheet("background-color:black");
-	
+	sss->setAttribute(Qt::WA_NativeWindow);
 	COriginalButton* ssd = new COriginalButton(sss);
 	QObject::connect(ssd, &COriginalButton::clicked, this, &qtcombobox::testDialog);
 	//sss->windowHandle()->setTransientParent(this->windowHandle());
+	
 	sss->show();
 }
 
@@ -407,7 +411,7 @@ void qtcombobox::testDialog()
 									 QString::fromStdWString(L"确定"),
 									 1,
 									 sss,
-									 3,
+									 30,
 									 true);
 	int32_t dialogId2 = 0;
 	int xxx = AskDialog::popAskDialog(dialogId2,
@@ -418,7 +422,7 @@ void qtcombobox::testDialog()
 									 QString::fromStdWString(L"取消"),
 									 1,
 									 sss,
-									 3);
+									 30);
 	QString editText = QString::fromStdWString(L"剧毒术士");
 	int32_t dialogId3 = 0;
 	int xxxx = InputDialog::popInputDialog(dialogId3,
@@ -428,21 +432,54 @@ void qtcombobox::testDialog()
 										 1,
 										 editText,
 										 sss,
-										 3,
+										 1,
 										 true);
 	int32_t dialogId4 = 0;
 	int xxxxx = WaitDialog::popWaitDialog(dialogId4,
 									   QString::fromStdWString(L"标题"),
 									   QString::fromStdWString(L"输入框提示："),
 									   sss,
-									   3);*/
+									   1);*/
 
-	DialogShow* show = new DialogShow;
-	show->initForShow();
 	int32_t dialogId5 = 0;
-	show->show(dialogId5);
+	ShowDialogManager::instance().showTipDialog(dialogId5,
+												11,
+												QString::fromStdWString(L"标题"),
+												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
+												1,
+												QString::fromStdWString(L"知道了"),
+												30,
+												true);
 
+	int32_t dialogId6 = 0;
+	ShowDialogManager::instance().showAskDialog(dialogId6,
+												22,
+												QString::fromStdWString(L"标题"),
+												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
+												1,
+												0,
+												QString::fromStdWString(L"同意"),
+												QString::fromStdWString(L"拒绝"),
+												30,
+												true);
+
+	int32_t dialogId7 = 0;
+	ShowDialogManager::instance().showLoginDialog(dialogId7,
+												  33,
+												  QString::fromStdWString(L"标题"),
+												  QString::fromStdWString(L"<a href=\"http://www.baidu.com\">www.baidu.com</a>123456"),
+												  QString::fromStdWString(L"www.sougou.com"),
+												  30,
+												  true,
+												  true);
+
+	QObject::connect(&ShowDialogManager::instance(), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
 	//dlg->windowHandle()->setTransientParent(this->windowHandle());
 	//dlg->show();
+	int x = 3;
+}
+
+void qtcombobox::onDialogDone(int32_t dialogId, int32_t result, int32_t userType)
+{
 	int x = 3;
 }

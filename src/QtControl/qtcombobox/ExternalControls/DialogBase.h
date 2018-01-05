@@ -28,8 +28,9 @@ public:
 	/** 展示窗口
 	@param [out] dialogId 窗口ID值
 	@param [in] timeOut 自动关闭时间，单位秒，如果不填则表示不会自动关闭
+	@param [in] isCountDownVisible 是否显示倒计时
 	*/
-	void show(int32_t& dialogId, int32_t timeOut = -1);
+	void show(int32_t& dialogId, int32_t timeOut = -1, bool isCountDownVisible = false);
 
 	/** 新增标签文字并设置
 	@param [in] text 文本内容
@@ -85,12 +86,13 @@ public:
 Q_SIGNALS:
 	void timeRest(int32_t seconds);
 
-private slots:
-	void endDialog();
-
-private:
+protected:
 	void showEvent(QShowEvent* eve);
 	void timerEvent(QTimerEvent* eve);
+	void done(int result);
+
+private slots:
+	void endDialog();
 
 protected:
 	bool m_timeVisible;

@@ -2,15 +2,17 @@
 #include <map>
 #include <stdint.h>
 #include <QString>
+#include <QObject>
 
 class DialogBase;
 class QWidget;
 /** 单一实例，用于统一管理窗口创建关闭，该类的对外接口，销毁所有窗口
 DialogManager::instance().removeAll();
 */
-class DialogManager
+class DialogManager : public QObject
 {
 	friend class DialogBase;
+	friend class DialogShow;
 public:
 	/** 单一实例
 	@return 返回单一实例
@@ -108,9 +110,14 @@ public:
 	*/
 	void destroyAll();
 
-private:
+	/** 根据窗口指针在已有窗口中获取窗口ID
+	*/
+	int32_t DialogId(DialogBase* base);
+
+protected:
 	DialogManager();
 
+private:
 	/** 存储窗口指针
 	@param [in] dialog 窗口指针
 	@return 返回窗口对应ID号
@@ -121,6 +128,11 @@ private:
 	@param [in] dialogId 窗口ID号
 	*/
 	void removeDialog(int32_t dialogId);
+
+	/** 根据ID号销毁窗口
+	@param [in] dialogId 窗口ID号
+	*/
+	void removeDialog(DialogBase* base);
 
 	int32_t getId();
 

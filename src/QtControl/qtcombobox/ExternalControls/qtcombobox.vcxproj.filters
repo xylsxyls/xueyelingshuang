@@ -129,18 +129,6 @@
     <Filter Include="QtDialog">
       <UniqueIdentifier>{ae0d673c-8b55-470e-806b-3d8e70708b2d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="QtDialog\WaitDialog">
-      <UniqueIdentifier>{5b68db52-4866-497c-aa28-210a136e3701}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="QtDialog\TipDialog">
-      <UniqueIdentifier>{4ee9da22-d5f5-4a3f-8aa8-c52bfcebd8d4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="QtDialog\AskDialog">
-      <UniqueIdentifier>{237d3997-b301-4c53-9f89-1f1f30657539}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="QtDialog\InputDialog">
-      <UniqueIdentifier>{9c8f96eb-e9dc-4554-9757-7cc3be3797f8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="QtDialog\DialogManager">
       <UniqueIdentifier>{062225db-0305-49b3-8c53-12af750b9efd}</UniqueIdentifier>
     </Filter>
@@ -152,6 +140,36 @@
     </Filter>
     <Filter Include="QtDialog\DialogBase\DialogShow">
       <UniqueIdentifier>{7c515d0b-9015-415b-9e70-9278603af8cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal">
+      <UniqueIdentifier>{98e80f68-4f3e-4bf9-be90-8683da8f6b4b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\AskDialog">
+      <UniqueIdentifier>{237d3997-b301-4c53-9f89-1f1f30657539}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\WaitDialog">
+      <UniqueIdentifier>{5b68db52-4866-497c-aa28-210a136e3701}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\TipDialog">
+      <UniqueIdentifier>{4ee9da22-d5f5-4a3f-8aa8-c52bfcebd8d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\InputDialog">
+      <UniqueIdentifier>{9c8f96eb-e9dc-4554-9757-7cc3be3797f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal">
+      <UniqueIdentifier>{e6cf1110-fbe2-4021-a2df-97e1635dfed2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal\LoginShowDialog">
+      <UniqueIdentifier>{15f9d3c6-928f-41cd-8dd1-37480f6282c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal\AskShowDialog">
+      <UniqueIdentifier>{9ba847bc-be7e-4ac0-a907-574d61fd157c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal\TipShowDialog">
+      <UniqueIdentifier>{65a8eaf1-f812-48bf-8539-551a671d12fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\ShowDialogManager">
+      <UniqueIdentifier>{8f80f1ed-89ec-4dc3-8e73-02126e63e0fa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -336,7 +354,7 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="TipDialog.cpp">
-      <Filter>QtDialog\TipDialog</Filter>
+      <Filter>QtDialog\Modal\TipDialog</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_TipDialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -345,13 +363,13 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="AskDialog.cpp">
-      <Filter>QtDialog\AskDialog</Filter>
+      <Filter>QtDialog\Modal\AskDialog</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_AskDialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="InputDialog.cpp">
-      <Filter>QtDialog\InputDialog</Filter>
+      <Filter>QtDialog\Modal\InputDialog</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_InputDialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -363,7 +381,7 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="WaitDialog.cpp">
-      <Filter>QtDialog\WaitDialog</Filter>
+      <Filter>QtDialog\Modal\WaitDialog</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_WaitDialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -373,6 +391,42 @@
     </ClCompile>
     <ClCompile Include="DialogManager.cpp">
       <Filter>QtDialog\DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="TipShowDialog.cpp">
+      <Filter>QtDialog\UnModal\TipShowDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="AskShowDialog.cpp">
+      <Filter>QtDialog\UnModal\AskShowDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="LoginShowDialog.cpp">
+      <Filter>QtDialog\UnModal\LoginShowDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="ShowDialogManager.cpp">
+      <Filter>QtDialog\ShowDialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ShowDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ShowDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -449,19 +503,31 @@
       <Filter>QtDialog\DialogBase\DialogShow</Filter>
     </CustomBuild>
     <CustomBuild Include="TipDialog.h">
-      <Filter>QtDialog\TipDialog</Filter>
+      <Filter>QtDialog\Modal\TipDialog</Filter>
     </CustomBuild>
     <CustomBuild Include="AskDialog.h">
-      <Filter>QtDialog\AskDialog</Filter>
+      <Filter>QtDialog\Modal\AskDialog</Filter>
     </CustomBuild>
     <CustomBuild Include="InputDialog.h">
-      <Filter>QtDialog\InputDialog</Filter>
+      <Filter>QtDialog\Modal\InputDialog</Filter>
     </CustomBuild>
     <CustomBuild Include="WaitDialog.h">
-      <Filter>QtDialog\WaitDialog</Filter>
+      <Filter>QtDialog\Modal\WaitDialog</Filter>
     </CustomBuild>
     <CustomBuild Include="DialogManager.h">
       <Filter>QtDialog\DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="TipShowDialog.h">
+      <Filter>QtDialog\UnModal\TipShowDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="AskShowDialog.h">
+      <Filter>QtDialog\UnModal\AskShowDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="LoginShowDialog.h">
+      <Filter>QtDialog\UnModal\LoginShowDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ShowDialogManager.h">
+      <Filter>QtDialog\ShowDialogManager</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

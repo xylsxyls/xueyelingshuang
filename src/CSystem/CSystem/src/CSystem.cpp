@@ -111,8 +111,8 @@ RECT CSystem::GetTaskbarRect(){
 }
 
 RECT CSystem::GetWindowResolution(){
-	int screenwidth_real=GetSystemMetrics(SM_CXSCREEN);
-	int screenheight_real=GetSystemMetrics(SM_CYSCREEN);
+	int screenwidth_real = ::GetSystemMetrics(SM_CXSCREEN);
+	int screenheight_real = ::GetSystemMetrics(SM_CYSCREEN);
 	RECT rectResult;
 	rectResult.left = 0;
 	rectResult.top = 0;

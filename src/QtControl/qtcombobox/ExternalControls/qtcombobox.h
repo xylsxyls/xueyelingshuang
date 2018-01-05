@@ -3,6 +3,7 @@
 
 #include <QtWidgets/QMainWindow>
 #include "ui_qtcombobox.h"
+#include <stdint.h>
 
 class HtmlComboBox;
 class qtcombobox : public QMainWindow
@@ -19,6 +20,7 @@ private slots:
 	void htmlItemPressed(int index);
 	void modalPop();
 	void testDialog();
+	void onDialogDone(int32_t dialogId, int32_t result, int32_t userType);
 private:
 	Ui::qtcomboboxClass ui;
 	HtmlComboBox* box;

@@ -10,6 +10,7 @@
 #include <QEvent>
 #include <QMouseEvent>
 #include "CGeneralStyle.h"
+//#include "common/QtWeb/WebViewEx.h"
 
 GameInfoWidget::GameInfoWidget(QWidget* parent) :
 QWidget(parent),

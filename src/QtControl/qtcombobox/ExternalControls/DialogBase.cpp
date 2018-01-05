@@ -6,6 +6,7 @@
 #include <QWindow>
 #include "CPasswordInputBox.h"
 #include "DialogManager.h"
+#include "ShowDialogManager.h"
 #include "../CGeneralStyle.h"
 
 DialogBase::DialogBase():
@@ -24,18 +25,19 @@ int32_t DialogBase::exec(int32_t& dialogId, int32_t timeOut, bool isCountDownVis
 	m_timeVisible = isCountDownVisible;
 	dialogId = DialogManager::instance().setDialog(this);
 	int32_t result = QDialog::exec();
-	DialogManager::instance().removeDialog(dialogId);
+	//DialogManager::instance().removeDialog(dialogId);
 	return result;
 }
 
-void DialogBase::show(int32_t& dialogId, int32_t timeOut)
+void DialogBase::show(int32_t& dialogId, int32_t timeOut, bool isCountDownVisible)
 {
 	m_timeRest = timeOut;
 	if (m_timeRest == 0)
 	{
 		return;
 	}
-	dialogId = DialogManager::instance().setDialog(this);
+	m_timeVisible = isCountDownVisible;
+	dialogId = ShowDialogManager::instance().setDialog(this);
 	QDialog::show();
 	return;
 }
@@ -64,7 +66,6 @@ Label* DialogBase::addTip(const QString& text, const QRect& rect, const QColor& 
 		return nullptr;
 	}
 	tip->setWordWrap(true);
-	tip->setAlignment(tip->alignment() | Qt::AlignHCenter);
 	return tip;
 }
 
@@ -148,6 +149,7 @@ void DialogBase::setResponseHighlightDialog(QWidget* parent)
 	QWindow* handle = parent->windowHandle();
 	if (handle != nullptr)
 	{
+		setWindowModality(Qt::WindowModal);
 		windowHandle()->setTransientParent(handle);
 	}
 }
@@ -157,7 +159,6 @@ void DialogBase::endDialog()
 	auto itResult = m_mapResult.find(childAt(mapFromGlobal(QWidget::cursor().pos())));
 	if (itResult != m_mapResult.end())
 	{
-		//reject();
 		done(itResult->second);
 	}
 }
@@ -182,4 +183,10 @@ void DialogBase::timerEvent(QTimerEvent* eve)
 		reject();
 	}
 	QDialog::timerEvent(eve);
+}
+
+void DialogBase::done(int result)
+{
+	//DialogManager::instance().removeDialog(this);
+	QDialog::done(result);
 }

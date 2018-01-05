@@ -21,4 +21,5 @@ public:
 	static QColor GetQColorWithDefault(const QColor& dstColor, const QColor& srcColor);
 
 	static int32_t GetIntWithDefault(const int32_t& dstInt, const int32_t& srcInt);
+
 };

@@ -45,6 +45,9 @@
     <Filter Include="基础控件\控件库">
       <UniqueIdentifier>{fdf251f1-16b7-4f1d-98d7-ea88d46d60b3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="QtWeb">
+      <UniqueIdentifier>{76446b83-c029-49a7-b4c1-43a178795eb2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

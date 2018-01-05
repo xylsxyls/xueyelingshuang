@@ -4,6 +4,9 @@
 #include "TipDialog.h"
 #include "InputDialog.h"
 #include "WaitDialog.h"
+#include "TipShowDialog.h"
+#include "AskShowDialog.h"
+#include "LoginShowDialog.h"
 
 DialogManager& DialogManager::instance()
 {
@@ -79,6 +82,10 @@ int32_t DialogManager::popWaitDialog(int32_t& dialogId,
 
 void DialogManager::destroyDialog(int32_t dialogId)
 {
+	if (m_mapDialog.empty())
+	{
+		return;
+	}
 	auto itDialog = m_mapDialog.find(dialogId);
 	if (itDialog != m_mapDialog.end())
 	{
@@ -89,6 +96,10 @@ void DialogManager::destroyDialog(int32_t dialogId)
 
 void DialogManager::destroyLastDialog()
 {
+	if (m_mapDialog.empty())
+	{
+		return;
+	}
 	if (!m_mapDialog.empty())
 	{
 		auto itDialog = --m_mapDialog.end();
@@ -99,11 +110,31 @@ void DialogManager::destroyLastDialog()
 
 void DialogManager::destroyAll()
 {
+	if (m_mapDialog.empty())
+	{
+		return;
+	}
 	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
 	{
 		itDialog->second->reject();
 	}
 	m_mapDialog.clear();
+}
+
+int32_t DialogManager::DialogId(DialogBase* base)
+{
+	if (m_mapDialog.empty())
+	{
+		return -1;
+	}
+	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
+	{
+		if (itDialog->second == base)
+		{
+			return itDialog->first;
+		}
+	}
+	return -1;
 }
 
 DialogManager::DialogManager() :
@@ -125,10 +156,30 @@ int32_t DialogManager::setDialog(DialogBase* dialog)
 
 void DialogManager::removeDialog(int32_t dialogId)
 {
+	if (m_mapDialog.empty())
+	{
+		return;
+	}
 	auto itDialog = m_mapDialog.find(dialogId);
 	if (itDialog != m_mapDialog.end())
 	{
 		m_mapDialog.erase(itDialog);
+	}
+}
+
+void DialogManager::removeDialog(DialogBase* base)
+{
+	if (m_mapDialog.empty())
+	{
+		return;
+	}
+	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
+	{
+		if (itDialog->second == base)
+		{
+			m_mapDialog.erase(itDialog);
+			return;
+		}
 	}
 }
 

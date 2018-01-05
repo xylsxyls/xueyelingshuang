@@ -7,12 +7,16 @@
 #include <Windows.h>
 #include "CStringManager.h"
 #include "../CGeneralStyle.h"
+#include "ShowDialogManager.h"
 
 DialogShow::DialogShow() :
 m_cancelEscAltF4(false),
 m_bPressed(false),
 m_highLight(false),
-m_isExec(false)
+m_isExec(false),
+m_animation(this, "geometry"),
+m_result(-1),
+m_userType(-1)
 {
 	
 }
@@ -34,26 +38,40 @@ void DialogShow::initForExec()
 	setAttribute(Qt::WA_NativeWindow);
 }
 
-void DialogShow::initForShow()
+void DialogShow::initForShow(int32_t dialogWidth, int32_t dialogHeight, const std::string& typeName)
 {
 	m_isExec = false;
 
-	setStyleSheet(".DialogShow{background-color:rgba(44, 52, 74, 255);border-top-left-radius:3px;border-top-right-radius:3px;border:1px solid;border-color:rgba(78, 146, 212, 255);}");
+	setStyleSheet(("." + typeName + "{ background-color:rgba(44, 52, 74, 255); border-top-left-radius:2px; border-top-right-radius:2px; border:1px solid; border-color:rgba(78, 146, 212, 255); }").c_str());
 
-	resize(234, 130);
+	resize(dialogWidth, dialogHeight);
 	m_titleBar = addLabel("", QRect(1, 1, width() - 2, 31), QColor(163, 175, 191, 255));
 	m_titleBar->setBackgroundColor(QColor(67, 81, 117, 255));
 	m_icon = addLabel("", QRect(6, 6, 13, 18), QColor(0, 0, 0, 0));
 	m_icon->setParent(m_titleBar);
 	m_icon->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/11Logo.png", 1, 1, 1, 1);
-	m_title = addLabel("title", QRect(23, 1, width() - 20, 31), QColor(163, 175, 191, 255));
+	m_title = addLabel("title", QRect(23, 1, width() - 20 - 34, 28), QColor(163, 175, 191, 255));
 	m_title->setParent(m_titleBar);
+	m_title->setTextColor(QColor(221, 213, 198, 255));
+	m_title->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
 	m_title->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
 	m_exit = addButton("", QRect(width() - 34, 1, 34, 31), 0);
 	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
 	m_exit->setBkgMargins(0, 0);
 	m_exit->setBorderRadius(0);
+	m_time = addLabel("", QRect(7, height() - 13, width() - 5, 13), QColor("#abb3d3"));
+	m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+	m_time->setFontSize(12);
+
+	RECT rect = { 0, 0, 0, 0 };
+	::GetWindowRect(::FindWindow(L"Shell_TrayWnd", L""), &rect);
+	RECT screenRect = { 0, 0, ::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN) };
+
+	m_beginRect.setRect(screenRect.right - width(), screenRect.bottom - (rect.bottom - rect.top) - height(), width(), height());
+	m_endRect.setRect(screenRect.right - width(), screenRect.bottom, width(), height());
 	QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::timeUpdate);
+	QObject::connect(&m_animation, &QPropertyAnimation::finished, this, &DialogShow::end);
+	
 }
 
 void DialogShow::setExitVisible(bool visible)
@@ -101,7 +119,7 @@ void DialogShow::paintEvent(QPaintEvent* eve)
 
 void DialogShow::mousePressEvent(QMouseEvent *eve)
 {
-	if (eve->button() == Qt::LeftButton)
+	if (eve->button() == Qt::LeftButton && m_isExec)
 	{
 		m_bPressed = true;
 		m_point = eve->pos();
@@ -138,7 +156,6 @@ void DialogShow::closeEvent(QCloseEvent* eve)
 		eve->ignore();
 		return;
 	}
-	//reject();
 	QDialog::closeEvent(eve);
 }
 
@@ -160,6 +177,47 @@ bool DialogShow::nativeEvent(const QByteArray& eventType, void* message, long* r
 		}
 	}
 	return res;
+}
+
+void DialogShow::showEvent(QShowEvent* eve)
+{
+	DialogBase::showEvent(eve);
+	if (m_isExec == false)
+	{
+		m_animation.setDuration(1000);
+		m_animation.setStartValue(m_endRect);
+		m_animation.setEndValue(m_beginRect);
+		m_animation.start();
+	}
+}
+
+void DialogShow::done(int result)
+{
+	if (m_isExec == false)
+	{
+		m_result = result;
+		emit dialogDone(ShowDialogManager::instance().DialogId(this), m_result, m_userType);
+		m_animation.setDuration(1000);
+		m_animation.setStartValue(m_beginRect);
+		m_animation.setEndValue(m_endRect);
+		m_animation.start();
+	}
+	else
+	{
+		DialogManager::instance().removeDialog(this);
+		DialogBase::done(result);
+	}
+}
+
+void DialogShow::end()
+{
+	int x = 3;
+	if (m_result != -1)
+	{
+		ShowDialogManager::instance().removeDialog(this);
+		DialogBase::done(m_result);
+		delete this;
+	}
 }
 
 void DialogShow::ncActiveChanged(int32_t wParam)
