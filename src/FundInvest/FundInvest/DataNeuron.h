@@ -105,6 +105,7 @@ public:
 	double m_upDownForecast5 = 0;
 	double m_upDownHighest3 = 0;
 	double m_upDownHighest5 = 0;
+    double m_upDownHighest10 = 0;
 	int32_t m_upDownInDays = 0;
 	int32_t m_forecastPlatDays = 0;
 

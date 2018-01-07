@@ -10,7 +10,7 @@
 #include "DataNeuron.h"
 #include "CSystem/CSystemAPI.h"
 
-#define FUND_NUM std::string("110022")
+#define FUND_NUM std::string("161725")
 
 class CDrawDlg;
 // CFundInvestDlg ¶Ô»°¿ò

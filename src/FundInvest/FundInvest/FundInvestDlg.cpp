@@ -131,7 +131,7 @@ BOOL CFundInvestDlg::OnInitDialog()
 
 	FundHelper::init();
 
-    LoadFund();
+    //LoadFund();
 	//AfxMessageBox("需要加载");
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -318,6 +318,7 @@ void CFundInvestDlg::LoadFund()
 		nowNeuron->m_forecastPlatDays = nowNeuron->GetForecastFlatDays();
 		nowNeuron->m_upDownForecast3 = nowNeuron->GetUpDown(3);
 		nowNeuron->m_upDownForecast5 = nowNeuron->GetUpDown(5);
+        nowNeuron->m_upDownHighest10 = nowNeuron->GetUpDownHighest(10);
 		nowNeuron->m_upDownHighest5 = nowNeuron->GetUpDownHighest(5);
 		nowNeuron->m_upDownHighest3 = nowNeuron->GetUpDownHighest(3);
 		nowNeuron = nowNeuron->m_nextData;
@@ -384,6 +385,10 @@ void CFundInvestDlg::OnBnClickedButton3()
 		{
 			continue;
 		}
+        if (txt.m_vectxt[line][3] == "")
+        {
+            continue;
+        }
 		ini.WriteIni(GETINFO(DAY_CHG), FundHelper::DoubleToString(atof(txt.m_vectxt[line][3].c_str()) / 100.0), txt.m_vectxt[line][0]);
 	}
 	AfxMessageBox("1");
@@ -826,8 +831,8 @@ std::vector<double> CFundInvestDlg::GetBidSellInfo(int32_t lookDays, const IntDa
 void CFundInvestDlg::OnBnClickedButton14()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	std::string beginDay = "2017-07-01";
-	std::string endDay = "2017-12-29";
+	std::string beginDay = "2017-10-01";
+	std::string endDay = "2018-01-05";
 	std::string path = "D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + "_draw_30.txt";
 	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, beginDay);
 	DataNeuron* endNeuron = GetNeuron(FUND_NUM, endDay);
@@ -885,14 +890,15 @@ void CFundInvestDlg::OnBnClickedButton14()
 	Ctxt txt4(path);
 	txt4.OpenFile_w();
 	txt4.CloseFile();
-	txt4.AddLine("up_down_5\tup_down_4\tup_down_3\tup_down_highest_in_week\tchg");
+	txt4.AddLine("up_down_5\tup_down_4\tup_down_3\tup_down_highest_in_week\thighest_2_week\tchg");
 	while (nowNeuron != endNeuron->m_nextData)
 	{
-		txt4.AddLine("%lf\t%lf\t%lf\t%lf\t%lf",
+		txt4.AddLine("%lf\t%lf\t%lf\t%lf\t%lf\t%lf",
 					 nowNeuron->m_upDown_5,
 					 nowNeuron->m_upDown_4,
 					 nowNeuron->m_upDown_3,
 					 nowNeuron->m_upDownHighest5,
+                     nowNeuron->m_upDownHighest10,
 					 nowNeuron->m_dayChg);
 		nowNeuron = nowNeuron->m_nextData;
 	}
@@ -917,7 +923,7 @@ void CFundInvestDlg::OnBnClickedButton14()
 void CFundInvestDlg::OnBnClickedButton15()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	int32_t page = 46;
+	int32_t page = 96;
 
 	Sleep(2000);
 	CMouse::LeftClick(0);
@@ -947,9 +953,9 @@ void CFundInvestDlg::OnBnClickedButton15()
 		Ctxt txt("D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + ".txt");
 		txt.AddLine("%s\n", str.c_str());
 
-		CMouse::MoveAbsolute(xyls::Point(1085, 1000), spacingTime);
+		CMouse::MoveAbsolute(xyls::Point(1105, 1000), spacingTime);
 		CMouse::LeftClick(spacingTime);
-		Sleep(500);
+		Sleep(3000);
 	}
 }
 
