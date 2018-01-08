@@ -42,8 +42,9 @@ public:
 	afx_msg void OnBnClickedButton2();
 
 private:
-	void LoadFund();
+	void LoadFund(const std::string& fundName);
 	DataNeuron* GetFirstNeuron(const std::string& fundName);
+	DataNeuron* GetLastNeuron(const std::string& fundName);
 	DataNeuron* GetNeuron(const std::string& fundName, const std::string& time);
     DataNeuron* GetNeuron(const std::string& fundName, const IntDateTime& time);
 
@@ -95,4 +96,6 @@ public:
                                            double bidEnd,
                                            double sell,
                                            int32_t days);
+
+	std::vector<std::string> m_vecFundName;
 };

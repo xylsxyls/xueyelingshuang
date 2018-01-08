@@ -184,7 +184,7 @@ void DialogShow::showEvent(QShowEvent* eve)
 	DialogBase::showEvent(eve);
 	if (m_isExec == false)
 	{
-		m_animation.setDuration(1000);
+		m_animation.setDuration(500);
 		m_animation.setStartValue(m_endRect);
 		m_animation.setEndValue(m_beginRect);
 		m_animation.start();
@@ -197,7 +197,7 @@ void DialogShow::done(int result)
 	{
 		m_result = result;
 		emit dialogDone(ShowDialogManager::instance().DialogId(this), m_result, m_userType);
-		m_animation.setDuration(1000);
+		m_animation.setDuration(250);
 		m_animation.setStartValue(m_beginRect);
 		m_animation.setEndValue(m_endRect);
 		m_animation.start();

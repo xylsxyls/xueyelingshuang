@@ -17,8 +17,8 @@ ShowDialogManager& ShowDialogManager::instance()
 
 void ShowDialogManager::showTipDialog(int32_t& dialogId,
 									  int32_t userType,
-									  const QString& title,
 									  const QString& tip,
+									  const QString& title,
 									  int32_t done,
 									  const QString& buttonText,
 									  int32_t timeOut,
@@ -29,8 +29,8 @@ void ShowDialogManager::showTipDialog(int32_t& dialogId,
 
 void ShowDialogManager::showAskDialog(int32_t& dialogId,
 									  int32_t userType,
-									  const QString& title,
 									  const QString& tip,
+									  const QString& title,
 									  int32_t acceptDone,
 									  int32_t ignoreDone,
 									  const QString& acceptText,
@@ -52,9 +52,9 @@ void ShowDialogManager::showAskDialog(int32_t& dialogId,
 
 void ShowDialogManager::showLoginDialog(int32_t& dialogId,
 										int32_t userType,
-										const QString& title,
 										const QString& tip,
 										const QString& linkUrl,
+										const QString& title,
 										int32_t timeOut,
 										bool isUrlButtonVisible,
 										bool isCountDownVisible)
@@ -64,19 +64,19 @@ void ShowDialogManager::showLoginDialog(int32_t& dialogId,
 	int hour = tm.hour();
 	if ((hour > 0) && (hour <= 9))
 	{
-		greeting = QString::fromStdWString(L"早晨好！");
+		greeting = QString::fromStdWString(L"Hi~早晨好！");
 	}
 	else if ((hour > 9) && (hour <= 12))
 	{
-		greeting = QString::fromStdWString(L"早上好！");
+		greeting = QString::fromStdWString(L"Hi~早上好！");
 	}
 	else if ((hour > 12) && (hour <= 18))
 	{
-		greeting = QString::fromStdWString(L"下午好！");
+		greeting = QString::fromStdWString(L"Hi~下午好！");
 	}
 	else
 	{
-		greeting = QString::fromStdWString(L"晚上好！");
+		greeting = QString::fromStdWString(L"Hi~晚上好！");
 	}
 
 	LoginShowDialog::showLoginDialog(dialogId,

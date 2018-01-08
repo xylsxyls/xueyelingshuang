@@ -53,7 +53,7 @@ Label* DialogBase::addLabel(const QString& text, const QRect& rect, const QColor
 	label->setText(text);
 	label->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
 	label->setTextColor(textColor);
-	label->setFontFace(QString::fromStdWString(L"ºÚÌå"));
+	label->setFontFace(CGeneralStyle::instance()->font().family());
 	label->setFontSize(14);
 	return label;
 }

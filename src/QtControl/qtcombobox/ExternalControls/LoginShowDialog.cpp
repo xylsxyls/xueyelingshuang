@@ -34,11 +34,12 @@ LoginShowDialog::LoginShowDialog(int32_t userType,
 {
 	std::string str = typeid(*this).name();
 	CStringManager::Replace(str, "class ", "");
-	initForShow(196, 145, str);
+	initForShow(234, 167, str);//196, 145
 	m_userType = userType;
 	m_title->setText(title);
 	m_greeting = addLabel(greeting, QRect(8, 39, 190, 17), QColor(187, 187, 195, 255));
 	m_greeting->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+	m_greeting->setFontSize(13);
 	m_separator = addSeparator(QPoint(6, 57), 183, true, QColor(60, 73, 104, 255), QColor(50, 60, 85, 255));
 	m_horn = addLabel("", QRect(8, 66, 17, 17), QColor(0, 0, 0, 0));
 	m_horn->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/broadcast.png", 1, 1, 1, 1);
@@ -56,7 +57,7 @@ LoginShowDialog::LoginShowDialog(int32_t userType,
 		"::-webkit-scrollbar-thumb  {  border-radius: 6px;  -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);  background-color: #7888b3;  }"
 		"::-webkit-scrollbar-corner { background: rgba(44,52,74,0); }"
 		"a,body { font-size: 12px; outline: none; color:#ffffff;}"
-		"a:link,a:visited,a:hover { color:rgba(255,255,0,255); text-decoration: none; }"
+		"a:link,a:visited,a:hover { color:rgba(255,255,0,255); text-decoration: none; font-weight:bold; }"
 		"</style></head><body>"
 		"%1"
 		"</body></html>").arg(tip);

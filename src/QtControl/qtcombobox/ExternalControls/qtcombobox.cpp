@@ -407,9 +407,9 @@ void qtcombobox::testDialog()
 	int32_t dialogId7 = 0;
 	ShowDialogManager::instance().showLoginDialog(dialogId7,
 												  33,
-												  QString::fromStdWString(L"标题"),
 												  QString::fromStdWString(L"<a href=\"http://www.baidu.com\">www.baidu.com</a>123456"),
 												  QString::fromStdWString(L"www.sougou.com"),
+												  QString::fromStdWString(L"标题"),
 												  30,
 												  true,
 												  true);
@@ -454,8 +454,8 @@ void qtcombobox::testDialog()
 	int32_t dialogId5 = 0;
 	ShowDialogManager::instance().showTipDialog(dialogId5,
 												11,
-												QString::fromStdWString(L"标题"),
 												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
+												QString::fromStdWString(L"标题"),
 												1,
 												QString::fromStdWString(L"知道了1"),
 												3,
@@ -464,16 +464,14 @@ void qtcombobox::testDialog()
 	int32_t dialogId6 = 0;
 	ShowDialogManager::instance().showAskDialog(dialogId6,
 												22,
-												QString::fromStdWString(L"标题"),
 												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
+												QString::fromStdWString(L"标题"),
 												1,
 												0,
 												QString::fromStdWString(L"同意1"),
 												QString::fromStdWString(L"拒绝1"),
 												30,
 												true);
-
-	
 
 	QObject::connect((&ShowDialogManager::instance()), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
 	//QObject::connect(&ShowDialogManager::instance(), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);

@@ -23,26 +23,26 @@ public:
 	/** 显示提示框
 	@param [out] dialogId 窗口ID值
 	@param [in] userType 用户自定义值，当窗口关闭时会发送信号，信号中含有这个值
-	@param [in] title 标题
 	@param [in] tip 提示内容
+	@param [in] title 标题
 	@param [in] done 按钮按下后的返回值
 	@param [in] timeOut 超时自动关闭，单位秒
 	@param [in] isCountDownVisible 倒计时是否显示
 	*/
 	void showTipDialog(int32_t& dialogId,
 					   int32_t userType,
-					   const QString& title,
 					   const QString& tip,
-					   int32_t done,
+					   const QString& title = QString::fromStdWString(L"11平台"),
+					   int32_t done = 0,
 					   const QString& buttonText = QString::fromStdWString(L"知道了"),
-					   int32_t timeOut = -1,
+					   int32_t timeOut = 30,
 					   bool isCountDownVisible = false);
 
 	/** 显示询问框
 	@param [out] dialogId 窗口ID值
 	@param [in] userType 用户自定义值，当窗口关闭时会发送信号，信号中含有这个值
-	@param [in] title 标题
 	@param [in] tip 提示内容
+	@param [in] title 标题
 	@param [in] acceptDone 确认按钮按下后的返回值
 	@param [in] ignoreDone 取消按钮按下后的返回值
 	@param [in] timeOut 超时自动关闭，单位秒
@@ -50,31 +50,31 @@ public:
 	*/
 	void showAskDialog(int32_t& dialogId,
 					   int32_t userType,
-					   const QString& title,
 					   const QString& tip,
-					   int32_t acceptDone,
-					   int32_t ignoreDone,
+					   const QString& title = QString::fromStdWString(L"11平台"),
+					   int32_t acceptDone = 1,
+					   int32_t ignoreDone = 0,
 					   const QString& acceptText = QString::fromStdWString(L"同意"),
 					   const QString& ignoreText = QString::fromStdWString(L"拒绝"),
-					   int32_t timeOut = -1,
+					   int32_t timeOut = 30,
 					   bool isCountDownVisible = false);
 
 	/** 显示登录框
 	@param [out] dialogId 窗口ID值
 	@param [in] userType 用户自定义值，当窗口关闭时会发送信号，信号中含有这个值
-	@param [in] title 标题
 	@param [in] tip 提示内容
 	@param [in] linkUrl 了解更多链接地址
+	@param [in] title 标题
 	@param [in] timeOut 超时自动关闭，单位秒
 	@param [in] isUrlButtonVisible 了解更多按钮是否显示
 	@param [in] isCountDownVisible 倒计时是否显示
 	*/
 	void showLoginDialog(int32_t& dialogId,
 						 int32_t userType,
-						 const QString& title,
 						 const QString& tip,
 						 const QString& linkUrl,
-						 int32_t timeOut = -1,
+						 const QString& title = QString::fromStdWString(L"11平台"),
+						 int32_t timeOut = 30,
 						 bool isUrlButtonVisible = false,
 						 bool isCountDownVisible = false);
 Q_SIGNALS:

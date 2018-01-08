@@ -36,6 +36,7 @@ AskShowDialog::AskShowDialog(int32_t userType,
 	m_userType = userType;
 	m_title->setText(title);
 	m_tip = addTip(tip, QRect(20, 35, width() - 20 * 2, 50), QColor(205, 213, 225, 255));
+	m_tip->setFontSize(13);
 	m_accept = addButton(acceptText, QRect(31, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19), acceptDone);
 	m_accept->setBkgImage("");
 	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255));
