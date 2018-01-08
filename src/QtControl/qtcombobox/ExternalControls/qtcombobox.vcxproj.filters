@@ -129,9 +129,6 @@
     <Filter Include="QtDialog">
       <UniqueIdentifier>{ae0d673c-8b55-470e-806b-3d8e70708b2d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="QtDialog\DialogManager">
-      <UniqueIdentifier>{062225db-0305-49b3-8c53-12af750b9efd}</UniqueIdentifier>
-    </Filter>
     <Filter Include="QtControl\CGeneralStyle">
       <UniqueIdentifier>{8e9ac672-b834-4b81-8637-9dac83866ac8}</UniqueIdentifier>
     </Filter>
@@ -168,7 +165,10 @@
     <Filter Include="QtDialog\UnModal\TipShowDialog">
       <UniqueIdentifier>{65a8eaf1-f812-48bf-8539-551a671d12fb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="QtDialog\ShowDialogManager">
+    <Filter Include="QtDialog\Modal\DialogManager">
+      <UniqueIdentifier>{062225db-0305-49b3-8c53-12af750b9efd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal\ShowDialogManager">
       <UniqueIdentifier>{8f80f1ed-89ec-4dc3-8e73-02126e63e0fa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -390,7 +390,7 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="DialogManager.cpp">
-      <Filter>QtDialog\DialogManager</Filter>
+      <Filter>QtDialog\Modal\DialogManager</Filter>
     </ClCompile>
     <ClCompile Include="TipShowDialog.cpp">
       <Filter>QtDialog\UnModal\TipShowDialog</Filter>
@@ -417,7 +417,7 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="ShowDialogManager.cpp">
-      <Filter>QtDialog\ShowDialogManager</Filter>
+      <Filter>QtDialog\UnModal\ShowDialogManager</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_ShowDialogManager.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -426,6 +426,12 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogManager.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
@@ -515,7 +521,7 @@
       <Filter>QtDialog\Modal\WaitDialog</Filter>
     </CustomBuild>
     <CustomBuild Include="DialogManager.h">
-      <Filter>QtDialog\DialogManager</Filter>
+      <Filter>QtDialog\Modal\DialogManager</Filter>
     </CustomBuild>
     <CustomBuild Include="TipShowDialog.h">
       <Filter>QtDialog\UnModal\TipShowDialog</Filter>
@@ -527,7 +533,7 @@
       <Filter>QtDialog\UnModal\LoginShowDialog</Filter>
     </CustomBuild>
     <CustomBuild Include="ShowDialogManager.h">
-      <Filter>QtDialog\ShowDialogManager</Filter>
+      <Filter>QtDialog\UnModal\ShowDialogManager</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

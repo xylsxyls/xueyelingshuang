@@ -88,7 +88,7 @@ COriginalButton* DialogBase::addButton(const QString& text, const QRect& rect, i
 	return button;
 }
 
-Label* DialogBase::addSeparator(const QPoint& point, int32_t length, bool isHorizon)
+Label* DialogBase::addSeparator(const QPoint& point, int32_t length, bool isHorizon, const QColor upColor, const QColor downColor)
 {
 	Label* label = new Label(this);
 	if (label == nullptr)
@@ -97,14 +97,14 @@ Label* DialogBase::addSeparator(const QPoint& point, int32_t length, bool isHori
 	}
 
 	label->setGeometry(point.x(), point.y(), isHorizon ? length : 2, isHorizon ? 2 : length);
-	label->setBackgroundColor(QColor(46, 52, 88, 255));
+	label->setBackgroundColor(downColor);
 	Label* lab = new Label(label);
 	if (lab == nullptr)
 	{
 		return nullptr;
 	}
 	lab->setGeometry(0, 0, isHorizon ? length : 1, isHorizon ? 1 : length);
-	lab->setBackgroundColor(QColor(16, 20, 31, 255));
+	lab->setBackgroundColor(upColor);
 	return label;
 }
 

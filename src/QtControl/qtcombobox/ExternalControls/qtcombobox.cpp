@@ -404,7 +404,17 @@ void qtcombobox::modalPop()
 
 void qtcombobox::testDialog()
 {
-	/*int32_t dialogId1 = 0;
+	int32_t dialogId7 = 0;
+	ShowDialogManager::instance().showLoginDialog(dialogId7,
+												  33,
+												  QString::fromStdWString(L"标题"),
+												  QString::fromStdWString(L"<a href=\"http://www.baidu.com\">www.baidu.com</a>123456"),
+												  QString::fromStdWString(L"www.sougou.com"),
+												  30,
+												  true,
+												  true);
+
+	int32_t dialogId1 = 0;
 	int xx = TipDialog::popTipDialog(dialogId1,
 									 QString::fromStdWString(L"标题"),
 									 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
@@ -439,7 +449,7 @@ void qtcombobox::testDialog()
 									   QString::fromStdWString(L"标题"),
 									   QString::fromStdWString(L"输入框提示："),
 									   sss,
-									   1);*/
+									   1);
 
 	int32_t dialogId5 = 0;
 	ShowDialogManager::instance().showTipDialog(dialogId5,
@@ -447,9 +457,9 @@ void qtcombobox::testDialog()
 												QString::fromStdWString(L"标题"),
 												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
 												1,
-												QString::fromStdWString(L"知道了"),
-												30,
-												true);
+												QString::fromStdWString(L"知道了1"),
+												3,
+												false);
 
 	int32_t dialogId6 = 0;
 	ShowDialogManager::instance().showAskDialog(dialogId6,
@@ -458,22 +468,16 @@ void qtcombobox::testDialog()
 												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
 												1,
 												0,
-												QString::fromStdWString(L"同意"),
-												QString::fromStdWString(L"拒绝"),
+												QString::fromStdWString(L"同意1"),
+												QString::fromStdWString(L"拒绝1"),
 												30,
 												true);
 
-	int32_t dialogId7 = 0;
-	ShowDialogManager::instance().showLoginDialog(dialogId7,
-												  33,
-												  QString::fromStdWString(L"标题"),
-												  QString::fromStdWString(L"<a href=\"http://www.baidu.com\">www.baidu.com</a>123456"),
-												  QString::fromStdWString(L"www.sougou.com"),
-												  30,
-												  true,
-												  true);
+	
 
-	QObject::connect(&ShowDialogManager::instance(), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
+	QObject::connect((&ShowDialogManager::instance()), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
+	//QObject::connect(&ShowDialogManager::instance(), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
+	//QObject::connect(&ShowDialogManager::instance(), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
 	//dlg->windowHandle()->setTransientParent(this->windowHandle());
 	//dlg->show();
 	int x = 3;
@@ -481,5 +485,6 @@ void qtcombobox::testDialog()
 
 void qtcombobox::onDialogDone(int32_t dialogId, int32_t result, int32_t userType)
 {
+	RCSend("DialogDone = %d,%d,%d", dialogId, result, userType);
 	int x = 3;
 }

@@ -30,7 +30,7 @@ void DialogShow::initForExec()
 	m_exit->setBorderRadius(0);
 	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupCloseButton.png");
 	m_title = addLabel("title", QRect(17, 4, 300, 27), QColor(163, 175, 191, 255));
-	m_separator = addSeparator(QPoint(13, 33), 308, true);
+	m_separator = addSeparator(QPoint(13, 33), 308, true, QColor(46, 52, 88, 255), QColor(16, 20, 31, 255));
 	m_time = addLabel("", QRect(205, 140, 125, 32), QColor("#abb3d3"));
 	m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 	m_time->setFontSize(12);
@@ -211,7 +211,6 @@ void DialogShow::done(int result)
 
 void DialogShow::end()
 {
-	int x = 3;
 	if (m_result != -1)
 	{
 		ShowDialogManager::instance().removeDialog(this);

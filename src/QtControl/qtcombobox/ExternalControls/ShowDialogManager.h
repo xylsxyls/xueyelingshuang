@@ -12,6 +12,8 @@ DialogManager::instance().removeAll();
 class ShowDialogManager : public DialogManager
 {
 	Q_OBJECT
+	friend class DialogBase;
+	friend class DialogShow;
 public:
 	/** 单一实例
 	@return 返回单一实例
@@ -77,4 +79,42 @@ public:
 						 bool isCountDownVisible = false);
 Q_SIGNALS:
 	void dialogDone(int32_t dialogId, int32_t result, int32_t userType);
+
+private:
+	int32_t popAskDialog(int32_t& dialogId,
+						 const QString& title,
+						 const QString& tip,
+						 const QString& acceptText,
+						 int32_t acceptDone,
+						 const QString& ignoreText,
+						 int32_t ignoreDone,
+						 QWidget* parent = nullptr,
+						 int32_t timeOut = -1,
+						 bool isCountDownVisible = false);
+
+	int32_t popTipDialog(int32_t& dialogId,
+						 const QString& title,
+						 const QString& tip,
+						 const QString& buttonText,
+						 int32_t done,
+						 QWidget* parent = nullptr,
+						 int32_t timeOut = -1,
+						 bool isCountDownVisible = false);
+
+	int32_t popInputDialog(int32_t& dialogId,
+						   const QString& title,
+						   const QString& editTip,
+						   const QString& buttonText,
+						   int32_t done,
+						   QString& editText,
+						   QWidget* parent = nullptr,
+						   int32_t timeOut = -1,
+						   bool isCountDownVisible = false);
+
+	int32_t popWaitDialog(int32_t& dialogId,
+						  const QString& title,
+						  const QString& tip,
+						  QWidget* parent = nullptr,
+						  int32_t timeOut = -1,
+						  bool isCountDownVisible = false);
 };

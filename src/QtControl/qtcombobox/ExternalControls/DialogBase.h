@@ -60,9 +60,11 @@ public:
 	@param [in] point 起始点
 	@param [in] length 长度
 	@param [in] isHorizon 是否水平
+	@param [in] upColor 上层颜色
+	@param [in] downColor 下层颜色
 	@return 返回分割线指针
 	*/
-	Label* addSeparator(const QPoint& point, int32_t length, bool isHorizon);
+	Label* addSeparator(const QPoint& point, int32_t length, bool isHorizon, const QColor upColor, const QColor downColor);
 
 	/** 添加单行文本框
 	@param [in] rect 标签相对父窗口所在位置

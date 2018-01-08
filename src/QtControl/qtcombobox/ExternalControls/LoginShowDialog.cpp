@@ -19,6 +19,7 @@ void LoginShowDialog::showLoginDialog(int32_t& dialogId,
 {
 	LoginShowDialog* dlg = new LoginShowDialog(userType, title, greeting, tip, urlButtonText, linkUrl, isUrlButtonVisible);
 	dlg->show(dialogId, timeOut, isCountDownVisible);
+	//QObject::connect(dlg, SIGNAL(dialogDone(int32_t, int32_t, int32_t)), (const QObject*)(&(ShowDialogManager::instance())), SIGNAL(dialogDone(int32_t, int32_t, int32_t)));
 	QObject::connect(dlg, &LoginShowDialog::dialogDone, &(ShowDialogManager::instance()), &ShowDialogManager::dialogDone);
 	return;
 }
@@ -36,9 +37,9 @@ LoginShowDialog::LoginShowDialog(int32_t userType,
 	initForShow(196, 145, str);
 	m_userType = userType;
 	m_title->setText(title);
-	m_greeting = addLabel(greeting, QRect(8, 39, 190, 17), QColor(136, 178, 221, 255));
+	m_greeting = addLabel(greeting, QRect(8, 39, 190, 17), QColor(187, 187, 195, 255));
 	m_greeting->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
-	m_separator = addSeparator(QPoint(6, 57), 183, true);
+	m_separator = addSeparator(QPoint(6, 57), 183, true, QColor(60, 73, 104, 255), QColor(50, 60, 85, 255));
 	m_horn = addLabel("", QRect(8, 66, 17, 17), QColor(0, 0, 0, 0));
 	m_horn->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/broadcast.png", 1, 1, 1, 1);
 	

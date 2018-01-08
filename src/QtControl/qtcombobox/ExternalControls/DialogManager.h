@@ -11,6 +11,7 @@ DialogManager::instance().removeAll();
 */
 class DialogManager : public QObject
 {
+	Q_OBJECT
 	friend class DialogBase;
 	friend class DialogShow;
 public:

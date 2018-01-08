@@ -2,6 +2,7 @@
 #include "Label.h"
 #include "../COriginalButton.h"
 #include "../CGeneralStyle.h"
+#include "ShowDialogManager.h"
 
 void AskShowDialog::showAskDialog(int32_t& dialogId,
 								  int32_t userType,
@@ -16,6 +17,8 @@ void AskShowDialog::showAskDialog(int32_t& dialogId,
 {
 	AskShowDialog* dlg = new AskShowDialog(userType, title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
 	dlg->show(dialogId, timeOut, isCountDownVisible);
+	QObject::connect(dlg, &AskShowDialog::dialogDone, &(ShowDialogManager::instance()), &ShowDialogManager::dialogDone);
+	//QObject::connect(dlg, SIGNAL(dialogDone(int32_t, int32_t, int32_t)), (const QObject*)(&(ShowDialogManager::instance())), SIGNAL(dialogDone(int32_t, int32_t, int32_t)));
 	return;
 }
 
@@ -29,10 +32,10 @@ AskShowDialog::AskShowDialog(int32_t userType,
 {
 	std::string str = typeid(*this).name();
 	CStringManager::Replace(str, "class ", "");
-	initForShow(234, 130, str);
+	initForShow(212, 118, str);
 	m_userType = userType;
 	m_title->setText(title);
-	m_tip = addTip(tip, QRect(20, 40, width() - 20 * 2, 50), QColor(205, 213, 225, 255));
+	m_tip = addTip(tip, QRect(20, 35, width() - 20 * 2, 50), QColor(205, 213, 225, 255));
 	m_accept = addButton(acceptText, QRect(31, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19), acceptDone);
 	m_accept->setBkgImage("");
 	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255));

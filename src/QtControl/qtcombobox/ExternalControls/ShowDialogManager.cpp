@@ -90,3 +90,52 @@ void ShowDialogManager::showLoginDialog(int32_t& dialogId,
 									 isUrlButtonVisible,
 									 isCountDownVisible);
 }
+
+int32_t ShowDialogManager::popAskDialog(int32_t& dialogId,
+										const QString& title,
+										const QString& tip,
+										const QString& acceptText,
+										int32_t acceptDone,
+										const QString& ignoreText,
+										int32_t ignoreDone,
+										QWidget* parent,
+										int32_t timeOut,
+										bool isCountDownVisible)
+{
+	return -1;
+}
+
+int32_t ShowDialogManager::popTipDialog(int32_t& dialogId,
+										const QString& title,
+										const QString& tip,
+										const QString& buttonText,
+										int32_t done,
+										QWidget* parent,
+										int32_t timeOut,
+										bool isCountDownVisible)
+{
+	return -1;
+}
+
+int32_t ShowDialogManager::popInputDialog(int32_t& dialogId,
+										  const QString& title,
+										  const QString& editTip,
+										  const QString& buttonText,
+										  int32_t done,
+										  QString& editText,
+										  QWidget* parent,
+										  int32_t timeOut,
+										  bool isCountDownVisible)
+{
+	return -1;
+}
+
+int32_t ShowDialogManager::popWaitDialog(int32_t& dialogId,
+										 const QString& title,
+										 const QString& tip,
+										 QWidget* parent,
+										 int32_t timeOut,
+										 bool isCountDownVisible)
+{
+	return -1;
+}
