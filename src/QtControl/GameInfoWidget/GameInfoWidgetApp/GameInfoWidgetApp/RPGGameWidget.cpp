@@ -1,4 +1,4 @@
-#include "GameInfoWidget.h"
+#include "RPGGameWidget.h"
 #include "COriginalButton.h"
 #include <stdint.h>
 #include "ExternalControls/ComboBox.h"
@@ -6,19 +6,17 @@
 #include "ExternalControls/CPasswordInputBox.h"
 #include "ExternalControls/CheckBox.h"
 #include "ExternalControls/LineEdit.h"
-#include "GameInfoWidgetDataInfo.h"
+#include "RPGGameWidgetDataInfo.h"
 #include <QEvent>
 #include <QMouseEvent>
 #include "CGeneralStyle.h"
 #include "../WebViewEx.h"
 
-GameInfoWidget::GameInfoWidget(QWidget* parent) :
+RPGGameWidget::RPGGameWidget(QWidget* parent) :
 QWidget(parent),
-m_gameInfoWidgetHeight(681),
-m_widgetHeight(550),
+m_gameInfoWidgetHeight(638),
+m_widgetHeight(285 + 10 + GAME_SETTING_WEBVIEW_HEIGHT),
 m_isLeader(false),
-m_lvFinish(true),
-m_MVPFinish(true),
 m_netFinish(true),
 m_leaveFinish(true)
 {
@@ -34,11 +32,10 @@ m_leaveFinish(true)
 	m_gameNameEdit = (new LineEdit(m_gameSettingWidget));
 	m_gamePasswordEdit = (new CPasswordInputBox(m_gameSettingWidget));
 	m_gameModeComboBox = (new ComboBox(m_gameSettingWidget));
-	m_gameLvComboBox = (new ComboBox(m_gameSettingWidget));
-	m_gameMVPComboBox = (new ComboBox(m_gameSettingWidget));
 	m_gameNetComboBox = (new ComboBox(m_gameSettingWidget));
 	m_gameLeaveComboBox = (new ComboBox(m_gameSettingWidget));
 	m_judgeCheckBox = (new CheckBox(m_gameSettingWidget));
+	m_rect = (new Label(this));
 	m_inviteFriend = (new COriginalButton(this));
 	m_startGame = (new COriginalButton(this));
 	m_prepareGame = (new COriginalButton(this));
@@ -49,16 +46,16 @@ m_leaveFinish(true)
 	m_gameName = (new Label(m_gameSettingWidget));
 	m_gamePassword = (new Label(m_gameSettingWidget));
 	m_gameMode = (new Label(m_gameSettingWidget));
-	m_gameLv = (new Label(m_gameSettingWidget));
-	m_gameMVP = (new Label(m_gameSettingWidget));
 	m_gameNet = (new Label(m_gameSettingWidget));
 	m_gameLeave = (new Label(m_gameSettingWidget));
 	m_save = (new COriginalButton(m_gameSettingWidget));
+	m_checkBox = (new Label(m_gameSettingWidget));
+	m_lab = (new Label(m_gameSettingWidget));
 
 	//无边框
 	setWindowFlags(Qt::FramelessWindowHint);
 	
-	setStyleSheet("QWidget{background-color:rgba(27,37,63,255);}");
+	setStyleSheet("QWidget{background-color:rgba(20,24,35,255);}");
 	
 	//头部3个button，后面会换成tab控件
 	initGameSettingButton();
@@ -70,48 +67,46 @@ m_leaveFinish(true)
 	{
 		m_inviteFriend->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/BigInviteFriendButton.png", 3, 1, 2, 3);
 		m_inviteFriend->setText(QString::fromStdWString(L""));
-		QObject::connect(m_inviteFriend, &COriginalButton::clicked, this, &GameInfoWidget::onInviteFriendClicked);
+		QObject::connect(m_inviteFriend, &COriginalButton::clicked, this, &RPGGameWidget::onInviteFriendClicked);
 	}
 	if (m_startGame != nullptr)
 	{
-		m_startGame->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/StartGameButton.png", 4, 1, 2, 3, 4);
+		m_startGame->setBkgImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/start_button.png", 2, 2, 1, 2, 2);
 		m_startGame->setText(QString::fromStdWString(L""));
-		QObject::connect(m_startGame, &COriginalButton::clicked, this, &GameInfoWidget::onStartGameClicked);
+		QObject::connect(m_startGame, &COriginalButton::clicked, this, &RPGGameWidget::onStartGameClicked);
 	}
 	if (m_prepareGame != nullptr)
 	{
-		m_prepareGame->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/prepare_button.png", 8, 1, 2, 3, 4, 5, 6, 7, 8);
+		m_prepareGame->setBkgImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/ready_button.png", 2, 2, 1, 2, 2);
 		m_prepareGame->setCheckable(true);
 		m_prepareGame->setChecked(false);
 		m_prepareGame->setText(QString::fromStdWString(L""));
-		QObject::connect(m_prepareGame, &COriginalButton::clicked, this, &GameInfoWidget::onPrepareGameClicked);
+		QObject::connect(m_prepareGame, &COriginalButton::clicked, this, &RPGGameWidget::onPrepareGameClicked);
 	}
 	if (m_exit != nullptr)
 	{
-		m_exit->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/QuitButton.png", 4, 1, 2, 3, 4);
+		m_exit->setBkgImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/quit_button.png", 2, 2, 1, 2, 2);
 		m_exit->setText(QString::fromStdWString(L""));
-		QObject::connect(m_exit, &COriginalButton::clicked, this, &GameInfoWidget::onExitClicked);
+		QObject::connect(m_exit, &COriginalButton::clicked, this, &RPGGameWidget::onExitClicked);
 	}
 
-	setLeader(false);
+	setLeader(true);
 
 	layout();
 
 	m_gameModeComboBox->installEventFilter(this);
-	m_gameLvComboBox->installEventFilter(this);
-	m_gameMVPComboBox->installEventFilter(this);
 	m_gameNetComboBox->installEventFilter(this);
 	m_gameLeaveComboBox->installEventFilter(this);
 
 	init();
 }
 
-GameInfoWidget::~GameInfoWidget()
+RPGGameWidget::~RPGGameWidget()
 {
 
 }
 
-void GameInfoWidget::setGameName(const QString& gameName)
+void RPGGameWidget::setGameName(const QString& gameName)
 {
 	if (m_gameNameEdit == nullptr)
 	{
@@ -120,7 +115,7 @@ void GameInfoWidget::setGameName(const QString& gameName)
 	m_gameNameEdit->setText(gameName);
 }
 
-QString GameInfoWidget::getGameName()
+QString RPGGameWidget::getGameName()
 {
 	if (m_gameNameEdit == nullptr)
 	{
@@ -129,12 +124,12 @@ QString GameInfoWidget::getGameName()
 	return m_gameNameEdit->text();
 }
 
-void GameInfoWidget::setGameNameEnable(bool enable)
+void RPGGameWidget::setGameNameEnable(bool enable)
 {
 	m_gameNameEdit->setEnabled(enable);
 }
 
-void GameInfoWidget::setGamePassword(const QString& gamePassword)
+void RPGGameWidget::setGamePassword(const QString& gamePassword)
 {
 	if (m_gamePasswordEdit == nullptr)
 	{
@@ -143,7 +138,7 @@ void GameInfoWidget::setGamePassword(const QString& gamePassword)
 	m_gamePasswordEdit->setText(gamePassword);
 }
 
-QString GameInfoWidget::getGamePassword()
+QString RPGGameWidget::getGamePassword()
 {
 	if (m_gamePasswordEdit == nullptr)
 	{
@@ -152,22 +147,22 @@ QString GameInfoWidget::getGamePassword()
 	return m_gamePasswordEdit->text();
 }
 
-void GameInfoWidget::setGamePasswordEnable(bool enable)
+void RPGGameWidget::setGamePasswordEnable(bool enable)
 {
 	m_gamePasswordEdit->setEnabled(enable);
 }
 
-void GameInfoWidget::setGameModeList(const QStringList& gameModeList)
+void RPGGameWidget::setGameModeList(const QStringList& gameModeList)
 {
 	SAFE(m_gameModeComboBox, m_gameModeComboBox->addItems(gameModeList));
 }
 
-void GameInfoWidget::setCurGameMode(const QString& gameMode)
+void RPGGameWidget::setCurGameMode(const QString& gameMode)
 {
 	SAFE(m_gameModeComboBox, m_gameModeComboBox->setCurrentText(gameMode));
 }
 
-QString GameInfoWidget::getCurGameMode()
+QString RPGGameWidget::getCurGameMode()
 {
 	if (m_gameModeComboBox == nullptr)
 	{
@@ -176,70 +171,22 @@ QString GameInfoWidget::getCurGameMode()
 	return m_gameModeComboBox->currentText();
 }
 
-void GameInfoWidget::setGameModeEnable(bool enable)
+void RPGGameWidget::setGameModeEnable(bool enable)
 {
 	m_gameModeComboBox->setEnabled(enable);
 }
 
-void GameInfoWidget::setGameLvList(const QStringList& gameLvList)
-{
-	SAFE(m_gameLvComboBox, m_gameLvComboBox->addItems(gameLvList));
-}
-
-void GameInfoWidget::setCurGameLv(const QString& gameLv)
-{
-	SAFE(m_gameLvComboBox, m_gameLvComboBox->setCurrentText(gameLv));
-}
-
-QString GameInfoWidget::getCurGameLv()
-{
-	if (m_gameLvComboBox == nullptr)
-	{
-		return QString();
-	}
-	return m_gameLvComboBox->currentText();
-}
-
-void GameInfoWidget::setGameLvEnable(bool enable)
-{
-	m_gameLvComboBox->setEnabled(enable);
-}
-
-void GameInfoWidget::setGameMVPList(const QStringList& gameMVPList)
-{
-	SAFE(m_gameMVPComboBox, m_gameMVPComboBox->addItems(gameMVPList));
-}
-
-void GameInfoWidget::setCurGameMVP(const QString& gameMVP)
-{
-	SAFE(m_gameMVPComboBox, m_gameMVPComboBox->setCurrentText(gameMVP));
-}
-
-QString GameInfoWidget::getCurGameMVP()
-{
-	if (m_gameMVPComboBox == nullptr)
-	{
-		return QString();
-	}
-	return m_gameMVPComboBox->currentText();
-}
-
-void GameInfoWidget::setGameMVPEnable(bool enable)
-{
-	m_gameMVPComboBox->setEnabled(enable);
-}
-
-void GameInfoWidget::setGameNetList(const QStringList& gameNetList)
+void RPGGameWidget::setGameNetList(const QStringList& gameNetList)
 {
 	SAFE(m_gameNetComboBox, m_gameNetComboBox->addItems(gameNetList));
 }
 
-void GameInfoWidget::setCurGameNet(const QString& gameNet)
+void RPGGameWidget::setCurGameNet(const QString& gameNet)
 {
 	SAFE(m_gameNetComboBox, m_gameNetComboBox->setCurrentText(gameNet));
 }
 
-QString GameInfoWidget::getCurGameNet()
+QString RPGGameWidget::getCurGameNet()
 {
 	if (m_gameNetComboBox == nullptr)
 	{
@@ -248,22 +195,22 @@ QString GameInfoWidget::getCurGameNet()
 	return m_gameNetComboBox->currentText();
 }
 
-void GameInfoWidget::setGameNetEnable(bool enable)
+void RPGGameWidget::setGameNetEnable(bool enable)
 {
 	m_gameNetComboBox->setEnabled(enable);
 }
 
-void GameInfoWidget::setGameLeaveList(const QStringList& gameLeaveList)
+void RPGGameWidget::setGameLeaveList(const QStringList& gameLeaveList)
 {
 	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->addItems(gameLeaveList));
 }
 
-void GameInfoWidget::setCurGameLeave(const QString& gameLeave)
+void RPGGameWidget::setCurGameLeave(const QString& gameLeave)
 {
 	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->setCurrentText(gameLeave));
 }
 
-QString GameInfoWidget::getCurGameLeave()
+QString RPGGameWidget::getCurGameLeave()
 {
 	if (m_gameLeaveComboBox == nullptr)
 	{
@@ -272,12 +219,12 @@ QString GameInfoWidget::getCurGameLeave()
 	return m_gameLeaveComboBox->currentText();
 }
 
-void GameInfoWidget::setGameLeaveEnable(bool enable)
+void RPGGameWidget::setGameLeaveEnable(bool enable)
 {
 	m_gameLeaveComboBox->setEnabled(enable);
 }
 
-void GameInfoWidget::setJudge(bool judge)
+void RPGGameWidget::setJudge(bool judge)
 {
 	if (m_judgeCheckBox == nullptr)
 	{
@@ -286,7 +233,7 @@ void GameInfoWidget::setJudge(bool judge)
 	m_judgeCheckBox->setChecked(judge);
 }
 
-bool GameInfoWidget::getJudge()
+bool RPGGameWidget::getJudge()
 {
 	if (m_judgeCheckBox == nullptr)
 	{
@@ -295,91 +242,85 @@ bool GameInfoWidget::getJudge()
 	return m_judgeCheckBox->isChecked();
 }
 
-void GameInfoWidget::setJudgeEnable(bool enable)
+void RPGGameWidget::setJudgeEnable(bool enable)
 {
 	m_judgeCheckBox->setEnabled(enable);
 }
 
-void GameInfoWidget::setSaveEnable(bool enable)
+void RPGGameWidget::setSaveEnable(bool enable)
 {
 	m_save->setEnabled(enable);
 }
 
-void GameInfoWidget::setInviteFriendEnable(bool enable)
+void RPGGameWidget::setInviteFriendEnable(bool enable)
 {
 	m_inviteFriend->setEnabled(enable);
 }
 
-bool GameInfoWidget::isInviteFriendEnable()
+bool RPGGameWidget::isInviteFriendEnable()
 {
 	return m_inviteFriend->isEnabled();
 }
 
-void GameInfoWidget::setStartGameEnable(bool enable)
+void RPGGameWidget::setStartGameEnable(bool enable)
 {
 	m_startGame->setEnabled(enable);
 }
 
-bool GameInfoWidget::isStartGameEnable()
+bool RPGGameWidget::isStartGameEnable()
 {
 	return m_startGame->isEnabled();
 }
 
-void GameInfoWidget::setPrepareGameEnable(bool enable)
+void RPGGameWidget::setPrepareGameEnable(bool enable)
 {
 	m_prepareGame->setEnabled(enable);
 }
 
-void GameInfoWidget::setPrepareGameCheck(bool check)
+void RPGGameWidget::setPrepareGameCheck(bool check)
 {
 	m_prepareGame->setChecked(check);
 }
 
-bool GameInfoWidget::isPrepareGameEnable()
+bool RPGGameWidget::isPrepareGameEnable()
 {
 	return m_prepareGame->isEnabled();
 }
 
-void GameInfoWidget::setExitEnable(bool enable)
+void RPGGameWidget::setExitEnable(bool enable)
 {
 	m_exit->setEnabled(enable);
 }
 
-bool GameInfoWidget::isExitEnable()
+bool RPGGameWidget::isExitEnable()
 {
 	return m_exit->isEnabled();
 }
 
-void GameInfoWidget::setGameSettingWebView(const QString& web)
+void RPGGameWidget::setGameSettingWebView(const QString& web)
 {
 	SAFE(m_gameSettingWebView, m_gameSettingWebView->load(QUrl(web)));
 }
 
-void GameInfoWidget::setPersonalRecordWebView(const QString& web)
+void RPGGameWidget::setPersonalRecordWebView(const QString& web)
 {
 	SAFE(m_personalRecordWebView, m_personalRecordWebView->load(QUrl(web)));
 }
 
-void GameInfoWidget::setMyToolWebView(const QString& web)
+void RPGGameWidget::setMyToolWebView(const QString& web)
 {
 	SAFE(m_myToolWebView, m_myToolWebView->load(QUrl(web)));
 }
 
-void GameInfoWidget::resetSettings()
+void RPGGameWidget::resetSettings()
 {
 	m_gameNameEdit->setText("");
 	m_gameNameEdit->setEnabled(true);
 	m_gamePasswordEdit->setText("");
 	m_gamePasswordEdit->setEnabled(true);
 	m_gameModeComboBox->clear();
-	m_gameModeComboBox->addItem(QString::fromStdWString(L"进入游戏后手动选择"));
+	m_gameModeComboBox->addItem(QString::fromStdWString(L"进入游戏后选择"));
 	m_gameModeComboBox->setEnabled(true);
-	m_gameLvComboBox->clear();
-	m_gameLvComboBox->addItem(QString::fromStdWString(L"无限制"));
-	m_gameLvComboBox->setEnabled(true);
-	m_gameMVPComboBox->clear();
-	m_gameMVPComboBox->addItem(QString::fromStdWString(L"无限制"));
-	m_gameMVPComboBox->setEnabled(true);
 	m_gameNetComboBox->clear();
 	m_gameNetComboBox->addItem(QString::fromStdWString(L"无限制"));
 	m_gameNetComboBox->setEnabled(true);
@@ -394,7 +335,7 @@ void GameInfoWidget::resetSettings()
 	m_exit->setEnabled(true);
 }
 
-void GameInfoWidget::setLeader(bool isLeader)
+void RPGGameWidget::setLeader(bool isLeader)
 {
 	m_isLeader = isLeader;
 	m_startGame->setVisible(isLeader);
@@ -405,8 +346,6 @@ void GameInfoWidget::setLeader(bool isLeader)
 	setGameNameEnable(isLeader);
 	setGamePasswordEnable(isLeader);
 	setGameModeEnable(isLeader);
-	setGameLvEnable(isLeader);
-	setGameMVPEnable(isLeader);
 	setGameNetEnable(isLeader);
 	setGameLeaveEnable(isLeader);
 	setJudgeEnable(isLeader);
@@ -414,36 +353,32 @@ void GameInfoWidget::setLeader(bool isLeader)
 
 	if (isLeader)
 	{
-		m_gameLvComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, true);
-		m_gameMVPComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, true);
 		m_gameNetComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, true);
 		m_gameLeaveComboBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, true);
 	}
 	else
 	{
-		m_gameLvComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, true);
-		m_gameMVPComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, true);
 		m_gameNetComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, true);
 		m_gameLeaveComboBox->setTextColor(CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR, true);
 	}
 }
 
-void GameInfoWidget::clickGameSetting()
+void RPGGameWidget::clickGameSetting()
 {
 	onGameSettingClicked();
 }
 
-void GameInfoWidget::clickPersonalRecord()
+void RPGGameWidget::clickPersonalRecord()
 {
 	onPersonalRecordClicked();
 }
 
-void GameInfoWidget::clickMyTool()
+void RPGGameWidget::clickMyTool()
 {
 	onMyToolClicked();
 }
 
-void GameInfoWidget::init()
+void RPGGameWidget::init()
 {
 	onGameSettingClicked();
 	onPersonalRecordClicked();
@@ -454,8 +389,6 @@ void GameInfoWidget::init()
 	QStringList list;
 	list.append(QString::fromStdWString(L"进入游戏后手动选择"));
 	setGameModeList(list);
-	setGameLvList(QStringList(QString::fromStdWString(L"无限制")));
-	setGameMVPList(QStringList(QString::fromStdWString(L"无限制")));
 	setGameNetList(QStringList(QString::fromStdWString(L"无限制")));
 	setGameLeaveList(QStringList(QString::fromStdWString(L"无限制")));
 	setJudge(false);
@@ -463,7 +396,7 @@ void GameInfoWidget::init()
 	installEventFilter(this);
 }
 
-void GameInfoWidget::initGameSettingButton()
+void RPGGameWidget::initGameSettingButton()
 {
 	if (m_gameSetting == nullptr)
 	{
@@ -471,7 +404,7 @@ void GameInfoWidget::initGameSettingButton()
 	}
 	QObject::connect(m_gameSetting, SIGNAL(clicked()), this, SLOT(onGameSettingClicked()));
 	m_gameSetting->setCheckable(true);
-	m_gameSetting->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/TabButton.png", 4, 1, 2, 3, 4, 3, 3, 4, 4);
+	m_gameSetting->setBkgImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/setting_tab_button.png", 2, 1, 1, 1, 1, 2, 2, 2, 2);
 	m_gameSetting->setText(QString::fromStdWString(L"游戏设置"));
 	m_gameSetting->setFontColor(QColor(199, 215, 255),
 								QColor(255, 255, 255),
@@ -486,7 +419,7 @@ void GameInfoWidget::initGameSettingButton()
 	initGameSettingWidget();
 }
 
-void GameInfoWidget::initPersonalRecordButton()
+void RPGGameWidget::initPersonalRecordButton()
 {
 	if (m_personalRecord == nullptr)
 	{
@@ -494,7 +427,7 @@ void GameInfoWidget::initPersonalRecordButton()
 	}
 	QObject::connect(m_personalRecord, SIGNAL(clicked()), this, SLOT(onPersonalRecordClicked()));
 	m_personalRecord->setCheckable(true);
-	m_personalRecord->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/TabButton.png", 4, 1, 2, 3, 4, 3, 3, 4, 4);
+	m_personalRecord->setBkgImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/setting_tab_button.png", 2, 1, 1, 1, 1, 2, 2, 2, 2);
 	m_personalRecord->setText(QString::fromStdWString(L"个人战绩"));
 	m_personalRecord->setFontColor(QColor(199, 215, 255),
 								   QColor(255, 255, 255),
@@ -509,7 +442,7 @@ void GameInfoWidget::initPersonalRecordButton()
 	initPersonalRecordWidget();
 }
 
-void GameInfoWidget::initMyToolButton()
+void RPGGameWidget::initMyToolButton()
 {
 	if (m_myTool == nullptr)
 	{
@@ -517,7 +450,7 @@ void GameInfoWidget::initMyToolButton()
 	}
 	QObject::connect(m_myTool, SIGNAL(clicked()), this, SLOT(onMyToolClicked()));
 	m_myTool->setCheckable(true);
-	m_myTool->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/TabButton.png", 4, 1, 2, 3, 4, 3, 3, 4, 4);
+	m_myTool->setBkgImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/setting_tab_button.png", 2, 1, 1, 1, 1, 2, 2, 2, 2);
 	m_myTool->setText(QString::fromStdWString(L"我的道具"));
 	m_myTool->setFontColor(QColor(199, 215, 255),
 						   QColor(255, 255, 255),
@@ -532,23 +465,24 @@ void GameInfoWidget::initMyToolButton()
 	initMyToolButtonWidget();
 }
 
-void GameInfoWidget::initGameSettingWidget()
+void RPGGameWidget::initGameSettingWidget()
 {
 	if (m_gameSettingWidget == nullptr)
 	{
 		return;
 	}
-	//下面一行后面删掉
-	//m_gameSettingWidget->setStyleSheet(".QWidget{background-color:rgba(27,37,78,255);}");
+
+	m_gameSettingWidget->setStyleSheet(".QWidget{background-color:#5b657f;}");
 
 	//第一行
 	if (m_gameName != nullptr)
 	{
-		m_gameName->setText(QString::fromStdWString(L"游戏局名称"));
+		m_gameName->setText(QString::fromStdWString(L"设置房间名"));
 		m_gameName->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
-		m_gameName->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+		m_gameName->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 		m_gameName->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gameName->setFontFace(GAME_INFO_FONT_FACE);
+		m_gameName->setBackgroundColor(QColor(0, 0, 0, 0));
 	}
 	if (m_gameNameEdit != nullptr)
 	{
@@ -560,70 +494,40 @@ void GameInfoWidget::initGameSettingWidget()
 		m_gameNameEdit->setTextOrigin(CONTROL_TEXT_ORIGIN);
 		m_gameNameEdit->setBackgroundColor(CONTROL_BACKGROUND_COLOR, CONTROL_BACKGROUND_COLOR, CONTROL_BACKGROUND_COLOR);
 		m_gameNameEdit->setContextMenuPolicy(Qt::NoContextMenu);
-		QObject::connect(m_gameNameEdit, &LineEdit::textChanged, this, &GameInfoWidget::onGameNameChanged);
+		QObject::connect(m_gameNameEdit, &LineEdit::textChanged, this, &RPGGameWidget::onGameNameChanged);
 	}
 
 	//第二行
 	if (m_gamePassword != nullptr)
 	{
-		m_gamePassword->setText(QString::fromStdWString(L"游戏局密码"));
+		m_gamePassword->setText(QString::fromStdWString(L"设置密码"));
 		m_gamePassword->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
-		m_gamePassword->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+		m_gamePassword->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 		m_gamePassword->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gamePassword->setFontFace(GAME_INFO_FONT_FACE);
+		m_gamePassword->setBackgroundColor(QColor(0, 0, 0, 0));
 	}
 	if (m_gamePasswordEdit != nullptr)
 	{
 		m_gamePasswordEdit->setContextMenuPolicy(Qt::NoContextMenu);
-		QObject::connect(m_gamePasswordEdit, &LineEdit::textChanged, this, &GameInfoWidget::onGamePasswordChanged);
+		QObject::connect(m_gamePasswordEdit, &LineEdit::textChanged, this, &RPGGameWidget::onGamePasswordChanged);
 	}
 
 	//第三行
 	if (m_gameMode != nullptr)
 	{
-		m_gameMode->setText(QString::fromStdWString(L"游戏局模式"));
+		m_gameMode->setText(QString::fromStdWString(L"游戏模式"));
 		m_gameMode->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
-		m_gameMode->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+		m_gameMode->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 		m_gameMode->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gameMode->setFontFace(GAME_INFO_FONT_FACE);
+		m_gameMode->setBackgroundColor(QColor(0, 0, 0, 0));
 	}
 	if (m_gameModeComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameModeComboBox);
 		m_gameModeComboBox->setTextOrigin(GAME_MODE_TEXT_ORIGIN);
-		QObject::connect(m_gameModeComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameModeChanged);
-	}
-
-	//第四行
-	if (m_gameLv != nullptr)
-	{
-		m_gameLv->setText(QString::fromStdWString(L"名将Lv限制"));
-		m_gameLv->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
-		m_gameLv->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-		m_gameLv->setFontSize(GAME_INFO_FONT_SIZE);
-		m_gameLv->setFontFace(GAME_INFO_FONT_FACE);
-	}
-	if (m_gameLvComboBox != nullptr)
-	{
-		setComboBoxAttri(m_gameLvComboBox, L"^(?!00)(?:[0-9]{1,3}|1000)$", &m_lvExp, &m_lvRep);
-		QObject::connect(m_gameLvComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameLvTextChanged);
-		QObject::connect(m_gameLvComboBox->lineEdit(), &LineEdit::editingFinished, this, &GameInfoWidget::onLvEditTextFinish);
-	}
-
-	//第五行
-	if (m_gameMVP != nullptr)
-	{
-		m_gameMVP->setText(QString::fromStdWString(L"MVP限制"));
-		m_gameMVP->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
-		m_gameMVP->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-		m_gameMVP->setFontSize(GAME_INFO_FONT_SIZE);
-		m_gameMVP->setFontFace(GAME_INFO_FONT_FACE);
-	}
-	if (m_gameMVPComboBox != nullptr)
-	{
-		setComboBoxAttri(m_gameMVPComboBox, L"^(?!00)(?:[0-9]{1,3}|1000)$", &m_MVPExp, &m_MVPRep);
-		QObject::connect(m_gameMVPComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameMVPTextChanged);
-		QObject::connect(m_gameMVPComboBox->lineEdit(), &LineEdit::editingFinished, this, &GameInfoWidget::onMVPEditTextFinish);
+		QObject::connect(m_gameModeComboBox, &ComboBox::currentTextChanged, this, &RPGGameWidget::onGameModeChanged);
 	}
 
 	//第六行
@@ -631,15 +535,16 @@ void GameInfoWidget::initGameSettingWidget()
 	{
 		m_gameNet->setText(QString::fromStdWString(L"网速限制"));
 		m_gameNet->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
-		m_gameNet->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+		m_gameNet->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 		m_gameNet->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gameNet->setFontFace(GAME_INFO_FONT_FACE);
+		m_gameNet->setBackgroundColor(QColor(0, 0, 0, 0));
 	}
 	if (m_gameNetComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameNetComboBox, L"^500|(?!00|[5-9][0-9]{2})(?:[0-9]{1,3})$", &m_netExp, &m_netRep);
-		QObject::connect(m_gameNetComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameNetTextChanged);
-		QObject::connect(m_gameNetComboBox->lineEdit(), &LineEdit::editingFinished, this, &GameInfoWidget::onNetEditTextFinish);
+		QObject::connect(m_gameNetComboBox, &ComboBox::currentTextChanged, this, &RPGGameWidget::onGameNetTextChanged);
+		QObject::connect(m_gameNetComboBox->lineEdit(), &LineEdit::editingFinished, this, &RPGGameWidget::onNetEditTextFinish);
 	}
 
 	//第七行
@@ -647,18 +552,28 @@ void GameInfoWidget::initGameSettingWidget()
 	{
 		m_gameLeave->setText(QString::fromStdWString(L"掉线率限制"));
 		m_gameLeave->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
-		m_gameLeave->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+		m_gameLeave->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 		m_gameLeave->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gameLeave->setFontFace(GAME_INFO_FONT_FACE);
+		m_gameLeave->setBackgroundColor(QColor(0, 0, 0, 0));
 	}
 	if (m_gameLeaveComboBox != nullptr)
 	{
 		setComboBoxAttri(m_gameLeaveComboBox, L"^(?!00)(?:[0-9]{1,2})$", &m_leaveExp, &m_leaveRep);
-		QObject::connect(m_gameLeaveComboBox, &ComboBox::currentTextChanged, this, &GameInfoWidget::onGameLeaveTextChanged);
-		QObject::connect(m_gameLeaveComboBox->lineEdit(), &LineEdit::editingFinished, this, &GameInfoWidget::onLeaveEditTextFinish);
+		QObject::connect(m_gameLeaveComboBox, &ComboBox::currentTextChanged, this, &RPGGameWidget::onGameLeaveTextChanged);
+		QObject::connect(m_gameLeaveComboBox->lineEdit(), &LineEdit::editingFinished, this, &RPGGameWidget::onLeaveEditTextFinish);
 	}
 
 	//开启裁判位
+	if (m_checkBox != nullptr)
+	{
+		m_checkBox->setText(QString::fromStdWString(L"开启裁判位"));
+		m_checkBox->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
+		m_checkBox->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+		m_checkBox->setFontSize(GAME_INFO_FONT_SIZE);
+		m_checkBox->setFontFace(GAME_INFO_FONT_FACE);
+		m_checkBox->setBackgroundColor(QColor(0, 0, 0, 0));
+	}
 	if(m_judgeCheckBox != nullptr)
 	{
 		m_judgeCheckBox->setBackgroundColor(QColor(0, 0, 0, 0),
@@ -677,22 +592,35 @@ void GameInfoWidget::initGameSettingWidget()
 									  LABEL_TEXT_COLOR,
 									  LABEL_TEXT_COLOR,
 									  LABEL_TEXT_COLOR);
-		m_judgeCheckBox->setText(QString::fromStdWString(L"开启裁判位"));
+		m_judgeCheckBox->setText(QString::fromStdWString(L""));
 		m_judgeCheckBox->setIndicatorImage(m_war3ResourcePath + "/Image/Common/Setting/SettingCheckBox.png", 4, 1, 2, 3, 1, 3, 3, 4, 3);
 		m_judgeCheckBox->setFontSize(GAME_INFO_FONT_SIZE);
 		m_judgeCheckBox->setFontFace(GAME_INFO_FONT_FACE);
-		m_judgeCheckBox->setIndicatorSize(18, 18);
-		QObject::connect(m_judgeCheckBox, &QCheckBox::stateChanged, this, &GameInfoWidget::onJudgeChanged);
+		m_judgeCheckBox->setIndicatorSize(16, 16);
+		QObject::connect(m_judgeCheckBox, &QCheckBox::stateChanged, this, &RPGGameWidget::onJudgeChanged);
 	}
 
 	//保存
 	if (m_save != nullptr)
 	{
-		m_save->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/SaveButton.png");
-		m_save->setBorderColor(SAVE_BORDER_COLOR);
+		m_save->setBkgColor(QColor("#83a2f5"), QColor("#6694ff"));
 		m_save->setBorderRadius(CONTROL_RADIUS);
-		m_save->setText(QString::fromStdWString(L""));
-		QObject::connect(m_save, &COriginalButton::clicked, this, &GameInfoWidget::onSaveClicked);
+		m_save->setText(QString::fromStdWString(L"确定"));
+		m_save->setFontSize(14);
+		QObject::connect(m_save, &COriginalButton::clicked, this, &RPGGameWidget::onSaveClicked);
+	}
+
+	if (m_lab != nullptr)
+	{
+		m_lab->setBackgroundColor(QColor(20, 24, 35, 255));
+	}
+
+	if (m_rect != nullptr)
+	{
+		//m_rect->setAttribute(Qt::WA_TranslucentBackground);
+		m_rect->setBorderColor(QColor(85, 103, 154, 255));
+		m_rect->setBorderWidth(1);
+		m_rect->setBackgroundColor(QColor(255, 0, 0, 0));
 	}
 
 	//网页
@@ -700,11 +628,11 @@ void GameInfoWidget::initGameSettingWidget()
 	{
 		m_gameSettingWebView->load(QUrl("http://www.sougou.com/"));
 		m_gameSettingWebView->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
-		QObject::connect(m_gameSettingWebView, &CWebViewEx::linkClicked, this, &GameInfoWidget::onGameSettingUrlLinkClicked);
+		QObject::connect(m_gameSettingWebView, &CWebViewEx::linkClicked, this, &RPGGameWidget::onGameSettingUrlLinkClicked);
 	}
 }
 
-void GameInfoWidget::initPersonalRecordWidget()
+void RPGGameWidget::initPersonalRecordWidget()
 {
 	//下面一行后面删掉
 	SAFE(m_personalRecordWidget, m_personalRecordWidget->setStyleSheet(".QWidget{background-color:rgba(27,37,78,255);}"));
@@ -714,11 +642,11 @@ void GameInfoWidget::initPersonalRecordWidget()
 	{
 		m_personalRecordWebView->load(QUrl("http://www.sougou.com/"));
 		m_personalRecordWebView->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
-		QObject::connect(m_personalRecordWebView, &CWebViewEx::linkClicked, this, &GameInfoWidget::onPersonalRecordUrlLinkClicked);
+		QObject::connect(m_personalRecordWebView, &CWebViewEx::linkClicked, this, &RPGGameWidget::onPersonalRecordUrlLinkClicked);
 	}
 }
 
-void GameInfoWidget::initMyToolButtonWidget()
+void RPGGameWidget::initMyToolButtonWidget()
 {
 	//下面一行后面删掉
 	SAFE(m_myToolWidget, m_myToolWidget->setStyleSheet(".QWidget{background-color:rgba(27,37,78,255);}"));
@@ -728,11 +656,11 @@ void GameInfoWidget::initMyToolButtonWidget()
 	{
 		m_myToolWebView->load(QUrl("http://www.sougou.com/"));
 		m_myToolWebView->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
-		QObject::connect(m_myToolWebView, &CWebViewEx::linkClicked, this, &GameInfoWidget::onMyToolUrlLinkClicked);
+		QObject::connect(m_myToolWebView, &CWebViewEx::linkClicked, this, &RPGGameWidget::onMyToolUrlLinkClicked);
 	}
 }
 
-void GameInfoWidget::setComboBoxAttri(ComboBox* pBox, const std::wstring& pattern, QRegExp* ex, QRegExpValidator* rep)
+void RPGGameWidget::setComboBoxAttri(ComboBox* pBox, const std::wstring& pattern, QRegExp* ex, QRegExpValidator* rep)
 {
 	if (pBox == nullptr)
 	{
@@ -755,15 +683,16 @@ void GameInfoWidget::setComboBoxAttri(ComboBox* pBox, const std::wstring& patter
 	pBox->setBorderRadius(CONTROL_RADIUS);
 	pBox->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
 	pBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR);
-	pBox->setDropDownImage(m_war3ResourcePath + "/Image/Common/Setting/combobox_indicator.png", 6, 1, 2, 3, 4, 6);
+	pBox->setDropDownImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/combobox_indicator.png", 1, 1, 1, 1, 1, 1);
 	pBox->setDropDownSize(DROP_DOWN_WIDTH, DROP_DOWN_HEIGHT);
 	pBox->setDropDownTopRightOrigin(DROP_DOWN_ORIGIN_X, DROP_DOWN_ORIGIN_Y);
 	pBox->setFontSize(GAME_INFO_FONT_SIZE);
 	pBox->setFontFace(GAME_INFO_FONT_FACE);
 	pBox->setTextOrigin(CONTROL_TEXT_ORIGIN);
-	pBox->setListBorderColor(CONTROL_BORDER_COLOR);
+	pBox->setListBorderWidth(0);
+	//pBox->setListBorderColor(CONTROL_BORDER_COLOR);
 	pBox->setListItemBorderWidth(LIST_ITEM_BORDER_WIDTH);
-	pBox->setListItemBackgroundColor(CONTROL_BACKGROUND_COLOR, LIST_HOVER_COLOR, CONTROL_BACKGROUND_COLOR);
+	pBox->setListItemBackgroundColor(LIST_NORMAL_COLOR, LIST_HOVER_COLOR, CONTROL_BACKGROUND_COLOR);
 	pBox->setListBorderWidth(LIST_BORDER_WIDTH);
 	pBox->setListOrigin(LIST_ORIGIN);
 	pBox->setListTextColor(LABEL_TEXT_COLOR, CONTROL_TEXT_COLOR, LABEL_TEXT_COLOR);
@@ -775,7 +704,7 @@ void GameInfoWidget::setComboBoxAttri(ComboBox* pBox, const std::wstring& patter
 	pBox->setContextMenuPolicy(Qt::NoContextMenu);
 }
 
-void GameInfoWidget::comboBoxTextChanged(const QString& text,
+void RPGGameWidget::comboBoxTextChanged(const QString& text,
 										 ComboBox* pBox,
 										 const QRegExp& exp,
 										 const std::wstring& addString,
@@ -811,15 +740,7 @@ void GameInfoWidget::comboBoxTextChanged(const QString& text,
 	}
 	else if (qstrText != "")
 	{
-		if (pBox == m_gameLvComboBox)
-		{
-			emit onGameLvChanged(text);
-		}
-		else if (pBox == m_gameMVPComboBox)
-		{
-			emit onGameMVPChanged(text);
-		}
-		else if (pBox == m_gameNetComboBox)
+		if (pBox == m_gameNetComboBox)
 		{
 			emit onGameNetChanged(text);
 		}
@@ -830,7 +751,7 @@ void GameInfoWidget::comboBoxTextChanged(const QString& text,
 	}
 }
 
-void GameInfoWidget::comboBoxEditFinish(ComboBox* pBox, const std::wstring& addString, std::wstring& curText, bool& finish)
+void RPGGameWidget::comboBoxEditFinish(ComboBox* pBox, const std::wstring& addString, std::wstring& curText, bool& finish)
 {
 	finish = true;
 	std::wstring editedStr = pBox->currentText().toStdWString();
@@ -841,7 +762,7 @@ void GameInfoWidget::comboBoxEditFinish(ComboBox* pBox, const std::wstring& addS
 	}
 }
 
-void GameInfoWidget::comboBoxPress(QObject* target,
+void RPGGameWidget::comboBoxPress(QObject* target,
 								   ComboBox* pBox,
 								   const std::wstring& addString,
 								   std::wstring& curText,
@@ -870,7 +791,7 @@ void GameInfoWidget::comboBoxPress(QObject* target,
 	}
 }
 
-void GameInfoWidget::comboBoxFocusOut(QObject* target,
+void RPGGameWidget::comboBoxFocusOut(QObject* target,
 									  ComboBox* pBox,
 									  const std::wstring& addString,
 									  std::wstring& curText,
@@ -942,7 +863,7 @@ void GameInfoWidget::comboBoxFocusOut(QObject* target,
 	}
 }
 
-void GameInfoWidget::resizeEvent(QResizeEvent* eve)
+void RPGGameWidget::resizeEvent(QResizeEvent* eve)
 {
 	QWidget::resizeEvent(eve);
 	int32_t gameInfoWidgetHeight = geometry().height();
@@ -955,14 +876,15 @@ void GameInfoWidget::resizeEvent(QResizeEvent* eve)
 	}
 }
 
-void GameInfoWidget::layout()
+void RPGGameWidget::layout()
 {
 	m_gameSettingWebviewOrigin = m_widgetHeight - GAME_SETTING_WEBVIEW_HEIGHT;
-	m_inviteFriendOrigin = WIDGET_BUTTON_HEIGHT + m_widgetHeight;
+	m_inviteFriendOrigin = WIDGET_BUTTON_HEIGHT + m_widgetHeight + WIDGET_ORIGIN;
 	m_startGameOrigin_y = m_gameInfoWidgetHeight - 
 						 (m_gameInfoWidgetHeight - 
 						  m_widgetHeight - 
 						  WIDGET_BUTTON_HEIGHT - 
+						  WIDGET_ORIGIN - 
 						  INVITE_FRIEND_HEIGHT - 
 						  START_GAME_HEIGHT) / 2 - 
 						  START_GAME_HEIGHT;
@@ -976,38 +898,35 @@ void GameInfoWidget::layout()
 	SAFE(m_gameSetting, m_gameSetting->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 0, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT));
 	SAFE(m_personalRecord, m_personalRecord->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 1, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT));
 	SAFE(m_myTool, m_myTool->setGeometry(GAME_INFO_WIDGET_WIDTH / 3 * 2, 0, GAME_INFO_WIDGET_WIDTH / 3, WIDGET_BUTTON_HEIGHT));
-	SAFE(m_gameSettingWidget, m_gameSettingWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, m_widgetHeight));
-	SAFE(m_gameName, m_gameName->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameSettingWidget, m_gameSettingWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT + WIDGET_ORIGIN, WIDGET_WIDTH, m_widgetHeight));
+	SAFE(m_gameName, m_gameName->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT));
 	SAFE(m_gameNameEdit, m_gameNameEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y, CONTROL_WIDTH, CONTROL_HEIGHT));
-	SAFE(m_gamePassword, m_gamePassword->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gamePassword, m_gamePassword->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING, LABEL_WIDTH, LABEL_HEIGHT));
 	SAFE(m_gamePasswordEdit, m_gamePasswordEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING, CONTROL_WIDTH, CONTROL_HEIGHT));
-	SAFE(m_gameMode, m_gameMode->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 2, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameMode, m_gameMode->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 2, LABEL_WIDTH, LABEL_HEIGHT));
 	SAFE(m_gameModeComboBox, m_gameModeComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 2, CONTROL_WIDTH, CONTROL_HEIGHT));
-	SAFE(m_gameLv, m_gameLv->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 3, LABEL_WIDTH, LABEL_HEIGHT));
-	SAFE(m_gameLvComboBox, m_gameLvComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 3, CONTROL_WIDTH, CONTROL_HEIGHT));
-	SAFE(m_gameMVP, m_gameMVP->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 4, LABEL_WIDTH, LABEL_HEIGHT));
-	SAFE(m_gameMVPComboBox, m_gameMVPComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, CONTROL_WIDTH, CONTROL_HEIGHT));
-	SAFE(m_gameNet, m_gameNet->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 5, LABEL_WIDTH, LABEL_HEIGHT));
-	SAFE(m_gameNetComboBox, m_gameNetComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 5, CONTROL_WIDTH, CONTROL_HEIGHT));
-	SAFE(m_gameLeave, m_gameLeave->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 6, LABEL_WIDTH, LABEL_HEIGHT));
-	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 6, CONTROL_WIDTH, CONTROL_HEIGHT));
-	SAFE(m_judgeCheckBox, m_judgeCheckBox->setGeometry(JUDGE_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 7, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_gameNet, m_gameNet->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 3, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameNetComboBox, m_gameNetComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 3, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_gameLeave, m_gameLeave->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 4, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_checkBox, m_checkBox->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 5, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_judgeCheckBox, m_judgeCheckBox->setGeometry(JUDGE_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 5, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_save, m_save->setGeometry(SAVE_ORIGIN_X, SAVE_ORIGIN_Y, SAVE_WIDTH, SAVE_HEIGHT));
+	SAFE(m_lab, m_lab->setGeometry(0, m_widgetHeight - GAME_SETTING_WEBVIEW_HEIGHT - LAB_HEIGHT, WIDGET_WIDTH, LAB_HEIGHT));
+	SAFE(m_rect, m_rect->setGeometry(0, m_widgetHeight + LAB_HEIGHT + WIDGET_ORIGIN + WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, m_gameInfoWidgetHeight - m_widgetHeight - LAB_HEIGHT - WIDGET_ORIGIN - WIDGET_BUTTON_HEIGHT));
 	SAFE(m_gameSettingWebView, m_gameSettingWebView->setGeometry(0, m_gameSettingWebviewOrigin, GAME_SETTING_WEBVIEW_WIDTH, GAME_SETTING_WEBVIEW_HEIGHT));
-	SAFE(m_personalRecordWidget, m_personalRecordWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, m_widgetHeight));
+	SAFE(m_personalRecordWidget, m_personalRecordWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT + WIDGET_ORIGIN, WIDGET_WIDTH, m_widgetHeight));
 	SAFE(m_personalRecordWebView, m_personalRecordWebView->setGeometry(0, 0, WIDGET_WIDTH, m_widgetHeight));
-	SAFE(m_myToolWidget, m_myToolWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, m_widgetHeight));
+	SAFE(m_myToolWidget, m_myToolWidget->setGeometry(0, WIDGET_BUTTON_HEIGHT + WIDGET_ORIGIN, WIDGET_WIDTH, m_widgetHeight));
 	SAFE(m_myToolWebView, m_myToolWebView->setGeometry(0, 0, WIDGET_WIDTH, m_widgetHeight));
 }
 
-bool GameInfoWidget::eventFilter(QObject* target, QEvent* eve)
+bool RPGGameWidget::eventFilter(QObject* target, QEvent* eve)
 {
 	switch (eve->type())
 	{
 	case QEvent::MouseButtonPress:
 	{
-		comboBoxPress(target, m_gameLvComboBox, L"≥", m_gameLvCurText, m_lvFinish);
-		comboBoxPress(target, m_gameMVPComboBox, L"≥", m_gameMVPCurText, m_MVPFinish);
 		comboBoxPress(target, m_gameNetComboBox, L"≤", m_gameNetCurText, m_netFinish);
 		comboBoxPress(target, m_gameLeaveComboBox, L"≤", m_gameLeaveCurText, m_leaveFinish);
 		
@@ -1015,8 +934,6 @@ bool GameInfoWidget::eventFilter(QObject* target, QEvent* eve)
 	}
 	case QEvent::FocusOut:
 	{
-		comboBoxFocusOut(target, m_gameLvComboBox, L"≥", m_gameLvCurText, m_lvFinish);
-		comboBoxFocusOut(target, m_gameMVPComboBox, L"≥", m_gameMVPCurText, m_MVPFinish);
 		comboBoxFocusOut(target, m_gameNetComboBox, L"≤", m_gameNetCurText, m_netFinish);
 		comboBoxFocusOut(target, m_gameLeaveComboBox, L"≤", m_gameLeaveCurText, m_leaveFinish);
 		
@@ -1036,7 +953,7 @@ bool GameInfoWidget::eventFilter(QObject* target, QEvent* eve)
 	return QWidget::eventFilter(target, eve);
 }
 
-void GameInfoWidget::onGameSettingClicked()
+void RPGGameWidget::onGameSettingClicked()
 {
 	SAFE(m_gameSetting, m_gameSetting->setChecked(true));
 	SAFE(m_personalRecord, m_personalRecord->setChecked(false));
@@ -1046,7 +963,7 @@ void GameInfoWidget::onGameSettingClicked()
 	SAFE(m_myToolWidget, m_myToolWidget->hide());
 }
 
-void GameInfoWidget::onPersonalRecordClicked()
+void RPGGameWidget::onPersonalRecordClicked()
 {
 	if (m_personalRecord && m_gameSetting && m_myTool)
 	{
@@ -1062,9 +979,8 @@ void GameInfoWidget::onPersonalRecordClicked()
 	}
 }
 
-void GameInfoWidget::onMyToolClicked()
+void RPGGameWidget::onMyToolClicked()
 {
-	m_myToolWebView->reload();
 	if (m_myTool && m_gameSetting && m_personalRecord)
 	{
 		m_myTool->setChecked(true);
@@ -1079,22 +995,22 @@ void GameInfoWidget::onMyToolClicked()
 	}
 }
 
-void GameInfoWidget::onGameSettingUrlLinkClicked(const QUrl& url)
+void RPGGameWidget::onGameSettingUrlLinkClicked(const QUrl& url)
 {
 	emit onGameSettingLinkClicked(url.toString());
 }
 
-void GameInfoWidget::onPersonalRecordUrlLinkClicked(const QUrl& url)
+void RPGGameWidget::onPersonalRecordUrlLinkClicked(const QUrl& url)
 {
 	emit onPersonalRecordLinkClicked(url.toString());
 }
 
-void GameInfoWidget::onMyToolUrlLinkClicked(const QUrl& url)
+void RPGGameWidget::onMyToolUrlLinkClicked(const QUrl& url)
 {
 	emit onMyToolLinkClicked(url.toString());
 }
 
-void GameInfoWidget::onPrepareGameClicked()
+void RPGGameWidget::onPrepareGameClicked()
 {
 	if (m_prepareGame->isChecked())
 	{
@@ -1106,42 +1022,22 @@ void GameInfoWidget::onPrepareGameClicked()
 	}
 }
 
-void GameInfoWidget::onLvEditTextFinish()
-{
-	comboBoxEditFinish(m_gameLvComboBox, L"≥", m_gameLvCurText, m_lvFinish);
-}
-
-void GameInfoWidget::onMVPEditTextFinish()
-{
-	comboBoxEditFinish(m_gameMVPComboBox, L"≥", m_gameMVPCurText, m_MVPFinish);
-}
-
-void GameInfoWidget::onNetEditTextFinish()
+void RPGGameWidget::onNetEditTextFinish()
 {
 	comboBoxEditFinish(m_gameNetComboBox, L"≤", m_gameNetCurText, m_netFinish);
 }
 
-void GameInfoWidget::onLeaveEditTextFinish()
+void RPGGameWidget::onLeaveEditTextFinish()
 {
 	comboBoxEditFinish(m_gameLeaveComboBox, L"≤", m_gameLeaveCurText, m_leaveFinish);
 }
 
-void GameInfoWidget::onGameLvTextChanged(const QString& text)
-{
-	comboBoxTextChanged(text, m_gameLvComboBox, m_lvExp, L"≥", m_gameLvCurText);
-}
-
-void GameInfoWidget::onGameMVPTextChanged(const QString& text)
-{
-	comboBoxTextChanged(text, m_gameMVPComboBox, m_MVPExp, L"≥", m_gameMVPCurText);
-}
-
-void GameInfoWidget::onGameNetTextChanged(const QString& text)
+void RPGGameWidget::onGameNetTextChanged(const QString& text)
 {
 	comboBoxTextChanged(text, m_gameNetComboBox, m_netExp, L"≤", m_gameNetCurText);
 }
 
-void GameInfoWidget::onGameLeaveTextChanged(const QString& text)
+void RPGGameWidget::onGameLeaveTextChanged(const QString& text)
 {
 	comboBoxTextChanged(text, m_gameLeaveComboBox, m_leaveExp, L"≤", m_gameLeaveCurText);
 }

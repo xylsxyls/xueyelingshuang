@@ -2,7 +2,7 @@
 #include "Label.h"
 #include "../COriginalButton.h"
 #include "../CGeneralStyle.h"
-#include "ShowDialogManager.h"
+#include "ModelessDialogManager.h"
 
 void AskShowDialog::showAskDialog(int32_t& dialogId,
 								  int32_t userType,
@@ -17,7 +17,7 @@ void AskShowDialog::showAskDialog(int32_t& dialogId,
 {
 	AskShowDialog* dlg = new AskShowDialog(userType, title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
 	dlg->show(dialogId, timeOut, isCountDownVisible);
-	QObject::connect(dlg, &AskShowDialog::dialogDone, &(ShowDialogManager::instance()), &ShowDialogManager::dialogDone);
+	QObject::connect(dlg, &AskShowDialog::dialogDone, &(ModelessDialogManager::instance()), &ModelessDialogManager::dialogDone);
 	//QObject::connect(dlg, SIGNAL(dialogDone(int32_t, int32_t, int32_t)), (const QObject*)(&(ShowDialogManager::instance())), SIGNAL(dialogDone(int32_t, int32_t, int32_t)));
 	return;
 }

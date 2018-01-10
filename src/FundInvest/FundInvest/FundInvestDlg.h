@@ -9,8 +9,9 @@
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "DataNeuron.h"
 #include "CSystem/CSystemAPI.h"
+#include "afxwin.h"
 
-#define FUND_NUM std::string("161725")
+#define FUND_NUM std::string("161725")//161725
 
 class CDrawDlg;
 // CFundInvestDlg ¶Ô»°¿ò
@@ -98,4 +99,23 @@ public:
                                            int32_t days);
 
 	std::vector<std::string> m_vecFundName;
+	afx_msg void OnBnClickedButton18();
+	double GetPersent(const IntDateTime& beginTime,
+					  const IntDateTime& endTime,
+					  double bidUpdown,
+					  double sellGetPersent);
+	afx_msg void OnBnClickedButton21();
+	CButton m_simulationBtn;
+	CButton m_bidSellBtn;
+	CButton m_haveLookBtn;
+
+	DataNeuron* m_simulationBegin;
+	DataNeuron* m_simulationEnd;
+	DataNeuron* m_simulationNow;
+	double m_present = 1.0;
+
+	double m_simulationFund = 100000.0;
+	bool m_isHave = false;
+	afx_msg void OnBnClickedButton19();
 };
+

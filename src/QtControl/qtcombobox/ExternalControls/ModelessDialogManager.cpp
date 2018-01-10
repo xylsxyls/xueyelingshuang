@@ -1,4 +1,4 @@
-#include "ShowDialogManager.h"
+#include "ModelessDialogManager.h"
 #include "DialogBase.h"
 #include "AskDialog.h"
 #include "TipDialog.h"
@@ -9,13 +9,13 @@
 #include "LoginShowDialog.h"
 #include <QTime>
 
-ShowDialogManager& ShowDialogManager::instance()
+ModelessDialogManager& ModelessDialogManager::instance()
 {
-	static ShowDialogManager showDialogHelper;
+	static ModelessDialogManager showDialogHelper;
 	return showDialogHelper;
 }
 
-void ShowDialogManager::showTipDialog(int32_t& dialogId,
+void ModelessDialogManager::showTipDialog(int32_t& dialogId,
 									  int32_t userType,
 									  const QString& tip,
 									  const QString& title,
@@ -27,7 +27,7 @@ void ShowDialogManager::showTipDialog(int32_t& dialogId,
 	TipShowDialog::showTipDialog(dialogId, userType, title, tip, buttonText, done, timeOut, isCountDownVisible);
 }
 
-void ShowDialogManager::showAskDialog(int32_t& dialogId,
+void ModelessDialogManager::showAskDialog(int32_t& dialogId,
 									  int32_t userType,
 									  const QString& tip,
 									  const QString& title,
@@ -50,7 +50,7 @@ void ShowDialogManager::showAskDialog(int32_t& dialogId,
 								 isCountDownVisible);
 }
 
-void ShowDialogManager::showLoginDialog(int32_t& dialogId,
+void ModelessDialogManager::showLoginDialog(int32_t& dialogId,
 										int32_t userType,
 										const QString& tip,
 										const QString& linkUrl,
@@ -91,7 +91,7 @@ void ShowDialogManager::showLoginDialog(int32_t& dialogId,
 									 isCountDownVisible);
 }
 
-int32_t ShowDialogManager::popAskDialog(int32_t& dialogId,
+int32_t ModelessDialogManager::popAskDialog(int32_t& dialogId,
 										const QString& title,
 										const QString& tip,
 										const QString& acceptText,
@@ -105,7 +105,7 @@ int32_t ShowDialogManager::popAskDialog(int32_t& dialogId,
 	return -1;
 }
 
-int32_t ShowDialogManager::popTipDialog(int32_t& dialogId,
+int32_t ModelessDialogManager::popTipDialog(int32_t& dialogId,
 										const QString& title,
 										const QString& tip,
 										const QString& buttonText,
@@ -117,7 +117,7 @@ int32_t ShowDialogManager::popTipDialog(int32_t& dialogId,
 	return -1;
 }
 
-int32_t ShowDialogManager::popInputDialog(int32_t& dialogId,
+int32_t ModelessDialogManager::popInputDialog(int32_t& dialogId,
 										  const QString& title,
 										  const QString& editTip,
 										  const QString& buttonText,
@@ -130,7 +130,7 @@ int32_t ShowDialogManager::popInputDialog(int32_t& dialogId,
 	return -1;
 }
 
-int32_t ShowDialogManager::popWaitDialog(int32_t& dialogId,
+int32_t ModelessDialogManager::popWaitDialog(int32_t& dialogId,
 										 const QString& title,
 										 const QString& tip,
 										 QWidget* parent,

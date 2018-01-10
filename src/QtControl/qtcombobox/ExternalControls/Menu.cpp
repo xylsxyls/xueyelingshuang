@@ -17,6 +17,10 @@ m_pCustomStyle(nullptr)
 	}
 	installEventFilter(this);
 	setMouseTracking(true);
+
+	setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
+	//±³¾°Í¸Ã÷
+	setAttribute(Qt::WA_TranslucentBackground);
 }
 
 Menu::~Menu()

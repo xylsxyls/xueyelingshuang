@@ -341,6 +341,17 @@ double DataNeuron::GetBidSellAvg_5(int32_t type, int32_t bidSell)
 	return result / days;
 }
 
+double DataNeuron::GetAlways(DataNeuron* begin)
+{
+	double result = 1;
+	while (begin != this->m_nextData)
+	{
+		begin = begin->m_nextData;
+		result *= (1 + begin->m_dayChg);
+	}
+	return result - 1;
+}
+
 void DataNeuron::AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,
 							 int32_t index,
 							 double& updata,

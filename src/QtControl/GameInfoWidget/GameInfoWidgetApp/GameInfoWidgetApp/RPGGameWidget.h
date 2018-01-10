@@ -12,18 +12,18 @@ class LineEdit;
 class CheckBox;
 class COriginalButton;
 class CPasswordInputBox;
-class GameInfoWidget : public QWidget
+class RPGGameWidget : public QWidget
 {
 	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	GameInfoWidget(QWidget* parent = NULL);
+	RPGGameWidget(QWidget* parent = NULL);
 
 	/** 析构函数
 	*/
-	virtual ~GameInfoWidget();
+	virtual ~RPGGameWidget();
 
 	/** 设置游戏局名称
 	@param [in] gameName 游戏局名称
@@ -74,46 +74,6 @@ public:
 	@param [in] enable 是否可用
 	*/
 	void setGameModeEnable(bool enable);
-
-	/** 设置名将Lv限制
-	@param [in] gameLvList 名将Lv限制
-	*/
-	void setGameLvList(const QStringList& gameLvList);
-
-	/** 设置当前名将Lv限制
-	@param [in] gameLv 名将Lv限制
-	*/
-	void setCurGameLv(const QString& gameLv);
-
-	/** 获取当前选择的名将Lv限制
-	@return 返回当前选择的名将Lv限制
-	*/
-	QString getCurGameLv();
-
-	/** 设置名将Lv限制是否可用
-	@param [in] enable 是否可用
-	*/
-	void setGameLvEnable(bool enable);
-
-	/** 设置MVP限制
-	@param [in] gameMVPList MVP限制
-	*/
-	void setGameMVPList(const QStringList& gameMVPList);
-
-	/** 添加一条MVP限制
-	@param [in] gameMVP MVP限制
-	*/
-	void setCurGameMVP(const QString& gameMVP);
-
-	/** 获取当前选择的MVP限制
-	@return 返回当前选择的MVP限制
-	*/
-	QString getCurGameMVP();
-
-	/** 设置MVP限制是否可用
-	@param [in] enable 是否可用
-	*/
-	void setGameMVPEnable(bool enable);
 
 	/** 设置网速限制
 	@param [in] gameNetList 网速限制
@@ -309,12 +269,8 @@ private slots:
 	void onPersonalRecordUrlLinkClicked(const QUrl& url);
 	void onMyToolUrlLinkClicked(const QUrl& url);
 	void onPrepareGameClicked();
-	void onLvEditTextFinish();
-	void onMVPEditTextFinish();
 	void onNetEditTextFinish();
 	void onLeaveEditTextFinish();
-	void onGameLvTextChanged(const QString& text);
-	void onGameMVPTextChanged(const QString& text);
 	void onGameNetTextChanged(const QString& text);
 	void onGameLeaveTextChanged(const QString& text);
 
@@ -328,8 +284,6 @@ Q_SIGNALS:
 	void onGameNameChanged(const QString &);
 	void onGamePasswordChanged(const QString &);
 	void onGameModeChanged(const QString&);
-	void onGameLvChanged(const QString &);
-	void onGameMVPChanged(const QString &);
 	void onGameNetChanged(const QString &);
 	void onGameLeaveChanged(const QString &);
 	void onJudgeChanged(int);
@@ -349,8 +303,6 @@ private:
 	LineEdit* m_gameNameEdit;
 	CPasswordInputBox* m_gamePasswordEdit;
 	ComboBox* m_gameModeComboBox;
-	ComboBox* m_gameLvComboBox;
-	ComboBox* m_gameMVPComboBox;
 	ComboBox* m_gameNetComboBox;
 	ComboBox* m_gameLeaveComboBox;
 	CheckBox* m_judgeCheckBox;
@@ -367,10 +319,11 @@ private:
 	Label* m_gameName;
 	Label* m_gamePassword;
 	Label* m_gameMode;
-	Label* m_gameLv;
-	Label* m_gameMVP;
 	Label* m_gameNet;
 	Label* m_gameLeave;
+	Label* m_checkBox;
+	Label* m_lab;
+	Label* m_rect;
 	COriginalButton* m_save;
 
 	//窗口整体高度
@@ -391,26 +344,18 @@ private:
 	//退出按钮纵轴起始位置
 	int32_t m_exitOrigin_y;
 
-	QRegExpValidator m_lvRep;
-	QRegExpValidator m_MVPRep;
 	QRegExpValidator m_netRep;
 	QRegExpValidator m_leaveRep;
 
-	QRegExp m_lvExp;
-	QRegExp m_MVPExp;
 	QRegExp m_netExp;
 	QRegExp m_leaveExp;
 
-	std::wstring m_gameLvCurText;
-	std::wstring m_gameMVPCurText;
 	std::wstring m_gameNetCurText;
 	std::wstring m_gameLeaveCurText;
 
 	QString m_war3ResourcePath;
 	bool m_isLeader;
 
-	bool m_lvFinish;
-	bool m_MVPFinish;
 	bool m_netFinish;
 	bool m_leaveFinish;
 };

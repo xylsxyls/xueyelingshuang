@@ -4,7 +4,7 @@
 #include "../CGeneralStyle.h"
 #include <QtWebKitWidgets/QWebView>
 #include <QDesktopServices>
-#include "ShowDialogManager.h"
+#include "ModelessDialogManager.h"
 
 void LoginShowDialog::showLoginDialog(int32_t& dialogId,
 									  int32_t userType,
@@ -20,7 +20,7 @@ void LoginShowDialog::showLoginDialog(int32_t& dialogId,
 	LoginShowDialog* dlg = new LoginShowDialog(userType, title, greeting, tip, urlButtonText, linkUrl, isUrlButtonVisible);
 	dlg->show(dialogId, timeOut, isCountDownVisible);
 	//QObject::connect(dlg, SIGNAL(dialogDone(int32_t, int32_t, int32_t)), (const QObject*)(&(ShowDialogManager::instance())), SIGNAL(dialogDone(int32_t, int32_t, int32_t)));
-	QObject::connect(dlg, &LoginShowDialog::dialogDone, &(ShowDialogManager::instance()), &ShowDialogManager::dialogDone);
+	QObject::connect(dlg, &LoginShowDialog::dialogDone, &(ModelessDialogManager::instance()), &ModelessDialogManager::dialogDone);
 	return;
 }
 

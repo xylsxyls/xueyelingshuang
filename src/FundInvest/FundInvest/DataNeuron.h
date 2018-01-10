@@ -42,6 +42,8 @@ public:
 	//bid 1£¬sell 2
 	double GetBidSellAvg_5(int32_t type, int32_t bidSell);
 
+	double GetAlways(DataNeuron* begin);
+
 private:
 	void AnalyzeData(const std::vector<DataNeuron>& vecDataNeuron,
 					 int32_t index,
@@ -106,8 +108,14 @@ public:
 	double m_upDownHighest3 = 0;
 	double m_upDownHighest5 = 0;
     double m_upDownHighest10 = 0;
+	double m_upDownHighest15 = 0;
+	double m_upDownHighest20 = 0;
 	int32_t m_upDownInDays = 0;
 	int32_t m_forecastPlatDays = 0;
+
+	double m_avg_in_always3 = 0;
+	double m_avg_in_always6 = 0;
+	double m_avg_in_always12 = 0;
 
 	double m_upDown_4 = 0;
 

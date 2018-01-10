@@ -22,7 +22,8 @@
 #include "../COriginalButton.h"
 #include <QWindow>
 #include "DialogManager.h"
-#include "ShowDialogManager.h"
+#include "ModelessDialogManager.h"
+#include "FriendDialog.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -113,7 +114,27 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//auto item3 = new QAction("&itme3...", this);
 	//auto item4 = new QAction("&item4...", this);*/
 
-	CollapseMenu* menu = new CollapseMenu;
+	Menu* menu = new Menu;
+
+	menu->addAction("123456");
+	menu->addAction("123456");
+	menu->addAction("123456");
+	menu->addAction("123456");
+	menu->addAction("123456");
+
+	menu->setBorderWidth(0);
+	menu->setFontSize(14);
+	menu->setBorderRadius(14);
+	menu->setItemHeight(54);
+	menu->setItemWidth(120);
+	menu->setFontFace(CGeneralStyle::instance()->font().family());
+	menu->setFontBold(true);
+	menu->setItemTextColor("white", "white", "gray");
+	menu->setItemTextOrigin(32);
+	menu->setItemBackgroundColor(QColor(0, 0, 0, 0), QColor("#4486ff"), QColor(0, 0, 0, 204));
+	menu->setItemBorderRadius(14);
+
+	//menu->exec(QPoint(50, 50));
 	
 	menu->addAction(QString::fromLocal8Bit("123456"), "D:/hot.png", QSize(50, 50), "D:/more.png", QSize(50, 50));
 	menu->addAction(QString::fromLocal8Bit("123456"), "D:/hot.png", QSize(50, 50), "D:/more.png", QSize(50, 50));
@@ -138,6 +159,8 @@ qtcombobox::qtcombobox(QWidget *parent)
 	menu->setFontBold(true);
 	menu->setBorderColor(QColor(255, 255, 255, 255));
 	menu->setItemTextColor(QColor(255, 255, 0, 255), QColor(255, 0, 0, 255), QColor(255, 255, 0, 255));
+
+	menu->setItemBorderRadius(15);
 	
 	
 
@@ -151,7 +174,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//menu->setIconSize(QSize(20, 20));
 	
 
-	//menu->exec(QPoint(50, 50));
+	menu->exec(QPoint(50, 50));
 
 	box = new HtmlComboBox(this);
 	//box->setDefault();
@@ -357,6 +380,11 @@ qtcombobox::qtcombobox(QWidget *parent)
 	modalButton->setGeometry(50, 300, 100, 30);
 	QObject::connect(modalButton, &COriginalButton::clicked, this, &qtcombobox::modalPop);
 
+	COriginalButton* modalFriendButton = new COriginalButton(this);
+	modalFriendButton->setGeometry(50, 350, 100, 30);
+	modalFriendButton->setText("friend");
+	QObject::connect(modalFriendButton, &COriginalButton::clicked, this, &qtcombobox::modalFriendPop);
+
 
 
 	int x = 3;
@@ -402,10 +430,17 @@ void qtcombobox::modalPop()
 	sss->show();
 }
 
+void qtcombobox::modalFriendPop()
+{
+	FriendDialog fdlg;
+	
+	fdlg.exec();
+}
+
 void qtcombobox::testDialog()
 {
 	int32_t dialogId7 = 0;
-	ShowDialogManager::instance().showLoginDialog(dialogId7,
+	ModelessDialogManager::instance().showLoginDialog(dialogId7,
 												  33,
 												  QString::fromStdWString(L"<a href=\"http://www.baidu.com\">www.baidu.com</a>123456"),
 												  QString::fromStdWString(L"www.sougou.com"),
@@ -425,55 +460,55 @@ void qtcombobox::testDialog()
 									 true);
 	int32_t dialogId2 = 0;
 	int xxx = AskDialog::popAskDialog(dialogId2,
-									 QString::fromStdWString(L"标题"),
-									 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
-									 QString::fromStdWString(L"确定"),
-									 2,
-									 QString::fromStdWString(L"取消"),
-									 1,
-									 sss,
-									 30);
+									  QString::fromStdWString(L"标题"),
+									  QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
+									  QString::fromStdWString(L"确定"),
+									  2,
+									  QString::fromStdWString(L"取消"),
+									  1,
+									  sss,
+									  30);
 	QString editText = QString::fromStdWString(L"剧毒术士");
 	int32_t dialogId3 = 0;
 	int xxxx = InputDialog::popInputDialog(dialogId3,
-										 QString::fromStdWString(L"标题"),
-										 QString::fromStdWString(L"输入框提示："),
-										 QString::fromStdWString(L"确定"),
-										 1,
-										 editText,
-										 sss,
-										 1,
-										 true);
+										   QString::fromStdWString(L"标题"),
+										   QString::fromStdWString(L"输入框提示："),
+										   QString::fromStdWString(L"确定"),
+										   1,
+										   editText,
+										   sss,
+										   1,
+										   true);
 	int32_t dialogId4 = 0;
 	int xxxxx = WaitDialog::popWaitDialog(dialogId4,
-									   QString::fromStdWString(L"标题"),
-									   QString::fromStdWString(L"输入框提示："),
-									   sss,
-									   1);
+									      QString::fromStdWString(L"标题"),
+									      QString::fromStdWString(L"输入框提示："),
+									      sss,
+									      1);
 
 	int32_t dialogId5 = 0;
-	ShowDialogManager::instance().showTipDialog(dialogId5,
-												11,
-												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
-												QString::fromStdWString(L"标题"),
-												1,
-												QString::fromStdWString(L"知道了1"),
-												3,
-												false);
+	ModelessDialogManager::instance().showTipDialog(dialogId5,
+													11,
+													QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
+													QString::fromStdWString(L"标题"),
+													1,
+													QString::fromStdWString(L"知道了1"),
+													3,
+													false);
 
 	int32_t dialogId6 = 0;
-	ShowDialogManager::instance().showAskDialog(dialogId6,
-												22,
-												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
-												QString::fromStdWString(L"标题"),
-												1,
-												0,
-												QString::fromStdWString(L"同意1"),
-												QString::fromStdWString(L"拒绝1"),
-												30,
-												true);
+	ModelessDialogManager::instance().showAskDialog(dialogId6,
+													22,
+													QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
+													QString::fromStdWString(L"标题"),
+													1,
+													0,
+													QString::fromStdWString(L"同意1"),
+													QString::fromStdWString(L"拒绝1"),
+													30,
+													true);
 
-	QObject::connect((&ShowDialogManager::instance()), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
+	QObject::connect((&ModelessDialogManager::instance()), &ModelessDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
 	//QObject::connect(&ShowDialogManager::instance(), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
 	//QObject::connect(&ShowDialogManager::instance(), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
 	//dlg->windowHandle()->setTransientParent(this->windowHandle());

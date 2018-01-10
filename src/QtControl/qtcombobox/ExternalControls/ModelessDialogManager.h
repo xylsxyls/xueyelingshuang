@@ -9,7 +9,7 @@ class QWidget;
 /** 单一实例，用于统一管理窗口创建关闭，该类的对外接口，销毁所有窗口
 DialogManager::instance().removeAll();
 */
-class ShowDialogManager : public DialogManager
+class ModelessDialogManager : public DialogManager
 {
 	Q_OBJECT
 	friend class DialogBase;
@@ -18,7 +18,7 @@ public:
 	/** 单一实例
 	@return 返回单一实例
 	*/
-	static ShowDialogManager& instance();
+	static ModelessDialogManager& instance();
 
 	/** 显示提示框
 	@param [out] dialogId 窗口ID值

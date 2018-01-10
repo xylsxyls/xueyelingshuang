@@ -78,6 +78,8 @@ void *Label::qt_metacast(const char *_clname)
         return static_cast<void*>(const_cast< Label*>(this));
     if (!strcmp(_clname, "ControlFont<QLabel>"))
         return static_cast< ControlFont<QLabel>*>(const_cast< Label*>(this));
+    if (!strcmp(_clname, "ControlSelf<QLabel>"))
+        return static_cast< ControlSelf<QLabel>*>(const_cast< Label*>(this));
     if (!strcmp(_clname, "ControlBorderForNormalHoverDisabled<QLabel>"))
         return static_cast< ControlBorderForNormalHoverDisabled<QLabel>*>(const_cast< Label*>(this));
     if (!strcmp(_clname, "ControlBackgroundForNormalHoverDisabled<QLabel>"))

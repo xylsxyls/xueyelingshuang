@@ -48,6 +48,9 @@
     <Filter Include="QtWeb">
       <UniqueIdentifier>{76446b83-c029-49a7-b4c1-43a178795eb2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="RPGGameWidget">
+      <UniqueIdentifier>{43a0a4b7-1e94-4f02-903a-b3f00378dd90}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -142,9 +145,6 @@
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_DialogBase.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\qtcombobox\ExternalControls\DialogManager.cpp">
-      <Filter>基础控件\控件库</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\qtcombobox\ExternalControls\DialogShow.cpp">
       <Filter>基础控件\控件库</Filter>
@@ -287,6 +287,69 @@
     <ClCompile Include="GeneratedFiles\Release\moc_WaitDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\ExternalControls\ModelessDialogManager.cpp">
+      <Filter>基础控件\控件库</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ModelessDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ModelessDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\ExternalControls\AskShowDialog.cpp">
+      <Filter>基础控件\控件库</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\ExternalControls\LoginShowDialog.cpp">
+      <Filter>基础控件\控件库</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\ExternalControls\TipShowDialog.cpp">
+      <Filter>基础控件\控件库</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\ExternalControls\DialogManager.cpp">
+      <Filter>基础控件\控件库</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="RPGGameWidget.cpp">
+      <Filter>RPGGameWidget</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RPGGameWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WebViewEx.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WebViewEx.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\WebViewEx.cpp">
+      <Filter>QtWeb</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_RPGGameWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="gameinfowidgetapp.h">
@@ -364,13 +427,31 @@
     <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\WaitDialog.h">
       <Filter>基础控件\控件库</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\ModelessDialogManager.h">
+      <Filter>基础控件\控件库</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\AskShowDialog.h">
+      <Filter>基础控件\控件库</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\LoginShowDialog.h">
+      <Filter>基础控件\控件库</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\TipShowDialog.h">
+      <Filter>基础控件\控件库</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\DialogManager.h">
+      <Filter>基础控件\控件库</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RPGGameWidget.h">
+      <Filter>RPGGameWidget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\WebViewEx.h">
+      <Filter>QtWeb</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_gameinfowidgetapp.h">
       <Filter>Generated Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GameInfoWidgetDataInfo.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\qtcombobox\COriginalButton.h">
       <Filter>基础控件\外层基础控件</Filter>
@@ -399,9 +480,6 @@
     <ClInclude Include="..\..\..\qtcombobox\ExternalControls\CStringManager.h">
       <Filter>基础控件\控件库</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\qtcombobox\ExternalControls\DialogManager.h">
-      <Filter>基础控件\控件库</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\qtcombobox\ExternalControls\HtmlComboBoxDelegate.h">
       <Filter>基础控件\控件库</Filter>
     </ClInclude>
@@ -416,6 +494,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\qtcombobox\ExternalControls\QssString.h">
       <Filter>基础控件\控件库</Filter>
+    </ClInclude>
+    <ClInclude Include="GameInfoWidgetDataInfo.h">
+      <Filter>GameInfoWidget</Filter>
+    </ClInclude>
+    <ClInclude Include="RPGGameWidgetDataInfo.h">
+      <Filter>RPGGameWidget</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

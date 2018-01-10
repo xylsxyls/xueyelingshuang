@@ -7,7 +7,7 @@
 #include <Windows.h>
 #include "CStringManager.h"
 #include "../CGeneralStyle.h"
-#include "ShowDialogManager.h"
+#include "ModelessDialogManager.h"
 
 DialogShow::DialogShow() :
 m_cancelEscAltF4(false),
@@ -196,7 +196,7 @@ void DialogShow::done(int result)
 	if (m_isExec == false)
 	{
 		m_result = result;
-		emit dialogDone(ShowDialogManager::instance().DialogId(this), m_result, m_userType);
+		emit dialogDone(ModelessDialogManager::instance().DialogId(this), m_result, m_userType);
 		m_animation.setDuration(250);
 		m_animation.setStartValue(m_beginRect);
 		m_animation.setEndValue(m_endRect);
@@ -213,7 +213,7 @@ void DialogShow::end()
 {
 	if (m_result != -1)
 	{
-		ShowDialogManager::instance().removeDialog(this);
+		ModelessDialogManager::instance().removeDialog(this);
 		DialogBase::done(m_result);
 		delete this;
 	}

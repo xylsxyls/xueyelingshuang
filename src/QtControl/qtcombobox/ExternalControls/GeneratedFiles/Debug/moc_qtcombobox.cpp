@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_qtcombobox_t {
-    QByteArrayData data[15];
-    char stringdata0[149];
+    QByteArrayData data[16];
+    char stringdata0[164];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -38,18 +38,20 @@ QT_MOC_LITERAL(5, 58, 2), // "id"
 QT_MOC_LITERAL(6, 61, 15), // "htmlItemPressed"
 QT_MOC_LITERAL(7, 77, 5), // "index"
 QT_MOC_LITERAL(8, 83, 8), // "modalPop"
-QT_MOC_LITERAL(9, 92, 10), // "testDialog"
-QT_MOC_LITERAL(10, 103, 12), // "onDialogDone"
-QT_MOC_LITERAL(11, 116, 7), // "int32_t"
-QT_MOC_LITERAL(12, 124, 8), // "dialogId"
-QT_MOC_LITERAL(13, 133, 6), // "result"
-QT_MOC_LITERAL(14, 140, 8) // "userType"
+QT_MOC_LITERAL(9, 92, 14), // "modalFriendPop"
+QT_MOC_LITERAL(10, 107, 10), // "testDialog"
+QT_MOC_LITERAL(11, 118, 12), // "onDialogDone"
+QT_MOC_LITERAL(12, 131, 7), // "int32_t"
+QT_MOC_LITERAL(13, 139, 8), // "dialogId"
+QT_MOC_LITERAL(14, 148, 6), // "result"
+QT_MOC_LITERAL(15, 155, 8) // "userType"
 
     },
     "qtcombobox\0currentTextChanged6\0\0str\0"
     "idComboBoxItemChanged\0id\0htmlItemPressed\0"
-    "index\0modalPop\0testDialog\0onDialogDone\0"
-    "int32_t\0dialogId\0result\0userType"
+    "index\0modalPop\0modalFriendPop\0testDialog\0"
+    "onDialogDone\0int32_t\0dialogId\0result\0"
+    "userType"
 };
 #undef QT_MOC_LITERAL
 
@@ -59,7 +61,7 @@ static const uint qt_meta_data_qtcombobox[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-       6,   14, // methods
+       7,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -67,12 +69,13 @@ static const uint qt_meta_data_qtcombobox[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    1,   44,    2, 0x08 /* Private */,
-       4,    2,   47,    2, 0x08 /* Private */,
-       6,    1,   52,    2, 0x08 /* Private */,
-       8,    0,   55,    2, 0x08 /* Private */,
-       9,    0,   56,    2, 0x08 /* Private */,
-      10,    3,   57,    2, 0x08 /* Private */,
+       1,    1,   49,    2, 0x08 /* Private */,
+       4,    2,   52,    2, 0x08 /* Private */,
+       6,    1,   57,    2, 0x08 /* Private */,
+       8,    0,   60,    2, 0x08 /* Private */,
+       9,    0,   61,    2, 0x08 /* Private */,
+      10,    0,   62,    2, 0x08 /* Private */,
+      11,    3,   63,    2, 0x08 /* Private */,
 
  // slots: parameters
     QMetaType::Void, QMetaType::QString,    3,
@@ -80,7 +83,8 @@ static const uint qt_meta_data_qtcombobox[] = {
     QMetaType::Void, QMetaType::Int,    7,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, 0x80000000 | 11, 0x80000000 | 11, 0x80000000 | 11,   12,   13,   14,
+    QMetaType::Void,
+    QMetaType::Void, 0x80000000 | 12, 0x80000000 | 12, 0x80000000 | 12,   13,   14,   15,
 
        0        // eod
 };
@@ -95,8 +99,9 @@ void qtcombobox::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 1: _t->idComboBoxItemChanged((*reinterpret_cast< qint64(*)>(_a[1])),(*reinterpret_cast< const QString(*)>(_a[2]))); break;
         case 2: _t->htmlItemPressed((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 3: _t->modalPop(); break;
-        case 4: _t->testDialog(); break;
-        case 5: _t->onDialogDone((*reinterpret_cast< int32_t(*)>(_a[1])),(*reinterpret_cast< int32_t(*)>(_a[2])),(*reinterpret_cast< int32_t(*)>(_a[3]))); break;
+        case 4: _t->modalFriendPop(); break;
+        case 5: _t->testDialog(); break;
+        case 6: _t->onDialogDone((*reinterpret_cast< int32_t(*)>(_a[1])),(*reinterpret_cast< int32_t(*)>(_a[2])),(*reinterpret_cast< int32_t(*)>(_a[3]))); break;
         default: ;
         }
     }
@@ -127,13 +132,13 @@ int qtcombobox::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 6)
+        if (_id < 7)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 6;
+        _id -= 7;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 6)
+        if (_id < 7)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 6;
+        _id -= 7;
     }
     return _id;
 }

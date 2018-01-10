@@ -168,7 +168,16 @@
     <Filter Include="QtDialog\Modal\DialogManager">
       <UniqueIdentifier>{062225db-0305-49b3-8c53-12af750b9efd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="QtDialog\UnModal\ShowDialogManager">
+    <Filter Include="COriginalDialog">
+      <UniqueIdentifier>{e807bfa0-ddf7-4e7a-b8b0-b07a72990ac3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CW3LModalFrame">
+      <UniqueIdentifier>{606aba6a-addf-4e51-87e1-c642c2bc4b93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FriendDialog">
+      <UniqueIdentifier>{e6847ddd-ff04-4799-bb60-908cd3d921a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal\ModelessDialogManager">
       <UniqueIdentifier>{8f80f1ed-89ec-4dc3-8e73-02126e63e0fa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -416,15 +425,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_LoginShowDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="ShowDialogManager.cpp">
-      <Filter>QtDialog\UnModal\ShowDialogManager</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_ShowDialogManager.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_ShowDialogManager.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_AskShowDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
@@ -433,6 +433,36 @@
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_DialogManager.cpp">
       <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\COriginalDialog.cpp">
+      <Filter>COriginalDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CW3LModalFrame.cpp">
+      <Filter>CW3LModalFrame</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CW3LModalFrame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CW3LModalFrame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelessDialogManager.cpp">
+      <Filter>QtDialog\UnModal\ModelessDialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ModelessDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ModelessDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="FriendDialog.cpp">
+      <Filter>FriendDialog</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -532,8 +562,14 @@
     <CustomBuild Include="LoginShowDialog.h">
       <Filter>QtDialog\UnModal\LoginShowDialog</Filter>
     </CustomBuild>
-    <CustomBuild Include="ShowDialogManager.h">
-      <Filter>QtDialog\UnModal\ShowDialogManager</Filter>
+    <CustomBuild Include="..\COriginalDialog.h">
+      <Filter>COriginalDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\CW3LModalFrame.h">
+      <Filter>CW3LModalFrame</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ModelessDialogManager.h">
+      <Filter>QtDialog\UnModal\ModelessDialogManager</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -569,6 +605,9 @@
     </ClInclude>
     <ClInclude Include="HtmlComboBoxStyle.h">
       <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="FriendDialog.h">
+      <Filter>FriendDialog</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

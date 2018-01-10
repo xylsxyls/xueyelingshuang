@@ -19,6 +19,7 @@ private slots:
 	void idComboBoxItemChanged(qint64 id, const QString& str);
 	void htmlItemPressed(int index);
 	void modalPop();
+	void modalFriendPop();
 	void testDialog();
 	void onDialogDone(int32_t dialogId, int32_t result, int32_t userType);
 private:

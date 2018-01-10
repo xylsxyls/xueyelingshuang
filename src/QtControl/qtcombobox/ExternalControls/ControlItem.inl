@@ -16,6 +16,12 @@ void ControlItem<QBase>::setItemBorderWidth(int32_t width, bool rePaint)
 }
 
 template<class QBase>
+void ControlItem<QBase>::setItemBorderRadius(int32_t radius, bool rePaint)
+{
+	ControlBase<QBase>::setPxValue(L"border-radius", radius, true, rePaint);
+}
+
+template<class QBase>
 void ControlItem<QBase>::setItemWidth(int32_t width, bool rePaint)
 {
 	ControlBase<QBase>::setPxValue(L"width", width, true, rePaint);

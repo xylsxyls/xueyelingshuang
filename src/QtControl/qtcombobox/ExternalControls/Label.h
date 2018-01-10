@@ -2,12 +2,14 @@
 #include <QtWidgets/QLabel>
 #include "ControlShow.h"
 #include "ControlFont.h"
+#include "ControlSelf.h"
 #include "ControlBorder.h"
 #include "ControlBackground.h"
 
 class Label : 
 	public ControlShow < QLabel >,
 	public ControlFont < QLabel >,
+	public ControlSelf < QLabel >,
 	public ControlBorderForNormalHoverDisabled < QLabel >,
 	public ControlBackgroundForNormalHoverDisabled < QLabel >
 {
