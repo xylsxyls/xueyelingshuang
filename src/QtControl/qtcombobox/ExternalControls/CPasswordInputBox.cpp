@@ -92,6 +92,11 @@ void CPasswordInputBox::setMaskBackgroundImage(const QString& backgroundImgPath,
 							  backgroundImgCkDisabled);
 }
 
+void CPasswordInputBox::setMaskVisible(bool enable)
+{
+	m_maskButton->setVisible(enable);
+}
+
 void CPasswordInputBox::layoutControl()
 {
 	if (m_maskButton == nullptr)

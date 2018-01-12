@@ -13,9 +13,9 @@ public:
 	@param [in] title 标题
 	@param [in] tip 提示内容
 	@param [in] acceptText 按钮内容
-	@param [in] acceptDone 确认按钮按下后的返回值
+	@param [in] acceptDone 确认按钮按下后信号里的参数值
 	@param [in] ignoreText 按钮内容
-	@param [in] ignoreDone 取消按钮按下后的返回值
+	@param [in] ignoreDone 取消按钮按下后信号里的参数值
 	@param [in] timeOut 超时自动关闭，单位秒
 	@param [in] isCountDownVisible 倒计时是否显示
 	*/

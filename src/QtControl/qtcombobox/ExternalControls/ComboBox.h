@@ -205,6 +205,12 @@ public:
 	*/
 	void setListMaxHeight(int32_t maxHeight);
 
+	/** 设置下拉箭头是否隐藏
+	@param [in] enable 是否隐藏
+	@param [in] rePaint 是否立即重画
+	*/
+	void setDropDownVisible(bool enable, bool rePaint = false);
+
 	/** 重画
 	*/
 	virtual void repaint();
@@ -238,4 +244,8 @@ private:
 	std::map<int32_t, std::map<int32_t, int32_t>> m_imageStateMap;
 	std::wstring m_imagePath;
 	int32_t m_listOrigin;
+	int32_t m_dropDownWidth;
+	int32_t m_dropDownHeight;
+	int32_t m_dropDownBorderWidth;
+	bool m_dropDownVisible;
 };

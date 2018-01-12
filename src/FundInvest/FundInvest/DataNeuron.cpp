@@ -344,7 +344,7 @@ double DataNeuron::GetBidSellAvg_5(int32_t type, int32_t bidSell)
 double DataNeuron::GetAlways(DataNeuron* begin)
 {
 	double result = 1;
-	while (begin != this->m_nextData)
+	while (begin != this)
 	{
 		begin = begin->m_nextData;
 		result *= (1 + begin->m_dayChg);

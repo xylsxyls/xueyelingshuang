@@ -4,7 +4,7 @@
 #include "../CGeneralStyle.h"
 #include <QtWebKitWidgets/QWebView>
 #include <QDesktopServices>
-#include "ModelessDialogManager.h"
+#include "NotifyDialogManager.h"
 
 void LoginShowDialog::showLoginDialog(int32_t& dialogId,
 									  int32_t userType,
@@ -19,8 +19,7 @@ void LoginShowDialog::showLoginDialog(int32_t& dialogId,
 {
 	LoginShowDialog* dlg = new LoginShowDialog(userType, title, greeting, tip, urlButtonText, linkUrl, isUrlButtonVisible);
 	dlg->show(dialogId, timeOut, isCountDownVisible);
-	//QObject::connect(dlg, SIGNAL(dialogDone(int32_t, int32_t, int32_t)), (const QObject*)(&(ShowDialogManager::instance())), SIGNAL(dialogDone(int32_t, int32_t, int32_t)));
-	QObject::connect(dlg, &LoginShowDialog::dialogDone, &(ModelessDialogManager::instance()), &ModelessDialogManager::dialogDone);
+	QObject::connect(dlg, &LoginShowDialog::dialogDone, &(NotifyDialogManager::instance()), &NotifyDialogManager::dialogDone);
 	return;
 }
 
@@ -40,7 +39,7 @@ LoginShowDialog::LoginShowDialog(int32_t userType,
 	m_greeting = addLabel(greeting, QRect(8, 39, 190, 17), QColor(187, 187, 195, 255));
 	m_greeting->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
 	m_greeting->setFontSize(13);
-	m_separator = addSeparator(QPoint(6, 57), 183, true, QColor(60, 73, 104, 255), QColor(50, 60, 85, 255));
+	m_separator = addSeparator(QPoint(6, 57), width() - 6 * 2, true, QColor(60, 73, 104, 255), QColor(50, 60, 85, 255));
 	m_horn = addLabel("", QRect(8, 66, 17, 17), QColor(0, 0, 0, 0));
 	m_horn->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/broadcast.png", 1, 1, 1, 1);
 	
@@ -74,7 +73,7 @@ LoginShowDialog::LoginShowDialog(int32_t userType,
 		return;
 	}
 	m_more->setText(urlButtonText);
-	m_more->setGeometry(QRect(8, 118, 180, 22));
+	m_more->setGeometry(QRect(8, height() - 25, width() - 17, 22));
 	m_more->setFontSize(13);
 	m_more->setFontColor(QColor(11, 199, 210, 255));
 	m_more->setTextAlign("right");

@@ -55,6 +55,11 @@ public:
 								int32_t backgroundImgCkHover = 6,
 								int32_t backgroundImgCkPressed = 7,
 								int32_t backgroundImgCkDisabled = 8);
+
+	/** 设置按钮是否隐藏
+	@param [in] enable 是否隐藏
+	*/
+	void setMaskVisible(bool enable);
 	
 private:
     void layoutControl();

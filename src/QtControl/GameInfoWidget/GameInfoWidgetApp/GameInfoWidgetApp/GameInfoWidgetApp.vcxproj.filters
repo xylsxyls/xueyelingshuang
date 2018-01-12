@@ -287,15 +287,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_WaitDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\qtcombobox\ExternalControls\ModelessDialogManager.cpp">
-      <Filter>基础控件\控件库</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_ModelessDialogManager.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_ModelessDialogManager.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\qtcombobox\ExternalControls\AskShowDialog.cpp">
       <Filter>基础控件\控件库</Filter>
     </ClCompile>
@@ -348,6 +339,15 @@
       <Filter>QtWeb</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_RPGGameWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\ExternalControls\NotifyDialogManager.cpp">
+      <Filter>基础控件\控件库</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NotifyDialogManager.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
@@ -427,9 +427,6 @@
     <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\WaitDialog.h">
       <Filter>基础控件\控件库</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\ModelessDialogManager.h">
-      <Filter>基础控件\控件库</Filter>
-    </CustomBuild>
     <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\AskShowDialog.h">
       <Filter>基础控件\控件库</Filter>
     </CustomBuild>
@@ -447,6 +444,9 @@
     </CustomBuild>
     <CustomBuild Include="..\..\..\qtcombobox\WebViewEx.h">
       <Filter>QtWeb</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\ExternalControls\NotifyDialogManager.h">
+      <Filter>基础控件\控件库</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

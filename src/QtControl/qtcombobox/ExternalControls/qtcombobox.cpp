@@ -22,7 +22,7 @@
 #include "../COriginalButton.h"
 #include <QWindow>
 #include "DialogManager.h"
-#include "ModelessDialogManager.h"
+#include "NotifyDialogManager.h"
 #include "FriendDialog.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
@@ -50,13 +50,13 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setBorderWidth(1);
 	pBox->setBorderRadius(8);
 	//pBox->setBorderImage("D:/dropdown.png", 4, 1, 2, 3, 4);
-	pBox->setDropDownSize(20, 26);
+	//pBox->setDropDownSize(20, 26);
 	pBox->setDropDownImage("D:/hot.png", 8, 1, 2, 4, 5, 8);
 	pBox->setTextColor(QColor(255, 0, 0, 1),
 					   QColor(0, 0, 255, 1),
 					   QColor(255, 0, 255, 1),
 					   QColor(255, 0, 0, 1));
-	pBox->setDropDownBorderWidth(0);
+	pBox->setDropDownBorderWidth(1);
 	pBox->setTextOrigin(20);
 
 	pBox->setListBorderWidth(1);
@@ -83,6 +83,10 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->addItem("123458");
 	pBox->addItem("123459");
 	pBox->addItem("123450");
+	pBox->setDropDownSize(10, 26);
+	pBox->setDropDownVisible(false);
+	//pBox->setDropDownSize(10, 26);
+	//pBox->setDropDownVisible(true);
 
 	pBox->addItem("asdf<font color = \"red\">15ms</font>");
 
@@ -433,6 +437,35 @@ void qtcombobox::modalPop()
 void qtcombobox::modalFriendPop()
 {
 	FriendDialog fdlg;
+	FriendDialog::Group groupList;
+	groupList.m_groupId = 0;
+	groupList.m_groupName = QString::fromStdWString(L"我的可邀请好友");
+	FriendDialog::User user;
+	user.m_userId = 0;
+	user.m_userName = "a1";
+	user.m_userPicPath = "23423";
+	user.m_userState = 0;
+	groupList.m_userList.push_back(user);
+
+	user.m_userId = 1;
+	user.m_userName = "b1";
+	user.m_userPicPath = "23423";
+	user.m_userState = 0;
+	groupList.m_userList.push_back(user);
+
+	user.m_userId = 2;
+	user.m_userName = "c1";
+	user.m_userPicPath = "23423";
+	user.m_userState = 0;
+	groupList.m_userList.push_back(user);
+
+	user.m_userId = 3;
+	user.m_userName = "d1";
+	user.m_userPicPath = "23423";
+	user.m_userState = 0;
+	groupList.m_userList.push_back(user);
+
+	fdlg.addGroupList(groupList);
 	
 	fdlg.exec();
 }
@@ -440,7 +473,7 @@ void qtcombobox::modalFriendPop()
 void qtcombobox::testDialog()
 {
 	int32_t dialogId7 = 0;
-	ModelessDialogManager::instance().showLoginDialog(dialogId7,
+	NotifyDialogManager::instance().showLoginDialog(dialogId7,
 												  33,
 												  QString::fromStdWString(L"<a href=\"http://www.baidu.com\">www.baidu.com</a>123456"),
 												  QString::fromStdWString(L"www.sougou.com"),
@@ -487,7 +520,7 @@ void qtcombobox::testDialog()
 									      1);
 
 	int32_t dialogId5 = 0;
-	ModelessDialogManager::instance().showTipDialog(dialogId5,
+	NotifyDialogManager::instance().showTipDialog(dialogId5,
 													11,
 													QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
 													QString::fromStdWString(L"标题"),
@@ -497,7 +530,7 @@ void qtcombobox::testDialog()
 													false);
 
 	int32_t dialogId6 = 0;
-	ModelessDialogManager::instance().showAskDialog(dialogId6,
+	NotifyDialogManager::instance().showAskDialog(dialogId6,
 													22,
 													QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
 													QString::fromStdWString(L"标题"),
@@ -508,7 +541,7 @@ void qtcombobox::testDialog()
 													30,
 													true);
 
-	QObject::connect((&ModelessDialogManager::instance()), &ModelessDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
+	QObject::connect((&NotifyDialogManager::instance()), &NotifyDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
 	//QObject::connect(&ShowDialogManager::instance(), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
 	//QObject::connect(&ShowDialogManager::instance(), &ShowDialogManager::dialogDone, this, &qtcombobox::onDialogDone);
 	//dlg->windowHandle()->setTransientParent(this->windowHandle());

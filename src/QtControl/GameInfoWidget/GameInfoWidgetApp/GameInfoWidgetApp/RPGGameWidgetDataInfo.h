@@ -18,7 +18,7 @@
 
 /** 右侧控件禁用时文字颜色
 */
-#define CONTROL_DISABLED_TEXT_COLOR QColor(82, 126, 185, 255)
+#define CONTROL_DISABLED_TEXT_COLOR CONTROL_TEXT_COLOR
 
 /** 保存按钮边框颜色
 */
@@ -140,23 +140,23 @@ enum
 
 	/** 邀请好友按钮宽度
 	*/
-	INVITE_FRIEND_WIDTH = WIDGET_WIDTH,
+	INVITE_FRIEND_WIDTH = 206,
 
 	/** 邀请好友按钮高度
 	*/
-	INVITE_FRIEND_HEIGHT = 34,
+	INVITE_FRIEND_HEIGHT = 30,
 
 	/** 开始游戏按钮宽度
 	*/
-	START_GAME_WIDTH = 164,
+	START_GAME_WIDTH = 118,
 
 	/** 开始游戏按钮高度
 	*/
-	START_GAME_HEIGHT = 38,
+	START_GAME_HEIGHT = 40,
 
 	/** 退出按钮宽度
 	*/
-	EXIT_WIDTH = 58,
+	EXIT_WIDTH = 72,
 
 	/** 退出按钮高度
 	*/
@@ -164,7 +164,7 @@ enum
 
 	/** 按钮之前的间隔宽度
 	*/
-	BUTTONS_SPACING = 6,
+	BUTTONS_SPACING = 16,
 
 	/** 开始游戏按钮横轴起始位置
 	*/
@@ -212,18 +212,18 @@ enum
 
 	/** 下拉箭头宽度
 	*/
-	DROP_DOWN_WIDTH = 10,
+	DROP_DOWN_WIDTH = 17,
 
 	/** 下拉箭头高度
 	*/
-	DROP_DOWN_HEIGHT = 5,
+	DROP_DOWN_HEIGHT = 22,
 
 	/** 下拉箭头距离右上角横轴距离
 	*/
-	DROP_DOWN_ORIGIN_X = 7,
+	DROP_DOWN_ORIGIN_X = 5,
 
 	/** 下拉箭头距离右上角纵轴距离
 	*/
-	DROP_DOWN_ORIGIN_Y = 5,
+	DROP_DOWN_ORIGIN_Y = 0,
 
 };

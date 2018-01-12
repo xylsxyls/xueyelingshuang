@@ -117,6 +117,7 @@ public:
 	double m_avg_in_always6 = 0;
 	double m_avg_in_always12 = 0;
 
+	//包括今天的
 	double m_upDown_4 = 0;
 
 private:

@@ -19,7 +19,11 @@ m_dropDownImgDisabled(4),
 m_dropDownImgExpandNormal(5),
 m_dropDownImgExpandDisabled(8),
 m_dropDownImgStateCount(8),
-m_hoverIndex(-1)
+m_hoverIndex(-1),
+m_dropDownWidth(-1),
+m_dropDownHeight(-1),
+m_dropDownVisible(true),
+m_dropDownBorderWidth(-1)
 {
 	ControlBase::setControlShow(this);
 	INIT(L"drop-down");
@@ -106,13 +110,22 @@ void ComboBox::setDefault()
 
 void ComboBox::setDropDownSize(int32_t width, int32_t height, bool rePaint)
 {
-	ControlBase::setPxValue(L"width", width, true, false);
-	ControlBase::setPxValue(L"height", GetInt(height, width), true, rePaint);
+	m_dropDownWidth = width;
+	m_dropDownHeight = GetInt(height, width);
+	if (m_dropDownVisible)
+	{
+		ControlBase::setPxValue(L"width", width, true, false);
+		ControlBase::setPxValue(L"height", GetInt(height, width), true, rePaint);
+	}
 }
 
 void ComboBox::setDropDownBorderWidth(int32_t width, bool rePaint)
 {
-	ControlBase::setPxSolidValue(L"border", width, true, rePaint);
+	m_dropDownBorderWidth = width;
+	if (m_dropDownVisible)
+	{
+		ControlBase::setPxSolidValue(L"border", width, true, rePaint);
+	}
 }
 
 void ComboBox::setDropDownImage(const QString& dropDownImgPath,
@@ -267,6 +280,34 @@ void ComboBox::setListItemAroundOrigin(int32_t leftOrigin,
 void ComboBox::setListMaxHeight(int32_t maxHeight)
 {
 	((QWidget*)(view()->parent()))->setStyleSheet(QString("max-height:%1px").arg(maxHeight));
+}
+
+void ComboBox::setDropDownVisible(bool enable, bool rePaint)
+{
+	m_dropDownVisible = enable;
+	if (m_dropDownVisible == false)
+	{
+		ControlBase::setPxValue(L"min-width", 0, true, false);
+		ControlBase::setPxValue(L"min-height", 0, true, false);
+		ControlBase::setPxValue(L"max-width", 0, true, false);
+		ControlBase::setPxValue(L"max-height", 0, true, false);
+		ControlBase::setPxValue(L"width", 0, true, false);
+		ControlBase::setPxValue(L"height", 0, true, false);
+		ControlBase::setPxSolidValue(L"border", 1, true, rePaint);
+	}
+	else if (m_dropDownWidth != -1 && m_dropDownHeight != -1)
+	{
+		ControlBase::setPxValue(L"min-width", m_dropDownWidth, true, false);
+		ControlBase::setPxValue(L"min-height", m_dropDownHeight, true, false);
+		ControlBase::setPxValue(L"max-width", m_dropDownWidth, true, false);
+		ControlBase::setPxValue(L"max-height", m_dropDownHeight, true, false);
+		ControlBase::setPxValue(L"width", m_dropDownWidth, true, false);
+		ControlBase::setPxValue(L"height", m_dropDownHeight, true, false);
+		if (m_dropDownBorderWidth != -1)
+		{
+			ControlBase::setPxSolidValue(L"border", m_dropDownBorderWidth, true, rePaint);
+		}
+	}
 }
 
 void ComboBox::showEvent(QShowEvent* eve)

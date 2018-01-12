@@ -9,7 +9,7 @@ class QWidget;
 /** 单一实例，用于统一管理窗口创建关闭，该类的对外接口，销毁所有窗口
 DialogManager::instance().removeAll();
 */
-class ModelessDialogManager : public DialogManager
+class NotifyDialogManager : public DialogManager
 {
 	Q_OBJECT
 	friend class DialogBase;
@@ -18,14 +18,14 @@ public:
 	/** 单一实例
 	@return 返回单一实例
 	*/
-	static ModelessDialogManager& instance();
+	static NotifyDialogManager& instance();
 
 	/** 显示提示框
 	@param [out] dialogId 窗口ID值
 	@param [in] userType 用户自定义值，当窗口关闭时会发送信号，信号中含有这个值
 	@param [in] tip 提示内容
 	@param [in] title 标题
-	@param [in] done 按钮按下后的返回值
+	@param [in] done 按钮按下后信号里的参数值
 	@param [in] timeOut 超时自动关闭，单位秒
 	@param [in] isCountDownVisible 倒计时是否显示
 	*/
@@ -43,8 +43,8 @@ public:
 	@param [in] userType 用户自定义值，当窗口关闭时会发送信号，信号中含有这个值
 	@param [in] tip 提示内容
 	@param [in] title 标题
-	@param [in] acceptDone 确认按钮按下后的返回值
-	@param [in] ignoreDone 取消按钮按下后的返回值
+	@param [in] acceptDone 确认按钮按下后信号里的参数值
+	@param [in] ignoreDone 取消按钮按下后信号里的参数值
 	@param [in] timeOut 超时自动关闭，单位秒
 	@param [in] isCountDownVisible 倒计时是否显示
 	*/
@@ -77,6 +77,7 @@ public:
 						 int32_t timeOut = 30,
 						 bool isUrlButtonVisible = false,
 						 bool isCountDownVisible = false);
+
 Q_SIGNALS:
 	void dialogDone(int32_t dialogId, int32_t result, int32_t userType);
 

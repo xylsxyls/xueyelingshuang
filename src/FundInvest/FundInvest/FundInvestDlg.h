@@ -117,5 +117,6 @@ public:
 	double m_simulationFund = 100000.0;
 	bool m_isHave = false;
 	afx_msg void OnBnClickedButton19();
+	afx_msg void OnBnClickedButton22();
 };
 

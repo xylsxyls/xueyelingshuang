@@ -2,7 +2,7 @@
 #include "Label.h"
 #include "../COriginalButton.h"
 #include "../CGeneralStyle.h"
-#include "ModelessDialogManager.h"
+#include "NotifyDialogManager.h"
 
 void TipShowDialog::showTipDialog(int32_t& dialogId,
 								  int32_t userType,
@@ -15,8 +15,7 @@ void TipShowDialog::showTipDialog(int32_t& dialogId,
 {
 	TipShowDialog* dlg = new TipShowDialog(userType, title, tip, buttonText, done);
 	dlg->show(dialogId, timeOut, isCountDownVisible);
-	QObject::connect(dlg, &TipShowDialog::dialogDone, &(ModelessDialogManager::instance()), &ModelessDialogManager::dialogDone);
-	//QObject::connect(dlg, SIGNAL(dialogDone(int32_t, int32_t, int32_t)), (const QObject*)(&(ShowDialogManager::instance())), SIGNAL(dialogDone(int32_t, int32_t, int32_t)));
+	QObject::connect(dlg, &TipShowDialog::dialogDone, &(NotifyDialogManager::instance()), &NotifyDialogManager::dialogDone);
 	return;
 }
 

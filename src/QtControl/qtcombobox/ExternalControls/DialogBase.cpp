@@ -6,7 +6,7 @@
 #include <QWindow>
 #include "CPasswordInputBox.h"
 #include "DialogManager.h"
-#include "ModelessDialogManager.h"
+#include "NotifyDialogManager.h"
 #include "../CGeneralStyle.h"
 
 DialogBase::DialogBase():
@@ -37,7 +37,7 @@ void DialogBase::show(int32_t& dialogId, int32_t timeOut, bool isCountDownVisibl
 		return;
 	}
 	m_timeVisible = isCountDownVisible;
-	dialogId = ModelessDialogManager::instance().setDialog(this);
+	dialogId = NotifyDialogManager::instance().setDialog(this);
 	QDialog::show();
 	return;
 }
