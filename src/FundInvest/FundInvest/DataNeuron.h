@@ -11,6 +11,12 @@ enum
     FORECAST_DAYS = 3,
 	HOLD,
 	WAIT,
+    BUY,
+    SELL,
+    SMALL,
+    BIG,
+    UP,
+    DOWN
 };
 
 class DataNeuron

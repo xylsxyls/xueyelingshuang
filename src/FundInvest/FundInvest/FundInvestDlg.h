@@ -11,7 +11,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "afxwin.h"
 
-#define FUND_NUM std::string("161725")//161725
+#define FUND_NUM std::string("110022")//161725
 
 class CDrawDlg;
 // CFundInvestDlg ¶Ô»°¿ò
@@ -118,5 +118,11 @@ public:
 	bool m_isHave = false;
 	afx_msg void OnBnClickedButton19();
 	afx_msg void OnBnClickedButton22();
+    afx_msg void OnBnClickedButton23();
+
+    void Buy(double fundHandlePersent, double& fundHave, double& fund, double buyCharge);
+    void Sell(double fundHandlePersent, double& fundHave, double& frozen, double sellCharge);
+    int32_t Condition(DataNeuron* nowNeuron, double& fundHandlePersent);
+    void HandleFrozen(double& frozen, double& fund);
 };
 
