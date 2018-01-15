@@ -36,7 +36,23 @@ public:
 	*/
 	void setMaxHeight(int32_t maxHeight, bool rePaint = false);
 
+	/** 初始化滚动条样式
+	*/
+	void initScrollBar();
+
+	/** 添加一个节点，如果父节点为空则添加组
+	@param [in] itemHeight 节点高度
+	@param [in] widget 节点指针
+	@param [in] parent 父节点指针
+	@param [in] column 第几列
+	*/
 	void addWidget(int32_t itemHeight, QWidget* widget, QWidget* parent = nullptr, int32_t column = 0);
+
+	/** 移除一个节点
+	@param [in] widget 节点指针
+	@param [in] column 第几列
+	*/
+	void removeWidget(QWidget* widget, int32_t column = 0);
 
 private:
 	std::map<QWidget*, QTreeWidgetItem*> m_itemData;

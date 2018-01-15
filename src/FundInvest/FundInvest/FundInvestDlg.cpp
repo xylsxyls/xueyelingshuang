@@ -1402,6 +1402,7 @@ void CFundInvestDlg::OnBnClickedButton23()
 		nowNeuron = nowNeuron->m_nextData;
 	}
     fundHave = fundHave * (1 + nowNeuron->m_dayChg);
+	HandleFrozen(frozen, fund);
     Sell(1, fundHave, frozen, sellCharge);
     HandleFrozen(frozen, fund);
     double x = (fund - 100000) / 100000.0;
@@ -1490,51 +1491,67 @@ int32_t CFundInvestDlg::Condition(DataNeuron* nowNeuron, double& fundHandlePerse
             persent = 2 / 3.0;
             buySell = SELL;
         }
-        else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) <= bigSmall)
-        {
-            persent = 1 / 3.0;
-            buySell = BUY;
-        }
-        else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > bigSmall)
-        {
-            persent = 2 / 3.0;
-            buySell = BUY;
-        }
+		else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) <= smallFund)
+		{
+			persent = 1 / 6.0;
+			buySell = BUY;
+		}
+		else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > smallFund && (nowNeuron->m_dayChg * -1) <= bigFund)
+		{
+			persent = 1 / 3.0;
+			buySell = BUY;
+		}
+		else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > bigFund)
+		{
+			persent = 1 / 2.0;
+			buySell = BUY;
+		}
+		
+		//else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) <= bigSmall)
+		//{
+		//	persent = 1 / 3.0;
+		//	buySell = BUY;
+		//}
+		//else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > bigSmall)
+		//{
+		//	persent = 2 / 3.0;
+		//	buySell = BUY;
+		//}
     }
-    else if (nowNeuron->m_upDown_5 >= 0.03 && nowNeuron->m_upDown_5 <= 0.05)
-    {
-        if (nowNeuron->m_dayChg > 0 && nowNeuron->m_dayChg <= smallFund)
-        {
-            persent = 1 / 6.0;
-            buySell = SELL;
-        }
-        else if (nowNeuron->m_dayChg > 0 && nowNeuron->m_dayChg > smallFund && nowNeuron->m_dayChg <= bigFund)
-        {
-            persent = 1 / 3.0;
-            buySell = SELL;
-        }
-        else if (nowNeuron->m_dayChg > 0 && nowNeuron->m_dayChg > bigFund)
-        {
-            persent = 1 / 2.0;
-            buySell = SELL;
-        }
-        else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) <= smallFund)
-        {
-            persent = 1 / 6.0;
-            buySell = BUY;
-        }
-        else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > smallFund && (nowNeuron->m_dayChg * -1) <= bigFund)
-        {
-            persent = 1 / 3.0;
-            buySell = BUY;
-        }
-        else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > bigFund)
-        {
-            persent = 1 / 2.0;
-            buySell = BUY;
-        }
-    }
-    else if (nowNeuron->m_upDown_5 >= 0.0 && nowNeuron->m_upDown_5 < 0.03)
+	else if (nowNeuron->m_upDown_5 >= 0.04 && nowNeuron->m_upDown_5 <= 0.05)
+	{
+		if (nowNeuron->m_dayChg > 0 && nowNeuron->m_dayChg <= smallFund)
+		{
+			persent = 1 / 6.0;
+			buySell = SELL;
+		}
+		else if (nowNeuron->m_dayChg > 0 && nowNeuron->m_dayChg > smallFund && nowNeuron->m_dayChg <= bigFund)
+		{
+			persent = 1 / 3.0;
+			buySell = SELL;
+		}
+		else if (nowNeuron->m_dayChg > 0 && nowNeuron->m_dayChg > bigFund)
+		{
+			persent = 1 / 2.0;
+			buySell = SELL;
+		}
+		else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) <= smallFund)
+		{
+			persent = 1 / 6.0;
+			buySell = BUY;
+		}
+		else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > smallFund && (nowNeuron->m_dayChg * -1) <= bigFund)
+		{
+			persent = 1 / 3.0;
+			buySell = BUY;
+		}
+		else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > bigFund)
+		{
+			persent = 1 / 2.0;
+			buySell = BUY;
+		}
+	}
+    else if (nowNeuron->m_upDown_5 >= 0.0 && nowNeuron->m_upDown_5 <= 0.04)
     {
         if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) <= smallFund)
         {
@@ -1571,33 +1588,48 @@ int32_t CFundInvestDlg::Condition(DataNeuron* nowNeuron, double& fundHandlePerse
         buySell = SELL;
         }
         else */
-        if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) <= smallFund)
-        {
-            persent = 1 / 6.0;
-            buySell = BUY;
-        }
-        else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > smallFund && (nowNeuron->m_dayChg * -1) <= bigFund)
-        {
-            persent = 1 / 3.0;
-            buySell = BUY;
-        }
-        else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > bigFund)
-        {
-            persent = 1 / 2.0;
-            buySell = BUY;
-        }
+		//if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) <= bigSmall)
+		//{
+		//	persent = 1 / 3.0;
+		//	buySell = BUY;
+		//}
+		//else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > bigSmall)
+		//{
+		//	persent = 2 / 3.0;
+		//	buySell = BUY;
+		//}
+		if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) <= smallFund)
+		{
+		    persent = 1 / 6.0;
+		    buySell = BUY;
+		}
+		else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > smallFund && (nowNeuron->m_dayChg * -1) <= bigFund)
+		{
+		    persent = 1 / 3.0;
+		    buySell = BUY;
+		}
+		else if (nowNeuron->m_dayChg < 0 && (nowNeuron->m_dayChg * -1) > bigFund)
+		{
+		    persent = 1 / 2.0;
+		    buySell = BUY;
+		}
     }
 
     if (updown == UP || buySell == BUY)
     {
-        fundHandlePersent = 1;
-        return BUY;
-        if (possibility == BIG && persent > 1 / 3.1)
-        {
-            fundHandlePersent = 1.0;
-            return BUY;
-        }
-        fundHandlePersent = min(persent * 2 ,1.0);
+		//fundHandlePersent = 1;
+		//return BUY;
+		//if (possibility == BIG && persent > 1 / 2.1)
+		//{
+		//    fundHandlePersent = 1.0;
+		//    return BUY;
+		//}
+		if ((nowNeuron->m_upDown_5 > 0.0 && nowNeuron->m_upDown_5 < 0.05) || ((updown == DOWN) && (possibility == SMALL)))
+		{
+			fundHandlePersent = 1;
+			return BUY;
+		}
+		fundHandlePersent = persent;// min(persent * 2, 1.0);
         return BUY;
     }
     else if (updown == DOWN && buySell == SELL)

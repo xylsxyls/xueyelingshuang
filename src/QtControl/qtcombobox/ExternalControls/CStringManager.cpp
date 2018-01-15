@@ -51,6 +51,25 @@ vector<string> CStringManager::split(string splitString, string separate_charact
 	return strs;
 }
 
+vector<wstring> CStringManager::split(wstring splitString, wstring separate_character)
+{
+	vector<wstring> strs;
+	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
+	int separate_characterLen = separate_character.length();
+	int lastPosition = 0, index = -1;
+	while (-1 != (index = splitString.find(separate_character, lastPosition)))
+	{
+		strs.push_back(splitString.substr(lastPosition, index - lastPosition).c_str());
+		lastPosition = index + separate_characterLen;
+	}
+	//?截取最后一个分隔符后的内容
+	wstring lastString = splitString.substr(lastPosition);
+	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
+	strs.push_back(lastString.c_str());
+	return strs;
+}
+
+
 void CStringManager::ReplaceAll(string& str, const string& old_value, const string& new_value)
 {
 	while (true)

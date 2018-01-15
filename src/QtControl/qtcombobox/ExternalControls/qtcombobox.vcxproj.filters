@@ -476,6 +476,12 @@
     <ClCompile Include="GeneratedFiles\Release\moc_TreeWidget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_FriendDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_FriendDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -586,6 +592,9 @@
     <CustomBuild Include="TreeWidget.h">
       <Filter>QtControl\TreeWidget</Filter>
     </CustomBuild>
+    <CustomBuild Include="FriendDialog.h">
+      <Filter>FriendDialog</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlFont.h">
@@ -620,9 +629,6 @@
     </ClInclude>
     <ClInclude Include="HtmlComboBoxStyle.h">
       <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
-    </ClInclude>
-    <ClInclude Include="FriendDialog.h">
-      <Filter>FriendDialog</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

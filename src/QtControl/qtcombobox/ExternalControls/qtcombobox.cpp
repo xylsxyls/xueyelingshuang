@@ -436,36 +436,56 @@ void qtcombobox::modalPop()
 
 void qtcombobox::modalFriendPop()
 {
-	FriendDialog fdlg;
+	FriendDialog fdlg(this);
 	FriendDialog::Group groupList;
 	groupList.m_groupId = 0;
 	groupList.m_groupName = QString::fromStdWString(L"我的可邀请好友");
 	FriendDialog::User user;
 	user.m_userId = 0;
 	user.m_userName = "a1";
-	user.m_userPicPath = "23423";
+	user.m_userPicPath = "D:/114.png";
 	user.m_userState = 0;
 	groupList.m_userList.push_back(user);
 
 	user.m_userId = 1;
 	user.m_userName = "b1";
-	user.m_userPicPath = "23423";
+	user.m_userPicPath = "D:/114.png";
 	user.m_userState = 0;
 	groupList.m_userList.push_back(user);
 
 	user.m_userId = 2;
 	user.m_userName = "c1";
-	user.m_userPicPath = "23423";
+	user.m_userPicPath = "D:/114.png";
 	user.m_userState = 0;
 	groupList.m_userList.push_back(user);
 
 	user.m_userId = 3;
 	user.m_userName = "d1";
-	user.m_userPicPath = "23423";
+	user.m_userPicPath = "D:/114.png";
 	user.m_userState = 0;
 	groupList.m_userList.push_back(user);
 
 	fdlg.addGroupList(groupList);
+	groupList.m_groupId = 1;
+	fdlg.addGroupList(groupList);
+	groupList.m_groupId = 2;
+	fdlg.addGroupList(groupList);
+	groupList.m_groupId = 3;
+	fdlg.addGroupList(groupList);
+
+	user.m_userName = "d2";
+	fdlg.updateUserInfo(3, user);
+
+	user.m_userId = 4;
+	user.m_userName = "d3";
+	fdlg.addUserInfo(3, user);
+
+	fdlg.removeUser(1, 0);
+	fdlg.removeUser(1, 1);
+	fdlg.removeUser(1, 2);
+	fdlg.removeUser(1, 3);
+	fdlg.removeUser(1, 4);
+	fdlg.removeGroup(2);
 	
 	fdlg.exec();
 }

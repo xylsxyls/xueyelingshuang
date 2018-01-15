@@ -11,7 +11,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "afxwin.h"
 
-#define FUND_NUM std::string("110022")//161725
+#define FUND_NUM std::string("161725")//161725
 
 class CDrawDlg;
 // CFundInvestDlg ¶Ô»°¿ò
