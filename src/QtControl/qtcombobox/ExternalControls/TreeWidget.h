@@ -55,5 +55,8 @@ public:
 	void removeWidget(QWidget* widget, int32_t column = 0);
 
 private:
+	void dropEvent(QDropEvent* eve);
+
+private:
 	std::map<QWidget*, QTreeWidgetItem*> m_itemData;
 };

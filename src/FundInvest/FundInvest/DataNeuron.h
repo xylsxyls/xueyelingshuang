@@ -125,6 +125,7 @@ public:
 
 	//包括今天的
 	double m_upDown_4 = 0;
+	double m_upDown_10 = 0;
 
 private:
 	std::string m_fundName;

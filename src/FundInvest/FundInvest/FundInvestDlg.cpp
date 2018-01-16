@@ -347,6 +347,7 @@ void CFundInvestDlg::LoadFund(const std::string& fundName)
         nowNeuron->m_upDown_3 = nowNeuron->GetUpDown(-3);
 		nowNeuron->m_upDown_4 = nowNeuron->GetUpDown(-4);
 		nowNeuron->m_upDown_5 = nowNeuron->GetUpDown(-5);
+		nowNeuron->m_upDown_10 = nowNeuron->GetUpDown(-10);
 		nowNeuron->m_upDownInDays = nowNeuron->GetUpDownDays();
 		nowNeuron->m_forecastPlatDays = nowNeuron->GetForecastFlatDays();
 		nowNeuron->m_upDownForecast3 = nowNeuron->GetUpDown(3);
@@ -429,6 +430,10 @@ void CFundInvestDlg::OnBnClickedButton3()
 	int index = -1;
 	while (index++ != m_vecFundName.size() - 1)
 	{
+		if (m_vecFundName[index] == "161725")
+		{
+			int x = 3;
+		}
 		Cini ini(m_fundPath + m_vecFundName[index] + ".ini");
 		Ctxt txt(m_fundPath + m_vecFundName[index] + ".txt");
 		txt.LoadTxt(2, "\t");
@@ -601,7 +606,7 @@ void CFundInvestDlg::OnBnClickedButton7()
 			double updown5 = nowNeuron->m_upDown_5;
 			double updown4 = nowNeuron->m_upDown_4;
 			double updown3 = nowNeuron->m_upDown_3;
-			if (nowNeuron->m_upDown_5 <= 10.01)
+			if (nowNeuron->m_nextData->m_dayChg > 0)
 			{
 				charge += fund * buyCharge / 100;
 				fund = fund * (1 - buyCharge / 100);
@@ -818,9 +823,9 @@ void CFundInvestDlg::OnBnClickedButton13()
 {
     // TODO:  在此添加控件通知处理程序代码
 	Cini ini(m_fundPath + FUND_NUM + ".ini");
-	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-01-01");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2018-01-05");
 	//DataNeuron* beginNeuron = GetFirstNeuron(FUND_NUM);
-    DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-10-01");
+    DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2018-01-15");
     DataNeuron* nowNeuron = beginNeuron;
 
     int32_t lookDays = 5;
@@ -960,10 +965,11 @@ void CFundInvestDlg::OnBnClickedButton14()
 		Ctxt txt4(path);
 		txt4.OpenFile_w();
 		txt4.CloseFile();
-		txt4.AddLine("up_down_5\tup_down_4\tup_down_3\tup_down_highest_in_week\thighest_2_week\thighest_3_week\thighest_4_week\tchg");
+		txt4.AddLine("up_down_10\tup_down_5\tup_down_4\tup_down_3\tup_down_highest_in_week\thighest_2_week\thighest_3_week\thighest_4_week\tchg");
 		while (nowNeuron != endNeuron->m_nextData)
 		{
-			txt4.AddLine("%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf",
+			txt4.AddLine("%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf",
+				nowNeuron->m_upDown_10,
 				nowNeuron->m_upDown_5,
 				nowNeuron->m_upDown_4,
 				nowNeuron->m_upDown_3,

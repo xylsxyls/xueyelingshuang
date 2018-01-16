@@ -8,6 +8,9 @@
 #include <QWindow>
 #include <QPainter>
 #include <Windows.h>
+#include <QPixmap>
+#include <QBitmap>
+//#include "D:\\SendToMessageTest.h"
 
 FriendDialog::FriendDialog(QWidget* parent) :
 m_lastHoverWidget(nullptr),
@@ -99,10 +102,15 @@ void FriendDialog::addGroupList(const Group& groupList)
 	label->setBackgroundColor(QColor(20, 28, 49, 255));
 
 	COriginalButton* indi = new COriginalButton(widget);
-	indi->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/../W3L/res/Image/InviteFriendView/FriendExpandButton.png", 2, 1, 2, 1, 1, 1, 2, 1, 1);
-	indi->setGeometry(6, 11, 6, 10);
+	indi->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/../W3L/res/Image/InviteFriendView/group_indicator.png", 4, 1, 2, 1, 1, 3, 4, 3, 3);
+	indi->setGeometry(6, 11, 10, 10);
 	indi->setText("");
+	indi->setObjectName("indi");
+	indi->setCheckable(true);
 	QObject::connect(indi, &COriginalButton::clicked, this, &FriendDialog::onIndiClicked);
+
+	QObject::connect(m_friendTree, &TreeWidget::itemExpanded, this, &FriendDialog::onItemExpanded);
+	QObject::connect(m_friendTree, &TreeWidget::itemCollapsed, this, &FriendDialog::onItemCollapsed);
 
 	const std::list<User>& userList = groupList.m_userList;
 	for (auto itUser = userList.begin(); itUser != userList.end(); ++itUser)
@@ -208,6 +216,8 @@ void FriendDialog::addUserInfo(int32_t groupId, const User& userInfo)
 	invite->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/../W3L/res/Image/InviteFriendView/InviteButton.png");
 	invite->setGeometry(210, 5, 40, 30);
 	invite->setText("");
+	invite->setMouseTracking(true);
+	invite->installEventFilter(this);
 	QObject::connect(invite, &COriginalButton::clicked, this, &FriendDialog::onInviteClicked);
 
 	m_friendTree->addWidget(40, userWidget, m_groupData[groupId]);
@@ -271,26 +281,29 @@ void FriendDialog::removeGroup(int32_t groupId)
 
 bool FriendDialog::eventFilter(QObject* obj, QEvent* eve)
 {
+	if (eve->type() == QEvent::Leave)
+	{
+		QWidget* leaveWidget = (QWidget*)obj;
+		Label* hoverLabel = leaveWidget->findChild<Label*>("hoverLabel");
+		if (hoverLabel != nullptr)
+		{
+			hoverLabel->setVisible(false);
+			hoverLabel->update();
+		}
+		Label* userName = leaveWidget->findChild<Label*>("userName");
+		if (userName != nullptr)
+		{
+			userName->setTextColor(QColor(200, 200, 250, 255), QColor(200, 200, 250, 255), QColor(200, 200, 250, 255), true);
+			userName->update();
+		}
+	}
+
 	for (auto itGroup = m_userData.begin(); itGroup != m_userData.end(); ++itGroup)
 	{
 		auto& userData = itGroup->second;
 		for (auto itUser = userData.begin(); itUser != userData.end(); ++itUser)
 		{
 			//RCSend("%d", eve->type());
-			if (eve->type() == QEvent::Leave)
-			{
-				QWidget* leaveWidget = (QWidget*)obj;
-				Label* hoverLabel = leaveWidget->findChild<Label*>("hoverLabel");
-				if (hoverLabel != nullptr)
-				{
-					hoverLabel->setVisible(false);
-				}
-				Label* userName = leaveWidget->findChild<Label*>("userName");
-				if (userName != nullptr)
-				{
-					userName->setTextColor(QColor(200, 200, 250, 255), QColor(200, 200, 250, 255), QColor(200, 200, 250, 255), true);
-				}
-			}
 			//说明到了子节点
 			if (itUser->second == obj && eve->type() == QEvent::MouseMove)
 			{
@@ -300,11 +313,13 @@ bool FriendDialog::eventFilter(QObject* obj, QEvent* eve)
 					if (hoverLabel != nullptr)
 					{
 						hoverLabel->setVisible(false);
+						hoverLabel->update();
 					}
 					Label* userName = m_lastHoverWidget->findChild<Label*>("userName");
 					if (userName != nullptr)
 					{
 						userName->setTextColor(QColor(200, 200, 250, 255), QColor(200, 200, 250, 255), QColor(200, 200, 250, 255), true);
+						userName->update();
 					}
 				}
 				
@@ -313,11 +328,13 @@ bool FriendDialog::eventFilter(QObject* obj, QEvent* eve)
 				if (hoverLabel != nullptr)
 				{
 					hoverLabel->setVisible(true);
+					hoverLabel->update();
 				}
 				Label* userName = m_lastHoverWidget->findChild<Label*>("userName");
 				if (userName != nullptr)
 				{
 					userName->setTextColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), true);
+					userName->update();
 				}
 			}
 		}
@@ -389,7 +406,22 @@ void FriendDialog::onIndiClicked()
 	}
 
 	QTreeWidgetItem* pClickItem = m_friendTree->itemAt(m_friendTree->mapFromGlobal(cursor().pos()));
+	if (pClickItem == nullptr)
+	{
+		return;
+	}
 	pClickItem->setExpanded(!pClickItem->isExpanded());
+	QWidget* clickWidget = m_friendTree->itemWidget(pClickItem, 0);
+	if (clickWidget == nullptr)
+	{
+		return;
+	}
+	COriginalButton* indi = clickWidget->findChild<COriginalButton*>("indi");
+	if (indi == nullptr)
+	{
+		return;
+	}
+	indi->setChecked(pClickItem->isExpanded() && pClickItem->childCount());
 }
 
 void FriendDialog::onInviteClicked()
@@ -412,4 +444,38 @@ void FriendDialog::onInviteClicked()
 		}
 	}
 	emit inviteClicked(groupId, userId);
+}
+
+void FriendDialog::onItemExpanded(QTreeWidgetItem* item)
+{
+	QWidget* expandedWidget = m_friendTree->itemWidget(item, 0);
+	if (expandedWidget == nullptr)
+	{
+		return;
+	}
+	COriginalButton* indi = expandedWidget->findChild<COriginalButton*>("indi");
+	if (indi == nullptr)
+	{
+		return;
+	}
+	bool xxx = indi->isChecked();
+	bool xxxx = m_friendTree->isItemExpanded(item);
+	indi->setChecked(m_friendTree->isItemExpanded(item));
+}
+
+void FriendDialog::onItemCollapsed(QTreeWidgetItem* item)
+{
+	QWidget* expandedWidget = m_friendTree->itemWidget(item, 0);
+	if (expandedWidget == nullptr)
+	{
+		return;
+	}
+	COriginalButton* indi = expandedWidget->findChild<COriginalButton*>("indi");
+	if (indi == nullptr)
+	{
+		return;
+	}
+	bool xxx = indi->isChecked();
+	bool xxxx = m_friendTree->isItemExpanded(item);
+	indi->setChecked(m_friendTree->isItemExpanded(item));
 }

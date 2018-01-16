@@ -5,6 +5,7 @@
 
 class TreeWidget;
 class COriginalButton;
+class QTreeWidgetItem;
 
 /** ºÃÓÑÁÐ±í¿ò
 */
@@ -71,6 +72,8 @@ private:
 private slots:
 	void onIndiClicked();
 	void onInviteClicked();
+	void onItemExpanded(QTreeWidgetItem* item);
+	void onItemCollapsed(QTreeWidgetItem* item);
 
 Q_SIGNALS:
 	void inviteClicked(int32_t groupId, int32_t userId);

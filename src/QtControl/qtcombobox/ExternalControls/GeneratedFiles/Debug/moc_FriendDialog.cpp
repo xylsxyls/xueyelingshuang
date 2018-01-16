@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_FriendDialog_t {
-    QByteArrayData data[8];
-    char stringdata0[81];
+    QByteArrayData data[12];
+    char stringdata0[134];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -36,12 +36,17 @@ QT_MOC_LITERAL(3, 28, 7), // "int32_t"
 QT_MOC_LITERAL(4, 36, 7), // "groupId"
 QT_MOC_LITERAL(5, 44, 6), // "userId"
 QT_MOC_LITERAL(6, 51, 13), // "onIndiClicked"
-QT_MOC_LITERAL(7, 65, 15) // "onInviteClicked"
+QT_MOC_LITERAL(7, 65, 15), // "onInviteClicked"
+QT_MOC_LITERAL(8, 81, 14), // "onItemExpanded"
+QT_MOC_LITERAL(9, 96, 16), // "QTreeWidgetItem*"
+QT_MOC_LITERAL(10, 113, 4), // "item"
+QT_MOC_LITERAL(11, 118, 15) // "onItemCollapsed"
 
     },
     "FriendDialog\0inviteClicked\0\0int32_t\0"
     "groupId\0userId\0onIndiClicked\0"
-    "onInviteClicked"
+    "onInviteClicked\0onItemExpanded\0"
+    "QTreeWidgetItem*\0item\0onItemCollapsed"
 };
 #undef QT_MOC_LITERAL
 
@@ -51,7 +56,7 @@ static const uint qt_meta_data_FriendDialog[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-       3,   14, // methods
+       5,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -59,11 +64,13 @@ static const uint qt_meta_data_FriendDialog[] = {
        1,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    2,   29,    2, 0x06 /* Public */,
+       1,    2,   39,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-       6,    0,   34,    2, 0x08 /* Private */,
-       7,    0,   35,    2, 0x08 /* Private */,
+       6,    0,   44,    2, 0x08 /* Private */,
+       7,    0,   45,    2, 0x08 /* Private */,
+       8,    1,   46,    2, 0x08 /* Private */,
+      11,    1,   49,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void, 0x80000000 | 3, 0x80000000 | 3,    4,    5,
@@ -71,6 +78,8 @@ static const uint qt_meta_data_FriendDialog[] = {
  // slots: parameters
     QMetaType::Void,
     QMetaType::Void,
+    QMetaType::Void, 0x80000000 | 9,   10,
+    QMetaType::Void, 0x80000000 | 9,   10,
 
        0        // eod
 };
@@ -84,6 +93,8 @@ void FriendDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
         case 0: _t->inviteClicked((*reinterpret_cast< int32_t(*)>(_a[1])),(*reinterpret_cast< int32_t(*)>(_a[2]))); break;
         case 1: _t->onIndiClicked(); break;
         case 2: _t->onInviteClicked(); break;
+        case 3: _t->onItemExpanded((*reinterpret_cast< QTreeWidgetItem*(*)>(_a[1]))); break;
+        case 4: _t->onItemCollapsed((*reinterpret_cast< QTreeWidgetItem*(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -123,13 +134,13 @@ int FriendDialog::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 3)
+        if (_id < 5)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 3;
+        _id -= 5;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 3)
+        if (_id < 5)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 3;
+        _id -= 5;
     }
     return _id;
 }
