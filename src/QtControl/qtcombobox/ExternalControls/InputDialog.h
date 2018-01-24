@@ -14,6 +14,7 @@ public:
 	@param [in] buttonText 按钮内容
 	@param [in] done 按钮按下后的返回值
 	@param [in,out] editText 输入框默认文字
+	@param [in] maxLength 输入最大长度，-1表示不限制
 	@param [in] parent 父窗口指针
 	@param [in] timeOut 超时自动关闭，单位秒
 	@return 关闭窗口时给的返回值
@@ -24,7 +25,8 @@ public:
 								  const QString& buttonText,
 								  int32_t done,
 								  QString& editText,
-								  QWidget* parent = nullptr,
+								  int32_t maxLength = -1,
+								  QWindow* parent = nullptr,
 								  int32_t timeOut = -1,
 								  bool isCountDownVisible = false);
 private:
@@ -32,7 +34,8 @@ private:
 				const QString& editTip,
 				const QString& buttonText,
 				int32_t done,
-				QString& editText);
+				QString& editText,
+				int32_t maxLength = -1);
 
 	void done(int result);
 

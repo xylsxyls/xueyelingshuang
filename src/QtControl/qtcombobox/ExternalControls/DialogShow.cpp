@@ -24,6 +24,7 @@ m_userType(-1)
 void DialogShow::initForExec()
 {
 	m_isExec = true;
+	setWindowFlags(windowFlags() | Qt::Tool | Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint);
 	resize(340, 165);
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
 	m_exit->setBkgMargins(0, 0);

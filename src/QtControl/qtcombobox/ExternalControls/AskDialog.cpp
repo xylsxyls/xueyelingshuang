@@ -8,12 +8,12 @@ int32_t AskDialog::popAskDialog(int32_t& dialogId,
 								int32_t acceptDone,
 								const QString& ignoreText,
 								int32_t ignoreDone,
-								QWidget* parent,
+								QWindow* parent,
 								int32_t timeOut,
 								bool isCountDownVisible)
 {
 	AskDialog dlg(title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
-	dlg.setResponseHighlightDialog(parent);
+	dlg.setParentWindow(parent);
 	return dlg.exec(dialogId, timeOut, isCountDownVisible);
 }
 

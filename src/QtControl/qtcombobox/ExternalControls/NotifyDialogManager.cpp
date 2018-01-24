@@ -98,7 +98,7 @@ int32_t NotifyDialogManager::popAskDialog(int32_t& dialogId,
 										int32_t acceptDone,
 										const QString& ignoreText,
 										int32_t ignoreDone,
-										QWidget* parent,
+										QWindow* parent,
 										int32_t timeOut,
 										bool isCountDownVisible)
 {
@@ -110,7 +110,7 @@ int32_t NotifyDialogManager::popTipDialog(int32_t& dialogId,
 										const QString& tip,
 										const QString& buttonText,
 										int32_t done,
-										QWidget* parent,
+										QWindow* parent,
 										int32_t timeOut,
 										bool isCountDownVisible)
 {
@@ -123,7 +123,7 @@ int32_t NotifyDialogManager::popInputDialog(int32_t& dialogId,
 										  const QString& buttonText,
 										  int32_t done,
 										  QString& editText,
-										  QWidget* parent,
+										  QWindow* parent,
 										  int32_t timeOut,
 										  bool isCountDownVisible)
 {
@@ -133,7 +133,7 @@ int32_t NotifyDialogManager::popInputDialog(int32_t& dialogId,
 int32_t NotifyDialogManager::popWaitDialog(int32_t& dialogId,
 										 const QString& title,
 										 const QString& tip,
-										 QWidget* parent,
+										 QWindow* parent,
 										 int32_t timeOut,
 										 bool isCountDownVisible)
 {

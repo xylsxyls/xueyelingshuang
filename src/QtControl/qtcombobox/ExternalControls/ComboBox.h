@@ -215,6 +215,12 @@ public:
 	*/
 	virtual void repaint();
 
+Q_SIGNALS:
+	/** 节点被按下之后发送信号
+	@param [in] index 节点索引值
+	*/
+	void itemPressed(int index);
+
 private:
 	virtual void showEvent(QShowEvent* eve);
 	virtual void mouseReleaseEvent(QMouseEvent* eve);
@@ -223,9 +229,6 @@ private:
 	virtual void hidePopup();
 	virtual void hideEvent(QHideEvent* eve);
 	virtual void keyPressEvent(QKeyEvent* eve);
-
-Q_SIGNALS:
-	void itemPressed(int index);
 
 private slots:
 	void listItemEntered(QListWidgetItem* item);

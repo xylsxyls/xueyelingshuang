@@ -6,12 +6,12 @@ int32_t TipDialog::popTipDialog(int32_t& dialogId,
 								const QString& tip,
 								const QString& buttonText,
 								int32_t done,
-								QWidget* parent,
+								QWindow* parent,
 								int32_t timeOut,
 								bool isCountDownVisible)
 {
 	TipDialog dlg(title, tip, buttonText, done);
-	dlg.setResponseHighlightDialog(parent);
+	dlg.setParentWindow(parent);
 	return dlg.exec(dialogId, timeOut, isCountDownVisible);
 }
 

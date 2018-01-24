@@ -5,7 +5,7 @@
 #include <QObject>
 
 class DialogBase;
-class QWidget;
+class QWindow;
 /** 单一实例，用于统一管理窗口创建关闭，该类的对外接口，销毁所有窗口
 DialogManager::instance().removeAll();
 */
@@ -39,7 +39,7 @@ public:
 						 int32_t acceptDone,
 						 const QString& ignoreText,
 						 int32_t ignoreDone,
-						 QWidget* parent = nullptr,
+						 QWindow* parent = nullptr,
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
 
@@ -58,7 +58,7 @@ public:
 						 const QString& tip,
 						 const QString& buttonText,
 						 int32_t done,
-						 QWidget* parent = nullptr,
+						 QWindow* parent = nullptr,
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
 
@@ -69,6 +69,7 @@ public:
 	@param [in] buttonText 按钮内容
 	@param [in] done 按钮按下后的返回值
 	@param [in,out] editText 输入框默认文字
+	@param [in] maxLength 输入最大长度，-1表示不限制
 	@param [in] parent 父窗口指针
 	@param [in] timeOut 超时自动关闭，单位秒
 	@return 关闭窗口时给的返回值
@@ -79,7 +80,8 @@ public:
 						   const QString& buttonText,
 						   int32_t done,
 						   QString& editText,
-						   QWidget* parent = nullptr,
+						   int32_t maxLength = -1,
+						   QWindow* parent = nullptr,
 						   int32_t timeOut = -1,
 						   bool isCountDownVisible = false);
 
@@ -94,7 +96,7 @@ public:
 	int32_t popWaitDialog(int32_t& dialogId,
 						  const QString& title,
 						  const QString& tip,
-						  QWidget* parent = nullptr,
+						  QWindow* parent = nullptr,
 						  int32_t timeOut = -1,
 						  bool isCountDownVisible = false);
 

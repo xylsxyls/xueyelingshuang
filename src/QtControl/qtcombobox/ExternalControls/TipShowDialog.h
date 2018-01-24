@@ -25,6 +25,7 @@ public:
 							  int32_t done,
 							  int32_t timeOut = -1,
 							  bool isCountDownVisible = false);
+
 private:
 	TipShowDialog(int32_t userType,
 				  const QString& title,

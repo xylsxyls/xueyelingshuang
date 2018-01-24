@@ -29,6 +29,11 @@ public:
 	void setExitVisible(bool visible);
 
 Q_SIGNALS:
+	/** 当通知框窗口关闭时发送信号，在关闭动画执行之前发送信号
+	@param [in] dialogId 窗口ID
+	@param [in] result 窗口关闭时所给的返回值
+	@param [in] userType 用户自定义值
+	*/
 	void dialogDone(int32_t dialogId, int32_t result, int32_t userType);
 
 protected:

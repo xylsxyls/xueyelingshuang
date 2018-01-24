@@ -4,12 +4,12 @@
 int32_t WaitDialog::popWaitDialog(int32_t& dialogId,
 								  const QString& title,
 								  const QString& tip,
-								  QWidget* parent,
+								  QWindow* parent,
 								  int32_t timeOut,
 								  bool isCountDownVisible)
 {
 	WaitDialog dlg(title, tip);
-	dlg.setResponseHighlightDialog(parent);
+	dlg.setParentWindow(parent);
 	return dlg.exec(dialogId, timeOut, isCountDownVisible);
 }
 

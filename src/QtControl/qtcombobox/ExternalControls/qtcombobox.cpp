@@ -23,7 +23,7 @@
 #include <QWindow>
 #include "DialogManager.h"
 #include "NotifyDialogManager.h"
-#include "FriendDialog.h"
+#include "FriendDialogFrame.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -87,6 +87,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setDropDownVisible(false);
 	//pBox->setDropDownSize(10, 26);
 	//pBox->setDropDownVisible(true);
+	pBox->setBackgroundColor(QColor(255, 255, 0, 80));
 
 	pBox->addItem("asdf<font color = \"red\">15ms</font>");
 
@@ -255,7 +256,8 @@ qtcombobox::qtcombobox(QWidget *parent)
 	idItemBox->addItem("124", 5);
 	idItemBox->addItem("125", 7);
 	idItemBox->addItem("125", 8);
-	idItemBox->setBorderImage("D:/dropdown.png", 4, 1, 2, 3, 4);
+	//idItemBox->setBorderImage("D:/dropdown.png", 4, 1, 2, 3, 4);
+	idItemBox->setBorderWidth(1);
 	idItemBox->setDropDownSize(20, 26);
 	idItemBox->setDropDownImage("D:/hot.png", 8, 1, 2, 4, 5, 8);
 	idItemBox->setTextColor(QColor(255, 0, 0, 255),
@@ -275,6 +277,8 @@ qtcombobox::qtcombobox(QWidget *parent)
 	idItemBox->addItems(textList);
 	QObject::connect(idItemBox, &IdItemComboBox::currentItemChanged, this, &qtcombobox::idComboBoxItemChanged);
 	idItemBox->setEditable(true);
+
+	idItemBox->setBackgroundColor(QColor(255, 255, 0, 80));
 
 	QWidget* ss = 0;
 	ComboBox* ssss = (ComboBox*)ss;
@@ -390,6 +394,36 @@ qtcombobox::qtcombobox(QWidget *parent)
 	QObject::connect(modalFriendButton, &COriginalButton::clicked, this, &qtcombobox::modalFriendPop);
 
 
+	IdItemComboBox* optionBox = new IdItemComboBox(this);
+	optionBox->resize(108, 24);
+	optionBox->setBorderRadius(2);
+	optionBox->setBackgroundColor(QColor(255, 0, 0, 153), QColor(255, 0, 0, 153), QColor(255, 0, 0, 153), QColor(255, 0, 0, 153));
+	optionBox->setDropDownImage(CGeneralStyle::instance()->war3lobbyResourcePath() +
+		"/Image/NewRPG/GameRoom/combobox_indicator.png", 2, 1, 1, 2, 1, 2);
+	optionBox->setDropDownSize(17, 22);
+	optionBox->setDropDownTopRightOrigin(0, 5);
+	optionBox->setObjectName("optionBox");
+
+	optionBox->setTextColor(QColor("#8c9eb8"), QColor("#8c9eb8"), QColor("#8c9eb8"), QColor("#8c9eb8"));
+	optionBox->setFontSize(12);
+	optionBox->setTextOrigin(12);
+	optionBox->setFontFace(CGeneralStyle::instance()->font().family());
+
+	optionBox->setListOrigin(1);
+	optionBox->setListBorderWidth(0);
+	optionBox->setListItemHeight(24);
+	optionBox->setListFontSize(12);
+	optionBox->setListFontFace(CGeneralStyle::instance()->font().family());
+	optionBox->setListTextOrigin(12);
+	optionBox->setListItemBackgroundColor(QColor("#15181f"), QColor("#4486ff"), QColor("#15181f"));
+	optionBox->setListTextColor(QColor("#8c9eb8"), QColor("#d7dbe0"), QColor("#8c9eb8"));
+
+	optionBox->addItem(QStringLiteral("打开"), 1);
+	optionBox->addItem(QStringLiteral("关闭"), 2);
+	optionBox->addItem(QStringLiteral("AI简单"), 3);
+	optionBox->addItem(QStringLiteral("AI中等"), 4);
+	optionBox->addItem(QStringLiteral("AI困难"), 5);
+	optionBox->addItem(QStringLiteral("观察者"), 6);
 
 	int x = 3;
 }
@@ -436,11 +470,11 @@ void qtcombobox::modalPop()
 
 void qtcombobox::modalFriendPop()
 {
-	FriendDialog fdlg(this);
-	FriendDialog::Group groupList;
+	FriendDialogFrame fdlg(this);
+	FriendDialogFrame::Group groupList;
 	groupList.m_groupId = 0;
 	groupList.m_groupName = QString::fromStdWString(L"我的可邀请好友");
-	FriendDialog::User user;
+	FriendDialogFrame::User user;
 	user.m_userId = 0;
 	user.m_userName = "a1";
 	user.m_userPicPath = "D:/114.png";
@@ -508,7 +542,7 @@ void qtcombobox::testDialog()
 									 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
 									 QString::fromStdWString(L"确定"),
 									 1,
-									 sss,
+									 sss->windowHandle(),
 									 30,
 									 true);
 	int32_t dialogId2 = 0;
@@ -519,7 +553,7 @@ void qtcombobox::testDialog()
 									  2,
 									  QString::fromStdWString(L"取消"),
 									  1,
-									  sss,
+									  sss->windowHandle(),
 									  30);
 	QString editText = QString::fromStdWString(L"剧毒术士");
 	int32_t dialogId3 = 0;
@@ -529,15 +563,16 @@ void qtcombobox::testDialog()
 										   QString::fromStdWString(L"确定"),
 										   1,
 										   editText,
-										   sss,
-										   1,
+										   6,
+										   sss->windowHandle(),
+										   10,
 										   true);
 	int32_t dialogId4 = 0;
 	int xxxxx = WaitDialog::popWaitDialog(dialogId4,
 									      QString::fromStdWString(L"标题"),
 									      QString::fromStdWString(L"输入框提示："),
-									      sss,
-									      1);
+										  0,
+									      10);
 
 	int32_t dialogId5 = 0;
 	NotifyDialogManager::instance().showTipDialog(dialogId5,

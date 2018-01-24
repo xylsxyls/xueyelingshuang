@@ -140,18 +140,22 @@ CPasswordInputBox* DialogBase::addPasswordInputBox(const QRect& rect, const QStr
 	return password;
 }
 
-void DialogBase::setResponseHighlightDialog(QWidget* parent)
+void DialogBase::setParentWindow(QWindow* parent)
 {
-	if (parent == nullptr)
+	if (parent != nullptr)
 	{
-		return;
+		QWindow* window = windowHandle();
+		if (window != nullptr)
+		{
+			setAttribute(Qt::WA_NativeWindow);
+			setWindowModality(Qt::WindowModal);
+			window->setTransientParent(parent);
+			return;
+		}
 	}
-	QWindow* handle = parent->windowHandle();
-	if (handle != nullptr)
-	{
-		setWindowModality(Qt::WindowModal);
-		windowHandle()->setTransientParent(handle);
-	}
+	//»•µÙ»ŒŒÒ¿∏
+	//setAttribute(Qt::WA_ShowModal);
+	setWindowModality(Qt::ApplicationModal);
 }
 
 void DialogBase::endDialog()
