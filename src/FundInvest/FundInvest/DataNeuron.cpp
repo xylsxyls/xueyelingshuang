@@ -150,6 +150,21 @@ double DataNeuron::GetUpDownHighest(int32_t days)
 	return result;
 }
 
+double DataNeuron::GetUpDownLowest(int32_t days)
+{
+	double result = 10000;
+	++days;
+	while (days-- != 1)
+	{
+		double upDown = GetUpDown(days);
+		if (upDown < result)
+		{
+			result = upDown;
+		}
+	}
+	return result;
+}
+
 int32_t DataNeuron::GetUpDownDays()
 {
 	DataNeuron* data = this;

@@ -124,5 +124,6 @@ public:
     void Sell(double fundHandlePersent, double& fundHave, double& frozen, double sellCharge);
     int32_t Condition(DataNeuron* nowNeuron, double& fundHandlePersent);
     void HandleFrozen(double& frozen, double& fund);
+	afx_msg void OnBnClickedButton24();
 };
 

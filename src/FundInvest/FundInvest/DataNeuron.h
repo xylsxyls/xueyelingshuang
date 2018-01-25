@@ -16,7 +16,8 @@ enum
     SMALL,
     BIG,
     UP,
-    DOWN
+    DOWN,
+	FROZEN,
 };
 
 class DataNeuron
@@ -34,6 +35,8 @@ public:
 	double GetUpDown(int32_t days);
 
 	double GetUpDownHighest(int32_t days);
+
+	double GetUpDownLowest(int32_t days);
 
 	int32_t GetUpDownDays();
 
@@ -119,6 +122,8 @@ public:
 	int32_t m_upDownInDays = 0;
 	int32_t m_forecastPlatDays = 0;
 
+	double m_upDownLowest5 = 0;
+
 	double m_avg_in_always3 = 0;
 	double m_avg_in_always6 = 0;
 	double m_avg_in_always12 = 0;
@@ -126,6 +131,8 @@ public:
 	//包括今天的
 	double m_upDown_4 = 0;
 	double m_upDown_10 = 0;
+
+	int32_t m_bestState = WAIT;
 
 private:
 	std::string m_fundName;

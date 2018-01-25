@@ -99,6 +99,7 @@ BEGIN_MESSAGE_MAP(CFundInvestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON19, &CFundInvestDlg::OnBnClickedButton19)
 	ON_BN_CLICKED(IDC_BUTTON22, &CFundInvestDlg::OnBnClickedButton22)
     ON_BN_CLICKED(IDC_BUTTON23, &CFundInvestDlg::OnBnClickedButton23)
+	ON_BN_CLICKED(IDC_BUTTON24, &CFundInvestDlg::OnBnClickedButton24)
 END_MESSAGE_MAP()
 
 
@@ -253,8 +254,8 @@ void CFundInvestDlg::OnBnClickedButton2()
 
 	LoadFund(FUND_NUM);
 
-	m_simulationBegin = GetNeuron(FUND_NUM, "2017-12-01");
-	m_simulationEnd = GetNeuron(FUND_NUM, "2017-12-31");
+	m_simulationBegin = GetNeuron(FUND_NUM, "2017-12-24");
+	m_simulationEnd = GetNeuron(FUND_NUM, "2018-01-24");
 	m_simulationNow = m_simulationBegin;
 	//int32_t index = -1;
 	//while (index++ != m_vecFundName.size() - 1)
@@ -357,6 +358,7 @@ void CFundInvestDlg::LoadFund(const std::string& fundName)
 		nowNeuron->m_upDownHighest20 = nowNeuron->GetUpDownHighest(20);
 		nowNeuron->m_upDownHighest5 = nowNeuron->GetUpDownHighest(5);
 		nowNeuron->m_upDownHighest3 = nowNeuron->GetUpDownHighest(3);
+		nowNeuron->m_upDownLowest5 = nowNeuron->GetUpDownLowest(5);
 
 		nowNeuron->m_avg_in_always3 = nowNeuron->GetUpDown(nowNeuron->GetDays(365 / 4) * -1) / 3;
 		nowNeuron->m_avg_in_always6 = nowNeuron->GetUpDown(nowNeuron->GetDays(365 / 2) * -1) / 6;
@@ -563,15 +565,15 @@ void CFundInvestDlg::OnBnClickedButton7()
 {
 	// TODO:  在此添加控件通知处理程序代码
 	double fund = 50000;
-	double buyCharge = 0.15;
+	double buyCharge = 0.1;
 	double sellCharge = 0.5;
 	double charge = 0;
 	double getPercent = 1;
 	double yearPower = 0.75;
 	double percent = pow(1 + yearPower, 1 / 242.0) - 1;
 
-	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-12-01");
-	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-12-31");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-01-01");
+	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2018-01-24");
 
 	double always = (endNeuron->GetAlways(beginNeuron) + 1) * (1 - buyCharge / 100.0) * (1 - sellCharge / 100.0) - 1;
 	AfxMessageBox(CStringManager::Format("%e", always).c_str());
@@ -593,7 +595,7 @@ void CFundInvestDlg::OnBnClickedButton7()
 			double updown4 = nowNeuron->m_upDown_4;
 			double updown3 = nowNeuron->m_upDown_3;
 
-			if ((getPercent - 1) >= 40.03)
+			if (nowNeuron->m_bestState == SELL)
 			{
 				charge += fund * 0.5 / 100;
 				fund = fund * (1 - 0.5 / 100);
@@ -606,7 +608,7 @@ void CFundInvestDlg::OnBnClickedButton7()
 			double updown5 = nowNeuron->m_upDown_5;
 			double updown4 = nowNeuron->m_upDown_4;
 			double updown3 = nowNeuron->m_upDown_3;
-			if (nowNeuron->m_nextData->m_dayChg > 0)
+			if (nowNeuron->m_bestState == BUY)
 			{
 				charge += fund * buyCharge / 100;
 				fund = fund * (1 - buyCharge / 100);
@@ -965,10 +967,10 @@ void CFundInvestDlg::OnBnClickedButton14()
 		Ctxt txt4(path);
 		txt4.OpenFile_w();
 		txt4.CloseFile();
-		txt4.AddLine("up_down_10\tup_down_5\tup_down_4\tup_down_3\tup_down_highest_in_week\thighest_2_week\thighest_3_week\thighest_4_week\tchg");
+		txt4.AddLine("up_down_10\tup_down_5\tup_down_4\tup_down_3\thighest_1_week\thighest_2_week\thighest_3_week\thighest_4_week\tlowest_1_week\tchg");
 		while (nowNeuron != endNeuron->m_nextData)
 		{
-			txt4.AddLine("%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf",
+			txt4.AddLine("%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf",
 				nowNeuron->m_upDown_10,
 				nowNeuron->m_upDown_5,
 				nowNeuron->m_upDown_4,
@@ -977,6 +979,7 @@ void CFundInvestDlg::OnBnClickedButton14()
 				nowNeuron->m_upDownHighest10,
 				nowNeuron->m_upDownHighest15,
 				nowNeuron->m_upDownHighest20,
+				-nowNeuron->m_upDownLowest5,
 				nowNeuron->m_dayChg);
 			nowNeuron = nowNeuron->m_nextData;
 		}
@@ -992,6 +995,29 @@ void CFundInvestDlg::OnBnClickedButton14()
 		while (nowNeuron != endNeuron->m_nextData)
 		{
 			txt5.AddLine("%lf\t%lf", nowNeuron->m_upDown_3, nowNeuron->m_upDownHighest3);
+			nowNeuron = nowNeuron->m_nextData;
+		}
+
+		path = "D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + "_best.txt";
+		beginNeuron = GetNeuron(FUND_NUM, beginDay);
+		endNeuron = GetLastNeuron(FUND_NUM);
+		nowNeuron = beginNeuron;
+		Ctxt txt6(path);
+		txt6.OpenFile_w();
+		txt6.CloseFile();
+		txt6.AddLine("up_down_5\tbest_state");
+		while (nowNeuron != endNeuron->m_nextData)
+		{
+			double bestState;
+			if (nowNeuron->m_bestState == BUY || nowNeuron->m_bestState == HOLD)
+			{
+				bestState = 0.03;
+			}
+			else
+			{
+				bestState = -0.03;
+			}
+			txt6.AddLine("%lf\t%lf", nowNeuron->m_upDown_5, bestState);
 			nowNeuron = nowNeuron->m_nextData;
 		}
 	}
@@ -1255,7 +1281,13 @@ void CFundInvestDlg::OnBnClickedButton21()
 
 	m_simulationBtn.SetWindowText("下一天");
 	
-	::SendMessage(GetDlgItem(IDC_STATIC_CHG)->m_hWnd, WM_SETTEXT, 0, (LPARAM)CStringManager::Format("%.2lf%%", m_simulationNow->m_dayChg * 100).c_str());
+	::SendMessage(GetDlgItem(IDC_STATIC_CHG)->m_hWnd, WM_SETTEXT, 0, 
+		(LPARAM)CStringManager::Format("%.2lf%%,%.2lf%%,%.2lf%%,%.2lf%%,%.2lf%%",
+		m_simulationNow->m_preData->m_preData->m_preData->m_preData->m_dayChg * 100,
+		m_simulationNow->m_preData->m_preData->m_preData->m_dayChg * 100,
+		m_simulationNow->m_preData->m_preData->m_dayChg * 100,
+		m_simulationNow->m_preData->m_dayChg * 100,
+		m_simulationNow->m_dayChg * 100).c_str());
 
 	::SendMessage(GetDlgItem(IDC_STATIC_WEEK)->m_hWnd,
 				  WM_SETTEXT,
@@ -1659,4 +1691,124 @@ void CFundInvestDlg::HandleFrozen(double& frozen, double& fund)
 {
     fund = fund + frozen;
     frozen = 0;
+}
+
+
+void CFundInvestDlg::OnBnClickedButton24()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	double buyCharge = 0.001;
+	double sellCharge = 0.005;
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-01-01");
+	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2018-01-18");
+	DataNeuron* nowNeuron = beginNeuron->m_preData;
+	int32_t nowState = WAIT;
+	while (nowNeuron != endNeuron->m_nextData)
+	{
+		nowNeuron = nowNeuron->m_nextData;
+		if (nowState == WAIT)
+		{
+			if (nowNeuron->m_nextData->m_dayChg <= 0)
+			{
+				nowNeuron->m_bestState = WAIT;
+				nowState = WAIT;
+				continue;
+			}
+			else
+			{
+				if (nowNeuron->m_nextData->m_dayChg > buyCharge + sellCharge)
+				{
+					nowNeuron->m_bestState = BUY;
+					nowState = HOLD;
+					continue;
+				}
+				else
+				{
+					double allchg = nowNeuron->m_nextData->m_dayChg +
+						nowNeuron->m_nextData->m_nextData->m_dayChg;
+					if (allchg > buyCharge + sellCharge)
+					{
+						nowNeuron->m_bestState = BUY;
+						nowState = HOLD;
+						continue;
+					}
+					else if (allchg < 0)
+					{
+						nowNeuron->m_bestState = WAIT;
+						nowState = WAIT;
+						continue;
+					}
+					else
+					{
+						double allchg = nowNeuron->m_nextData->m_dayChg +
+							nowNeuron->m_nextData->m_nextData->m_dayChg +
+							nowNeuron->m_nextData->m_nextData->m_nextData->m_dayChg;
+						if (allchg > buyCharge + sellCharge)
+						{
+							nowNeuron->m_bestState = BUY;
+							nowState = HOLD;
+							continue;
+						}
+						else
+						{
+							nowNeuron->m_bestState = WAIT;
+							nowState = WAIT;
+							continue;
+						}
+					}
+				}
+			}
+		}
+		else if (nowState == HOLD)
+		{
+			if (nowNeuron->m_nextData->m_dayChg >= 0)
+			{
+				nowNeuron->m_bestState = HOLD;
+				nowState = HOLD;
+				continue;
+			}
+			else
+			{
+				double allchg = nowNeuron->m_nextData->m_dayChg +
+					nowNeuron->m_nextData->m_nextData->m_dayChg;
+				if (allchg < 0 - buyCharge - sellCharge)
+				{
+					nowNeuron->m_bestState = SELL;
+					nowState = FROZEN;
+					continue;
+				}
+				else if (allchg > 0)
+				{
+					nowNeuron->m_bestState = HOLD;
+					nowState = HOLD;
+					continue;
+				}
+				else
+				{
+					double allchg = nowNeuron->m_nextData->m_dayChg +
+						nowNeuron->m_nextData->m_nextData->m_dayChg +
+						nowNeuron->m_nextData->m_nextData->m_nextData->m_dayChg;
+					if (allchg < 0 - buyCharge - sellCharge)
+					{
+						nowNeuron->m_bestState = SELL;
+						nowState = FROZEN;
+						continue;
+					}
+					else
+					{
+						nowNeuron->m_bestState = HOLD;
+						nowState = HOLD;
+						continue;
+					}
+				}
+			}
+		}
+		else
+		{
+			nowNeuron->m_bestState = FROZEN;
+			nowState = WAIT;
+			continue;
+		}
+	}
+	AfxMessageBox("1");
 }
