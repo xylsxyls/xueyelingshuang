@@ -108,9 +108,17 @@ Label* DialogBase::addSeparator(const QPoint& point, int32_t length, bool isHori
 	return label;
 }
 
-LineEdit* DialogBase::addLineEdit(const QRect& rect, const QString& defaultText)
+LineEdit* DialogBase::addLineEdit(const QRect& rect, bool isPassword, const QString& defaultText)
 {
-	LineEdit* lineEdit = new LineEdit(this);
+	LineEdit* lineEdit = nullptr;
+	if (isPassword)
+	{
+		lineEdit = new CPasswordInputBox(this);
+	}
+	else
+	{
+		lineEdit = new LineEdit(this);
+	}
 	if (lineEdit == nullptr)
 	{
 		return nullptr;
@@ -125,6 +133,7 @@ LineEdit* DialogBase::addLineEdit(const QRect& rect, const QString& defaultText)
 	lineEdit->setAlignment(Qt::AlignVCenter);
 	lineEdit->setTextOrigin(3);
 	lineEdit->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupInputBox.png", 1, 1, 1, 1);
+	lineEdit->setTextColor(QColor(0, 0, 0, 255));
 	return lineEdit;
 }
 

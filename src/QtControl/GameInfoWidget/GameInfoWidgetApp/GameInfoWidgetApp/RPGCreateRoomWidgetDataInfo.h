@@ -6,11 +6,7 @@
 
 /** 字条字体颜色
 */
-#define LABEL_TEXT_COLOR QColor(145, 169, 226)
-
-/** 右侧控件边框颜色
-*/
-#define CONTROL_BORDER_COLOR QColor(67, 81, 117, 255)
+#define LABEL_TEXT_COLOR QColor(209, 209, 209)
 
 /** 右侧控件文字颜色
 */
@@ -18,37 +14,61 @@
 
 /** 右侧控件禁用时文字颜色
 */
-#define CONTROL_DISABLED_TEXT_COLOR QColor(82, 126, 185, 255)
+#define CONTROL_DISABLED_TEXT_COLOR CONTROL_TEXT_COLOR
 
-/** 保存按钮边框颜色
+/** 创建房间字条颜色
 */
-#define SAVE_BORDER_COLOR QColor(84, 97, 138, 255)
+#define CREATE_GAME_COLOR QColor(183, 187, 204, 255)
 
-/** 字体
+/** 创建房间按钮常态颜色
 */
-#define GAME_INFO_FONT_FACE QString::fromStdWString(L"微软雅黑")
+#define CREATE_ROOM_NORMAL_COLOR QColor("#53be1e")
+
+/** 创建房间按钮悬停颜色
+*/
+#define CREATE_ROOM_HOVER_COLOR QColor("#1da403")
+
+/** 右侧控件边框颜色
+*/
+#define CONTROL_BORDER_COLOR QColor(0, 0, 0, 255 * 0.6)
 
 /** 控件背景颜色
 */
-#define CONTROL_BACKGROUND_COLOR QColor(39, 50, 83, 255)
+#define CONTROL_BACKGROUND_COLOR CONTROL_BORDER_COLOR
+
+/** 字体
+*/
+#define GAME_INFO_FONT_FACE CGeneralStyle::instance()->font().family()
+
+/** 下拉框常态颜色
+*/
+#define LIST_NORMAL_COLOR QColor("#15181f")
 
 /** 下拉框hover颜色
 */
-#define LIST_HOVER_COLOR QColor(80, 98, 146, 255)
+#define LIST_HOVER_COLOR QColor("#4486ff")
 
 enum
 {
 	/** 整体窗口宽度
 	*/
-	GAME_INFO_WIDGET_WIDTH = 254,
+	GAME_INFO_WIDGET_WIDTH = 262,
 
 	/** 上面3个按钮的高度
 	*/
-	WIDGET_BUTTON_HEIGHT = 29,
+	WIDGET_BUTTON_HEIGHT = 35,
+
+	/** widget起始位置
+	*/
+	WIDGET_ORIGIN = 11,
 
 	/** 每个按钮对应widget的宽度
 	*/
-	WIDGET_WIDTH = GAME_INFO_WIDGET_WIDTH,
+	WIDGET_WIDTH = 240,
+
+	/** widget高度
+	*/
+	WIDGET_HEIGHT = 265,
 
 	/** 每个字条的宽度
 	*/
@@ -56,11 +76,11 @@ enum
 
 	/** 每个字条的高度
 	*/
-	LABEL_HEIGHT = 22,
+	LABEL_HEIGHT = 24,
 
 	/** 第一个字条的起始高度
 	*/
-	FIRST_LABEL_BEGIN_HEIGHT = 15,
+	FIRST_LABEL_BEGIN_HEIGHT = 12,
 
 	/** 字条和右侧控件的间隔宽度
 	*/
@@ -76,7 +96,7 @@ enum
 
 	/** 右侧控件宽度
 	*/
-	CONTROL_WIDTH = 147,
+	CONTROL_WIDTH = 138,
 
 	/** 右侧控件高度
 	*/
@@ -84,35 +104,35 @@ enum
 
 	/** 右侧控件圆角半径
 	*/
-	CONTROL_RADIUS = 5,
+	CONTROL_RADIUS = 2,
+
+	/** 创建房间圆角半径
+	*/
+	CREATE_ROOM_RADIUS = 3,
 
 	/** 控件间隔高度
 	*/
-	CONTROL_SPACING_HEIGHT = 12,
+	CONTROL_SPACING_HEIGHT = 9,
 
 	/** 控件和间隔总高度
 	*/
 	CONTROL_ALL_SPACING = CONTROL_HEIGHT + CONTROL_SPACING_HEIGHT,
 
-	/** 开启裁判位横轴起始位置
-	*/
-	JUDGE_ORIGIN_X = 16,
-
 	/** 保存按钮横轴起始位置
 	*/
-	SAVE_ORIGIN_X = 77,
+	CREATE_ROOM_ORIGIN_X = 17,
 
 	/** 保存按钮纵轴起始位置
 	*/
-	SAVE_ORIGIN_Y = 319,
+	CREATE_ROOM_ORIGIN_Y = 202,
 
 	/** 保存按钮宽度
 	*/
-	SAVE_WIDTH = 100,
+	CREATE_ROOM_WIDTH = 208,
 
 	/** 保存按钮高度
 	*/
-	SAVE_HEIGHT = 28,
+	CREATE_ROOM_HEIGHT = 32,
 
 	/** 游戏设置网页宽度
 	*/
@@ -122,7 +142,21 @@ enum
 	*/
 	GAME_SETTING_WEBVIEW_HEIGHT = 170,
 
+	/** 创建游戏起始位置
+	*/
+	CREATE_GAME_ORIGIN_X = 11,
 
+	/** 创建房间字条起始高度
+	*/
+	CREATE_GAME_ORIGIN_Y = 1,
+
+	/** 创建房间字条宽度
+	*/
+	CREATE_GAME_WIDTH = 60,
+
+	/** 创建游戏高度
+	*/
+	CREATE_GAME_HEIGHT = WIDGET_BUTTON_HEIGHT - 6,
 
 	/** 邀请好友按钮宽度
 	*/
@@ -142,11 +176,19 @@ enum
 
 	/** 退出按钮宽度
 	*/
-	EXIT_WIDTH = 58,
+	EXIT_WIDTH = 13,
 
 	/** 退出按钮高度
 	*/
-	EXIT_HEIGHT = START_GAME_HEIGHT,
+	EXIT_HEIGHT = EXIT_WIDTH,
+
+	/** 退出按钮横轴起始位置
+	*/
+	EXIT_ORIGIN_X = GAME_INFO_WIDGET_WIDTH - EXIT_WIDTH - 11,
+
+	/** 退出按钮纵轴起始位置
+	*/
+	EXIT_ORIGIN_Y = 9,
 
 	/** 按钮之前的间隔宽度
 	*/
@@ -156,19 +198,13 @@ enum
 	*/
 	START_GAME_ORIGIN_X = (WIDGET_WIDTH - START_GAME_WIDTH - EXIT_WIDTH - BUTTONS_SPACING) / 2,
 
-
-
-	/** 退出按钮横轴起始位置
-	*/
-	EXIT_ORIGIN_X = START_GAME_ORIGIN_X + BUTTONS_SPACING + START_GAME_WIDTH,
-
 	/** 字体大小
 	*/
-	GAME_INFO_FONT_SIZE = 13,
+	GAME_INFO_FONT_SIZE = 12,
 
 	/** 下拉框字体大小
 	*/
-	LIST_FONT_SIZE = GAME_INFO_FONT_SIZE - 1,
+	LIST_FONT_SIZE = GAME_INFO_FONT_SIZE,
 
 	/** 右侧控件文字偏移量
 	*/
@@ -180,7 +216,7 @@ enum
 
 	/** 下拉框节点高度
 	*/
-	LIST_ITEM_HEIGHT = 17,
+	LIST_ITEM_HEIGHT = 24,
 
 	/** 下拉框最大高度
 	*/
@@ -188,11 +224,11 @@ enum
 
 	/** 下拉框偏移量
 	*/
-	LIST_ORIGIN = 2,
+	LIST_ORIGIN = 1,
 
 	/** 下拉框边框粗度
 	*/
-	LIST_BORDER_WIDTH = 1,
+	LIST_BORDER_WIDTH = 0,
 
 	/** 下拉框节点边框粗度
 	*/
@@ -200,18 +236,18 @@ enum
 
 	/** 下拉箭头宽度
 	*/
-	DROP_DOWN_WIDTH = 10,
+	DROP_DOWN_WIDTH = 17,
 
 	/** 下拉箭头高度
 	*/
-	DROP_DOWN_HEIGHT = 5,
+	DROP_DOWN_HEIGHT = 22,
 
 	/** 下拉箭头距离右上角横轴距离
 	*/
-	DROP_DOWN_ORIGIN_X = 7,
+	DROP_DOWN_ORIGIN_X = 5,
 
 	/** 下拉箭头距离右上角纵轴距离
 	*/
-	DROP_DOWN_ORIGIN_Y = 5,
+	DROP_DOWN_ORIGIN_Y = 1,
 
 };

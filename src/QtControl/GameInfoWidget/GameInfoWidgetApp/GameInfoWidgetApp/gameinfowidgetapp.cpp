@@ -26,6 +26,13 @@ GameInfoWidgetApp::GameInfoWidgetApp(QWidget *parent)
 	//pWidget->show();
 
 	RPGCreateRoomWidget* pCreateRoomWidget = new RPGCreateRoomWidget;
+	QObject::connect(pCreateRoomWidget, SIGNAL(exitClicked()), this, SLOT(save()));
+	QObject::connect(pCreateRoomWidget, SIGNAL(createRoomClicked()), this, SLOT(save()));
+	QObject::connect(pCreateRoomWidget, SIGNAL(gameNameChanged(const QString&)), this, SLOT(changed(const QString&)));
+	QObject::connect(pCreateRoomWidget, SIGNAL(gamePasswordChanged(const QString&)), this, SLOT(changed(const QString&)));
+	QObject::connect(pCreateRoomWidget, SIGNAL(gameModeChanged(const QString&)), this, SLOT(changed(const QString&)));
+	QObject::connect(pCreateRoomWidget, SIGNAL(judgeChanged(bool)), this, SLOT(onJudgeChanged(bool)));
+
 	pCreateRoomWidget->show();
 }
 
@@ -56,6 +63,11 @@ void GameInfoWidgetApp::prepare()
 }
 
 void GameInfoWidgetApp::cancelPrepare()
+{
+	int x = 3;
+}
+
+void GameInfoWidgetApp::onJudgeChanged(bool judge)
 {
 	int x = 3;
 }

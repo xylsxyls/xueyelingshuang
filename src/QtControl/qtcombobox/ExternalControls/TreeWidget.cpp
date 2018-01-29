@@ -130,10 +130,12 @@ void TreeWidget::removeWidget(QWidget* widget, int32_t column)
 		return;
 	}
 	
-	removeItemWidget(itData->second, column);
-	delete widget;
-	delete itData->second;
+	QTreeWidgetItem* item = itData->second;
 	m_itemData.erase(itData);
+
+	removeItemWidget(item, column);
+	delete widget;
+	delete item;
 }
 
 void TreeWidget::dropEvent(QDropEvent* eve)

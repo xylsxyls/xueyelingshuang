@@ -24,7 +24,7 @@ m_userType(-1)
 void DialogShow::initForExec()
 {
 	m_isExec = true;
-	setWindowFlags(windowFlags() | Qt::Tool | Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint);
+	setWindowFlags(windowFlags() | Qt::Tool);
 	resize(340, 165);
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
 	m_exit->setBkgMargins(0, 0);
@@ -118,27 +118,135 @@ void DialogShow::paintEvent(QPaintEvent* eve)
 	QDialog::paintEvent(eve);
 }
 
-void DialogShow::mousePressEvent(QMouseEvent *eve)
-{
-	if (eve->button() == Qt::LeftButton && m_isExec)
-	{
-		m_bPressed = true;
-		m_point = eve->pos();
-	}
-}
+//void DialogShow::mousePressEvent(QMouseEvent *eve)
+//{
+//	if (eve->button() == Qt::LeftButton && m_isExec)
+//	{
+//		m_bPressed = true;
+//		m_point = eve->pos();
+//	}
+//}
+//
+//void DialogShow::mouseMoveEvent(QMouseEvent* eve)
+//{
+//	if (m_bPressed)
+//	{
+//		move(eve->pos() - m_point + pos());
+//	}
+//}
+//
+//void DialogShow::mouseReleaseEvent(QMouseEvent* eve)
+//{
+//	Q_UNUSED(eve);
+//	m_bPressed = false;
+//}
 
-void DialogShow::mouseMoveEvent(QMouseEvent* eve)
+long DialogShow::onNcHitTest(QPoint pt)
 {
-	if (m_bPressed)
-	{
-		move(eve->pos() - m_point + pos());
-	}
-}
+	QRect rcClient = this->geometry();
 
-void DialogShow::mouseReleaseEvent(QMouseEvent* eve)
-{
-	Q_UNUSED(eve);
-	m_bPressed = false;
+	//if ((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
+	//	(pt.x() > (rcClient.right() - mTouchBorderWidth)))
+	//{
+	//	if ((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
+	//		(pt.y() > (rcClient.top() - mTouchBorderWidth)))
+	//	{
+	//		return HTTOPRIGHT;
+	//	}
+	//
+	//	if ((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
+	//		(pt.y() > (rcClient.bottom() - mTouchBorderWidth)))
+	//	{
+	//		return HTBOTTOMRIGHT;
+	//	}
+	//
+	//	return HTRIGHT;
+	//}
+	//
+	//if ((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
+	//	(pt.x() > (rcClient.left() - mTouchBorderWidth)))
+	//{
+	//	if ((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
+	//		(pt.y() > (rcClient.top() - mTouchBorderWidth)))
+	//	{
+	//		return HTTOPLEFT;
+	//	}
+	//
+	//	if ((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
+	//		(pt.y() > (rcClient.bottom() - mTouchBorderWidth)))
+	//	{
+	//		return HTBOTTOMLEFT;
+	//	}
+	//
+	//	return HTLEFT;
+	//}
+	//
+	//if ((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
+	//	(pt.y() > (rcClient.top() - mTouchBorderWidth)))
+	//{
+	//	if ((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
+	//		(pt.x() > (rcClient.right() - mTouchBorderWidth)))
+	//	{
+	//		return HTTOPRIGHT;
+	//	}
+	//
+	//	if ((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
+	//		(pt.x() > (rcClient.left() - mTouchBorderWidth)))
+	//	{
+	//		return HTTOPLEFT;
+	//	}
+	//
+	//
+	//	return HTTOP;
+	//}
+	//
+	//if ((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
+	//	(pt.y() > (rcClient.bottom() - mTouchBorderWidth)))
+	//{
+	//
+	//	if ((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
+	//		(pt.x() > (rcClient.right() - mTouchBorderWidth)))
+	//	{
+	//		return HTBOTTOMRIGHT;
+	//	}
+	//
+	//	if ((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
+	//		(pt.x() > (rcClient.left() - mTouchBorderWidth)))
+	//	{
+	//		return HTBOTTOMLEFT;
+	//	}
+	//
+	//
+	//	return HTBOTTOM;
+	//}
+
+
+	if ((pt.y() - rcClient.top()) <= 40 && m_isExec)
+	{
+		bool hasChild = false;
+		for (int i = 0; i < this->children().count(); i++)
+		{
+			QWidget* w = qobject_cast<QWidget*>(this->children()[i]);
+			if (w == NULL)
+				continue;
+	
+			QPoint mousePt = this->mapFromGlobal(QCursor::pos());
+			if (m_exit->geometry().contains(mousePt) && m_exit->isVisible())
+			{
+				hasChild = true;
+				break;
+			}
+		}
+	
+		if (hasChild)
+		{
+			return HTCLIENT;
+		}
+	
+		return HTCAPTION;
+	}
+
+	return HTCLIENT;
 }
 
 void DialogShow::keyPressEvent(QKeyEvent* eve)
@@ -171,6 +279,17 @@ bool DialogShow::nativeEvent(const QByteArray& eventType, void* message, long* r
 		case WM_NCACTIVATE:
 		{
 			ncActiveChanged(msg->wParam);
+		}
+		break;
+		case WM_NCHITTEST:
+		{
+			int xPos = (int)(short)LOWORD(msg->lParam);
+			int yPos = (int)(short)HIWORD(msg->lParam);
+
+			*result = onNcHitTest(QPoint(xPos, yPos));
+
+			if (HTERROR != *result)
+				return true;
 		}
 		break;
 		default:

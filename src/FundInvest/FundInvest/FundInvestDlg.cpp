@@ -254,8 +254,8 @@ void CFundInvestDlg::OnBnClickedButton2()
 
 	LoadFund(FUND_NUM);
 
-	m_simulationBegin = GetNeuron(FUND_NUM, "2017-12-24");
-	m_simulationEnd = GetNeuron(FUND_NUM, "2018-01-24");
+	m_simulationBegin = GetNeuron(FUND_NUM, "2017-10-24");
+	m_simulationEnd = GetNeuron(FUND_NUM, "2017-11-24");
 	m_simulationNow = m_simulationBegin;
 	//int32_t index = -1;
 	//while (index++ != m_vecFundName.size() - 1)
@@ -432,7 +432,7 @@ void CFundInvestDlg::OnBnClickedButton3()
 	int index = -1;
 	while (index++ != m_vecFundName.size() - 1)
 	{
-		if (m_vecFundName[index] == "161725")
+		if (m_vecFundName[index] == FUND_NUM)
 		{
 			int x = 3;
 		}
@@ -572,8 +572,8 @@ void CFundInvestDlg::OnBnClickedButton7()
 	double yearPower = 0.75;
 	double percent = pow(1 + yearPower, 1 / 242.0) - 1;
 
-	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-01-01");
-	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2018-01-24");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-10-24");
+	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-11-24");
 
 	double always = (endNeuron->GetAlways(beginNeuron) + 1) * (1 - buyCharge / 100.0) * (1 - sellCharge / 100.0) - 1;
 	AfxMessageBox(CStringManager::Format("%e", always).c_str());

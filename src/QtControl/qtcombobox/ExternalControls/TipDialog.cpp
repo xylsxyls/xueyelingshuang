@@ -22,6 +22,8 @@ TipDialog::TipDialog(const QString& title,
 {
 	initForExec();
 	m_title->setText(title);
+	m_title->setFontSize(12);
 	m_tip = addTip(tip, QRect(43, 51, width() - 43 * 2, 60), QColor(205, 213, 225, 255));
+	m_tip->setFontSize(13);
 	m_accept = addButton(buttonText, QRect((width() - 116) / 2, 127, 116, 22), done);
 }

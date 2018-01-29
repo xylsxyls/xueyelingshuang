@@ -15,6 +15,7 @@ public:
 	@param [in] done 按钮按下后的返回值
 	@param [in] parent 父窗口指针
 	@param [in] timeOut 超时自动关闭，单位秒
+	@param [in] isCountDownVisible 超时自动关闭提示是否可见
 	@return 关闭窗口时给的返回值
 	*/
 	static int32_t popTipDialog(int32_t& dialogId,

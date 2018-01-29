@@ -71,7 +71,7 @@ public:
 	@param [in] defaultText 默认显示文字
 	@return 返回文本框指针
 	*/
-	LineEdit* addLineEdit(const QRect& rect, const QString& defaultText = "");
+	LineEdit* addLineEdit(const QRect& rect, bool isPassword = false, const QString& defaultText = "");
 
 	/** 添加密码框
 	@param [in] rect 标签相对父窗口所在位置

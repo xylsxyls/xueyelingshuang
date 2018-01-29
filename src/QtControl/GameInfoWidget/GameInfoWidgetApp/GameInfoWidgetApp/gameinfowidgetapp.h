@@ -18,6 +18,7 @@ private slots:
 	void changed2(const QString& str);
 	void prepare();
 	void cancelPrepare();
+	void onJudgeChanged(bool judge);
 
 private:
 	Ui::GameInfoWidgetAppClass ui;

@@ -54,6 +54,12 @@
     <Filter Include="RPGCreateRoomWidget">
       <UniqueIdentifier>{928efc3f-dd3c-4eed-8654-883fb91bfae7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="COriginalButton">
+      <UniqueIdentifier>{439133a3-7626-4922-93ae-e23bb57690b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CW3LModalFrame">
+      <UniqueIdentifier>{bb1b2227-5adc-44e9-bfbb-34678868bba1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -362,6 +368,24 @@
     <ClCompile Include="GeneratedFiles\Release\moc_RPGCreateRoomWidget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\COriginalDialog.cpp">
+      <Filter>COriginalButton</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\qtcombobox\CW3LModalFrame.cpp">
+      <Filter>CW3LModalFrame</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CW3LModalFrame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CW3LModalFrame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="gameinfowidgetapp.h">
@@ -462,6 +486,12 @@
     </CustomBuild>
     <CustomBuild Include="RPGCreateRoomWidget.h">
       <Filter>RPGCreateRoomWidget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\COriginalDialog.h">
+      <Filter>COriginalButton</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\qtcombobox\CW3LModalFrame.h">
+      <Filter>CW3LModalFrame</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

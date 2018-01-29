@@ -49,6 +49,41 @@ int32_t DialogManager::popTipDialog(int32_t& dialogId,
 	return TipDialog::popTipDialog(dialogId, title, tip, buttonText, done, parent, timeOut, isCountDownVisible);
 }
 
+int32_t DialogManager::popAskDialog(int32_t& dialogId,
+									const QString& tip,
+									const QString& title,
+									QWindow* parent,
+									const QString& acceptText,
+									const QString& ignoreText,
+									int32_t acceptDone,
+									int32_t ignoreDone,
+									int32_t timeOut,
+									bool isCountDownVisible)
+{
+	return AskDialog::popAskDialog(dialogId,
+								   title,
+								   tip,
+								   acceptText,
+								   acceptDone,
+								   ignoreText,
+								   ignoreDone,
+								   parent,
+								   timeOut,
+								   isCountDownVisible);
+}
+
+int32_t DialogManager::popTipDialog(int32_t& dialogId,
+									const QString& tip,
+									const QString& title,
+									QWindow* parent,
+									const QString& buttonText,
+									int32_t done,
+									int32_t timeOut,
+									bool isCountDownVisible)
+{
+	return TipDialog::popTipDialog(dialogId, title, tip, buttonText, done, parent, timeOut, isCountDownVisible);
+}
+
 int32_t DialogManager::popInputDialog(int32_t& dialogId,
 									  const QString& title,
 									  const QString& editTip,
@@ -66,6 +101,32 @@ int32_t DialogManager::popInputDialog(int32_t& dialogId,
 									   buttonText,
 									   done,
 									   editText,
+									   false,
+									   maxLength,
+									   parent,
+									   timeOut,
+									   isCountDownVisible);
+}
+
+int32_t DialogManager::popInputDialog(int32_t& dialogId,
+									  QString& editText,
+									  const QString& editTip,
+									  bool isPassword,
+									  const QString& title,
+									  QWindow* parent,
+									  int32_t maxLength,
+									  const QString& buttonText,
+									  int32_t done,
+									  int32_t timeOut,
+									  bool isCountDownVisible)
+{
+	return InputDialog::popInputDialog(dialogId,
+									   title,
+									   editTip,
+									   buttonText,
+									   done,
+									   editText,
+									   isPassword,
 									   maxLength,
 									   parent,
 									   timeOut,
