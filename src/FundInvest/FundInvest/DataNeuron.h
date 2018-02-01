@@ -17,7 +17,8 @@ enum
     BIG,
     UP,
     DOWN,
-	FROZEN,
+	BUY_FROZEN,
+	SELL_FROZEN,
 };
 
 class DataNeuron

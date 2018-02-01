@@ -572,8 +572,8 @@ void CFundInvestDlg::OnBnClickedButton7()
 	double yearPower = 0.75;
 	double percent = pow(1 + yearPower, 1 / 242.0) - 1;
 
-	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-10-24");
-	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-11-24");
+	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-01-01");
+	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2017-12-29");
 
 	double always = (endNeuron->GetAlways(beginNeuron) + 1) * (1 - buyCharge / 100.0) * (1 - sellCharge / 100.0) - 1;
 	AfxMessageBox(CStringManager::Format("%e", always).c_str());
@@ -1005,19 +1005,28 @@ void CFundInvestDlg::OnBnClickedButton14()
 		Ctxt txt6(path);
 		txt6.OpenFile_w();
 		txt6.CloseFile();
-		txt6.AddLine("up_down_5\tbest_state");
+		txt6.AddLine("up_down_5\tbest_state\tchg");
 		while (nowNeuron != endNeuron->m_nextData)
 		{
 			double bestState;
-			if (nowNeuron->m_bestState == BUY || nowNeuron->m_bestState == HOLD)
+			if (nowNeuron->m_bestState == BUY_FROZEN || 
+				nowNeuron->m_bestState == HOLD)
 			{
 				bestState = 0.03;
+			}
+			else if (nowNeuron->m_bestState == BUY)
+			{
+				bestState = -0.02;
+			}
+			else if (nowNeuron->m_bestState == SELL)
+			{
+				bestState = 0.02;
 			}
 			else
 			{
 				bestState = -0.03;
 			}
-			txt6.AddLine("%lf\t%lf", nowNeuron->m_upDown_5, bestState);
+			txt6.AddLine("%lf\t%lf\t%lf", nowNeuron->m_upDown_5, bestState, nowNeuron->m_dayChg);
 			nowNeuron = nowNeuron->m_nextData;
 		}
 	}
@@ -1716,20 +1725,30 @@ void CFundInvestDlg::OnBnClickedButton24()
 			}
 			else
 			{
-				if (nowNeuron->m_nextData->m_dayChg > buyCharge + sellCharge)
+				double allchg = nowNeuron->m_nextData->m_dayChg +
+					nowNeuron->m_nextData->m_nextData->m_dayChg;
+				if (allchg > buyCharge + sellCharge)
 				{
 					nowNeuron->m_bestState = BUY;
-					nowState = HOLD;
+					nowState = BUY_FROZEN;
+					continue;
+				}
+				else if (allchg < 0)
+				{
+					nowNeuron->m_bestState = WAIT;
+					nowState = WAIT;
 					continue;
 				}
 				else
 				{
+					
 					double allchg = nowNeuron->m_nextData->m_dayChg +
-						nowNeuron->m_nextData->m_nextData->m_dayChg;
+						nowNeuron->m_nextData->m_nextData->m_dayChg +
+						nowNeuron->m_nextData->m_nextData->m_nextData->m_dayChg;
 					if (allchg > buyCharge + sellCharge)
 					{
 						nowNeuron->m_bestState = BUY;
-						nowState = HOLD;
+						nowState = BUY_FROZEN;
 						continue;
 					}
 					else if (allchg < 0)
@@ -1742,11 +1761,13 @@ void CFundInvestDlg::OnBnClickedButton24()
 					{
 						double allchg = nowNeuron->m_nextData->m_dayChg +
 							nowNeuron->m_nextData->m_nextData->m_dayChg +
-							nowNeuron->m_nextData->m_nextData->m_nextData->m_dayChg;
+							nowNeuron->m_nextData->m_nextData->m_nextData->m_dayChg + 
+							nowNeuron->m_nextData->m_nextData->m_nextData->m_nextData->m_dayChg;
+
 						if (allchg > buyCharge + sellCharge)
 						{
 							nowNeuron->m_bestState = BUY;
-							nowState = HOLD;
+							nowState = BUY_FROZEN;
 							continue;
 						}
 						else
@@ -1774,7 +1795,7 @@ void CFundInvestDlg::OnBnClickedButton24()
 				if (allchg < 0 - buyCharge - sellCharge)
 				{
 					nowNeuron->m_bestState = SELL;
-					nowState = FROZEN;
+					nowState = SELL_FROZEN;
 					continue;
 				}
 				else if (allchg > 0)
@@ -1791,22 +1812,48 @@ void CFundInvestDlg::OnBnClickedButton24()
 					if (allchg < 0 - buyCharge - sellCharge)
 					{
 						nowNeuron->m_bestState = SELL;
-						nowState = FROZEN;
+						nowState = SELL_FROZEN;
 						continue;
 					}
-					else
+					else if (allchg > 0)
 					{
 						nowNeuron->m_bestState = HOLD;
 						nowState = HOLD;
 						continue;
+					}
+					else
+					{
+						double allchg = nowNeuron->m_nextData->m_dayChg +
+							nowNeuron->m_nextData->m_nextData->m_dayChg +
+							nowNeuron->m_nextData->m_nextData->m_nextData->m_dayChg +
+							nowNeuron->m_nextData->m_nextData->m_nextData->m_nextData->m_dayChg;
+						if (allchg < 0 - buyCharge - sellCharge)
+						{
+							nowNeuron->m_bestState = SELL;
+							nowState = SELL_FROZEN;
+							continue;
+						}
+						else
+						{
+							nowNeuron->m_bestState = HOLD;
+							nowState = HOLD;
+							continue;
+						}
 					}
 				}
 			}
 		}
 		else
 		{
-			nowNeuron->m_bestState = FROZEN;
-			nowState = WAIT;
+			nowNeuron->m_bestState = nowState;
+			if (nowState == BUY_FROZEN)
+			{
+				nowState = HOLD;
+			}
+			else
+			{
+				nowState = WAIT;
+			}
 			continue;
 		}
 	}
