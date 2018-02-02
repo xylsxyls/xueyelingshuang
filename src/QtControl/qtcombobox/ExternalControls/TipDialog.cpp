@@ -1,5 +1,6 @@
 #include "TipDialog.h"
 #include "Label.h"
+#include "../COriginalButton.h"
 
 int32_t TipDialog::popTipDialog(int32_t& dialogId,
 								const QString& title,
@@ -22,8 +23,19 @@ TipDialog::TipDialog(const QString& title,
 {
 	initForExec();
 	m_title->setText(title);
+	setWindowTitle(title);
 	m_title->setFontSize(12);
-	m_tip = addTip(tip, QRect(43, 51, width() - 43 * 2, 60), QColor(205, 213, 225, 255));
-	m_tip->setFontSize(13);
+	m_tip = addTip(tip, QRect(43, 40, width() - 43 * 2, 83), QColor(205, 213, 225, 255));
+	m_tip->setFontSize(12);
 	m_accept = addButton(buttonText, QRect((width() - 116) / 2, 127, 116, 22), done);
+
+	m_accept->installEventFilter(this);
+
+	QObject::connect(this, SIGNAL(keyboardAccept()), this, SLOT(tipAccept()));
+}
+
+void TipDialog::tipAccept()
+{
+	m_accept->setFocus();
+	m_accept->click();
 }

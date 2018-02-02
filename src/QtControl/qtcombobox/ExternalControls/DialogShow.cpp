@@ -24,12 +24,14 @@ m_userType(-1)
 void DialogShow::initForExec()
 {
 	m_isExec = true;
+	installEventFilter(this);
 	setWindowFlags(windowFlags() | Qt::Tool);
 	resize(340, 165);
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
 	m_exit->setBkgMargins(0, 0);
 	m_exit->setBorderRadius(0);
 	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupCloseButton.png");
+	m_exit->installEventFilter(this);
 	m_title = addLabel("title", QRect(17, 4, 300, 27), QColor(163, 175, 191, 255));
 	m_separator = addSeparator(QPoint(13, 33), 308, true, QColor(46, 52, 88, 255), QColor(16, 20, 31, 255));
 	m_time = addLabel("", QRect(205, 140, 125, 32), QColor("#abb3d3"));
@@ -309,6 +311,10 @@ void DialogShow::showEvent(QShowEvent* eve)
 		m_animation.setEndValue(m_beginRect);
 		m_animation.start();
 	}
+	else
+	{
+		activateWindow();
+	}
 }
 
 void DialogShow::done(int result)
@@ -343,4 +349,18 @@ void DialogShow::ncActiveChanged(int32_t wParam)
 {
 	m_highLight = !!wParam;
 	QDialog::repaint();
+}
+
+bool DialogShow::eventFilter(QObject* tar, QEvent* eve)
+{
+	bool res = DialogBase::eventFilter(tar, eve);
+	if (eve->type() == QEvent::KeyPress)
+	{
+		auto keyEvent = (QKeyEvent*)eve;
+		if (keyEvent->key() == Qt::Key_Space || keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
+		{
+			emit keyboardAccept();
+		}
+	}
+	return res;
 }

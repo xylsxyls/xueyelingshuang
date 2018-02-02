@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_DialogShow_t {
-    QByteArrayData data[9];
-    char stringdata0[75];
+    QByteArrayData data[10];
+    char stringdata0[90];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -36,12 +36,14 @@ QT_MOC_LITERAL(3, 23, 7), // "int32_t"
 QT_MOC_LITERAL(4, 31, 8), // "dialogId"
 QT_MOC_LITERAL(5, 40, 6), // "result"
 QT_MOC_LITERAL(6, 47, 8), // "userType"
-QT_MOC_LITERAL(7, 56, 10), // "timeUpdate"
-QT_MOC_LITERAL(8, 67, 7) // "timeOut"
+QT_MOC_LITERAL(7, 56, 14), // "keyboardAccept"
+QT_MOC_LITERAL(8, 71, 10), // "timeUpdate"
+QT_MOC_LITERAL(9, 82, 7) // "timeOut"
 
     },
     "DialogShow\0dialogDone\0\0int32_t\0dialogId\0"
-    "result\0userType\0timeUpdate\0timeOut"
+    "result\0userType\0keyboardAccept\0"
+    "timeUpdate\0timeOut"
 };
 #undef QT_MOC_LITERAL
 
@@ -51,24 +53,26 @@ static const uint qt_meta_data_DialogShow[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-       2,   14, // methods
+       3,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-       1,       // signalCount
+       2,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    3,   24,    2, 0x06 /* Public */,
+       1,    3,   29,    2, 0x06 /* Public */,
+       7,    0,   36,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-       7,    1,   31,    2, 0x08 /* Private */,
+       8,    1,   37,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void, 0x80000000 | 3, 0x80000000 | 3, 0x80000000 | 3,    4,    5,    6,
+    QMetaType::Void,
 
  // slots: parameters
-    QMetaType::Void, 0x80000000 | 3,    8,
+    QMetaType::Void, 0x80000000 | 3,    9,
 
        0        // eod
 };
@@ -80,7 +84,8 @@ void DialogShow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         Q_UNUSED(_t)
         switch (_id) {
         case 0: _t->dialogDone((*reinterpret_cast< int32_t(*)>(_a[1])),(*reinterpret_cast< int32_t(*)>(_a[2])),(*reinterpret_cast< int32_t(*)>(_a[3]))); break;
-        case 1: _t->timeUpdate((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
+        case 1: _t->keyboardAccept(); break;
+        case 2: _t->timeUpdate((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -90,6 +95,12 @@ void DialogShow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
             typedef void (DialogShow::*_t)(int32_t , int32_t , int32_t );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DialogShow::dialogDone)) {
                 *result = 0;
+            }
+        }
+        {
+            typedef void (DialogShow::*_t)();
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DialogShow::keyboardAccept)) {
+                *result = 1;
             }
         }
     }
@@ -120,13 +131,13 @@ int DialogShow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 2)
+        if (_id < 3)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 2;
+        _id -= 3;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 2)
+        if (_id < 3)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 2;
+        _id -= 3;
     }
     return _id;
 }
@@ -136,5 +147,11 @@ void DialogShow::dialogDone(int32_t _t1, int32_t _t2, int32_t _t3)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)), const_cast<void*>(reinterpret_cast<const void*>(&_t2)), const_cast<void*>(reinterpret_cast<const void*>(&_t3)) };
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
+}
+
+// SIGNAL 1
+void DialogShow::keyboardAccept()
+{
+    QMetaObject::activate(this, &staticMetaObject, 1, Q_NULLPTR);
 }
 QT_END_MOC_NAMESPACE

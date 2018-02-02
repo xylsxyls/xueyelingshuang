@@ -17,6 +17,7 @@ WaitDialog::WaitDialog(const QString& title, const QString& tip)
 {
 	initForExec();
 	m_title->setText(title);
+	setWindowTitle(title);
 	m_tip = addTip(tip, QRect(43, 51, width() - 43 * 2, 60), QColor(205, 213, 225, 255));
 	setExitVisible(false);
 }

@@ -183,6 +183,9 @@
     <Filter Include="QtControl\TreeWidget">
       <UniqueIdentifier>{99eeff85-1fc4-49ce-9c8b-133057de528d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="FriendDialog\UserWidget">
+      <UniqueIdentifier>{9aaf7406-a480-4b88-aeec-fe0cfd2c151a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -482,6 +485,9 @@
     <ClCompile Include="GeneratedFiles\Release\moc_FriendDialogFrame.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="UserWidget.cpp">
+      <Filter>FriendDialog\UserWidget</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -629,6 +635,9 @@
     </ClInclude>
     <ClInclude Include="HtmlComboBoxStyle.h">
       <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="UserWidget.h">
+      <Filter>FriendDialog\UserWidget</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

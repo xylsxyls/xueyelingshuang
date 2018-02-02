@@ -128,6 +128,30 @@ public:
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
 
+	/** 弹出询问框
+	@param [out] dialogId 窗口ID值
+	@param [in] tip 提示内容
+	@param [in] parent 父窗口指针
+	@param [in] title 标题
+	@param [in] acceptText 接受按钮内容
+	@param [in] ignoreText 拒绝按钮内容
+	@param [in] acceptDone 接受按钮按下后的返回值
+	@param [in] ignoreDone 拒绝按钮按下后的返回值
+	@param [in] timeOut 超时自动关闭，单位秒
+	@param [in] isCountDownVisible 超时自动关闭提示是否可见
+	@return 关闭窗口时给的返回值
+	*/
+	int32_t popAskDialog(int32_t& dialogId,
+						 const QString& tip,
+						 QWindow* parent,
+						 const QString& title = QString::fromStdWString(L"11对战平台"),
+						 const QString& acceptText = QString::fromStdWString(L"确定"),
+						 const QString& ignoreText = QString::fromStdWString(L"取消"),
+						 int32_t acceptDone = 1,
+						 int32_t ignoreDone = 2,
+						 int32_t timeOut = -1,
+						 bool isCountDownVisible = false);
+
 	/** 弹出提示框
 	@param [out] dialogId 窗口ID值
 	@param [in] tip 提示内容
@@ -143,6 +167,26 @@ public:
 						 const QString& tip,
 						 const QString& title = QString::fromStdWString(L"11对战平台"),
 						 QWindow* parent = nullptr,
+						 const QString& buttonText = QString::fromStdWString(L"确定"),
+						 int32_t done = 1,
+						 int32_t timeOut = -1,
+						 bool isCountDownVisible = false);
+
+	/** 弹出提示框
+	@param [out] dialogId 窗口ID值
+	@param [in] tip 提示内容
+	@param [in] parent 父窗口指针
+	@param [in] title 标题
+	@param [in] buttonText 按钮内容
+	@param [in] done 按钮按下后的返回值
+	@param [in] timeOut 超时自动关闭，单位秒
+	@param [in] isCountDownVisible 超时自动关闭提示是否可见
+	@return 关闭窗口时给的返回值
+	*/
+	int32_t popTipDialog(int32_t& dialogId,
+						 const QString& tip,
+						 QWindow* parent,
+						 const QString& title = QString::fromStdWString(L"11对战平台"),
 						 const QString& buttonText = QString::fromStdWString(L"确定"),
 						 int32_t done = 1,
 						 int32_t timeOut = -1,
@@ -186,6 +230,11 @@ public:
 	/** 销毁所有窗口
 	*/
 	void destroyAll();
+
+	/** 当前弹框数量
+	@return 返回弹框数量
+	*/
+	int32_t dialogCount();
 
 	/** 根据窗口指针在已有窗口中获取窗口ID
 	@param [in] base 窗口指针

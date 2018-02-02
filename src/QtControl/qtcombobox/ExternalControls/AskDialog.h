@@ -38,6 +38,9 @@ private:
 			  const QString& ignoreText,
 			  int32_t ignoreDone);
 
+private slots:
+	void askAccept();
+
 private:
 	Label* m_tip;
 	COriginalButton* m_accept;

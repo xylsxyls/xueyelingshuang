@@ -1,6 +1,7 @@
 #include "InputDialog.h"
 #include "Label.h"
 #include "LineEdit.h"
+#include "../COriginalButton.h"
 
 int32_t InputDialog::popInputDialog(int32_t& dialogId,
 									const QString& title,
@@ -29,6 +30,8 @@ InputDialog::InputDialog(const QString& title,
 m_editText(editText)
 {
 	initForExec();
+	setFocus();
+	setWindowTitle(title);
 	m_title->setText(title);
 	m_title->setFontSize(12);
 	m_editTip = addLabel(editTip, QRect(43, 26, width() - 43 * 2, 60), QColor(205, 213, 225, 255));
@@ -39,10 +42,21 @@ m_editText(editText)
 	{
 		m_edit->setMaxLength(maxLength);
 	}
+	m_edit->setFocus();
+
+	m_accept->installEventFilter(this);
+
+	QObject::connect(this, SIGNAL(keyboardAccept()), this, SLOT(inputAccept()));
 }
 
 void InputDialog::done(int result)
 {
 	m_editText = m_edit->text();
 	QDialog::done(result);
+}
+
+void InputDialog::inputAccept()
+{
+	m_accept->setFocus();
+	m_accept->click();
 }

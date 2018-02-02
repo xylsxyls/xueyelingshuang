@@ -72,10 +72,45 @@ int32_t DialogManager::popAskDialog(int32_t& dialogId,
 								   isCountDownVisible);
 }
 
+int32_t DialogManager::popAskDialog(int32_t& dialogId,
+									const QString& tip,
+									QWindow* parent,
+									const QString& title,
+									const QString& acceptText,
+									const QString& ignoreText,
+									int32_t acceptDone,
+									int32_t ignoreDone,
+									int32_t timeOut,
+									bool isCountDownVisible)
+{
+	return AskDialog::popAskDialog(dialogId,
+								   title,
+								   tip,
+								   acceptText,
+								   acceptDone,
+								   ignoreText,
+								   ignoreDone,
+								   parent,
+								   timeOut,
+								   isCountDownVisible);
+}
+
 int32_t DialogManager::popTipDialog(int32_t& dialogId,
 									const QString& tip,
 									const QString& title,
 									QWindow* parent,
+									const QString& buttonText,
+									int32_t done,
+									int32_t timeOut,
+									bool isCountDownVisible)
+{
+	return TipDialog::popTipDialog(dialogId, title, tip, buttonText, done, parent, timeOut, isCountDownVisible);
+}
+
+int32_t DialogManager::popTipDialog(int32_t& dialogId,
+									const QString& tip,
+									QWindow* parent,
+									const QString& title,
 									const QString& buttonText,
 									int32_t done,
 									int32_t timeOut,
@@ -177,11 +212,20 @@ void DialogManager::destroyAll()
 	{
 		return;
 	}
-	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
+	while (m_mapDialog.size())
 	{
-		itDialog->second->reject();
+		m_mapDialog.begin()->second->reject();
 	}
-	m_mapDialog.clear();
+	//for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
+	//{
+	//	itDialog->second->reject();
+	//}
+	//m_mapDialog.clear();
+}
+
+int32_t DialogManager::dialogCount()
+{
+	return m_mapDialog.size();
 }
 
 int32_t DialogManager::DialogId(DialogBase* base)

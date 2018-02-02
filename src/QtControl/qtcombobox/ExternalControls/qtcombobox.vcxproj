@@ -283,6 +283,7 @@
     <ClCompile Include="TipDialog.cpp" />
     <ClCompile Include="TipShowDialog.cpp" />
     <ClCompile Include="TreeWidget.cpp" />
+    <ClCompile Include="UserWidget.cpp" />
     <ClCompile Include="WaitDialog.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -424,6 +425,7 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="UserWidget.h" />
     <CustomBuild Include="TreeWidget.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing TreeWidget.h...</Message>

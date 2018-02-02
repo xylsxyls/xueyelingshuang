@@ -152,7 +152,7 @@ BOOL CFundInvestDlg::OnInitDialog()
 	m_vecFundName.push_back("180012"); m_vecFundName.push_back("519156"); m_vecFundName.push_back("241001");
 	m_vecFundName.push_back("001938"); m_vecFundName.push_back("540006"); m_vecFundName.push_back("000577");
 	m_vecFundName.push_back("000457"); m_vecFundName.push_back("040035"); m_vecFundName.push_back("000619");
-	m_vecFundName.push_back("160212"); m_vecFundName.push_back("110022");// m_vecFundName.push_back("");
+	m_vecFundName.push_back("160212"); m_vecFundName.push_back("110022"); m_vecFundName.push_back("001740");
 
 	
 
@@ -216,14 +216,14 @@ HCURSOR CFundInvestDlg::OnQueryDragIcon()
 void CFundInvestDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	Ctxt txtload("D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + ".txt");
-	txtload.LoadTxt(2, "\t");
-	auto ss = txtload.m_vectxt;
-	return;
+	//Ctxt txtload("D:\\xueyelingshuang\\data\\Fund\\" + FUND_NUM + ".txt");
+	//txtload.LoadTxt(2, "\t");
+	//auto ss = txtload.m_vectxt;
+	//return;
 
 	Sleep(2000);
 	int32_t spacingTime = 5;
-	int i = 89;
+	int i = 25;
 	while (i-- != 0)
 	{
 		CMouse::MoveAbsolute(xyls::Point(670, 405), 0);

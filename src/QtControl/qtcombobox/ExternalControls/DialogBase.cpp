@@ -8,6 +8,8 @@
 #include "DialogManager.h"
 #include "NotifyDialogManager.h"
 #include "../CGeneralStyle.h"
+#include <Windows.h>
+#include <QApplication>
 
 DialogBase::DialogBase():
 m_timeVisible(false)
@@ -23,8 +25,18 @@ int32_t DialogBase::exec(int32_t& dialogId, int32_t timeOut, bool isCountDownVis
 		return 0;
 	}
 	m_timeVisible = isCountDownVisible;
+
+	auto oldModality = windowModality();
+
+	QWindow* handle = windowHandle();
+	if (handle != nullptr && handle->transientParent())
+	{
+		setWindowModality(Qt::WindowModal);
+	}
+
 	dialogId = DialogManager::instance().setDialog(this);
 	int32_t result = QDialog::exec();
+	setWindowModality(oldModality);
 	//DialogManager::instance().removeDialog(dialogId);
 	return result;
 }
@@ -156,9 +168,30 @@ void DialogBase::setParentWindow(QWindow* parent)
 		QWindow* window = windowHandle();
 		if (window != nullptr)
 		{
-			setAttribute(Qt::WA_NativeWindow);
-			setWindowModality(Qt::WindowModal);
-			window->setTransientParent(parent);
+			QWindow* windowHandle = nullptr;
+			WId topLevelHandle = (WId)::GetAncestor(HWND(parent->winId()), GA_ROOT);
+			QWidget* widget = QWidget::find(topLevelHandle);
+			if (widget != nullptr)
+			{
+				setAttribute(Qt::WA_NativeWindow);
+				window->setTransientParent(widget->windowHandle());
+			}
+			else
+			{
+				foreach(QWindow* window, qApp->allWindows())
+				{
+					if (window->winId() == topLevelHandle)
+					{
+						windowHandle = window;
+						break;
+					}
+				}
+			}
+			if (windowHandle != nullptr)
+			{
+				setAttribute(Qt::WA_NativeWindow);
+				window->setTransientParent(windowHandle);
+			}
 			return;
 		}
 	}
@@ -169,7 +202,8 @@ void DialogBase::setParentWindow(QWindow* parent)
 
 void DialogBase::endDialog()
 {
-	auto itResult = m_mapResult.find(childAt(mapFromGlobal(QWidget::cursor().pos())));
+	//childAt(mapFromGlobal(QWidget::cursor().pos()))
+	auto itResult = m_mapResult.find(focusWidget());
 	if (itResult != m_mapResult.end())
 	{
 		done(itResult->second);

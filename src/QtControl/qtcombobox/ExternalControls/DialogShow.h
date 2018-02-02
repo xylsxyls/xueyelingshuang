@@ -36,6 +36,10 @@ Q_SIGNALS:
 	*/
 	void dialogDone(int32_t dialogId, int32_t result, int32_t userType);
 
+	/** 按下回车和空格都表示accept
+	*/
+	void keyboardAccept();
+
 protected:
 	void paintEvent(QPaintEvent* eve);
 	//void mousePressEvent(QMouseEvent* eve);
@@ -56,6 +60,7 @@ private slots:
 
 private:
 	void ncActiveChanged(int32_t wParam);
+	bool eventFilter(QObject* tar, QEvent* eve);
 	
 protected:
 	COriginalButton* m_exit;

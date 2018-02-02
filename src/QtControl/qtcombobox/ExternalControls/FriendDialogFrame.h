@@ -53,7 +53,7 @@ public:
 
 	/** 初始化数据
 	*/
-	void initUIData();
+	//void initUIData();
 
 	/** 添加一个组
 	@param [in] groupList 组信息
@@ -110,8 +110,8 @@ private slots:
 	void onInviteClicked();
 	void onItemExpanded(QTreeWidgetItem* item);
 	void onItemCollapsed(QTreeWidgetItem* item);
-	void onFriendInsert(const YY::W3L::FriendData& data);
-	void onFriendUpdate(const YY::W3L::FriendData& data);
+	//void onFriendInsert(const YY::W3L::FriendData& data);
+	//void onFriendUpdate(const YY::W3L::FriendData& data);
 	void onFriendRemove(int32_t userId);
 
 private:

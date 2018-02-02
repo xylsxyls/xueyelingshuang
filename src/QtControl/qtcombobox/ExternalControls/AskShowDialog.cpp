@@ -34,6 +34,7 @@ AskShowDialog::AskShowDialog(int32_t userType,
 	initForShow(212, 118, str);
 	m_userType = userType;
 	m_title->setText(title);
+	setWindowTitle(title);
 	m_tip = addTip(tip, QRect(20, 35, width() - 20 * 2, 50), QColor(205, 213, 225, 255));
 	m_tip->setFontSize(13);
 	m_accept = addButton(acceptText, QRect(31, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19), acceptDone);

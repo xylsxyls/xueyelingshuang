@@ -32,6 +32,9 @@ private:
 			  const QString& buttonText,
 			  int32_t done);
 
+private slots:
+	void tipAccept();
+
 private:
 	Label* m_tip;
 	COriginalButton* m_accept;

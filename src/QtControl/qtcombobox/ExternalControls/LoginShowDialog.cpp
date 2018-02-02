@@ -36,6 +36,7 @@ LoginShowDialog::LoginShowDialog(int32_t userType,
 	initForShow(234, 167, str);//196, 145
 	m_userType = userType;
 	m_title->setText(title);
+	setWindowTitle(title);
 	m_greeting = addLabel(greeting, QRect(8, 39, 190, 17), QColor(187, 187, 195, 255));
 	m_greeting->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
 	m_greeting->setFontSize(13);

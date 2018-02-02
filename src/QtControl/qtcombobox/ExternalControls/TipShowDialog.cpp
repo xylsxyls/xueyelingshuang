@@ -30,6 +30,7 @@ TipShowDialog::TipShowDialog(int32_t userType,
 	initForShow(234, 130, str);
 	m_userType = userType;
 	m_title->setText(title);
+	setWindowTitle(title);
 	m_tip = addTip(tip, QRect(20, 40, width() - 20 * 2, 50), QColor(205, 213, 225, 255));
 	m_accept = addButton(buttonText, QRect((width() - 81) / 2, height() - 13 - 19, 81, 19), done);
 	m_accept->setBkgImage("");

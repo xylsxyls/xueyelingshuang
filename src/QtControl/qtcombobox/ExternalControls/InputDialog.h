@@ -43,6 +43,9 @@ private:
 
 	void done(int result);
 
+private slots:
+	void inputAccept();
+
 private:
 	Label* m_editTip;
 	COriginalButton* m_accept;

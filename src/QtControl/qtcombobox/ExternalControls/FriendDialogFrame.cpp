@@ -10,6 +10,7 @@
 #include <Windows.h>
 #include <QPixmap>
 #include <QBitmap>
+#include "UserWidget.h"
 //#include "D:\\SendToMessageTest.h"
 
 FriendDialogFrame::FriendDialogFrame(QWindow* parent) :
@@ -64,7 +65,7 @@ m_highLight(false)
 
 void FriendDialogFrame::popUp()
 {
-	initUIData();
+	//initUIData();
 	QTreeWidgetItem* item = m_friendTree->itemAt(0, 0);
 	if (item != nullptr)
 	{
@@ -75,41 +76,41 @@ void FriendDialogFrame::popUp()
 	return;
 }
 
-void FriendDialogFrame::initUIData()
-{
-	clear();
-
-	const YY::W3L::UIData& uiData = YY::W3L::UIData::getInstance();
-
-	auto friendDialogFrame = CLobbyMainFrame::instance()->friendDialogFrame();
-	if (friendDialogFrame != nullptr)
-	{
-		// 好友分组
-		FriendDialogFrame::Group groupData;
-		groupData.m_groupId = 0;
-		groupData.m_groupName = QString::fromStdWString(L"我的可邀请好友");
-
-		const YY::W3L::FriendList& friendList = uiData.getFriendList();
-		FriendDialogFrame::User user;
-
-		int32_t index = -1;
-		while (index++ != friendList.size() - 1)
-		{
-			auto& oneFriend = friendList[index];
-			user.m_userId = oneFriend.friendId;
-			user.m_userName = oneFriend.friendName;
-			user.m_userPicPath = CGeneralStyle::instance()->getUserAvatar(oneFriend.friendId, oneFriend.friendImageId);
-			user.m_isVip = oneFriend.friendVip;
-			groupData.m_userList.push_back(user);
-		}
-
-		friendDialogFrame->addGroupList(groupData);
-		
-		QObject::connect(&uiData, &YY::W3L::UIData::friendInserted, friendDialogFrame, &FriendDialogFrame::onFriendInsert);
-		QObject::connect(&uiData, &YY::W3L::UIData::friendUpdated, friendDialogFrame, &FriendDialogFrame::onFriendUpdate);
-		QObject::connect(&uiData, &YY::W3L::UIData::friendRemoved, friendDialogFrame, &FriendDialogFrame::onFriendRemove);
-	}
-}
+//void FriendDialogFrame::initUIData()
+//{
+//	clear();
+//
+//	const YY::W3L::UIData& uiData = YY::W3L::UIData::getInstance();
+//
+//	auto friendDialogFrame = CLobbyMainFrame::instance()->friendDialogFrame();
+//	if (friendDialogFrame != nullptr)
+//	{
+//		// 好友分组
+//		FriendDialogFrame::Group groupData;
+//		groupData.m_groupId = 0;
+//		groupData.m_groupName = QString::fromStdWString(L"我的可邀请好友");
+//
+//		const YY::W3L::FriendList& friendList = uiData.getFriendList();
+//		FriendDialogFrame::User user;
+//
+//		int32_t index = -1;
+//		while (index++ != friendList.size() - 1)
+//		{
+//			auto& oneFriend = friendList[index];
+//			user.m_userId = oneFriend.friendId;
+//			user.m_userName = oneFriend.friendName;
+//			user.m_userPicPath = CGeneralStyle::instance()->getUserAvatar(oneFriend.friendId, oneFriend.friendImageId);
+//			user.m_isVip = oneFriend.friendVip;
+//			groupData.m_userList.push_back(user);
+//		}
+//
+//		friendDialogFrame->addGroupList(groupData);
+//		
+//		QObject::connect(&uiData, &YY::W3L::UIData::friendInserted, friendDialogFrame, &FriendDialogFrame::onFriendInsert);
+//		QObject::connect(&uiData, &YY::W3L::UIData::friendUpdated, friendDialogFrame, &FriendDialogFrame::onFriendUpdate);
+//		QObject::connect(&uiData, &YY::W3L::UIData::friendRemoved, friendDialogFrame, &FriendDialogFrame::onFriendRemove);
+//	}
+//}
 
 void FriendDialogFrame::addGroupList(const Group& groupList)
 {
@@ -480,7 +481,7 @@ void FriendDialogFrame::onInviteClicked()
 	emit inviteClicked(groupId, userId);
 	QList<qint64> idList;
 	idList.append(userId);
-	emit YY::W3L::UISignalSet::getInstance().gameInvitationSent(idList);
+	//emit YY::W3L::UISignalSet::getInstance().gameInvitationSent(idList);
 }
 
 void FriendDialogFrame::onItemExpanded(QTreeWidgetItem* item)
@@ -515,23 +516,23 @@ void FriendDialogFrame::onItemCollapsed(QTreeWidgetItem* item)
 	indi->setChecked(m_friendTree->isItemExpanded(item));
 }
 
-void FriendDialogFrame::onFriendInsert(const YY::W3L::FriendData& data)
-{
-	FriendDialogFrame::User user;
-	user.m_userId = data.friendId;
-	user.m_userName = data.friendName;
-	user.m_userPicPath = CGeneralStyle::instance()->getUserAvatar(data.friendId, data.friendImageId);
-	addUserInfo(data.groupId, user);
-}
-
-void FriendDialogFrame::onFriendUpdate(const YY::W3L::FriendData& data)
-{
-	FriendDialogFrame::User user;
-	user.m_userId = data.friendId;
-	user.m_userName = data.friendName;
-	user.m_userPicPath = CGeneralStyle::instance()->getUserAvatar(data.friendId, data.friendImageId);
-	updateUserInfo(data.groupId, user);
-}
+//void FriendDialogFrame::onFriendInsert(const YY::W3L::FriendData& data)
+//{
+//	FriendDialogFrame::User user;
+//	user.m_userId = data.friendId;
+//	user.m_userName = data.friendName;
+//	user.m_userPicPath = CGeneralStyle::instance()->getUserAvatar(data.friendId, data.friendImageId);
+//	addUserInfo(data.groupId, user);
+//}
+//
+//void FriendDialogFrame::onFriendUpdate(const YY::W3L::FriendData& data)
+//{
+//	FriendDialogFrame::User user;
+//	user.m_userId = data.friendId;
+//	user.m_userName = data.friendName;
+//	user.m_userPicPath = CGeneralStyle::instance()->getUserAvatar(data.friendId, data.friendImageId);
+//	updateUserInfo(data.groupId, user);
+//}
 
 void FriendDialogFrame::onFriendRemove(int32_t userId)
 {
