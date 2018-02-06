@@ -28,6 +28,8 @@ public:
 	*/
 	void setExitVisible(bool visible);
 
+	void done(int result);
+
 Q_SIGNALS:
 	/** 当通知框窗口关闭时发送信号，在关闭动画执行之前发送信号
 	@param [in] dialogId 窗口ID
@@ -52,7 +54,7 @@ protected:
 	void showEvent(QShowEvent* eve);
 
 
-	void done(int result);
+	
 	void end();
 
 private slots:
@@ -70,6 +72,7 @@ protected:
 	Label* m_titleBar;
 	Label* m_icon;
 	int32_t m_userType;
+	bool m_inExit;
 
 private:
 	bool m_bPressed;

@@ -1,4 +1,4 @@
-#include "RPGCreateRoomWidget.h"
+#include "CreateGameDialog.h"
 #include "COriginalButton.h"
 #include <stdint.h>
 #include "ExternalControls/ComboBox.h"
@@ -6,41 +6,46 @@
 #include "ExternalControls/CPasswordInputBox.h"
 #include "ExternalControls/CheckBox.h"
 #include "ExternalControls/LineEdit.h"
-#include "RPGCreateRoomWidgetDataInfo.h"
+#include "CreateGameDialogDataInfo.h"
 #include <QEvent>
 #include <QMouseEvent>
 #include "CGeneralStyle.h"
 
-RPGCreateRoomWidget::RPGCreateRoomWidget(QWidget* parent) :
+CreateGameDialog::CreateGameDialog(QWidget* parent) :
 CW3LModalFrame(parent),
-m_rpgCreateRoomWidgetHeight(311),
-m_widgetHeight(550),
+m_createGameDialogHeight(422),
+m_widgetHeight(300),
 m_isLeader(false)
 {
 	m_war3ResourcePath = CGeneralStyle::instance()->war3lobbyResourcePath();
-	setFixedSize(GAME_INFO_WIDGET_WIDTH, m_rpgCreateRoomWidgetHeight);
+	setFixedSize(GAME_INFO_WIDGET_WIDTH, m_createGameDialogHeight);
 
 	m_gameSettingWidget = (new QWidget(this));
 
-	m_gameSetting = (new Label(this));
-	m_exit = (new COriginalButton(this));
-	m_gameNameEdit = (new LineEdit(m_gameSettingWidget));
-	m_mapVersionEdit = (new LineEdit(m_gameSettingWidget));
-	m_gamePasswordEdit = (new CPasswordInputBox(m_gameSettingWidget));
-	m_gameModeComboBox = (new ComboBox(m_gameSettingWidget));
-	m_judgeCheckName = (new Label(m_gameSettingWidget));
-	m_judgeCheckBox = (new CheckBox(m_gameSettingWidget));
-	m_gameName = (new Label(m_gameSettingWidget));
-	m_mapVersion = (new Label(m_gameSettingWidget));
-	m_gamePassword = (new Label(m_gameSettingWidget));
-	m_gameMode = (new Label(m_gameSettingWidget));
-	m_createRoom = (new COriginalButton(m_gameSettingWidget));
+	//m_gameSetting = (new Label(this));
+	m_exit = new COriginalButton(this);
+	m_gameNameEdit = new LineEdit(this);
+	m_mapVersionComboBox = new ComboBox(this);
+	m_gamePasswordEdit = new CPasswordInputBox(this);
+	m_gameModeComboBox = new ComboBox(this);
+	m_gameName = new Label(this);
+	m_mapVersion = new Label(this);
+	m_gamePassword = new Label(this);
+	m_gameMode = new Label(this);
+	m_createRoom = new COriginalButton(this);
+	m_separator = new Label(m_gameSettingWidget);
+	m_challengeMode = new Label(m_gameSettingWidget);
+	m_challengeModeComboBox = new ComboBox(m_gameSettingWidget);
+	m_challengeCost = new Label(m_gameSettingWidget);
+	m_challengeCostComboBox = new ComboBox(m_gameSettingWidget);
 
 	//无边框
 	//setWindowFlags(Qt::FramelessWindowHint);
-	
-	setStyleSheet(".RPGCreateRoomWidget{background-color:rgba(20,24,35,255);border:1px solid;border-color:rgba(39,59,113,255);}");
-	
+
+	//setStyleSheet(".CreateGameDialog{background-color:rgba(20,24,35,255);border:1px solid;border-color:rgba(39,59,113,255);}");
+
+	setWindowTitle(QString::fromStdWString(L"创建游戏"));
+
 	setLeader(true);
 
 	layout();
@@ -48,40 +53,37 @@ m_isLeader(false)
 	init();
 }
 
-RPGCreateRoomWidget::~RPGCreateRoomWidget()
+CreateGameDialog::~CreateGameDialog()
 {
 
 }
 
-void RPGCreateRoomWidget::setMapVersion(const QString& mapVersion)
+void CreateGameDialog::setMapVersionList(const QStringList& gameModeList)
 {
-	if (m_mapVersionEdit == nullptr)
-	{
-		return;
-	}
-	m_mapVersionEdit->setText(mapVersion);
+	m_mapVersionComboBox->clear();
+	SAFE(m_mapVersionComboBox, m_mapVersionComboBox->addItems(gameModeList));
 }
 
-QString RPGCreateRoomWidget::getMapVersion()
+void CreateGameDialog::setCurMapVersion(const QString& gameMode)
 {
-	if (m_mapVersionEdit == nullptr)
+	SAFE(m_mapVersionComboBox, m_mapVersionComboBox->setCurrentText(gameMode));
+}
+
+QString CreateGameDialog::getCurMapVersion()
+{
+	if (m_mapVersionComboBox == nullptr)
 	{
 		return QString();
 	}
-	return m_mapVersionEdit->text();
+	return m_mapVersionComboBox->currentText();
 }
 
-void RPGCreateRoomWidget::setMapVersionEnable(bool enable)
+void CreateGameDialog::setMapVersionEnable(bool enable)
 {
-	m_mapVersionEdit->setEnabled(enable);
+	m_mapVersionComboBox->setEnabled(enable);
 }
 
-void RPGCreateRoomWidget::setMapVersionReadOnly(bool readOnly)
-{
-	m_mapVersionEdit->setReadOnly(readOnly);
-}
-
-void RPGCreateRoomWidget::setGameName(const QString& gameName)
+void CreateGameDialog::setGameName(const QString& gameName)
 {
 	if (m_gameNameEdit == nullptr)
 	{
@@ -90,7 +92,7 @@ void RPGCreateRoomWidget::setGameName(const QString& gameName)
 	m_gameNameEdit->setText(gameName);
 }
 
-QString RPGCreateRoomWidget::getGameName()
+QString CreateGameDialog::getGameName()
 {
 	if (m_gameNameEdit == nullptr)
 	{
@@ -99,12 +101,12 @@ QString RPGCreateRoomWidget::getGameName()
 	return m_gameNameEdit->text();
 }
 
-void RPGCreateRoomWidget::setGameNameEnable(bool enable)
+void CreateGameDialog::setGameNameEnable(bool enable)
 {
 	m_gameNameEdit->setEnabled(enable);
 }
 
-void RPGCreateRoomWidget::setGamePassword(const QString& gamePassword)
+void CreateGameDialog::setGamePassword(const QString& gamePassword)
 {
 	if (m_gamePasswordEdit == nullptr)
 	{
@@ -113,7 +115,7 @@ void RPGCreateRoomWidget::setGamePassword(const QString& gamePassword)
 	m_gamePasswordEdit->setText(gamePassword);
 }
 
-QString RPGCreateRoomWidget::getGamePassword()
+QString CreateGameDialog::getGamePassword()
 {
 	if (m_gamePasswordEdit == nullptr)
 	{
@@ -122,23 +124,23 @@ QString RPGCreateRoomWidget::getGamePassword()
 	return m_gamePasswordEdit->text();
 }
 
-void RPGCreateRoomWidget::setGamePasswordEnable(bool enable)
+void CreateGameDialog::setGamePasswordEnable(bool enable)
 {
 	m_gamePasswordEdit->setEnabled(enable);
 }
 
-void RPGCreateRoomWidget::setGameModeList(const QStringList& gameModeList)
+void CreateGameDialog::setGameModeList(const QStringList& gameModeList)
 {
 	m_gameModeComboBox->clear();
 	SAFE(m_gameModeComboBox, m_gameModeComboBox->addItems(gameModeList));
 }
 
-void RPGCreateRoomWidget::setCurGameMode(const QString& gameMode)
+void CreateGameDialog::setCurGameMode(const QString& gameMode)
 {
 	SAFE(m_gameModeComboBox, m_gameModeComboBox->setCurrentText(gameMode));
 }
 
-QString RPGCreateRoomWidget::getCurGameMode()
+QString CreateGameDialog::getCurGameMode()
 {
 	if (m_gameModeComboBox == nullptr)
 	{
@@ -147,70 +149,100 @@ QString RPGCreateRoomWidget::getCurGameMode()
 	return m_gameModeComboBox->currentText();
 }
 
-void RPGCreateRoomWidget::setGameModeEnable(bool enable)
+void CreateGameDialog::setGameModeEnable(bool enable)
 {
 	m_gameModeComboBox->setEnabled(enable);
 }
 
-void RPGCreateRoomWidget::setJudge(bool judge)
+void CreateGameDialog::setChallengeModeList(const QStringList& challengeModeList)
 {
-	if (m_judgeCheckBox == nullptr)
+	m_challengeModeComboBox->clear();
+	SAFE(m_challengeModeComboBox, m_challengeModeComboBox->addItems(challengeModeList));
+}
+
+void CreateGameDialog::setCurChallengeMode(const QString& challengeMode)
+{
+	SAFE(m_challengeModeComboBox, m_challengeModeComboBox->setCurrentText(challengeMode));
+}
+
+QString CreateGameDialog::getCurChallengeMode()
+{
+	if (m_challengeModeComboBox == nullptr)
 	{
-		return;
+		return QString();
 	}
-	m_judgeCheckBox->setChecked(judge);
+	return m_challengeModeComboBox->currentText();
 }
 
-bool RPGCreateRoomWidget::getJudge()
+void CreateGameDialog::setChallengeModeEnable(bool enable)
 {
-	if (m_judgeCheckBox == nullptr)
+	m_challengeModeComboBox->setEnabled(enable);
+}
+
+void CreateGameDialog::setChallengeCostList(const QStringList& challengeCostList)
+{
+	m_challengeCostComboBox->clear();
+	SAFE(m_challengeCostComboBox, m_challengeCostComboBox->addItems(challengeCostList));
+}
+
+void CreateGameDialog::setCurChallengeCost(const QString& challengeCost)
+{
+	SAFE(m_challengeCostComboBox, m_challengeCostComboBox->setCurrentText(challengeCost));
+}
+
+QString CreateGameDialog::getCurChallengeCost()
+{
+	if (m_challengeCostComboBox == nullptr)
 	{
-		return false;
+		return QString();
 	}
-	return m_judgeCheckBox->isChecked();
+	return m_challengeCostComboBox->currentText();
 }
 
-void RPGCreateRoomWidget::setJudgeEnable(bool enable)
+void CreateGameDialog::setChallengeCostEnable(bool enable)
 {
-	m_judgeCheckBox->setEnabled(enable);
+	m_challengeCostComboBox->setEnabled(enable);
 }
 
-void RPGCreateRoomWidget::setSaveEnable(bool enable)
+void CreateGameDialog::setSaveEnable(bool enable)
 {
 	m_createRoom->setEnabled(enable);
 }
 
-void RPGCreateRoomWidget::resetSettings()
+void CreateGameDialog::resetSettings()
 {
-	m_mapVersionEdit->setText("");
-	setMapVersionReadOnly(true);
+	m_mapVersionComboBox->clear();
+	//setMapVersionEnable(false);
 	m_gameNameEdit->setText("");
 	m_gamePasswordEdit->setText("");
 	m_gameModeComboBox->clear();
 	m_gameModeComboBox->addItem(QString::fromStdWString(L"进入游戏后手动选择"));
-	m_judgeCheckBox->setCheckable(true);
-	m_judgeCheckBox->setChecked(false);
+	m_challengeModeComboBox->clear();
+	m_challengeCostComboBox->clear();
 	setLeader(m_isLeader);
 }
 
-void RPGCreateRoomWidget::setLeader(bool isLeader)
+void CreateGameDialog::setLeader(bool isLeader)
 {
 	m_isLeader = isLeader;
 
 	setGameNameEnable(isLeader);
 	setGamePasswordEnable(isLeader);
 	setGameModeEnable(isLeader);
-	setJudgeEnable(isLeader);
 	m_createRoom->setVisible(isLeader);
 }
 
-void RPGCreateRoomWidget::init()
+void CreateGameDialog::init()
 {
 	m_gameSettingWidget->show();
 	initGameSettingButton();
 
-	setMapVersion(QString::fromStdWString(L"地图版本"));
-	setMapVersionReadOnly(true);
+	QStringList maplist;
+	maplist.append(QString::fromStdWString(L"地图版本"));
+	maplist.append(QString::fromStdWString(L"地图版本2"));
+	setMapVersionList(maplist);
+	setCurMapVersion(QString::fromStdWString(L"地图版本"));
+	//setMapVersionEnable(false);
 	setGamePassword("123456");
 	setGameName(QString::fromStdWString(L"游戏名称"));
 
@@ -218,37 +250,46 @@ void RPGCreateRoomWidget::init()
 	list.append(QString::fromStdWString(L"进入游戏后手动选择"));
 	list.append(QString::fromStdWString(L"进入游戏后手动选择2"));
 	setGameModeList(list);
-	setJudge(false);
+
+	QStringList challengeModelist;
+	challengeModelist.append(QString::fromStdWString(L"挑战模式"));
+	challengeModelist.append(QString::fromStdWString(L"挑战模式2"));
+	setChallengeModeList(challengeModelist);
+
+	QStringList challengeCostlist;
+	challengeCostlist.append(QString::fromStdWString(L"挑战费用"));
+	challengeCostlist.append(QString::fromStdWString(L"挑战费用2"));
+	setChallengeCostList(challengeCostlist);
 
 	//resetSettings();
 }
 
-void RPGCreateRoomWidget::initGameSettingButton()
+void CreateGameDialog::initGameSettingButton()
 {
-	if (m_gameSetting == nullptr)
-	{
-		return;
-	}
-	m_gameSetting->setText(QString::fromStdWString(L"创建房间"));
-	m_gameSetting->setTextColor(CREATE_GAME_COLOR);
-	m_gameSetting->setFontSize(14);
-	m_gameSetting->setFontFace(GAME_INFO_FONT_FACE);
+	//if (m_gameSetting == nullptr)
+	//{
+	//	return;
+	//}
+	//m_gameSetting->setText(QString::fromStdWString(L"创建房间"));
+	//m_gameSetting->setTextColor(CREATE_GAME_COLOR);
+	//m_gameSetting->setFontSize(14);
+	//m_gameSetting->setFontFace(GAME_INFO_FONT_FACE);
 	m_exit->setText("");
 	m_exit->setBkgImage(m_war3ResourcePath + "/Image/MatchChat/message_template_close.png");
-	QObject::connect(m_exit, &COriginalButton::clicked, this, &RPGCreateRoomWidget::onExitClicked);
-	
+	QObject::connect(m_exit, &COriginalButton::clicked, this, &CreateGameDialog::onExitClicked);
+
 	//创建游戏设置界面
 	initGameSettingWidget();
 }
 
-void RPGCreateRoomWidget::initGameSettingWidget()
+void CreateGameDialog::initGameSettingWidget()
 {
 	if (m_gameSettingWidget == nullptr)
 	{
 		return;
 	}
 	//下面一行后面删掉
-	m_gameSettingWidget->setStyleSheet(".QWidget{background-color:rgba(91,101,127,255);border-top-left-radius:10px;}");
+	m_gameSettingWidget->setStyleSheet(".QWidget{background-color:rgba(0,0,0,0);}");
 
 	//第一行
 	if (m_mapVersion != nullptr)
@@ -260,18 +301,11 @@ void RPGCreateRoomWidget::initGameSettingWidget()
 		m_mapVersion->setFontFace(GAME_INFO_FONT_FACE);
 		m_mapVersion->setBackgroundColor(QColor(0, 0, 0, 0));
 	}
-	if (m_mapVersionEdit != nullptr)
+	if (m_mapVersionComboBox != nullptr)
 	{
-		m_mapVersionEdit->setBorderRadius(CONTROL_RADIUS);
-		m_mapVersionEdit->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
-		m_mapVersionEdit->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR);
-		m_mapVersionEdit->setFontSize(GAME_INFO_FONT_SIZE);
-		m_mapVersionEdit->setFontFace(GAME_INFO_FONT_FACE);
-		m_mapVersionEdit->setTextOrigin(CONTROL_TEXT_ORIGIN);
-		m_mapVersionEdit->setBackgroundColor(CONTROL_BACKGROUND_COLOR, CONTROL_BACKGROUND_COLOR, CONTROL_BACKGROUND_COLOR);
-		m_mapVersionEdit->setContextMenuPolicy(Qt::NoContextMenu);
-		m_mapVersionEdit->setBorderWidth(0);
-		QObject::connect(m_mapVersionEdit, &LineEdit::textChanged, this, &RPGCreateRoomWidget::gameNameChanged);
+		setComboBoxAttri(m_mapVersionComboBox);
+		m_mapVersionComboBox->setTextOrigin(GAME_MODE_TEXT_ORIGIN);
+		QObject::connect(m_mapVersionComboBox, &ComboBox::currentTextChanged, this, &CreateGameDialog::mapVersionChanged);
 	}
 
 	//第四行
@@ -295,7 +329,7 @@ void RPGCreateRoomWidget::initGameSettingWidget()
 		m_gameNameEdit->setBackgroundColor(CONTROL_BACKGROUND_COLOR);
 		m_gameNameEdit->setContextMenuPolicy(Qt::NoContextMenu);
 		m_gameNameEdit->setBorderWidth(0);
-		QObject::connect(m_gameNameEdit, &LineEdit::textChanged, this, &RPGCreateRoomWidget::gameNameChanged);
+		QObject::connect(m_gameNameEdit, &LineEdit::textChanged, this, &CreateGameDialog::mapVersionChanged);
 	}
 
 	//第二行
@@ -316,7 +350,7 @@ void RPGCreateRoomWidget::initGameSettingWidget()
 		m_gamePasswordEdit->setBorderRadius(CONTROL_RADIUS);
 		m_gamePasswordEdit->setMaskBackgroundImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/password_box_indicator.png", 2, 1, 1, 1, 1, 2, 2, 2, 2);
 		m_gamePasswordEdit->setMaskSize(15, 10);
-		QObject::connect(m_gamePasswordEdit, &LineEdit::textChanged, this, &RPGCreateRoomWidget::gamePasswordChanged);
+		QObject::connect(m_gamePasswordEdit, &LineEdit::textChanged, this, &CreateGameDialog::gamePasswordChanged);
 	}
 
 	//第三行
@@ -333,28 +367,44 @@ void RPGCreateRoomWidget::initGameSettingWidget()
 	{
 		setComboBoxAttri(m_gameModeComboBox);
 		m_gameModeComboBox->setTextOrigin(GAME_MODE_TEXT_ORIGIN);
-		QObject::connect(m_gameModeComboBox, &ComboBox::currentTextChanged, this, &RPGCreateRoomWidget::gameModeChanged);
+		QObject::connect(m_gameModeComboBox, &ComboBox::currentTextChanged, this, &CreateGameDialog::gameModeChanged);
 	}
 
-	//开启裁判位
-	if (m_judgeCheckName != nullptr)
+	if (m_separator != nullptr)
 	{
-		m_judgeCheckName->setTextColor(LABEL_TEXT_COLOR);
-		m_judgeCheckName->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-		m_judgeCheckName->setText(QString::fromStdWString(L"速开局"));
-		m_judgeCheckName->setFontSize(GAME_INFO_FONT_SIZE);
-		m_judgeCheckName->setFontFace(GAME_INFO_FONT_FACE);
-		m_judgeCheckName->setBackgroundColor(QColor(0, 0, 0, 0));
+		m_separator->setBackgroundColor(SEPARATOR_COLOR);
 	}
 
-	if(m_judgeCheckBox != nullptr)
+	if (m_challengeMode != nullptr)
 	{
-		m_judgeCheckBox->setBackgroundColor(QColor(0, 0, 0, 0));
-		//m_judgeCheckBox->setTextColor(LABEL_TEXT_COLOR);
-		//m_judgeCheckBox->setText(QString::fromStdWString(L""));
-		m_judgeCheckBox->setIndicatorImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/check_box_indicator.png", 2, 1, 1, 1, 1, 2, 2, 2, 2);
-		m_judgeCheckBox->setIndicatorSize(16, 16);
-		QObject::connect(m_judgeCheckBox, &CheckBox::stateChanged, this, &RPGCreateRoomWidget::onJudgeChanged);
+		m_challengeMode->setText(QString::fromStdWString(L"挑战模式"));
+		m_challengeMode->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
+		m_challengeMode->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+		m_challengeMode->setFontSize(GAME_INFO_FONT_SIZE);
+		m_challengeMode->setFontFace(GAME_INFO_FONT_FACE);
+		m_challengeMode->setBackgroundColor(QColor(0, 0, 0, 0));
+	}
+	if (m_challengeModeComboBox != nullptr)
+	{
+		setComboBoxAttri(m_challengeModeComboBox);
+		m_challengeModeComboBox->setTextOrigin(GAME_MODE_TEXT_ORIGIN);
+		QObject::connect(m_challengeModeComboBox, &ComboBox::currentTextChanged, this, &CreateGameDialog::challengeModeChanged);
+	}
+
+	if (m_challengeCost != nullptr)
+	{
+		m_challengeCost->setText(QString::fromStdWString(L"挑战费用"));
+		m_challengeCost->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
+		m_challengeCost->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+		m_challengeCost->setFontSize(GAME_INFO_FONT_SIZE);
+		m_challengeCost->setFontFace(GAME_INFO_FONT_FACE);
+		m_challengeCost->setBackgroundColor(QColor(0, 0, 0, 0));
+	}
+	if (m_challengeCostComboBox != nullptr)
+	{
+		setComboBoxAttri(m_challengeCostComboBox);
+		m_challengeCostComboBox->setTextOrigin(GAME_MODE_TEXT_ORIGIN);
+		QObject::connect(m_challengeCostComboBox, &ComboBox::currentTextChanged, this, &CreateGameDialog::challengeCostChanged);
 	}
 
 	//保存
@@ -364,11 +414,11 @@ void RPGCreateRoomWidget::initGameSettingWidget()
 		m_createRoom->setBkgColor(CREATE_ROOM_NORMAL_COLOR, CREATE_ROOM_HOVER_COLOR, CREATE_ROOM_NORMAL_COLOR, CREATE_ROOM_NORMAL_COLOR);
 		m_createRoom->setBorderRadius(CREATE_ROOM_RADIUS);
 		m_createRoom->setText(QString::fromStdWString(L"创建房间"));
-		QObject::connect(m_createRoom, &COriginalButton::clicked, this, &RPGCreateRoomWidget::createRoomClicked);
+		QObject::connect(m_createRoom, &COriginalButton::clicked, this, &CreateGameDialog::createRoomClicked);
 	}
 }
 
-void RPGCreateRoomWidget::setComboBoxAttri(ComboBox* pBox, const std::wstring& pattern, QRegExp* ex, QRegExpValidator* rep)
+void CreateGameDialog::setComboBoxAttri(ComboBox* pBox, const std::wstring& pattern, QRegExp* ex, QRegExpValidator* rep)
 {
 	if (pBox == nullptr)
 	{
@@ -409,60 +459,53 @@ void RPGCreateRoomWidget::setComboBoxAttri(ComboBox* pBox, const std::wstring& p
 	pBox->setContextMenuPolicy(Qt::NoContextMenu);
 }
 
-void RPGCreateRoomWidget::resizeEvent(QResizeEvent* eve)
+void CreateGameDialog::resizeEvent(QResizeEvent* eve)
 {
 	QWidget::resizeEvent(eve);
 	int32_t rpgCeateRoomWidgetHeight = geometry().height();
-	int32_t resizeHeight = rpgCeateRoomWidgetHeight - m_rpgCreateRoomWidgetHeight;
+	int32_t resizeHeight = rpgCeateRoomWidgetHeight - m_createGameDialogHeight;
 	if (resizeHeight != 0)
 	{
 		m_widgetHeight += resizeHeight;
-		m_rpgCreateRoomWidgetHeight = rpgCeateRoomWidgetHeight;
+		m_createGameDialogHeight = rpgCeateRoomWidgetHeight;
 		layout();
 	}
 }
 
-void RPGCreateRoomWidget::paintEvent(QPaintEvent* eve)
-{
-	QWidget::paintEvent(eve);
-}
-
-void RPGCreateRoomWidget::layout()
+void CreateGameDialog::layout()
 {
 	m_gameSettingWebviewOrigin = m_widgetHeight - GAME_SETTING_WEBVIEW_HEIGHT;
 	m_inviteFriendOrigin = WIDGET_BUTTON_HEIGHT + m_widgetHeight;
-	m_startGameOrigin_y = m_rpgCreateRoomWidgetHeight - 
-						 (m_rpgCreateRoomWidgetHeight - 
-						  m_widgetHeight - 
-						  WIDGET_BUTTON_HEIGHT - 
-						  INVITE_FRIEND_HEIGHT - 
-						  START_GAME_HEIGHT) / 2 - 
+	m_startGameOrigin_y = m_createGameDialogHeight -
+						  (m_createGameDialogHeight -
+						  m_widgetHeight -
+						  WIDGET_BUTTON_HEIGHT -
+						  INVITE_FRIEND_HEIGHT -
+						  START_GAME_HEIGHT) / 2 -
 						  START_GAME_HEIGHT;
 	m_exitOrigin_y = m_startGameOrigin_y;
 
 	SAFE(m_exit, m_exit->setGeometry(EXIT_ORIGIN_X, EXIT_ORIGIN_Y, EXIT_WIDTH, EXIT_HEIGHT));
-	SAFE(m_gameSetting, m_gameSetting->setGeometry(CREATE_GAME_ORIGIN_X, CREATE_GAME_ORIGIN_Y, CREATE_GAME_WIDTH, CREATE_GAME_HEIGHT));
-	SAFE(m_gameSettingWidget, m_gameSettingWidget->setGeometry(WIDGET_ORIGIN, WIDGET_BUTTON_HEIGHT, WIDGET_WIDTH, WIDGET_HEIGHT));
+	//SAFE(m_gameSetting, m_gameSetting->setGeometry(CREATE_GAME_ORIGIN_X, CREATE_GAME_ORIGIN_Y, CREATE_GAME_WIDTH, CREATE_GAME_HEIGHT));
+	SAFE(m_gameSettingWidget, m_gameSettingWidget->setGeometry(WIDGET_ORIGIN, WIDGET_ORIGIN_Y, WIDGET_WIDTH, WIDGET_HEIGHT));
 	SAFE(m_gameName, m_gameName->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 2, LABEL_WIDTH, LABEL_HEIGHT));
 	SAFE(m_gameNameEdit, m_gameNameEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 2, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_mapVersion, m_mapVersion->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT));
-	SAFE(m_mapVersionEdit, m_mapVersionEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_mapVersionComboBox, m_mapVersionComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_gamePassword, m_gamePassword->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 3, LABEL_WIDTH, LABEL_HEIGHT));
 	SAFE(m_gamePasswordEdit, m_gamePasswordEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 3, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_gameMode, m_gameMode->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 1, LABEL_WIDTH, LABEL_HEIGHT));
 	SAFE(m_gameModeComboBox, m_gameModeComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 1, CONTROL_WIDTH, CONTROL_HEIGHT));
-	SAFE(m_judgeCheckName, m_judgeCheckName->setGeometry(0, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, LABEL_WIDTH, LABEL_HEIGHT));
-	SAFE(m_judgeCheckBox, m_judgeCheckBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_separator, m_separator->setGeometry(SEPARATOR_ORIGIN_X, SEPARATOR_ORIGIN_Y, SEPARATOR_WIDTH, SEPARATOR_HEIGHT));
+	SAFE(m_challengeMode, m_challengeMode->setGeometry(0, CHALLENGE_MODE_ORIGIN, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_challengeModeComboBox, m_challengeModeComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CHALLENGE_MODE_ORIGIN, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_challengeCost, m_challengeCost->setGeometry(0, CHALLENGE_MODE_ORIGIN + CONTROL_ALL_SPACING * 1, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_challengeCostComboBox, m_challengeCostComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CHALLENGE_MODE_ORIGIN + CONTROL_ALL_SPACING * 1, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_createRoom, m_createRoom->setGeometry(CREATE_ROOM_ORIGIN_X, CREATE_ROOM_ORIGIN_Y, CREATE_ROOM_WIDTH, CREATE_ROOM_HEIGHT));
 }
 
-void RPGCreateRoomWidget::onExitClicked()
+void CreateGameDialog::onExitClicked()
 {
 	reject();
 	emit exitClicked();
-}
-
-void RPGCreateRoomWidget::onJudgeChanged(int state)
-{
-	emit judgeChanged(!!state);
 }

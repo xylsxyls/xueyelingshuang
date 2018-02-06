@@ -91,16 +91,16 @@ Q_SIGNALS:
 protected:
 	void showEvent(QShowEvent* eve);
 	void timerEvent(QTimerEvent* eve);
-	void done(int result);
+	
 
 private slots:
 	void endDialog();
 
 protected:
 	bool m_timeVisible;
+	int32_t m_timeId;
 
 private:
 	int32_t m_timeRest;
-	int32_t m_timeId;
 	std::map<void*, int32_t> m_mapResult;
 };

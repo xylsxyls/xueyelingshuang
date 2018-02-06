@@ -16,7 +16,8 @@ m_highLight(false),
 m_isExec(false),
 m_animation(this, "geometry"),
 m_result(-1),
-m_userType(-1)
+m_userType(-1),
+m_inExit(false)
 {
 	
 }
@@ -120,108 +121,9 @@ void DialogShow::paintEvent(QPaintEvent* eve)
 	QDialog::paintEvent(eve);
 }
 
-//void DialogShow::mousePressEvent(QMouseEvent *eve)
-//{
-//	if (eve->button() == Qt::LeftButton && m_isExec)
-//	{
-//		m_bPressed = true;
-//		m_point = eve->pos();
-//	}
-//}
-//
-//void DialogShow::mouseMoveEvent(QMouseEvent* eve)
-//{
-//	if (m_bPressed)
-//	{
-//		move(eve->pos() - m_point + pos());
-//	}
-//}
-//
-//void DialogShow::mouseReleaseEvent(QMouseEvent* eve)
-//{
-//	Q_UNUSED(eve);
-//	m_bPressed = false;
-//}
-
 long DialogShow::onNcHitTest(QPoint pt)
 {
 	QRect rcClient = this->geometry();
-
-	//if ((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
-	//	(pt.x() > (rcClient.right() - mTouchBorderWidth)))
-	//{
-	//	if ((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
-	//		(pt.y() > (rcClient.top() - mTouchBorderWidth)))
-	//	{
-	//		return HTTOPRIGHT;
-	//	}
-	//
-	//	if ((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
-	//		(pt.y() > (rcClient.bottom() - mTouchBorderWidth)))
-	//	{
-	//		return HTBOTTOMRIGHT;
-	//	}
-	//
-	//	return HTRIGHT;
-	//}
-	//
-	//if ((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
-	//	(pt.x() > (rcClient.left() - mTouchBorderWidth)))
-	//{
-	//	if ((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
-	//		(pt.y() > (rcClient.top() - mTouchBorderWidth)))
-	//	{
-	//		return HTTOPLEFT;
-	//	}
-	//
-	//	if ((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
-	//		(pt.y() > (rcClient.bottom() - mTouchBorderWidth)))
-	//	{
-	//		return HTBOTTOMLEFT;
-	//	}
-	//
-	//	return HTLEFT;
-	//}
-	//
-	//if ((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
-	//	(pt.y() > (rcClient.top() - mTouchBorderWidth)))
-	//{
-	//	if ((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
-	//		(pt.x() > (rcClient.right() - mTouchBorderWidth)))
-	//	{
-	//		return HTTOPRIGHT;
-	//	}
-	//
-	//	if ((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
-	//		(pt.x() > (rcClient.left() - mTouchBorderWidth)))
-	//	{
-	//		return HTTOPLEFT;
-	//	}
-	//
-	//
-	//	return HTTOP;
-	//}
-	//
-	//if ((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
-	//	(pt.y() > (rcClient.bottom() - mTouchBorderWidth)))
-	//{
-	//
-	//	if ((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
-	//		(pt.x() > (rcClient.right() - mTouchBorderWidth)))
-	//	{
-	//		return HTBOTTOMRIGHT;
-	//	}
-	//
-	//	if ((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
-	//		(pt.x() > (rcClient.left() - mTouchBorderWidth)))
-	//	{
-	//		return HTBOTTOMLEFT;
-	//	}
-	//
-	//
-	//	return HTBOTTOM;
-	//}
-
 
 	if ((pt.y() - rcClient.top()) <= 40 && m_isExec)
 	{
@@ -253,7 +155,7 @@ long DialogShow::onNcHitTest(QPoint pt)
 
 void DialogShow::keyPressEvent(QKeyEvent* eve)
 {
-	if (m_cancelEscAltF4 && (eve->key() == Qt::Key_Escape))
+	if ((m_inExit == true) || (m_cancelEscAltF4 && (eve->key() == Qt::Key_Escape)))
 	{
 		return;
 	}
@@ -267,6 +169,7 @@ void DialogShow::closeEvent(QCloseEvent* eve)
 		eve->ignore();
 		return;
 	}
+
 	QDialog::closeEvent(eve);
 }
 
@@ -322,11 +225,24 @@ void DialogShow::done(int result)
 	if (m_isExec == false)
 	{
 		m_result = result;
-		emit dialogDone(NotifyDialogManager::instance().DialogId(this), m_result, m_userType);
+		auto childs = children();
+		for each (QWidget* var in childs)
+		{
+			var->setEnabled(false);
+		}
+		m_inExit = true;
+		m_cancelEscAltF4 = true;
+
+		if (m_timeId != -1)
+		{
+			killTimer(m_timeId);
+			m_timeId = -1;
+		}
 		m_animation.setDuration(250);
 		m_animation.setStartValue(m_beginRect);
 		m_animation.setEndValue(m_endRect);
 		m_animation.start();
+		emit dialogDone(NotifyDialogManager::instance().DialogId(this), m_result, m_userType);
 	}
 	else
 	{

@@ -60,6 +60,9 @@
     <Filter Include="CW3LModalFrame">
       <UniqueIdentifier>{bb1b2227-5adc-44e9-bfbb-34678868bba1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CreateGameDialog">
+      <UniqueIdentifier>{15fcf4fb-56e4-4214-b05a-ff353d83aad2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -386,6 +389,15 @@
     <ClCompile Include="GeneratedFiles\Release\moc_CW3LModalFrame.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="CreateGameDialog.cpp">
+      <Filter>CreateGameDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CreateGameDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CreateGameDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="gameinfowidgetapp.h">
@@ -493,6 +505,9 @@
     <CustomBuild Include="..\..\..\qtcombobox\CW3LModalFrame.h">
       <Filter>CW3LModalFrame</Filter>
     </CustomBuild>
+    <CustomBuild Include="CreateGameDialog.h">
+      <Filter>CreateGameDialog</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_gameinfowidgetapp.h">
@@ -548,6 +563,9 @@
     </ClInclude>
     <ClInclude Include="RPGCreateRoomWidgetDataInfo.h">
       <Filter>RPGCreateRoomWidget</Filter>
+    </ClInclude>
+    <ClInclude Include="CreateGameDialogDataInfo.h">
+      <Filter>CreateGameDialog</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

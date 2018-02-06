@@ -93,7 +93,7 @@ m_leaveFinish(true)
 		QObject::connect(m_exit, &COriginalButton::clicked, this, &GameInfoWidget::onExitClicked);
 	}
 
-	setLeader(false);
+	setLeader(true);
 
 	layout();
 

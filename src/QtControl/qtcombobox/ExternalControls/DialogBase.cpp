@@ -226,14 +226,7 @@ void DialogBase::timerEvent(QTimerEvent* eve)
 	emit timeRest(m_timeRest);
 	if (m_timeRest == 0)
 	{
-		killTimer(m_timeId);
 		reject();
 	}
 	QDialog::timerEvent(eve);
-}
-
-void DialogBase::done(int result)
-{
-	//DialogManager::instance().removeDialog(this);
-	QDialog::done(result);
 }

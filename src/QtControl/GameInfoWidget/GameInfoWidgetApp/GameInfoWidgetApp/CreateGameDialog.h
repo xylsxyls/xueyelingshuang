@@ -13,38 +13,38 @@ class LineEdit;
 class CheckBox;
 class COriginalButton;
 class CPasswordInputBox;
-class RPGCreateRoomWidget : public CW3LModalFrame
+class CreateGameDialog : public CW3LModalFrame
 {
 	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	RPGCreateRoomWidget(QWidget* parent = NULL);
+	CreateGameDialog(QWidget* parent = NULL);
 
 	/** 析构函数
 	*/
-	virtual ~RPGCreateRoomWidget();
+	virtual ~CreateGameDialog();
 
 	/** 设置地图版本
+	@param [in] mapVersionList 地图版本
+	*/
+	void setMapVersionList(const QStringList& mapVersionList);
+
+	/** 设置当前地图版本
 	@param [in] mapVersion 地图版本
 	*/
-	void setMapVersion(const QString& mapVersion);
+	void setCurMapVersion(const QString& mapVersion);
 
-	/** 获取地图版本
-	@return 返回地图版本
+	/** 获取当前选择的地图版本
+	@return 返回当前选择的地图版本
 	*/
-	QString getMapVersion();
+	QString getCurMapVersion();
 
 	/** 设置地图版本是否可用
 	@param [in] enable 是否可用
 	*/
 	void setMapVersionEnable(bool enable);
-
-	/** 设置地图版本是否只读
-	@param [in] readOnly 是否只读
-	*/
-	void setMapVersionReadOnly(bool readOnly);
 
 	/** 设置游戏名称
 	@param [in] gameName 游戏名称
@@ -96,20 +96,45 @@ public:
 	*/
 	void setGameModeEnable(bool enable);
 
-	/** 设置是否开启裁判位
-	@param [in] judge 是否开启裁判位
+	/** 设置挑战模式
+	@param [in] challengeModeList 挑战模式
 	*/
-	void setJudge(bool judge);
+	void setChallengeModeList(const QStringList& challengeModeList);
 
-	/** 获取当前是否开启了裁判位
-	@return 返回当前是否开启了裁判位
+	/** 设置当前挑战模式
+	@param [in] challengeMode 挑战模式
 	*/
-	bool getJudge();
+	void setCurChallengeMode(const QString& challengeMode);
 
-	/** 设置裁判位是否可用
+	/** 获取当前选择的挑战模式
+	@return 返回当前选择的挑战模式
+	*/
+	QString getCurChallengeMode();
+
+	/** 设置挑战模式是否可用
 	@param [in] enable 是否可用
 	*/
-	void setJudgeEnable(bool enable);
+	void setChallengeModeEnable(bool enable);
+
+	/** 设置挑战费用
+	@param [in] challengeCostList 挑战费用
+	*/
+	void setChallengeCostList(const QStringList& challengeCostList);
+
+	/** 设置当前挑战费用
+	@param [in] challengeCost 挑战费用
+	*/
+	void setCurChallengeCost(const QString& challengeCost);
+
+	/** 获取当前选择的挑战费用
+	@return 返回当前选择的挑战费用
+	*/
+	QString getCurChallengeCost();
+
+	/** 设置挑战费用是否可用
+	@param [in] enable 是否可用
+	*/
+	void setChallengeCostEnable(bool enable);
 
 	/** 设置保存是否可用
 	@param [in] enable 是否可用
@@ -146,36 +171,39 @@ private:
 
 	void resizeEvent(QResizeEvent* eve);
 
-	void paintEvent(QPaintEvent* eve);
 	//所有控件统一布局
 	void layout();
 
 private slots:
 	void onExitClicked();
-	void onJudgeChanged(int state);
 	
 Q_SIGNALS:
 	void exitClicked();
 	void createRoomClicked();
-	void gameNameChanged(const QString &);
+	void mapVersionChanged(const QString &);
 	void gamePasswordChanged(const QString &);
 	void gameModeChanged(const QString&);
-	void judgeChanged(bool);
+	void challengeModeChanged(const QString&);
+	void challengeCostChanged(const QString&);
 	
 private:
-	Label* m_gameSetting;
+	//Label* m_gameSetting;
 
 	QWidget* m_gameSettingWidget;
 
 	LineEdit* m_gameNameEdit;
-	LineEdit* m_mapVersionEdit;
+	ComboBox* m_mapVersionComboBox;
 	CPasswordInputBox* m_gamePasswordEdit;
 	ComboBox* m_gameModeComboBox;
-	CheckBox* m_judgeCheckBox;
-	Label* m_judgeCheckName;
 
 	COriginalButton* m_exit;
 
+	Label* m_challengeMode;
+	ComboBox* m_challengeModeComboBox;
+	Label* m_challengeCost;
+	ComboBox* m_challengeCostComboBox;
+
+	Label* m_separator;
 	Label* m_mapVersion;
 	Label* m_gameName;
 	Label* m_gamePassword;
@@ -183,7 +211,7 @@ private:
 	COriginalButton* m_createRoom;
 
 	//窗口整体高度
-	int32_t m_rpgCreateRoomWidgetHeight;
+	int32_t m_createGameDialogHeight;
 
 	//按钮对应的widget高度
 	int32_t m_widgetHeight;

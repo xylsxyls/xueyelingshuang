@@ -34,7 +34,7 @@ TipShowDialog::TipShowDialog(int32_t userType,
 	m_tip = addTip(tip, QRect(20, 40, width() - 20 * 2, 50), QColor(205, 213, 225, 255));
 	m_accept = addButton(buttonText, QRect((width() - 81) / 2, height() - 13 - 19, 81, 19), done);
 	m_accept->setBkgImage("");
-	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255));
+	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255), QColor(97, 125, 197, 255));
 	m_accept->setFontColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(188, 199, 226, 255));
 	m_accept->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
 	m_accept->setBkgMargins(0, 0);

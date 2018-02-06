@@ -2,6 +2,7 @@
 #include "GameInfoWidget.h"
 #include "RPGGameWidget.h"
 #include "RPGCreateRoomWidget.h"
+#include "CreateGameDialog.h"
 
 GameInfoWidgetApp::GameInfoWidgetApp(QWidget *parent)
 	: QMainWindow(parent)
@@ -25,15 +26,25 @@ GameInfoWidgetApp::GameInfoWidgetApp(QWidget *parent)
 	//QObject::connect(pWidget, &RPGGameWidget::cancelPrepareGameClicked, this, &GameInfoWidgetApp::cancelPrepare);
 	//pWidget->show();
 
-	RPGCreateRoomWidget* pCreateRoomWidget = new RPGCreateRoomWidget;
-	QObject::connect(pCreateRoomWidget, SIGNAL(exitClicked()), this, SLOT(save()));
-	QObject::connect(pCreateRoomWidget, SIGNAL(createRoomClicked()), this, SLOT(save()));
-	QObject::connect(pCreateRoomWidget, SIGNAL(gameNameChanged(const QString&)), this, SLOT(changed(const QString&)));
-	QObject::connect(pCreateRoomWidget, SIGNAL(gamePasswordChanged(const QString&)), this, SLOT(changed(const QString&)));
-	QObject::connect(pCreateRoomWidget, SIGNAL(gameModeChanged(const QString&)), this, SLOT(changed(const QString&)));
-	QObject::connect(pCreateRoomWidget, SIGNAL(judgeChanged(bool)), this, SLOT(onJudgeChanged(bool)));
+	//RPGCreateRoomWidget* pCreateRoomWidget = new RPGCreateRoomWidget;
+	//QObject::connect(pCreateRoomWidget, SIGNAL(exitClicked()), this, SLOT(save()));
+	//QObject::connect(pCreateRoomWidget, SIGNAL(createRoomClicked()), this, SLOT(save()));
+	//QObject::connect(pCreateRoomWidget, SIGNAL(gameNameChanged(const QString&)), this, SLOT(changed(const QString&)));
+	//QObject::connect(pCreateRoomWidget, SIGNAL(gamePasswordChanged(const QString&)), this, SLOT(changed(const QString&)));
+	//QObject::connect(pCreateRoomWidget, SIGNAL(gameModeChanged(const QString&)), this, SLOT(changed(const QString&)));
+	//QObject::connect(pCreateRoomWidget, SIGNAL(judgeChanged(bool)), this, SLOT(onJudgeChanged(bool)));
+	//
+	//pCreateRoomWidget->show();
 
-	pCreateRoomWidget->show();
+	CreateGameDialog* pCreateRoomDialog = new CreateGameDialog;
+	QObject::connect(pCreateRoomDialog, SIGNAL(exitClicked()), this, SLOT(save()));
+	QObject::connect(pCreateRoomDialog, SIGNAL(createRoomClicked()), this, SLOT(save()));
+	QObject::connect(pCreateRoomDialog, SIGNAL(gameNameChanged(const QString&)), this, SLOT(changed(const QString&)));
+	QObject::connect(pCreateRoomDialog, SIGNAL(gamePasswordChanged(const QString&)), this, SLOT(changed(const QString&)));
+	QObject::connect(pCreateRoomDialog, SIGNAL(gameModeChanged(const QString&)), this, SLOT(changed(const QString&)));
+	QObject::connect(pCreateRoomDialog, SIGNAL(judgeChanged(bool)), this, SLOT(onJudgeChanged(bool)));
+
+	pCreateRoomDialog->show();
 }
 
 GameInfoWidgetApp::~GameInfoWidgetApp()

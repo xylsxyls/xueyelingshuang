@@ -91,6 +91,41 @@ void NotifyDialogManager::showLoginDialog(int32_t& dialogId,
 									 isCountDownVisible);
 }
 
+void NotifyDialogManager::showTipDialog(int32_t& dialogId,
+									    const QString& tip,
+									    const QString& title,
+										int32_t userType,
+									    int32_t done,
+									    const QString& buttonText,
+									    int32_t timeOut,
+									    bool isCountDownVisible)
+{
+	TipShowDialog::showTipDialog(dialogId, userType, title, tip, buttonText, done, timeOut, isCountDownVisible);
+}
+
+void NotifyDialogManager::showAskDialog(int32_t& dialogId,
+									  const QString& tip,
+									  const QString& title,
+									  int32_t userType,
+									  int32_t acceptDone,
+									  int32_t ignoreDone,
+									  const QString& acceptText,
+									  const QString& ignoreText,
+									  int32_t timeOut,
+									  bool isCountDownVisible)
+{
+	AskShowDialog::showAskDialog(dialogId,
+								 userType,
+								 title,
+								 tip,
+								 acceptText,
+								 acceptDone,
+								 ignoreText,
+								 ignoreDone,
+								 timeOut,
+								 isCountDownVisible);
+}
+
 int32_t NotifyDialogManager::popAskDialog(int32_t& dialogId,
 										const QString& title,
 										const QString& tip,

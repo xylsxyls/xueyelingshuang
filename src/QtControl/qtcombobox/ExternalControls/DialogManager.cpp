@@ -7,6 +7,8 @@
 #include "TipShowDialog.h"
 #include "AskShowDialog.h"
 #include "LoginShowDialog.h"
+#include <vector>
+#include <Windows.h>
 
 DialogManager& DialogManager::instance()
 {
@@ -212,10 +214,22 @@ void DialogManager::destroyAll()
 	{
 		return;
 	}
+	std::vector<DialogBase*> listDialog;
+	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
+	{
+		listDialog.push_back(itDialog->second);
+	}
+	int32_t index = -1;
+	while (index++ != listDialog.size() - 1)
+	{
+		listDialog[index]->reject();
+	}
+
 	while (m_mapDialog.size())
 	{
-		m_mapDialog.begin()->second->reject();
+		Sleep(50);
 	}
+
 	//for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
 	//{
 	//	itDialog->second->reject();

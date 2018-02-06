@@ -78,6 +78,45 @@ public:
 						 bool isUrlButtonVisible = false,
 						 bool isCountDownVisible = false);
 
+	/** 显示提示框
+	@param [out] dialogId 窗口ID值
+	@param [in] tip 提示内容
+	@param [in] title 标题
+	@param [in] userType 用户自定义值，当窗口关闭时会发送信号，信号中含有这个值
+	@param [in] done 按钮按下后信号里的参数值
+	@param [in] timeOut 超时自动关闭，单位秒
+	@param [in] isCountDownVisible 倒计时是否显示
+	*/
+	void showTipDialog(int32_t& dialogId,
+					   const QString& tip,
+					   const QString& title = QString::fromStdWString(L"11平台"),
+					   int32_t userType = 0,
+					   int32_t done = 0,
+					   const QString& buttonText = QString::fromStdWString(L"知道了"),
+					   int32_t timeOut = 30,
+					   bool isCountDownVisible = false);
+
+	/** 显示询问框
+	@param [out] dialogId 窗口ID值
+	@param [in] tip 提示内容
+	@param [in] title 标题
+	@param [in] userType 用户自定义值，当窗口关闭时会发送信号，信号中含有这个值
+	@param [in] acceptDone 确认按钮按下后信号里的参数值
+	@param [in] ignoreDone 取消按钮按下后信号里的参数值
+	@param [in] timeOut 超时自动关闭，单位秒
+	@param [in] isCountDownVisible 倒计时是否显示
+	*/
+	void showAskDialog(int32_t& dialogId,
+					   const QString& tip,
+					   const QString& title = QString::fromStdWString(L"11平台"),
+					   int32_t userType = 0,
+					   int32_t acceptDone = 1,
+					   int32_t ignoreDone = 0,
+					   const QString& acceptText = QString::fromStdWString(L"同意"),
+					   const QString& ignoreText = QString::fromStdWString(L"拒绝"),
+					   int32_t timeOut = 30,
+					   bool isCountDownVisible = false);
+
 Q_SIGNALS:
 	/** 当通知框窗口关闭时发送信号，在关闭动画执行之前发送信号
 	@param [in] dialogId 窗口ID

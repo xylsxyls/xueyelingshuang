@@ -39,7 +39,7 @@ AskShowDialog::AskShowDialog(int32_t userType,
 	m_tip->setFontSize(13);
 	m_accept = addButton(acceptText, QRect(31, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19), acceptDone);
 	m_accept->setBkgImage("");
-	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255));
+	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255), QColor(97, 125, 197, 255));
 	m_accept->setFontColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(188, 199, 226, 255));
 	m_accept->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
 	m_accept->setBkgMargins(0, 0);
@@ -47,7 +47,7 @@ AskShowDialog::AskShowDialog(int32_t userType,
 
 	m_ignore = addButton(ignoreText, QRect(31 + 13 + (width() - 31 * 2 - 13) / 2, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19), ignoreDone);
 	m_ignore->setBkgImage("");
-	m_ignore->setBkgColor(QColor(183, 62, 62, 255), QColor(225, 96, 96, 255), QColor(124, 41, 41, 255));
+	m_ignore->setBkgColor(QColor(183, 62, 62, 255), QColor(225, 96, 96, 255), QColor(124, 41, 41, 255), QColor(183, 62, 62, 255));
 	m_ignore->setFontColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(188, 199, 226, 255));
 	m_ignore->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
 	m_ignore->setBkgMargins(0, 0);
