@@ -49,7 +49,7 @@ m_leaveFinish(true)
 	m_gameNet = (new Label(m_gameSettingWidget));
 	m_gameLeave = (new Label(m_gameSettingWidget));
 	m_save = (new COriginalButton(m_gameSettingWidget));
-	m_checkBox = (new Label(m_gameSettingWidget));
+	m_judgeCheckName = (new Label(m_gameSettingWidget));
 	m_lab = (new Label(m_gameSettingWidget));
 
 	//无边框
@@ -155,7 +155,12 @@ void RPGGameWidget::setGamePasswordEnable(bool enable)
 
 void RPGGameWidget::setGameModeList(const QStringList& gameModeList)
 {
-	SAFE(m_gameModeComboBox, m_gameModeComboBox->addItems(gameModeList));
+	if (m_gameModeComboBox == nullptr)
+	{
+		return;
+	}
+	m_gameModeComboBox->clear();
+	m_gameModeComboBox->addItems(gameModeList);
 }
 
 void RPGGameWidget::setCurGameMode(const QString& gameMode)
@@ -179,7 +184,12 @@ void RPGGameWidget::setGameModeEnable(bool enable)
 
 void RPGGameWidget::setGameNetList(const QStringList& gameNetList)
 {
-	SAFE(m_gameNetComboBox, m_gameNetComboBox->addItems(gameNetList));
+	if (m_gameNetComboBox == nullptr)
+	{
+		return;
+	}
+	m_gameNetComboBox->clear();
+	m_gameNetComboBox->addItems(gameNetList);
 }
 
 void RPGGameWidget::setCurGameNet(const QString& gameNet)
@@ -203,7 +213,12 @@ void RPGGameWidget::setGameNetEnable(bool enable)
 
 void RPGGameWidget::setGameLeaveList(const QStringList& gameLeaveList)
 {
-	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->addItems(gameLeaveList));
+	if (m_gameLeaveComboBox == nullptr)
+	{
+		return;
+	}
+	m_gameLeaveComboBox->clear();
+	m_gameLeaveComboBox->addItems(gameLeaveList);
 }
 
 void RPGGameWidget::setCurGameLeave(const QString& gameLeave)
@@ -246,6 +261,12 @@ bool RPGGameWidget::getJudge()
 void RPGGameWidget::setJudgeEnable(bool enable)
 {
 	m_judgeCheckBox->setEnabled(enable);
+}
+
+void RPGGameWidget::setJudgeVisible(bool visible)
+{
+	m_judgeCheckName->setVisible(visible);
+	m_judgeCheckBox->setVisible(visible);
 }
 
 void RPGGameWidget::setSaveEnable(bool enable)
@@ -330,6 +351,7 @@ void RPGGameWidget::resetSettings()
 	setGameLeaveEnable(true);
 	m_judgeCheckBox->setCheckable(true);
 	m_judgeCheckBox->setChecked(false);
+	setJudgeVisible(true);
 	setJudgeEnable(true);
 	setInviteFriendEnable(true);
 	setLeader(m_isLeader);
@@ -382,6 +404,11 @@ void RPGGameWidget::init()
 	setGameNetList(QStringList(QString::fromStdWString(L"无限制")));
 	setGameLeaveList(QStringList(QString::fromStdWString(L"无限制")));
 	setJudge(false);
+	setJudgeVisible(true);
+
+	setLeader(true);
+
+	//resetSettings();
 
 	installEventFilter(this);
 }
@@ -563,14 +590,14 @@ void RPGGameWidget::initGameSettingWidget()
 	}
 
 	//开启裁判位
-	if (m_checkBox != nullptr)
+	if (m_judgeCheckName != nullptr)
 	{
-		m_checkBox->setText(QString::fromStdWString(L"开启裁判位"));
-		m_checkBox->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
-		m_checkBox->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-		m_checkBox->setFontSize(GAME_INFO_FONT_SIZE);
-		m_checkBox->setFontFace(GAME_INFO_FONT_FACE);
-		m_checkBox->setBackgroundColor(QColor(0, 0, 0, 0));
+		m_judgeCheckName->setText(QString::fromStdWString(L"开启裁判位"));
+		m_judgeCheckName->setTextColor(LABEL_TEXT_COLOR, LABEL_TEXT_COLOR, LABEL_TEXT_COLOR);
+		m_judgeCheckName->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+		m_judgeCheckName->setFontSize(GAME_INFO_FONT_SIZE);
+		m_judgeCheckName->setFontFace(GAME_INFO_FONT_FACE);
+		m_judgeCheckName->setBackgroundColor(QColor(0, 0, 0, 0));
 	}
 	if(m_judgeCheckBox != nullptr)
 	{
@@ -900,7 +927,7 @@ void RPGGameWidget::layout()
 	SAFE(m_gameNet, m_gameNet->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 3, LABEL_WIDTH, LABEL_HEIGHT));
 	SAFE(m_gameNetComboBox, m_gameNetComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 3, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_gameLeave, m_gameLeave->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 4, LABEL_WIDTH, LABEL_HEIGHT));
-	SAFE(m_checkBox, m_checkBox->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 5, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_judgeCheckName, m_judgeCheckName->setGeometry(LABEL_ORIGIN, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 5, LABEL_WIDTH, LABEL_HEIGHT));
 	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_judgeCheckBox, m_judgeCheckBox->setGeometry(JUDGE_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 5, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_save, m_save->setGeometry(SAVE_ORIGIN_X, SAVE_ORIGIN_Y, SAVE_WIDTH, SAVE_HEIGHT));

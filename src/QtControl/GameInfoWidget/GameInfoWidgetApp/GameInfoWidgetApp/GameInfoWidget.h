@@ -170,6 +170,11 @@ public:
 	*/
 	void setJudgeEnable(bool enable);
 
+	/** 设置裁判位是否显示
+	@param [in] visible 是否显示
+	*/
+	void setJudgeVisible(bool visible);
+
 	/** 设置保存是否可用
 	@param [in] enable 是否可用
 	*/

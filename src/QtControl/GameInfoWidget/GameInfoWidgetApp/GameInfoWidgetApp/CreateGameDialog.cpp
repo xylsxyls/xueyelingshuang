@@ -212,7 +212,7 @@ void CreateGameDialog::setSaveEnable(bool enable)
 void CreateGameDialog::resetSettings()
 {
 	m_mapVersionComboBox->clear();
-	//setMapVersionEnable(false);
+	setChallengeVisible(false);
 	m_gameNameEdit->setText("");
 	m_gamePasswordEdit->setText("");
 	m_gameModeComboBox->clear();
@@ -220,6 +220,11 @@ void CreateGameDialog::resetSettings()
 	m_challengeModeComboBox->clear();
 	m_challengeCostComboBox->clear();
 	setLeader(m_isLeader);
+}
+
+void CreateGameDialog::setChallengeVisible(bool visible)
+{
+	m_gameSettingWidget->setVisible(visible);
 }
 
 void CreateGameDialog::setLeader(bool isLeader)
@@ -261,7 +266,9 @@ void CreateGameDialog::init()
 	challengeCostlist.append(QString::fromStdWString(L"ÌôÕ½·ÑÓÃ2"));
 	setChallengeCostList(challengeCostlist);
 
-	//resetSettings();
+	setChallengeVisible(true);
+	resetSettings();
+	//setChallengeVisible(true);
 }
 
 void CreateGameDialog::initGameSettingButton()
@@ -321,14 +328,14 @@ void CreateGameDialog::initGameSettingWidget()
 	if (m_gameNameEdit != nullptr)
 	{
 		m_gameNameEdit->setBorderRadius(CONTROL_RADIUS);
-		m_gameNameEdit->setBorderColor(CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR, CONTROL_BORDER_COLOR);
+		m_gameNameEdit->setBorderColor(CONTROL_BORDER_COLOR);
 		m_gameNameEdit->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR);
 		m_gameNameEdit->setFontSize(GAME_INFO_FONT_SIZE);
 		m_gameNameEdit->setFontFace(GAME_INFO_FONT_FACE);
 		m_gameNameEdit->setTextOrigin(CONTROL_TEXT_ORIGIN);
 		m_gameNameEdit->setBackgroundColor(CONTROL_BACKGROUND_COLOR);
 		m_gameNameEdit->setContextMenuPolicy(Qt::NoContextMenu);
-		m_gameNameEdit->setBorderWidth(0);
+		m_gameNameEdit->setBorderWidth(1);
 		QObject::connect(m_gameNameEdit, &LineEdit::textChanged, this, &CreateGameDialog::mapVersionChanged);
 	}
 
@@ -345,11 +352,12 @@ void CreateGameDialog::initGameSettingWidget()
 	if (m_gamePasswordEdit != nullptr)
 	{
 		m_gamePasswordEdit->setContextMenuPolicy(Qt::NoContextMenu);
-		m_gamePasswordEdit->setBorderWidth(0);
+		m_gamePasswordEdit->setBorderWidth(1);
+		m_gamePasswordEdit->setBorderColor(CONTROL_BORDER_COLOR);
 		m_gamePasswordEdit->setBackgroundColor(CONTROL_BACKGROUND_COLOR);
 		m_gamePasswordEdit->setBorderRadius(CONTROL_RADIUS);
-		m_gamePasswordEdit->setMaskBackgroundImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/password_box_indicator.png", 2, 1, 1, 1, 1, 2, 2, 2, 2);
-		m_gamePasswordEdit->setMaskSize(15, 10);
+		m_gamePasswordEdit->setMaskBackgroundImage(m_war3ResourcePath + MASK_BUTTON_PNG, 6, 4, 5, 6, 6, 1, 2, 3, 3);
+		m_gamePasswordEdit->setMaskSize(18, 11);
 		QObject::connect(m_gamePasswordEdit, &LineEdit::textChanged, this, &CreateGameDialog::gamePasswordChanged);
 	}
 
@@ -420,6 +428,44 @@ void CreateGameDialog::initGameSettingWidget()
 
 void CreateGameDialog::setComboBoxAttri(ComboBox* pBox, const std::wstring& pattern, QRegExp* ex, QRegExpValidator* rep)
 {
+	if (pBox == nullptr)
+	{
+		return;
+	}
+
+	if (pattern != L"" && rep != nullptr)
+	{
+		pBox->setEditable(true);
+		ex->setPattern(QString::fromStdWString(pattern));
+		rep->setRegExp(*ex);
+		pBox->setValidator(rep);
+		pBox->lineEdit()->installEventFilter(this);
+	}
+
+	pBox->setBackgroundColor(CONTROL_BACKGROUND_COLOR);
+	pBox->setBorderRadius(CONTROL_RADIUS);
+	pBox->setBorderColor(CONTROL_BORDER_COLOR);
+	pBox->setTextColor(CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_TEXT_COLOR, CONTROL_DISABLED_TEXT_COLOR);
+	pBox->setDropDownImage(m_war3ResourcePath + "/Image/Common/Setting/combobox_indicator.png", 6, 1, 2, 3, 4, 6);
+	pBox->setDropDownSize(DROP_DOWN_WIDTH, DROP_DOWN_HEIGHT);
+	pBox->setDropDownTopRightOrigin(DROP_DOWN_ORIGIN_X, DROP_DOWN_ORIGIN_Y);
+	pBox->setFontSize(GAME_INFO_FONT_SIZE);
+	pBox->setFontFace(GAME_INFO_FONT_FACE);
+	pBox->setTextOrigin(CONTROL_TEXT_ORIGIN);
+	pBox->setListBorderColor(CONTROL_BORDER_COLOR);
+	pBox->setListItemBorderWidth(LIST_ITEM_BORDER_WIDTH);
+	pBox->setListItemBackgroundColor(CONTROL_BACKGROUND_COLOR, LIST_HOVER_COLOR);
+	pBox->setListBorderWidth(LIST_BORDER_WIDTH);
+	pBox->setListOrigin(LIST_ORIGIN);
+	pBox->setListTextColor(LABEL_TEXT_COLOR, CONTROL_TEXT_COLOR);
+	pBox->setListFontSize(LIST_FONT_SIZE);
+	pBox->setListFontFace(GAME_INFO_FONT_FACE);
+	pBox->setListTextOrigin(CONTROL_TEXT_ORIGIN);
+	pBox->setListItemHeight(LIST_ITEM_HEIGHT);
+	pBox->setListMaxHeight(LIST_MAX_HEIGHT);
+	pBox->setContextMenuPolicy(Qt::NoContextMenu);
+	return;
+
 	if (pBox == nullptr)
 	{
 		return;

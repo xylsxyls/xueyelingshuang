@@ -159,7 +159,12 @@ void GameInfoWidget::setGamePasswordEnable(bool enable)
 
 void GameInfoWidget::setGameModeList(const QStringList& gameModeList)
 {
-	SAFE(m_gameModeComboBox, m_gameModeComboBox->addItems(gameModeList));
+	if (m_gameModeComboBox == nullptr)
+	{
+		return;
+	}
+	m_gameModeComboBox->clear();
+	m_gameModeComboBox->addItems(gameModeList);
 }
 
 void GameInfoWidget::setCurGameMode(const QString& gameMode)
@@ -183,7 +188,12 @@ void GameInfoWidget::setGameModeEnable(bool enable)
 
 void GameInfoWidget::setGameLvList(const QStringList& gameLvList)
 {
-	SAFE(m_gameLvComboBox, m_gameLvComboBox->addItems(gameLvList));
+	if (m_gameLvComboBox == nullptr)
+	{
+		return;
+	}
+	m_gameLvComboBox->clear();
+	m_gameLvComboBox->addItems(gameLvList);
 }
 
 void GameInfoWidget::setCurGameLv(const QString& gameLv)
@@ -207,7 +217,12 @@ void GameInfoWidget::setGameLvEnable(bool enable)
 
 void GameInfoWidget::setGameMVPList(const QStringList& gameMVPList)
 {
-	SAFE(m_gameMVPComboBox, m_gameMVPComboBox->addItems(gameMVPList));
+	if (m_gameMVPComboBox == nullptr)
+	{
+		return;
+	}
+	m_gameMVPComboBox->clear();
+	m_gameMVPComboBox->addItems(gameMVPList);
 }
 
 void GameInfoWidget::setCurGameMVP(const QString& gameMVP)
@@ -231,7 +246,12 @@ void GameInfoWidget::setGameMVPEnable(bool enable)
 
 void GameInfoWidget::setGameNetList(const QStringList& gameNetList)
 {
-	SAFE(m_gameNetComboBox, m_gameNetComboBox->addItems(gameNetList));
+	if (m_gameNetComboBox == nullptr)
+	{
+		return;
+	}
+	m_gameNetComboBox->clear();
+	m_gameNetComboBox->addItems(gameNetList);
 }
 
 void GameInfoWidget::setCurGameNet(const QString& gameNet)
@@ -255,7 +275,12 @@ void GameInfoWidget::setGameNetEnable(bool enable)
 
 void GameInfoWidget::setGameLeaveList(const QStringList& gameLeaveList)
 {
-	SAFE(m_gameLeaveComboBox, m_gameLeaveComboBox->addItems(gameLeaveList));
+	if (m_gameLeaveComboBox == nullptr)
+	{
+		return;
+	}
+	m_gameLeaveComboBox->clear();
+	m_gameLeaveComboBox->addItems(gameLeaveList);
 }
 
 void GameInfoWidget::setCurGameLeave(const QString& gameLeave)
@@ -298,6 +323,11 @@ bool GameInfoWidget::getJudge()
 void GameInfoWidget::setJudgeEnable(bool enable)
 {
 	m_judgeCheckBox->setEnabled(enable);
+}
+
+void GameInfoWidget::setJudgeVisible(bool visible)
+{
+	m_judgeCheckBox->setVisible(visible);
 }
 
 void GameInfoWidget::setSaveEnable(bool enable)
@@ -389,6 +419,7 @@ void GameInfoWidget::resetSettings()
 	m_judgeCheckBox->setCheckable(true);
 	m_judgeCheckBox->setChecked(false);
 	m_judgeCheckBox->setEnabled(true);
+	setJudgeVisible(true);
 	m_inviteFriend->setEnabled(true);
 	setLeader(m_isLeader);
 	m_exit->setEnabled(true);
@@ -459,6 +490,11 @@ void GameInfoWidget::init()
 	setGameNetList(QStringList(QString::fromStdWString(L"无限制")));
 	setGameLeaveList(QStringList(QString::fromStdWString(L"无限制")));
 	setJudge(false);
+	setJudgeVisible(true);
+
+	setLeader(true);
+
+	//resetSettings();
 
 	installEventFilter(this);
 }

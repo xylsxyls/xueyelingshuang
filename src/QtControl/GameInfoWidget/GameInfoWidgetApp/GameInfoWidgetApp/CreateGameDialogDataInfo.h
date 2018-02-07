@@ -6,7 +6,7 @@
 
 /** 字条字体颜色
 */
-#define LABEL_TEXT_COLOR QColor(209, 209, 209)
+#define LABEL_TEXT_COLOR QColor(171, 179, 211)
 
 /** 右侧控件文字颜色
 */
@@ -14,7 +14,7 @@
 
 /** 右侧控件禁用时文字颜色
 */
-#define CONTROL_DISABLED_TEXT_COLOR CONTROL_TEXT_COLOR
+#define CONTROL_DISABLED_TEXT_COLOR QColor(82, 126, 185, 255)
 
 /** 创建房间字条颜色
 */
@@ -30,11 +30,11 @@
 
 /** 右侧控件边框颜色
 */
-#define CONTROL_BORDER_COLOR QColor(0, 0, 0, 255 * 0.6)
+#define CONTROL_BORDER_COLOR QColor(67, 81, 117, 255)
 
 /** 控件背景颜色
 */
-#define CONTROL_BACKGROUND_COLOR CONTROL_BORDER_COLOR
+#define CONTROL_BACKGROUND_COLOR QColor(39, 50, 83, 255)
 
 /** 字体
 */
@@ -42,11 +42,11 @@
 
 /** 下拉框常态颜色
 */
-#define LIST_NORMAL_COLOR QColor("#15181f")
+#define LIST_NORMAL_COLOR CONTROL_BACKGROUND_COLOR
 
 /** 下拉框hover颜色
 */
-#define LIST_HOVER_COLOR QColor("#4486ff")
+#define LIST_HOVER_COLOR QColor(80, 98, 146, 255)
 
 /** 分割线颜色
 */
@@ -84,7 +84,7 @@ enum
 
 	/** 每个字条的高度
 	*/
-	LABEL_HEIGHT = 24,
+	LABEL_HEIGHT = 22,
 
 	/** 第一个字条的起始高度
 	*/
@@ -104,7 +104,7 @@ enum
 
 	/** 右侧控件宽度
 	*/
-	CONTROL_WIDTH = 138,
+	CONTROL_WIDTH = 147,
 
 	/** 右侧控件高度
 	*/
@@ -112,7 +112,7 @@ enum
 
 	/** 右侧控件圆角半径
 	*/
-	CONTROL_RADIUS = 2,
+	CONTROL_RADIUS = 5,
 
 	/** 创建房间圆角半径
 	*/
@@ -120,7 +120,7 @@ enum
 
 	/** 控件间隔高度
 	*/
-	CONTROL_SPACING_HEIGHT = 9,
+	CONTROL_SPACING_HEIGHT = 10,
 
 	/** 控件和间隔总高度
 	*/
@@ -228,7 +228,7 @@ enum
 
 	/** 字体大小
 	*/
-	GAME_INFO_FONT_SIZE = 12,
+	GAME_INFO_FONT_SIZE = 13,
 
 	/** 下拉框字体大小
 	*/
@@ -244,7 +244,7 @@ enum
 
 	/** 下拉框节点高度
 	*/
-	LIST_ITEM_HEIGHT = 24,
+	LIST_ITEM_HEIGHT = 17,
 
 	/** 下拉框最大高度
 	*/
@@ -252,11 +252,11 @@ enum
 
 	/** 下拉框偏移量
 	*/
-	LIST_ORIGIN = 1,
+	LIST_ORIGIN = 2,
 
 	/** 下拉框边框粗度
 	*/
-	LIST_BORDER_WIDTH = 0,
+	LIST_BORDER_WIDTH = 1,
 
 	/** 下拉框节点边框粗度
 	*/
@@ -264,18 +264,18 @@ enum
 
 	/** 下拉箭头宽度
 	*/
-	DROP_DOWN_WIDTH = 17,
+	DROP_DOWN_WIDTH = 10,
 
 	/** 下拉箭头高度
 	*/
-	DROP_DOWN_HEIGHT = 22,
+	DROP_DOWN_HEIGHT = 5,
 
 	/** 下拉箭头距离右上角横轴距离
 	*/
-	DROP_DOWN_ORIGIN_X = 5,
+	DROP_DOWN_ORIGIN_X = 7,
 
 	/** 下拉箭头距离右上角纵轴距离
 	*/
-	DROP_DOWN_ORIGIN_Y = 1,
+	DROP_DOWN_ORIGIN_Y = 5,
 
 };

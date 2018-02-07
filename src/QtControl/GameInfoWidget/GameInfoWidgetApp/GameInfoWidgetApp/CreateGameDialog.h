@@ -145,9 +145,10 @@ public:
 	*/
 	void resetSettings();
 
-	/** 点击游戏设置界面
+	/** 设置挑战相关内容是否显示
+	@param [in] visible 是否显示
 	*/
-	void clickGameSetting();
+	void setChallengeVisible(bool visible);
 
 private:
 	/** 默认数据初始化

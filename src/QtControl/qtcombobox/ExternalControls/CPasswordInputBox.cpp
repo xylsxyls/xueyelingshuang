@@ -2,8 +2,6 @@
 #include "../CGeneralStyle.h"
 #include "../COriginalButton.h"
 
-#define MASK_BUTTON_PNG QString::fromStdWString(L"/Image/Common/Setting/SettingPasswordIcon.png")
-
 CPasswordInputBox::CPasswordInputBox(QWidget *parent):
 LineEdit(parent),
 m_maskButton(new COriginalButton(this)),

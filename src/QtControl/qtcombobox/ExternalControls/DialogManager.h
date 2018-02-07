@@ -4,6 +4,17 @@
 #include <QString>
 #include <QObject>
 
+enum
+{
+	/** 确认按钮
+	*/
+	ACCEPT_BUTTON = 1,
+
+	/** 取消按钮
+	*/
+	IGNORE_BUTTON = 2
+};
+
 class DialogBase;
 class QWindow;
 /** 单一实例，用于统一管理窗口创建关闭，该类的对外接口，销毁所有窗口
@@ -123,8 +134,8 @@ public:
 						 QWindow* parent = nullptr,
 						 const QString& acceptText = QString::fromStdWString(L"确定"),
 						 const QString& ignoreText = QString::fromStdWString(L"取消"),
-						 int32_t acceptDone = 1,
-						 int32_t ignoreDone = 2,
+						 int32_t acceptDone = ACCEPT_BUTTON,
+						 int32_t ignoreDone = IGNORE_BUTTON,
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
 
@@ -147,8 +158,8 @@ public:
 						 const QString& title = QString::fromStdWString(L"11对战平台"),
 						 const QString& acceptText = QString::fromStdWString(L"确定"),
 						 const QString& ignoreText = QString::fromStdWString(L"取消"),
-						 int32_t acceptDone = 1,
-						 int32_t ignoreDone = 2,
+						 int32_t acceptDone = ACCEPT_BUTTON,
+						 int32_t ignoreDone = IGNORE_BUTTON,
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
 
@@ -168,7 +179,7 @@ public:
 						 const QString& title = QString::fromStdWString(L"11对战平台"),
 						 QWindow* parent = nullptr,
 						 const QString& buttonText = QString::fromStdWString(L"确定"),
-						 int32_t done = 1,
+						 int32_t done = ACCEPT_BUTTON,
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
 
@@ -188,7 +199,7 @@ public:
 						 QWindow* parent,
 						 const QString& title = QString::fromStdWString(L"11对战平台"),
 						 const QString& buttonText = QString::fromStdWString(L"确定"),
-						 int32_t done = 1,
+						 int32_t done = ACCEPT_BUTTON,
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
 
@@ -214,7 +225,7 @@ public:
 						   QWindow* parent = nullptr,
 						   int32_t maxLength = -1,
 						   const QString& buttonText = QString::fromStdWString(L"确定"),
-						   int32_t done = 1,
+						   int32_t done = ACCEPT_BUTTON,
 						   int32_t timeOut = -1,
 						   bool isCountDownVisible = false);
 

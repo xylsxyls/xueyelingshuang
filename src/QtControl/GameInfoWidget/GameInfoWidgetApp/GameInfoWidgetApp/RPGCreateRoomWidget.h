@@ -96,20 +96,20 @@ public:
 	*/
 	void setGameModeEnable(bool enable);
 
-	/** 设置是否开启裁判位
-	@param [in] judge 是否开启裁判位
+	/** 设置是否开启速开局
+	@param [in] judge 是否开启速开局
 	*/
-	void setJudge(bool judge);
+	void setFastStart(bool ifFastStart);
 
-	/** 获取当前是否开启了裁判位
-	@return 返回当前是否开启了裁判位
+	/** 获取当前是否开启了速开局
+	@return 返回当前是否开启了速开局
 	*/
-	bool getJudge();
+	bool getFastStart();
 
-	/** 设置裁判位是否可用
+	/** 设置速开局是否可用
 	@param [in] enable 是否可用
 	*/
-	void setJudgeEnable(bool enable);
+	void setFastStartEnable(bool enable);
 
 	/** 设置保存是否可用
 	@param [in] enable 是否可用
@@ -122,7 +122,16 @@ public:
 
 	/** 点击游戏设置界面
 	*/
-	void clickGameSetting();
+	//void clickGameSetting();
+
+	/** 设置堵塞的父窗口
+	@param [in] parent 父窗口指针
+	*/
+	void setParentWindow(QWindow* parent);
+
+	/** 弹出窗口
+	*/
+	void popUp();
 
 private:
 	/** 默认数据初始化
@@ -171,8 +180,8 @@ private:
 	LineEdit* m_mapVersionEdit;
 	CPasswordInputBox* m_gamePasswordEdit;
 	ComboBox* m_gameModeComboBox;
-	CheckBox* m_judgeCheckBox;
-	Label* m_judgeCheckName;
+	CheckBox* m_fastStartCheckBox;
+	Label* m_fastStartCheckName;
 
 	COriginalButton* m_exit;
 

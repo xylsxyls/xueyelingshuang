@@ -1,7 +1,13 @@
 #ifndef CORIGINALDIALOG_H
 #define CORIGINALDIALOG_H
 
+
 #include <QDialog>
+
+
+
+//typedef HRESULT (WINAPI *lpfn_DwmExtendFrameIntoClientArea)(HWND hWnd, _In_ const MARGINS *pMarInset);
+//typedef HRESULT (WINAPI *lpfn_DwmIsCompositionEnabled)(_Out_ BOOL *pfEnabled);
 
 class COriginalDialog : public QDialog
 {
@@ -14,6 +20,7 @@ private:
 	int     mTouchBorderWidth;
 	int     mCustomerTitleBarHeight;
 	QRect   mCustomerTitleBarRect;
+	bool    mDwmInitialized;
 
 
 
@@ -21,10 +28,14 @@ private:
 protected:
 	long onNcHitTest(QPoint pt);
 	void resizeEvent(QResizeEvent *e);
-	bool nativeEvent(const QByteArray &eventType, void *message, long *result);
+	virtual bool nativeEvent(const QByteArray &eventType, void *message, long *result);
+
+	//bool dwm_init(HWND hwnd);
+	//bool isDwmEnabled();
 
 signals:
 	void ncActiveChanged(const bool& ncActive);
+	void activeChanged(bool s);
 
 
 public :
@@ -35,6 +46,9 @@ public :
 	int  customerTitleBarHeight();
 
 	QRect customerTitleBarRect();
+
+	void setTransientWindow(QWindow* w);
+	QWindow* transientWindow();
 };
 
 #endif // CORIGINALDIALOG_H

@@ -130,6 +130,11 @@ public:
 	*/
 	void setJudgeEnable(bool enable);
 
+	/** 设置裁判位是否显示
+	@param [in] visible 是否显示
+	*/
+	void setJudgeVisible(bool visible);
+
 	/** 设置保存是否可用
 	@param [in] enable 是否可用
 	*/
@@ -321,7 +326,7 @@ private:
 	Label* m_gameMode;
 	Label* m_gameNet;
 	Label* m_gameLeave;
-	Label* m_checkBox;
+	Label* m_judgeCheckName;
 	Label* m_lab;
 	Label* m_rect;
 	COriginalButton* m_save;

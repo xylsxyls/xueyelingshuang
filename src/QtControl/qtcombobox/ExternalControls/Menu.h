@@ -92,7 +92,6 @@ private:
 	*/
 	QIcon ChangeIcon(QAction* action, const QIcon& icon);
 	
-
 private:
 	std::map<QAction*, QIcon> m_mapIconData;
 	MenuCustomStyle* m_pCustomStyle;

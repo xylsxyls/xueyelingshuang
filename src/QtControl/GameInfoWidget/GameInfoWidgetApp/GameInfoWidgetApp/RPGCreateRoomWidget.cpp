@@ -17,6 +17,7 @@ m_rpgCreateRoomWidgetHeight(311),
 m_widgetHeight(550),
 m_isLeader(false)
 {
+	setWindowFlags(windowFlags() | Qt::Tool);
 	m_war3ResourcePath = CGeneralStyle::instance()->war3lobbyResourcePath();
 	setFixedSize(GAME_INFO_WIDGET_WIDTH, m_rpgCreateRoomWidgetHeight);
 
@@ -28,8 +29,8 @@ m_isLeader(false)
 	m_mapVersionEdit = (new LineEdit(m_gameSettingWidget));
 	m_gamePasswordEdit = (new CPasswordInputBox(m_gameSettingWidget));
 	m_gameModeComboBox = (new ComboBox(m_gameSettingWidget));
-	m_judgeCheckName = (new Label(m_gameSettingWidget));
-	m_judgeCheckBox = (new CheckBox(m_gameSettingWidget));
+	m_fastStartCheckName = (new Label(m_gameSettingWidget));
+	m_fastStartCheckBox = (new CheckBox(m_gameSettingWidget));
 	m_gameName = (new Label(m_gameSettingWidget));
 	m_mapVersion = (new Label(m_gameSettingWidget));
 	m_gamePassword = (new Label(m_gameSettingWidget));
@@ -152,27 +153,27 @@ void RPGCreateRoomWidget::setGameModeEnable(bool enable)
 	m_gameModeComboBox->setEnabled(enable);
 }
 
-void RPGCreateRoomWidget::setJudge(bool judge)
+void RPGCreateRoomWidget::setFastStart(bool ifFastStart)
 {
-	if (m_judgeCheckBox == nullptr)
+	if (m_fastStartCheckBox == nullptr)
 	{
 		return;
 	}
-	m_judgeCheckBox->setChecked(judge);
+	m_fastStartCheckBox->setChecked(ifFastStart);
 }
 
-bool RPGCreateRoomWidget::getJudge()
+bool RPGCreateRoomWidget::getFastStart()
 {
-	if (m_judgeCheckBox == nullptr)
+	if (m_fastStartCheckBox == nullptr)
 	{
 		return false;
 	}
-	return m_judgeCheckBox->isChecked();
+	return m_fastStartCheckBox->isChecked();
 }
 
-void RPGCreateRoomWidget::setJudgeEnable(bool enable)
+void RPGCreateRoomWidget::setFastStartEnable(bool enable)
 {
-	m_judgeCheckBox->setEnabled(enable);
+	m_fastStartCheckBox->setEnabled(enable);
 }
 
 void RPGCreateRoomWidget::setSaveEnable(bool enable)
@@ -188,9 +189,32 @@ void RPGCreateRoomWidget::resetSettings()
 	m_gamePasswordEdit->setText("");
 	m_gameModeComboBox->clear();
 	m_gameModeComboBox->addItem(QString::fromStdWString(L"进入游戏后手动选择"));
-	m_judgeCheckBox->setCheckable(true);
-	m_judgeCheckBox->setChecked(false);
+	m_fastStartCheckBox->setCheckable(true);
+	m_fastStartCheckBox->setChecked(false);
+	//m_fastStartCheckBox->setVisible(false);
 	setLeader(m_isLeader);
+}
+
+void RPGCreateRoomWidget::setParentWindow(QWindow* parent)
+{
+	setTransientWindow(parent);
+}
+
+void RPGCreateRoomWidget::popUp()
+{
+	//setParentWindow(CLobbyProxyWindow::instance());
+
+	if(transientWindow())
+	{
+		this->setWindowModality(Qt::WindowModal);
+	}
+	else
+	{
+		this->setWindowModality(Qt::ApplicationModal);
+	}
+
+	show();
+	return;
 }
 
 void RPGCreateRoomWidget::setLeader(bool isLeader)
@@ -200,7 +224,7 @@ void RPGCreateRoomWidget::setLeader(bool isLeader)
 	setGameNameEnable(isLeader);
 	setGamePasswordEnable(isLeader);
 	setGameModeEnable(isLeader);
-	setJudgeEnable(isLeader);
+	setFastStartEnable(isLeader);
 	m_createRoom->setVisible(isLeader);
 }
 
@@ -218,7 +242,7 @@ void RPGCreateRoomWidget::init()
 	list.append(QString::fromStdWString(L"进入游戏后手动选择"));
 	list.append(QString::fromStdWString(L"进入游戏后手动选择2"));
 	setGameModeList(list);
-	setJudge(false);
+	setFastStart(false);
 
 	//resetSettings();
 }
@@ -337,24 +361,24 @@ void RPGCreateRoomWidget::initGameSettingWidget()
 	}
 
 	//开启裁判位
-	if (m_judgeCheckName != nullptr)
+	if (m_fastStartCheckName != nullptr)
 	{
-		m_judgeCheckName->setTextColor(LABEL_TEXT_COLOR);
-		m_judgeCheckName->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-		m_judgeCheckName->setText(QString::fromStdWString(L"速开局"));
-		m_judgeCheckName->setFontSize(GAME_INFO_FONT_SIZE);
-		m_judgeCheckName->setFontFace(GAME_INFO_FONT_FACE);
-		m_judgeCheckName->setBackgroundColor(QColor(0, 0, 0, 0));
+		m_fastStartCheckName->setTextColor(LABEL_TEXT_COLOR);
+		m_fastStartCheckName->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+		m_fastStartCheckName->setText(QString::fromStdWString(L"速开局"));
+		m_fastStartCheckName->setFontSize(GAME_INFO_FONT_SIZE);
+		m_fastStartCheckName->setFontFace(GAME_INFO_FONT_FACE);
+		m_fastStartCheckName->setBackgroundColor(QColor(0, 0, 0, 0));
 	}
 
-	if(m_judgeCheckBox != nullptr)
+	if(m_fastStartCheckBox != nullptr)
 	{
-		m_judgeCheckBox->setBackgroundColor(QColor(0, 0, 0, 0));
+		m_fastStartCheckBox->setBackgroundColor(QColor(0, 0, 0, 0));
 		//m_judgeCheckBox->setTextColor(LABEL_TEXT_COLOR);
 		//m_judgeCheckBox->setText(QString::fromStdWString(L""));
-		m_judgeCheckBox->setIndicatorImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/check_box_indicator.png", 2, 1, 1, 1, 1, 2, 2, 2, 2);
-		m_judgeCheckBox->setIndicatorSize(16, 16);
-		QObject::connect(m_judgeCheckBox, &CheckBox::stateChanged, this, &RPGCreateRoomWidget::onJudgeChanged);
+		m_fastStartCheckBox->setIndicatorImage(m_war3ResourcePath + "/Image/NewRPG/GameRoom/check_box_indicator.png", 2, 1, 1, 1, 1, 2, 2, 2, 2);
+		m_fastStartCheckBox->setIndicatorSize(16, 16);
+		QObject::connect(m_fastStartCheckBox, &CheckBox::stateChanged, this, &RPGCreateRoomWidget::onJudgeChanged);
 	}
 
 	//保存
@@ -451,8 +475,8 @@ void RPGCreateRoomWidget::layout()
 	SAFE(m_gamePasswordEdit, m_gamePasswordEdit->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 3, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_gameMode, m_gameMode->setGeometry(0, FIRST_LABEL_BEGIN_HEIGHT + CONTROL_ALL_SPACING * 1, LABEL_WIDTH, LABEL_HEIGHT));
 	SAFE(m_gameModeComboBox, m_gameModeComboBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 1, CONTROL_WIDTH, CONTROL_HEIGHT));
-	SAFE(m_judgeCheckName, m_judgeCheckName->setGeometry(0, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, LABEL_WIDTH, LABEL_HEIGHT));
-	SAFE(m_judgeCheckBox, m_judgeCheckBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, CONTROL_WIDTH, CONTROL_HEIGHT));
+	SAFE(m_fastStartCheckName, m_fastStartCheckName->setGeometry(0, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, LABEL_WIDTH, LABEL_HEIGHT));
+	SAFE(m_fastStartCheckBox, m_fastStartCheckBox->setGeometry(CONTROL_BEGIN_ORIGIN_X, CONTROL_BEGIN_ORIGIN_Y + CONTROL_ALL_SPACING * 4, CONTROL_WIDTH, CONTROL_HEIGHT));
 	SAFE(m_createRoom, m_createRoom->setGeometry(CREATE_ROOM_ORIGIN_X, CREATE_ROOM_ORIGIN_Y, CREATE_ROOM_WIDTH, CREATE_ROOM_HEIGHT));
 }
 

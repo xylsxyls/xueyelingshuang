@@ -1,7 +1,7 @@
 #ifndef CW3LMODALFRAME_H
 #define CW3LMODALFRAME_H
 
-#include "COriginalDialog.h"
+#include "common/controls/COriginalDialog.h"
 
 class CW3LModalFrame : public COriginalDialog
 {
@@ -10,12 +10,7 @@ public:
 	CW3LModalFrame(QWidget* parent = NULL);
 	~CW3LModalFrame();
 
-private:
-	QRect   mTitleBarRect;
-	int     mTitleBarHeight;
-
 protected:
-
 	void paintEvent(QPaintEvent *e);
 	void closeEvent(QCloseEvent *e);
 

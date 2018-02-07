@@ -33,7 +33,6 @@ GameInfoWidgetApp::GameInfoWidgetApp(QWidget *parent)
 	//QObject::connect(pCreateRoomWidget, SIGNAL(gamePasswordChanged(const QString&)), this, SLOT(changed(const QString&)));
 	//QObject::connect(pCreateRoomWidget, SIGNAL(gameModeChanged(const QString&)), this, SLOT(changed(const QString&)));
 	//QObject::connect(pCreateRoomWidget, SIGNAL(judgeChanged(bool)), this, SLOT(onJudgeChanged(bool)));
-	//
 	//pCreateRoomWidget->show();
 
 	CreateGameDialog* pCreateRoomDialog = new CreateGameDialog;

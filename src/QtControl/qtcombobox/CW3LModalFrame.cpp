@@ -2,7 +2,7 @@
 
 #include <QMouseEvent>
 #include <QPainter>
-#include "CGeneralStyle.h"
+#include "common/controls/CGeneralStyle.h"
 #include <QDebug>
 
 CW3LModalFrame::CW3LModalFrame(QWidget *parent)
@@ -11,8 +11,11 @@ CW3LModalFrame::CW3LModalFrame(QWidget *parent)
 	this->setWindowTitle("W3L Modal Frame");
 	this->setFocusPolicy(Qt::ClickFocus);
 	this->setCustomerTitleBarHeight(34);
+	this->setAttribute(Qt::WA_NativeWindow);
+	//this->setWindowFlags((Qt::FramelessWindowHint|this->windowFlags()) & (~Qt::WindowTitleHint));
 	this->setWindowFlags(Qt::FramelessWindowHint);
-
+	
+	
 	connect(this, &CW3LModalFrame::windowTitleChanged, this, &CW3LModalFrame::onWindowTitleChanged);
 }
 

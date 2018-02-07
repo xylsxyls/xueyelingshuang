@@ -1,6 +1,8 @@
 #pragma once
 #include "LineEdit.h"
 
+#define MASK_BUTTON_PNG QString::fromStdWString(L"/Image/Common/Setting/SettingPasswordIcon.png")
+
 class COriginalButton;
 /** ÃÜÂëÊäÈë¿ò
 */
