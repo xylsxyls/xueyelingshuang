@@ -752,7 +752,7 @@ void RPGGameWidget::comboBoxTextChanged(const QString& text,
 	index = -1;
 	while (index++ != pBox->count() - 1)
 	{
-		if (qstrText == pBox->itemText(index))
+		if (text == pBox->itemText(index))
 		{
 			ok = true;
 		}
@@ -1000,6 +1000,7 @@ void RPGGameWidget::onPersonalRecordClicked()
 
 void RPGGameWidget::onMyToolClicked()
 {
+	m_myToolWebView->reload();
 	if (m_myTool && m_gameSetting && m_personalRecord)
 	{
 		m_myTool->setChecked(true);

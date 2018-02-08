@@ -4,7 +4,7 @@
 #include <QString>
 #include <QObject>
 
-enum
+enum DialogButton
 {
 	/** »∑»œ∞¥≈•
 	*/

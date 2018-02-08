@@ -1,6 +1,4 @@
 #pragma once
-#include <QWidget>
-#include <QUrl>
 #include <stdint.h>
 #include "ExternalControls/ComboBox.h"
 #include "../CW3LModalFrame.h"

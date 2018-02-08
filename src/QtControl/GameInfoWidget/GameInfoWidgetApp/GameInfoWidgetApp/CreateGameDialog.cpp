@@ -266,8 +266,8 @@ void CreateGameDialog::init()
 	challengeCostlist.append(QString::fromStdWString(L"挑战费用2"));
 	setChallengeCostList(challengeCostlist);
 
-	setChallengeVisible(true);
-	resetSettings();
+	//setChallengeVisible(true);
+	//resetSettings();
 	//setChallengeVisible(true);
 }
 
@@ -282,7 +282,7 @@ void CreateGameDialog::initGameSettingButton()
 	//m_gameSetting->setFontSize(14);
 	//m_gameSetting->setFontFace(GAME_INFO_FONT_FACE);
 	m_exit->setText("");
-	m_exit->setBkgImage(m_war3ResourcePath + "/Image/MatchChat/message_template_close.png");
+	m_exit->setBkgImage(m_war3ResourcePath + "/Image/Common/PopupView/NormalCloseButton.png");
 	QObject::connect(m_exit, &COriginalButton::clicked, this, &CreateGameDialog::onExitClicked);
 
 	//创建游戏设置界面
@@ -418,10 +418,8 @@ void CreateGameDialog::initGameSettingWidget()
 	//保存
 	if (m_createRoom != nullptr)
 	{
-		//m_createGame->setBkgImage(m_war3ResourcePath + "/Image/GameRoomView/SaveButton.png");
-		m_createRoom->setBkgColor(CREATE_ROOM_NORMAL_COLOR, CREATE_ROOM_HOVER_COLOR, CREATE_ROOM_NORMAL_COLOR, CREATE_ROOM_NORMAL_COLOR);
-		m_createRoom->setBorderRadius(CREATE_ROOM_RADIUS);
-		m_createRoom->setText(QString::fromStdWString(L"创建房间"));
+		m_createRoom->setBkgImage(m_war3ResourcePath + "/Image/War3/War3CreateGameView/CreateRoomButton.png");
+		m_createRoom->setText("");
 		QObject::connect(m_createRoom, &COriginalButton::clicked, this, &CreateGameDialog::createRoomClicked);
 	}
 }

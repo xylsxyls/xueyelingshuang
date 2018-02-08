@@ -62,13 +62,14 @@ public:
 	@param [in] enable ÊÇ·ñÒþ²Ø
 	*/
 	void setMaskVisible(bool enable);
-	
+
 private:
     void layoutControl();
 	void resizeEvent(QResizeEvent* eve);
 
 private slots:
 	void onMaskButtonClicked();
+	void currentTextChanged(const QString& str);
 
 private:
 	COriginalButton* m_maskButton;

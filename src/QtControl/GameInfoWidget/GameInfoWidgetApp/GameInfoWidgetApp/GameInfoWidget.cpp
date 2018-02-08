@@ -834,7 +834,7 @@ void GameInfoWidget::comboBoxTextChanged(const QString& text,
 	index = -1;
 	while (index++ != pBox->count() - 1)
 	{
-		if (qstrText == pBox->itemText(index))
+		if (text == pBox->itemText(index))
 		{
 			ok = true;
 		}

@@ -3,6 +3,7 @@
 #include "RPGGameWidget.h"
 #include "RPGCreateRoomWidget.h"
 #include "CreateGameDialog.h"
+#include "D:\\SendToMessageTest.h"
 
 GameInfoWidgetApp::GameInfoWidgetApp(QWidget *parent)
 	: QMainWindow(parent)
@@ -38,10 +39,11 @@ GameInfoWidgetApp::GameInfoWidgetApp(QWidget *parent)
 	CreateGameDialog* pCreateRoomDialog = new CreateGameDialog;
 	QObject::connect(pCreateRoomDialog, SIGNAL(exitClicked()), this, SLOT(save()));
 	QObject::connect(pCreateRoomDialog, SIGNAL(createRoomClicked()), this, SLOT(save()));
-	QObject::connect(pCreateRoomDialog, SIGNAL(gameNameChanged(const QString&)), this, SLOT(changed(const QString&)));
+	QObject::connect(pCreateRoomDialog, SIGNAL(mapVersionChanged(const QString&)), this, SLOT(changed(const QString&)));
 	QObject::connect(pCreateRoomDialog, SIGNAL(gamePasswordChanged(const QString&)), this, SLOT(changed(const QString&)));
 	QObject::connect(pCreateRoomDialog, SIGNAL(gameModeChanged(const QString&)), this, SLOT(changed(const QString&)));
-	QObject::connect(pCreateRoomDialog, SIGNAL(judgeChanged(bool)), this, SLOT(onJudgeChanged(bool)));
+	QObject::connect(pCreateRoomDialog, SIGNAL(challengeModeChanged(const QString&)), this, SLOT(changed(const QString&)));
+	QObject::connect(pCreateRoomDialog, SIGNAL(challengeCostChanged(const QString&)), this, SLOT(changed(const QString&)));
 
 	pCreateRoomDialog->show();
 }
@@ -53,31 +55,37 @@ GameInfoWidgetApp::~GameInfoWidgetApp()
 
 void GameInfoWidgetApp::save()
 {
+	RCSend("save");
 	int x = 3;
 }
 
 void GameInfoWidgetApp::changed(const QString& str)
 {
+	RCSend("changed = %s",str.toStdString().c_str());
 	str;
 	int x = 3;
 }
 
 void GameInfoWidgetApp::changed2(const QString& str)
 {
+	RCSend("changed2 = %s", str.toStdString().c_str());
 	int x = 3;
 }
 
 void GameInfoWidgetApp::prepare()
 {
+	RCSend("prepare");
 	int x = 3;
 }
 
 void GameInfoWidgetApp::cancelPrepare()
 {
+	RCSend("cancelPrepare");
 	int x = 3;
 }
 
 void GameInfoWidgetApp::onJudgeChanged(bool judge)
 {
+	RCSend("onJudgeChanged = %d", judge);
 	int x = 3;
 }

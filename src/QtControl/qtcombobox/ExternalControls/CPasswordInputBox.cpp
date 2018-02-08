@@ -42,6 +42,7 @@ void CPasswordInputBox::setDefault()
 	setTextOrigin(4);
 	setTextRightOrigin(25);
 	setTextColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(82, 126, 185, 255));
+	QObject::connect(this, &CPasswordInputBox::textChanged, this, &CPasswordInputBox::currentTextChanged);
 }
 
 void CPasswordInputBox::setMaskSize(int32_t width, int32_t height)
@@ -117,4 +118,25 @@ void CPasswordInputBox::onMaskButtonClicked()
 		return;
 	}
 	setEchoMode((m_maskButton->isChecked()) ? QLineEdit::Normal : QLineEdit::Password);
+
+	if (m_maskButton->isChecked())
+	{
+		setToolTip(text());
+	}
+	else
+	{
+		setToolTip("");
+	}
+}
+
+void CPasswordInputBox::currentTextChanged(const QString& str)
+{
+	if (m_maskButton->isChecked())
+	{
+		setToolTip(str);
+	}
+	else
+	{
+		setToolTip("");
+	}
 }

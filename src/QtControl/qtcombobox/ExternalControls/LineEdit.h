@@ -24,7 +24,8 @@ public:
 	*/
 	virtual ~LineEdit();
 
-public:
+private slots:
+	void currentTextChanged(const QString& str);
 
 private:
 	/** 常用初始化

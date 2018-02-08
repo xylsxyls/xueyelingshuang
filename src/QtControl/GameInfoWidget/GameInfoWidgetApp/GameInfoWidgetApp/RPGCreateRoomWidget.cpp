@@ -191,7 +191,6 @@ void RPGCreateRoomWidget::resetSettings()
 	m_gameModeComboBox->addItem(QString::fromStdWString(L"进入游戏后手动选择"));
 	m_fastStartCheckBox->setCheckable(true);
 	m_fastStartCheckBox->setChecked(false);
-	//m_fastStartCheckBox->setVisible(false);
 	setLeader(m_isLeader);
 }
 

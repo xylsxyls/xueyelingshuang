@@ -2,7 +2,7 @@
 
 #include <QMouseEvent>
 #include <QPainter>
-#include "common/controls/CGeneralStyle.h"
+#include "CGeneralStyle.h"
 #include <QDebug>
 
 CW3LModalFrame::CW3LModalFrame(QWidget *parent)

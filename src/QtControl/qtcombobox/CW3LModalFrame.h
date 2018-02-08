@@ -1,7 +1,7 @@
 #ifndef CW3LMODALFRAME_H
 #define CW3LMODALFRAME_H
 
-#include "common/controls/COriginalDialog.h"
+#include "../COriginalDialog.h"
 
 class CW3LModalFrame : public COriginalDialog
 {

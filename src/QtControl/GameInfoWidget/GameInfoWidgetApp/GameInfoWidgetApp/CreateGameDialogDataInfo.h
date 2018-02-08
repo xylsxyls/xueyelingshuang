@@ -126,21 +126,21 @@ enum
 	*/
 	CONTROL_ALL_SPACING = CONTROL_HEIGHT + CONTROL_SPACING_HEIGHT,
 
+	/** 保存按钮宽度
+	*/
+	CREATE_ROOM_WIDTH = 164,
+
+	/** 保存按钮高度
+	*/
+	CREATE_ROOM_HEIGHT = 38,
+
 	/** 保存按钮横轴起始位置
 	*/
-	CREATE_ROOM_ORIGIN_X = 46,
+	CREATE_ROOM_ORIGIN_X = (WIDGET_WIDTH - CREATE_ROOM_WIDTH) / 2,
 
 	/** 保存按钮纵轴起始位置
 	*/
 	CREATE_ROOM_ORIGIN_Y = 366,
-
-	/** 保存按钮宽度
-	*/
-	CREATE_ROOM_WIDTH = 162,
-
-	/** 保存按钮高度
-	*/
-	CREATE_ROOM_HEIGHT = 39,
 
 	/** 游戏设置网页宽度
 	*/
@@ -204,7 +204,7 @@ enum
 
 	/** 退出按钮宽度
 	*/
-	EXIT_WIDTH = 13,
+	EXIT_WIDTH = 24,
 
 	/** 退出按钮高度
 	*/
@@ -216,7 +216,7 @@ enum
 
 	/** 退出按钮纵轴起始位置
 	*/
-	EXIT_ORIGIN_Y = 9,
+	EXIT_ORIGIN_Y = 5,
 
 	/** 按钮之前的间隔宽度
 	*/
