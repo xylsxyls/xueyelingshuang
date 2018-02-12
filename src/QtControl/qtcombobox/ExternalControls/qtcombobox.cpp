@@ -179,7 +179,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//menu->setIconSize(QSize(20, 20));
 	
 
-	menu->exec(QPoint(50, 50));
+	//menu->exec(QPoint(50, 50));
 
 	box = new HtmlComboBox(this);
 	//box->setDefault();
@@ -540,6 +540,17 @@ void qtcombobox::modalFriendPop()
 
 void qtcombobox::testDialog()
 {
+	int32_t dialogId8 = 0;
+	DialogManager::instance().popDownloadDialog(dialogId8,
+												QString::fromStdWString(L"aaa.txt"),
+												QString::fromStdWString(L"下载"),
+												nullptr,
+												QString::fromStdWString(L"标题"),
+												QString::fromStdWString(L"确定"),
+												1,
+												30,
+												true);
+	return;
 	int32_t dialogId7 = 0;
 	NotifyDialogManager::instance().showLoginDialog(dialogId7,
 												    33,

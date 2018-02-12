@@ -126,6 +126,17 @@ void NotifyDialogManager::showAskDialog(int32_t& dialogId,
 								 isCountDownVisible);
 }
 
+void NotifyDialogManager::onDialogDone(int32_t dialogId, int32_t result, int32_t userType)
+{
+	auto ptr = dialogPtr(dialogId);
+	if (ptr != nullptr && result == DESTROY_ALL)
+	{
+		delete ptr;
+	}
+	removeDialog(dialogId);
+	emit dialogDone(dialogId, result, userType);
+}
+
 int32_t NotifyDialogManager::popAskDialog(int32_t& dialogId,
 										const QString& title,
 										const QString& tip,

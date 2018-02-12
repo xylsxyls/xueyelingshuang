@@ -7,6 +7,7 @@
 #include "TipShowDialog.h"
 #include "AskShowDialog.h"
 #include "LoginShowDialog.h"
+#include "DownloadDialog.h"
 #include <vector>
 #include <Windows.h>
 
@@ -180,7 +181,20 @@ int32_t DialogManager::popWaitDialog(int32_t& dialogId,
 	return WaitDialog::popWaitDialog(dialogId, title, tip, parent, timeOut, isCountDownVisible);
 }
 
-void DialogManager::destroyDialog(int32_t dialogId)
+int32_t DialogManager::popDownloadDialog(int32_t& dialogId,
+										 const QString& fileName,
+										 const QString& tip,
+										 QWindow* parent,
+										 const QString& title,
+										 const QString& buttonText,
+										 int32_t done,
+										 int32_t timeOut,
+										 bool isCountDownVisible)
+{
+	return DownloadDialog::popDownloadDialog(dialogId, title, fileName, tip, buttonText, done, parent, timeOut, isCountDownVisible);
+}
+
+void DialogManager::closeDialog(int32_t dialogId)
 {
 	if (m_mapDialog.empty())
 	{
@@ -190,11 +204,10 @@ void DialogManager::destroyDialog(int32_t dialogId)
 	if (itDialog != m_mapDialog.end())
 	{
 		itDialog->second->reject();
-		m_mapDialog.erase(itDialog);
 	}
 }
 
-void DialogManager::destroyLastDialog()
+void DialogManager::closeLastDialog()
 {
 	if (m_mapDialog.empty())
 	{
@@ -204,7 +217,6 @@ void DialogManager::destroyLastDialog()
 	{
 		auto itDialog = --m_mapDialog.end();
 		itDialog->second->reject();
-		m_mapDialog.erase(itDialog);
 	}
 }
 
@@ -214,27 +226,16 @@ void DialogManager::destroyAll()
 	{
 		return;
 	}
-	std::vector<DialogBase*> listDialog;
-	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
-	{
-		listDialog.push_back(itDialog->second);
-	}
-	int32_t index = -1;
-	while (index++ != listDialog.size() - 1)
-	{
-		listDialog[index]->reject();
-	}
 
-	while (m_mapDialog.size())
+	int32_t count = m_mapDialog.size();
+	while (count-- != 0)
 	{
-		Sleep(50);
+		auto itDialog = m_mapDialog.begin();
+		if (itDialog != m_mapDialog.end())
+		{
+			itDialog->second->done(DESTROY_ALL);
+		}
 	}
-
-	//for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
-	//{
-	//	itDialog->second->reject();
-	//}
-	//m_mapDialog.clear();
 }
 
 int32_t DialogManager::dialogCount()
@@ -302,6 +303,21 @@ void DialogManager::removeDialog(DialogBase* base)
 			return;
 		}
 	}
+}
+
+DialogBase* DialogManager::dialogPtr(int32_t dialogId)
+{
+	if (m_mapDialog.empty())
+	{
+		nullptr;
+	}
+
+	auto itDialog = m_mapDialog.find(dialogId);
+	if (itDialog != m_mapDialog.end())
+	{
+		return itDialog->second;
+	}
+	return nullptr;
 }
 
 int32_t DialogManager::getId()

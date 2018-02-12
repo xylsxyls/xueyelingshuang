@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_NotifyDialogManager_t {
-    QByteArrayData data[7];
-    char stringdata0[65];
+    QByteArrayData data[8];
+    char stringdata0[78];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -35,11 +35,12 @@ QT_MOC_LITERAL(2, 31, 0), // ""
 QT_MOC_LITERAL(3, 32, 7), // "int32_t"
 QT_MOC_LITERAL(4, 40, 8), // "dialogId"
 QT_MOC_LITERAL(5, 49, 6), // "result"
-QT_MOC_LITERAL(6, 56, 8) // "userType"
+QT_MOC_LITERAL(6, 56, 8), // "userType"
+QT_MOC_LITERAL(7, 65, 12) // "onDialogDone"
 
     },
     "NotifyDialogManager\0dialogDone\0\0int32_t\0"
-    "dialogId\0result\0userType"
+    "dialogId\0result\0userType\0onDialogDone"
 };
 #undef QT_MOC_LITERAL
 
@@ -49,7 +50,7 @@ static const uint qt_meta_data_NotifyDialogManager[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-       1,   14, // methods
+       2,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -57,9 +58,15 @@ static const uint qt_meta_data_NotifyDialogManager[] = {
        1,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    3,   19,    2, 0x06 /* Public */,
+       1,    3,   24,    2, 0x06 /* Public */,
+
+ // slots: name, argc, parameters, tag, flags
+       7,    3,   31,    2, 0x0a /* Public */,
 
  // signals: parameters
+    QMetaType::Void, 0x80000000 | 3, 0x80000000 | 3, 0x80000000 | 3,    4,    5,    6,
+
+ // slots: parameters
     QMetaType::Void, 0x80000000 | 3, 0x80000000 | 3, 0x80000000 | 3,    4,    5,    6,
 
        0        // eod
@@ -72,6 +79,7 @@ void NotifyDialogManager::qt_static_metacall(QObject *_o, QMetaObject::Call _c, 
         Q_UNUSED(_t)
         switch (_id) {
         case 0: _t->dialogDone((*reinterpret_cast< int32_t(*)>(_a[1])),(*reinterpret_cast< int32_t(*)>(_a[2])),(*reinterpret_cast< int32_t(*)>(_a[3]))); break;
+        case 1: _t->onDialogDone((*reinterpret_cast< int32_t(*)>(_a[1])),(*reinterpret_cast< int32_t(*)>(_a[2])),(*reinterpret_cast< int32_t(*)>(_a[3]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -111,13 +119,13 @@ int NotifyDialogManager::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 1)
+        if (_id < 2)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 1;
+        _id -= 2;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 1)
+        if (_id < 2)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 1;
+        _id -= 2;
     }
     return _id;
 }

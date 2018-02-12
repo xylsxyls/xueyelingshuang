@@ -9,13 +9,15 @@
 #include "../CGeneralStyle.h"
 #include "NotifyDialogManager.h"
 
+std::wstring DialogShow::s_countDownString = L"还有%d秒自动关闭";
+
 DialogShow::DialogShow() :
 m_cancelEscAltF4(false),
 m_bPressed(false),
 m_highLight(false),
 m_isExec(false),
 m_animation(this, "geometry"),
-m_result(-1),
+m_result(-2),
 m_userType(-1),
 m_inExit(false)
 {
@@ -27,15 +29,15 @@ void DialogShow::initForExec()
 	m_isExec = true;
 	installEventFilter(this);
 	setWindowFlags(windowFlags() | Qt::Tool);
-	resize(340, 165);
+	resize(411, 165);//411, 165340, 165
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
 	m_exit->setBkgMargins(0, 0);
 	m_exit->setBorderRadius(0);
 	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupCloseButton.png");
 	m_exit->installEventFilter(this);
-	m_title = addLabel("title", QRect(17, 4, 300, 27), QColor(163, 175, 191, 255));
-	m_separator = addSeparator(QPoint(13, 33), 308, true, QColor(46, 52, 88, 255), QColor(16, 20, 31, 255));
-	m_time = addLabel("", QRect(205, 140, 125, 32), QColor("#abb3d3"));
+	m_title = addLabel("title", QRect(17, 4, width() - 17 * 2, 27), QColor(163, 175, 191, 255));
+	m_separator = addSeparator(QPoint(13, 33), width() - 13 * 2, true, QColor(16, 20, 31, 255), QColor(46, 52, 88, 255));
+	m_time = addLabel("", QRect(width() - 125 - 10, 140, 125, 32), QColor("#abb3d3"));
 	m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 	m_time->setFontSize(12);
 	QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::timeUpdate);
@@ -71,8 +73,28 @@ void DialogShow::initForShow(int32_t dialogWidth, int32_t dialogHeight, const st
 	::GetWindowRect(::FindWindow(L"Shell_TrayWnd", L""), &rect);
 	RECT screenRect = { 0, 0, ::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN) };
 
-	m_beginRect.setRect(screenRect.right - width(), screenRect.bottom - (rect.bottom - rect.top) - height(), width(), height());
-	m_endRect.setRect(screenRect.right - width(), screenRect.bottom, width(), height());
+	//分4种情况，任务栏可能出现在左侧上侧右侧底侧
+	//右侧
+	if (rect.left != screenRect.left)
+	{
+		m_beginRect.setRect(screenRect.right - (rect.right - rect.left) - width(), screenRect.bottom - height(), width(), height());
+		m_endRect.setRect(screenRect.right - (rect.right - rect.left) - width(), screenRect.bottom, width(), height());
+	}
+	//底侧
+	else if (rect.top != screenRect.top)
+	{
+		m_beginRect.setRect(screenRect.right - width(), screenRect.bottom - (rect.bottom - rect.top) - height(), width(), height());
+		m_endRect.setRect(screenRect.right - width(), screenRect.bottom, width(), height());
+	}
+	//上侧左侧和其余情况一律从右下角弹出
+	else
+	{
+		m_beginRect.setRect(screenRect.right - width(), screenRect.bottom - height(), width(), height());
+		m_endRect.setRect(screenRect.right - width(), screenRect.bottom, width(), height());
+	}
+
+	//m_beginRect.setRect(screenRect.right - width(), screenRect.bottom - (rect.bottom - rect.top) - height(), width(), height());
+	//m_endRect.setRect(screenRect.right - width(), screenRect.bottom, width(), height());
 	QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::timeUpdate);
 	QObject::connect(&m_animation, &QPropertyAnimation::finished, this, &DialogShow::end);
 	
@@ -90,7 +112,7 @@ void DialogShow::timeUpdate(int32_t timeOut)
 	{
 		m_time->setVisible(false);
 	}
-	m_time->setText(QString::fromStdWString(CStringManager::Format(L"还有%d秒自动关闭", timeOut)));
+	m_time->setText(QString::fromStdWString(CStringManager::Format(s_countDownString.c_str(), timeOut)));
 }
 
 void DialogShow::paintEvent(QPaintEvent* eve)
@@ -238,11 +260,26 @@ void DialogShow::done(int result)
 			killTimer(m_timeId);
 			m_timeId = -1;
 		}
-		m_animation.setDuration(250);
-		m_animation.setStartValue(m_beginRect);
-		m_animation.setEndValue(m_endRect);
-		m_animation.start();
-		emit dialogDone(NotifyDialogManager::instance().DialogId(this), m_result, m_userType);
+		//DialogBase::done(m_result);
+
+		if (m_result != DESTROY_ALL)
+		{
+			m_animation.setDuration(250);
+			m_animation.setStartValue(m_beginRect);
+			m_animation.setEndValue(m_endRect);
+			m_animation.start();
+		}
+		else
+		{
+			DialogBase::done(m_result);
+		}
+
+		int32_t dialogId = NotifyDialogManager::instance().DialogId(this);
+		if (dialogId != -1)
+		{
+			emit dialogDone(NotifyDialogManager::instance().DialogId(this), m_result, m_userType);
+		}
+		NotifyDialogManager::instance().removeDialog(this);
 	}
 	else
 	{
@@ -253,11 +290,15 @@ void DialogShow::done(int result)
 
 void DialogShow::end()
 {
-	if (m_result != -1)
+	//判断-2是防止弹出的结束
+	if (m_result != -2)
 	{
 		NotifyDialogManager::instance().removeDialog(this);
 		DialogBase::done(m_result);
-		delete this;
+		if (m_result != DESTROY_ALL)
+		{
+			delete this;
+		}
 	}
 }
 

@@ -52,9 +52,6 @@ protected:
 	void closeEvent(QCloseEvent* eve);
 	bool nativeEvent(const QByteArray& eventType, void* message, long* result);
 	void showEvent(QShowEvent* eve);
-
-
-	
 	void end();
 
 private slots:
@@ -84,4 +81,5 @@ private:
 	int32_t m_result;
 	QRect m_beginRect;
 	QRect m_endRect;
+	static std::wstring s_countDownString;
 };

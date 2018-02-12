@@ -1005,7 +1005,7 @@ void CFundInvestDlg::OnBnClickedButton14()
 		Ctxt txt6(path);
 		txt6.OpenFile_w();
 		txt6.CloseFile();
-		txt6.AddLine("up_down_5\tbest_state\tchg");
+		txt6.AddLine("up_down_5\tbest_state\tchg\thighest_1_week");
 		while (nowNeuron != endNeuron->m_nextData)
 		{
 			double bestState;
@@ -1026,7 +1026,7 @@ void CFundInvestDlg::OnBnClickedButton14()
 			{
 				bestState = -0.03;
 			}
-			txt6.AddLine("%lf\t%lf\t%lf", nowNeuron->m_upDown_5, bestState, nowNeuron->m_dayChg);
+			txt6.AddLine("%lf\t%lf\t%lf\t%lf", nowNeuron->m_upDown_5, bestState, nowNeuron->m_dayChg, nowNeuron->m_upDownHighest5);
 			nowNeuron = nowNeuron->m_nextData;
 		}
 	}
@@ -1709,7 +1709,7 @@ void CFundInvestDlg::OnBnClickedButton24()
 	double buyCharge = 0.001;
 	double sellCharge = 0.005;
 	DataNeuron* beginNeuron = GetNeuron(FUND_NUM, "2017-01-01");
-	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2018-01-18");
+	DataNeuron* endNeuron = GetNeuron(FUND_NUM, "2018-02-05");
 	DataNeuron* nowNeuron = beginNeuron->m_preData;
 	int32_t nowState = WAIT;
 	while (nowNeuron != endNeuron->m_nextData)

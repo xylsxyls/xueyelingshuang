@@ -186,6 +186,9 @@
     <Filter Include="FriendDialog\UserWidget">
       <UniqueIdentifier>{9aaf7406-a480-4b88-aeec-fe0cfd2c151a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="QtDialog\Modal\DownloadDialog">
+      <UniqueIdentifier>{31fc6f36-08f6-4169-b765-8668b7b3ced5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -488,6 +491,15 @@
     <ClCompile Include="UserWidget.cpp">
       <Filter>FriendDialog\UserWidget</Filter>
     </ClCompile>
+    <ClCompile Include="DownloadDialog.cpp">
+      <Filter>QtDialog\Modal\DownloadDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -600,6 +612,9 @@
     </CustomBuild>
     <CustomBuild Include="FriendDialogFrame.h">
       <Filter>FriendDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DownloadDialog.h">
+      <Filter>QtDialog\Modal\DownloadDialog</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

@@ -125,6 +125,9 @@ Q_SIGNALS:
 	*/
 	void dialogDone(int32_t dialogId, int32_t result, int32_t userType);
 
+public slots:
+	void onDialogDone(int32_t dialogId, int32_t result, int32_t userType);
+
 private:
 	int32_t popAskDialog(int32_t& dialogId,
 						 const QString& title,

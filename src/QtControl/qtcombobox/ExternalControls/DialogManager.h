@@ -12,7 +12,11 @@ enum DialogButton
 
 	/** 取消按钮
 	*/
-	IGNORE_BUTTON = 2
+	IGNORE_BUTTON = 2,
+
+	/** 全部销毁专用返回值
+	*/
+	DESTROY_ALL = -1
 };
 
 class DialogBase;
@@ -229,16 +233,40 @@ public:
 						   int32_t timeOut = -1,
 						   bool isCountDownVisible = false);
 
-	/** 根据ID号销毁窗口
+	/** 弹出下载框
+	@param [out] dialogId 窗口ID值
+	@param [in] fileName 文件名
+	@param [in] tip 提示内容
+	@param [in] parent 父窗口指针
+	@param [in] title 标题
+	@param [in] buttonText 按钮内容
+	@param [in] done 按钮按下后的返回值
+	@param [in] timeOut 超时自动关闭，单位秒
+	@param [in] isCountDownVisible 超时自动关闭提示是否可见
+	@return 关闭窗口时给的返回值
+	*/
+	int32_t popDownloadDialog(int32_t& dialogId,
+							  const QString& fileName,
+							  const QString& tip,
+							  QWindow* parent,
+							  const QString& title = QString::fromStdWString(L"11对战平台"),
+							  const QString& buttonText = QString::fromStdWString(L"确定"),
+							  int32_t done = ACCEPT_BUTTON,
+							  int32_t timeOut = -1,
+							  bool isCountDownVisible = false);
+
+	
+
+	/** 根据ID号关闭窗口（有动画效果）
 	@param [in] dialogId 窗口ID号
 	*/
-	void destroyDialog(int32_t dialogId);
+	void closeDialog(int32_t dialogId);
 
-	/** 销毁最后一个弹出的窗口
+	/** 关闭最后一个弹出的窗口（有动画效果）
 	*/
-	void destroyLastDialog();
+	void closeLastDialog();
 
-	/** 销毁所有窗口
+	/** 销毁所有窗口（无动画效果）
 	*/
 	void destroyAll();
 
@@ -256,17 +284,23 @@ public:
 protected:
 	DialogManager();
 
+	/** 根据ID号销毁窗口
+	@param [in] dialogId 窗口ID号
+	*/
+	void removeDialog(int32_t dialogId);
+
+	/** 根据窗口ID获取窗口指针
+	@param [in] dialogId 窗口ID号
+	@return 返回窗口指针
+	*/
+	DialogBase* dialogPtr(int32_t dialogId);
+
 private:
 	/** 存储窗口指针
 	@param [in] dialog 窗口指针
 	@return 返回窗口对应ID号
 	*/
 	int32_t setDialog(DialogBase* dialog);
-
-	/** 根据ID号销毁窗口
-	@param [in] dialogId 窗口ID号
-	*/
-	void removeDialog(int32_t dialogId);
 
 	/** 根据ID号销毁窗口
 	@param [in] dialogId 窗口ID号
