@@ -21,7 +21,7 @@ TipDialog::TipDialog(const QString& title,
 					 const QString& buttonText,
 					 int32_t done)
 {
-	initForExec();
+	initForExec(340, 165);
 	m_title->setText(title);
 	setWindowTitle(title);
 	m_title->setFontSize(12);

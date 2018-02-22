@@ -13,8 +13,10 @@ public:
 	DialogShow();
 
 	/** 设置默认控件，含有关闭按钮，标题，分割线，框大小，背景颜色，背景边框
+	@param [in] dialogWidth 窗口宽度
+	@param [in] dialogHeight 窗口高度
 	*/
-	void initForExec();
+	void initForExec(int32_t dialogWidth, int32_t dialogHeight);
 
 	/** 设置默认控件，含有标题栏
 	@param [in] dialogWidth 宽度

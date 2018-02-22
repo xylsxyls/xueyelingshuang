@@ -29,7 +29,7 @@ InputDialog::InputDialog(const QString& title,
 						 int32_t maxLength) :
 m_editText(editText)
 {
-	initForExec();
+	initForExec(340, 165);
 	setFocus();
 	setWindowTitle(title);
 	m_title->setText(title);

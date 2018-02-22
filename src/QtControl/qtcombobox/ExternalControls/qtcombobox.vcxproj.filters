@@ -189,6 +189,9 @@
     <Filter Include="QtDialog\Modal\DownloadDialog">
       <UniqueIdentifier>{31fc6f36-08f6-4169-b765-8668b7b3ced5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="QtControl\ProgressBar">
+      <UniqueIdentifier>{22a47d44-8159-45da-8007-0d84ca0b6a0e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -500,6 +503,15 @@
     <ClCompile Include="GeneratedFiles\Release\moc_DownloadDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="ProgressBar.cpp">
+      <Filter>QtControl\ProgressBar</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -615,6 +627,9 @@
     </CustomBuild>
     <CustomBuild Include="DownloadDialog.h">
       <Filter>QtDialog\Modal\DownloadDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ProgressBar.h">
+      <Filter>QtControl\ProgressBar</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

@@ -1,6 +1,7 @@
 #pragma once
 #include "DialogShow.h"
 
+class ProgressBar;
 /** ÌáÊ¾µ¯³ö¿ò
 */
 class DownloadDialog : protected DialogShow
@@ -35,6 +36,8 @@ private:
 				   const QString& buttonText,
 				   int32_t done);
 
+	void setRate(int32_t persent);
+
 private slots:
 	void downloadAccept();
 
@@ -43,6 +46,7 @@ private:
 	Label* m_file;
 	Label* m_persent;
 	Label* m_downloadSlow;
+	ProgressBar *progressBar;
 	COriginalButton* m_hand;
 
 private:

@@ -15,7 +15,7 @@ int32_t WaitDialog::popWaitDialog(int32_t& dialogId,
 
 WaitDialog::WaitDialog(const QString& title, const QString& tip)
 {
-	initForExec();
+	initForExec(340, 165);
 	m_title->setText(title);
 	setWindowTitle(title);
 	m_tip = addTip(tip, QRect(43, 51, width() - 43 * 2, 60), QColor(205, 213, 225, 255));

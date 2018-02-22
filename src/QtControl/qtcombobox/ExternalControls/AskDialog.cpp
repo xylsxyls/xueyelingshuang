@@ -25,7 +25,7 @@ AskDialog::AskDialog(const QString& title,
 					 const QString& ignoreText,
 					 int32_t ignoreDone)
 {
-	initForExec();
+	initForExec(340, 165);
 	m_title->setText(title);
 	setWindowTitle(title);
 	m_title->setFontSize(12);

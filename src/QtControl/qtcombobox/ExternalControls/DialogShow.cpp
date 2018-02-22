@@ -24,12 +24,12 @@ m_inExit(false)
 	
 }
 
-void DialogShow::initForExec()
+void DialogShow::initForExec(int32_t dialogWidth, int32_t dialogHeight)
 {
 	m_isExec = true;
 	installEventFilter(this);
 	setWindowFlags(windowFlags() | Qt::Tool);
-	resize(411, 165);//411, 165340, 165
+	resize(dialogWidth, dialogHeight);//411, 165340, 165
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
 	m_exit->setBkgMargins(0, 0);
 	m_exit->setBorderRadius(0);
