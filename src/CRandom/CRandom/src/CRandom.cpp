@@ -152,9 +152,11 @@ vector<int> CRandom::Hash(int hashNumber, int size){
 	while (i++ != size - 1){
 		vecResult.push_back(0);
 	}
-	while (hashNumber-- != 0){
-		vecResult.at(Int(0, size - 1))++;
-	}
+    if (size != 0){
+        while (hashNumber-- != 0){
+            vecResult.at(Int(0, size - 1))++;
+        }
+    }
 	return vecResult;
 }
 

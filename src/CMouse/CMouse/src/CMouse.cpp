@@ -111,7 +111,7 @@ bool CMouse::MoveAbsolute(xyls::Rect rect, int sleepTime){
 		//?生成随机路径
 		vector<string> vecRoad = CRandom::Deal(mapCard);
 		//?生成随机间隔时间
-		vector<int> vecSleepTime = CRandom::Hash(sleepTime, step - 1);
+		vector<int> vecSleepTime = CRandom::Hash(sleepTime, step);
 		bool result = true;
 		int i = -1;
 		while (i++ != vecRoad.size() - 1){

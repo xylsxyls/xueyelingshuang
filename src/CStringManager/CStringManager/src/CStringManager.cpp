@@ -44,9 +44,9 @@ std::vector<std::string> CStringManager::split(std::string splitString, std::str
 	return strs;
 }
 
-vector<wstring> CStringManager::split(wstring splitString, wstring separate_character)
+std::vector<std::wstring> CStringManager::split(std::wstring splitString, std::wstring separate_character)
 {
-	vector<wstring> strs;
+    std::vector<std::wstring> strs;
 	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
 	int separate_characterLen = separate_character.length();
 	int lastPosition = 0, index = -1;
@@ -56,7 +56,7 @@ vector<wstring> CStringManager::split(wstring splitString, wstring separate_char
 		lastPosition = index + separate_characterLen;
 	}
 	//?截取最后一个分隔符后的内容
-	wstring lastString = splitString.substr(lastPosition);
+    std::wstring lastString = splitString.substr(lastPosition);
 	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
 	strs.push_back(lastString.c_str());
 	return strs;

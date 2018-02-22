@@ -27,7 +27,7 @@
     <ClCompile Include="..\src\CMouse.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{0D7D7246-0797-4502-859B-E37B36FACAF5}</ProjectGuid>
     <RootNamespace>CMouse</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

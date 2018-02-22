@@ -27,7 +27,7 @@
     <ClCompile Include="..\src\CRandom.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{7042C17A-B700-496D-8222-DDFE11B9092C}</ProjectGuid>
     <RootNamespace>CRandom</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
