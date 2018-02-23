@@ -97,7 +97,7 @@ bool CMouse::RightManyClick(int times, int sleepTime){
 bool CMouse::MoveAbsolute(xyls::Rect rect, int sleepTime){
 	if (sleepTime == -1) sleepTime = CRandom::Int(MoveTimeMin, MoveTimeMax);
 	//?生成一个点
-	xyls::Point pointResult(CRandom::Int(rect.left, rect.right), CRandom::Int(rect.top, rect.bottom));
+	xyls::Point pointResult(CRandom::Int(rect.m_left, rect.m_right), CRandom::Int(rect.m_top, rect.m_bottom));
 	//?是否立即到达
 	if (sleepTime == 0) return DmSoft::MoveTo(pointResult.x, pointResult.y) == 1;
 	//?不是立即到达
@@ -128,7 +128,7 @@ bool CMouse::MoveAbsolute(xyls::Rect rect, int sleepTime){
 
 bool CMouse::MoveOpposite(xyls::Rect rect, int sleepTime){
 	xyls::Point currentPoint = GetCurrentPos();
-	xyls::Rect rectAbsolute(currentPoint.x + rect.left, currentPoint.y + rect.top, currentPoint.x + rect.right, currentPoint.y + rect.bottom);
+	xyls::Rect rectAbsolute(currentPoint.x + rect.m_left, currentPoint.y + rect.m_top, currentPoint.x + rect.m_right, currentPoint.y + rect.m_bottom);
 	return MoveAbsolute(rectAbsolute, sleepTime);
 }
 

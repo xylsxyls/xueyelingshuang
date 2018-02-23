@@ -77,19 +77,19 @@ bool CScreen::initDict(const std::map<int, std::string>& mapDict, int use){
 }
 
 bool CScreen::SaveBmp(const xyls::Rect& rect, const std::string& path){
-	return DmSoft::Capture(rect.left, rect.top, rect.right, rect.bottom, path.c_str()) == 1;
+	return DmSoft::Capture(rect.m_left, rect.m_top, rect.m_right, rect.m_bottom, path.c_str()) == 1;
 }
 
 bool CScreen::SaveGif(const xyls::Rect& rect, int delay, int time, const std::string& path){
-	return DmSoft::CaptureGif(rect.left, rect.top, rect.right, rect.bottom, path.c_str(), delay, time) == 1;
+	return DmSoft::CaptureGif(rect.m_left, rect.m_top, rect.m_right, rect.m_bottom, path.c_str(), delay, time) == 1;
 }
 
 bool CScreen::SaveJpg(const xyls::Rect& rect, int quality, const std::string& path){
-	return DmSoft::CaptureJpg(rect.left, rect.top, rect.right, rect.bottom, path.c_str(), quality) == 1;
+	return DmSoft::CaptureJpg(rect.m_left, rect.m_top, rect.m_right, rect.m_bottom, path.c_str(), quality) == 1;
 }
 
 bool CScreen::SavePng(const xyls::Rect& rect, const std::string& path){
-	return DmSoft::CapturePng(rect.left, rect.top, rect.right, rect.bottom, path.c_str()) == 1;
+	return DmSoft::CapturePng(rect.m_left, rect.m_top, rect.m_right, rect.m_bottom, path.c_str()) == 1;
 }
 
 bool CScreen::ComparePointColor(const xyls::Point& point, const Color& color, double sim){
@@ -107,7 +107,7 @@ bool CScreen::ComparePointColor(const xyls::Point& point, const std::vector<Colo
 }
 
 bool CScreen::FindColor(const xyls::Rect& rect, const Color& color, int& x, int& y, double sim, int dir){
-	std::string result = DmSoft::FindColorE(rect.left, rect.top, rect.right, rect.bottom, color.toReserveString().c_str(), sim, dir);
+	std::string result = DmSoft::FindColorE(rect.m_left, rect.m_top, rect.m_right, rect.m_bottom, color.toReserveString().c_str(), sim, dir);
 	x = atoi(result.substr(0, result.find("|")).c_str());
 	y = atoi(result.substr(result.find("|") + 1, result.length() - result.find("|") - 1).c_str());
 	if (x == -1 && y == -1) return false;
@@ -121,7 +121,7 @@ bool CScreen::FindColor(const xyls::Rect& rect, const std::vector<Color>& vecCol
 		strColor = strColor + vecColor.at(i).toReserveString() + "|";
 	}
 	CStringManager::Delete(strColor, strColor.length() - 1, 1);
-	std::string result = DmSoft::FindColorE(rect.left, rect.top, rect.right, rect.bottom, strColor.c_str(), sim, dir);
+	std::string result = DmSoft::FindColorE(rect.m_left, rect.m_top, rect.m_right, rect.m_bottom, strColor.c_str(), sim, dir);
 	x = atoi(result.substr(0, result.find("|")).c_str());
 	y = atoi(result.substr(result.find("|") + 1, result.length() - result.find("|") - 1).c_str());
 	if (x == -1 && y == -1) return false;
@@ -131,7 +131,7 @@ bool CScreen::FindColor(const xyls::Rect& rect, const std::vector<Color>& vecCol
 bool CScreen::FindPic(const xyls::Rect& rect, const std::string& picPath, int& x, int& y, const ColorCast& colorCast, double sim, int dir){
 	VARIANT vx;
 	VARIANT vy;
-	bool result = (DmSoft::FindPic(rect.left, rect.top, rect.right, rect.bottom, picPath.c_str(), colorCast.toString().c_str(), sim, dir, &vx, &vy) != -1);
+	bool result = (DmSoft::FindPic(rect.m_left, rect.m_top, rect.m_right, rect.m_bottom, picPath.c_str(), colorCast.toString().c_str(), sim, dir, &vx, &vy) != -1);
 	if (result == true){
 		x = vx.intVal;
 		y = vy.intVal;
@@ -148,7 +148,7 @@ bool CScreen::FindPic(const xyls::Rect& rect, const std::vector<std::string>& ve
 		strPicPath = strPicPath + vecPicPath.at(i) + "|";
 	}
 	CStringManager::Delete(strPicPath, strPicPath.length() - 1, 1);
-	bool result = (DmSoft::FindPic(rect.left, rect.top, rect.right, rect.bottom, strPicPath.c_str(), colorCast.toString().c_str(), sim, dir, &vx, &vy) != -1);
+	bool result = (DmSoft::FindPic(rect.m_left, rect.m_top, rect.m_right, rect.m_bottom, strPicPath.c_str(), colorCast.toString().c_str(), sim, dir, &vx, &vy) != -1);
 	if (result == true){
 		x = vx.intVal;
 		y = vy.intVal;
@@ -161,8 +161,8 @@ xyls::Rect CScreen::GetPicSize(const std::string& picPath){
 	std::string strWidthHeight = DmSoft::GetPicSize(picPath.c_str());
 	std::vector<std::string>vecWidthHeight = CStringManager::split(strWidthHeight, ",");
 	if (vecWidthHeight.size() == 2){
-		rect.right = atoi(vecWidthHeight.at(0).c_str());
-		rect.bottom = atoi(vecWidthHeight.at(1).c_str());
+		rect.m_right = atoi(vecWidthHeight.at(0).c_str());
+		rect.m_bottom = atoi(vecWidthHeight.at(1).c_str());
 	}
 	return rect;
 }
@@ -178,7 +178,7 @@ std::vector<std::string> CScreen::MatchPicName(const std::string& picPath){
 bool CScreen::FindStr(const xyls::Rect& rect, const std::string& str, const Color& color, int& x, int& y, double sim){
 	VARIANT vx;
 	VARIANT vy;
-	bool result = (DmSoft::FindStrFast(rect.left, rect.top, rect.right, rect.bottom, str.c_str(), color.toString().c_str(), sim, &vx, &vy) != -1);
+	bool result = (DmSoft::FindStrFast(rect.m_left, rect.m_top, rect.m_right, rect.m_bottom, str.c_str(), color.toString().c_str(), sim, &vx, &vy) != -1);
 	if (result == true){
 		x = vx.intVal;
 		y = vy.intVal;

@@ -6,20 +6,18 @@
 #include <windows.h>
 #endif
 
-namespace xyls {
+namespace xyls
+{
 
-class RectAPI Rect{
+class RectAPI Rect
+{
+
 public:
-	int left;
-	int top;
-	int right;
-	int bottom;
-	Rect();
-
 #ifdef _WIN32
     Rect(const RECT& rect);
 #endif
 
+	Rect();
 	Rect(int left, int top, int right, int bottom);
 	Rect(const Point& origin, int width, int height);
 	Rect(const Point& point);
@@ -29,6 +27,8 @@ public:
 	int GetHeight()const;
 	bool isPoint()const;
 	bool isLine()const;
+
+	bool operator==(const Rect& rect) const;
 
     //?是否是水平线
     bool isHorizontalLine()const;
@@ -57,6 +57,12 @@ public:
 #ifdef _WIN32
     operator RECT()const;
 #endif
+
+public:
+	int m_left;
+	int m_top;
+	int m_right;
+	int m_bottom;
 };
 
 }
