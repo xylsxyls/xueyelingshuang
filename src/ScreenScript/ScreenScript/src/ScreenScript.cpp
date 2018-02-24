@@ -139,6 +139,7 @@ std::string ScreenScript::GetBmpPath(const std::string& path)
 	return bmpPath;
 }
 
+/*
 int main()
 {
 	Sleep(3000);
@@ -146,3 +147,4 @@ int main()
 	getchar();
 	return 0;
 }
+*/
