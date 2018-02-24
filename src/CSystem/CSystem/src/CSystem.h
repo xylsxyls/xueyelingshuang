@@ -41,6 +41,12 @@ public:
 	static std::string GetClipboardData(HWND hwnd);
 	//?获取环境变量值
 	static std::string GetEnvironment(const char* name);
+	//?创建目录
+	static bool CreateDir(const std::string& dir);
+	//?销毁目录
+	static bool DestroyDir(const std::string& dir);
+	//?检测目录或文件是否存在
+	static bool DirOrFileAccess(const std::string& dir);
 
 public:
     static bool ifRedirFrobid;

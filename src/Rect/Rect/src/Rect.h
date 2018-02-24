@@ -14,7 +14,7 @@ class RectAPI Rect
 
 public:
 #ifdef _WIN32
-    Rect(const RECT& rect);
+	Rect(const RECT& rect);
 #endif
 
 	Rect();
@@ -30,10 +30,10 @@ public:
 
 	bool operator==(const Rect& rect) const;
 
-    //?是否是水平线
-    bool isHorizontalLine()const;
-    //?是否是垂直线
-    bool isVerticalLine()const;
+	//?是否是水平线
+	bool isHorizontalLine()const;
+	//?是否是垂直线
+	bool isVerticalLine()const;
 
 	//? 居中适应放入背景bkRect中
 	//? param [in] bkRect 背景矩形
@@ -55,7 +55,7 @@ public:
 	double Gettan()const;
 
 #ifdef _WIN32
-    operator RECT()const;
+	operator RECT()const;
 #endif
 
 public:

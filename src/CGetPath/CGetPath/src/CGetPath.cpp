@@ -1,10 +1,10 @@
 #include <SDKDDKVer.h>
+#include <afxdlgs.h>
+#include <afxdisp.h>
 #include "CGetPath.h"
 #include <shlobj.h>
 #include <Tlhelp32.h>
 #include "CStringManager/CStringManagerAPI.h"
-#include <afxdlgs.h>
-#include <afxdisp.h>
 #include "CSystem/CSystemAPI.h"
 
 std::string CGetPath::GetRegOcxPath(const std::string& classid)

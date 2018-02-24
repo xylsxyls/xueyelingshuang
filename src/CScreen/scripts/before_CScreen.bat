@@ -58,3 +58,18 @@ goto CStringManager_end
 call "%CLOUD_REBUILD%" CStringManager %CStringManager_bit% %CStringManager_dlllib% %CStringManager_debugRelease%
 goto CStringManager_end
 :CStringManager_end
+
+::--------------------------------------------------------------------
+set Color_dlllib=lib
+set Color_bit=%1
+set Color_debugRelease=%3
+set Color_allSame=%4
+if "%4" == "same" (goto Color_callSame) else (goto Color_callSimple)
+:Color_callSame
+set Color_dlllib=%2
+call "%CLOUD_REBUILD%" Color %Color_bit% %Color_dlllib% %Color_debugRelease% %Color_allSame%
+goto Color_end
+:Color_callSimple
+call "%CLOUD_REBUILD%" Color %Color_bit% %Color_dlllib% %Color_debugRelease%
+goto Color_end
+:Color_end

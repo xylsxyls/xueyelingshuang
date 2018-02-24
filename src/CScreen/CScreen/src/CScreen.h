@@ -3,50 +3,8 @@
 #include <map>
 #include <vector>
 #include "Rect/RectAPI.h"
+#include "Color/ColorAPI.h"
 #include "CScreenMacro.h"
-
-class CScreenAPI ColorCast
-{
-public:
-	ColorCast();
-	ColorCast(const std::string& strColorCast);
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-	std::string RC;
-	std::string GC;
-	std::string BC;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-	
-	std::string toString()const;
-};
-
-class CScreenAPI Color
-{
-public:
-	Color();
-	Color(const std::string& strColor);
-	Color(const std::string& strRGB, const std::string& strRCGCBC);
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-	std::string R;
-	std::string G;
-	std::string B;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-	
-	ColorCast colorCast;
-	std::string toString()const;
-	std::string toReserveString()const;
-};
 
 class CScreenAPI CScreen
 {
@@ -62,16 +20,16 @@ public:
 	//?屏幕区域截图为PNG
 	static bool SavePng(const xyls::Rect& rect, const std::string& path);
 	//?比较绝对坐标颜色，颜色集合最多10个，相似度0.1-1.0
-	static bool ComparePointColor(const xyls::Point& point, const Color& color, double sim = 1.0);
-	static bool ComparePointColor(const xyls::Point& point, const std::vector<Color>& color, double sim = 1.0);
+	static bool ComparePointColor(const xyls::Point& point, const xyls::Color& color, double sim = 1.0);
+	static bool ComparePointColor(const xyls::Point& point, const std::vector<xyls::Color>& color, double sim = 1.0);
 	//?在指定区域内查找指定颜色，找到返回x，y值
 	//?dir，0：左右上下，1：左右下上，2：右左上下，3：右左下上，4：中心向外，5：上下左右，6：上下右左，7：下上左右，8：下上右左
-	static bool FindColor(const xyls::Rect& rect, const Color& color, int& x, int& y, double sim = 1.0, int dir = 0);
-	static bool FindColor(const xyls::Rect& rect, const std::vector<Color>& vecColor, int& x, int& y, double sim = 1.0, int dir = 0);
+	static bool FindColor(const xyls::Rect& rect, const xyls::Color& color, int& x, int& y, double sim = 1.0, int dir = 0);
+	static bool FindColor(const xyls::Rect& rect, const std::vector<xyls::Color>& vecColor, int& x, int& y, double sim = 1.0, int dir = 0);
 	//?检测当前区域是否有本地图片，图片格式为bmp，图片上下左右4个点颜色一样的话则该图片默认处理为透明色
 	//?dir，0：左右上下，1：左右下上，2：右左上下，3：右左下上
-	static bool FindPic(const xyls::Rect& rect, const std::string& picPath, int& x, int& y, const ColorCast& colorCast = std::string("000000"), double sim = 1.0, int dir = 0);
-	static bool FindPic(const xyls::Rect& rect, const std::vector<std::string>& vecPicPath, int& x, int& y, const ColorCast& colorCast = std::string("000000"), double sim = 1.0, int dir = 0);
+	static bool FindPic(const xyls::Rect& rect, const std::string& picPath, int& x, int& y, const xyls::Color& colorCast = xyls::Color(0, 0, 0), double sim = 1.0, int dir = 0);
+	static bool FindPic(const xyls::Rect& rect, const std::vector<std::string>& vecPicPath, int& x, int& y, const xyls::Color& colorCast = xyls::Color(0, 0, 0), double sim = 1.0, int dir = 0);
 	//?获取图片大小，使用GetWidth和GetHeight来获取长宽
 	static xyls::Rect GetPicSize(const std::string& picPath);
 	//?转换图片格式
@@ -79,5 +37,5 @@ public:
 	//?查找图片路径，返回相对路径
 	static std::vector<std::string> MatchPicName(const std::string& picPath);
 	//?检测当前区域是否有文字，相似度，如果有则在x，y中返回坐标
-	static bool FindStr(const xyls::Rect& rect, const std::string& str, const Color& color, int& x, int& y, double sim = 1.0);
+	static bool FindStr(const xyls::Rect& rect, const std::string& str, const xyls::Color& color, int& x, int& y, double sim = 1.0);
 };

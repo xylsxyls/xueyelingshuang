@@ -1,8 +1,8 @@
 #pragma once
-#include <afxwin.h>
 #include "CGetPathMacro.h"
 #include <vector>
 #include <stdint.h>
+#include <Windows.h>
 
 class CGetPathAPI CGetPath
 {

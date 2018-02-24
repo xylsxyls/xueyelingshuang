@@ -1,6 +1,8 @@
 #include "CSystem.h"
 #include <thread>
 #include <objbase.h>
+#include <direct.h>
+#include <io.h>
 
 double CSystem::GetCPUSpeedGHz(){
 #ifdef _WIN64
@@ -274,6 +276,21 @@ std::string CSystem::GetClipboardData(HWND hwnd)
 std::string CSystem::GetEnvironment(const char* name)
 {
 	return ::getenv(name);
+}
+
+bool CSystem::CreateDir(const std::string& dir)
+{
+	return _mkdir(dir.c_str()) == 0;
+}
+
+bool CSystem::DestroyDir(const std::string& dir)
+{
+	return _rmdir(dir.c_str()) == 0;
+}
+
+bool CSystem::DirOrFileAccess(const std::string& dir)
+{
+	return _access(dir.c_str(), 0) == 0;
 }
 
 /*

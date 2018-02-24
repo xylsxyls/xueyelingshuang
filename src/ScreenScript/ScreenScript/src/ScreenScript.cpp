@@ -4,6 +4,7 @@
 #include "CSystem/CSystemAPI.h"
 #include <atlimage.h>
 #include "CStopWatch/CStopWatchAPI.h"
+#include "CGetPath/CGetPathAPI.h"
 
 bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubleClick, const xyls::Rect& rect)
 {
@@ -26,10 +27,16 @@ bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubl
 
 	int32_t imgWidth = img.GetWidth();
 	int32_t imgHeight = img.GetHeight();
+
+	std::string bmpPath = GetBmpPath(path);
+	if (bmpPath == "")
+	{
+		return false;
+	}
 	
     int32_t x = 0;
     int32_t y = 0;
-	CScreen::FindPic(findRect, path, x, y, std::string("000000"), 0.7);
+	CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), 0.7);
     if (x == 0 && y == 0)
     {
 		return false;
@@ -69,9 +76,15 @@ bool ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect)
 		findRect = rect;
 	}
 
+	std::string bmpPath = GetBmpPath(path);
+	if (bmpPath == "")
+	{
+		return false;
+	}
+
 	int32_t x = 0;
 	int32_t y = 0;
-	return CScreen::FindPic(findRect, path, x, y, std::string("000000"), 0.7);
+	return CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), 0.7);
 }
 
 bool ScreenScript::WaitForPic(const std::string& path,
@@ -101,4 +114,35 @@ bool ScreenScript::WaitClickPic(const std::string& path,
 {
 	WaitForPic(path, rect, timeOut, searchIntervalTime);
 	return FindClick(path, leftClick, doubleClick, rect);
+}
+
+std::string ScreenScript::GetBmpPath(const std::string& path)
+{
+	std::string curExePath = CGetPath::GetCurrentExePath();
+	if (CSystem::DirOrFileAccess(curExePath + "ScreenScriptTemp") == false)
+	{
+		bool result = CSystem::CreateDir(curExePath + "ScreenScriptTemp");
+		if (result == false)
+		{
+			return "";
+		}
+	}
+	std::string bmpPath = curExePath + "ScreenScriptTemp\\" + CGetPath::GetName(path, 3) + ".bmp";
+	if (CSystem::DirOrFileAccess(bmpPath) == false)
+	{
+		bool result = CScreen::ChangeToBmp(bmpPath, path);
+		if (result == false)
+		{
+			return "";
+		}
+	}
+	return bmpPath;
+}
+
+int main()
+{
+	Sleep(3000);
+	ScreenScript::FindClick("D:\\12123.png");
+	getchar();
+	return 0;
 }
