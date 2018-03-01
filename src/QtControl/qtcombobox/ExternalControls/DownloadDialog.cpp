@@ -4,6 +4,8 @@
 #include "../CGeneralStyle.h"
 #include "ProgressBar.h"
 #include <Windows.h>
+#include "DownloadErrorDialog.h"
+#include "DialogManager.h"
 
 std::wstring DownloadDialog::s_fileString = L"文件名：%s";
 QString DownloadDialog::s_slowString = QString::fromStdWString(L"下载太慢？点击");
@@ -19,9 +21,9 @@ int32_t DownloadDialog::popDownloadDialog(int32_t& dialogId,
 										  int32_t timeOut,
 										  bool isCountDownVisible)
 {
-	DownloadDialog dlg(title, fileName, tip, buttonText, done);
-	dlg.setParentWindow(parent);
-	return dlg.exec(dialogId, timeOut, isCountDownVisible);
+	DownloadDialog* dlg = new DownloadDialog(title, fileName, tip, buttonText, done);
+	dlg->setParentWindow(parent);
+	return dlg->exec(dialogId, timeOut, isCountDownVisible);
 }
 
 DownloadDialog::DownloadDialog(const QString& title,
@@ -70,12 +72,63 @@ DownloadDialog::DownloadDialog(const QString& title,
 	progressBar->setItemBorderRadius(2);
 	progressBar->setItemBackgroundColor(QColor(150, 171, 255, 255));
 	progressBar->setFormat("");
+	QObject::connect(this, SIGNAL(rateChanged(int)), progressBar, SLOT(setValue(int)));
+	QObject::connect(this, SIGNAL(persentChanged(const QString&)), m_persent, SLOT(setText(const QString&)));
+	QObject::connect(this, SIGNAL(downloadComplete()), this, SLOT(reject()));
+	QObject::connect(this, SIGNAL(showError()), this, SLOT(showDownloadErrorDialog()), Qt::UniqueConnection);
+}
+
+DownloadDialog::~DownloadDialog()
+{
+	int x = 3;
 }
 
 void DownloadDialog::setRate(int32_t persent)
 {
-	progressBar->setValue(persent);
-	m_persent->setText(QString::fromStdWString(CStringManager::Format(L"%d%%", persent)));
+	emit rateChanged(persent);
+	emit persentChanged(QString::fromStdWString(CStringManager::Format(L"%d%%", persent)));
+}
+
+void DownloadDialog::complete()
+{
+	emit downloadComplete();
+}
+
+void DownloadDialog::error()
+{
+	emit showError();
+}
+
+void DownloadDialog::showDownloadErrorDialog()
+{
+	setVisible(false);
+	int32_t dialogId = 0;
+	std::wstring fileName = m_file->text().toStdWString();
+	CStringManager::Replace(fileName, L"文件名：", L"");
+	DownloadErrorDialog::popDownloadErrorDialog(dialogId,
+												QString::fromStdWString(fileName),
+												m_title->text(),
+												QString::fromStdWString(L"确定"),
+												ACCEPT_BUTTON,
+												windowHandle());
+	//setVisible(true);
+	//reject();
+	return;
+	//m_persent->setText("123123123");
+	//setVisible(false);
+	QDialog::done(0);
+	//int32_t dialogId = 0;
+	//std::wstring fileName = m_file->text().toStdWString();
+	//CStringManager::Replace(fileName, L"文件名：", L"");
+	//DownloadErrorDialog::popDownloadErrorDialog(dialogId,
+	//	QString::fromStdWString(fileName),
+	//	m_title->text(),
+	//	QString::fromStdWString(L"确定"),
+	//	ACCEPT_BUTTON,
+	//	windowHandle());
+	//m_persent->setText("123123123");
+	//setVisible(true);
+	//reject();
 }
 
 void DownloadDialog::downloadAccept()

@@ -24,6 +24,7 @@
 #include "DialogManager.h"
 #include "NotifyDialogManager.h"
 #include "FriendDialogFrame.h"
+#include "Thread.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -484,6 +485,11 @@ void qtcombobox::modalPop()
 
 void qtcombobox::modalFriendPop()
 {
+	Thread* thread = new Thread;
+	//QObject::connect(thread, SIGNAL(error(int)), &DialogManager::instance(), SLOT(onError(int)), Qt::QueuedConnection);
+	thread->start();
+	
+	return;
 	FriendDialogFrame fdlg(this->windowHandle());
 	FriendDialogFrame::Group groupList;
 	groupList.m_groupId = 0;
@@ -541,15 +547,12 @@ void qtcombobox::modalFriendPop()
 void qtcombobox::testDialog()
 {
 	int32_t dialogId8 = 0;
-	DialogManager::instance().popDownloadDialog(dialogId8,
-												QString::fromStdWString(L"aaa.txt"),
-												QString::fromStdWString(L"下载"),
-												nullptr,
-												QString::fromStdWString(L"标题"),
-												QString::fromStdWString(L"确定"),
-												1,
-												30,
-												true);
+	DialogManager::instance().popDownloadOperateDialog(dialogId8,
+													   QString::fromStdWString(L"aaxa.txt"),
+													   sss->windowHandle(),
+													   QString::fromStdWString(L"标题"),
+													   QString::fromStdWString(L"确定"),
+													   1);
 	return;
 	int32_t dialogId7 = 0;
 	NotifyDialogManager::instance().showLoginDialog(dialogId7,

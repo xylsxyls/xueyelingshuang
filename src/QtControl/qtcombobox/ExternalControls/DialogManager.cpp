@@ -8,6 +8,7 @@
 #include "AskShowDialog.h"
 #include "LoginShowDialog.h"
 #include "DownloadDialog.h"
+#include "DownloadOperateDialog.h"
 #include <vector>
 #include <Windows.h>
 
@@ -194,10 +195,52 @@ int32_t DialogManager::popDownloadDialog(int32_t& dialogId,
 	return DownloadDialog::popDownloadDialog(dialogId, title, fileName, tip, buttonText, done, parent, timeOut, isCountDownVisible);
 }
 
+int32_t DialogManager::popDownloadOperateDialog(int32_t& dialogId,
+												const QString& fileName,
+												QWindow* parent,
+												const QString& title,
+												const QString& buttonText,
+												int32_t done)
+{
+	return DownloadOperateDialog::popDownloadOperateDialog(dialogId, title, fileName, buttonText, done, parent);
+}
+
+void DialogManager::setDownloadRate(int32_t dialogId, int32_t persent)
+{
+	DownloadDialog* dialogPtr = (DownloadDialog*)DialogManager::instance().dialogPtr(dialogId);
+	if (dialogPtr == nullptr)
+	{
+		return;
+	}
+	dialogPtr->setRate(persent);
+}
+
+void DialogManager::downloadComplete(int32_t dialogId)
+{
+	DownloadDialog* dialogPtr = (DownloadDialog*)DialogManager::instance().dialogPtr(dialogId);
+	if (dialogPtr == nullptr)
+	{
+		return;
+	}
+	dialogPtr->complete();
+}
+
+void DialogManager::downloadError(int32_t dialogId)
+{
+	DownloadDialog* dialogPtr = (DownloadDialog*)DialogManager::instance().dialogPtr(dialogId);
+	if (dialogPtr == nullptr)
+	{
+		return;
+	}
+	dialogPtr->error();
+}
+
 void DialogManager::closeDialog(int32_t dialogId)
 {
+	m_mutex.lock();
 	if (m_mapDialog.empty())
 	{
+		m_mutex.unlock();
 		return;
 	}
 	auto itDialog = m_mapDialog.find(dialogId);
@@ -205,12 +248,15 @@ void DialogManager::closeDialog(int32_t dialogId)
 	{
 		itDialog->second->reject();
 	}
+	m_mutex.unlock();
 }
 
 void DialogManager::closeLastDialog()
 {
+	m_mutex.lock();
 	if (m_mapDialog.empty())
 	{
+		m_mutex.unlock();
 		return;
 	}
 	if (!m_mapDialog.empty())
@@ -218,12 +264,15 @@ void DialogManager::closeLastDialog()
 		auto itDialog = --m_mapDialog.end();
 		itDialog->second->reject();
 	}
+	m_mutex.unlock();
 }
 
 void DialogManager::destroyAll()
 {
+	m_mutex.lock();
 	if (m_mapDialog.empty())
 	{
+		m_mutex.unlock();
 		return;
 	}
 
@@ -236,17 +285,23 @@ void DialogManager::destroyAll()
 			itDialog->second->done(DESTROY_ALL);
 		}
 	}
+	m_mutex.unlock();
 }
 
 int32_t DialogManager::dialogCount()
 {
-	return m_mapDialog.size();
+	m_mutex.lock();
+	int32_t size = m_mapDialog.size();
+	m_mutex.unlock();
+	return size;
 }
 
 int32_t DialogManager::DialogId(DialogBase* base)
 {
+	m_mutex.lock();
 	if (m_mapDialog.empty())
 	{
+		m_mutex.unlock();
 		return -1;
 	}
 	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
@@ -256,6 +311,7 @@ int32_t DialogManager::DialogId(DialogBase* base)
 			return itDialog->first;
 		}
 	}
+	m_mutex.unlock();
 	return -1;
 }
 
@@ -272,14 +328,18 @@ int32_t DialogManager::setDialog(DialogBase* dialog)
 		return -1;
 	}
 	int32_t id = getId();
+	m_mutex.lock();
 	m_mapDialog[id] = dialog;
+	m_mutex.unlock();
 	return id;
 }
 
 void DialogManager::removeDialog(int32_t dialogId)
 {
+	m_mutex.lock();
 	if (m_mapDialog.empty())
 	{
+		m_mutex.unlock();
 		return;
 	}
 	auto itDialog = m_mapDialog.find(dialogId);
@@ -287,12 +347,15 @@ void DialogManager::removeDialog(int32_t dialogId)
 	{
 		m_mapDialog.erase(itDialog);
 	}
+	m_mutex.unlock();
 }
 
 void DialogManager::removeDialog(DialogBase* base)
 {
+	m_mutex.lock();
 	if (m_mapDialog.empty())
 	{
+		m_mutex.unlock();
 		return;
 	}
 	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
@@ -300,16 +363,20 @@ void DialogManager::removeDialog(DialogBase* base)
 		if (itDialog->second == base)
 		{
 			m_mapDialog.erase(itDialog);
+			m_mutex.unlock();
 			return;
 		}
 	}
+	m_mutex.unlock();
 }
 
 DialogBase* DialogManager::dialogPtr(int32_t dialogId)
 {
+	m_mutex.lock();
 	if (m_mapDialog.empty())
 	{
-		nullptr;
+		m_mutex.unlock();
+		return nullptr;
 	}
 
 	auto itDialog = m_mapDialog.find(dialogId);
@@ -317,6 +384,7 @@ DialogBase* DialogManager::dialogPtr(int32_t dialogId)
 	{
 		return itDialog->second;
 	}
+	m_mutex.unlock();
 	return nullptr;
 }
 
@@ -324,4 +392,3 @@ int32_t DialogManager::getId()
 {
 	return ++m_id;
 }
-

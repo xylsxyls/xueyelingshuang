@@ -4,7 +4,7 @@
 class ProgressBar;
 /** 下载框
 */
-class DownloadDialog : protected DialogShow
+class DownloadOperateDialog : protected DialogShow
 {
 	Q_OBJECT
 public:
@@ -20,48 +20,40 @@ public:
 	@param [in] isCountDownVisible 超时自动关闭提示是否可见
 	@return 关闭窗口时给的返回值
 	*/
-	static int32_t popDownloadDialog(int32_t& dialogId,
-									 const QString& title,
-									 const QString& fileName,
-									 const QString& tip,
-									 const QString& buttonText,
-									 int32_t done,
-									 QWindow* parent = nullptr,
-									 int32_t timeOut = -1,
-									 bool isCountDownVisible = false);
+	static int32_t popDownloadOperateDialog(int32_t& dialogId,
+											const QString& title,
+											const QString& fileName,
+											const QString& buttonText,
+											int32_t done,
+											QWindow* parent = nullptr);
 
-	/** 设置比例
+	/** 设置比例，该函数支持多线程
 	@param [in] persent 百分比
 	*/
 	void setRate(int32_t persent);
 
-	/** 下载完成
-	*/
-	void complete();
-
-	/** 当下载出错时显示下载错误框，该函数支持多线程
+	/** 当下载出错时显示下载框的出错状态，该函数支持多线程
 	*/
 	void error();
 
 public slots:
-	/** 下载失败时显示下载失败框，会先reject下载框再弹出下载失败框
+	/** 改变到下载失败状态
 	*/
-	void showDownloadErrorDialog();
+	void onChangeErrorStatus();
 
 Q_SIGNALS:
-	void showError();
+	void changeErrorStatus();
 	void rateChanged(int rate);
 	void persentChanged(const QString& persent);
 	void downloadComplete();
 
 private:
-	DownloadDialog(const QString& title,
-				   const QString& fileName,
-				   const QString& tip,
-				   const QString& buttonText,
-				   int32_t done);
+	DownloadOperateDialog(const QString& title,
+						  const QString& fileName,
+						  const QString& buttonText,
+						  int32_t done);
 
-	~DownloadDialog();
+	~DownloadOperateDialog();
 
 private slots:
 	void downloadAccept();
@@ -71,8 +63,10 @@ private:
 	Label* m_file;
 	Label* m_persent;
 	Label* m_downloadSlow;
-	ProgressBar *progressBar;
+	ProgressBar *m_progressBar;
 	COriginalButton* m_hand;
+	COriginalButton* m_change;
+	COriginalButton* m_cancel;
 
 private:
 	static std::wstring s_fileString;

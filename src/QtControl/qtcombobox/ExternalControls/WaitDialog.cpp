@@ -8,9 +8,9 @@ int32_t WaitDialog::popWaitDialog(int32_t& dialogId,
 								  int32_t timeOut,
 								  bool isCountDownVisible)
 {
-	WaitDialog dlg(title, tip);
-	dlg.setParentWindow(parent);
-	return dlg.exec(dialogId, timeOut, isCountDownVisible);
+	WaitDialog* dlg = new WaitDialog(title, tip);
+	dlg->setParentWindow(parent);
+	return dlg->exec(dialogId, timeOut, isCountDownVisible);
 }
 
 WaitDialog::WaitDialog(const QString& title, const QString& tip)

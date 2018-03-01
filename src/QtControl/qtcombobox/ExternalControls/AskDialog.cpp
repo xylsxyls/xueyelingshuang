@@ -13,9 +13,9 @@ int32_t AskDialog::popAskDialog(int32_t& dialogId,
 								int32_t timeOut,
 								bool isCountDownVisible)
 {
-	AskDialog dlg(title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
-	dlg.setParentWindow(parent);
-	return dlg.exec(dialogId, timeOut, isCountDownVisible);
+	AskDialog* dlg = new AskDialog(title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
+	dlg->setParentWindow(parent);
+	return dlg->exec(dialogId, timeOut, isCountDownVisible);
 }
 
 AskDialog::AskDialog(const QString& title,

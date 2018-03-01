@@ -36,7 +36,7 @@ int32_t DialogBase::exec(int32_t& dialogId, int32_t timeOut, bool isCountDownVis
 
 	dialogId = DialogManager::instance().setDialog(this);
 	int32_t result = QDialog::exec();
-	setWindowModality(oldModality);
+	//setWindowModality(oldModality);
 	//DialogManager::instance().removeDialog(dialogId);
 	return result;
 }

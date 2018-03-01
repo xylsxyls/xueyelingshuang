@@ -1,16 +1,16 @@
 /****************************************************************************
-** Meta object code from reading C++ file 'DownloadDialog.h'
+** Meta object code from reading C++ file 'DownloadOperateDialog.h'
 **
 ** Created by: The Qt Meta Object Compiler version 67 (Qt 5.5.1)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
-#include "../../DownloadDialog.h"
+#include "../../DownloadOperateDialog.h"
 #include <QtCore/qbytearray.h>
 #include <QtCore/qmetatype.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
-#error "The header file 'DownloadDialog.h' doesn't include <QObject>."
+#error "The header file 'DownloadOperateDialog.h' doesn't include <QObject>."
 #elif Q_MOC_OUTPUT_REVISION != 67
 #error "This file was generated using the moc from 5.5.1. It"
 #error "cannot be used with the include files from this version of Qt."
@@ -18,37 +18,37 @@
 #endif
 
 QT_BEGIN_MOC_NAMESPACE
-struct qt_meta_stringdata_DownloadDialog_t {
+struct qt_meta_stringdata_DownloadOperateDialog_t {
     QByteArrayData data[10];
-    char stringdata0[122];
+    char stringdata0[133];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
-    qptrdiff(offsetof(qt_meta_stringdata_DownloadDialog_t, stringdata0) + ofs \
+    qptrdiff(offsetof(qt_meta_stringdata_DownloadOperateDialog_t, stringdata0) + ofs \
         - idx * sizeof(QByteArrayData)) \
     )
-static const qt_meta_stringdata_DownloadDialog_t qt_meta_stringdata_DownloadDialog = {
+static const qt_meta_stringdata_DownloadOperateDialog_t qt_meta_stringdata_DownloadOperateDialog = {
     {
-QT_MOC_LITERAL(0, 0, 14), // "DownloadDialog"
-QT_MOC_LITERAL(1, 15, 9), // "showError"
-QT_MOC_LITERAL(2, 25, 0), // ""
-QT_MOC_LITERAL(3, 26, 11), // "rateChanged"
-QT_MOC_LITERAL(4, 38, 4), // "rate"
-QT_MOC_LITERAL(5, 43, 14), // "persentChanged"
-QT_MOC_LITERAL(6, 58, 7), // "persent"
-QT_MOC_LITERAL(7, 66, 16), // "downloadComplete"
-QT_MOC_LITERAL(8, 83, 23), // "showDownloadErrorDialog"
-QT_MOC_LITERAL(9, 107, 14) // "downloadAccept"
+QT_MOC_LITERAL(0, 0, 21), // "DownloadOperateDialog"
+QT_MOC_LITERAL(1, 22, 17), // "changeErrorStatus"
+QT_MOC_LITERAL(2, 40, 0), // ""
+QT_MOC_LITERAL(3, 41, 11), // "rateChanged"
+QT_MOC_LITERAL(4, 53, 4), // "rate"
+QT_MOC_LITERAL(5, 58, 14), // "persentChanged"
+QT_MOC_LITERAL(6, 73, 7), // "persent"
+QT_MOC_LITERAL(7, 81, 16), // "downloadComplete"
+QT_MOC_LITERAL(8, 98, 19), // "onChangeErrorStatus"
+QT_MOC_LITERAL(9, 118, 14) // "downloadAccept"
 
     },
-    "DownloadDialog\0showError\0\0rateChanged\0"
-    "rate\0persentChanged\0persent\0"
-    "downloadComplete\0showDownloadErrorDialog\0"
+    "DownloadOperateDialog\0changeErrorStatus\0"
+    "\0rateChanged\0rate\0persentChanged\0"
+    "persent\0downloadComplete\0onChangeErrorStatus\0"
     "downloadAccept"
 };
 #undef QT_MOC_LITERAL
 
-static const uint qt_meta_data_DownloadDialog[] = {
+static const uint qt_meta_data_DownloadOperateDialog[] = {
 
  // content:
        7,       // revision
@@ -84,17 +84,17 @@ static const uint qt_meta_data_DownloadDialog[] = {
        0        // eod
 };
 
-void DownloadDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+void DownloadOperateDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     if (_c == QMetaObject::InvokeMetaMethod) {
-        DownloadDialog *_t = static_cast<DownloadDialog *>(_o);
+        DownloadOperateDialog *_t = static_cast<DownloadOperateDialog *>(_o);
         Q_UNUSED(_t)
         switch (_id) {
-        case 0: _t->showError(); break;
+        case 0: _t->changeErrorStatus(); break;
         case 1: _t->rateChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 2: _t->persentChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
         case 3: _t->downloadComplete(); break;
-        case 4: _t->showDownloadErrorDialog(); break;
+        case 4: _t->onChangeErrorStatus(); break;
         case 5: _t->downloadAccept(); break;
         default: ;
         }
@@ -102,52 +102,52 @@ void DownloadDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         int *result = reinterpret_cast<int *>(_a[0]);
         void **func = reinterpret_cast<void **>(_a[1]);
         {
-            typedef void (DownloadDialog::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadDialog::showError)) {
+            typedef void (DownloadOperateDialog::*_t)();
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::changeErrorStatus)) {
                 *result = 0;
             }
         }
         {
-            typedef void (DownloadDialog::*_t)(int );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadDialog::rateChanged)) {
+            typedef void (DownloadOperateDialog::*_t)(int );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::rateChanged)) {
                 *result = 1;
             }
         }
         {
-            typedef void (DownloadDialog::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadDialog::persentChanged)) {
+            typedef void (DownloadOperateDialog::*_t)(const QString & );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::persentChanged)) {
                 *result = 2;
             }
         }
         {
-            typedef void (DownloadDialog::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadDialog::downloadComplete)) {
+            typedef void (DownloadOperateDialog::*_t)();
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloadComplete)) {
                 *result = 3;
             }
         }
     }
 }
 
-const QMetaObject DownloadDialog::staticMetaObject = {
-    { &DialogShow::staticMetaObject, qt_meta_stringdata_DownloadDialog.data,
-      qt_meta_data_DownloadDialog,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
+const QMetaObject DownloadOperateDialog::staticMetaObject = {
+    { &DialogShow::staticMetaObject, qt_meta_stringdata_DownloadOperateDialog.data,
+      qt_meta_data_DownloadOperateDialog,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
 };
 
 
-const QMetaObject *DownloadDialog::metaObject() const
+const QMetaObject *DownloadOperateDialog::metaObject() const
 {
     return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
 }
 
-void *DownloadDialog::qt_metacast(const char *_clname)
+void *DownloadOperateDialog::qt_metacast(const char *_clname)
 {
     if (!_clname) return Q_NULLPTR;
-    if (!strcmp(_clname, qt_meta_stringdata_DownloadDialog.stringdata0))
-        return static_cast<void*>(const_cast< DownloadDialog*>(this));
+    if (!strcmp(_clname, qt_meta_stringdata_DownloadOperateDialog.stringdata0))
+        return static_cast<void*>(const_cast< DownloadOperateDialog*>(this));
     return DialogShow::qt_metacast(_clname);
 }
 
-int DownloadDialog::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+int DownloadOperateDialog::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
     _id = DialogShow::qt_metacall(_c, _id, _a);
     if (_id < 0)
@@ -165,27 +165,27 @@ int DownloadDialog::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void DownloadDialog::showError()
+void DownloadOperateDialog::changeErrorStatus()
 {
     QMetaObject::activate(this, &staticMetaObject, 0, Q_NULLPTR);
 }
 
 // SIGNAL 1
-void DownloadDialog::rateChanged(int _t1)
+void DownloadOperateDialog::rateChanged(int _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 1, _a);
 }
 
 // SIGNAL 2
-void DownloadDialog::persentChanged(const QString & _t1)
+void DownloadOperateDialog::persentChanged(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 2, _a);
 }
 
 // SIGNAL 3
-void DownloadDialog::downloadComplete()
+void DownloadOperateDialog::downloadComplete()
 {
     QMetaObject::activate(this, &staticMetaObject, 3, Q_NULLPTR);
 }

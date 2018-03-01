@@ -192,6 +192,15 @@
     <Filter Include="QtControl\ProgressBar">
       <UniqueIdentifier>{22a47d44-8159-45da-8007-0d84ca0b6a0e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="QtDialog\Modal\DownloadErrorDialog">
+      <UniqueIdentifier>{1514c91f-8594-4b3f-9069-7a1a0289bb7e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Thread">
+      <UniqueIdentifier>{581c493d-43e8-4115-b001-2f8b9aee9939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\DownloadOperateDialog">
+      <UniqueIdentifier>{b0b6e834-c99e-4186-96ba-a826257f3097}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -512,6 +521,33 @@
     <ClCompile Include="GeneratedFiles\Release\moc_ProgressBar.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="DownloadErrorDialog.cpp">
+      <Filter>QtDialog\Modal\DownloadErrorDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadErrorDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadErrorDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="Thread.cpp">
+      <Filter>Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Thread.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Thread.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="DownloadOperateDialog.cpp">
+      <Filter>QtDialog\Modal\DownloadOperateDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -630,6 +666,15 @@
     </CustomBuild>
     <CustomBuild Include="ProgressBar.h">
       <Filter>QtControl\ProgressBar</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DownloadErrorDialog.h">
+      <Filter>QtDialog\Modal\DownloadErrorDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Thread.h">
+      <Filter>Thread</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DownloadOperateDialog.h">
+      <Filter>QtDialog\Modal\DownloadOperateDialog</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

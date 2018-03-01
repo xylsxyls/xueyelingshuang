@@ -15,9 +15,9 @@ int32_t InputDialog::popInputDialog(int32_t& dialogId,
 									int32_t timeOut,
 									bool isCountDownVisible)
 {
-	InputDialog dlg(title, editTip, buttonText, done, editText, isPassword, maxLength);
-	dlg.setParentWindow(parent);
-	return dlg.exec(dialogId, timeOut, isCountDownVisible);
+	InputDialog* dlg = new InputDialog(title, editTip, buttonText, done, editText, isPassword, maxLength);
+	dlg->setParentWindow(parent);
+	return dlg->exec(dialogId, timeOut, isCountDownVisible);
 }
 
 InputDialog::InputDialog(const QString& title,
