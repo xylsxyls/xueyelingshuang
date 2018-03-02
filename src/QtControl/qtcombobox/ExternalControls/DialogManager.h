@@ -269,11 +269,11 @@ public:
 	@return 关闭窗口时给的返回值
 	*/
 	int32_t popDownloadOperateDialog(int32_t& dialogId,
+									 const QString& title,
 									 const QString& fileName,
-									 QWindow* parent = nullptr,
-									 const QString& title = QString::fromStdWString(L"11对战平台"),
-									 const QString& buttonText = QString::fromStdWString(L"确定"),
-									 int32_t done = ACCEPT_BUTTON);
+									 const QString& downloadAddr = "",
+									 const QString& path = "",
+									 QWindow* parent = nullptr);
 
 	/** 设置比例
 	@param [in] dialogId 窗口ID值

@@ -196,13 +196,13 @@ int32_t DialogManager::popDownloadDialog(int32_t& dialogId,
 }
 
 int32_t DialogManager::popDownloadOperateDialog(int32_t& dialogId,
-												const QString& fileName,
-												QWindow* parent,
 												const QString& title,
-												const QString& buttonText,
-												int32_t done)
+												const QString& fileName,
+												const QString& downloadAddr,
+												const QString& path,
+												QWindow* parent)
 {
-	return DownloadOperateDialog::popDownloadOperateDialog(dialogId, title, fileName, buttonText, done, parent);
+	return DownloadOperateDialog::popDownloadOperateDialog(dialogId, title, fileName, downloadAddr, path, parent);
 }
 
 void DialogManager::setDownloadRate(int32_t dialogId, int32_t persent)

@@ -30,7 +30,10 @@ public:
 	*/
 	void setExitVisible(bool visible);
 
-	void done(int result);
+	/** 关闭窗口
+	@param [in] result 窗口返回值
+	*/
+	void done(int32_t result);
 
 Q_SIGNALS:
 	/** 当通知框窗口关闭时发送信号，在关闭动画执行之前发送信号

@@ -242,7 +242,7 @@ void DialogShow::showEvent(QShowEvent* eve)
 	}
 }
 
-void DialogShow::done(int result)
+void DialogShow::done(int32_t result)
 {
 	if (m_isExec == false)
 	{

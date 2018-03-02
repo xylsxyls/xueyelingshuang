@@ -548,11 +548,11 @@ void qtcombobox::testDialog()
 {
 	int32_t dialogId8 = 0;
 	DialogManager::instance().popDownloadOperateDialog(dialogId8,
+													   QString::fromStdWString(L"正在下载 三国雪 v1.37B+"),
 													   QString::fromStdWString(L"aaxa.txt"),
-													   sss->windowHandle(),
-													   QString::fromStdWString(L"标题"),
-													   QString::fromStdWString(L"确定"),
-													   1);
+													   QString::fromStdWString(L"http://www.5211game.com"),
+													   QString::fromStdWString(L"d:/11game/zip"),
+													   sss->windowHandle());
 	return;
 	int32_t dialogId7 = 0;
 	NotifyDialogManager::instance().showLoginDialog(dialogId7,

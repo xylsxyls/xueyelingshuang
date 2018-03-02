@@ -23,8 +23,8 @@ public:
 	static int32_t popDownloadOperateDialog(int32_t& dialogId,
 											const QString& title,
 											const QString& fileName,
-											const QString& buttonText,
-											int32_t done,
+											const QString& downloadAddr,
+											const QString& path,
 											QWindow* parent = nullptr);
 
 	/** 设置比例，该函数支持多线程
@@ -36,13 +36,22 @@ public:
 	*/
 	void error();
 
+	/** 从error切换到常态，该函数支持多线程
+	*/
+	void normal();
+
 public slots:
 	/** 改变到下载失败状态
 	*/
 	void onChangeErrorStatus();
 
+	/** 从失败下载状态切换到常态
+	*/
+	void onChangeNormalStatus();
+
 Q_SIGNALS:
 	void changeErrorStatus();
+	void changeNormalStatus();
 	void rateChanged(int rate);
 	void persentChanged(const QString& persent);
 	void downloadComplete();
@@ -50,8 +59,8 @@ Q_SIGNALS:
 private:
 	DownloadOperateDialog(const QString& title,
 						  const QString& fileName,
-						  const QString& buttonText,
-						  int32_t done);
+						  const QString& downloadAddr,
+						  const QString& path);
 
 	~DownloadOperateDialog();
 
@@ -61,12 +70,28 @@ private slots:
 private:
 	Label* m_tip;
 	Label* m_file;
-	Label* m_persent;
-	Label* m_downloadSlow;
+
+	Label* m_speed;
+	Label* m_hasDownload;
+	Label* m_nowTime;
+
 	ProgressBar *m_progressBar;
-	COriginalButton* m_hand;
+	Label* m_persent;
+
 	COriginalButton* m_change;
 	COriginalButton* m_cancel;
+
+	Label* m_downloadSlow;
+	COriginalButton* m_hand;
+
+	Label* m_downloadAddr;
+	Label* m_path;
+	LineEdit* m_downloadAddrEdit;
+	LineEdit* m_pathEdit;
+	COriginalButton* m_downloadButton;
+	COriginalButton* m_pathButton;
+
+	Label* m_error;
 
 private:
 	static std::wstring s_fileString;
