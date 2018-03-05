@@ -21,11 +21,27 @@ public:
 	@return 关闭窗口时给的返回值
 	*/
 	static int32_t popDownloadOperateDialog(int32_t& dialogId,
+											int32_t taskId,
 											const QString& title,
 											const QString& fileName,
 											const QString& downloadAddr,
 											const QString& path,
 											QWindow* parent = nullptr);
+
+	/** 设置速度
+	@param [in] speed 速度
+	*/
+	void setDownloadSpeed(const QString& speed);
+
+	/** 设置已下载量
+	@param [in] downloaded 已下载量
+	*/
+	void setDownloaded(const QString& download);
+
+	/** 设置时间
+	@param [in] time 时间
+	*/
+	void setDownloadTime(const QString& time);
 
 	/** 设置比例，该函数支持多线程
 	@param [in] persent 百分比
@@ -39,6 +55,16 @@ public:
 	/** 从error切换到常态，该函数支持多线程
 	*/
 	void normal();
+
+	/** 设置任务ID值
+	@param [in] taskId 任务ID值
+	*/
+	void setTaskId(int32_t taskId);
+
+	/** 任务ID值
+	@return 返回任务ID值
+	*/
+	int32_t getTaskId();
 
 public slots:
 	/** 改变到下载失败状态
@@ -55,9 +81,19 @@ Q_SIGNALS:
 	void rateChanged(int rate);
 	void persentChanged(const QString& persent);
 	void downloadComplete();
+	void downloadSpeed(const QString& persent);
+	void downloaded(const QString& persent);
+	void downloadTime(const QString& persent);
+	void changeToBack();
+	void downloadAgain();
+	void cancelDownload();
+	void useOtherDownload();
+	void copyDownloadAddr();
+	void copyPath();
 
 private:
-	DownloadOperateDialog(const QString& title,
+	DownloadOperateDialog(int32_t taskId,
+						  const QString& title,
 						  const QString& fileName,
 						  const QString& downloadAddr,
 						  const QString& path);
@@ -66,14 +102,19 @@ private:
 
 private slots:
 	void downloadAccept();
+	void onChanged();
+	void onCancelDownload();
+	void onUseOtherDownload();
+	void onCopyDownloadAddr();
+	void onCopyPath();
 
 private:
 	Label* m_tip;
 	Label* m_file;
 
-	Label* m_speed;
-	Label* m_hasDownload;
-	Label* m_nowTime;
+	Label* m_downloadSpeed;
+	Label* m_downloaded;
+	Label* m_downloadTime;
 
 	ProgressBar *m_progressBar;
 	Label* m_persent;
@@ -92,6 +133,8 @@ private:
 	COriginalButton* m_pathButton;
 
 	Label* m_error;
+
+	int32_t m_taskId;
 
 private:
 	static std::wstring s_fileString;

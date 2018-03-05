@@ -25,6 +25,7 @@
 #include "NotifyDialogManager.h"
 #include "FriendDialogFrame.h"
 #include "Thread.h"
+#include "DownloadOperateDialog.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -394,6 +395,10 @@ qtcombobox::qtcombobox(QWidget *parent)
 	modalFriendButton->setText("friend");
 	QObject::connect(modalFriendButton, &COriginalButton::clicked, this, &qtcombobox::modalFriendPop);
 
+	COriginalButton* testButton = new COriginalButton(this);
+	testButton->setGeometry(150, 350, 100, 30);
+	testButton->setText("testButton");
+	QObject::connect(testButton, &COriginalButton::clicked, this, &qtcombobox::onTestButton);
 
 	IdItemComboBox* optionBox = new IdItemComboBox(this);
 	optionBox->resize(108, 24);
@@ -486,6 +491,7 @@ void qtcombobox::modalPop()
 void qtcombobox::modalFriendPop()
 {
 	Thread* thread = new Thread;
+	thread->m_dialogId = m_dialogId8;
 	//QObject::connect(thread, SIGNAL(error(int)), &DialogManager::instance(), SLOT(onError(int)), Qt::QueuedConnection);
 	thread->start();
 	
@@ -544,10 +550,36 @@ void qtcombobox::modalFriendPop()
 	fdlg.exec();
 }
 
+void qtcombobox::onTestButton()
+{
+	DialogManager::instance().closeLastDialog();
+	return;
+	auto ptr = DialogManager::instance().downloadOperatePtr(m_dialogId8);
+	if (ptr == nullptr)
+	{
+		return;
+	}
+	static int32_t aa = 0;
+	if (++aa % 2 == 1)
+	{
+		ptr->error();
+	}
+	else
+	{
+		ptr->normal();
+	}
+}
+
 void qtcombobox::testDialog()
 {
-	int32_t dialogId8 = 0;
-	DialogManager::instance().popDownloadOperateDialog(dialogId8,
+	QObject::connect(&DialogManager::instance(), &DialogManager::changeToBack, this, &qtcombobox::onChangeToBack);
+	QObject::connect(&DialogManager::instance(), &DialogManager::downloadAgain, this, &qtcombobox::onDownloadAgain);
+	QObject::connect(&DialogManager::instance(), &DialogManager::cancelDownload, this, &qtcombobox::onCancelDownload);
+	QObject::connect(&DialogManager::instance(), &DialogManager::useOtherDownload, this, &qtcombobox::onUseOtherDownload);
+	QObject::connect(&DialogManager::instance(), &DialogManager::copyDownloadAddr, this, &qtcombobox::onCopyDownloadAddr);
+	QObject::connect(&DialogManager::instance(), &DialogManager::copyPath, this, &qtcombobox::onCopyPath);
+	DialogManager::instance().popDownloadOperateDialog(m_dialogId8,
+													   123,
 													   QString::fromStdWString(L"正在下载 三国雪 v1.37B+"),
 													   QString::fromStdWString(L"aaxa.txt"),
 													   QString::fromStdWString(L"http://www.5211game.com"),
@@ -638,4 +670,34 @@ void qtcombobox::onDialogDone(int32_t dialogId, int32_t result, int32_t userType
 {
 	RCSend("DialogDone = %d,%d,%d", dialogId, result, userType);
 	int x = 3;
+}
+
+void qtcombobox::onChangeToBack(int32_t dialogId)
+{
+	RCSend("onChangeToBack,dialogId = %d", dialogId);
+}
+
+void qtcombobox::onDownloadAgain(int32_t dialogId)
+{
+	RCSend("onDownloadAgain,dialogId = %d", dialogId);
+}
+
+void qtcombobox::onCancelDownload(int32_t dialogId)
+{
+	RCSend("onCancelDownload,dialogId = %d", dialogId);
+}
+
+void qtcombobox::onUseOtherDownload(int32_t dialogId)
+{
+	RCSend("onUseOtherDownload,dialogId = %d", dialogId);
+}
+
+void qtcombobox::onCopyDownloadAddr(int32_t dialogId)
+{
+	RCSend("onCopyDownloadAddr,dialogId = %d", dialogId);
+}
+
+void qtcombobox::onCopyPath(int32_t dialogId)
+{
+	RCSend("onCopyPath,dialogId = %d", dialogId);
 }

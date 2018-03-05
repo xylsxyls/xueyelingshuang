@@ -20,11 +20,20 @@ private slots:
 	void htmlItemPressed(int index);
 	void modalPop();
 	void modalFriendPop();
+	void onTestButton();
 	void testDialog();
 	void onDialogDone(int32_t dialogId, int32_t result, int32_t userType);
+
+	void onChangeToBack(int32_t dialogId);
+	void onDownloadAgain(int32_t dialogId);
+	void onCancelDownload(int32_t dialogId);
+	void onUseOtherDownload(int32_t dialogId);
+	void onCopyDownloadAddr(int32_t dialogId);
+	void onCopyPath(int32_t dialogId);
 private:
 	Ui::qtcomboboxClass ui;
 	HtmlComboBox* box;
+	int32_t m_dialogId8;
 };
 
 #endif // QTCOMBOBOX_H

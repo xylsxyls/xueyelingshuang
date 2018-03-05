@@ -20,4 +20,6 @@ protected:
 
 private:
 	int number;
+public:
+	int32_t m_dialogId;
 };

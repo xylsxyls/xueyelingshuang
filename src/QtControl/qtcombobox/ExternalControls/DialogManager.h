@@ -22,6 +22,7 @@ enum DialogButton
 
 class DialogBase;
 class QWindow;
+class DownloadOperateDialog;
 /** 单一实例，用于统一管理窗口创建关闭，该类的对外接口，销毁所有窗口
 DialogManager::instance().removeAll();
 */
@@ -234,7 +235,7 @@ public:
 						   int32_t timeOut = -1,
 						   bool isCountDownVisible = false);
 
-	/** 弹出下载框
+	/** 弹出下载框（老版）
 	@param [out] dialogId 窗口ID值
 	@param [in] fileName 文件名
 	@param [in] tip 提示内容
@@ -256,7 +257,23 @@ public:
 							  int32_t timeOut = -1,
 							  bool isCountDownVisible = false);
 
-	/** 弹出下载框
+	/** 设置比例（老版）
+	@param [in] dialogId 窗口ID值
+	@param [in] persent 百分比
+	*/
+	void setDownloadRate(int32_t dialogId, int32_t persent);
+
+	/** 下载完成（老版）
+	@param [in] dialogId 窗口ID值
+	*/
+	void downloadComplete(int32_t dialogId);
+
+	/** 将当前下载框销毁并弹窗下载失败框（老版）
+	@param [out] dialogId 窗口ID值
+	*/
+	void downloadError(int32_t dialogId);
+
+	/** 弹出下载框（新版）
 	@param [out] dialogId 窗口ID值
 	@param [in] fileName 文件名
 	@param [in] tip 提示内容
@@ -269,27 +286,16 @@ public:
 	@return 关闭窗口时给的返回值
 	*/
 	int32_t popDownloadOperateDialog(int32_t& dialogId,
+									 int32_t taskId,
 									 const QString& title,
 									 const QString& fileName,
 									 const QString& downloadAddr = "",
 									 const QString& path = "",
 									 QWindow* parent = nullptr);
 
-	/** 设置比例
-	@param [in] dialogId 窗口ID值
-	@param [in] persent 百分比
+	/** 获取下载框指针（新版）
 	*/
-	void setDownloadRate(int32_t dialogId, int32_t persent);
-
-	/** 下载完成
-	@param [in] dialogId 窗口ID值
-	*/
-	void downloadComplete(int32_t dialogId);
-
-	/** 将当前下载框销毁并弹窗下载失败框
-	@param [out] dialogId 窗口ID值
-	*/
-	void downloadError(int32_t dialogId);
+	DownloadOperateDialog* downloadOperatePtr(int32_t dialogId);
 
 	/** 根据ID号关闭窗口（有动画效果）
 	@param [in] dialogId 窗口ID号
@@ -314,6 +320,15 @@ public:
 	@return 返回窗口ID
 	*/
 	int32_t DialogId(DialogBase* base);
+
+Q_SIGNALS:
+	//以下6个信号是给新版下载框用的
+	void changeToBack(int32_t dialogId);
+	void downloadAgain(int32_t dialogId);
+	void cancelDownload(int32_t dialogId);
+	void useOtherDownload(int32_t dialogId);
+	void copyDownloadAddr(int32_t dialogId);
+	void copyPath(int32_t dialogId);
 
 protected:
 	DialogManager();

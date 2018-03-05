@@ -196,13 +196,14 @@ int32_t DialogManager::popDownloadDialog(int32_t& dialogId,
 }
 
 int32_t DialogManager::popDownloadOperateDialog(int32_t& dialogId,
+												int32_t taskId,
 												const QString& title,
 												const QString& fileName,
 												const QString& downloadAddr,
 												const QString& path,
 												QWindow* parent)
 {
-	return DownloadOperateDialog::popDownloadOperateDialog(dialogId, title, fileName, downloadAddr, path, parent);
+	return DownloadOperateDialog::popDownloadOperateDialog(dialogId, taskId, title, fileName, downloadAddr, path, parent);
 }
 
 void DialogManager::setDownloadRate(int32_t dialogId, int32_t persent)
@@ -246,7 +247,13 @@ void DialogManager::closeDialog(int32_t dialogId)
 	auto itDialog = m_mapDialog.find(dialogId);
 	if (itDialog != m_mapDialog.end())
 	{
-		itDialog->second->reject();
+		auto dialogPtr = itDialog->second;
+		m_mutex.unlock();
+		if (dialogPtr != nullptr)
+		{
+			dialogPtr->reject();
+		}
+		m_mutex.lock();
 	}
 	m_mutex.unlock();
 }
@@ -262,7 +269,13 @@ void DialogManager::closeLastDialog()
 	if (!m_mapDialog.empty())
 	{
 		auto itDialog = --m_mapDialog.end();
-		itDialog->second->reject();
+		auto dialogPtr = itDialog->second;
+		m_mutex.unlock();
+		if (dialogPtr != nullptr)
+		{
+			dialogPtr->reject();
+		}
+		m_mutex.lock();
 	}
 	m_mutex.unlock();
 }
@@ -282,7 +295,13 @@ void DialogManager::destroyAll()
 		auto itDialog = m_mapDialog.begin();
 		if (itDialog != m_mapDialog.end())
 		{
-			itDialog->second->done(DESTROY_ALL);
+			auto dialogPtr = itDialog->second;
+			m_mutex.unlock();
+			if (dialogPtr != nullptr)
+			{
+				dialogPtr->done(DESTROY_ALL);
+			}
+			m_mutex.lock();
 		}
 	}
 	m_mutex.unlock();
@@ -308,11 +327,32 @@ int32_t DialogManager::DialogId(DialogBase* base)
 	{
 		if (itDialog->second == base)
 		{
-			return itDialog->first;
+			int32_t dialogId = itDialog->first;
+			m_mutex.unlock();
+			return dialogId;
 		}
 	}
 	m_mutex.unlock();
 	return -1;
+}
+
+DownloadOperateDialog* DialogManager::downloadOperatePtr(int32_t dialogId)
+{
+	m_mutex.lock();
+	if (m_mapDialog.empty())
+	{
+		m_mutex.unlock();
+		return nullptr;
+	}
+	auto itDialog = m_mapDialog.find(dialogId);
+	if (itDialog == m_mapDialog.end())
+	{
+		m_mutex.unlock();
+		return nullptr;
+	}
+	DownloadOperateDialog* result = (DownloadOperateDialog*)itDialog->second;
+	m_mutex.unlock();
+	return result;
 }
 
 DialogManager::DialogManager() :
