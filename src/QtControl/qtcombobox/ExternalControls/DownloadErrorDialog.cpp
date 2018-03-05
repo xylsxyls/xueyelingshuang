@@ -4,6 +4,7 @@
 #include "../CGeneralStyle.h"
 #include "ProgressBar.h"
 #include <Windows.h>
+#include "DialogManager.h"
 
 std::wstring DownloadErrorDialog::s_fileString = L"文件名：%s";
 QString DownloadErrorDialog::s_tipString = QString::fromStdWString(L"下载错误请稍后再试");
@@ -19,7 +20,10 @@ int32_t DownloadErrorDialog::popDownloadErrorDialog(int32_t& dialogId,
 {
 	DownloadErrorDialog* dlg = new DownloadErrorDialog(fileName, title, buttonText, done);
 	dlg->setParentWindow(parent);
-	return dlg->exec(dialogId, timeOut, isCountDownVisible);
+	dlg->setDialogEnum(DOWNLOAD_ERROR_DIALOG);
+	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
+	delete dlg;
+	return result;
 }
 
 DownloadErrorDialog::DownloadErrorDialog(const QString& fileName,

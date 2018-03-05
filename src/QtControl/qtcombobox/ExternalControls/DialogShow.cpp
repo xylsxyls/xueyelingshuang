@@ -285,7 +285,6 @@ void DialogShow::done(int32_t result)
 	{
 		DialogManager::instance().removeDialog(this);
 		DialogBase::done(result);
-		delete this;
 	}
 }
 

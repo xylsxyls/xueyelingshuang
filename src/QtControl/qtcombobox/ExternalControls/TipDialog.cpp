@@ -1,6 +1,7 @@
 #include "TipDialog.h"
 #include "Label.h"
 #include "../COriginalButton.h"
+#include "DialogManager.h"
 
 int32_t TipDialog::popTipDialog(int32_t& dialogId,
 								const QString& title,
@@ -13,7 +14,10 @@ int32_t TipDialog::popTipDialog(int32_t& dialogId,
 {
 	TipDialog* dlg = new TipDialog(title, tip, buttonText, done);
 	dlg->setParentWindow(parent);
-	return dlg->exec(dialogId, timeOut, isCountDownVisible);
+	dlg->setDialogEnum(TIP_DIALOG);
+	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
+	delete dlg;
+	return result;
 }
 
 TipDialog::TipDialog(const QString& title,

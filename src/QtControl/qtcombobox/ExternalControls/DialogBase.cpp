@@ -12,7 +12,8 @@
 #include <QApplication>
 
 DialogBase::DialogBase():
-m_timeVisible(false)
+m_timeVisible(false),
+m_dialogEnum(-1)
 {
 	setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 }
@@ -198,6 +199,16 @@ void DialogBase::setParentWindow(QWindow* parent)
 	//»•µÙ»ŒŒÒ¿∏
 	//setAttribute(Qt::WA_ShowModal);
 	setWindowModality(Qt::ApplicationModal);
+}
+
+void DialogBase::setDialogEnum(int32_t dialogEnum)
+{
+	m_dialogEnum = dialogEnum;
+}
+
+int32_t DialogBase::dialogEnum()
+{
+	return m_dialogEnum;
 }
 
 void DialogBase::endDialog()

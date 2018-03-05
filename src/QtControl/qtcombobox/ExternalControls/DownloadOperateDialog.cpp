@@ -22,7 +22,11 @@ int32_t DownloadOperateDialog::popDownloadOperateDialog(int32_t& dialogId,
 {
 	DownloadOperateDialog* dlg = new DownloadOperateDialog(taskId, title, fileName, downloadAddr, path);
 	dlg->setParentWindow(parent);
-	return dlg->exec(dialogId);
+	dlg->setDialogEnum(DOWNLOAD_OPERATE_DIALOG);
+	int32_t result = dlg->exec(dialogId);
+	delete dlg;
+	return result;
+
 }
 
 DownloadOperateDialog::DownloadOperateDialog(int32_t taskId,

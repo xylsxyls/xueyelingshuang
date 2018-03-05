@@ -20,6 +20,37 @@ enum DialogButton
 	DESTROY_ALL = -1
 };
 
+enum
+{
+	/** 询问框
+	*/
+	ASK_DIALOG,
+
+	/** 输出框
+	*/
+	INPUT_DIALOG,
+
+	/** 提示框
+	*/
+	TIP_DIALOG,
+
+	/** 等待框
+	*/
+	WAIT_DIALOG,
+
+	/** 下载框（老版）
+	*/
+	DOWNLOAD_DIALOG,
+
+	/** 下载错误框（老版）
+	*/
+	DOWNLOAD_ERROR_DIALOG,
+
+	/** 下载框（新版）
+	*/
+	DOWNLOAD_OPERATE_DIALOG
+};
+
 class DialogBase;
 class QWindow;
 class DownloadOperateDialog;
@@ -294,8 +325,14 @@ public:
 									 QWindow* parent = nullptr);
 
 	/** 获取下载框指针（新版）
+	@param [in] dialogId 窗口ID
 	*/
 	DownloadOperateDialog* downloadOperatePtr(int32_t dialogId);
+
+	/** 获取下载框指针（新版）
+	@param [in] taskId 任务ID
+	*/
+	DownloadOperateDialog* downloadOperateTaskPtr(int32_t taskId);
 
 	/** 根据ID号关闭窗口（有动画效果）
 	@param [in] dialogId 窗口ID号

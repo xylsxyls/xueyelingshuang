@@ -85,6 +85,16 @@ public:
 	*/
 	void setParentWindow(QWindow* parent);
 
+	/** 设置窗口类型，该函数主要用于区分指针
+	@param [in] parent 父窗口指针
+	*/
+	void setDialogEnum(int32_t dialogEnum);
+
+	/** 获取窗口类型
+	@return 返回窗口类型
+	*/
+	int32_t dialogEnum();
+
 Q_SIGNALS:
 	void timeRest(int32_t seconds);
 
@@ -99,6 +109,7 @@ private slots:
 protected:
 	bool m_timeVisible;
 	int32_t m_timeId;
+	int32_t m_dialogEnum;
 
 private:
 	int32_t m_timeRest;

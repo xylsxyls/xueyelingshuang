@@ -1,6 +1,7 @@
 #include "AskDialog.h"
 #include "Label.h"
 #include "../COriginalButton.h"
+#include "DialogManager.h"
 
 int32_t AskDialog::popAskDialog(int32_t& dialogId,
 								const QString& title,
@@ -15,7 +16,11 @@ int32_t AskDialog::popAskDialog(int32_t& dialogId,
 {
 	AskDialog* dlg = new AskDialog(title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
 	dlg->setParentWindow(parent);
-	return dlg->exec(dialogId, timeOut, isCountDownVisible);
+	dlg->setDialogEnum(ASK_DIALOG);
+	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
+	delete dlg;
+	//dlg->deleteLater();
+	return result;
 }
 
 AskDialog::AskDialog(const QString& title,

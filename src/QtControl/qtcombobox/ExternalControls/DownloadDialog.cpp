@@ -23,7 +23,10 @@ int32_t DownloadDialog::popDownloadDialog(int32_t& dialogId,
 {
 	DownloadDialog* dlg = new DownloadDialog(title, fileName, tip, buttonText, done);
 	dlg->setParentWindow(parent);
-	return dlg->exec(dialogId, timeOut, isCountDownVisible);
+	dlg->setDialogEnum(DOWNLOAD_DIALOG);
+	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
+	delete dlg;
+	return result;
 }
 
 DownloadDialog::DownloadDialog(const QString& title,

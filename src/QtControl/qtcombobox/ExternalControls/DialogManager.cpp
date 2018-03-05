@@ -355,6 +355,33 @@ DownloadOperateDialog* DialogManager::downloadOperatePtr(int32_t dialogId)
 	return result;
 }
 
+DownloadOperateDialog* DialogManager::downloadOperateTaskPtr(int32_t taskId)
+{
+	m_mutex.lock();
+	if (m_mapDialog.empty())
+	{
+		m_mutex.unlock();
+		return nullptr;
+	}
+	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
+	{
+		auto dialogPtr = itDialog->second;
+		if (dialogPtr != nullptr)
+		{
+			if (dialogPtr->dialogEnum() == DOWNLOAD_OPERATE_DIALOG)
+			{
+				if (((DownloadOperateDialog*)dialogPtr)->getTaskId() == taskId)
+				{
+					m_mutex.unlock();
+					return (DownloadOperateDialog*)dialogPtr;
+				}
+			}
+		}
+	}
+	m_mutex.unlock();
+	return nullptr;
+}
+
 DialogManager::DialogManager() :
 m_id(0)
 {

@@ -2,6 +2,7 @@
 #include "Label.h"
 #include "LineEdit.h"
 #include "../COriginalButton.h"
+#include "DialogManager.h"
 
 int32_t InputDialog::popInputDialog(int32_t& dialogId,
 									const QString& title,
@@ -17,7 +18,10 @@ int32_t InputDialog::popInputDialog(int32_t& dialogId,
 {
 	InputDialog* dlg = new InputDialog(title, editTip, buttonText, done, editText, isPassword, maxLength);
 	dlg->setParentWindow(parent);
-	return dlg->exec(dialogId, timeOut, isCountDownVisible);
+	dlg->setDialogEnum(INPUT_DIALOG);
+	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
+	delete dlg;
+	return result;
 }
 
 InputDialog::InputDialog(const QString& title,

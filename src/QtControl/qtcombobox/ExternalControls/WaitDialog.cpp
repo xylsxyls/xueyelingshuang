@@ -1,5 +1,6 @@
 #include "WaitDialog.h"
 #include "Label.h"
+#include "DialogManager.h"
 
 int32_t WaitDialog::popWaitDialog(int32_t& dialogId,
 								  const QString& title,
@@ -10,7 +11,10 @@ int32_t WaitDialog::popWaitDialog(int32_t& dialogId,
 {
 	WaitDialog* dlg = new WaitDialog(title, tip);
 	dlg->setParentWindow(parent);
-	return dlg->exec(dialogId, timeOut, isCountDownVisible);
+	dlg->setDialogEnum(WAIT_DIALOG);
+	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
+	delete dlg;
+	return result;
 }
 
 WaitDialog::WaitDialog(const QString& title, const QString& tip)
