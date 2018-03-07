@@ -60,25 +60,23 @@ DownloadDialog::DownloadDialog(const QString& title,
 	m_hand->setText(s_handString);
 	m_hand->setUnderline(true);
 
-	QObject::connect(this, SIGNAL(keyboardAccept()), this, SLOT(tipAccept()));
-
-	progressBar = new ProgressBar(this);
-	progressBar->setOrientation(Qt::Horizontal);
+	m_progressBar = new ProgressBar(this);
+	m_progressBar->setOrientation(Qt::Horizontal);
 	//当前进度
 	setRate(80);
-	progressBar->setRange(0, 100);
-	progressBar->setGeometry(13, 101, width() - 13 * 2, 4);
-	progressBar->setBorderWidth(0);
-	progressBar->setBorderRadius(2);
-	progressBar->setBackgroundColor(QColor(38, 45, 73, 255));
-	progressBar->setItemBorderWidth(0);
-	progressBar->setItemBorderRadius(2);
-	progressBar->setItemBackgroundColor(QColor(150, 171, 255, 255));
-	progressBar->setFormat("");
-	QObject::connect(this, SIGNAL(rateChanged(int)), progressBar, SLOT(setValue(int)));
-	QObject::connect(this, SIGNAL(persentChanged(const QString&)), m_persent, SLOT(setText(const QString&)));
-	QObject::connect(this, SIGNAL(downloadComplete()), this, SLOT(reject()));
-	QObject::connect(this, SIGNAL(showError()), this, SLOT(showDownloadErrorDialog()), Qt::UniqueConnection);
+	m_progressBar->setRange(0, 100);
+	m_progressBar->setGeometry(13, 101, width() - 13 * 2, 4);
+	m_progressBar->setBorderWidth(0);
+	m_progressBar->setBorderRadius(2);
+	m_progressBar->setBackgroundColor(QColor(38, 45, 73, 255));
+	m_progressBar->setItemBorderWidth(0);
+	m_progressBar->setItemBorderRadius(2);
+	m_progressBar->setItemBackgroundColor(QColor(150, 171, 255, 255));
+	m_progressBar->setFormat("");
+	QObject::connect(this, &DownloadDialog::rateChanged, m_progressBar, &ProgressBar::setValue);
+	QObject::connect(this, &DownloadDialog::persentChanged, m_persent, &Label::setText);
+	QObject::connect(this, &DownloadDialog::downloadComplete, this, &DownloadDialog::reject);
+	QObject::connect(this, &DownloadDialog::showError, this, &DownloadDialog::showDownloadErrorDialog, Qt::UniqueConnection);
 }
 
 DownloadDialog::~DownloadDialog()

@@ -52,7 +52,7 @@ static const uint qt_meta_data_AskDialog[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,   19,    2, 0x08 /* Private */,
+       1,    0,   19,    2, 0x0a /* Public */,
 
  // slots: parameters
     QMetaType::Void,

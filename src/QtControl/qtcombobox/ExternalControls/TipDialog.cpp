@@ -34,7 +34,7 @@ TipDialog::TipDialog(const QString& title,
 	m_accept = addButton(buttonText, QRect((width() - 116) / 2, 127, 116, 22), done);
 	m_accept->installEventFilter(this);
 
-	QObject::connect(this, SIGNAL(keyboardAccept()), this, SLOT(tipAccept()));
+	QObject::connect(this, &DialogShow::keyboardAccept, this, &TipDialog::tipAccept);
 }
 
 void TipDialog::tipAccept()

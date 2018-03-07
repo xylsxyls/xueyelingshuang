@@ -42,7 +42,7 @@ AskDialog::AskDialog(const QString& title,
 	m_accept->installEventFilter(this);
 	m_ignore->installEventFilter(this);
 
-	QObject::connect(this, SIGNAL(keyboardAccept()), this, SLOT(askAccept()));
+	QObject::connect(this, &DialogShow::keyboardAccept, this, &AskDialog::askAccept);
 }
 
 void AskDialog::askAccept()

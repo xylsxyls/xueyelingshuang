@@ -90,8 +90,6 @@ DownloadOperateDialog::DownloadOperateDialog(int32_t taskId,
 	m_cancel->setBorderRadius(3);
 	m_cancel->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#5a5ea2"));
 
-	QObject::connect(this, SIGNAL(keyboardAccept()), this, SLOT(tipAccept()));
-
 	m_progressBar = new ProgressBar(this);
 	m_progressBar->setOrientation(Qt::Horizontal);
 	//当前进度
@@ -158,21 +156,23 @@ DownloadOperateDialog::DownloadOperateDialog(int32_t taskId,
 	m_pathButton->setBorderRadius(2);
 	m_pathButton->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"));
 
-	QObject::connect(this, SIGNAL(rateChanged(int)), m_progressBar, SLOT(setValue(int)));
-	QObject::connect(this, SIGNAL(persentChanged(const QString&)), m_persent, SLOT(setText(const QString&)));
-	QObject::connect(this, SIGNAL(changeErrorStatus()), this, SLOT(onChangeErrorStatus()), Qt::UniqueConnection);
-	QObject::connect(this, SIGNAL(changeNormalStatus()), this, SLOT(onChangeNormalStatus()), Qt::UniqueConnection);
+	QObject::connect(this, &DownloadOperateDialog::rateChanged, m_progressBar, &ProgressBar::setValue);
+	QObject::connect(this, &DownloadOperateDialog::persentChanged, m_persent, &Label::setText);
+	QObject::connect(this, &DownloadOperateDialog::changeErrorStatus, this, &DownloadOperateDialog::onChangeErrorStatus, Qt::UniqueConnection);
+	QObject::connect(this, &DownloadOperateDialog::changeNormalStatus, this, &DownloadOperateDialog::onChangeNormalStatus, Qt::UniqueConnection);
 
-	QObject::connect(this, SIGNAL(downloadComplete()), this, SLOT(reject()));
-	QObject::connect(this, SIGNAL(downloadSpeed(const QString&)), m_downloadSpeed, SLOT(setText(const QString&)));
-	QObject::connect(this, SIGNAL(downloaded(const QString&)), m_downloaded, SLOT(setText(const QString&)));
-	QObject::connect(this, SIGNAL(downloadTime(const QString&)), m_downloadTime, SLOT(setText(const QString&)));
-	QObject::connect(m_cancel, SIGNAL(clicked()), this, SLOT(onCancelDownload()));
-	QObject::connect(m_change, SIGNAL(clicked()), this, SLOT(onChanged()));
-	QObject::connect(m_hand, SIGNAL(clicked()), this, SLOT(onUseOtherDownload()));
-	QObject::connect(m_downloadButton, SIGNAL(clicked()), this, SLOT(onCopyDownloadAddr()));
-	QObject::connect(m_pathButton, SIGNAL(clicked()), this, SLOT(onCopyPath()));
+	QObject::connect(this, &DownloadOperateDialog::downloadComplete, this, &DownloadOperateDialog::reject);
+	QObject::connect(this, &DownloadOperateDialog::downloadSpeed, m_downloadSpeed, &Label::setText);
+	QObject::connect(this, &DownloadOperateDialog::downloaded, m_downloaded, &Label::setText);
+	QObject::connect(this, &DownloadOperateDialog::downloadTime, m_downloadTime, &Label::setText);
 
+	QObject::connect(m_cancel, &COriginalButton::clicked, this, &DownloadOperateDialog::onCancelDownload);
+	QObject::connect(m_change, &COriginalButton::clicked, this, &DownloadOperateDialog::onChanged);
+	QObject::connect(m_hand, &COriginalButton::clicked, this, &DownloadOperateDialog::onUseOtherDownload);
+	QObject::connect(m_downloadButton, &COriginalButton::clicked, this, &DownloadOperateDialog::onCopyDownloadAddr);
+	QObject::connect(m_pathButton, &COriginalButton::clicked, this, &DownloadOperateDialog::onCopyPath);
+
+	setExitVisible(false);
 	//error();
 	normal();
 }
@@ -256,35 +256,35 @@ void DownloadOperateDialog::onChanged()
 	if (m_change->text() == QString::fromStdWString(L"转到后台下载"))
 	{
 		emit changeToBack();
-		emit DialogManager::instance().changeToBack(DialogManager::instance().DialogId(this));
+		emit DialogManager::instance().changeToBack(DialogManager::instance().dialogId(this));
 	}
 	else
 	{
 		emit downloadAgain();
-		emit DialogManager::instance().downloadAgain(DialogManager::instance().DialogId(this));
+		emit DialogManager::instance().downloadAgain(DialogManager::instance().dialogId(this));
 	}
 }
 
 void DownloadOperateDialog::onCancelDownload()
 {
 	emit cancelDownload();
-	emit DialogManager::instance().cancelDownload(DialogManager::instance().DialogId(this));
+	emit DialogManager::instance().cancelDownload(DialogManager::instance().dialogId(this));
 }
 
 void DownloadOperateDialog::onUseOtherDownload()
 {
 	emit useOtherDownload();
-	emit DialogManager::instance().useOtherDownload(DialogManager::instance().DialogId(this));
+	emit DialogManager::instance().useOtherDownload(DialogManager::instance().dialogId(this));
 }
 
 void DownloadOperateDialog::onCopyDownloadAddr()
 {
-	emit copyDownloadAddr();
-	emit DialogManager::instance().copyDownloadAddr(DialogManager::instance().DialogId(this));
+	emit copyDownloadAddr(m_downloadAddrEdit->text());
+	emit DialogManager::instance().copyDownloadAddr(DialogManager::instance().dialogId(this), m_downloadAddrEdit->text());
 }
 
 void DownloadOperateDialog::onCopyPath()
 {
-	emit copyPath();
-	emit DialogManager::instance().copyPath(DialogManager::instance().DialogId(this));
+	emit copyPath(m_pathEdit->text());
+	emit DialogManager::instance().copyPath(DialogManager::instance().dialogId(this), m_pathEdit->text());
 }

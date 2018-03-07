@@ -19,7 +19,7 @@ void LoginShowDialog::showLoginDialog(int32_t& dialogId,
 {
 	LoginShowDialog* dlg = new LoginShowDialog(userType, title, greeting, tip, urlButtonText, linkUrl, isUrlButtonVisible);
 	dlg->show(dialogId, timeOut, isCountDownVisible);
-	QObject::connect(dlg, &LoginShowDialog::dialogDone, &(NotifyDialogManager::instance()), &NotifyDialogManager::onDialogDone);
+	QObject::connect(dlg, &DialogShow::dialogDone, &(NotifyDialogManager::instance()), &NotifyDialogManager::onDialogDone);
 	return;
 }
 

@@ -26,6 +26,8 @@
 #include "FriendDialogFrame.h"
 #include "Thread.h"
 #include "DownloadOperateDialog.h"
+#include "AccountDialog.h"
+#include "AccountManagerDialog.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -552,6 +554,8 @@ void qtcombobox::modalFriendPop()
 
 void qtcombobox::onTestButton()
 {
+	DownloadOperateDialog* ssdf = 0;
+	DialogManager::instance().closeDialog(DialogManager::instance().dialogId(ssdf));
 	DialogManager::instance().closeLastDialog();
 	return;
 	auto ptr = DialogManager::instance().downloadOperatePtr(m_dialogId8);
@@ -572,6 +576,16 @@ void qtcombobox::onTestButton()
 
 void qtcombobox::testDialog()
 {
+	int32_t dialogIdManager = 0;
+	DialogManager::instance().popAccountManagerDialog();
+	auto ptr = DialogManager::instance().accountMannagerDialogPtr();
+	ptr->popAccountDialog();
+	DialogManager::instance().destroyAccountManagerDialog();
+	return;
+	AccountDialog* sdf = new AccountDialog;
+	int32_t dialogId = 0;
+	sdf->exec(dialogId);
+	return;
 	QObject::connect(&DialogManager::instance(), &DialogManager::changeToBack, this, &qtcombobox::onChangeToBack);
 	QObject::connect(&DialogManager::instance(), &DialogManager::downloadAgain, this, &qtcombobox::onDownloadAgain);
 	QObject::connect(&DialogManager::instance(), &DialogManager::cancelDownload, this, &qtcombobox::onCancelDownload);
@@ -692,12 +706,12 @@ void qtcombobox::onUseOtherDownload(int32_t dialogId)
 	RCSend("onUseOtherDownload,dialogId = %d", dialogId);
 }
 
-void qtcombobox::onCopyDownloadAddr(int32_t dialogId)
+void qtcombobox::onCopyDownloadAddr(int32_t dialogId, const QString& addr)
 {
-	RCSend("onCopyDownloadAddr,dialogId = %d", dialogId);
+	RCSend("onCopyDownloadAddr,dialogId = %d, addr = %s", dialogId, addr.toStdString().c_str());
 }
 
-void qtcombobox::onCopyPath(int32_t dialogId)
+void qtcombobox::onCopyPath(int32_t dialogId, const QString& path)
 {
-	RCSend("onCopyPath,dialogId = %d", dialogId);
+	RCSend("onCopyPath,dialogId = %d, path = %s", dialogId, path.toStdString().c_str());
 }

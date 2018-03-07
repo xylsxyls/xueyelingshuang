@@ -60,4 +60,5 @@ Q_SIGNALS:
 
 private slots:
 	void curIndexChanged(const QString& str);
+	void curIndexChanged(int index){}
 };

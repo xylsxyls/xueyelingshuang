@@ -3,7 +3,7 @@
 
 /** µÈ´ýµ¯³ö¿ò
 */
-class WaitDialog : protected DialogShow
+class WaitDialog : public DialogShow
 {
 	Q_OBJECT
 public:

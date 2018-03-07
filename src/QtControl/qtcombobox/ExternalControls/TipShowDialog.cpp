@@ -15,7 +15,7 @@ void TipShowDialog::showTipDialog(int32_t& dialogId,
 {
 	TipShowDialog* dlg = new TipShowDialog(userType, title, tip, buttonText, done);
 	dlg->show(dialogId, timeOut, isCountDownVisible);
-	QObject::connect(dlg, &TipShowDialog::dialogDone, &(NotifyDialogManager::instance()), &NotifyDialogManager::onDialogDone);
+	QObject::connect(dlg, &DialogShow::dialogDone, &(NotifyDialogManager::instance()), &NotifyDialogManager::onDialogDone);
 	return;
 }
 

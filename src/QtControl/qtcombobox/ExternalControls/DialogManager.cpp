@@ -11,6 +11,7 @@
 #include "DownloadOperateDialog.h"
 #include <vector>
 #include <Windows.h>
+#include "AccountManagerDialog.h"
 
 DialogManager& DialogManager::instance()
 {
@@ -195,6 +196,31 @@ int32_t DialogManager::popDownloadDialog(int32_t& dialogId,
 	return DownloadDialog::popDownloadDialog(dialogId, title, fileName, tip, buttonText, done, parent, timeOut, isCountDownVisible);
 }
 
+void DialogManager::popAccountManagerDialog()
+{
+	if (m_accountManagerDialog == nullptr)
+	{
+		m_accountManagerDialog = new AccountManagerDialog;
+		QObject::connect(m_accountManagerDialog, &AccountManagerDialog::destroyed, this, &DialogManager::onDestroyAccountManagerDialog);
+	}
+	int32_t dialogId = 0;
+	if (m_accountManagerDialog->isVisible())
+	{
+		return;
+	}
+	m_accountManagerDialog->exec(dialogId);
+}
+
+AccountManagerDialog* DialogManager::accountMannagerDialogPtr()
+{
+	return m_accountManagerDialog;
+}
+
+void DialogManager::destroyAccountManagerDialog()
+{
+	delete m_accountManagerDialog;
+}
+
 int32_t DialogManager::popDownloadOperateDialog(int32_t& dialogId,
 												int32_t taskId,
 												const QString& title,
@@ -238,12 +264,11 @@ void DialogManager::downloadError(int32_t dialogId)
 
 void DialogManager::closeDialog(int32_t dialogId)
 {
-	m_mutex.lock();
-	if (m_mapDialog.empty())
+	if (mapIsEmpty())
 	{
-		m_mutex.unlock();
 		return;
 	}
+	m_mutex.lock();
 	auto itDialog = m_mapDialog.find(dialogId);
 	if (itDialog != m_mapDialog.end())
 	{
@@ -260,12 +285,11 @@ void DialogManager::closeDialog(int32_t dialogId)
 
 void DialogManager::closeLastDialog()
 {
-	m_mutex.lock();
-	if (m_mapDialog.empty())
+	if (mapIsEmpty())
 	{
-		m_mutex.unlock();
 		return;
 	}
+	m_mutex.lock();
 	if (!m_mapDialog.empty())
 	{
 		auto itDialog = --m_mapDialog.end();
@@ -282,13 +306,12 @@ void DialogManager::closeLastDialog()
 
 void DialogManager::destroyAll()
 {
-	m_mutex.lock();
-	if (m_mapDialog.empty())
+	if (mapIsEmpty())
 	{
-		m_mutex.unlock();
 		return;
 	}
 
+	m_mutex.lock();
 	int32_t count = m_mapDialog.size();
 	while (count-- != 0)
 	{
@@ -315,54 +338,31 @@ int32_t DialogManager::dialogCount()
 	return size;
 }
 
-int32_t DialogManager::DialogId(DialogBase* base)
+int32_t DialogManager::dialogId(DialogShow* base)
 {
-	m_mutex.lock();
-	if (m_mapDialog.empty())
+	if (mapIsEmpty())
 	{
-		m_mutex.unlock();
 		return -1;
 	}
-	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
-	{
-		if (itDialog->second == base)
-		{
-			int32_t dialogId = itDialog->first;
-			m_mutex.unlock();
-			return dialogId;
-		}
-	}
-	m_mutex.unlock();
-	return -1;
+	return mapFind((DialogBase*)base);
 }
 
 DownloadOperateDialog* DialogManager::downloadOperatePtr(int32_t dialogId)
 {
-	m_mutex.lock();
-	if (m_mapDialog.empty())
+	if (mapIsEmpty())
 	{
-		m_mutex.unlock();
 		return nullptr;
 	}
-	auto itDialog = m_mapDialog.find(dialogId);
-	if (itDialog == m_mapDialog.end())
-	{
-		m_mutex.unlock();
-		return nullptr;
-	}
-	DownloadOperateDialog* result = (DownloadOperateDialog*)itDialog->second;
-	m_mutex.unlock();
-	return result;
+	return (DownloadOperateDialog*)mapFind(dialogId);
 }
 
 DownloadOperateDialog* DialogManager::downloadOperateTaskPtr(int32_t taskId)
 {
-	m_mutex.lock();
-	if (m_mapDialog.empty())
+	if (mapIsEmpty())
 	{
-		m_mutex.unlock();
 		return nullptr;
 	}
+	m_mutex.lock();
 	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
 	{
 		auto dialogPtr = itDialog->second;
@@ -383,7 +383,8 @@ DownloadOperateDialog* DialogManager::downloadOperateTaskPtr(int32_t taskId)
 }
 
 DialogManager::DialogManager() :
-m_id(0)
+m_id(0),
+m_accountManagerDialog(nullptr)
 {
 
 }
@@ -403,12 +404,90 @@ int32_t DialogManager::setDialog(DialogBase* dialog)
 
 void DialogManager::removeDialog(int32_t dialogId)
 {
-	m_mutex.lock();
-	if (m_mapDialog.empty())
+	if (mapIsEmpty())
 	{
-		m_mutex.unlock();
 		return;
 	}
+	mapErase(dialogId);
+}
+
+void DialogManager::removeDialog(DialogBase* base)
+{
+	if (mapIsEmpty())
+	{
+		return;
+	}
+	mapErase(base);
+}
+
+DialogBase* DialogManager::dialogPtr(int32_t dialogId)
+{
+	if (mapIsEmpty())
+	{
+		return nullptr;
+	}
+	return mapFind(dialogId);
+}
+
+int32_t DialogManager::getId()
+{
+	return ++m_id;
+}
+
+bool DialogManager::mapIsEmpty()
+{
+	m_mutex.lock();
+	bool isEmpty = m_mapDialog.empty();
+	m_mutex.unlock();
+	return isEmpty;
+}
+
+DialogBase* DialogManager::mapFind(int32_t dialogId)
+{
+	DialogBase* result = nullptr;
+	m_mutex.lock();
+	auto itDialog = m_mapDialog.find(dialogId);
+	if (itDialog != m_mapDialog.end())
+	{
+		result = itDialog->second;
+	}
+	m_mutex.unlock();
+	return result;
+}
+
+int32_t DialogManager::mapFind(DialogBase* base)
+{
+	int32_t dialogId = -1;
+	m_mutex.lock();
+	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
+	{
+		if (itDialog->second == base)
+		{
+			dialogId = itDialog->first;
+			break;
+		}
+	}
+	m_mutex.unlock();
+	return dialogId;
+}
+
+void DialogManager::mapErase(DialogBase* base)
+{
+	m_mutex.lock();
+	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
+	{
+		if (itDialog->second == base)
+		{
+			m_mapDialog.erase(itDialog);
+			break;
+		}
+	}
+	m_mutex.unlock();
+}
+
+void DialogManager::mapErase(int32_t dialogId)
+{
+	m_mutex.lock();
 	auto itDialog = m_mapDialog.find(dialogId);
 	if (itDialog != m_mapDialog.end())
 	{
@@ -417,45 +496,18 @@ void DialogManager::removeDialog(int32_t dialogId)
 	m_mutex.unlock();
 }
 
-void DialogManager::removeDialog(DialogBase* base)
+void DialogManager::mapInsert(int32_t dialogId, DialogBase* base)
 {
 	m_mutex.lock();
-	if (m_mapDialog.empty())
-	{
-		m_mutex.unlock();
-		return;
-	}
-	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
-	{
-		if (itDialog->second == base)
-		{
-			m_mapDialog.erase(itDialog);
-			m_mutex.unlock();
-			return;
-		}
-	}
+	m_mapDialog[dialogId] = base;
 	m_mutex.unlock();
 }
 
-DialogBase* DialogManager::dialogPtr(int32_t dialogId)
+void DialogManager::onDestroyAccountManagerDialog(QObject* obj)
 {
-	m_mutex.lock();
-	if (m_mapDialog.empty())
+	if (m_accountManagerDialog == obj)
 	{
-		m_mutex.unlock();
-		return nullptr;
+		mapErase(m_accountManagerDialog);
+		m_accountManagerDialog = nullptr;
 	}
-
-	auto itDialog = m_mapDialog.find(dialogId);
-	if (itDialog != m_mapDialog.end())
-	{
-		return itDialog->second;
-	}
-	m_mutex.unlock();
-	return nullptr;
-}
-
-int32_t DialogManager::getId()
-{
-	return ++m_id;
 }

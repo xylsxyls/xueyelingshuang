@@ -54,6 +54,7 @@ enum
 class DialogBase;
 class QWindow;
 class DownloadOperateDialog;
+class AccountManagerDialog;
 /** 单一实例，用于统一管理窗口创建关闭，该类的对外接口，销毁所有窗口
 DialogManager::instance().removeAll();
 */
@@ -288,6 +289,19 @@ public:
 							  int32_t timeOut = -1,
 							  bool isCountDownVisible = false);
 
+	/** 弹出账号管理页面
+	*/
+	void popAccountManagerDialog();
+
+	/** 获取弹出账号管理页面的窗口指针
+	@return 返回弹出账号管理页面的窗口指针
+	*/
+	AccountManagerDialog* accountMannagerDialogPtr();
+
+	/** 销毁账号管理页面窗口
+	*/
+	void destroyAccountManagerDialog();
+
 	/** 设置比例（老版）
 	@param [in] dialogId 窗口ID值
 	@param [in] persent 百分比
@@ -306,6 +320,7 @@ public:
 
 	/** 弹出下载框（新版）
 	@param [out] dialogId 窗口ID值
+	@param [in] taskId 任务ID值
 	@param [in] fileName 文件名
 	@param [in] tip 提示内容
 	@param [in] parent 父窗口指针
@@ -356,16 +371,16 @@ public:
 	@param [in] base 窗口指针
 	@return 返回窗口ID
 	*/
-	int32_t DialogId(DialogBase* base);
+	int32_t dialogId(DialogShow* base);
 
 Q_SIGNALS:
 	//以下6个信号是给新版下载框用的
-	void changeToBack(int32_t dialogId);
-	void downloadAgain(int32_t dialogId);
-	void cancelDownload(int32_t dialogId);
-	void useOtherDownload(int32_t dialogId);
-	void copyDownloadAddr(int32_t dialogId);
-	void copyPath(int32_t dialogId);
+	void changeToBack(qint32 dialogId);
+	void downloadAgain(qint32 dialogId);
+	void cancelDownload(qint32 dialogId);
+	void useOtherDownload(qint32 dialogId);
+	void copyDownloadAddr(qint32 dialogId, const QString& addr);
+	void copyPath(qint32 dialogId, const QString& path);
 
 protected:
 	DialogManager();
@@ -398,9 +413,20 @@ private:
 	*/
 	int32_t getId();
 
+	bool mapIsEmpty();
+	DialogBase* mapFind(int32_t dialogId);
+	int32_t mapFind(DialogBase* base);
+	void mapErase(DialogBase* base);
+	void mapErase(int32_t dialogId);
+	void mapInsert(int32_t dialogId, DialogBase* base);
+
+	void onDestroyAccountManagerDialog(QObject* obj);
+
 private:
 	std::map<int32_t, DialogBase*> m_mapDialog;
 	int32_t m_id;
 	//该锁用于限制多线程操作下载框
 	QMutex m_mutex;
+
+	AccountManagerDialog* m_accountManagerDialog;
 };

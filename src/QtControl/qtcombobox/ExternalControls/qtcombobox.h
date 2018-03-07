@@ -28,8 +28,8 @@ private slots:
 	void onDownloadAgain(int32_t dialogId);
 	void onCancelDownload(int32_t dialogId);
 	void onUseOtherDownload(int32_t dialogId);
-	void onCopyDownloadAddr(int32_t dialogId);
-	void onCopyPath(int32_t dialogId);
+	void onCopyDownloadAddr(int32_t dialogId, const QString& addr);
+	void onCopyPath(int32_t dialogId, const QString& path);
 private:
 	Ui::qtcomboboxClass ui;
 	HtmlComboBox* box;

@@ -3,7 +3,7 @@
 
 /** Ñ¯ÎÊµ¯³ö¿ò
 */
-class AskDialog : protected DialogShow
+class AskDialog : public DialogShow
 {
 	Q_OBJECT
 public:
@@ -38,7 +38,7 @@ private:
 			  const QString& ignoreText,
 			  int32_t ignoreDone);
 
-private slots:
+public slots:
 	void askAccept();
 
 private:

@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_DownloadOperateDialog_t {
-    QByteArrayData data[26];
-    char stringdata0[372];
+    QByteArrayData data[31];
+    char stringdata0[407];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -39,31 +39,37 @@ QT_MOC_LITERAL(6, 77, 14), // "persentChanged"
 QT_MOC_LITERAL(7, 92, 7), // "persent"
 QT_MOC_LITERAL(8, 100, 16), // "downloadComplete"
 QT_MOC_LITERAL(9, 117, 13), // "downloadSpeed"
-QT_MOC_LITERAL(10, 131, 10), // "downloaded"
-QT_MOC_LITERAL(11, 142, 12), // "downloadTime"
-QT_MOC_LITERAL(12, 155, 12), // "changeToBack"
-QT_MOC_LITERAL(13, 168, 13), // "downloadAgain"
-QT_MOC_LITERAL(14, 182, 14), // "cancelDownload"
-QT_MOC_LITERAL(15, 197, 16), // "useOtherDownload"
-QT_MOC_LITERAL(16, 214, 16), // "copyDownloadAddr"
-QT_MOC_LITERAL(17, 231, 8), // "copyPath"
-QT_MOC_LITERAL(18, 240, 19), // "onChangeErrorStatus"
-QT_MOC_LITERAL(19, 260, 20), // "onChangeNormalStatus"
-QT_MOC_LITERAL(20, 281, 14), // "downloadAccept"
-QT_MOC_LITERAL(21, 296, 9), // "onChanged"
-QT_MOC_LITERAL(22, 306, 16), // "onCancelDownload"
-QT_MOC_LITERAL(23, 323, 18), // "onUseOtherDownload"
-QT_MOC_LITERAL(24, 342, 18), // "onCopyDownloadAddr"
-QT_MOC_LITERAL(25, 361, 10) // "onCopyPath"
+QT_MOC_LITERAL(10, 131, 5), // "speed"
+QT_MOC_LITERAL(11, 137, 10), // "downloaded"
+QT_MOC_LITERAL(12, 148, 13), // "hasDownloaded"
+QT_MOC_LITERAL(13, 162, 12), // "downloadTime"
+QT_MOC_LITERAL(14, 175, 4), // "time"
+QT_MOC_LITERAL(15, 180, 12), // "changeToBack"
+QT_MOC_LITERAL(16, 193, 13), // "downloadAgain"
+QT_MOC_LITERAL(17, 207, 14), // "cancelDownload"
+QT_MOC_LITERAL(18, 222, 16), // "useOtherDownload"
+QT_MOC_LITERAL(19, 239, 16), // "copyDownloadAddr"
+QT_MOC_LITERAL(20, 256, 4), // "addr"
+QT_MOC_LITERAL(21, 261, 8), // "copyPath"
+QT_MOC_LITERAL(22, 270, 4), // "path"
+QT_MOC_LITERAL(23, 275, 19), // "onChangeErrorStatus"
+QT_MOC_LITERAL(24, 295, 20), // "onChangeNormalStatus"
+QT_MOC_LITERAL(25, 316, 14), // "downloadAccept"
+QT_MOC_LITERAL(26, 331, 9), // "onChanged"
+QT_MOC_LITERAL(27, 341, 16), // "onCancelDownload"
+QT_MOC_LITERAL(28, 358, 18), // "onUseOtherDownload"
+QT_MOC_LITERAL(29, 377, 18), // "onCopyDownloadAddr"
+QT_MOC_LITERAL(30, 396, 10) // "onCopyPath"
 
     },
     "DownloadOperateDialog\0changeErrorStatus\0"
     "\0changeNormalStatus\0rateChanged\0rate\0"
     "persentChanged\0persent\0downloadComplete\0"
-    "downloadSpeed\0downloaded\0downloadTime\0"
+    "downloadSpeed\0speed\0downloaded\0"
+    "hasDownloaded\0downloadTime\0time\0"
     "changeToBack\0downloadAgain\0cancelDownload\0"
     "useOtherDownload\0copyDownloadAddr\0"
-    "copyPath\0onChangeErrorStatus\0"
+    "addr\0copyPath\0path\0onChangeErrorStatus\0"
     "onChangeNormalStatus\0downloadAccept\0"
     "onChanged\0onCancelDownload\0"
     "onUseOtherDownload\0onCopyDownloadAddr\0"
@@ -91,24 +97,24 @@ static const uint qt_meta_data_DownloadOperateDialog[] = {
        6,    1,  129,    2, 0x06 /* Public */,
        8,    0,  132,    2, 0x06 /* Public */,
        9,    1,  133,    2, 0x06 /* Public */,
-      10,    1,  136,    2, 0x06 /* Public */,
-      11,    1,  139,    2, 0x06 /* Public */,
-      12,    0,  142,    2, 0x06 /* Public */,
-      13,    0,  143,    2, 0x06 /* Public */,
-      14,    0,  144,    2, 0x06 /* Public */,
-      15,    0,  145,    2, 0x06 /* Public */,
-      16,    0,  146,    2, 0x06 /* Public */,
-      17,    0,  147,    2, 0x06 /* Public */,
+      11,    1,  136,    2, 0x06 /* Public */,
+      13,    1,  139,    2, 0x06 /* Public */,
+      15,    0,  142,    2, 0x06 /* Public */,
+      16,    0,  143,    2, 0x06 /* Public */,
+      17,    0,  144,    2, 0x06 /* Public */,
+      18,    0,  145,    2, 0x06 /* Public */,
+      19,    1,  146,    2, 0x06 /* Public */,
+      21,    1,  149,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-      18,    0,  148,    2, 0x0a /* Public */,
-      19,    0,  149,    2, 0x0a /* Public */,
-      20,    0,  150,    2, 0x08 /* Private */,
-      21,    0,  151,    2, 0x08 /* Private */,
-      22,    0,  152,    2, 0x08 /* Private */,
-      23,    0,  153,    2, 0x08 /* Private */,
-      24,    0,  154,    2, 0x08 /* Private */,
-      25,    0,  155,    2, 0x08 /* Private */,
+      23,    0,  152,    2, 0x0a /* Public */,
+      24,    0,  153,    2, 0x0a /* Public */,
+      25,    0,  154,    2, 0x08 /* Private */,
+      26,    0,  155,    2, 0x08 /* Private */,
+      27,    0,  156,    2, 0x08 /* Private */,
+      28,    0,  157,    2, 0x08 /* Private */,
+      29,    0,  158,    2, 0x08 /* Private */,
+      30,    0,  159,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void,
@@ -116,15 +122,15 @@ static const uint qt_meta_data_DownloadOperateDialog[] = {
     QMetaType::Void, QMetaType::Int,    5,
     QMetaType::Void, QMetaType::QString,    7,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QString,    7,
-    QMetaType::Void, QMetaType::QString,    7,
-    QMetaType::Void, QMetaType::QString,    7,
+    QMetaType::Void, QMetaType::QString,   10,
+    QMetaType::Void, QMetaType::QString,   12,
+    QMetaType::Void, QMetaType::QString,   14,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void,
-    QMetaType::Void,
+    QMetaType::Void, QMetaType::QString,   20,
+    QMetaType::Void, QMetaType::QString,   22,
 
  // slots: parameters
     QMetaType::Void,
@@ -157,8 +163,8 @@ void DownloadOperateDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c
         case 9: _t->downloadAgain(); break;
         case 10: _t->cancelDownload(); break;
         case 11: _t->useOtherDownload(); break;
-        case 12: _t->copyDownloadAddr(); break;
-        case 13: _t->copyPath(); break;
+        case 12: _t->copyDownloadAddr((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 13: _t->copyPath((*reinterpret_cast< const QString(*)>(_a[1]))); break;
         case 14: _t->onChangeErrorStatus(); break;
         case 15: _t->onChangeNormalStatus(); break;
         case 16: _t->downloadAccept(); break;
@@ -245,13 +251,13 @@ void DownloadOperateDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c
             }
         }
         {
-            typedef void (DownloadOperateDialog::*_t)();
+            typedef void (DownloadOperateDialog::*_t)(const QString & );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::copyDownloadAddr)) {
                 *result = 12;
             }
         }
         {
-            typedef void (DownloadOperateDialog::*_t)();
+            typedef void (DownloadOperateDialog::*_t)(const QString & );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::copyPath)) {
                 *result = 13;
             }
@@ -373,14 +379,16 @@ void DownloadOperateDialog::useOtherDownload()
 }
 
 // SIGNAL 12
-void DownloadOperateDialog::copyDownloadAddr()
+void DownloadOperateDialog::copyDownloadAddr(const QString & _t1)
 {
-    QMetaObject::activate(this, &staticMetaObject, 12, Q_NULLPTR);
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 12, _a);
 }
 
 // SIGNAL 13
-void DownloadOperateDialog::copyPath()
+void DownloadOperateDialog::copyPath(const QString & _t1)
 {
-    QMetaObject::activate(this, &staticMetaObject, 13, Q_NULLPTR);
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 13, _a);
 }
 QT_END_MOC_NAMESPACE

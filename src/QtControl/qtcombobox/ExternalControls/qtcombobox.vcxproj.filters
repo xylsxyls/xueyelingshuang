@@ -201,6 +201,15 @@
     <Filter Include="QtDialog\Modal\DownloadOperateDialog">
       <UniqueIdentifier>{b0b6e834-c99e-4186-96ba-a826257f3097}</UniqueIdentifier>
     </Filter>
+    <Filter Include="QtDialog\Modal\BoxDialogBase">
+      <UniqueIdentifier>{95106191-b067-4af9-b24a-e56c42ffcd1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\BoxDialogBase\AccountDialog">
+      <UniqueIdentifier>{e417b961-331c-479d-8dd2-1b8992b12552}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\BoxDialogBase\AccountManagerDialog">
+      <UniqueIdentifier>{fe5f6ccf-eb48-42e2-93b0-bfa7b84c0556}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -548,6 +557,15 @@
     <ClCompile Include="GeneratedFiles\Release\moc_DownloadOperateDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="BoxDialogBase.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountDialog.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase\AccountDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountManagerDialog.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase\AccountManagerDialog</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -713,6 +731,15 @@
     </ClInclude>
     <ClInclude Include="UserWidget.h">
       <Filter>FriendDialog\UserWidget</Filter>
+    </ClInclude>
+    <ClInclude Include="BoxDialogBase.h">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AccountDialog.h">
+      <Filter>QtDialog\Modal\BoxDialogBase\AccountDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="AccountManagerDialog.h">
+      <Filter>QtDialog\Modal\BoxDialogBase\AccountManagerDialog</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

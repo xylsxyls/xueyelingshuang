@@ -4,12 +4,13 @@
 class ProgressBar;
 /** 下载框
 */
-class DownloadOperateDialog : protected DialogShow
+class DownloadOperateDialog : public DialogShow
 {
 	Q_OBJECT
 public:
 	/** 弹出提示框
 	@param [out] dialogId 窗口ID值
+	@param [in] taskId 任务ID值
 	@param [in] title 标题
 	@param [in] fileName 文件名
 	@param [in] tip 提示内容
@@ -81,15 +82,15 @@ Q_SIGNALS:
 	void rateChanged(int rate);
 	void persentChanged(const QString& persent);
 	void downloadComplete();
-	void downloadSpeed(const QString& persent);
-	void downloaded(const QString& persent);
-	void downloadTime(const QString& persent);
+	void downloadSpeed(const QString& speed);
+	void downloaded(const QString& hasDownloaded);
+	void downloadTime(const QString& time);
 	void changeToBack();
 	void downloadAgain();
 	void cancelDownload();
 	void useOtherDownload();
-	void copyDownloadAddr();
-	void copyPath();
+	void copyDownloadAddr(const QString& addr);
+	void copyPath(const QString& path);
 
 private:
 	DownloadOperateDialog(int32_t taskId,

@@ -4,7 +4,7 @@
 class QWebView;
 /** œ‘ æÃ· æøÚ
 */
-class LoginShowDialog : protected DialogShow
+class LoginShowDialog : public DialogShow
 {
 	Q_OBJECT
 public:

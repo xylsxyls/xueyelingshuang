@@ -17,7 +17,7 @@ void AskShowDialog::showAskDialog(int32_t& dialogId,
 {
 	AskShowDialog* dlg = new AskShowDialog(userType, title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
 	dlg->show(dialogId, timeOut, isCountDownVisible);
-	QObject::connect(dlg, &AskShowDialog::dialogDone, &(NotifyDialogManager::instance()), &NotifyDialogManager::onDialogDone);
+	QObject::connect(dlg, &DialogShow::dialogDone, &(NotifyDialogManager::instance()), &NotifyDialogManager::onDialogDone);
 	return;
 }
 

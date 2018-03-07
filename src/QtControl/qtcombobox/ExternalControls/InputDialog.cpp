@@ -50,7 +50,7 @@ m_editText(editText)
 
 	m_accept->installEventFilter(this);
 
-	QObject::connect(this, SIGNAL(keyboardAccept()), this, SLOT(inputAccept()));
+	QObject::connect(this, &DialogShow::keyboardAccept, this, &InputDialog::inputAccept);
 }
 
 void InputDialog::done(int result)

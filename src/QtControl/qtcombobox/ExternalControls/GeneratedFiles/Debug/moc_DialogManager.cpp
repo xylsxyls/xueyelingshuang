@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_DialogManager_t {
-    QByteArrayData data[10];
-    char stringdata0[117];
+    QByteArrayData data[11];
+    char stringdata0[119];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -32,19 +32,20 @@ static const qt_meta_stringdata_DialogManager_t qt_meta_stringdata_DialogManager
 QT_MOC_LITERAL(0, 0, 13), // "DialogManager"
 QT_MOC_LITERAL(1, 14, 12), // "changeToBack"
 QT_MOC_LITERAL(2, 27, 0), // ""
-QT_MOC_LITERAL(3, 28, 7), // "int32_t"
-QT_MOC_LITERAL(4, 36, 8), // "dialogId"
-QT_MOC_LITERAL(5, 45, 13), // "downloadAgain"
-QT_MOC_LITERAL(6, 59, 14), // "cancelDownload"
-QT_MOC_LITERAL(7, 74, 16), // "useOtherDownload"
-QT_MOC_LITERAL(8, 91, 16), // "copyDownloadAddr"
-QT_MOC_LITERAL(9, 108, 8) // "copyPath"
+QT_MOC_LITERAL(3, 28, 8), // "dialogId"
+QT_MOC_LITERAL(4, 37, 13), // "downloadAgain"
+QT_MOC_LITERAL(5, 51, 14), // "cancelDownload"
+QT_MOC_LITERAL(6, 66, 16), // "useOtherDownload"
+QT_MOC_LITERAL(7, 83, 16), // "copyDownloadAddr"
+QT_MOC_LITERAL(8, 100, 4), // "addr"
+QT_MOC_LITERAL(9, 105, 8), // "copyPath"
+QT_MOC_LITERAL(10, 114, 4) // "path"
 
     },
-    "DialogManager\0changeToBack\0\0int32_t\0"
-    "dialogId\0downloadAgain\0cancelDownload\0"
+    "DialogManager\0changeToBack\0\0dialogId\0"
+    "downloadAgain\0cancelDownload\0"
     "useOtherDownload\0copyDownloadAddr\0"
-    "copyPath"
+    "addr\0copyPath\0path"
 };
 #undef QT_MOC_LITERAL
 
@@ -63,19 +64,19 @@ static const uint qt_meta_data_DialogManager[] = {
 
  // signals: name, argc, parameters, tag, flags
        1,    1,   44,    2, 0x06 /* Public */,
-       5,    1,   47,    2, 0x06 /* Public */,
-       6,    1,   50,    2, 0x06 /* Public */,
-       7,    1,   53,    2, 0x06 /* Public */,
-       8,    1,   56,    2, 0x06 /* Public */,
-       9,    1,   59,    2, 0x06 /* Public */,
+       4,    1,   47,    2, 0x06 /* Public */,
+       5,    1,   50,    2, 0x06 /* Public */,
+       6,    1,   53,    2, 0x06 /* Public */,
+       7,    2,   56,    2, 0x06 /* Public */,
+       9,    2,   61,    2, 0x06 /* Public */,
 
  // signals: parameters
-    QMetaType::Void, 0x80000000 | 3,    4,
-    QMetaType::Void, 0x80000000 | 3,    4,
-    QMetaType::Void, 0x80000000 | 3,    4,
-    QMetaType::Void, 0x80000000 | 3,    4,
-    QMetaType::Void, 0x80000000 | 3,    4,
-    QMetaType::Void, 0x80000000 | 3,    4,
+    QMetaType::Void, QMetaType::Int,    3,
+    QMetaType::Void, QMetaType::Int,    3,
+    QMetaType::Void, QMetaType::Int,    3,
+    QMetaType::Void, QMetaType::Int,    3,
+    QMetaType::Void, QMetaType::Int, QMetaType::QString,    3,    8,
+    QMetaType::Void, QMetaType::Int, QMetaType::QString,    3,   10,
 
        0        // eod
 };
@@ -86,49 +87,49 @@ void DialogManager::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         DialogManager *_t = static_cast<DialogManager *>(_o);
         Q_UNUSED(_t)
         switch (_id) {
-        case 0: _t->changeToBack((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
-        case 1: _t->downloadAgain((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
-        case 2: _t->cancelDownload((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
-        case 3: _t->useOtherDownload((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
-        case 4: _t->copyDownloadAddr((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
-        case 5: _t->copyPath((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
+        case 0: _t->changeToBack((*reinterpret_cast< qint32(*)>(_a[1]))); break;
+        case 1: _t->downloadAgain((*reinterpret_cast< qint32(*)>(_a[1]))); break;
+        case 2: _t->cancelDownload((*reinterpret_cast< qint32(*)>(_a[1]))); break;
+        case 3: _t->useOtherDownload((*reinterpret_cast< qint32(*)>(_a[1]))); break;
+        case 4: _t->copyDownloadAddr((*reinterpret_cast< qint32(*)>(_a[1])),(*reinterpret_cast< const QString(*)>(_a[2]))); break;
+        case 5: _t->copyPath((*reinterpret_cast< qint32(*)>(_a[1])),(*reinterpret_cast< const QString(*)>(_a[2]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         void **func = reinterpret_cast<void **>(_a[1]);
         {
-            typedef void (DialogManager::*_t)(int32_t );
+            typedef void (DialogManager::*_t)(qint32 );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DialogManager::changeToBack)) {
                 *result = 0;
             }
         }
         {
-            typedef void (DialogManager::*_t)(int32_t );
+            typedef void (DialogManager::*_t)(qint32 );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DialogManager::downloadAgain)) {
                 *result = 1;
             }
         }
         {
-            typedef void (DialogManager::*_t)(int32_t );
+            typedef void (DialogManager::*_t)(qint32 );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DialogManager::cancelDownload)) {
                 *result = 2;
             }
         }
         {
-            typedef void (DialogManager::*_t)(int32_t );
+            typedef void (DialogManager::*_t)(qint32 );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DialogManager::useOtherDownload)) {
                 *result = 3;
             }
         }
         {
-            typedef void (DialogManager::*_t)(int32_t );
+            typedef void (DialogManager::*_t)(qint32 , const QString & );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DialogManager::copyDownloadAddr)) {
                 *result = 4;
             }
         }
         {
-            typedef void (DialogManager::*_t)(int32_t );
+            typedef void (DialogManager::*_t)(qint32 , const QString & );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DialogManager::copyPath)) {
                 *result = 5;
             }
@@ -173,44 +174,44 @@ int DialogManager::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void DialogManager::changeToBack(int32_t _t1)
+void DialogManager::changeToBack(qint32 _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 
 // SIGNAL 1
-void DialogManager::downloadAgain(int32_t _t1)
+void DialogManager::downloadAgain(qint32 _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 1, _a);
 }
 
 // SIGNAL 2
-void DialogManager::cancelDownload(int32_t _t1)
+void DialogManager::cancelDownload(qint32 _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 2, _a);
 }
 
 // SIGNAL 3
-void DialogManager::useOtherDownload(int32_t _t1)
+void DialogManager::useOtherDownload(qint32 _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 3, _a);
 }
 
 // SIGNAL 4
-void DialogManager::copyDownloadAddr(int32_t _t1)
+void DialogManager::copyDownloadAddr(qint32 _t1, const QString & _t2)
 {
-    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)), const_cast<void*>(reinterpret_cast<const void*>(&_t2)) };
     QMetaObject::activate(this, &staticMetaObject, 4, _a);
 }
 
 // SIGNAL 5
-void DialogManager::copyPath(int32_t _t1)
+void DialogManager::copyPath(qint32 _t1, const QString & _t2)
 {
-    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)), const_cast<void*>(reinterpret_cast<const void*>(&_t2)) };
     QMetaObject::activate(this, &staticMetaObject, 5, _a);
 }
 QT_END_MOC_NAMESPACE

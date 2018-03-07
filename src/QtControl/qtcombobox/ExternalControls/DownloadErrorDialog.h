@@ -3,7 +3,7 @@
 
 /** обть╢МнС©Р
 */
-class DownloadErrorDialog : protected DialogShow
+class DownloadErrorDialog : public DialogShow
 {
 	Q_OBJECT
 public:

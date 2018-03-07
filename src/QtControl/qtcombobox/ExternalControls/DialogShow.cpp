@@ -95,8 +95,14 @@ void DialogShow::initForShow(int32_t dialogWidth, int32_t dialogHeight, const st
 
 	//m_beginRect.setRect(screenRect.right - width(), screenRect.bottom - (rect.bottom - rect.top) - height(), width(), height());
 	//m_endRect.setRect(screenRect.right - width(), screenRect.bottom, width(), height());
-	QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::timeUpdate);
-	QObject::connect(&m_animation, &QPropertyAnimation::finished, this, &DialogShow::end);
+	QObject::connect(this, &DialogBase::timeRest, [this](int32_t second)
+	{
+		this->timeUpdate(second);
+	});
+	QObject::connect(&m_animation, &QPropertyAnimation::finished, [this]()
+	{
+		this->end();
+	});
 	
 }
 
@@ -274,10 +280,10 @@ void DialogShow::done(int32_t result)
 			DialogBase::done(m_result);
 		}
 
-		int32_t dialogId = NotifyDialogManager::instance().DialogId(this);
+		int32_t dialogId = NotifyDialogManager::instance().dialogId(this);
 		if (dialogId != -1)
 		{
-			emit dialogDone(NotifyDialogManager::instance().DialogId(this), m_result, m_userType);
+			emit dialogDone(NotifyDialogManager::instance().dialogId(this), m_result, m_userType);
 		}
 		NotifyDialogManager::instance().removeDialog(this);
 	}

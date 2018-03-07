@@ -4,7 +4,7 @@
 class ProgressBar;
 /** обть©Р
 */
-class DownloadDialog : protected DialogShow
+class DownloadDialog : public DialogShow
 {
 	Q_OBJECT
 public:
@@ -71,7 +71,7 @@ private:
 	Label* m_file;
 	Label* m_persent;
 	Label* m_downloadSlow;
-	ProgressBar *progressBar;
+	ProgressBar *m_progressBar;
 	COriginalButton* m_hand;
 
 private:

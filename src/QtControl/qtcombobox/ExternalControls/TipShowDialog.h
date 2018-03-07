@@ -3,7 +3,7 @@
 
 /** œ‘ æÃ· æøÚ
 */
-class TipShowDialog : protected DialogShow
+class TipShowDialog : public DialogShow
 {
 	Q_OBJECT
 public:
