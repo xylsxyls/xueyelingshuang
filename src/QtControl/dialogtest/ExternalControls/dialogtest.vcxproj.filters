@@ -1,0 +1,552 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;cxx;c;def</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>moc;h;cpp</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug">
+      <UniqueIdentifier>{858fd352-9fdb-4c4f-a65b-fce5f132c428}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release">
+      <UniqueIdentifier>{753d657c-628b-4d94-959f-ed019e05a052}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="controls">
+      <UniqueIdentifier>{36318b8f-f7ca-4857-959c-f5f731a3f5d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="controls\ExternalControls">
+      <UniqueIdentifier>{ee8355f0-f7ce-4ce3-9005-3f5cf9e31c04}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dialogtest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_dialogtest.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_dialogtest.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_dialogtest.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\AccountDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\AccountManagerDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\AskDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\AskShowDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\BoxDialogBase.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\CheckBox.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CheckBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\CollapseMenu.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CollapseMenu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CollapseMenu.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\ComboBox.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\CPasswordInputBox.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\CStringManager.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\DialogBase.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogBase.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogBase.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\DialogManager.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\DialogShow.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogShow.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogShow.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\DownloadDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\DownloadErrorDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadErrorDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadErrorDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\DownloadOperateDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\HtmlComboBox.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\HtmlComboBoxDelegate.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\HtmlComboBoxStyle.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\IdItemComboBox.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_IdItemComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_IdItemComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\InputDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_InputDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_InputDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\Label.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Label.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Label.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\LineEdit.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LineEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LineEdit.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\ListWidget.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ListWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ListWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\ListWidgetIdItem.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\LoginShowDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\Menu.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Menu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Menu.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\MenuCustomStyle.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\NoFocusFrameDelegate.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\NotifyDialogManager.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\PointLabel.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PointLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PointLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\ProgressBar.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\QssHelper.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\QssString.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\RadioButton.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RadioButton.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_RadioButton.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\TipDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\TipShowDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\TreeWidget.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TreeWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TreeWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\ExternalControls\WaitDialog.cpp">
+      <Filter>controls\ExternalControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\CGeneralStyle.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\qtcombobox\COriginalButton.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="dialogtest.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="dialogtest.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="dialogtest.qrc">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GeneratedFiles\ui_dialogtest.h">
+      <Filter>Generated Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\AskDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\AskShowDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\CheckBox.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\CollapseMenu.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\ComboBox.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\CPasswordInputBox.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\DialogBase.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\DialogManager.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\DialogShow.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\DownloadDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\DownloadErrorDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\DownloadOperateDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\HtmlComboBox.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\IdItemComboBox.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\InputDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\Label.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\LineEdit.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\ListWidget.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\LoginShowDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\Menu.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\MenuCustomStyle.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\NoFocusFrameDelegate.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\NotifyDialogManager.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\PointLabel.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\ProgressBar.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\RadioButton.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\TipDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\TipShowDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\TreeWidget.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\ExternalControls\WaitDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\qtcombobox\CGeneralStyle.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\AccountDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\AccountManagerDialog.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\BoxDialogBase.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\ControlBackground.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\ControlBase.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\ControlBorder.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\ControlFont.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\ControlItem.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\ControlSelf.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\ControlShow.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\CStringManager.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\HtmlComboBoxDelegate.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\HtmlComboBoxStyle.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\ListWidgetIdItem.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\QssHelper.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\ExternalControls\QssString.h">
+      <Filter>controls\ExternalControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\qtcombobox\COriginalButton.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\qtcombobox\ExternalControls\ControlBackground.inl">
+      <Filter>controls\ExternalControls</Filter>
+    </None>
+    <None Include="..\..\qtcombobox\ExternalControls\ControlBase.inl">
+      <Filter>controls\ExternalControls</Filter>
+    </None>
+    <None Include="..\..\qtcombobox\ExternalControls\ControlBorder.inl">
+      <Filter>controls\ExternalControls</Filter>
+    </None>
+    <None Include="..\..\qtcombobox\ExternalControls\ControlFont.inl">
+      <Filter>controls\ExternalControls</Filter>
+    </None>
+    <None Include="..\..\qtcombobox\ExternalControls\ControlItem.inl">
+      <Filter>controls\ExternalControls</Filter>
+    </None>
+    <None Include="..\..\qtcombobox\ExternalControls\ControlSelf.inl">
+      <Filter>controls\ExternalControls</Filter>
+    </None>
+    <None Include="..\..\qtcombobox\ExternalControls\ControlShow.inl">
+      <Filter>controls\ExternalControls</Filter>
+    </None>
+  </ItemGroup>
+</Project>
