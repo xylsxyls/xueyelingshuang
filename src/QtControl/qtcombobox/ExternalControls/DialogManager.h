@@ -291,7 +291,7 @@ public:
 
 	/** 弹出账号管理页面
 	*/
-	void popAccountManagerDialog();
+	void popAccountManagerDialog(QWindow* parent = nullptr);
 
 	/** 获取弹出账号管理页面的窗口指针
 	@return 返回弹出账号管理页面的窗口指针
@@ -321,31 +321,35 @@ public:
 	/** 弹出下载框（新版）
 	@param [out] dialogId 窗口ID值
 	@param [in] taskId 任务ID值
-	@param [in] fileName 文件名
-	@param [in] tip 提示内容
-	@param [in] parent 父窗口指针
 	@param [in] title 标题
-	@param [in] buttonText 按钮内容
-	@param [in] done 按钮按下后的返回值
-	@param [in] timeOut 超时自动关闭，单位秒
-	@param [in] isCountDownVisible 超时自动关闭提示是否可见
+	@param [in] fileName 文件名
+	@param [in] downloadAddr 下载地址
+	@param [in] path 本地地址
+	@param [in] parent 父窗口指针
 	@return 关闭窗口时给的返回值
 	*/
 	int32_t popDownloadOperateDialog(int32_t& dialogId,
+									 QWindow* parent,
 									 int32_t taskId,
 									 const QString& title,
 									 const QString& fileName,
+									 const QString& downloadSpeed,
+									 const QString& hasDownloaded,
+									 const QString& downloadTime,
+									 int32_t rate,
+									 bool backEnable,
 									 const QString& downloadAddr = "",
-									 const QString& path = "",
-									 QWindow* parent = nullptr);
+									 const QString& path = "");
 
 	/** 获取下载框指针（新版）
 	@param [in] dialogId 窗口ID
+	@return 返回下载框指针
 	*/
 	DownloadOperateDialog* downloadOperatePtr(int32_t dialogId);
 
 	/** 获取下载框指针（新版）
 	@param [in] taskId 任务ID
+	@return 返回下载框指针
 	*/
 	DownloadOperateDialog* downloadOperateTaskPtr(int32_t taskId);
 
@@ -373,14 +377,26 @@ public:
 	*/
 	int32_t dialogId(DialogShow* base);
 
+	/** 根据下载框的指针找到任务ID
+	@param [in] base 窗口指针
+	@return 返回任务ID
+	*/
+	int32_t taskId(DialogShow* base);
+
 Q_SIGNALS:
-	//以下6个信号是给新版下载框用的
-	void changeToBack(qint32 dialogId);
-	void downloadAgain(qint32 dialogId);
-	void cancelDownload(qint32 dialogId);
-	void useOtherDownload(qint32 dialogId);
-	void copyDownloadAddr(qint32 dialogId, const QString& addr);
-	void copyPath(qint32 dialogId, const QString& path);
+	//以下6个新号给新版下载框用
+	//转到后台下载
+	void changeToBack(qint32 taskId);
+	//重试
+	void downloadAgain(qint32 taskId);
+	//取消下载
+	void cancelDownload(qint32 taskId);
+	//使用其他下载渠道
+	void useOtherDownload(qint32 taskId);
+	//下载地址的复制按钮
+	void copyDownloadAddr(qint32 taskId, const QString& addr);
+	//本地路径的复制按钮
+	void copyPath(qint32 taskId, const QString& path);
 
 protected:
 	DialogManager();
@@ -416,6 +432,7 @@ private:
 	bool mapIsEmpty();
 	DialogBase* mapFind(int32_t dialogId);
 	int32_t mapFind(DialogBase* base);
+	int32_t mapFindTaskId(DialogBase* base);
 	void mapErase(DialogBase* base);
 	void mapErase(int32_t dialogId);
 	void mapInsert(int32_t dialogId, DialogBase* base);

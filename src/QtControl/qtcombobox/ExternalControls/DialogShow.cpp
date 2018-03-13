@@ -19,7 +19,8 @@ m_isExec(false),
 m_animation(this, "geometry"),
 m_result(-2),
 m_userType(-1),
-m_inExit(false)
+m_inExit(false),
+m_titleHeight(40)
 {
 	
 }
@@ -138,6 +139,7 @@ void DialogShow::paintEvent(QPaintEvent* eve)
 		if (m_highLight)
 		{
 			painter.setPen(QColor("#373e60"));
+			raise();
 		}
 		else
 		{
@@ -153,7 +155,7 @@ long DialogShow::onNcHitTest(QPoint pt)
 {
 	QRect rcClient = this->geometry();
 
-	if ((pt.y() - rcClient.top()) <= 40 && m_isExec)
+	if ((pt.y() - rcClient.top()) <= m_titleHeight && m_isExec)
 	{
 		bool hasChild = false;
 		for (int i = 0; i < this->children().count(); i++)
@@ -294,6 +296,16 @@ void DialogShow::done(int32_t result)
 	}
 }
 
+void DialogShow::setMoveTitleHeight(int32_t titleHeight)
+{
+	m_titleHeight = titleHeight;
+}
+
+int32_t DialogShow::moveTitleHeight()
+{
+	return m_titleHeight;
+}
+
 void DialogShow::end()
 {
 	//判断-2是防止弹出的结束
@@ -322,8 +334,9 @@ bool DialogShow::eventFilter(QObject* tar, QEvent* eve)
 		auto keyEvent = (QKeyEvent*)eve;
 		if (keyEvent->key() == Qt::Key_Space || keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
 		{
-			emit keyboardAccept();
+			emit keyboardAccept(tar, (Qt::Key)keyEvent->key());
 		}
 	}
+	
 	return res;
 }

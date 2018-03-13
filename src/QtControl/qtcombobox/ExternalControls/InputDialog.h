@@ -44,7 +44,7 @@ private:
 	void done(int result);
 
 private slots:
-	void inputAccept();
+	void inputAccept(QObject* tar, Qt::Key key);
 
 private:
 	Label* m_editTip;

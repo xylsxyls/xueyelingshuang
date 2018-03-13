@@ -35,6 +35,16 @@ public:
 	*/
 	void done(int32_t result);
 
+	/** 设置拖动标题高度
+	@param [in] titleHeight 拖动高度
+	*/
+	void setMoveTitleHeight(int32_t titleHeight);
+
+	/** 获取拖动标题高度
+	@return 返回拖动标题高度
+	*/
+	int32_t moveTitleHeight();
+
 Q_SIGNALS:
 	/** 当通知框窗口关闭时发送信号，在关闭动画执行之前发送信号
 	@param [in] dialogId 窗口ID
@@ -45,7 +55,7 @@ Q_SIGNALS:
 
 	/** 按下回车和空格都表示accept
 	*/
-	void keyboardAccept();
+	void keyboardAccept(QObject* tar, Qt::Key key);
 
 protected:
 	void paintEvent(QPaintEvent* eve);
@@ -58,13 +68,13 @@ protected:
 	bool nativeEvent(const QByteArray& eventType, void* message, long* result);
 	void showEvent(QShowEvent* eve);
 	void end();
+	bool eventFilter(QObject* tar, QEvent* eve);
 
 private slots:
 	void timeUpdate(int32_t timeOut);
 
 private:
 	void ncActiveChanged(int32_t wParam);
-	bool eventFilter(QObject* tar, QEvent* eve);
 	
 protected:
 	COriginalButton* m_exit;
@@ -82,6 +92,7 @@ private:
 	QPoint m_point;
 	bool m_cancelEscAltF4;
 	bool m_isExec;
+	int32_t m_titleHeight;
 	QPropertyAnimation m_animation;
 	int32_t m_result;
 	QRect m_beginRect;

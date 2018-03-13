@@ -132,7 +132,7 @@ void DownloadDialog::showDownloadErrorDialog()
 	//reject();
 }
 
-void DownloadDialog::downloadAccept()
+void DownloadDialog::downloadAccept(QObject* tar, Qt::Key key)
 {
 	m_hand->setFocus();
 	m_hand->click();

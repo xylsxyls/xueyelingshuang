@@ -20,7 +20,7 @@
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_DialogManager_t {
     QByteArrayData data[11];
-    char stringdata0[119];
+    char stringdata0[117];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -32,17 +32,17 @@ static const qt_meta_stringdata_DialogManager_t qt_meta_stringdata_DialogManager
 QT_MOC_LITERAL(0, 0, 13), // "DialogManager"
 QT_MOC_LITERAL(1, 14, 12), // "changeToBack"
 QT_MOC_LITERAL(2, 27, 0), // ""
-QT_MOC_LITERAL(3, 28, 8), // "dialogId"
-QT_MOC_LITERAL(4, 37, 13), // "downloadAgain"
-QT_MOC_LITERAL(5, 51, 14), // "cancelDownload"
-QT_MOC_LITERAL(6, 66, 16), // "useOtherDownload"
-QT_MOC_LITERAL(7, 83, 16), // "copyDownloadAddr"
-QT_MOC_LITERAL(8, 100, 4), // "addr"
-QT_MOC_LITERAL(9, 105, 8), // "copyPath"
-QT_MOC_LITERAL(10, 114, 4) // "path"
+QT_MOC_LITERAL(3, 28, 6), // "taskId"
+QT_MOC_LITERAL(4, 35, 13), // "downloadAgain"
+QT_MOC_LITERAL(5, 49, 14), // "cancelDownload"
+QT_MOC_LITERAL(6, 64, 16), // "useOtherDownload"
+QT_MOC_LITERAL(7, 81, 16), // "copyDownloadAddr"
+QT_MOC_LITERAL(8, 98, 4), // "addr"
+QT_MOC_LITERAL(9, 103, 8), // "copyPath"
+QT_MOC_LITERAL(10, 112, 4) // "path"
 
     },
-    "DialogManager\0changeToBack\0\0dialogId\0"
+    "DialogManager\0changeToBack\0\0taskId\0"
     "downloadAgain\0cancelDownload\0"
     "useOtherDownload\0copyDownloadAddr\0"
     "addr\0copyPath\0path"

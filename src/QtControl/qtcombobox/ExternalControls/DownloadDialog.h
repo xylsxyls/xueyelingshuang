@@ -64,7 +64,7 @@ private:
 	~DownloadDialog();
 
 private slots:
-	void downloadAccept();
+	void downloadAccept(QObject* tar, Qt::Key key);
 
 private:
 	Label* m_tip;

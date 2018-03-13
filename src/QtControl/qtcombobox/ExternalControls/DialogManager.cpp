@@ -196,13 +196,16 @@ int32_t DialogManager::popDownloadDialog(int32_t& dialogId,
 	return DownloadDialog::popDownloadDialog(dialogId, title, fileName, tip, buttonText, done, parent, timeOut, isCountDownVisible);
 }
 
-void DialogManager::popAccountManagerDialog()
+void DialogManager::popAccountManagerDialog(QWindow* parent)
 {
 	if (m_accountManagerDialog == nullptr)
 	{
 		m_accountManagerDialog = new AccountManagerDialog;
 		QObject::connect(m_accountManagerDialog, &AccountManagerDialog::destroyed, this, &DialogManager::onDestroyAccountManagerDialog);
 	}
+
+	m_accountManagerDialog->setParentWindow(parent);
+
 	int32_t dialogId = 0;
 	if (m_accountManagerDialog->isVisible())
 	{
@@ -222,14 +225,30 @@ void DialogManager::destroyAccountManagerDialog()
 }
 
 int32_t DialogManager::popDownloadOperateDialog(int32_t& dialogId,
+												QWindow* parent,
 												int32_t taskId,
 												const QString& title,
 												const QString& fileName,
+												const QString& downloadSpeed,
+												const QString& hasDownloaded,
+												const QString& downloadTime,
+												int32_t rate,
+												bool backEnable,
 												const QString& downloadAddr,
-												const QString& path,
-												QWindow* parent)
+												const QString& path)
 {
-	return DownloadOperateDialog::popDownloadOperateDialog(dialogId, taskId, title, fileName, downloadAddr, path, parent);
+	return DownloadOperateDialog::popDownloadOperateDialog(dialogId,
+														   taskId,
+														   title,
+														   fileName,
+														   downloadSpeed,
+														   hasDownloaded,
+														   downloadTime,
+														   rate,
+														   backEnable,
+														   downloadAddr,
+														   path,
+														   parent);
 }
 
 void DialogManager::setDownloadRate(int32_t dialogId, int32_t persent)
@@ -345,6 +364,15 @@ int32_t DialogManager::dialogId(DialogShow* base)
 		return -1;
 	}
 	return mapFind((DialogBase*)base);
+}
+
+int32_t DialogManager::taskId(DialogShow* base)
+{
+	if (mapIsEmpty())
+	{
+		return -1;
+	}
+	return mapFindTaskId(base);
 }
 
 DownloadOperateDialog* DialogManager::downloadOperatePtr(int32_t dialogId)
@@ -469,6 +497,15 @@ int32_t DialogManager::mapFind(DialogBase* base)
 	}
 	m_mutex.unlock();
 	return dialogId;
+}
+
+int32_t DialogManager::mapFindTaskId(DialogBase* base)
+{
+	if (base->dialogEnum() == DOWNLOAD_OPERATE_DIALOG)
+	{
+		return ((DownloadOperateDialog*)base)->getTaskId();
+	}
+	return -1;
 }
 
 void DialogManager::mapErase(DialogBase* base)

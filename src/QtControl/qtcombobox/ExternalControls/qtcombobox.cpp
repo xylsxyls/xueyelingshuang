@@ -555,7 +555,7 @@ void qtcombobox::modalFriendPop()
 void qtcombobox::onTestButton()
 {
 	DownloadOperateDialog* ssdf = 0;
-	DialogManager::instance().closeDialog(DialogManager::instance().dialogId(ssdf));
+	DialogManager::instance().closeDialog(m_dialogId8);
 	DialogManager::instance().closeLastDialog();
 	return;
 	auto ptr = DialogManager::instance().downloadOperatePtr(m_dialogId8);
@@ -576,16 +576,25 @@ void qtcombobox::onTestButton()
 
 void qtcombobox::testDialog()
 {
-	int32_t dialogIdManager = 0;
-	DialogManager::instance().popAccountManagerDialog();
-	auto ptr = DialogManager::instance().accountMannagerDialogPtr();
-	ptr->popAccountDialog();
-	DialogManager::instance().destroyAccountManagerDialog();
-	return;
-	AccountDialog* sdf = new AccountDialog;
-	int32_t dialogId = 0;
-	sdf->exec(dialogId);
-	return;
+	//QDialog* dia = new QDialog;
+	//QWidget* wi = new QWidget(dia);
+	//dia->exec();
+	//
+	//int32_t dialogIdManager = 0;
+	//DialogManager::instance().popAccountManagerDialog();
+	//auto ptr = DialogManager::instance().accountMannagerDialogPtr();
+	//if (ptr)
+	//{
+	//	ptr->popAccountDialog();
+	//	ptr->popClosureDialog();
+	//}
+	//
+	//DialogManager::instance().destroyAccountManagerDialog();
+	//return;
+	//AccountDialog* sdf = new AccountDialog;
+	//int32_t dialogId = 0;
+	//sdf->exec(dialogId);
+	//return;
 	QObject::connect(&DialogManager::instance(), &DialogManager::changeToBack, this, &qtcombobox::onChangeToBack);
 	QObject::connect(&DialogManager::instance(), &DialogManager::downloadAgain, this, &qtcombobox::onDownloadAgain);
 	QObject::connect(&DialogManager::instance(), &DialogManager::cancelDownload, this, &qtcombobox::onCancelDownload);
@@ -593,12 +602,17 @@ void qtcombobox::testDialog()
 	QObject::connect(&DialogManager::instance(), &DialogManager::copyDownloadAddr, this, &qtcombobox::onCopyDownloadAddr);
 	QObject::connect(&DialogManager::instance(), &DialogManager::copyPath, this, &qtcombobox::onCopyPath);
 	DialogManager::instance().popDownloadOperateDialog(m_dialogId8,
+													   sss->windowHandle(),
 													   123,
 													   QString::fromStdWString(L"正在下载 三国雪 v1.37B+"),
 													   QString::fromStdWString(L"aaxa.txt"),
+													   "100kb/s",
+													   "11MB/14MB",
+													   "10:00:00",
+													   10,
+													   true,
 													   QString::fromStdWString(L"http://www.5211game.com"),
-													   QString::fromStdWString(L"d:/11game/zip"),
-													   sss->windowHandle());
+													   QString::fromStdWString(L"d:/11game/zip"));
 	return;
 	int32_t dialogId7 = 0;
 	NotifyDialogManager::instance().showLoginDialog(dialogId7,

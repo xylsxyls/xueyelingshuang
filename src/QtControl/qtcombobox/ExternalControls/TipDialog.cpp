@@ -37,7 +37,7 @@ TipDialog::TipDialog(const QString& title,
 	QObject::connect(this, &DialogShow::keyboardAccept, this, &TipDialog::tipAccept);
 }
 
-void TipDialog::tipAccept()
+void TipDialog::tipAccept(QObject* tar, Qt::Key key)
 {
 	m_accept->setFocus();
 	m_accept->click();

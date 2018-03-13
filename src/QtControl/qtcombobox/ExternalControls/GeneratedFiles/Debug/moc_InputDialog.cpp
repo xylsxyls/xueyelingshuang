@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_InputDialog_t {
-    QByteArrayData data[3];
-    char stringdata0[25];
+    QByteArrayData data[6];
+    char stringdata0[41];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -31,10 +31,14 @@ static const qt_meta_stringdata_InputDialog_t qt_meta_stringdata_InputDialog = {
     {
 QT_MOC_LITERAL(0, 0, 11), // "InputDialog"
 QT_MOC_LITERAL(1, 12, 11), // "inputAccept"
-QT_MOC_LITERAL(2, 24, 0) // ""
+QT_MOC_LITERAL(2, 24, 0), // ""
+QT_MOC_LITERAL(3, 25, 3), // "tar"
+QT_MOC_LITERAL(4, 29, 7), // "Qt::Key"
+QT_MOC_LITERAL(5, 37, 3) // "key"
 
     },
-    "InputDialog\0inputAccept\0"
+    "InputDialog\0inputAccept\0\0tar\0Qt::Key\0"
+    "key"
 };
 #undef QT_MOC_LITERAL
 
@@ -52,10 +56,10 @@ static const uint qt_meta_data_InputDialog[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,   19,    2, 0x08 /* Private */,
+       1,    2,   19,    2, 0x08 /* Private */,
 
  // slots: parameters
-    QMetaType::Void,
+    QMetaType::Void, QMetaType::QObjectStar, 0x80000000 | 4,    3,    5,
 
        0        // eod
 };
@@ -66,11 +70,10 @@ void InputDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id,
         InputDialog *_t = static_cast<InputDialog *>(_o);
         Q_UNUSED(_t)
         switch (_id) {
-        case 0: _t->inputAccept(); break;
+        case 0: _t->inputAccept((*reinterpret_cast< QObject*(*)>(_a[1])),(*reinterpret_cast< Qt::Key(*)>(_a[2]))); break;
         default: ;
         }
     }
-    Q_UNUSED(_a);
 }
 
 const QMetaObject InputDialog::staticMetaObject = {

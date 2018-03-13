@@ -25,6 +25,11 @@ public:
 											int32_t taskId,
 											const QString& title,
 											const QString& fileName,
+											const QString& downloadSpeed,
+											const QString& hasDownloaded,
+											const QString& downloadTime,
+											int32_t rate,
+											bool backEnable,
 											const QString& downloadAddr,
 											const QString& path,
 											QWindow* parent = nullptr);
@@ -48,6 +53,11 @@ public:
 	@param [in] persent 百分比
 	*/
 	void setRate(int32_t persent);
+
+	/** 设置转到后台下载按钮是否可用
+	@param [in] enable 是否可用
+	*/
+	void setBackEnable(bool enable);
 
 	/** 当下载出错时显示下载框的出错状态，该函数支持多线程
 	*/
@@ -77,6 +87,7 @@ public slots:
 	void onChangeNormalStatus();
 
 Q_SIGNALS:
+	void backEnable(bool enable);
 	void changeErrorStatus();
 	void changeNormalStatus();
 	void rateChanged(int rate);
@@ -96,14 +107,20 @@ private:
 	DownloadOperateDialog(int32_t taskId,
 						  const QString& title,
 						  const QString& fileName,
+						  const QString& downloadSpeed,
+						  const QString& hasDownloaded,
+						  const QString& downloadTime,
+						  int32_t rate,
+						  bool backEnable,
 						  const QString& downloadAddr,
 						  const QString& path);
 
 	~DownloadOperateDialog();
 
 private slots:
-	void downloadAccept();
-	void onChanged();
+	void downloadAccept(QObject* tar, Qt::Key key);
+	void onBack();
+	void onAgain();
 	void onCancelDownload();
 	void onUseOtherDownload();
 	void onCopyDownloadAddr();
@@ -120,7 +137,8 @@ private:
 	ProgressBar *m_progressBar;
 	Label* m_persent;
 
-	COriginalButton* m_change;
+	COriginalButton* m_back;
+	COriginalButton* m_again;
 	COriginalButton* m_cancel;
 
 	Label* m_downloadSlow;

@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_TipDialog_t {
-    QByteArrayData data[3];
-    char stringdata0[21];
+    QByteArrayData data[6];
+    char stringdata0[37];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -31,10 +31,13 @@ static const qt_meta_stringdata_TipDialog_t qt_meta_stringdata_TipDialog = {
     {
 QT_MOC_LITERAL(0, 0, 9), // "TipDialog"
 QT_MOC_LITERAL(1, 10, 9), // "tipAccept"
-QT_MOC_LITERAL(2, 20, 0) // ""
+QT_MOC_LITERAL(2, 20, 0), // ""
+QT_MOC_LITERAL(3, 21, 3), // "tar"
+QT_MOC_LITERAL(4, 25, 7), // "Qt::Key"
+QT_MOC_LITERAL(5, 33, 3) // "key"
 
     },
-    "TipDialog\0tipAccept\0"
+    "TipDialog\0tipAccept\0\0tar\0Qt::Key\0key"
 };
 #undef QT_MOC_LITERAL
 
@@ -52,10 +55,10 @@ static const uint qt_meta_data_TipDialog[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,   19,    2, 0x08 /* Private */,
+       1,    2,   19,    2, 0x08 /* Private */,
 
  // slots: parameters
-    QMetaType::Void,
+    QMetaType::Void, QMetaType::QObjectStar, 0x80000000 | 4,    3,    5,
 
        0        // eod
 };
@@ -66,11 +69,10 @@ void TipDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, v
         TipDialog *_t = static_cast<TipDialog *>(_o);
         Q_UNUSED(_t)
         switch (_id) {
-        case 0: _t->tipAccept(); break;
+        case 0: _t->tipAccept((*reinterpret_cast< QObject*(*)>(_a[1])),(*reinterpret_cast< Qt::Key(*)>(_a[2]))); break;
         default: ;
         }
     }
-    Q_UNUSED(_a);
 }
 
 const QMetaObject TipDialog::staticMetaObject = {

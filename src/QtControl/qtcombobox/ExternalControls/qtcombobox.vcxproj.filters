@@ -210,6 +210,12 @@
     <Filter Include="QtDialog\Modal\BoxDialogBase\AccountManagerDialog">
       <UniqueIdentifier>{fe5f6ccf-eb48-42e2-93b0-bfa7b84c0556}</UniqueIdentifier>
     </Filter>
+    <Filter Include="out">
+      <UniqueIdentifier>{f278afa9-39f8-445b-b369-d132a5ce6db0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\BoxDialogBase\ClosureDialog">
+      <UniqueIdentifier>{5ab1d85a-4658-4909-87ea-6180a733dd67}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -566,6 +572,57 @@
     <ClCompile Include="AccountManagerDialog.cpp">
       <Filter>QtDialog\Modal\BoxDialogBase\AccountManagerDialog</Filter>
     </ClCompile>
+    <ClCompile Include="LockedAccountPanel.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClCompile>
+    <ClCompile Include="SubAccountPanel.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_SubAccountPanel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_SubAccountPanel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CExternalTextEdit.cpp">
+      <Filter>out</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CExternalTextEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CExternalTextEdit.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\COriginalWebView.cpp">
+      <Filter>out</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalWebView.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalWebView.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CTreeViewEx.cpp">
+      <Filter>out</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CTreeViewEx.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CTreeViewEx.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\EO_XmlSax2Parser.cpp">
+      <Filter>out</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AccountDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AccountDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="ClosureDialog.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase\ClosureDialog</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -694,6 +751,21 @@
     <CustomBuild Include="DownloadOperateDialog.h">
       <Filter>QtDialog\Modal\DownloadOperateDialog</Filter>
     </CustomBuild>
+    <CustomBuild Include="SubAccountPanel.h">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\CExternalTextEdit.h">
+      <Filter>out</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\COriginalWebView.h">
+      <Filter>out</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\CTreeViewEx.h">
+      <Filter>out</Filter>
+    </CustomBuild>
+    <CustomBuild Include="AccountDialog.h">
+      <Filter>QtDialog\Modal\BoxDialogBase\AccountDialog</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlFont.h">
@@ -735,11 +807,17 @@
     <ClInclude Include="BoxDialogBase.h">
       <Filter>QtDialog\Modal\BoxDialogBase</Filter>
     </ClInclude>
-    <ClInclude Include="AccountDialog.h">
-      <Filter>QtDialog\Modal\BoxDialogBase\AccountDialog</Filter>
-    </ClInclude>
     <ClInclude Include="AccountManagerDialog.h">
       <Filter>QtDialog\Modal\BoxDialogBase\AccountManagerDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="LockedAccountPanel.h">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\EO_XmlSax2Parser.h">
+      <Filter>out</Filter>
+    </ClInclude>
+    <ClInclude Include="ClosureDialog.h">
+      <Filter>QtDialog\Modal\BoxDialogBase\ClosureDialog</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

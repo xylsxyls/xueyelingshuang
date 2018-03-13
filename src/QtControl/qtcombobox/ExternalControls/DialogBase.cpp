@@ -228,6 +228,8 @@ void DialogBase::showEvent(QShowEvent* eve)
 		m_timeId = startTimer(1000);
 		emit timeRest(m_timeRest);
 	}
+
+	raise();
 	QDialog::showEvent(eve);
 }
 

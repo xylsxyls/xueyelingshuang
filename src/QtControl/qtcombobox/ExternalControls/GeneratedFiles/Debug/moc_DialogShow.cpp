@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_DialogShow_t {
-    QByteArrayData data[10];
-    char stringdata0[90];
+    QByteArrayData data[13];
+    char stringdata0[106];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -37,13 +37,16 @@ QT_MOC_LITERAL(4, 31, 8), // "dialogId"
 QT_MOC_LITERAL(5, 40, 6), // "result"
 QT_MOC_LITERAL(6, 47, 8), // "userType"
 QT_MOC_LITERAL(7, 56, 14), // "keyboardAccept"
-QT_MOC_LITERAL(8, 71, 10), // "timeUpdate"
-QT_MOC_LITERAL(9, 82, 7) // "timeOut"
+QT_MOC_LITERAL(8, 71, 3), // "tar"
+QT_MOC_LITERAL(9, 75, 7), // "Qt::Key"
+QT_MOC_LITERAL(10, 83, 3), // "key"
+QT_MOC_LITERAL(11, 87, 10), // "timeUpdate"
+QT_MOC_LITERAL(12, 98, 7) // "timeOut"
 
     },
     "DialogShow\0dialogDone\0\0int32_t\0dialogId\0"
-    "result\0userType\0keyboardAccept\0"
-    "timeUpdate\0timeOut"
+    "result\0userType\0keyboardAccept\0tar\0"
+    "Qt::Key\0key\0timeUpdate\0timeOut"
 };
 #undef QT_MOC_LITERAL
 
@@ -62,17 +65,17 @@ static const uint qt_meta_data_DialogShow[] = {
 
  // signals: name, argc, parameters, tag, flags
        1,    3,   29,    2, 0x06 /* Public */,
-       7,    0,   36,    2, 0x06 /* Public */,
+       7,    2,   36,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-       8,    1,   37,    2, 0x08 /* Private */,
+      11,    1,   41,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void, 0x80000000 | 3, 0x80000000 | 3, 0x80000000 | 3,    4,    5,    6,
-    QMetaType::Void,
+    QMetaType::Void, QMetaType::QObjectStar, 0x80000000 | 9,    8,   10,
 
  // slots: parameters
-    QMetaType::Void, 0x80000000 | 3,    9,
+    QMetaType::Void, 0x80000000 | 3,   12,
 
        0        // eod
 };
@@ -84,7 +87,7 @@ void DialogShow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         Q_UNUSED(_t)
         switch (_id) {
         case 0: _t->dialogDone((*reinterpret_cast< int32_t(*)>(_a[1])),(*reinterpret_cast< int32_t(*)>(_a[2])),(*reinterpret_cast< int32_t(*)>(_a[3]))); break;
-        case 1: _t->keyboardAccept(); break;
+        case 1: _t->keyboardAccept((*reinterpret_cast< QObject*(*)>(_a[1])),(*reinterpret_cast< Qt::Key(*)>(_a[2]))); break;
         case 2: _t->timeUpdate((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
         default: ;
         }
@@ -98,7 +101,7 @@ void DialogShow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
             }
         }
         {
-            typedef void (DialogShow::*_t)();
+            typedef void (DialogShow::*_t)(QObject * , Qt::Key );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DialogShow::keyboardAccept)) {
                 *result = 1;
             }
@@ -150,8 +153,9 @@ void DialogShow::dialogDone(int32_t _t1, int32_t _t2, int32_t _t3)
 }
 
 // SIGNAL 1
-void DialogShow::keyboardAccept()
+void DialogShow::keyboardAccept(QObject * _t1, Qt::Key _t2)
 {
-    QMetaObject::activate(this, &staticMetaObject, 1, Q_NULLPTR);
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)), const_cast<void*>(reinterpret_cast<const void*>(&_t2)) };
+    QMetaObject::activate(this, &staticMetaObject, 1, _a);
 }
 QT_END_MOC_NAMESPACE

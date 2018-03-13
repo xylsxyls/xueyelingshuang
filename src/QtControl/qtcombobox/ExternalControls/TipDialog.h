@@ -33,7 +33,7 @@ private:
 			  int32_t done);
 
 private slots:
-	void tipAccept();
+	void tipAccept(QObject* tar, Qt::Key key);
 
 private:
 	Label* m_tip;

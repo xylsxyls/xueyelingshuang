@@ -59,7 +59,7 @@ void InputDialog::done(int result)
 	QDialog::done(result);
 }
 
-void InputDialog::inputAccept()
+void InputDialog::inputAccept(QObject* tar, Qt::Key key)
 {
 	m_accept->setFocus();
 	m_accept->click();

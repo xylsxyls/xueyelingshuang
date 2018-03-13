@@ -45,7 +45,7 @@ AskDialog::AskDialog(const QString& title,
 	QObject::connect(this, &DialogShow::keyboardAccept, this, &AskDialog::askAccept);
 }
 
-void AskDialog::askAccept()
+void AskDialog::askAccept(QObject* tar, Qt::Key key)
 {
 	m_accept->setFocus();
 	m_accept->click();

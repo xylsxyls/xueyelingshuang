@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_DownloadDialog_t {
-    QByteArrayData data[10];
-    char stringdata0[122];
+    QByteArrayData data[13];
+    char stringdata0[138];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -38,13 +38,16 @@ QT_MOC_LITERAL(5, 43, 14), // "persentChanged"
 QT_MOC_LITERAL(6, 58, 7), // "persent"
 QT_MOC_LITERAL(7, 66, 16), // "downloadComplete"
 QT_MOC_LITERAL(8, 83, 23), // "showDownloadErrorDialog"
-QT_MOC_LITERAL(9, 107, 14) // "downloadAccept"
+QT_MOC_LITERAL(9, 107, 14), // "downloadAccept"
+QT_MOC_LITERAL(10, 122, 3), // "tar"
+QT_MOC_LITERAL(11, 126, 7), // "Qt::Key"
+QT_MOC_LITERAL(12, 134, 3) // "key"
 
     },
     "DownloadDialog\0showError\0\0rateChanged\0"
     "rate\0persentChanged\0persent\0"
     "downloadComplete\0showDownloadErrorDialog\0"
-    "downloadAccept"
+    "downloadAccept\0tar\0Qt::Key\0key"
 };
 #undef QT_MOC_LITERAL
 
@@ -69,7 +72,7 @@ static const uint qt_meta_data_DownloadDialog[] = {
 
  // slots: name, argc, parameters, tag, flags
        8,    0,   52,    2, 0x0a /* Public */,
-       9,    0,   53,    2, 0x08 /* Private */,
+       9,    2,   53,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void,
@@ -79,7 +82,7 @@ static const uint qt_meta_data_DownloadDialog[] = {
 
  // slots: parameters
     QMetaType::Void,
-    QMetaType::Void,
+    QMetaType::Void, QMetaType::QObjectStar, 0x80000000 | 11,   10,   12,
 
        0        // eod
 };
@@ -95,7 +98,7 @@ void DownloadDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 2: _t->persentChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
         case 3: _t->downloadComplete(); break;
         case 4: _t->showDownloadErrorDialog(); break;
-        case 5: _t->downloadAccept(); break;
+        case 5: _t->downloadAccept((*reinterpret_cast< QObject*(*)>(_a[1])),(*reinterpret_cast< Qt::Key(*)>(_a[2]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {

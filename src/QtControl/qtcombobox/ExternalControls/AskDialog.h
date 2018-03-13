@@ -39,7 +39,7 @@ private:
 			  int32_t ignoreDone);
 
 public slots:
-	void askAccept();
+	void askAccept(QObject* tar, Qt::Key key);
 
 private:
 	Label* m_tip;

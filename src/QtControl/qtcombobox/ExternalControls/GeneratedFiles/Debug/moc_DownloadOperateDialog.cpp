@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_DownloadOperateDialog_t {
-    QByteArrayData data[31];
-    char stringdata0[407];
+    QByteArrayData data[37];
+    char stringdata0[446];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -30,50 +30,56 @@ struct qt_meta_stringdata_DownloadOperateDialog_t {
 static const qt_meta_stringdata_DownloadOperateDialog_t qt_meta_stringdata_DownloadOperateDialog = {
     {
 QT_MOC_LITERAL(0, 0, 21), // "DownloadOperateDialog"
-QT_MOC_LITERAL(1, 22, 17), // "changeErrorStatus"
-QT_MOC_LITERAL(2, 40, 0), // ""
-QT_MOC_LITERAL(3, 41, 18), // "changeNormalStatus"
-QT_MOC_LITERAL(4, 60, 11), // "rateChanged"
-QT_MOC_LITERAL(5, 72, 4), // "rate"
-QT_MOC_LITERAL(6, 77, 14), // "persentChanged"
-QT_MOC_LITERAL(7, 92, 7), // "persent"
-QT_MOC_LITERAL(8, 100, 16), // "downloadComplete"
-QT_MOC_LITERAL(9, 117, 13), // "downloadSpeed"
-QT_MOC_LITERAL(10, 131, 5), // "speed"
-QT_MOC_LITERAL(11, 137, 10), // "downloaded"
-QT_MOC_LITERAL(12, 148, 13), // "hasDownloaded"
-QT_MOC_LITERAL(13, 162, 12), // "downloadTime"
-QT_MOC_LITERAL(14, 175, 4), // "time"
-QT_MOC_LITERAL(15, 180, 12), // "changeToBack"
-QT_MOC_LITERAL(16, 193, 13), // "downloadAgain"
-QT_MOC_LITERAL(17, 207, 14), // "cancelDownload"
-QT_MOC_LITERAL(18, 222, 16), // "useOtherDownload"
-QT_MOC_LITERAL(19, 239, 16), // "copyDownloadAddr"
-QT_MOC_LITERAL(20, 256, 4), // "addr"
-QT_MOC_LITERAL(21, 261, 8), // "copyPath"
-QT_MOC_LITERAL(22, 270, 4), // "path"
-QT_MOC_LITERAL(23, 275, 19), // "onChangeErrorStatus"
-QT_MOC_LITERAL(24, 295, 20), // "onChangeNormalStatus"
-QT_MOC_LITERAL(25, 316, 14), // "downloadAccept"
-QT_MOC_LITERAL(26, 331, 9), // "onChanged"
-QT_MOC_LITERAL(27, 341, 16), // "onCancelDownload"
-QT_MOC_LITERAL(28, 358, 18), // "onUseOtherDownload"
-QT_MOC_LITERAL(29, 377, 18), // "onCopyDownloadAddr"
-QT_MOC_LITERAL(30, 396, 10) // "onCopyPath"
+QT_MOC_LITERAL(1, 22, 10), // "backEnable"
+QT_MOC_LITERAL(2, 33, 0), // ""
+QT_MOC_LITERAL(3, 34, 6), // "enable"
+QT_MOC_LITERAL(4, 41, 17), // "changeErrorStatus"
+QT_MOC_LITERAL(5, 59, 18), // "changeNormalStatus"
+QT_MOC_LITERAL(6, 78, 11), // "rateChanged"
+QT_MOC_LITERAL(7, 90, 4), // "rate"
+QT_MOC_LITERAL(8, 95, 14), // "persentChanged"
+QT_MOC_LITERAL(9, 110, 7), // "persent"
+QT_MOC_LITERAL(10, 118, 16), // "downloadComplete"
+QT_MOC_LITERAL(11, 135, 13), // "downloadSpeed"
+QT_MOC_LITERAL(12, 149, 5), // "speed"
+QT_MOC_LITERAL(13, 155, 10), // "downloaded"
+QT_MOC_LITERAL(14, 166, 13), // "hasDownloaded"
+QT_MOC_LITERAL(15, 180, 12), // "downloadTime"
+QT_MOC_LITERAL(16, 193, 4), // "time"
+QT_MOC_LITERAL(17, 198, 12), // "changeToBack"
+QT_MOC_LITERAL(18, 211, 13), // "downloadAgain"
+QT_MOC_LITERAL(19, 225, 14), // "cancelDownload"
+QT_MOC_LITERAL(20, 240, 16), // "useOtherDownload"
+QT_MOC_LITERAL(21, 257, 16), // "copyDownloadAddr"
+QT_MOC_LITERAL(22, 274, 4), // "addr"
+QT_MOC_LITERAL(23, 279, 8), // "copyPath"
+QT_MOC_LITERAL(24, 288, 4), // "path"
+QT_MOC_LITERAL(25, 293, 19), // "onChangeErrorStatus"
+QT_MOC_LITERAL(26, 313, 20), // "onChangeNormalStatus"
+QT_MOC_LITERAL(27, 334, 14), // "downloadAccept"
+QT_MOC_LITERAL(28, 349, 3), // "tar"
+QT_MOC_LITERAL(29, 353, 7), // "Qt::Key"
+QT_MOC_LITERAL(30, 361, 3), // "key"
+QT_MOC_LITERAL(31, 365, 6), // "onBack"
+QT_MOC_LITERAL(32, 372, 7), // "onAgain"
+QT_MOC_LITERAL(33, 380, 16), // "onCancelDownload"
+QT_MOC_LITERAL(34, 397, 18), // "onUseOtherDownload"
+QT_MOC_LITERAL(35, 416, 18), // "onCopyDownloadAddr"
+QT_MOC_LITERAL(36, 435, 10) // "onCopyPath"
 
     },
-    "DownloadOperateDialog\0changeErrorStatus\0"
-    "\0changeNormalStatus\0rateChanged\0rate\0"
-    "persentChanged\0persent\0downloadComplete\0"
-    "downloadSpeed\0speed\0downloaded\0"
-    "hasDownloaded\0downloadTime\0time\0"
-    "changeToBack\0downloadAgain\0cancelDownload\0"
-    "useOtherDownload\0copyDownloadAddr\0"
-    "addr\0copyPath\0path\0onChangeErrorStatus\0"
-    "onChangeNormalStatus\0downloadAccept\0"
-    "onChanged\0onCancelDownload\0"
-    "onUseOtherDownload\0onCopyDownloadAddr\0"
-    "onCopyPath"
+    "DownloadOperateDialog\0backEnable\0\0"
+    "enable\0changeErrorStatus\0changeNormalStatus\0"
+    "rateChanged\0rate\0persentChanged\0persent\0"
+    "downloadComplete\0downloadSpeed\0speed\0"
+    "downloaded\0hasDownloaded\0downloadTime\0"
+    "time\0changeToBack\0downloadAgain\0"
+    "cancelDownload\0useOtherDownload\0"
+    "copyDownloadAddr\0addr\0copyPath\0path\0"
+    "onChangeErrorStatus\0onChangeNormalStatus\0"
+    "downloadAccept\0tar\0Qt::Key\0key\0onBack\0"
+    "onAgain\0onCancelDownload\0onUseOtherDownload\0"
+    "onCopyDownloadAddr\0onCopyPath"
 };
 #undef QT_MOC_LITERAL
 
@@ -83,58 +89,62 @@ static const uint qt_meta_data_DownloadOperateDialog[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-      22,   14, // methods
+      24,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-      14,       // signalCount
+      15,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    0,  124,    2, 0x06 /* Public */,
-       3,    0,  125,    2, 0x06 /* Public */,
-       4,    1,  126,    2, 0x06 /* Public */,
-       6,    1,  129,    2, 0x06 /* Public */,
-       8,    0,  132,    2, 0x06 /* Public */,
-       9,    1,  133,    2, 0x06 /* Public */,
-      11,    1,  136,    2, 0x06 /* Public */,
-      13,    1,  139,    2, 0x06 /* Public */,
-      15,    0,  142,    2, 0x06 /* Public */,
-      16,    0,  143,    2, 0x06 /* Public */,
-      17,    0,  144,    2, 0x06 /* Public */,
-      18,    0,  145,    2, 0x06 /* Public */,
-      19,    1,  146,    2, 0x06 /* Public */,
-      21,    1,  149,    2, 0x06 /* Public */,
+       1,    1,  134,    2, 0x06 /* Public */,
+       4,    0,  137,    2, 0x06 /* Public */,
+       5,    0,  138,    2, 0x06 /* Public */,
+       6,    1,  139,    2, 0x06 /* Public */,
+       8,    1,  142,    2, 0x06 /* Public */,
+      10,    0,  145,    2, 0x06 /* Public */,
+      11,    1,  146,    2, 0x06 /* Public */,
+      13,    1,  149,    2, 0x06 /* Public */,
+      15,    1,  152,    2, 0x06 /* Public */,
+      17,    0,  155,    2, 0x06 /* Public */,
+      18,    0,  156,    2, 0x06 /* Public */,
+      19,    0,  157,    2, 0x06 /* Public */,
+      20,    0,  158,    2, 0x06 /* Public */,
+      21,    1,  159,    2, 0x06 /* Public */,
+      23,    1,  162,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-      23,    0,  152,    2, 0x0a /* Public */,
-      24,    0,  153,    2, 0x0a /* Public */,
-      25,    0,  154,    2, 0x08 /* Private */,
-      26,    0,  155,    2, 0x08 /* Private */,
-      27,    0,  156,    2, 0x08 /* Private */,
-      28,    0,  157,    2, 0x08 /* Private */,
-      29,    0,  158,    2, 0x08 /* Private */,
-      30,    0,  159,    2, 0x08 /* Private */,
+      25,    0,  165,    2, 0x0a /* Public */,
+      26,    0,  166,    2, 0x0a /* Public */,
+      27,    2,  167,    2, 0x08 /* Private */,
+      31,    0,  172,    2, 0x08 /* Private */,
+      32,    0,  173,    2, 0x08 /* Private */,
+      33,    0,  174,    2, 0x08 /* Private */,
+      34,    0,  175,    2, 0x08 /* Private */,
+      35,    0,  176,    2, 0x08 /* Private */,
+      36,    0,  177,    2, 0x08 /* Private */,
 
  // signals: parameters
+    QMetaType::Void, QMetaType::Bool,    3,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::Int,    5,
-    QMetaType::Void, QMetaType::QString,    7,
+    QMetaType::Void, QMetaType::Int,    7,
+    QMetaType::Void, QMetaType::QString,    9,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QString,   10,
     QMetaType::Void, QMetaType::QString,   12,
     QMetaType::Void, QMetaType::QString,   14,
+    QMetaType::Void, QMetaType::QString,   16,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QString,   20,
     QMetaType::Void, QMetaType::QString,   22,
+    QMetaType::Void, QMetaType::QString,   24,
 
  // slots: parameters
     QMetaType::Void,
     QMetaType::Void,
+    QMetaType::Void, QMetaType::QObjectStar, 0x80000000 | 29,   28,   30,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -151,115 +161,123 @@ void DownloadOperateDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c
         DownloadOperateDialog *_t = static_cast<DownloadOperateDialog *>(_o);
         Q_UNUSED(_t)
         switch (_id) {
-        case 0: _t->changeErrorStatus(); break;
-        case 1: _t->changeNormalStatus(); break;
-        case 2: _t->rateChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 3: _t->persentChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 4: _t->downloadComplete(); break;
-        case 5: _t->downloadSpeed((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 6: _t->downloaded((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 7: _t->downloadTime((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 8: _t->changeToBack(); break;
-        case 9: _t->downloadAgain(); break;
-        case 10: _t->cancelDownload(); break;
-        case 11: _t->useOtherDownload(); break;
-        case 12: _t->copyDownloadAddr((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 13: _t->copyPath((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 14: _t->onChangeErrorStatus(); break;
-        case 15: _t->onChangeNormalStatus(); break;
-        case 16: _t->downloadAccept(); break;
-        case 17: _t->onChanged(); break;
-        case 18: _t->onCancelDownload(); break;
-        case 19: _t->onUseOtherDownload(); break;
-        case 20: _t->onCopyDownloadAddr(); break;
-        case 21: _t->onCopyPath(); break;
+        case 0: _t->backEnable((*reinterpret_cast< bool(*)>(_a[1]))); break;
+        case 1: _t->changeErrorStatus(); break;
+        case 2: _t->changeNormalStatus(); break;
+        case 3: _t->rateChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 4: _t->persentChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 5: _t->downloadComplete(); break;
+        case 6: _t->downloadSpeed((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 7: _t->downloaded((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 8: _t->downloadTime((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 9: _t->changeToBack(); break;
+        case 10: _t->downloadAgain(); break;
+        case 11: _t->cancelDownload(); break;
+        case 12: _t->useOtherDownload(); break;
+        case 13: _t->copyDownloadAddr((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 14: _t->copyPath((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 15: _t->onChangeErrorStatus(); break;
+        case 16: _t->onChangeNormalStatus(); break;
+        case 17: _t->downloadAccept((*reinterpret_cast< QObject*(*)>(_a[1])),(*reinterpret_cast< Qt::Key(*)>(_a[2]))); break;
+        case 18: _t->onBack(); break;
+        case 19: _t->onAgain(); break;
+        case 20: _t->onCancelDownload(); break;
+        case 21: _t->onUseOtherDownload(); break;
+        case 22: _t->onCopyDownloadAddr(); break;
+        case 23: _t->onCopyPath(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         void **func = reinterpret_cast<void **>(_a[1]);
         {
-            typedef void (DownloadOperateDialog::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::changeErrorStatus)) {
+            typedef void (DownloadOperateDialog::*_t)(bool );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::backEnable)) {
                 *result = 0;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::changeNormalStatus)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::changeErrorStatus)) {
                 *result = 1;
+            }
+        }
+        {
+            typedef void (DownloadOperateDialog::*_t)();
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::changeNormalStatus)) {
+                *result = 2;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)(int );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::rateChanged)) {
-                *result = 2;
+                *result = 3;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)(const QString & );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::persentChanged)) {
-                *result = 3;
+                *result = 4;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)();
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloadComplete)) {
-                *result = 4;
-            }
-        }
-        {
-            typedef void (DownloadOperateDialog::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloadSpeed)) {
                 *result = 5;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloaded)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloadSpeed)) {
                 *result = 6;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloadTime)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloaded)) {
                 *result = 7;
             }
         }
         {
-            typedef void (DownloadOperateDialog::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::changeToBack)) {
+            typedef void (DownloadOperateDialog::*_t)(const QString & );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloadTime)) {
                 *result = 8;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloadAgain)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::changeToBack)) {
                 *result = 9;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::cancelDownload)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::downloadAgain)) {
                 *result = 10;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::useOtherDownload)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::cancelDownload)) {
                 *result = 11;
             }
         }
         {
-            typedef void (DownloadOperateDialog::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::copyDownloadAddr)) {
+            typedef void (DownloadOperateDialog::*_t)();
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::useOtherDownload)) {
                 *result = 12;
             }
         }
         {
             typedef void (DownloadOperateDialog::*_t)(const QString & );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::copyPath)) {
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::copyDownloadAddr)) {
                 *result = 13;
+            }
+        }
+        {
+            typedef void (DownloadOperateDialog::*_t)(const QString & );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&DownloadOperateDialog::copyPath)) {
+                *result = 14;
             }
         }
     }
@@ -290,105 +308,112 @@ int DownloadOperateDialog::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 22)
+        if (_id < 24)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 22;
+        _id -= 24;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 22)
+        if (_id < 24)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 22;
+        _id -= 24;
     }
     return _id;
 }
 
 // SIGNAL 0
-void DownloadOperateDialog::changeErrorStatus()
+void DownloadOperateDialog::backEnable(bool _t1)
 {
-    QMetaObject::activate(this, &staticMetaObject, 0, Q_NULLPTR);
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 
 // SIGNAL 1
-void DownloadOperateDialog::changeNormalStatus()
+void DownloadOperateDialog::changeErrorStatus()
 {
     QMetaObject::activate(this, &staticMetaObject, 1, Q_NULLPTR);
 }
 
 // SIGNAL 2
-void DownloadOperateDialog::rateChanged(int _t1)
+void DownloadOperateDialog::changeNormalStatus()
 {
-    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
-    QMetaObject::activate(this, &staticMetaObject, 2, _a);
+    QMetaObject::activate(this, &staticMetaObject, 2, Q_NULLPTR);
 }
 
 // SIGNAL 3
-void DownloadOperateDialog::persentChanged(const QString & _t1)
+void DownloadOperateDialog::rateChanged(int _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 3, _a);
 }
 
 // SIGNAL 4
-void DownloadOperateDialog::downloadComplete()
+void DownloadOperateDialog::persentChanged(const QString & _t1)
 {
-    QMetaObject::activate(this, &staticMetaObject, 4, Q_NULLPTR);
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 4, _a);
 }
 
 // SIGNAL 5
-void DownloadOperateDialog::downloadSpeed(const QString & _t1)
+void DownloadOperateDialog::downloadComplete()
 {
-    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
-    QMetaObject::activate(this, &staticMetaObject, 5, _a);
+    QMetaObject::activate(this, &staticMetaObject, 5, Q_NULLPTR);
 }
 
 // SIGNAL 6
-void DownloadOperateDialog::downloaded(const QString & _t1)
+void DownloadOperateDialog::downloadSpeed(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 6, _a);
 }
 
 // SIGNAL 7
-void DownloadOperateDialog::downloadTime(const QString & _t1)
+void DownloadOperateDialog::downloaded(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 7, _a);
 }
 
 // SIGNAL 8
-void DownloadOperateDialog::changeToBack()
+void DownloadOperateDialog::downloadTime(const QString & _t1)
 {
-    QMetaObject::activate(this, &staticMetaObject, 8, Q_NULLPTR);
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 8, _a);
 }
 
 // SIGNAL 9
-void DownloadOperateDialog::downloadAgain()
+void DownloadOperateDialog::changeToBack()
 {
     QMetaObject::activate(this, &staticMetaObject, 9, Q_NULLPTR);
 }
 
 // SIGNAL 10
-void DownloadOperateDialog::cancelDownload()
+void DownloadOperateDialog::downloadAgain()
 {
     QMetaObject::activate(this, &staticMetaObject, 10, Q_NULLPTR);
 }
 
 // SIGNAL 11
-void DownloadOperateDialog::useOtherDownload()
+void DownloadOperateDialog::cancelDownload()
 {
     QMetaObject::activate(this, &staticMetaObject, 11, Q_NULLPTR);
 }
 
 // SIGNAL 12
-void DownloadOperateDialog::copyDownloadAddr(const QString & _t1)
+void DownloadOperateDialog::useOtherDownload()
 {
-    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
-    QMetaObject::activate(this, &staticMetaObject, 12, _a);
+    QMetaObject::activate(this, &staticMetaObject, 12, Q_NULLPTR);
 }
 
 // SIGNAL 13
-void DownloadOperateDialog::copyPath(const QString & _t1)
+void DownloadOperateDialog::copyDownloadAddr(const QString & _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 13, _a);
+}
+
+// SIGNAL 14
+void DownloadOperateDialog::copyPath(const QString & _t1)
+{
+    void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 14, _a);
 }
 QT_END_MOC_NAMESPACE

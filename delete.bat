@@ -56,6 +56,10 @@ rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\Win32\"
 rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\GameInfoWidgetApp\Debug\"
 rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\GameInfoWidgetApp\Release\"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\QtControl\dialogtest\Win32\"
+rmdir /q /s "%~dp0src\QtControl\dialogtest\ExternalControls\Debug\"
+rmdir /q /s "%~dp0src\QtControl\dialogtest\ExternalControls\Release\"
+::------------------------------------------------------------
 
 ::-------------------删除控制台临时文件-----------------------
 rmdir /q /s "%~dp0src\ConsoleTest\ConsoleTest\Debug\"
