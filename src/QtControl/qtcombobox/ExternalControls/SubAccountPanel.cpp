@@ -206,10 +206,46 @@ void SubAccountPanel::setSubAccountList(const SubAccountItemList &li)
 }
 
 
+SubAccountItemList SubAccountPanel::subAccountList()
+{
+	SubAccountItemList li;
+	for(int i = 0; i < mModel->rowCount(); i++)
+	{
+		li << (SubAccountItem*)(mModel->item(i,0));
+	}
+
+	return li;
+}
+
 void SubAccountPanel::appendSubAccount(SubAccountItem* item)
 {
 	mModel->appendRow(item);
 	mTreeView->openPersistentEditor(item->index());
+}
+
+SubAccountItem* SubAccountPanel::getSubAccountItemById(quint64 id)
+{
+	SubAccountItem* res = NULL;
+	SubAccountItemList allLi = subAccountList();
+	for(int i = 0; i < allLi.count(); i++)
+	{
+		SubAccountItem* t = allLi[i];
+		if(t->id() == id)
+		{
+			return t;
+		}
+	}
+
+	return res;
+}
+
+void SubAccountPanel::removeSubAccountItem(quint64 id)
+{
+	SubAccountItem* sitem = getSubAccountItemById(id);
+	if(sitem)
+	{
+		mModel->removeRow(sitem->row());
+	}
 }
 
 SubAccountItemView::SubAccountItemView(QWidget *parent)

@@ -1,6 +1,7 @@
 #include "CPasswordInputBox.h"
 #include "../CGeneralStyle.h"
 #include "../COriginalButton.h"
+#include <QRegExpValidator>
 
 CPasswordInputBox::CPasswordInputBox(QWidget *parent):
 LineEdit(parent),
@@ -23,6 +24,11 @@ void CPasswordInputBox::setDefault()
 	{
 		return;
 	}
+
+	QRegExp regx("[a-zA-Z0-9]+$");
+	QValidator *validator = new QRegExpValidator(regx, this);
+	setValidator(validator);
+
 	QString maskPath = CGeneralStyle::instance()->war3lobbyResourcePath() + MASK_BUTTON_PNG;
 	setMaskBackgroundImage(maskPath, 6, 4, 5, 6, 6, 1, 2, 3, 3);
 	setMaskSize(18, 11);

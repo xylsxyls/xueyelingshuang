@@ -127,9 +127,15 @@ public:
     SubAccountItemList    standardItemLiToSubAccountItemLi(const QList<QStandardItem*>& li);
 
 	CExternalTextEdit* helpTip();
-    void setCanCreateCount(quint64 v);
-    void setSubAccountList(const SubAccountItemList& li);
-	void appendSubAccount(SubAccountItem* item);
+	
+    void setCanCreateCount(quint64 v); //* 设置可创建的子账号个数
+    void setSubAccountList(const SubAccountItemList& li); //* 设置子账号列表
+	SubAccountItemList subAccountList(); //* 子账号列表
+	 
+	void appendSubAccount(SubAccountItem* item); //* 添加子账号
+	
+	SubAccountItem* getSubAccountItemById(quint64 id); //* 根据id获取子账号
+	void removeSubAccountItem(quint64 id); //* 根据id删除子账号
 };
 
 #endif // SUBACCOUNTPANEL_H

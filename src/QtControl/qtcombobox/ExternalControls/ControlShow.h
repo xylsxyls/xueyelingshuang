@@ -34,7 +34,7 @@ protected:
 	*/
 	bool init(const std::wstring& className, const std::wstring& itemName = L"");
 
-private:
+protected:
 	virtual void showEvent(QShowEvent* eve);
 
 public:

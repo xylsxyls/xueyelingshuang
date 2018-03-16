@@ -28,6 +28,8 @@
 #include "DownloadOperateDialog.h"
 #include "AccountDialog.h"
 #include "AccountManagerDialog.h"
+#include "TipLabel.h"
+#include "TipLabelManager.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -576,6 +578,18 @@ void qtcombobox::onTestButton()
 
 void qtcombobox::testDialog()
 {
+	//TipLabel* m_tipLabel = new TipLabel(nullptr);
+	//m_tipLabel->setWordWrap(true);
+	////m_tipLabel->setBottomRight(QPoint(100,100));
+	//m_tipLabel->setText(QStringLiteral("123的风格的华国锋的恢复的华国锋的"));
+	//m_tipLabel->setTextColor(QColor(255, 0, 0, 255));
+	//m_tipLabel->setGeometry(100, 100, 50, 100);
+	//m_tipLabel->show();
+	////m_tipLabel->setMaxWidth(50);
+	////m_tipLabel->setExistTime(20);
+	////m_tipLabel->setHasFocus(false);
+	TipLabelManager::instance().popTip(QPoint(1000, 500), QStringLiteral("1的水电费暗室逢灯阿斯蒂芬"), 100, 5, false);
+	return;
 	//QDialog* dia = new QDialog;
 	//QWidget* wi = new QWidget(dia);
 	//dia->exec();

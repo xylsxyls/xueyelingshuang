@@ -1,0 +1,2 @@
+╪сио
+m_advert->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);

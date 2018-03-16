@@ -33,7 +33,7 @@ public:
 	*/
 	QString text();
 
-private:
+protected:
 	virtual void showEvent(QShowEvent* eve);
 
 private:

@@ -1,0 +1,18 @@
+Gradient
+		{
+			GradientStop { position: 0; color: "#1f253d" }
+			GradientStop { position: 1; color: "#1b1d29" }
+		}
+ÕÅÓÀÇì(ÕÅÓÀÇì) 12-20 15:24:27
+QLinearGradient
+ÕÅÓÀÇì(ÕÅÓÀÇì) 12-20 15:24:56
+QLinearGradient gradient(QPointF(0,0),QPoint(view->width(), 0));
+        gradient.setColorAt(0.08, "#1c3d5d");
+        gradient.setColorAt(0.50, "#009cff");
+        gradient.setColorAt(0.92, "#1c3d5d");
+
+        QRect gRectTop   (0,tagRect.top()   , view->width(), 1);
+        QRect gRectBottom(0,tagRect.bottom(), view->width(), 1);
+
+        painter->fillRect(gRectTop   , gradient);
+        painter->fillRect(gRectBottom, gradient);

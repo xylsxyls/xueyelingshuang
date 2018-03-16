@@ -229,8 +229,8 @@ void DialogBase::showEvent(QShowEvent* eve)
 		emit timeRest(m_timeRest);
 	}
 
-	raise();
 	QDialog::showEvent(eve);
+	raise();
 }
 
 void DialogBase::timerEvent(QTimerEvent* eve)

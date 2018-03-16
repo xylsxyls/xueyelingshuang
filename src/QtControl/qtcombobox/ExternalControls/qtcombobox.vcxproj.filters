@@ -216,6 +216,12 @@
     <Filter Include="QtDialog\Modal\BoxDialogBase\ClosureDialog">
       <UniqueIdentifier>{5ab1d85a-4658-4909-87ea-6180a733dd67}</UniqueIdentifier>
     </Filter>
+    <Filter Include="QtControl\Label\TipLabel">
+      <UniqueIdentifier>{cf3f94d1-8ef7-41cd-8bdb-716eed7c671f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Label\TipLabel\TipLabelManager">
+      <UniqueIdentifier>{14b0cafa-f555-435a-b8b0-c96183c6d578}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -623,6 +629,27 @@
     <ClCompile Include="ClosureDialog.cpp">
       <Filter>QtDialog\Modal\BoxDialogBase\ClosureDialog</Filter>
     </ClCompile>
+    <ClCompile Include="TipLabel.cpp">
+      <Filter>QtControl\Label\TipLabel</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PointLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="TipLabelManager.cpp">
+      <Filter>QtControl\Label\TipLabel\TipLabelManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipLabelManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipLabelManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -765,6 +792,12 @@
     </CustomBuild>
     <CustomBuild Include="AccountDialog.h">
       <Filter>QtDialog\Modal\BoxDialogBase\AccountDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="TipLabel.h">
+      <Filter>QtControl\Label\TipLabel</Filter>
+    </CustomBuild>
+    <CustomBuild Include="TipLabelManager.h">
+      <Filter>QtControl\Label\TipLabel\TipLabelManager</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

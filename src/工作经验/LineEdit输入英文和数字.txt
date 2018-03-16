@@ -1,0 +1,3 @@
+QRegExp regx("[a-zA-Z0-9]+$");
+	QValidator *validator = new QRegExpValidator(regx, this);
+	setValidator(validator);

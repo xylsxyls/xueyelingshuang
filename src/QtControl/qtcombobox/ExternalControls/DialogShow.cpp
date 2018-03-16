@@ -51,6 +51,7 @@ void DialogShow::initForShow(int32_t dialogWidth, int32_t dialogHeight, const st
 
 	setStyleSheet(("." + typeName + "{ background-color:rgba(44, 52, 74, 255); border-top-left-radius:2px; border-top-right-radius:2px; border:1px solid; border-color:rgba(78, 146, 212, 255); }").c_str());
 
+	setAttribute(Qt::WA_ShowWithoutActivating, true);
 	resize(dialogWidth, dialogHeight);
 	m_titleBar = addLabel("", QRect(1, 1, width() - 2, 31), QColor(163, 175, 191, 255));
 	m_titleBar->setBackgroundColor(QColor(67, 81, 117, 255));
@@ -247,6 +248,7 @@ void DialogShow::showEvent(QShowEvent* eve)
 	else
 	{
 		activateWindow();
+		raise();
 	}
 }
 

@@ -1,0 +1,1 @@
+QT中文乱码使用QStringLiteral
