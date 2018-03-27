@@ -30,6 +30,7 @@ SubAccountPanel::SubAccountPanel(QWidget *parent)
     mCreateSubAccountButton->setFixedSize(88,21);
     mCreateSubAccountButton->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/SubAccount/create_subaccount_button.png",
                                          4,1,2,3,4,1,2,3,4);
+	connect(mCreateSubAccountButton, &COriginalButton::clicked, this, &SubAccountPanel::createSubAccount);
 
     mHelpButton->setUnderline(true);
     mHelpButton->setFixedSize(80,21);
@@ -189,6 +190,11 @@ CExternalTextEdit* SubAccountPanel::helpTip()
 	return mHelpTip;
 }
 
+quint64 SubAccountPanel::canCreateCount()
+{
+	return mCanCreateCount;
+}
+
 void SubAccountPanel::setCanCreateCount(quint64 v)
 {
     mCanCreateCount = v;
@@ -203,6 +209,9 @@ void SubAccountPanel::setSubAccountList(const SubAccountItemList &li)
     {
         mTreeView->openPersistentEditor(mModel->index(i,0));
     }
+
+	//	mModel->setSortRole(SubAccountItem::Role_IsCurrent);
+	//	mModel->sort(0, Qt::DescendingOrder);
 }
 
 
@@ -252,7 +261,10 @@ SubAccountItemView::SubAccountItemView(QWidget *parent)
     :QWidget(parent)
     ,mId(0)
     ,mSwitchButton(new COriginalButton(this))
+	,mHelpButton(new COriginalButton(this))
+	,mChangeNameButton(new COriginalButton(this))
 {
+	setBlocked(true);
     mSwitchButton->setText("");
     mSwitchButton->resize(51, 21);
     mSwitchButton->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/SubAccount/switch_subaccount_button.png",
@@ -260,6 +272,23 @@ SubAccountItemView::SubAccountItemView(QWidget *parent)
 
     connect(mSwitchButton, &COriginalButton::clicked,
             this, &SubAccountItemView::onSwitchButtonClicked);
+
+
+	mHelpButton->setText("");
+	mHelpButton->resize(19,19);
+	mHelpButton->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/SubAccount/help_button.png",
+		3,1,2,3,3,1,2,3,3);
+
+	connect(mHelpButton, &COriginalButton::clicked, this, &SubAccountItemView::helpButtonClicked);
+
+	mChangeNameButton->setText(QStringLiteral("¸ÄÃû"));
+	mChangeNameButton->resize(51,21);
+	mChangeNameButton->setBorderWidth(1);
+	mChangeNameButton->setBorderStyle("solid");
+	mChangeNameButton->setBorderColor(QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181));
+	mChangeNameButton->setFontColor(QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181),QColor(202,212,248),QColor(0,248,255), QColor(44,52,74), QColor(180,180,181));
+
+	connect(mChangeNameButton, &COriginalButton::clicked, this, &SubAccountItemView::onChangeNameButtonClicked);
 }
 
 void SubAccountItemView::resizeEvent(QResizeEvent *e)
@@ -270,7 +299,9 @@ void SubAccountItemView::resizeEvent(QResizeEvent *e)
 
 void SubAccountItemView::layoutControls()
 {
-    mSwitchButton->move(this->width() - mSwitchButton->width() - 22, 22);
+    mSwitchButton->move(this->width() - mSwitchButton->width() - 22, 17);
+	mChangeNameButton->move(mSwitchButton->x(), mSwitchButton->y() + mSwitchButton->height() + 10);
+	mHelpButton->move(this->width() - mHelpButton->width() - 2, 2);
 }
 
 void SubAccountItemView::onSwitchButtonClicked()
@@ -278,9 +309,25 @@ void SubAccountItemView::onSwitchButtonClicked()
     emit switchAccount(mId);
 }
 
+void SubAccountItemView::onChangeNameButtonClicked()
+{
+	emit renameAccount(mId);
+}
+
 void SubAccountItemView::showSwitchButton(bool s)
 {
 	mSwitchButton->setVisible(s);
+	mChangeNameButton->setVisible(s);
+}
+
+void SubAccountItemView::setBlocked(bool s)
+{
+	mBlocked = s;
+	mSwitchButton->setEnabled(!s);
+	mChangeNameButton->setEnabled(!s);
+	mHelpButton->setVisible(s);
+
+	this->update();
 }
 
 SubAccountItemDelegate::SubAccountItemDelegate(QObject *parent)
@@ -363,7 +410,22 @@ void SubAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem
 
 QWidget *SubAccountItemDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
+	CTreeViewEx* view = qobject_cast<CTreeViewEx*> (this->parent());
+	if(view == NULL)
+	{
+		return QStyledItemDelegate::createEditor(parent, option, index);
+	}
+
+	SubAccountPanel* panel = qobject_cast<SubAccountPanel*> (view->parent());
+	if(panel == NULL)
+	{
+		return QStyledItemDelegate::createEditor(parent, option, index);
+	}
+
     SubAccountItemView* itemView = new SubAccountItemView(parent);
+	connect(itemView, &SubAccountItemView::switchAccount, panel, &SubAccountPanel::siwtchSubAccount);
+	connect(itemView, &SubAccountItemView::helpButtonClicked, panel, &SubAccountPanel::helpButtonClicked);
+	connect(itemView, &SubAccountItemView::renameAccount, panel, &SubAccountPanel::renameSubAccount);
 
     return itemView;
 }
@@ -382,7 +444,8 @@ void SubAccountItemDelegate::setEditorData(QWidget *editor, const QModelIndex &i
     SubAccountItemView* itemView = (SubAccountItemView*)(editor);
     itemView->setId(sitem->id());
 
-    itemView->setEnabled(!sitem->locked());
+    //itemView->setEnabled(!sitem->locked());
+	itemView->setBlocked(sitem->locked());
 	itemView->showSwitchButton(!sitem->isCurrent());
 }
 

@@ -222,6 +222,12 @@
     <Filter Include="QtControl\Label\TipLabel\TipLabelManager">
       <UniqueIdentifier>{14b0cafa-f555-435a-b8b0-c96183c6d578}</UniqueIdentifier>
     </Filter>
+    <Filter Include="RPGFourWidget">
+      <UniqueIdentifier>{3ce754f0-17ab-4837-8100-ea315d478175}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Label\ContentLabel">
+      <UniqueIdentifier>{2213ec7b-d6a1-4308-a7f8-78707e78ba7e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -650,6 +656,18 @@
     <ClCompile Include="GeneratedFiles\Release\moc_TipLabelManager.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="ContentLabel.cpp">
+      <Filter>QtControl\Label\ContentLabel</Filter>
+    </ClCompile>
+    <ClCompile Include="RPGFourWidget.cpp">
+      <Filter>RPGFourWidget</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RPGFourWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_RPGFourWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -799,6 +817,9 @@
     <CustomBuild Include="TipLabelManager.h">
       <Filter>QtControl\Label\TipLabel\TipLabelManager</Filter>
     </CustomBuild>
+    <CustomBuild Include="RPGFourWidget.h">
+      <Filter>RPGFourWidget</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlFont.h">
@@ -851,6 +872,9 @@
     </ClInclude>
     <ClInclude Include="ClosureDialog.h">
       <Filter>QtDialog\Modal\BoxDialogBase\ClosureDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="ContentLabel.h">
+      <Filter>QtControl\Label\ContentLabel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -17,6 +17,10 @@ public:
 	*/
 	DialogBase();
 
+	/** 设置窗口含有句柄
+	*/
+	void setWinId();
+
 	/** 展示窗口
 	@param [out] dialogId 窗口ID值
 	@param [in] timeOut 自动关闭时间，单位秒，如果不填则表示不会自动关闭
@@ -80,8 +84,8 @@ public:
 	*/
 	CPasswordInputBox* addPasswordInputBox(const QRect& rect, const QString& defaultText = "");
 
-	/** 设置点击外部时会响应高亮闪烁的父窗口
-	@param [in] parent 父窗口指针
+	/** 将本窗口的临时父窗口设为传入窗口的顶层临时父窗口，点击外部时会响应高亮闪烁的父窗口，传入窗口会执行winId
+	@param [in] parent 传入窗口的句柄
 	*/
 	void setParentWindow(QWindow* parent);
 
@@ -101,6 +105,9 @@ Q_SIGNALS:
 protected:
 	void showEvent(QShowEvent* eve);
 	void timerEvent(QTimerEvent* eve);
+
+private:
+	QWindow* topWindowHandle(QWindow* parent);
 	
 
 private slots:

@@ -1,6 +1,8 @@
 #pragma once
 #include "BoxDialogBase.h"
 
+class LockedAccountPanel;
+
 class ClosureDialog : public BoxDialogBase
 {
 public:
@@ -8,4 +10,13 @@ public:
 	@param [in] parent ¸¸´°¿Ú¾ä±ú
 	*/
 	ClosureDialog(QWindow* parent = nullptr);
+
+	LockedAccountPanel* lockedAccountPanel();
+
+private:
+	LockedAccountPanel* mLockedAccountPanel;
+
+
+	void resizeEvent(QResizeEvent *e);
+	void layoutContorls();
 };

@@ -43,13 +43,13 @@ void CGeneralStyle::initPath()
 	{
 		mPlatformResourcePath = w3lDir.path();
 	}
-	mPlatformResourcePath = "E:/newClient/output/resource";
+	mPlatformResourcePath = "D:/newClient/output/resource";
 }
 
 CGeneralStyle::CGeneralStyle()
 {
 	
-	mWar3LobbyResourcePath = "E:/newClient/output/W3L/res";
+	mWar3LobbyResourcePath = "D:/newClient/output/W3L/res";
 	//TODO: init resoucre
     mFont.setFamily(QStringLiteral("Î¢ÈíÑÅºÚ"));
     mFont.setPixelSize(14);

@@ -13,8 +13,9 @@ public:
 	AccountManagerDialog();
 
 	/** 弹出注册账号窗口
+	@return 返回输入的子账号名，如果点击取消则返回空字符串
 	*/
-	void popAccountDialog();
+	QString popAccountDialog();
 
 	/** 获取注册账号窗口指针
 	@return 返回注册账号窗口指针

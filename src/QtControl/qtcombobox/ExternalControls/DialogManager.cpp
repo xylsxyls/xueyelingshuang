@@ -12,6 +12,7 @@
 #include <vector>
 #include <Windows.h>
 #include "AccountManagerDialog.h"
+#include <QWindow>
 
 DialogManager& DialogManager::instance()
 {
@@ -221,7 +222,10 @@ AccountManagerDialog* DialogManager::accountMannagerDialogPtr()
 
 void DialogManager::destroyAccountManagerDialog()
 {
-	delete m_accountManagerDialog;
+	if (m_accountManagerDialog != nullptr)
+	{
+		delete m_accountManagerDialog;
+	}
 }
 
 int32_t DialogManager::popDownloadOperateDialog(int32_t& dialogId,
@@ -325,6 +329,22 @@ void DialogManager::closeLastDialog()
 
 void DialogManager::destroyAll()
 {
+	if (m_accountManagerDialog != nullptr)
+	{
+		auto accountDialog = m_accountManagerDialog->accountDialogPtr();
+		auto closureDialog = m_accountManagerDialog->closureDialogPtr();
+		if (accountDialog != nullptr)
+		{
+			delete accountDialog;
+		}
+		if (closureDialog != nullptr)
+		{
+			delete closureDialog;
+		}
+		delete m_accountManagerDialog;
+		m_accountManagerDialog = nullptr;
+	}
+
 	if (mapIsEmpty())
 	{
 		return;
@@ -408,6 +428,22 @@ DownloadOperateDialog* DialogManager::downloadOperateTaskPtr(int32_t taskId)
 	}
 	m_mutex.unlock();
 	return nullptr;
+}
+
+void DialogManager::activeWindow(QWindow* window)
+{
+	if (window == nullptr)
+	{
+		return;
+	}
+
+	QWindow* transParent = window->transientParent();
+	if (transParent == nullptr)
+	{
+		return;
+	}
+	transParent->requestActivate();
+	window->setTransientParent(nullptr);
 }
 
 DialogManager::DialogManager() :

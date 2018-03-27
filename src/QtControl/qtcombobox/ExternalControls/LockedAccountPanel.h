@@ -55,6 +55,8 @@ public:
     QString name();
 
     void setLockedAccountItemList(const LockedAccountItemList& li);
+	void appendLockedAccountItem(LockedAccountItem* item);
+	void clearLockedAccountItem();
 };
 
 #endif // LOCKEDACCOUNTPANEL_H

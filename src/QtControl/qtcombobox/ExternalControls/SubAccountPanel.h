@@ -62,6 +62,9 @@ public:
     SubAccountItemView(QWidget* parent = NULL);
 private:
     COriginalButton* mSwitchButton;
+	COriginalButton* mHelpButton;
+	COriginalButton* mChangeNameButton;
+	bool             mBlocked;
     //QString mName;
     //QString mDate;
     //QString mDesc;
@@ -72,9 +75,12 @@ private:
 
 signals:
     void switchAccount(quint64 id);
+	void helpButtonClicked();
+	void renameAccount(quint64 id);
 
 private slots:
     void onSwitchButtonClicked();
+	void onChangeNameButtonClicked();
 
 public:
     //void setName(const QString& s){mName = s;update();}
@@ -82,6 +88,7 @@ public:
     //void setDesc(const QString& s){mDesc = s;update();}
     void setId(quint64 id){mId = id;}
 	void showSwitchButton(bool s);
+	void setBlocked(bool s);
 };
 
 class SubAccountItemDelegate: public QStyledItemDelegate
@@ -119,8 +126,9 @@ private:
 
 signals:
     void createSubAccount();
-    void siwtchSubAccount(quint32 id);
-
+    void siwtchSubAccount(quint64 id);
+	void renameSubAccount(quint64 id);
+	void helpButtonClicked();
 
 public:
     QList<QStandardItem*> subAccountItemLiToStandardItemLi(const SubAccountItemList& li);
@@ -128,6 +136,7 @@ public:
 
 	CExternalTextEdit* helpTip();
 	
+	quint64 canCreateCount();
     void setCanCreateCount(quint64 v); //* 设置可创建的子账号个数
     void setSubAccountList(const SubAccountItemList& li); //* 设置子账号列表
 	SubAccountItemList subAccountList(); //* 子账号列表

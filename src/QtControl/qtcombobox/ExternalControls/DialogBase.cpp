@@ -18,6 +18,11 @@ m_dialogEnum(-1)
 	setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 }
 
+void DialogBase::setWinId()
+{
+	winId();
+}
+
 int32_t DialogBase::exec(int32_t& dialogId, int32_t timeOut, bool isCountDownVisible)
 {
 	m_timeRest = timeOut;
@@ -33,6 +38,10 @@ int32_t DialogBase::exec(int32_t& dialogId, int32_t timeOut, bool isCountDownVis
 	if (handle != nullptr && handle->transientParent())
 	{
 		setWindowModality(Qt::WindowModal);
+	}
+	else
+	{
+		setWindowModality(Qt::ApplicationModal);
 	}
 
 	dialogId = DialogManager::instance().setDialog(this);
@@ -164,41 +173,14 @@ CPasswordInputBox* DialogBase::addPasswordInputBox(const QRect& rect, const QStr
 
 void DialogBase::setParentWindow(QWindow* parent)
 {
-	if (parent != nullptr)
+	QWindow* window = windowHandle();
+	if (window == nullptr)
 	{
-		QWindow* window = windowHandle();
-		if (window != nullptr)
-		{
-			QWindow* windowHandle = nullptr;
-			WId topLevelHandle = (WId)::GetAncestor(HWND(parent->winId()), GA_ROOT);
-			QWidget* widget = QWidget::find(topLevelHandle);
-			if (widget != nullptr)
-			{
-				setAttribute(Qt::WA_NativeWindow);
-				window->setTransientParent(widget->windowHandle());
-			}
-			else
-			{
-				foreach(QWindow* window, qApp->allWindows())
-				{
-					if (window->winId() == topLevelHandle)
-					{
-						windowHandle = window;
-						break;
-					}
-				}
-			}
-			if (windowHandle != nullptr)
-			{
-				setAttribute(Qt::WA_NativeWindow);
-				window->setTransientParent(windowHandle);
-			}
-			return;
-		}
+		return;
 	}
-	//È¥µôÈÎÎñÀ¸
-	//setAttribute(Qt::WA_ShowModal);
-	setWindowModality(Qt::ApplicationModal);
+
+	window->setTransientParent(topWindowHandle(parent));
+	return;
 }
 
 void DialogBase::setDialogEnum(int32_t dialogEnum)
@@ -242,4 +224,31 @@ void DialogBase::timerEvent(QTimerEvent* eve)
 		reject();
 	}
 	QDialog::timerEvent(eve);
+}
+
+QWindow* DialogBase::topWindowHandle(QWindow* parent)
+{
+	if (parent == nullptr)
+	{
+		return nullptr;
+	}
+	QWindow* windowInAppHandle = nullptr;
+	WId topLevelHandle = (WId)::GetAncestor(HWND(parent->winId()), GA_ROOT);
+	QWidget* widget = QWidget::find(topLevelHandle);
+	if (widget != nullptr)
+	{
+		setAttribute(Qt::WA_NativeWindow);
+		return widget->windowHandle();
+	}
+	else
+	{
+		foreach(QWindow* windowInApp, qApp->allWindows())
+		{
+			if (windowInApp->winId() == topLevelHandle)
+			{
+				return windowInApp;
+			}
+		}
+	}
+	return nullptr;
 }

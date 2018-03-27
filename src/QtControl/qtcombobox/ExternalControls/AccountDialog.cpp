@@ -64,6 +64,16 @@ void AccountDialog::setErrorVisible(bool visible)
 	emit errorVisible(visible);
 }
 
+void AccountDialog::clearAccountEdit()
+{
+	m_account->clear();
+}
+
+QString AccountDialog::accountEditText()
+{
+	return m_account->text();
+}
+
 bool AccountDialog::eventFilter(QObject* tar, QEvent* eve)
 {
 	bool result = BoxDialogBase::eventFilter(tar, eve);

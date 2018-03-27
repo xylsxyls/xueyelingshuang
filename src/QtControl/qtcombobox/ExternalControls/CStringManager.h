@@ -59,4 +59,6 @@ public:
 	static std::wstring Format(const wchar_t * fmt, ...);
 
 	static void MakeReverse(std::string & str);
+
+	static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
 };

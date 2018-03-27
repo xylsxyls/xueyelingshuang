@@ -588,8 +588,8 @@ void qtcombobox::testDialog()
 	////m_tipLabel->setMaxWidth(50);
 	////m_tipLabel->setExistTime(20);
 	////m_tipLabel->setHasFocus(false);
-	TipLabelManager::instance().popTip(QPoint(1000, 500), QStringLiteral("1µÄË®µç·Ñ°µÊÒ·êµÆ°¢Ë¹µÙ·Ò"), 100, 5, false);
-	return;
+	//TipLabelManager::instance().popTip(QPoint(1000, 500), QStringLiteral("1µÄË®µç·Ñ°µÊÒ·êµÆ°¢Ë¹µÙ·Ò"), 100, 5, false);
+	//return;
 	//QDialog* dia = new QDialog;
 	//QWidget* wi = new QWidget(dia);
 	//dia->exec();
@@ -626,7 +626,7 @@ void qtcombobox::testDialog()
 													   10,
 													   true,
 													   QString::fromStdWString(L"http://www.5211game.com"),
-													   QString::fromStdWString(L"d:/11game/zip"));
+													   QStringLiteral("d:/11game/°¢Ë¹µÙ·Òzip"));
 	return;
 	int32_t dialogId7 = 0;
 	NotifyDialogManager::instance().showLoginDialog(dialogId7,

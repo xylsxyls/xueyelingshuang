@@ -77,6 +77,9 @@ void Thread::run()
 	ptr->setDownloaded("13MB/14MB");
 	ptr->setDownloadTime("11:00:04");
 
+	ptr->setEditDownloadAddr("1121212");
+	ptr->setEditPath(QStringLiteral("44水电费水电费"));
+
 	ptr->error();
 
 	return;

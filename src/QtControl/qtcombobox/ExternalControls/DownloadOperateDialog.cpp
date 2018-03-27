@@ -151,6 +151,9 @@ DownloadOperateDialog::DownloadOperateDialog(int32_t taskId,
 	m_downloadAddrEdit->setFontSize(12);
 	m_downloadAddrEdit->setBorderWidth(0);
 	m_downloadAddrEdit->setText(downloadAddr);
+	m_downloadAddrEdit->setReadOnly(true);
+	QObject::connect(this, &DownloadOperateDialog::editDownloadAddr, m_downloadAddrEdit, &LineEdit::setText);
+
 	m_downloadButton = new COriginalButton(this);
 	m_downloadButton->setGeometry(332, 210, 72, 24);
 	m_downloadButton->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
@@ -170,6 +173,8 @@ DownloadOperateDialog::DownloadOperateDialog(int32_t taskId,
 	m_pathEdit->setFontSize(12);
 	m_pathEdit->setBorderWidth(0);
 	m_pathEdit->setText(path);
+	m_pathEdit->setReadOnly(true);
+	QObject::connect(this, &DownloadOperateDialog::editPath, m_pathEdit, &LineEdit::setText);
 	m_pathButton = new COriginalButton(this);
 	m_pathButton->setGeometry(332, 242, 72, 24);
 	m_pathButton->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
@@ -206,6 +211,30 @@ DownloadOperateDialog::~DownloadOperateDialog()
 
 }
 
+void DownloadOperateDialog::setClipboardData(HWND hWnd, const std::string& str)
+{
+	//打开剪贴板
+	if (::OpenClipboard(hWnd))
+	{
+		HANDLE hClip;
+		char* pBuf;
+		//清空剪贴板
+		::EmptyClipboard();
+
+		//写入数据
+		hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
+		pBuf = (char*)::GlobalLock(hClip);
+		::strcpy(pBuf, str.c_str());
+		//解锁
+		::GlobalUnlock(hClip);
+		//设置格式
+		::SetClipboardData(CF_TEXT, hClip);
+
+		//关闭剪贴板
+		::CloseClipboard();
+	}
+}
+
 void DownloadOperateDialog::setDownloadSpeed(const QString& speed)
 {
 	emit downloadSpeed(speed);
@@ -225,6 +254,16 @@ void DownloadOperateDialog::setRate(int32_t persent)
 {
 	emit rateChanged(persent);
 	emit persentChanged(QString::fromStdWString(CStringManager::Format(L"%d%%", persent)));
+}
+
+void DownloadOperateDialog::setEditDownloadAddr(const QString& addr)
+{
+	emit editDownloadAddr(addr);
+}
+
+void DownloadOperateDialog::setEditPath(const QString& path)
+{
+	emit editPath(path);
 }
 
 void DownloadOperateDialog::setBackEnable(bool enable)
@@ -310,12 +349,14 @@ void DownloadOperateDialog::onUseOtherDownload()
 
 void DownloadOperateDialog::onCopyDownloadAddr()
 {
+	setClipboardData((HWND)winId(), CStringManager::UnicodeToAnsi(m_downloadAddrEdit->text().toStdWString()));
 	emit copyDownloadAddr(m_downloadAddrEdit->text());
 	emit DialogManager::instance().copyDownloadAddr(DialogManager::instance().taskId(this), m_downloadAddrEdit->text());
 }
 
 void DownloadOperateDialog::onCopyPath()
 {
+	setClipboardData((HWND)winId(), CStringManager::UnicodeToAnsi(m_pathEdit->text().toStdWString()));
 	emit copyPath(m_pathEdit->text());
 	emit DialogManager::instance().copyPath(DialogManager::instance().taskId(this), m_pathEdit->text());
 }

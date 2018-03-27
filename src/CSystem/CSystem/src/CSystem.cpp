@@ -249,14 +249,38 @@ int CSystem::GetCPUCount()
 	return si.dwNumberOfProcessors;
 }
 
-std::string CSystem::GetClipboardData(HWND hwnd)
+void CSystem::setClipboardData(HWND hWnd, const std::string& str)
+{
+	//打开剪贴板
+	if (::OpenClipboard(hWnd))
+	{
+		HANDLE hClip;
+		char* pBuf;
+		//清空剪贴板
+		::EmptyClipboard();
+
+		//写入数据
+		hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
+		pBuf = (char*)::GlobalLock(hClip);
+		::strcpy(pBuf, str.c_str());
+		//解锁
+		::GlobalUnlock(hClip);
+		//设置格式
+		::SetClipboardData(CF_TEXT, hClip);
+
+		//关闭剪贴板
+		::CloseClipboard();
+	}
+}
+
+std::string CSystem::GetClipboardData(HWND hWnd)
 {
 	char* pBuf = nullptr;
 	//打开剪贴板
-	if (::OpenClipboard(hwnd))
+	if (::OpenClipboard(hWnd))
 	{
 		//判断格式是否是我们所需要
-		if (IsClipboardFormatAvailable(CF_TEXT))
+		if (::IsClipboardFormatAvailable(CF_TEXT))
 		{
 			HANDLE hClip;
 			//读取数据  
@@ -293,8 +317,35 @@ bool CSystem::DirOrFileAccess(const std::string& dir)
 	return _access(dir.c_str(), 0) == 0;
 }
 
-/*
-int main(){
+HWND CSystem::GetConsoleHwnd()
+{
+	const int32_t bufsize = 1024;
+	//This is what is returned to the caller.
+	HWND hwndFound;
+	// Contains fabricated
+	char pszNewWindowTitle[bufsize];
+	// WindowTitle.
+	// Contains original
+	char pszOldWindowTitle[bufsize];
+	// WindowTitle.
+	// Fetch current window title.
+	GetConsoleTitle(pszOldWindowTitle, bufsize);
+	// Format a "unique" NewWindowTitle.
+	wsprintf(pszNewWindowTitle, "%d/%d", GetTickCount(), GetCurrentProcessId());
+	// Change current window title.
+	SetConsoleTitle(pszNewWindowTitle);
+	// Ensure window title has been updated.
+	Sleep(40);
+	// Look for NewWindowTitle.
+	hwndFound = FindWindow(NULL, pszNewWindowTitle);
+	// Restore original window title.
+	SetConsoleTitle(pszOldWindowTitle);
+	return(hwndFound);
+}
+
+int main()
+{
+	CSystem::setClipboardData(CSystem::GetConsoleHwnd(), "12as34");
 	//CSystem system;
 	double x = CSystem::GetCPUSpeedGHz();
 	RECT rect = CSystem::GetWindowResolution();
@@ -309,4 +360,3 @@ int main(){
 	CSystem::Sleep(1000);
 	return 0;
 }
-*/

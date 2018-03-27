@@ -34,36 +34,46 @@ public:
 											const QString& path,
 											QWindow* parent = nullptr);
 
-	/** 设置速度
+	/** 设置速度（支持多线程）
 	@param [in] speed 速度
 	*/
 	void setDownloadSpeed(const QString& speed);
 
-	/** 设置已下载量
+	/** 设置已下载量（支持多线程）
 	@param [in] downloaded 已下载量
 	*/
 	void setDownloaded(const QString& download);
 
-	/** 设置时间
+	/** 设置时间（支持多线程）
 	@param [in] time 时间
 	*/
 	void setDownloadTime(const QString& time);
 
-	/** 设置比例，该函数支持多线程
+	/** 设置比例（支持多线程）
 	@param [in] persent 百分比
 	*/
 	void setRate(int32_t persent);
 
-	/** 设置转到后台下载按钮是否可用
+	/** 设置编辑框内的下载地址（支持多线程）
+	@param [in] addr 下载地址
+	*/
+	void setEditDownloadAddr(const QString& addr);
+
+	/** 设置编辑框内的本地路径（支持多线程）
+	@param [in] path 本地路径
+	*/
+	void setEditPath(const QString& path);
+
+	/** 设置转到后台下载按钮是否可用（支持多线程）
 	@param [in] enable 是否可用
 	*/
 	void setBackEnable(bool enable);
 
-	/** 当下载出错时显示下载框的出错状态，该函数支持多线程
+	/** 当下载出错时显示下载框的出错状态（支持多线程）
 	*/
 	void error();
 
-	/** 从error切换到常态，该函数支持多线程
+	/** 从error切换到常态（支持多线程）
 	*/
 	void normal();
 
@@ -87,6 +97,8 @@ public slots:
 	void onChangeNormalStatus();
 
 Q_SIGNALS:
+	void editDownloadAddr(const QString& addr);
+	void editPath(const QString& addr);
 	void backEnable(bool enable);
 	void changeErrorStatus();
 	void changeNormalStatus();
@@ -116,6 +128,9 @@ private:
 						  const QString& path);
 
 	~DownloadOperateDialog();
+
+private:
+	void setClipboardData(HWND hWnd, const std::string& str);
 
 private slots:
 	void downloadAccept(QObject* tar, Qt::Key key);

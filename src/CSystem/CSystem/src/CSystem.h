@@ -37,8 +37,10 @@ public:
 	static std::string GetSysUserName();
 	//?获得本机中处理器的数量
 	static int GetCPUCount();
+	//?将字符串写入到剪贴板
+	static void setClipboardData(HWND hWnd, const std::string& str);
 	//?获取剪贴板内容
-	static std::string GetClipboardData(HWND hwnd);
+	static std::string GetClipboardData(HWND hWnd);
 	//?获取环境变量值
 	static std::string GetEnvironment(const char* name);
 	//?创建目录
@@ -47,6 +49,8 @@ public:
 	static bool DestroyDir(const std::string& dir);
 	//?检测目录或文件是否存在
 	static bool DirOrFileAccess(const std::string& dir);
+	//?获取控制台句柄
+	static HWND GetConsoleHwnd();
 
 public:
     static bool ifRedirFrobid;

@@ -353,6 +353,11 @@ public:
 	*/
 	DownloadOperateDialog* downloadOperateTaskPtr(int32_t taskId);
 
+	/** 激活临时父窗口
+	@param [in] 需要激活窗口的子窗口句柄
+	*/
+	void activeWindow(QWindow* window);
+
 	/** 根据ID号关闭窗口（有动画效果）
 	@param [in] dialogId 窗口ID号
 	*/

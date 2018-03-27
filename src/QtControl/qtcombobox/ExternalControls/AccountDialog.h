@@ -20,6 +20,15 @@ public:
 	*/
 	void setErrorVisible(bool visible);
 
+	/** 清空输入框
+	*/
+	void clearAccountEdit();
+
+	/** 获取输入框内容
+	@return 返回输入框内容
+	*/
+	QString accountEditText();
+
 Q_SIGNALS:
 	void errorVisible(bool visible);
 

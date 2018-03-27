@@ -7,7 +7,7 @@
 
 LockedAccountPanel::LockedAccountPanel(QWidget *parent)
     :QWidget(parent)
-    ,mName(QStringLiteral("一二三四五六七"))
+    ,mName(QStringLiteral("被封禁账号列表"))
     ,mTreeView(new CTreeViewEx(this))
     ,mModel(new QStandardItemModel(this))
 {
@@ -93,6 +93,24 @@ void LockedAccountPanel::setLockedAccountItemList(const LockedAccountItemList &l
     mTreeView->header()->resizeSection(2,60);
 }
 
+void LockedAccountPanel::appendLockedAccountItem(LockedAccountItem* item)
+{
+	mModel->appendRow(item);
+}
+
+void LockedAccountPanel::clearLockedAccountItem()
+{
+	mModel->clear();
+
+	QStringList labels;
+	labels << QStringLiteral("封号时间") << QStringLiteral("封号原因") << QStringLiteral("封号天数");
+	mModel->setHorizontalHeaderLabels(labels);
+	
+	mTreeView->header()->resizeSection(0,170);
+	mTreeView->header()->resizeSection(1,110);
+	mTreeView->header()->resizeSection(2,60);
+}
+
 LockedAccountItemDelegate::LockedAccountItemDelegate(QObject *parent)
     :QStyledItemDelegate(parent)
 {
@@ -121,12 +139,17 @@ void LockedAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewI
 
     QRect rowRect(rt0.topLeft(), rt2.bottomRight());
 
+	QFontMetrics fm = painter->fontMetrics();
+	QString startDateString = fm.elidedText(litem->startDate(), Qt::ElideRight,rt0.adjusted(7,0,0,0).width());
+	QString reasionString = fm.elidedText(litem->reasion(), Qt::ElideRight,rt1.width());
+	QString dayCountString = fm.elidedText(QString::number(litem->dayCount()), Qt::ElideRight,rt2.width());
+
     painter->setPen("#ffffff");
-    painter->drawText(rt0.adjusted(7,0,0,0), Qt::AlignLeft|Qt::AlignVCenter, litem->startDate());
+    painter->drawText(rt0.adjusted(7,0,0,0), Qt::AlignLeft|Qt::AlignVCenter, startDateString);
     painter->setPen("#fd874c");
-    painter->drawText(rt1, Qt::AlignCenter, litem->reasion());
+    painter->drawText(rt1, Qt::AlignCenter, reasionString);
     painter->setPen("#ffffff");
-    painter->drawText(rt2, Qt::AlignCenter, QString::number(litem->dayCount()));
+    painter->drawText(rt2, Qt::AlignCenter, dayCountString);
     painter->setPen("#4a5980");
 
     QLine line(rowRect.bottomLeft() + QPoint(0,-1), rowRect.bottomRight() + QPoint(0,-1));

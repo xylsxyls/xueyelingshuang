@@ -8,15 +8,21 @@
 #include <QWindow>
 #include "ClosureDialog.h"
 
-void AccountManagerDialog::popAccountDialog()
+QString AccountManagerDialog::popAccountDialog()
 {
 	if (m_accountDialog == nullptr)
 	{
-		return;
+		return -1;
 	}
 
+	m_accountDialog->clearAccountEdit();
 	int32_t dialogId = 0;
-	m_accountDialog->exec(dialogId);
+	int32_t result = m_accountDialog->exec(dialogId);
+	if (result != ACCEPT_BUTTON)
+	{
+		return "";
+	}
+	return m_accountDialog->accountEditText();
 }
 
 AccountDialog* AccountManagerDialog::accountDialogPtr()
