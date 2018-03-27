@@ -1,16 +1,16 @@
 /****************************************************************************
-** Meta object code from reading C++ file 'RPGFourWidget.h'
+** Meta object code from reading C++ file 'RPGThreeWidget.h'
 **
 ** Created by: The Qt Meta Object Compiler version 67 (Qt 5.5.1)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
-#include "../../RPGFourWidget.h"
+#include "../../RPGThreeWidget.h"
 #include <QtCore/qbytearray.h>
 #include <QtCore/qmetatype.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
-#error "The header file 'RPGFourWidget.h' doesn't include <QObject>."
+#error "The header file 'RPGThreeWidget.h' doesn't include <QObject>."
 #elif Q_MOC_OUTPUT_REVISION != 67
 #error "This file was generated using the moc from 5.5.1. It"
 #error "cannot be used with the include files from this version of Qt."
@@ -18,28 +18,28 @@
 #endif
 
 QT_BEGIN_MOC_NAMESPACE
-struct qt_meta_stringdata_RPGFourWidget_t {
+struct qt_meta_stringdata_RPGThreeWidget_t {
     QByteArrayData data[4];
-    char stringdata0[29];
+    char stringdata0[30];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
-    qptrdiff(offsetof(qt_meta_stringdata_RPGFourWidget_t, stringdata0) + ofs \
+    qptrdiff(offsetof(qt_meta_stringdata_RPGThreeWidget_t, stringdata0) + ofs \
         - idx * sizeof(QByteArrayData)) \
     )
-static const qt_meta_stringdata_RPGFourWidget_t qt_meta_stringdata_RPGFourWidget = {
+static const qt_meta_stringdata_RPGThreeWidget_t qt_meta_stringdata_RPGThreeWidget = {
     {
-QT_MOC_LITERAL(0, 0, 13), // "RPGFourWidget"
-QT_MOC_LITERAL(1, 14, 5), // "error"
-QT_MOC_LITERAL(2, 20, 0), // ""
-QT_MOC_LITERAL(3, 21, 7) // "isError"
+QT_MOC_LITERAL(0, 0, 14), // "RPGThreeWidget"
+QT_MOC_LITERAL(1, 15, 5), // "error"
+QT_MOC_LITERAL(2, 21, 0), // ""
+QT_MOC_LITERAL(3, 22, 7) // "isError"
 
     },
-    "RPGFourWidget\0error\0\0isError"
+    "RPGThreeWidget\0error\0\0isError"
 };
 #undef QT_MOC_LITERAL
 
-static const uint qt_meta_data_RPGFourWidget[] = {
+static const uint qt_meta_data_RPGThreeWidget[] = {
 
  // content:
        7,       // revision
@@ -61,10 +61,10 @@ static const uint qt_meta_data_RPGFourWidget[] = {
        0        // eod
 };
 
-void RPGFourWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+void RPGThreeWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     if (_c == QMetaObject::InvokeMetaMethod) {
-        RPGFourWidget *_t = static_cast<RPGFourWidget *>(_o);
+        RPGThreeWidget *_t = static_cast<RPGThreeWidget *>(_o);
         Q_UNUSED(_t)
         switch (_id) {
         case 0: _t->error((*reinterpret_cast< bool(*)>(_a[1]))); break;
@@ -74,34 +74,34 @@ void RPGFourWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         int *result = reinterpret_cast<int *>(_a[0]);
         void **func = reinterpret_cast<void **>(_a[1]);
         {
-            typedef void (RPGFourWidget::*_t)(bool );
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&RPGFourWidget::error)) {
+            typedef void (RPGThreeWidget::*_t)(bool );
+            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&RPGThreeWidget::error)) {
                 *result = 0;
             }
         }
     }
 }
 
-const QMetaObject RPGFourWidget::staticMetaObject = {
-    { &QWidget::staticMetaObject, qt_meta_stringdata_RPGFourWidget.data,
-      qt_meta_data_RPGFourWidget,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
+const QMetaObject RPGThreeWidget::staticMetaObject = {
+    { &QWidget::staticMetaObject, qt_meta_stringdata_RPGThreeWidget.data,
+      qt_meta_data_RPGThreeWidget,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
 };
 
 
-const QMetaObject *RPGFourWidget::metaObject() const
+const QMetaObject *RPGThreeWidget::metaObject() const
 {
     return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
 }
 
-void *RPGFourWidget::qt_metacast(const char *_clname)
+void *RPGThreeWidget::qt_metacast(const char *_clname)
 {
     if (!_clname) return Q_NULLPTR;
-    if (!strcmp(_clname, qt_meta_stringdata_RPGFourWidget.stringdata0))
-        return static_cast<void*>(const_cast< RPGFourWidget*>(this));
+    if (!strcmp(_clname, qt_meta_stringdata_RPGThreeWidget.stringdata0))
+        return static_cast<void*>(const_cast< RPGThreeWidget*>(this));
     return QWidget::qt_metacast(_clname);
 }
 
-int RPGFourWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+int RPGThreeWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
     _id = QWidget::qt_metacall(_c, _id, _a);
     if (_id < 0)
@@ -119,7 +119,7 @@ int RPGFourWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void RPGFourWidget::error(bool _t1)
+void RPGThreeWidget::error(bool _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 0, _a);

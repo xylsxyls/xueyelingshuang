@@ -8,6 +8,7 @@ BoxDialogBase::BoxDialogBase(int32_t dialogWidth, int32_t dialogHeight, QWindow*
 {
 	setParentWindow(parent);
 	initForExec(dialogWidth, dialogHeight);
+	setFixedSize(dialogWidth, dialogHeight);
 	m_title->setText(QString::fromStdWString(L"11对战平台"));
 	m_title->setBackgroundColor(QColor(67, 81, 117, 255));
 	m_title->setGeometry(QRect(1, 1, width() - 2, 31));

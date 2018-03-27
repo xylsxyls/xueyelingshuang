@@ -217,6 +217,10 @@ void DialogManager::popAccountManagerDialog(QWindow* parent)
 
 AccountManagerDialog* DialogManager::accountMannagerDialogPtr()
 {
+	if (m_accountManagerDialog == nullptr)
+	{
+		m_accountManagerDialog = new AccountManagerDialog;
+	}
 	return m_accountManagerDialog;
 }
 

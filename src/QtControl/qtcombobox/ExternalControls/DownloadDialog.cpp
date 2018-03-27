@@ -25,7 +25,7 @@ int32_t DownloadDialog::popDownloadDialog(int32_t& dialogId,
 	dlg->setParentWindow(parent);
 	dlg->setDialogEnum(DOWNLOAD_DIALOG);
 	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
-	delete dlg;
+	dlg->deleteLater();
 	return result;
 }
 

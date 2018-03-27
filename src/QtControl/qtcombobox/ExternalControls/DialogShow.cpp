@@ -30,7 +30,7 @@ void DialogShow::initForExec(int32_t dialogWidth, int32_t dialogHeight)
 	m_isExec = true;
 	installEventFilter(this);
 	setWindowFlags(windowFlags() | Qt::Tool);
-	setFixedSize(dialogWidth, dialogHeight);//411, 165340, 165
+	resize(dialogWidth, dialogHeight);//411, 165340, 165
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
 	m_exit->setBkgMargins(0, 0);
 	m_exit->setBorderRadius(0);
@@ -317,7 +317,7 @@ void DialogShow::end()
 		DialogBase::done(m_result);
 		if (m_result != DESTROY_ALL)
 		{
-			delete this;
+			deleteLater();
 		}
 	}
 }

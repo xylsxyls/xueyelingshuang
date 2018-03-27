@@ -21,6 +21,7 @@ void ContentLabel::setUpColor(const QColor& color)
 		return;
 	}
 	m_up->setTextColor(color);
+	m_up->repaint();
 }
 
 void ContentLabel::setDownColor(const QColor& color)
@@ -30,6 +31,7 @@ void ContentLabel::setDownColor(const QColor& color)
 		return;
 	}
 	m_down->setTextColor(color);
+	m_down->repaint();
 }
 
 void ContentLabel::setOneLine()
@@ -76,6 +78,8 @@ void ContentLabel::setBackgroundColor(const QColor& color)
 	}
 	m_up->setBackgroundColor(color);
 	m_down->setBackgroundColor(color);
+	m_up->repaint();
+	m_down->repaint();
 }
 
 void ContentLabel::setFontFace(const QString& fontFace)
@@ -86,6 +90,8 @@ void ContentLabel::setFontFace(const QString& fontFace)
 	}
 	m_up->setFontFace(fontFace);
 	m_down->setFontFace(fontFace);
+	m_up->repaint();
+	m_down->repaint();
 }
 
 void ContentLabel::setFontSize(int32_t size)
@@ -96,6 +102,8 @@ void ContentLabel::setFontSize(int32_t size)
 	}
 	m_up->setFontSize(size);
 	m_down->setFontSize(size);
+	m_up->repaint();
+	m_down->repaint();
 }
 
 void ContentLabel::update()
