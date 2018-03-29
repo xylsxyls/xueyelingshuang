@@ -3,7 +3,7 @@
 #include "ContentLabel.h"
 
 RPGThreeWidget::RPGThreeWidget(QWidget* parent):
-QWidget(parent),
+RPGContentBase(parent),
 m_titleLeft(nullptr),
 m_titleRight(nullptr),
 m_separator(nullptr),
@@ -44,8 +44,8 @@ m_downError(nullptr)
 	{
 		m_upError->setVisible(false);
 		m_downError->setVisible(false);
-		QObject::connect(this, &RPGThreeWidget::error, m_upError, &Label::setVisible);
-		QObject::connect(this, &RPGThreeWidget::error, m_downError, &Label::setVisible);
+		QObject::connect(this, &RPGThreeWidget::stateSignal, this, &RPGThreeWidget::onState);
+		QObject::connect(this, &RPGThreeWidget::stateSignal, this, &RPGThreeWidget::onState);
 	}
 }
 
@@ -259,11 +259,6 @@ void RPGThreeWidget::init(const QString& titleLeft,
 	m_downContentThree->setUpColor(QColor("#ffffff"));
 }
 
-void RPGThreeWidget::setError(bool isError)
-{
-	emit error(isError);
-}
-
 void RPGThreeWidget::resizeEvent(QResizeEvent* eve)
 {
 	QWidget::resizeEvent(eve);
@@ -303,6 +298,42 @@ void RPGThreeWidget::resizeEvent(QResizeEvent* eve)
 
 	m_upError->setGeometry(QRect(0, upContentTop, RPGWidth, contentHeight).adjusted(-1, -1, 1, 1));
 	m_downError->setGeometry(QRect(0, downContentTop, RPGWidth, contentHeight).adjusted(-1, -1, 1, 1));
+}
+
+void RPGThreeWidget::onState(int32_t state)
+{
+	if (!check())
+	{
+		return;
+	}
+
+	switch (state)
+	{
+	case NORMAL:
+	{
+		m_upError->setVisible(false);
+		m_downError->setVisible(false);
+		break;
+	}
+	case ERROR_VALUE:
+	{
+		m_upError->setVisible(true);
+		m_downError->setVisible(true);
+		break;
+	}
+	case ERROR_HEADER:
+	{
+
+		break;
+	}
+	case ERROR_ALL:
+	{
+
+		break;
+	}
+	default:
+		break;
+	}
 }
 
 bool RPGThreeWidget::check()

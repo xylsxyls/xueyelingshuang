@@ -206,11 +206,6 @@ DownloadOperateDialog::DownloadOperateDialog(int32_t taskId,
 	normal();
 }
 
-DownloadOperateDialog::~DownloadOperateDialog()
-{
-
-}
-
 void DownloadOperateDialog::setClipboardData(HWND hWnd, const std::string& str)
 {
 	//´ò¿ª¼ôÌù°å

@@ -20,7 +20,7 @@ int32_t InputDialog::popInputDialog(int32_t& dialogId,
 	dlg->setParentWindow(parent);
 	dlg->setDialogEnum(INPUT_DIALOG);
 	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
-	dlg->deleteLater();
+	delete dlg;
 	return result;
 }
 

@@ -3,7 +3,7 @@
 #include "ContentLabel.h"
 
 RPGFourWidget::RPGFourWidget(QWidget* parent):
-QWidget(parent),
+RPGContentBase(parent),
 m_titleLeft(nullptr),
 m_titleRight(nullptr),
 m_separator(nullptr),
@@ -52,10 +52,9 @@ m_downError(nullptr)
 	{
 		m_upError->setVisible(false);
 		m_downError->setVisible(false);
-		QObject::connect(this, &RPGFourWidget::error, m_upError, &Label::setVisible);
-		QObject::connect(this, &RPGFourWidget::error, m_downError, &Label::setVisible);
+		QObject::connect(this, &RPGFourWidget::stateSignal, this, &RPGFourWidget::onState);
+		QObject::connect(this, &RPGFourWidget::stateSignal, this, &RPGFourWidget::onState);
 	}
-	
 }
 
 void RPGFourWidget::init(const QString& titleLeft,
@@ -316,11 +315,6 @@ void RPGFourWidget::init(const QString& titleLeft,
 	m_downContentFour->setUpColor(QColor("#ffffff"));
 }
 
-void RPGFourWidget::setError(bool isError)
-{
-	emit error(isError);
-}
-
 void RPGFourWidget::resizeEvent(QResizeEvent* eve)
 {
 	QWidget::resizeEvent(eve);
@@ -364,6 +358,42 @@ void RPGFourWidget::resizeEvent(QResizeEvent* eve)
 
 	m_upError->setGeometry(QRect(0, upContentTop, RPGWidth, contentHeight).adjusted(-1, -1, 1, 1));
 	m_downError->setGeometry(QRect(0, downContentTop, RPGWidth, contentHeight).adjusted(-1, -1, 1, 1));
+}
+
+void RPGFourWidget::onState(int32_t state)
+{
+	if (!check())
+	{
+		return;
+	}
+
+	switch (state)
+	{
+	case NORMAL:
+	{
+		m_upError->setVisible(false);
+		m_downError->setVisible(false);
+		break;
+	}
+	case ERROR_VALUE:
+	{
+		m_upError->setVisible(true);
+		m_downError->setVisible(true);
+		break;
+	}
+	case ERROR_HEADER:
+	{
+
+		break;
+	}
+	case ERROR_ALL:
+	{
+
+		break;
+	}
+	default:
+		break;
+	}
 }
 
 bool RPGFourWidget::check()

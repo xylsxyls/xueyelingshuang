@@ -211,6 +211,11 @@ public:
 	*/
 	void setDropDownVisible(bool enable, bool rePaint = false);
 
+	/** 设置点击下拉框是否有效
+	@param [in] enable 是否有效
+	*/
+	void setSelectEnable(bool enable);
+
 	/** 重画
 	*/
 	virtual void repaint();

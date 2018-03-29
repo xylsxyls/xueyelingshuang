@@ -1,30 +1,13 @@
 #pragma once
 #include <QWidget>
+#include "RPGContentBase.h"
 
 class Label;
 class ContentLabel;
 /** RPG四列战报显示
 */
-class RPGThreeWidget : public QWidget
+class RPGThreeWidget : public RPGContentBase
 {
-	enum
-	{
-		/** 标题高度
-		*/
-		TITLE_HEIGHT = 24,
-
-		/** 分割线高度
-		*/
-		SEPARATOR_HEIGHT = 1,
-
-		/** 上部或下部标题栏高度
-		*/
-		UP_DOWN_TITLE_HEIGHT = 23,
-
-		/** 列数
-		*/
-		COLUMN = 3
-	};
 	Q_OBJECT
 public:
 	/** 构造函数
@@ -46,18 +29,31 @@ public:
 			  const QStringList& value,
 			  const QStringList& progress);
 
-	/** 设置当前是否是错误状态（支持多线程）
-	@param [in] isError 是否是错误状态
-	*/
-	void setError(bool isError);
-
-Q_SIGNALS:
-	void error(bool isError);
-
 protected:
 	void resizeEvent(QResizeEvent* eve);
 
 private:
+	enum
+	{
+		/** 标题高度
+		*/
+		TITLE_HEIGHT = 24,
+
+		/** 分割线高度
+		*/
+		SEPARATOR_HEIGHT = 1,
+
+		/** 上部或下部标题栏高度
+		*/
+		UP_DOWN_TITLE_HEIGHT = 23,
+
+		/** 列数
+		*/
+		COLUMN = 3
+	};
+
+private:
+	void onState(int32_t state);
 	bool check();
 
 private:

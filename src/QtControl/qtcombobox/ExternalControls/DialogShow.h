@@ -12,6 +12,10 @@ public:
 	*/
 	DialogShow();
 
+	/** 析构函数
+	*/
+	virtual ~DialogShow();
+
 	/** 设置默认控件，含有关闭按钮，标题，分割线，框大小，背景颜色，背景边框
 	@param [in] dialogWidth 窗口宽度
 	@param [in] dialogHeight 窗口高度

@@ -34,7 +34,7 @@ m_dropDownBorderWidth(-1)
 	
 	setMouseTracking(true);
 	QObject::connect(m_listWidget, &QListWidget::itemEntered, this, &ComboBox::listItemEntered);
-	QObject::connect(m_listWidget, &QListWidget::itemPressed, this, &ComboBox::listItemPressed);
+	QObject::connect(m_listWidget, &ListWidget::itemPressed, this, &ComboBox::listItemPressed);
 	setDefault();
 	m_listWidget->verticalScrollBar()->setStyleSheet(
 		"QScrollBar:vertical"
@@ -308,6 +308,11 @@ void ComboBox::setDropDownVisible(bool enable, bool rePaint)
 			ControlBase::setPxSolidValue(L"border", m_dropDownBorderWidth, true, rePaint);
 		}
 	}
+}
+
+void ComboBox::setSelectEnable(bool enable)
+{
+	m_listWidget->setClickEnable(enable);
 }
 
 void ComboBox::showEvent(QShowEvent* eve)

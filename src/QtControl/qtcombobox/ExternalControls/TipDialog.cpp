@@ -16,7 +16,7 @@ int32_t TipDialog::popTipDialog(int32_t& dialogId,
 	dlg->setParentWindow(parent);
 	dlg->setDialogEnum(TIP_DIALOG);
 	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
-	dlg->deleteLater();
+	delete dlg;
 	return result;
 }
 

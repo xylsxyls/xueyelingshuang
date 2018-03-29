@@ -25,6 +25,19 @@ m_titleHeight(40)
 	
 }
 
+DialogShow::~DialogShow()
+{
+	auto childs = children();
+	for each (QObject* var in childs)
+	{
+		QWidget* widget = qobject_cast<QWidget*>(var);
+		if (widget)
+		{
+			widget->installEventFilter(nullptr);
+		}
+	}
+}
+
 void DialogShow::initForExec(int32_t dialogWidth, int32_t dialogHeight)
 {
 	m_isExec = true;
@@ -258,9 +271,13 @@ void DialogShow::done(int32_t result)
 	{
 		m_result = result;
 		auto childs = children();
-		for each (QWidget* var in childs)
+		for each (QObject* var in childs)
 		{
-			var->setEnabled(false);
+			QWidget* widget = qobject_cast<QWidget*>(var);
+			if (widget)
+			{
+				widget->setEnabled(false);
+			}
 		}
 		m_inExit = true;
 		m_cancelEscAltF4 = true;

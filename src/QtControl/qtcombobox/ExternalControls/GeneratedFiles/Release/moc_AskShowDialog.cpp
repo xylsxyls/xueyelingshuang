@@ -1,16 +1,16 @@
 /****************************************************************************
-** Meta object code from reading C++ file 'BattleDialog.h'
+** Meta object code from reading C++ file 'AskShowDialog.h'
 **
 ** Created by: The Qt Meta Object Compiler version 67 (Qt 5.5.1)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
-#include "../../BattleDialog.h"
+#include "../../AskShowDialog.h"
 #include <QtCore/qbytearray.h>
 #include <QtCore/qmetatype.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
-#error "The header file 'BattleDialog.h' doesn't include <QObject>."
+#error "The header file 'AskShowDialog.h' doesn't include <QObject>."
 #elif Q_MOC_OUTPUT_REVISION != 67
 #error "This file was generated using the moc from 5.5.1. It"
 #error "cannot be used with the include files from this version of Qt."
@@ -18,25 +18,25 @@
 #endif
 
 QT_BEGIN_MOC_NAMESPACE
-struct qt_meta_stringdata_BattleDialog_t {
+struct qt_meta_stringdata_AskShowDialog_t {
     QByteArrayData data[1];
-    char stringdata0[13];
+    char stringdata0[14];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
-    qptrdiff(offsetof(qt_meta_stringdata_BattleDialog_t, stringdata0) + ofs \
+    qptrdiff(offsetof(qt_meta_stringdata_AskShowDialog_t, stringdata0) + ofs \
         - idx * sizeof(QByteArrayData)) \
     )
-static const qt_meta_stringdata_BattleDialog_t qt_meta_stringdata_BattleDialog = {
+static const qt_meta_stringdata_AskShowDialog_t qt_meta_stringdata_AskShowDialog = {
     {
-QT_MOC_LITERAL(0, 0, 12) // "BattleDialog"
+QT_MOC_LITERAL(0, 0, 13) // "AskShowDialog"
 
     },
-    "BattleDialog"
+    "AskShowDialog"
 };
 #undef QT_MOC_LITERAL
 
-static const uint qt_meta_data_BattleDialog[] = {
+static const uint qt_meta_data_AskShowDialog[] = {
 
  // content:
        7,       // revision
@@ -52,7 +52,7 @@ static const uint qt_meta_data_BattleDialog[] = {
        0        // eod
 };
 
-void BattleDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+void AskShowDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     Q_UNUSED(_o);
     Q_UNUSED(_id);
@@ -60,28 +60,28 @@ void BattleDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
     Q_UNUSED(_a);
 }
 
-const QMetaObject BattleDialog::staticMetaObject = {
-    { &CW3LModalFrame::staticMetaObject, qt_meta_stringdata_BattleDialog.data,
-      qt_meta_data_BattleDialog,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
+const QMetaObject AskShowDialog::staticMetaObject = {
+    { &DialogShow::staticMetaObject, qt_meta_stringdata_AskShowDialog.data,
+      qt_meta_data_AskShowDialog,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
 };
 
 
-const QMetaObject *BattleDialog::metaObject() const
+const QMetaObject *AskShowDialog::metaObject() const
 {
     return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
 }
 
-void *BattleDialog::qt_metacast(const char *_clname)
+void *AskShowDialog::qt_metacast(const char *_clname)
 {
     if (!_clname) return Q_NULLPTR;
-    if (!strcmp(_clname, qt_meta_stringdata_BattleDialog.stringdata0))
-        return static_cast<void*>(const_cast< BattleDialog*>(this));
-    return CW3LModalFrame::qt_metacast(_clname);
+    if (!strcmp(_clname, qt_meta_stringdata_AskShowDialog.stringdata0))
+        return static_cast<void*>(const_cast< AskShowDialog*>(this));
+    return DialogShow::qt_metacast(_clname);
 }
 
-int BattleDialog::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+int AskShowDialog::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
-    _id = CW3LModalFrame::qt_metacall(_c, _id, _a);
+    _id = DialogShow::qt_metacall(_c, _id, _a);
     if (_id < 0)
         return _id;
     return _id;

@@ -83,7 +83,7 @@ void RPGThreeWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
 }
 
 const QMetaObject RPGThreeWidget::staticMetaObject = {
-    { &QWidget::staticMetaObject, qt_meta_stringdata_RPGThreeWidget.data,
+    { &RPGContentBase::staticMetaObject, qt_meta_stringdata_RPGThreeWidget.data,
       qt_meta_data_RPGThreeWidget,  qt_static_metacall, Q_NULLPTR, Q_NULLPTR}
 };
 
@@ -98,12 +98,12 @@ void *RPGThreeWidget::qt_metacast(const char *_clname)
     if (!_clname) return Q_NULLPTR;
     if (!strcmp(_clname, qt_meta_stringdata_RPGThreeWidget.stringdata0))
         return static_cast<void*>(const_cast< RPGThreeWidget*>(this));
-    return QWidget::qt_metacast(_clname);
+    return RPGContentBase::qt_metacast(_clname);
 }
 
 int RPGThreeWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
-    _id = QWidget::qt_metacall(_c, _id, _a);
+    _id = RPGContentBase::qt_metacall(_c, _id, _a);
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {

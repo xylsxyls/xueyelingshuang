@@ -32,7 +32,9 @@
 #include "TipLabelManager.h"
 #include "RPGFourWidget.h"
 #include "RPGThreeWidget.h"
-#include "BattleDialog.h"
+#include "BattleDialogBase.h"
+#include "BattleFourDialog.h"
+#include "BattleThreeDialog.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -99,6 +101,12 @@ qtcombobox::qtcombobox(QWidget *parent)
 	pBox->setBackgroundColor(QColor(255, 255, 0, 80));
 
 	pBox->addItem("asdf<font color = \"red\">15ms</font>");
+
+	pBox->setSelectEnable(false);
+
+	QObject::connect(pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onItemChanged(int)));
+	QObject::connect(pBox, &ComboBox::itemPressed, this, &qtcombobox::onItemPressed);
+	//QObject::connect(pBox, &ComboBox::hidePopup, this, &qtcombobox::onItemPressed);
 
 	RadioButton* pButton = new RadioButton(this);
 	pButton->setText("123456789");
@@ -439,7 +447,8 @@ qtcombobox::qtcombobox(QWidget *parent)
 	optionBox->addItem(QStringLiteral("观察者"), 6);
 
 	RPGFourWidget* fourWidget = new RPGFourWidget;
-	fourWidget->setGeometry(500, 500, 281, 157);
+	fourWidget->move(500, 500);
+	//fourWidget->setGeometry(500, 500, 281, 157);
 	QStringList headerFour;
 	headerFour.push_back(QStringLiteral("屠龙"));
 	headerFour.push_back(QStringLiteral("炫目"));
@@ -468,7 +477,7 @@ qtcombobox::qtcombobox(QWidget *parent)
 	progressFour.push_back(QStringLiteral("(+125)"));
 	progressFour.push_back(QStringLiteral("(-125)"));
 	fourWidget->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
-	fourWidget->setError(true);
+	fourWidget->setState(true);
 	//fourWidget->setError(false);
 	//fourWidget->show();
 
@@ -498,10 +507,13 @@ qtcombobox::qtcombobox(QWidget *parent)
 	threeWidget->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), header, value, progress);
 	//threeWidget->show();
 
-	BattleDialog* battle = new BattleDialog;
-	battle->init();
-	battle->setGeometry(200, 200, 285 + 22, 185);
+	BattleFourDialog* battle = new BattleFourDialog;
+	battle->move(200, 200);
 	battle->show();
+
+	BattleThreeDialog* battle2 = new BattleThreeDialog;
+	battle2->move(400, 400);
+	battle2->show();
 
 	int x = 3;
 }
@@ -562,6 +574,8 @@ void qtcombobox::modalPop()
 
 void qtcombobox::modalFriendPop()
 {
+	auto ptrdown = DialogManager::instance().downloadOperatePtr(m_dialogId8);
+	
 	Thread* thread = new Thread;
 	thread->m_dialogId = m_dialogId8;
 	//QObject::connect(thread, SIGNAL(error(int)), &DialogManager::instance(), SLOT(onError(int)), Qt::QueuedConnection);
@@ -625,6 +639,7 @@ void qtcombobox::modalFriendPop()
 void qtcombobox::onTestButton()
 {
 	DownloadOperateDialog* ssdf = 0;
+	DialogManager::instance().closeDialog(m_dialogId8);
 	DialogManager::instance().closeDialog(m_dialogId8);
 	DialogManager::instance().closeLastDialog();
 	return;
@@ -795,6 +810,7 @@ void qtcombobox::onDownloadAgain(int32_t dialogId)
 void qtcombobox::onCancelDownload(int32_t dialogId)
 {
 	RCSend("onCancelDownload,dialogId = %d", dialogId);
+	//DialogManager::instance().closeDialog(m_dialogId8);
 }
 
 void qtcombobox::onUseOtherDownload(int32_t dialogId)
@@ -810,4 +826,16 @@ void qtcombobox::onCopyDownloadAddr(int32_t dialogId, const QString& addr)
 void qtcombobox::onCopyPath(int32_t dialogId, const QString& path)
 {
 	RCSend("onCopyPath,dialogId = %d, path = %s", dialogId, path.toStdString().c_str());
+}
+
+void qtcombobox::onItemPressed(int index)
+{
+	
+	qDebug() << index;
+}
+
+void qtcombobox::onItemChanged(int index)
+{
+
+	qDebug() << 2;
 }

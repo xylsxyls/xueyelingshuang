@@ -5,6 +5,8 @@
 #include <Windows.h>
 #include <QApplication>
 
+#include <QLabel>
+
 #ifndef WM_DWMCOMPOSITIONCHANGED
 #define WM_DWMCOMPOSITIONCHANGED        0x031E
 #endif
@@ -113,6 +115,14 @@ long COriginalDialog::onNcHitTest(QPoint pt)
 		{
 			QWidget* w = qobject_cast<QWidget*>(this->children()[i]);
 			if(w == NULL)
+				continue;
+
+			if(!w->isVisible())
+				continue;
+
+			//* label²»Ó°ÏìÍÏ¶¯
+			QLabel* isLabel = qobject_cast<QLabel*>(w);
+			if(isLabel)
 				continue;
 
 			QPoint mousePt =  this->mapFromGlobal(QCursor::pos());

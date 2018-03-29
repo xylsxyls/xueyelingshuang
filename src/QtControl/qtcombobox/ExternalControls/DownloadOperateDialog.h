@@ -127,8 +127,6 @@ private:
 						  const QString& downloadAddr,
 						  const QString& path);
 
-	~DownloadOperateDialog();
-
 private:
 	void setClipboardData(HWND hWnd, const std::string& str);
 

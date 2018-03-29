@@ -35,4 +35,18 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setMaxHeight(int32_t maxHeight, bool rePaint = false);
+
+	/** 是否使点击失效
+	@param [in] enable 是否有效
+	*/
+	void setClickEnable(bool enable);
+
+Q_SIGNALS:
+	void itemPressed(QListWidgetItem* item);
+
+protected:
+	void mousePressEvent(QMouseEvent* eve);
+
+private:
+	bool m_click;
 };

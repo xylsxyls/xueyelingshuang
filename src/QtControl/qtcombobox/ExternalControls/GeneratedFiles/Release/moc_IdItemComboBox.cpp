@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_IdItemComboBox_t {
-    QByteArrayData data[7];
-    char stringdata0[63];
+    QByteArrayData data[8];
+    char stringdata0[69];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -35,11 +35,12 @@ QT_MOC_LITERAL(2, 34, 0), // ""
 QT_MOC_LITERAL(3, 35, 2), // "id"
 QT_MOC_LITERAL(4, 38, 4), // "text"
 QT_MOC_LITERAL(5, 43, 15), // "curIndexChanged"
-QT_MOC_LITERAL(6, 59, 3) // "str"
+QT_MOC_LITERAL(6, 59, 3), // "str"
+QT_MOC_LITERAL(7, 63, 5) // "index"
 
     },
     "IdItemComboBox\0currentItemChanged\0\0"
-    "id\0text\0curIndexChanged\0str"
+    "id\0text\0curIndexChanged\0str\0index"
 };
 #undef QT_MOC_LITERAL
 
@@ -49,7 +50,7 @@ static const uint qt_meta_data_IdItemComboBox[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-       2,   14, // methods
+       3,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -57,16 +58,18 @@ static const uint qt_meta_data_IdItemComboBox[] = {
        1,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    2,   24,    2, 0x06 /* Public */,
+       1,    2,   29,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-       5,    1,   29,    2, 0x08 /* Private */,
+       5,    1,   34,    2, 0x08 /* Private */,
+       5,    1,   37,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void, QMetaType::LongLong, QMetaType::QString,    3,    4,
 
  // slots: parameters
     QMetaType::Void, QMetaType::QString,    6,
+    QMetaType::Void, QMetaType::Int,    7,
 
        0        // eod
 };
@@ -79,6 +82,7 @@ void IdItemComboBox::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         switch (_id) {
         case 0: _t->currentItemChanged((*reinterpret_cast< qint64(*)>(_a[1])),(*reinterpret_cast< const QString(*)>(_a[2]))); break;
         case 1: _t->curIndexChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
+        case 2: _t->curIndexChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -118,13 +122,13 @@ int IdItemComboBox::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 2)
+        if (_id < 3)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 2;
+        _id -= 3;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 2)
+        if (_id < 3)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 2;
+        _id -= 3;
     }
     return _id;
 }
