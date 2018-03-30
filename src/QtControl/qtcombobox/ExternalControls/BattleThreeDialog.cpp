@@ -1,14 +1,14 @@
 #include "BattleThreeDialog.h"
-#include "RPGThreeWidget.h"
+#include "RPGContentWidget.h"
 
 BattleThreeDialog::BattleThreeDialog(QWidget* parent) :
 BattleDialogBase(parent)
 {
-	m_content = new RPGThreeWidget(this);
+	m_content = new RPGContentWidget(2, 3, this);
 	//基类的初始化函数必须放在实例子类的构造函数中调用
 	init();
 	setDisplayMode(true);
-	setState(true);
+	setState(RPGContentBase::ERROR_ALL);
 	setLogo(false);
 }
 
@@ -26,7 +26,10 @@ void BattleThreeDialog::initWidget()
 	headerThree.push_back(QStringLiteral("怪兽杀"));
 	headerThree.push_back(QStringLiteral("局杀"));
 	headerThree.push_back(QStringLiteral("其他"));
+	headerThree.push_back(QStringLiteral("其他"));
+	headerThree.push_back(QStringLiteral("其他"));
 	QStringList valueThree;
+	valueThree.push_back(QStringLiteral("999999"));
 	valueThree.push_back(QStringLiteral("999999"));
 	valueThree.push_back(QStringLiteral("999999"));
 	valueThree.push_back(QStringLiteral("999999"));
@@ -40,7 +43,7 @@ void BattleThreeDialog::initWidget()
 	progressThree.push_back(QStringLiteral(""));
 	progressThree.push_back(QStringLiteral(""));
 	progressThree.push_back(QStringLiteral("(-125)"));
-	((RPGThreeWidget*)m_content)->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerThree, valueThree, progressThree);
+	((RPGContentWidget*)m_content)->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerThree, valueThree, progressThree);
 }
 
 bool BattleThreeDialog::check()

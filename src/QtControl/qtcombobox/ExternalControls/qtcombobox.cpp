@@ -30,8 +30,7 @@
 #include "AccountManagerDialog.h"
 #include "TipLabel.h"
 #include "TipLabelManager.h"
-#include "RPGFourWidget.h"
-#include "RPGThreeWidget.h"
+#include "RPGContentWidget.h"
 #include "BattleDialogBase.h"
 #include "BattleFourDialog.h"
 #include "BattleThreeDialog.h"
@@ -446,69 +445,69 @@ qtcombobox::qtcombobox(QWidget *parent)
 	optionBox->addItem(QStringLiteral("AI困难"), 5);
 	optionBox->addItem(QStringLiteral("观察者"), 6);
 
-	RPGFourWidget* fourWidget = new RPGFourWidget;
-	fourWidget->move(500, 500);
-	//fourWidget->setGeometry(500, 500, 281, 157);
-	QStringList headerFour;
-	headerFour.push_back(QStringLiteral("屠龙"));
-	headerFour.push_back(QStringLiteral("炫目"));
-	headerFour.push_back(QStringLiteral("玉树"));
-	headerFour.push_back(QStringLiteral("杀"));
-	headerFour.push_back(QStringLiteral("怪兽杀"));
-	headerFour.push_back(QStringLiteral("局杀"));
-	headerFour.push_back(QStringLiteral("逃跑"));
-	headerFour.push_back(QStringLiteral("其他"));
-	QStringList valueFour;
-	valueFour.push_back(QStringLiteral("999999"));
-	valueFour.push_back(QStringLiteral("999999"));
-	valueFour.push_back(QStringLiteral("999999"));
-	valueFour.push_back(QStringLiteral("999999"));
-	valueFour.push_back(QStringLiteral("999999"));
-	valueFour.push_back(QStringLiteral("999999"));
-	valueFour.push_back(QStringLiteral("999999"));
-	valueFour.push_back(QStringLiteral("999999"));
-	QStringList progressFour;
-	progressFour.push_back(QStringLiteral(""));
-	progressFour.push_back(QStringLiteral("(+125)"));
-	progressFour.push_back(QStringLiteral(""));
-	progressFour.push_back(QStringLiteral(""));
-	progressFour.push_back(QStringLiteral(""));
-	progressFour.push_back(QStringLiteral(""));
-	progressFour.push_back(QStringLiteral("(+125)"));
-	progressFour.push_back(QStringLiteral("(-125)"));
-	fourWidget->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
-	fourWidget->setState(true);
+	//RPGFourWidget* fourWidget = new RPGFourWidget;
+	//fourWidget->move(500, 500);
+	////fourWidget->setGeometry(500, 500, 281, 157);
+	//QStringList headerFour;
+	//headerFour.push_back(QStringLiteral("屠龙"));
+	//headerFour.push_back(QStringLiteral("炫目"));
+	//headerFour.push_back(QStringLiteral("玉树"));
+	//headerFour.push_back(QStringLiteral("杀"));
+	//headerFour.push_back(QStringLiteral("怪兽杀"));
+	//headerFour.push_back(QStringLiteral("局杀"));
+	//headerFour.push_back(QStringLiteral("逃跑"));
+	//headerFour.push_back(QStringLiteral("其他"));
+	//QStringList valueFour;
+	//valueFour.push_back(QStringLiteral("999999"));
+	//valueFour.push_back(QStringLiteral("999999"));
+	//valueFour.push_back(QStringLiteral("999999"));
+	//valueFour.push_back(QStringLiteral("999999"));
+	//valueFour.push_back(QStringLiteral("999999"));
+	//valueFour.push_back(QStringLiteral("999999"));
+	//valueFour.push_back(QStringLiteral("999999"));
+	//valueFour.push_back(QStringLiteral("999999"));
+	//QStringList progressFour;
+	//progressFour.push_back(QStringLiteral(""));
+	//progressFour.push_back(QStringLiteral("(+125)"));
+	//progressFour.push_back(QStringLiteral(""));
+	//progressFour.push_back(QStringLiteral(""));
+	//progressFour.push_back(QStringLiteral(""));
+	//progressFour.push_back(QStringLiteral(""));
+	//progressFour.push_back(QStringLiteral("(+125)"));
+	//progressFour.push_back(QStringLiteral("(-125)"));
+	//fourWidget->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
+	//fourWidget->setState(true);
 	//fourWidget->setError(false);
 	//fourWidget->show();
 
-	RPGThreeWidget* threeWidget = new RPGThreeWidget;
-	threeWidget->setGeometry(300, 300, 281, 157);
-	QStringList header;
-	header.push_back(QStringLiteral("屠龙"));
-	header.push_back(QStringLiteral("炫目"));
-	header.push_back(QStringLiteral("杀"));
-	header.push_back(QStringLiteral("怪兽杀"));
-	header.push_back(QStringLiteral("局杀"));
-	header.push_back(QStringLiteral("其他"));
-	QStringList value;
-	value.push_back(QStringLiteral("999999"));
-	value.push_back(QStringLiteral("999999"));
-	value.push_back(QStringLiteral("999999"));
-	value.push_back(QStringLiteral("999999"));
-	value.push_back(QStringLiteral("999999"));
-	value.push_back(QStringLiteral("999999"));
-	QStringList progress;
-	progress.push_back(QStringLiteral(""));
-	progress.push_back(QStringLiteral("(+125)"));
-	progress.push_back(QStringLiteral(""));
-	progress.push_back(QStringLiteral(""));
-	progress.push_back(QStringLiteral(""));
-	progress.push_back(QStringLiteral("(-125)"));
-	threeWidget->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), header, value, progress);
+	//RPGThreeWidget* threeWidget = new RPGThreeWidget;
+	//threeWidget->setGeometry(300, 300, 281, 157);
+	//QStringList header;
+	//header.push_back(QStringLiteral("屠龙"));
+	//header.push_back(QStringLiteral("炫目"));
+	//header.push_back(QStringLiteral("杀"));
+	//header.push_back(QStringLiteral("怪兽杀"));
+	//header.push_back(QStringLiteral("局杀"));
+	//header.push_back(QStringLiteral("其他"));
+	//QStringList value;
+	//value.push_back(QStringLiteral("999999"));
+	//value.push_back(QStringLiteral("999999"));
+	//value.push_back(QStringLiteral("999999"));
+	//value.push_back(QStringLiteral("999999"));
+	//value.push_back(QStringLiteral("999999"));
+	//value.push_back(QStringLiteral("999999"));
+	//QStringList progress;
+	//progress.push_back(QStringLiteral(""));
+	//progress.push_back(QStringLiteral("(+125)"));
+	//progress.push_back(QStringLiteral(""));
+	//progress.push_back(QStringLiteral(""));
+	//progress.push_back(QStringLiteral(""));
+	//progress.push_back(QStringLiteral("(-125)"));
+	//threeWidget->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), header, value, progress);
 	//threeWidget->show();
 
 	BattleFourDialog* battle = new BattleFourDialog;
-	battle->move(200, 200);
+	//battle->move(200, 200);
 	battle->show();
 
 	BattleThreeDialog* battle2 = new BattleThreeDialog;

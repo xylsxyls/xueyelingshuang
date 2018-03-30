@@ -1,10 +1,10 @@
 #include "BattleFourDialog.h"
-#include "RPGFourWidget.h"
+#include "RPGContentWidget.h"
 
 BattleFourDialog::BattleFourDialog(QWidget* parent) :
 BattleDialogBase(parent)
 {
-	m_content = new RPGFourWidget(this);
+	m_content = new RPGContentWidget(2, 4, this);
 	//基类的初始化函数必须放在实例子类的构造函数中调用
 	init();
 	setDisplayMode(true);
@@ -46,7 +46,7 @@ void BattleFourDialog::initWidget()
 	progressFour.push_back(QStringLiteral(""));
 	progressFour.push_back(QStringLiteral("(+125)"));
 	progressFour.push_back(QStringLiteral("(-125)"));
-	((RPGFourWidget*)m_content)->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
+	((RPGContentWidget*)m_content)->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
 }
 
 bool BattleFourDialog::check()

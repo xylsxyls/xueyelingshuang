@@ -6,14 +6,18 @@ class Label;
 class ContentLabel;
 /** RPG四列战报显示
 */
-class RPGThreeWidget : public RPGContentBase
+class RPGContentWidget : public RPGContentBase
 {
 	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] parent 父窗口指针
 	*/
-	RPGThreeWidget(QWidget* parent = nullptr);
+	RPGContentWidget(int32_t row, int32_t column, QWidget* parent = nullptr);
+
+	/** 析构函数
+	*/
+	virtual ~RPGContentWidget();
 
 public:
 	/** 初始化（该函数要求每个QStringList内必须有6个值，不管是不是错误状态）
@@ -32,6 +36,12 @@ public:
 protected:
 	void resizeEvent(QResizeEvent* eve);
 
+	template <typename TypeClass>
+	TypeClass** CreateDyadicArray(int32_t row, int32_t column);
+
+	template <typename TypeClass>
+	void DestroyDyadicArray(TypeClass** classPtr, int32_t row);
+
 private:
 	enum
 	{
@@ -43,13 +53,9 @@ private:
 		*/
 		SEPARATOR_HEIGHT = 1,
 
-		/** 上部或下部标题栏高度
+		/** 内容部分的标题栏高度
 		*/
-		UP_DOWN_TITLE_HEIGHT = 23,
-
-		/** 列数
-		*/
-		COLUMN = 3
+		CONTENT_TITLE_HEIGHT = 23
 	};
 
 private:
@@ -57,21 +63,19 @@ private:
 	bool check();
 
 private:
+	int32_t m_row;
+	int32_t m_column;
+
 	Label* m_titleLeft;
 	Label* m_titleRight;
 	Label* m_separator;
-	Label* m_upTitleOne;
-	Label* m_upTitleTwo;
-	Label* m_upTitleThree;
-	Label* m_downTitleOne;
-	Label* m_downTitleTwo;
-	Label* m_downTitleThree;
-	ContentLabel* m_upContentOne;
-	ContentLabel* m_upContentTwo;
-	ContentLabel* m_upContentThree;
-	ContentLabel* m_downContentOne;
-	ContentLabel* m_downContentTwo;
-	ContentLabel* m_downContentThree;
-	Label* m_upError;
-	Label* m_downError;
+
+	Label*** m_szTitle;
+	ContentLabel*** m_szContent;
+	Label** m_szError;
+	Label* m_errorLeft;
+	Label* m_errorAllTitle;
+	Label* m_errorAllContentTitle;
+	Label** m_errorTitle;
+	Label* m_errorAllContent;
 };

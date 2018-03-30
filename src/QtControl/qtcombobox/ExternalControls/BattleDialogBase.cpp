@@ -170,10 +170,38 @@ void BattleDialogBase::update()
 		m_bigSuccessLogo->setVisible(false);
 	}
 
-	if (m_state)
+	switch (m_state)
+	{
+	case RPGContentBase::NORMAL:
+	{
+		
+		break;
+	}
+	case RPGContentBase::ERROR_VALUE:
 	{
 		m_smallExpand->setVisible(false);
 		m_bigExpand->setVisible(false);
+		break;
+	}
+	case RPGContentBase::ERROR_HEADER:
+	{
+		m_smallExpand->setVisible(false);
+		m_bigExpand->setVisible(false);
+		break;
+	}
+	case RPGContentBase::ERROR_ALL:
+	{
+		m_smallExpand->setVisible(false);
+		m_bigExpand->setVisible(false);
+		m_smallFailedLogo->setVisible(false);
+		m_bigFailedLogo->setVisible(false);
+		m_smallSuccessLogo->setVisible(false);
+		m_bigSuccessLogo->setVisible(false);
+		//m_content->m_row = 1;
+		break;
+	}
+	default:
+		break;
 	}
 
 	m_content->setState(m_state);
@@ -230,8 +258,6 @@ void BattleDialogBase::paintEvent(QPaintEvent* eve)
 
 void BattleDialogBase::resizeEvent(QResizeEvent* eve)
 {
-	CW3LModalFrame::resizeEvent(eve);
-
 	if (!check())
 	{
 		return;
@@ -269,6 +295,8 @@ void BattleDialogBase::resizeEvent(QResizeEvent* eve)
 		m_isSmall ? SMALL_TITLE_HEIGHT : BIG_TITLE_HEIGHT,
 		m_isSmall ? dialogWidth - LOGO_IN_WIDTH - CONTENT_MARGIN * 2 : dialogWidth - CONTENT_MARGIN * 2,
 		m_isSmall ? dialogHeight - SMALL_TITLE_HEIGHT - CONTENT_MARGIN : dialogHeight - BIG_TITLE_HEIGHT - CONTENT_MARGIN);
+
+	CW3LModalFrame::resizeEvent(eve);
 }
 
 bool BattleDialogBase::check()
