@@ -4,8 +4,15 @@
 
 class RPGContentBase : public QWidget
 {
+	Q_OBJECT
 public:
-	enum
+	/** 构造函数
+	@param [in] parent 父窗口指针
+	*/
+	RPGContentBase(QWidget* parent = nullptr);
+
+public:
+	enum ContentState
 	{
 		/** 常态
 		*/
@@ -24,19 +31,13 @@ public:
 		ERROR_ALL
 	};
 
-	Q_OBJECT
-public:
-	/** 构造函数
-	@param [in] parent 父窗口指针
-	*/
-	RPGContentBase(QWidget* parent = nullptr);
-
 public:
 	/** 设置当前是否是错误状态（支持多线程）
 	@param [in] state 错误状态
 	*/
-	void setState(int32_t state);
+	void setState(ContentState state);
 
 Q_SIGNALS:
-	void stateSignal(int32_t state);
+	//子类通过该信号改变窗口内容显示
+	void stateSignal(ContentState state);
 };

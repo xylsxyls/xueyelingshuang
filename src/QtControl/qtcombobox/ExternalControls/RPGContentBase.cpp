@@ -6,7 +6,7 @@ QWidget(parent)
 
 }
 
-void RPGContentBase::setState(int32_t state)
+void RPGContentBase::setState(ContentState state)
 {
 	emit stateSignal(state);
 }

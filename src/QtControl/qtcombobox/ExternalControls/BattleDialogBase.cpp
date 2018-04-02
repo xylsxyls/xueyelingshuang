@@ -11,7 +11,8 @@ BattleDialogBase::BattleDialogBase(QWidget* parent):
 CW3LModalFrame(parent),
 m_isSmall(true),
 m_isSuccess(true),
-m_state(false),
+m_state(NORMAL),
+m_contentState(RPGContentBase::NORMAL),
 m_smallExit(nullptr),
 m_smallSuccessLogo(nullptr),
 m_smallFailedLogo(nullptr),
@@ -21,8 +22,9 @@ m_bigExit(nullptr),
 m_bigSuccessLogo(nullptr),
 m_bigFailedLogo(nullptr),
 m_bigTitle(nullptr),
-m_bigExpand(nullptr),
-m_content(nullptr)
+m_bigShrink(nullptr),
+m_content(nullptr),
+m_logoInWidth(0)
 {
 	m_smallExit = new COriginalButton(this);
 	m_smallSuccessLogo = new Label(this);
@@ -34,7 +36,9 @@ m_content(nullptr)
 	m_bigSuccessLogo = new Label(this);
 	m_bigFailedLogo = new Label(this);
 	m_bigTitle = new Label(this);
-	m_bigExpand = new COriginalButton(this);
+	m_bigGameTime = new Label(this);
+	m_bigCurrentTime = new Label(this);
+	m_bigShrink = new COriginalButton(this);
 
 	setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
 	setAttribute(Qt::WA_TranslucentBackground);
@@ -53,6 +57,7 @@ void BattleDialogBase::init()
 	
 	m_smallExpand->setText("");
 	m_smallExpand->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/GameResultView/Small/SmallExpandButton.png", 3, 1, 2, 3, 1);
+	QObject::connect(m_smallExpand, &COriginalButton::clicked, this, &BattleDialogBase::expandClicked);
 
 	m_smallSuccessLogo->setBorderImage(CGeneralStyle::instance()->war3lobbyResourcePath() +
 		"/Image/GameResultView/Small/SmallResultIcon.png",
@@ -105,10 +110,23 @@ void BattleDialogBase::init()
 	m_bigTitle->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 	m_bigTitle->setTextOrigin(BIG_TITLE_ORIGIN);
 
-	m_bigExpand->setText("");
-	m_bigExpand->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/GameResultView/Big/BigShrinkButton.png", 3, 1, 2, 3, 1);
+	m_bigGameTime->setText(QStringLiteral("ÓÎÏ·Ê±³¤ 47£º37"));
+	m_bigGameTime->setFontFace(CGeneralStyle::instance()->font().family());
+	m_bigGameTime->setTextColor("#313541");
+	m_bigGameTime->setFontSize(BIG_GAME_TIME_FONT_SIZE);
+	m_bigGameTime->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+	m_bigGameTime->setTextOrigin(BIG_GAME_TIME_ORIGIN);
+	
+	m_bigCurrentTime->setText(QStringLiteral("2016-11-28 11:04:38"));
+	m_bigCurrentTime->setFontFace(CGeneralStyle::instance()->font().family());
+	m_bigCurrentTime->setTextColor("#714c0a");
+	m_bigCurrentTime->setFontSize(BIG_CURRENT_TIME_FONT_SIZE);
+	m_bigCurrentTime->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+	m_bigCurrentTime->setTextRightOrigin(BIG_CURRENT_TIME_RIGHT_ORIGIN);
 
-	initWidget();
+	m_bigShrink->setText("");
+	m_bigShrink->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/GameResultView/Big/BigShrinkButton.png", 3, 1, 2, 3, 1);
+	QObject::connect(m_bigShrink, &COriginalButton::clicked, this, &BattleDialogBase::shrinkClicked);
 
 	m_smallSuccessLogo->raise();
 	m_smallFailedLogo->raise();
@@ -140,7 +158,9 @@ void BattleDialogBase::update()
 	m_bigSuccessLogo->setVisible(true);
 	m_bigFailedLogo->setVisible(true);
 	m_bigTitle->setVisible(true);
-	m_bigExpand->setVisible(true);
+	m_bigGameTime->setVisible(true);
+	m_bigCurrentTime->setVisible(true);
+	m_bigShrink->setVisible(true);
 
 	if (m_isSmall)
 	{
@@ -148,7 +168,9 @@ void BattleDialogBase::update()
 		m_bigSuccessLogo->setVisible(false);
 		m_bigFailedLogo->setVisible(false);
 		m_bigTitle->setVisible(false);
-		m_bigExpand->setVisible(false);
+		m_bigGameTime->setVisible(false);
+		m_bigCurrentTime->setVisible(false);
+		m_bigShrink->setVisible(false);
 	}
 	else
 	{
@@ -172,47 +194,45 @@ void BattleDialogBase::update()
 
 	switch (m_state)
 	{
-	case RPGContentBase::NORMAL:
+	case NORMAL:
 	{
 		
 		break;
 	}
-	case RPGContentBase::ERROR_VALUE:
+	case ERROR_PART:
 	{
 		m_smallExpand->setVisible(false);
-		m_bigExpand->setVisible(false);
+		m_bigShrink->setVisible(false);
 		break;
 	}
-	case RPGContentBase::ERROR_HEADER:
+	case ERROR_ALL:
 	{
 		m_smallExpand->setVisible(false);
-		m_bigExpand->setVisible(false);
-		break;
-	}
-	case RPGContentBase::ERROR_ALL:
-	{
-		m_smallExpand->setVisible(false);
-		m_bigExpand->setVisible(false);
+		m_bigShrink->setVisible(false);
 		m_smallFailedLogo->setVisible(false);
 		m_bigFailedLogo->setVisible(false);
 		m_smallSuccessLogo->setVisible(false);
 		m_bigSuccessLogo->setVisible(false);
-		//m_content->m_row = 1;
 		break;
 	}
 	default:
 		break;
 	}
 
-	m_content->setState(m_state);
+	m_content->setState(m_contentState);
 
-	resize(m_isSmall ? SMALL_DIALOG_WIDTH + LOGO_IN_WIDTH : BIG_DIALOG_WIDTH,
-		   m_isSmall ? SMALL_DIALOG_HEIGHT : BIG_DIALOG_HEIGHT);
+	emit resizeDialog();
 }
 
 void BattleDialogBase::setLogo(bool isSuccess)
 {
 	m_isSuccess = isSuccess;
+	update();
+}
+
+void BattleDialogBase::setContentState(RPGContentBase::ContentState state)
+{
+	m_contentState = state;
 	update();
 }
 
@@ -222,7 +242,7 @@ void BattleDialogBase::setDisplayMode(bool isSmall)
 	update();
 }
 
-void BattleDialogBase::setState(int32_t state)
+void BattleDialogBase::setState(BattleState state)
 {
 	m_state = state;
 	update();
@@ -242,7 +262,7 @@ void BattleDialogBase::paintEvent(QPaintEvent* eve)
 
 	painter.save();
 	
-	painter.fillRect(QRect(m_isSmall ? LOGO_IN_WIDTH : 0, 0, width(), titleHeight), gradient);
+	painter.fillRect(QRect(m_isSmall ? m_logoInWidth : 0, 0, width(), titleHeight), gradient);
 
 	QLinearGradient gradientContent(QPointF(0, 0), QPoint(0, contentHeight));
 	gradientContent.setColorAt(0.00, QColor("#d1953d"));
@@ -251,7 +271,7 @@ void BattleDialogBase::paintEvent(QPaintEvent* eve)
 	gradientContent.setColorAt(1.00, QColor("#9b6a51"));
 	gradientContent.setSpread(QGradient::PadSpread);
 
-	painter.fillRect(QRect(m_isSmall ? LOGO_IN_WIDTH : 0, titleHeight, width(), contentHeight), gradientContent);
+	painter.fillRect(QRect(m_isSmall ? m_logoInWidth : 0, titleHeight, width(), contentHeight), gradientContent);
 	
 	painter.restore();
 }
@@ -273,7 +293,7 @@ void BattleDialogBase::resizeEvent(QResizeEvent* eve)
 							 SMALL_EXIT_HEIGHT);
 	m_smallSuccessLogo->setGeometry(0, 0, SMALL_LOGO_WIDTH, SMALL_LOGO_HEIGHT);
 	m_smallFailedLogo->setGeometry(0, 0, SMALL_LOGO_WIDTH, SMALL_LOGO_HEIGHT);
-	m_smallTitle->setGeometry(LOGO_IN_WIDTH, 0, dialogWidth - LOGO_IN_WIDTH, titleHeight);
+	m_smallTitle->setGeometry(m_logoInWidth, 0, dialogWidth - m_logoInWidth, titleHeight);
 	m_smallExpand->setGeometry(dialogWidth - SMALL_EXPAND_WIDTH - SMALL_EXIT_WIDTH - SMALL_EXIT_RIGHT_ORIGIN - SMALL_EXPAND_RIGHT_ORIGIN,
 							   (titleHeight - SMALL_EXPAND_WIDTH) / 2,
 							   SMALL_EXPAND_WIDTH,
@@ -286,14 +306,16 @@ void BattleDialogBase::resizeEvent(QResizeEvent* eve)
 	m_bigSuccessLogo->setGeometry(0, 0, BIG_LOGO_WIDTH, BIG_LOGO_HEIGHT);
 	m_bigFailedLogo->setGeometry(0, 0, BIG_LOGO_WIDTH, BIG_LOGO_HEIGHT);
 	m_bigTitle->setGeometry(0, 0, dialogWidth, titleHeight);
-	m_bigExpand->setGeometry(dialogWidth - BIG_EXPAND_WIDTH - BIG_EXIT_WIDTH - BIG_EXIT_RIGHT_ORIGIN - BIG_EXPAND_RIGHT_ORIGIN,
-							 (titleHeight - BIG_EXPAND_WIDTH) / 2,
-							 BIG_EXPAND_WIDTH,
+	m_bigGameTime->setGeometry(0, 0, dialogWidth, titleHeight);
+	m_bigCurrentTime->setGeometry(0, 0, dialogWidth, titleHeight);
+	m_bigShrink->setGeometry(dialogWidth - BIG_SHRINK_WIDTH - BIG_EXIT_WIDTH - BIG_EXIT_RIGHT_ORIGIN - BIG_SHRINK_RIGHT_ORIGIN,
+							 (titleHeight - BIG_SHRINK_WIDTH) / 2,
+							 BIG_SHRINK_WIDTH,
 							 BIG_EXPAND_HEIGHT);
 
-	m_content->setGeometry(m_isSmall ? CONTENT_MARGIN + LOGO_IN_WIDTH : CONTENT_MARGIN,
+	m_content->setGeometry(m_isSmall ? CONTENT_MARGIN + m_logoInWidth : CONTENT_MARGIN,
 		m_isSmall ? SMALL_TITLE_HEIGHT : BIG_TITLE_HEIGHT,
-		m_isSmall ? dialogWidth - LOGO_IN_WIDTH - CONTENT_MARGIN * 2 : dialogWidth - CONTENT_MARGIN * 2,
+		m_isSmall ? dialogWidth - m_logoInWidth - CONTENT_MARGIN * 2 : dialogWidth - CONTENT_MARGIN * 2,
 		m_isSmall ? dialogHeight - SMALL_TITLE_HEIGHT - CONTENT_MARGIN : dialogHeight - BIG_TITLE_HEIGHT - CONTENT_MARGIN);
 
 	CW3LModalFrame::resizeEvent(eve);
@@ -310,6 +332,8 @@ bool BattleDialogBase::check()
 		   m_bigSuccessLogo != nullptr &&
 		   m_bigFailedLogo != nullptr &&
 		   m_bigTitle != nullptr &&
-		   m_bigExpand != nullptr &&
+		   m_bigGameTime != nullptr &&
+		   m_bigCurrentTime != nullptr &&
+		   m_bigShrink != nullptr &&
 		   m_content != nullptr;
 }

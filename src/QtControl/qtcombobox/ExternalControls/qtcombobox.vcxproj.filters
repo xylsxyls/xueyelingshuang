@@ -228,17 +228,14 @@
     <Filter Include="BattleDialogBase">
       <UniqueIdentifier>{3b43189a-5dc5-4eba-964a-564cb7024b0e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="BattleDialogBase\BattleFourDialog">
-      <UniqueIdentifier>{ac042bc4-4ff3-4ee9-b0df-472b257c80ee}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="BattleDialogBase\BattleThreeDialog">
-      <UniqueIdentifier>{489348bd-331c-4de3-aa04-c4305007b341}</UniqueIdentifier>
-    </Filter>
     <Filter Include="BattleDialogBase\RPGContentBase">
       <UniqueIdentifier>{5ff196a2-6fbf-40b9-9a8c-334a0738f582}</UniqueIdentifier>
     </Filter>
     <Filter Include="BattleDialogBase\RPGContentBase\RPGContentWidget">
       <UniqueIdentifier>{4816e82d-0f67-4878-9b4d-14463687453b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\BattleDialog">
+      <UniqueIdentifier>{489348bd-331c-4de3-aa04-c4305007b341}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -680,15 +677,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_BattleDialogBase.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="BattleFourDialog.cpp">
-      <Filter>BattleDialogBase\BattleFourDialog</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_BattleFourDialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_BattleFourDialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="RPGContentBase.cpp">
       <Filter>BattleDialogBase\RPGContentBase</Filter>
     </ClCompile>
@@ -701,15 +689,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_Label.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="BattleThreeDialog.cpp">
-      <Filter>BattleDialogBase\BattleThreeDialog</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_BattleThreeDialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_BattleThreeDialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="RPGContentWidget.cpp">
       <Filter>BattleDialogBase\RPGContentBase\RPGContentWidget</Filter>
     </ClCompile>
@@ -717,6 +696,15 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_RPGContentWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="BattleDialog.cpp">
+      <Filter>BattleDialogBase\BattleDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_BattleDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_BattleDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
@@ -871,17 +859,14 @@
     <CustomBuild Include="BattleDialogBase.h">
       <Filter>BattleDialogBase</Filter>
     </CustomBuild>
-    <CustomBuild Include="BattleFourDialog.h">
-      <Filter>BattleDialogBase\BattleFourDialog</Filter>
-    </CustomBuild>
     <CustomBuild Include="RPGContentBase.h">
       <Filter>BattleDialogBase\RPGContentBase</Filter>
     </CustomBuild>
-    <CustomBuild Include="BattleThreeDialog.h">
-      <Filter>BattleDialogBase\BattleThreeDialog</Filter>
-    </CustomBuild>
     <CustomBuild Include="RPGContentWidget.h">
       <Filter>BattleDialogBase\RPGContentBase\RPGContentWidget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="BattleDialog.h">
+      <Filter>BattleDialogBase\BattleDialog</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

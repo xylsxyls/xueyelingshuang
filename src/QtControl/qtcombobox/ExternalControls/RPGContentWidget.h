@@ -43,6 +43,12 @@ protected:
 	void DestroyDyadicArray(TypeClass** classPtr, int32_t row);
 
 private:
+	void onState(ContentState state);
+	void hideError();
+	void raiseError();
+	bool check();
+
+private:
 	enum
 	{
 		/** 标题高度
@@ -59,10 +65,6 @@ private:
 	};
 
 private:
-	void onState(int32_t state);
-	bool check();
-
-private:
 	int32_t m_row;
 	int32_t m_column;
 
@@ -73,6 +75,7 @@ private:
 	Label*** m_szTitle;
 	ContentLabel*** m_szContent;
 	Label** m_szError;
+
 	Label* m_errorLeft;
 	Label* m_errorAllTitle;
 	Label* m_errorAllContentTitle;

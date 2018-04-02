@@ -78,6 +78,7 @@ m_errorAllContent(nullptr)
 			}
 		}
 	}
+	raiseError();
 	QObject::connect(this, &RPGContentWidget::stateSignal, this, &RPGContentWidget::onState);
 }
 
@@ -138,7 +139,7 @@ void RPGContentWidget::init(const QString& titleLeft,
 	m_errorAllContent->setBackgroundColor(QColor("#313541"));
 	m_errorAllContent->setFontFace(QStringLiteral("Î¢ÈíÑÅºÚ"));
 	m_errorAllContent->setFontSize(12);
-	m_errorAllContent->setAlignment(Qt::AlignCenter);
+	m_errorAllContent->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
 	for (int32_t columnIndex = 0; columnIndex < m_column; ++columnIndex)
 	{
@@ -222,6 +223,11 @@ void RPGContentWidget::resizeEvent(QResizeEvent* eve)
 	m_errorAllTitle->setGeometry(QRect(0, 0, RPGWidth, TITLE_HEIGHT).adjusted(-1, 0, 1, 0));
 	m_errorAllContentTitle->setGeometry(QRect(0, titleSepHeight, RPGWidth, CONTENT_TITLE_HEIGHT).adjusted(-1, 0, 1, 0));
 
+	m_errorAllContent->setGeometry(QRect(0,
+		titleSepHeight + CONTENT_TITLE_HEIGHT,
+		RPGWidth,
+		RPGHeight - titleSepHeight - CONTENT_TITLE_HEIGHT).adjusted(-1, -1, 1, 1));
+
 	m_separator->setGeometry(QRect(0, TITLE_HEIGHT, RPGWidth, SEPARATOR_HEIGHT).adjusted(-1, 0, 1, 0));
 
 	for (int32_t rowIndex = 0; rowIndex < m_row; ++rowIndex)
@@ -250,14 +256,6 @@ void RPGContentWidget::resizeEvent(QResizeEvent* eve)
 			titleContentHeight * rowIndex + titleSepHeight + CONTENT_TITLE_HEIGHT,
 			RPGWidth,
 			contentHeight).adjusted(-1, -1, 1, 1));
-
-		if (rowIndex == 0)
-		{
-			m_errorAllContent->setGeometry(QRect(0,
-				titleContentHeight * rowIndex + titleSepHeight + CONTENT_TITLE_HEIGHT,
-				RPGWidth,
-				contentHeight).adjusted(-1, -1, 1, 1));
-		}
 	}
 
 	QWidget::resizeEvent(eve);
@@ -304,21 +302,18 @@ void RPGContentWidget::DestroyDyadicArray(TypeClass** classPtr, int32_t row)
 	classPtr = nullptr;
 }
 
-void RPGContentWidget::onState(int32_t state)
+void RPGContentWidget::onState(ContentState state)
 {
 	if (!check())
 	{
 		return;
 	}
 
+	hideError();
 	switch (state)
 	{
 	case NORMAL:
 	{
-		for (int32_t rowIndex = 0; rowIndex < m_row; ++rowIndex)
-		{
-			m_szError[rowIndex]->setVisible(false);
-		}
 		break;
 	}
 	case ERROR_VALUE:
@@ -336,19 +331,14 @@ void RPGContentWidget::onState(int32_t state)
 		{
 			m_errorTitle[columnIndex]->setVisible(true);
 		}
-		for (int32_t rowIndex = 0; rowIndex < m_row; ++rowIndex)
-		{
-			m_szError[rowIndex]->setVisible(true);
-		}
+		m_errorAllContent->setVisible(true);
 		break;
 	}
 	case ERROR_ALL:
 	{
 		m_errorAllTitle->setVisible(true);
 		m_errorAllContentTitle->setVisible(true);
-		m_errorAllContentTitle->raise();
 		m_errorAllContent->setVisible(true);
-		m_errorAllContent->raise();
 		for (int32_t rowIndex = 0; rowIndex < m_row; ++rowIndex)
 		{
 			m_szError[rowIndex]->setVisible(true);
@@ -358,6 +348,50 @@ void RPGContentWidget::onState(int32_t state)
 	default:
 		break;
 	}
+}
+
+void RPGContentWidget::hideError()
+{
+	if (!check())
+	{
+		return;
+	}
+
+	for (int32_t rowIndex = 0; rowIndex < m_row; ++rowIndex)
+	{
+		m_szError[rowIndex]->setVisible(false);
+	}
+	m_errorLeft->setVisible(false);
+	for (int32_t columnIndex = 0; columnIndex < m_column; ++columnIndex)
+	{
+		m_errorTitle[columnIndex]->setVisible(false);
+	}
+	m_errorAllContent->setVisible(false);
+	m_errorAllTitle->setVisible(false);
+	m_errorAllContentTitle->setVisible(false);
+	m_errorAllContent->setVisible(false);
+}
+
+void RPGContentWidget::raiseError()
+{
+	if (!check())
+	{
+		return;
+	}
+
+	for (int32_t rowIndex = 0; rowIndex < m_row; ++rowIndex)
+	{
+		m_szError[rowIndex]->raise();
+	}
+	m_errorLeft->raise();
+	for (int32_t columnIndex = 0; columnIndex < m_column; ++columnIndex)
+	{
+		m_errorTitle[columnIndex]->raise();
+	}
+	m_errorAllContent->raise();
+	m_errorAllTitle->raise();
+	m_errorAllContentTitle->raise();
+	m_errorAllContent->raise();
 }
 
 bool RPGContentWidget::check()

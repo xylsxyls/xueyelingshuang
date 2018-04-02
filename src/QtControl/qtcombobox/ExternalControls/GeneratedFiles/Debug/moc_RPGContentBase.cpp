@@ -20,7 +20,7 @@
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_RPGContentBase_t {
     QByteArrayData data[5];
-    char stringdata0[42];
+    char stringdata0[47];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -32,11 +32,11 @@ static const qt_meta_stringdata_RPGContentBase_t qt_meta_stringdata_RPGContentBa
 QT_MOC_LITERAL(0, 0, 14), // "RPGContentBase"
 QT_MOC_LITERAL(1, 15, 11), // "stateSignal"
 QT_MOC_LITERAL(2, 27, 0), // ""
-QT_MOC_LITERAL(3, 28, 7), // "int32_t"
-QT_MOC_LITERAL(4, 36, 5) // "state"
+QT_MOC_LITERAL(3, 28, 12), // "ContentState"
+QT_MOC_LITERAL(4, 41, 5) // "state"
 
     },
-    "RPGContentBase\0stateSignal\0\0int32_t\0"
+    "RPGContentBase\0stateSignal\0\0ContentState\0"
     "state"
 };
 #undef QT_MOC_LITERAL
@@ -69,14 +69,14 @@ void RPGContentBase::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         RPGContentBase *_t = static_cast<RPGContentBase *>(_o);
         Q_UNUSED(_t)
         switch (_id) {
-        case 0: _t->stateSignal((*reinterpret_cast< int32_t(*)>(_a[1]))); break;
+        case 0: _t->stateSignal((*reinterpret_cast< ContentState(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         void **func = reinterpret_cast<void **>(_a[1]);
         {
-            typedef void (RPGContentBase::*_t)(int32_t );
+            typedef void (RPGContentBase::*_t)(ContentState );
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&RPGContentBase::stateSignal)) {
                 *result = 0;
             }
@@ -121,7 +121,7 @@ int RPGContentBase::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void RPGContentBase::stateSignal(int32_t _t1)
+void RPGContentBase::stateSignal(ContentState _t1)
 {
     void *_a[] = { Q_NULLPTR, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
     QMetaObject::activate(this, &staticMetaObject, 0, _a);

@@ -32,8 +32,7 @@
 #include "TipLabelManager.h"
 #include "RPGContentWidget.h"
 #include "BattleDialogBase.h"
-#include "BattleFourDialog.h"
-#include "BattleThreeDialog.h"
+#include "BattleDialog.h"
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -506,12 +505,41 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//threeWidget->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), header, value, progress);
 	//threeWidget->show();
 
-	BattleFourDialog* battle = new BattleFourDialog;
-	//battle->move(200, 200);
+	QStringList headerFour;
+	headerFour.push_back(QStringLiteral("屠龙"));
+	headerFour.push_back(QStringLiteral("炫目"));
+	headerFour.push_back(QStringLiteral("玉树"));
+	headerFour.push_back(QStringLiteral("杀"));
+	headerFour.push_back(QStringLiteral("怪兽杀"));
+	headerFour.push_back(QStringLiteral("局杀"));
+	headerFour.push_back(QStringLiteral("逃跑"));
+	headerFour.push_back(QStringLiteral("其他"));
+	QStringList valueFour;
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	QStringList progressFour;
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral("(+125)"));
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral("(+125)"));
+	progressFour.push_back(QStringLiteral("(-125)"));
+
+	BattleDialog* battle = new BattleDialog(2, 4);
+	battle->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
 	battle->show();
 
-	BattleThreeDialog* battle2 = new BattleThreeDialog;
+	BattleDialog* battle2 = new BattleDialog(2, 3);
 	battle2->move(400, 400);
+	battle2->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
 	battle2->show();
 
 	int x = 3;
