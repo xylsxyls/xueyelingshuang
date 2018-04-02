@@ -36,12 +36,6 @@ public:
 protected:
 	void resizeEvent(QResizeEvent* eve);
 
-	template <typename TypeClass>
-	TypeClass** CreateDyadicArray(int32_t row, int32_t column);
-
-	template <typename TypeClass>
-	void DestroyDyadicArray(TypeClass** classPtr, int32_t row);
-
 private:
 	void onState(ContentState state);
 	void hideError();

@@ -8,6 +8,7 @@
 #include "CStringManager.h"
 #include "../CGeneralStyle.h"
 #include "NotifyDialogManager.h"
+#include <fstream>
 
 std::wstring DialogShow::s_countDownString = L"还有%d秒自动关闭";
 
@@ -347,6 +348,18 @@ void DialogShow::ncActiveChanged(int32_t wParam)
 
 bool DialogShow::eventFilter(QObject* tar, QEvent* eve)
 {
+	if (tar == nullptr || eve == nullptr)
+	{
+		static ofstream file("eventFilter.txt");
+		file << "tar = " << tar << "eve = " << eve << "\r\n";
+		if (tar != nullptr)
+		{
+			file << "objectName = " << tar->objectName().toStdString() << "\r\n";
+			file << "dialogEnum = " << dialogEnum() << "\r\n";
+		}
+		return true;
+	}
+
 	bool res = DialogBase::eventFilter(tar, eve);
 	if (eve->type() == QEvent::KeyPress)
 	{

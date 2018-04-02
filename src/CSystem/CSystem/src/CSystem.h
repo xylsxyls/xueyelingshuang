@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include <string>
+#include <stdint.h>
 #include "CSystemMacro.h"
 
 class CSystemAPI CSystem{
@@ -51,8 +52,16 @@ public:
 	static bool DirOrFileAccess(const std::string& dir);
 	//?获取控制台句柄
 	static HWND GetConsoleHwnd();
+	//?创建动态的二维数组，返回空代表失败，不为空则全部成功创建
+	template <typename TypeClass>
+	static TypeClass** CreateDyadicArray(int32_t row, int32_t column);
+	//?销毁动态的二位数组，内部有判空
+	template <typename TypeClass>
+	static void DestroyDyadicArray(TypeClass** classPtr, int32_t row);
 
 public:
     static bool ifRedirFrobid;
     static PVOID oldValue;
 };
+
+#include "CSystem.inl"

@@ -100,6 +100,7 @@
     <ClCompile Include="ControlFont.inl" />
     <ClCompile Include="CPasswordInputBox.cpp" />
     <ClCompile Include="CStringManager.cpp" />
+    <ClCompile Include="CSystem.inl" />
     <ClCompile Include="DialogManager.cpp" />
     <ClCompile Include="DialogShow.cpp" />
     <ClCompile Include="DownloadDialog.cpp" />
@@ -668,6 +669,7 @@
     <ClInclude Include="BoxDialogBase.h" />
     <ClInclude Include="ClosureDialog.h" />
     <ClInclude Include="ContentLabel.h" />
+    <ClInclude Include="CSystem.h" />
     <ClInclude Include="LockedAccountPanel.h" />
     <CustomBuild Include="SubAccountPanel.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

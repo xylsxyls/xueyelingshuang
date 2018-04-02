@@ -237,6 +237,9 @@
     <Filter Include="BattleDialogBase\BattleDialog">
       <UniqueIdentifier>{489348bd-331c-4de3-aa04-c4305007b341}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CSystem">
+      <UniqueIdentifier>{9ca7766e-b2bf-4f92-87b7-270056b9c95b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -707,6 +710,9 @@
     <ClCompile Include="GeneratedFiles\Release\moc_BattleDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="CSystem.inl">
+      <Filter>CSystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -923,6 +929,9 @@
     </ClInclude>
     <ClInclude Include="ContentLabel.h">
       <Filter>QtControl\Label\ContentLabel</Filter>
+    </ClInclude>
+    <ClInclude Include="CSystem.h">
+      <Filter>CSystem</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

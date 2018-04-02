@@ -26,6 +26,9 @@
   <ItemGroup>
     <ClCompile Include="..\src\CSystem.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\CSystem.inl" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{69431D09-315D-414B-A196-B2F5F6CDD7DE}</ProjectGuid>
     <RootNamespace>CSystem</RootNamespace>

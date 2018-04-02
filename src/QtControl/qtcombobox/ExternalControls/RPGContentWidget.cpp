@@ -1,6 +1,7 @@
 #include "RPGContentWidget.h"
 #include "Label.h"
 #include "ContentLabel.h"
+#include "CSystem.h"
 
 RPGContentWidget::RPGContentWidget(int32_t row, int32_t column, QWidget* parent) :
 RPGContentBase(parent),
@@ -21,8 +22,8 @@ m_errorAllContent(nullptr)
 	m_titleRight = new Label(this);
 	m_separator = new Label(this);
 
-	m_szTitle = CreateDyadicArray<Label*>(m_row, m_column);
-	m_szContent = CreateDyadicArray<ContentLabel*>(m_row, m_column);
+	m_szTitle = CSystem::CreateDyadicArray<Label*>(m_row, m_column);
+	m_szContent = CSystem::CreateDyadicArray<ContentLabel*>(m_row, m_column);
 	
 	m_szError = new Label*[m_row];
 
@@ -84,8 +85,8 @@ m_errorAllContent(nullptr)
 
 RPGContentWidget::~RPGContentWidget()
 {
-	DestroyDyadicArray(m_szTitle, m_row);
-	DestroyDyadicArray(m_szContent, m_row);
+	CSystem::DestroyDyadicArray(m_szTitle, m_row);
+	CSystem::DestroyDyadicArray(m_szContent, m_row);
 	if (m_szError != nullptr)
 	{
 		delete[] m_szError;
@@ -259,47 +260,6 @@ void RPGContentWidget::resizeEvent(QResizeEvent* eve)
 	}
 
 	QWidget::resizeEvent(eve);
-}
-
-template <typename TypeClass>
-TypeClass** RPGContentWidget::CreateDyadicArray(int32_t row, int32_t column)
-{
-	TypeClass** dyadicArrayPtr = new TypeClass*[row];
-	if (dyadicArrayPtr != nullptr)
-	{
-		for (int32_t index = 0; index < row; ++index)
-		{
-			dyadicArrayPtr[index] = new TypeClass[column];
-			if (dyadicArrayPtr[index] == nullptr)
-			{
-				for (int32_t errorIndex = 0; errorIndex < index; ++errorIndex)
-				{
-					delete[] dyadicArrayPtr[errorIndex];
-					dyadicArrayPtr[errorIndex] = nullptr;
-				}
-				dyadicArrayPtr = nullptr;
-				break;
-			}
-		}
-	}
-	return dyadicArrayPtr;
-}
-
-template <typename TypeClass>
-void RPGContentWidget::DestroyDyadicArray(TypeClass** classPtr, int32_t row)
-{
-	if (classPtr == nullptr)
-	{
-		return;
-	}
-
-	for (int32_t index = 0; index < row; index++)
-	{
-		delete[] classPtr[index];
-		classPtr[index] = nullptr;
-	}
-	delete[] classPtr;
-	classPtr = nullptr;
 }
 
 void RPGContentWidget::onState(ContentState state)
