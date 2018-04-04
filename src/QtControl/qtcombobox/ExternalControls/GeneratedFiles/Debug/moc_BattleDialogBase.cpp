@@ -20,7 +20,7 @@
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_BattleDialogBase_t {
     QByteArrayData data[5];
-    char stringdata0[59];
+    char stringdata0[63];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -32,12 +32,12 @@ static const qt_meta_stringdata_BattleDialogBase_t qt_meta_stringdata_BattleDial
 QT_MOC_LITERAL(0, 0, 16), // "BattleDialogBase"
 QT_MOC_LITERAL(1, 17, 12), // "resizeDialog"
 QT_MOC_LITERAL(2, 30, 0), // ""
-QT_MOC_LITERAL(3, 31, 13), // "expandClicked"
-QT_MOC_LITERAL(4, 45, 13) // "shrinkClicked"
+QT_MOC_LITERAL(3, 31, 15), // "onExpandClicked"
+QT_MOC_LITERAL(4, 47, 15) // "onShrinkClicked"
 
     },
     "BattleDialogBase\0resizeDialog\0\0"
-    "expandClicked\0shrinkClicked"
+    "onExpandClicked\0onShrinkClicked"
 };
 #undef QT_MOC_LITERAL
 
@@ -52,15 +52,19 @@ static const uint qt_meta_data_BattleDialogBase[] = {
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-       3,       // signalCount
+       1,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
        1,    0,   29,    2, 0x06 /* Public */,
-       3,    0,   30,    2, 0x06 /* Public */,
-       4,    0,   31,    2, 0x06 /* Public */,
+
+ // slots: name, argc, parameters, tag, flags
+       3,    0,   30,    2, 0x08 /* Private */,
+       4,    0,   31,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void,
+
+ // slots: parameters
     QMetaType::Void,
     QMetaType::Void,
 
@@ -74,8 +78,8 @@ void BattleDialogBase::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int
         Q_UNUSED(_t)
         switch (_id) {
         case 0: _t->resizeDialog(); break;
-        case 1: _t->expandClicked(); break;
-        case 2: _t->shrinkClicked(); break;
+        case 1: _t->onExpandClicked(); break;
+        case 2: _t->onShrinkClicked(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -85,18 +89,6 @@ void BattleDialogBase::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int
             typedef void (BattleDialogBase::*_t)();
             if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&BattleDialogBase::resizeDialog)) {
                 *result = 0;
-            }
-        }
-        {
-            typedef void (BattleDialogBase::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&BattleDialogBase::expandClicked)) {
-                *result = 1;
-            }
-        }
-        {
-            typedef void (BattleDialogBase::*_t)();
-            if (*reinterpret_cast<_t *>(func) == static_cast<_t>(&BattleDialogBase::shrinkClicked)) {
-                *result = 2;
             }
         }
     }
@@ -143,17 +135,5 @@ int BattleDialogBase::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 void BattleDialogBase::resizeDialog()
 {
     QMetaObject::activate(this, &staticMetaObject, 0, Q_NULLPTR);
-}
-
-// SIGNAL 1
-void BattleDialogBase::expandClicked()
-{
-    QMetaObject::activate(this, &staticMetaObject, 1, Q_NULLPTR);
-}
-
-// SIGNAL 2
-void BattleDialogBase::shrinkClicked()
-{
-    QMetaObject::activate(this, &staticMetaObject, 2, Q_NULLPTR);
 }
 QT_END_MOC_NAMESPACE

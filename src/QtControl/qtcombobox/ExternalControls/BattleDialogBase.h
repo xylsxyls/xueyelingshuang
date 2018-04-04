@@ -39,6 +39,22 @@ public:
 	*/
 	void setLogo(bool isSuccess);
 
+	/** 设置游戏时长标题
+	@param [in] gameTime 游戏时长
+	*/
+	void setGameTime(const QString& gameTime);
+
+	/** 设置当前时间
+	@param [in] currentTime 当前时间
+	*/
+	void setCurrentTime(const QString& currentTime);
+
+	/** 设置窗口数据
+	@param [in] gameResult 游戏结果
+	@return 返回是否设置成功
+	*/
+	bool setGameResult(const GameResultType::GameResult& gameResult);
+
 protected:
 	/** 设置内容的状态
 	@param [in] state 状态标志
@@ -66,25 +82,41 @@ protected:
 Q_SIGNALS:
 	//初始化的时候通过该信号改变窗口大小
 	void resizeDialog();
-	//小窗口扩展按钮点击信号
-	void expandClicked();
-	//大窗口缩小按钮点击信号
-	void shrinkClicked();
 
 protected:
 	void paintEvent(QPaintEvent* eve);
 	void resizeEvent(QResizeEvent* eve);
 
 protected:
+	void endDialog();
 	bool check();
 
 protected:
 	RPGContentBase* m_content;
+	RPGContentBase* m_bigContent;
 	bool m_isSmall;
 	bool m_isSuccess;
 	BattleState m_state;
 	RPGContentBase::ContentState m_contentState;
 	int32_t m_logoInWidth;
+
+	COriginalButton* m_smallExit;
+	Label* m_smallSuccessLogo;
+	Label* m_smallFailedLogo;
+	Label* m_smallTitle;
+	COriginalButton* m_smallExpand;
+
+	COriginalButton* m_bigExit;
+	Label* m_bigSuccessLogo;
+	Label* m_bigFailedLogo;
+	Label* m_bigTitle;
+	Label* m_bigGameTime;
+	Label* m_bigCurrentTime;
+	COriginalButton* m_bigShrink;
+
+private slots:
+	void onExpandClicked();
+	void onShrinkClicked();
 
 private:
 	enum
@@ -197,19 +229,4 @@ private:
 		*/
 		CONTENT_MARGIN = 2,
 	};
-
-private:
-	COriginalButton* m_smallExit;
-	Label* m_smallSuccessLogo;
-	Label* m_smallFailedLogo;
-	Label* m_smallTitle;
-	COriginalButton* m_smallExpand;
-
-	COriginalButton* m_bigExit;
-	Label* m_bigSuccessLogo;
-	Label* m_bigFailedLogo;
-	Label* m_bigTitle;
-	Label* m_bigGameTime;
-	Label* m_bigCurrentTime;
-	COriginalButton* m_bigShrink;
 };

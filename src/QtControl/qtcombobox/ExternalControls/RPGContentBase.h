@@ -1,6 +1,7 @@
 #pragma once
 #include <QWidget>
 #include <stdint.h>
+#include "game_result_view.h"
 
 class RPGContentBase : public QWidget
 {
@@ -36,6 +37,12 @@ public:
 	@param [in] state 错误状态
 	*/
 	void setState(ContentState state);
+
+	/** 设置窗口数据
+	@param [in] gameResult 游戏结果
+	@return 返回是否设置成功
+	*/
+	virtual bool setGameResult(const GameResultType::GameResult& gameResult) = 0;
 
 Q_SIGNALS:
 	//子类通过该信号改变窗口内容显示

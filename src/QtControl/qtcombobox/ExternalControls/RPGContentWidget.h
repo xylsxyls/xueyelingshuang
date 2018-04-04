@@ -1,6 +1,7 @@
 #pragma once
 #include <QWidget>
 #include "RPGContentBase.h"
+#include "game_result_view.h"
 
 class Label;
 class ContentLabel;
@@ -20,23 +21,29 @@ public:
 	virtual ~RPGContentWidget();
 
 public:
-	/** 初始化（该函数要求每个QStringList内必须有6个值，不管是不是错误状态）
+	/** 设置窗口数据
+	@param [in] gameResult 游戏结果
+	@return 返回是否设置成功
+	*/
+	virtual bool setGameResult(const GameResultType::GameResult& gameResult);
+
+protected:
+	void resizeEvent(QResizeEvent* eve);
+
+private:
+	/** 初始化
 	@param [in] titleLeft 左侧标题内容
 	@param [in] titleRight 右侧标题内容
 	@param [in] header 标题字符串集
 	@param [in] value 内容字符串集
 	@param [in] progress 变化字符串集
 	*/
-	void init(const QString& titleLeft,
-			  const QString& titleRight,
-			  const QStringList& header,
-			  const QStringList& value,
-			  const QStringList& progress);
+	bool initWidget(const QString& titleLeft,
+		const QString& titleRight,
+		const QStringList& header,
+		const QStringList& value,
+		const QStringList& progress);
 
-protected:
-	void resizeEvent(QResizeEvent* eve);
-
-private:
 	void onState(ContentState state);
 	void hideError();
 	void raiseError();

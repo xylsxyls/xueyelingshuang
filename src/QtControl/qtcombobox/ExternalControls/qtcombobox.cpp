@@ -33,6 +33,83 @@
 #include "RPGContentWidget.h"
 #include "BattleDialogBase.h"
 #include "BattleDialog.h"
+#include "MingJiangDialog.h"
+#include "BattleDialogManager.h"
+
+class Alloc
+{
+public:
+	Alloc(QObject* alloc) :
+		m_alloc(0)
+	{
+		void* ssdfs = this;
+		m_alloc = alloc;
+		//QWidget* widget = qobject_cast <QWidget*>(m_alloc);
+		//if (widget)
+		//{
+		//	m_vecWidget.push_back(widget);
+		//}
+		//QWindow* window = qobject_cast <QWindow*>(m_alloc);
+		//if (window)
+		//{
+		//	m_vecWindow.push_back(window);
+		//}
+	}
+	~Alloc()
+	{
+		for (auto it = m_vecWidget.begin(); it != m_vecWidget.end(); ++it)
+		{
+			if (m_alloc == (QObject*)&it)
+			{
+				m_vecWidget.erase(it);
+				break;
+			}
+		}
+		for (auto it = m_vecWindow.begin(); it != m_vecWindow.end(); ++it)
+		{
+			if (m_alloc == (QObject*)&it)
+			{
+				m_vecWindow.erase(it);
+				break;
+			}
+		}
+	}
+
+	QObject* m_alloc;
+public:
+	static std::vector<QWidget*> m_vecWidget;
+	static std::vector<QWindow*> m_vecWindow;
+};
+
+std::vector<QWidget*> Alloc::m_vecWidget;
+std::vector<QWindow*> Alloc::m_vecWindow;
+
+class Dialog : public Alloc, public QWidget
+{
+public:
+	Dialog():
+		Alloc(this->a())
+	{
+		Alloc::push_back(this);
+		QObject* sdfd = this;
+	}
+	QObject* a()
+	{
+		QObject* sdfd = this;
+		return (QObject*)0x12345678;
+	}
+	void sdf()
+	{
+		QObject* sss = this;
+		int x = 3;
+	}
+
+	void ssds()
+	{
+		QObject* sss = this;
+		int x = 3;
+	}
+};
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -533,14 +610,26 @@ qtcombobox::qtcombobox(QWidget *parent)
 	progressFour.push_back(QStringLiteral("(+125)"));
 	progressFour.push_back(QStringLiteral("(-125)"));
 
-	BattleDialog* battle = new BattleDialog(2, 4);
-	battle->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
-	battle->show();
+	//BattleDialog* battle = new BattleDialog(2, 4);
+	//battle->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
+	//battle->show();
+	//
+	//BattleDialog* battle2 = new BattleDialog(2, 3);
+	//battle2->move(400, 400);
+	//battle2->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
+	//battle2->show();
+	//
+	//MingJiangDialog* mingJiang = new MingJiangDialog;
+	//mingJiang->move(600, 600);
+	//mingJiang->show();
 
-	BattleDialog* battle2 = new BattleDialog(2, 3);
-	battle2->move(400, 400);
-	battle2->init(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
-	battle2->show();
+	GameResultType::GameResult gameResult;
+	gameResult.type = GameResultType::ResultType_RPG;
+	BattleDialogManager::instance().showBattleDialog(gameResult);
+
+	Dialog s;
+	s.sdf();
+	s.ssds();
 
 	int x = 3;
 }
@@ -601,6 +690,10 @@ void qtcombobox::modalPop()
 
 void qtcombobox::modalFriendPop()
 {
+	int32_t xxxds = m_dialogId8;
+	int32_t waitDialogId = DialogManager::instance().dialogId(2);
+	DialogManager::instance().closeDialog(waitDialogId);
+	return;
 	auto ptrdown = DialogManager::instance().downloadOperatePtr(m_dialogId8);
 	
 	Thread* thread = new Thread;
@@ -665,6 +758,10 @@ void qtcombobox::modalFriendPop()
 
 void qtcombobox::onTestButton()
 {
+	
+	DialogManager::instance().popWaitDialog(m_dialogId8, 2, "123", "1111",sss->windowHandle());
+	
+	return;
 	DownloadOperateDialog* ssdf = 0;
 	DialogManager::instance().closeDialog(m_dialogId8);
 	DialogManager::instance().closeDialog(m_dialogId8);
@@ -782,6 +879,7 @@ void qtcombobox::testDialog()
 										   true);
 	int32_t dialogId4 = 0;
 	int xxxxx = WaitDialog::popWaitDialog(dialogId4,
+										  22,
 									      QString::fromStdWString(L"标题"),
 									      QString::fromStdWString(L"输入框提示："),
 										  0,
@@ -866,3 +964,6 @@ void qtcombobox::onItemChanged(int index)
 
 	qDebug() << 2;
 }
+
+
+

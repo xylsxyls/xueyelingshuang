@@ -240,6 +240,18 @@
     <Filter Include="CSystem">
       <UniqueIdentifier>{9ca7766e-b2bf-4f92-87b7-270056b9c95b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GameResult">
+      <UniqueIdentifier>{cd09e1d9-5180-4058-af24-38b91d5165d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\MingJiangDialog">
+      <UniqueIdentifier>{9afc7fb0-b16f-4b32-9a76-122f4c6346ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\BattleDialogManager">
+      <UniqueIdentifier>{41201bb5-22b5-4fea-8cc5-9dc0a0628f35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\LadderDialog">
+      <UniqueIdentifier>{7f683d8f-62b0-40ec-abde-fca3bd3df851}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -713,6 +725,60 @@
     <ClCompile Include="CSystem.inl">
       <Filter>CSystem</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_GameResultListPanelMini.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_GameResultListPanelMini.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CGameResultTopPlayer_Ladder.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_game_result_view.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_game_result_view.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GameResultListPanelExDelegate.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="GameResultListPanelMax.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_GameResultListPanelMax.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_GameResultListPanelMax.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GameResultListPanelMaxDelegate.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="GameResultListPanelMini.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="MingJiangDialog.cpp">
+      <Filter>BattleDialogBase\MingJiangDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_MingJiangDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_MingJiangDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="BattleDialogManager.cpp">
+      <Filter>BattleDialogBase\BattleDialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="LadderDialog.cpp">
+      <Filter>BattleDialogBase\LadderDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LadderDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LadderDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -874,6 +940,21 @@
     <CustomBuild Include="BattleDialog.h">
       <Filter>BattleDialogBase\BattleDialog</Filter>
     </CustomBuild>
+    <CustomBuild Include="GameResultListPanelMini.h">
+      <Filter>GameResult</Filter>
+    </CustomBuild>
+    <CustomBuild Include="game_result_view.h">
+      <Filter>GameResult</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GameResultListPanelMax.h">
+      <Filter>GameResult</Filter>
+    </CustomBuild>
+    <CustomBuild Include="MingJiangDialog.h">
+      <Filter>BattleDialogBase\MingJiangDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="LadderDialog.h">
+      <Filter>BattleDialogBase\LadderDialog</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlFont.h">
@@ -932,6 +1013,18 @@
     </ClInclude>
     <ClInclude Include="CSystem.h">
       <Filter>CSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="CGameResultTopPlayer_Ladder.h">
+      <Filter>GameResult</Filter>
+    </ClInclude>
+    <ClInclude Include="GameResultListPanelExDelegate.h">
+      <Filter>GameResult</Filter>
+    </ClInclude>
+    <ClInclude Include="GameResultListPanelMaxDelegate.h">
+      <Filter>GameResult</Filter>
+    </ClInclude>
+    <ClInclude Include="BattleDialogManager.h">
+      <Filter>BattleDialogBase\BattleDialogManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

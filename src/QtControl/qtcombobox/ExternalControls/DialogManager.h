@@ -139,6 +139,7 @@ public:
 
 	/** 弹出等待框
 	@param [out] dialogId 窗口ID值
+	@param [in] taskId 用户传入的ID值
 	@param [in] title 标题
 	@param [in] tip 提示内容
 	@param [in] parent 父窗口指针
@@ -147,6 +148,7 @@ public:
 	@return 关闭窗口时给的返回值
 	*/
 	int32_t popWaitDialog(int32_t& dialogId,
+						  int32_t taskId,
 						  const QString& title,
 						  const QString& tip,
 						  QWindow* parent = nullptr,
@@ -382,6 +384,11 @@ public:
 	*/
 	int32_t dialogId(DialogShow* base);
 
+	/** 根据taskId找到dialogId（只针对等待框）
+	@param [in] 用户传入ID
+	*/
+	int32_t dialogId(int32_t taskId);
+
 	/** 根据下载框的指针找到任务ID
 	@param [in] base 窗口指针
 	@return 返回任务ID
@@ -435,6 +442,8 @@ private:
 	int32_t getId();
 
 	bool mapIsEmpty();
+	//只针对等待框
+	int32_t mapFindDialogId(int32_t taskId);
 	DialogBase* mapFind(int32_t dialogId);
 	int32_t mapFind(DialogBase* base);
 	int32_t mapFindTaskId(DialogBase* base);

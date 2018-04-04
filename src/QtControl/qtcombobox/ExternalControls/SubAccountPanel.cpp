@@ -22,6 +22,7 @@ SubAccountPanel::SubAccountPanel(QWidget *parent)
     mTreeView->setIndentation(0);
     mTreeView->header()->setVisible(false);
     mTreeView->setEditTriggers(CTreeViewEx::NoEditTriggers);
+	mTreeView->setSelectionMode(CTreeViewEx::NoSelection);
     SubAccountItemDelegate* tDelegate = new SubAccountItemDelegate(mTreeView);
     mTreeView->setItemDelegate(tDelegate);
 
@@ -354,7 +355,7 @@ void SubAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem
     QColor tc3 = "#efefef";
 
     int useTC = 1;
-    if(option.state.testFlag(QStyle::State_Selected) || option.state.testFlag(QStyle::State_MouseOver))
+    if(option.state.testFlag(QStyle::State_Selected) || option.state.testFlag(QStyle::State_MouseOver) || sitem->isCurrent())
     {
         bkgColor = "#687fba";
         useTC = 1;

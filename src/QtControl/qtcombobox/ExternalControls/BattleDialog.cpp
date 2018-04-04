@@ -1,30 +1,18 @@
 #include "BattleDialog.h"
 #include "RPGContentWidget.h"
+#include "GameResultListPanelMax.h"
+#include "Label.h"
 
-BattleDialog::BattleDialog(int32_t row, int32_t column, QWidget* parent) :
+BattleDialog::BattleDialog(QWidget* parent) :
 BattleDialogBase(parent)
 {
 	m_logoInWidth = 22;
-	m_content = new RPGContentWidget(row, column, this);
-	QObject::connect(this, &BattleDialogBase::resizeDialog, this, &BattleDialog::onResizeDialog);
-	//基类的初始化函数必须放在实例子类的构造函数中调用
+	m_content = new RPGContentWidget(2, 4, this);
+	m_bigContent = new GameResultListPanelMax(this);
 	BattleDialogBase::init();
-	setBattleState(SMALL_NORMAL);
+	QObject::connect(this, &BattleDialogBase::resizeDialog, this, &BattleDialog::onResizeDialog);
+	setBattleState(BIG_NORMAL);
 	setLogo(true);
-}
-
-void BattleDialog::init(const QString& titleLeft,
-						const QString& titleRight,
-						const QStringList& header,
-						const QStringList& value,
-						const QStringList& progress)
-{
-	m_titleLeft = titleLeft;
-	m_titleRight = titleRight;
-	m_header = header;
-	m_value = value;
-	m_progress = progress;
-	((RPGContentWidget*)m_content)->init(m_titleLeft, m_titleRight, m_header, m_value, m_progress);
 }
 
 void BattleDialog::setBattleState(BattleState state)
@@ -120,9 +108,4 @@ void BattleDialog::onResizeDialog()
 		dialogHeight = BIG_DIALOG_HEIGHT;
 	}
 	resize(dialogWidth, dialogHeight);
-}
-
-bool BattleDialog::check()
-{
-	return m_content != nullptr;
 }

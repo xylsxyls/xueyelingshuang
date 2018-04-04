@@ -1,18 +1,16 @@
 #pragma once
 #include "BattleDialogBase.h"
-#include "GameResultListPanelMax.h"
 
-class RPGFourWidget;
 /** 四列战报
 */
-class BattleDialog : public BattleDialogBase
+class LadderDialog : public BattleDialogBase
 {
 	Q_OBJECT
 public:
 	/** 构造函数
 	@param [in] 父窗口指针
 	*/
-	BattleDialog(QWidget* parent = nullptr);
+	LadderDialog(QWidget* parent = nullptr);
 
 public:
 	enum BattleState
@@ -43,7 +41,7 @@ public:
 	*/
 	void setBattleState(BattleState state);
 
-private slots:
+	private slots:
 	void onResizeDialog();
 
 private:
@@ -55,19 +53,11 @@ private:
 
 		/** 常态宽度
 		*/
-		NORMAL_WIDTH = 285 + LOGO_IN_WIDTH,
+		NORMAL_WIDTH = 349 + LOGO_IN_WIDTH,
 
 		/** 常态高度
 		*/
-		NORMAL_HEIGHT = 185,
-
-		/** 错误状态宽度
-		*/
-		ERROR_WIDTH = NORMAL_WIDTH,
-
-		/** 错误状态高度
-		*/
-		ERROR_HEIGHT = 117,
+		NORMAL_HEIGHT = 125,
 
 		/** 大窗口宽度
 		*/

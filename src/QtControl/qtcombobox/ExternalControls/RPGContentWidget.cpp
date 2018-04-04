@@ -93,15 +93,73 @@ RPGContentWidget::~RPGContentWidget()
 	}
 }
 
-void RPGContentWidget::init(const QString& titleLeft,
-						  const QString& titleRight,
-						  const QStringList& header,
-						  const QStringList& value,
-						  const QStringList& progress)
+bool RPGContentWidget::setGameResult(const GameResultType::GameResult& gameResult)
+{
+	QStringList headerFour;
+	headerFour.push_back(QStringLiteral("屠龙"));
+	headerFour.push_back(QStringLiteral("炫目"));
+	headerFour.push_back(QStringLiteral("玉树"));
+	headerFour.push_back(QStringLiteral("杀"));
+	headerFour.push_back(QStringLiteral("怪兽杀"));
+	headerFour.push_back(QStringLiteral("局杀"));
+	headerFour.push_back(QStringLiteral("逃跑"));
+	headerFour.push_back(QStringLiteral("其他"));
+	QStringList valueFour;
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	valueFour.push_back(QStringLiteral("999999"));
+	QStringList progressFour;
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral("(+125)"));
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral(""));
+	progressFour.push_back(QStringLiteral("(+125)"));
+	progressFour.push_back(QStringLiteral("(-125)"));
+	initWidget(QStringLiteral("欧斯小清新欧耶"), QStringLiteral("拉尔李连杰打破"), headerFour, valueFour, progressFour);
+	update();
+	return true;
+	bool result = false;
+	bool isFind = false;
+	for (auto itCamp = gameResult.campList.begin(); itCamp != gameResult.campList.end(); ++itCamp)
+	{
+		auto& slotList = itCamp->slotList;
+		for (auto itSlot = slotList.begin(); itSlot != slotList.end(); ++itSlot)
+		{
+			if (itSlot->isMe)
+			{
+				isFind = true;
+				result = initWidget(itCamp->campName,
+									itSlot->playerName,
+									itCamp->headerList,
+									itSlot->valueList,
+									itSlot->valueProgressList);
+				break;
+			}
+		}
+		if (isFind)
+		{
+			break;
+		}
+	}
+	return isFind && result;
+}
+
+bool RPGContentWidget::initWidget(const QString& titleLeft,
+								  const QString& titleRight,
+								  const QStringList& header,
+								  const QStringList& value,
+								  const QStringList& progress)
 {
 	if (!check())
 	{
-		return;
+		return false;
 	}
 
 	m_titleLeft->setText(titleLeft);
@@ -203,6 +261,8 @@ void RPGContentWidget::init(const QString& titleLeft,
 		errorPtr->setFontSize(12);
 		errorPtr->setAlignment(Qt::AlignCenter);
 	}
+
+	return true;
 }
 
 void RPGContentWidget::resizeEvent(QResizeEvent* eve)

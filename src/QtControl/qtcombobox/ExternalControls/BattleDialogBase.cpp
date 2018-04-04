@@ -24,8 +24,12 @@ m_bigFailedLogo(nullptr),
 m_bigTitle(nullptr),
 m_bigShrink(nullptr),
 m_content(nullptr),
+m_bigContent(nullptr),
 m_logoInWidth(0)
 {
+	setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
+	setAttribute(Qt::WA_TranslucentBackground);
+
 	m_smallExit = new COriginalButton(this);
 	m_smallSuccessLogo = new Label(this);
 	m_smallFailedLogo = new Label(this);
@@ -40,8 +44,6 @@ m_logoInWidth(0)
 	m_bigCurrentTime = new Label(this);
 	m_bigShrink = new COriginalButton(this);
 
-	setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
-	setAttribute(Qt::WA_TranslucentBackground);
 }
 
 void BattleDialogBase::init()
@@ -53,11 +55,11 @@ void BattleDialogBase::init()
 
 	m_smallExit->setText("");
 	m_smallExit->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/GameResultView/Small/SmallCloseButton.png", 3, 1, 2, 3, 1);
-	QObject::connect(m_smallExit, &COriginalButton::clicked, this, &BattleDialogBase::reject);
+	QObject::connect(m_smallExit, &COriginalButton::clicked, this, &BattleDialogBase::endDialog);
 	
 	m_smallExpand->setText("");
 	m_smallExpand->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/GameResultView/Small/SmallExpandButton.png", 3, 1, 2, 3, 1);
-	QObject::connect(m_smallExpand, &COriginalButton::clicked, this, &BattleDialogBase::expandClicked);
+	QObject::connect(m_smallExpand, &COriginalButton::clicked, this, &BattleDialogBase::onExpandClicked);
 
 	m_smallSuccessLogo->setBorderImage(CGeneralStyle::instance()->war3lobbyResourcePath() +
 		"/Image/GameResultView/Small/SmallResultIcon.png",
@@ -85,7 +87,7 @@ void BattleDialogBase::init()
 
 	m_bigExit->setText("");
 	m_bigExit->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/GameResultView/Big/BigCloseButton.png", 3, 1, 2, 3, 1);
-	QObject::connect(m_bigExit, &COriginalButton::clicked, this, &BattleDialogBase::reject);
+	QObject::connect(m_bigExit, &COriginalButton::clicked, this, &BattleDialogBase::endDialog);
 
 	m_bigSuccessLogo->setBorderImage(CGeneralStyle::instance()->war3lobbyResourcePath() +
 		"/Image/GameResultView/Big/BigResultIcon.png",
@@ -126,7 +128,7 @@ void BattleDialogBase::init()
 
 	m_bigShrink->setText("");
 	m_bigShrink->setBkgImage(CGeneralStyle::instance()->war3lobbyResourcePath() + "/Image/GameResultView/Big/BigShrinkButton.png", 3, 1, 2, 3, 1);
-	QObject::connect(m_bigShrink, &COriginalButton::clicked, this, &BattleDialogBase::shrinkClicked);
+	QObject::connect(m_bigShrink, &COriginalButton::clicked, this, &BattleDialogBase::onShrinkClicked);
 
 	m_smallSuccessLogo->raise();
 	m_smallFailedLogo->raise();
@@ -171,6 +173,9 @@ void BattleDialogBase::update()
 		m_bigGameTime->setVisible(false);
 		m_bigCurrentTime->setVisible(false);
 		m_bigShrink->setVisible(false);
+		m_bigContent->setVisible(false);
+		m_content->setVisible(true);
+		m_content->setState(m_contentState);
 	}
 	else
 	{
@@ -179,6 +184,8 @@ void BattleDialogBase::update()
 		m_smallFailedLogo->setVisible(false);
 		m_smallTitle->setVisible(false);
 		m_smallExpand->setVisible(false);
+		m_bigContent->setVisible(true);
+		m_content->setVisible(false);
 	}
 
 	if (m_isSuccess)
@@ -219,8 +226,6 @@ void BattleDialogBase::update()
 		break;
 	}
 
-	m_content->setState(m_contentState);
-
 	emit resizeDialog();
 }
 
@@ -228,6 +233,39 @@ void BattleDialogBase::setLogo(bool isSuccess)
 {
 	m_isSuccess = isSuccess;
 	update();
+}
+
+void BattleDialogBase::setGameTime(const QString& gameTime)
+{
+	if (!check())
+	{
+		return;
+	}
+	m_bigGameTime->setText(gameTime);
+}
+
+void BattleDialogBase::setCurrentTime(const QString& currentTime)
+{
+	if (!check())
+	{
+		return;
+	}
+	m_bigCurrentTime->setText(currentTime);
+}
+
+bool BattleDialogBase::setGameResult(const GameResultType::GameResult& gameResult)
+{
+	if (!check())
+	{
+		return false;
+	}
+
+	m_smallTitle->setText(gameResult.gameName);
+	m_bigTitle->setText(gameResult.gameName);
+	m_bigGameTime->setText(gameResult.gameTime);
+	m_bigCurrentTime->setText(gameResult.startTime);
+
+	return m_content->setGameResult(gameResult) && m_bigContent->setGameResult(gameResult);
 }
 
 void BattleDialogBase::setContentState(RPGContentBase::ContentState state)
@@ -313,12 +351,23 @@ void BattleDialogBase::resizeEvent(QResizeEvent* eve)
 							 BIG_SHRINK_WIDTH,
 							 BIG_EXPAND_HEIGHT);
 
-	m_content->setGeometry(m_isSmall ? CONTENT_MARGIN + m_logoInWidth : CONTENT_MARGIN,
-		m_isSmall ? SMALL_TITLE_HEIGHT : BIG_TITLE_HEIGHT,
-		m_isSmall ? dialogWidth - m_logoInWidth - CONTENT_MARGIN * 2 : dialogWidth - CONTENT_MARGIN * 2,
-		m_isSmall ? dialogHeight - SMALL_TITLE_HEIGHT - CONTENT_MARGIN : dialogHeight - BIG_TITLE_HEIGHT - CONTENT_MARGIN);
+	m_content->setGeometry(CONTENT_MARGIN + m_logoInWidth,
+						   SMALL_TITLE_HEIGHT,
+						   dialogWidth - m_logoInWidth - CONTENT_MARGIN * 2,
+						   dialogHeight - SMALL_TITLE_HEIGHT - CONTENT_MARGIN);
+
+	m_bigContent->setGeometry(CONTENT_MARGIN,
+							  BIG_TITLE_HEIGHT,
+							  dialogWidth - CONTENT_MARGIN * 2,
+							  dialogHeight - BIG_TITLE_HEIGHT - CONTENT_MARGIN);
 
 	CW3LModalFrame::resizeEvent(eve);
+}
+
+void BattleDialogBase::endDialog()
+{
+	reject();
+	delete this;
 }
 
 bool BattleDialogBase::check()
@@ -335,5 +384,16 @@ bool BattleDialogBase::check()
 		   m_bigGameTime != nullptr &&
 		   m_bigCurrentTime != nullptr &&
 		   m_bigShrink != nullptr &&
-		   m_content != nullptr;
+		   m_content != nullptr &&
+		   m_bigContent != nullptr;
+}
+
+void BattleDialogBase::onExpandClicked()
+{
+	setDisplayMode(false);
+}
+
+void BattleDialogBase::onShrinkClicked()
+{
+	setDisplayMode(true);
 }

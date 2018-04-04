@@ -175,13 +175,14 @@ int32_t DialogManager::popInputDialog(int32_t& dialogId,
 }
 
 int32_t DialogManager::popWaitDialog(int32_t& dialogId,
+									 int32_t taskId,
 									 const QString& title,
 									 const QString& tip,
 									 QWindow* parent,
 									 int32_t timeOut,
 									 bool isCountDownVisible)
 {
-	return WaitDialog::popWaitDialog(dialogId, title, tip, parent, timeOut, isCountDownVisible);
+	return WaitDialog::popWaitDialog(dialogId, taskId, title, tip, parent, timeOut, isCountDownVisible);
 }
 
 int32_t DialogManager::popDownloadDialog(int32_t& dialogId,
@@ -390,6 +391,15 @@ int32_t DialogManager::dialogId(DialogShow* base)
 	return mapFind((DialogBase*)base);
 }
 
+int32_t DialogManager::dialogId(int32_t taskId)
+{
+	if (mapIsEmpty())
+	{
+		return -1;
+	}
+	return mapFindDialogId(taskId);
+}
+
 int32_t DialogManager::taskId(DialogShow* base)
 {
 	if (mapIsEmpty())
@@ -510,6 +520,26 @@ bool DialogManager::mapIsEmpty()
 	return isEmpty;
 }
 
+int32_t DialogManager::mapFindDialogId(int32_t taskId)
+{
+	int32_t dialogId = -1;
+	m_mutex.lock();
+	for (auto itDialog = m_mapDialog.begin(); itDialog != m_mapDialog.end(); ++itDialog)
+	{
+		DialogBase* base = itDialog->second;
+		if (base->dialogEnum() == WAIT_DIALOG)
+		{
+			if (((WaitDialog*)base)->getTaskId() == taskId)
+			{
+				dialogId = itDialog->first;
+				break;
+			}
+		}
+	}
+	m_mutex.unlock();
+	return dialogId;
+}
+
 DialogBase* DialogManager::mapFind(int32_t dialogId)
 {
 	DialogBase* result = nullptr;
@@ -544,6 +574,10 @@ int32_t DialogManager::mapFindTaskId(DialogBase* base)
 	if (base->dialogEnum() == DOWNLOAD_OPERATE_DIALOG)
 	{
 		return ((DownloadOperateDialog*)base)->getTaskId();
+	}
+	else if (base->dialogEnum() == WAIT_DIALOG)
+	{
+		return ((WaitDialog*)base)->getTaskId();
 	}
 	return -1;
 }
