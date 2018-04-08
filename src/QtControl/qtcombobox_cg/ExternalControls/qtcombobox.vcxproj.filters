@@ -1,0 +1,1047 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;cxx;c;def</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>moc;h;cpp</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug">
+      <UniqueIdentifier>{858fd352-9fdb-4c4f-a65b-fce5f132c428}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release">
+      <UniqueIdentifier>{753d657c-628b-4d94-959f-ed019e05a052}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="QtControl">
+      <UniqueIdentifier>{4ad6196e-4ce5-402b-bb4a-ef35173728ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\RadioButton">
+      <UniqueIdentifier>{998a499a-57a8-4c6f-847f-1f61a9a305d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Menu">
+      <UniqueIdentifier>{89dbc6da-c6e3-41ea-8a43-f78671cd1616}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Menu\CollapseMenu">
+      <UniqueIdentifier>{2dcc0fd5-1dd0-4f2a-94d9-7d5a8b5d8c5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Menu\MenuCustomStyle">
+      <UniqueIdentifier>{fc307ab2-3b9a-40a7-8f1e-f6f2014667c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ListWidget">
+      <UniqueIdentifier>{cfd4c733-0ac1-40f5-be6d-9ae3d6993e35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ListWidget\ListWidgetIdItem">
+      <UniqueIdentifier>{0499b28e-c508-4b62-a5e2-624504f72f0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\lib">
+      <UniqueIdentifier>{38eca791-2b1e-44d0-8dbd-cb4f5a148e67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\lib\QssHelper">
+      <UniqueIdentifier>{b6ea808e-8a91-4e03-86d5-d5f9aa75ccf5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\lib\QssString">
+      <UniqueIdentifier>{5f150465-4398-4f78-bb0f-1d9904ea0362}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\lib\CStringManager">
+      <UniqueIdentifier>{f64a13c8-59c9-472a-a1d0-005204690605}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\LineEdit">
+      <UniqueIdentifier>{3a86d31f-e656-4a63-a82b-20ff8647feba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\LineEdit\CPasswordInputBox">
+      <UniqueIdentifier>{4dbd4d2f-c9cc-45e7-b098-95ba4bd91c9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Label">
+      <UniqueIdentifier>{dcf75ab5-eb90-43c2-b105-8ff286e46aba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Label\PointLabel">
+      <UniqueIdentifier>{25eaaa47-6f34-4a93-af85-c76b95e90284}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Control">
+      <UniqueIdentifier>{8ed858cf-5421-4525-baed-ce60acf9bf76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Control\ControlBase">
+      <UniqueIdentifier>{34699273-aaf7-45e8-9afd-b4e45b4fedb2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Control\ControlBase\ControlFont">
+      <UniqueIdentifier>{2274c276-9e1d-4fd5-9b33-e01ccf737ec4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Control\ControlBase\ControlItem">
+      <UniqueIdentifier>{90c5a3ff-7ff1-4bbb-8962-18f5f946102a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Control\ControlBase\ControlSelf">
+      <UniqueIdentifier>{973f9eb2-49ed-4ff4-94b9-2d06e7cbac2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Control\ControlBase\ControlBorder">
+      <UniqueIdentifier>{b984472c-9b8b-4055-8f27-3b924ca5f4e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Control\ControlBase\ControlBackground">
+      <UniqueIdentifier>{b785091a-e8e7-49d5-8046-8367f46c6f9d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Control\ControlShow">
+      <UniqueIdentifier>{fdb62e1d-a271-4f26-b14a-146c9479bd14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\COriginalButton">
+      <UniqueIdentifier>{1212dac7-9d6f-42c3-b84e-91550afc1b68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ComboBox">
+      <UniqueIdentifier>{2426806f-5940-4ed9-b78f-f98f99159164}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ComboBox\IdItemComboBox">
+      <UniqueIdentifier>{8f0a6389-9e82-4c03-8387-fcdbd421f404}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ComboBox\IdItemComboBox\HtmlComboBox">
+      <UniqueIdentifier>{40905ac0-54f5-419c-9a74-2851317b6bbe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle">
+      <UniqueIdentifier>{0f23648d-bfd3-44cb-8335-e9e40ca347f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate">
+      <UniqueIdentifier>{a0e8d20e-0218-40b8-8f00-e0d282ffeb35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ComboBox\NoFocusFrameDelegate">
+      <UniqueIdentifier>{d7501777-f35f-4fa6-a318-e8972130bc95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\CheckBox">
+      <UniqueIdentifier>{017e38ad-4ba5-48e4-b28c-ebf55396bb84}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog">
+      <UniqueIdentifier>{ae0d673c-8b55-470e-806b-3d8e70708b2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\CGeneralStyle">
+      <UniqueIdentifier>{8e9ac672-b834-4b81-8637-9dac83866ac8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\DialogBase">
+      <UniqueIdentifier>{c19b6e57-4199-471d-89be-f9892f365ec4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\DialogBase\DialogShow">
+      <UniqueIdentifier>{7c515d0b-9015-415b-9e70-9278603af8cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal">
+      <UniqueIdentifier>{98e80f68-4f3e-4bf9-be90-8683da8f6b4b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\AskDialog">
+      <UniqueIdentifier>{237d3997-b301-4c53-9f89-1f1f30657539}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\WaitDialog">
+      <UniqueIdentifier>{5b68db52-4866-497c-aa28-210a136e3701}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\TipDialog">
+      <UniqueIdentifier>{4ee9da22-d5f5-4a3f-8aa8-c52bfcebd8d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\InputDialog">
+      <UniqueIdentifier>{9c8f96eb-e9dc-4554-9757-7cc3be3797f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal">
+      <UniqueIdentifier>{e6cf1110-fbe2-4021-a2df-97e1635dfed2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal\LoginShowDialog">
+      <UniqueIdentifier>{15f9d3c6-928f-41cd-8dd1-37480f6282c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal\AskShowDialog">
+      <UniqueIdentifier>{9ba847bc-be7e-4ac0-a907-574d61fd157c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal\TipShowDialog">
+      <UniqueIdentifier>{65a8eaf1-f812-48bf-8539-551a671d12fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\DialogManager">
+      <UniqueIdentifier>{062225db-0305-49b3-8c53-12af750b9efd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="COriginalDialog">
+      <UniqueIdentifier>{e807bfa0-ddf7-4e7a-b8b0-b07a72990ac3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CW3LModalFrame">
+      <UniqueIdentifier>{606aba6a-addf-4e51-87e1-c642c2bc4b93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FriendDialog">
+      <UniqueIdentifier>{e6847ddd-ff04-4799-bb60-908cd3d921a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\UnModal\NotifyDialogManager">
+      <UniqueIdentifier>{8f80f1ed-89ec-4dc3-8e73-02126e63e0fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\TreeWidget">
+      <UniqueIdentifier>{99eeff85-1fc4-49ce-9c8b-133057de528d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FriendDialog\UserWidget">
+      <UniqueIdentifier>{9aaf7406-a480-4b88-aeec-fe0cfd2c151a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\DownloadDialog">
+      <UniqueIdentifier>{31fc6f36-08f6-4169-b765-8668b7b3ced5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\ProgressBar">
+      <UniqueIdentifier>{22a47d44-8159-45da-8007-0d84ca0b6a0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\DownloadErrorDialog">
+      <UniqueIdentifier>{1514c91f-8594-4b3f-9069-7a1a0289bb7e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Thread">
+      <UniqueIdentifier>{581c493d-43e8-4115-b001-2f8b9aee9939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\DownloadOperateDialog">
+      <UniqueIdentifier>{b0b6e834-c99e-4186-96ba-a826257f3097}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\BoxDialogBase">
+      <UniqueIdentifier>{95106191-b067-4af9-b24a-e56c42ffcd1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\BoxDialogBase\AccountDialog">
+      <UniqueIdentifier>{e417b961-331c-479d-8dd2-1b8992b12552}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\BoxDialogBase\AccountManagerDialog">
+      <UniqueIdentifier>{fe5f6ccf-eb48-42e2-93b0-bfa7b84c0556}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="out">
+      <UniqueIdentifier>{f278afa9-39f8-445b-b369-d132a5ce6db0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\BoxDialogBase\ClosureDialog">
+      <UniqueIdentifier>{5ab1d85a-4658-4909-87ea-6180a733dd67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Label\TipLabel">
+      <UniqueIdentifier>{cf3f94d1-8ef7-41cd-8bdb-716eed7c671f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Label\TipLabel\TipLabelManager">
+      <UniqueIdentifier>{14b0cafa-f555-435a-b8b0-c96183c6d578}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControl\Label\ContentLabel">
+      <UniqueIdentifier>{2213ec7b-d6a1-4308-a7f8-78707e78ba7e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase">
+      <UniqueIdentifier>{3b43189a-5dc5-4eba-964a-564cb7024b0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\RPGContentBase">
+      <UniqueIdentifier>{5ff196a2-6fbf-40b9-9a8c-334a0738f582}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\RPGContentBase\RPGContentWidget">
+      <UniqueIdentifier>{4816e82d-0f67-4878-9b4d-14463687453b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\BattleDialog">
+      <UniqueIdentifier>{489348bd-331c-4de3-aa04-c4305007b341}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CSystem">
+      <UniqueIdentifier>{9ca7766e-b2bf-4f92-87b7-270056b9c95b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameResult">
+      <UniqueIdentifier>{cd09e1d9-5180-4058-af24-38b91d5165d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\MingJiangDialog">
+      <UniqueIdentifier>{9afc7fb0-b16f-4b32-9a76-122f4c6346ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\BattleDialogManager">
+      <UniqueIdentifier>{41201bb5-22b5-4fea-8cc5-9dc0a0628f35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BattleDialogBase\LadderDialog">
+      <UniqueIdentifier>{7f683d8f-62b0-40ec-abde-fca3bd3df851}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="qtcombobox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_qtcombobox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_qtcombobox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_qtcombobox.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CStringManager.cpp">
+      <Filter>QtControl\lib\CStringManager</Filter>
+    </ClCompile>
+    <ClCompile Include="QssString.cpp">
+      <Filter>QtControl\lib\QssString</Filter>
+    </ClCompile>
+    <ClCompile Include="ComboBox.cpp">
+      <Filter>QtControl\ComboBox</Filter>
+    </ClCompile>
+    <ClCompile Include="ListWidget.cpp">
+      <Filter>QtControl\ListWidget</Filter>
+    </ClCompile>
+    <ClCompile Include="NoFocusFrameDelegate.cpp">
+      <Filter>QtControl\ComboBox\NoFocusFrameDelegate</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QssHelper.cpp">
+      <Filter>QtControl\lib\QssHelper</Filter>
+    </ClCompile>
+    <ClCompile Include="HtmlComboBox.cpp">
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox</Filter>
+    </ClCompile>
+    <ClCompile Include="IdItemComboBox.cpp">
+      <Filter>QtControl\ComboBox\IdItemComboBox</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_IdItemComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_IdItemComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="Label.cpp">
+      <Filter>QtControl\Label</Filter>
+    </ClCompile>
+    <ClCompile Include="LineEdit.cpp">
+      <Filter>QtControl\LineEdit</Filter>
+    </ClCompile>
+    <ClCompile Include="Menu.cpp">
+      <Filter>QtControl\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="CollapseMenu.cpp">
+      <Filter>QtControl\Menu\CollapseMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="RadioButton.cpp">
+      <Filter>QtControl\RadioButton</Filter>
+    </ClCompile>
+    <ClCompile Include="ControlFont.inl">
+      <Filter>QtControl\Control\ControlBase\ControlFont</Filter>
+    </ClCompile>
+    <ClCompile Include="ControlBase.inl">
+      <Filter>QtControl\Control\ControlBase</Filter>
+    </ClCompile>
+    <ClCompile Include="ListWidgetIdItem.cpp">
+      <Filter>QtControl\ListWidget\ListWidgetIdItem</Filter>
+    </ClCompile>
+    <ClCompile Include="PointLabel.cpp">
+      <Filter>QtControl\Label\PointLabel</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Label.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RadioButton.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LineEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PointLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ListWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ListWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CollapseMenu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Menu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CPasswordInputBox.cpp">
+      <Filter>QtControl\LineEdit\CPasswordInputBox</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CGeneralStyle.cpp">
+      <Filter>QtControl\CGeneralStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\COriginalButton.cpp">
+      <Filter>QtControl\COriginalButton</Filter>
+    </ClCompile>
+    <ClCompile Include="HtmlComboBoxDelegate.cpp">
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
+    </ClCompile>
+    <ClCompile Include="HtmlComboBoxStyle.cpp">
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Menu.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="MenuCustomStyle.cpp">
+      <Filter>QtControl\Menu\MenuCustomStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CheckBox.cpp">
+      <Filter>QtControl\CheckBox</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CheckBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CollapseMenu.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogBase.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogBase.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogBase.cpp">
+      <Filter>QtDialog\DialogBase</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogShow.cpp">
+      <Filter>QtDialog\DialogBase\DialogShow</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogShow.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogShow.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="TipDialog.cpp">
+      <Filter>QtDialog\Modal\TipDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="AskDialog.cpp">
+      <Filter>QtDialog\Modal\AskDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="InputDialog.cpp">
+      <Filter>QtDialog\Modal\InputDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_InputDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_InputDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="WaitDialog.cpp">
+      <Filter>QtDialog\Modal\WaitDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogManager.cpp">
+      <Filter>QtDialog\Modal\DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="TipShowDialog.cpp">
+      <Filter>QtDialog\UnModal\TipShowDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="AskShowDialog.cpp">
+      <Filter>QtDialog\UnModal\AskShowDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="LoginShowDialog.cpp">
+      <Filter>QtDialog\UnModal\LoginShowDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\COriginalDialog.cpp">
+      <Filter>COriginalDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CW3LModalFrame.cpp">
+      <Filter>CW3LModalFrame</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CW3LModalFrame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CW3LModalFrame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="NotifyDialogManager.cpp">
+      <Filter>QtDialog\UnModal\NotifyDialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="TreeWidget.cpp">
+      <Filter>QtControl\TreeWidget</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TreeWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TreeWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="FriendDialogFrame.cpp">
+      <Filter>FriendDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_FriendDialogFrame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_FriendDialogFrame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="UserWidget.cpp">
+      <Filter>FriendDialog\UserWidget</Filter>
+    </ClCompile>
+    <ClCompile Include="DownloadDialog.cpp">
+      <Filter>QtDialog\Modal\DownloadDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="ProgressBar.cpp">
+      <Filter>QtControl\ProgressBar</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="DownloadErrorDialog.cpp">
+      <Filter>QtDialog\Modal\DownloadErrorDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadErrorDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadErrorDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="Thread.cpp">
+      <Filter>Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Thread.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Thread.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="DownloadOperateDialog.cpp">
+      <Filter>QtDialog\Modal\DownloadOperateDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="BoxDialogBase.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountDialog.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase\AccountDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="AccountManagerDialog.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase\AccountManagerDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="LockedAccountPanel.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClCompile>
+    <ClCompile Include="SubAccountPanel.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_SubAccountPanel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_SubAccountPanel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CExternalTextEdit.cpp">
+      <Filter>out</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CExternalTextEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CExternalTextEdit.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\COriginalWebView.cpp">
+      <Filter>out</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalWebView.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalWebView.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CTreeViewEx.cpp">
+      <Filter>out</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CTreeViewEx.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CTreeViewEx.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\EO_XmlSax2Parser.cpp">
+      <Filter>out</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AccountDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AccountDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="ClosureDialog.cpp">
+      <Filter>QtDialog\Modal\BoxDialogBase\ClosureDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="TipLabel.cpp">
+      <Filter>QtControl\Label\TipLabel</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PointLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="TipLabelManager.cpp">
+      <Filter>QtControl\Label\TipLabel\TipLabelManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipLabelManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipLabelManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="ContentLabel.cpp">
+      <Filter>QtControl\Label\ContentLabel</Filter>
+    </ClCompile>
+    <ClCompile Include="BattleDialogBase.cpp">
+      <Filter>BattleDialogBase</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_BattleDialogBase.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_BattleDialogBase.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="RPGContentBase.cpp">
+      <Filter>BattleDialogBase\RPGContentBase</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RPGContentBase.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_RPGContentBase.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Label.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="RPGContentWidget.cpp">
+      <Filter>BattleDialogBase\RPGContentBase\RPGContentWidget</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RPGContentWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_RPGContentWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="BattleDialog.cpp">
+      <Filter>BattleDialogBase\BattleDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_BattleDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_BattleDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystem.inl">
+      <Filter>CSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_GameResultListPanelMini.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_GameResultListPanelMini.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CGameResultTopPlayer_Ladder.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_game_result_view.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_game_result_view.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GameResultListPanelExDelegate.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="GameResultListPanelMax.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_GameResultListPanelMax.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_GameResultListPanelMax.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GameResultListPanelMaxDelegate.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="GameResultListPanelMini.cpp">
+      <Filter>GameResult</Filter>
+    </ClCompile>
+    <ClCompile Include="MingJiangDialog.cpp">
+      <Filter>BattleDialogBase\MingJiangDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_MingJiangDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_MingJiangDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="BattleDialogManager.cpp">
+      <Filter>BattleDialogBase\BattleDialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="LadderDialog.cpp">
+      <Filter>BattleDialogBase\LadderDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LadderDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LadderDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="qtcombobox.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="qtcombobox.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="qtcombobox.qrc">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="NoFocusFrameDelegate.h">
+      <Filter>QtControl\ComboBox\NoFocusFrameDelegate</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ListWidget.h">
+      <Filter>QtControl\ListWidget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GeneratedFiles\ui_qtcombobox.h">
+      <Filter>Generated Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CStringManager.h">
+      <Filter>QtControl\lib\CStringManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ComboBox.h">
+      <Filter>QtControl\ComboBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="QssString.h">
+      <Filter>QtControl\lib\QssString</Filter>
+    </CustomBuild>
+    <CustomBuild Include="QssHelper.h">
+      <Filter>QtControl\lib\QssHelper</Filter>
+    </CustomBuild>
+    <CustomBuild Include="IdItemComboBox.h">
+      <Filter>QtControl\ComboBox\IdItemComboBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Label.h">
+      <Filter>QtControl\Label</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HtmlComboBox.h">
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RadioButton.h">
+      <Filter>QtControl\RadioButton</Filter>
+    </CustomBuild>
+    <CustomBuild Include="LineEdit.h">
+      <Filter>QtControl\LineEdit</Filter>
+    </CustomBuild>
+    <CustomBuild Include="PointLabel.h">
+      <Filter>QtControl\Label\PointLabel</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CollapseMenu.h">
+      <Filter>QtControl\Menu\CollapseMenu</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Menu.h">
+      <Filter>QtControl\Menu</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CPasswordInputBox.h">
+      <Filter>QtControl\LineEdit\CPasswordInputBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\CGeneralStyle.h">
+      <Filter>QtControl\CGeneralStyle</Filter>
+    </CustomBuild>
+    <CustomBuild Include="MenuCustomStyle.h">
+      <Filter>QtControl\Menu\MenuCustomStyle</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CheckBox.h">
+      <Filter>QtControl\CheckBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DialogBase.h">
+      <Filter>QtDialog\DialogBase</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DialogShow.h">
+      <Filter>QtDialog\DialogBase\DialogShow</Filter>
+    </CustomBuild>
+    <CustomBuild Include="TipDialog.h">
+      <Filter>QtDialog\Modal\TipDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="AskDialog.h">
+      <Filter>QtDialog\Modal\AskDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="InputDialog.h">
+      <Filter>QtDialog\Modal\InputDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="WaitDialog.h">
+      <Filter>QtDialog\Modal\WaitDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DialogManager.h">
+      <Filter>QtDialog\Modal\DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="TipShowDialog.h">
+      <Filter>QtDialog\UnModal\TipShowDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="AskShowDialog.h">
+      <Filter>QtDialog\UnModal\AskShowDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="LoginShowDialog.h">
+      <Filter>QtDialog\UnModal\LoginShowDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\COriginalDialog.h">
+      <Filter>COriginalDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\CW3LModalFrame.h">
+      <Filter>CW3LModalFrame</Filter>
+    </CustomBuild>
+    <CustomBuild Include="NotifyDialogManager.h">
+      <Filter>QtDialog\UnModal\NotifyDialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="TreeWidget.h">
+      <Filter>QtControl\TreeWidget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="FriendDialogFrame.h">
+      <Filter>FriendDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DownloadDialog.h">
+      <Filter>QtDialog\Modal\DownloadDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ProgressBar.h">
+      <Filter>QtControl\ProgressBar</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DownloadErrorDialog.h">
+      <Filter>QtDialog\Modal\DownloadErrorDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Thread.h">
+      <Filter>Thread</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DownloadOperateDialog.h">
+      <Filter>QtDialog\Modal\DownloadOperateDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="SubAccountPanel.h">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\CExternalTextEdit.h">
+      <Filter>out</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\COriginalWebView.h">
+      <Filter>out</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\CTreeViewEx.h">
+      <Filter>out</Filter>
+    </CustomBuild>
+    <CustomBuild Include="AccountDialog.h">
+      <Filter>QtDialog\Modal\BoxDialogBase\AccountDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="TipLabel.h">
+      <Filter>QtControl\Label\TipLabel</Filter>
+    </CustomBuild>
+    <CustomBuild Include="TipLabelManager.h">
+      <Filter>QtControl\Label\TipLabel\TipLabelManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="BattleDialogBase.h">
+      <Filter>BattleDialogBase</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RPGContentBase.h">
+      <Filter>BattleDialogBase\RPGContentBase</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RPGContentWidget.h">
+      <Filter>BattleDialogBase\RPGContentBase\RPGContentWidget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="BattleDialog.h">
+      <Filter>BattleDialogBase\BattleDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GameResultListPanelMini.h">
+      <Filter>GameResult</Filter>
+    </CustomBuild>
+    <CustomBuild Include="game_result_view.h">
+      <Filter>GameResult</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GameResultListPanelMax.h">
+      <Filter>GameResult</Filter>
+    </CustomBuild>
+    <CustomBuild Include="MingJiangDialog.h">
+      <Filter>BattleDialogBase\MingJiangDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="LadderDialog.h">
+      <Filter>BattleDialogBase\LadderDialog</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ControlFont.h">
+      <Filter>QtControl\Control\ControlBase\ControlFont</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlItem.h">
+      <Filter>QtControl\Control\ControlBase\ControlItem</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlSelf.h">
+      <Filter>QtControl\Control\ControlBase\ControlSelf</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlShow.h">
+      <Filter>QtControl\Control\ControlShow</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlBase.h">
+      <Filter>QtControl\Control\ControlBase</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlBorder.h">
+      <Filter>QtControl\Control\ControlBase\ControlBorder</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlBackground.h">
+      <Filter>QtControl\Control\ControlBase\ControlBackground</Filter>
+    </ClInclude>
+    <ClInclude Include="ListWidgetIdItem.h">
+      <Filter>QtControl\ListWidget\ListWidgetIdItem</Filter>
+    </ClInclude>
+    <ClInclude Include="..\COriginalButton.h">
+      <Filter>QtControl\COriginalButton</Filter>
+    </ClInclude>
+    <ClInclude Include="HtmlComboBoxDelegate.h">
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxDelegate</Filter>
+    </ClInclude>
+    <ClInclude Include="HtmlComboBoxStyle.h">
+      <Filter>QtControl\ComboBox\IdItemComboBox\HtmlComboBox\HtmlComboBoxStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="UserWidget.h">
+      <Filter>FriendDialog\UserWidget</Filter>
+    </ClInclude>
+    <ClInclude Include="BoxDialogBase.h">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AccountManagerDialog.h">
+      <Filter>QtDialog\Modal\BoxDialogBase\AccountManagerDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="LockedAccountPanel.h">
+      <Filter>QtDialog\Modal\BoxDialogBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\EO_XmlSax2Parser.h">
+      <Filter>out</Filter>
+    </ClInclude>
+    <ClInclude Include="ClosureDialog.h">
+      <Filter>QtDialog\Modal\BoxDialogBase\ClosureDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="ContentLabel.h">
+      <Filter>QtControl\Label\ContentLabel</Filter>
+    </ClInclude>
+    <ClInclude Include="CSystem.h">
+      <Filter>CSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="CGameResultTopPlayer_Ladder.h">
+      <Filter>GameResult</Filter>
+    </ClInclude>
+    <ClInclude Include="GameResultListPanelExDelegate.h">
+      <Filter>GameResult</Filter>
+    </ClInclude>
+    <ClInclude Include="GameResultListPanelMaxDelegate.h">
+      <Filter>GameResult</Filter>
+    </ClInclude>
+    <ClInclude Include="BattleDialogManager.h">
+      <Filter>BattleDialogBase\BattleDialogManager</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ControlItem.inl">
+      <Filter>QtControl\Control\ControlBase\ControlItem</Filter>
+    </None>
+    <None Include="ControlSelf.inl">
+      <Filter>QtControl\Control\ControlBase\ControlSelf</Filter>
+    </None>
+    <None Include="ControlBorder.inl">
+      <Filter>QtControl\Control\ControlBase\ControlBorder</Filter>
+    </None>
+    <None Include="ControlBackground.inl">
+      <Filter>QtControl\Control\ControlBase\ControlBackground</Filter>
+    </None>
+    <None Include="ControlShow.inl">
+      <Filter>QtControl\Control\ControlShow</Filter>
+    </None>
+  </ItemGroup>
+</Project>
