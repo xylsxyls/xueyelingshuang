@@ -31,7 +31,7 @@ AskShowDialog::AskShowDialog(int32_t userType,
 {
 	std::string str = typeid(*this).name();
 	CStringManager::Replace(str, "class ", "");
-	initForShow(212, 118, str);
+	initForShow(212, 128, str);
 	m_userType = userType;
 	m_title->setText(title);
 	setWindowTitle(title);

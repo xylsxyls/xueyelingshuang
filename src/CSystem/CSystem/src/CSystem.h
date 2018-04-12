@@ -12,6 +12,10 @@ public:
 	static RECT GetTaskbarRect();
 	//?获取屏幕分辨率
 	static RECT GetWindowResolution();
+	//?返回屏幕右下角坐标，不包含任务栏
+	static POINT taskbarRightBottomPoint();
+	//?返回屏幕中央点
+	static POINT screenCenterPoint();
 	//?获取去除任务栏及软件最大化时软件内任务栏后屏幕高度
 	static int GetVisibleHeight();
 	//?跨平台Sleep，毫秒

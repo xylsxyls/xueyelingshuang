@@ -35,6 +35,10 @@
 #include "BattleDialog.h"
 #include "MingJiangDialog.h"
 #include "BattleDialogManager.h"
+#include "WaitingBoxManager.h"
+
+QWidget* sss = nullptr;
+COriginalButton* ssd = nullptr;
 
 qtcombobox::qtcombobox(QWidget *parent)
 	: QMainWindow(parent)
@@ -297,10 +301,6 @@ qtcombobox::qtcombobox(QWidget *parent)
 
 	idItemBox->setBackgroundColor(QColor(255, 255, 0, 80));
 
-	QWidget* ss = 0;
-	ComboBox* ssss = (ComboBox*)ss;
-	ComboBox* sss = dynamic_cast<ComboBox*>(ss);
-
 	Label* pLab = new Label(this);
 	pLab->setText("asdf<font color = \"red\">15ms</font>");
 	pLab->setGeometry(400, 50, 100, 30);
@@ -548,16 +548,60 @@ qtcombobox::qtcombobox(QWidget *parent)
 	//mingJiang->move(600, 600);
 	//mingJiang->show();
 
+	PointLabel* pointLabel = new PointLabel(this);
+	pointLabel->setGeometry(300, 250, 100, 30);
+	pointLabel->setText("121246546598784653213543213535432132");
+	pointLabel->setToolTip("121246546598784653213543213535432132");
+
 	GameResultType::GameResult gameResult;
-	gameResult.type = GameResultType::ResultType_RPG;
+	gameResult.type = GameResultType::ResultType_MingJiang;
+	gameResult.tip = QStringLiteral("11提示");
+	gameResult.gameTime = QStringLiteral("游戏时长（秒）");
+	gameResult.startTime = QStringLiteral("开始时间");
+	gameResult.gameName = QStringLiteral("游戏名字121212121212121");
+	gameResult.dataError = false;
+	gameResult.invalidGame = false;
+	GameResultType::Camp camp;
+	camp.isVictory = true;
+	camp.campName = QStringLiteral("阵营名字");
+	camp.headerList = headerFour;
+	camp.campScore = QStringLiteral("阵营总分");
+	GameResultType::Slot slot;
+	slot.isMvp = true; //是否mvp     war3 & rpg
+	slot.isFriend = true; //是否好友     war3 & rpg
+	slot.icon; //头像图标路径  war3 & rpg
+	slot.playerName = QStringLiteral("玩家名字"); //玩家名字     war3 & rpg
+	slot.isEscap = true; //是否逃跑     war3 & rpg
+	slot.isNew = true; //是否新玩家   war3 & rpg
+	slot.isDropNet = true; //是否掉线     war3 & rpg
+	slot.valueList = valueFour; //积分列表     war3 & rpg
+	slot.valueProgressList = progressFour; //积分增量列表  war3 & rpg
+	slot.accountId = 12345678; //账号id      war3 & rpg
+	slot.titleFlags = GameResultType::TitleFlags_PO; //称号        war3
+	slot.isBiaoZhang = true; //表彰        war3 & rpg
+	slot.isMe = true; //是否是自己   war3 & rpg
+	slot.totalScore = 888; //总分        war3 & rpg
+
+	camp.slotList.push_back(slot);
+	gameResult.campList.push_back(camp);
 	BattleDialogManager::instance().showBattleDialog(gameResult);
 
+	QObject::connect(&WaitingBoxManager::instance(), &WaitingBoxManager::waitingBoxDone, this, &qtcombobox::onWaitingBoxDone);
+	
+	
+	//Sleep(1000);
+	//WaitingBoxManager::instance().closeWaitingBox(2);
 	int x = 3;
 }
 
 qtcombobox::~qtcombobox()
 {
 
+}
+
+void qtcombobox::onWaitingBoxDone(int32_t key, WaitingBox::ExitEnum exitEnum)
+{
+	RCSend("key = %d,exitEnum = %d", key, exitEnum);
 }
 
 void qtcombobox::currentTextChanged6(const QString& str)
@@ -580,8 +624,7 @@ void qtcombobox::htmlItemPressed(int index)
 	int32_t sss = box->itemIndexByFirstId(2);
 	int x = 3;
 }
-QWidget* sss = nullptr;
-COriginalButton* ssd = nullptr;
+
 void qtcombobox::modalPop()
 {
 	setAttribute(Qt::WA_NativeWindow);
@@ -598,6 +641,7 @@ void qtcombobox::modalPop()
 	auto windowhan = sss->windowHandle();
 	sss->show();
 
+	WaitingBoxManager::instance().showWaitingBox(2, "123", "1234", sss->windowHandle(), -1, false);
 	//int32_t dialogId1 = 0;
 	//int xx = TipDialog::popTipDialog(dialogId1,
 	//								 QString::fromStdWString(L"标题"),
@@ -611,6 +655,10 @@ void qtcombobox::modalPop()
 
 void qtcombobox::modalFriendPop()
 {
+	DialogManager::instance().popAdvertAskDialog(m_dialogId8, "http://pt.5211game.com/AdFiles/2017/1024/ad2.html", "waiting", nullptr);
+	//WaitingBoxManager::instance().showWaitingBox(2, "123", "12354", nullptr, 5, false);
+	//WaitingBoxManager::instance().closeWaitingBox(2);
+	return;
 	int32_t xxxds = m_dialogId8;
 	int32_t waitDialogId = DialogManager::instance().dialogId(2);
 	DialogManager::instance().closeDialog(waitDialogId);
@@ -679,6 +727,19 @@ void qtcombobox::modalFriendPop()
 
 void qtcombobox::onTestButton()
 {
+	NotifyDialogManager::instance().showAskDialog(m_dialogId8, "111");
+	return;
+	COriginalDialog* dia = new COriginalDialog;
+	dia->setWindowTitle("dialog1");
+	dia->show();
+
+	COriginalDialog* dia2 = new COriginalDialog;
+	dia2->setWindowTitle("dialog2");
+	dia2->setWindowFlags(dia2->windowFlags() | Qt::Tool);
+	
+	dia2->show();
+	dia2->windowHandle()->setTransientParent(dia->windowHandle());
+	return;
 	
 	DialogManager::instance().popWaitDialog(m_dialogId8, 2, "123", "1111",sss->windowHandle());
 	
@@ -706,6 +767,9 @@ void qtcombobox::onTestButton()
 
 void qtcombobox::testDialog()
 {
+	
+
+	return;
 	//TipLabel* m_tipLabel = new TipLabel(nullptr);
 	//m_tipLabel->setWordWrap(true);
 	////m_tipLabel->setBottomRight(QPoint(100,100));

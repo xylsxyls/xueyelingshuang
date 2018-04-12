@@ -10,36 +10,46 @@ BattleDialogManager& BattleDialogManager::instance()
 	return battleDialogHelper;
 }
 
+BattleDialogManager::BattleDialogManager():
+m_dialog(nullptr)
+{
+
+}
+
 void BattleDialogManager::showBattleDialog(const GameResultType::GameResult& gameResult)
 {
+	if (m_dialog != nullptr)
+	{
+		delete m_dialog;
+		m_dialog = nullptr;
+	}
 	switch (gameResult.type)
 	{
 	case GameResultType::ResultType_RPG:
 	{
-		BattleDialog* battleDialog = new BattleDialog;
-		battleDialog->setGameResult(gameResult);
-		battleDialog->show();
+		m_dialog = new BattleDialog;
 		break;
 	}
 	case GameResultType::ResultType_Ladder:
-	{
-		LadderDialog* ladderDialog = new LadderDialog;
-		ladderDialog->show();
-		break;
-	}
 	case GameResultType::ResultType_Battle:
 	{
-		LadderDialog* ladderDialog = new LadderDialog;
-		ladderDialog->show();
+		m_dialog = new LadderDialog;
 		break;
 	}
 	case GameResultType::ResultType_MingJiang:
 	{
-		MingJiangDialog* mingJiangDialog = new MingJiangDialog;
-		mingJiangDialog->show();
+		m_dialog = new MingJiangDialog;
 		break;
 	}
 	default:
 		break;
 	}
+
+	if (m_dialog == nullptr)
+	{
+		return;
+	}
+
+	m_dialog->setGameResult(gameResult);
+	m_dialog->show();
 }

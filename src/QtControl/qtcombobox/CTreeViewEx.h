@@ -17,6 +17,7 @@ private:
 
 protected:
     virtual void mouseMoveEvent(QMouseEvent* e);
+	virtual void leaveEvent(QEvent *e);
     virtual bool eventFilter(QObject *obj, QEvent *e);
 
 public:

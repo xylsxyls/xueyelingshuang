@@ -2,10 +2,13 @@
 #include <QPainter>
 #include <stdint.h>
 #include "Label.h"
+#include "PointLabel.h"
 #include "../COriginalButton.h"
 #include "../CGeneralStyle.h"
 #include <QPaintEvent>
 #include "RPGContentBase.h"
+#include "CSystem.h"
+#include <QPoint>
 
 BattleDialogBase::BattleDialogBase(QWidget* parent):
 CW3LModalFrame(parent),
@@ -27,7 +30,7 @@ m_content(nullptr),
 m_bigContent(nullptr),
 m_logoInWidth(0)
 {
-	setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
+	setWindowFlags(windowFlags() | Qt::FramelessWindowHint | Qt::Window | Qt::Tool);
 	setAttribute(Qt::WA_TranslucentBackground);
 
 	m_smallExit = new COriginalButton(this);
@@ -39,7 +42,7 @@ m_logoInWidth(0)
 	m_bigExit = new COriginalButton(this);
 	m_bigSuccessLogo = new Label(this);
 	m_bigFailedLogo = new Label(this);
-	m_bigTitle = new Label(this);
+	m_bigTitle = new PointLabel(this);
 	m_bigGameTime = new Label(this);
 	m_bigCurrentTime = new Label(this);
 	m_bigShrink = new COriginalButton(this);
@@ -111,6 +114,7 @@ void BattleDialogBase::init()
 	m_bigTitle->setFontSize(BIG_TITLE_FONT_SIZE);
 	m_bigTitle->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 	m_bigTitle->setTextOrigin(BIG_TITLE_ORIGIN);
+	m_bigTitle->setToolTip(QStringLiteral("绿色循环圈"));
 
 	m_bigGameTime->setText(QStringLiteral("游戏时长 47：37"));
 	m_bigGameTime->setFontFace(CGeneralStyle::instance()->font().family());
@@ -134,6 +138,7 @@ void BattleDialogBase::init()
 	m_smallFailedLogo->raise();
 	m_bigSuccessLogo->raise();
 	m_bigFailedLogo->raise();
+	m_bigTitle->raise();
 	m_smallExit->raise();
 	m_bigExit->raise();
 
@@ -150,7 +155,6 @@ void BattleDialogBase::update()
 	setCustomerTitleBarHeight(m_isSmall ? SMALL_TITLE_HEIGHT : BIG_TITLE_HEIGHT);
 
 	//先显示所有的控件，然后根据条件隐藏不符合要求的控件
-
 	m_smallExit->setVisible(true);
 	m_smallSuccessLogo->setVisible(true);
 	m_smallFailedLogo->setVisible(true);
@@ -227,6 +231,19 @@ void BattleDialogBase::update()
 	}
 
 	emit resizeDialog();
+
+	if (m_isSmall)
+	{
+		POINT rightBottom = CSystem::taskbarRightBottomPoint();
+		QPoint qrightBottom(rightBottom.x, rightBottom.y);
+		move(qrightBottom - QPoint(width(), height()));
+	}
+	else
+	{
+		POINT center = CSystem::screenCenterPoint();
+		QPoint qcenter(center.x, center.y);
+		move(qcenter - QPoint(width() / 2, height() / 2));
+	}
 }
 
 void BattleDialogBase::setLogo(bool isSuccess)
@@ -260,12 +277,19 @@ bool BattleDialogBase::setGameResult(const GameResultType::GameResult& gameResul
 		return false;
 	}
 
-	m_smallTitle->setText(gameResult.gameName);
-	m_bigTitle->setText(gameResult.gameName);
+	setWindowTitle(gameResult.gameName);
+	m_smallTitle->setText(windowTitle());
+	m_bigTitle->setText(windowTitle());
+	m_bigTitle->setToolTip(windowTitle());
+	
 	m_bigGameTime->setText(gameResult.gameTime);
 	m_bigCurrentTime->setText(gameResult.startTime);
 
-	return m_content->setGameResult(gameResult) && m_bigContent->setGameResult(gameResult);
+	emit setGameResultSignal(gameResult);
+	
+	bool contentResult = m_content->setGameResult(gameResult);
+	bool bigContentResult = m_bigContent->setGameResult(gameResult);
+	return contentResult && bigContentResult;
 }
 
 void BattleDialogBase::setContentState(RPGContentBase::ContentState state)
@@ -343,7 +367,7 @@ void BattleDialogBase::resizeEvent(QResizeEvent* eve)
 						   BIG_EXIT_HEIGHT);
 	m_bigSuccessLogo->setGeometry(0, 0, BIG_LOGO_WIDTH, BIG_LOGO_HEIGHT);
 	m_bigFailedLogo->setGeometry(0, 0, BIG_LOGO_WIDTH, BIG_LOGO_HEIGHT);
-	m_bigTitle->setGeometry(0, 0, dialogWidth, titleHeight);
+	m_bigTitle->setGeometry(0, 0, BIG_TITLE_MAX_WIDTH, titleHeight);
 	m_bigGameTime->setGeometry(0, 0, dialogWidth, titleHeight);
 	m_bigCurrentTime->setGeometry(0, 0, dialogWidth, titleHeight);
 	m_bigShrink->setGeometry(dialogWidth - BIG_SHRINK_WIDTH - BIG_EXIT_WIDTH - BIG_EXIT_RIGHT_ORIGIN - BIG_SHRINK_RIGHT_ORIGIN,
@@ -362,6 +386,12 @@ void BattleDialogBase::resizeEvent(QResizeEvent* eve)
 							  dialogHeight - BIG_TITLE_HEIGHT - CONTENT_MARGIN);
 
 	CW3LModalFrame::resizeEvent(eve);
+}
+
+void BattleDialogBase::showEvent(QShowEvent* eve)
+{
+	CW3LModalFrame::showEvent(eve);
+	raise();
 }
 
 void BattleDialogBase::endDialog()

@@ -84,6 +84,79 @@ typedef struct xml_node_t{
         return result;
     }
 
+	//nÎª²ãÊý
+	QString toXmlString(int n = 0)
+	{
+		QString font_tag;
+		font_tag = QString("<%1 ").arg(name);
+
+
+		QString space_string;
+		for(int i = 0; i < n; i++)
+		{
+			space_string += " ";
+		}
+		//if(!space_string.isEmpty())
+		{
+			space_string.insert(0,"\n");
+		}
+
+		QString xml_string;
+
+
+		QString att_str;
+		for(int i = 0; i < attributes.count(); i++)
+		{
+			XMLAttribute a = attributes[i];
+			if(i == 0)
+			{
+				att_str += QString(" %1='%2'").arg(a.name).arg(a.value);
+			}
+			else
+			{
+				att_str += QString("%1='%2'").arg(a.name).arg(a.value);
+			}
+
+			att_str += " ";
+		}
+
+		if(characters.isEmpty())
+		{
+			if(children.isEmpty())
+			{
+				xml_string = QString("%1<%2%3/>").arg(space_string).arg(name).arg(att_str);
+			}
+			else
+			{
+				QString sub_string;
+				for(int i = 0; i < children.count(); i++)
+				{
+					sub_string += children[i]->toXmlString(n+1);
+				}
+
+				xml_string = QString("%1<%2%3>%4%5</%6>").arg(space_string).arg(name).arg(att_str).arg(sub_string).arg(space_string).arg(name);
+			}
+		}
+		else
+		{
+			if(children.isEmpty())
+			{
+				xml_string = QString("%1<%2%3>%4</%5>").arg(space_string).arg(name).arg(att_str).arg(characters).arg(name);
+			}
+			else
+			{
+				QString sub_string;
+				for(int i = 0; i < children.count(); i++)
+				{
+					sub_string += children[i]->toXmlString(n+1);
+				}
+
+				xml_string = QString("%1<%2%3>%4%5%6</%7>").arg(space_string).arg(name).arg(att_str).arg(characters).arg(sub_string).arg(space_string).arg(name);
+			}
+		}
+
+		return xml_string;
+	}
 }XMLNode;
 
 typedef QVector<XMLNode*> XMLNodeVector;

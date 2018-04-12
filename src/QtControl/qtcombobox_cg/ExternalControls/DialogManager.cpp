@@ -14,10 +14,40 @@
 #include "AccountManagerDialog.h"
 #include <QWindow>
 
+bool isUsed = false;
+DialogManager* dialogManager = nullptr;
+
 DialogManager& DialogManager::instance()
 {
-	static DialogManager dialogHelper;
-	return dialogHelper;
+	if (isUsed)
+	{
+		MessageBoxA(NULL, "单例已被释放过", "DialogManager", 0);
+		exit(0);
+	}
+
+	if (dialogManager == nullptr)
+	{
+		dialogManager = new DialogManager;
+		if (dialogManager == nullptr)
+		{
+			MessageBoxA(NULL, "内存不足", "DialogManager", 0);
+			exit(0);
+		}
+	}
+	
+	return *dialogManager;
+}
+
+bool DialogManager::exist()
+{
+	return dialogManager != nullptr;
+}
+
+void DialogManager::release()
+{
+	isUsed = true;
+	delete dialogManager;
+	dialogManager = nullptr;
 }
 
 int32_t DialogManager::popAskDialog(int32_t& dialogId,

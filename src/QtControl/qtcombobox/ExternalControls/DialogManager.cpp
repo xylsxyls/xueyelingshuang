@@ -13,6 +13,7 @@
 #include <Windows.h>
 #include "AccountManagerDialog.h"
 #include <QWindow>
+#include "AdvertAskDialog.h"
 
 DialogManager& DialogManager::instance()
 {
@@ -99,6 +100,31 @@ int32_t DialogManager::popAskDialog(int32_t& dialogId,
 								   parent,
 								   timeOut,
 								   isCountDownVisible);
+}
+
+int32_t DialogManager::popAdvertAskDialog(int32_t& dialogId,
+										  const QString& url,
+										  const QString& tip,
+										  QWindow* parent,
+										  const QString& title,
+										  const QString& acceptText,
+										  const QString& ignoreText,
+										  int32_t acceptDone,
+										  int32_t ignoreDone,
+										  int32_t timeOut,
+										  bool isCountDownVisible)
+{
+	return AdvertAskDialog::popAdvertAskDialog(dialogId,
+											   url,
+											   title,
+											   tip,
+											   acceptText,
+											   acceptDone,
+											   ignoreText,
+											   ignoreDone,
+											   parent,
+											   timeOut,
+											   isCountDownVisible);
 }
 
 int32_t DialogManager::popTipDialog(int32_t& dialogId,
@@ -304,6 +330,11 @@ void DialogManager::closeDialog(int32_t dialogId)
 		m_mutex.unlock();
 		if (dialogPtr != nullptr)
 		{
+			QWindow* handle = dialogPtr->windowHandle();
+			if (handle != nullptr && handle->transientParent() != nullptr)
+			{
+				handle->setTransientParent(nullptr);
+			}
 			dialogPtr->reject();
 		}
 		m_mutex.lock();
@@ -325,6 +356,11 @@ void DialogManager::closeLastDialog()
 		m_mutex.unlock();
 		if (dialogPtr != nullptr)
 		{
+			QWindow* handle = dialogPtr->windowHandle();
+			if (handle != nullptr && handle->transientParent() != nullptr)
+			{
+				handle->setTransientParent(nullptr);
+			}
 			dialogPtr->reject();
 		}
 		m_mutex.lock();
@@ -366,6 +402,11 @@ void DialogManager::destroyAll()
 			m_mutex.unlock();
 			if (dialogPtr != nullptr)
 			{
+				QWindow* handle = dialogPtr->windowHandle();
+				if (handle != nullptr && handle->transientParent() != nullptr)
+				{
+					handle->setTransientParent(nullptr);
+				}
 				dialogPtr->done(DESTROY_ALL);
 			}
 			m_mutex.lock();

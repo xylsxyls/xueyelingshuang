@@ -252,6 +252,9 @@
     <Filter Include="BattleDialogBase\LadderDialog">
       <UniqueIdentifier>{7f683d8f-62b0-40ec-abde-fca3bd3df851}</UniqueIdentifier>
     </Filter>
+    <Filter Include="QtDialog\AllocManager">
+      <UniqueIdentifier>{8cf91d0f-6f0b-4c41-b1ac-7e2ee649b0ac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -779,6 +782,9 @@
     <ClCompile Include="GeneratedFiles\Release\moc_LadderDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="AllocManager.cpp">
+      <Filter>QtDialog\AllocManager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="qtcombobox.h">
@@ -1025,6 +1031,9 @@
     </ClInclude>
     <ClInclude Include="BattleDialogManager.h">
       <Filter>BattleDialogBase\BattleDialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="AllocManager.h">
+      <Filter>QtDialog\AllocManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

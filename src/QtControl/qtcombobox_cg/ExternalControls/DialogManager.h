@@ -65,9 +65,18 @@ class DialogManager : public QObject
 	friend class DialogShow;
 public:
 	/** 单一实例
-	@return 返回单一实例
+	@return 返回单一实例，第一次调用会初始化单例
 	*/
 	static DialogManager& instance();
+
+	/** 单例是否存在
+	@return 返回单例是否存在
+	*/
+	static bool exist();
+
+	/** 释放单一实例，释放后不能再被创建
+	*/
+	static void release();
 	
 	/** 弹出询问框
 	@param [out] dialogId 窗口ID值

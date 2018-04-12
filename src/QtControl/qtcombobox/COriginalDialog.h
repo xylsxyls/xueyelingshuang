@@ -34,6 +34,7 @@ protected:
 	//bool isDwmEnabled();
 
 signals:
+	// π”√Qt::QueuedConnection
 	void ncActiveChanged(const bool& ncActive);
 	void activeChanged(bool s);
 

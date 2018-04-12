@@ -4,6 +4,7 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_qtcombobox.h"
 #include <stdint.h>
+#include "WaitingBox.h"
 
 class HtmlComboBox;
 class qtcombobox : public QMainWindow
@@ -15,6 +16,7 @@ public:
 	~qtcombobox();
 
 private slots:
+	void onWaitingBoxDone(int32_t key, WaitingBox::ExitEnum exitEnum);
 	void currentTextChanged6(const QString& str);
 	void idComboBoxItemChanged(qint64 id, const QString& str);
 	void htmlItemPressed(int index);

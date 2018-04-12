@@ -45,17 +45,14 @@ public:
 
 private slots:
 	void onResizeDialog();
+	void onSetGameResultSignal(const GameResultType::GameResult& gameResult);
 
 private:
 	enum
 	{
-		/** 胜利失败标志左侧凸出宽度
-		*/
-		LOGO_IN_WIDTH = 22,
-
 		/** 常态宽度
 		*/
-		NORMAL_WIDTH = 285 + LOGO_IN_WIDTH,
+		NORMAL_WIDTH = 285,
 
 		/** 常态高度
 		*/

@@ -237,9 +237,6 @@
     <Filter Include="BattleDialogBase\BattleDialog">
       <UniqueIdentifier>{489348bd-331c-4de3-aa04-c4305007b341}</UniqueIdentifier>
     </Filter>
-    <Filter Include="CSystem">
-      <UniqueIdentifier>{9ca7766e-b2bf-4f92-87b7-270056b9c95b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="GameResult">
       <UniqueIdentifier>{cd09e1d9-5180-4058-af24-38b91d5165d8}</UniqueIdentifier>
     </Filter>
@@ -251,6 +248,18 @@
     </Filter>
     <Filter Include="BattleDialogBase\LadderDialog">
       <UniqueIdentifier>{7f683d8f-62b0-40ec-abde-fca3bd3df851}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CSystemFun">
+      <UniqueIdentifier>{9ca7766e-b2bf-4f92-87b7-270056b9c95b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WaitingBoxManager">
+      <UniqueIdentifier>{ec57a4ce-0625-46ec-a5bd-167e3b3f5858}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WaitingBoxManager\WaitingBox">
+      <UniqueIdentifier>{3884553e-1b65-41e5-b4c8-4ddc9db4965f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtDialog\Modal\AdvertAskDialog">
+      <UniqueIdentifier>{8d1c0027-1b2d-4362-92ab-38c3de1f58bb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -722,9 +731,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_BattleDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="CSystem.inl">
-      <Filter>CSystem</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_GameResultListPanelMini.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -777,6 +783,48 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_LadderDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystem.inl">
+      <Filter>CSystemFun</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystem.cpp">
+      <Filter>CSystemFun</Filter>
+    </ClCompile>
+    <ClCompile Include="WaitingBoxManager.cpp">
+      <Filter>WaitingBoxManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WaitingBoxManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WaitingBoxManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="WaitingBox.cpp">
+      <Filter>WaitingBoxManager\WaitingBox</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WaitingBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WaitingBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AdvertAskDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AdvertAskDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="AdvertAskDialog.cpp">
+      <Filter>QtDialog\Modal\AdvertAskDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="..\WebViewEx.cpp">
+      <Filter>out</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WebViewEx.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WebViewEx.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
@@ -955,6 +1003,18 @@
     <CustomBuild Include="LadderDialog.h">
       <Filter>BattleDialogBase\LadderDialog</Filter>
     </CustomBuild>
+    <CustomBuild Include="WaitingBoxManager.h">
+      <Filter>WaitingBoxManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="WaitingBox.h">
+      <Filter>WaitingBoxManager\WaitingBox</Filter>
+    </CustomBuild>
+    <CustomBuild Include="AdvertAskDialog.h">
+      <Filter>QtDialog\Modal\AdvertAskDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\WebViewEx.h">
+      <Filter>out</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlFont.h">
@@ -1011,9 +1071,6 @@
     <ClInclude Include="ContentLabel.h">
       <Filter>QtControl\Label\ContentLabel</Filter>
     </ClInclude>
-    <ClInclude Include="CSystem.h">
-      <Filter>CSystem</Filter>
-    </ClInclude>
     <ClInclude Include="CGameResultTopPlayer_Ladder.h">
       <Filter>GameResult</Filter>
     </ClInclude>
@@ -1025,6 +1082,9 @@
     </ClInclude>
     <ClInclude Include="BattleDialogManager.h">
       <Filter>BattleDialogBase\BattleDialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="CSystem.h">
+      <Filter>CSystemFun</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

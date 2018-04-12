@@ -1,0 +1,697 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>moc;h;cpp</Extensions>
+      <ParseFiles>true</ParseFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug">
+      <UniqueIdentifier>{5ba7e582-538d-4b75-b796-7d8a75cdb8e2}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release">
+      <UniqueIdentifier>{5c0370e0-4cd9-4710-9a6e-adb3f3f31942}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="controls">
+      <UniqueIdentifier>{f170f4a5-5e53-4a8d-bedd-cdc1d99cb1b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core">
+      <UniqueIdentifier>{244da402-c0f5-4a96-b1ad-7257291b05f0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\core\CStringManager.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\CSystem.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\QssHelper.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\QssString.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\AccountDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AccountDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AccountDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\AccountManagerDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\AskDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\AskShowDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\BoxDialogBase.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\CExternalTextEdit.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CExternalTextEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CExternalTextEdit.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\CGeneralStyle.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\CheckBox.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CheckBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\ClosureDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\CollapseMenu.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CollapseMenu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CollapseMenu.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\ComboBox.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\ContentLabel.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\COriginalButton.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalButton.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalButton.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\COriginalDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\COriginalWebView.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalWebView.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalWebView.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\CPasswordInputBox.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\CTreeViewEx.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CTreeViewEx.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CTreeViewEx.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\DialogBase.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogBase.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogBase.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\DialogManager.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\DialogShow.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogShow.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogShow.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\DownloadDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\DownloadErrorDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadErrorDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadErrorDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\DownloadOperateDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\EO_XmlSax2Parser.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\HtmlComboBox.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\HtmlComboBoxDelegate.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\HtmlComboBoxStyle.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\IdItemComboBox.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_IdItemComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_IdItemComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\InputDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_InputDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_InputDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\Label.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Label.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Label.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\LineEdit.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LineEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LineEdit.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\ListWidget.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ListWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ListWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\ListWidgetIdItem.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\LockedAccountPanel.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\LoginShowDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\Menu.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Menu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Menu.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\MenuCustomStyle.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\NoFocusFrameDelegate.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\NotifyDialogManager.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\PointLabel.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PointLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PointLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\ProgressBar.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\RadioButton.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RadioButton.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_RadioButton.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\SubAccountPanel.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_SubAccountPanel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_SubAccountPanel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\TipDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\TipLabel.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\TipLabelManager.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipLabelManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipLabelManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\TipShowDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\TreeWidget.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TreeWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TreeWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\WaitDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\CExpressionDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CExpressionDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CExpressionDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\CExpressionPicker.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CExpressionPicker.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CExpressionPicker.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\CExpressionPickerDelegate.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\AdvertAskDialog.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AdvertAskDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AdvertAskDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\WebViewEx.cpp">
+      <Filter>controls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WebViewEx.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WebViewEx.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\core\CStringManager.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\CSystem.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\QssHelper.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\QssString.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\AccountManagerDialog.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\BoxDialogBase.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ClosureDialog.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ContentLabel.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlBackground.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlBase.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlBorder.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlFont.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlItem.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlSelf.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlShow.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\EO_XmlSax2Parser.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\HtmlComboBoxDelegate.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\HtmlComboBoxStyle.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ListWidgetIdItem.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\LockedAccountPanel.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlsMacro.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\CoreMacro.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\CExpressionPickerDelegate.h">
+      <Filter>controls</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\core\CSystem.inl">
+      <Filter>core</Filter>
+    </None>
+    <None Include="src\controls\ControlBackground.inl">
+      <Filter>controls</Filter>
+    </None>
+    <None Include="src\controls\ControlBase.inl">
+      <Filter>controls</Filter>
+    </None>
+    <None Include="src\controls\ControlBorder.inl">
+      <Filter>controls</Filter>
+    </None>
+    <None Include="src\controls\ControlFont.inl">
+      <Filter>controls</Filter>
+    </None>
+    <None Include="src\controls\ControlItem.inl">
+      <Filter>controls</Filter>
+    </None>
+    <None Include="src\controls\ControlSelf.inl">
+      <Filter>controls</Filter>
+    </None>
+    <None Include="src\controls\ControlShow.inl">
+      <Filter>controls</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\controls\AccountDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\AskDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\AskShowDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\CExternalTextEdit.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\CGeneralStyle.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\CheckBox.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\CollapseMenu.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\ComboBox.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\COriginalButton.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\COriginalDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\COriginalWebView.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\CPasswordInputBox.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\CTreeViewEx.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\DialogBase.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\DialogManager.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\DialogShow.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\DownloadDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\DownloadErrorDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\DownloadOperateDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\HtmlComboBox.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\IdItemComboBox.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\InputDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\Label.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\LineEdit.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\ListWidget.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\LoginShowDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\Menu.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\MenuCustomStyle.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\NoFocusFrameDelegate.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\NotifyDialogManager.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\PointLabel.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\ProgressBar.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\RadioButton.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\SubAccountPanel.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\TipDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\TipLabel.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\TipLabelManager.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\TipShowDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\TreeWidget.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\WaitDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\CExpressionDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\CExpressionPicker.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\AdvertAskDialog.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\WebViewEx.h">
+      <Filter>controls</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

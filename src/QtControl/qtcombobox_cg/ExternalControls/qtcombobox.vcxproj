@@ -86,6 +86,7 @@
     <ClCompile Include="..\EO_XmlSax2Parser.cpp" />
     <ClCompile Include="AccountDialog.cpp" />
     <ClCompile Include="AccountManagerDialog.cpp" />
+    <ClCompile Include="AllocManager.cpp" />
     <ClCompile Include="BattleDialogBase.cpp" />
     <ClCompile Include="BattleDialog.cpp" />
     <ClCompile Include="BattleDialogManager.cpp" />
@@ -704,6 +705,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB -DQT_QML_LIB -DQT_XML_LIB -DQT_XMLPATTERNS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets" "-I$(QTDIR)\include\QtQml" "-I$(QTDIR)\include\QtXml" "-I$(QTDIR)\include\QtXmlPatterns"</Command>
     </CustomBuild>
+    <ClInclude Include="AllocManager.h" />
     <ClInclude Include="BattleDialogManager.h" />
     <ClInclude Include="BoxDialogBase.h" />
     <ClInclude Include="CGameResultTopPlayer_Ladder.h" />

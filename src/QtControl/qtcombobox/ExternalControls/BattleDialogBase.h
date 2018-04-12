@@ -4,6 +4,7 @@
 #include "RPGContentBase.h"
 
 class Label;
+class PointLabel;
 class COriginalButton;
 class RPGContentBase;
 /** 战报外框
@@ -82,10 +83,13 @@ protected:
 Q_SIGNALS:
 	//初始化的时候通过该信号改变窗口大小
 	void resizeDialog();
+	//设置游戏结果的时候发送信号
+	void setGameResultSignal(const GameResultType::GameResult& gameResult);
 
 protected:
 	void paintEvent(QPaintEvent* eve);
 	void resizeEvent(QResizeEvent* eve);
+	void showEvent(QShowEvent* eve);
 
 protected:
 	void endDialog();
@@ -109,7 +113,7 @@ protected:
 	COriginalButton* m_bigExit;
 	Label* m_bigSuccessLogo;
 	Label* m_bigFailedLogo;
-	Label* m_bigTitle;
+	PointLabel* m_bigTitle;
 	Label* m_bigGameTime;
 	Label* m_bigCurrentTime;
 	COriginalButton* m_bigShrink;
@@ -185,6 +189,10 @@ private:
 		*/
 		BIG_LOGO_HEIGHT = 102,
 
+		/** 大窗口标题最大宽度
+		*/
+		BIG_TITLE_MAX_WIDTH = 360,
+
 		/** 大窗口缩小按钮宽度
 		*/
 		BIG_SHRINK_WIDTH = 17,
@@ -203,7 +211,7 @@ private:
 
 		/** 大窗口游戏时长左侧偏移量
 		*/
-		BIG_GAME_TIME_ORIGIN = 239,
+		BIG_GAME_TIME_ORIGIN = 370,
 
 		/** 大窗口当前时间右侧偏移量
 		*/

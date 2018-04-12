@@ -11,6 +11,7 @@ BattleDialogBase(parent)
 	m_content = new GameResultListPanelMini_MingJiang(this);
 	m_bigContent = new GameResultListPanelMax(this);
 	QObject::connect(this, &BattleDialogBase::resizeDialog, this, &MingJiangDialog::onResizeDialog);
+	QObject::connect(this, &BattleDialogBase::setGameResultSignal, this, &MingJiangDialog::onSetGameResultSignal);
 	//基类的初始化函数必须放在实例子类的构造函数中调用
 	BattleDialogBase::init();
 	setBattleState(SMALL_NORMAL);
@@ -25,35 +26,24 @@ void MingJiangDialog::setBattleState(BattleState state)
 	{
 		setDisplayMode(true);
 		setState(NORMAL);
-		setContentState(RPGContentBase::NORMAL);
 		break;
 	}
 	case MingJiangDialog::SMALL_ERROR_VALUE:
 	{
 		setDisplayMode(true);
 		setState(ERROR_PART);
-		setContentState(RPGContentBase::ERROR_VALUE);
-		break;
-	}
-	case MingJiangDialog::SMALL_ERROR_HEADER:
-	{
-		setDisplayMode(true);
-		setState(ERROR_PART);
-		setContentState(RPGContentBase::ERROR_HEADER);
 		break;
 	}
 	case MingJiangDialog::SMALL_ERROR_ALL:
 	{
 		setDisplayMode(true);
 		setState(ERROR_ALL);
-		setContentState(RPGContentBase::ERROR_ALL);
 		break;
 	}
 	case MingJiangDialog::BIG_NORMAL:
 	{
 		setDisplayMode(false);
 		setState(NORMAL);
-		setContentState(RPGContentBase::NORMAL);
 		break;
 	}
 	default:
@@ -63,7 +53,7 @@ void MingJiangDialog::setBattleState(BattleState state)
 
 void MingJiangDialog::onResizeDialog()
 {
-	int32_t dialogWidth = NORMAL_WIDTH;
+	int32_t dialogWidth = NORMAL_WIDTH + m_logoInWidth;
 	int32_t dialogHeight = NORMAL_HEIGHT;
 
 	if (m_isSmall == false)
@@ -72,4 +62,32 @@ void MingJiangDialog::onResizeDialog()
 		dialogHeight = BIG_DIALOG_HEIGHT;
 	}
 	resize(dialogWidth, dialogHeight);
+}
+
+void MingJiangDialog::onSetGameResultSignal(const GameResultType::GameResult& gameResult)
+{
+	for (auto itCamp = gameResult.campList.begin(); itCamp != gameResult.campList.end(); ++itCamp)
+	{
+		auto& slotList = itCamp->slotList;
+		for (auto itSlot = slotList.begin(); itSlot != slotList.end(); ++itSlot)
+		{
+			if (itSlot->isMe)
+			{
+				setLogo(itCamp->isVictory);
+				if (gameResult.invalidGame)
+				{
+					setBattleState(SMALL_ERROR_ALL);
+				}
+				else if (gameResult.dataError)
+				{
+					setBattleState(SMALL_ERROR_VALUE);
+				}
+				else
+				{
+					setBattleState(SMALL_NORMAL);
+				}
+				break;
+			}
+		}
+	}
 }

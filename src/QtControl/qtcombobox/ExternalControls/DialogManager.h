@@ -26,6 +26,10 @@ enum
 	*/
 	ASK_DIALOG,
 
+	/** 包含广告位的询问框
+	*/
+	ADVERT_ASK_DIALOG,
+
 	/** 输出框
 	*/
 	INPUT_DIALOG,
@@ -202,6 +206,32 @@ public:
 						 int32_t ignoreDone = IGNORE_BUTTON,
 						 int32_t timeOut = -1,
 						 bool isCountDownVisible = false);
+
+	/** 弹出包含广告位的询问窗
+	@param [out] dialogId 窗口ID值
+	@param [in] advertUrl 广告位URL
+	@param [in] tip 提示内容
+	@param [in] parent 父窗口指针
+	@param [in] title 标题
+	@param [in] acceptText 接受按钮内容
+	@param [in] ignoreText 拒绝按钮内容
+	@param [in] acceptDone 接受按钮按下后的返回值
+	@param [in] ignoreDone 拒绝按钮按下后的返回值
+	@param [in] timeOut 超时自动关闭，单位秒
+	@param [in] isCountDownVisible 超时自动关闭提示是否可见
+	@return 关闭窗口时给的返回值
+	*/
+	int32_t popAdvertAskDialog(int32_t& dialogId,
+							   const QString& advertUrl,
+							   const QString& tip,
+							   QWindow* parent,
+							   const QString& title = QString::fromStdWString(L"11对战平台"),
+							   const QString& acceptText = QString::fromStdWString(L"确定"),
+							   const QString& ignoreText = QString::fromStdWString(L"取消"),
+							   int32_t acceptDone = ACCEPT_BUTTON,
+							   int32_t ignoreDone = IGNORE_BUTTON,
+							   int32_t timeOut = -1,
+							   bool isCountDownVisible = false);
 
 	/** 弹出提示框
 	@param [out] dialogId 窗口ID值
@@ -409,6 +439,8 @@ Q_SIGNALS:
 	void copyDownloadAddr(qint32 taskId, const QString& addr);
 	//本地路径的复制按钮
 	void copyPath(qint32 taskId, const QString& path);
+	//点击包含广告位询问框时发送信号
+	void clickAdvert(int32_t dialogId, const QString& url);
 
 protected:
 	DialogManager();
