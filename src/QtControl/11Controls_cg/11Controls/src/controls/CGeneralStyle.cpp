@@ -39,7 +39,7 @@ void CGeneralStyle::initPath()
 
 		if(res)
 		{
-			mPlatformResourcePath = exeDir.path();
+			mPlatformResourcePath = "D:/newClient/output/resource";
 		}
 	}
 	else
@@ -60,7 +60,7 @@ void CGeneralStyle::initPath()
 
 		if(res)
 		{
-			mPlatformResourcePath = exeDir.path();
+			mPlatformResourcePath = "D:/newClient/output/resource";
 		}
 	}
 
@@ -154,7 +154,7 @@ QString CGeneralStyle::war3lobbyResourcePath()
 
 QString CGeneralStyle::platformResourcePath()
 {
-	return mPlatformResourcePath;
+	return "D:/newClient/output/resource";
 }
 
 CGeneralStyle::PingLevel CGeneralStyle::getPingLevel(quint64 ping)

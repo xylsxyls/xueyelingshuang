@@ -45,12 +45,12 @@ void DialogShow::initForExec(int32_t dialogWidth, int32_t dialogHeight)
 	installEventFilter(this);
 	setWindowFlags(windowFlags() | Qt::Tool);
 	resize(dialogWidth, dialogHeight);//411, 165340, 165
+	m_title = addLabel("title", QRect(17, 4, width() - 17 * 2, 27), QColor(163, 175, 191, 255));
 	m_exit = addButton("", QRect(width() - 3 - 30, 3, 30, 30), 0);
 	m_exit->setBkgMargins(0, 0);
 	m_exit->setBorderRadius(0);
 	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupCloseButton.png");
 	m_exit->installEventFilter(this);
-	m_title = addLabel("title", QRect(17, 4, width() - 17 * 2, 27), QColor(163, 175, 191, 255));
 	m_separator = addSeparator(QPoint(13, 33), width() - 13 * 2, true, QColor(16, 20, 31, 255), QColor(46, 52, 88, 255));
 	m_time = addLabel("", QRect(width() - 125 - 10, 140, 125, 32), QColor("#abb3d3"));
 	m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
