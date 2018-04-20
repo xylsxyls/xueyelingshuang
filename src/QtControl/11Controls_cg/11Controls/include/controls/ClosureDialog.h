@@ -7,16 +7,14 @@ class ControlsAPI ClosureDialog : public BoxDialogBase
 {
 public:
 	/** 构造函数
-	@param [in] parent 父窗口句柄
 	*/
-	ClosureDialog(QWindow* parent = nullptr);
+	ClosureDialog();
 
-	LockedAccountPanel* lockedAccountPanel();
+protected:
+    void resizeEvent(QResizeEvent* eve);
 
 private:
 	LockedAccountPanel* mLockedAccountPanel;
 
-
-	void resizeEvent(QResizeEvent *e);
-	void layoutContorls();
+	
 };

@@ -149,7 +149,7 @@ QString CGeneralStyle::fontFace_BaiDuZongYi()
 
 QString CGeneralStyle::war3lobbyResourcePath()
 {
-    return mWar3LobbyResourcePath;
+    return "D:/newClient/output/W3L/res";
 }
 
 QString CGeneralStyle::platformResourcePath()

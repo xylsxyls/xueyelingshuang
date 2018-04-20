@@ -1,1 +1,2 @@
 std::unique_lock<std::mutex> lock(mutex);
+QMutexLocker locker(&m_mutex);

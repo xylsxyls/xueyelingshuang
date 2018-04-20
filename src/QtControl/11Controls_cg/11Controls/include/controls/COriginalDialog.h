@@ -46,7 +46,8 @@ public :
 
 	QRect customerTitleBarRect();
 
-	void setTransientWindow(QWindow* w);
+	void setTopTransientWindow(QWindow* w);
+    QWindow* getTopWindowHandle(QWindow* window);
 	QWindow* transientWindow();
 };
 

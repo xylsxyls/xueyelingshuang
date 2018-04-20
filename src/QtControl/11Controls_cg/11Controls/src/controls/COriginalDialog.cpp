@@ -26,7 +26,15 @@ COriginalDialog::COriginalDialog(QWidget *parent)
 
 COriginalDialog::~COriginalDialog()
 {
-
+    auto childs = children();
+    for each (QObject* var in childs)
+    {
+        QWidget* widget = qobject_cast<QWidget*>(var);
+        if (widget)
+        {
+            widget->installEventFilter(nullptr);
+        }
+    }
 }
 
 long COriginalDialog::onNcHitTest(QPoint pt)
@@ -349,53 +357,56 @@ QRect COriginalDialog::customerTitleBarRect()
 	return mCustomerTitleBarRect;
 }
 
-void COriginalDialog::setTransientWindow(QWindow* w)
+void COriginalDialog::setTopTransientWindow(QWindow* window)
 {
-	if(this->windowHandle() == NULL)
-		return;
+    QWindow* handle = windowHandle();
+    if (handle == nullptr)
+    {
+        return;
+    }
+    QWindow* realTransientWindow = getTopWindowHandle(window);
+    handle->setTransientParent(realTransientWindow);
+}
 
-	this->winId();
-	QWindow* thisWindow = this->windowHandle();
-
-	QWindow* realTransientWindow = NULL;
-	if(w)
-	{
-		WId ancetorId = (WId)::GetAncestor(HWND(w->winId()), GA_ROOT);
-
-		QWidget* topLevelWidget = QWidget::find(ancetorId);
-
-		if(topLevelWidget)
-		{
-			realTransientWindow = topLevelWidget->windowHandle();
-		}
-		else
-		{
-			for(int i = 0; i < qApp->allWindows().count(); i++)
-			{
-				QWindow* tw = qApp->allWindows()[i];
-				if(tw->winId() == ancetorId)
-				{
-					realTransientWindow = tw;
-					break;
-				}
-			}
-		}
-
-		if(!realTransientWindow)
-		{
-			realTransientWindow = QWindow::fromWinId(ancetorId);
-		}
-	}
-	thisWindow->setTransientParent(realTransientWindow);
+QWindow* COriginalDialog::getTopWindowHandle(QWindow* window)
+{
+    if (window == nullptr)
+    {
+        return nullptr;
+    }
+    QWindow* realTransientWindow = nullptr;
+    WId ancetorId = (WId)::GetAncestor(HWND(window->winId()), GA_ROOT);
+    QWidget* topLevelWidget = QWidget::find(ancetorId);
+    if (topLevelWidget)
+    {
+        realTransientWindow = topLevelWidget->windowHandle();
+    }
+    else
+    {
+        for (int i = 0; i < qApp->allWindows().count(); i++)
+        {
+            QWindow* tw = qApp->allWindows()[i];
+            if (tw->winId() == ancetorId)
+            {
+                realTransientWindow = tw;
+                break;
+            }
+        }
+    }
+    //如果是不同进程
+    if ((realTransientWindow == nullptr) && (::IsWindow(HWND(ancetorId)) == TRUE))
+    {
+        realTransientWindow = QWindow::fromWinId(ancetorId);
+    }
+    return realTransientWindow;
 }
 
 QWindow* COriginalDialog::transientWindow()
 {
-	QWindow* w = NULL;
-	if(this->windowHandle() == NULL)
-		return w;
-
-	w = this->windowHandle()->transientParent();
-
-	return w;
+    QWindow* handle = windowHandle();
+    if (handle == nullptr)
+    {
+        return nullptr;
+    }
+    return handle->transientParent();
 }

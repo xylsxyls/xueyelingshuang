@@ -3,60 +3,39 @@
 #include "LineEdit.h"
 #include "COriginalButton.h"
 #include <QEvent>
+#include "DialogHelper.h"
+#include "CGeneralStyle.h"
 
-AccountDialog::AccountDialog(QWindow* parent, int32_t acceptDone, int32_t ignoreDone) :
-BoxDialogBase(340, 296, parent)
+AccountDialog::AccountDialog() :
+m_sep(nullptr),
+m_account(nullptr),
+m_accept(nullptr),
+m_ignore(nullptr)
 {
 	m_sep = new Label(this);
-	m_sep->setGeometry(QRect(7, 76, width() - 7 * 2, 1));
+    m_account = new LineEdit(this);
+    m_accept = new COriginalButton(this);
+    m_ignore = new COriginalButton(this);
+	
 	m_sep->setBackgroundColor(QColor(74, 89, 128, 255));
 
-	m_registerAlt = addLabel(QString::fromStdWString(L"×¢²áÐ¡ºÅ"), QRect(1, 32, width() - 2, 44), QColor(255, 255, 255, 255));
-	m_registerAlt->setAlignment(Qt::AlignCenter);
-	m_registerAlt->setFontSize(18);
-	m_registerAlt->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
+    DialogHelper::setLabel(m_registerAlt, QString::fromStdWString(L"×¢²áÐ¡ºÅ"), QColor(255, 255, 255, 255), 18);
 
-	m_account = new LineEdit(this);
-	m_account->setGeometry(QRect((width() - 248) / 2, 100, 248, 32));
 	m_account->setPlaceholderText(QString::fromStdWString(L"ÊäÈëÕËºÅÃû"));
-	m_account->setAlignment(Qt::AlignCenter);
 	m_account->setFontSize(18);
 	m_account->setTextColor(QColor("#5d6a8d"));//QColor("#acc0f5")
 	m_account->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
 	m_account->setBackgroundColor(QColor(31, 36, 51, 255));
 	m_account->setBorderRadius(4);
 	m_account->setBorderColor(QColor(67, 81, 117, 255));
-	m_account->installEventFilter(this);
 
-	m_errorAccount = addLabel(QString::fromStdWString(L"ÄúÊäÈëµÄÕËºÅÓÐÎó"), QRect(20, 153, width() - 20 * 2, 30), QColor("#e2361f"));
-	m_errorAccount->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
-	m_errorAccount->setFontSize(18);
+    DialogHelper::setLabel(m_errorAccount, QString::fromStdWString(L"ÄúÊäÈëµÄÕËºÅÓÐÎó"), QColor("#e2361f"), 18);
 	m_errorAccount->setVisible(false);
 	QObject::connect(this, &AccountDialog::errorVisible, m_errorAccount, &Label::setEnabled);
 
-	m_accept = addButton(QString::fromStdWString(L"È·¶¨"), QRect((width() - 248) / 2, 229, 100, 28), acceptDone);
-	m_accept->setBkgImage("");
-	m_accept->setBkgColor();
-	m_accept->setBorderWidth(1);
-	m_accept->setBorderStyle("solid");
-	m_accept->setBorderRadius(4);
-	m_accept->setBorderColor(QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255));
-	m_accept->setFontSize(13);
-	m_accept->setFontColor(QColor(166, 183, 249, 255));
-	m_accept->installEventFilter(this);
-	QObject::connect(this, &DialogShow::keyboardAccept, this, &AccountDialog::accountAccept);
+    initKeyboardAccept(m_accept);
 
-	m_ignore = addButton(QString::fromStdWString(L"È¡Ïû"), QRect(width() - (width() - 248) / 2 - 100, 229, 100, 28), ignoreDone);
-	m_ignore->setBkgImage("");
-	m_ignore->setBkgColor();
-	m_ignore->setBorderWidth(1);
-	m_ignore->setBorderStyle("solid");
-	m_ignore->setBorderRadius(4);
-	m_ignore->setBorderColor(QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255));
-	m_ignore->setFontSize(13);
-	m_ignore->setFontColor(QColor(166, 183, 249, 255));
-
-	m_ignore->installEventFilter(this);
+    resize(340, 296);
 }
 
 void AccountDialog::setErrorVisible(bool visible)
@@ -72,6 +51,30 @@ void AccountDialog::clearAccountEdit()
 QString AccountDialog::accountEditText()
 {
 	return m_account->text();
+}
+
+void AccountDialog::setAcceptDown(DialogResult result)
+{
+    setPopButtonConfig(m_accept, QString::fromStdWString(L"È·¶¨"), QColor(), result, 13);
+    m_accept->setBkgImage("");
+    m_accept->setBkgColor();
+    m_accept->setBorderWidth(1);
+    m_accept->setBorderStyle("solid");
+    m_accept->setBorderRadius(4);
+    m_accept->setBorderColor(QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255));
+    m_accept->setFontColor(QColor(166, 183, 249, 255));
+}
+
+void AccountDialog::setIgnoreDown(DialogResult result)
+{
+    setPopButtonConfig(m_ignore, QString::fromStdWString(L"È¡Ïû"), QColor(), result, 13);
+    m_ignore->setBkgImage("");
+    m_ignore->setBkgColor();
+    m_ignore->setBorderWidth(1);
+    m_ignore->setBorderStyle("solid");
+    m_ignore->setBorderRadius(4);
+    m_ignore->setBorderColor(QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255));
+    m_ignore->setFontColor(QColor(166, 183, 249, 255));
 }
 
 bool AccountDialog::eventFilter(QObject* tar, QEvent* eve)
@@ -97,6 +100,17 @@ bool AccountDialog::eventFilter(QObject* tar, QEvent* eve)
 		}
 	}
 	return result;
+}
+
+void AccountDialog::resizeEvent(QResizeEvent* eve)
+{
+    BoxDialogBase::resizeEvent(eve);
+    m_sep->setGeometry(QRect(7, 76, width() - 7 * 2, 1));
+    m_registerAlt->setGeometry(QRect(1, 32, width() - 2, 44));
+    m_account->setGeometry(QRect((width() - 248) / 2, 100, 248, 32));
+    m_errorAccount->setGeometry(QRect(20, 153, width() - 20 * 2, 30));
+    m_accept->setGeometry(QRect((width() - 248) / 2, 229, 100, 28));
+    m_ignore->setGeometry(QRect(width() - (width() - 248) / 2 - 100, 229, 100, 28));
 }
 
 void AccountDialog::accountAccept(QObject* tar, Qt::Key key)

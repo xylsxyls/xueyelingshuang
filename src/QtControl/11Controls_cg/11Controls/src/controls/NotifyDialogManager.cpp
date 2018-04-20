@@ -1,187 +1,83 @@
 #include "NotifyDialogManager.h"
-#include "DialogBase.h"
-#include "AskDialog.h"
-#include "TipDialog.h"
-#include "InputDialog.h"
-#include "WaitDialog.h"
-#include "TipShowDialog.h"
+#include "NotifyDialog.h"
 #include "AskShowDialog.h"
+#include "TipShowDialog.h"
 #include "LoginShowDialog.h"
-#include <QTime>
+#include "AllocManager.h"
 
-NotifyDialogManager& NotifyDialogManager::instance()
+void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
 {
-	static NotifyDialogManager showDialogHelper;
-	return showDialogHelper;
-}
+    NotifyDialog* notifyDialogPtr = nullptr;
+    switch (type)
+    {
+    case ASK_SHOW_DIALOG:
+    {
+        AskShowDialogParam askShowDialogParam;
+        if (param != nullptr)
+        {
+            askShowDialogParam = *((AskShowDialogParam*)param);
+        }
 
-void NotifyDialogManager::showTipDialog(int32_t& dialogId,
-									  int32_t userType,
-									  const QString& tip,
-									  const QString& title,
-									  int32_t done,
-									  const QString& buttonText,
-									  int32_t timeOut,
-									  bool isCountDownVisible)
-{
-	TipShowDialog::showTipDialog(dialogId, userType, title, tip, buttonText, done, timeOut, isCountDownVisible);
-}
+        AskShowDialog* askShowDialog = new AskShowDialog;
+        if (askShowDialog == nullptr)
+        {
+            break;
+        }
 
-void NotifyDialogManager::showAskDialog(int32_t& dialogId,
-									  int32_t userType,
-									  const QString& tip,
-									  const QString& title,
-									  int32_t acceptDone,
-									  int32_t ignoreDone,
-									  const QString& acceptText,
-									  const QString& ignoreText,
-									  int32_t timeOut,
-									  bool isCountDownVisible)
-{
-	AskShowDialog::showAskDialog(dialogId,
-								 userType,
-								 title,
-								 tip,
-								 acceptText,
-								 acceptDone,
-								 ignoreText,
-								 ignoreDone,
-								 timeOut,
-								 isCountDownVisible);
-}
+        int32_t dialogId = AllocManager::instance().add(askShowDialog, ASK_SHOW_DIALOG, askShowDialogParam.m_userId);
+        if (param != nullptr)
+        {
+            param->m_dialogId = dialogId;
+        }
+        
+        askShowDialog->setTip(askShowDialogParam.m_tip);
+        askShowDialog->setAcceptButton(askShowDialogParam.m_acceptText, askShowDialogParam.m_acceptDone);
+        askShowDialog->setIgnoreButton(askShowDialogParam.m_ignoreText, askShowDialogParam.m_ignoreDone);
+        notifyDialogPtr = askShowDialog;
+        break;
+    }
+    case TIP_SHOW_DIALOG:
+    {
+        TipShowDialog* tipShowDialog = new TipShowDialog;
+        param->m_dialogId = AllocManager::instance().add(tipShowDialog, ASK_SHOW_DIALOG, param->m_userId);
+        TipShowDialogParam tipShowDialogParam;
+        if (param != nullptr)
+        {
+            tipShowDialogParam = *((TipShowDialogParam*)param);
+        }
 
-void NotifyDialogManager::showLoginDialog(int32_t& dialogId,
-										int32_t userType,
-										const QString& tip,
-										const QString& linkUrl,
-										const QString& title,
-										int32_t timeOut,
-										bool isUrlButtonVisible,
-										bool isCountDownVisible)
-{
-	QString greeting;
-	QTime tm = QTime::currentTime();
-	int hour = tm.hour();
-	if ((hour > 0) && (hour <= 9))
-	{
-		greeting = QString::fromStdWString(L"Hi~早晨好！");
-	}
-	else if ((hour > 9) && (hour <= 12))
-	{
-		greeting = QString::fromStdWString(L"Hi~早上好！");
-	}
-	else if ((hour > 12) && (hour <= 18))
-	{
-		greeting = QString::fromStdWString(L"Hi~下午好！");
-	}
-	else
-	{
-		greeting = QString::fromStdWString(L"Hi~晚上好！");
-	}
+        tipShowDialog->setTip(tipShowDialogParam.m_tip);
+        tipShowDialog->setAcceptButton(tipShowDialogParam.m_buttonText, tipShowDialogParam.m_done);
+        notifyDialogPtr = tipShowDialog;
+        break;
+    }
+    case LOGIN_SHOW_DIALOG:
+    {
+        LoginShowDialog* loginShowDialog = new LoginShowDialog;
+        param->m_dialogId = AllocManager::instance().add(loginShowDialog, LOGIN_SHOW_DIALOG, param->m_userId);
+        LoginShowDialogParam loginShowDialogParam;
+        if (param != nullptr)
+        {
+            loginShowDialogParam = *((LoginShowDialogParam*)param);
+        }
 
-	LoginShowDialog::showLoginDialog(dialogId,
-									 userType,
-									 title,
-									 greeting,
-									 tip,
-									 QString::fromStdWString(L">>了解更多"),
-									 linkUrl,
-									 timeOut,
-									 isUrlButtonVisible,
-									 isCountDownVisible);
-}
+        loginShowDialog->setTip(loginShowDialogParam.m_tip);
+        loginShowDialog->setGreeting(loginShowDialogParam.m_greeting);
+        loginShowDialog->setMoreButton(loginShowDialogParam.m_urlButtonText, loginShowDialogParam.m_linkUrl, loginShowDialogParam.m_isUrlButtonVisible);
+        notifyDialogPtr = loginShowDialog;
+        break;
+    }
+    default:
+        break;
+    }
 
-void NotifyDialogManager::showTipDialog(int32_t& dialogId,
-									    const QString& tip,
-									    const QString& title,
-										int32_t userType,
-									    int32_t done,
-									    const QString& buttonText,
-									    int32_t timeOut,
-									    bool isCountDownVisible)
-{
-	TipShowDialog::showTipDialog(dialogId, userType, title, tip, buttonText, done, timeOut, isCountDownVisible);
-}
-
-void NotifyDialogManager::showAskDialog(int32_t& dialogId,
-									  const QString& tip,
-									  const QString& title,
-									  int32_t userType,
-									  int32_t acceptDone,
-									  int32_t ignoreDone,
-									  const QString& acceptText,
-									  const QString& ignoreText,
-									  int32_t timeOut,
-									  bool isCountDownVisible)
-{
-	AskShowDialog::showAskDialog(dialogId,
-								 userType,
-								 title,
-								 tip,
-								 acceptText,
-								 acceptDone,
-								 ignoreText,
-								 ignoreDone,
-								 timeOut,
-								 isCountDownVisible);
-}
-
-void NotifyDialogManager::onDialogDone(int32_t dialogId, int32_t result, int32_t userType)
-{
-	auto ptr = dialogPtr(dialogId);
-	if (ptr != nullptr && result == DESTROY_ALL)
-	{
-		delete ptr;
-	}
-	removeDialog(dialogId);
-	emit dialogDone(dialogId, result, userType);
-}
-
-int32_t NotifyDialogManager::popAskDialog(int32_t& dialogId,
-										const QString& title,
-										const QString& tip,
-										const QString& acceptText,
-										int32_t acceptDone,
-										const QString& ignoreText,
-										int32_t ignoreDone,
-										QWindow* parent,
-										int32_t timeOut,
-										bool isCountDownVisible)
-{
-	return -1;
-}
-
-int32_t NotifyDialogManager::popTipDialog(int32_t& dialogId,
-										const QString& title,
-										const QString& tip,
-										const QString& buttonText,
-										int32_t done,
-										QWindow* parent,
-										int32_t timeOut,
-										bool isCountDownVisible)
-{
-	return -1;
-}
-
-int32_t NotifyDialogManager::popInputDialog(int32_t& dialogId,
-										  const QString& title,
-										  const QString& editTip,
-										  const QString& buttonText,
-										  int32_t done,
-										  QString& editText,
-										  QWindow* parent,
-										  int32_t timeOut,
-										  bool isCountDownVisible)
-{
-	return -1;
-}
-
-int32_t NotifyDialogManager::popWaitDialog(int32_t& dialogId,
-										 const QString& title,
-										 const QString& tip,
-										 QWindow* parent,
-										 int32_t timeOut,
-										 bool isCountDownVisible)
-{
-	return -1;
+    ParamBase baseParam;
+    if (param != nullptr)
+    {
+        baseParam = *param;
+    }
+    notifyDialogPtr->setUserParam(baseParam.m_userParam);
+    notifyDialogPtr->setWindowTiTle(baseParam.m_title);
+    notifyDialogPtr->setUserParam(baseParam.m_userParam);
+    notifyDialogPtr->show();
 }

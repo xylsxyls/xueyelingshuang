@@ -26,6 +26,7 @@ public:
 
 	//判断当前鼠标中键是否按下
 	static bool isMouseMidDown();
+
 };
 
 #include "CSystem.inl"

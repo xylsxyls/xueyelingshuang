@@ -3,53 +3,44 @@
 #include "COriginalButton.h"
 #include "CGeneralStyle.h"
 #include "NotifyDialogManager.h"
+#include "DialogHelper.h"
 
-void AskShowDialog::showAskDialog(int32_t& dialogId,
-								  int32_t userType,
-								  const QString& title,
-								  const QString& tip,
-								  const QString& acceptText,
-								  int32_t acceptDone,
-								  const QString& ignoreText,
-								  int32_t ignoreDone,
-								  int32_t timeOut,
-								  bool isCountDownVisible)
+AskShowDialog::AskShowDialog():
+m_tip(nullptr),
+m_accept(nullptr),
+m_ignore(nullptr)
 {
-	AskShowDialog* dlg = new AskShowDialog(userType, title, tip, acceptText, acceptDone, ignoreText, ignoreDone);
-	dlg->show(dialogId, timeOut, isCountDownVisible);
-	QObject::connect(dlg, &DialogShow::dialogDone, &(NotifyDialogManager::instance()), &NotifyDialogManager::onDialogDone);
-	return;
-}
-
-AskShowDialog::AskShowDialog(int32_t userType,
-							 const QString& title,
-							 const QString& tip,
-							 const QString& acceptText,
-							 int32_t acceptDone,
-							 const QString& ignoreText,
-							 int32_t ignoreDone)
-{
-	std::string str = typeid(*this).name();
-	CStringManager::Replace(str, "class ", "");
-	initForShow(212, 128, str);
-	m_userType = userType;
-	m_title->setText(title);
-	setWindowTitle(title);
-	m_tip = addTip(tip, QRect(20, 35, width() - 20 * 2, 50), QColor(205, 213, 225, 255));
-	m_tip->setFontSize(13);
-	m_accept = addButton(acceptText, QRect(31, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19), acceptDone);
-	m_accept->setBkgImage("");
+    DialogHelper::setTip(m_tip, "", QColor(205, 213, 225, 255), 13);
+    
 	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255), QColor(97, 125, 197, 255));
 	m_accept->setFontColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(188, 199, 226, 255));
-	m_accept->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
-	m_accept->setBkgMargins(0, 0);
-	m_accept->setBorderRadius(4);
 
-	m_ignore = addButton(ignoreText, QRect(31 + 13 + (width() - 31 * 2 - 13) / 2, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19), ignoreDone);
-	m_ignore->setBkgImage("");
 	m_ignore->setBkgColor(QColor(183, 62, 62, 255), QColor(225, 96, 96, 255), QColor(124, 41, 41, 255), QColor(183, 62, 62, 255));
 	m_ignore->setFontColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(188, 199, 226, 255));
-	m_ignore->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
-	m_ignore->setBkgMargins(0, 0);
-	m_ignore->setBorderRadius(4);
+
+    initKeyboardAccept(m_accept);
+    resize(212, 128);
+}
+
+void AskShowDialog::setTip(const QString& tip)
+{
+    m_tip->setText(tip);
+}
+
+void AskShowDialog::setAcceptButton(const QString& acceptText, int32_t acceptDone)
+{
+    setNotifyButtonConfig(m_accept, acceptText, acceptDone, 14);
+}
+
+void AskShowDialog::setIgnoreButton(const QString& ignoreText, int32_t ignoreDone)
+{
+    setNotifyButtonConfig(m_ignore, ignoreText, ignoreDone, 14);
+}
+
+void AskShowDialog::resizeEvent(QResizeEvent* eve)
+{
+    NotifyDialog::resizeEvent(eve);
+    m_tip->setGeometry(QRect(20, 35, width() - 20 * 2, 50));
+    m_accept->setGeometry(QRect(31, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19));
+    m_ignore->setGeometry(QRect(31 + 13 + (width() - 31 * 2 - 13) / 2, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19));
 }
