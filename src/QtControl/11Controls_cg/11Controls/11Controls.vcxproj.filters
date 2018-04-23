@@ -34,9 +34,6 @@
     <Filter Include="controls\QtDialog\UnModal">
       <UniqueIdentifier>{f8865651-fce5-4441-9fe4-5e3992a22b3c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="controls\QtDialog\AllocManager">
-      <UniqueIdentifier>{ea675d17-2e1e-4280-a194-7478ce3a800f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="controls\QtDialog\DialogHelper">
       <UniqueIdentifier>{5dae5fcc-9a2c-416b-a13f-e3db46529bf7}</UniqueIdentifier>
     </Filter>
@@ -48,6 +45,9 @@
     </Filter>
     <Filter Include="controls\QtDialog\Static">
       <UniqueIdentifier>{d8da0ab3-14e2-4fb5-a817-c42e14496e8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="controls\QtDialog\AllocManager">
+      <UniqueIdentifier>{ea675d17-2e1e-4280-a194-7478ce3a800f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -153,12 +153,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_DialogBase.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_DialogManager.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_DialogManager.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_DialogShow.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -184,12 +178,6 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_IdItemComboBox.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_InputDialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_InputDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_Label.cpp">
@@ -411,9 +399,6 @@
     <ClCompile Include="src\controls\AskDialog.cpp">
       <Filter>controls\QtDialog\Modal</Filter>
     </ClCompile>
-    <ClCompile Include="src\controls\InputDialog.cpp">
-      <Filter>controls\QtDialog\Modal</Filter>
-    </ClCompile>
     <ClCompile Include="src\controls\TipDialog.cpp">
       <Filter>controls\QtDialog\Modal</Filter>
     </ClCompile>
@@ -434,9 +419,6 @@
     </ClCompile>
     <ClCompile Include="src\controls\DialogBase.cpp">
       <Filter>controls\QtDialog\Base</Filter>
-    </ClCompile>
-    <ClCompile Include="src\controls\DialogManager.cpp">
-      <Filter>controls\QtDialog\Manager</Filter>
     </ClCompile>
     <ClCompile Include="src\controls\COriginalDialog.cpp">
       <Filter>controls\QtDialog\Base</Filter>
@@ -474,27 +456,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_PopDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_PopDialogManager.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_PopDialogManager.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_StaticDialogManager.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_StaticDialogManager.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="src\controls\StaticDialogManager.cpp">
-      <Filter>controls\QtDialog\Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="src\controls\PopDialogManager.cpp">
-      <Filter>controls\QtDialog\Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="src\controls\AllocManager.cpp">
-      <Filter>controls\QtDialog\AllocManager</Filter>
-    </ClCompile>
     <ClCompile Include="src\controls\NotifyDialog.cpp">
       <Filter>controls\QtDialog\Base</Filter>
     </ClCompile>
@@ -504,6 +465,33 @@
     <ClCompile Include="src\controls\DialogHelper.cpp">
       <Filter>controls\QtDialog\DialogHelper</Filter>
     </ClCompile>
+    <ClCompile Include="src\controls\InputDialog.cpp">
+      <Filter>controls\QtDialog\Modal</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_InputDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_InputDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Separator.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Separator.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\Separator.cpp">
+      <Filter>controls\QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\DialogManager.cpp">
+      <Filter>controls\QtDialog\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="src\controls\NotifyDialogManager.cpp">
       <Filter>controls\QtDialog\Manager</Filter>
     </ClCompile>
@@ -511,6 +499,33 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\PopDialogManager.cpp">
+      <Filter>controls\QtDialog\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PopDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PopDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\StaticDialogManager.cpp">
+      <Filter>controls\QtDialog\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_StaticDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_StaticDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\AllocManager.cpp">
+      <Filter>controls\QtDialog\AllocManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AllocManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AllocManager.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
@@ -587,14 +602,14 @@
     <ClInclude Include="src\controls\DialogType.h">
       <Filter>controls\QtDialog</Filter>
     </ClInclude>
-    <ClInclude Include="src\controls\AllocManager.h">
-      <Filter>controls\QtDialog\AllocManager</Filter>
-    </ClInclude>
-    <ClInclude Include="src\controls\ManagerBase.h">
-      <Filter>controls\QtDialog\Base</Filter>
-    </ClInclude>
     <ClInclude Include="src\controls\DialogHelper.h">
       <Filter>controls\QtDialog\DialogHelper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\ManagerBase.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\SingletonBase.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -622,8 +637,11 @@
     <None Include="src\controls\ControlShow.inl">
       <Filter>controls\QtControls</Filter>
     </None>
-    <None Include="src\controls\ManagerBase.inl">
-      <Filter>controls\QtDialog\Base</Filter>
+    <None Include="src\core\ManagerBase.inl">
+      <Filter>core</Filter>
+    </None>
+    <None Include="src\core\SingletonBase.inl">
+      <Filter>core</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -711,9 +729,6 @@
     <CustomBuild Include="src\controls\AskDialog.h">
       <Filter>controls\QtDialog\Modal</Filter>
     </CustomBuild>
-    <CustomBuild Include="src\controls\InputDialog.h">
-      <Filter>controls\QtDialog\Modal</Filter>
-    </CustomBuild>
     <CustomBuild Include="src\controls\TipDialog.h">
       <Filter>controls\QtDialog\Modal</Filter>
     </CustomBuild>
@@ -747,23 +762,32 @@
     <CustomBuild Include="src\controls\SubAccountPanel.h">
       <Filter>controls\QtDialog\Static</Filter>
     </CustomBuild>
-    <CustomBuild Include="src\controls\DialogManager.h">
-      <Filter>controls\QtDialog\Manager</Filter>
-    </CustomBuild>
-    <CustomBuild Include="src\controls\StaticDialogManager.h">
-      <Filter>controls\QtDialog\Manager</Filter>
-    </CustomBuild>
-    <CustomBuild Include="src\controls\PopDialogManager.h">
-      <Filter>controls\QtDialog\Manager</Filter>
-    </CustomBuild>
     <CustomBuild Include="src\controls\NotifyDialog.h">
       <Filter>controls\QtDialog\Base</Filter>
     </CustomBuild>
     <CustomBuild Include="src\controls\PopDialog.h">
       <Filter>controls\QtDialog\Base</Filter>
     </CustomBuild>
+    <CustomBuild Include="src\controls\InputDialog.h">
+      <Filter>controls\QtDialog\Modal</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\Separator.h">
+      <Filter>controls\QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\DialogManager.h">
+      <Filter>controls\QtDialog\Manager</Filter>
+    </CustomBuild>
     <CustomBuild Include="src\controls\NotifyDialogManager.h">
       <Filter>controls\QtDialog\Manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\PopDialogManager.h">
+      <Filter>controls\QtDialog\Manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\StaticDialogManager.h">
+      <Filter>controls\QtDialog\Manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\AllocManager.h">
+      <Filter>controls\QtDialog\AllocManager</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

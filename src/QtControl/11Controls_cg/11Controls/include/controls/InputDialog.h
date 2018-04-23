@@ -13,7 +13,7 @@ public:
 	InputDialog();
 
 public:
-    void initLineEdit(const QString& defaultText, QString* editText, bool isPassword = false, int32_t maxLength = -1);
+    void setLineEdit(const QString& defaultText, QString* editText, int32_t maxLength = -1);
 
     void setTip(const QString& tip);
 

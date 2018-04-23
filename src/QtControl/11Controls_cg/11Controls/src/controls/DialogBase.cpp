@@ -156,7 +156,6 @@ void DialogBase::resizeEvent(QResizeEvent* eve)
     COriginalDialog::resizeEvent(eve);
     int32_t titleHeight = customerTitleBarHeight();
     m_title->setGeometry(0, 0, width(), titleHeight);
-    m_title->repaint();
 }
 
 bool DialogBase::check()

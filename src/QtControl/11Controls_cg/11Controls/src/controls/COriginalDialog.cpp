@@ -37,6 +37,12 @@ COriginalDialog::~COriginalDialog()
     }
 }
 
+void COriginalDialog::done(int result)
+{
+    QDialog::done(result);
+    emit dialogFinished(result);
+}
+
 long COriginalDialog::onNcHitTest(QPoint pt)
 {
 	QRect rcClient = this->geometry();

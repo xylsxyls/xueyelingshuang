@@ -8,12 +8,16 @@
 
 AccountDialog::AccountDialog() :
 m_sep(nullptr),
+m_registerAlt(nullptr),
 m_account(nullptr),
+m_errorAccount(nullptr),
 m_accept(nullptr),
 m_ignore(nullptr)
 {
-	m_sep = new Label(this);
+    m_sep = new Label(this);
+    m_registerAlt = new Label(this);
     m_account = new LineEdit(this);
+    m_errorAccount = new Label(this);
     m_accept = new COriginalButton(this);
     m_ignore = new COriginalButton(this);
 	

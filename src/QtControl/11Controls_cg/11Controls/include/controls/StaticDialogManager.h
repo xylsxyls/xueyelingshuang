@@ -1,26 +1,31 @@
 #pragma once
 #include <QObject>
 #include "DialogType.h"
-#include "ManagerBase.h"
+#include "../core/ManagerBase.h"
+#include "ControlsMacro.h"
 
-class QWindow;
 class AccountManagerDialog;
-
-class StaticDialogManager : public ManagerBase < StaticDialogManager >
+/** 静态窗口管理类
+*/
+class ControlsAPI StaticDialogManager :
+    public QObject,
+    public ManagerBase < StaticDialogManager >
 {
     Q_OBJECT
 public:
     void popStaticDialog(DialogType type, ParamBase* param);
+    void deleteStaticDialog(DialogType type);
 
+public:
+    StaticDialogManager();
 
-    /** 弹出账号管理页面
-    */
-    void popAccountManagerDialog(QWindow* parent = nullptr);
+Q_SIGNALS:
+    void staticDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
 
-    /** 销毁账号管理页面窗口
-    */
-    void destroyAccountManagerDialog();
+private slots:
+    void onDeleteDialog(DialogType type);
+    void onFinished(int result);
 
-private:
+public:
     AccountManagerDialog* m_accountManagerDialog;
 };

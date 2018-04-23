@@ -4,27 +4,17 @@
 #include <QMutex>
 #include "DialogType.h"
 #include "ControlsMacro.h"
+#include "../core/ManagerBase.h"
+#include <QObject>
 
 class COriginalDialog;
 /** 窗口内存管理器
 */
-class ControlsAPI AllocManager
+class ControlsAPI AllocManager : 
+    public QObject,
+    public ManagerBase < AllocManager >
 {
-public:
-    /** 单一实例
-    @return 返回单一实例
-    */
-    static AllocManager& instance();
-
-    /** 实例是否存在
-    @return 返回是否存在
-    */
-    static bool hasInstance();
-
-    /** 释放实例，释放之后不再可以创建
-    */
-    static void releaseInstance();
-
+    Q_OBJECT
 public:
     /** 添加一个窗口，支持多线程
     @param [in] base 窗口指针，必须是唯一值，不可以出现不同userId对应同一个窗口指针的情况
@@ -83,11 +73,18 @@ public:
     */
     void destroyAll();
 
-private:
+Q_SIGNALS:
+    void deleteDialog(DialogType type);
+
+public:
     /** 析构函数
     */
     ~AllocManager();
 
+private slots:
+    void onDialogFinished(int result);
+
+private:
     /** 获取窗口ID，从1开始
     @return 返回窗口ID
     */

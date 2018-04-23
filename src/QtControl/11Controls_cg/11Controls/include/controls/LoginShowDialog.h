@@ -5,6 +5,7 @@
 
 class QWebView;
 class COriginalButton;
+class Separator;
 /** œ‘ æÃ· æøÚ
 */
 class LoginShowDialog : public NotifyDialog
@@ -33,4 +34,5 @@ private:
 	COriginalButton* m_more;
 	QString m_moreLinkUrl;
 	QWebView* m_tip;
+    Separator* m_separator;
 };

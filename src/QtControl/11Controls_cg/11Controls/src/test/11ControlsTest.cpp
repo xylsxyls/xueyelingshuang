@@ -22,6 +22,7 @@
 #include <QWindow>
 #include "11Controls/include/controls/DialogManager.h"
 #include "11Controls/include/controls/NotifyDialogManager.h"
+#include "11Controls/include/controls/StaticDialogManager.h"
 
 #pragma comment(lib,"11Controls.lib")
 
@@ -97,8 +98,9 @@ ControlsTest::~ControlsTest()
 
 void ControlsTest::onPopTipDialog()
 {
+    StaticDialogManager::instance().deleteStaticDialog(ACCOUNT_MANAGER_DIALOG);
 	int32_t dialogId1 = 0;
-    DialogManager::instance().createDialog(TIP_DIALOG);
+    DialogManager::instance().createDialog(ACCOUNT_MANAGER_DIALOG);
 	// int xx = DialogManager::instance().popTipDialog(dialogId1,
 	// 												QString::fromStdWString(L"标题"),
 	// 												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),

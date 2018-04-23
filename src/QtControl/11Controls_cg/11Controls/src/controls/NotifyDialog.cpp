@@ -5,10 +5,13 @@
 #include "CGeneralStyle.h"
 #include "src/core/CSystem.h"
 #include "DialogType.h"
+#include <QShowEvent>
 
 NotifyDialog::NotifyDialog():
 m_titleBar(nullptr),
-m_icon(nullptr)
+m_icon(nullptr),
+m_animation(this, "geometry"),
+m_isShow(false)
 {
     m_titleBar = new Label(this);
     m_icon = new Label(m_titleBar);
@@ -23,9 +26,11 @@ m_icon(nullptr)
 
     DialogHelper::setLabel(m_title, "title", QColor(221, 213, 198, 255), 12);//QColor(163, 175, 191, 255)
     m_title->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    m_title->raise();
 
     setNotifyButtonConfig(m_exit, "", 0, 12);
     m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
+    m_exit->raise();
 
     DialogHelper::setLabel(m_time, "", QColor("#abb3d3"), 12);
     m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -35,7 +40,9 @@ m_icon(nullptr)
 
 void NotifyDialog::init(const std::string& typeName)
 {
-    setStyleSheet(("." + typeName + "{ background-color:rgba(44, 52, 74, 255); border-top-left-radius:2px; border-top-right-radius:2px; border:1px solid; border-color:rgba(78, 146, 212, 255); }").c_str());
+    std::string className = typeName;
+    CStringManager::Replace(className, "class ", "");
+    setStyleSheet(("." + className + "{ background-color:rgba(44, 52, 74, 255); border-top-left-radius:2px; border-top-right-radius:2px; border:1px solid; border-color:rgba(78, 146, 212, 255); }").c_str());
 }
 
 void NotifyDialog::done(int32_t result)
@@ -66,15 +73,27 @@ void NotifyDialog::done(int32_t result)
     }
 
     m_result = result;
+    m_isShow = false;
     m_animation.setDuration(250);
     m_animation.setStartValue(m_beginRect);
     m_animation.setEndValue(m_endRect);
     m_animation.start();
 }
 
+void NotifyDialog::setWindowTiTle(const QString& title,
+                                  const QColor& color,
+                                  int32_t fontSize,
+                                  Qt::Alignment align,
+                                  int32_t origin,
+                                  const QString& fontName)
+{
+    DialogShow::setWindowTiTle(title, color, fontSize, align, origin, fontName);
+}
+
 void NotifyDialog::showEvent(QShowEvent* eve)
 {
     DialogBase::showEvent(eve);
+    m_isShow = true;
     m_animation.setDuration(500);
     m_animation.setStartValue(m_endRect);
     m_animation.setEndValue(m_beginRect);
@@ -97,5 +116,8 @@ void NotifyDialog::resizeEvent(QResizeEvent* eve)
 
 void NotifyDialog::end()
 {
-    DialogBase::done(m_result);
+    if (m_isShow == false)
+    {
+        DialogBase::done(m_result);
+    }
 }

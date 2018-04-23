@@ -17,12 +17,11 @@ DialogShow::DialogShow() :
 m_acceptButton(nullptr),
 m_userParam(-1),
 m_time(nullptr),
-m_exit(nullptr)
+m_exit(nullptr),
+m_result(0)
 {
     m_time = new Label(this);
     m_exit = new COriginalButton(this);
-    setPopButtonConfig(m_exit, "", QColor(), 0, 12);
-    m_exit->setBkgMargins(0, 0);
     QObject::connect(this, &DialogBase::timeRest, this, &DialogShow::onTimeUpdate);
 }
 

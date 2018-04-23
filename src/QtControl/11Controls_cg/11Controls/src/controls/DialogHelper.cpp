@@ -7,6 +7,7 @@
 #include "LineEdit.h"
 #include "CPasswordInputBox.h"
 #include <QWindow>
+#include "Separator.h"
 
 void DialogHelper::setLabel(Label* label, const QString& text, const QColor& textColor, int32_t fontSize)
 {
@@ -46,7 +47,7 @@ void DialogHelper::setButton(DialogShow* dialog,
         return;
     }
     button->setText(text);
-    button->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupButton.png");
+    button->setBkgImage(backgroundImage);
     button->setBkgMargins(imageMargin, 0);
     button->setBorderRadius(4);
     button->setFontSize(fontSize);
@@ -56,43 +57,25 @@ void DialogHelper::setButton(DialogShow* dialog,
         (*mapResult)[button] = result;
         QObject::connect(button, &COriginalButton::clicked, dialog, &DialogShow::endDialog);
     }
-    
 }
 
-//Label* DialogHelper::addSeparator(const QPoint& point, int32_t length, bool isHorizon, const QColor upColor, const QColor downColor)
-//{
-//    Label* label = new Label(this);
-//    if (label == nullptr)
-//    {
-//        return nullptr;
-//    }
-//
-//    label->setGeometry(point.x(), point.y(), isHorizon ? length : 2, isHorizon ? 2 : length);
-//    label->setBackgroundColor(downColor);
-//    Label* lab = new Label(label);
-//    if (lab == nullptr)
-//    {
-//        return nullptr;
-//    }
-//    lab->setGeometry(0, 0, isHorizon ? length : 1, isHorizon ? 1 : length);
-//    lab->setBackgroundColor(upColor);
-//    return label;
-//}
-
-LineEdit* DialogHelper::initLineEdit(DialogShow* dialog, bool isPassword, const QString& defaultText, int32_t maxLength)
+void DialogHelper::setSeparator(Separator* separator, bool isHorizon, const QColor& upColor, const QColor& downColor)
 {
-    LineEdit* lineEdit = nullptr;
-    if (isPassword)
+    if (separator == nullptr)
     {
-        lineEdit = new CPasswordInputBox(dialog);
+        return;
     }
-    else
-    {
-        lineEdit = new LineEdit(dialog);
-    }
+
+    separator->setDisplayMode(isHorizon);
+    separator->setColor(upColor, downColor);
+    return;
+}
+
+void DialogHelper::setLineEdit(LineEdit* lineEdit, const QString& defaultText, int32_t maxLength)
+{
     if (lineEdit == nullptr)
     {
-        return nullptr;
+        return;
     }
     lineEdit->setText(defaultText);
     lineEdit->setBorderWidth(1);
@@ -108,7 +91,7 @@ LineEdit* DialogHelper::initLineEdit(DialogShow* dialog, bool isPassword, const 
     {
         lineEdit->setMaxLength(maxLength);
     }
-    return lineEdit;
+    return;
 }
 
 //CPasswordInputBox* DialogHelper::addPasswordInputBox(const QRect& rect, const QString& defaultText)

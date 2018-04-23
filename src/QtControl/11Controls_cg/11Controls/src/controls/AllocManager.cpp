@@ -1,35 +1,13 @@
 #include "AllocManager.h"
-
-AllocManager* allocManager = nullptr;
-bool isUsed = false;
-
-AllocManager& AllocManager::instance()
-{
-    if (isUsed)
-    {
-        return *allocManager;
-    }
-    if (allocManager == nullptr)
-    {
-        allocManager = new AllocManager;
-    }
-    return *allocManager;
-}
-
-bool AllocManager::hasInstance()
-{
-    return allocManager != nullptr;
-}
-
-void AllocManager::releaseInstance()
-{
-    isUsed = true;
-    delete allocManager;
-    allocManager = nullptr;
-}
+#include "COriginalDialog.h"
+#include "PopDialog.h"
 
 int32_t AllocManager::add(COriginalDialog* base, DialogType type, int32_t userId)
 {
+    if (base == nullptr)
+    {
+        return -1;
+    }
     QMutexLocker locker(&m_mutex);
     int32_t dialogId = getDialogId();
     if (userId != -1)
@@ -51,6 +29,7 @@ int32_t AllocManager::add(COriginalDialog* base, DialogType type, int32_t userId
         m_mapDialogIdToUserId[dialogId] = userId;
         m_mapUserIdToDialogId[userId] = dialogId;
     }
+    QObject::connect(base, &COriginalDialog::dialogFinished, this, &AllocManager::onDialogFinished);
     return dialogId;
 }
 
@@ -62,6 +41,7 @@ void AllocManager::removeByDialogId(int32_t dialogId)
         return;
     }
     
+    emit deleteDialog(findDialogType(dialogId));
     int32_t userId = findUserId(dialogId);
     {
         QMutexLocker locker(&m_mutex);
@@ -151,6 +131,16 @@ int32_t AllocManager::findLastDialogId()
 AllocManager::~AllocManager()
 {
     destroyAll();
+}
+
+void AllocManager::onDialogFinished(int result)
+{
+    int32_t dialogId = findDialogId((COriginalDialog*)sender());
+    if (findDialogType(dialogId) == ACCOUNT_MANAGER_DIALOG)
+    {
+        return;
+    }
+    removeByDialogId(dialogId);
 }
 
 int32_t AllocManager::getDialogId()

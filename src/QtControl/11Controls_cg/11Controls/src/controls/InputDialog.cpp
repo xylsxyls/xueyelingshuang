@@ -7,15 +7,22 @@
 #include "CGeneralStyle.h"
 
 InputDialog::InputDialog() :
-m_edit(nullptr)
+m_edit(nullptr),
+m_editTip(nullptr),
+m_accept(nullptr),
+m_editText(nullptr)
 {
+    m_editTip = new Label(this);
+    m_accept = new COriginalButton(this);
+    m_edit = new LineEdit(this);
+
     initKeyboardAccept(m_accept);
     resize(340, 165);
 }
 
-void InputDialog::initLineEdit(const QString& defaultText, QString* editText, bool isPassword, int32_t maxLength)
+void InputDialog::setLineEdit(const QString& defaultText, QString* editText, int32_t maxLength)
 {
-    m_edit = DialogHelper::initLineEdit(this, isPassword, defaultText, maxLength);
+    DialogHelper::setLineEdit(m_edit, defaultText, maxLength);
     m_editText = editText;
 }
 
@@ -31,7 +38,10 @@ void InputDialog::setAcceptButton(const QString& acceptText, int32_t acceptDone)
 
 void InputDialog::done(int result)
 {
-	*m_editText = m_edit->text();
+    if (m_editText != nullptr)
+    {
+        *m_editText = m_edit->text();
+    }
 	PopDialog::done(result);
 }
 

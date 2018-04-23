@@ -6,12 +6,13 @@
 #include <QMutex>
 #include "ControlsMacro.h"
 #include "DialogType.h"
-#include "ManagerBase.h"
+#include "../core/ManagerBase.h"
 
-/** 单一实例，用于统一管理窗口创建关闭，该类的对外接口，销毁所有窗口
-DialogManager::instance().removeAll();
+/** 单一实例，用于统一管理窗口创建关闭，该类为对外接口
 */
-class ControlsAPI DialogManager : public ManagerBase < DialogManager >
+class ControlsAPI DialogManager :
+    public QObject,
+    public ManagerBase < DialogManager >
 {
 	Q_OBJECT
 public:

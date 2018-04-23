@@ -1,14 +1,13 @@
 #pragma once
-#include <QObject>
 
-template<typename Manager>
-class ManagerBase : public QObject
+template<typename Singleton>
+class SingletonBase
 {
 public:
     /** 单一实例
     @return 返回单一实例
     */
-    static Manager& instance();
+    static Singleton& instance();
 
     /** 实例是否存在
     @return 返回是否存在
@@ -20,7 +19,7 @@ public:
     static void releaseInstance();
 
 protected:
-    static Manager* m_manager;
+    static Singleton* s_singleton;
 };
 
-#include "ManagerBase.inl"
+#include "SingletonBase.inl"

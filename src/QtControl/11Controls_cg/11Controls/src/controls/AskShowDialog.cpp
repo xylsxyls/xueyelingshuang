@@ -4,12 +4,19 @@
 #include "CGeneralStyle.h"
 #include "NotifyDialogManager.h"
 #include "DialogHelper.h"
+#include "../core/CSystem.h"
 
 AskShowDialog::AskShowDialog():
 m_tip(nullptr),
 m_accept(nullptr),
 m_ignore(nullptr)
 {
+    m_tip = new Label(this);
+    m_accept = new COriginalButton(this);
+    m_ignore = new COriginalButton(this);
+
+    init(typeid(*this).name());
+
     DialogHelper::setTip(m_tip, "", QColor(205, 213, 225, 255), 13);
     
 	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255), QColor(97, 125, 197, 255));

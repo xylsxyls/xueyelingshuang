@@ -161,7 +161,7 @@ struct WaitDialogParam : public PopParamBase
     }
 };
 
-struct AskAdvertDialogParam : public PopParamBase
+struct AdvertAskDialogParam : public PopParamBase
 {
     QString m_advertUrl;
     QString m_tip;
@@ -169,7 +169,7 @@ struct AskAdvertDialogParam : public PopParamBase
     QString m_ignoreText;
     int32_t m_acceptDone;
     int32_t m_ignoreDone;
-    AskAdvertDialogParam()
+    AdvertAskDialogParam()
     {
         m_tip = QStringLiteral("包含广告的询问框提示");
         m_acceptText = QStringLiteral("确认");

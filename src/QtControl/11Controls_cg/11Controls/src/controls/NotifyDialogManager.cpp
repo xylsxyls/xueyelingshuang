@@ -4,6 +4,7 @@
 #include "TipShowDialog.h"
 #include "LoginShowDialog.h"
 #include "AllocManager.h"
+#include "DialogShow.h"
 
 void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
 {
@@ -25,45 +26,65 @@ void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
         }
 
         int32_t dialogId = AllocManager::instance().add(askShowDialog, ASK_SHOW_DIALOG, askShowDialogParam.m_userId);
+        askShowDialog->setTip(askShowDialogParam.m_tip);
+        askShowDialog->setAcceptButton(askShowDialogParam.m_acceptText, askShowDialogParam.m_acceptDone);
+        askShowDialog->setIgnoreButton(askShowDialogParam.m_ignoreText, askShowDialogParam.m_ignoreDone);
         if (param != nullptr)
         {
             param->m_dialogId = dialogId;
         }
-        
-        askShowDialog->setTip(askShowDialogParam.m_tip);
-        askShowDialog->setAcceptButton(askShowDialogParam.m_acceptText, askShowDialogParam.m_acceptDone);
-        askShowDialog->setIgnoreButton(askShowDialogParam.m_ignoreText, askShowDialogParam.m_ignoreDone);
+
         notifyDialogPtr = askShowDialog;
         break;
     }
     case TIP_SHOW_DIALOG:
     {
-        TipShowDialog* tipShowDialog = new TipShowDialog;
-        param->m_dialogId = AllocManager::instance().add(tipShowDialog, ASK_SHOW_DIALOG, param->m_userId);
         TipShowDialogParam tipShowDialogParam;
         if (param != nullptr)
         {
             tipShowDialogParam = *((TipShowDialogParam*)param);
         }
 
+        TipShowDialog* tipShowDialog = new TipShowDialog;
+        if (tipShowDialog == nullptr)
+        {
+            break;
+        }
+
+        int32_t dialogId = AllocManager::instance().add(tipShowDialog, TIP_SHOW_DIALOG, tipShowDialogParam.m_userId);
         tipShowDialog->setTip(tipShowDialogParam.m_tip);
         tipShowDialog->setAcceptButton(tipShowDialogParam.m_buttonText, tipShowDialogParam.m_done);
+        if (param != nullptr)
+        {
+            param->m_dialogId = dialogId;
+        }
+
         notifyDialogPtr = tipShowDialog;
         break;
     }
     case LOGIN_SHOW_DIALOG:
     {
-        LoginShowDialog* loginShowDialog = new LoginShowDialog;
-        param->m_dialogId = AllocManager::instance().add(loginShowDialog, LOGIN_SHOW_DIALOG, param->m_userId);
         LoginShowDialogParam loginShowDialogParam;
         if (param != nullptr)
         {
             loginShowDialogParam = *((LoginShowDialogParam*)param);
         }
 
+        LoginShowDialog* loginShowDialog = new LoginShowDialog;
+        if (loginShowDialog == nullptr)
+        {
+            break;
+        }
+
+        int32_t dialogId = AllocManager::instance().add(loginShowDialog, LOGIN_SHOW_DIALOG, loginShowDialogParam.m_userId);
         loginShowDialog->setTip(loginShowDialogParam.m_tip);
         loginShowDialog->setGreeting(loginShowDialogParam.m_greeting);
         loginShowDialog->setMoreButton(loginShowDialogParam.m_urlButtonText, loginShowDialogParam.m_linkUrl, loginShowDialogParam.m_isUrlButtonVisible);
+        if (param != nullptr)
+        {
+            param->m_dialogId = dialogId;
+        }
+
         notifyDialogPtr = loginShowDialog;
         break;
     }
@@ -71,13 +92,32 @@ void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
         break;
     }
 
+    if (notifyDialogPtr == nullptr)
+    {
+        return;
+    }
+
     ParamBase baseParam;
     if (param != nullptr)
     {
         baseParam = *param;
     }
-    notifyDialogPtr->setUserParam(baseParam.m_userParam);
     notifyDialogPtr->setWindowTiTle(baseParam.m_title);
     notifyDialogPtr->setUserParam(baseParam.m_userParam);
+    QObject::connect(notifyDialogPtr, &COriginalDialog::finished, this, &NotifyDialogManager::onFinished);
     notifyDialogPtr->show();
+}
+
+void NotifyDialogManager::onFinished(int result)
+{
+    DialogShow* dialogPtr = (DialogShow*)sender();
+    if (dialogPtr == nullptr)
+    {
+        return;
+    }
+    int32_t dialogId = AllocManager::instance().findDialogId(dialogPtr);
+    int32_t userId = AllocManager::instance().findUserId(dialogId);
+    DialogType type = AllocManager::instance().findDialogType(dialogId);
+    int32_t userParam = dialogPtr->userParam();
+    emit notifyDialogDone(dialogId, userId, type, result, userParam);
 }

@@ -5,6 +5,7 @@
 
 class Label;
 class COriginalButton;
+class Separator;
 /** 窗口基本模型，实现通用部分
 */
 class ControlsAPI DialogShow : public DialogBase

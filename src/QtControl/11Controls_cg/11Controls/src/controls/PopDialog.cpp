@@ -3,20 +3,25 @@
 #include "COriginalButton.h"
 #include "CGeneralStyle.h"
 #include <QPainter>
+#include "DialogHelper.h"
+#include "Separator.h"
 
-PopDialog::PopDialog()
+PopDialog::PopDialog():
+m_separator(nullptr)
 {
+    m_separator = new Separator(this);
     init();
 }
 
 void PopDialog::init()
 {
     setNativeWindow(true);
-    setEscAltF4Enable(false);
     setWindowFlags(windowFlags() | Qt::Tool);
     setCustomerTitleBarHeight(40);
+    setPopButtonConfig(m_exit, "", QColor(), 0, 12);
+    m_exit->setBkgMargins(0, 0);
     m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupCloseButton.png");
-    //m_separator = addSeparator(QPoint(13, 33), width() - 13 * 2, true, QColor(16, 20, 31, 255), QColor(46, 52, 88, 255));
+    DialogHelper::setSeparator(m_separator, true, QColor(16, 20, 31, 255), QColor(46, 52, 88, 255));
     m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 }
 
@@ -28,6 +33,16 @@ void PopDialog::done(int32_t result)
         m_timeId = -1;
     }
     DialogShow::done(result);
+}
+
+void PopDialog::setWindowTiTle(const QString& title,
+                               const QColor& color,
+                               int32_t fontSize,
+                               Qt::Alignment align,
+                               int32_t origin,
+                               const QString& fontName)
+{
+    DialogShow::setWindowTiTle(title, color, fontSize, align, origin, fontName);
 }
 
 void PopDialog::paintEvent(QPaintEvent* eve)
@@ -68,6 +83,7 @@ void PopDialog::resizeEvent(QResizeEvent* eve)
     DialogShow::resizeEvent(eve);
     m_time->setGeometry(QRect(width() - 125 - 10, 140, 125, 32));
     m_exit->setGeometry(QRect(width() - 3 - 30, 3, 30, 30));
+    m_separator->setGeometry(13, 33, width() - 13 * 2, 2);
 }
 
 void PopDialog::onNcActiveChanged(const bool& ncActive)

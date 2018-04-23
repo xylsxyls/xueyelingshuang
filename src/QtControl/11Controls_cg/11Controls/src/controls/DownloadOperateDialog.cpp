@@ -13,8 +13,46 @@ std::wstring DownloadOperateDialog::s_fileString = L"文件名：%s";
 QString DownloadOperateDialog::s_slowString = QString::fromStdWString(L"如果下载失败。您可以尝试手动下载文件，或者");
 QString DownloadOperateDialog::s_handString = QString::fromStdWString(L"使用其他下载渠道");
 
-DownloadOperateDialog::DownloadOperateDialog()
+DownloadOperateDialog::DownloadOperateDialog():
+m_tip(nullptr),
+m_file(nullptr),
+m_downloadSpeed(nullptr),
+m_downloaded(nullptr),
+m_progressBar(nullptr),
+m_persent(nullptr),
+m_back(nullptr),
+m_again(nullptr),
+m_cancel(nullptr),
+m_downloadSlow(nullptr),
+m_hand(nullptr),
+m_downloadAddr(nullptr),
+m_path(nullptr),
+m_downloadAddrEdit(nullptr),
+m_pathEdit(nullptr),
+m_downloadButton(nullptr),
+m_pathButton(nullptr),
+m_error(nullptr)
 {
+    m_tip = new Label(this);
+    m_file = new Label(this);
+    m_downloadSpeed = new Label(this);
+    m_downloaded = new Label(this);
+    m_downloadTime = new Label(this);
+    m_progressBar = new ProgressBar(this);
+    m_persent = new Label(this);
+    m_back = new COriginalButton(this);
+    m_again = new COriginalButton(this);
+    m_cancel = new COriginalButton(this);
+    m_downloadSlow = new Label(this);
+    m_hand = new COriginalButton(this);
+    m_downloadAddr = new Label(this);
+    m_path = new Label(this);
+    m_downloadAddrEdit = new LineEdit(this);
+    m_pathEdit = new LineEdit(this);
+    m_downloadButton = new COriginalButton(this);
+    m_pathButton = new COriginalButton(this);
+    m_error = new Label(this);
+
 	m_title->setTextColor(QColor("#cdd5e1"));
 
     DialogHelper::setLabel(m_downloadSpeed, "", QColor("#8592bf"), 12);
@@ -31,7 +69,6 @@ DownloadOperateDialog::DownloadOperateDialog()
 	m_persent->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
 	m_persent->setVisible(false);
 
-	m_back = new COriginalButton(this);
 	m_back->setFontFace(CGeneralStyle::instance()->font().family());
 	m_back->setFontSize(12);
 	m_back->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
@@ -40,7 +77,6 @@ DownloadOperateDialog::DownloadOperateDialog()
 	m_back->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_back->setEnabled(true);
 
-	m_again = new COriginalButton(this);
 	m_again->setFontFace(CGeneralStyle::instance()->font().family());
 	m_again->setFontSize(12);
 	m_again->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
@@ -49,7 +85,6 @@ DownloadOperateDialog::DownloadOperateDialog()
 	m_again->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_again->setVisible(false);
 
-	m_cancel = new COriginalButton(this);
 	m_cancel->setFontFace(CGeneralStyle::instance()->font().family());
 	m_cancel->setFontSize(12);
 	m_cancel->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
@@ -57,7 +92,6 @@ DownloadOperateDialog::DownloadOperateDialog()
 	m_cancel->setBorderRadius(3);
 	m_cancel->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 
-	m_progressBar = new ProgressBar(this);
 	m_progressBar->setOrientation(Qt::Horizontal);
 	//当前进度
 	setRate(0);
@@ -72,7 +106,6 @@ DownloadOperateDialog::DownloadOperateDialog()
 
     DialogHelper::setLabel(m_downloadSlow, s_slowString, QColor("#8491bd"), 12);
 
-	m_hand = new COriginalButton(this);
 	m_hand->installEventFilter(this);
 	m_hand->setGeometry(258, 179, 120, 18);
 	m_hand->setFontFace(CGeneralStyle::instance()->font().family());
@@ -86,7 +119,6 @@ DownloadOperateDialog::DownloadOperateDialog()
     DialogHelper::setLabel(m_downloadAddr, QString::fromStdWString(L"下载地址"), QColor("#8d8e91"), 12);
 	m_downloadAddr->setAlignment(Qt::AlignLeft);
 
-	m_downloadAddrEdit = new LineEdit(this);
 	m_downloadAddrEdit->setBackgroundColor(QColor("#0b0d15"));
 	m_downloadAddrEdit->setBorderRadius(2);
 	m_downloadAddrEdit->setTextColor(QColor("#cdd5e1"));
@@ -96,7 +128,6 @@ DownloadOperateDialog::DownloadOperateDialog()
 	m_downloadAddrEdit->setReadOnly(true);
 	QObject::connect(this, &DownloadOperateDialog::editDownloadAddr, m_downloadAddrEdit, &LineEdit::setText);
 
-	m_downloadButton = new COriginalButton(this);
 	m_downloadButton->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_downloadButton->setFontSize(12);
 	m_downloadButton->setText(QString::fromStdWString(L"复制地址"));
@@ -106,7 +137,6 @@ DownloadOperateDialog::DownloadOperateDialog()
     DialogHelper::setLabel(m_path, QString::fromStdWString(L"本地路径"), QColor("#8d8e91"), 12);
 	m_path->setAlignment(Qt::AlignLeft);
 
-	m_pathEdit = new LineEdit(this);
 	m_pathEdit->setBackgroundColor(QColor("#0b0d15"));
 	m_pathEdit->setBorderRadius(2);
 	m_pathEdit->setTextColor(QColor("#cdd5e1"));
@@ -116,7 +146,6 @@ DownloadOperateDialog::DownloadOperateDialog()
 	m_pathEdit->setReadOnly(true);
 	QObject::connect(this, &DownloadOperateDialog::editPath, m_pathEdit, &LineEdit::setText);
 
-	m_pathButton = new COriginalButton(this);
 	m_pathButton->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_pathButton->setFontSize(12);
 	m_pathButton->setText(QString::fromStdWString(L"复制地址"));
@@ -158,7 +187,6 @@ void DownloadOperateDialog::setFileName(const QString& fileName)
 void DownloadOperateDialog::resizeEvent(QResizeEvent* eve)
 {
     PopDialog::resizeEvent(eve);
-    m_title->resize(width() - 30, 35);
     //m_separator->setGeometry(16, 41, width() - 16 * 2, 2);
     m_file->setGeometry(QRect(16, 63, width() / 2 - 16, 30));
     m_downloadSpeed->setGeometry(QRect(212, 63, 50, 20));

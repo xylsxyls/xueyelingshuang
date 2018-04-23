@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <Windows.h>
 #include "CoreMacro.h"
+#include <string>
 
 class CoreAPI CSystem
 {
@@ -26,6 +27,9 @@ public:
 
 	//判断当前鼠标中键是否按下
 	static bool isMouseMidDown();
+
+    //template <typename TypeClass>
+    //static std::string className();
 
 };
 

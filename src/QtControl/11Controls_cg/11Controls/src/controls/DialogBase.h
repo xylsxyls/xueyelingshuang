@@ -48,7 +48,7 @@ public:
     /** 设置窗口标题
     */
     void setWindowTiTle(const QString& title,
-                        const QColor& color = QColor(255, 0, 0, 255),
+                        const QColor& color = QColor(255, 255, 255, 255),
                         int32_t fontSize = 12,
                         Qt::Alignment align = Qt::AlignCenter,
                         int32_t origin = 0,

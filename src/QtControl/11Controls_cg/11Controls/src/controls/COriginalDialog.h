@@ -20,8 +20,8 @@ private:
 	QRect   mCustomerTitleBarRect;
 	bool    mDwmInitialized;
 
-
-
+public:
+    void done(int result);
 
 protected:
 	long onNcHitTest(QPoint pt);
@@ -35,7 +35,8 @@ signals:
 	//使用Qt::QueuedConnection
 	void ncActiveChanged(const bool& ncActive);
 	void activeChanged(bool s);
-
+    //和finished信号不同，是在窗口完全关闭后才会发送信号
+    void dialogFinished(int result);
 
 public :
 	void setTouchBorderWidth(int n);

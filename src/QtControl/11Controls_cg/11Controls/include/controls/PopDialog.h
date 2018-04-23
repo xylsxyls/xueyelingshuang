@@ -17,6 +17,15 @@ public:
     */
     void done(int32_t result);
 
+    /** 设置窗口标题
+    */
+    void setWindowTiTle(const QString& title,
+                        const QColor& color = QColor(163, 175, 191, 255),
+                        int32_t fontSize = 12,
+                        Qt::Alignment align = Qt::AlignCenter,
+                        int32_t origin = 0,
+                        const QString& fontName = QString::fromStdWString(L"微软雅黑"));
+
 protected:
     void paintEvent(QPaintEvent* eve);
     void showEvent(QShowEvent* eve);
@@ -27,4 +36,5 @@ private slots:
 
 private:
     bool m_highLight;
+    Separator* m_separator;
 };

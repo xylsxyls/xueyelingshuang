@@ -6,18 +6,27 @@
 #include <QDesktopServices>
 #include "NotifyDialogManager.h"
 #include "DialogHelper.h"
+#include "Separator.h"
 
-LoginShowDialog::LoginShowDialog()
+LoginShowDialog::LoginShowDialog():
+m_tip(nullptr),
+m_horn(nullptr),
+m_greeting(nullptr),
+m_more(nullptr),
+m_separator(nullptr)
 {
     m_tip = new QWebView(this);
     m_horn = new Label(this);
     m_greeting = new Label(this);
     m_more = new COriginalButton(this);
+    m_separator = new Separator(this);
+
+    init(typeid(*this).name());
 
     DialogHelper::setLabel(m_greeting, "", QColor(187, 187, 195, 255), 13);
 	m_greeting->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
 
-	//m_separator = addSeparator(QPoint(6, 57), width() - 6 * 2, true, QColor(60, 73, 104, 255), QColor(50, 60, 85, 255));
+    DialogHelper::setSeparator(m_separator, true, QColor(60, 73, 104, 255), QColor(50, 60, 85, 255));
     DialogHelper::setLabel(m_horn, "", QColor(0, 0, 0, 0), 12);
 	m_horn->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/broadcast.png", 1, 1, 1, 1);
 	
@@ -84,6 +93,7 @@ void LoginShowDialog::resizeEvent(QResizeEvent* eve)
     m_tip->setGeometry(QRect(24, 60, 157, 57));
     m_more->setGeometry(QRect(8, height() - 25, width() - 17, 22));
     m_time->setGeometry(QRect(7, height() - 13 - 6, width() - 5, 13));
+    m_separator->setGeometry(6, 57, width() - 6 * 2, 2);
 }
 
 void LoginShowDialog::onLinkClicked(const QUrl& url)

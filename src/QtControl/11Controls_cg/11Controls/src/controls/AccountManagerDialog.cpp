@@ -43,9 +43,9 @@ m_subAccountPanel(nullptr)
     m_subAccountPanel = new SubAccountPanel(this);
 
 	m_subAccountPanel->helpTip()->winId();
-	m_subAccountPanel->helpTip()->windowHandle()->setTransientParent(this->windowHandle());
+	m_subAccountPanel->helpTip()->windowHandle()->setTransientParent(windowHandle());
 
-	m_title->setText(QStringLiteral("11对战平台 - 账号管理页面"));
+	setWindowTiTle(QStringLiteral("11对战平台 - 账号管理页面"));
 
     m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
 

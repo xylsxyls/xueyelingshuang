@@ -16,6 +16,7 @@ class CPasswordInputBox;
 class DialogShow;
 class QWidget;
 class QWindow;
+class Separator;
 /** 帮助窗口创建控件
 */
 class DialogHelper
@@ -54,21 +55,20 @@ public:
                           int32_t imageMargin);
 
     /** 添加分割线
-    @param [in] point 起始点
-    @param [in] length 长度
+    @param [in] 分割线控件指针
     @param [in] isHorizon 是否水平
     @param [in] upColor 上层颜色
     @param [in] downColor 下层颜色
     @return 返回分割线指针
     */
-    static Label* addSeparator(const QPoint& point, int32_t length, bool isHorizon, const QColor upColor, const QColor downColor);
+    static void setSeparator(Separator* separator, bool isHorizon, const QColor& upColor, const QColor& downColor);
 
     /** 添加单行文本框
     @param [in] rect 标签相对父窗口所在位置
     @param [in] defaultText 默认显示文字
     @return 返回文本框指针
     */
-    static LineEdit* initLineEdit(DialogShow* dialog, bool isPassword = false, const QString& defaultText = "", int32_t maxLength = -1);
+    static void setLineEdit(LineEdit* lineEdit, const QString& defaultText = "", int32_t maxLength = -1);
 
     /** 添加密码框
     @param [in] rect 标签相对父窗口所在位置

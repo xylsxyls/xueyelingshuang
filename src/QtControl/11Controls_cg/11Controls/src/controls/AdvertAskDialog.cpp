@@ -7,13 +7,17 @@
 #include "CGeneralStyle.h"
 
 AdvertAskDialog::AdvertAskDialog():
-m_advert(nullptr)
+m_advert(nullptr),
+m_tip(nullptr),
+m_accept(nullptr),
+m_ignore(nullptr)
 {
-	init();
-	m_advert = new CWebViewEx(this);
-    
-    initKeyboardAccept(m_accept);
+    m_tip = new Label(this);
+    m_advert = new CWebViewEx(this);
+    m_accept = new COriginalButton(this);
+    m_ignore = new COriginalButton(this);
 
+    initKeyboardAccept(m_accept);
     resize(340, 265);
 }
 

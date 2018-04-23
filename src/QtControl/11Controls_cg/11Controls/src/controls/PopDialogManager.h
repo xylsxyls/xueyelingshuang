@@ -2,9 +2,13 @@
 #include <QObject>
 #include <stdint.h>
 #include "DialogType.h"
-#include "ManagerBase.h"
+#include "../core/ManagerBase.h"
 
-class PopDialogManager : public ManagerBase < PopDialogManager >
+/** 弹窗的管理类
+*/
+class PopDialogManager :
+    public QObject,
+    public ManagerBase < PopDialogManager >
 {
     Q_OBJECT
 public:
@@ -43,4 +47,8 @@ Q_SIGNALS:
     void copyPath(qint32 taskId, const QString& path);
     //点击包含广告位询问框时发送信号
     void clickAdvert(int32_t dialogId, const QString& url);
+    void popDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
+
+private slots:
+    void onFinished(int result);
 };
