@@ -11,7 +11,7 @@ m_accept(nullptr)
 {
     m_tip = new Label(this);
     m_accept = new COriginalButton(this);
-    initKeyboardAccept(m_accept);
+    initAcceptButton(m_accept);
     resize(340, 165);
 }
 

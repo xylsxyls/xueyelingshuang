@@ -12,16 +12,14 @@ class ControlsAPI COriginalDialog : public QDialog
 	Q_OBJECT
 public:
 	COriginalDialog(QWidget* parent = NULL);
-	~COriginalDialog();
+	virtual ~COriginalDialog();
 
 private:
 	int     mTouchBorderWidth;
 	int     mCustomerTitleBarHeight;
 	QRect   mCustomerTitleBarRect;
 	bool    mDwmInitialized;
-
-public:
-    void done(int result);
+    bool    mAltF4Enable;
 
 protected:
 	long onNcHitTest(QPoint pt);
@@ -35,8 +33,7 @@ signals:
 	//使用Qt::QueuedConnection
 	void ncActiveChanged(const bool& ncActive);
 	void activeChanged(bool s);
-    //和finished信号不同，是在窗口完全关闭后才会发送信号
-    void dialogFinished(int result);
+    void altF4Pressed();
 
 public :
 	void setTouchBorderWidth(int n);
@@ -50,6 +47,9 @@ public :
 	void setTopTransientWindow(QWindow* w);
     QWindow* getTopWindowHandle(QWindow* window);
 	QWindow* transientWindow();
+
+    void setAltF4Enable(bool enabled);
+    bool AltF4Enable();
 };
 
 #endif // CORIGINALDIALOG_H

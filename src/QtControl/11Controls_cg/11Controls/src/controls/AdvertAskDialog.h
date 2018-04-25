@@ -21,7 +21,7 @@ public:
     void initAdvertUrl(const QString& advertUrl);
 
 Q_SIGNALS:
-	void advertClicked(AdvertAskDialog* dialogPtr, const QString& url);
+	void advertClicked(const QString& url);
 
 protected:
     void resizeEvent(QResizeEvent* eve);

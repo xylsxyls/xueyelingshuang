@@ -20,12 +20,12 @@ public:
     StaticDialogManager();
 
 Q_SIGNALS:
+    //静态窗关闭的时候发送信号
     void staticDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
 
 private slots:
-    void onDeleteDialog(DialogType type);
-    void onFinished(int result);
+    void onClosedSignal(int result);
 
 public:
-    AccountManagerDialog* m_accountManagerDialog;
+    int32_t m_accountManagerDialogId;
 };

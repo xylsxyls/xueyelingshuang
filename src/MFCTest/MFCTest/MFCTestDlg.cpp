@@ -55,7 +55,8 @@ CMFCTestDlg::CMFCTestDlg(CWnd* pParent /*=NULL*/)
 
 void CMFCTestDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialogEx::DoDataExchange(pDX);
+    CDialogEx::DoDataExchange(pDX);
+    DDX_Control(pDX, IDC_EDIT1, m_edit);
 }
 
 BEGIN_MESSAGE_MAP(CMFCTestDlg, CDialogEx)

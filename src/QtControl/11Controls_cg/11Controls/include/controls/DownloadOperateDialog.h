@@ -11,6 +11,8 @@ class ControlsAPI DownloadOperateDialog : public PopDialog
 {
 	Q_OBJECT
 public:
+    /** ¹¹Ôìº¯Êý
+    */
     DownloadOperateDialog();
 
 public:
@@ -100,8 +102,6 @@ Q_SIGNALS:
 	void copyDownloadAddr(const QString& addr);
 	void copyPath(const QString& path);
 
-
-
 protected:
     void resizeEvent(QResizeEvent* eve);
 
@@ -120,34 +120,22 @@ private slots:
 private:
 	Label* m_tip;
 	Label* m_file;
-
 	Label* m_downloadSpeed;
 	Label* m_downloaded;
 	Label* m_downloadTime;
-
 	ProgressBar *m_progressBar;
 	Label* m_persent;
-
 	COriginalButton* m_back;
 	COriginalButton* m_again;
 	COriginalButton* m_cancel;
-
 	Label* m_downloadSlow;
 	COriginalButton* m_hand;
-
 	Label* m_downloadAddr;
 	Label* m_path;
 	LineEdit* m_downloadAddrEdit;
 	LineEdit* m_pathEdit;
 	COriginalButton* m_downloadButton;
 	COriginalButton* m_pathButton;
-
 	Label* m_error;
-
 	int32_t m_taskId;
-
-private:
-	static std::wstring s_fileString;
-	static QString s_slowString;
-	static QString s_handString;
 };

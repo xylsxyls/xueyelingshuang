@@ -35,7 +35,12 @@ m_isShow(false)
     DialogHelper::setLabel(m_time, "", QColor("#abb3d3"), 12);
     m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
+    addListenKey(Qt::Key_Escape);
+
     QObject::connect(&m_animation, &QPropertyAnimation::finished, this, &NotifyDialog::end);
+    QObject::connect(this, &DialogBase::timeUp, this, &NotifyDialog::onTimeUp);
+    QObject::connect(this, &DialogBase::keyboardAccept, this, &NotifyDialog::onKeyboardAccept);
+    QObject::connect(this, &COriginalDialog::altF4Pressed, this, &NotifyDialog::onAltF4Pressed);
 }
 
 void NotifyDialog::init(const std::string& typeName)
@@ -45,20 +50,14 @@ void NotifyDialog::init(const std::string& typeName)
     setStyleSheet(("." + className + "{ background-color:rgba(44, 52, 74, 255); border-top-left-radius:2px; border-top-right-radius:2px; border:1px solid; border-color:rgba(78, 146, 212, 255); }").c_str());
 }
 
-void NotifyDialog::done(int32_t result)
+void NotifyDialog::beginExitAnimation()
 {
+    m_result = buttonResult((COriginalButton*)sender());
     //去掉定时器
     if (m_timeId != -1)
     {
         killTimer(m_timeId);
         m_timeId = -1;
-    }
-
-    //代码关闭
-    if (result == CODE_DESTROY)
-    {
-        DialogBase::done(result);
-        return;
     }
 
     //先将所有控件设为禁用
@@ -72,7 +71,6 @@ void NotifyDialog::done(int32_t result)
         }
     }
 
-    m_result = result;
     m_isShow = false;
     m_animation.setDuration(250);
     m_animation.setStartValue(m_beginRect);
@@ -116,8 +114,44 @@ void NotifyDialog::resizeEvent(QResizeEvent* eve)
 
 void NotifyDialog::end()
 {
+    //当关闭的时候动画结束才关闭窗口
     if (m_isShow == false)
     {
-        DialogBase::done(m_result);
+        close();
     }
+}
+
+int32_t NotifyDialog::buttonResult(COriginalButton* button)
+{
+    //childAt(mapFromGlobal(QWidget::cursor().pos()))
+    auto itResult = m_mapResult.find(button);
+    if (itResult != m_mapResult.end())
+    {
+        return itResult->second;
+    }
+    return 0;
+}
+
+void NotifyDialog::onTimeUp()
+{
+    beginExitAnimation();
+}
+
+void NotifyDialog::onKeyboardAccept(QObject* tar, Qt::Key key)
+{
+    switch (key)
+    {
+    case Qt::Key_Escape:
+    {
+        close();
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void NotifyDialog::onAltF4Pressed()
+{
+    close();
 }

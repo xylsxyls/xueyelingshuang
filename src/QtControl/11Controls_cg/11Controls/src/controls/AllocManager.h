@@ -7,6 +7,7 @@
 #include "../core/ManagerBase.h"
 #include <QObject>
 
+class AccountManagerDialog;
 class COriginalDialog;
 /** 窗口内存管理器
 */
@@ -16,13 +17,18 @@ class ControlsAPI AllocManager :
 {
     Q_OBJECT
 public:
-    /** 添加一个窗口，支持多线程
-    @param [in] base 窗口指针，必须是唯一值，不可以出现不同userId对应同一个窗口指针的情况
-    @param [in] type 窗口类型
-    @param [in] userId 用户自定义ID，如果出现重复，则不改变现有的直接返回-1
-    @return 返回窗口ID
+    /** 析构函数
     */
-    int32_t add(COriginalDialog* base, DialogType type, int32_t userId = -1);
+    ~AllocManager();
+
+public:
+    /** 创建一个窗口，支持多线程
+    @param [out] dialogId 窗口ID
+    @param [in] userId 用户自定义ID
+    @param [in] type 窗口类型
+    @return 返回创建的窗口指针
+    */
+    COriginalDialog* createDialog(int32_t& dialogId, int32_t userId, DialogType type);
 
     /** 移除并清除内存，支持多线程
     @param [in] dialogId 窗口ID
@@ -69,26 +75,43 @@ public:
     */
     int32_t findLastDialogId();
 
+    /** 获取未释放的窗口个数
+    @return 返回未释放的窗口个数
+    */
+    int32_t dialogCount();
+
     /** 释放所有窗口，支持多线程
     */
     void destroyAll();
 
 Q_SIGNALS:
+    /** 当内存管理器删除一个窗口之前发送信号
+    @param [in] type 窗口类型
+    */
     void deleteDialog(DialogType type);
 
-public:
-    /** 析构函数
-    */
-    ~AllocManager();
-
 private slots:
-    void onDialogFinished(int result);
+    void onClosedSignal(int result);
 
 private:
+    /** 添加一个窗口，支持多线程
+    @param [in] base 窗口指针，必须是唯一值，不可以出现不同userId对应同一个窗口指针的情况
+    @param [in] type 窗口类型
+    @param [in] userId 用户自定义ID，如果出现重复，则不改变现有的直接返回-1
+    @return 返回窗口ID
+    */
+    int32_t add(COriginalDialog* base, DialogType type, int32_t userId = -1);
+
     /** 获取窗口ID，从1开始
     @return 返回窗口ID
     */
     int32_t getDialogId();
+
+    /** 是否是静态窗口
+    @param [in] dialogId 窗口ID
+    @return 返回是否是静态窗口
+    */
+    bool isStatic(int32_t dialogId);
 
 private:
     //窗口指针，窗口ID
@@ -103,4 +126,5 @@ private:
     std::map<int32_t, DialogType> m_mapDialogIdToDialogType;
 
     QMutex m_mutex;
+    AccountManagerDialog* m_accountManagerDialog;
 };

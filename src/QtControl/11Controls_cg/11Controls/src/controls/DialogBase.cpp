@@ -14,13 +14,26 @@
 #include <fstream>
 
 DialogBase::DialogBase():
-m_escAltF4Enable(true),
+m_escEnable(true),
 m_timeRest(-1),
 m_timeId(-1),
 m_title(nullptr)
 {
 	setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     m_title = new Label(this);
+}
+
+DialogBase::~DialogBase()
+{
+    auto childs = children();
+    for each (QObject* var in childs)
+    {
+        QWidget* widget = qobject_cast<QWidget*>(var);
+        if (widget)
+        {
+            widget->installEventFilter(nullptr);
+        }
+    }
 }
 
 void DialogBase::setNativeWindow(bool hasHandle)
@@ -42,9 +55,20 @@ void DialogBase::setTimeRest(int32_t timeOut)
     }
 }
 
+void DialogBase::setEscEnable(bool enable)
+{
+    m_escEnable = enable;
+}
+
+bool DialogBase::escEnable()
+{
+    return m_escEnable;
+}
+
 void DialogBase::setEscAltF4Enable(bool enable)
 {
-    m_escAltF4Enable = enable;
+    setEscEnable(enable);
+    setAltF4Enable(enable);
 }
 
 int32_t DialogBase::exec()
@@ -59,6 +83,24 @@ void DialogBase::setChangeSizeEnable(bool enable)
     {
         setFixedSize(width(), height());
     }
+}
+
+void DialogBase::listenAllControls()
+{
+    auto childs = children();
+    for each (QObject* var in childs)
+    {
+        QWidget* widget = qobject_cast<QWidget*>(var);
+        if (widget)
+        {
+            widget->installEventFilter(this);
+        }
+    }
+}
+
+void DialogBase::addListenKey(Qt::Key key)
+{
+    m_listenKey.push_back(key);
 }
 
 void DialogBase::setWindowTiTle(const QString& title,
@@ -90,62 +132,69 @@ void DialogBase::showEvent(QShowEvent* eve)
 		emit timeRest(m_timeRest);
 	}
 
+    if (!m_listenKey.empty())
+    {
+        listenAllControls();
+    }
+
 	QDialog::showEvent(eve);
 	raise();
 }
 
 void DialogBase::timerEvent(QTimerEvent* eve)
 {
+    QDialog::timerEvent(eve);
 	--m_timeRest;
 	emit timeRest(m_timeRest);
 	if (m_timeRest == 0)
 	{
-		reject();
+        killTimer(m_timeId);
+        emit timeUp();
 	}
-	QDialog::timerEvent(eve);
 }
 
 void DialogBase::keyPressEvent(QKeyEvent* eve)
 {
-    if (((m_escAltF4Enable == false) && (eve != nullptr) && (eve->key() == Qt::Key_Escape)))
+    if (eve == nullptr)
     {
-        eve->ignore();
+        QDialog::keyPressEvent(eve);
         return;
+    }
+
+    switch (eve->key())
+    {
+    case Qt::Key_Escape:
+    {
+        if (m_escEnable == false)
+        {
+            eve->ignore();
+            return;
+        }
+        break;
+    }
+    default:
+        break;
     }
     QDialog::keyPressEvent(eve);
-}
-
-void DialogBase::closeEvent(QCloseEvent* eve)
-{
-    if (m_escAltF4Enable == false)
-    {
-        eve->ignore();
-        return;
-    }
-    QDialog::closeEvent(eve);
 }
 
 bool DialogBase::eventFilter(QObject* tar, QEvent* eve)
 {
     if (tar == nullptr || eve == nullptr)
     {
-        static ofstream file("eventFilter.txt");
-        file << "tar = " << tar << "eve = " << eve << "\r\n";
-        if (tar != nullptr)
-        {
-            file << "objectName = " << tar->objectName().toStdString() << "\r\n";
-        }
         return true;
     }
 
     bool res = COriginalDialog::eventFilter(tar, eve);
     if (eve->type() == QEvent::KeyPress)
     {
-        auto keyEvent = (QKeyEvent*)eve;
-        if (keyEvent->key() == Qt::Key_Space || keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
+        QKeyEvent* keyEvent = (QKeyEvent*)eve;
+        auto result = std::find(m_listenKey.begin(), m_listenKey.end(), keyEvent->key());
+        if (result != m_listenKey.end())
         {
             emit keyboardAccept(tar, (Qt::Key)keyEvent->key());
         }
+        //Qt::Key_Space Qt::Key_Enter Qt::Key_Return Qt::Key_Escape
     }
 
     return res;

@@ -10,44 +10,29 @@ void StaticDialogManager::popStaticDialog(DialogType type, ParamBase* param)
     {
     case ACCOUNT_MANAGER_DIALOG:
     {
-        if (m_accountManagerDialog == nullptr)
+        AccountManagerDialogParam* accountManagerDialogParam = (AccountManagerDialogParam*)param;
+        int32_t dialogId = 0;
+        AccountManagerDialog* accountManagerDialog = (AccountManagerDialog*)AllocManager::instance().createDialog(dialogId, accountManagerDialogParam->m_userId, ACCOUNT_MANAGER_DIALOG);
+        if (accountManagerDialog == nullptr)
         {
-            AccountManagerDialogParam accountManagerDialogParam;
-            if (param != nullptr)
-            {
-                accountManagerDialogParam = *((AccountManagerDialogParam*)param);
-            }
-            m_accountManagerDialog = new AccountManagerDialog;
-            int32_t dialogId = AllocManager::instance().add(m_accountManagerDialog, ACCOUNT_MANAGER_DIALOG, accountManagerDialogParam.m_userId);
-            if (param != nullptr)
-            {
-                param->m_dialogId = dialogId;
-            }
+            return;
         }
-
-        popDialogPtr = m_accountManagerDialog;
+        param->m_dialogId = dialogId;
+        m_accountManagerDialogId = param->m_dialogId;
+        popDialogPtr = accountManagerDialog;
         break;
     }
     default:
         break;
     }
-
-    PopParamBase baseParam;
-    if (param != nullptr)
-    {
-        baseParam = *(PopParamBase*)param;
-    }
-    popDialogPtr->setWindowTiTle(baseParam.m_title);
-    popDialogPtr->setUserParam(baseParam.m_userParam);
-    popDialogPtr->setTimeRest(baseParam.m_timeOut);
-    popDialogPtr->setTimeRestVisible(baseParam.m_isCountDownVisible);
-    popDialogPtr->setTopTransientWindow(baseParam.m_parent);
-    QObject::connect(popDialogPtr, &COriginalDialog::finished, this, &StaticDialogManager::onFinished);
-    DialogResult result = (DialogResult)popDialogPtr->exec();
-    if (param != nullptr)
-    {
-        ((PopParamBase*)param)->m_result = result;
-    }
+    
+    popDialogPtr->setWindowTiTle(param->m_title);
+    popDialogPtr->setUserParam(param->m_userParam);
+    popDialogPtr->setTimeRest(param->m_timeOut);
+    popDialogPtr->setTimeRestVisible(param->m_isCountDownVisible);
+    popDialogPtr->setTopTransientWindow(param->m_parent);
+    QObject::connect(popDialogPtr, &DialogShow::closedSignal, this, &StaticDialogManager::onClosedSignal);
+    param->m_result = popDialogPtr->exec();
 }
 
 void StaticDialogManager::deleteStaticDialog(DialogType type)
@@ -56,7 +41,8 @@ void StaticDialogManager::deleteStaticDialog(DialogType type)
     {
     case ACCOUNT_MANAGER_DIALOG:
     {
-        AllocManager::instance().removeByDialogId(AllocManager::instance().findDialogId(m_accountManagerDialog));
+        AllocManager::instance().removeByDialogId(m_accountManagerDialogId);
+        m_accountManagerDialogId = -1;
         break;
     }
     default:
@@ -65,20 +51,12 @@ void StaticDialogManager::deleteStaticDialog(DialogType type)
 }
 
 StaticDialogManager::StaticDialogManager() :
-m_accountManagerDialog(nullptr)
+m_accountManagerDialogId(-1)
 {
-    QObject::connect(&AllocManager::instance(), &AllocManager::deleteDialog, this, &StaticDialogManager::onDeleteDialog);
+
 }
 
-void StaticDialogManager::onDeleteDialog(DialogType type)
-{
-    if (type == ACCOUNT_MANAGER_DIALOG)
-    {
-        m_accountManagerDialog = nullptr;
-    }
-}
-
-void StaticDialogManager::onFinished(int result)
+void StaticDialogManager::onClosedSignal(int result)
 {
     DialogShow* dialogPtr = (DialogShow*)sender();
     if (dialogPtr == nullptr)

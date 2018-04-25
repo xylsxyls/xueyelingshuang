@@ -95,12 +95,12 @@ ControlsTest::~ControlsTest()
 {
 
 }
-
+QWidget* sss = nullptr;
 void ControlsTest::onPopTipDialog()
 {
-    StaticDialogManager::instance().deleteStaticDialog(ACCOUNT_MANAGER_DIALOG);
+    TipShowDialogParam param;
 	int32_t dialogId1 = 0;
-    DialogManager::instance().createDialog(ACCOUNT_MANAGER_DIALOG);
+    DialogManager::instance().createDialog(TIP_SHOW_DIALOG, &param);
 	// int xx = DialogManager::instance().popTipDialog(dialogId1,
 	// 												QString::fromStdWString(L"标题"),
 	// 												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
@@ -113,6 +113,8 @@ void ControlsTest::onPopTipDialog()
 
 void ControlsTest::onPopAskDialog()
 {
+    sss = new QWidget;
+    sss->show();
 	int32_t dialogId2 = 0;
 	//int xxx = DialogManager::instance().popAskDialog(dialogId2,
 	//												 QString::fromStdWString(L"标题"),

@@ -17,7 +17,7 @@ m_ignore(nullptr)
     m_accept = new COriginalButton(this);
     m_ignore = new COriginalButton(this);
 
-    initKeyboardAccept(m_accept);
+    initAcceptButton(m_accept);
     resize(340, 265);
 }
 
@@ -61,5 +61,5 @@ void AdvertAskDialog::resizeEvent(QResizeEvent* eve)
 
 void AdvertAskDialog::onLinkClicked(const QUrl& url)
 {
-	emit advertClicked(this, url.toString());
+	emit advertClicked(url.toString());
 }

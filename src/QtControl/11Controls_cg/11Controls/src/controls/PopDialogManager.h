@@ -12,7 +12,7 @@ class PopDialogManager :
 {
     Q_OBJECT
 public:
-    void popDialog(DialogType type, PopParamBase* param);
+    void popDialog(DialogType type, ParamBase* param);
 
 public:
     /** 设置比例（老版）
@@ -45,10 +45,18 @@ Q_SIGNALS:
     void copyDownloadAddr(qint32 taskId, const QString& addr);
     //本地路径的复制按钮
     void copyPath(qint32 taskId, const QString& path);
-    //点击包含广告位询问框时发送信号
-    void clickAdvert(int32_t dialogId, const QString& url);
+    //弹窗关闭的时候发送信号
     void popDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
 
 private slots:
-    void onFinished(int result);
+    void onClosedSignal(int result);
+    void onChangeToBack();
+    void onDownloadAgain();
+    void onCancelDownload();
+    void onUseOtherDownload();
+    void onCopyDownloadAddr(const QString& addr);
+    void onCopyPath(const QString& path);
+
+private:
+    int32_t userId();
 };

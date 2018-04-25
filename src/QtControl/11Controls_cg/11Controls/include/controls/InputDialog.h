@@ -19,10 +19,9 @@ public:
 
     void setAcceptButton(const QString& acceptText, int32_t acceptDone);
 
-	void done(int result);
-
 protected:
     void resizeEvent(QResizeEvent* eve);
+    void closeEvent(QCloseEvent* eve);
 
 private:
 	Label* m_editTip;

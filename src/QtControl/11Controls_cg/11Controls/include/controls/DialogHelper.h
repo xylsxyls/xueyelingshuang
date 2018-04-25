@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <map>
 
-#define setPopButtonConfig(button, buttonText, textColor, acceptDone, fontSize) DialogHelper::setButton(this, button, buttonText, textColor, CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupButton.png", acceptDone, fontSize, &m_mapResult, 4)
-#define setNotifyButtonConfig(button, buttonText, acceptDone, fontSize) DialogHelper::setButton(this, button, buttonText, QColor(255, 255, 255, 255), "", acceptDone, fontSize, &m_mapResult, 0)
+#define setPopButtonConfig(button, buttonText, textColor, acceptDone, fontSize) DialogHelper::setButton(this, button, buttonText, textColor, CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupButton.png", acceptDone, fontSize, &m_mapResult, 4, true)
+#define setNotifyButtonConfig(button, buttonText, acceptDone, fontSize) DialogHelper::setButton(this, button, buttonText, QColor(255, 255, 255, 255), "", acceptDone, fontSize, &m_mapResult, 0, false)
 
 class Label;
 class COriginalButton;
@@ -52,7 +52,8 @@ public:
                           int32_t result,
                           int32_t fontSize,
                           std::map<QWidget*, int32_t>* mapResult,
-                          int32_t imageMargin);
+                          int32_t imageMargin,
+                          bool isPop);
 
     /** 添加分割线
     @param [in] 分割线控件指针
@@ -75,10 +76,10 @@ public:
     @param [in] defaultText 默认显示文字
     @return 返回文本框指针
     */
-    static CPasswordInputBox* addPasswordInputBox(const QRect& rect, const QString& defaultText = "");
+    //static CPasswordInputBox* addPasswordInputBox(const QRect& rect, const QString& defaultText = "");
 
     /** 激活临时父窗口
     @param [in] 需要激活窗口的子窗口句柄
     */
-    void activeWindow(QWindow* window);
+    void activeTransientParentWindow(QWindow* window);
 };

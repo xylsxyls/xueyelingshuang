@@ -9,137 +9,91 @@
 #include "DownloadOperateDialog.h"
 #include "DialogType.h"
 
-void PopDialogManager::popDialog(DialogType type, PopParamBase* param)
+void PopDialogManager::popDialog(DialogType type, ParamBase* param)
 {
+    if (param == nullptr)
+    {
+        return;
+    }
+
     PopDialog* popDialogPtr = nullptr;
-    
     switch (type)
     {
     case ASK_DIALOG:
     {
-        AskDialogParam askDialogParam;
-        if (param != nullptr)
-        {
-            askDialogParam = *((AskDialogParam*)param);
-        }
-
-        AskDialog* askDialog = new AskDialog;
+        AskDialogParam* askDialogParam = (AskDialogParam*)param;
+        int32_t dialogId = 0;
+        AskDialog* askDialog = (AskDialog*)AllocManager::instance().createDialog(dialogId, askDialogParam->m_userId, ASK_DIALOG);
         if (askDialog == nullptr)
         {
-            break;
+            return;
         }
-
-        int32_t dialogId = AllocManager::instance().add(askDialog, ASK_DIALOG, askDialogParam.m_userId);
-        askDialog->setTip(askDialogParam.m_tip);
-        askDialog->setAcceptButton(askDialogParam.m_acceptText, askDialogParam.m_acceptDone);
-        askDialog->setIgnoreButton(askDialogParam.m_ignoreText, askDialogParam.m_ignoreDone);
-        if (param != nullptr)
-        {
-            param->m_dialogId = dialogId;
-        }
-
+        askDialog->setTip(askDialogParam->m_tip);
+        askDialog->setAcceptButton(askDialogParam->m_acceptText, askDialogParam->m_acceptDone);
+        askDialog->setIgnoreButton(askDialogParam->m_ignoreText, askDialogParam->m_ignoreDone);
+        param->m_dialogId = dialogId;
         popDialogPtr = askDialog;
         break;
     }
     case ADVERT_ASK_DIALOG:
     {
-        AdvertAskDialogParam advertAskDialogParam;
-        if (param != nullptr)
-        {
-            advertAskDialogParam = *((AdvertAskDialogParam*)param);
-        }
-
-        AdvertAskDialog* advertAskDialog = new AdvertAskDialog;
+        AdvertAskDialogParam* advertAskDialogParam = (AdvertAskDialogParam*)param;
+        int32_t dialogId = 0;
+        AdvertAskDialog* advertAskDialog = (AdvertAskDialog*)AllocManager::instance().createDialog(dialogId, advertAskDialogParam->m_userId, ADVERT_ASK_DIALOG);
         if (advertAskDialog == nullptr)
         {
-            break;
+            return;
         }
-
-        int32_t dialogId = AllocManager::instance().add(advertAskDialog, ADVERT_ASK_DIALOG, advertAskDialogParam.m_userId);
-        advertAskDialog->initAdvertUrl(advertAskDialogParam.m_advertUrl);
-        advertAskDialog->setTip(advertAskDialogParam.m_tip);
-        advertAskDialog->setAcceptButton(advertAskDialogParam.m_acceptText, advertAskDialogParam.m_acceptDone);
-        advertAskDialog->setIgnoreButton(advertAskDialogParam.m_ignoreText, advertAskDialogParam.m_ignoreDone);
-        if (param != nullptr)
-        {
-            param->m_dialogId = dialogId;
-        }
-
+        advertAskDialog->initAdvertUrl(advertAskDialogParam->m_advertUrl);
+        advertAskDialog->setTip(advertAskDialogParam->m_tip);
+        advertAskDialog->setAcceptButton(advertAskDialogParam->m_acceptText, advertAskDialogParam->m_acceptDone);
+        advertAskDialog->setIgnoreButton(advertAskDialogParam->m_ignoreText, advertAskDialogParam->m_ignoreDone);
+        param->m_dialogId = dialogId;
         popDialogPtr = advertAskDialog;
         break;
     }
     case INPUT_DIALOG:
     {
-        InputDialogParam inputDialogParam;
-        if (param != nullptr)
-        {
-            inputDialogParam = *((InputDialogParam*)param);
-        }
-
-        InputDialog* inputDialog = new InputDialog;
+        InputDialogParam* inputDialogParam = (InputDialogParam*)param;
+        int32_t dialogId = 0;
+        InputDialog* inputDialog = (InputDialog*)AllocManager::instance().createDialog(dialogId, inputDialogParam->m_userId, INPUT_DIALOG);
         if (inputDialog == nullptr)
         {
-            break;
+            return;
         }
-
-        int32_t dialogId = AllocManager::instance().add(inputDialog, ADVERT_ASK_DIALOG, inputDialogParam.m_userId);
-        inputDialog->setTip(inputDialogParam.m_editTip);
-        inputDialog->setAcceptButton(inputDialogParam.m_buttonText, inputDialogParam.m_done);
-        inputDialog->setLineEdit(inputDialogParam.m_defaultText, &inputDialogParam.m_editText, inputDialogParam.m_maxLength);
-        if (param != nullptr)
-        {
-            param->m_dialogId = dialogId;
-        }
-
+        inputDialog->setTip(inputDialogParam->m_editTip);
+        inputDialog->setAcceptButton(inputDialogParam->m_buttonText, inputDialogParam->m_done);
+        inputDialog->setLineEdit(inputDialogParam->m_defaultText, &(inputDialogParam->m_editText), inputDialogParam->m_maxLength);
+        param->m_dialogId = dialogId;
         popDialogPtr = inputDialog;
         break;
     }
     case TIP_DIALOG:
     {
-        TipDialogParam tipDialogParam;
-        if (param != nullptr)
-        {
-            tipDialogParam = *((TipDialogParam*)param);
-        }
-
-        TipDialog* tipDialog = new TipDialog;
+        TipDialogParam* tipDialogParam = (TipDialogParam*)param;
+        int32_t dialogId = 0;
+        TipDialog* tipDialog = (TipDialog*)AllocManager::instance().createDialog(dialogId, tipDialogParam->m_userId, TIP_DIALOG);
         if (tipDialog == nullptr)
         {
-            break;
+            return;
         }
-        
-        int32_t dialogId = AllocManager::instance().add(tipDialog, TIP_DIALOG, tipDialogParam.m_userId);
-        tipDialog->setTip(tipDialogParam.m_tip);
-        tipDialog->setAcceptButton(tipDialogParam.m_buttonText, tipDialogParam.m_done);
-        if (param != nullptr)
-        {
-            param->m_dialogId = dialogId;
-        }
-
+        tipDialog->setTip(tipDialogParam->m_tip);
+        tipDialog->setAcceptButton(tipDialogParam->m_buttonText, tipDialogParam->m_done);
+        param->m_dialogId = dialogId;
         popDialogPtr = tipDialog;
         break;
     }
     case WAIT_DIALOG:
     {
-        WaitDialogParam waitDialogParam;
-        if (param != nullptr)
-        {
-            waitDialogParam = *((WaitDialogParam*)param);
-        }
-
-        WaitDialog* waitDialog = new WaitDialog;
+        WaitDialogParam* waitDialogParam = (WaitDialogParam*)param;
+        int32_t dialogId = 0;
+        WaitDialog* waitDialog = (WaitDialog*)AllocManager::instance().createDialog(dialogId, waitDialogParam->m_userId, WAIT_DIALOG);
         if (waitDialog == nullptr)
         {
-            break;
+            return;
         }
-
-        int32_t dialogId = AllocManager::instance().add(waitDialog, WAIT_DIALOG, waitDialogParam.m_userId);
-        waitDialog->setTip(waitDialogParam.m_tip);
-        if (param != nullptr)
-        {
-            param->m_dialogId = dialogId;
-        }
-
+        waitDialog->setTip(waitDialogParam->m_tip);
+        param->m_dialogId = dialogId;
         popDialogPtr = waitDialog;
         break;
     }
@@ -153,31 +107,29 @@ void PopDialogManager::popDialog(DialogType type, PopParamBase* param)
     }
     case DOWNLOAD_OPERATE_DIALOG:
     {
-        DownloadOperateDialogParam downloadOperateDialogParam;
-        if (param != nullptr)
-        {
-            downloadOperateDialogParam = *((DownloadOperateDialogParam*)param);
-        }
-
-        DownloadOperateDialog* downloadOperateDialog = new DownloadOperateDialog;
+        DownloadOperateDialogParam* downloadOperateDialogParam = (DownloadOperateDialogParam*)param;
+        int32_t dialogId = 0;
+        DownloadOperateDialog* downloadOperateDialog = (DownloadOperateDialog*)AllocManager::instance().createDialog(dialogId, downloadOperateDialogParam->m_userId, DOWNLOAD_OPERATE_DIALOG);
         if (downloadOperateDialog == nullptr)
         {
-            break;
+            return;
         }
+        downloadOperateDialog->setFileName(downloadOperateDialogParam->m_fileName);
+        downloadOperateDialog->setDownloadSpeed(downloadOperateDialogParam->m_downloadSpeed);
+        downloadOperateDialog->setDownloaded(downloadOperateDialogParam->m_hasDownloaded);
+        downloadOperateDialog->setDownloadTime(downloadOperateDialogParam->m_downloadTime);
+        downloadOperateDialog->setRate(downloadOperateDialogParam->m_rate);
+        downloadOperateDialog->setBackEnable(downloadOperateDialogParam->m_backEnable);
+        downloadOperateDialog->setEditDownloadAddr(downloadOperateDialogParam->m_downloadAddr);
+        downloadOperateDialog->setEditPath(downloadOperateDialogParam->m_path);
+        param->m_dialogId = dialogId;
 
-        int32_t dialogId = AllocManager::instance().add(downloadOperateDialog, DOWNLOAD_OPERATE_DIALOG, downloadOperateDialogParam.m_userId);
-        downloadOperateDialog->setFileName(downloadOperateDialogParam.m_fileName);
-        downloadOperateDialog->setDownloadSpeed(downloadOperateDialogParam.m_downloadSpeed);
-        downloadOperateDialog->setDownloaded(downloadOperateDialogParam.m_hasDownloaded);
-        downloadOperateDialog->setDownloadTime(downloadOperateDialogParam.m_downloadTime);
-        downloadOperateDialog->setRate(downloadOperateDialogParam.m_rate);
-        downloadOperateDialog->setBackEnable(downloadOperateDialogParam.m_backEnable);
-        downloadOperateDialog->setEditDownloadAddr(downloadOperateDialogParam.m_downloadAddr);
-        downloadOperateDialog->setEditPath(downloadOperateDialogParam.m_path);
-        if (param != nullptr)
-        {
-            param->m_dialogId = dialogId;
-        }
+        QObject::connect(downloadOperateDialog, &DownloadOperateDialog::changeToBack, this, &PopDialogManager::onChangeToBack);
+        QObject::connect(downloadOperateDialog, &DownloadOperateDialog::downloadAgain, this, &PopDialogManager::onDownloadAgain);
+        QObject::connect(downloadOperateDialog, &DownloadOperateDialog::cancelDownload, this, &PopDialogManager::onCancelDownload);
+        QObject::connect(downloadOperateDialog, &DownloadOperateDialog::useOtherDownload, this, &PopDialogManager::onUseOtherDownload);
+        QObject::connect(downloadOperateDialog, &DownloadOperateDialog::copyDownloadAddr, this, &PopDialogManager::onCopyDownloadAddr);
+        QObject::connect(downloadOperateDialog, &DownloadOperateDialog::copyPath, this, &PopDialogManager::onCopyPath);
 
         popDialogPtr = downloadOperateDialog;
         break;
@@ -191,25 +143,16 @@ void PopDialogManager::popDialog(DialogType type, PopParamBase* param)
         return;
     }
 
-    PopParamBase baseParam;
-    if (param != nullptr)
-    {
-        baseParam = *param;
-    }
-    popDialogPtr->setWindowTiTle(baseParam.m_title);
-    popDialogPtr->setUserParam(baseParam.m_userParam);
-    popDialogPtr->setTimeRest(baseParam.m_timeOut);
-    popDialogPtr->setTimeRestVisible(baseParam.m_isCountDownVisible);
-    popDialogPtr->setTopTransientWindow(baseParam.m_parent);
-    QObject::connect(popDialogPtr, &COriginalDialog::finished, this, &PopDialogManager::onFinished);
-    DialogResult result = (DialogResult)popDialogPtr->exec();
-    if (param != nullptr)
-    {
-        param->m_result = result;
-    }
+    popDialogPtr->setWindowTiTle(param->m_title);
+    popDialogPtr->setUserParam(param->m_userParam);
+    popDialogPtr->setTimeRest(param->m_timeOut);
+    popDialogPtr->setTimeRestVisible(param->m_isCountDownVisible);
+    popDialogPtr->setTopTransientWindow(param->m_parent);
+    QObject::connect(popDialogPtr, &DialogShow::closedSignal, this, &PopDialogManager::onClosedSignal);
+    param->m_result = popDialogPtr->exec();
 }
 
-void PopDialogManager::onFinished(int result)
+void PopDialogManager::onClosedSignal(int result)
 {
     DialogShow* dialogPtr = (DialogShow*)sender();
     if (dialogPtr == nullptr)
@@ -221,4 +164,41 @@ void PopDialogManager::onFinished(int result)
     DialogType type = AllocManager::instance().findDialogType(dialogId);
     int32_t userParam = dialogPtr->userParam();
     emit popDialogDone(dialogId, userId, type, result, userParam);
+    AllocManager::instance().removeByDialogId(dialogId);
+}
+
+void PopDialogManager::onChangeToBack()
+{
+    emit changeToBack(userId());
+}
+
+void PopDialogManager::onDownloadAgain()
+{
+    emit downloadAgain(userId());
+}
+
+void PopDialogManager::onCancelDownload()
+{
+    emit cancelDownload(userId());
+}
+
+void PopDialogManager::onUseOtherDownload()
+{
+    emit useOtherDownload(userId());
+}
+
+void PopDialogManager::onCopyDownloadAddr(const QString& addr)
+{
+    emit copyDownloadAddr(userId(), addr);
+}
+
+void PopDialogManager::onCopyPath(const QString& path)
+{
+    emit copyPath(userId(), path);
+}
+
+int32_t PopDialogManager::userId()
+{
+    int32_t dialogId = AllocManager::instance().findDialogId((COriginalDialog*)sender());
+    return AllocManager::instance().findUserId(dialogId);
 }

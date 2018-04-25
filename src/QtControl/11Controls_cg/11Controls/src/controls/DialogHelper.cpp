@@ -8,6 +8,8 @@
 #include "CPasswordInputBox.h"
 #include <QWindow>
 #include "Separator.h"
+#include "PopDialog.h"
+#include "NotifyDialog.h"
 
 void DialogHelper::setLabel(Label* label, const QString& text, const QColor& textColor, int32_t fontSize)
 {
@@ -40,7 +42,8 @@ void DialogHelper::setButton(DialogShow* dialog,
                              int32_t result,
                              int32_t fontSize,
                              std::map<QWidget*, int32_t>* mapResult,
-                             int32_t imageMargin)
+                             int32_t imageMargin,
+                             bool isPop)
 {
     if (button == nullptr)
     {
@@ -55,7 +58,15 @@ void DialogHelper::setButton(DialogShow* dialog,
     if (mapResult != nullptr)
     {
         (*mapResult)[button] = result;
-        QObject::connect(button, &COriginalButton::clicked, dialog, &DialogShow::endDialog);
+        if (isPop)
+        {
+            QObject::connect(button, &COriginalButton::clicked, (PopDialog*)dialog, &PopDialog::endDialog);
+        }
+        else
+        {
+            QObject::connect(button, &COriginalButton::clicked, (NotifyDialog*)dialog, &NotifyDialog::beginExitAnimation);
+        }
+        
     }
 }
 
@@ -106,7 +117,7 @@ void DialogHelper::setLineEdit(LineEdit* lineEdit, const QString& defaultText, i
 //    return password;
 //}
 
-void DialogHelper::activeWindow(QWindow* window)
+void DialogHelper::activeTransientParentWindow(QWindow* window)
 {
     if (window == nullptr)
     {

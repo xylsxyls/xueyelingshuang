@@ -25,7 +25,7 @@ m_ignore(nullptr)
 	m_ignore->setBkgColor(QColor(183, 62, 62, 255), QColor(225, 96, 96, 255), QColor(124, 41, 41, 255), QColor(183, 62, 62, 255));
 	m_ignore->setFontColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(188, 199, 226, 255));
 
-    initKeyboardAccept(m_accept);
+    //initKeyboardAccept(m_accept);
     resize(212, 128);
 }
 

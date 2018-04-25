@@ -37,7 +37,7 @@ m_ignore(nullptr)
 	m_errorAccount->setVisible(false);
 	QObject::connect(this, &AccountDialog::errorVisible, m_errorAccount, &Label::setEnabled);
 
-    initKeyboardAccept(m_accept);
+    initAcceptButton(m_accept);
 
     resize(340, 296);
 }
@@ -57,7 +57,7 @@ QString AccountDialog::accountEditText()
 	return m_account->text();
 }
 
-void AccountDialog::setAcceptDown(DialogResult result)
+void AccountDialog::setAcceptDown(int32_t result)
 {
     setPopButtonConfig(m_accept, QString::fromStdWString(L"确定"), QColor(), result, 13);
     m_accept->setBkgImage("");
@@ -69,7 +69,7 @@ void AccountDialog::setAcceptDown(DialogResult result)
     m_accept->setFontColor(QColor(166, 183, 249, 255));
 }
 
-void AccountDialog::setIgnoreDown(DialogResult result)
+void AccountDialog::setIgnoreDown(int32_t result)
 {
     setPopButtonConfig(m_ignore, QString::fromStdWString(L"取消"), QColor(), result, 13);
     m_ignore->setBkgImage("");

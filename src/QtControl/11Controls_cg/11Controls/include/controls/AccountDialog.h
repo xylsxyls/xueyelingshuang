@@ -31,9 +31,9 @@ public:
 	*/
 	QString accountEditText();
 
-    void setAcceptDown(DialogResult result);
+    void setAcceptDown(int32_t result);
 
-    void setIgnoreDown(DialogResult result);
+    void setIgnoreDown(int32_t result);
 
 Q_SIGNALS:
 	void errorVisible(bool visible);

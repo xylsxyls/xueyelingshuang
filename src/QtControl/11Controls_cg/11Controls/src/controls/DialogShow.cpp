@@ -11,8 +11,6 @@
 #include <fstream>
 #include "DialogHelper.h"
 
-std::wstring DialogShow::s_countDownString = L"还有%d秒自动关闭";
-
 DialogShow::DialogShow() :
 m_acceptButton(nullptr),
 m_userParam(-1),
@@ -45,42 +43,41 @@ int32_t DialogShow::userParam()
     return m_userParam;
 }
 
-void DialogShow::initKeyboardAccept(COriginalButton* button)
+void DialogShow::initAcceptButton(COriginalButton* button)
 {
-    auto childs = children();
-    for each (QObject* var in childs)
+    if (button == nullptr)
     {
-        QWidget* widget = qobject_cast<QWidget*>(var);
-        if (widget)
-        {
-            widget->installEventFilter(this);
-        }
+        return;
     }
+    addListenKey(Qt::Key_Space);
+    addListenKey(Qt::Key_Return);
+    addListenKey(Qt::Key_Enter);
+    QObject::connect(this, &DialogShow::keyboardAccept, this, &DialogShow::onKeyboardAccept, Qt::QueuedConnection);
     m_acceptButton = button;
-    QObject::connect(this, &DialogShow::keyboardAccept, this, &DialogShow::onKeyboardAccept);
 }
 
 void DialogShow::onTimeUpdate(int32_t timeOut)
 {
-	m_time->setText(QString::fromStdWString(CStringManager::Format(s_countDownString.c_str(), timeOut)));
+    m_time->setText(QString::fromStdWString(CStringManager::Format(L"还有%d秒自动关闭", timeOut)));
 }
 
 void DialogShow::onKeyboardAccept(QObject* tar, Qt::Key key)
 {
-    if (m_acceptButton != nullptr)
+    switch (key)
     {
-        m_acceptButton->setFocus();
-        m_acceptButton->click();
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+    case Qt::Key_Space:
+    {
+        if (m_acceptButton != nullptr)
+        {
+            m_acceptButton->setFocus();
+            m_acceptButton->click();
+        }
+        break;
     }
-}
-
-void DialogShow::endDialog()
-{
-    //childAt(mapFromGlobal(QWidget::cursor().pos()))
-    auto itResult = m_mapResult.find(focusWidget());
-    if (itResult != m_mapResult.end())
-    {
-        done(itResult->second);
+    default:
+        break;
     }
 }
 
@@ -91,4 +88,10 @@ void DialogShow::showEvent(QShowEvent* eve)
         m_time->setText("");
     }
     DialogBase::showEvent(eve);
+}
+
+void DialogShow::closeEvent(QCloseEvent* eve)
+{
+    DialogBase::closeEvent(eve);
+    emit closedSignal(m_result);
 }

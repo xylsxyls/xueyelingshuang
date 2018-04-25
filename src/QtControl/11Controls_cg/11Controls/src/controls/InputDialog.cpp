@@ -16,7 +16,7 @@ m_editText(nullptr)
     m_accept = new COriginalButton(this);
     m_edit = new LineEdit(this);
 
-    initKeyboardAccept(m_accept);
+    initAcceptButton(m_accept);
     resize(340, 165);
 }
 
@@ -36,19 +36,19 @@ void InputDialog::setAcceptButton(const QString& acceptText, int32_t acceptDone)
     setPopButtonConfig(m_accept, acceptText, QColor(201, 211, 252, 255), acceptDone, 14);
 }
 
-void InputDialog::done(int result)
-{
-    if (m_editText != nullptr)
-    {
-        *m_editText = m_edit->text();
-    }
-	PopDialog::done(result);
-}
-
 void InputDialog::resizeEvent(QResizeEvent* eve)
 {
     PopDialog::resizeEvent(eve);
     m_editTip->setGeometry(QRect(43, 26, width() - 43 * 2, 60));
     m_accept->setGeometry(QRect((width() - 116) / 2, 127, 116, 22));
     m_edit->setGeometry(QRect(52, 74, 234, 26));
+}
+
+void InputDialog::closeEvent(QCloseEvent* eve)
+{
+    if (m_editText != nullptr)
+    {
+        *m_editText = m_edit->text();
+    }
+    PopDialog::closeEvent(eve);
 }

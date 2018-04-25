@@ -17,6 +17,7 @@ m_accept(nullptr)
 	m_accept->setBkgColor(QColor(97, 125, 197, 255), QColor(138, 169, 249, 255), QColor(67, 81, 117, 255), QColor(97, 125, 197, 255));
 	m_accept->setFontColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(188, 199, 226, 255));
 
+    setEscAltF4Enable(false);
     resize(234, 140);
 }
 

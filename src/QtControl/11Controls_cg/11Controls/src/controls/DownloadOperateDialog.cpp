@@ -9,10 +9,6 @@
 #include "LineEdit.h"
 #include "DialogHelper.h"
 
-std::wstring DownloadOperateDialog::s_fileString = L"文件名：%s";
-QString DownloadOperateDialog::s_slowString = QString::fromStdWString(L"如果下载失败。您可以尝试手动下载文件，或者");
-QString DownloadOperateDialog::s_handString = QString::fromStdWString(L"使用其他下载渠道");
-
 DownloadOperateDialog::DownloadOperateDialog():
 m_tip(nullptr),
 m_file(nullptr),
@@ -104,14 +100,14 @@ m_error(nullptr)
 	m_progressBar->setItemBackgroundColor(QColor(150, 171, 255, 255));
 	m_progressBar->setFormat("");
 
-    DialogHelper::setLabel(m_downloadSlow, s_slowString, QColor("#8491bd"), 12);
+    DialogHelper::setLabel(m_downloadSlow, QStringLiteral("如果下载失败。您可以尝试手动下载文件，或者"), QColor("#8491bd"), 12);
 
 	m_hand->installEventFilter(this);
 	m_hand->setGeometry(258, 179, 120, 18);
 	m_hand->setFontFace(CGeneralStyle::instance()->font().family());
 	m_hand->setFontSize(12);
 	m_hand->setFontColor(QColor("#4a6fff"));
-	m_hand->setText(s_handString);
+    m_hand->setText(QStringLiteral("使用其他下载渠道"));
 	m_hand->setUnderline(true);
 
 	m_time->move(width() - 139, height() - 36);
@@ -180,7 +176,8 @@ m_error(nullptr)
 
 void DownloadOperateDialog::setFileName(const QString& fileName)
 {
-    DialogHelper::setLabel(m_file, fileName, QColor("#8592bf"), 12);
+    QString file = QString::fromStdWString(CStringManager::Format(L"文件名：%s", fileName.toStdWString().c_str()));
+    DialogHelper::setLabel(m_file, file, QColor("#8592bf"), 12);
     m_file->setAlignment(Qt::AlignLeft);
 }
 

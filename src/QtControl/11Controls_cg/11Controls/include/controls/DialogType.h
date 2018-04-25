@@ -3,7 +3,7 @@
 #include <QTime>
 #include <stdint.h>
 
-enum DialogResult
+enum
 {
     ERROR_RESULT,
     /** 确认按钮
@@ -73,6 +73,7 @@ struct ParamBase
     int32_t m_userId;
     int32_t m_userParam;
     QString m_title;
+    int32_t m_result;
     QWindow* m_parent;
     int32_t m_timeOut;
     bool m_isCountDownVisible;
@@ -83,23 +84,14 @@ struct ParamBase
         m_userId = -1;
         m_userParam = -1;
         m_title = QStringLiteral("11平台");
+        m_result = ERROR_RESULT;
         m_parent = nullptr;
         m_timeOut = -1;
         m_isCountDownVisible = false;
     }
 };
 
-struct PopParamBase : public ParamBase
-{
-    DialogResult m_result;
-
-    PopParamBase()
-    {
-        m_result = ERROR_RESULT;
-    }
-};
-
-struct AskDialogParam : public PopParamBase
+struct AskDialogParam : public ParamBase
 {
     QString m_tip;
     QString m_acceptText;
@@ -117,7 +109,7 @@ struct AskDialogParam : public PopParamBase
     }
 };
 
-struct TipDialogParam : public PopParamBase
+struct TipDialogParam : public ParamBase
 {
     QString m_tip;
     QString m_buttonText;
@@ -131,7 +123,7 @@ struct TipDialogParam : public PopParamBase
     }
 };
 
-struct InputDialogParam : public PopParamBase
+struct InputDialogParam : public ParamBase
 {
     QString m_editTip;
     QString m_buttonText;
@@ -152,7 +144,7 @@ struct InputDialogParam : public PopParamBase
     }
 };
 
-struct WaitDialogParam : public PopParamBase
+struct WaitDialogParam : public ParamBase
 {
     QString m_tip;
     WaitDialogParam()
@@ -161,7 +153,7 @@ struct WaitDialogParam : public PopParamBase
     }
 };
 
-struct AdvertAskDialogParam : public PopParamBase
+struct AdvertAskDialogParam : public ParamBase
 {
     QString m_advertUrl;
     QString m_tip;
@@ -179,7 +171,7 @@ struct AdvertAskDialogParam : public PopParamBase
     }
 };
 
-struct DownloadDialogParam : public PopParamBase
+struct DownloadDialogParam : public ParamBase
 {
     QString m_fileName;
     QString m_tip;
@@ -194,7 +186,7 @@ struct DownloadDialogParam : public PopParamBase
     }
 };
 
-struct DownloadOperateDialogParam : public PopParamBase
+struct DownloadOperateDialogParam : public ParamBase
 {
     QString m_fileName;
     QString m_downloadSpeed;
@@ -214,6 +206,7 @@ struct DownloadOperateDialogParam : public PopParamBase
         m_backEnable = true;
         m_downloadAddr = "http://www.baidu.com/";
         m_path = "D:\\";
+        m_timeOut = 5;
     }
 };
 
@@ -227,6 +220,7 @@ struct TipShowDialogParam : public ParamBase
         m_tip = QStringLiteral("提示通知框提示");
         m_done = ACCEPT_BUTTON;
         m_buttonText = QString::fromStdWString(L"知道了");
+        m_timeOut = 5;
     }
 };
 
@@ -283,7 +277,7 @@ struct LoginShowDialogParam : public ParamBase
     }
 };
 
-struct AccountManagerDialogParam : public PopParamBase
+struct AccountManagerDialogParam : public ParamBase
 {
 
 };

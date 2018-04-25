@@ -21,30 +21,35 @@ public:
 	virtual ~DialogShow();
 
 public:
+    /** 设置剩余时间是否显示
+    @param [in] visible 是否显示
+    */
     void setTimeRestVisible(bool visible);
 
+    /** 设置用户自定义参数
+    @param [in] userParam 用户自定义参数
+    */
     void setUserParam(int32_t userParam);
 
+    /** 获取用户自定义参数
+    @return 返回用户自定义参数
+    */
     int32_t userParam();
 
     /** 设置当按下空格和回车后窗口默认点击的按钮
+    @param [in] button 默认点击的按钮指针
     */
-    void initKeyboardAccept(COriginalButton* button);
+    void initAcceptButton(COriginalButton* button);
 
 Q_SIGNALS:
-	/** 当通知框窗口关闭时发送信号，在关闭动画执行之前发送信号
-	@param [in] dialogId 窗口ID
-    @param [in] userId 用户自定义ID
-	@param [in] result 窗口关闭时所给的返回值
-	@param [in] userParam 用户自定义值
-	*/
-	void dialogDone(int32_t dialogId, int32_t userId, int32_t result, int32_t userParam);
-
-public:
-    void endDialog();
+    /** 在窗口关闭之后发送信号
+    @param [in] result 窗口关闭时所给的返回值
+    */
+    void closedSignal(int32_t result);
 
 protected:
     void showEvent(QShowEvent* eve);
+    void closeEvent(QCloseEvent* eve);
 
 private slots:
 	void onTimeUpdate(int32_t timeOut);
@@ -58,6 +63,5 @@ protected:
     int32_t m_result;
 
 private:
-    static std::wstring s_countDownString;
     COriginalButton* m_acceptButton;
 };

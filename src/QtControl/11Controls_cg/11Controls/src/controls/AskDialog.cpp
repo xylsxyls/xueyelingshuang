@@ -14,7 +14,7 @@ m_ignore(nullptr)
     m_accept = new COriginalButton(this);
     m_ignore = new COriginalButton(this);
 
-    initKeyboardAccept(m_accept);
+    initAcceptButton(m_accept);
     resize(340, 165);
 }
 

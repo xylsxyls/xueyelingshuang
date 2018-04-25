@@ -17,9 +17,22 @@
 #include "PopDialogManager.h"
 #include "NotifyDialogManager.h"
 #include "StaticDialogManager.h"
+#include "AllocManager.h"
 
-void DialogManager::createDialog(DialogType type, void* param)
+DialogManager::DialogManager():
+m_init(false)
 {
+    
+}
+
+void DialogManager::createDialog(DialogType type, ParamBase* param)
+{
+    if (m_init == false)
+    {
+        m_init = true;
+        init();
+    }
+
     switch (type)
     {
     case ERROR_TYPE:
@@ -35,19 +48,19 @@ void DialogManager::createDialog(DialogType type, void* param)
     case DOWNLOAD_ERROR_DIALOG:
     case DOWNLOAD_OPERATE_DIALOG:
     {
-        PopDialogManager::instance().popDialog(type, (PopParamBase*)param);
+        PopDialogManager::instance().popDialog(type, (ParamBase*)param);
         break;
     }
     case ASK_SHOW_DIALOG:
     case TIP_SHOW_DIALOG:
     case LOGIN_SHOW_DIALOG:
     {
-        NotifyDialogManager::instance().showDialog(type, (PopParamBase*)param);
+        NotifyDialogManager::instance().showDialog(type, (ParamBase*)param);
         break;
     }
     case ACCOUNT_MANAGER_DIALOG:
     {
-        StaticDialogManager::instance().popStaticDialog(type, (PopParamBase*)param);
+        StaticDialogManager::instance().popStaticDialog(type, (ParamBase*)param);
         break;
     }
     default:
@@ -55,30 +68,37 @@ void DialogManager::createDialog(DialogType type, void* param)
     }
 }
 
-void DialogManager::closeDialog(int32_t dialogId)
+void DialogManager::destroyDialog(int32_t dialogId)
 {
-	
+    AllocManager::instance().removeByDialogId(dialogId);
 }
 
-void DialogManager::closeLastDialog()
+void DialogManager::destroyLastDialog()
 {
-	
+    AllocManager::instance().removeByDialogId(AllocManager::instance().findLastDialogId());
 }
 
 void DialogManager::destroyAll()
 {
-	
+    AllocManager::instance().destroyAll();
 }
 
 int32_t DialogManager::dialogCount()
 {
-    //m_mutex.lock();
-    //int32_t size = m_mapDialog.size();
-    //m_mutex.unlock();
-	return 0;
+    return AllocManager::instance().dialogCount();
 }
 
-DialogManager::DialogManager()
+void DialogManager::init()
 {
+    QObject::connect(&PopDialogManager::instance(), &PopDialogManager::changeToBack, &DialogManager::instance(), &DialogManager::changeToBack);
+    QObject::connect(&PopDialogManager::instance(), &PopDialogManager::downloadAgain, &DialogManager::instance(), &DialogManager::downloadAgain);
+    QObject::connect(&PopDialogManager::instance(), &PopDialogManager::cancelDownload, &DialogManager::instance(), &DialogManager::cancelDownload);
+    QObject::connect(&PopDialogManager::instance(), &PopDialogManager::useOtherDownload, &DialogManager::instance(), &DialogManager::useOtherDownload);
+    QObject::connect(&PopDialogManager::instance(), &PopDialogManager::copyDownloadAddr, &DialogManager::instance(), &DialogManager::copyDownloadAddr);
+    QObject::connect(&PopDialogManager::instance(), &PopDialogManager::copyPath, &DialogManager::instance(), &DialogManager::copyPath);
+    QObject::connect(&PopDialogManager::instance(), &PopDialogManager::popDialogDone, &DialogManager::instance(), &DialogManager::popDialogDone);
 
+    QObject::connect(&NotifyDialogManager::instance(), &NotifyDialogManager::notifyDialogDone, &DialogManager::instance(), &DialogManager::notifyDialogDone);
+
+    QObject::connect(&StaticDialogManager::instance(), &StaticDialogManager::staticDialogDone, &DialogManager::instance(), &DialogManager::staticDialogDone);
 }

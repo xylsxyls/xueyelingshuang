@@ -1,6 +1,16 @@
 #include "AllocManager.h"
 #include "COriginalDialog.h"
 #include "PopDialog.h"
+#include "AdvertAskDialog.h"
+#include "AskDialog.h"
+#include "DownloadOperateDialog.h"
+#include "InputDialog.h"
+#include "TipDialog.h"
+#include "WaitDialog.h"
+#include "AskShowDialog.h"
+#include "LoginShowDialog.h"
+#include "TipShowDialog.h"
+#include "AccountManagerDialog.h"
 
 int32_t AllocManager::add(COriginalDialog* base, DialogType type, int32_t userId)
 {
@@ -29,7 +39,7 @@ int32_t AllocManager::add(COriginalDialog* base, DialogType type, int32_t userId
         m_mapDialogIdToUserId[dialogId] = userId;
         m_mapUserIdToDialogId[userId] = dialogId;
     }
-    QObject::connect(base, &COriginalDialog::dialogFinished, this, &AllocManager::onDialogFinished);
+    //QObject::connect((DialogShow*)base, &DialogShow::closedSignal, this, &AllocManager::onClosedSignal);
     return dialogId;
 }
 
@@ -128,15 +138,99 @@ int32_t AllocManager::findLastDialogId()
     return m_mapDialogIdToDialogPtr.rbegin()->first;
 }
 
+int32_t AllocManager::dialogCount()
+{
+    QMutexLocker locker(&m_mutex);
+    return m_mapDialogIdToDialogPtr.size();
+}
+
 AllocManager::~AllocManager()
 {
     destroyAll();
 }
 
-void AllocManager::onDialogFinished(int result)
+COriginalDialog* AllocManager::createDialog(int32_t& dialogId, int32_t userId, DialogType type)
+{
+    COriginalDialog* dialogPtr = nullptr;
+    switch (type)
+    {
+    case ERROR_TYPE:
+        break;
+    case ASK_DIALOG:
+    {
+        dialogPtr = new AskDialog;
+        break;
+    }
+    case ADVERT_ASK_DIALOG:
+    {
+        dialogPtr = new AdvertAskDialog;
+        break;
+    }
+    case INPUT_DIALOG:
+    {
+        dialogPtr = new InputDialog;
+        break;
+    }
+    case TIP_DIALOG:
+    {
+        dialogPtr = new TipDialog;
+        break;
+    }
+    case WAIT_DIALOG:
+    {
+        dialogPtr = new WaitDialog;
+        break;
+    }
+    case DOWNLOAD_DIALOG:
+    {
+        break;
+    }
+    case DOWNLOAD_ERROR_DIALOG:
+    {
+        break;
+    }
+    case DOWNLOAD_OPERATE_DIALOG:
+    {
+        dialogPtr = new DownloadOperateDialog;
+        break;
+    }
+    case ASK_SHOW_DIALOG:
+    {
+        dialogPtr = new AskShowDialog;
+        break;
+    }
+    case TIP_SHOW_DIALOG:
+    {
+        dialogPtr = new TipShowDialog;
+        break;
+    }
+    case LOGIN_SHOW_DIALOG:
+    {
+        dialogPtr = new LoginShowDialog;
+        break;
+    }
+    default:
+        break;
+    }
+    dialogId = add(dialogPtr, type, userId);
+
+    if (type == ACCOUNT_MANAGER_DIALOG)
+    {
+        if (m_accountManagerDialog == nullptr)
+        {
+            m_accountManagerDialog = new AccountManagerDialog;
+            dialogId = add(m_accountManagerDialog, type, userId);
+        }
+        dialogPtr = m_accountManagerDialog;
+    }
+
+    return dialogPtr;
+}
+
+void AllocManager::onClosedSignal(int result)
 {
     int32_t dialogId = findDialogId((COriginalDialog*)sender());
-    if (findDialogType(dialogId) == ACCOUNT_MANAGER_DIALOG)
+    if (isStatic(dialogId))
     {
         return;
     }
@@ -149,14 +243,18 @@ int32_t AllocManager::getDialogId()
     return ++dialogId;
 }
 
+bool AllocManager::isStatic(int32_t dialogId)
+{
+    if (findDialogType(dialogId) == ACCOUNT_MANAGER_DIALOG)
+    {
+        return true;
+    }
+    return false;
+}
+
 void AllocManager::destroyAll()
 {
-    int32_t count = 0;
-    {
-        QMutexLocker locker(&m_mutex);
-        count = m_mapDialogIdToDialogPtr.size();
-    }
-    
+    int32_t count = dialogCount();
     while (count-- != 0)
     {
         removeByDialogId(findLastDialogId());

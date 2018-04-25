@@ -7,7 +7,8 @@
 #include "Separator.h"
 
 PopDialog::PopDialog():
-m_separator(nullptr)
+m_separator(nullptr),
+m_highLight(false)
 {
     m_separator = new Separator(this);
     init();
@@ -23,16 +24,13 @@ void PopDialog::init()
     m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupCloseButton.png");
     DialogHelper::setSeparator(m_separator, true, QColor(16, 20, 31, 255), QColor(46, 52, 88, 255));
     m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-}
 
-void PopDialog::done(int32_t result)
-{
-    if (m_timeId != -1)
-    {
-        killTimer(m_timeId);
-        m_timeId = -1;
-    }
-    DialogShow::done(result);
+    addListenKey(Qt::Key_Escape);
+
+    QObject::connect(this, &COriginalDialog::ncActiveChanged, this, &PopDialog::onNcActiveChanged);
+    QObject::connect(this, &DialogBase::timeUp, this, &PopDialog::onTimeUp);
+    QObject::connect(this, &DialogBase::keyboardAccept, this, &PopDialog::onKeyboardAccept);
+    QObject::connect(this, &COriginalDialog::altF4Pressed, this, &PopDialog::onAltF4Pressed);
 }
 
 void PopDialog::setWindowTiTle(const QString& title,
@@ -73,7 +71,7 @@ void PopDialog::paintEvent(QPaintEvent* eve)
 
 void PopDialog::showEvent(QShowEvent* eve)
 {
-    DialogBase::showEvent(eve);
+    DialogShow::showEvent(eve);
     activateWindow();
     raise();
 }
@@ -86,8 +84,55 @@ void PopDialog::resizeEvent(QResizeEvent* eve)
     m_separator->setGeometry(13, 33, width() - 13 * 2, 2);
 }
 
+void PopDialog::closeEvent(QCloseEvent* eve)
+{
+    if (m_timeId != -1)
+    {
+        killTimer(m_timeId);
+        m_timeId = -1;
+    }
+    DialogShow::closeEvent(eve);
+}
+
 void PopDialog::onNcActiveChanged(const bool& ncActive)
 {
     m_highLight = ncActive;
     repaint();
+}
+
+void PopDialog::onTimeUp()
+{
+    close();
+}
+
+void PopDialog::endDialog()
+{
+    //childAt(mapFromGlobal(QWidget::cursor().pos()))
+    auto itResult = m_mapResult.find(focusWidget());
+    if (itResult != m_mapResult.end())
+    {
+        m_result = itResult->second;
+        done(m_result);
+        //setResult(m_result);
+        close();
+    }
+}
+
+void PopDialog::onKeyboardAccept(QObject* tar, Qt::Key key)
+{
+    switch (key)
+    {
+    case Qt::Key_Escape:
+    {
+        close();
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void PopDialog::onAltF4Pressed()
+{
+    close();
 }

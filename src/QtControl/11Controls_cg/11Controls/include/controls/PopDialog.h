@@ -5,19 +5,17 @@ class PopDialog : public DialogShow
 {
     Q_OBJECT
 public:
+    /** 构造函数
+    */
     PopDialog();
-    /** 设置默认控件，含有关闭按钮，标题，分割线，框大小，背景颜色，背景边框
-    @param [in] dialogWidth 窗口宽度
-    @param [in] dialogHeight 窗口高度
-    */
-    void init();
-
-    /** 关闭窗口
-    @param [in] result 窗口返回值
-    */
-    void done(int32_t result);
 
     /** 设置窗口标题
+    @param [in] title 窗口标题
+    @param [in] color 窗口标题颜色
+    @param [in] fontSize 字体大小
+    @param [in] align 对齐方式
+    @param [in] origin 当左对齐时窗口标题的偏移量
+    @param [in] fontName 字体名
     */
     void setWindowTiTle(const QString& title,
                         const QColor& color = QColor(163, 175, 191, 255),
@@ -26,13 +24,23 @@ public:
                         int32_t origin = 0,
                         const QString& fontName = QString::fromStdWString(L"微软雅黑"));
 
+public slots:
+    void endDialog();
+    void onKeyboardAccept(QObject* tar, Qt::Key key);
+    void onAltF4Pressed();
+
 protected:
     void paintEvent(QPaintEvent* eve);
     void showEvent(QShowEvent* eve);
     void resizeEvent(QResizeEvent* eve);
+    void closeEvent(QCloseEvent* eve);
 
 private slots:
     void onNcActiveChanged(const bool& ncActive);
+    void onTimeUp();
+
+private:
+    void init();
 
 private:
     bool m_highLight;

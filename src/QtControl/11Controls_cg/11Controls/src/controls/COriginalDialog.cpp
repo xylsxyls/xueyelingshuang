@@ -8,6 +8,7 @@
 #include <QLabel>
 
 #define KEY_DOWN(VK_NONAME) ((::GetAsyncKeyState(VK_NONAME) & 0x8000) ? 1 : 0)
+#define HOT_KEY_ALTF4 0x100
 
 #ifndef WM_DWMCOMPOSITIONCHANGED
 #define WM_DWMCOMPOSITIONCHANGED        0x031E
@@ -18,29 +19,18 @@ COriginalDialog::COriginalDialog(QWidget *parent)
 	:QDialog(parent)
 	,mTouchBorderWidth(2)
 	,mDwmInitialized(false)
+    ,mAltF4Enable(true)
 {
 	setCustomerTitleBarHeight(0);
 	this->setMouseTracking(true);
+    ::RegisterHotKey(HWND(this->winId()), HOT_KEY_ALTF4, MOD_ALT, VK_F4);
+
 	//this->setAttribute(Qt::WA_NativeWindow);
 }
 
 COriginalDialog::~COriginalDialog()
 {
-    auto childs = children();
-    for each (QObject* var in childs)
-    {
-        QWidget* widget = qobject_cast<QWidget*>(var);
-        if (widget)
-        {
-            widget->installEventFilter(nullptr);
-        }
-    }
-}
-
-void COriginalDialog::done(int result)
-{
-    QDialog::done(result);
-    emit dialogFinished(result);
+    ::UnregisterHotKey(HWND(this->winId()), HOT_KEY_ALTF4);
 }
 
 long COriginalDialog::onNcHitTest(QPoint pt)
@@ -290,6 +280,17 @@ bool COriginalDialog::nativeEvent(const QByteArray &eventType, void *message, lo
 				return true;
 			}
 			break;
+        case WM_HOTKEY:
+            if (msg->wParam == HOT_KEY_ALTF4)
+            {
+                if (mAltF4Enable)
+                {
+                    emit altF4Pressed();
+                }
+                return true;
+            }
+            break;
+
 		default:
 			break;
 		}
@@ -415,4 +416,14 @@ QWindow* COriginalDialog::transientWindow()
         return nullptr;
     }
     return handle->transientParent();
+}
+
+bool COriginalDialog::AltF4Enable()
+{
+    return mAltF4Enable;
+}
+
+void COriginalDialog::setAltF4Enable(bool enabled)
+{
+    mAltF4Enable = enabled;
 }
