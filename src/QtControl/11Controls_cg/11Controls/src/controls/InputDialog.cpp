@@ -16,7 +16,18 @@ m_editText(nullptr)
     m_accept = new COriginalButton(this);
     m_edit = new LineEdit(this);
 
-    initAcceptButton(m_accept);
+    if (!check())
+    {
+        return;
+    }
+
+    m_edit->setFocus();
+
+    addListenKey(Qt::Key_Return);
+    addListenKey(Qt::Key_Enter);
+    QObject::connect(this, &DialogShow::keyboardAccept, this, &DialogShow::onKeyboardAccept, Qt::QueuedConnection);
+    m_acceptButton = m_accept;
+
     resize(340, 165);
 }
 
@@ -39,6 +50,10 @@ void InputDialog::setAcceptButton(const QString& acceptText, int32_t acceptDone)
 void InputDialog::resizeEvent(QResizeEvent* eve)
 {
     PopDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     m_editTip->setGeometry(QRect(43, 26, width() - 43 * 2, 60));
     m_accept->setGeometry(QRect((width() - 116) / 2, 127, 116, 22));
     m_edit->setGeometry(QRect(52, 74, 234, 26));
@@ -51,4 +66,12 @@ void InputDialog::closeEvent(QCloseEvent* eve)
         *m_editText = m_edit->text();
     }
     PopDialog::closeEvent(eve);
+}
+
+bool InputDialog::check()
+{
+    return m_editTip != nullptr &&
+        m_accept != nullptr &&
+        m_edit != nullptr &&
+        PopDialog::check();
 }

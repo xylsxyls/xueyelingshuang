@@ -47,13 +47,16 @@ Q_SIGNALS:
     */
     void closedSignal(int32_t result);
 
+public slots:
+    void onKeyboardAccept(QObject* tar, Qt::Key key);
+
 protected:
     void showEvent(QShowEvent* eve);
     void closeEvent(QCloseEvent* eve);
+    bool check();
 
 private slots:
 	void onTimeUpdate(int32_t timeOut);
-    void onKeyboardAccept(QObject* tar, Qt::Key key);
 	
 protected:
 	COriginalButton* m_exit;
@@ -61,7 +64,5 @@ protected:
     Label* m_time;
     std::map<QWidget*, int32_t> m_mapResult;
     int32_t m_result;
-
-private:
     COriginalButton* m_acceptButton;
 };

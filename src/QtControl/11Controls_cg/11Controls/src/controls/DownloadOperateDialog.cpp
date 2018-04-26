@@ -8,6 +8,7 @@
 #include "DialogManager.h"
 #include "LineEdit.h"
 #include "DialogHelper.h"
+#include "Separator.h"
 
 DownloadOperateDialog::DownloadOperateDialog():
 m_tip(nullptr),
@@ -48,6 +49,10 @@ m_error(nullptr)
     m_downloadButton = new COriginalButton(this);
     m_pathButton = new COriginalButton(this);
     m_error = new Label(this);
+    if (!check())
+    {
+        return;
+    }
 
 	m_title->setTextColor(QColor("#cdd5e1"));
 
@@ -176,6 +181,10 @@ m_error(nullptr)
 
 void DownloadOperateDialog::setFileName(const QString& fileName)
 {
+    if (!check())
+    {
+        return;
+    }
     QString file = QString::fromStdWString(CStringManager::Format(L"文件名：%s", fileName.toStdWString().c_str()));
     DialogHelper::setLabel(m_file, file, QColor("#8592bf"), 12);
     m_file->setAlignment(Qt::AlignLeft);
@@ -184,7 +193,11 @@ void DownloadOperateDialog::setFileName(const QString& fileName)
 void DownloadOperateDialog::resizeEvent(QResizeEvent* eve)
 {
     PopDialog::resizeEvent(eve);
-    //m_separator->setGeometry(16, 41, width() - 16 * 2, 2);
+    if (!check())
+    {
+        return;
+    }
+    m_separator->setGeometry(16, 41, width() - 16 * 2, 2);
     m_file->setGeometry(QRect(16, 63, width() / 2 - 16, 30));
     m_downloadSpeed->setGeometry(QRect(212, 63, 50, 20));
     m_downloaded->setGeometry(QRect(271, 63, 80, 20));
@@ -226,6 +239,30 @@ void DownloadOperateDialog::setClipboardData(HWND hWnd, const std::string& str)
 		//关闭剪贴板
 		::CloseClipboard();
 	}
+}
+
+bool DownloadOperateDialog::check()
+{
+    return m_tip != nullptr &&
+        m_file != nullptr &&
+        m_downloadSpeed != nullptr &&
+        m_downloaded != nullptr &&
+        m_downloadTime != nullptr &&
+        m_progressBar != nullptr &&
+        m_persent != nullptr &&
+        m_back != nullptr &&
+        m_again != nullptr &&
+        m_cancel != nullptr &&
+        m_downloadSlow != nullptr &&
+        m_hand != nullptr &&
+        m_downloadAddr != nullptr &&
+        m_path != nullptr &&
+        m_downloadAddrEdit != nullptr &&
+        m_pathEdit != nullptr &&
+        m_downloadButton != nullptr &&
+        m_pathButton != nullptr &&
+        m_error != nullptr &&
+        PopDialog::check();
 }
 
 void DownloadOperateDialog::setDownloadSpeed(const QString& speed)
@@ -286,6 +323,11 @@ int32_t DownloadOperateDialog::getTaskId()
 
 void DownloadOperateDialog::onChangeErrorStatus()
 {
+    if (!check())
+    {
+        return;
+    }
+
 	resize(420, 280);
 	m_downloadSpeed->setVisible(false);
 	m_downloaded->setVisible(false);
@@ -299,6 +341,10 @@ void DownloadOperateDialog::onChangeErrorStatus()
 
 void DownloadOperateDialog::onChangeNormalStatus()
 {
+    if (!check())
+    {
+        return;
+    }
 	resize(420, 180);
 	m_downloadSpeed->setVisible(true);
 	m_downloaded->setVisible(true);
@@ -312,6 +358,10 @@ void DownloadOperateDialog::onChangeNormalStatus()
 
 void DownloadOperateDialog::downloadAccept(QObject* tar, Qt::Key key)
 {
+    if (!check())
+    {
+        return;
+    }
 	m_hand->setFocus();
 	m_hand->click();
 }
@@ -338,12 +388,20 @@ void DownloadOperateDialog::onUseOtherDownload()
 
 void DownloadOperateDialog::onCopyDownloadAddr()
 {
+    if (!check())
+    {
+        return;
+    }
 	setClipboardData((HWND)winId(), CStringManager::UnicodeToAnsi(m_downloadAddrEdit->text().toStdWString()));
 	emit copyDownloadAddr(m_downloadAddrEdit->text());
 }
 
 void DownloadOperateDialog::onCopyPath()
 {
+    if (!check())
+    {
+        return;
+    }
 	setClipboardData((HWND)winId(), CStringManager::UnicodeToAnsi(m_pathEdit->text().toStdWString()));
 	emit copyPath(m_pathEdit->text());
 }

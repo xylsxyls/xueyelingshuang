@@ -37,14 +37,13 @@ protected:
     void showEvent(QShowEvent* eve);
     void resizeEvent(QResizeEvent* eve);
     void end();
+    bool check();
 
 private:
     int32_t buttonResult(COriginalButton* button);
 
 private slots:
     void onTimeUp();
-    void onKeyboardAccept(QObject* tar, Qt::Key key);
-    void onAltF4Pressed();
 
 protected:
     QPropertyAnimation m_animation;

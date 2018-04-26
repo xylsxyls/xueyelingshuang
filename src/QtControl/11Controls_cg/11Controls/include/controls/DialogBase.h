@@ -102,9 +102,10 @@ protected:
     void keyPressEvent(QKeyEvent* eve);
     bool eventFilter(QObject* tar, QEvent* eve);
     void resizeEvent(QResizeEvent* eve);
+    virtual void EscEvent();
+    virtual bool check();
 
 private:
-    bool check();
     void listenAllControls();
 	
 protected:

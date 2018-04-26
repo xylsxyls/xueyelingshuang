@@ -16,6 +16,11 @@ m_isShow(false)
     m_titleBar = new Label(this);
     m_icon = new Label(m_titleBar);
 
+    if (!check())
+    {
+        return;
+    }
+
     setExistFocus(false);
 
     DialogHelper::setLabel(m_titleBar, "", QColor(0, 0, 0, 0), 12);//QColor(163, 175, 191, 255)
@@ -39,8 +44,6 @@ m_isShow(false)
 
     QObject::connect(&m_animation, &QPropertyAnimation::finished, this, &NotifyDialog::end);
     QObject::connect(this, &DialogBase::timeUp, this, &NotifyDialog::onTimeUp);
-    QObject::connect(this, &DialogBase::keyboardAccept, this, &NotifyDialog::onKeyboardAccept);
-    QObject::connect(this, &COriginalDialog::altF4Pressed, this, &NotifyDialog::onAltF4Pressed);
 }
 
 void NotifyDialog::init(const std::string& typeName)
@@ -101,6 +104,10 @@ void NotifyDialog::showEvent(QShowEvent* eve)
 void NotifyDialog::resizeEvent(QResizeEvent* eve)
 {
     DialogShow::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     m_titleBar->setGeometry(QRect(1, 1, width() - 2, 31));
     m_icon->setGeometry(QRect(6, 6, 13, 18));
     m_title->setGeometry(QRect(23, 1, width() - 20 - 34, 28));
@@ -132,26 +139,12 @@ int32_t NotifyDialog::buttonResult(COriginalButton* button)
     return 0;
 }
 
+bool NotifyDialog::check()
+{
+    return m_titleBar != nullptr && m_icon != nullptr && DialogShow::check();
+}
+
 void NotifyDialog::onTimeUp()
 {
     beginExitAnimation();
-}
-
-void NotifyDialog::onKeyboardAccept(QObject* tar, Qt::Key key)
-{
-    switch (key)
-    {
-    case Qt::Key_Escape:
-    {
-        close();
-        break;
-    }
-    default:
-        break;
-    }
-}
-
-void NotifyDialog::onAltF4Pressed()
-{
-    close();
 }

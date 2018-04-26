@@ -110,6 +110,10 @@ void DialogBase::setWindowTiTle(const QString& title,
                                 int32_t origin,
                                 const QString& fontName)
 {
+    if (!check())
+    {
+        return;
+    }
     setWindowTitle(title);
     m_title->setText(title);
     m_title->setTextColor(color);
@@ -165,12 +169,12 @@ void DialogBase::keyPressEvent(QKeyEvent* eve)
     {
     case Qt::Key_Escape:
     {
-        if (m_escEnable == false)
+        eve->ignore();
+        if (m_escEnable)
         {
-            eve->ignore();
-            return;
+            EscEvent();
         }
-        break;
+        return;
     }
     default:
         break;
@@ -203,8 +207,17 @@ bool DialogBase::eventFilter(QObject* tar, QEvent* eve)
 void DialogBase::resizeEvent(QResizeEvent* eve)
 {
     COriginalDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     int32_t titleHeight = customerTitleBarHeight();
     m_title->setGeometry(0, 0, width(), titleHeight);
+}
+
+void DialogBase::EscEvent()
+{
+    close();
 }
 
 bool DialogBase::check()

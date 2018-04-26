@@ -46,6 +46,9 @@ private slots:
 	void accountAccept(QObject* tar, Qt::Key key);
 
 private:
+    bool check();
+
+private:
 	Label* m_sep;
 	Label* m_registerAlt;
 	LineEdit* m_account;

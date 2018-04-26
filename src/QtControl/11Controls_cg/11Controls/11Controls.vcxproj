@@ -924,6 +924,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <WarningLevel>Level1</WarningLevel>
     </ClCompile>
     <Lib>
       <OutputFile>Debug\$(ProjectName)d.lib</OutputFile>

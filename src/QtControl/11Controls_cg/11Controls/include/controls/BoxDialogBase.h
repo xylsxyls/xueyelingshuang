@@ -13,4 +13,5 @@ public:
 protected:
 	void paintEvent(QPaintEvent* eve);
     void resizeEvent(QResizeEvent* eve);
+    bool check();
 };

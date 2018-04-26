@@ -24,6 +24,9 @@ protected:
     void closeEvent(QCloseEvent* eve);
 
 private:
+    bool check();
+
+private:
 	Label* m_editTip;
 	COriginalButton* m_accept;
 	LineEdit* m_edit;

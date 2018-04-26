@@ -285,7 +285,8 @@ bool COriginalDialog::nativeEvent(const QByteArray &eventType, void *message, lo
             {
                 if (mAltF4Enable)
                 {
-                    emit altF4Pressed();
+                    altF4PressedEvent();
+                    //emit altF4Pressed();
                 }
                 return true;
             }
@@ -297,6 +298,11 @@ bool COriginalDialog::nativeEvent(const QByteArray &eventType, void *message, lo
 	}
 
 	return QDialog::nativeEvent(eventType, message, result);
+}
+
+void COriginalDialog::altF4PressedEvent()
+{
+    close();
 }
 
 //bool COriginalDialog::dwm_init(HWND hwnd)

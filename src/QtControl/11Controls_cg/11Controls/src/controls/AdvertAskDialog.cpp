@@ -17,6 +17,11 @@ m_ignore(nullptr)
     m_accept = new COriginalButton(this);
     m_ignore = new COriginalButton(this);
 
+    if (!check())
+    {
+        return;
+    }
+
     initAcceptButton(m_accept);
     resize(340, 265);
 }
@@ -39,6 +44,10 @@ void AdvertAskDialog::setIgnoreButton(const QString& ignoreText, int32_t ignoreD
 
 void AdvertAskDialog::initAdvertUrl(const QString& advertUrl)
 {
+    if (!check())
+    {
+        return;
+    }
     m_advert->setUrl(QUrl(advertUrl));
     QWebPage* webPage = m_advert->page();
     if (webPage != nullptr)
@@ -51,6 +60,10 @@ void AdvertAskDialog::initAdvertUrl(const QString& advertUrl)
 void AdvertAskDialog::resizeEvent(QResizeEvent* eve)
 {
     PopDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     int32_t advertWidth = 320;
     int32_t advertHeight = 90;
     m_advert->setGeometry((width() - advertWidth) / 2, 50, advertWidth, advertHeight);
@@ -62,4 +75,13 @@ void AdvertAskDialog::resizeEvent(QResizeEvent* eve)
 void AdvertAskDialog::onLinkClicked(const QUrl& url)
 {
 	emit advertClicked(url.toString());
+}
+
+bool AdvertAskDialog::check()
+{
+    return m_tip != nullptr &&
+        m_advert != nullptr &&
+        m_accept != nullptr &&
+        m_ignore != nullptr &&
+        PopDialog::check();
 }

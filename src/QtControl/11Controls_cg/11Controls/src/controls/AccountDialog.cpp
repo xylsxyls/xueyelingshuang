@@ -20,6 +20,10 @@ m_ignore(nullptr)
     m_errorAccount = new Label(this);
     m_accept = new COriginalButton(this);
     m_ignore = new COriginalButton(this);
+    if (!check())
+    {
+        return;
+    }
 	
 	m_sep->setBackgroundColor(QColor(74, 89, 128, 255));
 
@@ -49,16 +53,28 @@ void AccountDialog::setErrorVisible(bool visible)
 
 void AccountDialog::clearAccountEdit()
 {
+    if (!check())
+    {
+        return;
+    }
 	m_account->clear();
 }
 
 QString AccountDialog::accountEditText()
 {
+    if (!check())
+    {
+        return "";
+    }
 	return m_account->text();
 }
 
 void AccountDialog::setAcceptDown(int32_t result)
 {
+    if (!check())
+    {
+        return;
+    }
     setPopButtonConfig(m_accept, QString::fromStdWString(L"确定"), QColor(), result, 13);
     m_accept->setBkgImage("");
     m_accept->setBkgColor();
@@ -71,6 +87,10 @@ void AccountDialog::setAcceptDown(int32_t result)
 
 void AccountDialog::setIgnoreDown(int32_t result)
 {
+    if (!check())
+    {
+        return;
+    }
     setPopButtonConfig(m_ignore, QString::fromStdWString(L"取消"), QColor(), result, 13);
     m_ignore->setBkgImage("");
     m_ignore->setBkgColor();
@@ -84,6 +104,10 @@ void AccountDialog::setIgnoreDown(int32_t result)
 bool AccountDialog::eventFilter(QObject* tar, QEvent* eve)
 {
 	bool result = BoxDialogBase::eventFilter(tar, eve);
+    if (!check())
+    {
+        return result;
+    }
 	if (tar == m_account)
 	{
 		if (eve->type() == QEvent::FocusIn)
@@ -109,6 +133,10 @@ bool AccountDialog::eventFilter(QObject* tar, QEvent* eve)
 void AccountDialog::resizeEvent(QResizeEvent* eve)
 {
     BoxDialogBase::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     m_sep->setGeometry(QRect(7, 76, width() - 7 * 2, 1));
     m_registerAlt->setGeometry(QRect(1, 32, width() - 2, 44));
     m_account->setGeometry(QRect((width() - 248) / 2, 100, 248, 32));
@@ -119,6 +147,10 @@ void AccountDialog::resizeEvent(QResizeEvent* eve)
 
 void AccountDialog::accountAccept(QObject* tar, Qt::Key key)
 {
+    if (!check())
+    {
+        return;
+    }
 	if (m_account->hasFocus() && key == Qt::Key_Space)
 	{
 		return;
@@ -132,4 +164,15 @@ void AccountDialog::accountAccept(QObject* tar, Qt::Key key)
 		m_accept->setFocus();
 		m_accept->click();
 	}
+}
+
+bool AccountDialog::check()
+{
+    return m_sep != nullptr &&
+        m_registerAlt != nullptr &&
+        m_account != nullptr &&
+        m_errorAccount != nullptr &&
+        m_accept != nullptr &&
+        m_ignore != nullptr &&
+        BoxDialogBase::check();
 }

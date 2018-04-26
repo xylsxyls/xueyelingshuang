@@ -30,6 +30,10 @@ DialogShow::~DialogShow()
 
 void DialogShow::setTimeRestVisible(bool visible)
 {
+    if (!check())
+    {
+        return;
+    }
     m_time->setVisible(visible);
 }
 
@@ -58,6 +62,10 @@ void DialogShow::initAcceptButton(COriginalButton* button)
 
 void DialogShow::onTimeUpdate(int32_t timeOut)
 {
+    if (!check())
+    {
+        return;
+    }
     m_time->setText(QString::fromStdWString(CStringManager::Format(L"还有%d秒自动关闭", timeOut)));
 }
 
@@ -81,8 +89,17 @@ void DialogShow::onKeyboardAccept(QObject* tar, Qt::Key key)
     }
 }
 
+bool DialogShow::check()
+{
+    return m_exit != nullptr && m_time != nullptr && DialogBase::check();
+}
+
 void DialogShow::showEvent(QShowEvent* eve)
 {
+    if (!check())
+    {
+        return;
+    }
     if (m_timeRest <= 0)
     {
         m_time->setText("");

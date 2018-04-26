@@ -17,5 +17,8 @@ protected:
     void resizeEvent(QResizeEvent* eve);
 
 private:
+    bool check();
+
+private:
 	Label* m_tip;
 };

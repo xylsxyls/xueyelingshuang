@@ -11,6 +11,7 @@
 #include "LoginShowDialog.h"
 #include "TipShowDialog.h"
 #include "AccountManagerDialog.h"
+#include "D:\\SendToMessageTest.h"
 
 int32_t AllocManager::add(COriginalDialog* base, DialogType type, int32_t userId)
 {
@@ -39,7 +40,12 @@ int32_t AllocManager::add(COriginalDialog* base, DialogType type, int32_t userId
         m_mapDialogIdToUserId[dialogId] = userId;
         m_mapUserIdToDialogId[userId] = dialogId;
     }
-    //QObject::connect((DialogShow*)base, &DialogShow::closedSignal, this, &AllocManager::onClosedSignal);
+    RCSend("add map = dialogId-ptr = %d,ptr-dialogId = %d,dialogId-type = %d,dialogId-userId = %d,userId-dialogId = %d", m_mapDialogIdToDialogPtr.size(),
+        m_mapDialogPtrToDialogId.size(),
+        m_mapDialogIdToDialogType.size(),
+        m_mapDialogIdToUserId.size(),
+        m_mapUserIdToDialogId.size());
+
     return dialogId;
 }
 
@@ -64,6 +70,11 @@ void AllocManager::removeByDialogId(int32_t dialogId)
         m_mapDialogPtrToDialogId.erase(m_mapDialogPtrToDialogId.find(dialogPtr));
         m_mapDialogIdToDialogType.erase(m_mapDialogIdToDialogType.find(dialogId));
     }
+    RCSend("remove map = dialogId-ptr = %d,ptr-dialogId = %d,dialogId-type = %d,dialogId-userId = %d,userId-dialogId = %d", m_mapDialogIdToDialogPtr.size(),
+        m_mapDialogPtrToDialogId.size(),
+        m_mapDialogIdToDialogType.size(),
+        m_mapDialogIdToUserId.size(),
+        m_mapUserIdToDialogId.size());
     delete dialogPtr;
 }
 

@@ -25,6 +25,7 @@ Q_SIGNALS:
 
 protected:
     void resizeEvent(QResizeEvent* eve);
+    bool check();
 
 public slots:
 	void onLinkClicked(const QUrl& url);

@@ -23,6 +23,7 @@
 #include "11Controls/include/controls/DialogManager.h"
 #include "11Controls/include/controls/NotifyDialogManager.h"
 #include "11Controls/include/controls/StaticDialogManager.h"
+#include "D:\\SendToMessageTest.h"
 
 #pragma comment(lib,"11Controls.lib")
 
@@ -88,6 +89,10 @@ ControlsTest::ControlsTest(QWidget *parent)
 	//sdf->setEditable(true);
 	//startTimer(3000);
 
+    QObject::connect(&DialogManager::instance(), &DialogManager::popDialogDone, this, &ControlsTest::onPopDialogDone);
+    QObject::connect(&DialogManager::instance(), &DialogManager::notifyDialogDone, this, &ControlsTest::onNotifyDialogDone);
+    QObject::connect(&DialogManager::instance(), &DialogManager::staticDialogDone, this, &ControlsTest::onStaticDialogDone);
+
 	int x = 3;
 }
 
@@ -95,12 +100,28 @@ ControlsTest::~ControlsTest()
 {
 
 }
+//ASK_DIALOG,
+//ADVERT_ASK_DIALOG,
+//INPUT_DIALOG,
+//TIP_DIALOG,
+//WAIT_DIALOG,
+//DOWNLOAD_OPERATE_DIALOG,
+//ACCOUNT_MANAGER_DIALOG,
+//ASK_SHOW_DIALOG,
+//TIP_SHOW_DIALOG,
+//LOGIN_SHOW_DIALOG
 QWidget* sss = nullptr;
 void ControlsTest::onPopTipDialog()
 {
+    onPopAskDialog();
     TipShowDialogParam param;
+    param.m_userParam = 30;
+    param.m_userId = 20;
+    param.m_parent = sss->windowHandle();
+    param.m_timeOut = 10;
 	int32_t dialogId1 = 0;
     DialogManager::instance().createDialog(TIP_SHOW_DIALOG, &param);
+    //RCSend("%s", CStringManager::UnicodeToAnsi(param.m_editText.toStdWString()).c_str());
 	// int xx = DialogManager::instance().popTipDialog(dialogId1,
 	// 												QString::fromStdWString(L"标题"),
 	// 												QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
@@ -210,6 +231,21 @@ void ControlsTest::onDialogDone(int32_t dialogId, int32_t result, int32_t userTy
 	//												 result,
 	//												 userType,
 	//												 NotifyDialogManager::instance().dialogCount()).c_str(), L"", 0);
+}
+
+void ControlsTest::onPopDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam)
+{
+    RCSend("pop = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", dialogId, userId, type, result, userParam);
+}
+
+void ControlsTest::onNotifyDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam)
+{
+    RCSend("notify = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", dialogId, userId, type, result, userParam);
+}
+
+void ControlsTest::onStaticDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam)
+{
+    RCSend("static = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", dialogId, userId, type, result, userParam);
 }
 
 void ControlsTest::timerEvent(QTimerEvent* eve)

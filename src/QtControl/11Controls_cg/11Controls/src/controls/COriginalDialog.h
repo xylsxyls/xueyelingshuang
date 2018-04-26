@@ -26,6 +26,7 @@ protected:
 	void resizeEvent(QResizeEvent *e);
 	virtual bool nativeEvent(const QByteArray &eventType, void *message, long *result);
 
+    virtual void altF4PressedEvent();
 	//bool dwm_init(HWND hwnd);
 	//bool isDwmEnabled();
 
@@ -33,7 +34,7 @@ signals:
 	// π”√Qt::QueuedConnection
 	void ncActiveChanged(const bool& ncActive);
 	void activeChanged(bool s);
-    void altF4Pressed();
+    //void altF4Pressed();
 
 public :
 	void setTouchBorderWidth(int n);

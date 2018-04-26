@@ -21,8 +21,11 @@ public:
 	*/
 	void popClosureDialog();
 
-private:
+protected:
     void resizeEvent(QResizeEvent* eve);
+
+private:
+    bool check();
 
 private:
 	AccountDialog* m_accountDialog;

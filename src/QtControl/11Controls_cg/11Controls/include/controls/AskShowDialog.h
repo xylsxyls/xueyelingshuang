@@ -23,6 +23,9 @@ protected:
     void resizeEvent(QResizeEvent* eve);
 
 private:
+    bool check();
+
+private:
 	Label* m_tip;
 	COriginalButton* m_accept;
 	COriginalButton* m_ignore;

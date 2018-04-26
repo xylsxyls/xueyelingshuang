@@ -8,7 +8,10 @@ WaitDialog::WaitDialog():
 m_tip(nullptr)
 {
     m_tip = new Label(this);
-
+    if (!check())
+    {
+        return;
+    }
     m_exit->setVisible(false);
     setEscAltF4Enable(false);
     resize(340, 165);
@@ -22,5 +25,14 @@ void WaitDialog::setTip(const QString& tip)
 void WaitDialog::resizeEvent(QResizeEvent* eve)
 {
     PopDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     m_tip->setGeometry(QRect(43, 51, width() - 43 * 2, 60));
+}
+
+bool WaitDialog::check()
+{
+    return m_tip != nullptr && PopDialog::check();
 }

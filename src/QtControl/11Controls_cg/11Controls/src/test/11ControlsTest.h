@@ -4,6 +4,7 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_11ControlsTest.h"
 #include <stdint.h>
+#include "11Controls/include/controls/DialogType.h"
 
 class ControlsTest : public QMainWindow
 {
@@ -24,6 +25,10 @@ private slots:
 	void onShowDestroyAll();
 
 	void onDialogDone(int32_t dialogId, int32_t result, int32_t userType);
+
+    void onPopDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
+    void onNotifyDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
+    void onStaticDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
 
 	void timerEvent(QTimerEvent* eve);
 private:

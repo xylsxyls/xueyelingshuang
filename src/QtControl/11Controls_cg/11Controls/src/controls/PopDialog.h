@@ -26,14 +26,13 @@ public:
 
 public slots:
     void endDialog();
-    void onKeyboardAccept(QObject* tar, Qt::Key key);
-    void onAltF4Pressed();
 
 protected:
     void paintEvent(QPaintEvent* eve);
     void showEvent(QShowEvent* eve);
     void resizeEvent(QResizeEvent* eve);
     void closeEvent(QCloseEvent* eve);
+    bool check();
 
 private slots:
     void onNcActiveChanged(const bool& ncActive);
@@ -42,7 +41,9 @@ private slots:
 private:
     void init();
 
+protected:
+    Separator* m_separator;
+
 private:
     bool m_highLight;
-    Separator* m_separator;
 };

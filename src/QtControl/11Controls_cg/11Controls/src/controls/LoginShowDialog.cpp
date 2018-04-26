@@ -21,6 +21,11 @@ m_separator(nullptr)
     m_more = new COriginalButton(this);
     m_separator = new Separator(this);
 
+    if (!check())
+    {
+        return;
+    }
+
     init(typeid(*this).name());
 
     DialogHelper::setLabel(m_greeting, "", QColor(187, 187, 195, 255), 13);
@@ -58,6 +63,10 @@ m_separator(nullptr)
 
 void LoginShowDialog::setTip(const QString& tip)
 {
+    if (!check())
+    {
+        return;
+    }
     QString html = QString("<html><head><style type='text/css'>"
         "a,body { font-family: \"yahei\"; font-size:12px; }"
         "::-webkit-scrollbar {  width:6px;  height:6px;background-color: #2c3745;}"
@@ -75,11 +84,19 @@ void LoginShowDialog::setTip(const QString& tip)
 
 void LoginShowDialog::setGreeting(const QString& greeting)
 {
+    if (!check())
+    {
+        return;
+    }
     m_greeting->setText(greeting);
 }
 
 void LoginShowDialog::setMoreButton(const QString& buttonText, const QString& linkUrl, bool isUrlButtonVisible)
 {
+    if (!check())
+    {
+        return;
+    }
     m_more->setText(buttonText);
     m_more->setVisible(isUrlButtonVisible);
     m_moreLinkUrl = linkUrl;
@@ -88,6 +105,10 @@ void LoginShowDialog::setMoreButton(const QString& buttonText, const QString& li
 void LoginShowDialog::resizeEvent(QResizeEvent* eve)
 {
     NotifyDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     m_greeting->setGeometry(QRect(8, 39, 190, 17));
     m_horn->setGeometry(QRect(8, 66, 17, 17));
     m_tip->setGeometry(QRect(24, 60, 157, 57));
@@ -104,4 +125,14 @@ void LoginShowDialog::onLinkClicked(const QUrl& url)
 void LoginShowDialog::onMoreClicked()
 {
 	QDesktopServices::openUrl(m_moreLinkUrl);
+}
+
+bool LoginShowDialog::check()
+{
+    return m_greeting != nullptr &&
+        m_horn != nullptr &&
+        m_more != nullptr &&
+        m_tip != nullptr &&
+        m_separator != nullptr &&
+        NotifyDialog::check();
 }

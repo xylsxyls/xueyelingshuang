@@ -11,11 +11,19 @@ m_separator(nullptr),
 m_highLight(false)
 {
     m_separator = new Separator(this);
+    if (!check())
+    {
+        return;
+    }
     init();
 }
 
 void PopDialog::init()
 {
+    if (!check())
+    {
+        return;
+    }
     setNativeWindow(true);
     setWindowFlags(windowFlags() | Qt::Tool);
     setCustomerTitleBarHeight(40);
@@ -29,8 +37,11 @@ void PopDialog::init()
 
     QObject::connect(this, &COriginalDialog::ncActiveChanged, this, &PopDialog::onNcActiveChanged);
     QObject::connect(this, &DialogBase::timeUp, this, &PopDialog::onTimeUp);
-    QObject::connect(this, &DialogBase::keyboardAccept, this, &PopDialog::onKeyboardAccept);
-    QObject::connect(this, &COriginalDialog::altF4Pressed, this, &PopDialog::onAltF4Pressed);
+}
+
+bool PopDialog::check()
+{
+    return m_separator != nullptr && DialogShow::check();
 }
 
 void PopDialog::setWindowTiTle(const QString& title,
@@ -79,6 +90,10 @@ void PopDialog::showEvent(QShowEvent* eve)
 void PopDialog::resizeEvent(QResizeEvent* eve)
 {
     DialogShow::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     m_time->setGeometry(QRect(width() - 125 - 10, 140, 125, 32));
     m_exit->setGeometry(QRect(width() - 3 - 30, 3, 30, 30));
     m_separator->setGeometry(13, 33, width() - 13 * 2, 2);
@@ -116,23 +131,4 @@ void PopDialog::endDialog()
         //setResult(m_result);
         close();
     }
-}
-
-void PopDialog::onKeyboardAccept(QObject* tar, Qt::Key key)
-{
-    switch (key)
-    {
-    case Qt::Key_Escape:
-    {
-        close();
-        break;
-    }
-    default:
-        break;
-    }
-}
-
-void PopDialog::onAltF4Pressed()
-{
-    close();
 }

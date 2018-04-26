@@ -15,6 +15,11 @@ m_ignore(nullptr)
     m_accept = new COriginalButton(this);
     m_ignore = new COriginalButton(this);
 
+    if (!check())
+    {
+        return;
+    }
+
     init(typeid(*this).name());
 
     DialogHelper::setTip(m_tip, "", QColor(205, 213, 225, 255), 13);
@@ -31,6 +36,10 @@ m_ignore(nullptr)
 
 void AskShowDialog::setTip(const QString& tip)
 {
+    if (!check())
+    {
+        return;
+    }
     m_tip->setText(tip);
 }
 
@@ -47,7 +56,19 @@ void AskShowDialog::setIgnoreButton(const QString& ignoreText, int32_t ignoreDon
 void AskShowDialog::resizeEvent(QResizeEvent* eve)
 {
     NotifyDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     m_tip->setGeometry(QRect(20, 35, width() - 20 * 2, 50));
     m_accept->setGeometry(QRect(31, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19));
     m_ignore->setGeometry(QRect(31 + 13 + (width() - 31 * 2 - 13) / 2, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19));
+}
+
+bool AskShowDialog::check()
+{
+    return m_tip != nullptr &&
+        m_accept != nullptr &&
+        m_ignore != nullptr &&
+        NotifyDialog::check();
 }

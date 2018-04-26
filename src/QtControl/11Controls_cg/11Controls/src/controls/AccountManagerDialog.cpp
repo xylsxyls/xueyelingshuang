@@ -10,10 +10,10 @@
 
 QString AccountManagerDialog::popAccountDialog()
 {
-	if (m_accountDialog == nullptr)
-	{
-		return -1;
-	}
+    if (!check())
+    {
+        return "";
+    }
 
 	m_accountDialog->clearAccountEdit();
 	int32_t result = m_accountDialog->exec();
@@ -26,10 +26,10 @@ QString AccountManagerDialog::popAccountDialog()
 
 void AccountManagerDialog::popClosureDialog()
 {
-	if (m_closureDialog == nullptr)
-	{
-		return;
-	}
+    if (!check())
+    {
+        return;
+    }
 	m_closureDialog->exec();
 }
 
@@ -41,6 +41,11 @@ m_subAccountPanel(nullptr)
     m_accountDialog = new AccountDialog();
     m_closureDialog = new ClosureDialog();
     m_subAccountPanel = new SubAccountPanel(this);
+
+    if (!check())
+    {
+        return;
+    }
 
 	m_subAccountPanel->helpTip()->winId();
 	m_subAccountPanel->helpTip()->windowHandle()->setTransientParent(windowHandle());
@@ -55,6 +60,18 @@ m_subAccountPanel(nullptr)
 void AccountManagerDialog::resizeEvent(QResizeEvent* eve)
 {
     BoxDialogBase::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     m_subAccountPanel->setGeometry(rect().adjusted(1, customerTitleBarHeight() + 1, -1, -1));
     m_exit->setGeometry(QRect(width() - 34, 1, 34, 31));
+}
+
+bool AccountManagerDialog::check()
+{
+    return m_accountDialog != nullptr &&
+        m_closureDialog != nullptr &&
+        m_subAccountPanel != nullptr &&
+        BoxDialogBase::check();
 }

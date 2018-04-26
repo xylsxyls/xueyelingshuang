@@ -105,9 +105,6 @@ Q_SIGNALS:
 protected:
     void resizeEvent(QResizeEvent* eve);
 
-private:
-	void setClipboardData(HWND hWnd, const std::string& str);
-
 private slots:
 	void downloadAccept(QObject* tar, Qt::Key key);
 	void onBack();
@@ -116,6 +113,10 @@ private slots:
 	void onUseOtherDownload();
 	void onCopyDownloadAddr();
 	void onCopyPath();
+
+private:
+    void setClipboardData(HWND hWnd, const std::string& str);
+    bool check();
 
 private:
 	Label* m_tip;

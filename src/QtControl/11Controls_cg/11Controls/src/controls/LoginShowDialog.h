@@ -29,6 +29,9 @@ private slots:
 	void onMoreClicked();
 
 private:
+    bool check();
+
+private:
 	Label* m_greeting;
 	Label* m_horn;
 	COriginalButton* m_more;

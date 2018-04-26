@@ -6,6 +6,10 @@
 
 BoxDialogBase::BoxDialogBase()
 {
+    if (!check())
+    {
+        return;
+    }
     setChangeSizeEnable(false);
 	m_title->setBackgroundColor(QColor(67, 81, 117, 255));
 	m_title->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
@@ -22,15 +26,26 @@ void BoxDialogBase::paintEvent(QPaintEvent* eve)
 {
 	PopDialog::paintEvent(eve);
 	QPainter painter(this);
+    painter.save();
 	painter.fillRect(QRect(0, 0, width(), height()), QColor(44, 52, 74, 255));
 	painter.setPen(QColor(79, 153, 222, 255));
 	painter.drawRect(0, 0, width() - 1, height() - 1);
+    painter.restore();
 }
 
 void BoxDialogBase::resizeEvent(QResizeEvent* eve)
 {
     PopDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
     m_title->setGeometry(QRect(1, 1, width() - 2, 31));
     m_exit->setGeometry(QRect(width() - 34, 1, 34, 31));
+}
+
+bool BoxDialogBase::check()
+{
+    return PopDialog::check();
 }
 
