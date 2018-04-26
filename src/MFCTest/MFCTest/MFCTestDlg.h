@@ -4,7 +4,7 @@
 
 #pragma once
 #include "afxwin.h"
-
+#include <vector>
 
 // CMFCTestDlg ¶Ô»°¿ò
 class CMFCTestDlg : public CDialogEx
@@ -32,5 +32,10 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnBnClickedButton1();
+    BOOL PreTranslateMessage(MSG* pMsg);
+    void CalcProbability();
     CEdit m_edit;
+    std::vector<double> m_vecSmall;
+    std::vector<double> m_vecMid;
+    std::vector<double> m_vecBig;
 };

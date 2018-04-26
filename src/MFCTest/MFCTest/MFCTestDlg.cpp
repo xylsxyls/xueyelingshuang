@@ -6,6 +6,7 @@
 #include "MFCTest.h"
 #include "MFCTestDlg.h"
 #include "afxdialogex.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -157,4 +158,84 @@ HCURSOR CMFCTestDlg::OnQueryDragIcon()
 void CMFCTestDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
+}
+
+BOOL CMFCTestDlg::PreTranslateMessage(MSG* pMsg)
+{
+    if (pMsg->message == WM_KEYDOWN && pMsg->wParam == VK_ESCAPE)
+    {
+        //不响应键按下和空格键  
+        return TRUE;
+    }
+    else if (pMsg->message == WM_KEYDOWN && pMsg->wParam == VK_RETURN && pMsg->wParam)
+    {
+        //响应回车键  
+        if (GetFocus() == GetDlgItem(IDC_EDIT1))
+        {
+            CString windowText;
+            m_edit.GetWindowText(windowText);
+            std::string str = windowText.GetBuffer();
+            std::vector<std::string> vecString = CStringManager::split(str, "-");
+            if (vecString.size() == 2)
+            {
+                double smallNum = atof(vecString[0].c_str());
+                double bigNum = atof(vecString[1].c_str());
+                m_vecSmall.push_back(smallNum / 100);
+                m_vecBig.push_back(bigNum / 100);
+                m_vecMid.push_back((smallNum + bigNum) / 2 / 100);
+            }
+            else if (vecString.size() == 1)
+            {
+                double num = atof(vecString[0].c_str());
+                m_vecSmall.push_back(num / 100);
+                m_vecBig.push_back(num / 100);
+                m_vecMid.push_back(num / 100);
+            }
+            m_edit.SetWindowText("");
+            CalcProbability();
+        }
+        else
+        {
+            //TODO  
+        }
+
+        //拦截事件  
+        return TRUE;
+    }
+
+    return CDialog::PreTranslateMessage(pMsg);
+}
+
+void CMFCTestDlg::CalcProbability()
+{
+    double smallAllSuccess = 1;
+    double smallAllFail = 1;
+
+    double midAllSuccess = 1;
+    double midAllFail = 1;
+
+    double bigAllSuccess = 1;
+    double bigAllFail = 1;
+
+    int i = -1;
+    while (i++ != m_vecSmall.size() - 1)
+    {
+        smallAllSuccess = smallAllSuccess * m_vecSmall[i];
+        smallAllFail = smallAllFail * (1 - m_vecSmall[i]);
+
+        midAllSuccess = midAllSuccess * m_vecMid[i];
+        midAllFail = midAllFail * (1 - m_vecMid[i]);
+
+        bigAllSuccess = bigAllSuccess * m_vecBig[i];
+        bigAllFail = bigAllFail * (1 - m_vecBig[i]);
+    }
+    double successSmall = smallAllSuccess / (smallAllSuccess + smallAllFail) * 100;
+    double successMid = midAllSuccess / (midAllSuccess + midAllFail) * 100;
+    double successBig = bigAllSuccess / (bigAllSuccess + bigAllFail) * 100;
+
+    std::string smallSuccessStr = CStringManager::Format("%lf", successSmall);
+    std::string midSuccessStr = CStringManager::Format("%lf", successMid);
+    std::string bigSuccessStr = CStringManager::Format("%lf", successBig);
+
+    ::SendMessage(GetDlgItem(IDC_STATIC)->m_hWnd, WM_SETTEXT, 0, (LPARAM)(smallSuccessStr + " - " + midSuccessStr + " - " + bigSuccessStr).c_str());
 }
