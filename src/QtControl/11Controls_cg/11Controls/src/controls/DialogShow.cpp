@@ -94,6 +94,20 @@ bool DialogShow::check()
     return m_exit != nullptr && m_time != nullptr && DialogBase::check();
 }
 
+void DialogShow::EscEvent()
+{
+    m_result = ESC_EXIT;
+    setResult(m_result);
+    DialogBase::EscEvent();
+}
+
+void DialogShow::altF4PressedEvent()
+{
+    m_result = ALT_F4_EXIT;
+    setResult(m_result);
+    DialogBase::altF4PressedEvent();
+}
+
 void DialogShow::showEvent(QShowEvent* eve)
 {
     if (!check())

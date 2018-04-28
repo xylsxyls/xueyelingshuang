@@ -24,6 +24,12 @@ public:
                         int32_t origin = 0,
                         const QString& fontName = QString::fromStdWString(L"微软雅黑"));
 
+    /** 设置常态和高亮边框颜色，子类在paintEvent函数内不可以画到边框上
+    @param [in] normalColor 常态颜色
+    @param [in] highLightColor 高亮颜色
+    */
+    void setBorderNormalHighLightColor(const QColor& normalColor, const QColor& highLightColor = QColor(0, 0, 0, 0));
+
 public slots:
     void endDialog();
 
@@ -46,4 +52,6 @@ protected:
 
 private:
     bool m_highLight;
+    QColor m_normalColor;
+    QColor m_highLightColor;
 };

@@ -64,16 +64,6 @@ public:
 	*/
 	void normal();
 
-	/** 设置任务ID值
-	@param [in] taskId 任务ID值
-	*/
-	void setTaskId(int32_t taskId);
-
-	/** 任务ID值
-	@return 返回任务ID值
-	*/
-	int32_t getTaskId();
-
 public slots:
 	/** 改变到下载失败状态
 	*/
@@ -104,6 +94,7 @@ Q_SIGNALS:
 
 protected:
     void resizeEvent(QResizeEvent* eve);
+    bool check();
 
 private slots:
 	void downloadAccept(QObject* tar, Qt::Key key);
@@ -116,7 +107,6 @@ private slots:
 
 private:
     void setClipboardData(HWND hWnd, const std::string& str);
-    bool check();
 
 private:
 	Label* m_tip;

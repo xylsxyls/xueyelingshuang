@@ -34,6 +34,11 @@ DialogBase::~DialogBase()
             widget->installEventFilter(nullptr);
         }
     }
+    QWindow* handle = windowHandle();
+    if (handle != nullptr && handle->transientParent() != nullptr)
+    {
+        handle->setTransientParent(nullptr);
+    }
 }
 
 void DialogBase::setNativeWindow(bool hasHandle)
@@ -75,14 +80,6 @@ int32_t DialogBase::exec()
 {
     setWindowModality((transientWindow() != nullptr) ? Qt::WindowModal : Qt::ApplicationModal);
     return QDialog::exec();
-}
-
-void DialogBase::setChangeSizeEnable(bool enable)
-{
-    if (enable == false)
-    {
-        setFixedSize(width(), height());
-    }
 }
 
 void DialogBase::listenAllControls()

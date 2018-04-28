@@ -54,6 +54,8 @@ protected:
     void showEvent(QShowEvent* eve);
     void closeEvent(QCloseEvent* eve);
     bool check();
+    void EscEvent();
+    void altF4PressedEvent();
 
 private slots:
 	void onTimeUpdate(int32_t timeOut);
@@ -62,7 +64,7 @@ protected:
 	COriginalButton* m_exit;
 	int32_t m_userParam;
     Label* m_time;
-    std::map<QWidget*, int32_t> m_mapResult;
     int32_t m_result;
+    std::map<QWidget*, int32_t> m_mapResult;
     COriginalButton* m_acceptButton;
 };

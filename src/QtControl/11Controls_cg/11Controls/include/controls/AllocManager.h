@@ -11,12 +11,16 @@ class AccountManagerDialog;
 class COriginalDialog;
 /** 窗口内存管理器
 */
-class ControlsAPI AllocManager : 
+class AllocManager : 
     public QObject,
     public ManagerBase < AllocManager >
 {
     Q_OBJECT
 public:
+    /** 构造函数
+    */
+    AllocManager();
+
     /** 析构函数
     */
     ~AllocManager();

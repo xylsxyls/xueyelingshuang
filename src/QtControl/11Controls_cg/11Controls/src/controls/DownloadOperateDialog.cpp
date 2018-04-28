@@ -311,16 +311,6 @@ void DownloadOperateDialog::normal()
 	emit changeNormalStatus();
 }
 
-void DownloadOperateDialog::setTaskId(int32_t taskId)
-{
-	m_taskId = taskId;
-}
-
-int32_t DownloadOperateDialog::getTaskId()
-{
-	return m_taskId;
-}
-
 void DownloadOperateDialog::onChangeErrorStatus()
 {
     if (!check())

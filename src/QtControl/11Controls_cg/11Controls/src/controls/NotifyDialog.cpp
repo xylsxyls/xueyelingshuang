@@ -21,7 +21,10 @@ m_isShow(false)
         return;
     }
 
+    setWindowFlags(windowFlags() | Qt::Tool);
+
     setExistFocus(false);
+    setTouchBorderWidth(0);
 
     DialogHelper::setLabel(m_titleBar, "", QColor(0, 0, 0, 0), 12);//QColor(163, 175, 191, 255)
     m_titleBar->setBackgroundColor(QColor(67, 81, 117, 255));
@@ -56,6 +59,7 @@ void NotifyDialog::init(const std::string& typeName)
 void NotifyDialog::beginExitAnimation()
 {
     m_result = buttonResult((COriginalButton*)sender());
+    
     //去掉定时器
     if (m_timeId != -1)
     {
@@ -124,6 +128,7 @@ void NotifyDialog::end()
     //当关闭的时候动画结束才关闭窗口
     if (m_isShow == false)
     {
+        setResult(m_result);
         close();
     }
 }
@@ -146,5 +151,7 @@ bool NotifyDialog::check()
 
 void NotifyDialog::onTimeUp()
 {
+    m_result = TIME_OUT;
+    setResult(m_result);
     beginExitAnimation();
 }

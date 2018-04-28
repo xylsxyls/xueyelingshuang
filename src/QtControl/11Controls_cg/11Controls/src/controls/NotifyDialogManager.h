@@ -14,7 +14,7 @@ public:
     void showDialog(DialogType type, ParamBase* param);
 
 Q_SIGNALS:
-    void notifyDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
+    void notifyDialogDone(const DialogDoneSignalParam& param);
 
 private slots:
     void onClosedSignal(int result);

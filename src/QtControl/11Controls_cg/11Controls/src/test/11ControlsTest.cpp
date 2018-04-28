@@ -114,13 +114,22 @@ QWidget* sss = nullptr;
 void ControlsTest::onPopTipDialog()
 {
     onPopAskDialog();
-    TipShowDialogParam param;
+    AccountManagerDialogParam param;
     param.m_userParam = 30;
-    param.m_userId = 20;
+    param.m_userId = 10002;
     param.m_parent = sss->windowHandle();
-    param.m_timeOut = 10;
+    param.m_timeOut = 100;
 	int32_t dialogId1 = 0;
-    DialogManager::instance().createDialog(TIP_SHOW_DIALOG, &param);
+
+    //QObject::connect(&DialogManager::instance(), &DialogManager::changeToBack, this, &ControlsTest::onChangeToBack);
+    //QObject::connect(&DialogManager::instance(), &DialogManager::downloadAgain, this, &ControlsTest::onDownloadAgain);
+    //QObject::connect(&DialogManager::instance(), &DialogManager::cancelDownload, this, &ControlsTest::onCancelDownload);
+    //QObject::connect(&DialogManager::instance(), &DialogManager::useOtherDownload, this, &ControlsTest::onUseOtherDownload);
+    //QObject::connect(&DialogManager::instance(), &DialogManager::copyDownloadAddr, this, &ControlsTest::onCopyDownloadAddr);
+    //QObject::connect(&DialogManager::instance(), &DialogManager::copyPath, this, &ControlsTest::onCopyPath);
+
+    DialogManager::instance().createDialog(ACCOUNT_MANAGER_DIALOG, &param);
+    
     //RCSend("%s", CStringManager::UnicodeToAnsi(param.m_editText.toStdWString()).c_str());
 	// int xx = DialogManager::instance().popTipDialog(dialogId1,
 	// 												QString::fromStdWString(L"БъЬт"),
@@ -150,6 +159,16 @@ void ControlsTest::onPopAskDialog()
 
 void ControlsTest::onPopWaitDialog()
 {
+    DialogManager::instance().setDownloadSpeed(10002, "speed");
+    DialogManager::instance().setDownloaded(10002, "download");
+    DialogManager::instance().setDownloadTime(10002, "time");
+    DialogManager::instance().setRate(10002, 80);
+    DialogManager::instance().setEditDownloadAddr(10002, "22232323");
+    DialogManager::instance().setEditPath(10002, "12121212");
+    DialogManager::instance().setBackEnable(10002, false);
+    DialogManager::instance().error(10002);
+    //DialogManager::instance().normal(10002);
+    //DialogManager::instance().destroyAll();
 	int32_t dialogId4 = 0;
 	//int xxxxx = DialogManager::instance().popWaitDialog(dialogId4,
 	//													2,
@@ -233,19 +252,49 @@ void ControlsTest::onDialogDone(int32_t dialogId, int32_t result, int32_t userTy
 	//												 NotifyDialogManager::instance().dialogCount()).c_str(), L"", 0);
 }
 
-void ControlsTest::onPopDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam)
+void ControlsTest::onPopDialogDone(const DialogDoneSignalParam& param)
 {
-    RCSend("pop = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", dialogId, userId, type, result, userParam);
+    RCSend("pop = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", param.m_dialogId, param.m_userId, param.m_type, param.m_result, param.m_userParam);
 }
 
-void ControlsTest::onNotifyDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam)
+void ControlsTest::onNotifyDialogDone(const DialogDoneSignalParam& param)
 {
-    RCSend("notify = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", dialogId, userId, type, result, userParam);
+    RCSend("notify = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", param.m_dialogId, param.m_userId, param.m_type, param.m_result, param.m_userParam);
 }
 
-void ControlsTest::onStaticDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam)
+void ControlsTest::onStaticDialogDone(const DialogDoneSignalParam& param)
 {
-    RCSend("static = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", dialogId, userId, type, result, userParam);
+    RCSend("static = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", param.m_dialogId, param.m_userId, param.m_type, param.m_result, param.m_userParam);
+}
+
+void ControlsTest::onChangeToBack(qint32 taskId)
+{
+    RCSend("onChangeToBack taskId = %d", taskId);
+}
+
+void ControlsTest::onDownloadAgain(qint32 taskId)
+{
+    RCSend("onDownloadAgain taskId = %d", taskId);
+}
+
+void ControlsTest::onCancelDownload(qint32 taskId)
+{
+    RCSend("onCancelDownload taskId = %d", taskId);
+}
+
+void ControlsTest::onUseOtherDownload(qint32 taskId)
+{
+    RCSend("onUseOtherDownload taskId = %d", taskId);
+}
+
+void ControlsTest::onCopyDownloadAddr(qint32 taskId, const QString& addr)
+{
+    RCSend("onCopyDownloadAddr taskId = %d, addr = %s", taskId, addr.toStdString().c_str());
+}
+
+void ControlsTest::onCopyPath(qint32 taskId, const QString& path)
+{
+    RCSend("onCopyPath taskId = %d, path = %s", taskId, path.toStdString().c_str());
 }
 
 void ControlsTest::timerEvent(QTimerEvent* eve)

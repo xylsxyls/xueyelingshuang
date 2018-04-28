@@ -50,11 +50,9 @@ m_subAccountPanel(nullptr)
 	m_subAccountPanel->helpTip()->winId();
 	m_subAccountPanel->helpTip()->windowHandle()->setTransientParent(windowHandle());
 
-	setWindowTiTle(QStringLiteral("11对战平台 - 账号管理页面"));
-
     m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
 
-    resize(340, 482);
+    setFixedSize(340, 482);
 }
 
 void AccountManagerDialog::resizeEvent(QResizeEvent* eve)

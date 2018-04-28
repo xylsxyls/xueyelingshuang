@@ -15,21 +15,57 @@ public:
     void popDialog(DialogType type, ParamBase* param);
 
 public:
-    /** 设置比例（老版）
-    @param [in] dialogId 窗口ID值
+    /** 设置速度（支持多线程）
+    @param [in] userId 用户自定义ID
+    @param [in] speed 速度
+    */
+    void setDownloadSpeed(int32_t userId, const QString& speed);
+
+    /** 设置已下载量（支持多线程）
+    @param [in] userId 用户自定义ID
+    @param [in] downloaded 已下载量
+    */
+    void setDownloaded(int32_t userId, const QString& download);
+
+    /** 设置时间（支持多线程）
+    @param [in] userId 用户自定义ID
+    @param [in] time 时间
+    */
+    void setDownloadTime(int32_t userId, const QString& time);
+
+    /** 设置比例（支持多线程）
+    @param [in] userId 用户自定义ID
     @param [in] persent 百分比
     */
-    void setDownloadRate(int32_t dialogId, int32_t persent);
+    void setRate(int32_t userId, int32_t persent);
 
-    /** 下载完成（老版）
-    @param [in] dialogId 窗口ID值
+    /** 设置编辑框内的下载地址（支持多线程）
+    @param [in] userId 用户自定义ID
+    @param [in] addr 下载地址
     */
-    void downloadComplete(int32_t dialogId);
+    void setEditDownloadAddr(int32_t userId, const QString& addr);
 
-    /** 将当前下载框销毁并弹窗下载失败框（老版）
-    @param [out] dialogId 窗口ID值
+    /** 设置编辑框内的本地路径（支持多线程）
+    @param [in] userId 用户自定义ID
+    @param [in] path 本地路径
     */
-    void downloadError(int32_t dialogId);
+    void setEditPath(int32_t userId, const QString& path);
+
+    /** 设置转到后台下载按钮是否可用（支持多线程）
+    @param [in] userId 用户自定义ID
+    @param [in] enable 是否可用
+    */
+    void setBackEnable(int32_t userId, bool enable);
+
+    /** 当下载出错时显示下载框的出错状态（支持多线程）
+    @param [in] userId 用户自定义ID
+    */
+    void error(int32_t userId);
+
+    /** 从error切换到常态（支持多线程）
+    @param [in] userId 用户自定义ID
+    */
+    void normal(int32_t userId);
 
 Q_SIGNALS:
     //以下6个新号给新版下载框用
@@ -46,7 +82,7 @@ Q_SIGNALS:
     //本地路径的复制按钮
     void copyPath(qint32 taskId, const QString& path);
     //弹窗关闭的时候发送信号
-    void popDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
+    void popDialogDone(const DialogDoneSignalParam& param);
 
 private slots:
     void onClosedSignal(int result);

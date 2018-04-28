@@ -55,11 +55,6 @@ public:
 	*/
 	int32_t exec();
 
-    /** 设置窗口是否可改变大小，暂时只可变为不可改变大小
-    @param [in] enable 是否可改变大小
-    */
-    void setChangeSizeEnable(bool enable);
-
     /** 监听当前键是否被按下，按下则发送信号keyboardAccept
     @param [in] key 键盘码
     */

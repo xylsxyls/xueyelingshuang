@@ -67,5 +67,11 @@ void StaticDialogManager::onClosedSignal(int result)
     int32_t userId = AllocManager::instance().findUserId(dialogId);
     DialogType type = AllocManager::instance().findDialogType(dialogId);
     int32_t userParam = dialogPtr->userParam();
-    emit staticDialogDone(dialogId, userId, type, result, userParam);
+    DialogDoneSignalParam param;
+    param.m_dialogId = dialogId;
+    param.m_userId = userId;
+    param.m_type = type;
+    param.m_result = (DialogResult)result;
+    param.m_userParam = userParam;
+    emit staticDialogDone(param);
 }

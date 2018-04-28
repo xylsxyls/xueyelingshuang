@@ -3,24 +3,45 @@
 #include <QTime>
 #include <stdint.h>
 
-enum
+enum DialogResult
 {
-    ERROR_RESULT,
+    /** 错误值，用于初始化
+    */
+    ERROR_RESULT = 1000,
+
     /** 确认按钮
     */
-    ACCEPT_BUTTON = 1,
+    ACCEPT_BUTTON,
 
     /** 取消按钮
     */
-    IGNORE_BUTTON = 2,
+    IGNORE_BUTTON,
 
-    /** 全部销毁专用返回值
+    /** 超时
+    */
+    TIME_OUT,
+
+    /** Esc退出
+    */
+    ESC_EXIT,
+
+    /** Alt+F4退出
+    */
+    ALT_F4_EXIT,
+
+    /** 右上角的关闭
+    */
+    RIGHT_TOP_EXIT,
+
+    /** 代码销毁
     */
     CODE_DESTROY = -1
 };
 
 enum DialogType
 {
+    /** 错误类型
+    */
     ERROR_TYPE,
 
     /** 询问框
@@ -55,14 +76,21 @@ enum DialogType
     */
     DOWNLOAD_OPERATE_DIALOG,
 
+    /** 下载盒子
+    */
     ACCOUNT_MANAGER_DIALOG,
 
+    /** 询问通知框
+    */
     ASK_SHOW_DIALOG,
 
+    /** 提示通知框
+    */
     TIP_SHOW_DIALOG,
 
+    /** 登录通知框
+    */
     LOGIN_SHOW_DIALOG
-
 };
 
 class QWindow;
@@ -95,17 +123,13 @@ struct AskDialogParam : public ParamBase
 {
     QString m_tip;
     QString m_acceptText;
-    int32_t m_acceptDone;
     QString m_ignoreText;
-    int32_t m_ignoreDone;
 
     AskDialogParam()
     {
         m_tip = QStringLiteral("询问弹框提示信息");
         m_acceptText = QStringLiteral("确认");
-        m_acceptDone = ACCEPT_BUTTON;
         m_ignoreText = QStringLiteral("取消");
-        m_ignoreDone = IGNORE_BUTTON;
     }
 };
 
@@ -113,13 +137,11 @@ struct TipDialogParam : public ParamBase
 {
     QString m_tip;
     QString m_buttonText;
-    int32_t m_done;
 
     TipDialogParam()
     {
         m_tip = QStringLiteral("询问弹框提示信息");
         m_buttonText = QStringLiteral("确认");
-        m_done = ACCEPT_BUTTON;
     }
 };
 
@@ -127,7 +149,6 @@ struct InputDialogParam : public ParamBase
 {
     QString m_editTip;
     QString m_buttonText;
-    int32_t m_done;
     QString m_defaultText;
     //[out] 
     QString m_editText;
@@ -138,7 +159,6 @@ struct InputDialogParam : public ParamBase
     {
         m_editTip = QStringLiteral("输入框提示");
         m_buttonText = QStringLiteral("确认");
-        m_done = ACCEPT_BUTTON;
         m_isPassword = false;
         m_maxLength = -1;
     }
@@ -159,15 +179,11 @@ struct AdvertAskDialogParam : public ParamBase
     QString m_tip;
     QString m_acceptText;
     QString m_ignoreText;
-    int32_t m_acceptDone;
-    int32_t m_ignoreDone;
     AdvertAskDialogParam()
     {
         m_tip = QStringLiteral("包含广告的询问框提示");
         m_acceptText = QStringLiteral("确认");
-        m_acceptDone = ACCEPT_BUTTON;
         m_ignoreText = QStringLiteral("取消");
-        m_ignoreDone = IGNORE_BUTTON;
     }
 };
 
@@ -176,13 +192,11 @@ struct DownloadDialogParam : public ParamBase
     QString m_fileName;
     QString m_tip;
     QString m_buttonText;
-    int32_t m_done;
     DownloadDialogParam()
     {
         m_fileName = QStringLiteral("文件名");
         m_tip = QStringLiteral("下载框提示");
         m_buttonText = QStringLiteral("确认");
-        m_done = ACCEPT_BUTTON;
     }
 };
 
@@ -213,12 +227,10 @@ struct DownloadOperateDialogParam : public ParamBase
 struct TipShowDialogParam : public ParamBase
 {
     QString m_tip;
-    int32_t m_done;
     QString m_buttonText;
     TipShowDialogParam()
     {
         m_tip = QStringLiteral("提示通知框提示");
-        m_done = ACCEPT_BUTTON;
         m_buttonText = QString::fromStdWString(L"知道了");
         m_timeOut = 5;
     }
@@ -227,17 +239,13 @@ struct TipShowDialogParam : public ParamBase
 struct AskShowDialogParam : public ParamBase
 {
     QString m_tip;
-    int32_t m_acceptDone;
-    int32_t m_ignoreDone;
     QString m_acceptText;
     QString m_ignoreText;
     AskShowDialogParam()
     {
         m_tip = QStringLiteral("询问通知框提示");
         m_acceptText = QStringLiteral("同意");
-        m_acceptDone = ACCEPT_BUTTON;
         m_ignoreText = QStringLiteral("拒绝");
-        m_ignoreDone = IGNORE_BUTTON;
     }
 };
 
@@ -279,5 +287,25 @@ struct LoginShowDialogParam : public ParamBase
 
 struct AccountManagerDialogParam : public ParamBase
 {
+    AccountManagerDialogParam()
+    {
+        m_title = QStringLiteral("11对战平台 - 账号管理页面");
+    }
+};
 
+struct DialogDoneSignalParam
+{
+    int32_t m_dialogId;
+    int32_t m_userId;
+    DialogType m_type;
+    DialogResult m_result;
+    int32_t m_userParam;
+    DialogDoneSignalParam()
+    {
+        m_dialogId = 0;
+        m_userId = -1;
+        m_type = ERROR_TYPE;
+        m_result = CODE_DESTROY;
+        m_userParam = -1;
+    }
 };

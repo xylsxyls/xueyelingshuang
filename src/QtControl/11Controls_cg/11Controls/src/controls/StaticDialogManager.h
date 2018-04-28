@@ -21,7 +21,7 @@ public:
 
 Q_SIGNALS:
     //静态窗关闭的时候发送信号
-    void staticDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
+    void staticDialogDone(const DialogDoneSignalParam& param);
 
 private slots:
     void onClosedSignal(int result);

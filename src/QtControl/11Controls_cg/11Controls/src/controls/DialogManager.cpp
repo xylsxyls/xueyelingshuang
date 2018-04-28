@@ -88,6 +88,51 @@ int32_t DialogManager::dialogCount()
     return AllocManager::instance().dialogCount();
 }
 
+void DialogManager::setDownloadSpeed(int32_t userId, const QString& speed)
+{
+    PopDialogManager::instance().setDownloadSpeed(userId, speed);
+}
+
+void DialogManager::setDownloaded(int32_t userId, const QString& download)
+{
+    PopDialogManager::instance().setDownloaded(userId, download);
+}
+
+void DialogManager::setDownloadTime(int32_t userId, const QString& time)
+{
+    PopDialogManager::instance().setDownloadTime(userId, time);
+}
+
+void DialogManager::setRate(int32_t userId, int32_t persent)
+{
+    PopDialogManager::instance().setRate(userId, persent);
+}
+
+void DialogManager::setEditDownloadAddr(int32_t userId, const QString& addr)
+{
+    PopDialogManager::instance().setEditDownloadAddr(userId, addr);
+}
+
+void DialogManager::setEditPath(int32_t userId, const QString& path)
+{
+    PopDialogManager::instance().setEditPath(userId, path);
+}
+
+void DialogManager::setBackEnable(int32_t userId, bool enable)
+{
+    PopDialogManager::instance().setBackEnable(userId, enable);
+}
+
+void DialogManager::error(int32_t userId)
+{
+    PopDialogManager::instance().error(userId);
+}
+
+void DialogManager::normal(int32_t userId)
+{
+    PopDialogManager::instance().normal(userId);
+}
+
 void DialogManager::init()
 {
     QObject::connect(&PopDialogManager::instance(), &PopDialogManager::changeToBack, &DialogManager::instance(), &DialogManager::changeToBack);

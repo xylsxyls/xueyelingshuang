@@ -26,9 +26,16 @@ private slots:
 
 	void onDialogDone(int32_t dialogId, int32_t result, int32_t userType);
 
-    void onPopDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
-    void onNotifyDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
-    void onStaticDialogDone(int32_t dialogId, int32_t userId, DialogType type, int32_t result, int32_t userParam);
+    void onPopDialogDone(const DialogDoneSignalParam& param);
+    void onNotifyDialogDone(const DialogDoneSignalParam& param);
+    void onStaticDialogDone(const DialogDoneSignalParam& param);
+
+    void onChangeToBack(qint32 taskId);
+    void onDownloadAgain(qint32 taskId);
+    void onCancelDownload(qint32 taskId);
+    void onUseOtherDownload(qint32 taskId);
+    void onCopyDownloadAddr(qint32 taskId, const QString& addr);
+    void onCopyPath(qint32 taskId, const QString& path);
 
 	void timerEvent(QTimerEvent* eve);
 private:

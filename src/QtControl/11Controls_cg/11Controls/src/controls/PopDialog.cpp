@@ -5,10 +5,13 @@
 #include <QPainter>
 #include "DialogHelper.h"
 #include "Separator.h"
+#include "DialogType.h"
 
 PopDialog::PopDialog():
 m_separator(nullptr),
-m_highLight(false)
+m_highLight(false),
+m_normalColor("#4b5586"),
+m_highLightColor("#373e60")
 {
     m_separator = new Separator(this);
     if (!check())
@@ -27,6 +30,7 @@ void PopDialog::init()
     setNativeWindow(true);
     setWindowFlags(windowFlags() | Qt::Tool);
     setCustomerTitleBarHeight(40);
+    setTouchBorderWidth(0);
     setPopButtonConfig(m_exit, "", QColor(), 0, 12);
     m_exit->setBkgMargins(0, 0);
     m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupCloseButton.png");
@@ -54,6 +58,15 @@ void PopDialog::setWindowTiTle(const QString& title,
     DialogShow::setWindowTiTle(title, color, fontSize, align, origin, fontName);
 }
 
+void PopDialog::setBorderNormalHighLightColor(const QColor& normalColor, const QColor& highLightColor)
+{
+    m_normalColor = normalColor;
+    if (highLightColor != QColor(0, 0, 0, 0))
+    {
+        m_highLightColor = highLightColor;
+    }
+}
+
 void PopDialog::paintEvent(QPaintEvent* eve)
 {
     QLinearGradient gradient(QPointF(0, 0), QPoint(0, height()));
@@ -68,16 +81,16 @@ void PopDialog::paintEvent(QPaintEvent* eve)
     painter.fillRect(QRect(0, 0, width(), height()), gradient);
     if (m_highLight)
     {
-        painter.setPen(QColor("#373e60"));
+        painter.setPen(m_normalColor);
         raise();
     }
     else
     {
-        painter.setPen(QColor("#4b5586"));
+        painter.setPen(m_highLightColor);
     }
     painter.drawRect(0, 0, width() - 1, height() - 1);
     painter.restore();
-    QDialog::paintEvent(eve);
+    DialogShow::paintEvent(eve);
 }
 
 void PopDialog::showEvent(QShowEvent* eve)
@@ -117,6 +130,8 @@ void PopDialog::onNcActiveChanged(const bool& ncActive)
 
 void PopDialog::onTimeUp()
 {
+    m_result = TIME_OUT;
+    setResult(TIME_OUT);
     close();
 }
 
@@ -126,9 +141,7 @@ void PopDialog::endDialog()
     auto itResult = m_mapResult.find(focusWidget());
     if (itResult != m_mapResult.end())
     {
-        m_result = itResult->second;
-        done(m_result);
-        //setResult(m_result);
+        setResult(itResult->second);
         close();
     }
 }

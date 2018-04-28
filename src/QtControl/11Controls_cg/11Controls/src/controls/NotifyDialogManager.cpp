@@ -21,8 +21,8 @@ void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
             return;
         }
         askShowDialog->setTip(askShowDialogParam->m_tip);
-        askShowDialog->setAcceptButton(askShowDialogParam->m_acceptText, askShowDialogParam->m_acceptDone);
-        askShowDialog->setIgnoreButton(askShowDialogParam->m_ignoreText, askShowDialogParam->m_ignoreDone);
+        askShowDialog->setAcceptButton(askShowDialogParam->m_acceptText, ACCEPT_BUTTON);
+        askShowDialog->setIgnoreButton(askShowDialogParam->m_ignoreText, IGNORE_BUTTON);
         param->m_dialogId = dialogId;
         notifyDialogPtr = askShowDialog;
         break;
@@ -37,7 +37,7 @@ void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
             return;
         }
         tipShowDialog->setTip(tipShowDialogParam->m_tip);
-        tipShowDialog->setAcceptButton(tipShowDialogParam->m_buttonText, tipShowDialogParam->m_done);
+        tipShowDialog->setAcceptButton(tipShowDialogParam->m_buttonText, ACCEPT_BUTTON);
         param->m_dialogId = dialogId;
         notifyDialogPtr = tipShowDialog;
         break;
@@ -88,6 +88,14 @@ void NotifyDialogManager::onClosedSignal(int result)
     int32_t userId = AllocManager::instance().findUserId(dialogId);
     DialogType type = AllocManager::instance().findDialogType(dialogId);
     int32_t userParam = dialogPtr->userParam();
-    emit notifyDialogDone(dialogId, userId, type, result, userParam);
+
+    DialogDoneSignalParam param;
+    param.m_dialogId = dialogId;
+    param.m_userId = userId;
+    param.m_type = type;
+    param.m_result = (DialogResult)result;
+    param.m_userParam = userParam;
+
+    emit notifyDialogDone(param);
     AllocManager::instance().removeByDialogId(dialogId);
 }

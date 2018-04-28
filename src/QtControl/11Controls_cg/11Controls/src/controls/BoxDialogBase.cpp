@@ -10,7 +10,6 @@ BoxDialogBase::BoxDialogBase()
     {
         return;
     }
-    setChangeSizeEnable(false);
 	m_title->setBackgroundColor(QColor(67, 81, 117, 255));
 	m_title->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 	m_title->setTextOrigin(13);
@@ -19,6 +18,8 @@ BoxDialogBase::BoxDialogBase()
 	m_exit->raise();
 	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
 	m_exit->setBorderRadius(0);
+
+    setBorderNormalHighLightColor(QColor(79, 153, 222, 255));
 	//m_separator->setVisible(false);
 	//setStyleSheet(".AccountDialogBase{background-color:rgba(44,52,74,255);border:1px solid;border-color:rgba(79,153,222,255);}");
 }
@@ -27,9 +28,7 @@ void BoxDialogBase::paintEvent(QPaintEvent* eve)
 	PopDialog::paintEvent(eve);
 	QPainter painter(this);
     painter.save();
-	painter.fillRect(QRect(0, 0, width(), height()), QColor(44, 52, 74, 255));
-	painter.setPen(QColor(79, 153, 222, 255));
-	painter.drawRect(0, 0, width() - 1, height() - 1);
+	painter.fillRect(QRect(1, 1, width() - 2, height() - 2), QColor(44, 52, 74, 255));
     painter.restore();
 }
 
