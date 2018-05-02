@@ -3,6 +3,8 @@
 #include "ControlsMacro.h"
 #include "PopDialog.h"
 
+/** ÕËºÅ¿ò»ùÀà
+*/
 class BoxDialogBase : public PopDialog
 {
 public:

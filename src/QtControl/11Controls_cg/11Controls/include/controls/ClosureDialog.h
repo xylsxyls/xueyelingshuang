@@ -3,6 +3,8 @@
 #include "ControlsMacro.h"
 
 class LockedAccountPanel;
+/** ·âºÅ¿ò
+*/
 class ControlsAPI ClosureDialog : public BoxDialogBase
 {
 public:
@@ -12,12 +14,8 @@ public:
 
 protected:
     void resizeEvent(QResizeEvent* eve);
-
-private:
     bool check();
 
 private:
 	LockedAccountPanel* mLockedAccountPanel;
-
-	
 };

@@ -11,9 +11,16 @@ class NotifyDialogManager :
 {
     Q_OBJECT
 public:
+    /** 显示窗口
+    @param [in] type 弹窗类型
+    @param [in] param 弹窗参数
+    */
     void showDialog(DialogType type, ParamBase* param);
 
 Q_SIGNALS:
+    /** 非模态窗关闭的时候发送信号
+    @param [in] param 非模态窗关闭发送信号的参数结构体
+    */
     void notifyDialogDone(const DialogDoneSignalParam& param);
 
 private slots:

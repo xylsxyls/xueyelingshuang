@@ -23,26 +23,33 @@ class DialogHelper
 {
 public:
     /** 新增标签文字并设置
+    @param [in] label 控件指针
     @param [in] text 文本内容
-    @param [in] rect 标签相对父窗口所在位置
-    @param [in] textColor 文字颜色
+    @param [in] textColor 字体颜色
+    @param [in] fontSize 字体大小
     @return 返回标签指针
     */
     static void setLabel(Label* label, const QString& text, const QColor& textColor, int32_t fontSize);
 
     /** 新增提示文字并设置（多行）
+    @param [in] tip 控件指针
     @param [in] text 文本内容
-    @param [in] rect 标签相对父窗口所在位置
-    @param [in] textColor 文字颜色
-    @return 返回标签指针
+    @param [in] textColor 字体颜色
+    @param [in] fontSize 字体大小
     */
     static void setTip(Label* tip, const QString& text, const QColor& textColor, int32_t fontSize);
 
     /** 新增按钮并设置，按钮点击后会关闭窗口
-    @param [in] text 按钮内文本内容
-    @param [in] rect 按钮相对父窗口所在位置
-    @param [in] result 关闭窗口后的返回值
-    @return 返回按钮指针
+    @param [in] dialog 窗口指针
+    @param [in] button 按钮指针
+    @param [in] text 按钮文本内容
+    @param [in] textColor 按钮文字颜色
+    @param [in] backgroundImage 按钮背景图片路径
+    @param [in] result 按下后的返回值
+    @param [in] fontSize 字体大小
+    @param [in] mapResult 按钮返回值的存储容器
+    @param [in] imageMargin 图片起始位置
+    @param [in] isPop 是否是弹窗的按钮
     */
     static void setButton(DialogShow* dialog,
                           COriginalButton* button,
@@ -56,17 +63,17 @@ public:
                           bool isPop);
 
     /** 添加分割线
-    @param [in] 分割线控件指针
+    @param [in] separator 分割线控件指针
     @param [in] isHorizon 是否水平
     @param [in] upColor 上层颜色
     @param [in] downColor 下层颜色
-    @return 返回分割线指针
     */
     static void setSeparator(Separator* separator, bool isHorizon, const QColor& upColor, const QColor& downColor);
 
     /** 添加单行文本框
-    @param [in] rect 标签相对父窗口所在位置
-    @param [in] defaultText 默认显示文字
+    @param [in] lineEdit 单行文本框指针
+    @param [in] defaultText 默认输入内容
+    @param [in] maxLength 文本框可输入的最大长度
     @return 返回文本框指针
     */
     static void setLineEdit(LineEdit* lineEdit, const QString& defaultText = "", int32_t maxLength = -1);

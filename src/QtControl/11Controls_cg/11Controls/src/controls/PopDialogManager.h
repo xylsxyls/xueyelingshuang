@@ -12,6 +12,10 @@ class PopDialogManager :
 {
     Q_OBJECT
 public:
+    /** 弹出弹框
+    @param [in] type 弹窗类型
+    @param [in] param 弹窗参数
+    */
     void popDialog(DialogType type, ParamBase* param);
 
 public:

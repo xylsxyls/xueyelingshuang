@@ -5,6 +5,8 @@
 class AccountDialog;
 class ClosureDialog;
 class SubAccountPanel;
+/** ’À∫≈π‹¿ÌøÚ
+*/
 class ControlsAPI AccountManagerDialog : public BoxDialogBase
 {
 public:
@@ -23,8 +25,6 @@ public:
 
 protected:
     void resizeEvent(QResizeEvent* eve);
-
-private:
     bool check();
 
 private:

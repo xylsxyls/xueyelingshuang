@@ -6,14 +6,13 @@
 class Label;
 class ComboBox;
 class LineEdit;
+/** 添加账号框
+*/
 class ControlsAPI AccountDialog : public BoxDialogBase
 {
 	Q_OBJECT
 public:
 	/** 构造函数
-	@param [in] parent 父窗口句柄
-	@param [in] acceptDone 按下确定的返回值
-	@param [in] ignoreDone 按下取消的返回值
 	*/
 	AccountDialog();
 
@@ -31,22 +30,29 @@ public:
 	*/
 	QString accountEditText();
 
+    /** 设置确定按钮按下的返回值
+    @param [in] result 确定按钮按下的返回值
+    */
     void setAcceptDown(int32_t result);
 
+    /** 设置取消按钮按下的返回值
+    @param [in] result 取消按钮按下的返回值
+    */
     void setIgnoreDown(int32_t result);
 
 Q_SIGNALS:
+    /** 错误提示是否显示
+    @param [in] visible 是否显示
+    */
 	void errorVisible(bool visible);
 
 protected:
 	bool eventFilter(QObject* tar, QEvent* eve);
     void resizeEvent(QResizeEvent* eve);
+    bool check();
 
 private slots:
 	void accountAccept(QObject* tar, Qt::Key key);
-
-private:
-    bool check();
 
 private:
 	Label* m_sep;
