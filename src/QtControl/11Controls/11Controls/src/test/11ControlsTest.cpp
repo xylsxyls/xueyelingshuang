@@ -113,7 +113,7 @@ COriginalDialog* sss = nullptr;
 void ControlsTest::onPopTipDialog()
 {
     onPopAskDialog();
-    AskShowDialogParam param;
+    AdvertShowDialogParam param;
     param.m_userParam = 30;
     param.m_userId = 10002;
     param.m_parent = sss->windowHandle();
@@ -127,7 +127,7 @@ void ControlsTest::onPopTipDialog()
     //QObject::connect(&DialogManager::instance(), &DialogManager::copyDownloadAddr, this, &ControlsTest::onCopyDownloadAddr);
     //QObject::connect(&DialogManager::instance(), &DialogManager::copyPath, this, &ControlsTest::onCopyPath);
 
-    DialogManager::instance().makeDialog(ASK_SHOW_DIALOG, &param);
+    DialogManager::instance().makeDialog(ADVERT_SHOW_DIALOG, &param);
     
     //RCSend("%s", CStringManager::UnicodeToAnsi(param.m_editText.toStdWString()).c_str());
 	// int xx = DialogManager::instance().popTipDialog(dialogId1,

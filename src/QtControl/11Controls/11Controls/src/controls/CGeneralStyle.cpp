@@ -149,12 +149,12 @@ QString CGeneralStyle::fontFace_BaiDuZongYi()
 
 QString CGeneralStyle::war3lobbyResourcePath()
 {
-    return mWar3LobbyResourcePath;
+    return "D:/newClient/output/W3L/res";
 }
 
 QString CGeneralStyle::platformResourcePath()
 {
-	return mPlatformResourcePath;
+	return "D:/newClient/output/resource";
 }
 
 CGeneralStyle::PingLevel CGeneralStyle::getPingLevel(quint64 ping)

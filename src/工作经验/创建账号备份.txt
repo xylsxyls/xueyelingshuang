@@ -1,0 +1,97 @@
+void SubAccountManager::onCreateUserRsp(const QByteArray& data)
+{
+	std::string json_txt = data.toStdString();
+	if (json_txt.empty())
+	{
+		return;
+	}
+
+	bool ok = false;
+	int32_t code = 0;
+	int32_t surplusCount = 0;
+	int32_t accountId = 0;
+	SubAccount subAccount;
+	subAccount.login_time = time(0);
+	Json::Reader reader;
+	Json::Value json_object;
+	Json::Value json_object_array;
+	Json::Value valve;
+	if (reader.parse(json_txt, json_object))
+	{
+		if (json_object["code"].isInt())
+		{
+			code = json_object["code"].asInt();
+			if (code == 0)
+			{
+				if (json_object["SurplusCount"].isInt())
+				{
+					surplusCount = json_object["SurplusCount"].asInt();
+				}
+
+				json_object_array = json_object["data"];
+				if (json_object_array.isArray())
+				{
+					for (uint32_t i = 0; i < json_object_array.size(); i++)
+					{
+						json_object = json_object_array.get(i, valve);
+						if (json_object.isObject())
+						{
+							uint64_t account_id = 0;
+							bool is_default = false;
+							if (json_object["userid"].isNumeric())
+							{
+								subAccount.id = json_object["userid"].asInt();
+							}
+
+							if (json_object["username"].isString())
+							{
+								std::string name_txt = json_object["username"].asString();
+								CBase64 base64;
+								char buffer[256] = { 0 };
+								base64.DecodeBuffer((char*)name_txt.c_str(), buffer);
+								wchar_t w_player_name[256] = { 0 };
+								CStrSupport::Utf2Unicode(buffer, w_player_name, _countof(w_player_name));
+								subAccount.name = w_player_name;
+							}
+
+							if (json_object["accountid"].isNumeric())
+							{
+								accountId = json_object["accountid"].asUInt64();
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				if (json_object["msg"].isString())
+				{
+					std::string error_msg = json_object["msg"].asString();
+					wchar_t w_msg[256] = { 0 };
+					CStrSupport::Utf2Unicode(error_msg.c_str(), w_msg, _countof(w_msg));
+				}
+			}
+		}
+	}
+
+	QString result;
+	if (code == 0)
+	{
+		result = "创建成功";
+		queryAllAccount();
+	}
+	if (code == -10003)
+	{
+		// tip:"账号名已存在，请重新输入！".
+		result = tr("IDS_STR_CREATEPLAYER_EXISTED");
+	}
+	else
+	{
+		// tip:"账号名创建失败，请稍后再试！".
+		result = tr("IDS_STR_CREATEPLAYER_ERR");
+	}
+
+	std::string accountInfoUrl = getQueryAccountInfoUrl();
+	CW3LDataSurport::instance()->httpGet(QString::fromStdString(accountInfoUrl));
+	return;
+}

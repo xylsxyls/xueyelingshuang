@@ -1,0 +1,5 @@
+大家可以备忘下，存起来：
+版本发布下载Url: http://10.0.19.239/Publish
+PDB下载:  http://10.0.19.239/PDB
+马彪(马彪) 05-04 09:45:46
+http://log1.5211game.com/search/admin/PlatFormLogList.aspx?page=6&bugSrcVer=Lobby_2.0.21.24-20180502T142515

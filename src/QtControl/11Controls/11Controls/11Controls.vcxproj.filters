@@ -528,6 +528,15 @@
     <ClCompile Include="src\controls\CGeneralStyle.cpp">
       <Filter>controls\QtDialog</Filter>
     </ClCompile>
+    <ClCompile Include="src\controls\AdvertShowDialog.cpp">
+      <Filter>controls\QtDialog\UnModal</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AdvertShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AdvertShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\CStringManager.h">
@@ -788,6 +797,9 @@
     </CustomBuild>
     <CustomBuild Include="src\controls\CGeneralStyle.h">
       <Filter>controls\QtDialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\AdvertShowDialog.h">
+      <Filter>controls\QtDialog\UnModal</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

@@ -98,7 +98,11 @@ enum DialogType
 
     /** 登录通知框
     */
-    LOGIN_SHOW_DIALOG
+    LOGIN_SHOW_DIALOG,
+
+	/** 广告通知框
+	*/
+	ADVERT_SHOW_DIALOG
 };
 
 enum OperateType
@@ -467,6 +471,7 @@ struct SignalParam
 {
 
 };
+Q_DECLARE_METATYPE(SignalParam)
 
 /** 转到后台下载信号
 */
@@ -772,6 +777,19 @@ struct LoginShowDialogParam : public ParamBase
         m_linkUrl = "http://www.baidu.com/";
         m_isUrlButtonVisible = true;
     }
+};
+
+/** 广告通知框参数
+*/
+struct AdvertShowDialogParam : public ParamBase
+{
+	//广告链接
+	QString m_advertUrl;
+	AdvertShowDialogParam()
+	{
+		m_title = QStringLiteral("11热点推荐");
+		m_advertUrl = QStringLiteral("http://www.baidu.com/");
+	}
 };
 
 struct AccountManagerDialogParam : public ParamBase

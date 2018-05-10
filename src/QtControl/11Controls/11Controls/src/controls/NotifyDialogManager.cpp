@@ -5,6 +5,7 @@
 #include "LoginShowDialog.h"
 #include "AllocManager.h"
 #include "DialogShow.h"
+#include "AdvertShowDialog.h"
 
 void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
 {
@@ -23,6 +24,7 @@ void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
         askShowDialog->setTip(askShowDialogParam->m_tip);
         askShowDialog->setAcceptButton(askShowDialogParam->m_acceptText, ACCEPT_BUTTON);
         askShowDialog->setIgnoreButton(askShowDialogParam->m_ignoreText, IGNORE_BUTTON);
+		askShowDialog->setWindowTiTle(param->m_title);
         param->m_dialogId = dialogId;
         notifyDialogPtr = askShowDialog;
         break;
@@ -38,6 +40,7 @@ void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
         }
         tipShowDialog->setTip(tipShowDialogParam->m_tip);
         tipShowDialog->setAcceptButton(tipShowDialogParam->m_buttonText, ACCEPT_BUTTON);
+		tipShowDialog->setWindowTiTle(param->m_title);
         param->m_dialogId = dialogId;
         notifyDialogPtr = tipShowDialog;
         break;
@@ -54,10 +57,26 @@ void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
         loginShowDialog->setTip(loginShowDialogParam->m_tip);
         loginShowDialog->setGreeting(loginShowDialogParam->m_greeting);
         loginShowDialog->setMoreButton(loginShowDialogParam->m_urlButtonText, loginShowDialogParam->m_linkUrl, loginShowDialogParam->m_isUrlButtonVisible);
+		loginShowDialog->setWindowTiTle(param->m_title);
         param->m_dialogId = dialogId;
         notifyDialogPtr = loginShowDialog;
         break;
     }
+	case ADVERT_SHOW_DIALOG:
+	{
+		AdvertShowDialogParam* advertShowDialogParam = (AdvertShowDialogParam*)param;
+		quint64 dialogId = 0;
+		AdvertShowDialog* advertShowDialog = (AdvertShowDialog*)AllocManager::instance().createDialog(dialogId, advertShowDialogParam->m_userId, ADVERT_SHOW_DIALOG);
+		if (advertShowDialog == nullptr)
+		{
+			return;
+		}
+		advertShowDialog->setAdvertUrl(advertShowDialogParam->m_advertUrl);
+		advertShowDialog->setWindowTiTle(param->m_title, QColor(255, 255, 255, 255), 14);
+		param->m_dialogId = dialogId;
+		notifyDialogPtr = advertShowDialog;
+		break;
+	}
     default:
         break;
     }
@@ -68,7 +87,6 @@ void NotifyDialogManager::showDialog(DialogType type, ParamBase* param)
     }
 
     notifyDialogPtr->setWindowResultAddr(new DialogResult);
-    notifyDialogPtr->setWindowTiTle(param->m_title);
     notifyDialogPtr->setUserParam(param->m_userParam);
     notifyDialogPtr->setTimeRest(param->m_timeOut);
     notifyDialogPtr->setTimeRestVisible(param->m_isCountDownVisible);

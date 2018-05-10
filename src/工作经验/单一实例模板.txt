@@ -1,0 +1,46 @@
+#pragma once
+
+class AllocManager
+{
+public:
+	/** 单一实例
+	@return 返回单一实例
+	*/
+	static AllocManager& instance();
+
+	/** 实例是否存在
+	@return 返回是否存在
+	*/
+	static bool hasInstance();
+
+	/** 释放实例，释放之后不再可以创建
+	*/
+	static void releaseInstance();
+};
+
+#include "AllocManager.h"
+
+AllocManager* allocManager = nullptr;
+bool isUsed = false;
+
+AllocManager& AllocManager::instance()
+{
+	if (isUsed)
+	{
+		return *allocManager;
+	}
+	allocManager = new AllocManager;
+	return *allocManager;
+}
+
+bool AllocManager::hasInstance()
+{
+	return allocManager != nullptr;
+}
+
+void AllocManager::releaseInstance()
+{
+	isUsed = true;
+	delete allocManager;
+	allocManager = nullptr;
+}

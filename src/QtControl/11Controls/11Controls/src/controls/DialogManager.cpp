@@ -59,6 +59,7 @@ void DialogManager::makeDialog(DialogType type, ParamBase* param)
     case ASK_SHOW_DIALOG:
     case TIP_SHOW_DIALOG:
     case LOGIN_SHOW_DIALOG:
+	case ADVERT_SHOW_DIALOG:
     {
         NotifyDialogManager::instance().showDialog(type, (ParamBase*)param);
         break;

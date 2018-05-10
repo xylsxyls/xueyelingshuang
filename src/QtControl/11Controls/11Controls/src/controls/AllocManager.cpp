@@ -11,6 +11,7 @@
 #include "LoginShowDialog.h"
 #include "TipShowDialog.h"
 #include "AccountManagerDialog.h"
+#include "AdvertShowDialog.h"
 
 quint64 AllocManager::add(COriginalDialog* base, DialogType type, quint64 userId)
 {
@@ -224,6 +225,11 @@ COriginalDialog* AllocManager::createDialog(quint64& dialogId, quint64 userId, D
         dialogPtr = new LoginShowDialog;
         break;
     }
+	case ADVERT_SHOW_DIALOG:
+	{
+		dialogPtr = new AdvertShowDialog;
+		break;
+	}
     default:
         break;
     }
