@@ -2,43 +2,45 @@
 #include "Label.h"
 #include "COriginalButton.h"
 #include "DialogManager.h"
+#include "DialogHelper.h"
+#include "CGeneralStyle.h"
 
-int32_t TipDialog::popTipDialog(int32_t& dialogId,
-								const QString& title,
-								const QString& tip,
-								const QString& buttonText,
-								int32_t done,
-								QWindow* parent,
-								int32_t timeOut,
-								bool isCountDownVisible)
+TipDialog::TipDialog():
+m_tip(nullptr),
+m_accept(nullptr)
 {
-	TipDialog* dlg = new TipDialog(title, tip, buttonText, done);
-	dlg->setParentWindow(parent);
-	dlg->setDialogEnum(TIP_DIALOG);
-	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
-	delete dlg;
-	return result;
+    m_tip = new Label(this);
+    m_accept = new COriginalButton(this);
+    if (!check())
+    {
+        return;
+    }
+    initAcceptButton(m_accept);
+    resize(340, 165);
 }
 
-TipDialog::TipDialog(const QString& title,
-					 const QString& tip,
-					 const QString& buttonText,
-					 int32_t done)
+void TipDialog::setTip(const QString& tip)
 {
-	initForExec(340, 165);
-	m_title->setText(title);
-	setWindowTitle(title);
-	m_title->setFontSize(12);
-	m_tip = addTip(tip, QRect(43, 40, width() - 43 * 2, 83), QColor(205, 213, 225, 255));
-	m_tip->setFontSize(12);
-	m_accept = addButton(buttonText, QRect((width() - 116) / 2, 127, 116, 22), done);
-	m_accept->installEventFilter(this);
-
-	QObject::connect(this, &DialogShow::keyboardAccept, this, &TipDialog::tipAccept);
+    DialogHelper::setTip(m_tip, tip, QColor(205, 213, 225, 255), 12);
 }
 
-void TipDialog::tipAccept(QObject* tar, Qt::Key key)
+void TipDialog::setAcceptButton(const QString& acceptText, DialogResult acceptDone)
 {
-	m_accept->setFocus();
-	m_accept->click();
+    setPopButtonConfig(m_accept, acceptText, QColor(201, 211, 252, 255), acceptDone, 14);
+}
+
+void TipDialog::resizeEvent(QResizeEvent* eve)
+{
+    PopDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
+    m_tip->setGeometry(QRect(43, 40, width() - 43 * 2, 83));
+    m_accept->setGeometry(QRect((width() - 116) / 2, 127, 116, 22));
+}
+
+bool TipDialog::check()
+{
+    return m_tip != nullptr && m_accept != nullptr && PopDialog::check();
 }

@@ -10,197 +10,127 @@
 #include "CGeneralStyle.h"
 #include <Windows.h>
 #include <QApplication>
+#include <QKeyEvent>
+#include <fstream>
 
 DialogBase::DialogBase():
-m_timeVisible(false),
-m_dialogEnum(-1)
+m_escEnable(true),
+m_timeRest(-1),
+m_timeId(-1),
+m_title(nullptr)
 {
 	setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+    m_title = new Label(this);
 }
 
-void DialogBase::setWinId()
+DialogBase::~DialogBase()
 {
-	winId();
+    auto childs = children();
+    for each (QObject* var in childs)
+    {
+        QWidget* widget = qobject_cast<QWidget*>(var);
+        if (widget)
+        {
+            widget->installEventFilter(nullptr);
+        }
+    }
+    QWindow* handle = windowHandle();
+    if (handle != nullptr && handle->transientParent() != nullptr)
+    {
+        handle->setTransientParent(nullptr);
+    }
 }
 
-int32_t DialogBase::exec(int32_t& dialogId, int32_t timeOut, bool isCountDownVisible)
+void DialogBase::setNativeWindow(bool hasHandle)
 {
-	m_timeRest = timeOut;
-	if (m_timeRest == 0)
-	{
-		return 0;
-	}
-	m_timeVisible = isCountDownVisible;
-
-	auto oldModality = windowModality();
-
-	QWindow* handle = windowHandle();
-	if (handle != nullptr && handle->transientParent())
-	{
-		setWindowModality(Qt::WindowModal);
-	}
-	else
-	{
-		setWindowModality(Qt::ApplicationModal);
-	}
-
-	dialogId = DialogManager::instance().setDialog(this);
-	int32_t result = QDialog::exec();
-	//setWindowModality(oldModality);
-	//DialogManager::instance().removeDialog(dialogId);
-	return result;
+    setAttribute(Qt::WA_NativeWindow, hasHandle);
 }
 
-void DialogBase::show(int32_t& dialogId, int32_t timeOut, bool isCountDownVisible)
+void DialogBase::setExistFocus(bool focus)
 {
-	m_timeRest = timeOut;
-	if (m_timeRest == 0)
-	{
-		return;
-	}
-	m_timeVisible = isCountDownVisible;
-	dialogId = NotifyDialogManager::instance().setDialog(this);
-	QDialog::show();
-	return;
+    setAttribute(Qt::WA_ShowWithoutActivating, !focus);
 }
 
-Label* DialogBase::addLabel(const QString& text, const QRect& rect, const QColor& textColor)
+void DialogBase::setTimeRest(int32_t timeOut)
 {
-	Label* label = new Label(this);
-	if (label == nullptr)
-	{
-		return nullptr;
-	}
-	label->setGeometry(rect);
-	label->setText(text);
-	label->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
-	label->setTextColor(textColor);
-	label->setFontFace(CGeneralStyle::instance()->font().family());
-	label->setFontSize(14);
-	return label;
+    m_timeRest = timeOut;
+    if (m_timeId != -1)
+    {
+        killTimer(m_timeId);
+    }
 }
 
-Label* DialogBase::addTip(const QString& text, const QRect& rect, const QColor& textColor)
+void DialogBase::setEscEnable(bool enable)
 {
-	Label* tip = addLabel(text, rect, textColor);
-	if (tip == nullptr)
-	{
-		return nullptr;
-	}
-	tip->setWordWrap(true);
-	return tip;
+    m_escEnable = enable;
 }
 
-COriginalButton* DialogBase::addButton(const QString& text, const QRect& rect, int32_t result)
+bool DialogBase::escEnable()
 {
-	COriginalButton* button = new COriginalButton(this);
-	if (button == nullptr)
-	{
-		return nullptr;
-	}
-	button->setText(text);
-	button->setGeometry(rect);
-	button->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupButton.png");
-	button->setBkgMargins(4, 0);
-	button->setBorderRadius(4);
-	button->setFontSize(13);
-	button->setFontColor(QColor(201, 211, 252));
-	m_mapResult[button] = result;
-	QObject::connect(button, &COriginalButton::clicked, this, &DialogBase::endDialog);
-	return button;
+    return m_escEnable;
 }
 
-Label* DialogBase::addSeparator(const QPoint& point, int32_t length, bool isHorizon, const QColor upColor, const QColor downColor)
+void DialogBase::setEscAltF4Enable(bool enable)
 {
-	Label* label = new Label(this);
-	if (label == nullptr)
-	{
-		return nullptr;
-	}
-
-	label->setGeometry(point.x(), point.y(), isHorizon ? length : 2, isHorizon ? 2 : length);
-	label->setBackgroundColor(downColor);
-	Label* lab = new Label(label);
-	if (lab == nullptr)
-	{
-		return nullptr;
-	}
-	lab->setGeometry(0, 0, isHorizon ? length : 1, isHorizon ? 1 : length);
-	lab->setBackgroundColor(upColor);
-	return label;
+    setEscEnable(enable);
+    setAltF4Enable(enable);
 }
 
-LineEdit* DialogBase::addLineEdit(const QRect& rect, bool isPassword, const QString& defaultText)
+int32_t DialogBase::exec()
 {
-	LineEdit* lineEdit = nullptr;
-	if (isPassword)
-	{
-		lineEdit = new CPasswordInputBox(this);
-	}
-	else
-	{
-		lineEdit = new LineEdit(this);
-	}
-	if (lineEdit == nullptr)
-	{
-		return nullptr;
-	}
-	lineEdit->setText(defaultText);
-	lineEdit->setGeometry(rect);
-	lineEdit->setBorderWidth(1);
-	lineEdit->setBorderColor(QColor(31, 36, 51, 255));
-	lineEdit->setBorderRadius(4);
-	lineEdit->setFontSize(16);
-	lineEdit->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
-	lineEdit->setAlignment(Qt::AlignVCenter);
-	lineEdit->setTextOrigin(3);
-	lineEdit->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupInputBox.png", 1, 1, 1, 1);
-	lineEdit->setTextColor(QColor(0, 0, 0, 255));
-	return lineEdit;
+    setWindowModality((transientWindow() != nullptr) ? Qt::WindowModal : Qt::ApplicationModal);
+    if (m_timeRest == 0)
+    {
+        return 0;
+    }
+    return COriginalDialog::exec();
 }
 
-CPasswordInputBox* DialogBase::addPasswordInputBox(const QRect& rect, const QString& defaultText)
+void DialogBase::show()
 {
-	CPasswordInputBox* password = new CPasswordInputBox(this);
-	if (password == nullptr)
-	{
-		return nullptr;
-	}
-	password->setText(defaultText);
-	password->setGeometry(rect);
-	return password;
+    if (m_timeRest == 0)
+    {
+        return;
+    }
+    COriginalDialog::show();
 }
 
-void DialogBase::setParentWindow(QWindow* parent)
+void DialogBase::listenAllControls()
 {
-	QWindow* window = windowHandle();
-	if (window == nullptr)
-	{
-		return;
-	}
-
-	window->setTransientParent(topWindowHandle(parent));
-	return;
+    auto childs = children();
+    for each (QObject* var in childs)
+    {
+        QWidget* widget = qobject_cast<QWidget*>(var);
+        if (widget)
+        {
+            widget->installEventFilter(this);
+        }
+    }
 }
 
-void DialogBase::setDialogEnum(int32_t dialogEnum)
+void DialogBase::addListenKey(Qt::Key key)
 {
-	m_dialogEnum = dialogEnum;
+    m_listenKey.push_back(key);
 }
 
-int32_t DialogBase::dialogEnum()
+void DialogBase::setWindowTiTle(const QString& title,
+                                const QColor& color,
+                                int32_t fontSize,
+                                Qt::Alignment align,
+                                int32_t origin,
+                                const QString& fontName)
 {
-	return m_dialogEnum;
-}
-
-void DialogBase::endDialog()
-{
-	//childAt(mapFromGlobal(QWidget::cursor().pos()))
-	auto itResult = m_mapResult.find(focusWidget());
-	if (itResult != m_mapResult.end())
-	{
-		done(itResult->second);
-	}
+    if (!check())
+    {
+        return;
+    }
+    setWindowTitle(title);
+    m_title->setText(title);
+    m_title->setTextColor(color);
+    m_title->setFontSize(fontSize);
+    m_title->setAlignment(align);
+    m_title->setTextOrigin(origin);
+    m_title->setFontFace(fontName);
 }
 
 void DialogBase::showEvent(QShowEvent* eve)
@@ -211,44 +141,92 @@ void DialogBase::showEvent(QShowEvent* eve)
 		emit timeRest(m_timeRest);
 	}
 
+    if (!m_listenKey.empty())
+    {
+        listenAllControls();
+    }
+
 	QDialog::showEvent(eve);
 	raise();
 }
 
 void DialogBase::timerEvent(QTimerEvent* eve)
 {
+    QDialog::timerEvent(eve);
 	--m_timeRest;
 	emit timeRest(m_timeRest);
 	if (m_timeRest == 0)
 	{
-		reject();
+        killTimer(m_timeId);
+        emit timeUp();
 	}
-	QDialog::timerEvent(eve);
 }
 
-QWindow* DialogBase::topWindowHandle(QWindow* parent)
+void DialogBase::keyPressEvent(QKeyEvent* eve)
 {
-	if (parent == nullptr)
-	{
-		return nullptr;
-	}
-	QWindow* windowInAppHandle = nullptr;
-	WId topLevelHandle = (WId)::GetAncestor(HWND(parent->winId()), GA_ROOT);
-	QWidget* widget = QWidget::find(topLevelHandle);
-	if (widget != nullptr)
-	{
-		setAttribute(Qt::WA_NativeWindow);
-		return widget->windowHandle();
-	}
-	else
-	{
-		foreach(QWindow* windowInApp, qApp->allWindows())
-		{
-			if (windowInApp->winId() == topLevelHandle)
-			{
-				return windowInApp;
-			}
-		}
-	}
-	return nullptr;
+    if (eve == nullptr)
+    {
+        QDialog::keyPressEvent(eve);
+        return;
+    }
+
+    auto ssd = eve->key();
+    switch (eve->key())
+    {
+    case Qt::Key_Escape:
+    {
+        eve->ignore();
+        if (m_escEnable)
+        {
+            escEvent();
+        }
+        return;
+    }
+    default:
+        break;
+    }
+    QDialog::keyPressEvent(eve);
+}
+
+bool DialogBase::eventFilter(QObject* tar, QEvent* eve)
+{
+    if (tar == nullptr || eve == nullptr)
+    {
+        return true;
+    }
+
+    bool res = COriginalDialog::eventFilter(tar, eve);
+    if (eve->type() == QEvent::KeyPress)
+    {
+        QKeyEvent* keyEvent = (QKeyEvent*)eve;
+        auto result = std::find(m_listenKey.begin(), m_listenKey.end(), keyEvent->key());
+        if (result != m_listenKey.end())
+        {
+            emit keyboardAccept(tar, (Qt::Key)keyEvent->key());
+        }
+        //Qt::Key_Space Qt::Key_Enter Qt::Key_Return Qt::Key_Escape
+    }
+
+    return res;
+}
+
+void DialogBase::resizeEvent(QResizeEvent* eve)
+{
+    COriginalDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
+    int32_t titleHeight = customerTitleBarHeight();
+    m_title->setGeometry(0, 0, width(), titleHeight);
+}
+
+void DialogBase::escEvent()
+{
+    close();
+}
+
+bool DialogBase::check()
+{
+    return m_title != nullptr;
 }

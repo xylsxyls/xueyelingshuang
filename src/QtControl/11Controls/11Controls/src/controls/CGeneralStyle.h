@@ -44,6 +44,33 @@ public:
         PingLevel_Bad     = 3,
     };
 
+	//青铜I   0~1000
+	//青铜II  1001~1050
+	//青铜III 1051~1100
+	//白银I   1101~1150
+	//白银II  1151~1200
+	//白银III 1201~1300
+	//黄金I   1301~1400
+	//黄金II  1401~1500
+	//黄金III 1501~1600
+	//钻石    1601~2000
+	//王者    2001+
+	//王者    top10
+	enum BattleLevel
+	{
+		BattleLevel_Bronze01 ,
+		BattleLevel_Bronze02 ,
+		BattleLevel_Bronze03 ,
+		BattleLevel_Sliver01 ,
+		BattleLevel_Sliver02 ,
+		BattleLevel_Sliver03 ,
+		BattleLevel_Golden01 ,
+		BattleLevel_Golden02 ,
+		BattleLevel_Golden03 ,
+		BattleLevel_Diamond  ,
+		BattleLevel_King     ,
+	};
+
     static CGeneralStyle* instance();
     static void           release();
 
@@ -51,8 +78,10 @@ public:
     QString war3lobbyResourcePath();
 	QString platformResourcePath();
 
-    PingLevel getPingLevel(quint64 ping);
-	QColor    getPingColor(quint64 ping);
+   PingLevel getPingLevel(quint64 ping); //* 获取ping等级
+	QColor    getPingColor(quint64 ping); //* 获取ping的颜色
+
+	BattleLevel getBattleLevel(quint64 score); //* 获取竞技场积分等级
 
     QColor  fontColor();
     QFont   font();

@@ -19,7 +19,7 @@ int32_t DownloadErrorDialog::popDownloadErrorDialog(int32_t& dialogId,
 													bool isCountDownVisible)
 {
 	DownloadErrorDialog* dlg = new DownloadErrorDialog(fileName, title, buttonText, done);
-	dlg->setParentWindow(parent);
+	dlg->setTopTransientParentWindow(parent);
 	dlg->setDialogEnum(DOWNLOAD_ERROR_DIALOG);
 	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
 	delete dlg;
@@ -31,7 +31,7 @@ DownloadErrorDialog::DownloadErrorDialog(const QString& fileName,
 										 const QString& buttonText,
 										 int32_t done)
 {
-	initForExec(340, 165);
+	init(340, 165);
 	m_title->setText(title);
 	setWindowTitle(title);
 	m_title->setFontSize(12);

@@ -1,38 +1,33 @@
 #pragma once
 #include "DialogShow.h"
 #include "ControlsMacro.h"
+#include "NotifyDialog.h"
 
 /** 显示提示框
 */
-class TipShowDialog : public DialogShow
+class TipShowDialog : public NotifyDialog
 {
 	Q_OBJECT
 public:
-	/** 显示提示框
-	@param [out] dialogId 窗口ID值
-	@param [in] userType 用户自定义值，当窗口关闭时会发送信号，信号中含有这个值
-	@param [in] title 标题
-	@param [in] tip 提示内容
-	@param [in] buttonText 按钮内容
-	@param [in] done 按钮按下后信号里的参数值
-	@param [in] timeOut 超时自动关闭，单位秒
-	@param [in] isCountDownVisible 倒计时是否显示
-	*/
-	static void showTipDialog(int32_t& dialogId,
-							  int32_t userType,
-							  const QString& title,
-							  const QString& tip,
-							  const QString& buttonText,
-							  int32_t done,
-							  int32_t timeOut = -1,
-							  bool isCountDownVisible = false);
+    /** 构造函数
+    */
+	TipShowDialog();
 
-private:
-	TipShowDialog(int32_t userType,
-				  const QString& title,
-				  const QString& tip,
-				  const QString& buttonText,
-				  int32_t done);
+public:
+    /** 设置提示
+    @param [in] tip 提示内容
+    */
+    void setTip(const QString& tip);
+
+    /** 设置确定按钮文字内容和按下的返回值
+    @param [in] acceptText 按钮文字内容
+    @param [in] acceptDone 按下的返回值
+    */
+    void setAcceptButton(const QString& acceptText, DialogResult acceptDone);
+
+protected:
+    void resizeEvent(QResizeEvent* eve);
+    bool check();
 
 private:
 	Label* m_tip;

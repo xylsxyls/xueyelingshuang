@@ -4,20 +4,21 @@
 #include <QWindow>
 #include <Windows.h>
 #include <QApplication>
+#include <QKeyEvent>
 
 #include <QLabel>
 
-#define KEY_DOWN(VK_NONAME) ((::GetAsyncKeyState(VK_NONAME) & 0x8000) ? 1 : 0)
+#define IS_KEY_DOWN(VK_NONAME) ((::GetAsyncKeyState(VK_NONAME) & 0x8000) ? 1 : 0)
 
 #ifndef WM_DWMCOMPOSITIONCHANGED
 #define WM_DWMCOMPOSITIONCHANGED        0x031E
 #endif
 
-
 COriginalDialog::COriginalDialog(QWidget *parent)
 	:QDialog(parent)
-	,mTouchBorderWidth(2)
+	,mTouchBorderWidth(6)
 	,mDwmInitialized(false)
+    ,mAltF4Enable(true)
 {
 	setCustomerTitleBarHeight(0);
 	this->setMouseTracking(true);
@@ -31,8 +32,16 @@ COriginalDialog::~COriginalDialog()
 
 long COriginalDialog::onNcHitTest(QPoint pt)
 {
-	QRect rcClient = this->geometry();
+	RECT windowRect;
+	::GetWindowRect(HWND(this->winId()), &windowRect);
+	QRect rcClient;
+	rcClient.setLeft(windowRect.left);
+	rcClient.setRight(windowRect.right);
+	rcClient.setTop(windowRect.top);
+	rcClient.setBottom(windowRect.bottom);
 
+	bool fixdWidth  = this->minimumWidth () == this->maximumWidth ();
+	bool fixdHeight = this->minimumHeight() == this->maximumHeight();
 
 	if((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
 		(pt.x() > (rcClient.right() - mTouchBorderWidth))   )
@@ -40,16 +49,37 @@ long COriginalDialog::onNcHitTest(QPoint pt)
 		if((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
 			(pt.y() > (rcClient.top() - mTouchBorderWidth))   )
 		{
-			return HTTOPRIGHT;
+			if(fixdWidth || fixdHeight)
+			{
+				return HTCLIENT;
+			}
+			else
+			{
+				return HTTOPRIGHT;
+			}
 		}
 
 		if((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
 			(pt.y() > (rcClient.bottom() - mTouchBorderWidth))   )
 		{
-			return HTBOTTOMRIGHT;
+			if(fixdWidth || fixdHeight)
+			{
+				return HTCLIENT;
+			}
+			else
+			{
+				return HTBOTTOMRIGHT;
+			}
 		}
 
-		return HTRIGHT;
+		if(fixdWidth)
+		{
+			return HTCLIENT;
+		}
+		else
+		{
+			return HTRIGHT;
+		}
 	}
 
 	if((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
@@ -58,16 +88,37 @@ long COriginalDialog::onNcHitTest(QPoint pt)
 		if((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
 			(pt.y() > (rcClient.top() - mTouchBorderWidth))   )
 		{
-			return HTTOPLEFT;
+			if(fixdWidth || fixdHeight)
+			{
+				return HTCLIENT;
+			}
+			else
+			{
+				return HTTOPLEFT;
+			}
 		}
 
 		if((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
 			(pt.y() > (rcClient.bottom() - mTouchBorderWidth))   )
 		{
-			return HTBOTTOMLEFT;
+			if(fixdWidth || fixdHeight)
+			{
+				return HTCLIENT;
+			}
+			else
+			{
+				return HTBOTTOMLEFT;
+			}
 		}
 
-		return HTLEFT;
+		if(fixdWidth)
+		{
+			return HTCLIENT;
+		}
+		else
+		{
+			return HTLEFT;
+		}
 	}
 
 	if((pt.y() < (rcClient.top() + mTouchBorderWidth)) &&
@@ -76,17 +127,37 @@ long COriginalDialog::onNcHitTest(QPoint pt)
 		if((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
 			(pt.x() > (rcClient.right() - mTouchBorderWidth))   )
 		{
-			return HTTOPRIGHT;
+			if(fixdWidth || fixdHeight)
+			{
+				return HTCLIENT;
+			}
+			else
+			{
+				return HTTOPRIGHT;
+			}
 		}
 
 		if((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
 			(pt.x() > (rcClient.left() - mTouchBorderWidth))   )
 		{
-			return HTTOPLEFT;
+			if(fixdWidth || fixdHeight)
+			{
+				return HTCLIENT;
+			}
+			else
+			{
+				return HTTOPLEFT;
+			}
 		}
 
-
-		return HTTOP;
+		if(fixdHeight)
+		{
+			return HTCLIENT;
+		}
+		else
+		{
+			return HTTOP;
+		}
 	}
 
 	if((pt.y() < (rcClient.bottom() + mTouchBorderWidth)) &&
@@ -96,13 +167,27 @@ long COriginalDialog::onNcHitTest(QPoint pt)
 		if((pt.x() < (rcClient.right() + mTouchBorderWidth)) &&
 			(pt.x() > (rcClient.right() - mTouchBorderWidth))   )
 		{
-			return HTBOTTOMRIGHT;
+			if(fixdWidth || fixdHeight)
+			{
+				return HTCLIENT;
+			}
+			else
+			{
+				return HTBOTTOMRIGHT;
+			}
 		}
 
 		if((pt.x() < (rcClient.left() + mTouchBorderWidth)) &&
 			(pt.x() > (rcClient.left() - mTouchBorderWidth))   )
 		{
-			return HTBOTTOMLEFT;
+			if(fixdWidth || fixdHeight)
+			{
+				return HTCLIENT;
+			}
+			else
+			{
+				return HTBOTTOMLEFT;
+			}
 		}
 
 
@@ -127,7 +212,7 @@ long COriginalDialog::onNcHitTest(QPoint pt)
 
 			//* label不影响拖动
 			QLabel* isLabel = qobject_cast<QLabel*>(w);
-			if (isLabel && KEY_DOWN(MOUSE_MOVED))
+			if (isLabel && IS_KEY_DOWN(MOUSE_MOVED))
 				continue;
 
 			QPoint mousePt =  this->mapFromGlobal(QCursor::pos());
@@ -276,12 +361,27 @@ bool COriginalDialog::nativeEvent(const QByteArray &eventType, void *message, lo
 				return true;
 			}
 			break;
+        //case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        {
+            if (mAltF4Enable && (VK_F4 == msg->wParam) && (::GetKeyState(VK_MENU) & 0xF000))
+            {
+                altF4PressedEvent();
+            }
+            return true;
+        }
+        break;
 		default:
 			break;
 		}
 	}
 
 	return QDialog::nativeEvent(eventType, message, result);
+}
+
+void COriginalDialog::altF4PressedEvent()
+{
+    close();
 }
 
 //bool COriginalDialog::dwm_init(HWND hwnd)
@@ -349,53 +449,67 @@ QRect COriginalDialog::customerTitleBarRect()
 	return mCustomerTitleBarRect;
 }
 
-void COriginalDialog::setTransientWindow(QWindow* w)
+void COriginalDialog::setTransientWindow(QWindow* window)
 {
-	if(this->windowHandle() == NULL)
-		return;
+    winId();
+    QWindow* handle = windowHandle();
+    if (handle == nullptr)
+    {
+        return;
+    }
+    QWindow* realTransientWindow = getAncestorHandle(window);
+    handle->setTransientParent(realTransientWindow);
+}
 
-	this->winId();
-	QWindow* thisWindow = this->windowHandle();
-
-	QWindow* realTransientWindow = NULL;
-	if(w)
-	{
-		WId ancetorId = (WId)::GetAncestor(HWND(w->winId()), GA_ROOT);
-
-		QWidget* topLevelWidget = QWidget::find(ancetorId);
-
-		if(topLevelWidget)
-		{
-			realTransientWindow = topLevelWidget->windowHandle();
-		}
-		else
-		{
-			for(int i = 0; i < qApp->allWindows().count(); i++)
-			{
-				QWindow* tw = qApp->allWindows()[i];
-				if(tw->winId() == ancetorId)
-				{
-					realTransientWindow = tw;
-					break;
-				}
-			}
-		}
-
-		if(!realTransientWindow)
-		{
-			realTransientWindow = QWindow::fromWinId(ancetorId);
-		}
-	}
-	thisWindow->setTransientParent(realTransientWindow);
+QWindow* COriginalDialog::getAncestorHandle(QWindow* window)
+{
+    if (window == nullptr)
+    {
+        return nullptr;
+    }
+    QWindow* realTransientWindow = nullptr;
+    WId ancetorId = (WId)::GetAncestor(HWND(window->winId()), GA_ROOT);
+    QWidget* topLevelWidget = QWidget::find(ancetorId);
+    if (topLevelWidget)
+    {
+        realTransientWindow = topLevelWidget->windowHandle();
+    }
+    else
+    {
+        for (int i = 0; i < qApp->allWindows().count(); i++)
+        {
+            QWindow* tw = qApp->allWindows()[i];
+            if (tw->winId() == ancetorId)
+            {
+                realTransientWindow = tw;
+                break;
+            }
+        }
+    }
+    //如果是不同进程
+    if ((realTransientWindow == nullptr) && (::IsWindow(HWND(ancetorId)) == TRUE))
+    {
+        realTransientWindow = QWindow::fromWinId(ancetorId);
+    }
+    return realTransientWindow;
 }
 
 QWindow* COriginalDialog::transientWindow()
 {
-	QWindow* w = NULL;
-	if(this->windowHandle() == NULL)
-		return w;
+    QWindow* handle = windowHandle();
+    if (handle == nullptr)
+    {
+        return nullptr;
+    }
+    return handle->transientParent();
+}
 
-	w = this->windowHandle()->transientParent();
+bool COriginalDialog::altF4Enable()
+{
+    return mAltF4Enable;
+}
 
-	return w;
+void COriginalDialog::setAltF4Enable(bool enabled)
+{
+    mAltF4Enable = enabled;
 }

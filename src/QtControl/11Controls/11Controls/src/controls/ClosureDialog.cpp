@@ -1,25 +1,34 @@
 #include "ClosureDialog.h"
 #include "LockedAccountPanel.h"
+#include "../core/CSystem.h"
 
-ClosureDialog::ClosureDialog(QWindow* parent) :
-BoxDialogBase(372, 296, parent)
-	,mLockedAccountPanel(new LockedAccountPanel(this))
+ClosureDialog::ClosureDialog():
+mLockedAccountPanel(nullptr)
 {
-
+    mLockedAccountPanel = new LockedAccountPanel(this);
+    if (!check())
+    {
+        return;
+    }
+    resize(372, 296);
 }
 
 LockedAccountPanel* ClosureDialog::lockedAccountPanel()
 {
-	return mLockedAccountPanel;
+    return mLockedAccountPanel;
 }
 
-void ClosureDialog::resizeEvent(QResizeEvent *e)
+void ClosureDialog::resizeEvent(QResizeEvent* eve)
 {
-	BoxDialogBase::resizeEvent(e);
-	this->layoutContorls();
+	BoxDialogBase::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
+    mLockedAccountPanel->setGeometry(CSystem::rectValid(rect().adjusted(1, customerTitleBarHeight() + 1, -1, -1)));
 }
 
-void ClosureDialog::layoutContorls()
+bool ClosureDialog::check()
 {
-	mLockedAccountPanel->setGeometry(rect().adjusted(1,this->moveTitleHeight() + 1,-1,-1));
+    return mLockedAccountPanel != nullptr && BoxDialogBase::check();
 }

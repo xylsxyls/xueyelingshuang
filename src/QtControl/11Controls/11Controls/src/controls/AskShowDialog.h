@@ -1,43 +1,40 @@
 #pragma once
 #include "DialogShow.h"
 #include "ControlsMacro.h"
+#include "NotifyDialog.h"
 
+class COriginalButton;
 /** 显示提示框
 */
-class AskShowDialog : public DialogShow
+class AskShowDialog : public NotifyDialog
 {
 	Q_OBJECT
 public:
-	/** 显示提示框
-	@param [out] dialogId 窗口ID值
-	@param [in] userType 用户自定义值，当窗口关闭时会发送信号，信号中含有这个值
-	@param [in] title 标题
-	@param [in] tip 提示内容
-	@param [in] acceptText 按钮内容
-	@param [in] acceptDone 确认按钮按下后信号里的参数值
-	@param [in] ignoreText 按钮内容
-	@param [in] ignoreDone 取消按钮按下后信号里的参数值
-	@param [in] timeOut 超时自动关闭，单位秒
-	@param [in] isCountDownVisible 倒计时是否显示
-	*/
-	static void showAskDialog(int32_t& dialogId,
-							  int32_t userType,
-							  const QString& title,
-							  const QString& tip,
-							  const QString& acceptText,
-							  int32_t acceptDone,
-							  const QString& ignoreText,
-							  int32_t ignoreDone,
-							  int32_t timeOut = -1,
-							  bool isCountDownVisible = false);
-private:
-	AskShowDialog(int32_t userType,
-				  const QString& title,
-				  const QString& tip,
-				  const QString& acceptText,
-				  int32_t acceptDone,
-				  const QString& ignoreText,
-				  int32_t ignoreDone);
+    /** 构造函数
+    */
+	AskShowDialog();
+
+public:
+    /** 设置提示
+    @param [in] tip 提示内容
+    */
+    void setTip(const QString& tip);
+
+    /** 设置确定按钮文字内容和按下的返回值
+    @param [in] acceptText 按钮文字内容
+    @param [in] acceptDone 按下的返回值
+    */
+    void setAcceptButton(const QString& acceptText, DialogResult acceptDone);
+
+    /** 设置取消按钮文字内容和按下的返回值
+    @param [in] ignoreText 按钮文字内容
+    @param [in] ignoreDone 按下的返回值
+    */
+    void setIgnoreButton(const QString& ignoreText, DialogResult ignoreDone);
+
+protected:
+    void resizeEvent(QResizeEvent* eve);
+    bool check();
 
 private:
 	Label* m_tip;

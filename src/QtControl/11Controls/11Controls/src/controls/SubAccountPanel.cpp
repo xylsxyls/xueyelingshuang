@@ -1,5 +1,4 @@
 #include "SubAccountPanel.h"
-
 #include <QEvent>
 #include <QHeaderView>
 #include <QPainter>
@@ -8,6 +7,7 @@
 #include "CTreeViewEx.h"
 #include "CExternalTextEdit.h"
 #include <QWindow>
+#include "../core/CSystem.h"
 
 SubAccountPanel::SubAccountPanel(QWidget *parent)
     :QWidget(parent)
@@ -110,16 +110,17 @@ void SubAccountPanel::resizeEvent(QResizeEvent *e)
 void SubAccountPanel::paintEvent(QPaintEvent *e)
 {
     QPainter p(this);
+    p.save();
     p.fillRect(rect(), "#2c344a");
 
-    QRect fucRect(8,45, this->width() - 16, 32);
+    QRect fucRect(8, 45, width() - 16 < 0 ? 0 : (width() - 16), 32);
     p.setPen("#4a5980");
-    p.drawRect(fucRect);
+    p.drawRect(CSystem::rectValid(fucRect));
 
     QFont tf = CGeneralStyle::instance()->font();
     p.setPen(QColor(192,200,218));
     p.setFont(tf);
-    p.drawText(fucRect.adjusted(21,0,0,0), Qt::AlignVCenter|Qt::AlignLeft, QStringLiteral("可创建的子账号数："));
+    p.drawText(CSystem::rectValid(fucRect.adjusted(21, 0, 0, 0)), Qt::AlignVCenter | Qt::AlignLeft, QStringLiteral("可创建的子账号数："));
 
 
     QRect descRect(29,0,this->width(),45);
@@ -128,13 +129,13 @@ void SubAccountPanel::paintEvent(QPaintEvent *e)
     tf1.setPixelSize(16);
     p.setFont(tf1);
 
-    p.drawText(descRect, Qt::AlignVCenter|Qt::AlignLeft, QStringLiteral("子账号管理"));
+    p.drawText(CSystem::rectValid(descRect), Qt::AlignVCenter | Qt::AlignLeft, QStringLiteral("子账号管理"));
 
     QRect countRect = fucRect;
     countRect.setRight(mHelpButton->geometry().left() - 10);
-    p.drawText(countRect, Qt::AlignVCenter|Qt::AlignRight, QString::number(mCanCreateCount));
+    p.drawText(CSystem::rectValid(countRect), Qt::AlignVCenter | Qt::AlignRight, QString::number(mCanCreateCount));
 
-
+    p.restore();
     //p.drawRect(mTreeView->geometry());
 }
 
@@ -339,6 +340,10 @@ SubAccountItemDelegate::SubAccountItemDelegate(QObject *parent)
 
 void SubAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
+    if (painter == nullptr)
+    {
+        return;
+    }
     CTreeViewEx* view = qobject_cast<CTreeViewEx*> (parent());
     if(view == NULL)
         return ;
@@ -374,8 +379,7 @@ void SubAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem
 
     QRect tagRect = option.rect.adjusted(0,0,0,-10);
 
-    painter->fillRect(tagRect, bkgColor);
-
+    painter->fillRect(CSystem::rectValid(tagRect), bkgColor);
 
     QRect nameRect = tagRect.adjusted(18,13,0,0);
     painter->setFont(tf);
@@ -388,7 +392,7 @@ void SubAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem
         painter->setPen(tc1);
     }
 
-    painter->drawText(nameRect, Qt::AlignLeft|Qt::AlignTop, sitem->name());
+    painter->drawText(CSystem::rectValid(nameRect), Qt::AlignLeft | Qt::AlignTop, sitem->name());
 
     QRect dateRect = tagRect.adjusted(18,36,0,0);
     QRect descRect = tagRect.adjusted(18,58,0,0);
@@ -405,8 +409,8 @@ void SubAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem
         break;
     }
 
-    painter->drawText(dateRect, Qt::AlignLeft|Qt::AlignTop, sitem->date());
-    painter->drawText(descRect, Qt::AlignLeft|Qt::AlignTop, sitem->desc());
+    painter->drawText(CSystem::rectValid(dateRect), Qt::AlignLeft | Qt::AlignTop, sitem->date());
+    painter->drawText(CSystem::rectValid(descRect), Qt::AlignLeft | Qt::AlignTop, sitem->desc());
 }
 
 QWidget *SubAccountItemDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const

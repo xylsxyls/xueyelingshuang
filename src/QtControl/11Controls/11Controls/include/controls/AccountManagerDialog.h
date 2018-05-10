@@ -4,8 +4,9 @@
 
 class AccountDialog;
 class ClosureDialog;
-class COriginalButton;
 class SubAccountPanel;
+/** 账号管理框
+*/
 class ControlsAPI AccountManagerDialog : public BoxDialogBase
 {
 public:
@@ -18,33 +19,31 @@ public:
 	*/
 	QString popAccountDialog();
 
-	/** 获取注册账号窗口指针
-	@return 返回注册账号窗口指针
-	*/
-	AccountDialog* accountDialogPtr();
-
 	/** 弹出封号窗口
 	*/
 	void popClosureDialog();
 
-	/** 获取封号窗口指针
-	@return 返回封号窗口指针
-	*/
-	ClosureDialog* closureDialogPtr();
+    /** 获取内部界面指针
+    @return 返回内部界面指针
+    */
+    SubAccountPanel* subAccountPanelPtr();
 
-	//* 返回子账号列表
-	SubAccountPanel* subAccountPanelPtr();
+    /** 获取账号框指针
+    @return 返回账号框指针
+    */
+    AccountDialog* accountDialogPtr();
 
-private slots:
-	void onHide();
+    /** 获取封号窗口指针
+    @return 返回封号窗口指针
+    */
+    ClosureDialog* closureDialogPtr();
 
-private:
-	void layoutContorls();
-	void resizeEvent(QResizeEvent *e);
+protected:
+    void resizeEvent(QResizeEvent* eve);
+    bool check();
 
 private:
 	AccountDialog* m_accountDialog;
 	ClosureDialog* m_closureDialog;
-	COriginalButton* m_hide;
 	SubAccountPanel* m_subAccountPanel;
 };

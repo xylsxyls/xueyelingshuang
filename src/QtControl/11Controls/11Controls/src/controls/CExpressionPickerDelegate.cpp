@@ -1,8 +1,8 @@
 #include "CExpressionPickerDelegate.h"
-
 #include <QPainter>
 #include <QDebug>
 #include "CExpressionPicker.h"
+#include "../core/CSystem.h"
 
 CExpressionPickerDelegate::CExpressionPickerDelegate()
 {
@@ -34,7 +34,7 @@ void CExpressionPickerDelegate::paint(QPainter *painter, const QStyleOptionViewI
         hoveredColor = borderColor;
     }
 
-    painter->fillRect(option.rect, hoveredColor);
+    painter->fillRect(CSystem::rectValid(option.rect), hoveredColor);
 
 
     //fill bkg
@@ -49,7 +49,7 @@ void CExpressionPickerDelegate::paint(QPainter *painter, const QStyleOptionViewI
         bkgRect = option.rect;
     }
 
-    painter->fillRect(bkgRect, bkgColor);
+    painter->fillRect(CSystem::rectValid(bkgRect), bkgColor);
 
     QString icon = index.data(CExpressionPicker::ExpressionRole_FileName).toString();
     QPixmap pix;

@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QPainter>
 #include <Windows.h>
+#include "../core/CSystem.h"
 
 CExpressionDialog::CExpressionDialog(QWidget *parent)
     :QDialog(parent)
@@ -67,7 +68,7 @@ void CExpressionDialog::paintEvent(QPaintEvent *e)
 
     painter.fillRect(this->rect(), QColor(44,52,74));
     painter.setPen(QColor("#4A5677"));
-    painter.drawRect(this->rect().adjusted(0,0,-1,-1));
+    painter.drawRect(CSystem::rectValid(rect().adjusted(0, 0, -1, -1)));
 
     painter.restore();
 }

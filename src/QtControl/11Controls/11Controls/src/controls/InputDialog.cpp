@@ -3,64 +3,98 @@
 #include "LineEdit.h"
 #include "COriginalButton.h"
 #include "DialogManager.h"
+#include "DialogHelper.h"
+#include "CGeneralStyle.h"
+#include "CPasswordInputBox.h"
 
-int32_t InputDialog::popInputDialog(int32_t& dialogId,
-									const QString& title,
-									const QString& editTip,
-									const QString& buttonText,
-									int32_t done,
-									QString& editText,
-									bool isPassword,
-									int32_t maxLength,
-									QWindow* parent,
-									int32_t timeOut,
-									bool isCountDownVisible)
+InputDialog::InputDialog() :
+m_edit(nullptr),
+m_editTip(nullptr),
+m_accept(nullptr),
+m_editText(nullptr),
+m_passwordInputBox(nullptr)
 {
-	InputDialog* dlg = new InputDialog(title, editTip, buttonText, done, editText, isPassword, maxLength);
-	dlg->setParentWindow(parent);
-	dlg->setDialogEnum(INPUT_DIALOG);
-	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
-	delete dlg;
-	return result;
+    m_editTip = new Label(this);
+    m_accept = new COriginalButton(this);
+    m_passwordInputBox = new CPasswordInputBox(this);
+    m_edit = new LineEdit(this);
+
+    if (!check())
+    {
+        return;
+    }
+
+    m_edit->setFocus();
+
+    addListenKey(Qt::Key_Return);
+    addListenKey(Qt::Key_Enter);
+    QObject::connect(this, &DialogShow::keyboardAccept, this, &DialogShow::onKeyboardAccept, Qt::QueuedConnection);
+    m_acceptButton = m_accept;
+
+    resize(340, 165);
 }
 
-InputDialog::InputDialog(const QString& title,
-						 const QString& editTip,
-						 const QString& buttonText,
-						 int32_t done,
-						 QString& editText,
-						 bool isPassword,
-						 int32_t maxLength) :
-m_editText(editText)
+void InputDialog::setLineEdit(const QString& defaultText, QString* editText, int32_t maxLength)
 {
-	initForExec(340, 165);
-	setFocus();
-	setWindowTitle(title);
-	m_title->setText(title);
-	m_title->setFontSize(12);
-	m_editTip = addLabel(editTip, QRect(43, 26, width() - 43 * 2, 60), QColor(205, 213, 225, 255));
-	m_editTip->setFontSize(12);
-	m_accept = addButton(buttonText, QRect((width() - 116) / 2, 127, 116, 22), done);
-	m_edit = addLineEdit(QRect(52, 74, 234, 26), isPassword, editText);
-	if (maxLength >= 0)
-	{
-		m_edit->setMaxLength(maxLength);
-	}
-	m_edit->setFocus();
-
-	m_accept->installEventFilter(this);
-
-	QObject::connect(this, &DialogShow::keyboardAccept, this, &InputDialog::inputAccept);
+    if (!check())
+    {
+        return;
+    }
+    m_passwordInputBox->setVisible(false);
+    m_edit->setVisible(true);
+    DialogHelper::setLineEdit(m_edit, defaultText, maxLength);
+    m_editText = editText;
 }
 
-void InputDialog::done(int result)
+void InputDialog::setPasswordInputBox(const QString& defaultText, QString* editText, int32_t maxLength)
 {
-	m_editText = m_edit->text();
-	QDialog::done(result);
+    if (!check())
+    {
+        return;
+    }
+    m_passwordInputBox->setVisible(true);
+    m_edit->setVisible(false);
+    DialogHelper::setPasswordInputBox(m_passwordInputBox, defaultText, maxLength);
+    m_editText = editText;
 }
 
-void InputDialog::inputAccept(QObject* tar, Qt::Key key)
+void InputDialog::setTip(const QString& tip)
 {
-	m_accept->setFocus();
-	m_accept->click();
+    DialogHelper::setTip(m_editTip, tip, QColor(205, 213, 225, 255), 12);
+}
+
+void InputDialog::setAcceptButton(const QString& acceptText, DialogResult acceptDone)
+{
+    setPopButtonConfig(m_accept, acceptText, QColor(201, 211, 252, 255), acceptDone, 14);
+}
+
+void InputDialog::resizeEvent(QResizeEvent* eve)
+{
+    PopDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
+    m_editTip->setGeometry(QRect(43, 26, width() - 43 * 2, 60));
+    m_accept->setGeometry(QRect((width() - 116) / 2, 127, 116, 22));
+    m_edit->setGeometry(QRect(52, 74, 234, 26));
+    m_passwordInputBox->setGeometry(QRect(52, 74, 234, 26));
+}
+
+void InputDialog::closeEvent(QCloseEvent* eve)
+{
+    if (m_editText != nullptr)
+    {
+        *m_editText = m_edit->text();
+    }
+    PopDialog::closeEvent(eve);
+}
+
+bool InputDialog::check()
+{
+    return m_editTip != nullptr &&
+        m_accept != nullptr &&
+        m_edit != nullptr &&
+        m_passwordInputBox != nullptr &&
+        PopDialog::check();
 }

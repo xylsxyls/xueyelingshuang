@@ -7,17 +7,18 @@
 #include "CExternalTextEdit.h"
 #include <QWindow>
 #include "ClosureDialog.h"
+#include "../core/CSystem.h"
 
 QString AccountManagerDialog::popAccountDialog()
 {
-	if (m_accountDialog == nullptr)
-	{
-		return -1;
-	}
+    if (!check())
+    {
+        return "";
+    }
 
 	m_accountDialog->clearAccountEdit();
-	int32_t dialogId = 0;
-	int32_t result = m_accountDialog->exec(dialogId);
+    m_accountDialog->setTransientWindow(windowHandle());
+	int32_t result = m_accountDialog->exec();
 	if (result != ACCEPT_BUTTON)
 	{
 		return "";
@@ -25,72 +26,67 @@ QString AccountManagerDialog::popAccountDialog()
 	return m_accountDialog->accountEditText();
 }
 
-AccountDialog* AccountManagerDialog::accountDialogPtr()
+void AccountManagerDialog::popClosureDialog()
 {
-	return m_accountDialog;
+    if (!check())
+    {
+        return;
+    }
+	m_closureDialog->exec();
 }
 
 SubAccountPanel* AccountManagerDialog::subAccountPanelPtr()
 {
-	return m_subAccountPanel;
+    return m_subAccountPanel;
 }
 
-void AccountManagerDialog::popClosureDialog()
+AccountDialog* AccountManagerDialog::accountDialogPtr()
 {
-	if (m_closureDialog == nullptr)
-	{
-		return;
-	}
-
-	int32_t dialogId = 0;
-	m_closureDialog->exec(dialogId);
+    return m_accountDialog;
 }
 
 ClosureDialog* AccountManagerDialog::closureDialogPtr()
 {
-	return m_closureDialog;
+    return m_closureDialog;
 }
 
 AccountManagerDialog::AccountManagerDialog() :
-BoxDialogBase(340, 482, nullptr),
 m_accountDialog(nullptr),
 m_closureDialog(nullptr),
-m_subAccountPanel(new SubAccountPanel(this))
+m_subAccountPanel(nullptr)
 {
+    m_accountDialog = new AccountDialog();
+    m_closureDialog = new ClosureDialog();
+    m_subAccountPanel = new SubAccountPanel(this);
+
+    if (!check())
+    {
+        return;
+    }
+
 	m_subAccountPanel->helpTip()->winId();
-	m_subAccountPanel->helpTip()->windowHandle()->setTransientParent(this->windowHandle());
+	m_subAccountPanel->helpTip()->windowHandle()->setTransientParent(windowHandle());
 
-	m_accountDialog = new AccountDialog(nullptr);
-	m_title->setText(QString::fromStdWString(L"11对战平台 - 账号管理页面"));
-	m_exit->setVisible(true);
+    m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
 
-	m_hide = new COriginalButton(this);
-	m_hide->setText("");
-	m_hide->setGeometry(QRect(width() - 34, 1, 34, 31));
-	m_hide->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
-	m_hide->setBkgMargins(0, 0);
-	m_hide->setBorderRadius(0);
-	m_hide->setMouseTracking(true);
-	m_hide->installEventFilter(this);
-	QObject::connect(m_hide, &COriginalButton::clicked, this, &AccountManagerDialog::onHide);
-
-	m_closureDialog = new ClosureDialog(nullptr);
-
-	layoutContorls();
+    setFixedSize(340, 482);
 }
 
-void AccountManagerDialog::onHide()
+void AccountManagerDialog::resizeEvent(QResizeEvent* eve)
 {
-	setVisible(false);
+    BoxDialogBase::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
+    m_subAccountPanel->setGeometry(CSystem::rectValid(rect().adjusted(1, customerTitleBarHeight() + 1, -1, -1)));
+    m_exit->setGeometry(QRect(width() - 34, 1, 34, 31));
 }
 
-void AccountManagerDialog::layoutContorls()
+bool AccountManagerDialog::check()
 {
-	m_subAccountPanel->setGeometry(rect().adjusted(1,this->moveTitleHeight() + 1,-1,-1));
-}
-
-void AccountManagerDialog::resizeEvent(QResizeEvent *e)
-{
-	BoxDialogBase::resizeEvent(e);
-	layoutContorls();
+    return m_accountDialog != nullptr &&
+        m_closureDialog != nullptr &&
+        m_subAccountPanel != nullptr &&
+        BoxDialogBase::check();
 }

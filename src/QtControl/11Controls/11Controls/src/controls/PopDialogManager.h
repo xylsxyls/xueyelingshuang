@@ -1,0 +1,48 @@
+#pragma once
+#include <QObject>
+#include <stdint.h>
+#include "DialogType.h"
+#include "../core/ManagerBase.h"
+
+class DownloadOperateDialog;
+/** 弹窗的管理类
+*/
+class PopDialogManager :
+    public QObject,
+    public ManagerBase < PopDialogManager >
+{
+    Q_OBJECT
+public:
+    /** 弹出弹框
+    @param [in] type 弹窗类型
+    @param [in] param 弹窗参数
+    */
+    void popDialog(DialogType type, ParamBase* param);
+
+public:
+	/** 操作窗口
+	@param [in] type 操作类型
+	@param [in] param 操作参数
+	*/
+	void operateDialog(OperateType type, OperateParam* param);
+
+Q_SIGNALS:
+	/** 窗口发出信号
+	@param [in] type 信号类型
+	@param [in] param 信号参数
+	*/
+	void dialogSignal(SignalType type, SignalParam* param);
+
+private slots:
+    void onClosedSignal(DialogResult* result);
+    void onChangeToBack();
+    void onDownloadAgain();
+    void onCancelDownload();
+    void onUseOtherDownload();
+    void onCopyDownloadAddr(const QString& addr);
+    void onCopyPath(const QString& path);
+
+private:
+    quint64 userId();
+	DownloadOperateDialog* downloadOperateDialogPtrByUserId(quint64 userId);
+};

@@ -1,6 +1,0 @@
-﻿11Controls
-包含11平台一些基础控件或者实用工具。
-src是编译11Controls的所有文件
-include是11Controls编译好之后导出的头文件（提供给外部使用）
-生成的dll文件在output下Debug或者Release目录中
-Debug和Release的dll文件为11Controls.dll

@@ -49,3 +49,25 @@ bool CSystem::isMouseMidDown()
 {
 	return ((::GetAsyncKeyState(MOUSE_WHEELED) & 0x8000) ? 1 : 0);
 }
+
+QRect CSystem::rectValid(const QRect& rect)
+{
+    QRect result = rect;
+    if (result.left() < 0)
+    {
+        result.setLeft(0);
+    }
+    if (result.top() < 0)
+    {
+        result.setTop(0);
+    }
+    if (result.right() < 0)
+    {
+        result.setRight(0);
+    }
+    if (result.bottom() < 0)
+    {
+        result.setBottom(0);
+    }
+    return result;
+}

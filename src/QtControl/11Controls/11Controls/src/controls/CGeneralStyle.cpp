@@ -212,6 +212,57 @@ QColor CGeneralStyle::getPingColor(quint64 ping)
 	return pingColor;
 }
 
+CGeneralStyle::BattleLevel CGeneralStyle::getBattleLevel(quint64 score)
+{
+	BattleLevel level = BattleLevel_Bronze01;
+	if(score >= 0 && score <= 1000)
+	{
+		level = BattleLevel_Bronze01;
+	}
+	else if(score >= 1001 && score <= 1050)
+	{
+		level = BattleLevel_Bronze02;
+	}
+	else if(score >= 1051 && score <= 1100)
+	{
+		level = BattleLevel_Bronze03;
+	}
+	else if(score >= 1101 && score <= 1150)
+	{
+		level = BattleLevel_Sliver01;
+	}
+	else if(score >= 1051 && score <= 1200)
+	{
+		level = BattleLevel_Sliver02;
+	}
+	else if(score >= 1201 && score <= 1300)
+	{
+		level = BattleLevel_Sliver03;
+	}
+	else if(score >= 1301 && score <= 1400)
+	{
+		level = BattleLevel_Golden01;
+	}
+	else if(score >= 1401 && score <= 1500)
+	{
+		level = BattleLevel_Golden02;
+	}
+	else if(score >= 1501 && score <= 1600)
+	{
+		level = BattleLevel_Golden03;
+	}
+	else if(score >= 1601 && score <= 2000)
+	{
+		level = BattleLevel_Diamond;
+	}
+	else if(score > 2000)
+	{
+		level = BattleLevel_King;
+	}
+
+	return level;
+}
+
 QColor CGeneralStyle::fontColor()
 {
     return mFontColr;

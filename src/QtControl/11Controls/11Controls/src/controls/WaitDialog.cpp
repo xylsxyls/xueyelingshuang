@@ -1,40 +1,38 @@
 #include "WaitDialog.h"
 #include "Label.h"
 #include "DialogManager.h"
+#include "DialogHelper.h"
+#include "COriginalButton.h"
 
-int32_t WaitDialog::popWaitDialog(int32_t& dialogId,
-								  int32_t taskId,
-								  const QString& title,
-								  const QString& tip,
-								  QWindow* parent,
-								  int32_t timeOut,
-								  bool isCountDownVisible)
+WaitDialog::WaitDialog():
+m_tip(nullptr)
 {
-	WaitDialog* dlg = new WaitDialog(title, tip);
-	dlg->setParentWindow(parent);
-	dlg->setDialogEnum(WAIT_DIALOG);
-	dlg->setTaskId(taskId);
-	int32_t result = dlg->exec(dialogId, timeOut, isCountDownVisible);
-	delete dlg;
-	return result;
+    m_tip = new Label(this);
+    if (!check())
+    {
+        return;
+    }
+    m_exit->setVisible(false);
+    setEscAltF4Enable(false);
+    resize(340, 165);
 }
 
-void WaitDialog::setTaskId(int32_t taskId)
+void WaitDialog::setTip(const QString& tip)
 {
-	m_taskId = taskId;
+    DialogHelper::setTip(m_tip, tip, QColor(205, 213, 225, 255), 12);
 }
 
-int32_t WaitDialog::getTaskId()
+void WaitDialog::resizeEvent(QResizeEvent* eve)
 {
-	return m_taskId;
+    PopDialog::resizeEvent(eve);
+    if (!check())
+    {
+        return;
+    }
+    m_tip->setGeometry(QRect(43, 51, width() - 43 * 2, 60));
 }
 
-WaitDialog::WaitDialog(const QString& title, const QString& tip) :
-m_taskId(0)
+bool WaitDialog::check()
 {
-	initForExec(340, 165);
-	m_title->setText(title);
-	setWindowTitle(title);
-	m_tip = addTip(tip, QRect(43, 51, width() - 43 * 2, 60), QColor(205, 213, 225, 255));
-	setExitVisible(false);
+    return m_tip != nullptr && PopDialog::check();
 }

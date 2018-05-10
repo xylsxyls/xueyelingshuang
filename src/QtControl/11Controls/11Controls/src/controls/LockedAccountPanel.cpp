@@ -1,9 +1,9 @@
 #include "LockedAccountPanel.h"
-
 #include <QPainter>
 #include "CGeneralStyle.h"
 #include "CTreeViewEx.h"
 #include <QHeaderView>
+#include "../core/CSystem.h"
 
 LockedAccountPanel::LockedAccountPanel(QWidget *parent)
     :QWidget(parent)
@@ -19,7 +19,6 @@ LockedAccountPanel::LockedAccountPanel(QWidget *parent)
     mTreeView->header()->setDefaultAlignment(Qt::AlignCenter);
     mTreeView->header()->setStyleSheet(QStringLiteral("QHeaderView{border-top:1px solid #4a5980;}") +
                                        QStringLiteral("QHeaderView::section{background-color:#36415f;height:28px; border:none; text-align: center;font-style: 14px '微软雅黑'; color:#899ac7}"));
-
 
     QStringList labels;
     labels << QStringLiteral("封号时间") << QStringLiteral("封号原因") << QStringLiteral("封号天数");
@@ -41,6 +40,7 @@ LockedAccountPanel::LockedAccountPanel(QWidget *parent)
 void LockedAccountPanel::paintEvent(QPaintEvent *e)
 {
     QPainter p(this);
+    p.save();
     p.fillRect(rect(), "#2c344a");
 
     QRect nameRect = rect().adjusted(0,14,0,0);
@@ -51,7 +51,8 @@ void LockedAccountPanel::paintEvent(QPaintEvent *e)
     p.setFont(nameFont);
     p.setPen(nameColor);
 
-    p.drawText(nameRect, Qt::AlignTop|Qt::AlignHCenter, mName);
+    p.drawText(CSystem::rectValid(nameRect), Qt::AlignTop|Qt::AlignHCenter, mName);
+    p.restore();
 }
 
 void LockedAccountPanel::resizeEvent(QResizeEvent *e)
@@ -145,13 +146,16 @@ void LockedAccountItemDelegate::paint(QPainter *painter, const QStyleOptionViewI
 	QString dayCountString = fm.elidedText(QString::number(litem->dayCount()), Qt::ElideRight,rt2.width());
 
     painter->setPen("#ffffff");
-    painter->drawText(rt0.adjusted(7,0,0,0), Qt::AlignLeft|Qt::AlignVCenter, startDateString);
+    painter->drawText(CSystem::rectValid(rt0.adjusted(7, 0, 0, 0)), Qt::AlignLeft | Qt::AlignVCenter, startDateString);
     painter->setPen("#fd874c");
-    painter->drawText(rt1, Qt::AlignCenter, reasionString);
+    painter->drawText(CSystem::rectValid(rt1), Qt::AlignCenter, reasionString);
     painter->setPen("#ffffff");
-    painter->drawText(rt2, Qt::AlignCenter, dayCountString);
+    painter->drawText(CSystem::rectValid(rt2), Qt::AlignCenter, dayCountString);
     painter->setPen("#4a5980");
 
-    QLine line(rowRect.bottomLeft() + QPoint(0,-1), rowRect.bottomRight() + QPoint(0,-1));
-    painter->drawLine(line);
+    if (rowRect.left() >= 1)
+    {
+        QLine line(rowRect.bottomLeft() + QPoint(0, -1), rowRect.bottomRight() + QPoint(0, -1));
+        painter->drawLine(line);
+    }
 }

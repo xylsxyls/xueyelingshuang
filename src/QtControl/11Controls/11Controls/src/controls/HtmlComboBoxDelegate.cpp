@@ -2,6 +2,7 @@
 #include <QPainter>
 #include "HtmlComboBox.h"
 #include "CGeneralStyle.h"
+#include "../core/CSystem.h"
 
 HtmlComboBoxDelegate::HtmlComboBoxDelegate(HtmlComboBox* htmlComboBox):
 m_htmlComboBox(htmlComboBox)
@@ -52,7 +53,7 @@ void HtmlComboBoxDelegate::paint(QPainter* painter,
 										  m_htmlComboBox->m_itemBorderWidth);
 
 	CGeneralStyle::instance()->drawHtmlTextByLabel(painter,
-												   drawRect,
+                                                   CSystem::rectValid(drawRect),
 												   index.data().toString(),
 												   Qt::AlignLeft | Qt::AlignVCenter);
 

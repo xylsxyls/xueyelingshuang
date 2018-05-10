@@ -1,39 +1,25 @@
 #pragma once
 #include "DialogShow.h"
 #include "ControlsMacro.h"
+#include "PopDialog.h"
 
 class ProgressBar;
+class LineEdit;
 /** 下载框
 */
-class ControlsAPI DownloadOperateDialog : public DialogShow
+class ControlsAPI DownloadOperateDialog : public PopDialog
 {
 	Q_OBJECT
 public:
-	/** 弹出提示框
-	@param [out] dialogId 窗口ID值
-	@param [in] taskId 任务ID值
-	@param [in] title 标题
-	@param [in] fileName 文件名
-	@param [in] tip 提示内容
-	@param [in] buttonText 按钮内容
-	@param [in] done 按钮按下后的返回值
-	@param [in] parent 父窗口指针
-	@param [in] timeOut 超时自动关闭，单位秒
-	@param [in] isCountDownVisible 超时自动关闭提示是否可见
-	@return 关闭窗口时给的返回值
-	*/
-	static int32_t popDownloadOperateDialog(int32_t& dialogId,
-											int32_t taskId,
-											const QString& title,
-											const QString& fileName,
-											const QString& downloadSpeed,
-											const QString& hasDownloaded,
-											const QString& downloadTime,
-											int32_t rate,
-											bool backEnable,
-											const QString& downloadAddr,
-											const QString& path,
-											QWindow* parent = nullptr);
+    /** 构造函数
+    */
+    DownloadOperateDialog();
+
+public:
+    /** 设置文件名
+    @param [in] fileName 文件名
+    */
+    void setFileName(const QString& fileName);
 
 	/** 设置速度（支持多线程）
 	@param [in] speed 速度
@@ -72,21 +58,11 @@ public:
 
 	/** 当下载出错时显示下载框的出错状态（支持多线程）
 	*/
-	void error();
+	void downloadError();
 
 	/** 从error切换到常态（支持多线程）
 	*/
-	void normal();
-
-	/** 设置任务ID值
-	@param [in] taskId 任务ID值
-	*/
-	void setTaskId(int32_t taskId);
-
-	/** 任务ID值
-	@return 返回任务ID值
-	*/
-	int32_t getTaskId();
+	void downloadNormal();
 
 public slots:
 	/** 改变到下载失败状态
@@ -116,20 +92,9 @@ Q_SIGNALS:
 	void copyDownloadAddr(const QString& addr);
 	void copyPath(const QString& path);
 
-private:
-	DownloadOperateDialog(int32_t taskId,
-						  const QString& title,
-						  const QString& fileName,
-						  const QString& downloadSpeed,
-						  const QString& hasDownloaded,
-						  const QString& downloadTime,
-						  int32_t rate,
-						  bool backEnable,
-						  const QString& downloadAddr,
-						  const QString& path);
-
-private:
-	void setClipboardData(HWND hWnd, const std::string& str);
+protected:
+    void resizeEvent(QResizeEvent* eve);
+    bool check();
 
 private slots:
 	void downloadAccept(QObject* tar, Qt::Key key);
@@ -141,36 +106,27 @@ private slots:
 	void onCopyPath();
 
 private:
+    void setClipboardData(HWND hWnd, const std::string& str);
+
+private:
 	Label* m_tip;
 	Label* m_file;
-
 	Label* m_downloadSpeed;
 	Label* m_downloaded;
 	Label* m_downloadTime;
-
 	ProgressBar *m_progressBar;
 	Label* m_persent;
-
 	COriginalButton* m_back;
 	COriginalButton* m_again;
 	COriginalButton* m_cancel;
-
 	Label* m_downloadSlow;
 	COriginalButton* m_hand;
-
 	Label* m_downloadAddr;
 	Label* m_path;
 	LineEdit* m_downloadAddrEdit;
 	LineEdit* m_pathEdit;
 	COriginalButton* m_downloadButton;
 	COriginalButton* m_pathButton;
-
 	Label* m_error;
-
 	int32_t m_taskId;
-
-private:
-	static std::wstring s_fileString;
-	static QString s_slowString;
-	static QString s_handString;
 };

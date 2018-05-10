@@ -1367,11 +1367,11 @@ void CFundInvestDlg::OnBnClickedButton19()
 void CFundInvestDlg::OnBnClickedButton22()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	double monthPower = 0.2;//0.04774
-	int month = 60;
-	int monthFund = 12000;
-	int monthYear = 18000;
-	double now = 70000;
+	double monthPower = 0.13;//0.04774
+	int month = 56;
+	int monthFund = 13000;
+	int monthYear = 24000;
+	double now = 100000;
 
 	int index = 0;
 	while (index++ != month)

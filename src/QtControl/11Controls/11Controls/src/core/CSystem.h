@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <Windows.h>
 #include "CoreMacro.h"
+#include <string>
+#include <QRect>
 
 class CoreAPI CSystem
 {
@@ -26,6 +28,13 @@ public:
 
 	//判断当前鼠标中键是否按下
 	static bool isMouseMidDown();
+
+    //将QRect中4个点中小于0的点换成0
+    static QRect rectValid(const QRect& rect);
+
+    //template <typename TypeClass>
+    //static std::string className();
+
 };
 
 #include "CSystem.inl"
