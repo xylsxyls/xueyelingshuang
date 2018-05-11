@@ -21,19 +21,18 @@ public:
     @param [in] type 窗口类型
     @param [in,out] param 窗口参数结构体指针，结构体中可能有传出参数
     */
-    void makeDialog(DialogType type, ParamBase* param);
+    void makeDialog(DialogParam& param);
 
 public:
 	/** 操作窗口
-	@param [in] type 操作类型
-	@param [in] param 操作参数
+	@param [in,out] param 操作参数
 	*/
-	void operateDialog(OperateType type, OperateParam* param);
+	void operateDialog(OperateParam& param);
 
 Q_SIGNALS:
 	/** 窗口发出信号
 	@param [in] type 信号类型
 	@param [in] param 信号参数
 	*/
-	void dialogSignal(SignalType type, SignalParam* param);
+	void dialogSignal(const SignalParam& param);
 };

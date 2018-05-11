@@ -170,7 +170,7 @@ COriginalDialog* AllocManager::createDialog(quint64& dialogId, quint64 userId, D
     COriginalDialog* dialogPtr = nullptr;
     switch (type)
     {
-    case ERROR_TYPE:
+    case ERROR_DIALOG_TYPE:
         break;
     case ASK_DIALOG:
     {

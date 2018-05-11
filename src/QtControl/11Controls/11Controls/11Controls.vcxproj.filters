@@ -49,6 +49,9 @@
     <Filter Include="controls\QtDialog\AllocManager">
       <UniqueIdentifier>{ea675d17-2e1e-4280-a194-7478ce3a800f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="controls\QtControls\base">
+      <UniqueIdentifier>{24117c63-4be9-4c83-b13e-a37572ca37c6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\CStringManager.cpp">
@@ -563,27 +566,6 @@
     <ClInclude Include="src\controls\ContentLabel.h">
       <Filter>controls\QtControls</Filter>
     </ClInclude>
-    <ClInclude Include="src\controls\ControlBackground.h">
-      <Filter>controls\QtControls</Filter>
-    </ClInclude>
-    <ClInclude Include="src\controls\ControlBase.h">
-      <Filter>controls\QtControls</Filter>
-    </ClInclude>
-    <ClInclude Include="src\controls\ControlBorder.h">
-      <Filter>controls\QtControls</Filter>
-    </ClInclude>
-    <ClInclude Include="src\controls\ControlFont.h">
-      <Filter>controls\QtControls</Filter>
-    </ClInclude>
-    <ClInclude Include="src\controls\ControlItem.h">
-      <Filter>controls\QtControls</Filter>
-    </ClInclude>
-    <ClInclude Include="src\controls\ControlSelf.h">
-      <Filter>controls\QtControls</Filter>
-    </ClInclude>
-    <ClInclude Include="src\controls\ControlShow.h">
-      <Filter>controls\QtControls</Filter>
-    </ClInclude>
     <ClInclude Include="src\controls\HtmlComboBoxDelegate.h">
       <Filter>controls\QtControls</Filter>
     </ClInclude>
@@ -620,37 +602,61 @@
     <ClInclude Include="src\core\SingletonBase.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="src\controls\ControlBackground.h">
+      <Filter>controls\QtControls\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlBase.h">
+      <Filter>controls\QtControls\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlBorder.h">
+      <Filter>controls\QtControls\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlFont.h">
+      <Filter>controls\QtControls\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlItem.h">
+      <Filter>controls\QtControls\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlSelf.h">
+      <Filter>controls\QtControls\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\ControlShow.h">
+      <Filter>controls\QtControls\base</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\core\CSystem.inl">
       <Filter>core</Filter>
-    </None>
-    <None Include="src\controls\ControlBackground.inl">
-      <Filter>controls\QtControls</Filter>
-    </None>
-    <None Include="src\controls\ControlBase.inl">
-      <Filter>controls\QtControls</Filter>
-    </None>
-    <None Include="src\controls\ControlBorder.inl">
-      <Filter>controls\QtControls</Filter>
-    </None>
-    <None Include="src\controls\ControlItem.inl">
-      <Filter>controls\QtControls</Filter>
-    </None>
-    <None Include="src\controls\ControlFont.inl">
-      <Filter>controls\QtControls</Filter>
-    </None>
-    <None Include="src\controls\ControlSelf.inl">
-      <Filter>controls\QtControls</Filter>
-    </None>
-    <None Include="src\controls\ControlShow.inl">
-      <Filter>controls\QtControls</Filter>
     </None>
     <None Include="src\core\ManagerBase.inl">
       <Filter>core</Filter>
     </None>
     <None Include="src\core\SingletonBase.inl">
       <Filter>core</Filter>
+    </None>
+    <None Include="src\controls\ControlBackground.inl">
+      <Filter>controls\QtControls\base</Filter>
+    </None>
+    <None Include="src\controls\ControlBase.inl">
+      <Filter>controls\QtControls\base</Filter>
+    </None>
+    <None Include="src\controls\ControlBorder.inl">
+      <Filter>controls\QtControls\base</Filter>
+    </None>
+    <None Include="src\controls\ControlFont.inl">
+      <Filter>controls\QtControls\base</Filter>
+    </None>
+    <None Include="src\controls\ControlItem.inl">
+      <Filter>controls\QtControls\base</Filter>
+    </None>
+    <None Include="src\controls\ControlSelf.inl">
+      <Filter>controls\QtControls\base</Filter>
+    </None>
+    <None Include="src\controls\ControlShow.inl">
+      <Filter>controls\QtControls\base</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -801,5 +807,8 @@
     <CustomBuild Include="src\controls\AdvertShowDialog.h">
       <Filter>controls\QtDialog\UnModal</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="11Controls.rc" />
   </ItemGroup>
 </Project>

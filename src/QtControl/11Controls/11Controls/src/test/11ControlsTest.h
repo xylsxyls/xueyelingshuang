@@ -24,7 +24,7 @@ private slots:
 	void onShowAskDialog();
 	void onShowDestroyAll();
 
-	void onDialogSignal(SignalType type, SignalParam* param);
+	void onDialogSignal(const SignalParam& param);
 
 	void timerEvent(QTimerEvent* eve);
 private:

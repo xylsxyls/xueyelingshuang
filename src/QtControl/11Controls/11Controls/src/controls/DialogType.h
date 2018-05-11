@@ -7,6 +7,8 @@
 
 class QWindow;
 
+/** 窗口返回值
+*/
 enum DialogResult
 {
     /** 错误值，用于初始化
@@ -50,7 +52,7 @@ enum DialogType
 {
     /** 错误类型
     */
-    ERROR_TYPE,
+    ERROR_DIALOG_TYPE,
 
     /** 询问框
     */
@@ -107,36 +109,125 @@ enum DialogType
 
 enum OperateType
 {
-	SET_DOWNLOAD_SPEED,
-	SET_DOWNLOADED,
-	SET_DOWNLOAD_TIME,
-	SET_RATE,
-	SET_EDIT_DOWNLOAD_ADDR,
-	SET_EDIT_PATH,
-	SET_BACK_ENABLE,
-	DOWNLOAD_ERROR,
-	DOWNLOAD_NORMAL,
-	STATIC_DIALOG_DIALOG_ID,
-	POP_ACCOUNT_DIALOG,
-	POP_CLOSURE_DIALOG,
-	SUB_ACCOUNT_PANEL_PTR,
-	ACCOUNT_DIALOG_PTR,
-	CLOSURE_DIALOG_PTR,
-	CLOSE_STATIC_DIALOG,
-	DIALOG_EXIST_BY_DIALOG_ID,
-	DIALOG_EXIST_BY_USER_ID,
-	DESTROY_DIALOG,
-	DESTROY_DIALOG_BY_USER_ID,
-	DESTROY_LAST_DIALOG,
-	DESTROY_ALL,
-	DIALOG_HANDLE,
-	DIALOG_COUNT,
-	STATIC_DIALOG_HANDLE
+	/** 预设错误值
+	*/
+	ERROR_OPERATE_TYPE,
+
+	/** 设置下载速度
+	*/
+	SET_DOWNLOAD_SPEED_OPERATE,
+
+	/** 设置已下载量
+	*/
+	SET_DOWNLOADED_OPERATE,
+
+	/** 设置下载时间
+	*/
+	SET_DOWNLOAD_TIME_OPERATE,
+
+	/** 设置下载进度
+	*/
+	SET_RATE_OPERATE,
+
+	/** 设置下载地址文本框内容
+	*/
+	SET_EDIT_DOWNLOAD_ADDR_OPERATE,
+
+	/** 设置本地路径文本框内容
+	*/
+	SET_EDIT_PATH_OPERATE,
+
+	/** 设置转到后台下载按钮是否可用
+	*/
+	SET_BACK_ENABLE_OPERATE,
+
+	/** 设置下载框为错误状态
+	*/
+	DOWNLOAD_ERROR_OPERATE,
+
+	/** 设置下载框为常态
+	*/
+	DOWNLOAD_NORMAL_OPERATE,
+
+	/** 获取静态框窗口ID
+	*/
+	STATIC_DIALOG_DIALOG_ID_OPERATE,
+
+	/** 弹出创建账号框
+	*/
+	POP_ACCOUNT_DIALOG_OPERATE,
+
+	/** 弹出封号框
+	*/
+	POP_CLOSURE_DIALOG_OPERATE,
+
+	/** 获取内部窗口指针
+	*/
+	SUB_ACCOUNT_PANEL_PTR_OPERATE,
+
+	/** 获取创建账号框指针
+	*/
+	ACCOUNT_DIALOG_PTR_OPERATE,
+
+	/** 获取封号框指针
+	*/
+	CLOSURE_DIALOG_PTR_OPERATE,
+
+	/** 关闭静态框
+	*/
+	CLOSE_STATIC_DIALOG_OPERATE,
+
+	/** 通过窗口ID判断窗口是否存在
+	*/
+	DIALOG_EXIST_BY_DIALOG_ID_OPERATE,
+
+	/** 通过用户自定义ID判断窗口是否存在
+	*/
+	DIALOG_EXIST_BY_USER_ID_OPERATE,
+
+	/** 销毁窗口
+	*/
+	DESTROY_DIALOG_BY_DIALOG_ID_OPERATE,
+
+	/** 通过用户自定义ID销毁窗口
+	*/
+	DESTROY_DIALOG_BY_USER_ID_OPERATE,
+
+	/** 销毁最后一个生成的窗口
+	*/
+	DESTROY_LAST_DIALOG_OPERATE,
+
+	/** 销毁所有窗口
+	*/
+	DESTROY_ALL_OPERATE,
+
+	/** 获取窗口句柄
+	*/
+	DIALOG_HANDLE_OPERATE,
+
+	/** 获取窗口个数
+	*/
+	DIALOG_COUNT_OPERATE,
+
+	/** 获取静态框窗口句柄
+	*/
+	STATIC_DIALOG_HANDLE_OPERATE
 };
 
+/** 操作参数
+*/
 struct OperateParam
 {
-
+	OperateParam()
+	{
+		m_operateType = ERROR_OPERATE_TYPE;
+	}
+	OperateType operateType()
+	{
+		return m_operateType;
+	}
+protected:
+	OperateType m_operateType;
 };
 
 /** 设置速度（支持多线程）
@@ -149,6 +240,7 @@ struct SetDownloadSpeedOperateParam : public OperateParam
 	QString m_speed;
 	SetDownloadSpeedOperateParam()
 	{
+		m_operateType = SET_DOWNLOAD_SPEED_OPERATE;
 		m_userId = 0;
 	}
 };
@@ -163,6 +255,7 @@ struct SetDownloadedOperateParam : public OperateParam
 	QString m_downloaded;
 	SetDownloadedOperateParam()
 	{
+		m_operateType = SET_DOWNLOADED_OPERATE;
 		m_userId = 0;
 	}
 };
@@ -177,6 +270,7 @@ struct SetDownloadTimeOperateParam : public OperateParam
 	QString m_time;
 	SetDownloadTimeOperateParam()
 	{
+		m_operateType = SET_DOWNLOAD_TIME_OPERATE;
 		m_userId = 0;
 	}
 };
@@ -191,6 +285,7 @@ struct SetRateOperateParam : public OperateParam
 	int32_t m_persent;
 	SetRateOperateParam()
 	{
+		m_operateType = SET_RATE_OPERATE;
 		m_userId = 0;
 		m_persent = 0;
 	}
@@ -206,6 +301,7 @@ struct SetEditDownloadAddrOperateParam : public OperateParam
 	QString m_addr;
 	SetEditDownloadAddrOperateParam()
 	{
+		m_operateType = SET_EDIT_DOWNLOAD_ADDR_OPERATE;
 		m_userId = 0;
 	}
 };
@@ -220,6 +316,7 @@ struct SetEditPathOperateParam : public OperateParam
 	QString m_path;
 	SetEditPathOperateParam()
 	{
+		m_operateType = SET_EDIT_PATH_OPERATE;
 		m_userId = 0;
 	}
 };
@@ -234,6 +331,7 @@ struct SetBackEnableOperateParam : public OperateParam
 	bool m_enable;
 	SetBackEnableOperateParam()
 	{
+		m_operateType = SET_BACK_ENABLE_OPERATE;
 		m_userId = 0;
 		m_enable = false;
 	}
@@ -247,6 +345,7 @@ struct DownloadErrorOperateParam : public OperateParam
 	quint64 m_userId;
 	DownloadErrorOperateParam()
 	{
+		m_operateType = DOWNLOAD_ERROR_OPERATE;
 		m_userId = 0;
 	}
 };
@@ -259,6 +358,7 @@ struct DownloadNormalOperateParam : public OperateParam
 	quint64 m_userId;
 	DownloadNormalOperateParam()
 	{
+		m_operateType = DOWNLOAD_NORMAL_OPERATE;
 		m_userId = 0;
 	}
 };
@@ -268,12 +368,13 @@ struct DownloadNormalOperateParam : public OperateParam
 struct StaticDialogDialogIdOperateParam : public OperateParam
 {
 	//窗口类型
-	DialogType m_type;
+	DialogType m_dialogType;
 	//静态框ID，out
 	quint64 m_dialogId;
 	StaticDialogDialogIdOperateParam()
 	{
-		m_type = ERROR_TYPE;
+		m_operateType = STATIC_DIALOG_DIALOG_ID_OPERATE;
+		m_dialogType = ERROR_DIALOG_TYPE;
 		m_dialogId = 0;
 	}
 };
@@ -284,13 +385,20 @@ struct PopAccountDialogOperateParam : public OperateParam
 {
 	//输入的账号名，out
 	QString m_accountName;
+	PopAccountDialogOperateParam()
+	{
+		m_operateType = POP_ACCOUNT_DIALOG_OPERATE;
+	}
 };
 
 /** 弹出封号窗口（当账号框存在时才能弹出）
 */
 struct PopClosureDialogOperateParam : public OperateParam
 {
-
+	PopClosureDialogOperateParam()
+	{
+		m_operateType = POP_CLOSURE_DIALOG_OPERATE;
+	}
 };
 
 class SubAccountPanel;
@@ -302,6 +410,7 @@ struct SubAccountPanelPtrOperateParam : public OperateParam
 	SubAccountPanel* m_subAccountPanel;
 	SubAccountPanelPtrOperateParam()
 	{
+		m_operateType = SUB_ACCOUNT_PANEL_PTR_OPERATE;
 		m_subAccountPanel = nullptr;
 	}
 };
@@ -315,6 +424,7 @@ struct AccountDialogPtrOperateParam : public OperateParam
 	AccountDialog* m_accountDialog;
 	AccountDialogPtrOperateParam()
 	{
+		m_operateType = ACCOUNT_DIALOG_PTR_OPERATE;
 		m_accountDialog = nullptr;
 	}
 };
@@ -328,6 +438,7 @@ struct ClosureDialogPtrOperateParam : public OperateParam
 	ClosureDialog* m_closureDialog;
 	ClosureDialogPtrOperateParam()
 	{
+		m_operateType = CLOSURE_DIALOG_PTR_OPERATE;
 		m_closureDialog = nullptr;
 	}
 };
@@ -337,10 +448,11 @@ struct ClosureDialogPtrOperateParam : public OperateParam
 struct CloseStaticDialogOperateParam : public OperateParam
 {
 	//窗口类型
-	DialogType m_type;
+	DialogType m_dialogType;
 	CloseStaticDialogOperateParam()
 	{
-		m_type = ERROR_TYPE;
+		m_operateType = CLOSE_STATIC_DIALOG_OPERATE;
+		m_dialogType = ERROR_DIALOG_TYPE;
 	}
 };
 
@@ -354,6 +466,7 @@ struct DialogExistByDialogIdOperateParam : public OperateParam
 	bool m_isExist;
 	DialogExistByDialogIdOperateParam()
 	{
+		m_operateType = DIALOG_EXIST_BY_DIALOG_ID_OPERATE;
 		m_dialogId = 0;
 		m_isExist = false;
 	}
@@ -369,6 +482,7 @@ struct DialogExistByUserIdOperateParam : public OperateParam
 	bool m_isExist;
 	DialogExistByUserIdOperateParam()
 	{
+		m_operateType = DIALOG_EXIST_BY_USER_ID_OPERATE;
 		m_userId = 0;
 		m_isExist = false;
 	}
@@ -382,6 +496,7 @@ struct DestroyDialogOperateParam : public OperateParam
 	quint64 m_dialogId;
 	DestroyDialogOperateParam()
 	{
+		m_operateType = DESTROY_DIALOG_BY_DIALOG_ID_OPERATE;
 		m_dialogId = 0;
 	}
 };
@@ -394,6 +509,7 @@ struct DestroyDialogByUserIdOperateParam : public OperateParam
 	quint64 m_userId;
 	DestroyDialogByUserIdOperateParam()
 	{
+		m_operateType = DESTROY_DIALOG_BY_USER_ID_OPERATE;
 		m_userId = 0;
 	}
 };
@@ -402,14 +518,20 @@ struct DestroyDialogByUserIdOperateParam : public OperateParam
 */
 struct DestroyLastDialogOperateParam : public OperateParam
 {
-
+	DestroyLastDialogOperateParam()
+	{
+		m_operateType = DESTROY_LAST_DIALOG_OPERATE;
+	}
 };
 
 /** 销毁所有窗口（无动画效果）
 */
 struct DestroyAllOperateParam : public OperateParam
 {
-
+	DestroyAllOperateParam()
+	{
+		m_operateType = DESTROY_ALL_OPERATE;
+	}
 };
 
 /** 获取窗口句柄
@@ -422,6 +544,7 @@ struct DialogHandleOperateParam : public OperateParam
 	QWindow* m_windowHandle;
 	DialogHandleOperateParam()
 	{
+		m_operateType = DIALOG_HANDLE_OPERATE;
 		m_dialogId = 0;
 		m_windowHandle = nullptr;
 	}
@@ -435,6 +558,7 @@ struct DialogCountOperateParam : public OperateParam
 	quint64 m_count;
 	DialogCountOperateParam()
 	{
+		m_operateType = DIALOG_COUNT_OPERATE;
 		m_count = 0;
 	}
 };
@@ -444,32 +568,75 @@ struct DialogCountOperateParam : public OperateParam
 struct StaticDialogHandleOperateParam : public OperateParam
 {
 	//窗口类型
-	DialogType m_type;
+	DialogType m_dialogType;
 	//窗口句柄，out
 	QWindow* m_windowHandle;
 	StaticDialogHandleOperateParam()
 	{
-		m_type = ERROR_TYPE;
+		m_operateType = STATIC_DIALOG_HANDLE_OPERATE;
+		m_dialogType = ERROR_DIALOG_TYPE;
 		m_windowHandle = nullptr;
 	}
 };
 
 enum SignalType
 {
-	CHANGE_TO_BACK,
-	DOWNLOAD_AGAIN,
-	CANCEL_DOWNLOAD,
-	USE_OTHER_DOWNLOAD,
-	COPY_DOWNLOAD_ADDR,
-	COPY_PATH,
-	POP_DIALOG_DONE,
-	NOTIFY_DIALOG_DONE,
-	STATIC_DIALOG_DONE
+	/** 预设错误值
+	*/
+	ERROR_SIGNAL_TYPE,
+
+	/** 点击下载框的转到后台下载按钮发送信号
+	*/
+	CHANGE_TO_BACK_SIGNAL,
+
+	/** 点击下载框的重试按钮发送信号
+	*/
+	DOWNLOAD_AGAIN_SIGNAL,
+
+	/** 点击下载框的取消下载按钮发送信号
+	*/
+	CANCEL_DOWNLOAD_SIGNAL,
+
+	/** 点击下载框的使用其他下载渠道按钮发送信号
+	*/
+	USE_OTHER_DOWNLOAD_SIGNAL,
+
+	/** 点击下载框的下载地址按钮发送信号
+	*/
+	COPY_DOWNLOAD_ADDR_SIGNAL,
+
+	/** 点击下载框的复制路径按钮发送信号
+	*/
+	COPY_PATH_SIGNAL,
+
+	/** 弹窗关闭发送信号
+	*/
+	POP_DIALOG_DONE_SIGNAL,
+
+	/** 通知框关闭发送信号
+	*/
+	NOTIFY_DIALOG_DONE_SIGNAL,
+
+	/** 静态框关闭发送信号
+	*/
+	STATIC_DIALOG_DONE_SIGNAL
 };
 
+/** 信号参数
+*/
 struct SignalParam
 {
+	SignalParam()
+	{
+		m_signalType = ERROR_SIGNAL_TYPE;
+	}
 
+	SignalType signalType() const
+	{
+		return m_signalType;
+	}
+protected:
+	SignalType m_signalType;
 };
 Q_DECLARE_METATYPE(SignalParam)
 
@@ -481,6 +648,7 @@ struct ChangeToBackSignalParam : public SignalParam
 	quint64 m_userId;
 	ChangeToBackSignalParam()
 	{
+		m_signalType = CHANGE_TO_BACK_SIGNAL;
 		m_userId = 0;
 	}
 };
@@ -494,6 +662,7 @@ struct DownloadAgainSignalParam : public SignalParam
 	quint64 m_userId;
 	DownloadAgainSignalParam()
 	{
+		m_signalType = DOWNLOAD_AGAIN_SIGNAL;
 		m_userId = 0;
 	}
 };
@@ -507,6 +676,7 @@ struct CancelDownloadSignalParam : public SignalParam
 	quint64 m_userId;
 	CancelDownloadSignalParam()
 	{
+		m_signalType = CANCEL_DOWNLOAD_SIGNAL;
 		m_userId = 0;
 	}
 };
@@ -520,6 +690,7 @@ struct UseOtherDownloadSignalParam : public SignalParam
 	quint64 m_userId;
 	UseOtherDownloadSignalParam()
 	{
+		m_signalType = USE_OTHER_DOWNLOAD_SIGNAL;
 		m_userId = 0;
 	}
 };
@@ -535,6 +706,7 @@ struct CopyDownloadAddrSignalParam : public SignalParam
 	QString m_addr;
 	CopyDownloadAddrSignalParam()
 	{
+		m_signalType = COPY_DOWNLOAD_ADDR_SIGNAL;
 		m_userId = 0;
 	}
 };
@@ -550,48 +722,68 @@ struct CopyPathSignalParam : public SignalParam
 	QString m_path;
 	CopyPathSignalParam()
 	{
+		m_signalType = COPY_PATH_SIGNAL;
 		m_userId = 0;
 	}
 };
 Q_DECLARE_METATYPE(CopyPathSignalParam)
 
+/** 窗口关闭信号参数
+*/
 struct DialogDoneSignalParam : public SignalParam
 {
 	quint64 m_dialogId;
 	quint64 m_userId;
-	DialogType m_type;
+	DialogType m_dialogType;
 	DialogResult m_result;
 	int32_t m_userParam;
 	DialogDoneSignalParam()
 	{
 		m_dialogId = 0;
 		m_userId = 0;
-		m_type = ERROR_TYPE;
+		m_dialogType = ERROR_DIALOG_TYPE;
 		m_result = CODE_DESTROY;
 		m_userParam = -1;
 	}
 };
 Q_DECLARE_METATYPE(DialogDoneSignalParam)
 
+/** 弹框关闭信号参数
+*/
 struct PopDialogDoneSignalParam : public DialogDoneSignalParam
 {
-
+	PopDialogDoneSignalParam()
+	{
+		m_signalType = POP_DIALOG_DONE_SIGNAL;
+	}
 };
 Q_DECLARE_METATYPE(PopDialogDoneSignalParam)
 
+/** 通知框关闭信号参数
+*/
 struct NotifyDialogDoneSignalParam : public DialogDoneSignalParam
 {
-
+	NotifyDialogDoneSignalParam()
+	{
+		m_signalType = NOTIFY_DIALOG_DONE_SIGNAL;
+	}
 };
 Q_DECLARE_METATYPE(NotifyDialogDoneSignalParam)
 
+/** 静态框关闭信号参数
+*/
 struct StaticDialogDoneSignalParam : public DialogDoneSignalParam
 {
-
+	StaticDialogDoneSignalParam()
+	{
+		m_signalType = STATIC_DIALOG_DONE_SIGNAL;
+	}
 };
 Q_DECLARE_METATYPE(StaticDialogDoneSignalParam)
 
-struct ParamBase
+/** 窗口参数
+*/
+struct DialogParam
 {
     quint64 m_dialogId;
     quint64 m_userId;
@@ -602,8 +794,9 @@ struct ParamBase
     int32_t m_timeOut;
     bool m_isCountDownVisible;
 
-    ParamBase()
+    DialogParam()
     {
+		m_dialogType = ERROR_DIALOG_TYPE;
         m_dialogId = 0;
         m_userId = 0;
         m_userParam = -1;
@@ -613,9 +806,19 @@ struct ParamBase
         m_timeOut = -1;
         m_isCountDownVisible = false;
     }
+
+	DialogType dialogType()
+	{
+		return m_dialogType;
+	}
+
+protected:
+	DialogType m_dialogType;
 };
 
-struct AskDialogParam : public ParamBase
+/** 询问框
+*/
+struct AskDialogParam : public DialogParam
 {
     QString m_tip;
     QString m_acceptText;
@@ -623,25 +826,31 @@ struct AskDialogParam : public ParamBase
 
     AskDialogParam()
     {
+		m_dialogType = ASK_DIALOG;
         m_tip = QStringLiteral("询问弹框提示信息");
         m_acceptText = QStringLiteral("确认");
         m_ignoreText = QStringLiteral("取消");
     }
 };
 
-struct TipDialogParam : public ParamBase
+/** 提示框
+*/
+struct TipDialogParam : public DialogParam
 {
     QString m_tip;
     QString m_buttonText;
 
     TipDialogParam()
     {
+		m_dialogType = TIP_DIALOG;
         m_tip = QStringLiteral("询问弹框提示信息");
         m_buttonText = QStringLiteral("确认");
     }
 };
 
-struct InputDialogParam : public ParamBase
+/** 输入框
+*/
+struct InputDialogParam : public DialogParam
 {
     QString m_editTip;
     QString m_buttonText;
@@ -653,6 +862,7 @@ struct InputDialogParam : public ParamBase
 
     InputDialogParam()
     {
+		m_dialogType = INPUT_DIALOG;
         m_editTip = QStringLiteral("输入框提示");
         m_buttonText = QStringLiteral("确认");
         m_isPassword = false;
@@ -660,16 +870,21 @@ struct InputDialogParam : public ParamBase
     }
 };
 
-struct WaitDialogParam : public ParamBase
+/** 等待框
+*/
+struct WaitDialogParam : public DialogParam
 {
     QString m_tip;
     WaitDialogParam()
     {
+		m_dialogType = WAIT_DIALOG;
         m_tip = QStringLiteral("等待框提示");
     }
 };
 
-struct AdvertAskDialogParam : public ParamBase
+/** 含广告的询问框
+*/
+struct AdvertAskDialogParam : public DialogParam
 {
     QString m_advertUrl;
     QString m_tip;
@@ -677,26 +892,32 @@ struct AdvertAskDialogParam : public ParamBase
     QString m_ignoreText;
     AdvertAskDialogParam()
     {
+		m_dialogType = ADVERT_ASK_DIALOG;
         m_tip = QStringLiteral("包含广告的询问框提示");
         m_acceptText = QStringLiteral("确认");
         m_ignoreText = QStringLiteral("取消");
     }
 };
 
-struct DownloadDialogParam : public ParamBase
+/** 老版下载框
+*/
+struct DownloadDialogParam : public DialogParam
 {
     QString m_fileName;
     QString m_tip;
     QString m_buttonText;
     DownloadDialogParam()
     {
+		m_dialogType = DOWNLOAD_DIALOG;
         m_fileName = QStringLiteral("文件名");
         m_tip = QStringLiteral("下载框提示");
         m_buttonText = QStringLiteral("确认");
     }
 };
 
-struct DownloadOperateDialogParam : public ParamBase
+/** 下载框
+*/
+struct DownloadOperateDialogParam : public DialogParam
 {
     QString m_fileName;
     QString m_downloadSpeed;
@@ -708,6 +929,7 @@ struct DownloadOperateDialogParam : public ParamBase
     QString m_path;
     DownloadOperateDialogParam()
     {
+		m_dialogType = DOWNLOAD_OPERATE_DIALOG;
         m_fileName = QStringLiteral("文件名");
         m_downloadSpeed = QStringLiteral("0k/s");
         m_hasDownloaded = QStringLiteral("0M/0M");
@@ -719,31 +941,39 @@ struct DownloadOperateDialogParam : public ParamBase
     }
 };
 
-struct TipShowDialogParam : public ParamBase
+/** 提示通知框
+*/
+struct TipShowDialogParam : public DialogParam
 {
     QString m_tip;
     QString m_buttonText;
     TipShowDialogParam()
     {
+		m_dialogType = TIP_SHOW_DIALOG;
         m_tip = QStringLiteral("提示通知框提示");
         m_buttonText = QString::fromStdWString(L"知道了");
     }
 };
 
-struct AskShowDialogParam : public ParamBase
+/** 询问通知框
+*/
+struct AskShowDialogParam : public DialogParam
 {
     QString m_tip;
     QString m_acceptText;
     QString m_ignoreText;
     AskShowDialogParam()
     {
+		m_dialogType = ASK_SHOW_DIALOG;
         m_tip = QStringLiteral("询问通知框提示");
         m_acceptText = QStringLiteral("同意");
         m_ignoreText = QStringLiteral("拒绝");
     }
 };
 
-struct LoginShowDialogParam : public ParamBase
+/** 登录框
+*/
+struct LoginShowDialogParam : public DialogParam
 {
     QString m_tip;
     QString m_greeting;
@@ -753,6 +983,7 @@ struct LoginShowDialogParam : public ParamBase
 
     LoginShowDialogParam()
     {
+		m_dialogType = LOGIN_SHOW_DIALOG;
         QTime tm = QTime::currentTime();
         int hour = tm.hour();
         if ((hour > 0) && (hour <= 9))
@@ -781,22 +1012,25 @@ struct LoginShowDialogParam : public ParamBase
 
 /** 广告通知框参数
 */
-struct AdvertShowDialogParam : public ParamBase
+struct AdvertShowDialogParam : public DialogParam
 {
 	//广告链接
 	QString m_advertUrl;
 	AdvertShowDialogParam()
 	{
+		m_dialogType = ADVERT_SHOW_DIALOG;
 		m_title = QStringLiteral("11热点推荐");
 		m_advertUrl = QStringLiteral("http://www.baidu.com/");
 	}
 };
 
-struct AccountManagerDialogParam : public ParamBase
+/** 账号框
+*/
+struct AccountManagerDialogParam : public DialogParam
 {
     AccountManagerDialogParam()
     {
+		m_dialogType = ACCOUNT_MANAGER_DIALOG;
         m_title = QStringLiteral("11对战平台 - 账号管理页面");
     }
 };
-

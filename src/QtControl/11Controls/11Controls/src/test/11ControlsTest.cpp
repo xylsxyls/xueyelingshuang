@@ -21,6 +21,7 @@
 #include "11Controls/include/controls/COriginalButton.h"
 #include <QWindow>
 #include "11Controls/include/controls/DialogManager.h"
+#include "11Controls/include/controls/ListWidgetIdItem.h"
 #include "D:\\SendToMessageTest.h"
 
 #pragma comment(lib,"11Controls.lib")
@@ -32,6 +33,23 @@ ControlsTest::ControlsTest(QWidget *parent)
 	setWindowFlags(Qt::FramelessWindowHint);
 	//this->setAttribute(Qt::WA_TranslucentBackground);
 	this->setStyleSheet("QMainWindow{background-color:rgba(100,0,0,255);}");
+
+	ComboBox* box = new ComboBox(this);
+	box->setGeometry(20, 20, 150, 30);
+	box->addItem("123");
+	box->addItem("124");
+	box->addItem("125");
+	box->addItem("126");
+	box->setListBackgroundColor(QColor(255, 0, 0, 100));
+	box->setListBorderWidth(0);
+	box->setListOrigin(30);
+
+	//ListWidget* list = new ListWidget(this);
+	//list->setBackgroundColor(QColor(255, 0, 0, 100));
+	//list->setGeometry(300, 100, 200, 600);
+	//ListWidgetIdItem* item = new ListWidgetIdItem;
+	//item->setText("12121");
+	//list->addItem(item);
 
     QRect rect(10, 20, 30, 40);
     QRect ssssds = rect.adjusted(0, 0, 0, -50);
@@ -113,12 +131,13 @@ COriginalDialog* sss = nullptr;
 void ControlsTest::onPopTipDialog()
 {
     onPopAskDialog();
-    AdvertShowDialogParam param;
+    DownloadOperateDialogParam param;
     param.m_userParam = 30;
     param.m_userId = 10002;
     param.m_parent = sss->windowHandle();
     param.m_timeOut = 30;
     param.m_isCountDownVisible = true;
+	//param.m_tip = QStringLiteral("撒大声地撒大声地撒大声地撒大声地撒大声地撒大声地撒大声地撒大声地撒大声大声地撒大声地撒大声地撒大声地撒大声地撒大声地");
 
     //QObject::connect(&DialogManager::instance(), &DialogManager::changeToBack, this, &ControlsTest::onChangeToBack);
     //QObject::connect(&DialogManager::instance(), &DialogManager::downloadAgain, this, &ControlsTest::onDownloadAgain);
@@ -127,7 +146,7 @@ void ControlsTest::onPopTipDialog()
     //QObject::connect(&DialogManager::instance(), &DialogManager::copyDownloadAddr, this, &ControlsTest::onCopyDownloadAddr);
     //QObject::connect(&DialogManager::instance(), &DialogManager::copyPath, this, &ControlsTest::onCopyPath);
 
-    DialogManager::instance().makeDialog(ADVERT_SHOW_DIALOG, &param);
+    DialogManager::instance().makeDialog(param);
     
     //RCSend("%s", CStringManager::UnicodeToAnsi(param.m_editText.toStdWString()).c_str());
 	// int xx = DialogManager::instance().popTipDialog(dialogId1,
@@ -165,41 +184,41 @@ void ControlsTest::onPopWaitDialog()
 	SetDownloadSpeedOperateParam setDownloadSpeedOperateParam;
 	setDownloadSpeedOperateParam.m_userId = 10002;
 	setDownloadSpeedOperateParam.m_speed = "speed";
-	DialogManager::instance().operateDialog(SET_DOWNLOAD_SPEED, &setDownloadSpeedOperateParam);
+	DialogManager::instance().operateDialog(setDownloadSpeedOperateParam);
 
 	SetDownloadedOperateParam setDownloadedOperateParam;
 	setDownloadedOperateParam.m_userId = 10002;
 	setDownloadedOperateParam.m_downloaded = "download";
-	DialogManager::instance().operateDialog(SET_DOWNLOADED, &setDownloadedOperateParam);
+	DialogManager::instance().operateDialog(setDownloadedOperateParam);
 
 	SetDownloadTimeOperateParam setDownloadTimeOperateParam;
 	setDownloadTimeOperateParam.m_userId = 10002;
 	setDownloadTimeOperateParam.m_time = "time";
-	DialogManager::instance().operateDialog(SET_DOWNLOAD_TIME, &setDownloadTimeOperateParam);
+	DialogManager::instance().operateDialog(setDownloadTimeOperateParam);
 
 	SetRateOperateParam setRateOperateParam;
 	setRateOperateParam.m_userId = 10002;
 	setRateOperateParam.m_persent = 80;
-	DialogManager::instance().operateDialog(SET_RATE, &setRateOperateParam);
+	DialogManager::instance().operateDialog(setRateOperateParam);
 
 	SetEditDownloadAddrOperateParam setEditDownloadAddrOperateParam;
 	setEditDownloadAddrOperateParam.m_userId = 10002;
 	setEditDownloadAddrOperateParam.m_addr = "22232323";
-	DialogManager::instance().operateDialog(SET_EDIT_DOWNLOAD_ADDR, &setEditDownloadAddrOperateParam);
+	DialogManager::instance().operateDialog(setEditDownloadAddrOperateParam);
 
 	SetEditPathOperateParam setEditPathOperateParam;
 	setEditPathOperateParam.m_userId = 10002;
 	setEditPathOperateParam.m_path = "12121212";
-	DialogManager::instance().operateDialog(SET_EDIT_PATH, &setEditPathOperateParam);
+	DialogManager::instance().operateDialog(setEditPathOperateParam);
 
 	SetBackEnableOperateParam setBackEnableOperateParam;
 	setBackEnableOperateParam.m_userId = 10002;
 	setBackEnableOperateParam.m_enable = false;
-	DialogManager::instance().operateDialog(SET_BACK_ENABLE, &setBackEnableOperateParam);
+	DialogManager::instance().operateDialog(setBackEnableOperateParam);
 
 	DownloadErrorOperateParam downloadErrorOperateParam;
 	downloadErrorOperateParam.m_userId = 10002;
-	DialogManager::instance().operateDialog(DOWNLOAD_ERROR, &downloadErrorOperateParam);
+	DialogManager::instance().operateDialog(downloadErrorOperateParam);
 
 	//DownloadNormalOperateParam downloadNormalOperateParam;
 	//downloadNormalOperateParam.m_userId = 10002;
@@ -298,66 +317,62 @@ void ControlsTest::onShowDestroyAll()
 	MessageBox(nullptr, L"完成", L"", 0);
 }
 
-void ControlsTest::onDialogSignal(SignalType type, SignalParam* param)
+void ControlsTest::onDialogSignal(const SignalParam& param)
 {
-	if (param == nullptr)
+	switch (param.signalType())
 	{
-		return;
-	}
-	switch (type)
+	case CHANGE_TO_BACK_SIGNAL:
 	{
-	case CHANGE_TO_BACK:
-	{
-		ChangeToBackSignalParam* signalParam = (ChangeToBackSignalParam*)param;
-		RCSend("onChangeToBack taskId = %d", (int32_t)signalParam->m_userId);
+		ChangeToBackSignalParam& signalParam = (ChangeToBackSignalParam&)param;
+		RCSend("onChangeToBack taskId = %d", (int32_t)signalParam.m_userId);
 		break;
 	}
-	case DOWNLOAD_AGAIN:
+	case DOWNLOAD_AGAIN_SIGNAL:
 	{
-		DownloadAgainSignalParam* signalParam = (DownloadAgainSignalParam*)param;
-		RCSend("onDownloadAgain taskId = %d", (int32_t)signalParam->m_userId);
+		DownloadAgainSignalParam& signalParam = (DownloadAgainSignalParam&)param;
+		RCSend("onDownloadAgain taskId = %d", (int32_t)signalParam.m_userId);
 		break;
 	}
-	case CANCEL_DOWNLOAD:
+	case CANCEL_DOWNLOAD_SIGNAL:
 	{
-		CancelDownloadSignalParam* signalParam = (CancelDownloadSignalParam*)param;
-		RCSend("onCancelDownload taskId = %d", (int32_t)signalParam->m_userId);
+		CancelDownloadSignalParam& signalParam = (CancelDownloadSignalParam&)param;
+		RCSend("onCancelDownload taskId = %d", (int32_t)signalParam.m_userId);
 		break;
 	}
-	case USE_OTHER_DOWNLOAD:
+	case USE_OTHER_DOWNLOAD_SIGNAL:
 	{
-		UseOtherDownloadSignalParam* signalParam = (UseOtherDownloadSignalParam*)param;
-		RCSend("onUseOtherDownload taskId = %d", (int32_t)signalParam->m_userId);
+		UseOtherDownloadSignalParam& signalParam = (UseOtherDownloadSignalParam&)param;
+		RCSend("onUseOtherDownload taskId = %d", (int32_t)signalParam.m_userId);
 		break;
 	}
-	case COPY_DOWNLOAD_ADDR:
+	case COPY_DOWNLOAD_ADDR_SIGNAL:
 	{
-		CopyDownloadAddrSignalParam* signalParam = (CopyDownloadAddrSignalParam*)param;
-		RCSend("onCopyDownloadAddr taskId = %d, addr = %s", (int32_t)signalParam->m_userId, signalParam->m_addr.toStdString().c_str());
+		CopyDownloadAddrSignalParam& signalParam = (CopyDownloadAddrSignalParam&)param;
+		RCSend("onCopyDownloadAddr taskId = %d, addr = %s", (int32_t)signalParam.m_userId, signalParam.m_addr.toStdString().c_str());
 		break;
 	}
-	case COPY_PATH:
+	case COPY_PATH_SIGNAL:
 	{
-		CopyPathSignalParam* signalParam = (CopyPathSignalParam*)param;
-		RCSend("onCopyPath taskId = %d, path = %s", (int32_t)signalParam->m_userId, signalParam->m_path.toStdString().c_str());
+		CopyPathSignalParam& signalParam = (CopyPathSignalParam&)param;
+		RCSend("onCopyPath taskId = %d, path = %s", (int32_t)signalParam.m_userId, signalParam.m_path.toStdString().c_str());
 		break;
 	}
-	case POP_DIALOG_DONE:
+	case POP_DIALOG_DONE_SIGNAL:
 	{
-		PopDialogDoneSignalParam* signalParam = (PopDialogDoneSignalParam*)param;
-		RCSend("pop = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", (int32_t)signalParam->m_dialogId, (int32_t)signalParam->m_userId, signalParam->m_type, signalParam->m_result, signalParam->m_userParam);
+		PopDialogDoneSignalParam& signalParam = (PopDialogDoneSignalParam&)param;
+		RCSend("pop = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", (int32_t)signalParam.m_dialogId, (int32_t)signalParam.m_userId, signalParam.m_dialogType, signalParam.m_result, signalParam.m_userParam);
 		break;
 	}
-	case NOTIFY_DIALOG_DONE:
+	case NOTIFY_DIALOG_DONE_SIGNAL:
 	{
-		NotifyDialogDoneSignalParam* signalParam = (NotifyDialogDoneSignalParam*)param;
-		RCSend("notify = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", (int32_t)signalParam->m_dialogId, (int32_t)signalParam->m_userId, signalParam->m_type, signalParam->m_result, signalParam->m_userParam);
+		NotifyDialogDoneSignalParam& signalParam = (NotifyDialogDoneSignalParam&)param;
+		RCSend("notify = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", (int32_t)signalParam.m_dialogId, (int32_t)signalParam.m_userId, signalParam.m_dialogType, signalParam.m_result, signalParam.m_userParam);
 		break;
 	}
-	case STATIC_DIALOG_DONE:
+	case STATIC_DIALOG_DONE_SIGNAL:
 	{
-		StaticDialogDoneSignalParam* signalParam = (StaticDialogDoneSignalParam*)param;
-		RCSend("static = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", (int32_t)signalParam->m_dialogId, (int32_t)signalParam->m_userId, signalParam->m_type, signalParam->m_result, signalParam->m_userParam);
+		StaticDialogDoneSignalParam& signalParam = (StaticDialogDoneSignalParam&)param;
+		RCSend("static = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", (int32_t)signalParam.m_dialogId, (int32_t)signalParam.m_userId, signalParam.m_dialogType, signalParam.m_result, signalParam.m_userParam);
 		break;
 	}
 	default:

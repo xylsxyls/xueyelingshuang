@@ -31,7 +31,7 @@ m_ignore(nullptr)
 	m_ignore->setFontColor(QColor(255, 255, 255, 255), QColor(255, 255, 255, 255), QColor(188, 199, 226, 255));
 
     //initKeyboardAccept(m_accept);
-    resize(212, 128);
+    resize(212, 148);
 }
 
 void AskShowDialog::setTip(const QString& tip)
@@ -41,6 +41,7 @@ void AskShowDialog::setTip(const QString& tip)
         return;
     }
     m_tip->setText(tip);
+	m_tip->setToolTip(tip);
 }
 
 void AskShowDialog::setAcceptButton(const QString& acceptText, DialogResult acceptDone)
@@ -60,7 +61,7 @@ void AskShowDialog::resizeEvent(QResizeEvent* eve)
     {
         return;
     }
-    m_tip->setGeometry(QRect(20, 35, width() - 20 * 2, 50));
+    m_tip->setGeometry(QRect(20, 35, width() - 20 * 2, height() - 70));
     m_accept->setGeometry(QRect(31, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19));
     m_ignore->setGeometry(QRect(31 + 13 + (width() - 31 * 2 - 13) / 2, height() - 13 - 19, (width() - 31 * 2 - 13) / 2, 19));
 }

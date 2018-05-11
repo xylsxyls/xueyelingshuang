@@ -36,6 +36,10 @@ m_dropDownBorderWidth(-1)
 	QObject::connect(m_listWidget, &QListWidget::itemEntered, this, &ComboBox::listItemEntered);
 	QObject::connect(m_listWidget, &ListWidget::itemPressed, this, &ComboBox::listItemPressed);
 	setDefault();
+
+	m_listWidget->parentWidget()->setWindowFlags((m_listWidget->parentWidget()->windowFlags() | Qt::FramelessWindowHint));
+	m_listWidget->parentWidget()->setAttribute(Qt::WA_TranslucentBackground);
+
 	m_listWidget->verticalScrollBar()->setStyleSheet(
 		"QScrollBar:vertical"
 		"{"

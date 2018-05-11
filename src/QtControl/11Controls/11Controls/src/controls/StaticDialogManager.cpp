@@ -9,22 +9,22 @@ m_accountManagerDialogId(0)
 
 }
 
-void StaticDialogManager::popStaticDialog(DialogType type, ParamBase* param)
+void StaticDialogManager::popStaticDialog(DialogParam& param)
 {
     PopDialog* popDialogPtr = nullptr;
-    switch (type)
+	switch (param.dialogType())
     {
     case ACCOUNT_MANAGER_DIALOG:
     {
-        AccountManagerDialogParam* accountManagerDialogParam = (AccountManagerDialogParam*)param;
+        AccountManagerDialogParam& accountManagerDialogParam = (AccountManagerDialogParam&)param;
         quint64 dialogId = 0;
-        AccountManagerDialog* accountManagerDialog = (AccountManagerDialog*)AllocManager::instance().createDialog(dialogId, accountManagerDialogParam->m_userId, ACCOUNT_MANAGER_DIALOG);
+        AccountManagerDialog* accountManagerDialog = (AccountManagerDialog*)AllocManager::instance().createDialog(dialogId, accountManagerDialogParam.m_userId, ACCOUNT_MANAGER_DIALOG);
         if (accountManagerDialog == nullptr)
         {
             return;
         }
-        param->m_dialogId = dialogId;
-        m_accountManagerDialogId = param->m_dialogId;
+        param.m_dialogId = dialogId;
+        m_accountManagerDialogId = param.m_dialogId;
         popDialogPtr = accountManagerDialog;
         break;
     }
@@ -37,44 +37,40 @@ void StaticDialogManager::popStaticDialog(DialogType type, ParamBase* param)
         return;
     }
     
-    popDialogPtr->setWindowResultAddr(&(param->m_result));
-    popDialogPtr->setWindowTiTle(param->m_title);
-    popDialogPtr->setUserParam(param->m_userParam);
-    popDialogPtr->setTimeRest(param->m_timeOut);
-    popDialogPtr->setTimeRestVisible(param->m_isCountDownVisible);
-    popDialogPtr->setTransientWindow(param->m_parent);
+    popDialogPtr->setWindowResultAddr(&(param.m_result));
+    popDialogPtr->setWindowTiTle(param.m_title);
+    popDialogPtr->setUserParam(param.m_userParam);
+    popDialogPtr->setTimeRest(param.m_timeOut);
+    popDialogPtr->setTimeRestVisible(param.m_isCountDownVisible);
+    popDialogPtr->setTransientWindow(param.m_parent);
     QObject::connect(popDialogPtr, &DialogShow::closedSignal, this, &StaticDialogManager::onClosedSignal);
     popDialogPtr->exec();
 }
 
-void StaticDialogManager::operateDialog(OperateType type, OperateParam* param)
+void StaticDialogManager::operateDialog(OperateParam& param)
 {
-	if (param == nullptr)
+	switch (param.operateType())
 	{
-		return;
-	}
-	switch (type)
+	case STATIC_DIALOG_DIALOG_ID_OPERATE:
 	{
-	case STATIC_DIALOG_DIALOG_ID:
-	{
-		StaticDialogDialogIdOperateParam* operateParam = (StaticDialogDialogIdOperateParam*)param;
-		operateParam->m_dialogId = staticDialogDialogId(operateParam->m_type);
+		StaticDialogDialogIdOperateParam& operateParam = (StaticDialogDialogIdOperateParam&)param;
+		operateParam.m_dialogId = staticDialogDialogId(operateParam.m_dialogType);
 		break;
 	}
-	case POP_ACCOUNT_DIALOG:
+	case POP_ACCOUNT_DIALOG_OPERATE:
 	{
-		PopAccountDialogOperateParam* operateParam = (PopAccountDialogOperateParam*)param;
+		PopAccountDialogOperateParam& operateParam = (PopAccountDialogOperateParam&)param;
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
 			return;
 		}
-		operateParam->m_accountName = dialogPtr->popAccountDialog();
+		operateParam.m_accountName = dialogPtr->popAccountDialog();
 		break;
 	}
-	case POP_CLOSURE_DIALOG:
+	case POP_CLOSURE_DIALOG_OPERATE:
 	{
-		PopClosureDialogOperateParam* operateParam = (PopClosureDialogOperateParam*)param;
+		PopClosureDialogOperateParam& operateParam = (PopClosureDialogOperateParam&)param;
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
@@ -83,43 +79,43 @@ void StaticDialogManager::operateDialog(OperateType type, OperateParam* param)
 		dialogPtr->popClosureDialog();
 		break;
 	}
-	case SUB_ACCOUNT_PANEL_PTR:
+	case SUB_ACCOUNT_PANEL_PTR_OPERATE:
 	{
-		SubAccountPanelPtrOperateParam* operateParam = (SubAccountPanelPtrOperateParam*)param;
+		SubAccountPanelPtrOperateParam& operateParam = (SubAccountPanelPtrOperateParam&)param;
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
 			return;
 		}
-		operateParam->m_subAccountPanel = dialogPtr->subAccountPanelPtr();
+		operateParam.m_subAccountPanel = dialogPtr->subAccountPanelPtr();
 		break;
 	}
-	case ACCOUNT_DIALOG_PTR:
+	case ACCOUNT_DIALOG_PTR_OPERATE:
 	{
-		AccountDialogPtrOperateParam* operateParam = (AccountDialogPtrOperateParam*)param;
+		AccountDialogPtrOperateParam& operateParam = (AccountDialogPtrOperateParam&)param;
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
 			return;
 		}
-		operateParam->m_accountDialog = dialogPtr->accountDialogPtr();
+		operateParam.m_accountDialog = dialogPtr->accountDialogPtr();
 		break;
 	}
-	case CLOSURE_DIALOG_PTR:
+	case CLOSURE_DIALOG_PTR_OPERATE:
 	{
-		ClosureDialogPtrOperateParam* operateParam = (ClosureDialogPtrOperateParam*)param;
+		ClosureDialogPtrOperateParam& operateParam = (ClosureDialogPtrOperateParam&)param;
 		AccountManagerDialog* dialogPtr = accountManagerDialogPtr();
 		if (dialogPtr == nullptr)
 		{
 			return;
 		}
-		operateParam->m_closureDialog = dialogPtr->closureDialogPtr();
+		operateParam.m_closureDialog = dialogPtr->closureDialogPtr();
 		break;
 	}
-	case CLOSE_STATIC_DIALOG:
+	case CLOSE_STATIC_DIALOG_OPERATE:
 	{
-		CloseStaticDialogOperateParam* operateParam = (CloseStaticDialogOperateParam*)param;
-		closeStaticDialog(operateParam->m_type);
+		CloseStaticDialogOperateParam& operateParam = (CloseStaticDialogOperateParam&)param;
+		closeStaticDialog(operateParam.m_dialogType);
 		break;
 	}
 	default:
@@ -178,13 +174,13 @@ void StaticDialogManager::onClosedSignal(DialogResult* result)
     StaticDialogDoneSignalParam param;
     param.m_dialogId = dialogId;
     param.m_userId = userId;
-    param.m_type = type;
+    param.m_dialogType = type;
     if (result != nullptr)
     {
         param.m_result = *result;
     }
     param.m_userParam = userParam;
-	emit dialogSignal(STATIC_DIALOG_DONE, &param);
+	emit dialogSignal(param);
 }
 
 AccountManagerDialog* StaticDialogManager::accountManagerDialogPtr()

@@ -17,21 +17,21 @@ public:
     @param [in] type 弹窗类型
     @param [in] param 弹窗参数
     */
-    void popDialog(DialogType type, ParamBase* param);
+	void popDialog(DialogParam& param);
 
 public:
 	/** 操作窗口
 	@param [in] type 操作类型
 	@param [in] param 操作参数
 	*/
-	void operateDialog(OperateType type, OperateParam* param);
+	void operateDialog(OperateParam& param);
 
 Q_SIGNALS:
 	/** 窗口发出信号
 	@param [in] type 信号类型
 	@param [in] param 信号参数
 	*/
-	void dialogSignal(SignalType type, SignalParam* param);
+	void dialogSignal(const SignalParam& param);
 
 private slots:
     void onClosedSignal(DialogResult* result);
