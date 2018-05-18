@@ -39,7 +39,7 @@ public:
 	@param [in] id ID值
 	@return 返回索引值
 	*/
-	int32_t itemIndexByFirstId(qint64 id);
+	qint32 itemIndexByFirstId(qint64 id);
 
 	/** 获取当前选择节点ID
 	@return 返回当前选择节点ID
@@ -50,7 +50,7 @@ public:
 	@param [in] index 节点索引值
 	@return 返回指定节点ID
 	*/
-	qint64 itemId(int32_t index);
+	qint64 itemId(qint32 index);
 
 Q_SIGNALS:
 	/** 当选择了另一个id的下拉节点时发送信号（点击框设为可编辑，手动输入文字时不发送信号）
@@ -59,7 +59,17 @@ Q_SIGNALS:
 	*/
 	void currentItemChanged(qint64 id, const QString& text);
 
+	/** 按下时发送信号
+	@param [in] id 节点ID
+	@param [in] text 当前点击框内文本内容
+	*/
+	void idItemPressed(qint64 id, const QString& text);
+
+protected:
+	void init();
+
 private slots:
 	void curIndexChanged(const QString& str);
 	void curIndexChanged(int index){}
+	void onItemPressed(qint32 index);
 };

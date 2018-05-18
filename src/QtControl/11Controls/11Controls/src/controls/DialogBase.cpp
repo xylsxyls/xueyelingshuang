@@ -1,17 +1,7 @@
 #include "DialogBase.h"
 #include "Label.h"
-#include "COriginalButton.h"
-#include <QSplitter>
-#include "LineEdit.h"
 #include <QWindow>
-#include "CPasswordInputBox.h"
-#include "DialogManager.h"
-#include "NotifyDialogManager.h"
-#include "CGeneralStyle.h"
-#include <Windows.h>
-#include <QApplication>
 #include <QKeyEvent>
-#include <fstream>
 
 DialogBase::DialogBase():
 m_escEnable(true),
@@ -51,7 +41,7 @@ void DialogBase::setExistFocus(bool focus)
     setAttribute(Qt::WA_ShowWithoutActivating, !focus);
 }
 
-void DialogBase::setTimeRest(int32_t timeOut)
+void DialogBase::setTimeRest(qint32 timeOut)
 {
     m_timeRest = timeOut;
     if (m_timeId != -1)
@@ -76,7 +66,7 @@ void DialogBase::setEscAltF4Enable(bool enable)
     setAltF4Enable(enable);
 }
 
-int32_t DialogBase::exec()
+qint32 DialogBase::exec()
 {
     setWindowModality((transientWindow() != nullptr) ? Qt::WindowModal : Qt::ApplicationModal);
     if (m_timeRest == 0)
@@ -115,9 +105,9 @@ void DialogBase::addListenKey(Qt::Key key)
 
 void DialogBase::setWindowTiTle(const QString& title,
                                 const QColor& color,
-                                int32_t fontSize,
+                                qint32 fontSize,
                                 Qt::Alignment align,
-                                int32_t origin,
+                                qint32 origin,
                                 const QString& fontName)
 {
     if (!check())
@@ -217,7 +207,7 @@ void DialogBase::resizeEvent(QResizeEvent* eve)
     {
         return;
     }
-    int32_t titleHeight = customerTitleBarHeight();
+    qint32 titleHeight = customerTitleBarHeight();
     m_title->setGeometry(0, 0, width(), titleHeight);
 }
 

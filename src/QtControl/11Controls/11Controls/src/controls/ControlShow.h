@@ -4,7 +4,7 @@
 #include <QColor>
 #include "ControlsMacro.h"
 
-#define INIT(itemName) init(QString::fromStdString(CStringManager::Replace(typeid(*this).name(), "class ", "")).toStdWString(), itemName)
+#define INIT(itemName) ControlShow::init(QString::fromStdString(CStringManager::Replace(typeid(*this).name(), "class ", "")).toStdWString(), itemName)
 
 class QShowEvent;
 class QWidget;

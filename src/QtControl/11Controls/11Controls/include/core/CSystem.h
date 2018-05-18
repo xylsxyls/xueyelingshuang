@@ -1,18 +1,24 @@
 #pragma once
-#include <stdint.h>
 #include <Windows.h>
 #include "CoreMacro.h"
 #include <string>
 #include <QRect>
 
+#define SafeDelete(ptr) \
+if (ptr != nullptr)\
+{\
+	delete ptr;\
+	ptr = nullptr;\
+}
+
 class CoreAPI CSystem
 {
 public:
 	template <typename TypeClass>
-	static TypeClass** CreateDyadicArray(int32_t row, int32_t column);
+	static TypeClass** CreateDyadicArray(qint32 row, qint32 column);
 
 	template <typename TypeClass>
-	static void DestroyDyadicArray(TypeClass** classPtr, int32_t row);
+	static void DestroyDyadicArray(TypeClass** classPtr, qint32 row);
 
 	//返回屏幕右下角坐标，不包含任务栏
 	static POINT taskbarRightBottomPoint();

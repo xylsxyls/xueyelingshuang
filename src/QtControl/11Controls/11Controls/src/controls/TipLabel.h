@@ -16,12 +16,12 @@ public:
 	/** 设置存在时间（单位秒）
 	@param [in] time 时间
 	*/
-	void setExistTime(int32_t time);
+	void setExistTime(qint32 time);
 
 	/** 设置最大宽度
 	@param [in] maxWidth 最大宽度
 	*/
-	void setMaxWidth(int32_t maxWidth);
+	void setMaxWidth(qint32 maxWidth);
 
 	/** 设置是否有焦点
 	@param [in] hasFocus 弹出时是否抢焦点
@@ -39,9 +39,9 @@ protected:
 	bool nativeEvent(const QByteArray& eventType, void* message, long* result);
 
 private:
-	int32_t m_existTime;
-	int32_t m_timeId;
-	int32_t m_maxWidth;
+	qint32 m_existTime;
+	qint32 m_timeId;
+	qint32 m_maxWidth;
 	bool m_hasFocus;
 	QPoint m_bottomRight;
 };

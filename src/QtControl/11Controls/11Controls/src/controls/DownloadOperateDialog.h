@@ -1,5 +1,4 @@
 #pragma once
-#include "DialogShow.h"
 #include "ControlsMacro.h"
 #include "PopDialog.h"
 
@@ -39,7 +38,7 @@ public:
 	/** 设置比例（支持多线程）
 	@param [in] persent 百分比
 	*/
-	void setRate(int32_t persent);
+	void setRate(qint32 persent);
 
 	/** 设置编辑框内的下载地址（支持多线程）
 	@param [in] addr 下载地址
@@ -128,5 +127,5 @@ private:
 	COriginalButton* m_downloadButton;
 	COriginalButton* m_pathButton;
 	Label* m_error;
-	int32_t m_taskId;
+	qint32 m_taskId;
 };

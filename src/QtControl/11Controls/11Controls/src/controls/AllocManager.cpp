@@ -1,6 +1,4 @@
 #include "AllocManager.h"
-#include "COriginalDialog.h"
-#include "PopDialog.h"
 #include "AdvertAskDialog.h"
 #include "AskDialog.h"
 #include "DownloadOperateDialog.h"

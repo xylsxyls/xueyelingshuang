@@ -1,5 +1,4 @@
 #include "StaticDialogManager.h"
-#include "PopDialog.h"
 #include "AllocManager.h"
 #include "AccountManagerDialog.h"
 
@@ -163,14 +162,14 @@ void StaticDialogManager::onClosedSignal(DialogResult* result)
     {
         return;
     }
-    int32_t dialogId = AllocManager::instance().findDialogId(dialogPtr);
+    qint32 dialogId = AllocManager::instance().findDialogId(dialogPtr);
     if (dialogId == 0)
     {
         return;
     }
-    int32_t userId = AllocManager::instance().findUserId(dialogId);
+    qint32 userId = AllocManager::instance().findUserId(dialogId);
     DialogType type = AllocManager::instance().findDialogType(dialogId);
-    int32_t userParam = dialogPtr->userParam();
+    qint32 userParam = dialogPtr->userParam();
     StaticDialogDoneSignalParam param;
     param.m_dialogId = dialogId;
     param.m_userId = userId;

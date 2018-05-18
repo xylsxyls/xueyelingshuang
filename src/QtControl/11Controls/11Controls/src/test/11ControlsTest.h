@@ -3,7 +3,6 @@
 
 #include <QtWidgets/QMainWindow>
 #include "ui_11ControlsTest.h"
-#include <stdint.h>
 #include "11Controls/include/controls/DialogType.h"
 
 class ControlsTest : public QMainWindow
@@ -25,6 +24,7 @@ private slots:
 	void onShowDestroyAll();
 
 	void onDialogSignal(const SignalParam& param);
+	void onCurrentItemChanged(qint32 index, qint64 id, const QString& text);
 
 	void timerEvent(QTimerEvent* eve);
 private:

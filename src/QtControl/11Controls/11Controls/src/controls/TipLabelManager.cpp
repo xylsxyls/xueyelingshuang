@@ -7,7 +7,7 @@ TipLabelManager& TipLabelManager::instance()
 	return tipLabelManager;
 }
 
-void TipLabelManager::popTip(const QPoint& pos, const QString& text, int32_t maxWidth, int32_t timeOut, bool hasFocus)
+void TipLabelManager::popTip(const QPoint& pos, const QString& text, qint32 maxWidth, qint32 timeOut, bool hasFocus)
 {
 	if (m_tipLabel == nullptr)
 	{

@@ -1,5 +1,4 @@
 #include "PopDialogManager.h"
-#include "PopDialog.h"
 #include "AskDialog.h"
 #include "TipDialog.h"
 #include "WaitDialog.h"
@@ -271,14 +270,14 @@ void PopDialogManager::onClosedSignal(DialogResult* result)
     {
         return;
     }
-    int32_t dialogId = AllocManager::instance().findDialogId(dialogPtr);
+    qint32 dialogId = AllocManager::instance().findDialogId(dialogPtr);
     if (dialogId == 0)
     {
         return;
     }
-    int32_t userId = AllocManager::instance().findUserId(dialogId);
+    qint32 userId = AllocManager::instance().findUserId(dialogId);
     DialogType type = AllocManager::instance().findDialogType(dialogId);
-    int32_t userParam = dialogPtr->userParam();
+    qint32 userParam = dialogPtr->userParam();
 
 	PopDialogDoneSignalParam param;
     param.m_dialogId = dialogId;

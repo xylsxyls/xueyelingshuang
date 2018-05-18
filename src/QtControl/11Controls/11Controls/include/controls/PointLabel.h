@@ -22,7 +22,7 @@ public:
 	@param [in] origin 文本偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setTextOrigin(int32_t origin, bool rePaint = false);
+	void setTextOrigin(qint32 origin, bool rePaint = false);
 
 	/** 插入文本，过长显示省略号
 	@param [in] str 字符串
@@ -39,5 +39,5 @@ protected:
 
 private:
 	std::wstring m_str;
-	int32_t m_leftOrigin;
+	qint32 m_leftOrigin;
 };

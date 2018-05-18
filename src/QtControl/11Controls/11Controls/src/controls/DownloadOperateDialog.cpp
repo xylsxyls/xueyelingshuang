@@ -4,7 +4,6 @@
 #include "CGeneralStyle.h"
 #include "ProgressBar.h"
 #include <Windows.h>
-#include "DownloadErrorDialog.h"
 #include "DialogManager.h"
 #include "LineEdit.h"
 #include "DialogHelper.h"
@@ -280,7 +279,7 @@ void DownloadOperateDialog::setDownloadTime(const QString& time)
 	emit downloadTime(time);
 }
 
-void DownloadOperateDialog::setRate(int32_t persent)
+void DownloadOperateDialog::setRate(qint32 persent)
 {
 	emit rateChanged(persent);
 	emit persentChanged(QString::fromStdWString(CStringManager::Format(L"%d%%", persent)));

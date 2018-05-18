@@ -1,11 +1,7 @@
 #include "COriginalDialog.h"
-
-#include <QMouseEvent>
 #include <QWindow>
 #include <Windows.h>
 #include <QApplication>
-#include <QKeyEvent>
-
 #include <QLabel>
 
 #define IS_KEY_DOWN(VK_NONAME) ((::GetAsyncKeyState(VK_NONAME) & 0x8000) ? 1 : 0)

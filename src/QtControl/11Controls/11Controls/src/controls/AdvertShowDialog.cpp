@@ -1,10 +1,8 @@
 #include "AdvertShowDialog.h"
 #include "Label.h"
 #include "COriginalButton.h"
-#include "CGeneralStyle.h"
 #include <QtWebKitWidgets/QWebView>
 #include <QDesktopServices>
-#include "NotifyDialogManager.h"
 #include "DialogHelper.h"
 #include "Separator.h"
 #include "WebViewEx.h"

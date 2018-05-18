@@ -8,6 +8,7 @@
 #include <QWindow>
 #include "ClosureDialog.h"
 #include "../core/CSystem.h"
+#include "DialogType.h"
 
 QString AccountManagerDialog::popAccountDialog()
 {
@@ -18,7 +19,7 @@ QString AccountManagerDialog::popAccountDialog()
 
 	m_accountDialog->clearAccountEdit();
     m_accountDialog->setTransientWindow(windowHandle());
-	int32_t result = m_accountDialog->exec();
+	qint32 result = m_accountDialog->exec();
 	if (result != ACCEPT_BUTTON)
 	{
 		return "";

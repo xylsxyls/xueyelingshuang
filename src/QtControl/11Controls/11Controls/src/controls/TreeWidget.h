@@ -1,6 +1,5 @@
 #pragma once
 #include <QtWidgets/QTreeWidget>
-#include <stdint.h>
 #include "ControlFont.h"
 #include "ControlItem.h"
 #include "ControlSelf.h"
@@ -35,7 +34,7 @@ public:
 	@param [in] maxHeight 最大高度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setMaxHeight(int32_t maxHeight, bool rePaint = false);
+	void setMaxHeight(qint32 maxHeight, bool rePaint = false);
 
 	/** 初始化滚动条样式
 	*/
@@ -47,13 +46,13 @@ public:
 	@param [in] parent 父节点指针
 	@param [in] column 第几列
 	*/
-	void addWidget(int32_t itemHeight, QWidget* widget, QWidget* parent = nullptr, int32_t column = 0);
+	void addWidget(qint32 itemHeight, QWidget* widget, QWidget* parent = nullptr, qint32 column = 0);
 
 	/** 移除一个节点
 	@param [in] widget 节点指针
 	@param [in] column 第几列
 	*/
-	void removeWidget(QWidget* widget, int32_t column = 0);
+	void removeWidget(QWidget* widget, qint32 column = 0);
 
 private:
 	void dropEvent(QDropEvent* eve);

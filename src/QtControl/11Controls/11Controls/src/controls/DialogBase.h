@@ -1,6 +1,4 @@
 #pragma once
-#include <QDialog>
-#include <stdint.h>
 #include "ControlsMacro.h"
 #include "COriginalDialog.h"
 
@@ -33,7 +31,7 @@ public:
     /** 设置倒计时，以秒为单位
     @param [in] timeOut 倒计时
     */
-    void setTimeRest(int32_t timeOut);
+    void setTimeRest(qint32 timeOut);
 
     /** 设置Esc是否可用，Esc原本作用是隐藏
     @param [in] enable 是否可用
@@ -53,7 +51,7 @@ public:
 	/** 展示窗口，如果倒计时设为0则此函数无效，会根据临时父窗口设置WindowModal或ApplicationModal
 	@return 关闭窗口时给的返回值
 	*/
-	int32_t exec();
+	qint32 exec();
 
     /** 显示窗口
     */
@@ -74,16 +72,16 @@ public:
     */
     void setWindowTiTle(const QString& title,
                         const QColor& color = QColor(255, 255, 255, 255),
-                        int32_t fontSize = 12,
+                        qint32 fontSize = 12,
                         Qt::Alignment align = Qt::AlignCenter,
-                        int32_t origin = 0,
+                        qint32 origin = 0,
                         const QString& fontName = QString::fromStdWString(L"微软雅黑"));
 
 Q_SIGNALS:
     /** 倒计时时间剩余，每秒发送一次
     @param [in] seconds 当前还剩多少秒
     */
-	void timeRest(int32_t seconds);
+	void timeRest(qint32 seconds);
 
     /** 倒计时结束，这个信号在timeRest(0)之后发
     */
@@ -108,9 +106,9 @@ private:
     void listenAllControls();
 	
 protected:
-	int32_t m_timeId;
+	qint32 m_timeId;
     bool m_escEnable;
-    int32_t m_timeRest;
+    qint32 m_timeRest;
     Label* m_title;
     std::vector<Qt::Key> m_listenKey;
 };

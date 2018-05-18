@@ -16,7 +16,7 @@ void ControlFont<QBase>::setFontFace(const QString& fontName, bool rePaint)
 }
 
 template<class QBase>
-void ControlFont<QBase>::setFontSize(int32_t fontSize, bool rePaint)
+void ControlFont<QBase>::setFontSize(qint32 fontSize, bool rePaint)
 {
 	ControlBase<QBase>::setPxValue(L"font-size", fontSize, false, rePaint);
 }
@@ -31,13 +31,13 @@ void ControlFont<QBase>::setFontBold(bool bold, bool rePaint)
 }
 
 template<class QBase>
-void ControlFont<QBase>::setTextOrigin(int32_t origin, bool rePaint)
+void ControlFont<QBase>::setTextOrigin(qint32 origin, bool rePaint)
 {
 	ControlBase<QBase>::setPxValue(L"padding-left", origin, false, rePaint);
 }
 
 template<class QBase>
-void ControlFont<QBase>::setTextRightOrigin(int32_t origin, bool rePaint)
+void ControlFont<QBase>::setTextRightOrigin(qint32 origin, bool rePaint)
 {
 	ControlBase<QBase>::setPxValue(L"padding-right", origin, false, rePaint);
 }

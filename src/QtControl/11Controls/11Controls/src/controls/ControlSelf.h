@@ -17,13 +17,13 @@ public:
 	@param [in] radius ‘≤Ω«∞Îæ∂
 	@param [in] rePaint  «∑Ò¡¢º¥÷ÿª≠
 	*/
-	void setBorderRadius(int32_t radius, bool rePaint = false);
+	void setBorderRadius(qint32 radius, bool rePaint = false);
 
 	/** …Ë÷√±ﬂøÚ¥÷∂»
 	@param [in] width ±ﬂøÚ¥÷∂»
 	@param [in] rePaint  «∑Ò¡¢º¥÷ÿª≠
 	*/
-	void setBorderWidth(int32_t width, bool rePaint = false);
+	void setBorderWidth(qint32 width, bool rePaint = false);
 };
 
 #include "ControlSelf.inl"

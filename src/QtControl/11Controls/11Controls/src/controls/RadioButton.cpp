@@ -13,18 +13,18 @@ RadioButton::~RadioButton()
 }
 
 void RadioButton::setIndicatorImage(const QString& indicatorImg,
-									int32_t indicatorImgStateCount,
-									int32_t indicatorImgNormal,
-									int32_t indicatorImgHover,
-									int32_t indicatorImgPressed,
-									int32_t indicatorImgDisabled,
-									int32_t indicatorImgCkNormal,
-									int32_t indicatorImgCkHover,
-									int32_t indicatorImgCkPressed,
-									int32_t indicatorImgCkDisabled,
+									qint32 indicatorImgStateCount,
+									qint32 indicatorImgNormal,
+									qint32 indicatorImgHover,
+									qint32 indicatorImgPressed,
+									qint32 indicatorImgDisabled,
+									qint32 indicatorImgCkNormal,
+									qint32 indicatorImgCkHover,
+									qint32 indicatorImgCkPressed,
+									qint32 indicatorImgCkDisabled,
 									bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> indicatorImgMap;
+	std::map<qint32, std::map<qint32, qint32>> indicatorImgMap;
 
 	indicatorImgMap[UNCHECK][NORMAL] = indicatorImgNormal;
 	indicatorImgMap[UNCHECK][HOVER] = indicatorImgHover;
@@ -43,7 +43,7 @@ void RadioButton::setIndicatorImage(const QString& indicatorImg,
 								  rePaint);
 }
 
-void RadioButton::setTextOrigin(int32_t origin, bool rePaint)
+void RadioButton::setTextOrigin(qint32 origin, bool rePaint)
 {
 	ControlBase::setPxValue(L"spacing", origin, false, rePaint);
 }

@@ -14,7 +14,7 @@ ListWidget::~ListWidget()
 
 }
 
-void ListWidget::setMaxHeight(int32_t maxHeight, bool rePaint)
+void ListWidget::setMaxHeight(qint32 maxHeight, bool rePaint)
 {
 	ControlBase::setPxValue(L"max-height", maxHeight, false, rePaint);
 }

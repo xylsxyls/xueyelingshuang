@@ -29,8 +29,8 @@ POINT CSystem::taskbarRightBottomPoint()
 
 POINT CSystem::screenCenterPoint()
 {
-	int32_t screenwidth_real = ::GetSystemMetrics(SM_CXSCREEN);
-	int32_t screenheight_real = ::GetSystemMetrics(SM_CYSCREEN);
+	qint32 screenwidth_real = ::GetSystemMetrics(SM_CXSCREEN);
+	qint32 screenheight_real = ::GetSystemMetrics(SM_CYSCREEN);
 	POINT point = { screenwidth_real / 2, screenheight_real / 2 };
 	return point;
 }

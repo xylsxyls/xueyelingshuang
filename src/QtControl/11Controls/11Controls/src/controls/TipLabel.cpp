@@ -16,12 +16,12 @@ m_bottomRight(0,0)
 	setMargin(3);
 }
 
-void TipLabel::setExistTime(int32_t time)
+void TipLabel::setExistTime(qint32 time)
 {
 	m_existTime = time;
 }
 
-void TipLabel::setMaxWidth(int32_t maxWidth)
+void TipLabel::setMaxWidth(qint32 maxWidth)
 {
 	m_maxWidth = maxWidth;
 }
@@ -41,14 +41,14 @@ void TipLabel::showEvent(QShowEvent* eve)
 	Label::showEvent(eve);
 	m_timeId = startTimer(m_existTime * 1000);
 
-	int32_t margin = 3;
+	qint32 margin = 3;
 	QFontMetrics fontMetrics(font());
 	QString strShow = text();
 	//获取之前设置的字符串的像素大小
-	int32_t textWidth = fontMetrics.width(strShow);
-	int32_t textHeight = fontMetrics.height();
-	int32_t tipWidth = textWidth + margin * 2;
-	int32_t tipHeight = textHeight + margin * 2;
+	qint32 textWidth = fontMetrics.width(strShow);
+	qint32 textHeight = fontMetrics.height();
+	qint32 tipWidth = textWidth + margin * 2;
+	qint32 tipHeight = textHeight + margin * 2;
 	if (tipWidth > m_maxWidth)
 	{
 		tipWidth = m_maxWidth;

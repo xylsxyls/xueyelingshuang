@@ -19,20 +19,20 @@ public:
 	@param [in] isCountDownVisible 超时自动关闭提示是否可见
 	@return 关闭窗口时给的返回值
 	*/
-	static int32_t popDownloadErrorDialog(int32_t& dialogId,
+	static qint32 popDownloadErrorDialog(qint32& dialogId,
 										  const QString& fileName,
 										  const QString& title,
 										  const QString& buttonText,
-										  int32_t done,
+										  qint32 done,
 										  QWindow* parent = nullptr,
-										  int32_t timeOut = -1,
+										  qint32 timeOut = -1,
 										  bool isCountDownVisible = false);
 
 private:
 	DownloadErrorDialog(const QString& fileName,
 						const QString& title,
 						const QString& buttonText,
-						int32_t done);
+						qint32 done);
 
 private:
 	Label* m_tip;

@@ -7,7 +7,7 @@ std::wstring QssHelper::QColorToWString(const QColor& color)
 	return CStringManager::Format(L"rgba(%d,%d,%d,%d)", color.red(), color.green(), color.blue(), color.alpha());
 }
 
-bool QssHelper::GetPicHeight(const std::wstring& path, int32_t count, std::vector<int32_t>& vecHeight)
+bool QssHelper::GetPicHeight(const std::wstring& path, qint32 count, std::vector<qint32>& vecHeight)
 {
 	QString imgPath = QString::fromStdWString(path.c_str());
 	QPixmap imgPixmap;
@@ -16,15 +16,15 @@ bool QssHelper::GetPicHeight(const std::wstring& path, int32_t count, std::vecto
 		return false;
 	}
 
-	int32_t imgHeight = imgPixmap.height();
-	int32_t stepHeight = imgHeight / count;
+	qint32 imgHeight = imgPixmap.height();
+	qint32 stepHeight = imgHeight / count;
 
 	if (imgHeight % count != 0)
 	{
 		return false;
 	}
 
-	int32_t height = 0;
+	qint32 height = 0;
 	vecHeight.clear();
 	while (height != imgHeight)
 	{
@@ -44,7 +44,7 @@ template <typename QControl>
 void QssHelper::init(const std::wstring& itemName, QControl* control)
 {
 	control->m_className = typeid(QControl).name();
-	int32_t count = 6;
+	qint32 count = 6;
 	while (count-- != 0)
 	{
 		control->m_className.pop_front();
@@ -57,7 +57,7 @@ QColor QssHelper::GetQColorWithDefault(const QColor& dstColor, const QColor& src
 	return (dstColor == QColor(0, 0, 0, 0)) ? srcColor : dstColor;
 }
 
-int32_t QssHelper::GetIntWithDefault(const int32_t& dstInt, const int32_t& srcInt)
+qint32 QssHelper::GetIntWithDefault(const qint32& dstInt, const qint32& srcInt)
 {
 	return (dstInt == -1) ? srcInt : dstInt;
 }

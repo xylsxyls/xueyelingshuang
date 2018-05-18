@@ -4,8 +4,6 @@
 #include "COriginalButton.h"
 #include "CGeneralStyle.h"
 #include "src/core/CSystem.h"
-#include "DialogType.h"
-#include <QShowEvent>
 
 NotifyDialog::NotifyDialog():
 m_titleBar(nullptr),
@@ -94,9 +92,9 @@ void NotifyDialog::beginExitAnimation()
 
 void NotifyDialog::setWindowTiTle(const QString& title,
                                   const QColor& color,
-                                  int32_t fontSize,
+                                  qint32 fontSize,
                                   Qt::Alignment align,
-                                  int32_t origin,
+                                  qint32 origin,
                                   const QString& fontName)
 {
     DialogShow::setWindowTiTle(title, color, fontSize, align, origin, fontName);

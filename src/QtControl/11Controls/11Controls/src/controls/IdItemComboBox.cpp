@@ -6,7 +6,7 @@ IdItemComboBox::IdItemComboBox(QWidget* parent) :
 ComboBox(parent)
 {
 	INIT(L"drop-down");
-	QObject::connect(this, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(curIndexChanged(const QString&)));
+	init();
 }
 
 IdItemComboBox::~IdItemComboBox()
@@ -29,7 +29,7 @@ void IdItemComboBox::addItems(const QStringList& textList, const QList<qint64>& 
 	{
 		return;
 	}
-	int32_t index = -1;
+	qint32 index = -1;
 	while (index++ != textList.size() - 1)
 	{
 		ListWidgetIdItem* widgetItem = new ListWidgetIdItem;
@@ -52,9 +52,9 @@ void IdItemComboBox::setCurrentItemByFirstId(qint64 id)
 	setCurrentIndex(itemIndexByFirstId(id));
 }
 
-int32_t IdItemComboBox::itemIndexByFirstId(qint64 id)
+qint32 IdItemComboBox::itemIndexByFirstId(qint64 id)
 {
-	int32_t index = -1;
+	qint32 index = -1;
 	while (index++ != m_listWidget->count() - 1)
 	{
 		ListWidgetIdItem* item = (ListWidgetIdItem*)m_listWidget->item(index);
@@ -75,7 +75,7 @@ qint64 IdItemComboBox::currentItemId()
 	return itemId(currentIndex());
 }
 
-qint64 IdItemComboBox::itemId(int32_t index)
+qint64 IdItemComboBox::itemId(qint32 index)
 {
 	ListWidgetIdItem* item = (ListWidgetIdItem*)m_listWidget->item(index);
 	if (item == nullptr)
@@ -83,6 +83,12 @@ qint64 IdItemComboBox::itemId(int32_t index)
 		return -1;
 	}
 	return item->getId();
+}
+
+void IdItemComboBox::init()
+{
+	QObject::connect(this, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(curIndexChanged(const QString&)));
+	QObject::connect(this, &ComboBox::itemPressed, this, &IdItemComboBox::onItemPressed);
 }
 
 void IdItemComboBox::curIndexChanged(const QString& str)
@@ -93,4 +99,9 @@ void IdItemComboBox::curIndexChanged(const QString& str)
 		return;
 	}
 	emit currentItemChanged(item->getId(), str);
+}
+
+void IdItemComboBox::onItemPressed(qint32 index)
+{
+	emit idItemPressed(itemId(index), itemText(index));
 }

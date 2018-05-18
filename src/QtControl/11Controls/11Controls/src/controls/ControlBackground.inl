@@ -12,7 +12,7 @@ ControlBackgroundForNormal<QBase>::~ControlBackgroundForNormal()
 template<class QBase>
 void ControlBackgroundForNormal<QBase>::setBackgroundColor(const QColor& color, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = color;
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", false, rePaint);
 }
@@ -20,7 +20,7 @@ void ControlBackgroundForNormal<QBase>::setBackgroundColor(const QColor& color, 
 template<class QBase>
 void ControlBackgroundForNormal<QBase>::setBackgroundImage(const QString& backgroundImgPath, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = 1;
 	std::wstring wstrImgPath = backgroundImgPath.toStdWString();
 	ControlBase<QBase>::setImageStateMap(imageStateMap, wstrImgPath, 1, L"background-image", false, rePaint);
@@ -38,7 +38,7 @@ void ControlBackgroundForNormalHoverDisabled<QBase>::setBackgroundColor(const QC
 																		const QColor& disabledColor,
 																		bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
@@ -47,13 +47,13 @@ void ControlBackgroundForNormalHoverDisabled<QBase>::setBackgroundColor(const QC
 
 template<class QBase>
 void ControlBackgroundForNormalHoverDisabled<QBase>::setBackgroundImage(const QString& backgroundImgPath,
-																		int32_t backgroundImgStateCount,
-																		int32_t backgroundImgNormal,
-																		int32_t backgroundImgHover,
-																		int32_t backgroundImgDisabled,
+																		qint32 backgroundImgStateCount,
+																		qint32 backgroundImgNormal,
+																		qint32 backgroundImgHover,
+																		qint32 backgroundImgDisabled,
 																		bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = backgroundImgNormal;
 	imageStateMap[NORMAL][HOVER] = backgroundImgHover;
 	imageStateMap[NORMAL][DISABLED] = backgroundImgDisabled;
@@ -73,7 +73,7 @@ void ControlBackgroundForNormalSelectedDisabled<QBase>::setBackgroundColor(const
 																		   const QColor& disabledColor,
 																		   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][SELECTED] = GetQColor(selectedColor, normalColor);
 	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
@@ -82,13 +82,13 @@ void ControlBackgroundForNormalSelectedDisabled<QBase>::setBackgroundColor(const
 
 template<class QBase>
 void ControlBackgroundForNormalSelectedDisabled<QBase>::setBackgroundImage(const QString& backgroundImgPath,
-																		   int32_t backgroundImgStateCount,
-																		   int32_t backgroundImgNormal,
-																		   int32_t backgroundImgSelected,
-																		   int32_t backgroundImgDisabled,
+																		   qint32 backgroundImgStateCount,
+																		   qint32 backgroundImgNormal,
+																		   qint32 backgroundImgSelected,
+																		   qint32 backgroundImgDisabled,
 																		   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = backgroundImgNormal;
 	imageStateMap[NORMAL][SELECTED] = backgroundImgSelected;
 	imageStateMap[NORMAL][DISABLED] = backgroundImgDisabled;
@@ -109,7 +109,7 @@ void ControlBackgroundForNormalHoverPressedDisabled<QBase>::setBackgroundColor(c
 																			   const QColor& disabledColor,
 																			   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[NORMAL][PRESSED] = GetQColor(pressedColor, normalColor);
@@ -119,14 +119,14 @@ void ControlBackgroundForNormalHoverPressedDisabled<QBase>::setBackgroundColor(c
 
 template<class QBase>
 void ControlBackgroundForNormalHoverPressedDisabled<QBase>::setBackgroundImage(const QString& backgroundImgPath,
-																			   int32_t backgroundImgStateCount,
-																			   int32_t backgroundImgNormal,
-																			   int32_t backgroundImgHover,
-																			   int32_t backgroundImgPressed,
-																			   int32_t backgroundImgDisabled,
+																			   qint32 backgroundImgStateCount,
+																			   qint32 backgroundImgNormal,
+																			   qint32 backgroundImgHover,
+																			   qint32 backgroundImgPressed,
+																			   qint32 backgroundImgDisabled,
 																			   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = backgroundImgNormal;
 	imageStateMap[NORMAL][HOVER] = backgroundImgHover;
 	imageStateMap[NORMAL][PRESSED] = backgroundImgPressed;
@@ -152,7 +152,7 @@ void ControlBackgroundForNormalHoverPressedDisabledAndCheck<QBase>::setBackgroun
 																					   const QColor& disabledCkColor,
 																					   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[UNCHECK][NORMAL] = normalColor;
 	colorStateMap[UNCHECK][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[UNCHECK][PRESSED] = GetQColor(pressedColor, normalColor);
@@ -166,18 +166,18 @@ void ControlBackgroundForNormalHoverPressedDisabledAndCheck<QBase>::setBackgroun
 
 template<class QBase>
 void ControlBackgroundForNormalHoverPressedDisabledAndCheck<QBase>::setBackgroundImage(const QString& backgroundImgPath,
-																					   int32_t backgroundImgStateCount,
-																					   int32_t backgroundImgNormal,
-																					   int32_t backgroundImgHover,
-																					   int32_t backgroundImgPressed,
-																					   int32_t backgroundImgDisabled,
-																					   int32_t backgroundImgCkNormal,
-																					   int32_t backgroundImgCkHover,
-																					   int32_t backgroundImgCkPressed,
-																					   int32_t backgroundImgCkDisabled,
+																					   qint32 backgroundImgStateCount,
+																					   qint32 backgroundImgNormal,
+																					   qint32 backgroundImgHover,
+																					   qint32 backgroundImgPressed,
+																					   qint32 backgroundImgDisabled,
+																					   qint32 backgroundImgCkNormal,
+																					   qint32 backgroundImgCkHover,
+																					   qint32 backgroundImgCkPressed,
+																					   qint32 backgroundImgCkDisabled,
 																					   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[UNCHECK][NORMAL] = backgroundImgNormal;
 	imageStateMap[UNCHECK][HOVER] = backgroundImgHover;
 	imageStateMap[UNCHECK][PRESSED] = backgroundImgPressed;
@@ -199,7 +199,7 @@ ControlItemBackgroundForNormal<QBase>::~ControlItemBackgroundForNormal()
 template<class QBase>
 void ControlItemBackgroundForNormal<QBase>::setItemBackgroundColor(const QColor& color, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = color;
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"background-color", true, rePaint);
 }
@@ -207,7 +207,7 @@ void ControlItemBackgroundForNormal<QBase>::setItemBackgroundColor(const QColor&
 template<class QBase>
 void ControlItemBackgroundForNormal<QBase>::setItemBackgroundImage(const QString& backgroundImgPath, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = 1;
 	std::wstring wstrImgPath = backgroundImgPath.toStdWString();
 	ControlBase<QBase>::setImageStateMap(imageStateMap, wstrImgPath, 1, L"background-image", true, rePaint);
@@ -225,7 +225,7 @@ void ControlItemBackgroundForNormalHoverDisabled<QBase>::setItemBackgroundColor(
 																				const QColor& disabledColor,
 																				bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
@@ -234,13 +234,13 @@ void ControlItemBackgroundForNormalHoverDisabled<QBase>::setItemBackgroundColor(
 
 template<class QBase>
 void ControlItemBackgroundForNormalHoverDisabled<QBase>::setItemBackgroundImage(const QString& backgroundImgPath,
-																				int32_t backgroundImgStateCount,
-																				int32_t backgroundImgNormal,
-																				int32_t backgroundImgHover,
-																				int32_t backgroundImgDisabled,
+																				qint32 backgroundImgStateCount,
+																				qint32 backgroundImgNormal,
+																				qint32 backgroundImgHover,
+																				qint32 backgroundImgDisabled,
 																				bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = backgroundImgNormal;
 	imageStateMap[NORMAL][HOVER] = backgroundImgHover;
 	imageStateMap[NORMAL][DISABLED] = backgroundImgDisabled;
@@ -260,7 +260,7 @@ void ControlItemBackgroundForNormalSelectedDisabled<QBase>::setItemBackgroundCol
 																				   const QColor& disabledColor,
 																				   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][SELECTED] = GetQColor(selectedColor, normalColor);
 	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
@@ -269,13 +269,13 @@ void ControlItemBackgroundForNormalSelectedDisabled<QBase>::setItemBackgroundCol
 
 template<class QBase>
 void ControlItemBackgroundForNormalSelectedDisabled<QBase>::setItemBackgroundImage(const QString& backgroundImgPath,
-																				   int32_t backgroundImgStateCount,
-																				   int32_t backgroundImgNormal,
-																				   int32_t backgroundImgSelected,
-																				   int32_t backgroundImgDisabled,
+																				   qint32 backgroundImgStateCount,
+																				   qint32 backgroundImgNormal,
+																				   qint32 backgroundImgSelected,
+																				   qint32 backgroundImgDisabled,
 																				   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = backgroundImgNormal;
 	imageStateMap[NORMAL][SELECTED] = backgroundImgSelected;
 	imageStateMap[NORMAL][DISABLED] = backgroundImgDisabled;
@@ -296,7 +296,7 @@ void ControlItemBackgroundForNormalHoverPressedDisabled<QBase>::setItemBackgroun
 																					   const QColor& disabledColor,
 																					   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[NORMAL][PRESSED] = GetQColor(pressedColor, normalColor);
@@ -306,14 +306,14 @@ void ControlItemBackgroundForNormalHoverPressedDisabled<QBase>::setItemBackgroun
 
 template<class QBase>
 void ControlItemBackgroundForNormalHoverPressedDisabled<QBase>::setItemBackgroundImage(const QString& backgroundImgPath,
-																					   int32_t backgroundImgStateCount,
-																					   int32_t backgroundImgNormal,
-																					   int32_t backgroundImgHover,
-																					   int32_t backgroundImgPressed,
-																					   int32_t backgroundImgDisabled,
+																					   qint32 backgroundImgStateCount,
+																					   qint32 backgroundImgNormal,
+																					   qint32 backgroundImgHover,
+																					   qint32 backgroundImgPressed,
+																					   qint32 backgroundImgDisabled,
 																					   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = backgroundImgNormal;
 	imageStateMap[NORMAL][HOVER] = backgroundImgHover;
 	imageStateMap[NORMAL][PRESSED] = backgroundImgPressed;
@@ -339,7 +339,7 @@ void ControlItemBackgroundForNormalHoverPressedDisabledAndCheck<QBase>::setItemB
 																							   const QColor& disabledCkColor,
 																							   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[UNCHECK][NORMAL] = normalColor;
 	colorStateMap[UNCHECK][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[UNCHECK][PRESSED] = GetQColor(pressedColor, normalColor);
@@ -353,18 +353,18 @@ void ControlItemBackgroundForNormalHoverPressedDisabledAndCheck<QBase>::setItemB
 
 template<class QBase>
 void ControlItemBackgroundForNormalHoverPressedDisabledAndCheck<QBase>::setItemBackgroundImage(const QString& backgroundImgPath,
-																							   int32_t backgroundImgStateCount,
-																							   int32_t backgroundImgNormal,
-																							   int32_t backgroundImgHover,
-																							   int32_t backgroundImgPressed,
-																							   int32_t backgroundImgDisabled,
-																							   int32_t backgroundImgCkNormal,
-																							   int32_t backgroundImgCkHover,
-																							   int32_t backgroundImgCkPressed,
-																							   int32_t backgroundImgCkDisabled,
+																							   qint32 backgroundImgStateCount,
+																							   qint32 backgroundImgNormal,
+																							   qint32 backgroundImgHover,
+																							   qint32 backgroundImgPressed,
+																							   qint32 backgroundImgDisabled,
+																							   qint32 backgroundImgCkNormal,
+																							   qint32 backgroundImgCkHover,
+																							   qint32 backgroundImgCkPressed,
+																							   qint32 backgroundImgCkDisabled,
 																							   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[UNCHECK][NORMAL] = backgroundImgNormal;
 	imageStateMap[UNCHECK][HOVER] = backgroundImgHover;
 	imageStateMap[UNCHECK][PRESSED] = backgroundImgPressed;

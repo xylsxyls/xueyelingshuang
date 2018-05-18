@@ -28,7 +28,7 @@ QssString& QssString::operator[](const std::wstring& name)
 
 
 
-QssString& QssString::operator()(int32_t flag, const std::wstring& name)
+QssString& QssString::operator()(qint32 flag, const std::wstring& name)
 {
 	m_keyString.append(L" ");
 	m_keyString.append(name);
@@ -52,7 +52,7 @@ QssString& QssString::operator()(const std::wstring& state)
 	return *this;
 }
 
-QssString& QssString::operator()(int32_t enumFlag)
+QssString& QssString::operator()(qint32 enumFlag)
 {
 	std::wstring& str = m_mapEnum[enumFlag];
 	if (str.empty() == false)

@@ -58,7 +58,7 @@ public:
 	/** 设置字体大小
 	@param [in] size 字体大小
 	*/
-	void setFontSize(int32_t size);
+	void setFontSize(qint32 size);
 
 private:
 	/** 更新

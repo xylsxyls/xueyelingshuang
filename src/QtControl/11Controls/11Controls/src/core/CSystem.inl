@@ -4,17 +4,17 @@
 #include "CSystem.h"
 
 template <typename TypeClass>
-TypeClass** CSystem::CreateDyadicArray(int32_t row, int32_t column)
+TypeClass** CSystem::CreateDyadicArray(qint32 row, qint32 column)
 {
     TypeClass** dyadicArrayPtr = new TypeClass*[row];
     if (dyadicArrayPtr != nullptr)
     {
-        for (int32_t index = 0; index < row; ++index)
+        for (qint32 index = 0; index < row; ++index)
         {
             dyadicArrayPtr[index] = new TypeClass[column];
             if (dyadicArrayPtr[index] == nullptr)
             {
-                for (int32_t errorIndex = 0; errorIndex < index; ++errorIndex)
+                for (qint32 errorIndex = 0; errorIndex < index; ++errorIndex)
                 {
                     delete[] dyadicArrayPtr[errorIndex];
                     dyadicArrayPtr[errorIndex] = nullptr;
@@ -28,14 +28,14 @@ TypeClass** CSystem::CreateDyadicArray(int32_t row, int32_t column)
 }
 
 template <typename TypeClass>
-void CSystem::DestroyDyadicArray(TypeClass** classPtr, int32_t row)
+void CSystem::DestroyDyadicArray(TypeClass** classPtr, qint32 row)
 {
     if (classPtr == nullptr)
     {
         return;
     }
 
-    for (int32_t index = 0; index < row; index++)
+    for (qint32 index = 0; index < row; index++)
     {
         delete[] classPtr[index];
         classPtr[index] = nullptr;

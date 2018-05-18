@@ -2,7 +2,6 @@
 #include <QString>
 #include <QRect>
 #include <QColor>
-#include <stdint.h>
 #include <map>
 #include "DialogType.h"
 
@@ -11,11 +10,9 @@
 
 class Label;
 class COriginalButton;
-class QSplitter;
 class LineEdit;
 class CPasswordInputBox;
 class DialogShow;
-class QWidget;
 class QWindow;
 class Separator;
 /** 帮助窗口创建控件
@@ -30,7 +27,7 @@ public:
     @param [in] fontSize 字体大小
     @return 返回标签指针
     */
-    static void setLabel(Label* label, const QString& text, const QColor& textColor, int32_t fontSize);
+    static void setLabel(Label* label, const QString& text, const QColor& textColor, qint32 fontSize);
 
     /** 新增提示文字并设置（多行）
     @param [in] tip 控件指针
@@ -38,7 +35,7 @@ public:
     @param [in] textColor 字体颜色
     @param [in] fontSize 字体大小
     */
-    static void setTip(Label* tip, const QString& text, const QColor& textColor, int32_t fontSize);
+    static void setTip(Label* tip, const QString& text, const QColor& textColor, qint32 fontSize);
 
     /** 新增按钮并设置，按钮点击后会关闭窗口
     @param [in] dialog 窗口指针
@@ -58,9 +55,9 @@ public:
                           const QColor& textColor,
                           const QString& backgroundImage,
                           DialogResult result,
-                          int32_t fontSize,
+                          qint32 fontSize,
                           std::map<QWidget*, DialogResult>* mapResult,
-                          int32_t imageMargin,
+                          qint32 imageMargin,
                           bool isPop);
 
     /** 添加分割线
@@ -76,17 +73,17 @@ public:
     @param [in] defaultText 默认输入内容
     @param [in] maxLength 文本框可输入的最大长度
     */
-    static void setLineEdit(LineEdit* lineEdit, const QString& defaultText = "", int32_t maxLength = -1);
+    static void setLineEdit(LineEdit* lineEdit, const QString& defaultText = "", qint32 maxLength = -1);
 
     /** 添加密码框
     @param [in] passwordInputBox 密码框指针
     @param [in] defaultText 默认输入内容
     @param [in] maxLength 文本框可输入的最大长度
     */
-    static void setPasswordInputBox(CPasswordInputBox* passwordInputBox, const QString& defaultText = "", int32_t maxLength = -1);
+    static void setPasswordInputBox(CPasswordInputBox* passwordInputBox, const QString& defaultText = "", qint32 maxLength = -1);
 
     /** 激活临时父窗口
     @param [in] 需要激活窗口的子窗口句柄
     */
-    void activeTransientParentWindow(QWindow* window);
+	static void activeTransientParentWindow(QWindow* window);
 };

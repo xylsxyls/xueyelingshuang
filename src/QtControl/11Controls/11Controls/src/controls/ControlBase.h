@@ -36,7 +36,7 @@ protected:
 	@param [in] isItem 该项是否为节点
 	@param [in] rePaint 是否立即重画
 	*/
-	void setPxValue(const std::wstring& keyWord, int32_t valuePx, bool isItem, bool rePaint);
+	void setPxValue(const std::wstring& keyWord, qint32 valuePx, bool isItem, bool rePaint);
 
 	/** 设置线条对应值加solid
 	@param [in] keyWord 关键词
@@ -44,7 +44,7 @@ protected:
 	@param [in] isItem 该项是否为节点
 	@param [in] rePaint 是否立即重画
 	*/
-	void setPxSolidValue(const std::wstring& keyWord, int32_t valuePxSolid, bool isItem, bool rePaint);
+	void setPxSolidValue(const std::wstring& keyWord, qint32 valuePxSolid, bool isItem, bool rePaint);
 
 	/** 设置对应值
 	@param [in] keyWord 关键词
@@ -60,7 +60,7 @@ protected:
 	@param [in] isItem 该项是否为节点
 	@param [in] rePaint 是否立即重画
 	*/
-	void setColorStateMap(const std::map<int32_t, std::map<int32_t, QColor>>& colorStateMap,
+	void setColorStateMap(const std::map<qint32, std::map<qint32, QColor>>& colorStateMap,
 						  const std::wstring& keyWord,
 						  bool isItem,
 						  bool rePaint);
@@ -73,9 +73,9 @@ protected:
 	@param [in] isItem 该项是否为节点
 	@param [in] rePaint 是否立即重画
 	*/
-	void setImageStateMap(const std::map<int32_t, std::map<int32_t, int32_t>>& imageStateMap,
+	void setImageStateMap(const std::map<qint32, std::map<qint32, qint32>>& imageStateMap,
 						  const std::wstring& imagePath,
-						  int32_t stateCount,
+						  qint32 stateCount,
 						  const std::wstring& keyWord,
 						  bool isItem,
 						  bool rePaint);
@@ -88,9 +88,9 @@ protected:
 	@param [in] itemName 节点名
 	@param [in] rePaint 是否立即重画
 	*/
-	void setImageStateMap(const std::map<int32_t, std::map<int32_t, int32_t>>& imageStateMap,
+	void setImageStateMap(const std::map<qint32, std::map<qint32, qint32>>& imageStateMap,
 						  const std::wstring& imagePath,
-						  int32_t stateCount,
+						  qint32 stateCount,
 						  const std::wstring& keyWord,
 						  const std::wstring& itemName,
 						  bool rePaint);

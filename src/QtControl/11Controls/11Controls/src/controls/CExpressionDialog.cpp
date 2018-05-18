@@ -64,13 +64,9 @@ void CExpressionDialog::resizeEvent(QResizeEvent *e)
 void CExpressionDialog::paintEvent(QPaintEvent *e)
 {
     QPainter painter(this);
-    painter.save();
-
     painter.fillRect(this->rect(), QColor(44,52,74));
     painter.setPen(QColor("#4A5677"));
     painter.drawRect(CSystem::rectValid(rect().adjusted(0, 0, -1, -1)));
-
-    painter.restore();
 }
 
 bool CExpressionDialog::nativeEvent(const QByteArray &eventType, void *message, long *result)

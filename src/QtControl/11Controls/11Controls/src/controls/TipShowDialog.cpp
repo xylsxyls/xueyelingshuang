@@ -1,8 +1,6 @@
 #include "TipShowDialog.h"
 #include "Label.h"
 #include "COriginalButton.h"
-#include "CGeneralStyle.h"
-#include "NotifyDialogManager.h"
 #include "DialogHelper.h"
 
 TipShowDialog::TipShowDialog():

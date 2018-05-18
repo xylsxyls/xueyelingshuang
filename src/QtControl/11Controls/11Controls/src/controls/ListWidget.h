@@ -1,6 +1,5 @@
 #pragma once
 #include <QtWidgets/QListWidget>
-#include <stdint.h>
 #include "ControlFont.h"
 #include "ControlItem.h"
 #include "ControlSelf.h"
@@ -35,7 +34,7 @@ public:
 	@param [in] maxHeight 最大高度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setMaxHeight(int32_t maxHeight, bool rePaint = false);
+	void setMaxHeight(qint32 maxHeight, bool rePaint = false);
 
 	/** 是否使点击失效
 	@param [in] enable 是否有效

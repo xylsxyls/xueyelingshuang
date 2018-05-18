@@ -1,6 +1,5 @@
 #pragma once
 #include "BoxDialogBase.h"
-#include "DialogManager.h"
 #include "ControlsMacro.h"
 
 class Label;

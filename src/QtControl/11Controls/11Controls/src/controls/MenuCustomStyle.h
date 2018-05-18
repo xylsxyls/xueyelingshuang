@@ -1,6 +1,5 @@
 #pragma once
 #include <QProxyStyle>
-#include <stdint.h>
 #include "ControlsMacro.h"
 
 // ²Î¿¼QtÔ´Âë, qfunsionstyle
@@ -13,9 +12,9 @@ class MenuCustomStyle : public QProxyStyle
 	Q_OBJECT
 public:
 	MenuCustomStyle(QStyle* style = nullptr);
-	void setMaxSize(int32_t size);
-	int32_t pixelMetric(PixelMetric pm, const QStyleOption* opt, const QWidget* widget) const;	
+	void setMaxSize(qint32 size);
+	qint32 pixelMetric(PixelMetric pm, const QStyleOption* opt, const QWidget* widget) const;	
 
 private:
-	int32_t m_size;
+	qint32 m_size;
 };

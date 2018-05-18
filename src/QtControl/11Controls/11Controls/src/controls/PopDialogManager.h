@@ -1,6 +1,5 @@
 #pragma once
 #include <QObject>
-#include <stdint.h>
 #include "DialogType.h"
 #include "../core/ManagerBase.h"
 

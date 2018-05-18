@@ -2,16 +2,13 @@
 #include "Label.h"
 #include "CGeneralStyle.h"
 #include "COriginalButton.h"
-#include <map>
-#include "DialogShow.h"
-#include "LineEdit.h"
 #include "CPasswordInputBox.h"
 #include <QWindow>
 #include "Separator.h"
 #include "PopDialog.h"
 #include "NotifyDialog.h"
 
-void DialogHelper::setLabel(Label* label, const QString& text, const QColor& textColor, int32_t fontSize)
+void DialogHelper::setLabel(Label* label, const QString& text, const QColor& textColor, qint32 fontSize)
 {
     if (label == nullptr)
     {
@@ -24,7 +21,7 @@ void DialogHelper::setLabel(Label* label, const QString& text, const QColor& tex
     label->setFontSize(fontSize);
 }
 
-void DialogHelper::setTip(Label* tip, const QString& text, const QColor& textColor, int32_t fontSize)
+void DialogHelper::setTip(Label* tip, const QString& text, const QColor& textColor, qint32 fontSize)
 {
     setLabel(tip, text, textColor, fontSize);
     if (tip == nullptr)
@@ -40,9 +37,9 @@ void DialogHelper::setButton(DialogShow* dialog,
                              const QColor& textColor,
                              const QString& backgroundImage,
                              DialogResult result,
-                             int32_t fontSize,
+                             qint32 fontSize,
                              std::map<QWidget*, DialogResult>* mapResult,
-                             int32_t imageMargin,
+                             qint32 imageMargin,
                              bool isPop)
 {
     if (button == nullptr)
@@ -81,7 +78,7 @@ void DialogHelper::setSeparator(Separator* separator, bool isHorizon, const QCol
     return;
 }
 
-void DialogHelper::setLineEdit(LineEdit* lineEdit, const QString& defaultText, int32_t maxLength)
+void DialogHelper::setLineEdit(LineEdit* lineEdit, const QString& defaultText, qint32 maxLength)
 {
     if (lineEdit == nullptr)
     {
@@ -104,7 +101,7 @@ void DialogHelper::setLineEdit(LineEdit* lineEdit, const QString& defaultText, i
     return;
 }
 
-void DialogHelper::setPasswordInputBox(CPasswordInputBox* passwordInputBox, const QString& defaultText, int32_t maxLength)
+void DialogHelper::setPasswordInputBox(CPasswordInputBox* passwordInputBox, const QString& defaultText, qint32 maxLength)
 {
     setLineEdit(passwordInputBox, defaultText, maxLength);
 }

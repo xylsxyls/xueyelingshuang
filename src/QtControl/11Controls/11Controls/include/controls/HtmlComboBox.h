@@ -34,7 +34,7 @@ public:
 	@param [in] origin 文本偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListTextOrigin(int32_t origin, bool rePaint = false);
+	void setListTextOrigin(qint32 origin, bool rePaint = false);
 
 	/** 节点到下拉框窗口的四个外边距
 	@param [in] leftOrigin 左侧偏移量
@@ -43,26 +43,29 @@ public:
 	@param [in] bottomOrigin 下侧偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListItemAroundOrigin(int32_t leftOrigin,
-								 int32_t topOrigin = -1,
-								 int32_t rightOrigin = -1,
-								 int32_t bottomOrigin = -1,
+	void setListItemAroundOrigin(qint32 leftOrigin,
+								 qint32 topOrigin = -1,
+								 qint32 rightOrigin = -1,
+								 qint32 bottomOrigin = -1,
 								 bool rePaint = false);
 
 	/** 设置下拉框节点边框粗度
 	@param [in] width 边框粗度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListItemBorderWidth(int32_t width, bool rePaint = false);
+	void setListItemBorderWidth(qint32 width, bool rePaint = false);
+
+protected:
+	void init();
 
 public:
 	QColor m_normalColor;
 	QColor m_selectedColor;
 	QColor m_disabledColor;
-	int32_t m_origin;
-	int32_t m_leftOrigin;
-	int32_t m_topOrigin;
-	int32_t m_rightOrigin;
-	int32_t m_bottomOrigin;
-	int32_t m_itemBorderWidth;
+	qint32 m_origin;
+	qint32 m_leftOrigin;
+	qint32 m_topOrigin;
+	qint32 m_rightOrigin;
+	qint32 m_bottomOrigin;
+	qint32 m_itemBorderWidth;
 };

@@ -1,5 +1,4 @@
 #pragma once
-#include "DialogShow.h"
 #include "ControlsMacro.h"
 #include "PopDialog.h"
 
@@ -21,14 +20,14 @@ public:
     @param [out] editText 弹框关闭时通过该指针给出输入框内容
     @param [in] maxLength 输入框可输入的最大长度
     */
-    void setLineEdit(const QString& defaultText, QString* editText, int32_t maxLength = -1);
+    void setLineEdit(const QString& defaultText, QString* editText, qint32 maxLength = -1);
 
     /** 设置密码框（与输入框不共存）
     @param [in] defaultText 输入框默认填入内容
     @param [out] editText 弹框关闭时通过该指针给出输入框内容
     @param [in] maxLength 输入框可输入的最大长度
     */
-    void setPasswordInputBox(const QString& defaultText, QString* editText, int32_t maxLength = -1);
+    void setPasswordInputBox(const QString& defaultText, QString* editText, qint32 maxLength = -1);
 
     /** 设置提示
     @param [in] tip 提示内容

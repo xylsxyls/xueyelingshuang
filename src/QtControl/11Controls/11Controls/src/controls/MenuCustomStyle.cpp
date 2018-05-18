@@ -7,7 +7,7 @@ m_size(20)
 	
 }
 
-void MenuCustomStyle::setMaxSize(int32_t size)
+void MenuCustomStyle::setMaxSize(qint32 size)
 {
 	m_size = size;
 }

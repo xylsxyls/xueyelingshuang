@@ -1,14 +1,6 @@
 #include "DialogShow.h"
 #include "Label.h"
-#include <QPainter>
-#include <QMouseEvent>
 #include "COriginalButton.h"
-#include <QWindow>
-#include <Windows.h>
-#include "../core/CStringManager.h"
-#include "CGeneralStyle.h"
-#include "NotifyDialogManager.h"
-#include <fstream>
 #include "DialogHelper.h"
 
 DialogShow::DialogShow() :
@@ -37,12 +29,12 @@ void DialogShow::setTimeRestVisible(bool visible)
     m_time->setVisible(visible);
 }
 
-void DialogShow::setUserParam(int32_t userParam)
+void DialogShow::setUserParam(qint32 userParam)
 {
     m_userParam = userParam;
 }
 
-int32_t DialogShow::userParam()
+qint32 DialogShow::userParam()
 {
     return m_userParam;
 }
@@ -73,7 +65,7 @@ void DialogShow::setWindowResult(DialogResult result)
     }
 }
 
-void DialogShow::onTimeUpdate(int32_t timeOut)
+void DialogShow::onTimeUpdate(qint32 timeOut)
 {
     if (!check())
     {

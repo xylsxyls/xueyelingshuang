@@ -20,7 +20,7 @@ TreeWidget::~TreeWidget()
 
 }
 
-void TreeWidget::setMaxHeight(int32_t maxHeight, bool rePaint)
+void TreeWidget::setMaxHeight(qint32 maxHeight, bool rePaint)
 {
 	ControlBase::setPxValue(L"max-height", maxHeight, false, rePaint);
 }
@@ -86,7 +86,7 @@ void TreeWidget::initScrollBar()
 	);
 }
 
-void TreeWidget::addWidget(int32_t itemHeight, QWidget* widget, QWidget* parent, int32_t column)
+void TreeWidget::addWidget(qint32 itemHeight, QWidget* widget, QWidget* parent, qint32 column)
 {
 	if (widget == nullptr)
 	{
@@ -122,7 +122,7 @@ void TreeWidget::addWidget(int32_t itemHeight, QWidget* widget, QWidget* parent,
 	}
 }
 
-void TreeWidget::removeWidget(QWidget* widget, int32_t column)
+void TreeWidget::removeWidget(QWidget* widget, qint32 column)
 {
 	auto itData = m_itemData.find(widget);
 	if (itData == m_itemData.end())

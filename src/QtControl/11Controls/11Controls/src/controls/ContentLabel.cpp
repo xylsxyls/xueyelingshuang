@@ -94,7 +94,7 @@ void ContentLabel::setFontFace(const QString& fontFace)
 	m_down->repaint();
 }
 
-void ContentLabel::setFontSize(int32_t size)
+void ContentLabel::setFontSize(qint32 size)
 {
 	if (!check())
 	{

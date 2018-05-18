@@ -51,7 +51,7 @@ void CPasswordInputBox::setDefault()
 	QObject::connect(this, &CPasswordInputBox::textChanged, this, &CPasswordInputBox::currentTextChanged);
 }
 
-void CPasswordInputBox::setMaskSize(int32_t width, int32_t height)
+void CPasswordInputBox::setMaskSize(qint32 width, qint32 height)
 {
 	if (m_maskButton == nullptr)
 	{
@@ -60,7 +60,7 @@ void CPasswordInputBox::setMaskSize(int32_t width, int32_t height)
 	m_maskButton->resize(width, GetInt(height, width));
 }
 
-void CPasswordInputBox::setMaskRightOrigin(int32_t rightOrigin)
+void CPasswordInputBox::setMaskRightOrigin(qint32 rightOrigin)
 {
 	if (m_maskButton == nullptr)
 	{
@@ -71,15 +71,15 @@ void CPasswordInputBox::setMaskRightOrigin(int32_t rightOrigin)
 }
 
 void CPasswordInputBox::setMaskBackgroundImage(const QString& backgroundImgPath,
-											   int32_t backgroundImgStateCount,
-											   int32_t backgroundImgNormal,
-											   int32_t backgroundImgHover,
-											   int32_t backgroundImgPressed,
-											   int32_t backgroundImgDisabled,
-											   int32_t backgroundImgCkNormal,
-											   int32_t backgroundImgCkHover,
-											   int32_t backgroundImgCkPressed,
-											   int32_t backgroundImgCkDisabled)
+											   qint32 backgroundImgStateCount,
+											   qint32 backgroundImgNormal,
+											   qint32 backgroundImgHover,
+											   qint32 backgroundImgPressed,
+											   qint32 backgroundImgDisabled,
+											   qint32 backgroundImgCkNormal,
+											   qint32 backgroundImgCkHover,
+											   qint32 backgroundImgCkPressed,
+											   qint32 backgroundImgCkDisabled)
 {
 	if (m_maskButton == nullptr)
 	{

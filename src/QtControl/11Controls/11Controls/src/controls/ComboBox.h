@@ -1,6 +1,5 @@
 #pragma once
 #include <QtWidgets/QComboBox>
-#include <stdint.h>
 #include "ControlFont.h"
 #include "ControlSelf.h"
 #include "ControlBorder.h"
@@ -37,13 +36,13 @@ public:
 	@param [in] height 下拉箭头高度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setDropDownSize(int32_t width, int32_t height = -1, bool rePaint = false);
+	void setDropDownSize(qint32 width, qint32 height = -1, bool rePaint = false);
 
 	/** 设置下拉箭头的边框宽度
 	@param [in] width 下拉箭头宽度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setDropDownBorderWidth(int32_t width, bool rePaint = false);
+	void setDropDownBorderWidth(qint32 width, bool rePaint = false);
 
 	/** 设置下拉箭头的图片
 	@param [in] dropDownImgPath 背景图片路径，如果路径中必须使用正斜杠
@@ -56,12 +55,12 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setDropDownImage(const QString& dropDownImgPath,
-						  int32_t dropDownImgStateCount = 8,
-						  int32_t dropDownImgNormal = 1,
-						  int32_t dropDownImgHover = 2,
-						  int32_t dropDownImgDisabled = 4,
-						  int32_t dropDownImgExpandNormal = 5,
-						  int32_t dropDownImgExpandDisabled = 8,
+						  qint32 dropDownImgStateCount = 8,
+						  qint32 dropDownImgNormal = 1,
+						  qint32 dropDownImgHover = 2,
+						  qint32 dropDownImgDisabled = 4,
+						  qint32 dropDownImgExpandNormal = 5,
+						  qint32 dropDownImgExpandDisabled = 8,
 						  bool rePaint = false);
 
 	/** 设置下拉箭头距离右上角的边距
@@ -69,12 +68,12 @@ public:
 	@param [in] rightOrigin 右侧偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setDropDownTopRightOrigin(int32_t topOrigin, int32_t rightOrigin = -1, bool rePaint = false);
+	void setDropDownTopRightOrigin(qint32 topOrigin, qint32 rightOrigin = -1, bool rePaint = false);
 
 	/** 设置下拉框弹出时距离点击框的纵向偏移量
 	@param [in] origin 纵向偏移量
 	*/
-	void setListOrigin(int32_t origin);
+	void setListOrigin(qint32 origin);
 
 	/** 增加一行
 	@param [in] text 文本
@@ -90,7 +89,7 @@ public:
 	@param [in] index 索引值
 	@param [in] text 文本
 	*/
-	void setItemText(int32_t index, const QString& text);
+	void setItemText(qint32 index, const QString& text);
 
 	/** 设置背景颜色
 	@param [in] color 背景颜色
@@ -102,7 +101,7 @@ public:
 	@param [in] width 边框粗度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListBorderWidth(int32_t width, bool rePaint = false);
+	void setListBorderWidth(qint32 width, bool rePaint = false);
 
 	/** 设置下拉框边框颜色
 	@param [in] color 常态
@@ -136,7 +135,7 @@ public:
 	@param [in] width 边框粗度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListItemBorderWidth(int32_t width, bool rePaint = false);
+	void setListItemBorderWidth(qint32 width, bool rePaint = false);
 
 	/** 设置下拉框节点背景图片，和边框颜色不用存
 	@param [in] borderImgPath 背景图片路径，如果路径中必须使用正斜杠
@@ -147,17 +146,17 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setListItemBorderImage(const QString& borderImgPath,
-								int32_t borderImgStateCount = 4,
-								int32_t borderImgNormal = 1,
-								int32_t borderImgHover = 2,
-								int32_t borderImgDisabled = 4,
+								qint32 borderImgStateCount = 4,
+								qint32 borderImgNormal = 1,
+								qint32 borderImgHover = 2,
+								qint32 borderImgDisabled = 4,
 								bool rePaint = false);
 
 	/** 设置下拉框节点高度
 	@param [in] height 节点高度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListItemHeight(int32_t height, bool rePaint = false);
+	void setListItemHeight(qint32 height, bool rePaint = false);
 
 	/** 设置下拉框文字颜色
 	@param [in] normalColor 常态颜色
@@ -180,13 +179,13 @@ public:
 	@param [in] fontSize 字体大小
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListFontSize(int32_t fontSize, bool rePaint = false);
+	void setListFontSize(qint32 fontSize, bool rePaint = false);
 
 	/** 设置下拉框文本偏移量
 	@param [in] origin 文本偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListTextOrigin(int32_t origin, bool rePaint = false);
+	void setListTextOrigin(qint32 origin, bool rePaint = false);
 
 	/** 节点到下拉框窗口的四个外边距
 	@param [in] leftOrigin 左侧偏移量
@@ -195,16 +194,16 @@ public:
 	@param [in] bottomOrigin 下侧偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setListItemAroundOrigin(int32_t leftOrigin,
-								 int32_t topOrigin = -1,
-								 int32_t rightOrigin = -1,
-								 int32_t bottomOrigin = -1,
+	void setListItemAroundOrigin(qint32 leftOrigin,
+								 qint32 topOrigin = -1,
+								 qint32 rightOrigin = -1,
+								 qint32 bottomOrigin = -1,
 								 bool rePaint = false);
 
 	/** 设置下拉框最大高度
 	@param [in] maxHeight 最大高度
 	*/
-	void setListMaxHeight(int32_t maxHeight);
+	void setListMaxHeight(qint32 maxHeight);
 
 	/** 设置下拉箭头是否隐藏
 	@param [in] enable 是否隐藏
@@ -225,9 +224,9 @@ Q_SIGNALS:
 	/** 节点被按下之后发送信号
 	@param [in] index 节点索引值
 	*/
-	void itemPressed(int index);
+	void itemPressed(qint32 index);
 
-private:
+protected:
 	virtual void showEvent(QShowEvent* eve);
 	virtual void mouseReleaseEvent(QMouseEvent* eve);
 	virtual void mouseMoveEvent(QMouseEvent* eve);
@@ -236,25 +235,32 @@ private:
 	virtual void hideEvent(QHideEvent* eve);
 	virtual void keyPressEvent(QKeyEvent* eve);
 
+protected:
+	bool check();
+	/** 控件初始化
+	*/
+	void init();
+
 private slots:
 	void listItemEntered(QListWidgetItem* item);
 	void listItemPressed(QListWidgetItem* item);
 
 protected:
 	ListWidget* m_listWidget;
-	int32_t m_hoverIndex;
+	qint32 m_hoverIndex;
 
 private:
-	int32_t m_dropDownImgNormal;
-	int32_t m_dropDownImgDisabled;
-	int32_t m_dropDownImgExpandNormal;
-	int32_t m_dropDownImgExpandDisabled;
-	int32_t m_dropDownImgStateCount;
-	std::map<int32_t, std::map<int32_t, int32_t>> m_imageStateMap;
+	qint32 m_dropDownImgNormal;
+	qint32 m_dropDownImgDisabled;
+	qint32 m_dropDownImgExpandNormal;
+	qint32 m_dropDownImgExpandDisabled;
+	qint32 m_dropDownImgStateCount;
+	std::map<qint32, std::map<qint32, qint32>> m_imageStateMap;
 	std::wstring m_imagePath;
-	int32_t m_listOrigin;
-	int32_t m_dropDownWidth;
-	int32_t m_dropDownHeight;
-	int32_t m_dropDownBorderWidth;
+	qint32 m_listOrigin;
+	qint32 m_dropDownWidth;
+	qint32 m_dropDownHeight;
+	qint32 m_dropDownBorderWidth;
 	bool m_dropDownVisible;
+	QEvent* m_hoverLeaveEvent;
 };

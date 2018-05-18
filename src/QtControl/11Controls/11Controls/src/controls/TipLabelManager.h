@@ -1,5 +1,4 @@
 #pragma once
-#include <stdint.h>
 #include <QString>
 #include <QPoint>
 #include <QObject>
@@ -23,7 +22,7 @@ public:
 	@param [in] timeOut 最长显示时间，单位秒
 	@param [in] hasFocus 弹出时是否抢焦点，如果抢焦点，则在失去焦点时自动消失
 	*/
-	void popTip(const QPoint& pos, const QString& text, int32_t maxWidth = 500, int32_t timeOut = 10, bool hasFocus = true);
+	void popTip(const QPoint& pos, const QString& text, qint32 maxWidth = 500, qint32 timeOut = 10, bool hasFocus = true);
 
 	/** 关闭提示框（支持多线程）
 	*/

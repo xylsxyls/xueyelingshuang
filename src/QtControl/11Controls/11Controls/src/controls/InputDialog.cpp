@@ -34,7 +34,7 @@ m_passwordInputBox(nullptr)
     resize(340, 165);
 }
 
-void InputDialog::setLineEdit(const QString& defaultText, QString* editText, int32_t maxLength)
+void InputDialog::setLineEdit(const QString& defaultText, QString* editText, qint32 maxLength)
 {
     if (!check())
     {
@@ -46,7 +46,7 @@ void InputDialog::setLineEdit(const QString& defaultText, QString* editText, int
     m_editText = editText;
 }
 
-void InputDialog::setPasswordInputBox(const QString& defaultText, QString* editText, int32_t maxLength)
+void InputDialog::setPasswordInputBox(const QString& defaultText, QString* editText, qint32 maxLength)
 {
     if (!check())
     {

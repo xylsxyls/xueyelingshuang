@@ -4,7 +4,6 @@
 #include "CGeneralStyle.h"
 #include <QtWebKitWidgets/QWebView>
 #include <QDesktopServices>
-#include "NotifyDialogManager.h"
 #include "DialogHelper.h"
 #include "Separator.h"
 

@@ -3,6 +3,7 @@
 #include <QPainter>
 #include "COriginalButton.h"
 #include "CGeneralStyle.h"
+#include "Separator.h"
 #include "../core/CSystem.h"
 
 BoxDialogBase::BoxDialogBase()
@@ -20,8 +21,10 @@ BoxDialogBase::BoxDialogBase()
 	m_exit->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/Common/Image/NotificationView/CloseButton.png");
 	m_exit->setBorderRadius(0);
 
+	m_separator->setVisible(false);
+
     setBorderNormalHighLightColor(QColor(79, 153, 222, 255));
-	//m_separator->setVisible(false);
+	setCustomerTitleBarHeight(32);
 	//setStyleSheet(".AccountDialogBase{background-color:rgba(44,52,74,255);border:1px solid;border-color:rgba(79,153,222,255);}");
 }
 void BoxDialogBase::paintEvent(QPaintEvent* eve)

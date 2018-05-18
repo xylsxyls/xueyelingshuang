@@ -12,7 +12,7 @@ PointLabel::~PointLabel()
 
 }
 
-void PointLabel::setTextOrigin(int32_t origin, bool rePaint)
+void PointLabel::setTextOrigin(qint32 origin, bool rePaint)
 {
 	m_leftOrigin = origin;
 	Label::setTextOrigin(origin, rePaint);
@@ -35,7 +35,7 @@ void PointLabel::showEvent(QShowEvent* eve)
 	QFontMetrics fontMetrics(font());
 	QString strShow = Label::text();
 	//获取之前设置的字符串的像素大小
-	int32_t fontSize = fontMetrics.width(strShow);
+	qint32 fontSize = fontMetrics.width(strShow);
 	if (fontSize > width() - m_leftOrigin)
 	{
 		//返回一个带有省略号的字符串

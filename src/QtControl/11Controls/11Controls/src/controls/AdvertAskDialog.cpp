@@ -33,7 +33,6 @@ void AdvertAskDialog::setTip(const QString& tip)
 
 void AdvertAskDialog::setAcceptButton(const QString& acceptText, DialogResult acceptDone)
 {
-    //DialogHelper::setButton(this, m_accept, "", "", "", 0, 0, &m_mapResult, 0);
     setPopButtonConfig(m_accept, acceptText, QColor(201, 211, 252, 255), acceptDone, 14);
 }
 
@@ -64,8 +63,8 @@ void AdvertAskDialog::resizeEvent(QResizeEvent* eve)
     {
         return;
     }
-    int32_t advertWidth = 320;
-    int32_t advertHeight = 90;
+    qint32 advertWidth = 320;
+    qint32 advertHeight = 90;
     m_advert->setGeometry((width() - advertWidth) / 2, 50, advertWidth, advertHeight);
     m_tip->setGeometry(QRect(43, 40 + advertHeight, width() - 43 * 2, 83));
     m_accept->setGeometry(QRect((width() - 116 * 2) / 3, 127 + advertHeight, 116, 22));

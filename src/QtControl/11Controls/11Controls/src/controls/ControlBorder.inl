@@ -12,7 +12,7 @@ ControlBorderForNormal<QBase>::~ControlBorderForNormal()
 template<class QBase>
 void ControlBorderForNormal<QBase>::setBorderColor(const QColor& color, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = color;
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", false, rePaint);
 }
@@ -20,7 +20,7 @@ void ControlBorderForNormal<QBase>::setBorderColor(const QColor& color, bool reP
 template<class QBase>
 void ControlBorderForNormal<QBase>::setBorderImage(const QString& borderImgPath, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = 1;
 	std::wstring wstrImgPath = borderImgPath.toStdWString();
 	ControlBase<QBase>::setImageStateMap(imageStateMap, wstrImgPath, 1, L"border-image", false, rePaint);
@@ -29,7 +29,7 @@ void ControlBorderForNormal<QBase>::setBorderImage(const QString& borderImgPath,
 template<class QBase>
 void ControlBorderForNormal<QBase>::setTextColor(const QColor& textColor, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 	textColorMap[NORMAL][NORMAL] = textColor;
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", false, rePaint);
 }
@@ -46,7 +46,7 @@ void ControlBorderForNormalHoverDisabled<QBase>::setBorderColor(const QColor& no
 																const QColor& disabledColor,
 																bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
@@ -55,13 +55,13 @@ void ControlBorderForNormalHoverDisabled<QBase>::setBorderColor(const QColor& no
 
 template<class QBase>
 void ControlBorderForNormalHoverDisabled<QBase>::setBorderImage(const QString& borderImgPath,
-																int32_t borderImgStateCount,
-																int32_t borderImgNormal,
-																int32_t borderImgHover,
-																int32_t borderImgDisabled,
+																qint32 borderImgStateCount,
+																qint32 borderImgNormal,
+																qint32 borderImgHover,
+																qint32 borderImgDisabled,
 																bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = borderImgNormal;
 	imageStateMap[NORMAL][HOVER] = borderImgHover;
 	imageStateMap[NORMAL][DISABLED] = borderImgDisabled;
@@ -75,7 +75,7 @@ void ControlBorderForNormalHoverDisabled<QBase>::setTextColor(const QColor& text
 															  const QColor& textDisabledColor,
 															  bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
 	textColorMap[NORMAL][HOVER] = GetQColor(textHoverColor, textNormalColor);
@@ -96,7 +96,7 @@ void ControlBorderForNormalSelectedDisabled<QBase>::setBorderColor(const QColor&
 																   const QColor& disabledColor,
 																   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][SELECTED] = GetQColor(selectedColor, normalColor);
 	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
@@ -105,13 +105,13 @@ void ControlBorderForNormalSelectedDisabled<QBase>::setBorderColor(const QColor&
 
 template<class QBase>
 void ControlBorderForNormalSelectedDisabled<QBase>::setBorderImage(const QString& borderImgPath,
-																   int32_t borderImgStateCount,
-																   int32_t borderImgNormal,
-																   int32_t borderImgSelected,
-																   int32_t borderImgDisabled,
+																   qint32 borderImgStateCount,
+																   qint32 borderImgNormal,
+																   qint32 borderImgSelected,
+																   qint32 borderImgDisabled,
 																   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = borderImgNormal;
 	imageStateMap[NORMAL][SELECTED] = borderImgSelected;
 	imageStateMap[NORMAL][DISABLED] = borderImgDisabled;
@@ -125,7 +125,7 @@ void ControlBorderForNormalSelectedDisabled<QBase>::setTextColor(const QColor& t
 																 const QColor& textDisabledColor,
 																 bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
 	textColorMap[NORMAL][SELECTED] = GetQColor(textSelectedColor, textNormalColor);
@@ -147,7 +147,7 @@ void ControlBorderForNormalHoverPressedDisabled<QBase>::setBorderColor(const QCo
 																	   const QColor& disabledColor,
 																	   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[NORMAL][PRESSED] = GetQColor(pressedColor, normalColor);
@@ -157,14 +157,14 @@ void ControlBorderForNormalHoverPressedDisabled<QBase>::setBorderColor(const QCo
 
 template<class QBase>
 void ControlBorderForNormalHoverPressedDisabled<QBase>::setBorderImage(const QString& borderImgPath,
-																	   int32_t borderImgStateCount,
-																	   int32_t borderImgNormal,
-																	   int32_t borderImgHover,
-																	   int32_t borderImgPressed,
-																	   int32_t borderImgDisabled,
+																	   qint32 borderImgStateCount,
+																	   qint32 borderImgNormal,
+																	   qint32 borderImgHover,
+																	   qint32 borderImgPressed,
+																	   qint32 borderImgDisabled,
 																	   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = borderImgNormal;
 	imageStateMap[NORMAL][HOVER] = borderImgHover;
 	imageStateMap[NORMAL][PRESSED] = borderImgPressed;
@@ -180,7 +180,7 @@ void ControlBorderForNormalHoverPressedDisabled<QBase>::setTextColor(const QColo
 																	 const QColor& textDisabledColor,
 																	 bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
 	textColorMap[NORMAL][HOVER] = GetQColor(textHoverColor, textNormalColor);
@@ -207,7 +207,7 @@ void ControlBorderForNormalHoverPressedDisabledAndCheck<QBase>::setBorderColor(c
 																			   const QColor& disabledCkColor,
 																			   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[UNCHECK][NORMAL] = normalColor;
 	colorStateMap[UNCHECK][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[UNCHECK][PRESSED] = GetQColor(pressedColor, normalColor);
@@ -221,18 +221,18 @@ void ControlBorderForNormalHoverPressedDisabledAndCheck<QBase>::setBorderColor(c
 
 template<class QBase>
 void ControlBorderForNormalHoverPressedDisabledAndCheck<QBase>::setBorderImage(const QString& borderImgPath,
-																			   int32_t borderImgStateCount,
-																			   int32_t borderImgNormal,
-																			   int32_t borderImgHover,
-																			   int32_t borderImgPressed,
-																			   int32_t borderImgDisabled,
-																			   int32_t borderImgCkNormal,
-																			   int32_t borderImgCkHover,
-																			   int32_t borderImgCkPressed,
-																			   int32_t borderImgCkDisabled,
+																			   qint32 borderImgStateCount,
+																			   qint32 borderImgNormal,
+																			   qint32 borderImgHover,
+																			   qint32 borderImgPressed,
+																			   qint32 borderImgDisabled,
+																			   qint32 borderImgCkNormal,
+																			   qint32 borderImgCkHover,
+																			   qint32 borderImgCkPressed,
+																			   qint32 borderImgCkDisabled,
 																			   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[UNCHECK][NORMAL] = borderImgNormal;
 	imageStateMap[UNCHECK][HOVER] = borderImgHover;
 	imageStateMap[UNCHECK][PRESSED] = borderImgPressed;
@@ -256,7 +256,7 @@ void ControlBorderForNormalHoverPressedDisabledAndCheck<QBase>::setTextColor(con
 																			 const QColor& textCkDisabledColor,
 																			 bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 
 	textColorMap[UNCHECK][NORMAL] = textNormalColor;
 	textColorMap[UNCHECK][HOVER] = GetQColor(textHoverColor, textNormalColor);
@@ -279,7 +279,7 @@ ControlItemBorderForNormal<QBase>::~ControlItemBorderForNormal()
 template<class QBase>
 void ControlItemBorderForNormal<QBase>::setItemBorderColor(const QColor& color, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = color;
 	ControlBase<QBase>::setColorStateMap(colorStateMap, L"border-color", true, rePaint);
 }
@@ -287,7 +287,7 @@ void ControlItemBorderForNormal<QBase>::setItemBorderColor(const QColor& color, 
 template<class QBase>
 void ControlItemBorderForNormal<QBase>::setItemBorderImage(const QString& borderImgPath, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = 1;
 	std::wstring wstrImgPath = borderImgPath.toStdWString();
 	ControlBase<QBase>::setImageStateMap(imageStateMap, wstrImgPath, 1, L"border-image", true, rePaint);
@@ -296,7 +296,7 @@ void ControlItemBorderForNormal<QBase>::setItemBorderImage(const QString& border
 template<class QBase>
 void ControlItemBorderForNormal<QBase>::setItemTextColor(const QColor& textColor, bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 	textColorMap[NORMAL][NORMAL] = textColor;
 	ControlBase<QBase>::setColorStateMap(textColorMap, L"color", true, rePaint);
 }
@@ -313,7 +313,7 @@ void ControlItemBorderForNormalHoverDisabled<QBase>::setItemBorderColor(const QC
 																const QColor& disabledColor,
 																bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
@@ -322,13 +322,13 @@ void ControlItemBorderForNormalHoverDisabled<QBase>::setItemBorderColor(const QC
 
 template<class QBase>
 void ControlItemBorderForNormalHoverDisabled<QBase>::setItemBorderImage(const QString& borderImgPath,
-																int32_t borderImgStateCount,
-																int32_t borderImgNormal,
-																int32_t borderImgHover,
-																int32_t borderImgDisabled,
+																qint32 borderImgStateCount,
+																qint32 borderImgNormal,
+																qint32 borderImgHover,
+																qint32 borderImgDisabled,
 																bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = borderImgNormal;
 	imageStateMap[NORMAL][HOVER] = borderImgHover;
 	imageStateMap[NORMAL][DISABLED] = borderImgDisabled;
@@ -342,7 +342,7 @@ void ControlItemBorderForNormalHoverDisabled<QBase>::setItemTextColor(const QCol
 																	  const QColor& textDisabledColor,
 																	  bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
 	textColorMap[NORMAL][HOVER] = GetQColor(textHoverColor, textNormalColor);
@@ -363,7 +363,7 @@ void ControlItemBorderForNormalSelectedDisabled<QBase>::setItemBorderColor(const
 																		   const QColor& disabledColor,
 																		   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][SELECTED] = GetQColor(selectedColor, normalColor);
 	colorStateMap[NORMAL][DISABLED] = GetQColor(disabledColor, normalColor);
@@ -372,13 +372,13 @@ void ControlItemBorderForNormalSelectedDisabled<QBase>::setItemBorderColor(const
 
 template<class QBase>
 void ControlItemBorderForNormalSelectedDisabled<QBase>::setItemBorderImage(const QString& borderImgPath,
-																		   int32_t borderImgStateCount,
-																		   int32_t borderImgNormal,
-																		   int32_t borderImgSelected,
-																		   int32_t borderImgDisabled,
+																		   qint32 borderImgStateCount,
+																		   qint32 borderImgNormal,
+																		   qint32 borderImgSelected,
+																		   qint32 borderImgDisabled,
 																		   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = borderImgNormal;
 	imageStateMap[NORMAL][SELECTED] = borderImgSelected;
 	imageStateMap[NORMAL][DISABLED] = borderImgDisabled;
@@ -392,7 +392,7 @@ void ControlItemBorderForNormalSelectedDisabled<QBase>::setItemTextColor(const Q
 																		 const QColor& textDisabledColor,
 																		 bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
 	textColorMap[NORMAL][SELECTED] = GetQColor(textSelectedColor, textNormalColor);
@@ -414,7 +414,7 @@ void ControlItemBorderForNormalHoverPressedDisabled<QBase>::setItemBorderColor(c
 																			   const QColor& disabledColor,
 																			   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = normalColor;
 	colorStateMap[NORMAL][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[NORMAL][PRESSED] = GetQColor(pressedColor, normalColor);
@@ -424,14 +424,14 @@ void ControlItemBorderForNormalHoverPressedDisabled<QBase>::setItemBorderColor(c
 
 template<class QBase>
 void ControlItemBorderForNormalHoverPressedDisabled<QBase>::setItemBorderImage(const QString& borderImgPath,
-																			   int32_t borderImgStateCount,
-																			   int32_t borderImgNormal,
-																			   int32_t borderImgHover,
-																			   int32_t borderImgPressed,
-																			   int32_t borderImgDisabled,
+																			   qint32 borderImgStateCount,
+																			   qint32 borderImgNormal,
+																			   qint32 borderImgHover,
+																			   qint32 borderImgPressed,
+																			   qint32 borderImgDisabled,
 																			   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[NORMAL][NORMAL] = borderImgNormal;
 	imageStateMap[NORMAL][HOVER] = borderImgHover;
 	imageStateMap[NORMAL][PRESSED] = borderImgPressed;
@@ -447,7 +447,7 @@ void ControlItemBorderForNormalHoverPressedDisabled<QBase>::setItemTextColor(con
 																			 const QColor& textDisabledColor,
 																			 bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 
 	textColorMap[NORMAL][NORMAL] = textNormalColor;
 	textColorMap[NORMAL][HOVER] = GetQColor(textHoverColor, textNormalColor);
@@ -474,7 +474,7 @@ void ControlItemBorderForNormalHoverPressedDisabledAndCheck<QBase>::setItemBorde
 																					   const QColor& disabledCkColor,
 																					   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[UNCHECK][NORMAL] = normalColor;
 	colorStateMap[UNCHECK][HOVER] = GetQColor(hoverColor, normalColor);
 	colorStateMap[UNCHECK][PRESSED] = GetQColor(pressedColor, normalColor);
@@ -488,18 +488,18 @@ void ControlItemBorderForNormalHoverPressedDisabledAndCheck<QBase>::setItemBorde
 
 template<class QBase>
 void ControlItemBorderForNormalHoverPressedDisabledAndCheck<QBase>::setItemBorderImage(const QString& borderImgPath,
-																					   int32_t borderImgStateCount,
-																					   int32_t borderImgNormal,
-																					   int32_t borderImgHover,
-																					   int32_t borderImgPressed,
-																					   int32_t borderImgDisabled,
-																					   int32_t borderImgCkNormal,
-																					   int32_t borderImgCkHover,
-																					   int32_t borderImgCkPressed,
-																					   int32_t borderImgCkDisabled,
+																					   qint32 borderImgStateCount,
+																					   qint32 borderImgNormal,
+																					   qint32 borderImgHover,
+																					   qint32 borderImgPressed,
+																					   qint32 borderImgDisabled,
+																					   qint32 borderImgCkNormal,
+																					   qint32 borderImgCkHover,
+																					   qint32 borderImgCkPressed,
+																					   qint32 borderImgCkDisabled,
 																					   bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, int32_t>> imageStateMap;
+	std::map<qint32, std::map<qint32, qint32>> imageStateMap;
 	imageStateMap[UNCHECK][NORMAL] = borderImgNormal;
 	imageStateMap[UNCHECK][HOVER] = borderImgHover;
 	imageStateMap[UNCHECK][PRESSED] = borderImgPressed;
@@ -523,7 +523,7 @@ void ControlItemBorderForNormalHoverPressedDisabledAndCheck<QBase>::setItemTextC
 																					 const QColor& textCkDisabledColor,
 																					 bool rePaint)
 {
-	std::map<int32_t, std::map<int32_t, QColor>> textColorMap;
+	std::map<qint32, std::map<qint32, QColor>> textColorMap;
 
 	textColorMap[UNCHECK][NORMAL] = textNormalColor;
 	textColorMap[UNCHECK][HOVER] = GetQColor(textHoverColor, textNormalColor);

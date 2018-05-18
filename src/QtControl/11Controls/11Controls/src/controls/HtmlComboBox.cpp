@@ -4,24 +4,19 @@
 #include "HtmlComboBoxDelegate.h"
 
 HtmlComboBox::HtmlComboBox(QWidget* parent) :
-IdItemComboBox(parent)
+IdItemComboBox(parent),
+m_normalColor(QColor(0, 0, 0, 0)),
+m_selectedColor(QColor(0, 0, 0, 0)),
+m_disabledColor(QColor(0, 0, 0, 0)),
+m_origin(0),
+m_leftOrigin(0),
+m_topOrigin(0),
+m_rightOrigin(0),
+m_bottomOrigin(0),
+m_itemBorderWidth(0)
 {
 	INIT(L"drop-down");
-	ComboBox::setDefault();
-	m_normalColor = QColor(0, 0, 0, 0);
-	m_selectedColor = QColor(0, 0, 0, 0);
-	m_disabledColor = QColor(0, 0, 0, 0);
-	m_origin = 0;
-	m_leftOrigin = 0;
-	m_topOrigin = 0;
-	m_rightOrigin = 0;
-	m_bottomOrigin = 0;
-	m_itemBorderWidth = 0;
-
-	setStyle(new HtmlComboBoxStyle(this));
-	m_listWidget->setItemDelegate(new HtmlComboBoxDelegate(this));
-
-	///*((QWidget*)(view()->parent()))->*/setStyleSheet("QToolTip{text-align:alignvcenter;}");
+	init();
 }
 
 HtmlComboBox::~HtmlComboBox()
@@ -40,16 +35,16 @@ void HtmlComboBox::setListTextColor(const QColor& normalColor,
 	ComboBox::setListTextColor(normalColor, hoverColor, disabledColor, rePaint);
 }
 
-void HtmlComboBox::setListTextOrigin(int32_t origin, bool rePaint)
+void HtmlComboBox::setListTextOrigin(qint32 origin, bool rePaint)
 {
 	m_origin = origin;
 	ComboBox::setListTextOrigin(origin, rePaint);
 }
 
-void HtmlComboBox::setListItemAroundOrigin(int32_t leftOrigin,
-										   int32_t topOrigin,
-										   int32_t rightOrigin,
-										   int32_t bottomOrigin,
+void HtmlComboBox::setListItemAroundOrigin(qint32 leftOrigin,
+										   qint32 topOrigin,
+										   qint32 rightOrigin,
+										   qint32 bottomOrigin,
 										   bool rePaint)
 {
 	m_leftOrigin = leftOrigin;
@@ -59,8 +54,20 @@ void HtmlComboBox::setListItemAroundOrigin(int32_t leftOrigin,
 	ComboBox::setListItemAroundOrigin(leftOrigin, topOrigin, rightOrigin, bottomOrigin, rePaint);
 }
 
-void HtmlComboBox::setListItemBorderWidth(int32_t width, bool rePaint)
+void HtmlComboBox::setListItemBorderWidth(qint32 width, bool rePaint)
 {
 	m_itemBorderWidth = width;
 	ComboBox::setListItemBorderWidth(width, rePaint);
+}
+
+void HtmlComboBox::init()
+{
+	ComboBox::setDefault();
+	setStyle(new HtmlComboBoxStyle(this));
+	if (!check())
+	{
+		return;
+	}
+	m_listWidget->setItemDelegate(new HtmlComboBoxDelegate(this));
+	///*((QWidget*)(view()->parent()))->*/setStyleSheet("QToolTip{text-align:alignvcenter;}");
 }

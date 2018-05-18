@@ -62,10 +62,10 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBorderImage(const QString& borderImgPath,
-						int32_t borderImgStateCount = 4,
-						int32_t borderImgNormal = 1,
-						int32_t borderImgHover = 2,
-						int32_t borderImgDisabled = 4,
+						qint32 borderImgStateCount = 4,
+						qint32 borderImgNormal = 1,
+						qint32 borderImgHover = 2,
+						qint32 borderImgDisabled = 4,
 						bool rePaint = false);
 
 	/** 设置文字颜色
@@ -109,10 +109,10 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBorderImage(const QString& borderImgPath,
-						int32_t borderImgStateCount = 4,
-						int32_t borderImgNormal = 1,
-						int32_t borderImgSelected = 2,
-						int32_t borderImgDisabled = 4,
+						qint32 borderImgStateCount = 4,
+						qint32 borderImgNormal = 1,
+						qint32 borderImgSelected = 2,
+						qint32 borderImgDisabled = 4,
 						bool rePaint = false);
 
 	/** 设置文字颜色
@@ -159,11 +159,11 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBorderImage(const QString& borderImgPath,
-						int32_t borderImgStateCount = 4,
-						int32_t borderImgNormal = 1,
-						int32_t borderImgHover = 2,
-						int32_t borderImgPressed = 3,
-						int32_t borderImgDisabled = 4,
+						qint32 borderImgStateCount = 4,
+						qint32 borderImgNormal = 1,
+						qint32 borderImgHover = 2,
+						qint32 borderImgPressed = 3,
+						qint32 borderImgDisabled = 4,
 						bool rePaint = false);
 
 	/** 设置文字颜色
@@ -224,15 +224,15 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBorderImage(const QString& borderImgPath,
-						int32_t borderImgStateCount = 8,
-						int32_t borderImgNormal = 1,
-						int32_t borderImgHover = 2,
-						int32_t borderImgPressed = 3,
-						int32_t borderImgDisabled = 4,
-						int32_t borderImgCkNormal = 5,
-						int32_t borderImgCkHover = 6,
-						int32_t borderImgCkPressed = 7,
-						int32_t borderImgCkDisabled = 8,
+						qint32 borderImgStateCount = 8,
+						qint32 borderImgNormal = 1,
+						qint32 borderImgHover = 2,
+						qint32 borderImgPressed = 3,
+						qint32 borderImgDisabled = 4,
+						qint32 borderImgCkNormal = 5,
+						qint32 borderImgCkHover = 6,
+						qint32 borderImgCkPressed = 7,
+						qint32 borderImgCkDisabled = 8,
 						bool rePaint = false);
 
 	/** 设置字体颜色
@@ -314,10 +314,10 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
-							int32_t borderImgStateCount = 4,
-							int32_t borderImgNormal = 1,
-							int32_t borderImgHover = 2,
-							int32_t borderImgDisabled = 4,
+							qint32 borderImgStateCount = 4,
+							qint32 borderImgNormal = 1,
+							qint32 borderImgHover = 2,
+							qint32 borderImgDisabled = 4,
 							bool rePaint = false);
 
 	/** 设置文字颜色
@@ -361,10 +361,10 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
-							int32_t borderImgStateCount = 4,
-							int32_t borderImgNormal = 1,
-							int32_t borderImgSelected = 2,
-							int32_t borderImgDisabled = 4,
+							qint32 borderImgStateCount = 4,
+							qint32 borderImgNormal = 1,
+							qint32 borderImgSelected = 2,
+							qint32 borderImgDisabled = 4,
 							bool rePaint = false);
 
 	/** 设置文字颜色
@@ -411,11 +411,11 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
-							int32_t borderImgStateCount = 4,
-							int32_t borderImgNormal = 1,
-							int32_t borderImgHover = 2,
-							int32_t borderImgPressed = 3,
-							int32_t borderImgDisabled = 4,
+							qint32 borderImgStateCount = 4,
+							qint32 borderImgNormal = 1,
+							qint32 borderImgHover = 2,
+							qint32 borderImgPressed = 3,
+							qint32 borderImgDisabled = 4,
 							bool rePaint = false);
 
 	/** 设置文字颜色
@@ -476,15 +476,15 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
-							int32_t borderImgStateCount = 8,
-							int32_t borderImgNormal = 1,
-							int32_t borderImgHover = 2,
-							int32_t borderImgPressed = 3,
-							int32_t borderImgDisabled = 4,
-							int32_t borderImgCkNormal = 5,
-							int32_t borderImgCkHover = 6,
-							int32_t borderImgCkPressed = 7,
-							int32_t borderImgCkDisabled = 8,
+							qint32 borderImgStateCount = 8,
+							qint32 borderImgNormal = 1,
+							qint32 borderImgHover = 2,
+							qint32 borderImgPressed = 3,
+							qint32 borderImgDisabled = 4,
+							qint32 borderImgCkNormal = 5,
+							qint32 borderImgCkHover = 6,
+							qint32 borderImgCkPressed = 7,
+							qint32 borderImgCkDisabled = 8,
 							bool rePaint = false);
 
 	/** 设置字体颜色

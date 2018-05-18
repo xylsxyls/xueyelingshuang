@@ -1,11 +1,9 @@
 #include "PopDialog.h"
-#include "Label.h"
 #include "COriginalButton.h"
 #include "CGeneralStyle.h"
 #include <QPainter>
 #include "DialogHelper.h"
 #include "Separator.h"
-#include "DialogType.h"
 #include "../core/CSystem.h"
 
 PopDialog::PopDialog():
@@ -40,8 +38,6 @@ void PopDialog::init()
     DialogHelper::setLabel(m_time, "", QColor("#abb3d3"), 10);
     m_time->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    addListenKey(Qt::Key_Escape);
-
     QObject::connect(this, &COriginalDialog::ncActiveChanged, this, &PopDialog::onNcActiveChanged);
     QObject::connect(this, &DialogBase::timeUp, this, &PopDialog::onTimeUp);
 }
@@ -53,9 +49,9 @@ bool PopDialog::check()
 
 void PopDialog::setWindowTiTle(const QString& title,
                                const QColor& color,
-                               int32_t fontSize,
+                               qint32 fontSize,
                                Qt::Alignment align,
-                               int32_t origin,
+                               qint32 origin,
                                const QString& fontName)
 {
     DialogShow::setWindowTiTle(title, color, fontSize, align, origin, fontName);

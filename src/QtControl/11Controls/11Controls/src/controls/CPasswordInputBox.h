@@ -29,12 +29,12 @@ public:
 	@param [in] width 图标宽度
 	@param [in] height 图标高度
 	*/
-	void setMaskSize(int32_t width, int32_t height = -1);
+	void setMaskSize(qint32 width, qint32 height = -1);
 
 	/** 设置按钮图标大小
 	@param [in] rightOrigin 距离右侧宽度
 	*/
-	void setMaskRightOrigin(int32_t rightOrigin);
+	void setMaskRightOrigin(qint32 rightOrigin);
 
 	/** 设置标志按钮背景颜色
 	@param [in] backgroundImgPath 背景图片路径，如果路径中必须使用正斜杠
@@ -49,15 +49,15 @@ public:
 	@param [in] backgroundImgCkDisabled 选中禁用图片
 	*/
 	void setMaskBackgroundImage(const QString& backgroundImgPath,
-								int32_t backgroundImgStateCount = 8,
-								int32_t backgroundImgNormal = 1,
-								int32_t backgroundImgHover = 2,
-								int32_t backgroundImgPressed = 3,
-								int32_t backgroundImgDisabled = 4,
-								int32_t backgroundImgCkNormal = 5,
-								int32_t backgroundImgCkHover = 6,
-								int32_t backgroundImgCkPressed = 7,
-								int32_t backgroundImgCkDisabled = 8);
+								qint32 backgroundImgStateCount = 8,
+								qint32 backgroundImgNormal = 1,
+								qint32 backgroundImgHover = 2,
+								qint32 backgroundImgPressed = 3,
+								qint32 backgroundImgDisabled = 4,
+								qint32 backgroundImgCkNormal = 5,
+								qint32 backgroundImgCkHover = 6,
+								qint32 backgroundImgCkPressed = 7,
+								qint32 backgroundImgCkDisabled = 8);
 
 	/** 设置按钮是否隐藏
 	@param [in] enable 是否隐藏
@@ -74,5 +74,5 @@ private slots:
 
 private:
 	COriginalButton* m_maskButton;
-	int32_t m_rightOrigin;
+	qint32 m_rightOrigin;
 };

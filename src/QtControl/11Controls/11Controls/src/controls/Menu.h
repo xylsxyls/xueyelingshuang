@@ -65,7 +65,7 @@ public:
 	@param [in] height 分割线高度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setSeparatorHeight(int32_t height, bool rePaint = false);
+	void setSeparatorHeight(qint32 height, bool rePaint = false);
 
 	/** 设置分割线颜色
 	@param [in] color 分割线颜色
@@ -77,7 +77,7 @@ public:
 	@param [in] leftOrigin 图标偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setItemIconOrigin(int32_t leftOrigin, bool rePaint = false);
+	void setItemIconOrigin(qint32 leftOrigin, bool rePaint = false);
 
 	/** 弹出菜单
 	@param [in] point 弹出位置

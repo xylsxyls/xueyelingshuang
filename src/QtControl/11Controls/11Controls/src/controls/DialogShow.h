@@ -30,12 +30,12 @@ public:
     /** 设置用户自定义参数
     @param [in] userParam 用户自定义参数
     */
-    void setUserParam(int32_t userParam);
+    void setUserParam(qint32 userParam);
 
     /** 获取用户自定义参数
     @return 返回用户自定义参数
     */
-    int32_t userParam();
+    qint32 userParam();
 
     /** 设置当按下空格和回车后窗口默认点击的按钮
     @param [in] button 默认点击的按钮指针
@@ -69,11 +69,11 @@ protected:
     void altF4PressedEvent();
 
 private slots:
-	void onTimeUpdate(int32_t timeOut);
+	void onTimeUpdate(qint32 timeOut);
 	
 protected:
 	COriginalButton* m_exit;
-	int32_t m_userParam;
+	qint32 m_userParam;
     Label* m_time;
     
     std::map<QWidget*, DialogResult> m_mapResult;

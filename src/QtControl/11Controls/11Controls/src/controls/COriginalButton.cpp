@@ -37,7 +37,7 @@ COriginalButton::COriginalButton(QWidget *parent)
 {
 
     this->setFontSize(14);
-    this->setText("EO_Original Button");
+    this->setText("");
     this->setBold(false);
     this->setItalic(false);
     this->setUnderline(false);

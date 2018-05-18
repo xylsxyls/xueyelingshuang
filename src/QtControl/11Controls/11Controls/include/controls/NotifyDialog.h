@@ -1,6 +1,8 @@
 #pragma once
 #include "DialogShow.h"
 
+/** 通知框基类
+*/
 class NotifyDialog : public DialogShow
 {
     Q_OBJECT
@@ -28,9 +30,9 @@ public:
     */
     void setWindowTiTle(const QString& title,
                         const QColor& color = QColor(221, 213, 198, 255),
-                        int32_t fontSize = 12,
+                        qint32 fontSize = 12,
                         Qt::Alignment align = Qt::AlignVCenter | Qt::AlignLeft,
-                        int32_t origin = 0,
+                        qint32 origin = 0,
                         const QString& fontName = QString::fromStdWString(L"微软雅黑"));
 
 protected:

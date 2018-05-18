@@ -23,7 +23,7 @@ public:
 	@param [in] fontSize 字体大小
 	@param [in] rePaint 是否立即重画
 	*/
-	void setFontSize(int32_t fontSize, bool rePaint = false);
+	void setFontSize(qint32 fontSize, bool rePaint = false);
 
 	/** 设置字体粗体
 	@param [in] bold 是否为粗体
@@ -35,13 +35,13 @@ public:
 	@param [in] origin 文字偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setTextOrigin(int32_t origin, bool rePaint = false);
+	void setTextOrigin(qint32 origin, bool rePaint = false);
 
 	/** 设置文字右侧偏移量
 	@param [in] origin 文字偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setTextRightOrigin(int32_t origin, bool rePaint = false);
+	void setTextRightOrigin(qint32 origin, bool rePaint = false);
 };
 
 #include "ControlFont.inl"

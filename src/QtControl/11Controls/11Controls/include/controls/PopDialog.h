@@ -1,6 +1,8 @@
 #pragma once
 #include "DialogShow.h"
 
+/** 弹框基类
+*/
 class PopDialog : public DialogShow
 {
     Q_OBJECT
@@ -19,9 +21,9 @@ public:
     */
     void setWindowTiTle(const QString& title,
                         const QColor& color = QColor(163, 175, 191, 255),
-                        int32_t fontSize = 12,
+                        qint32 fontSize = 12,
                         Qt::Alignment align = Qt::AlignCenter,
-                        int32_t origin = 0,
+                        qint32 origin = 0,
                         const QString& fontName = QString::fromStdWString(L"微软雅黑"));
 
     
@@ -33,6 +35,8 @@ public:
     void setBorderNormalHighLightColor(const QColor& normalColor, const QColor& highLightColor = QColor(0, 0, 0, 0));
 
 public slots:
+	/** 按钮点击之后窗口关闭
+	*/
     void endDialog();
 
 protected:

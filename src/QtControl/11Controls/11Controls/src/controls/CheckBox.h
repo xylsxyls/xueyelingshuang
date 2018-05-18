@@ -1,6 +1,5 @@
 #pragma once
 #include <QtWidgets/QCheckBox>
-#include <stdint.h>
 #include "ControlShow.h"
 #include "ControlFont.h"
 #include "ControlBorder.h"
@@ -39,27 +38,27 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setIndicatorImage(const QString& indicatorImg,
-			   			   int32_t indicatorImgStateCount = 4,
-						   int32_t indicatorImgNormal = 1,
-						   int32_t indicatorImgHover = 2,
-						   int32_t indicatorImgPressed = 3,
-						   int32_t indicatorImgDisabled = 4,
-						   int32_t indicatorImgCKNormal = 1,
-						   int32_t indicatorImgCKHover = 2,
-						   int32_t indicatorImgCKPressed = 3,
-						   int32_t indicatorImgCKDisabled = 4,
+			   			   qint32 indicatorImgStateCount = 4,
+						   qint32 indicatorImgNormal = 1,
+						   qint32 indicatorImgHover = 2,
+						   qint32 indicatorImgPressed = 3,
+						   qint32 indicatorImgDisabled = 4,
+						   qint32 indicatorImgCKNormal = 1,
+						   qint32 indicatorImgCKHover = 2,
+						   qint32 indicatorImgCKPressed = 3,
+						   qint32 indicatorImgCKDisabled = 4,
 						   bool rePaint = false);
 
 	/** 设置文本偏移量
 	@param [in] origin 文本偏移量
 	@param [in] rePaint 是否立即重画
 	*/
-	void setTextOrigin(int32_t origin, bool rePaint = false);
+	void setTextOrigin(qint32 origin, bool rePaint = false);
 
 	/** 设置指示器大小
 	@param [in] width 宽度
 	@param [in] height 高度
 	@param [in] rePaint 是否立即重画
 	*/
-	void setIndicatorSize(int32_t width, int32_t height = -1, bool rePaint = false);
+	void setIndicatorSize(qint32 width, qint32 height = -1, bool rePaint = false);
 };

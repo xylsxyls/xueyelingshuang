@@ -56,10 +56,10 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath,
-							int32_t backgroundImgStateCount = 4,
-							int32_t backgroundImgNormal = 1,
-							int32_t backgroundImgHover = 2,
-							int32_t backgroundImgDisabled = 4,
+							qint32 backgroundImgStateCount = 4,
+							qint32 backgroundImgNormal = 1,
+							qint32 backgroundImgHover = 2,
+							qint32 backgroundImgDisabled = 4,
 							bool rePaint = false);
 };
 
@@ -92,10 +92,10 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath,
-							int32_t backgroundImgStateCount = 4,
-							int32_t backgroundImgNormal = 1,
-							int32_t backgroundImgSelected = 2,
-							int32_t backgroundImgDisabled = 4,
+							qint32 backgroundImgStateCount = 4,
+							qint32 backgroundImgNormal = 1,
+							qint32 backgroundImgSelected = 2,
+							qint32 backgroundImgDisabled = 4,
 							bool rePaint = false);
 };
 
@@ -131,11 +131,11 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath,
-							int32_t backgroundImgStateCount = 4,
-							int32_t backgroundImgNormal = 1,
-							int32_t backgroundImgHover = 2,
-							int32_t backgroundImgPressed = 3,
-							int32_t backgroundImgDisabled = 4,
+							qint32 backgroundImgStateCount = 4,
+							qint32 backgroundImgNormal = 1,
+							qint32 backgroundImgHover = 2,
+							qint32 backgroundImgPressed = 3,
+							qint32 backgroundImgDisabled = 4,
 							bool rePaint = false);
 };
 
@@ -183,15 +183,15 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath,
-							int32_t backgroundImgStateCount = 8,
-							int32_t backgroundImgNormal = 1,
-							int32_t backgroundImgHover = 2,
-							int32_t backgroundImgPressed = 3,
-							int32_t backgroundImgDisabled = 4,
-							int32_t backgroundImgCkNormal = 5,
-							int32_t backgroundImgCkHover = 6,
-							int32_t backgroundImgCkPressed = 7,
-							int32_t backgroundImgCkDisabled = 8,
+							qint32 backgroundImgStateCount = 8,
+							qint32 backgroundImgNormal = 1,
+							qint32 backgroundImgHover = 2,
+							qint32 backgroundImgPressed = 3,
+							qint32 backgroundImgDisabled = 4,
+							qint32 backgroundImgCkNormal = 5,
+							qint32 backgroundImgCkHover = 6,
+							qint32 backgroundImgCkPressed = 7,
+							qint32 backgroundImgCkDisabled = 8,
 							bool rePaint = false);
 };
 
@@ -246,10 +246,10 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath,
-								int32_t backgroundImgStateCount = 4,
-								int32_t backgroundImgNormal = 1,
-								int32_t backgroundImgHover = 2,
-								int32_t backgroundImgDisabled = 4,
+								qint32 backgroundImgStateCount = 4,
+								qint32 backgroundImgNormal = 1,
+								qint32 backgroundImgHover = 2,
+								qint32 backgroundImgDisabled = 4,
 								bool rePaint = false);
 };
 
@@ -282,10 +282,10 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath,
-								int32_t backgroundImgStateCount = 4,
-								int32_t backgroundImgNormal = 1,
-								int32_t backgroundImgSelected = 2,
-								int32_t backgroundImgDisabled = 4,
+								qint32 backgroundImgStateCount = 4,
+								qint32 backgroundImgNormal = 1,
+								qint32 backgroundImgSelected = 2,
+								qint32 backgroundImgDisabled = 4,
 								bool rePaint = false);
 };
 
@@ -321,11 +321,11 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath,
-								int32_t backgroundImgStateCount = 4,
-								int32_t backgroundImgNormal = 1,
-								int32_t backgroundImgHover = 2,
-								int32_t backgroundImgPressed = 3,
-								int32_t backgroundImgDisabled = 4,
+								qint32 backgroundImgStateCount = 4,
+								qint32 backgroundImgNormal = 1,
+								qint32 backgroundImgHover = 2,
+								qint32 backgroundImgPressed = 3,
+								qint32 backgroundImgDisabled = 4,
 								bool rePaint = false);
 };
 
@@ -373,15 +373,15 @@ public:
 	@param [in] rePaint 是否立即重画
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath,
-								int32_t backgroundImgStateCount = 8,
-								int32_t backgroundImgNormal = 1,
-								int32_t backgroundImgHover = 2,
-								int32_t backgroundImgPressed = 3,
-								int32_t backgroundImgDisabled = 4,
-								int32_t backgroundImgCkNormal = 5,
-								int32_t backgroundImgCkHover = 6,
-								int32_t backgroundImgCkPressed = 7,
-								int32_t backgroundImgCkDisabled = 8,
+								qint32 backgroundImgStateCount = 8,
+								qint32 backgroundImgNormal = 1,
+								qint32 backgroundImgHover = 2,
+								qint32 backgroundImgPressed = 3,
+								qint32 backgroundImgDisabled = 4,
+								qint32 backgroundImgCkNormal = 5,
+								qint32 backgroundImgCkHover = 6,
+								qint32 backgroundImgCkPressed = 7,
+								qint32 backgroundImgCkDisabled = 8,
 								bool rePaint = false);
 };
 

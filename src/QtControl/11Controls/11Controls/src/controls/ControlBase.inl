@@ -31,13 +31,13 @@ void ControlBase<QBase>::setFontFace(const std::wstring& fontName, bool isItem, 
 }
 
 template<class QBase>
-void ControlBase<QBase>::setPxValue(const std::wstring& keyWord, int32_t valuePx, bool isItem, bool rePaint)
+void ControlBase<QBase>::setPxValue(const std::wstring& keyWord, qint32 valuePx, bool isItem, bool rePaint)
 {
 	setKeyValue(keyWord, CStringManager::Format(L"%dpx", valuePx), isItem, rePaint);
 }
 
 template<class QBase>
-void ControlBase<QBase>::setPxSolidValue(const std::wstring& keyWord, int32_t valuePxSolid, bool isItem, bool rePaint)
+void ControlBase<QBase>::setPxSolidValue(const std::wstring& keyWord, qint32 valuePxSolid, bool isItem, bool rePaint)
 {
 	setKeyValue(keyWord, CStringManager::Format(L"%dpx solid", valuePxSolid), isItem, rePaint);
 }
@@ -56,7 +56,7 @@ void ControlBase<QBase>::setKeyValue(const std::wstring& keyWord,
 }
 
 template<class QBase>
-void ControlBase<QBase>::setColorStateMap(const std::map<int32_t, std::map<int32_t, QColor>>& colorStateMap,
+void ControlBase<QBase>::setColorStateMap(const std::map<qint32, std::map<qint32, QColor>>& colorStateMap,
 										  const std::wstring& keyWord,
 										  bool isItem,
 										  bool rePaint)
@@ -80,14 +80,14 @@ void ControlBase<QBase>::setColorStateMap(const std::map<int32_t, std::map<int32
 }
 
 template<class QBase>
-void ControlBase<QBase>::setImageStateMap(const std::map<int32_t, std::map<int32_t, int32_t>>& imageStateMap,
+void ControlBase<QBase>::setImageStateMap(const std::map<qint32, std::map<qint32, qint32>>& imageStateMap,
 										  const std::wstring& imagePath,
-										  int32_t stateCount,
+										  qint32 stateCount,
 										  const std::wstring& keyWord,
 										  bool isItem,
 										  bool rePaint)
 {
-	std::vector<int32_t> vecHeight;
+	std::vector<qint32> vecHeight;
 	if (QssHelper::GetPicHeight(imagePath, stateCount, vecHeight) == false)
 	{
 		return;
@@ -100,7 +100,7 @@ void ControlBase<QBase>::setImageStateMap(const std::map<int32_t, std::map<int32
 		for (auto itImage = imageMap.begin(); itImage != imageMap.end(); ++itImage)
 		{
 			auto& stateInMap = itImage->first;
-			const int32_t& imageNum = itImage->second;
+			const qint32& imageNum = itImage->second;
 			if (imageNum > stateCount || imageNum <= 0)
 			{
 				continue;
@@ -119,9 +119,9 @@ void ControlBase<QBase>::setImageStateMap(const std::map<int32_t, std::map<int32
 }
 
 template<class QBase>
-void ControlBase<QBase>::setImageStateMap(const std::map<int32_t, std::map<int32_t, int32_t>>& imageStateMap,
+void ControlBase<QBase>::setImageStateMap(const std::map<qint32, std::map<qint32, qint32>>& imageStateMap,
 										  const std::wstring& imagePath,
-										  int32_t stateCount,
+										  qint32 stateCount,
 										  const std::wstring& keyWord,
 										  const std::wstring& itemName,
 										  bool rePaint)

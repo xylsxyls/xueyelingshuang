@@ -53,8 +53,8 @@ QAction* Menu::addAction(const QString& text,
 {
 	if (m_pCustomStyle)
 	{
-		int32_t uncheckMax = qMax(uncheckIconSize.width(), uncheckIconSize.height());
-		int32_t checkMax = qMax(checkIconSize.width(), checkIconSize.height());
+		qint32 uncheckMax = qMax(uncheckIconSize.width(), uncheckIconSize.height());
+		qint32 checkMax = qMax(checkIconSize.width(), checkIconSize.height());
 		m_pCustomStyle->setMaxSize(qMax(uncheckMax, checkMax));
 	}
 	QAction* item = new QAction(this);
@@ -77,7 +77,7 @@ void Menu::addMenu(Menu* menu)
 	m_vecMenu.push_back(menu);
 }
 
-void Menu::setSeparatorHeight(int32_t height, bool rePaint)
+void Menu::setSeparatorHeight(qint32 height, bool rePaint)
 {
 	m_itemName = L"separator";
 	ControlBase::setPxValue(L"height", height, true, rePaint);
@@ -87,13 +87,13 @@ void Menu::setSeparatorHeight(int32_t height, bool rePaint)
 void Menu::setSeparatorColor(const QColor& color, bool rePaint)
 {
 	m_itemName = L"separator";
-	std::map<int32_t, std::map<int32_t, QColor>> colorStateMap;
+	std::map<qint32, std::map<qint32, QColor>> colorStateMap;
 	colorStateMap[NORMAL][NORMAL] = color;
 	ControlBase::setColorStateMap(colorStateMap, L"background-color", true, rePaint);
 	m_itemName = L"item";
 }
 
-void Menu::setItemIconOrigin(int32_t leftOrigin, bool rePaint)
+void Menu::setItemIconOrigin(qint32 leftOrigin, bool rePaint)
 {
 	m_itemName = L"icon";
 	ControlBase::setPxValue(L"padding-left", leftOrigin, true, rePaint);
@@ -123,7 +123,7 @@ QIcon Menu::ChangeIcon(QAction* action, const QIcon& icon)
 		return result;
 	}
 	//如果本节点没有就找子节点
-	int32_t index = -1;
+	qint32 index = -1;
 	while (index++ != m_vecMenu.size() - 1)
 	{
 		Menu* menu = m_vecMenu[index];

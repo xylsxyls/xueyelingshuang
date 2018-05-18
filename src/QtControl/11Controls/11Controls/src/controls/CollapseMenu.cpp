@@ -84,8 +84,8 @@ void CollapseMenu::mouseMoveEvent(QMouseEvent *eve)
 	}
 
 	QRect rect = actionGeometry(pAction);
-	int32_t top = rect.top();
-	int32_t bottom = rect.bottom();
+	qint32 top = rect.top();
+	qint32 bottom = rect.bottom();
 	if (m_selectedLabelTop != nullptr)
 	{
 		m_selectedLabelTop->setGeometry(rect.left(), (top - 1) < 0 ? 0 : (top - 1), rect.width(), 1);

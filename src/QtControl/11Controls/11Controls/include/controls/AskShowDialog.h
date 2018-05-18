@@ -1,5 +1,4 @@
 #pragma once
-#include "DialogShow.h"
 #include "ControlsMacro.h"
 #include "NotifyDialog.h"
 
