@@ -48,17 +48,11 @@ rmdir /q /s "%~dp0src\OneKey\ipch\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Debug\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Release\"
 ::------------------------------------------------------------
-rmdir /q /s "%~dp0src\QtControl\qtcombobox\Win32\"
-rmdir /q /s "%~dp0src\QtControl\qtcombobox\ExternalControls\Debug\"
-rmdir /q /s "%~dp0src\QtControl\qtcombobox\ExternalControls\Release\"
-::------------------------------------------------------------
-rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\Win32\"
-rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\GameInfoWidgetApp\Debug\"
-rmdir /q /s "%~dp0src\QtControl\GameInfoWidget\GameInfoWidgetApp\GameInfoWidgetApp\Release\"
-::------------------------------------------------------------
-rmdir /q /s "%~dp0src\QtControl\dialogtest\Win32\"
-rmdir /q /s "%~dp0src\QtControl\dialogtest\ExternalControls\Debug\"
-rmdir /q /s "%~dp0src\QtControl\dialogtest\ExternalControls\Release\"
+rmdir /q /s "%~dp0src\QtControl\11Controls\output\"
+rmdir /q /s "%~dp0src\QtControl\11Controls\pdbs\"
+rmdir /q /s "%~dp0src\QtControl\11Controls\11Controls\Debug\"
+rmdir /q /s "%~dp0src\QtControl\11Controls\11Controls\Release\"
+rmdir /q /s "%~dp0src\QtControl\11Controls\11Controls\GeneratedFiles\"
 ::------------------------------------------------------------
 
 ::-------------------删除控制台临时文件-----------------------

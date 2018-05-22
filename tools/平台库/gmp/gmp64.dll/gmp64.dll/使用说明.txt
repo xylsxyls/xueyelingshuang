@@ -1,0 +1,6 @@
+用于64位VC与mingw系统的dll版的GMP大数运行库，版本6.0.0a
+包含gmp.h，VC下引入libgmp.dll.lib，mingw下引入libgmp.dll.a
+然后把libgmp-10.dll放到程序执行目录下即可使用
+
+需要注意，VC下，凡是参数需要stdout, stderr标准输入输出的，与FILE文件类型的函数
+都会报错暂时不能使用，gmp_printf可以使用，如果需要输出到文件，请自己转成字符串输出

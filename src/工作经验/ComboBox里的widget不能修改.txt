@@ -1,0 +1,1 @@
+通过setItemWidget设置进去的widget不能增删子节点
