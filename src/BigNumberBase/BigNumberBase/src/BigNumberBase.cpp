@@ -17,12 +17,14 @@ BigNumberBase::~BigNumberBase()
 	mpz_clear(m_integer);
 }
 
-BigNumberBase::BigNumberBase(int32_t num)
+BigNumberBase::BigNumberBase(int32_t num):
+m_prec(0)
 {
 	mpz_init_set_ui(m_integer, num);
 }
 
-BigNumberBase::BigNumberBase(const char* num)
+BigNumberBase::BigNumberBase(const char* num):
+m_prec(0)
 {
 	std::vector<std::string> vecNum = CStringManager::split(num, ".");
 	if (vecNum.size() == 1)
@@ -44,15 +46,24 @@ BigNumberBase::BigNumberBase(const BigNumberBase& num)
 	m_prec = num.m_prec;
 }
 
+BigNumberBase BigNumberBase::operator = (const BigNumberBase& num)
+{
+	mpz_set(m_integer, num.m_integer);
+	m_prec = num.m_prec;
+	return *this;
+}
+
 void BigNumberBase::TenExp(mpz_t& num, int32_t exp)
 {
-	char* szExp = new char[exp + 2];
+	char* szExp = (char*)malloc(exp + 2);
 	memset(szExp, 48, exp + 1);
 	szExp[exp + 1] = 0;
 	szExp[0] = 49;
 	mpz_t mpzExp;
 	mpz_init_set_str(mpzExp, szExp, 10);
 	mpz_mul(num, num, mpzExp);
+	mpz_clear(mpzExp);
+	::free(szExp);
 }
 
 BigNumberBase operator + (const BigNumberBase& x, const BigNumberBase& y)
@@ -111,15 +122,67 @@ BigNumberBase operator * (const BigNumberBase& x, const BigNumberBase& y)
 	return result;
 }
 
+BigNumberBase operator / (const BigNumberBase& x, const BigNumberBase& y)
+{
+	if (x.m_prec != 0 || y.m_prec != 0)
+	{
+		abort();
+	}
+	BigNumberBase result;
+	mpz_tdiv_q(result.m_integer, x.m_integer, y.m_integer);
+	return result;
+}
+
+BigNumberBase operator % (const BigNumberBase& x, const BigNumberBase& y)
+{
+	return x - x / y * y;
+}
+
+BigNumberBase::BigNumberCompare BigNumberBase::Compare(const BigNumberBase& x, const BigNumberBase& y)
+{
+	BigNumberBase result = x - y;
+	char firstChara = result.toString()[0];
+	if (firstChara == '-')
+	{
+		return BigNumberCompare::SMALL;
+	}
+	else
+	{
+		int32_t count = mpz_sizeinbase(result.m_integer, 10);
+		if (count == 1 && firstChara == '0')
+		{
+			return BigNumberCompare::EQUAL;
+		}
+		return BigNumberCompare::BIG;
+	}
+}
+
 std::string BigNumberBase::toString()
 {
-	int32_t count = mpz_sizeinbase(m_integer, 2);
-	char* num = (char*)::calloc(count + 1, sizeof(char));
-	memset(num, 0, count + 1);
+	int32_t count = mpz_sizeinbase(m_integer, 10);
+	char* num = (char*)::malloc(count + 1);
 	mpz_get_str(num, 10, m_integer);
 	std::string result = num;
+	if (m_prec == 0)
+	{
+		::free(num);
+		return result;
+	}
+	bool isMinus = (result[0] == '-');
+	int32_t countValid = result.size() - (isMinus ? 1 : 0);
+	int32_t insertCount = m_prec - countValid + 1;
+	if (insertCount > 0)
+	{
+		result.insert(isMinus ? 1 : 0, insertCount, '0');
+	}
+	result.insert(result.size() - m_prec, 1, '.');
 	::free(num);
 	return result;
+}
+
+void BigNumberBase::setMaxPrec(int32_t maxPrec)
+{
+	m_maxPrec = maxPrec;
 }
 
 #include <string>
@@ -127,9 +190,62 @@ std::string BigNumberBase::toString()
 
 int main()
 {
-	BigNumberBase aaaaa = 5000000;
-	BigNumberBase bbbbb = 200000;
-	std::string str = (aaaaa - bbbbb).toString();
+	int i = 10000000;
+	while (i-- != 0)
+	{
+		BigNumberBase aaaaa = "0";
+		BigNumberBase bbbbb = "0.0";
+		BigNumberBase ccccc = aaaaa - bbbbb;
+		//std::string str3 = ccccc.toString();
+		std::string sdsd = aaaaa.toString();
+		std::string sdsd2 = bbbbb.toString();
+		std::string str2 = (aaaaa - bbbbb).toString();
+	}
+	//void mpz_mod (mpz_t r, mpz_t n, mpz_t d);
+	//unsigned long int mpz_cdiv_qr_ui(mpz_t q, mpz_t r, mpz_t n, unsigned long int d);
+	//void mpz_cdiv_q(mpz_t q, mpz_t n, mpz_t d);
+
+	BigNumberBase aaaaa = "0";
+	BigNumberBase bbbbb = "0.0";
+	BigNumberBase ccccc = aaaaa - bbbbb;
+	//std::string str3 = ccccc.toString();
+	std::string sdsd = aaaaa.toString();
+	std::string sdsd2 = bbbbb.toString();
+	std::string str2 = (aaaaa - bbbbb).toString();
+	auto ss2 = BigNumberBase::Compare(aaaaa, bbbbb);
+	std::string str = (aaaaa % bbbbb).toString();
+	int x = 101;
+	int y = 3;
+	int z = x % y;
+
+	aaaaa = "102";
+	bbbbb = "3";
+	str = (aaaaa % bbbbb).toString();
+	x = 102;
+	y = 3;
+	z = x % y;
+
+	aaaaa = "103";
+	bbbbb = "3";
+	str = (aaaaa % bbbbb).toString();
+	x = 103;
+	y = 3;
+	z = x % y;
+
+	aaaaa = "104";
+	bbbbb = "3";
+	str = (aaaaa % bbbbb).toString();
+	x = 104;
+	y = 3;
+	z = x % y;
+
+	aaaaa = "105";
+	bbbbb = "3";
+	str = (aaaaa % bbbbb).toString();
+	x = 105;
+	y = 3;
+	z = x % y;
+
 	mpz_t a, b, c, d;
 	mpz_init(a);
 	mpz_init(b);
@@ -160,7 +276,7 @@ int main()
 	gmp_printf("sd = %Z\n", sss);
 	char sdfsd[1024] = {};
 	gmp_sprintf(sdfsd, "%F", sss);
-	mp_exp_t exp;
+	//mp_exp_t exp;
 	mpz_get_str(sdfsd, 10,sss);
 
 	int xs = mpz_cmp(sss, ss);
