@@ -9,9 +9,35 @@ class BigNumberBaseAPI BigNumberBase
 public:
 	enum BigNumberCompare
 	{
+		/** 第一个比第二个大
+		*/
 		BIG,
+
+		/** 第一个比第二个小
+		*/
 		SMALL,
+
+		/** 相等
+		*/
 		EQUAL
+	};
+	enum PrecFlag
+	{
+		/** 去尾
+		*/
+		ROUND_OFF,
+
+		/** 四舍五入
+		*/
+		HALF_ADJUST,
+
+		/** 总是向上一位
+		*/
+		ROUND_UP,
+
+		/** 总是向下一位
+		*/
+		ROUND_DOWN
 	};
 public:
 	/** 构造函数
@@ -21,11 +47,6 @@ public:
 	/** 析构函数
 	*/
 	~BigNumberBase();
-
-	/** 构造函数
-	@param [in] num 数值
-	*/
-	BigNumberBase(int32_t num);
 
 	/** 构造函数
 	@param [in] num 数值字符串
@@ -50,19 +71,26 @@ public:
 	friend BigNumberBase operator / (const BigNumberBase& x, const BigNumberBase& y);
 	friend BigNumberBase operator % (const BigNumberBase& x, const BigNumberBase& y);
 
+	BigNumberBase div(const BigNumberBase& divisor, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
+
+	BigNumberBase pow(const BigNumberBase& powNum, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
+
 	//只比较大小不比较精度
 	static BigNumberCompare Compare(const BigNumberBase& x, const BigNumberBase& y);
 
-	std::string toString();
+	std::string toString() const;
 
-	void setMaxPrec(int32_t maxPrec);
+	void setFixedPrec(int32_t fixedPrec, PrecFlag fixedPrecFlag = HALF_ADJUST);
+
+	void setPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
 	
 private:
 	//num*10的exp次方
 	static void TenExp(mpz_t& num, int32_t exp);
 
-private:
+public:
 	mpz_t m_integer;
 	int32_t m_prec;
-	int32_t m_maxPrec;
+	int32_t m_fixedPrec;
+	PrecFlag m_fixedPrecFlag;
 };
