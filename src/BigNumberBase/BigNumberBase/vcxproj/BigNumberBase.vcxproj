@@ -26,6 +26,9 @@
   <ItemGroup>
     <ClCompile Include="..\src\BigNumberBase.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\BigNumberBase.inl" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
     <RootNamespace>BigNumberBase</RootNamespace>

@@ -1,9 +1,9 @@
 #pragma once
 #include "BigNumberBaseMacro.h"
 #include <stdint.h>
-#include "gmp.h"
 #include <string>
 
+class GmpInt;
 class BigNumberBaseAPI BigNumberBase
 {
 public:
@@ -89,14 +89,19 @@ public:
 	void setFixedPrec(int32_t fixedPrec, PrecFlag fixedPrecFlag = HALF_ADJUST);
 
 	void setPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
-	
+
 private:
-	//num*10µÄexp´Î·½
-	static void TenExp(mpz_t& num, int32_t exp);
+	static BigNumberBase add(const BigNumberBase& x, const BigNumberBase& y);
+	static BigNumberBase sub(const BigNumberBase& x, const BigNumberBase& y);
+	static BigNumberBase mul(const BigNumberBase& x, const BigNumberBase& y);
+	static BigNumberBase div(const BigNumberBase& x, const BigNumberBase& y);
+	static BigNumberBase mod(const BigNumberBase& x, const BigNumberBase& y);
 
 public:
-	mpz_t m_integer;
+	GmpInt* m_gmp;
 	int32_t m_prec;
 	int32_t m_fixedPrec;
 	PrecFlag m_fixedPrecFlag;
 };
+
+#include "BigNumberBase.inl"

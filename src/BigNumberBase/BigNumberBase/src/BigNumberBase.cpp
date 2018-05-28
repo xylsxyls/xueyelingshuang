@@ -7,17 +7,25 @@
 #pragma comment(lib, "libmingwex.a")
 #pragma comment(lib, "libmsvcrt.a")
 
+class GmpInt
+{
+public:
+	mpz_t m_integer;
+};
+
 BigNumberBase::BigNumberBase():
 m_prec(0),
 m_fixedPrec(-1),
 m_fixedPrecFlag(HALF_ADJUST)
 {
-	mpz_init(m_integer);
+	m_gmp = new GmpInt;
+	mpz_init(m_gmp->m_integer);
 }
 
 BigNumberBase::~BigNumberBase()
 {
-	mpz_clear(m_integer);
+	mpz_clear(m_gmp->m_integer);
+	delete m_gmp;
 }
 
 BigNumberBase::BigNumberBase(const char* num):
@@ -25,17 +33,18 @@ m_prec(0),
 m_fixedPrec(-1),
 m_fixedPrecFlag(HALF_ADJUST)
 {
+	m_gmp = new GmpInt;
 	std::vector<std::string> vecNum = CStringManager::split(num, ".");
 	if (vecNum.size() == 1)
 	{
-		mpz_init_set_str(m_integer, num, 10);
+		mpz_init_set_str(m_gmp->m_integer, num, 10);
 	}
 	else if (vecNum.size() == 2)
 	{
 		m_prec = vecNum[1].size();
 		std::string strNum = num;
 		CStringManager::Replace(strNum, ".", "");
-		mpz_init_set_str(m_integer, strNum.c_str(), 10);
+		mpz_init_set_str(m_gmp->m_integer, strNum.c_str(), 10);
 	}
 }
 
@@ -44,12 +53,13 @@ m_prec(num.m_prec),
 m_fixedPrec(-1),
 m_fixedPrecFlag(HALF_ADJUST)
 {
-	mpz_init_set(m_integer, num.m_integer);
+	m_gmp = new GmpInt;
+	mpz_init_set(m_gmp->m_integer, num.m_gmp->m_integer);
 }
 
 BigNumberBase BigNumberBase::operator = (const BigNumberBase& num)
 {
-	mpz_set(m_integer, num.m_integer);
+	mpz_set(m_gmp->m_integer, num.m_gmp->m_integer);
 	m_prec = num.m_prec;
 	if (m_fixedPrec != -1)
 	{
@@ -58,7 +68,8 @@ BigNumberBase BigNumberBase::operator = (const BigNumberBase& num)
 	return *this;
 }
 
-void BigNumberBase::TenExp(mpz_t& num, int32_t exp)
+//num*10µÄexp´Î·½
+void TenExp(mpz_t& num, int32_t exp)
 {
 	if (exp == 0)
 	{
@@ -75,93 +86,97 @@ void BigNumberBase::TenExp(mpz_t& num, int32_t exp)
 	::free(szExp);
 }
 
-BigNumberBase operator + (const BigNumberBase& x, const BigNumberBase& y)
+BigNumberBase BigNumberBase::add(const BigNumberBase& x, const BigNumberBase& y)
 {
 	BigNumberBase result;
 	if (x.m_prec == y.m_prec)
 	{
-		mpz_add(result.m_integer, x.m_integer, y.m_integer);
+		mpz_add(result.m_gmp->m_integer, x.m_gmp->m_integer, y.m_gmp->m_integer);
 		result.m_prec = x.m_prec;
 	}
 	else if (x.m_prec < y.m_prec)
 	{
 		result = x;
-		BigNumberBase::TenExp(result.m_integer, y.m_prec - x.m_prec);
+		TenExp(result.m_gmp->m_integer, y.m_prec - x.m_prec);
 		result.m_prec = y.m_prec;
-		mpz_add(result.m_integer, result.m_integer, y.m_integer);
+		mpz_add(result.m_gmp->m_integer, result.m_gmp->m_integer, y.m_gmp->m_integer);
 	}
 	else
 	{
 		result = y;
-		BigNumberBase::TenExp(result.m_integer, x.m_prec - y.m_prec);
+		TenExp(result.m_gmp->m_integer, x.m_prec - y.m_prec);
 		result.m_prec = x.m_prec;
-		mpz_add(result.m_integer, x.m_integer, result.m_integer);
+		mpz_add(result.m_gmp->m_integer, x.m_gmp->m_integer, result.m_gmp->m_integer);
 	}
 	return result;
 }
 
-BigNumberBase operator - (const BigNumberBase& x, const BigNumberBase& y)
+BigNumberBase BigNumberBase::sub(const BigNumberBase& x, const BigNumberBase& y)
 {
 	BigNumberBase result;
 	if (x.m_prec == y.m_prec)
 	{
 		result.m_prec = x.m_prec;
-		mpz_sub(result.m_integer, x.m_integer, y.m_integer);
+		mpz_sub(result.m_gmp->m_integer, x.m_gmp->m_integer, y.m_gmp->m_integer);
 	}
 	else if (x.m_prec < y.m_prec)
 	{
 		result = x;
-		BigNumberBase::TenExp(result.m_integer, y.m_prec - x.m_prec);
+		TenExp(result.m_gmp->m_integer, y.m_prec - x.m_prec);
 		result.m_prec = y.m_prec;
-		mpz_sub(result.m_integer, result.m_integer, y.m_integer);
+		mpz_sub(result.m_gmp->m_integer, result.m_gmp->m_integer, y.m_gmp->m_integer);
 	}
 	else
 	{
 		result = y;
-		BigNumberBase::TenExp(result.m_integer, x.m_prec - y.m_prec);
+		TenExp(result.m_gmp->m_integer, x.m_prec - y.m_prec);
 		result.m_prec = x.m_prec;
-		mpz_sub(result.m_integer, x.m_integer, result.m_integer);
+		mpz_sub(result.m_gmp->m_integer, x.m_gmp->m_integer, result.m_gmp->m_integer);
 	}
 	return result;
 }
 
-BigNumberBase operator * (const BigNumberBase& x, const BigNumberBase& y)
+BigNumberBase BigNumberBase::mul(const BigNumberBase& x, const BigNumberBase& y)
 {
 	BigNumberBase result;
-	mpz_mul(result.m_integer, x.m_integer, y.m_integer);
+	mpz_mul(result.m_gmp->m_integer, x.m_gmp->m_integer, y.m_gmp->m_integer);
 	result.m_prec = x.m_prec + y.m_prec;
 	return result;
 }
 
-BigNumberBase operator / (const BigNumberBase& x, const BigNumberBase& y)
+BigNumberBase BigNumberBase::div(const BigNumberBase& x, const BigNumberBase& y)
 {
 	if (x.m_prec != 0 || y.m_prec != 0)
 	{
 		abort();
 	}
 	BigNumberBase result;
-	mpz_tdiv_q(result.m_integer, x.m_integer, y.m_integer);
+	mpz_tdiv_q(result.m_gmp->m_integer, x.m_gmp->m_integer, y.m_gmp->m_integer);
 	return result;
 }
 
-BigNumberBase operator % (const BigNumberBase& x, const BigNumberBase& y)
+BigNumberBase BigNumberBase::mod(const BigNumberBase& x, const BigNumberBase& y)
 {
 	return x - x / y * y;
 }
 
 BigNumberBase BigNumberBase::div(const BigNumberBase& divisor, int32_t prec, PrecFlag flag)
 {
+	if (prec == -1)
+	{
+		prec = Calc::PRECISE;
+	}
 	if (m_prec >= divisor.m_prec)
 	{
 		BigNumberBase dividerTemp = *this;
-		BigNumberBase::TenExp(dividerTemp.m_integer, prec + Calc::PRECISE);
+		TenExp(dividerTemp.m_gmp->m_integer, prec + Calc::PRECISE);
 		BigNumberBase divisorTemp = divisor;
-		BigNumberBase::TenExp(divisorTemp.m_integer, m_prec - divisor.m_prec);
+		TenExp(divisorTemp.m_gmp->m_integer, m_prec - divisor.m_prec);
 		dividerTemp.m_prec = 0;
 		divisorTemp.m_prec = 0;
 
 		BigNumberBase result;
-		mpz_tdiv_q(result.m_integer, dividerTemp.m_integer, divisorTemp.m_integer);
+		mpz_tdiv_q(result.m_gmp->m_integer, dividerTemp.m_gmp->m_integer, divisorTemp.m_gmp->m_integer);
 		result.m_prec = prec + Calc::PRECISE;
 		result.setPrec(prec, flag);
 		return result;
@@ -169,13 +184,13 @@ BigNumberBase BigNumberBase::div(const BigNumberBase& divisor, int32_t prec, Pre
 	else
 	{
 		BigNumberBase dividerTemp = *this;
-		BigNumberBase::TenExp(dividerTemp.m_integer, divisor.m_prec - m_prec + prec + Calc::PRECISE);
+		TenExp(dividerTemp.m_gmp->m_integer, divisor.m_prec - m_prec + prec + Calc::PRECISE);
 		BigNumberBase divisorTemp = divisor;
 		dividerTemp.m_prec = 0;
 		divisorTemp.m_prec = 0;
 
 		BigNumberBase result;
-		mpz_tdiv_q(result.m_integer, dividerTemp.m_integer, divisorTemp.m_integer);
+		mpz_tdiv_q(result.m_gmp->m_integer, dividerTemp.m_gmp->m_integer, divisorTemp.m_gmp->m_integer);
 		result.m_prec = prec + Calc::PRECISE;
 		result.setPrec(prec, flag);
 		return result;
@@ -184,7 +199,10 @@ BigNumberBase BigNumberBase::div(const BigNumberBase& divisor, int32_t prec, Pre
 
 BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, PrecFlag flag)
 {
-	//void mpz_pow_ui(mpz_t rop, mpz_t base, unsigned long int exp);
+	if (prec == -1)
+	{
+		prec = Calc::PRECISE;
+	}
 	BigNumberBase result;
 	if (BigNumberBase::Compare(powNum, "0") == EQUAL)
 	{
@@ -223,34 +241,25 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 		else
 		{
 			BigNumberBase resultBk = result;
-			mpz_pow_ui(resultBk.m_integer, m_integer, indexBk);
-			mpz_root(resultBk.m_integer, resultBk.m_integer, indexNumBk);
+			mpz_pow_ui(resultBk.m_gmp->m_integer, m_gmp->m_integer, indexBk);
+			mpz_root(resultBk.m_gmp->m_integer, resultBk.m_gmp->m_integer, indexNumBk);
 			isMinus = true;
 		}
 		*this = *this * "-1";
 	}
 	
-	mpz_pow_ui(result.m_integer, m_integer, index);
-	std::string sdsdsd = result.toString();
-	BigNumberBase::TenExp(result.m_integer, (unsigned long int)::pow(10, powNum.m_prec) * (prec + Calc::PRECISE));
-	sdsdsd = result.toString();
+	mpz_pow_ui(result.m_gmp->m_integer, m_gmp->m_integer, index);
+	TenExp(result.m_gmp->m_integer, (unsigned long int)::pow(10, powNum.m_prec) * (prec + Calc::PRECISE));
 	unsigned long int exp = (unsigned long int)::pow(10, powNum.m_prec);
-	mpz_root(result.m_integer, result.m_integer, exp);
-	sdsdsd = result.toString();
+	mpz_root(result.m_gmp->m_integer, result.m_gmp->m_integer, exp);
 	result.m_prec = prec + Calc::PRECISE;
-	sdsdsd = result.toString();
-	
 
 	BigNumberBase divisorMultiple = "1";
-	BigNumberBase::TenExp(divisorMultiple.m_integer, m_prec);
-	sdsdsd = divisorMultiple.toString();
-	mpz_pow_ui(divisorMultiple.m_integer, divisorMultiple.m_integer, index);
-	BigNumberBase::TenExp(divisorMultiple.m_integer, exp * (prec + Calc::PRECISE));
-	sdsdsd = divisorMultiple.toString();
-	mpz_root(divisorMultiple.m_integer, divisorMultiple.m_integer, exp);
-	sdsdsd = divisorMultiple.toString();
+	TenExp(divisorMultiple.m_gmp->m_integer, m_prec);
+	mpz_pow_ui(divisorMultiple.m_gmp->m_integer, divisorMultiple.m_gmp->m_integer, index);
+	TenExp(divisorMultiple.m_gmp->m_integer, exp * (prec + Calc::PRECISE));
+	mpz_root(divisorMultiple.m_gmp->m_integer, divisorMultiple.m_gmp->m_integer, exp);
 	divisorMultiple.m_prec = prec + Calc::PRECISE;
-	sdsdsd = divisorMultiple.toString();
 
 	result = result.div(divisorMultiple, prec + Calc::PRECISE, flag);
 
@@ -281,7 +290,7 @@ BigNumberBase::BigNumberCompare BigNumberBase::Compare(const BigNumberBase& x, c
 	}
 	else
 	{
-		int32_t count = mpz_sizeinbase(result.m_integer, 10);
+		int32_t count = mpz_sizeinbase(result.m_gmp->m_integer, 10);
 		if (count == 1 && firstChara == '0' && lastChara == '0')
 		{
 			return BigNumberCompare::EQUAL;
@@ -292,9 +301,9 @@ BigNumberBase::BigNumberCompare BigNumberBase::Compare(const BigNumberBase& x, c
 
 std::string BigNumberBase::toString() const
 {
-	int32_t count = mpz_sizeinbase(m_integer, 10);
+	int32_t count = mpz_sizeinbase(m_gmp->m_integer, 10);
 	char* num = (char*)::malloc(count + 2);
-	mpz_get_str(num, 10, m_integer);
+	mpz_get_str(num, 10, m_gmp->m_integer);
 	std::string result = num;
 	if (m_prec == 0)
 	{
@@ -315,6 +324,10 @@ std::string BigNumberBase::toString() const
 
 void BigNumberBase::setFixedPrec(int32_t fixedPrec, PrecFlag fixedPrecFlag)
 {
+	if (fixedPrec == -1)
+	{
+		fixedPrec = Calc::PRECISE;
+	}
 	m_fixedPrec = fixedPrec;
 	m_fixedPrecFlag = fixedPrecFlag;
 	setPrec(m_fixedPrec, m_fixedPrecFlag);
@@ -322,13 +335,17 @@ void BigNumberBase::setFixedPrec(int32_t fixedPrec, PrecFlag fixedPrecFlag)
 
 void BigNumberBase::setPrec(int32_t prec, PrecFlag flag)
 {
+	if (prec == -1)
+	{
+		prec = Calc::PRECISE;
+	}
 	if (m_prec == prec)
 	{
 		return;
 	}
 	if (m_prec < prec)
 	{
-		BigNumberBase::TenExp(m_integer, (prec - m_prec));
+		TenExp(m_gmp->m_integer, (prec - m_prec));
 		m_prec = prec;
 		return;
 	}
@@ -362,17 +379,17 @@ void BigNumberBase::setPrec(int32_t prec, PrecFlag flag)
 	{
 	case BigNumberBase::ROUND_OFF:
 	{
-		mpz_tdiv_q(m_integer, m_integer, mpzExp);
+		mpz_tdiv_q(m_gmp->m_integer, m_gmp->m_integer, mpzExp);
 		break;
 	}
 	case BigNumberBase::ROUND_UP:
 	{
-		mpz_cdiv_q(m_integer, m_integer, mpzExp);
+		mpz_cdiv_q(m_gmp->m_integer, m_gmp->m_integer, mpzExp);
 		break;
 	}
 	case BigNumberBase::ROUND_DOWN:
 	{
-		mpz_fdiv_q(m_integer, m_integer, mpzExp);
+		mpz_fdiv_q(m_gmp->m_integer, m_gmp->m_integer, mpzExp);
 		break;
 	}
 	default:

@@ -26,6 +26,9 @@
   <ItemGroup>
     <ClCompile Include="..\src\BigNumber.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\BigNumber.inl" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
     <RootNamespace>BigNumber</RootNamespace>

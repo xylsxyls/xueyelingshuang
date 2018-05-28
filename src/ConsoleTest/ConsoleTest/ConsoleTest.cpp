@@ -1,116 +1,52 @@
 #include "ConsoleTest.h"
 #include <stdint.h>
-#include <stdio.h>
-#include <windows.h>
+#include "BigNumber/BigNumberAPI.h"
 
-template<typename Singleton>
-class SingletonBase
+#include <string>
+#include <iostream>
+#include "D:\\SendToMessageTest.h"
+
+int main()
 {
-public:
-    /** 单一实例
-    @return 返回单一实例
-    */
-    static Singleton& instance();
-
-    /** 实例是否存在
-    @return 返回是否存在
-    */
-    static bool hasInstance();
-
-    /** 释放实例，释放之后不再可以创建
-    */
-    static void releaseInstance();
-
-protected:
-    static Singleton* s_singleton;
-};
-
-template<typename Singleton>
-Singleton* SingletonBase<Singleton>::s_singleton = nullptr;
-
-template<typename Singleton>
-void SingletonBase<Singleton>::releaseInstance()
-{
-    if (s_singleton != nullptr)
-    {
-        delete s_singleton;
-        s_singleton = nullptr;
-    }
-}
-
-template<typename Singleton>
-bool SingletonBase<Singleton>::hasInstance()
-{
-    return s_singleton != nullptr;
-}
-
-template<typename Singleton>
-Singleton& SingletonBase<Singleton>::instance()
-{
-    if (s_singleton == nullptr)
-    {
-        s_singleton = new Singleton;
-        if (s_singleton == nullptr)
-        {
-            abort();
-        }
-    }
-    return *s_singleton;
-}
-
-template<typename Manager>
-class ManagerBase : public SingletonBase < Manager >
-{
-public:
-    /** 单一实例
-    @return 返回单一实例
-    */
-    static Manager& instance();
-
-    /** 释放实例，释放之后不再可以创建
-    */
-    static void releaseInstance();
-
-protected:
-    static bool s_isUsed;
-};
-
-template<typename Manager>
-bool ManagerBase<Manager>::s_isUsed = false;
-
-template<typename Manager>
-void ManagerBase<Manager>::releaseInstance()
-{
-    SingletonBase<Manager>::releaseInstance();
-    s_isUsed = true;
-}
-
-template<typename Manager>
-Manager& ManagerBase<Manager>::instance()
-{
-    if (s_isUsed)
-    {
-        abort();
-    }
-    return SingletonBase<Manager>::instance();
-}
-
-class A : public ManagerBase < A >
-{
-
-};
-
-class B : public ManagerBase < B >
-{
-
-};
-
-int32_t main()
-{
-    A::instance();
-    B::instance();
-    A::releaseInstance();
-    B::releaseInstance();
-    getchar();
+	BigNumber x = "-0.2";
+	BigNumber y = "0.4";
+	RCSend("x = %s,y = %s\n", x.toString().c_str(), y.toString().c_str());
+	RCSend("x + y = %s\n", (x + y).toString().c_str());
+	RCSend("x - y = %s\n", (x - y).toString().c_str());
+	RCSend("x * y = %s\n", (x * y).toString().c_str());
+	RCSend("x / y = %s\n", (x / y).toString().c_str());
+	RCSend("x ^ y = %s\n", x.pow(y).toString().c_str());
+	RCSend("\n");
+	std::vector<std::string> xVec;
+	xVec.push_back("0.2");
+	xVec.push_back("-0.2");
+	xVec.push_back("2.2");
+	xVec.push_back("-2.2");
+	std::vector<std::string> yVec;
+	yVec.push_back("0.2");
+	yVec.push_back("-0.2");
+	yVec.push_back("2.2");
+	yVec.push_back("-2.2");
+	for (unsigned int xIndex = 0; xIndex < xVec.size(); xIndex++)
+	{
+		for (unsigned int yIndex = 0; yIndex < yVec.size(); yIndex++)
+		{
+			x = xVec[xIndex].c_str();
+			y = yVec[yIndex].c_str();
+			RCSend("x = %s,y = %s\n", x.toString().c_str(), y.toString().c_str());
+			RCSend("x + y = %s\n", (x + y).toString().c_str());
+			RCSend("x - y = %s\n", (x - y).toString().c_str());
+			RCSend("x * y = %s\n", (x * y).toString().c_str());
+			RCSend("x / y = %s\n", (x / y).toString().c_str());
+			if (x == "0")
+			{
+				RCSend("\n");
+				continue;
+			}
+			RCSend("x ^ y = %s\n", x.pow(y).toString().c_str());
+			RCSend("\n");
+		}
+	}
+	getchar();
 	return 0;
 }
