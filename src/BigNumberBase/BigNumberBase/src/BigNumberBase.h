@@ -39,6 +39,10 @@ public:
 		*/
 		ROUND_DOWN
 	};
+	enum Calc
+	{
+		PRECISE = 16
+	};
 public:
 	/** 构造函数
 	*/
@@ -73,6 +77,8 @@ public:
 
 	BigNumberBase div(const BigNumberBase& divisor, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
+	/** 乘方，指数必须在两倍int的范围之内
+	*/
 	BigNumberBase pow(const BigNumberBase& powNum, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
 	//只比较大小不比较精度

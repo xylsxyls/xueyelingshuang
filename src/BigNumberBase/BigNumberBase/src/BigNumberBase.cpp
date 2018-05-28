@@ -81,6 +81,7 @@ BigNumberBase operator + (const BigNumberBase& x, const BigNumberBase& y)
 	if (x.m_prec == y.m_prec)
 	{
 		mpz_add(result.m_integer, x.m_integer, y.m_integer);
+		result.m_prec = x.m_prec;
 	}
 	else if (x.m_prec < y.m_prec)
 	{
@@ -153,7 +154,7 @@ BigNumberBase BigNumberBase::div(const BigNumberBase& divisor, int32_t prec, Pre
 	if (m_prec >= divisor.m_prec)
 	{
 		BigNumberBase dividerTemp = *this;
-		BigNumberBase::TenExp(dividerTemp.m_integer, prec + 1);
+		BigNumberBase::TenExp(dividerTemp.m_integer, prec + Calc::PRECISE);
 		BigNumberBase divisorTemp = divisor;
 		BigNumberBase::TenExp(divisorTemp.m_integer, m_prec - divisor.m_prec);
 		dividerTemp.m_prec = 0;
@@ -161,21 +162,21 @@ BigNumberBase BigNumberBase::div(const BigNumberBase& divisor, int32_t prec, Pre
 
 		BigNumberBase result;
 		mpz_tdiv_q(result.m_integer, dividerTemp.m_integer, divisorTemp.m_integer);
-		result.m_prec = prec + 1;
+		result.m_prec = prec + Calc::PRECISE;
 		result.setPrec(prec, flag);
 		return result;
 	}
 	else
 	{
 		BigNumberBase dividerTemp = *this;
-		BigNumberBase::TenExp(dividerTemp.m_integer, divisor.m_prec - m_prec + prec + 1);
+		BigNumberBase::TenExp(dividerTemp.m_integer, divisor.m_prec - m_prec + prec + Calc::PRECISE);
 		BigNumberBase divisorTemp = divisor;
 		dividerTemp.m_prec = 0;
 		divisorTemp.m_prec = 0;
 
 		BigNumberBase result;
 		mpz_tdiv_q(result.m_integer, dividerTemp.m_integer, divisorTemp.m_integer);
-		result.m_prec = prec + 1;
+		result.m_prec = prec + Calc::PRECISE;
 		result.setPrec(prec, flag);
 		return result;
 	}
@@ -193,11 +194,6 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 	}
 	
 	BigNumberBase powNumTemp = powNum;
-	bool isMinus = (BigNumberBase::Compare(*this, "0") == SMALL);
-	if (isMinus)
-	{
-		*this = *this * "-1";
-	}
 	bool powIsMinus = (BigNumberBase::Compare(powNumTemp, "0") == SMALL);
 	if (powIsMinus)
 	{
@@ -206,43 +202,68 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 		sds = sds;
 	}
 	powNumTemp.m_prec = 0;
-	unsigned long int sds = strtoul(powNumTemp.toString().c_str(), nullptr, 10);
-	mpz_pow_ui(result.m_integer, m_integer, sds);
+	unsigned long int index = strtoul(powNumTemp.toString().c_str(), nullptr, 10);
+	unsigned long int indexNum = (unsigned long int)::pow(10, powNum.m_prec);
+	
+	bool isMinus = (BigNumberBase::Compare(*this, "0") == SMALL);
+	if (isMinus)
+	{
+		//先判断是否有效
+		unsigned long int indexBk = index;
+		unsigned long int indexNumBk = indexNum;
+		while (indexBk % 2 == 0 && indexNumBk % 2 == 0)
+		{
+			indexBk = indexBk / 2;
+			indexNumBk = indexNumBk / 2;
+		}
+		if (indexBk % 2 == 0)
+		{
+			isMinus = false;
+		}
+		else
+		{
+			BigNumberBase resultBk = result;
+			mpz_pow_ui(resultBk.m_integer, m_integer, indexBk);
+			mpz_root(resultBk.m_integer, resultBk.m_integer, indexNumBk);
+			isMinus = true;
+		}
+		*this = *this * "-1";
+	}
+	
+	mpz_pow_ui(result.m_integer, m_integer, index);
 	std::string sdsdsd = result.toString();
-	BigNumberBase::TenExp(result.m_integer, (unsigned long int)::pow(10, powNum.m_prec) * (prec + 20));
+	BigNumberBase::TenExp(result.m_integer, (unsigned long int)::pow(10, powNum.m_prec) * (prec + Calc::PRECISE));
 	sdsdsd = result.toString();
 	unsigned long int exp = (unsigned long int)::pow(10, powNum.m_prec);
 	mpz_root(result.m_integer, result.m_integer, exp);
 	sdsdsd = result.toString();
-	result.m_prec = prec + 20;
+	result.m_prec = prec + Calc::PRECISE;
 	sdsdsd = result.toString();
 	
 
 	BigNumberBase divisorMultiple = "1";
 	BigNumberBase::TenExp(divisorMultiple.m_integer, m_prec);
 	sdsdsd = divisorMultiple.toString();
-	mpz_pow_ui(divisorMultiple.m_integer, divisorMultiple.m_integer, sds);
-	BigNumberBase::TenExp(divisorMultiple.m_integer, exp * (prec + 20));
+	mpz_pow_ui(divisorMultiple.m_integer, divisorMultiple.m_integer, index);
+	BigNumberBase::TenExp(divisorMultiple.m_integer, exp * (prec + Calc::PRECISE));
 	sdsdsd = divisorMultiple.toString();
 	mpz_root(divisorMultiple.m_integer, divisorMultiple.m_integer, exp);
 	sdsdsd = divisorMultiple.toString();
-	divisorMultiple.m_prec = prec + 20;
-	//divisorMultiple.setPrec(prec + 20);
+	divisorMultiple.m_prec = prec + Calc::PRECISE;
 	sdsdsd = divisorMultiple.toString();
-	//divisorMultiple.setPrec(prec + 20);
 
-	result = result.div(divisorMultiple, prec + 20, flag);
+	result = result.div(divisorMultiple, prec + Calc::PRECISE, flag);
 
 	if (powIsMinus)
 	{
 		BigNumberBase minusRoot = "1";
-		result = minusRoot.div(result, prec + 20, flag);
+		result = minusRoot.div(result, prec + Calc::PRECISE, flag);
 	}
 
 	result.setPrec(prec);
 	if (isMinus)
 	{
-		result = result * ((sds % 2 == 0) ? "1" : "-1");
+		result = result * "-1";
 	}
 	
 	return result;
@@ -363,106 +384,51 @@ void BigNumberBase::setPrec(int32_t prec, PrecFlag flag)
 	m_prec = prec;
 }
 
-#include <string>
-#include <iostream>
-
-int main()
-{
-	int i = 1;
-	while (i-- != 0)
-	{
-		BigNumberBase aaaaa = "5.12";
-		BigNumberBase bbbbb = "7.1";
-		BigNumberBase ccccc = aaaaa.div(bbbbb);
-		//std::string str3 = ccccc.toString();
-		std::string sdsd = aaaaa.toString();
-		std::string sdsd2 = bbbbb.toString();
-		std::string str2 = ccccc.toString();
-	}
-	//void mpz_mod (mpz_t r, mpz_t n, mpz_t d);
-	//unsigned long int mpz_cdiv_qr_ui(mpz_t q, mpz_t r, mpz_t n, unsigned long int d);
-	//void mpz_cdiv_q(mpz_t q, mpz_t n, mpz_t d);
-	auto sdsdssdd = BigNumberBase::Compare("0.01", "0");
-	BigNumberBase aaaaa = "-2";
-	BigNumberBase bbbbb = "-3";
-	BigNumberBase ccccc;
-	ccccc.setFixedPrec(12);
-	ccccc = aaaaa.pow(bbbbb, 10);
-	//ccccc.setPrec(4, BigNumberBase::HALF_ADJUST);
-	std::string str3 = ccccc.toString();
-	std::string sdsd = aaaaa.toString();
-	std::string sdsd2 = bbbbb.toString();
-	std::string str2 = (aaaaa - bbbbb).toString();
-	auto ss2 = BigNumberBase::Compare(aaaaa, bbbbb);
-	std::string str = (aaaaa % bbbbb).toString();
-	int x = 101;
-	int y = 3;
-	int z = x % y;
-
-	aaaaa = "102";
-	bbbbb = "3";
-	str = (aaaaa % bbbbb).toString();
-	x = 102;
-	y = 3;
-	z = x % y;
-
-	aaaaa = "103";
-	bbbbb = "3";
-	str = (aaaaa % bbbbb).toString();
-	x = 103;
-	y = 3;
-	z = x % y;
-
-	aaaaa = "104";
-	bbbbb = "3";
-	str = (aaaaa % bbbbb).toString();
-	x = 104;
-	y = 3;
-	z = x % y;
-
-	aaaaa = "105";
-	bbbbb = "3";
-	str = (aaaaa % bbbbb).toString();
-	x = 105;
-	y = 3;
-	z = x % y;
-
-	mpz_t a, b, c, d;
-	mpz_init(a);
-	mpz_init(b);
-	mpz_init(c);
-	mpz_init(d);
-	//计算2的1000次方
-	mpz_init_set_ui(a, 2);
-	mpz_pow_ui(c, a, 10);
-	gmp_printf("c = %Zd\n", c);
-
-	//计算12345678900987654321*98765432100123456789
-	mpz_init_set_str(b, "12345678900987654321.21", 10);//10进制 
-	mpz_init_set_str(c, "98765432100123456789.12", 10);
-	mpz_mul(d, b, c);
-	gmp_printf("d = %Zd\n", d);
-	mpz_clear(a);
-	mpz_clear(b);
-	mpz_clear(c);
-	mpz_clear(d);
-
-	mpz_t s, ss, sss;
-	mpz_init(s);
-	mpz_init(ss);
-	mpz_init(sss);
-	mpz_set_str(s, "11", 10);
-	mpz_set_str(ss, "-2", 10);
-	mpz_div(sss, s, ss);
-	gmp_printf("sd = %Z\n", sss);
-	char sdfsd[1024] = {};
-	gmp_sprintf(sdfsd, "%F", sss);
-	//mp_exp_t exp;
-	mpz_get_str(sdfsd, 10,sss);
-
-	int xs = mpz_cmp(sss, ss);
-
-	int ass = 11 / -2;
-	getchar();
-	return 0;
-}
+//#include <string>
+//#include <iostream>
+//#include "D:\\SendToMessageTest.h"
+//
+//int main()
+//{
+//	BigNumberBase x = "-0.2";
+//	BigNumberBase y = "0.4";
+//	RCSend("x = %s,y = %s\n", x.toString().c_str(), y.toString().c_str());
+//	RCSend("x + y = %s\n", (x + y).toString().c_str());
+//	RCSend("x - y = %s\n", (x - y).toString().c_str());
+//	RCSend("x * y = %s\n", (x * y).toString().c_str());
+//	RCSend("x / y = %s\n", x.div(y).toString().c_str());
+//	RCSend("x ^ y = %s\n", x.pow(y).toString().c_str());
+//	RCSend("\n");
+//	std::vector<std::string> xVec;
+//	xVec.push_back("0.2");
+//	xVec.push_back("-0.2");
+//	xVec.push_back("2.2");
+//	xVec.push_back("-2.2");
+//	std::vector<std::string> yVec;
+//	yVec.push_back("0.2");
+//	yVec.push_back("-0.2");
+//	yVec.push_back("2.2");
+//	yVec.push_back("-2.2");
+//	for (unsigned int xIndex = 0; xIndex < xVec.size(); xIndex++)
+//	{
+//		for (unsigned int yIndex = 0; yIndex < yVec.size(); yIndex++)
+//		{
+//			x = xVec[xIndex].c_str();
+//			y = yVec[yIndex].c_str();
+//			RCSend("x = %s,y = %s\n", x.toString().c_str(), y.toString().c_str());
+//			//RCSend("x + y = %s\n", (x + y).toString().c_str());
+//			//RCSend("x - y = %s\n", (x - y).toString().c_str());
+//			//RCSend("x * y = %s\n", (x * y).toString().c_str());
+//			//RCSend("x / y = %s\n", x.div(y).toString().c_str());
+//			if (BigNumberBase::Compare(x, "0") == BigNumberBase::SMALL)
+//			{
+//				RCSend("\n");
+//				continue;
+//			}
+//			RCSend("x ^ y = %s\n", x.pow(y).toString().c_str());
+//			RCSend("\n");
+//		}
+//	}
+//	getchar();
+//	return 0;
+//}
