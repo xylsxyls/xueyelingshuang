@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" Storage 32 dll debug same
