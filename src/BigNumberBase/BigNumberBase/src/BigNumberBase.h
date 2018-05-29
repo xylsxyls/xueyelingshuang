@@ -69,11 +69,11 @@ public:
 	BigNumberBase operator = (const BigNumberBase& num);
 
 public:
-	friend BigNumberBase operator + (const BigNumberBase& x, const BigNumberBase& y);
-	friend BigNumberBase operator - (const BigNumberBase& x, const BigNumberBase& y);
-	friend BigNumberBase operator * (const BigNumberBase& x, const BigNumberBase& y);
-	friend BigNumberBase operator / (const BigNumberBase& x, const BigNumberBase& y);
-	friend BigNumberBase operator % (const BigNumberBase& x, const BigNumberBase& y);
+	//friend BigNumberBase operator + (const BigNumberBase& x, const BigNumberBase& y);
+	//friend BigNumberBase operator - (const BigNumberBase& x, const BigNumberBase& y);
+	//friend BigNumberBase operator * (const BigNumberBase& x, const BigNumberBase& y);
+	//friend BigNumberBase operator / (const BigNumberBase& x, const BigNumberBase& y);
+	//friend BigNumberBase operator % (const BigNumberBase& x, const BigNumberBase& y);
 
 	BigNumberBase div(const BigNumberBase& divisor, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
@@ -90,7 +90,7 @@ public:
 
 	void setPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
 
-private:
+public:
 	static BigNumberBase add(const BigNumberBase& x, const BigNumberBase& y);
 	static BigNumberBase sub(const BigNumberBase& x, const BigNumberBase& y);
 	static BigNumberBase mul(const BigNumberBase& x, const BigNumberBase& y);

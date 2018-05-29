@@ -8,7 +8,7 @@
 
 int main()
 {
-	BigNumber x = "-0.2";
+	BigNumber x = "-1.2";
 	BigNumber y = "0.4";
 	RCSend("x = %s,y = %s\n", x.toString().c_str(), y.toString().c_str());
 	RCSend("x + y = %s\n", (x + y).toString().c_str());

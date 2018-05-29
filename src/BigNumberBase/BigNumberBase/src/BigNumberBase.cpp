@@ -157,7 +157,7 @@ BigNumberBase BigNumberBase::div(const BigNumberBase& x, const BigNumberBase& y)
 
 BigNumberBase BigNumberBase::mod(const BigNumberBase& x, const BigNumberBase& y)
 {
-	return x - x / y * y;
+	return sub(x, mul(div(x, y), y));
 }
 
 BigNumberBase BigNumberBase::div(const BigNumberBase& divisor, int32_t prec, PrecFlag flag)
@@ -215,7 +215,7 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 	bool powIsMinus = (BigNumberBase::Compare(powNumTemp, "0") == SMALL);
 	if (powIsMinus)
 	{
-		powNumTemp = powNumTemp * "-1";
+		powNumTemp = mul(powNumTemp, "-1");
 		std::string sds = powNumTemp.toString();
 		sds = sds;
 	}
@@ -245,7 +245,7 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 			mpz_root(resultBk.m_gmp->m_integer, resultBk.m_gmp->m_integer, indexNumBk);
 			isMinus = true;
 		}
-		*this = *this * "-1";
+		*this = mul(*this, "-1");
 	}
 	
 	mpz_pow_ui(result.m_gmp->m_integer, m_gmp->m_integer, index);
@@ -272,7 +272,7 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 	result.setPrec(prec);
 	if (isMinus)
 	{
-		result = result * "-1";
+		result = mul(result, "-1");
 	}
 	
 	return result;
@@ -280,7 +280,7 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 
 BigNumberBase::BigNumberCompare BigNumberBase::Compare(const BigNumberBase& x, const BigNumberBase& y)
 {
-	BigNumberBase result = x - y;
+	BigNumberBase result = sub(x, y);
 	std::string strResult = result.toString();
 	char firstChara = strResult[0];
 	char lastChara = strResult[strResult.size() - 1];

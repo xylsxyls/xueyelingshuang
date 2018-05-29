@@ -18,10 +18,10 @@ goto DllRelyTest_end
 set BigNumberBase_dlllib=lib
 set BigNumberBase_bit=%1
 set BigNumberBase_debugRelease=%3
-set BigNumberBase_allSame=%4
+set BigNumberBase_allSame=same
 if "%4" == "same" (goto BigNumberBase_callSame) else (goto BigNumberBase_callSimple)
 :BigNumberBase_callSame
-set BigNumberBase_dlllib=%2
+set BigNumberBase_dlllib=lib
 call "%CLOUD_REBUILD%" BigNumberBase %BigNumberBase_bit% %BigNumberBase_dlllib% %BigNumberBase_debugRelease% %BigNumberBase_allSame%
 goto BigNumberBase_end
 :BigNumberBase_callSimple
@@ -30,16 +30,10 @@ goto BigNumberBase_end
 :BigNumberBase_end
 
 ::--------------------------------------------------------------------
-set CStringManager_dlllib=lib
-set CStringManager_bit=%1
-set CStringManager_debugRelease=%3
-set CStringManager_allSame=%4
-if "%4" == "same" (goto CStringManager_callSame) else (goto CStringManager_callSimple)
-:CStringManager_callSame
-set CStringManager_dlllib=%2
-call "%CLOUD_REBUILD%" CStringManager %CStringManager_bit% %CStringManager_dlllib% %CStringManager_debugRelease% %CStringManager_allSame%
-goto CStringManager_end
-:CStringManager_callSimple
-call "%CLOUD_REBUILD%" CStringManager %CStringManager_bit% %CStringManager_dlllib% %CStringManager_debugRelease%
-goto CStringManager_end
-:CStringManager_end
+set bat=%~dp0
+set xueyelingshuang=%bat%..\..\..\
+
+xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp32.static\gmp-static-p4\libgcc.a" "%xueyelingshuang%lib\"
+xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp32.static\gmp-static-p4\libgmp.a" "%xueyelingshuang%lib\"
+xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp32.static\gmp-static-p4\libmingwex.a" "%xueyelingshuang%lib\"
+xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp32.static\gmp-static-p4\libmsvcrt.a" "%xueyelingshuang%lib\"

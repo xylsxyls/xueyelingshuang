@@ -1,6 +1,10 @@
 #include "BigNumber.h"
 #include "BigNumberBase/BigNumberBaseAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#pragma comment(lib, "libgmp.a")
+#pragma comment(lib, "libgcc.a")
+#pragma comment(lib, "libmingwex.a")
+#pragma comment(lib, "libmsvcrt.a")
 
 BigNumber::BigNumber():
 m_prec(-1),
@@ -65,17 +69,15 @@ BigNumber BigNumber::operator=(int32_t num)
 	return *this;
 }
 
-
-
 BigNumber BigNumber::operator++ ()
 {
-	*m_base = *m_base + "1";
+	*m_base = BigNumberBase::add(*m_base, "1");
 	return *this;
 }
 
 BigNumber BigNumber::operator -- ()
 {
-	*m_base = *m_base - "1";
+	*m_base = BigNumberBase::sub(*m_base, "1");
 	return *this;
 }
 
@@ -83,7 +85,7 @@ BigNumber BigNumber::operator ++ (int)
 {
 	BigNumber result;
 	*result.m_base = *m_base;
-	*m_base = *m_base + "1";
+	*m_base = BigNumberBase::add(*m_base, "1");
 	return result;
 }
 
@@ -91,7 +93,7 @@ BigNumber BigNumber::operator -- (int)
 {
 	BigNumber result;
 	*result.m_base = *m_base;
-	*m_base = *m_base - "1";
+	*m_base = BigNumberBase::sub(*m_base, "1");
 	return result;
 }
 
@@ -126,21 +128,21 @@ void BigNumber::setDivParam(int32_t prec, PrecFlag flag)
 BigNumber BigNumber::add(const BigNumber& x, const BigNumber& y)
 {
 	BigNumber result;
-	*result.m_base = *x.m_base + *y.m_base;
+	*result.m_base = BigNumberBase::add(*x.m_base, *y.m_base);
 	return result;
 }
 
 BigNumber BigNumber::sub(const BigNumber& x, const BigNumber& y)
 {
 	BigNumber result;
-	*result.m_base = *x.m_base - *y.m_base;
+	*result.m_base = BigNumberBase::sub(*x.m_base, *y.m_base);
 	return result;
 }
 
 BigNumber BigNumber::mul(const BigNumber& x, const BigNumber& y)
 {
 	BigNumber result;
-	*result.m_base = (*x.m_base) * (*y.m_base);
+	*result.m_base = BigNumberBase::mul(*x.m_base, *y.m_base);
 	return result;
 }
 
@@ -149,7 +151,7 @@ BigNumber BigNumber::div(const BigNumber& x, const BigNumber& y)
 	BigNumber result;
 	if (x.m_base->m_prec == 0 && y.m_base->m_prec == 0)
 	{
-		*result.m_base = *x.m_base / *y.m_base;
+		*result.m_base = BigNumberBase::div(*x.m_base, *y.m_base);
 		return result;
 	}
 	*result.m_base = x.m_base->div(*y.m_base, x.m_prec, (BigNumberBase::PrecFlag)x.m_flag);
@@ -161,7 +163,7 @@ BigNumber BigNumber::mod(const BigNumber& x, const BigNumber& y)
 	BigNumber result;
 	if (x.m_base->m_prec == 0 && y.m_base->m_prec == 0)
 	{
-		*result.m_base = *x.m_base % *y.m_base;
+		*result.m_base = BigNumberBase::mod(*x.m_base, *y.m_base);
 		return result;
 	}
 	return result;
@@ -199,51 +201,51 @@ bool BigNumber::smallEqual(const BigNumber& x, const BigNumber& y)
 		(BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::EQUAL);
 }
 
-//#include <string>
-//#include <iostream>
-//#include "D:\\SendToMessageTest.h"
-//
-//int main()
-//{
-//	BigNumber x = "-0.2";
-//	BigNumber y = "0.4";
-//	RCSend("x = %s,y = %s\n", x.toString().c_str(), y.toString().c_str());
-//	RCSend("x + y = %s\n", (x + y).toString().c_str());
-//	RCSend("x - y = %s\n", (x - y).toString().c_str());
-//	RCSend("x * y = %s\n", (x * y).toString().c_str());
-//	RCSend("x / y = %s\n", (x / y).toString().c_str());
-//	RCSend("x ^ y = %s\n", x.pow(y).toString().c_str());
-//	RCSend("\n");
-//	std::vector<std::string> xVec;
-//	xVec.push_back("0.2");
-//	xVec.push_back("-0.2");
-//	xVec.push_back("2.2");
-//	xVec.push_back("-2.2");
-//	std::vector<std::string> yVec;
-//	yVec.push_back("0.2");
-//	yVec.push_back("-0.2");
-//	yVec.push_back("2.2");
-//	yVec.push_back("-2.2");
-//	for (unsigned int xIndex = 0; xIndex < xVec.size(); xIndex++)
-//	{
-//		for (unsigned int yIndex = 0; yIndex < yVec.size(); yIndex++)
-//		{
-//			x = xVec[xIndex].c_str();
-//			y = yVec[yIndex].c_str();
-//			RCSend("x = %s,y = %s\n", x.toString().c_str(), y.toString().c_str());
-//			RCSend("x + y = %s\n", (x + y).toString().c_str());
-//			RCSend("x - y = %s\n", (x - y).toString().c_str());
-//			RCSend("x * y = %s\n", (x * y).toString().c_str());
-//			RCSend("x / y = %s\n", (x / y).toString().c_str());
-//			if (x == "0")
-//			{
-//				RCSend("\n");
-//				continue;
-//			}
-//			RCSend("x ^ y = %s\n", x.pow(y).toString().c_str());
-//			RCSend("\n");
-//		}
-//	}
-//	getchar();
-//	return 0;
-//}
+#include <string>
+#include <iostream>
+#include "D:\\SendToMessageTest.h"
+
+int main()
+{
+	BigNumber x = "-0.2";
+	BigNumber y = "0.4";
+	RCSend("x = %s,y = %s\n", x.toString().c_str(), y.toString().c_str());
+	RCSend("x + y = %s\n", (x + y).toString().c_str());
+	RCSend("x - y = %s\n", (x - y).toString().c_str());
+	RCSend("x * y = %s\n", (x * y).toString().c_str());
+	RCSend("x / y = %s\n", (x / y).toString().c_str());
+	RCSend("x ^ y = %s\n", x.pow(y).toString().c_str());
+	RCSend("\n");
+	std::vector<std::string> xVec;
+	xVec.push_back("0.2");
+	xVec.push_back("-0.2");
+	xVec.push_back("2.2");
+	xVec.push_back("-2.2");
+	std::vector<std::string> yVec;
+	yVec.push_back("0.2");
+	yVec.push_back("-0.2");
+	yVec.push_back("2.2");
+	yVec.push_back("-2.2");
+	for (unsigned int xIndex = 0; xIndex < xVec.size(); xIndex++)
+	{
+		for (unsigned int yIndex = 0; yIndex < yVec.size(); yIndex++)
+		{
+			x = xVec[xIndex].c_str();
+			y = yVec[yIndex].c_str();
+			RCSend("x = %s,y = %s\n", x.toString().c_str(), y.toString().c_str());
+			RCSend("x + y = %s\n", (x + y).toString().c_str());
+			RCSend("x - y = %s\n", (x - y).toString().c_str());
+			RCSend("x * y = %s\n", (x * y).toString().c_str());
+			RCSend("x / y = %s\n", (x / y).toString().c_str());
+			if (x == "0")
+			{
+				RCSend("\n");
+				continue;
+			}
+			RCSend("x ^ y = %s\n", x.pow(y).toString().c_str());
+			RCSend("\n");
+		}
+	}
+	getchar();
+	return 0;
+}
