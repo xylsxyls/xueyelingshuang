@@ -1,24 +1,22 @@
 #pragma once
-#include <afxwin.h>
 #include "CMysqlMacro.h"
+#include <string>
 
 class CValue;
 class CCondition;
-class CMysqlAPI CTableField{
-public:
-	CString Table;
-	CString Field;
+class CMysqlAPI CTableField
+{
 public:
 	//tf("User")["ID"];
-	CTableField& operator()(CString Table);
-	CTableField& operator[](CString Field);
+	CTableField& operator()(const std::string& Table);
+	CTableField& operator[](const std::string& Field);
 public:
 	CTableField();
 	CTableField(const CTableField& tf);
 	CTableField operator=(const CTableField& tf);
 
 public:
-	CTableField(CString Table,CString Field);
+	CTableField(const std::string& Table, const std::string& Field);
 
 public:
 	CCondition operator==(const CValue& value);
@@ -35,4 +33,15 @@ public:
 	CCondition operator>=(const CTableField& tf);
 	//È«Áª
 	CCondition operator||(const CTableField& tf);
+
+public:
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	std::string m_table;
+	std::string m_field;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 };

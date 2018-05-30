@@ -2,76 +2,86 @@
 #include "CDataBase.h"
 #include "CMysqlManager.h"
 #include "CTable.h"
+#include "mysql.h"
+#include "CStringManager/CStringManagerAPI.h"
 
-CDataBase::CDataBase(bool* bSucceed,CMysqlManager* pMysqlManager,CString IP,int port,CString User,CString PassWord,CString dbName){
+CDataBase::CDataBase(bool* bSucceed, CMysqlManager* pMysqlManager, const std::string& IP, int32_t port, const std::string& User, const std::string& PassWord, const std::string& dbName)
+{
 	//从外部导入管理者指针
-	this->pMysqlManager = pMysqlManager;
+	m_pMysqlManager = pMysqlManager;
 	//先把新开的指针放到容器里
-	this->pMysqlManager->listDataBase.push_back(this);
+	m_pMysqlManager->m_listDataBase.push_back(this);
 
-	this->IP = IP;
-	this->port = port;
-	this->User = User;
-	this->PassWord = PassWord;
-	this->dbName = dbName;
-	mysql = mysql_init(NULL);
+	m_ip = IP;
+	m_port = port;
+	m_user = User;
+	m_passWord = PassWord;
+	m_dbName = dbName;
+	m_mysql = mysql_init(NULL);
 
-	MYSQL *IsSucceed = mysql_real_connect(mysql,IP,User,PassWord,dbName,port,NULL,0);
+	MYSQL *IsSucceed = mysql_real_connect(m_mysql, IP.c_str(), User.c_str(), PassWord.c_str(), dbName.c_str(), port, NULL, 0);
 	//如果连接失败则释放，但是不释放管理者，管理者只有在CMysql被释放时才会释放
-	if(IsSucceed == NULL){
-		this->pMysqlManager->DeleteOne(this);
+	if (IsSucceed == NULL)
+	{
+		m_pMysqlManager->DeleteOne(this);
 		*bSucceed = 0;
 	}
 	*bSucceed = 1;
 }
 
-CTable* CDataBase::CreateTable(CString TableName,CString FieldName,BOOL type,int length,bool ifExists,bool AutoCommit){
-	int nIsSucceed = -1;
-	CString strType;
-	if(type == 1) strType = "varchar";
-	else if(type == 2) strType = "int";
-	else if(type == 3) strType = "double";
-	CString strLength;
-	strLength.Format("%d",length);
+CTable* CDataBase::CreateTable(const std::string& TableName, const std::string& FieldName, int32_t type, int32_t length, bool ifExists, bool AutoCommit)
+{
+	int32_t nIsSucceed = -1;
+	std::string strType;
+	if (type == 1) strType = "varchar";
+	else if (type == 2) strType = "int";
+	else if (type == 3) strType = "double";
+	std::string strLength;
+	strLength = CStringManager::Format("%d", length);
 	//建表，默认有一个test的int字段，因为数据库无法建立空表
-	if(ifExists == 0) nIsSucceed = mysql_query(mysql,"create table " + TableName + "(" + FieldName + " " + strType + "(" + strLength + "))");
-	if(ifExists == 1) nIsSucceed = mysql_query(mysql,"create table if not exists " + TableName + "(" + FieldName + " " + strType + "(" + strLength + "))");
+	if (ifExists == 0) nIsSucceed = mysql_query(m_mysql, ("create table " + TableName + "(" + FieldName + " " + strType + "(" + strLength + "))").c_str());
+	if (ifExists == 1) nIsSucceed = mysql_query(m_mysql, ("create table if not exists " + TableName + "(" + FieldName + " " + strType + "(" + strLength + "))").c_str());
 
 	CTable* pTable = NULL;
-	if(nIsSucceed == 0){
+	if (nIsSucceed == 0)
+	{
 		//新开一个表接口并为他的内部建立一个连接线
-		pTable = new CTable(pMysqlManager,this,TableName,1);
+		pTable = new CTable(m_pMysqlManager, this, TableName, 1);
 		//把数据库里的内部连接线重新再制造一个放进CTable内
-		mysql_real_connect(pTable->pDataBase->mysql,IP,User,PassWord,dbName,port,NULL,0);
+		mysql_real_connect(pTable->m_pDataBase->m_mysql, m_ip.c_str(), m_user.c_str(), m_passWord.c_str(), m_dbName.c_str(), m_port, NULL, 0);
 	}
 	return pTable;
 }
 
-int CDataBase::DropTable(CString TableName,bool ifExists){
-	int nIsSucceed = -1;
+int32_t CDataBase::DropTable(const std::string& TableName, bool ifExists)
+{
+	int32_t nIsSucceed = -1;
 	//删表
-	if(ifExists == 0) nIsSucceed = mysql_query(mysql,"drop table " + TableName);
-	else if(ifExists == 1) nIsSucceed = mysql_query(mysql,"drop table if exists " + TableName);
+	if (ifExists == 0) nIsSucceed = mysql_query(m_mysql, ("drop table " + TableName).c_str());
+	else if (ifExists == 1) nIsSucceed = mysql_query(m_mysql, ("drop table if exists " + TableName).c_str());
 
 	return nIsSucceed;
 }
 
-CTable* CDataBase::OpenTableInterface(CString TableName,bool AutoCommit){
+CTable* CDataBase::OpenTableInterface(const std::string& TableName, bool AutoCommit)
+{
 	CTable* pTable = NULL;
 	//返回0表示确实有这张表
-	mysql_query(mysql,"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='" + dbName + "' AND TABLE_NAME='" + TableName + "'");
+	mysql_query(m_mysql, ("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='" + m_dbName + "' AND TABLE_NAME='" + TableName + "'").c_str());
 	//结果中如果行数 == 1说明确实有这张表
-	if(mysql_store_result(mysql)->row_count == 1){
+	if (mysql_store_result(m_mysql)->row_count == 1)
+	{
 		//新开一个表接口并为他的内部建立一个连接线
-		pTable = new CTable(pMysqlManager,this,TableName);
+		pTable = new CTable(m_pMysqlManager, this, TableName);
 		//把数据库里的内部连接线重新再制造一个放进CTable内
-		mysql_real_connect(pTable->pDataBase->mysql,IP,User,PassWord,dbName,port,NULL,0);
+		mysql_real_connect(pTable->m_pDataBase->m_mysql, m_ip.c_str(), m_user.c_str(), m_passWord.c_str(), m_dbName.c_str(), m_port, NULL, 0);
 	}
 	pTable->Refresh();
 	return pTable;
 }
 
-void CDataBase::CloseTableInterface(CTable* pTable){
-	pMysqlManager->DeleteOne(pTable);
+void CDataBase::CloseTableInterface(CTable* pTable)
+{
+	m_pMysqlManager->DeleteOne(pTable);
 	return;
 }

@@ -2,107 +2,119 @@
 #include "CValue.h"
 #include "CAttri.h"
 #include "CTable.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 //CTable* CValue::pTable = NULL;
 
-CValue::CValue(){
-	this->Type = 0;
-	this->nValue = 0;
-	this->dValue = 0;
-	this->strValue = "";
+CValue::CValue()
+{
+	m_type = 0;
+	m_nValue = 0;
+	m_dValue = 0;
+	m_strValue = "";
 }
 
-CValue::CValue(CString strValue){
-	this->Type = 1;
-	this->nValue = 0;
-	this->dValue = 0;
-	this->strValue = "'" + strValue + "'";
+CValue::CValue(const std::string& strValue)
+{
+	m_type = 1;
+	m_nValue = 0;
+	m_dValue = 0;
+	m_strValue = "'" + strValue + "'";
 }
 
-CValue::CValue(char* szValue){
-	this->Type = 1;
-	this->nValue = 0;
-	this->dValue = 0;
-	this->strValue = this->strValue + "'" + szValue + "'";
+CValue::CValue(char* szValue)
+{
+	m_type = 1;
+	m_nValue = 0;
+	m_dValue = 0;
+	m_strValue = m_strValue + "'" + szValue + "'";
 }
 
-CValue::CValue(string strValue){
-	this->Type = 1;
-	this->nValue = 0;
-	this->dValue = 0;
-	this->strValue = ("'" + strValue + "'").c_str();
+CValue::CValue(int32_t nValue)
+{
+	m_type = 2;
+	m_nValue = nValue;
+	m_dValue = 0;
+	m_strValue = CStringManager::Format("%d", nValue);
 }
 
-CValue::CValue(int nValue){
-	this->Type = 2;
-	this->nValue = nValue;
-	this->dValue = 0;
-	this->strValue.Format("%d",nValue);
+CValue::CValue(double dValue)
+{
+	m_type = 3;
+	m_nValue = 0;
+	m_dValue = dValue;
+	m_strValue = CStringManager::Format("%lf", dValue);
 }
 
-CValue::CValue(double dValue){
-	this->Type = 3;
-	this->nValue = 0;
-	this->dValue = dValue;
-	this->strValue.Format("%lf",dValue);
+CValue::CValue(int32_t Type, const std::string& strValue, int32_t nValue, double dValue)
+{
+	m_type = -1;
+	m_nValue = -1;
+	m_dValue = -1;
+	m_strValue = "-1";
 }
 
-CValue::CValue(BOOL Type,CString strValue,int nValue,double dValue){
-	this->Type = -1;
-	this->nValue = -1;
-	this->dValue = -1;
-	this->strValue = "-1";
+CValue::CValue(const CValue& value)
+{
+	m_type = value.m_type;
+	m_nValue = value.m_nValue;
+	m_dValue = value.m_dValue;
+	m_strValue = value.m_strValue;
+	m_strCurrentField = value.m_strCurrentField;
 }
 
-CValue::CValue(const CValue& value){
-	this->Type = value.Type;
-	this->nValue = value.nValue;
-	this->dValue = value.dValue;
-	this->strValue = value.strValue;
-	this->strCurrentField = value.strCurrentField;
-}
-
-CValue CValue::operator = (const CValue& value){
-	this->Type = value.Type;
-	this->nValue = value.nValue;
-	this->dValue = value.dValue;
-	this->strValue = value.strValue;
-	this->strCurrentField = value.strCurrentField;
+CValue CValue::operator = (const CValue& value)
+{
+	m_type = value.m_type;
+	m_nValue = value.m_nValue;
+	m_dValue = value.m_dValue;
+	m_strValue = value.m_strValue;
+	m_strCurrentField = value.m_strCurrentField;
 	return *this;
 }
 
-bool CValue::operator== (const CValue& value){
-	return this->Type == value.Type &&
-		this->nValue == value.nValue &&
-		this->dValue == value.dValue &&
-		this->strValue == value.strValue;
+bool CValue::operator== (const CValue& value)
+{
+	return m_type == value.m_type &&
+		m_nValue == value.m_nValue &&
+		m_dValue == value.m_dValue &&
+		m_strValue == value.m_strValue;
 }
 
-bool CValue::operator!= (const CValue& value){
-	return this->Type != value.Type &&
-		this->nValue != value.nValue &&
-		this->dValue != value.dValue &&
-		this->strValue != value.strValue;
+bool CValue::operator!= (const CValue& value)
+{
+	return m_type != value.m_type &&
+		m_nValue != value.m_nValue &&
+		m_dValue != value.m_dValue &&
+		m_strValue != value.m_strValue;
 }
 
-CValue::operator int(){
-	return nValue;
+CValue::operator int()
+{
+	return m_nValue;
 }
 
-CValue::operator CString(){
-	if(strValue == "-1") return "-1";
-	return strValue.Mid(1,strValue.GetLength() - 2);
+CValue::operator std::string()
+{
+	if (m_strValue == "-1")
+	{
+		return "-1";
+	}
+	return CStringManager::Mid(m_strValue, 1, m_strValue.length() - 2);
 }
 
-CValue::operator double(){
-	return dValue;
+CValue::operator double()
+{
+	return m_dValue;
 }
 
-//void CValue::init(CTable* pTable){
-//	this->pTable = pTable;
+//void CValue::init(CTable* pTable)
+//{
+//	pTable = pTable;
 //	return;
 //}
 
-//CAttri* CValue::operator->(){
+//CAttri* CValue::operator->()
+//{
 //	return &(pTable->mapAttri[strCurrentField]);
 //}

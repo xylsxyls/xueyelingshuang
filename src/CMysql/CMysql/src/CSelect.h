@@ -1,20 +1,14 @@
 #pragma once
-#include <afxwin.h>
 #include <list>
 #include "CTableField.h"
-using namespace std;
 #include "CMysqlMacro.h"
 
-class CMysqlAPI CSelect{
-public:
-	//先传入tf然后传入list
-	list<CTableField> listTf;
-	CTableField tf;
-
+class CMysqlAPI CSelect
+{
 public:
 	//sel("User")["ID"];
-	CSelect& operator()(CString Table);
-	CSelect& operator[](CString Field);
+	CSelect& operator()(const std::string& Table);
+	CSelect& operator[](const std::string& Field);
 
 public:
 	CSelect();
@@ -22,6 +16,18 @@ public:
 	CSelect operator=(const CSelect& sel);
 
 public:
-	CString toCString();
-	CString toTableString();
+	std::string toString();
+	std::string toTableString();
+
+public:
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	//先传入tf然后传入list
+	std::list<CTableField> m_listTf;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	CTableField m_tf;
 };
