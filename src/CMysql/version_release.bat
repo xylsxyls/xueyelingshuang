@@ -11,6 +11,13 @@ set bat=%~dp0
 set xueyelingshuang=%bat%..\..\
 ::如果需要获取依赖dll-----------------------------------------------------------
 
+call "%xueyelingshuang%src\CStringManager\version_release.bat"
+
+::call完之后都需要重新set
+set bat=%~dp0
+set xueyelingshuang=%bat%..\..\
+::如果需要获取依赖dll-----------------------------------------------------------
+
 ::获取第三方库
 call "%bat%public.bat"
 
