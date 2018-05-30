@@ -15,16 +15,20 @@ class CTable;
 class CMysqlAPI CMysql
 {
 public:
-	CMysql(const std::string& IP = "127.0.0.1", int32_t port = 3306, const std::string& User = "root", const std::string& PassWord = "", const std::string& dbName = "test");
+	CMysql(const std::string& ip = "127.0.0.1",
+		   int32_t port = 3306,
+		   const std::string& user = "root",
+		   const std::string& passWord = "",
+		   const std::string& dbName = "test");
 	~CMysql();
 
 public:
-	//开IP的接口，并初始化CIP，用于管理User
+	//开ip的接口，并初始化CIP，用于管理user
 	CHostIP* OpenHostIPInterface();
-	CHostIP* OpenHostIPInterface(const std::string& IP, int32_t port = 3306);
-	//开User的接口，用于管理数据库
+	CHostIP* OpenHostIPInterface(const std::string& ip, int32_t port = 3306);
+	//开user的接口，用于管理数据库
 	CUser* OpenUserInterface();
-	CUser* OpenUserInterface(const std::string& User, const std::string& PassWord);
+	CUser* OpenUserInterface(const std::string& user, const std::string& password);
 	//开数据库接口，用于管理表
 	CDataBase* OpenDataBaseInterface();
 	CDataBase* OpenDataBaseInterface(const std::string& dbName, bool AutoCommit = 1);
@@ -32,8 +36,8 @@ public:
 	CTable* OpenTableInterface(const std::string& TableName, bool AutoCommit = 1);
 
 public:
-	//转到另一个IP的数据库
-	//void SelectOtherIPDataBase(std::string IP,std::string User,std::string PassWord,std::string dbName,int32_t port = 3306);
+	//转到另一个ip的数据库
+	//void SelectOtherIPDataBase(std::string ip,std::string user,std::string password,std::string dbName,int32_t port = 3306);
 
 	//选择表进行操作
 	//void SelectTable(std::string TableName);
@@ -48,12 +52,12 @@ public:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	//记录现在所在的IP
+	//记录现在所在的ip
 	std::string m_ip;
-	//记录现在的User
+	//记录现在的user
 	std::string m_user;
 	//记录现在的密码
-	std::string m_passWord;
+	std::string m_password;
 	//记录现在的数据库名
 	std::string m_dbName;
 #ifdef _MSC_VER

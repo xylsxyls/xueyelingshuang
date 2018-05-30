@@ -7,16 +7,16 @@ class CDataBase;
 class CMysqlManager;
 struct st_mysql;
 typedef st_mysql MYSQL;
-//IP管用户
-//在CIP被创建的时候管理者IP和port就必须被初始化，内部的连接线也必须被初始化
+//ip管用户
+//在CIP被创建的时候管理者ip和port就必须被初始化，内部的连接线也必须被初始化
 class CMysqlAPI CHostIP
 {
 public:
-	CHostIP(CMysqlManager *pMysqlManager, const std::string& IP, int32_t port);
+	CHostIP(CMysqlManager *pMysqlManager, const std::string& ip, int32_t port);
 
 public:
 	//转到另一个用户的数据库
-	CDataBase* OpenUserDataBaseInterface(const std::string& User, const std::string& PassWord, const std::string& dbName);
+	CDataBase* OpenUserDataBaseInterface(const std::string& user, const std::string& password, const std::string& dbName);
 	void CloseDataBaseInterface(CDataBase* pCDataBase);
 
 public:

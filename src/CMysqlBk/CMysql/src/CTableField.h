@@ -7,7 +7,7 @@ class CCondition;
 class CMysqlAPI CTableField
 {
 public:
-	//tf("User")["ID"];
+	//tf("user")["ID"];
 	CTableField& operator()(const std::string& Table);
 	CTableField& operator[](const std::string& Field);
 public:

@@ -12,7 +12,7 @@ class CMysqlAPI CDataBase
 {
 public:
 	//如果数据库连接失败则会自动释放，包括管理者里的指针释放，用bSucceed标识，但是new出来的依然有值，需要在外部置0
-	CDataBase(bool* bSucceed, CMysqlManager* pMysqlManager, const std::string& IP, int32_t port, const std::string& User, const std::string& PassWord, const std::string& dbName);
+	CDataBase(bool* bSucceed, CMysqlManager* pMysqlManager, const std::string& ip, int32_t port, const std::string& user, const std::string& password, const std::string& dbName);
 
 public:
 	//建表
@@ -34,7 +34,7 @@ public:
 #endif
 	std::string m_ip;
 	std::string m_user;
-	std::string m_passWord;
+	std::string m_password;
 	std::string m_dbName;
 #ifdef _MSC_VER
 #pragma warning(pop)

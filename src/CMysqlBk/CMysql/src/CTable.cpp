@@ -41,7 +41,7 @@ CRecord& CTable::operator[](int32_t num)
 {
 	int32_t n = 0;
 	for (auto it = m_listRecord.begin(); it != m_listRecord.end(); it++)
-{
+	{
 		if (n == num) return *it;
 		n++;
 	}
@@ -54,24 +54,30 @@ int32_t CTable::Add(CRecord* pRecord)
 
 	//查看是否有新字段添加，但是不为新字段设置属性
 	for (auto itFieldInRecord = pRecord->m_mapValue.begin(); itFieldInRecord != pRecord->m_mapValue.end(); itFieldInRecord++)
-{
+	{
 		for (auto itFieldInTable = m_mapAttri.begin(); itFieldInTable != m_mapAttri.end(); itFieldInTable++)
-{
+		{
 			//如果记录中有一个字段和Table中的相等了说明不是新字段
-			if (itFieldInRecord->first == itFieldInTable->first) goto Next;
+			if (itFieldInRecord->first == itFieldInTable->first)
+			{
+				goto Next;
+			}
 		}
 		//如果自然退出则说明全都不相等则说明该字段是新字段
 		int32_t nResult = AddNewFieldWithNoAttri(itFieldInRecord->first);
 		//如果添加新字段失败则返回
-		if (nResult != 0) return nResult;
+		if (nResult != 0)
+		{
+			return nResult;
+		}
 	Next:;
 	}
 
 	//根据listReviseAttri提供的修改属性的字段名进行属性修改
 	if (pRecord->m_listReviseAttri.size() != 0)
-{
+	{
 		for (auto itRevise = pRecord->m_listReviseAttri.begin(); itRevise != pRecord->m_listReviseAttri.end(); itRevise++)
-{
+		{
 			int32_t nResult = ReviseAttri(&m_mapAttri[*itRevise]);
 			//说明有属性修改不成功
 			if (nResult != 0) return nResult;
@@ -121,7 +127,7 @@ CTable CTable::SelectRecord(CSelect *pSelect, CCondition* pCondition)
 	//先存字段属性
 	int32_t j = -1;
 	while (j++ != resField->field_count - 1)
-{
+	{
 		std::string strFieldName = itSelect->m_table + "." + itSelect->m_field;
 		itSelect++;
 		//存储
@@ -138,7 +144,7 @@ CTable CTable::SelectRecord(CSelect *pSelect, CCondition* pCondition)
 		if ((flags & AUTO_INCREMENT_FLAG) == AUTO_INCREMENT_FLAG) ResultTable.m_mapAttri[strFieldName].m_bAutoIncrement = 1;
 		//如果有默认值获取默认值
 		if ((std::string)((resField->fields) + j)->def != "")
-{
+		{
 			ResultTable.m_mapAttri[strFieldName].m_hasDefault = 1;
 			ResultTable.m_mapAttri[strFieldName].m_vDefault = (std::string)((resField->fields) + j)->def;
 		}
@@ -148,7 +154,7 @@ CTable CTable::SelectRecord(CSelect *pSelect, CCondition* pCondition)
 	int32_t i = -1;
 	//行数
 	while (i++ != result->row_count - 1)
-{
+	{
 		int32_t j = -1;
 		//先找到第一行的值，然后根据当前行数转next找到对应的行
 		MYSQL_ROWS* pRow = result->data->data;
@@ -160,7 +166,7 @@ CTable CTable::SelectRecord(CSelect *pSelect, CCondition* pCondition)
 		auto itSelect = pSelect->m_listTf.begin();
 		//列数循环，把有效值循环加到记录中
 		while (j++ != result->field_count - 1)
-{
+		{
 			//分别获得每列的字段名
 			std::string FieldName = itSelect->m_table + "." + itSelect->m_field;
 			itSelect++;
@@ -168,16 +174,16 @@ CTable CTable::SelectRecord(CSelect *pSelect, CCondition* pCondition)
 			std::string strValue = pRow->data[j];
 			//把字符串根据类型做转换
 			if (m_mapAttri[FieldName].m_type == 253)
-{
+			{
 				//形成一个记录
 				record[FieldName] = strValue;
 			}
 			else if (m_mapAttri[FieldName].m_type == 3)
-{
+			{
 				record[FieldName] = atoi(strValue.c_str());
 			}
 			else if (m_mapAttri[FieldName].m_type == 5)
-{
+			{
 				record[FieldName] = (double)atof(strValue.c_str());
 			}
 		}
@@ -242,7 +248,7 @@ void CTable::Refresh()
 	//先存字段属性
 	int32_t j = -1;
 	while (j++ != resField->field_count - 1)
-{
+	{
 		std::string strFieldName = m_tableName + "." + ((resField->fields) + j)->name;
 		//存储
 		m_mapAttri[strFieldName].m_type = ((resField->fields) + j)->type;
@@ -258,7 +264,7 @@ void CTable::Refresh()
 		if ((flags & AUTO_INCREMENT_FLAG) == AUTO_INCREMENT_FLAG) m_mapAttri[strFieldName].m_bAutoIncrement = 1;
 		//如果有默认值获取默认值
 		if ((std::string)((resField->fields) + j)->def != "")
-{
+		{
 			m_mapAttri[strFieldName].m_hasDefault = 1;
 			m_mapAttri[strFieldName].m_vDefault = (std::string)((resField->fields) + j)->def;
 		}
@@ -268,7 +274,7 @@ void CTable::Refresh()
 	int32_t i = -1;
 	//行数
 	while (i++ != result->row_count - 1)
-{
+	{
 		int32_t j = -1;
 		//先找到第一行的值，然后根据当前行数转next找到对应的行
 		MYSQL_ROWS* pRow = result->data->data;
@@ -278,23 +284,23 @@ void CTable::Refresh()
 		CRecord record(this);
 		//列数循环，把有效值循环加到记录中
 		while (j++ != result->field_count - 1)
-{
+		{
 			//分别获得每列的字段名
 			std::string FieldName = m_tableName + "." + ((result->fields) + j)->name;
 			//字段值
 			std::string strValue = pRow->data[j];
 			//把字符串根据类型做转换
 			if (m_mapAttri[FieldName].m_type == 253)
-{
+			{
 				//形成一个记录
 				record[FieldName] = strValue;
 			}
 			else if (m_mapAttri[FieldName].m_type == 3)
-{
+			{
 				record[FieldName] = atoi(strValue.c_str());
 			}
 			else if (m_mapAttri[FieldName].m_type == 5)
-{
+			{
 				record[FieldName] = (double)atof(strValue.c_str());
 			}
 		}

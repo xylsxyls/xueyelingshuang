@@ -12,7 +12,7 @@ typedef st_mysql MYSQL;
 class CMysqlAPI CUser
 {
 public:
-	CUser(CMysqlManager *pMysqlManager, const std::string& IP, int32_t port, const std::string& User, const std::string& PassWord);
+	CUser(CMysqlManager *pMysqlManager, const std::string& ip, int32_t port, const std::string& user, const std::string& password);
 	void Close();
 
 public:
@@ -37,7 +37,7 @@ public:
 #endif
 	std::string m_ip;
 	std::string m_user;
-	std::string m_passWord;
+	std::string m_password;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

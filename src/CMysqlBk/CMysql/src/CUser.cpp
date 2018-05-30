@@ -4,17 +4,17 @@
 #include "CDataBase.h"
 #include "mysql.h"
 
-CUser::CUser(CMysqlManager *pMysqlManager, const std::string& IP, int32_t port, const std::string& User, const std::string& PassWord)
+CUser::CUser(CMysqlManager *pMysqlManager, const std::string& ip, int32_t port, const std::string& user, const std::string& password)
 {
 	//从外部导入管理者指针
 	m_pMysqlManager = pMysqlManager;
 	//先把新开的指针放到容器里
 	m_pMysqlManager->m_listUser.push_back(this);
 
-	m_ip = IP;
+	m_ip = ip;
 	m_port = port;
-	m_user = User;
-	m_passWord = PassWord;
+	m_user = user;
+	m_password = password;
 
 	m_mysql = mysql_init(NULL);
 }
@@ -62,7 +62,7 @@ CDataBase* CUser::OpenDataBaseInterface(const std::string& dbName)
 {
 	bool bSucceed = 0;
 	//连接这个数据库看是否能连接上，连接上表示确实有这个数据库，连接不上返回错误
-	CDataBase* pDataBase = new CDataBase(&bSucceed, m_pMysqlManager, m_ip, m_port, m_user, m_passWord, dbName);
+	CDataBase* pDataBase = new CDataBase(&bSucceed, m_pMysqlManager, m_ip, m_port, m_user, m_password, dbName);
 	//如果连接不上，返回0
 	if (bSucceed == 0)
 {

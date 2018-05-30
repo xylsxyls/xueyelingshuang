@@ -7,16 +7,20 @@
 #include "CUser.h"
 #include "mysql.h"
 
-CMysql::CMysql(const std::string& IP, int32_t port, const std::string& User, const std::string& PassWord, const std::string& dbName)
+CMysql::CMysql(const std::string& ip,
+			   int32_t port,
+			   const std::string& user,
+			   const std::string& password,
+			   const std::string& dbName)
 {
 	//初始化管理者
 	m_pMysqlManager = new CMysqlManager;
 
 	//把初始化的参数传给类中的记录参数类
-	m_ip = IP;
+	m_ip = ip;
 	m_port = port;
-	m_user = User;
-	m_passWord = PassWord;
+	m_user = user;
+	m_password = password;
 	m_dbName = dbName;
 }
 
@@ -25,27 +29,27 @@ CMysql::~CMysql()
 	delete m_pMysqlManager;
 }
 
-//只是将IP和port的记录存入新开的类
+//只是将ip和port的记录存入新开的类
 CHostIP* CMysql::OpenHostIPInterface()
 {
 	return OpenHostIPInterface(m_ip, m_port);
 }
 
-CHostIP* CMysql::OpenHostIPInterface(const std::string& IP, int32_t port)
+CHostIP* CMysql::OpenHostIPInterface(const std::string& ip, int32_t port)
 {
 	//在创建时内存所有成员变量均被初始化
-	return new CHostIP(m_pMysqlManager, IP, port);
+	return new CHostIP(m_pMysqlManager, ip, port);
 }
 
 CUser* CMysql::OpenUserInterface()
 {
-	return OpenUserInterface(m_user, m_passWord);
+	return OpenUserInterface(m_user, m_password);
 }
 
-CUser* CMysql::OpenUserInterface(const std::string& User, const std::string& PassWord)
+CUser* CMysql::OpenUserInterface(const std::string& user, const std::string& password)
 {
 	//在创建时内存所有成员变量均被初始化
-	return new CUser(m_pMysqlManager, m_ip, m_port, User, PassWord);
+	return new CUser(m_pMysqlManager, m_ip, m_port, user, password);
 }
 
 CDataBase* CMysql::OpenDataBaseInterface()
@@ -56,7 +60,7 @@ CDataBase* CMysql::OpenDataBaseInterface()
 CDataBase* CMysql::OpenDataBaseInterface(const std::string& dbName, bool AutoCommit)
 {
 	bool bSucceed = 0;
-	CDataBase* pDataBase = new CDataBase(&bSucceed, m_pMysqlManager, m_ip, m_port, m_user, m_passWord, dbName);
+	CDataBase* pDataBase = new CDataBase(&bSucceed, m_pMysqlManager, m_ip, m_port, m_user, m_password, dbName);
 	if (bSucceed == 0) pDataBase = 0;
 	return pDataBase;
 }
@@ -68,9 +72,9 @@ CTable* CMysql::OpenTableInterface(const std::string& TableName, bool AutoCommit
 	CTable* pTable = new CTable(m_pMysqlManager, pDataBase, TableName);
 
 	//将新开的CDataBase里的连接线进行连接
-	MYSQL *IsSucceed = mysql_real_connect(pTable->m_pDataBase->m_mysql, m_ip.c_str(), m_user.c_str(), m_passWord.c_str(), m_dbName.c_str(), m_port, NULL, 0);
+	MYSQL *isSucceed = mysql_real_connect(pTable->m_pDataBase->m_mysql, m_ip.c_str(), m_user.c_str(), m_password.c_str(), m_dbName.c_str(), m_port, NULL, 0);
 	//如果连接失败则释放，但是不释放管理者，管理者只有在CMysql被释放时才会释放
-	if (IsSucceed == NULL)
+	if (isSucceed == NULL)
 	{
 		delete pTable;
 		pTable = 0;
@@ -80,19 +84,19 @@ CTable* CMysql::OpenTableInterface(const std::string& TableName, bool AutoCommit
 }
 
 /*
-void CMysql::SelectOtherIPDataBase(std::string IP,std::string User,std::string PassWord,std::string dbName,int32_t port)
+void CMysql::SelectOtherIPDataBase(std::string ip,std::string user,std::string password,std::string dbName,int32_t port)
 {
 if(MysqlSucceed != 1) return;
 
 mysql_close(mysql);
 mysql = mysql_init(NULL);
-IsSucceed = mysql_real_connect(mysql,IP,User,PassWord,dbName,port,NULL,0);
+isSucceed = mysql_real_connect(mysql,ip,user,password,dbName,port,NULL,0);
 //由于这个值是指针，当不为空时才说明执行成功
-if(IsSucceed != 0)
+if(isSucceed != 0)
 {
-ConnectParameter.IP = IP;
-ConnectParameter.User = User;
-ConnectParameter.PassWord = PassWord;
+ConnectParameter.ip = ip;
+ConnectParameter.user = user;
+ConnectParameter.password = password;
 ConnectParameter.dbName = dbName;
 ConnectParameter.port = port;
 }
@@ -136,7 +140,7 @@ int32_t main()
 	con(0, 4);
 	con["test.name"]--;
 	//条件or，左联合
-	//con || (CTableField("User","ID") <= CTableField("Department","UserID"));
+	//con || (CTableField("user","ID") <= CTableField("Department","UserID"));
 	//条件not
 	//!con;
 
@@ -158,11 +162,11 @@ int32_t main()
 	std::string strr = (*pTable1)[0]["depart.name"].toValue();
 	int32_t xxxx = table.size();
 	std::string strDepartName = table[0]["depart.name"].toValue();
-	int32_t nUserID = table[0]["User.ID"].toValue();
+	int32_t nUserID = table[0]["user.ID"].toValue();
 
-	//rec["User"].pTable->mapAttri["User"].Name = "123456";
+	//rec["user"].pTable->mapAttri["user"].Name = "123456";
 	//修改字段属性
-	rec["User"]->m_length = 256;
+	rec["user"]->m_length = 256;
 	pTable->Add(&rec);
 
 	return 0;

@@ -6,7 +6,7 @@
 class CMysqlAPI CSelect
 {
 public:
-	//sel("User")["ID"];
+	//sel("user")["ID"];
 	CSelect& operator()(const std::string& Table);
 	CSelect& operator[](const std::string& Field);
 
