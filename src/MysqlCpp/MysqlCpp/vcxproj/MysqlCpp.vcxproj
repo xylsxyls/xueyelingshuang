@@ -22,9 +22,15 @@
     <ClInclude Include="..\src\MysqlCppAPI.h" />
     <ClInclude Include="..\src\MysqlCppMacro.h" />
     <ClInclude Include="..\src\MysqlCpp.h" />
+    <ClInclude Include="..\src\MysqlCppPrepareStatement.h" />
+    <ClInclude Include="..\src\MysqlCppResultSet.h" />
+    <ClInclude Include="..\src\SqlString.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\MysqlCpp.cpp" />
+    <ClCompile Include="..\src\MysqlCppPrepareStatement.cpp" />
+    <ClCompile Include="..\src\MysqlCppResultSet.cpp" />
+    <ClCompile Include="..\src\SqlString.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
@@ -102,7 +108,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;$(BOOST_ROOT);%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -130,7 +136,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;$(BOOST_ROOT);%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>

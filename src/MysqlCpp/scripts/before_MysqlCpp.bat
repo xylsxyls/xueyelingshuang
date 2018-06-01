@@ -15,13 +15,20 @@ goto DllRelyTest_end
 :DllRelyTest_end
 
 ::--------------------------------------------------------------------
+set bat=%~dp0
+set xueyelingshuang=%bat%..\..\..\
+
+xcopy /y /i /r /s "%xueyelingshuang%tools\mysqlcpp\include\*" "%xueyelingshuang%include\"
+xcopy /y /i /r /s "%xueyelingshuang%tools\mysqlcpp\lib\*" "%xueyelingshuang%lib\"
+
+::--------------------------------------------------------------------
 set CStringManager_dlllib=lib
 set CStringManager_bit=%1
 set CStringManager_debugRelease=%3
-set CStringManager_allSame=%4
+set CStringManager_allSame=same
 if "%4" == "same" (goto CStringManager_callSame) else (goto CStringManager_callSimple)
 :CStringManager_callSame
-set CStringManager_dlllib=%2
+set CStringManager_dlllib=lib
 call "%CLOUD_REBUILD%" CStringManager %CStringManager_bit% %CStringManager_dlllib% %CStringManager_debugRelease% %CStringManager_allSame%
 goto CStringManager_end
 :CStringManager_callSimple
