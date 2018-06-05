@@ -52,17 +52,11 @@ public:
 	*/
 	std::shared_ptr<MysqlCppPrepareStatement> PreparedStatementCreator(const std::string& sqlString);
 
-	/** 操作增删改
-	@param [in] statement 条件语句
-	@return 返回是否操作成功
-	*/
-	bool execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement);
-
 	/** 操作查
 	@param [in] statement 条件语句
 	@return 返回查询结果
 	*/
-	std::shared_ptr<MysqlCppResultSet> executeResult(const std::shared_ptr<MysqlCppPrepareStatement>& statement);
+	std::shared_ptr<MysqlCppResultSet> execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement);
 
 	/** 设置是否自动提交
 	@param [in] autoCommit 是否自动提交

@@ -81,56 +81,34 @@ std::shared_ptr<MysqlCppPrepareStatement> MysqlCpp::PreparedStatementCreator(con
 	}
 	catch (...)
 	{
-		return std::shared_ptr<MysqlCppPrepareStatement>(nullptr);
+		return std::shared_ptr<MysqlCppPrepareStatement>(new MysqlCppPrepareStatement(nullptr));
 	}
 }
 
-bool MysqlCpp::execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement)
+std::shared_ptr<MysqlCppResultSet> MysqlCpp::execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement)
 {
 	if (!check())
 	{
-		return false;
+		return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
 	}
 	try
 	{
 		auto preparedStatement = statement->preparedStatement();
 		if (preparedStatement == nullptr)
 		{
-			return false;
-		}
-		std::unique_ptr<sql::ResultSet> result(preparedStatement->executeQuery());
-		commit();
-	}
-	catch (...)
-	{
-		rollback();
-		return false;
-	}
-	return true;
-}
-
-std::shared_ptr<MysqlCppResultSet> MysqlCpp::executeResult(const std::shared_ptr<MysqlCppPrepareStatement>& statement)
-{
-	if (!check())
-	{
-		return std::shared_ptr<MysqlCppResultSet>(nullptr);
-	}
-	try
-	{
-		auto preparedStatement = statement->preparedStatement();
-		if (preparedStatement == nullptr)
-		{
-			return std::shared_ptr<MysqlCppResultSet>(nullptr);
+			return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
 		}
 		sql::ResultSet* result = preparedStatement->executeQuery();
-		
+		result != nullptr ? commit() : rollback();
 		return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(result));
 	}
 	catch (...)
 	{
-		return std::shared_ptr<MysqlCppResultSet>(nullptr);
+		rollback();
+		return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
 	}
-	return std::shared_ptr<MysqlCppResultSet>(nullptr);
+	rollback();
+	return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
 }
 
 void MysqlCpp::setAutoCommit(bool autoCommit)

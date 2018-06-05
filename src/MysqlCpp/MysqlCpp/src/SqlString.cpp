@@ -5,7 +5,7 @@
 
 std::string SqlString::insertString(const std::string& tableName, const std::string& fields)
 {
-	std::string insertStr = "INSERT INTO %s(%s) VALUES(%s)";
+	std::string insertStr = "insert into %s(%s) values(%s)";
 	std::string fieldsTemp = fields;
 	int32_t count = CStringManager::Replace(fieldsTemp, ",", "");
 	std::string valueStr;
@@ -31,4 +31,26 @@ std::string SqlString::deleteString(const std::string& tableName, const std::str
 std::string SqlString::selectString(const std::string& tableName, const std::string whereString, const std::string& selectFields)
 {
 	return CStringManager::Format("select %s from %s where %s", selectFields.c_str(), tableName.c_str(), whereString.c_str());
+}
+
+std::string SqlString::createTableString(const std::string& tableName, const std::vector<std::string>& fields)
+{
+	std::string createTableStr = "create table " + tableName + "(";
+	int32_t index = -1;
+	while (true)
+	{
+		createTableStr += fields[++index];
+		if (index == fields.size() - 1)
+		{
+			break;
+		}
+		createTableStr += ",";
+	}
+	createTableStr += ");";
+	return createTableStr;
+}
+
+std::string SqlString::createDatabase(const std::string& databaseName)
+{
+	return "CREATE DATABASE " + databaseName;
 }
