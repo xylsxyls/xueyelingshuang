@@ -7,77 +7,107 @@
 #pragma comment(lib, "libmsvcrt.a")
 
 BigNumber::BigNumber():
-m_prec(-1),
-m_flag(HALF_ADJUST)
+m_divPrec(16),
+m_divFlag(HALF_ADJUST)
 {
 	m_base = new BigNumberBase;
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 }
 
 BigNumber::BigNumber(int32_t num):
-m_prec(-1),
-m_flag(HALF_ADJUST)
+m_divPrec(16),
+m_divFlag(HALF_ADJUST)
 {
 	m_base = new BigNumberBase;
 	*m_base = CStringManager::Format("%d", num).c_str();
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 }
 
 BigNumber::BigNumber(const char* num):
-m_prec(-1),
-m_flag(HALF_ADJUST)
+m_divPrec(16),
+m_divFlag(HALF_ADJUST)
 {
 	m_base = new BigNumberBase;
 	*m_base = num;
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 }
 
 BigNumber::BigNumber(double num):
-m_prec(-1),
-m_flag(HALF_ADJUST)
+m_divPrec(16),
+m_divFlag(HALF_ADJUST)
 {
 	m_base = new BigNumberBase;
 	*m_base = CStringManager::Format("%lf", num).c_str();
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 }
 
 BigNumber::BigNumber(const BigNumber& num):
-m_prec(-1),
-m_flag(HALF_ADJUST)
+m_divPrec(16),
+m_divFlag(HALF_ADJUST)
 {
 	m_base = new BigNumberBase;
 	*m_base = *num.m_base;
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 }
 
 BigNumber BigNumber::operator=(double num)
 {
 	*m_base = CStringManager::Format("%lf", num).c_str();
-	m_prec = -1;
-	m_flag = HALF_ADJUST;
+	m_divPrec = 16;
+	m_divFlag = HALF_ADJUST;
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 	return *this;
 }
 
 BigNumber BigNumber::operator=(const char* num)
 {
 	*m_base = num;
-	m_prec = -1;
-	m_flag = HALF_ADJUST;
+	m_divPrec = 16;
+	m_divFlag = HALF_ADJUST;
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 	return *this;
 }
 
 BigNumber BigNumber::operator=(int32_t num)
 {
 	*m_base = CStringManager::Format("%d", num).c_str();
-	m_prec = -1;
-	m_flag = HALF_ADJUST;
+	m_divPrec = 16;
+	m_divFlag = HALF_ADJUST;
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 	return *this;
 }
 
 BigNumber BigNumber::operator++ ()
 {
 	*m_base = BigNumberBase::add(*m_base, "1");
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 	return *this;
 }
 
 BigNumber BigNumber::operator -- ()
 {
 	*m_base = BigNumberBase::sub(*m_base, "1");
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 	return *this;
 }
 
@@ -86,6 +116,9 @@ BigNumber BigNumber::operator ++ (int)
 	BigNumber result;
 	*result.m_base = *m_base;
 	*m_base = BigNumberBase::add(*m_base, "1");
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 	return result;
 }
 
@@ -94,6 +127,9 @@ BigNumber BigNumber::operator -- (int)
 	BigNumber result;
 	*result.m_base = *m_base;
 	*m_base = BigNumberBase::sub(*m_base, "1");
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 	return result;
 }
 
@@ -101,6 +137,9 @@ BigNumber BigNumber::pow(const BigNumber& powNum, int32_t prec, PrecFlag flag)
 {
 	BigNumber result;
 	*result.m_base = m_base->pow(*powNum.m_base, prec, (BigNumberBase::PrecFlag)flag);
+#ifdef _DEBUG
+	m_num = toString();
+#endif
 	return result;
 }
 
@@ -109,20 +148,29 @@ std::string BigNumber::toString()
 	return m_base->toString();
 }
 
-void BigNumber::setPrec(int32_t prec, PrecFlag flag)
+BigNumber& BigNumber::setPrec(int32_t prec, PrecFlag flag)
 {
 	m_base->setPrec(prec, (BigNumberBase::PrecFlag)flag);
+#ifdef _DEBUG
+	m_num = toString();
+#endif
+	return *this;
 }
 
-void BigNumber::setFixedPrec(int32_t fixedPrec, PrecFlag fixedPrecFlag)
+BigNumber& BigNumber::setFixedPrec(int32_t fixedPrec, PrecFlag fixedPrecFlag)
 {
 	m_base->setFixedPrec(fixedPrec, (BigNumberBase::PrecFlag)fixedPrecFlag);
+#ifdef _DEBUG
+	m_num = toString();
+#endif
+	return *this;
 }
 
-void BigNumber::setDivParam(int32_t prec, PrecFlag flag)
+BigNumber& BigNumber::setDivParam(int32_t prec, PrecFlag flag)
 {
-	m_prec = prec;
-	m_flag = flag;
+	m_divPrec = prec;
+	m_divFlag = flag;
+	return *this;
 }
 
 BigNumber BigNumber::add(const BigNumber& x, const BigNumber& y)
@@ -154,7 +202,7 @@ BigNumber BigNumber::div(const BigNumber& x, const BigNumber& y)
 		*result.m_base = BigNumberBase::div(*x.m_base, *y.m_base);
 		return result;
 	}
-	*result.m_base = x.m_base->div(*y.m_base, x.m_prec, (BigNumberBase::PrecFlag)x.m_flag);
+	*result.m_base = x.m_base->div(*y.m_base, x.m_divPrec, (BigNumberBase::PrecFlag)x.m_divFlag);
 	return result;
 }
 
@@ -181,23 +229,23 @@ bool BigNumber::notEqual(const BigNumber& x, const BigNumber& y)
 
 bool BigNumber::big(const BigNumber& x, const BigNumber& y)
 {
-	return BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::BIG;
+	return BigNumberBase::Compare(*x.m_base, *y.m_base) == BigNumberBase::BIG;
 }
 
 bool BigNumber::bigEqual(const BigNumber& x, const BigNumber& y)
 {
-	return (BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::BIG) ||
+	return (BigNumberBase::Compare(*x.m_base, *y.m_base) == BigNumberBase::BIG) ||
 		(BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::EQUAL);
 }
 
 bool BigNumber::small(const BigNumber& x, const BigNumber& y)
 {
-	return BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::SMALL;
+	return BigNumberBase::Compare(*x.m_base, *y.m_base) == BigNumberBase::SMALL;
 }
 
 bool BigNumber::smallEqual(const BigNumber& x, const BigNumber& y)
 {
-	return (BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::SMALL) ||
+	return (BigNumberBase::Compare(*x.m_base, *y.m_base) == BigNumberBase::SMALL) ||
 		(BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::EQUAL);
 }
 

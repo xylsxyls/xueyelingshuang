@@ -25,18 +25,18 @@
 // libmysql defines HAVE_STRTOUL (on win), so we have to follow different pattern in definitions names
 // to avoid annoying warnings.
 
-#define HAVE_FUNCTION_STRTOLD 1
-#define HAVE_FUNCTION_STRTOLL 1
+/* #undef HAVE_FUNCTION_STRTOLD */
+/* #undef HAVE_FUNCTION_STRTOLL */
 #define HAVE_FUNCTION_STRTOL 1
-#define HAVE_FUNCTION_STRTOULL 1
+/* #undef HAVE_FUNCTION_STRTOULL */
 
 #define HAVE_FUNCTION_STRTOUL 1
 
-#define HAVE_FUNCTION_STRTOIMAX 1
-#define HAVE_FUNCTION_STRTOUMAX 1
+/* #undef HAVE_FUNCTION_STRTOIMAX */
+/* #undef HAVE_FUNCTION_STRTOUMAX */
 
 #define HAVE_STDINT_H 1
-#define HAVE_INTTYPES_H 1
+/* #undef HAVE_INTTYPES_H */
 
 #define HAVE_INT8_T   1
 #define HAVE_UINT8_T  1
@@ -62,8 +62,7 @@
 #include <stdint.h>
 #endif
 
-
-#if defined(HAVE_INTTYPES_H) && !defined(_WIN32)
+#ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
 

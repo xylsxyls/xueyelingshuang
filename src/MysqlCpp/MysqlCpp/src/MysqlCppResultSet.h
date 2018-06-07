@@ -2,13 +2,15 @@
 #include <stdint.h>
 #include <string>
 #include "MysqlCppMacro.h"
+#include <vector>
 
 namespace sql
 {
 	class ResultSet;
 }
 
-/** 该类等同于sql::ResultSet*/
+/** 该类等同于sql::ResultSet
+*/
 class MysqlCppAPI MysqlCppResultSet
 {
 public:
@@ -19,6 +21,11 @@ public:
 	/** 析构函数
 	*/
 	~MysqlCppResultSet();
+
+public:
+	std::vector<std::vector<std::string>> toVector();
+
+	int32_t columnCount();
 
 public:
 	std::istream* getBlob(uint32_t columnIndex) const;
@@ -46,6 +53,7 @@ public:
 	std::string getString(const std::string& columnLabel) const;
 
 	bool next();
+	bool previous();
 
 	size_t rowsCount() const;
 

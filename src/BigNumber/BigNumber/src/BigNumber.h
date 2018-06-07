@@ -38,18 +38,52 @@ public:
 	BigNumber operator = (double num);
 
 public:
-	friend BigNumber operator + (const BigNumber& x, const BigNumber& y);
-	friend BigNumber operator - (const BigNumber& x, const BigNumber& y);
-	friend BigNumber operator * (const BigNumber& x, const BigNumber& y);
-	friend BigNumber operator / (const BigNumber& x, const BigNumber& y);
-	friend BigNumber operator % (const BigNumber& x, const BigNumber& y);
+	friend BigNumber operator + (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::add(x, y);
+	}
+	friend BigNumber operator - (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::sub(x, y);
+	}
+	friend BigNumber operator * (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::mul(x, y);
+	}
+	//除法小数位数和尾数处理规则和x内的除法规则一致
+	friend BigNumber operator / (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::div(x, y);
+	}
+	friend BigNumber operator % (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::mod(x, y);
+	}
 
-	friend bool operator == (const BigNumber& x, const BigNumber& y);
-	friend bool operator != (const BigNumber& x, const BigNumber& y);
-	friend bool operator >  (const BigNumber& x, const BigNumber& y);
-	friend bool operator >= (const BigNumber& x, const BigNumber& y);
-	friend bool operator <  (const BigNumber& x, const BigNumber& y);
-	friend bool operator <= (const BigNumber& x, const BigNumber& y);
+	friend bool operator == (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::equal(x, y);
+	}
+	friend bool operator != (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::notEqual(x, y);
+	}
+	friend bool operator >  (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::big(x, y);
+	}
+	friend bool operator >= (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::bigEqual(x, y);
+	}
+	friend bool operator <  (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::small(x, y);
+	}
+	friend bool operator <= (const BigNumber& x, const BigNumber& y)
+	{
+		return BigNumber::smallEqual(x, y);
+	}
 
 	BigNumber operator ++ ();//前++
 	BigNumber operator -- ();//前--
@@ -60,11 +94,13 @@ public:
 
 	std::string toString();
 
-	void setPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
+	//以下3函数都是返回本身
+	BigNumber& setPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
 
-	void setFixedPrec(int32_t fixedPrec, PrecFlag fixedPrecFlag = HALF_ADJUST);
+	BigNumber& setFixedPrec(int32_t fixedPrec, PrecFlag fixedPrecFlag = HALF_ADJUST);
 
-	void setDivParam(int32_t prec, PrecFlag flag = HALF_ADJUST);
+	//除法规则
+	BigNumber& setDivParam(int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
 private:
 	static BigNumber add(const BigNumber& x, const BigNumber& y);
@@ -81,9 +117,17 @@ private:
 	static bool smallEqual(const BigNumber& x, const BigNumber& y);
 
 private:
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+#ifdef _DEBUG
+	std::string m_num;
+#endif
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	PrecFlag m_divFlag;
+	int32_t m_divPrec;
 	BigNumberBase* m_base;
-	int32_t m_prec;
-	PrecFlag m_flag;
 };
-
-#include "BigNumber.inl"

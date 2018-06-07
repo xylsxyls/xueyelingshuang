@@ -1,1 +1,1 @@
-call "%CLOUD_REBUILD%" BigNumber 32 dll release same
+call "%CLOUD_REBUILD%" BigNumber 32 dll release

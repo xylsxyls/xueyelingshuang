@@ -26,15 +26,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MYCPPCONN_DM_MAJOR_VERSION 1
 #define MYCPPCONN_DM_MINOR_VERSION 1
-#define MYCPPCONN_DM_PATCH_VERSION 7
+#define MYCPPCONN_DM_PATCH_VERSION 5
 
-#define MYCPPCONN_DM_VERSION     "1.01.0007"
-#define MYCPPCONN_DM_VERSION_ID  1010007
-
-
-/* Driver version info */
-
-#define MYCPPCONN_STATIC_MYSQL_VERSION     "5.7.10"
-#define MYCPPCONN_STATIC_MYSQL_VERSION_ID  50710
-
-#define MYCPPCONN_BOOST_VERSION            105600
+#define MYCPPCONN_DM_VERSION     "1.01.0005"
+#define MYCPPCONN_DM_VERSION_ID  1010005

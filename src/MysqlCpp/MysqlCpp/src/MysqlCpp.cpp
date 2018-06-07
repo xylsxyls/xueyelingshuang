@@ -22,6 +22,7 @@
 #endif
 
 #pragma comment(lib, "mysqlcppconn.lib")
+#pragma comment(lib, "mysqlcppconn-static.lib")
 
 MysqlCpp::MysqlCpp():
 m_driver(nullptr),
@@ -54,7 +55,7 @@ bool MysqlCpp::connect(const std::string& ip,
 		delete m_con;
 		m_con = nullptr;
 	}
-
+	
 	m_con = m_driver->connect(CStringManager::Format("tcp://%s:%d", ip.c_str(), port).c_str(), account.c_str(), password.c_str());
 	if (m_con == nullptr)
 	{
@@ -111,6 +112,26 @@ std::shared_ptr<MysqlCppResultSet> MysqlCpp::execute(const std::shared_ptr<Mysql
 	return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
 }
 
+void MysqlCpp::importSql(const std::string sqlPath,
+						 const std::string& host,
+						 const std::string& user,
+						 const std::string& password,
+						 const std::string& database)
+{
+	system(SqlString::importString(sqlPath, host, user, password, database).c_str());
+}
+
+void MysqlCpp::exportSql(const std::string sqlPath,
+						 const std::string& host,
+						 const std::string& user,
+						 const std::string& password,
+						 const std::string& exportData)
+{
+
+	system(SqlString::importString(sqlPath, host, user, password, exportData).c_str());
+	return;
+}
+
 void MysqlCpp::setAutoCommit(bool autoCommit)
 {
 	if (!check())
@@ -148,11 +169,11 @@ bool MysqlCpp::check()
 //	MysqlCpp mysql;
 //	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 //	mysql.selectDb("test");
-//	auto statement = mysql.PreparedStatementCreator(SqlString::selectString("testtable", "id=3","num"));
+//	auto statement = mysql.PreparedStatementCreator(SqlString::selectString("testtable", "id=3", "num"));
 //	//statement->setInt(1, 80);
 //	//statement->setString(2, "aaa");
 //	//statement->setDouble(3, 808.22);
-//	std::shared_ptr<MysqlCppResultSet> result = mysql.executeResult(statement);
+//	std::shared_ptr<MysqlCppResultSet> result = mysql.execute(statement);
 //	while (result->next())
 //	{
 //		int id = result->getInt("num");

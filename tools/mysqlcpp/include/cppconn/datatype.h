@@ -32,36 +32,35 @@ namespace sql
 
 class DataType
 {
-  DataType();
+	DataType();
 public:
-  enum {
-    UNKNOWN = 0,
-    BIT,
-    TINYINT,
-    SMALLINT,
-    MEDIUMINT,
-    INTEGER,
-    BIGINT,
-    REAL,
-    DOUBLE,
-    DECIMAL,
-    NUMERIC,
-    CHAR,
-    BINARY,
-    VARCHAR,
-    VARBINARY,
-    LONGVARCHAR,
-    LONGVARBINARY,
-    TIMESTAMP,
-    DATE,
-    TIME,
-    YEAR,
-    GEOMETRY,
-    ENUM,
-    SET,
-    SQLNULL,
-    JSON
-  };
+	enum {
+		UNKNOWN = 0,
+		BIT,
+		TINYINT,
+		SMALLINT,
+		MEDIUMINT,
+		INTEGER,
+		BIGINT,
+		REAL,
+		DOUBLE,
+		DECIMAL,
+		NUMERIC,
+		CHAR,
+		BINARY,
+		VARCHAR,
+		VARBINARY,
+		LONGVARCHAR,
+		LONGVARBINARY,
+		TIMESTAMP,
+		DATE,
+		TIME,
+		YEAR,
+		GEOMETRY,
+		ENUM,
+		SET,
+		SQLNULL
+	};
 };
 
 } /* namespace */

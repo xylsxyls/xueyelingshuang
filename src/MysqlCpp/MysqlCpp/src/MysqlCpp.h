@@ -58,6 +58,32 @@ public:
 	*/
 	std::shared_ptr<MysqlCppResultSet> execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement);
 
+	/** 导入
+	@param [in] sqlPath 导入的sql文件路径
+	@param [in] host 主机IP地址
+	@param [in] user 用户名
+	@param [in] password 密码
+	@param [in] database 数据库名
+	*/
+	void importSql(const std::string sqlPath,
+				   const std::string& host,
+				   const std::string& user,
+				   const std::string& password,
+				   const std::string& database);
+
+	/** 导出
+	@param [in] sqlPath 导入的sql文件路径
+	@param [in] host 主机IP地址
+	@param [in] user 用户名
+	@param [in] password 密码
+	@param [in] exportData 导出内容，database或者database table
+	*/
+	void exportSql(const std::string sqlPath,
+				   const std::string& host,
+				   const std::string& user,
+				   const std::string& password,
+				   const std::string& exportData);
+
 	/** 设置是否自动提交
 	@param [in] autoCommit 是否自动提交
 	*/
