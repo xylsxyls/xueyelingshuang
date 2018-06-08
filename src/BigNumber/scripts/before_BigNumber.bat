@@ -28,12 +28,3 @@ goto BigNumberBase_end
 call "%CLOUD_REBUILD%" BigNumberBase %BigNumberBase_bit% %BigNumberBase_dlllib% %BigNumberBase_debugRelease%
 goto BigNumberBase_end
 :BigNumberBase_end
-
-::--------------------------------------------------------------------
-set bat=%~dp0
-set xueyelingshuang=%bat%..\..\..\
-
-xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp32.static\gmp-static-p4\libgcc.a" "%xueyelingshuang%lib\"
-xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp32.static\gmp-static-p4\libgmp.a" "%xueyelingshuang%lib\"
-xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp32.static\gmp-static-p4\libmingwex.a" "%xueyelingshuang%lib\"
-xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp32.static\gmp-static-p4\libmsvcrt.a" "%xueyelingshuang%lib\"

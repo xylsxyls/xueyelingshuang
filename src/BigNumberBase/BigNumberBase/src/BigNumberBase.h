@@ -103,5 +103,3 @@ public:
 	int32_t m_fixedPrec;
 	PrecFlag m_fixedPrecFlag;
 };
-
-#include "BigNumberBase.inl"

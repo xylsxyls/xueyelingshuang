@@ -17,8 +17,10 @@ int main()
 	mysql.selectDb("test");
 	//Stock::insertDatabase(mysql);
 	auto sssds = Stock::getPriceMap(mysql);
+	
 	int end = ::GetTickCount();
 	printf("%d", end - begin);
-	getchar();
+	//getchar();
+	//exit(0);
 	return 0;
 }

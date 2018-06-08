@@ -2,14 +2,13 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include <math.h>
 #include "gmp.h"
-#pragma comment(lib, "libgmp.a")
-#pragma comment(lib, "libgcc.a")
-#pragma comment(lib, "libmingwex.a")
-#pragma comment(lib, "libmsvcrt.a")
+#pragma comment(lib, "gmp.lib")
 
 class GmpInt
 {
 public:
+	static void TenExp(mpz_t& num, int32_t exp);
+
 	mpz_t m_integer;
 };
 
@@ -69,7 +68,7 @@ BigNumberBase BigNumberBase::operator = (const BigNumberBase& num)
 }
 
 //num*10µÄexp´Î·½
-void TenExp(mpz_t& num, int32_t exp)
+void GmpInt::TenExp(mpz_t& num, int32_t exp)
 {
 	if (exp == 0)
 	{
@@ -97,14 +96,14 @@ BigNumberBase BigNumberBase::add(const BigNumberBase& x, const BigNumberBase& y)
 	else if (x.m_prec < y.m_prec)
 	{
 		result = x;
-		TenExp(result.m_gmp->m_integer, y.m_prec - x.m_prec);
+		GmpInt::TenExp(result.m_gmp->m_integer, y.m_prec - x.m_prec);
 		result.m_prec = y.m_prec;
 		mpz_add(result.m_gmp->m_integer, result.m_gmp->m_integer, y.m_gmp->m_integer);
 	}
 	else
 	{
 		result = y;
-		TenExp(result.m_gmp->m_integer, x.m_prec - y.m_prec);
+		GmpInt::TenExp(result.m_gmp->m_integer, x.m_prec - y.m_prec);
 		result.m_prec = x.m_prec;
 		mpz_add(result.m_gmp->m_integer, x.m_gmp->m_integer, result.m_gmp->m_integer);
 	}
@@ -122,14 +121,14 @@ BigNumberBase BigNumberBase::sub(const BigNumberBase& x, const BigNumberBase& y)
 	else if (x.m_prec < y.m_prec)
 	{
 		result = x;
-		TenExp(result.m_gmp->m_integer, y.m_prec - x.m_prec);
+		GmpInt::TenExp(result.m_gmp->m_integer, y.m_prec - x.m_prec);
 		result.m_prec = y.m_prec;
 		mpz_sub(result.m_gmp->m_integer, result.m_gmp->m_integer, y.m_gmp->m_integer);
 	}
 	else
 	{
 		result = y;
-		TenExp(result.m_gmp->m_integer, x.m_prec - y.m_prec);
+		GmpInt::TenExp(result.m_gmp->m_integer, x.m_prec - y.m_prec);
 		result.m_prec = x.m_prec;
 		mpz_sub(result.m_gmp->m_integer, x.m_gmp->m_integer, result.m_gmp->m_integer);
 	}
@@ -169,9 +168,9 @@ BigNumberBase BigNumberBase::div(const BigNumberBase& divisor, int32_t prec, Pre
 	if (m_prec >= divisor.m_prec)
 	{
 		BigNumberBase dividerTemp = *this;
-		TenExp(dividerTemp.m_gmp->m_integer, prec + Calc::PRECISE);
+		GmpInt::TenExp(dividerTemp.m_gmp->m_integer, prec + Calc::PRECISE);
 		BigNumberBase divisorTemp = divisor;
-		TenExp(divisorTemp.m_gmp->m_integer, m_prec - divisor.m_prec);
+		GmpInt::TenExp(divisorTemp.m_gmp->m_integer, m_prec - divisor.m_prec);
 		dividerTemp.m_prec = 0;
 		divisorTemp.m_prec = 0;
 
@@ -184,7 +183,7 @@ BigNumberBase BigNumberBase::div(const BigNumberBase& divisor, int32_t prec, Pre
 	else
 	{
 		BigNumberBase dividerTemp = *this;
-		TenExp(dividerTemp.m_gmp->m_integer, divisor.m_prec - m_prec + prec + Calc::PRECISE);
+		GmpInt::TenExp(dividerTemp.m_gmp->m_integer, divisor.m_prec - m_prec + prec + Calc::PRECISE);
 		BigNumberBase divisorTemp = divisor;
 		dividerTemp.m_prec = 0;
 		divisorTemp.m_prec = 0;
@@ -249,15 +248,15 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 	}
 	
 	mpz_pow_ui(result.m_gmp->m_integer, m_gmp->m_integer, index);
-	TenExp(result.m_gmp->m_integer, (unsigned long int)::pow(10, powNum.m_prec) * (prec + Calc::PRECISE));
+	GmpInt::TenExp(result.m_gmp->m_integer, (unsigned long int)::pow(10, powNum.m_prec) * (prec + Calc::PRECISE));
 	unsigned long int exp = (unsigned long int)::pow(10, powNum.m_prec);
 	mpz_root(result.m_gmp->m_integer, result.m_gmp->m_integer, exp);
 	result.m_prec = prec + Calc::PRECISE;
 
 	BigNumberBase divisorMultiple = "1";
-	TenExp(divisorMultiple.m_gmp->m_integer, m_prec);
+	GmpInt::TenExp(divisorMultiple.m_gmp->m_integer, m_prec);
 	mpz_pow_ui(divisorMultiple.m_gmp->m_integer, divisorMultiple.m_gmp->m_integer, index);
-	TenExp(divisorMultiple.m_gmp->m_integer, exp * (prec + Calc::PRECISE));
+	GmpInt::TenExp(divisorMultiple.m_gmp->m_integer, exp * (prec + Calc::PRECISE));
 	mpz_root(divisorMultiple.m_gmp->m_integer, divisorMultiple.m_gmp->m_integer, exp);
 	divisorMultiple.m_prec = prec + Calc::PRECISE;
 
@@ -345,7 +344,7 @@ void BigNumberBase::setPrec(int32_t prec, PrecFlag flag)
 	}
 	if (m_prec < prec)
 	{
-		TenExp(m_gmp->m_integer, (prec - m_prec));
+		GmpInt::TenExp(m_gmp->m_integer, (prec - m_prec));
 		m_prec = prec;
 		return;
 	}

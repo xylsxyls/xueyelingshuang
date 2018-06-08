@@ -70,7 +70,7 @@ public:
 	}
 	friend bool operator >  (const BigNumber& x, const BigNumber& y)
 	{
-		return BigNumber::big(x, y);
+		return BigNumber::bigThan(x, y);
 	}
 	friend bool operator >= (const BigNumber& x, const BigNumber& y)
 	{
@@ -78,7 +78,7 @@ public:
 	}
 	friend bool operator <  (const BigNumber& x, const BigNumber& y)
 	{
-		return BigNumber::small(x, y);
+		return BigNumber::smallThan(x, y);
 	}
 	friend bool operator <= (const BigNumber& x, const BigNumber& y)
 	{
@@ -111,9 +111,9 @@ private:
 
 	static bool equal(const BigNumber& x, const BigNumber& y);
 	static bool notEqual(const BigNumber& x, const BigNumber& y);
-	static bool big(const BigNumber& x, const BigNumber& y);
+	static bool bigThan(const BigNumber& x, const BigNumber& y);
 	static bool bigEqual(const BigNumber& x, const BigNumber& y);
-	static bool small(const BigNumber& x, const BigNumber& y);
+	static bool smallThan(const BigNumber& x, const BigNumber& y);
 	static bool smallEqual(const BigNumber& x, const BigNumber& y);
 
 private:

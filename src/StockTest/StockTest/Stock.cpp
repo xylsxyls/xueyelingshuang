@@ -4,6 +4,7 @@
 #include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "BigNumber/BigNumberAPI.h"
+#include "D:\\SendToMessageTest.h"
 
 void Stock::insertDatabase(MysqlCpp& mysql)
 {

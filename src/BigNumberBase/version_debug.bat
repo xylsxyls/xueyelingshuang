@@ -1,1 +1,1 @@
-call "%CLOUD_REBUILD%" BigNumberBase 32 dll debug same
+call "%CLOUD_REBUILD%" BigNumberBase 32 lib debug same
