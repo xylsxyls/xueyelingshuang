@@ -27,6 +27,7 @@ public:
 	};
 public:
 	BigNumber();
+    ~BigNumber();
 	BigNumber(int32_t num);
 	BigNumber(const char* num);
 	BigNumber(double num);
@@ -36,6 +37,7 @@ public:
 	BigNumber operator = (int32_t num);
 	BigNumber operator = (const char* num);
 	BigNumber operator = (double num);
+    BigNumber operator = (const BigNumber& num);
 
 public:
 	friend BigNumber operator + (const BigNumber& x, const BigNumber& y)
@@ -93,6 +95,8 @@ public:
 	BigNumber pow(const BigNumber& powNum, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
 	std::string toString();
+
+    BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
 
 	//以下3函数都是返回本身
 	BigNumber& setPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);

@@ -11,16 +11,12 @@
 
 int main()
 {
-	int begin = ::GetTickCount();
 	MysqlCpp mysql;
 	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 	mysql.selectDb("test");
 	//Stock::insertDatabase(mysql);
-	auto sssds = Stock::getPriceMap(mysql);
-	
-	int end = ::GetTickCount();
-	printf("%d", end - begin);
-	//getchar();
-	//exit(0);
+    //Stock::getPriceMap(mysql);
+    Stock::getPriceFromScreen();
+	getchar();
 	return 0;
 }

@@ -2,6 +2,8 @@
 #include <windows.h>
 #include <string>
 #include <stdint.h>
+#include <map>
+#include <vector>
 #include "CSystemMacro.h"
 
 class CSystemAPI CSystem{
@@ -62,6 +64,10 @@ public:
 	//?销毁动态的二位数组，内部有判空
 	template <typename TypeClass>
 	static void DestroyDyadicArray(TypeClass** classPtr, int32_t row);
+    //?打印map
+    static void PrintfMap(const std::map<std::string, std::string>& stringMap);
+    //?打印vector
+    static void PrintfVector(const std::vector<std::string>& stringVector);
 
 public:
     static bool ifRedirFrobid;

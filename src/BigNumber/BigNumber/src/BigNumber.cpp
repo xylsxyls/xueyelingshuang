@@ -56,6 +56,22 @@ m_divFlag(HALF_ADJUST)
 #endif
 }
 
+BigNumber BigNumber::operator=(const BigNumber& num)
+{
+    *m_base = *num.m_base;
+    m_divPrec = 16;
+    m_divFlag = HALF_ADJUST;
+#ifdef _DEBUG
+    m_num = toString();
+#endif
+    return *this;
+}
+
+BigNumber::~BigNumber()
+{
+    delete m_base;
+}
+
 BigNumber BigNumber::operator=(double num)
 {
 	*m_base = CStringManager::Format("%lf", num).c_str();
@@ -142,6 +158,16 @@ BigNumber BigNumber::pow(const BigNumber& powNum, int32_t prec, PrecFlag flag)
 std::string BigNumber::toString()
 {
 	return m_base->toString();
+}
+
+BigNumber BigNumber::toPrec(int32_t prec, PrecFlag flag)
+{
+    BigNumber result = *this;
+    result.setPrec(prec, flag);
+#ifdef _DEBUG
+    m_num = toString();
+#endif
+    return result;
 }
 
 BigNumber& BigNumber::setPrec(int32_t prec, PrecFlag flag)

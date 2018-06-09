@@ -248,6 +248,22 @@ int CSystem::GetSystemBits()
     return 32;
 }
 
+void CSystem::PrintfMap(const std::map<std::string, std::string>& stringMap)
+{
+    for (auto itData = stringMap.begin(); itData != stringMap.end(); ++itData)
+    {
+        printf("[%s] = %s\n", itData->first.c_str(), itData->second.c_str());
+    }
+}
+
+void CSystem::PrintfVector(const std::vector<std::string>& stringVector)
+{
+    for (auto itData = stringVector.begin(); itData != stringVector.end(); ++itData)
+    {
+        printf("%s\n", itData->c_str());
+    }
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 
