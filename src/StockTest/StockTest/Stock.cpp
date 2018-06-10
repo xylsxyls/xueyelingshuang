@@ -212,27 +212,22 @@ std::map<int32_t, std::string> Stock::getFundMap(MysqlCpp& mysql)
 	return fundMap(result);
 }
 
-void Stock::getPriceFromScreen()
+void Stock::getPriceFromScreen(const std::string& stock)
 {
-    Sleep(3000);
-    std::vector<std::string> vecStock = getStock();
-    int32_t index = -1;
-    while (index++ != vecStock.size() - 1)
-    {
-        std::string& strStock = vecStock[index];
-        CKeyboard::InputString(strStock + "\n");
-        CMouse::MoveAbsolute(xyls::Point(500, 500));
-        CMouse::RightClick();
-        CMouse::MoveOpposite(xyls::Point(100, 142));
-        CMouse::MoveOpposite(xyls::Point(200, 0));
-        CMouse::LeftClick();
-        Sleep(200);
-        CKeyboard::InputString("\n");
-        Sleep(200);
-        CKeyboard::InputString("\n");
-        Sleep(1500);
-        CKeyboard::InputString("\n");
-    }
+    CMouse::MoveAbsolute(xyls::Point(500, 500));
+    CMouse::LeftClick();
+    CKeyboard::InputString(stock + "\n");
+    CMouse::MoveAbsolute(xyls::Point(500, 500));
+    CMouse::RightClick();
+    CMouse::MoveOpposite(xyls::Point(100, 142));
+    CMouse::MoveOpposite(xyls::Point(200, 0));
+    CMouse::LeftClick();
+    Sleep(200);
+    CKeyboard::InputString("\n");
+    Sleep(200);
+    CKeyboard::InputString("\n");
+    Sleep(1500);
+    CKeyboard::InputString("\n");
 }
 
 std::vector<std::string> Stock::getStock()

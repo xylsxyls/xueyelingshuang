@@ -14,9 +14,10 @@ int main()
 	MysqlCpp mysql;
 	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 	mysql.selectDb("test");
-	//Stock::insertDatabase(mysql);
-    //Stock::getPriceMap(mysql);
-    Stock::getPriceFromScreen();
+    Sleep(3000);
+    Stock::getPriceFromScreen("000001");
+    Stock::insertDatabase(mysql);
+    Stock::getPriceMap(mysql);
 	getchar();
 	return 0;
 }

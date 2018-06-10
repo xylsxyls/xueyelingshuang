@@ -16,7 +16,7 @@ public:
 	static std::map<int32_t, std::string> getFundMap(MysqlCpp& mysql);
 
     //获取图
-    static void getPriceFromScreen();
+    static void getPriceFromScreen(const std::string& stock);
 
     //获取自选股列表
     static std::vector<std::string> getStock();
