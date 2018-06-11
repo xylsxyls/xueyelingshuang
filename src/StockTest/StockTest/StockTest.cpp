@@ -11,6 +11,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "CMouse/CMouseAPI.h"
 #include <fstream>
+#include "D:\\SendToMessageTest.h"
 
 int main()
 {
@@ -33,8 +34,9 @@ int main()
 	int32_t index = -1;
 	while (index++ != vecStock.size() - 1)
 	{
-		std::ofstream file("D:\\stock.txt");
-		file << vecStock[index].c_str() << "\r\n";
+		//std::ofstream file("D:\\stock.txt");
+		//file << vecStock[index].c_str() << "\r\n";
+		RCSend("%s", vecStock[index].c_str());
 		Stock::getPriceFromScreen(vecStock[index]);
 		Stock::insertDatabase(mysql);
 		auto map = Stock::getPriceMap(mysql);
