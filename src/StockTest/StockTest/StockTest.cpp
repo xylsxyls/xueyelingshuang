@@ -15,9 +15,23 @@
 
 int main()
 {
+	
 	MysqlCpp mysql;
 	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 	mysql.selectDb("stock");
+
+	Ctxt self("D:\\Table.txt");
+	self.LoadTxt(2, "\t");
+	mysql.execute(mysql.PreparedStatementCreator(SqlString::clearTableString("selfstock")));
+	int32_t lineIndex = 0;
+	while (lineIndex++ != self.m_vectxt.size() - 2)
+	{
+		auto lineStr = CStringManager::Mid(self.m_vectxt[lineIndex][0], 2, 6);
+		auto state = mysql.PreparedStatementCreator(SqlString::insertString("selfstock", "daima"));
+		state->setString(1, lineStr.c_str());
+		mysql.execute(state);
+	}
+	return 0;
     Sleep(3000);
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
