@@ -17,7 +17,7 @@ int main()
 {
 	MysqlCpp mysql;
 	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
-	mysql.selectDb("test");
+	mysql.selectDb("stock");
     Sleep(3000);
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
