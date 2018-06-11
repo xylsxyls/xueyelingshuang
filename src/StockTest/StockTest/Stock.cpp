@@ -9,7 +9,7 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "D:\\SendToMessageTest.h"
 
-void Stock::insertDatabase(MysqlCpp& mysql)
+bool Stock::insertDatabase(MysqlCpp& mysql)
 {
 	mysql.execute(mysql.PreparedStatementCreator(SqlString::destroyTableString("stock")));
 	std::vector<std::string> vec;
@@ -44,7 +44,7 @@ void Stock::insertDatabase(MysqlCpp& mysql)
     {
         if (txt.m_vectxt[index].size() != 4)
         {
-            abort();
+            return false;
         }
     }
 
@@ -71,6 +71,7 @@ void Stock::insertDatabase(MysqlCpp& mysql)
 		state->setString(5, stateStr);
 		mysql.execute(state);
 	}
+	return true;
 }
 
 std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_t fundNum, bool& isMinus)

@@ -20,17 +20,19 @@ int main()
 	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 	mysql.selectDb("stock");
 
-	Ctxt self("D:\\Table.txt");
-	self.LoadTxt(2, "\t");
-	mysql.execute(mysql.PreparedStatementCreator(SqlString::clearTableString("selfstock")));
-	int32_t lineIndex = 0;
-	while (lineIndex++ != self.m_vectxt.size() - 2)
-	{
-		auto lineStr = CStringManager::Mid(self.m_vectxt[lineIndex][0], 2, 6);
-		auto state = mysql.PreparedStatementCreator(SqlString::insertString("selfstock", "daima"));
-		state->setString(1, lineStr.c_str());
-		mysql.execute(state);
-	}
+	//Ctxt self("D:\\Table.txt");
+	//self.LoadTxt(2, "\t");
+	//mysql.execute(mysql.PreparedStatementCreator(SqlString::clearTableString("selfstock")));
+	//int32_t lineIndex = 0;
+	//while (lineIndex++ != self.m_vectxt.size() - 2)
+	//{
+	//	auto lineStr = CStringManager::Mid(self.m_vectxt[lineIndex][0], 2, 6);
+	//	auto state = mysql.PreparedStatementCreator(SqlString::insertString("selfstock", "daima"));
+	//	state->setString(1, lineStr.c_str());
+	//	mysql.execute(state);
+	//}
+	//return 0;
+	Stock::insertDatabase(mysql);
 	return 0;
 	int begin = ::GetTickCount();
     Sleep(3000);
@@ -41,12 +43,18 @@ int main()
 	std::map<std::string, std::string> useCountMap;
 	Ctxt txt("D:\\stock.txt");
 	txt.ClearFile();
+	Ctxt txtError("D:\\stockError.txt");
+	txtError.ClearFile();
 	int32_t index = -1;
 	while (index++ != vecStock.size() - 1)
 	{
 		txt.AddLine("%s", vecStock[index][0].c_str());
 		Stock::getPriceFromScreen(vecStock[index][0]);
-		Stock::insertDatabase(mysql);
+		bool insertSuccess = Stock::insertDatabase(mysql);
+		if (insertSuccess == false)
+		{
+			txtError.AddLine("%s", vecStock[index][0].c_str());
+		}
 		int32_t useCount = 0;
 		auto map = Stock::getPriceMap(mysql, useCount);
 		std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];

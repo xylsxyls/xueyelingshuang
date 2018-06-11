@@ -7,7 +7,7 @@ class Stock
 {
 public:
 	//±ÊÈë¿â
-	static void insertDatabase(MysqlCpp& mysql);
+	static bool insertDatabase(MysqlCpp& mysql);
 
 	//¾ù¼ÛÍ¼
 	static std::vector<std::string> getPriceMap(MysqlCpp& mysql, int32_t& useCount);
