@@ -47,6 +47,8 @@ int main()
 		CSystem::OutputVector(map, "D:\\stock.txt");
 		txt.AddLine("");
 	}
+	Ctxt txtMap("D:\\stockPriceMap.txt");
+	txtMap.ClearFile();
 	CSystem::OutputMap(useCountMap, "D:\\stockPriceMap.txt");
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
