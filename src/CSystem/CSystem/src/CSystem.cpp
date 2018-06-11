@@ -266,7 +266,7 @@ void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, con
 		}
 		else
 		{
-			file << "[" << itData->first.c_str() << "] = " << itData->second.c_str() << "\r\n";
+			file << "[" << itData->first.c_str() << "] = " << itData->second.c_str() << "\n";
 		}
     }
 }
@@ -282,7 +282,7 @@ void CSystem::OutputVector(const std::vector<std::string>& stringVector, const s
 		}
 		else
 		{
-			file << itData->c_str() << "\r\n";
+			file << itData->c_str() << "\n";
 		}
     }
 }

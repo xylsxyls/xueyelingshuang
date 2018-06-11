@@ -19,7 +19,7 @@ public:
     static void getPriceFromScreen(const std::string& stock);
 
     //获取自选
-    static std::vector<std::string> getSelfStock();
+	static std::vector<std::vector<std::string>> getSelfStock(MysqlCpp& mysql);
 
     static void toPrec(std::string& result, int32_t prec);
 };

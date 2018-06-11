@@ -22,38 +22,30 @@ int main()
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
 	Sleep(1500);
-	std::vector<std::string> vecStock;
-	vecStock.push_back("603045");
-	vecStock.push_back("300718");
-	vecStock.push_back("300702");
-	vecStock.push_back("300720");
-	vecStock.push_back("603709");
-	vecStock.push_back("002927");
-	vecStock.push_back("300682");
-	vecStock.push_back("603013");
+	std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql);
 	std::map<std::string, std::string> useCountMap;
 	Ctxt txt("D:\\stock.txt");
 	txt.ClearFile();
-	std::ofstream file("D:\\stock.txt");
 	int32_t index = -1;
 	while (index++ != vecStock.size() - 1)
 	{
-		txt.AddLine("%s", vecStock[index].c_str());
-		Stock::getPriceFromScreen(vecStock[index]);
+		txt.AddLine("%s", vecStock[index][0].c_str());
+		Stock::getPriceFromScreen(vecStock[index][0]);
 		Stock::insertDatabase(mysql);
 		int32_t useCount = 0;
 		auto map = Stock::getPriceMap(mysql, useCount);
 		std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
 		if (nowStr == "")
 		{
-			useCountMap[CStringManager::Format("%d", useCount)] = vecStock[index];
+			useCountMap[CStringManager::Format("%d", useCount)] = vecStock[index][0];
 		}
 		else
 		{
-			useCountMap[CStringManager::Format("%d", useCount)] = nowStr + ", " + vecStock[index];
+			useCountMap[CStringManager::Format("%d", useCount)] = nowStr + ", " + vecStock[index][0];
 		}
-		useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index]);
+		useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index][0]);
 		CSystem::OutputVector(map, "D:\\stock.txt");
+		txt.AddLine("");
 	}
 	CSystem::OutputMap(useCountMap, "D:\\stockPriceMap.txt");
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));

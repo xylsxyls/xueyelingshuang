@@ -230,23 +230,10 @@ void Stock::getPriceFromScreen(const std::string& stock)
     CKeyboard::InputString("\n");
 }
 
-std::vector<std::string> Stock::getSelfStock()
+std::vector<std::vector<std::string>> Stock::getSelfStock(MysqlCpp& mysql)
 {
-    std::vector<std::string> result;
-    result.push_back("000001");
-    result.push_back("000002");
-    result.push_back("000003");
-    result.push_back("000004");
-    result.push_back("000005");
-    result.push_back("000006");
-    result.push_back("000007");
-    result.push_back("000008");
-    result.push_back("000009");
-    result.push_back("000010");
-    result.push_back("000011");
-    result.push_back("000012");
-    result.push_back("000013");
-    return result;
+	auto state = mysql.PreparedStatementCreator(SqlString::selectString("selfstock", "daima"));
+	return mysql.execute(state)->toVector();
 }
 
 void Stock::toPrec(std::string& result, int32_t prec)
