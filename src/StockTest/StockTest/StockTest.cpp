@@ -31,16 +31,31 @@ int main()
 	vecStock.push_back("002927");
 	vecStock.push_back("300682");
 	vecStock.push_back("603013");
+	std::map<std::string, std::string> useCountMap;
+	Ctxt txt("D:\\stock.txt");
+	txt.ClearFile();
 	std::ofstream file("D:\\stock.txt");
 	int32_t index = -1;
 	while (index++ != vecStock.size() - 1)
 	{
-		file << vecStock[index].c_str() << "\r\n";
+		txt.AddLine("%s", vecStock[index].c_str());
 		Stock::getPriceFromScreen(vecStock[index]);
 		Stock::insertDatabase(mysql);
-		auto map = Stock::getPriceMap(mysql);
+		int32_t useCount = 0;
+		auto map = Stock::getPriceMap(mysql, useCount);
+		std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
+		if (nowStr == "")
+		{
+			useCountMap[CStringManager::Format("%d", useCount)] = vecStock[index];
+		}
+		else
+		{
+			useCountMap[CStringManager::Format("%d", useCount)] = nowStr + ", " + vecStock[index];
+		}
+		useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index]);
 		CSystem::OutputVector(map, "D:\\stock.txt");
 	}
+	CSystem::OutputMap(useCountMap, "D:\\stockPriceMap.txt");
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
 	Sleep(1500);

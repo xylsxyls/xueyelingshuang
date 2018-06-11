@@ -37,6 +37,8 @@ public:
 	void AddLine(const char* fmt, ...);
 	//?另存
 	void SaveAs(const std::string& path);
+	//?清空文件
+	void ClearFile();
 
 private:
 	//?用点到点的方式加载

@@ -209,6 +209,12 @@ void Ctxt::SaveAs(const std::string& path)
 	m_pFile = NULL;
 }
 
+void Ctxt::ClearFile()
+{
+	OpenFile_w();
+	CloseFile();
+}
+
 void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
 {
 	std::vector<std::vector<int32_t>> vecSplit;

@@ -73,7 +73,7 @@ void Stock::insertDatabase(MysqlCpp& mysql)
 	}
 }
 
-std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_t fundNum)
+std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_t fundNum, bool& isMinus)
 {
 	BigNumber buyNum = 0;
 	BigNumber sellNum = 0;
@@ -114,23 +114,27 @@ std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_
     std::string sellStr = sellclass.toPrec(prec).toString();
     std::string sub = (buyclass == 0 || sellclass == 0) ? "0" : (sellclass - buyclass).toPrec(prec).toString();
     std::string strpresent = (buyclass == 0 || sellclass == 0) ? "0" : ((sellclass - buyclass) / buyclass * 100).toPrec(prec - 2).toString();
+	isMinus = (strpresent[0] == '-');
 
     return buyStr + "," + sellStr + "," + sub + "," + strpresent + "%";
 }
 
-std::vector<std::string> priceMap(const std::vector<std::vector<std::string>>& result)
+std::vector<std::string> priceMap(const std::vector<std::vector<std::string>>& result, int32_t useCount)
 {
+	useCount = 0;
     std::vector<std::string> pricemap;
 	int32_t num = 0;
 	while (num != 110000)
 	{
-        pricemap.push_back(CStringManager::Format("[%d] = %s", num, getPrice(result, num).c_str()));
+		bool isMinus = false;
+		pricemap.push_back(CStringManager::Format("[%d] = %s", num, getPrice(result, num, isMinus).c_str()));
 		num += 10000;
+		useCount += (int32_t)(!isMinus);
 	}
 	return pricemap;
 }
 
-std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql)
+std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql, int32_t& useCount)
 {
     //std::map<int32_t, std::string> pricemap;
     //int num = 0;
@@ -151,7 +155,7 @@ std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql)
 
     auto state = mysql.PreparedStatementCreator(SqlString::selectString("stock", "shijian,chengjiao,xianshou,bishu,maimai"));
     std::vector<std::vector<std::string>> result = mysql.execute(state)->toVector(); //¡ý¡ü--
-    return priceMap(result);
+	return priceMap(result, useCount);
 }
 
 std::string getFund(const std::vector<std::vector<std::string>>& result, int32_t fundNum)
@@ -226,7 +230,7 @@ void Stock::getPriceFromScreen(const std::string& stock)
     CKeyboard::InputString("\n");
 }
 
-std::vector<std::string> Stock::getStock()
+std::vector<std::string> Stock::getSelfStock()
 {
     std::vector<std::string> result;
     result.push_back("000001");
