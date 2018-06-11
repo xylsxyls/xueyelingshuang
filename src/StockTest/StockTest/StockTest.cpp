@@ -31,12 +31,11 @@ int main()
 	vecStock.push_back("002927");
 	vecStock.push_back("300682");
 	vecStock.push_back("603013");
+	std::ofstream file("D:\\stock.txt");
 	int32_t index = -1;
 	while (index++ != vecStock.size() - 1)
 	{
-		//std::ofstream file("D:\\stock.txt");
-		//file << vecStock[index].c_str() << "\r\n";
-		RCSend("%s", vecStock[index].c_str());
+		file << vecStock[index].c_str() << "\r\n";
 		Stock::getPriceFromScreen(vecStock[index]);
 		Stock::insertDatabase(mysql);
 		auto map = Stock::getPriceMap(mysql);

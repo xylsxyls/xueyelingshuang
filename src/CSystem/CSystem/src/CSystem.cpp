@@ -4,7 +4,6 @@
 #include <direct.h>
 #include <io.h>
 #include <fstream>
-#include "D:\\SendToMessageTest.h"
 
 double CSystem::GetCPUSpeedGHz()
 {
@@ -258,7 +257,7 @@ int CSystem::GetSystemBits()
 
 void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path)
 {
-	std::ofstream file(path.c_str());
+	std::ofstream file(path.c_str(), std::ios::app);
     for (auto itData = stringMap.begin(); itData != stringMap.end(); ++itData)
     {
 		if (path == "")
@@ -274,7 +273,7 @@ void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, con
 
 void CSystem::OutputVector(const std::vector<std::string>& stringVector, const std::string& path)
 {
-	//std::ofstream file(path.c_str());
+	std::ofstream file(path.c_str(), std::ios::app);
     for (auto itData = stringVector.begin(); itData != stringVector.end(); ++itData)
     {
 		if (path == "")
@@ -283,7 +282,7 @@ void CSystem::OutputVector(const std::vector<std::string>& stringVector, const s
 		}
 		else
 		{
-			RCSend("%s", itData->c_str());
+			file << itData->c_str() << "\r\n";
 		}
     }
 }
