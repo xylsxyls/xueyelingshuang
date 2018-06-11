@@ -65,9 +65,9 @@ public:
 	template <typename TypeClass>
 	static void DestroyDyadicArray(TypeClass** classPtr, int32_t row);
     //?¥Ú”°map
-    static void PrintfMap(const std::map<std::string, std::string>& stringMap);
+	static void OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path = "");
     //?¥Ú”°vector
-    static void PrintfVector(const std::vector<std::string>& stringVector);
+	static void OutputVector(const std::vector<std::string>& stringVector, const std::string& path = "");
 
 public:
     static bool ifRedirFrobid;

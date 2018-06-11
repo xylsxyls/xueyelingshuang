@@ -10,7 +10,7 @@ public:
 	static void insertDatabase(MysqlCpp& mysql);
 
 	//¾ù¼ÛÍ¼
-    static void getPriceMap(MysqlCpp& mysql);
+	static std::vector<std::string> getPriceMap(MysqlCpp& mysql);
 
 	//±ÊµØÍ¼
 	static std::map<int32_t, std::string> getFundMap(MysqlCpp& mysql);

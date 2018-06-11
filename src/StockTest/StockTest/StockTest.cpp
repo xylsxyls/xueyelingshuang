@@ -8,6 +8,7 @@
 #include <map>
 #include "stock.h"
 #include <windows.h>
+#include "CSystem/CSystemAPI.h"
 
 int main()
 {
@@ -15,9 +16,10 @@ int main()
 	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 	mysql.selectDb("test");
     Sleep(3000);
-    Stock::getPriceFromScreen("000001");
+    Stock::getPriceFromScreen("603045");
     Stock::insertDatabase(mysql);
-    Stock::getPriceMap(mysql);
+    auto map = Stock::getPriceMap(mysql);
+	CSystem::OutputVector(map,"D:\\stock.txt");
 	getchar();
 	return 0;
 }

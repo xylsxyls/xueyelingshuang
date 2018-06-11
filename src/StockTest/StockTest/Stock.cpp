@@ -130,7 +130,7 @@ std::vector<std::string> priceMap(const std::vector<std::vector<std::string>>& r
 	return pricemap;
 }
 
-void Stock::getPriceMap(MysqlCpp& mysql)
+std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql)
 {
     //std::map<int32_t, std::string> pricemap;
     //int num = 0;
@@ -151,11 +151,7 @@ void Stock::getPriceMap(MysqlCpp& mysql)
 
     auto state = mysql.PreparedStatementCreator(SqlString::selectString("stock", "shijian,chengjiao,xianshou,bishu,maimai"));
     std::vector<std::vector<std::string>> result = mysql.execute(state)->toVector(); //¡ý¡ü--
-    int begin = ::GetTickCount();
-    auto map = priceMap(result);
-    int end = ::GetTickCount();
-    printf("time = %dms\n", end - begin);
-    CSystem::PrintfVector(map);
+    return priceMap(result);
 }
 
 std::string getFund(const std::vector<std::vector<std::string>>& result, int32_t fundNum)

@@ -3,8 +3,10 @@
 #include <objbase.h>
 #include <direct.h>
 #include <io.h>
+#include <fstream>
 
-double CSystem::GetCPUSpeedGHz(){
+double CSystem::GetCPUSpeedGHz()
+{
 #ifdef _WIN64
 	return 0;
 #elif _WIN32
@@ -105,14 +107,16 @@ double CSystem::GetCPUSpeedGHz(){
 #endif
 }
 
-RECT CSystem::GetTaskbarRect(){
+RECT CSystem::GetTaskbarRect()
+{
 	HWND h = ::FindWindow("Shell_TrayWnd","");
 	RECT r;
 	::GetWindowRect(h,&r);
 	return r;
 }
 
-RECT CSystem::GetWindowResolution(){
+RECT CSystem::GetWindowResolution()
+{
 	int screenwidth_real = ::GetSystemMetrics(SM_CXSCREEN);
 	int screenheight_real = ::GetSystemMetrics(SM_CYSCREEN);
 	RECT rectResult;
@@ -158,16 +162,19 @@ POINT CSystem::screenCenterPoint()
 	return point;
 }
 
-int CSystem::GetVisibleHeight(){
+int CSystem::GetVisibleHeight()
+{
 	return GetSystemMetrics(SM_CYFULLSCREEN);
 }
 
-void CSystem::Sleep(long long milliseconds){
+void CSystem::Sleep(long long milliseconds)
+{
 	std::chrono::milliseconds dura(milliseconds);
 	std::this_thread::sleep_for(dura);
 }
 
-std::string CSystem::uuid(int flag){
+std::string CSystem::uuid(int flag)
+{
 	char buffer[64] = { 0 };
 	GUID guid;
 	if (CoCreateGuid(&guid)) return "";
@@ -248,19 +255,35 @@ int CSystem::GetSystemBits()
     return 32;
 }
 
-void CSystem::PrintfMap(const std::map<std::string, std::string>& stringMap)
+void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path)
 {
+	std::ofstream file(path.c_str());
     for (auto itData = stringMap.begin(); itData != stringMap.end(); ++itData)
     {
-        printf("[%s] = %s\n", itData->first.c_str(), itData->second.c_str());
+		if (path == "")
+		{
+			printf("[%s] = %s\n", itData->first.c_str(), itData->second.c_str());
+		}
+		else
+		{
+			file << "[" << itData->first.c_str() << "] = " << itData->second.c_str() << "\r\n";
+		}
     }
 }
 
-void CSystem::PrintfVector(const std::vector<std::string>& stringVector)
+void CSystem::OutputVector(const std::vector<std::string>& stringVector, const std::string& path)
 {
+	std::ofstream file(path.c_str());
     for (auto itData = stringVector.begin(); itData != stringVector.end(); ++itData)
     {
-        printf("%s\n", itData->c_str());
+		if (path == "")
+		{
+			printf("%s\n", itData->c_str());
+		}
+		else
+		{
+			file << itData->c_str() << "\r\n";
+		}
     }
 }
 
