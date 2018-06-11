@@ -32,6 +32,7 @@ int main()
 		mysql.execute(state);
 	}
 	return 0;
+	int begin = ::GetTickCount();
     Sleep(3000);
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
@@ -67,7 +68,8 @@ int main()
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
 	Sleep(1500);
-	printf("完成\n");
+	int end = ::GetTickCount();
+	printf("完成，耗时：%dms\n", end - begin);
 	getchar();
 	return 0;
 }
