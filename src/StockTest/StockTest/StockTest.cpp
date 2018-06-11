@@ -32,8 +32,6 @@ int main()
 	//	mysql.execute(state);
 	//}
 	//return 0;
-	Stock::insertDatabase(mysql);
-	return 0;
 	int begin = ::GetTickCount();
     Sleep(3000);
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
