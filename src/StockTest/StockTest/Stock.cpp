@@ -119,7 +119,7 @@ std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_
     return buyStr + "," + sellStr + "," + sub + "," + strpresent + "%";
 }
 
-std::vector<std::string> priceMap(const std::vector<std::vector<std::string>>& result, int32_t useCount)
+std::vector<std::string> priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount)
 {
 	useCount = 0;
     std::vector<std::string> pricemap;
