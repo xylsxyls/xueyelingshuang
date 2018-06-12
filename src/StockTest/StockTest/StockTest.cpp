@@ -55,7 +55,7 @@ int main()
 	printWatch.Stop();
 
 	int32_t index = -1;
-	while (index++ != 20)//vecStock.size() - 1
+    while (index++ != vecStock.size() - 1)//
 	{
 		getWatch.Run();
 		txt.AddLine("%s", vecStock[index][0].c_str());

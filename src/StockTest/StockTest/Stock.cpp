@@ -218,20 +218,20 @@ std::map<int32_t, std::string> Stock::getFundMap(MysqlCpp& mysql)
 
 void Stock::getPriceFromScreen(const std::string& stock)
 {
-    CMouse::MoveAbsolute(xyls::Point(500, 500));
-    CMouse::LeftClick();
-    CKeyboard::InputString(stock + "\n");
-    CMouse::MoveAbsolute(xyls::Point(500, 500));
-    CMouse::RightClick();
-    CMouse::MoveOpposite(xyls::Point(100, 142));
-    CMouse::MoveOpposite(xyls::Point(200, 0));
-    CMouse::LeftClick();
+    CMouse::MoveAbsolute(xyls::Point(500, 500), 0);
+    CMouse::LeftClick(0);
+    CKeyboard::InputString(stock + "\n", 50);
+    CMouse::MoveAbsolute(xyls::Point(500, 500), 100);
+    CMouse::RightClick(0);
+    CMouse::MoveOpposite(xyls::Point(100, 142), 100);
+    CMouse::MoveOpposite(xyls::Point(200, 0), 100);
+    CMouse::LeftClick(0);
     Sleep(200);
-    CKeyboard::InputString("\n");
+    CKeyboard::InputString("\n", 0);
     Sleep(200);
-    CKeyboard::InputString("\n");
-    Sleep(1500);
-    CKeyboard::InputString("\n");
+    CKeyboard::InputString("\n", 0);
+    Sleep(1000);
+    CKeyboard::InputString("\n", 0);
 }
 
 std::vector<std::vector<std::string>> Stock::getSelfStock(MysqlCpp& mysql)
