@@ -12,6 +12,7 @@
 #include "CMouse/CMouseAPI.h"
 #include <fstream>
 #include "D:\\SendToMessageTest.h"
+#include "CStopWatch/CStopWatchAPI.h"
 
 int main()
 {
@@ -43,9 +44,18 @@ int main()
 	txt.ClearFile();
 	Ctxt txtError("D:\\stockError.txt");
 	txtError.ClearFile();
+
+	CStopWatch insertWatch;
+	insertWatch.Stop();
+	CStopWatch priceMapWatch;
+	priceMapWatch.Stop();
+	CStopWatch printWatch;
+	printWatch.Stop();
+
 	int32_t index = -1;
-	while (index++ != vecStock.size() - 1)
+	while (index++ != 20)//vecStock.size() - 1
 	{
+		insertWatch.Run();
 		txt.AddLine("%s", vecStock[index][0].c_str());
 		Stock::getPriceFromScreen(vecStock[index][0]);
 		bool insertSuccess = Stock::insertDatabase(mysql);
@@ -53,8 +63,12 @@ int main()
 		{
 			txtError.AddLine("%s", vecStock[index][0].c_str());
 		}
+		insertWatch.Stop();
+		priceMapWatch.Run();
 		int32_t useCount = 0;
 		auto map = Stock::getPriceMap(mysql, useCount);
+		priceMapWatch.Stop();
+		printWatch.Run();
 		std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
 		if (nowStr == "")
 		{
@@ -67,6 +81,7 @@ int main()
 		useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index][0]);
 		CSystem::OutputVector(map, "D:\\stock.txt");
 		txt.AddLine("");
+		printWatch.Stop();
 	}
 	Ctxt txtMap("D:\\stockPriceMap.txt");
 	txtMap.ClearFile();
@@ -76,6 +91,7 @@ int main()
 	Sleep(1500);
 	int end = ::GetTickCount();
 	printf("Íê³É£¬ºÄÊ±£º%dms\n", end - begin);
+	printf("insert = %dms,price = %dms,print = %dms", insertWatch.GetWatchTime(), priceMapWatch.GetWatchTime(), printWatch.GetWatchTime());
 	getchar();
 	return 0;
 }
