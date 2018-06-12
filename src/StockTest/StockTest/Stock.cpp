@@ -120,7 +120,7 @@ std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_
     return buyStr + "," + sellStr + "," + sub + "," + strpresent + "%";
 }
 
-std::vector<std::string> priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount)
+std::vector<std::string> Stock::priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount)
 {
 	useCount = 0;
     std::vector<std::string> pricemap;
@@ -153,10 +153,13 @@ std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql, int32_t& useCount)
     //    num += 10000;
     //}
     //return pricemap;
+	
+	return priceMap(getResultVecFromMysql(mysql), useCount);
+}
 
-    auto state = mysql.PreparedStatementCreator(SqlString::selectString("stock", "shijian,chengjiao,xianshou,bishu,maimai"));
-    std::vector<std::vector<std::string>> result = mysql.execute(state)->toVector(); //¡ý¡ü--
-	return priceMap(result, useCount);
+std::vector<std::string> Stock::getPriceMapFromLocal(int32_t& useCount)
+{
+	return priceMap(getResultVec(), useCount);
 }
 
 std::string getFund(const std::vector<std::vector<std::string>>& result, int32_t fundNum)
@@ -235,6 +238,69 @@ std::vector<std::vector<std::string>> Stock::getSelfStock(MysqlCpp& mysql)
 {
 	auto state = mysql.PreparedStatementCreator(SqlString::selectString("selfstock", "daima"));
 	return mysql.execute(state)->toVector();
+}
+
+std::vector<std::vector<std::string>> Stock::getResultVecFromMysql(MysqlCpp& mysql)
+{
+	auto state = mysql.PreparedStatementCreator(SqlString::selectString("stock", "shijian,chengjiao,xianshou,bishu,maimai"));
+	return mysql.execute(state)->toVector(); //¡ý¡ü--
+}
+
+std::vector<std::vector<std::string>> Stock::getResultVec()
+{
+	std::vector<std::vector<std::string>> result;
+
+	Ctxt txt("D:\\Table.txt");
+	txt.LoadTxt(2, "\t");
+
+	int index = 0;
+	while (index++ != txt.m_vectxt.size() - 2)
+	{
+		auto& lineVec = txt.m_vectxt[index];
+		for (auto itData = lineVec.begin(); itData != lineVec.end();)
+		{
+			if (*itData == "" || *itData == "\r")
+			{
+				itData = lineVec.erase(itData);
+				continue;
+			}
+			++itData;
+		}
+	}
+
+	index = 0;
+	while (index++ != txt.m_vectxt.size() - 2)
+	{
+		if (txt.m_vectxt[index].size() != 4)
+		{
+			return result;
+		}
+	}
+
+	index = 0;
+	while (index++ != txt.m_vectxt.size() - 2)
+	{
+		int32_t bsState = 0;
+		std::string xianshouStr = CStringManager::Format("%d", atoi(txt.m_vectxt[index][2].c_str()));
+		if (txt.m_vectxt[index][2].back() == -3)
+		{
+			bsState = -1;
+		}
+		else if (txt.m_vectxt[index][2].back() == -4)
+		{
+			bsState = 1;
+		}
+		std::string stateStr = CStringManager::Format("%d", bsState);
+
+		std::vector<std::string> line;
+		line.push_back(txt.m_vectxt[index][0]);
+		line.push_back(txt.m_vectxt[index][1]);
+		line.push_back(xianshouStr);
+		line.push_back(txt.m_vectxt[index][3]);
+		line.push_back(stateStr);
+		result.push_back(line);
+	}
+	return result;
 }
 
 void Stock::toPrec(std::string& result, int32_t prec)

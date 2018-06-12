@@ -66,7 +66,8 @@ int main()
 		insertWatch.Stop();
 		priceMapWatch.Run();
 		int32_t useCount = 0;
-		auto map = Stock::getPriceMap(mysql, useCount);
+		//auto map = Stock::getPriceMap(mysql, useCount);
+		auto map = Stock::getPriceMapFromLocal(useCount);
 		priceMapWatch.Stop();
 		printWatch.Run();
 		std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
