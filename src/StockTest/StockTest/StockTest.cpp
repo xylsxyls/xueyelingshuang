@@ -45,8 +45,10 @@ int main()
 	Ctxt txtError("D:\\stockError.txt");
 	txtError.ClearFile();
 
-	CStopWatch insertWatch;
-	insertWatch.Stop();
+	CStopWatch getWatch;
+	getWatch.Stop();
+	//CStopWatch insertWatch;
+	//insertWatch.Stop();
 	CStopWatch priceMapWatch;
 	priceMapWatch.Stop();
 	CStopWatch printWatch;
@@ -55,15 +57,17 @@ int main()
 	int32_t index = -1;
 	while (index++ != 20)//vecStock.size() - 1
 	{
-		insertWatch.Run();
+		getWatch.Run();
 		txt.AddLine("%s", vecStock[index][0].c_str());
 		Stock::getPriceFromScreen(vecStock[index][0]);
-		bool insertSuccess = Stock::insertDatabase(mysql);
-		if (insertSuccess == false)
-		{
-			txtError.AddLine("%s", vecStock[index][0].c_str());
-		}
-		insertWatch.Stop();
+		getWatch.Stop();
+		//insertWatch.Run();
+		//bool insertSuccess = Stock::insertDatabase(mysql);
+		//if (insertSuccess == false)
+		//{
+		//	txtError.AddLine("%s", vecStock[index][0].c_str());
+		//}
+		//insertWatch.Stop();
 		priceMapWatch.Run();
 		int32_t useCount = 0;
 		//auto map = Stock::getPriceMap(mysql, useCount);
@@ -92,7 +96,7 @@ int main()
 	Sleep(1500);
 	int end = ::GetTickCount();
 	printf("Íê³É£¬ºÄÊ±£º%dms\n", end - begin);
-	printf("insert = %dms,price = %dms,print = %dms", insertWatch.GetWatchTime(), priceMapWatch.GetWatchTime(), printWatch.GetWatchTime());
+	printf("get = %dms,price = %dms,print = %dms", getWatch.GetWatchTime(), priceMapWatch.GetWatchTime(), printWatch.GetWatchTime());
 	getchar();
 	return 0;
 }
