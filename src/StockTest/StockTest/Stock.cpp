@@ -123,15 +123,24 @@ std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_
 std::vector<std::string> Stock::priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount)
 {
 	useCount = 0;
+	BigNumber persent_10000_50000 = 0;
+	BigNumber persent_60000_100000 = 0;
     std::vector<std::string> pricemap;
 	int32_t num = 0;
 	while (num != 110000)
 	{
 		bool isMinus = false;
-		pricemap.push_back(CStringManager::Format("[%d] = %s", num, getPrice(result, num, isMinus).c_str()));
+		std::string price = getPrice(result, num, isMinus).c_str();
+		pricemap.push_back(CStringManager::Format("[%d] = %s", num, price.c_str()));
 		num += 10000;
 		useCount += (int32_t)(!isMinus);
+		std::string persent = CStringManager::split(price, ",").back();
+		persent.pop_back();
+		BigNumber* persentPtr = (num > 10000 && num <= 60000) ? &persent_10000_50000 : &persent_60000_100000;
+		*persentPtr = *persentPtr + persent.c_str();
 	}
+	pricemap.push_back(CStringManager::Format("[10000-50000] = %s", persent_10000_50000.toString().c_str()));
+	pricemap.push_back(CStringManager::Format("[60000-100000] = %s", persent_60000_100000.toString().c_str()));
 	return pricemap;
 }
 
@@ -238,6 +247,20 @@ std::vector<std::vector<std::string>> Stock::getSelfStock(MysqlCpp& mysql)
 {
 	auto state = mysql.PreparedStatementCreator(SqlString::selectString("selfstock", "daima"));
 	return mysql.execute(state)->toVector();
+}
+
+std::vector<std::vector<std::string>> Stock::getDefineStock(const std::string& define)
+{
+	std::vector<std::vector<std::string>> result;
+	auto vecDefine = CStringManager::split(define, ",");
+	int32_t index = -1;
+	while (index++ != vecDefine.size() - 1)
+	{
+		std::vector<std::string> stock;
+		stock.push_back(vecDefine[index]);
+		result.push_back(stock);
+	}
+	return result;
 }
 
 std::vector<std::vector<std::string>> Stock::getResultVecFromMysql(MysqlCpp& mysql)

@@ -24,6 +24,9 @@ public:
     //获取自选
 	static std::vector<std::vector<std::string>> getSelfStock(MysqlCpp& mysql);
 
+	//获取自定义
+	static std::vector<std::vector<std::string>> getDefineStock(const std::string& define);
+
 	//数据转换为均价图
 	static std::vector<std::string> priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount);
 

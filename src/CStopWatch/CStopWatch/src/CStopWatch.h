@@ -8,7 +8,8 @@
 
 class std::mutex;
 //typedef void* HANDLE;
-class CStopWatchAPI CStopWatch{
+class CStopWatchAPI CStopWatch
+{
 public:
 	CStopWatch();
 	~CStopWatch();

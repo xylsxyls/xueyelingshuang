@@ -39,6 +39,7 @@ int main()
 	CMouse::LeftClick();
 	Sleep(1500);
 	std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql);
+	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("000001,000002,000010");
 	std::map<std::string, std::string> useCountMap;
 	Ctxt txt("D:\\stock.txt");
 	txt.ClearFile();
@@ -61,6 +62,7 @@ int main()
 		txt.AddLine("%s", vecStock[index][0].c_str());
 		Stock::getPriceFromScreen(vecStock[index][0]);
 		getWatch.Stop();
+
 		//insertWatch.Run();
 		//bool insertSuccess = Stock::insertDatabase(mysql);
 		//if (insertSuccess == false)
@@ -68,12 +70,18 @@ int main()
 		//	txtError.AddLine("%s", vecStock[index][0].c_str());
 		//}
 		//insertWatch.Stop();
+
 		priceMapWatch.Run();
 		int32_t useCount = 0;
 		//auto map = Stock::getPriceMap(mysql, useCount);
 		auto map = Stock::getPriceMapFromLocal(useCount);
 		priceMapWatch.Stop();
+
 		printWatch.Run();
+		CSystem::OutputVector(map, "D:\\stock.txt");
+		txt.AddLine("");
+		printWatch.Stop();
+
 		std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
 		if (nowStr == "")
 		{
@@ -84,9 +92,6 @@ int main()
 			useCountMap[CStringManager::Format("%d", useCount)] = nowStr + ", " + vecStock[index][0];
 		}
 		useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index][0]);
-		CSystem::OutputVector(map, "D:\\stock.txt");
-		txt.AddLine("");
-		printWatch.Stop();
 	}
 	Ctxt txtMap("D:\\stockPriceMap.txt");
 	txtMap.ClearFile();
