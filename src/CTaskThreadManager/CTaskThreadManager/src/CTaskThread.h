@@ -11,7 +11,7 @@ class CTaskThreadManagerAPI CTaskThread
 {
     friend class CTaskThreadManager;
 public:
-    /* 添加任务，任务优先级必须大于1
+    /* 添加任务，任务优先级必须从1开始
     */
     void PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel);
 
@@ -22,6 +22,8 @@ public:
     /* 判断任务队列里是否有任务
     */
     bool HasTask();
+
+	void StopCurTask();
 
     void StopTask(int32_t taskId, int32_t taskLevel = 0);
 
@@ -62,8 +64,6 @@ private:
     void WorkThread();
 
     void StopAllTaskUnlock();
-
-    bool HasTaskUnlock();
 
 private:
 

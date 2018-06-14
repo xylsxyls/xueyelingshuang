@@ -26,7 +26,7 @@ private:
 	void SetWaitForSendHandle(HANDLE waitForSend);
 	HANDLE GetWaitForSendHandle();
 
-private:
+protected:
     int32_t m_taskId;
 
 	/* SendTask中用到的阻塞事件

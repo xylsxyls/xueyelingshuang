@@ -233,19 +233,21 @@ CTask(taskId)
 
 void CTestTask1::DoTask()
 {
-    int32_t i = testNum;
+	
+    int32_t i = 10;
     while (i-- != 0)
     {
         if (m_hasExitSignal == true)
         {
             break;
         }
+		RCSend("task1");
         //生成任务号
         int32_t taskId = CRandom::Int(1, 10000);
         //生成任务等级
         int32_t taskLevel = CRandom::Int(1, 10);
         //生成线程号
-        int32_t threadId = CRandom::Int(1, 200);
+        int32_t threadId = CRandom::Int(1, 20);
         //随机选择任务
         int32_t taskType = CRandom::Int(0, 9);
         //是否停止所有任务

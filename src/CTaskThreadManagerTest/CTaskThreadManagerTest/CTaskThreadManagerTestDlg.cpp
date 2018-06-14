@@ -173,14 +173,14 @@ HCURSOR CCTaskThreadManagerTestDlg::OnQueryDragIcon()
 void CCTaskThreadManagerTestDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
-    bool is = CTaskThreadManager::Instance().Init(1);
+    int32_t threadId = CTaskThreadManager::Instance().Init();
 }
 
 
 void CCTaskThreadManagerTestDlg::OnBnClickedButton2()
 {
     // TODO: Add your control notification handler code here
-    CTaskThreadManager::Instance().Init(2);
+    int32_t threadId = CTaskThreadManager::Instance().Init();
 }
 
 
@@ -295,9 +295,9 @@ void CCTaskThreadManagerTestDlg::OnBnClickedButton14()
 {
     // TODO: Add your control notification handler code here
     //开200条线程ID为1-200
-    for (int32_t i = 1; i <= 200; ++i)
+    for (int32_t i = 1; i <= 20; ++i)
     {
-        CTaskThreadManager::Instance().Init(i);
+        CTaskThreadManager::Instance().Init();
     }
     int32_t begin = ::GetTickCount();
     while (true)
@@ -307,7 +307,7 @@ void CCTaskThreadManagerTestDlg::OnBnClickedButton14()
         //生成任务等级
         int32_t taskLevel = CRandom::Int(1, 10);
         //生成线程号
-        int32_t threadId = CRandom::Int(1, 200);
+        int32_t threadId = CRandom::Int(1, 20);
         //随机选择任务
         int32_t taskType = CRandom::Int(0, 9);
         //是否停止所有任务
@@ -321,15 +321,21 @@ void CCTaskThreadManagerTestDlg::OnBnClickedButton14()
             continue;
         }
         taskThread->PostTask(CTaskFactory::CreateTask(TEST_TASK_1 + taskType, taskId), taskLevel);
-        if (ifStopAll == 1)
+		//if (ifStopAll == 1)
+		//{
+		//    taskThread->StopAllTask();
+		//}
+        if (Time > 15000)
         {
-            taskThread->StopAllTask();
-        }
-        if (Time > 30000)
-        {
+			auto thread = CTaskThreadManager::Instance().GetThreadInterface(2);
+			std::map<int32_t, int32_t> taskCountMap;
+			thread->GetWaitTaskCount(taskCountMap);
+			RCSend("开始删除,taskCountMap.size() = %d", taskCountMap[1]);
             CTaskThreadManager::Instance().UninitAll();
             int x = 3;
             x = 3;
+			RCSend("完成,%d", CTaskThreadManager::Instance().GetThreadInterface(1).get());
+			break;
         }
     }
     
