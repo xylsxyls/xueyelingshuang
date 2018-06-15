@@ -145,6 +145,7 @@ std::vector<std::string> Stock::priceMap(const std::vector<std::vector<std::stri
 	}
 	pricemap.push_back(CStringManager::Format("[10000-50000] = %s", persent_10000_50000.toString().c_str()));
 	pricemap.push_back(CStringManager::Format("[60000-100000] = %s", persent_60000_100000.toString().c_str()));
+	pricemap.push_back(CStringManager::Format("[reserveValue] = %s", (persent_10000_50000 - persent_60000_100000).toString().c_str()));
 	reserveValue = persent_10000_50000 - persent_60000_100000;
 	return pricemap;
 }
