@@ -120,7 +120,7 @@ std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_
     return buyStr + "," + sellStr + "," + sub + "," + strpresent + "%";
 }
 
-std::vector<std::string> Stock::priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount)
+std::vector<std::string> Stock::priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount, BigNumber& reserveValue)
 {
 	useCount = 0;
 	BigNumber persent_10000_50000 = 0;
@@ -141,10 +141,11 @@ std::vector<std::string> Stock::priceMap(const std::vector<std::vector<std::stri
 	}
 	pricemap.push_back(CStringManager::Format("[10000-50000] = %s", persent_10000_50000.toString().c_str()));
 	pricemap.push_back(CStringManager::Format("[60000-100000] = %s", persent_60000_100000.toString().c_str()));
+	reserveValue = persent_10000_50000 - persent_60000_100000;
 	return pricemap;
 }
 
-std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql, int32_t& useCount)
+std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql, int32_t& useCount, BigNumber& reserveValue)
 {
     //std::map<int32_t, std::string> pricemap;
     //int num = 0;
@@ -163,12 +164,12 @@ std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql, int32_t& useCount)
     //}
     //return pricemap;
 	
-	return priceMap(getResultVecFromMysql(mysql), useCount);
+	return priceMap(getResultVecFromMysql(mysql), useCount, reserveValue);
 }
 
-std::vector<std::string> Stock::getPriceMapFromLocal(int32_t& useCount)
+std::vector<std::string> Stock::getPriceMapFromLocal(int32_t& useCount, BigNumber& reserveValue)
 {
-	return priceMap(getResultVec(), useCount);
+	return priceMap(getResultVec(), useCount, reserveValue);
 }
 
 std::string getFund(const std::vector<std::vector<std::string>>& result, int32_t fundNum)
@@ -336,4 +337,21 @@ void Stock::toPrec(std::string& result, int32_t prec)
         result.insert(isMinus ? 1 : 0, insertCount, '0');
     }
     result.insert(result.size() - prec, 1, '.');
+}
+
+void Stock::printReserveMap(const std::map<BigNumber, std::vector<std::string>>& reserveMap)
+{
+	Ctxt txt("D:\\stockReserveMap");
+	txt.ClearFile();
+	for (auto itData = reserveMap.begin(); itData != reserveMap.end(); ++itData)
+	{
+		auto& dataVec = itData->second;
+		std::string strDataVec;
+		for (auto itStock = dataVec.begin(); itStock != dataVec.end(); ++itStock)
+		{
+			strDataVec += *itStock + ",";
+		}
+		strDataVec.pop_back();
+		txt.AddLine("[%s] = %s", itData->first.toString().c_str(), strDataVec.c_str());
+	}
 }

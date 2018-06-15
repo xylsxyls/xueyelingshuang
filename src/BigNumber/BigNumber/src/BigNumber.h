@@ -94,7 +94,7 @@ public:
 
 	BigNumber pow(const BigNumber& powNum, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
-	std::string toString();
+	std::string toString() const;
 
     BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
 

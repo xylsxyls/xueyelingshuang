@@ -41,6 +41,7 @@ int main()
 	std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql);
 	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("000001,000002,000010");
 	std::map<std::string, std::string> useCountMap;
+	std::map<BigNumber, std::vector<std::string>> reserveMap;
 	Ctxt txt("D:\\stock.txt");
 	txt.ClearFile();
 	Ctxt txtError("D:\\stockError.txt");
@@ -72,15 +73,18 @@ int main()
 		//insertWatch.Stop();
 
 		priceMapWatch.Run();
+		BigNumber reserveValue = 0;
 		int32_t useCount = 0;
-		//auto map = Stock::getPriceMap(mysql, useCount);
-		auto map = Stock::getPriceMapFromLocal(useCount);
+		//auto map = Stock::getPriceMap(mysql, useCount, reserveValue);
+		auto map = Stock::getPriceMapFromLocal(useCount, reserveValue);
 		priceMapWatch.Stop();
 
 		printWatch.Run();
 		CSystem::OutputVector(map, "D:\\stock.txt");
 		txt.AddLine("");
 		printWatch.Stop();
+
+		reserveMap[reserveValue].push_back(vecStock[index][0]);
 
 		std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
 		if (nowStr == "")
@@ -96,6 +100,7 @@ int main()
 	Ctxt txtMap("D:\\stockPriceMap.txt");
 	txtMap.ClearFile();
 	CSystem::OutputMap(useCountMap, "D:\\stockPriceMap.txt");
+	Stock::printReserveMap(reserveMap);
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
 	Sleep(1500);

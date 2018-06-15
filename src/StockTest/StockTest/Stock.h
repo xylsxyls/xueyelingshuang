@@ -2,6 +2,7 @@
 #include "MysqlCpp/MysqlCppAPI.h"
 #include <string>
 #include <map>
+#include "BigNumber/BigNumberAPI.h"
 
 class Stock
 {
@@ -10,10 +11,10 @@ public:
 	static bool insertDatabase(MysqlCpp& mysql);
 
 	//均价图
-	static std::vector<std::string> getPriceMap(MysqlCpp& mysql, int32_t& useCount);
+	static std::vector<std::string> getPriceMap(MysqlCpp& mysql, int32_t& useCount, BigNumber& reserveValue);
 
 	//均价图
-	static std::vector<std::string> getPriceMapFromLocal(int32_t& useCount);
+	static std::vector<std::string> getPriceMapFromLocal(int32_t& useCount, BigNumber& reserveValue);
 
 	//笔地图
 	static std::map<int32_t, std::string> getFundMap(MysqlCpp& mysql);
@@ -28,7 +29,7 @@ public:
 	static std::vector<std::vector<std::string>> getDefineStock(const std::string& define);
 
 	//数据转换为均价图
-	static std::vector<std::string> priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount);
+	static std::vector<std::string> priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount, BigNumber& reserveValue);
 
 	//获取处理好的笔数据
 	static std::vector<std::vector<std::string>> getResultVecFromMysql(MysqlCpp& mysql);
@@ -37,4 +38,6 @@ public:
 	static std::vector<std::vector<std::string>> getResultVec();
 
     static void toPrec(std::string& result, int32_t prec);
+
+	static void printReserveMap(const std::map<BigNumber, std::vector<std::string>>& reserveMap);
 };

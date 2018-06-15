@@ -155,7 +155,7 @@ BigNumber BigNumber::pow(const BigNumber& powNum, int32_t prec, PrecFlag flag)
 	return result;
 }
 
-std::string BigNumber::toString()
+std::string BigNumber::toString() const
 {
 	return m_base->toString();
 }
