@@ -134,9 +134,13 @@ std::vector<std::string> Stock::priceMap(const std::vector<std::vector<std::stri
 		pricemap.push_back(CStringManager::Format("[%d] = %s", num, price.c_str()));
 		num += 10000;
 		useCount += (int32_t)(!isMinus);
+		if (num == 10000)
+		{
+			continue;
+		}
 		std::string persent = CStringManager::split(price, ",").back();
 		persent.pop_back();
-		BigNumber* persentPtr = (num > 10000 && num <= 60000) ? &persent_10000_50000 : &persent_60000_100000;
+		BigNumber* persentPtr = (num <= 60000) ? &persent_10000_50000 : &persent_60000_100000;
 		*persentPtr = *persentPtr + persent.c_str();
 	}
 	pricemap.push_back(CStringManager::Format("[10000-50000] = %s", persent_10000_50000.toString().c_str()));
