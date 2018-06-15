@@ -1,2 +1,4 @@
 !analyze -v
+显示所有线程3帧
+~*kb 3
 http://blog.csdn.net/xuleilx/article/details/17622627
