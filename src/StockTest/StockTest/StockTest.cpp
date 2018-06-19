@@ -20,7 +20,9 @@ int main()
 	MysqlCpp mysql;
 	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 	mysql.selectDb("stock");
-
+    //Stock::insertDatabase(mysql);
+    //auto sssss=Stock::getFundMap(mysql);
+    //int x = 3;
 	//Ctxt self("D:\\Table.txt");
 	//self.LoadTxt(2, "\t");
 	//mysql.execute(mysql.PreparedStatementCreator(SqlString::clearTableString("selfstock")));
@@ -39,7 +41,7 @@ int main()
 	CMouse::LeftClick();
 	Sleep(1500);
 	std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql);
-	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("000001,000002,000010");
+	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
 	Ctxt txt("D:\\stock.txt");
