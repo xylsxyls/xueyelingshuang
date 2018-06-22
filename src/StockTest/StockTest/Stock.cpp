@@ -7,6 +7,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "CMouse/CMouseAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
+#include "IntDateTime/IntDateTimeAPI.h"
 #include "D:\\SendToMessageTest.h"
 
 bool Stock::insertDatabase(MysqlCpp& mysql)
@@ -330,6 +331,80 @@ std::vector<std::vector<std::string>> Stock::getResultVec()
 		result.push_back(line);
 	}
 	return result;
+}
+
+void Stock::insertQuoteDataBase(MysqlCpp& mysql)
+{
+	std::vector<std::string> vec;
+	vec.push_back("shijian varchar(20)");
+	vec.push_back("daima varchar(20)");
+	vec.push_back("zuigaozhangfu varchar(20)");
+	vec.push_back("dangqianzhangfu varchar(20)");
+	vec.push_back("kaipan varchar(20)");
+	vec.push_back("zuigao varchar(20)");
+	vec.push_back("zuidi varchar(20)");
+	vec.push_back("xianjia varchar(20)");
+	vec.push_back("zuoshou varchar(20)");
+	vec.push_back("huanshou varchar(20)");
+	vec.push_back("sanhushuliang varchar(20)");
+	vec.push_back("shijinglv varchar(20)");
+	auto state = mysql.PreparedStatementCreator(SqlString::createTableString("stockquote", vec));
+	mysql.execute(state); //¡ý¡ü--
+
+	Ctxt quotetxt("D:\\Table.txt");
+	quotetxt.LoadTxt(2, "\t");
+
+	int index = 0;
+	while (index++ != quotetxt.m_vectxt.size() - 2)
+	{
+		auto& lineVec = quotetxt.m_vectxt[index];
+		for (auto itData = lineVec.begin(); itData != lineVec.end();)
+		{
+			if (*itData == "" || *itData == "\r")
+			{
+				itData = lineVec.erase(itData);
+				continue;
+			}
+			++itData;
+		}
+	}
+
+	index = 0;
+	while (index++ != quotetxt.m_vectxt.size() - 2)
+	{
+		if (quotetxt.m_vectxt[index].size() != 11)
+		{
+			return;
+		}
+	}
+
+	std::string time = IntDateTime().dateToString();
+
+	mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("stockquote", "shijian='" + time + "'")));
+
+	index = 0;
+	while (index++ != quotetxt.m_vectxt.size() - 2)
+	{
+		std::string& kaipan = quotetxt.m_vectxt[index][3] == "--" ? quotetxt.m_vectxt[index][7] : quotetxt.m_vectxt[index][3];
+		std::string& zuigao = quotetxt.m_vectxt[index][4] == "--" ? quotetxt.m_vectxt[index][7] : quotetxt.m_vectxt[index][4];
+		std::string& zuidi = quotetxt.m_vectxt[index][5] == "--" ? quotetxt.m_vectxt[index][7] : quotetxt.m_vectxt[index][5];
+		std::string& xianjia = quotetxt.m_vectxt[index][6] == "--" ? quotetxt.m_vectxt[index][7] : quotetxt.m_vectxt[index][6];
+		std::string& zuoshou = quotetxt.m_vectxt[index][7];
+		auto state = mysql.PreparedStatementCreator(SqlString::insertString("stockquote", "shijian,daima,zuigaozhangfu,dangqianzhangfu,kaipan,zuigao,zuidi,xianjia,zuoshou,huanshou,sanhushuliang,shijinglv"));
+		state->setString(1, time.c_str());
+		state->setString(2, CStringManager::Mid(quotetxt.m_vectxt[index][0], 2, 6));
+		state->setString(3, ((BigNumber(zuigao.c_str()) / BigNumber(zuoshou.c_str()) - 1) * 100).toPrec(4).toString());
+		state->setString(4, ((BigNumber(xianjia.c_str()) / BigNumber(zuoshou.c_str()) - 1) * 100).toPrec(4).toString());
+		state->setString(5, kaipan);
+		state->setString(6, zuigao);
+		state->setString(7, zuidi);
+		state->setString(8, xianjia);
+		state->setString(9, zuoshou);
+		state->setString(10, quotetxt.m_vectxt[index][8] == "--" ? "0" : quotetxt.m_vectxt[index][8]);
+		state->setString(11, quotetxt.m_vectxt[index][9] == "--" ? "0" : quotetxt.m_vectxt[index][9]);
+		state->setString(12, quotetxt.m_vectxt[index][10] == "--" ? "0" : quotetxt.m_vectxt[index][10]);
+		mysql.execute(state);
+	}
 }
 
 void Stock::toPrec(std::string& result, int32_t prec)

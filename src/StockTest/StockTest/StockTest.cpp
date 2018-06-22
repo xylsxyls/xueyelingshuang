@@ -20,8 +20,10 @@ int main()
 	MysqlCpp mysql;
 	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 	mysql.selectDb("stock");
-    //Stock::insertDatabase(mysql);
-    //auto sssss=Stock::getFundMap(mysql);
+    
+	Stock::insertQuoteDataBase(mysql);
+	return 0;
+
     //int x = 3;
 	//Ctxt self("D:\\Table.txt");
 	//self.LoadTxt(2, "\t");
@@ -36,7 +38,7 @@ int main()
 	//}
 	//return 0;
 	int begin = ::GetTickCount();
-    Sleep(3000);
+    Sleep(2000);
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
 	Sleep(1500);
@@ -105,7 +107,7 @@ int main()
 	Stock::printReserveMap(reserveMap);
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
-	Sleep(1500);
+	Sleep(1000);
 	int end = ::GetTickCount();
 	printf("Íê³É£¬ºÄÊ±£º%dms\n", end - begin);
 	printf("get = %dms,price = %dms,print = %dms", getWatch.GetWatchTime(), priceMapWatch.GetWatchTime(), printWatch.GetWatchTime());

@@ -6,3 +6,4 @@ call "%CLOUD_REBUILD%" Ctxt 32 dll release same
 call "%CLOUD_REBUILD%" CMouse 32 dll release same
 call "%CLOUD_REBUILD%" CKeyboard 32 dll release same
 call "%CLOUD_REBUILD%" CStopWatch 32 dll release same
+call "%CLOUD_REBUILD%" IntDateTime 32 dll release same

@@ -37,6 +37,9 @@ public:
 	//获取处理好的笔数据
 	static std::vector<std::vector<std::string>> getResultVec();
 
+	//存入当天价格
+	static void insertQuoteDataBase(MysqlCpp& mysql);
+
     static void toPrec(std::string& result, int32_t prec);
 
 	static void printReserveMap(const std::map<BigNumber, std::vector<std::string>>& reserveMap);
