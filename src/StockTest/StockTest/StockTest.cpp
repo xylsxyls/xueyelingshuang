@@ -12,6 +12,7 @@
 #include "CMouse/CMouseAPI.h"
 #include <fstream>
 #include "D:\\SendToMessageTest.h"
+#include "IntDateTime/IntDateTimeAPI.h"
 #include "CStopWatch/CStopWatchAPI.h"
 
 int main()
@@ -21,8 +22,8 @@ int main()
 	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 	mysql.selectDb("stock");
     
-	Stock::insertQuoteDataBase(mysql);
-	return 0;
+	//Stock::insertQuoteDataBase(mysql);
+	//return 0;
 
     //int x = 3;
 	//Ctxt self("D:\\Table.txt");
@@ -46,9 +47,9 @@ int main()
 	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
-	Ctxt txt("D:\\stock.txt");
+    Ctxt txt("D:\\stock" + IntDateTime().dateToString() + ".txt");
 	txt.ClearFile();
-	Ctxt txtError("D:\\stockError.txt");
+    Ctxt txtError("D:\\stockError" + IntDateTime().dateToString() + ".txt");
 	txtError.ClearFile();
 
 	CStopWatch getWatch;
@@ -84,7 +85,7 @@ int main()
 		priceMapWatch.Stop();
 
 		printWatch.Run();
-		CSystem::OutputVector(map, "D:\\stock.txt");
+        CSystem::OutputVector(map, "D:\\stock" + IntDateTime().dateToString() + ".txt");
 		txt.AddLine("");
 		printWatch.Stop();
 
@@ -101,9 +102,9 @@ int main()
 		}
 		useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index][0]);
 	}
-	Ctxt txtMap("D:\\stockPriceMap.txt");
+    Ctxt txtMap("D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
 	txtMap.ClearFile();
-	CSystem::OutputMap(useCountMap, "D:\\stockPriceMap.txt");
+    CSystem::OutputMap(useCountMap, "D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
 	Stock::printReserveMap(reserveMap);
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();

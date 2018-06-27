@@ -237,12 +237,12 @@ void Stock::getPriceFromScreen(const std::string& stock)
     CMouse::MoveAbsolute(xyls::Point(500, 500), 0);
     CMouse::LeftClick(0);
     CKeyboard::InputString(stock + "\n", 50);
-    CMouse::MoveAbsolute(xyls::Point(500, 500), 100);
-    CMouse::RightClick(400);
-    CMouse::MoveOpposite(xyls::Point(100, 142), 100);
-    CMouse::MoveOpposite(xyls::Point(200, 0), 100);
+    CMouse::MoveAbsolute(xyls::Point(500, 500), 200);
+    CMouse::RightClick(500);
+    CMouse::MoveOpposite(xyls::Point(100, 142), 200);
+    CMouse::MoveOpposite(xyls::Point(200, 0), 200);
     CMouse::LeftClick(0);
-    Sleep(200);
+    Sleep(400);
     CKeyboard::InputString("\n", 0);
     Sleep(400);
     CKeyboard::InputString("\n", 0);
@@ -421,7 +421,7 @@ void Stock::toPrec(std::string& result, int32_t prec)
 
 void Stock::printReserveMap(const std::map<BigNumber, std::vector<std::string>>& reserveMap)
 {
-	Ctxt txt("D:\\stock.txt");//stockReserveMap.txt
+    Ctxt txt("D:\\stock" + IntDateTime().dateToString() + ".txt");//stockReserveMap.txt
 	//txt.ClearFile();
 	for (auto itData = reserveMap.begin(); itData != reserveMap.end(); ++itData)
 	{
