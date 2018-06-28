@@ -22,10 +22,12 @@ int main()
 	bool isConnect = mysql.connect("192.168.1.2", 3306, "root", "");
 	mysql.selectDb("stock");
     
+    //回测
 	//Stock::insertQuoteDataBase(mysql);
     //Stock::chooseTest(mysql, Stock::getPreDate(mysql));
 	//return 0;
 
+    //自选导入
     //int x = 3;
 	//Ctxt self("D:\\Table.txt");
 	//self.LoadTxt(2, "\t");
