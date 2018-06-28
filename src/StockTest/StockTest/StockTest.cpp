@@ -22,10 +22,10 @@ int main()
 	bool isConnect = mysql.connect("192.168.1.2", 3306, "root", "");
 	mysql.selectDb("stock");
     
-    //回测
-	//Stock::insertQuoteDataBase(mysql);
+    //回测，首先Table.txt中时今天行情
+    //Stock::insertQuoteDataBase(mysql);
     //Stock::chooseTest(mysql, Stock::getPreDate(mysql));
-	//return 0;
+    //return 0;
 
     //自选导入
     //int x = 3;

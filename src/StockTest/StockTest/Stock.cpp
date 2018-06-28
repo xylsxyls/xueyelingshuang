@@ -441,6 +441,12 @@ void Stock::chooseTest(MysqlCpp& mysql, const std::string& preDate)
 
     auto todayQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", whereString)))->toVector();
     
+    BigNumber zuigaozhangfuAll = 0;
+    BigNumber zuizhongzhangfuAll = 0;
+    BigNumber zuigaozhangfumingciAll = 0;
+    BigNumber zuizhongzhangfumingciAll = 0;
+    BigNumber zuigaozhangfubaifenbiAll = 0;
+    BigNumber zuizhongzhangfubaifenbiAll = 0;
     index = -1;
     while (index++ != preChooseVec.size() - 1)
     {
@@ -448,7 +454,9 @@ void Stock::chooseTest(MysqlCpp& mysql, const std::string& preDate)
         whereString = "shijian = '" + todayDate + "' and daima='" + chooseDaima + "'";
         auto veczhangfu = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", whereString)))->toVector();
         std::string zuigaozhangfu = veczhangfu[0][0];
+        zuigaozhangfuAll = zuigaozhangfuAll + zuigaozhangfu.c_str();
         std::string zuizhongzhangfu = veczhangfu[0][1];
+        zuizhongzhangfuAll = zuizhongzhangfuAll + zuizhongzhangfu.c_str();
         int32_t zuigaozhangfumingci = 1;
         int32_t zuizhongzhangfumingci = 1;
         int32_t quoteIndex = -1;
@@ -463,13 +471,27 @@ void Stock::chooseTest(MysqlCpp& mysql, const std::string& preDate)
                 ++zuizhongzhangfumingci;
             }
         }
+        zuigaozhangfumingciAll = zuigaozhangfumingciAll + zuigaozhangfumingci;
+        zuizhongzhangfumingciAll = zuizhongzhangfumingciAll + zuizhongzhangfumingci;
         BigNumber zuigaozhangfubaifenbi = BigNumber(zuigaozhangfumingci).toPrec(6) / stockCount;
         BigNumber zuizhongzhangfubaifenbi = BigNumber(zuizhongzhangfumingci).toPrec(6) / stockCount;
+        zuigaozhangfubaifenbiAll = zuigaozhangfubaifenbiAll + zuigaozhangfubaifenbi;
+        zuizhongzhangfubaifenbiAll = zuizhongzhangfubaifenbiAll + zuizhongzhangfubaifenbi;
         std::string setString = CStringManager::Format("zuigaozhangfu='%s',zuizhongzhangfu='%s',zuigaozhangfumingci='%d',zuizhongzhangfumingci='%d',zuigaozhangfubaifenbi='%s',zuizhongzhangfubaifenbi='%s'",
             zuigaozhangfu.c_str(), zuizhongzhangfu.c_str(), zuigaozhangfumingci, zuizhongzhangfumingci, (zuigaozhangfubaifenbi * 100).toPrec(2).toString().c_str(), (zuizhongzhangfubaifenbi * 100).toPrec(2).toString().c_str());
-        whereString = CStringManager::Format("shijian='%s'", preDate.c_str());
+        whereString = CStringManager::Format("shijian='%s' and daima='%s'", preDate.c_str(), chooseDaima.c_str());
         mysql.execute(mysql.PreparedStatementCreator(SqlString::updateString("choose", setString, whereString)))->toVector();
     }
+    int32_t chooseCount = preChooseVec.size();
+    auto state = mysql.PreparedStatementCreator(SqlString::insertString("chooseavg", "shijian,zuigaozhangfu,zuizhongzhangfu,zuigaozhangfumingci,zuizhongzhangfumingci,zuigaozhangfubaifenbi,zuizhongzhangfubaifenbi"));
+    state->setString(1, preDate.c_str());
+    state->setString(2, (zuigaozhangfuAll.toPrec(4) / chooseCount).toPrec(2).toString().c_str());
+    state->setString(3, (zuizhongzhangfuAll.toPrec(4) / chooseCount).toPrec(2).toString().c_str());
+    state->setString(4, (zuigaozhangfumingciAll.toPrec(4) / chooseCount).toPrec(2).toString().c_str());
+    state->setString(5, (zuizhongzhangfumingciAll.toPrec(4) / chooseCount).toPrec(2).toString().c_str());
+    state->setString(6, ((zuigaozhangfubaifenbiAll * 100).toPrec(4) / chooseCount).toPrec(2).toString().c_str());
+    state->setString(7, ((zuizhongzhangfubaifenbiAll * 100).toPrec(4) / chooseCount).toPrec(2).toString().c_str());
+    mysql.execute(state);
 }
 
 std::string Stock::getPreDate(MysqlCpp& mysql)
