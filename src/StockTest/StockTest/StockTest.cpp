@@ -22,9 +22,9 @@ int main()
 	bool isConnect = mysql.connect("192.168.1.2", 3306, "root", "");
 	mysql.selectDb("stock");
     
-	Stock::insertQuoteDataBase(mysql);
-    Stock::chooseTest(mysql, Stock::getPreDate(mysql));
-	return 0;
+	//Stock::insertQuoteDataBase(mysql);
+    //Stock::chooseTest(mysql, Stock::getPreDate(mysql));
+	//return 0;
 
     //int x = 3;
 	//Ctxt self("D:\\Table.txt");
@@ -41,7 +41,8 @@ int main()
 	//return 0;
 	int begin = ::GetTickCount();
     Sleep(2000);
-	CMouse::MoveAbsolute(xyls::Point(457, 1056));
+    xyls::Point tonghuashunPoint(213, CSystem::GetWindowResolution().bottom - 23);
+    CMouse::MoveAbsolute(tonghuashunPoint);
 	CMouse::LeftClick();
 	Sleep(1500);
     int32_t zubie = 1;
@@ -113,7 +114,7 @@ int main()
 	Stock::printReserveMap(reserveMap);
     Stock::printChooseMap(chooseMap);
     Stock::saveChooseToDataBase(mysql, chooseMap, zubie);
-	CMouse::MoveAbsolute(xyls::Point(457, 1056));
+    CMouse::MoveAbsolute(tonghuashunPoint);
 	CMouse::LeftClick();
 	Sleep(1000);
 	int end = ::GetTickCount();
