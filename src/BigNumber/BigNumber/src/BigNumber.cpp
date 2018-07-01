@@ -160,13 +160,10 @@ std::string BigNumber::toString() const
 	return m_base->toString();
 }
 
-BigNumber BigNumber::toPrec(int32_t prec, PrecFlag flag)
+BigNumber BigNumber::toPrec(int32_t prec, PrecFlag flag) const
 {
     BigNumber result = *this;
     result.setPrec(prec, flag);
-#ifdef _DEBUG
-    m_num = toString();
-#endif
     return result;
 }
 

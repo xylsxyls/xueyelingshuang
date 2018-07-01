@@ -96,7 +96,7 @@ public:
 
 	std::string toString() const;
 
-    BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
+    BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST) const;
 
 	//以下3函数都是返回本身
 	BigNumber& setPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);

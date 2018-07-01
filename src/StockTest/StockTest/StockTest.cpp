@@ -19,11 +19,12 @@ int main()
 {
 	
 	MysqlCpp mysql;
-	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
+	bool isConnect = mysql.connect("192.168.1.2", 3306, "root", "");
 	mysql.selectDb("stock");
     
-	//Stock::insertQuoteDataBase(mysql);
-	//return 0;
+	Stock::insertQuoteDataBase(mysql);
+    Stock::chooseTest(mysql, Stock::getPreDate(mysql));
+	return 0;
 
     //int x = 3;
 	//Ctxt self("D:\\Table.txt");
@@ -43,10 +44,12 @@ int main()
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
 	Sleep(1500);
-	std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql);
-	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721");
+    int32_t zubie = 1;
+    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, zubie);
+	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721,600123,603100");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
+    std::map<BigNumber, std::vector<BigNumber>> chooseMap;
     Ctxt txt("D:\\stock" + IntDateTime().dateToString() + ".txt");
 	txt.ClearFile();
     Ctxt txtError("D:\\stockError" + IntDateTime().dateToString() + ".txt");
@@ -85,11 +88,13 @@ int main()
 		priceMapWatch.Stop();
 
 		printWatch.Run();
-        CSystem::OutputVector(map, "D:\\stock" + IntDateTime().dateToString() + ".txt");
+        Stock::printPriceMap(map);
 		txt.AddLine("");
 		printWatch.Stop();
 
 		reserveMap[reserveValue].push_back(vecStock[index][0]);
+
+        Stock::addChooseMap(chooseMap, map, vecStock[index][0]);
 
 		std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
 		if (nowStr == "")
@@ -106,6 +111,8 @@ int main()
 	txtMap.ClearFile();
     CSystem::OutputMap(useCountMap, "D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
 	Stock::printReserveMap(reserveMap);
+    Stock::printChooseMap(chooseMap);
+    Stock::saveChooseToDataBase(mysql, chooseMap, zubie);
 	CMouse::MoveAbsolute(xyls::Point(457, 1056));
 	CMouse::LeftClick();
 	Sleep(1000);

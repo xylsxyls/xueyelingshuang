@@ -75,7 +75,7 @@ bool Stock::insertDatabase(MysqlCpp& mysql)
 	return true;
 }
 
-std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_t fundNum, bool& isMinus)
+std::vector<BigNumber> getPrice(const std::vector<std::vector<std::string>>& result, int32_t fundNum, bool& isMinus)
 {
 	BigNumber buyNum = 0;
 	BigNumber sellNum = 0;
@@ -118,40 +118,49 @@ std::string getPrice(const std::vector<std::vector<std::string>>& result, int32_
     std::string strpresent = (buyclass == 0 || sellclass == 0) ? "0" : ((sellclass - buyclass) / buyclass * 100).toPrec(prec - 2).toString();
 	isMinus = (strpresent[0] == '-');
 
-    return buyStr + "," + sellStr + "," + sub + "," + strpresent + "%";
+    std::vector<BigNumber> vecResult;
+    vecResult.push_back(buyStr.c_str());
+    vecResult.push_back(sellStr.c_str());
+    vecResult.push_back(sub.c_str());
+    vecResult.push_back(BigNumber(strpresent.c_str()).toPrec(4) / 100);
+    return vecResult;
 }
 
-std::vector<std::string> Stock::priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount, BigNumber& reserveValue)
+std::map<std::string, std::vector<BigNumber>> Stock::priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount, BigNumber& reserveValue)
 {
 	useCount = 0;
 	BigNumber persent_10000_50000 = 0;
 	BigNumber persent_60000_100000 = 0;
-    std::vector<std::string> pricemap;
+    std::map<std::string, std::vector<BigNumber>> pricemap;
 	int32_t num = 0;
 	while (num != 110000)
 	{
 		bool isMinus = false;
-		std::string price = getPrice(result, num, isMinus).c_str();
-		pricemap.push_back(CStringManager::Format("[%d] = %s", num, price.c_str()));
+		std::vector<BigNumber> price = getPrice(result, num, isMinus);
+        pricemap[CStringManager::Format("%d", num)] = price;
 		num += 10000;
 		useCount += (int32_t)(!isMinus);
 		if (num == 10000)
 		{
 			continue;
 		}
-		std::string persent = CStringManager::split(price, ",").back();
-		persent.pop_back();
 		BigNumber* persentPtr = (num <= 60000) ? &persent_10000_50000 : &persent_60000_100000;
-		*persentPtr = *persentPtr + persent.c_str();
+        *persentPtr = *persentPtr + price.back();
 	}
-	pricemap.push_back(CStringManager::Format("[10000-50000] = %s", persent_10000_50000.toString().c_str()));
-	pricemap.push_back(CStringManager::Format("[60000-100000] = %s", persent_60000_100000.toString().c_str()));
-	pricemap.push_back(CStringManager::Format("[reserveValue] = %s", (persent_10000_50000 - persent_60000_100000).toString().c_str()));
+    std::vector<BigNumber> calc;
+    calc.push_back(persent_10000_50000);
+    pricemap["10000-50000"] = calc;
+    calc.clear();
+    calc.push_back(persent_60000_100000);
+    pricemap["60000-100000"] = calc;
+    calc.clear();
+    calc.push_back(persent_10000_50000 - persent_60000_100000);
+    pricemap["reserveValue"] = calc;
 	reserveValue = persent_10000_50000 - persent_60000_100000;
 	return pricemap;
 }
 
-std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql, int32_t& useCount, BigNumber& reserveValue)
+std::map<std::string, std::vector<BigNumber>> Stock::getPriceMap(MysqlCpp& mysql, int32_t& useCount, BigNumber& reserveValue)
 {
     //std::map<int32_t, std::string> pricemap;
     //int num = 0;
@@ -173,7 +182,7 @@ std::vector<std::string> Stock::getPriceMap(MysqlCpp& mysql, int32_t& useCount, 
 	return priceMap(getResultVecFromMysql(mysql), useCount, reserveValue);
 }
 
-std::vector<std::string> Stock::getPriceMapFromLocal(int32_t& useCount, BigNumber& reserveValue)
+std::map<std::string, std::vector<BigNumber>> Stock::getPriceMapFromLocal(int32_t& useCount, BigNumber& reserveValue)
 {
 	return priceMap(getResultVec(), useCount, reserveValue);
 }
@@ -238,6 +247,7 @@ void Stock::getPriceFromScreen(const std::string& stock)
     CMouse::LeftClick(0);
     CKeyboard::InputString(stock + "\n", 50);
     CMouse::MoveAbsolute(xyls::Point(500, 500), 200);
+    Sleep(1000);
     CMouse::RightClick(500);
     CMouse::MoveOpposite(xyls::Point(100, 142), 200);
     CMouse::MoveOpposite(xyls::Point(200, 0), 200);
@@ -250,9 +260,9 @@ void Stock::getPriceFromScreen(const std::string& stock)
     CKeyboard::InputString("\n", 0);
 }
 
-std::vector<std::vector<std::string>> Stock::getSelfStock(MysqlCpp& mysql)
+std::vector<std::vector<std::string>> Stock::getSelfStock(MysqlCpp& mysql, int32_t zubie)
 {
-	auto state = mysql.PreparedStatementCreator(SqlString::selectString("selfstock", "daima"));
+    auto state = mysql.PreparedStatementCreator(SqlString::selectString("selfstock", "daima", "zubie='1'"));
 	return mysql.execute(state)->toVector();
 }
 
@@ -339,7 +349,7 @@ void Stock::insertQuoteDataBase(MysqlCpp& mysql)
 	vec.push_back("shijian varchar(20)");
 	vec.push_back("daima varchar(20)");
 	vec.push_back("zuigaozhangfu varchar(20)");
-	vec.push_back("dangqianzhangfu varchar(20)");
+	vec.push_back("zuizhongzhangfu varchar(20)");
 	vec.push_back("kaipan varchar(20)");
 	vec.push_back("zuigao varchar(20)");
 	vec.push_back("zuidi varchar(20)");
@@ -390,7 +400,7 @@ void Stock::insertQuoteDataBase(MysqlCpp& mysql)
 		std::string& zuidi = quotetxt.m_vectxt[index][5] == "--" ? quotetxt.m_vectxt[index][7] : quotetxt.m_vectxt[index][5];
 		std::string& xianjia = quotetxt.m_vectxt[index][6] == "--" ? quotetxt.m_vectxt[index][7] : quotetxt.m_vectxt[index][6];
 		std::string& zuoshou = quotetxt.m_vectxt[index][7];
-		auto state = mysql.PreparedStatementCreator(SqlString::insertString("stockquote", "shijian,daima,zuigaozhangfu,dangqianzhangfu,kaipan,zuigao,zuidi,xianjia,zuoshou,huanshou,sanhushuliang,shijinglv"));
+		auto state = mysql.PreparedStatementCreator(SqlString::insertString("stockquote", "shijian,daima,zuigaozhangfu,zuizhongzhangfu,kaipan,zuigao,zuidi,xianjia,zuoshou,huanshou,sanhushuliang,shijinglv"));
 		state->setString(1, time.c_str());
 		state->setString(2, CStringManager::Mid(quotetxt.m_vectxt[index][0], 2, 6));
 		state->setString(3, ((BigNumber(zuigao.c_str()) / BigNumber(zuoshou.c_str()) - 1) * 100).toPrec(4).toString());
@@ -405,6 +415,79 @@ void Stock::insertQuoteDataBase(MysqlCpp& mysql)
 		state->setString(12, quotetxt.m_vectxt[index][10] == "--" ? "0" : quotetxt.m_vectxt[index][10]);
 		mysql.execute(state);
 	}
+}
+
+void Stock::chooseTest(MysqlCpp& mysql, const std::string& preDate)
+{
+    std::string todayDate = IntDateTime().dateToString();
+    std::string whereString = CStringManager::Format("shijian='%s'", preDate.c_str());
+    auto preChooseVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("choose", "daima", whereString)))->toVector();
+
+    int32_t stockCount = atoi(mysql.execute(mysql.PreparedStatementCreator(CStringManager::Format("select count(*) from stockquote where shijian='%s'", preDate.c_str())))->toVector()[0][0].c_str());
+
+    auto preQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "daima", whereString)))->toVector();
+
+    whereString = "shijian='" + todayDate + "' and (";
+    int32_t index = -1;
+    while (index++ != preQuoteVec.size() - 1)
+    {
+        whereString += "daima='" + preQuoteVec[index][0] + "' or ";
+    }
+    whereString.pop_back();
+    whereString.pop_back();
+    whereString.pop_back();
+    whereString.pop_back();
+    whereString.push_back(')');
+
+    auto todayQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", whereString)))->toVector();
+    
+    index = -1;
+    while (index++ != preChooseVec.size() - 1)
+    {
+        std::string& chooseDaima = preChooseVec[index][0];
+        whereString = "shijian = '" + todayDate + "' and daima='" + chooseDaima + "'";
+        auto veczhangfu = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", whereString)))->toVector();
+        std::string zuigaozhangfu = veczhangfu[0][0];
+        std::string zuizhongzhangfu = veczhangfu[0][1];
+        int32_t zuigaozhangfumingci = 1;
+        int32_t zuizhongzhangfumingci = 1;
+        int32_t quoteIndex = -1;
+        while (quoteIndex++ != todayQuoteVec.size() - 1)
+        {
+            if (BigNumber(todayQuoteVec[quoteIndex][0].c_str()) > BigNumber(zuigaozhangfu.c_str()))
+            {
+                ++zuigaozhangfumingci;
+            }
+            if (BigNumber(todayQuoteVec[quoteIndex][1].c_str()) > BigNumber(zuizhongzhangfu.c_str()))
+            {
+                ++zuizhongzhangfumingci;
+            }
+        }
+        BigNumber zuigaozhangfubaifenbi = BigNumber(zuigaozhangfumingci).toPrec(6) / stockCount;
+        BigNumber zuizhongzhangfubaifenbi = BigNumber(zuizhongzhangfumingci).toPrec(6) / stockCount;
+        std::string setString = CStringManager::Format("zuigaozhangfu='%s',zuizhongzhangfu='%s',zuigaozhangfumingci='%d',zuizhongzhangfumingci='%d',zuigaozhangfubaifenbi='%s',zuizhongzhangfubaifenbi='%s'",
+            zuigaozhangfu.c_str(), zuizhongzhangfu.c_str(), zuigaozhangfumingci, zuizhongzhangfumingci, (zuigaozhangfubaifenbi * 100).toPrec(2).toString().c_str(), (zuizhongzhangfubaifenbi * 100).toPrec(2).toString().c_str());
+        whereString = CStringManager::Format("shijian='%s'", preDate.c_str());
+        mysql.execute(mysql.PreparedStatementCreator(SqlString::updateString("choose", setString, whereString)))->toVector();
+    }
+}
+
+std::string Stock::getPreDate(MysqlCpp& mysql)
+{
+    IntDateTime nowTime;
+    std::string todayDate = nowTime.dateToString();
+    int32_t count = 15;
+    while (count-- != 0)
+    {
+        nowTime = nowTime - 86400;
+        std::string preDate = nowTime.dateToString();
+        std::string whereString = CStringManager::Format("shijian='%s'", preDate.c_str());
+        if (atoi(mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "count(*)", whereString)))->toVector()[0][0].c_str()) != 0)
+        {
+            return preDate;
+        }
+    }
+    return todayDate;
 }
 
 void Stock::toPrec(std::string& result, int32_t prec)
@@ -432,6 +515,116 @@ void Stock::printReserveMap(const std::map<BigNumber, std::vector<std::string>>&
 			strDataVec += *itStock + ",";
 		}
 		strDataVec.pop_back();
-		txt.AddLine("[%s] = %s", itData->first.toString().c_str(), strDataVec.c_str());
+		txt.AddLine("[%s] = %s", (itData->first * 100).toPrec(2).toString().c_str(), strDataVec.c_str());
 	}
+    txt.AddLine("");
+}
+
+void Stock::printChooseMap(const std::map<BigNumber, std::vector<BigNumber>>& chooseMap)
+{
+    Ctxt txt("D:\\stock" + IntDateTime().dateToString() + ".txt");
+    txt.AddLine("choose");
+    for (auto itData = chooseMap.begin(); itData != chooseMap.end(); ++itData)
+    {
+        auto& dataVec = itData->second;
+        std::string strDataVec;
+        strDataVec += dataVec[0].toString() + ",";
+        int32_t index = 0;
+        while (index++ != dataVec.size() - 1)
+        {
+            strDataVec += (dataVec[index] * 100).toPrec(2).toString() + ",";
+        }
+        strDataVec.pop_back();
+        txt.AddLine("[%s] = %s", (itData->first * 100).toPrec(2).toString().c_str(), strDataVec.c_str());
+    }
+}
+
+void Stock::saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vector<BigNumber>>& chooseMap, int32_t zubie)
+{
+    mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("choose", CStringManager::Format("shijian='%s' and zubie='%d'", IntDateTime().dateToString().c_str(), zubie))));
+    for (auto itChoose = chooseMap.begin(); itChoose != chooseMap.end(); ++itChoose)
+    {
+        auto state = mysql.PreparedStatementCreator(SqlString::insertString("choose", "shijian,daima,zubie,xiangcha,xiaodan,dadan"));
+        state->setString(1, IntDateTime().dateToString());
+        state->setString(2, itChoose->second[0].toString());
+        state->setString(3, CStringManager::Format("%d", zubie));
+        state->setString(4, (itChoose->first * 100).toPrec(2).toString());
+        state->setString(5, (itChoose->second[1] * 100).toPrec(2).toString());
+        state->setString(6, (itChoose->second[2] * 100).toPrec(2).toString());
+        mysql.execute(state);
+    }
+}
+
+void Stock::printPriceMap(const std::map<std::string, std::vector<BigNumber>>& priceMap)
+{
+    Ctxt txt("D:\\stock" + IntDateTime().dateToString() + ".txt");
+    std::vector<std::string> vecPrint;
+    vecPrint.push_back("0");
+    vecPrint.push_back("10000");
+    vecPrint.push_back("20000");
+    vecPrint.push_back("30000");
+    vecPrint.push_back("40000");
+    vecPrint.push_back("50000");
+    vecPrint.push_back("60000");
+    vecPrint.push_back("70000");
+    vecPrint.push_back("80000");
+    vecPrint.push_back("90000");
+    vecPrint.push_back("100000");
+    int32_t index = -1;
+    while (index++ != vecPrint.size() - 1)
+    {
+        auto& vecBigNumber = priceMap.find(vecPrint[index])->second;
+        std::string strBigNumber = vecBigNumber[0].toString() + "," +
+            vecBigNumber[1].toString() + "," +
+            vecBigNumber[2].toString() + "," +
+            (vecBigNumber[3] * 100).toPrec(2).toString() + "%";
+        txt.AddLine("[%s] = %s", vecPrint[index].c_str(), strBigNumber.c_str());
+    }
+    vecPrint.clear();
+    vecPrint.push_back("10000-50000");
+    vecPrint.push_back("60000-100000");
+    vecPrint.push_back("reserveValue");
+    index = -1;
+    while (index++ != vecPrint.size() - 1)
+    {
+        auto& vecBigNumber = priceMap.find(vecPrint[index])->second;
+        txt.AddLine("[%s] = %s", vecPrint[index].c_str(), (vecBigNumber[0] * 100).toPrec(2).toString().c_str());
+    }
+}
+
+void Stock::addChooseMap(std::map<BigNumber, std::vector<BigNumber>>& chooseMap, const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::string& stockNum)
+{
+    if ((priceMap.find("reserveValue")->second)[0] * 100 > "3" && (priceMap.find("10000-50000")->second)[0] * 100 > "-2")
+    {
+        bool isUsed = true;
+        std::vector<std::string> calc;
+        calc.push_back("0");
+        calc.push_back("10000");
+        calc.push_back("20000");
+        calc.push_back("30000");
+        calc.push_back("40000");
+        calc.push_back("50000");
+        calc.push_back("60000");
+        calc.push_back("70000");
+        calc.push_back("80000");
+        calc.push_back("90000");
+        calc.push_back("100000");
+        int32_t index = -1;
+        while (index++ != calc.size() - 1)
+        {
+            if (((priceMap.find(calc[index])->second)[2] == 0) && ((priceMap.find(calc[index])->second)[3] == 0))
+            {
+                isUsed = false;
+                break;
+            }
+        }
+        if (isUsed)
+        {
+            std::vector<BigNumber> vecBigNumber;
+            vecBigNumber.push_back(stockNum.c_str());
+            vecBigNumber.push_back((priceMap.find("10000-50000")->second)[0]);
+            vecBigNumber.push_back((priceMap.find("60000-100000")->second)[0]);
+            chooseMap[(priceMap.find("reserveValue")->second)[0]] = vecBigNumber;
+        }
+    }
 }

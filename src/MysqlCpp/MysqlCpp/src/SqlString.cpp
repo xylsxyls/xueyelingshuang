@@ -23,12 +23,12 @@ std::string SqlString::updateString(const std::string& tableName, const std::str
 	return CStringManager::Format(updateStr.c_str(), tableName.c_str(), setString.c_str(), whereString.c_str());
 }
 
-std::string SqlString::deleteString(const std::string& tableName, const std::string whereString)
+std::string SqlString::deleteString(const std::string& tableName, const std::string& whereString)
 {
 	return CStringManager::Format("delete from %s where %s", tableName.c_str(), whereString.c_str());
 }
 
-std::string SqlString::selectString(const std::string& tableName, const std::string& selectFields, const std::string whereString)
+std::string SqlString::selectString(const std::string& tableName, const std::string& selectFields, const std::string& whereString)
 {
 	if (whereString == "")
 	{
@@ -74,7 +74,7 @@ std::string SqlString::clearTableString(const std::string& tableName)
 	return "truncate table " + tableName;
 }
 
-std::string SqlString::importString(const std::string sqlPath,
+std::string SqlString::importString(const std::string& sqlPath,
 									const std::string& host,
 									const std::string& user,
 									const std::string& password,
@@ -89,7 +89,7 @@ std::string SqlString::importString(const std::string sqlPath,
 		sqlPath.c_str());
 }
 
-std::string SqlString::exportString(const std::string sqlPath,
+std::string SqlString::exportString(const std::string& sqlPath,
 									const std::string& host,
 									const std::string& user,
 									const std::string& password,
