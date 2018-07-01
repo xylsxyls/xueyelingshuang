@@ -243,10 +243,10 @@ std::map<int32_t, std::string> Stock::getFundMap(MysqlCpp& mysql)
 
 void Stock::getPriceFromScreen(const std::string& stock)
 {
-    CMouse::MoveAbsolute(xyls::Point(500, 500), 0);
+    CMouse::MoveAbsolute(xyls::Point(200, 200), 0);
     CMouse::LeftClick(0);
     CKeyboard::InputString(stock + "\n", 50);
-    CMouse::MoveAbsolute(xyls::Point(500, 500), 200);
+    CMouse::MoveAbsolute(xyls::Point(200, 200), 200);
     Sleep(1000);
     CMouse::RightClick(500);
     CMouse::MoveOpposite(xyls::Point(100, 142), 200);
@@ -262,7 +262,7 @@ void Stock::getPriceFromScreen(const std::string& stock)
 
 std::vector<std::vector<std::string>> Stock::getSelfStock(MysqlCpp& mysql, int32_t zubie)
 {
-    auto state = mysql.PreparedStatementCreator(SqlString::selectString("selfstock", "daima", "zubie='1'"));
+    auto state = mysql.PreparedStatementCreator(SqlString::selectString("selfstock", "daima", CStringManager::Format("zubie='%d'", zubie).c_str()));
 	return mysql.execute(state)->toVector();
 }
 
