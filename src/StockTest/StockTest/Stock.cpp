@@ -550,7 +550,12 @@ void Stock::printChooseMap(const std::map<BigNumber, std::vector<BigNumber>>& ch
     {
         auto& dataVec = itData->second;
         std::string strDataVec;
-        strDataVec += dataVec[0].toString() + ",";
+		std::string num = dataVec[0].toString();
+		while (num.size() < 6)
+		{
+			num = "0" + num;
+		}
+		strDataVec += num + ",";
         int32_t index = 0;
         while (index++ != dataVec.size() - 1)
         {
@@ -568,7 +573,12 @@ void Stock::saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vecto
     {
         auto state = mysql.PreparedStatementCreator(SqlString::insertString("choose", "shijian,daima,zubie,xiangcha,xiaodan,dadan"));
         state->setString(1, IntDateTime().dateToString());
-        state->setString(2, itChoose->second[0].toString());
+		std::string num = itChoose->second[0].toString();
+		while (num.size() < 6)
+		{
+			num = "0" + num;
+		}
+		state->setString(2, num);
         state->setString(3, CStringManager::Format("%d", zubie));
         state->setString(4, (itChoose->first * 100).toPrec(2).toString());
         state->setString(5, (itChoose->second[1] * 100).toPrec(2).toString());
