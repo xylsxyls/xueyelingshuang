@@ -249,7 +249,7 @@ void Stock::getPriceFromScreen(const std::string& stock)
     CMouse::MoveAbsolute(xyls::Point(200, 200), 200);
     Sleep(1000);
     CMouse::RightClick(500);
-    CMouse::MoveOpposite(xyls::Point(100, 142), 200);
+    CMouse::MoveOpposite(xyls::Point(100, 172), 200);
     CMouse::MoveOpposite(xyls::Point(200, 0), 200);
     CMouse::LeftClick(0);
     Sleep(400);
