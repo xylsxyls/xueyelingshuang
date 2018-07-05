@@ -44,28 +44,29 @@ int main()
 	//return 0;
 
 	//分笔存入
-	MysqlCpp mysqlfenbi;
-	bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
-	mysqlfenbi.selectDb("stocktradequote");
-
-	int beginfenbi = ::GetTickCount();
-	Sleep(2000);
-	xyls::Point tonghuashunPointfenbi(213, CSystem::GetWindowResolution().bottom - 23);
-	CMouse::MoveAbsolute(tonghuashunPointfenbi);
-	CMouse::LeftClick();
-	Sleep(1500);
-	std::vector<std::vector<std::string>> vecStockfenbi = Stock::getSelfStock(mysqlfenbi);
-	int32_t indexfenbi = -1;
-	while (indexfenbi++ != vecStockfenbi.size() - 1)//
-	{
-		Stock::getPriceFromScreen(vecStockfenbi[indexfenbi][0]);
-		Stock::fenbiInsertDataBase(mysqlfenbi, vecStockfenbi[indexfenbi][0]);
-	}
-	CMouse::MoveAbsolute(tonghuashunPointfenbi);
-	CMouse::LeftClick();
-	int endfenbi = ::GetTickCount();
-	printf("完成，耗时：%dms\n", endfenbi - beginfenbi);
-	return 0;
+	//MysqlCpp mysqlfenbi;
+	//bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
+	//mysqlfenbi.selectDb("stocktradequote");
+    //
+    //int beginfenbi = ::GetTickCount();
+    //Sleep(2000);
+    //xyls::Point tonghuashunPointfenbi(213, CSystem::GetWindowResolution().bottom - 23);
+    //CMouse::MoveAbsolute(tonghuashunPointfenbi);
+    //CMouse::LeftClick();
+    //Sleep(1500);
+    //std::vector<std::vector<std::string>> vecStockfenbi = Stock::getSelfStock(mysql);
+    ////std::vector<std::vector<std::string>> vecStockfenbi = Stock::getDefineStock("603721,603100");
+    //int32_t indexfenbi = -1;
+    //while (indexfenbi++ != vecStockfenbi.size() - 1)//
+    //{
+    //    Stock::getPriceFromScreen(vecStockfenbi[indexfenbi][0]);
+    //    Stock::fenbiInsertDataBase(mysqlfenbi, vecStockfenbi[indexfenbi][0]);
+    //}
+    //CMouse::MoveAbsolute(tonghuashunPointfenbi);
+    //CMouse::LeftClick();
+    //int endfenbi = ::GetTickCount();
+    //printf("完成，耗时：%dms\n", endfenbi - beginfenbi);
+    //return 0;
 
 	//正文
 	int begin = ::GetTickCount();

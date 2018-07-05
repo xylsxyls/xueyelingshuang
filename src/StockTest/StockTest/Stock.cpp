@@ -482,6 +482,9 @@ void Stock::chooseTest(MysqlCpp& mysql, const std::string& preDate)
         whereString = CStringManager::Format("shijian='%s' and daima='%s'", preDate.c_str(), chooseDaima.c_str());
         mysql.execute(mysql.PreparedStatementCreator(SqlString::updateString("choose", setString, whereString)))->toVector();
     }
+
+    mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("chooseavg", "shijian='" + preDate + "'")));
+
     int32_t chooseCount = preChooseVec.size();
     auto state = mysql.PreparedStatementCreator(SqlString::insertString("chooseavg", "shijian,zuigaozhangfu,zuizhongzhangfu,zuigaozhangfumingci,zuizhongzhangfumingci,zuigaozhangfubaifenbi,zuizhongzhangfubaifenbi"));
     state->setString(1, preDate.c_str());

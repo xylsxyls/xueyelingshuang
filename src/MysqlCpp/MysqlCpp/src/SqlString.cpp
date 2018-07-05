@@ -5,7 +5,7 @@
 
 std::string SqlString::insertString(const std::string& tableName, const std::string& fields)
 {
-	std::string insertStr = "insert into %s(%s) values(%s)";
+	std::string insertStr = "insert into `%s`(%s) values(%s)";
 	std::string fieldsTemp = fields;
 	int32_t count = CStringManager::Replace(fieldsTemp, ",", "");
 	std::string valueStr;
@@ -25,21 +25,21 @@ std::string SqlString::updateString(const std::string& tableName, const std::str
 
 std::string SqlString::deleteString(const std::string& tableName, const std::string& whereString)
 {
-	return CStringManager::Format("delete from %s where %s", tableName.c_str(), whereString.c_str());
+	return CStringManager::Format("delete from `%s` where %s", tableName.c_str(), whereString.c_str());
 }
 
 std::string SqlString::selectString(const std::string& tableName, const std::string& selectFields, const std::string& whereString)
 {
 	if (whereString == "")
 	{
-		return CStringManager::Format("select %s from %s", selectFields.c_str(), tableName.c_str());
+		return CStringManager::Format("select %s from `%s`", selectFields.c_str(), tableName.c_str());
 	}
-	return CStringManager::Format("select %s from %s where %s", selectFields.c_str(), tableName.c_str(), whereString.c_str());
+	return CStringManager::Format("select %s from `%s` where %s", selectFields.c_str(), tableName.c_str(), whereString.c_str());
 }
 
 std::string SqlString::createTableString(const std::string& tableName, const std::vector<std::string>& fields)
 {
-	std::string createTableStr = "create table " + tableName + "(";
+	std::string createTableStr = "create table `" + tableName + "`(";
 	int32_t index = -1;
 	while (true)
 	{
@@ -56,22 +56,22 @@ std::string SqlString::createTableString(const std::string& tableName, const std
 
 std::string SqlString::createDatabaseString(const std::string& databaseName)
 {
-	return "create database " + databaseName;
+	return "create database `" + databaseName + "`";
 }
 
 std::string SqlString::destroyTableString(const std::string& tableName)
 {
-	return "drop table " + tableName;
+	return "drop table `" + tableName + "`";
 }
 
 std::string SqlString::destroyDatabaseString(const std::string& databaseName)
 {
-	return "drop database " + databaseName;
+	return "drop database `" + databaseName + "`";
 }
 
 std::string SqlString::clearTableString(const std::string& tableName)
 {
-	return "truncate table " + tableName;
+	return "truncate table `" + tableName + "`";
 }
 
 std::string SqlString::importString(const std::string& sqlPath,
