@@ -19,7 +19,7 @@ int main()
 {
 	
 	MysqlCpp mysql;
-	bool isConnect = mysql.connect("192.168.1.3", 3306, "root", "");
+	bool isConnect = mysql.connect("192.168.1.2", 3306, "root", "");
 	mysql.selectDb("stock");
     
     //回测，首先Table.txt中时今天行情
