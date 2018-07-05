@@ -1,25 +1,26 @@
 #include "StockTest.h"
+#include "stock.h"
 #include <stdint.h>
-#include "MysqlCpp/MysqlCppAPI.h"
 #include <vector>
+#include <map>
+#include <windows.h>
+#include "MysqlCpp/MysqlCppAPI.h"
 #include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
-#include "BigNumber/BigNumberAPI.h"
-#include <map>
-#include "stock.h"
-#include <windows.h>
 #include "CSystem/CSystemAPI.h"
 #include "CMouse/CMouseAPI.h"
-#include <fstream>
-#include "D:\\SendToMessageTest.h"
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "CStopWatch/CStopWatchAPI.h"
+#include "Cini/CiniAPI.h"
+#include "CGetPath/CGetPathAPI.h"
+#include "BigNumber/BigNumberAPI.h"
+#include "D:\\SendToMessageTest.h"
 
 int main()
 {
-	
 	MysqlCpp mysql;
-	bool isConnect = mysql.connect("192.168.1.2", 3306, "root", "");
+	Cini ini(CGetPath::GetCurrentExePath() + "config.ini");
+	bool isConnect = mysql.connect(ini.ReadIni("ip"), 3306, "root", "");
 	mysql.selectDb("stock");
     
     //回测，首先Table.txt中时今天行情
@@ -41,13 +42,39 @@ int main()
 	//	mysql.execute(state);
 	//}
 	//return 0;
+
+	//分笔存入
+	MysqlCpp mysqlfenbi;
+	bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
+	mysqlfenbi.selectDb("stocktradequote");
+
+	int beginfenbi = ::GetTickCount();
+	Sleep(2000);
+	xyls::Point tonghuashunPointfenbi(213, CSystem::GetWindowResolution().bottom - 23);
+	CMouse::MoveAbsolute(tonghuashunPointfenbi);
+	CMouse::LeftClick();
+	Sleep(1500);
+	std::vector<std::vector<std::string>> vecStockfenbi = Stock::getSelfStock(mysqlfenbi);
+	int32_t indexfenbi = -1;
+	while (indexfenbi++ != vecStockfenbi.size() - 1)//
+	{
+		Stock::getPriceFromScreen(vecStockfenbi[indexfenbi][0]);
+		Stock::fenbiInsertDataBase(mysqlfenbi, vecStockfenbi[indexfenbi][0]);
+	}
+	CMouse::MoveAbsolute(tonghuashunPointfenbi);
+	CMouse::LeftClick();
+	int endfenbi = ::GetTickCount();
+	printf("完成，耗时：%dms\n", endfenbi - beginfenbi);
+	return 0;
+
+	//正文
 	int begin = ::GetTickCount();
     Sleep(2000);
     xyls::Point tonghuashunPoint(213, CSystem::GetWindowResolution().bottom - 23);
     CMouse::MoveAbsolute(tonghuashunPoint);
 	CMouse::LeftClick();
 	Sleep(1500);
-    int32_t zubie = 1;
+    int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
     std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, zubie);
 	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721,600123,603100");
 	std::map<std::string, std::string> useCountMap;

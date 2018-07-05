@@ -262,7 +262,7 @@ void Stock::getPriceFromScreen(const std::string& stock)
 
 std::vector<std::vector<std::string>> Stock::getSelfStock(MysqlCpp& mysql, int32_t zubie)
 {
-    auto state = mysql.PreparedStatementCreator(SqlString::selectString("selfstock", "daima", CStringManager::Format("zubie='%d'", zubie).c_str()));
+	auto state = mysql.PreparedStatementCreator(SqlString::selectString("selfstock", "daima", zubie == 0 ? "" : CStringManager::Format("zubie='%d'", zubie).c_str()));
 	return mysql.execute(state)->toVector();
 }
 
@@ -564,6 +564,65 @@ void Stock::printChooseMap(const std::map<BigNumber, std::vector<BigNumber>>& ch
         strDataVec.pop_back();
         txt.AddLine("[%s] = %s", (itData->first * 100).toPrec(2).toString().c_str(), strDataVec.c_str());
     }
+}
+
+void Stock::fenbiInsertDataBase(MysqlCpp& mysql, const std::string& stockNum)
+{
+	Ctxt txt("D:\\Table.txt");
+	txt.LoadTxt(2, "\t");
+
+	int index = 0;
+	while (index++ != txt.m_vectxt.size() - 2)
+	{
+		auto& lineVec = txt.m_vectxt[index];
+		for (auto itData = lineVec.begin(); itData != lineVec.end();)
+		{
+			if (*itData == "" || *itData == "\r")
+			{
+				itData = lineVec.erase(itData);
+				continue;
+			}
+			++itData;
+		}
+	}
+
+	index = 0;
+	while (index++ != txt.m_vectxt.size() - 2)
+	{
+		if (txt.m_vectxt[index].size() != 4)
+		{
+			return;
+		}
+	}
+
+	std::string todayDate = IntDateTime().dateToString();
+	mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString(stockNum, "shijian='" + todayDate + "'")));
+
+	index = 0;
+	while (index++ != txt.m_vectxt.size() - 2)
+	{
+		int32_t bsState = 0;
+		std::string xianshouStr = CStringManager::Format("%d", atoi(txt.m_vectxt[index][2].c_str()));
+		if (txt.m_vectxt[index][2].back() == -3)
+		{
+			bsState = -1;
+		}
+		else if (txt.m_vectxt[index][2].back() == -4)
+		{
+			bsState = 1;
+		}
+		std::string stateStr = CStringManager::Format("%d", bsState);
+
+		auto state = mysql.PreparedStatementCreator(SqlString::insertString(stockNum, "shijian,fenbishijian,chengjiao,xianshou,bishu,maimai"));
+		state->setString(1, todayDate);
+		state->setString(2, txt.m_vectxt[index][0]);
+		state->setString(3, txt.m_vectxt[index][1]);
+		state->setString(4, xianshouStr);
+		state->setString(5, txt.m_vectxt[index][3]);
+		state->setString(6, stateStr);
+		mysql.execute(state);
+	}
+	return;
 }
 
 void Stock::saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vector<BigNumber>>& chooseMap, int32_t zubie)

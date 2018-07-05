@@ -23,7 +23,7 @@ public:
     static void getPriceFromScreen(const std::string& stock);
 
     //获取自选
-    static std::vector<std::vector<std::string>> getSelfStock(MysqlCpp& mysql, int32_t zubie);
+    static std::vector<std::vector<std::string>> getSelfStock(MysqlCpp& mysql, int32_t zubie = 0);
 
 	//获取自定义
 	static std::vector<std::vector<std::string>> getDefineStock(const std::string& define);
@@ -51,6 +51,9 @@ public:
 	static void printReserveMap(const std::map<BigNumber, std::vector<std::string>>& reserveMap);
 
     static void printChooseMap(const std::map<BigNumber, std::vector<BigNumber>>& chooseMap);
+
+	//分笔入库
+	static void fenbiInsertDataBase(MysqlCpp& mysql, const std::string& stockNum);
 
     //保存选择
     static void saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vector<BigNumber>>& chooseMap, int32_t zubie);
