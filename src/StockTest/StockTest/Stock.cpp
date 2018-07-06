@@ -628,6 +628,31 @@ void Stock::fenbiInsertDataBase(MysqlCpp& mysql, const std::string& stockNum)
 	return;
 }
 
+std::map<std::string, BigNumber> Stock::getLastPriceFromStockQuote(MysqlCpp& mysql, const std::string& date)
+{
+	std::map<std::string, BigNumber> result;
+	auto vec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "daima,xianjia", "shijian='" + date + "'")))->toVector();
+	int32_t index = -1;
+	while (index++ != vec.size() - 1)
+	{
+		result[vec[index][0]] = vec[index][1].c_str();
+	}
+	return result;
+}
+
+std::map<std::string, BigNumber> Stock::getLastPriceFromStockTradeQuote(MysqlCpp& mysql, MysqlCpp& mysqlfenbi, const std::string& date)
+{
+	std::map<std::string, BigNumber> result;
+	auto vecDaima = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "daima", "shijian='" + date + "'")))->toVector();
+	int32_t index = -1;
+	while (index++ != vecDaima.size() - 1)
+	{
+		auto vec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString(vecDaima[index][0], "chengjiao", "fenbishijian='15:00' and shijian='" + date + "'")))->toVector();
+		result[vecDaima[index][0]] = vec.back()[0].c_str();
+	}
+	return result;
+}
+
 void Stock::saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vector<BigNumber>>& chooseMap, int32_t zubie)
 {
     mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("choose", CStringManager::Format("shijian='%s' and zubie='%d'", IntDateTime().dateToString().c_str(), zubie))));

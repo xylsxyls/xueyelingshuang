@@ -55,6 +55,12 @@ public:
 	//分笔入库
 	static void fenbiInsertDataBase(MysqlCpp& mysql, const std::string& stockNum);
 
+	//分笔验证，总数据
+	static std::map<std::string, BigNumber> getLastPriceFromStockQuote(MysqlCpp& mysql, const std::string& date);
+
+	//分笔验证，分笔数据
+	static std::map<std::string, BigNumber> getLastPriceFromStockTradeQuote(MysqlCpp& mysql, MysqlCpp& mysqlfenbi, const std::string& date);
+
     //保存选择
     static void saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vector<BigNumber>>& chooseMap, int32_t zubie);
 
