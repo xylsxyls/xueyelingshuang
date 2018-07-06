@@ -44,7 +44,7 @@ public:
     static void chooseTest(MysqlCpp& mysql, const std::string& preDate);
 
     //获取上一天的时间
-    static std::string getPreDate(MysqlCpp& mysql);
+	static std::string getPreDate(MysqlCpp& mysql, std::string* date = nullptr);
 
     static void toPrec(std::string& result, int32_t prec);
 

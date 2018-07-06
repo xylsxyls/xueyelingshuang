@@ -497,10 +497,18 @@ void Stock::chooseTest(MysqlCpp& mysql, const std::string& preDate)
     mysql.execute(state);
 }
 
-std::string Stock::getPreDate(MysqlCpp& mysql)
+std::string Stock::getPreDate(MysqlCpp& mysql, std::string* date)
 {
     IntDateTime nowTime;
-    std::string todayDate = nowTime.dateToString();
+	std::string todayDate;
+	if (date = nullptr)
+	{
+		todayDate = nowTime.dateToString();
+	}
+	else
+	{
+		todayDate = *date;
+	}
     int32_t count = 15;
     while (count-- != 0)
     {
@@ -716,6 +724,7 @@ void Stock::bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi)
 	//取出今天的总数据
 	std::string todayDate = IntDateTime().dateToString();
 	std::string preDate = Stock::getPreDate(mysql);
+	std::string prepreDate = Stock::getPreDate(mysql, &preDate);
 	auto vec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "daima,zuigaozhangfu", "shijian='" + todayDate + "'")))->toVector();
 	std::map<BigNumber, std::vector<std::string>> bestMap;
 	int32_t index = -1;
@@ -746,13 +755,14 @@ void Stock::bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi)
 		auto state = mysql.PreparedStatementCreator(SqlString::insertString("best", "shijian,daima,zuigaozhangfu,zuizhongzhangfu,huanshoubianhua,sanhushuliang,shijinglvbianhua"));
 		state->setString(1, todayDate);
 		state->setString(2, bestStockVec[index]);
-		auto todayQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu,huanshou,sanhushuliang,shijinglv", "shijian='" + todayDate + "' and daima='" + bestStockVec[index] + "'")))->toVector();
-		auto preQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu,huanshou,sanhushuliang,shijinglv", "shijian='" + preDate + "' and daima='" + bestStockVec[index] + "'")))->toVector();
+		auto todayQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", "shijian='" + todayDate + "' and daima='" + bestStockVec[index] + "'")))->toVector();
+		auto preQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "huanshou,sanhushuliang,shijinglv", "shijian='" + preDate + "' and daima='" + bestStockVec[index] + "'")))->toVector();
+		auto prepreQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "huanshou,shijinglv", "shijian='" + prepreDate + "' and daima='" + bestStockVec[index] + "'")))->toVector();
 		state->setString(3, todayQuoteVec[0][0]);
 		state->setString(4, todayQuoteVec[0][1]);
-		state->setString(5, (BigNumber(todayQuoteVec[0][2].c_str()) - BigNumber(preQuoteVec[0][2].c_str())).toPrec(2).toString());
-		state->setString(6, todayQuoteVec[0][3]);
-		state->setString(7, (BigNumber(todayQuoteVec[0][4].c_str()) - BigNumber(preQuoteVec[0][4].c_str())).toPrec(2).toString());
+		state->setString(5, (BigNumber(preQuoteVec[0][0].c_str()) - BigNumber(prepreQuoteVec[0][0].c_str())).toPrec(2).toString());
+		state->setString(6, preQuoteVec[0][1]);
+		state->setString(7, (BigNumber(preQuoteVec[0][2].c_str()) - BigNumber(prepreQuoteVec[0][1].c_str())).toPrec(2).toString());
 		mysql.execute(state);
 	}
 }
