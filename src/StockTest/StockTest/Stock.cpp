@@ -647,8 +647,8 @@ std::map<std::string, BigNumber> Stock::getLastPriceFromStockTradeQuote(MysqlCpp
 	int32_t index = -1;
 	while (index++ != vecDaima.size() - 1)
 	{
-		auto vec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString(vecDaima[index][0], "chengjiao", "fenbishijian='15:00' and shijian='" + date + "'")))->toVector();
-		result[vecDaima[index][0]] = vec.back()[0].c_str();
+        auto vec = mysqlfenbi.execute(mysqlfenbi.PreparedStatementCreator(SqlString::selectString(vecDaima[index][0], "chengjiao", "shijian='" + date + "'")))->toVector();
+        result[vecDaima[index][0]] = vec.size() == 0 ? "0" : vec.back().back().c_str();
 	}
 	return result;
 }

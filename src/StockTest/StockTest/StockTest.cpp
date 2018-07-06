@@ -69,21 +69,22 @@ int main()
     //return 0;
 
 	//分笔验证
-	//MysqlCpp mysqlfenbi;
-	//bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
-	//mysqlfenbi.selectDb("stocktradequote");
-	//std::string todayDate = IntDateTime().dateToString();
-	//std::map<std::string, BigNumber> stockQuoteMap = Stock::getLastPriceFromStockQuote(mysql, todayDate);
-	//std::map<std::string, BigNumber> stockTradeQuoteMap = Stock::getLastPriceFromStockTradeQuote(mysql, mysqlfenbi, todayDate);
-	//for (auto itStock = stockQuoteMap.begin(); itStock != stockQuoteMap.end(); ++itStock)
-	//{
-	//	if (itStock->second != stockTradeQuoteMap.find(itStock->first)->second)
-	//	{
-	//		printf("%s", itStock->first.c_str());
-	//	}
-	//}
-	//getchar();
-	//return 0;
+    //MysqlCpp mysqlfenbi;
+    //bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
+    //mysqlfenbi.selectDb("stocktradequote");
+    //std::string todayDate = IntDateTime().dateToString();
+    //std::map<std::string, BigNumber> stockQuoteMap = Stock::getLastPriceFromStockQuote(mysql, todayDate);
+    //std::map<std::string, BigNumber> stockTradeQuoteMap = Stock::getLastPriceFromStockTradeQuote(mysql, mysqlfenbi, todayDate);
+    //for (auto itStock = stockQuoteMap.begin(); itStock != stockQuoteMap.end(); ++itStock)
+    //{
+    //	if (itStock->second != stockTradeQuoteMap.find(itStock->first)->second)
+    //	{
+    //		printf("%s\n", itStock->first.c_str());
+    //	}
+    //}
+    //printf("完成");
+    //getchar();
+    //return 0;
 
 	//正文
 	int begin = ::GetTickCount();
