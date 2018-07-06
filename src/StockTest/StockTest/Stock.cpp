@@ -508,6 +508,7 @@ std::string Stock::getPreDate(MysqlCpp& mysql, std::string* date)
 	else
 	{
 		todayDate = *date;
+		nowTime.setTime(todayDate + " 00:00:00");
 	}
     int32_t count = 15;
     while (count-- != 0)
