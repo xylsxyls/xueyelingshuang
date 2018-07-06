@@ -745,7 +745,11 @@ void Stock::bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi)
 		int32_t indexItem = -1;
 		while (indexItem++ != vecbestitem.size() - 1)
 		{
-			bestStockVec.push_back(vecbestitem[indexItem]);
+			BigNumber prezuizhongzhangfu = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuizhongzhangfu", "daima='" + vecbestitem[indexItem] + "' and shijian='" + preDate + "'")))->toVector()[0][0].c_str();
+			if (prezuizhongzhangfu < BigNumber("9.95"))
+			{
+				bestStockVec.push_back(vecbestitem[indexItem]);
+			}
 		}
 	}
 	//Ìí¼Óµ½best
