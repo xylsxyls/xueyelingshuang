@@ -501,7 +501,7 @@ std::string Stock::getPreDate(MysqlCpp& mysql, std::string* date)
 {
     IntDateTime nowTime;
 	std::string todayDate;
-	if (date = nullptr)
+	if (date == nullptr)
 	{
 		todayDate = nowTime.dateToString();
 	}
