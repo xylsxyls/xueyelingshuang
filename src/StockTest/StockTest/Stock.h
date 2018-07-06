@@ -67,6 +67,9 @@ public:
     //打印均价图
     static void printPriceMap(const std::map<std::string, std::vector<BigNumber>>& priceMap);
 
+	//最好分析
+	static void bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi);
+
     //添加到选择图
     //xiangcha,daima,xiaodan,dadan
     static void addChooseMap(std::map<BigNumber, std::vector<BigNumber>>& chooseMap, const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::string& stockNum);

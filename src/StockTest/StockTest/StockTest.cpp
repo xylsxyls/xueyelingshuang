@@ -86,6 +86,13 @@ int main()
     //getchar();
     //return 0;
 
+	//最好分析，需要先存入分笔数据
+	//MysqlCpp mysqlfenbi;
+	//bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
+	//mysqlfenbi.selectDb("stocktradequote");
+	//Stock::bestAnalyzeDataBase(mysql, mysqlfenbi);
+	//return 0;
+
 	//正文
 	int begin = ::GetTickCount();
     Sleep(2000);

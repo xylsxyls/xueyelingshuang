@@ -711,6 +711,52 @@ void Stock::printPriceMap(const std::map<std::string, std::vector<BigNumber>>& p
     }
 }
 
+void Stock::bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi)
+{
+	//取出今天的总数据
+	std::string todayDate = IntDateTime().dateToString();
+	std::string preDate = Stock::getPreDate(mysql);
+	auto vec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "daima,zuigaozhangfu", "shijian='" + todayDate + "'")))->toVector();
+	std::map<BigNumber, std::vector<std::string>> bestMap;
+	int32_t index = -1;
+	while (index++ != vec.size() - 1)
+	{
+		bestMap[vec[index][1].c_str()].push_back(vec[index][0]);
+	}
+	//获取最好的前20个，可能超过
+	std::vector<std::string> bestStockVec;
+	for (auto itStock = bestMap.rbegin(); itStock != bestMap.rend(); ++itStock)
+	{
+		if (bestStockVec.size() >= 20)
+		{
+			break;
+		}
+		auto& vecbestitem = itStock->second;
+		int32_t indexItem = -1;
+		while (indexItem++ != vecbestitem.size() - 1)
+		{
+			bestStockVec.push_back(vecbestitem[indexItem]);
+		}
+	}
+	//添加到best
+	mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("best", "shijian='" + todayDate + "'")));
+	index = -1;
+	while (index++ != bestStockVec.size() - 1)
+	{
+		auto state = mysql.PreparedStatementCreator(SqlString::insertString("best", "shijian,daima,zuigaozhangfu,zuizhongzhangfu,huanshoubianhua,sanhushuliang,shijinglvbianhua"));
+		state->setString(1, todayDate);
+		state->setString(2, bestStockVec[index]);
+		auto todayQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu,huanshou,sanhushuliang,shijinglv", "shijian='" + todayDate + "' and daima='" + bestStockVec[index] + "'")))->toVector();
+		auto preQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu,huanshou,sanhushuliang,shijinglv", "shijian='" + preDate + "' and daima='" + bestStockVec[index] + "'")))->toVector();
+		state->setString(3, todayQuoteVec[0][0]);
+		state->setString(4, todayQuoteVec[0][1]);
+		state->setString(5, (BigNumber(todayQuoteVec[0][2].c_str()) - BigNumber(preQuoteVec[0][2].c_str())).toPrec(2).toString());
+		state->setString(6, todayQuoteVec[0][3]);
+		state->setString(7, (BigNumber(todayQuoteVec[0][4].c_str()) - BigNumber(preQuoteVec[0][4].c_str())).toPrec(2).toString());
+		mysql.execute(state);
+	}
+}
+
 void Stock::addChooseMap(std::map<BigNumber, std::vector<BigNumber>>& chooseMap, const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::string& stockNum)
 {
     if ((priceMap.find("reserveValue")->second)[0] * 100 > "3" && (priceMap.find("10000-50000")->second)[0] * 100 > "-2")
