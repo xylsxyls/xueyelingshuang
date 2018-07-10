@@ -131,21 +131,52 @@ std::map<std::string, std::vector<BigNumber>> Stock::priceMap(const std::vector<
 	useCount = 0;
 	BigNumber persent_10000_50000 = 0;
 	BigNumber persent_60000_100000 = 0;
+    BigNumber persent_110000_150000 = 0;
+    BigNumber persent_160000_200000 = 0;
+    BigNumber persent_210000_250000 = 0;
+    BigNumber persent_260000_300000 = 0;
     std::map<std::string, std::vector<BigNumber>> pricemap;
-	int32_t num = 0;
-	while (num != 110000)
+	int32_t num = -10000;
+	while (true)
 	{
+        num += 10000;
 		bool isMinus = false;
 		std::vector<BigNumber> price = getPrice(result, num, isMinus);
         pricemap[CStringManager::Format("%d", num)] = price;
-		num += 10000;
 		useCount += (int32_t)(!isMinus);
-		if (num == 10000)
-		{
-			continue;
-		}
-		BigNumber* persentPtr = (num <= 60000) ? &persent_10000_50000 : &persent_60000_100000;
-        *persentPtr = *persentPtr + price.back();
+        BigNumber* persentPtr = nullptr;
+        if (num >= 10000 && num <= 50000)
+        {
+            persentPtr = &persent_10000_50000;
+        }
+        else if (num >= 60000 && num <= 100000)
+        {
+            persentPtr = &persent_60000_100000;
+        }
+        else if (num >= 110000 && num <= 150000)
+        {
+            persentPtr = &persent_110000_150000;
+        }
+        else if (num >= 160000 && num <= 200000)
+        {
+            persentPtr = &persent_160000_200000;
+        }
+        else if (num >= 210000 && num <= 250000)
+        {
+            persentPtr = &persent_210000_250000;
+        }
+        else if (num >= 260000 && num <= 300000)
+        {
+            persentPtr = &persent_260000_300000;
+        }
+        if (persentPtr != nullptr)
+        {
+            *persentPtr = *persentPtr + price.back();
+        }
+        if (num == 300000)
+        {
+            break;
+        }
 	}
     std::vector<BigNumber> calc;
     calc.push_back(persent_10000_50000);
@@ -154,13 +185,25 @@ std::map<std::string, std::vector<BigNumber>> Stock::priceMap(const std::vector<
     calc.push_back(persent_60000_100000);
     pricemap["60000-100000"] = calc;
     calc.clear();
+    calc.push_back(persent_110000_150000);
+    pricemap["110000-150000"] = calc;
+    calc.clear();
+    calc.push_back(persent_160000_200000);
+    pricemap["160000-200000"] = calc;
+    calc.clear();
+    calc.push_back(persent_210000_250000);
+    pricemap["210000-250000"] = calc;
+    calc.clear();
+    calc.push_back(persent_260000_300000);
+    pricemap["260000-300000"] = calc;
+    calc.clear();
     calc.push_back(persent_10000_50000 - persent_60000_100000);
     pricemap["reserveValue"] = calc;
 	reserveValue = persent_10000_50000 - persent_60000_100000;
 	return pricemap;
 }
 
-std::map<std::string, std::vector<BigNumber>> Stock::getPriceMap(MysqlCpp& mysql, int32_t& useCount, BigNumber& reserveValue)
+std::map<std::string, std::vector<BigNumber>> Stock::getPriceMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, int32_t& useCount, BigNumber& reserveValue, const std::string& date)
 {
     //std::map<int32_t, std::string> pricemap;
     //int num = 0;
@@ -179,7 +222,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::getPriceMap(MysqlCpp& mysql
     //}
     //return pricemap;
 	
-	return priceMap(getResultVecFromMysql(mysql), useCount, reserveValue);
+    return priceMap(getResultVecFromMysql(mysql, stockNum, date), useCount, reserveValue);
 }
 
 std::map<std::string, std::vector<BigNumber>> Stock::getPriceMapFromLocal(int32_t& useCount, BigNumber& reserveValue)
@@ -280,9 +323,14 @@ std::vector<std::vector<std::string>> Stock::getDefineStock(const std::string& d
 	return result;
 }
 
-std::vector<std::vector<std::string>> Stock::getResultVecFromMysql(MysqlCpp& mysql)
+std::vector<std::vector<std::string>> Stock::getResultVecFromMysql(MysqlCpp& mysql, const std::string& stockNum, const std::string& date)
 {
-	auto state = mysql.PreparedStatementCreator(SqlString::selectString("stock", "shijian,chengjiao,xianshou,bishu,maimai"));
+    std::string todayDate = date;
+    if (date == "")
+    {
+        todayDate = IntDateTime().dateToString();
+    }
+    auto state = mysql.PreparedStatementCreator(SqlString::selectString(stockNum, "fenbishijian,chengjiao,xianshou,bishu,maimai", "shijian='" + todayDate + "'"));
 	return mysql.execute(state)->toVector(); //¡ý¡ü--
 }
 
@@ -687,17 +735,13 @@ void Stock::printPriceMap(const std::map<std::string, std::vector<BigNumber>>& p
 {
     Ctxt txt("D:\\stock" + IntDateTime().dateToString() + ".txt");
     std::vector<std::string> vecPrint;
-    vecPrint.push_back("0");
-    vecPrint.push_back("10000");
-    vecPrint.push_back("20000");
-    vecPrint.push_back("30000");
-    vecPrint.push_back("40000");
-    vecPrint.push_back("50000");
-    vecPrint.push_back("60000");
-    vecPrint.push_back("70000");
-    vecPrint.push_back("80000");
-    vecPrint.push_back("90000");
-    vecPrint.push_back("100000");
+    int32_t price = 0;
+    int32_t count = 31;
+    while (count-- != 0)
+    {
+        vecPrint.push_back(CStringManager::Format("%d", price));
+        price += 10000;
+    }
     int32_t index = -1;
     while (index++ != vecPrint.size() - 1)
     {
@@ -711,6 +755,10 @@ void Stock::printPriceMap(const std::map<std::string, std::vector<BigNumber>>& p
     vecPrint.clear();
     vecPrint.push_back("10000-50000");
     vecPrint.push_back("60000-100000");
+    vecPrint.push_back("110000-150000");
+    vecPrint.push_back("160000-200000");
+    vecPrint.push_back("210000-250000");
+    vecPrint.push_back("260000-300000");
     vecPrint.push_back("reserveValue");
     index = -1;
     while (index++ != vecPrint.size() - 1)

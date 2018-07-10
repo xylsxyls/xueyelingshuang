@@ -22,6 +22,10 @@ int main()
 	Cini ini(CGetPath::GetCurrentExePath() + "config.ini");
 	bool isConnect = mysql.connect(ini.ReadIni("ip"), 3306, "root", "");
 	mysql.selectDb("stock");
+
+    MysqlCpp mysqlfenbi;
+    bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
+    mysqlfenbi.selectDb("stocktradequote");
     
     //回测，首先Table.txt中时今天行情
     //Stock::insertQuoteDataBase(mysql);
@@ -87,9 +91,6 @@ int main()
     //return 0;
 
 	//最好分析，需要先存入分笔数据
-	//MysqlCpp mysqlfenbi;
-	//bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
-	//mysqlfenbi.selectDb("stocktradequote");
 	//Stock::bestAnalyzeDataBase(mysql, mysqlfenbi);
 	//return 0;
 
@@ -101,8 +102,8 @@ int main()
 	CMouse::LeftClick();
 	Sleep(1500);
     int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
-    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, zubie);
-	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721,600123,603100");
+    //std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
+	std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721,002799,002847");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
     std::map<BigNumber, std::vector<BigNumber>> chooseMap;
@@ -125,7 +126,7 @@ int main()
 	{
 		getWatch.Run();
 		txt.AddLine("%s", vecStock[index][0].c_str());
-		Stock::getPriceFromScreen(vecStock[index][0]);
+		//Stock::getPriceFromScreen(vecStock[index][0]);
 		getWatch.Stop();
 
 		//insertWatch.Run();
@@ -139,8 +140,8 @@ int main()
 		priceMapWatch.Run();
 		BigNumber reserveValue = 0;
 		int32_t useCount = 0;
-		//auto map = Stock::getPriceMap(mysql, useCount, reserveValue);
-		auto map = Stock::getPriceMapFromLocal(useCount, reserveValue);
+        auto map = Stock::getPriceMapFromDataBase(mysqlfenbi, vecStock[index][0], useCount, reserveValue, "2018-07-09");
+		//auto map = Stock::getPriceMapFromLocal(useCount, reserveValue);
 		priceMapWatch.Stop();
 
 		printWatch.Run();

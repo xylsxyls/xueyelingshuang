@@ -11,7 +11,7 @@ public:
 	static bool insertDatabase(MysqlCpp& mysql);
 
 	//均价图
-    static std::map<std::string, std::vector<BigNumber>> getPriceMap(MysqlCpp& mysql, int32_t& useCount, BigNumber& reserveValue);
+    static std::map<std::string, std::vector<BigNumber>> getPriceMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, int32_t& useCount, BigNumber& reserveValue, const std::string& date = "");
 
 	//均价图
     static std::map<std::string, std::vector<BigNumber>> getPriceMapFromLocal(int32_t& useCount, BigNumber& reserveValue);
@@ -32,7 +32,7 @@ public:
     static std::map<std::string, std::vector<BigNumber>> priceMap(const std::vector<std::vector<std::string>>& result, int32_t& useCount, BigNumber& reserveValue);
 
 	//获取处理好的笔数据
-	static std::vector<std::vector<std::string>> getResultVecFromMysql(MysqlCpp& mysql);
+    static std::vector<std::vector<std::string>> getResultVecFromMysql(MysqlCpp& mysql, const std::string& stockNum, const std::string& date);
 
 	//获取处理好的笔数据
 	static std::vector<std::vector<std::string>> getResultVec();
