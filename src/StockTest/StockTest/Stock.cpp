@@ -136,7 +136,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100).toPrec(4) / allzijin.zero());
 			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100).toPrec(4) / allzijin.zero());
 			baifenbiCapitalMap[baifenbi].push_back(mairujunjia - maichujunjia);
-			baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4) / maichujunjia.zero() - 1);
+			baifenbiCapitalMap[baifenbi].push_back((mairujunjia.toPrec(4) / maichujunjia.zero() - 1) * 100);
 			baifenbiNum += 10;
 		}
 	}
@@ -148,7 +148,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
     baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100).toPrec(4) / allzijin.zero());
     baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100).toPrec(4) / allzijin.zero());
     baifenbiCapitalMap[baifenbi].push_back(mairujunjia - maichujunjia);
-    baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4) / maichujunjia.zero() - 1);
+    baifenbiCapitalMap[baifenbi].push_back((mairujunjia.toPrec(4) / maichujunjia.zero() - 1) * 100);
 
 	return baifenbiCapitalMap;
 }
