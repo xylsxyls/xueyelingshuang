@@ -135,7 +135,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 			baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
 			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100 / allzijin.zero()).toPrec(2));
 			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100 / allzijin.zero()).toPrec(2));
-			baifenbiCapitalMap[baifenbi].push_back(mairujunjia - maichujunjia);
+			baifenbiCapitalMap[baifenbi].push_back((mairujunjia - maichujunjia).toPrec(4));
 			baifenbiCapitalMap[baifenbi].push_back(((mairujunjia / maichujunjia.zero() - 1) * 100).toPrec(2));
 			baifenbiNum += 10;
 		}
@@ -147,7 +147,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 	baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
 	baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100 / allzijin.zero()).toPrec(2));
 	baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100 / allzijin.zero()).toPrec(2));
-	baifenbiCapitalMap[baifenbi].push_back(mairujunjia - maichujunjia);
+	baifenbiCapitalMap[baifenbi].push_back((mairujunjia - maichujunjia).toPrec(4));
 	baifenbiCapitalMap[baifenbi].push_back(((mairujunjia / maichujunjia.zero() - 1) * 100).toPrec(2));
 
 	return baifenbiCapitalMap;
@@ -815,12 +815,17 @@ void Stock::printMap(const std::map<std::string, std::vector<BigNumber>>& priceM
 	int32_t index = -1;
 	while (index++ != vecPrint.size() - 1)
 	{
-		auto& vecBigNumber = priceMap.find(vecPrint[index])->second;
+        auto itPrice = priceMap.find(vecPrint[index]);
+        if (itPrice == priceMap.end())
+        {
+            continue;
+        }
+        auto& vecBigNumber = itPrice->second;
 		std::string strBigNumber;
 		int32_t bigIndex = -1;
 		while (bigIndex++ != vecBigNumber.size() - 1)
 		{
-			strBigNumber += vecBigNumber[bigIndex].toString() + (((int32_t)sep.size() > index) ? sep[index] : "") + ",";
+            strBigNumber += vecBigNumber[bigIndex].toString() + (((int32_t)sep.size() > bigIndex) ? sep[bigIndex] : "") + ",";
 		}
 		strBigNumber.pop_back();
 		txt.AddLine("[%s] = %s", vecPrint[index].c_str(), strBigNumber.c_str());
@@ -856,8 +861,8 @@ void Stock::printPriceMap(const std::map<std::string, std::vector<BigNumber>>& p
 void Stock::printCapitalMap(const std::map<std::string, std::vector<BigNumber>>& priceMap)
 {
 	std::vector<std::string> vecPrint;
-	vecPrint.push_back("0");
-	int32_t persent = -1;
+	vecPrint.push_back("0%");
+	int32_t persent = 0;
 	while (persent++ != 9)
 	{
 		vecPrint.push_back(CStringManager::Format("%d0%%", persent));

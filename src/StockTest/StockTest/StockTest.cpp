@@ -102,8 +102,8 @@ int main()
 	CMouse::LeftClick();
 	Sleep(1500);
     int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
-    //std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
-	std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721,002799,002847");
+    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
+	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721,002799,002847");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
     std::map<BigNumber, std::vector<BigNumber>> chooseMap;
