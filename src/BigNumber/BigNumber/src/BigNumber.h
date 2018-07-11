@@ -96,6 +96,10 @@ public:
 
 	std::string toString() const;
 
+	/** 设置该数若为除数，且为0时不崩溃，返回0，含有精度
+	*/
+	BigNumber& zero(bool zero = true);
+
     BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST) const;
 
 	//以下3函数都是返回本身
@@ -120,6 +124,8 @@ private:
 	static bool smallThan(const BigNumber& x, const BigNumber& y);
 	static bool smallEqual(const BigNumber& x, const BigNumber& y);
 
+	bool getZero() const;
+
 private:
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -134,4 +140,5 @@ private:
 	PrecFlag m_divFlag;
 	int32_t m_divPrec;
 	BigNumberBase* m_base;
+	bool m_isZero;
 };
