@@ -140,7 +140,8 @@ int main()
 		priceMapWatch.Run();
 		BigNumber reserveValue = 0;
 		int32_t useCount = 0;
-        auto map = Stock::getPriceMapFromDataBase(mysqlfenbi, vecStock[index][0], useCount, reserveValue, "2018-07-09");
+        //auto map = Stock::getPriceMapFromDataBase(mysqlfenbi, vecStock[index][0], useCount, reserveValue, "2018-07-09");
+		auto map = Stock::getCapitalMapFromDataBase(mysqlfenbi, vecStock[index][0], "2018-07-09");
 		//auto map = Stock::getPriceMapFromLocal(useCount, reserveValue);
 		priceMapWatch.Stop();
 

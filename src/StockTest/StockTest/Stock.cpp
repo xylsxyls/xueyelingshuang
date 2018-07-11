@@ -75,6 +75,70 @@ bool Stock::insertDatabase(MysqlCpp& mysql)
 	return true;
 }
 
+std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, const std::string& date)
+{
+	//pingjunjine£¬vec, bishu£¬xianshou£¬maimai1-1
+	std::map<BigNumber, std::vector<BigNumber>> capitalMap;
+	auto fenbiVec = getResultVecFromMysql(mysql, stockNum, date);
+	BigNumber allzijin = 0;
+	int32_t index = -1;
+	while (index++ != fenbiVec.size() - 1)
+	{
+		BigNumber chengjiao = fenbiVec[index][1].c_str();
+		BigNumber xianshou = fenbiVec[index][2].c_str();
+		BigNumber bishu = fenbiVec[index][3].c_str();
+		BigNumber maimai = fenbiVec[index][4].c_str();
+		BigNumber zijin = chengjiao * xianshou;
+		allzijin = allzijin + zijin;
+		BigNumber danbijine = (zijin).toPrec(4) / bishu;
+		capitalMap[danbijine].push_back(bishu);
+		capitalMap[danbijine].push_back(xianshou);
+		capitalMap[danbijine].push_back(maimai);
+	}
+
+	//baifenbi, vec, mairujunjia,maichujunjia,mairubaifenbi,maichubaifenbi,zhangdie,zhangfu
+	std::map<std::string, std::vector<BigNumber>> baifenbiCapitalMap;
+	BigNumber mairucapitalNum = 0;
+	BigNumber maichucapitalNum = 0;
+	BigNumber mairuxianshouNum = 0;
+	BigNumber maichuxianshouNum = 0;
+	int32_t baifenbiNum = 10;
+	for (auto itCapital = capitalMap.rbegin(); itCapital != capitalMap.rend(); ++itCapital)
+	{
+		if (itCapital->second[2] == 1)
+		{
+			mairucapitalNum = mairucapitalNum + itCapital->first * itCapital->second[0];
+			mairuxianshouNum = mairuxianshouNum + itCapital->second[1];
+		}
+		else if (itCapital->second[2] == -1)
+		{
+			maichucapitalNum = maichucapitalNum + itCapital->first * itCapital->second[0];
+			maichuxianshouNum = maichuxianshouNum + itCapital->second[1];
+		}
+		
+		if (mairucapitalNum + maichucapitalNum > allzijin * baifenbiNum / 100)
+		{
+			std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
+			baifenbiCapitalMap[baifenbi].push_back(mairucapitalNum.toPrec(4) / mairuxianshouNum);
+			baifenbiCapitalMap[baifenbi].push_back(maichucapitalNum.toPrec(4) / maichuxianshouNum);
+			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100).toPrec(4) / allzijin);
+			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100).toPrec(4) / allzijin);
+			baifenbiCapitalMap[baifenbi].push_back(maichucapitalNum - mairucapitalNum);
+			baifenbiCapitalMap[baifenbi].push_back(maichucapitalNum.toPrec(4) / mairucapitalNum - 1);
+			baifenbiNum += 10;
+		}
+	}
+	std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
+	baifenbiCapitalMap[baifenbi].push_back(mairucapitalNum.toPrec(4) / mairuxianshouNum);
+	baifenbiCapitalMap[baifenbi].push_back(maichucapitalNum.toPrec(4) / maichuxianshouNum);
+	baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100).toPrec(4) / allzijin);
+	baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100).toPrec(4) / allzijin);
+	baifenbiCapitalMap[baifenbi].push_back(maichucapitalNum - mairucapitalNum);
+	baifenbiCapitalMap[baifenbi].push_back(maichucapitalNum.toPrec(4) / mairucapitalNum - 1);
+
+	return baifenbiCapitalMap;
+}
+
 std::vector<BigNumber> getPrice(const std::vector<std::vector<std::string>>& result, int32_t fundNum, bool& isMinus)
 {
 	BigNumber buyNum = 0;
@@ -227,7 +291,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::getPriceMapFromDataBase(Mys
 
 std::map<std::string, std::vector<BigNumber>> Stock::getPriceMapFromLocal(int32_t& useCount, BigNumber& reserveValue)
 {
-	return priceMap(getResultVec(), useCount, reserveValue);
+	return priceMap(getResultVecFromLocal(), useCount, reserveValue);
 }
 
 std::string getFund(const std::vector<std::vector<std::string>>& result, int32_t fundNum)
@@ -334,7 +398,7 @@ std::vector<std::vector<std::string>> Stock::getResultVecFromMysql(MysqlCpp& mys
 	return mysql.execute(state)->toVector(); //¡ý¡ü--
 }
 
-std::vector<std::vector<std::string>> Stock::getResultVec()
+std::vector<std::vector<std::string>> Stock::getResultVecFromLocal()
 {
 	std::vector<std::vector<std::string>> result;
 

@@ -9,6 +9,9 @@ class Stock
 public:
 	//笔入库
 	static bool insertDatabase(MysqlCpp& mysql);
+	
+	//资金图
+	static std::map<std::string, std::vector<BigNumber>> getCapitalMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, const std::string& date = "");
 
 	//均价图
     static std::map<std::string, std::vector<BigNumber>> getPriceMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, int32_t& useCount, BigNumber& reserveValue, const std::string& date = "");
@@ -35,7 +38,7 @@ public:
     static std::vector<std::vector<std::string>> getResultVecFromMysql(MysqlCpp& mysql, const std::string& stockNum, const std::string& date);
 
 	//获取处理好的笔数据
-	static std::vector<std::vector<std::string>> getResultVec();
+	static std::vector<std::vector<std::string>> getResultVecFromLocal();
 
 	//存入当天价格
 	static void insertQuoteDataBase(MysqlCpp& mysql);
