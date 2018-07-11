@@ -146,31 +146,32 @@ int main()
 		priceMapWatch.Stop();
 
 		printWatch.Run();
-        Stock::printPriceMap(map);
+        //Stock::printPriceMap(map);
+		Stock::printCapitalMap(map);
 		txt.AddLine("");
 		printWatch.Stop();
 
-		reserveMap[reserveValue].push_back(vecStock[index][0]);
+		//reserveMap[reserveValue].push_back(vecStock[index][0]);
 
-        Stock::addChooseMap(chooseMap, map, vecStock[index][0]);
-
-		std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
-		if (nowStr == "")
-		{
-			useCountMap[CStringManager::Format("%d", useCount)] = vecStock[index][0];
-		}
-		else
-		{
-			useCountMap[CStringManager::Format("%d", useCount)] = nowStr + ", " + vecStock[index][0];
-		}
-		useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index][0]);
+		//Stock::addChooseMap(chooseMap, map, vecStock[index][0]);
+		//
+		//std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
+		//if (nowStr == "")
+		//{
+		//	useCountMap[CStringManager::Format("%d", useCount)] = vecStock[index][0];
+		//}
+		//else
+		//{
+		//	useCountMap[CStringManager::Format("%d", useCount)] = nowStr + ", " + vecStock[index][0];
+		//}
+		//useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index][0]);
 	}
-    Ctxt txtMap("D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
-	txtMap.ClearFile();
-    CSystem::OutputMap(useCountMap, "D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
-	Stock::printReserveMap(reserveMap);
-    Stock::printChooseMap(chooseMap);
-    Stock::saveChooseToDataBase(mysql, chooseMap, zubie);
+    //Ctxt txtMap("D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
+	//txtMap.ClearFile();
+    //CSystem::OutputMap(useCountMap, "D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
+	//Stock::printReserveMap(reserveMap);
+	//Stock::printChooseMap(chooseMap);
+	//Stock::saveChooseToDataBase(mysql, chooseMap, zubie);
     CMouse::MoveAbsolute(tonghuashunPoint);
 	CMouse::LeftClick();
 	Sleep(1000);

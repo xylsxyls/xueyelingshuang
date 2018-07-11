@@ -131,24 +131,24 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 			std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
 			BigNumber mairujunjia = mairucapitalNum.toPrec(4) / mairuxianshouNum.zero();
 			BigNumber maichujunjia = maichucapitalNum.toPrec(4) / maichuxianshouNum.zero();
-			baifenbiCapitalMap[baifenbi].push_back(mairujunjia);
-			baifenbiCapitalMap[baifenbi].push_back(maichujunjia);
-			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100).toPrec(4) / allzijin.zero());
-			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100).toPrec(4) / allzijin.zero());
+			baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
+			baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
+			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100 / allzijin.zero()).toPrec(2));
+			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100 / allzijin.zero()).toPrec(2));
 			baifenbiCapitalMap[baifenbi].push_back(mairujunjia - maichujunjia);
-			baifenbiCapitalMap[baifenbi].push_back((mairujunjia.toPrec(4) / maichujunjia.zero() - 1) * 100);
+			baifenbiCapitalMap[baifenbi].push_back(((mairujunjia / maichujunjia.zero() - 1) * 100).toPrec(2));
 			baifenbiNum += 10;
 		}
 	}
-    std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
-    BigNumber mairujunjia = mairucapitalNum.toPrec(4) / mairuxianshouNum.zero();
-    BigNumber maichujunjia = maichucapitalNum.toPrec(4) / maichuxianshouNum.zero();
-    baifenbiCapitalMap[baifenbi].push_back(mairujunjia);
-    baifenbiCapitalMap[baifenbi].push_back(maichujunjia);
-    baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100).toPrec(4) / allzijin.zero());
-    baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100).toPrec(4) / allzijin.zero());
-    baifenbiCapitalMap[baifenbi].push_back(mairujunjia - maichujunjia);
-    baifenbiCapitalMap[baifenbi].push_back((mairujunjia.toPrec(4) / maichujunjia.zero() - 1) * 100);
+	std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
+	BigNumber mairujunjia = mairucapitalNum.toPrec(4) / mairuxianshouNum.zero();
+	BigNumber maichujunjia = maichucapitalNum.toPrec(4) / maichuxianshouNum.zero();
+	baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
+	baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
+	baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100 / allzijin.zero()).toPrec(2));
+	baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100 / allzijin.zero()).toPrec(2));
+	baifenbiCapitalMap[baifenbi].push_back(mairujunjia - maichujunjia);
+	baifenbiCapitalMap[baifenbi].push_back(((mairujunjia / maichujunjia.zero() - 1) * 100).toPrec(2));
 
 	return baifenbiCapitalMap;
 }
@@ -809,41 +809,69 @@ void Stock::saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vecto
     }
 }
 
+void Stock::printMap(const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::vector<std::string>& vecPrint, const std::vector<std::string>& sep)
+{
+	Ctxt txt("D:\\stock" + IntDateTime().dateToString() + ".txt");
+	int32_t index = -1;
+	while (index++ != vecPrint.size() - 1)
+	{
+		auto& vecBigNumber = priceMap.find(vecPrint[index])->second;
+		std::string strBigNumber;
+		int32_t bigIndex = -1;
+		while (bigIndex++ != vecBigNumber.size() - 1)
+		{
+			strBigNumber += vecBigNumber[bigIndex].toString() + (((int32_t)sep.size() > index) ? sep[index] : "") + ",";
+		}
+		strBigNumber.pop_back();
+		txt.AddLine("[%s] = %s", vecPrint[index].c_str(), strBigNumber.c_str());
+	}
+}
+
 void Stock::printPriceMap(const std::map<std::string, std::vector<BigNumber>>& priceMap)
 {
-    Ctxt txt("D:\\stock" + IntDateTime().dateToString() + ".txt");
-    std::vector<std::string> vecPrint;
-    int32_t price = 0;
-    int32_t count = 31;
-    while (count-- != 0)
-    {
-        vecPrint.push_back(CStringManager::Format("%d", price));
-        price += 10000;
-    }
-    int32_t index = -1;
-    while (index++ != vecPrint.size() - 1)
-    {
-        auto& vecBigNumber = priceMap.find(vecPrint[index])->second;
-        std::string strBigNumber = vecBigNumber[0].toString() + "," +
-            vecBigNumber[1].toString() + "," +
-            vecBigNumber[2].toString() + "," +
-            (vecBigNumber[3] * 100).toPrec(2).toString() + "%";
-        txt.AddLine("[%s] = %s", vecPrint[index].c_str(), strBigNumber.c_str());
-    }
-    vecPrint.clear();
-    vecPrint.push_back("10000-50000");
-    vecPrint.push_back("60000-100000");
-    vecPrint.push_back("110000-150000");
-    vecPrint.push_back("160000-200000");
-    vecPrint.push_back("210000-250000");
-    vecPrint.push_back("260000-300000");
-    vecPrint.push_back("reserveValue");
-    index = -1;
-    while (index++ != vecPrint.size() - 1)
-    {
-        auto& vecBigNumber = priceMap.find(vecPrint[index])->second;
-        txt.AddLine("[%s] = %s", vecPrint[index].c_str(), (vecBigNumber[0] * 100).toPrec(2).toString().c_str());
-    }
+	std::vector<std::string> vecPrint;
+	vecPrint.push_back("0");
+	int32_t price = 0;
+	while (price++ != 30)
+	{
+		vecPrint.push_back(CStringManager::Format("%d0000", price));
+	}
+	vecPrint.push_back("10000-50000");
+	vecPrint.push_back("60000-100000");
+	vecPrint.push_back("110000-150000");
+	vecPrint.push_back("160000-200000");
+	vecPrint.push_back("210000-250000");
+	vecPrint.push_back("260000-300000");
+	vecPrint.push_back("reserveValue");
+
+	std::vector<std::string> sep;
+	sep.push_back("");
+	sep.push_back("");
+	sep.push_back("");
+	sep.push_back("%");
+
+	Stock::printMap(priceMap, vecPrint, sep);
+}
+
+void Stock::printCapitalMap(const std::map<std::string, std::vector<BigNumber>>& priceMap)
+{
+	std::vector<std::string> vecPrint;
+	vecPrint.push_back("0");
+	int32_t persent = -1;
+	while (persent++ != 9)
+	{
+		vecPrint.push_back(CStringManager::Format("%d0%%", persent));
+	}
+
+	std::vector<std::string> sep;
+	sep.push_back("");
+	sep.push_back("");
+	sep.push_back("%");
+	sep.push_back("%");
+	sep.push_back("");
+	sep.push_back("%");
+
+	Stock::printMap(priceMap, vecPrint, sep);
 }
 
 void Stock::bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi)

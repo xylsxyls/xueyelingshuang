@@ -67,8 +67,14 @@ public:
     //保存选择
     static void saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vector<BigNumber>>& chooseMap, int32_t zubie);
 
-    //打印均价图
-    static void printPriceMap(const std::map<std::string, std::vector<BigNumber>>& priceMap);
+    //打印图
+	static void printMap(const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::vector<std::string>& vecPrint, const std::vector<std::string>& sep);
+
+	//打印价格图
+	static void printPriceMap(const std::map<std::string, std::vector<BigNumber>>& priceMap);
+
+	//打印资金图
+	static void printCapitalMap(const std::map<std::string, std::vector<BigNumber>>& priceMap);
 
 	//最好分析
 	static void bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi);
