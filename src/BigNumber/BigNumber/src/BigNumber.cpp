@@ -169,10 +169,11 @@ std::string BigNumber::toString() const
 	return m_base->toString();
 }
 
-BigNumber& BigNumber::zero(bool zero)
+BigNumber BigNumber::zero() const
 {
-	m_isZero = zero;
-	return *this;
+	BigNumber result;
+	result.m_isZero = true;
+	return result;
 }
 
 BigNumber BigNumber::toPrec(int32_t prec, PrecFlag flag) const
@@ -231,7 +232,7 @@ BigNumber BigNumber::mul(const BigNumber& x, const BigNumber& y)
 BigNumber BigNumber::div(const BigNumber& x, const BigNumber& y)
 {
 	BigNumber result;
-	if (y.getZero() && y == 0)
+	if (y.m_isZero && y == 0)
 	{
 		result = x;
 		return result - result;
@@ -286,11 +287,6 @@ bool BigNumber::smallEqual(const BigNumber& x, const BigNumber& y)
 {
 	return (BigNumberBase::Compare(*x.m_base, *y.m_base) == BigNumberBase::SMALL) ||
 		(BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::EQUAL);
-}
-
-bool BigNumber::getZero() const
-{
-	return m_isZero;
 }
 
 //#include <string>

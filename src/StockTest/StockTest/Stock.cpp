@@ -78,7 +78,7 @@ bool Stock::insertDatabase(MysqlCpp& mysql)
 std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, const std::string& date)
 {
 	//pingjunjine£¬vec, bishu£¬xianshou£¬maimai1-1
-	std::map<BigNumber, std::vector<BigNumber>> capitalMap;
+	std::map<BigNumber, std::vector<std::vector<BigNumber>>> capitalMap;
 	auto fenbiVec = getResultVecFromMysql(mysql, stockNum, date);
 	BigNumber allzijin = 0;
 	int32_t index = -1;
@@ -95,9 +95,11 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 		BigNumber zijin = chengjiao * xianshou;
 		allzijin = allzijin + zijin;
 		BigNumber danbijine = (zijin).toPrec(4) / bishu;
-		capitalMap[danbijine].push_back(bishu);
-		capitalMap[danbijine].push_back(xianshou);
-		capitalMap[danbijine].push_back(maimai);
+		std::vector<BigNumber> danbivec;
+		danbivec.push_back(bishu);
+		danbivec.push_back(xianshou);
+		danbivec.push_back(maimai);
+		capitalMap[danbijine].push_back(danbivec);
 	}
 
 	//baifenbi, vec, mairujunjia,maichujunjia,mairubaifenbi,maichubaifenbi,zhangdie,zhangfu
@@ -109,28 +111,32 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 	int32_t baifenbiNum = 10;
 	for (auto itCapital = capitalMap.rbegin(); itCapital != capitalMap.rend(); ++itCapital)
 	{
-		if (itCapital->second[2] == 1)
+		auto& danbiCapiVec = itCapital->second;
+		int32_t index = -1;
+		while (index++ != danbiCapiVec.size() - 1)
 		{
-			mairucapitalNum = mairucapitalNum + itCapital->first * itCapital->second[0];
-			mairuxianshouNum = mairuxianshouNum + itCapital->second[1];
+			if (danbiCapiVec[index][2] == 1)
+			{
+				mairucapitalNum = mairucapitalNum + itCapital->first * danbiCapiVec[index][0];
+				mairuxianshouNum = mairuxianshouNum + danbiCapiVec[index][1];
+			}
+			else if (danbiCapiVec[index][2] == -1)
+			{
+				maichucapitalNum = maichucapitalNum + itCapital->first * danbiCapiVec[index][0];
+				maichuxianshouNum = maichuxianshouNum + danbiCapiVec[index][1];
+			}
 		}
-		else if (itCapital->second[2] == -1)
-		{
-			maichucapitalNum = maichucapitalNum + itCapital->first * itCapital->second[0];
-			maichuxianshouNum = maichuxianshouNum + itCapital->second[1];
-		}
-		
 		if (mairucapitalNum + maichucapitalNum > allzijin * baifenbiNum / 100)
 		{
 			std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
-            BigNumber mairujunjia = mairucapitalNum.toPrec(4) / mairuxianshouNum.zero();
-            BigNumber maichujunjia = maichucapitalNum.toPrec(4) / maichuxianshouNum.zero();
-            baifenbiCapitalMap[baifenbi].push_back(mairujunjia);
-            baifenbiCapitalMap[baifenbi].push_back(maichujunjia);
-            baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100).toPrec(4) / allzijin.zero());
-            baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100).toPrec(4) / allzijin.zero());
-            baifenbiCapitalMap[baifenbi].push_back(mairujunjia - maichujunjia);
-            baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4) / maichujunjia.zero() - 1);
+			BigNumber mairujunjia = mairucapitalNum.toPrec(4) / mairuxianshouNum.zero();
+			BigNumber maichujunjia = maichucapitalNum.toPrec(4) / maichuxianshouNum.zero();
+			baifenbiCapitalMap[baifenbi].push_back(mairujunjia);
+			baifenbiCapitalMap[baifenbi].push_back(maichujunjia);
+			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100).toPrec(4) / allzijin.zero());
+			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100).toPrec(4) / allzijin.zero());
+			baifenbiCapitalMap[baifenbi].push_back(mairujunjia - maichujunjia);
+			baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4) / maichujunjia.zero() - 1);
 			baifenbiNum += 10;
 		}
 	}

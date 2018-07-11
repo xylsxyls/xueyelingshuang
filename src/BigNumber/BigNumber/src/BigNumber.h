@@ -96,9 +96,9 @@ public:
 
 	std::string toString() const;
 
-	/** 设置该数若为除数，且为0时不崩溃，返回0，含有精度
+	/** 返回数若为除数，且为0时不崩溃，除后返回0，含有精度
 	*/
-	BigNumber& zero(bool zero = true);
+	BigNumber zero() const;
 
     BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST) const;
 
@@ -123,8 +123,6 @@ private:
 	static bool bigEqual(const BigNumber& x, const BigNumber& y);
 	static bool smallThan(const BigNumber& x, const BigNumber& y);
 	static bool smallEqual(const BigNumber& x, const BigNumber& y);
-
-	bool getZero() const;
 
 private:
 #ifdef _MSC_VER
