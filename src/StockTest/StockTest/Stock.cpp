@@ -75,11 +75,11 @@ bool Stock::insertDatabase(MysqlCpp& mysql)
 	return true;
 }
 
-std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, const std::string& date)
+std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi, const std::string& stockNum, const std::string& date)
 {
 	//pingjunjine，vec, bishu，xianshou，maimai1-1
 	std::map<BigNumber, std::vector<std::vector<BigNumber>>> capitalMap;
-	auto fenbiVec = getResultVecFromMysql(mysql, stockNum, date);
+	auto fenbiVec = getResultVecFromMysql(mysqlfenbi, stockNum, date);
 	BigNumber allzijin = 0;
 	int32_t index = -1;
 	while (index++ != fenbiVec.size() - 1)
@@ -108,6 +108,13 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 	BigNumber maichucapitalNum = 0;
 	BigNumber mairuxianshouNum = 0;
 	BigNumber maichuxianshouNum = 0;
+
+	BigNumber smallpart = 0;
+	BigNumber bigpart = 0;
+	BigNumber smallpersent = 0;
+	BigNumber bigpersent = 0;
+	BigNumber midpersent = 0;
+
 	int32_t baifenbiNum = 10;
 	for (auto itCapital = capitalMap.rbegin(); itCapital != capitalMap.rend(); ++itCapital)
 	{
@@ -131,12 +138,33 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 			std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
 			BigNumber mairujunjia = mairucapitalNum.toPrec(4) / mairuxianshouNum.zero();
 			BigNumber maichujunjia = maichucapitalNum.toPrec(4) / maichuxianshouNum.zero();
+			BigNumber persent = ((mairujunjia / maichujunjia.zero() - 1) * 100);
 			baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
 			baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
 			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100 / allzijin.zero()).toPrec(2));
 			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100 / allzijin.zero()).toPrec(2));
 			baifenbiCapitalMap[baifenbi].push_back((mairujunjia - maichujunjia).toPrec(4));
-			baifenbiCapitalMap[baifenbi].push_back(((mairujunjia / maichujunjia.zero() - 1) * 100).toPrec(2));
+			baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
+			if (baifenbiNum >= 10 && baifenbiNum <= 30)
+			{
+				smallpersent = smallpersent + persent;
+			}
+			else if (baifenbiNum >= 40 && baifenbiNum <= 60)
+			{
+				midpersent = midpersent + persent;
+			}
+			else if (baifenbiNum >= 70 && baifenbiNum <= 90)
+			{
+				bigpersent = bigpersent + persent;
+			}
+			if (baifenbiNum >= 0 && baifenbiNum <= 40)
+			{
+				smallpart = smallpart + persent;
+			}
+			else if (baifenbiNum >= 50 && baifenbiNum <= 90)
+			{
+				bigpart = bigpart + persent;
+			}
 			baifenbiNum += 10;
 		}
 	}
@@ -149,6 +177,23 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 	baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100 / allzijin.zero()).toPrec(2));
 	baifenbiCapitalMap[baifenbi].push_back((mairujunjia - maichujunjia).toPrec(4));
 	baifenbiCapitalMap[baifenbi].push_back(((mairujunjia / maichujunjia.zero() - 1) * 100).toPrec(2));
+
+	BigNumber zuigaozhangfu = 0;
+	BigNumber zuizhongzhangfu = 0;
+	auto stockPriceVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", "daima='" + stockNum + "' and shijian='" + Stock::getNextDate(mysql, date) + "'")))->toVector();
+	if (!stockPriceVec.empty() && (stockPriceVec[0].size() == 2))
+	{
+		zuigaozhangfu = stockPriceVec[0][0].c_str();
+		zuizhongzhangfu = stockPriceVec[0][1].c_str();
+	}
+
+	baifenbiCapitalMap["100%"].push_back(smallpersent);
+	baifenbiCapitalMap["100%"].push_back(midpersent);
+	baifenbiCapitalMap["100%"].push_back(bigpersent);
+	baifenbiCapitalMap["100%"].push_back(smallpart);
+	baifenbiCapitalMap["100%"].push_back(bigpart);
+	baifenbiCapitalMap["100%"].push_back(zuigaozhangfu);
+	baifenbiCapitalMap["100%"].push_back(zuizhongzhangfu);
 
 	return baifenbiCapitalMap;
 }
@@ -623,17 +668,17 @@ void Stock::chooseTest(MysqlCpp& mysql, const std::string& preDate)
     mysql.execute(state);
 }
 
-std::string Stock::getPreDate(MysqlCpp& mysql, std::string* date)
+std::string Stock::getPreDate(MysqlCpp& mysql, const std::string& date)
 {
     IntDateTime nowTime;
 	std::string todayDate;
-	if (date == nullptr)
+	if (date == "")
 	{
 		todayDate = nowTime.dateToString();
 	}
 	else
 	{
-		todayDate = *date;
+		todayDate = date;
 		nowTime.setTime(todayDate + " 00:00:00");
 	}
     int32_t count = 15;
@@ -648,6 +693,33 @@ std::string Stock::getPreDate(MysqlCpp& mysql, std::string* date)
         }
     }
     return todayDate;
+}
+
+std::string Stock::getNextDate(MysqlCpp& mysql, const std::string date)
+{
+	IntDateTime nowTime;
+	std::string todayDate;
+	if (date == "")
+	{
+		todayDate = nowTime.dateToString();
+	}
+	else
+	{
+		todayDate = date;
+		nowTime.setTime(todayDate + " 00:00:00");
+	}
+	int32_t count = 15;
+	while (count-- != 0)
+	{
+		nowTime = nowTime + 86400;
+		std::string nextDate = nowTime.dateToString();
+		std::string whereString = CStringManager::Format("shijian='%s'", nextDate.c_str());
+		if (atoi(mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "count(*)", whereString)))->toVector()[0][0].c_str()) != 0)
+		{
+			return nextDate;
+		}
+	}
+	return "";
 }
 
 void Stock::toPrec(std::string& result, int32_t prec)
@@ -809,7 +881,7 @@ void Stock::saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vecto
     }
 }
 
-void Stock::printMap(const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::vector<std::string>& vecPrint, const std::vector<std::string>& sep)
+void Stock::printMap(const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::vector<std::string>& vecPrint, const std::vector<std::vector<std::string>>& sep)
 {
 	Ctxt txt("D:\\stock" + IntDateTime().dateToString() + ".txt");
 	int32_t index = -1;
@@ -825,7 +897,12 @@ void Stock::printMap(const std::map<std::string, std::vector<BigNumber>>& priceM
 		int32_t bigIndex = -1;
 		while (bigIndex++ != vecBigNumber.size() - 1)
 		{
-            strBigNumber += vecBigNumber[bigIndex].toString() + (((int32_t)sep.size() > bigIndex) ? sep[bigIndex] : "") + ",";
+			std::string strSep;
+			if ((int32_t)sep.size() > index && (int32_t)sep[index].size() > bigIndex)
+			{
+				strSep = sep[index][bigIndex];
+			}
+			strBigNumber += vecBigNumber[bigIndex].toString() + strSep + ",";
 		}
 		strBigNumber.pop_back();
 		txt.AddLine("[%s] = %s", vecPrint[index].c_str(), strBigNumber.c_str());
@@ -849,12 +926,17 @@ void Stock::printPriceMap(const std::map<std::string, std::vector<BigNumber>>& p
 	vecPrint.push_back("260000-300000");
 	vecPrint.push_back("reserveValue");
 
-	std::vector<std::string> sep;
-	sep.push_back("");
-	sep.push_back("");
-	sep.push_back("");
-	sep.push_back("%");
-
+	std::vector<std::vector<std::string>> sep;
+	std::vector<std::string> lineSep;
+	lineSep.push_back("");
+	lineSep.push_back("");
+	lineSep.push_back("");
+	lineSep.push_back("%");
+	int32_t count = 38;
+	while (count-- != 0)
+	{
+		sep.push_back(lineSep);
+	}
 	Stock::printMap(priceMap, vecPrint, sep);
 }
 
@@ -868,13 +950,28 @@ void Stock::printCapitalMap(const std::map<std::string, std::vector<BigNumber>>&
 		vecPrint.push_back(CStringManager::Format("%d0%%", persent));
 	}
 
-	std::vector<std::string> sep;
-	sep.push_back("");
-	sep.push_back("");
-	sep.push_back("%");
-	sep.push_back("%");
-	sep.push_back("");
-	sep.push_back("%");
+	std::vector<std::vector<std::string>> sep;
+	std::vector<std::string> lineSep;
+	lineSep.push_back("");
+	lineSep.push_back("");
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	lineSep.push_back("");
+	lineSep.push_back("%");
+	int32_t count = 10;
+	while (count-- != 0)
+	{
+		sep.push_back(lineSep);
+	}
+	lineSep.clear();
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	sep.push_back(lineSep);
 
 	Stock::printMap(priceMap, vecPrint, sep);
 }
@@ -884,7 +981,7 @@ void Stock::bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi)
 	//取出今天的总数据
 	std::string todayDate = IntDateTime().dateToString();
 	std::string preDate = Stock::getPreDate(mysql);
-	std::string prepreDate = Stock::getPreDate(mysql, &preDate);
+	std::string prepreDate = Stock::getPreDate(mysql, preDate);
 	auto vec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "daima,zuigaozhangfu", "shijian='" + todayDate + "'")))->toVector();
 	std::map<BigNumber, std::vector<std::string>> bestMap;
 	int32_t index = -1;

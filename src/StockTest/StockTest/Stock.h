@@ -11,7 +11,7 @@ public:
 	static bool insertDatabase(MysqlCpp& mysql);
 	
 	//资金图
-	static std::map<std::string, std::vector<BigNumber>> getCapitalMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, const std::string& date = "");
+	static std::map<std::string, std::vector<BigNumber>> getCapitalMapFromDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi, const std::string& stockNum, const std::string& date = "");
 
 	//均价图
     static std::map<std::string, std::vector<BigNumber>> getPriceMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, int32_t& useCount, BigNumber& reserveValue, const std::string& date = "");
@@ -47,7 +47,10 @@ public:
     static void chooseTest(MysqlCpp& mysql, const std::string& preDate);
 
     //获取上一天的时间
-	static std::string getPreDate(MysqlCpp& mysql, std::string* date = nullptr);
+	static std::string getPreDate(MysqlCpp& mysql, const std::string& date = "");
+
+	//获取下一天的时间，前提已经存入stockquote
+	static std::string getNextDate(MysqlCpp& mysql, const std::string date = "");
 
     static void toPrec(std::string& result, int32_t prec);
 
@@ -68,7 +71,7 @@ public:
     static void saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vector<BigNumber>>& chooseMap, int32_t zubie);
 
     //打印图
-	static void printMap(const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::vector<std::string>& vecPrint, const std::vector<std::string>& sep);
+	static void printMap(const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::vector<std::string>& vecPrint, const std::vector<std::vector<std::string>>& sep);
 
 	//打印价格图
 	static void printPriceMap(const std::map<std::string, std::vector<BigNumber>>& priceMap);
