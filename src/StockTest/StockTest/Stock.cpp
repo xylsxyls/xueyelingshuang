@@ -109,6 +109,11 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 	BigNumber mairuxianshouNum = 0;
 	BigNumber maichuxianshouNum = 0;
 
+	BigNumber mairucapitalNumTemp = 0;
+	BigNumber maichucapitalNumTemp = 0;
+	BigNumber mairuxianshouNumTemp = 0;
+	BigNumber maichuxianshouNumTemp = 0;
+
 	BigNumber smallpart = 0;
 	BigNumber bigpart = 0;
 	BigNumber smallpersent = 0;
@@ -124,11 +129,17 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 		{
 			if (danbiCapiVec[index][2] == 1)
 			{
+				mairucapitalNumTemp = mairucapitalNumTemp + itCapital->first * danbiCapiVec[index][0];
+				mairuxianshouNumTemp = mairuxianshouNumTemp + danbiCapiVec[index][1];
+
 				mairucapitalNum = mairucapitalNum + itCapital->first * danbiCapiVec[index][0];
 				mairuxianshouNum = mairuxianshouNum + danbiCapiVec[index][1];
 			}
 			else if (danbiCapiVec[index][2] == -1)
 			{
+				maichucapitalNumTemp = maichucapitalNumTemp + itCapital->first * danbiCapiVec[index][0];
+				maichuxianshouNumTemp = maichuxianshouNumTemp + danbiCapiVec[index][1];
+
 				maichucapitalNum = maichucapitalNum + itCapital->first * danbiCapiVec[index][0];
 				maichuxianshouNum = maichuxianshouNum + danbiCapiVec[index][1];
 			}
@@ -136,18 +147,18 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 		if (mairucapitalNum + maichucapitalNum > allzijin * baifenbiNum / 100)
 		{
 			std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
-			BigNumber mairujunjia = mairucapitalNum.toPrec(4) / mairuxianshouNum.zero();
-			BigNumber maichujunjia = maichucapitalNum.toPrec(4) / maichuxianshouNum.zero();
+			BigNumber mairujunjia = mairucapitalNumTemp.toPrec(4) / mairuxianshouNumTemp.zero();
+			BigNumber maichujunjia = maichucapitalNumTemp.toPrec(4) / maichuxianshouNumTemp.zero();
 			BigNumber persent = ((mairujunjia / maichujunjia.zero() - 1) * 100);
 			baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
 			baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
-			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100 / allzijin.zero()).toPrec(2));
-			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100 / allzijin.zero()).toPrec(2));
+			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
+			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
 			baifenbiCapitalMap[baifenbi].push_back((mairujunjia - maichujunjia).toPrec(4));
 			baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
 			if (baifenbiNum >= 10 && baifenbiNum <= 30)
 			{
-				smallpersent = smallpersent + persent;
+				bigpersent = bigpersent + persent;
 			}
 			else if (baifenbiNum >= 40 && baifenbiNum <= 60)
 			{
@@ -155,28 +166,39 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 			}
 			else if (baifenbiNum >= 70 && baifenbiNum <= 90)
 			{
-				bigpersent = bigpersent + persent;
+				smallpersent = smallpersent + persent;
 			}
-			if (baifenbiNum >= 0 && baifenbiNum <= 40)
-			{
-				smallpart = smallpart + persent;
-			}
-			else if (baifenbiNum >= 50 && baifenbiNum <= 90)
+			if (baifenbiNum >= 10 && baifenbiNum <= 50)
 			{
 				bigpart = bigpart + persent;
 			}
+			else if (baifenbiNum >= 60 && baifenbiNum <= 90)
+			{
+				smallpart = smallpart + persent;
+			}
+
+			mairucapitalNumTemp = 0;
+			maichucapitalNumTemp = 0;
+			mairuxianshouNumTemp = 0;
+			maichuxianshouNumTemp = 0;
+
 			baifenbiNum += 10;
 		}
 	}
 	std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
-	BigNumber mairujunjia = mairucapitalNum.toPrec(4) / mairuxianshouNum.zero();
-	BigNumber maichujunjia = maichucapitalNum.toPrec(4) / maichuxianshouNum.zero();
+	BigNumber mairujunjia = mairucapitalNumTemp.toPrec(4) / mairuxianshouNumTemp.zero();
+	BigNumber maichujunjia = maichucapitalNumTemp.toPrec(4) / maichuxianshouNumTemp.zero();
+	BigNumber persent = ((mairujunjia / maichujunjia.zero() - 1) * 100);
 	baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
 	baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
-	baifenbiCapitalMap[baifenbi].push_back((mairucapitalNum * 100 / allzijin.zero()).toPrec(2));
-	baifenbiCapitalMap[baifenbi].push_back((maichucapitalNum * 100 / allzijin.zero()).toPrec(2));
+	baifenbiCapitalMap[baifenbi].push_back((mairucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
+	baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
 	baifenbiCapitalMap[baifenbi].push_back((mairujunjia - maichujunjia).toPrec(4));
-	baifenbiCapitalMap[baifenbi].push_back(((mairujunjia / maichujunjia.zero() - 1) * 100).toPrec(2));
+	baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
+	if (baifenbiNum == 100)
+	{
+		smallpart = smallpart + persent;
+	}
 
 	BigNumber zuigaozhangfu = 0;
 	BigNumber zuizhongzhangfu = 0;
