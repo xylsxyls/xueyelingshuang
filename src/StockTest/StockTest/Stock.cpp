@@ -187,11 +187,11 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 		zuizhongzhangfu = stockPriceVec[0][1].c_str();
 	}
 
-	baifenbiCapitalMap["100%"].push_back(smallpersent);
-	baifenbiCapitalMap["100%"].push_back(midpersent);
-	baifenbiCapitalMap["100%"].push_back(bigpersent);
-	baifenbiCapitalMap["100%"].push_back(smallpart);
-	baifenbiCapitalMap["100%"].push_back(bigpart);
+	baifenbiCapitalMap["100%"].push_back(smallpersent.toPrec(2));
+    baifenbiCapitalMap["100%"].push_back(midpersent.toPrec(2));
+    baifenbiCapitalMap["100%"].push_back(bigpersent.toPrec(2));
+    baifenbiCapitalMap["100%"].push_back(smallpart.toPrec(2));
+    baifenbiCapitalMap["100%"].push_back(bigpart.toPrec(2));
 	baifenbiCapitalMap["100%"].push_back(zuigaozhangfu);
 	baifenbiCapitalMap["100%"].push_back(zuizhongzhangfu);
 
@@ -945,7 +945,7 @@ void Stock::printCapitalMap(const std::map<std::string, std::vector<BigNumber>>&
 	std::vector<std::string> vecPrint;
 	vecPrint.push_back("0%");
 	int32_t persent = 0;
-	while (persent++ != 9)
+	while (persent++ != 10)
 	{
 		vecPrint.push_back(CStringManager::Format("%d0%%", persent));
 	}

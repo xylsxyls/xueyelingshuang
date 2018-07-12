@@ -52,7 +52,7 @@ m_isZero(false)
 BigNumber::BigNumber(const BigNumber& num):
 m_divPrec(16),
 m_divFlag(HALF_ADJUST),
-m_isZero(false)
+m_isZero(num.m_isZero)
 {
 	m_base = new BigNumberBase;
 	*m_base = *num.m_base;
@@ -66,7 +66,7 @@ BigNumber BigNumber::operator=(const BigNumber& num)
     *m_base = *num.m_base;
     m_divPrec = 16;
     m_divFlag = HALF_ADJUST;
-	m_isZero = false;
+    m_isZero = num.m_isZero;
 #ifdef _DEBUG
     m_num = toString();
 #endif
@@ -171,7 +171,7 @@ std::string BigNumber::toString() const
 
 BigNumber BigNumber::zero() const
 {
-	BigNumber result;
+	BigNumber result = *this;
 	result.m_isZero = true;
 	return result;
 }
