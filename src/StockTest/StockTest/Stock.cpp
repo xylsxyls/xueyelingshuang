@@ -1089,6 +1089,90 @@ void Stock::bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi)
 	}
 }
 
+std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const std::map<std::string, std::map<std::string, std::vector<BigNumber>>>& capitalMap)
+{
+	//daima,vec,zuigaozhangfu,zuizhongzhangfu,zuigaozhangfubaifenbi,zuizhongzhangfubaifenbi
+	std::map<std::string, std::vector<BigNumber>> result;
+
+	BigNumber zuigaozhangfuAll;
+	BigNumber zuizhongzhangfuAll;
+	BigNumber zuigaozhangfubaifenbiAll;
+	BigNumber zuizhongzhangfubaifenbiAll;
+	
+	for (auto itStock = capitalMap.begin(); itStock != capitalMap.end(); ++itStock)
+	{
+		const std::string& stockNum = itStock->first;
+		auto& stockMap = itStock->second;
+
+		BigNumber zuigaozhangfu = 0;
+		BigNumber zuizhongzhangfu = 0;
+		BigNumber zuigaozhangfubaifenbi = 0;
+		BigNumber zuizhongzhangfubaifenbi = 0;
+
+		auto& itzuigaozuizhongResult = stockMap.find("zuigaozuizhong");
+		if (itzuigaozuizhongResult == stockMap.end())
+		{
+			continue;
+		}
+
+		auto& zuigaozuizhongResultVec = itzuigaozuizhongResult->second;
+		if (zuigaozuizhongResultVec.size() != 2)
+		{
+			continue;
+		}
+
+		auto& itbaifenbiResult = stockMap.find("zuigaozuizhongbaifenbi");
+		if (itbaifenbiResult == stockMap.end())
+		{
+			continue;
+		}
+
+		auto& baifenbiResultVec = itbaifenbiResult->second;
+		if (baifenbiResultVec.size() != 2)
+		{
+			continue;
+		}
+
+		auto itHalfpersentResult = stockMap.find("halfpersent");
+		if (itHalfpersentResult == stockMap.end())
+		{
+			continue;
+		}
+
+		auto& halfpersentResultVec = itHalfpersentResult->second;
+		if (halfpersentResultVec.size() != 2)
+		{
+			continue;
+		}
+
+		zuigaozhangfu = zuigaozuizhongResultVec[0];
+		zuizhongzhangfu = zuigaozuizhongResultVec[1];
+
+		zuigaozhangfubaifenbi = baifenbiResultVec[0];
+		zuizhongzhangfubaifenbi = baifenbiResultVec[1];
+
+		if (halfpersentResultVec[0] - halfpersentResultVec[1] > 0)
+		{
+			result[stockNum].push_back(zuigaozhangfu);
+			result[stockNum].push_back(zuizhongzhangfu);
+			result[stockNum].push_back(zuigaozhangfubaifenbi);
+			result[stockNum].push_back(zuizhongzhangfubaifenbi);
+
+			zuigaozhangfuAll = zuigaozhangfuAll + zuigaozhangfu;
+			zuizhongzhangfuAll = zuizhongzhangfuAll + zuizhongzhangfu;
+			zuigaozhangfubaifenbiAll = zuigaozhangfubaifenbiAll + zuigaozhangfubaifenbi;
+			zuizhongzhangfubaifenbiAll = zuizhongzhangfubaifenbiAll + zuizhongzhangfubaifenbi;
+		}
+	}
+
+	result["888888"].push_back(zuigaozhangfuAll);
+	result["888888"].push_back(zuizhongzhangfuAll);
+	result["888888"].push_back(zuigaozhangfubaifenbiAll);
+	result["888888"].push_back(zuizhongzhangfubaifenbiAll);
+
+	return result;
+}
+
 void Stock::addChooseMap(std::map<BigNumber, std::vector<BigNumber>>& chooseMap, const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::string& stockNum)
 {
     if ((priceMap.find("reserveValue")->second)[0] * 100 > "3" && (priceMap.find("10000-50000")->second)[0] * 100 > "-2")

@@ -121,6 +121,8 @@ int main()
 	CStopWatch printWatch;
 	printWatch.Stop();
 
+	std::map<std::string, std::map<std::string, std::vector<BigNumber>>> capitalMapAll;
+
 	int32_t index = -1;
     while (index++ != vecStock.size() - 1)//
 	{
@@ -145,6 +147,8 @@ int main()
 		//auto map = Stock::getPriceMapFromLocal(useCount, reserveValue);
 		priceMapWatch.Stop();
 
+		capitalMapAll[vecStock[index][0]] = map;
+
 		printWatch.Run();
         //Stock::printPriceMap(map);
 		Stock::printCapitalMap(map);
@@ -166,6 +170,9 @@ int main()
 		//}
 		//useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index][0]);
 	}
+
+	auto chooseVec = Stock::chooseFromCapitalMap(capitalMapAll);
+
     //Ctxt txtMap("D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
 	//txtMap.ClearFile();
     //CSystem::OutputMap(useCountMap, "D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
