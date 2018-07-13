@@ -163,20 +163,24 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 			baifenbiNum += 10;
 		}
 	}
-    std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
-    BigNumber mairujunjia = mairucapitalNumTemp.toPrec(4) / mairuxianshouNumTemp.zero();
-    BigNumber maichujunjia = maichucapitalNumTemp.toPrec(4) / maichuxianshouNumTemp.zero();
-    BigNumber persent = ((maichujunjia / mairujunjia.zero() - 1) * 100);
-    if (persent == -100)
-    {
-        persent = "0.00";
-    }
-    baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
-    baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
-    baifenbiCapitalMap[baifenbi].push_back((mairucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
-    baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
-    baifenbiCapitalMap[baifenbi].push_back((maichujunjia - mairujunjia).toPrec(4));
-    baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
+
+	if (baifenbiCapitalMap.size() < 10)
+	{
+		std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
+		BigNumber mairujunjia = mairucapitalNumTemp.toPrec(4) / mairuxianshouNumTemp.zero();
+		BigNumber maichujunjia = maichucapitalNumTemp.toPrec(4) / maichuxianshouNumTemp.zero();
+		BigNumber persent = ((maichujunjia / mairujunjia.zero() - 1) * 100);
+		if (persent == -100)
+		{
+			persent = "0.00";
+		}
+		baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
+		baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
+		baifenbiCapitalMap[baifenbi].push_back((mairucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
+		baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
+		baifenbiCapitalMap[baifenbi].push_back((maichujunjia - mairujunjia).toPrec(4));
+		baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
+	}
 
 	BigNumber zuigaozhangfu = 0;
 	BigNumber zuizhongzhangfu = 0;
