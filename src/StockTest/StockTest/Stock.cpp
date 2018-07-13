@@ -187,6 +187,28 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 		zuizhongzhangfu = stockPriceVec[0][1].c_str();
 	}
 
+	int32_t zuigaozhangfumingci = 1;
+	int32_t zuizhongzhangfumingci = 1;
+	auto stockPriceAllVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", "shijian='" + Stock::getNextDate(mysql, date) + "'")))->toVector();
+	index = -1;
+	while (index++ != stockPriceAllVec.size() - 1)
+	{
+		BigNumber zuigaozhangfuNum = stockPriceAllVec[index][0].c_str();
+		BigNumber zuizhongzhangfuNum = stockPriceAllVec[index][1].c_str();
+		if (zuigaozhangfuNum > zuigaozhangfu)
+		{
+			++zuigaozhangfumingci;
+		}
+		if (zuizhongzhangfuNum > zuizhongzhangfu)
+		{
+			++zuizhongzhangfumingci;
+		}
+	}
+
+	BigNumber stockCount = (int32_t)stockPriceAllVec.size();
+	BigNumber zuigaozhangfubaifenbi = (BigNumber(zuigaozhangfumingci).toPrec(6) * 100 / stockCount).toPrec(2);
+	BigNumber zuizhongzhangfubaifenbi = (BigNumber(zuizhongzhangfumingci).toPrec(6) * 100 / stockCount).toPrec(2);
+
     if (baifenbiCapitalMap.size() < 10)
     {
         return baifenbiCapitalMap;
@@ -217,6 +239,9 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 
 	baifenbiCapitalMap["zuigaozuizhong"].push_back(zuigaozhangfu);
 	baifenbiCapitalMap["zuigaozuizhong"].push_back(zuizhongzhangfu);
+
+	baifenbiCapitalMap["zuigaozuizhongbaifenbi"].push_back(zuigaozhangfubaifenbi);
+	baifenbiCapitalMap["zuigaozuizhongbaifenbi"].push_back(zuizhongzhangfubaifenbi);
 
 	return baifenbiCapitalMap;
 }
@@ -980,6 +1005,7 @@ void Stock::printCapitalMap(const std::map<std::string, std::vector<BigNumber>>&
 	vecPrint.push_back("halfmairubaifenbi");
 	vecPrint.push_back("halfmaichubaifenbi");
 	vecPrint.push_back("zuigaozuizhong");
+	vecPrint.push_back("zuigaozuizhongbaifenbi");
 
 	std::vector<std::vector<std::string>> sep;
 	std::vector<std::string> lineSep;
@@ -1002,7 +1028,7 @@ void Stock::printCapitalMap(const std::map<std::string, std::vector<BigNumber>>&
 	lineSep.push_back("%");
 	lineSep.push_back("%");
 	lineSep.push_back("%");
-	count = 7;
+	count = 8;
 	while (count-- != 0)
 	{
 		sep.push_back(lineSep);
