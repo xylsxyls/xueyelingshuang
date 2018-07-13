@@ -114,12 +114,6 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 	BigNumber mairuxianshouNumTemp = 0;
 	BigNumber maichuxianshouNumTemp = 0;
 
-	BigNumber smallpart = 0;
-	BigNumber bigpart = 0;
-	BigNumber smallpersent = 0;
-	BigNumber bigpersent = 0;
-	BigNumber midpersent = 0;
-
 	int32_t baifenbiNum = 10;
 	for (auto itCapital = capitalMap.rbegin(); itCapital != capitalMap.rend(); ++itCapital)
 	{
@@ -160,26 +154,6 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
             baifenbiCapitalMap[baifenbi].push_back((maichujunjia - mairujunjia).toPrec(4));
 			baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
-			if (baifenbiNum >= 10 && baifenbiNum <= 30)
-			{
-				bigpersent = bigpersent + persent;
-			}
-			else if (baifenbiNum >= 40 && baifenbiNum <= 60)
-			{
-				midpersent = midpersent + persent;
-			}
-			else if (baifenbiNum >= 70 && baifenbiNum <= 90)
-			{
-				smallpersent = smallpersent + persent;
-			}
-			if (baifenbiNum >= 10 && baifenbiNum <= 50)
-			{
-				bigpart = bigpart + persent;
-			}
-			else if (baifenbiNum >= 60 && baifenbiNum <= 90)
-			{
-				smallpart = smallpart + persent;
-			}
 
 			mairucapitalNumTemp = 0;
 			maichucapitalNumTemp = 0;
@@ -203,10 +177,6 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
     baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
     baifenbiCapitalMap[baifenbi].push_back((maichujunjia - mairujunjia).toPrec(4));
     baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
-	if (baifenbiNum == 100)
-	{
-		smallpart = smallpart + persent;
-	}
 
 	BigNumber zuigaozhangfu = 0;
 	BigNumber zuizhongzhangfu = 0;
@@ -216,6 +186,11 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 		zuigaozhangfu = stockPriceVec[0][0].c_str();
 		zuizhongzhangfu = stockPriceVec[0][1].c_str();
 	}
+
+    if (baifenbiCapitalMap.size() < 10)
+    {
+        return baifenbiCapitalMap;
+    }
 
 	baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["10%"][5] + baifenbiCapitalMap["20%"][5] + baifenbiCapitalMap["30%"][5]);
 	baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["40%"][5] + baifenbiCapitalMap["50%"][5] + baifenbiCapitalMap["60%"][5]);
