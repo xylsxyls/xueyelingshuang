@@ -1094,10 +1094,10 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 	//daima,vec,zuigaozhangfu,zuizhongzhangfu,zuigaozhangfubaifenbi,zuizhongzhangfubaifenbi
 	std::map<std::string, std::vector<BigNumber>> result;
 
-	BigNumber zuigaozhangfuAll;
-	BigNumber zuizhongzhangfuAll;
-	BigNumber zuigaozhangfubaifenbiAll;
-	BigNumber zuizhongzhangfubaifenbiAll;
+	BigNumber zuigaozhangfuAll = 0;
+	BigNumber zuizhongzhangfuAll = 0;
+	BigNumber zuigaozhangfubaifenbiAll = 0;
+	BigNumber zuizhongzhangfubaifenbiAll = 0;
 	
 	for (auto itStock = capitalMap.begin(); itStock != capitalMap.end(); ++itStock)
 	{
@@ -1165,10 +1165,12 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 		}
 	}
 
-	result["888888"].push_back(zuigaozhangfuAll);
-	result["888888"].push_back(zuizhongzhangfuAll);
-	result["888888"].push_back(zuigaozhangfubaifenbiAll);
-	result["888888"].push_back(zuizhongzhangfubaifenbiAll);
+	int32_t chooseCount = result.size();
+
+	result["888888"].push_back(zuigaozhangfuAll / chooseCount);
+	result["888888"].push_back(zuizhongzhangfuAll / chooseCount);
+	result["888888"].push_back(zuigaozhangfubaifenbiAll / chooseCount);
+	result["888888"].push_back(zuizhongzhangfubaifenbiAll / chooseCount);
 
 	return result;
 }
