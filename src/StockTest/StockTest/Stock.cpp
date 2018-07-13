@@ -217,13 +217,31 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 		zuizhongzhangfu = stockPriceVec[0][1].c_str();
 	}
 
-	baifenbiCapitalMap["100%"].push_back(smallpersent.toPrec(2));
-    baifenbiCapitalMap["100%"].push_back(midpersent.toPrec(2));
-    baifenbiCapitalMap["100%"].push_back(bigpersent.toPrec(2));
-    baifenbiCapitalMap["100%"].push_back(smallpart.toPrec(2));
-    baifenbiCapitalMap["100%"].push_back(bigpart.toPrec(2));
-	baifenbiCapitalMap["100%"].push_back(zuigaozhangfu);
-	baifenbiCapitalMap["100%"].push_back(zuizhongzhangfu);
+	baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["10%"][5] + baifenbiCapitalMap["20%"][5] + baifenbiCapitalMap["30%"][5]);
+	baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["40%"][5] + baifenbiCapitalMap["50%"][5] + baifenbiCapitalMap["60%"][5]);
+	baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["70%"][5] + baifenbiCapitalMap["80%"][5] + baifenbiCapitalMap["90%"][5]);
+
+	baifenbiCapitalMap["halfpersent"].push_back(baifenbiCapitalMap["0%"][5] + baifenbiCapitalMap["10%"][5] + baifenbiCapitalMap["20%"][5] + baifenbiCapitalMap["30%"][5] + baifenbiCapitalMap["40%"][5]);
+	baifenbiCapitalMap["halfpersent"].push_back(baifenbiCapitalMap["50%"][5] + baifenbiCapitalMap["60%"][5] + baifenbiCapitalMap["70%"][5] + baifenbiCapitalMap["80%"][5] + baifenbiCapitalMap["90%"][5]);
+
+	baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["70%"][2] + baifenbiCapitalMap["80%"][2] + baifenbiCapitalMap["90%"][2]);
+	baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["40%"][2] + baifenbiCapitalMap["50%"][2] + baifenbiCapitalMap["60%"][2] + baifenbiCapitalMap["threemairubaifenbi"][0]);
+	baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["10%"][2] + baifenbiCapitalMap["20%"][2] + baifenbiCapitalMap["30%"][2] + baifenbiCapitalMap["threemairubaifenbi"][1]);
+	baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["0%"][2] + baifenbiCapitalMap["threemairubaifenbi"][2]);
+
+	baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["70%"][3] + baifenbiCapitalMap["80%"][3] + baifenbiCapitalMap["90%"][3]);
+	baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["40%"][3] + baifenbiCapitalMap["50%"][3] + baifenbiCapitalMap["60%"][3] + baifenbiCapitalMap["threemaichubaifenbi"][0]);
+	baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["10%"][3] + baifenbiCapitalMap["20%"][3] + baifenbiCapitalMap["30%"][3] + baifenbiCapitalMap["threemaichubaifenbi"][1]);
+	baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["0%"][3] + baifenbiCapitalMap["threemaichubaifenbi"][2]);
+
+	baifenbiCapitalMap["halfmairubaifenbi"].push_back(baifenbiCapitalMap["0%"][2] + baifenbiCapitalMap["10%"][2] + baifenbiCapitalMap["20%"][2] + baifenbiCapitalMap["30%"][2] + baifenbiCapitalMap["40%"][2]);
+	baifenbiCapitalMap["halfmairubaifenbi"].push_back(baifenbiCapitalMap["50%"][2] + baifenbiCapitalMap["60%"][2] + baifenbiCapitalMap["70%"][2] + baifenbiCapitalMap["80%"][2] + baifenbiCapitalMap["90%"][2]);
+
+	baifenbiCapitalMap["halfmaichubaifenbi"].push_back(baifenbiCapitalMap["0%"][3] + baifenbiCapitalMap["10%"][3] + baifenbiCapitalMap["20%"][3] + baifenbiCapitalMap["30%"][3] + baifenbiCapitalMap["40%"][3]);
+	baifenbiCapitalMap["halfmaichubaifenbi"].push_back(baifenbiCapitalMap["50%"][3] + baifenbiCapitalMap["60%"][3] + baifenbiCapitalMap["70%"][3] + baifenbiCapitalMap["80%"][3] + baifenbiCapitalMap["90%"][3]);
+
+	baifenbiCapitalMap["zuigaozuizhong"].push_back(zuigaozhangfu);
+	baifenbiCapitalMap["zuigaozuizhong"].push_back(zuizhongzhangfu);
 
 	return baifenbiCapitalMap;
 }
@@ -975,10 +993,18 @@ void Stock::printCapitalMap(const std::map<std::string, std::vector<BigNumber>>&
 	std::vector<std::string> vecPrint;
 	vecPrint.push_back("0%");
 	int32_t persent = 0;
-	while (persent++ != 10)
+	while (persent++ != 9)
 	{
 		vecPrint.push_back(CStringManager::Format("%d0%%", persent));
 	}
+
+	vecPrint.push_back("threepersent");
+	vecPrint.push_back("halfpersent");
+	vecPrint.push_back("threemairubaifenbi");
+	vecPrint.push_back("threemaichubaifenbi");
+	vecPrint.push_back("halfmairubaifenbi");
+	vecPrint.push_back("halfmaichubaifenbi");
+	vecPrint.push_back("zuigaozuizhong");
 
 	std::vector<std::vector<std::string>> sep;
 	std::vector<std::string> lineSep;
@@ -1001,7 +1027,11 @@ void Stock::printCapitalMap(const std::map<std::string, std::vector<BigNumber>>&
 	lineSep.push_back("%");
 	lineSep.push_back("%");
 	lineSep.push_back("%");
-	sep.push_back(lineSep);
+	count = 7;
+	while (count-- != 0)
+	{
+		sep.push_back(lineSep);
+	}
 
 	Stock::printMap(priceMap, vecPrint, sep);
 }
