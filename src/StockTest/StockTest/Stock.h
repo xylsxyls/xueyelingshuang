@@ -85,6 +85,9 @@ public:
 	//从资金图中选取
 	static std::map<std::string, std::vector<BigNumber>> chooseFromCapitalMap(const std::map<std::string, std::map<std::string, std::vector<BigNumber>>>& capitalMap);
 
+	//打印选择的资金图
+	static void printChooseFromCapitalMap(const std::map<std::string, std::vector<BigNumber>>& capitalMap);
+
     //添加到选择图
     //xiangcha,daima,xiaodan,dadan
     static void addChooseMap(std::map<BigNumber, std::vector<BigNumber>>& chooseMap, const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::string& stockNum);

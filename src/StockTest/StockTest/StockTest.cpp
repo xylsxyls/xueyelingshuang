@@ -172,11 +172,13 @@ int main()
 	}
 
 	auto chooseVec = Stock::chooseFromCapitalMap(capitalMapAll);
-    RCSend("stock = %s",chooseVec.begin()->first.c_str());
-    return 0;
-	RCSend("size = %d", chooseVec.size() - 1);
-	RCSend("zuigao = %s,zuizhong = %s", chooseVec["888888"][0].toString().c_str(), chooseVec["888888"][1].toString().c_str());
-	RCSend("zuigaobaifenbi = %s,zuizhongbaifenbi = %s", chooseVec["888888"][2].toString().c_str(), chooseVec["888888"][3].toString().c_str());
+	Stock::printChooseFromCapitalMap(chooseVec);
+	return 0;
+    //RCSend("stock = %s",chooseVec.begin()->first.c_str());
+    //return 0;
+	//RCSend("size = %d", chooseVec.size() - 1);
+	//RCSend("zuigao = %s,zuizhong = %s", chooseVec["888888"][0].toString().c_str(), chooseVec["888888"][1].toString().c_str());
+	//RCSend("zuigaobaifenbi = %s,zuizhongbaifenbi = %s", chooseVec["888888"][2].toString().c_str(), chooseVec["888888"][3].toString().c_str());
 
     //Ctxt txtMap("D:\\stockPriceMap" + IntDateTime().dateToString() + ".txt");
 	//txtMap.ClearFile();

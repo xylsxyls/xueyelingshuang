@@ -1179,6 +1179,48 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 	return result;
 }
 
+void Stock::printChooseFromCapitalMap(const std::map<std::string, std::vector<BigNumber>>& capitalMap)
+{
+	std::vector<std::string> vecPrint;
+	vecPrint.push_back("0");
+	int32_t persent = 0;
+	while (persent++ != 9)
+	{
+		vecPrint.push_back(CStringManager::Format("%d0", persent));
+	}
+	vecPrint.push_back("zuigaozuizhong");
+	vecPrint.push_back("zuigaozuizhongbaifenbi");
+	vecPrint.push_back("halfpersent");
+	vecPrint.push_back("888888");
+
+	std::vector<std::vector<std::string>> sep;
+	std::vector<std::string> lineSep;
+	lineSep.push_back("");
+	lineSep.push_back("");
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	int32_t count = 10;
+	while (count-- != 0)
+	{
+		sep.push_back(lineSep);
+	}
+	lineSep.clear();
+	lineSep.push_back("");
+	lineSep.push_back("");
+	lineSep.clear();
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	sep.push_back(lineSep);
+	sep.push_back(lineSep);
+	lineSep.clear();
+	lineSep.push_back("");
+	lineSep.push_back("");
+	lineSep.push_back("%");
+	lineSep.push_back("%");
+	sep.push_back(lineSep);
+	Stock::printMap(capitalMap, vecPrint, sep);
+}
+
 void Stock::addChooseMap(std::map<BigNumber, std::vector<BigNumber>>& chooseMap, const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::string& stockNum)
 {
     if ((priceMap.find("reserveValue")->second)[0] * 100 > "3" && (priceMap.find("10000-50000")->second)[0] * 100 > "-2")
