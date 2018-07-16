@@ -210,8 +210,8 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 	}
 
 	BigNumber stockCount = (int32_t)stockPriceAllVec.size();
-	BigNumber zuigaozhangfubaifenbi = (BigNumber(zuigaozhangfumingci).toPrec(6) * 100 / stockCount).toPrec(2);
-	BigNumber zuizhongzhangfubaifenbi = (BigNumber(zuizhongzhangfumingci).toPrec(6) * 100 / stockCount).toPrec(2);
+	BigNumber zuigaozhangfubaifenbi = (BigNumber(zuigaozhangfumingci).toPrec(6) * 100 / stockCount.zero()).toPrec(2);
+    BigNumber zuizhongzhangfubaifenbi = (BigNumber(zuizhongzhangfumingci).toPrec(6) * 100 / stockCount.zero()).toPrec(2);
 
     if (baifenbiCapitalMap.size() < 10)
     {
@@ -1155,7 +1155,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 		zuigaozhangfubaifenbi = baifenbiResultVec[0];
 		zuizhongzhangfubaifenbi = baifenbiResultVec[1];
 
-		if (halfpersentResultVec[0] - halfpersentResultVec[1] > 0)
+		if (halfpersentResultVec[0] - halfpersentResultVec[1] > 3)
 		{
 			result[stockNum].push_back(zuigaozhangfu);
 			result[stockNum].push_back(zuizhongzhangfu);
@@ -1171,10 +1171,10 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 
 	int32_t chooseCount = result.size();
 
-	result["888888"].push_back(zuigaozhangfuAll / chooseCount);
-	result["888888"].push_back(zuizhongzhangfuAll / chooseCount);
-	result["888888"].push_back(zuigaozhangfubaifenbiAll / chooseCount);
-	result["888888"].push_back(zuizhongzhangfubaifenbiAll / chooseCount);
+	result["888888"].push_back((zuigaozhangfuAll / BigNumber(chooseCount).zero()).toPrec(2));
+    result["888888"].push_back((zuizhongzhangfuAll / BigNumber(chooseCount).zero()).toPrec(2));
+    result["888888"].push_back((zuigaozhangfubaifenbiAll / BigNumber(chooseCount).zero()).toPrec(2));
+    result["888888"].push_back((zuizhongzhangfubaifenbiAll / BigNumber(chooseCount).zero()).toPrec(2));
 
 	return result;
 }
