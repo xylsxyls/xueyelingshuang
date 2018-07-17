@@ -102,8 +102,8 @@ int main()
 	CMouse::LeftClick();
 	Sleep(1500);
     int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
-    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
-	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721,002799,002847");
+    //std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
+	std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
     std::map<BigNumber, std::vector<BigNumber>> chooseMap;
@@ -121,58 +121,80 @@ int main()
 	CStopWatch printWatch;
 	printWatch.Stop();
 
-	std::map<std::string, std::map<std::string, std::vector<BigNumber>>> capitalMapAll;
+    std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>> chooseMapAll;
 
-	int32_t index = -1;
-    while (index++ != vecStock.size() - 1)//
-	{
-		getWatch.Run();
-		txt.AddLine("%s", vecStock[index][0].c_str());
-		//Stock::getPriceFromScreen(vecStock[index][0]);
-		getWatch.Stop();
+    IntDateTime beginTime = "2018-07-16 00:00:00";
+    IntDateTime endTime = "2018-07-16 00:00:00";
+    IntDateTime nowTime = beginTime;
+    while (true)
+    {
+        if (nowTime > endTime)
+        {
+            break;
+        }
 
-		//insertWatch.Run();
-		//bool insertSuccess = Stock::insertDatabase(mysql);
-		//if (insertSuccess == false)
-		//{
-		//	txtError.AddLine("%s", vecStock[index][0].c_str());
-		//}
-		//insertWatch.Stop();
+        std::map<std::string, std::map<std::string, std::vector<BigNumber>>> capitalMapAll;
 
-		priceMapWatch.Run();
-		BigNumber reserveValue = 0;
-		int32_t useCount = 0;
-        //auto map = Stock::getPriceMapFromDataBase(mysqlfenbi, vecStock[index][0], useCount, reserveValue, "2018-07-09");
-		auto map = Stock::getCapitalMapFromDataBase(mysql, mysqlfenbi, vecStock[index][0], "2018-07-13");
-		//auto map = Stock::getPriceMapFromLocal(useCount, reserveValue);
-		priceMapWatch.Stop();
+        int32_t index = -1;
+        while (index++ != vecStock.size() - 1)//
+        {
+            getWatch.Run();
+            txt.AddLine("%s", vecStock[index][0].c_str());
+            //Stock::getPriceFromScreen(vecStock[index][0]);
+            getWatch.Stop();
 
-		capitalMapAll[vecStock[index][0]] = map;
+            //insertWatch.Run();
+            //bool insertSuccess = Stock::insertDatabase(mysql);
+            //if (insertSuccess == false)
+            //{
+            //	txtError.AddLine("%s", vecStock[index][0].c_str());
+            //}
+            //insertWatch.Stop();
 
-		printWatch.Run();
-        //Stock::printPriceMap(map);
-		Stock::printCapitalMap(map);
-		txt.AddLine("");
-		printWatch.Stop();
+            priceMapWatch.Run();
+            BigNumber reserveValue = 0;
+            int32_t useCount = 0;
+            //auto map = Stock::getPriceMapFromDataBase(mysqlfenbi, vecStock[index][0], useCount, reserveValue, "2018-07-09");
+            auto map = Stock::getCapitalMapFromDataBase(mysql, mysqlfenbi, vecStock[index][0], nowTime.dateToString());
+            //auto map = Stock::getPriceMapFromLocal(useCount, reserveValue);
+            priceMapWatch.Stop();
 
-		//reserveMap[reserveValue].push_back(vecStock[index][0]);
+            capitalMapAll[vecStock[index][0]] = map;
 
-		//Stock::addChooseMap(chooseMap, map, vecStock[index][0]);
-		//
-		//std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
-		//if (nowStr == "")
-		//{
-		//	useCountMap[CStringManager::Format("%d", useCount)] = vecStock[index][0];
-		//}
-		//else
-		//{
-		//	useCountMap[CStringManager::Format("%d", useCount)] = nowStr + ", " + vecStock[index][0];
-		//}
-		//useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index][0]);
-	}
+            printWatch.Run();
+            //Stock::printPriceMap(map);
+            Stock::printCapitalMap(map);
+            //txt.AddLine("");
+            printWatch.Stop();
 
-	auto chooseVec = Stock::chooseFromCapitalMap(capitalMapAll);
-	Stock::printChooseFromCapitalMap(chooseVec);
+            //reserveMap[reserveValue].push_back(vecStock[index][0]);
+
+            //Stock::addChooseMap(chooseMap, map, vecStock[index][0]);
+            //
+            //std::string& nowStr = useCountMap[CStringManager::Format("%d", useCount)];
+            //if (nowStr == "")
+            //{
+            //	useCountMap[CStringManager::Format("%d", useCount)] = vecStock[index][0];
+            //}
+            //else
+            //{
+            //	useCountMap[CStringManager::Format("%d", useCount)] = nowStr + ", " + vecStock[index][0];
+            //}
+            //useCountMap[CStringManager::Format("%d", useCount)] + " " + (vecStock[index][0]);
+        }
+
+        auto chooseVec = Stock::chooseFromCapitalMap(capitalMapAll);
+        chooseMapAll[nowTime] = chooseVec;
+        Stock::printChooseFromCapitalMap(chooseVec);
+
+        txt.AddLine("");
+
+        nowTime = nowTime + 86400;
+    }
+
+    BigNumber gain = Stock::reckonGain(chooseMapAll);
+    RCSend("gain = %s", gain.toString().c_str());
+	
 	return 0;
     //RCSend("stock = %s",chooseVec.begin()->first.c_str());
     //return 0;

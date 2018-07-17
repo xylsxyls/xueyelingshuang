@@ -1102,6 +1102,10 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 	BigNumber zuizhongzhangfuAll = 0;
 	BigNumber zuigaozhangfubaifenbiAll = 0;
 	BigNumber zuizhongzhangfubaifenbiAll = 0;
+
+    int32_t bigger = 3;
+
+    rem:
 	
 	for (auto itStock = capitalMap.begin(); itStock != capitalMap.end(); ++itStock)
 	{
@@ -1137,7 +1141,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 			continue;
 		}
 
-		auto itHalfpersentResult = stockMap.find("halfpersent");
+		auto& itHalfpersentResult = stockMap.find("halfpersent");
 		if (itHalfpersentResult == stockMap.end())
 		{
 			continue;
@@ -1149,27 +1153,87 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 			continue;
 		}
 
+        auto& itThreepersentResult = stockMap.find("threepersent");
+        if (itThreepersentResult == stockMap.end())
+        {
+            continue;
+        }
+
+        auto& threepersentResultVec = itThreepersentResult->second;
+        if (threepersentResultVec.size() != 3)
+        {
+            continue;
+        }
+
+        auto& itHalfmairubaifenbiResult = stockMap.find("halfmairubaifenbi");
+        if (itHalfmairubaifenbiResult == stockMap.end())
+        {
+            continue;
+        }
+
+        auto& halfmairubaifenbiResultVec = itHalfmairubaifenbiResult->second;
+        if (halfmairubaifenbiResultVec.size() != 2)
+        {
+            continue;
+        }
+
+        auto& itHalfmaichubaifenbiResult = stockMap.find("halfmaichubaifenbi");
+        if (itHalfmaichubaifenbiResult == stockMap.end())
+        {
+            continue;
+        }
+
+        auto& halfmaichubaifenbiResultVec = itHalfmaichubaifenbiResult->second;
+        if (halfmaichubaifenbiResultVec.size() != 2)
+        {
+            continue;
+        }
+
 		zuigaozhangfu = zuigaozuizhongResultVec[0];
 		zuizhongzhangfu = zuigaozuizhongResultVec[1];
 
 		zuigaozhangfubaifenbi = baifenbiResultVec[0];
 		zuizhongzhangfubaifenbi = baifenbiResultVec[1];
 
-		if (halfpersentResultVec[0] - halfpersentResultVec[1] > 3)
-		{
-			result[stockNum].push_back(zuigaozhangfu);
-			result[stockNum].push_back(zuizhongzhangfu);
-			result[stockNum].push_back(zuigaozhangfubaifenbi);
-			result[stockNum].push_back(zuizhongzhangfubaifenbi);
+        bool halfpersentPassed = (((halfpersentResultVec[0] - halfpersentResultVec[1]) > bigger) && (halfpersentResultVec[0] > -2));
+        bool threepersentPassed = (threepersentResultVec[0] > threepersentResultVec[1]);
+        bool halfmairubaifenbi = ((halfmairubaifenbiResultVec[0] > halfmairubaifenbiResultVec[1]));
+        bool halfmaichubaifenbi = ((halfmaichubaifenbiResultVec[0] < halfmaichubaifenbiResultVec[1]));
 
-			zuigaozhangfuAll = zuigaozhangfuAll + zuigaozhangfu;
-			zuizhongzhangfuAll = zuizhongzhangfuAll + zuizhongzhangfu;
-			zuigaozhangfubaifenbiAll = zuigaozhangfubaifenbiAll + zuigaozhangfubaifenbi;
-			zuizhongzhangfubaifenbiAll = zuizhongzhangfubaifenbiAll + zuizhongzhangfubaifenbi;
+        //bool halfpersentPassed2 = ((halfpersentResultVec[1] - halfpersentResultVec[0]) > 1 && (halfpersentResultVec[0] < 2));
+        //bool threepersentPassed2 = (threepersentResultVec[1] > threepersentResultVec[0]);
+        //bool halfmairubaifenbi2 = ((halfmairubaifenbiResultVec[0] < halfmairubaifenbiResultVec[1]));
+        //bool halfmaichubaifenbi2 = ((halfmaichubaifenbiResultVec[0] > halfmaichubaifenbiResultVec[1]));
+
+        if (halfpersentPassed && threepersentPassed && halfmairubaifenbi && halfmaichubaifenbi)
+            //if ((halfpersentPassed && threepersentPassed && halfmairubaifenbi && halfmaichubaifenbi) ||
+            //    (halfpersentPassed2 && threepersentPassed2 && halfmairubaifenbi2 && halfmaichubaifenbi2))
+		{
+            result[stockNum].push_back(zuigaozhangfu);
+            result[stockNum].push_back(zuizhongzhangfu);
+            result[stockNum].push_back(zuigaozhangfubaifenbi);
+            result[stockNum].push_back(zuizhongzhangfubaifenbi);
+
+            zuigaozhangfuAll = zuigaozhangfuAll + zuigaozhangfu;
+            zuizhongzhangfuAll = zuizhongzhangfuAll + zuizhongzhangfu;
+            zuigaozhangfubaifenbiAll = zuigaozhangfubaifenbiAll + zuigaozhangfubaifenbi;
+            zuizhongzhangfubaifenbiAll = zuizhongzhangfubaifenbiAll + zuizhongzhangfubaifenbi;
 		}
 	}
 
 	int32_t chooseCount = result.size();
+
+    if (chooseCount == 0 && bigger == 3)
+    {
+        bigger = 2;
+        goto rem;
+    }
+
+    if (chooseCount == 0 && bigger == 2)
+    {
+        bigger = 1;
+        goto rem;
+    }
 
 	result["888888"].push_back((zuigaozhangfuAll / BigNumber(chooseCount).zero()).toPrec(2));
     result["888888"].push_back((zuizhongzhangfuAll / BigNumber(chooseCount).zero()).toPrec(2));
@@ -1182,16 +1246,15 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 void Stock::printChooseFromCapitalMap(const std::map<std::string, std::vector<BigNumber>>& capitalMap)
 {
 	std::vector<std::string> vecPrint;
-	vecPrint.push_back("0");
-	int32_t persent = 0;
-	while (persent++ != 9)
-	{
-		vecPrint.push_back(CStringManager::Format("%d0", persent));
-	}
-	vecPrint.push_back("zuigaozuizhong");
-	vecPrint.push_back("zuigaozuizhongbaifenbi");
-	vecPrint.push_back("halfpersent");
-	vecPrint.push_back("888888");
+
+    for (auto itChoose = capitalMap.begin(); itChoose != capitalMap.end(); ++itChoose)
+    {
+        if (itChoose->first != "888888")
+        {
+            vecPrint.push_back(itChoose->first);
+        }
+    }
+    vecPrint.push_back("888888");
 
 	std::vector<std::vector<std::string>> sep;
 	std::vector<std::string> lineSep;
@@ -1199,26 +1262,54 @@ void Stock::printChooseFromCapitalMap(const std::map<std::string, std::vector<Bi
 	lineSep.push_back("");
 	lineSep.push_back("%");
 	lineSep.push_back("%");
-	int32_t count = 10;
+    int32_t count = capitalMap.size();
 	while (count-- != 0)
 	{
 		sep.push_back(lineSep);
 	}
-	lineSep.clear();
-	lineSep.push_back("");
-	lineSep.push_back("");
-	lineSep.clear();
-	lineSep.push_back("%");
-	lineSep.push_back("%");
-	sep.push_back(lineSep);
-	sep.push_back(lineSep);
-	lineSep.clear();
-	lineSep.push_back("");
-	lineSep.push_back("");
-	lineSep.push_back("%");
-	lineSep.push_back("%");
-	sep.push_back(lineSep);
 	Stock::printMap(capitalMap, vecPrint, sep);
+}
+
+BigNumber Stock::reckonGain(const std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>>& chooseMapAll)
+{
+    BigNumber gain = 100000;
+    BigNumber chargeBegin = 100;
+    BigNumber chargeEnd = 100;
+    for (auto itDate = chooseMapAll.begin(); itDate != chooseMapAll.end(); ++itDate)
+    {
+        auto& chooseMap = itDate->second;
+
+        int32_t chooseCount = chooseMap.size();
+        if (chooseCount == 1)
+        {
+            continue;
+        }
+
+        BigNumber gusuanzhangfu;
+        for (auto itChoose = chooseMap.begin(); itChoose != chooseMap.end(); ++itChoose)
+        {
+            if (itChoose->first == "888888")
+            {
+                continue;
+            }
+            auto& chooseResultVec = itChoose->second;
+            if (chooseResultVec.size() != 4)
+            {
+                continue;
+            }
+            auto& zuigaozhangfu = chooseResultVec[0];
+            auto& zuizhongzhangfu = chooseResultVec[1];
+            gusuanzhangfu = gusuanzhangfu + ((zuizhongzhangfu > 0) ? ((zuizhongzhangfu + zuizhongzhangfu) / 2) : zuizhongzhangfu);
+        }
+        gusuanzhangfu = gusuanzhangfu / (chooseCount - 1);
+        RCSend("%s = %d", itDate->first.dateToString().c_str(), chooseCount - 1);
+        if (chooseCount == 2)
+        {
+            RCSend("%s,%s", chooseMap.begin()->first.c_str(), (++chooseMap.begin())->first.c_str());
+        }
+        gain = (gain - chargeBegin) * (1 + gusuanzhangfu.toPrec(4) / 100) - chargeEnd;
+    }
+    return gain.toPrec(2);
 }
 
 void Stock::addChooseMap(std::map<BigNumber, std::vector<BigNumber>>& chooseMap, const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::string& stockNum)

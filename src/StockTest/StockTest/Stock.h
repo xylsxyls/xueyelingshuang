@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include "BigNumber/BigNumberAPI.h"
+#include "IntDateTime/IntDateTimeAPI.h"
 
 class Stock
 {
@@ -87,6 +88,9 @@ public:
 
 	//打印选择的资金图
 	static void printChooseFromCapitalMap(const std::map<std::string, std::vector<BigNumber>>& capitalMap);
+
+    //估算收益
+    static BigNumber reckonGain(const std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>>& chooseMapAll);
 
     //添加到选择图
     //xiangcha,daima,xiaodan,dadan
