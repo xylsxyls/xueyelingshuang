@@ -1195,7 +1195,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 		zuigaozhangfubaifenbi = baifenbiResultVec[0];
 		zuizhongzhangfubaifenbi = baifenbiResultVec[1];
 
-        bool halfpersentPassed = (((halfpersentResultVec[0] - halfpersentResultVec[1]) > bigger) && (halfpersentResultVec[0] > -2));
+        bool halfpersentPassed = (((halfpersentResultVec[0] - halfpersentResultVec[1]) > bigger) && (halfpersentResultVec[0] > -2 && halfpersentResultVec[1] < -2));
         bool threepersentPassed = (threepersentResultVec[0] > threepersentResultVec[1]);
         bool halfmairubaifenbi = ((halfmairubaifenbiResultVec[0] > halfmairubaifenbiResultVec[1]));
         bool halfmaichubaifenbi = ((halfmaichubaifenbiResultVec[0] < halfmaichubaifenbiResultVec[1]));

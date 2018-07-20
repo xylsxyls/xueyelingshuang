@@ -102,8 +102,8 @@ int main()
 	CMouse::LeftClick();
 	Sleep(1500);
     int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
-    //std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
-	std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721");
+    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
+	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
     std::map<BigNumber, std::vector<BigNumber>> chooseMap;
@@ -123,8 +123,8 @@ int main()
 
     std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>> chooseMapAll;
 
-    IntDateTime beginTime = "2018-07-16 00:00:00";
-    IntDateTime endTime = "2018-07-16 00:00:00";
+    IntDateTime beginTime = "2018-07-19 00:00:00";
+    IntDateTime endTime = "2018-07-19 00:00:00";
     IntDateTime nowTime = beginTime;
     while (true)
     {
