@@ -77,141 +77,146 @@ bool Stock::insertDatabase(MysqlCpp& mysql)
 
 std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi, const std::string& stockNum, const std::string& date)
 {
-	//pingjunjine£¬vec, bishu£¬xianshou£¬maimai1-1
-	std::map<BigNumber, std::vector<std::vector<BigNumber>>> capitalMap;
-	auto fenbiVec = getResultVecFromMysql(mysqlfenbi, stockNum, date);
+    auto fenbiVec = getResultVecFromMysql(mysqlfenbi, stockNum, date);
+    return getCapitalMap(mysql, fenbiVec, stockNum, date);
+}
+
+std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMap(MysqlCpp& mysql, const std::vector<std::vector<std::string>>& fenbiVec, const std::string& stockNum, const std::string& date)
+{
+    //pingjunjine£¬vec, bishu£¬xianshou£¬maimai1-1
+    std::map<BigNumber, std::vector<std::vector<BigNumber>>> capitalMap;
     //auto fenbiVec = getResultVecFromLocal();
-	BigNumber allzijin = 0;
-	int32_t index = -1;
-	while (index++ != fenbiVec.size() - 1)
-	{
-		BigNumber chengjiao = fenbiVec[index][1].c_str();
-		BigNumber xianshou = fenbiVec[index][2].c_str();
-		BigNumber bishu = fenbiVec[index][3].c_str();
-		BigNumber maimai = fenbiVec[index][4].c_str();
+    BigNumber allzijin = 0;
+    int32_t index = -1;
+    while (index++ != fenbiVec.size() - 1)
+    {
+        BigNumber chengjiao = fenbiVec[index][1].c_str();
+        BigNumber xianshou = fenbiVec[index][2].c_str();
+        BigNumber bishu = fenbiVec[index][3].c_str();
+        BigNumber maimai = fenbiVec[index][4].c_str();
         if (bishu == 0 || maimai == 0)
         {
             continue;
         }
-		BigNumber zijin = chengjiao * xianshou;
-		allzijin = allzijin + zijin;
-		BigNumber danbijine = (zijin).toPrec(4) / bishu;
-		std::vector<BigNumber> danbivec;
-		danbivec.push_back(bishu);
-		danbivec.push_back(xianshou);
-		danbivec.push_back(maimai);
-		capitalMap[danbijine].push_back(danbivec);
-	}
+        BigNumber zijin = chengjiao * xianshou;
+        allzijin = allzijin + zijin;
+        BigNumber danbijine = (zijin).toPrec(4) / bishu;
+        std::vector<BigNumber> danbivec;
+        danbivec.push_back(bishu);
+        danbivec.push_back(xianshou);
+        danbivec.push_back(maimai);
+        capitalMap[danbijine].push_back(danbivec);
+    }
 
-	//baifenbi, vec, mairujunjia,maichujunjia,mairubaifenbi,maichubaifenbi,zhangdie,zhangfu
-	std::map<std::string, std::vector<BigNumber>> baifenbiCapitalMap;
-	BigNumber mairucapitalNum = 0;
-	BigNumber maichucapitalNum = 0;
-	BigNumber mairuxianshouNum = 0;
-	BigNumber maichuxianshouNum = 0;
+    //baifenbi, vec, mairujunjia,maichujunjia,mairubaifenbi,maichubaifenbi,zhangdie,zhangfu
+    std::map<std::string, std::vector<BigNumber>> baifenbiCapitalMap;
+    BigNumber mairucapitalNum = 0;
+    BigNumber maichucapitalNum = 0;
+    BigNumber mairuxianshouNum = 0;
+    BigNumber maichuxianshouNum = 0;
 
-	BigNumber mairucapitalNumTemp = 0;
-	BigNumber maichucapitalNumTemp = 0;
-	BigNumber mairuxianshouNumTemp = 0;
-	BigNumber maichuxianshouNumTemp = 0;
+    BigNumber mairucapitalNumTemp = 0;
+    BigNumber maichucapitalNumTemp = 0;
+    BigNumber mairuxianshouNumTemp = 0;
+    BigNumber maichuxianshouNumTemp = 0;
 
-	int32_t baifenbiNum = 10;
-	for (auto itCapital = capitalMap.rbegin(); itCapital != capitalMap.rend(); ++itCapital)
-	{
-		auto& danbiCapiVec = itCapital->second;
-		int32_t index = -1;
-		while (index++ != danbiCapiVec.size() - 1)
-		{
-			if (danbiCapiVec[index][2] == 1)
-			{
-				mairucapitalNumTemp = mairucapitalNumTemp + itCapital->first * danbiCapiVec[index][0];
-				mairuxianshouNumTemp = mairuxianshouNumTemp + danbiCapiVec[index][1];
+    int32_t baifenbiNum = 10;
+    for (auto itCapital = capitalMap.rbegin(); itCapital != capitalMap.rend(); ++itCapital)
+    {
+        auto& danbiCapiVec = itCapital->second;
+        int32_t index = -1;
+        while (index++ != danbiCapiVec.size() - 1)
+        {
+            if (danbiCapiVec[index][2] == 1)
+            {
+                mairucapitalNumTemp = mairucapitalNumTemp + itCapital->first * danbiCapiVec[index][0];
+                mairuxianshouNumTemp = mairuxianshouNumTemp + danbiCapiVec[index][1];
 
-				mairucapitalNum = mairucapitalNum + itCapital->first * danbiCapiVec[index][0];
-				mairuxianshouNum = mairuxianshouNum + danbiCapiVec[index][1];
-			}
-			else if (danbiCapiVec[index][2] == -1)
-			{
-				maichucapitalNumTemp = maichucapitalNumTemp + itCapital->first * danbiCapiVec[index][0];
-				maichuxianshouNumTemp = maichuxianshouNumTemp + danbiCapiVec[index][1];
+                mairucapitalNum = mairucapitalNum + itCapital->first * danbiCapiVec[index][0];
+                mairuxianshouNum = mairuxianshouNum + danbiCapiVec[index][1];
+            }
+            else if (danbiCapiVec[index][2] == -1)
+            {
+                maichucapitalNumTemp = maichucapitalNumTemp + itCapital->first * danbiCapiVec[index][0];
+                maichuxianshouNumTemp = maichuxianshouNumTemp + danbiCapiVec[index][1];
 
-				maichucapitalNum = maichucapitalNum + itCapital->first * danbiCapiVec[index][0];
-				maichuxianshouNum = maichuxianshouNum + danbiCapiVec[index][1];
-			}
-		}
-		if (mairucapitalNum + maichucapitalNum > allzijin * baifenbiNum / 100)
-		{
-			std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
-			BigNumber mairujunjia = mairucapitalNumTemp.toPrec(4) / mairuxianshouNumTemp.zero();
-			BigNumber maichujunjia = maichucapitalNumTemp.toPrec(4) / maichuxianshouNumTemp.zero();
+                maichucapitalNum = maichucapitalNum + itCapital->first * danbiCapiVec[index][0];
+                maichuxianshouNum = maichuxianshouNum + danbiCapiVec[index][1];
+            }
+        }
+        if (mairucapitalNum + maichucapitalNum > allzijin * baifenbiNum / 100)
+        {
+            std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
+            BigNumber mairujunjia = mairucapitalNumTemp.toPrec(4) / mairuxianshouNumTemp.zero();
+            BigNumber maichujunjia = maichucapitalNumTemp.toPrec(4) / maichuxianshouNumTemp.zero();
             BigNumber persent = ((maichujunjia / mairujunjia.zero() - 1) * 100);
             if (persent == -100)
             {
                 persent = "0.00";
             }
-			baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
-			baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
-			baifenbiCapitalMap[baifenbi].push_back((mairucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
-			baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
+            baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
+            baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
+            baifenbiCapitalMap[baifenbi].push_back((mairucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
+            baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
             baifenbiCapitalMap[baifenbi].push_back((maichujunjia - mairujunjia).toPrec(4));
-			baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
+            baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
 
-			mairucapitalNumTemp = 0;
-			maichucapitalNumTemp = 0;
-			mairuxianshouNumTemp = 0;
-			maichuxianshouNumTemp = 0;
+            mairucapitalNumTemp = 0;
+            maichucapitalNumTemp = 0;
+            mairuxianshouNumTemp = 0;
+            maichuxianshouNumTemp = 0;
 
-			baifenbiNum += 10;
-		}
-	}
+            baifenbiNum += 10;
+        }
+    }
 
-	if (baifenbiCapitalMap.size() < 10)
-	{
-		std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
-		BigNumber mairujunjia = mairucapitalNumTemp.toPrec(4) / mairuxianshouNumTemp.zero();
-		BigNumber maichujunjia = maichucapitalNumTemp.toPrec(4) / maichuxianshouNumTemp.zero();
-		BigNumber persent = ((maichujunjia / mairujunjia.zero() - 1) * 100);
-		if (persent == -100)
-		{
-			persent = "0.00";
-		}
-		baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
-		baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
-		baifenbiCapitalMap[baifenbi].push_back((mairucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
-		baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
-		baifenbiCapitalMap[baifenbi].push_back((maichujunjia - mairujunjia).toPrec(4));
-		baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
-	}
+    if (baifenbiCapitalMap.size() < 10)
+    {
+        std::string baifenbi = CStringManager::Format("%d%%", 100 - baifenbiNum);
+        BigNumber mairujunjia = mairucapitalNumTemp.toPrec(4) / mairuxianshouNumTemp.zero();
+        BigNumber maichujunjia = maichucapitalNumTemp.toPrec(4) / maichuxianshouNumTemp.zero();
+        BigNumber persent = ((maichujunjia / mairujunjia.zero() - 1) * 100);
+        if (persent == -100)
+        {
+            persent = "0.00";
+        }
+        baifenbiCapitalMap[baifenbi].push_back(mairujunjia.toPrec(4));
+        baifenbiCapitalMap[baifenbi].push_back(maichujunjia.toPrec(4));
+        baifenbiCapitalMap[baifenbi].push_back((mairucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
+        baifenbiCapitalMap[baifenbi].push_back((maichucapitalNumTemp * 100 / allzijin.zero()).toPrec(2));
+        baifenbiCapitalMap[baifenbi].push_back((maichujunjia - mairujunjia).toPrec(4));
+        baifenbiCapitalMap[baifenbi].push_back(persent.toPrec(2));
+    }
 
-	BigNumber zuigaozhangfu = 0;
-	BigNumber zuizhongzhangfu = 0;
-	auto stockPriceVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", "daima='" + stockNum + "' and shijian='" + Stock::getNextDate(mysql, date) + "'")))->toVector();
-	if (!stockPriceVec.empty() && (stockPriceVec[0].size() == 2))
-	{
-		zuigaozhangfu = stockPriceVec[0][0].c_str();
-		zuizhongzhangfu = stockPriceVec[0][1].c_str();
-	}
+    BigNumber zuigaozhangfu = 0;
+    BigNumber zuizhongzhangfu = 0;
+    auto stockPriceVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", "daima='" + stockNum + "' and shijian='" + Stock::getNextDate(mysql, date) + "'")))->toVector();
+    if (!stockPriceVec.empty() && (stockPriceVec[0].size() == 2))
+    {
+        zuigaozhangfu = stockPriceVec[0][0].c_str();
+        zuizhongzhangfu = stockPriceVec[0][1].c_str();
+    }
 
-	int32_t zuigaozhangfumingci = 1;
-	int32_t zuizhongzhangfumingci = 1;
-	auto stockPriceAllVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", "shijian='" + Stock::getNextDate(mysql, date) + "'")))->toVector();
-	index = -1;
-	while (index++ != stockPriceAllVec.size() - 1)
-	{
-		BigNumber zuigaozhangfuNum = stockPriceAllVec[index][0].c_str();
-		BigNumber zuizhongzhangfuNum = stockPriceAllVec[index][1].c_str();
-		if (zuigaozhangfuNum > zuigaozhangfu)
-		{
-			++zuigaozhangfumingci;
-		}
-		if (zuizhongzhangfuNum > zuizhongzhangfu)
-		{
-			++zuizhongzhangfumingci;
-		}
-	}
+    int32_t zuigaozhangfumingci = 1;
+    int32_t zuizhongzhangfumingci = 1;
+    auto stockPriceAllVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", "shijian='" + Stock::getNextDate(mysql, date) + "'")))->toVector();
+    index = -1;
+    while (index++ != stockPriceAllVec.size() - 1)
+    {
+        BigNumber zuigaozhangfuNum = stockPriceAllVec[index][0].c_str();
+        BigNumber zuizhongzhangfuNum = stockPriceAllVec[index][1].c_str();
+        if (zuigaozhangfuNum > zuigaozhangfu)
+        {
+            ++zuigaozhangfumingci;
+        }
+        if (zuizhongzhangfuNum > zuizhongzhangfu)
+        {
+            ++zuizhongzhangfumingci;
+        }
+    }
 
-	BigNumber stockCount = (int32_t)stockPriceAllVec.size();
-	BigNumber zuigaozhangfubaifenbi = (BigNumber(zuigaozhangfumingci).toPrec(6) * 100 / stockCount.zero()).toPrec(2);
+    BigNumber stockCount = (int32_t)stockPriceAllVec.size();
+    BigNumber zuigaozhangfubaifenbi = (BigNumber(zuigaozhangfumingci).toPrec(6) * 100 / stockCount.zero()).toPrec(2);
     BigNumber zuizhongzhangfubaifenbi = (BigNumber(zuizhongzhangfumingci).toPrec(6) * 100 / stockCount.zero()).toPrec(2);
 
     if (baifenbiCapitalMap.size() < 10)
@@ -219,36 +224,42 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
         return baifenbiCapitalMap;
     }
 
-	baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["10%"][5] + baifenbiCapitalMap["20%"][5] + baifenbiCapitalMap["30%"][5]);
-	baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["40%"][5] + baifenbiCapitalMap["50%"][5] + baifenbiCapitalMap["60%"][5]);
-	baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["70%"][5] + baifenbiCapitalMap["80%"][5] + baifenbiCapitalMap["90%"][5]);
+    baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["10%"][5] + baifenbiCapitalMap["20%"][5] + baifenbiCapitalMap["30%"][5]);
+    baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["40%"][5] + baifenbiCapitalMap["50%"][5] + baifenbiCapitalMap["60%"][5]);
+    baifenbiCapitalMap["threepersent"].push_back(baifenbiCapitalMap["70%"][5] + baifenbiCapitalMap["80%"][5] + baifenbiCapitalMap["90%"][5]);
 
-	baifenbiCapitalMap["halfpersent"].push_back(baifenbiCapitalMap["0%"][5] + baifenbiCapitalMap["10%"][5] + baifenbiCapitalMap["20%"][5] + baifenbiCapitalMap["30%"][5] + baifenbiCapitalMap["40%"][5]);
-	baifenbiCapitalMap["halfpersent"].push_back(baifenbiCapitalMap["50%"][5] + baifenbiCapitalMap["60%"][5] + baifenbiCapitalMap["70%"][5] + baifenbiCapitalMap["80%"][5] + baifenbiCapitalMap["90%"][5]);
+    baifenbiCapitalMap["halfpersent"].push_back(baifenbiCapitalMap["0%"][5] + baifenbiCapitalMap["10%"][5] + baifenbiCapitalMap["20%"][5] + baifenbiCapitalMap["30%"][5] + baifenbiCapitalMap["40%"][5]);
+    baifenbiCapitalMap["halfpersent"].push_back(baifenbiCapitalMap["50%"][5] + baifenbiCapitalMap["60%"][5] + baifenbiCapitalMap["70%"][5] + baifenbiCapitalMap["80%"][5] + baifenbiCapitalMap["90%"][5]);
 
-	baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["70%"][2] + baifenbiCapitalMap["80%"][2] + baifenbiCapitalMap["90%"][2]);
-	baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["40%"][2] + baifenbiCapitalMap["50%"][2] + baifenbiCapitalMap["60%"][2] + baifenbiCapitalMap["threemairubaifenbi"][0]);
-	baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["10%"][2] + baifenbiCapitalMap["20%"][2] + baifenbiCapitalMap["30%"][2] + baifenbiCapitalMap["threemairubaifenbi"][1]);
-	baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["0%"][2] + baifenbiCapitalMap["threemairubaifenbi"][2]);
+    baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["70%"][2] + baifenbiCapitalMap["80%"][2] + baifenbiCapitalMap["90%"][2]);
+    baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["40%"][2] + baifenbiCapitalMap["50%"][2] + baifenbiCapitalMap["60%"][2] + baifenbiCapitalMap["threemairubaifenbi"][0]);
+    baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["10%"][2] + baifenbiCapitalMap["20%"][2] + baifenbiCapitalMap["30%"][2] + baifenbiCapitalMap["threemairubaifenbi"][1]);
+    baifenbiCapitalMap["threemairubaifenbi"].push_back(baifenbiCapitalMap["0%"][2] + baifenbiCapitalMap["threemairubaifenbi"][2]);
 
-	baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["70%"][3] + baifenbiCapitalMap["80%"][3] + baifenbiCapitalMap["90%"][3]);
-	baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["40%"][3] + baifenbiCapitalMap["50%"][3] + baifenbiCapitalMap["60%"][3] + baifenbiCapitalMap["threemaichubaifenbi"][0]);
-	baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["10%"][3] + baifenbiCapitalMap["20%"][3] + baifenbiCapitalMap["30%"][3] + baifenbiCapitalMap["threemaichubaifenbi"][1]);
-	baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["0%"][3] + baifenbiCapitalMap["threemaichubaifenbi"][2]);
+    baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["70%"][3] + baifenbiCapitalMap["80%"][3] + baifenbiCapitalMap["90%"][3]);
+    baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["40%"][3] + baifenbiCapitalMap["50%"][3] + baifenbiCapitalMap["60%"][3] + baifenbiCapitalMap["threemaichubaifenbi"][0]);
+    baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["10%"][3] + baifenbiCapitalMap["20%"][3] + baifenbiCapitalMap["30%"][3] + baifenbiCapitalMap["threemaichubaifenbi"][1]);
+    baifenbiCapitalMap["threemaichubaifenbi"].push_back(baifenbiCapitalMap["0%"][3] + baifenbiCapitalMap["threemaichubaifenbi"][2]);
 
-	baifenbiCapitalMap["halfmairubaifenbi"].push_back(baifenbiCapitalMap["0%"][2] + baifenbiCapitalMap["10%"][2] + baifenbiCapitalMap["20%"][2] + baifenbiCapitalMap["30%"][2] + baifenbiCapitalMap["40%"][2]);
-	baifenbiCapitalMap["halfmairubaifenbi"].push_back(baifenbiCapitalMap["50%"][2] + baifenbiCapitalMap["60%"][2] + baifenbiCapitalMap["70%"][2] + baifenbiCapitalMap["80%"][2] + baifenbiCapitalMap["90%"][2]);
+    baifenbiCapitalMap["halfmairubaifenbi"].push_back(baifenbiCapitalMap["0%"][2] + baifenbiCapitalMap["10%"][2] + baifenbiCapitalMap["20%"][2] + baifenbiCapitalMap["30%"][2] + baifenbiCapitalMap["40%"][2]);
+    baifenbiCapitalMap["halfmairubaifenbi"].push_back(baifenbiCapitalMap["50%"][2] + baifenbiCapitalMap["60%"][2] + baifenbiCapitalMap["70%"][2] + baifenbiCapitalMap["80%"][2] + baifenbiCapitalMap["90%"][2]);
 
-	baifenbiCapitalMap["halfmaichubaifenbi"].push_back(baifenbiCapitalMap["0%"][3] + baifenbiCapitalMap["10%"][3] + baifenbiCapitalMap["20%"][3] + baifenbiCapitalMap["30%"][3] + baifenbiCapitalMap["40%"][3]);
-	baifenbiCapitalMap["halfmaichubaifenbi"].push_back(baifenbiCapitalMap["50%"][3] + baifenbiCapitalMap["60%"][3] + baifenbiCapitalMap["70%"][3] + baifenbiCapitalMap["80%"][3] + baifenbiCapitalMap["90%"][3]);
+    baifenbiCapitalMap["halfmaichubaifenbi"].push_back(baifenbiCapitalMap["0%"][3] + baifenbiCapitalMap["10%"][3] + baifenbiCapitalMap["20%"][3] + baifenbiCapitalMap["30%"][3] + baifenbiCapitalMap["40%"][3]);
+    baifenbiCapitalMap["halfmaichubaifenbi"].push_back(baifenbiCapitalMap["50%"][3] + baifenbiCapitalMap["60%"][3] + baifenbiCapitalMap["70%"][3] + baifenbiCapitalMap["80%"][3] + baifenbiCapitalMap["90%"][3]);
 
-	baifenbiCapitalMap["zuigaozuizhong"].push_back(zuigaozhangfu);
-	baifenbiCapitalMap["zuigaozuizhong"].push_back(zuizhongzhangfu);
+    baifenbiCapitalMap["zuigaozuizhong"].push_back(zuigaozhangfu);
+    baifenbiCapitalMap["zuigaozuizhong"].push_back(zuizhongzhangfu);
 
-	baifenbiCapitalMap["zuigaozuizhongbaifenbi"].push_back(zuigaozhangfubaifenbi);
-	baifenbiCapitalMap["zuigaozuizhongbaifenbi"].push_back(zuizhongzhangfubaifenbi);
+    baifenbiCapitalMap["zuigaozuizhongbaifenbi"].push_back(zuigaozhangfubaifenbi);
+    baifenbiCapitalMap["zuigaozuizhongbaifenbi"].push_back(zuizhongzhangfubaifenbi);
 
-	return baifenbiCapitalMap;
+    return baifenbiCapitalMap;
+}
+
+std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromLocal(MysqlCpp& mysql, const std::string& stockNum, const std::string& date)
+{
+    auto fenbiVec = getResultVecFromLocal();
+    return getCapitalMap(mysql, fenbiVec, stockNum, date);
 }
 
 std::vector<BigNumber> getPrice(const std::vector<std::vector<std::string>>& result, int32_t fundNum, bool& isMinus)
@@ -664,6 +675,16 @@ void Stock::chooseTest(MysqlCpp& mysql, const std::string& preDate)
     whereString.push_back(')');
 
     auto todayQuoteVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stockquote", "zuigaozhangfu,zuizhongzhangfu", whereString)))->toVector();
+
+    BigNumber zixuanzuigaozhangfuAll;
+    BigNumber zixuanzuizhongzhangfuAll;
+    BigNumber quoteCount = (int32_t)todayQuoteVec.size();
+    index = -1;
+    while (index++ != todayQuoteVec.size() - 1)
+    {
+        zixuanzuigaozhangfuAll = zixuanzuigaozhangfuAll + BigNumber(todayQuoteVec[index][0].c_str());
+        zixuanzuizhongzhangfuAll = zixuanzuizhongzhangfuAll + BigNumber(todayQuoteVec[index][1].c_str());
+    }
     
     BigNumber zuigaozhangfuAll = 0;
     BigNumber zuizhongzhangfuAll = 0;
@@ -709,15 +730,17 @@ void Stock::chooseTest(MysqlCpp& mysql, const std::string& preDate)
 
     mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("chooseavg", "shijian='" + preDate + "'")));
 
-    int32_t chooseCount = preChooseVec.size();
-    auto state = mysql.PreparedStatementCreator(SqlString::insertString("chooseavg", "shijian,zuigaozhangfu,zuizhongzhangfu,zuigaozhangfumingci,zuizhongzhangfumingci,zuigaozhangfubaifenbi,zuizhongzhangfubaifenbi"));
+    BigNumber chooseCount = (int32_t)preChooseVec.size();
+    auto state = mysql.PreparedStatementCreator(SqlString::insertString("chooseavg", "shijian,zuigaozhangfu,zuizhongzhangfu,zuigaozhangfumingci,zuizhongzhangfumingci,zuigaozhangfubaifenbi,zuizhongzhangfubaifenbi,zixuanzuigaozhangfu,zixuanzuizhongzhangfu"));
     state->setString(1, preDate.c_str());
-    state->setString(2, (zuigaozhangfuAll.toPrec(4) / chooseCount).toPrec(2).toString().c_str());
-    state->setString(3, (zuizhongzhangfuAll.toPrec(4) / chooseCount).toPrec(2).toString().c_str());
-    state->setString(4, (zuigaozhangfumingciAll.toPrec(4) / chooseCount).toPrec(2).toString().c_str());
-    state->setString(5, (zuizhongzhangfumingciAll.toPrec(4) / chooseCount).toPrec(2).toString().c_str());
-    state->setString(6, ((zuigaozhangfubaifenbiAll * 100).toPrec(4) / chooseCount).toPrec(2).toString().c_str());
-    state->setString(7, ((zuizhongzhangfubaifenbiAll * 100).toPrec(4) / chooseCount).toPrec(2).toString().c_str());
+    state->setString(2, (zuigaozhangfuAll.toPrec(4) / chooseCount.zero()).toPrec(2).toString());
+    state->setString(3, (zuizhongzhangfuAll.toPrec(4) / chooseCount.zero()).toPrec(2).toString());
+    state->setString(4, (zuigaozhangfumingciAll.toPrec(4) / chooseCount.zero()).toPrec(2).toString());
+    state->setString(5, (zuizhongzhangfumingciAll.toPrec(4) / chooseCount.zero()).toPrec(2).toString());
+    state->setString(6, ((zuigaozhangfubaifenbiAll * 100).toPrec(4) / chooseCount.zero()).toPrec(2).toString());
+    state->setString(7, ((zuizhongzhangfubaifenbiAll * 100).toPrec(4) / chooseCount.zero()).toPrec(2).toString());
+    state->setString(8, (zixuanzuigaozhangfuAll / quoteCount.zero()).toPrec(2).toString());
+    state->setString(9, (zixuanzuizhongzhangfuAll / quoteCount.zero()).toPrec(2).toString());
     mysql.execute(state);
 }
 
@@ -937,8 +960,14 @@ void Stock::saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vecto
 void Stock::saveCapitalChooseToDataBase(MysqlCpp& mysql, std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>>& capitalMapAll, int32_t zubie)
 {
     mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("choose", CStringManager::Format("shijian='%s' and zubie='%d'", IntDateTime().dateToString().c_str(), zubie))));
+    std::string nowTime = IntDateTime().dateToString();
     for (auto itChoose = capitalMapAll.begin(); itChoose != capitalMapAll.end(); ++itChoose)
     {
+        auto& date = itChoose->first;
+        if (date.dateToString() != nowTime)
+        {
+            continue;
+        }
         auto& capitalMap = itChoose->second;
         for (auto itChoose = capitalMap.begin(); itChoose != capitalMap.end(); ++itChoose)
         {
@@ -947,14 +976,61 @@ void Stock::saveCapitalChooseToDataBase(MysqlCpp& mysql, std::map<IntDateTime, s
             {
                 continue;
             }
+            auto& stockData = itChoose->second;
+            if (stockData.size() != 7)
+            {
+                continue;
+            }
             auto state = mysql.PreparedStatementCreator(SqlString::insertString("choose", "shijian,daima,zubie,xiangcha,xiaodan,dadan"));
             state->setString(1, IntDateTime().dateToString());
             state->setString(2, daima);
             state->setString(3, CStringManager::Format("%d", zubie));
-            state->setString(4, "0");
-            state->setString(5, "0");
-            state->setString(6, "0");
+            state->setString(4, stockData[2].toString());
+            state->setString(5, stockData[0].toString());
+            state->setString(6, stockData[1].toString());
             mysql.execute(state);
+        }
+    }
+}
+
+void Stock::deleteCapitalChooseToDataBase(MysqlCpp& mysql)
+{
+    std::string nowTime = IntDateTime().dateToString();
+    auto& chooseVec = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("choose", "xiangcha", CStringManager::Format("shijian='%s'", nowTime.c_str()))))->toVector();
+    std::vector<BigNumber> vecThree;
+    std::vector<BigNumber> vecTwo;
+    std::vector<BigNumber> vecOne;
+    int32_t index = -1;
+    while (index++ != chooseVec.size() - 1)
+    {
+        BigNumber xiangcha = chooseVec[index][0].c_str();
+        if (xiangcha >= 3)
+        {
+            vecThree.push_back(xiangcha);
+        }
+        else if (xiangcha >= 2)
+        {
+            vecTwo.push_back(xiangcha);
+        }
+        else
+        {
+            vecOne.push_back(xiangcha);
+        }
+    }
+    if (vecThree.size() + vecTwo.size() > 0)
+    {
+        if (vecThree.size() > 0)
+        {
+            int32_t indexTwo = -1;
+            while (indexTwo++ != vecTwo.size() - 1)
+            {
+                mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("choose", CStringManager::Format("shijian='%s' and xiangcha='%s'", nowTime.c_str(), vecTwo[indexTwo].toString().c_str()))))->toVector();
+            }
+        }
+        int32_t indexOne = -1;
+        while (indexOne++ != vecOne.size() - 1)
+        {
+            mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("choose", CStringManager::Format("shijian='%s' and xiangcha='%s'", nowTime.c_str(), vecOne[indexOne].toString().c_str()))))->toVector();
         }
     }
 }
@@ -1121,7 +1197,7 @@ void Stock::bestAnalyzeDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi)
 
 std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const std::map<std::string, std::map<std::string, std::vector<BigNumber>>>& capitalMap)
 {
-	//daima,vec,zuigaozhangfu,zuizhongzhangfu,zuigaozhangfubaifenbi,zuizhongzhangfubaifenbi
+	//daima,vec,xiaodan,dadan,xiangcha,zuigaozhangfu,zuizhongzhangfu,zuigaozhangfubaifenbi,zuizhongzhangfubaifenbi
 	std::map<std::string, std::vector<BigNumber>> result;
 
 	BigNumber zuigaozhangfuAll = 0;
@@ -1235,6 +1311,9 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
             //if ((halfpersentPassed && threepersentPassed && halfmairubaifenbi && halfmaichubaifenbi) ||
             //    (halfpersentPassed2 && threepersentPassed2 && halfmairubaifenbi2 && halfmaichubaifenbi2))
 		{
+            result[stockNum].push_back(halfpersentResultVec[0]);
+            result[stockNum].push_back(halfpersentResultVec[1]);
+            result[stockNum].push_back(halfpersentResultVec[0] - halfpersentResultVec[1]);
             result[stockNum].push_back(zuigaozhangfu);
             result[stockNum].push_back(zuizhongzhangfu);
             result[stockNum].push_back(zuigaozhangfubaifenbi);
@@ -1286,13 +1365,22 @@ void Stock::printChooseFromCapitalMap(const std::map<std::string, std::vector<Bi
 	std::vector<std::string> lineSep;
 	lineSep.push_back("");
 	lineSep.push_back("");
+    lineSep.push_back("");
+    lineSep.push_back("");
+    lineSep.push_back("");
 	lineSep.push_back("%");
 	lineSep.push_back("%");
-    int32_t count = capitalMap.size();
+    int32_t count = capitalMap.size() - 1;
 	while (count-- != 0)
 	{
 		sep.push_back(lineSep);
 	}
+    lineSep.clear();
+    lineSep.push_back("");
+    lineSep.push_back("");
+    lineSep.push_back("%");
+    lineSep.push_back("%");
+    sep.push_back(lineSep);
 	Stock::printMap(capitalMap, vecPrint, sep);
 }
 

@@ -48,10 +48,6 @@ int main()
 	//return 0;
 
 	//分笔存入
-	//MysqlCpp mysqlfenbi;
-	//bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
-	//mysqlfenbi.selectDb("stocktradequote");
-    //
     //int beginfenbi = ::GetTickCount();
     //Sleep(2000);
     //xyls::Point tonghuashunPointfenbi(213, CSystem::GetWindowResolution().bottom - 23);
@@ -73,18 +69,15 @@ int main()
     //return 0;
 
 	//分笔验证
-    //MysqlCpp mysqlfenbi;
-    //bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
-    //mysqlfenbi.selectDb("stocktradequote");
     //std::string todayDate = IntDateTime().dateToString();
     //std::map<std::string, BigNumber> stockQuoteMap = Stock::getLastPriceFromStockQuote(mysql, todayDate);
     //std::map<std::string, BigNumber> stockTradeQuoteMap = Stock::getLastPriceFromStockTradeQuote(mysql, mysqlfenbi, todayDate);
     //for (auto itStock = stockQuoteMap.begin(); itStock != stockQuoteMap.end(); ++itStock)
     //{
-    //	if (itStock->second != stockTradeQuoteMap.find(itStock->first)->second)
-    //	{
-    //		printf("%s\n", itStock->first.c_str());
-    //	}
+    //    if (itStock->second != stockTradeQuoteMap.find(itStock->first)->second)
+    //    {
+    //        printf("%s\n", itStock->first.c_str());
+    //    }
     //}
     //printf("完成");
     //getchar();
@@ -102,8 +95,8 @@ int main()
 	CMouse::LeftClick();
 	Sleep(1500);
     int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
-    //std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, zubie);
-	std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("300702,300584");
+    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, zubie);
+	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("300702,300584");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
     std::map<BigNumber, std::vector<BigNumber>> chooseMap;
@@ -123,8 +116,8 @@ int main()
 
     std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>> chooseMapAll;
 
-    IntDateTime beginTime = "2018-07-19 00:00:00";
-    IntDateTime endTime = "2018-07-19 00:00:00";
+    IntDateTime beginTime;// = "2018-07-19 00:00:00";
+    IntDateTime endTime;// = "2018-07-19 00:00:00";
     IntDateTime nowTime = beginTime;
     while (true)
     {
@@ -140,7 +133,7 @@ int main()
         {
             getWatch.Run();
             txt.AddLine("%s", vecStock[index][0].c_str());
-            //Stock::getPriceFromScreen(vecStock[index][0]);
+            Stock::getPriceFromScreen(vecStock[index][0]);
             getWatch.Stop();
 
             //insertWatch.Run();
@@ -155,7 +148,8 @@ int main()
             BigNumber reserveValue = 0;
             int32_t useCount = 0;
             //auto map = Stock::getPriceMapFromDataBase(mysqlfenbi, vecStock[index][0], useCount, reserveValue, "2018-07-09");
-            auto map = Stock::getCapitalMapFromDataBase(mysql, mysqlfenbi, vecStock[index][0], nowTime.dateToString());
+            //auto map = Stock::getCapitalMapFromDataBase(mysql, mysqlfenbi, vecStock[index][0], nowTime.dateToString());
+            auto map = Stock::getCapitalMapFromLocal(mysql, vecStock[index][0], nowTime.dateToString());
             //auto map = Stock::getPriceMapFromLocal(useCount, reserveValue);
             priceMapWatch.Stop();
 
@@ -164,7 +158,7 @@ int main()
             printWatch.Run();
             //Stock::printPriceMap(map);
             Stock::printCapitalMap(map);
-            //txt.AddLine("");
+            txt.AddLine("");
             printWatch.Stop();
 
             //reserveMap[reserveValue].push_back(vecStock[index][0]);
@@ -186,14 +180,12 @@ int main()
         auto chooseVec = Stock::chooseFromCapitalMap(capitalMapAll);
         chooseMapAll[nowTime] = chooseVec;
         Stock::printChooseFromCapitalMap(chooseVec);
-        
-
         txt.AddLine("");
-
         nowTime = nowTime + 86400;
     }
 
     Stock::saveCapitalChooseToDataBase(mysql, chooseMapAll, zubie);
+    Stock::deleteCapitalChooseToDataBase(mysql);
 
     //BigNumber gain = Stock::reckonGain(chooseMapAll);
     //RCSend("gain = %s", gain.toString().c_str());

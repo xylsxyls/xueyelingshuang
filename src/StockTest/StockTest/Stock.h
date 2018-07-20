@@ -11,8 +11,14 @@ public:
 	//笔入库
 	static bool insertDatabase(MysqlCpp& mysql);
 	
-	//资金图
+	//从数据库获取资金图
 	static std::map<std::string, std::vector<BigNumber>> getCapitalMapFromDataBase(MysqlCpp& mysql, MysqlCpp& mysqlfenbi, const std::string& stockNum, const std::string& date = "");
+
+    //本地获取资金图
+    static std::map<std::string, std::vector<BigNumber>> getCapitalMapFromLocal(MysqlCpp& mysql, const std::string& stockNum, const std::string& date = "");
+
+    //获取资金图
+    static std::map<std::string, std::vector<BigNumber>> getCapitalMap(MysqlCpp& mysql, const std::vector<std::vector<std::string>>& fenbiVec, const std::string& stockNum, const std::string& date = "");
 
 	//均价图
     static std::map<std::string, std::vector<BigNumber>> getPriceMapFromDataBase(MysqlCpp& mysql, const std::string& stockNum, int32_t& useCount, BigNumber& reserveValue, const std::string& date = "");
@@ -73,6 +79,9 @@ public:
 
     //保存资金选择
     static void saveCapitalChooseToDataBase(MysqlCpp& mysql, std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>>& chooseMap, int32_t zubie);
+
+    //删除部分资金选择
+    static void deleteCapitalChooseToDataBase(MysqlCpp& mysql);
 
     //打印图
 	static void printMap(const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::vector<std::string>& vecPrint, const std::vector<std::vector<std::string>>& sep);
