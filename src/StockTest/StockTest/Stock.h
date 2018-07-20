@@ -71,6 +71,9 @@ public:
     //保存选择
     static void saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vector<BigNumber>>& chooseMap, int32_t zubie);
 
+    //保存资金选择
+    static void saveCapitalChooseToDataBase(MysqlCpp& mysql, std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>>& chooseMap, int32_t zubie);
+
     //打印图
 	static void printMap(const std::map<std::string, std::vector<BigNumber>>& priceMap, const std::vector<std::string>& vecPrint, const std::vector<std::vector<std::string>>& sep);
 

@@ -102,8 +102,8 @@ int main()
 	CMouse::LeftClick();
 	Sleep(1500);
     int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
-    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
-	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("603721");
+    //std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, zubie);
+	std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("300702,300584");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
     std::map<BigNumber, std::vector<BigNumber>> chooseMap;
@@ -186,16 +186,19 @@ int main()
         auto chooseVec = Stock::chooseFromCapitalMap(capitalMapAll);
         chooseMapAll[nowTime] = chooseVec;
         Stock::printChooseFromCapitalMap(chooseVec);
+        
 
         txt.AddLine("");
 
         nowTime = nowTime + 86400;
     }
 
-    BigNumber gain = Stock::reckonGain(chooseMapAll);
-    RCSend("gain = %s", gain.toString().c_str());
+    Stock::saveCapitalChooseToDataBase(mysql, chooseMapAll, zubie);
+
+    //BigNumber gain = Stock::reckonGain(chooseMapAll);
+    //RCSend("gain = %s", gain.toString().c_str());
 	
-	return 0;
+	//return 0;
     //RCSend("stock = %s",chooseVec.begin()->first.c_str());
     //return 0;
 	//RCSend("size = %d", chooseVec.size() - 1);

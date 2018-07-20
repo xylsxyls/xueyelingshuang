@@ -80,6 +80,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::getCapitalMapFromDataBase(M
 	//pingjunjine£¬vec, bishu£¬xianshou£¬maimai1-1
 	std::map<BigNumber, std::vector<std::vector<BigNumber>>> capitalMap;
 	auto fenbiVec = getResultVecFromMysql(mysqlfenbi, stockNum, date);
+    //auto fenbiVec = getResultVecFromLocal();
 	BigNumber allzijin = 0;
 	int32_t index = -1;
 	while (index++ != fenbiVec.size() - 1)
@@ -930,6 +931,31 @@ void Stock::saveChooseToDataBase(MysqlCpp& mysql, std::map<BigNumber, std::vecto
         state->setString(5, (itChoose->second[1] * 100).toPrec(2).toString());
         state->setString(6, (itChoose->second[2] * 100).toPrec(2).toString());
         mysql.execute(state);
+    }
+}
+
+void Stock::saveCapitalChooseToDataBase(MysqlCpp& mysql, std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>>& capitalMapAll, int32_t zubie)
+{
+    mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString("choose", CStringManager::Format("shijian='%s' and zubie='%d'", IntDateTime().dateToString().c_str(), zubie))));
+    for (auto itChoose = capitalMapAll.begin(); itChoose != capitalMapAll.end(); ++itChoose)
+    {
+        auto& capitalMap = itChoose->second;
+        for (auto itChoose = capitalMap.begin(); itChoose != capitalMap.end(); ++itChoose)
+        {
+            const std::string& daima = itChoose->first;
+            if (daima == "888888")
+            {
+                continue;
+            }
+            auto state = mysql.PreparedStatementCreator(SqlString::insertString("choose", "shijian,daima,zubie,xiangcha,xiaodan,dadan"));
+            state->setString(1, IntDateTime().dateToString());
+            state->setString(2, daima);
+            state->setString(3, CStringManager::Format("%d", zubie));
+            state->setString(4, "0");
+            state->setString(5, "0");
+            state->setString(6, "0");
+            mysql.execute(state);
+        }
     }
 }
 
