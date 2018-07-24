@@ -1206,6 +1206,10 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 	BigNumber zuizhongzhangfubaifenbiAll = 0;
 
     int32_t bigger = 3;
+    //逃离最小量
+    int32_t smallMin = -2;
+    //下拉最小量
+    int32_t bigMax = -2;
 
     rem:
 	
@@ -1297,12 +1301,12 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
 		zuigaozhangfubaifenbi = baifenbiResultVec[0];
 		zuizhongzhangfubaifenbi = baifenbiResultVec[1];
 
-        bool halfpersentPassed = (((halfpersentResultVec[0] - halfpersentResultVec[1]) > bigger) && (halfpersentResultVec[0] > -2 && halfpersentResultVec[1] < -2));
-        bool threepersentPassed = (threepersentResultVec[0] > threepersentResultVec[1]);
+        bool halfpersentPassed = (((halfpersentResultVec[0] - halfpersentResultVec[1]) > bigger) && (halfpersentResultVec[0] > smallMin && halfpersentResultVec[1] < bigMax));
+        bool threepersentPassed = ((threepersentResultVec[0] > threepersentResultVec[1]));
         bool halfmairubaifenbi = ((halfmairubaifenbiResultVec[0] > halfmairubaifenbiResultVec[1]));
         bool halfmaichubaifenbi = ((halfmaichubaifenbiResultVec[0] < halfmaichubaifenbiResultVec[1]));
 
-        //bool halfpersentPassed2 = ((halfpersentResultVec[1] - halfpersentResultVec[0]) > 1 && (halfpersentResultVec[0] < 2));
+        //bool halfpersentPassed2 = ((halfpersentResultVec[1] - halfpersentResultVec[0]) > bigger && (halfpersentResultVec[0] < 2));
         //bool threepersentPassed2 = (threepersentResultVec[1] > threepersentResultVec[0]);
         //bool halfmairubaifenbi2 = ((halfmairubaifenbiResultVec[0] < halfmairubaifenbiResultVec[1]));
         //bool halfmaichubaifenbi2 = ((halfmaichubaifenbiResultVec[0] > halfmaichubaifenbiResultVec[1]));
@@ -1333,7 +1337,7 @@ std::map<std::string, std::vector<BigNumber>> Stock::chooseFromCapitalMap(const 
         bigger = 2;
         goto rem;
     }
-
+    
     if (chooseCount == 0 && bigger == 2)
     {
         bigger = 1;
@@ -1407,20 +1411,27 @@ BigNumber Stock::reckonGain(const std::map<IntDateTime, std::map<std::string, st
                 continue;
             }
             auto& chooseResultVec = itChoose->second;
-            if (chooseResultVec.size() != 4)
+            if (chooseResultVec.size() != 7)
             {
                 continue;
             }
-            auto& zuigaozhangfu = chooseResultVec[0];
-            auto& zuizhongzhangfu = chooseResultVec[1];
+            auto& zuigaozhangfu = chooseResultVec[3];
+            auto& zuizhongzhangfu = chooseResultVec[4];
             gusuanzhangfu = gusuanzhangfu + ((zuizhongzhangfu > 0) ? ((zuizhongzhangfu + zuizhongzhangfu) / 2) : zuizhongzhangfu);
         }
         gusuanzhangfu = gusuanzhangfu / (chooseCount - 1);
         RCSend("%s = %d", itDate->first.dateToString().c_str(), chooseCount - 1);
-        if (chooseCount == 2)
+        std::string stocks;
+        for (auto itChooseMap = chooseMap.begin(); itChooseMap != chooseMap.end(); ++itChooseMap)
         {
-            RCSend("%s,%s", chooseMap.begin()->first.c_str(), (++chooseMap.begin())->first.c_str());
+            if (itChooseMap->first == "888888")
+            {
+                stocks += "avg = " + itChooseMap->second[0].toString() + "," + itChooseMap->second[1].toString() + "," + itChooseMap->second[2].toString() + "," + itChooseMap->second[3].toString();
+                break;
+            }
+            stocks += itChooseMap->first + ",";
         }
+        RCSend("%s", stocks.c_str());
         gain = (gain - chargeBegin) * (1 + gusuanzhangfu.toPrec(4) / 100) - chargeEnd;
     }
     return gain.toPrec(2);

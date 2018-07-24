@@ -55,7 +55,7 @@ int main()
     //CMouse::LeftClick();
     //Sleep(1500);
     //std::vector<std::vector<std::string>> vecStockfenbi = Stock::getSelfStock(mysql);
-    ////std::vector<std::vector<std::string>> vecStockfenbi = Stock::getDefineStock("603721,603100");
+    ////std::vector<std::vector<std::string>> vecStockfenbi = Stock::getDefineStock("603655");
     //int32_t indexfenbi = -1;
     //while (indexfenbi++ != vecStockfenbi.size() - 1)//
     //{
@@ -95,8 +95,8 @@ int main()
 	CMouse::LeftClick();
 	Sleep(1500);
     int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
-    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, zubie);
-	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("300702,300584");
+    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
+	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("300584");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
     std::map<BigNumber, std::vector<BigNumber>> chooseMap;
@@ -116,8 +116,8 @@ int main()
 
     std::map<IntDateTime, std::map<std::string, std::vector<BigNumber>>> chooseMapAll;
 
-    IntDateTime beginTime;// = "2018-07-19 00:00:00";
-    IntDateTime endTime;// = "2018-07-19 00:00:00";
+    IntDateTime beginTime = "2018-07-05 00:00:00";
+    IntDateTime endTime = "2018-07-23 00:00:00";
     IntDateTime nowTime = beginTime;
     while (true)
     {
@@ -133,7 +133,7 @@ int main()
         {
             getWatch.Run();
             txt.AddLine("%s", vecStock[index][0].c_str());
-            Stock::getPriceFromScreen(vecStock[index][0]);
+            //Stock::getPriceFromScreen(vecStock[index][0]);
             getWatch.Stop();
 
             //insertWatch.Run();
@@ -148,8 +148,8 @@ int main()
             BigNumber reserveValue = 0;
             int32_t useCount = 0;
             //auto map = Stock::getPriceMapFromDataBase(mysqlfenbi, vecStock[index][0], useCount, reserveValue, "2018-07-09");
-            //auto map = Stock::getCapitalMapFromDataBase(mysql, mysqlfenbi, vecStock[index][0], nowTime.dateToString());
-            auto map = Stock::getCapitalMapFromLocal(mysql, vecStock[index][0], nowTime.dateToString());
+            auto map = Stock::getCapitalMapFromDataBase(mysql, mysqlfenbi, vecStock[index][0], nowTime.dateToString());
+            //auto map = Stock::getCapitalMapFromLocal(mysql, vecStock[index][0], nowTime.dateToString());
             //auto map = Stock::getPriceMapFromLocal(useCount, reserveValue);
             priceMapWatch.Stop();
 
@@ -184,11 +184,12 @@ int main()
         nowTime = nowTime + 86400;
     }
 
-    Stock::saveCapitalChooseToDataBase(mysql, chooseMapAll, zubie);
-    Stock::deleteCapitalChooseToDataBase(mysql);
+    //Stock::saveCapitalChooseToDataBase(mysql, chooseMapAll, zubie);
+    //Stock::deleteCapitalChooseToDataBase(mysql);
 
-    //BigNumber gain = Stock::reckonGain(chooseMapAll);
-    //RCSend("gain = %s", gain.toString().c_str());
+    BigNumber gain = Stock::reckonGain(chooseMapAll);
+    printf("gain = %s\n", gain.toString().c_str());
+    RCSend("gain = %s", gain.toString().c_str());
 	
 	//return 0;
     //RCSend("stock = %s",chooseVec.begin()->first.c_str());
