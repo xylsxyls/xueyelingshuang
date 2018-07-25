@@ -287,6 +287,14 @@ void CSystem::OutputVector(const std::vector<std::string>& stringVector, const s
     }
 }
 
+void CSystem::ClearScanf()
+{
+    char pathJar[1024] = {};
+    scanf("%[^\n]", pathJar);
+    scanf("%*[^\n]");
+    scanf("%*c");
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 

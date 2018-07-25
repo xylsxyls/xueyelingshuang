@@ -68,6 +68,8 @@ public:
 	static void OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path = "");
     //?´òÓ¡vector
 	static void OutputVector(const std::vector<std::string>& stringVector, const std::string& path = "");
+    //?Çå¿Õscanf»º´æÇø
+    static void ClearScanf();
 
 public:
     static bool ifRedirFrobid;

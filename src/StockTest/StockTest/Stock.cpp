@@ -1432,6 +1432,10 @@ BigNumber Stock::reckonGain(const std::map<IntDateTime, std::map<std::string, st
             stocks += itChooseMap->first + ",";
         }
         RCSend("%s", stocks.c_str());
+        if (gusuanzhangfu == 0)
+        {
+            continue;
+        }
         gain = (gain - chargeBegin) * (1 + gusuanzhangfu.toPrec(4) / 100) - chargeEnd;
     }
     return gain.toPrec(2);

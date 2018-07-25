@@ -94,13 +94,16 @@ int main()
 
 	//正文
 	int begin = ::GetTickCount();
-    Sleep(2000);
     xyls::Point tonghuashunPoint(213, CSystem::GetWindowResolution().bottom - 23);
-    CMouse::MoveAbsolute(tonghuashunPoint);
-	CMouse::LeftClick();
-	Sleep(1500);
+    if (!isGain)
+    {
+        Sleep(2000);
+        CMouse::MoveAbsolute(tonghuashunPoint);
+        CMouse::LeftClick();
+        Sleep(1500);
+    }
     int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
-    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, 0);
+    std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, isGain ? 0 : zubie);
 	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("300584");
 	std::map<std::string, std::string> useCountMap;
 	std::map<BigNumber, std::vector<std::string>> reserveMap;
@@ -122,9 +125,13 @@ int main()
 	if (isGain)
 	{
 		printf("beginTime = ");
-		scanf("%s", strBeginTime);
+        strBeginTime.resize(10);
+		scanf("%s", &strBeginTime[0]);
 		printf("endTime = ");
-		scanf("%s", strEndTime);
+        strEndTime.resize(10);
+        scanf("%s", &strEndTime[0]);
+        printf("calc...\n");
+        CSystem::ClearScanf();
 	}
 
     IntDateTime beginTime;
@@ -198,9 +205,12 @@ int main()
 		Stock::deleteCapitalChooseToDataBase(mysql);
 	}
 	
-    CMouse::MoveAbsolute(tonghuashunPoint);
-	CMouse::LeftClick();
-	Sleep(1000);
+    if (!isGain)
+    {
+        CMouse::MoveAbsolute(tonghuashunPoint);
+        CMouse::LeftClick();
+        Sleep(1000);
+    }
 	int end = ::GetTickCount();
 	printf("完成，耗时：%dms\n", end - begin);
 	printf("get = %dms,price = %dms,print = %dms", getWatch.GetWatchTime(), priceMapWatch.GetWatchTime(), printWatch.GetWatchTime());
