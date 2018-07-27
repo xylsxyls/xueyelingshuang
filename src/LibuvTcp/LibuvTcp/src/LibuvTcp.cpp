@@ -1,25 +1,26 @@
 #include "LibuvTcp.h"
+#include "libuv/uv.h"
 
-ReceiveCallback::ReceiveCallback() :
-m_libuvTcp(nullptr)
-{
+//ReceiveCallback::ReceiveCallback() :
+//m_libuvTcp(nullptr)
+//{
+//
+//}
 
-}
-
-void ReceiveCallback::receive(uv_tcp_t* client, void* buffer, int32_t length)
-{
-
-}
-
-void ReceiveCallback::clientConnected(uv_tcp_t* client)
-{
-
-}
-
-void ReceiveCallback::serverConnected(uv_tcp_t* server)
-{
-
-}
+//void ReceiveCallback::receive(uv_tcp_t* client, void* buffer, int32_t length)
+//{
+//
+//}
+//
+//void ReceiveCallback::clientConnected(uv_tcp_t* client)
+//{
+//
+//}
+//
+//void ReceiveCallback::serverConnected(uv_tcp_t* server)
+//{
+//
+//}
 
 LibuvTcp::LibuvTcp():
 m_receiveCallback(nullptr)
@@ -39,7 +40,7 @@ void onRead(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
 	{
 		//实际读取到了内容
 		LibuvTcp* libuvTcp = (LibuvTcp*)client->data;
-		libuvTcp->callback()->receive((uv_tcp_t*)client, (void*)buf->base, nread);
+		libuvTcp->callback()->receive((uv_tcp_t*)client, buf->base, nread);
 		//printf("buf = %s\n", buf->base);
 	}
 	else
@@ -49,7 +50,7 @@ void onRead(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
 		{
 			printf("Read error %s\n", uv_err_name(nread));
 		}
-		uv_close((uv_handle_t*)client, NULL);
+		uv_close((uv_handle_t*)client, nullptr);
 	}
 	//确保这句代码一定会在最后面执行，不要在中间突然退出函数，否则就内存泄露了 
 	free(buf->base);
@@ -62,13 +63,13 @@ void onConnect(uv_connect_t* connect, int status)
 		printf("connect error: %s!\n", uv_strerror(status));
 		return;
 	}
-	printf("connect success!");
+	printf("connect success!\n");
 
 	((uv_tcp_t*)connect->handle)->data = connect->data;
 
 	//开始读取客户端发送的数据，并设置好接收缓存分配的函数alloc_buffer和读取完毕后的回调函数echo_read 
 	uv_read_start((uv_stream_t*)connect->handle,
-		[](uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
+		[](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 	{
 		//分配接收缓存内存和设置建议大小，小于等于实际大小 
 		buf->base = (char*)malloc(suggested_size);
@@ -105,7 +106,7 @@ void onNewConnect(uv_stream_t *server, int status)
 		((LibuvTcp*)server->data)->callback()->clientConnected(client);
 		//开始读取客户端发送的数据，并设置好接收缓存分配的函数alloc_buffer和读取完毕后的回调函数echo_read 
 		uv_read_start((uv_stream_t*)client,
-			[](uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
+			[](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 		{
 			//分配接收缓存内存和设置建议大小，小于等于实际大小 
 			buf->base = (char*)malloc(suggested_size);
@@ -174,7 +175,7 @@ ReceiveCallback* LibuvTcp::callback()
 	return m_receiveCallback;
 }
 
-void LibuvTcp::send(uv_tcp_t* client, void* buffer, int32_t length)
+void LibuvTcp::send(uv_tcp_t* client, char* buffer, int32_t length)
 {
 	//为回复客户端数据创建一个写数据对象uv_write_t，写数据对象内存将会在写完后的回调函数中释放 
 	//因为发送完的数据在发送完毕后无论成功与否，都会释放内存。如果一定要确保发送出去，那么请自己存储好发送的数据，直到echo_write执行完再释放。 
@@ -182,13 +183,13 @@ void LibuvTcp::send(uv_tcp_t* client, void* buffer, int32_t length)
 	//用缓存中的起始地址和大小初始化写数据对象
 	req->data = buffer;
 	uv_buf_t send_buf;
-	send_buf.base = (char*)buffer;
+	send_buf.base = buffer;
 	send_buf.len = length;
 
 	//写数据，并将写数据对象uv_write_t和客户端、缓存、回调函数关联，第四个参数表示创建一个uv_buf_t缓存，不是1个字节 
 	uv_write((uv_write_t*)req, (uv_stream_t*)client, &send_buf, 1, [](uv_write_t *req, int status)
 	{
-		if (status)
+		if (status != 0)
 		{
 			//状态值status不为0表示发送数据失败。 
 			printf("Write error %s\n", uv_strerror(status));
@@ -198,28 +199,28 @@ void LibuvTcp::send(uv_tcp_t* client, void* buffer, int32_t length)
 	});
 }
 
-class Receive : public ReceiveCallback
-{
-public:
-	void receive(uv_tcp_t* client, void* buffer, int32_t length)
-	{
-		((char*)buffer)[length] = 0;
-		printf("bufcallback = %s\n", (char*)buffer);
-		//m_libuvTcp->send(client, buffer, length);
-		return;
-	}
-
-	void clientConnected(uv_tcp_t* client)
-	{
-
-	}
-
-	void serverConnected(uv_tcp_t* server)
-	{
-		m_libuvTcp->send(server, "12123", 5);
-		int x = 3;
-	}
-};
+//class Receive : public ReceiveCallback
+//{
+//public:
+//	void receive(uv_tcp_t* client, void* buffer, int32_t length)
+//	{
+//		((char*)buffer)[length] = 0;
+//		printf("bufcallback = %s\n", (char*)buffer);
+//		//m_libuvTcp->send(client, buffer, length);
+//		return;
+//	}
+//
+//	void clientConnected(uv_tcp_t* client)
+//	{
+//
+//	}
+//
+//	void serverConnected(uv_tcp_t* server)
+//	{
+//		m_libuvTcp->send(server, "12123", 5);
+//		int x = 3;
+//	}
+//};
 
 //int main()
 //{

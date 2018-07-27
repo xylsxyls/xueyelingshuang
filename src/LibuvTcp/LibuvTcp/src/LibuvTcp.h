@@ -1,19 +1,19 @@
 #pragma once
 #include "LibuvTcpMacro.h"
-#include "libuv/uv.h"
-#include <vector>
+#include <stdint.h>
 
 class LibuvTcp;
+typedef struct uv_tcp_s uv_tcp_t;
 class ReceiveCallback
 {
 public:
-	ReceiveCallback();
+	//ReceiveCallback();
 public:
-	virtual void receive(uv_tcp_t* client, void* buffer, int32_t length);
+	virtual void receive(uv_tcp_t* client, char* buffer, int32_t length){}
 
-	virtual void clientConnected(uv_tcp_t* client);
+	virtual void clientConnected(uv_tcp_t* client){}
 
-	virtual void serverConnected(uv_tcp_t* server);
+	virtual void serverConnected(uv_tcp_t* server){}
 
 	LibuvTcp* m_libuvTcp;
 };
@@ -32,7 +32,7 @@ public:
 
 	void loop();
 
-	void send(uv_tcp_t* dest, void* buffer, int32_t length);
+	void send(uv_tcp_t* dest, char* buffer, int32_t length);
 
 	ReceiveCallback* callback();
 
