@@ -22,9 +22,11 @@
     <ClInclude Include="..\src\LibuvTcpAPI.h" />
     <ClInclude Include="..\src\LibuvTcpMacro.h" />
     <ClInclude Include="..\src\LibuvTcp.h" />
+    <ClInclude Include="..\src\ReceiveCallback.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\LibuvTcp.cpp" />
+    <ClCompile Include="..\src\ReceiveCallback.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

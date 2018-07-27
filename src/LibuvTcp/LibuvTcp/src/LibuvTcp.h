@@ -2,21 +2,8 @@
 #include "LibuvTcpMacro.h"
 #include <stdint.h>
 
-class LibuvTcp;
 typedef struct uv_tcp_s uv_tcp_t;
-class ReceiveCallback
-{
-public:
-	//ReceiveCallback();
-public:
-	virtual void receive(uv_tcp_t* client, char* buffer, int32_t length){}
-
-	virtual void clientConnected(uv_tcp_t* client){}
-
-	virtual void serverConnected(uv_tcp_t* server){}
-
-	LibuvTcp* m_libuvTcp;
-};
+class ReceiveCallback;
 
 class LibuvTcpAPI LibuvTcp
 {
