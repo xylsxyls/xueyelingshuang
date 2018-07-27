@@ -15,12 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ConsoleTest.h">
+    <ClInclude Include="..\src\LibuvTcp.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LibuvTcpAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LibuvTcpMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ConsoleTest.cpp">
+    <ClCompile Include="..\src\LibuvTcp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

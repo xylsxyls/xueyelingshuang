@@ -12,7 +12,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{81CE7AF5-E9D4-4C9F-83BE-8B1731CDD108}</ProjectGuid>
-    <RootNamespace>ConsoleTest</RootNamespace>
+    <RootNamespace>ConsoleTest1</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -80,10 +80,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ConsoleTest.h" />
+    <ClInclude Include="ConsoleTest1.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ConsoleTest.cpp" />
+    <ClCompile Include="ConsoleTest1.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
