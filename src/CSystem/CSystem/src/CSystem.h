@@ -6,7 +6,8 @@
 #include <vector>
 #include "CSystemMacro.h"
 
-class CSystemAPI CSystem{
+class CSystemAPI CSystem
+{
 public:
 	//?实测CPU主频
 	static double GetCPUSpeedGHz();
@@ -70,6 +71,8 @@ public:
 	static void OutputVector(const std::vector<std::string>& stringVector, const std::string& path = "");
     //?清空scanf缓存区
     static void ClearScanf();
+	//?获取执行参数列表
+	static std::vector<std::string> exeParam();
 
 public:
     static bool ifRedirFrobid;

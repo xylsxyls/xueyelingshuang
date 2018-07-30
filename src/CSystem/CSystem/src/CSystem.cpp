@@ -295,6 +295,16 @@ void CSystem::ClearScanf()
     scanf("%*c");
 }
 
+std::vector<std::string> CSystem::exeParam()
+{
+	std::vector<std::string> result;
+	for (int32_t index = 0; index < __argc; ++index)
+	{
+		result.push_back(__argv[index]);
+	}
+	return result;
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 

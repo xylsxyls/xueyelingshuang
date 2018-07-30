@@ -1,102 +1,91 @@
+#include <stdio.h>
+#include "CSystem/CSystemAPI.h"
+#include "CGetPath/CGetPathAPI.h"
+#include "CEncodeDecode/CEncodeDecodeAPI.h"
+#include "Ctxt/CtxtAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
-// Package.cpp : 定义应用程序的类行为。
-//
-
-#include "stdafx.h"
-#include "Package.h"
-#include "PackageDlg.h"
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#endif
-
-
-// CPackageApp
-
-BEGIN_MESSAGE_MAP(CPackageApp, CWinApp)
-	ON_COMMAND(ID_HELP, &CWinApp::OnHelp)
-END_MESSAGE_MAP()
-
-
-// CPackageApp 构造
-
-CPackageApp::CPackageApp()
+int main(int argc, char** argv)
 {
-	// 支持重新启动管理器
-	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
-
-	// TODO: 在此处添加构造代码，
-	// 将所有重要的初始化放置在 InitInstance 中
+	std::vector<std::string> params = CSystem::exeParam();
+	if (params.size() != 2)
+	{
+		return -1;
+	}
+	std::string exePath = CGetPath::GetCurrentExePath();
+	std::string decodePath = exePath + "..\\..\\..\\attacklogy\\AttackData\\";
+	std::string encodePath = exePath + "..\\..\\..\\attacklogy\\AttackSrc\\";
+	std::vector<std::string> encodeFilePaths = CGetPath::FindFilePath("", encodePath, 3);
+	std::vector<std::string> decodeFilePaths = CGetPath::FindFilePath("", decodePath, 3);
+	std::string param = params[1];
+	if (param == "encode")
+	{
+		int32_t index = -1;
+		while (index++ != encodeFilePaths.size() - 1)
+		{
+			if (encodeFilePaths[index] == "." || encodeFilePaths[index] == "..")
+			{
+				continue;
+			}
+			std::string name = CGetPath::GetName(encodeFilePaths[index], 1);
+			std::string filePath = CGetPath::GetName(encodeFilePaths[index], 4);
+			std::string decodeName = CEncodeDecode::AESEncode("Yangnan8", name);
+			Ctxt txt(encodeFilePaths[index]);
+			txt.LoadTxt(3, "");
+			int32_t lineIndex = -1;
+			while (lineIndex++ != txt.m_vectxt.size() - 1)
+			{
+				txt.m_vectxt[lineIndex][0] = CEncodeDecode::AESEncode("Yangnan8", txt.m_vectxt[lineIndex][0]);
+			}
+			std::string decodePath = encodePath;
+			CStringManager::Replace(decodePath, "AttackSrc", "AttackData");
+			txt.SaveAs(decodePath + decodeName);
+		}
+	}
+	else if (param == "decode")
+	{
+		printf("key = ");
+		char key[1024] = {};
+		scanf("%s", key);
+		bool isRevise = false;
+		CSystem::CreateDir(encodePath);
+		int32_t index = -1;
+		while (index++ != decodeFilePaths.size() - 1)
+		{
+			if (decodeFilePaths[index] == "." || decodeFilePaths[index] == "..")
+			{
+				continue;
+			}
+			std::string name = CGetPath::GetName(decodeFilePaths[index], 1);
+			std::string filePath = CGetPath::GetName(decodeFilePaths[index], 4);
+			std::string decodeName = CEncodeDecode::AESDecode(key, name);
+			Ctxt txt(decodeFilePaths[index]);
+			txt.LoadTxt(3, "");
+			int32_t lineIndex = -1;
+			while (lineIndex++ != txt.m_vectxt.size() - 1)
+			{
+				txt.m_vectxt[lineIndex][0] = CEncodeDecode::AESDecode(key, txt.m_vectxt[lineIndex][0]);
+			}
+			std::string encodePath = decodePath;
+			CStringManager::Replace(encodePath, "AttackData", "AttackSrc");
+			Ctxt txtExist(encodePath + decodeName);
+			txtExist.LoadTxt(3, "");
+			if (txtExist.m_vectxt.size() == 0)
+			{
+				txt.SaveAs(encodePath + decodeName);
+			}
+			else if (txt.m_vectxt != txtExist.m_vectxt)
+			{
+				isRevise = true;
+				printf("内容有修改，%s", decodeName.c_str());
+				continue;
+			}
+		}
+		if (isRevise)
+		{
+			CSystem::ClearScanf();
+			getchar();
+		}
+	}
+	return 0;
 }
-
-
-// 唯一的一个 CPackageApp 对象
-
-CPackageApp theApp;
-
-
-// CPackageApp 初始化
-
-BOOL CPackageApp::InitInstance()
-{
-	// 如果一个运行在 Windows XP 上的应用程序清单指定要
-	// 使用 ComCtl32.dll 版本 6 或更高版本来启用可视化方式，
-	//则需要 InitCommonControlsEx()。否则，将无法创建窗口。
-	INITCOMMONCONTROLSEX InitCtrls;
-	InitCtrls.dwSize = sizeof(InitCtrls);
-	// 将它设置为包括所有要在应用程序中使用的
-	// 公共控件类。
-	InitCtrls.dwICC = ICC_WIN95_CLASSES;
-	InitCommonControlsEx(&InitCtrls);
-
-	CWinApp::InitInstance();
-
-
-	AfxEnableControlContainer();
-
-	// 创建 shell 管理器，以防对话框包含
-	// 任何 shell 树视图控件或 shell 列表视图控件。
-	CShellManager *pShellManager = new CShellManager;
-
-	// 激活“Windows Native”视觉管理器，以便在 MFC 控件中启用主题
-	CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerWindows));
-
-	// 标准初始化
-	// 如果未使用这些功能并希望减小
-	// 最终可执行文件的大小，则应移除下列
-	// 不需要的特定初始化例程
-	// 更改用于存储设置的注册表项
-	// TODO: 应适当修改该字符串，
-	// 例如修改为公司或组织名
-	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
-
-	CPackageDlg dlg;
-	m_pMainWnd = &dlg;
-	INT_PTR nResponse = dlg.DoModal();
-	if (nResponse == IDOK)
-	{
-		// TODO: 在此放置处理何时用
-		//  “确定”来关闭对话框的代码
-	}
-	else if (nResponse == IDCANCEL)
-	{
-		// TODO: 在此放置处理何时用
-		//  “取消”来关闭对话框的代码
-	}
-	else if (nResponse == -1)
-	{
-		TRACE(traceAppMsg, 0, "警告: 对话框创建失败，应用程序将意外终止。\n");
-		TRACE(traceAppMsg, 0, "警告: 如果您在对话框上使用 MFC 控件，则无法 #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS。\n");
-	}
-
-	// 删除上面创建的 shell 管理器。
-	if (pShellManager != NULL)
-	{
-		delete pShellManager;
-	}
-
-	// 由于对话框已关闭，所以将返回 FALSE 以便退出应用程序，
-	//  而不是启动应用程序的消息泵。
-	return FALSE;
-}
-

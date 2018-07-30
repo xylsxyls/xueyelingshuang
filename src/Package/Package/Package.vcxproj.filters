@@ -15,25 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="Package.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="PackageDlg.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Resource.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="CTaskFactory.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -41,29 +23,5 @@
     <ClCompile Include="Package.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="PackageDlg.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="CTaskFactory.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="Package.rc">
-      <Filter>资源文件</Filter>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="res\Package.rc2">
-      <Filter>资源文件</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="res\Package.ico">
-      <Filter>资源文件</Filter>
-    </Image>
   </ItemGroup>
 </Project>
