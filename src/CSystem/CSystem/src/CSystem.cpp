@@ -4,6 +4,7 @@
 #include <direct.h>
 #include <io.h>
 #include <fstream>
+#include <conio.h>
 
 double CSystem::GetCPUSpeedGHz()
 {
@@ -303,6 +304,27 @@ std::vector<std::string> CSystem::exeParam()
 		result.push_back(__argv[index]);
 	}
 	return result;
+}
+
+std::string CSystem::PasswordScanf()
+{
+	std::string password;
+	char ch;
+	while ((ch = ::getch()) != '\r')
+	{
+		if (ch != 8)//不是回撤就录入
+		{
+			password.push_back(ch);
+			putchar('*');//并且输出*号
+		}
+		else
+		{
+			putchar('\b');//这里是删除一个，我们通过输出回撤符 /b，回撤一格，
+			putchar(' ');//再显示空格符把刚才的*给盖住，
+			putchar('\b');//然后再 回撤一格等待录入。
+		}
+	}
+	return password;
 }
 
 bool CSystem::ifRedirFrobid = false;

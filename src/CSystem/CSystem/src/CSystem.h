@@ -73,6 +73,8 @@ public:
     static void ClearScanf();
 	//?获取执行参数列表
 	static std::vector<std::string> exeParam();
+	//?获取密码
+	static std::string PasswordScanf();
 
 public:
     static bool ifRedirFrobid;

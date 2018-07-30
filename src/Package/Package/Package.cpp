@@ -45,8 +45,7 @@ int main(int argc, char** argv)
 	else if (param == "decode")
 	{
 		printf("key = ");
-		char key[1024] = {};
-		scanf("%s", key);
+		std::string key = CSystem::PasswordScanf();
 		bool isRevise = false;
 		CSystem::CreateDir(encodePath);
 		int32_t index = -1;
