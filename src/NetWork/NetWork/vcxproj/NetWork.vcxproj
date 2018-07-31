@@ -19,12 +19,18 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\ClientCallback.h" />
+    <ClInclude Include="..\src\NetServer.h" />
     <ClInclude Include="..\src\NetWorkAPI.h" />
     <ClInclude Include="..\src\NetWorkMacro.h" />
-    <ClInclude Include="..\src\NetWork.h" />
+    <ClInclude Include="..\src\NetClient.h" />
+    <ClInclude Include="..\src\ServerCallback.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetWork.cpp" />
+    <ClCompile Include="..\src\ClientCallback.cpp" />
+    <ClCompile Include="..\src\NetClient.cpp" />
+    <ClCompile Include="..\src\NetServer.cpp" />
+    <ClCompile Include="..\src\ServerCallback.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

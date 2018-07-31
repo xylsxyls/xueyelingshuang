@@ -13,21 +13,45 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Client">
+      <UniqueIdentifier>{37eacb2f-8406-480a-9b68-32bfb33723e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server">
+      <UniqueIdentifier>{cdf07516-62ad-485b-8ffd-32813c61e19a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\NetWork.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\NetWorkAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\NetWorkMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\NetClient.h">
+      <Filter>Client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ClientCallback.h">
+      <Filter>Client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NetServer.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ServerCallback.h">
+      <Filter>Server</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetWork.cpp">
-      <Filter>源文件</Filter>
+    <ClCompile Include="..\src\ClientCallback.cpp">
+      <Filter>Client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetClient.cpp">
+      <Filter>Client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetServer.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ServerCallback.cpp">
+      <Filter>Server</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
