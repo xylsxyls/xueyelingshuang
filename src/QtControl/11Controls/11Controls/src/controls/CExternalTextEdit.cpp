@@ -26,12 +26,28 @@ void CExternalTextEdit::showEvent(QShowEvent *e)
 {
     QTextEdit::showEvent(e);
     mRefresgGifTimer.start();
+	for(int i = 0; i < mGifResourceMapForExpression.keys().count(); i++)
+	{
+		QMovie *m = mGifResourceMapForExpression.value(mGifResourceMapForExpression.keys()[i], NULL);
+		if(m)
+		{
+			m->start();
+		}
+	}
 }
 
 void CExternalTextEdit::hideEvent(QHideEvent *e)
 {
     QTextEdit::hideEvent(e);
     mRefresgGifTimer.stop();
+	for(int i = 0; i < mGifResourceMapForExpression.keys().count(); i++)
+	{
+		QMovie *m = mGifResourceMapForExpression.value(mGifResourceMapForExpression.keys()[i], NULL);
+		if(m)
+		{
+			m->stop();
+		}
+	}
 }
 
 void CExternalTextEdit::keyPressEvent(QKeyEvent *e)
@@ -88,7 +104,10 @@ void CExternalTextEdit::updateGifResourceForExpression()
 {
     for(int i = 0; i < mGifResourceMapForExpression.keys().count(); i++)
     {
-        QMovie *m = mGifResourceMapForExpression[mGifResourceMapForExpression.keys()[i]];
+        QMovie *m = mGifResourceMapForExpression.value(mGifResourceMapForExpression.keys()[i], NULL);
+		if(m == NULL)
+			continue;
+
         int currentFrame = m->currentFrameNumber();
         currentFrame = currentFrame < m->frameCount() - 1 ? currentFrame + 1 : 0;
 
@@ -280,10 +299,11 @@ void CExternalTextEdit::loadExpressions(const QString& emotionPath)
     {
         QString gifFilename = mMapedExpression[mMapedExpression.keys()[i]];
         QMovie* m = new QMovie;
-        m->setCacheMode(QMovie::CacheNone);
+        m->setCacheMode(QMovie::CacheAll);
         m->setFileName(gifFilename);
 		m->setScaledSize(QSize(mExpressionSize,mExpressionSize));
-        m->start();
+		if(this->isVisible())
+			m->start();
 
         QString docResourceUrl(mExpressionTag + mMapedExpression.keys()[i]);
         this->document()->addResource(QTextDocument::ImageResource, docResourceUrl, m->currentPixmap());

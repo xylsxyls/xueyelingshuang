@@ -40,6 +40,7 @@ private slots:
     void onUseOtherDownload();
     void onCopyDownloadAddr(const QString& addr);
     void onCopyPath(const QString& path);
+	void onAlreadyShown();
 
 private:
     quint64 userId();

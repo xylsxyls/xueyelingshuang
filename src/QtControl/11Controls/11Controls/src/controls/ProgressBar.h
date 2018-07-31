@@ -28,7 +28,4 @@ public:
 	/** Îö¹¹º¯Êý
 	*/
 	virtual ~ProgressBar();
-
-public:
-	
 };

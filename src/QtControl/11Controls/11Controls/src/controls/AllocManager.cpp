@@ -92,6 +92,20 @@ COriginalDialog* AllocManager::findDialogPtr(quint64 dialogId)
     return itDialog->second;
 }
 
+COriginalDialog* AllocManager::findDialogPtr(DialogType type)
+{
+	switch (type)
+	{
+	case ACCOUNT_MANAGER_DIALOG:
+	{
+		return m_accountManagerDialog;
+	}
+	default:
+		break;
+	}
+	return nullptr;
+}
+
 quint64 AllocManager::findDialogId(quint64 userId)
 {
     QMutexLocker locker(&m_mutex);
@@ -120,7 +134,7 @@ DialogType AllocManager::findDialogType(quint64 dialogId)
     auto itDialog = m_mapDialogIdToDialogType.find(dialogId);
     if (itDialog == m_mapDialogIdToDialogType.end())
     {
-        abort();
+		return ERROR_DIALOG_TYPE;
     }
     return itDialog->second;
 }

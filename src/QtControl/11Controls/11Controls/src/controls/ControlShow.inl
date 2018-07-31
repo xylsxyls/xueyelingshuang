@@ -9,6 +9,7 @@
 template<class QBase>
 void ControlShow<QBase>::repaint()
 {
+	initClassName();
 	QBase::setStyleSheet(QString::fromStdWString(m_controlStyle.toWString()));
 }
 
@@ -25,18 +26,29 @@ ControlShow<QBase>::~ControlShow()
 
 }
 
-template<class QBase>
-bool ControlShow<QBase>::init(const std::wstring& className, const std::wstring& itemName)
+template <class QBase>
+std::wstring ControlShow<QBase>::className()
 {
-	m_className = className;
+	return QString::fromStdString(CStringManager::Replace(typeid(*this).name(), "class ", "")).toStdWString();
+}
+
+template <class QBase>
+void ControlShow<QBase>::initClassName()
+{
+	m_controlStyle.setClassName(className());
+}
+
+template <class QBase>
+void ControlShow<QBase>::setItemName(const std::wstring& itemName)
+{
 	m_itemName = itemName;
-	return true;
 }
 
 template<class QBase>
-void ControlShow<QBase>::showEvent(QShowEvent*)
+void ControlShow<QBase>::showEvent(QShowEvent* eve)
 {
 	repaint();
+	QBase::showEvent(eve);
 }
 
 #endif

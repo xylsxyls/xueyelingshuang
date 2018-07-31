@@ -11,7 +11,7 @@ CExpressionDialog::CExpressionDialog(QWidget *parent)
     ,mExpressionPicker(new CExpressionPicker(this))
     ,mExpressionGroupPicker(new CExpressionPicker(this))
 {
-    this->setWindowFlags(Qt::FramelessWindowHint);
+    this->setWindowFlags(Qt::FramelessWindowHint | Qt::Popup);
 
     ((QStandardItemModel*)(mExpressionPicker->model()))->setColumnCount(12);
     ((QStandardItemModel*)(mExpressionPicker->model()))->setRowCount(4);

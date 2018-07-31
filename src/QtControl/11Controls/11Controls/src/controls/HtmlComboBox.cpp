@@ -15,7 +15,6 @@ m_rightOrigin(0),
 m_bottomOrigin(0),
 m_itemBorderWidth(0)
 {
-	INIT(L"drop-down");
 	init();
 }
 
@@ -62,12 +61,19 @@ void HtmlComboBox::setListItemBorderWidth(qint32 width, bool rePaint)
 
 void HtmlComboBox::init()
 {
-	ComboBox::setDefault();
-	setStyle(new HtmlComboBoxStyle(this));
+	HtmlComboBoxStyle* style = new HtmlComboBoxStyle(this);
+	if (style != nullptr)
+	{
+		setStyle(style);
+	}
+	
 	if (!check())
 	{
 		return;
 	}
-	m_listWidget->setItemDelegate(new HtmlComboBoxDelegate(this));
-	///*((QWidget*)(view()->parent()))->*/setStyleSheet("QToolTip{text-align:alignvcenter;}");
+	HtmlComboBoxDelegate* comboBoxDelegate = new HtmlComboBoxDelegate(this);
+	if (comboBoxDelegate != nullptr)
+	{
+		m_listWidget->setItemDelegate(comboBoxDelegate);
+	}
 }

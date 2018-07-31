@@ -4,8 +4,6 @@
 #include <QColor>
 #include "ControlsMacro.h"
 
-#define INIT(itemName) ControlShow::init(QString::fromStdString(CStringManager::Replace(typeid(*this).name(), "class ", "")).toStdWString(), itemName)
-
 class QShowEvent;
 class QWidget;
 /** 控件通用样式模板
@@ -28,12 +26,21 @@ protected:
 	*/
 	virtual ~ControlShow();
 
-protected:
-	/** 初始化
-	@param [in] className 类名
-	@param [in] itemName 节点名
+public:
+	/** 初始化类名
 	*/
-	bool init(const std::wstring& className, const std::wstring& itemName = L"");
+	void initClassName();
+
+	/** 设置子节点名
+	@param [in] itemName 子节点名
+	*/
+	void setItemName(const std::wstring& itemName);
+
+protected:
+	/** 获取类名
+	@return 返回类名
+	*/
+	std::wstring className();
 
 protected:
 	virtual void showEvent(QShowEvent* eve);
@@ -41,8 +48,6 @@ protected:
 public:
 	//style字符串管理对象
 	QssString m_controlStyle;
-	//类名字符串
-	std::wstring m_className;
 	//节点名字符串
 	std::wstring m_itemName;
 };

@@ -47,6 +47,7 @@ protected:
 
 public slots:
 	void onLinkClicked(const QUrl& url);
+	void onLoadFinished(bool finished);
 
 private:
 	Label* m_tip;

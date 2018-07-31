@@ -5,12 +5,11 @@
 
 CPasswordInputBox::CPasswordInputBox(QWidget *parent):
 LineEdit(parent),
-m_maskButton(new COriginalButton(this)),
+m_maskButton(nullptr),
 m_rightOrigin(5)
 {
-	INIT(L"");
-	QObject::connect(m_maskButton, &COriginalButton::clicked, this, &CPasswordInputBox::onMaskButtonClicked);
-	setDefault();
+	m_maskButton = new COriginalButton(this);
+	init();
 }
 
 CPasswordInputBox::~CPasswordInputBox()
@@ -20,13 +19,17 @@ CPasswordInputBox::~CPasswordInputBox()
 
 void CPasswordInputBox::setDefault()
 {
-	if (m_maskButton == nullptr)
+	if (!check())
 	{
 		return;
 	}
 
 	QRegExp regx("[a-zA-Z0-9]+$");
 	QValidator *validator = new QRegExpValidator(regx, this);
+	if (validator == nullptr)
+	{
+		return;
+	}
 	setValidator(validator);
 
 	QString maskPath = CGeneralStyle::instance()->war3lobbyResourcePath() + MASK_BUTTON_PNG;
@@ -53,7 +56,7 @@ void CPasswordInputBox::setDefault()
 
 void CPasswordInputBox::setMaskSize(qint32 width, qint32 height)
 {
-	if (m_maskButton == nullptr)
+	if (!check())
 	{
 		return;
 	}
@@ -62,7 +65,7 @@ void CPasswordInputBox::setMaskSize(qint32 width, qint32 height)
 
 void CPasswordInputBox::setMaskRightOrigin(qint32 rightOrigin)
 {
-	if (m_maskButton == nullptr)
+	if (!check())
 	{
 		return;
 	}
@@ -81,7 +84,7 @@ void CPasswordInputBox::setMaskBackgroundImage(const QString& backgroundImgPath,
 											   qint32 backgroundImgCkPressed,
 											   qint32 backgroundImgCkDisabled)
 {
-	if (m_maskButton == nullptr)
+	if (!check())
 	{
 		return;
 	}
@@ -99,12 +102,31 @@ void CPasswordInputBox::setMaskBackgroundImage(const QString& backgroundImgPath,
 
 void CPasswordInputBox::setMaskVisible(bool enable)
 {
+	if (!check())
+	{
+		return;
+	}
 	m_maskButton->setVisible(enable);
+}
+
+bool CPasswordInputBox::check()
+{
+	return m_maskButton != nullptr;
+}
+
+void CPasswordInputBox::init()
+{
+	if (!check())
+	{
+		return;
+	}
+	QObject::connect(m_maskButton, &COriginalButton::clicked, this, &CPasswordInputBox::onMaskButtonClicked);
+	setDefault();
 }
 
 void CPasswordInputBox::layoutControl()
 {
-	if (m_maskButton == nullptr)
+	if (!check())
 	{
 		return;
 	}
@@ -119,30 +141,20 @@ void CPasswordInputBox::resizeEvent(QResizeEvent* eve)
 
 void CPasswordInputBox::onMaskButtonClicked()
 {
-	if (m_maskButton == nullptr)
+	if (!check())
 	{
 		return;
 	}
-	setEchoMode((m_maskButton->isChecked()) ? QLineEdit::Normal : QLineEdit::Password);
-
-	if (m_maskButton->isChecked())
-	{
-		setToolTip(text());
-	}
-	else
-	{
-		setToolTip("");
-	}
+	bool isChecked = m_maskButton->isChecked();
+	setEchoMode(isChecked ? QLineEdit::Normal : QLineEdit::Password);
+	setToolTip(isChecked ? text() : "");
 }
 
 void CPasswordInputBox::currentTextChanged(const QString& str)
 {
-	if (m_maskButton->isChecked())
+	if (!check())
 	{
-		setToolTip(str);
+		return;
 	}
-	else
-	{
-		setToolTip("");
-	}
+	setToolTip(m_maskButton->isChecked() ? str : "");
 }

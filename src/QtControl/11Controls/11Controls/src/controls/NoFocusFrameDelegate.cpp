@@ -1,8 +1,12 @@
-#include "nofocusframedelegate.h"
-//#include <QPainter>
+#include "NoFocusFrameDelegate.h"
 
-NoFocusFrameDelegate::NoFocusFrameDelegate(QWidget *parent) :
+NoFocusFrameDelegate::NoFocusFrameDelegate(QWidget* parent) :
 QStyledItemDelegate(parent)
+{
+
+}
+
+NoFocusFrameDelegate::~NoFocusFrameDelegate()
 {
 
 }
@@ -14,6 +18,5 @@ void NoFocusFrameDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
 	{
 		itemOption.state ^= QStyle::State_HasFocus;
 	}
-
 	QStyledItemDelegate::paint(painter, itemOption, index);
 }

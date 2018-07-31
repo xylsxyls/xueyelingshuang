@@ -12,7 +12,8 @@ m_edit(nullptr),
 m_editTip(nullptr),
 m_accept(nullptr),
 m_editText(nullptr),
-m_passwordInputBox(nullptr)
+m_passwordInputBox(nullptr),
+m_isPassword(false)
 {
     m_editTip = new Label(this);
     m_accept = new COriginalButton(this);
@@ -28,7 +29,7 @@ m_passwordInputBox(nullptr)
 
     addListenKey(Qt::Key_Return);
     addListenKey(Qt::Key_Enter);
-    QObject::connect(this, &DialogShow::keyboardAccept, this, &DialogShow::onKeyboardAccept, Qt::QueuedConnection);
+	QObject::connect(this, &DialogShow::keyboardAccept, this, &InputDialog::onKeyboardAccept, Qt::QueuedConnection);
     m_acceptButton = m_accept;
 
     resize(340, 165);
@@ -40,6 +41,7 @@ void InputDialog::setLineEdit(const QString& defaultText, QString* editText, qin
     {
         return;
     }
+	m_isPassword = false;
     m_passwordInputBox->setVisible(false);
     m_edit->setVisible(true);
     DialogHelper::setLineEdit(m_edit, defaultText, maxLength);
@@ -52,6 +54,7 @@ void InputDialog::setPasswordInputBox(const QString& defaultText, QString* editT
     {
         return;
     }
+	m_isPassword = true;
     m_passwordInputBox->setVisible(true);
     m_edit->setVisible(false);
     DialogHelper::setPasswordInputBox(m_passwordInputBox, defaultText, maxLength);
@@ -83,9 +86,13 @@ void InputDialog::resizeEvent(QResizeEvent* eve)
 
 void InputDialog::closeEvent(QCloseEvent* eve)
 {
+	if (!check())
+	{
+		return;
+	}
     if (m_editText != nullptr)
     {
-        *m_editText = m_edit->text();
+		*m_editText = m_isPassword ? m_passwordInputBox->text() : m_edit->text();
     }
     PopDialog::closeEvent(eve);
 }
@@ -93,8 +100,8 @@ void InputDialog::closeEvent(QCloseEvent* eve)
 bool InputDialog::check()
 {
     return m_editTip != nullptr &&
-        m_accept != nullptr &&
-        m_edit != nullptr &&
-        m_passwordInputBox != nullptr &&
-        PopDialog::check();
+           m_accept != nullptr &&
+           m_edit != nullptr &&
+           m_passwordInputBox != nullptr &&
+           PopDialog::check();
 }

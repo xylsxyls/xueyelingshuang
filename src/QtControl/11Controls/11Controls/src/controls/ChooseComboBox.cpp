@@ -1,5 +1,4 @@
 #include "ChooseComboBox.h"
-#include "ListWidgetIdItem.h"
 #include "ListWidget.h"
 #include "Label.h"
 #include <QStylePainter>
@@ -13,7 +12,6 @@ m_choose(nullptr),
 m_chooseOrigin(0),
 m_listItemHeight(0)
 {
-	INIT(L"drop-down");
 	m_choose = new Label(nullptr);
 	init();
 }
@@ -29,10 +27,6 @@ ChooseComboBox::~ChooseComboBox()
 
 void ChooseComboBox::setComboBoxText(const QString& text)
 {
-	if (!check())
-	{
-		return;
-	}
 	m_comboBoxText = text;
 }
 
@@ -202,7 +196,6 @@ bool ChooseComboBox::check()
 
 void ChooseComboBox::init()
 {
-	setDefault();
 	setSelectEnable(false);
 	QObject::connect(this, &ComboBox::itemPressed, this, &ChooseComboBox::onItemPressed);
 }

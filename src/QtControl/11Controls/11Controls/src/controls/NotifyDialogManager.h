@@ -26,4 +26,5 @@ Q_SIGNALS:
 
 private slots:
     void onClosedSignal(DialogResult* result);
+	void onAlreadyShown();
 };

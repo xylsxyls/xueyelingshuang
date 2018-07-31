@@ -44,6 +44,7 @@ CExpressionPicker::CExpressionPicker(QWidget *parent)
     mPreView->setStyleSheet("background-color:white;");
     mPreView->installEventFilter(this);
     mMovie->setScaledSize(mPreView->size());
+	mMovie->setCacheMode(QMovie::CacheAll);
     mPreView->setMovie(mMovie);
 
 }
@@ -187,6 +188,15 @@ bool CExpressionPicker::eventFilter(QObject *obj, QEvent *e)
                                0);
             }
         }
+
+		if(e->type() == QEvent::Hide)
+		{
+			mMovie->stop();
+		}
+		if(e->type() == QEvent::Show)
+		{
+			mMovie->start();
+		}
     }
 
     return res;

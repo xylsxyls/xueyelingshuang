@@ -9,7 +9,6 @@ m_maxWidth(500),
 m_hasFocus(true),
 m_bottomRight(0,0)
 {
-	INIT(L"");
 	setWindowFlags(windowFlags() | Qt::FramelessWindowHint | Qt::Tool | Qt::ToolTip);
 	setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
 	setWordWrap(true);

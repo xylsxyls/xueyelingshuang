@@ -10,6 +10,12 @@ DialogManager::DialogManager()
 	
 }
 
+DialogManager::~DialogManager()
+{
+	DestroyAllOperateParam destroyAllOperateParam;
+	operateDialog(destroyAllOperateParam);
+}
+
 void DialogManager::makeDialog(DialogParam& param)
 {
 	static bool init = false;
@@ -19,6 +25,21 @@ void DialogManager::makeDialog(DialogParam& param)
 		QObject::connect(&PopDialogManager::instance(), &PopDialogManager::dialogSignal, &DialogManager::instance(), &DialogManager::dialogSignal);
 		QObject::connect(&NotifyDialogManager::instance(), &NotifyDialogManager::dialogSignal, &DialogManager::instance(), &DialogManager::dialogSignal);
 		QObject::connect(&StaticDialogManager::instance(), &StaticDialogManager::dialogSignal, &DialogManager::instance(), &DialogManager::dialogSignal);
+	}
+	//如果有相同的userId先关掉上一个的
+	if (param.m_userId != 0)
+	{
+		quint64 dialogId = AllocManager::instance().findDialogId(param.m_userId);
+		bool isStatic = AllocManager::instance().isStatic(dialogId);
+		if (isStatic == false)
+		{
+			DialogShow* dialogPtr = (DialogShow*)AllocManager::instance().findDialogPtr(AllocManager::instance().findDialogId(param.m_userId));
+			if (dialogPtr != nullptr)
+			{
+				dialogPtr->setWindowResult(BUSY);
+				dialogPtr->close();
+			}
+		}
 	}
 	switch (param.dialogType())
     {
@@ -101,9 +122,29 @@ void DialogManager::operateDialog(OperateParam& param)
 		operateParam.m_isExist = dialogExistByDialogIdOperateParam.m_isExist;
 		break;
 	}
+	case CHANGE_USER_RESULT_BY_DIALOG_ID_OPERATE:
+	{
+		ChangeUserResultByDialogIdOperateParam& operateParam = (ChangeUserResultByDialogIdOperateParam&)param;
+		DialogShow* dialogPtr = (DialogShow*)AllocManager::instance().findDialogPtr(operateParam.m_dialogId);
+		if (dialogPtr == nullptr)
+		{
+			return;
+		}
+		dialogPtr->setUserResult(operateParam.m_userResult);
+		break;
+	}
+	case CHANGE_USER_RESULT_BY_USER_ID_OPERATE:
+	{
+		ChangeUserResultByUserIdOperateParam& operateParam = (ChangeUserResultByUserIdOperateParam&)param;
+		ChangeUserResultByDialogIdOperateParam changeUserResultByDialogIdOperateParam;
+		changeUserResultByDialogIdOperateParam.m_dialogId = AllocManager::instance().findDialogId(operateParam.m_userId);
+		changeUserResultByDialogIdOperateParam.m_userResult = operateParam.m_userResult;
+		operateDialog(changeUserResultByDialogIdOperateParam);
+		break;
+	}
 	case DESTROY_DIALOG_BY_DIALOG_ID_OPERATE:
 	{
-		DestroyDialogOperateParam& operateParam = (DestroyDialogOperateParam&)param;
+		DestroyDialogByDialogIdOperateParam& operateParam = (DestroyDialogByDialogIdOperateParam&)param;
 		DialogShow* dialogPtr = (DialogShow*)AllocManager::instance().findDialogPtr(operateParam.m_dialogId);
 		if (dialogPtr == nullptr)
 		{
@@ -116,7 +157,7 @@ void DialogManager::operateDialog(OperateParam& param)
 	case DESTROY_DIALOG_BY_USER_ID_OPERATE:
 	{
 		DestroyDialogByUserIdOperateParam& operateParam = (DestroyDialogByUserIdOperateParam&)param;
-		DestroyDialogOperateParam destroyDialogOperateParam;
+		DestroyDialogByDialogIdOperateParam destroyDialogOperateParam;
 		destroyDialogOperateParam.m_dialogId = AllocManager::instance().findDialogId(operateParam.m_userId);
 		operateDialog(destroyDialogOperateParam);
 		break;
@@ -124,7 +165,7 @@ void DialogManager::operateDialog(OperateParam& param)
 	case DESTROY_LAST_DIALOG_OPERATE:
 	{
 		DestroyLastDialogOperateParam& operateParam = (DestroyLastDialogOperateParam&)param;
-		DestroyDialogOperateParam destroyDialogOperateParam;
+		DestroyDialogByDialogIdOperateParam destroyDialogOperateParam;
 		destroyDialogOperateParam.m_dialogId = AllocManager::instance().findLastDialogId();
 		operateDialog(destroyDialogOperateParam);
 		break;
@@ -134,7 +175,7 @@ void DialogManager::operateDialog(OperateParam& param)
 		std::vector<quint64> vecAllDialogId = AllocManager::instance().allDialogId();
 		for (auto itDialogId = vecAllDialogId.begin(); itDialogId != vecAllDialogId.end(); ++itDialogId)
 		{
-			DestroyDialogOperateParam destroyDialogOperateParam;
+			DestroyDialogByDialogIdOperateParam destroyDialogOperateParam;
 			destroyDialogOperateParam.m_dialogId = *itDialogId;
 			operateDialog(destroyDialogOperateParam);
 		}

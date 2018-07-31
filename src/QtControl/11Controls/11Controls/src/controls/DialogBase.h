@@ -23,11 +23,6 @@ public:
 	*/
 	void setNativeWindow(bool hasHandle);
 
-    /** 设置窗口弹出时是否抢焦点
-    @param [in] focus 是否抢焦点
-    */
-    void setExistFocus(bool focus);
-
     /** 设置倒计时，以秒为单位
     @param [in] timeOut 倒计时
     */
@@ -93,6 +88,10 @@ Q_SIGNALS:
     */
     void keyboardAccept(QObject* tar, Qt::Key key);
 
+	/** 窗口已经执行过显示操作发送信号
+	*/
+	void alreadyShown();
+
 protected:
 	void showEvent(QShowEvent* eve);
 	void timerEvent(QTimerEvent* eve);
@@ -100,7 +99,7 @@ protected:
     bool eventFilter(QObject* tar, QEvent* eve);
     void resizeEvent(QResizeEvent* eve);
     virtual void escEvent();
-    virtual bool check();
+    bool check();
 
 private:
     void listenAllControls();

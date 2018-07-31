@@ -1,5 +1,6 @@
 #include "TipLabelManager.h"
 #include "TipLabel.h"
+#include "../core/CSystem.h"
 
 TipLabelManager& TipLabelManager::instance()
 {
@@ -12,6 +13,10 @@ void TipLabelManager::popTip(const QPoint& pos, const QString& text, qint32 maxW
 	if (m_tipLabel == nullptr)
 	{
 		init();
+		if (m_tipLabel == nullptr)
+		{
+			return;
+		}
 	}
 	m_tipLabel->close();
 	m_tipLabel->setBottomRight(pos);
@@ -35,16 +40,16 @@ TipLabelManager::TipLabelManager()
 
 TipLabelManager::~TipLabelManager()
 {
-	if (m_tipLabel != nullptr)
-	{
-		delete m_tipLabel;
-		m_tipLabel = nullptr;
-	}
+	SafeDelete(m_tipLabel);
 }
 
 void TipLabelManager::init()
 {
 	m_tipLabel = new TipLabel(nullptr);
+	if (m_tipLabel == nullptr)
+	{
+		return;
+	}
 	m_tipLabel->setBorderRadius(2);
 	m_tipLabel->setBorderWidth(1);
 	m_tipLabel->setBorderColor(QColor(118, 118, 118, 255));

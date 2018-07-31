@@ -501,9 +501,6 @@
     <ClCompile Include="src\controls\ComboBox.cpp">
       <Filter>controls\QtControls\ComboBox</Filter>
     </ClCompile>
-    <ClCompile Include="src\controls\ListWidgetIdItem.cpp">
-      <Filter>controls\QtControls\ComboBox</Filter>
-    </ClCompile>
     <ClCompile Include="src\controls\HtmlComboBoxStyle.cpp">
       <Filter>controls\QtControls\ComboBox</Filter>
     </ClCompile>
@@ -661,9 +658,6 @@
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Generated Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\controls\ListWidgetIdItem.h">
-      <Filter>controls\QtControls\ComboBox</Filter>
     </ClInclude>
     <ClInclude Include="src\controls\HtmlComboBoxDelegate.h">
       <Filter>controls\QtControls\ComboBox</Filter>

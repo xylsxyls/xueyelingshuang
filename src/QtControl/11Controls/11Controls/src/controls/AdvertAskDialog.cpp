@@ -47,6 +47,7 @@ void AdvertAskDialog::initAdvertUrl(const QString& advertUrl)
     {
         return;
     }
+	m_advert->setVisible(false);
     m_advert->setUrl(QUrl(advertUrl));
     QWebPage* webPage = m_advert->page();
     if (webPage != nullptr)
@@ -54,6 +55,7 @@ void AdvertAskDialog::initAdvertUrl(const QString& advertUrl)
         webPage->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
     }
     QObject::connect(m_advert, &CWebViewEx::linkClicked, this, &AdvertAskDialog::onLinkClicked);
+	QObject::connect(m_advert, &CWebViewEx::loadFinished, this, &AdvertAskDialog::onLoadFinished);
 }
 
 void AdvertAskDialog::resizeEvent(QResizeEvent* eve)
@@ -74,6 +76,15 @@ void AdvertAskDialog::resizeEvent(QResizeEvent* eve)
 void AdvertAskDialog::onLinkClicked(const QUrl& url)
 {
 	emit advertClicked(url.toString());
+}
+
+void AdvertAskDialog::onLoadFinished(bool finished)
+{
+	if (!check())
+	{
+		return;
+	}
+	m_advert->setVisible(true);
 }
 
 bool AdvertAskDialog::check()

@@ -19,9 +19,9 @@ m_isShow(false)
         return;
     }
 
-    setWindowFlags(windowFlags() | Qt::Tool);
+	//使用Qt::Tool之后show出来的窗口不抢焦点
+	setWindowFlags(windowFlags() | Qt::Tool | Qt::WindowDoesNotAcceptFocus);
 
-    setExistFocus(false);
     setTouchBorderWidth(0);
 
     DialogHelper::setLabel(m_titleBar, "", QColor(0, 0, 0, 0), 12);//QColor(163, 175, 191, 255)

@@ -8,7 +8,7 @@ m_hasSetSelectedLabelTop(false),
 m_hasSetSelectedLabelBottom(false),
 m_hasSetTopLabel(false)
 {
-	INIT(L"item");
+	setItemName(L"item");
 	setBorderCollapse();
 	m_topLabel = new Label(this);
 	m_selectedLabelTop = new Label(this);
@@ -21,7 +21,6 @@ m_hasSetSelectedLabelTop(false),
 m_hasSetSelectedLabelBottom(false),
 m_hasSetTopLabel(false)
 {
-	INIT(L"item");
 	setBorderCollapse();
 	m_topLabel = new Label(this);
 	m_selectedLabelTop = new Label(this);
@@ -51,15 +50,19 @@ void CollapseMenu::setItemBorderColor(const QColor& normalColor,
 
 void CollapseMenu::paintEvent(QPaintEvent *eve)
 {
+	if (m_topLabel == nullptr || eve == nullptr)
+	{
+		Menu::paintEvent(eve);
+		return;
+	}
+
 	m_topLabel->setGeometry(0, 0, eve->rect().width(), 1);
 	if (m_hasSetTopLabel == false)
 	{
 		m_topLabel->setBackgroundColor(m_normalColor, m_normalColor, m_normalColor, true);
 		m_hasSetTopLabel = true;
 	}
-	
 	Menu::paintEvent(eve);
-	return;
 }
 
 void CollapseMenu::leaveEvent(QEvent* eve)

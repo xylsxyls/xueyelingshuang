@@ -29,6 +29,8 @@ m_separator(nullptr)
 
     DialogHelper::setLabel(m_greeting, "", QColor(187, 187, 195, 255), 13);
 	m_greeting->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+	m_greeting->setVisible(false);
+	m_separator->setVisible(false);
 
     DialogHelper::setSeparator(m_separator, true, QColor(60, 73, 104, 255), QColor(50, 60, 85, 255));
     DialogHelper::setLabel(m_horn, "", QColor(0, 0, 0, 0), 12);
@@ -57,7 +59,7 @@ m_separator(nullptr)
 	
 	m_time->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
 	
-    resize(234, 177);
+	resize(252, 193);
 }
 
 void LoginShowDialog::setTip(const QString& tip)
@@ -109,8 +111,8 @@ void LoginShowDialog::resizeEvent(QResizeEvent* eve)
         return;
     }
     m_greeting->setGeometry(QRect(8, 39, 190, 17));
-    m_horn->setGeometry(QRect(8, 66, 17, 17));
-    m_tip->setGeometry(QRect(24, 60, 157, 57));
+    m_horn->setGeometry(QRect(8, 45, 17, 17));
+	m_tip->setGeometry(QRect(24, 39, width() - 45, height() - 40));
     m_more->setGeometry(QRect(8, height() - 25, width() - 17, 22));
     m_time->setGeometry(QRect(7, height() - 13 - 6, width() - 5, 13));
     m_separator->setGeometry(6, 57, width() - 6 * 2, 2);

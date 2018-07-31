@@ -85,12 +85,13 @@ void NotifyDialogManager::showDialog(DialogParam& param)
     }
 
     notifyDialogPtr->setWindowResultAddr(new DialogResult);
-    notifyDialogPtr->setUserParam(param.m_userParam);
+	notifyDialogPtr->setUserResultPtr(new qint32(param.m_userResult));
 	notifyDialogPtr->setTimeRest(param.m_timeOut);
 	notifyDialogPtr->setTimeRestVisible(param.m_isCountDownVisible);
 	notifyDialogPtr->setTransientWindow(param.m_parent);
 
     QObject::connect(notifyDialogPtr, &DialogShow::closedSignal, this, &NotifyDialogManager::onClosedSignal);
+	QObject::connect(notifyDialogPtr, &DialogBase::alreadyShown, this, &NotifyDialogManager::onAlreadyShown, Qt::QueuedConnection);
     notifyDialogPtr->show();
 }
 
@@ -108,7 +109,8 @@ void NotifyDialogManager::onClosedSignal(DialogResult* result)
     }
     qint32 userId = AllocManager::instance().findUserId(dialogId);
     DialogType type = AllocManager::instance().findDialogType(dialogId);
-    qint32 userParam = dialogPtr->userParam();
+    qint32 userResult = dialogPtr->userResult();
+	qint32* userResultPtr = dialogPtr->userResultPtr();
 
     NotifyDialogDoneSignalParam param;
     param.m_dialogId = dialogId;
@@ -118,8 +120,17 @@ void NotifyDialogManager::onClosedSignal(DialogResult* result)
     {
         param.m_result = *result;
     }
-    param.m_userParam = userParam;
+    param.m_userResult = userResult;
 	emit dialogSignal(param);
     AllocManager::instance().removeByDialogId(dialogId);
     delete result;
+	delete userResultPtr;
+}
+
+void NotifyDialogManager::onAlreadyShown()
+{
+	AlreadyShownSignalParam param;
+	param.m_dialog = AllocManager::instance().findDialogId((COriginalDialog*)sender());
+	param.m_userId = AllocManager::instance().findUserId(param.m_dialog);
+	emit dialogSignal(param);
 }

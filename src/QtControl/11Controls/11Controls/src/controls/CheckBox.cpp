@@ -4,7 +4,7 @@ CheckBox::CheckBox(QWidget* parent) :
 ControlShow(parent)
 {
 	ControlBase::setControlShow(this);
-	INIT(L"indicator");
+	setItemName(L"indicator");
 }
 
 CheckBox::~CheckBox()

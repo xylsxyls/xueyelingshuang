@@ -28,5 +28,8 @@ public:
 	virtual ~Label();
 
 public:
-	
+	/** …Ë÷√––æ‡
+	@param [in] lineHeight ––æ‡
+	*/
+	void setLineHeight(qint32 lineHeight);
 };

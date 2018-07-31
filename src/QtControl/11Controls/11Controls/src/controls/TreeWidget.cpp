@@ -7,12 +7,16 @@ TreeWidget::TreeWidget(QWidget* parent) :
 ControlShow(parent)
 {
 	ControlBase::setControlShow(this);
-	INIT(L"item");
+	setItemName(L"item");
 
 	setIndentation(0);
 	setHeaderHidden(true);
 	setSelectionMode(QAbstractItemView::NoSelection);
-	setItemDelegate(new NoFocusFrameDelegate(this));
+	NoFocusFrameDelegate* frameDelegate = new NoFocusFrameDelegate(this);
+	if (frameDelegate != nullptr)
+	{
+		setItemDelegate(frameDelegate);
+	}
 }
 
 TreeWidget::~TreeWidget()
@@ -27,7 +31,12 @@ void TreeWidget::setMaxHeight(qint32 maxHeight, bool rePaint)
 
 void TreeWidget::initScrollBar()
 {
-	verticalScrollBar()->setStyleSheet(
+	QScrollBar* scrollbar = verticalScrollBar();
+	if (scrollbar == nullptr)
+	{
+		return;
+	}
+	scrollbar->setStyleSheet(
 		"QScrollBar:vertical"
 		"{"
 			"width:6px;"
@@ -136,10 +145,4 @@ void TreeWidget::removeWidget(QWidget* widget, qint32 column)
 	removeItemWidget(item, column);
 	delete widget;
 	delete item;
-}
-
-void TreeWidget::dropEvent(QDropEvent* eve)
-{
-
-	QTreeWidget::dropEvent(eve);
 }

@@ -228,12 +228,10 @@ Q_SIGNALS:
 
 protected:
 	virtual void showEvent(QShowEvent* eve);
-	virtual void mouseReleaseEvent(QMouseEvent* eve);
 	virtual void mouseMoveEvent(QMouseEvent* eve);
+	virtual void keyPressEvent(QKeyEvent* eve);
 	virtual void showPopup();
 	virtual void hidePopup();
-	virtual void hideEvent(QHideEvent* eve);
-	virtual void keyPressEvent(QKeyEvent* eve);
 
 protected:
 	bool check();
@@ -262,5 +260,4 @@ private:
 	qint32 m_dropDownHeight;
 	qint32 m_dropDownBorderWidth;
 	bool m_dropDownVisible;
-	QEvent* m_hoverLeaveEvent;
 };

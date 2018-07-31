@@ -15,17 +15,18 @@ public:
 	virtual ~COriginalDialog();
 
 private:
-	int     mTouchBorderWidth;
-	int     mCustomerTitleBarHeight;
-	QRect   mCustomerTitleBarRect;
-	bool    mDwmInitialized;
-    bool    mAltF4Enable;
+	int      mTouchBorderWidth;
+	int      mCustomerTitleBarHeight;
+	QRect    mCustomerTitleBarRect;
+	bool     mDwmInitialized;
+	bool     mAltF4Enable;
 
 protected:
 	long onNcHitTest(QPoint pt);
 	void resizeEvent(QResizeEvent *e);
 	virtual bool nativeEvent(const QByteArray &eventType, void *message, long *result);
     virtual void altF4PressedEvent();
+	bool eventFilter(QObject* tar, QEvent* eve);
 	//bool dwm_init(HWND hwnd);
 	//bool isDwmEnabled();
 

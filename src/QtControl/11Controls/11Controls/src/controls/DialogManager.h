@@ -16,6 +16,10 @@ public:
     */
     DialogManager();
 
+	/** 析构函数
+	*/
+	~DialogManager();
+
 public:
     /** 创建窗口
     @param [in] type 窗口类型

@@ -1,25 +1,22 @@
-#ifndef NOFOCUSFRAMEDELEGATE_H
-#define NOFOCUSFRAMEDELEGATE_H
-
+#pragma once
 #include <QStyledItemDelegate>
 #include "ControlsMacro.h"
 
-/**
-* 去除虚线框
+/** 去除虚线框
 */
 class NoFocusFrameDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	explicit NoFocusFrameDelegate(QWidget *parent = 0);
-	virtual ~NoFocusFrameDelegate(){};
+	/** 构造函数
+	@param [in] parent 父窗口指针
+	*/
+	NoFocusFrameDelegate(QWidget* parent = nullptr);
 
+	/** 析构函数
+	*/
+	virtual ~NoFocusFrameDelegate();
+
+public:
 	void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
-
-signals:
-
-	public slots :
-
 };
-
-#endif // NOFOCUSFRAMEDELEGATE_H

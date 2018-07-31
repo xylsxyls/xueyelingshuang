@@ -6,7 +6,7 @@ ControlShow(parent),
 m_click(true)
 {
 	ControlBase::setControlShow(this);
-	INIT(L"item");
+	setItemName(L"item");
 }
 
 ListWidget::~ListWidget()
@@ -26,6 +26,11 @@ void ListWidget::setClickEnable(bool enable)
 
 void ListWidget::mousePressEvent(QMouseEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		QListWidget::mousePressEvent(eve);
+		return;
+	}
 	if (m_click == false)
 	{
 		eve->ignore();

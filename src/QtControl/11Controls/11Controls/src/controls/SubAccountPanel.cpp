@@ -319,7 +319,7 @@ void SubAccountItemView::onChangeNameButtonClicked()
 void SubAccountItemView::showSwitchButton(bool s)
 {
 	mSwitchButton->setVisible(s);
-	mChangeNameButton->setVisible(s);
+	//mChangeNameButton->setVisible(s);
 }
 
 void SubAccountItemView::setBlocked(bool s)

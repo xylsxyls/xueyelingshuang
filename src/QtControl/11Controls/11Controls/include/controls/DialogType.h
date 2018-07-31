@@ -42,9 +42,9 @@ enum DialogResult
     */
     CODE_DESTROY = -1,
 
-    /** 代码关闭
+    /** 弹框因为UserId重复而关闭
     */
-    CODE_CLOSE = -2
+    BUSY = -2
 };
 
 enum DialogType
@@ -183,6 +183,14 @@ enum OperateType
 	/** 通过用户自定义ID判断窗口是否存在
 	*/
 	DIALOG_EXIST_BY_USER_ID_OPERATE,
+
+	/** 通过DialogId改变用户自定义参数
+	*/
+	CHANGE_USER_RESULT_BY_DIALOG_ID_OPERATE,
+
+	/** 通过UserId改变用户自定义参数
+	*/
+	CHANGE_USER_RESULT_BY_USER_ID_OPERATE,
 
 	/** 销毁窗口
 	*/
@@ -545,16 +553,54 @@ struct DialogExistByUserIdOperateParam : public OperateParam
 	}
 };
 
+/** 修改用户自定义参数
+*/
+struct ChangeUserResultByDialogIdOperateParam : public OperateParam
+{
+	//窗口ID
+	quint64 m_dialogId;
+	//用户自定义参数
+	qint32 m_userResult;
+
+	/** 构造函数
+	*/
+	ChangeUserResultByDialogIdOperateParam()
+	{
+		m_operateType = CHANGE_USER_RESULT_BY_DIALOG_ID_OPERATE;
+		m_dialogId = 0;
+		m_userResult = -1;
+	}
+};
+
+/** 修改用户自定义参数
+*/
+struct ChangeUserResultByUserIdOperateParam : public OperateParam
+{
+	//窗口ID
+	quint64 m_userId;
+	//用户自定义参数
+	qint32 m_userResult;
+
+	/** 构造函数
+	*/
+	ChangeUserResultByUserIdOperateParam()
+	{
+		m_operateType = CHANGE_USER_RESULT_BY_USER_ID_OPERATE;
+		m_userId = 0;
+		m_userResult = -1;
+	}
+};
+
 /** 根据ID号关闭窗口（无动画效果）
 */
-struct DestroyDialogOperateParam : public OperateParam
+struct DestroyDialogByDialogIdOperateParam : public OperateParam
 {
 	//窗口ID号
 	quint64 m_dialogId;
 
 	/** 构造函数
 	*/
-	DestroyDialogOperateParam()
+	DestroyDialogByDialogIdOperateParam()
 	{
 		m_operateType = DESTROY_DIALOG_BY_DIALOG_ID_OPERATE;
 		m_dialogId = 0;
@@ -695,7 +741,11 @@ enum SignalType
 
 	/** 静态框关闭发送信号
 	*/
-	STATIC_DIALOG_DONE_SIGNAL
+	STATIC_DIALOG_DONE_SIGNAL,
+
+	/** 窗口已经执行显示操作发送信号
+	*/
+	ALREADY_SHOWN_SIGNAL
 };
 
 /** 信号参数
@@ -719,6 +769,26 @@ protected:
 	SignalType m_signalType;
 };
 Q_DECLARE_METATYPE(SignalParam)
+
+/** 窗口显示完毕信号
+*/
+struct AlreadyShownSignalParam : public SignalParam
+{
+	//窗口ID，out
+	quint64 m_dialog;
+	//用户自定义ID，out
+	quint64 m_userId;
+
+	/** 构造函数
+	*/
+	AlreadyShownSignalParam()
+	{
+		m_signalType = ALREADY_SHOWN_SIGNAL;
+		m_dialog = 0;
+		m_userId = 0;
+	}
+};
+Q_DECLARE_METATYPE(AlreadyShownSignalParam)
 
 /** 转到后台下载信号
 */
@@ -839,7 +909,7 @@ struct DialogDoneSignalParam : public SignalParam
 	//窗口返回值
 	DialogResult m_result;
 	//用户自定义参数
-	qint32 m_userParam;
+	qint32 m_userResult;
 
 	/** 构造函数
 	*/
@@ -848,8 +918,8 @@ struct DialogDoneSignalParam : public SignalParam
 		m_dialogId = 0;
 		m_userId = 0;
 		m_dialogType = ERROR_DIALOG_TYPE;
-		m_result = CODE_DESTROY;
-		m_userParam = -1;
+		m_result = ERROR_RESULT;
+		m_userResult = -1;
 	}
 };
 Q_DECLARE_METATYPE(DialogDoneSignalParam)
@@ -901,8 +971,8 @@ struct DialogParam
     quint64 m_dialogId;
 	//用户自定义ID
     quint64 m_userId;
-	//用户自定义参数
-    qint32 m_userParam;
+	//用户自定义值
+    qint32 m_userResult;
 	//窗口标题
     QString m_title;
 	//窗口返回值
@@ -921,7 +991,7 @@ struct DialogParam
 		m_dialogType = ERROR_DIALOG_TYPE;
         m_dialogId = 0;
         m_userId = 0;
-        m_userParam = -1;
+		m_userResult = -1;
         m_title = QStringLiteral("11平台");
         m_result = ERROR_RESULT;
         m_parent = nullptr;
@@ -1043,6 +1113,7 @@ struct AdvertAskDialogParam : public DialogParam
 	*/
     AdvertAskDialogParam()
     {
+		m_advertUrl = "http://www.baidu.com/";
 		m_dialogType = ADVERT_ASK_DIALOG;
         m_tip = QStringLiteral("包含广告的询问框提示");
         m_acceptText = QStringLiteral("确认");

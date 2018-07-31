@@ -5,7 +5,7 @@
 
 DialogShow::DialogShow() :
 m_acceptButton(nullptr),
-m_userParam(-1),
+m_userResult(nullptr),
 m_time(nullptr),
 m_exit(nullptr),
 m_result(nullptr)
@@ -29,14 +29,32 @@ void DialogShow::setTimeRestVisible(bool visible)
     m_time->setVisible(visible);
 }
 
-void DialogShow::setUserParam(qint32 userParam)
+void DialogShow::setUserResult(qint32 userResult)
 {
-    m_userParam = userParam;
+	if (m_userResult == nullptr)
+	{
+		return;
+	}
+	*m_userResult = userResult;
 }
 
-qint32 DialogShow::userParam()
+qint32 DialogShow::userResult()
 {
-    return m_userParam;
+	if (m_userResult == nullptr)
+	{
+		return -1;
+	}
+    return *m_userResult;
+}
+
+void DialogShow::setUserResultPtr(qint32* userResult)
+{
+	m_userResult = userResult;
+}
+
+qint32* DialogShow::userResultPtr()
+{
+	return m_userResult;
 }
 
 void DialogShow::initAcceptButton(COriginalButton* button)
@@ -133,8 +151,5 @@ void DialogShow::showEvent(QShowEvent* eve)
 void DialogShow::closeEvent(QCloseEvent* eve)
 {
     DialogBase::closeEvent(eve);
-    if (m_result != nullptr)
-    {
-        emit closedSignal(m_result);
-    }
+	emit closedSignal(m_result);
 }

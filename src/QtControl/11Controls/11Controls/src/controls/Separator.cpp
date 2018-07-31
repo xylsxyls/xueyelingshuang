@@ -6,7 +6,6 @@ m_colorLabel(nullptr),
 m_isHorizon(true)
 {
 	ControlBase::setControlShow(this);
-	INIT(L"");
     m_colorLabel = new Label(this);
 }
 

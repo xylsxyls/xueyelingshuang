@@ -4,7 +4,7 @@ ProgressBar::ProgressBar(QWidget* parent) :
 ControlShow(parent)
 {
 	ControlBase::setControlShow(this);
-	INIT(L"chunk");
+	setItemName(L"chunk");
 }
 
 ProgressBar::~ProgressBar()

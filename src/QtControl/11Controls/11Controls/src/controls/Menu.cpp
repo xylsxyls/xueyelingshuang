@@ -9,7 +9,7 @@ ControlShow(parent),
 m_pCustomStyle(nullptr)
 {
 	ControlBase::setControlShow(this);
-	INIT(L"item");
+	setItemName(L"item");
 	m_pCustomStyle = new MenuCustomStyle;
 	if (m_pCustomStyle != nullptr)
 	{
@@ -32,7 +32,7 @@ Menu::Menu(const QString& title, const QString& icon, const QSize& size, QWidget
 ControlShow(parent)
 {
 	ControlBase::setControlShow(this);
-	init(L"QMenu", L"item");
+	setItemName(L"item");
 	QMenu::setTitle(title);
 
 	QMenu::setIcon(QPixmap(icon).scaled(size));
@@ -51,7 +51,7 @@ QAction* Menu::addAction(const QString& text,
 					 const QString& checkIcon,
 					 const QSize& checkIconSize)
 {
-	if (m_pCustomStyle)
+	if (m_pCustomStyle != nullptr)
 	{
 		qint32 uncheckMax = qMax(uncheckIconSize.width(), uncheckIconSize.height());
 		qint32 checkMax = qMax(checkIconSize.width(), checkIconSize.height());
@@ -105,7 +105,7 @@ QAction* Menu::exec(const QPoint& point)
 	QAction* action = QMenu::exec(point);
 	if (action == nullptr)
 	{
-		return action;
+		return nullptr;
 	}
 	QIcon icon = action->icon();
 	action->setIcon(ChangeIcon(action, icon));
@@ -135,7 +135,7 @@ QIcon Menu::ChangeIcon(QAction* action, const QIcon& icon)
 	return QIcon();
 }
 
-//m_controlStyle[m_className](true, m_itemName)(UNCHECK)(NORMAL).AddKeyValue(L"top", L"1px");
-//m_controlStyle[m_className](true, m_itemName)(UNCHECK)(NORMAL).AddKeyValue(L"left", L"1px");
-//m_controlStyle[m_className](true, m_itemName)(UNCHECK)(NORMAL).AddKeyValue(L"right", L"1px");
-//m_controlStyle[m_className](true, m_itemName)(UNCHECK)(NORMAL).AddKeyValue(L"bottom", L"1px");
+//m_controlStyle.addClassName()(true, m_itemName)(UNCHECK)(NORMAL).AddKeyValue(L"top", L"1px");
+//m_controlStyle.addClassName()(true, m_itemName)(UNCHECK)(NORMAL).AddKeyValue(L"left", L"1px");
+//m_controlStyle.addClassName()(true, m_itemName)(UNCHECK)(NORMAL).AddKeyValue(L"right", L"1px");
+//m_controlStyle.addClassName()(true, m_itemName)(UNCHECK)(NORMAL).AddKeyValue(L"bottom", L"1px");

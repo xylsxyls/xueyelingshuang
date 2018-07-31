@@ -26,6 +26,12 @@ private slots:
 	void onDialogSignal(const SignalParam& param);
 	void onCurrentItemChanged(qint32 index, qint64 id, const QString& text);
 
+	void onCurrentItemChanged2(qint64 id, const QString& text);
+
+	void onCurrentIndexChanged(const QString& text);
+
+	void onClicked();
+
 	void timerEvent(QTimerEvent* eve);
 private:
 	Ui::ControlsTestClass ui;

@@ -23,7 +23,12 @@ COriginalDialog::COriginalDialog(QWidget *parent)
 
 COriginalDialog::~COriginalDialog()
 {
-
+	//不能在closeEvent里做这段操作，因为当临时父窗口改变之后静态框无法再次显示
+	//QWindow* handle = windowHandle();
+	//if (handle != nullptr && handle->transientParent() != nullptr)
+	//{
+	//	handle->setTransientParent(nullptr);
+	//}
 }
 
 long COriginalDialog::onNcHitTest(QPoint pt)
@@ -233,7 +238,7 @@ long COriginalDialog::onNcHitTest(QPoint pt)
 void COriginalDialog::resizeEvent(QResizeEvent *e)
 {
 	QDialog::resizeEvent(e);
-	mCustomerTitleBarRect = QRect(0,0, this->width(), mCustomerTitleBarHeight);
+	mCustomerTitleBarRect = QRect(0, 0, width(), mCustomerTitleBarHeight);
 }
 
 bool COriginalDialog::nativeEvent(const QByteArray &eventType, void *message, long *result)
@@ -380,6 +385,28 @@ void COriginalDialog::altF4PressedEvent()
     close();
 }
 
+bool COriginalDialog::eventFilter(QObject* tar, QEvent* eve)
+{
+	bool res = QDialog::eventFilter(tar, eve);
+	if (tar == nullptr || eve == nullptr)
+	{
+		return res;
+	}
+	switch (eve->type())
+	{
+	case QEvent::Hide:
+	{
+		if (tar == transientWindow())
+		{
+			close();
+		}
+	}
+	default:
+		break;
+	}
+	return res;
+}
+
 //bool COriginalDialog::dwm_init(HWND hwnd)
 //{
 //	CWinOSVersion osVer;
@@ -454,6 +481,10 @@ void COriginalDialog::setTransientWindow(QWindow* window)
         return;
     }
     QWindow* realTransientWindow = getAncestorHandle(window);
+	if (realTransientWindow != nullptr)
+	{
+		realTransientWindow->installEventFilter(this);
+	}
     handle->setTransientParent(realTransientWindow);
 }
 

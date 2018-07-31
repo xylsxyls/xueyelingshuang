@@ -19,27 +19,23 @@ m_hoverIndex(-1),
 m_dropDownWidth(-1),
 m_dropDownHeight(-1),
 m_dropDownVisible(true),
-m_dropDownBorderWidth(-1),
-m_hoverLeaveEvent(nullptr)
+m_dropDownBorderWidth(-1)
 {
 	ControlBase::setControlShow(this);
-	INIT(L"drop-down");
-
-	m_hoverLeaveEvent = new QEvent(QEvent::HoverLeave);
+	setItemName(L"drop-down");
 	m_listWidget = new ListWidget(this);
-
 	init();
 }
 
 ComboBox::~ComboBox()
 {
-	SafeDelete(m_hoverLeaveEvent);
+	
 }
 
 void ComboBox::setDefault()
 {
 	//下拉边框粗度设为0，因为QListWidget已有边框，此属性px无效
-	m_controlStyle[m_className](1, L"QAbstractItemView").AddKeyValue(L"border", L"none");
+	m_controlStyle.addClassName()(SPACE, L"QAbstractItemView").AddKeyValue(L"border", L"none");
 	setBorderWidth(1);
 	setTextOrigin(0);
 }
@@ -292,13 +288,12 @@ void ComboBox::setListMaxHeight(qint32 maxHeight)
 	{
 		return;
 	}
-	QWidget* widget = (QWidget*)viewPtr->parent();
+	QWidget* widget = viewPtr->parentWidget();
 	if (widget == nullptr)
 	{
 		return;
 	}
 	widget->setStyleSheet(QString("max-height:%1px").arg(maxHeight));
-	//((QWidget*)(view()->parent()))->setStyleSheet(QString("max-height:%1px").arg(maxHeight));
 }
 
 void ComboBox::setDropDownVisible(bool enable, bool rePaint)
@@ -340,18 +335,15 @@ void ComboBox::setSelectEnable(bool enable)
 
 void ComboBox::showEvent(QShowEvent* eve)
 {
+	//这里重写repaint为了刷新下拉列表控件
 	repaint();
-}
-
-void ComboBox::mouseReleaseEvent(QMouseEvent* eve)
-{
-	return;
+	QComboBox::showEvent(eve);
 }
 
 void ComboBox::mouseMoveEvent(QMouseEvent* eve)
 {
-	QComboBox::mouseMoveEvent(eve);
 	setToolTip(currentText());
+	QComboBox::mouseMoveEvent(eve);
 }
 
 void ComboBox::showPopup()
@@ -364,19 +356,17 @@ void ComboBox::showPopup()
 	m_imageStateMap[NORMAL][NORMAL] = m_dropDownImgExpandNormal;
 	m_imageStateMap[NORMAL][DISABLED] = m_dropDownImgExpandDisabled;
 	ControlBase::setImageStateMap(m_imageStateMap, m_imagePath, m_dropDownImgStateCount, L"border-image", L"down-arrow", true);
-	if (m_listOrigin != 0)
-	{
-		QRect rect = geometry();
-		QRect moveRect = rect;
-		moveRect.setBottom(rect.bottom() + m_listOrigin);
-		setGeometry(moveRect);
-		QComboBox::showPopup();
-		setGeometry(rect);
-	}
-	else
+	if (m_listOrigin == 0)
 	{
 		QComboBox::showPopup();
+		return;
 	}
+	QRect rect = geometry();
+	QRect moveRect = rect;
+	moveRect.setBottom(rect.bottom() + m_listOrigin);
+	setGeometry(moveRect);
+	QComboBox::showPopup();
+	setGeometry(rect);
 	return;
 }
 
@@ -386,23 +376,16 @@ void ComboBox::hidePopup()
 	m_imageStateMap[NORMAL][DISABLED] = m_dropDownImgDisabled;
 	ControlBase::setImageStateMap(m_imageStateMap, m_imagePath, m_dropDownImgStateCount, L"border-image", L"down-arrow", true);
 	QComboBox::hidePopup();
-	if (!check())
-	{
-		return;
-	}
-	event(m_hoverLeaveEvent);
-	update();
-	return;
-}
-
-void ComboBox::hideEvent(QHideEvent* eve)
-{
-	QComboBox::hideEvent(eve);
-	return;
+	event(&(QEvent(QEvent::HoverLeave)));
 }
 
 void ComboBox::keyPressEvent(QKeyEvent* eve)
 {
+	if (eve == nullptr)
+	{
+		QComboBox::keyPressEvent(eve);
+		return;
+	}
 	if (eve->key() == Qt::Key_Enter || eve->key() == Qt::Key_Return)
 	{
 		return;
@@ -412,7 +395,7 @@ void ComboBox::keyPressEvent(QKeyEvent* eve)
 
 bool ComboBox::check()
 {
-	return m_listWidget != nullptr && m_hoverLeaveEvent != nullptr;
+	return m_listWidget != nullptr;
 }
 
 void ComboBox::init()
@@ -421,19 +404,35 @@ void ComboBox::init()
 	{
 		return;
 	}
-	setModel(m_listWidget->model());
+	QAbstractItemModel* model = m_listWidget->model();
+	if (model != nullptr)
+	{
+		setModel(model);
+	}
 	setView(m_listWidget);
-	setItemDelegate(new NoFocusFrameDelegate(this));
-
+	NoFocusFrameDelegate* frameDelegate = new NoFocusFrameDelegate(this);
+	if (frameDelegate != nullptr)
+	{
+		setItemDelegate(frameDelegate);
+	}
 	setMouseTracking(true);
 	QObject::connect(m_listWidget, &QListWidget::itemEntered, this, &ComboBox::listItemEntered);
 	QObject::connect(m_listWidget, &ListWidget::itemPressed, this, &ComboBox::listItemPressed);
 	setDefault();
 
-	m_listWidget->parentWidget()->setWindowFlags((m_listWidget->parentWidget()->windowFlags() | Qt::FramelessWindowHint));
-	m_listWidget->parentWidget()->setAttribute(Qt::WA_TranslucentBackground);
+	QWidget* parentWidget = m_listWidget->parentWidget();
+	if (parentWidget != nullptr)
+	{
+		parentWidget->setWindowFlags((parentWidget->windowFlags() | Qt::FramelessWindowHint));
+		parentWidget->setAttribute(Qt::WA_TranslucentBackground);
+	}
 
-	m_listWidget->verticalScrollBar()->setStyleSheet(
+	QScrollBar* scrollBar = m_listWidget->verticalScrollBar();
+	if (scrollBar == nullptr)
+	{
+		return;
+	}
+	scrollBar->setStyleSheet(
 		"QScrollBar:vertical"
 		"{"
 		"width:3px;"

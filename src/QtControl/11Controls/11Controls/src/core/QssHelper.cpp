@@ -9,6 +9,11 @@ std::wstring QssHelper::QColorToWString(const QColor& color)
 
 bool QssHelper::GetPicHeight(const std::wstring& path, qint32 count, std::vector<qint32>& vecHeight)
 {
+	if (count == 0)
+	{
+		return false;
+	}
+
 	QString imgPath = QString::fromStdWString(path.c_str());
 	QPixmap imgPixmap;
 	if (imgPixmap.load(imgPath) == false)
@@ -26,13 +31,13 @@ bool QssHelper::GetPicHeight(const std::wstring& path, qint32 count, std::vector
 
 	qint32 height = 0;
 	vecHeight.clear();
-	while (height != imgHeight)
+	while (height <= imgHeight)
 	{
 		vecHeight.push_back(height);
 		height += stepHeight;
 	}
 
-	if (vecHeight.size() != count)
+	if (vecHeight.size() != count + 1)
 	{
 		return false;
 	}

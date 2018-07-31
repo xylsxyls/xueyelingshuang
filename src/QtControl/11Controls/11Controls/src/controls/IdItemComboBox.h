@@ -2,7 +2,7 @@
 #include "ComboBox.h"
 #include "ControlsMacro.h"
 
-/** 定做类，节点对应ID编号，当点击框内容改变时发射信号
+/** 定做类，节点对应ID编号，当点击框内容改变时发射信号，Qt::UserRole + 777不可使用
 */
 class ControlsAPI IdItemComboBox : public ComboBox
 {
@@ -72,4 +72,7 @@ private slots:
 	void curIndexChanged(const QString& str);
 	void curIndexChanged(int index){}
 	void onItemPressed(qint32 index);
+
+private:
+	static const qint32 s_idRole = Qt::UserRole + 777;
 };

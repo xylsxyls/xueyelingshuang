@@ -146,11 +146,13 @@ void PopDialogManager::popDialog(DialogParam& param)
 
     popDialogPtr->setWindowResultAddr(&(param.m_result));
     popDialogPtr->setWindowTiTle(param.m_title);
-    popDialogPtr->setUserParam(param.m_userParam);
+	popDialogPtr->setUserResultPtr(&(param.m_userResult));
     popDialogPtr->setTimeRest(param.m_timeOut);
     popDialogPtr->setTimeRestVisible(param.m_isCountDownVisible);
     popDialogPtr->setTransientWindow(param.m_parent);
     QObject::connect(popDialogPtr, &DialogShow::closedSignal, this, &PopDialogManager::onClosedSignal);
+	QObject::connect(popDialogPtr, &DialogBase::alreadyShown, this, &PopDialogManager::onAlreadyShown, Qt::QueuedConnection);
+
     popDialogPtr->exec();
 }
 
@@ -277,7 +279,7 @@ void PopDialogManager::onClosedSignal(DialogResult* result)
     }
     qint32 userId = AllocManager::instance().findUserId(dialogId);
     DialogType type = AllocManager::instance().findDialogType(dialogId);
-    qint32 userParam = dialogPtr->userParam();
+    qint32 userResult = dialogPtr->userResult();
 
 	PopDialogDoneSignalParam param;
     param.m_dialogId = dialogId;
@@ -287,7 +289,7 @@ void PopDialogManager::onClosedSignal(DialogResult* result)
     {
         param.m_result = *result;
     }
-    param.m_userParam = userParam;
+    param.m_userResult = userResult;
 
 	emit dialogSignal(param);
     AllocManager::instance().removeByDialogId(dialogId);
@@ -334,6 +336,14 @@ void PopDialogManager::onCopyPath(const QString& path)
 	CopyPathSignalParam param;
 	param.m_userId = userId();
 	param.m_path = path;
+	emit dialogSignal(param);
+}
+
+void PopDialogManager::onAlreadyShown()
+{
+	AlreadyShownSignalParam param;
+	param.m_dialog = AllocManager::instance().findDialogId((COriginalDialog*)sender());
+	param.m_userId = userId();
 	emit dialogSignal(param);
 }
 

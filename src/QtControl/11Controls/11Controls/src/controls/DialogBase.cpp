@@ -24,21 +24,11 @@ DialogBase::~DialogBase()
             widget->installEventFilter(nullptr);
         }
     }
-    QWindow* handle = windowHandle();
-    if (handle != nullptr && handle->transientParent() != nullptr)
-    {
-        handle->setTransientParent(nullptr);
-    }
 }
 
 void DialogBase::setNativeWindow(bool hasHandle)
 {
     setAttribute(Qt::WA_NativeWindow, hasHandle);
-}
-
-void DialogBase::setExistFocus(bool focus)
-{
-    setAttribute(Qt::WA_ShowWithoutActivating, !focus);
 }
 
 void DialogBase::setTimeRest(qint32 timeOut)
@@ -138,6 +128,7 @@ void DialogBase::showEvent(QShowEvent* eve)
 
 	QDialog::showEvent(eve);
 	raise();
+	emit alreadyShown();
 }
 
 void DialogBase::timerEvent(QTimerEvent* eve)

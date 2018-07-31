@@ -1,11 +1,10 @@
 #include "IdItemComboBox.h"
-#include "ListWidgetIdItem.h"
+#include <QListWidgetItem>
 #include "ListWidget.h"
 
 IdItemComboBox::IdItemComboBox(QWidget* parent) :
 ComboBox(parent)
 {
-	INIT(L"drop-down");
 	init();
 }
 
@@ -16,15 +15,27 @@ IdItemComboBox::~IdItemComboBox()
 
 void IdItemComboBox::addItem(const QString& text, qint64 id)
 {
-	ListWidgetIdItem* widgetItem = new ListWidgetIdItem;
+	if (!check())
+	{
+		return;
+	}
+	QListWidgetItem* widgetItem = new QListWidgetItem;
+	if (widgetItem == nullptr)
+	{
+		return;
+	}
 	widgetItem->setText(text);
 	widgetItem->setToolTip(text);
-	widgetItem->setId(id);
+	widgetItem->setData(s_idRole, id);
 	m_listWidget->addItem(widgetItem);
 }
 
 void IdItemComboBox::addItems(const QStringList& textList, const QList<qint64>& idList)
 {
+	if (!check())
+	{
+		return;
+	}
 	if ((idList.size() != textList.size()) && (idList.empty() == false))
 	{
 		return;
@@ -32,18 +43,14 @@ void IdItemComboBox::addItems(const QStringList& textList, const QList<qint64>& 
 	qint32 index = -1;
 	while (index++ != textList.size() - 1)
 	{
-		ListWidgetIdItem* widgetItem = new ListWidgetIdItem;
-		widgetItem->setText(textList[index]);
-		widgetItem->setToolTip(textList[index]);
-		if (idList.empty())
+		QListWidgetItem* widgetItem = new QListWidgetItem;
+		if (widgetItem != nullptr)
 		{
-			widgetItem->setId(0);
+			widgetItem->setText(textList[index]);
+			widgetItem->setToolTip(textList[index]);
+			widgetItem->setData(s_idRole, idList.empty() ? 0 : idList[index]);
+			m_listWidget->addItem(widgetItem);
 		}
-		else
-		{
-			widgetItem->setId(idList[index]);
-		}
-		m_listWidget->addItem(widgetItem);
 	}
 }
 
@@ -54,17 +61,20 @@ void IdItemComboBox::setCurrentItemByFirstId(qint64 id)
 
 qint32 IdItemComboBox::itemIndexByFirstId(qint64 id)
 {
+	if (!check())
+	{
+		return -1;
+	}
 	qint32 index = -1;
 	while (index++ != m_listWidget->count() - 1)
 	{
-		ListWidgetIdItem* item = (ListWidgetIdItem*)m_listWidget->item(index);
-		if (item == nullptr)
+		QListWidgetItem* item = m_listWidget->item(index);
+		if (item != nullptr)
 		{
-			continue;
-		}
-		if (item->getId() == id)
-		{
-			return index;
+			if (item->data(s_idRole).toLongLong() == id)
+			{
+				return index;
+			}
 		}
 	}
 	return -1;
@@ -77,12 +87,16 @@ qint64 IdItemComboBox::currentItemId()
 
 qint64 IdItemComboBox::itemId(qint32 index)
 {
-	ListWidgetIdItem* item = (ListWidgetIdItem*)m_listWidget->item(index);
+	if (!check())
+	{
+		return -1;
+	}
+	QListWidgetItem* item = m_listWidget->item(index);
 	if (item == nullptr)
 	{
 		return -1;
 	}
-	return item->getId();
+	return item->data(s_idRole).toLongLong();
 }
 
 void IdItemComboBox::init()
@@ -93,12 +107,16 @@ void IdItemComboBox::init()
 
 void IdItemComboBox::curIndexChanged(const QString& str)
 {
-	ListWidgetIdItem* item = (ListWidgetIdItem*)m_listWidget->item(currentIndex());
+	if (!check())
+	{
+		return;
+	}
+	QListWidgetItem* item = m_listWidget->item(currentIndex());
 	if (item == nullptr)
 	{
 		return;
 	}
-	emit currentItemChanged(item->getId(), str);
+	emit currentItemChanged(item->data(s_idRole).toLongLong(), str);
 }
 
 void IdItemComboBox::onItemPressed(qint32 index)

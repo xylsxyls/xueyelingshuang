@@ -7,11 +7,8 @@ m_isOne(true),
 m_rect(QRect(0, 0, 0, 0))
 {
 	m_up = new Label(parent);
-	m_up->setAlignment(Qt::AlignCenter);
-	m_up->setBorderWidth(0);
 	m_down = new Label(parent);
-	m_down->setAlignment(Qt::AlignCenter);
-	m_down->setBorderWidth(0);
+	init();
 }
 
 void ContentLabel::setUpColor(const QColor& color)
@@ -129,4 +126,16 @@ void ContentLabel::update()
 bool ContentLabel::check()
 {
 	return m_up != nullptr && m_down != nullptr;
+}
+
+void ContentLabel::init()
+{
+	if (!check())
+	{
+		return;
+	}
+	m_up->setAlignment(Qt::AlignCenter);
+	m_up->setBorderWidth(0);
+	m_down->setAlignment(Qt::AlignCenter);
+	m_down->setBorderWidth(0);
 }

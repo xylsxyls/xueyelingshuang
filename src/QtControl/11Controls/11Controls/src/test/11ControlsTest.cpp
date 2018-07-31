@@ -16,6 +16,7 @@
 #include "11Controls/include/controls/CGeneralStyle.h"
 #include "11Controls/include/controls/TipDialog.h"
 #include "11Controls/include/controls/AskDialog.h"
+#include "11Controls/include/controls/AccountManagerDialog.h"
 #include "11Controls/include/controls/InputDialog.h"
 #include "11Controls/include/controls/WaitDialog.h"
 #include "11Controls/include/controls/COriginalButton.h"
@@ -36,15 +37,26 @@ ControlsTest::ControlsTest(QWidget *parent)
 	//this->setAttribute(Qt::WA_TranslucentBackground);
 	this->setStyleSheet("QMainWindow{background-color:rgba(100,0,0,255);}");
 
-	ComboBox* box = new ComboBox(this);
+
+	QComboBox* box = new QComboBox(this);
 	box->setGeometry(20, 20, 150, 30);
 	box->addItem("123");
 	box->addItem("124");
 	box->addItem("125");
 	box->addItem("126");
-	box->setListBackgroundColor(QColor(255, 0, 0, 100));
-	box->setListBorderWidth(0);
-	box->setListOrigin(30);
+	//box->setListBackgroundColor(QColor(255, 0, 0, 100));
+	//box->setListBorderWidth(0);
+	//box->setListOrigin(30);
+	//box->setEditable(true);
+	//box->setListMaxHeight(30);
+	
+	//QObject::connect(box, &HtmlComboBox::currentItemChanged, this, &ControlsTest::onCurrentItemChanged2);
+	QObject::connect(box, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(onCurrentIndexChanged(const QString&)));
+	
+	QPushButton* button3 = new QPushButton(this);
+	button3->setGeometry(60, 100, 100, 50);
+	button3->setText(QStringLiteral("测试按钮"));
+	QObject::connect(button3, SIGNAL(clicked()), this, SLOT(onClicked()));
 
 	//ListWidget* list = new ListWidget(this);
 	//list->setBackgroundColor(QColor(255, 0, 0, 100));
@@ -145,11 +157,19 @@ ControlsTest::ControlsTest(QWidget *parent)
 	chooseComboBox->setChooseByIndex(1);
 	chooseComboBox->setChooseOrigin(20);
 	chooseComboBox->setListItemHeight(30);
-	chooseComboBox->setBackgroundColor(QColor(255, 0, 0, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255));
+	//chooseComboBox->setBackgroundColor(QColor(255, 0, 0, 255), QColor(255, 255, 0, 255), QColor(255, 0, 255, 255));
+	//chooseComboBox->setBackgroundColor(QColor(255, 0, 1, 255), QColor(255, 255, 1, 255), QColor(255, 1, 255, 255));
+	chooseComboBox->setDropDownImage("D:/hot.png", 0, 1, 0, 3, 4, 2);
 	chooseComboBox->setListBackgroundColor(QColor(255, 0, 0, 255));
 	chooseComboBox->setChooseByIndex(-1);
 	chooseComboBox->clear();
 	chooseComboBox->addItem("232323", 11);
+
+	LoginShowDialogParam loginShowDialogParam;
+	loginShowDialogParam.m_tip = "123";
+	loginShowDialogParam.m_timeOut = 5;
+	loginShowDialogParam.m_isUrlButtonVisible = false;
+	DialogManager::instance().makeDialog(loginShowDialogParam);
 	//QObject::connect(chooseComboBox, &ChooseComboBox::itemChoosed, this, &ControlsTest::onCurrentItemChanged);
 	//QWidget* lab = new QWidget;
 	//chooseComboBox->setLineEdit((QLineEdit*)lab);
@@ -167,17 +187,26 @@ ControlsTest::ControlsTest(QWidget *parent)
 	//	line->setText("2233333334");
 	//}
 	
-	int i = 30;
-	while (i-- != 0)
-	{
-		AdvertShowDialogParam advertShowDialogParam;
-		advertShowDialogParam.m_timeOut = 5;
-		advertShowDialogParam.m_advertUrl = "http://www.baidu.com/";
-		DialogManager::instance().makeDialog(advertShowDialogParam);
-	}
+	//int i = 30;
+	//while (i-- != 0)
+	//{
+	//	AdvertShowDialogParam advertShowDialogParam;
+	//	advertShowDialogParam.m_timeOut = 5;
+	//	advertShowDialogParam.m_advertUrl = "http://www.baidu.com/";
+	//	DialogManager::instance().makeDialog(advertShowDialogParam);
+	//}
 	
 	//chooseComboBox->setChooseSize()
-	int x = 3;
+	//AskShowDialogParam param;
+	//int i = 100;
+	//int begin = ::GetTickCount();
+	//while (i-- != 0)
+	//{
+	//	DialogManager::instance().makeDialog(param);
+	//}
+	//int end = ::GetTickCount();
+	//RCSend("time = %d", end - begin);
+	//int x = 3;
 }
 
 ControlsTest::~ControlsTest()
@@ -195,18 +224,26 @@ ControlsTest::~ControlsTest()
 //TIP_SHOW_DIALOG,
 //LOGIN_SHOW_DIALOG
 COriginalDialog* sss = nullptr;
+QWindow* sswin = nullptr;
 void ControlsTest::onPopTipDialog()
 {
+	//CrimeDialog* dia = new CrimeDialog;
+	//dia->show();
+	//return;
 	//chooseComboBox->setEnabled(false);
 	//chooseComboBox->setEnabled(true);
 	//chooseComboBox->setEnabled(false);
-	RCSend("index = %d,id = %d", chooseComboBox->currentIndex(), chooseComboBox->itemId(chooseComboBox->currentIndex()));
-	return;
-    onPopAskDialog();
-    TipDialogParam param;
-    param.m_userParam = 30;
+	//RCSend("index = %d,id = %d", chooseComboBox->currentIndex(), chooseComboBox->itemId(chooseComboBox->currentIndex()));
+	//return;
+    //onPopAskDialog();
+	sswin = new QWindow;
+	sswin->setGeometry(100, 100, 200, 200);
+	sswin->show();
+	//return;
+    LoginShowDialogParam param;
+    param.m_userResult = 30;
     param.m_userId = 10002;
-    param.m_parent = sss->windowHandle();
+    param.m_parent = sswin;
     param.m_timeOut = 30;
     param.m_isCountDownVisible = true;
 	//param.m_tip = QStringLiteral("撒大声地撒大声地撒大声地撒大声地撒大声地撒大声地撒大声地撒大声地撒大声大声地撒大声地撒大声地撒大声地撒大声地撒大声地");
@@ -219,7 +256,9 @@ void ControlsTest::onPopTipDialog()
     //QObject::connect(&DialogManager::instance(), &DialogManager::copyPath, this, &ControlsTest::onCopyPath);
 
     DialogManager::instance().makeDialog(param);
-    
+	auto sdsds = param.m_userResult;
+	int x = 3;
+	//RCSend("m_editText = %s", CStringManager::UnicodeToAnsi(param.m_editText.toStdWString()).c_str());
     //RCSend("%s", CStringManager::UnicodeToAnsi(param.m_editText.toStdWString()).c_str());
 	// int xx = DialogManager::instance().popTipDialog(dialogId1,
 	// 												QString::fromStdWString(L"标题"),
@@ -230,13 +269,32 @@ void ControlsTest::onPopTipDialog()
 	// 												30,
 	// 												true);
 }
-
+COriginalDialog* sdsssss = nullptr;
 void ControlsTest::onPopAskDialog()
 {
-    sss = new COriginalDialog;
-	sss->setCustomerTitleBarHeight(15);
-    sss->show();
-	qint32 dialogId2 = 0;
+    //sss = new COriginalDialog;
+	//sss->setCustomerTitleBarHeight(15);
+    //sss->show();
+
+	//if (sdsssss == nullptr)
+	//{
+	//	sdsssss = new COriginalDialog;
+	//}
+	//sdsssss->setTransientWindow(sswin);
+	//sdsssss->exec();
+	//return;
+	
+	ChangeUserResultByUserIdOperateParam changeUserResultByUserIdOperateParam;
+	changeUserResultByUserIdOperateParam.m_userId = 10002;
+	changeUserResultByUserIdOperateParam.m_userResult = 2020;
+	DialogManager::instance().operateDialog(changeUserResultByUserIdOperateParam);
+	
+	DestroyDialogByUserIdOperateParam destroyDialogByUserIdOperateParam;
+	destroyDialogByUserIdOperateParam.m_userId = 10002;
+	DialogManager::instance().operateDialog(destroyDialogByUserIdOperateParam);
+
+	//delete sswin;
+	//qint32 dialogId2 = 0;
 	//int xxx = DialogManager::instance().popAskDialog(dialogId2,
 	//												 QString::fromStdWString(L"标题"),
 	//												 QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
@@ -378,6 +436,7 @@ void ControlsTest::onShowTipDialog()
 
 void ControlsTest::onShowLoginDialog()
 {
+	sss->close();
 	qint32 dialogId7 = 0;
 	//NotifyDialogManager::instance().showLoginDialog(dialogId7,
 	//											    33,
@@ -392,6 +451,10 @@ void ControlsTest::onShowLoginDialog()
 void ControlsTest::onShowAskDialog()
 {
 	qint32 dialogId6 = 0;
+	AskDialogParam param;
+	param.m_userId = 200;
+	DialogManager::instance().makeDialog(param);
+	//base.exec();
 	//NotifyDialogManager::instance().showAskDialog(dialogId6,
 	//											  22,
 	//											  QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
@@ -453,19 +516,29 @@ void ControlsTest::onDialogSignal(const SignalParam& param)
 	case POP_DIALOG_DONE_SIGNAL:
 	{
 		PopDialogDoneSignalParam& signalParam = (PopDialogDoneSignalParam&)param;
-		RCSend("pop = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", (qint32)signalParam.m_dialogId, (qint32)signalParam.m_userId, signalParam.m_dialogType, signalParam.m_result, signalParam.m_userParam);
+		RCSend("pop = dialogId = %d,userId = %d,type = %d,result = %d,userResult = %d", (qint32)signalParam.m_dialogId, (qint32)signalParam.m_userId, signalParam.m_dialogType, signalParam.m_result, signalParam.m_userResult);
 		break;
 	}
 	case NOTIFY_DIALOG_DONE_SIGNAL:
 	{
 		NotifyDialogDoneSignalParam& signalParam = (NotifyDialogDoneSignalParam&)param;
-		RCSend("notify = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", (qint32)signalParam.m_dialogId, (qint32)signalParam.m_userId, signalParam.m_dialogType, signalParam.m_result, signalParam.m_userParam);
+		RCSend("notify = dialogId = %d,userId = %d,type = %d,result = %d,userResult = %d", (qint32)signalParam.m_dialogId, (qint32)signalParam.m_userId, signalParam.m_dialogType, signalParam.m_result, signalParam.m_userResult);
 		break;
 	}
 	case STATIC_DIALOG_DONE_SIGNAL:
 	{
 		StaticDialogDoneSignalParam& signalParam = (StaticDialogDoneSignalParam&)param;
-		RCSend("static = dialogId = %d,userId = %d,type = %d,result = %d,userParam = %d", (qint32)signalParam.m_dialogId, (qint32)signalParam.m_userId, signalParam.m_dialogType, signalParam.m_result, signalParam.m_userParam);
+		RCSend("static = dialogId = %d,userId = %d,type = %d,result = %d,userResult = %d", (qint32)signalParam.m_dialogId, (qint32)signalParam.m_userId, signalParam.m_dialogType, signalParam.m_result, signalParam.m_userResult);
+		break;
+	}
+	case ALREADY_SHOWN_SIGNAL:
+	{
+		DestroyDialogByUserIdOperateParam param;
+		param.m_userId = 200;
+		DialogManager::instance().operateDialog(param);
+
+		//int index = param.m_isExist;
+		int xx = 3;
 		break;
 	}
 	default:
@@ -478,18 +551,39 @@ void ControlsTest::onCurrentItemChanged(qint32 index, qint64 id, const QString& 
 	RCSend("index = %d,id = %d,text = %s", index, id, text.toStdString().c_str());
 }
 
+void ControlsTest::onCurrentItemChanged2(qint64 id, const QString& text)
+{
+	RCSend("id = %d,text = %s", id, text.toStdString().c_str());
+}
+
+void ControlsTest::onCurrentIndexChanged(const QString& text)
+{
+	RCSend("onCurrentIndexChanged = text = %s", text.toStdString().c_str());
+
+	(QComboBox*)(sender())->disconnect();
+	QObject::connect((QComboBox*)(sender()), SIGNAL(currentIndexChanged(const QString&)), this, SLOT(onCurrentIndexChanged(const QString&)));
+}
+
+void ControlsTest::onClicked()
+{
+	RCSend("onClicked");
+	(QPushButton*)(sender())->disconnect(this);//
+	
+	((QPushButton*)(sender()))->connect(((QPushButton*)(sender())), SIGNAL(clicked()), this, SLOT(onClicked()));
+	//QObject::connect((QPushButton*)(sender()), SIGNAL(clicked()), this, SLOT(onClicked()));
+}
+
 void ControlsTest::timerEvent(QTimerEvent* eve)
 {
 	qint32 dialogId6 = 0;
-	//NotifyDialogManager::instance().showAskDialog(dialogId6,
-	//											  22,
-	//											  QString::fromStdWString(L"使用QLabel的使用QLabel的使用QLabel的使用QLabel的"),
-	//											  QString::fromStdWString(L"标题"),
-	//											  1,
-	//											  0,
-	//											  QString::fromStdWString(L"同意1"),
-	//											  QString::fromStdWString(L"拒绝1"),
-	//											  30,
-	//											  true);
+	//NotifyDialog* ss = new NotifyDialog;
+	//ss->setGeometry(1000, 100, 100, 100);
+	//ss->show();
+	AskShowDialogParam param;
+	DialogManager::instance().makeDialog(param);
+	DestroyDialogByDialogIdOperateParam operateParam;
+	operateParam.m_dialogId = param.m_dialogId;
+	DialogManager::instance().operateDialog(operateParam);
+	
 	QMainWindow::timerEvent(eve);
 }

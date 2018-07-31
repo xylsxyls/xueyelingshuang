@@ -64,6 +64,10 @@ public:
 	*/
 	void setMaskVisible(bool enable);
 
+protected:
+	bool check();
+	void init();
+
 private:
     void layoutControl();
 	void resizeEvent(QResizeEvent* eve);

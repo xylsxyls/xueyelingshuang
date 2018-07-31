@@ -48,7 +48,7 @@ void ControlBase<QBase>::setKeyValue(const std::wstring& keyWord,
 									 bool isItem,
 									 bool rePaint)
 {
-	m_show->m_controlStyle[m_show->m_className](isItem, m_show->m_itemName).AddKeyValue(keyWord, value);
+	m_show->m_controlStyle.addClassName()(isItem, m_show->m_itemName).AddKeyValue(keyWord, value);
 	if (rePaint)
 	{
 		m_show->repaint();
@@ -70,7 +70,7 @@ void ControlBase<QBase>::setColorStateMap(const std::map<qint32, std::map<qint32
 			auto& stateInMap = itColor->first;
 			const QColor& color = itColor->second;
 			std::wstring colorString = QssHelper::QColorToWString(color);
-			m_show->m_controlStyle[m_show->m_className](isItem, m_show->m_itemName)(state)(stateInMap).AddKeyValue(keyWord, colorString);
+			m_show->m_controlStyle.addClassName()(isItem, m_show->m_itemName)(state)(stateInMap).AddKeyValue(keyWord, colorString);
 		}
 	}
 	if (rePaint)
@@ -101,15 +101,16 @@ void ControlBase<QBase>::setImageStateMap(const std::map<qint32, std::map<qint32
 		{
 			auto& stateInMap = itImage->first;
 			const qint32& imageNum = itImage->second;
-			if (imageNum > stateCount || imageNum <= 0)
+			if (imageNum > stateCount || imageNum < 0)
 			{
 				continue;
 			}
 			std::wstring imageUrl = CStringManager::Format(L"url(%s) %d 0 %d 0 stretch stretch",
 														   imagePath.c_str(),
-														   vecHeight[imageNum - 1],
+														   imageNum == 0 ? 0 : vecHeight[imageNum - 1],
 														   vecHeight[stateCount - imageNum]);
-			m_show->m_controlStyle[m_show->m_className](isItem, m_show->m_itemName)(state)(stateInMap).AddKeyValue(keyWord, imageUrl);
+			
+			m_show->m_controlStyle.addClassName()(isItem, m_show->m_itemName)(state)(stateInMap).AddKeyValue(keyWord, imageUrl);
 		}
 	}
 	if (rePaint)

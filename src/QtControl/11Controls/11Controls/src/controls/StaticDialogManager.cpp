@@ -16,6 +16,13 @@ void StaticDialogManager::popStaticDialog(DialogParam& param)
     case ACCOUNT_MANAGER_DIALOG:
     {
         AccountManagerDialogParam& accountManagerDialogParam = (AccountManagerDialogParam&)param;
+		bool bExist = false;
+		auto dialogPtr = AllocManager::instance().findDialogPtr(ACCOUNT_MANAGER_DIALOG);
+		if (dialogPtr != nullptr)
+		{
+			bExist = true;
+		}
+
         quint64 dialogId = 0;
         AccountManagerDialog* accountManagerDialog = (AccountManagerDialog*)AllocManager::instance().createDialog(dialogId, accountManagerDialogParam.m_userId, ACCOUNT_MANAGER_DIALOG);
         if (accountManagerDialog == nullptr)
@@ -25,6 +32,12 @@ void StaticDialogManager::popStaticDialog(DialogParam& param)
         param.m_dialogId = dialogId;
         m_accountManagerDialogId = param.m_dialogId;
         popDialogPtr = accountManagerDialog;
+
+		if (bExist == false)
+		{
+			QObject::connect(popDialogPtr, &DialogShow::closedSignal, this, &StaticDialogManager::onClosedSignal);
+			QObject::connect(popDialogPtr, &DialogBase::alreadyShown, this, &StaticDialogManager::onAlreadyShown, Qt::QueuedConnection);
+		}
         break;
     }
     default:
@@ -38,12 +51,13 @@ void StaticDialogManager::popStaticDialog(DialogParam& param)
     
     popDialogPtr->setWindowResultAddr(&(param.m_result));
     popDialogPtr->setWindowTiTle(param.m_title);
-    popDialogPtr->setUserParam(param.m_userParam);
+    popDialogPtr->setUserResultPtr(&(param.m_userResult));
     popDialogPtr->setTimeRest(param.m_timeOut);
     popDialogPtr->setTimeRestVisible(param.m_isCountDownVisible);
     popDialogPtr->setTransientWindow(param.m_parent);
-    QObject::connect(popDialogPtr, &DialogShow::closedSignal, this, &StaticDialogManager::onClosedSignal);
     popDialogPtr->exec();
+	popDialogPtr->setWindowResultAddr(nullptr);
+	popDialogPtr->setUserResultPtr(nullptr);
 }
 
 void StaticDialogManager::operateDialog(OperateParam& param)
@@ -169,7 +183,7 @@ void StaticDialogManager::onClosedSignal(DialogResult* result)
     }
     qint32 userId = AllocManager::instance().findUserId(dialogId);
     DialogType type = AllocManager::instance().findDialogType(dialogId);
-    qint32 userParam = dialogPtr->userParam();
+    qint32 userResult = dialogPtr->userResult();
     StaticDialogDoneSignalParam param;
     param.m_dialogId = dialogId;
     param.m_userId = userId;
@@ -178,7 +192,15 @@ void StaticDialogManager::onClosedSignal(DialogResult* result)
     {
         param.m_result = *result;
     }
-    param.m_userParam = userParam;
+    param.m_userResult = userResult;
+	emit dialogSignal(param);
+}
+
+void StaticDialogManager::onAlreadyShown()
+{
+	AlreadyShownSignalParam param;
+	param.m_dialog = AllocManager::instance().findDialogId((COriginalDialog*)sender());
+	param.m_userId = AllocManager::instance().findUserId(param.m_dialog);
 	emit dialogSignal(param);
 }
 

@@ -70,6 +70,10 @@ private:
 	*/
 	bool check();
 
+	/** ≥ı ºªØ
+	*/
+	void init();
+
 
 public:
 	Label* m_up;

@@ -10,8 +10,8 @@ class AccountManagerDialog;
 class COriginalDialog;
 /** 窗口内存管理器
 */
-class AllocManager : 
-    public QObject,
+class AllocManager :
+	public QObject,
     public ManagerBase < AllocManager >
 {
     Q_OBJECT
@@ -55,6 +55,12 @@ public:
     */
     COriginalDialog* findDialogPtr(quint64 dialogId);
 
+	/** 根据窗口类型查找对应的窗口指针，只支持静态窗口，支持多线程
+	@param [in] dialogId 窗口ID
+	@return 返回窗口指针
+	*/
+	COriginalDialog* findDialogPtr(DialogType type);
+
     /** 根据用户自定义ID查找窗口ID，支持多线程
     @param [in] userId 用户自定义ID
     @return 返回窗口ID
@@ -77,6 +83,12 @@ public:
     @return 返回最后一个创建的窗口ID
     */
     quint64 findLastDialogId();
+
+	/** 是否是静态窗口
+	@param [in] dialogId 窗口ID
+	@return 返回是否是静态窗口
+	*/
+	bool isStatic(quint64 dialogId);
 
     /** 获取未释放的窗口个数
     @return 返回未释放的窗口个数
@@ -101,12 +113,6 @@ private:
     @return 返回窗口ID
     */
     quint64 getDialogId();
-
-    /** 是否是静态窗口
-    @param [in] dialogId 窗口ID
-    @return 返回是否是静态窗口
-    */
-    bool isStatic(quint64 dialogId);
 
 private:
     //窗口指针，窗口ID

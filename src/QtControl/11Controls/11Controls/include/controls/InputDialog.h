@@ -51,4 +51,5 @@ private:
 	LineEdit* m_edit;
     CPasswordInputBox* m_passwordInputBox;
 	QString* m_editText;
+	bool m_isPassword;
 };
