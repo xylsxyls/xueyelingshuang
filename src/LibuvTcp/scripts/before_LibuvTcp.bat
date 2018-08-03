@@ -13,3 +13,10 @@ goto DllRelyTest_end
 call "%CLOUD_REBUILD%" DllRelyTest %DllRelyTest_bit% %DllRelyTest_dlllib% %DllRelyTest_debugRelease%
 goto DllRelyTest_end
 :DllRelyTest_end
+
+set bat=%~dp0
+set xueyelingshuang=%bat%..\..\..\
+
+xcopy /y /i /r /s "%xueyelingshuang%tools\libuv\libuv\*" "%xueyelingshuang%include\libuv\"
+xcopy /y /i /r /s "%xueyelingshuang%tools\libuv\libuvd.lib" "%xueyelingshuang%lib\"
+xcopy /y /i /r /s "%xueyelingshuang%tools\libuv\libuv.lib" "%xueyelingshuang%lib\"

@@ -5,7 +5,6 @@
 #include "D:\\SendToMessageTest.h"
 #include <thread>
 #include <iostream>
-#include "CSystem/CSystemAPI.h"
 #include "NetHelper.h"
 
 class ServerCallbackBase : public ReceiveCallback
