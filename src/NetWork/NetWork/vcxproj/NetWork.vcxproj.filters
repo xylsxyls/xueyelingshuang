@@ -19,6 +19,9 @@
     <Filter Include="Server">
       <UniqueIdentifier>{cdf07516-62ad-485b-8ffd-32813c61e19a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="NetHelper">
+      <UniqueIdentifier>{4968e659-4e33-4e43-ac76-428b6b64112e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetWorkAPI.h">
@@ -39,6 +42,9 @@
     <ClInclude Include="..\src\ServerCallback.h">
       <Filter>Server</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\NetHelper.h">
+      <Filter>NetHelper</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ClientCallback.cpp">
@@ -52,6 +58,9 @@
     </ClCompile>
     <ClCompile Include="..\src\ServerCallback.cpp">
       <Filter>Server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetHelper.cpp">
+      <Filter>NetHelper</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

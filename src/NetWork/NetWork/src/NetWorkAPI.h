@@ -1,6 +1,9 @@
 #pragma once
 #define _NetWorkAPI
-#include "NetWork.h"
+#include "NetClient.h"
+#include "ClientCallback.h"
+#include "NetServer.h"
+#include "ServerCallback.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"NetWorkd.lib")

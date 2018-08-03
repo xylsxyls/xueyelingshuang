@@ -327,6 +327,11 @@ std::string CSystem::PasswordScanf()
 	return password;
 }
 
+uint32_t CSystem::systemThreadId()
+{
+	return ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 

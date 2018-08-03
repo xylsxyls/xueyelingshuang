@@ -3,7 +3,8 @@
 #include "NetServer.h"
 
 ServerCallback::ServerCallback() :
-m_callback(nullptr)
+m_callback(nullptr),
+m_netServer(nullptr)
 {
 	m_callback = new ReceiveCallback;
 }
@@ -16,4 +17,14 @@ void ServerCallback::receive(uv_tcp_t* client, char* buffer, int32_t length)
 void ServerCallback::clientConnected(uv_tcp_t* client)
 {
 
+}
+
+void ServerCallback::setNetServer(NetServer* netServer)
+{
+	m_netServer = netServer;
+}
+
+NetServer* ServerCallback::netServer()
+{
+	return m_netServer;
 }

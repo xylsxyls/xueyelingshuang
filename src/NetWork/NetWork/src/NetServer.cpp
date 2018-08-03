@@ -1,6 +1,12 @@
 #include "NetServer.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include "ServerCallback.h"
+#include <windows.h>
+#include "D:\\SendToMessageTest.h"
+#include <thread>
+#include <iostream>
+#include "CSystem/CSystemAPI.h"
+#include "NetHelper.h"
 
 class ServerCallbackBase : public ReceiveCallback
 {
@@ -10,21 +16,17 @@ public:
 public:
 	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length);
 
-	virtual void serverConnected(uv_tcp_t* server);
+	virtual void clientConnected(uv_tcp_t* client);
 
 	void setCallback(ServerCallback* callback);
 
-	void setNetServer(NetServer* netServer);
-
 protected:
 	ServerCallback* m_callback;
-
-	NetServer* m_netServer;
+	std::string m_area;
 };
 
-ServerCallbackBase::ServerCallbackBase() :
-m_callback(nullptr),
-m_netServer(nullptr)
+ServerCallbackBase::ServerCallbackBase():
+m_callback(nullptr)
 {
 	m_callback = new ServerCallback;
 }
@@ -35,17 +37,36 @@ void ServerCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 	{
 		return;
 	}
-	m_callback->receive(sender, buffer, length);
-}
 
-void ServerCallbackBase::serverConnected(uv_tcp_t* server)
-{
-	if (m_callback == nullptr || m_netServer == nullptr)
+	int32_t vernier = 0;
+	char* tagBuffer = nullptr;
+	int32_t tagLength = 0;
+
+	if (NetHelper::getSplitedBuffer(buffer, length, vernier, m_area, tagBuffer, tagLength) == false)
 	{
 		return;
 	}
-	m_netServer->setServer(server);
-	m_callback->serverConnected(server);
+	
+	if (!m_area.empty())
+	{
+		m_callback->receive(sender, tagBuffer, tagLength);
+	}
+	m_area.clear();
+
+	while (NetHelper::splitBuffer(buffer, length, vernier, m_area, tagBuffer, tagLength))
+	{
+		m_callback->receive(sender, tagBuffer, tagLength);
+	}
+	return;
+}
+
+void ServerCallbackBase::clientConnected(uv_tcp_t* client)
+{
+	if (m_callback == nullptr)
+	{
+		return;
+	}
+	m_callback->clientConnected(client);
 }
 
 void ServerCallbackBase::setCallback(ServerCallback* callback)
@@ -53,42 +74,36 @@ void ServerCallbackBase::setCallback(ServerCallback* callback)
 	m_callback = callback;
 }
 
-void ServerCallbackBase::setNetServer(NetServer* netServer)
-{
-	m_netServer = netServer;
-}
-
 NetServer::NetServer() :
 m_libuvTcp(nullptr),
-m_serverCallbackBase(nullptr),
-m_server(nullptr)
+m_serverCallbackBase(nullptr)
 {
 	m_libuvTcp = new LibuvTcp;
 	m_serverCallbackBase = new ServerCallbackBase;
 }
 
-void NetServer::connect(const char* ip, int32_t port, ServerCallback* callback)
+void NetServer::listen(int32_t port, ServerCallback* callback)
 {
-	if (m_libuvTcp == nullptr || m_serverCallbackBase == nullptr)
+	if (m_libuvTcp == nullptr || m_serverCallbackBase == nullptr || callback == nullptr)
 	{
 		return;
 	}
 	m_serverCallbackBase->setCallback(callback);
-	m_serverCallbackBase->setNetServer(this);
+	callback->setNetServer(this);
 	m_libuvTcp->initServer(port, m_serverCallbackBase);
 	m_libuvTcp->loop();
 }
 
 void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
 {
-	if (m_libuvTcp == nullptr)
+	if (m_libuvTcp == nullptr || dest == nullptr)
 	{
 		return;
 	}
-	m_libuvTcp->send(dest, buffer, length);
-}
 
-void NetServer::setServer(uv_tcp_t* server)
-{
-	m_server = server;
+	char* text = (char*)::malloc(length + 4);
+	*(int32_t*)text = length;
+	memcpy(text + 4, buffer, length);
+	m_libuvTcp->send(dest, text, length + 4);
+	::free(text);
 }

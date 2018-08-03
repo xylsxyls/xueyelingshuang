@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ClientCallback.h" />
+    <ClInclude Include="..\src\NetHelper.h" />
     <ClInclude Include="..\src\NetServer.h" />
     <ClInclude Include="..\src\NetWorkAPI.h" />
     <ClInclude Include="..\src\NetWorkMacro.h" />
@@ -29,6 +30,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\ClientCallback.cpp" />
     <ClCompile Include="..\src\NetClient.cpp" />
+    <ClCompile Include="..\src\NetHelper.cpp" />
     <ClCompile Include="..\src\NetServer.cpp" />
     <ClCompile Include="..\src\ServerCallback.cpp" />
   </ItemGroup>

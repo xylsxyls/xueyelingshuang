@@ -1,11 +1,14 @@
 #include "LibuvTcp.h"
 #include "libuv/uv.h"
 #include "ReceiveCallback.h"
+#include "D:\\SendToMessageTest.h"
 
 LibuvTcp::LibuvTcp():
-m_receiveCallback(nullptr)
+m_receiveCallback(nullptr),
+m_loop(nullptr)
 {
-	
+	m_loop = new uv_loop_t;
+	uv_loop_init(m_loop);
 }
 
 LibuvTcp::~LibuvTcp()
@@ -20,7 +23,33 @@ void onRead(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
 	{
 		//实际读取到了内容
 		LibuvTcp* libuvTcp = (LibuvTcp*)client->data;
-		libuvTcp->callback()->receive((uv_tcp_t*)client, buf->base, nread);
+		//int32_t vernier = 0;
+		//static auto sender1 = client;
+		//while (vernier < nread)
+		//{
+		//	int32_t tagLength = *(int32_t*)(buf->base + vernier);
+		//
+		//	if (tagLength != 6)
+		//	{
+		//		if (sender1 == client)
+		//		{
+		//			for (int i = vernier - 10; i < vernier + 10; i++)
+		//			{
+		//				RCSend("2tagLength = %d,s[%d] = %d,vernier = %d,nread = %d", tagLength, i, buf->base[i], vernier, nread);
+		//			}
+		//		}
+		//		printf("pause\n");
+		//		getchar();
+		//	}
+		//	vernier += 4;
+		//	vernier += tagLength;
+		//}
+
+		auto callback = libuvTcp->callback();
+		if (callback != nullptr)
+		{
+			callback->receive((uv_tcp_t*)client, buf->base, nread);
+		}
 		//printf("buf = %s\n", buf->base);
 	}
 	else
@@ -75,15 +104,17 @@ void onNewConnect(uv_stream_t *server, int status)
 	{
 		return;
 	}
+	LibuvTcp* libuvTcp = (LibuvTcp*)server->data;
+
 	//将全局的主循环和处理连接的对象关联起来
-	uv_tcp_init(uv_default_loop(), client);
+	uv_tcp_init(libuvTcp->loopPtr(), client);
 	//存入类地址
-	client->data = server->data;
+	client->data = libuvTcp;
 
 	//接收服务端对象 
 	if (uv_accept(server, (uv_stream_t*)client) == 0)
 	{
-		((LibuvTcp*)server->data)->callback()->clientConnected(client);
+		libuvTcp->callback()->clientConnected(client);
 		//开始读取客户端发送的数据，并设置好接收缓存分配的函数alloc_buffer和读取完毕后的回调函数echo_read 
 		uv_read_start((uv_stream_t*)client,
 			[](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
@@ -106,7 +137,7 @@ void LibuvTcp::initClient(const char* ip, int32_t port, ReceiveCallback* callbac
 	m_receiveCallback->m_libuvTcp = this;
 
 	uv_tcp_t* socket = new uv_tcp_t;
-	uv_tcp_init(uv_default_loop(), socket);
+	uv_tcp_init(m_loop, socket);
 
 	uv_connect_t* connect = new uv_connect_t;
 	connect->data = this;
@@ -128,7 +159,7 @@ void LibuvTcp::initServer(int32_t port, ReceiveCallback* callback, int32_t backl
 	//TCP服务端对象
 	uv_tcp_t* server = new uv_tcp_t;
 	//初始化，将TCP服务端对象和主循环绑定在一起
-	uv_tcp_init(uv_default_loop(), server);
+	uv_tcp_init(m_loop, server);
 	//存入类地址
 	server->data = this;
 
@@ -147,12 +178,17 @@ void LibuvTcp::initServer(int32_t port, ReceiveCallback* callback, int32_t backl
 
 void LibuvTcp::loop()
 {
-	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+	uv_run(m_loop, UV_RUN_DEFAULT);
 }
 
 ReceiveCallback* LibuvTcp::callback()
 {
 	return m_receiveCallback;
+}
+
+uv_loop_t* LibuvTcp::loopPtr()
+{
+	return m_loop;
 }
 
 void LibuvTcp::send(uv_tcp_t* client, char* buffer, int32_t length)

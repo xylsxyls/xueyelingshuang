@@ -75,6 +75,8 @@ public:
 	static std::vector<std::string> exeParam();
 	//?获取密码
 	static std::string PasswordScanf();
+	//?获取线程ID号
+	static uint32_t systemThreadId();
 
 public:
     static bool ifRedirFrobid;

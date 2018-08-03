@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 typedef struct uv_tcp_s uv_tcp_t;
+typedef struct uv_loop_s uv_loop_t;
 class ReceiveCallback;
 
 class LibuvTcpAPI LibuvTcp
@@ -23,6 +24,9 @@ public:
 
 	ReceiveCallback* callback();
 
+	uv_loop_t* loopPtr();
+
 protected:
 	ReceiveCallback* m_receiveCallback;
+	uv_loop_t* m_loop;
 };
