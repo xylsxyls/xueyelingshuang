@@ -881,6 +881,16 @@ void Stock::fenbiInsertDataBase(MysqlCpp& mysql, const std::string& stockNum)
 		}
 	}
 
+    std::vector<std::string> vecCreateParam;
+    //shijian,fenbishijian,chengjiao,xianshou,bishu,maimai
+    vecCreateParam.push_back("shijian varchar(20)");
+    vecCreateParam.push_back("fenbishijian varchar(20)");
+    vecCreateParam.push_back("chengjiao varchar(20)");
+    vecCreateParam.push_back("xianshou varchar(20)");
+    vecCreateParam.push_back("bishu varchar(20)");
+    vecCreateParam.push_back("maimai varchar(20)");
+    mysql.execute(mysql.PreparedStatementCreator(SqlString::createTableString(stockNum, vecCreateParam)));
+
 	std::string todayDate = IntDateTime().dateToString();
 	mysql.execute(mysql.PreparedStatementCreator(SqlString::deleteString(stockNum, "shijian='" + todayDate + "'")));
 
