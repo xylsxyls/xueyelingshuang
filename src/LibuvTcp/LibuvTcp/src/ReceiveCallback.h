@@ -17,6 +17,8 @@ public:
 
 	virtual void serverConnected(uv_tcp_t* server);
 
+	void setLibuvTcp(LibuvTcp* libuvTcp);
+
 public:
 	LibuvTcp* m_libuvTcp;
 };

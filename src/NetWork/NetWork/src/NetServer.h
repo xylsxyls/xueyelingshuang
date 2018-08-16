@@ -2,6 +2,9 @@
 #include "NetWorkMacro.h"
 #include <stdint.h>
 #include <string>
+#include <map>
+#include <vector>
+#include <list>
 
 class LibuvTcp;
 class ServerCallback;
@@ -18,7 +21,12 @@ public:
 
 	void send(char* buffer, int32_t length, uv_tcp_t* dest);
 
+	
+
 protected:
 	LibuvTcp* m_libuvTcp;
+
+public:
 	ServerCallbackBase* m_serverCallbackBase;
+	
 };

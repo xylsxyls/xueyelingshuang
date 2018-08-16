@@ -15,6 +15,10 @@ public:
     */
     void PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel);
 
+	/* 尝试添加任务，任务优先级必须从1开始，和try_lock相似
+	*/
+	bool TryPostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel);
+
     /* 同步执行任务，当任务没结束是发送线程卡住，但是任务仍然是在线程中执行
     */
     void SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel);
@@ -32,7 +36,12 @@ public:
     /* 获取当前map中任务个数，该函数会清空传入的map
     @param [out] taskCountMap 左边是任务优先级，右边是当前优先级的任务个数
     */
-    void GetWaitTaskCount(std::map<int32_t, int32_t>& taskCountMap);
+    void GetWaitTaskInfo(std::map<int32_t, int32_t>& taskCountMap);
+
+	/** 获取当前任务个数
+	@return 返回等待任务个数
+	*/
+	int32_t GetWaitTaskCount();
 
 	/** 获取正在执行的任务优先级
 	*/
@@ -64,6 +73,8 @@ private:
     void WorkThread();
 
     void StopAllTaskUnlock();
+
+	void HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel);
 
 private:
 

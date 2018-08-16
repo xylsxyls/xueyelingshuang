@@ -327,9 +327,16 @@ std::string CSystem::PasswordScanf()
 	return password;
 }
 
-uint32_t CSystem::systemThreadId()
+uint32_t CSystem::SystemThreadId()
 {
 	return ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
+}
+
+int32_t CSystem::GetCPUCoreCount()
+{
+	SYSTEM_INFO si;
+	GetSystemInfo(&si);
+	return si.dwNumberOfProcessors;
 }
 
 bool CSystem::ifRedirFrobid = false;

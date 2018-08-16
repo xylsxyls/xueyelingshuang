@@ -54,19 +54,22 @@ void CTaskThread::PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLev
         return;
     }
     std::unique_lock<std::mutex> lock(m_mutex);
-	::SetEvent(m_waitEvent);
-    m_taskMap[taskLevel].push_back(spTask);
-    //如果添加任务的优先级高于当前任务则当前任务停止
-    if (m_spCurTask != nullptr && taskLevel > m_curTaskLevel)
-    {
-        //如果该任务的属性是被顶掉后重做，则先添加此任务，判空是防止当前任务还没来得及退出就添加了多个优先级更高的任务
-        if (m_spCurTaskBk != nullptr && m_spCurTask->ReExecute())
-        {
-            m_taskMap[m_curTaskLevel].push_front(m_spCurTaskBk);
-            m_spCurTaskBk = nullptr;
-        }
-		StopCurTask();
-    }
+	HandlePostTask(spTask, taskLevel);
+}
+
+bool CTaskThread::TryPostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
+{
+	if (spTask == nullptr || taskLevel < 1 || m_hasExitSignal)
+	{
+		return false;
+	}
+	if (!m_mutex.try_lock())
+	{
+		return false;
+	}
+	HandlePostTask(spTask, taskLevel);
+	m_mutex.unlock();
+	return true;
 }
 
 void CTaskThread::SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
@@ -143,6 +146,23 @@ void CTaskThread::StopAllTaskUnlock()
     }
     //如果有还未执行完毕的任务
 	StopCurTask();
+}
+
+void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
+{
+	::SetEvent(m_waitEvent);
+	m_taskMap[taskLevel].push_back(spTask);
+	//如果添加任务的优先级高于当前任务则当前任务停止
+	if (m_spCurTask != nullptr && taskLevel > m_curTaskLevel)
+	{
+		//如果该任务的属性是被顶掉后重做，则先添加此任务，判空是防止当前任务还没来得及退出就添加了多个优先级更高的任务
+		if (m_spCurTaskBk != nullptr && m_spCurTask->ReExecute())
+		{
+			m_taskMap[m_curTaskLevel].push_front(m_spCurTaskBk);
+			m_spCurTaskBk = nullptr;
+		}
+		StopCurTask();
+	}
 }
 
 bool CTaskThread::HasTask()
@@ -232,7 +252,7 @@ void CTaskThread::StopAllTask()
     StopAllTaskUnlock();
 }
 
-void CTaskThread::GetWaitTaskCount(std::map<int32_t, int32_t>& taskCountMap)
+void CTaskThread::GetWaitTaskInfo(std::map<int32_t, int32_t>& taskCountMap)
 {
     taskCountMap.clear();
     {
@@ -242,6 +262,17 @@ void CTaskThread::GetWaitTaskCount(std::map<int32_t, int32_t>& taskCountMap)
             taskCountMap[itTaskList->first] = (int32_t)itTaskList->second.size();
         }
     }
+}
+
+int32_t CTaskThread::GetWaitTaskCount()
+{
+	int32_t count = 0;
+	std::unique_lock<std::mutex> lock(m_mutex);
+	for (auto itTaskList = m_taskMap.begin(); itTaskList != m_taskMap.end(); ++itTaskList)
+	{
+		count += (int32_t)itTaskList->second.size();
+	}
+	return count;
 }
 
 int32_t CTaskThread::GetCurTaskLevel()

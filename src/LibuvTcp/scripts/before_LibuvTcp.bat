@@ -14,6 +14,36 @@ call "%CLOUD_REBUILD%" DllRelyTest %DllRelyTest_bit% %DllRelyTest_dlllib% %DllRe
 goto DllRelyTest_end
 :DllRelyTest_end
 
+::--------------------------------------------------------------------
+set CTaskThreadManager_dlllib=lib
+set CTaskThreadManager_bit=%1
+set CTaskThreadManager_debugRelease=%3
+set CTaskThreadManager_allSame=%4
+if "%4" == "same" (goto CTaskThreadManager_callSame) else (goto CTaskThreadManager_callSimple)
+:CTaskThreadManager_callSame
+set CTaskThreadManager_dlllib=%2
+call "%CLOUD_REBUILD%" CTaskThreadManager %CTaskThreadManager_bit% %CTaskThreadManager_dlllib% %CTaskThreadManager_debugRelease% %CTaskThreadManager_allSame%
+goto CTaskThreadManager_end
+:CTaskThreadManager_callSimple
+call "%CLOUD_REBUILD%" CTaskThreadManager %CTaskThreadManager_bit% %CTaskThreadManager_dlllib% %CTaskThreadManager_debugRelease%
+goto CTaskThreadManager_end
+:CTaskThreadManager_end
+
+::--------------------------------------------------------------------
+set CSystem_dlllib=lib
+set CSystem_bit=%1
+set CSystem_debugRelease=%3
+set CSystem_allSame=%4
+if "%4" == "same" (goto CSystem_callSame) else (goto CSystem_callSimple)
+:CSystem_callSame
+set CSystem_dlllib=%2
+call "%CLOUD_REBUILD%" CSystem %CSystem_bit% %CSystem_dlllib% %CSystem_debugRelease% %CSystem_allSame%
+goto CSystem_end
+:CSystem_callSimple
+call "%CLOUD_REBUILD%" CSystem %CSystem_bit% %CSystem_dlllib% %CSystem_debugRelease%
+goto CSystem_end
+:CSystem_end
+
 set bat=%~dp0
 set xueyelingshuang=%bat%..\..\..\
 

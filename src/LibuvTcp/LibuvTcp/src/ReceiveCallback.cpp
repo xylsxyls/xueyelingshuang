@@ -1,6 +1,6 @@
 #include "ReceiveCallback.h"
 
-ReceiveCallback::ReceiveCallback():
+ReceiveCallback::ReceiveCallback() :
 m_libuvTcp(nullptr)
 {
 
@@ -19,4 +19,9 @@ void ReceiveCallback::clientConnected(uv_tcp_t* client)
 void ReceiveCallback::serverConnected(uv_tcp_t* server)
 {
 
+}
+
+void ReceiveCallback::setLibuvTcp(LibuvTcp* libuvTcp)
+{
+	m_libuvTcp = libuvTcp;
 }

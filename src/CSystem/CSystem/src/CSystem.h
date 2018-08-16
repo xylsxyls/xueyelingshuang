@@ -76,7 +76,9 @@ public:
 	//?获取密码
 	static std::string PasswordScanf();
 	//?获取线程ID号
-	static uint32_t systemThreadId();
+	static uint32_t SystemThreadId();
+	//?获取CPU核数
+	static int32_t GetCPUCoreCount();
 
 public:
     static bool ifRedirFrobid;

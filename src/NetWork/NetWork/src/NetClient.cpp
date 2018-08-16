@@ -4,6 +4,7 @@
 #include <windows.h>
 #include "NetHelper.h"
 #include "D:\\SendToMessageTest.h"
+#include <map>
 
 class ClientCallbackBase : public ReceiveCallback
 {
@@ -19,7 +20,7 @@ public:
 
 protected:
 	ClientCallback* m_callback;
-	std::string m_area;
+	std::map<uv_tcp_t*, std::string> m_area;
 };
 
 ClientCallbackBase::ClientCallbackBase():
@@ -39,18 +40,18 @@ void ClientCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 	char* tagBuffer = nullptr;
 	int32_t tagLength = 0;
 
-	if (NetHelper::getSplitedBuffer(buffer, length, vernier, m_area, tagBuffer, tagLength) == false)
+	if (NetHelper::getSplitedBuffer(buffer, length, vernier, m_area[sender], tagBuffer, tagLength) == false)
 	{
 		return;
 	}
 
-	if (!m_area.empty())
+	if (!m_area[sender].empty())
 	{
 		m_callback->receive(sender, tagBuffer, tagLength);
 	}
-	m_area.clear();
+	m_area[sender].clear();
 
-	while (NetHelper::splitBuffer(buffer, length, vernier, m_area, tagBuffer, tagLength))
+	while (NetHelper::splitBuffer(buffer, length, vernier, m_area[sender], tagBuffer, tagLength))
 	{
 		m_callback->receive(sender, tagBuffer, tagLength);
 	}
@@ -90,7 +91,7 @@ void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback)
 	m_clientCallbackBase->setCallback(callback);
 	callback->setNetClient(this);
 	m_libuvTcp->initClient(ip, port, m_clientCallbackBase);
-	m_libuvTcp->loop();
+	m_libuvTcp->clientLoop();
 }
 
 void NetClient::send(char* buffer, int32_t length, uv_tcp_t* dest)
