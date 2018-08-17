@@ -246,7 +246,7 @@ public:
 		printf("begin = %d\n", ::GetTickCount());
 		while (count-- != 0)
 		{
-			m_netClient->send("efefhg", 6);
+			//m_netClient->send("efefhg", 6);
 		}
 		printf("time = %d", ::GetTickCount() - begin);
 	}
@@ -295,7 +295,7 @@ public:
 		printf("begin = %d\n", ::GetTickCount());
 		while (count-- != 0)
 		{
-			m_netClient->send("efefhg", 6);
+			//m_netClient->send("efefhg", 6);
 		}
 		printf("time = %d", ::GetTickCount() - begin);
 	}
@@ -344,7 +344,7 @@ public:
 		printf("begin = %d\n", ::GetTickCount());
 		while (count-- != 0)
 		{
-			m_netClient->send("efefhg", 6);
+			//m_netClient->send("efefhg", 6);
 		}
 		printf("time = %d", ::GetTickCount() - begin);
 	}
@@ -393,7 +393,7 @@ public:
 		printf("begin = %d\n", ::GetTickCount());
 		while (count-- != 0)
 		{
-			m_netClient->send("efefhg", 6);
+			//m_netClient->send("efefhg", 6);
 		}
 		printf("time = %d", ::GetTickCount() - begin);
 	}

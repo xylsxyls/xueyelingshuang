@@ -1,19 +1,19 @@
 #pragma once
 #include "NetWorkMacro.h"
 #include <stdint.h>
+#include "CallbackBase.h"
 
 class NetClient;
 typedef struct uv_tcp_s uv_tcp_t;
 class ReceiveCallback;
 
-class NetWorkAPI ClientCallback
+class NetWorkAPI ClientCallback : public CallbackBase
 {
 	friend class ClientCallbackBase;
 public:
 	ClientCallback();
-public:
-	virtual void receive(uv_tcp_t* server, char* buffer, int32_t length);
 
+public:
 	virtual void serverConnected(uv_tcp_t* server);
 
 	void setNetClient(NetClient* netClient);

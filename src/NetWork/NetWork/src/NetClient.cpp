@@ -1,10 +1,11 @@
 #include "NetClient.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include "ClientCallback.h"
-#include <windows.h>
-#include "NetHelper.h"
 #include "D:\\SendToMessageTest.h"
 #include <map>
+#include "SendTask.h"
+#include "WorkTask.h"
+#include "NetWorkThreadManager.h"
 
 class ClientCallbackBase : public ReceiveCallback
 {
@@ -39,21 +40,122 @@ void ClientCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 	int32_t vernier = 0;
 	char* tagBuffer = nullptr;
 	int32_t tagLength = 0;
+	std::string& senderArea = m_area[sender];
 
-	if (NetHelper::getSplitedBuffer(buffer, length, vernier, m_area[sender], tagBuffer, tagLength) == false)
+	//缓冲区里有值
+	if (!senderArea.empty())
 	{
-		return;
+		//缓冲区里长度小于4
+		if (senderArea.size() < 4)
+		{
+			//剩余值无法填满缓冲区4个字节
+			if (senderArea.size() + length < 4)
+			{
+				//添加进缓冲区
+				senderArea.append(buffer, length);
+				return;
+			}
+			//剩余值可以填满缓冲区4个字节
+			vernier = 4 - senderArea.size();
+			senderArea.append(buffer, vernier);
+		}
+		//缓冲区里长度大于等于4
+		//计算包大小
+		tagLength = *(int32_t*)&senderArea[0];
+		//剩余值无法填满一个包
+		if (length - vernier < tagLength)
+		{
+			//添加进缓冲区
+			senderArea.append(buffer + vernier, length - vernier);
+			return;
+		}
+		//剩余值可以填满一个包
+		int32_t addSize = tagLength + 4 - senderArea.size();
+		senderArea.append(buffer + vernier, addSize);
+		vernier += addSize;
+		//receive
+		//如果包大小为0则给空指针
+		if (tagLength == 0)
+		{
+			std::shared_ptr<WorkTask> spTask;
+			WorkTask* task = new WorkTask;
+			task->setCallback(m_callback);
+			task->setParam(sender, nullptr, 0);
+			spTask.reset(task);
+			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
+		}
+		else
+		{
+			char* allocBuffer = (char*)::malloc(tagLength + 1);
+			allocBuffer[tagLength] = 0;
+			::memcpy(allocBuffer, &senderArea[4], tagLength);
+			std::shared_ptr<WorkTask> spTask;
+			WorkTask* task = new WorkTask;
+			task->setCallback(m_callback);
+			task->setParam(sender, allocBuffer, tagLength);
+			spTask.reset(task);
+			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
+		}
+		//清空缓冲区
+		senderArea.clear();
 	}
-
-	if (!m_area[sender].empty())
+	//缓冲区是空的
+	while (true)
 	{
-		m_callback->receive(sender, tagBuffer, tagLength);
-	}
-	m_area[sender].clear();
-
-	while (NetHelper::splitBuffer(buffer, length, vernier, m_area[sender], tagBuffer, tagLength))
-	{
-		m_callback->receive(sender, tagBuffer, tagLength);
+		//剩余值长度小于4
+		if (length - vernier < 4)
+		{
+			//添加进缓冲区
+			senderArea.append(buffer + vernier, length - vernier);
+			return;
+		}
+		//剩余值长度大于等于4
+		//计算包大小
+		tagLength = *(int32_t*)(buffer + vernier);
+		vernier += 4;
+		//剩余值无法填满一个包
+		if (length - vernier < tagLength)
+		{
+			//添加进缓冲区
+			senderArea.append(buffer + vernier - 4, length - vernier + 4);
+			return;
+		}
+		//剩余值可以填满一个包
+		//如果包大小为0则给空指针
+		if (tagLength == 0)
+		{
+			std::shared_ptr<WorkTask> spTask;
+			WorkTask* task = new WorkTask;
+			task->setCallback(m_callback);
+			task->setParam(sender, nullptr, 0);
+			spTask.reset(task);
+			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
+		}
+		else
+		{
+			char* allocBuffer = (char*)::malloc(tagLength + 1);
+			allocBuffer[tagLength] = 0;
+			::memcpy(allocBuffer, buffer + vernier, tagLength);
+			std::shared_ptr<WorkTask> spTask;
+			WorkTask* task = new WorkTask;
+			task->setCallback(m_callback);
+			task->setParam(sender, allocBuffer, tagLength);
+			spTask.reset(task);
+			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
+		}
+		//if (ccc % 200000 == 0)
+		//{
+		//	printf("ccc = %d\n", (int)ccc);
+		//
+		//	int32_t index = -1;
+		//	while (index++ != m_vecWorkThreadId.size() - 1)
+		//	{
+		//		int32_t threadId = m_vecWorkThreadId[index];
+		//		int32_t count = CTaskThreadManager::Instance().GetThreadInterface(threadId)->GetWaitTaskCount();
+		//		printf("threadId[%d].size = %d\n", threadId, count);
+		//	}
+		//}
+		vernier += tagLength;
 	}
 	return;
 }
@@ -80,6 +182,7 @@ m_server(nullptr)
 {
 	m_libuvTcp = new LibuvTcp;
 	m_clientCallbackBase = new ClientCallbackBase;
+	NetWorkThreadManager::instance().init(m_libuvTcp->m_coreCount);
 }
 
 void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback)
@@ -108,11 +211,17 @@ void NetClient::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	{
 		return;
 	}
+
 	char* text = (char*)::malloc(length + 4);
-	memcpy(text, &length, 4);
+	*(int32_t*)text = length;
 	memcpy(text + 4, buffer, length);
-	m_libuvTcp->send(dest, text, length + 4);
-	::free(text);
+
+	std::shared_ptr<SendTask> spTask;
+	SendTask* task = new SendTask;
+	task->setLibuvTcp(m_libuvTcp);
+	task->setParam(dest, text, length + 4);
+	spTask.reset(task);
+	NetWorkThreadManager::instance().postSendTaskToThreadPool(spTask);
 }
 
 void NetClient::setServer(uv_tcp_t* server)

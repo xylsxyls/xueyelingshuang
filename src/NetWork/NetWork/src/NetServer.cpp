@@ -2,13 +2,15 @@
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include "ServerCallback.h"
 #include "D:\\SendToMessageTest.h"
-#include "NetHelper.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "WorkTask.h"
+#include "SendTask.h"
+#include "NetWorkThreadManager.h"
 
 class ServerCallbackBase : public ReceiveCallback
 {
 public:
-	ServerCallbackBase(int32_t coreCount);
+	ServerCallbackBase();
 
 public:
 	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length);
@@ -17,73 +19,15 @@ public:
 
 	void setCallback(ServerCallback* callback);
 
-	uint32_t getCurrentWorkThreadId();
-
 public:
 	ServerCallback* m_callback;
 	std::map<uv_tcp_t*, std::string> m_area;
-
-	std::vector<uint32_t> m_vecWorkThreadId;
-	int32_t m_threadIDCounter;
 };
 
-class WorkTask : public CTask
-{
-public:
-	WorkTask():
-		m_client(nullptr),
-		m_buffer(nullptr),
-		m_length(0),
-		m_callback(nullptr)
-	{
-
-	}
-
-public:
-	void setCallback(ServerCallback* callback)
-	{
-		m_callback = callback;
-	}
-
-	void setParam(uv_tcp_t* client, char* buffer, int32_t length)
-	{
-		m_client = client;
-		m_buffer = buffer;
-		m_length = length;
-	}
-
-	virtual void DoTask()
-	{
-		m_callback->receive(m_client, m_buffer, m_length);
-		if (m_buffer == nullptr)
-		{
-			return;
-		}
-		::free(m_buffer);
-	}
-
-private:
-	uv_tcp_t* m_client;
-	char* m_buffer;
-	int32_t m_length;
-	ServerCallback* m_callback;
-};
-
-ServerCallbackBase::ServerCallbackBase(int32_t coreCount) :
-m_callback(nullptr),
-m_threadIDCounter(-1)
+ServerCallbackBase::ServerCallbackBase() :
+m_callback(nullptr)
 {
 	m_callback = new ServerCallback;
-	int32_t index = -1;
-	while (index++ != coreCount - 1)
-	{
-		m_vecWorkThreadId.push_back(CTaskThreadManager::Instance().Init());
-	}
-}
-
-uint32_t ServerCallbackBase::getCurrentWorkThreadId()
-{
-	return m_vecWorkThreadId[(++m_threadIDCounter) % m_vecWorkThreadId.size()];
 }
 
 void ServerCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
@@ -138,7 +82,7 @@ void ServerCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 			task->setCallback(m_callback);
 			task->setParam(sender, nullptr, 0);
 			spTask.reset(task);
-			while (!CTaskThreadManager::Instance().GetThreadInterface(getCurrentWorkThreadId())->TryPostTask(spTask, 1));
+			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		}
 		else
 		{
@@ -150,7 +94,7 @@ void ServerCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 			task->setCallback(m_callback);
 			task->setParam(sender, allocBuffer, tagLength);
 			spTask.reset(task);
-			while (!CTaskThreadManager::Instance().GetThreadInterface(getCurrentWorkThreadId())->TryPostTask(spTask, 1));
+			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		}
 		//Çå¿Õ»º³åÇø
 		senderArea.clear();
@@ -185,7 +129,7 @@ void ServerCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 			task->setCallback(m_callback);
 			task->setParam(sender, nullptr, 0);
 			spTask.reset(task);
-			while (!CTaskThreadManager::Instance().GetThreadInterface(getCurrentWorkThreadId())->TryPostTask(spTask, 1));
+			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		}
 		else
 		{
@@ -197,7 +141,7 @@ void ServerCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 			task->setCallback(m_callback);
 			task->setParam(sender, allocBuffer, tagLength);
 			spTask.reset(task);
-			while (!CTaskThreadManager::Instance().GetThreadInterface(getCurrentWorkThreadId())->TryPostTask(spTask, 1));
+			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		}
 		//if (ccc % 200000 == 0)
 		//{
@@ -236,7 +180,8 @@ m_libuvTcp(nullptr),
 m_serverCallbackBase(nullptr)
 {
 	m_libuvTcp = new LibuvTcp;
-	m_serverCallbackBase = new ServerCallbackBase(m_libuvTcp->m_coreCount);
+	m_serverCallbackBase = new ServerCallbackBase;
+	NetWorkThreadManager::instance().init(m_libuvTcp->m_coreCount);
 }
 
 void NetServer::listen(int32_t port, ServerCallback* callback)
@@ -261,6 +206,11 @@ void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	char* text = (char*)::malloc(length + 4);
 	*(int32_t*)text = length;
 	memcpy(text + 4, buffer, length);
-	m_libuvTcp->send(dest, text, length + 4);
-	::free(text);
+
+	std::shared_ptr<SendTask> spTask;
+	SendTask* task = new SendTask;
+	task->setLibuvTcp(m_libuvTcp);
+	task->setParam(dest, text, length + 4);
+	spTask.reset(task);
+	NetWorkThreadManager::instance().postSendTaskToThreadPool(spTask);
 }

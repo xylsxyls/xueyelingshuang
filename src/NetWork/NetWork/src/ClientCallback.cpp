@@ -9,11 +9,6 @@ m_netClient(nullptr)
 	m_callback = new ReceiveCallback;
 }
 
-void ClientCallback::receive(uv_tcp_t* server, char* buffer, int32_t length)
-{
-
-}
-
 void ClientCallback::serverConnected(uv_tcp_t* server)
 {
 
