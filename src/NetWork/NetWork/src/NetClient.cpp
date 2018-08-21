@@ -192,8 +192,8 @@ m_sendThreadId(0)
 	//RCSend("m_libuvTcp = %d,netClient = %d", m_libuvTcp,this);
 	m_clientCallbackBase = new ClientCallbackBase;
 	NetWorkThreadManager::instance().init(m_libuvTcp->m_coreCount);
-	//m_sendThreadId = NetWorkThreadManager::instance().giveSendThreadId();
-	m_sendThreadId = CTaskThreadManager::Instance().Init();
+	m_sendThreadId = NetWorkThreadManager::instance().giveSendThreadId();
+	//m_sendThreadId = CTaskThreadManager::Instance().Init();
 }
 
 void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback)

@@ -3,7 +3,9 @@
 
 std::atomic<int> netCalc = 0;
 
-NetWorkThreadManager::NetWorkThreadManager()
+NetWorkThreadManager::NetWorkThreadManager():
+m_sendThreadIdCounter(-1),
+m_workThreadIdCounter(-1)
 {
 
 }
