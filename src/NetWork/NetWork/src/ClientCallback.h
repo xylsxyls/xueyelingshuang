@@ -9,7 +9,6 @@ class ReceiveCallback;
 
 class NetWorkAPI ClientCallback : public CallbackBase
 {
-	friend class ClientCallbackBase;
 public:
 	ClientCallback();
 
@@ -18,9 +17,6 @@ public:
 
 	void setNetClient(NetClient* netClient);
 
-protected:
+public:
 	NetClient* m_netClient;
-
-private:
-	ReceiveCallback* m_callback;
 };

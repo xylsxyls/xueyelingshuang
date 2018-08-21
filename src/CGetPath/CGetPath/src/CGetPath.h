@@ -22,7 +22,7 @@ public:
 	//strPath如果传必须传文件夹，寻找文件夹以下，如果不传则寻找当前路径及以下的所有文件夹，带不带\\都可以
 	//flag = 1表示查找文件，2表示查找文件后缀名，3表示查找所有文件，FileStr不起作用
     //pUnVisitPath把当前文件夹下不可访问的文件夹列出来，传空代表不存储，所有文件夹路径带\符号
-	static std::vector<std::string> FindFilePath(const std::string& FileStr, const std::string& strPath = "", BOOL flag = 1, std::vector<std::string> *pUnVisitPath = NULL);
+	static std::vector<std::string> FindFilePath(const std::string& FileStr, const std::string& strPath = "", int32_t flag = 1, std::vector<std::string> *pUnVisitPath = NULL);
 	//获取进程pid，传入进程名
 	static std::vector<int32_t> GetProcessID(const std::string& strProcessName);
 	//根据pid获取窗口句柄

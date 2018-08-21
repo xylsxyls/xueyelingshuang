@@ -1,17 +1,17 @@
 #include "ClientCallback.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include "NetClient.h"
+#include "D:\\SendToMessageTest.h"
 
 ClientCallback::ClientCallback():
-m_callback(nullptr),
 m_netClient(nullptr)
 {
-	m_callback = new ReceiveCallback;
+
 }
 
 void ClientCallback::serverConnected(uv_tcp_t* server)
 {
-
+	RCSend("ClientCallback::serverConnected");
 }
 
 void ClientCallback::setNetClient(NetClient* netClient)

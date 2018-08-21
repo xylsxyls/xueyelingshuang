@@ -1,6 +1,8 @@
 #include "NetWorkThreadManager.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
+std::atomic<int> netCalc = 0;
+
 NetWorkThreadManager::NetWorkThreadManager()
 {
 
@@ -18,20 +20,27 @@ void NetWorkThreadManager::init(int32_t coreCount)
 	{
 		return;
 	}
+	
 	int32_t index = -1;
 	while (index++ != coreCount - 1)
 	{
-		m_vecWorkThreadId.push_back(CTaskThreadManager::Instance().Init());
 		m_vecSendThreadId.push_back(CTaskThreadManager::Instance().Init());
+		m_vecWorkThreadId.push_back(CTaskThreadManager::Instance().Init());
 	}
 }
 
-void NetWorkThreadManager::postSendTaskToThreadPool(std::shared_ptr<CTask> spSendTask)
+void NetWorkThreadManager::postSendTaskToThreadPool(const std::shared_ptr<CTask>& spSendTask)
 {
+	++netCalc;
+	if (netCalc % 200000 == 0)
+	{
+		printf("netCalc = %d\n", netCalc);
+	}
+	//CTaskThreadManager::Instance().GetThreadInterface(getSendThreadId())->PostTask(spSendTask, 1);
 	while (!CTaskThreadManager::Instance().GetThreadInterface(getSendThreadId())->TryPostTask(spSendTask, 1));
 }
 
-void NetWorkThreadManager::postWorkTaskToThreadPool(std::shared_ptr<CTask> spWorkTask)
+void NetWorkThreadManager::postWorkTaskToThreadPool(const std::shared_ptr<CTask>& spWorkTask)
 {
 	while (!CTaskThreadManager::Instance().GetThreadInterface(getWorkThreadId())->TryPostTask(spWorkTask, 1));
 }
@@ -39,6 +48,7 @@ void NetWorkThreadManager::postWorkTaskToThreadPool(std::shared_ptr<CTask> spWor
 uint32_t NetWorkThreadManager::getSendThreadId()
 {
 	return m_vecSendThreadId[(++m_sendThreadIdCounter) % m_vecSendThreadId.size()];
+	return m_vecSendThreadId[0];
 }
 
 uint32_t NetWorkThreadManager::getWorkThreadId()

@@ -2,6 +2,7 @@
 #include "LibuvTcpMacro.h"
 #include <stdint.h>
 #include <vector>
+#include <mutex>
 
 typedef struct uv_tcp_s uv_tcp_t;
 typedef struct uv_loop_s uv_loop_t;
@@ -39,6 +40,7 @@ public:
 	uv_loop_t* m_clientLoop;
 	int32_t m_workIndex;
 	int32_t m_coreCount;
+	std::mutex m_mu;
 
 protected:
 	ReceiveCallback* m_receiveCallback;

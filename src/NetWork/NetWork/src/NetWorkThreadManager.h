@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <vector>
 #include <memory>
+#include <atomic>
 
 class CTask;
 
@@ -19,18 +20,18 @@ public:
 public:
 	void init(int32_t coreCount);
 
-	void postSendTaskToThreadPool(std::shared_ptr<CTask> spSendTask);
+	void postSendTaskToThreadPool(const std::shared_ptr<CTask>& spSendTask);
 
-	void postWorkTaskToThreadPool(std::shared_ptr<CTask> spWorkTask);
+	void postWorkTaskToThreadPool(const std::shared_ptr<CTask>& spWorkTask);
 
 	uint32_t getSendThreadId();
 
 	uint32_t getWorkThreadId();
 
 private:
-	int32_t m_sendThreadIdCounter;
+	std::atomic<int32_t> m_sendThreadIdCounter;
 	std::vector<uint32_t> m_vecSendThreadId;
 
-	int32_t m_workThreadIdCounter;
+	std::atomic<int32_t> m_workThreadIdCounter;
 	std::vector<uint32_t> m_vecWorkThreadId;
 };

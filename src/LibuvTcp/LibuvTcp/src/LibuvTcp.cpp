@@ -5,6 +5,7 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
 
+std::mutex g_mu;
 class RunLoopTask : public CTask
 {
 public:
@@ -93,17 +94,26 @@ void StartRead(uv_tcp_t* sender)
 //客户端连上服务端的回调（客户端函数）
 void onServerConnected(uv_connect_t* connect, int status)
 {
+	//RCSend("onserverConnected,%d,%d", connect,status);
 	if (status < 0)
 	{
+		//RCSend("connect error: %s!\n", uv_strerror(status));
 		printf("connect error: %s!\n", uv_strerror(status));
 		return;
 	}
+	//RCSend("connect success");
 	printf("connect success!\n");
 
 	LibuvTcp* libuvTcp = (LibuvTcp*)connect->data;
 	uv_tcp_t* server = (uv_tcp_t*)connect->handle;
 	server->data = libuvTcp;
+	//RCSend("callback serverConnected");
+	if (libuvTcp->callback()->m_libuvTcp == nullptr)
+	{
+		RCSend("libuvTcp->callback()->m_libuvTcp nullptr");
+	}
 	libuvTcp->callback()->serverConnected(server);
+	//RCSend("end callback serverConnected");
 
 	//开始读取客户端发送的数据，并设置好接收缓存分配的函数alloc_buffer和读取完毕后的回调函数echo_read 
 	StartRead(server);
@@ -238,6 +248,7 @@ ReceiveCallback* LibuvTcp::callback()
 
 void LibuvTcp::send(uv_tcp_t* dest, char* buffer, int32_t length)
 {
+	
 	//为回复客户端数据创建一个写数据对象uv_write_t，写数据对象内存将会在写完后的回调函数中释放 
 	//因为发送完的数据在发送完毕后无论成功与否，都会释放内存。如果一定要确保发送出去，那么请自己存储好发送的数据，直到echo_write执行完再释放。 
 	uv_write_t* req = (uv_write_t*)::malloc(sizeof(uv_write_t));
@@ -249,6 +260,7 @@ void LibuvTcp::send(uv_tcp_t* dest, char* buffer, int32_t length)
 	send_buf.base = buffer;
 	send_buf.len = length;
 
+	m_mu.lock();
 	//写数据，并将写数据对象uv_write_t和客户端、缓存、回调函数关联，第四个参数表示创建一个uv_buf_t缓存，不是1个字节 
 	uv_write((uv_write_t*)req, (uv_stream_t*)dest, &send_buf, 1, [](uv_write_t *req, int status)
 	{
@@ -261,6 +273,7 @@ void LibuvTcp::send(uv_tcp_t* dest, char* buffer, int32_t length)
 		//::free(req->data);
 		::free(req);
 	});
+	m_mu.unlock();
 }
 
 //class Receive : public ReceiveCallback

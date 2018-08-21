@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{81CE7AF5-E9D4-4C9F-83BE-8B1731CDD108}</ProjectGuid>
+    <ProjectGuid>{6D8FE34C-B47A-446B-AD47-CCECAE5B0F9B}</ProjectGuid>
     <RootNamespace>ConsoleTest1</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

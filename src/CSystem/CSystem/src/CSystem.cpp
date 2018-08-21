@@ -469,20 +469,20 @@ HWND CSystem::GetConsoleHwnd()
 	return(hwndFound);
 }
 
-int main()
-{
-	CSystem::setClipboardData(CSystem::GetConsoleHwnd(), "12as34");
-	//CSystem system;
-	double x = CSystem::GetCPUSpeedGHz();
-	RECT rect = CSystem::GetWindowResolution();
-	int xx = rect.right - rect.left;
-	int y = rect.bottom - rect.top;
-	int sss = CSystem::GetVisibleHeight();
-	int screenwidth=GetSystemMetrics(SM_CXFULLSCREEN);
-	int screenheight=GetSystemMetrics(SM_CYFULLSCREEN);
-	//?以下两个函数获取的是真正屏幕的大小，即实际的大小
-	int screenwidth_real=GetSystemMetrics(SM_CXSCREEN);
-	int screenheight_real=GetSystemMetrics(SM_CYSCREEN);
-	CSystem::Sleep(1000);
-	return 0;
-}
+//int main()
+//{
+//	CSystem::setClipboardData(CSystem::GetConsoleHwnd(), "12as34");
+//	//CSystem system;
+//	double x = CSystem::GetCPUSpeedGHz();
+//	RECT rect = CSystem::GetWindowResolution();
+//	int xx = rect.right - rect.left;
+//	int y = rect.bottom - rect.top;
+//	int sss = CSystem::GetVisibleHeight();
+//	int screenwidth=GetSystemMetrics(SM_CXFULLSCREEN);
+//	int screenheight=GetSystemMetrics(SM_CYFULLSCREEN);
+//	//?以下两个函数获取的是真正屏幕的大小，即实际的大小
+//	int screenwidth_real=GetSystemMetrics(SM_CXSCREEN);
+//	int screenheight_real=GetSystemMetrics(SM_CYSCREEN);
+//	CSystem::Sleep(1000);
+//	return 0;
+//}

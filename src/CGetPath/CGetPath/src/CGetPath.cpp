@@ -95,7 +95,7 @@ std::std::string RCGetPath::GetFileFromWindow(HWND hwnd){
 }
 #endif
 
-void RecursionFindFile(const std::string& strPath, const std::string& FileStr, std::vector<std::string> *pPathVector, BOOL flag, std::vector<std::string> *pUnVisitPath)
+void RecursionFindFile(const std::string& strPath, const std::string& FileStr, std::vector<std::string> *pPathVector, int32_t flag, std::vector<std::string> *pUnVisitPath)
 {
 	CFileFind finder;
     //_T()的作用是使系统支持Unicode编码
@@ -169,7 +169,7 @@ void RecursionFindFile(const std::string& strPath, const std::string& FileStr, s
 	return;
 }
 
-std::vector<std::string> CGetPath::FindFilePath(const std::string& FileStr, const std::string& strPath, BOOL flag, std::vector<std::string> *pUnVisitPath)
+std::vector<std::string> CGetPath::FindFilePath(const std::string& FileStr, const std::string& strPath, int32_t flag, std::vector<std::string> *pUnVisitPath)
 {
     std::string path = strPath;
     if (path == "")

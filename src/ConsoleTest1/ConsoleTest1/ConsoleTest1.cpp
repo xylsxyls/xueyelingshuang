@@ -17,6 +17,11 @@ public:
 	{
 		//return;
 		++calc;
+		if (calc % 200000 == 0)
+		{
+			printf("x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
+		}
+
 		if (length != 6 || 
 			(std::string(buffer) != "121243" &&
 			std::string(buffer) != "575798" &&
@@ -32,10 +37,7 @@ public:
 			getchar();
 		}
 		
-		if (calc % 200000 == 0)
-		{
-			printf("x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
-		}
+		
 		//((char*)buffer)[length] = 0;
 		//m_netServer->send("receive", 7, client);
 		return;
