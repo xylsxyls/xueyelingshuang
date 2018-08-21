@@ -26,6 +26,8 @@ public:
 
 	void send(uv_tcp_t* dest, char* buffer, int32_t length);
 
+	bool trySend(uv_tcp_t* dest, char* buffer, int32_t length);
+
 	ReceiveCallback* callback();
 
 public:

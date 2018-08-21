@@ -23,5 +23,5 @@ public:
 	LibuvTcp* m_libuvTcp;
 	ClientCallbackBase* m_clientCallbackBase;
 	uv_tcp_t* m_server;
-	uint32_t m_threadId;
+	uint32_t m_sendThreadId;
 };

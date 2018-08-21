@@ -212,5 +212,5 @@ void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	task->setLibuvTcp(m_libuvTcp);
 	task->setParam(dest, text, length + 4);
 	spTask.reset(task);
-	NetWorkThreadManager::instance().postSendTaskToThreadPool(spTask);
+	NetWorkThreadManager::instance().postSendTaskToThreadPool(0, spTask, 1);
 }

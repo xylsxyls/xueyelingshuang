@@ -186,13 +186,14 @@ NetClient::NetClient() :
 m_libuvTcp(nullptr),
 m_clientCallbackBase(nullptr),
 m_server(nullptr),
-m_threadId(0)
+m_sendThreadId(0)
 {
 	m_libuvTcp = new LibuvTcp;
 	//RCSend("m_libuvTcp = %d,netClient = %d", m_libuvTcp,this);
 	m_clientCallbackBase = new ClientCallbackBase;
 	NetWorkThreadManager::instance().init(m_libuvTcp->m_coreCount);
-	m_threadId = CTaskThreadManager::Instance().Init();
+	//m_sendThreadId = NetWorkThreadManager::instance().giveSendThreadId();
+	m_sendThreadId = CTaskThreadManager::Instance().Init();
 }
 
 void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback)
@@ -206,7 +207,6 @@ void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback)
 	m_libuvTcp->initClient(ip, port, m_clientCallbackBase);
 	//RCSend("connect,m_libuvTcp = %d", m_libuvTcp);
 	m_libuvTcp->clientLoop();
-	
 }
 
 void NetClient::send(char* buffer, int32_t length, uv_tcp_t* dest)
@@ -246,7 +246,7 @@ void NetClient::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	//	printf("netClientCalc = %d,m_libuvTcp = %d\n", netClientCalc, m_libuvTcp);
 	//}
 
-	NetWorkThreadManager::instance().postSendTaskToThreadPool(spTask);
+	NetWorkThreadManager::instance().postSendTaskToThreadPool(m_sendThreadId, spTask, 1);
 	//RCSend("m_threadId = %d", m_threadId);
 	//CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spTask, 1);
 	//m_libuvTcp->send(dest, text, length + 4);

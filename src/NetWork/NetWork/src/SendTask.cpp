@@ -2,6 +2,7 @@
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include "D:\\SendToMessageTest.h"
 #include "CSystem/CSystemAPI.h"
+#include "NetWorkThreadManager.h"
 
 std::atomic<int> calc = 0;
 
@@ -28,17 +29,15 @@ void SendTask::setParam(uv_tcp_t* dest, char* buffer, int32_t length)
 
 void SendTask::DoTask()
 {
-	//RCSend("sendtask");
-	++calc;
-	//m_libuvTcp->send(dest, text, length + 4);
-	if (calc % 200000 == 0)
-	{
-		printf("x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
-	}
-	if (m_libuvTcp == nullptr)
-	{
-		RCSend("m_libuvTcp = nullptr error,calc = %d",calc);
-	}
+	//if (!(m_libuvTcp->trySend(m_dest, m_buffer, m_length)))
+	//{
+	//	std::shared_ptr<SendTask> spTask;
+	//	SendTask* sendTask = new SendTask;
+	//	*sendTask = *this;
+	//	spTask.reset(sendTask);
+	//	NetWorkThreadManager::instance().postSendTaskToThreadPool(spTask, 2);
+	//	return;
+	//}
 	m_libuvTcp->send(m_dest, m_buffer, m_length);
 	if (m_length == 0)
 	{
@@ -49,4 +48,11 @@ void SendTask::DoTask()
 		RCSend("m_libuvTcp = nullptr error,calc = %d", calc);
 	}
 	::free(m_buffer);
+
+	++calc;
+	//m_libuvTcp->send(dest, text, length + 4);
+	if (calc % 200000 == 0)
+	{
+		printf("x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
+	}
 }

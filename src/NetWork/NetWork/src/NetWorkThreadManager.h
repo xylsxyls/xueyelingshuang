@@ -20,11 +20,11 @@ public:
 public:
 	void init(int32_t coreCount);
 
-	void postSendTaskToThreadPool(const std::shared_ptr<CTask>& spSendTask);
+	void postSendTaskToThreadPool(uint32_t threadId, const std::shared_ptr<CTask>& spSendTask, int32_t taskLevel);
 
 	void postWorkTaskToThreadPool(const std::shared_ptr<CTask>& spWorkTask);
 
-	uint32_t getSendThreadId();
+	uint32_t giveSendThreadId();
 
 	uint32_t getWorkThreadId();
 

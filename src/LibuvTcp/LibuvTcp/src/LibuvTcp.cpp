@@ -260,7 +260,6 @@ void LibuvTcp::send(uv_tcp_t* dest, char* buffer, int32_t length)
 	send_buf.base = buffer;
 	send_buf.len = length;
 
-	m_mu.lock();
 	//写数据，并将写数据对象uv_write_t和客户端、缓存、回调函数关联，第四个参数表示创建一个uv_buf_t缓存，不是1个字节 
 	uv_write((uv_write_t*)req, (uv_stream_t*)dest, &send_buf, 1, [](uv_write_t *req, int status)
 	{
@@ -273,7 +272,17 @@ void LibuvTcp::send(uv_tcp_t* dest, char* buffer, int32_t length)
 		//::free(req->data);
 		::free(req);
 	});
+}
+
+bool LibuvTcp::trySend(uv_tcp_t* dest, char* buffer, int32_t length)
+{
+	if (!m_mu.try_lock())
+	{
+		return false;
+	}
+	send(dest, buffer, length);
 	m_mu.unlock();
+	return true;
 }
 
 //class Receive : public ReceiveCallback
