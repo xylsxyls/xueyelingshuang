@@ -4,6 +4,7 @@
 #include <windows.h>
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "D:\\SendToMessageTest.h"
 
 std::atomic<int> calc = 0;
 
@@ -19,7 +20,7 @@ public:
 		++calc;
 		if (calc % 200000 == 0)
 		{
-			printf("x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
+			RCSend("x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
 		}
 
 		if (length != 6 || 
@@ -28,12 +29,12 @@ public:
 			std::string(buffer) != "ababdc" &&
 			std::string(buffer) != "efefhg"))
 		{
-			printf("length = %d,%s\n", length, buffer);
+			RCSend("length = %d,%s\n", length, buffer);
 			for (int32_t index = -5; index < 12; ++index)
 			{
-				printf("%d,", buffer[index]);
+				RCSend("%d,", buffer[index]);
 			}
-			printf("\n");
+			RCSend("\n");
 			getchar();
 		}
 		
@@ -46,15 +47,15 @@ public:
 	virtual void clientConnected(uv_tcp_t* client)
 	{
 		return;
-		printf("client connected\n");
+		RCSend("client connected\n");
 		int32_t count = 1200000;
 		int begin = ::GetTickCount();
-		printf("begin = %d\n", ::GetTickCount());
+		RCSend("begin = %d\n", ::GetTickCount());
 		while (count-- != 0)
 		{
 			m_netServer->send("121243", 6, client);
 		}
-		printf("time = %d", ::GetTickCount() - begin);
+		RCSend("time = %d", ::GetTickCount() - begin);
 	}
 
 	int m_x;

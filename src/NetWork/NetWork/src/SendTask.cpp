@@ -53,6 +53,6 @@ void SendTask::DoTask()
 	//m_libuvTcp->send(dest, text, length + 4);
 	if (calc % 200000 == 0)
 	{
-		printf("x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
+		RCSend("x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
 	}
 }

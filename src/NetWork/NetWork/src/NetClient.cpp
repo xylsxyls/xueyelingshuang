@@ -239,7 +239,7 @@ void NetClient::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	++netClientCalc;
 	if (netClientCalc % 200000 == 0)
 	{
-		printf("netClientCalc = %d\n", netClientCalc);
+		RCSend("netClientCalc = %d\n", netClientCalc);
 	}
 	//if (netClientCalc > 3999900)
 	//{

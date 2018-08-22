@@ -1,5 +1,6 @@
 #include "ConsoleTest.h"
 #include "NetWork/NetWorkAPI.h"
+#include <windows.h>
 
 #define SEND_COUNT 1000000
 
@@ -24,6 +25,7 @@ public:
 
 int32_t main()
 {
+	Sleep(3000);
 	ClientReceive clientReceive1;
 	NetClient client1;
 	client1.connect("10.1.22.116", 7000, &clientReceive1);
