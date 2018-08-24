@@ -14,13 +14,11 @@ public:
 public:
 	void setLibuvTcp(LibuvTcp* libuvTcp);
 
-	void setParam(uv_tcp_t* dest, char* buffer, int32_t length);
+	void setParam(char* text);
 
 	virtual void DoTask();
 	
 private:
-	uv_tcp_t* m_dest;
-	char* m_buffer;
-	int32_t m_length;
+	char* m_text;
 	LibuvTcp* m_libuvTcp;
 };

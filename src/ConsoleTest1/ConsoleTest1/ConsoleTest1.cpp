@@ -20,7 +20,7 @@ public:
 		++calc;
 		if (calc % 200000 == 0)
 		{
-			RCSend("x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
+			RCSend("server x = %d,time = %d,threadId = %d\n", calc, ::GetTickCount(), CSystem::SystemThreadId());
 		}
 
 		if (length != 6 || 

@@ -125,5 +125,6 @@ public:
     int32_t Condition(DataNeuron* nowNeuron, double& fundHandlePersent);
     void HandleFrozen(double& frozen, double& fund);
 	afx_msg void OnBnClickedButton24();
+	afx_msg void OnBnClickedButton25();
 };
 

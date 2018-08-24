@@ -5,6 +5,8 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
 
+std::atomic<int> asyncCalc = 0;
+std::atomic<int> asyncSendCalc = 0;
 std::mutex g_mu;
 class RunLoopTask : public CTask
 {
@@ -30,11 +32,45 @@ private:
 	uv_loop_t* m_loop;
 };
 
+struct Package
+{
+	char* m_data;
+	Package* m_next;
+	Package() :
+		m_data(nullptr),
+		m_next(nullptr)
+	{
+
+	}
+};
+
+Package* createPackageItem(char* data)
+{
+	Package* package = new Package;
+	package->m_data = data;
+	return package;
+}
+
+Package* popfrontItem(Package* package)
+{
+	//RCSend("pop");
+	Package* next = package->m_next;
+	::free(package);
+	return next;
+}
+
+void aaaa(std::atomic<int>& sds)
+{
+	return;
+}
+
 LibuvTcp::LibuvTcp():
 m_receiveCallback(nullptr),
 m_coreCount(0),
 m_clientLoop(nullptr),
-m_workIndex(-1)
+m_workIndex(-1),
+m_asyncHandle(nullptr),
+m_endPackage(nullptr)
 {
 	m_coreCount = CSystem::GetCPUCoreCount();
 
@@ -45,6 +81,9 @@ m_workIndex(-1)
 		uv_loop_init(m_clientLoop);
 		m_vecServerLoop.push_back(m_clientLoop);
 	}
+
+	std::atomic<int> x = 3;
+	aaaa(x);
 	
 	m_clientLoop = new uv_loop_t;
 	uv_loop_init(m_clientLoop);
@@ -161,6 +200,61 @@ void onClientConnected(uv_stream_t* server, int status)
 	Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[++(libuvTcp->m_workIndex) % libuvTcp->m_coreCount]);
 }
 
+void onAsyncCallback(uv_async_t* handle)
+{
+	++asyncCalc;
+	if (asyncCalc % 200000 == 0)
+	{
+		RCSend("asyncCalc = %d", asyncCalc);
+	}
+
+	//Package* package = (Package*)handle->data;
+	//if (package == nullptr)
+	//{
+	//	RCSend("package nullptr");
+	//	printf("package nullptr");
+	//	return;
+	//}
+	char* text = (char*)handle->data;
+	uv_tcp_t* dest = (uv_tcp_t*)(*(int32_t*)text);
+	int32_t length = *(int32_t*)(text + 4);
+	char* buffer = text + 8;
+
+	//handle->data = popfrontItem(package);
+
+	//uv__handle_closing
+	uv_close((uv_handle_t*)handle, [](uv_handle_t* handle)
+	{
+		::free((uv_async_t*)handle);
+	});
+
+	//为回复客户端数据创建一个写数据对象uv_write_t，写数据对象内存将会在写完后的回调函数中释放 
+	//因为发送完的数据在发送完毕后无论成功与否，都会释放内存。如果一定要确保发送出去，那么请自己存储好发送的数据，直到echo_write执行完再释放。 
+	uv_write_t* req = (uv_write_t*)::malloc(sizeof(uv_write_t));
+	//char* bufferAlloc = (char*)::malloc(length);
+	//memcpy(bufferAlloc, buffer, length);
+	//用缓存中的起始地址和大小初始化写数据对象
+	req->data = text;
+	uv_buf_t send_buf;
+	send_buf.base = text + 4;
+	send_buf.len = length + 4;
+	
+	//写数据，并将写数据对象uv_write_t和客户端、缓存、回调函数关联，第四个参数表示创建一个uv_buf_t缓存，不是1个字节 
+	uv_write((uv_write_t*)req, (uv_stream_t*)dest, &send_buf, 1, [](uv_write_t *req, int status)
+	{
+		if (status != 0)
+		{
+			//状态值status不为0表示发送数据失败。 
+			printf("Write error %s\n", uv_strerror(status));
+		}
+		//不管发送数据成功与否，都要执行下面的函数释放资源，以免内存泄露
+		::free(((char*)req->data));
+		::free(req);
+	});
+	//g_mu.unlock();
+	
+}
+
 void LibuvTcp::initClient(const char* ip, int32_t port, ReceiveCallback* callback)
 {
 	m_receiveCallback = callback;
@@ -246,44 +340,49 @@ ReceiveCallback* LibuvTcp::callback()
 	return m_receiveCallback;
 }
 
-void LibuvTcp::send(uv_tcp_t* dest, char* buffer, int32_t length)
+void LibuvTcp::send(char* text)
 {
-	
-	//为回复客户端数据创建一个写数据对象uv_write_t，写数据对象内存将会在写完后的回调函数中释放 
-	//因为发送完的数据在发送完毕后无论成功与否，都会释放内存。如果一定要确保发送出去，那么请自己存储好发送的数据，直到echo_write执行完再释放。 
-	uv_write_t* req = (uv_write_t*)::malloc(sizeof(uv_write_t));
-	//char* bufferAlloc = (char*)::malloc(length);
-	//memcpy(bufferAlloc, buffer, length);
-	//用缓存中的起始地址和大小初始化写数据对象
-	req->data = buffer;
-	uv_buf_t send_buf;
-	send_buf.base = buffer;
-	send_buf.len = length;
+	uv_async_t* asyncHandle = new uv_async_t;
+	asyncHandle->data = text;
+	uv_async_init(m_clientLoop, asyncHandle, onAsyncCallback);
+	//if (m_asyncHandle->data == nullptr)
+	//{
+	//	m_endPackage = createPackageItem(text);
+	//	m_asyncHandle->data = m_endPackage;
+	//}
+	//else
+	//{
+	//	m_endPackage->m_next = createPackageItem(text);
+	//	m_endPackage = m_endPackage->m_next;
+	//}
 
-	//写数据，并将写数据对象uv_write_t和客户端、缓存、回调函数关联，第四个参数表示创建一个uv_buf_t缓存，不是1个字节 
-	uv_write((uv_write_t*)req, (uv_stream_t*)dest, &send_buf, 1, [](uv_write_t *req, int status)
+	++asyncSendCalc;
+	if (asyncSendCalc % 200000 == 0)
 	{
-		if (status != 0)
-		{
-			//状态值status不为0表示发送数据失败。 
-			printf("Write error %s\n", uv_strerror(status));
-		}
-		//不管发送数据成功与否，都要执行下面的函数释放资源，以免内存泄露
-		//::free(req->data);
-		::free(req);
-	});
-}
-
-bool LibuvTcp::trySend(uv_tcp_t* dest, char* buffer, int32_t length)
-{
-	if (!m_mu.try_lock())
-	{
-		return false;
+		RCSend("asyncSendCalc = %d", asyncSendCalc);
 	}
-	send(dest, buffer, length);
-	m_mu.unlock();
-	return true;
+	uv_async_send(asyncHandle);
 }
+
+char* LibuvTcp::getText(uv_tcp_t* dest, char* buffer, int32_t length)
+{
+	char* text = (char*)::malloc(length + 8);
+	*(int32_t*)text = (int32_t)dest;
+	*((int32_t*)(text + 4)) = length;
+	::memcpy(text + 8, buffer, length);
+	return text;
+}
+
+//bool LibuvTcp::trySend(uv_tcp_t* dest, char* buffer, int32_t length)
+//{
+//	if (!m_mu.try_lock())
+//	{
+//		return false;
+//	}
+//	send(dest, buffer, length);
+//	m_mu.unlock();
+//	return true;
+//}
 
 //class Receive : public ReceiveCallback
 //{

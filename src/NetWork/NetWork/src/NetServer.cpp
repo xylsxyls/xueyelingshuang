@@ -203,14 +203,15 @@ void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
 		return;
 	}
 
-	char* text = (char*)::malloc(length + 4);
-	*(int32_t*)text = length;
-	memcpy(text + 4, buffer, length);
+	char* text = (char*)::malloc(length + 8);
+	*(int32_t*)text = (int32_t)dest;
+	*((int32_t*)(text + 4)) = length;
+	::memcpy(text + 8, buffer, length);
 
 	std::shared_ptr<SendTask> spTask;
 	SendTask* task = new SendTask;
 	task->setLibuvTcp(m_libuvTcp);
-	task->setParam(dest, text, length + 4);
+	task->setParam(text);
 	spTask.reset(task);
 	NetWorkThreadManager::instance().postSendTaskToThreadPool(0, spTask, 1);
 }

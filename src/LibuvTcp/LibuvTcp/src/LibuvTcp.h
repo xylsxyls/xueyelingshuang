@@ -6,7 +6,9 @@
 
 typedef struct uv_tcp_s uv_tcp_t;
 typedef struct uv_loop_s uv_loop_t;
+typedef struct uv_async_s uv_async_t;
 class ReceiveCallback;
+struct Package;
 
 class LibuvTcpAPI LibuvTcp
 {
@@ -24,9 +26,11 @@ public:
 
 	void serverLoop();
 
-	void send(uv_tcp_t* dest, char* buffer, int32_t length);
+	void send(char* text);
 
-	bool trySend(uv_tcp_t* dest, char* buffer, int32_t length);
+	char* getText(uv_tcp_t* dest, char* buffer, int32_t length);
+
+	//bool trySend(uv_tcp_t* dest, char* buffer, int32_t length);
 
 	ReceiveCallback* callback();
 
@@ -36,13 +40,16 @@ public:
 #pragma warning(disable:4251)
 #endif
 	std::vector<uv_loop_t*> m_vecServerLoop;
+	std::mutex m_mu;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 	uv_loop_t* m_clientLoop;
 	int32_t m_workIndex;
 	int32_t m_coreCount;
-	std::mutex m_mu;
+	Package* m_endPackage;
+
+	uv_async_t* m_asyncHandle;
 
 protected:
 	ReceiveCallback* m_receiveCallback;

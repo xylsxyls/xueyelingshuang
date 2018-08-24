@@ -100,6 +100,7 @@ BEGIN_MESSAGE_MAP(CFundInvestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON22, &CFundInvestDlg::OnBnClickedButton22)
     ON_BN_CLICKED(IDC_BUTTON23, &CFundInvestDlg::OnBnClickedButton23)
 	ON_BN_CLICKED(IDC_BUTTON24, &CFundInvestDlg::OnBnClickedButton24)
+	ON_BN_CLICKED(IDC_BUTTON25, &CFundInvestDlg::OnBnClickedButton25)
 END_MESSAGE_MAP()
 
 
@@ -1858,4 +1859,34 @@ void CFundInvestDlg::OnBnClickedButton24()
 		}
 	}
 	AfxMessageBox("1");
+}
+
+
+void CFundInvestDlg::OnBnClickedButton25()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	std::vector<double> vec = { -3.2, -0.85, -0.43, 0.45, 3.1, 0.07, -1.27, 2.86, 2.76, 0.06, -1.47, -1.46, -0.7, 0.07, -1.79, 3.64, -0.56, -1.46, 1.08, -1.88, 0.48, -2.13/*, -3.63, -3.17, -2.16, 2.61, -3.09,2.78,0.16,-1.51,0.54,-3.39,-3.34,-0.49,0.67,3.56,-1.14,0.31 */ };
+
+	double allmoney = 0;
+	double per = 1.0;
+	double all = 0;
+	int32_t index = -1;
+	while (index++ != vec.size() - 1)
+	{
+		double& day = vec[index];
+		if (index == 0)
+		{
+			double money = day < 0 ? (int32_t)day * -10000 : (int32_t)day * 10000 / 2;
+			all += money;
+			allmoney += money;
+			continue;
+		}
+		per *= (1 + day / 100);
+		all *= (1 + day / 100);
+
+		double money = day < 0 ? (int32_t)day * -10000 : (int32_t)day * -10000 / 3;
+		all += money;
+		allmoney += money;
+	}
+	auto m = all / allmoney;
 }

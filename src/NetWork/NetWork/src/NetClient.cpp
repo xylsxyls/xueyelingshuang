@@ -226,14 +226,10 @@ void NetClient::send(char* buffer, int32_t length, uv_tcp_t* dest)
 		return;
 	}
 
-	char* text = (char*)::malloc(length + 4);
-	*(int32_t*)text = length;
-	memcpy(text + 4, buffer, length);
-
 	std::shared_ptr<SendTask> spTask;
 	SendTask* task = new SendTask;
 	task->setLibuvTcp(m_libuvTcp);
-	task->setParam(dest, text, length + 4);
+	task->setParam(m_libuvTcp->getText(dest, buffer, length));
 	spTask.reset(task);
 
 	++netClientCalc;
@@ -246,11 +242,11 @@ void NetClient::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	//	printf("netClientCalc = %d,m_libuvTcp = %d\n", netClientCalc, m_libuvTcp);
 	//}
 
-	//NetWorkThreadManager::instance().postSendTaskToThreadPool(m_sendThreadId, spTask, 1);
+	NetWorkThreadManager::instance().postSendTaskToThreadPool(m_sendThreadId, spTask, 1);
 	//RCSend("m_threadId = %d", m_threadId);
 	//CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spTask, 1);
-	m_libuvTcp->send(dest, text, length + 4);
-	::free(text);
+	//m_libuvTcp->send(dest, text, length + 4);
+	//::free(text);
 }
 
 void NetClient::setServer(uv_tcp_t* server)
