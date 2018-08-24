@@ -33,12 +33,6 @@ void NetWorkThreadManager::init(int32_t coreCount)
 
 void NetWorkThreadManager::postSendTaskToThreadPool(uint32_t threadId, const std::shared_ptr<CTask>& spSendTask, int32_t taskLevel)
 {
-	//++netCalc;
-	//if (netCalc % 200000 == 0)
-	//{
-	//	printf("netCalc = %d\n", netCalc);
-	//}
-	//CTaskThreadManager::Instance().GetThreadInterface(getSendThreadId())->PostTask(spSendTask, 1);
 	//while (!CTaskThreadManager::Instance().GetThreadInterface(giveSendThreadId())->TryPostTask(spSendTask, taskLevel));
 	CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spSendTask, taskLevel);
 }
@@ -58,6 +52,3 @@ uint32_t NetWorkThreadManager::getWorkThreadId()
 {
 	return m_vecWorkThreadId[(++m_workThreadIdCounter) % m_vecWorkThreadId.size()];
 }
-
-
-

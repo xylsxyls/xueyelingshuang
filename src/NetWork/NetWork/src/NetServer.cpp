@@ -143,18 +143,6 @@ void ServerCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 			spTask.reset(task);
 			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		}
-		//if (ccc % 200000 == 0)
-		//{
-		//	printf("ccc = %d\n", (int)ccc);
-		//
-		//	int32_t index = -1;
-		//	while (index++ != m_vecWorkThreadId.size() - 1)
-		//	{
-		//		int32_t threadId = m_vecWorkThreadId[index];
-		//		int32_t count = CTaskThreadManager::Instance().GetThreadInterface(threadId)->GetWaitTaskCount();
-		//		printf("threadId[%d].size = %d\n", threadId, count);
-		//	}
-		//}
 		vernier += tagLength;
 	}
 	return;

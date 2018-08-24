@@ -32,45 +32,11 @@ private:
 	uv_loop_t* m_loop;
 };
 
-struct Package
-{
-	char* m_data;
-	Package* m_next;
-	Package() :
-		m_data(nullptr),
-		m_next(nullptr)
-	{
-
-	}
-};
-
-Package* createPackageItem(char* data)
-{
-	Package* package = new Package;
-	package->m_data = data;
-	return package;
-}
-
-Package* popfrontItem(Package* package)
-{
-	//RCSend("pop");
-	Package* next = package->m_next;
-	::free(package);
-	return next;
-}
-
-void aaaa(std::atomic<int>& sds)
-{
-	return;
-}
-
 LibuvTcp::LibuvTcp():
 m_receiveCallback(nullptr),
 m_coreCount(0),
 m_clientLoop(nullptr),
-m_workIndex(-1),
-m_asyncHandle(nullptr),
-m_endPackage(nullptr)
+m_workIndex(-1)
 {
 	m_coreCount = CSystem::GetCPUCoreCount();
 
@@ -81,9 +47,6 @@ m_endPackage(nullptr)
 		uv_loop_init(m_clientLoop);
 		m_vecServerLoop.push_back(m_clientLoop);
 	}
-
-	std::atomic<int> x = 3;
-	aaaa(x);
 	
 	m_clientLoop = new uv_loop_t;
 	uv_loop_init(m_clientLoop);
@@ -133,26 +96,17 @@ void StartRead(uv_tcp_t* sender)
 //客户端连上服务端的回调（客户端函数）
 void onServerConnected(uv_connect_t* connect, int status)
 {
-	//RCSend("onserverConnected,%d,%d", connect,status);
 	if (status < 0)
 	{
-		//RCSend("connect error: %s!\n", uv_strerror(status));
 		printf("connect error: %s!\n", uv_strerror(status));
 		return;
 	}
-	//RCSend("connect success");
 	printf("connect success!\n");
 
 	LibuvTcp* libuvTcp = (LibuvTcp*)connect->data;
 	uv_tcp_t* server = (uv_tcp_t*)connect->handle;
 	server->data = libuvTcp;
-	//RCSend("callback serverConnected");
-	if (libuvTcp->callback()->m_libuvTcp == nullptr)
-	{
-		RCSend("libuvTcp->callback()->m_libuvTcp nullptr");
-	}
 	libuvTcp->callback()->serverConnected(server);
-	//RCSend("end callback serverConnected");
 
 	//开始读取客户端发送的数据，并设置好接收缓存分配的函数alloc_buffer和读取完毕后的回调函数echo_read 
 	StartRead(server);
@@ -183,7 +137,6 @@ void Accept(uv_tcp_t* server, uv_loop_t* loop)
 	libuvTcp->callback()->clientConnected(client);
 	//开始读取客户端发送的数据，并设置好接收缓存分配的函数alloc_buffer和读取完毕后的回调函数echo_read
 	StartRead(client);
-	//StartRead2(client);
 }
 
 //客户端连上服务端的回调（服务端函数）
@@ -208,21 +161,11 @@ void onAsyncCallback(uv_async_t* handle)
 		RCSend("asyncCalc = %d", asyncCalc);
 	}
 
-	//Package* package = (Package*)handle->data;
-	//if (package == nullptr)
-	//{
-	//	RCSend("package nullptr");
-	//	printf("package nullptr");
-	//	return;
-	//}
 	char* text = (char*)handle->data;
 	uv_tcp_t* dest = (uv_tcp_t*)(*(int32_t*)text);
 	int32_t length = *(int32_t*)(text + 4);
 	char* buffer = text + 8;
 
-	//handle->data = popfrontItem(package);
-
-	//uv__handle_closing
 	uv_close((uv_handle_t*)handle, [](uv_handle_t* handle)
 	{
 		::free((uv_async_t*)handle);
@@ -251,8 +194,6 @@ void onAsyncCallback(uv_async_t* handle)
 		::free(((char*)req->data));
 		::free(req);
 	});
-	//g_mu.unlock();
-	
 }
 
 void LibuvTcp::initClient(const char* ip, int32_t port, ReceiveCallback* callback)
@@ -345,16 +286,6 @@ void LibuvTcp::send(char* text)
 	uv_async_t* asyncHandle = new uv_async_t;
 	asyncHandle->data = text;
 	uv_async_init(m_clientLoop, asyncHandle, onAsyncCallback);
-	//if (m_asyncHandle->data == nullptr)
-	//{
-	//	m_endPackage = createPackageItem(text);
-	//	m_asyncHandle->data = m_endPackage;
-	//}
-	//else
-	//{
-	//	m_endPackage->m_next = createPackageItem(text);
-	//	m_endPackage = m_endPackage->m_next;
-	//}
 
 	++asyncSendCalc;
 	if (asyncSendCalc % 200000 == 0)
@@ -372,17 +303,6 @@ char* LibuvTcp::getText(uv_tcp_t* dest, char* buffer, int32_t length)
 	::memcpy(text + 8, buffer, length);
 	return text;
 }
-
-//bool LibuvTcp::trySend(uv_tcp_t* dest, char* buffer, int32_t length)
-//{
-//	if (!m_mu.try_lock())
-//	{
-//		return false;
-//	}
-//	send(dest, buffer, length);
-//	m_mu.unlock();
-//	return true;
-//}
 
 //class Receive : public ReceiveCallback
 //{

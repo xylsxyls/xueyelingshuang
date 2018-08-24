@@ -21,15 +21,9 @@ public:
 
 	void send(char* buffer, int32_t length, uv_tcp_t* dest);
 
-private:
-	
-
 protected:
 	LibuvTcp* m_libuvTcp;
 
 public:
 	ServerCallbackBase* m_serverCallbackBase;
-
-	
-	
 };

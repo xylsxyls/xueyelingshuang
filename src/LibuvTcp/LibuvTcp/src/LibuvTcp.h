@@ -30,8 +30,6 @@ public:
 
 	char* getText(uv_tcp_t* dest, char* buffer, int32_t length);
 
-	//bool trySend(uv_tcp_t* dest, char* buffer, int32_t length);
-
 	ReceiveCallback* callback();
 
 public:
@@ -47,9 +45,6 @@ public:
 	uv_loop_t* m_clientLoop;
 	int32_t m_workIndex;
 	int32_t m_coreCount;
-	Package* m_endPackage;
-
-	uv_async_t* m_asyncHandle;
 
 protected:
 	ReceiveCallback* m_receiveCallback;
