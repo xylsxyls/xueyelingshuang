@@ -21,7 +21,7 @@ public:
 public:
 	virtual void receive(uv_tcp_t* client, char* buffer, int32_t length)
 	{
-		//return;
+		return;
 		++calc;
 		if (calc % 200000 == 0)
 		{
@@ -79,9 +79,8 @@ public:
 
 	virtual void clientConnected(uv_tcp_t* client)
 	{
-		return;
 		RCSend("client connected\n");
-		int32_t count = 1200000;
+		int32_t count = 1000000;
 		int begin = ::GetTickCount();
 		RCSend("begin = %d\n", ::GetTickCount());
 		while (count-- != 0)
@@ -89,6 +88,7 @@ public:
 			m_netServer->send("121243", 6, client);
 		}
 		RCSend("time = %d", ::GetTickCount() - begin);
+		return;
 	}
 
 	int m_x;

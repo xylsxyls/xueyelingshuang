@@ -26,4 +26,5 @@ protected:
 
 public:
 	ServerCallbackBase* m_serverCallbackBase;
+	uint32_t m_sendThreadId;
 };

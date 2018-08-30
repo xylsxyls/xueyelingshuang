@@ -165,11 +165,13 @@ void ServerCallbackBase::setCallback(ServerCallback* callback)
 
 NetServer::NetServer() :
 m_libuvTcp(nullptr),
-m_serverCallbackBase(nullptr)
+m_serverCallbackBase(nullptr),
+m_sendThreadId(0)
 {
 	m_libuvTcp = new LibuvTcp;
 	m_serverCallbackBase = new ServerCallbackBase;
 	NetWorkThreadManager::instance().init(m_libuvTcp->m_coreCount);
+	m_sendThreadId = NetWorkThreadManager::instance().giveSendThreadId();
 }
 
 void NetServer::listen(int32_t port, ServerCallback* callback)
@@ -201,5 +203,5 @@ void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	task->setLibuvTcp(m_libuvTcp);
 	task->setParam(text);
 	spTask.reset(task);
-	NetWorkThreadManager::instance().postSendTaskToThreadPool(0, spTask, 1);
+	NetWorkThreadManager::instance().postSendTaskToThreadPool(m_sendThreadId, spTask, 1);
 }
