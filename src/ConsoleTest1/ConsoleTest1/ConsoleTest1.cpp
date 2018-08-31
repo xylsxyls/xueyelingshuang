@@ -79,6 +79,7 @@ public:
 
 	virtual void clientConnected(uv_tcp_t* client)
 	{
+		//return;
 		RCSend("client connected\n");
 		int32_t count = 1000000;
 		int begin = ::GetTickCount();

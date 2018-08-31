@@ -41,6 +41,7 @@ public:
 
 	void receive(uv_tcp_t* client, char* buffer, int32_t length)
 	{
+		//return;
 		++calc;
 		if (calc % 200000 == 0)
 		{
@@ -99,7 +100,7 @@ public:
 int32_t main()
 {
 	//Sleep(3000);
-	
+	RCSend("beginTime = %d", ::GetTickCount());
 	ClientReceive clientReceive1;
 	char* buf1 = new char[6];
 	memcpy(buf1, "121243", 6);

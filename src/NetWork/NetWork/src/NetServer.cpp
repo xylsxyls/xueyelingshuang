@@ -7,6 +7,8 @@
 #include "SendTask.h"
 #include "NetWorkThreadManager.h"
 
+std::mutex g_netServerMu;
+
 class ServerCallbackBase : public ReceiveCallback
 {
 public:
@@ -188,6 +190,7 @@ void NetServer::listen(int32_t port, ServerCallback* callback)
 
 void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
 {
+	//std::unique_lock<std::mutex> lock(g_netServerMu);
 	if (m_libuvTcp == nullptr || dest == nullptr)
 	{
 		return;

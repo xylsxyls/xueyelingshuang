@@ -7,7 +7,12 @@
 
 std::atomic<int> asyncCalc = 0;
 std::atomic<int> asyncSendCalc = 0;
+std::atomic<int> freeCalc = 0;
 std::mutex g_mu;
+std::mutex g_amu;
+
+HANDLE handleAns = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+
 class RunLoopTask : public CTask
 {
 public:
@@ -36,7 +41,8 @@ LibuvTcp::LibuvTcp():
 m_receiveCallback(nullptr),
 m_coreCount(0),
 m_clientLoop(nullptr),
-m_workIndex(-1)
+m_workIndex(-1),
+m_isClient(false)
 {
 	m_coreCount = CSystem::GetCPUCoreCount();
 
@@ -124,6 +130,16 @@ void Accept(uv_tcp_t* server, uv_loop_t* loop)
 
 	//将全局的主循环和处理连接的对象关联起来
 	uv_tcp_init(loop, client);
+
+	RCSend("loop = %d, client = %d", loop, client);
+
+	//将客户端指针和loop存入map
+	{
+		//std::unique_lock<std::mutex> lock(g_mu);
+		WriteLock clientPtrToLoopWriteLock(libuvTcp->m_clientPtrToLoopMutex);
+		libuvTcp->m_clientPtrToLoopMap[client] = loop;
+	}
+
 	//存入类地址
 	client->data = libuvTcp;
 
@@ -150,6 +166,7 @@ void onClientConnected(uv_stream_t* server, int status)
 	}
 
 	LibuvTcp* libuvTcp = (LibuvTcp*)server->data;
+	//Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[3]);
 	Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[++(libuvTcp->m_workIndex) % libuvTcp->m_coreCount]);
 }
 
@@ -161,16 +178,18 @@ void onAsyncCallback(uv_async_t* handle)
 		RCSend("asyncCalc = %d", asyncCalc);
 	}
 
+	//std::unique_lock<std::mutex> lock(g_mu);
 	char* text = (char*)handle->data;
 	uv_tcp_t* dest = (uv_tcp_t*)(*(int32_t*)text);
 	int32_t length = *(int32_t*)(text + 4);
 	char* buffer = text + 8;
 
-	uv_close((uv_handle_t*)handle, [](uv_handle_t* handle)
-	{
-		::free((uv_async_t*)handle);
-	});
-
+	//uv_close((uv_handle_t*)handle, [](uv_handle_t* handle)
+	//{
+	//	::free((uv_async_t*)handle);
+	//	
+	//});
+	//uv_close去掉可以不崩溃
 	//为回复客户端数据创建一个写数据对象uv_write_t，写数据对象内存将会在写完后的回调函数中释放 
 	//因为发送完的数据在发送完毕后无论成功与否，都会释放内存。如果一定要确保发送出去，那么请自己存储好发送的数据，直到echo_write执行完再释放。 
 	uv_write_t* req = (uv_write_t*)::malloc(sizeof(uv_write_t));
@@ -193,11 +212,25 @@ void onAsyncCallback(uv_async_t* handle)
 		//不管发送数据成功与否，都要执行下面的函数释放资源，以免内存泄露
 		::free(((char*)req->data));
 		::free(req);
+	
+		//++freeCalc;
+		//if (freeCalc % 1000000 == 0)
+		//{
+		//	::SetEvent(handleAns);
+		//	RCSend("setevent");
+		//}
 	});
+	if (asyncCalc % 1000000 == 0)
+	{
+		//::SetEvent(handleAns);
+		RCSend("setevent");
+	}
 }
 
 void LibuvTcp::initClient(const char* ip, int32_t port, ReceiveCallback* callback)
 {
+	m_isClient = true;
+
 	m_receiveCallback = callback;
 	m_receiveCallback->setLibuvTcp(this);
 
@@ -222,6 +255,9 @@ void Listen(uv_loop_t* loop, LibuvTcp* libuvTcp, int32_t port, int32_t backlog)
 	uv_tcp_t* server = new uv_tcp_t;
 	//初始化，将TCP服务端对象和主循环绑定在一起
 	uv_tcp_init(loop, server);
+
+	RCSend("loop = %d, server = %d", loop, server);
+
 	//存入类地址
 	server->data = libuvTcp;
 
@@ -240,6 +276,8 @@ void Listen(uv_loop_t* loop, LibuvTcp* libuvTcp, int32_t port, int32_t backlog)
 
 void LibuvTcp::initServer(int32_t port, ReceiveCallback* callback, int32_t backlog)
 {
+	m_isClient = false;
+
 	m_receiveCallback = callback;
 	m_receiveCallback->setLibuvTcp(this);
 
@@ -283,9 +321,59 @@ ReceiveCallback* LibuvTcp::callback()
 
 void LibuvTcp::send(char* text)
 {
-	uv_async_t* asyncHandle = new uv_async_t;
+	
+	if (m_isClient)
+	{
+		uv_async_t* asyncHandle = new uv_async_t;
+		if (asyncHandle == nullptr)
+		{
+			return;
+		}
+		asyncHandle->data = text;
+		uv_async_init(m_clientLoop, asyncHandle, onAsyncCallback);
+
+		++asyncSendCalc;
+		if (asyncSendCalc % 200000 == 0)
+		{
+			RCSend("asyncSendCalc = %d", asyncSendCalc);
+		}
+		uv_async_send(asyncHandle);
+		return;
+	}
+
+	
+	ReadLock clientPtrToLoopReadLock(m_clientPtrToLoopMutex);
+	uv_tcp_t* client = (uv_tcp_t*)(*(int32_t*)text);
+	static uv_tcp_t* preclient = client;
+	if (preclient != client)
+	{
+		RCSend("WaitForSingleObject");
+		//::WaitForSingleObject(handleAns, INFINITE);
+		RCSend("WaitForSingleObject end");
+		//Sleep(2000);
+		preclient = client;
+	}
+
+	//std::unique_lock<std::mutex> lock(g_mu);
+
+	auto itClient = m_clientPtrToLoopMap.find(client);
+	if (itClient == m_clientPtrToLoopMap.end())
+	{
+		return;
+	}
+	uv_loop_t* loop = itClient->second;
+	static uv_loop_t* loopPre = loop;
+
+	uv_async_t* asyncHandle = (uv_async_t*)::malloc(sizeof(uv_async_t));
+	if (asyncHandle == nullptr)
+	{
+		return;
+	}
 	asyncHandle->data = text;
-	uv_async_init(m_clientLoop, asyncHandle, onAsyncCallback);
+	//通过客户端指针获取接收的loop
+	//g_mu.lock();
+	uv_async_init(itClient->second, asyncHandle, onAsyncCallback);
+	//g_mu.unlock();
 
 	++asyncSendCalc;
 	if (asyncSendCalc % 200000 == 0)
