@@ -4,12 +4,17 @@
 #include "D:\\SendToMessageTest.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include <list>
 
 std::atomic<int> asyncCalc = 0;
 std::atomic<int> asyncSendCalc = 0;
 std::atomic<int> freeCalc = 0;
+std::atomic<int> writeCalc = 0;
 std::mutex g_mu;
 std::mutex g_amu;
+
+std::map<uv_loop_t*, std::list<uv_handle_t*>> mapHandle;
+std::map<uv_loop_t*, std::atomic<int>> mapCalc;
 
 HANDLE handleAns = ::CreateEvent(NULL, TRUE, FALSE, NULL);
 
@@ -184,11 +189,7 @@ void onAsyncCallback(uv_async_t* handle)
 	int32_t length = *(int32_t*)(text + 4);
 	char* buffer = text + 8;
 
-	//uv_close((uv_handle_t*)handle, [](uv_handle_t* handle)
-	//{
-	//	::free((uv_async_t*)handle);
-	//	
-	//});
+	
 	//uv_close去掉可以不崩溃
 	//为回复客户端数据创建一个写数据对象uv_write_t，写数据对象内存将会在写完后的回调函数中释放 
 	//因为发送完的数据在发送完毕后无论成功与否，都会释放内存。如果一定要确保发送出去，那么请自己存储好发送的数据，直到echo_write执行完再释放。 
@@ -213,17 +214,51 @@ void onAsyncCallback(uv_async_t* handle)
 		::free(((char*)req->data));
 		::free(req);
 	
-		//++freeCalc;
-		//if (freeCalc % 1000000 == 0)
-		//{
-		//	::SetEvent(handleAns);
-		//	RCSend("setevent");
-		//}
+		++writeCalc;
+		if (writeCalc % 200000 == 0)
+		{
+			RCSend("writeCalc = %d", writeCalc);
+		}
 	});
-	if (asyncCalc % 1000000 == 0)
+
 	{
-		//::SetEvent(handleAns);
-		RCSend("setevent");
+		std::unique_lock<std::mutex> lock(g_mu);
+		mapHandle[handle->loop].push_back((uv_handle_t*)handle);
+		mapCalc[handle->loop]++;
+		//RCSend("handle = %d, loop = %d", handle, handle->loop);
+		
+	}
+	
+	for (auto itCalc = mapCalc.begin(); itCalc != mapCalc.end();++itCalc)
+	{
+		if (itCalc->second == 1000000)
+		{
+			itCalc->second = 0;
+			auto& destList = mapHandle[itCalc->first];
+			RCSend("destLoop = %d，currentLoop = %d", itCalc->first, handle->loop);
+			RCSend("destList = %d", destList.size());
+			for (auto itHandle = destList.begin(); itHandle != destList.end(); ++itHandle)
+			{
+				uv_close((uv_handle_t*)(*itHandle), [](uv_handle_t* handle)
+				{
+					std::unique_lock<std::mutex> lock(g_amu);
+					::free((uv_async_t*)handle);
+					++freeCalc;
+					if (freeCalc % 200000 == 0)
+					{
+						//::SetEvent(handleAns);
+						RCSend("freeCalc = %d", freeCalc);
+					}
+				});
+			}
+			static std::atomic<int> erase1 = 0;
+			if (++erase1 == 4)
+			{
+				mapHandle.clear();
+				mapHandle.swap(std::map<uv_loop_t*, std::list<uv_handle_t*>>());
+			}
+			RCSend("erase 1");
+		}
 	}
 }
 
@@ -369,6 +404,7 @@ void LibuvTcp::send(char* text)
 	{
 		return;
 	}
+	//RCSend("asyncHandle = %d, loop = %d", asyncHandle, itClient->second);
 	asyncHandle->data = text;
 	//通过客户端指针获取接收的loop
 	//g_mu.lock();
