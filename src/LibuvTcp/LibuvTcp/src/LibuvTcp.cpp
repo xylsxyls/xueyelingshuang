@@ -6,6 +6,7 @@
 #include "CSystem/CSystemAPI.h"
 #include <list>
 #include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 
 std::atomic<int> asyncCalc = 0;
 std::atomic<int> asyncSendCalc = 0;
@@ -64,9 +65,13 @@ m_clientLoop(nullptr),
 m_serverLoop(nullptr),
 m_workIndex(-1),
 m_isClient(false),
-m_asyncHandle(nullptr)
+m_asyncHandle(nullptr),
+m_queue(nullptr),
+m_clientPtrToLoopMutex(nullptr)
 {
 	m_coreCount = CSystem::GetCPUCoreCount();
+
+	m_clientPtrToLoopMutex = new ReadWriteMutex;
 
 	m_clientLoop = new uv_loop_t;
 	uv_loop_init(m_clientLoop);
@@ -88,9 +93,11 @@ m_asyncHandle(nullptr)
 	m_serverLoop = new uv_loop_t;
 	uv_loop_init(m_serverLoop);
 
+	m_queue = new LockFreeQueue < char* > ;
+
 	m_asyncHandle = new uv_async_t;
-	uv_async_init(m_serverLoop, m_asyncHandle, onAsyncCallback);
-	m_asyncHandle->data = &m_queue;
+	uv_async_init(m_clientLoop, m_asyncHandle, onAsyncCallback);
+	m_asyncHandle->data = m_queue;
 }
 
 LibuvTcp::~LibuvTcp()
@@ -178,7 +185,7 @@ void Accept(uv_tcp_t* server, uv_loop_t* loop)
 	//将客户端指针和loop存入map
 	{
 		//std::unique_lock<std::mutex> lock(g_mu);
-		WriteLock clientPtrToLoopWriteLock(libuvTcp->m_clientPtrToLoopMutex);
+		WriteLock clientPtrToLoopWriteLock(*libuvTcp->m_clientPtrToLoopMutex);
 		libuvTcp->m_clientPtrToLoopMap[client] = loop;
 	}
 
@@ -387,20 +394,13 @@ void LibuvTcp::send(char* text)
 	//std::unique_lock<std::mutex> lock(g_mu);
 	if (m_isClient)
 	{
-		uv_async_t* asyncHandle = new uv_async_t;
-		if (asyncHandle == nullptr)
-		{
-			return;
-		}
-		asyncHandle->data = text;
-		uv_async_init(m_clientLoop, asyncHandle, onAsyncCallback);
-
 		++asyncSendCalc;
 		if (asyncSendCalc % 200000 == 0)
 		{
 			RCSend("asyncSendCalc = %d", asyncSendCalc);
 		}
-		uv_async_send(asyncHandle);
+		m_queue->push(text);
+		uv_async_send(m_asyncHandle);
 		return;
 	}
 
@@ -411,10 +411,8 @@ void LibuvTcp::send(char* text)
 	}
 
 	uv_loop_t* loop = nullptr;
-	uv_async_t* handle = nullptr;
-	LockFreeQueue<char*>* queue = nullptr;
 	{
-		ReadLock clientPtrToLoopReadLock(m_clientPtrToLoopMutex);
+		ReadLock clientPtrToLoopReadLock(*m_clientPtrToLoopMutex);
 		uv_tcp_t* client = (uv_tcp_t*)(*(int32_t*)text);
 
 		auto itClient = m_clientPtrToLoopMap.find(client);
@@ -425,33 +423,30 @@ void LibuvTcp::send(char* text)
 		loop = itClient->second;
 	}
 
-		auto itHandle = m_loopToAsyncHandleMap.find(loop);
-		if (itHandle == m_loopToAsyncHandleMap.end())
-		{
-			return;
-		}
-		handle = itHandle->second;
+	auto itHandle = m_loopToAsyncHandleMap.find(loop);
+	if (itHandle == m_loopToAsyncHandleMap.end())
+	{
+		return;
+	}
+	uv_async_t* handle = itHandle->second;
 
-		auto itQueue = m_loopToQueueMap.find(loop);
-		if (itQueue == m_loopToQueueMap.end())
-		{
-			return;
-		}
-		queue = itQueue->second;
-	
-		queue->push(text);
-	
+	auto itQueue = m_loopToQueueMap.find(loop);
+	if (itQueue == m_loopToQueueMap.end())
+	{
+		return;
+	}
+	LockFreeQueue<char*>* queue = itQueue->second;
 	if (queue == nullptr)
 	{
-		RCSend("nullptr");
+		return;
 	}
-	
+	queue->push(text);
+
 	int sendres = uv_async_send(handle);
 	if (sendres != 0)
 	{
 		RCSend("send error");
 	}
-	
 }
 
 char* LibuvTcp::getText(uv_tcp_t* dest, char* buffer, int32_t length)
