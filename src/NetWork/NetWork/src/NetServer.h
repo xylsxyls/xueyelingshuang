@@ -5,12 +5,12 @@
 #include <map>
 #include <vector>
 #include <list>
-#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 
 class LibuvTcp;
 class ServerCallback;
 class ServerCallbackBase;
 typedef struct uv_tcp_s uv_tcp_t;
+class ReadWriteMutex;
 
 class NetWorkAPI NetServer
 {
@@ -31,7 +31,7 @@ public:
 #pragma warning(disable:4251)
 #endif
 	std::map<uv_tcp_t*, uint32_t> m_clientPtrToThreadIdMap;
-	ReadWriteMutex m_clientPtrToThreadIdMutex;
+	ReadWriteMutex* m_clientPtrToThreadIdMutex;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

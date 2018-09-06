@@ -21,7 +21,7 @@ public:
 public:
 	virtual void receive(uv_tcp_t* client, char* buffer, int32_t length)
 	{
-		//return;
+		return;
 		++calc;
 		if (calc % 200000 == 0)
 		{
@@ -79,7 +79,7 @@ public:
 
 	virtual void clientConnected(uv_tcp_t* client)
 	{
-		return;
+		//return;
 		RCSend("client connected\n");
 		int32_t count = 1000000;
 		int begin = ::GetTickCount();

@@ -19,9 +19,6 @@
     <Filter Include="Server">
       <UniqueIdentifier>{cdf07516-62ad-485b-8ffd-32813c61e19a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="NetHelper">
-      <UniqueIdentifier>{4968e659-4e33-4e43-ac76-428b6b64112e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Task">
       <UniqueIdentifier>{a3e9c31f-91c1-488d-92cc-03919b83b429}</UniqueIdentifier>
     </Filter>
@@ -51,9 +48,6 @@
     <ClInclude Include="..\src\ServerCallback.h">
       <Filter>Server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\NetHelper.h">
-      <Filter>NetHelper</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\SendTask.h">
       <Filter>Task</Filter>
     </ClInclude>
@@ -65,6 +59,15 @@
     </ClInclude>
     <ClInclude Include="..\src\NetWorkThreadManager.h">
       <Filter>NetWorkThreadManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ReceiveCallbackBase.h">
+      <Filter>CallbackBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ClientCallbackBase.h">
+      <Filter>CallbackBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ServerCallbackBase.h">
+      <Filter>CallbackBase</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -80,9 +83,6 @@
     <ClCompile Include="..\src\ServerCallback.cpp">
       <Filter>Server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\NetHelper.cpp">
-      <Filter>NetHelper</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\WorkTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
@@ -94,6 +94,15 @@
     </ClCompile>
     <ClCompile Include="..\src\NetWorkThreadManager.cpp">
       <Filter>NetWorkThreadManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ReceiveCallbackBase.cpp">
+      <Filter>CallbackBase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ClientCallbackBase.cpp">
+      <Filter>CallbackBase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ServerCallbackBase.cpp">
+      <Filter>CallbackBase</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

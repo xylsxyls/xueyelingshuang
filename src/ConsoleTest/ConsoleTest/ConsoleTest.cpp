@@ -26,7 +26,7 @@ public:
 public:
 	void serverConnected(uv_tcp_t* server)
 	{
-		//return;
+		return;
 		int32_t count = SEND_COUNT;
 		while (count-- != 0)
 		{
@@ -41,7 +41,7 @@ public:
 
 	void receive(uv_tcp_t* client, char* buffer, int32_t length)
 	{
-		return;
+		//return;
 		++calc;
 		if (calc % 200000 == 0)
 		{
