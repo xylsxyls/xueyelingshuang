@@ -1,0 +1,5 @@
+在127.0.0.1上执行
+第二句执行完会报错，不用管它。
+use mysql;
+update user set host = '%' where user = 'root';
+FLUSH PRIVILEGES;
