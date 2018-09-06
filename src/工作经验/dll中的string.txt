@@ -1,0 +1,1 @@
+dll中的string或vector等不能放到外部释放内存，必须由dll本身申请和释放

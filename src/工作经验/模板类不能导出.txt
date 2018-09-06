@@ -1,0 +1,1 @@
+模板类不能用dllimport导入，导出时也不要加dllexport

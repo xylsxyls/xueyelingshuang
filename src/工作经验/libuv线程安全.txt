@@ -1,0 +1,1 @@
+async_send并不是完全线程安全的，在多路循环中，执行uv_close关闭句柄是同时执行send会崩溃，即便不是同一个句柄，必须等到uv_close_cb中才可以执行send

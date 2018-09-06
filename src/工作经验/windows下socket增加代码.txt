@@ -1,0 +1,9 @@
+WORD wVersionRequested;
+    WSADATA wsaData;
+    int err;
+    wVersionRequested = MAKEWORD(1, 1);
+    err = WSAStartup(wVersionRequested, &wsaData);
+    if(err != 0)
+    {
+        perror("WSAStartup error");
+    }
