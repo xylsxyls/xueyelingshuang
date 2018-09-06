@@ -11,6 +11,8 @@ class ReceiveCallbackBase : public ReceiveCallback
 public:
 	ReceiveCallbackBase();
 
+	virtual ~ReceiveCallbackBase();
+
 public:
 	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length);
 
@@ -19,4 +21,5 @@ public:
 protected:
 	CallbackBase* m_callback;
 	std::map<uv_tcp_t*, std::string> m_area;
+	ReadWriteMutex* m_areaReadWriteMutex;
 };

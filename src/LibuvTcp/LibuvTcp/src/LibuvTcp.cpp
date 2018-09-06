@@ -4,7 +4,6 @@
 #include "D:\\SendToMessageTest.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
-#include <list>
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 

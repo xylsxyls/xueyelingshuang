@@ -2,7 +2,6 @@
 #include "LibuvTcpMacro.h"
 #include <stdint.h>
 #include <vector>
-#include <mutex>
 #include <map>
 #include <atomic>
 
@@ -38,6 +37,8 @@ public:
 	ReceiveCallback* callback();
 
 public:
+	int32_t m_coreCount;
+	uv_loop_t* m_serverLoop;
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
@@ -45,19 +46,17 @@ public:
 	std::vector<uv_loop_t*> m_vecServerLoop;
 	std::map<uv_loop_t*, uv_async_t*> m_loopToAsyncHandleMap;
 	std::map<uv_loop_t*, LockFreeQueue<char*>*> m_loopToQueueMap;
-	LockFreeQueue<char*>* m_queue;
+	
 	ReadWriteMutex* m_clientPtrToLoopMutex;
-	std::mutex m_mu;
 	std::map<uv_tcp_t*, uv_loop_t*> m_clientPtrToLoopMap;
 	std::atomic<int32_t> m_workIndex;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-	uv_loop_t* m_serverLoop;
+	
 	uv_loop_t* m_clientLoop;
 	uv_async_t* m_asyncHandle;
-	
-	int32_t m_coreCount;
+	LockFreeQueue<char*>* m_queue;
 
 protected:
 	ReceiveCallback* m_receiveCallback;

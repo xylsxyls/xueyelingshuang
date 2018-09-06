@@ -24,6 +24,5 @@ void ReceiveCallback::serverConnected(uv_tcp_t* server)
 
 void ReceiveCallback::setLibuvTcp(LibuvTcp* libuvTcp)
 {
-	//RCSend("ReceiveCallback = %d", libuvTcp);
 	m_libuvTcp = libuvTcp;
 }

@@ -11,7 +11,7 @@ m_netClient(nullptr)
 
 void ClientCallback::serverConnected(uv_tcp_t* server)
 {
-	RCSend("ClientCallback::serverConnected");
+	
 }
 
 void ClientCallback::setNetClient(NetClient* netClient)

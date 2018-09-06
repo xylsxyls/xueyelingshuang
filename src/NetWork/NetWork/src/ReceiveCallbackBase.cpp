@@ -2,11 +2,21 @@
 #include "NetWorkThreadManager.h"
 #include <string>
 #include "WorkTask.h"
+#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 
 ReceiveCallbackBase::ReceiveCallbackBase():
-m_callback(nullptr)
+m_callback(nullptr),
+m_areaReadWriteMutex(nullptr)
 {
+	m_areaReadWriteMutex = new ReadWriteMutex;
+}
 
+ReceiveCallbackBase::~ReceiveCallbackBase()
+{
+	if (m_areaReadWriteMutex != nullptr)
+	{
+		delete m_areaReadWriteMutex;
+	}
 }
 
 void ReceiveCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length)
@@ -16,10 +26,17 @@ void ReceiveCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length
 		return;
 	}
 
+	ReadLock areaReadLock(*m_areaReadWriteMutex);
+	auto itArea = m_area.find(sender);
+	if (itArea == m_area.end())
+	{
+		return;
+	}
+	std::string& senderArea = itArea->second;
+
 	int32_t vernier = 0;
 	char* tagBuffer = nullptr;
 	int32_t tagLength = 0;
-	std::string& senderArea = m_area[sender];
 
 	//缓冲区里有值
 	if (!senderArea.empty())
@@ -53,28 +70,23 @@ void ReceiveCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length
 		senderArea.append(buffer + vernier, addSize);
 		vernier += addSize;
 		//receive
+		std::shared_ptr<WorkTask> spTask;
+		WorkTask* task = new WorkTask;
+		task->setCallback(m_callback);
 		//如果包大小为0则给空指针
 		if (tagLength == 0)
 		{
-			std::shared_ptr<WorkTask> spTask;
-			WorkTask* task = new WorkTask;
-			task->setCallback(m_callback);
 			task->setParam(sender, nullptr, 0);
-			spTask.reset(task);
-			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		}
 		else
 		{
 			char* allocBuffer = (char*)::malloc(tagLength + 1);
 			allocBuffer[tagLength] = 0;
 			::memcpy(allocBuffer, &senderArea[4], tagLength);
-			std::shared_ptr<WorkTask> spTask;
-			WorkTask* task = new WorkTask;
-			task->setCallback(m_callback);
 			task->setParam(sender, allocBuffer, tagLength);
-			spTask.reset(task);
-			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		}
+		spTask.reset(task);
+		NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		//清空缓冲区
 		senderArea.clear();
 	}
@@ -100,28 +112,23 @@ void ReceiveCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length
 			return;
 		}
 		//剩余值可以填满一个包
+		std::shared_ptr<WorkTask> spTask;
+		WorkTask* task = new WorkTask;
+		task->setCallback(m_callback);
 		//如果包大小为0则给空指针
 		if (tagLength == 0)
 		{
-			std::shared_ptr<WorkTask> spTask;
-			WorkTask* task = new WorkTask;
-			task->setCallback(m_callback);
 			task->setParam(sender, nullptr, 0);
-			spTask.reset(task);
-			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		}
 		else
 		{
 			char* allocBuffer = (char*)::malloc(tagLength + 1);
 			allocBuffer[tagLength] = 0;
 			::memcpy(allocBuffer, buffer + vernier, tagLength);
-			std::shared_ptr<WorkTask> spTask;
-			WorkTask* task = new WorkTask;
-			task->setCallback(m_callback);
 			task->setParam(sender, allocBuffer, tagLength);
-			spTask.reset(task);
-			NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		}
+		spTask.reset(task);
+		NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 		vernier += tagLength;
 	}
 	return;

@@ -10,8 +10,13 @@ void ServerCallbackBase::clientConnected(uv_tcp_t* client)
 	{
 		return;
 	}
+
 	ServerCallback* callback = (ServerCallback*)m_callback;
-	m_area[client] = std::string();
+	{
+		WriteLock areaWriteLock(*m_areaReadWriteMutex);
+		m_area[client];
+	}
+
 	{
 		WriteLock clientToThreadIdWriteLock(*(callback->netServer()->m_clientPtrToThreadIdMutex));
 		callback->netServer()->m_clientPtrToThreadIdMap[client] = NetWorkThreadManager::instance().getWorkThreadId();
