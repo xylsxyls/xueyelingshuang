@@ -4,6 +4,8 @@
 #include "CSystem/CSystemAPI.h"
 #include "NetWorkThreadManager.h"
 
+std::mutex g_sendMutex;
+
 SendTask::SendTask() :
 m_text(nullptr),
 m_libuvTcp(nullptr)

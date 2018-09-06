@@ -156,8 +156,12 @@ void ServerCallbackBase::clientConnected(uv_tcp_t* client)
 	{
 		return;
 	}
-	m_callback->clientConnected(client);
 	m_area[client] = std::string();
+	{
+		WriteLock clientToThreadIdWriteLock(m_callback->netServer()->m_clientPtrToThreadIdMutex);
+		m_callback->netServer()->m_clientPtrToThreadIdMap[client] = NetWorkThreadManager::instance().getWorkThreadId();
+	}
+	m_callback->clientConnected(client);
 }
 
 void ServerCallbackBase::setCallback(ServerCallback* callback)
@@ -167,13 +171,14 @@ void ServerCallbackBase::setCallback(ServerCallback* callback)
 
 NetServer::NetServer() :
 m_libuvTcp(nullptr),
-m_serverCallbackBase(nullptr),
-m_sendThreadId(0)
+m_serverCallbackBase(nullptr)
+//m_sendThreadId(0)
 {
 	m_libuvTcp = new LibuvTcp;
 	m_serverCallbackBase = new ServerCallbackBase;
 	NetWorkThreadManager::instance().init(m_libuvTcp->m_coreCount);
-	m_sendThreadId = NetWorkThreadManager::instance().giveSendThreadId();
+	//m_sendThreadId = NetWorkThreadManager::instance().giveSendThreadId();
+	//m_libuvTcp->setServerThreadId(m_sendThreadId);
 }
 
 void NetServer::listen(int32_t port, ServerCallback* callback)
@@ -196,15 +201,11 @@ void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
 		return;
 	}
 
-	char* text = (char*)::malloc(length + 8);
-	*(int32_t*)text = (int32_t)dest;
-	*((int32_t*)(text + 4)) = length;
-	::memcpy(text + 8, buffer, length);
-
 	std::shared_ptr<SendTask> spTask;
 	SendTask* task = new SendTask;
 	task->setLibuvTcp(m_libuvTcp);
-	task->setParam(text);
+	task->setParam(m_libuvTcp->getText(dest, buffer, length));
 	spTask.reset(task);
-	NetWorkThreadManager::instance().postSendTaskToThreadPool(m_sendThreadId, spTask, 1);
+	ReadLock clientToThreadIdReadLock(m_clientPtrToThreadIdMutex);
+	NetWorkThreadManager::instance().postSendTaskToThread(m_clientPtrToThreadIdMap.find(dest)->second, spTask);
 }

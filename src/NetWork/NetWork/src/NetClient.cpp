@@ -169,13 +169,11 @@ void ClientCallbackBase::setCallback(ClientCallback* callback)
 NetClient::NetClient() :
 m_libuvTcp(nullptr),
 m_clientCallbackBase(nullptr),
-m_server(nullptr),
-m_sendThreadId(0)
+m_server(nullptr)
 {
 	m_libuvTcp = new LibuvTcp;
 	m_clientCallbackBase = new ClientCallbackBase;
 	NetWorkThreadManager::instance().init(m_libuvTcp->m_coreCount);
-	m_sendThreadId = NetWorkThreadManager::instance().giveSendThreadId();
 }
 
 void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback)
@@ -211,7 +209,7 @@ void NetClient::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	task->setParam(m_libuvTcp->getText(dest, buffer, length));
 	spTask.reset(task);
 
-	NetWorkThreadManager::instance().postSendTaskToThreadPool(m_sendThreadId, spTask, 1);
+	NetWorkThreadManager::instance().postWorkTaskToThreadPool(spTask);
 	//RCSend("m_threadId = %d", m_threadId);
 	//CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spTask, 1);
 	//m_libuvTcp->send(dest, text, length + 4);

@@ -5,18 +5,30 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include <list>
+#include "LockFreeQueue/LockFreeQueueAPI.h"
 
 std::atomic<int> asyncCalc = 0;
 std::atomic<int> asyncSendCalc = 0;
 std::atomic<int> freeCalc = 0;
 std::atomic<int> writeCalc = 0;
+std::atomic<int> closeTaskCalc = 0;
 std::mutex g_mu;
 std::mutex g_amu;
 
 std::map<uv_loop_t*, std::list<uv_handle_t*>> mapHandle;
 std::map<uv_loop_t*, std::atomic<int>> mapCalc;
 
-HANDLE handleAns = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+std::atomic<uint32_t> g_serverSendThreadId = 0;
+
+uv_async_t g_async_handle[4000000];
+
+HANDLE g_waitHandle = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+uv_async_t* g_asyncHandleBk = nullptr;
+
+void onAsyncCallback(uv_async_t* handle);
+void onAsyncCallback2(uv_async_t* handle);
+void onAsyncCallback3(uv_async_t* handle);
+void onAsyncCallback4(uv_async_t* handle);
 
 class RunLoopTask : public CTask
 {
@@ -35,7 +47,10 @@ public:
 
 	virtual void DoTask()
 	{
-		uv_run(m_loop, UV_RUN_DEFAULT);
+		RCSend("loop threadId = %d", CSystem::SystemThreadId());
+		int res = uv_run(m_loop, UV_RUN_DEFAULT);
+		printf("loop end, res = %d\n", res);
+		RCSend("loop end threadId = %d, res = %d", CSystem::SystemThreadId(), res);
 	}
 
 private:
@@ -46,21 +61,36 @@ LibuvTcp::LibuvTcp():
 m_receiveCallback(nullptr),
 m_coreCount(0),
 m_clientLoop(nullptr),
+m_serverLoop(nullptr),
 m_workIndex(-1),
-m_isClient(false)
+m_isClient(false),
+m_asyncHandle(nullptr)
 {
 	m_coreCount = CSystem::GetCPUCoreCount();
 
-	int32_t index = -1;
-	while (index++ != m_coreCount - 1)
-	{
-		m_clientLoop = new uv_loop_t;
-		uv_loop_init(m_clientLoop);
-		m_vecServerLoop.push_back(m_clientLoop);
-	}
-	
 	m_clientLoop = new uv_loop_t;
 	uv_loop_init(m_clientLoop);
+
+	int32_t index = -1;
+	//*2
+	while (index++ != m_coreCount - 1)
+	{
+		m_serverLoop = new uv_loop_t;
+		uv_loop_init(m_serverLoop);
+		m_vecServerLoop.push_back(m_serverLoop);
+		m_asyncHandle = new uv_async_t;
+		uv_async_init(m_serverLoop, m_asyncHandle, onAsyncCallback);
+		m_loopToAsyncHandleMap[m_serverLoop] = m_asyncHandle;
+		m_loopToQueueMap[m_serverLoop] = new LockFreeQueue<char*>;
+		m_asyncHandle->data = m_loopToQueueMap.find(m_serverLoop)->second;
+	}
+
+	m_serverLoop = new uv_loop_t;
+	uv_loop_init(m_serverLoop);
+
+	m_asyncHandle = new uv_async_t;
+	uv_async_init(m_serverLoop, m_asyncHandle, onAsyncCallback);
+	m_asyncHandle->data = &m_queue;
 }
 
 LibuvTcp::~LibuvTcp()
@@ -70,6 +100,7 @@ LibuvTcp::~LibuvTcp()
 
 void onRead(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
 {
+	//RCSend("receive, threadId = %d",CSystem::SystemThreadId());
 	//分配好的缓存在这里使用，使用完后最后回释放，=0为读取成功，但是没有读取到任何数据而已 
 	if (nread < 0)
 	{
@@ -91,17 +122,22 @@ void onRead(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
 	}
 	//确保这句代码一定会在最后面执行，不要在中间突然退出函数，否则就内存泄露了 
 	::free(buf->base);
+	//RCSend("receive end, threadId = %d", CSystem::SystemThreadId());
 }
 
 void StartRead(uv_tcp_t* sender)
 {
-	uv_read_start((uv_stream_t*)sender,
+	int32_t res = uv_read_start((uv_stream_t*)sender,
 		[](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 	{
 		//分配接收缓存内存和设置建议大小，小于等于实际大小 
 		buf->base = (char*)malloc(suggested_size);
 		buf->len = suggested_size;
 	}, onRead);
+	if (res != 0)
+	{
+		printf("uv_read_start error\n");
+	}
 }
 
 //客户端连上服务端的回调（客户端函数）
@@ -133,6 +169,7 @@ void Accept(uv_tcp_t* server, uv_loop_t* loop)
 	}
 	LibuvTcp* libuvTcp = (LibuvTcp*)server->data;
 
+	//std::unique_lock<std::mutex> lock(g_mu);
 	//将全局的主循环和处理连接的对象关联起来
 	uv_tcp_init(loop, client);
 
@@ -151,18 +188,23 @@ void Accept(uv_tcp_t* server, uv_loop_t* loop)
 	//接收服务端对象
 	if (uv_accept((uv_stream_t*)server, (uv_stream_t*)client) != 0)
 	{
-		//读取失败，释放处理对象 
+		//读取失败，释放处理对象
+		printf("accept error\n");
 		uv_close((uv_handle_t*)client, NULL);
 		return;
 	}
-	libuvTcp->callback()->clientConnected(client);
+	
 	//开始读取客户端发送的数据，并设置好接收缓存分配的函数alloc_buffer和读取完毕后的回调函数echo_read
 	StartRead(client);
+
+	libuvTcp->callback()->clientConnected(client);
 }
 
 //客户端连上服务端的回调（服务端函数）
 void onClientConnected(uv_stream_t* server, int status)
 {
+	RCSend("connected, threadId = %d, loop = %d", CSystem::SystemThreadId(), server->loop);
+	//std::unique_lock<std::mutex> lock(g_mu);
 	if (status < 0)
 	{
 		//新建连接出错
@@ -171,117 +213,70 @@ void onClientConnected(uv_stream_t* server, int status)
 	}
 
 	LibuvTcp* libuvTcp = (LibuvTcp*)server->data;
-	//Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[3]);
-	Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[++(libuvTcp->m_workIndex) % libuvTcp->m_coreCount]);
+	//Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[7]);
+	//*2
+	Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[++(libuvTcp->m_workIndex) % (libuvTcp->m_coreCount)]);
+	RCSend("connected end, threadId = %d, loop = %d", CSystem::SystemThreadId(), server->loop);
 }
 
 void onAsyncCallback(uv_async_t* handle)
 {
+	//std::unique_lock<std::mutex> lock(g_mu);
 	++asyncCalc;
+	if (asyncCalc == 1)
+	{
+		RCSend("asyncCalc begin");
+	}
 	if (asyncCalc % 200000 == 0)
 	{
-		RCSend("asyncCalc = %d", asyncCalc);
+		RCSend("asyncCalc = %d, threadId = %d", asyncCalc, CSystem::SystemThreadId());
 	}
 
+	LockFreeQueue<char*>* queue = (LockFreeQueue<char*>*)handle->data;
 	//std::unique_lock<std::mutex> lock(g_mu);
-	char* text = (char*)handle->data;
-	uv_tcp_t* dest = (uv_tcp_t*)(*(int32_t*)text);
-	int32_t length = *(int32_t*)(text + 4);
-	char* buffer = text + 8;
+	char* text = nullptr;
+	while (queue->pop(&text))
+	{
+		uv_tcp_t* dest = (uv_tcp_t*)(*(int32_t*)text);
+		int32_t length = *(int32_t*)(text + 4);
+		char* buffer = text + 8;
 
-	
-	//uv_close去掉可以不崩溃
-	//为回复客户端数据创建一个写数据对象uv_write_t，写数据对象内存将会在写完后的回调函数中释放 
-	//因为发送完的数据在发送完毕后无论成功与否，都会释放内存。如果一定要确保发送出去，那么请自己存储好发送的数据，直到echo_write执行完再释放。 
-	uv_write_t* req = (uv_write_t*)::malloc(sizeof(uv_write_t));
-	//char* bufferAlloc = (char*)::malloc(length);
-	//memcpy(bufferAlloc, buffer, length);
-	//用缓存中的起始地址和大小初始化写数据对象
-	req->data = text;
-	uv_buf_t send_buf;
-	send_buf.base = text + 4;
-	send_buf.len = length + 4;
-	
-	//写数据，并将写数据对象uv_write_t和客户端、缓存、回调函数关联，第四个参数表示创建一个uv_buf_t缓存，不是1个字节 
-	uv_write((uv_write_t*)req, (uv_stream_t*)dest, &send_buf, 1, [](uv_write_t *req, int status)
-	{
-		if (status != 0)
-		{
-			//状态值status不为0表示发送数据失败。 
-			printf("Write error %s\n", uv_strerror(status));
-		}
-		//不管发送数据成功与否，都要执行下面的函数释放资源，以免内存泄露
-		::free(((char*)req->data));
-		::free(req);
-	
-		++writeCalc;
-		if (writeCalc % 200000 == 0)
-		{
-			RCSend("writeCalc = %d", writeCalc);
-		}
-	});
+		//为回复客户端数据创建一个写数据对象uv_write_t，写数据对象内存将会在写完后的回调函数中释放 
+		//因为发送完的数据在发送完毕后无论成功与否，都会释放内存。如果一定要确保发送出去，那么请自己存储好发送的数据，直到echo_write执行完再释放。 
+		uv_write_t* req = (uv_write_t*)::malloc(sizeof(uv_write_t));
+		//char* bufferAlloc = (char*)::malloc(length);
+		//memcpy(bufferAlloc, buffer, length);
+		//用缓存中的起始地址和大小初始化写数据对象
+		req->data = text;
+		uv_buf_t send_buf;
+		send_buf.base = text + 4;
+		send_buf.len = length + 4;
 
-	{
-		std::unique_lock<std::mutex> lock(g_mu);
-		mapHandle[handle->loop].push_back((uv_handle_t*)handle);
-		mapCalc[handle->loop]++;
-		//RCSend("handle = %d, loop = %d", handle, handle->loop);
-		
-	}
-	
-	for (auto itCalc = mapCalc.begin(); itCalc != mapCalc.end();++itCalc)
-	{
-		if (itCalc->second == 1000000)
+		//写数据，并将写数据对象uv_write_t和客户端、缓存、回调函数关联，第四个参数表示创建一个uv_buf_t缓存，不是1个字节 
+		uv_write((uv_write_t*)req, (uv_stream_t*)dest, &send_buf, 1, [](uv_write_t *req, int status)
 		{
-			itCalc->second = 0;
-			auto& destList = mapHandle[itCalc->first];
-			RCSend("destLoop = %d，currentLoop = %d", itCalc->first, handle->loop);
-			RCSend("destList = %d", destList.size());
-			for (auto itHandle = destList.begin(); itHandle != destList.end(); ++itHandle)
+			if (status != 0)
 			{
-				uv_close((uv_handle_t*)(*itHandle), [](uv_handle_t* handle)
-				{
-					std::unique_lock<std::mutex> lock(g_amu);
-					::free((uv_async_t*)handle);
-					++freeCalc;
-					if (freeCalc % 200000 == 0)
-					{
-						//::SetEvent(handleAns);
-						RCSend("freeCalc = %d", freeCalc);
-					}
-				});
+				//状态值status不为0表示发送数据失败。 
+				printf("Write error %s\n", uv_strerror(status));
 			}
-			static std::atomic<int> erase1 = 0;
-			if (++erase1 == 4)
+			//不管发送数据成功与否，都要执行下面的函数释放资源，以免内存泄露
+			::free(((char*)req->data));
+			::free(req);
+
+			++writeCalc;
+			if (writeCalc == 1)
 			{
-				mapHandle.clear();
-				mapHandle.swap(std::map<uv_loop_t*, std::list<uv_handle_t*>>());
+				RCSend("writeCalc begin");
 			}
-			RCSend("erase 1");
-		}
+			if (writeCalc % 200000 == 0)
+			{
+				RCSend("writeCalc = %d, time = %d", writeCalc, ::GetTickCount());
+			}
+		});
 	}
-}
-
-void LibuvTcp::initClient(const char* ip, int32_t port, ReceiveCallback* callback)
-{
-	m_isClient = true;
-
-	m_receiveCallback = callback;
-	m_receiveCallback->setLibuvTcp(this);
-
-	struct sockaddr_in dest;
-	uv_ip4_addr(ip, port, &dest);
-
-	uv_tcp_t* socket = new uv_tcp_t;
-	uv_tcp_init(m_clientLoop, socket);
-	uv_connect_t* connect = new uv_connect_t;
-	connect->data = this;
-	int32_t ret = uv_tcp_connect(connect, socket, (const struct sockaddr*)&dest, onServerConnected);
-	if (ret != 0)
-	{
-		printf("Connect error: %s\n", uv_strerror(ret));
-		return;
-	}
+	
+	return;
 }
 
 void Listen(uv_loop_t* loop, LibuvTcp* libuvTcp, int32_t port, int32_t backlog)
@@ -309,12 +304,36 @@ void Listen(uv_loop_t* loop, LibuvTcp* libuvTcp, int32_t port, int32_t backlog)
 	}
 }
 
+void LibuvTcp::initClient(const char* ip, int32_t port, ReceiveCallback* callback)
+{
+	m_isClient = true;
+
+	m_receiveCallback = callback;
+	m_receiveCallback->setLibuvTcp(this);
+
+	struct sockaddr_in dest;
+	uv_ip4_addr(ip, port, &dest);
+
+	uv_tcp_t* socket = new uv_tcp_t;
+	uv_tcp_init(m_clientLoop, socket);
+	uv_connect_t* connect = new uv_connect_t;
+	connect->data = this;
+	int32_t ret = uv_tcp_connect(connect, socket, (const struct sockaddr*)&dest, onServerConnected);
+	if (ret != 0)
+	{
+		printf("Connect error: %s\n", uv_strerror(ret));
+		return;
+	}
+}
+
 void LibuvTcp::initServer(int32_t port, ReceiveCallback* callback, int32_t backlog)
 {
 	m_isClient = false;
 
 	m_receiveCallback = callback;
 	m_receiveCallback->setLibuvTcp(this);
+
+	Listen(m_serverLoop, this, port, backlog);
 
 	int32_t index = -1;
 	while (index++ != m_vecServerLoop.size() - 1)
@@ -336,7 +355,16 @@ void LibuvTcp::clientLoop()
 
 void LibuvTcp::serverLoop()
 {
+	auto threadId = CTaskThreadManager::Instance().Init();
+	auto thread = CTaskThreadManager::Instance().GetThreadInterface(threadId);
+	std::shared_ptr<RunLoopTask> spTask;
+	RunLoopTask* task = new RunLoopTask;
+	task->setLoop(m_serverLoop);
+	spTask.reset(task);
+	thread->PostTask(spTask, 1);
+
 	int32_t index = -1;
+	//*2
 	while (index++ != m_coreCount - 1)
 	{
 		auto threadId = CTaskThreadManager::Instance().Init();
@@ -356,7 +384,7 @@ ReceiveCallback* LibuvTcp::callback()
 
 void LibuvTcp::send(char* text)
 {
-	
+	//std::unique_lock<std::mutex> lock(g_mu);
 	if (m_isClient)
 	{
 		uv_async_t* asyncHandle = new uv_async_t;
@@ -376,47 +404,54 @@ void LibuvTcp::send(char* text)
 		return;
 	}
 
-	
-	ReadLock clientPtrToLoopReadLock(m_clientPtrToLoopMutex);
-	uv_tcp_t* client = (uv_tcp_t*)(*(int32_t*)text);
-	static uv_tcp_t* preclient = client;
-	if (preclient != client)
-	{
-		RCSend("WaitForSingleObject");
-		//::WaitForSingleObject(handleAns, INFINITE);
-		RCSend("WaitForSingleObject end");
-		//Sleep(2000);
-		preclient = client;
-	}
-
-	//std::unique_lock<std::mutex> lock(g_mu);
-
-	auto itClient = m_clientPtrToLoopMap.find(client);
-	if (itClient == m_clientPtrToLoopMap.end())
-	{
-		return;
-	}
-	uv_loop_t* loop = itClient->second;
-	static uv_loop_t* loopPre = loop;
-
-	uv_async_t* asyncHandle = (uv_async_t*)::malloc(sizeof(uv_async_t));
-	if (asyncHandle == nullptr)
-	{
-		return;
-	}
-	//RCSend("asyncHandle = %d, loop = %d", asyncHandle, itClient->second);
-	asyncHandle->data = text;
-	//通过客户端指针获取接收的loop
-	//g_mu.lock();
-	uv_async_init(itClient->second, asyncHandle, onAsyncCallback);
-	//g_mu.unlock();
-
 	++asyncSendCalc;
 	if (asyncSendCalc % 200000 == 0)
 	{
-		RCSend("asyncSendCalc = %d", asyncSendCalc);
+		RCSend("asyncSendCalc = %d, threadId = %d", asyncSendCalc, CSystem::SystemThreadId());
 	}
-	uv_async_send(asyncHandle);
+
+	uv_loop_t* loop = nullptr;
+	uv_async_t* handle = nullptr;
+	LockFreeQueue<char*>* queue = nullptr;
+	{
+		ReadLock clientPtrToLoopReadLock(m_clientPtrToLoopMutex);
+		uv_tcp_t* client = (uv_tcp_t*)(*(int32_t*)text);
+
+		auto itClient = m_clientPtrToLoopMap.find(client);
+		if (itClient == m_clientPtrToLoopMap.end())
+		{
+			return;
+		}
+		loop = itClient->second;
+	}
+
+		auto itHandle = m_loopToAsyncHandleMap.find(loop);
+		if (itHandle == m_loopToAsyncHandleMap.end())
+		{
+			return;
+		}
+		handle = itHandle->second;
+
+		auto itQueue = m_loopToQueueMap.find(loop);
+		if (itQueue == m_loopToQueueMap.end())
+		{
+			return;
+		}
+		queue = itQueue->second;
+	
+		queue->push(text);
+	
+	if (queue == nullptr)
+	{
+		RCSend("nullptr");
+	}
+	
+	int sendres = uv_async_send(handle);
+	if (sendres != 0)
+	{
+		RCSend("send error");
+	}
+	
 }
 
 char* LibuvTcp::getText(uv_tcp_t* dest, char* buffer, int32_t length)

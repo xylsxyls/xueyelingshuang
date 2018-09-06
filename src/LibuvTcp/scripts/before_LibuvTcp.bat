@@ -59,6 +59,21 @@ call "%CLOUD_REBUILD%" ReadWriteMutex %ReadWriteMutex_bit% %ReadWriteMutex_dllli
 goto ReadWriteMutex_end
 :ReadWriteMutex_end
 
+::--------------------------------------------------------------------
+set LockFreeQueue_dlllib=lib
+set LockFreeQueue_bit=%1
+set LockFreeQueue_debugRelease=%3
+set LockFreeQueue_allSame=%4
+if "%4" == "same" (goto LockFreeQueue_callSame) else (goto LockFreeQueue_callSimple)
+:LockFreeQueue_callSame
+set LockFreeQueue_dlllib=%2
+call "%CLOUD_REBUILD%" LockFreeQueue %LockFreeQueue_bit% %LockFreeQueue_dlllib% %LockFreeQueue_debugRelease% %LockFreeQueue_allSame%
+goto LockFreeQueue_end
+:LockFreeQueue_callSimple
+call "%CLOUD_REBUILD%" LockFreeQueue %LockFreeQueue_bit% %LockFreeQueue_dlllib% %LockFreeQueue_debugRelease%
+goto LockFreeQueue_end
+:LockFreeQueue_end
+
 set bat=%~dp0
 set xueyelingshuang=%bat%..\..\..\
 
