@@ -18,7 +18,7 @@ m_clientPtrToThreadIdMutex(nullptr)
 {
 	m_libuvTcp = new LibuvTcp;
 	m_serverCallbackBase = new ServerCallbackBase;
-	NetWorkThreadManager::instance().init(m_libuvTcp->m_coreCount);
+	NetWorkThreadManager::instance().init(m_libuvTcp->coreCount());
 	m_clientPtrToThreadIdMutex = new ReadWriteMutex;
 }
 
@@ -58,4 +58,14 @@ void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	task->setParam(m_libuvTcp->getText(dest, buffer, length));
 	spTask.reset(task);
 	NetWorkThreadManager::instance().postSendTaskToThread(threadId, spTask);
+}
+
+ReadWriteMutex* NetServer::clientPtrToThreadIdMutex()
+{
+	return m_clientPtrToThreadIdMutex;
+}
+
+std::map<uv_tcp_t*, uint32_t>& NetServer::clientPtrToThreadIdMap()
+{
+	return m_clientPtrToThreadIdMap;
 }

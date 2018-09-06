@@ -27,12 +27,18 @@
     <ClInclude Include="..\src\ReceiveCallback.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\RunLoopTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\LibuvTcp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ReceiveCallback.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RunLoopTask.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

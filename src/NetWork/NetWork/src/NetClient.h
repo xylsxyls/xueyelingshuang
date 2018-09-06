@@ -14,12 +14,10 @@ public:
 
 public:
 	void connect(const char* ip, int32_t port, ClientCallback* callback);
-
 	void send(char* buffer, int32_t length, uv_tcp_t* dest = nullptr);
-
 	void setServer(uv_tcp_t* server);
 
-public:
+protected:
 	LibuvTcp* m_libuvTcp;
 	ClientCallbackBase* m_clientCallbackBase;
 	uv_tcp_t* m_server;

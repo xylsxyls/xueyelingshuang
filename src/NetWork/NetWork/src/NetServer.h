@@ -22,10 +22,15 @@ public:
 
 	void send(char* buffer, int32_t length, uv_tcp_t* dest);
 
+public:
+	ReadWriteMutex* clientPtrToThreadIdMutex();
+
+	std::map<uv_tcp_t*, uint32_t>& clientPtrToThreadIdMap();
+
 protected:
 	LibuvTcp* m_libuvTcp;
 
-public:
+protected:
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)

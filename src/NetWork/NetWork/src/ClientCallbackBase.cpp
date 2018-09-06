@@ -5,7 +5,7 @@
 
 void ClientCallbackBase::serverConnected(uv_tcp_t* server)
 {
-	if (m_callback == nullptr || ((ClientCallback*)m_callback)->m_netClient == nullptr)
+	if (m_callback == nullptr || ((ClientCallback*)m_callback)->netClient() == nullptr)
 	{
 		return;
 	}
@@ -15,6 +15,6 @@ void ClientCallbackBase::serverConnected(uv_tcp_t* server)
 		m_area[server];
 	}
 	
-	((ClientCallback*)m_callback)->m_netClient->setServer(server);
+	((ClientCallback*)m_callback)->netClient()->setServer(server);
 	((ClientCallback*)m_callback)->serverConnected(server);
 }

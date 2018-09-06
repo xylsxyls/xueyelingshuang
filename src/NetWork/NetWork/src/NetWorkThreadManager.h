@@ -29,6 +29,5 @@ public:
 private:
 	std::atomic<int32_t> m_workThreadIdCounter;
 	std::vector<uint32_t> m_vecWorkThreadId;
-
 	std::atomic<uint32_t> m_sendThreadId;
 };

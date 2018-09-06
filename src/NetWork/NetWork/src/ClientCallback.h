@@ -17,6 +17,8 @@ public:
 
 	void setNetClient(NetClient* netClient);
 
-public:
+	NetClient* netClient();
+
+protected:
 	NetClient* m_netClient;
 };

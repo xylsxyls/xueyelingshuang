@@ -6,56 +6,14 @@
 #include "CSystem/CSystemAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
+#include "RunLoopTask.h"
 
 std::atomic<int> asyncCalc = 0;
 std::atomic<int> asyncSendCalc = 0;
 std::atomic<int> freeCalc = 0;
 std::atomic<int> writeCalc = 0;
-std::atomic<int> closeTaskCalc = 0;
-std::mutex g_mu;
-std::mutex g_amu;
-
-std::map<uv_loop_t*, std::list<uv_handle_t*>> mapHandle;
-std::map<uv_loop_t*, std::atomic<int>> mapCalc;
-
-std::atomic<uint32_t> g_serverSendThreadId = 0;
-
-uv_async_t g_async_handle[4000000];
-
-HANDLE g_waitHandle = ::CreateEvent(NULL, TRUE, FALSE, NULL);
-uv_async_t* g_asyncHandleBk = nullptr;
 
 void onAsyncCallback(uv_async_t* handle);
-void onAsyncCallback2(uv_async_t* handle);
-void onAsyncCallback3(uv_async_t* handle);
-void onAsyncCallback4(uv_async_t* handle);
-
-class RunLoopTask : public CTask
-{
-public:
-	RunLoopTask():
-		m_loop(nullptr)
-	{
-
-	}
-
-public:
-	void setLoop(uv_loop_t* loop)
-	{
-		m_loop = loop;
-	}
-
-	virtual void DoTask()
-	{
-		RCSend("loop threadId = %d", CSystem::SystemThreadId());
-		int res = uv_run(m_loop, UV_RUN_DEFAULT);
-		printf("loop end, res = %d\n", res);
-		RCSend("loop end threadId = %d, res = %d", CSystem::SystemThreadId(), res);
-	}
-
-private:
-	uv_loop_t* m_loop;
-};
 
 LibuvTcp::LibuvTcp():
 m_receiveCallback(nullptr),
@@ -184,8 +142,8 @@ void Accept(uv_tcp_t* server, uv_loop_t* loop)
 	//将客户端指针和loop存入map
 	{
 		//std::unique_lock<std::mutex> lock(g_mu);
-		WriteLock clientPtrToLoopWriteLock(*libuvTcp->m_clientPtrToLoopMutex);
-		libuvTcp->m_clientPtrToLoopMap[client] = loop;
+		WriteLock clientPtrToLoopWriteLock(*(libuvTcp->clientPtrToLoopMutex()));
+		(libuvTcp->clientPtrToLoopMap())[client] = loop;
 	}
 
 	//存入类地址
@@ -221,7 +179,7 @@ void onClientConnected(uv_stream_t* server, int status)
 	LibuvTcp* libuvTcp = (LibuvTcp*)server->data;
 	//Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[7]);
 	//*2
-	Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[++(libuvTcp->m_workIndex) % (libuvTcp->m_coreCount)]);
+	Accept((uv_tcp_t*)server, (libuvTcp->vecServerLoop())[libuvTcp->workIndex() % libuvTcp->coreCount()]);
 	RCSend("connected end, threadId = %d, loop = %d", CSystem::SystemThreadId(), server->loop);
 }
 
@@ -455,6 +413,31 @@ char* LibuvTcp::getText(uv_tcp_t* dest, char* buffer, int32_t length)
 	*((int32_t*)(text + 4)) = length;
 	::memcpy(text + 8, buffer, length);
 	return text;
+}
+
+ReadWriteMutex* LibuvTcp::clientPtrToLoopMutex()
+{
+	return m_clientPtrToLoopMutex;
+}
+
+std::map<uv_tcp_t*, uv_loop_t*>& LibuvTcp::clientPtrToLoopMap()
+{
+	return m_clientPtrToLoopMap;
+}
+
+std::vector<uv_loop_t*>& LibuvTcp::vecServerLoop()
+{
+	return m_vecServerLoop;
+}
+
+std::atomic<int32_t> LibuvTcp::workIndex()
+{
+	return ++m_workIndex;
+}
+
+int32_t LibuvTcp::coreCount()
+{
+	return m_coreCount;
 }
 
 //class Receive : public ReceiveCallback

@@ -19,7 +19,7 @@ m_sendThreadId(0)
 {
 	m_libuvTcp = new LibuvTcp;
 	m_clientCallbackBase = new ClientCallbackBase;
-	NetWorkThreadManager::instance().init(m_libuvTcp->m_coreCount);
+	NetWorkThreadManager::instance().init(m_libuvTcp->coreCount());
 	m_sendThreadId = NetWorkThreadManager::instance().getWorkThreadId();
 }
 

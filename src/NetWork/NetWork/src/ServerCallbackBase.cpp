@@ -18,8 +18,8 @@ void ServerCallbackBase::clientConnected(uv_tcp_t* client)
 	}
 
 	{
-		WriteLock clientToThreadIdWriteLock(*(callback->netServer()->m_clientPtrToThreadIdMutex));
-		callback->netServer()->m_clientPtrToThreadIdMap[client] = NetWorkThreadManager::instance().getWorkThreadId();
+		WriteLock clientToThreadIdWriteLock(*(callback->netServer()->clientPtrToThreadIdMutex()));
+		(callback->netServer()->clientPtrToThreadIdMap())[client] = NetWorkThreadManager::instance().getWorkThreadId();
 	}
 	callback->clientConnected(client);
 }

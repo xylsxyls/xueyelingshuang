@@ -19,7 +19,7 @@ class LibuvTcpAPI LibuvTcp
 public:
 	LibuvTcp();
 
-	~LibuvTcp();
+	virtual ~LibuvTcp();
 
 public:
 	void initClient(const char* ip, int32_t port, ReceiveCallback* callback);
@@ -34,11 +34,23 @@ public:
 
 	char* getText(uv_tcp_t* dest, char* buffer, int32_t length);
 
+public:
+	ReadWriteMutex* clientPtrToLoopMutex();
+
+	std::map<uv_tcp_t*, uv_loop_t*>& clientPtrToLoopMap();
+
+	std::vector<uv_loop_t*>& vecServerLoop();
+
+	std::atomic<int32_t> workIndex();
+
+	int32_t coreCount();
+
 	ReceiveCallback* callback();
 
-public:
+protected:
 	int32_t m_coreCount;
 	uv_loop_t* m_serverLoop;
+
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
@@ -58,7 +70,6 @@ public:
 	uv_async_t* m_asyncHandle;
 	LockFreeQueue<char*>* m_queue;
 
-protected:
 	ReceiveCallback* m_receiveCallback;
 	bool m_isClient;
 };
