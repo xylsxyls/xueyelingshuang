@@ -1,7 +1,4 @@
 #include "ClientCallback.h"
-#include "LibuvTcp/LibuvTcpAPI.h"
-#include "NetClient.h"
-#include "D:\\SendToMessageTest.h"
 
 ClientCallback::ClientCallback():
 m_netClient(nullptr)

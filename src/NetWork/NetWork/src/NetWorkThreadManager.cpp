@@ -1,8 +1,6 @@
 #include "NetWorkThreadManager.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
-std::atomic<int> netCalc = 0;
-
 NetWorkThreadManager::NetWorkThreadManager():
 m_workThreadIdCounter(-1),
 m_sendThreadId(0)

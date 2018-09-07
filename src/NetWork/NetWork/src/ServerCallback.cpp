@@ -1,6 +1,5 @@
 #include "ServerCallback.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
-#include "NetServer.h"
 
 ServerCallback::ServerCallback() :
 m_callback(nullptr),

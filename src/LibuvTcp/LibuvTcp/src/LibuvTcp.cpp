@@ -1,17 +1,10 @@
 #include "LibuvTcp.h"
 #include "libuv/uv.h"
 #include "ReceiveCallback.h"
-#include "D:\\SendToMessageTest.h"
-#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #include "RunLoopTask.h"
-
-std::atomic<int> asyncCalc = 0;
-std::atomic<int> asyncSendCalc = 0;
-std::atomic<int> freeCalc = 0;
-std::atomic<int> writeCalc = 0;
 
 void onAsyncCallback(uv_async_t* handle);
 
@@ -133,15 +126,11 @@ void Accept(uv_tcp_t* server, uv_loop_t* loop)
 	}
 	LibuvTcp* libuvTcp = (LibuvTcp*)server->data;
 
-	//std::unique_lock<std::mutex> lock(g_mu);
 	//将全局的主循环和处理连接的对象关联起来
 	uv_tcp_init(loop, client);
 
-	RCSend("loop = %d, client = %d", loop, client);
-
 	//将客户端指针和loop存入map
 	{
-		//std::unique_lock<std::mutex> lock(g_mu);
 		WriteLock clientPtrToLoopWriteLock(*(libuvTcp->clientPtrToLoopMutex()));
 		(libuvTcp->clientPtrToLoopMap())[client] = loop;
 	}
@@ -167,8 +156,6 @@ void Accept(uv_tcp_t* server, uv_loop_t* loop)
 //客户端连上服务端的回调（服务端函数）
 void onClientConnected(uv_stream_t* server, int status)
 {
-	RCSend("connected, threadId = %d, loop = %d", CSystem::SystemThreadId(), server->loop);
-	//std::unique_lock<std::mutex> lock(g_mu);
 	if (status < 0)
 	{
 		//新建连接出错
@@ -180,24 +167,11 @@ void onClientConnected(uv_stream_t* server, int status)
 	//Accept((uv_tcp_t*)server, libuvTcp->m_vecServerLoop[7]);
 	//*2
 	Accept((uv_tcp_t*)server, (libuvTcp->vecServerLoop())[libuvTcp->workIndex() % libuvTcp->coreCount()]);
-	RCSend("connected end, threadId = %d, loop = %d", CSystem::SystemThreadId(), server->loop);
 }
 
 void onAsyncCallback(uv_async_t* handle)
 {
-	//std::unique_lock<std::mutex> lock(g_mu);
-	++asyncCalc;
-	if (asyncCalc == 1)
-	{
-		RCSend("asyncCalc begin");
-	}
-	if (asyncCalc % 200000 == 0)
-	{
-		RCSend("asyncCalc = %d, threadId = %d", asyncCalc, CSystem::SystemThreadId());
-	}
-
 	LockFreeQueue<char*>* queue = (LockFreeQueue<char*>*)handle->data;
-	//std::unique_lock<std::mutex> lock(g_mu);
 	char* text = nullptr;
 	while (queue->pop(&text))
 	{
@@ -227,16 +201,6 @@ void onAsyncCallback(uv_async_t* handle)
 			//不管发送数据成功与否，都要执行下面的函数释放资源，以免内存泄露
 			::free(((char*)req->data));
 			::free(req);
-
-			++writeCalc;
-			if (writeCalc == 1)
-			{
-				RCSend("writeCalc begin");
-			}
-			if (writeCalc % 200000 == 0)
-			{
-				RCSend("writeCalc = %d, time = %d", writeCalc, ::GetTickCount());
-			}
 		});
 	}
 	
@@ -249,8 +213,6 @@ void Listen(uv_loop_t* loop, LibuvTcp* libuvTcp, int32_t port, int32_t backlog)
 	uv_tcp_t* server = new uv_tcp_t;
 	//初始化，将TCP服务端对象和主循环绑定在一起
 	uv_tcp_init(loop, server);
-
-	RCSend("loop = %d, server = %d", loop, server);
 
 	//存入类地址
 	server->data = libuvTcp;
@@ -351,20 +313,9 @@ void LibuvTcp::send(char* text)
 	//std::unique_lock<std::mutex> lock(g_mu);
 	if (m_isClient)
 	{
-		++asyncSendCalc;
-		if (asyncSendCalc % 200000 == 0)
-		{
-			RCSend("asyncSendCalc = %d", asyncSendCalc);
-		}
 		m_queue->push(text);
 		uv_async_send(m_asyncHandle);
 		return;
-	}
-
-	++asyncSendCalc;
-	if (asyncSendCalc % 200000 == 0)
-	{
-		RCSend("asyncSendCalc = %d, threadId = %d", asyncSendCalc, CSystem::SystemThreadId());
 	}
 
 	uv_loop_t* loop = nullptr;
@@ -402,7 +353,7 @@ void LibuvTcp::send(char* text)
 	int sendres = uv_async_send(handle);
 	if (sendres != 0)
 	{
-		RCSend("send error");
+		printf("uv_async_send error\n");
 	}
 }
 

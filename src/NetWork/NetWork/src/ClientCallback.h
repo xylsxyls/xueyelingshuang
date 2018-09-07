@@ -1,6 +1,5 @@
 #pragma once
 #include "NetWorkMacro.h"
-#include <stdint.h>
 #include "CallbackBase.h"
 
 class NetClient;

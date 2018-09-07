@@ -1,10 +1,5 @@
 #include "SendTask.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
-#include "D:\\SendToMessageTest.h"
-#include "CSystem/CSystemAPI.h"
-#include "NetWorkThreadManager.h"
-
-std::mutex g_sendMutex;
 
 SendTask::SendTask() :
 m_text(nullptr),

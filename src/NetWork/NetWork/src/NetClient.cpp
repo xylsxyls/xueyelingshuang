@@ -1,15 +1,8 @@
 #include "NetClient.h"
-#include "LibuvTcp/LibuvTcpAPI.h"
 #include "ClientCallback.h"
-#include "D:\\SendToMessageTest.h"
-#include <map>
 #include "SendTask.h"
-#include "WorkTask.h"
 #include "NetWorkThreadManager.h"
-#include "CSystem/CSystemAPI.h"
 #include "ClientCallbackBase.h"
-
-std::atomic<int> netClientCalc = 0;
 
 NetClient::NetClient() :
 m_libuvTcp(nullptr),

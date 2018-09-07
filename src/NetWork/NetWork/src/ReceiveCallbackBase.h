@@ -1,5 +1,4 @@
 #pragma once
-#include "NetWorkMacro.h"
 #include <stdint.h>
 #include "LibuvTcp/LibuvTcpAPI.h"
 

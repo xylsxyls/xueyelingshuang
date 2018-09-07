@@ -1,15 +1,9 @@
 #include "NetServer.h"
-#include "LibuvTcp/LibuvTcpAPI.h"
 #include "ServerCallback.h"
-#include "D:\\SendToMessageTest.h"
-#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "WorkTask.h"
 #include "SendTask.h"
 #include "NetWorkThreadManager.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #include "ServerCallbackBase.h"
-
-std::mutex g_netServerMu;
 
 NetServer::NetServer() :
 m_libuvTcp(nullptr),
