@@ -1,7 +1,7 @@
 #include "ReadLock.h"
 #include "ReadWriteMutex.h"
 
-ReadLock::ReadLock(ReadWriteMutex& mutex)
+ReadLock::ReadLock(ReadWriteMutexBase& mutex)
 {
 	m_mutex = &mutex;
 	m_mutex->read();

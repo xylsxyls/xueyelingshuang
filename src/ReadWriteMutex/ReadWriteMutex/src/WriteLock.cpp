@@ -1,7 +1,7 @@
 #include "WriteLock.h"
-#include "ReadWriteMutex.h"
+#include "ReadWriteMutexBase.h"
 
-WriteLock::WriteLock(ReadWriteMutex& mutex)
+WriteLock::WriteLock(ReadWriteMutexBase& mutex)
 {
 	m_mutex = &mutex;
 	m_mutex->write();

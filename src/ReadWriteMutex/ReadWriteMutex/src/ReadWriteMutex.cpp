@@ -5,7 +5,7 @@ ReadWriteMutex::ReadWriteMutex():
 m_mutex(nullptr)
 {
 	m_mutex = new SRWLOCK;
-	InitializeSRWLock((SRWLOCK*)m_mutex);
+	InitializeSRWLock(m_mutex);
 }
 
 ReadWriteMutex::~ReadWriteMutex()
@@ -16,20 +16,20 @@ ReadWriteMutex::~ReadWriteMutex()
 
 void ReadWriteMutex::read()
 {
-	AcquireSRWLockExclusive((SRWLOCK*)m_mutex);
+	AcquireSRWLockExclusive(m_mutex);
 }
 
 void ReadWriteMutex::unread()
 {
-	ReleaseSRWLockExclusive((SRWLOCK*)m_mutex);
+	ReleaseSRWLockExclusive(m_mutex);
 }
 
 void ReadWriteMutex::write()
 {
-	AcquireSRWLockShared((SRWLOCK*)m_mutex);
+	AcquireSRWLockShared(m_mutex);
 }
 
 void ReadWriteMutex::unwrite()
 {
-	ReleaseSRWLockShared((SRWLOCK*)m_mutex);
+	ReleaseSRWLockShared(m_mutex);
 }

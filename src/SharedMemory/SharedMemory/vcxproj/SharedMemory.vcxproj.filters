@@ -15,39 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\ReadWriteMutex.h">
+    <ClInclude Include="..\src\SharedMemory.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ReadWriteMutexAPI.h">
+    <ClInclude Include="..\src\SharedMemoryAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ReadWriteMutexMacro.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ReadLock.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\WriteLock.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ProcessReadWriteMutex.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ReadWriteMutexBase.h">
+    <ClInclude Include="..\src\SharedMemoryMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\ReadWriteMutex.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\WriteLock.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ReadLock.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ProcessReadWriteMutex.cpp">
+    <ClCompile Include="..\src\SharedMemory.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

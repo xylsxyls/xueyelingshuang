@@ -1,14 +1,14 @@
 #pragma once
 #include "ReadWriteMutexMacro.h"
 
-class ReadWriteMutex;
+class ReadWriteMutexBase;
 
 class ReadWriteMutexAPI WriteLock
 {
 public:
-	WriteLock(ReadWriteMutex& mutex);
+	WriteLock(ReadWriteMutexBase& mutex);
 	~WriteLock();
 
 private:
-	ReadWriteMutex* m_mutex;
+	ReadWriteMutexBase* m_mutex;
 };

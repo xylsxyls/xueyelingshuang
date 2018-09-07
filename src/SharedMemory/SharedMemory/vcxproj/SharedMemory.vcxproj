@@ -19,23 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\ProcessReadWriteMutex.h" />
-    <ClInclude Include="..\src\ReadLock.h" />
-    <ClInclude Include="..\src\ReadWriteMutexAPI.h" />
-    <ClInclude Include="..\src\ReadWriteMutexBase.h" />
-    <ClInclude Include="..\src\ReadWriteMutexMacro.h" />
-    <ClInclude Include="..\src\ReadWriteMutex.h" />
-    <ClInclude Include="..\src\WriteLock.h" />
+    <ClInclude Include="..\src\SharedMemoryAPI.h" />
+    <ClInclude Include="..\src\SharedMemoryMacro.h" />
+    <ClInclude Include="..\src\SharedMemory.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\ProcessReadWriteMutex.cpp" />
-    <ClCompile Include="..\src\ReadLock.cpp" />
-    <ClCompile Include="..\src\ReadWriteMutex.cpp" />
-    <ClCompile Include="..\src\WriteLock.cpp" />
+    <ClCompile Include="..\src\SharedMemory.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{152F782A-7582-4FB5-922F-94EEEA5DDC44}</ProjectGuid>
-    <RootNamespace>ReadWriteMutex</RootNamespace>
+    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <RootNamespace>SharedMemory</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

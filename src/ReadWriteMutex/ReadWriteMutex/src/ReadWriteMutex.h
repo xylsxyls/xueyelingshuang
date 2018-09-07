@@ -1,22 +1,23 @@
 #pragma once
 #include "ReadWriteMutexMacro.h"
+#include "ReadWriteMutexBase.h"
 
-class ReadWriteMutexAPI ReadWriteMutex
+struct _RTL_SRWLOCK;
+typedef _RTL_SRWLOCK RTL_SRWLOCK;
+typedef RTL_SRWLOCK SRWLOCK;
+
+class ReadWriteMutexAPI ReadWriteMutex : public ReadWriteMutexBase
 {
 public:
 	ReadWriteMutex();
-
 	~ReadWriteMutex();
 
 public:
-	void read();
-
-	void unread();
-
-	void write();
-
-	void unwrite();
+	virtual void read();
+	virtual void unread();
+	virtual void write();
+	virtual void unwrite();
 
 private:
-	void* m_mutex;
+	SRWLOCK* m_mutex;
 };
