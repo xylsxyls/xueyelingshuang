@@ -4,74 +4,13 @@
 
 #pragma once
 #include "afxwin.h"
-#include <vector>
-#include <list>
-#include <thread>
 #include <atomic>
 #include <mutex>
-//#include "Controller/ControllerAPI.h"
-using namespace std;
+#include "LockFreeQueue/LockFreeQueueAPI.h"
 
-typedef struct tagList
+namespace std
 {
-    tagList* next;
-    string str;
-}tagList;
-
-class CListMessage
-{
-public:
-    void push_back(string str)
-    {
-        tagList* ptagList = new tagList;
-        ptagList->next = 0;
-        ptagList->str = str;
-        int last = m_last;
-        if (last == 0)
-        {
-            m_first = (int)ptagList;
-            m_last = (int)ptagList;
-        }
-        else
-        {
-            ((tagList*)last)->next = ptagList;
-            m_last = (int)ptagList;
-            if (m_first == 0)
-            {
-                m_first = (int)m_last;
-            }
-        }
-        ++m_size;
-    }
-    string pop_front()
-    {
-        if (m_size >= 2)
-        {
-            int first = m_first;
-            if (first != 0)
-            {
-                m_first = (int)(((tagList*)first)->next);
-                string data = ((tagList*)first)->str;
-                delete (tagList*)first;
-                --m_size;
-                return data;
-            }
-            return "";
-        }
-        return "";
-    }
-    int size()
-    {
-        return m_size;
-    }
-    bool empty()
-    {
-        return m_size == 0;
-    }
-private:
-    atomic<int> m_size;
-    atomic<int> m_first;
-    atomic<int> m_last;
+	class thread;
 };
 
 // CMessageTestDlg 对话框
@@ -125,15 +64,15 @@ public:
     //屏幕文本显示容器
     CString windowtext;
     //缓冲区
-    list<string> listCopyData;
+	LockFreeQueue<std::string> listCopyData;
     //缓冲区转换出的字符串
-    string showString;
+	std::string showString;
     //缓冲区是否有变动，可能是存入文件，可能是存入屏幕显示容器
-    atomic<bool> bListChangeAmc = false;
+	std::atomic<bool> bListChangeAmc = false;
     //整合字符串线程
-    thread* threadWork = nullptr;
+	std::thread* threadWork = nullptr;
     //线程是否运行
-    atomic<bool> bWorkThreadRunAmc = 0;
+	std::atomic<bool> bWorkThreadRunAmc = 0;
     
 private:
     void AddListDataLock(const char* szData);
@@ -141,16 +80,17 @@ private:
     void UpdateScreenSize();
     int32_t GetListSizeLock();
     bool IsListEmptyLock();
-    string GetPopFrontLock();
-    void ShowStringInsertLock(const string& insertData);
+    bool GetPopFrontLock(std::string* popStr);
+	void ShowStringInsertLock(const std::string& insertData);
     std::string TCHAR2STRING(TCHAR *STR);
+	CString getEnableShowText();
 
 private:
     char* szData = nullptr;
     int curDataSize = 0;
-    std::mutex mu;
-    atomic<int> linesAmc;
-    atomic<bool> bToFileAmc = false;
+	std::mutex m_showStringMutex;
+	std::atomic<int> linesAmc;
+	std::atomic<bool> bToFileAmc = false;
     void* file;
     bool bChangeScreen = false;
 public:

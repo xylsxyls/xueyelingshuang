@@ -51,3 +51,8 @@ void ProcessReadWriteMutex::unwrite()
 	}
 	::ReleaseMutex(m_hLock);
 }
+
+bool ProcessReadWriteMutex::trywrite()
+{
+	return (::WaitForSingleObject(m_hLock, 0) == WAIT_OBJECT_0) ? 1 : 0;
+}

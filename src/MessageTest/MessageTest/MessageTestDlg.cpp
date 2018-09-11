@@ -7,10 +7,10 @@
 #include "MessageTestDlg.h"
 #include "afxdialogex.h"
 #include <string>
-#include <afxwin.h>
 #include "resource.h"
 #include <fstream>
-using namespace std;
+#include <algorithm>
+#include <thread>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -114,11 +114,14 @@ BOOL CMessageTestDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+
+	GetSystemMenu(FALSE)->InsertMenu(-1, MF_BYPOSITION, SC_MINIMIZE, _T("最小化"));
+
     ModifyStyle(0, WS_MINIMIZEBOX);
     m_edit.EnableWindow(bChangeScreen);
     m_editToFile.SetWindowText(_T("D:\\123.txt"));
     bWorkThreadRunAmc = 1;
-    threadWork = new thread(std::bind(&CMessageTestDlg::WorkThread, this));
+	threadWork = new std::thread(std::bind(&CMessageTestDlg::WorkThread, this));
     SetTimer(10000, 100, NULL);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -217,7 +220,6 @@ BOOL CMessageTestDlg::OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCopyDataStruct)
     memcpy(szData, (char *)pCopyDataStruct->lpData, dataSize);
     szData[dataSize] = 0;
     AddListDataLock(szData);
-
     return true;
     return CDialogEx::OnCopyData(pWnd, pCopyDataStruct);
 }
@@ -236,13 +238,14 @@ void CMessageTestDlg::OnTimer(UINT_PTR nIDEvent)
         else
         {
             bListChangeAmc = false;
-            mu.lock();
-            windowtext = CString(showString.c_str()) + windowtext;
-            showString.clear();
-            mu.unlock();
-
+			{
+				std::unique_lock<std::mutex> umutex(m_showStringMutex);
+				windowtext = CString(showString.c_str()) + windowtext;
+				showString.clear();
+			}
+			
             //这里高速循环时有几率失败，但是下次进入时会把上次未成功显示的内容显示
-            m_edit.SetWindowText(windowtext);
+			m_edit.SetWindowText(m_edit.IsWindowEnabled() ? windowtext : getEnableShowText());
             m_edit.UpdateWindow();
 
             UpdateBufferSize();
@@ -256,25 +259,22 @@ void CMessageTestDlg::WorkThread()
 {
     while (bWorkThreadRunAmc == true)
     {
-        if (IsListEmptyLock() == true)
+		std::string oneData;
+		if (!GetPopFrontLock(&oneData))
         {
             Sleep(1);
             continue;
         }
-        else
-        {
-            bListChangeAmc = true;
-            string oneData = GetPopFrontLock();
-            if (bToFileAmc == true)
-            {
-                *((ofstream*)file) << oneData << endl;
-            }
-            else
-            {
-                ShowStringInsertLock(oneData);
-                ++linesAmc;
-            }
-        }
+		bListChangeAmc = true;
+		if (bToFileAmc == true)
+		{
+			*((std::ofstream*)file) << oneData << std::endl;
+		}
+		else
+		{
+			ShowStringInsertLock(oneData);
+			++linesAmc;
+		}
     }
 }
 
@@ -294,14 +294,20 @@ void CMessageTestDlg::OnBnClickedButton2()
     if (bChangeScreen == true)
     {
         m_btnChange.SetWindowText(_T("更改完毕"));
+		m_edit.SetWindowText(windowtext);
     }
     else
     {
+		m_btnChange.SetWindowText(_T("更改屏幕"));
         m_edit.GetWindowText(windowtext);
-        linesAmc = windowtext.Replace(_T("\r\n"), _T("\r\n"));
-        UpdateBufferSize();
-        UpdateScreenSize();
-        m_btnChange.SetWindowText(_T("更改屏幕"));
+		linesAmc = std::count_if((LPCTSTR)windowtext, (LPCTSTR)windowtext + windowtext.GetLength(), std::bind2nd(std::equal_to<TCHAR>(), _T('\r')));
+		if (windowtext.Right(2) != "\r\n" && !windowtext.IsEmpty())
+		{
+			++linesAmc;
+		}
+		m_edit.SetWindowText(getEnableShowText());
+		UpdateBufferSize();
+		UpdateScreenSize();
     }
     m_edit.EnableWindow(bChangeScreen);
 }
@@ -313,13 +319,13 @@ void CMessageTestDlg::OnBnClickedButton3()
     bToFileAmc = !bToFileAmc;
     if (file == nullptr)
     {
-        file = ::new ofstream(_T("MessageTestFile.txt"), ios::app);
+		file = ::new std::ofstream(_T("MessageTestFile.txt"), std::ios::app);
     }
     if (bToFileAmc == false)
     {
         if (file != nullptr)
         {
-            delete (ofstream*)file;
+			delete (std::ofstream*)file;
         }
         file = nullptr;
         m_fileBtn.SetWindowText(_T("转为写入文件"));
@@ -336,10 +342,10 @@ void CMessageTestDlg::OnBnClickedButton4()
     // TODO:  在此添加控件通知处理程序代码
     CString strToFileName;
     m_editToFile.GetWindowText(strToFileName);
-    ofstream file(strToFileName, ios::app);
-    file << string("begin to file") << endl;
+	std::ofstream file(strToFileName, std::ios::app);
+	file << std::string("begin to file") << std::endl;
     windowtext.Replace(_T("\r"), _T(""));
-    file << TCHAR2STRING(windowtext.GetBuffer()) << endl;
+	file << TCHAR2STRING(windowtext.GetBuffer()) << std::endl;
     windowtext.ReleaseBuffer();
     windowtext.Replace(_T("\n"), _T("\r\n"));
     AfxMessageBox(_T("写入完成"));
@@ -355,8 +361,7 @@ void CMessageTestDlg::OnBnClickedButton5()
 //以下为私有函数
 void CMessageTestDlg::AddListDataLock(const char* szData)
 {
-    std::unique_lock<std::mutex> umutex(mu);
-    listCopyData.push_back(szData);
+    listCopyData.push(szData);
 }
 
 void CMessageTestDlg::UpdateBufferSize()
@@ -377,27 +382,22 @@ void CMessageTestDlg::UpdateScreenSize()
 
 int32_t CMessageTestDlg::GetListSizeLock()
 {
-    std::unique_lock<std::mutex> umutex(mu);
-    return listCopyData.size();
+	return listCopyData.size();
 }
 
 bool CMessageTestDlg::IsListEmptyLock()
 {
-    std::unique_lock<std::mutex> umutex(mu);
-    return listCopyData.empty();
+	return listCopyData.empty();
 }
 
-string CMessageTestDlg::GetPopFrontLock()
+bool CMessageTestDlg::GetPopFrontLock(std::string* popStr)
 {
-    std::unique_lock<std::mutex> umutex(mu);
-    string oneData = listCopyData.front();
-    listCopyData.pop_front();
-    return oneData;
+	return listCopyData.pop(popStr);
 }
 
-void CMessageTestDlg::ShowStringInsertLock(const string& insertData)
+void CMessageTestDlg::ShowStringInsertLock(const std::string& insertData)
 {
-    std::unique_lock<std::mutex> umutex(mu);
+	std::unique_lock<std::mutex> umutex(m_showStringMutex);
     showString.insert(0, insertData + "\r\n");
 }
 
@@ -409,4 +409,25 @@ std::string CMessageTestDlg::TCHAR2STRING(TCHAR *STR)
     std::string str(chRtn);
     delete chRtn;
     return str;
+}
+
+CString CMessageTestDlg::getEnableShowText()
+{
+	int32_t size = windowtext.GetLength();
+	int32_t length = 0;
+	int32_t line = 41;
+	while (line-- != 0)
+	{
+		length = windowtext.Find(_T("\r\n"), length) + 2;
+		if (length == 1)
+		{
+			length = size + 2;
+			break;
+		}
+		else if (length >= size)
+		{
+			break;
+		}
+	}
+	return windowtext.Mid(0, length - 2);
 }

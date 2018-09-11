@@ -75,4 +75,27 @@ bool LockFreeQueue<QElmType>::pop(QElmType *e)
 	return true;
 }
 
+template<class QElmType>
+bool LockFreeQueue<QElmType>::empty()
+{
+	return m_front == m_rear;
+}
+
+template<class QElmType>
+int32_t LockFreeQueue<QElmType>::size()
+{
+	if (empty())
+	{
+		return 0;
+	}
+	int32_t size = 1;
+	struct qnode<QElmType>* volatile pfront = m_front;
+	while (pfront->m_next != m_rear)
+	{
+		pfront = pfront->m_next;
+		++size;
+	}
+	return size;
+}
+
 #endif

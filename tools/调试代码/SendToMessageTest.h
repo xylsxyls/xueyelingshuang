@@ -132,7 +132,7 @@ public:
 			vsprintf_s(&str[0], size + 1, fmt, args);
 		}
         va_end(args);
-        HWND receiveWindow = ::FindWindow(NULL, _T("MessageTest1.2"));
+        HWND receiveWindow = ::FindWindowA(NULL, "MessageTest1.3");
         if (receiveWindow == NULL) return false;
         COPYDATASTRUCT copyData = { 0 };
         copyData.lpData = (PVOID)str.c_str();

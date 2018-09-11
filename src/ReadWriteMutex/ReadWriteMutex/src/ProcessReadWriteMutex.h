@@ -16,6 +16,7 @@ public:
 	virtual void unread();
 	virtual void write();
 	virtual void unwrite();
+	bool trywrite();
 	
 private:
 	HANDLE m_hLock;

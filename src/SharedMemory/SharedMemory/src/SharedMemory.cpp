@@ -72,6 +72,22 @@ void SharedMemory::unwrite()
 	m_processReadWriteMutex.unwrite();
 }
 
+bool SharedMemory::trywrite()
+{
+	if (!m_processReadWriteMutex.trywrite())
+	{
+		return false;
+	}
+	open(false);
+	if (m_memoryHandle == nullptr)
+	{
+		m_processReadWriteMutex.unwrite();
+		return false;
+	}
+	m_memoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+	return true;
+}
+
 void SharedMemory::close()
 {
 	if (m_memoryPtr)

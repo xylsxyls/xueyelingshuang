@@ -1,5 +1,6 @@
 #pragma once
 #include "LockFreeQueueMacro.h"
+#include <stdint.h>
 
 template<class QElmType>
 struct qnode
@@ -21,6 +22,8 @@ public:
 	void destroy();
 	bool push(const QElmType& e);
 	bool pop(QElmType* e);
+	bool empty();
+	int32_t size();
 
 private:
 	struct qnode<QElmType>* volatile m_front;
