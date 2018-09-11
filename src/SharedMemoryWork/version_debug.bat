@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" SharedMemoryWork 32 dll debug same

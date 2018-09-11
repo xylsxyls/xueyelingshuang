@@ -19,16 +19,19 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\SharedMemoryAPI.h" />
-    <ClInclude Include="..\src\SharedMemoryMacro.h" />
-    <ClInclude Include="..\src\SharedMemory.h" />
+    <ClInclude Include="..\src\ServerReceiveCallback.h" />
+    <ClInclude Include="..\src\SharedMemoryServer.h" />
+    <ClInclude Include="..\src\SharedMemoryWorkAPI.h" />
+    <ClInclude Include="..\src\SharedMemoryWorkMacro.h" />
+    <ClInclude Include="..\src\SharedMemoryClient.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\SharedMemory.cpp" />
+    <ClCompile Include="..\src\SharedMemoryClient.cpp" />
+    <ClCompile Include="..\src\SharedMemoryServer.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}</ProjectGuid>
-    <RootNamespace>SharedMemory</RootNamespace>
+    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <RootNamespace>SharedMemoryWork</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

@@ -59,17 +59,22 @@ void SharedMemory::unread()
 void SharedMemory::write()
 {
 	m_processReadWriteMutex.write();
-	open(false);
-	if (m_memoryHandle == nullptr)
-	{
-		return;
-	}
-	m_memoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+	writeWithoutLock();
 }
 
 void SharedMemory::unwrite()
 {
 	m_processReadWriteMutex.unwrite();
+}
+
+void* SharedMemory::writeWithoutLock()
+{
+	open(false);
+	if (m_memoryHandle == nullptr)
+	{
+		return nullptr;
+	}
+	return m_memoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 }
 
 bool SharedMemory::trywrite()

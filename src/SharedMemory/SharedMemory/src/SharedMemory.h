@@ -17,6 +17,7 @@ public:
 	virtual void unread();
 	virtual void write();
 	virtual void unwrite();
+	void* writeWithoutLock();
 	bool trywrite();
 	void close();
 
