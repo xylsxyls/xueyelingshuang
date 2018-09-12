@@ -283,6 +283,8 @@ void CMessageTestDlg::OnDestroy()
     CDialogEx::OnDestroy();
     bWorkThreadRunAmc = false;
     threadWork->join();
+	delete threadWork;
+	threadWork = nullptr;
     // TODO:  在此处添加消息处理程序代码
 }
 
