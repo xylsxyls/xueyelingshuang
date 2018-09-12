@@ -79,6 +79,8 @@ public:
 	static uint32_t SystemThreadId();
 	//?获取CPU核数
 	static int32_t GetCPUCoreCount();
+	//?包含目录的拷贝，可以自动创建文件夹，同步函数
+	static bool ShellCopy(const char* from, const char* dest);
 
 public:
     static bool ifRedirFrobid;

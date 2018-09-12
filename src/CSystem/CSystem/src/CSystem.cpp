@@ -5,6 +5,8 @@
 #include <io.h>
 #include <fstream>
 #include <conio.h>
+#include <tchar.h>
+#pragma comment(lib, "shell32.lib")
 
 double CSystem::GetCPUSpeedGHz()
 {
@@ -337,6 +339,22 @@ int32_t CSystem::GetCPUCoreCount()
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 	return si.dwNumberOfProcessors;
+}
+
+bool CSystem::ShellCopy(const char* from, const char* dest)
+{
+	SHFILEOPSTRUCT fileOp = { 0 };
+	fileOp.wFunc = FO_COPY;
+	TCHAR newFrom[MAX_PATH];
+	_tcscpy_s(newFrom, from);
+	newFrom[_tcsclen(from) + 1] = 0;
+	fileOp.pFrom = newFrom;
+	TCHAR newTo[MAX_PATH];
+	_tcscpy_s(newTo, dest);
+	newTo[_tcsclen(dest) + 1] = 0;
+	fileOp.pTo = newTo;
+	fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
+	return SHFileOperation(&fileOp) == 0;
 }
 
 bool CSystem::ifRedirFrobid = false;
