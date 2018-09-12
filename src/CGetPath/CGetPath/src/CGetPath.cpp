@@ -32,6 +32,13 @@ std::string CGetPath::GetCurrentExePath()
     return CGetPath::GetName(szFilePath, 4);
 }
 
+std::string CGetPath::GetCurrentExeName()
+{
+	char szFilePath[1024] = {};
+	GetModuleFileName(NULL, szFilePath, 1024);
+	return CGetPath::GetName(szFilePath, 3);
+}
+
 std::string CGetPath::GetFolderFromWindow(HWND hWnd)
 {
 	std::string cstrSelectPath;

@@ -11,6 +11,8 @@ public:
     static std::string GetRegOcxPath(const std::string& classid);
 	//返回本进程所在路径，带\符号
     static std::string GetCurrentExePath();
+	//返回进程名，没有后缀名
+	static std::string GetCurrentExeName();
 	//通过窗口获取文件夹路径，不能获取文件路径，带\符号，传入MFC句柄
     static std::string GetFolderFromWindow(HWND hWnd);
 	//浏览窗口选取文件获取文件路径，成功返回绝对路径，失败返回CString字符串-1

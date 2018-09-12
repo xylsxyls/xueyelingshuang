@@ -15,18 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\CLog.h">
+    <ClInclude Include="..\src\LogManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CLogAPI.h">
+    <ClInclude Include="..\src\LogManagerAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CLogMacro.h">
+    <ClInclude Include="..\src\LogManagerMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\CLog.cpp">
+    <ClCompile Include="..\src\LogManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

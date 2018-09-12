@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" CLog 32 dll release same

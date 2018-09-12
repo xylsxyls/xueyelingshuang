@@ -19,16 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\CLogAPI.h" />
-    <ClInclude Include="..\src\CLogMacro.h" />
-    <ClInclude Include="..\src\CLog.h" />
+    <ClInclude Include="..\src\LogManagerAPI.h" />
+    <ClInclude Include="..\src\LogManagerMacro.h" />
+    <ClInclude Include="..\src\LogManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\CLog.cpp" />
+    <ClCompile Include="..\src\LogManager.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
-    <RootNamespace>CLog</RootNamespace>
+    <RootNamespace>LogManager</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

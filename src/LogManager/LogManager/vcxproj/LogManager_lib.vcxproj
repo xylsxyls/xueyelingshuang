@@ -19,16 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\CLogAPI.h" />
-    <ClInclude Include="..\src\CLogMacro.h" />
-    <ClInclude Include="..\src\CLog.h" />
+    <ClInclude Include="..\src\LogManagerAPI.h" />
+    <ClInclude Include="..\src\LogManagerMacro.h" />
+    <ClInclude Include="..\src\LogManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\CLog.cpp" />
+    <ClCompile Include="..\src\LogManager.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>
-    <RootNamespace>CLog</RootNamespace>
+    <RootNamespace>LogManager</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -80,22 +80,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(ProjectDir)..\..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\..\temp\$(ProjectName)\lib\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>CLogd</TargetName>
+    <TargetName>LogManagerd</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>CLogd</TargetName>
+    <TargetName>LogManagerd</TargetName>
     <IntDir>$(ProjectDir)..\..\..\temp\$(ProjectName)\lib\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(ProjectDir)..\..\..\..\lib\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(ProjectDir)..\..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\..\temp\$(ProjectName)\lib\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>CLog</TargetName>
+    <TargetName>LogManager</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(ProjectDir)..\..\..\temp\$(ProjectName)\lib\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(ProjectDir)..\..\..\..\lib\</OutDir>
-    <TargetName>CLog</TargetName>
+    <TargetName>LogManager</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
