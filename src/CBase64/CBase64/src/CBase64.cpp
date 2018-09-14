@@ -1,98 +1,116 @@
-#include <SDKDDKVer.h>
 #include "CBase64.h"
+#include <iostream>
 #include <string>
-using namespace std;
 
-string CBase64::Encode(const unsigned char* Data,int DataByte)  
-{  
-	//编码表
-	const char EncodeTable[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";  
-	//返回值
-	string strEncode;  
-	unsigned char Tmp[4]={0};  
-	int LineLength=0;  
-	for(int i=0;i<(int)(DataByte / 3);i++)  
-	{  
-		Tmp[1] = *Data++;  
-		Tmp[2] = *Data++;  
-		Tmp[3] = *Data++;  
-		strEncode+= EncodeTable[Tmp[1] >> 2];  
-		strEncode+= EncodeTable[((Tmp[1] << 4) | (Tmp[2] >> 4)) & 0x3F];  
-		strEncode+= EncodeTable[((Tmp[2] << 2) | (Tmp[3] >> 6)) & 0x3F];  
-		strEncode+= EncodeTable[Tmp[3] & 0x3F];  
-		if(LineLength+=4,LineLength==76) {strEncode+="\r\n";LineLength=0;}  
-	}  
-	//对剩余数据进行编码  
-	int Mod=DataByte % 3;  
-	if(Mod==1)  
-	{  
-		Tmp[1] = *Data++;  
-		strEncode+= EncodeTable[(Tmp[1] & 0xFC) >> 2];  
-		strEncode+= EncodeTable[((Tmp[1] & 0x03) << 4)];  
-		strEncode+= "==";  
-	}  
-	else if(Mod==2)  
-	{  
-		Tmp[1] = *Data++;  
-		Tmp[2] = *Data++;  
-		strEncode+= EncodeTable[(Tmp[1] & 0xFC) >> 2];  
-		strEncode+= EncodeTable[((Tmp[1] & 0x03) << 4) | ((Tmp[2] & 0xF0) >> 4)];  
-		strEncode+= EncodeTable[((Tmp[2] & 0x0F) << 2)];  
-		strEncode+= "=";  
-	}  
+std::string CBase64::encode(const unsigned char* str, int32_t bytes)
+{
+	int32_t num = 0;
+	int32_t bin = 0;
+	std::string encode_result;
+	const unsigned char* current;
+	current = str;
+	std::string base64_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; /*这是Base64编码使用的标准字典*/
+	while (bytes > 2)
+	{
+		encode_result += base64_table[current[0] >> 2];
+		encode_result += base64_table[((current[0] & 0x03) << 4) + (current[1] >> 4)];
+		encode_result += base64_table[((current[1] & 0x0f) << 2) + (current[2] >> 6)];
+		encode_result += base64_table[current[2] & 0x3f];
 
-	return strEncode;
-}  
+		current += 3;
+		bytes -= 3;
+	}
+	if (bytes > 0)
+	{
+		encode_result += base64_table[current[0] >> 2];
+		if (bytes % 3 == 1)
+		{
+			encode_result += base64_table[(current[0] & 0x03) << 4];
+			encode_result += "==";
+		}
+		else if (bytes % 3 == 2)
+		{
+			encode_result += base64_table[((current[0] & 0x03) << 4) + (current[1] >> 4)];
+			encode_result += base64_table[(current[1] & 0x0f) << 2];
+			encode_result += "=";
+		}
+	}
+	return encode_result;
+}
 
-string CBase64::Decode(const char* Data,int DataByte,int* pOutByte)  
-{  
-	//解码表  
-	const char DecodeTable[] =  
-	{  
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  
-		62, // '+'  
-		0, 0, 0,  
-		63, // '/'  
-		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, // '0'-'9'  
-		0, 0, 0, 0, 0, 0, 0,  
-		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,  
-		13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, // 'A'-'Z'  
-		0, 0, 0, 0, 0, 0,  
-		26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,  
-		39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, // 'a'-'z'  
-	};  
-	//返回值  
-	string strDecode;  
-	int nValue;  
-	int i= 0;  
-	while (i < DataByte)  
-	{  
-		if (*Data != '\r' && *Data!='\n')  
-		{  
-			nValue = DecodeTable[*Data++] << 18;  
-			nValue += DecodeTable[*Data++] << 12;  
-			strDecode+=(nValue & 0x00FF0000) >> 16;  
-			(*pOutByte)++;  
-			if (*Data != '=')  
-			{  
-				nValue += DecodeTable[*Data++] << 6;  
-				strDecode+=(nValue & 0x0000FF00) >> 8;  
-				(*pOutByte)++;  
-				if (*Data != '=')  
-				{  
-					nValue += DecodeTable[*Data++];  
-					strDecode+=nValue & 0x000000FF;  
-					(*pOutByte)++;  
-				}  
-			}  
-			i += 4;  
-		}  
-		else// 回车换行,跳过  
-		{  
-			Data++;  
-			i++;  
-		}  
-	}  
-	return strDecode;  
+std::string CBase64::decode(const char* str, int32_t length)
+{
+	//解码表
+	const char decodeTable[] =
+	{
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -2, -2, -1, -2, -2,
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+		-1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, 62, -2, -2, -2, 63,
+		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -2, -2, -2, -2, -2, -2,
+		-2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -2, -2, -2, -2, -2,
+		-2, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -2, -2, -2, -2, -2,
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2
+	};
+	int32_t bin = 0;
+	int32_t i = 0;
+	int32_t pos = 0;
+	std::string decode_result;
+	const char* current = str;
+	char ch;
+	while ((ch = *current++) != '\0' && length-- > 0)
+	{
+		//当前一个字符是“=”号
+		if (ch == '=')
+		{
+			/*
+			先说明一个概念：在解码时，4个字符为一组进行一轮字符匹配。
+			两个条件：
+			1、如果某一轮匹配的第二个是“=”且第三个字符不是“=”，说明这个带解析字符串不合法，直接返回空
+			2、如果当前“=”不是第二个字符，且后面的字符只包含空白符，则说明这个这个条件合法，可以继续。
+			*/
+			if (*current != '=' && (i % 4) == 1)
+			{
+				return std::string();
+			}
+			continue;
+		}
+		ch = decodeTable[ch];
+		//这个很重要，用来过滤所有不合法的字符
+		if (ch < 0)
+		{
+			/* a space or some other separator character, we simply skip over */
+			continue;
+		}
+		switch (i % 4)
+		{
+		case 0:
+			bin = ch << 2;
+			break;
+		case 1:
+			bin |= ch >> 4;
+			decode_result += bin;
+			bin = (ch & 0x0f) << 4;
+			break;
+		case 2:
+			bin |= ch >> 2;
+			decode_result += bin;
+			bin = (ch & 0x03) << 6;
+			break;
+		case 3:
+			bin |= ch;
+			decode_result += bin;
+			break;
+		}
+		++i;
+	}
+	return decode_result;
 }
