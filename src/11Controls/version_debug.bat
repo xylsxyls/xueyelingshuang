@@ -1,2 +1,1 @@
 call "%CLOUD_REBUILD%" 11Controls 32 dll debug
-pause
