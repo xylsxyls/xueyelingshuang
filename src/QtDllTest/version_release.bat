@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" QtDllTest 32 dll release same

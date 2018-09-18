@@ -1,4 +1,3 @@
-#include <SDKDDKVer.h>
 #include "DllProduce.h"
 #include "CGetPath/CGetPathAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
@@ -22,14 +21,17 @@ int32_t main()
 		vecRelyClassName.clear();
 	}
 
+	std::string changeClassName = CGetPath::GetCurrentExePath();
+	changeClassName.pop_back();
+	changeClassName = CStringManager::Right(changeClassName, changeClassName.size() - changeClassName.find_last_of("/\\") - 1);
 	std::string strPath = CGetPath::GetCurrentExePath();
 	std::vector<std::string> vecPath = CGetPath::FindFilePath("", strPath, 3);
 	std::vector<std::string> vecPathBk = vecPath;
 	int32_t index = -1;
 	while (index++ != vecPath.size() - 1)
 	{
-		CStringManager::Replace(vecPath[index], "DllTest", className);
-		if (vecPath[index].find("DllProduce1.0.exe") != -1)
+		CStringManager::Replace(vecPath[index], changeClassName, className);
+		if (vecPath[index].find("DllProduce1.1.exe") != -1)
 		{
 			continue;
 		}
@@ -48,7 +50,7 @@ int32_t main()
 			int32_t line = -1;
 			while (line++ != txt.m_vectxt.size() - 1)
 			{
-				CStringManager::Replace(txt.m_vectxt[line][0], "DllTest", className);
+				CStringManager::Replace(txt.m_vectxt[line][0], changeClassName, className);
 			}
 			txt.Save();
 		}

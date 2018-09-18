@@ -48,11 +48,8 @@ rmdir /q /s "%~dp0src\OneKey\ipch\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Debug\"
 rmdir /q /s "%~dp0src\OneKey\OneKey\Release\"
 ::------------------------------------------------------------
-rmdir /q /s "%~dp0src\QtControl\11Controls\output\"
-rmdir /q /s "%~dp0src\QtControl\11Controls\pdbs\"
-rmdir /q /s "%~dp0src\QtControl\11Controls\11Controls\Debug\"
-rmdir /q /s "%~dp0src\QtControl\11Controls\11Controls\Release\"
-rmdir /q /s "%~dp0src\QtControl\11Controls\11Controls\GeneratedFiles\"
+rmdir /q /s "%~dp0src\11Controls\11Controls\GeneratedFiles\"
+rmdir /q /s "%~dp0src\11Controls\11Controls\include\"
 ::------------------------------------------------------------
 
 ::-------------------删除控制台临时文件-----------------------
