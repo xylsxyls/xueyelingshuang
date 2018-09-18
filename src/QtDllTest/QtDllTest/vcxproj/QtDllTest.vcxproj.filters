@@ -25,11 +25,5 @@
     <CustomBuild Include="..\src\QtDllTestMacro.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\src\QtDllTestMacroDll.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\src\QtDllTestMacroLib.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
   </ItemGroup>
 </Project>
