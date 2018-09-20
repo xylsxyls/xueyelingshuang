@@ -51,6 +51,9 @@ rmdir /q /s "%~dp0src\OneKey\OneKey\Release\"
 rmdir /q /s "%~dp0src\11Controls\11Controls\GeneratedFiles\"
 rmdir /q /s "%~dp0src\11Controls\11Controls\include\"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\QtTest\QtTest\GeneratedFiles\"
+rmdir /q /s "%~dp0src\QtTest1\QtTest1\GeneratedFiles\"
+::------------------------------------------------------------
 
 ::-------------------删除控制台临时文件-----------------------
 rmdir /q /s "%~dp0src\ConsoleTest\ConsoleTest\Debug\"

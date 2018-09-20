@@ -15,16 +15,16 @@ goto DllRelyTest_end
 :DllRelyTest_end
 
 ::--------------------------------------------------------------------
-set SqlString_dlllib=lib
-set SqlString_bit=%1
-set SqlString_debugRelease=%3
-set SqlString_allSame=%4
-if "%4" == "same" (goto SqlString_callSame) else (goto SqlString_callSimple)
-:SqlString_callSame
-set SqlString_dlllib=%2
-call "%CLOUD_REBUILD%" SqlString %SqlString_bit% %SqlString_dlllib% %SqlString_debugRelease% %SqlString_allSame%
-goto SqlString_end
-:SqlString_callSimple
-call "%CLOUD_REBUILD%" SqlString %SqlString_bit% %SqlString_dlllib% %SqlString_debugRelease%
-goto SqlString_end
-:SqlString_end
+set CStringManager_dlllib=lib
+set CStringManager_bit=%1
+set CStringManager_debugRelease=%3
+set CStringManager_allSame=%4
+if "%4" == "same" (goto CStringManager_callSame) else (goto CStringManager_callSimple)
+:CStringManager_callSame
+set CStringManager_dlllib=%2
+call "%CLOUD_REBUILD%" CStringManager %CStringManager_bit% %CStringManager_dlllib% %CStringManager_debugRelease% %CStringManager_allSame%
+goto CStringManager_end
+:CStringManager_callSimple
+call "%CLOUD_REBUILD%" CStringManager %CStringManager_bit% %CStringManager_dlllib% %CStringManager_debugRelease%
+goto CStringManager_end
+:CStringManager_end

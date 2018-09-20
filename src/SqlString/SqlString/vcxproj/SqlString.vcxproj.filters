@@ -15,36 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\MysqlCpp.h">
+    <ClInclude Include="..\src\SqlString.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\MysqlCppAPI.h">
+    <ClInclude Include="..\src\SqlStringAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\MysqlCppMacro.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\MysqlCppPrepareStatement.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\MysqlCppResultSet.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\MysqlSqlString.h">
+    <ClInclude Include="..\src\SqlStringMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\MysqlCpp.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\MysqlCppPrepareStatement.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\MysqlCppResultSet.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\MysqlSqlString.cpp">
+    <ClCompile Include="..\src\SqlString.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

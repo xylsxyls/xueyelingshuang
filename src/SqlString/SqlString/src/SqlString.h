@@ -1,9 +1,9 @@
 #pragma once
 #include <string>
-#include "MysqlCppMacro.h"
 #include <vector>
+#include "SqlStringMacro.h"
 
-class MysqlCppAPI SqlString
+class SqlStringAPI SqlString
 {
 public:
 	static std::string insertString(const std::string& tableName, const std::string& fields);
@@ -24,16 +24,4 @@ public:
 	static std::string destroyDatabaseString(const std::string& databaseName);
 
 	static std::string clearTableString(const std::string& tableName);
-
-	static std::string importString(const std::string& sqlPath,
-									const std::string& host,
-									const std::string& user,
-									const std::string& password,
-									const std::string& database);
-
-	static std::string exportString(const std::string& sqlPath,
-									const std::string& host,
-									const std::string& user,
-									const std::string& password,
-									const std::string& exportData);
 };

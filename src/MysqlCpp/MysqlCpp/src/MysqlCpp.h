@@ -1,8 +1,5 @@
 #pragma once
 #include "MysqlCppMacro.h"
-#include <string>
-#include <stdint.h>
-#include "SqlString.h"
 #include "MysqlCppResultSet.h"
 #include "MysqlCppPrepareStatement.h"
 #include <memory>

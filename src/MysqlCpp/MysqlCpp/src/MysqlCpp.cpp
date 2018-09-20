@@ -1,6 +1,7 @@
 #include "MysqlCpp.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "MysqlCppPrepareStatement.h"
+#include "MysqlSqlString.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -118,7 +119,7 @@ void MysqlCpp::importSql(const std::string sqlPath,
 						 const std::string& password,
 						 const std::string& database)
 {
-	system(SqlString::importString(sqlPath, host, user, password, database).c_str());
+	system(MysqlSqlString::importString(sqlPath, host, user, password, database).c_str());
 }
 
 void MysqlCpp::exportSql(const std::string sqlPath,
@@ -128,7 +129,7 @@ void MysqlCpp::exportSql(const std::string sqlPath,
 						 const std::string& exportData)
 {
 
-	system(SqlString::importString(sqlPath, host, user, password, exportData).c_str());
+	system(MysqlSqlString::importString(sqlPath, host, user, password, exportData).c_str());
 	return;
 }
 
@@ -169,7 +170,7 @@ bool MysqlCpp::check()
 //	MysqlCpp mysql;
 //	bool isConnect = mysql.connect("127.0.0.1", 3306, "root", "");
 //	mysql.selectDb("test");
-//	auto statement = mysql.PreparedStatementCreator(SqlString::selectString("testtable", "id=3", "num"));
+//	auto statement = mysql.PreparedStatementCreator(MysqlSqlString::selectString("testtable", "id=3", "num"));
 //	//statement->setInt(1, 80);
 //	//statement->setString(2, "aaa");
 //	//statement->setDouble(3, 808.22);
