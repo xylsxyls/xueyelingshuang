@@ -53,6 +53,23 @@ std::string SqlString::createTableString(const std::string& tableName, const std
 	return createTableStr;
 }
 
+std::string SqlString::createTableIfNotExistString(const std::string& tableName, const std::vector<std::string>& fields)
+{
+	std::string createTableStr = "create table if not exists `" + tableName + "`(";
+	int32_t index = -1;
+	while (true)
+	{
+		createTableStr += fields[++index];
+		if (index == fields.size() - 1)
+		{
+			break;
+		}
+		createTableStr += ",";
+	}
+	createTableStr += ");";
+	return createTableStr;
+}
+
 std::string SqlString::createDatabaseString(const std::string& databaseName)
 {
 	return "create database `" + databaseName + "`";

@@ -81,6 +81,8 @@ public:
 	static int32_t GetCPUCoreCount();
 	//?包含目录的拷贝，可以自动创建文件夹，同步函数
 	static bool ShellCopy(const char* from, const char* dest);
+	//?字符串转无符号长整型
+	static uint64_t atoui64(const char* str);
 
 public:
     static bool ifRedirFrobid;

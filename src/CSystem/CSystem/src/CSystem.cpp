@@ -6,6 +6,7 @@
 #include <fstream>
 #include <conio.h>
 #include <tchar.h>
+#include <sstream>
 #pragma comment(lib, "shell32.lib")
 
 double CSystem::GetCPUSpeedGHz()
@@ -355,6 +356,15 @@ bool CSystem::ShellCopy(const char* from, const char* dest)
 	fileOp.pTo = newTo;
 	fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
 	return SHFileOperation(&fileOp) == 0;
+}
+
+uint64_t CSystem::atoui64(const char* str)
+{
+	uint64_t result;
+	std::stringstream strValue;
+	strValue << str;
+	strValue >> result;
+	return result;
 }
 
 bool CSystem::ifRedirFrobid = false;

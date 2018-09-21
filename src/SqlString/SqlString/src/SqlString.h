@@ -17,6 +17,9 @@ public:
 	//fields÷–name varchar(20)
 	static std::string createTableString(const std::string& tableName, const std::vector<std::string>& fields);
 
+	//fields÷–name varchar(20)
+	static std::string createTableIfNotExistString(const std::string& tableName, const std::vector<std::string>& fields);
+
 	static std::string createDatabaseString(const std::string& databaseName);
 
 	static std::string destroyTableString(const std::string& tableName);
