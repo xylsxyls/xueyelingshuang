@@ -1,5 +1,7 @@
 #include "CSystem.h"
+#if (_MSC_VER >= 1800)
 #include <thread>
+#endif
 #include <objbase.h>
 #include <direct.h>
 #include <io.h>
@@ -173,8 +175,10 @@ int CSystem::GetVisibleHeight()
 
 void CSystem::Sleep(long long milliseconds)
 {
+#if (_MSC_VER >= 1800)
 	std::chrono::milliseconds dura(milliseconds);
 	std::this_thread::sleep_for(dura);
+#endif
 }
 
 std::string CSystem::uuid(int flag)
@@ -332,7 +336,11 @@ std::string CSystem::PasswordScanf()
 
 uint32_t CSystem::SystemThreadId()
 {
-	return ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
+	uint32_t threadId = 0;
+#if (_MSC_VER >= 1800)
+	threadId = ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
+#endif
+	return threadId;
 }
 
 int32_t CSystem::GetCPUCoreCount()

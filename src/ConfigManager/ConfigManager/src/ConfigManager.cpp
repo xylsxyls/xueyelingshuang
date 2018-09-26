@@ -1,7 +1,6 @@
 #include "ConfigManager.h"
 #include "SQLite/SQLiteAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
-#include <sstream>
 #include "CSystem/CSystemAPI.h"
 #include "UserConfigManager.h"
 #include "CGetPath/CGetPathAPI.h"
@@ -155,6 +154,16 @@ void ConfigManager::deleteConfig(int32_t section, int32_t key)
 	s_spConfig->execute(s_spConfig->preparedCreator(SQLiteSqlString::deleteString(m_tableName, CStringManager::Format("key='%d_%d'", section, key))));
 }
 
+void ConfigManager::transaction()
+{
+	s_spConfig->transaction();
+}
+
+void ConfigManager::commit()
+{
+	s_spConfig->commit();
+}
+
 void ConfigManager::addConfig(int32_t key, int32_t value, int32_t section)
 {
 	addConfigBase(key, CStringManager::Format("%d", value), TYPE_INT32, section);
@@ -187,7 +196,16 @@ void ConfigManager::getConfig(int32_t key, double& value, int32_t section)
 
 void ConfigManager::addConfigBase(int32_t key, const std::string& value, const std::string& type, int32_t section)
 {
-	deleteConfig(section, key);
+	init();
+	auto result = s_spConfig->execute(s_spConfig->preparedCreator(SQLiteSqlString::selectString(m_tableName, "key", CStringManager::Format("key='%d_%d'", section, key))));
+	if (result != nullptr && result->next())
+	{
+		auto prepare = s_spConfig->preparedCreator(SQLiteSqlString::updateString(m_tableName.c_str(), "data=?,type=?", CStringManager::Format("key='%d_%d'", section, key)));
+		prepare->setBlob(0, value);
+		prepare->setString(1, type);
+		s_spConfig->execute(prepare);
+		return;
+	}
 	auto prepare = s_spConfig->preparedCreator(SQLiteSqlString::insertString(m_tableName.c_str(), "key,data,type"));
 	prepare->setString(0, CStringManager::Format("%d_%d", section, key));
 	prepare->setBlob(1, value);
@@ -222,7 +240,7 @@ void ConfigManager::createTableIfNotExist(const std::string& tableName)
 {
 	std::vector<std::string> vecField;
 	vecField.push_back("key varchar(20) primary key");
-	vecField.push_back("data blob(1048576)");
+	vecField.push_back(CStringManager::Format("data blob(%u)", SAVE_LENGTH));
 	vecField.push_back("type varchar(20)");
 	s_spConfig->execute(s_spConfig->preparedCreator(SQLiteSqlString::createTableIfNotExistString(tableName.c_str(), vecField)));
 }

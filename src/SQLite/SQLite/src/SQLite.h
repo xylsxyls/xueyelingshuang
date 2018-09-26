@@ -10,10 +10,26 @@ class SQLiteResultSet;
 class SQLiteAPI SQLite
 {
 public:
+	enum PragmaFlag
+	{
+		/** 最安全的方式但是最慢
+		*/
+		PRAGMA_FULL = 2,
+
+		/** 硬盘不可用时数据库文件也会损坏
+		*/
+		PRAGMA_NORMAL = 1,
+
+		/** 没有保护机制，但是程序崩溃不会影响文件
+		*/
+		PRAGMA_OFF = 0
+	};
+public:
 	/** 构造函数
 	@param [in] dbName 数据库文件路径
+	@param [in] pragmaFlag 数据库存储方式
 	*/
-	SQLite(const std::string& dbFilePath);
+	SQLite(const std::string& dbFilePath, PragmaFlag pragmaFlag = PRAGMA_OFF);
 
 	/** 析构函数
 	*/
@@ -43,8 +59,6 @@ public:
 	/** 回滚
 	*/
 	void rollback();
-
-	void run();
 
 private:
 	QSqlDatabase* m_db;

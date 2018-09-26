@@ -40,6 +40,8 @@ public:
 	bool next();
 	bool previous();
 
+	int32_t rowsAffected();
+
 private:
 #ifdef _MSC_VER
 #pragma warning(push)

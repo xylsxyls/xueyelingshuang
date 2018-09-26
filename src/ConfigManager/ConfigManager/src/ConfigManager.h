@@ -56,7 +56,19 @@ GLOBAL_CONFIG[key值];
 GLOBAL_CONFIG[key值] = value;
 这样写是允许的
 Fun(GLOBAL_CONFIG[key值].toInt32());
-8.用法实例
+8.性能
+目前一秒插入1000条配置数据，查询几乎不耗时间
+如果在这个基础上想提高速度可以在执行存储前加上CONFIG_BEGIN，执行多条存储语句后执行CONFIG_END
+例如
+CONFIG_BEGIN;
+for(int32_t index = 0; index < 10000; ++index)
+{
+	GLOBAL_CONFIG[index] = index;
+}
+CONFIG_END;
+9.存储长度
+目前存储长度为SAVE_LENGTH，(4G - 1)大小，uint32_t上限
+9.用法实例
 存储用户登录账号列表
 GLOBAL_CONFIG[登录账号列表配置枚举值][复选框中账号位置的序列号] = 二进制字符串(登录账号\0登录密码\0用户头像路径);
 存储和删除当前账号最近在玩游戏名
@@ -69,6 +81,8 @@ DELETE_USER_CONFIG(最近在玩游戏名配置枚举值);
 #define TYPE_INT32 "int32_t"
 #define TYPE_UINT64 "uint64_t"
 #define TYPE_DOUBLE "double"
+
+#define SAVE_LENGTH 4294967295
 
 #define GET_MACRO(_1, _2, NAME,...) NAME
 
@@ -84,6 +98,9 @@ DELETE_USER_CONFIG(最近在玩游戏名配置枚举值);
 #define GLOBAL_CONFIG ConfigManager::instance()
 #define USER_CONFIG (*(ConfigManager::instance().getUserConfigManager()))
 #define SET_CONFIG_USERID(userId) ConfigManager::instance().setUserId(userId)
+
+#define CONFIG_BEGIN ConfigManager::instance().transaction()
+#define CONFIG_END ConfigManager::instance().commit()
 
 class SQLite;
 class UserConfigManager;
@@ -185,6 +202,14 @@ public:
 	@param [in] section 节点值
 	*/
 	void deleteConfig(int32_t section, int32_t key);
+
+	/** 开启事务
+	*/
+	void transaction();
+
+	/** 提交
+	*/
+	void commit();
 
 protected:
 	/** 添加配置（二进制字符串）

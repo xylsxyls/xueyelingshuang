@@ -10,11 +10,11 @@ public:
 	//?两侧个数不匹配的时候会根据左侧开始返回对应的右侧
 	static int FindOther(const std::string& str, char cLeft, char cRight, int nSelect);
 	//?分割字符串
-	static std::vector<std::string> split(std::string splitString, std::string separate_character);
+	static std::vector<std::string> split(const std::string& splitString, const std::string& separate_character);
 	//?vector<CString> vec = split("123,234,345,456,",","); //得到5个字符串
 	//?vector<CString> vec2 = split("123,,234,,345,,456",",,"); //得到4个字符串
 
-    static std::vector<std::wstring> split(std::wstring splitString, std::wstring separate_character);
+	static std::vector<std::wstring> split(const std::wstring& splitString, const std::wstring& separate_character);
 
 	//?替换字符串，循环替换所有字符串，保证结果中不存在原来的字符串
 	static void ReplaceAll(std::string& str, const std::string& old_value, const std::string& new_value);

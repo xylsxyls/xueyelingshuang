@@ -224,3 +224,15 @@ bool SQLiteResultSet::previous()
 		return false;
 	}
 }
+
+int32_t SQLiteResultSet::rowsAffected()
+{
+	try
+	{
+		return m_spSqlQuery->numRowsAffected();
+	}
+	catch (...)
+	{
+		return 0;
+	}
+}
