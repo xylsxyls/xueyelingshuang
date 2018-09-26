@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <memory>
 #include <string>
+#include <vector>
 
 class QSqlQuery;
 class SQLitePrepareStatement;
@@ -11,6 +12,9 @@ class SQLiteAPI SQLiteResultSet
 {
 public:
 	SQLiteResultSet(const std::shared_ptr<QSqlQuery>& spSqlQuery);
+
+public:
+	std::vector<std::vector<std::string>> toVector();
 
 public:
 	std::string getBlob(uint32_t columnIndex) const;
@@ -41,6 +45,9 @@ public:
 	bool previous();
 
 	int32_t rowsAffected();
+
+	int32_t rowsCount();
+	int32_t columnCount();
 
 private:
 #ifdef _MSC_VER

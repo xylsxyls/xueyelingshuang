@@ -236,3 +236,62 @@ int32_t SQLiteResultSet::rowsAffected()
 		return 0;
 	}
 }
+
+int32_t SQLiteResultSet::rowsCount()
+{
+	int32_t rows = 0;
+	while (next())
+	{
+		++rows;
+	}
+	int32_t count = rows + 1;
+	while (count-- != 0)
+	{
+		previous();
+	}
+	return rows;
+}
+
+std::vector<std::vector<std::string>> SQLiteResultSet::toVector()
+{
+	std::vector<std::vector<std::string>> result;
+	int32_t column = columnCount();
+	while (next())
+	{
+		std::vector<std::string> vecRow;
+		int32_t index = -1;
+		while (index++ != column - 1)
+		{
+			vecRow.push_back(getString(index));
+		}
+		result.push_back(vecRow);
+	}
+	return result;
+}
+
+int32_t SQLiteResultSet::columnCount()
+{
+	int32_t columnCount = -1;
+	bool hasNext = next();
+	if (hasNext == false)
+	{
+		previous();
+		return 0;
+	}
+	while (true)
+	{
+		try
+		{
+			if (!m_spSqlQuery->value(++columnCount).isValid())
+			{
+				break;
+			}
+		}
+		catch (...)
+		{
+			break;
+		}
+	}
+	previous();
+	return columnCount;
+}

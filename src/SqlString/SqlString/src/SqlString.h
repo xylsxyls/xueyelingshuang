@@ -8,7 +8,8 @@ class SqlStringAPI SqlString
 public:
 	static std::string insertString(const std::string& tableName, const std::string& fields);
 
-	static std::string updateString(const std::string& tableName, const std::string& setString, const std::string& whereString = "");
+	//fields逗号分隔，生成的字符串有占位符需要填充
+	static std::string updateString(const std::string& tableName, const std::string& fields, const std::string& whereString = "");
 
 	static std::string deleteString(const std::string& tableName, const std::string& whereString);
 

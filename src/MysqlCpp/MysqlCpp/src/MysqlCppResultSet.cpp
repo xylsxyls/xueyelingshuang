@@ -29,8 +29,8 @@ std::vector<std::vector<std::string>> MysqlCppResultSet::toVector()
 	while (next())
 	{
 		std::vector<std::string> vecRow;
-		int32_t index = 0;
-		while (index++ != column)
+		int32_t index = -1;
+		while (index++ != column - 1)
 		{
 			vecRow.push_back(getString(index));
 		}
@@ -45,6 +45,7 @@ int32_t MysqlCppResultSet::columnCount()
 	bool hasNext = next();
 	if (hasNext == false)
 	{
+		previous();
 		return 0;
 	}
 	while (true)
@@ -71,7 +72,7 @@ std::istream* MysqlCppResultSet::getBlob(uint32_t columnIndex) const
 	}
 	try
 	{
-		return m_resultSet->getBlob(columnIndex);
+		return m_resultSet->getBlob(columnIndex + 1);
 	}
 	catch (...)
 	{
@@ -103,7 +104,7 @@ bool MysqlCppResultSet::getBoolean(uint32_t columnIndex) const
 	}
 	try
 	{
-		return m_resultSet->getBoolean(columnIndex);
+		return m_resultSet->getBoolean(columnIndex + 1);
 	}
 	catch (...)
 	{
@@ -135,7 +136,7 @@ long double MysqlCppResultSet::getDouble(uint32_t columnIndex) const
 	}
 	try
 	{
-		return m_resultSet->getDouble(columnIndex);
+		return m_resultSet->getDouble(columnIndex + 1);
 	}
 	catch (...)
 	{
@@ -167,7 +168,7 @@ int32_t MysqlCppResultSet::getInt(uint32_t columnIndex) const
 	}
 	try
 	{
-		return m_resultSet->getInt(columnIndex);
+		return m_resultSet->getInt(columnIndex + 1);
 	}
 	catch (...)
 	{
@@ -199,7 +200,7 @@ uint32_t MysqlCppResultSet::getUInt(uint32_t columnIndex) const
 	}
 	try
 	{
-		return m_resultSet->getUInt(columnIndex);
+		return m_resultSet->getUInt(columnIndex + 1);
 	}
 	catch (...)
 	{
@@ -231,7 +232,7 @@ int64_t MysqlCppResultSet::getInt64(uint32_t columnIndex) const
 	}
 	try
 	{
-		return m_resultSet->getInt64(columnIndex);
+		return m_resultSet->getInt64(columnIndex + 1);
 	}
 	catch (...)
 	{
@@ -263,7 +264,7 @@ uint64_t MysqlCppResultSet::getUInt64(uint32_t columnIndex) const
 	}
 	try
 	{
-		return m_resultSet->getUInt64(columnIndex);
+		return m_resultSet->getUInt64(columnIndex + 1);
 	}
 	catch (...)
 	{
@@ -295,7 +296,7 @@ std::string MysqlCppResultSet::getString(uint32_t columnIndex) const
 	}
 	try
 	{
-		return m_resultSet->getString(columnIndex);
+		return m_resultSet->getString(columnIndex + 1);
 	}
 	catch (...)
 	{
@@ -352,7 +353,7 @@ bool MysqlCppResultSet::previous()
 	}
 }
 
-size_t MysqlCppResultSet::rowsCount() const
+size_t MysqlCppResultSet::rowsCount()
 {
 	if (m_resultSet == nullptr)
 	{

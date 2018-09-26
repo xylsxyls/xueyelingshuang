@@ -16,10 +16,13 @@ std::string SqlString::insertString(const std::string& tableName, const std::str
 	return CStringManager::Format(insertStr.c_str(), tableName.c_str(), fields.c_str(), valueStr.c_str());
 }
 
-std::string SqlString::updateString(const std::string& tableName, const std::string& setString, const std::string& whereString)
+std::string SqlString::updateString(const std::string& tableName, const std::string& fields, const std::string& whereString)
 {
+	std::string fieldsTemp = fields;
+	CStringManager::Replace(fieldsTemp, ",", "=?,");
+	fieldsTemp.append("=?");
 	std::string updateStr = (whereString == "") ? "update `%s` set %s" : "update `%s` set %s where %s";
-	return CStringManager::Format(updateStr.c_str(), tableName.c_str(), setString.c_str(), whereString.c_str());
+	return CStringManager::Format(updateStr.c_str(), tableName.c_str(), fieldsTemp.c_str(), whereString.c_str());
 }
 
 std::string SqlString::deleteString(const std::string& tableName, const std::string& whereString)

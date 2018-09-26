@@ -1,6 +1,7 @@
 #pragma once
 #define _MysqlCppAPI
 #include "MysqlCpp.h"
+#include "MysqlSqlString.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"MysqlCppd.lib")

@@ -25,8 +25,6 @@ public:
 public:
 	std::vector<std::vector<std::string>> toVector();
 
-	int32_t columnCount();
-
 public:
 	std::istream* getBlob(uint32_t columnIndex) const;
 	std::istream* getBlob(const std::string& columnLabel) const;
@@ -55,7 +53,8 @@ public:
 	bool next();
 	bool previous();
 
-	size_t rowsCount() const;
+	size_t rowsCount();
+	int32_t columnCount();
 
 private:
 	sql::ResultSet* m_resultSet;

@@ -30,7 +30,7 @@ void MysqlCppPrepareStatement::setBigInt(unsigned int parameterIndex, const std:
 	}
 	try
 	{
-		m_preparedStatement->setBigInt(parameterIndex, value);
+		m_preparedStatement->setBigInt(parameterIndex + 1, value);
 	}
 	catch (...)
 	{
@@ -46,7 +46,7 @@ void MysqlCppPrepareStatement::setBlob(unsigned int parameterIndex, std::istream
 	}
 	try
 	{
-		m_preparedStatement->setBlob(parameterIndex, blob);
+		m_preparedStatement->setBlob(parameterIndex + 1, blob);
 	}
 	catch (...)
 	{
@@ -62,7 +62,7 @@ void MysqlCppPrepareStatement::setBoolean(unsigned int parameterIndex, bool valu
 	}
 	try
 	{
-		m_preparedStatement->setBoolean(parameterIndex, value);
+		m_preparedStatement->setBoolean(parameterIndex + 1, value);
 	}
 	catch (...)
 	{
@@ -78,7 +78,7 @@ void MysqlCppPrepareStatement::setDateTime(unsigned int parameterIndex, const st
 	}
 	try
 	{
-		m_preparedStatement->setDateTime(parameterIndex, value);
+		m_preparedStatement->setDateTime(parameterIndex + 1, value);
 	}
 	catch (...)
 	{
@@ -94,7 +94,7 @@ void MysqlCppPrepareStatement::setDouble(unsigned int parameterIndex, double val
 	}
 	try
 	{
-		m_preparedStatement->setDouble(parameterIndex, value);
+		m_preparedStatement->setDouble(parameterIndex + 1, value);
 	}
 	catch (...)
 	{
@@ -110,7 +110,7 @@ void MysqlCppPrepareStatement::setInt(unsigned int parameterIndex, int32_t value
 	}
 	try
 	{
-		m_preparedStatement->setInt(parameterIndex, value);
+		m_preparedStatement->setInt(parameterIndex + 1, value);
 	}
 	catch (...)
 	{
@@ -126,7 +126,7 @@ void MysqlCppPrepareStatement::setUInt(unsigned int parameterIndex, uint32_t val
 	}
 	try
 	{
-		m_preparedStatement->setUInt(parameterIndex, value);
+		m_preparedStatement->setUInt(parameterIndex + 1, value);
 	}
 	catch (...)
 	{
@@ -142,7 +142,7 @@ void MysqlCppPrepareStatement::setInt64(unsigned int parameterIndex, int64_t val
 	}
 	try
 	{
-		m_preparedStatement->setInt64(parameterIndex, value);
+		m_preparedStatement->setInt64(parameterIndex + 1, value);
 	}
 	catch (...)
 	{
@@ -158,7 +158,7 @@ void MysqlCppPrepareStatement::setUInt64(unsigned int parameterIndex, uint64_t v
 	}
 	try
 	{
-		m_preparedStatement->setUInt64(parameterIndex, value);
+		m_preparedStatement->setUInt64(parameterIndex + 1, value);
 	}
 	catch (...)
 	{
@@ -174,7 +174,7 @@ void MysqlCppPrepareStatement::setNull(unsigned int parameterIndex, int sqlType)
 	}
 	try
 	{
-		m_preparedStatement->setNull(parameterIndex, sqlType);
+		m_preparedStatement->setNull(parameterIndex + 1, sqlType);
 	}
 	catch (...)
 	{
@@ -190,7 +190,7 @@ void MysqlCppPrepareStatement::setString(unsigned int parameterIndex, const std:
 	}
 	try
 	{
-		m_preparedStatement->setString(parameterIndex, value);
+		m_preparedStatement->setString(parameterIndex + 1, value);
 	}
 	catch (...)
 	{
