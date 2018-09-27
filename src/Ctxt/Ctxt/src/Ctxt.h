@@ -39,6 +39,8 @@ public:
 	void SaveAs(const std::string& path);
 	//?清空文件
 	void ClearFile();
+	//?文件内群体换
+	int32_t Replace(const std::string& oldstr, const std::string& newstr);
 
 private:
 	//?用点到点的方式加载

@@ -34,6 +34,24 @@ void Split(const std::string& src, const std::string& separate_character, std::v
 	return;
 }
 
+size_t ReplaceStr(std::string& str, const std::string& oldstr, const std::string& newstr)
+{
+	size_t count = 0;
+	size_t pos = 0;
+	while (true)
+	{
+		pos = str.find(oldstr, pos);
+		if (pos == std::string::npos)
+		{
+			break;
+		}
+		str.replace(pos, oldstr.length(), newstr);
+		pos += newstr.length();
+		++count;
+	}
+	return count;
+}
+
 void Ctxt::LoadTxt(int32_t flag, const std::string& strSplit)
 {
 	m_vectxt.clear();
@@ -101,7 +119,11 @@ void Ctxt::ToMap()
 
 void Ctxt::Save()
 {
-	OpenFile_w();
+	if (!OpenFile_w())
+	{
+		return;
+	}
+	
 	bool inWhile = true;
 	int32_t lineIndex = -1;
 	int32_t partIndex = -1;
@@ -130,19 +152,30 @@ void Ctxt::Save()
 bool Ctxt::OpenFile_w()
 {
 	m_pFile = ::fopen(m_strPath.c_str(), "w+");
-	if (m_pFile == NULL) return 0;
-	return 1;
+	if (m_pFile == nullptr)
+	{
+		return false;
+	}
+	return true;
 }
 
 bool Ctxt::OpenFile_a()
 {
 	m_pFile = ::fopen(m_strPath.c_str(), "a+");
-	if(m_pFile == NULL) return 0;
-	return 1;
+	if (m_pFile == nullptr)
+	{
+		return false;
+	}
+	return true;
 }
 
 void Ctxt::AddWriteLine(const char* fmt, ...)
 {
+	if (m_pFile == nullptr)
+	{
+		return;
+	}
+
 	std::string result;
 	va_list args;
 	va_start(args, fmt);
@@ -160,8 +193,12 @@ void Ctxt::AddWriteLine(const char* fmt, ...)
 
 void Ctxt::CloseFile()
 {
+	if (m_pFile == nullptr)
+	{
+		return;
+	}
 	::fclose(m_pFile);
-	m_pFile = NULL;
+	m_pFile = nullptr;
 	return;
 }
 
@@ -213,6 +250,23 @@ void Ctxt::ClearFile()
 {
 	OpenFile_w();
 	CloseFile();
+}
+
+int32_t Ctxt::Replace(const std::string& oldstr, const std::string& newstr)
+{
+	int32_t result = 0;
+	int32_t lineIndex = -1;
+	while (lineIndex++ != m_vectxt.size() - 1)
+	{
+		auto& lineVec = m_vectxt[lineIndex];
+		int32_t columnIndex = -1;
+		while (columnIndex++ != lineVec.size() - 1)
+		{
+			std::string& text = lineVec[columnIndex];
+			result += ReplaceStr(text, oldstr, newstr);
+		}
+	}
+	return result;
 }
 
 void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)

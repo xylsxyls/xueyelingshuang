@@ -278,7 +278,8 @@ int32_t SQLiteResultSet::columnCount()
 		previous();
 		return 0;
 	}
-	while (true)
+	bool btrue = true;
+	while (btrue)
 	{
 		try
 		{

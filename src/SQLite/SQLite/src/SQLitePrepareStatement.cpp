@@ -16,7 +16,7 @@ void SQLitePrepareStatement::setBlob(uint32_t pos, const std::string& value)
 	}
 	try
 	{
-		m_spSqlQuery->bindValue(pos, QByteArray(&value[0], value.size()));
+		m_spSqlQuery->bindValue(pos, QByteArray(&value[0], (int32_t)value.size()));
 	}
 	catch (...)
 	{

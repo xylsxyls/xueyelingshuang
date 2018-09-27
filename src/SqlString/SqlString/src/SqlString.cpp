@@ -1,12 +1,13 @@
 #include "SqlString.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <stdint.h>
+#include <crtdefs.h>
 
 std::string SqlString::insertString(const std::string& tableName, const std::string& fields)
 {
 	std::string insertStr = "insert into `%s`(%s) values(%s)";
 	std::string fieldsTemp = fields;
-	int32_t count = CStringManager::Replace(fieldsTemp, ",", "");
+	int32_t count = (int32_t)CStringManager::Replace(fieldsTemp, ",", "");
 	std::string valueStr;
 	while (count-- != 0)
 	{
@@ -42,10 +43,11 @@ std::string SqlString::selectString(const std::string& tableName, const std::str
 std::string SqlString::createTableString(const std::string& tableName, const std::vector<std::string>& fields)
 {
 	std::string createTableStr = "create table `" + tableName + "`(";
-	int32_t index = -1;
-	while (true)
+	uint32_t index = 0;
+	bool btrue = true;
+	while (btrue)
 	{
-		createTableStr += fields[++index];
+		createTableStr += fields[index++];
 		if (index == fields.size() - 1)
 		{
 			break;
@@ -59,10 +61,11 @@ std::string SqlString::createTableString(const std::string& tableName, const std
 std::string SqlString::createTableIfNotExistString(const std::string& tableName, const std::vector<std::string>& fields)
 {
 	std::string createTableStr = "create table if not exists `" + tableName + "`(";
-	int32_t index = -1;
-	while (true)
+	uint32_t index = 0;
+	bool btrue = true;
+	while (btrue)
 	{
-		createTableStr += fields[++index];
+		createTableStr += fields[index++];
 		if (index == fields.size() - 1)
 		{
 			break;

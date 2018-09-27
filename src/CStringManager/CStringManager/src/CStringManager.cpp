@@ -1,19 +1,23 @@
 #include "CStringManager.h"
 #include <stdarg.h>
 #include <algorithm>
+#include <stdint.h>
 
-int CStringManager::FindOther(const std::string& str, char cLeft, char cRight, int nSelect)
+size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect)
 {
-	std::vector<int> vecn;
-	int nSelectSize = 0;
-	int index = 0;
+	std::vector<size_t> vecn;
+	size_t nSelectSize = 0;
+	size_t index = 0;
 	while (str[index])
 	{
 		if (str[index] == cLeft)
 		{
 			vecn.push_back(index);
 			//?nSelect在左，记下现在的nSelectSize
-			if(nSelect == index) nSelectSize = (int)vecn.size();
+			if (nSelect == index)
+			{
+				nSelectSize = vecn.size();
+			}
 		}
 		if (str[index] == cRight)
 		{
@@ -44,9 +48,10 @@ std::vector<std::string> CStringManager::split(const std::string& splitString, c
 {
 	std::vector<std::string> strs;
 	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
-	int separate_characterLen = (int)separate_character.length();
-	int lastPosition = 0,index = -1;
-	while (-1 != (index = (int)splitString.find(separate_character, lastPosition)))
+	size_t separate_characterLen = separate_character.length();
+	size_t lastPosition = 0;
+	int32_t index = -1;
+	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
 	{
 		strs.push_back(splitString.substr(lastPosition, index - lastPosition).c_str());
 		lastPosition = index + separate_characterLen;   
@@ -62,9 +67,10 @@ std::vector<std::wstring> CStringManager::split(const std::wstring& splitString,
 {
     std::vector<std::wstring> strs;
 	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
-	int separate_characterLen = separate_character.length();
-	int lastPosition = 0, index = -1;
-	while (-1 != (index = splitString.find(separate_character, lastPosition)))
+	size_t separate_characterLen = separate_character.length();
+	size_t lastPosition = 0;
+	int32_t index = -1;
+	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
 	{
 		strs.push_back(splitString.substr(lastPosition, index - lastPosition).c_str());
 		lastPosition = index + separate_characterLen;
@@ -104,7 +110,7 @@ std::string CStringManager::Right(const std::string& str, size_t count)
 	return Mid(str, str.size() - count, count);
 }
 
-size_t CStringManager::Find(const std::string& str, const std::string & right, size_t offset)
+size_t CStringManager::Find(const std::string& str, const std::string& right, size_t offset)
 {
 	return str.find(right, offset);
 }
@@ -134,7 +140,7 @@ size_t CStringManager::Delete(std::string& str, size_t offset, size_t count)
 	return str.erase(offset, count).length();
 }
 
-size_t CStringManager::Insert(std::string& str, size_t offset, const std::string & right)
+size_t CStringManager::Insert(std::string& str, size_t offset, const std::string& right)
 {
 	return str.insert(offset, right).length();
 }
@@ -144,7 +150,7 @@ size_t CStringManager::Insert(std::string& str, size_t offset, char ch)
 	return str.insert(offset, &ch, 1).length();
 }
 
-size_t CStringManager::Replace(std::string& str, const std::string & oldstr, const std::string & newstr)
+size_t CStringManager::Replace(std::string& str, const std::string& oldstr, const std::string& newstr)
 {
 	size_t count = 0;
 	size_t pos = 0;
@@ -191,7 +197,7 @@ size_t CStringManager::Replace(std::wstring& str, const std::wstring& oldstr, co
 	return count;
 }
 
-size_t CStringManager::Replace(std::string & str, char ch1, char ch2)
+size_t CStringManager::Replace(std::string& str, char ch1, char ch2)
 {
 	size_t count = 0;
 	for (size_t pos = 0; pos != str.size(); ++pos)

@@ -124,19 +124,19 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v100</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v100</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v100</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v100</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -180,11 +180,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1\5.5\msvc2010\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtCore;C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtGui;C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -197,11 +198,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1\5.5\msvc2010\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtCore;C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtGui;C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -214,10 +216,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1\5.5\msvc2010\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtCore;C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtGui;C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat />
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -230,11 +233,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1\5.5\msvc2010\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtCore;C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtGui;C:\Qt\Qt5.5.1\5.5\msvc2010\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>
       </DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -249,7 +253,7 @@
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties MocDir=".\GeneratedFiles\$(ConfigurationName)" UicDir=".\GeneratedFiles" RccDir=".\GeneratedFiles" lupdateOptions="" lupdateOnBuild="0" lreleaseOptions="" Qt5Version_x0020_Win32="5.5.1" Qt5Version_x0020_x64="5.5.1_64" MocOptions="" />
+      <UserProperties MocDir=".\GeneratedFiles\$(ConfigurationName)" UicDir=".\GeneratedFiles" RccDir=".\GeneratedFiles" lupdateOptions="" lupdateOnBuild="0" lreleaseOptions="" MocOptions="" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>

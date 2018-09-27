@@ -85,7 +85,7 @@ std::string CGetPath::GetFileFromWindow(HWND hwnd)
 	ofn.nFilterIndex = 0;
     //标志如果是多选要加上OFN_ALLOWMULTISELECT
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER;
-	BOOL bSel = GetOpenFileName(&ofn);
+	GetOpenFileName(&ofn);
 	return std::string(szBuffer);
 }
 

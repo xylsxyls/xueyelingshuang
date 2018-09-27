@@ -156,7 +156,7 @@ class Logger():
 
 
 def GetMSBuildPath():
-    cmd = 'call "%VS100COMNTOOLS%..\\..\\VC\\vcvarsall.bat" x86\nwhere msbuild'
+    cmd = 'call "%VS120COMNTOOLS%..\\..\\VC\\vcvarsall.bat" x86\nwhere msbuild'
     ftemp = open('GetMSBuildPath.bat', 'wt')
     ftemp.write(cmd)
     ftemp.close()

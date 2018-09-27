@@ -34,16 +34,14 @@
     <CustomBuild Include="..\src\SQLiteMacro.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\src\SQLitePrepareStatement.h">
+    <CustomBuild Include="..\src\SQLitePrepareStatement.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SQLiteResultSet.h">
+    </CustomBuild>
+    <CustomBuild Include="..\src\SQLiteResultSet.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SQLiteSqlString.h">
+    </CustomBuild>
+    <CustomBuild Include="..\src\SQLiteSqlString.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
+    </CustomBuild>
   </ItemGroup>
 </Project>
