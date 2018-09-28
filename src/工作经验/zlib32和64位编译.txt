@@ -1,0 +1,39 @@
+官网下载zlib1.2.11版本，vs2013
+解压成两个包分别用于编译32和64位release
+cmd进入根目录
+cd "C:\Users\Administrator\Downloads\zlib12111\zlib-1.2.11"
+
+32位运行
+"c:\program files (x86)\microsoft visual studio 12.0\vc\vcvarsall.bat" x86
+nmake -f win32/Makefile.msc LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.obj"
+
+双击sln
+contrib\vstudio\vc12\zlibvc.sln
+选择release Win32 重新编译所有工程
+
+目录contrib\vstudio\vc12\x86\ZlibStatRelease下
+zlibstat.lib是需要的静态库改名为zlibstat_32.lib
+
+64位运行
+"c:\program files (x86)\microsoft visual studio 12.0\vc\vcvarsall.bat" x64
+nmake -f win32/Makefile.msc AS=ml64 LOC="-DASMV -DASMINF -I." OBJA="inffasx64.obj gvmat64.obj inffas8664.obj"
+
+双击sln
+contrib\vstudio\vc12\zlibvc.sln
+选择release x64 重新编译所有工程
+
+目录contrib\vstudio\vc12\x64\ZlibStatRelease下
+zlibstat.lib是需要的静态库改名为zlibstat_64.lib
+
+头文件
+根目录下zlib.h zconf.h
+包含的时候
+extern "C"
+{
+#include "zlib.h"
+}
+
+使用时需要在所有配置中加上预定义宏ZLIB_WINAPI
+32位忽略库libcmt.lib
+64位忽略库msvcrt.lib
+32和64位用宏_WIN64区别
