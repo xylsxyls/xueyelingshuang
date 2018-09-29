@@ -273,3 +273,13 @@ std::string CGetPath::GetName(const std::string& path, int32_t flag)
             return "";
     }
 }
+
+std::string CGetPath::GetAppdataRoamingPath()
+{
+	TCHAR szPath[MAX_PATH] = { 0 };
+	if (::SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath) < 0)
+	{
+		return "";
+	}
+	return szPath;
+}
