@@ -1,0 +1,7 @@
+bool dlllib = false;
+	do 
+	{
+		//do
+
+		dlllib = !dlllib;
+	} while (dlllib);

@@ -1,0 +1,21 @@
+std::string bb()
+{
+	return std::string("123456");
+}
+
+std::string& aa()
+{
+	std::string& ds = bb();
+	return ds;
+}
+
+int32_t main()
+{
+	const std::string& sds = aa();
+	int s = sds.size();
+	getchar();
+	return 0;
+}
+
+s取不到正确的值
+但是ds可以取到正确的值，返回值副本的生命周期是调用函数的生命周期

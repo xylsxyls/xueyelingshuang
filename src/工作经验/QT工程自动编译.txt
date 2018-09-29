@@ -1,0 +1,1 @@
+需要在解决方案中右键工程选择倒数第三项Convert project to Qt Add-in project

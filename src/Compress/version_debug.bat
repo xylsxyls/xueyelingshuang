@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" Compress 32 dll debug same

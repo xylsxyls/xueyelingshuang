@@ -1,0 +1,6 @@
+32位int32_t uint32_t
+64位int64_t uint64_t
+32位下32长度，64位下64长度
+size_t 代表无符号
+intptr_t 代表有符号
+uintptr_t 代表无符号

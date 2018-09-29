@@ -1,0 +1,8 @@
+#define GET_MACRO(_1, _2, NAME,...) NAME
+
+#define DELETE_GLOBAL_CONFIG_FUN_1(key) ConfigManager::instance().deleteConfig(key)
+#define DELETE_GLOBAL_CONFIG_FUN_2(section, key) ConfigManager::instance().deleteConfig(section, key)
+#define DELETE_GLOBAL_CONFIG(...) GET_MACRO(__VA_ARGS__, DELETE_GLOBAL_CONFIG_FUN_2, DELETE_GLOBAL_CONFIG_FUN_1)(__VA_ARGS__)
+
+这样做可以做到重载，但是参数顺序改变不了，换成这样无效
+ConfigManager::instance().deleteConfig(key, section)
