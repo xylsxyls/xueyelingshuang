@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" ProtoMessage 64 dll release same

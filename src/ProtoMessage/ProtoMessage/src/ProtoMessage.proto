@@ -1,0 +1,64 @@
+syntax = "proto3";
+package pt;
+
+/** 消息返回码
+*/
+message RspCode
+{
+	int32 code = 1;
+	string errorMessage = 2;
+}
+
+/** 转化为std::map<std::string, std::string>
+*/
+message MapData
+{
+	string key = 1;
+	bytes value = 2;
+}
+
+/** 转化为std::list<std::string>
+*/
+message ListData
+{
+	bytes value = 1;
+}
+
+/** 转化为std::vector<std::vector<std::string>>
+*/
+message TableData
+{
+	repeated ListData listData = 1;
+}
+
+/** 转化为std::map<std::string, std::map<std::string, std::string>>
+*/
+message KeyMapData
+{
+	string key = 1;
+	MapData mapData = 2;
+}
+
+/** 转化为std::map<std::string, std::list<std::string>>
+*/
+message KeyListData
+{
+	string key = 1;
+	ListData listData = 2;
+}
+
+/** 转化为std::map<std::string, std::vector<std::vector<std::string>>>
+*/
+message KeyTableData
+{
+	string key = 1;
+	TableData tableData = 2;
+}
+
+message ProtoMessage
+{
+	RspCode rspCode = 1;
+	KeyMapData keyMapData = 2;
+	KeyListData keyListData = 3;
+	KeyTableData keyTableData = 4;
+}
