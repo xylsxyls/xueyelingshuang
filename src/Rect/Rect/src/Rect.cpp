@@ -1,31 +1,35 @@
 #include "Rect.h"
 
-namespace xyls {
+namespace xyls
+{
 
-Rect::Rect(){
+Rect::Rect()
+{
 	m_left = 0;
 	m_top = 0;
 	m_right = 0;
 	m_bottom = 0;
 }
 
-Rect::Rect(int left, int top, int right, int bottom){
-	this->m_left = left;
-	this->m_top = top;
-	this->m_right = right;
-	this->m_bottom = bottom;
+Rect::Rect(int32_t left, int32_t top, int32_t right, int32_t bottom)
+{
+    m_left = left;
+    m_top = top;
+    m_right = right;
+    m_bottom = bottom;
 }
 
-Rect::Rect(const Point& origin, int width, int height)
+Rect::Rect(const Point& origin, int32_t width, int32_t height)
 {
-	this->m_left = origin.x;
-	this->m_top = origin.y;
-	this->m_right = origin.x + width;
-	this->m_bottom = origin.y + height;
+	m_left = origin.x();
+	m_top = origin.y();
+    m_right = origin.x() + width;
+    m_bottom = origin.y() + height;
 }
 
 #ifdef _WIN32
-Rect::Rect(const RECT& rect){
+Rect::Rect(const RECT& rect)
+{
     m_left = rect.left;
     m_top = rect.top;
     m_right = rect.right;
@@ -33,41 +37,96 @@ Rect::Rect(const RECT& rect){
 }
 #endif
 
-Rect::Rect(const Point& point){
-	m_left = point.x;
-	m_top = point.y;
-	m_right = point.x;
-	m_bottom = point.y;
+Rect::Rect(const Point& point)
+{
+    m_left = point.x();
+    m_top = point.y();
+    m_right = point.x();
+    m_bottom = point.y();
 }
 
-void Rect::SetRect(int left, int top, int right, int bottom){
-	this->m_left = left;
-	this->m_top = top;
-	this->m_right = right;
-	this->m_bottom = bottom;
+Rect::Rect(const Point& point, int32_t margin)
+{
+    m_left = point.x() - margin;
+    m_top = point.y() - margin;
+    m_right = point.x() + margin;
+    m_bottom = point.y() + margin;
 }
 
-void Rect::SetRect(const Point& point){
-	this->m_left = point.x;
-	this->m_top = point.y;
-	this->m_right = point.x;
-	this->m_bottom = point.y;
+void Rect::SetRect(int32_t left, int32_t top, int32_t right, int32_t bottom)
+{
+    m_left = left;
+    m_top = top;
+    m_right = right;
+    m_bottom = bottom;
 }
 
-int Rect::GetWidth()const{
+void Rect::SetRect(const Point& point)
+{
+	m_left = point.x();
+    m_top = point.y();
+    m_right = point.x();
+    m_bottom = point.y();
+}
+
+int32_t Rect::GetWidth() const
+{
 	return m_right - m_left;
 }
 
-int Rect::GetHeight()const{
+int32_t Rect::GetHeight() const
+{
 	return m_bottom - m_top;
 }
 
-bool Rect::isPoint()const{
+bool Rect::isPoint() const
+{
 	return (m_left == m_right) && (m_top == m_bottom);
 }
 
-bool Rect::isLine()const{
+bool Rect::isLine() const
+{
 	return ((m_left == m_right) + (m_top == m_bottom)) == 1;
+}
+
+int32_t Rect::Left() const
+{
+    return m_left;
+}
+
+int32_t Rect::Top() const
+{
+    return m_top;
+}
+
+int32_t Rect::Right() const
+{
+    return m_right;
+}
+
+int32_t Rect::Bottom() const
+{
+    return m_bottom;
+}
+
+void Rect::SetLeft(int32_t left)
+{
+    m_left = left;
+}
+
+void Rect::SetTop(int32_t top)
+{
+    m_top = top;
+}
+
+void Rect::SetRight(int32_t right)
+{
+    m_right = right;
+}
+
+void Rect::SetBottom(int32_t bottom)
+{
+    m_bottom = bottom;
 }
 
 bool Rect::operator==(const Rect& rect) const
@@ -330,13 +389,14 @@ Rect Rect::Over(const Rect& otherRect)
     return Rect(rect);
 }
 
-double Rect::Gettan()const
+double Rect::Gettan() const
 {
 	return GetHeight() / (double)GetWidth();
 }
 
 #ifdef _WIN32
-Rect::operator RECT()const{
+Rect::operator RECT() const
+{
     RECT rect;
     rect.left = m_left;
     rect.right = m_right;

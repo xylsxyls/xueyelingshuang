@@ -140,7 +140,7 @@ std::string ScreenScript::GetBmpPath(const std::string& path)
 }
 
 /*
-int main()
+int32_t main()
 {
 	Sleep(3000);
 	ScreenScript::FindClick("D:\\12123.png");

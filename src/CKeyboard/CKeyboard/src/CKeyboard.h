@@ -1,13 +1,15 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <stdint.h>
 #include <windows.h>
 #include "CKeyboardMacro.h"
-using namespace std;
 
-class CKeyboardAPI CKeyboard{
+class CKeyboardAPI CKeyboard
+{
 public:
-	enum{
+	enum
+    {
 		Esc = VK_ESCAPE,
 		F1 = VK_F1,
 		F2 = VK_F2,
@@ -41,21 +43,22 @@ public:
 		Ctrl = VK_CONTROL,
 		Win = VK_LWIN,
 		Alt = VK_MENU,
+        SPACE = VK_SPACE,
 		MouseRightClick = VK_APPS
 	};
 public:
 	//?按下键盘
-	static bool KeyDown(int code);
+	static bool KeyDown(int32_t code);
 	//?弹起键盘
-	static bool KeyUp(int code);
+	static bool KeyUp(int32_t code);
 	//?按下弹起，完成时间，默认100-300毫秒
-	static bool KeyPress(int code, int sleepTime = -1);
+	static bool KeyPress(int32_t code, int32_t sleepTime = -1);
 	//?输入字符串，间隔时间，支持所有单个字符输入，包括!@之类，但是都是英文字符
-	static bool InputString(const string& str, int sleepTime = -1);
+	static bool InputString(const std::string& str, int32_t sleepTime = -1);
 	//?按下组合键，完成时间，Ctrl+Alt+Delete无法模拟，如果想调出任务管理器可以使用Ctrl+Shift+Esc
-	static bool KeyManyPress(const vector<int>& vecCode, int sleepTime = -1);
+    static bool KeyManyPress(const std::vector<int32_t>& vecCode, int32_t sleepTime = -1);
 	//?输入中文字符串
 
 	//?获取键码，遇到不是英文字符的返回-1
-	static vector<int> GetCode(char c);
+	static std::vector<int32_t> GetCode(char c);
 };

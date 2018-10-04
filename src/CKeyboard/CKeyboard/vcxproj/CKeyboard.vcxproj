@@ -27,7 +27,7 @@
     <ClCompile Include="..\src\CKeyboard.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{E54BD987-B684-4A00-AE47-162C6C1CAA62}</ProjectGuid>
     <RootNamespace>CKeyboard</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

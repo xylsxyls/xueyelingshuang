@@ -1,6 +1,7 @@
 #pragma once
 #include "RectMacro.h"
 #include "Point/PointAPI.h"
+#include <stdint.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -11,29 +12,40 @@ namespace xyls
 
 class RectAPI Rect
 {
-
 public:
 #ifdef _WIN32
 	Rect(const RECT& rect);
 #endif
 
 	Rect();
-	Rect(int left, int top, int right, int bottom);
-	Rect(const Point& origin, int width, int height);
+    Rect(int32_t left, int32_t top, int32_t right, int32_t bottom);
+    Rect(const Point& origin, int32_t width, int32_t height);
 	Rect(const Point& point);
-	void SetRect(int left, int top, int right, int bottom);
+    //中心到四周距离
+    Rect(const Point& point, int32_t margin);
+    void SetRect(int32_t left, int32_t top, int32_t right, int32_t bottom);
 	void SetRect(const Point& point);
 	int GetWidth()const;
 	int GetHeight()const;
 	bool isPoint()const;
 	bool isLine()const;
 
+    int32_t Left() const;
+    int32_t Top() const;
+    int32_t Right() const;
+    int32_t Bottom() const;
+
+    void SetLeft(int32_t left);
+    void SetTop(int32_t top);
+    void SetRight(int32_t right);
+    void SetBottom(int32_t bottom);
+
 	bool operator==(const Rect& rect) const;
 
 	//?是否是水平线
-	bool isHorizontalLine()const;
+	bool isHorizontalLine() const;
 	//?是否是垂直线
-	bool isVerticalLine()const;
+	bool isVerticalLine() const;
 
 	//? 居中适应放入背景bkRect中
 	//? param [in] bkRect 背景矩形
@@ -52,17 +64,17 @@ public:
 
 	//? 获取tan角，高/宽
 	//? 返回tan角
-	double Gettan()const;
+	double Gettan() const;
 
 #ifdef _WIN32
-	operator RECT()const;
+	operator RECT() const;
 #endif
 
-public:
-	int m_left;
-	int m_top;
-	int m_right;
-	int m_bottom;
+private:
+    int32_t m_left;
+    int32_t m_top;
+    int32_t m_right;
+    int32_t m_bottom;
 };
 
 }
