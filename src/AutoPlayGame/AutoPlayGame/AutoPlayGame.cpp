@@ -22,13 +22,13 @@ public:
         {
             CMouse::MoveAbsolute(storage.find<xyls::Point>(CRandom::Int(1, 3)));
             CMouse::RightClick();
-            Sleep(10000);
+            Sleep(30000);
             CKeyboard::KeyPress(VK_SPACE);
             
-            int32_t count = 3;
+            int32_t count = 6;
             while (count-- != 0)
             {
-                CMouse::MoveAbsolute(xyls::Rect(CSystem::screenCenterPoint(), 30));
+                CMouse::MoveAbsolute(xyls::Rect(CSystem::screenCenterPoint(), 100));
                 CMouse::RightClick();
                 Sleep(1000);
             }
