@@ -9,6 +9,7 @@
 #include "CMouse/CMouseAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "CDump/CDumpAPI.h"
 
 Storage storage;
 
@@ -25,12 +26,11 @@ public:
             Sleep(30000);
             CKeyboard::KeyPress(VK_SPACE);
             
-            int32_t count = 6;
+            int32_t count = 20;
             while (count-- != 0)
             {
-                CMouse::MoveAbsolute(xyls::Rect(CSystem::screenCenterPoint(), 100));
-                CMouse::RightClick();
-                Sleep(1000);
+                CMouse::MoveAbsolute(xyls::Rect(CSystem::screenCenterPoint(), 100), 100);
+                CMouse::RightClick(200);
             }
         }
     }
@@ -38,6 +38,7 @@ public:
 
 int32_t main()
 {
+    CDump::instance().DeclareDumpFile();
     int32_t com = 1;
     xyls::Rect rect(CSystem::GetWindowResolution());
     if (rect == xyls::Rect(0, 0, 1366, 768))
@@ -70,21 +71,22 @@ int32_t main()
     }
     else if (camp == 1 && com == 2)
     {
-        storage.add(1, xyls::Point(1693, 924));
+        storage.add(1, xyls::Point(1689, 924));
         storage.add(2, xyls::Point(1720, 958));
-        storage.add(3, xyls::Point(1800, 1027));
+        storage.add(3, xyls::Point(1798, 1023));
     }
     else if (camp == 2 && com == 2)
     {
-        storage.add(1, xyls::Point(1767, 858));
-        storage.add(2, xyls::Point(1848, 926));
-        storage.add(3, xyls::Point(1875, 960));
+        storage.add(1, xyls::Point(1767, 856));
+        storage.add(2, xyls::Point(1848, 921));
+        storage.add(3, xyls::Point(1872, 956));
     }
 
     std::shared_ptr<AutoTask> spLanTask;
     spLanTask.reset(new AutoTask);
     thread->PostTask(spLanTask, 1);
     
+
     system("pause");
 	return 0;
 }
