@@ -10,8 +10,28 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CDump/CDumpAPI.h"
+#include "CStopWatch/CStopWatchAPI.h"
 
 Storage storage;
+
+class SkillTask : public CountDownTask
+{
+public:
+    void DoTask()
+    {
+        CKeyboard::KeyDown(CKeyboard::Ctrl);
+        CKeyboard::KeyDown('W');
+        CKeyboard::KeyUp(CKeyboard::Ctrl);
+        CKeyboard::KeyUp('W');
+        CKeyboard::KeyDown(CKeyboard::Ctrl);
+        CKeyboard::KeyDown('Q');
+        CKeyboard::KeyUp(CKeyboard::Ctrl);
+        CKeyboard::KeyUp('Q');
+
+        int32_t threadId = 0;
+        CStopWatch::CountDown(3 * 60 * 1000, new SkillTask, 1, threadId);
+    }
+};
 
 class AutoTask : public CTask
 {
@@ -19,6 +39,8 @@ public:
     void DoTask()
     {
         Sleep(5000);
+        int32_t threadId = 0;
+        CStopWatch::CountDown(3 * 60 * 1000, new SkillTask, 1, threadId);
         while (true)
         {
             xyls::Point point = storage.find<xyls::Point>(CRandom::Int(1, 3));
@@ -28,12 +50,12 @@ public:
             CMouse::MoveAbsolute(point);
             CMouse::LeftClick();
             
+            CKeyboard::InputString("qqww");
             int32_t count = 20;
             while (count-- != 0)
             {
                 CMouse::MoveAbsolute(xyls::Rect(CSystem::screenCenterPoint(), 100), 100);
                 CMouse::RightClick(200);
-                CKeyboard::InputString("qqww");
             }
         }
     }
