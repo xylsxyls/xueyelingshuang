@@ -21,16 +21,19 @@ public:
         Sleep(5000);
         while (true)
         {
-            CMouse::MoveAbsolute(storage.find<xyls::Point>(CRandom::Int(1, 3)));
+            xyls::Point point = storage.find<xyls::Point>(CRandom::Int(1, 3));
+            CMouse::MoveAbsolute(xyls::Rect(point, 3));
             CMouse::RightClick();
             Sleep(30000);
-            CKeyboard::KeyPress(VK_SPACE);
+            CMouse::MoveAbsolute(point);
+            CMouse::LeftClick();
             
             int32_t count = 20;
             while (count-- != 0)
             {
                 CMouse::MoveAbsolute(xyls::Rect(CSystem::screenCenterPoint(), 100), 100);
                 CMouse::RightClick(200);
+                CKeyboard::InputString("qqww");
             }
         }
     }
@@ -61,7 +64,7 @@ int32_t main()
     {
         storage.add(1, xyls::Point(1204, 657));
         storage.add(2, xyls::Point(1223, 681));
-        storage.add(3, xyls::Point(1280, 730));
+        storage.add(3, xyls::Point(1277, 728));
     }
     else if (camp == 2 && com == 1)
     {
