@@ -91,7 +91,7 @@ int32_t main()
     else if (camp == 2 && com == 1)
     {
         storage.add(1, xyls::Point(1256, 609));
-        storage.add(2, xyls::Point(1314, 658));
+        storage.add(2, xyls::Point(1313, 655));
         storage.add(3, xyls::Point(1333, 682));
     }
     else if (camp == 1 && com == 2)
