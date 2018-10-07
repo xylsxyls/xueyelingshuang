@@ -12,10 +12,11 @@
 #include "CDump/CDumpAPI.h"
 #include "CStopWatch/CStopWatchAPI.h"
 #include "ScreenScript/ScreenScriptAPI.h"
-#include "CScreen/CScreenAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 Storage storage;
 int32_t beginPlay;
+int32_t computer = 1;
 int32_t camp = 1;
 
 class SkillTask : public CountDownTask
@@ -129,34 +130,32 @@ public:
                     Sleep(1000);
                 }
                 ScreenScript::FindClick("OK.png");
-                if (ScreenScript::FindPic("lan.png"))
+                if (ScreenScript::FindPic(CStringManager::Format("lan%d.png", computer)))
                 {
                     camp = 1;
                     break;
                 }
-                else if (ScreenScript::FindPic("zi.png"))
+                else if (ScreenScript::FindPic(CStringManager::Format("zi%d.png", computer)))
                 {
                     camp = 2;
                     break;
                 }
             }
         }
-
     }
 };
 
 int32_t main()
 {
     CDump::instance().DeclareDumpFile();
-    int32_t com = 1;
     xyls::Rect rect(CSystem::GetWindowResolution());
     if (rect == xyls::Rect(0, 0, 1366, 768))
     {
-        com = 1;
+        computer = 1;
     }
     else if(rect == xyls::Rect(0, 0, 1920, 1080))
     {
-        com = 2;
+        computer = 2;
     }
 
     printf("从哪里开始，游戏开始1，选择开始2\n");
@@ -173,7 +172,7 @@ int32_t main()
     auto threadId = CTaskThreadManager::Instance().Init();
     auto thread = CTaskThreadManager::Instance().GetThreadInterface(threadId);
     
-    if (com == 1)
+    if (computer == 1)
     {
         storage.add(1, xyls::Point(1204, 657));
         storage.add(2, xyls::Point(1223, 681));
@@ -182,7 +181,7 @@ int32_t main()
         storage.add(5, xyls::Point(1313, 655));
         storage.add(6, xyls::Point(1333, 682));
     }
-    else if (com == 2)
+    else if (computer == 2)
     {
         storage.add(1, xyls::Point(1689, 924));
         storage.add(2, xyls::Point(1720, 958));
