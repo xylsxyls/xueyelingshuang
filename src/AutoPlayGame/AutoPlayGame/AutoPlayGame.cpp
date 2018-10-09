@@ -87,10 +87,17 @@ public:
 
                 ScreenScript::FindClick("shi.png");
                 ScreenScript::FindClick("OtherOk.png");
+                ScreenScript::FindClick("EndShop.png");
 
                 if (ScreenScript::FindClick("EndGame.png"))
                 {
-                    ScreenScript::WaitClickPic("BackHome.png");
+                    CMouse::MoveAbsolute(xyls::Point(10, 10), 100);
+                    break;
+                }
+
+                if (ScreenScript::FindClick("BackHome.png"))
+                {
+                    CMouse::MoveAbsolute(xyls::Point(10, 10), 100);
                     break;
                 }
 
@@ -106,6 +113,19 @@ public:
                 ScreenScript::FindClick("Play.png");
                 ScreenScript::FindClick("Rank.png");
                 ScreenScript::FindClick("Confirm.png");
+                if (ScreenScript::FindClick("PlayAgain.png"))
+                {
+                    CMouse::MoveAbsolute(xyls::Point(10, 10), 100);
+                }
+                if (ScreenScript::FindClick("OtherOk.png"))
+                {
+                    CMouse::MoveAbsolute(xyls::Point(10, 10), 100);
+                }
+                if (ScreenScript::FindClick("OtherOk2.png"))
+                {
+                    CMouse::MoveAbsolute(xyls::Point(10, 10), 100);
+                }
+                ScreenScript::FindClick("EndFriend.png");
                 ScreenScript::FindClick("ErrorOk.png");
                 ScreenScript::FindClick("Choose.png");
                 ScreenScript::FindClick("zhonglu.png");
