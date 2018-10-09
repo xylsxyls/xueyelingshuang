@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <stdint.h>
 #include "CStringManagerMacro.h"
 
 class CStringManagerAPI CStringManager
@@ -69,4 +70,7 @@ public:
 
 	//取出两个字符串中间的字符串，不包括头尾
 	static std::string GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString);
+
+	//?字符串转无符号长整型
+	static uint64_t atoui64(const char* str);
 };

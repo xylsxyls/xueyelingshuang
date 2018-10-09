@@ -9,29 +9,44 @@ message RspCode
 	string errorMessage = 2;
 }
 
-/** 转化为std::map<std::string, std::string>
+/** 变种类型
+*/
+message VariantData
+{
+	bytes data = 1;
+	int32 type = 2;
+}
+
+/** std::map的一个节点
+*/
+message MapKeyValue
+{
+	string key = 1;
+	VariantData value = 2;
+}
+
+/** 转化为std::map<std::string, Variant>
 */
 message MapData
 {
-	string key = 1;
-	bytes value = 2;
+	repeated MapKeyValue mapKeyValue = 1;
 }
 
-/** 转化为std::list<std::string>
+/** 转化为std::list<Variant>
 */
 message ListData
 {
-	bytes value = 1;
+	repeated VariantData value = 1;
 }
 
-/** 转化为std::vector<std::vector<std::string>>
+/** 转化为std::vector<std::vector<Variant>>
 */
 message TableData
 {
 	repeated ListData listData = 1;
 }
 
-/** 转化为std::map<std::string, std::map<std::string, std::string>>
+/** 转化为std::map<std::string, std::map<std::string, Variant>>的一个节点
 */
 message KeyMapData
 {
@@ -39,7 +54,7 @@ message KeyMapData
 	MapData mapData = 2;
 }
 
-/** 转化为std::map<std::string, std::list<std::string>>
+/** 转化为std::map<std::string, std::list<Variant>>的一个节点
 */
 message KeyListData
 {
@@ -47,7 +62,7 @@ message KeyListData
 	ListData listData = 2;
 }
 
-/** 转化为std::map<std::string, std::vector<std::vector<std::string>>>
+/** 转化为std::map<std::string, std::vector<std::vector<Variant>>>的一个节点
 */
 message KeyTableData
 {
@@ -58,7 +73,7 @@ message KeyTableData
 message ProtoMessage
 {
 	RspCode rspCode = 1;
-	KeyMapData keyMapData = 2;
-	KeyListData keyListData = 3;
-	KeyTableData keyTableData = 4;
+	repeated KeyMapData keyMapData = 2;
+	repeated KeyListData keyListData = 3;
+	repeated KeyTableData keyTableData = 4;
 }

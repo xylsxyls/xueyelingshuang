@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <algorithm>
 #include <stdint.h>
+#include <sstream>
 
 size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect)
 {
@@ -322,4 +323,13 @@ std::string CStringManager::GetMidString(const std::string& src, const std::stri
 	int left = (int)src.find(leftString);
 	int right = (int)src.find(rightString);
 	return Mid(src, left + 1, right - left - 1);
+}
+
+uint64_t CStringManager::atoui64(const char* str)
+{
+	uint64_t result;
+	std::stringstream strValue;
+	strValue << str;
+	strValue >> result;
+	return result;
 }

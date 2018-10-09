@@ -41,6 +41,8 @@ public:
 	void ClearFile();
 	//?文件内群体换
 	int32_t Replace(const std::string& oldstr, const std::string& newstr);
+	//读取文件到std::string中
+	std::string ReadFile(const std::string& path);
 
 private:
 	//?用点到点的方式加载

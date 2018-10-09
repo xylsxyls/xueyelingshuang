@@ -269,6 +269,12 @@ int32_t Ctxt::Replace(const std::string& oldstr, const std::string& newstr)
 	return result;
 }
 
+std::string Ctxt::ReadFile(const std::string& path)
+{
+	std::ifstream f1(path.c_str(), std::ios::binary);
+	return std::string((std::istreambuf_iterator<char>(f1)), std::istreambuf_iterator<char>());
+}
+
 void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
 {
 	std::vector<std::vector<int32_t>> vecSplit;

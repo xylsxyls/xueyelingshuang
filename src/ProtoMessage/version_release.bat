@@ -1,1 +1,1 @@
-call "%CLOUD_REBUILD%" ProtoMessage 64 dll release same
+call "%CLOUD_REBUILD%" ProtoMessage 32 dll release same

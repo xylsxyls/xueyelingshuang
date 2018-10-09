@@ -65,3 +65,10 @@ rmdir /q /s "%~dp0src\ConsoleTest1\ConsoleTest\Release\"
 rmdir /q /s "%~dp0src\CloudRebuild\CloudRebuild\Debug\"
 rmdir /q /s "%~dp0src\CloudRebuild\CloudRebuild\Release\"
 ::------------------------------------------------------------
+
+::-------------------…æ≥˝¡Ÿ ±Õº∆¨-----------------------------
+rmdir /q /s "%~dp0common\AutoPlayGame\ScreenScriptTemp\"
+
+::-------------------…æ≥˝¡Ÿ ±¥˙¬Î-----------------------------
+del "%~dp0src\ProtoMessage\ProtoMessage\src\ProtoMessage.pb.h"
+del "%~dp0src\ProtoMessage\ProtoMessage\src\ProtoMessage.pb.cc"

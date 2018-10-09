@@ -1,11 +1,94 @@
 #include "ProtoMessage.h"
 #include "ProtoMessage.pb.h"
-#pragma comment(lib, "libprotobuf.lib")
+#if defined _WIN64 && defined _DEBUG
+#pragma comment(lib, "libprotobuf_64d.lib")
+#elif defined _WIN64
+#pragma comment(lib, "libprotobuf_64.lib")
+#elif defined _DEBUG
+#pragma comment(lib, "libprotobuf_32d.lib")
+#else
+#pragma comment(lib, "libprotobuf_32.lib")
+#endif
 
 ProtoMessage::ProtoMessage():
 m_protoMsg(nullptr)
 {
 	m_protoMsg = new pt::ProtoMessage;
+}
+
+ProtoMessage& ProtoMessage::operator[](const char* key)
+{
+	if (key == nullptr)
+	{
+		return *this;
+	}
+	if (m_dataKey == "")
+	{
+		m_dataKey = key;
+	}
+	else
+	{
+		m_key = m_dataKey;
+		m_dataKey = key;
+	}
+	return *this;
+}
+
+ProtoMessage ProtoMessage::operator=(const Variant& value)
+{
+	if (m_key == "")
+	{
+		m_key = PROTO_GLOBAL;
+	}
+	setKeyValue(m_dataKey, value, m_key);
+	m_dataKey.clear();
+	m_key.clear();
+	return *this;
+}
+
+void ProtoMessage::push_back(const Variant& value)
+{
+	if (m_dataKey == "")
+	{
+		m_key = PROTO_GLOBAL;
+	}
+	else
+	{
+		m_key = m_dataKey;
+	}
+	m_keyListData[m_key].push_back(value);
+	m_key.clear();
+	m_dataKey.clear();
+}
+
+void ProtoMessage::push_front(const Variant& value)
+{
+	if (m_dataKey == "")
+	{
+		m_key = PROTO_GLOBAL;
+	}
+	else
+	{
+		m_key = m_dataKey;
+	}
+	m_keyListData[m_key].push_front(value);
+	m_key.clear();
+	m_dataKey.clear();
+}
+
+void ProtoMessage::setTable(const std::vector<std::vector<Variant>>& table)
+{
+	if (m_dataKey == "")
+	{
+		m_key = PROTO_GLOBAL;
+	}
+	else
+	{
+		m_key = m_dataKey;
+	}
+	m_keyTableData[m_key] = table;
+	m_key.clear();
+	m_dataKey.clear();
 }
 
 void ProtoMessage::setCode(int32_t code, const std::string& errorMsg /*= ""*/)
@@ -39,43 +122,53 @@ std::string ProtoMessage::getErrorMessage() const
 	return rspCode->errormessage();
 }
 
-void ProtoMessage::setKeyMap(const std::map<std::string, std::string>& mapData, const std::string& key /*= "global"*/)
+void ProtoMessage::setKeyValue(const std::string& dataKey, const Variant& dataValue, const std::string& key)
+{
+	m_keyMapData[key][dataKey] = dataValue;
+}
+
+void ProtoMessage::addListValue(const Variant& value, const std::string& key)
+{
+	m_keyListData[key].push_back(value);
+}
+
+void ProtoMessage::setKeyMap(const std::map<std::string, Variant>& mapData, const std::string& key)
 {
 	m_keyMapData[key] = mapData;
 }
 
-void ProtoMessage::setKeyList(const std::list<std::string>& listData, const std::string& key /*= "global"*/)
+void ProtoMessage::setKeyList(const std::list<Variant>& listData, const std::string& key)
 {
 	m_keyListData[key] = listData;
 }
 
-void ProtoMessage::setKeyTable(const std::vector<std::vector<std::string>>& tableData, const std::string& key /*= "global"*/)
+void ProtoMessage::setKeyTable(const std::vector<std::vector<Variant>>& tableData, const std::string& key)
 {
 	m_keyTableData[key] = tableData;
 }
 
-std::map<std::string, std::string> ProtoMessage::getMap(const std::string& key /*= "global"*/)
+std::map<std::string, Variant> ProtoMessage::getMap(const std::string& key)
 {
-	std::map<std::string, std::string> result;
+	std::map<std::string, Variant> result;
 	getMap(result, key);
 	return result;
 }
 
-std::list<std::string> ProtoMessage::getList(const std::string& key /*= "global"*/)
+std::list<Variant> ProtoMessage::getList(const std::string& key)
 {
-	std::list<std::string> result;
+	std::list<Variant> result;
 	getList(result, key);
 	return result;
 }
 
-std::vector<std::vector<std::string>> ProtoMessage::getTable(const std::string& key /*= "global"*/)
+std::vector<std::vector<Variant>> ProtoMessage::getTable(const std::string& key)
 {
-	std::vector<std::vector<std::string>> result;
+	std::vector<std::vector<Variant>> result;
 	getTable(result, key);
 	return result;
 }
 
-bool ProtoMessage::getMap(std::map<std::string, std::string>& mapData, const std::string& key /*= "global"*/)
+bool ProtoMessage::getMap(std::map<std::string, Variant>& mapData, const std::string& key)
 {
 	auto itKeyMapData = m_keyMapData.find(key);
 	if (itKeyMapData == m_keyMapData.end())
@@ -86,7 +179,7 @@ bool ProtoMessage::getMap(std::map<std::string, std::string>& mapData, const std
 	return true;
 }
 
-bool ProtoMessage::getList(std::list<std::string>& listData, const std::string& key /*= "global"*/)
+bool ProtoMessage::getList(std::list<Variant>& listData, const std::string& key)
 {
 	auto itKeyListData = m_keyListData.find(key);
 	if (itKeyListData == m_keyListData.end())
@@ -97,7 +190,7 @@ bool ProtoMessage::getList(std::list<std::string>& listData, const std::string& 
 	return true;
 }
 
-bool ProtoMessage::getTable(std::vector<std::vector<std::string>>& tableData, const std::string& key /*= "global"*/)
+bool ProtoMessage::getTable(std::vector<std::vector<Variant>>& tableData, const std::string& key)
 {
 	auto itKeyTableData = m_keyTableData.find(key);
 	if (itKeyTableData == m_keyTableData.end())
@@ -110,21 +203,142 @@ bool ProtoMessage::getTable(std::vector<std::vector<std::string>>& tableData, co
 
 bool ProtoMessage::from(const std::string& data)
 {
-	if (!m_protoMsg->ParseFromString(data))
+	if (m_protoMsg == nullptr || !m_protoMsg->ParseFromString(data))
 	{
 		return false;
 	}
-	//stringtomaplisttable
+	clearMap();
+	clearList();
+	clearTable();
+	
+	int32_t index = -1;
+	while (index++ != m_protoMsg->keymapdata_size() - 1)
+	{
+		auto protokeyMapData = m_protoMsg->mutable_keymapdata(index);
+		const std::string& key = protokeyMapData->key();
+		auto mapData = protokeyMapData->mutable_mapdata();
+		int32_t dataIndex = -1;
+		while (dataIndex++ != mapData->mapkeyvalue_size() - 1)
+		{
+			auto mapKeyValue = mapData->mutable_mapkeyvalue(dataIndex);
+			const std::string& dataKey = mapKeyValue->key();
+			auto variantValue = mapKeyValue->mutable_value();
+			m_keyMapData[key][dataKey] = Variant(variantValue->data(), (Variant::VariantType)(variantValue->type()), true);
+		}
+	}
 
-	//stringtomaplisttable
+	index = -1;
+	while (index++ != m_protoMsg->keylistdata_size() - 1)
+	{
+		auto protokeyListData = m_protoMsg->mutable_keylistdata(index);
+		const std::string& key = protokeyListData->key();
+		auto listData = protokeyListData->mutable_listdata();
+		int32_t dataIndex = -1;
+		while (dataIndex++ != listData->value_size() - 1)
+		{
+			auto variantValue = listData->mutable_value(dataIndex);
+			m_keyListData[key].push_back(Variant(variantValue->data(), (Variant::VariantType)(variantValue->type()), true));
+		}
+	}
+
+	index = -1;
+	while (index++ != m_protoMsg->keytabledata_size() - 1)
+	{
+		auto protokeyTableData = m_protoMsg->mutable_keytabledata(index);
+		const std::string& key = protokeyTableData->key();
+		auto tableData = protokeyTableData->mutable_tabledata();
+		std::vector<std::vector<Variant>> vecData;
+		int32_t lineIndex = -1;
+		while (lineIndex++ != tableData->listdata_size() - 1)
+		{
+			std::vector<Variant> vecLine;
+			auto list = tableData->mutable_listdata(lineIndex);
+			int32_t dataIndex = -1;
+			while (dataIndex++ != list->value_size() - 1)
+			{
+				auto variantValue = list->mutable_value(dataIndex);
+				vecLine.push_back(Variant(variantValue->data(), (Variant::VariantType)(variantValue->type()), true));
+			}
+			vecData.push_back(vecLine);
+		}
+		m_keyTableData[key] = vecData;
+	}
+
 	return true;
 }
 
 std::string ProtoMessage::toString()
 {
-	//maplisttabletostring
+	if (m_protoMsg == nullptr)
+	{
+		return "";
+	}
+	
+	m_protoMsg->Clear();
+	for (auto itKeyMapData = m_keyMapData.begin(); itKeyMapData != m_keyMapData.end(); ++itKeyMapData)
+	{
+		const std::string& key = itKeyMapData->first;
+		auto protoKeyMapData = m_protoMsg->add_keymapdata();
+		protoKeyMapData->set_key(key);
+		auto protoMapData = protoKeyMapData->mutable_mapdata();
+		auto& mapData = itKeyMapData->second;
+		for (auto itData = mapData.begin(); itData != mapData.end(); ++itData)
+		{
+			const std::string& dataKey = itData->first;
+			const Variant& dataValue = itData->second;
+			auto mapKeyValue = protoMapData->add_mapkeyvalue();
+			mapKeyValue->set_key(dataKey);
+			auto variantValue = mapKeyValue->mutable_value();
+			std::string blob;
+			dataValue.toBlob(blob);
+			variantValue->set_data(blob);
+			variantValue->set_type((int32_t)dataValue.type());
+		}
+	}
 
-	//maplisttabletostring
+	for (auto itKeyListData = m_keyListData.begin(); itKeyListData != m_keyListData.end(); ++itKeyListData)
+	{
+		const std::string& key = itKeyListData->first;
+		auto protokeyListData = m_protoMsg->add_keylistdata();
+		protokeyListData->set_key(key);
+		auto protoListData = protokeyListData->mutable_listdata();
+		auto& listData = itKeyListData->second;
+		for (auto itData = listData.begin(); itData != listData.end(); ++itData)
+		{
+			const Variant& dataValue = *itData;
+			auto variantValue = protoListData->add_value();
+			std::string blob;
+			dataValue.toBlob(blob);
+			variantValue->set_data(blob);
+			variantValue->set_type((int32_t)dataValue.type());
+		}
+	}
+
+	for (auto itKeyTableData = m_keyTableData.begin(); itKeyTableData != m_keyTableData.end(); ++itKeyTableData)
+	{
+		const std::string& key = itKeyTableData->first;
+		auto protoKeyTableData = m_protoMsg->add_keytabledata();
+		protoKeyTableData->set_key(key);
+		auto protoTableData = protoKeyTableData->mutable_tabledata();
+		auto& tableData = itKeyTableData->second;
+		int32_t lineIndex = -1;
+		while (lineIndex++ != tableData.size() - 1)
+		{
+			auto list = protoTableData->add_listdata();
+			auto& listData = tableData[lineIndex];
+			int32_t dataIndex = -1;
+			while (dataIndex++ != listData.size() - 1)
+			{
+				const Variant& dataValue = listData[dataIndex];
+				auto variantValue = list->add_value();
+				std::string blob;
+				dataValue.toBlob(blob);
+				variantValue->set_data(blob);
+				variantValue->set_type((int32_t)dataValue.type());
+			}
+		}
+	}
+
 	std::string result;
 	if (!m_protoMsg->SerializeToString(&result))
 	{
@@ -133,9 +347,97 @@ std::string ProtoMessage::toString()
 	return result;
 }
 
-int32_t main()
+void ProtoMessage::clear()
 {
-	
-	getchar();
-	return 0;
+	if (m_protoMsg == nullptr)
+	{
+		return;
+	}
+	m_protoMsg->Clear();
+	clearMap();
+	clearList();
+	clearTable();
+	m_key.clear();
+	m_dataKey.clear();
 }
+
+void ProtoMessage::clearMap()
+{
+	m_keyMapData.clear();
+}
+
+void ProtoMessage::clearList()
+{
+	m_keyListData.clear();
+}
+
+void ProtoMessage::clearTable()
+{
+	m_keyTableData.clear();
+}
+
+//int32_t main()
+//{
+//	ProtoMessage msg;
+//	msg["1"] = "2";
+//	msg["other"]["2"] = 3;
+//	msg.push_back("123");
+//	msg.push_front("1234");
+//	msg["1"].push_back("123");
+//	msg["1"].push_back("1234");
+//	std::vector<std::vector<Variant>> vecTable;
+//	std::vector<Variant> vecList;
+//	vecList.push_back(12345);
+//	vecList.push_back("123456");
+//	vecTable.push_back(vecList);
+//	vecList[0] = 23456;
+//	vecList[1] = 234567;
+//	vecTable.push_back(vecList);
+//	msg.setKeyTable(vecTable);
+//	msg["table2"].setTable(vecTable);
+//	int begin = ::GetTickCount();
+//	int count = 100000;
+//	while (count-- != 0)
+//	{
+//		std::string proto = msg.toString();
+//		ProtoMessage msg2;
+//		msg2.from(proto);
+//		std::string str = msg2.toString();
+//		//if (str == proto)
+//		//{
+//		//	RCSend("same");
+//		//}
+//		//ProtoMessage msg3;
+//		//msg3.from(proto);
+//		//std::string str2 = msg3.toString();
+//		//if (str == str2)
+//		//{
+//		//	RCSend("same2");
+//		//}
+//		//RCSend("str.size = %d, proto.size = %d,cmp = %d", str.size(), proto.size(), memcmp(&str[0], &proto[0], 117));
+//	}
+//
+//	RCSend("time = %d", ::GetTickCount() - begin);
+//
+//	//count = 100000;
+//	//while (count-- != 0)
+//	//{
+//	//	Cjson json;
+//	//	json["1"] = "2";
+//	//	json["global"][0] = "123";
+//	//	json["global"][1] = "1234";
+//	//	json["global2"][0][0] = "12345";
+//	//	json["global2"][0][1] = "123456";
+//	//	json["global2"][1][0] = "23456";
+//	//	json["global2"][1][1] = "234567";
+//	//	json["global2"][1][2] = "234567";
+//	//	std::string str2 = json.tostring("", "");
+//	//	Cjson json2;
+//	//	json2.LoadJson(str2);
+//	//	std::string str3 = json.tostring("", "");
+//	//}
+//	//RCSend("time = %d", ::GetTickCount() - begin);
+//
+//	getchar();
+//	return 0;
+//}
