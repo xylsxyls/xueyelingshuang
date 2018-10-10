@@ -29,6 +29,7 @@ public:
 	int GetHeight()const;
 	bool isPoint()const;
 	bool isLine()const;
+	bool empty()const;
 
     int32_t Left() const;
     int32_t Top() const;

@@ -37,6 +37,11 @@ int32_t Point::y() const
     return m_y;
 }
 
+bool Point::empty() const
+{
+	return (m_x == 0) && (m_y == 0);
+}
+
 void Point::SetX(int32_t x)
 {
     m_x = x;

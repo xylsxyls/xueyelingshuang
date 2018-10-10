@@ -6,17 +6,10 @@
 #include "CStopWatch/CStopWatchAPI.h"
 #include "CGetPath/CGetPathAPI.h"
 
-bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubleClick, const xyls::Rect& rect)
+bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubleClick, const xyls::Rect& rect, const xyls::Rect& moved)
 {
-	CImage img;
-	HRESULT res = img.Load(path.c_str());
-	if (res != S_OK)
-	{
-		return false;
-	}
-
 	xyls::Rect findRect;
-	if (rect == xyls::Rect(0, 0, 0, 0))
+	if (rect.empty())
 	{
 		findRect = CSystem::GetWindowResolution();
 	}
@@ -25,22 +18,30 @@ bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubl
 		findRect = rect;
 	}
 
-	int32_t imgWidth = img.GetWidth();
-	int32_t imgHeight = img.GetHeight();
-
 	std::string bmpPath = GetBmpPath(path);
-	if (bmpPath == "")
+	if (bmpPath.empty())
 	{
 		return false;
 	}
-	
-    int32_t x = 0;
-    int32_t y = 0;
-	CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), 0.7);
-    if (x == 0 && y == 0)
-    {
+
+	CMouse::MoveAbsolute(moved, 100);
+	int32_t x = 0;
+	int32_t y = 0;
+	if (!CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), 0.7))
+	{
 		return false;
-    }
+	}
+
+	CImage img;
+	HRESULT res = img.Load(path.c_str());
+	if (res != S_OK)
+	{
+		return false;
+	}
+
+	int32_t imgWidth = img.GetWidth();
+	int32_t imgHeight = img.GetHeight();
+	img.Destroy();
 
 	CMouse::MoveAbsolute(xyls::Rect(x + imgWidth / 3, y + imgHeight / 3, x + imgWidth * 2 / 3, y + imgHeight  * 2 / 3));
     if (leftClick && doubleClick)
@@ -59,15 +60,15 @@ bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubl
 	{
 		CMouse::RightClick();
 	}
-    
-	img.Destroy();
+	CMouse::MoveAbsolute(moved, 100);
+	
 	return true;
 }
 
-bool ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect)
+bool ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect, const xyls::Rect& move)
 {
 	xyls::Rect findRect;
-	if (rect == xyls::Rect(0, 0, 0, 0))
+	if (rect.empty())
 	{
 		findRect = CSystem::GetWindowResolution();
 	}
@@ -77,11 +78,12 @@ bool ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect)
 	}
 
 	std::string bmpPath = GetBmpPath(path);
-	if (bmpPath == "")
+	if (bmpPath.empty())
 	{
 		return false;
 	}
 
+	CMouse::MoveAbsolute(move, 100);
 	int32_t x = 0;
 	int32_t y = 0;
 	return CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), 0.7);
@@ -90,13 +92,14 @@ bool ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect)
 bool ScreenScript::WaitForPic(const std::string& path,
 							  const xyls::Rect& rect,
 							  int32_t timeOut,
-							  int32_t searchIntervalTime)
+							  int32_t searchIntervalTime,
+							  const xyls::Rect& move)
 {
+	CMouse::MoveAbsolute(move, 100);
 	CStopWatch watch;
 	while ((int32_t)watch.GetWatchTime() <= timeOut)
 	{
-		bool result = FindPic(path, rect);
-		if (result)
+		if (FindPic(path, rect))
 		{
 			return true;
 		}
@@ -110,9 +113,10 @@ bool ScreenScript::WaitClickPic(const std::string& path,
 								bool doubleClick,
 								const xyls::Rect& rect,
 								int32_t timeOut,
-								int32_t searchIntervalTime)
+								int32_t searchIntervalTime,
+								const xyls::Rect& move)
 {
-	WaitForPic(path, rect, timeOut, searchIntervalTime);
+	WaitForPic(path, rect, timeOut, searchIntervalTime, move);
 	return FindClick(path, leftClick, doubleClick, rect);
 }
 
@@ -121,8 +125,7 @@ std::string ScreenScript::GetBmpPath(const std::string& path)
 	std::string curExePath = CGetPath::GetCurrentExePath();
 	if (CSystem::DirOrFileAccess(curExePath + "ScreenScriptTemp") == false)
 	{
-		bool result = CSystem::CreateDir(curExePath + "ScreenScriptTemp");
-		if (result == false)
+		if(!CSystem::CreateDir(curExePath + "ScreenScriptTemp"))
 		{
 			return "";
 		}
@@ -130,8 +133,7 @@ std::string ScreenScript::GetBmpPath(const std::string& path)
 	std::string bmpPath = curExePath + "ScreenScriptTemp\\" + CGetPath::GetName(path, 3) + ".bmp";
 	if (CSystem::DirOrFileAccess(bmpPath) == false)
 	{
-		bool result = CScreen::ChangeToBmp(bmpPath, path);
-		if (result == false)
+		if (!CScreen::ChangeToBmp(bmpPath, path))
 		{
 			return "";
 		}

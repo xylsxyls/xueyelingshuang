@@ -15,6 +15,7 @@ public:
     void SetPoint(int32_t x, int32_t y);
     int32_t x() const;
     int32_t y() const;
+	bool empty() const;
 
     void SetX(int32_t x);
     void SetY(int32_t y);

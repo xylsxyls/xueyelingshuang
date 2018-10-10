@@ -89,6 +89,11 @@ bool Rect::isLine() const
 	return ((m_left == m_right) + (m_top == m_bottom)) == 1;
 }
 
+bool Rect::empty() const
+{
+	return (m_left == 0) && (m_top == 0) && (m_right == 0) && (m_bottom == 0);
+}
+
 int32_t Rect::Left() const
 {
     return m_left;
