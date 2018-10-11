@@ -18,7 +18,7 @@ public:
 						  bool leftClick = true,
 						  bool doubleClick = false,
 						  const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
-						  const xyls::Rect& moved = xyls::Rect(10, 10, 20, 20));
+						  const xyls::Rect& moved = xyls::Rect(100, 100, 110, 110));
 
 	/** 在指定区域内搜图
 	@param [in] path 图片路径，支持bmp，jpg，png三种格式
@@ -28,7 +28,7 @@ public:
 	*/
 	static bool FindPic(const std::string& path,
 						const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
-						const xyls::Rect& move = xyls::Rect(10, 10, 20, 20));
+						const xyls::Rect& move = xyls::Rect(100, 100, 110, 110));
 
 	/** 等待屏幕中图片出现，阻塞线程
 	@param [in] path 图片路径，支持bmp，jpg，png三种格式
@@ -42,7 +42,7 @@ public:
 						   const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
 						   int32_t timeOut = 30000,
 						   int32_t searchIntervalTime = 300,
-						   const xyls::Rect& move = xyls::Rect(10, 10, 20, 20));
+						   const xyls::Rect& move = xyls::Rect(100, 100, 110, 110));
 
 	/** 等待屏幕中图片出现并点击，阻塞线程
 	@param [in] path 图片路径，支持bmp，jpg，png三种格式
@@ -60,7 +60,7 @@ public:
 							 const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
 							 int32_t timeOut = 30000,
 							 int32_t searchIntervalTime = 300,
-							 const xyls::Rect& move = xyls::Rect(10, 10, 20, 20));
+							 const xyls::Rect& move = xyls::Rect(100, 100, 110, 110));
 
 private:
 	static std::string GetBmpPath(const std::string& path);
