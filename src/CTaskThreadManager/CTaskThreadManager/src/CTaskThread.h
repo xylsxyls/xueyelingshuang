@@ -13,15 +13,15 @@ class CTaskThreadManagerAPI CTaskThread
 public:
     /* 添加任务，任务优先级必须从1开始
     */
-    void PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel);
+    void PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
 
 	/* 尝试添加任务，任务优先级必须从1开始，和try_lock相似
 	*/
-	bool TryPostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel);
+    bool TryPostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
 
     /* 同步执行任务，当任务没结束是发送线程卡住，但是任务仍然是在线程中执行
     */
-    void SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel);
+    void SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
 
     /* 判断任务队列里是否有任务
     */

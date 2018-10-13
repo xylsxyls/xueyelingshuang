@@ -5,6 +5,10 @@ VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProcessClient", "ProcessClient\ProcessClient.vcxproj", "{75281B86-B4AF-499C-A5AF-5F1BC7641ADD}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProcessWork", "..\ProcessWork\ProcessWork\vcxproj\ProcessWork.vcxproj", "{A0FCB1E5-988D-498B-9AB2-235430C72171}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReadWriteMutex", "..\ReadWriteMutex\ReadWriteMutex\vcxproj\ReadWriteMutex.vcxproj", "{152F782A-7582-4FB5-922F-94EEEA5DDC44}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -21,6 +25,22 @@ Global
 		{75281B86-B4AF-499C-A5AF-5F1BC7641ADD}.Release|Win32.Build.0 = Release|Win32
 		{75281B86-B4AF-499C-A5AF-5F1BC7641ADD}.Release|x64.ActiveCfg = Release|x64
 		{75281B86-B4AF-499C-A5AF-5F1BC7641ADD}.Release|x64.Build.0 = Release|x64
+		{A0FCB1E5-988D-498B-9AB2-235430C72171}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A0FCB1E5-988D-498B-9AB2-235430C72171}.Debug|Win32.Build.0 = Debug|Win32
+		{A0FCB1E5-988D-498B-9AB2-235430C72171}.Debug|x64.ActiveCfg = Debug|x64
+		{A0FCB1E5-988D-498B-9AB2-235430C72171}.Debug|x64.Build.0 = Debug|x64
+		{A0FCB1E5-988D-498B-9AB2-235430C72171}.Release|Win32.ActiveCfg = Release|Win32
+		{A0FCB1E5-988D-498B-9AB2-235430C72171}.Release|Win32.Build.0 = Release|Win32
+		{A0FCB1E5-988D-498B-9AB2-235430C72171}.Release|x64.ActiveCfg = Release|x64
+		{A0FCB1E5-988D-498B-9AB2-235430C72171}.Release|x64.Build.0 = Release|x64
+		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Debug|Win32.ActiveCfg = Debug|Win32
+		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Debug|Win32.Build.0 = Debug|Win32
+		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Debug|x64.ActiveCfg = Debug|x64
+		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Debug|x64.Build.0 = Debug|x64
+		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Release|Win32.ActiveCfg = Release|Win32
+		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Release|Win32.Build.0 = Release|Win32
+		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Release|x64.ActiveCfg = Release|x64
+		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

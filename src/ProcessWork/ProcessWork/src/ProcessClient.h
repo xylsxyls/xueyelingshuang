@@ -2,11 +2,18 @@
 #include "ProcessWorkMacro.h"
 #include <string>
 #include <stdint.h>
+#include <windows.h>
+
+class SharedMemory;
+class ProcessReadWriteMutex;
 
 /** 共享内存客户端，客户端只能发送
 */
 class ProcessWorkAPI ProcessClient
 {
+public:
+    ProcessClient();
+
 public:
     /** 连接共享内存
     @param [in] mapName 共享内存名
@@ -18,5 +25,10 @@ public:
     @param [in] length 长度
     @param [in] isOrdered 是否有序
     */
-    void send(char* buffer, int32_t length, bool isOrdered);
+    void send(char* buffer, int32_t length, bool isOrdered = true);
+
+protected:
+    SharedMemory* m_memory;
+    ProcessReadWriteMutex* m_processMutex;
+    HANDLE m_event;
 };
