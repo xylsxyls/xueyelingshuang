@@ -6,7 +6,7 @@
 #include "CStopWatch/CStopWatchAPI.h"
 #include "CGetPath/CGetPathAPI.h"
 
-bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubleClick, const xyls::Rect& rect, const xyls::Rect& moved)
+bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubleClick, const xyls::Rect& rect, const xyls::Rect& move)
 {
 	xyls::Rect findRect;
 	if (rect.empty())
@@ -24,7 +24,6 @@ bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubl
 		return false;
 	}
 
-	CMouse::MoveAbsolute(moved, 100);
 	int32_t x = 0;
 	int32_t y = 0;
 	if (!CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), 0.7))
@@ -60,12 +59,12 @@ bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubl
 	{
 		CMouse::RightClick();
 	}
-	CMouse::MoveAbsolute(moved, 100);
+	CMouse::MoveAbsolute(move, 100);
 	
 	return true;
 }
 
-bool ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect, const xyls::Rect& move)
+bool ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect)
 {
 	xyls::Rect findRect;
 	if (rect.empty())
@@ -83,7 +82,6 @@ bool ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect, cons
 		return false;
 	}
 
-	CMouse::MoveAbsolute(move, 100);
 	int32_t x = 0;
 	int32_t y = 0;
 	return CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), 0.7);
@@ -92,10 +90,8 @@ bool ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect, cons
 bool ScreenScript::WaitForPic(const std::string& path,
 							  const xyls::Rect& rect,
 							  int32_t timeOut,
-							  int32_t searchIntervalTime,
-							  const xyls::Rect& move)
+							  int32_t searchIntervalTime)
 {
-	CMouse::MoveAbsolute(move, 100);
 	CStopWatch watch;
 	while ((int32_t)watch.GetWatchTime() <= timeOut)
 	{
@@ -116,8 +112,8 @@ bool ScreenScript::WaitClickPic(const std::string& path,
 								int32_t searchIntervalTime,
 								const xyls::Rect& move)
 {
-	WaitForPic(path, rect, timeOut, searchIntervalTime, move);
-	return FindClick(path, leftClick, doubleClick, rect);
+	WaitForPic(path, rect, timeOut, searchIntervalTime);
+    return FindClick(path, leftClick, doubleClick, rect, move);
 }
 
 std::string ScreenScript::GetBmpPath(const std::string& path)
