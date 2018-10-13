@@ -1,8 +1,8 @@
 #pragma once
-#include "SharedMemoryWorkMacro.h"
+#include "ProcessWorkMacro.h"
 #include <stdint.h>
 
-class SharedMemoryWorkAPI ServerReceiveCallback
+class ProcessWorkAPI ServerReceiveCallback
 {
 public:
 	virtual void receive(char* buffer, int32_t length) = 0;
