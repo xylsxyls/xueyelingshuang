@@ -609,6 +609,9 @@
     <ClCompile Include="GeneratedFiles\Release\moc_Dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="src\controls\RegExpBase.cpp">
+      <Filter>controls\QtControls\ComboBox</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\controls\COriginalWebView.h">
@@ -881,5 +884,13 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="11Controls.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\controls\RegExpBase.h">
+      <Filter>controls\QtControls\ComboBox</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\RegExpAttri.h">
+      <Filter>controls\QtControls\ComboBox</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

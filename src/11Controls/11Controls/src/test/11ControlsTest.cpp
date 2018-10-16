@@ -75,6 +75,9 @@ ControlsTest::ControlsTest(QWidget *parent)
 	//this->setAttribute(Qt::WA_TranslucentBackground);
 	this->setStyleSheet("QMainWindow{background-color:rgba(100,0,0,255);}");
 
+	DialogBase* s123132 = new DialogBase;
+	s123132->exec();
+
 	QDialog* widget = new QDialog;
 
 	//widget->setBorderWidth(0);
@@ -99,15 +102,16 @@ ControlsTest::ControlsTest(QWidget *parent)
 	//box->setText("112111111");
 	box->setGeometry(300, 20, 150, 30);
 	box->addItem("123");
-	//box->addItem("124");
-	//box->addItem("125");
+	box->addItem("124");
+	box->addItem("125");
 	//box->addItem("126");
 	//box->setToolTip("<p style=\"background:yellow\">aa</p>");
-	//box->setListBackgroundColor(QColor(255, 0, 0, 100));
+	box->setListBackgroundColor(QColor(255, 0, 0, 2));
 	//box->setListBorderWidth(0);
-	//box->setListOrigin(30);
+	box->setListOrigin(30);
 	//box->setEditable(true);
 	box->setToolTip("12323");
+	box->setListTextColor(QColor(255, 0, 0, 255), QColor(255, 255, 0, 255));
 	//box->setToolTipBackgroundColor(QColor(255, 0, 0, 255));
 	//box->setStyleSheet("QToolTip{border: 0px solid;background-color:rgba(255,255,0,255);}");
 	QString st = "<b style=\"background:%s;color:white;\">%1</b>";

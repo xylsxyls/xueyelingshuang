@@ -79,7 +79,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_WEBKITWIDGETS_LIB;QT_XML_LIB;QT_XMLPATTERNS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtWebKit;$(QTDIR)\include\QtWebkitWidgets;$(QTDIR)\include\QtXml;$(QTDIR)\include\QtXmlPatterns;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebKit;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebkitWidgets;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXml;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXmlPatterns;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -89,15 +89,15 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;Qt5WebKitd.lib;Qt5WebkitWidgetsd.lib;Qt5Xmld.lib;Qt5XmlPatternsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\qtmaind.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Cored.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Guid.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Widgetsd.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5WebKitd.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5WebkitWidgetsd.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Xmld.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5XmlPatternsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_WEBKITWIDGETS_LIB;QT_XML_LIB;QT_XMLPATTERNS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtWebKit;$(QTDIR)\include\QtWebkitWidgets;$(QTDIR)\include\QtXml;$(QTDIR)\include\QtXmlPatterns;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebKit;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebkitWidgets;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXml;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXmlPatterns;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -107,15 +107,15 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;Qt5WebKitd.lib;Qt5WebkitWidgetsd.lib;Qt5Xmld.lib;Qt5XmlPatternsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\qtmaind.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Cored.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Guid.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Widgetsd.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5WebKitd.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5WebkitWidgetsd.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Xmld.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5XmlPatternsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_WEBKITWIDGETS_LIB;QT_XML_LIB;QT_XMLPATTERNS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtWebKit;$(QTDIR)\include\QtWebkitWidgets;$(QTDIR)\include\QtXml;$(QTDIR)\include\QtXmlPatterns;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebKit;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebkitWidgets;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXml;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXmlPatterns;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat />
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
@@ -124,15 +124,15 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5WebKit.lib;Qt5WebkitWidgets.lib;Qt5Xml.lib;Qt5XmlPatterns.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\qtmain.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Core.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Gui.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Widgets.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5WebKit.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5WebkitWidgets.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Xml.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5XmlPatterns.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_WEBKITWIDGETS_LIB;QT_XML_LIB;QT_XMLPATTERNS_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtWebKit;$(QTDIR)\include\QtWebkitWidgets;$(QTDIR)\include\QtXml;$(QTDIR)\include\QtXmlPatterns;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebKit;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebkitWidgets;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXml;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXmlPatterns;$(ProjectDir)..\..\..\include\;$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>
       </DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -142,9 +142,9 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib;$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5WebKit.lib;Qt5WebkitWidgets.lib;Qt5Xml.lib;Qt5XmlPatterns.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\qtmain.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Core.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Gui.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Widgets.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5WebKit.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5WebkitWidgets.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Xml.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5XmlPatterns.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -171,22 +171,22 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\test\11ControlsTest.ui">
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Uic%27ing %(Identity)...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Uic%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Uic%27ing %(Identity)...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Uic%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -221,22 +221,22 @@
       </AdditionalInputs>
     </CustomBuild>
     <CustomBuild Include="src\test\11ControlsTest.h">
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing 11ControlsTest.h...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing 11ControlsTest.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB -DQT_XML_LIB -DQT_XMLPATTERNS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets" "-I$(QTDIR)\include\QtXml" "-I$(QTDIR)\include\QtXmlPatterns" "-I$(ProjectDir)..\..\..\include" "-I$(ProjectDir).."</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB -DQT_XML_LIB -DQT_XMLPATTERNS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets" "-I$(QTDIR)\include\QtXml" "-I$(QTDIR)\include\QtXmlPatterns" "-I$(ProjectDir)..\..\..\include" "-I$(ProjectDir).."</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB -DQT_XML_LIB -DQT_XMLPATTERNS_LIB  "-I.\GeneratedFiles" "-I." "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebKit" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebkitWidgets" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXml" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXmlPatterns" "-I$(ProjectDir)..\..\..\include" "-I$(ProjectDir).."</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB -DQT_XML_LIB -DQT_XMLPATTERNS_LIB  "-I.\GeneratedFiles" "-I." "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebKit" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebkitWidgets" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXml" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXmlPatterns" "-I$(ProjectDir)..\..\..\include" "-I$(ProjectDir).."</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Moc%27ing 11ControlsTest.h...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing 11ControlsTest.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB -DQT_XML_LIB -DQT_XMLPATTERNS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets" "-I$(QTDIR)\include\QtXml" "-I$(QTDIR)\include\QtXmlPatterns" "-I$(ProjectDir)..\..\..\include" "-I$(ProjectDir).."</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB -DQT_XML_LIB -DQT_XMLPATTERNS_LIB  "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtWebKit" "-I$(QTDIR)\include\QtWebkitWidgets" "-I$(QTDIR)\include\QtXml" "-I$(QTDIR)\include\QtXmlPatterns" "-I$(ProjectDir)..\..\..\include" "-I$(ProjectDir).."</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB -DQT_XML_LIB -DQT_XMLPATTERNS_LIB  "-I.\GeneratedFiles" "-I." "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebKit" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebkitWidgets" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXml" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXmlPatterns" "-I$(ProjectDir)..\..\..\include" "-I$(ProjectDir).."</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -DQT_WEBKITWIDGETS_LIB -DQT_XML_LIB -DQT_XMLPATTERNS_LIB  "-I.\GeneratedFiles" "-I." "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebKit" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWebkitWidgets" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXml" "-IC:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtXmlPatterns" "-I$(ProjectDir)..\..\..\include" "-I$(ProjectDir).."</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -247,16 +247,16 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Rcc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(FullPath);%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Rcc%27ing %(Identity)...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Rcc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -296,7 +296,7 @@
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties MocDir=".\GeneratedFiles\$(ConfigurationName)" UicDir=".\GeneratedFiles" RccDir=".\GeneratedFiles" lupdateOptions="" lupdateOnBuild="0" lreleaseOptions="" Qt5Version_x0020_Win32="5.5.1_32_2013" Qt5Version_x0020_x64="5.5.1_64" MocOptions="" />
+      <UserProperties MocDir=".\GeneratedFiles\$(ConfigurationName)" UicDir=".\GeneratedFiles" RccDir=".\GeneratedFiles" lupdateOptions="" lupdateOnBuild="0" lreleaseOptions="" MocOptions="" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>

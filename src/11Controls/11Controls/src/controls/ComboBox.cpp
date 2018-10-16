@@ -363,10 +363,10 @@ void ComboBox::showPopup()
 	}
 	QRect rect = geometry();
 	QRect moveRect = rect;
-	moveRect.setBottom(rect.bottom() + m_listOrigin);
-	setGeometry(moveRect);
+	moveRect.setTop(rect.top() + m_listOrigin);
+	move(moveRect.topLeft());
 	QComboBox::showPopup();
-	setGeometry(rect);
+	move(rect.topLeft());
 	return;
 }
 
