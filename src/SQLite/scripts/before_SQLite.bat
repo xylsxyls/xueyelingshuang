@@ -28,3 +28,18 @@ goto SqlString_end
 call "%CLOUD_REBUILD%" SqlString %SqlString_bit% %SqlString_dlllib% %SqlString_debugRelease%
 goto SqlString_end
 :SqlString_end
+
+::--------------------------------------------------------------------
+set CCharset_dlllib=lib
+set CCharset_bit=%1
+set CCharset_debugRelease=%3
+set CCharset_allSame=%4
+if "%4" == "same" (goto CCharset_callSame) else (goto CCharset_callSimple)
+:CCharset_callSame
+set CCharset_dlllib=%2
+call "%CLOUD_REBUILD%" CCharset %CCharset_bit% %CCharset_dlllib% %CCharset_debugRelease% %CCharset_allSame%
+goto CCharset_end
+:CCharset_callSimple
+call "%CLOUD_REBUILD%" CCharset %CCharset_bit% %CCharset_dlllib% %CCharset_debugRelease%
+goto CCharset_end
+:CCharset_end

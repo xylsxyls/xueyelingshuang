@@ -273,7 +273,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_SQL_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;$(QTDIR)\include\QtSql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtSql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -283,15 +283,15 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib;$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;Qt5Sqld.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\qtmaind.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Cored.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Guid.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Widgetsd.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Sqld.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_SQL_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;$(QTDIR)\include\QtSql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtSql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -301,15 +301,15 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib;$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;Qt5Sqld.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\qtmaind.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Cored.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Guid.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Widgetsd.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Sqld.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_SQL_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;$(QTDIR)\include\QtSql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtSql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat />
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
@@ -318,15 +318,15 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib;$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5Sql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\qtmain.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Core.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Gui.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Widgets.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Sql.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_WIDGETS_LIB;QT_SQL_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;$(QTDIR)\include\QtSql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include;.\GeneratedFiles\$(ConfigurationName);C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtCore;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtGui;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtWidgets;$(ProjectDir)..\..\..\..\include\;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\include\QtSql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>
       </DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -336,9 +336,9 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib;$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5Sql.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\qtmain.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Core.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Gui.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Widgets.lib;C:\Qt\Qt5.5.1_32_2013\5.5\msvc2013\lib\Qt5Sql.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
@@ -346,7 +346,7 @@
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties MocDir=".\GeneratedFiles\$(ConfigurationName)" UicDir=".\GeneratedFiles" RccDir=".\GeneratedFiles" lupdateOptions="" lupdateOnBuild="0" lreleaseOptions="" Qt5Version_x0020_Win32="5.5.1_32_2013" Qt5Version_x0020_x64="5.5.1_64" MocOptions="" />
+      <UserProperties MocDir=".\GeneratedFiles\$(ConfigurationName)" UicDir=".\GeneratedFiles" RccDir=".\GeneratedFiles" lupdateOptions="" lupdateOnBuild="0" lreleaseOptions="" MocOptions="" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>

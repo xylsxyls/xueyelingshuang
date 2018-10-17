@@ -60,6 +60,9 @@ public:
 	*/
 	void rollback();
 
+protected:
+	void init(const std::string& path, PragmaFlag pragmaFlag);
+
 private:
 	QSqlDatabase* m_db;
 };

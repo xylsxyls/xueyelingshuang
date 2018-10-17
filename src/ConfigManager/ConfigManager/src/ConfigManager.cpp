@@ -1,7 +1,6 @@
 #include "ConfigManager.h"
 #include "SQLite/SQLiteAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
-#include "CSystem/CSystemAPI.h"
 #include "UserConfigManager.h"
 #include "CGetPath/CGetPathAPI.h"
 
@@ -181,7 +180,7 @@ void ConfigManager::addConfig(int32_t key, uint64_t value, int32_t section)
 
 void ConfigManager::getConfig(int32_t key, uint64_t& value, int32_t section)
 {
-	value = CSystem::atoui64(getConfigBase(key, section).c_str());
+	value = CStringManager::atoui64(getConfigBase(key, section).c_str());
 }
 
 void ConfigManager::addConfig(int32_t key, double value, int32_t section)

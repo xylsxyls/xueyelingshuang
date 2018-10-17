@@ -4,6 +4,7 @@
 #include "SQLiteResultSet.h"
 #include <QStringList>
 #include "CStringManager/CStringManagerAPI.h"
+#include "CCharset/CCharsetAPI.h"
 
 SQLite::SQLite(const std::string& dbFilePath, PragmaFlag pragmaFlag) :
 m_db(nullptr)
@@ -11,16 +12,7 @@ m_db(nullptr)
 	QSqlDatabase::drivers();
 	m_db = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE"));
 
-	//数据库名
-	m_db->setDatabaseName(dbFilePath.c_str());
-
-	//打开数据库连接 调用 open() 方法打开数据库物理连接。在打开连接之前，连接不可用
-	if (!m_db->open())
-	{
-		delete m_db;
-		m_db = nullptr;
-	}
-	m_db->exec(CStringManager::Format("PRAGMA synchronous = %d;", pragmaFlag).c_str());
+	init(dbFilePath, pragmaFlag);
 }
 
 SQLite::~SQLite()
@@ -69,6 +61,10 @@ std::shared_ptr<SQLiteResultSet> SQLite::execute(const std::shared_ptr<SQLitePre
 
 void SQLite::transaction()
 {
+	if (m_db == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_db->transaction();
@@ -81,6 +77,10 @@ void SQLite::transaction()
 
 void SQLite::commit()
 {
+	if (m_db == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_db->commit();
@@ -93,6 +93,10 @@ void SQLite::commit()
 
 void SQLite::rollback()
 {
+	if (m_db == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_db->rollback();
@@ -101,6 +105,25 @@ void SQLite::rollback()
 	{
 
 	}
+}
+
+void SQLite::init(const std::string& dbFilePath, PragmaFlag pragmaFlag)
+{
+	if (m_db == nullptr)
+	{
+		return;
+	}
+	//数据库名
+	m_db->setDatabaseName(QString::fromStdWString(CCharset::AnsiToUnicode(dbFilePath)));
+
+	//打开数据库连接 调用 open() 方法打开数据库物理连接。在打开连接之前，连接不可用
+	if (!m_db->open())
+	{
+		delete m_db;
+		m_db = nullptr;
+		return;
+	}
+	m_db->exec(CStringManager::Format("PRAGMA synchronous = %d;", (int32_t)pragmaFlag).c_str());
 }
 
 //void SQLite::run()
