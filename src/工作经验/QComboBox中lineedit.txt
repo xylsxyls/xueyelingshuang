@@ -1,0 +1,1 @@
+必须在执行了setEditable(true);之后通过lineEdit才能取到指针

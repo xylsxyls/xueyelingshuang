@@ -1,0 +1,6 @@
+在git bash中打开执行
+$ git log
+# 2.本地回到上一个commit_id
+$ git reset --hard <commit_id>
+# 3.推送到服务器，一定要加 --force 参数
+$ git push origin HEAD:master --force
