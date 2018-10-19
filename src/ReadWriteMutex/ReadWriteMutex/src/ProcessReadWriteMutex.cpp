@@ -5,7 +5,7 @@ ProcessReadWriteMutex::ProcessReadWriteMutex(const std::string& name) :
 m_hLock(nullptr)
 {
 	//初始化的时候不被任何线程占用
-	m_hLock = ::CreateMutex(NULL, FALSE, name.c_str());
+	m_hLock = ::CreateMutexA(NULL, FALSE, name.c_str());
 }
 
 ProcessReadWriteMutex::~ProcessReadWriteMutex()

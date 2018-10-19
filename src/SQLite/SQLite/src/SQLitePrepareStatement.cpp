@@ -1,16 +1,38 @@
 #include "SQLitePrepareStatement.h"
 #include <QSqlQuery>
 #include <QVariant>
+#include <QSqlDatabase>
 
-SQLitePrepareStatement::SQLitePrepareStatement(const std::shared_ptr<QSqlQuery>& spSqlQuery):
-m_spSqlQuery(spSqlQuery)
+SQLitePrepareStatement::SQLitePrepareStatement(QSqlDatabase* dataBase) :
+m_spSqlQuery(nullptr)
 {
+	m_spSqlQuery.reset(new QSqlQuery(*dataBase));
+}
 
+bool SQLitePrepareStatement::empty()
+{
+	return m_spSqlQuery == nullptr;
+}
+
+bool SQLitePrepareStatement::prepare(const std::string& sqlString)
+{
+	if (m_spSqlQuery == nullptr)
+	{
+		return false;
+	}
+	try
+	{
+		return m_spSqlQuery->prepare(sqlString.c_str());
+	}
+	catch (...)
+	{
+		return false;
+	}
 }
 
 void SQLitePrepareStatement::setBlob(uint32_t pos, const std::string& value)
 {
-	if (value.empty())
+	if (value.empty() || m_spSqlQuery == nullptr)
 	{
 		return;
 	}
@@ -26,6 +48,10 @@ void SQLitePrepareStatement::setBlob(uint32_t pos, const std::string& value)
 
 void SQLitePrepareStatement::setBoolean(uint32_t pos, bool value)
 {
+	if (m_spSqlQuery == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_spSqlQuery->bindValue(pos, value);
@@ -38,6 +64,10 @@ void SQLitePrepareStatement::setBoolean(uint32_t pos, bool value)
 
 void SQLitePrepareStatement::setInt(uint32_t pos, int32_t value)
 {
+	if (m_spSqlQuery == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_spSqlQuery->bindValue(pos, value);
@@ -50,6 +80,10 @@ void SQLitePrepareStatement::setInt(uint32_t pos, int32_t value)
 
 void SQLitePrepareStatement::setDouble(uint32_t pos, double value)
 {
+	if (m_spSqlQuery == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_spSqlQuery->bindValue(pos, value);
@@ -62,6 +96,10 @@ void SQLitePrepareStatement::setDouble(uint32_t pos, double value)
 
 void SQLitePrepareStatement::setString(uint32_t pos, const std::string& value)
 {
+	if (m_spSqlQuery == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_spSqlQuery->bindValue(pos, value.c_str());
@@ -74,6 +112,10 @@ void SQLitePrepareStatement::setString(uint32_t pos, const std::string& value)
 
 void SQLitePrepareStatement::setUnsignedInt(uint32_t pos, uint32_t value)
 {
+	if (m_spSqlQuery == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_spSqlQuery->bindValue(pos, value);
@@ -86,6 +128,10 @@ void SQLitePrepareStatement::setUnsignedInt(uint32_t pos, uint32_t value)
 
 void SQLitePrepareStatement::setLongLong(uint32_t pos, int64_t value)
 {
+	if (m_spSqlQuery == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_spSqlQuery->bindValue(pos, value);
@@ -98,6 +144,10 @@ void SQLitePrepareStatement::setLongLong(uint32_t pos, int64_t value)
 
 void SQLitePrepareStatement::setUnsignedLongLong(uint32_t pos, uint64_t value)
 {
+	if (m_spSqlQuery == nullptr)
+	{
+		return;
+	}
 	try
 	{
 		m_spSqlQuery->bindValue(pos, value);
@@ -110,6 +160,10 @@ void SQLitePrepareStatement::setUnsignedLongLong(uint32_t pos, uint64_t value)
 
 bool SQLitePrepareStatement::exec()
 {
+	if (m_spSqlQuery == nullptr)
+	{
+		return false;
+	}
 	try
 	{
 		return m_spSqlQuery->exec();
@@ -118,9 +172,4 @@ bool SQLitePrepareStatement::exec()
 	{
 		return false;
 	}
-}
-
-std::shared_ptr<QSqlQuery> SQLitePrepareStatement::sqlQuery()
-{
-	return m_spSqlQuery;
 }

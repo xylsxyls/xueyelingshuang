@@ -1,7 +1,6 @@
 #include "SqlString.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <stdint.h>
-#include <crtdefs.h>
 
 std::string SqlString::insertString(const std::string& tableName, const std::string& fields)
 {
@@ -48,7 +47,7 @@ std::string SqlString::createTableString(const std::string& tableName, const std
 	while (btrue)
 	{
 		createTableStr += fields[index++];
-		if (index == fields.size() - 1)
+		if (index == fields.size())
 		{
 			break;
 		}
@@ -66,7 +65,7 @@ std::string SqlString::createTableIfNotExistString(const std::string& tableName,
 	while (btrue)
 	{
 		createTableStr += fields[index++];
-		if (index == fields.size() - 1)
+		if (index == fields.size())
 		{
 			break;
 		}

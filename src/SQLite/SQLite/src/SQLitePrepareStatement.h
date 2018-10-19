@@ -6,6 +6,10 @@
 
 class QSqlQuery;
 class QVariant;
+class QSqlDatabase;
+
+/** sql语句管理类
+*/
 class SQLiteAPI SQLitePrepareStatement
 {
 	friend class SQLiteResultSet;
@@ -13,9 +17,13 @@ public:
 	/** 构造函数
 	@param [in] prepareStatement 实际的操作指针
 	*/
-	SQLitePrepareStatement(const std::shared_ptr<QSqlQuery>& spSqlQuery);
+	SQLitePrepareStatement(QSqlDatabase* dataBase);
 
 public:
+	bool empty();
+
+	bool prepare(const std::string& sqlString);
+
 	void setBlob(uint32_t pos, const std::string& value);
 
 	void setBoolean(uint32_t pos, bool value);
@@ -33,8 +41,6 @@ public:
 	void setUnsignedLongLong(uint32_t pos, uint64_t value);
 
 	bool exec();
-
-	std::shared_ptr<QSqlQuery> sqlQuery();
 
 private:
 #ifdef _MSC_VER

@@ -3,14 +3,26 @@
 #include <QVariant>
 #include "SQLitePrepareStatement.h"
 
-SQLiteResultSet::SQLiteResultSet(const std::shared_ptr<QSqlQuery>& spSqlQuery) :
-m_spSqlQuery(spSqlQuery)
+SQLiteResultSet::SQLiteResultSet() :
+m_spSqlQuery(nullptr)
 {
 
 }
 
+SQLiteResultSet::SQLiteResultSet(SQLitePrepareStatement& prepareStatement)
+{
+	if (!prepareStatement.empty())
+	{
+		m_spSqlQuery = prepareStatement.m_spSqlQuery;
+	}
+}
+
 std::string SQLiteResultSet::getBlob(uint32_t columnIndex) const
 {
+	if (!check())
+	{
+		return "";
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnIndex).toByteArray().toStdString();
@@ -23,6 +35,10 @@ std::string SQLiteResultSet::getBlob(uint32_t columnIndex) const
 
 std::string SQLiteResultSet::getBlob(const std::string& columnLabel) const
 {
+	if (!check())
+	{
+		return "";
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnLabel.c_str()).toByteArray().toStdString();
@@ -35,6 +51,10 @@ std::string SQLiteResultSet::getBlob(const std::string& columnLabel) const
 
 bool SQLiteResultSet::getBoolean(uint32_t columnIndex) const
 {
+	if (!check())
+	{
+		return false;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnIndex).toBool();
@@ -47,6 +67,10 @@ bool SQLiteResultSet::getBoolean(uint32_t columnIndex) const
 
 bool SQLiteResultSet::getBoolean(const std::string& columnLabel) const
 {
+	if (!check())
+	{
+		return false;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnLabel.c_str()).toBool();
@@ -59,6 +83,10 @@ bool SQLiteResultSet::getBoolean(const std::string& columnLabel) const
 
 double SQLiteResultSet::getDouble(uint32_t columnIndex) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnIndex).toDouble();
@@ -71,6 +99,10 @@ double SQLiteResultSet::getDouble(uint32_t columnIndex) const
 
 double SQLiteResultSet::getDouble(const std::string& columnLabel) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnLabel.c_str()).toDouble();
@@ -83,6 +115,10 @@ double SQLiteResultSet::getDouble(const std::string& columnLabel) const
 
 int32_t SQLiteResultSet::getInt(uint32_t columnIndex) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnIndex).toInt();
@@ -95,6 +131,10 @@ int32_t SQLiteResultSet::getInt(uint32_t columnIndex) const
 
 int32_t SQLiteResultSet::getInt(const std::string& columnLabel) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnLabel.c_str()).toInt();
@@ -107,6 +147,10 @@ int32_t SQLiteResultSet::getInt(const std::string& columnLabel) const
 
 uint32_t SQLiteResultSet::getUInt(uint32_t columnIndex) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnIndex).toUInt();
@@ -119,6 +163,10 @@ uint32_t SQLiteResultSet::getUInt(uint32_t columnIndex) const
 
 uint32_t SQLiteResultSet::getUInt(const std::string& columnLabel) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnLabel.c_str()).toString().toUInt();
@@ -131,6 +179,10 @@ uint32_t SQLiteResultSet::getUInt(const std::string& columnLabel) const
 
 int64_t SQLiteResultSet::getInt64(uint32_t columnIndex) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnIndex).toLongLong();
@@ -143,6 +195,10 @@ int64_t SQLiteResultSet::getInt64(uint32_t columnIndex) const
 
 int64_t SQLiteResultSet::getInt64(const std::string& columnLabel) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnLabel.c_str()).toString().toLongLong();
@@ -155,6 +211,10 @@ int64_t SQLiteResultSet::getInt64(const std::string& columnLabel) const
 
 uint64_t SQLiteResultSet::getUInt64(uint32_t columnIndex) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnIndex).toULongLong();
@@ -167,6 +227,10 @@ uint64_t SQLiteResultSet::getUInt64(uint32_t columnIndex) const
 
 uint64_t SQLiteResultSet::getUInt64(const std::string& columnLabel) const
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnLabel.c_str()).toString().toULongLong();
@@ -179,6 +243,10 @@ uint64_t SQLiteResultSet::getUInt64(const std::string& columnLabel) const
 
 std::string SQLiteResultSet::getString(uint32_t columnIndex) const
 {
+	if (!check())
+	{
+		return "";
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnIndex).toString().toStdString();
@@ -191,6 +259,10 @@ std::string SQLiteResultSet::getString(uint32_t columnIndex) const
 
 std::string SQLiteResultSet::getString(const std::string& columnLabel) const
 {
+	if (!check())
+	{
+		return "";
+	}
 	try
 	{
 		return m_spSqlQuery->value(columnLabel.c_str()).toString().toStdString();
@@ -203,6 +275,10 @@ std::string SQLiteResultSet::getString(const std::string& columnLabel) const
 
 bool SQLiteResultSet::next()
 {
+	if (!check())
+	{
+		return false;
+	}
 	try
 	{
 		return m_spSqlQuery->next();
@@ -215,6 +291,10 @@ bool SQLiteResultSet::next()
 
 bool SQLiteResultSet::previous()
 {
+	if (!check())
+	{
+		return false;
+	}
 	try
 	{
 		return m_spSqlQuery->previous();
@@ -227,6 +307,10 @@ bool SQLiteResultSet::previous()
 
 int32_t SQLiteResultSet::rowsAffected()
 {
+	if (!check())
+	{
+		return 0;
+	}
 	try
 	{
 		return m_spSqlQuery->numRowsAffected();
@@ -269,8 +353,17 @@ std::vector<std::vector<std::string>> SQLiteResultSet::toVector()
 	return result;
 }
 
+bool SQLiteResultSet::empty()
+{
+	return m_spSqlQuery != nullptr;
+}
+
 int32_t SQLiteResultSet::columnCount()
 {
+	if (!check())
+	{
+		return 0;
+	}
 	int32_t columnCount = -1;
 	bool hasNext = next();
 	if (hasNext == false)
@@ -295,4 +388,9 @@ int32_t SQLiteResultSet::columnCount()
 	}
 	previous();
 	return columnCount;
+}
+
+bool SQLiteResultSet::check() const
+{
+	return m_spSqlQuery != nullptr;
 }

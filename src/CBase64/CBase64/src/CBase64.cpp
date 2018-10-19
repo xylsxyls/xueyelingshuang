@@ -1,116 +1,142 @@
 #include "CBase64.h"
-#include <iostream>
 #include <string>
 
-std::string CBase64::encode(const unsigned char* str, int32_t bytes)
+std::string CBase64::encode(const char* str, int32_t bytes, Base64Options options /*= Base64Encoding*/)
 {
-	int32_t num = 0;
-	int32_t bin = 0;
-	std::string encode_result;
-	const unsigned char* current;
-	current = str;
-	std::string base64_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; /*这是Base64编码使用的标准字典*/
-	while (bytes > 2)
-	{
-		encode_result += base64_table[current[0] >> 2];
-		encode_result += base64_table[((current[0] & 0x03) << 4) + (current[1] >> 4)];
-		encode_result += base64_table[((current[1] & 0x0f) << 2) + (current[2] >> 6)];
-		encode_result += base64_table[current[2] & 0x3f];
+	const char alphabet_base64[] = "ABCDEFGH" "IJKLMNOP" "QRSTUVWX" "YZabcdef"
+		"ghijklmn" "opqrstuv" "wxyz0123" "456789+/";
+	const char alphabet_base64url[] = "ABCDEFGH" "IJKLMNOP" "QRSTUVWX" "YZabcdef"
+		"ghijklmn" "opqrstuv" "wxyz0123" "456789-_";
+	const char* const alphabet = options & Base64UrlEncoding ? alphabet_base64url : alphabet_base64;
+	const char padchar = '=';
+	int padlen = 0;
 
-		current += 3;
-		bytes -= 3;
-	}
-	if (bytes > 0)
+	std::string tmp;
+	tmp.resize((bytes + 2) / 3 * 4);
+	//QByteArray tmp((d->size + 2) / 3 * 4, Qt::Uninitialized);
+
+	int i = 0;
+	char* out = (char*)tmp.data();
+	while (i < bytes)
 	{
-		encode_result += base64_table[current[0] >> 2];
-		if (bytes % 3 == 1)
+		// encode 3 bytes at a time
+		int chunk = 0;
+		chunk |= int(unsigned char(str[i++])) << 16;
+		if (i == bytes)
 		{
-			encode_result += base64_table[(current[0] & 0x03) << 4];
-			encode_result += "==";
+			padlen = 2;
 		}
-		else if (bytes % 3 == 2)
+		else
 		{
-			encode_result += base64_table[((current[0] & 0x03) << 4) + (current[1] >> 4)];
-			encode_result += base64_table[(current[1] & 0x0f) << 2];
-			encode_result += "=";
+			chunk |= int(unsigned char(str[i++])) << 8;
+			if (i == bytes)
+			{
+				padlen = 1;
+			}
+			else
+			{
+				chunk |= int(unsigned char(str[i++]));
+			}
+		}
+
+		int j = (chunk & 0x00fc0000) >> 18;
+		int k = (chunk & 0x0003f000) >> 12;
+		int l = (chunk & 0x00000fc0) >> 6;
+		int m = (chunk & 0x0000003f);
+		*out++ = alphabet[j];
+		*out++ = alphabet[k];
+
+		if (padlen > 1)
+		{
+			if ((options & OmitTrailingEquals) == 0)
+			{
+				*out++ = padchar;
+			}
+		}
+		else
+		{
+			*out++ = alphabet[l];
+		}
+		if (padlen > 0)
+		{
+			if ((options & OmitTrailingEquals) == 0)
+			{
+				*out++ = padchar;
+			}
+		}
+		else
+		{
+			*out++ = alphabet[m];
 		}
 	}
-	return encode_result;
+	//Q_ASSERT((options & OmitTrailingEquals) || (out == tmp.size() + tmp.data()));
+	if (options & OmitTrailingEquals)
+	{
+		tmp.substr(0, out - tmp.data());
+	}
+	return tmp;
 }
 
-std::string CBase64::decode(const char* str, int32_t length)
+std::string CBase64::decode(const char* str, int32_t bytes, Base64Options options /*= Base64Encoding*/)
 {
-	//解码表
-	const char decodeTable[] =
+	unsigned int buf = 0;
+	int nbits = 0;
+	std::string tmp;
+	tmp.resize(bytes * 3 / 4);
+	//QByteArray tmp((base64.size() * 3) / 4, Qt::Uninitialized);
+
+	int offset = 0;
+	for (int i = 0; i < bytes; ++i)
 	{
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -2, -2, -1, -2, -2,
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-		-1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, 62, -2, -2, -2, 63,
-		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -2, -2, -2, -2, -2, -2,
-		-2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -2, -2, -2, -2, -2,
-		-2, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -2, -2, -2, -2, -2,
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-		-2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2
-	};
-	int32_t bin = 0;
-	int32_t i = 0;
-	int32_t pos = 0;
-	std::string decode_result;
-	const char* current = str;
-	char ch;
-	while ((ch = *current++) != '\0' && length-- > 0)
-	{
-		//当前一个字符是“=”号
-		if (ch == '=')
+		int ch = str[i];
+		int d;
+
+		if (ch >= 'A' && ch <= 'Z')
 		{
-			/*
-			先说明一个概念：在解码时，4个字符为一组进行一轮字符匹配。
-			两个条件：
-			1、如果某一轮匹配的第二个是“=”且第三个字符不是“=”，说明这个带解析字符串不合法，直接返回空
-			2、如果当前“=”不是第二个字符，且后面的字符只包含空白符，则说明这个这个条件合法，可以继续。
-			*/
-			if (*current != '=' && (i % 4) == 1)
+			d = ch - 'A';
+		}
+		else if (ch >= 'a' && ch <= 'z')
+		{
+			d = ch - 'a' + 26;
+		}
+		else if (ch >= '0' && ch <= '9')
+		{
+			d = ch - '0' + 52;
+		}
+		else if (ch == '+' && (options & Base64UrlEncoding) == 0)
+		{
+			d = 62;
+		}
+		else if (ch == '-' && (options & Base64UrlEncoding) != 0)
+		{
+			d = 62;
+		}
+		else if (ch == '/' && (options & Base64UrlEncoding) == 0)
+		{
+			d = 63;
+		}
+		else if (ch == '_' && (options & Base64UrlEncoding) != 0)
+		{
+			d = 63;
+		}
+		else
+		{
+			d = -1;
+		}
+			
+		if (d != -1)
+		{
+			buf = (buf << 6) | d;
+			nbits += 6;
+			if (nbits >= 8)
 			{
-				return std::string();
+				nbits -= 8;
+				tmp[offset++] = buf >> nbits;
+				buf &= (1 << nbits) - 1;
 			}
-			continue;
 		}
-		ch = decodeTable[ch];
-		//这个很重要，用来过滤所有不合法的字符
-		if (ch < 0)
-		{
-			/* a space or some other separator character, we simply skip over */
-			continue;
-		}
-		switch (i % 4)
-		{
-		case 0:
-			bin = ch << 2;
-			break;
-		case 1:
-			bin |= ch >> 4;
-			decode_result += bin;
-			bin = (ch & 0x0f) << 4;
-			break;
-		case 2:
-			bin |= ch >> 2;
-			decode_result += bin;
-			bin = (ch & 0x03) << 6;
-			break;
-		case 3:
-			bin |= ch;
-			decode_result += bin;
-			break;
-		}
-		++i;
 	}
-	return decode_result;
+
+	tmp.substr(0, offset);
+	return tmp;
 }

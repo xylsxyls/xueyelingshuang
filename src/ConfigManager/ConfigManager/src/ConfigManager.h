@@ -57,7 +57,7 @@ GLOBAL_CONFIG[key值] = value;
 这样写是允许的
 Fun(GLOBAL_CONFIG[key值].toInt32());
 8.性能
-目前一秒插入1000条配置数据，查询几乎不耗时间
+目前一秒插入430条配置数据，查询几乎不耗时间
 如果在这个基础上想提高速度可以在执行存储前加上CONFIG_BEGIN，执行多条存储语句后执行CONFIG_END
 例如
 CONFIG_BEGIN;
@@ -68,7 +68,9 @@ for(int32_t index = 0; index < 10000; ++index)
 CONFIG_END;
 9.存储长度
 目前存储长度为SAVE_LENGTH，(4G - 1)大小，uint32_t上限
-9.用法实例
+10.多线程多进程
+支持多线程多进程同时使用，支持存入同一个数据库文件
+11.用法实例
 存储用户登录账号列表
 GLOBAL_CONFIG[登录账号列表配置枚举值][复选框中账号位置的序列号] = 二进制字符串(登录账号\0登录密码\0用户头像路径);
 存储和删除当前账号最近在玩游戏名
@@ -99,11 +101,14 @@ DELETE_USER_CONFIG(最近在玩游戏名配置枚举值);
 #define USER_CONFIG (*(ConfigManager::instance().getUserConfigManager()))
 #define SET_CONFIG_USERID(userId) ConfigManager::instance().setUserId(userId)
 
-#define CONFIG_BEGIN ConfigManager::instance().transaction()
-#define CONFIG_END ConfigManager::instance().commit()
+//暂时不可用
+//#define CONFIG_BEGIN ConfigManager::instance().transaction()
+//#define CONFIG_END ConfigManager::instance().commit()
 
 class SQLite;
 class UserConfigManager;
+class SQLiteResultSet;
+class ProcessReadWriteMutex;
 
 /** 配置管理类
 */
@@ -181,6 +186,10 @@ public:
 	@param [in] configPath 配置文件路径
 	*/
 	void init(const std::string& configPath = "");
+
+	/** 构建数据库
+	*/
+	void initSQLite();
 
 	/** 设置用户ID
 	@param [in] userId 用户ID
@@ -276,8 +285,11 @@ protected:
 	std::string getConfigType(int32_t key, int32_t section = 0);
 
 protected:
-	void addConfigBase(int32_t key, const std::string& value, const std::string& type, int32_t section = 0);
-	std::string getConfigBase(int32_t key, int32_t section = 0);
+	void addConfigBase(int32_t key, const std::string& value, const std::string& type, int32_t section);
+	bool hasConfigBase(int32_t key, int32_t section);
+	bool updateConfigBase(int32_t key, const std::string& value, const std::string& type, int32_t section);
+	bool insertConfigBase(int32_t key, const std::string& value, const std::string& type, int32_t section);
+	std::string getConfigBase(int32_t key, int32_t section);
 	void createTableIfNotExist(const std::string& tableName);
 
 protected:
@@ -285,8 +297,10 @@ protected:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	static std::shared_ptr<SQLite> s_spConfig;
+	std::shared_ptr<SQLite> m_spConfig;
+	std::shared_ptr<ProcessReadWriteMutex> m_spProcessMutex;
 	std::string m_tableName;
+	std::string m_databasePath;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

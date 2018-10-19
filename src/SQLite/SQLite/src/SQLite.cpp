@@ -5,57 +5,77 @@
 #include <QStringList>
 #include "CStringManager/CStringManagerAPI.h"
 #include "CCharset/CCharsetAPI.h"
+#include <QSqlError>
 
-SQLite::SQLite(const std::string& dbFilePath, PragmaFlag pragmaFlag) :
+SQLite::SQLite(const std::string& dbFilePath) :
 m_db(nullptr)
 {
 	QSqlDatabase::drivers();
-	m_db = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE"));
+	m_db = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE", "SQLite"));
 
-	init(dbFilePath, pragmaFlag);
+	init(dbFilePath);
 }
 
 SQLite::~SQLite()
 {
-	if (m_db != nullptr)
-	{
-		//释放数据库连接
-		m_db->close();
-		delete m_db;
-		m_db = nullptr;
-	}
+	free();
 }
 
-std::shared_ptr<SQLitePrepareStatement> SQLite::preparedCreator(const std::string& sqlString)
+void SQLite::open(PragmaFlag pragmaFlag)
 {
-	std::shared_ptr<SQLitePrepareStatement> spPrepareQuery;
-	QSqlQuery* query = new QSqlQuery;
-	if (query == nullptr)
+	if (m_db == nullptr)
 	{
-		return spPrepareQuery;
+		return;
 	}
-	std::shared_ptr<QSqlQuery> spSqlQuery;
-	spSqlQuery.reset(query);
-	spSqlQuery->prepare(sqlString.c_str());
-	spPrepareQuery.reset(new SQLitePrepareStatement(spSqlQuery));
-	return spPrepareQuery;
+	//打开数据库连接 调用 open() 方法打开数据库物理连接。在打开连接之前，连接不可用
+	if (!m_db->open())
+	{
+		QString error = m_db->lastError().text();
+		free();
+		return;
+	}
+	m_db->exec(CStringManager::Format("PRAGMA synchronous = %d;", (int32_t)pragmaFlag).c_str());
 }
 
-std::shared_ptr<SQLiteResultSet> SQLite::execute(const std::shared_ptr<SQLitePrepareStatement>& spPrepareQuery)
+void SQLite::close()
+{
+	if (m_db == nullptr)
+	{
+		return;
+	}
+	m_db->close();
+}
+
+bool SQLite::isOpen()
+{
+	if (m_db == nullptr)
+	{
+		return false;
+	}
+	return m_db->isOpen();
+}
+
+SQLitePrepareStatement SQLite::preparedCreator(const std::string& sqlString)
+{
+	SQLitePrepareStatement prepareQuery(m_db);
+	prepareQuery.prepare(sqlString.c_str());
+	return prepareQuery;
+}
+
+SQLiteResultSet SQLite::execute(SQLitePrepareStatement& spPrepareQuery)
 {
 	try
 	{
-		if (!spPrepareQuery->exec())
+		SQLiteResultSet spResult(spPrepareQuery);
+		if (!spPrepareQuery.exec())
 		{
-			return std::shared_ptr<SQLiteResultSet>();
+			return SQLiteResultSet();
 		}
-		std::shared_ptr<SQLiteResultSet> spResult;
-		spResult.reset(new SQLiteResultSet(spPrepareQuery->sqlQuery()));
 		return spResult;
 	}
 	catch (...)
 	{
-		return false;
+		return SQLiteResultSet();
 	}
 }
 
@@ -107,7 +127,7 @@ void SQLite::rollback()
 	}
 }
 
-void SQLite::init(const std::string& dbFilePath, PragmaFlag pragmaFlag)
+void SQLite::init(const std::string& dbFilePath)
 {
 	if (m_db == nullptr)
 	{
@@ -115,16 +135,23 @@ void SQLite::init(const std::string& dbFilePath, PragmaFlag pragmaFlag)
 	}
 	//数据库名
 	m_db->setDatabaseName(QString::fromStdWString(CCharset::AnsiToUnicode(dbFilePath)));
+}
 
-	//打开数据库连接 调用 open() 方法打开数据库物理连接。在打开连接之前，连接不可用
-	if (!m_db->open())
+void SQLite::free()
+{
+	if (m_db != nullptr)
 	{
+		//释放数据库连接
 		delete m_db;
 		m_db = nullptr;
-		return;
+		QSqlDatabase::removeDatabase("SQLite");
 	}
-	m_db->exec(CStringManager::Format("PRAGMA synchronous = %d;", (int32_t)pragmaFlag).c_str());
 }
+
+//int main()
+//{
+//	return 0;
+//}
 
 //void SQLite::run()
 //{

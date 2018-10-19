@@ -43,3 +43,18 @@ goto SQLite_end
 call "%CLOUD_REBUILD%" SQLite %SQLite_bit% %SQLite_dlllib% %SQLite_debugRelease%
 goto SQLite_end
 :SQLite_end
+
+::--------------------------------------------------------------------
+set ReadWriteMutex_dlllib=lib
+set ReadWriteMutex_bit=%1
+set ReadWriteMutex_debugRelease=%3
+set ReadWriteMutex_allSame=%4
+if "%4" == "same" (goto ReadWriteMutex_callSame) else (goto ReadWriteMutex_callSimple)
+:ReadWriteMutex_callSame
+set ReadWriteMutex_dlllib=%2
+call "%CLOUD_REBUILD%" ReadWriteMutex %ReadWriteMutex_bit% %ReadWriteMutex_dlllib% %ReadWriteMutex_debugRelease% %ReadWriteMutex_allSame%
+goto ReadWriteMutex_end
+:ReadWriteMutex_callSimple
+call "%CLOUD_REBUILD%" ReadWriteMutex %ReadWriteMutex_bit% %ReadWriteMutex_dlllib% %ReadWriteMutex_debugRelease%
+goto ReadWriteMutex_end
+:ReadWriteMutex_end

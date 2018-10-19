@@ -11,12 +11,21 @@ class SQLitePrepareStatement;
 class SQLiteAPI SQLiteResultSet
 {
 public:
-	SQLiteResultSet(const std::shared_ptr<QSqlQuery>& spSqlQuery);
+	/** 构造函数
+	*/
+	SQLiteResultSet();
+
+	/** 构造函数
+	@param [in] prepareStatement sql语句管理类
+	*/
+	SQLiteResultSet(SQLitePrepareStatement& prepareStatement);
 
 public:
 	std::vector<std::vector<std::string>> toVector();
 
 public:
+	bool empty();
+
 	std::string getBlob(uint32_t columnIndex) const;
 	std::string getBlob(const std::string& columnLabel) const;
 
@@ -48,6 +57,9 @@ public:
 
 	int32_t rowsCount();
 	int32_t columnCount();
+
+protected:
+	bool check() const;
 
 private:
 #ifdef _MSC_VER
