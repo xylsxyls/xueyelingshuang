@@ -62,11 +62,21 @@ public:
         std::string result;
         va_list args;
         va_start(args, fmt);
-        int size = _vscprintf(fmt, args);
-        //?resize分配后string类会自动在最后分配\0，resize(5)则总长6
-        result.resize(size);
-        //?即便分配了足够内存，长度必须加1，否则会崩溃
-        vsprintf_s(&result[0], size + 1, fmt, args);
+
+#if (_MSC_VER >= 1500)
+		int size = _vscprintf(fmt, args);
+		//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
+		result.resize(size);
+		//?即便分配了足够内存，长度必须加1，否则会崩溃
+		vsprintf_s(&result[0], size + 1, fmt, args);
+#else
+		result.resize(10240);
+		::memset(&result[0], 0, 10240);
+		//?即便分配了足够内存，长度必须加1，否则会崩溃
+		_vsnprintf(&result[0], 10240, fmt, args);
+		result.resize(strlen(&result[0]));
+#endif
+
         va_end(args);
         return result;
     }
@@ -125,12 +135,21 @@ public:
         std::string str;
         va_list args = NULL;
         va_start(args, fmt);
-        int size = _vscprintf(fmt, args);
-        str.resize(size);
+
+#if (_MSC_VER >= 1500)
+		int size = _vscprintf(fmt, args);
+		str.resize(size);
 		if (size != 0)
 		{
 			vsprintf_s(&str[0], size + 1, fmt, args);
 		}
+#else
+		str.resize(10240);
+		::memset(&str[0], 0, 10240);
+		_vsnprintf(&str[0], 10240, fmt, args);
+		str.resize(strlen(&str[0]));
+#endif
+        
         va_end(args);
         HWND receiveWindow = ::FindWindowA(NULL, "MessageTest1.3");
         if (receiveWindow == NULL) return false;

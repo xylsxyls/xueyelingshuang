@@ -9,6 +9,7 @@
 #include <conio.h>
 #include <tchar.h>
 #pragma comment(lib, "shell32.lib")
+#pragma warning(disable: 4200)
 
 double CSystem::GetCPUSpeedGHz()
 {
@@ -335,11 +336,11 @@ std::string CSystem::PasswordScanf()
 
 uint32_t CSystem::SystemThreadId()
 {
-	uint32_t threadId = 0;
-#if (_MSC_VER >= 1800)
-	threadId = ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
+#ifdef _WIN32
+	return ::GetCurrentThreadId();
+#else
+	return ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
 #endif
-	return threadId;
 }
 
 int32_t CSystem::GetCPUCoreCount()
@@ -363,6 +364,38 @@ bool CSystem::ShellCopy(const char* from, const char* dest)
 	fileOp.pTo = newTo;
 	fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
 	return SHFileOperation(&fileOp) == 0;
+}
+
+int32_t CSystem::GetSystemVersionNum()
+{
+	DWORD dwVersion = 0;
+	HMODULE hinstDLL = LoadLibraryExW(L"kernel32.dll", NULL, LOAD_LIBRARY_AS_DATAFILE);
+	if (hinstDLL != NULL)
+	{
+		HRSRC hResInfo = FindResource(hinstDLL, MAKEINTRESOURCE(VS_VERSION_INFO), RT_VERSION);
+		if (hResInfo != NULL)
+		{
+			HGLOBAL hResData = LoadResource(hinstDLL, hResInfo);
+			if (hResData != NULL)
+			{
+				static const WCHAR wszVerInfo[] = L"VS_VERSION_INFO";
+				struct VS_VERSIONINFO {
+					WORD wLength;
+					WORD wValueLength;
+					WORD wType;
+					WCHAR szKey[ARRAYSIZE(wszVerInfo)];
+					VS_FIXEDFILEINFO Value;
+					WORD Children[];
+				} *lpVI = (struct VS_VERSIONINFO *)LockResource(hResData);
+				if ((lpVI != NULL) && (lstrcmpiW(lpVI->szKey, wszVerInfo) == 0) && (lpVI->wValueLength > 0))
+				{
+					dwVersion = lpVI->Value.dwFileVersionMS;
+				}
+			}
+		}
+		FreeLibrary(hinstDLL);
+	}
+	return dwVersion;
 }
 
 bool CSystem::ifRedirFrobid = false;

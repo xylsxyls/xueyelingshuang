@@ -81,7 +81,8 @@ public:
 	static int32_t GetCPUCoreCount();
 	//?包含目录的拷贝，可以自动创建文件夹，同步函数
 	static bool ShellCopy(const char* from, const char* dest);
-
+	//?获取操作系统版本号
+	static int32_t GetSystemVersionNum();
 public:
     static bool ifRedirFrobid;
     static PVOID oldValue;
