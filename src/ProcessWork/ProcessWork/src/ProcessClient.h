@@ -28,7 +28,10 @@ public:
     void send(char* buffer, int32_t length, bool isOrdered = true);
 
 protected:
+	//记录数据
     SharedMemory* m_memory;
+	//记录位置
+	SharedMemory* m_position;
     ProcessReadWriteMutex* m_processMutex;
-    HANDLE m_event;
+    HANDLE m_semaphore;
 };

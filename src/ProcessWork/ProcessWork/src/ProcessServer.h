@@ -22,7 +22,9 @@ public:
 protected:
 	ServerReceiveCallback* m_callback;
     SharedMemory* m_memory;
+	SharedMemory* m_position;
     ProcessReadWriteMutex* m_processMutex;
     uint32_t m_listenThreadId;
     uint32_t m_workThreadId;
+	int32_t m_currentPosition;
 };
