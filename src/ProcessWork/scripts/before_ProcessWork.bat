@@ -43,3 +43,33 @@ goto CTaskThreadManager_end
 call "%CLOUD_REBUILD%" CTaskThreadManager %CTaskThreadManager_bit% %CTaskThreadManager_dlllib% %CTaskThreadManager_debugRelease%
 goto CTaskThreadManager_end
 :CTaskThreadManager_end
+
+::--------------------------------------------------------------------
+set LogManager_dlllib=lib
+set LogManager_bit=%1
+set LogManager_debugRelease=%3
+set LogManager_allSame=%4
+if "%4" == "same" (goto LogManager_callSame) else (goto LogManager_callSimple)
+:LogManager_callSame
+set LogManager_dlllib=%2
+call "%CLOUD_REBUILD%" LogManager %LogManager_bit% %LogManager_dlllib% %LogManager_debugRelease% %LogManager_allSame%
+goto LogManager_end
+:LogManager_callSimple
+call "%CLOUD_REBUILD%" LogManager %LogManager_bit% %LogManager_dlllib% %LogManager_debugRelease%
+goto LogManager_end
+:LogManager_end
+
+::--------------------------------------------------------------------
+set LockFreeQueue_dlllib=lib
+set LockFreeQueue_bit=%1
+set LockFreeQueue_debugRelease=%3
+set LockFreeQueue_allSame=%4
+if "%4" == "same" (goto LockFreeQueue_callSame) else (goto LockFreeQueue_callSimple)
+:LockFreeQueue_callSame
+set LockFreeQueue_dlllib=%2
+call "%CLOUD_REBUILD%" LockFreeQueue %LockFreeQueue_bit% %LockFreeQueue_dlllib% %LockFreeQueue_debugRelease% %LockFreeQueue_allSame%
+goto LockFreeQueue_end
+:LockFreeQueue_callSimple
+call "%CLOUD_REBUILD%" LockFreeQueue %LockFreeQueue_bit% %LockFreeQueue_dlllib% %LockFreeQueue_debugRelease%
+goto LockFreeQueue_end
+:LockFreeQueue_end

@@ -73,7 +73,7 @@ public:
         while (true)
         {
 			//wait
-			LOGINFO("WaitForSingleObject begin");
+			//LOGINFO("WaitForSingleObject begin");
 			::WaitForSingleObject(m_semaphore, INFINITE);
 			//static int x = 0;
 			//++x;
@@ -89,31 +89,31 @@ public:
 			char* buffer = nullptr;
 			int32_t length = 0;
 			int32_t protocolId = 0;
-			LOGINFO("readMemory");
+			//LOGINFO("readMemory");
 			++readCount;
 			if (!ProcessHelper::readMemory(memory, m_receivePosition, &buffer, &length, &protocolId))
 			{
 				--readCount;
-				LOGINFO("readCount = %d", readCount);
-				LOGINFO("read nullptr");
+				//LOGINFO("readCount = %d", readCount);
+				//LOGINFO("read nullptr");
 				delete m_server->m_memory;
 				SharedMemory* currentSharedMemory = nullptr;
 				m_server->m_memoryQueue->pop(&currentSharedMemory);
 				++m_receiveMemoryIndex;
 				std::string receiveMemoryMapName = ProcessHelper::receiveMemoryMapName(m_mapName, m_receiveMemoryIndex);
-				LOGINFO("new SharedMemory mapName = %s", receiveMemoryMapName.c_str());
+				//LOGINFO("new SharedMemory mapName = %s", receiveMemoryMapName.c_str());
 				m_server->m_memory = new SharedMemory(receiveMemoryMapName);
 				m_receivePosition = 0;
 				memory = m_server->m_memory->readWithoutLock();
 				if (memory == nullptr)
 				{
-					LOGERROR("currentSharedMemory->mapName() = %s, m_server->m_memory->mapName() = %s, readCount = %d", currentSharedMemory->mapName().c_str(), m_server->m_memory->mapName().c_str(), readCount);
-					LOGERROR("memory = nullptr");
+					//LOGERROR("currentSharedMemory->mapName() = %s, m_server->m_memory->mapName() = %s, readCount = %d", currentSharedMemory->mapName().c_str(), m_server->m_memory->mapName().c_str(), readCount);
+					//LOGERROR("memory = nullptr");
 				}
-				LOGINFO("read new Memory, mapName = %s", m_server->m_memory->mapName().c_str());
+				//LOGINFO("read new Memory, mapName = %s", m_server->m_memory->mapName().c_str());
 				++readCount;
 				ProcessHelper::readMemory(memory, m_receivePosition, &buffer, &length, &protocolId);
-				LOGINFO("read new Memory end");
+				//LOGINFO("read new Memory end");
 			}
 
 			//{
@@ -123,7 +123,7 @@ public:
 			//	ProcessHelper::addReceivePosition(position, sizeof(int32_t) * 2 + length);
 			//}
 			m_receivePosition += sizeof(int32_t) * 2 + length;
-			LOGINFO("m_receivePosition = %d", m_receivePosition);
+			//LOGINFO("m_receivePosition = %d", m_receivePosition);
 
 			//if (readCount % 10000 == 0)
 			//{
@@ -138,7 +138,7 @@ public:
 			workTask->setSize(length);
 			workTask->setProtocolId(protocolId);
 			spTask.reset(workTask);
-			LOGINFO("sendtothread");
+			//LOGINFO("sendtothread");
             CTaskThreadManager::Instance().GetThreadInterface(m_server->m_workThreadId)->PostTask(spTask);
         }
     }
@@ -176,20 +176,20 @@ public:
 	{
 		while (true)
 		{
-			LOGINFO("WaitForSingleObject begin");
+			//LOGINFO("WaitForSingleObject begin");
 			::WaitForSingleObject(m_positionBeginSemaphore, INFINITE);
 			{
 				//WriteLock writeLock(*m_server->m_position);
 				//由客户端锁住
-				LOGINFO("CreateMemoryTask begin");
+				//LOGINFO("CreateMemoryTask begin");
 				void* position = m_server->m_position->writeWithoutLock();
 				int32_t& sendMemoryIndex = ProcessHelper::sendMemoryIndex(position);
 				SharedMemory* sharedMemory = new SharedMemory(ProcessHelper::sendMemoryMapName(m_mapName, sendMemoryIndex + 1), WorkParam::STEP_LENGTH);
 				m_server->m_memoryQueue->push(sharedMemory);
 				++sendMemoryIndex;
-				LOGINFO("sharedMemory->mapName() = %s", sharedMemory->mapName().c_str());
+				//LOGINFO("sharedMemory->mapName() = %s", sharedMemory->mapName().c_str());
 			}
-			LOGINFO("ReleaseSemaphore begin");
+			//LOGINFO("ReleaseSemaphore begin");
 			::ReleaseSemaphore(m_positionEndSemaphore, 1, NULL);
 			//static int xx = 0;
 			//xx++;
@@ -240,7 +240,7 @@ void ProcessServer::listen(const std::string& mapName, ServerReceiveCallback* re
 	if (m_position->writeWithoutLock() == nullptr)
 	{
 		delete m_position;
-		LOGINFO("new position");
+		//LOGINFO("new position");
 		m_position = new SharedMemory(ProcessHelper::positionMapName(mapName), sizeof(int32_t) * 4);
 		{
 			//writeposition
@@ -252,16 +252,16 @@ void ProcessServer::listen(const std::string& mapName, ServerReceiveCallback* re
 	else
 	{
 		//destroy position
-		LOGINFO("destroy position");
+		//LOGINFO("destroy position");
 	}
 
 	void* position = m_position->writeWithoutLock();
 	std::string receiveMapName = ProcessHelper::receiveMemoryMapName(mapName, position);
-	LOGINFO("new memory");
+	//LOGINFO("new memory");
 	m_memory = new SharedMemory(receiveMapName.c_str(), WorkParam::STEP_LENGTH);
 	m_memoryQueue->push(m_memory);
 	
-	LOGINFO("CreateMemoryTask");
+	//LOGINFO("CreateMemoryTask");
 	CreateMemoryTask* createMemoryTask = new CreateMemoryTask;
 	createMemoryTask->setServer(this);
 	createMemoryTask->setMapName(mapName);
@@ -269,7 +269,7 @@ void ProcessServer::listen(const std::string& mapName, ServerReceiveCallback* re
 	spCreateMemoryTask.reset(createMemoryTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_createThreadId)->PostTask(spCreateMemoryTask);
 
-	LOGINFO("ListenTask");
+	//LOGINFO("ListenTask");
     ListenTask* listenTask = new ListenTask;
     listenTask->setServer(this);
 	listenTask->setMapName(mapName);

@@ -7,7 +7,7 @@ int32_t& ProcessHelper::sendPosition(void* position)
 {
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	return *((int32_t*)((char*)position + sizeof(int32_t) * 0));
 }
@@ -16,7 +16,7 @@ int32_t& ProcessHelper::receivePosition(void* position)
 {
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	return *((int32_t*)((char*)position + sizeof(int32_t) * 1));
 }
@@ -25,7 +25,7 @@ int32_t& ProcessHelper::sendMemoryIndex(void* position)
 {
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	return *((int32_t*)((char*)position + sizeof(int32_t) * 2));
 }
@@ -34,7 +34,7 @@ int32_t& ProcessHelper::receiveMemoryIndex(void* position)
 {
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	return *((int32_t*)((char*)position + sizeof(int32_t) * 3));
 }
@@ -48,7 +48,7 @@ bool ProcessHelper::addSendPosition(void* position, int32_t addNum, int32_t step
 {
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	int32_t& sendPosition = ProcessHelper::sendPosition(position);
 	if (sendPosition + addNum > step)
@@ -63,7 +63,7 @@ void ProcessHelper::addReceivePosition(void* position, int32_t addNum)
 {
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	ProcessHelper::receivePosition(position) += addNum;
 }
@@ -72,7 +72,7 @@ void ProcessHelper::addSendMemoryIndex(void* position)
 {
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	++ProcessHelper::sendMemoryIndex(position);
 }
@@ -81,7 +81,7 @@ void ProcessHelper::addReceiveMemoryIndex(void* position)
 {
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	++ProcessHelper::receiveMemoryIndex(position);
 }
@@ -90,7 +90,7 @@ std::string ProcessHelper::positionMapName(const std::string& mapName)
 {
 	if (mapName == "")
 	{
-		LOGERROR("mapName = \"\"");
+		//LOGERROR("mapName = \"\"");
 	}
 	return mapName + "Position";
 }
@@ -99,11 +99,11 @@ std::string ProcessHelper::sendMemoryMapName(const std::string& mapName, void* p
 {
 	if (mapName == "")
 	{
-		LOGERROR("mapName = \"\"");
+		//LOGERROR("mapName = \"\"");
 	}
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	return CStringManager::Format("%s_%d", mapName.c_str(), ProcessHelper::sendMemoryIndex(position));
 }
@@ -112,7 +112,7 @@ std::string ProcessHelper::sendMemoryMapName(const std::string& mapName, int32_t
 {
 	if (mapName == "")
 	{
-		LOGERROR("mapName = \"\"");
+		//LOGERROR("mapName = \"\"");
 	}
 	return CStringManager::Format("%s_%d", mapName.c_str(), sendMemoryIndex);
 }
@@ -121,11 +121,11 @@ std::string ProcessHelper::receiveMemoryMapName(const std::string& mapName, void
 {
 	if (mapName == "")
 	{
-		LOGERROR("mapName = \"\"");
+		//LOGERROR("mapName = \"\"");
 	}
 	if (position == nullptr)
 	{
-		LOGERROR("position = nullptr");
+		//LOGERROR("position = nullptr");
 	}
 	return CStringManager::Format("%s_%d", mapName.c_str(), ProcessHelper::receiveMemoryIndex(position));
 }
@@ -134,11 +134,11 @@ std::string ProcessHelper::receiveMemoryMapName(const std::string& mapName, int3
 {
 	if (mapName == "")
 	{
-		LOGERROR("mapName = \"\"");
+		//LOGERROR("mapName = \"\"");
 	}
 	if (receiveMemoryIndex == 0)
 	{
-		LOGERROR("receiveMemoryIndex = 0");
+		//LOGERROR("receiveMemoryIndex = 0");
 	}
 	return CStringManager::Format("%s_%d", mapName.c_str(), receiveMemoryIndex);
 }
@@ -148,7 +148,7 @@ void ProcessHelper::changeToCurrentSendMemory(SharedMemory** memory, const std::
 	std::string sendMemoryMapName = ProcessHelper::sendMemoryMapName(mapName, position);
 	if ((*memory)->mapName() != sendMemoryMapName)
 	{
-		LOGINFO("check memory old = %s, new = %s", (*memory)->mapName(), sendMemoryMapName);
+		//LOGINFO("check memory old = %s, new = %s", (*memory)->mapName(), sendMemoryMapName);
 		delete (*memory);
 		(*memory) = new SharedMemory(sendMemoryMapName);
 	}
@@ -158,7 +158,7 @@ void ProcessHelper::writeMemory(void* memory, int32_t sendPosition, char* buffer
 {
 	if (memory == nullptr)
 	{
-		LOGERROR("memory = nullptr");
+		//LOGERROR("memory = nullptr");
 	}
 	void* currentMemory = (char*)memory + sendPosition;
 	*((int32_t*)currentMemory) = length;
@@ -170,7 +170,7 @@ bool ProcessHelper::readMemory(void* memory, int32_t receivePosition, char** buf
 {
 	if (memory == nullptr)
 	{
-		LOGERROR("memory = nullptr");
+		//LOGERROR("memory = nullptr");
 	}
 	void* currentMemory = (char*)memory + receivePosition;
 	*length = *((int32_t*)currentMemory);
@@ -189,7 +189,7 @@ void ProcessHelper::writeEndMemory(void* memory, int32_t sendPosition)
 {
 	if (memory == nullptr)
 	{
-		LOGERROR("memory = nullptr");
+		//LOGERROR("memory = nullptr");
 	}
 	void* currentMemory = (char*)memory + sendPosition;
 	::memset(currentMemory, 0, sizeof(int32_t) * 2);

@@ -54,43 +54,43 @@ void ProcessClient::send(char* buffer, int32_t length, bool isOrdered, int32_t p
 		WriteLock writeLock(*m_position);
 		void* position = m_position->memory();
 
-		LOGINFO("changeToCurrentSendMemory");
+		//LOGINFO("changeToCurrentSendMemory");
 		ProcessHelper::changeToCurrentSendMemory(&m_memory, m_mapName, position);
 
 		sendPosition = ProcessHelper::sendPosition(position);
 		//writenewposition
-		LOGINFO("addSendPosition");
+		//LOGINFO("addSendPosition");
 		if (!ProcessHelper::addSendPosition(position, length + sizeof(int32_t) * 2))
 		{
 			//writememory
 			void* memory = m_memory->writeWithoutLock();
-			LOGINFO("writeEndMemory");
+			//LOGINFO("writeEndMemory");
 			ProcessHelper::writeEndMemory(memory, sendPosition);
 
-			LOGINFO("sendCount = %d, buffer = %s", sendCount, buffer);
+			//LOGINFO("sendCount = %d, buffer = %s", sendCount, buffer);
 
 			::ReleaseSemaphore(m_positionBeginSemaphore, 1, NULL);
-			LOGINFO("release end");
+			//LOGINFO("release end");
 			::WaitForSingleObject(m_positionEndSemaphore, INFINITE);
-			LOGINFO("wait end");
+			//LOGINFO("wait end");
 			delete m_memory;
 			std::string sendMemoryMapName = ProcessHelper::sendMemoryMapName(m_mapName, position);
-			LOGINFO("new sendMemoryMapName = %s", sendMemoryMapName.c_str());
+			//LOGINFO("new sendMemoryMapName = %s", sendMemoryMapName.c_str());
 			m_memory = new SharedMemory(sendMemoryMapName);
 			ProcessHelper::resetSendPosition(position);
 			sendPosition = 0;
 			ProcessHelper::addSendPosition(position, length + sizeof(int32_t) * 2);
-			LOGINFO("apply end");
+			//LOGINFO("apply end");
 		}
 	}
 
 	//writememory
-	LOGINFO("write memory, mapName = %s, buffer = %s, sendPosition = %d", m_memory->mapName().c_str(), buffer, sendPosition);
+	//LOGINFO("write memory, mapName = %s, buffer = %s, sendPosition = %d", m_memory->mapName().c_str(), buffer, sendPosition);
 	void* memory = m_memory->writeWithoutLock();
 	ProcessHelper::writeMemory(memory, sendPosition, buffer, length, protocolId);
 	++sendCount;
     //unlock
-	LOGINFO("ReleaseSemaphore");
+	//LOGINFO("ReleaseSemaphore");
 	//if (sendCount % 10000 == 0)
 	//{
 	//	RCSend("sendCount = %d", sendCount);
