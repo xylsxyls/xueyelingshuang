@@ -1,9 +1,16 @@
 #include "SharedMemory.h"
 #include <Windows.h>
+#include <psapi.h>
+#include <shlwapi.h>
+#include <stdio.h>
+#include <TCHAR.H>
+#include <strsafe.h>
 
 SharedMemory::SharedMemory(const std::string& name, uint32_t size):
 m_memoryHandle(nullptr),
 m_memoryPtr(nullptr),
+m_readMemoryPtr(nullptr),
+m_writeMemoryPtr(nullptr),
 m_memoryName(name),
 m_processReadWriteMutex((name + "_lock").c_str())
 {
@@ -35,6 +42,106 @@ uint32_t SharedMemory::size()
 	return mem_info.RegionSize;
 }
 
+std::string SharedMemory::mapName()
+{
+	return m_memoryName;
+}
+
+std::string SharedMemory::mapName(HANDLE memoryHandle, int32_t bufferSize)
+{
+	//BOOL bSuccess = FALSE;
+	TCHAR pszFilename[MAX_PATH + 1];
+	HANDLE hFileMap;
+
+	// Get the file size.
+	DWORD dwFileSizeHi = 0;
+	DWORD dwFileSizeLo = GetFileSize(memoryHandle, &dwFileSizeHi);
+
+	if (dwFileSizeLo == 0 && dwFileSizeHi == 0)
+	{
+		//_tprintf(TEXT("Cannot map a file with a length of zero.\n"));
+		return "";
+	}
+
+	// Create a file mapping object.
+	hFileMap = CreateFileMapping(memoryHandle,
+		NULL,
+		PAGE_READONLY,
+		0,
+		1,
+		NULL);
+
+	if (hFileMap)
+	{
+		// Create a file mapping to get the file name.
+		void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
+
+		if (pMem)
+		{
+			if (GetMappedFileName(GetCurrentProcess(),
+				pMem,
+				pszFilename,
+				MAX_PATH))
+			{
+
+				// Translate path with device name to drive letters.
+				TCHAR* szTemp = new TCHAR[bufferSize];
+				szTemp[0] = '\0';
+
+				if (GetLogicalDriveStrings(bufferSize - 1, szTemp))
+				{
+					TCHAR szName[MAX_PATH];
+					TCHAR szDrive[3] = TEXT(" :");
+					BOOL bFound = FALSE;
+					TCHAR* p = szTemp;
+
+					do
+					{
+						// Copy the drive letter to the template string
+						*szDrive = *p;
+
+						// Look up each device name
+						if (QueryDosDevice(szDrive, szName, MAX_PATH))
+						{
+							size_t uNameLen = _tcslen(szName);
+
+							if (uNameLen < MAX_PATH)
+							{
+								bFound = _tcsnicmp(pszFilename, szName, uNameLen) == 0
+									&& *(pszFilename + uNameLen) == _T('\\');
+
+								if (bFound)
+								{
+									// Reconstruct pszFilename using szTempFile
+									// Replace device path with DOS path
+									TCHAR szTempFile[MAX_PATH];
+									StringCchPrintf(szTempFile,
+										MAX_PATH,
+										TEXT("%s%s"),
+										szDrive,
+										pszFilename + uNameLen);
+									StringCchCopyN(pszFilename, MAX_PATH + 1, szTempFile, _tcslen(szTempFile));
+								}
+							}
+						}
+
+						// Go to the next NULL character.
+						while (*p++);
+					} while (!bFound && *p); // end of string
+				}
+
+				delete[] szTemp;
+			}
+			//bSuccess = TRUE;
+			UnmapViewOfFile(pMem);
+		}
+
+		CloseHandle(hFileMap);
+	}
+	//_tprintf(TEXT("File name is %s\n"), pszFilename);
+	return pszFilename;
+}
+
 void* SharedMemory::memory()
 {
 	return m_memoryPtr;
@@ -43,12 +150,7 @@ void* SharedMemory::memory()
 void SharedMemory::read()
 {
 	m_processReadWriteMutex.read();
-	open(true);
-	if (m_memoryHandle == nullptr)
-	{
-		return;
-	}
-	m_memoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_READ, 0, 0, 0);
+	readWithoutLock();
 }
 
 void SharedMemory::unread()
@@ -67,14 +169,32 @@ void SharedMemory::unwrite()
 	m_processReadWriteMutex.unwrite();
 }
 
+void* SharedMemory::readWithoutLock()
+{
+	if (m_readMemoryPtr != nullptr)
+	{
+		return m_memoryPtr = m_readMemoryPtr;
+	}
+	open(true);
+	if (m_memoryHandle == nullptr)
+	{
+		return nullptr;
+	}
+	return m_memoryPtr = m_readMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_READ, 0, 0, 0);
+}
+
 void* SharedMemory::writeWithoutLock()
 {
+	if (m_writeMemoryPtr != nullptr)
+	{
+		return m_memoryPtr = m_writeMemoryPtr;
+	}
 	open(false);
 	if (m_memoryHandle == nullptr)
 	{
 		return nullptr;
 	}
-	return m_memoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+	return m_memoryPtr = m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 }
 
 bool SharedMemory::trywrite()
@@ -89,17 +209,25 @@ bool SharedMemory::trywrite()
 		m_processReadWriteMutex.unwrite();
 		return false;
 	}
-	m_memoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+	m_memoryPtr = m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 	return true;
 }
 
 void SharedMemory::close()
 {
-	if (m_memoryPtr)
+	if (m_readMemoryPtr)
 	{
-		::UnmapViewOfFile(m_memoryPtr);
-		m_memoryPtr = nullptr;
+		::UnmapViewOfFile(m_readMemoryPtr);
+		m_readMemoryPtr = nullptr;
 	}
+
+	if (m_writeMemoryPtr)
+	{
+		::UnmapViewOfFile(m_writeMemoryPtr);
+		m_writeMemoryPtr = nullptr;
+	}
+
+	m_memoryPtr = nullptr;
 }
 
 void SharedMemory::open(bool bReadOnly)

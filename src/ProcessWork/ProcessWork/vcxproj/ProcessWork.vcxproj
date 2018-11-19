@@ -19,15 +19,18 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\ProcessHelper.h" />
     <ClInclude Include="..\src\ServerReceiveCallback.h" />
     <ClInclude Include="..\src\ProcessServer.h" />
     <ClInclude Include="..\src\ProcessWorkAPI.h" />
     <ClInclude Include="..\src\ProcessWorkMacro.h" />
     <ClInclude Include="..\src\ProcessClient.h" />
+    <ClInclude Include="..\src\WorkParam.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ProcessClient.cpp" />
     <ClCompile Include="..\src\ProcessServer.cpp" />
+    <ClCompile Include="..\src\ProcessHelper.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

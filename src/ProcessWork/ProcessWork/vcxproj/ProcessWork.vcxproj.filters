@@ -16,6 +16,12 @@
     <Filter Include="Task">
       <UniqueIdentifier>{4407886c-c8da-4ebb-89bd-1c0c0b3b466f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ProcessWorkHelper">
+      <UniqueIdentifier>{eb213f20-15ae-4b8b-a346-2e2335664147}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="callback">
+      <UniqueIdentifier>{2eda1451-3732-4934-be57-2ca30ee1175e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ProcessWorkAPI.h">
@@ -30,8 +36,14 @@
     <ClInclude Include="..\src\ProcessServer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ServerReceiveCallback.h">
+    <ClInclude Include="..\src\WorkParam.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ServerReceiveCallback.h">
+      <Filter>callback</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ProcessHelper.h">
+      <Filter>ProcessWorkHelper</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -40,6 +52,9 @@
     </ClCompile>
     <ClCompile Include="..\src\ProcessServer.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ProcessHelper.cpp">
+      <Filter>ProcessWorkHelper</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -5,5 +5,5 @@
 class ProcessWorkAPI ServerReceiveCallback
 {
 public:
-	virtual void receive(char* buffer, int32_t length) = 0;
+	virtual void receive(char* buffer, int32_t length, int32_t protocolId) = 0;
 };

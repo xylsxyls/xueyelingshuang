@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProcessWork", "..\ProcessWo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReadWriteMutex", "..\ReadWriteMutex\ReadWriteMutex\vcxproj\ReadWriteMutex.vcxproj", "{152F782A-7582-4FB5-922F-94EEEA5DDC44}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SharedMemory", "..\SharedMemory\SharedMemory\vcxproj\SharedMemory.vcxproj", "{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -41,6 +43,14 @@ Global
 		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Release|Win32.Build.0 = Release|Win32
 		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Release|x64.ActiveCfg = Release|x64
 		{152F782A-7582-4FB5-922F-94EEEA5DDC44}.Release|x64.Build.0 = Release|x64
+		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Debug|Win32.Build.0 = Debug|Win32
+		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Debug|x64.ActiveCfg = Debug|x64
+		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Debug|x64.Build.0 = Debug|x64
+		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Release|Win32.ActiveCfg = Release|Win32
+		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Release|Win32.Build.0 = Release|Win32
+		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Release|x64.ActiveCfg = Release|x64
+		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

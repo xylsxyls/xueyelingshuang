@@ -1,2 +1,7 @@
 template <class QBase>
 class ControlShow;
+
+template <class SharedMemory>
+class LockFreeQueue;
+
+LockFreeQueue<std::shared_ptr<SharedMemory>>* m_memoryQueue;
