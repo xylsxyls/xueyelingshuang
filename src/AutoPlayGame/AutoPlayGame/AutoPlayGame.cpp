@@ -104,6 +104,7 @@ public:
                     break;
                 }
             }
+            return;
         CHOOSE:
             while (true)
             {
