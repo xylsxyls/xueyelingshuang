@@ -12,11 +12,13 @@ m_memoryPtr(nullptr),
 m_readMemoryPtr(nullptr),
 m_writeMemoryPtr(nullptr),
 m_memoryName(name),
-m_processReadWriteMutex((name + "_lock").c_str())
+m_processReadWriteMutex((name + "_lock").c_str()),
+m_size(0)
 {
 	if (size != 0)
 	{
 		m_memoryHandle = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, name.empty() ? nullptr : name.c_str());
+		m_size = size;
 	}
 }
 
@@ -32,6 +34,7 @@ SharedMemory::~SharedMemory()
 
 uint32_t SharedMemory::size()
 {
+	return m_size;
 	open(true);
 	if (m_memoryHandle == nullptr)
 	{
@@ -228,6 +231,11 @@ void SharedMemory::close()
 	}
 
 	m_memoryPtr = nullptr;
+}
+
+void SharedMemory::clear()
+{
+	::memset(writeWithoutLock(), 0, size());
 }
 
 void SharedMemory::open(bool bReadOnly)

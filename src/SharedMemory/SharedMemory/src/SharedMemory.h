@@ -26,6 +26,7 @@ public:
 	void* writeWithoutLock();
 	bool trywrite();
 	void close();
+	void clear();
 
 public:
 	static std::string mapName(HANDLE memoryHandle, int32_t bufferSize = 1024);
@@ -51,4 +52,5 @@ private:
 	void* m_readMemoryPtr;
 	void* m_writeMemoryPtr;
 	ProcessReadWriteMutex m_processReadWriteMutex;
+	uint32_t m_size;
 };

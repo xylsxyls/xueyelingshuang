@@ -88,7 +88,7 @@ Q_SIGNALS:
     */
     void keyboardAccept(QObject* tar, Qt::Key key);
 
-	/** 窗口已经执行过显示操作发送信号
+	/** 窗口已经执行过显示操作发送信号，使用队列方式连接则是在显示界面之后执行
 	*/
 	void alreadyShown();
 

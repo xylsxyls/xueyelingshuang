@@ -398,6 +398,11 @@ int32_t CSystem::GetSystemVersionNum()
 	return dwVersion;
 }
 
+int32_t CSystem::processPid()
+{
+	return GetCurrentProcessId();
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 

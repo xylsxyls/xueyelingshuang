@@ -7,65 +7,65 @@
     </Filter>
     <Filter Include="头文件">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
     <Filter Include="资源文件">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="ProcessHelper">
-      <UniqueIdentifier>{7ca06f78-a635-495c-ba3b-4cac77faac06}</UniqueIdentifier>
+      <UniqueIdentifier>{c02dc956-6cf7-4b1d-b392-b3513ec20bfa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ReceiveCallback">
+      <UniqueIdentifier>{61f48079-8755-4835-a25a-6e87664a178b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Task">
-      <UniqueIdentifier>{6d0cbf30-f12a-4535-93fc-d34a181a5fb1}</UniqueIdentifier>
+      <UniqueIdentifier>{0c52e382-fda8-4403-88ad-cebd51cda4da}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ProcessServer.h">
+    <ClInclude Include="..\src\ProcessClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ProcessHelper.h">
+    <ClInclude Include="..\src\ProcessClientAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ProcessClientMacro.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ProcessServer\ProcessServer\KeyPackage.h">
       <Filter>ProcessHelper</Filter>
     </ClInclude>
-    <ClInclude Include="KeyPackage.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="..\..\..\ProcessServer\ProcessServer\ProcessHelper.h">
+      <Filter>ProcessHelper</Filter>
     </ClInclude>
-    <ClInclude Include="AssignTask.h">
+    <ClInclude Include="..\src\ReceiveCallback.h">
+      <Filter>ReceiveCallback</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ReceiveTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="CreateDataTask.h">
+    <ClInclude Include="..\src\WorkTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="CreateKeyTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="DeleteDataTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="HandleManager.h">
+    <ClInclude Include="..\..\..\ProcessServer\ProcessServer\HandleManager.h">
       <Filter>ProcessHelper</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ProcessServer.cpp">
+    <ClCompile Include="..\src\ProcessClient.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="ProcessHelper.cpp">
+    <ClCompile Include="..\..\..\ProcessServer\ProcessServer\ProcessHelper.cpp">
       <Filter>ProcessHelper</Filter>
     </ClCompile>
-    <ClCompile Include="AssignTask.cpp">
+    <ClCompile Include="..\src\ReceiveTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="CreateDataTask.cpp">
+    <ClCompile Include="..\src\WorkTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="CreateKeyTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="DeleteDataTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="HandleManager.cpp">
+    <ClCompile Include="..\..\..\ProcessServer\ProcessServer\HandleManager.cpp">
       <Filter>ProcessHelper</Filter>
     </ClCompile>
   </ItemGroup>

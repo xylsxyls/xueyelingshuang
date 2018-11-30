@@ -83,6 +83,8 @@ public:
 	static bool ShellCopy(const char* from, const char* dest);
 	//?获取操作系统版本号
 	static int32_t GetSystemVersionNum();
+	//?获取进程PID
+	static int32_t processPid();
 public:
     static bool ifRedirFrobid;
     static PVOID oldValue;
