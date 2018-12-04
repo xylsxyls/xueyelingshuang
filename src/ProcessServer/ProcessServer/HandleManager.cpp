@@ -2,15 +2,22 @@
 #include "ProcessHelper.h"
 #include "CSystem/CSystemAPI.h"
 
-HandleManager::HandleManager()
+HandleManager::HandleManager():
+m_assignHandle(nullptr),
+m_createDataHandle(nullptr),
+m_createDataEndHandle(nullptr),
+m_createKeyHandle(nullptr),
+m_createKeyEndHandle(nullptr),
+m_deleteDataHandle(nullptr),
+m_deleteDataEndHandle(nullptr)
 {
 	m_assignHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessAssign");
-	m_createDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateData");;
-	m_createDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateDataEnd");;
-	m_createKeyHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateKey");;
-	m_createKeyEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateKeyEnd");;
-	m_deleteDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessDeleteData");;
-	m_deleteDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessDeleteDataEnd");;
+	m_createDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateData");
+	m_createDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateDataEnd");
+	m_createKeyHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateKey");
+	m_createKeyEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateKeyEnd");
+	m_deleteDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessDeleteData");
+	m_deleteDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessDeleteDataEnd");
 }
 
 HandleManager::~HandleManager()
@@ -44,11 +51,19 @@ HandleManager::~HandleManager()
 		::CloseHandle(m_deleteDataEndHandle);
 	}
 
-	for (auto itClientHandle = m_clientKeyMap.begin(); itClientHandle != m_clientKeyMap.end(); ++itClientHandle)
+	for (auto itClientKeyHandle = m_clientKeyMap.begin(); itClientKeyHandle != m_clientKeyMap.end(); ++itClientKeyHandle)
 	{
-		if (itClientHandle->second)
+		if (itClientKeyHandle->second)
 		{
-			::CloseHandle(itClientHandle->second);
+			::CloseHandle(itClientKeyHandle->second);
+		}
+	}
+
+	for (auto itClientKeyEndHandle = m_clientKeyEndMap.begin(); itClientKeyEndHandle != m_clientKeyEndMap.end(); ++itClientKeyEndHandle)
+	{
+		if (itClientKeyEndHandle->second)
+		{
+			::CloseHandle(itClientKeyEndHandle->second);
 		}
 	}
 }

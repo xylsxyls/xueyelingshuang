@@ -25,7 +25,10 @@ void CreateDataTask::DoTask()
 		{
 			std::unique_lock<std::mutex> mu(m_server->m_dataMutex);
 			++m_dataIndex;
-			m_server->m_dataMap[m_dataIndex] = ProcessHelper::createDataMemory(m_dataIndex);
+			SharedMemory* data = ProcessHelper::createDataMemory(m_dataIndex);
+			ProcessHelper::clearCalcData(data);
+			m_server->m_dataMap[m_dataIndex] = data;
+			ProcessHelper::updateDataPosition(m_server->m_position);
 		}
 		//创建完成
 		::ReleaseSemaphore(HandleManager::instance().createDataEndHandle(), 1, nullptr);

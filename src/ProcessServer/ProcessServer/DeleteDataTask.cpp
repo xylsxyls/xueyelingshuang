@@ -21,7 +21,7 @@ void DeleteDataTask::DoTask()
 		{
 			return;
 		}
-		int32_t deleteIndex = ProcessHelper::deleteDataIndex(m_server->m_position->readWithoutLock());
+		int32_t deleteIndex = ProcessHelper::deleteDataIndex(m_server->m_position);
 		SharedMemory* deleteMemory = nullptr;
 		{
 			std::unique_lock<std::mutex> mu(m_server->m_dataMutex);

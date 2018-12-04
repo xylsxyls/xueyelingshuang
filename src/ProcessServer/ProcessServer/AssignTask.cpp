@@ -3,6 +3,7 @@
 #include "ProcessHelper.h"
 #include "HandleManager.h"
 #include "SharedMemory/SharedMemoryAPI.h"
+#include "LogManager/LogManagerAPI.h"
 
 AssignTask::AssignTask():
 m_server(nullptr),
@@ -34,9 +35,20 @@ void AssignTask::DoTask()
 		{
 			return;
 		}
-		if (m_readKeyPosition == ProcessHelper::keyMemoryLength() - sizeof(KeyPackage))
+		m_readKeyPosition += sizeof(KeyPackage);
+		if (m_readKeyPosition == ProcessHelper::keyMemoryLength() - sizeof(int32_t))
 		{
 			m_readKeyPosition = 0;
+			SharedMemory* key = nullptr;
+			if (!m_server->m_keyList.pop(&key))
+			{
+				LOGERROR("pop error");
+			}
+			if (key->mapName() != m_server->m_key->mapName())
+			{
+				LOGERROR("key->mapName() != m_server->m_key->mapName()");
+			}
+			delete key;
 			delete m_server->m_key;
 			m_server->m_key = new SharedMemory(ProcessHelper::keyMapName(++m_readKeyIndex));
 		}

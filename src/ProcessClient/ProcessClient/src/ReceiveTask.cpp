@@ -27,6 +27,7 @@ void ReceiveTask::DoTask()
 		//读取钥匙
 		ProcessHelper::changeToCurrentReadKey(&(m_client->m_readKey), m_client->m_position);
 		KeyPackage keyPackage = ProcessHelper::readKey(m_client->m_position, m_client->m_readKey);
+		//add失败则进入下一个钥匙内存
 		ProcessHelper::addReadKey(m_client->m_position);
 		//通知服务端读取完毕
 		::ReleaseSemaphore(HandleManager::instance().clientReadKeyEndHandle(), 1, nullptr);

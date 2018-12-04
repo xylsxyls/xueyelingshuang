@@ -25,12 +25,10 @@ m_sendPid(0)
 	m_deleteThreadId = CTaskThreadManager::Instance().Init();
 	m_positionMutex = new ProcessReadWriteMutex(ProcessHelper::positionMutexName());
 	m_position = new SharedMemory(ProcessHelper::positionMapName());
-	void* positionPtr = m_position->writeWithoutLock();
-	m_data = new SharedMemory(ProcessHelper::dataMapName(positionPtr));
-	void* p = m_data->writeWithoutLock();
-	m_key = new SharedMemory(ProcessHelper::keyMapName(positionPtr));
-	m_readData = new SharedMemory(ProcessHelper::dataMapName(positionPtr));
-	m_readKey = new SharedMemory(ProcessHelper::keyMapName(positionPtr));
+	m_data = new SharedMemory(ProcessHelper::dataMapName(m_position));
+	m_key = new SharedMemory(ProcessHelper::keyMapName(m_position));
+	m_readData = new SharedMemory(ProcessHelper::dataMapName(m_position));
+	m_readKey = new SharedMemory(ProcessHelper::keyMapName(m_position));
 }
 
 ProcessClient& ProcessClient::instance()
@@ -77,12 +75,12 @@ void ProcessClient::send(char* buffer, int32_t length, int32_t pid, bool isOrder
 		ProcessHelper::addDataAlreadyUsed(m_data, length);
 		data = m_data->writeWithoutLock();
 
-		sendIndex = ProcessHelper::dataIndex(m_position->writeWithoutLock());
-		sendBegin = ProcessHelper::dataPosition(m_position->writeWithoutLock()) - length;
+		sendIndex = ProcessHelper::dataIndex(m_position);
+		sendBegin = ProcessHelper::dataPosition(m_position) - length;
 	}
 
 	//¿½±´
-	::memcpy(data, buffer, length);
+	::memcpy((char*)data + sendBegin, buffer, length);
 
 	{
 		WriteLock writeLock(*m_positionMutex);
@@ -110,7 +108,7 @@ void ProcessClient::send(char* buffer, int32_t length, int32_t pid, bool isOrder
 		keyPackage.m_index = sendIndex;
 		keyPackage.m_begin = sendBegin;
 		//Ð´ÈëÔ¿³×
-		ProcessHelper::writeKey(m_key, keyPackage);
+		ProcessHelper::writeKey(m_key, m_position, keyPackage);
 	}
 	
 	//Í¨Öª

@@ -21,7 +21,10 @@ void CreateKeyTask::DoTask()
 		{
 			return;
 		}
-		m_server->m_keyList.push(ProcessHelper::createKeyMemory(++m_keyIndex));
+		SharedMemory* key = ProcessHelper::createKeyMemory(++m_keyIndex);
+		ProcessHelper::clearCalcKey(key);
+		m_server->m_keyList.push(key);
+		ProcessHelper::updateKeyPosition(m_server->m_position);
 		//创建完成
 		::ReleaseSemaphore(HandleManager::instance().createKeyEndHandle(), 1, nullptr);
 	}

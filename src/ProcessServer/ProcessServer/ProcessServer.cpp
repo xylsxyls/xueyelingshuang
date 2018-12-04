@@ -9,6 +9,7 @@
 #include "CreateDataTask.h"
 #include "CreateKeyTask.h"
 #include "DeleteDataTask.h"
+#include "HandleManager.h"
 
 ProcessServer::ProcessServer():
 m_position(nullptr),
@@ -19,14 +20,20 @@ m_createDataThreadId(0),
 m_createKeyThreadId(0),
 m_deleteDataThreadId(0)
 {
+	HandleManager::instance();
 	m_assignThreadId = CTaskThreadManager::Instance().Init();
 	m_createDataThreadId = CTaskThreadManager::Instance().Init();
 	m_createKeyThreadId = CTaskThreadManager::Instance().Init();
 	m_deleteDataThreadId = CTaskThreadManager::Instance().Init();
 	m_position = new SharedMemory(ProcessHelper::positionMapName(), ProcessHelper::positionLength());
 	m_position->clear();
-	m_data = new SharedMemory(ProcessHelper::dataMapName(m_position->writeWithoutLock()), ProcessHelper::dataMemoryLength());
-	m_key = new SharedMemory(ProcessHelper::keyMapName(m_position->writeWithoutLock()), ProcessHelper::keyMemoryLength());
+	m_data = new SharedMemory(ProcessHelper::dataMapName(m_position), ProcessHelper::dataMemoryLength());
+	ProcessHelper::clearCalcData(m_data);
+	m_dataMap[0] = m_data;
+	m_key = new SharedMemory(ProcessHelper::keyMapName(m_position), ProcessHelper::keyMemoryLength());
+	ProcessHelper::clearCalcKey(m_key);
+	m_keyList.push(m_key);
+	m_key = new SharedMemory(ProcessHelper::keyMapName(m_position));
 }
 
 void ProcessServer::listen()

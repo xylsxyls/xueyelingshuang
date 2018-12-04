@@ -11,21 +11,21 @@ public:
 	//位置内存名
 	static std::string positionMapName();
 	//数据内存名
-	static std::string dataMapName(void* position);
+	static std::string dataMapName(SharedMemory* position);
 	//数据内存名
 	static std::string dataMapName(int32_t index);
 	//钥匙内存名
-	static std::string keyMapName(void* position);
+	static std::string keyMapName(SharedMemory* position);
 	//钥匙内存名
 	static std::string keyMapName(int32_t index);
 	//当前数据写入的内存索引值
-	static int32_t& dataIndex(void* position);
+	static int32_t& dataIndex(SharedMemory* position);
 	//当前数据在内存中的写入位置
-	static int32_t& dataPosition(void* position);
+	static int32_t& dataPosition(SharedMemory* position);
 	//钥匙写入的内存索引值
-	static int32_t& keyIndex(void* position);
+	static int32_t& keyIndex(SharedMemory* position);
 	//钥匙在内存中的写入位置
-	static int32_t& keyPosition(void* position);
+	static int32_t& keyPosition(SharedMemory* position);
 	//位置内存长度
 	static int32_t positionLength();
 	//数据内存长度
@@ -41,7 +41,7 @@ public:
 	//创建钥匙内存
 	static SharedMemory* createKeyMemory(int32_t index);
 	//获取删除数据内存索引值
-	static int32_t& deleteDataIndex(void* position);
+	static int32_t& deleteDataIndex(SharedMemory* position);
 	//向后推移数据写入位置
 	static bool addDataPosition(SharedMemory* data, int32_t length);
 	//修改当前共享内存已使用大小
@@ -51,7 +51,7 @@ public:
 	//向后推移钥匙写入位置
 	static bool addKeyPosition(SharedMemory* key);
 	//写入钥匙
-	static void writeKey(SharedMemory* key, const KeyPackage& keyPackage);
+	static void writeKey(SharedMemory* key, SharedMemory* position, const KeyPackage& keyPackage);
 	//等待信号量最大值
 	static int32_t semMaxCount();
 	//读取钥匙
@@ -71,17 +71,25 @@ public:
 	//客户端读取完毕信号量名字
 	static std::string clientReadKeyEndName(int32_t pid);
 	//读取进度索引值
-	static int32_t& readKeyIndex(void* position);
+	static int32_t& readKeyIndex(SharedMemory* position);
 	//读取进度位置
-	static int32_t& readKeyPosition(void* position);
+	static int32_t& readKeyPosition(SharedMemory* position);
 	//切换到当前读取钥匙内存
 	static void changeToCurrentReadKey(SharedMemory** readKey, SharedMemory* position);
 	//改变读取钥匙位置
-	static void addReadKey(SharedMemory* position);
+	static bool addReadKey(SharedMemory* position);
 	//切换到当前读取数据内存
 	static void changeToCurrentReadData(SharedMemory** readData, int32_t readIndex);
 	//读取钥匙内存名
-	static std::string readKeyMapName(void* position);
+	static std::string readKeyMapName(SharedMemory* position);
 	//读取数据内存名
-	static std::string readDataMapName(void* position);
+	//static std::string readDataMapName(SharedMemory* position);
+	//初始化数据使用长度
+	static void clearCalcData(SharedMemory* data);
+	//初始化钥匙使用长度
+	static void clearCalcKey(SharedMemory* key);
+	//更新数据写入内存索引值和重置数据写入位置
+	static void updateDataPosition(SharedMemory* position);
+	//更新钥匙写入内存索引值和重置钥匙写入位置
+	static void updateKeyPosition(SharedMemory* position);
 };
