@@ -7,6 +7,7 @@
 #include <io.h>
 #include <fstream>
 #include <conio.h>
+#include <tlhelp32.h>
 #include <tchar.h>
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
@@ -398,9 +399,28 @@ int32_t CSystem::GetSystemVersionNum()
 	return dwVersion;
 }
 
-int32_t CSystem::processPid()
+int32_t CSystem::processPid(const std::string processName)
 {
-	return GetCurrentProcessId();
+	if (processName.empty())
+	{
+		return GetCurrentProcessId();
+	}
+	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (INVALID_HANDLE_VALUE == hSnapshot)
+	{
+		return 0;
+	}
+	PROCESSENTRY32 pe = { sizeof(pe) };
+	for (BOOL ret = Process32First(hSnapshot, &pe); ret; ret = ::Process32Next(hSnapshot, &pe))
+	{
+		if (std::string(pe.szExeFile) == processName)
+		{
+			::CloseHandle(hSnapshot);
+			return pe.th32ProcessID;
+		}
+	}
+	::CloseHandle(hSnapshot);
+	return 0;
 }
 
 bool CSystem::ifRedirFrobid = false;

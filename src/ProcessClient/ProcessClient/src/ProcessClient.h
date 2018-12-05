@@ -25,10 +25,17 @@ public:
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
 	@param [in] pid 目标进程id
-	@param [in] isOrdered 是否有序
 	@param [in] protocolId 协议号
 	*/
-	void send(char* buffer, int32_t length, int32_t pid, bool isOrdered = true, int32_t protocolId = 1);
+	void send(const char* buffer, int32_t length, int32_t pid, int32_t protocolId = 1);
+
+	/** 向服务端发送字符串，有序收到单线程，无序收到多线程
+	@param [in] buffer 字符串地址
+	@param [in] length 长度
+	@param [in] processName 目标进程名
+	@param [in] protocolId 协议号
+	*/
+	void send(const char* buffer, int32_t length, const std::string processName, int32_t protocolId = 1);
 
 private:
 	SharedMemory* m_position;

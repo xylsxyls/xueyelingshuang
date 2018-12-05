@@ -47,7 +47,7 @@ void ProcessClient::initReceive(ReceiveCallback* callback)
 	CTaskThreadManager::Instance().GetThreadInterface(m_receiveThreadId)->PostTask(spWorkTask);
 }
 
-void ProcessClient::send(char* buffer, int32_t length, int32_t pid, bool isOrdered, int32_t protocolId)
+void ProcessClient::send(const char* buffer, int32_t length, int32_t pid, int32_t protocolId)
 {
 	void* data = nullptr;
 	int32_t sendIndex = 0;
@@ -113,4 +113,9 @@ void ProcessClient::send(char* buffer, int32_t length, int32_t pid, bool isOrder
 	
 	//֪ͨ
 	::ReleaseSemaphore(HandleManager::instance().assignHandle(), 1, nullptr);
+}
+
+void ProcessClient::send(const char* buffer, int32_t length, const std::string processName, int32_t protocolId)
+{
+	send(buffer, length, CSystem::processPid(processName), protocolId);
 }
