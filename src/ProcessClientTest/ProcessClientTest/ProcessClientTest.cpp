@@ -56,7 +56,7 @@ int32_t main()
 	Sleep(8000);
 	//RCSend("%s.pid = %d", CGetPath::GetCurrentExeName().c_str(), CSystem::processPid());
 
-	int sendTimes = 10;
+	int sendTimes = 1000000;
 	while (sendTimes-- != 0)
 	{
 		std::string exeName = CStringManager::split(CGetPath::GetCurrentExeName(), "_")[0];
