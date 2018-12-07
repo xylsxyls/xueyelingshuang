@@ -142,6 +142,10 @@ void SubAccountPanel::paintEvent(QPaintEvent *e)
 bool SubAccountPanel::eventFilter(QObject *obj, QEvent *e)
 {
     bool res = QWidget::eventFilter(obj, e);
+	if (obj == nullptr || e == nullptr)
+	{
+		return res;
+	}
 
     if(obj == this)
     {

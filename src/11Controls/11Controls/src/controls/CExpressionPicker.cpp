@@ -174,6 +174,10 @@ void CExpressionPicker::mouseMoveEvent(QMouseEvent *e)
 bool CExpressionPicker::eventFilter(QObject *obj, QEvent *e)
 {
     bool res = QTableView::eventFilter(obj,e);
+	if (obj == nullptr || e == nullptr)
+	{
+		return res;
+	}
     if(obj == mPreView)
     {
         if(e->type() == QEvent::MouseMove)

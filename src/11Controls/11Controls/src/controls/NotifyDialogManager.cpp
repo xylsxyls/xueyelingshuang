@@ -86,7 +86,7 @@ void NotifyDialogManager::showDialog(DialogParam& param)
         return;
     }
 
-    notifyDialogPtr->setWindowResultAddr(new DialogResult);
+	notifyDialogPtr->setWindowResultAddr(new DialogResult(ERROR_RESULT));
 	notifyDialogPtr->setUserResultPtr(new qint32(param.m_userResult));
 	notifyDialogPtr->setTimeRest(param.m_timeOut);
 	notifyDialogPtr->setTimeRestVisible(param.m_isCountDownVisible);

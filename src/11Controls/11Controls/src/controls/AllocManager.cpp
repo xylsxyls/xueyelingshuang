@@ -63,7 +63,8 @@ void AllocManager::removeByDialogId(quint64 dialogId)
         m_mapDialogPtrToDialogId.erase(m_mapDialogPtrToDialogId.find(dialogPtr));
         m_mapDialogIdToDialogType.erase(m_mapDialogIdToDialogType.find(dialogId));
     }
-    delete dialogPtr;
+    //delete dialogPtr;
+	dialogPtr->deleteLater();
 }
 
 void AllocManager::removeByUserId(quint64 userId)

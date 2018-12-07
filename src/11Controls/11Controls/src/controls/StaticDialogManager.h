@@ -20,6 +20,10 @@ public:
     */
     StaticDialogManager();
 
+	/** 析构函数
+	*/
+	~StaticDialogManager();
+
 public:
     /** 弹出静态框
     @param [in] type 静态框类型

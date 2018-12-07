@@ -171,12 +171,11 @@ void DialogBase::keyPressEvent(QKeyEvent* eve)
 
 bool DialogBase::eventFilter(QObject* tar, QEvent* eve)
 {
+	bool res = COriginalDialog::eventFilter(tar, eve);
     if (tar == nullptr || eve == nullptr)
     {
-        return true;
+		return res;
     }
-
-    bool res = COriginalDialog::eventFilter(tar, eve);
     if (eve->type() == QEvent::KeyPress)
     {
         QKeyEvent* keyEvent = (QKeyEvent*)eve;

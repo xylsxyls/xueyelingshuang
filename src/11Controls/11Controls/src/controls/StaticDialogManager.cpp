@@ -8,6 +8,11 @@ m_accountManagerDialogId(0)
 
 }
 
+StaticDialogManager::~StaticDialogManager()
+{
+	AllocManager::instance().removeByDialogId(m_accountManagerDialogId);
+}
+
 void StaticDialogManager::popStaticDialog(DialogParam& param)
 {
     PopDialog* popDialogPtr = nullptr;

@@ -617,7 +617,7 @@ QString CExternalTextEdit::parseShortcutToHTMLExpression(QString text) const
 	for(int i = 0 ; i < findedShortcutMap.keys().count(); i++)
 	{
 		QString shortcut = findedShortcutMap.keys()[i];
-		QString img = "<div style='position:relative; display:inline;background-color:rgba(0,0,0,0); top:3px;'><img src='file:///" + mMapedExpression[shortcut] + QString("' width='%1' height='%2' style='top:3px;' /></div>").arg(mExpressionSize).arg(mExpressionSize);
+		QString img = "<div style='position:relative; display:inline;background-color:rgba(0,0,0,0); top:5px;'><img src='file:///" + mMapedExpression[shortcut] + QString("' width='%1' height='%2' style='top:3px;' /></div>").arg(mExpressionSize).arg(mExpressionSize);
 		t_text.replace(shortcut, img);
 	}
 

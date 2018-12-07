@@ -120,7 +120,7 @@ void AccountDialog::setIgnoreDown(DialogResult result)
 bool AccountDialog::eventFilter(QObject* tar, QEvent* eve)
 {
 	bool result = BoxDialogBase::eventFilter(tar, eve);
-    if (!check())
+	if (!check() || tar == nullptr || eve == nullptr)
     {
         return result;
     }
