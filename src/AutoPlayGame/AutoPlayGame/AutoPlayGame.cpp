@@ -91,17 +91,17 @@ public:
 
                 if (ScreenScript::FindClick("EndGame.png"))
                 {
-                    break;
+                    return;
                 }
 
                 if (ScreenScript::FindClick("BackHome.png"))
                 {
-                    break;
+                    return;
                 }
 
                 if (ScreenScript::FindClick("PlayAgain.png"))
                 {
-                    break;
+                    return;
                 }
             }
             return;
