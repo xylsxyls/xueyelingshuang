@@ -28,7 +28,7 @@ void NetServer::listen(int32_t port, ServerCallback* callback)
 	m_libuvTcp->serverLoop();
 }
 
-void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
+void NetServer::send(const char* buffer, int32_t length, int32_t protocolId, uv_tcp_t* dest)
 {
 	if (m_libuvTcp == nullptr || dest == nullptr)
 	{
@@ -49,7 +49,7 @@ void NetServer::send(char* buffer, int32_t length, uv_tcp_t* dest)
 	std::shared_ptr<SendTask> spTask;
 	SendTask* task = new SendTask;
 	task->setLibuvTcp(m_libuvTcp);
-	task->setParam(m_libuvTcp->getText(dest, buffer, length));
+	task->setParam(m_libuvTcp->getText(dest, buffer, length, protocolId));
 	spTask.reset(task);
 	NetWorkThreadManager::instance().postSendTaskToThread(threadId, spTask);
 }

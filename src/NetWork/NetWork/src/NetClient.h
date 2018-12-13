@@ -14,7 +14,7 @@ public:
 
 public:
 	void connect(const char* ip, int32_t port, ClientCallback* callback);
-	void send(char* buffer, int32_t length, uv_tcp_t* dest = nullptr);
+	void send(const char* buffer, int32_t length, int32_t protocolId = 1, uv_tcp_t* dest = nullptr);
 	void setServer(uv_tcp_t* server);
 
 protected:

@@ -149,10 +149,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="NetServerManager.h" />
+    <ClInclude Include="ProtocolId.h" />
+    <ClInclude Include="ServerManagerProcessReceive.h" />
     <ClInclude Include="ServerManagerReceive.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetServerManager.cpp" />
+    <ClCompile Include="ServerManagerProcessReceive.cpp" />
     <ClCompile Include="ServerManagerReceive.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

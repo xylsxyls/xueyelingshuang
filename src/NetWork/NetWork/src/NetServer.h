@@ -20,7 +20,7 @@ public:
 public:
 	void listen(int32_t port, ServerCallback* callback);
 
-	void send(char* buffer, int32_t length, uv_tcp_t* dest);
+	void send(const char* buffer, int32_t length, int32_t protocolId, uv_tcp_t* dest);
 
 public:
 	ReadWriteMutex* clientPtrToThreadIdMutex();

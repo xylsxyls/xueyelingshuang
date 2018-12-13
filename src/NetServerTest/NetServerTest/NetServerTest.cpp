@@ -19,8 +19,10 @@ public:
 	ServerReceiveCallback() :m_x(0){}
 
 public:
-	virtual void receive(uv_tcp_t* client, char* buffer, int32_t length)
+	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length, int32_t protocolId)
 	{
+		//RCSend("client = %d, buffer = %s, length = %d, protocolId = %d", sender, buffer, length, protocolId);
+		//m_netServer->send("1212434", 7, 2, sender);
 		return;
 		++calc;
 		if (calc % 200000 == 0)
@@ -86,7 +88,7 @@ public:
 		RCSend("begin = %d\n", ::GetTickCount());
 		while (count-- != 0)
 		{
-			m_netServer->send("121243", 6, client);
+			m_netServer->send("121243", 6, 1, client);
 		}
 		RCSend("time = %d", ::GetTickCount() - begin);
 		return;

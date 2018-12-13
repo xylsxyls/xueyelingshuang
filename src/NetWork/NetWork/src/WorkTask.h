@@ -27,5 +27,6 @@ private:
 	uv_tcp_t* m_client;
 	char* m_buffer;
 	int32_t m_length;
+	int32_t m_protocolId;
 	CallbackBase* m_callback;
 };

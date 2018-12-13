@@ -7,5 +7,5 @@ typedef struct uv_tcp_s uv_tcp_t;
 class NetWorkAPI CallbackBase
 {
 public:
-	virtual void receive(uv_tcp_t* client, char* buffer, int32_t length);
+	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length, int32_t protocolId);
 };

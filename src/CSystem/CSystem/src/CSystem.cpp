@@ -423,6 +423,29 @@ int32_t CSystem::processPid(const std::string processName)
 	return 0;
 }
 
+std::string CSystem::processName(int32_t pid)
+{
+	std::string result;
+	PROCESSENTRY32 pe32 = { 0 };
+	HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (snapshot != INVALID_HANDLE_VALUE)
+	{
+		pe32.dwSize = sizeof(PROCESSENTRY32);
+		if (::Process32First(snapshot, &pe32))
+		{
+			do{
+				if (pe32.th32ProcessID == pid)
+				{
+					result = pe32.szExeFile;
+					break;
+				}
+			} while (::Process32Next(snapshot, &pe32));
+		}
+		::CloseHandle(snapshot);
+	}
+	return result;
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 

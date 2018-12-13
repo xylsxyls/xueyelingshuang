@@ -149,9 +149,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="LogTestServer.h" />
+    <ClInclude Include="LogTestServerReceive.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LogTestServer.cpp" />
+    <ClCompile Include="LogTestServerReceive.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

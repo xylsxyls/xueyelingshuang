@@ -624,6 +624,15 @@
     <ClCompile Include="GeneratedFiles\Release\moc_TextEdit.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="src\controls\BackgroundLabel.cpp">
+      <Filter>controls\QtControls\Label</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_BackgroundLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_BackgroundLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\controls\COriginalWebView.h">
@@ -901,6 +910,9 @@
     </CustomBuild>
     <CustomBuild Include="src\controls\TextEdit.h">
       <Filter>controls\QtControls\TextEdit</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\BackgroundLabel.h">
+      <Filter>controls\QtControls\Label</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

@@ -5,8 +5,6 @@ VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProcessServer", "ProcessServer\ProcessServer.vcxproj", "{75281B86-B4AF-499C-A5AF-5F1BC7641ADD}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SharedMemory", "..\SharedMemory\SharedMemory\vcxproj\SharedMemory.vcxproj", "{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -23,14 +21,6 @@ Global
 		{75281B86-B4AF-499C-A5AF-5F1BC7641ADD}.Release|Win32.Build.0 = Release|Win32
 		{75281B86-B4AF-499C-A5AF-5F1BC7641ADD}.Release|x64.ActiveCfg = Release|x64
 		{75281B86-B4AF-499C-A5AF-5F1BC7641ADD}.Release|x64.Build.0 = Release|x64
-		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Debug|Win32.ActiveCfg = Debug|Win32
-		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Debug|Win32.Build.0 = Debug|Win32
-		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Debug|x64.ActiveCfg = Debug|x64
-		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Debug|x64.Build.0 = Debug|x64
-		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Release|Win32.ActiveCfg = Release|Win32
-		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Release|Win32.Build.0 = Release|Win32
-		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Release|x64.ActiveCfg = Release|x64
-		{D7817DA3-4450-4877-9EC4-B2811D0F8AAB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

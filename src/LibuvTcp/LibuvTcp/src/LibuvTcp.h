@@ -32,7 +32,7 @@ public:
 
 	void send(char* text);
 
-	char* getText(uv_tcp_t* dest, char* buffer, int32_t length);
+	char* getText(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t protocolId);
 
 public:
 	ReadWriteMutex* clientPtrToLoopMutex();

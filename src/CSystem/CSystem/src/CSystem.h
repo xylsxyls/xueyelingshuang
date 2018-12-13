@@ -85,6 +85,8 @@ public:
 	static int32_t GetSystemVersionNum();
 	//?获取进程PID
 	static int32_t processPid(const std::string processName = "");
+	//?获取进程名
+	static std::string processName(int32_t pid);
 public:
     static bool ifRedirFrobid;
     static PVOID oldValue;

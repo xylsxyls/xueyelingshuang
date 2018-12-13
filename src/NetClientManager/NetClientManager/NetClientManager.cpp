@@ -10,7 +10,7 @@ int32_t main()
 {
 	ClientManagerReceive clientManagerReceive;
 	NetClient client;
-	client.connect("127.0.0.1", 5203, &clientManagerReceive);
+	client.connect("10.1.22.66", 5203, &clientManagerReceive);
 	ProcessReceive processReceive;
 	processReceive.setNetClient(&client);
 	ProcessClient::instance().initReceive(&processReceive);

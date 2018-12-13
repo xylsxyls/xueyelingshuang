@@ -18,9 +18,15 @@
     <ClInclude Include="LogTestServer.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="LogTestServerReceive.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LogTestServer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LogTestServerReceive.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

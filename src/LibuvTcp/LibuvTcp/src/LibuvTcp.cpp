@@ -357,12 +357,13 @@ void LibuvTcp::send(char* text)
 	}
 }
 
-char* LibuvTcp::getText(uv_tcp_t* dest, char* buffer, int32_t length)
+char* LibuvTcp::getText(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t protocolId)
 {
-	char* text = (char*)::malloc(length + 8);
+	char* text = (char*)::malloc(length + 12);
 	*(int32_t*)text = (int32_t)dest;
-	*((int32_t*)(text + 4)) = length;
-	::memcpy(text + 8, buffer, length);
+	*((int32_t*)(text + 4)) = length + 4;
+	*((int32_t*)(text + 8)) = protocolId;
+	::memcpy(text + 12, buffer, length);
 	return text;
 }
 
