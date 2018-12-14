@@ -1,7 +1,6 @@
 #include "ServerManagerReceive.h"
 #include "ProtocolId.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
-#include "CStringManager/CStringManagerAPI.h"
 #include "ProcessClient/ProcessClientAPI.h"
 #include <mutex>
 

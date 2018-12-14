@@ -119,3 +119,10 @@ void ProcessClient::send(const char* buffer, int32_t length, const std::string p
 {
 	send(buffer, length, CSystem::processPid(processName), protocolId);
 }
+
+void ProcessClient::uninit()
+{
+	CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
+	CTaskThreadManager::Instance().Uninit(m_workThreadId);
+	CTaskThreadManager::Instance().Uninit(m_deleteThreadId);
+}

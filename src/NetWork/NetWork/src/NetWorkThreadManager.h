@@ -11,6 +11,8 @@ class NetWorkThreadManager
 private:
 	NetWorkThreadManager();
 
+	~NetWorkThreadManager();
+
 public:
 	/** 单一实例
 	@return 返回单一实例

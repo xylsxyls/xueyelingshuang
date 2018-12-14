@@ -6,6 +6,19 @@
 #include "NetWork/NetWorkAPI.h"
 #include "ClientManagerReceive.h"
 
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		ProcessClient::instance().uninit();
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
 int32_t main()
 {
 	ClientManagerReceive clientManagerReceive;

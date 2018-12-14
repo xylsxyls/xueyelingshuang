@@ -8,6 +8,16 @@ m_sendThreadId(0)
 
 }
 
+NetWorkThreadManager::~NetWorkThreadManager()
+{
+	int32_t index = -1;
+	while (index++ != m_vecWorkThreadId.size() - 1)
+	{
+		CTaskThreadManager::Instance().Uninit(m_vecWorkThreadId[index]);
+	}
+	CTaskThreadManager::Instance().Uninit(m_sendThreadId);
+}
+
 NetWorkThreadManager& NetWorkThreadManager::instance()
 {
 	static NetWorkThreadManager netWorkThreadManager;

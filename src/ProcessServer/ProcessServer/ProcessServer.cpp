@@ -63,10 +63,37 @@ void ProcessServer::listen()
 	CTaskThreadManager::Instance().GetThreadInterface(m_assignThreadId)->PostTask(spAssignTask);
 }
 
+void ProcessServer::uninit()
+{
+	CTaskThreadManager::Instance().Uninit(m_assignThreadId);
+	CTaskThreadManager::Instance().Uninit(m_createDataThreadId);
+	CTaskThreadManager::Instance().Uninit(m_createKeyThreadId);
+	CTaskThreadManager::Instance().Uninit(m_deleteDataThreadId);
+}
+
+ProcessServer* g_server = nullptr;
+
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		if (g_server != nullptr)
+		{
+			g_server->uninit();
+			delete g_server;
+		}
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
 int32_t main()
 {
-	ProcessServer server;
-	server.listen();
+	g_server = new ProcessServer;
+	g_server->listen();
 	getchar();
 	return 0;
 }

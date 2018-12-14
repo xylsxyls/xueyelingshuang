@@ -12,4 +12,6 @@ public:
 
 public:
 	void send(char* buffer, int32_t length);
+
+	void uninit();
 };

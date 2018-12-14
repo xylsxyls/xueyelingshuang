@@ -37,6 +37,10 @@ public:
 	*/
 	void send(const char* buffer, int32_t length, const std::string processName, int32_t protocolId = 1);
 
+	/** ÍË³öÏß³Ì
+	*/
+	void uninit();
+
 private:
 	SharedMemory* m_position;
 	SharedMemory* m_data;

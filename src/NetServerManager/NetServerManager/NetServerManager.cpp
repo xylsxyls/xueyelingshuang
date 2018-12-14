@@ -1,10 +1,22 @@
 #include "NetServerManager.h"
 #include <stdint.h>
 #include <stdio.h>
-#include "NetWork/NetWorkAPI.h"
 #include "ServerManagerReceive.h"
 #include "ServerManagerProcessReceive.h"
 #include <mutex>
+
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		ProcessClient::instance().uninit();
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {

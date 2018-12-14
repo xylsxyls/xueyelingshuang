@@ -16,7 +16,10 @@ class ProcessServer
 public:
 	ProcessServer();
 
+public:
 	void listen();
+
+	void uninit();
 
 private:
 	SharedMemory* m_position;

@@ -14,6 +14,6 @@ void RunLoopTask::setLoop(uv_loop_t* loop)
 
 void RunLoopTask::DoTask()
 {
-	int res = uv_run(m_loop, UV_RUN_DEFAULT);
+	int32_t res = uv_run(m_loop, UV_RUN_DEFAULT);
 	printf("loop end, res = %d\n", res);
 }

@@ -15,16 +15,16 @@ goto DllRelyTest_end
 :DllRelyTest_end
 
 ::--------------------------------------------------------------------
-set NetWork_dlllib=lib
-set NetWork_bit=%1
-set NetWork_debugRelease=%3
-set NetWork_allSame=%4
-if "%4" == "same" (goto NetWork_callSame) else (goto NetWork_callSimple)
-:NetWork_callSame
-set NetWork_dlllib=%2
-call "%CLOUD_REBUILD%" NetWork %NetWork_bit% %NetWork_dlllib% %NetWork_debugRelease% %NetWork_allSame%
-goto NetWork_end
-:NetWork_callSimple
-call "%CLOUD_REBUILD%" NetWork %NetWork_bit% %NetWork_dlllib% %NetWork_debugRelease%
-goto NetWork_end
-:NetWork_end
+set ProcessClient_dlllib=lib
+set ProcessClient_bit=%1
+set ProcessClient_debugRelease=%3
+set ProcessClient_allSame=%4
+if "%4" == "same" (goto ProcessClient_callSame) else (goto ProcessClient_callSimple)
+:ProcessClient_callSame
+set ProcessClient_dlllib=%2
+call "%CLOUD_REBUILD%" ProcessClient %ProcessClient_bit% %ProcessClient_dlllib% %ProcessClient_debugRelease% %ProcessClient_allSame%
+goto ProcessClient_end
+:ProcessClient_callSimple
+call "%CLOUD_REBUILD%" ProcessClient %ProcessClient_bit% %ProcessClient_dlllib% %ProcessClient_debugRelease%
+goto ProcessClient_end
+:ProcessClient_end
