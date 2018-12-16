@@ -14,5 +14,5 @@ NetSender& NetSender::instance()
 
 void NetSender::send(const char* buffer, int32_t length, int32_t protocolId, bool isServer)
 {
-	ProcessClient::instance().send(buffer, length, isServer ? "NetServerManager.exe" : "NetClientManager.exe", protocolId);
+	ProcessClient::instance().send(buffer, length, isServer ? "NetServerManager1.0.exe" : "NetClientManager1.0.exe", protocolId);
 }
