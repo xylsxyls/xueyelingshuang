@@ -18,7 +18,7 @@ void LogSender::send(char* buffer, int32_t length)
 {
 	ProtoMessage message;
 	message["buffer"] = buffer;
-	ProcessClient::instance().send(message.toString().c_str(), message.toString().length(), "LogTest.exe", ProtocolId::PROTO_MESSAGE);
+	ProcessClient::instance().send(message.toString().c_str(), message.toString().length(), "LogTest1.0.exe", ProtocolId::PROTO_MESSAGE);
 }
 
 void LogSender::uninit()

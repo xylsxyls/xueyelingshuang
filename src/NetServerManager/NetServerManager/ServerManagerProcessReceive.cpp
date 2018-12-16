@@ -4,6 +4,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "NetWork/NetWorkAPI.h"
 #include <mutex>
+#include "CStringManager/CStringManagerAPI.h"
 
 ServerManagerProcessReceive::ServerManagerProcessReceive():
 m_netServer(nullptr),
@@ -32,12 +33,8 @@ void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t 
 		m_mapMutex->lock();
 		dest = (*m_connectedMap)[serverName];
 		m_mapMutex->unlock();
-		int32_t count = 4 + 6;
-		while (count-- != 0)
-		{
-			serverName.pop_back();
-		}
-		std::string clientName = serverName + ".exe";
+		std::string clientName = serverName;
+		CStringManager::Delete(clientName, clientName.length() - 13, 6);
 		message["ClientProcessName"] = clientName;
 		break;
 	}
