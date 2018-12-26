@@ -12,6 +12,8 @@ class ProcessWorkAPI ProcessWork
 	friend class ReceiveTask;
 	friend class WorkTask;
 	friend class DeleteTask;
+	friend class CreateKeyTask;
+	friend class CreateDataTask;
 public:
 	static ProcessWork& instance();
 
@@ -51,7 +53,11 @@ private:
 	uint32_t m_receiveThreadId;
 	uint32_t m_workThreadId;
 	uint32_t m_deleteThreadId;
-	int32_t m_sendPid;
+	uint32_t m_deleteKeyThreadId;
+	uint32_t m_deleteDataThreadId;
+	uint32_t m_createKeyThreadId;
+	uint32_t m_createDataThreadId;
+	int32_t m_processPid;
 
 	ReceiveCallback* m_callback;
 #ifdef _MSC_VER

@@ -33,12 +33,6 @@
     <ClInclude Include="..\src\ProcessWorkMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\ProcessServer\ProcessServer\KeyPackage.h">
-      <Filter>ProcessHelper</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\ProcessServer\ProcessServer\ProcessHelper.h">
-      <Filter>ProcessHelper</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\ReceiveCallback.h">
       <Filter>ReceiveCallback</Filter>
     </ClInclude>
@@ -48,16 +42,40 @@
     <ClInclude Include="..\src\WorkTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\ProcessServer\ProcessServer\HandleManager.h">
+    <ClInclude Include="..\src\HandleManager.h">
       <Filter>ProcessHelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\KeyPackage.h">
+      <Filter>ProcessHelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ProcessHelper.h">
+      <Filter>ProcessHelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HandlePackage.h">
+      <Filter>ProcessHelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SharedMemoryManager.h">
+      <Filter>ProcessHelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ProcessMutexManager.h">
+      <Filter>ProcessHelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CreateKeyTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CreateDataTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\DeleteKeyTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\DeleteDataTask.h">
+      <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ProcessWork.cpp">
       <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\ProcessServer\ProcessServer\ProcessHelper.cpp">
-      <Filter>ProcessHelper</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ReceiveTask.cpp">
       <Filter>Task</Filter>
@@ -65,8 +83,29 @@
     <ClCompile Include="..\src\WorkTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\ProcessServer\ProcessServer\HandleManager.cpp">
+    <ClCompile Include="..\src\HandleManager.cpp">
       <Filter>ProcessHelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ProcessHelper.cpp">
+      <Filter>ProcessHelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SharedMemoryManager.cpp">
+      <Filter>ProcessHelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ProcessMutexManager.cpp">
+      <Filter>ProcessHelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CreateDataTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CreateKeyTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DeleteDataTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DeleteKeyTask.cpp">
+      <Filter>Task</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

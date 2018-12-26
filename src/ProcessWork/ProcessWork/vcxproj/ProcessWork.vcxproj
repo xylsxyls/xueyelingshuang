@@ -19,21 +19,34 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\ProcessServer\ProcessServer\HandleManager.h" />
-    <ClInclude Include="..\..\..\ProcessServer\ProcessServer\KeyPackage.h" />
-    <ClInclude Include="..\..\..\ProcessServer\ProcessServer\ProcessHelper.h" />
+    <ClInclude Include="..\src\CreateDataTask.h" />
+    <ClInclude Include="..\src\CreateKeyTask.h" />
+    <ClInclude Include="..\src\DeleteDataTask.h" />
+    <ClInclude Include="..\src\DeleteKeyTask.h" />
+    <ClInclude Include="..\src\HandleManager.h" />
+    <ClInclude Include="..\src\HandlePackage.h" />
+    <ClInclude Include="..\src\KeyPackage.h" />
+    <ClInclude Include="..\src\ProcessHelper.h" />
+    <ClInclude Include="..\src\ProcessMutexManager.h" />
     <ClInclude Include="..\src\ProcessWorkAPI.h" />
     <ClInclude Include="..\src\ProcessWorkMacro.h" />
     <ClInclude Include="..\src\ProcessWork.h" />
     <ClInclude Include="..\src\ReceiveCallback.h" />
     <ClInclude Include="..\src\ReceiveTask.h" />
+    <ClInclude Include="..\src\SharedMemoryManager.h" />
     <ClInclude Include="..\src\WorkTask.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\ProcessServer\ProcessServer\HandleManager.cpp" />
-    <ClCompile Include="..\..\..\ProcessServer\ProcessServer\ProcessHelper.cpp" />
+    <ClCompile Include="..\src\CreateDataTask.cpp" />
+    <ClCompile Include="..\src\CreateKeyTask.cpp" />
+    <ClCompile Include="..\src\DeleteDataTask.cpp" />
+    <ClCompile Include="..\src\DeleteKeyTask.cpp" />
+    <ClCompile Include="..\src\HandleManager.cpp" />
+    <ClCompile Include="..\src\ProcessHelper.cpp" />
+    <ClCompile Include="..\src\ProcessMutexManager.cpp" />
     <ClCompile Include="..\src\ProcessWork.cpp" />
     <ClCompile Include="..\src\ReceiveTask.cpp" />
+    <ClCompile Include="..\src\SharedMemoryManager.cpp" />
     <ClCompile Include="..\src\WorkTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -3,21 +3,18 @@
 
 class ProcessWork;
 
-class ReceiveTask : public CTask
+class DeleteKeyTask : public CTask
 {
 public:
-	ReceiveTask();
+	DeleteKeyTask();
 
 public:
 	virtual void DoTask();
 
-	virtual void StopTask();
-
-public:
 	void setClient(ProcessWork* client);
 
-private:
-	HANDLE m_hAssgin;
+protected:
 	ProcessWork* m_client;
 	bool m_exit;
+	HANDLE m_hCreateData;
 };

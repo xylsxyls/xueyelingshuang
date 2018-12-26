@@ -1,14 +1,16 @@
 #include "ReceiveTask.h"
-#include "../../../ProcessServer/ProcessServer/ProcessHelper.h"
-#include "../../../ProcessServer/ProcessServer/HandleManager.h"
+#include "ProcessHelper.h"
+#include "HandleManager.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "ProcessWork.h"
-#include "../../../ProcessServer/ProcessServer/KeyPackage.h"
+#include "KeyPackage.h"
 #include "WorkTask.h"
+#include "SharedMemoryManager.h"
+#include "DeleteKeyTask.h"
 
 ReceiveTask::ReceiveTask():
 m_client(nullptr),
-m_hClientReadKey(nullptr),
+m_hAssgin(nullptr),
 m_exit(false)
 {
 	
@@ -18,19 +20,24 @@ void ReceiveTask::DoTask()
 {
 	while (!m_exit)
 	{
-		m_hClientReadKey = HandleManager::instance().clientReadKeyHandle();
-		::WaitForSingleObject(m_hClientReadKey, INFINITE);
+		m_hAssgin = HandleManager::instance().assignHandle(m_client->m_processPid, false);
+		::WaitForSingleObject(m_hAssgin, INFINITE);
 		if (m_exit)
 		{
 			return;
 		}
 		//读取钥匙
-		ProcessHelper::changeToCurrentReadKey(&(m_client->m_readKey), m_client->m_position);
-		KeyPackage keyPackage = ProcessHelper::readKey(m_client->m_position, m_client->m_readKey);
-		//add失败则进入下一个钥匙内存
-		ProcessHelper::addReadKey(m_client->m_position);
-		//通知服务端读取完毕
-		::ReleaseSemaphore(HandleManager::instance().clientReadKeyEndHandle(), 1, nullptr);
+		KeyPackage keyPackage = SharedMemoryManager::instance().readKey();
+		//add失败则自动进入下一个钥匙内存
+		if (!SharedMemoryManager::instance().addReadKeyPosition())
+		{
+			//删除上一个钥匙内存
+			DeleteKeyTask* deleteKeyTask = new DeleteKeyTask;
+			deleteKeyTask->setClient(m_client);
+			std::shared_ptr<DeleteKeyTask> spDeleteKeyTask;
+			spDeleteKeyTask.reset(deleteKeyTask);
+			CTaskThreadManager::Instance().GetThreadInterface(m_client->m_deleteKeyThreadId)->PostTask(spDeleteKeyTask);
+		}
 
 		//发送至处理队列
 		WorkTask* workTask = new WorkTask;
@@ -45,7 +52,7 @@ void ReceiveTask::DoTask()
 void ReceiveTask::StopTask()
 {
 	m_exit = true;
-	::ReleaseSemaphore(m_hClientReadKey, 1, nullptr);
+	::ReleaseSemaphore(m_hAssgin, 1, nullptr);
 }
 
 void ReceiveTask::setClient(ProcessWork* client)

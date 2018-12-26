@@ -1,6 +1,6 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "../../../ProcessServer/ProcessServer/KeyPackage.h"
+#include "KeyPackage.h"
 
 class ProcessWork;
 
@@ -12,11 +12,10 @@ public:
 public:
 	virtual void DoTask();
 
-	virtual void StopTask();
-
 	void setKey(const KeyPackage& keyPackage);
 
 	void setClient(ProcessWork* client);
+
 private:
 	KeyPackage m_keyPackage;
 	ProcessWork* m_client;
