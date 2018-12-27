@@ -11,7 +11,7 @@ m_hCreateData(nullptr)
 
 void DeleteKeyTask::DoTask()
 {
-	//删除钥匙内存
+	//删除最前面的钥匙内存
 	SharedMemoryManager::instance().deleteKey();
 }
 

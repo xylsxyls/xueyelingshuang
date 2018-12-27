@@ -7,31 +7,13 @@
 #include "CSystem/CSystemAPI.h"
 #include "ProcessMutexManager.h"
 #include "SharedMemoryManager.h"
+#include "ThreadManager.h"
 
 ProcessWork::ProcessWork():
-m_position(nullptr),
-m_data(nullptr),
-m_key(nullptr),
-m_readData(nullptr),
-m_readKey(nullptr),
-m_positionMutex(nullptr),
-m_receiveThreadId(0),
-m_workThreadId(0),
-m_deleteThreadId(0),
 m_callback(nullptr),
-m_processPid(0),
-m_deleteKeyThreadId(0),
-m_deleteDataThreadId(0),
-m_createKeyThreadId(0),
-m_createDataThreadId(0)
+m_processPid(0)
 {
 	m_processPid = CSystem::processPid();
-	m_receiveThreadId = CTaskThreadManager::Instance().Init();
-	m_workThreadId = CTaskThreadManager::Instance().Init();
-	m_deleteKeyThreadId = CTaskThreadManager::Instance().Init();
-	m_deleteDataThreadId = CTaskThreadManager::Instance().Init();
-	m_createKeyThreadId = CTaskThreadManager::Instance().Init();
-	m_createDataThreadId = CTaskThreadManager::Instance().Init();
 }
 
 ProcessWork& ProcessWork::instance()
@@ -40,14 +22,22 @@ ProcessWork& ProcessWork::instance()
 	return ProcessWork;
 }
 
+void ProcessWork::uninit()
+{
+	SharedMemoryManager::instance().uninit();
+	ThreadManager::instance().uninit();
+	ProcessMutexManager::instance().uninit();
+	HandleManager::instance().uninit();
+}
+
 void ProcessWork::initReceive(ReceiveCallback* callback)
 {
 	m_callback = callback;
-	ReceiveTask* workTask = new ReceiveTask;
-	workTask->setClient(this);
-	std::shared_ptr<ReceiveTask> spWorkTask;
-	spWorkTask.reset(workTask);
-	CTaskThreadManager::Instance().GetThreadInterface(m_receiveThreadId)->PostTask(spWorkTask);
+	ReceiveTask* receiveTask = new ReceiveTask;
+	receiveTask->setClient(this);
+	std::shared_ptr<ReceiveTask> spReceiveTask;
+	spReceiveTask.reset(receiveTask);
+	ThreadManager::instance().postReceiveTask(spReceiveTask);
 }
 
 void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, int32_t protocolId)
@@ -124,11 +114,4 @@ void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, int32_t 
 void ProcessWork::send(const char* buffer, int32_t length, const std::string processName, int32_t protocolId)
 {
 	send(buffer, length, CSystem::processPid(processName), protocolId);
-}
-
-void ProcessWork::uninit()
-{
-	CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
-	CTaskThreadManager::Instance().Uninit(m_workThreadId);
-	CTaskThreadManager::Instance().Uninit(m_deleteThreadId);
 }

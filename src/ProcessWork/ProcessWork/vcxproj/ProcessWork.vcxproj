@@ -34,6 +34,7 @@
     <ClInclude Include="..\src\ReceiveCallback.h" />
     <ClInclude Include="..\src\ReceiveTask.h" />
     <ClInclude Include="..\src\SharedMemoryManager.h" />
+    <ClInclude Include="..\src\ThreadManager.h" />
     <ClInclude Include="..\src\WorkTask.h" />
   </ItemGroup>
   <ItemGroup>
@@ -47,6 +48,7 @@
     <ClCompile Include="..\src\ProcessWork.cpp" />
     <ClCompile Include="..\src\ReceiveTask.cpp" />
     <ClCompile Include="..\src\SharedMemoryManager.cpp" />
+    <ClCompile Include="..\src\ThreadManager.cpp" />
     <ClCompile Include="..\src\WorkTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

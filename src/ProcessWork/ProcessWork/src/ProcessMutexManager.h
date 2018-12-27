@@ -14,6 +14,11 @@ protected:
 	ProcessMutexManager();
 
 public:
+	/** 释放资源
+	*/
+	void uninit();
+
+public:
 	/** 单一实例
 	@return 返回单一实例
 	*/

@@ -19,6 +19,12 @@ public:
 	*/
 	static SharedMemoryManager& instance();
 
+public:
+	/** 释放资源
+	*/
+	void uninit();
+
+public:
 	/** 增加数据写入位置
 	@param [in] pid 进程ID
 	@param [in] length 写入的数据长度

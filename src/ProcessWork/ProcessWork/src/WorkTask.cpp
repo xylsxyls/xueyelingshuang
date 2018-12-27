@@ -7,6 +7,7 @@
 #include "DeleteTask.h"
 #include "SharedMemoryManager.h"
 #include "DeleteDataTask.h"
+#include "ThreadManager.h"
 
 WorkTask::WorkTask():
 m_client(nullptr),
@@ -33,7 +34,7 @@ void WorkTask::DoTask()
 		deleteDataTask->setDeleteDataIndex(m_keyPackage.m_index);
 		std::shared_ptr<DeleteDataTask> spDeleteDataTask;
 		spDeleteDataTask.reset(deleteDataTask);
-		CTaskThreadManager::Instance().GetThreadInterface(m_client->m_deleteDataThreadId)->PostTask(spDeleteDataTask);
+		ThreadManager::instance().postDeleteDataTask(spDeleteDataTask);
 	}
 }
 

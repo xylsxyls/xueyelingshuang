@@ -7,67 +7,76 @@ HandleManager::HandleManager():
 m_pid(0)
 {
 	m_pid = CSystem::processPid();
-	//m_assignHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessAssign");
-	//m_createDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateData");
-	//m_createDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateDataEnd");
-	//m_createKeyHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateKey");
-	//m_createKeyEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessCreateKeyEnd");
-	//m_deleteDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessDeleteData");
-	//m_deleteDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), "ProcessDeleteDataEnd");
-}
-
-HandleManager::~HandleManager()
-{
-	//if (m_assignHandle)
-	//{
-	//	::CloseHandle(m_assignHandle);
-	//}
-	//if (m_createDataHandle)
-	//{
-	//	::CloseHandle(m_createDataHandle);
-	//}
-	//if (m_createDataEndHandle)
-	//{
-	//	::CloseHandle(m_createDataEndHandle);
-	//}
-	//if (m_createKeyHandle)
-	//{
-	//	::CloseHandle(m_createKeyHandle);
-	//}
-	//if (m_createKeyEndHandle)
-	//{
-	//	::CloseHandle(m_createKeyEndHandle);
-	//}
-	//if (m_deleteDataHandle)
-	//{
-	//	::CloseHandle(m_deleteDataHandle);
-	//}
-	//if (m_deleteDataEndHandle)
-	//{
-	//	::CloseHandle(m_deleteDataEndHandle);
-	//}
-	//
-	//for (auto itClientKeyHandle = m_clientKeyMap.begin(); itClientKeyHandle != m_clientKeyMap.end(); ++itClientKeyHandle)
-	//{
-	//	if (itClientKeyHandle->second)
-	//	{
-	//		::CloseHandle(itClientKeyHandle->second);
-	//	}
-	//}
-	//
-	//for (auto itClientKeyEndHandle = m_clientKeyEndMap.begin(); itClientKeyEndHandle != m_clientKeyEndMap.end(); ++itClientKeyEndHandle)
-	//{
-	//	if (itClientKeyEndHandle->second)
-	//	{
-	//		::CloseHandle(itClientKeyEndHandle->second);
-	//	}
-	//}
 }
 
 HandleManager& HandleManager::instance()
 {
 	static HandleManager handleManager;
 	return handleManager;
+}
+
+void HandleManager::uninit()
+{
+	for (auto itSendHandle = m_sendHandleMap.begin(); itSendHandle != m_sendHandleMap.end(); ++itSendHandle)
+	{
+		auto& sendHandle = itSendHandle->second;
+		if (sendHandle.m_assignHandle != nullptr)
+		{
+			::DeleteObject(sendHandle.m_assignHandle);
+		}
+		if (sendHandle.m_createDataHandle != nullptr)
+		{
+			::DeleteObject(sendHandle.m_createDataHandle);
+		}
+		if (sendHandle.m_createDataEndHandle != nullptr)
+		{
+			::DeleteObject(sendHandle.m_createDataEndHandle);
+		}
+		if (sendHandle.m_createKeyHandle != nullptr)
+		{
+			::DeleteObject(sendHandle.m_createKeyHandle);
+		}
+		if (sendHandle.m_createKeyEndHandle != nullptr)
+		{
+			::DeleteObject(sendHandle.m_createKeyEndHandle);
+		}
+		if (sendHandle.m_deleteDataHandle != nullptr)
+		{
+			::DeleteObject(sendHandle.m_deleteDataHandle);
+		}
+		if (sendHandle.m_deleteDataEndHandle != nullptr)
+		{
+			::DeleteObject(sendHandle.m_deleteDataEndHandle);
+		}
+	}
+	if (m_readHandle.m_assignHandle != nullptr)
+	{
+		::DeleteObject(m_readHandle.m_assignHandle);
+	}
+	if (m_readHandle.m_createDataHandle != nullptr)
+	{
+		::DeleteObject(m_readHandle.m_createDataHandle);
+	}
+	if (m_readHandle.m_createDataEndHandle != nullptr)
+	{
+		::DeleteObject(m_readHandle.m_createDataEndHandle);
+	}
+	if (m_readHandle.m_createKeyHandle != nullptr)
+	{
+		::DeleteObject(m_readHandle.m_createKeyHandle);
+	}
+	if (m_readHandle.m_createKeyEndHandle != nullptr)
+	{
+		::DeleteObject(m_readHandle.m_createKeyEndHandle);
+	}
+	if (m_readHandle.m_deleteDataHandle != nullptr)
+	{
+		::DeleteObject(m_readHandle.m_deleteDataHandle);
+	}
+	if (m_readHandle.m_deleteDataEndHandle != nullptr)
+	{
+		::DeleteObject(m_readHandle.m_deleteDataEndHandle);
+	}
 }
 
 void HandleManager::openSendHandle(int32_t pid)
@@ -88,35 +97,35 @@ void HandleManager::openSendHandle(int32_t pid)
 	m_sendHandleMap[pid] = sendHandlePackage;
 }
 
-void HandleManager::createReadHandle(int32_t pid)
+void HandleManager::createReadHandle()
 {
 	if (m_readHandle.m_assignHandle == nullptr)
 	{
-		m_readHandle.m_assignHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessAssign_%d", pid).c_str());
+		m_readHandle.m_assignHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessAssign_%d", m_pid).c_str());
 	}
 	if (m_readHandle.m_createDataHandle == nullptr)
 	{
-		m_readHandle.m_createDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessCreateData_%d", pid).c_str());
+		m_readHandle.m_createDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessCreateData_%d", m_pid).c_str());
 	}
 	if (m_readHandle.m_createDataEndHandle == nullptr)
 	{
-		m_readHandle.m_createDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessCreateDataEnd_%d", pid).c_str());
+		m_readHandle.m_createDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessCreateDataEnd_%d", m_pid).c_str());
 	}
 	if (m_readHandle.m_createKeyHandle == nullptr)
 	{
-		m_readHandle.m_createKeyHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessCreateKey_%d", pid).c_str());
+		m_readHandle.m_createKeyHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessCreateKey_%d", m_pid).c_str());
 	}
 	if (m_readHandle.m_createKeyEndHandle == nullptr)
 	{
-		m_readHandle.m_createKeyEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessCreateKeyEnd_%d", pid).c_str());
+		m_readHandle.m_createKeyEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessCreateKeyEnd_%d", m_pid).c_str());
 	}
 	if (m_readHandle.m_deleteDataHandle == nullptr)
 	{
-		m_readHandle.m_deleteDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessDeleteData_%d", pid).c_str());
+		m_readHandle.m_deleteDataHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessDeleteData_%d", m_pid).c_str());
 	}
 	if (m_readHandle.m_deleteDataEndHandle == nullptr)
 	{
-		m_readHandle.m_deleteDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessDeleteDataEnd_%d", pid).c_str());
+		m_readHandle.m_deleteDataEndHandle = ::CreateSemaphore(nullptr, 0, ProcessHelper::semMaxCount(), CStringManager::Format("ProcessDeleteDataEnd_%d", m_pid).c_str());
 	}
 }
 
@@ -127,7 +136,7 @@ HANDLE HandleManager::assignHandle(int32_t pid, bool isSend)
 		openSendHandle(pid);
 		return m_sendHandleMap.find(pid)->second.m_assignHandle;
 	}
-	createReadHandle(pid);
+	createReadHandle();
 	return m_readHandle.m_assignHandle;
 }
 
@@ -138,7 +147,7 @@ HANDLE HandleManager::createDataHandle(int32_t pid, bool isSend)
 		openSendHandle(pid);
 		return m_sendHandleMap.find(pid)->second.m_createDataHandle;
 	}
-	createReadHandle(pid);
+	createReadHandle();
 	return m_readHandle.m_createDataHandle;
 }
 
@@ -149,7 +158,7 @@ HANDLE HandleManager::createDataEndHandle(int32_t pid, bool isSend)
 		openSendHandle(pid);
 		return m_sendHandleMap.find(pid)->second.m_createDataEndHandle;
 	}
-	createReadHandle(pid);
+	createReadHandle();
 	return m_readHandle.m_createDataEndHandle;
 }
 
@@ -160,7 +169,7 @@ HANDLE HandleManager::createKeyHandle(int32_t pid, bool isSend)
 		openSendHandle(pid);
 		return m_sendHandleMap.find(pid)->second.m_createKeyHandle;
 	}
-	createReadHandle(pid);
+	createReadHandle();
 	return m_readHandle.m_createKeyHandle;
 }
 
@@ -171,7 +180,7 @@ HANDLE HandleManager::createKeyEndHandle(int32_t pid, bool isSend)
 		openSendHandle(pid);
 		return m_sendHandleMap.find(pid)->second.m_createKeyEndHandle;
 	}
-	createReadHandle(pid);
+	createReadHandle();
 	return m_readHandle.m_createKeyEndHandle;
 }
 
@@ -182,7 +191,7 @@ HANDLE HandleManager::deleteDataHandle(int32_t pid, bool isSend)
 		openSendHandle(pid);
 		return m_sendHandleMap.find(pid)->second.m_deleteDataHandle;
 	}
-	createReadHandle(pid);
+	createReadHandle();
 	return m_readHandle.m_deleteDataHandle;
 }
 
@@ -193,6 +202,6 @@ HANDLE HandleManager::deleteDataEndHandle(int32_t pid, bool isSend)
 		openSendHandle(pid);
 		return m_sendHandleMap.find(pid)->second.m_deleteDataEndHandle;
 	}
-	createReadHandle(pid);
+	createReadHandle();
 	return m_readHandle.m_deleteDataEndHandle;
 }

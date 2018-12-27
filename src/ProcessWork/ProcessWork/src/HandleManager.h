@@ -12,10 +12,6 @@ protected:
 	*/
 	HandleManager();
 
-	/** 析构函数
-	*/
-	~HandleManager();
-
 public:
 	/** 单一实例
 	@return 返回单一实例
@@ -23,10 +19,15 @@ public:
 	static HandleManager& instance();
 
 public:
+	/** 释放资源
+	*/
+	void uninit();
+
+public:
 	//打开发送端句柄
 	void openSendHandle(int32_t pid);
 	//创建读取端句柄
-	void createReadHandle(int32_t pid);
+	void createReadHandle();
 	//分配句柄
 	HANDLE assignHandle(int32_t pid, bool isSend);
 	//创建数据内存句柄

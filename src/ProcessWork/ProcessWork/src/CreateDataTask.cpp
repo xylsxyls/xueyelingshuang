@@ -19,7 +19,7 @@ void CreateDataTask::DoTask()
 		{
 			return;
 		}
-		//创建钥匙内存
+		//创建数据内存
 		SharedMemoryManager::instance().createData();
 		::ReleaseSemaphore(HandleManager::instance().createDataEndHandle(m_client->m_processPid, false), 1, nullptr);
 	}

@@ -11,6 +11,11 @@ SharedMemoryManager& SharedMemoryManager::instance()
 	return s_sharedMemoryManager;
 }
 
+void SharedMemoryManager::uninit()
+{
+
+}
+
 bool SharedMemoryManager::addDataPosition(int32_t pid, int32_t length)
 {
 	return false;

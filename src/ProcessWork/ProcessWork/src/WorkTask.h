@@ -3,17 +3,28 @@
 #include "KeyPackage.h"
 
 class ProcessWork;
-
+/** 处理任务
+*/
 class WorkTask : public CTask
 {
 public:
+	/** 构造函数
+	*/
 	WorkTask();
 
 public:
+	/** 执行任务
+	*/
 	virtual void DoTask();
 
+	/** 设置钥匙
+	@param [in] keyPackage 钥匙
+	*/
 	void setKey(const KeyPackage& keyPackage);
 
+	/** 设置客户端
+	@param [in] client 客户端
+	*/
 	void setClient(ProcessWork* client);
 
 private:

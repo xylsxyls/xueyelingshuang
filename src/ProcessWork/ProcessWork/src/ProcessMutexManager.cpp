@@ -7,6 +7,16 @@ ProcessMutexManager::ProcessMutexManager()
 
 }
 
+void ProcessMutexManager::uninit()
+{
+	for (auto itMutex = m_positionMutex.begin(); itMutex != m_positionMutex.end(); ++itMutex)
+	{
+		delete itMutex->second;
+	}
+	m_positionMutex.clear();
+	m_positionMutex.swap(std::map<int32_t, ProcessReadWriteMutex*>());
+}
+
 ProcessMutexManager& ProcessMutexManager::instance()
 {
 	static ProcessMutexManager s_processMutexManager;

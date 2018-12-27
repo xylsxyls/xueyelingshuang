@@ -7,6 +7,7 @@
 #include "WorkTask.h"
 #include "SharedMemoryManager.h"
 #include "DeleteKeyTask.h"
+#include "ThreadManager.h"
 
 ReceiveTask::ReceiveTask():
 m_client(nullptr),
@@ -36,7 +37,7 @@ void ReceiveTask::DoTask()
 			deleteKeyTask->setClient(m_client);
 			std::shared_ptr<DeleteKeyTask> spDeleteKeyTask;
 			spDeleteKeyTask.reset(deleteKeyTask);
-			CTaskThreadManager::Instance().GetThreadInterface(m_client->m_deleteKeyThreadId)->PostTask(spDeleteKeyTask);
+			ThreadManager::instance().postDeleteKeyTask(spDeleteKeyTask);
 		}
 
 		//发送至处理队列
@@ -45,7 +46,7 @@ void ReceiveTask::DoTask()
 		workTask->setClient(m_client);
 		std::shared_ptr<WorkTask> spWorkTask;
 		spWorkTask.reset(workTask);
-		CTaskThreadManager::Instance().GetThreadInterface(m_client->m_workThreadId)->PostTask(spWorkTask);
+		ThreadManager::instance().postWorkTask(spWorkTask);
 	}
 }
 

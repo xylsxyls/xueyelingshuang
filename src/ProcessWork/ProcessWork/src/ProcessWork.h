@@ -7,6 +7,8 @@ class ReceiveCallback;
 class SharedMemory;
 class ProcessReadWriteMutex;
 
+/** 进程通信类
+*/
 class ProcessWorkAPI ProcessWork
 {
 	friend class ReceiveTask;
@@ -14,13 +16,26 @@ class ProcessWorkAPI ProcessWork
 	friend class DeleteTask;
 	friend class CreateKeyTask;
 	friend class CreateDataTask;
-public:
-	static ProcessWork& instance();
-
 protected:
+	/** 构造函数
+	*/
 	ProcessWork();
 
 public:
+	/** 单一实例
+	@return 返回单一实例
+	*/
+	static ProcessWork& instance();
+
+public:
+	/** 销毁资源
+	*/
+	void uninit();
+
+public:
+	/** 初始化接收模块
+	@param [in] callback 接收回调类
+	*/
 	void initReceive(ReceiveCallback* callback);
 
 	/** 向服务端发送字符串，有序收到单线程，无序收到多线程
@@ -39,33 +54,7 @@ public:
 	*/
 	void send(const char* buffer, int32_t length, const std::string processName, int32_t protocolId = 1);
 
-	/** 退出线程
-	*/
-	void uninit();
-
-private:
-	SharedMemory* m_position;
-	SharedMemory* m_data;
-	SharedMemory* m_key;
-	SharedMemory* m_readData;
-	SharedMemory* m_readKey;
-	ProcessReadWriteMutex* m_positionMutex;
-	uint32_t m_receiveThreadId;
-	uint32_t m_workThreadId;
-	uint32_t m_deleteThreadId;
-	uint32_t m_deleteKeyThreadId;
-	uint32_t m_deleteDataThreadId;
-	uint32_t m_createKeyThreadId;
-	uint32_t m_createDataThreadId;
+protected:
 	int32_t m_processPid;
-
 	ReceiveCallback* m_callback;
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-	std::map<int32_t, SharedMemory*> m_dataMemoryMap;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 };
