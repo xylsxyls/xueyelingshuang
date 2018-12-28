@@ -78,6 +78,9 @@
     <ClInclude Include="..\src\HandlePackage.h">
       <Filter>Helper</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\MemroyPackage.h">
+      <Filter>Helper</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ProcessWork.cpp">

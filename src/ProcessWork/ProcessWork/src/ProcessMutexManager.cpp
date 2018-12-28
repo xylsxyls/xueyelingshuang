@@ -29,7 +29,7 @@ ProcessReadWriteMutex* ProcessMutexManager::positionMutex(int32_t pid)
 	auto itMutex = m_positionMutex.find(pid);
 	if (itMutex == m_positionMutex.end())
 	{
-		result = new ProcessReadWriteMutex(ProcessHelper::positionMutexName());
+		result = new ProcessReadWriteMutex(ProcessHelper::positionMutexName(pid));
 		m_positionMutex[pid] = result;
 		return result;
 	}

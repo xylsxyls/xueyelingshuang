@@ -26,6 +26,7 @@
     <ClInclude Include="..\src\HandleManager.h" />
     <ClInclude Include="..\src\HandlePackage.h" />
     <ClInclude Include="..\src\KeyPackage.h" />
+    <ClInclude Include="..\src\MemroyPackage.h" />
     <ClInclude Include="..\src\ProcessHelper.h" />
     <ClInclude Include="..\src\ProcessMutexManager.h" />
     <ClInclude Include="..\src\ProcessWorkAPI.h" />

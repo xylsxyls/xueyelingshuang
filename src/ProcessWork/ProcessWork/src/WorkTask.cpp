@@ -27,7 +27,7 @@ void WorkTask::DoTask()
 	}
 	delete[] buffer;
 	//减少当前内存使用大小，判断是否需要删除共享内存
-	if (!SharedMemoryManager::instance().reduceDataValid(m_keyPackage.m_length))
+	if (!SharedMemoryManager::instance().reduceDataValid(m_keyPackage.m_index, m_keyPackage.m_length))
 	{
 		DeleteDataTask* deleteDataTask = new DeleteDataTask;
 		deleteDataTask->setClient(m_client);
