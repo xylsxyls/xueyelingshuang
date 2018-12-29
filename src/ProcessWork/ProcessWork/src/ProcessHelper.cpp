@@ -145,10 +145,11 @@ void ProcessHelper::readData(char*& buffer, const KeyPackage& keyPackage, void* 
 	::memcpy(buffer, (char*)data + keyPackage.m_begin, keyPackage.m_length);
 }
 
-bool ProcessHelper::reduceDataValid(void* data, int32_t length)
+bool ProcessHelper::reduceDataValid(void* data, int32_t length, int32_t currentDataIndex, int32_t lastDataIndex)
 {
+	int32_t current = *(int32_t*)((char*)data + ProcessHelper::dataMemoryLength() - sizeof(int32_t));
 	*(int32_t*)((char*)data + ProcessHelper::dataMemoryLength() - sizeof(int32_t)) -= length;
-	return *(int32_t*)((char*)data + ProcessHelper::dataMemoryLength() - sizeof(int32_t)) > 0;
+	return !((*(int32_t*)((char*)data + ProcessHelper::dataMemoryLength() - sizeof(int32_t)) == 0) && (lastDataIndex > currentDataIndex));
 }
 
 int32_t ProcessHelper::semMaxCount()
@@ -159,6 +160,19 @@ int32_t ProcessHelper::semMaxCount()
 std::string ProcessHelper::positionMutexName(int32_t pid)
 {
 	return CStringManager::Format("ProcessPositionMutex_%d", pid);
+}
+
+bool ProcessHelper::addReadKeyPosition(void* position)
+{
+	int32_t newPosition = ProcessHelper::readKeyPosition(position) + sizeof(KeyPackage);
+	if (newPosition + int32_t(sizeof(KeyPackage)) >= ProcessHelper::keyMemoryLength())
+	{
+		++ProcessHelper::readKeyIndex(position);
+		ProcessHelper::readKeyPosition(position) = 0;
+		return false;
+	}
+	ProcessHelper::readKeyPosition(position) = newPosition;
+	return true;
 }
 
 //std::string ProcessHelper::positionMapName()
@@ -289,18 +303,7 @@ std::string ProcessHelper::positionMutexName(int32_t pid)
 //	}
 //}
 //
-//bool ProcessHelper::addReadKey(SharedMemory* position)
-//{
-//	int32_t newPosition = ProcessHelper::readKeyPosition(position) + sizeof(KeyPackage);
-//	if (newPosition + int32_t(sizeof(KeyPackage)) >= ProcessHelper::keyMemoryLength())
-//	{
-//		++ProcessHelper::readKeyIndex(position);
-//		ProcessHelper::readKeyPosition(position) = 0;
-//		return false;
-//	}
-//	ProcessHelper::readKeyPosition(position) = newPosition;
-//	return true;
-//}
+//
 //
 //void ProcessHelper::changeToCurrentReadData(SharedMemory** readData, int32_t readIndex)
 //{

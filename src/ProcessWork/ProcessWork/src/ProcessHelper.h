@@ -45,11 +45,13 @@ public:
 	//读取数据
 	static void readData(char*& buffer, const KeyPackage& keyPackage, void* data);
 	//减少当前内存使用大小
-	static bool reduceDataValid(void* data, int32_t length);
+	static bool reduceDataValid(void* data, int32_t length, int32_t currentDataIndex, int32_t lastDataIndex);
 	//等待信号量最大值
 	static int32_t semMaxCount();
 	//位置锁锁名
 	static std::string positionMutexName(int32_t pid);
+	//改变读取钥匙位置
+	static bool addReadKeyPosition(void* position);
 	////位置内存名
 	//static std::string positionMapName();
 	////数据内存名 
@@ -117,8 +119,8 @@ public:
 	//
 	////切换到当前读取钥匙内存
 	//static void changeToCurrentReadKey(SharedMemory** readKey, SharedMemory* position);
-	////改变读取钥匙位置
-	//static bool addReadKey(SharedMemory* position);
+	//
+	//
 	////切换到当前读取数据内存
 	//static void changeToCurrentReadData(SharedMemory** readData, int32_t readIndex);
 	////读取钥匙内存名

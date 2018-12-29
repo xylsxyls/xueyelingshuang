@@ -59,6 +59,11 @@ void ProcessWork::initReceive(ReceiveCallback* callback)
 
 void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, int32_t protocolId)
 {
+	if (pid == 0)
+	{
+		LOGERROR("pid == 0");
+		return;
+	}
 	void* data = nullptr;
 	int32_t sendIndex = 0;
 	int32_t sendBegin = 0;
