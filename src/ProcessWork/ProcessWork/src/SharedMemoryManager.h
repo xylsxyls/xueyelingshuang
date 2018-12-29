@@ -97,9 +97,10 @@ public:
 	bool reduceDataValid(int32_t index, int32_t length);
 
 	/** 增加读取钥匙位置
+	@param [out] deleteMemory 要删除的内存
 	@return 返回增加后是否仍然在当前内存
 	*/
-	bool addReadKeyPosition();
+	bool addReadKeyPosition(SharedMemory*& deleteMemory);
 
 	/** 删除数据内存
 	@param [in] index 数据内存索引值
@@ -107,8 +108,9 @@ public:
 	void deleteData(int32_t index);
 
 	/** 删除钥匙内存
+	@param [in] deleteMemory 要删除的内存指针
 	*/
-	void deleteKey();
+	void deleteKey(SharedMemory* deleteMemory);
 
 protected:
 	/** 创建发送内存

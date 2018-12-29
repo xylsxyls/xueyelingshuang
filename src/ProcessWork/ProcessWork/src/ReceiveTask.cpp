@@ -29,12 +29,14 @@ void ReceiveTask::DoTask()
 		}
 		//读取钥匙
 		KeyPackage keyPackage = SharedMemoryManager::instance().readKey();
+		SharedMemory* deleteMemory = nullptr;
 		//add失败则自动进入下一个钥匙内存
-		if (!SharedMemoryManager::instance().addReadKeyPosition())
+		if (!SharedMemoryManager::instance().addReadKeyPosition(deleteMemory))
 		{
 			//删除上一个钥匙内存
 			DeleteKeyTask* deleteKeyTask = new DeleteKeyTask;
 			deleteKeyTask->setClient(m_client);
+			deleteKeyTask->setDeleteMemory(deleteMemory);
 			std::shared_ptr<DeleteKeyTask> spDeleteKeyTask;
 			spDeleteKeyTask.reset(deleteKeyTask);
 			ThreadManager::instance().postDeleteKeyTask(spDeleteKeyTask);

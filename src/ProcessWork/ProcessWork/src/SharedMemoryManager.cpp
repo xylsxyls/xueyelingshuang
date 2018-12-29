@@ -166,6 +166,7 @@ void SharedMemoryManager::createData()
 	if (m_position == nullptr)
 	{
 		m_position = new SharedMemory(ProcessHelper::positionMapName(m_pid));
+		m_position->clear();
 	}
 	void* position = m_position->writeWithoutLock();
 	if (position == nullptr)
@@ -240,14 +241,25 @@ bool SharedMemoryManager::reduceDataValid(int32_t index, int32_t length)
 	return ProcessHelper::reduceDataValid(data, length);
 }
 
-bool SharedMemoryManager::addReadKeyPosition()
+bool SharedMemoryManager::addReadKeyPosition(SharedMemory*& deleteMemory)
 {
+	if (m_readKey == nullptr)
+	{
+		return false;
+	}
+	deleteMemory = nullptr;
 	void* key = m_readKey->writeWithoutLock();
 	if (key == nullptr)
 	{
 		return false;
 	}
-	return ProcessHelper::addKeyPosition(key);
+	if (!ProcessHelper::addKeyPosition(key))
+	{
+		deleteMemory = m_readKey;
+		m_keyList.pop(&m_readKey);
+		return false;
+	}
+	return true;
 }
 
 void SharedMemoryManager::deleteData(int32_t index)
@@ -263,14 +275,9 @@ void SharedMemoryManager::deleteData(int32_t index)
 	}
 }
 
-void SharedMemoryManager::deleteKey()
+void SharedMemoryManager::deleteKey(SharedMemory* deleteMemory)
 {
-	if (m_readKey != nullptr)
-	{
-		delete m_readKey;
-		m_readKey = nullptr;
-	}
-	m_keyList.pop(&m_readKey);
+	delete deleteMemory;
 }
 
 bool SharedMemoryManager::createSendMemory(int32_t pid)

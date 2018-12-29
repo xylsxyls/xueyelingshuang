@@ -2,6 +2,7 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
 class ProcessWork;
+class SharedMemory;
 /** 删除钥匙内存任务
 */
 class DeleteKeyTask : public CTask
@@ -21,8 +22,14 @@ public:
 	*/
 	void setClient(ProcessWork* client);
 
+	/** 设置要删除的内存指针
+	@param [in] deleteMemory 要删除的内存指针
+	*/
+	void setDeleteMemory(SharedMemory* deleteMemory);
+
 protected:
 	ProcessWork* m_client;
 	bool m_exit;
 	HANDLE m_hCreateData;
+	SharedMemory* m_deleteMemory;
 };
