@@ -70,6 +70,10 @@ public:
 	*/
 	bool writeKey(int32_t pid, const KeyPackage& keyPackage);
 
+	/** 初始化接收相关内存
+	*/
+	void initReceiveMemory();
+
 	/** 创建数据内存
 	*/
 	void createData();

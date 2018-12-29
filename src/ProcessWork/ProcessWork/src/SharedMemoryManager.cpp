@@ -161,12 +161,39 @@ bool SharedMemoryManager::writeKey(int32_t pid, const KeyPackage& keyPackage)
 	return true;
 }
 
+void SharedMemoryManager::initReceiveMemory()
+{
+	if (m_position == nullptr)
+	{
+		m_position = new SharedMemory(ProcessHelper::positionMapName(m_pid), ProcessHelper::positionLength());
+	}
+	m_position->clear();
+	if (m_readKey != nullptr)
+	{
+		delete m_readKey;
+		m_readKey = nullptr;
+	}
+	m_readKey = new SharedMemory(ProcessHelper::keyMapName(m_pid, 0), ProcessHelper::keyMemoryLength());
+	SharedMemory* memory = nullptr;
+	while (m_keyList.pop(&memory))
+	{
+		delete memory;
+	}
+
+	for (auto itData = m_dataMap.begin(); itData != m_dataMap.end(); ++itData)
+	{
+		delete itData->second;
+	}
+	m_dataMap.clear();
+	m_dataMap.swap(std::map<int32_t, SharedMemory*>());
+	m_dataMap[0] = new SharedMemory(ProcessHelper::dataMapName(m_pid, 0), ProcessHelper::dataMemoryLength());
+}
+
 void SharedMemoryManager::createData()
 {
 	if (m_position == nullptr)
 	{
-		m_position = new SharedMemory(ProcessHelper::positionMapName(m_pid));
-		m_position->clear();
+		return;
 	}
 	void* position = m_position->writeWithoutLock();
 	if (position == nullptr)
@@ -181,7 +208,7 @@ void SharedMemoryManager::createKey()
 {
 	if (m_position == nullptr)
 	{
-		m_position = new SharedMemory(ProcessHelper::positionMapName(m_pid));
+		return;
 	}
 	void* position = m_position->writeWithoutLock();
 	if (position == nullptr)

@@ -28,16 +28,6 @@ void ThreadManager::init()
 	m_deleteDataThreadId = CTaskThreadManager::Instance().Init();
 	m_createKeyThreadId = CTaskThreadManager::Instance().Init();
 	m_createDataThreadId = CTaskThreadManager::Instance().Init();
-
-	CreateDataTask* createDataTask = new CreateDataTask;
-	std::shared_ptr<CreateDataTask> spCreateDataTask;
-	spCreateDataTask.reset(createDataTask);
-	postCreateDataTask(spCreateDataTask);
-
-	CreateKeyTask* createKeyTask = new CreateKeyTask;
-	std::shared_ptr<CreateKeyTask> spCreateKeyTask;
-	spCreateKeyTask.reset(createKeyTask);
-	postCreateKeyTask(spCreateKeyTask);
 }
 
 void ThreadManager::uninit()

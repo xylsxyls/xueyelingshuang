@@ -8,6 +8,8 @@
 #include "ProcessMutexManager.h"
 #include "SharedMemoryManager.h"
 #include "ThreadManager.h"
+#include "CreateDataTask.h"
+#include "CreateKeyTask.h"
 
 ProcessWork::ProcessWork():
 m_callback(nullptr),
@@ -33,6 +35,21 @@ void ProcessWork::uninit()
 void ProcessWork::initReceive(ReceiveCallback* callback)
 {
 	m_callback = callback;
+
+	SharedMemoryManager::instance().initReceiveMemory();
+
+	CreateKeyTask* createKeyTask = new CreateKeyTask;
+	createKeyTask->setClient(this);
+	std::shared_ptr<CreateKeyTask> spCreateKeyTask;
+	spCreateKeyTask.reset(createKeyTask);
+	ThreadManager::instance().postCreateKeyTask(spCreateKeyTask);
+
+	CreateDataTask* createDataTask = new CreateDataTask;
+	createDataTask->setClient(this);
+	std::shared_ptr<CreateDataTask> spCreateDataTask;
+	spCreateDataTask.reset(createDataTask);
+	ThreadManager::instance().postCreateDataTask(spCreateDataTask);
+
 	ReceiveTask* receiveTask = new ReceiveTask;
 	receiveTask->setClient(this);
 	std::shared_ptr<ReceiveTask> spReceiveTask;
