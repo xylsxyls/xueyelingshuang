@@ -135,6 +135,18 @@ public:
                 {
                     Sleep(1000);
                 }
+				if (ScreenScript::FindClick("Fourth.png"))
+				{
+					Sleep(1000);
+				}
+				if (ScreenScript::FindClick("Fifth.png"))
+				{
+					Sleep(1000);
+				}
+				if (ScreenScript::FindClick("Sixth.png"))
+				{
+					Sleep(1000);
+				}
                 ScreenScript::FindClick("OK.png");
                 if (ScreenScript::FindPic(CStringManager::Format("lan%d.png", computer)))
                 {
