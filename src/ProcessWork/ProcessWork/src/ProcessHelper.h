@@ -37,11 +37,11 @@ public:
 	//写入钥匙
 	static void writeKey(void* key, void* position, const KeyPackage& keyPackage);
 	//读取钥匙
-	static KeyPackage readKey(void* position, void* key);
+	//static KeyPackage readKey(void* position, void* key);
 	//读取进度索引值
-	static int32_t& readKeyIndex(void* position);
+	//static int32_t& readKeyIndex(void* position);
 	//读取进度位置
-	static int32_t& readKeyPosition(void* position);
+	//static int32_t& readKeyPosition(void* position);
 	//读取数据
 	static void readData(char*& buffer, const KeyPackage& keyPackage, void* data);
 	//减少当前内存使用大小
@@ -51,7 +51,7 @@ public:
 	//位置锁锁名
 	static std::string positionMutexName(int32_t pid);
 	//改变读取钥匙位置
-	static bool addReadKeyPosition(void* position);
+	//static bool addReadKeyPosition(void* position);
 	////位置内存名
 	//static std::string positionMapName();
 	////数据内存名 

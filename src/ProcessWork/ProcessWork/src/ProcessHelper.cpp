@@ -95,6 +95,7 @@ void ProcessHelper::addDataAlreadyUsed(void* data, int32_t length)
 
 bool ProcessHelper::addKeyPosition(void* key)
 {
+	//RCSend("addKeyPosition");
 	int32_t newPosition = ProcessHelper::keyPosition(key) + sizeof(KeyPackage);
 	if (newPosition >= ProcessHelper::keyMemoryLength())
 	{
@@ -106,6 +107,7 @@ bool ProcessHelper::addKeyPosition(void* key)
 
 void ProcessHelper::writeKey(void* key, void* position, const KeyPackage& keyPackage)
 {
+	//RCSend("writeKey");
 	if (key == nullptr)
 	{
 		LOGERROR("key == nullptr");
@@ -117,28 +119,37 @@ void ProcessHelper::writeKey(void* key, void* position, const KeyPackage& keyPac
 	*(KeyPackage*)(((char*)key) + ProcessHelper::keyPosition(position) - sizeof(KeyPackage)) = keyPackage;
 }
 
-KeyPackage ProcessHelper::readKey(void* position, void* key)
-{
-	return *(KeyPackage*)(((char*)(key)) + ProcessHelper::readKeyPosition(position));
-}
+//KeyPackage ProcessHelper::readKey(void* position, void* key)
+//{
+//	RCSend("readKey");
+//	return *(KeyPackage*)(((char*)(key)) + ProcessHelper::readKeyPosition(position));
+//}
 
-int32_t& ProcessHelper::readKeyIndex(void* position)
-{
-	if (position == nullptr)
-	{
-		LOGERROR("position == nullptr");
-	}
-	return *(((int32_t*)(position)) + 4);
-}
-
-int32_t& ProcessHelper::readKeyPosition(void* position)
-{
-	if (position == nullptr)
-	{
-		LOGERROR("position == nullptr");
-	}
-	return *(((int32_t*)(position)) + 5);
-}
+//int32_t& ProcessHelper::readKeyIndex(void* position)
+//{
+//	if (position == nullptr)
+//	{
+//		LOGERROR("position == nullptr");
+//	}
+//	return *(((int32_t*)(position)) + 4);
+//}
+//
+//int32_t& ProcessHelper::readKeyPosition(void* position)
+//{
+//	RCSend("readKeyPosition");
+//	if (position == nullptr)
+//	{
+//		LOGERROR("position == nullptr");
+//	}
+//
+//	int32_t readPosition = *(((int32_t*)(position)) + 0);
+//	readPosition = *(((int32_t*)(position)) + 1);
+//	readPosition = *(((int32_t*)(position)) + 2);
+//	readPosition = *(((int32_t*)(position)) + 3);
+//	readPosition = *(((int32_t*)(position)) + 4);
+//	readPosition = *(((int32_t*)(position)) + 5);
+//	return *(((int32_t*)(position)) + 5);
+//}
 
 void ProcessHelper::readData(char*& buffer, const KeyPackage& keyPackage, void* data)
 {
@@ -154,7 +165,7 @@ bool ProcessHelper::reduceDataValid(void* data, int32_t length, int32_t currentD
 
 int32_t ProcessHelper::semMaxCount()
 {
-	return 80000000;
+	return 800000000;
 }
 
 std::string ProcessHelper::positionMutexName(int32_t pid)
@@ -162,18 +173,30 @@ std::string ProcessHelper::positionMutexName(int32_t pid)
 	return CStringManager::Format("ProcessPositionMutex_%d", pid);
 }
 
-bool ProcessHelper::addReadKeyPosition(void* position)
-{
-	int32_t newPosition = ProcessHelper::readKeyPosition(position) + sizeof(KeyPackage);
-	if (newPosition + int32_t(sizeof(KeyPackage)) >= ProcessHelper::keyMemoryLength())
-	{
-		++ProcessHelper::readKeyIndex(position);
-		ProcessHelper::readKeyPosition(position) = 0;
-		return false;
-	}
-	ProcessHelper::readKeyPosition(position) = newPosition;
-	return true;
-}
+//bool ProcessHelper::addReadKeyPosition(void* position)
+//{
+//	//RCSend("addReadKeyPosition");
+//	int32_t newPosition = *(((int32_t*)(position)) + 5) + sizeof(KeyPackage);
+//	if (newPosition >= ProcessHelper::keyMemoryLength())
+//	{
+//		++ProcessHelper::readKeyIndex(position);
+//		*(((int32_t*)(position)) + 5) = sizeof(KeyPackage);
+//		return false;
+//	}
+//	*(((int32_t*)(position)) + 5) = newPosition;
+//	return true;
+//
+//
+//	//int32_t newPosition = ProcessHelper::readKeyPosition(position) + sizeof(KeyPackage);
+//	//if (newPosition + int32_t(sizeof(KeyPackage)) >= ProcessHelper::keyMemoryLength())
+//	//{
+//	//	++ProcessHelper::readKeyIndex(position);
+//	//	ProcessHelper::readKeyPosition(position) = 0;
+//	//	return false;
+//	//}
+//	//ProcessHelper::readKeyPosition(position) = newPosition;
+//	//return true;
+//}
 
 //std::string ProcessHelper::positionMapName()
 //{

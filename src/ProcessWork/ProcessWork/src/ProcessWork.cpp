@@ -76,10 +76,10 @@ void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, int32_t 
 			//如果不成功就申请新共享内存
 			::ReleaseSemaphore(HandleManager::instance().createDataHandle(pid, true), 1, nullptr);
 			::WaitForSingleObject(HandleManager::instance().createDataEndHandle(pid, true), INFINITE);
-			//修改发送位置
-			if (!SharedMemoryManager::instance().addDataPosition(pid, length))
+			//进入下一段数据内存
+			if (!SharedMemoryManager::instance().raiseSendData(pid, length))
 			{
-				LOGERROR("change error");
+				LOGERROR("raiseSendData error");
 			}
 		}
 
@@ -108,10 +108,10 @@ void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, int32_t 
 			::WaitForSingleObject(HandleManager::instance().createKeyEndHandle(pid, true), INFINITE);
 			//切换至当前
 			//ProcessHelper::changeToCurrentKey(&m_key, m_position);
-			//修改钥匙位置
-			if (!SharedMemoryManager::instance().addKeyPosition(pid))
+			//进入下一段钥匙内存
+			if (!SharedMemoryManager::instance().raiseSendKey(pid))
 			{
-				LOGERROR("key change error");
+				LOGERROR("raiseSendKey error");
 			}
 		}
 

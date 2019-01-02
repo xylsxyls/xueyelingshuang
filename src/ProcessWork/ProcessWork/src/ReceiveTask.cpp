@@ -28,10 +28,10 @@ void ReceiveTask::DoTask()
 			return;
 		}
 		//读取钥匙
-		KeyPackage keyPackage = SharedMemoryManager::instance().readKey();
+		KeyPackage keyPackage;
 		SharedMemory* deleteMemory = nullptr;
-		//add失败则自动进入下一个钥匙内存
-		if (!SharedMemoryManager::instance().addReadKeyPosition(deleteMemory))
+		SharedMemoryManager::instance().readKey(keyPackage, deleteMemory);
+		if (deleteMemory != nullptr)
 		{
 			//删除上一个钥匙内存
 			DeleteKeyTask* deleteKeyTask = new DeleteKeyTask;

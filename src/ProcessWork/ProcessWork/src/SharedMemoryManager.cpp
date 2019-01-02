@@ -6,7 +6,9 @@
 SharedMemoryManager::SharedMemoryManager():
 m_position(nullptr),
 m_pid(0),
-m_readKey(nullptr)
+m_readKey(nullptr),
+m_readIndex(0),
+m_readPosition(0)
 {
 	m_pid = CSystem::processPid();
 }
@@ -19,32 +21,40 @@ SharedMemoryManager& SharedMemoryManager::instance()
 
 void SharedMemoryManager::uninit()
 {
-	for (auto itSend = m_send.begin(); itSend != m_send.end(); ++itSend)
 	{
-		if (itSend->second.m_data != nullptr)
+		std::unique_lock<std::mutex> mu(m_sendMutex);
+		for (auto itSend = m_send.begin(); itSend != m_send.end(); ++itSend)
 		{
-			delete itSend->second.m_data;
+			if (itSend->second.m_data != nullptr)
+			{
+				delete itSend->second.m_data;
+			}
+			if (itSend->second.m_key != nullptr)
+			{
+				delete itSend->second.m_key;
+			}
+			if (itSend->second.m_position != nullptr)
+			{
+				delete itSend->second.m_position;
+			}
 		}
-		if (itSend->second.m_key != nullptr)
-		{
-			delete itSend->second.m_key;
-		}
-		if (itSend->second.m_position != nullptr)
-		{
-			delete itSend->second.m_position;
-		}
+		m_send.clear();
+		m_send.swap(std::map<int32_t, MemoryPackage>());
 	}
-	m_send.clear();
-	m_send.swap(std::map<int32_t, MemoryPackage>());
-	for (auto itData = m_dataMap.begin(); itData != m_dataMap.end(); ++itData)
+	
 	{
-		if (itData->second != nullptr)
+		std::unique_lock<std::mutex> mu(m_readMutex);
+		for (auto itData = m_dataMap.begin(); itData != m_dataMap.end(); ++itData)
 		{
-			delete itData->second;
+			if (itData->second != nullptr)
+			{
+				delete itData->second;
+			}
 		}
+		m_dataMap.clear();
+		m_dataMap.swap(std::map<int32_t, SharedMemory*>());
 	}
-	m_dataMap.clear();
-	m_dataMap.swap(std::map<int32_t, SharedMemory*>());
+	
 	SharedMemory* key = nullptr;
 	while (m_keyList.pop(&key))
 	{
@@ -76,6 +86,7 @@ SharedMemory* SharedMemoryManager::getCurrentSendData(int32_t pid)
 	{
 		return nullptr;
 	}
+	std::unique_lock<std::mutex> mu(m_sendMutex);
 	auto itSend = m_send.find(pid);
 	if (itSend == m_send.end())
 	{
@@ -141,6 +152,39 @@ bool SharedMemoryManager::addKeyPosition(int32_t pid)
 	return ProcessHelper::addKeyPosition(position);
 }
 
+bool SharedMemoryManager::raiseSendKey(int32_t pid)
+{
+	//RCSend("raiseSendKey");
+	if (!createSendMemory(pid))
+	{
+		return false;
+	}
+	void* position = getPositionMemory(pid);
+	if (position == nullptr)
+	{
+		return false;
+	}
+	++ProcessHelper::keyIndex(position);
+	ProcessHelper::keyPosition(position) = sizeof(KeyPackage);
+	return true;
+}
+
+bool SharedMemoryManager::raiseSendData(int32_t pid, int32_t length)
+{
+	if (!createSendMemory(pid))
+	{
+		return false;
+	}
+	void* position = getPositionMemory(pid);
+	if (position == nullptr)
+	{
+		return false;
+	}
+	++ProcessHelper::dataIndex(position);
+	ProcessHelper::dataPosition(position) = length;
+	return true;
+}
+
 bool SharedMemoryManager::writeKey(int32_t pid, const KeyPackage& keyPackage)
 {
 	if (!createSendMemory(pid))
@@ -180,6 +224,7 @@ void SharedMemoryManager::initReceiveMemory()
 		delete memory;
 	}
 
+	std::unique_lock<std::mutex> mu(m_readMutex);
 	for (auto itData = m_dataMap.begin(); itData != m_dataMap.end(); ++itData)
 	{
 		delete itData->second;
@@ -215,6 +260,7 @@ void SharedMemoryManager::createData()
 		return;
 	}
 	*(int32_t*)((char*)data + ProcessHelper::dataMemoryLength() - sizeof(int32_t)) = 0;
+	std::unique_lock<std::mutex> mu(m_readMutex);
 	m_dataMap[newIndex] = dataMemory;
 }
 
@@ -237,23 +283,30 @@ void SharedMemoryManager::createKey()
 	m_keyList.push(new SharedMemory(ProcessHelper::keyMapName(m_pid, ProcessHelper::keyIndex(position) + 1), ProcessHelper::keyMemoryLength()));
 }
 
-KeyPackage SharedMemoryManager::readKey()
+bool SharedMemoryManager::readKey(KeyPackage& keyPackage, SharedMemory*& deleteMemory)
 {
-	void* position = m_position->writeWithoutLock();
-	if (position == nullptr)
+	deleteMemory = nullptr;
+	if (m_readPosition + int32_t(sizeof(KeyPackage)) > ProcessHelper::keyMemoryLength())
 	{
-		return KeyPackage();
+		++m_readIndex;
+		m_readPosition = 0;
+		deleteMemory = m_readKey;
+		m_keyList.pop(&m_readKey);
 	}
 	void* key = m_readKey->writeWithoutLock();
+	//RCSend("m_readKey keyName = %s", m_readKey->mapName().c_str());
 	if (key == nullptr)
 	{
-		return KeyPackage();
+		return false;
 	}
-	return ProcessHelper::readKey(position, key);
+	keyPackage = *(KeyPackage*)((char*)key + m_readPosition);
+	m_readPosition += int32_t(sizeof(KeyPackage));
+	return true;
 }
 
 void SharedMemoryManager::readData(char*& buffer, const KeyPackage& keyPackage)
 {
+	std::unique_lock<std::mutex> mu(m_readMutex);
 	auto itData = m_dataMap.find(keyPackage.m_index);
 	if (itData == m_dataMap.end())
 	{
@@ -270,6 +323,7 @@ void SharedMemoryManager::readData(char*& buffer, const KeyPackage& keyPackage)
 
 bool SharedMemoryManager::reduceDataValid(int32_t index, int32_t length)
 {
+	std::unique_lock<std::mutex> mu(m_readMutex);
 	auto itData = m_dataMap.find(index);
 	if (itData == m_dataMap.end())
 	{
@@ -288,29 +342,30 @@ bool SharedMemoryManager::reduceDataValid(int32_t index, int32_t length)
 	return ProcessHelper::reduceDataValid(data, length, index, lastDataIndex);
 }
 
-bool SharedMemoryManager::addReadKeyPosition(SharedMemory*& deleteMemory)
-{
-	if (m_readKey == nullptr)
-	{
-		return false;
-	}
-	deleteMemory = nullptr;
-	void* position = m_position->writeWithoutLock();
-	if (position == nullptr)
-	{
-		return false;
-	}
-	if (!ProcessHelper::addReadKeyPosition(position))
-	{
-		deleteMemory = m_readKey;
-		m_keyList.pop(&m_readKey);
-		return false;
-	}
-	return true;
-}
+//bool SharedMemoryManager::addReadKeyPosition(SharedMemory*& deleteMemory)
+//{
+//	if (m_readKey == nullptr)
+//	{
+//		return false;
+//	}
+//	deleteMemory = nullptr;
+//	void* position = m_position->writeWithoutLock();
+//	if (position == nullptr)
+//	{
+//		return false;
+//	}
+//	if (!ProcessHelper::addReadKeyPosition(position))
+//	{
+//		deleteMemory = m_readKey;
+//		m_keyList.pop(&m_readKey);
+//		return false;
+//	}
+//	return true;
+//}
 
 void SharedMemoryManager::deleteData(int32_t index)
 {
+	std::unique_lock<std::mutex> mu(m_readMutex);
 	auto itData = m_dataMap.find(index);
 	if (itData == m_dataMap.end())
 	{
@@ -330,6 +385,7 @@ void SharedMemoryManager::deleteKey(SharedMemory* deleteMemory)
 
 bool SharedMemoryManager::createSendMemory(int32_t pid)
 {
+	std::unique_lock<std::mutex> mu(m_sendMutex);
 	auto itSend = m_send.find(pid);
 	if (itSend == m_send.end())
 	{
@@ -368,6 +424,7 @@ bool SharedMemoryManager::createSendMemory(int32_t pid)
 
 void* SharedMemoryManager::getPositionMemory(int32_t pid)
 {
+	std::unique_lock<std::mutex> mu(m_sendMutex);
 	auto itSend = m_send.find(pid);
 	if (itSend == m_send.end())
 	{
@@ -378,6 +435,7 @@ void* SharedMemoryManager::getPositionMemory(int32_t pid)
 
 void* SharedMemoryManager::getDataMemory(int32_t pid)
 {
+	std::unique_lock<std::mutex> mu(m_sendMutex);
 	auto itSend = m_send.find(pid);
 	if (itSend == m_send.end())
 	{
@@ -388,6 +446,7 @@ void* SharedMemoryManager::getDataMemory(int32_t pid)
 
 void* SharedMemoryManager::getKeyMemory(int32_t pid)
 {
+	std::unique_lock<std::mutex> mu(m_sendMutex);
 	auto itSend = m_send.find(pid);
 	if (itSend == m_send.end())
 	{

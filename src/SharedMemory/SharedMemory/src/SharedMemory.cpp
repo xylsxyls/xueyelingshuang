@@ -183,7 +183,9 @@ void* SharedMemory::readWithoutLock()
 	{
 		return nullptr;
 	}
-	return m_memoryPtr = m_readMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_READ, 0, 0, 0);
+	m_readMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_READ, 0, 0, 0);
+	m_memoryPtr = m_readMemoryPtr;
+	return m_memoryPtr;
 }
 
 void* SharedMemory::writeWithoutLock()
@@ -197,7 +199,9 @@ void* SharedMemory::writeWithoutLock()
 	{
 		return nullptr;
 	}
-	return m_memoryPtr = m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+	m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+	m_memoryPtr = m_writeMemoryPtr;
+	return m_memoryPtr;
 }
 
 bool SharedMemory::trywrite()

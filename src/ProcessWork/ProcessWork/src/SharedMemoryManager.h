@@ -3,6 +3,7 @@
 #include <map>
 #include "KeyPackage.h"
 #include "MemroyPackage.h"
+#include <mutex>
 
 class SharedMemory;
 /** 共享内存管理类
@@ -63,6 +64,19 @@ public:
 	*/
 	bool addKeyPosition(int32_t pid);
 
+	/** 提示钥匙一级，进入下一个内存段
+	@param [in] pid 进程ID
+	@return 返回是否提升成功
+	*/
+	bool raiseSendKey(int32_t pid);
+
+	/** 提示数据一级，进入下一个内存段
+	@param [in] pid 进程ID
+	@param [in] length 数据长度
+	@return 返回是否提升成功
+	*/
+	bool raiseSendData(int32_t pid, int32_t length);
+
 	/** 先切换到当前钥匙内存再写入钥匙
 	@param [in] pid 进程ID
 	@param [in] keyPackage 钥匙内存
@@ -82,10 +96,12 @@ public:
 	*/
 	void createKey();
 
-	/** 读取钥匙
-	@return 返回钥匙
+	/** 读取钥匙，如果进入了下一段内存则传出上一段钥匙内存
+	@param [out] keyPackage 钥匙
+	@param [out] deleteMemory 删除的内存
+	@return 返回是否读取成功
 	*/
-	KeyPackage readKey();
+	bool readKey(KeyPackage& keyPackage, SharedMemory*& deleteMemory);
 
 	/** 读取数据
 	@param [out] buffer 数据缓冲区
@@ -104,7 +120,7 @@ public:
 	@param [out] deleteMemory 要删除的内存
 	@return 返回增加后是否仍然在当前内存
 	*/
-	bool addReadKeyPosition(SharedMemory*& deleteMemory);
+	//bool addReadKeyPosition(SharedMemory*& deleteMemory);
 
 	/** 删除数据内存
 	@param [in] index 数据内存索引值
@@ -154,4 +170,12 @@ protected:
 	std::map<int32_t, MemoryPackage> m_send;
 	//本进程ID
 	int32_t m_pid;
+	//读取钥匙内存索引值
+	int32_t m_readIndex;
+	//读取钥匙位置
+	int32_t m_readPosition;
+	//发送map锁
+	std::mutex m_sendMutex;
+	//读取map锁
+	std::mutex m_readMutex;
 };
