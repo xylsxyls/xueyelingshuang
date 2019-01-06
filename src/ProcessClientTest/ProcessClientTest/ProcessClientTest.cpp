@@ -1,7 +1,7 @@
 #include "ProcessClientTest.h"
 #include <stdint.h>
 #include <stdio.h>
-#include "ProcessClient/ProcessClientAPI.h"
+#include "ProcessWork/ProcessWorkAPI.h"
 #include "CGetPath/CGetPathAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -43,7 +43,7 @@ public:
 		//RCSend("recv exeName = %s, sendPid = %d, receivePid = %d", CGetPath::GetCurrentExeName().c_str(), CSystem::processPid(), pid);
 		if (currentId + 1 <= 10)
 		{
-			ProcessClient::instance().send(sendText.c_str(), sendText.length(), CStringManager::Format("%s_%d.exe", exeName.c_str(), currentId + 1), currentId);
+			ProcessWork::instance().send(sendText.c_str(), sendText.length(), CStringManager::Format("%s_%d.exe", exeName.c_str(), currentId + 1), currentId);
 		}
 	}
 };
@@ -51,12 +51,12 @@ public:
 int32_t main()
 {
 	Receive receive;
-	ProcessClient::instance().initReceive(&receive);
+	ProcessWork::instance().initReceive(&receive);
 
 	Sleep(8000);
 	//RCSend("%s.pid = %d", CGetPath::GetCurrentExeName().c_str(), CSystem::processPid());
 
-	int sendTimes = 1000000;
+	int sendTimes = 1000;
 	while (sendTimes-- != 0)
 	{
 		std::string exeName = CStringManager::split(CGetPath::GetCurrentExeName(), "_")[0];
@@ -71,7 +71,7 @@ int32_t main()
 		//RCSend("exeName = %s, sendPid = %d, receivePid = %d", CGetPath::GetCurrentExeName().c_str(), CSystem::processPid(), pid);
 		if (currentId + 1 <= 10)
 		{
-			ProcessClient::instance().send(sendText.c_str(), sendText.length(), CStringManager::Format("%s_%d.exe", exeName.c_str(), currentId + 1), currentId);
+			ProcessWork::instance().send(sendText.c_str(), sendText.length(), CStringManager::Format("%s_%d.exe", exeName.c_str(), currentId + 1), currentId);
 		}
 	}
 	getchar();
