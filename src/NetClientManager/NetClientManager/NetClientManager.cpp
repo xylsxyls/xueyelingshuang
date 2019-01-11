@@ -1,7 +1,7 @@
 #include "NetClientManager.h"
 #include <stdint.h>
 #include <stdio.h>
-#include "ProcessClient/ProcessClientAPI.h"
+#include "ProcessWork/ProcessWorkAPI.h"
 #include "ProcessReceive.h"
 #include "NetWork/NetWorkAPI.h"
 #include "ClientManagerReceive.h"
@@ -12,7 +12,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		ProcessClient::instance().uninit();
+		ProcessWork::instance().uninit();
 	}
 	return FALSE;
 }
@@ -23,10 +23,10 @@ int32_t main()
 {
 	ClientManagerReceive clientManagerReceive;
 	NetClient client;
-	client.connect("10.1.22.66", 5203, &clientManagerReceive);
+	client.connect("106.12.77.189", 5203, &clientManagerReceive);
 	ProcessReceive processReceive;
 	processReceive.setNetClient(&client);
-	ProcessClient::instance().initReceive(&processReceive);
+	ProcessWork::instance().initReceive(&processReceive);
 
 	while (true) Sleep(1000);
 	return 0;

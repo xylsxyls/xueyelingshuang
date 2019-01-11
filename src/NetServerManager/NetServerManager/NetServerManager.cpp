@@ -11,7 +11,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		ProcessClient::instance().uninit();
+		ProcessWork::instance().uninit();
 	}
 	return FALSE;
 }
@@ -34,7 +34,7 @@ int32_t main()
 	serverManagerProcessReceive.setConnectedMap(&connectedMap);
 	serverManagerProcessReceive.setMutex(&mapMutex);
 	serverManagerProcessReceive.setServer(&server);
-	ProcessClient::instance().initReceive(&serverManagerProcessReceive);
+	ProcessWork::instance().initReceive(&serverManagerProcessReceive);
 
 	while (true) Sleep(1000);
 	return 0;

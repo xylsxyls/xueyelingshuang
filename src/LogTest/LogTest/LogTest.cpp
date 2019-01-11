@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "LogReceive.h"
-#include "ProcessClient/ProcessClientAPI.h"
+#include "ProcessWork/ProcessWorkAPI.h"
 #include "NetSender/NetSenderAPI.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
@@ -11,7 +11,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		ProcessClient::instance().uninit();
+		ProcessWork::instance().uninit();
 	}
 	return FALSE;
 }
@@ -21,7 +21,7 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 int32_t main()
 {
 	LogReceive logReceive;
-	ProcessClient::instance().initReceive(&logReceive);
+	ProcessWork::instance().initReceive(&logReceive);
 	NetSender::instance().send(nullptr, 0, 0);
 	while (true) Sleep(1000);
 	return 0;

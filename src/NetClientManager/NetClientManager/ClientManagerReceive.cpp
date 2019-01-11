@@ -1,7 +1,7 @@
 #include "ClientManagerReceive.h"
 #include "../../NetServerManager/NetServerManager/ProtocolId.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
-#include "ProcessClient/ProcessClientAPI.h"
+#include "ProcessWork/ProcessWorkAPI.h"
 
 void ClientManagerReceive::serverConnected(uv_tcp_t* server)
 {
@@ -45,5 +45,5 @@ void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 		break;
 	}
 	printf("send to process\n");
-	ProcessClient::instance().send(message.toString().c_str(), message.toString().length(), clientName, protocolId);
+	ProcessWork::instance().send(message.toString().c_str(), message.toString().length(), clientName, protocolId);
 }

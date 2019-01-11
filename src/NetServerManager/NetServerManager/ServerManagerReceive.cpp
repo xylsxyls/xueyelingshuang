@@ -1,7 +1,7 @@
 #include "ServerManagerReceive.h"
 #include "ProtocolId.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
-#include "ProcessClient/ProcessClientAPI.h"
+#include "ProcessWork/ProcessWorkAPI.h"
 #include <mutex>
 
 ServerManagerReceive::ServerManagerReceive():
@@ -57,7 +57,7 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 		break;
 	}
 	RCSend("send to process, serverName = %s\n", serverName.c_str());
-	ProcessClient::instance().send(message.toString().c_str(), message.toString().length() , serverName, protocolId);
+	ProcessWork::instance().send(message.toString().c_str(), message.toString().length() , serverName, protocolId);
 }
 
 void ServerManagerReceive::setConnectedMap(std::map<std::string, uv_tcp_t*>* connectedMap)

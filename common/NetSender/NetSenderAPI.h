@@ -3,7 +3,7 @@
 #include "NetSender.h"
 
 #ifdef _DEBUG
-#pragma comment(lib,"NetSenderd.lib")
+#pragma comment(lib,"NetSender.lib")
 #else
 #pragma comment(lib,"NetSender.lib")
 #endif

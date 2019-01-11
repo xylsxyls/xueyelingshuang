@@ -56,7 +56,7 @@ int32_t main()
 	Sleep(8000);
 	//RCSend("%s.pid = %d", CGetPath::GetCurrentExeName().c_str(), CSystem::processPid());
 
-	int sendTimes = 1000;
+	int sendTimes = 10000;
 	while (sendTimes-- != 0)
 	{
 		std::string exeName = CStringManager::split(CGetPath::GetCurrentExeName(), "_")[0];
@@ -69,7 +69,7 @@ int32_t main()
 		}
 		int pid = CSystem::processPid(CStringManager::Format("%s_%d.exe", exeName.c_str(), currentId + 1));
 		//RCSend("exeName = %s, sendPid = %d, receivePid = %d", CGetPath::GetCurrentExeName().c_str(), CSystem::processPid(), pid);
-		if (currentId + 1 <= 10)
+		if (currentId + 1 <= 11)
 		{
 			ProcessWork::instance().send(sendText.c_str(), sendText.length(), CStringManager::Format("%s_%d.exe", exeName.c_str(), currentId + 1), currentId);
 		}
