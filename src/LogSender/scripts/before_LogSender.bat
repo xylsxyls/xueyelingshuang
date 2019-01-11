@@ -15,19 +15,19 @@ goto DllRelyTest_end
 :DllRelyTest_end
 
 ::--------------------------------------------------------------------
-set ProcessClient_dlllib=lib
-set ProcessClient_bit=%1
-set ProcessClient_debugRelease=%3
-set ProcessClient_allSame=%4
-if "%4" == "same" (goto ProcessClient_callSame) else (goto ProcessClient_callSimple)
-:ProcessClient_callSame
-set ProcessClient_dlllib=%2
-call "%CLOUD_REBUILD%" ProcessClient %ProcessClient_bit% %ProcessClient_dlllib% %ProcessClient_debugRelease% %ProcessClient_allSame%
-goto ProcessClient_end
-:ProcessClient_callSimple
-call "%CLOUD_REBUILD%" ProcessClient %ProcessClient_bit% %ProcessClient_dlllib% %ProcessClient_debugRelease%
-goto ProcessClient_end
-:ProcessClient_end
+set ProcessWork_dlllib=lib
+set ProcessWork_bit=%1
+set ProcessWork_debugRelease=%3
+set ProcessWork_allSame=%4
+if "%4" == "same" (goto ProcessWork_callSame) else (goto ProcessWork_callSimple)
+:ProcessWork_callSame
+set ProcessWork_dlllib=%2
+call "%CLOUD_REBUILD%" ProcessWork %ProcessWork_bit% %ProcessWork_dlllib% %ProcessWork_debugRelease% %ProcessWork_allSame%
+goto ProcessWork_end
+:ProcessWork_callSimple
+call "%CLOUD_REBUILD%" ProcessWork %ProcessWork_bit% %ProcessWork_dlllib% %ProcessWork_debugRelease%
+goto ProcessWork_end
+:ProcessWork_end
 
 ::--------------------------------------------------------------------
 set ProtoMessage_dlllib=lib

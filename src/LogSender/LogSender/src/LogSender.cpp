@@ -1,5 +1,5 @@
 #include "LogSender.h"
-#include "ProcessClient/ProcessClientAPI.h"
+#include "ProcessWork/ProcessWorkAPI.h"
 #include "../../../NetServerManager/NetServerManager/ProtocolId.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 
@@ -18,10 +18,10 @@ void LogSender::send(char* buffer, int32_t length)
 {
 	ProtoMessage message;
 	message["buffer"] = buffer;
-	ProcessClient::instance().send(message.toString().c_str(), message.toString().length(), "LogTest1.0.exe", ProtocolId::PROTO_MESSAGE);
+	ProcessWork::instance().send(message.toString().c_str(), message.toString().length(), "LogTest1.0.exe", ProtocolId::PROTO_MESSAGE);
 }
 
 void LogSender::uninit()
 {
-	ProcessClient::instance().uninit();
+	ProcessWork::instance().uninit();
 }
