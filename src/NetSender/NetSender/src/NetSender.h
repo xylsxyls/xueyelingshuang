@@ -4,6 +4,15 @@
 
 class NetSenderAPI NetSender
 {
+public:
+	enum ProtocolId
+	{
+		INIT = 0,
+		PROTO_MESSAGE,
+		JSON,
+		XML
+	};
+
 protected:
 	NetSender();
 
@@ -12,4 +21,7 @@ public:
 
 public:
 	void send(const char* buffer, int32_t length, int32_t protocolId, bool isServer = false);
+
+private:
+	bool m_isInit;
 };

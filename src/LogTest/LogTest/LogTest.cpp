@@ -22,7 +22,6 @@ int32_t main()
 {
 	LogReceive logReceive;
 	ProcessWork::instance().initReceive(&logReceive);
-	NetSender::instance().send(nullptr, 0, 0);
 	while (true) Sleep(1000);
 	return 0;
 }

@@ -1,7 +1,8 @@
 #include "NetSender.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 
-NetSender::NetSender()
+NetSender::NetSender():
+m_isInit(false)
 {
 
 }
@@ -14,5 +15,10 @@ NetSender& NetSender::instance()
 
 void NetSender::send(const char* buffer, int32_t length, int32_t protocolId, bool isServer)
 {
+	if (!m_isInit)
+	{
+		m_isInit = true;
+		ProcessWork::instance().send(buffer, length, isServer ? "NetServerManager1.0.exe" : "NetClientManager1.0.exe", NetSender::INIT);
+	}
 	ProcessWork::instance().send(buffer, length, isServer ? "NetServerManager1.0.exe" : "NetClientManager1.0.exe", protocolId);
 }
