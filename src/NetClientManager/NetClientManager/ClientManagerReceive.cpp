@@ -20,7 +20,7 @@ void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	case ProcessWork::PROTO_MESSAGE:
 	{
 		printf("PROTO_MESSAGE, buffer = %s, length = %d\n", buffer, length);
-		message.from(buffer);
+		message.from(std::string(buffer, length));
 		clientName = message.getMap().find("ClientProcessName")->second.toString();
 		auto messageMap = message.getMap();
 		auto itClientName = messageMap.find("ClientProcessName");

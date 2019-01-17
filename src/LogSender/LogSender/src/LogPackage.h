@@ -32,5 +32,13 @@ public:
 			   const std::string& funName,
 			   bool isSendNet,
 			   bool isSendScreen,
-			   bool isWriteLog);
+			   bool isWriteLog)
+	{
+		m_logLevel = logLevel;
+		m_fileName = fileName;
+		m_funName = funName;
+		m_isSendNet = isSendNet;
+		m_isSendScreen = isSendScreen;
+		m_isWriteLog = isWriteLog;
+	}
 };

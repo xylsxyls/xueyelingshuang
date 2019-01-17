@@ -7,7 +7,7 @@
 void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid, int32_t protocolId)
 {
 	ProtoMessage message;
-	message.from(buffer);
+	message.from(std::string(buffer, length));
 	switch (protocolId)
 	{
 	case ProcessWork::INIT:

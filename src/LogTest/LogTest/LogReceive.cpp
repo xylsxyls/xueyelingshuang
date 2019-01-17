@@ -37,7 +37,7 @@ void LogReceive::receiveFromNet(char* buffer, int32_t length, int32_t protocolId
 	case NetSender::PROTO_MESSAGE:
 	{
 		ProtoMessage message;
-		message.from(buffer);
+		message.from(std::string(buffer, length));
 		auto messageMap = message.getMap();
 		std::string str = messageMap["buffer"];
 		if ((int32_t)messageMap["isSendScreen"] == (int32_t)true)
@@ -63,7 +63,7 @@ void LogReceive::receiveFromNet(char* buffer, int32_t length, int32_t protocolId
 void LogReceive::sendToNet(char* buffer, int32_t length, int32_t sendPid, int32_t protocolId)
 {
 	ProtoMessage message;
-	message.from(buffer);
+	message.from(std::string(buffer, length));
 	auto messageMap = message.getMap();
 	std::string str = messageMap["buffer"];
 	if ((int32_t)messageMap["isSendScreen"] == (int32_t)true)

@@ -18,7 +18,7 @@ void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, int3
 	case ProcessWork::INIT:
 	{
 		printf("PROCESS_RECEIVE_INIT, buffer = %s, length = %d\n", buffer, length);
-		message.from(buffer);
+		message.from(std::string(buffer, length));
 		std::string clientName = CSystem::processName(sendPid);
 		printf("clientName = %s\n", clientName.c_str());
 		std::string serverName = clientName;
@@ -30,7 +30,7 @@ void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, int3
 	case ProcessWork::PROTO_MESSAGE:
 	{
 		printf("PROTO_MESSAGE, buffer = %s, length = %d\n", buffer, length);
-		message.from(buffer);
+		message.from(std::string(buffer, length));
 		std::string clientName = CSystem::processName(sendPid);
 		std::string serverName = clientName;
 		CStringManager::Insert(serverName, clientName.length() - 7, "Server");

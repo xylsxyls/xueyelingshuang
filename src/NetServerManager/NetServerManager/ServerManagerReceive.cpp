@@ -21,7 +21,7 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	case ProcessWork::INIT:
 	{
 		printf("NET_INIT, sender = %d, buffer = %s, length = %d\n", sender, buffer, length);
-		message.from(buffer);
+		message.from(std::string(buffer, length));
 		serverName = eraseServerName(message);
 		addClientPtr(message, sender);
 		//NetLineManager::instance().addConnect(serverName, sender);
@@ -30,7 +30,7 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	case ProcessWork::PROTO_MESSAGE:
 	{
 		printf("NET_PROTO_MESSAGE, sender = %d, buffer = %s, length = %d\n", sender, buffer, length);
-		message.from(buffer);
+		message.from(std::string(buffer, length));
 		serverName = eraseServerName(message);
 		addClientPtr(message, sender);
 		break;

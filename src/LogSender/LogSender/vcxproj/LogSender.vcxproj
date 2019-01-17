@@ -25,7 +25,6 @@
     <ClInclude Include="..\src\LogSender.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\LogPackage.cpp" />
     <ClCompile Include="..\src\LogSender.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -35,6 +35,8 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	message["isSendScreen"] = (int32_t)package.m_isSendScreen;
 	message["isWriteLog"] = (int32_t)package.m_isWriteLog;
 	message["buffer"] = str;
+	const char* sds = message.toString().c_str();
+	const char* sds2 = message.toString().data();
 	send(message.toString().c_str(), message.toString().length());
 }
 
