@@ -446,6 +446,14 @@ std::string CSystem::processName(int32_t pid)
 	return result;
 }
 
+std::string CSystem::getComputerName()
+{
+	char computerName[256] = {};
+	DWORD length = 256;
+	GetComputerNameA(computerName, &length);
+	return computerName;
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 

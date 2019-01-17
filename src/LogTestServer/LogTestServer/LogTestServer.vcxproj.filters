@@ -21,12 +21,18 @@
     <ClInclude Include="LogTestServerReceive.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="NetLineManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LogTestServer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="LogTestServerReceive.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NetLineManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

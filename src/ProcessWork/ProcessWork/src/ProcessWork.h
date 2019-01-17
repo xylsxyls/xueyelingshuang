@@ -16,6 +16,15 @@ class ProcessWorkAPI ProcessWork
 	friend class DeleteTask;
 	friend class CreateKeyTask;
 	friend class CreateDataTask;
+public:
+	enum ProtocolId
+	{
+		INIT = 0,
+		PROTO_MESSAGE,
+		JSON,
+		XML
+	};
+
 protected:
 	/** ¹¹Ôìº¯Êý
 	*/

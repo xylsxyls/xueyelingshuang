@@ -27,7 +27,6 @@ int32_t main()
 	ProcessReceive processReceive;
 	processReceive.setNetClient(&client);
 	ProcessWork::instance().initReceive(&processReceive);
-
 	while (true) Sleep(1000);
 	return 0;
 }

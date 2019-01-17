@@ -1,71 +1,69 @@
 #include "ServerManagerReceive.h"
-#include "ProtocolId.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "ProcessWork/ProcessWorkAPI.h"
-#include <mutex>
 
-ServerManagerReceive::ServerManagerReceive():
-m_connectedMap(nullptr),
-m_mapMutex(nullptr)
+ServerManagerReceive::ServerManagerReceive()
 {
 
 }
 
 void ServerManagerReceive::clientConnected(uv_tcp_t* client)
 {
-	RCSend("clientConnected = %d\n", client);
+	printf("clientConnected = %d\n", client);
 }
 
 void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, int32_t protocolId)
 {
-	RCSend("ServerManagerReceive\n");
 	ProtoMessage message;
 	std::string serverName;
 	switch (protocolId)
 	{
-	case ProtocolId::INIT:
+	case ProcessWork::INIT:
 	{
-		RCSend("INIT, sender = %d, buffer = %s, length = %d\n", sender, buffer, length);
+		printf("NET_INIT, sender = %d, buffer = %s, length = %d\n", sender, buffer, length);
 		message.from(buffer);
-		m_mapMutex->lock();
-		(*m_connectedMap)[message.getMap().find("ServerProcessName")->second.toString()] = sender;
-		m_mapMutex->unlock();
-	}
-	case ProtocolId::PROTO_MESSAGE:
-	{
-		RCSend("PROTO_MESSAGE, sender = %d, buffer = %s, length = %d\n", sender, buffer, length);
-		message.from(buffer);
-		serverName = message.getMap().find("ServerProcessName")->second.toString();
-		auto messageMap = message.getMap();
-		auto itServerName = messageMap.find("ServerProcessName");
-		if (itServerName != messageMap.end())
-		{
-			messageMap.erase(itServerName);
-		}
-		message.setKeyMap(messageMap);
+		serverName = eraseServerName(message);
+		addClientPtr(message, sender);
+		//NetLineManager::instance().addConnect(serverName, sender);
 		break;
 	}
-	case ProtocolId::JSON:
+	case ProcessWork::PROTO_MESSAGE:
+	{
+		printf("NET_PROTO_MESSAGE, sender = %d, buffer = %s, length = %d\n", sender, buffer, length);
+		message.from(buffer);
+		serverName = eraseServerName(message);
+		addClientPtr(message, sender);
+		break;
+	}
+	case ProcessWork::JSON:
 	{
 		break;
 	}
-	case ProtocolId::XML:
+	case ProcessWork::XML:
 	{
 		break;
 	}
 	default:
 		break;
 	}
-	RCSend("send to process, serverName = %s\n", serverName.c_str());
+	printf("send to process, serverName = %s\n", serverName.c_str());
 	ProcessWork::instance().send(message.toString().c_str(), message.toString().length() , serverName, protocolId);
 }
 
-void ServerManagerReceive::setConnectedMap(std::map<std::string, uv_tcp_t*>* connectedMap)
+std::string ServerManagerReceive::eraseServerName(ProtoMessage& message)
 {
-	m_connectedMap = connectedMap;
+	std::string serverName = message.getMap().find("ServerProcessName")->second.toString();
+	auto messageMap = message.getMap();
+	auto itServerName = messageMap.find("ServerProcessName");
+	if (itServerName != messageMap.end())
+	{
+		messageMap.erase(itServerName);
+	}
+	message.setKeyMap(messageMap);
+	return serverName;
 }
 
-void ServerManagerReceive::setMutex(std::mutex* mapMutex)
+void ServerManagerReceive::addClientPtr(ProtoMessage& message, uv_tcp_t* sender)
 {
-	m_mapMutex = mapMutex;
+	message["ClientPtr"] = (int32_t)sender;
 }

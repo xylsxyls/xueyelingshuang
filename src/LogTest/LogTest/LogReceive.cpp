@@ -38,9 +38,21 @@ void LogReceive::receiveFromNet(char* buffer, int32_t length, int32_t protocolId
 	{
 		ProtoMessage message;
 		message.from(buffer);
-		std::string str = message.getMap().find("buffer")->second.toString().c_str();
-		RCSend("NET = %s", str.c_str());
-		LOGINFO("NET = %s", str.c_str());
+		auto messageMap = message.getMap();
+		std::string str = messageMap["buffer"];
+		if ((int32_t)messageMap["isSendScreen"] == (int32_t)true)
+		{
+			RCSend("NET %s %s", messageMap["loginName"].toString().c_str(), str.c_str());
+		}
+		if ((int32_t)messageMap["isWriteLog"] == (int32_t)true)
+		{
+			LogManager::instance().print((LogManager::LogLevel)(int32_t)messageMap["logLevel"],
+				messageMap["fileName"].toString(),
+				messageMap["funName"].toString(),
+				"NET %s %s",
+				messageMap["loginName"].toString().c_str(),
+				str.c_str());
+		}
 		break;
 	}
 	default:
@@ -50,6 +62,26 @@ void LogReceive::receiveFromNet(char* buffer, int32_t length, int32_t protocolId
 
 void LogReceive::sendToNet(char* buffer, int32_t length, int32_t sendPid, int32_t protocolId)
 {
-	printf("send to netclient\n");
-	NetSender::instance().send(buffer, length, protocolId);
+	ProtoMessage message;
+	message.from(buffer);
+	auto messageMap = message.getMap();
+	std::string str = messageMap["buffer"];
+	if ((int32_t)messageMap["isSendScreen"] == (int32_t)true)
+	{
+		RCSend("%s", str.c_str());
+	}
+	if ((int32_t)messageMap["isWriteLog"] == (int32_t)true)
+	{
+		LogManager::instance().print((LogManager::LogLevel)(int32_t)messageMap["logLevel"],
+			messageMap["fileName"].toString(),
+			messageMap["funName"].toString(),
+			"%s %s",
+			messageMap["loginName"].toString().c_str(),
+			str.c_str());
+	}
+	if ((int32_t)messageMap["isSendNet"] == (int32_t)true)
+	{
+		printf("send to netclient\n");
+		NetSender::instance().send(buffer, length, protocolId);
+	}
 }

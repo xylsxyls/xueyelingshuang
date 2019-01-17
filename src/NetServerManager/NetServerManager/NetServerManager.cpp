@@ -20,19 +20,12 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {
-	std::mutex mapMutex;
-	std::map<std::string, uv_tcp_t*> connectedMap;
-
 	ServerManagerReceive serverManagerReceive;
-	serverManagerReceive.setConnectedMap(&connectedMap);
-	serverManagerReceive.setMutex(&mapMutex);
 
 	NetServer server;
 	server.listen(5203, &serverManagerReceive);
 
 	ServerManagerProcessReceive serverManagerProcessReceive;
-	serverManagerProcessReceive.setConnectedMap(&connectedMap);
-	serverManagerProcessReceive.setMutex(&mapMutex);
 	serverManagerProcessReceive.setServer(&server);
 	ProcessWork::instance().initReceive(&serverManagerProcessReceive);
 

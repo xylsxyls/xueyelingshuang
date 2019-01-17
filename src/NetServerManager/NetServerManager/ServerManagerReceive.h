@@ -1,5 +1,6 @@
 #pragma once
 #include "NetWork/NetWorkAPI.h"
+#include "ProtoMessage/ProtoMessageAPI.h"
 
 namespace std
 {
@@ -16,11 +17,7 @@ public:
 
 	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length, int32_t protocolId);
 
-	void setConnectedMap(std::map<std::string, uv_tcp_t*>* connectedMap);
+	std::string eraseServerName(ProtoMessage& message);
 
-	void setMutex(std::mutex* mapMutex);
-
-protected:
-	std::map<std::string, uv_tcp_t*>* m_connectedMap;
-	std::mutex* m_mapMutex;
+	void addClientPtr(ProtoMessage& message, uv_tcp_t* sender);
 };

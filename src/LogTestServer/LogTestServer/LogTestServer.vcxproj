@@ -151,10 +151,12 @@
   <ItemGroup>
     <ClInclude Include="LogTestServer.h" />
     <ClInclude Include="LogTestServerReceive.h" />
+    <ClInclude Include="NetLineManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LogTestServer.cpp" />
     <ClCompile Include="LogTestServerReceive.cpp" />
+    <ClCompile Include="NetLineManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

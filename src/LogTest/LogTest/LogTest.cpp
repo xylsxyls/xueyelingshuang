@@ -4,6 +4,7 @@
 #include "LogReceive.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "NetSender/NetSenderAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -22,6 +23,7 @@ int32_t main()
 {
 	LogReceive logReceive;
 	ProcessWork::instance().initReceive(&logReceive);
+	printf("ComputerName = %s\n", CSystem::getComputerName().c_str());
 	while (true) Sleep(1000);
 	return 0;
 }

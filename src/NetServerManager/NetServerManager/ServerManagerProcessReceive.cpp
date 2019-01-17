@@ -1,55 +1,50 @@
 #include "ServerManagerProcessReceive.h"
-#include "ProtocolId.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "NetWork/NetWorkAPI.h"
 #include <mutex>
 #include "CStringManager/CStringManagerAPI.h"
 
 ServerManagerProcessReceive::ServerManagerProcessReceive():
-m_netServer(nullptr),
-m_connectedMap(nullptr),
-m_mapMutex(nullptr)
+m_netServer(nullptr)
 {
 
 }
 
 void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, int32_t protocalId)
 {
-	RCSend("process receive\n");
 	ProtoMessage message;
+	std::string serverName = CSystem::processName(sendPid);
 	uv_tcp_t* dest = nullptr;
 	switch (protocalId)
 	{
-	case ProtocolId::INIT:
+	case ProcessWork::INIT:
 	{
-		RCSend("INIT, buffer = %s, length = %d\n", buffer, length);
-	}
-	case ProtocolId::PROTO_MESSAGE:
-	{
-		RCSend("PROTO_MESSAGE, buffer = %s, length = %d\n", buffer, length);
+		printf("PROCESS_INIT, buffer = %s, length = %d\n", buffer, length);
 		message.from(buffer);
-		std::string serverName = CSystem::processName(sendPid);
-		m_mapMutex->lock();
-		dest = (*m_connectedMap)[serverName];
-		m_mapMutex->unlock();
-		std::string clientName = serverName;
-		CStringManager::Delete(clientName, clientName.length() - 13, 6);
-		message["ClientProcessName"] = clientName;
+		setClientName(message, serverName);
+		dest = getClientPtr(message);
 		break;
 	}
-	case ProtocolId::JSON:
+	case ProcessWork::PROTO_MESSAGE:
+	{
+		printf("PROCESS_PROTO_MESSAGE, buffer = %s, length = %d\n", buffer, length);
+		message.from(buffer);
+		setClientName(message, serverName);
+		dest = getClientPtr(message);
+		break;
+	}
+	case ProcessWork::JSON:
 	{
 		break;
 	}
-	case ProtocolId::XML:
+	case ProcessWork::XML:
 	{
 		break;
 	}
 	default:
 		break;
 	}
-	RCSend("send to net, dest = %d\n", dest);
+	printf("send to net, dest = %d\n", dest);
 	m_netServer->send(message.toString().c_str(), message.toString().length(), protocalId, dest);
 }
 
@@ -58,12 +53,23 @@ void ServerManagerProcessReceive::setServer(NetServer* netServer)
 	m_netServer = netServer;
 }
 
-void ServerManagerProcessReceive::setConnectedMap(std::map<std::string, uv_tcp_t*>* connectedMap)
+void ServerManagerProcessReceive::setClientName(ProtoMessage& message, const std::string& serverName)
 {
-	m_connectedMap = connectedMap;
+	std::string clientName = serverName;
+	CStringManager::Delete(clientName, clientName.length() - 13, 6);
+	message["ClientProcessName"] = clientName;
 }
 
-void ServerManagerProcessReceive::setMutex(std::mutex* mapMutex)
+uv_tcp_t* ServerManagerProcessReceive::getClientPtr(ProtoMessage& message)
 {
-	m_mapMutex = mapMutex;
+	auto messageMap = message.getMap();
+	uv_tcp_t* result = nullptr;
+	auto itMessage = messageMap.find("ClientPtr");
+	if (itMessage != messageMap.end())
+	{
+		result = (uv_tcp_t*)(int32_t)itMessage->second;
+		messageMap.erase(itMessage);
+		message.setKeyMap(messageMap);
+	}
+	return result;
 }

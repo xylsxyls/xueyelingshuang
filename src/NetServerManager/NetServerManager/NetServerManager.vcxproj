@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{75281B86-B4AF-499C-A5AF-5F1BC7641ADD}</ProjectGuid>
+    <ProjectGuid>{AC987ACC-B7CB-4D38-8518-99B2E9730AE6}</ProjectGuid>
     <RootNamespace>NetServerManager</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -150,7 +150,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="NetServerManager.h" />
-    <ClInclude Include="ProtocolId.h" />
     <ClInclude Include="ServerManagerProcessReceive.h" />
     <ClInclude Include="ServerManagerReceive.h" />
   </ItemGroup>

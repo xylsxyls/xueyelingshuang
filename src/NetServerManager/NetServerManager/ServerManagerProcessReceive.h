@@ -1,5 +1,6 @@
 #pragma once
 #include "ProcessWork/ProcessWorkAPI.h"
+#include "ProtoMessage/ProtoMessageAPI.h"
 
 typedef struct uv_tcp_s uv_tcp_t;
 class NetServer;
@@ -18,12 +19,10 @@ public:
 
 	void setServer(NetServer* netServer);
 
-	void setConnectedMap(std::map<std::string, uv_tcp_t*>* connectedMap);
+	void setClientName(ProtoMessage& message, const std::string& serverName);
 
-	void setMutex(std::mutex* mapMutex);
+	uv_tcp_t* getClientPtr(ProtoMessage& message);
 
 protected:
 	NetServer* m_netServer;
-	std::map<std::string, uv_tcp_t*>* m_connectedMap;
-	std::mutex* m_mapMutex;
 };

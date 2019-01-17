@@ -1,5 +1,4 @@
 #include "ClientManagerReceive.h"
-#include "../../NetServerManager/NetServerManager/ProtocolId.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 
@@ -10,16 +9,15 @@ void ClientManagerReceive::serverConnected(uv_tcp_t* server)
 
 void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, int32_t protocolId)
 {
-	printf("ClientManagerReceive\n");
 	ProtoMessage message;
 	std::string clientName;
 	switch (protocolId)
 	{
-	case ProtocolId::INIT:
+	case ProcessWork::INIT:
 	{
 		printf("INIT, buffer = %s, length = %d\n", buffer, length);
 	}
-	case ProtocolId::PROTO_MESSAGE:
+	case ProcessWork::PROTO_MESSAGE:
 	{
 		printf("PROTO_MESSAGE, buffer = %s, length = %d\n", buffer, length);
 		message.from(buffer);
@@ -33,11 +31,11 @@ void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 		message.setKeyMap(messageMap);
 		break;
 	}
-	case ProtocolId::JSON:
+	case ProcessWork::JSON:
 	{
 		break;
 	}
-	case ProtocolId::XML:
+	case ProcessWork::XML:
 	{
 		break;
 	}
