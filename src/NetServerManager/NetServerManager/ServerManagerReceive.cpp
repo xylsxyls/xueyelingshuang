@@ -20,7 +20,7 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	{
 	case ProcessWork::INIT:
 	{
-		printf("NET_INIT, sender = %d, buffer = %s, length = %d\n", sender, buffer, length);
+		printf("NET_INIT, sender = %d, length = %d\n", sender, buffer, length);
 		message.from(std::string(buffer, length));
 		serverName = eraseServerName(message);
 		addClientPtr(message, sender);
@@ -29,7 +29,7 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	}
 	case ProcessWork::PROTO_MESSAGE:
 	{
-		printf("NET_PROTO_MESSAGE, sender = %d, buffer = %s, length = %d\n", sender, buffer, length);
+		printf("NET_PROTO_MESSAGE, sender = %d, length = %d\n", sender, buffer, length);
 		message.from(std::string(buffer, length));
 		serverName = eraseServerName(message);
 		addClientPtr(message, sender);

@@ -31,7 +31,7 @@ void LogReceive::receiveFromNet(char* buffer, int32_t length, int32_t protocolId
 	{
 	case NetSender::INIT:
 	{
-		printf("INIT, buffer = %s, length = %d\n", buffer, length);
+		printf("INIT, length = %d\n", buffer, length);
 		break;
 	}
 	case NetSender::PROTO_MESSAGE:

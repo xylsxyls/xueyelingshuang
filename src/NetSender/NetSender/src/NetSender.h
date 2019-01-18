@@ -20,8 +20,7 @@ public:
 	static NetSender& instance();
 
 public:
-	void send(const char* buffer, int32_t length, int32_t protocolId, bool isServer = false);
+	void init(bool isServer = false);
 
-private:
-	bool m_isInit;
+	void send(const char* buffer, int32_t length, int32_t protocolId, bool isServer = false);
 };

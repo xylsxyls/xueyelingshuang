@@ -23,6 +23,7 @@ int32_t main()
 {
 	LogReceive logReceive;
 	ProcessWork::instance().initReceive(&logReceive);
+	NetSender::instance().init();
 	printf("ComputerName = %s\n", CSystem::getComputerName().c_str());
 	while (true) Sleep(1000);
 	return 0;

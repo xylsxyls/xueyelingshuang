@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "LogTestServerReceive.h"
+#include "NetSender/NetSenderAPI.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -21,6 +22,7 @@ int32_t main()
 {
 	LogTestServerReceive receive;
 	ProcessWork::instance().initReceive(&receive);
+	NetSender::instance().init(true);
 	while (true) Sleep(1000);
 	getchar();
 	return 0;

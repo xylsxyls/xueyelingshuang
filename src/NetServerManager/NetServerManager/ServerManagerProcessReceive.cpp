@@ -19,7 +19,7 @@ void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t 
 	{
 	case ProcessWork::INIT:
 	{
-		printf("PROCESS_INIT, buffer = %s, length = %d\n", buffer, length);
+		printf("PROCESS_INIT, length = %d\n", buffer, length);
 		message.from(std::string(buffer, length));
 		setClientName(message, serverName);
 		dest = getClientPtr(message);
@@ -27,7 +27,7 @@ void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t 
 	}
 	case ProcessWork::PROTO_MESSAGE:
 	{
-		printf("PROCESS_PROTO_MESSAGE, buffer = %s, length = %d\n", buffer, length);
+		printf("PROCESS_PROTO_MESSAGE, length = %d\n", buffer, length);
 		message.from(std::string(buffer, length));
 		setClientName(message, serverName);
 		dest = getClientPtr(message);

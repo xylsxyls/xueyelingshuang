@@ -12,13 +12,13 @@ void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid
 	{
 	case ProcessWork::INIT:
 	{
-		printf("INIT, buffer = %s, length = %d\n", buffer, length);
+		printf("INIT, length = %d\n", length);
 		HandleInitMessage(message);
 		break;
 	}
 	case ProcessWork::PROTO_MESSAGE:
 	{
-		printf("PROTO_MESSAGE, buffer = %s, length = %d\n", buffer, length);
+		printf("PROTO_MESSAGE, length = %d\n", buffer, length);
 		HandleMessage(message);
 		break;
 	}
@@ -38,8 +38,10 @@ void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid
 void LogTestServerReceive::HandleInitMessage(ProtoMessage& message)
 {
 	auto messageMap = message.getMap();
-	NetLineManager::instance().addConnect(messageMap["loginName"].toString(), (uv_tcp_t*)(int32_t)messageMap["ClientPtr"]);
-	printf("init send to netserver\n");
+	std::string loginName = messageMap["loginName"].toString();
+	uv_tcp_t* clientPtr = (uv_tcp_t*)(int32_t)messageMap["ClientPtr"];
+	NetLineManager::instance().addConnect(loginName, clientPtr);
+	printf("logtestserver init,loginName = %s,clientPtr = %d, send to netserver\n", loginName.c_str(), clientPtr);
 	NetSender::instance().send(message.toString().c_str(), message.toString().length(), ProcessWork::INIT, true);
 }
 
@@ -54,7 +56,7 @@ void LogTestServerReceive::HandleMessage(ProtoMessage& message)
 		auto& computerName = vecComputerName[index];
 		uv_tcp_t* clientPtr = NetLineManager::instance().findConnect(computerName);
 		message["ClientPtr"] = (int32_t)clientPtr;
-		printf("send to netserver\n");
+		printf("send to netserver,computerName = %s,clientPtr = %d\n", computerName.c_str(), clientPtr);
 		NetSender::instance().send(message.toString().c_str(), message.toString().length(), ProcessWork::PROTO_MESSAGE, true);
 	}
 }
