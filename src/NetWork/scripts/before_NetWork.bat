@@ -15,6 +15,21 @@ goto DllRelyTest_end
 :DllRelyTest_end
 
 ::--------------------------------------------------------------------
+set CorrespondParam_dlllib=lib
+set CorrespondParam_bit=%1
+set CorrespondParam_debugRelease=%3
+set CorrespondParam_allSame=%4
+if "%4" == "same" (goto CorrespondParam_callSame) else (goto CorrespondParam_callSimple)
+:CorrespondParam_callSame
+set CorrespondParam_dlllib=%2
+call "%CLOUD_REBUILD%" CorrespondParam %CorrespondParam_bit% %CorrespondParam_dlllib% %CorrespondParam_debugRelease% %CorrespondParam_allSame%
+goto CorrespondParam_end
+:CorrespondParam_callSimple
+call "%CLOUD_REBUILD%" CorrespondParam %CorrespondParam_bit% %CorrespondParam_dlllib% %CorrespondParam_debugRelease%
+goto CorrespondParam_end
+:CorrespondParam_end
+
+::--------------------------------------------------------------------
 set LibuvTcp_dlllib=lib
 set LibuvTcp_bit=%1
 set LibuvTcp_debugRelease=%3

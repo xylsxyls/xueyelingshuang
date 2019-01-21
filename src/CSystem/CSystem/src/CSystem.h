@@ -89,6 +89,12 @@ public:
 	static std::string processName(int32_t pid);
 	//?获取电脑名
 	static std::string getComputerName();
+	//返回本进程所在路径，带\符号
+	static std::string GetCurrentExePath();
+	//返回进程名，没有后缀名
+	static std::string GetCurrentExeName();
+	//获取文件相关信息，flag1表示获取文件全名，flag2表示获取文件后缀名，flag3表示获取文件名，flag4表示获取前面的路径带\\符号
+	static std::string GetName(const std::string& path, int32_t flag);
 public:
     static bool ifRedirFrobid;
     static PVOID oldValue;

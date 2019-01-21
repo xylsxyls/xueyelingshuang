@@ -68,7 +68,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)d</TargetName>
+    <TargetName>$(ProjectName)1.0</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
@@ -149,11 +149,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ClientPackageManager.h" />
     <ClInclude Include="NetServerManager.h" />
     <ClInclude Include="ServerManagerProcessReceive.h" />
     <ClInclude Include="ServerManagerReceive.h" />
+    <ClInclude Include="ClientPackage.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ClientPackageManager.cpp" />
     <ClCompile Include="NetServerManager.cpp" />
     <ClCompile Include="ServerManagerProcessReceive.cpp" />
     <ClCompile Include="ServerManagerReceive.cpp" />

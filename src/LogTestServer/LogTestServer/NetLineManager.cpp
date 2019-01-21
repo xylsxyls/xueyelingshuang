@@ -11,19 +11,31 @@ NetLineManager& NetLineManager::instance()
 	return s_netLineManager;
 }
 
-void NetLineManager::addConnect(const std::string& serverName, uv_tcp_t* connect)
+void NetLineManager::addConnect(const std::string& loginName, int32_t clientId)
 {
 	std::unique_lock<std::mutex> mu(m_mutex);
-	m_connectedMap[serverName] = connect;
+	m_connectedMap[loginName].push_back(clientId);
+	m_loginNameMap[clientId] = loginName;
 }
 
-uv_tcp_t* NetLineManager::findConnect(const std::string& serverName)
+std::vector<int32_t> NetLineManager::findConnect(const std::string& loginName)
 {
 	std::unique_lock<std::mutex> mu(m_mutex);
-	auto it = m_connectedMap.find(serverName);
+	auto it = m_connectedMap.find(loginName);
 	if (it == m_connectedMap.end())
 	{
-		return nullptr;
+		return std::vector<int32_t>();
+	}
+	return it->second;
+}
+
+std::string NetLineManager::findLoginName(int32_t clientId)
+{
+	std::unique_lock<std::mutex> mu(m_mutex);
+	auto it = m_loginNameMap.find(clientId);
+	if (it == m_loginNameMap.end())
+	{
+		return "";
 	}
 	return it->second;
 }

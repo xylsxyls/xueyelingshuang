@@ -3,6 +3,7 @@
 #include "NetWork/NetWorkAPI.h"
 #include <mutex>
 #include "CStringManager/CStringManagerAPI.h"
+#include "ClientPackageManager.h"
 
 ServerManagerProcessReceive::ServerManagerProcessReceive():
 m_netServer(nullptr)
@@ -10,34 +11,39 @@ m_netServer(nullptr)
 
 }
 
-void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, int32_t protocalId)
+void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId)
 {
 	ProtoMessage message;
 	std::string serverName = CSystem::processName(sendPid);
 	uv_tcp_t* dest = nullptr;
-	switch (protocalId)
+	switch (protocolId)
 	{
-	case ProcessWork::INIT:
+	case CorrespondParam::CLIENT_INIT:
 	{
-		printf("PROCESS_INIT, length = %d\n", buffer, length);
+		printf("PROCESS_CLIENT_INIT, length = %d\n", length);
 		message.from(std::string(buffer, length));
-		setClientName(message, serverName);
 		dest = getClientPtr(message);
 		break;
 	}
-	case ProcessWork::PROTO_MESSAGE:
+	case CorrespondParam::SERVER_INIT:
 	{
-		printf("PROCESS_PROTO_MESSAGE, length = %d\n", buffer, length);
+		printf("PROCESS_SERVER_INIT, length = %d\n", length);
 		message.from(std::string(buffer, length));
-		setClientName(message, serverName);
+		ProcessWork::instance().send(message.toString().c_str(), message.toString().length(), sendPid, protocolId);
+		return;
+	}
+	case CorrespondParam::PROTO_MESSAGE:
+	{
+		printf("PROCESS_PROTO_MESSAGE, length = %d\n", length);
+		message.from(std::string(buffer, length));
 		dest = getClientPtr(message);
 		break;
 	}
-	case ProcessWork::JSON:
+	case CorrespondParam::JSON:
 	{
 		break;
 	}
-	case ProcessWork::XML:
+	case CorrespondParam::XML:
 	{
 		break;
 	}
@@ -45,7 +51,7 @@ void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t 
 		break;
 	}
 	printf("send to net, dest = %d\n", dest);
-	m_netServer->send(message.toString().c_str(), message.toString().length(), protocalId, dest);
+	m_netServer->send(message.toString().c_str(), message.toString().length(), protocolId, dest);
 }
 
 void ServerManagerProcessReceive::setServer(NetServer* netServer)
@@ -64,12 +70,11 @@ uv_tcp_t* ServerManagerProcessReceive::getClientPtr(ProtoMessage& message)
 {
 	auto messageMap = message.getMap();
 	uv_tcp_t* result = nullptr;
-	auto itMessage = messageMap.find("ClientPtr");
+	auto itMessage = messageMap.find(CLIENT_ID);
 	if (itMessage != messageMap.end())
 	{
-		result = (uv_tcp_t*)(int32_t)itMessage->second;
-		messageMap.erase(itMessage);
-		message.setKeyMap(messageMap);
+		auto& clientId = itMessage->second;
+		result = ClientPackageManager::instance().getClientPtr(clientId);
 	}
 	return result;
 }

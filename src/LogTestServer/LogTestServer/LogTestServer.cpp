@@ -22,7 +22,7 @@ int32_t main()
 {
 	LogTestServerReceive receive;
 	ProcessWork::instance().initReceive(&receive);
-	NetSender::instance().init(true);
+	NetSender::instance().init(nullptr, 0, true);
 	while (true) Sleep(1000);
 	getchar();
 	return 0;

@@ -2,6 +2,8 @@
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "CorrespondParam/CorrespondParamAPI.h"
+#include "IntDateTime/IntDateTimeAPI.h"
 
 LogSender::LogSender()
 {
@@ -27,22 +29,21 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	va_end(args);
 
 	ProtoMessage message;
-	message["logLevel"] = package.m_logLevel;
-	message["fileName"] = package.m_fileName;
-	message["funName"] = package.m_funName;
-	message["loginName"] = m_computerName;
-	message["isSendNet"] = (int32_t)package.m_isSendNet;
-	message["isSendScreen"] = (int32_t)package.m_isSendScreen;
-	message["isWriteLog"] = (int32_t)package.m_isWriteLog;
-	message["buffer"] = str;
-	const char* sds = message.toString().c_str();
-	const char* sds2 = message.toString().data();
+	message[LOG_LEVEL] = package.m_logLevel;
+	message[LOG_FILE_NAME] = package.m_fileName;
+	message[LOG_FUN_NAME] = package.m_funName;
+	message[LOG_IS_SEND_NET] = (int32_t)package.m_isSendNet;
+	message[LOG_IS_SEND_SCREEN] = (int32_t)package.m_isSendScreen;
+	message[LOG_IS_WRITE_LOG] = (int32_t)package.m_isWriteLog;
+	message[LOG_BUFFER] = str;
+	message[LOG_THREAD_ID] = (int32_t)CSystem::SystemThreadId();
+	message[LOG_INT_DATE_TIME] = IntDateTime().toString();
 	send(message.toString().c_str(), message.toString().length());
 }
 
 void LogSender::send(const char* buffer, int32_t length)
 {
-	ProcessWork::instance().send(buffer, length, "LogTest1.0.exe", ProcessWork::PROTO_MESSAGE);
+	ProcessWork::instance().send(buffer, length, "LogTest1.0.exe", CorrespondParam::PROTO_MESSAGE);
 }
 
 void LogSender::uninit()

@@ -454,6 +454,48 @@ std::string CSystem::getComputerName()
 	return computerName;
 }
 
+std::string CSystem::GetCurrentExePath()
+{
+	char szFilePath[1024] = {};
+	::GetModuleFileName(NULL, szFilePath, 1024);
+	return CSystem::GetName(szFilePath, 4);
+}
+
+std::string CSystem::GetCurrentExeName()
+{
+	char szFilePath[1024] = {};
+	::GetModuleFileName(NULL, szFilePath, 1024);
+	return CSystem::GetName(szFilePath, 3);
+}
+
+std::string CSystem::GetName(const std::string& path, int32_t flag)
+{
+	int32_t left = (int32_t)path.find_last_of("/\\");
+	std::string name = path.substr(left + 1, path.length() - left - 1);
+	int32_t point = (int32_t)name.find_last_of(".");
+	switch (flag)
+	{
+	case 1:
+	{
+		return name;
+	}
+	case 2:
+	{
+		return name.substr(point + 1, point == -1 ? 0 : name.length() - point - 1);
+	}
+	case 3:
+	{
+		return name.substr(0, point == -1 ? name.length() : point);
+	}
+	case 4:
+	{
+		return path.substr(0, left + 1);
+	}
+	default:
+		return "";
+	}
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 

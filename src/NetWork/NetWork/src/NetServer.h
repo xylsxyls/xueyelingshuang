@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 #include <list>
+#include "CorrespondParam/CorrespondParamAPI.h"
 
 class LibuvTcp;
 class ServerCallback;
@@ -20,7 +21,7 @@ public:
 public:
 	void listen(int32_t port, ServerCallback* callback);
 
-	void send(const char* buffer, int32_t length, int32_t protocolId, uv_tcp_t* dest);
+	void send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId, uv_tcp_t* dest);
 
 public:
 	ReadWriteMutex* clientPtrToThreadIdMutex();

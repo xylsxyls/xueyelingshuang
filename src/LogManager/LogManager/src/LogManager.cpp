@@ -47,7 +47,7 @@ void LogManager::init(const std::string& path)
 	LOGBEGIN("");
 }
 
-void LogManager::print(LogLevel flag, const string& fileMacro, const std::string& funName, const char* format, ...)
+void LogManager::print(LogLevel flag, const string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...)
 {
 	if (m_log == nullptr || m_processMutex == nullptr)
 	{
@@ -99,6 +99,7 @@ void LogManager::print(LogLevel flag, const string& fileMacro, const std::string
 	default:
 		break;
 	}
+
 	string str;
 	va_list args = nullptr;
 	va_start(args, format);
@@ -111,7 +112,6 @@ void LogManager::print(LogLevel flag, const string& fileMacro, const std::string
 	string fileMacroTemp;
 	int32_t nRight = fileMacro.find_last_of("/\\");
 	fileMacroTemp = CStringManager::Mid(fileMacro, nRight + 1, fileMacro.length() - nRight - 1);
-	
 	
 	WriteLock writelock(*m_processMutex);
 	if (flag == LOG_BEGIN)
@@ -131,5 +131,5 @@ void LogManager::print(LogLevel flag, const string& fileMacro, const std::string
 	}
 	std::string beginEnd;
 	//?这里str就是要打印的日志
-	*m_log << "[" + IntDateTime().timeToString() + "][" + strFlag + "][ThreadId:" << CSystem::SystemThreadId() << "][" << m_exeName << "][" << fileMacroTemp << "][" << funName.c_str() << "]" << ((flag == LOG_BEGIN || flag == LOG_END) ? beginEnd : beginEnd = " : " + str) << std::endl;
+	*m_log << "[" + (intDateTime.empty() ? IntDateTime().timeToString() : intDateTime) + "][" + strFlag + "][ThreadId:" << (threadId == 0 ? CSystem::SystemThreadId() : threadId) << "][" << (exeName.empty() ? m_exeName : exeName) << "][" << fileMacroTemp << "][" << funName.c_str() << "]" << ((flag == LOG_BEGIN || flag == LOG_END) ? beginEnd : beginEnd = " : " + str) << std::endl;
 }

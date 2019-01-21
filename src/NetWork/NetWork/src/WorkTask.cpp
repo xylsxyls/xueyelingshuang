@@ -24,7 +24,7 @@ void WorkTask::setParam(uv_tcp_t* client, char* buffer, int32_t length)
 
 void WorkTask::DoTask()
 {
-	m_callback->receive(m_client, m_buffer + 4, m_length - 4, *(int32_t*)m_buffer);
+	m_callback->receive(m_client, m_buffer + 4, m_length - 4, (CorrespondParam::ProtocolId)(*(int32_t*)m_buffer));
 	if (m_buffer == nullptr)
 	{
 		//加了protocolId之后包大小不可能为0

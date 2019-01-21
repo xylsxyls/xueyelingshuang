@@ -2,6 +2,7 @@
 #include "ProcessWorkMacro.h"
 #include <stdint.h>
 #include <map>
+#include "CorrespondParam/CorrespondParamAPI.h"
 
 class ReceiveCallback;
 class SharedMemory;
@@ -16,15 +17,6 @@ class ProcessWorkAPI ProcessWork
 	friend class DeleteTask;
 	friend class CreateKeyTask;
 	friend class CreateDataTask;
-public:
-	enum ProtocolId
-	{
-		INIT = 0,
-		PROTO_MESSAGE,
-		JSON,
-		XML
-	};
-
 protected:
 	/** 构造函数
 	*/
@@ -53,7 +45,7 @@ public:
 	@param [in] pid 目标进程id
 	@param [in] protocolId 协议号
 	*/
-	void send(const char* buffer, int32_t length, int32_t pid, int32_t protocolId = 1);
+	void send(const char* buffer, int32_t length, int32_t pid, CorrespondParam::ProtocolId protocolId = CorrespondParam::PROTO_MESSAGE);
 
 	/** 向服务端发送字符串，有序收到单线程，无序收到多线程
 	@param [in] buffer 字符串地址
@@ -61,7 +53,7 @@ public:
 	@param [in] processName 目标进程名
 	@param [in] protocolId 协议号
 	*/
-	void send(const char* buffer, int32_t length, const std::string processName, int32_t protocolId = 1);
+	void send(const char* buffer, int32_t length, const std::string& processName, CorrespondParam::ProtocolId protocolId = CorrespondParam::PROTO_MESSAGE);
 
 protected:
 	int32_t m_processPid;

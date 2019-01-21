@@ -1,11 +1,8 @@
 #pragma once
 #include "NetWork/NetWorkAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
-
-namespace std
-{
-	class mutex;
-}
+#include "CorrespondParam/CorrespondParamAPI.h"
+#include "ClientPackage.h"
 
 class ServerManagerReceive : public ServerCallback
 {
@@ -15,9 +12,14 @@ public:
 public:
 	virtual void clientConnected(uv_tcp_t* client);
 
-	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length, int32_t protocolId);
+	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
 
 	std::string eraseServerName(ProtoMessage& message);
 
-	void addClientPtr(ProtoMessage& message, uv_tcp_t* sender);
+	
+
+	void addClientId(ProtoMessage& message, uv_tcp_t* sender);
+
+private:
+	
 };

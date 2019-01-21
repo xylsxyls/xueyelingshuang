@@ -57,7 +57,7 @@ void ProcessWork::initReceive(ReceiveCallback* callback)
 	ThreadManager::instance().postReceiveTask(spReceiveTask);
 }
 
-void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, int32_t protocolId)
+void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, CorrespondParam::ProtocolId protocolId)
 {
 	if (pid == 0)
 	{
@@ -133,7 +133,7 @@ void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, int32_t 
 	::ReleaseSemaphore(HandleManager::instance().assignHandle(pid, true), 1, nullptr);
 }
 
-void ProcessWork::send(const char* buffer, int32_t length, const std::string processName, int32_t protocolId)
+void ProcessWork::send(const char* buffer, int32_t length, const std::string& processName, CorrespondParam::ProtocolId protocolId)
 {
 	send(buffer, length, CSystem::processPid(processName), protocolId);
 }

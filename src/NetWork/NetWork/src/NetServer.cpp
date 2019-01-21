@@ -28,7 +28,7 @@ void NetServer::listen(int32_t port, ServerCallback* callback)
 	m_libuvTcp->serverLoop();
 }
 
-void NetServer::send(const char* buffer, int32_t length, int32_t protocolId, uv_tcp_t* dest)
+void NetServer::send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId, uv_tcp_t* dest)
 {
 	if (m_libuvTcp == nullptr || dest == nullptr)
 	{

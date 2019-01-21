@@ -28,14 +28,14 @@ std::string CGetPath::GetRegOcxPath(const std::string& classid)
 std::string CGetPath::GetCurrentExePath()
 {
 	char szFilePath[1024] = {};
-	GetModuleFileName(NULL, szFilePath, 1024);
+	::GetModuleFileName(NULL, szFilePath, 1024);
     return CGetPath::GetName(szFilePath, 4);
 }
 
 std::string CGetPath::GetCurrentExeName()
 {
 	char szFilePath[1024] = {};
-	GetModuleFileName(NULL, szFilePath, 1024);
+	::GetModuleFileName(NULL, szFilePath, 1024);
 	return CGetPath::GetName(szFilePath, 3);
 }
 

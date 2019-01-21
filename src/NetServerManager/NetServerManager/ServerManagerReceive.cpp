@@ -1,6 +1,8 @@
 #include "ServerManagerReceive.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "ProcessWork/ProcessWorkAPI.h"
+#include "ClientPackageManager.h"
+
 
 ServerManagerReceive::ServerManagerReceive()
 {
@@ -12,42 +14,40 @@ void ServerManagerReceive::clientConnected(uv_tcp_t* client)
 	printf("clientConnected = %d\n", client);
 }
 
-void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, int32_t protocolId)
+void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
 	ProtoMessage message;
-	std::string serverName;
+	int32_t serverPid = 0;
 	switch (protocolId)
 	{
-	case ProcessWork::INIT:
+	case CorrespondParam::CLIENT_INIT:
 	{
-		printf("NET_INIT, sender = %d, length = %d\n", sender, buffer, length);
+		printf("NET_CLIENT_INIT, sender = %d, length = %d\n", sender, buffer, length);
 		message.from(std::string(buffer, length));
-		serverName = eraseServerName(message);
-		addClientPtr(message, sender);
-		//NetLineManager::instance().addConnect(serverName, sender);
+		ClientPackageManager::instance().addClientPackage(message, sender);
+		addClientId(message, sender);
 		break;
 	}
-	case ProcessWork::PROTO_MESSAGE:
+	case CorrespondParam::PROTO_MESSAGE:
 	{
 		printf("NET_PROTO_MESSAGE, sender = %d, length = %d\n", sender, buffer, length);
 		message.from(std::string(buffer, length));
-		serverName = eraseServerName(message);
-		addClientPtr(message, sender);
+		addClientId(message, sender);
 		break;
 	}
-	case ProcessWork::JSON:
+	case CorrespondParam::JSON:
 	{
 		break;
 	}
-	case ProcessWork::XML:
+	case CorrespondParam::XML:
 	{
 		break;
 	}
 	default:
 		break;
 	}
-	printf("send to process, serverName = %s\n", serverName.c_str());
-	ProcessWork::instance().send(message.toString().c_str(), message.toString().length() , serverName, protocolId);
+	printf("send to process, serverPid = %d\n", ClientPackageManager::instance().getServerPid(sender));
+	ProcessWork::instance().send(message.toString().c_str(), message.toString().length(), ClientPackageManager::instance().getServerPid(sender), protocolId);
 }
 
 std::string ServerManagerReceive::eraseServerName(ProtoMessage& message)
@@ -63,7 +63,7 @@ std::string ServerManagerReceive::eraseServerName(ProtoMessage& message)
 	return serverName;
 }
 
-void ServerManagerReceive::addClientPtr(ProtoMessage& message, uv_tcp_t* sender)
+void ServerManagerReceive::addClientId(ProtoMessage& message, uv_tcp_t* sender)
 {
-	message["ClientPtr"] = (int32_t)sender;
+	message[CLIENT_ID] = ClientPackageManager::instance().getClientId(sender);
 }

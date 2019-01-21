@@ -4,14 +4,14 @@
 #include <stdint.h>
 
 //LOGDEBUG在release下不会输进日志文件
-#define LOGDEBUG(format, ...) LogManager::instance().print(LogManager::LOG_DEBUG, __FILE__, __FUNCTION__, format, ##__VA_ARGS__)
-#define LOGINFO(format, ...) LogManager::instance().print(LogManager::LOG_INFO, __FILE__, __FUNCTION__, format, ##__VA_ARGS__)
-#define LOGWARNING(format, ...) LogManager::instance().print(LogManager::LOG_WARNING, __FILE__, __FUNCTION__, format, ##__VA_ARGS__)
-#define LOGERROR(format, ...) LogManager::instance().print(LogManager::LOG_ERROR, __FILE__, __FUNCTION__, format, ##__VA_ARGS__)
-#define LOGFATAL(format, ...) LogManager::instance().print(LogManager::LOG_FATAL, __FILE__, __FUNCTION__, format, ##__VA_ARGS__)
+#define LOGDEBUG(format, ...) LogManager::instance().print(LogManager::LOG_DEBUG, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGINFO(format, ...) LogManager::instance().print(LogManager::LOG_INFO, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGWARNING(format, ...) LogManager::instance().print(LogManager::LOG_WARNING, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGERROR(format, ...) LogManager::instance().print(LogManager::LOG_ERROR, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGFATAL(format, ...) LogManager::instance().print(LogManager::LOG_FATAL, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
 //begin和end是内部使用
-#define LOGBEGIN(format, ...) LogManager::instance().print(LogManager::LOG_BEGIN, __FILE__, __FUNCTION__, format, ##__VA_ARGS__)
-#define LOGEND(format, ...) LogManager::instance().print(LogManager::LOG_END, __FILE__, __FUNCTION__, format, ##__VA_ARGS__)
+#define LOGBEGIN(format, ...) LogManager::instance().print(LogManager::LOG_BEGIN, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGEND(format, ...) LogManager::instance().print(LogManager::LOG_END, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
 
 namespace std
 {
@@ -43,7 +43,7 @@ public:
 public:
 	void init(const std::string& path = "");
 
-	void print(LogLevel flag, const std::string& fileMacro, const std::string& funName, const char* format, ...);
+	void print(LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...);
 
 private:
 #ifdef _MSC_VER

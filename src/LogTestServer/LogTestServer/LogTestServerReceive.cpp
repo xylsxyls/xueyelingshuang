@@ -3,30 +3,41 @@
 #include "NetLineManager.h"
 #include "Cini/CiniAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
 
-void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid, int32_t protocolId)
+LogTestServerReceive::LogTestServerReceive()
+{
+	m_iniPath = CSystem::GetCurrentExePath() + "Config.ini";
+}
+
+void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId)
 {
 	ProtoMessage message;
 	message.from(std::string(buffer, length));
 	switch (protocolId)
 	{
-	case ProcessWork::INIT:
+	case CorrespondParam::CLIENT_INIT:
 	{
-		printf("INIT, length = %d\n", length);
+		printf("CLIENT_INIT, length = %d\n", length);
 		HandleInitMessage(message);
 		break;
 	}
-	case ProcessWork::PROTO_MESSAGE:
+	case CorrespondParam::SERVER_INIT:
 	{
-		printf("PROTO_MESSAGE, length = %d\n", buffer, length);
+		printf("SERVER_INIT\n");
+		break;
+	}
+	case CorrespondParam::PROTO_MESSAGE:
+	{
+		printf("PROTO_MESSAGE, length = %d\n", length);
 		HandleMessage(message);
 		break;
 	}
-	case ProcessWork::JSON:
+	case CorrespondParam::JSON:
 	{
 		break;
 	}
-	case ProcessWork::XML:
+	case CorrespondParam::XML:
 	{
 		break;
 	}
@@ -38,25 +49,31 @@ void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid
 void LogTestServerReceive::HandleInitMessage(ProtoMessage& message)
 {
 	auto messageMap = message.getMap();
-	std::string loginName = messageMap["loginName"].toString();
-	uv_tcp_t* clientPtr = (uv_tcp_t*)(int32_t)messageMap["ClientPtr"];
-	NetLineManager::instance().addConnect(loginName, clientPtr);
-	printf("logtestserver init,loginName = %s,clientPtr = %d, send to netserver\n", loginName.c_str(), clientPtr);
-	NetSender::instance().send(message.toString().c_str(), message.toString().length(), ProcessWork::INIT, true);
+	std::string loginName = messageMap[LOGIN_NAME].toString();
+	int32_t clientId = messageMap[CLIENT_ID];
+	NetLineManager::instance().addConnect(loginName, clientId);
+	printf("logtestserver init,loginName = %s,clientId = %d, send to netserver\n", loginName.c_str(), clientId);
+	NetSender::instance().send(message.toString().c_str(), message.toString().length(), CorrespondParam::CLIENT_INIT, true);
 }
 
 void LogTestServerReceive::HandleMessage(ProtoMessage& message)
 {
-	Cini ini("config.ini");
+	Cini ini(m_iniPath);
 	std::string collectComputerName = ini.ReadIni("CollectComputerName");
 	std::vector<std::string> vecComputerName = CStringManager::split(collectComputerName, ",");
 	int32_t index = -1;
 	while (index++ != vecComputerName.size() - 1)
 	{
 		auto& computerName = vecComputerName[index];
-		uv_tcp_t* clientPtr = NetLineManager::instance().findConnect(computerName);
-		message["ClientPtr"] = (int32_t)clientPtr;
-		printf("send to netserver,computerName = %s,clientPtr = %d\n", computerName.c_str(), clientPtr);
-		NetSender::instance().send(message.toString().c_str(), message.toString().length(), ProcessWork::PROTO_MESSAGE, true);
+		std::vector<int32_t> vecId = NetLineManager::instance().findConnect(computerName);
+		int32_t idIndex = -1;
+		while (idIndex++ != vecId.size() - 1)
+		{
+			int32_t& clientId = vecId[idIndex];
+			message[CLIENT_ID] = clientId;
+			message[LOGIN_NAME] = NetLineManager::instance().findLoginName(clientId);
+			printf("send to netserver,computerName = %s,clientId = %d\n", computerName.c_str(), clientId);
+			NetSender::instance().send(message.toString().c_str(), message.toString().length(), CorrespondParam::PROTO_MESSAGE, true);
+		}
 	}
 }

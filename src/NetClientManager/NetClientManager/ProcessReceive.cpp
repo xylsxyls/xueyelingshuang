@@ -1,48 +1,38 @@
 #include "ProcessReceive.h"
 #include "NetWork/NetWorkAPI.h"
 #include "CSystem/CSystemAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 
 ProcessReceive::ProcessReceive():
 m_netClient(nullptr)
 {
-
+	m_computerName = CSystem::getComputerName();
 }
 
-void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, int32_t protocalId)
+void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocalId)
 {
+	std::string clientName = CSystem::processName(sendPid);
 	ProtoMessage message;
 	switch (protocalId)
 	{
-	case ProcessWork::INIT:
+	case CorrespondParam::CLIENT_INIT:
 	{
-		printf("PROCESS_RECEIVE_INIT, buffer = %s, length = %d\n", buffer, length);
+		printf("PROCESS_CLIENT_INIT, length = %d\n", length);
 		message.from(std::string(buffer, length));
-		std::string clientName = CSystem::processName(sendPid);
-		printf("clientName = %s\n", clientName.c_str());
-		std::string serverName = clientName;
-		CStringManager::Insert(serverName, clientName.length() - 7, "Server");
-		message["ServerProcessName"] = serverName;
-		//printf("serverName = %s\n", message["ServerProcessName"].toString().c_str());
+		addClientServerLoginName(message, clientName);
 		break;
 	}
-	case ProcessWork::PROTO_MESSAGE:
+	case CorrespondParam::PROTO_MESSAGE:
 	{
-		printf("PROTO_MESSAGE, buffer = %s, length = %d\n", buffer, length);
+		printf("PROTO_MESSAGE, length = %d\n", length);
 		message.from(std::string(buffer, length));
-		std::string clientName = CSystem::processName(sendPid);
-		std::string serverName = clientName;
-		CStringManager::Insert(serverName, clientName.length() - 7, "Server");
-		message["ServerProcessName"] = serverName;
-		printf("process receive = %s", buffer);
 		break;
 	}
-	case ProcessWork::JSON:
+	case CorrespondParam::JSON:
 	{
 		break;
 	}
-	case ProcessWork::XML:
+	case CorrespondParam::XML:
 	{
 		break;
 	}
@@ -56,4 +46,13 @@ void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, int3
 void ProcessReceive::setNetClient(NetClient* netClient)
 {
 	m_netClient = netClient;
+}
+
+void ProcessReceive::addClientServerLoginName(ProtoMessage& message, const std::string& clientName)
+{
+	std::string serverName = clientName;
+	CStringManager::Insert(serverName, clientName.length() - 7, "Server");
+	message[CLIENT_NAME] = clientName;
+	message[SERVER_NAME] = serverName;
+	message[LOGIN_NAME] = m_computerName;
 }

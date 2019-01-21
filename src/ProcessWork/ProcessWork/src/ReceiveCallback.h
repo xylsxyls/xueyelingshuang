@@ -12,5 +12,5 @@ public:
 	@param [in] sendPid 发送进程ID
 	@param [in] protocolId 发送数据协议
 	*/
-	virtual void receive(char* buffer, int32_t length, int32_t sendPid, int32_t protocolId) = 0;
+	virtual void receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId) = 0;
 };

@@ -28,7 +28,7 @@ void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback)
 	m_libuvTcp->clientLoop();
 }
 
-void NetClient::send(const char* buffer, int32_t length, int32_t protocolId, uv_tcp_t* dest)
+void NetClient::send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId, uv_tcp_t* dest)
 {
 	if (m_libuvTcp == nullptr)
 	{

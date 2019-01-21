@@ -1,18 +1,10 @@
 #pragma once
 #include "NetSenderMacro.h"
 #include <stdint.h>
+#include "CorrespondParam/CorrespondParamAPI.h"
 
 class NetSenderAPI NetSender
 {
-public:
-	enum ProtocolId
-	{
-		INIT = 0,
-		PROTO_MESSAGE,
-		JSON,
-		XML
-	};
-
 protected:
 	NetSender();
 
@@ -20,7 +12,7 @@ public:
 	static NetSender& instance();
 
 public:
-	void init(bool isServer = false);
+	void init(const char* buffer = nullptr, int32_t length = 0, bool isServer = false);
 
-	void send(const char* buffer, int32_t length, int32_t protocolId, bool isServer = false);
+	void send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId, bool isServer = false);
 };

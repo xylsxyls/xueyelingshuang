@@ -12,12 +12,12 @@ NetSender& NetSender::instance()
 	return netSender;
 }
 
-void NetSender::init(bool isServer)
+void NetSender::init(const char* buffer, int32_t length, bool isServer)
 {
-	ProcessWork::instance().send(nullptr, 0, isServer ? "NetServerManager1.0.exe" : "NetClientManager1.0.exe", ProcessWork::INIT);
+	ProcessWork::instance().send(buffer, length, isServer ? "NetServerManager1.0.exe" : "NetClientManager1.0.exe", isServer ? CorrespondParam::SERVER_INIT : CorrespondParam::CLIENT_INIT);
 }
 
-void NetSender::send(const char* buffer, int32_t length, int32_t protocolId, bool isServer)
+void NetSender::send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId, bool isServer)
 {
 	ProcessWork::instance().send(buffer, length, isServer ? "NetServerManager1.0.exe" : "NetClientManager1.0.exe", protocolId);
 }

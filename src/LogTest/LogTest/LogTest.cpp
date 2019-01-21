@@ -5,6 +5,7 @@
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "NetSender/NetSenderAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "ProtoMessage/ProtoMessageAPI.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
