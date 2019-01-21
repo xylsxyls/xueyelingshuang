@@ -58,6 +58,7 @@ void LogTestServerReceive::HandleInitMessage(ProtoMessage& message)
 
 void LogTestServerReceive::HandleMessage(ProtoMessage& message)
 {
+	std::string loginName = NetLineManager::instance().findLoginName((message.getMap())[CLIENT_ID]);
 	Cini ini(m_iniPath);
 	std::string collectComputerName = ini.ReadIni("CollectComputerName");
 	std::vector<std::string> vecComputerName = CStringManager::split(collectComputerName, ",");
@@ -71,7 +72,7 @@ void LogTestServerReceive::HandleMessage(ProtoMessage& message)
 		{
 			int32_t& clientId = vecId[idIndex];
 			message[CLIENT_ID] = clientId;
-			message[LOGIN_NAME] = NetLineManager::instance().findLoginName(clientId);
+			message[LOGIN_NAME] = loginName;
 			printf("send to netserver,computerName = %s,clientId = %d\n", computerName.c_str(), clientId);
 			NetSender::instance().send(message.toString().c_str(), message.toString().length(), CorrespondParam::PROTO_MESSAGE, true);
 		}
