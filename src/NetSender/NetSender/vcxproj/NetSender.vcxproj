@@ -27,7 +27,7 @@
     <ClCompile Include="..\src\NetSender.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{B4F50279-9C4B-4C44-B180-FB80D269ACD4}</ProjectGuid>
     <RootNamespace>NetSender</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

@@ -13,20 +13,41 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Task">
+      <UniqueIdentifier>{5791b90c-8638-4f20-aa01-59d1a014a4ce}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LogTest.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="LogReceive.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="LogTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="NetTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="ScreenTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="LogTest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LogTest.cpp">
+    <ClCompile Include="LogReceive.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="LogReceive.cpp">
+    <ClCompile Include="LogTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="NetTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="ScreenTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="LogTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

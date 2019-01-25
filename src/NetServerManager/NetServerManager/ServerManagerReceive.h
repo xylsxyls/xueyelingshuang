@@ -13,13 +13,4 @@ public:
 	virtual void clientConnected(uv_tcp_t* client);
 
 	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
-
-	std::string eraseServerName(ProtoMessage& message);
-
-	
-
-	void addClientId(ProtoMessage& message, uv_tcp_t* sender);
-
-private:
-	
 };

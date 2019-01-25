@@ -150,11 +150,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="LogReceive.h" />
+    <ClInclude Include="LogTask.h" />
     <ClInclude Include="LogTest.h" />
+    <ClInclude Include="NetTask.h" />
+    <ClInclude Include="ScreenTask.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LogReceive.cpp" />
+    <ClCompile Include="LogTask.cpp" />
     <ClCompile Include="LogTest.cpp" />
+    <ClCompile Include="NetTask.cpp" />
+    <ClCompile Include="ScreenTask.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

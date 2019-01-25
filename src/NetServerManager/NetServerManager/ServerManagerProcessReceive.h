@@ -16,9 +16,7 @@ public:
 
 	void setServer(NetServer* netServer);
 
-	void setClientName(ProtoMessage& message, const std::string& serverName);
-
-	uv_tcp_t* getClientPtr(ProtoMessage& message);
+	uv_tcp_t* getClientPtr(const char* buffer, int32_t length);
 
 protected:
 	NetServer* m_netServer;

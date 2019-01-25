@@ -5,6 +5,8 @@
 #define CLIENT_NAME "ClientName"
 #define LOGIN_NAME "LoginName"
 #define CLIENT_ID "ClientId"
+#define PREDEFINE "Predefine"
+
 #define LOG_FUN_NAME "LogFunName"
 #define LOG_FILE_NAME "LogFileName"
 #define LOG_PROCESS_NAME "LogProcessName"
@@ -15,6 +17,7 @@
 #define LOG_BUFFER "Buffer"
 #define LOG_THREAD_ID "ThreadId"
 #define LOG_INT_DATE_TIME "IntDateTime"
+#define LOG_LOGIN_NAME "LoginName"
 
 class CorrespondParamAPI CorrespondParam
 {

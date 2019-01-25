@@ -2,7 +2,7 @@
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ClientPackageManager.h"
-
+#include "CStringManager/CStringManagerAPI.h"
 
 ServerManagerReceive::ServerManagerReceive()
 {
@@ -16,8 +16,8 @@ void ServerManagerReceive::clientConnected(uv_tcp_t* client)
 
 void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
+	std::string strMessage;
 	ProtoMessage message;
-	int32_t serverPid = 0;
 	switch (protocolId)
 	{
 	case CorrespondParam::CLIENT_INIT:
@@ -25,14 +25,14 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 		printf("NET_CLIENT_INIT, sender = %d, length = %d\n", sender, buffer, length);
 		message.from(std::string(buffer, length));
 		ClientPackageManager::instance().addClientPackage(message, sender);
-		addClientId(message, sender);
-		break;
+		strMessage = ClientPackageManager::instance().get4ClientId(sender);
+		strMessage.append(message.toString());
+		ProcessWork::instance().send(strMessage.c_str(), strMessage.length(), ClientPackageManager::instance().getServerPid(sender), protocolId);
+		return;
 	}
 	case CorrespondParam::PROTO_MESSAGE:
 	{
-		printf("NET_PROTO_MESSAGE, sender = %d, length = %d\n", sender, buffer, length);
-		message.from(std::string(buffer, length));
-		addClientId(message, sender);
+		//printf("NET_PROTO_MESSAGE, sender = %d, length = %d\n", sender, buffer, length);
 		break;
 	}
 	case CorrespondParam::JSON:
@@ -46,24 +46,8 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	default:
 		break;
 	}
-	printf("send to process, serverPid = %d\n", ClientPackageManager::instance().getServerPid(sender));
-	ProcessWork::instance().send(message.toString().c_str(), message.toString().length(), ClientPackageManager::instance().getServerPid(sender), protocolId);
-}
-
-std::string ServerManagerReceive::eraseServerName(ProtoMessage& message)
-{
-	std::string serverName = message.getMap().find("ServerProcessName")->second.toString();
-	auto messageMap = message.getMap();
-	auto itServerName = messageMap.find("ServerProcessName");
-	if (itServerName != messageMap.end())
-	{
-		messageMap.erase(itServerName);
-	}
-	message.setKeyMap(messageMap);
-	return serverName;
-}
-
-void ServerManagerReceive::addClientId(ProtoMessage& message, uv_tcp_t* sender)
-{
-	message[CLIENT_ID] = ClientPackageManager::instance().getClientId(sender);
+	//printf("send to process, serverPid = %d\n", ClientPackageManager::instance().getServerPid(sender));
+	strMessage = ClientPackageManager::instance().get4ClientId(sender);
+	strMessage.append(buffer, length);
+	ProcessWork::instance().send(strMessage.c_str(), strMessage.length(), ClientPackageManager::instance().getServerPid(sender), protocolId);
 }

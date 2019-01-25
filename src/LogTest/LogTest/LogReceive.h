@@ -1,6 +1,10 @@
 #pragma once
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
+#include <memory>
+#include "ProtoMessage/ProtoMessageAPI.h"
+
+class CTaskThread;
 
 class LogReceive : public ReceiveCallback
 {
@@ -14,9 +18,13 @@ public:
 
 	void sendToNet(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId);
 
-	std::string addSendMap(int32_t sendPid);
+	std::string getSenderName(int32_t sendPid);
 
 protected:
 	int32_t m_netClientManagerPid;
 	std::map<int32_t, std::string> m_sendMap;
+	std::shared_ptr<CTaskThread> m_screenThread;
+	std::shared_ptr<CTaskThread> m_logThread;
+	std::shared_ptr<CTaskThread> m_netThread;
+	ProtoMessage m_message;
 };

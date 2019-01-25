@@ -10,8 +10,6 @@ public:
 
 	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
 
-	std::string removeClientName(ProtoMessage& message);
-
 	void addClientIdMap(uv_tcp_t* server, int32_t clientPid);
 
 	int32_t findClientId(uv_tcp_t* server);

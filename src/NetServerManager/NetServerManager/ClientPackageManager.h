@@ -20,11 +20,13 @@ public:
 
 	int32_t getClientId(uv_tcp_t* clientPtr);
 
+	std::string get4ClientId(uv_tcp_t* clientPtr);
+
 	int32_t getServerPid(uv_tcp_t* clientPtr);
 
 private:
 	std::map<int32_t, ClientPackage> m_serverPackageMap;
 	std::map<uv_tcp_t*, int32_t> m_clientPtrMap;
-	static int32_t s_clientId;
+	int32_t m_clientId;
 	std::mutex m_mutex;
 };

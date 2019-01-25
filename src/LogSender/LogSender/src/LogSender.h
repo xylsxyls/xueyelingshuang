@@ -10,12 +10,14 @@
 #define LOG_SEND_ERROR(format, ...) LogSender::instance().logSend(LogPackage(LogPackage::LOG_ERROR, __FILE__, __FUNCTION__, true, true, true), format, ##__VA_ARGS__)
 #define LOG_SEND_FATAL(format, ...) LogSender::instance().logSend(LogPackage(LogPackage::LOG_FATAL, __FILE__, __FUNCTION__, true, true, true), format, ##__VA_ARGS__)
 
+class ProtoMessage;
+
 class LogSenderAPI LogSender
 {
-public:
-	
 protected:
 	LogSender();
+
+	~LogSender();
 
 public:
 	static LogSender& instance();
@@ -34,6 +36,7 @@ private:
 #pragma warning(disable:4251)
 #endif
 	std::string m_computerName;
+	ProtoMessage* m_message;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

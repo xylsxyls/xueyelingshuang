@@ -2,10 +2,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "LogReceive.h"
-#include "ProcessWork/ProcessWorkAPI.h"
 #include "NetSender/NetSenderAPI.h"
 #include "CSystem/CSystemAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -14,6 +13,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninit();
+		//CTaskThreadManager::Instance().UninitAll();
 	}
 	return FALSE;
 }
@@ -25,7 +25,7 @@ int32_t main()
 	LogReceive logReceive;
 	ProcessWork::instance().initReceive(&logReceive);
 	NetSender::instance().init();
-	printf("ComputerName = %s\n", CSystem::getComputerName().c_str());
+	printf("ComputerName = %s, pid = %d\n", CSystem::getComputerName().c_str(), CSystem::processPid());
 	while (true) Sleep(1000);
 	return 0;
 }

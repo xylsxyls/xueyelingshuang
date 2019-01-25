@@ -14,29 +14,24 @@ m_netServer(nullptr)
 void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId)
 {
 	ProtoMessage message;
-	std::string serverName = CSystem::processName(sendPid);
 	uv_tcp_t* dest = nullptr;
 	switch (protocolId)
 	{
 	case CorrespondParam::CLIENT_INIT:
 	{
 		printf("PROCESS_CLIENT_INIT, length = %d\n", length);
-		message.from(std::string(buffer, length));
-		dest = getClientPtr(message);
-		break;
+		m_netServer->send(buffer + sizeof(int32_t), length - sizeof(int32_t), protocolId, getClientPtr(buffer, length));
+		return;
 	}
 	case CorrespondParam::SERVER_INIT:
 	{
 		printf("PROCESS_SERVER_INIT, length = %d\n", length);
-		message.from(std::string(buffer, length));
-		ProcessWork::instance().send(message.toString().c_str(), message.toString().length(), sendPid, protocolId);
+		ProcessWork::instance().send(buffer, length, sendPid, protocolId);
 		return;
 	}
 	case CorrespondParam::PROTO_MESSAGE:
 	{
-		printf("PROCESS_PROTO_MESSAGE, length = %d\n", length);
-		message.from(std::string(buffer, length));
-		dest = getClientPtr(message);
+		//printf("PROCESS_PROTO_MESSAGE, length = %d\n", length);
 		break;
 	}
 	case CorrespondParam::JSON:
@@ -50,8 +45,9 @@ void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t 
 	default:
 		break;
 	}
-	printf("send to net, dest = %d\n", dest);
-	m_netServer->send(message.toString().c_str(), message.toString().length(), protocolId, dest);
+	//printf("send to net, dest = %d\n", dest);
+	dest = getClientPtr(buffer, length);
+	m_netServer->send(buffer + sizeof(int32_t), length - sizeof(int32_t), protocolId, dest);
 }
 
 void ServerManagerProcessReceive::setServer(NetServer* netServer)
@@ -59,22 +55,11 @@ void ServerManagerProcessReceive::setServer(NetServer* netServer)
 	m_netServer = netServer;
 }
 
-void ServerManagerProcessReceive::setClientName(ProtoMessage& message, const std::string& serverName)
+uv_tcp_t* ServerManagerProcessReceive::getClientPtr(const char* buffer, int32_t length)
 {
-	std::string clientName = serverName;
-	CStringManager::Delete(clientName, clientName.length() - 13, 6);
-	message["ClientProcessName"] = clientName;
-}
-
-uv_tcp_t* ServerManagerProcessReceive::getClientPtr(ProtoMessage& message)
-{
-	auto messageMap = message.getMap();
-	uv_tcp_t* result = nullptr;
-	auto itMessage = messageMap.find(CLIENT_ID);
-	if (itMessage != messageMap.end())
+	if (length < sizeof(int32_t))
 	{
-		auto& clientId = itMessage->second;
-		result = ClientPackageManager::instance().getClientPtr(clientId);
+		return nullptr;
 	}
-	return result;
+	return ClientPackageManager::instance().getClientPtr(*((int32_t*)buffer));
 }

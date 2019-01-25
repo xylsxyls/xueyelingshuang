@@ -17,45 +17,35 @@ void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	{
 		printf("CLIENT_INIT, length = %d\n", length);
 		message.from(std::string(buffer, length));
-		auto messageMap = message.getMap();
-		clientPid = CSystem::processPid(messageMap[CLIENT_NAME].toString());
+		std::map<std::string, Variant> predefineMap;
+		message.getMap(predefineMap, PREDEFINE);
+		clientPid = CSystem::processPid(predefineMap[CLIENT_NAME].toString());
 		addClientIdMap(sender, clientPid);
-		break;
+		std::string strMessage = message.toString();
+		ProcessWork::instance().send(strMessage.c_str(), strMessage.length(), clientPid, protocolId);
+		return;
 	}
 	case CorrespondParam::PROTO_MESSAGE:
 	{
-		printf("PROTO_MESSAGE, length = %d\n", length);
-		message.from(std::string(buffer, length));
+		//printf("PROTO_MESSAGE, length = %d\n", length);
 		clientPid = findClientId(sender);
 		break;
 	}
 	case CorrespondParam::JSON:
 	{
+		clientPid = findClientId(sender);
 		break;
 	}
 	case CorrespondParam::XML:
 	{
+		clientPid = findClientId(sender);
 		break;
 	}
 	default:
 		break;
 	}
-	printf("send to process\n");
-	ProcessWork::instance().send(message.toString().c_str(), message.toString().length(), clientPid, protocolId);
-}
-
-std::string ClientManagerReceive::removeClientName(ProtoMessage& message)
-{
-	std::string clientName;
-	auto messageMap = message.getMap();
-	auto itClientName = messageMap.find(CLIENT_NAME);
-	if (itClientName != messageMap.end())
-	{
-		clientName = itClientName->second;
-		messageMap.erase(itClientName);
-	}
-	message.setKeyMap(messageMap);
-	return clientName;
+	//printf("send to process\n");
+	ProcessWork::instance().send(buffer, length, clientPid, protocolId);
 }
 
 void ClientManagerReceive::addClientIdMap(uv_tcp_t* server, int32_t clientPid)

@@ -20,12 +20,13 @@ void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, Corr
 		printf("PROCESS_CLIENT_INIT, length = %d\n", length);
 		message.from(std::string(buffer, length));
 		addClientServerLoginName(message, clientName);
-		break;
+		std::string strMessage = message.toString();
+		m_netClient->send(strMessage.c_str(), strMessage.length(), protocalId);
+		return;
 	}
 	case CorrespondParam::PROTO_MESSAGE:
 	{
-		printf("PROTO_MESSAGE, length = %d\n", length);
-		message.from(std::string(buffer, length));
+		//printf("PROTO_MESSAGE, length = %d\n", length);
 		break;
 	}
 	case CorrespondParam::JSON:
@@ -39,8 +40,8 @@ void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, Corr
 	default:
 		break;
 	}
-	printf("send to net\n");
-	m_netClient->send(message.toString().c_str(), message.toString().length(), protocalId);
+	//printf("send to net\n");
+	m_netClient->send(buffer, length, protocalId);
 }
 
 void ProcessReceive::setNetClient(NetClient* netClient)
@@ -52,7 +53,9 @@ void ProcessReceive::addClientServerLoginName(ProtoMessage& message, const std::
 {
 	std::string serverName = clientName;
 	CStringManager::Insert(serverName, clientName.length() - 7, "Server");
-	message[CLIENT_NAME] = clientName;
-	message[SERVER_NAME] = serverName;
-	message[LOGIN_NAME] = m_computerName;
+	std::map<std::string, Variant> predefineMap;
+	predefineMap[CLIENT_NAME] = clientName;
+	predefineMap[SERVER_NAME] = serverName;
+	predefineMap[LOGIN_NAME] = m_computerName;
+	message.setKeyMap(predefineMap, PREDEFINE);
 }

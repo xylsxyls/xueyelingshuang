@@ -4,6 +4,7 @@
 #include <windows.h>
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "CorrespondParam/CorrespondParamAPI.h"
 #include "D:\\SendToMessageTest.h"
 
 std::atomic<int> calc = 0;
@@ -88,7 +89,7 @@ public:
 		RCSend("begin = %d\n", ::GetTickCount());
 		while (count-- != 0)
 		{
-			m_netServer->send("121243", 6, 1, client);
+			m_netServer->send("121243", 6, CorrespondParam::PROTO_MESSAGE, client);
 		}
 		RCSend("time = %d", ::GetTickCount() - begin);
 		return;

@@ -2,9 +2,8 @@
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "CSystem/CSystemAPI.h"
 
-int32_t ClientPackageManager::s_clientId = 0;
-
-ClientPackageManager::ClientPackageManager()
+ClientPackageManager::ClientPackageManager():
+m_clientId(0)
 {
 
 }
@@ -18,11 +17,12 @@ ClientPackageManager& ClientPackageManager::instance()
 void ClientPackageManager::addClientPackage(ProtoMessage& message, uv_tcp_t* sender)
 {
 	std::unique_lock<std::mutex> mu(m_mutex);
-	++s_clientId;
-	auto messageMap = message.getMap();
-	std::string serverName = messageMap[SERVER_NAME].toString();
-	m_serverPackageMap[s_clientId] = ClientPackage(messageMap[CLIENT_NAME].toString(), serverName, CSystem::processPid(serverName), messageMap[LOGIN_NAME].toString(), sender);
-	m_clientPtrMap[sender] = s_clientId;
+	++m_clientId;
+	std::map<std::string, Variant> predefineMap;
+	message.getMap(predefineMap, PREDEFINE);
+	std::string serverName = predefineMap[SERVER_NAME].toString();
+	m_serverPackageMap[m_clientId] = ClientPackage(predefineMap[CLIENT_NAME].toString(), serverName, CSystem::processPid(serverName), predefineMap[LOGIN_NAME].toString(), sender);
+	m_clientPtrMap[sender] = m_clientId;
 }
 
 uv_tcp_t* ClientPackageManager::getClientPtr(int32_t clientId)
@@ -43,6 +43,15 @@ int32_t ClientPackageManager::getClientId(uv_tcp_t* clientPtr)
 		return 0;
 	}
 	return itClient->second;
+}
+
+std::string ClientPackageManager::get4ClientId(uv_tcp_t* clientPtr)
+{
+	int32_t clientId = getClientId(clientPtr);
+	std::string strClientId;
+	strClientId.resize(sizeof(int32_t));
+	*(int32_t*)(&strClientId[0]) = clientId;
+	return strClientId;
 }
 
 int32_t ClientPackageManager::getServerPid(uv_tcp_t* clientPtr)

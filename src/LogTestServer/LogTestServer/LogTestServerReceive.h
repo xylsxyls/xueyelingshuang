@@ -11,9 +11,11 @@ public:
 public:
 	virtual void receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId);
 
-	void HandleInitMessage(ProtoMessage& message);
+	void HandleMessage(ProtoMessage& message, int32_t clientId);
 
-	void HandleMessage(ProtoMessage& message);
+	int32_t getClientId(const char* buffer, int32_t length);
+
+	std::string set4ClientId(int32_t clientId);
 
 private:
 	std::string m_iniPath;

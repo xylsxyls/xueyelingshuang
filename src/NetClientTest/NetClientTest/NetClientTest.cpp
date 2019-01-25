@@ -2,6 +2,7 @@
 #include "NetWork/NetWorkAPI.h"
 #include <windows.h>
 #include <atomic>
+#include "CorrespondParam/CorrespondParamAPI.h"
 #include "D:\\SendToMessageTest.h"
 #include "CSystem/CSystemAPI.h"
 
@@ -31,7 +32,7 @@ public:
 		int32_t count = SEND_COUNT;
 		while (count-- != 0)
 		{
-			m_netClient->send(m_buf, 6, 1);
+			m_netClient->send(m_buf, 6, CorrespondParam::PROTO_MESSAGE);
 		}
 	}
 
@@ -40,7 +41,7 @@ public:
 		m_buf = buf;
 	}
 
-	void receive(uv_tcp_t* sender, char* buffer, int32_t length, int32_t protocolId)
+	void receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 	{
 		//RCSend("client = %d, buffer = %s, length = %d, protocolId = %d", sender, buffer, length, protocolId);
 		//return;
@@ -74,21 +75,21 @@ public:
 			++calc4;
 		}
 
-		if (calc % 200000 == 0)
+		if (calc % 4000000 == 0)
 		{
-			if (calc1 > 0 && calc1 % 1000000 == 0)
+			if (calc1 > 0 && calc1 % 10000 == 0)
 			{
 				RCSend("client calc1 = %d\n", calc1);
 			}
-			if (calc2 > 0 && calc2 % 1000000 == 0)
+			if (calc2 > 0 && calc2 % 10000 == 0)
 			{
 				RCSend("client calc2 = %d\n", calc2);
 			}
-			if (calc3 > 0 && calc3 % 1000000 == 0)
+			if (calc3 > 0 && calc3 % 10000 == 0)
 			{
 				RCSend("client calc3 = %d\n", calc3);
 			}
-			if (calc4 > 0 && calc4 % 1000000 == 0)
+			if (calc4 > 0 && calc4 % 10000 == 0)
 			{
 				RCSend("client calc4 = %d\n", calc4);
 			}
@@ -108,28 +109,28 @@ int32_t main()
 	memcpy(buf1, "121243", 6);
 	clientReceive1.setText(buf1);
 	NetClient client1;
-	client1.connect("10.1.22.13", 7000, &clientReceive1);
+	client1.connect("127.0.0.1", 7000, &clientReceive1);//106.12.77.189
 
 	ClientReceive clientReceive2;
 	char* buf2 = new char[6];
 	memcpy(buf2, "575798", 6);
 	clientReceive2.setText(buf2);
 	NetClient client2;
-	client2.connect("10.1.22.13", 7000, &clientReceive2);
+	client2.connect("127.0.0.1", 7000, &clientReceive2);
 	
 	ClientReceive clientReceive3;
 	char* buf3 = new char[6];
 	memcpy(buf3, "ababdc", 6);
 	clientReceive3.setText(buf3);
 	NetClient client3;
-	client3.connect("10.1.22.13", 7000, &clientReceive3);
+	client3.connect("127.0.0.1", 7000, &clientReceive3);
 	
 	ClientReceive clientReceive4;
 	char* buf4 = new char[6];
 	memcpy(buf4, "efefhg", 6);
 	clientReceive4.setText(buf4);
 	NetClient client4;
-	client4.connect("10.1.22.13", 7000, &clientReceive4);
+	client4.connect("127.0.0.1", 7000, &clientReceive4);
 
 	getchar();
 	return 0;
