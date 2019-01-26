@@ -12,6 +12,7 @@
 #include "CFlashTask.h"
 #include "CNoFlashTask.h"
 #include "CqNoFlashTask.h"
+#include "CSmallFlashTask.h"
 #include "D:\\SendToMessageTest.h"
 
 #ifdef _DEBUG
@@ -23,10 +24,14 @@ CStopWatch stopWatch;
 bool wDown = false;
 bool eDown = false;
 bool dDown = false;
+bool fDown = false;
 bool qDown = false;
 bool rDown = false;
+bool threeDown = false;
 
 std::atomic<bool> rightMouse = true;
+
+uint32_t g_threadId = 0;
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
@@ -125,6 +130,14 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
         {
             rDown = true;
         }
+		else if (vkCode == 'F')
+		{
+			fDown = true;
+		}
+		else if (vkCode == '3')
+		{
+			threeDown = true;
+		}
 	}
 	else if (CHook::IsKeyUp(wParam))
 	{
@@ -148,9 +161,17 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
         {
             rDown = false;
         }
+		else if (vkCode == 'F')
+		{
+			fDown = false;
+		}
+		else if (vkCode == '3')
+		{
+			threeDown = false;
+		}
 	}
 
-	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(1);
+	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(g_threadId);
 	if (taskThread == nullptr)
 	{
 		goto Exit;
@@ -175,6 +196,20 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		stopWatch.SetWatchTime(0);
 		std::shared_ptr<CFlashTask> spTask;
 		spTask.reset(new CFlashTask);
+		taskThread->PostTask(spTask, 1);
+	}
+	else if (dDown && stopWatch.GetWatchTime() > 500)
+	{
+		stopWatch.SetWatchTime(0);
+		std::shared_ptr<CSmallFlashTask> spTask;
+		spTask.reset(new CSmallFlashTask);
+		taskThread->PostTask(spTask, 1);
+	}
+	else if (wDown && threeDown && stopWatch.GetWatchTime() > 500)
+	{
+		stopWatch.SetWatchTime(0);
+		std::shared_ptr<CqNoFlashTask> spTask;
+		spTask.reset(new CqNoFlashTask);
 		taskThread->PostTask(spTask, 1);
 	}
 
@@ -216,7 +251,7 @@ BOOL COneKeyDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 
-	CTaskThreadManager::Instance().Init(1);
+	g_threadId = CTaskThreadManager::Instance().Init();
 	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);
     //CHook::Init(WH_MOUSE_LL, MouseHookFun);
 

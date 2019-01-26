@@ -51,7 +51,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)Release\</IntDir>
-    <TargetName>$(ProjectName)1.0</TargetName>
+    <TargetName>$(ProjectName)1.1</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -114,6 +114,7 @@
     <ClInclude Include="CFlashTask.h" />
     <ClInclude Include="CNoFlashTask.h" />
     <ClInclude Include="CqNoFlashTask.h" />
+    <ClInclude Include="CSmallFlashTask.h" />
     <ClInclude Include="OneKey.h" />
     <ClInclude Include="OneKeyDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -124,6 +125,7 @@
     <ClCompile Include="CFlashTask.cpp" />
     <ClCompile Include="CNoFlashTask.cpp" />
     <ClCompile Include="CqNoFlashTask.cpp" />
+    <ClCompile Include="CSmallFlashTask.cpp" />
     <ClCompile Include="OneKey.cpp" />
     <ClCompile Include="OneKeyDlg.cpp" />
     <ClCompile Include="stdafx.cpp">
