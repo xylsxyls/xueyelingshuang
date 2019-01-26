@@ -27,7 +27,10 @@ void CqNoFlashTask::DoTask()
     CKeyboard::InputString("r", 0);
 
 	Sleep(40);
-	CMouse::RightManyClick(2, 100);
+	CMouse::RightClick(0);
+	Sleep(40);
+	CMouse::RightClick(0);
+	Sleep(20);
 	CKeyboard::InputString("qf", 0);
 	CMouse::RightClick(40);
 	CKeyboard::InputString("qf", 0);

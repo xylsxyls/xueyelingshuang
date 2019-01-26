@@ -9,7 +9,9 @@ void CSmallFlashTask::DoTask()
 {
     rightMouse = false;
 
-	CMouse::RightClick(300);
+	//Sleep(20);
+	CMouse::RightClick(0);
+	Sleep(250);
 	CKeyboard::KeyDown('N');
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('N');
