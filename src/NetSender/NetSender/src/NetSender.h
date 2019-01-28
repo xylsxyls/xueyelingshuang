@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include "CorrespondParam/CorrespondParamAPI.h"
 
+class SharedMemory;
+
 class NetSenderAPI NetSender
 {
 protected:
@@ -15,4 +17,8 @@ public:
 	void init(const char* buffer = nullptr, int32_t length = 0, bool isServer = false);
 
 	void send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId, bool isServer = false);
+
+private:
+	SharedMemory* m_clientManagerPid;
+	SharedMemory* m_serverManagerPid;
 };

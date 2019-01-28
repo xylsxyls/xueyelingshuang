@@ -5,6 +5,9 @@
 #include "ProcessReceive.h"
 #include "NetWork/NetWorkAPI.h"
 #include "ClientManagerReceive.h"
+#include "SharedMemory/SharedMemoryAPI.h"
+
+SharedMemory* pid = nullptr;
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -13,6 +16,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninit();
+		delete pid;
 	}
 	return FALSE;
 }
@@ -21,9 +25,10 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {
+	pid = SharedMemory::createPid();
 	ClientManagerReceive clientManagerReceive;
 	NetClient client;
-	client.connect("127.0.0.1", 5203, &clientManagerReceive);//106.12.77.189
+	client.connect("106.12.77.189", 5203, &clientManagerReceive);//106.12.77.189 127.0.0.1
 	ProcessReceive processReceive;
 	processReceive.setNetClient(&client);
 	ProcessWork::instance().initReceive(&processReceive);

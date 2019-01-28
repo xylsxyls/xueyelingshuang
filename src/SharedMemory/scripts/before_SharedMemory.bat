@@ -28,3 +28,18 @@ goto ReadWriteMutex_end
 call "%CLOUD_REBUILD%" ReadWriteMutex %ReadWriteMutex_bit% %ReadWriteMutex_dlllib% %ReadWriteMutex_debugRelease%
 goto ReadWriteMutex_end
 :ReadWriteMutex_end
+
+::--------------------------------------------------------------------
+set CSystem_dlllib=lib
+set CSystem_bit=%1
+set CSystem_debugRelease=%3
+set CSystem_allSame=%4
+if "%4" == "same" (goto CSystem_callSame) else (goto CSystem_callSimple)
+:CSystem_callSame
+set CSystem_dlllib=%2
+call "%CLOUD_REBUILD%" CSystem %CSystem_bit% %CSystem_dlllib% %CSystem_debugRelease% %CSystem_allSame%
+goto CSystem_end
+:CSystem_callSimple
+call "%CLOUD_REBUILD%" CSystem %CSystem_bit% %CSystem_dlllib% %CSystem_debugRelease%
+goto CSystem_end
+:CSystem_end

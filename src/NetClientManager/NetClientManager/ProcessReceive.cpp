@@ -11,15 +11,14 @@ m_netClient(nullptr)
 
 void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocalId)
 {
-	std::string clientName = CSystem::processName(sendPid);
-	ProtoMessage message;
 	switch (protocalId)
 	{
 	case CorrespondParam::CLIENT_INIT:
 	{
 		printf("PROCESS_CLIENT_INIT, length = %d\n", length);
+		ProtoMessage message;
 		message.from(std::string(buffer, length));
-		addClientServerLoginName(message, clientName);
+		addClientServerLoginName(message, CSystem::processName(sendPid));
 		std::string strMessage = message.toString();
 		m_netClient->send(strMessage.c_str(), strMessage.length(), protocalId);
 		return;

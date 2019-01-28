@@ -17,12 +17,12 @@ void ServerManagerReceive::clientConnected(uv_tcp_t* client)
 void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
 	std::string strMessage;
-	ProtoMessage message;
 	switch (protocolId)
 	{
 	case CorrespondParam::CLIENT_INIT:
 	{
 		printf("NET_CLIENT_INIT, sender = %d, length = %d\n", sender, buffer, length);
+		ProtoMessage message;
 		message.from(std::string(buffer, length));
 		ClientPackageManager::instance().addClientPackage(message, sender);
 		strMessage = ClientPackageManager::instance().get4ClientId(sender);

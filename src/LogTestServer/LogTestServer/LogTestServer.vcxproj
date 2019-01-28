@@ -149,11 +149,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="LogTask.h" />
     <ClInclude Include="LogTestServer.h" />
     <ClInclude Include="LogTestServerReceive.h" />
     <ClInclude Include="NetLineManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="LogTask.cpp" />
     <ClCompile Include="LogTestServer.cpp" />
     <ClCompile Include="LogTestServerReceive.cpp" />
     <ClCompile Include="NetLineManager.cpp" />

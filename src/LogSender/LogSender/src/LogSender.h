@@ -11,6 +11,7 @@
 #define LOG_SEND_FATAL(format, ...) LogSender::instance().logSend(LogPackage(LogPackage::LOG_FATAL, __FILE__, __FUNCTION__, true, true, true), format, ##__VA_ARGS__)
 
 class ProtoMessage;
+class SharedMemory;
 
 class LogSenderAPI LogSender
 {
@@ -37,6 +38,7 @@ private:
 #endif
 	std::string m_computerName;
 	ProtoMessage* m_message;
+	SharedMemory* m_logTestPid;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

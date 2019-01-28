@@ -5,6 +5,9 @@
 #include "NetSender/NetSenderAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "SharedMemory/SharedMemoryAPI.h"
+
+SharedMemory* pid = nullptr;
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -13,6 +16,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninit();
+		delete pid;
 		//CTaskThreadManager::Instance().UninitAll();
 	}
 	return FALSE;
@@ -22,6 +26,7 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {
+	pid = SharedMemory::createPid();
 	LogReceive logReceive;
 	ProcessWork::instance().initReceive(&logReceive);
 	NetSender::instance().init();

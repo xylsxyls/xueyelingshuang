@@ -1,6 +1,5 @@
 #include "ScreenTask.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
-#include "CStopWatch/CStopWatchAPI.h"
 
 ScreenTask::ScreenTask():
 m_isNet(false)

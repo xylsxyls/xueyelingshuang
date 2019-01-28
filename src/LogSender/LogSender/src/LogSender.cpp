@@ -4,10 +4,11 @@
 #include "CSystem/CSystemAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "IntDateTime/IntDateTimeAPI.h"
-#include "CStopWatch/CStopWatchAPI.h"
+#include "SharedMemory/SharedMemoryAPI.h"
 
 LogSender::LogSender():
-m_message(nullptr)
+m_message(nullptr),
+m_logTestPid(nullptr)
 {
 	m_computerName = CSystem::getComputerName();
 	m_message = new ProtoMessage;
@@ -57,7 +58,7 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 
 void LogSender::send(const char* buffer, int32_t length)
 {
-	ProcessWork::instance().send(buffer, length, "LogTest1.0.exe", CorrespondParam::PROTO_MESSAGE);
+	ProcessWork::instance().send(buffer, length, SharedMemory::readPid("LogTest1.0.exe", m_logTestPid), CorrespondParam::PROTO_MESSAGE);
 }
 
 void LogSender::uninit()

@@ -4,10 +4,12 @@
 #include "Cini/CiniAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "LogTask.h"
 
 LogTestServerReceive::LogTestServerReceive()
 {
 	m_iniPath = CSystem::GetCurrentExePath() + "Config.ini";
+	m_logThread = CTaskThreadManager::Instance().GetThreadInterface(CTaskThreadManager::Instance().Init());
 }
 
 void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId)
@@ -38,9 +40,11 @@ void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid
 	case CorrespondParam::PROTO_MESSAGE:
 	{
 		//printf("PROTO_MESSAGE, length = %d\n", length);
-		ProtoMessage message;
-		message.from(std::string(buffer + sizeof(int32_t), length - sizeof(int32_t)));
-		HandleMessage(message, getClientId(buffer, length));
+		LogTask* logTask = new LogTask;
+		logTask->setParam(std::string(buffer + sizeof(int32_t), length - sizeof(int32_t)), getClientId(buffer, length), m_iniPath);
+		std::shared_ptr<LogTask> spLogTask;
+		spLogTask.reset(logTask);
+		m_logThread->PostTask(spLogTask);
 		break;
 	}
 	case CorrespondParam::JSON:
@@ -53,30 +57,6 @@ void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid
 	}
 	default:
 		break;
-	}
-}
-
-void LogTestServerReceive::HandleMessage(ProtoMessage& message, int32_t clientId)
-{
-	std::string loginName = NetLineManager::instance().findLoginName(clientId);
-	Cini ini(m_iniPath);
-	std::string collectComputerName = ini.ReadIni("CollectComputerName");
-	std::vector<std::string> vecComputerName = CStringManager::split(collectComputerName, ",");
-	int32_t index = -1;
-	while (index++ != vecComputerName.size() - 1)
-	{
-		auto& computerName = vecComputerName[index];
-		std::vector<int32_t> vecId = NetLineManager::instance().findConnect(computerName);
-		int32_t idIndex = -1;
-		while (idIndex++ != vecId.size() - 1)
-		{
-			message[LOG_LOGIN_NAME] = loginName;
-			int32_t& clientId = vecId[idIndex];
-			std::string strMessage = set4ClientId(clientId);
-			strMessage.append(message.toString());
-			//printf("send to netserver,computerName = %s,clientId = %d\n", computerName.c_str(), clientId);
-			NetSender::instance().send(strMessage.c_str(), strMessage.length(), CorrespondParam::PROTO_MESSAGE, true);
-		}
 	}
 }
 

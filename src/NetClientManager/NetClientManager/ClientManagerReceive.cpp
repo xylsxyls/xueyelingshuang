@@ -9,13 +9,13 @@ void ClientManagerReceive::serverConnected(uv_tcp_t* server)
 
 void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
-	ProtoMessage message;
 	int32_t clientPid = 0;
 	switch (protocolId)
 	{
 	case CorrespondParam::CLIENT_INIT:
 	{
 		printf("CLIENT_INIT, length = %d\n", length);
+		ProtoMessage message;
 		message.from(std::string(buffer, length));
 		std::map<std::string, Variant> predefineMap;
 		message.getMap(predefineMap, PREDEFINE);

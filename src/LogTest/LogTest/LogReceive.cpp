@@ -3,7 +3,6 @@
 #include "ScreenTask.h"
 #include "LogTask.h"
 #include "NetTask.h"
-#include "CStopWatch/CStopWatchAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include "NetSender/NetSenderAPI.h"
 

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <TCHAR.H>
 #include <strsafe.h>
+#include "CSystem/CSystemAPI.h"
 
 SharedMemory::SharedMemory(const std::string& name, uint32_t size):
 m_memoryHandle(nullptr),
@@ -143,6 +144,24 @@ std::string SharedMemory::mapName(HANDLE memoryHandle, int32_t bufferSize)
 	}
 	//_tprintf(TEXT("File name is %s\n"), pszFilename);
 	return pszFilename;
+}
+
+SharedMemory* SharedMemory::createPid()
+{
+	SharedMemory* pid = new SharedMemory(CSystem::GetCurrentExeName() + "_pid", sizeof(int32_t));
+	void* memory = pid->writeWithoutLock();
+	*((int32_t*)memory) = CSystem::processPid();
+	return pid;
+}
+
+int32_t SharedMemory::readPid(const std::string& exeName, SharedMemory*& pid)
+{
+	if (pid == nullptr)
+	{
+		pid = new SharedMemory(CSystem::GetName(exeName, 3) + "_pid");
+	}
+	void* memory = pid->readWithoutLock();
+	return *((int32_t*)memory);
 }
 
 void* SharedMemory::memory()

@@ -4,6 +4,9 @@
 #include "ServerManagerReceive.h"
 #include "ServerManagerProcessReceive.h"
 #include <mutex>
+#include "SharedMemory/SharedMemoryAPI.h"
+
+SharedMemory* pid = nullptr;
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -12,6 +15,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninit();
+		delete pid;
 	}
 	return FALSE;
 }
@@ -20,6 +24,8 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {
+	pid = SharedMemory::createPid();
+
 	ServerManagerReceive serverManagerReceive;
 
 	NetServer server;

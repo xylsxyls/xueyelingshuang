@@ -13,8 +13,7 @@ m_netServer(nullptr)
 
 void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId)
 {
-	ProtoMessage message;
-	uv_tcp_t* dest = nullptr;
+	//ProtoMessage message;
 	switch (protocolId)
 	{
 	case CorrespondParam::CLIENT_INIT:
@@ -46,8 +45,7 @@ void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t 
 		break;
 	}
 	//printf("send to net, dest = %d\n", dest);
-	dest = getClientPtr(buffer, length);
-	m_netServer->send(buffer + sizeof(int32_t), length - sizeof(int32_t), protocolId, dest);
+	m_netServer->send(buffer + sizeof(int32_t), length - sizeof(int32_t), protocolId, getClientPtr(buffer, length));
 }
 
 void ServerManagerProcessReceive::setServer(NetServer* netServer)
