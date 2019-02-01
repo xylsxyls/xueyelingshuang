@@ -89,6 +89,10 @@ void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, Correspo
 		//修改当前共享内存已使用大小
 		SharedMemoryManager::instance().addDataAlreadyUsed(pid, length);
 		data = sendData->writeWithoutLock();
+		if (data == nullptr)
+		{
+			LOGERROR("data == nullptr");
+		}
 
 		sendIndex = SharedMemoryManager::instance().sendDataIndex(pid);
 		sendBegin = SharedMemoryManager::instance().sendDataPosition(pid) - length;
@@ -126,7 +130,10 @@ void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, Correspo
 		keyPackage.m_index = sendIndex;
 		keyPackage.m_begin = sendBegin;
 		//先切换到当前钥匙内存再写入钥匙
-		SharedMemoryManager::instance().writeKey(pid, keyPackage);
+		if (!SharedMemoryManager::instance().writeKey(pid, keyPackage))
+		{
+			LOGERROR("writeKey false");
+		}
 	}
 	
 	//通知

@@ -1,0 +1,10 @@
+copy ProcessServerTest.exe ProcessServerTest_1.exe
+copy ProcessServerTest.exe ProcessServerTest_2.exe
+copy ProcessServerTest.exe ProcessServerTest_3.exe
+copy ProcessServerTest.exe ProcessServerTest_4.exe
+copy ProcessServerTest.exe ProcessServerTest_5.exe
+copy ProcessServerTest.exe ProcessServerTest_6.exe
+copy ProcessServerTest.exe ProcessServerTest_7.exe
+copy ProcessServerTest.exe ProcessServerTest_8.exe
+copy ProcessServerTest.exe ProcessServerTest_9.exe
+copy ProcessServerTest.exe ProcessServerTest_10.exe

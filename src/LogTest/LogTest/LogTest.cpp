@@ -6,6 +6,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "SharedMemory/SharedMemoryAPI.h"
+#include "CDump/CDumpAPI.h"
 
 SharedMemory* pid = nullptr;
 
@@ -26,6 +27,7 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {
+	CDump::declareDumpFile();
 	pid = SharedMemory::createPid();
 	LogReceive logReceive;
 	ProcessWork::instance().initReceive(&logReceive);

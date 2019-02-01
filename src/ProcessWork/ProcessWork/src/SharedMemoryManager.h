@@ -90,11 +90,11 @@ public:
 
 	/** 创建数据内存
 	*/
-	void createData();
+	bool createData();
 
 	/** 创建钥匙内存
 	*/
-	void createKey();
+	bool createKey();
 
 	/** 读取钥匙，如果进入了下一段内存则传出上一段钥匙内存
 	@param [out] keyPackage 钥匙

@@ -29,3 +29,18 @@ goto CSystem_end
 call "%CLOUD_REBUILD%" CSystem %CSystem_bit% %CSystem_dlllib% %CSystem_debugRelease%
 goto CSystem_end
 :CSystem_end
+
+::--------------------------------------------------------------------
+set CStringManager_dlllib=lib
+set CStringManager_bit=%1
+set CStringManager_debugRelease=%3
+set CStringManager_allSame=%4
+if "%4" == "same" (goto CStringManager_callSame) else (goto CStringManager_callSimple)
+:CStringManager_callSame
+set CStringManager_dlllib=%2
+call "%CLOUD_REBUILD%" CStringManager %CStringManager_bit% %CStringManager_dlllib% %CStringManager_debugRelease% %CStringManager_allSame%
+goto CStringManager_end
+:CStringManager_callSimple
+call "%CLOUD_REBUILD%" CStringManager %CStringManager_bit% %CStringManager_dlllib% %CStringManager_debugRelease%
+goto CStringManager_end
+:CStringManager_end

@@ -1,8 +1,6 @@
 #include "SharedMemory.h"
 #include <Windows.h>
 #include <psapi.h>
-#include <shlwapi.h>
-#include <stdio.h>
 #include <TCHAR.H>
 #include <strsafe.h>
 #include "CSystem/CSystemAPI.h"
@@ -150,6 +148,10 @@ SharedMemory* SharedMemory::createPid()
 {
 	SharedMemory* pid = new SharedMemory(CSystem::GetCurrentExeName() + "_pid", sizeof(int32_t));
 	void* memory = pid->writeWithoutLock();
+	if (memory == nullptr)
+	{
+		return nullptr;
+	}
 	*((int32_t*)memory) = CSystem::processPid();
 	return pid;
 }
@@ -161,6 +163,10 @@ int32_t SharedMemory::readPid(const std::string& exeName, SharedMemory*& pid)
 		pid = new SharedMemory(CSystem::GetName(exeName, 3) + "_pid");
 	}
 	void* memory = pid->readWithoutLock();
+	if (memory == nullptr)
+	{
+		return 0;
+	}
 	return *((int32_t*)memory);
 }
 
@@ -197,7 +203,10 @@ void* SharedMemory::readWithoutLock()
 	{
 		return m_memoryPtr = m_readMemoryPtr;
 	}
-	open(true);
+	if (m_memoryHandle == nullptr)
+	{
+		open(true);
+	}
 	if (m_memoryHandle == nullptr)
 	{
 		return nullptr;
@@ -213,7 +222,10 @@ void* SharedMemory::writeWithoutLock()
 	{
 		return m_memoryPtr = m_writeMemoryPtr;
 	}
-	open(false);
+	if (m_memoryHandle == nullptr)
+	{
+		open(false);
+	}
 	if (m_memoryHandle == nullptr)
 	{
 		return nullptr;

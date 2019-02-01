@@ -95,7 +95,6 @@ void ProcessHelper::addDataAlreadyUsed(void* data, int32_t length)
 
 bool ProcessHelper::addKeyPosition(void* key)
 {
-	//RCSend("addKeyPosition");
 	int32_t newPosition = ProcessHelper::keyPosition(key) + sizeof(KeyPackage);
 	if (newPosition >= ProcessHelper::keyMemoryLength())
 	{
@@ -105,18 +104,14 @@ bool ProcessHelper::addKeyPosition(void* key)
 	return true;
 }
 
-void ProcessHelper::writeKey(void* key, void* position, const KeyPackage& keyPackage)
+bool ProcessHelper::writeKey(void* key, void* position, const KeyPackage& keyPackage)
 {
-	//RCSend("writeKey");
-	if (key == nullptr)
+	if (key == nullptr || position == nullptr)
 	{
-		LOGERROR("key == nullptr");
-	}
-	if (position == nullptr)
-	{
-		LOGERROR("position == nullptr");
+		return false;
 	}
 	*(KeyPackage*)(((char*)key) + ProcessHelper::keyPosition(position) - sizeof(KeyPackage)) = keyPackage;
+	return true;
 }
 
 //KeyPackage ProcessHelper::readKey(void* position, void* key)

@@ -6,6 +6,7 @@
 #include "NetWork/NetWorkAPI.h"
 #include "ClientManagerReceive.h"
 #include "SharedMemory/SharedMemoryAPI.h"
+#include "CDump/CDumpAPI.h"
 
 SharedMemory* pid = nullptr;
 
@@ -25,6 +26,7 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {
+	CDump::declareDumpFile();
 	pid = SharedMemory::createPid();
 	ClientManagerReceive clientManagerReceive;
 	NetClient client;

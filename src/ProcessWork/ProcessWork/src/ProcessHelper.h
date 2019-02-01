@@ -35,7 +35,7 @@ public:
 	//向后推移钥匙写入位置
 	static bool addKeyPosition(void* key);
 	//写入钥匙
-	static void writeKey(void* key, void* position, const KeyPackage& keyPackage);
+	static bool writeKey(void* key, void* position, const KeyPackage& keyPackage);
 	//读取钥匙
 	//static KeyPackage readKey(void* position, void* key);
 	//读取进度索引值

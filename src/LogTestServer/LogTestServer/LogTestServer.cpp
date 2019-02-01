@@ -4,6 +4,7 @@
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "LogTestServerReceive.h"
 #include "NetSender/NetSenderAPI.h"
+#include "CDump/CDumpAPI.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -20,6 +21,7 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {
+	CDump::declareDumpFile();
 	LogTestServerReceive receive;
 	ProcessWork::instance().initReceive(&receive);
 	NetSender::instance().init(nullptr, 0, true);

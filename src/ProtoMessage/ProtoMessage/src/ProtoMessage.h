@@ -24,6 +24,10 @@ public:
 public:
 	ProtoMessage();
 
+	ProtoMessage(const ProtoMessage& other);
+
+	~ProtoMessage();
+
 public:
 	/** ÓÃ·¨
 	msg["global"]["time"] = "12:05";

@@ -154,7 +154,6 @@ bool SharedMemoryManager::addKeyPosition(int32_t pid)
 
 bool SharedMemoryManager::raiseSendKey(int32_t pid)
 {
-	//RCSend("raiseSendKey");
 	if (!createSendMemory(pid))
 	{
 		return false;
@@ -241,46 +240,63 @@ void SharedMemoryManager::initReceiveMemory()
 	m_dataMap[0] = dataMemory;
 }
 
-void SharedMemoryManager::createData()
+bool SharedMemoryManager::createData()
 {
 	if (m_position == nullptr)
 	{
-		return;
+		return false;
 	}
 	void* position = m_position->writeWithoutLock();
 	if (position == nullptr)
 	{
-		return;
+		return false;
 	}
 	int32_t newIndex = ProcessHelper::dataIndex(position) + 1;
 	SharedMemory* dataMemory = new SharedMemory(ProcessHelper::dataMapName(m_pid, newIndex), ProcessHelper::dataMemoryLength());
 	void* data = dataMemory->writeWithoutLock();
 	if (data == nullptr)
 	{
-		return;
+		return false;
 	}
 	*(int32_t*)((char*)data + ProcessHelper::dataMemoryLength() - sizeof(int32_t)) = 0;
 	std::unique_lock<std::mutex> mu(m_readMutex);
 	m_dataMap[newIndex] = dataMemory;
+	return true;
 }
 
-void SharedMemoryManager::createKey()
+bool SharedMemoryManager::createKey()
 {
 	if (m_position == nullptr)
 	{
-		return;
+		return false;
 	}
 	void* position = m_position->writeWithoutLock();
 	if (position == nullptr)
 	{
-		return;
+		return false;
 	}
 	if (m_readKey == nullptr)
 	{
 		m_readKey = new SharedMemory(ProcessHelper::keyMapName(m_pid, ProcessHelper::keyIndex(position) + 1), ProcessHelper::keyMemoryLength());
-		return;
+		void* key = m_readKey->writeWithoutLock();
+		if (key == nullptr)
+		{
+			return false;
+		}
+		return true;
 	}
-	m_keyList.push(new SharedMemory(ProcessHelper::keyMapName(m_pid, ProcessHelper::keyIndex(position) + 1), ProcessHelper::keyMemoryLength()));
+	SharedMemory* keyInList = new SharedMemory(ProcessHelper::keyMapName(m_pid, ProcessHelper::keyIndex(position) + 1), ProcessHelper::keyMemoryLength());
+	if (keyInList == nullptr)
+	{
+		return false;
+	}
+	void* keyInListPtr = keyInList->writeWithoutLock();
+	if (keyInListPtr == nullptr)
+	{
+		return false;
+	}
+	m_keyList.push(keyInList);
+	return true;
 }
 
 bool SharedMemoryManager::readKey(KeyPackage& keyPackage, SharedMemory*& deleteMemory)
@@ -291,10 +307,12 @@ bool SharedMemoryManager::readKey(KeyPackage& keyPackage, SharedMemory*& deleteM
 		++m_readIndex;
 		m_readPosition = 0;
 		deleteMemory = m_readKey;
-		m_keyList.pop(&m_readKey);
+		if (!m_keyList.pop(&m_readKey))
+		{
+			return false;
+		}
 	}
 	void* key = m_readKey->writeWithoutLock();
-	//RCSend("m_readKey keyName = %s", m_readKey->mapName().c_str());
 	if (key == nullptr)
 	{
 		return false;

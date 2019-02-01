@@ -1,4 +1,4 @@
-#include "ProcessClientTest.h"
+#include "ProcessServerTest.h"
 #include <stdint.h>
 #include <stdio.h>
 #include "ProcessWork/ProcessWorkAPI.h"
@@ -24,8 +24,11 @@ public:
 		++count;
 		if (count % 1000000 == 0)
 		{
-			RCSend("count client = %d", count);
+			RCSend("count = %d, time = %d", count, ::GetTickCount());
 		}
+		static SharedMemory* client = nullptr;
+		ProcessWork::instance().send("123456", 6, SharedMemory::readPid("ProcessClientTest.exe", client), CorrespondParam::PROTO_MESSAGE);
+		//RCSend("%s,%d,%d,%d", buffer, length, sendPid, (int32_t)protocolId);
 	}
 };
 
@@ -33,18 +36,9 @@ int32_t main()
 {
 	CDump::declareDumpFile();
 	SharedMemory::createPid();
+	printf("pid = %d\n", CSystem::processPid());
 	Receive receive;
 	ProcessWork::instance().initReceive(&receive);
-
-	SharedMemory* server = nullptr;
-	int32_t count = 1000000;
-	while (count-- != 0)
-	{
-		ProcessWork::instance().send("123456", 6, SharedMemory::readPid("ProcessServerTest.exe", server), CorrespondParam::PROTO_MESSAGE);
-		ProcessWork::instance().send("1234567", 7, SharedMemory::readPid("ProcessServerTest.exe", server), CorrespondParam::PROTO_MESSAGE);
-		ProcessWork::instance().send("12345678", 8, SharedMemory::readPid("ProcessServerTest.exe", server), CorrespondParam::PROTO_MESSAGE);
-		ProcessWork::instance().send("123456789", 9, SharedMemory::readPid("ProcessServerTest.exe", server), CorrespondParam::PROTO_MESSAGE);
-	}
 	getchar();
 	return 0;
 }

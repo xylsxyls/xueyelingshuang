@@ -16,6 +16,28 @@ m_protoMsg(nullptr)
 	m_protoMsg = new pt::ProtoMessage;
 }
 
+ProtoMessage::ProtoMessage(const ProtoMessage& other)
+{
+	m_protoMsg = new pt::ProtoMessage;
+	m_protoMsg->CopyFrom(*(other.m_protoMsg));
+
+	m_keyMapData = other.m_keyMapData;
+	m_keyListData = other.m_keyListData;
+	m_keyTableData = other.m_keyTableData;
+
+	m_key = other.m_key;
+	m_dataKey = other.m_dataKey;
+}
+
+ProtoMessage::~ProtoMessage()
+{
+	if (m_protoMsg != nullptr)
+	{
+		delete m_protoMsg;
+		m_protoMsg = nullptr;
+	}
+}
+
 ProtoMessage& ProtoMessage::operator[](const char* key)
 {
 	if (key == nullptr)

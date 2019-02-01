@@ -57,9 +57,7 @@ void LogReceive::receiveFromNet(char* buffer, int32_t length, CorrespondParam::P
 
 		ScreenTask* screenTask = new ScreenTask;
 		screenTask->setParam(true, strBuffer);
-		std::shared_ptr<CTask> spScreenTask;
-		spScreenTask.reset(screenTask);
-		m_screenThread->PostTask(spScreenTask);
+		m_screenThread->PostTask(std::shared_ptr<ScreenTask>(screenTask));
 
 		//if ((int32_t)messageMap[LOG_IS_WRITE_LOG] == (int32_t)true)
 		//{
@@ -76,9 +74,7 @@ void LogReceive::receiveFromNet(char* buffer, int32_t length, CorrespondParam::P
 
 		LogTask* logTask = new LogTask;
 		logTask->setParam(true, strBuffer);
-		std::shared_ptr<CTask> spLogTask;
-		spLogTask.reset(logTask);
-		m_logThread->PostTask(spLogTask);
+		m_logThread->PostTask(std::shared_ptr<LogTask>(logTask));
 
 		break;
 	}
@@ -114,13 +110,11 @@ void LogReceive::sendToNet(char* buffer, int32_t length, int32_t sendPid, Corres
 	//{
 	//	RCSend("%s", messageMap[LOG_BUFFER].toString().c_str());
 	//}
-	
+
 	ScreenTask* screenTask = new ScreenTask;
 	screenTask->setParam(false, strBuffer);
-	std::shared_ptr<CTask> spScreenTask;
-	spScreenTask.reset(screenTask);
-	m_screenThread->PostTask(spScreenTask);
-	//
+	m_screenThread->PostTask(std::shared_ptr<ScreenTask>(screenTask));
+	
 	//if ((int32_t)messageMap[LOG_IS_WRITE_LOG] == (int32_t)true)
 	//{
 	//	LogManager::instance().print((LogManager::LogLevel)(int32_t)messageMap[LOG_LEVEL],
@@ -132,13 +126,11 @@ void LogReceive::sendToNet(char* buffer, int32_t length, int32_t sendPid, Corres
 	//		"%s",
 	//		messageMap[LOG_BUFFER].toString().c_str());
 	//}
-	//
+
 	LogTask* logTask = new LogTask;
 	logTask->setParam(false, strBuffer, processName);
-	std::shared_ptr<CTask> spLogTask;
-	spLogTask.reset(logTask);
-	m_logThread->PostTask(spLogTask);
-	//
+	m_logThread->PostTask(std::shared_ptr<LogTask>(logTask));
+	
 	//if ((int32_t)messageMap[LOG_IS_SEND_NET] == (int32_t)true)
 	//{
 	//	//printf("send to netclient\n");
@@ -146,12 +138,10 @@ void LogReceive::sendToNet(char* buffer, int32_t length, int32_t sendPid, Corres
 	//	std::string strMessage = m_message.toString();
 	//	NetSender::instance().send(strMessage.c_str(), strMessage.length(), protocolId);
 	//}
-	//
+	
 	NetTask* netTask = new NetTask;
 	netTask->setParam(strBuffer, processName, protocolId);
-	std::shared_ptr<CTask> spNetTask;
-	spNetTask.reset(netTask);
-	m_netThread->PostTask(spNetTask);
+	m_netThread->PostTask(std::shared_ptr<NetTask>(netTask));
 }
 
 std::string LogReceive::getSenderName(int32_t sendPid)
