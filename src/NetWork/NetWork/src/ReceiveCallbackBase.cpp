@@ -59,7 +59,7 @@ void ReceiveCallbackBase::receive(uv_tcp_t* sender, char* buffer, int32_t length
 		//计算包大小
 		tagLength = *(int32_t*)&senderArea[0];
 		//剩余值无法填满一个包
-		if (length - vernier < tagLength)
+		if (length - vernier + (int32_t)(senderArea.size() - 4) < tagLength)
 		{
 			//添加进缓冲区
 			senderArea.append(buffer + vernier, length - vernier);
