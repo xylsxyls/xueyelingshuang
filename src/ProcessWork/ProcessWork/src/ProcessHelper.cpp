@@ -61,12 +61,12 @@ int32_t ProcessHelper::positionLength()
 
 int32_t ProcessHelper::dataMemoryLength()
 {
-	return 4096;
+	return 10485760;
 }
 
 int32_t ProcessHelper::keyMemoryLength()
 {
-	return sizeof(KeyPackage) * 200 + sizeof(int32_t);
+	return sizeof(KeyPackage) * 436906 + sizeof(int32_t);
 }
 
 bool ProcessHelper::addDataPosition(void* position, int32_t length)
