@@ -4,6 +4,7 @@
 #include <mutex>
 #include "CStringManager/CStringManagerAPI.h"
 #include "ClientPackageManager.h"
+//#include "Compress/CompressAPI.h"
 
 ServerManagerProcessReceive::ServerManagerProcessReceive():
 m_netServer(nullptr)
@@ -19,7 +20,8 @@ void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t 
 	case CorrespondParam::CLIENT_INIT:
 	{
 		printf("PROCESS_CLIENT_INIT, length = %d\n", length);
-		m_netServer->send(buffer + sizeof(int32_t), length - sizeof(int32_t), protocolId, getClientPtr(buffer, length));
+		std::string strMessage = /*Compress::zlibCompress(*/std::string(buffer + sizeof(int32_t), length - sizeof(int32_t))/*, 7)*/;
+		m_netServer->send(strMessage.c_str(), strMessage.length(), protocolId, getClientPtr(buffer, length));
 		return;
 	}
 	case CorrespondParam::SERVER_INIT:
@@ -44,8 +46,8 @@ void ServerManagerProcessReceive::receive(char* buffer, int32_t length, int32_t 
 	default:
 		break;
 	}
-	//printf("send to net, dest = %d\n", dest);
-	m_netServer->send(buffer + sizeof(int32_t), length - sizeof(int32_t), protocolId, getClientPtr(buffer, length));
+	std::string strMessage = /*Compress::zlibCompress(*/std::string(buffer + sizeof(int32_t), length - sizeof(int32_t))/*, 7)*/;
+	m_netServer->send(strMessage.c_str(), strMessage.length(), protocolId, getClientPtr(buffer, length));
 }
 
 void ServerManagerProcessReceive::setServer(NetServer* netServer)

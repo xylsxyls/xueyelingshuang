@@ -3,6 +3,7 @@
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ClientPackageManager.h"
 #include "CStringManager/CStringManagerAPI.h"
+//#include "Compress/CompressAPI.h"
 
 ServerManagerReceive::ServerManagerReceive()
 {
@@ -16,14 +17,15 @@ void ServerManagerReceive::clientConnected(uv_tcp_t* client)
 
 void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
+	std::string strBuffer = /*Compress::zlibUnCompress(*/std::string(buffer, length)/*)*/;
 	std::string strMessage;
 	switch (protocolId)
 	{
 	case CorrespondParam::CLIENT_INIT:
 	{
-		printf("NET_CLIENT_INIT, sender = %d, length = %d\n", sender, buffer, length);
+		printf("NET_CLIENT_INIT, sender = %d, length = %d\n", sender, length);
 		ProtoMessage message;
-		message.from(std::string(buffer, length));
+		message.from(strBuffer);
 		ClientPackageManager::instance().addClientPackage(message, sender);
 		strMessage = ClientPackageManager::instance().get4ClientId(sender);
 		strMessage.append(message.toString());
@@ -48,6 +50,6 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	}
 	//printf("send to process, serverPid = %d\n", ClientPackageManager::instance().getServerPid(sender));
 	strMessage = ClientPackageManager::instance().get4ClientId(sender);
-	strMessage.append(buffer, length);
+	strMessage.append(strBuffer);
 	ProcessWork::instance().send(strMessage.c_str(), strMessage.length(), ClientPackageManager::instance().getServerPid(sender), protocolId);
 }
