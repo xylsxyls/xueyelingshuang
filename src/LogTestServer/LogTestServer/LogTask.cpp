@@ -24,16 +24,17 @@ void LogTask::DoTask()
 	{
 		auto& computerName = vecComputerName[index];
 		std::vector<int32_t> vecId = NetLineManager::instance().findConnect(computerName);
-		int32_t idIndex = -1;
-		while (idIndex++ != vecId.size() - 1)
+		//因为没有断线机制，只发送最后一个同登录名用户
+		if (vecId.empty())
 		{
-			m_message[LOG_LOGIN_NAME] = loginName;
-			int32_t& clientId = vecId[idIndex];
-			std::string strMessage = set4ClientId(clientId);
-			strMessage.append(m_message.toString());
-			//printf("send to netserver,computerName = %s,clientId = %d\n", computerName.c_str(), clientId);
-			NetSender::instance().send(strMessage.c_str(), strMessage.length(), CorrespondParam::PROTO_MESSAGE, true);
+			continue;
 		}
+		m_message[LOG_LOGIN_NAME] = loginName;
+		int32_t& clientId = vecId.back();
+		std::string strMessage = set4ClientId(clientId);
+		strMessage.append(m_message.toString());
+		//printf("send to netserver,computerName = %s,clientId = %d\n", computerName.c_str(), clientId);
+		NetSender::instance().send(strMessage.c_str(), strMessage.length(), CorrespondParam::PROTO_MESSAGE, true);
 	}
 }
 
