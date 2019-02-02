@@ -18,12 +18,7 @@ m_processMutex(nullptr)
 
 LogManager::~LogManager()
 {
-	if (m_log != nullptr)
-	{
-		LOGEND("");
-		delete m_log;
-		m_log = nullptr;
-	}
+	uninit();
 	if (m_processMutex != nullptr)
 	{
 		delete m_processMutex;
@@ -49,9 +44,19 @@ void LogManager::init(const std::string& path)
 
 void LogManager::print(LogLevel flag, const string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...)
 {
-	if (m_log == nullptr || m_processMutex == nullptr)
+	if (m_processMutex == nullptr)
+	{
+		return;
+	}
+
+	if (m_log == nullptr)
 	{
 		init();
+	}
+
+	if (m_log == nullptr)
+	{
+		return;
 	}
 
 	std::string strFlag;
@@ -132,4 +137,21 @@ void LogManager::print(LogLevel flag, const string& fileMacro, const std::string
 	std::string beginEnd;
 	//?这里str就是要打印的日志
 	*m_log << "[" + (intDateTime.empty() ? IntDateTime().timeToString() : intDateTime) + "][" + strFlag + "][ThreadId:" << (threadId == 0 ? CSystem::SystemThreadId() : threadId) << "][" << (exeName.empty() ? m_exeName : exeName) << "][" << fileMacroTemp << "][" << funName.c_str() << "]" << ((flag == LOG_BEGIN || flag == LOG_END) ? beginEnd : beginEnd = " : " + str) << std::endl;
+}
+
+void LogManager::uninit()
+{
+	if (m_log == nullptr)
+	{
+		return;
+	}
+	LOGEND("");
+	delete m_log;
+	m_log = nullptr;
+}
+
+void LogManager::deleteFile()
+{
+	uninit();
+	CSystem::deleteFile(m_logPath.c_str());
 }

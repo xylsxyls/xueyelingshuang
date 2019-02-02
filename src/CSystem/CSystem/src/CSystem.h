@@ -95,6 +95,9 @@ public:
 	static std::string GetCurrentExeName();
 	//获取文件相关信息，flag1表示获取文件全名，flag2表示获取文件后缀名，flag3表示获取文件名，flag4表示获取前面的路径带\\符号
 	static std::string GetName(const std::string& path, int32_t flag);
+	//删除文件
+	static bool deleteFile(const char* path);
+
 public:
     static bool ifRedirFrobid;
     static PVOID oldValue;

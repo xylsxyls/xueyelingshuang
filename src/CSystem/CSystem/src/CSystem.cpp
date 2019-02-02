@@ -496,6 +496,11 @@ std::string CSystem::GetName(const std::string& path, int32_t flag)
 	}
 }
 
+bool CSystem::deleteFile(const char* path)
+{
+	return ::remove(path) == 0;
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 

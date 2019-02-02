@@ -45,6 +45,10 @@ public:
 
 	void print(LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...);
 
+	void uninit();
+
+	void deleteFile();
+
 private:
 #ifdef _MSC_VER
 #pragma warning(push)

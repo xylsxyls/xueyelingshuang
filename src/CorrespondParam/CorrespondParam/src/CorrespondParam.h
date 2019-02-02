@@ -18,6 +18,7 @@
 #define LOG_THREAD_ID "ThreadId"
 #define LOG_INT_DATE_TIME "IntDateTime"
 #define LOG_LOGIN_NAME "LoginName"
+#define LOG_UNINIT "Uninit"
 
 class CorrespondParamAPI CorrespondParam
 {

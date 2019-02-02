@@ -14,6 +14,11 @@ void LogTask::DoTask()
 	m_message.from(m_buffer);
 	m_messageMap.clear();
 	m_message.getMap(m_messageMap);
+	if ((int32_t)m_messageMap[LOG_UNINIT] == (int32_t)true)
+	{
+		LogManager::instance().deleteFile();
+		return;
+	}
 	if ((int32_t)m_messageMap[LOG_IS_WRITE_LOG] == (int32_t)true)
 	{
 		if (m_isNet)
