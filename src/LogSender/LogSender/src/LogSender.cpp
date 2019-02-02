@@ -50,7 +50,12 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	(*m_message)[LOG_BUFFER] = str;
 	
 	(*m_message)[LOG_THREAD_ID] = (int32_t)CSystem::SystemThreadId();
-	(*m_message)[LOG_INT_DATE_TIME] = IntDateTime().toString();
+	uint64_t time = 0;
+	uint64_t* timePtr = &time;
+	IntDateTime currentTime;
+	*((int32_t*)timePtr) = currentTime.getDate();
+	*((int32_t*)timePtr + 1) = currentTime.getTime();
+	(*m_message)[LOG_INT_DATE_TIME] = time;
 	
 	std::string& strMessage = (*m_message).toString();
 	send(strMessage.c_str(), strMessage.length());
