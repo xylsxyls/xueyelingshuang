@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include "Variant/VariantAPI.h"
 
-#define PROTO_GLOBAL "global"
+#define PROTO_GLOBAL 0
 
 namespace pt
 {
@@ -35,7 +35,7 @@ public:
 	msg["global"].push_back(12345);
 	msg["global2"].push_back("12345");
 	*/
-	ProtoMessage& operator[](const char* key);
+	ProtoMessage& operator[](const int32_t& key);
 	ProtoMessage operator=(const Variant& value);
 	void push_back(const Variant& value);
 	void push_front(const Variant& value);
@@ -47,27 +47,27 @@ public:
 
 	std::string getErrorMessage() const;
 
-	void setKeyValue(const std::string& dataKey, const Variant& dataValue, const std::string& key = PROTO_GLOBAL);
+	void setKeyValue(const int32_t& dataKey, const Variant& dataValue, const int32_t& key = PROTO_GLOBAL);
 
-	void addListValue(const Variant& value, const std::string& key = PROTO_GLOBAL);
+	void addListValue(const Variant& value, const int32_t& key = PROTO_GLOBAL);
 
-	void setKeyMap(const std::map<std::string, Variant>& mapData, const std::string& key = PROTO_GLOBAL);
+	void setKeyMap(const std::map<int32_t, Variant>& mapData, const int32_t& key = PROTO_GLOBAL);
 
-	void setKeyList(const std::list<Variant>& listData, const std::string& key = PROTO_GLOBAL);
+	void setKeyList(const std::list<Variant>& listData, const int32_t& key = PROTO_GLOBAL);
 
-	void setKeyTable(const std::vector<std::vector<Variant>>& tableData, const std::string& key = PROTO_GLOBAL);
+	void setKeyTable(const std::vector<std::vector<Variant>>& tableData, const int32_t& key = PROTO_GLOBAL);
 
-	std::map<std::string, Variant> getMap(const std::string& key = PROTO_GLOBAL);
+	std::map<int32_t, Variant> getMap(const int32_t& key = PROTO_GLOBAL);
 
-	std::list<Variant> getList(const std::string& key = PROTO_GLOBAL);
+	std::list<Variant> getList(const int32_t& key = PROTO_GLOBAL);
 
-	std::vector<std::vector<Variant>> getTable(const std::string& key = PROTO_GLOBAL);
+	std::vector<std::vector<Variant>> getTable(const int32_t& key = PROTO_GLOBAL);
 
-	bool getMap(std::map<std::string, Variant>& mapData, const std::string& key = PROTO_GLOBAL);
+	bool getMap(std::map<int32_t, Variant>& mapData, const int32_t& key = PROTO_GLOBAL);
 
-	bool getList(std::list<Variant>& listData, const std::string& key = PROTO_GLOBAL);
+	bool getList(std::list<Variant>& listData, const int32_t& key = PROTO_GLOBAL);
 
-	bool getTable(std::vector<std::vector<Variant>>& tableData, const std::string& key = PROTO_GLOBAL);
+	bool getTable(std::vector<std::vector<Variant>>& tableData, const int32_t& key = PROTO_GLOBAL);
 
 	bool from(const std::string& data);
 
@@ -86,12 +86,12 @@ protected:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::map<std::string, std::map<std::string, Variant>> m_keyMapData;
-	std::map<std::string, std::list<Variant>> m_keyListData;
-	std::map<std::string, std::vector<std::vector<Variant>>> m_keyTableData;
+	std::map<int32_t, std::map<int32_t, Variant>> m_keyMapData;
+	std::map<int32_t, std::list<Variant>> m_keyListData;
+	std::map<int32_t, std::vector<std::vector<Variant>>> m_keyTableData;
 
-	std::string m_key;
-	std::string m_dataKey;
+	int32_t m_key;
+	int32_t m_dataKey;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

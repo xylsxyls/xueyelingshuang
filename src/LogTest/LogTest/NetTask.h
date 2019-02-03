@@ -16,5 +16,5 @@ private:
 	std::string m_processName;
 	CorrespondParam::ProtocolId m_protocolId;
 	ProtoMessage m_message;
-	std::map<std::string, Variant> m_messageMap;
+	std::map<int32_t, Variant> m_messageMap;
 };

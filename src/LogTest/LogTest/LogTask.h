@@ -18,5 +18,5 @@ private:
 	std::string m_processName;
 	bool m_isNet;
 	ProtoMessage m_message;
-	std::map<std::string, Variant> m_messageMap;
+	std::map<int32_t, Variant> m_messageMap;
 };

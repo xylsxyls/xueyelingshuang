@@ -9,9 +9,9 @@ nmake -f win32/Makefile.msc LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.ob
 
 双击sln
 contrib\vstudio\vc12\zlibvc.sln
-选择release Win32 重新编译所有工程
+选择releaseWithoutAsm Win32 重新编译所有工程
 
-目录contrib\vstudio\vc12\x86\ZlibStatRelease下
+目录contrib\vstudio\vc12\x86\ZlibStatReleaseWithoutAsm下
 zlibstat.lib是需要的静态库改名为zlibstat_32.lib
 
 64位运行
@@ -20,9 +20,9 @@ nmake -f win32/Makefile.msc AS=ml64 LOC="-DASMV -DASMINF -I." OBJA="inffasx64.ob
 
 双击sln
 contrib\vstudio\vc12\zlibvc.sln
-选择release x64 重新编译所有工程
+选择releaseWithoutAsm x64 重新编译所有工程
 
-目录contrib\vstudio\vc12\x64\ZlibStatRelease下
+目录contrib\vstudio\vc12\x64\ZlibStatReleaseWithoutAsm下
 zlibstat.lib是需要的静态库改名为zlibstat_64.lib
 
 头文件

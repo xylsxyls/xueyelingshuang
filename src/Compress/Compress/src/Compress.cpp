@@ -44,12 +44,13 @@ std::string Compress::zlibCompress(const std::string& src, int32_t level)
 	{
 		return "";
 	}
+	unsigned long boundLength = ::compressBound((unsigned long)src.size());
 	std::string result;
-	unsigned long length = ::compressBound((unsigned long)src.size()) + sizeof(uint32_t);
+	unsigned long length = boundLength + sizeof(uint32_t);
 	result.resize(length);
 	*((uint32_t*)&(result[0])) = (uint32_t)src.size();
-	::compress2((unsigned char*)(&result[sizeof(uint32_t)]), &length, (unsigned char*)(&src[0]), (unsigned long)src.size(), level);
-	result.resize(length);
+	::compress2((unsigned char*)(&result[sizeof(uint32_t)]), &boundLength, (unsigned char*)(&src[0]), (unsigned long)src.size(), level);
+	result.resize(boundLength + sizeof(uint32_t));
 	return result;
 }
 
@@ -62,32 +63,44 @@ std::string Compress::zlibUnCompress(const std::string& src)
 	std::string result;
 	unsigned long length = *((uint32_t*)&src[0]);
 	result.resize(length);
-	::uncompress((unsigned char*)(&result[0]), &length, (unsigned char*)(&src[sizeof(uint32_t)]), (unsigned long)src.size());
+	::uncompress((unsigned char*)(&result[0]), &length, (unsigned char*)(&src[sizeof(uint32_t)]), (unsigned long)src.size() - sizeof(uint32_t));
 	result.resize(length);
 	return result;
 }
 
 //int main()
 //{
-//	char x[] = "123456789012345678901234567890123456789012345678901234567890";
-//	uint32_t length = Compress::zlibCompressBound(sizeof(x));
-//	char* xx = new char[length];
-//	uint32_t destLength = length;
-//	Compress::zlibCompress(xx, destLength, x, sizeof(x));
-//	uint32_t bufferLength = Compress::zlibUnCompressBound(xx);
-//	char* xxx = new char[bufferLength];
-//	Compress::zlibUnCompress(xxx, bufferLength, xx, destLength);
-//	
-//	RCSend("xxx = %s", xxx);
+//	/*原始数据*/
+//	unsigned char strsrc[] = "这些是测试数据。123456789 abcdefghigklmnopqrstuvwxyz\n\t\0abcdefghijklmnopqrstuvwxyz\n"; //包含\0字符
+//	unsigned char buf[1024] = { 0 };
+//	unsigned char strdst[1024] = { 0 };
+//	unsigned long srclen = sizeof(strsrc);
+//	unsigned long buflen = sizeof(buf);
+//	unsigned long dstlen = sizeof(strdst);
+//	int i;
+//	FILE * fp;
 //
-//	delete xx;
-//	delete xxx;
+//	printf("源串:");
+//	for (i = 0; i < srclen; ++i)
+//	{
+//		printf("%c", strsrc[i]);
+//	}
+//	printf("原串长度为:%ld\n", srclen);
 //
-//	std::string dest = Compress::zlibCompress("123456789012345678901234567890123456789012345678901234567890");
-//	std::string src = Compress::zlibUnCompress(dest);
+//	printf("字符串预计算长度为:%ld\n", compressBound(srclen));
+//	//压缩
+//	compress(buf, &buflen, strsrc, srclen);
+//	printf("压缩后实际长度为:%ld\n", buflen);
+//	dstlen = 1024;
+//	//解压缩
+//	uncompress(strdst, &dstlen, buf, buflen);
 //
-//	RCSend("src = %s", src.c_str());
-//	
+//	printf("目的串:");
+//	for (i = 0; i < dstlen; ++i)
+//	{
+//		printf("%c", strdst[i]);
+//	}
+//
 //	getchar();
 //	return 0;
 //}

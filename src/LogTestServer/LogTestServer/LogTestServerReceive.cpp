@@ -22,7 +22,7 @@ void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid
 		ProtoMessage message;
 		message.from(std::string(buffer + sizeof(int32_t), length - sizeof(int32_t)));
 		int32_t clientId = getClientId(buffer, length);
-		std::map<std::string, Variant> predefineMap;
+		std::map<int32_t, Variant> predefineMap;
 		message.getMap(predefineMap, PREDEFINE);
 		std::string loginName = predefineMap[LOGIN_NAME].toString();
 		NetLineManager::instance().addConnect(loginName, clientId);

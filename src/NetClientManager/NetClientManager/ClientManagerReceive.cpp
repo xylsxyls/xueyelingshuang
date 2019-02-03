@@ -19,7 +19,7 @@ void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 		printf("CLIENT_INIT, length = %d\n", length);
 		ProtoMessage message;
 		message.from(strMessage);
-		std::map<std::string, Variant> predefineMap;
+		std::map<int32_t, Variant> predefineMap;
 		message.getMap(predefineMap, PREDEFINE);
 		clientPid = CSystem::processPid(predefineMap[CLIENT_NAME].toString());
 		addClientIdMap(sender, clientPid);

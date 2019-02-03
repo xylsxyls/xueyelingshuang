@@ -55,7 +55,7 @@ void ProcessReceive::addClientServerLoginName(ProtoMessage& message, const std::
 {
 	std::string serverName = clientName;
 	CStringManager::Insert(serverName, clientName.length() - 7, "Server");
-	std::map<std::string, Variant> predefineMap;
+	std::map<int32_t, Variant> predefineMap;
 	predefineMap[CLIENT_NAME] = clientName;
 	predefineMap[SERVER_NAME] = serverName;
 	predefineMap[LOGIN_NAME] = m_computerName;

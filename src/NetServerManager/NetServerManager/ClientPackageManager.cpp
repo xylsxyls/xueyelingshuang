@@ -18,7 +18,7 @@ void ClientPackageManager::addClientPackage(ProtoMessage& message, uv_tcp_t* sen
 {
 	std::unique_lock<std::mutex> mu(m_mutex);
 	++m_clientId;
-	std::map<std::string, Variant> predefineMap;
+	std::map<int32_t, Variant> predefineMap;
 	message.getMap(predefineMap, PREDEFINE);
 	std::string serverName = predefineMap[SERVER_NAME].toString();
 	m_serverPackageMap[m_clientId] = ClientPackage(predefineMap[CLIENT_NAME].toString(), serverName, CSystem::processPid(serverName), predefineMap[LOGIN_NAME].toString(), sender);

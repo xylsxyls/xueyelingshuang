@@ -22,7 +22,7 @@ message VariantData
 */
 message MapKeyValue
 {
-	string key = 1;
+	int32 key = 1;
 	VariantData value = 2;
 }
 
@@ -51,7 +51,7 @@ message TableData
 */
 message KeyMapData
 {
-	string key = 1;
+	int32 key = 1;
 	MapData mapData = 2;
 }
 
@@ -59,7 +59,7 @@ message KeyMapData
 */
 message KeyListData
 {
-	string key = 1;
+	int32 key = 1;
 	ListData listData = 2;
 }
 
@@ -67,7 +67,7 @@ message KeyListData
 */
 message KeyTableData
 {
-	string key = 1;
+	int32 key = 1;
 	TableData tableData = 2;
 }
 
