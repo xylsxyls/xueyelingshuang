@@ -41,23 +41,24 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	::vsprintf_s(&str[0], size + 1, format, args);
 	va_end(args);
 
-	(*m_message)[LOG_LEVEL] = package.m_logLevel;
-	(*m_message)[LOG_FILE_NAME] = package.m_fileName;
-	(*m_message)[LOG_FUN_NAME] = package.m_funName;
-	(*m_message)[LOG_IS_SEND_NET] = (int32_t)package.m_isSendNet;
-	(*m_message)[LOG_IS_SEND_SCREEN] = (int32_t)package.m_isSendScreen;
-	(*m_message)[LOG_IS_WRITE_LOG] = (int32_t)package.m_isWriteLog;
-	(*m_message)[LOG_BUFFER] = str;
-	
-	(*m_message)[LOG_THREAD_ID] = (int32_t)CSystem::SystemThreadId();
 	uint64_t time = 0;
 	uint64_t* timePtr = &time;
 	IntDateTime currentTime;
 	*((int32_t*)timePtr) = currentTime.getDate();
 	*((int32_t*)timePtr + 1) = currentTime.getTime();
 	(*m_message)[LOG_INT_DATE_TIME] = time;
+	(*m_message)[LOG_LEVEL] = package.m_logLevel;
+	(*m_message)[LOG_IS_SEND_NET] = (int32_t)package.m_isSendNet;
+	(*m_message)[LOG_IS_SEND_SCREEN] = (int32_t)package.m_isSendScreen;
+	(*m_message)[LOG_IS_WRITE_LOG] = (int32_t)package.m_isWriteLog;
+	(*m_message)[LOG_THREAD_ID] = (int32_t)CSystem::SystemThreadId();
+
+	(*m_message)[LOG_FILE_NAME] = package.m_fileName;
+	(*m_message)[LOG_FUN_NAME] = package.m_funName;
+	(*m_message)[LOG_BUFFER] = str;
 	
-	std::string& strMessage = (*m_message).toString();
+	std::string strMessage;
+	(*m_message).toString(strMessage);
 	send(strMessage.c_str(), strMessage.length());
 }
 

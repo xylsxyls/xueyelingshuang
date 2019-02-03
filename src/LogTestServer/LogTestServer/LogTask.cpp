@@ -32,7 +32,9 @@ void LogTask::DoTask()
 		m_message[LOG_LOGIN_NAME] = loginName;
 		int32_t& clientId = vecId.back();
 		std::string strMessage = set4ClientId(clientId);
-		strMessage.append(m_message.toString());
+		std::string protoMsg;
+		m_message.toString(protoMsg);
+		strMessage.append(protoMsg);
 		//printf("send to netserver,computerName = %s,clientId = %d\n", computerName.c_str(), clientId);
 		NetSender::instance().send(strMessage.c_str(), strMessage.length(), CorrespondParam::PROTO_MESSAGE, true);
 	}

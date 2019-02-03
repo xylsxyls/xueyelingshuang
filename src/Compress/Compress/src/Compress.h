@@ -16,4 +16,8 @@ public:
 	//src的长度不能超过uint32_t上限
 	static std::string zlibCompress(const std::string& src, int32_t level = 7);
 	static std::string zlibUnCompress(const std::string& src);
+
+	//src的长度不能超过uint32_t上限
+	static void zlibCompress(std::string& dest, const std::string& src, int32_t level = 7);
+	static void zlibUnCompress(std::string& dest, const std::string& src);
 };

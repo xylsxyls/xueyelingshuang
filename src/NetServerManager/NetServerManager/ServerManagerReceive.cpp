@@ -3,7 +3,7 @@
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ClientPackageManager.h"
 #include "CStringManager/CStringManagerAPI.h"
-//#include "Compress/CompressAPI.h"
+#include "Compress/CompressAPI.h"
 
 ServerManagerReceive::ServerManagerReceive()
 {
@@ -17,7 +17,8 @@ void ServerManagerReceive::clientConnected(uv_tcp_t* client)
 
 void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
-	std::string strBuffer = /*Compress::zlibUnCompress(*/std::string(buffer, length)/*)*/;
+	std::string strBuffer;
+	Compress::zlibUnCompress(strBuffer, std::string(buffer, length));
 	std::string strMessage;
 	switch (protocolId)
 	{
@@ -28,13 +29,15 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 		message.from(strBuffer);
 		ClientPackageManager::instance().addClientPackage(message, sender);
 		strMessage = ClientPackageManager::instance().get4ClientId(sender);
-		strMessage.append(message.toString());
+		std::string protoMsg;
+		message.toString(protoMsg);
+		strMessage.append(protoMsg);
 		ProcessWork::instance().send(strMessage.c_str(), strMessage.length(), ClientPackageManager::instance().getServerPid(sender), protocolId);
 		return;
 	}
 	case CorrespondParam::PROTO_MESSAGE:
 	{
-		//printf("NET_PROTO_MESSAGE, sender = %d, length = %d\n", sender, buffer, length);
+		//printf("NET_PROTO_MESSAGE, length = %d\n", length);
 		break;
 	}
 	case CorrespondParam::JSON:

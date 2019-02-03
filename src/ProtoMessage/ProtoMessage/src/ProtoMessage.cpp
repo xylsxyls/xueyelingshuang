@@ -289,11 +289,18 @@ bool ProtoMessage::from(const std::string& data)
 
 std::string ProtoMessage::toString()
 {
+	std::string result;
+	toString(result);
+	return result;
+}
+
+bool ProtoMessage::toString(std::string& result)
+{
 	if (m_protoMsg == nullptr)
 	{
-		return "";
+		return false;
 	}
-	
+
 	m_protoMsg->Clear();
 	for (auto itKeyMapData = m_keyMapData.begin(); itKeyMapData != m_keyMapData.end(); ++itKeyMapData)
 	{
@@ -358,13 +365,7 @@ std::string ProtoMessage::toString()
 			}
 		}
 	}
-
-	std::string result;
-	if (!m_protoMsg->SerializeToString(&result))
-	{
-		return "";
-	}
-	return result;
+	return m_protoMsg->SerializeToString(&result);
 }
 
 void ProtoMessage::clear()

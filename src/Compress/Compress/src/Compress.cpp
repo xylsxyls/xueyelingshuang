@@ -21,6 +21,32 @@ void Compress::zlibCompress(char* dest, uint32_t& destLength, const char* src, u
 	destLength = length;
 }
 
+void Compress::zlibCompress(std::string& dest, const std::string& src, int32_t level)
+{
+	if (src.empty())
+	{
+		return;
+	}
+	unsigned long boundLength = ::compressBound((unsigned long)src.size());
+	unsigned long length = boundLength + sizeof(uint32_t);
+	dest.resize(length);
+	*((uint32_t*)&(dest[0])) = (uint32_t)src.size();
+	::compress2((unsigned char*)(&dest[sizeof(uint32_t)]), &boundLength, (unsigned char*)(&src[0]), (unsigned long)src.size(), level);
+	dest.resize(boundLength + sizeof(uint32_t));
+}
+
+void Compress::zlibUnCompress(std::string& dest, const std::string& src)
+{
+	if (src.size() <= sizeof(uint32_t))
+	{
+		return;
+	}
+	unsigned long length = *((uint32_t*)&src[0]);
+	dest.resize(length);
+	::uncompress((unsigned char*)(&dest[0]), &length, (unsigned char*)(&src[sizeof(uint32_t)]), (unsigned long)src.size() - sizeof(uint32_t));
+	dest.resize(length);
+}
+
 uint32_t Compress::zlibCompressBound(uint32_t srcLength)
 {
 	return ::compressBound(srcLength) + sizeof(uint32_t);
@@ -40,31 +66,15 @@ void Compress::zlibUnCompress(char* dest, uint32_t& destLength, const char* src,
 
 std::string Compress::zlibCompress(const std::string& src, int32_t level)
 {
-	if (src.empty())
-	{
-		return "";
-	}
-	unsigned long boundLength = ::compressBound((unsigned long)src.size());
 	std::string result;
-	unsigned long length = boundLength + sizeof(uint32_t);
-	result.resize(length);
-	*((uint32_t*)&(result[0])) = (uint32_t)src.size();
-	::compress2((unsigned char*)(&result[sizeof(uint32_t)]), &boundLength, (unsigned char*)(&src[0]), (unsigned long)src.size(), level);
-	result.resize(boundLength + sizeof(uint32_t));
+	zlibCompress(result, src, level);
 	return result;
 }
 
 std::string Compress::zlibUnCompress(const std::string& src)
 {
-	if (src.size() <= sizeof(uint32_t))
-	{
-		return "";
-	}
 	std::string result;
-	unsigned long length = *((uint32_t*)&src[0]);
-	result.resize(length);
-	::uncompress((unsigned char*)(&result[0]), &length, (unsigned char*)(&src[sizeof(uint32_t)]), (unsigned long)src.size() - sizeof(uint32_t));
-	result.resize(length);
+	zlibUnCompress(result, src);
 	return result;
 }
 

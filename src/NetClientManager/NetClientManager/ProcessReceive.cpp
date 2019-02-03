@@ -2,7 +2,7 @@
 #include "NetWork/NetWorkAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
-//#include "Compress/CompressAPI.h"
+#include "Compress/CompressAPI.h"
 
 ProcessReceive::ProcessReceive():
 m_netClient(nullptr)
@@ -21,8 +21,11 @@ void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, Corr
 		ProtoMessage message;
 		message.from(strBuffer);
 		addClientServerLoginName(message, CSystem::processName(sendPid));
-		std::string strMessage = /*Compress::zlibCompress(*/message.toString()/*, 7)*/;
-		m_netClient->send(strMessage.c_str(), strMessage.length(), protocalId);
+		std::string strMessage;
+		message.toString(strMessage);
+		std::string compressMessage;
+		Compress::zlibCompress(compressMessage, strMessage, 9);
+		m_netClient->send(compressMessage.c_str(), compressMessage.length(), protocalId);
 		return;
 	}
 	case CorrespondParam::PROTO_MESSAGE:
@@ -42,8 +45,9 @@ void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, Corr
 		break;
 	}
 	
-	std::string strMessage = /*Compress::zlibCompress(*/strBuffer/*, 7)*/;
-	m_netClient->send(strMessage.c_str(), strMessage.length(), protocalId);
+	std::string compressMessage;
+	Compress::zlibCompress(compressMessage, strBuffer, 9);
+	m_netClient->send(compressMessage.c_str(), compressMessage.length(), protocalId);
 }
 
 void ProcessReceive::setNetClient(NetClient* netClient)

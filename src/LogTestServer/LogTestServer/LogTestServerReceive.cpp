@@ -27,7 +27,9 @@ void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid
 		std::string loginName = predefineMap[LOGIN_NAME].toString();
 		NetLineManager::instance().addConnect(loginName, clientId);
 		std::string strMessage = set4ClientId(clientId);
-		strMessage.append(message.toString());
+		std::string protoMsg;
+		message.toString(protoMsg);
+		strMessage.append(protoMsg);
 		printf("logtest client init,loginName = %s,clientId = %d, send to netserver\n", loginName.c_str(), clientId);
 		NetSender::instance().send(strMessage.c_str(), strMessage.length(), CorrespondParam::CLIENT_INIT, true);
 		return;

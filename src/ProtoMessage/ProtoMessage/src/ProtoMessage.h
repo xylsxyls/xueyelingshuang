@@ -73,6 +73,8 @@ public:
 
 	std::string toString();
 
+	bool toString(std::string& result);
+
 	void clear();
 
 	void clearMap();

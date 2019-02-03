@@ -1,7 +1,7 @@
 #include "ClientManagerReceive.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "CSystem/CSystemAPI.h"
-//#include "Compress/CompressAPI.h"
+#include "Compress/CompressAPI.h"
 
 void ClientManagerReceive::serverConnected(uv_tcp_t* server)
 {
@@ -11,7 +11,8 @@ void ClientManagerReceive::serverConnected(uv_tcp_t* server)
 void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
 	int32_t clientPid = 0;
-	std::string strMessage = /*Compress::zlibUnCompress(*/std::string(buffer, length)/*)*/;
+	std::string strMessage;
+	Compress::zlibUnCompress(strMessage, std::string(buffer, length));
 	switch (protocolId)
 	{
 	case CorrespondParam::CLIENT_INIT:
@@ -23,7 +24,8 @@ void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 		message.getMap(predefineMap, PREDEFINE);
 		clientPid = CSystem::processPid(predefineMap[CLIENT_NAME].toString());
 		addClientIdMap(sender, clientPid);
-		std::string strMessage = message.toString();
+		std::string strMessage;
+		message.toString(strMessage);
 		ProcessWork::instance().send(strMessage.c_str(), strMessage.length(), clientPid, protocolId);
 		return;
 	}
