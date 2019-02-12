@@ -91,20 +91,23 @@ public:
 
                 if (ScreenScript::FindClick("EndGame.png"))
                 {
-                    return;
+					break;
                 }
 
                 if (ScreenScript::FindClick("BackHome.png"))
                 {
-                    return;
+					break;
                 }
 
                 if (ScreenScript::FindClick("PlayAgain.png"))
                 {
-                    return;
+					break;
                 }
             }
-            return;
+			if (beginPlay == 1)
+			{
+				return;
+			}
         CHOOSE:
             while (true)
             {
@@ -165,7 +168,7 @@ public:
 
 int32_t main()
 {
-    CDump::instance().DeclareDumpFile();
+    CDump::declareDumpFile();
     xyls::Rect rect(CSystem::GetWindowResolution());
     if (rect == xyls::Rect(0, 0, 1366, 768))
     {
