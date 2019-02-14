@@ -1,0 +1,3 @@
+QTimer *timer = new QTimer(this);
+	QObject::connect(timer, SIGNAL(timeout()), this, SLOT(updateModelWindow()));
+	timer->start(100);

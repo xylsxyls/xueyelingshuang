@@ -1,0 +1,4 @@
+QTimer::singleShot(100, this, [this]()
+	{
+		m_model->repaint();
+	});

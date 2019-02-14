@@ -1,0 +1,9 @@
+m_advert1->setVisible(false);
+	m_advert1->setUrl(QUrl(advertUrl));
+	QWebPage* webPage = m_advert1->page();
+	if (webPage != nullptr)
+	{
+		webPage->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
+	}
+	QObject::connect(m_advert1, &CWebViewEx::linkClicked, this, &AdvertAskDialog::onLinkClicked);
+	QObject::connect(m_advert1, &CWebViewEx::loadFinished, this, &AdvertAskDialog::onLoadFinished);

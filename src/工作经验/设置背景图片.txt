@@ -1,0 +1,7 @@
+setAutoFillBackground(true);
+
+QPalette pal = palette();
+
+pal.setBrush(backgroundRole(), QPixmap("D:/ze/hero_background.png"));
+
+setPalette(pal);

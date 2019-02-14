@@ -1,0 +1,24 @@
+void paintEvent(QPaintEvent* eve)
+	{
+		QLabel::paintEvent(eve);
+		QPainter painter(this);
+
+		QString renderText = "this is a row text";
+
+		QFont ft;
+		ft.setPixelSize(50);
+		ft.setBold(true);
+		painter.setFont(ft);
+
+		int textWidth = painter.fontMetrics().width(renderText);
+		int textHeight = painter.fontMetrics().height();
+
+		QLinearGradient linearGrad(QPointF(0, 0), QPointF(textWidth, 0));
+		linearGrad.setColorAt(0, Qt::darkGreen);
+		linearGrad.setColorAt(1, Qt::yellow);
+
+		QBrush brush(linearGrad);
+		painter.setBrush(brush);
+		painter.setPen(QPen(brush,1, Qt::SolidLine));
+		painter.drawText(0, textHeight, renderText);
+	}

@@ -1,0 +1,9 @@
+std::queue<std::shared_ptr<char>>* li = new std::queue<std::shared_ptr<char>>();
+	{
+		std::shared_ptr<char> a;
+		a.reset(new char[1024*1024*20]);
+		li->push(a);
+	}
+	delete li;
+
+智能指针在容器中一样会释放，new出来的也一样，内部使用char也会一起删除后面连续的char内存

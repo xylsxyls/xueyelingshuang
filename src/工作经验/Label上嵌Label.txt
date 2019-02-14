@@ -1,0 +1,1 @@
+如果使用stylesheet，必须将父窗口和子窗口设置objectName，并且.Label要换成#objectName
