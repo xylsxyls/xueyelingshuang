@@ -67,7 +67,7 @@ std::string Cini::GetFirstKey(const std::string& section, int32_t maxLength) con
 {
 	std::string result;
 	result.resize(maxLength);
-	GetPrivateProfileString(section.c_str(), nullptr, "-1", &result[0], maxLength, m_iniPath.c_str());
+	GetPrivateProfileString(section.c_str(), nullptr, "", &result[0], maxLength, m_iniPath.c_str());
 	result.resize(strlen(&result[0]));
 	return result;
 }
