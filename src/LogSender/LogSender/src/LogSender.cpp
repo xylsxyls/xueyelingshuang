@@ -2,9 +2,13 @@
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "CSystem/CSystemAPI.h"
-#include "CorrespondParam/CorrespondParamAPI.h"
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "SharedMemory/SharedMemoryAPI.h"
+
+LogSenderAPI LogSenderInterface& logInstance()
+{
+	return LogSender::instance();
+}
 
 LogSender::LogSender():
 m_message(nullptr),

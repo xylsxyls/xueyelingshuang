@@ -3,17 +3,23 @@
 #include <stdint.h>
 #include "LogPackage.h"
 
-#define LOG_SEND_ALL(format, ...)  LogSender::instance().logSend(LogPackage(LogPackage::LOG_INFO, __FILE__, __FUNCTION__, true, true, true), format, ##__VA_ARGS__)
-#define LOG_SEND_DEBUG(format, ...) LogSender::instance().logSend(LogPackage(LogPackage::LOG_DEBUG, __FILE__, __FUNCTION__, false, true, true), format, ##__VA_ARGS__)
-#define LOG_SEND_INFO(format, ...) LogSender::instance().logSend(LogPackage(LogPackage::LOG_INFO, __FILE__, __FUNCTION__, false, true, true), format, ##__VA_ARGS__)
-#define LOG_SEND_WARNING(format, ...) LogSender::instance().logSend(LogPackage(LogPackage::LOG_WARNING, __FILE__, __FUNCTION__, true, true, true), format, ##__VA_ARGS__)
-#define LOG_SEND_ERROR(format, ...) LogSender::instance().logSend(LogPackage(LogPackage::LOG_ERROR, __FILE__, __FUNCTION__, true, true, true), format, ##__VA_ARGS__)
-#define LOG_SEND_FATAL(format, ...) LogSender::instance().logSend(LogPackage(LogPackage::LOG_FATAL, __FILE__, __FUNCTION__, true, true, true), format, ##__VA_ARGS__)
-
 class ProtoMessage;
 class SharedMemory;
 
-class LogSenderAPI LogSender
+class LogSenderAPI LogSenderInterface
+{
+public:
+	virtual void logSend(const LogPackage& package, const char* format, ...) = 0;
+
+	virtual void uninit() = 0;
+};
+
+extern "C"
+{
+	LogSenderAPI LogSenderInterface& logInstance();
+}
+
+class LogSenderAPI LogSender : public LogSenderInterface
 {
 protected:
 	LogSender();

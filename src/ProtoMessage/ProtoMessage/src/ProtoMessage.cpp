@@ -397,74 +397,74 @@ void ProtoMessage::clearTable()
 	m_keyTableData.clear();
 }
 
-int32_t main()
-{
-	ProtoMessage msg;
-	
-	//msg["1"] = "2";
-	//msg["other"]["2"] = 3;
-	//msg.push_back("123");
-	//msg.push_front("1234");
-	//msg["1"].push_back("123");
-	//msg["1"].push_back("1234");
-	//std::vector<std::vector<Variant>> vecTable;
-	//std::vector<Variant> vecList;
-	//vecList.push_back(12345);
-	//vecList.push_back("123456");
-	//vecTable.push_back(vecList);
-	//vecList[0] = 23456;
-	//vecList[1] = 234567;
-	//vecTable.push_back(vecList);
-	//msg.setKeyTable(vecTable);
-	//msg["table2"].setTable(vecTable);
-	//Cjson json;
-	//int begin = ::GetTickCount();
-	//int count = 3000;
-	//while (count-- != 0)
-	//{
-	//	msg[CStringManager::Format("%d",count).c_str()] = "2";
-	//	//json["global"][CStringManager::Format("%d", count).c_str()] = "2";
-	//	//std::string proto = msg.toString();
-	//	//ProtoMessage msg2;
-	//	//msg2.from(proto);
-	//	//std::string str = msg2.toString();
-	//	//if (str == proto)
-	//	//{
-	//	//	RCSend("same,%d",str.size());
-	//	//}
-	//	//ProtoMessage msg3;
-	//	//msg3.from(proto);
-	//	//std::string str2 = msg3.toString();
-	//	//if (str == str2)
-	//	//{
-	//	//	RCSend("same2");
-	//	//}
-	//	//RCSend("str.size = %d, proto.size = %d,cmp = %d", str.size(), proto.size(), memcmp(&str[0], &proto[0], 117));
-	//}
-	//std::string proto = msg.toString();
-	//std::string strjson = json.tostring("", "");
-	//std::string com = Compress::zlibCompress(proto);
-	//RCSend("time = %d,length = %d", ::GetTickCount() - begin, com.size());
-
-	//count = 100000;
-	//while (count-- != 0)
-	//{
-	//	Cjson json;
-	//	json["1"] = "2";
-	//	json["global"][0] = "123";
-	//	json["global"][1] = "1234";
-	//	json["global2"][0][0] = "12345";
-	//	json["global2"][0][1] = "123456";
-	//	json["global2"][1][0] = "23456";
-	//	json["global2"][1][1] = "234567";
-	//	json["global2"][1][2] = "234567";
-	//	std::string str2 = json.tostring("", "");
-	//	Cjson json2;
-	//	json2.LoadJson(str2);
-	//	std::string str3 = json.tostring("", "");
-	//}
-	//RCSend("time = %d", ::GetTickCount() - begin);
-
-	getchar();
-	return 0;
-}
+//int32_t main()
+//{
+//	ProtoMessage msg;
+//	
+//	//msg["1"] = "2";
+//	//msg["other"]["2"] = 3;
+//	//msg.push_back("123");
+//	//msg.push_front("1234");
+//	//msg["1"].push_back("123");
+//	//msg["1"].push_back("1234");
+//	//std::vector<std::vector<Variant>> vecTable;
+//	//std::vector<Variant> vecList;
+//	//vecList.push_back(12345);
+//	//vecList.push_back("123456");
+//	//vecTable.push_back(vecList);
+//	//vecList[0] = 23456;
+//	//vecList[1] = 234567;
+//	//vecTable.push_back(vecList);
+//	//msg.setKeyTable(vecTable);
+//	//msg["table2"].setTable(vecTable);
+//	//Cjson json;
+//	//int begin = ::GetTickCount();
+//	//int count = 3000;
+//	//while (count-- != 0)
+//	//{
+//	//	msg[CStringManager::Format("%d",count).c_str()] = "2";
+//	//	//json["global"][CStringManager::Format("%d", count).c_str()] = "2";
+//	//	//std::string proto = msg.toString();
+//	//	//ProtoMessage msg2;
+//	//	//msg2.from(proto);
+//	//	//std::string str = msg2.toString();
+//	//	//if (str == proto)
+//	//	//{
+//	//	//	RCSend("same,%d",str.size());
+//	//	//}
+//	//	//ProtoMessage msg3;
+//	//	//msg3.from(proto);
+//	//	//std::string str2 = msg3.toString();
+//	//	//if (str == str2)
+//	//	//{
+//	//	//	RCSend("same2");
+//	//	//}
+//	//	//RCSend("str.size = %d, proto.size = %d,cmp = %d", str.size(), proto.size(), memcmp(&str[0], &proto[0], 117));
+//	//}
+//	//std::string proto = msg.toString();
+//	//std::string strjson = json.tostring("", "");
+//	//std::string com = Compress::zlibCompress(proto);
+//	//RCSend("time = %d,length = %d", ::GetTickCount() - begin, com.size());
+//
+//	//count = 100000;
+//	//while (count-- != 0)
+//	//{
+//	//	Cjson json;
+//	//	json["1"] = "2";
+//	//	json["global"][0] = "123";
+//	//	json["global"][1] = "1234";
+//	//	json["global2"][0][0] = "12345";
+//	//	json["global2"][0][1] = "123456";
+//	//	json["global2"][1][0] = "23456";
+//	//	json["global2"][1][1] = "234567";
+//	//	json["global2"][1][2] = "234567";
+//	//	std::string str2 = json.tostring("", "");
+//	//	Cjson json2;
+//	//	json2.LoadJson(str2);
+//	//	std::string str3 = json.tostring("", "");
+//	//}
+//	//RCSend("time = %d", ::GetTickCount() - begin);
+//
+//	getchar();
+//	return 0;
+//}
