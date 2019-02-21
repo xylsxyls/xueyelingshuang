@@ -146,7 +146,7 @@ std::string SharedMemory::mapName(HANDLE memoryHandle, int32_t bufferSize)
 
 SharedMemory* SharedMemory::createPid()
 {
-	SharedMemory* pid = new SharedMemory(CSystem::GetCurrentExeName() + "_pid", sizeof(int32_t));
+	SharedMemory* pid = new SharedMemory("Global\\" + CSystem::GetCurrentExeName() + "_pid", sizeof(int32_t));
 	void* memory = pid->writeWithoutLock();
 	if (memory == nullptr)
 	{
@@ -160,7 +160,7 @@ int32_t SharedMemory::readPid(const std::string& exeName, SharedMemory*& pid)
 {
 	if (pid == nullptr)
 	{
-		pid = new SharedMemory(CSystem::GetName(exeName, 3) + "_pid");
+		pid = new SharedMemory("Global\\" + CSystem::GetName(exeName, 3) + "_pid");
 	}
 	void* memory = pid->readWithoutLock();
 	if (memory == nullptr)

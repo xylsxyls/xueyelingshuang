@@ -53,7 +53,7 @@ public:
 			m_dllHinstance = ::LoadLibraryExA(exeDllPath.c_str(), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
 			if (m_dllHinstance == nullptr)
 			{
-				m_dllHinstance = ::LoadLibraryExA("D:/xueyelingshuang/lib/LogSender.dll", 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+				m_dllHinstance = ::LoadLibraryExA("D:/xueyelingshuang/common/LogSender/LogSender.dll", 0, LOAD_WITH_ALTERED_SEARCH_PATH);
 			}
 		}
 
