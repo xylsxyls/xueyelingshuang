@@ -1,7 +1,10 @@
-instsrv.exe LogTest1.0 srvany.exe
+E:\setup\instsrv.exe LogTest1.0 E:\setup\srvany.exe
 LogTest1.0是服务名
 然后打开注册表
 HKEY_LOCAL_MACHINE->SYSTEM->CurrentControlSet->services->LogTest1.0
 新建项Parameters
 在Parameters中新建字符串值
 名字Application，值为LogTest1.0.exe的路径，路径中用双反斜杠\\
+
+移除
+instsrv.exe ServerName remove
