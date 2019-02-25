@@ -10,6 +10,10 @@
     <ClInclude Include="..\src\ReadWriteMutexMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\ProcessReadWriteMutex.h" />
+    <ClInclude Include="..\src\ReadLock.h" />
+    <ClInclude Include="..\src\ReadWriteMutexBase.h" />
+    <ClInclude Include="..\src\WriteLock.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -23,5 +27,8 @@
     <ClCompile Include="..\src\ReadWriteMutex.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\ProcessReadWriteMutex.cpp" />
+    <ClCompile Include="..\src\ReadLock.cpp" />
+    <ClCompile Include="..\src\WriteLock.cpp" />
   </ItemGroup>
 </Project>

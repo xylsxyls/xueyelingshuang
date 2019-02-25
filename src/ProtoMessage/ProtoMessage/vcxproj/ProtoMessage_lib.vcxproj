@@ -19,12 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\ProtoMessage.pb.h" />
     <ClInclude Include="..\src\ProtoMessageAPI.h" />
     <ClInclude Include="..\src\ProtoMessageMacro.h" />
     <ClInclude Include="..\src\ProtoMessage.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ProtoMessage.cpp" />
+    <ClCompile Include="..\src\ProtoMessage.pb.cc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>

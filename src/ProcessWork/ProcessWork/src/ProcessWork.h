@@ -4,7 +4,7 @@
 #include <map>
 #include "CorrespondParam/CorrespondParamAPI.h"
 
-class ReceiveCallback;
+class ProcessReceiveCallback;
 class SharedMemory;
 class ProcessReadWriteMutex;
 
@@ -13,8 +13,7 @@ class ProcessReadWriteMutex;
 class ProcessWorkAPI ProcessWork
 {
 	friend class ReceiveTask;
-	friend class WorkTask;
-	friend class DeleteTask;
+	friend class ProcessWorkTask;
 	friend class CreateKeyTask;
 	friend class CreateDataTask;
 protected:
@@ -37,7 +36,7 @@ public:
 	/** 初始化接收模块
 	@param [in] callback 接收回调类
 	*/
-	void initReceive(ReceiveCallback* callback);
+	void initReceive(ProcessReceiveCallback* callback);
 
 	/** 向服务端发送字符串，有序收到单线程，无序收到多线程
 	@param [in] buffer 字符串地址
@@ -57,5 +56,5 @@ public:
 
 protected:
 	int32_t m_processPid;
-	ReceiveCallback* m_callback;
+	ProcessReceiveCallback* m_callback;
 };

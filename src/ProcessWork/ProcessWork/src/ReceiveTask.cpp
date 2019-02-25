@@ -4,7 +4,7 @@
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "ProcessWork.h"
 #include "KeyPackage.h"
-#include "WorkTask.h"
+#include "ProcessWorkTask.h"
 #include "SharedMemoryManager.h"
 #include "DeleteKeyTask.h"
 #include "ThreadManager.h"
@@ -46,10 +46,10 @@ void ReceiveTask::DoTask()
 		}
 
 		//发送至处理队列
-		WorkTask* workTask = new WorkTask;
+		ProcessWorkTask* workTask = new ProcessWorkTask;
 		workTask->setKey(keyPackage);
 		workTask->setClient(m_client);
-		std::shared_ptr<WorkTask> spWorkTask;
+		std::shared_ptr<ProcessWorkTask> spWorkTask;
 		spWorkTask.reset(workTask);
 		ThreadManager::instance().postWorkTask(spWorkTask);
 	}

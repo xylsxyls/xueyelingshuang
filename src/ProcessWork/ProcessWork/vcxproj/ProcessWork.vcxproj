@@ -32,11 +32,11 @@
     <ClInclude Include="..\src\ProcessWorkAPI.h" />
     <ClInclude Include="..\src\ProcessWorkMacro.h" />
     <ClInclude Include="..\src\ProcessWork.h" />
+    <ClInclude Include="..\src\ProcessWorkTask.h" />
     <ClInclude Include="..\src\ReceiveCallback.h" />
     <ClInclude Include="..\src\ReceiveTask.h" />
     <ClInclude Include="..\src\SharedMemoryManager.h" />
     <ClInclude Include="..\src\ThreadManager.h" />
-    <ClInclude Include="..\src\WorkTask.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CreateDataTask.cpp" />
@@ -47,10 +47,10 @@
     <ClCompile Include="..\src\ProcessHelper.cpp" />
     <ClCompile Include="..\src\ProcessMutexManager.cpp" />
     <ClCompile Include="..\src\ProcessWork.cpp" />
+    <ClCompile Include="..\src\ProcessWorkTask.cpp" />
     <ClCompile Include="..\src\ReceiveTask.cpp" />
     <ClCompile Include="..\src\SharedMemoryManager.cpp" />
     <ClCompile Include="..\src\ThreadManager.cpp" />
-    <ClCompile Include="..\src\WorkTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8209383E-9A8F-4F50-B583-7173B6100B3C}</ProjectGuid>

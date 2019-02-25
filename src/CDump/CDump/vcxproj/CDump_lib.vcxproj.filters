@@ -10,6 +10,7 @@
     <ClInclude Include="..\src\CDumpMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\mdump.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -23,5 +24,6 @@
     <ClCompile Include="..\src\CDump.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\mdump.cpp" />
   </ItemGroup>
 </Project>

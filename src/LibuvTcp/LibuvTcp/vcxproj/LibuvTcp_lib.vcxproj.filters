@@ -10,6 +10,8 @@
     <ClInclude Include="..\src\LibuvTcpMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\ReceiveCallback.h" />
+    <ClInclude Include="..\src\RunLoopTask.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -23,5 +25,7 @@
     <ClCompile Include="..\src\LibuvTcp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\ReceiveCallback.cpp" />
+    <ClCompile Include="..\src\RunLoopTask.cpp" />
   </ItemGroup>
 </Project>

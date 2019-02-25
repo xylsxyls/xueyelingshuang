@@ -32,7 +32,7 @@ void ProcessWork::uninit()
 	HandleManager::instance().uninit();
 }
 
-void ProcessWork::initReceive(ReceiveCallback* callback)
+void ProcessWork::initReceive(ProcessReceiveCallback* callback)
 {
 	m_callback = callback;
 

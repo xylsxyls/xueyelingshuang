@@ -1,17 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClInclude Include="..\src\NetWork.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\NetWorkAPI.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\NetWorkMacro.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="源文件">
       <UniqueIdentifier>{c99e1316-4fc2-499d-9bce-3ab83335428b}</UniqueIdentifier>
     </Filter>
@@ -20,8 +9,31 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetWork.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <ClCompile Include="..\src\CallbackBase.cpp" />
+    <ClCompile Include="..\src\ClientCallback.cpp" />
+    <ClCompile Include="..\src\ClientCallbackBase.cpp" />
+    <ClCompile Include="..\src\NetClient.cpp" />
+    <ClCompile Include="..\src\NetServer.cpp" />
+    <ClCompile Include="..\src\NetWorkThreadManager.cpp" />
+    <ClCompile Include="..\src\ReceiveCallbackBase.cpp" />
+    <ClCompile Include="..\src\SendTask.cpp" />
+    <ClCompile Include="..\src\ServerCallback.cpp" />
+    <ClCompile Include="..\src\ServerCallbackBase.cpp" />
+    <ClCompile Include="..\src\WorkTask.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\CallbackBase.h" />
+    <ClInclude Include="..\src\ClientCallback.h" />
+    <ClInclude Include="..\src\ClientCallbackBase.h" />
+    <ClInclude Include="..\src\NetClient.h" />
+    <ClInclude Include="..\src\NetServer.h" />
+    <ClInclude Include="..\src\NetWorkAPI.h" />
+    <ClInclude Include="..\src\NetWorkMacro.h" />
+    <ClInclude Include="..\src\NetWorkThreadManager.h" />
+    <ClInclude Include="..\src\ReceiveCallbackBase.h" />
+    <ClInclude Include="..\src\SendTask.h" />
+    <ClInclude Include="..\src\ServerCallback.h" />
+    <ClInclude Include="..\src\ServerCallbackBase.h" />
+    <ClInclude Include="..\src\WorkTask.h" />
   </ItemGroup>
 </Project>

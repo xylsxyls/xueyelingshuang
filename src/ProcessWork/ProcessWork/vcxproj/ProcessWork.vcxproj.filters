@@ -42,9 +42,6 @@
     <ClInclude Include="..\src\ReceiveTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\WorkTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\HandleManager.h">
       <Filter>Manager</Filter>
     </ClInclude>
@@ -81,15 +78,15 @@
     <ClInclude Include="..\src\MemroyPackage.h">
       <Filter>Helper</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\ProcessWorkTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ProcessWork.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ReceiveTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\WorkTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
     <ClCompile Include="..\src\HandleManager.cpp">
@@ -118,6 +115,9 @@
     </ClCompile>
     <ClCompile Include="..\src\ProcessHelper.cpp">
       <Filter>Helper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ProcessWorkTask.cpp">
+      <Filter>Task</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

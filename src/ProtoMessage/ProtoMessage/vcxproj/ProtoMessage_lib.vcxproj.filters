@@ -10,6 +10,7 @@
     <ClInclude Include="..\src\ProtoMessageMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\ProtoMessage.pb.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -23,5 +24,6 @@
     <ClCompile Include="..\src\ProtoMessage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\ProtoMessage.pb.cc" />
   </ItemGroup>
 </Project>

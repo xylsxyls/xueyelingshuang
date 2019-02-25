@@ -19,12 +19,19 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\ProcessReadWriteMutex.h" />
+    <ClInclude Include="..\src\ReadLock.h" />
     <ClInclude Include="..\src\ReadWriteMutexAPI.h" />
+    <ClInclude Include="..\src\ReadWriteMutexBase.h" />
     <ClInclude Include="..\src\ReadWriteMutexMacro.h" />
     <ClInclude Include="..\src\ReadWriteMutex.h" />
+    <ClInclude Include="..\src\WriteLock.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\ProcessReadWriteMutex.cpp" />
+    <ClCompile Include="..\src\ReadLock.cpp" />
     <ClCompile Include="..\src\ReadWriteMutex.cpp" />
+    <ClCompile Include="..\src\WriteLock.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>

@@ -19,12 +19,32 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\NetWorkAPI.h" />
-    <ClInclude Include="..\src\NetWorkMacro.h" />
-    <ClInclude Include="..\src\NetWork.h" />
+    <ClCompile Include="..\src\CallbackBase.cpp" />
+    <ClCompile Include="..\src\ClientCallback.cpp" />
+    <ClCompile Include="..\src\ClientCallbackBase.cpp" />
+    <ClCompile Include="..\src\NetClient.cpp" />
+    <ClCompile Include="..\src\NetServer.cpp" />
+    <ClCompile Include="..\src\NetWorkThreadManager.cpp" />
+    <ClCompile Include="..\src\ReceiveCallbackBase.cpp" />
+    <ClCompile Include="..\src\SendTask.cpp" />
+    <ClCompile Include="..\src\ServerCallback.cpp" />
+    <ClCompile Include="..\src\ServerCallbackBase.cpp" />
+    <ClCompile Include="..\src\WorkTask.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\NetWork.cpp" />
+    <ClInclude Include="..\src\CallbackBase.h" />
+    <ClInclude Include="..\src\ClientCallback.h" />
+    <ClInclude Include="..\src\ClientCallbackBase.h" />
+    <ClInclude Include="..\src\NetClient.h" />
+    <ClInclude Include="..\src\NetServer.h" />
+    <ClInclude Include="..\src\NetWorkAPI.h" />
+    <ClInclude Include="..\src\NetWorkMacro.h" />
+    <ClInclude Include="..\src\NetWorkThreadManager.h" />
+    <ClInclude Include="..\src\ReceiveCallbackBase.h" />
+    <ClInclude Include="..\src\SendTask.h" />
+    <ClInclude Include="..\src\ServerCallback.h" />
+    <ClInclude Include="..\src\ServerCallbackBase.h" />
+    <ClInclude Include="..\src\WorkTask.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>

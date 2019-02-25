@@ -5,7 +5,7 @@
 
 class NetClient;
 
-class ProcessReceive : public ReceiveCallback
+class ProcessReceive : public ProcessReceiveCallback
 {
 public:
 	ProcessReceive();
