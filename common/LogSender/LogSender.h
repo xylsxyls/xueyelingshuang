@@ -43,9 +43,10 @@ private:
 #pragma warning(disable:4251)
 #endif
 	std::string m_computerName;
-	ProtoMessage* m_message;
-	SharedMemory* m_logTestPid;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+	ProtoMessage* m_message;
+	SharedMemory* m_logTestPid;
+	int32_t m_pid;
 };
