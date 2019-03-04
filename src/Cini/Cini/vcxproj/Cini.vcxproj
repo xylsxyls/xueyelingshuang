@@ -22,6 +22,7 @@
     <ClInclude Include="..\src\CiniAPI.h" />
     <ClInclude Include="..\src\CiniMacro.h" />
     <ClInclude Include="..\src\Cini.h" />
+    <ClInclude Include="..\src\SimpleIni.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Cini.cpp" />
