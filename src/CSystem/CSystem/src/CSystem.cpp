@@ -9,6 +9,7 @@
 #include <conio.h>
 #include <tlhelp32.h>
 #include <tchar.h>
+#include <iostream>
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
 
@@ -499,6 +500,18 @@ std::string CSystem::GetName(const std::string& path, int32_t flag)
 bool CSystem::deleteFile(const char* path)
 {
 	return ::remove(path) == 0;
+}
+
+std::string CSystem::inputString(const std::string& tip)
+{
+	printf("%s\n", tip.c_str());
+	std::string result;
+	char ch = 0;
+	while ((ch = std::cin.get()) != '\n')
+	{
+		result += ch;
+	}
+	return result;
 }
 
 bool CSystem::ifRedirFrobid = false;

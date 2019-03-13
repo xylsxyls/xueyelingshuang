@@ -7,7 +7,7 @@
 class CtxtAPI Ctxt
 {
 public:
-	enum
+	enum Load
 	{
 		POINT_TO_POINT = 1,
 		SPLIT,
@@ -20,7 +20,7 @@ public:
 
 public:
 	//?内部使用ifstream和getline，文件末尾的多余空行不会被加载，txt导入分为两种，第一种，每行只取固定格子的东西，如"1-3,4-6"，顶格就是1，1-3就是取123格，第二种，每行以一个标志分隔，每行输入的最大长度默认一亿，第三种，一行一加载
-	void LoadTxt(int32_t flag, const std::string& strSplit);
+	void LoadTxt(Load flag, const std::string& strSplit = "");
 	//?转化为map形式，通过[string][/string]方式找到开始行和结束行
 	void ToMap();
 	//?把内存中的保存到文件里

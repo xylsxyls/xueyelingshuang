@@ -97,6 +97,8 @@ public:
 	static std::string GetName(const std::string& path, int32_t flag);
 	//删除文件
 	static bool deleteFile(const char* path);
+	//控制台输入输出
+	static std::string inputString(const std::string& tip);
 
 public:
     static bool ifRedirFrobid;

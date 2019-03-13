@@ -52,7 +52,7 @@ size_t ReplaceStr(std::string& str, const std::string& oldstr, const std::string
 	return count;
 }
 
-void Ctxt::LoadTxt(int32_t flag, const std::string& strSplit)
+void Ctxt::LoadTxt(Load flag, const std::string& strSplit)
 {
 	m_vectxt.clear();
 	switch (flag)
