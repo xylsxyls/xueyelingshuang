@@ -22,6 +22,7 @@
     <ClCompile Include="..\src\CallbackBase.cpp" />
     <ClCompile Include="..\src\ClientCallback.cpp" />
     <ClCompile Include="..\src\ClientCallbackBase.cpp" />
+    <ClCompile Include="..\src\HeartTask.cpp" />
     <ClCompile Include="..\src\NetClient.cpp" />
     <ClCompile Include="..\src\NetServer.cpp" />
     <ClCompile Include="..\src\NetWorkThreadManager.cpp" />
@@ -35,6 +36,7 @@
     <ClInclude Include="..\src\CallbackBase.h" />
     <ClInclude Include="..\src\ClientCallback.h" />
     <ClInclude Include="..\src\ClientCallbackBase.h" />
+    <ClInclude Include="..\src\HeartTask.h" />
     <ClInclude Include="..\src\NetClient.h" />
     <ClInclude Include="..\src\NetServer.h" />
     <ClInclude Include="..\src\NetWorkAPI.h" />

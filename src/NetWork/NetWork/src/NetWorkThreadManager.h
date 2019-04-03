@@ -26,10 +26,13 @@ public:
 
 	void postSendTaskToThread(uint32_t threadId, const std::shared_ptr<CTask>& spSendTask);
 
+	void postHeartTaskToThread(const std::shared_ptr<CTask>& spHeartTask);
+
 	uint32_t getWorkThreadId();
 
 private:
 	std::atomic<int32_t> m_workThreadIdCounter;
 	std::vector<uint32_t> m_vecWorkThreadId;
 	std::atomic<uint32_t> m_sendThreadId;
+	std::atomic<uint32_t> m_heartThreadId;
 };

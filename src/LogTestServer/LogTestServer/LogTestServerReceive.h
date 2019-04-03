@@ -6,7 +6,7 @@
 
 class CTaskThread;
 
-class LogTestServerReceive : public ReceiveCallback
+class LogTestServerReceive : public ProcessReceiveCallback
 {
 public:
 	LogTestServerReceive();

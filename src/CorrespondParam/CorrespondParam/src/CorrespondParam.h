@@ -33,6 +33,7 @@ public:
 		SERVER_INIT,
 		PROTO_MESSAGE,
 		JSON,
-		XML
+		XML,
+		HEART
 	};
 };

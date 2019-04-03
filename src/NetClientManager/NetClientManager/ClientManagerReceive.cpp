@@ -6,6 +6,7 @@
 void ClientManagerReceive::serverConnected(uv_tcp_t* server)
 {
 	printf("serverConnected = %d\n", server);
+	m_netClient->heart();
 }
 
 void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
@@ -44,6 +45,10 @@ void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	{
 		clientPid = findClientId(sender);
 		break;
+	}
+	case CorrespondParam::HEART:
+	{
+		return;
 	}
 	default:
 		break;

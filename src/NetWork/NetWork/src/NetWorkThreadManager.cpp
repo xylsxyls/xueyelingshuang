@@ -3,7 +3,8 @@
 
 NetWorkThreadManager::NetWorkThreadManager():
 m_workThreadIdCounter(-1),
-m_sendThreadId(0)
+m_sendThreadId(0),
+m_heartThreadId(0)
 {
 
 }
@@ -15,6 +16,7 @@ NetWorkThreadManager::~NetWorkThreadManager()
 	{
 		CTaskThreadManager::Instance().Uninit(m_vecWorkThreadId[index]);
 	}
+	CTaskThreadManager::Instance().Uninit(m_heartThreadId);
 	CTaskThreadManager::Instance().Uninit(m_sendThreadId);
 }
 
@@ -38,6 +40,7 @@ void NetWorkThreadManager::init(int32_t coreCount)
 		m_vecWorkThreadId.push_back(CTaskThreadManager::Instance().Init());
 	}
 	m_sendThreadId = CTaskThreadManager::Instance().Init();
+	m_heartThreadId = CTaskThreadManager::Instance().Init();
 }
 
 void NetWorkThreadManager::postWorkTaskToThreadPool(const std::shared_ptr<CTask>& spWorkTask)
@@ -48,6 +51,11 @@ void NetWorkThreadManager::postWorkTaskToThreadPool(const std::shared_ptr<CTask>
 void NetWorkThreadManager::postSendTaskToThread(uint32_t threadId, const std::shared_ptr<CTask>& spSendTask)
 {
 	CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spSendTask, 1);
+}
+
+void NetWorkThreadManager::postHeartTaskToThread(const std::shared_ptr<CTask>& spHeartTask)
+{
+	CTaskThreadManager::Instance().GetThreadInterface(m_heartThreadId)->PostTask(spHeartTask);
 }
 
 uint32_t NetWorkThreadManager::getWorkThreadId()

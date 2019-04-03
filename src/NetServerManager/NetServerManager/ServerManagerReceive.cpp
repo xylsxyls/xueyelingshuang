@@ -48,6 +48,11 @@ void ServerManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 	{
 		break;
 	}
+	case CorrespondParam::HEART:
+	{
+		m_netServer->send("", 0, CorrespondParam::HEART, sender);
+		return;
+	}
 	default:
 		break;
 	}

@@ -14,9 +14,10 @@ public:
 	NetClient();
 
 public:
-	void connect(const char* ip, int32_t port, ClientCallback* callback);
+	void connect(const char* ip, int32_t port, ClientCallback* callback, bool sendHeart = true);
 	void send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId = CorrespondParam::PROTO_MESSAGE, uv_tcp_t* dest = nullptr);
 	void setServer(uv_tcp_t* server);
+	void heart(int32_t time = 5000);
 
 protected:
 	LibuvTcp* m_libuvTcp;

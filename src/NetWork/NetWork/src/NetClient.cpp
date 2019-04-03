@@ -3,6 +3,7 @@
 #include "SendTask.h"
 #include "NetWorkThreadManager.h"
 #include "ClientCallbackBase.h"
+#include "HeartTask.h"
 
 NetClient::NetClient() :
 m_libuvTcp(nullptr),
@@ -16,7 +17,7 @@ m_sendThreadId(0)
 	m_sendThreadId = NetWorkThreadManager::instance().getWorkThreadId();
 }
 
-void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback)
+void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback, bool sendHeart)
 {
 	if (m_libuvTcp == nullptr || m_clientCallbackBase == nullptr || callback == nullptr)
 	{
@@ -26,6 +27,10 @@ void NetClient::connect(const char* ip, int32_t port, ClientCallback* callback)
 	callback->setNetClient(this);
 	m_libuvTcp->initClient(ip, port, m_clientCallbackBase);
 	m_libuvTcp->clientLoop();
+	if (sendHeart)
+	{
+		heart();
+	}
 }
 
 void NetClient::send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId, uv_tcp_t* dest)
@@ -55,4 +60,13 @@ void NetClient::send(const char* buffer, int32_t length, CorrespondParam::Protoc
 void NetClient::setServer(uv_tcp_t* server)
 {
 	m_server = server;
+}
+
+void NetClient::heart(int32_t time)
+{
+	HeartTask* heartTask = new HeartTask;
+	heartTask->setParam(time, this);
+	std::shared_ptr<HeartTask> spTask;
+	spTask.reset(heartTask);
+	NetWorkThreadManager::instance().postHeartTaskToThread(spTask);
 }

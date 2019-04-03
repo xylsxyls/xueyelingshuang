@@ -20,6 +20,7 @@
     <ClCompile Include="..\src\ServerCallback.cpp" />
     <ClCompile Include="..\src\ServerCallbackBase.cpp" />
     <ClCompile Include="..\src\WorkTask.cpp" />
+    <ClCompile Include="..\src\HeartTask.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CallbackBase.h" />
@@ -35,5 +36,6 @@
     <ClInclude Include="..\src\ServerCallback.h" />
     <ClInclude Include="..\src\ServerCallbackBase.h" />
     <ClInclude Include="..\src\WorkTask.h" />
+    <ClInclude Include="..\src\HeartTask.h" />
   </ItemGroup>
 </Project>

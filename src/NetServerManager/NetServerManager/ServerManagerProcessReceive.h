@@ -6,7 +6,7 @@
 typedef struct uv_tcp_s uv_tcp_t;
 class NetServer;
 
-class ServerManagerProcessReceive : public ReceiveCallback
+class ServerManagerProcessReceive : public ProcessReceiveCallback
 {
 public:
 	ServerManagerProcessReceive();

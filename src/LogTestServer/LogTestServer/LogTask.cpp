@@ -17,7 +17,7 @@ void LogTask::DoTask()
 	m_message.from(m_strMessage);
 	std::string loginName = NetLineManager::instance().findLoginName(m_clientId);
 	Cini ini(m_iniPath);
-	std::string collectComputerName = ini.ReadIni("CollectComputerName");
+	std::string collectComputerName = ini.readIni("CollectComputerName");
 	std::vector<std::string> vecComputerName = CStringManager::split(collectComputerName, ",");
 	int32_t index = -1;
 	while (index++ != vecComputerName.size() - 1)
