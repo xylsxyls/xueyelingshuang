@@ -1,0 +1,10 @@
+在show之前如果执行了过多操作会导致界面无法正常刷新
+m_button3->setBkgColor(QColor(255, 255, 0, 255));
+m_button3->repaint();
+Sleep(1000);
+m_button3->show();
+Sleep(2000);
+
+button在一秒之后显示出来，但是颜色不对，再过两秒之后颜色才会换成黄色
+如果在复杂工程里可能会出现界面残留情况，即便在show之前进行了清空操作也会有残留
+解决办法是把show换成队列形式的信号，在槽函数中执行show

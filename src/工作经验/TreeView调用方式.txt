@@ -1,0 +1,111 @@
+TreeView* mingJiang = new TreeView(nullptr);
+	mingJiang->setGeometry(100, 100, 813, 335);
+	mingJiang->model()->setColumnCount(9);
+	TreeText headerText;
+	headerText.m_textColor = "#789FD5";
+	headerText.m_backgroundColor = "#272E3D";
+	headerText.m_hoverColor = "#123456";
+	headerText.m_selectedColor = "#654321";
+	headerText.m_disabledColor = "#223565";
+	headerText.m_fontSize = 10;
+	mingJiang->model()->setHeaderText(0, headerText);
+	
+	mingJiang->model()->setHeaderText(1, headerText);
+	headerText.m_text = QStringLiteral("局名称");
+	mingJiang->model()->setHeaderText(2, headerText);
+	headerText.m_text = QStringLiteral("人数");
+	mingJiang->model()->setHeaderText(3, headerText);
+	headerText.m_text = QStringLiteral("地图名称");
+	mingJiang->model()->setHeaderText(4, headerText);
+	headerText.m_text = QStringLiteral("地图类型");
+	mingJiang->model()->setHeaderText(5, headerText);
+	headerText.m_text = QStringLiteral("地图模式");
+	mingJiang->model()->setHeaderText(6, headerText);
+	headerText.m_text = QStringLiteral("网速");
+	mingJiang->model()->setHeaderText(7, headerText);
+	headerText.m_text = QStringLiteral("限速");
+	headerText.m_align = Qt::AlignLeft | Qt::AlignVCenter;
+	headerText.m_origin = 30;
+	mingJiang->model()->setHeaderText(8, headerText);
+
+	mingJiang->model()->setColumnWidth(60, 0);
+	mingJiang->model()->setColumnWidth(32, 1);
+	mingJiang->model()->setColumnWidth(104, 2);
+	mingJiang->model()->setColumnWidth(68, 3);
+	mingJiang->model()->setColumnWidth(114, 4);
+	mingJiang->model()->setColumnWidth(88, 5);
+	mingJiang->model()->setColumnWidth(96, 6);
+	mingJiang->model()->setColumnWidth(70, 7);
+	mingJiang->model()->setColumnWidth(813 - 60 - 32 - 104 - 68 - 114 - 88 - 96 - 70, 8);
+
+	mingJiang->model()->setColumnWidthFixedMode();
+
+	mingJiang->model()->setListItemColor(QColor(255, 0, 255, 255), QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255));
+
+	mingJiang->model()->setHeaderHeight(36);
+	//mingJiang->setHeaderHidden(true);
+
+	Widget* widgetText = new Widget;
+	widgetText->setBackgroundColor(QColor(0, 0, 0, 0));
+	Label* label = new Label(widgetText);
+	label->setBorderImage("D:/hot.png", 5, 1, 1, 1);
+	label->setGeometry(10, (36 - 16) / 2, 12, 16);
+	TreeText bodyText;
+	bodyText.m_fontSize = 10;
+	bodyText.m_backgroundColor = "#172233";
+	bodyText.m_widget = widgetText;
+	mingJiang->model()->setBodyText(0, 0, bodyText);
+	bodyText.m_widget = nullptr;
+	mingJiang->model()->setBodyText(0, 1, bodyText);
+	bodyText.m_text = QStringLiteral("天堂II归来");
+	bodyText.m_textColor = "#FFFF00";
+	mingJiang->model()->setBodyText(0, 2, bodyText);
+	bodyText.m_text = QStringLiteral("65/100");
+	bodyText.m_textColor = "#5BC718";
+	mingJiang->model()->setBodyText(0, 3, bodyText);
+	bodyText.m_text = QStringLiteral("再战荣耀");
+	bodyText.m_textColor = "#FFFF00";
+	mingJiang->model()->setBodyText(0, 4, bodyText);
+	bodyText.m_text = QStringLiteral("--");
+	mingJiang->model()->setBodyText(0, 5, bodyText);
+	bodyText.m_text = QStringLiteral("-");
+	mingJiang->model()->setBodyText(0, 6, bodyText);
+	bodyText.m_text = QStringLiteral("5ms");
+	mingJiang->model()->setBodyText(0, 7, bodyText);
+	bodyText.m_text = QStringLiteral("--");
+	bodyText.m_align = Qt::AlignLeft | Qt::AlignVCenter;
+	bodyText.m_origin = 30;
+	mingJiang->model()->setBodyText(0, 8, bodyText);
+
+	bodyText.m_align = Qt::AlignCenter;
+	bodyText.m_origin = 0;
+	bodyText.m_text = "";
+	bodyText.m_backgroundColor = "#1C283D";
+	mingJiang->model()->setBodyText(1, 0, bodyText);
+	mingJiang->model()->setBodyText(1, 1, bodyText);
+	bodyText.m_textColor = "#AE00AC";
+	bodyText.m_text = QStringLiteral("天堂II归来");
+	mingJiang->model()->setBodyText(1, 2, bodyText);
+	bodyText.m_text = QStringLiteral("65/100");
+	bodyText.m_textColor = "#5BC718";
+	mingJiang->model()->setBodyText(1, 3, bodyText);
+	bodyText.m_text = QStringLiteral("再战荣耀");
+	bodyText.m_textColor = "#AE00AC";
+	mingJiang->model()->setBodyText(1, 4, bodyText);
+	bodyText.m_text = QStringLiteral("--");
+	mingJiang->model()->setBodyText(1, 5, bodyText);
+	bodyText.m_text = QStringLiteral("-");
+	mingJiang->model()->setBodyText(1, 6, bodyText);
+	bodyText.m_text = QStringLiteral("5ms");
+	mingJiang->model()->setBodyText(1, 7, bodyText);
+	bodyText.m_text = QStringLiteral("--");
+	bodyText.m_align = Qt::AlignLeft | Qt::AlignVCenter;
+	bodyText.m_origin = 30;
+	mingJiang->model()->setBodyText(1, 8, bodyText);
+
+	QObject::connect(mingJiang, &TreeView::clicked, this, &QtTest::onTreeClicked);
+
+	mingJiang->model()->setRowHeight(31);
+	//mingJiang->setEnabled(false);
+
+	mingJiang->show();
