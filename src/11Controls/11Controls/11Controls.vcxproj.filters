@@ -100,6 +100,9 @@
     <Filter Include="controls\QtControls\TextEdit">
       <UniqueIdentifier>{366b6d36-fb99-4112-9010-efbb2435d891}</UniqueIdentifier>
     </Filter>
+    <Filter Include="controls\QtControls\TreeView">
+      <UniqueIdentifier>{9c8eeeaf-906b-4776-b352-29a0a4554746}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\CStringManager.cpp">
@@ -642,6 +645,39 @@
     <ClCompile Include="GeneratedFiles\Release\moc_HttpRequest.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="src\controls\TreeView.cpp">
+      <Filter>controls\QtControls\TreeView</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TreeView.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TreeView.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\TreeViewDelegate.cpp">
+      <Filter>controls\QtControls\TreeView</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\TreeViewHeader.cpp">
+      <Filter>controls\QtControls\TreeView</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TreeViewHeader.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TreeViewHeader.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\controls\TreeViewModel.cpp">
+      <Filter>controls\QtControls\TreeView</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WidgetFactory.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WidgetFactory.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\WidgetFactory.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\controls\COriginalWebView.h">
@@ -926,8 +962,28 @@
     <CustomBuild Include="src\core\HttpRequest.h">
       <Filter>core</Filter>
     </CustomBuild>
+    <CustomBuild Include="src\controls\TreeView.h">
+      <Filter>controls\QtControls\TreeView</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\controls\TreeViewHeader.h">
+      <Filter>controls\QtControls\TreeView</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\core\WidgetFactory.h">
+      <Filter>core</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="11Controls.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\controls\TreeText.h">
+      <Filter>controls\QtControls\TreeView</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\TreeViewDelegate.h">
+      <Filter>controls\QtControls\TreeView</Filter>
+    </ClInclude>
+    <ClInclude Include="src\controls\TreeViewModel.h">
+      <Filter>controls\QtControls\TreeView</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
