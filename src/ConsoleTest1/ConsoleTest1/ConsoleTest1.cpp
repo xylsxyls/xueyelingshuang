@@ -16,7 +16,7 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {
-
+	
 	getchar();
 	return 0;
 }
