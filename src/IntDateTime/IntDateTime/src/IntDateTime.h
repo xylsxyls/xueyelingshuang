@@ -1,164 +1,271 @@
 #pragma once
 #include <string>
 #include <time.h>
+#include <stdint.h>
 #include "IntDateTimeMacro.h"
-using namespace std;
 
-class IntDateTimeAPI IntDateTime{
+class IntDateTimeAPI IntDateTime
+{
 public:
-	int date_;
-	int time_;
+	int32_t m_date;
+	int32_t m_time;
 
 	//默认获取本地当前时间
 	IntDateTime();
 	IntDateTime(const IntDateTime& intDateTime);
-	IntDateTime(int date, int time);
-	IntDateTime(const string& time);
+	IntDateTime(int32_t date, int32_t time);
+	IntDateTime(const std::string& time);
 	IntDateTime(time_t time);
 
 	IntDateTime operator=(const IntDateTime& intDateTime);
-	IntDateTime operator=(const string& intDateTime);
+	IntDateTime operator=(const std::string& intDateTime);
 	IntDateTime operator=(const time_t& time);
 
-    friend IntDateTime operator+(const IntDateTime& intDateTime, int seconds){
-        struct tm Time;
-        Time.tm_year = intDateTime.getYear() - 1900;
-        Time.tm_mon = intDateTime.getMonth() - 1;
-        Time.tm_mday = intDateTime.getDay();
-        Time.tm_hour = intDateTime.getHour();
-        Time.tm_min = intDateTime.getMin();
-        Time.tm_sec = intDateTime.getSeconds();
-        time_t Timeint64 = mktime(&Time);
+    friend IntDateTime operator+(const IntDateTime& intDateTime, int32_t seconds)
+	{
+        struct tm time;
+        time.tm_year = intDateTime.getYear() - 1900;
+        time.tm_mon = intDateTime.getMonth() - 1;
+        time.tm_mday = intDateTime.getDay();
+        time.tm_hour = intDateTime.getHour();
+        time.tm_min = intDateTime.getMin();
+        time.tm_sec = intDateTime.getSeconds();
+        time_t timeint64 = mktime(&time);
         IntDateTime result;
-        result = Timeint64 + seconds;
+        result = timeint64 + seconds;
         return result;
     }
-    friend IntDateTime operator+(int seconds, const IntDateTime& intDateTime){
-        struct tm Time;
-        Time.tm_year = intDateTime.getYear() - 1900;
-        Time.tm_mon = intDateTime.getMonth() - 1;
-        Time.tm_mday = intDateTime.getDay();
-        Time.tm_hour = intDateTime.getHour();
-        Time.tm_min = intDateTime.getMin();
-        Time.tm_sec = intDateTime.getSeconds();
-        time_t Timeint64 = mktime(&Time);
+    friend IntDateTime operator+(int32_t seconds, const IntDateTime& intDateTime)
+	{
+		struct tm time;
+		time.tm_year = intDateTime.getYear() - 1900;
+		time.tm_mon = intDateTime.getMonth() - 1;
+		time.tm_mday = intDateTime.getDay();
+		time.tm_hour = intDateTime.getHour();
+		time.tm_min = intDateTime.getMin();
+		time.tm_sec = intDateTime.getSeconds();
+        time_t timeint64 = mktime(&time);
         IntDateTime result;
-        result = Timeint64 + seconds;
+		result = timeint64 + seconds;
         return result;
     }
-    friend IntDateTime operator-(const IntDateTime& intDateTime, int seconds){
-        struct tm Time;
-        Time.tm_year = intDateTime.getYear() - 1900;
-        Time.tm_mon = intDateTime.getMonth() - 1;
-        Time.tm_mday = intDateTime.getDay();
-        Time.tm_hour = intDateTime.getHour();
-        Time.tm_min = intDateTime.getMin();
-        Time.tm_sec = intDateTime.getSeconds();
-        time_t Timeint64 = mktime(&Time);
+    friend IntDateTime operator-(const IntDateTime& intDateTime, int32_t seconds)
+	{
+		struct tm time;
+		time.tm_year = intDateTime.getYear() - 1900;
+		time.tm_mon = intDateTime.getMonth() - 1;
+		time.tm_mday = intDateTime.getDay();
+		time.tm_hour = intDateTime.getHour();
+		time.tm_min = intDateTime.getMin();
+		time.tm_sec = intDateTime.getSeconds();
+        time_t timeint64 = mktime(&time);
         IntDateTime result;
-        result = Timeint64 - seconds;
+		result = timeint64 - seconds;
         return result;
     }
-    friend int operator-(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2){
-        struct tm Time;
-        Time.tm_year = intDateTime1.getYear() - 1900;
-        Time.tm_mon = intDateTime1.getMonth() - 1;
-        Time.tm_mday = intDateTime1.getDay();
-        Time.tm_hour = intDateTime1.getHour();
-        Time.tm_min = intDateTime1.getMin();
-        Time.tm_sec = intDateTime1.getSeconds();
-        time_t Timeint64 = mktime(&Time);
+    friend int32_t operator-(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
+	{
+		struct tm time;
+		time.tm_year = intDateTime1.getYear() - 1900;
+		time.tm_mon = intDateTime1.getMonth() - 1;
+		time.tm_mday = intDateTime1.getDay();
+		time.tm_hour = intDateTime1.getHour();
+		time.tm_min = intDateTime1.getMin();
+		time.tm_sec = intDateTime1.getSeconds();
+        time_t timeint64 = mktime(&time);
 
-        struct tm TimeSub;
-        TimeSub.tm_year = intDateTime2.getYear() - 1900;
-        TimeSub.tm_mon = intDateTime2.getMonth() - 1;
-        TimeSub.tm_mday = intDateTime2.getDay();
-        TimeSub.tm_hour = intDateTime2.getHour();
-        TimeSub.tm_min = intDateTime2.getMin();
-        TimeSub.tm_sec = intDateTime2.getSeconds();
-        time_t Timeint64Sub = mktime(&TimeSub);
+        struct tm timeSub;
+		timeSub.tm_year = intDateTime2.getYear() - 1900;
+		timeSub.tm_mon = intDateTime2.getMonth() - 1;
+		timeSub.tm_mday = intDateTime2.getDay();
+		timeSub.tm_hour = intDateTime2.getHour();
+		timeSub.tm_min = intDateTime2.getMin();
+		timeSub.tm_sec = intDateTime2.getSeconds();
+        time_t timeint64Sub = mktime(&timeSub);
 
-        return (int)difftime(Timeint64, Timeint64Sub);
+		return (int32_t)difftime(timeint64, timeint64Sub);
     }
 
-    friend bool operator< (const IntDateTime& intDateTime1, const IntDateTime& intDateTime2){
-        if (intDateTime1.date_ < intDateTime2.date_) return true;
-        else if (intDateTime1.date_ > intDateTime2.date_) return false;
-        else{
-            if (intDateTime1.time_ < intDateTime2.time_) return true;
-            else if (intDateTime1.time_ > intDateTime2.time_) return false;
-            else return false;
+    friend bool operator< (const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
+	{
+		if (intDateTime1.m_date < intDateTime2.m_date)
+		{
+			return true;
+		}
+		else if (intDateTime1.m_date > intDateTime2.m_date)
+		{
+			return false;
+		}
+        else
+		{
+			if (intDateTime1.m_time < intDateTime2.m_time)
+			{
+				return true;
+			}
+			else if (intDateTime1.m_time > intDateTime2.m_time)
+			{
+				return false;
+			}
+			else
+			{
+				return false;
+			}
         }
     }
 
-    friend bool operator> (const IntDateTime& intDateTime1, const IntDateTime& intDateTime2){
-        if (intDateTime1.date_ < intDateTime2.date_) return false;
-        else if (intDateTime1.date_ > intDateTime2.date_) return true;
-        else{
-            if (intDateTime1.time_ < intDateTime2.time_) return false;
-            else if (intDateTime1.time_ > intDateTime2.time_) return true;
-            else return false;
+    friend bool operator> (const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
+	{
+		if (intDateTime1.m_date < intDateTime2.m_date)
+		{
+			return false;
+		}
+		else if (intDateTime1.m_date > intDateTime2.m_date)
+		{
+			return true;
+		}
+        else
+		{
+			if (intDateTime1.m_time < intDateTime2.m_time)
+			{
+				return false;
+			}
+			else if (intDateTime1.m_time > intDateTime2.m_time)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
         }
     }
 
-    friend bool operator<=(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2){
-        if (intDateTime1.date_ < intDateTime2.date_) return true;
-        else if (intDateTime1.date_ > intDateTime2.date_) return false;
-        else{
-            if (intDateTime1.time_ < intDateTime2.time_) return true;
-            else if (intDateTime1.time_ > intDateTime2.time_) return false;
-            else return true;
+    friend bool operator<=(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
+	{
+		if (intDateTime1.m_date < intDateTime2.m_date)
+		{
+			return true;
+		}
+		else if (intDateTime1.m_date > intDateTime2.m_date)
+		{
+			return false;
+		}
+        else
+		{
+			if (intDateTime1.m_time < intDateTime2.m_time)
+			{
+				return true;
+			}
+			else if (intDateTime1.m_time > intDateTime2.m_time)
+			{
+				return false;
+			}
+			else
+			{
+				return true;
+			}
         }
     }
 
-    friend bool operator>=(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2){
-        if (intDateTime1.date_ < intDateTime2.date_) return false;
-        else if (intDateTime1.date_ > intDateTime2.date_) return true;
-        else{
-            if (intDateTime1.time_ < intDateTime2.time_) return false;
-            else if (intDateTime1.time_ > intDateTime2.time_) return true;
-            else return true;
+    friend bool operator>=(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
+	{
+		if (intDateTime1.m_date < intDateTime2.m_date)
+		{
+			return false;
+		}
+		else if (intDateTime1.m_date > intDateTime2.m_date)
+		{
+			return true;
+		}
+        else
+		{
+			if (intDateTime1.m_time < intDateTime2.m_time)
+			{
+				return false;
+			}
+			else if (intDateTime1.m_time > intDateTime2.m_time)
+			{
+				return true;
+			}
+			else
+			{
+				return true;
+			}
         }
     }
 
-    friend bool operator==(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2){
-        if (intDateTime1.date_ == intDateTime2.date_ && intDateTime1.time_ == intDateTime2.time_) return true;
-        else return false;
+    friend bool operator==(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
+	{
+		if (intDateTime1.m_date == intDateTime2.m_date && intDateTime1.m_time == intDateTime2.m_time)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
     }
 
-    friend bool operator!=(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2){
-        if (intDateTime1.date_ == intDateTime2.date_ && intDateTime1.time_ == intDateTime2.time_) return false;
-        else return true;
+    friend bool operator!=(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
+	{
+		if (intDateTime1.m_date == intDateTime2.m_date && intDateTime1.m_time == intDateTime2.m_time)
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
     }
 
-    friend bool operator==(const IntDateTime& intDateTime, int num){
-        if (num != 0) return false;
-        if (intDateTime.getDate() == 0 && intDateTime.getTime() == 0) return true;
-        else return false;
+    friend bool operator==(const IntDateTime& intDateTime, int32_t num)
+	{
+		if (num != 0)
+		{
+			return false;
+		}
+		if (intDateTime.getDate() == 0 && intDateTime.getTime() == 0)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
     }
 
-    friend bool operator==(int num, const IntDateTime& intDateTime){
-        if (num != 0) return false;
-        if (intDateTime.getDate() == 0 && intDateTime.getTime() == 0) return true;
-        else return false;
+    friend bool operator==(int32_t num, const IntDateTime& intDateTime)
+	{
+		if (num != 0)
+		{
+			return false;
+		}
+		if (intDateTime.getDate() == 0 && intDateTime.getTime() == 0)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
     }
 
-	void setTime(int date, int time);
-	void setTime(const string& time);
+	void setTime(int32_t date, int32_t time);
+	void setTime(const std::string& time);
 	void setTime(time_t time);
 
-	int getDate()const;
-	int getTime()const;
+	int32_t getDate() const;
+	int32_t getTime() const;
 
-	int getYear()const;
-	int getMonth()const;
-	int getDay()const;
-	int getHour()const;
-	int getMin()const;
-	int getSeconds()const;
+	int32_t getYear() const;
+	int32_t getMonth() const;
+	int32_t getDay() const;
+	int32_t getHour() const;
+	int32_t getMin() const;
+	int32_t getSeconds() const;
 
-	string toString()const;
-	string dateToString()const;
-	string dateNumToString()const;
-	string timeToString()const;
+	std::string toString() const;
+	std::string dateToString() const;
+	std::string dateNumToString() const;
+	std::string timeToString() const;
 };

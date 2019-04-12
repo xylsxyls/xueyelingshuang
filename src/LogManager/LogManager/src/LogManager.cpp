@@ -7,18 +7,16 @@
 #include <fstream>
 
 LogManager::LogManager():
-m_log(nullptr),
 m_processMutex(nullptr)
 {
 	m_exeName = CGetPath::GetCurrentExeName();
-	m_logPath = CGetPath::GetCurrentExePath() + m_exeName + ".log";
 	m_exeName.append(".exe");
 	m_processMutex = new ProcessReadWriteMutex("LogManager_Mutex");
 }
 
 LogManager::~LogManager()
 {
-	uninit();
+	uninitAll();
 	if (m_processMutex != nullptr)
 	{
 		delete m_processMutex;
@@ -32,29 +30,41 @@ LogManager& LogManager::instance()
 	return s_logManager;
 }
 
-void LogManager::init(const std::string& path)
+void LogManager::init(int32_t fileId, const std::string& path)
 {
-	if (!path.empty())
+	std::string logPath;
+	if (fileId == 0)
 	{
-		m_logPath = path;
+		logPath = CGetPath::GetCurrentExePath() + m_exeName + ".log";
 	}
-	m_log = new std::ofstream(m_logPath.c_str(), std::ios::app);
-	LOGBEGIN("");
+	else
+	{
+		logPath = path;
+	}
+	
+	std::ofstream* logFile = new std::ofstream(logPath.c_str(), std::ios::app);
+	if (logFile == nullptr)
+	{
+		return;
+	}
+	m_logMap[fileId] = std::pair<std::string, std::ofstream*>(path, logFile);
+	LOGBEGIN(fileId, "");
 }
 
-void LogManager::print(LogLevel flag, const string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...)
+void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...)
 {
 	if (m_processMutex == nullptr)
 	{
 		return;
 	}
 
-	if (m_log == nullptr)
+	if ((fileId == 0) && (m_logMap.find(0) == m_logMap.end()))
 	{
 		init();
 	}
 
-	if (m_log == nullptr)
+	std::ofstream* logFile = getLogFile(fileId);
+	if (logFile == nullptr)
 	{
 		return;
 	}
@@ -105,7 +115,7 @@ void LogManager::print(LogLevel flag, const string& fileMacro, const std::string
 		break;
 	}
 
-	string str;
+	std::string str;
 	va_list args = nullptr;
 	va_start(args, format);
 	int32_t size = ::_vscprintf(format, args);
@@ -114,7 +124,7 @@ void LogManager::print(LogLevel flag, const string& fileMacro, const std::string
 	//?即便分配了足够内存，长度必须加1，否则会崩溃
 	::vsprintf_s(&str[0], size + 1, format, args);
 	va_end(args);
-	string fileMacroTemp;
+	std::string fileMacroTemp;
 	int32_t nRight = fileMacro.find_last_of("/\\");
 	fileMacroTemp = CStringManager::Mid(fileMacro, nRight + 1, fileMacro.length() - nRight - 1);
 	
@@ -122,36 +132,73 @@ void LogManager::print(LogLevel flag, const string& fileMacro, const std::string
 	if (flag == LOG_BEGIN)
 	{
 		bool isFileEmpty = true;
-		std::ofstream* log = new std::ofstream(m_logPath, std::ios::in | std::ios::out | std::ios::app);
-		log->seekp(ios::beg);
-		if (log->rdbuf()->sgetc() != char_traits<char>::eof())
+		std::ofstream* newLogFile = new std::ofstream(getLogPath(fileId), std::ios::in | std::ios::out | std::ios::app);
+		newLogFile->seekp(std::ios::beg);
+		if (newLogFile->rdbuf()->sgetc() != std::char_traits<char>::eof())
 		{
 			isFileEmpty = false;
 		}
-		delete log;
+		delete newLogFile;
 		if (isFileEmpty == false)
 		{
-			*m_log << std::endl;
+			*logFile << std::endl;
 		}
 	}
 	std::string beginEnd;
 	//?这里str就是要打印的日志
-	*m_log << "[" + (intDateTime.empty() ? IntDateTime().timeToString() : intDateTime) + "][" + strFlag + "][ThreadId:" << (threadId == 0 ? CSystem::SystemThreadId() : threadId) << "][" << (exeName.empty() ? m_exeName : exeName) << "][" << fileMacroTemp << "][" << funName.c_str() << "]" << ((flag == LOG_BEGIN || flag == LOG_END) ? beginEnd : beginEnd = " : " + str) << std::endl;
+	*logFile << "[" + (intDateTime.empty() ? IntDateTime().timeToString() : intDateTime) + "][" + strFlag + "][ThreadId:" << (threadId == 0 ? CSystem::SystemThreadId() : threadId) << "][" << (exeName.empty() ? m_exeName : exeName) << "][" << fileMacroTemp << "][" << funName.c_str() << "]" << ((flag == LOG_BEGIN || flag == LOG_END) ? beginEnd : beginEnd = " : " + str) << std::endl;
 }
 
-void LogManager::uninit()
+void LogManager::uninit(int32_t fileId)
 {
-	if (m_log == nullptr)
+	LOGEND(fileId, "");
+	auto itLog = m_logMap.find(fileId);
+	if (itLog == m_logMap.end())
 	{
 		return;
 	}
-	LOGEND("");
-	delete m_log;
-	m_log = nullptr;
+	std::ofstream* logFile = itLog->second.second;
+	m_logMap.erase(itLog);
+	delete logFile;
 }
 
-void LogManager::deleteFile()
+void LogManager::uninitAll()
 {
-	uninit();
-	CSystem::deleteFile(m_logPath.c_str());
+	std::vector<int32_t> vecLogId;
+	for (auto itLog = m_logMap.begin(); itLog != m_logMap.end(); ++itLog)
+	{
+		vecLogId.push_back(itLog->first);
+	}
+	int32_t index = -1;
+	while (index++ != vecLogId.size() - 1)
+	{
+		uninit(vecLogId[index]);
+	}
+}
+
+void LogManager::deleteFile(int32_t fileId)
+{
+	std::string logPath = getLogPath(fileId);
+	uninit(fileId);
+	CSystem::deleteFile(logPath.c_str());
+}
+
+std::ofstream* LogManager::getLogFile(int32_t fileId)
+{
+	auto itLog = m_logMap.find(fileId);
+	if (itLog == m_logMap.end())
+	{
+		return nullptr;
+	}
+	return itLog->second.second;
+}
+
+std::string LogManager::getLogPath(int32_t fileId)
+{
+	auto itLog = m_logMap.find(fileId);
+	if (itLog == m_logMap.end())
+	{
+		return "";
+	}
+	return itLog->second.first;
 }

@@ -2,16 +2,24 @@
 #include "LogManagerMacro.h"
 #include <string>
 #include <stdint.h>
+#include <map>
 
 //LOGDEBUG在release下不会输进日志文件
-#define LOGDEBUG(format, ...) LogManager::instance().print(LogManager::LOG_DEBUG, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
-#define LOGINFO(format, ...) LogManager::instance().print(LogManager::LOG_INFO, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
-#define LOGWARNING(format, ...) LogManager::instance().print(LogManager::LOG_WARNING, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
-#define LOGERROR(format, ...) LogManager::instance().print(LogManager::LOG_ERROR, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
-#define LOGFATAL(format, ...) LogManager::instance().print(LogManager::LOG_FATAL, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGDEBUG(format, ...) LogManager::instance().print(0, LogManager::LOG_DEBUG, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGINFO(format, ...) LogManager::instance().print(0, LogManager::LOG_INFO, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGWARNING(format, ...) LogManager::instance().print(0, LogManager::LOG_WARNING, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGERROR(format, ...) LogManager::instance().print(0, LogManager::LOG_ERROR, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGFATAL(format, ...) LogManager::instance().print(0, LogManager::LOG_FATAL, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+
+#define LOGDEBUG_EX(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_DEBUG, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGINFO_EX(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_INFO, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGWARNING_EX(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_WARNING, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGERROR_EX(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_ERROR, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGFATAL_EX(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_FATAL, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+
 //begin和end是内部使用
-#define LOGBEGIN(format, ...) LogManager::instance().print(LogManager::LOG_BEGIN, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
-#define LOGEND(format, ...) LogManager::instance().print(LogManager::LOG_END, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGBEGIN(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_BEGIN, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
+#define LOGEND(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_END, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
 
 namespace std
 {
@@ -41,13 +49,20 @@ public:
 	static LogManager& instance();
 
 public:
-	void init(const std::string& path = "");
+	void init(int32_t fileId = 0, const std::string& path = "");
 
-	void print(LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...);
+	void print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...);
 
-	void uninit();
+	void uninit(int32_t fileId);
 
-	void deleteFile();
+	void uninitAll();
+
+	void deleteFile(int32_t fileId);
+
+protected:
+	std::ofstream* getLogFile(int32_t fileId);
+
+	std::string getLogPath(int32_t fileId);
 
 private:
 #ifdef _MSC_VER
@@ -55,10 +70,9 @@ private:
 #pragma warning(disable:4251)
 #endif
 	std::string m_exeName;
-	std::string m_logPath;
+	std::map<int32_t, std::pair<std::string, std::ofstream*>> m_logMap;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-	std::ofstream* m_log;
 	ProcessReadWriteMutex* m_processMutex;
 };
