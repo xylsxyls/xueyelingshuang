@@ -28,6 +28,7 @@ bool fDown = false;
 bool qDown = false;
 bool rDown = false;
 bool threeDown = false;
+bool enter = false;
 
 std::atomic<bool> rightMouse = true;
 
@@ -77,6 +78,7 @@ COneKeyDlg::COneKeyDlg(CWnd* pParent /*=NULL*/)
 void COneKeyDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_BUTTON1, m_button);
 }
 
 BEGIN_MESSAGE_MAP(COneKeyDlg, CDialogEx)
@@ -141,7 +143,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	}
 	else if (CHook::IsKeyUp(wParam))
 	{
-		if (vkCode == 'W')
+		if (vkCode == 107)
+		{
+			enter = !enter;
+		}
+		else if (vkCode == 'W')
 		{
 			wDown = false;
 		}
@@ -169,6 +175,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			threeDown = false;
 		}
+	}
+
+	if (enter)
+	{
+		return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
 	}
 
 	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(g_threadId);
@@ -250,7 +261,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
-
+	m_button.SetFocus();
 	g_threadId = CTaskThreadManager::Instance().Init();
 	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);
     //CHook::Init(WH_MOUSE_LL, MouseHookFun);

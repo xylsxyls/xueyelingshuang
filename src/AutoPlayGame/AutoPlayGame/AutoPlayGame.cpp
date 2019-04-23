@@ -57,12 +57,12 @@ public:
         {
             if (beginPlay == 1)
             {
-                beginPlay = 0;
+                beginPlay = 3;
                 goto GAME;
             }
             else if (beginPlay == 2)
             {
-                beginPlay = 0;
+                beginPlay = 4;
                 goto CHOOSE;
             }
         GAME:
@@ -104,7 +104,7 @@ public:
 					break;
                 }
             }
-			if (beginPlay == 1)
+			if (beginPlay == 3)
 			{
 				return;
 			}

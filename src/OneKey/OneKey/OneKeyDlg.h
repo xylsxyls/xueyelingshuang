@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "afxwin.h"
 
 
 // COneKeyDlg ¶Ô»°¿ò
@@ -32,4 +33,5 @@ protected:
 public:
 	afx_msg void OnBnClickedButton1();
 	afx_msg void OnDestroy();
+	CButton m_button;
 };
