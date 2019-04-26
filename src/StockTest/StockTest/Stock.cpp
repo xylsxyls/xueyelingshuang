@@ -23,7 +23,7 @@ bool Stock::insertDatabase(MysqlCpp& mysql)
 	mysql.execute(state); //¡ý¡ü--
 
 	Ctxt txt("D:\\Table.txt");
-	txt.LoadTxt(2, "\t");
+	txt.LoadTxt(Ctxt::SPLIT, "\t");
 
     int index = 0;
     while (index++ != txt.m_vectxt.size() - 2)
@@ -526,7 +526,7 @@ std::vector<std::vector<std::string>> Stock::getResultVecFromLocal()
 	std::vector<std::vector<std::string>> result;
 
 	Ctxt txt("D:\\Table.txt");
-	txt.LoadTxt(2, "\t");
+	txt.LoadTxt(Ctxt::SPLIT, "\t");
 
 	int index = 0;
 	while (index++ != txt.m_vectxt.size() - 2)
@@ -597,7 +597,7 @@ void Stock::insertQuoteDataBase(MysqlCpp& mysql)
 	mysql.execute(state); //¡ý¡ü--
 
 	Ctxt quotetxt("D:\\Table.txt");
-	quotetxt.LoadTxt(2, "\t");
+	quotetxt.LoadTxt(Ctxt::SPLIT, "\t");
 
 	int index = 0;
 	while (index++ != quotetxt.m_vectxt.size() - 2)
@@ -855,7 +855,7 @@ void Stock::printChooseMap(const std::map<BigNumber, std::vector<BigNumber>>& ch
 void Stock::fenbiInsertDataBase(MysqlCpp& mysql, const std::string& stockNum)
 {
 	Ctxt txt("D:\\Table.txt");
-	txt.LoadTxt(2, "\t");
+	txt.LoadTxt(Ctxt::SPLIT, "\t");
 
 	int index = 0;
 	while (index++ != txt.m_vectxt.size() - 2)

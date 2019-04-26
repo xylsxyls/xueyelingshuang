@@ -20,11 +20,11 @@ int main()
 {
 	MysqlCpp mysql;
 	Cini ini(CGetPath::GetCurrentExePath() + "config.ini");
-	bool isConnect = mysql.connect(ini.ReadIni("ip"), 3306, "root", "");
+	bool isConnect = mysql.connect(ini.readIni("ip"), 3306, "root", "");
 	mysql.selectDb("stock");
 
     MysqlCpp mysqlfenbi;
-    bool isConnectfenbi = mysqlfenbi.connect(ini.ReadIni("ip"), 3306, "root", "");
+	bool isConnectfenbi = mysqlfenbi.connect(ini.readIni("ip"), 3306, "root", "");
     mysqlfenbi.selectDb("stocktradequote");
 
 	bool isGain = false;
@@ -102,7 +102,7 @@ int main()
         CMouse::LeftClick();
         Sleep(1500);
     }
-    int32_t zubie = atoi(ini.ReadIni("zubie").c_str());
+	int32_t zubie = atoi(ini.readIni("zubie").c_str());
     std::vector<std::vector<std::string>> vecStock = Stock::getSelfStock(mysql, isGain ? 0 : zubie);
 	//std::vector<std::vector<std::string>> vecStock = Stock::getDefineStock("300584");
 	std::map<std::string, std::string> useCountMap;
