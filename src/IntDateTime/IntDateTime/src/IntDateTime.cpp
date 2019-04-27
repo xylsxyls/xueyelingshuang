@@ -37,13 +37,13 @@ IntDateTime::IntDateTime(int32_t date, int32_t time)
 IntDateTime::IntDateTime(const std::string& time)
 {
 	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
-	if (vecDateTime.size() != 2)
+	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
 	{
 		printf("解析时间出错");
 		return;
 	}
 	std::string strDate = vecDateTime.at(0);
-	std::string strTime = vecDateTime.at(1);
+	std::string strTime = (vecDateTime.size() == 1) ? "00:00:00" : vecDateTime.at(1);
 	CStringManager::Replace(strDate, "-", "");
 	m_date = atoi(strDate.c_str());
 	CStringManager::Replace(strTime, ":", "");
