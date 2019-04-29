@@ -69,6 +69,22 @@ IntDateTime::IntDateTime(time_t time)
 	m_time = atoi(strLocalTime.c_str());
 }
 
+IntDateTime::IntDateTime(const char* time)
+{
+	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
+	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
+	{
+		printf("解析时间出错");
+		return;
+	}
+	std::string strDate = vecDateTime.at(0);
+	std::string strTime = (vecDateTime.size() == 1) ? "00:00:00" : vecDateTime.at(1);
+	CStringManager::Replace(strDate, "-", "");
+	m_date = atoi(strDate.c_str());
+	CStringManager::Replace(strTime, ":", "");
+	m_time = atoi(strTime.c_str()) * 1000;
+}
+
 IntDateTime IntDateTime::operator = (const IntDateTime& intDateTime)
 {
 	m_date = intDateTime.m_date;

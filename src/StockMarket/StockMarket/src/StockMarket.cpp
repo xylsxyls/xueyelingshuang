@@ -33,7 +33,17 @@ void StockMarket::add(const IntDateTime& date, const std::vector<BigNumber>& dat
 	m_histroy[date] = data;
 }
 
-BigNumber StockMarket::open(const IntDateTime& date)
+std::string StockMarket::stock() const
+{
+	return m_stock;
+}
+
+std::string StockMarket::name() const
+{
+	return m_name;
+}
+
+BigNumber StockMarket::open(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -42,7 +52,7 @@ BigNumber StockMarket::open(const IntDateTime& date)
 	return m_histroy.find(date)->second[OPEN];
 }
 
-BigNumber StockMarket::high(const IntDateTime& date)
+BigNumber StockMarket::high(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -51,7 +61,7 @@ BigNumber StockMarket::high(const IntDateTime& date)
 	return m_histroy.find(date)->second[HIGH];
 }
 
-BigNumber StockMarket::low(const IntDateTime& date)
+BigNumber StockMarket::low(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -60,7 +70,7 @@ BigNumber StockMarket::low(const IntDateTime& date)
 	return m_histroy.find(date)->second[LOW];
 }
 
-BigNumber StockMarket::close(const IntDateTime& date)
+BigNumber StockMarket::close(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -69,7 +79,7 @@ BigNumber StockMarket::close(const IntDateTime& date)
 	return m_histroy.find(date)->second[CLOSE];
 }
 
-BigNumber StockMarket::preOpen(const IntDateTime& date)
+BigNumber StockMarket::preOpen(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -83,7 +93,7 @@ BigNumber StockMarket::preOpen(const IntDateTime& date)
 	return m_histroy.find(preDate)->second[OPEN];
 }
 
-BigNumber StockMarket::preHigh(const IntDateTime& date)
+BigNumber StockMarket::preHigh(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -97,7 +107,7 @@ BigNumber StockMarket::preHigh(const IntDateTime& date)
 	return m_histroy.find(preDate)->second[HIGH];
 }
 
-BigNumber StockMarket::preLow(const IntDateTime& date)
+BigNumber StockMarket::preLow(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -111,7 +121,7 @@ BigNumber StockMarket::preLow(const IntDateTime& date)
 	return m_histroy.find(preDate)->second[LOW];
 }
 
-BigNumber StockMarket::preClose(const IntDateTime& date)
+BigNumber StockMarket::preClose(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -125,7 +135,7 @@ BigNumber StockMarket::preClose(const IntDateTime& date)
 	return m_histroy.find(preDate)->second[CLOSE];
 }
 
-BigNumber StockMarket::nextOpen(const IntDateTime& date)
+BigNumber StockMarket::nextOpen(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -139,7 +149,7 @@ BigNumber StockMarket::nextOpen(const IntDateTime& date)
 	return m_histroy.find(nextDate)->second[OPEN];
 }
 
-BigNumber StockMarket::nextHigh(const IntDateTime& date)
+BigNumber StockMarket::nextHigh(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -153,7 +163,7 @@ BigNumber StockMarket::nextHigh(const IntDateTime& date)
 	return m_histroy.find(nextDate)->second[HIGH];
 }
 
-BigNumber StockMarket::nextLow(const IntDateTime& date)
+BigNumber StockMarket::nextLow(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -167,7 +177,7 @@ BigNumber StockMarket::nextLow(const IntDateTime& date)
 	return m_histroy.find(nextDate)->second[LOW];
 }
 
-BigNumber StockMarket::nextClose(const IntDateTime& date)
+BigNumber StockMarket::nextClose(const IntDateTime& date) const
 {
 	if (!dateExist(date))
 	{
@@ -181,12 +191,12 @@ BigNumber StockMarket::nextClose(const IntDateTime& date)
 	return m_histroy.find(nextDate)->second[CLOSE];
 }
 
-bool StockMarket::dateExist(const IntDateTime& date)
+bool StockMarket::dateExist(const IntDateTime& date) const
 {
 	return m_histroy.find(date) != m_histroy.end();
 }
 
-bool StockMarket::getDatePre(const IntDateTime& date, IntDateTime& preDate)
+bool StockMarket::getDatePre(const IntDateTime& date, IntDateTime& preDate) const
 {
 	if (!dateExist(date))
 	{
@@ -201,7 +211,7 @@ bool StockMarket::getDatePre(const IntDateTime& date, IntDateTime& preDate)
 	return true;
 }
 
-bool StockMarket::getDateNext(const IntDateTime& date, IntDateTime& nextDate)
+bool StockMarket::getDateNext(const IntDateTime& date, IntDateTime& nextDate) const
 {
 	if (!dateExist(date))
 	{
@@ -216,7 +226,7 @@ bool StockMarket::getDateNext(const IntDateTime& date, IntDateTime& nextDate)
 	return true;
 }
 
-bool StockMarket::getMarketPre(const IntDateTime& date, IntDateTime& preDate, std::vector<BigNumber>& preData)
+bool StockMarket::getMarketPre(const IntDateTime& date, IntDateTime& preDate, std::vector<BigNumber>& preData) const
 {
 	if (!dateExist(date))
 	{
@@ -230,7 +240,7 @@ bool StockMarket::getMarketPre(const IntDateTime& date, IntDateTime& preDate, st
 	return true;
 }
 
-bool StockMarket::getMarketNext(const IntDateTime& date, IntDateTime& nextDate, std::vector<BigNumber>& nextData)
+bool StockMarket::getMarketNext(const IntDateTime& date, IntDateTime& nextDate, std::vector<BigNumber>& nextData) const
 {
 	if (!dateExist(date))
 	{
@@ -244,7 +254,7 @@ bool StockMarket::getMarketNext(const IntDateTime& date, IntDateTime& nextDate, 
 	return true;
 }
 
-bool StockMarket::getMarketPre(const IntDateTime& date, int32_t days, std::map<IntDateTime, std::vector<BigNumber>>& preDaysData)
+bool StockMarket::getMarketPre(const IntDateTime& date, int32_t days, std::map<IntDateTime, std::vector<BigNumber>>& preDaysData) const
 {
 	if (!dateExist(date))
 	{
@@ -270,7 +280,7 @@ bool StockMarket::getMarketPre(const IntDateTime& date, int32_t days, std::map<I
 	return true;
 }
 
-bool StockMarket::getMarketNext(const IntDateTime& date, int32_t days, std::map<IntDateTime, std::vector<BigNumber>>& nextDaysData)
+bool StockMarket::getMarketNext(const IntDateTime& date, int32_t days, std::map<IntDateTime, std::vector<BigNumber>>& nextDaysData) const
 {
 	if (!dateExist(date))
 	{

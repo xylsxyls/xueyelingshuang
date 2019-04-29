@@ -15,31 +15,31 @@ goto DllRelyTest_end
 :DllRelyTest_end
 
 ::--------------------------------------------------------------------
-set BigNumber_dlllib=lib
-set BigNumber_bit=%1
-set BigNumber_debugRelease=%3
-set BigNumber_allSame=%4
-if "%4" == "same" (goto BigNumber_callSame) else (goto BigNumber_callSimple)
-:BigNumber_callSame
-set BigNumber_dlllib=%2
-call "%CLOUD_REBUILD%" BigNumber %BigNumber_bit% %BigNumber_dlllib% %BigNumber_debugRelease% %BigNumber_allSame%
-goto BigNumber_end
-:BigNumber_callSimple
-call "%CLOUD_REBUILD%" BigNumber %BigNumber_bit% %BigNumber_dlllib% %BigNumber_debugRelease%
-goto BigNumber_end
-:BigNumber_end
+set StockMarket_dlllib=lib
+set StockMarket_bit=%1
+set StockMarket_debugRelease=%3
+set StockMarket_allSame=%4
+if "%4" == "same" (goto StockMarket_callSame) else (goto StockMarket_callSimple)
+:StockMarket_callSame
+set StockMarket_dlllib=%2
+call "%CLOUD_REBUILD%" StockMarket %StockMarket_bit% %StockMarket_dlllib% %StockMarket_debugRelease% %StockMarket_allSame%
+goto StockMarket_end
+:StockMarket_callSimple
+call "%CLOUD_REBUILD%" StockMarket %StockMarket_bit% %StockMarket_dlllib% %StockMarket_debugRelease%
+goto StockMarket_end
+:StockMarket_end
 
 ::--------------------------------------------------------------------
-set IntDateTime_dlllib=lib
-set IntDateTime_bit=%1
-set IntDateTime_debugRelease=%3
-set IntDateTime_allSame=%4
-if "%4" == "same" (goto IntDateTime_callSame) else (goto IntDateTime_callSimple)
-:IntDateTime_callSame
-set IntDateTime_dlllib=%2
-call "%CLOUD_REBUILD%" IntDateTime %IntDateTime_bit% %IntDateTime_dlllib% %IntDateTime_debugRelease% %IntDateTime_allSame%
-goto IntDateTime_end
-:IntDateTime_callSimple
-call "%CLOUD_REBUILD%" IntDateTime %IntDateTime_bit% %IntDateTime_dlllib% %IntDateTime_debugRelease%
-goto IntDateTime_end
-:IntDateTime_end
+set StockCharge_dlllib=lib
+set StockCharge_bit=%1
+set StockCharge_debugRelease=%3
+set StockCharge_allSame=%4
+if "%4" == "same" (goto StockCharge_callSame) else (goto StockCharge_callSimple)
+:StockCharge_callSame
+set StockCharge_dlllib=%2
+call "%CLOUD_REBUILD%" StockCharge %StockCharge_bit% %StockCharge_dlllib% %StockCharge_debugRelease% %StockCharge_allSame%
+goto StockCharge_end
+:StockCharge_callSimple
+call "%CLOUD_REBUILD%" StockCharge %StockCharge_bit% %StockCharge_dlllib% %StockCharge_debugRelease%
+goto StockCharge_end
+:StockCharge_end

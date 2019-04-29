@@ -14,6 +14,7 @@ public:
 	IntDateTime();
 	IntDateTime(const IntDateTime& intDateTime);
 	IntDateTime(int32_t date, int32_t time);
+	IntDateTime(const char* time);
 	IntDateTime(const std::string& time);
 	IntDateTime(time_t time);
 

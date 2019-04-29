@@ -275,7 +275,7 @@ bool BigNumber::bigThan(const BigNumber& x, const BigNumber& y)
 bool BigNumber::bigEqual(const BigNumber& x, const BigNumber& y)
 {
 	return (BigNumberBase::Compare(*x.m_base, *y.m_base) == BigNumberBase::BIG) ||
-		(BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::EQUAL);
+		(BigNumberBase::Compare(*x.m_base, *y.m_base) == BigNumberBase::EQUAL);
 }
 
 bool BigNumber::smallThan(const BigNumber& x, const BigNumber& y)
@@ -286,7 +286,7 @@ bool BigNumber::smallThan(const BigNumber& x, const BigNumber& y)
 bool BigNumber::smallEqual(const BigNumber& x, const BigNumber& y)
 {
 	return (BigNumberBase::Compare(*x.m_base, *y.m_base) == BigNumberBase::SMALL) ||
-		(BigNumberBase::Compare(*x.m_base, *y.m_base) != BigNumberBase::EQUAL);
+		(BigNumberBase::Compare(*x.m_base, *y.m_base) == BigNumberBase::EQUAL);
 }
 
 //#include <string>
