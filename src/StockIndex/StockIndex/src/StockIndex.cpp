@@ -1,20 +1,11 @@
 #include "StockIndex.h"
+#include "CorrespondParam/CorrespondParamAPI.h"
+#include "StockMarket/StockMarketAPI.h"
 
-BigNumber StockIndex::rsi(int32_t days, const IntDateTime& date, const StockMarket& stockMarket)
+BigNumber StockIndex::rsi(int32_t days, const IntDateTime& date, const std::shared_ptr<StockMarket>& spStockMarket)
 {
-	//BigNumber X = MAX(stockMarket.close(date) - stockMarket.preClose(date), 0);
-	//BigNumber N = days;
-	//BigNumber M = 1;
-	//BigNumber ssss = (M * X + (N - M) * (M * (0.01) / 1)) / N;
-	//
-	//X = ABS(stockMarket.close(date) - stockMarket.preClose(date));
-	//N = days;
-	//M = 1;
-	//BigNumber ssss2 = (M * X + (N - M) * (M * (0.01) / 1)) / N;
-	//return ssss / ssss2.toPrec(6) * 100;
-
 	std::map<IntDateTime, std::vector<BigNumber>> preDaysData;
-	if (!stockMarket.getMarketPre(date, days + 1, preDaysData))
+	if (!spStockMarket->getMarketPre(date, days + 1, preDaysData))
 	{
 		return -1;
 	}
@@ -38,16 +29,16 @@ BigNumber StockIndex::rsi(int32_t days, const IntDateTime& date, const StockMark
 	return (positiveNumber.setPrec(6) / (positiveNumber - negativeNumber) * 100).toPrec(2);
 }
 
-BigNumber StockIndex::wr(int32_t days, const IntDateTime& date, const StockMarket& stockMarket)
+BigNumber StockIndex::wr(int32_t days, const IntDateTime& date, const std::shared_ptr<StockMarket>& spStockMarket)
 {
 	std::map<IntDateTime, std::vector<BigNumber>> preDaysData;
-	if (!stockMarket.getMarketPre(date, days, preDaysData))
+	if (!spStockMarket->getMarketPre(date, days, preDaysData))
 	{
 		return -1;
 	}
 	BigNumber high = 0;
 	BigNumber low = 10000;
-	BigNumber close = stockMarket.close(date);
+	BigNumber close = spStockMarket->close(date);
 	auto itData = preDaysData.begin();
 	while (days-- != 0)
 	{
@@ -64,6 +55,61 @@ BigNumber StockIndex::wr(int32_t days, const IntDateTime& date, const StockMarke
 		++itData;
 	}
 	return ((high - close) / (high - low).toPrec(6).zero() * 100).toPrec(2);
+}
+
+void StockIndex::load(const std::map<IntDateTime, std::vector<BigNumber>>& data)
+{
+	m_stockIndex = data;
+}
+
+BigNumber StockIndex::rsi6(const IntDateTime& date) const
+{
+	auto itDate = m_stockIndex.find(date);
+	if (itDate == m_stockIndex.end())
+	{
+		return -1;
+	}
+	return itDate->second[STOCK_RSI6];
+}
+
+BigNumber StockIndex::rsi12(const IntDateTime& date) const
+{
+	auto itDate = m_stockIndex.find(date);
+	if (itDate == m_stockIndex.end())
+	{
+		return -1;
+	}
+	return itDate->second[STOCK_RSI12];
+}
+
+BigNumber StockIndex::rsi24(const IntDateTime& date) const
+{
+	auto itDate = m_stockIndex.find(date);
+	if (itDate == m_stockIndex.end())
+	{
+		return -1;
+	}
+	return itDate->second[STOCK_RSI24];
+}
+
+BigNumber StockIndex::wr10(const IntDateTime& date) const
+{
+	auto itDate = m_stockIndex.find(date);
+	if (itDate == m_stockIndex.end())
+	{
+		return -1;
+	}
+	return itDate->second[STOCK_WR10];
+}
+
+BigNumber StockIndex::wr20(const IntDateTime& date) const
+{
+	auto itDate = m_stockIndex.find(date);
+	if (itDate == m_stockIndex.end())
+	{
+		return -1;
+	}
+	return itDate->second[STOCK_WR20];
 }
 
 BigNumber StockIndex::SMA(const BigNumber& X, const BigNumber& N, const BigNumber& M)

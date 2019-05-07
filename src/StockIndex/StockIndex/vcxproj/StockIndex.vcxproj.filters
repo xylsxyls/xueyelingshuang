@@ -24,9 +24,15 @@
     <ClInclude Include="..\src\StockIndexMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\StockAllIndex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockIndex.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockAllIndex.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

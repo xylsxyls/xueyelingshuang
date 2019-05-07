@@ -84,7 +84,7 @@ DELETE_USER_CONFIG(最近在玩游戏名配置枚举值);
 #define TYPE_UINT64 "uint64_t"
 #define TYPE_DOUBLE "double"
 
-#define SAVE_LENGTH 4294967295
+#define SAVE_LENGTH 104857600 //4294967295
 
 #define GET_MACRO(_1, _2, NAME,...) NAME
 
@@ -97,8 +97,8 @@ DELETE_USER_CONFIG(最近在玩游戏名配置枚举值);
 #define DELETE_USER_CONFIG(...) GET_MACRO(__VA_ARGS__, DELETE_USER_CONFIG_FUN_2, DELETE_USER_CONFIG_FUN_1)(__VA_ARGS__)
 
 #define INIT_CONFIG(dbPath) ConfigManager::instance().init(dbPath)
-#define GLOBAL_CONFIG ConfigManager::instance()
-#define USER_CONFIG (*(ConfigManager::instance().getUserConfigManager()))
+#define GLOBAL_CONFIG ConfigManager::instance().getGlobalConfig()
+#define USER_CONFIG ConfigManager::instance()
 #define SET_CONFIG_USERID(userId) ConfigManager::instance().setUserId(userId)
 
 //暂时不可用
@@ -200,6 +200,11 @@ public:
 	@return 返回用户相关配置管理类
 	*/
 	UserConfigManager* getUserConfigManager();
+
+	/** 获取全局类
+	@return 返回全局类
+	*/
+	ConfigManager& getGlobalConfig();
 
 	/** 删除配置
 	@param [in] key key值

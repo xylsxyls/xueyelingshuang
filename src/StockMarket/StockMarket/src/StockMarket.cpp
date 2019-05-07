@@ -2,11 +2,25 @@
 #include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 
-bool StockMarket::load(const std::string& stock)
+void StockMarket::load(const std::string& stock, const std::string& name, const std::map<IntDateTime, std::vector<BigNumber>>& history)
 {
-	Ctxt txt("D:\\Table.txt");
-	txt.LoadTxt(Ctxt::SPLIT, "\t\t");
+	m_stock = stock;
+	m_name = name;
+	m_history = history;
+}
 
+void StockMarket::save(const std::string& stock, const MysqlCpp& mysql, const std::string& file)
+{
+	mysql.selectDb("stockmarket");
+	std::vector<std::string> vecFields;
+	vecFields.push_back("date varchar(10)");
+	vecFields.push_back("open varchar(7)");
+	vecFields.push_back("high varchar(7)");
+	vecFields.push_back("low varchar(7)");
+	vecFields.push_back("close varchar(7)");
+	mysql.execute(mysql.PreparedStatementCreator(SqlString::createTableString(stock, vecFields)));
+	Ctxt txt(file);
+	txt.LoadTxt(Ctxt::SPLIT, "\t\t");
 	int32_t lineIndex = 0;
 	while (lineIndex++ != txt.m_vectxt.size() - 1)
 	{
@@ -17,20 +31,28 @@ bool StockMarket::load(const std::string& stock)
 		}
 		IntDateTime date = vec[0];
 		std::vector<std::string> price = CStringManager::split(vec[1], "\t");
-		std::vector<BigNumber> data;
-		data.push_back(BigNumber(price[1].c_str()));
-		data.push_back(BigNumber(txt.m_vectxt[lineIndex][1].c_str()));
-		data.push_back(BigNumber(txt.m_vectxt[lineIndex][2].c_str()));
-		data.push_back(BigNumber(txt.m_vectxt[lineIndex][3].c_str()));
-		m_histroy[date] = data;
+		std::string& open = price[1];
+		std::string& high = txt.m_vectxt[lineIndex][1];
+		std::string& low = txt.m_vectxt[lineIndex][2];
+		std::string& close = txt.m_vectxt[lineIndex][3];
+		auto prepare = mysql.PreparedStatementCreator(SqlString::insertString(stock, "date,open,high,low,close"));
+		prepare->setString(0, date.dateToString());
+		prepare->setString(1, open);
+		prepare->setString(2, high);
+		prepare->setString(3, low);
+		prepare->setString(4, close);
+		mysql.execute(prepare);
 	}
-	m_stock = stock;
-	return true;
+
+	auto prepare = mysql.PreparedStatementCreator(SqlString::insertString("stock", "stock,name"));
+	prepare->setString(0, stock);
+	prepare->setString(1, "");
+	mysql.execute(prepare);
 }
 
 void StockMarket::add(const IntDateTime& date, const std::vector<BigNumber>& data)
 {
-	m_histroy[date] = data;
+	m_history[date] = data;
 }
 
 std::string StockMarket::stock() const
@@ -49,7 +71,7 @@ BigNumber StockMarket::open(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(date)->second[OPEN];
+	return m_history.find(date)->second[OPEN];
 }
 
 BigNumber StockMarket::high(const IntDateTime& date) const
@@ -58,7 +80,7 @@ BigNumber StockMarket::high(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(date)->second[HIGH];
+	return m_history.find(date)->second[HIGH];
 }
 
 BigNumber StockMarket::low(const IntDateTime& date) const
@@ -67,7 +89,7 @@ BigNumber StockMarket::low(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(date)->second[LOW];
+	return m_history.find(date)->second[LOW];
 }
 
 BigNumber StockMarket::close(const IntDateTime& date) const
@@ -76,7 +98,7 @@ BigNumber StockMarket::close(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(date)->second[CLOSE];
+	return m_history.find(date)->second[CLOSE];
 }
 
 BigNumber StockMarket::preOpen(const IntDateTime& date) const
@@ -90,7 +112,7 @@ BigNumber StockMarket::preOpen(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(preDate)->second[OPEN];
+	return m_history.find(preDate)->second[OPEN];
 }
 
 BigNumber StockMarket::preHigh(const IntDateTime& date) const
@@ -104,7 +126,7 @@ BigNumber StockMarket::preHigh(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(preDate)->second[HIGH];
+	return m_history.find(preDate)->second[HIGH];
 }
 
 BigNumber StockMarket::preLow(const IntDateTime& date) const
@@ -118,7 +140,7 @@ BigNumber StockMarket::preLow(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(preDate)->second[LOW];
+	return m_history.find(preDate)->second[LOW];
 }
 
 BigNumber StockMarket::preClose(const IntDateTime& date) const
@@ -132,7 +154,7 @@ BigNumber StockMarket::preClose(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(preDate)->second[CLOSE];
+	return m_history.find(preDate)->second[CLOSE];
 }
 
 BigNumber StockMarket::nextOpen(const IntDateTime& date) const
@@ -146,7 +168,7 @@ BigNumber StockMarket::nextOpen(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(nextDate)->second[OPEN];
+	return m_history.find(nextDate)->second[OPEN];
 }
 
 BigNumber StockMarket::nextHigh(const IntDateTime& date) const
@@ -160,7 +182,7 @@ BigNumber StockMarket::nextHigh(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(nextDate)->second[HIGH];
+	return m_history.find(nextDate)->second[HIGH];
 }
 
 BigNumber StockMarket::nextLow(const IntDateTime& date) const
@@ -174,7 +196,7 @@ BigNumber StockMarket::nextLow(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(nextDate)->second[LOW];
+	return m_history.find(nextDate)->second[LOW];
 }
 
 BigNumber StockMarket::nextClose(const IntDateTime& date) const
@@ -188,12 +210,54 @@ BigNumber StockMarket::nextClose(const IntDateTime& date) const
 	{
 		return -1;
 	}
-	return m_histroy.find(nextDate)->second[CLOSE];
+	return m_history.find(nextDate)->second[CLOSE];
+}
+
+BigNumber StockMarket::upValue(const IntDateTime& date) const
+{
+	BigNumber openValue = open(date);
+	BigNumber closeValue = close(date);
+	if (openValue < closeValue)
+	{
+		return high(date) - close(date);
+	}
+	return high(date) - open(date);
+}
+
+BigNumber StockMarket::downValue(const IntDateTime& date) const
+{
+	BigNumber openValue = open(date);
+	BigNumber closeValue = close(date);
+	if (openValue < closeValue)
+	{
+		return open(date) - low(date);
+	}
+	return close(date) - low(date);
+}
+
+BigNumber StockMarket::entityValue(const IntDateTime& date) const
+{
+	return (open(date) - close(date)).abs();
+}
+
+BigNumber StockMarket::chgValue(const IntDateTime& date) const
+{
+	return (((close(date) / preClose(date).toPrec(6)) - 1) * 100).toPrec(2);
+}
+
+bool StockMarket::isLimitUp(const IntDateTime& date) const
+{
+	return (preClose(date).toPrec(6) * 1.1).toPrec(2) == close(date);
+}
+
+bool StockMarket::isLimitDown(const IntDateTime& date) const
+{
+	return (preClose(date).toPrec(6) * 0.9).toPrec(2) == close(date);
 }
 
 bool StockMarket::dateExist(const IntDateTime& date) const
 {
-	return m_histroy.find(date) != m_histroy.end();
+	return m_history.find(date) != m_history.end();
 }
 
 bool StockMarket::getDatePre(const IntDateTime& date, IntDateTime& preDate) const
@@ -202,8 +266,8 @@ bool StockMarket::getDatePre(const IntDateTime& date, IntDateTime& preDate) cons
 	{
 		return false;
 	}
-	auto itDate = m_histroy.find(date);
-	if (itDate == m_histroy.begin())
+	auto itDate = m_history.find(date);
+	if (itDate == m_history.begin())
 	{
 		return false;
 	}
@@ -217,8 +281,8 @@ bool StockMarket::getDateNext(const IntDateTime& date, IntDateTime& nextDate) co
 	{
 		return false;
 	}
-	auto itDate = ++(m_histroy.find(date));
-	if (itDate == m_histroy.end())
+	auto itDate = ++(m_history.find(date));
+	if (itDate == m_history.end())
 	{
 		return false;
 	}
@@ -236,7 +300,7 @@ bool StockMarket::getMarketPre(const IntDateTime& date, IntDateTime& preDate, st
 	{
 		return false;
 	}
-	preData = m_histroy.find(preDate)->second;
+	preData = m_history.find(preDate)->second;
 	return true;
 }
 
@@ -250,8 +314,13 @@ bool StockMarket::getMarketNext(const IntDateTime& date, IntDateTime& nextDate, 
 	{
 		return false;
 	}
-	nextData = m_histroy.find(nextDate)->second;
+	nextData = m_history.find(nextDate)->second;
 	return true;
+}
+
+std::map<IntDateTime, std::vector<BigNumber>> StockMarket::history() const
+{
+	return m_history;
 }
 
 bool StockMarket::getMarketPre(const IntDateTime& date, int32_t days, std::map<IntDateTime, std::vector<BigNumber>>& preDaysData) const
@@ -274,7 +343,7 @@ bool StockMarket::getMarketPre(const IntDateTime& date, int32_t days, std::map<I
 	preDaysData.clear();
 	while (dataDays-- != 0)
 	{
-		preDaysData[preDate] = m_histroy.find(preDate)->second;
+		preDaysData[preDate] = m_history.find(preDate)->second;
 		getDateNext(preDate, preDate);
 	}
 	return true;
@@ -300,7 +369,7 @@ bool StockMarket::getMarketNext(const IntDateTime& date, int32_t days, std::map<
 	while (dataDays-- != 0)
 	{
 		getDateNext(nextDate, nextDate);
-		nextDaysData[nextDate] = m_histroy.find(nextDate)->second;
+		nextDaysData[nextDate] = m_history.find(nextDate)->second;
 	}
 	return true;
 }

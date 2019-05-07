@@ -19,11 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\StockAllIndex.h" />
     <ClInclude Include="..\src\StockIndexAPI.h" />
     <ClInclude Include="..\src\StockIndexMacro.h" />
     <ClInclude Include="..\src\StockIndex.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\StockAllIndex.cpp" />
     <ClCompile Include="..\src\StockIndex.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -19,15 +19,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\StockAllMarket.h" />
     <ClInclude Include="..\src\StockMarketAPI.h" />
     <ClInclude Include="..\src\StockMarketMacro.h" />
     <ClInclude Include="..\src\StockMarket.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\StockAllMarket.cpp" />
     <ClCompile Include="..\src\StockMarket.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{FE46F4B5-4FBF-4A74-A7DB-7C9CAF133A62}</ProjectGuid>
     <RootNamespace>StockMarket</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

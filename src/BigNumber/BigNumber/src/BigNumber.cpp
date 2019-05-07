@@ -176,6 +176,16 @@ BigNumber BigNumber::zero() const
 	return result;
 }
 
+BigNumber BigNumber::abs() const
+{
+	BigNumber result = *this;
+	if (result < 0)
+	{
+		return result * -1;
+	}
+	return result;
+}
+
 BigNumber BigNumber::toPrec(int32_t prec, PrecFlag flag) const
 {
     BigNumber result = *this;

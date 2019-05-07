@@ -2,8 +2,8 @@
 #include "StockMarketMacro.h"
 #include <map>
 #include "IntDateTime/IntDateTimeAPI.h"
-#include <vector>
 #include "BigNumber/BigNumberAPI.h"
+#include "MysqlCpp/MysqlCppAPI.h"
 
 /** 行情管理
 */
@@ -24,9 +24,17 @@ public:
 public:
 	/** 加载股票历史行情
 	@param [in] stock 股票代码
-	@return 返回是否加载成功
+	@param [in] name 名字
+	@param [in] history 历史
 	*/
-	bool load(const std::string& stock);
+	void load(const std::string& stock, const std::string& name, const std::map<IntDateTime, std::vector<BigNumber>>& history);
+
+	/** 存储股票历史行情
+	@param [in] stock 股票代码
+	@param [in] mysql 数据库
+	@param [in] file 下载的原始文件
+	*/
+	static void save(const std::string& stock, const MysqlCpp& mysql, const std::string& file = "D:\\Table.txt");
 
 	/** 临时添加行情节点，用于添加当天行情
 	@param [in] date 日期
@@ -116,6 +124,42 @@ public:
 	*/
 	BigNumber nextClose(const IntDateTime& date) const;
 
+	/** 上影线值
+	@param [in] date 日期
+	@return 返回上影线值
+	*/
+	BigNumber upValue(const IntDateTime& date) const;
+
+	/** 下影线值
+	@param [in] date 日期
+	@return 返回下影线值
+	*/
+	BigNumber downValue(const IntDateTime& date) const;
+
+	/** 实体值
+	@param [in] date 日期
+	@return 返回实体值
+	*/
+	BigNumber entityValue(const IntDateTime& date) const;
+
+	/** 涨跌幅，已乘以100，包含百分号
+	@param [in] date 日期
+	@return 返回涨跌幅
+	*/
+	BigNumber chgValue(const IntDateTime& date) const;
+
+	/** 是否是涨停
+	@param [in] date 日期
+	@return 返回是否是涨停
+	*/
+	bool isLimitUp(const IntDateTime& date) const;
+
+	/** 是否是跌停
+	@param [in] date 日期
+	@return 返回是否是跌停
+	*/
+	bool isLimitDown(const IntDateTime& date) const;
+
 	/** 当前交易日是否存在
 	@param [in] date 日期
 	@return 返回当前交易日是否存在
@@ -168,6 +212,11 @@ public:
 	*/
 	bool getMarketNext(const IntDateTime& date, int32_t days, std::map<IntDateTime, std::vector<BigNumber>>& nextDaysData) const;
 
+	/** 获取该行情历史
+	@return 返回该行情历史
+	*/
+	std::map<IntDateTime, std::vector<BigNumber>> history() const;
+
 private:
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -178,7 +227,7 @@ private:
 	//股票名
 	std::string m_name;
 	//日期，开高低收，索引对应Histroy枚举
-	std::map<IntDateTime, std::vector<BigNumber>> m_histroy;
+	std::map<IntDateTime, std::vector<BigNumber>> m_history;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

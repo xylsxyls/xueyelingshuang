@@ -1,14 +1,14 @@
 #include "StockFund.h"
 #include "StockCharge/StockChargeAPI.h"
-#include "StockIndex/StockIndexAPI.h"
+#include "StockMarket/StockMarketAPI.h"
 
-bool StockFund::buyStock(const IntDateTime& date, const BigNumber& price, const StockMarket& stockMarket, const BigNumber& rate)
+bool StockFund::buyStock(const IntDateTime& date, const BigNumber& price, const std::shared_ptr<StockMarket>& spStockMarket, const BigNumber& rate)
 {
-	if (!stockMarket.dateExist(date))
+	if (!spStockMarket->dateExist(date))
 	{
 		return false;
 	}
-	if (price < stockMarket.low(date) || price > stockMarket.high(date))
+	if (price < spStockMarket->low(date) || price > spStockMarket->high(date))
 	{
 		return false;
 	}
@@ -17,8 +17,12 @@ bool StockFund::buyStock(const IntDateTime& date, const BigNumber& price, const 
 		return false;
 	}
 
-	std::string stock = stockMarket.stock();
+	std::string stock = spStockMarket->stock();
 	BigNumber position = (m_available * rate / price.toPrec(4) / 100).toPrec(0) * 100;
+	if (position == 0)
+	{
+		return false;
+	}
 	while (price * position + StockCharge::instance().buyFee(stock, price, position) > m_available * rate)
 	{
 		position = position - 100;
@@ -30,9 +34,9 @@ bool StockFund::buyStock(const IntDateTime& date, const BigNumber& price, const 
 	BigNumber charge = StockCharge::instance().buyFee(stock, price, position);
 	BigNumber consume = charge + price * position;
 	m_available = (m_available - consume).toPrec(2);
-	m_stock[stock].push_back(std::pair<BigNumber, BigNumber>(price, position));
+	m_stock[stock].push_back(std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>(date, std::pair<BigNumber, BigNumber>(price, position)));
 	std::string log;
-	log.append("购买股票：" + stock + " " + stockMarket.name() + "，");
+	log.append("购买股票：" + stock + " " + spStockMarket->name() + "，");
 	log.append("日期：" + date.dateToString() + "，");
 	log.append("价格：" + price.toPrec(2).toString() + "，");
 	log.append("仓位：" + position.toPrec(0).toString() + ", ");
@@ -42,7 +46,7 @@ bool StockFund::buyStock(const IntDateTime& date, const BigNumber& price, const 
 
 	if (m_stockMarket.find(stock) == m_stockMarket.end())
 	{
-		m_stockMarket[stock] = stockMarket;
+		m_stockMarket[stock] = spStockMarket;
 	}
 	return true;
 }
@@ -54,12 +58,12 @@ bool StockFund::sellStock(const IntDateTime& date, const BigNumber& price, const
 	{
 		return false;
 	}
-	StockMarket& stockMarket = itStockMarket->second;
-	if (!stockMarket.dateExist(date))
+	const std::shared_ptr<StockMarket>& spStockMarket = itStockMarket->second;
+	if (!spStockMarket->dateExist(date))
 	{
 		return false;
 	}
-	if (price < stockMarket.low(date) || price > stockMarket.high(date))
+	if (price < spStockMarket->low(date) || price > spStockMarket->high(date))
 	{
 		return false;
 	}
@@ -74,11 +78,11 @@ bool StockFund::sellStock(const IntDateTime& date, const BigNumber& price, const
 		return false;
 	}
 	BigNumber position = 0;
-	std::vector<std::pair<BigNumber,BigNumber>>& vecDeal = itStock->second;
+	std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& vecDeal = itStock->second;
 	int32_t index = -1;
 	while (index++ != vecDeal.size() - 1)
 	{
-		position = position + vecDeal[index].second;
+		position = position + vecDeal[index].second.second;
 	}
 	BigNumber sellPosition = (position * rate / 100).toPrec(0) * 100;
 	BigNumber charge = StockCharge::instance().sellFee(stock, price, sellPosition);
@@ -87,14 +91,14 @@ bool StockFund::sellStock(const IntDateTime& date, const BigNumber& price, const
 	std::string log;
 	if (position == sellPosition)
 	{
-		log.append("清仓股票：" + stock + " " + stockMarket.name() + "，");
+		log.append("清仓股票：" + stock + " " + spStockMarket->name() + "，");
 		BigNumber hasBuy = 0;
 		BigNumber hasSell = 0;
 		int32_t index = -1;
 		while (index++ != vecDeal.size() - 1)
 		{
-			BigNumber& currentPrice = vecDeal[index].first;
-			BigNumber& currentPosition = vecDeal[index].second;
+			BigNumber& currentPrice = vecDeal[index].second.first;
+			BigNumber& currentPosition = vecDeal[index].second.second;
 			if (currentPosition > 0)
 			{
 				hasBuy = hasBuy + currentPrice * currentPosition;
@@ -111,8 +115,8 @@ bool StockFund::sellStock(const IntDateTime& date, const BigNumber& price, const
 	}
 	else
 	{
-		vecDeal.push_back(std::pair<BigNumber, BigNumber>(price, sellPosition * -1));
-		log.append("卖出股票：" + stock + " " + stockMarket.name() + "，");
+		vecDeal.push_back(std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>(date, std::pair<BigNumber, BigNumber>(price, sellPosition * -1)));
+		log.append("卖出股票：" + stock + " " + spStockMarket->name() + "，");
 	}
 	log.append("日期：" + date.dateToString() + "，");
 	log.append("价格：" + price.toPrec(2).toString() + "，");
@@ -156,14 +160,14 @@ BigNumber StockFund::allFund(const IntDateTime& date)
 	for (auto itStock = m_stock.begin(); itStock != m_stock.end(); ++itStock)
 	{
 		const std::string& stock = itStock->first;
-		const std::vector<std::pair<BigNumber, BigNumber>>& vecDeal = itStock->second;
+		const std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& vecDeal = itStock->second;
 
 		auto itStockMarket = m_stockMarket.find(stock);
 		if (itStockMarket == m_stockMarket.end())
 		{
 			return -1;
 		}
-		if (!itStockMarket->second.dateExist(date))
+		if (!itStockMarket->second->dateExist(date))
 		{
 			return -1;
 		}
@@ -172,9 +176,9 @@ BigNumber StockFund::allFund(const IntDateTime& date)
 		int32_t index = -1;
 		while (index++ != vecDeal.size() - 1)
 		{
-			position = position + vecDeal[index].second;
+			position = position + vecDeal[index].second.second;
 		}
-		stockFund = stockFund + itStockMarket->second.close(date) * position;
+		stockFund = stockFund + itStockMarket->second->close(date) * position;
 	}
 	BigNumber allFund = stockFund + m_available + m_freeze;
 	std::string log;
@@ -183,7 +187,7 @@ BigNumber StockFund::allFund(const IntDateTime& date)
 	return allFund;
 }
 
-bool StockFund::stockChg(const std::string& stock, const IntDateTime& date, BigNumber& chg)
+bool StockFund::stockChg(const std::string& stock, const IntDateTime& date, BigNumber& chg) const
 {
 	auto itStock = m_stock.find(stock);
 	if (itStock == m_stock.end())
@@ -195,20 +199,20 @@ bool StockFund::stockChg(const std::string& stock, const IntDateTime& date, BigN
 	{
 		return false;
 	}
-	if (!itStockMarket->second.dateExist(date))
+	if (!itStockMarket->second->dateExist(date))
 	{
 		return false;
 	}
 
-	std::vector<std::pair<BigNumber, BigNumber>>& vecDeal = itStock->second;
+	const std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& vecDeal = itStock->second;
 	BigNumber hasBuy = 0;
 	BigNumber hasSell = 0;
 	BigNumber position = 0;
 	int32_t index = -1;
 	while (index++ != vecDeal.size() - 1)
 	{
-		BigNumber& currentPrice = vecDeal[index].first;
-		BigNumber& currentPosition = vecDeal[index].second;
+		const BigNumber& currentPrice = vecDeal[index].second.first;
+		const BigNumber& currentPosition = vecDeal[index].second.second;
 		position = position + currentPosition;
 		if (currentPosition > 0)
 		{
@@ -219,13 +223,23 @@ bool StockFund::stockChg(const std::string& stock, const IntDateTime& date, BigN
 			hasSell = hasSell + currentPrice * currentPosition * -1;
 		}
 	}
-	hasSell = hasSell + itStockMarket->second.close(date) * position;
+	hasSell = hasSell + itStockMarket->second->close(date) * position;
 	chg = (hasSell / hasBuy * 100 - 100).toPrec(2);
-	std::string log;
-	log.append("所持股票：" + stock + " " + itStockMarket->second.name() + "，");
-	log.append("目前收益率：" + chg.toString() + "%");
-	m_stockLog.push_back(log);
+	//std::string log;
+	//log.append("所持股票：" + stock + " " + itStockMarket->second.name() + "，");
+	//log.append("目前收益率：" + chg.toString() + "%");
+	//m_stockLog.push_back(log);
 	return true;
+}
+
+std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>> StockFund::trade(const std::string& stock) const
+{
+	auto itStock = m_stock.find(stock);
+	if (itStock == m_stock.end())
+	{
+		return std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>();
+	}
+	return itStock->second;
 }
 
 std::vector<std::string> StockFund::stockLog() const
@@ -243,20 +257,53 @@ bool StockFund::stockExist(const std::string& stock) const
 	return m_stock.find(stock) != m_stock.end();
 }
 
+std::vector<std::string> StockFund::ownedStock() const
+{
+	std::vector<std::string> ownedStock;
+	for (auto itStock = m_stock.begin(); itStock != m_stock.end(); ++itStock)
+	{
+		ownedStock.push_back(itStock->first);
+	}
+	return ownedStock;
+}
+
+bool StockFund::hasAvailableFund() const
+{
+	return m_available != 0;
+}
+
+bool StockFund::hasFreezeFund() const
+{
+	return m_freeze != 0;
+}
+
 //int main()
 //{
 //	StockMarket market;
-//	market.load("600323");
+//	std::string stock = "002882";
+//
+//	MysqlCpp mysql;
+//	mysql.connect("127.0.0.1", 3306, "root", "");
+//
+//	CStopWatch marketWatch;
+//	market.load(stock, mysql);
+//	RCSend("histroy = %d", market.history().size());
+//	int32_t marketWatchTime = marketWatch.GetWatchTime();
 //	StockFund fund;
 //	fund.add(100000);
-//
-//	IntDateTime time = "2017-08-14";
+//	StockIndex::instance().load(mysql);
+//	CStopWatch indexWatch;
+//	IntDateTime time = "2017-12-14";
 //	do
 //	{
-//		BigNumber wr10 = StockIndex::wr(10, time, market);
-//		BigNumber rsi6 = StockIndex::rsi(6, time, market);
-//		BigNumber rsi24 = StockIndex::rsi(24, time, market);
+//		BigNumber wr10 = StockIndex::instance().wr10(stock, time);
+//		BigNumber rsi6 = StockIndex::instance().rsi6(stock, time);
+//		BigNumber rsi24 = StockIndex::instance().rsi24(stock, time);
 //
+//		//BigNumber wr10 = StockIndex::wr(10, time, market);
+//		//BigNumber rsi6 = StockIndex::rsi(6, time, market);
+//		//BigNumber rsi24 = StockIndex::rsi(24, time, market);
+//	
 //		if (fund.stockNum() == 0 && wr10 >= 95 && rsi24 <= 45)
 //		{
 //			fund.buyStock(time, market.close(time), market, 0.5);
@@ -271,10 +318,11 @@ bool StockFund::stockExist(const std::string& stock) const
 //			fund.stockChg(market.stock(), time, chg);
 //			fund.sellStock(time, market.close(time), market.stock(), 1);
 //		}
-//
+//	
 //	} while (market.getDateNext(time, time));
-//
+//	int32_t indexWatchTime = indexWatch.GetWatchTime();
 //	BigNumber allFund = fund.allFund("2019-04-26");
+//	RCSend("marketWatchTime = %d, indexWatchTime = %d, allFund = %s", marketWatchTime, indexWatchTime, allFund.toString().c_str());
 //	std::vector<std::string> vec = fund.stockLog();
 //	getchar();
 //	return 0;

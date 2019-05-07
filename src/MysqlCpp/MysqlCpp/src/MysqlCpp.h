@@ -41,19 +41,19 @@ public:
 	@param [in] dbName 数据库名
 	@param [in] autoCommit 是否自动提交
 	*/
-	void selectDb(const std::string& dbName, bool autoCommit = false);
+	void selectDb(const std::string& dbName, bool autoCommit = false) const;
 
 	/** 创建一个用于增删改查的类
 	@param [in] sqlString sql字符串
 	@return 返回操作条件语句的类
 	*/
-	std::shared_ptr<MysqlCppPrepareStatement> PreparedStatementCreator(const std::string& sqlString);
+	std::shared_ptr<MysqlCppPrepareStatement> PreparedStatementCreator(const std::string& sqlString) const;
 
 	/** 操作查
 	@param [in] statement 条件语句
 	@return 返回查询结果
 	*/
-	std::shared_ptr<MysqlCppResultSet> execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement);
+	std::shared_ptr<MysqlCppResultSet> execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement) const;
 
 	/** 导入
 	@param [in] sqlPath 导入的sql文件路径
@@ -66,7 +66,7 @@ public:
 				   const std::string& host,
 				   const std::string& user,
 				   const std::string& password,
-				   const std::string& database);
+				   const std::string& database) const;
 
 	/** 导出
 	@param [in] sqlPath 导入的sql文件路径
@@ -79,23 +79,23 @@ public:
 				   const std::string& host,
 				   const std::string& user,
 				   const std::string& password,
-				   const std::string& exportData);
+				   const std::string& exportData) const;
 
 	/** 设置是否自动提交
 	@param [in] autoCommit 是否自动提交
 	*/
-	void setAutoCommit(bool autoCommit);
+	void setAutoCommit(bool autoCommit) const;
 
 	/** 提交
 	*/
-	void commit();
+	void commit() const;
 
 	/** 回滚
 	*/
-	void rollback();
+	void rollback() const;
 
 protected:
-	bool check();
+	bool check() const;
 
 public:
 	sql::Driver* m_driver;

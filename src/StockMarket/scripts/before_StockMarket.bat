@@ -58,3 +58,33 @@ goto BigNumber_end
 call "%CLOUD_REBUILD%" BigNumber %BigNumber_bit% %BigNumber_dlllib% %BigNumber_debugRelease%
 goto BigNumber_end
 :BigNumber_end
+
+::--------------------------------------------------------------------
+set Ctxt_dlllib=lib
+set Ctxt_bit=%1
+set Ctxt_debugRelease=%3
+set Ctxt_allSame=%4
+if "%4" == "same" (goto Ctxt_callSame) else (goto Ctxt_callSimple)
+:Ctxt_callSame
+set Ctxt_dlllib=%2
+call "%CLOUD_REBUILD%" Ctxt %Ctxt_bit% %Ctxt_dlllib% %Ctxt_debugRelease% %Ctxt_allSame%
+goto Ctxt_end
+:Ctxt_callSimple
+call "%CLOUD_REBUILD%" Ctxt %Ctxt_bit% %Ctxt_dlllib% %Ctxt_debugRelease%
+goto Ctxt_end
+:Ctxt_end
+
+::--------------------------------------------------------------------
+set CGetPath_dlllib=lib
+set CGetPath_bit=%1
+set CGetPath_debugRelease=%3
+set CGetPath_allSame=%4
+if "%4" == "same" (goto CGetPath_callSame) else (goto CGetPath_callSimple)
+:CGetPath_callSame
+set CGetPath_dlllib=%2
+call "%CLOUD_REBUILD%" CGetPath %CGetPath_bit% %CGetPath_dlllib% %CGetPath_debugRelease% %CGetPath_allSame%
+goto CGetPath_end
+:CGetPath_callSimple
+call "%CLOUD_REBUILD%" CGetPath %CGetPath_bit% %CGetPath_dlllib% %CGetPath_debugRelease%
+goto CGetPath_end
+:CGetPath_end

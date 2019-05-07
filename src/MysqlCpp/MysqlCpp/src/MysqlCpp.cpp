@@ -65,7 +65,7 @@ bool MysqlCpp::connect(const std::string& ip,
 	return m_con->isValid();
 }
 
-void MysqlCpp::selectDb(const std::string& dbName, bool autoCommit)
+void MysqlCpp::selectDb(const std::string& dbName, bool autoCommit) const
 {
 	if (!check())
 	{
@@ -75,7 +75,7 @@ void MysqlCpp::selectDb(const std::string& dbName, bool autoCommit)
 	setAutoCommit(autoCommit);
 }
 
-std::shared_ptr<MysqlCppPrepareStatement> MysqlCpp::PreparedStatementCreator(const std::string& sqlString)
+std::shared_ptr<MysqlCppPrepareStatement> MysqlCpp::PreparedStatementCreator(const std::string& sqlString) const
 {
 	try
 	{
@@ -87,7 +87,7 @@ std::shared_ptr<MysqlCppPrepareStatement> MysqlCpp::PreparedStatementCreator(con
 	}
 }
 
-std::shared_ptr<MysqlCppResultSet> MysqlCpp::execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement)
+std::shared_ptr<MysqlCppResultSet> MysqlCpp::execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement) const
 {
 	if (!check())
 	{
@@ -117,7 +117,7 @@ void MysqlCpp::importSql(const std::string sqlPath,
 						 const std::string& host,
 						 const std::string& user,
 						 const std::string& password,
-						 const std::string& database)
+						 const std::string& database) const
 {
 	system(MysqlSqlString::importString(sqlPath, host, user, password, database).c_str());
 }
@@ -126,14 +126,14 @@ void MysqlCpp::exportSql(const std::string sqlPath,
 						 const std::string& host,
 						 const std::string& user,
 						 const std::string& password,
-						 const std::string& exportData)
+						 const std::string& exportData) const
 {
 
 	system(MysqlSqlString::importString(sqlPath, host, user, password, exportData).c_str());
 	return;
 }
 
-void MysqlCpp::setAutoCommit(bool autoCommit)
+void MysqlCpp::setAutoCommit(bool autoCommit) const
 {
 	if (!check())
 	{
@@ -142,7 +142,7 @@ void MysqlCpp::setAutoCommit(bool autoCommit)
 	m_con->setAutoCommit(autoCommit);
 }
 
-void MysqlCpp::commit()
+void MysqlCpp::commit() const
 {
 	if (!check())
 	{
@@ -151,7 +151,7 @@ void MysqlCpp::commit()
 	m_con->commit();
 }
 
-void MysqlCpp::rollback()
+void MysqlCpp::rollback() const
 {
 	if (!check())
 	{
@@ -160,7 +160,7 @@ void MysqlCpp::rollback()
 	m_con->rollback();
 }
 
-bool MysqlCpp::check()
+bool MysqlCpp::check() const
 {
 	return m_driver != nullptr && m_con != nullptr;
 }

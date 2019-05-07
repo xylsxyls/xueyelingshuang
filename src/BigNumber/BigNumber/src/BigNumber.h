@@ -100,6 +100,8 @@ public:
 	*/
 	BigNumber zero() const;
 
+	BigNumber abs() const;
+
     BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST) const;
 
 	//以下3函数都是返回本身

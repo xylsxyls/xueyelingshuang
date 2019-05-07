@@ -9,7 +9,8 @@ ConfigManager::ConfigManager():
 m_key(0),
 m_section(0),
 m_spConfig(nullptr),
-m_spProcessMutex(nullptr)
+m_spProcessMutex(nullptr),
+m_tableName("g_config")
 {
 	m_spProcessMutex.reset(new ProcessReadWriteMutex("ConfigManagerProcessMutex"));
 }
@@ -119,19 +120,24 @@ void ConfigManager::initSQLite()
 	}
 	m_spConfig = nullptr;
 	m_spConfig.reset(new SQLite(m_databasePath));
-	m_tableName = "g_config";
-	createTableIfNotExist(m_tableName);
+	createTableIfNotExist("g_config");
 }
 
 void ConfigManager::setUserId(uint64_t userId)
 {
-	initSQLite();
-	UserConfigManager::instance().setUserId(userId);
+	m_tableName = CStringManager::Format("user_%I64u", userId);
+	createTableIfNotExist(m_tableName);
 }
 
 UserConfigManager* ConfigManager::getUserConfigManager()
 {
 	return &(UserConfigManager::instance());
+}
+
+ConfigManager& ConfigManager::getGlobalConfig()
+{
+	m_tableName = "g_config";
+	return *this;
 }
 
 void ConfigManager::addConfig(int32_t key, const std::string& value, int32_t section)
