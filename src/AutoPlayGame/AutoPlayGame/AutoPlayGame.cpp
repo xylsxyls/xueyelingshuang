@@ -63,7 +63,7 @@ public:
             else if (beginPlay == 2)
             {
                 beginPlay = 4;
-                goto CHOOSE;
+               // goto CHOOSE;
             }
         GAME:
             int32_t threadId = 0;
@@ -108,61 +108,61 @@ public:
 			{
 				return;
 			}
-        CHOOSE:
-            while (true)
-            {
-                ScreenScript::FindClick("Play.png");
-                ScreenScript::FindClick("Rank.png");
-                ScreenScript::FindClick("Confirm.png");
-				ScreenScript::FindClick("PlayAgain.png");
-				ScreenScript::FindClick("OtherOk.png");
-				ScreenScript::FindClick("OtherOk2.png");
-                ScreenScript::FindClick("EndFriend.png");
-                ScreenScript::FindClick("ErrorOk.png");
-                ScreenScript::FindClick("Choose.png");
-                ScreenScript::FindClick("zhonglu.png");
-                ScreenScript::FindClick("daye.png");
-                ScreenScript::FindClick("Begin.png");
-				ScreenScript::FindClick("Agree.png");
-                ScreenScript::FindClick("NoBody.png");
-                ScreenScript::FindClick("Forbidden.png");
-                if (ScreenScript::FindClick("First.png"))
-                {
-                    Sleep(1000);
-                }
-                if (ScreenScript::FindClick("Second.png"))
-                {
-                    Sleep(1000);
-                }
-                if (ScreenScript::FindClick("Third.png"))
-                {
-                    Sleep(1000);
-                }
-				if (ScreenScript::FindClick("Fourth.png"))
-				{
-					Sleep(1000);
-				}
-				if (ScreenScript::FindClick("Fifth.png"))
-				{
-					Sleep(1000);
-				}
-				if (ScreenScript::FindClick("Sixth.png"))
-				{
-					Sleep(1000);
-				}
-                ScreenScript::FindClick("OK.png");
-                if (ScreenScript::FindPic(CStringManager::Format("lan%d.png", computer)))
-                {
-                    camp = 1;
-                    break;
-                }
-                else if (ScreenScript::FindPic(CStringManager::Format("zi%d.png", computer)))
-                {
-                    camp = 2;
-                    break;
-                }
+            //CHOOSE:
+            //    while (true)
+            //    {
+            //        ScreenScript::FindClick("Play.png");
+            //        ScreenScript::FindClick("Rank.png");
+            //        ScreenScript::FindClick("Confirm.png");
+            //		ScreenScript::FindClick("PlayAgain.png");
+            //		ScreenScript::FindClick("OtherOk.png");
+            //		ScreenScript::FindClick("OtherOk2.png");
+            //        ScreenScript::FindClick("EndFriend.png");
+            //        ScreenScript::FindClick("ErrorOk.png");
+            //        ScreenScript::FindClick("Choose.png");
+            //        ScreenScript::FindClick("zhonglu.png");
+            //        ScreenScript::FindClick("daye.png");
+            //        ScreenScript::FindClick("Begin.png");
+            //		ScreenScript::FindClick("Agree.png");
+            //        ScreenScript::FindClick("NoBody.png");
+            //        ScreenScript::FindClick("Forbidden.png");
+            //        if (ScreenScript::FindClick("First.png"))
+            //        {
+            //            Sleep(1000);
+            //        }
+            //        if (ScreenScript::FindClick("Second.png"))
+            //        {
+            //            Sleep(1000);
+            //        }
+            //        if (ScreenScript::FindClick("Third.png"))
+            //        {
+            //            Sleep(1000);
+            //        }
+            //		if (ScreenScript::FindClick("Fourth.png"))
+            //		{
+            //			Sleep(1000);
+            //		}
+            //		if (ScreenScript::FindClick("Fifth.png"))
+            //		{
+            //			Sleep(1000);
+            //		}
+            //		if (ScreenScript::FindClick("Sixth.png"))
+            //		{
+            //			Sleep(1000);
+            //		}
+            //        ScreenScript::FindClick("OK.png");
+            //        if (ScreenScript::FindPic(CStringManager::Format("lan%d.png", computer)))
+            //        {
+            //            camp = 1;
+            //            break;
+            //        }
+            //        else if (ScreenScript::FindPic(CStringManager::Format("zi%d.png", computer)))
+            //        {
+            //            camp = 2;
+            //            break;
+            //        }
+            //    }
             }
-        }
     }
 };
 
