@@ -248,13 +248,6 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CWeqTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		//else if (rDown && stopWatch.GetWatchTime() > 500)
-		//{
-		//	stopWatch.SetWatchTime(0);
-		//	std::shared_ptr<CRightClickTask> spTask;
-		//	spTask.reset(new CRightClickTask);
-		//	taskThread->PostTask(spTask, 1);
-		//}
 	}
 
 	Exit:
