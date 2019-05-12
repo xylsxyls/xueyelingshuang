@@ -1,1 +1,1 @@
-call "%CLOUD_REBUILD%" StockCondition 32 dll release same
+call "%CLOUD_REBUILD%" StockCondition 64 dll release same
