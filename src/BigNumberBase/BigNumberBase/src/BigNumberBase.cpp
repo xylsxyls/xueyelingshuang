@@ -2,7 +2,11 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include <math.h>
 #include "gmp.h"
+#ifdef _WIN64
+#pragma comment(lib, "libgmp.dll.lib")
+#elif _WIN32
 #pragma comment(lib, "gmp.lib")
+#endif
 
 class GmpInt
 {

@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include "StockStrategy/StockStrategyAPI.h"
 #include "StockCondition/StockConditionAPI.h"
-#include "CDump/CDumpAPI.h"
+//#include "CDump/CDumpAPI.h"
 #include "CStopWatch/CStopWatchAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -20,41 +21,99 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 int32_t main()
 {
-	CDump::declareDumpFile();
+	//CStopWatch watch1;
+	//MysqlCpp m_mysql;
+	//m_mysql.connect("127.0.0.1", 3306, "root", "");
+	//m_mysql.selectDb("stockmarket");
+	//std::vector<std::vector<std::string>> vecStock1 = m_mysql.execute(m_mysql.PreparedStatementCreator("select table_name from information_schema.tables where table_schema='stockmarket'"))->toVector();
+	//std::string str;
+	//int32_t index1 = -1;
+	//while (index1++ != 1000 - 1)
+	//{
+	//	RCSend("market load = %d", index1 + 1);
+	//	std::string& tableName = vecStock1[index1][0];
+	//	if (tableName.size() != 6)
+	//	{
+	//		continue;
+	//	}
+	//	const std::string& stock = tableName;
+	//	str.append(SqlString::selectString(stock) + " union ");
+	//	//std::string name = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("stock", "name", "stock='" + stock + "'")))->toVector()[0][0];
+	//}
+	//str.pop_back();
+	//str.pop_back();
+	//str.pop_back();
+	//str.pop_back();
+	//str.pop_back();
+	//str.pop_back();
+	//str.pop_back();
+	//std::vector<std::vector<std::string>> vecMarket = m_mysql.execute(m_mysql.PreparedStatementCreator(str))->toVector();
+	//RCSend("loadall = %d", watch1.GetWatchTime());
+	//printf("loadall\n");
+	//CDump::declareDumpFile();
+
+	std::vector<std::string> vecStock;
+	vecStock.push_back("000001");
+	vecStock.push_back("000002");
+	vecStock.push_back("000004");
 	CStopWatch watch;
 	StockAllMarket::instance().load();
 	StockAllIndex::instance().load();
 	RCSend("load = %d", watch.GetWatchTime());
 
-	StockFund stockFund;
-	stockFund.add(100000);
+	vecStock = StockAllMarket::instance().allStock();
+	RCSend("allStock.size = %d", vecStock.size());
+	//for (auto itStock = vecStock.begin(); itStock != vecStock.end(); )
+	//{
+	//	if (*itStock == "300274")
+	//	{
+	//		itStock = vecStock.erase(itStock);
+	//		continue;
+	//	}
+	//	else if (*itStock == "603721")
+	//	{
+	//		itStock = vecStock.erase(itStock);
+	//		continue;
+	//	}
+	//	else if (*itStock == "000681")
+	//	{
+	//		itStock = vecStock.erase(itStock);
+	//		continue;
+	//	}
+	//	++itStock;
+	//}
 
-	StockStrategy stockStrategy;
-	stockStrategy.init(StockCondition::instance().getStrategy(), &stockFund);
-	std::vector<std::string> vecStock = StockAllMarket::instance().allStock();
-	for (auto itStock = vecStock.begin(); itStock != vecStock.end(); )
+	IntDateTime beginTime = "2014-04-30";
+	IntDateTime endTime = "2019-04-30";
+
+	while (true)
 	{
-		if (*itStock == "300274")
+		int32_t temp = 0;
+		printf("¼´½«¼ÓÔØ¶¯Ì¬¿â\n");
+		scanf("%d", &temp);
+		CSystem::ClearScanf();
+
+		StockConditionInterface::instance().load();
+
+		StockFund stockFund;
+		stockFund.add(100000);
+		
+		StockStrategy stockStrategy;
+		stockStrategy.init(StockConditionInterface::instance().condition()->getStrategy(), &stockFund);
+		watch.SetWatchTime(0);
+		stockStrategy.run(vecStock, beginTime, endTime);
+		RCSend("runTime = %d", watch.GetWatchTime());
+		stockFund.allFund(endTime);
+		std::vector<std::string> stockLog = stockFund.stockLog();
+		int32_t index = -1;
+		while (index++ != stockLog.size() - 1)
 		{
-			itStock = vecStock.erase(itStock);
-			continue;
+			RCSend("%s", stockLog[index].c_str());
 		}
-		else if (*itStock == "603721")
-		{
-			itStock = vecStock.erase(itStock);
-			continue;
-		}
-		++itStock;
+		StockConditionInterface::instance().unload();
+		printf("ÒÑÐ¶ÔØ¶¯Ì¬¿â\n");
 	}
-	//vecStock.push_back("000681");
-	stockStrategy.run(vecStock, "2009-04-30", "2019-04-30");//StockAllMarket::instance().allStock()
-	stockFund.allFund("2019-04-30");
-	std::vector<std::string> stockLog = stockFund.stockLog();
-	int32_t index = -1;
-	while (index++ != stockLog.size() - 1)
-	{
-		RCSend("%s", stockLog[index].c_str());
-	}
+	
 	getchar();
 	return 0;
 }

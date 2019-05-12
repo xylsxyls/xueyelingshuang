@@ -48,6 +48,12 @@
     <ClInclude Include="CSmallFlashTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="CWeqTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CRightClickTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -69,6 +75,12 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CSmallFlashTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CWeqTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CRightClickTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

@@ -22,8 +22,13 @@
 #pragma warning(pop)
 #endif
 
+#ifdef _WIN64
+#pragma comment(lib, "mysqlcppconn_64.lib")
+#pragma comment(lib, "mysqlcppconn-static_64.lib")
+#elif _WIN32
 #pragma comment(lib, "mysqlcppconn.lib")
 #pragma comment(lib, "mysqlcppconn-static.lib")
+#endif
 
 MysqlCpp::MysqlCpp():
 m_driver(nullptr),
@@ -87,7 +92,7 @@ std::shared_ptr<MysqlCppPrepareStatement> MysqlCpp::PreparedStatementCreator(con
 	}
 }
 
-std::shared_ptr<MysqlCppResultSet> MysqlCpp::execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement) const
+std::shared_ptr<MysqlCppResultSet> MysqlCpp::execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement, bool isCommit) const
 {
 	if (!check())
 	{
@@ -101,7 +106,10 @@ std::shared_ptr<MysqlCppResultSet> MysqlCpp::execute(const std::shared_ptr<Mysql
 			return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(nullptr));
 		}
 		sql::ResultSet* result = preparedStatement->executeQuery();
-		result != nullptr ? commit() : rollback();
+		if (isCommit)
+		{
+			result != nullptr ? commit() : rollback();
+		}
 		return std::shared_ptr<MysqlCppResultSet>(new MysqlCppResultSet(result));
 	}
 	catch (...)

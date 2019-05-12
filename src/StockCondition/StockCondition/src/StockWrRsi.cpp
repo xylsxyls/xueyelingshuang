@@ -1,6 +1,6 @@
 #include "StockWrRsi.h"
 
-std::vector<StockHandle> StockWrRsi::strategy(const IntDateTime& date, const std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>>& validStock)
+void StockWrRsi::strategy(const IntDateTime& date, const std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>>& validStock, std::vector<StockHandle>& vecStockHandle)
 {
 	/** 买卖条件，最多两只票
 	买：
@@ -23,10 +23,10 @@ std::vector<StockHandle> StockWrRsi::strategy(const IntDateTime& date, const std
 	6.WR小于10且有收益且非涨停卖出
 	*/
 
-	std::vector<StockHandle> vecStockHandle;
+	vecStockHandle.clear();
 	if (m_stockFund->stockNum() != 0)
 	{
-		std::vector<std::string> vecOwnedStock = m_stockFund->ownedStock();
+		const std::vector<std::string>& vecOwnedStock = m_stockFund->ownedStock();
 		int32_t index = -1;
 		while (index++ != vecOwnedStock.size() - 1)
 		{
@@ -36,14 +36,20 @@ std::vector<StockHandle> StockWrRsi::strategy(const IntDateTime& date, const std
 			{
 				if (needSell(date, itValidStock->second.first, itValidStock->second.second))
 				{
-					vecStockHandle.push_back(StockHandle(false, ownedStock, 1, itValidStock->second.first->close(date), 1, 0));
+					m_stockHandle.m_isBuy = false;
+					m_stockHandle.m_stock = ownedStock;
+					m_stockHandle.m_freezeOrFree = 1;
+					m_stockHandle.m_price = itValidStock->second.first->close(date);
+					m_stockHandle.m_rate = 1;
+					m_stockHandle.m_freeBeforeBuy = 0;
+					vecStockHandle.push_back(m_stockHandle);
 				}
 			}
 		}
 	}
 	if (m_stockFund->hasFreezeFund())
 	{
-		std::vector<std::string> vecOwnedStock = m_stockFund->ownedStock();
+		const std::vector<std::string>& vecOwnedStock = m_stockFund->ownedStock();
 		int32_t index = -1;
 		while (index++ != vecOwnedStock.size() - 1)
 		{
@@ -53,23 +59,36 @@ std::vector<StockHandle> StockWrRsi::strategy(const IntDateTime& date, const std
 			{
 				if (addBuy(date, itValidStock->second.first, itValidStock->second.second))
 				{
-					vecStockHandle.push_back(StockHandle(true, ownedStock, 0, itValidStock->second.first->close(date), 1, 1));
+					m_stockHandle.m_isBuy = true;
+					m_stockHandle.m_stock = ownedStock;
+					m_stockHandle.m_freezeOrFree = 0;
+					m_stockHandle.m_price = itValidStock->second.first->close(date);
+					m_stockHandle.m_rate = 1;
+					m_stockHandle.m_freeBeforeBuy = 1;
+					vecStockHandle.push_back(m_stockHandle);
 				}
 			}
 		}
 	}
 	else if (m_stockFund->hasAvailableFund())
 	{
-		std::vector<std::pair<std::string, BigNumber>> vecChooseStock = availBuyStock(date, validStock);
-		if (!vecChooseStock.empty())
+		availBuyStock(date, validStock, m_vecChooseStock);
+		if (!m_vecChooseStock.empty())
 		{
-			vecStockHandle.push_back(StockHandle(true, vecChooseStock[0].first, 1, vecChooseStock[0].second, m_stockFund->stockNum() == 0 ? 0.5 : 1, 0));
+			m_stockHandle.m_isBuy = true;
+			m_stockHandle.m_stock = m_vecChooseStock[0].first;
+			m_stockHandle.m_freezeOrFree = 1;
+			m_stockHandle.m_price = m_vecChooseStock[0].second;
+			m_stockHandle.m_rate = ((m_stockFund->stockNum() == 0) ? 0.5 : 1);
+			m_stockHandle.m_freeBeforeBuy = 0;
+			vecStockHandle.push_back(m_stockHandle);
 		}
 	}
-	return vecStockHandle;
 }
 
-std::vector<std::pair<std::string, BigNumber>> StockWrRsi::availBuyStock(const IntDateTime& date, const std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>>& validStock)
+void StockWrRsi::availBuyStock(const IntDateTime& date,
+	const std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>>& validStock,
+	std::vector<std::pair<std::string, BigNumber>>& vecAvailBuyStock)
 {
 	/**
 	1.WR>95,RSI<45,RSI>30，
@@ -82,8 +101,8 @@ std::vector<std::pair<std::string, BigNumber>> StockWrRsi::availBuyStock(const I
 	8.rsi24-rsi6最大优先
 	下仓一半
 	*/
-	std::vector<std::pair<std::string, BigNumber>> result;
-	std::map <BigNumber, std::vector<std::pair<std::string, BigNumber>>>  mapChooseStock;
+	vecAvailBuyStock.clear();
+	m_mapChooseStock.clear();
 	for (auto itValidStock = validStock.begin(); itValidStock != validStock.end(); ++itValidStock)
 	{
 		const std::string& stock = itValidStock->first;
@@ -102,34 +121,37 @@ std::vector<std::pair<std::string, BigNumber>> StockWrRsi::availBuyStock(const I
 		const BigNumber& wr10Pre = spStockIndex->wr10(preDate);
 		const BigNumber& wr10 = spStockIndex->wr10(date);
 		const BigNumber& rsi6 = spStockIndex->rsi6(date);
+		const BigNumber& rsi6Pre = spStockIndex->rsi6(preDate);
+		const BigNumber& rsi12 = spStockIndex->rsi12(date);
 		const BigNumber& rsi24 = spStockIndex->rsi24(date);
 		const BigNumber& downValue = spStockMarket->downValue(date);
 		const BigNumber& entityValue = spStockMarket->entityValue(date);
 		const BigNumber& chgValue = spStockMarket->chgValue(date);
-		if ((wr10 > 95 && rsi24 < 45 && rsi24 > 30) &&
+		if ((wr10 > 95 && rsi24 < 43 && rsi24 > 37/*&& rsi24 > 35*/) &&
 			(wr10Pre < wr10) &&
-			(spStockMarket->low(date) < spStockMarket->low(preDate)) &&
+			//(spStockMarket->low(date) < spStockMarket->low(preDate)) &&
 			((entityValue != 0) && (downValue / entityValue.toPrec(4) < (1 / 4.0))) &&
-			(chgValue < -2 || spStockMarket->chgValue(preDate) < -3) &&
+			//(chgValue < -2 || spStockMarket->chgValue(preDate) < -3) &&
 			(close > 10) &&
 			(!spStockMarket->isLimitDown(date)))
-		//if ((wr10 > 80 && rsi24 < 50 && close > 10) &&
+		//if ((wr10 > 95 && rsi24 < 50 && rsi24 > 40 && close > 0) &&
 		//	//wr10Pre < wr10 &&
 		//	chgValue > -9)
 		{
-			mapChooseStock[rsi24 - rsi6].push_back(std::pair<std::string, BigNumber>(stock, close));
+			m_chooseStock.first = stock;
+			m_chooseStock.second = close;
+			m_mapChooseStock[rsi24 - rsi6].push_back(m_chooseStock);
 		}
 	}
-	for (auto itChooseStock = mapChooseStock.rbegin(); itChooseStock != mapChooseStock.rend(); ++itChooseStock)
+	for (auto itChooseStock = m_mapChooseStock.rbegin(); itChooseStock != m_mapChooseStock.rend(); ++itChooseStock)
 	{
-		std::vector<std::pair<std::string, BigNumber>>& vecStock = itChooseStock->second;
+		const std::vector<std::pair<std::string, BigNumber>>& vecStock = itChooseStock->second;
 		int32_t index = -1;
 		while (index++ != vecStock.size() - 1)
 		{
-			result.push_back(vecStock[index]);
+			vecAvailBuyStock.push_back(vecStock[index]);
 		}
 	}
-	return result;
 }
 
 bool StockWrRsi::addBuy(const IntDateTime& date, const std::shared_ptr<StockMarket>& spStockMarket, const std::shared_ptr<StockIndex>& spStockIndex)
@@ -138,6 +160,7 @@ bool StockWrRsi::addBuy(const IntDateTime& date, const std::shared_ptr<StockMark
 	1.WR>90,RSI<45,RSI>30，
 	2.前一日WR比今日低，
 	3.今日最低低于昨日最低上浮一个点，
+	4.非跌停
 	*/
 	if (!spStockMarket->dateExist(date))
 	{
@@ -151,9 +174,10 @@ bool StockWrRsi::addBuy(const IntDateTime& date, const std::shared_ptr<StockMark
 	const BigNumber& wr10Pre = spStockIndex->wr10(preDate);
 	const BigNumber& wr10 = spStockIndex->wr10(date);
 	const BigNumber& rsi24 = spStockIndex->rsi24(date);
-	if ((wr10 > 90 && rsi24 < 45 && rsi24 > 30) &&
+	if ((wr10 > 95 && rsi24 < 43 && rsi24 > 37/*rsi24 < 45 && rsi24 > 30*/) &&
 		(wr10Pre < wr10) &&
-		(spStockMarket->low(date) < spStockMarket->low(preDate) * 1.01))
+		(spStockMarket->low(date) < spStockMarket->low(preDate) * 1.01) &&
+		(!spStockMarket->isLimitDown(date)))
 	{
 		return true;
 	}
@@ -162,6 +186,34 @@ bool StockWrRsi::addBuy(const IntDateTime& date, const std::shared_ptr<StockMark
 
 bool StockWrRsi::needSell(const IntDateTime& date, const std::shared_ptr<StockMarket>& spStockMarket, const std::shared_ptr<StockIndex>& spStockIndex)
 {
+	const std::string& stock = spStockMarket->stock();
+	const std::vector<IntDateTime>& vecTime = m_stockFund->ownedTime(stock);
+	if (vecTime.empty())
+	{
+		return false;
+	}
+	const IntDateTime& firstBuyTime = vecTime[0];
+	BigNumber days = spStockMarket->getDays(vecTime[0], date);
+	BigNumber chg = 0;
+	bool res = m_stockFund->stockChg(stock, date, chg);
+	bool firstBuy = (vecTime.size() == 1);
+	if (firstBuy)
+	{
+		if (days == 2)
+		{
+			if (spStockMarket->chgValue(date) > 0 && spStockMarket->close(date) < ((spStockMarket->open(firstBuyTime) - spStockMarket->close(firstBuyTime)).toPrec(6) * 2 / 3 + spStockMarket->close(firstBuyTime)))
+			{
+				return true;
+			}
+		}
+		else
+		{
+			if (chg > 0 && spStockMarket->entityValue(date) < spStockMarket->upValue(date) * 2)
+			{
+				return true;
+			}
+		}
+	}
 	return spStockIndex->wr10(date) < 50 && spStockMarket->chgValue(date) < 9.8;
 
 	//const BigNumber& stockNum = m_stockFund->stockNum();

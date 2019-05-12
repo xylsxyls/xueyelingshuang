@@ -45,18 +45,24 @@ public:
 	void free(const BigNumber& rate);
 
 	/** 总资金
-	@param [in] date 日期
+	@param [in] date 日期，该日期可以不是交易日
 	@return 返回总资金
 	*/
 	BigNumber allFund(const IntDateTime& date);
 
 	/** 计算所持股票在指定日期内的涨跌幅，已经放大100倍，包含百分号
-	@param [in] stock 股票
+	@param [in] stock 股票代码
 	@param [in] date 日期
 	@param [out] chg 涨跌幅
 	@return 返回是否获取成功
 	*/
 	bool stockChg(const std::string& stock, const IntDateTime& date, BigNumber& chg) const;
+
+	/** 获取该股票的买入时间
+	@param [in] stock 股票代码
+	@return 返回该股票的买入时间
+	*/
+	std::vector<IntDateTime> ownedTime(const std::string& stock);
 
 	/** 获取某只股票的买卖情况
 	@return 返回某只股票的买卖情况

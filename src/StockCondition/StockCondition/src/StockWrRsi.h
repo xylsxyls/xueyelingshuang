@@ -8,16 +8,18 @@ public:
 	/** 策略
 	@param [in] date 日期
 	@param [in] validStock 有效的股票集合，股票代码，股票行情，股票指标
-	@return 返回买卖的股票，买为true，股票代码，冻结或解冻，都是整数
+	@param [out] 传出买卖的股票，买为true，股票代码，冻结或解冻，都是正数
 	*/
-	virtual std::vector<StockHandle> strategy(const IntDateTime& date, const std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>>& validStock);
+	virtual void strategy(const IntDateTime& date, const std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>>& validStock, std::vector<StockHandle>& vecStockHandle);
 
 	/** 购买逻辑
 	@param [in] date 日期
 	@param [in] validStock 有效的股票集合，股票代码，股票行情，股票指标
-	@return 返回可购买的股票集合，股票代码，购买价格
+	@param [out] vecAvailBuyStock 传出可购买的股票集合，股票代码，购买价格
 	*/
-	std::vector<std::pair<std::string, BigNumber>> availBuyStock(const IntDateTime& date, const std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>>& validStock);
+	void availBuyStock(const IntDateTime& date,
+		const std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>>& validStock,
+		std::vector<std::pair<std::string, BigNumber>>& vecAvailBuyStock);
 
 	/** 补买逻辑
 	@param [in] date 日期
@@ -34,4 +36,10 @@ public:
 	@return 返回是否需要卖出
 	*/
 	bool needSell(const IntDateTime& date, const std::shared_ptr<StockMarket>& stockMarket, const std::shared_ptr<StockIndex>& stockIndex);
+
+private:
+	StockHandle m_stockHandle;
+	std::vector<std::pair<std::string, BigNumber>> m_vecChooseStock;
+	std::map <BigNumber, std::vector<std::pair<std::string, BigNumber>>> m_mapChooseStock;
+	std::pair<std::string, BigNumber> m_chooseStock;
 };

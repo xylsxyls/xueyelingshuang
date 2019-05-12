@@ -43,3 +43,18 @@ goto StockIndex_end
 call "%CLOUD_REBUILD%" StockIndex %StockIndex_bit% %StockIndex_dlllib% %StockIndex_debugRelease%
 goto StockIndex_end
 :StockIndex_end
+
+::--------------------------------------------------------------------
+set CStopWatch_dlllib=lib
+set CStopWatch_bit=%1
+set CStopWatch_debugRelease=%3
+set CStopWatch_allSame=%4
+if "%4" == "same" (goto CStopWatch_callSame) else (goto CStopWatch_callSimple)
+:CStopWatch_callSame
+set CStopWatch_dlllib=%2
+call "%CLOUD_REBUILD%" CStopWatch %CStopWatch_bit% %CStopWatch_dlllib% %CStopWatch_debugRelease% %CStopWatch_allSame%
+goto CStopWatch_end
+:CStopWatch_callSimple
+call "%CLOUD_REBUILD%" CStopWatch %CStopWatch_bit% %CStopWatch_dlllib% %CStopWatch_debugRelease%
+goto CStopWatch_end
+:CStopWatch_end

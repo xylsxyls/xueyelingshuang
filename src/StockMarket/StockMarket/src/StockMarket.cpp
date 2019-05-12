@@ -240,6 +240,11 @@ BigNumber StockMarket::entityValue(const IntDateTime& date) const
 	return (open(date) - close(date)).abs();
 }
 
+BigNumber StockMarket::riseFallValue(const IntDateTime& date) const
+{
+	return close(date) - preClose(date);
+}
+
 BigNumber StockMarket::chgValue(const IntDateTime& date) const
 {
 	return (((close(date) / preClose(date).toPrec(6)) - 1) * 100).toPrec(2);
@@ -247,17 +252,26 @@ BigNumber StockMarket::chgValue(const IntDateTime& date) const
 
 bool StockMarket::isLimitUp(const IntDateTime& date) const
 {
-	return (preClose(date).toPrec(6) * 1.1).toPrec(2) == close(date);
+	return (preClose(date).toPrec(6) * 1.1).toPrec(2) <= close(date);
 }
 
 bool StockMarket::isLimitDown(const IntDateTime& date) const
 {
-	return (preClose(date).toPrec(6) * 0.9).toPrec(2) == close(date);
+	return (preClose(date).toPrec(6) * 0.9).toPrec(2) >= close(date);
 }
 
 bool StockMarket::dateExist(const IntDateTime& date) const
 {
 	return m_history.find(date) != m_history.end();
+}
+
+IntDateTime StockMarket::beginDate()
+{
+	if (m_history.empty())
+	{
+		return IntDateTime(0, 0);
+	}
+	return m_history.begin()->first;
 }
 
 bool StockMarket::getDatePre(const IntDateTime& date, IntDateTime& preDate) const
@@ -316,6 +330,33 @@ bool StockMarket::getMarketNext(const IntDateTime& date, IntDateTime& nextDate, 
 	}
 	nextData = m_history.find(nextDate)->second;
 	return true;
+}
+
+BigNumber StockMarket::getDays(const IntDateTime& date1, const IntDateTime& date2)
+{
+	if (date1 > date2)
+	{
+		return 0;
+	}
+	if (date1 == date2)
+	{
+		return 1;
+	}
+	BigNumber days = 1;
+	IntDateTime preDate = date2;
+	while (getDatePre(preDate, preDate))
+	{
+		++days;
+		if (date1 == preDate)
+		{
+			return days;
+		}
+		else if (preDate < date1)
+		{
+			return 0;
+		}
+	}
+	return 0;
 }
 
 std::map<IntDateTime, std::vector<BigNumber>> StockMarket::history() const

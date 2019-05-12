@@ -47,3 +47,8 @@ void StockCondition::destroyAll()
 		delete itStrategy->second;
 	}
 }
+
+StockCondition* StockConditionInterface()
+{
+	return &StockCondition::instance();
+}

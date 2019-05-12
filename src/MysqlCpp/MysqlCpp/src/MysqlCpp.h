@@ -53,7 +53,7 @@ public:
 	@param [in] statement 条件语句
 	@return 返回查询结果
 	*/
-	std::shared_ptr<MysqlCppResultSet> execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement) const;
+	std::shared_ptr<MysqlCppResultSet> execute(const std::shared_ptr<MysqlCppPrepareStatement>& statement, bool isCommit = true) const;
 
 	/** 导入
 	@param [in] sqlPath 导入的sql文件路径

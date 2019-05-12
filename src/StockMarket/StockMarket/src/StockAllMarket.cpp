@@ -20,15 +20,24 @@ void StockAllMarket::init()
 	m_mysql.connect("127.0.0.1", 3306, "root", "");
 }
 
-void StockAllMarket::load()
+void StockAllMarket::load(const std::vector<std::string>& vecNeedStock)
 {
 	m_allHistory.clear();
 	m_mysql.selectDb("stockmarket");
-	std::vector<std::vector<std::string>> vecStock = m_mysql.execute(m_mysql.PreparedStatementCreator("select table_name from information_schema.tables where table_schema='stockmarket'"))->toVector();
-	int32_t index = -1;
-	while (index++ != vecStock.size() - 1)
+
+	std::vector<std::vector<std::string>> vecAllStock;
+	size_t size = vecNeedStock.size();
+	if (vecNeedStock.empty())
 	{
-		std::string& tableName = vecStock[index][0];
+		vecAllStock = m_mysql.execute(m_mysql.PreparedStatementCreator("select table_name from information_schema.tables where table_schema='stockmarket'"))->toVector();
+		size = vecAllStock.size();
+	}
+
+	int32_t index = -1;
+	while (index++ != size - 1)
+	{
+		RCSend("market load = %d", index + 1);
+		const std::string& tableName = (vecNeedStock.empty() ? vecAllStock[index][0] : vecNeedStock[index]);
 		if (tableName.size() != 6)
 		{
 			continue;
@@ -63,6 +72,7 @@ void StockAllMarket::save(const std::string& folder)
 	int32_t index = -1;
 	while (index++ != vecTxt.size() - 1)
 	{
+		RCSend("market = %d", index + 1);
 		std::string& file = vecTxt[index];
 		std::string stock = CGetPath::GetName(file, 3);
 
@@ -72,9 +82,9 @@ void StockAllMarket::save(const std::string& folder)
 		vecFields.push_back("high varchar(7)");
 		vecFields.push_back("low varchar(7)");
 		vecFields.push_back("close varchar(7)");
-		m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableString(stock, vecFields)));
+		m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableString(stock, vecFields)), false);
 		Ctxt txt(file);
-		txt.LoadTxt(Ctxt::SPLIT, "\t\t");
+		txt.LoadTxt(Ctxt::SPLIT, "\t");
 		int32_t lineIndex = 0;
 		while (lineIndex++ != txt.m_vectxt.size() - 1)
 		{
@@ -84,19 +94,19 @@ void StockAllMarket::save(const std::string& folder)
 				break;
 			}
 			IntDateTime date = vec[0];
-			std::vector<std::string> price = CStringManager::split(vec[1], "\t");
-			std::string& open = price[1];
-			std::string& high = txt.m_vectxt[lineIndex][1];
-			std::string& low = txt.m_vectxt[lineIndex][2];
-			std::string& close = txt.m_vectxt[lineIndex][3];
+			std::string& open = txt.m_vectxt[lineIndex][1];
+			std::string& high = txt.m_vectxt[lineIndex][3];
+			std::string& low = txt.m_vectxt[lineIndex][5];
+			std::string& close = txt.m_vectxt[lineIndex][7];
 			auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString(stock, "date,open,high,low,close"));
 			prepare->setString(0, date.dateToString());
 			prepare->setString(1, open);
 			prepare->setString(2, high);
 			prepare->setString(3, low);
 			prepare->setString(4, close);
-			m_mysql.execute(prepare);
+			m_mysql.execute(prepare, false);
 		}
+		m_mysql.commit();
 	}
 }
 

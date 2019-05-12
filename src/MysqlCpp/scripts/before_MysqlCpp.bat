@@ -18,7 +18,7 @@ goto DllRelyTest_end
 set bat=%~dp0
 set xueyelingshuang=%bat%..\..\..\
 
-call "%xueyelingshuang%src\mysqlcpp\public.bat" %3
+call "%xueyelingshuang%src\mysqlcpp\public.bat" %1 %3
 
 ::--------------------------------------------------------------------
 set SqlString_dlllib=lib

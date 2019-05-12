@@ -19,7 +19,16 @@ set bat=%~dp0
 set xueyelingshuang=%bat%..\..\..\
 
 xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\include\gmp.h" "%xueyelingshuang%include\"
+
+if "%1" == "32" (goto BigNumberBase_32) else (goto BigNumberBase_64)
+:BigNumberBase_32
 xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\lib\gmp.lib" "%xueyelingshuang%lib\"
+goto BigNumberBase_end
+:BigNumberBase_64
+xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp64.dll\gmp64.dll\libgmp.dll.lib" "%xueyelingshuang%lib\"
+xcopy /y /i /r /s "%xueyelingshuang%tools\gmp\gmp64.dll\gmp64.dll\libgmp-10.dll" "%xueyelingshuang%lib\"
+goto BigNumberBase_end
+:BigNumberBase_end
 
 ::--------------------------------------------------------------------
 set CStringManager_dlllib=lib

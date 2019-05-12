@@ -29,7 +29,7 @@
     <ClCompile Include="..\src\StockWrRsi.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{66131736-C4AD-4002-AD01-CD5938760BB9}</ProjectGuid>
     <RootNamespace>StockCondition</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

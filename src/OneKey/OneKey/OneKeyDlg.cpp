@@ -13,7 +13,8 @@
 #include "CNoFlashTask.h"
 #include "CqNoFlashTask.h"
 #include "CSmallFlashTask.h"
-#include "D:\\SendToMessageTest.h"
+#include "CWeqTask.h"
+#include "CRightClickTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -21,6 +22,7 @@
 
 CStopWatch stopWatch;
 
+int32_t type = 1;
 bool wDown = false;
 bool eDown = false;
 bool dDown = false;
@@ -28,6 +30,7 @@ bool fDown = false;
 bool qDown = false;
 bool rDown = false;
 bool threeDown = false;
+bool fiveDown = false;
 bool enter = false;
 
 std::atomic<bool> rightMouse = true;
@@ -79,6 +82,7 @@ void COneKeyDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_BUTTON1, m_button);
+	DDX_Control(pDX, IDC_COMBO1, m_type);
 }
 
 BEGIN_MESSAGE_MAP(COneKeyDlg, CDialogEx)
@@ -87,6 +91,7 @@ BEGIN_MESSAGE_MAP(COneKeyDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &COneKeyDlg::OnBnClickedButton1)
 	ON_WM_DESTROY()
+	ON_CBN_SELCHANGE(IDC_COMBO1, &COneKeyDlg::OnSelchangeCombo1)
 END_MESSAGE_MAP()
 
 LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
@@ -140,6 +145,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			threeDown = true;
 		}
+		else if (vkCode == '5')
+		{
+			fiveDown = true;
+		}
 	}
 	else if (CHook::IsKeyUp(wParam))
 	{
@@ -175,6 +184,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			threeDown = false;
 		}
+		else if (vkCode == '5')
+		{
+			fiveDown = false;
+		}
 	}
 
 	if (enter)
@@ -188,40 +201,60 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		goto Exit;
 	}
 
-	if (wDown && eDown && stopWatch.GetWatchTime() > 500)
+	if (type == 1)
 	{
-		stopWatch.SetWatchTime(0);
-		std::shared_ptr<CNoFlashTask> spTask;
-		spTask.reset(new CNoFlashTask);
-		taskThread->PostTask(spTask, 1);
+		if (wDown && eDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CNoFlashTask> spTask;
+			spTask.reset(new CNoFlashTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		else if (qDown && wDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CqNoFlashTask> spTask;
+			spTask.reset(new CqNoFlashTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		else if (wDown && dDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CFlashTask> spTask;
+			spTask.reset(new CFlashTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		else if (dDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CSmallFlashTask> spTask;
+			spTask.reset(new CSmallFlashTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		else if (wDown && threeDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CqNoFlashTask> spTask;
+			spTask.reset(new CqNoFlashTask);
+			taskThread->PostTask(spTask, 1);
+		}
 	}
-	else if (qDown && wDown && stopWatch.GetWatchTime() > 500)
+	else if (type == 2)
 	{
-		stopWatch.SetWatchTime(0);
-		std::shared_ptr<CqNoFlashTask> spTask;
-		spTask.reset(new CqNoFlashTask);
-		taskThread->PostTask(spTask, 1);
-	}
-	else if (wDown && dDown && stopWatch.GetWatchTime() > 500)
-	{
-		stopWatch.SetWatchTime(0);
-		std::shared_ptr<CFlashTask> spTask;
-		spTask.reset(new CFlashTask);
-		taskThread->PostTask(spTask, 1);
-	}
-	else if (dDown && stopWatch.GetWatchTime() > 500)
-	{
-		stopWatch.SetWatchTime(0);
-		std::shared_ptr<CSmallFlashTask> spTask;
-		spTask.reset(new CSmallFlashTask);
-		taskThread->PostTask(spTask, 1);
-	}
-	else if (wDown && threeDown && stopWatch.GetWatchTime() > 500)
-	{
-		stopWatch.SetWatchTime(0);
-		std::shared_ptr<CqNoFlashTask> spTask;
-		spTask.reset(new CqNoFlashTask);
-		taskThread->PostTask(spTask, 1);
+		if (threeDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CWeqTask> spTask;
+			spTask.reset(new CWeqTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		//else if (rDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CRightClickTask> spTask;
+		//	spTask.reset(new CRightClickTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
 	}
 
 	Exit:
@@ -261,6 +294,9 @@ BOOL COneKeyDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+	m_type.AddString("刀锋");
+	m_type.AddString("劫");
+	m_type.SelectString(0, "刀锋");
 	m_button.SetFocus();
 	g_threadId = CTaskThreadManager::Instance().Init();
 	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);
@@ -333,4 +369,20 @@ void COneKeyDlg::OnDestroy()
 	// TODO:  在此处添加消息处理程序代码
 	CHook::Uninit();
 	CTaskThreadManager::Instance().UninitAll();
+}
+
+
+void COneKeyDlg::OnSelchangeCombo1()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	CString str;
+	m_type.GetWindowText(str);
+	if (str == "刀锋")
+	{
+		type = 1;
+	}
+	else if (str == "劫")
+	{
+		type = 2;
+	}
 }

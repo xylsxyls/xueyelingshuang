@@ -129,6 +129,11 @@ IntDateTime IntDateTime::operator=(const time_t& time)
 	return *this;
 }
 
+bool IntDateTime::empty() const
+{
+	return m_date == 0 && m_time == 0;
+}
+
 void IntDateTime::setTime(int32_t date, int32_t time)
 {
 	m_date = date;

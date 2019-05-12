@@ -14,4 +14,5 @@ Strategy::~Strategy()
 void Strategy::init(StockFund* stockFund)
 {
 	m_stockFund = stockFund;
+	RCSend("init");
 }

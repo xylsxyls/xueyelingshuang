@@ -26,7 +26,29 @@ BigNumber StockIndex::rsi(int32_t days, const IntDateTime& date, const std::shar
 			negativeNumber = negativeNumber + closeNode;
 		}
 	}
-	return (positiveNumber.setPrec(6) / (positiveNumber - negativeNumber) * 100).toPrec(2);
+	return (positiveNumber.setPrec(6) / (positiveNumber - negativeNumber).zero() * 100).toPrec(2);
+}
+
+std::map<IntDateTime, BigNumber> StockIndex::rsiTongHuaShun(int32_t days, const std::shared_ptr<StockMarket>& stockMarket)
+{
+	std::map<IntDateTime, BigNumber> mapRsi;
+	BigNumber riseAvg = 0;
+	BigNumber allAvg = 0;
+	IntDateTime date = stockMarket->beginDate();
+	if (date.empty())
+	{
+		return mapRsi;
+	}
+	mapRsi[date] = BigNumber(100).toPrec(2);
+	int32_t dateIndex = 1;
+	while (stockMarket->getDateNext(date, date))
+	{
+		BigNumber riseFall = stockMarket->riseFallValue(date);
+		riseAvg = (riseAvg * (days - 1) + (riseFall > 0 ? riseFall : 0)).toPrec(16) / days;
+		allAvg = (allAvg * (days - 1) + riseFall.abs()).toPrec(16) / days;
+		mapRsi[date] = (++dateIndex >= days ? (riseAvg / allAvg.zero() * 100).toPrec(2) : BigNumber(100).toPrec(2));
+	}
+	return mapRsi;
 }
 
 BigNumber StockIndex::wr(int32_t days, const IntDateTime& date, const std::shared_ptr<StockMarket>& spStockMarket)

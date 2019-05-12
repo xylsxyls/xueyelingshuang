@@ -40,8 +40,9 @@ public:
 	void save() const;
 
 	/** 加载
+	@param [in] vecNeedStock 需要加载的股票集合，填空代表加载全部
 	*/
-	void load();
+	void load(const std::vector<std::string>& vecNeedStock = std::vector<std::string>());
 
 private:
 #ifdef _MSC_VER

@@ -26,8 +26,9 @@ protected:
 
 public:
 	/** 加载股票历史行情
+	@param [in] 需要加载的股票集合，填空表示加载全部
 	*/
-	void load();
+	void load(const std::vector<std::string>& vecNeedStock = std::vector<std::string>());
 
 	/** 存储股票历史行情
 	@param [in] folder 存放股票行情的文件夹

@@ -3,6 +3,7 @@
 #include "StockIndex/StockIndexAPI.h"
 #include "Strategy.h"
 #include "StockFund/StockFundAPI.h"
+#include "CStopWatch/CStopWatchAPI.h"
 
 void StockStrategy::init(Strategy* strategy, StockFund* stockFund)
 {
@@ -21,7 +22,9 @@ void StockStrategy::run(const std::vector<std::string>& vecStock, const IntDateT
 	{
 		return;
 	}
+	CStopWatch watch;
 	std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>> vecValidStock;
+	std::vector<StockHandle> vecHandle;
 	IntDateTime time = beginTime;
 	do
 	{
@@ -41,11 +44,14 @@ void StockStrategy::run(const std::vector<std::string>& vecStock, const IntDateT
 		{
 			continue;
 		}
-		std::vector<StockHandle> vecHandle = m_strategy->strategy(time, vecValidStock);
+		vecHandle.clear();
+		watch.Run();
+		m_strategy->strategy(time, vecValidStock, vecHandle);
+		watch.Stop();
 		int32_t handleIndex = -1;
 		while (handleIndex++ != vecHandle.size() - 1)
 		{
-			StockHandle& handle = vecHandle[handleIndex];
+			const StockHandle& handle = vecHandle[handleIndex];
 			if (handle.m_isBuy)
 			{
 				if (handle.m_freeBeforeBuy != 0)
@@ -72,6 +78,7 @@ void StockStrategy::run(const std::vector<std::string>& vecStock, const IntDateT
 			}
 		}
 	} while ((time = time + 86400) <= endTime);
+	RCSend("StockStrategy run watch = %d", watch.GetWatchTime());
 }
 
 bool StockStrategy::check()

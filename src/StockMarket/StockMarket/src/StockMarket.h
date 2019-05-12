@@ -142,6 +142,12 @@ public:
 	*/
 	BigNumber entityValue(const IntDateTime& date) const;
 
+	/** 涨跌
+	@param [in] date 日期
+	@return 返回涨跌
+	*/
+	BigNumber riseFallValue(const IntDateTime& date) const;
+
 	/** 涨跌幅，已乘以100，包含百分号
 	@param [in] date 日期
 	@return 返回涨跌幅
@@ -165,6 +171,11 @@ public:
 	@return 返回当前交易日是否存在
 	*/
 	bool dateExist(const IntDateTime& date) const;
+
+	/** 获取第一个交易日
+	@return 返回第一个交易日
+	*/
+	IntDateTime beginDate();
 
 	/** 获取上一个交易日日期
 	@param [in] date 日期
@@ -211,6 +222,13 @@ public:
 	@return 返回是否获取成功
 	*/
 	bool getMarketNext(const IntDateTime& date, int32_t days, std::map<IntDateTime, std::vector<BigNumber>>& nextDaysData) const;
+
+	/** 获取两个日期之间的交易日天数
+	@param [in] date1 交易日日期1，1小
+	@param [in] date2 交易日日期2，2大
+	@return 返回间隔天数，包括头尾
+	*/
+	BigNumber getDays(const IntDateTime& date1, const IntDateTime& date2);
 
 	/** 获取该行情历史
 	@return 返回该行情历史

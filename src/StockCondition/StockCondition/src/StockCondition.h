@@ -2,6 +2,9 @@
 #include "StockConditionMacro.h"
 #include <map>
 
+class StockCondition;
+extern "C" StockConditionAPI StockCondition* StockConditionInterface();
+
 class Strategy;
 class StockConditionAPI StockCondition
 {
@@ -18,7 +21,7 @@ private:
 
 	/** 析构函数
 	*/
-	~StockCondition();
+	virtual ~StockCondition();
 
 public:
 	/** 单一实例
@@ -31,11 +34,11 @@ public:
 	@param [in] condition 策略基于条件
 	@return 返回策略接口
 	*/
-	Strategy* getStrategy(ConditionEnum condition = WR_RSI);
+	virtual Strategy* getStrategy(ConditionEnum condition = WR_RSI);
 
 	/** 释放所有策略接口
 	*/
-	void destroyAll();
+	virtual void destroyAll();
 
 private:
 #ifdef _MSC_VER

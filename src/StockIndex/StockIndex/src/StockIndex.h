@@ -17,6 +17,13 @@ public:
 	*/
 	static BigNumber rsi(int32_t days, const IntDateTime& date, const std::shared_ptr<StockMarket>& stockMarket);
 
+	/** rsi同花顺指标
+	@param [in] days 周期
+	@param [in] stockMarket 行情
+	@return 返回rsi所有指标
+	*/
+	static std::map<IntDateTime, BigNumber> rsiTongHuaShun(int32_t days, const std::shared_ptr<StockMarket>& stockMarket);
+
 	/** wr指标
 	@param [in] days 周期
 	@param [in] date 计算日期

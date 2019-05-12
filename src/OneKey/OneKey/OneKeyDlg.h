@@ -34,4 +34,6 @@ public:
 	afx_msg void OnBnClickedButton1();
 	afx_msg void OnDestroy();
 	CButton m_button;
+	CComboBox m_type;
+	afx_msg void OnSelchangeCombo1();
 };

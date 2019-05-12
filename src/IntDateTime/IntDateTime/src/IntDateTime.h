@@ -251,6 +251,8 @@ public:
 		}
     }
 
+	bool empty() const;
+
 	void setTime(int32_t date, int32_t time);
 	void setTime(const std::string& time);
 	void setTime(time_t time);

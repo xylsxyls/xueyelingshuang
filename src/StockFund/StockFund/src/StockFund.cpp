@@ -156,6 +156,7 @@ void StockFund::free(const BigNumber& rate)
 
 BigNumber StockFund::allFund(const IntDateTime& date)
 {
+	IntDateTime lastTime = date;
 	BigNumber stockFund = 0;
 	for (auto itStock = m_stock.begin(); itStock != m_stock.end(); ++itStock)
 	{
@@ -167,9 +168,9 @@ BigNumber StockFund::allFund(const IntDateTime& date)
 		{
 			return -1;
 		}
-		if (!itStockMarket->second->dateExist(date))
+		while (!itStockMarket->second->dateExist(lastTime))
 		{
-			return -1;
+			lastTime = lastTime - 86400;
 		}
 
 		BigNumber position = 0;
@@ -178,7 +179,7 @@ BigNumber StockFund::allFund(const IntDateTime& date)
 		{
 			position = position + vecDeal[index].second.second;
 		}
-		stockFund = stockFund + itStockMarket->second->close(date) * position;
+		stockFund = stockFund + itStockMarket->second->close(lastTime) * position;
 	}
 	BigNumber allFund = stockFund + m_available + m_freeze;
 	std::string log;
@@ -230,6 +231,23 @@ bool StockFund::stockChg(const std::string& stock, const IntDateTime& date, BigN
 	//log.append("目前收益率：" + chg.toString() + "%");
 	//m_stockLog.push_back(log);
 	return true;
+}
+
+std::vector<IntDateTime> StockFund::ownedTime(const std::string& stock)
+{
+	std::vector<IntDateTime> result;
+	auto itStock = m_stock.find(stock);
+	if (itStock == m_stock.end())
+	{
+		return result;
+	}
+	const std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& stockTime = itStock->second;
+	int32_t index = -1;
+	while (index++ != stockTime.size() - 1)
+	{
+		result.push_back(stockTime[index].first);
+	}
+	return result;
 }
 
 std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>> StockFund::trade(const std::string& stock) const
