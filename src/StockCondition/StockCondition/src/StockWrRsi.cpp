@@ -127,11 +127,11 @@ void StockWrRsi::availBuyStock(const IntDateTime& date,
 		const BigNumber& downValue = spStockMarket->downValue(date);
 		const BigNumber& entityValue = spStockMarket->entityValue(date);
 		const BigNumber& chgValue = spStockMarket->chgValue(date);
-		if ((wr10 > 95 && rsi24 < 43 && rsi24 > 37/*&& rsi24 > 35*/) &&
+		if ((wr10 > 95 && rsi24 < 45 && rsi24 > 35/*&& rsi24 > 35*/) &&
 			(wr10Pre < wr10) &&
-			//(spStockMarket->low(date) < spStockMarket->low(preDate)) &&
+			(spStockMarket->low(date) < spStockMarket->low(preDate)) &&
 			((entityValue != 0) && (downValue / entityValue.toPrec(4) < (1 / 4.0))) &&
-			//(chgValue < -2 || spStockMarket->chgValue(preDate) < -3) &&
+			(chgValue < -2 || spStockMarket->chgValue(preDate) < -3) &&
 			(close > 10) &&
 			(!spStockMarket->isLimitDown(date)))
 		//if ((wr10 > 95 && rsi24 < 50 && rsi24 > 40 && close > 0) &&
@@ -174,7 +174,7 @@ bool StockWrRsi::addBuy(const IntDateTime& date, const std::shared_ptr<StockMark
 	const BigNumber& wr10Pre = spStockIndex->wr10(preDate);
 	const BigNumber& wr10 = spStockIndex->wr10(date);
 	const BigNumber& rsi24 = spStockIndex->rsi24(date);
-	if ((wr10 > 95 && rsi24 < 43 && rsi24 > 37/*rsi24 < 45 && rsi24 > 30*/) &&
+	if ((wr10 > 95 && rsi24 < 45 && rsi24 > 35/*rsi24 < 45 && rsi24 > 30*/) &&
 		(wr10Pre < wr10) &&
 		(spStockMarket->low(date) < spStockMarket->low(preDate) * 1.01) &&
 		(!spStockMarket->isLimitDown(date)))

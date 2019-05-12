@@ -21,6 +21,7 @@
 #endif
 
 CStopWatch stopWatch;
+CStopWatch sleepWatch;
 
 int32_t type = 1;
 bool wDown = false;
@@ -245,8 +246,14 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			stopWatch.SetWatchTime(0);
 			std::shared_ptr<CWeqTask> spTask;
-			spTask.reset(new CWeqTask);
+			CWeqTask* weqTask = new CWeqTask;
+			weqTask->setParam((sleepWatch.GetWatchTime()) > 20000 ? 20 : 0);
+			spTask.reset(weqTask);
 			taskThread->PostTask(spTask, 1);
+		}
+		else if (rDown)
+		{
+			sleepWatch.SetWatchTime(0);
 		}
 	}
 

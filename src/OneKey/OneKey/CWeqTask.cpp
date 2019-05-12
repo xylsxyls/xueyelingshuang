@@ -3,14 +3,24 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
 
+CWeqTask::CWeqTask():
+m_sleepTime(0)
+{
+
+}
+
 void CWeqTask::DoTask()
 {
-	//Sleep(20);
 	CKeyboard::KeyDown('W');
 	CKeyboard::KeyDown('E');
-	CKeyboard::KeyDown('Q');
+	
 	CKeyboard::KeyUp('W');
 	CKeyboard::KeyUp('E');
+	if (m_sleepTime != 0)
+	{
+		Sleep(m_sleepTime);
+	}
+	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('Q');
 	CMouse::RightClick(20);
 	CMouse::RightClick(20);
@@ -18,4 +28,9 @@ void CWeqTask::DoTask()
 	CMouse::RightClick(20);
 	CMouse::RightClick(20);
 	CMouse::RightClick(20);
+}
+
+void CWeqTask::setParam(int32_t sleepTime)
+{
+	m_sleepTime = sleepTime;
 }
