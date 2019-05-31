@@ -22,12 +22,6 @@ void CWeqTask::DoTask()
 	}
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('Q');
-	CMouse::RightClick(20);
-	CMouse::RightClick(20);
-	CMouse::RightClick(20);
-	CMouse::RightClick(20);
-	CMouse::RightClick(20);
-	CMouse::RightClick(20);
 }
 
 void CWeqTask::setParam(int32_t sleepTime)

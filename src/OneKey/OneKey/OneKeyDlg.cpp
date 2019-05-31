@@ -242,7 +242,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	}
 	else if (type == 2)
 	{
-		if (threeDown && stopWatch.GetWatchTime() > 3000)
+		if (threeDown && stopWatch.GetWatchTime() > 200)
 		{
 			stopWatch.SetWatchTime(0);
 			std::shared_ptr<CWeqTask> spTask;
