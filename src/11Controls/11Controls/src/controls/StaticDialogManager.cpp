@@ -55,7 +55,7 @@ void StaticDialogManager::popStaticDialog(DialogParam& param)
     }
     
     popDialogPtr->setWindowResultAddr(&(param.m_result));
-    popDialogPtr->setWindowTiTle(param.m_title);
+    popDialogPtr->setWindowTitle(param.m_title);
     popDialogPtr->setUserResultPtr(&(param.m_userResult));
     popDialogPtr->setTimeRest(param.m_timeOut);
     popDialogPtr->setTimeRestVisible(param.m_isCountDownVisible);

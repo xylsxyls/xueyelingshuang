@@ -28,7 +28,7 @@ public:
     @param [in] origin 当左对齐时窗口标题的偏移量
     @param [in] fontName 字体名
     */
-    void setWindowTiTle(const QString& title,
+    void setWindowTitle(const QString& title,
                         const QColor& color = QColor(221, 213, 198, 255),
                         qint32 fontSize = 12,
                         Qt::Alignment align = Qt::AlignVCenter | Qt::AlignLeft,

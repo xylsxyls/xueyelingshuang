@@ -22,7 +22,7 @@ void NotifyDialogManager::showDialog(DialogParam& param)
         askShowDialog->setTip(askShowDialogParam.m_tip);
         askShowDialog->setAcceptButton(askShowDialogParam.m_acceptText, ACCEPT_BUTTON);
         askShowDialog->setIgnoreButton(askShowDialogParam.m_ignoreText, IGNORE_BUTTON);
-		askShowDialog->setWindowTiTle(param.m_title);
+		askShowDialog->setWindowTitle(param.m_title);
 		param.m_dialogId = dialogId;
         notifyDialogPtr = askShowDialog;
         break;
@@ -38,7 +38,7 @@ void NotifyDialogManager::showDialog(DialogParam& param)
         }
         tipShowDialog->setTip(tipShowDialogParam.m_tip);
         tipShowDialog->setAcceptButton(tipShowDialogParam.m_buttonText, ACCEPT_BUTTON);
-		tipShowDialog->setWindowTiTle(param.m_title);
+		tipShowDialog->setWindowTitle(param.m_title);
 		param.m_dialogId = dialogId;
         notifyDialogPtr = tipShowDialog;
         break;
@@ -57,7 +57,7 @@ void NotifyDialogManager::showDialog(DialogParam& param)
         loginShowDialog->setMoreButton(loginShowDialogParam.m_urlButtonText, loginShowDialogParam.m_linkUrl, loginShowDialogParam.m_isUrlButtonVisible);
 		loginShowDialog->setPreLoginAddr(loginShowDialogParam.m_preLoginAddr);
 		loginShowDialog->setPreLoginTime(loginShowDialogParam.m_preLoginTime);
-		loginShowDialog->setWindowTiTle(param.m_title);
+		loginShowDialog->setWindowTitle(param.m_title);
 		param.m_dialogId = dialogId;
         notifyDialogPtr = loginShowDialog;
         break;
@@ -72,7 +72,7 @@ void NotifyDialogManager::showDialog(DialogParam& param)
 			return;
 		}
 		advertShowDialog->setAdvertUrl(advertShowDialogParam.m_advertUrl);
-		advertShowDialog->setWindowTiTle(param.m_title, QColor(255, 255, 255, 255), 14);
+		advertShowDialog->setWindowTitle(param.m_title, QColor(255, 255, 255, 255), 14);
 		param.m_dialogId = dialogId;
 		notifyDialogPtr = advertShowDialog;
 		break;

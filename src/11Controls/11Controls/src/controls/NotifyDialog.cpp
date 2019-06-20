@@ -92,14 +92,14 @@ void NotifyDialog::beginExitAnimation()
     m_animation.start();
 }
 
-void NotifyDialog::setWindowTiTle(const QString& title,
+void NotifyDialog::setWindowTitle(const QString& title,
                                   const QColor& color,
                                   qint32 fontSize,
                                   Qt::Alignment align,
                                   qint32 origin,
                                   const QString& fontName)
 {
-    DialogShow::setWindowTiTle(title, color, fontSize, align, origin, fontName);
+    DialogShow::setWindowTitle(title, color, fontSize, align, origin, fontName);
 }
 
 void NotifyDialog::showEvent(QShowEvent* eve)

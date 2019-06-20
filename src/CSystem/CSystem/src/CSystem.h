@@ -84,7 +84,7 @@ public:
 	//?获取操作系统版本号
 	static int32_t GetSystemVersionNum();
 	//?获取进程PID，耗时10毫秒左右
-	static int32_t processPid(const std::string processName = "");
+	static std::vector<int32_t> processPid(const std::string& processName = "");
 	//?获取进程名，耗时10毫秒左右
 	static std::string processName(int32_t pid);
 	//?获取电脑名
@@ -99,6 +99,8 @@ public:
 	static bool deleteFile(const char* path);
 	//控制台输入输出
 	static std::string inputString(const std::string& tip);
+	//关闭进程
+	static void killProcess(int32_t pid);
 
 public:
     static bool ifRedirFrobid;

@@ -47,14 +47,14 @@ bool PopDialog::check()
     return m_separator != nullptr && DialogShow::check();
 }
 
-void PopDialog::setWindowTiTle(const QString& title,
+void PopDialog::setWindowTitle(const QString& title,
                                const QColor& color,
                                qint32 fontSize,
                                Qt::Alignment align,
                                qint32 origin,
                                const QString& fontName)
 {
-    DialogShow::setWindowTiTle(title, color, fontSize, align, origin, fontName);
+    DialogShow::setWindowTitle(title, color, fontSize, align, origin, fontName);
 }
 
 void PopDialog::setBorderNormalHighLightColor(const QColor& normalColor, const QColor& highLightColor)

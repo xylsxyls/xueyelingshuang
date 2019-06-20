@@ -146,3 +146,25 @@ void TreeWidget::removeWidget(QWidget* widget, qint32 column)
 	delete widget;
 	delete item;
 }
+
+QWidget* TreeWidget::findWidget(QTreeWidgetItem* item)
+{
+	for (auto itData = m_itemData.begin(); itData != m_itemData.end(); ++itData)
+	{
+		if (itData->second == item)
+		{
+			return itData->first;
+		}
+	}
+	return nullptr;
+}
+
+QTreeWidgetItem* TreeWidget::findTreeWidgetItem(QWidget* widget)
+{
+	auto itData = m_itemData.find(widget);
+	if (itData == m_itemData.end())
+	{
+		return nullptr;
+	}
+	return itData->second;
+}

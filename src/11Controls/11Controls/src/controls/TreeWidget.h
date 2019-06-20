@@ -54,6 +54,18 @@ public:
 	*/
 	void removeWidget(QWidget* widget, qint32 column = 0);
 
+	/** 根据内置节点获取传入的widget指针
+	@param [in] item 内置节点指针
+	@return 返回传入的widget指针
+	*/
+	QWidget* findWidget(QTreeWidgetItem* item);
+
+	/** 根据传入的widget指针获取内置节点
+	@param [in] widget 传入的widget指针
+	@return 返回内置节点指针
+	*/
+	QTreeWidgetItem* findTreeWidgetItem(QWidget* widget);
+
 private:
 	std::map<QWidget*, QTreeWidgetItem*> m_itemData;
 };

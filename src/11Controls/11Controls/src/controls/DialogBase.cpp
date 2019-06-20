@@ -93,7 +93,7 @@ void DialogBase::addListenKey(Qt::Key key)
     m_listenKey.push_back(key);
 }
 
-void DialogBase::setWindowTiTle(const QString& title,
+void DialogBase::setWindowTitle(const QString& title,
                                 const QColor& color,
                                 qint32 fontSize,
                                 Qt::Alignment align,
@@ -104,7 +104,7 @@ void DialogBase::setWindowTiTle(const QString& title,
     {
         return;
     }
-    setWindowTitle(title);
+    COriginalDialog::setWindowTitle(title);
     m_title->setText(title);
     m_title->setTextColor(color);
     m_title->setFontSize(fontSize);

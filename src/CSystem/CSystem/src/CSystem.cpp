@@ -400,28 +400,29 @@ int32_t CSystem::GetSystemVersionNum()
 	return dwVersion;
 }
 
-int32_t CSystem::processPid(const std::string processName)
+std::vector<int32_t> CSystem::processPid(const std::string& processName)
 {
+	std::vector<int32_t> result;
 	if (processName.empty())
 	{
-		return GetCurrentProcessId();
+		result.push_back(GetCurrentProcessId());
+		return result;
 	}
 	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (INVALID_HANDLE_VALUE == hSnapshot)
 	{
-		return 0;
+		return result;
 	}
 	PROCESSENTRY32 pe = { sizeof(pe) };
 	for (BOOL ret = Process32First(hSnapshot, &pe); ret; ret = ::Process32Next(hSnapshot, &pe))
 	{
 		if (std::string(pe.szExeFile) == processName)
 		{
-			::CloseHandle(hSnapshot);
-			return pe.th32ProcessID;
+			result.push_back(pe.th32ProcessID);
 		}
 	}
 	::CloseHandle(hSnapshot);
-	return 0;
+	return result;
 }
 
 std::string CSystem::processName(int32_t pid)
@@ -512,6 +513,13 @@ std::string CSystem::inputString(const std::string& tip)
 		result += ch;
 	}
 	return result;
+}
+
+void CSystem::killProcess(int32_t pid)
+{
+	char command[256] = {};
+	::_snprintf(command, 256, "taskkill /f /pid %d", pid);
+	::WinExec(command, SW_HIDE);
 }
 
 bool CSystem::ifRedirFrobid = false;
