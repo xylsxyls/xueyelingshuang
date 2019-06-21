@@ -19,12 +19,20 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\coreAPI.h" />
     <ClInclude Include="..\src\coreMacro.h" />
-    <ClInclude Include="..\src\core.h" />
+    <ClInclude Include="..\src\CStringManager.h" />
+    <ClInclude Include="..\src\CSystem.h" />
+    <ClInclude Include="..\src\ManagerBase.h" />
+    <ClInclude Include="..\src\SingletonBase.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\core.cpp" />
+    <ClCompile Include="..\src\CStringManager.cpp" />
+    <ClCompile Include="..\src\CSystem.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\CSystem.inl" />
+    <None Include="..\src\ManagerBase.inl" />
+    <None Include="..\src\SingletonBase.inl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>

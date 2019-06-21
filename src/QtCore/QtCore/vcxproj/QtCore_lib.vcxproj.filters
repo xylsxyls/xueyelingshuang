@@ -11,18 +11,39 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\QtCore.cpp">
+    <ClCompile Include="..\src\EO_XmlSax2Parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\HttpRequest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\QssHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\QssString.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\WidgetFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\src\QtCore.h">
+    <CustomBuild Include="..\src\HttpRequest.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\src\QtCoreAPI.h">
+    <CustomBuild Include="..\src\EO_XmlSax2Parser.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\src\QssHelper.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\src\QssString.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="..\src\QtCoreMacro.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\src\WidgetFactory.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>
