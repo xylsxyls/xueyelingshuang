@@ -1,5 +1,10 @@
 #include "QssHelper.h"
 #include "core/CStringManager.h"
+#if defined(_DEBUG)
+#pragma comment(lib,"cored.lib")
+#else
+#pragma comment(lib,"core.lib")
+#endif
 #include <QPixmap>
 
 std::wstring QssHelper::QColorToWString(const QColor& color)

@@ -1,6 +1,6 @@
 #include "TipLabelManager.h"
 #include "TipLabel.h"
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 
 TipLabelManager& TipLabelManager::instance()
 {

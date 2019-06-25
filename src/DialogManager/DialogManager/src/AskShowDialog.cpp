@@ -3,7 +3,7 @@
 #include "QtControls/COriginalButton.h"
 #include "QtControls/CGeneralStyle.h"
 #include "DialogHelper.h"
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 
 AskShowDialog::AskShowDialog():
 m_tip(nullptr),

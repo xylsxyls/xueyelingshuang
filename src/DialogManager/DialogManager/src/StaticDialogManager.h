@@ -1,7 +1,7 @@
 #pragma once
 #include <QObject>
 #include "DialogType.h"
-#include "core/ManagerBase.h"
+#include "core/coreAPI.h"
 #include "DialogManagerMacro.h"
 
 class SubAccountPanel;

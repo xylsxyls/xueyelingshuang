@@ -7,7 +7,7 @@
 #include "QtControls/Separator.h"
 #include "PopDialog.h"
 #include "NotifyDialog.h"
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 
 std::ofstream* g_11ClientLogFile = nullptr;
 std::ofstream* g_war3LogFile = nullptr;

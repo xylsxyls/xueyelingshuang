@@ -6,7 +6,7 @@
 #include "DialogHelper.h"
 #include "QtControls/Separator.h"
 #include "QtControls/WebViewEx.h"
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 
 AdvertShowDialog::AdvertShowDialog():
 m_advert(nullptr)

@@ -4,7 +4,7 @@
 #include <QPainter>
 #include "DialogHelper.h"
 #include "QtControls/Separator.h"
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 
 PopDialog::PopDialog():
 m_separator(nullptr),

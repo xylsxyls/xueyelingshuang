@@ -7,7 +7,7 @@
 #include "QtControls/CExternalTextEdit.h"
 #include <QWindow>
 #include "ClosureDialog.h"
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 #include "DialogType.h"
 #include "DialogHelper.h"
 

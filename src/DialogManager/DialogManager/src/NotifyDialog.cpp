@@ -3,7 +3,7 @@
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
 #include "QtControls/CGeneralStyle.h"
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 
 NotifyDialog::NotifyDialog():
 m_titleBar(nullptr),

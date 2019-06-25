@@ -1,9 +1,9 @@
 #pragma once
 
 #ifdef _coreAPI
-#define coreAPI _declspec(dllexport)
-#else
 #define coreAPI _declspec(dllimport)
+#else
+#define coreAPI _declspec(dllexport)
 #endif
 
 #if defined(STATIC_LIB)

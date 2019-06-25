@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\coreAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\coreMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>

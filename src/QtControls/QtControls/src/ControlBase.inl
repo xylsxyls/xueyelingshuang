@@ -2,9 +2,9 @@
 #define CONTROLBASE_INL__
 
 #include "ControlBase.h"
-#include "QtCore/QssString.h"
+#include "QtCore/QtCoreAPI.h"
 #include "core/CStringManager.h"
-#include "QtCore/QssHelper.h"
+#include "QtCore/QtCoreAPI.h"
 #include "ControlShow.h"
 
 template<class QBase>

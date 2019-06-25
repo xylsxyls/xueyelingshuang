@@ -3,7 +3,7 @@
 #include <QLineEdit>
 #include <stdint.h>
 #include <QEvent>
-#include "core/CStringManager.h"
+#include "core/coreAPI.h"
 #include "ComboBox.h"
 
 //"^500|(?!00|[5-9][0-9]{2})(?:[0-9]{1,3})$"

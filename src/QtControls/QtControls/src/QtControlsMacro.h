@@ -1,12 +1,7 @@
 #pragma once
 
-#ifdef _QtControlsAPI
-#define QtControlsAPI _declspec(dllexport)
-#else
-#define QtControlsAPI _declspec(dllimport)
-#endif
-
-#if defined(STATIC_LIB)
-#undef QtControlsAPI
+#ifdef STATIC_LIB
 #define QtControlsAPI 
+#else
+#define QtControlsAPI _declspec(dllexport)
 #endif

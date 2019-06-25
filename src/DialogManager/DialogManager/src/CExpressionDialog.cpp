@@ -1,10 +1,10 @@
 #include "CExpressionDialog.h"
 #include <QStandardItemModel>
-#include "QtCore/EO_XmlSax2Parser.h"
+#include "QtCore/QtCoreAPI.h"
 #include <QDebug>
 #include <QPainter>
 #include <Windows.h>
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 #include "DialogHelper.h"
 
 CExpressionDialog::CExpressionDialog(QWidget *parent)

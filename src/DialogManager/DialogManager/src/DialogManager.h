@@ -2,7 +2,7 @@
 #include <QObject>
 #include "DialogManagerMacro.h"
 #include "DialogType.h"
-#include "core/ManagerBase.h"
+#include "core/coreAPI.h"
 
 /** 单一实例，用于统一管理窗口创建关闭，该类为对外接口
 */

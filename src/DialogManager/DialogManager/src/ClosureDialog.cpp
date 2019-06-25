@@ -1,6 +1,6 @@
 #include "ClosureDialog.h"
 #include "LockedAccountPanel.h"
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 #include "DialogHelper.h"
 
 ClosureDialog::ClosureDialog():

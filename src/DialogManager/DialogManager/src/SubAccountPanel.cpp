@@ -7,7 +7,7 @@
 #include "QtControls/CTreeViewEx.h"
 #include "QtControls/CExternalTextEdit.h"
 #include <QWindow>
-#include "core/CSystem.h"
+#include "core/coreAPI.h"
 #include "DialogHelper.h"
 
 SubAccountPanel::SubAccountPanel(QWidget *parent)

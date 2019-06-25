@@ -2,9 +2,9 @@
 #define CONTROLSHOW_INL__
 
 #include "ControlShow.h"
-#include "QtCore/QssString.h"
+#include "QtCore/QtCoreAPI.h"
 #include "core/CStringManager.h"
-#include "QtCore/QssHelper.h"
+#include "QtCore/QtCoreAPI.h"
 
 template<class QBase>
 void ControlShow<QBase>::repaint()

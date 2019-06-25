@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\coreAPI.h" />
     <ClInclude Include="..\src\coreMacro.h" />
     <ClInclude Include="..\src\CStringManager.h" />
     <ClInclude Include="..\src\CSystem.h" />
