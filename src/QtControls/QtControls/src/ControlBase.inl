@@ -3,7 +3,7 @@
 
 #include "ControlBase.h"
 #include "QtCore/QtCoreAPI.h"
-#include "core/CStringManager.h"
+#include "core/coreAPI.h"
 #include "QtCore/QtCoreAPI.h"
 #include "ControlShow.h"
 

@@ -1,0 +1,625 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="QtCore">
+      <UniqueIdentifier>{da1bf6cd-1ceb-4d41-a0d7-64e9f776ab01}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QtControls">
+      <UniqueIdentifier>{63ed71f6-8f8f-49d8-9c67-36e450f3965a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core">
+      <UniqueIdentifier>{53ef4453-448a-437a-b4a7-40c9c17f3e61}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>moc;h;cpp</Extensions>
+      <ParseFiles>true</ParseFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug">
+      <UniqueIdentifier>{1169383d-6744-4c8d-b063-8679c1f925f2}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release">
+      <UniqueIdentifier>{ce1250c5-5258-4a75-9568-0843cfe89676}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\core\core\src\coreMacro.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\core\core\src\CStringManager.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\core\core\src\CSystem.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\core\core\src\ManagerBase.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\core\core\src\SingletonBase.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\ContentLabel.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\ControlBackground.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\ControlBase.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\ControlBorder.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\ControlFont.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\ControlItem.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\ControlSelf.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\ControlShow.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\HtmlComboBoxDelegate.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\HtmlComboBoxStyle.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\ListWidgetIdItem.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\QtControlsMacro.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\RegExpAttri.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\RegExpBase.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\TreeText.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\TreeViewDelegate.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\TreeViewModel.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtCore\QtCore\src\EO_XmlSax2Parser.h">
+      <Filter>QtCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtCore\QtCore\src\QssHelper.h">
+      <Filter>QtCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtCore\QtCore\src\QssString.h">
+      <Filter>QtCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtCore\QtCore\src\QtCoreMacro.h">
+      <Filter>QtCore</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\core\core\src\CStringManager.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\core\core\src\CSystem.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\BackgroundLabel.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_BackgroundLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_BackgroundLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\CExternalTextEdit.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CExternalTextEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CExternalTextEdit.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\CGeneralStyle.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CGeneralStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\CheckBox.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CheckBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CheckBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\ChooseComboBox.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ChooseComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ChooseComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\CollapseMenu.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CollapseMenu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CollapseMenu.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\ComboBox.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\ContentLabel.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\COriginalButton.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalButton.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalButton.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\COriginalDialog.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\COriginalWebView.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_COriginalWebView.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_COriginalWebView.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\CPasswordInputBox.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CPasswordInputBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\CTreeViewEx.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CTreeViewEx.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CTreeViewEx.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\Dialog.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\DialogBase.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogBase.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogBase.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\DialogShow.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogShow.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogShow.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\HtmlComboBox.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_HtmlComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\HtmlComboBoxDelegate.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\HtmlComboBoxStyle.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\IdItemComboBox.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_IdItemComboBox.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_IdItemComboBox.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\Label.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Label.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Label.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\LineEdit.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LineEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LineEdit.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\ListWidget.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ListWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ListWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\ListWidgetIdItem.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\Menu.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Menu.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Menu.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\MenuCustomStyle.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_MenuCustomStyle.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\NoFocusFrameDelegate.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NoFocusFrameDelegate.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\PointLabel.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PointLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PointLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\ProgressBar.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ProgressBar.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\RadioButton.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RadioButton.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_RadioButton.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\RegExpBase.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\Separator.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Separator.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Separator.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\TextEdit.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TextEdit.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TextEdit.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\TipLabel.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipLabel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipLabel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\TipLabelManager.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipLabelManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipLabelManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\TreeView.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TreeView.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TreeView.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\TreeViewDelegate.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\TreeViewHeader.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TreeViewHeader.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TreeViewHeader.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\TreeViewModel.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\TreeWidget.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TreeWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TreeWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\WebViewEx.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WebViewEx.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WebViewEx.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtControls\QtControls\src\Widget.cpp">
+      <Filter>QtControls</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Widget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Widget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtCore\QtCore\src\EO_XmlSax2Parser.cpp">
+      <Filter>QtCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtCore\QtCore\src\HttpRequest.cpp">
+      <Filter>QtCore</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_HttpRequest.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_HttpRequest.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtCore\QtCore\src\QssHelper.cpp">
+      <Filter>QtCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtCore\QtCore\src\QssString.cpp">
+      <Filter>QtCore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QtCore\QtCore\src\WidgetFactory.cpp">
+      <Filter>QtCore</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WidgetFactory.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WidgetFactory.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\core\core\src\CSystem.inl">
+      <Filter>core</Filter>
+    </None>
+    <None Include="..\..\..\core\core\src\ManagerBase.inl">
+      <Filter>core</Filter>
+    </None>
+    <None Include="..\..\..\core\core\src\SingletonBase.inl">
+      <Filter>core</Filter>
+    </None>
+    <None Include="..\..\..\QtControls\QtControls\src\ControlBackground.inl">
+      <Filter>QtControls</Filter>
+    </None>
+    <None Include="..\..\..\QtControls\QtControls\src\ControlBase.inl">
+      <Filter>QtControls</Filter>
+    </None>
+    <None Include="..\..\..\QtControls\QtControls\src\ControlBorder.inl">
+      <Filter>QtControls</Filter>
+    </None>
+    <None Include="..\..\..\QtControls\QtControls\src\ControlFont.inl">
+      <Filter>QtControls</Filter>
+    </None>
+    <None Include="..\..\..\QtControls\QtControls\src\ControlItem.inl">
+      <Filter>QtControls</Filter>
+    </None>
+    <None Include="..\..\..\QtControls\QtControls\src\ControlSelf.inl">
+      <Filter>QtControls</Filter>
+    </None>
+    <None Include="..\..\..\QtControls\QtControls\src\ControlShow.inl">
+      <Filter>QtControls</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\BackgroundLabel.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\CExternalTextEdit.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\CGeneralStyle.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\CheckBox.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\ChooseComboBox.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\CollapseMenu.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\ComboBox.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\COriginalButton.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\COriginalDialog.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\COriginalWebView.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\CPasswordInputBox.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\CTreeViewEx.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\Dialog.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\DialogBase.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\DialogShow.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\HtmlComboBox.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\IdItemComboBox.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\Label.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\LineEdit.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\ListWidget.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\Menu.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\MenuCustomStyle.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\NoFocusFrameDelegate.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\PointLabel.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\ProgressBar.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\RadioButton.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\Separator.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\TextEdit.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\TipLabel.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\TipLabelManager.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\TreeView.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\TreeViewHeader.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\TreeWidget.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\WebViewEx.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtControls\QtControls\src\Widget.h">
+      <Filter>QtControls</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtCore\QtCore\src\HttpRequest.h">
+      <Filter>QtCore</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\QtCore\QtCore\src\WidgetFactory.h">
+      <Filter>QtCore</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

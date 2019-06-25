@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" QtClient 32 dll release same
