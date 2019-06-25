@@ -2,11 +2,11 @@
 #include "DialogBase.h"
 #include <QPropertyAnimation>
 #include "QtControlsMacro.h"
+#include "DialogManager/DialogManagerAPI.h"
 
 class Label;
 class COriginalButton;
 class Separator;
-enum DialogResult;
 /** 窗口基本模型，实现通用部分
 */
 class QtControlsAPI DialogShow : public DialogBase

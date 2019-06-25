@@ -1,5 +1,8 @@
 #include "COriginalWebView.h"
 
+#include <qglobal.h>
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 #include <QPainter>
 #include <QContextMenuEvent>
 #include <QMenu>
@@ -105,3 +108,5 @@ bool COriginalWebView::isShowProgress()
 	return mIsShowProgress;
 }
 
+
+#endif

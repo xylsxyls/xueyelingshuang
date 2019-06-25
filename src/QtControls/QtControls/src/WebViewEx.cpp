@@ -1,4 +1,8 @@
 #include "WebViewEx.h"
+
+#include <qglobal.h>
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 #include <QWebSettings>
 #include <QtNetwork/QNetworkDiskCache>
 #include <QDesktopServices>
@@ -201,3 +205,5 @@ QVariant CWebViewEx::evaluateJavaScript(QString x)
 	}
 	return v;
 }
+
+#endif

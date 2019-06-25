@@ -1,6 +1,9 @@
 #ifndef WEBVIEWEX_H
 #define WEBVIEWEX_H
 
+#include <qglobal.h>
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 #include <QWebView>
 #include "QtControlsMacro.h"
 
@@ -46,5 +49,7 @@ private:
 	bool m_bDestroying;
 	std::map<QString,QObject*> m_js_object_list;
 };
+
+#endif
 
 #endif // WEBVIEWEX_H

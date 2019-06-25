@@ -28,6 +28,8 @@ copy "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user" 
 del "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user"
 rmdir /q /s "%~dp0src\DialogManager\DialogManager\vcxproj\GeneratedFiles\" 
 
+rmdir /q /s "%~dp0src\QtClient\QtClient\vcxproj\GeneratedFiles\" 
+
 rmdir /q /s "%~dp0src\temp\"
 
 ::-------------------É¾³ýMFCÁÙÊ±ÎÄ¼þ--------------------------

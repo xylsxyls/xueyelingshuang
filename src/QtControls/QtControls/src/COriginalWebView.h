@@ -1,6 +1,9 @@
 #ifndef CORIGINALWEBVIEW_H
 #define CORIGINALWEBVIEW_H
 
+#include <qglobal.h>
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 #include <QWebView>
 #include "QtControlsMacro.h"
 
@@ -28,5 +31,7 @@ private slots:
 	bool isShowProgress();
 
 };
+
+#endif
 
 #endif // CORINGINALWEBVIEW_H
