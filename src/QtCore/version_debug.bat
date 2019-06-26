@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" QtCore 32 lib debug same

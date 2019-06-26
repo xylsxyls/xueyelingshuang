@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" core 32 dll release same
