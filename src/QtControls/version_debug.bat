@@ -1,1 +1,1 @@
-call "%CLOUD_REBUILD%" QtControls 32 lib debug same
+call "%CLOUD_REBUILD%" QtControls 32 dll debug same
