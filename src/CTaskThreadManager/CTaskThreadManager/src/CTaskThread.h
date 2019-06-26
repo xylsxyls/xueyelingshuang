@@ -47,6 +47,10 @@ public:
 	*/
 	int32_t GetCurTaskLevel();
 
+	/** 等待所有任务执行完成后退出
+	*/
+	void WaitForEnd();
+
 private:
     CTaskThread(int32_t threadId);
 
@@ -106,6 +110,10 @@ private:
     /* 线程是否有退出信号
     */
     std::atomic<bool> m_hasExitSignal = false;
+
+	/** 等待所有任务执行完的退出信号
+	*/
+	std::atomic<bool> m_waitForEndSignal = false;
 
 	/* 正在执行任务的优先级
 	*/

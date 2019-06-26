@@ -15,6 +15,8 @@ public:
 	//·µ»ØÏß³ÌID
 	uint32_t Init();
 
+	void WaitForEnd(uint32_t threadId);
+
     void Uninit(uint32_t threadId);
 
     void UninitAll();

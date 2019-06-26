@@ -31,7 +31,7 @@ void CTaskThread::DestroyThread()
 void CTaskThread::SetExitSignal()
 {
     m_hasExitSignal = true;
-    //设置了提出信号就立即把当前任务停止
+    //设置了退出信号就立即把当前任务停止
 	StopCurTask();
 	::SetEvent(m_waitEvent);
 }
@@ -129,7 +129,15 @@ void CTaskThread::WorkThread()
         }
 		else
 		{
+			if (m_waitForEndSignal)
+			{
+				break;
+			}
 			::WaitForSingleObject(m_waitEvent, INFINITE);
+			if (m_waitForEndSignal)
+			{
+				break;
+			}
 		}
     }
 }
@@ -278,4 +286,11 @@ int32_t CTaskThread::GetWaitTaskCount()
 int32_t CTaskThread::GetCurTaskLevel()
 {
 	return m_curTaskLevel;
+}
+
+void CTaskThread::WaitForEnd()
+{
+	m_waitForEndSignal = true;
+	::SetEvent(m_waitEvent);
+	WaitForExit();
 }

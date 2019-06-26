@@ -37,6 +37,28 @@ uint32_t CTaskThreadManager::Init()
     return 0;
 }
 
+void CTaskThreadManager::WaitForEnd(uint32_t threadId)
+{
+	if (threadId == 0)
+	{
+		return;
+	}
+	m_mutex.lock();
+	auto itThread = m_spThreadMap.find(threadId);
+	if (itThread != m_spThreadMap.end())
+	{
+		std::shared_ptr<CTaskThread>& spTaskThread = itThread->second;
+		if (spTaskThread != nullptr)
+		{
+			m_mutex.unlock();
+			spTaskThread->WaitForEnd();
+			m_mutex.lock();
+		}
+		m_spThreadMap.erase(m_spThreadMap.find(threadId));
+	}
+	m_mutex.unlock();
+}
+
 void CTaskThreadManager::Uninit(uint32_t threadId)
 {
     if (threadId == 0)

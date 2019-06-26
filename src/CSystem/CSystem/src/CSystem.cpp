@@ -522,6 +522,26 @@ void CSystem::killProcess(int32_t pid)
 	::WinExec(command, SW_HIDE);
 }
 
+std::vector<std::string> CSystem::mainParam()
+{
+	std::vector<std::string> result;
+	for (int32_t index = 0; index < __argc; ++index)
+	{
+		result.push_back(__argv[index]);
+	}
+	return result;
+}
+
+bool CSystem::rename(const std::string& oldPath, const std::string& newPath)
+{
+	return ::rename(oldPath.c_str(), newPath.c_str()) == 0;
+}
+
+bool CSystem::fileExist(const std::string& filePath)
+{
+	return ::_access(filePath.c_str(), 0) == 0;
+}
+
 bool CSystem::ifRedirFrobid = false;
 PVOID CSystem::oldValue = nullptr;
 

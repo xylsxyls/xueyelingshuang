@@ -101,6 +101,12 @@ public:
 	static std::string inputString(const std::string& tip);
 	//关闭进程
 	static void killProcess(int32_t pid);
+	//获取所有的命令行参数，第一个为文件路径
+	static std::vector<std::string> mainParam();
+	//重命名，传目录则重命名目录，传文件重命名文件，新文件或空目录若已存在则先删除，新目录不可以是老目录的子目录
+	static bool rename(const std::string& oldPath, const std::string& newPath);
+	//文件是否存在
+	static bool fileExist(const std::string& filePath);
 
 public:
     static bool ifRedirFrobid;
