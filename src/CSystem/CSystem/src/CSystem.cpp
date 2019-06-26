@@ -413,8 +413,8 @@ std::vector<int32_t> CSystem::processPid(const std::wstring& processName)
 	{
 		return result;
 	}
-	PROCESSENTRY32 pe = { sizeof(pe) };
-	for (BOOL ret = Process32First(hSnapshot, &pe); ret; ret = ::Process32Next(hSnapshot, &pe))
+	PROCESSENTRY32W pe = { sizeof(pe) };
+	for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
 	{
 		if (std::wstring(pe.szExeFile) == processName)
 		{
@@ -428,12 +428,12 @@ std::vector<int32_t> CSystem::processPid(const std::wstring& processName)
 std::wstring CSystem::processName(int32_t pid)
 {
 	std::wstring result;
-	PROCESSENTRY32 pe32 = { 0 };
+	PROCESSENTRY32W pe32 = { 0 };
 	HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (snapshot != INVALID_HANDLE_VALUE)
 	{
 		pe32.dwSize = sizeof(PROCESSENTRY32);
-		if (::Process32First(snapshot, &pe32))
+		if (::Process32FirstW(snapshot, &pe32))
 		{
 			do{
 				if (pe32.th32ProcessID == pid)
@@ -441,7 +441,7 @@ std::wstring CSystem::processName(int32_t pid)
 					result = pe32.szExeFile;
 					break;
 				}
-			} while (::Process32Next(snapshot, &pe32));
+			} while (::Process32NextW(snapshot, &pe32));
 		}
 		::CloseHandle(snapshot);
 	}
