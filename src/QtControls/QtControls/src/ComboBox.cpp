@@ -4,7 +4,6 @@
 #include <QtWidgets/QScrollBar>
 #include <QKeyEvent>
 #include <QEvent>
-#include "core/coreAPI.h"
 
 ComboBox::ComboBox(QWidget* parent) :
 ControlShow(parent),

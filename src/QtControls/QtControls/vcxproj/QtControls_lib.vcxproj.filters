@@ -531,6 +531,9 @@
     <ClInclude Include="..\src\TreeViewModel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\DialogResult.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\ControlBackground.inl" />

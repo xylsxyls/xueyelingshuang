@@ -483,6 +483,7 @@
     <ClInclude Include="..\src\ControlItem.h" />
     <ClInclude Include="..\src\ControlSelf.h" />
     <ClInclude Include="..\src\ControlShow.h" />
+    <ClInclude Include="..\src\DialogResult.h" />
     <ClInclude Include="..\src\HtmlComboBoxDelegate.h" />
     <ClInclude Include="..\src\HtmlComboBoxStyle.h" />
     <ClInclude Include="..\src\ListWidgetIdItem.h" />

@@ -1,14 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="QtCore">
-      <UniqueIdentifier>{da1bf6cd-1ceb-4d41-a0d7-64e9f776ab01}</UniqueIdentifier>
-    </Filter>
     <Filter Include="QtControls">
       <UniqueIdentifier>{63ed71f6-8f8f-49d8-9c67-36e450f3965a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="core">
-      <UniqueIdentifier>{53ef4453-448a-437a-b4a7-40c9c17f3e61}</UniqueIdentifier>
     </Filter>
     <Filter Include="Generated Files">
       <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
@@ -25,22 +19,64 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="CStringManager">
+      <UniqueIdentifier>{c0e43ed6-68e3-4d49-81ac-a80dcd61051a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CSystem">
+      <UniqueIdentifier>{6e1607a1-dd16-4e1b-bb9c-3e09ca4aa422}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ManagerBase">
+      <UniqueIdentifier>{6d4154a6-a8cd-4a98-9a13-56b0e03e8774}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="EO_XmlSax2Parser">
+      <UniqueIdentifier>{f5a7eeb5-0ab6-4879-aceb-9030f43691aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QssString">
+      <UniqueIdentifier>{6d21d838-892b-4e65-9076-1a801990094d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HttpRequest">
+      <UniqueIdentifier>{5b31a9de-5440-425d-96ac-62ef42b4fbfe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WidgetFactory">
+      <UniqueIdentifier>{5e5631d1-9ff0-4b0e-aea8-f0228fee8154}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\core\core\src\coreMacro.h">
-      <Filter>core</Filter>
+    <ClInclude Include="..\..\..\CStringManager\CStringManager\src\CStringManager.h">
+      <Filter>CStringManager</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\core\core\src\CStringManager.h">
-      <Filter>core</Filter>
+    <ClInclude Include="..\..\..\CSystem\CSystem\src\CSystem.h">
+      <Filter>CSystem</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\core\core\src\CSystem.h">
-      <Filter>core</Filter>
+    <ClInclude Include="..\..\..\CStringManager\CStringManager\src\CStringManagerMacro.h">
+      <Filter>CStringManager</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\core\core\src\ManagerBase.h">
-      <Filter>core</Filter>
+    <ClInclude Include="..\..\..\CSystem\CSystem\src\CSystemMacro.h">
+      <Filter>CSystem</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\core\core\src\SingletonBase.h">
-      <Filter>core</Filter>
+    <ClInclude Include="..\..\..\ManagerBase\ManagerBase\src\ManagerBase.h">
+      <Filter>ManagerBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ManagerBase\ManagerBase\src\SingletonBase.h">
+      <Filter>ManagerBase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\EO_XmlSax2Parser\EO_XmlSax2Parser\src\EO_XmlSax2Parser.h">
+      <Filter>EO_XmlSax2Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\EO_XmlSax2Parser\EO_XmlSax2Parser\src\EO_XmlSax2ParserMacro.h">
+      <Filter>EO_XmlSax2Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\HttpRequest\HttpRequest\src\HttpRequestMacro.h">
+      <Filter>HttpRequest</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QssString\QssString\src\QssHelper.h">
+      <Filter>QssString</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QssString\QssString\src\QssString.h">
+      <Filter>QssString</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QssString\QssString\src\QssStringMacro.h">
+      <Filter>QssString</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\QtControls\QtControls\src\ContentLabel.h">
       <Filter>QtControls</Filter>
@@ -64,6 +100,9 @@
       <Filter>QtControls</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\QtControls\QtControls\src\ControlShow.h">
+      <Filter>QtControls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\QtControls\QtControls\src\DialogResult.h">
       <Filter>QtControls</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\QtControls\QtControls\src\HtmlComboBoxDelegate.h">
@@ -93,25 +132,37 @@
     <ClInclude Include="..\..\..\QtControls\QtControls\src\TreeViewModel.h">
       <Filter>QtControls</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\QtCore\QtCore\src\EO_XmlSax2Parser.h">
-      <Filter>QtCore</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\QtCore\QtCore\src\QssHelper.h">
-      <Filter>QtCore</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\QtCore\QtCore\src\QssString.h">
-      <Filter>QtCore</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\QtCore\QtCore\src\QtCoreMacro.h">
-      <Filter>QtCore</Filter>
+    <ClInclude Include="..\..\..\WidgetFactory\WidgetFactory\src\WidgetFactoryMacro.h">
+      <Filter>WidgetFactory</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\core\core\src\CStringManager.cpp">
-      <Filter>core</Filter>
+    <ClCompile Include="..\..\..\CStringManager\CStringManager\src\CStringManager.cpp">
+      <Filter>CStringManager</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\core\core\src\CSystem.cpp">
-      <Filter>core</Filter>
+    <ClCompile Include="..\..\..\CSystem\CSystem\src\CSystem.cpp">
+      <Filter>CSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WidgetFactory.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\EO_XmlSax2Parser\EO_XmlSax2Parser\src\EO_XmlSax2Parser.cpp">
+      <Filter>EO_XmlSax2Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\HttpRequest\HttpRequest\src\HttpRequest.cpp">
+      <Filter>HttpRequest</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_HttpRequest.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_HttpRequest.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QssString\QssString\src\QssHelper.cpp">
+      <Filter>QssString</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\QssString\QssString\src\QssString.cpp">
+      <Filter>QssString</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\QtControls\QtControls\src\BackgroundLabel.cpp">
       <Filter>QtControls</Filter>
@@ -449,43 +500,22 @@
     <ClCompile Include="GeneratedFiles\Release\moc_Widget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\QtCore\QtCore\src\EO_XmlSax2Parser.cpp">
-      <Filter>QtCore</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\QtCore\QtCore\src\HttpRequest.cpp">
-      <Filter>QtCore</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_HttpRequest.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_HttpRequest.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\QtCore\QtCore\src\QssHelper.cpp">
-      <Filter>QtCore</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\QtCore\QtCore\src\QssString.cpp">
-      <Filter>QtCore</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\QtCore\QtCore\src\WidgetFactory.cpp">
-      <Filter>QtCore</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_WidgetFactory.cpp">
-      <Filter>Generated Files\Debug</Filter>
+    <ClCompile Include="..\..\..\WidgetFactory\WidgetFactory\src\WidgetFactory.cpp">
+      <Filter>WidgetFactory</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_WidgetFactory.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\core\core\src\CSystem.inl">
-      <Filter>core</Filter>
+    <None Include="..\..\..\CSystem\CSystem\src\CSystem.inl">
+      <Filter>CSystem</Filter>
     </None>
-    <None Include="..\..\..\core\core\src\ManagerBase.inl">
-      <Filter>core</Filter>
+    <None Include="..\..\..\ManagerBase\ManagerBase\src\ManagerBase.inl">
+      <Filter>ManagerBase</Filter>
     </None>
-    <None Include="..\..\..\core\core\src\SingletonBase.inl">
-      <Filter>core</Filter>
+    <None Include="..\..\..\ManagerBase\ManagerBase\src\SingletonBase.inl">
+      <Filter>ManagerBase</Filter>
     </None>
     <None Include="..\..\..\QtControls\QtControls\src\ControlBackground.inl">
       <Filter>QtControls</Filter>
@@ -510,6 +540,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <CustomBuild Include="..\..\..\HttpRequest\HttpRequest\src\HttpRequest.h">
+      <Filter>HttpRequest</Filter>
+    </CustomBuild>
     <CustomBuild Include="..\..\..\QtControls\QtControls\src\BackgroundLabel.h">
       <Filter>QtControls</Filter>
     </CustomBuild>
@@ -615,11 +648,8 @@
     <CustomBuild Include="..\..\..\QtControls\QtControls\src\Widget.h">
       <Filter>QtControls</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\QtCore\QtCore\src\HttpRequest.h">
-      <Filter>QtCore</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\..\QtCore\QtCore\src\WidgetFactory.h">
-      <Filter>QtCore</Filter>
+    <CustomBuild Include="..\..\..\WidgetFactory\WidgetFactory\src\WidgetFactory.h">
+      <Filter>WidgetFactory</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

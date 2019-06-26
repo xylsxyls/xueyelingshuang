@@ -2,7 +2,7 @@
 #include <QPainter>
 #include "HtmlComboBox.h"
 #include "CGeneralStyle.h"
-#include "core/coreAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 HtmlComboBoxDelegate::HtmlComboBoxDelegate(HtmlComboBox* htmlComboBox):
 m_htmlComboBox(htmlComboBox)

@@ -73,4 +73,6 @@ public:
 
 	//?字符串转无符号长整型
 	static uint64_t atoui64(const char* str);
+
+	static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
 };

@@ -7,26 +7,30 @@ del "%~dp0*.aps" /s
 attrib -a -h -s -r "%~dp0*.opensdf" /s
 del "%~dp0*.opensdf" /s
 
-copy "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.user" "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.1user"
+::copy "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.user" "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.1user"
 
-copy "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.user" "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.1user"
+::copy "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.user" "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.1user"
 
-copy "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.user" "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user"
+::copy "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.user" "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user"
 
-attrib -a -h -s -r "%~dp0*.user" /s
-del "%~dp0*.user" /s
+::attrib -a -h -s -r "%~dp0*.user" /s
+::del "%~dp0*.user" /s
 
-copy "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.1user" "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.user"
-del "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.1user"
-rmdir /q /s "%~dp0src\QtCore\QtCore\vcxproj\GeneratedFiles\" 
+::copy "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.1user" "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.user"
+::del "%~dp0src\QtCore\QtCore\vcxproj\QtCore.vcxproj.1user"
 
-copy "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.1user" "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.user"
-del "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.1user"
-rmdir /q /s "%~dp0src\QtControls\QtControls\vcxproj\GeneratedFiles\" 
+::copy "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.1user" "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.user"
+::del "%~dp0src\QtControls\QtControls\vcxproj\QtControls.vcxproj.1user"
+ 
+::copy "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user" "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.user"
+::del "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user"
 
-copy "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user" "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.user"
-del "%~dp0src\DialogManager\DialogManager\vcxproj\DialogManager.vcxproj.1user"
-rmdir /q /s "%~dp0src\DialogManager\DialogManager\vcxproj\GeneratedFiles\" 
+rmdir /q /s "%~dp0src\WidgetFactory\WidgetFactory\vcxproj\GeneratedFiles\"
+rmdir /q /s "%~dp0src\QssString\QssString\vcxproj\GeneratedFiles\"
+rmdir /q /s "%~dp0src\HttpRequest\HttpRequest\vcxproj\GeneratedFiles\"
+rmdir /q /s "%~dp0src\EO_XmlSax2Parser\EO_XmlSax2Parser\vcxproj\GeneratedFiles\"
+rmdir /q /s "%~dp0src\QtControls\QtControls\vcxproj\GeneratedFiles\"
+rmdir /q /s "%~dp0src\DialogManager\DialogManager\vcxproj\GeneratedFiles\"
 
 rmdir /q /s "%~dp0src\QtClient\QtClient\vcxproj\GeneratedFiles\" 
 

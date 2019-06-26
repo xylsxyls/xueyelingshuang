@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <stdint.h>
 #include <sstream>
+#include <windows.h>
 
 size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect)
 {
@@ -332,4 +333,27 @@ uint64_t CStringManager::atoui64(const char* str)
 	strValue << str;
 	strValue >> result;
 	return result;
+}
+
+std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
+{
+	// 分配目标空间, 一个16位Unicode字符最多可以转为4个字节
+	int iAllocSize = static_cast<int>(wstrSrc.size() * 4 + 10);
+	char* pwszBuffer = new char[iAllocSize];
+	if (NULL == pwszBuffer)
+	{
+		return "";
+	}
+	int iCharsRet = ::WideCharToMultiByte(CP_ACP, 0, wstrSrc.c_str(),
+		static_cast<int>(wstrSrc.size()),
+		pwszBuffer, iAllocSize, NULL, NULL);
+	std::string strRet;
+	if (0 < iCharsRet)
+	{
+		strRet.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
+	}
+
+	delete[] pwszBuffer;
+
+	return strRet;
 }

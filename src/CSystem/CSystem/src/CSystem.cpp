@@ -117,7 +117,7 @@ double CSystem::GetCPUSpeedGHz()
 
 RECT CSystem::GetTaskbarRect()
 {
-	HWND h = ::FindWindow("Shell_TrayWnd","");
+	HWND h = ::FindWindowA("Shell_TrayWnd","");
 	RECT r;
 	::GetWindowRect(h,&r);
 	return r;
@@ -202,35 +202,35 @@ std::string CSystem::uuid(int flag)
 void CSystem::OpenFolder(const std::string& folder)
 {
     CSystem::ForbidRedir();
-    ShellExecute(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
+    ShellExecuteA(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
     CSystem::RecoveryRedir();
 }
 
 void CSystem::OpenFolderAndSelectFile(const std::string& file)
 {
     CSystem::ForbidRedir();
-    ShellExecute(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
+    ShellExecuteA(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
     CSystem::RecoveryRedir();
 }
 
 void CSystem::OpenFile(const std::string& file)
 {
     CSystem::ForbidRedir();
-    ShellExecute(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    ShellExecuteA(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
     CSystem::RecoveryRedir();
 }
 
 void CSystem::OpenWebPage(const std::string& webPage)
 {
     CSystem::ForbidRedir();
-    ShellExecute(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    ShellExecuteA(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
     CSystem::RecoveryRedir();
 }
 
 void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over)
 {
     CSystem::ForbidRedir();
-	::CopyFile(srcFile.c_str(), dstFile.c_str(), over == false);
+	::CopyFileA(srcFile.c_str(), dstFile.c_str(), over == false);
     CSystem::RecoveryRedir();
 }
 
@@ -242,7 +242,7 @@ VOID SafeGetNativeSystemInfo(__out LPSYSTEM_INFO lpSystemInfo)
         return;
     }
     typedef VOID(WINAPI *LPFN_GetNativeSystemInfo)(LPSYSTEM_INFO lpSystemInfo);
-    LPFN_GetNativeSystemInfo fnGetNativeSystemInfo = (LPFN_GetNativeSystemInfo)GetProcAddress(GetModuleHandle("kernel32"), "GetNativeSystemInfo");
+    LPFN_GetNativeSystemInfo fnGetNativeSystemInfo = (LPFN_GetNativeSystemInfo)GetProcAddress(GetModuleHandleA("kernel32"), "GetNativeSystemInfo");
     if (NULL != fnGetNativeSystemInfo)
     {
         fnGetNativeSystemInfo(lpSystemInfo);
@@ -319,7 +319,7 @@ std::string CSystem::PasswordScanf()
 {
 	std::string password;
 	char ch;
-	while ((ch = ::getch()) != '\r')
+	while ((ch = ::_getch()) != '\r')
 	{
 		if (ch != 8)//不是回撤就录入
 		{
@@ -354,18 +354,18 @@ int32_t CSystem::GetCPUCoreCount()
 
 bool CSystem::ShellCopy(const char* from, const char* dest)
 {
-	SHFILEOPSTRUCT fileOp = { 0 };
+	SHFILEOPSTRUCTA fileOp = { 0 };
 	fileOp.wFunc = FO_COPY;
-	TCHAR newFrom[MAX_PATH];
+	char newFrom[MAX_PATH];
 	_tcscpy_s(newFrom, from);
 	newFrom[_tcsclen(from) + 1] = 0;
 	fileOp.pFrom = newFrom;
-	TCHAR newTo[MAX_PATH];
+	char newTo[MAX_PATH];
 	_tcscpy_s(newTo, dest);
 	newTo[_tcsclen(dest) + 1] = 0;
 	fileOp.pTo = newTo;
 	fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
-	return SHFileOperation(&fileOp) == 0;
+	return SHFileOperationA(&fileOp) == 0;
 }
 
 int32_t CSystem::GetSystemVersionNum()
@@ -400,7 +400,7 @@ int32_t CSystem::GetSystemVersionNum()
 	return dwVersion;
 }
 
-std::vector<int32_t> CSystem::processPid(const std::string& processName)
+std::vector<int32_t> CSystem::processPid(const std::wstring& processName)
 {
 	std::vector<int32_t> result;
 	if (processName.empty())
@@ -416,7 +416,7 @@ std::vector<int32_t> CSystem::processPid(const std::string& processName)
 	PROCESSENTRY32 pe = { sizeof(pe) };
 	for (BOOL ret = Process32First(hSnapshot, &pe); ret; ret = ::Process32Next(hSnapshot, &pe))
 	{
-		if (std::string(pe.szExeFile) == processName)
+		if (std::wstring(pe.szExeFile) == processName)
 		{
 			result.push_back(pe.th32ProcessID);
 		}
@@ -425,9 +425,9 @@ std::vector<int32_t> CSystem::processPid(const std::string& processName)
 	return result;
 }
 
-std::string CSystem::processName(int32_t pid)
+std::wstring CSystem::processName(int32_t pid)
 {
-	std::string result;
+	std::wstring result;
 	PROCESSENTRY32 pe32 = { 0 };
 	HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (snapshot != INVALID_HANDLE_VALUE)
@@ -459,14 +459,14 @@ std::string CSystem::getComputerName()
 std::string CSystem::GetCurrentExePath()
 {
 	char szFilePath[1024] = {};
-	::GetModuleFileName(NULL, szFilePath, 1024);
+	::GetModuleFileNameA(NULL, szFilePath, 1024);
 	return CSystem::GetName(szFilePath, 4);
 }
 
 std::string CSystem::GetCurrentExeName()
 {
 	char szFilePath[1024] = {};
-	::GetModuleFileName(NULL, szFilePath, 1024);
+	::GetModuleFileNameA(NULL, szFilePath, 1024);
 	return CSystem::GetName(szFilePath, 3);
 }
 
@@ -566,8 +566,8 @@ void CSystem::RecoveryRedir()
 std::string CSystem::GetSysUserName()
 {
     DWORD size = 1024;
-    TCHAR szName[1024] = {};
-    ::GetUserName(szName, &size);
+    char szName[1024] = {};
+    ::GetUserNameA(szName, &size);
     return szName;
 }
 
@@ -658,18 +658,55 @@ HWND CSystem::GetConsoleHwnd()
 	char pszOldWindowTitle[bufsize];
 	// WindowTitle.
 	// Fetch current window title.
-	GetConsoleTitle(pszOldWindowTitle, bufsize);
+	GetConsoleTitleA(pszOldWindowTitle, bufsize);
 	// Format a "unique" NewWindowTitle.
-	wsprintf(pszNewWindowTitle, "%d/%d", GetTickCount(), GetCurrentProcessId());
+	sprintf(pszNewWindowTitle, "%d/%d", GetTickCount(), GetCurrentProcessId());
 	// Change current window title.
-	SetConsoleTitle(pszNewWindowTitle);
+	SetConsoleTitleA(pszNewWindowTitle);
 	// Ensure window title has been updated.
 	Sleep(40);
 	// Look for NewWindowTitle.
-	hwndFound = FindWindow(NULL, pszNewWindowTitle);
+	hwndFound = FindWindowA(NULL, pszNewWindowTitle);
 	// Restore original window title.
-	SetConsoleTitle(pszOldWindowTitle);
+	SetConsoleTitleA(pszOldWindowTitle);
 	return(hwndFound);
+}
+
+bool CSystem::isMouseLeftDown()
+{
+	return ((::GetAsyncKeyState(MOUSE_MOVED) & 0x8000) ? 1 : 0);
+}
+
+bool CSystem::isMouseRightDown()
+{
+	return ((::GetAsyncKeyState(MOUSE_EVENT) & 0x8000) ? 1 : 0);
+}
+
+bool CSystem::isMouseMidDown()
+{
+	return ((::GetAsyncKeyState(MOUSE_WHEELED) & 0x8000) ? 1 : 0);
+}
+
+RECT CSystem::rectValid(const RECT& rect)
+{
+	RECT result = rect;
+    if (result.left < 0)
+    {
+		result.left = 0;
+    }
+    if (result.top < 0)
+    {
+		result.top = 0;
+    }
+    if (result.right < 0)
+    {
+		result.right = 0;
+    }
+    if (result.bottom < 0)
+    {
+		result.bottom = 0;
+    }
+    return result;
 }
 
 //int main()

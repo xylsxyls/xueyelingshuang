@@ -1,5 +1,5 @@
 #pragma once
-#include "QtCore/QtCoreAPI.h"
+#include "QssString/QssStringAPI.h"
 #include <string>
 #include <QColor>
 #include "QtControlsMacro.h"

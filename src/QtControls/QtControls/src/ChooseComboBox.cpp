@@ -3,7 +3,6 @@
 #include "Label.h"
 #include <QStylePainter>
 #include "CGeneralStyle.h"
-#include "core/coreAPI.h"
 #include <qmath.h>
 
 ChooseComboBox::ChooseComboBox(QWidget* parent):

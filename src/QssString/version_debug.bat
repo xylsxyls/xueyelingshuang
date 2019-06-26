@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" QssString 32 dll debug same

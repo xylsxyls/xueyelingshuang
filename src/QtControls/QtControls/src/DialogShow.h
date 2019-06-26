@@ -2,7 +2,7 @@
 #include "DialogBase.h"
 #include <QPropertyAnimation>
 #include "QtControlsMacro.h"
-#include "DialogManager/DialogManagerAPI.h"
+#include "DialogResult.h"
 
 class Label;
 class COriginalButton;

@@ -1,6 +1,6 @@
 #include "CExternalTextEdit.h"
 
-#include "QtCore/QtCoreAPI.h"
+#include "EO_XmlSax2Parser/EO_XmlSax2ParserAPI.h"
 #include <QDebug>
 #include <QMimeData>
 #include <QMouseEvent>

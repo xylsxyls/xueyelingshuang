@@ -6,6 +6,13 @@
 #include <vector>
 #include "CSystemMacro.h"
 
+#define SafeDelete(ptr) \
+if (ptr != nullptr)\
+{\
+	delete ptr;\
+	ptr = nullptr;\
+}
+
 class CSystemAPI CSystem
 {
 public:
@@ -84,9 +91,9 @@ public:
 	//?获取操作系统版本号
 	static int32_t GetSystemVersionNum();
 	//?获取进程PID，耗时10毫秒左右
-	static std::vector<int32_t> processPid(const std::string& processName = "");
+	static std::vector<int32_t> processPid(const std::wstring& processName = L"");
 	//?获取进程名，耗时10毫秒左右
-	static std::string processName(int32_t pid);
+	static std::wstring processName(int32_t pid);
 	//?获取电脑名
 	static std::string getComputerName();
 	//返回本进程所在路径，带\符号
@@ -107,6 +114,14 @@ public:
 	static bool rename(const std::string& oldPath, const std::string& newPath);
 	//文件是否存在
 	static bool fileExist(const std::string& filePath);
+	//判断当前鼠标左键是否按下
+	static bool isMouseLeftDown();
+	//判断当前鼠标右键是否按下
+	static bool isMouseRightDown();
+	//判断当前鼠标中键是否按下
+	static bool isMouseMidDown();
+    //将QRect中4个点中小于0的点换成0
+	static RECT rectValid(const RECT& rect);
 
 public:
     static bool ifRedirFrobid;
