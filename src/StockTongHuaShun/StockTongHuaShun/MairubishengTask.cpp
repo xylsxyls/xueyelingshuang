@@ -13,9 +13,8 @@ m_sleepTime(0)
 
 void MairubishengTask::DoTask()
 {
-	CMouse::MoveAbsolute(xyls::Point(1680, 350), 0);
 	CMouse::LeftClick(0);
-	CKeyboard::InputString(m_stock + "\n");
+	CKeyboard::InputString(m_stock + "\n", 0);
 	Sleep(m_sleepTime);
 	bool isFind = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "mai.png", xyls::Rect(1320, 630, 1370, 769));//
 	if (isFind)
