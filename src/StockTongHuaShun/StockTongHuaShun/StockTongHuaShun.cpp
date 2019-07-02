@@ -5,6 +5,8 @@
 #include "CStopWatch/CStopWatchAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "MairubishengTask.h"
+#include "Cini/CiniAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -23,9 +25,15 @@ int32_t main()
 	printf("任意键3秒后开始\n");
 	getchar();
 	Sleep(3000);
+	Cini ini(CSystem::GetCurrentExePath() + "config.ini");
 	CStopWatch stopWatch;
 	MysqlCpp mysql;
-	bool ss = mysql.connect("127.0.0.1", 3306, "root", "");
+	if (!mysql.connect(ini.readIni("mysql_ip"), 3306, "root", ""))
+	{
+		printf("数据库连接失败\n");
+		getchar();
+		return 0;
+	}
 	mysql.selectDb("stockmarket");
 	auto allStock = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString("stock", "stock")))->toVector();
 	auto threadId = CTaskThreadManager::Instance().Init();
