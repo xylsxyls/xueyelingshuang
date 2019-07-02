@@ -26,6 +26,7 @@ int32_t main()
 	getchar();
 	Sleep(3000);
 	Cini ini(CSystem::GetCurrentExePath() + "config.ini");
+	int32_t sleepTime = atoi(ini.readIni("sleep_time").c_str());
 	CStopWatch stopWatch;
 	MysqlCpp mysql;
 	if (!mysql.connect(ini.readIni("mysql_ip"), 3306, "root", ""))
@@ -44,7 +45,7 @@ int32_t main()
 	{
 		std::shared_ptr<MairubishengTask> spMairubishengTask;
 		MairubishengTask* mairubishengTask = new MairubishengTask;
-		mairubishengTask->setParam(allStock[index][0], &vecValidStock);
+		mairubishengTask->setParam(allStock[index][0], sleepTime, &vecValidStock);
 		spMairubishengTask.reset(mairubishengTask);
 		CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spMairubishengTask);
 	}//"600354""600206"

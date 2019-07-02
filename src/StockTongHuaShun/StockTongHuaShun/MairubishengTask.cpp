@@ -2,17 +2,21 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "ScreenScript/ScreenScriptAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "CMouse/CMouseAPI.h"
 
 MairubishengTask::MairubishengTask():
-m_vecValidStock(nullptr)
+m_vecValidStock(nullptr),
+m_sleepTime(0)
 {
 
 }
 
 void MairubishengTask::DoTask()
 {
+	CMouse::MoveAbsolute(xyls::Point(1680, 350), 0);
+	CMouse::LeftClick(0);
 	CKeyboard::InputString(m_stock + "\n");
-	Sleep(200);
+	Sleep(m_sleepTime);
 	bool isFind = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "mai.png", xyls::Rect(1320, 630, 1370, 769));//
 	if (isFind)
 	{
@@ -21,8 +25,9 @@ void MairubishengTask::DoTask()
 	}
 }
 
-void MairubishengTask::setParam(const std::string& stock, std::vector<std::string>* vecValidStock)
+void MairubishengTask::setParam(const std::string& stock, int32_t sleepTime, std::vector<std::string>* vecValidStock)
 {
 	m_stock = stock;
+	m_sleepTime = sleepTime;
 	m_vecValidStock = vecValidStock;
 }
