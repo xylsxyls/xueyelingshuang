@@ -26,7 +26,7 @@ int32_t main()
 	printf("任意键3秒后开始\n");
 	getchar();
 	Sleep(3000);
-	CMouse::MoveAbsolute(xyls::Point(1680, 350), 0);
+	CMouse::MoveAbsolute(xyls::Point(1819, 10), 0);
 	Cini ini(CSystem::GetCurrentExePath() + "config.ini");
 	int32_t sleepTime = atoi(ini.readIni("sleep_time").c_str());
 	CStopWatch stopWatch;
