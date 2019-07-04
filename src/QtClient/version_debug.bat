@@ -1,5 +1,4 @@
-call "%CLOUD_REBUILD%" QtControls 0 dll debug same
-call "%CLOUD_REBUILD%" ManagerBase 0 dll debug same
+call "%CLOUD_REBUILD%" DialogManager 0 dll debug same
 call "%CLOUD_REBUILD%" HttpRequest 0 dll debug same
 call "%CLOUD_REBUILD%" WidgetFactory 0 dll debug same
 call "%FILE_REPLACE%" -dir %~dp0..\..\include\ Macro.h -replace "#pragma comment(lib," "//#pragma comment(lib,"
@@ -44,3 +43,8 @@ call "%FILE_REPLACE%" -dir %~dp0..\..\include\ Macro.h -replace "//#pragma comme
 call "%FILE_REPLACE%" -dir %~dp0..\..\include\ API.h -replace "//#pragma comment(lib,\"QtControlsd.lib\")" "#pragma comment(lib,\"QtClientd.lib\")"
 call "%FILE_REPLACE%" -dir %~dp0..\..\include\ Macro.h -replace "//#pragma comment(lib,\"QtControls.lib\")" "#pragma comment(lib,\"QtClient.lib\")"
 call "%FILE_REPLACE%" -dir %~dp0..\..\include\ API.h -replace "//#pragma comment(lib,\"QtControls.lib\")" "#pragma comment(lib,\"QtClient.lib\")"
+
+call "%FILE_REPLACE%" -dir %~dp0..\..\include\ Macro.h -replace "//#pragma comment(lib,\"DialogManagerd.lib\")" "#pragma comment(lib,\"QtClientd.lib\")"
+call "%FILE_REPLACE%" -dir %~dp0..\..\include\ API.h -replace "//#pragma comment(lib,\"DialogManagerd.lib\")" "#pragma comment(lib,\"QtClientd.lib\")"
+call "%FILE_REPLACE%" -dir %~dp0..\..\include\ Macro.h -replace "//#pragma comment(lib,\"DialogManager.lib\")" "#pragma comment(lib,\"QtClient.lib\")"
+call "%FILE_REPLACE%" -dir %~dp0..\..\include\ API.h -replace "//#pragma comment(lib,\"DialogManager.lib\")" "#pragma comment(lib,\"QtClient.lib\")"

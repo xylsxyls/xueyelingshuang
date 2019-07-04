@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QStandardPaths>
 #include <QAbstractTextDocumentLayout>
+#include "CSystem/CSystemAPI.h"
 
 CGeneralStyle* CGeneralStyle::gInstance = NULL;
 
@@ -149,12 +150,18 @@ QString CGeneralStyle::fontFace_BaiDuZongYi()
 
 QString CGeneralStyle::war3lobbyResourcePath()
 {
-    return "D:/newClient/code/output/W3L/res";
+	std::string path = CSystem::GetCurrentExePath();
+	CStringManager::Replace(path, "\\", "/");
+	return path.c_str();
+    //return "D:/newClient/code/output/W3L/res";
 }
 
 QString CGeneralStyle::platformResourcePath()
 {
-	return "D:/newClient/code/output/resource";
+	std::string path = CSystem::GetCurrentExePath();
+	CStringManager::Replace(path, "\\", "/");
+	return path.c_str();
+	//return "D:/newClient/code/output/resource";
 }
 
 CGeneralStyle::PingLevel CGeneralStyle::getPingLevel(quint64 ping)

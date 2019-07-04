@@ -2,6 +2,9 @@
 #include "DialogManagerMacro.h"
 #include "NotifyDialog.h"
 
+#include <qglobal.h>
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 class CWebViewEx;
 class COriginalButton;
 class Separator;
@@ -29,3 +32,5 @@ private:
 	QString m_advertUrl;
 	CWebViewEx* m_advert;
 };
+
+#endif

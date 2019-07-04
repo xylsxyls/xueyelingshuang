@@ -2,6 +2,7 @@
 #include <QTreeWidgetItem>
 #include "NoFocusFrameDelegate.h"
 #include <QScrollBar>
+#include <QContextMenuEvent>
 
 TreeWidget::TreeWidget(QWidget* parent) :
 ControlShow(parent)
@@ -167,4 +168,9 @@ QTreeWidgetItem* TreeWidget::findTreeWidgetItem(QWidget* widget)
 		return nullptr;
 	}
 	return itData->second;
+}
+
+void TreeWidget::contextMenuEvent(QContextMenuEvent* eve)
+{
+	emit itemRightClicked(itemAt(eve->pos()));
 }

@@ -40,6 +40,12 @@
     <Filter Include="WidgetFactory">
       <UniqueIdentifier>{5e5631d1-9ff0-4b0e-aea8-f0228fee8154}</UniqueIdentifier>
     </Filter>
+    <Filter Include="DialogManager">
+      <UniqueIdentifier>{4a077936-0a38-496e-89c6-5bef76a163d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="JsonCpp">
+      <UniqueIdentifier>{c50f09b8-465f-4e9a-a130-d8603a6e035d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\CStringManager\CStringManager\src\CStringManager.h">
@@ -134,6 +140,63 @@
     </ClInclude>
     <ClInclude Include="..\..\..\WidgetFactory\WidgetFactory\src\WidgetFactoryMacro.h">
       <Filter>WidgetFactory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\DialogManager\DialogManager\src\AccountManagerDialog.h">
+      <Filter>DialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\DialogManager\DialogManager\src\BoxDialogBase.h">
+      <Filter>DialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\DialogManager\DialogManager\src\CExpressionPickerDelegate.h">
+      <Filter>DialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\DialogManager\DialogManager\src\ClosureDialog.h">
+      <Filter>DialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\DialogManager\DialogManager\src\DialogHelper.h">
+      <Filter>DialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\DialogManager\DialogManager\src\DialogManagerAPI.h">
+      <Filter>DialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\DialogManager\DialogManager\src\DialogManagerMacro.h">
+      <Filter>DialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\DialogManager\DialogManager\src\DialogType.h">
+      <Filter>DialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\DialogManager\DialogManager\src\LockedAccountPanel.h">
+      <Filter>DialogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json_batchallocator.h">
+      <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\JsonCppMacro.h">
+      <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json\autolink.h">
+      <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json\config.h">
+      <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json\features.h">
+      <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json\forwards.h">
+      <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json\json.h">
+      <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json\reader.h">
+      <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json\value.h">
+      <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json\writer.h">
+      <Filter>JsonCpp</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -506,6 +569,222 @@
     <ClCompile Include="GeneratedFiles\Release\moc_WidgetFactory.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\AccountDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AccountDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AccountDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\AccountManagerDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\AdvertAskDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AdvertAskDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AdvertAskDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\AdvertShowDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AdvertShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AdvertShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\AllocManager.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AllocManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AllocManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\AskDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\AskShowDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AskShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\BoxDialogBase.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\CExpressionDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CExpressionDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CExpressionDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\CExpressionPicker.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CExpressionPicker.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CExpressionPicker.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\CExpressionPickerDelegate.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\ClosureDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\DialogHelper.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\DialogManager.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\DownloadOperateDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_DownloadOperateDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\InputDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_InputDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_InputDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\LockedAccountPanel.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\LoginShowDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_LoginShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\NotifyDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NotifyDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NotifyDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\NotifyDialogManager.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_NotifyDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\PopDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PopDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PopDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\PopDialogManager.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PopDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PopDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\StaticDialogManager.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_StaticDialogManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_StaticDialogManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\SubAccountPanel.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_SubAccountPanel.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_SubAccountPanel.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\TipDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\TipShowDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_TipShowDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\DialogManager\DialogManager\src\WaitDialog.cpp">
+      <Filter>DialogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_WaitDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\JsonCpp\JsonCpp\src\json_reader.cpp">
+      <Filter>JsonCpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\JsonCpp\JsonCpp\src\json_value.cpp">
+      <Filter>JsonCpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\JsonCpp\JsonCpp\src\json_writer.cpp">
+      <Filter>JsonCpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\CSystem\CSystem\src\CSystem.inl">
@@ -537,6 +816,15 @@
     </None>
     <None Include="..\..\..\QtControls\QtControls\src\ControlShow.inl">
       <Filter>QtControls</Filter>
+    </None>
+    <None Include="..\..\..\JsonCpp\JsonCpp\src\json_internalarray.inl">
+      <Filter>JsonCpp</Filter>
+    </None>
+    <None Include="..\..\..\JsonCpp\JsonCpp\src\json_internalmap.inl">
+      <Filter>JsonCpp</Filter>
+    </None>
+    <None Include="..\..\..\JsonCpp\JsonCpp\src\json_valueiterator.inl">
+      <Filter>JsonCpp</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -650,6 +938,69 @@
     </CustomBuild>
     <CustomBuild Include="..\..\..\WidgetFactory\WidgetFactory\src\WidgetFactory.h">
       <Filter>WidgetFactory</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\AccountDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\AdvertAskDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\AdvertShowDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\AllocManager.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\AskDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\AskShowDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\CExpressionDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\CExpressionPicker.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\DialogManager.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\DownloadOperateDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\InputDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\LoginShowDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\NotifyDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\NotifyDialogManager.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\PopDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\PopDialogManager.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\StaticDialogManager.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\SubAccountPanel.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\TipDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\TipShowDialog.h">
+      <Filter>DialogManager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\DialogManager\DialogManager\src\WaitDialog.h">
+      <Filter>DialogManager</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

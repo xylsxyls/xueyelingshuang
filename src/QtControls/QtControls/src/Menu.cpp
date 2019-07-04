@@ -58,15 +58,20 @@ QAction* Menu::addAction(const QString& text,
 		m_pCustomStyle->setMaxSize(qMax(uncheckMax, checkMax));
 	}
 	QAction* item = new QAction(this);
-	item->setIcon(QPixmap(uncheckIcon).scaled(uncheckIconSize));
-	item->setText(text);
 	if (item == nullptr)
 	{
 		return nullptr;
 	}
-	item->installEventFilter(this);
 	
-	m_mapIconData[item] = QPixmap(checkIcon).scaled(checkIconSize);
+	item->setText(text);
+	item->installEventFilter(this);
+
+	if (!uncheckIcon.isEmpty() || !checkIcon.isEmpty())
+	{
+		item->setIcon(QPixmap(uncheckIcon).scaled(uncheckIconSize));
+		item->setCheckable(true);
+		m_mapIconData[item] = QPixmap(checkIcon).scaled(checkIconSize);
+	}
 	QMenu::addAction(item);
 	return item;
 }

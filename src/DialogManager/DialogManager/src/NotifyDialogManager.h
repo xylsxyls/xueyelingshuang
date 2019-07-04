@@ -1,7 +1,7 @@
 #pragma once
 #include <QObject>
 #include "DialogType.h"
-#include "core/coreAPI.h"
+#include "ManagerBase/ManagerBaseAPI.h"
 
 /** 通知框的管理类
 */

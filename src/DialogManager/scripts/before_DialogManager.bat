@@ -28,3 +28,18 @@ goto QtControls_end
 call "%CLOUD_REBUILD%" QtControls %QtControls_bit% %QtControls_dlllib% %QtControls_debugRelease%
 goto QtControls_end
 :QtControls_end
+
+::--------------------------------------------------------------------
+set ManagerBase_dlllib=lib
+set ManagerBase_bit=%1
+set ManagerBase_debugRelease=%3
+set ManagerBase_allSame=%4
+if "%4" == "same" (goto ManagerBase_callSame) else (goto ManagerBase_callSimple)
+:ManagerBase_callSame
+set ManagerBase_dlllib=%2
+call "%CLOUD_REBUILD%" ManagerBase %ManagerBase_bit% %ManagerBase_dlllib% %ManagerBase_debugRelease% %ManagerBase_allSame%
+goto ManagerBase_end
+:ManagerBase_callSimple
+call "%CLOUD_REBUILD%" ManagerBase %ManagerBase_bit% %ManagerBase_dlllib% %ManagerBase_debugRelease%
+goto ManagerBase_end
+:ManagerBase_end

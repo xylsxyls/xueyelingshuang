@@ -1,7 +1,7 @@
 #pragma once
 #include <QObject>
 #include "DialogType.h"
-#include "core/coreAPI.h"
+#include "ManagerBase/ManagerBaseAPI.h"
 
 class DownloadOperateDialog;
 /** 弹窗的管理类

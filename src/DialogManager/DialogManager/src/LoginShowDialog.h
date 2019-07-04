@@ -2,6 +2,8 @@
 #include "DialogManagerMacro.h"
 #include "NotifyDialog.h"
 
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 class QWebView;
 class COriginalButton;
 class Separator;
@@ -65,3 +67,5 @@ private:
 	COriginalButton* m_changePassword;
 	Label* m_preLoginTime;
 };
+
+#endif

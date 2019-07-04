@@ -206,11 +206,6 @@ COriginalDialog* AllocManager::createDialog(quint64& dialogId, quint64 userId, D
         dialogPtr = new AskDialog;
         break;
     }
-    case ADVERT_ASK_DIALOG:
-    {
-        dialogPtr = new AdvertAskDialog;
-        break;
-    }
     case INPUT_DIALOG:
     {
         dialogPtr = new InputDialog;
@@ -249,16 +244,23 @@ COriginalDialog* AllocManager::createDialog(quint64& dialogId, quint64 userId, D
         dialogPtr = new TipShowDialog;
         break;
     }
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
     case LOGIN_SHOW_DIALOG:
     {
         dialogPtr = new LoginShowDialog;
         break;
     }
+	case ADVERT_ASK_DIALOG:
+	{
+		dialogPtr = new AdvertAskDialog;
+		break;
+	}
 	case ADVERT_SHOW_DIALOG:
 	{
 		dialogPtr = new AdvertShowDialog;
 		break;
 	}
+#endif
     default:
         break;
     }

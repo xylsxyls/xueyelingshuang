@@ -8,6 +8,9 @@
 #include "ControlBackground.h"
 #include "QtControlsMacro.h"
 
+class QContextMenuEvent;
+/** 树形控件
+*/
 class QtControlsAPI TreeWidget :
 	public ControlShow < QTreeWidget >,
 	public ControlFont < QTreeWidget >,
@@ -65,6 +68,15 @@ public:
 	@return 返回内置节点指针
 	*/
 	QTreeWidgetItem* findTreeWidgetItem(QWidget* widget);
+
+Q_SIGNALS:
+	/** 节点被右键单击
+	@param [in] item 节点指针
+	*/
+	void itemRightClicked(QTreeWidgetItem* item);
+
+protected:
+	void contextMenuEvent(QContextMenuEvent* eve);
 
 private:
 	std::map<QWidget*, QTreeWidgetItem*> m_itemData;

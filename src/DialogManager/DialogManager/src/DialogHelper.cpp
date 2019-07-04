@@ -7,7 +7,7 @@
 #include "QtControls/Separator.h"
 #include "PopDialog.h"
 #include "NotifyDialog.h"
-#include "core/coreAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 std::ofstream* g_11ClientLogFile = nullptr;
 std::ofstream* g_war3LogFile = nullptr;
@@ -96,7 +96,7 @@ void DialogHelper::setLineEdit(LineEdit* lineEdit, const QString& defaultText, q
     lineEdit->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
     lineEdit->setAlignment(Qt::AlignVCenter);
     lineEdit->setTextOrigin(3);
-    lineEdit->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "/Dialog/PopupInputBox.png", 1, 1, 1, 1);
+    lineEdit->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "res/Dialog/PopupInputBox.png", 1, 1, 1, 1);
     lineEdit->setTextColor(QColor(0, 0, 0, 255));
     if (maxLength > 0)
     {

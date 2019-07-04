@@ -1,4 +1,8 @@
 #include "AdvertShowDialog.h"
+
+#include <qglobal.h>
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
 #include <QtWebKitWidgets/QWebView>
@@ -6,7 +10,6 @@
 #include "DialogHelper.h"
 #include "QtControls/Separator.h"
 #include "QtControls/WebViewEx.h"
-#include "core/coreAPI.h"
 
 AdvertShowDialog::AdvertShowDialog():
 m_advert(nullptr)
@@ -54,3 +57,5 @@ bool AdvertShowDialog::check()
 {
 	return m_advert != nullptr && NotifyDialog::check();
 }
+
+#endif

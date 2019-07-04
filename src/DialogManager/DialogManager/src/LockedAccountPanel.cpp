@@ -3,7 +3,6 @@
 #include "QtControls/CGeneralStyle.h"
 #include "QtControls/CTreeViewEx.h"
 #include <QHeaderView>
-#include "core/coreAPI.h"
 #include "DialogHelper.h"
 
 LockedAccountPanel::LockedAccountPanel(QWidget *parent)

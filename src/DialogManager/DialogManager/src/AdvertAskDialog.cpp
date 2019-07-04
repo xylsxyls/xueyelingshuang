@@ -1,4 +1,8 @@
 #include "AdvertAskDialog.h"
+
+#include <qglobal.h>
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
 #include "DialogManager.h"
@@ -95,3 +99,5 @@ bool AdvertAskDialog::check()
         m_ignore != nullptr &&
         PopDialog::check();
 }
+
+#endif

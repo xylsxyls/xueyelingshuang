@@ -1,4 +1,7 @@
 #include "LoginShowDialog.h"
+
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
 #include "QtControls/CGeneralStyle.h"
@@ -203,3 +206,5 @@ bool LoginShowDialog::check()
 		m_preLoginTime != nullptr &&
         NotifyDialog::check();
 }
+
+#endif

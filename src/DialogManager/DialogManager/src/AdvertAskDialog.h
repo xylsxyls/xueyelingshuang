@@ -1,6 +1,9 @@
 #pragma once
 #include "PopDialog.h"
 
+#include <qglobal.h>
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
+
 class CWebViewEx;
 /** 包含广告位的询问弹出框
 */
@@ -55,3 +58,5 @@ private:
 	COriginalButton* m_accept;
 	COriginalButton* m_ignore;
 };
+
+#endif

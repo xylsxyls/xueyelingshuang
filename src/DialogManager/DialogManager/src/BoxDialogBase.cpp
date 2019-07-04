@@ -4,7 +4,6 @@
 #include "QtControls/COriginalButton.h"
 #include "QtControls/CGeneralStyle.h"
 #include "QtControls/Separator.h"
-#include "core/coreAPI.h"
 #include "DialogHelper.h"
 
 BoxDialogBase::BoxDialogBase()

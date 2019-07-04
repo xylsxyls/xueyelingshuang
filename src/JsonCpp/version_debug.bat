@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" JsonCpp 32 dll debug same

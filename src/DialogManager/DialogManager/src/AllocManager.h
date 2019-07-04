@@ -3,7 +3,7 @@
 #include <QMutex>
 #include "DialogType.h"
 #include "DialogManagerMacro.h"
-#include "core/coreAPI.h"
+#include "ManagerBase/ManagerBaseAPI.h"
 #include <QObject>
 
 class AccountManagerDialog;

@@ -29,6 +29,7 @@ void PopDialogManager::popDialog(DialogParam& param)
         popDialogPtr = askDialog;
         break;
     }
+#if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
     case ADVERT_ASK_DIALOG:
     {
         AdvertAskDialogParam& advertAskDialogParam = (AdvertAskDialogParam&)param;
@@ -46,6 +47,7 @@ void PopDialogManager::popDialog(DialogParam& param)
         popDialogPtr = advertAskDialog;
         break;
     }
+#endif
     case INPUT_DIALOG:
     {
         InputDialogParam& inputDialogParam = (InputDialogParam&)param;
