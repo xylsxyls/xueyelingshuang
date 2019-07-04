@@ -1,6 +1,7 @@
 call "%CLOUD_REBUILD%" DialogManager 0 dll release same
 call "%CLOUD_REBUILD%" HttpRequest 0 dll release same
 call "%CLOUD_REBUILD%" WidgetFactory 0 dll release same
+call "%CLOUD_REBUILD%" JsonCpp 0 dll release same
 call "%FILE_REPLACE%" -dir %~dp0..\..\include\ Macro.h -replace "#pragma comment(lib," "//#pragma comment(lib,"
 call "%FILE_REPLACE%" -dir %~dp0..\..\include\ API.h -replace "#pragma comment(lib," "//#pragma comment(lib,"
 call "%FILE_REPLACE%" -dir %~dp0..\..\include\ Macro.h -replace _declspec(dllimport) _declspec(dllexport)
