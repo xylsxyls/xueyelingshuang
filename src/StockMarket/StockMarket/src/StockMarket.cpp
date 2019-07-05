@@ -247,7 +247,7 @@ BigNumber StockMarket::riseFallValue(const IntDateTime& date) const
 
 BigNumber StockMarket::chgValue(const IntDateTime& date) const
 {
-	return (((close(date) / preClose(date).toPrec(6)) - 1) * 100).toPrec(2);
+	return (((close(date) / preClose(date).toPrec(6).zero()) - 1) * 100).toPrec(2);
 }
 
 bool StockMarket::isLimitUp(const IntDateTime& date) const

@@ -83,7 +83,7 @@ int32_t main()
 	//	++itStock;
 	//}
 
-	IntDateTime beginTime = "2014-04-30";
+	IntDateTime beginTime = "2009-04-30";
 	IntDateTime endTime = "2019-04-30";
 
 	while (true)
@@ -101,14 +101,14 @@ int32_t main()
 		StockStrategy stockStrategy;
 		stockStrategy.init(StockConditionInterface::instance().condition()->getStrategy(), &stockFund);
 		watch.SetWatchTime(0);
-		stockStrategy.run(vecStock, beginTime, endTime);
+		stockStrategy.profit(vecStock, beginTime, endTime);
 		RCSend("runTime = %d", watch.GetWatchTime());
 		stockFund.allFund(endTime);
 		std::vector<std::string> stockLog = stockFund.stockLog();
 		int32_t index = -1;
 		while (index++ != stockLog.size() - 1)
 		{
-			RCSend("%s", stockLog[index].c_str());
+			//RCSend("%s", stockLog[index].c_str());
 		}
 		StockConditionInterface::instance().unload();
 		printf("ÒÑÐ¶ÔØ¶¯Ì¬¿â\n");

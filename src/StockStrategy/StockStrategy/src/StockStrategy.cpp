@@ -78,7 +78,66 @@ void StockStrategy::run(const std::vector<std::string>& vecStock, const IntDateT
 			}
 		}
 	} while ((time = time + 86400) <= endTime);
-	RCSend("StockStrategy run watch = %d", watch.GetWatchTime());
+}
+
+void StockStrategy::times(const std::vector<std::string>& vecStock, const IntDateTime& beginTime, const IntDateTime& endTime)
+{
+
+}
+
+void StockStrategy::profit(const std::vector<std::string>& vecStock, const IntDateTime& beginTime, const IntDateTime& endTime)
+{
+	std::map<BigNumber, std::vector<std::string>> profitMap;
+	BigNumber allProfit = 0;
+	int32_t index = -1;
+	while (index++ != vecStock.size() - 1)
+	{
+		IntDateTime date = beginTime;
+		const std::string& stock = vecStock[index];
+		std::shared_ptr<StockMarket> spStockMarket = StockAllMarket::instance().history(stock);
+		IntDateTime stockBeginDate = spStockMarket->beginDate();
+		if (stockBeginDate.empty())
+		{
+			continue;
+		}
+		if (date < stockBeginDate)
+		{
+			date = stockBeginDate;
+		}
+		std::vector<std::string> vecRunStock;
+		vecRunStock.push_back(stock);
+		run(vecRunStock, date, endTime);
+		std::vector<std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>> dataLog = m_stockFund->dataLog();
+		m_stockFund->clear();
+		m_stockFund->add(100000);
+		int32_t logIndex = -1;
+		while (logIndex++ != dataLog.size() - 1)
+		{
+			std::string every;
+			every.append(dataLog[logIndex].first[0].toString() + ",");
+			every.append(dataLog[logIndex].first[2].toString() + ",");
+			every.append(dataLog[logIndex].first[3].toString() + ",");
+			int32_t timeIndex = -1;
+			while (timeIndex++ != dataLog[logIndex].second.size() - 1)
+			{
+				every.append(dataLog[logIndex].second[timeIndex].dateToString() + ",");
+			}
+			profitMap[dataLog[logIndex].first[1]].push_back(every);
+			allProfit = allProfit + (dataLog[logIndex].first[1] / 100) * (dataLog[logIndex].first[2] * 100000);
+		}
+	}
+	
+	int32_t times = 0;
+	for (auto itProfit = profitMap.begin(); itProfit != profitMap.end(); ++itProfit)
+	{
+		int32_t profitIndex = -1;
+		while (profitIndex++ != itProfit->second.size() - 1)
+		{
+			RCSend((itProfit->first.toString() + "," + itProfit->second[profitIndex]).c_str());
+			++times;
+		}
+	}
+	RCSend("平均一次收益：%s%", (allProfit / times / 100000 * 100).toPrec(2).toString().c_str());
 }
 
 bool StockStrategy::check()

@@ -74,6 +74,15 @@ public:
 	*/
 	std::vector<std::string> stockLog() const;
 
+	/** 获取买卖数据日志
+	@return 返回买卖数据日志
+	*/
+	std::vector<std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>> dataLog() const;
+
+	/** 清空资产
+	*/
+	void clear();
+
 	/** 目前有几只股票
 	@return 返回目前有几只股票
 	*/
@@ -115,6 +124,8 @@ private:
 	std::map<std::string, std::shared_ptr<StockMarket>> m_stockMarket;
 	//买卖日志记录
 	std::vector<std::string> m_stockLog;
+	//买卖记录，股票代码，收益率，仓位比，持股天数，买入时间，卖出时间
+	std::vector<std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>> m_dataLog;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

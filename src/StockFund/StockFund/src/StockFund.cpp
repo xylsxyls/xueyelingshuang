@@ -79,14 +79,19 @@ bool StockFund::sellStock(const IntDateTime& date, const BigNumber& price, const
 	}
 	BigNumber position = 0;
 	std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& vecDeal = itStock->second;
+	std::vector<IntDateTime> vecTimes;
+	std::vector<BigNumber> vecData;
+	vecData.push_back(BigNumber(atoi(stock.c_str())));
 	int32_t index = -1;
 	while (index++ != vecDeal.size() - 1)
 	{
 		position = position + vecDeal[index].second.second;
+		vecTimes.push_back(vecDeal[index].first);
 	}
 	BigNumber sellPosition = (position * rate / 100).toPrec(0) * 100;
 	BigNumber charge = StockCharge::instance().sellFee(stock, price, sellPosition);
 	BigNumber back = price * sellPosition - charge;
+	BigNumber profit = 0;
 	m_available = m_available + back;
 	std::string log;
 	if (position == sellPosition)
@@ -109,7 +114,9 @@ bool StockFund::sellStock(const IntDateTime& date, const BigNumber& price, const
 			}
 		}
 		hasSell = hasSell + price * sellPosition;
-		log.append("总收益：" + ((hasSell / hasBuy.toPrec(6) - 1) * 100).toPrec(2).toString() + "%，");
+		profit = ((hasSell / hasBuy.toPrec(6) - 1) * 100).toPrec(2);
+		vecData.push_back(profit);
+		log.append("总收益：" + profit.toString() + "%，");
 		m_stock.erase(itStock);
 		m_stockMarket.erase(itStockMarket);
 	}
@@ -118,6 +125,11 @@ bool StockFund::sellStock(const IntDateTime& date, const BigNumber& price, const
 		vecDeal.push_back(std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>(date, std::pair<BigNumber, BigNumber>(price, sellPosition * -1)));
 		log.append("卖出股票：" + stock + " " + spStockMarket->name() + "，");
 	}
+	vecTimes.push_back(date);
+	vecData.push_back((back / allFund(date)).toPrec(2));
+	vecData.push_back((date - vecTimes[0]) / 86400);
+	m_dataLog.push_back(std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>(vecData, vecTimes));
+
 	log.append("日期：" + date.dateToString() + "，");
 	log.append("价格：" + price.toPrec(2).toString() + "，");
 	log.append("仓位：" + sellPosition.toPrec(0).toString() + ", ");
@@ -263,6 +275,22 @@ std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>> StockFund::
 std::vector<std::string> StockFund::stockLog() const
 {
 	return m_stockLog;
+}
+
+std::vector<std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>> StockFund::dataLog() const
+{
+	return m_dataLog;
+}
+
+void StockFund::clear()
+{
+	m_available = 0;
+	m_freeze = 0;
+	m_stock.clear();
+	m_stockMarket.clear();
+	m_stockLog.clear();
+	m_dataLog.clear();
+	m_all = 0;
 }
 
 BigNumber StockFund::stockNum() const

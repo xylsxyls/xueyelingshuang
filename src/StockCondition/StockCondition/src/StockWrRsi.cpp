@@ -117,23 +117,25 @@ void StockWrRsi::availBuyStock(const IntDateTime& date,
 		{
 			continue;
 		}
-		const BigNumber& close = spStockMarket->close(date);
-		const BigNumber& wr10Pre = spStockIndex->wr10(preDate);
-		const BigNumber& wr10 = spStockIndex->wr10(date);
-		const BigNumber& rsi6 = spStockIndex->rsi6(date);
-		const BigNumber& rsi6Pre = spStockIndex->rsi6(preDate);
-		const BigNumber& rsi12 = spStockIndex->rsi12(date);
-		const BigNumber& rsi24 = spStockIndex->rsi24(date);
-		const BigNumber& downValue = spStockMarket->downValue(date);
-		const BigNumber& entityValue = spStockMarket->entityValue(date);
-		const BigNumber& chgValue = spStockMarket->chgValue(date);
-		if ((wr10 > 95 && rsi24 < 45 && rsi24 > 35/*&& rsi24 > 35*/) &&
+		BigNumber close = spStockMarket->close(date);
+		BigNumber wr10Pre = spStockIndex->wr10(preDate);
+		BigNumber wr10 = spStockIndex->wr10(date);
+		BigNumber rsi6 = spStockIndex->rsi6(date);
+		BigNumber rsi6Pre = spStockIndex->rsi6(preDate);
+		BigNumber rsi12 = spStockIndex->rsi12(date);
+		BigNumber rsi24 = spStockIndex->rsi24(date);
+		BigNumber downValue = spStockMarket->downValue(date);
+		BigNumber entityValue = spStockMarket->entityValue(date);
+		BigNumber chgValue = spStockMarket->chgValue(date);
+		IntDateTime firstDate = spStockMarket->beginDate();
+		if ((wr10 > 90 && rsi24 < 40 && rsi24 > 35/*&& rsi24 > 35*/) &&
 			(wr10Pre < wr10) &&
 			(spStockMarket->low(date) < spStockMarket->low(preDate)) &&
-			((entityValue != 0) && (downValue / entityValue.toPrec(4) < (1 / 4.0))) &&
-			(chgValue < -2 || spStockMarket->chgValue(preDate) < -3) &&
+			((entityValue != 0) && (downValue < (1 / 4.0) * entityValue.toPrec(4))) &&
+			((chgValue < -2 && chgValue > -7) || spStockMarket->chgValue(preDate) < -3) &&
 			(close > 10) &&
-			(!spStockMarket->isLimitDown(date)))
+			(!spStockMarket->isLimitDown(date)) &&
+			(date - 86400 * 365 > firstDate))
 		//if ((wr10 > 95 && rsi24 < 50 && rsi24 > 40 && close > 0) &&
 		//	//wr10Pre < wr10 &&
 		//	chgValue > -9)
@@ -171,10 +173,10 @@ bool StockWrRsi::addBuy(const IntDateTime& date, const std::shared_ptr<StockMark
 	{
 		return false;
 	}
-	const BigNumber& wr10Pre = spStockIndex->wr10(preDate);
-	const BigNumber& wr10 = spStockIndex->wr10(date);
-	const BigNumber& rsi24 = spStockIndex->rsi24(date);
-	if ((wr10 > 95 && rsi24 < 45 && rsi24 > 35/*rsi24 < 45 && rsi24 > 30*/) &&
+	BigNumber wr10Pre = spStockIndex->wr10(preDate);
+	BigNumber wr10 = spStockIndex->wr10(date);
+	BigNumber rsi24 = spStockIndex->rsi24(date);
+	if ((wr10 > 90 && rsi24 < 40 && rsi24 > 35/*rsi24 < 45 && rsi24 > 30*/) &&
 		(wr10Pre < wr10) &&
 		(spStockMarket->low(date) < spStockMarket->low(preDate) * 1.01) &&
 		(!spStockMarket->isLimitDown(date)))
@@ -186,8 +188,8 @@ bool StockWrRsi::addBuy(const IntDateTime& date, const std::shared_ptr<StockMark
 
 bool StockWrRsi::needSell(const IntDateTime& date, const std::shared_ptr<StockMarket>& spStockMarket, const std::shared_ptr<StockIndex>& spStockIndex)
 {
-	const std::string& stock = spStockMarket->stock();
-	const std::vector<IntDateTime>& vecTime = m_stockFund->ownedTime(stock);
+	std::string stock = spStockMarket->stock();
+	std::vector<IntDateTime> vecTime = m_stockFund->ownedTime(stock);
 	if (vecTime.empty())
 	{
 		return false;
@@ -203,6 +205,7 @@ bool StockWrRsi::needSell(const IntDateTime& date, const std::shared_ptr<StockMa
 		{
 			if (spStockMarket->chgValue(date) > 0 && spStockMarket->close(date) < ((spStockMarket->open(firstBuyTime) - spStockMarket->close(firstBuyTime)).toPrec(6) * 2 / 3 + spStockMarket->close(firstBuyTime)))
 			{
+				m_stockFund->allFund(date);
 				return true;
 			}
 		}
@@ -210,11 +213,17 @@ bool StockWrRsi::needSell(const IntDateTime& date, const std::shared_ptr<StockMa
 		{
 			if (chg > 0 && spStockMarket->entityValue(date) < spStockMarket->upValue(date) * 2)
 			{
+				m_stockFund->allFund(date);
 				return true;
 			}
 		}
 	}
-	return spStockIndex->wr10(date) < 50 && spStockMarket->chgValue(date) < 9.8;
+	bool result = spStockIndex->wr10(date) < 10 && spStockMarket->chgValue(date) < 9.8;
+	if (result)
+	{
+		m_stockFund->allFund(date);
+	}
+	return result;
 
 	//const BigNumber& stockNum = m_stockFund->stockNum();
 	//if (stockNum != 0)
