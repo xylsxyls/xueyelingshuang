@@ -15,6 +15,7 @@ goto MysqlCpp_end
 :MysqlCpp_end
 goto MysqlCpp_debug_release_end
 :MysqlCpp_debug
-xcopy /y /i /r /s "%xueyelingshuang%tools\mysqlcpp\lib\debug\*" "%xueyelingshuang%lib\"
+xcopy /y /i /r /s "%xueyelingshuang%tools\mysqlcpp\lib\release\*.lib" "%xueyelingshuang%lib\"
+xcopy /y /i /r /s "%xueyelingshuang%tools\mysqlcpp\lib\debug\*.dll" "%xueyelingshuang%lib\"
 goto MysqlCpp_debug_release_end
 :MysqlCpp_debug_release_end
