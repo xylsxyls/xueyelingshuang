@@ -46,6 +46,9 @@
     <Filter Include="JsonCpp">
       <UniqueIdentifier>{c50f09b8-465f-4e9a-a130-d8603a6e035d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Cini">
+      <UniqueIdentifier>{0d65adc1-f222-4b28-b5bd-cbdb7eeb894d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\CStringManager\CStringManager\src\CStringManager.h">
@@ -197,6 +200,15 @@
     </ClInclude>
     <ClInclude Include="..\..\..\JsonCpp\JsonCpp\src\json\writer.h">
       <Filter>JsonCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Cini\Cini\src\Cini.h">
+      <Filter>Cini</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Cini\Cini\src\CiniMacro.h">
+      <Filter>Cini</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Cini\Cini\src\SimpleIni.h">
+      <Filter>Cini</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -784,6 +796,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\JsonCpp\JsonCpp\src\json_writer.cpp">
       <Filter>JsonCpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Cini\Cini\src\Cini.cpp">
+      <Filter>Cini</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

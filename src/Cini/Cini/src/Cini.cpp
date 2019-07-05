@@ -47,7 +47,7 @@ std::string Cini::readIni(const std::string& key, const std::string& section) co
 	}
 	std::string value;
 	value.resize(m_length);
-	GetPrivateProfileString(section.c_str(), key.c_str(), "", &value[0], m_length, m_iniPath.c_str());
+	GetPrivateProfileStringA(section.c_str(), key.c_str(), "", &value[0], m_length, m_iniPath.c_str());
 	value.resize(strlen(&value[0]));
 	return value;
 }
@@ -61,7 +61,7 @@ void Cini::writeIni(const std::string& key, const std::string& value, const std:
 		return;
 	}
 
-	WritePrivateProfileString(section.c_str(), key.c_str(), value.c_str(), m_iniPath.c_str());
+	WritePrivateProfileStringA(section.c_str(), key.c_str(), value.c_str(), m_iniPath.c_str());
 }
 
 std::vector<std::string> Cini::getAllSection() const
@@ -84,10 +84,10 @@ std::vector<std::string> Cini::getAllSection() const
 	//总长度
 	uint32_t maxSectionLength = (uint32_t)m_sectionNum * (uint32_t)m_length;
 	//总的提出来的字符串
-	TCHAR* chSectionNames = new TCHAR[maxSectionLength];
+	CHAR* chSectionNames = new CHAR[maxSectionLength];
 	//存放一个段名
-	TCHAR* chSection = new TCHAR[m_length];
-	DWORD nChar = GetPrivateProfileSectionNames(chSectionNames, maxSectionLength, m_iniPath.c_str());
+	CHAR* chSection = new CHAR[m_length];
+	DWORD nChar = GetPrivateProfileSectionNamesA(chSectionNames, maxSectionLength, m_iniPath.c_str());
 	//以下循环，截断到两个连续的0
 	for (int32_t i = 0; (DWORD)i < nChar; i++)
 	{
@@ -145,7 +145,7 @@ std::string Cini::getFirstKey(const std::string& section) const
 
 	std::string result;
 	result.resize(m_length);
-	GetPrivateProfileString(section.c_str(), nullptr, "", &result[0], m_length, m_iniPath.c_str());
+	GetPrivateProfileStringA(section.c_str(), nullptr, "", &result[0], m_length, m_iniPath.c_str());
 	result.resize(strlen(&result[0]));
 	return result;
 }
@@ -158,7 +158,7 @@ void Cini::deleteKey(const std::string& key, const std::string& section) const
 		m_simpleIni->SaveFile(m_iniPath.c_str(), m_isUtf8);
 		return;
 	}
-	WritePrivateProfileString(section.c_str(), key.c_str(), nullptr, m_iniPath.c_str());
+	WritePrivateProfileStringA(section.c_str(), key.c_str(), nullptr, m_iniPath.c_str());
 }
 
 void Cini::deleteSection(const std::string& section) const
@@ -174,7 +174,7 @@ void Cini::deleteSection(const std::string& section) const
 		m_simpleIni->SaveFile(m_iniPath.c_str(), m_isUtf8);
 		return;
 	}
-	WritePrivateProfileSection(section.c_str(), nullptr, m_iniPath.c_str());
+	WritePrivateProfileSectionA(section.c_str(), nullptr, m_iniPath.c_str());
 }
 
 //int32_t main()

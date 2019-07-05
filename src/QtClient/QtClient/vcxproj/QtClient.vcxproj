@@ -19,6 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\Cini\Cini\src\Cini.h" />
+    <ClInclude Include="..\..\..\Cini\Cini\src\CiniMacro.h" />
+    <ClInclude Include="..\..\..\Cini\Cini\src\SimpleIni.h" />
     <ClInclude Include="..\..\..\CStringManager\CStringManager\src\CStringManager.h" />
     <ClInclude Include="..\..\..\CStringManager\CStringManager\src\CStringManagerMacro.h" />
     <ClInclude Include="..\..\..\CSystem\CSystem\src\CSystem.h" />
@@ -1115,6 +1118,7 @@
     <ClInclude Include="..\..\..\ManagerBase\ManagerBase\src\SingletonBase.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\Cini\Cini\src\Cini.cpp" />
     <ClCompile Include="..\..\..\CStringManager\CStringManager\src\CStringManager.cpp" />
     <ClCompile Include="..\..\..\CSystem\CSystem\src\CSystem.cpp" />
     <ClCompile Include="..\..\..\DialogManager\DialogManager\src\AccountDialog.cpp" />
