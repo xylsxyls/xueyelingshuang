@@ -218,6 +218,16 @@ BigNumber& BigNumber::setDivParam(int32_t prec, PrecFlag flag)
 	return *this;
 }
 
+BigNumber BigNumber::minNumber(const BigNumber& x, const BigNumber& y)
+{
+	return x < y ? x : y;
+}
+
+BigNumber BigNumber::maxNumber(const BigNumber& x, const BigNumber& y)
+{
+	return x > y ? x : y;
+}
+
 BigNumber BigNumber::add(const BigNumber& x, const BigNumber& y)
 {
 	BigNumber result;

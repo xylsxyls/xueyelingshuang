@@ -22,7 +22,7 @@ void StockMysql::init()
 	}
 }
 
-std::vector<std::string> StockMysql::allStock()
+std::vector<std::string> StockMysql::allStock() const
 {
 	m_mysql.selectDb("stockmarket");
 	std::vector<std::string> result;
@@ -58,7 +58,7 @@ void StockMysql::addStock(const std::string& stock)
 
 void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vector<std::string>>& vecMarket)
 {
-	m_mysql.selectDb("stockmarket");
+	createMarketHead(stock);
 	int32_t lineIndex = -1;
 	while (lineIndex++ != vecMarket.size() - 1)
 	{
@@ -72,7 +72,7 @@ void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vec
 	}
 }
 
-std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
+std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
 {
 	m_mysql.selectDb("stockmarket");
 	IntDateTime useBeginTime = beginTime;
@@ -85,14 +85,111 @@ std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& 
 	{
 		useEndTime.setTime(31500101, 0);
 	}
-	return m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "*", "STR_TO_DATE(date, '%Y-%m-%d') >= STR_TO_DATE('" + useBeginTime.dateToString() + "', '%Y-%m-%d') and STR_TO_DATE(date, '%Y-%m-%d') <= STR_TO_DATE('" + useEndTime.dateToString() + "', '%Y-%m-%d')")))->toVector();
+	return m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "*", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(useBeginTime.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(useEndTime.dateToString()))))->toVector();
+}
+
+std::vector<std::vector<std::string>> StockMysql::readWr(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
+{
+	m_mysql.selectDb("stockindex");
+	IntDateTime useBeginTime = beginTime;
+	IntDateTime useEndTime = endTime;
+	if (beginTime.empty())
+	{
+		useBeginTime.setTime(19700101, 0);
+	}
+	if (endTime.empty())
+	{
+		useEndTime.setTime(31500101, 0);
+	}
+	return m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date,wr10,wr20", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(useBeginTime.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(useEndTime.dateToString()))))->toVector();
+}
+
+std::vector<std::vector<std::string>> StockMysql::readRsi(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
+{
+	m_mysql.selectDb("stockindex");
+	IntDateTime useBeginTime = beginTime;
+	IntDateTime useEndTime = endTime;
+	if (beginTime.empty())
+	{
+		useBeginTime.setTime(19700101, 0);
+	}
+	if (endTime.empty())
+	{
+		useEndTime.setTime(31500101, 0);
+	}
+	return m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date,rsi6,rsi12,rsi24", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(useBeginTime.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(useEndTime.dateToString()))))->toVector();
+}
+
+bool StockMysql::dateExist(const std::string& stock, const IntDateTime& date) const
+{
+	m_mysql.selectDb("stockmarket");
+	return !(m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "*", SqlString::fieldStrToDate("date") + "=" + SqlString::strToDate(date.dateToString()))))->toVector().empty());
+}
+
+IntDateTime StockMysql::beginDate(const std::string& stock) const
+{
+	m_mysql.selectDb("stockmarket");
+	std::string minSelect = SqlString::selectString(stock, SqlString::sqlMin(SqlString::fieldStrToDate("date")));
+	auto vec = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date", SqlString::fieldStrToDate("date") + "=(" + minSelect + ")")))->toVector();
+	if (vec.empty())
+	{
+		return IntDateTime(0, 0);
+	}
+	return vec[0][0];
+}
+
+IntDateTime StockMysql::endDate(const std::string& stock) const
+{
+	std::string maxSelect = SqlString::selectString(stock, SqlString::sqlMax(SqlString::fieldStrToDate("date")));
+	auto vec = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date", SqlString::fieldStrToDate("date") + "=(" + maxSelect + ")")))->toVector();
+	if (vec.empty())
+	{
+		return IntDateTime(0, 0);
+	}
+	return vec[0][0];
+}
+
+IntDateTime StockMysql::getDatePre(const std::string& stock, const IntDateTime& date) const
+{
+	m_mysql.selectDb("stockmarket");
+	std::string maxSelect = SqlString::selectString(stock, SqlString::sqlMax(SqlString::fieldStrToDate("date")), SqlString::fieldStrToDate("date") + "<" + SqlString::strToDate(date.dateToString()));
+	auto vec = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date", SqlString::fieldStrToDate("date") + "=(" + maxSelect + ")")))->toVector();
+	if (vec.empty())
+	{
+		return IntDateTime(0, 0);
+	}
+	return vec[0][0];
+}
+
+IntDateTime StockMysql::getDateNext(const std::string& stock, const IntDateTime& date) const
+{
+	m_mysql.selectDb("stockmarket");
+	std::string minSelect = SqlString::selectString(stock, SqlString::sqlMin(SqlString::fieldStrToDate("date")), SqlString::fieldStrToDate("date") + ">" + SqlString::strToDate(date.dateToString()));
+	auto vec = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date", SqlString::fieldStrToDate("date") + "=(" + minSelect + ")")))->toVector();
+	if (vec.empty())
+	{
+		return IntDateTime(0, 0);
+	}
+	return vec[0][0];
+}
+
+BigNumber StockMysql::getDays(const std::string& stock, const IntDateTime& date1, const IntDateTime& date2)
+{
+	m_mysql.selectDb("stockmarket");
+	return atoi(m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "COUNT(*)", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(date1.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(date2.dateToString()))))->toVector()[0][0].c_str());
 }
 
 //int main()
 //{
 //	IntDateTime ss(0, 0);
 //	
-//	auto sss = StockMysql::instance().readMarket("603826", IntDateTime(20190430, 0));
+//	auto sss1 = StockMysql::instance().getDatePre("603826", IntDateTime(20190430, 0));
+//	auto sss2 = StockMysql::instance().getDateNext("603826", IntDateTime(20190430, 0));
+//	auto sss3 = StockMysql::instance().dateExist("603826", IntDateTime(20190506, 0));
+//	auto sss4 = StockMysql::instance().readMarket("603826", "2019-01-01", "2019-01-30");
+//	auto sss5 = StockMysql::instance().beginDate("603826");
+//	auto sss6 = StockMysql::instance().endDate("603826");
+//	auto sss7 = StockMysql::instance().getDays("603826", "2019-04-27", "2019-05-06");
 //	
 //	return 0;
 //}

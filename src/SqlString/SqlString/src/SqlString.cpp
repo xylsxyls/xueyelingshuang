@@ -94,3 +94,23 @@ std::string SqlString::clearTableString(const std::string& tableName)
 {
 	return "truncate table `" + tableName + "`";
 }
+
+std::string SqlString::strToDate(const std::string& date)
+{
+	return "STR_TO_DATE('" + date + "', '%Y-%m-%d')";
+}
+
+std::string SqlString::fieldStrToDate(const std::string& field)
+{
+	return "STR_TO_DATE(" + field + ", '%Y-%m-%d')";
+}
+
+std::string SqlString::sqlMin(const std::string& field)
+{
+	return "MIN(" + field + ")";
+}
+
+std::string SqlString::sqlMax(const std::string& field)
+{
+	return "MAX(" + field + ")";
+}

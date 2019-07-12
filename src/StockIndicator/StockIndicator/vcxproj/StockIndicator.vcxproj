@@ -19,20 +19,26 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\StockDay.h" />
-    <ClInclude Include="..\src\StockMarketAPI.h" />
-    <ClInclude Include="..\src\StockMarketHelper.h" />
-    <ClInclude Include="..\src\StockMarketMacro.h" />
-    <ClInclude Include="..\src\StockMarket.h" />
+    <ClInclude Include="..\src\IndicatorBase.h" />
+    <ClInclude Include="..\src\StockIndicatorAPI.h" />
+    <ClInclude Include="..\src\StockIndicatorMacro.h" />
+    <ClInclude Include="..\src\StockIndicator.h" />
+    <ClInclude Include="..\src\StockRsi.h" />
+    <ClInclude Include="..\src\StockRsiIndicator.h" />
+    <ClInclude Include="..\src\StockWr.h" />
+    <ClInclude Include="..\src\StockWrIndicator.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\StockDay.cpp" />
-    <ClCompile Include="..\src\StockMarket.cpp" />
-    <ClCompile Include="..\src\StockMarketHelper.cpp" />
+    <ClCompile Include="..\src\IndicatorBase.cpp" />
+    <ClCompile Include="..\src\StockIndicator.cpp" />
+    <ClCompile Include="..\src\StockRsi.cpp" />
+    <ClCompile Include="..\src\StockRsiIndicator.cpp" />
+    <ClCompile Include="..\src\StockWr.cpp" />
+    <ClCompile Include="..\src\StockWrIndicator.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{FE46F4B5-4FBF-4A74-A7DB-7C9CAF133A62}</ProjectGuid>
-    <RootNamespace>StockMarket</RootNamespace>
+    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <RootNamespace>StockIndicator</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

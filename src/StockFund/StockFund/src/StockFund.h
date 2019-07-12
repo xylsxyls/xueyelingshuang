@@ -6,66 +6,65 @@
 #include <map>
 
 class StockMarket;
-/** 股票账户资金管理
+class StockDay;
+/** gupiao账户zijin管理
 */
 class StockFundAPI StockFund
 {
 public:
-	/** 购买股票
-	@param [in] date 日期
-	@param [in] price 期望的购买价格
-	@param [in] stockMarket 股票行情
-	@param [in] rate 使用的可用资金比例
-	@return 返回是否购买成功，即是否能在期望价格买到
+	/** 购买gupiao
+	@param [in] price 期望的购买jiage
+	@param [in] rate 使用的可用zijin比例
+	@param [in] spStockDay gupiao当天hangqing
+	@return 返回是否购买成功，即是否能在期望jiage买到
 	*/
-	bool buyStock(const IntDateTime& date, const BigNumber& price, const std::shared_ptr<StockMarket>& stockMarket, const BigNumber& rate);
+	bool buyStock(const BigNumber& price, const BigNumber& rate, const std::shared_ptr<StockDay>& spStockDay);
 
-	/** 卖出股票
-	@param [in] date 日期
-	@param [in] price 期望的卖出价格
-	@param [in] stock 股票代码
-	@param [in] rate 使用的可用资金比例
-	@return 返回是否购买成功，即是否能在期望价格买到
+	/** 卖出gupiao
+	@param [in] price 期望的卖出jiage
+	@param [in] rate 卖出比例
+	@param [in] spStockDay gupiao当天hangqing
+	@return 返回是否卖出成功，即是否能在期望jiage卖出
 	*/
-	bool sellStock(const IntDateTime& date, const BigNumber& price, const std::string& stock, const BigNumber& rate);
+	bool sellStock(const BigNumber& price, const BigNumber& rate, const std::shared_ptr<StockDay>& spStockDay);
 
-	/** 增加可用资金
-	@param [in] fund 资金
+	/** 增加可用zijin
+	@param [in] fund zijin
 	*/
 	void add(const BigNumber& fund);
 
-	/** 冻结可用资金
-	@param [in] rate 冻结可用资金比例
+	/** 冻结可用zijin
+	@param [in] rate 冻结可用zijin比例
 	*/
 	void freeze(const BigNumber& rate);
 
-	/** 解冻可用资金
-	@param [in] rate 解冻可用资金比例
+	/** 解冻可用zijin
+	@param [in] rate 解冻可用zijin比例
 	*/
 	void free(const BigNumber& rate);
 
-	/** 总资金
-	@param [in] date 日期，该日期可以不是交易日
-	@return 返回总资金
+	/** 总zijin
+	@param [in] date 日期，该日期可以不是jiaoyiri
+	@return 返回总zijin
 	*/
 	BigNumber allFund(const IntDateTime& date);
 
-	/** 计算所持股票在指定日期内的涨跌幅，已经放大100倍，包含百分号
-	@param [in] stock 股票代码
+	/** 计算所持gupiao在指定日期内的涨跌幅，已经放大100倍，包含百分号
+	@param [in] stock gupiao代码
 	@param [in] date 日期
 	@param [out] chg 涨跌幅
 	@return 返回是否获取成功
 	*/
 	bool stockChg(const std::string& stock, const IntDateTime& date, BigNumber& chg) const;
 
-	/** 获取该股票的买入时间
-	@param [in] stock 股票代码
-	@return 返回该股票的买入时间
+	/** 获取该gupiao的买入时间
+	@param [in] stock gupiao代码
+	@return 返回该gupiao的买入时间
 	*/
 	std::vector<IntDateTime> ownedTime(const std::string& stock);
 
-	/** 获取某只股票的买卖情况
-	@return 返回某只股票的买卖情况
+	/** 获取某只gupiao的买卖情况
+	@return 返回某只gupiao的买卖情况
 	*/
 	std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>> trade(const std::string& stock) const;
 
@@ -79,56 +78,56 @@ public:
 	*/
 	std::vector<std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>> dataLog() const;
 
-	/** 清空资产
+	/** 清空zichan
 	*/
 	void clear();
 
-	/** 目前有几只股票
-	@return 返回目前有几只股票
+	/** 目前有几只gupiao
+	@return 返回目前有几只gupiao
 	*/
 	BigNumber stockNum() const;
 
-	/** 目前是否持有该股票
-	@param [in] stock 股票
-	@return 返回目前是否持有该股票
+	/** 目前是否持有该gupiao
+	@param [in] stock gupiao
+	@return 返回目前是否持有该gupiao
 	*/
 	bool stockExist(const std::string& stock) const;
 
-	/** 获取持有的股票
-	@return 返回持有的股票
+	/** 获取持有的gupiao
+	@return 返回持有的gupiao
 	*/
 	std::vector<std::string> ownedStock() const;
 
-	/** 是否还有可用资金
-	@return 返回是否还有可用资金
+	/** 是否还有可用zijin
+	@return 返回是否还有可用zijin
 	*/
 	bool hasAvailableFund() const;
 
-	/** 是否有冻结资金
-	@return 返回是否有冻结资金
+	/** 是否有冻结zijin
+	@return 返回是否有冻结zijin
 	*/
 	bool hasFreezeFund() const;
 
 private:
-	//可用资金
+	//可用zijin
 	BigNumber m_available;
-	//冻结资金
+	//冻结zijin
 	BigNumber m_freeze;
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	//股票代码，购买日期（成本资金，股票仓位）组
+	//gupiao代码，购买日期（成本zijin，gupiaocangwei）组
 	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>> m_stock;
-	//股票行情
-	std::map<std::string, std::shared_ptr<StockMarket>> m_stockMarket;
+	//gupiaohangqing
+	//std::map<std::string, std::shared_ptr<StockMarket>> m_stockMarket;
 	//买卖日志记录
 	std::vector<std::string> m_stockLog;
-	//买卖记录，股票代码，收益率，仓位比，持股天数，买入时间，卖出时间
+	//买卖记录，gupiao代码，shouyi率，cangwei比，chigu天数，买入时间，卖出时间
 	std::vector<std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>> m_dataLog;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-	//总资金
+	//总zijin
 	BigNumber m_all;
 };

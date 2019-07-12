@@ -1,7 +1,7 @@
 #pragma once
 #define _StockMarketAPI
 #include "StockMarket.h"
-#include "StockAllMarket.h"
+#include "StockDay.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockMarketd.lib")

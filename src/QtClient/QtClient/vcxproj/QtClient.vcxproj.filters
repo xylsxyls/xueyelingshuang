@@ -49,6 +49,12 @@
     <Filter Include="Cini">
       <UniqueIdentifier>{0d65adc1-f222-4b28-b5bd-cbdb7eeb894d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CCharset">
+      <UniqueIdentifier>{7f809794-4d95-48a0-b36d-dddb72da8f14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CDump">
+      <UniqueIdentifier>{a2b96645-d92b-4e5c-86fb-a137eebd88d2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\CStringManager\CStringManager\src\CStringManager.h">
@@ -209,6 +215,21 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Cini\Cini\src\SimpleIni.h">
       <Filter>Cini</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CCharset\CCharset\src\CCharset.h">
+      <Filter>CCharset</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CCharset\CCharset\src\CCharsetMacro.h">
+      <Filter>CCharset</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CDump\CDump\src\CDump.h">
+      <Filter>CDump</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CDump\CDump\src\CDumpMacro.h">
+      <Filter>CDump</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CDump\CDump\src\mdump.h">
+      <Filter>CDump</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -799,6 +820,15 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Cini\Cini\src\Cini.cpp">
       <Filter>Cini</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CCharset\CCharset\src\CCharset.cpp">
+      <Filter>CCharset</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CDump\CDump\src\CDump.cpp">
+      <Filter>CDump</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CDump\CDump\src\mdump.cpp">
+      <Filter>CDump</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

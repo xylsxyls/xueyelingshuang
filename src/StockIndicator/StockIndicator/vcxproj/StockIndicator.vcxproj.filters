@@ -15,30 +15,48 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\StockMarket.h">
+    <ClInclude Include="..\src\StockIndicator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StockMarketAPI.h">
+    <ClInclude Include="..\src\StockIndicatorAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StockMarketMacro.h">
+    <ClInclude Include="..\src\StockIndicatorMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StockDay.h">
+    <ClInclude Include="..\src\StockWr.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StockMarketHelper.h">
+    <ClInclude Include="..\src\StockRsi.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockWrIndicator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\IndicatorBase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockRsiIndicator.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\StockMarket.cpp">
+    <ClCompile Include="..\src\StockIndicator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\StockDay.cpp">
+    <ClCompile Include="..\src\StockRsi.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\StockMarketHelper.cpp">
+    <ClCompile Include="..\src\StockWr.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockWrIndicator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\IndicatorBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockRsiIndicator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

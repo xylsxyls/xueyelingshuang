@@ -112,6 +112,9 @@ public:
 	//³ı·¨¹æÔò
 	BigNumber& setDivParam(int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
+	static BigNumber minNumber(const BigNumber& x, const BigNumber& y);
+	static BigNumber maxNumber(const BigNumber& x, const BigNumber& y);
+
 private:
 	static BigNumber add(const BigNumber& x, const BigNumber& y);
 	static BigNumber sub(const BigNumber& x, const BigNumber& y);

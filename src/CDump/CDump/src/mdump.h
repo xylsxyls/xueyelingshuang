@@ -18,8 +18,8 @@ namespace WIN32DUMP
 		//, func_on_catching_unhandled_exception func=NULL);
 
 	private:
-		static TCHAR m_szAppName[MAX_PATH];
-		static TCHAR m_szDumpDir[MAX_PATH];
+		static CHAR m_szAppName[MAX_PATH];
+		static CHAR m_szDumpDir[MAX_PATH];
 		//static func_on_catching_unhandled_exception ms_func_after_catching_unhandled_exeception;
 
 		static HMODULE GetDebugHelperDll(FARPROC* ppfnMiniDumpWriteDump, bool bShowErrors);

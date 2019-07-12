@@ -15,49 +15,19 @@ goto DllRelyTest_end
 :DllRelyTest_end
 
 ::--------------------------------------------------------------------
-set MysqlCpp_dlllib=lib
-set MysqlCpp_bit=%1
-set MysqlCpp_debugRelease=%3
-set MysqlCpp_allSame=%4
-if "%4" == "same" (goto MysqlCpp_callSame) else (goto MysqlCpp_callSimple)
-:MysqlCpp_callSame
-set MysqlCpp_dlllib=%2
-call "%CLOUD_REBUILD%" MysqlCpp %MysqlCpp_bit% %MysqlCpp_dlllib% %MysqlCpp_debugRelease% %MysqlCpp_allSame%
-goto MysqlCpp_end
-:MysqlCpp_callSimple
-call "%CLOUD_REBUILD%" MysqlCpp %MysqlCpp_bit% %MysqlCpp_dlllib% %MysqlCpp_debugRelease%
-goto MysqlCpp_end
-:MysqlCpp_end
-
-::--------------------------------------------------------------------
-set IntDateTime_dlllib=lib
-set IntDateTime_bit=%1
-set IntDateTime_debugRelease=%3
-set IntDateTime_allSame=%4
-if "%4" == "same" (goto IntDateTime_callSame) else (goto IntDateTime_callSimple)
-:IntDateTime_callSame
-set IntDateTime_dlllib=%2
-call "%CLOUD_REBUILD%" IntDateTime %IntDateTime_bit% %IntDateTime_dlllib% %IntDateTime_debugRelease% %IntDateTime_allSame%
-goto IntDateTime_end
-:IntDateTime_callSimple
-call "%CLOUD_REBUILD%" IntDateTime %IntDateTime_bit% %IntDateTime_dlllib% %IntDateTime_debugRelease%
-goto IntDateTime_end
-:IntDateTime_end
-
-::--------------------------------------------------------------------
-set BigNumber_dlllib=lib
-set BigNumber_bit=%1
-set BigNumber_debugRelease=%3
-set BigNumber_allSame=%4
-if "%4" == "same" (goto BigNumber_callSame) else (goto BigNumber_callSimple)
-:BigNumber_callSame
-set BigNumber_dlllib=%2
-call "%CLOUD_REBUILD%" BigNumber %BigNumber_bit% %BigNumber_dlllib% %BigNumber_debugRelease% %BigNumber_allSame%
-goto BigNumber_end
-:BigNumber_callSimple
-call "%CLOUD_REBUILD%" BigNumber %BigNumber_bit% %BigNumber_dlllib% %BigNumber_debugRelease%
-goto BigNumber_end
-:BigNumber_end
+set StockMysql_dlllib=lib
+set StockMysql_bit=%1
+set StockMysql_debugRelease=%3
+set StockMysql_allSame=%4
+if "%4" == "same" (goto StockMysql_callSame) else (goto StockMysql_callSimple)
+:StockMysql_callSame
+set StockMysql_dlllib=%2
+call "%CLOUD_REBUILD%" StockMysql %StockMysql_bit% %StockMysql_dlllib% %StockMysql_debugRelease% %StockMysql_allSame%
+goto StockMysql_end
+:StockMysql_callSimple
+call "%CLOUD_REBUILD%" StockMysql %StockMysql_bit% %StockMysql_dlllib% %StockMysql_debugRelease%
+goto StockMysql_end
+:StockMysql_end
 
 ::--------------------------------------------------------------------
 set Ctxt_dlllib=lib

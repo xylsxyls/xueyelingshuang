@@ -28,4 +28,12 @@ public:
 	static std::string destroyDatabaseString(const std::string& databaseName);
 
 	static std::string clearTableString(const std::string& tableName);
+
+	static std::string strToDate(const std::string& date);
+
+	static std::string fieldStrToDate(const std::string& field);
+
+	static std::string sqlMin(const std::string& field);
+
+	static std::string sqlMax(const std::string& field);
 };

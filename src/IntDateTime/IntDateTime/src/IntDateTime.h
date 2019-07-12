@@ -252,6 +252,7 @@ public:
     }
 
 	bool empty() const;
+	void clear();
 
 	void setTime(int32_t date, int32_t time);
 	void setTime(const std::string& time);

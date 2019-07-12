@@ -2,11 +2,15 @@
 #include <windows.h>
 #include <dbghelp.h>
 #include <Shlwapi.h>
+#include <time.h>
+#if _MSC_VER <= 1800
 #include "boost/filesystem.hpp"
 #include "boost/filesystem/fstream.hpp"
+#endif
 #include "CStringManager/CStringManagerAPI.h"
 #pragma comment(lib, "shlwapi.lib")
 
+#if _MSC_VER <= 1800
 class CErrorLog
 {
 public:
@@ -127,10 +131,10 @@ public:
 			PEXCEPTION_RECORD pException = pExInfo->ExceptionRecord;
 			PCONTEXT pContext = pExInfo->ContextRecord;
 			MEMORY_BASIC_INFORMATION memInfo = { 0 };
-			TCHAR szCrashModule[_MAX_PATH] = "Unknown";
+			CHAR szCrashModule[_MAX_PATH] = "Unknown";
 			if (VirtualQuery((void *)pExInfo->ContextRecord->Eip, &memInfo, sizeof(memInfo)))
 			{
-				GetModuleFileName((HINSTANCE)memInfo.AllocationBase, szCrashModule, _MAX_PATH);
+				GetModuleFileNameA((HINSTANCE)memInfo.AllocationBase, szCrashModule, _MAX_PATH);
 			}
 			objThis << CStringManager::Format("Error Module: %s \n", szCrashModule);
 			objThis << CStringManager::Format("Code: 0x%08x \n", pException->ExceptionCode);
@@ -288,6 +292,8 @@ private:
 	boost::filesystem::path    m_filePath;
 };
 
+#endif
+
 namespace WIN32DUMP
 {
 	typedef BOOL(WINAPI *MINIDUMPWRITEDUMP)(HANDLE hProcess, DWORD dwPid, HANDLE hFile, MINIDUMP_TYPE DumpType,
@@ -296,8 +302,8 @@ namespace WIN32DUMP
 		CONST PMINIDUMP_CALLBACK_INFORMATION CallbackParam);
 
 	CMiniDumper theCrashDumper;
-	TCHAR CMiniDumper::m_szAppName[MAX_PATH] = { 0 };
-	TCHAR CMiniDumper::m_szDumpDir[MAX_PATH] = { 0 };
+	CHAR CMiniDumper::m_szAppName[MAX_PATH] = { 0 };
+	CHAR CMiniDumper::m_szDumpDir[MAX_PATH] = { 0 };
 	//func_on_catching_unhandled_exception CMiniDumper::ms_func_after_catching_unhandled_exeception = NULL;
 
 	void CMiniDumper::Enable(const char* pszAppName, bool bShowErrors, const char* pszDumpDir)
@@ -312,7 +318,7 @@ namespace WIN32DUMP
 		// Need to pre-determine a valid directory.
 		strncpy(m_szDumpDir, pszDumpDir, _countof(m_szDumpDir) - 1);
 		m_szDumpDir[_countof(m_szDumpDir) - 1] = '\0';
-		PathAddBackslash(m_szDumpDir);
+		PathAddBackslashA(m_szDumpDir);
 
 		// save the callback function
 		//ms_func_after_catching_unhandled_exeception = f;
@@ -354,7 +360,7 @@ namespace WIN32DUMP
 	HMODULE CMiniDumper::GetDebugHelperDll(FARPROC* ppfnMiniDumpWriteDump, bool bShowErrors)
 	{
 		*ppfnMiniDumpWriteDump = NULL;
-		HMODULE hDll = ::LoadLibrary("DBGHELP.DLL");
+		HMODULE hDll = ::LoadLibraryA("DBGHELP.DLL");
 		if (hDll == NULL)
 		{
 			if (bShowErrors) {
@@ -379,13 +385,14 @@ namespace WIN32DUMP
 	LONG CMiniDumper::TopLevelFilter(struct _EXCEPTION_POINTERS* pExceptionInfo)
 	{
 		LONG lRetValue = EXCEPTION_CONTINUE_SEARCH;
-		TCHAR szResult[MAX_PATH + 1024] = { 0 };
+		CHAR szResult[MAX_PATH + 1024] = { 0 };
 		MINIDUMPWRITEDUMP pfnMiniDumpWriteDump = NULL;
 		HMODULE hDll = GetDebugHelperDll((FARPROC*)&pfnMiniDumpWriteDump, true);
 
+#if _MSC_VER <= 1800
 		CErrorLog errLog(boost::filesystem::path(m_szDumpDir) / L"err.log");
 		errLog.saveExcecptInfo(pExceptionInfo);
-
+#endif
 		if (hDll)
 		{
 			if (pfnMiniDumpWriteDump)
@@ -393,12 +400,12 @@ namespace WIN32DUMP
 				// Ask user if they want to save a dump file
 				// Do *NOT* localize that string (in fact, do not use MFC to load it)!
 				// Create full path for DUMP file
-				TCHAR szDumpPath[MAX_PATH];
+				CHAR szDumpPath[MAX_PATH];
 				strncpy(szDumpPath, m_szDumpDir, _countof(szDumpPath) - 1);
 				szDumpPath[_countof(szDumpPath) - 1] = L'\0';
 				size_t uDumpPathLen = strlen(szDumpPath);
 
-				TCHAR szBaseName[MAX_PATH];
+				CHAR szBaseName[MAX_PATH];
 				strncpy(szBaseName, m_szAppName, _countof(szBaseName) - 1);
 				szBaseName[_countof(szBaseName) - 1] = L'\0';
 				size_t uBaseNameLen = strlen(szBaseName);
@@ -408,7 +415,7 @@ namespace WIN32DUMP
 				szBaseName[_countof(szBaseName) - 1] = L'\0';
 
 				// Replace spaces and dots in file name.
-				TCHAR* psz = szBaseName;
+				CHAR* psz = szBaseName;
 				while (*psz != '\0')
 				{
 					if (*psz == '.')
@@ -431,7 +438,7 @@ namespace WIN32DUMP
 					}
 				}
 
-				HANDLE hFile = CreateFile(szDumpPath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+				HANDLE hFile = CreateFileA(szDumpPath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 				if (hFile != INVALID_HANDLE_VALUE)
 				{
 					_MINIDUMP_EXCEPTION_INFORMATION ExInfo = { 0 };
@@ -449,8 +456,10 @@ namespace WIN32DUMP
 						szResult[_countof(szResult) - 1] = L'\0';
 						lRetValue = EXCEPTION_EXECUTE_HANDLER;
 
+#if _MSC_VER <= 1800
 						errLog << "Catch a critical error! \n";
 						errLog << std::string(szResult);
+#endif
 					}
 					else
 					{
@@ -458,7 +467,9 @@ namespace WIN32DUMP
 						_snprintf(szResult, _countof(szResult) - 1, "Failed to save dump file to \"%s\". \n Error: %u\n", szDumpPath, GetLastError());
 						szResult[_countof(szResult) - 1] = L'\0';
 
+#if _MSC_VER <= 1800
 						errLog << szResult;
+#endif
 					}
 
 				}
@@ -468,12 +479,16 @@ namespace WIN32DUMP
 					_snprintf(szResult, _countof(szResult) - 1, "Failed to create dump file \"%s\". \n Error: %u\n", szDumpPath, GetLastError());
 					szResult[_countof(szResult) - 1] = L'\0';
 
+#if _MSC_VER <= 1800
 					errLog << szResult;
+#endif
 				}
 			}
 			else
 			{
+#if _MSC_VER <= 1800
 				errLog << "Catch a critical error! Get MiniDumpWriteDump api from debug helper dll failed!\n";
+#endif
 			}
 
 			FreeLibrary(hDll);
@@ -482,7 +497,9 @@ namespace WIN32DUMP
 		}
 		else
 		{
+#if _MSC_VER <= 1800
 			errLog << "Catch a critical error! Load dbghelp.dll failed!\n";
+#endif
 		}
 
 		//if( ms_func_after_catching_unhandled_exeception )
@@ -496,11 +513,13 @@ namespace WIN32DUMP
 		//	}
 		//}
 
+#if _MSC_VER <= 1800
 		errLog << "\n\n";
 
 		//if (szResult[0] != L('\0'))
 		//	MessageBox(NULL, szResult, m_szAppName, MB_ICONINFORMATION | MB_OK);
 		errLog.close();
+#endif
 #ifndef _DEBUG
 		// Exit the process only in release builds, so that in debug builds the exceptio is passed to a possible
 		// installed debugger
