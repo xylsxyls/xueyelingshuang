@@ -2,11 +2,16 @@
 #include "StockWr.h"
 #include "StockMysql/StockMysqlAPI.h"
 
+StockWrIndicator::StockWrIndicator()
+{
+	m_spStockMysql = StockMysql::newCase();
+}
+
 void StockWrIndicator::load(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
 {
 	clear();
 	m_stock = stock;
-	std::vector<std::vector<std::string>> vecIndicator = StockMysql::instance().readWr(stock, beginTime, endTime);
+	std::vector<std::vector<std::string>> vecIndicator = m_spStockMysql->readWr(stock, beginTime, endTime);
 	int32_t index = -1;
 	while (index++ != vecIndicator.size() - 1)
 	{

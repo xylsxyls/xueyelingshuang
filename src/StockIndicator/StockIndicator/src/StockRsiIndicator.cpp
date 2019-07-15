@@ -2,11 +2,16 @@
 #include "StockRsi.h"
 #include "StockMysql/StockMysqlAPI.h"
 
+StockRsiIndicator::StockRsiIndicator()
+{
+	m_spStockMysql = StockMysql::newCase();
+}
+
 void StockRsiIndicator::load(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
 {
 	clear();
 	m_stock = stock;
-	std::vector<std::vector<std::string>> vecIndicator = StockMysql::instance().readRsi(stock, beginTime, endTime);
+	std::vector<std::vector<std::string>> vecIndicator = m_spStockMysql->readRsi(stock, beginTime, endTime);
 	int32_t index = -1;
 	while (index++ != vecIndicator.size() - 1)
 	{

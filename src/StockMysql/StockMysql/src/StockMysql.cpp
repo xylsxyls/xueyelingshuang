@@ -7,10 +7,9 @@ StockMysql::StockMysql()
 	init();
 }
 
-StockMysql& StockMysql::instance()
+std::shared_ptr<StockMysql> StockMysql::newCase()
 {
-	static StockMysql s_stockMysql;
-	return s_stockMysql;
+	return std::shared_ptr<StockMysql>(new StockMysql);
 }
 
 void StockMysql::init()

@@ -6,8 +6,12 @@
 #include "StockIndicatorMacro.h"
 
 class StockRsi;
+class StockMysql;
 class StockIndicatorAPI StockRsiIndicator
 {
+public:
+	StockRsiIndicator();
+
 public:
 	void load(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
@@ -29,6 +33,7 @@ public:
 #endif
 	std::string m_stock;
 	std::map<IntDateTime, std::shared_ptr<StockRsi>> m_indicator;
+	std::shared_ptr<StockMysql> m_spStockMysql;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

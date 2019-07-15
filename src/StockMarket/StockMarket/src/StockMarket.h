@@ -6,10 +6,16 @@
 #include <memory>
 
 class StockDay;
+class StockMysql;
 /** hangqing管理
 */
 class StockMarketAPI StockMarket
 {
+public:
+	/** 构造函数
+	*/
+	StockMarket();
+
 public:
 	/** 加载gupiao历史hangqing
 	@param [in] stock gupiao代码
@@ -134,6 +140,8 @@ private:
 	IntDateTime m_date;
 	//日期，开高低收，索引对应Histroy枚举
 	std::map<IntDateTime, std::shared_ptr<StockDay>> m_history;
+	//数据库
+	std::shared_ptr<StockMysql> m_spStockMysql;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

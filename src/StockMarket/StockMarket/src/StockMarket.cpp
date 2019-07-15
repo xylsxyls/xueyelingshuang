@@ -3,19 +3,24 @@
 #include "StockMysql/StockMysqlAPI.h"
 #include "StockDay.h"
 
+StockMarket::StockMarket()
+{
+	m_spStockMysql = StockMysql::newCase();
+}
+
 void StockMarket::load(const std::string& stock,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime)
 {
 	clear();
 	m_stock = stock;
-	std::vector<std::vector<std::string>> vecMarket = StockMysql::instance().readMarket(stock, beginTime, endTime);
+	std::vector<std::vector<std::string>> vecMarket = m_spStockMysql->readMarket(stock, beginTime, endTime);
 	if (vecMarket.empty())
 	{
 		return;
 	}
 	
-	IntDateTime preDate = StockMysql::instance().getDatePre(stock, beginTime);
+	IntDateTime preDate = m_spStockMysql->getDatePre(stock, beginTime);
 	std::shared_ptr<StockDay> spFirstDay(new StockDay);
 	m_date = vecMarket[0][0];
 	spFirstDay->load(stock,
@@ -24,7 +29,7 @@ void StockMarket::load(const std::string& stock,
 		vecMarket[0][2].c_str(),
 		vecMarket[0][3].c_str(),
 		vecMarket[0][4].c_str(),
-		preDate.empty() ? (BigNumber(vecMarket[0][1].c_str()) / 1.1).toPrec(2) : StockMysql::instance().readMarket(stock, preDate, preDate)[0][4].c_str());
+		preDate.empty() ? (BigNumber(vecMarket[0][1].c_str()) / 1.1).toPrec(2) : m_spStockMysql->readMarket(stock, preDate, preDate)[0][4].c_str());
 	m_history[vecMarket[0][0]] = spFirstDay;
 
 	int32_t dayIndex = 0;
@@ -314,12 +319,12 @@ std::shared_ptr<StockDay> StockMarket::stockDay(const IntDateTime& date) const
 
 bool StockMarket::dateExist(const IntDateTime& date) const
 {
-	return StockMysql::instance().dateExist(m_stock, date);
+	return m_spStockMysql->dateExist(m_stock, date);
 }
 
 IntDateTime StockMarket::beginDate()
 {
-	return StockMysql::instance().beginDate(m_stock);
+	return m_spStockMysql->beginDate(m_stock);
 }
 
 //bool StockMarket::getDatePre(const IntDateTime& date, IntDateTime& preDate) const
@@ -339,7 +344,7 @@ IntDateTime StockMarket::beginDate()
 
 IntDateTime StockMarket::getDatePre(const IntDateTime& date) const
 {
-	return StockMysql::instance().getDatePre(m_stock, date);
+	return m_spStockMysql->getDatePre(m_stock, date);
 }
 
 //bool StockMarket::getDateNext(const IntDateTime& date, IntDateTime& nextDate) const
@@ -359,7 +364,7 @@ IntDateTime StockMarket::getDatePre(const IntDateTime& date) const
 
 IntDateTime StockMarket::getDateNext(const IntDateTime& date) const
 {
-	return StockMysql::instance().getDateNext(m_stock, date);
+	return m_spStockMysql->getDateNext(m_stock, date);
 }
 
 //bool StockMarket::getMarketPre(const IntDateTime& date, IntDateTime& preDate, std::vector<BigNumber>& preData) const
@@ -400,7 +405,7 @@ BigNumber StockMarket::getDays(const IntDateTime& date1, const IntDateTime& date
 	{
 		return 1;
 	}
-	return StockMysql::instance().getDays(m_stock, date1, date2);
+	return m_spStockMysql->getDays(m_stock, date1, date2);
 }
 
 //bool StockMarket::getMarketPre(const IntDateTime& date, int32_t days, std::map<IntDateTime, std::vector<BigNumber>>& preDaysData) const

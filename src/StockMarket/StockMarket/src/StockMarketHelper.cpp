@@ -30,6 +30,8 @@ void StockMarketHelper::save(const std::string& stock, const std::string& file)
 		vecMarket.back().push_back(close);
 	}
 
-	StockMysql::instance().saveMarket(stock, vecMarket);
-	StockMysql::instance().addStock(stock);
+	std::shared_ptr<StockMysql> spStockMysql = StockMysql::newCase();
+
+	spStockMysql->saveMarket(stock, vecMarket);
+	spStockMysql->addStock(stock);
 }

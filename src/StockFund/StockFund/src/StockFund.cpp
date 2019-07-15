@@ -113,7 +113,7 @@ bool StockFund::sellStock(const BigNumber& price, const BigNumber& rate, const s
 		log.append("Âô³ögupiao£º" + stock + " " + "name" + "£¬");
 	}
 	vecTimes.push_back(date);
-	vecData.push_back((back / allFund(date)).toPrec(2));
+	vecData.push_back((back / allFund(spStockDay)).toPrec(2));
 	vecData.push_back((date - vecTimes[0]) / 86400);
 	m_dataLog.push_back(std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>(vecData, vecTimes));
 
@@ -153,25 +153,25 @@ void StockFund::free(const BigNumber& rate)
 	m_stockLog.push_back(log);
 }
 
-BigNumber StockFund::allFund(const IntDateTime& date)
+BigNumber StockFund::allFund(const std::shared_ptr<StockDay>& dayDate)
 {
-	IntDateTime lastTime = date;
+	//IntDateTime lastTime = date;
 	BigNumber stockFund = 0;
 	for (auto itStock = m_stock.begin(); itStock != m_stock.end(); ++itStock)
 	{
 		const std::string& stock = itStock->first;
 		const std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& vecDeal = itStock->second;
 
-		StockMarket lastTimeMarket;
-		lastTimeMarket.setStock(stock);
-		if (!lastTimeMarket.dateExist(date))
-		{
-			lastTime = lastTimeMarket.getDatePre(date);
-		}
-		if (lastTime.empty())
-		{
-			continue;
-		}
+		//StockMarket lastTimeMarket;
+		//lastTimeMarket.setStock(stock);
+		//if (!lastTimeMarket.dateExist(date))
+		//{
+		//	lastTime = lastTimeMarket.getDatePre(date);
+		//}
+		//if (lastTime.empty())
+		//{
+		//	continue;
+		//}
 
 		BigNumber position = 0;
 		int32_t index = -1;
@@ -179,7 +179,7 @@ BigNumber StockFund::allFund(const IntDateTime& date)
 		{
 			position = position + vecDeal[index].second.second;
 		}
-		stockFund = stockFund + lastTimeMarket.stockDay(lastTime)->close() * position;
+		stockFund = stockFund + dayDate->close() * position;
 	}
 	BigNumber allFund = stockFund + m_available + m_freeze;
 	std::string log;
@@ -188,7 +188,7 @@ BigNumber StockFund::allFund(const IntDateTime& date)
 	return allFund;
 }
 
-bool StockFund::stockChg(const std::string& stock, const IntDateTime& date, BigNumber& chg) const
+bool StockFund::stockChg(const std::string& stock, const std::shared_ptr<StockDay>& dateDay, BigNumber& chg) const
 {
 	auto itStock = m_stock.find(stock);
 	if (itStock == m_stock.end())
@@ -216,9 +216,7 @@ bool StockFund::stockChg(const std::string& stock, const IntDateTime& date, BigN
 		}
 	}
 
-	StockMarket sellMarket;
-	sellMarket.setStock(stock);
-	hasSell = hasSell + sellMarket.stockDay(date)->close() * position;
+	hasSell = hasSell + dateDay->close() * position;
 	chg = (hasSell / hasBuy * 100 - 100).toPrec(2);
 	//std::string log;
 	//log.append("Ëù³Ögupiao£º" + stock + " " + itStockMarket->second.name() + "£¬");

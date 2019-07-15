@@ -3,21 +3,22 @@
 #include "MysqlCpp/MysqlCppAPI.h"
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "BigNumber/BigNumberAPI.h"
+#include <memory>
 
 /** 数据库对接类
 */
 class StockMysqlAPI StockMysql
 {
-protected:
+public:
 	/** 构造函数
 	*/
 	StockMysql();
 
 public:
-	/** 单一实例
-	@return 返回单一实例
+	/** 生成一个实例
+	@return 返回实例，不唯一
 	*/
-	static StockMysql& instance();
+	static std::shared_ptr<StockMysql> newCase();
 
 	/** 初始化
 	*/

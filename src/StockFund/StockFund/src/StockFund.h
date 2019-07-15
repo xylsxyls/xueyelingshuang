@@ -44,18 +44,18 @@ public:
 	void free(const BigNumber& rate);
 
 	/** 总zijin
-	@param [in] date 日期，该日期可以不是jiaoyiri
+	@param [in] dayDate 包含数据的日期结构体
 	@return 返回总zijin
 	*/
-	BigNumber allFund(const IntDateTime& date);
+	BigNumber allFund(const std::shared_ptr<StockDay>& dayDate);
 
 	/** 计算所持gupiao在指定日期内的涨跌幅，已经放大100倍，包含百分号
 	@param [in] stock gupiao代码
-	@param [in] date 日期
+	@param [in] dayDate 包含数据的日期结构体
 	@param [out] chg 涨跌幅
 	@return 返回是否获取成功
 	*/
-	bool stockChg(const std::string& stock, const IntDateTime& date, BigNumber& chg) const;
+	bool stockChg(const std::string& stock, const std::shared_ptr<StockDay>& dateDay, BigNumber& chg) const;
 
 	/** 获取该gupiao的买入时间
 	@param [in] stock gupiao代码

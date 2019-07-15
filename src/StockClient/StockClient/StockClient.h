@@ -3,9 +3,11 @@
 
 #include <QtWidgets/QMainWindow>
 #include "ui_StockClient.h"
+#include <memory>
 
 class LineEdit;
 class COriginalButton;
+class StockMysql;
 
 class StockClient : public QMainWindow
 {
@@ -33,6 +35,10 @@ private:
 	COriginalButton* m_everyTest;
 	//线程池
 	std::vector<uint32_t> m_threadId;
+	//线程数
+	int32_t m_threadCount;
+	//数据库
+	std::shared_ptr<StockMysql> m_spStockMysql;
 };
 
 #endif // StockClient_H
