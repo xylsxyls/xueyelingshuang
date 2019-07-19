@@ -5,7 +5,6 @@
 #include <memory>
 #include <map>
 
-class StockMarket;
 class StockDay;
 /** gupiao’Àªßzijinπ‹¿Ì
 */

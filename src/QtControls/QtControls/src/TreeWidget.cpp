@@ -144,8 +144,8 @@ void TreeWidget::removeWidget(QWidget* widget, qint32 column)
 	m_itemData.erase(itData);
 
 	removeItemWidget(item, column);
-	delete widget;
-	delete item;
+	//delete widget;
+	//delete item;
 }
 
 QWidget* TreeWidget::findWidget(QTreeWidgetItem* item)
@@ -168,6 +168,12 @@ QTreeWidgetItem* TreeWidget::findTreeWidgetItem(QWidget* widget)
 		return nullptr;
 	}
 	return itData->second;
+}
+
+void TreeWidget::clear()
+{
+	QTreeWidget::clear();
+	m_itemData.clear();
 }
 
 void TreeWidget::contextMenuEvent(QContextMenuEvent* eve)

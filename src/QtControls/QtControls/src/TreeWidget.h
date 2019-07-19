@@ -51,7 +51,7 @@ public:
 	*/
 	void addWidget(qint32 itemHeight, QWidget* widget, QWidget* parent = nullptr, qint32 column = 0);
 
-	/** 移除一个节点
+	/** 移除一个节点，该API可能有错，需要测试，群删除和内存泄漏
 	@param [in] widget 节点指针
 	@param [in] column 第几列
 	*/
@@ -68,6 +68,10 @@ public:
 	@return 返回内置节点指针
 	*/
 	QTreeWidgetItem* findTreeWidgetItem(QWidget* widget);
+
+	/** 清空所有节点
+	*/
+	void clear();
 
 Q_SIGNALS:
 	/** 节点被右键单击
