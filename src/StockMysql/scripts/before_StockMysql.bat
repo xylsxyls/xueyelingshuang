@@ -58,3 +58,18 @@ goto BigNumber_end
 call "%CLOUD_REBUILD%" BigNumber %BigNumber_bit% %BigNumber_dlllib% %BigNumber_debugRelease%
 goto BigNumber_end
 :BigNumber_end
+
+::--------------------------------------------------------------------
+set HiRedis_dlllib=lib
+set HiRedis_bit=%1
+set HiRedis_debugRelease=%3
+set HiRedis_allSame=%4
+if "%4" == "same" (goto HiRedis_callSame) else (goto HiRedis_callSimple)
+:HiRedis_callSame
+set HiRedis_dlllib=%2
+call "%CLOUD_REBUILD%" HiRedis %HiRedis_bit% %HiRedis_dlllib% %HiRedis_debugRelease% %HiRedis_allSame%
+goto HiRedis_end
+:HiRedis_callSimple
+call "%CLOUD_REBUILD%" HiRedis %HiRedis_bit% %HiRedis_dlllib% %HiRedis_debugRelease%
+goto HiRedis_end
+:HiRedis_end
