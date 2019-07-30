@@ -32,4 +32,27 @@ public:
 	@param [in] lineHeight 行距
 	*/
 	void setLineHeight(qint32 lineHeight);
+
+	/** 设置双击全屏，一旦设置不可退回
+	*/
+	void setDoubleClickFullScreen();
+
+Q_SIGNALS:
+	/** 双击之后发送信号
+	*/
+	void doubleClicked();
+
+protected:
+	bool eventFilter(QObject* tar, QEvent* eve);
+
+protected:
+	void onDoubleClicked();
+
+private:
+	//当前是否全屏
+	bool m_full;
+	//是否已经设置过含有双击全屏功能
+	bool m_hasSetFullScreen;
+	//全屏之前的位置
+	QRect m_rect;
 };
