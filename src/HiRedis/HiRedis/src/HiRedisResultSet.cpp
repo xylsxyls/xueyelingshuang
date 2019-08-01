@@ -121,6 +121,11 @@ std::vector<std::vector<std::string>> HiRedisResultSet::toTable(int32_t key, con
 	return result;
 }
 
+std::vector<std::string> HiRedisResultSet::toGroup() const
+{
+	return toKeys();
+}
+
 bool HiRedisResultSet::toStatus() const
 {
 	if (!check() || (m_reply->type != REDIS_REPLY_STATUS))

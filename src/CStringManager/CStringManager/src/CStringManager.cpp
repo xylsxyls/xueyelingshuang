@@ -335,6 +335,15 @@ uint64_t CStringManager::atoui64(const char* str)
 	return result;
 }
 
+int64_t CStringManager::atoi64(const char* str)
+{
+	int64_t result;
+	std::stringstream strValue;
+	strValue << str;
+	strValue >> result;
+	return result;
+}
+
 std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 {
 	// 分配目标空间, 一个16位Unicode字符最多可以转为4个字节

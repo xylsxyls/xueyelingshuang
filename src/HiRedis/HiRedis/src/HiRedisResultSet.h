@@ -2,9 +2,10 @@
 #include <map>
 #include <string>
 #include <stdint.h>
+#include "HiRedisMacro.h"
 
 struct redisReply;
-class HiRedisResultSet
+class HiRedisAPI HiRedisResultSet
 {
 public:
 	HiRedisResultSet();
@@ -30,6 +31,8 @@ public:
 
 	std::vector<std::vector<std::string>> toTable(int32_t key = -1, const std::string& split = ",") const;
 
+	std::vector<std::string> toGroup() const;
+
 	bool toStatus() const;
 
 protected:
@@ -37,5 +40,12 @@ protected:
 
 protected:
 	redisReply* m_reply;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
 	std::vector<std::string> m_vecKey;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 };
