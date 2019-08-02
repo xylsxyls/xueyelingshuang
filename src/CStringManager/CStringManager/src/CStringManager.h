@@ -12,6 +12,7 @@ public:
 	static size_t FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect);
 	//?分割字符串
 	static std::vector<std::string> split(const std::string& splitString, const std::string& separate_character);
+	static void split(std::vector<std::string>& result, const std::string& splitString, char separate_character);
 	//?vector<CString> vec = split("123,234,345,456,",","); //得到5个字符串
 	//?vector<CString> vec2 = split("123,,234,,345,,456",",,"); //得到4个字符串
 

@@ -35,6 +35,10 @@ public:
 
 	bool toStatus() const;
 
+	int32_t toCount() const;
+
+	redisReply* toReply() const;
+
 protected:
 	bool check() const;
 

@@ -55,13 +55,12 @@ std::vector<std::string> CStringManager::split(const std::string& splitString, c
 	int32_t index = -1;
 	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
 	{
-		strs.push_back(splitString.substr(lastPosition, index - lastPosition).c_str());
+		strs.push_back(splitString.substr(lastPosition, index - lastPosition));
 		lastPosition = index + separate_characterLen;   
 	}
 	//?截取最后一个分隔符后的内容
-	std::string lastString = splitString.substr(lastPosition);
 	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
-	strs.push_back(lastString.c_str());
+	strs.push_back(splitString.substr(lastPosition));
 	return strs;
 }
 
@@ -74,14 +73,26 @@ std::vector<std::wstring> CStringManager::split(const std::wstring& splitString,
 	int32_t index = -1;
 	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
 	{
-		strs.push_back(splitString.substr(lastPosition, index - lastPosition).c_str());
+		strs.push_back(splitString.substr(lastPosition, index - lastPosition));
 		lastPosition = index + separate_characterLen;
 	}
 	//?截取最后一个分隔符后的内容
-    std::wstring lastString = splitString.substr(lastPosition);
 	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
-	strs.push_back(lastString.c_str());
+	strs.push_back(splitString.substr(lastPosition));
 	return strs;
+}
+
+void CStringManager::split(std::vector<std::string>& result, const std::string& splitString, char separate_character)
+{
+	result.clear();
+	size_t lastPosition = 0;
+	int32_t index = -1;
+	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
+	{
+		result.push_back(splitString.substr(lastPosition, index - lastPosition));
+		lastPosition = index + 1;
+	}
+	result.push_back(splitString.substr(lastPosition));
 }
 
 void CStringManager::ReplaceAll(std::string& str, const std::string& old_value, const std::string& new_value)

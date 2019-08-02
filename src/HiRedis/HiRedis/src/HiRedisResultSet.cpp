@@ -135,6 +135,20 @@ bool HiRedisResultSet::toStatus() const
 	return (std::string(m_reply->str) == "OK");
 }
 
+int32_t HiRedisResultSet::toCount() const
+{
+	if (!check())
+	{
+		return false;
+	}
+	return (int32_t)m_reply->elements;
+}
+
+redisReply* HiRedisResultSet::toReply() const
+{
+	return m_reply;
+}
+
 bool HiRedisResultSet::check() const
 {
 	return m_reply != nullptr;

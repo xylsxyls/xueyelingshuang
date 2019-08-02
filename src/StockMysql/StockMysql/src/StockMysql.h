@@ -4,6 +4,7 @@
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "BigNumber/BigNumberAPI.h"
 #include <memory>
+#include "HiRedis/HiRedisAPI.h"
 
 /** 数据库对接类
 */
@@ -29,11 +30,6 @@ public:
 	@return 返回所有gupiao代码
 	*/
 	std::vector<std::string> allStock() const;
-
-	/** 新开一个kaigaodishou的表
-	@param [in] stock gupiao代码
-	*/
-	void createMarketHead(const std::string& stock);
 
 	/** 添加一个gupiao代码到gupiao集合
 	@param [in] stock gupiao代码
@@ -117,7 +113,15 @@ public:
 	*/
 	BigNumber getDays(const std::string& stock, const IntDateTime& date1, const IntDateTime& date2);
 
+protected:
+	/** 新开一个kaigaodishou的表
+	@param [in] stock gupiao代码
+	*/
+	void createMarketHead(const std::string& stock);
+
 private:
 	//数据库连接类
 	MysqlCpp m_mysql;
+	//redis连接类
+	HiRedis m_redis;
 };
