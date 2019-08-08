@@ -188,8 +188,8 @@ std::string CSystem::uuid(int flag)
 	char buffer[64] = { 0 };
 	GUID guid;
 	if (CoCreateGuid(&guid)) return "";
-	std::string strFormat = "%08X-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X";
-	if (flag == 0) strFormat = "%08X%04X%04x%02X%02X%02X%02X%02X%02X%02X%02X";
+	std::string strFormat = "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X";
+	if (flag == 0) strFormat = "%08X%04X%04X%02X%02X%02X%02X%02X%02X%02X%02X";
 	_snprintf(buffer, sizeof(buffer),
 		strFormat.c_str(),
 		guid.Data1, guid.Data2, guid.Data3,

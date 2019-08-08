@@ -38,11 +38,25 @@ public:
 	void setDoubleClickFullScreen();
 
 Q_SIGNALS:
+	/** 左键单击发送信号
+	*/
+	void leftClicked();
+
+	/** 右键单击发送信号
+	*/
+	void rightClicked();
+
 	/** 双击之后发送信号
 	*/
 	void doubleClicked();
 
+	/** 鼠标移动信号
+	@param [in] 相对于父窗口的鼠标位置
+	*/
+	void mouseMoved(QPoint point);
+
 protected:
+	void mouseMoveEvent(QMouseEvent* eve);
 	bool eventFilter(QObject* tar, QEvent* eve);
 
 protected:

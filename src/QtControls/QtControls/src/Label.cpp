@@ -1,5 +1,7 @@
 #include "Label.h"
 #include <QEvent>
+#include <QApplication>
+#include <QMouseEvent>
 
 Label::Label(QWidget* parent) :
 ControlShow(parent),
@@ -7,14 +9,13 @@ m_full(false),
 m_hasSetFullScreen(false)
 {
 	ControlBase::setControlShow(this);
+	installEventFilter(this);
+	setMouseTracking(true);
 }
 
 Label::~Label()
 {
-	if (m_hasSetFullScreen)
-	{
-		installEventFilter(nullptr);
-	}
+	installEventFilter(nullptr);
 }
 
 void Label::setLineHeight(qint32 lineHeight)
@@ -27,9 +28,14 @@ void Label::setDoubleClickFullScreen()
 	if (!m_hasSetFullScreen)
 	{
 		m_hasSetFullScreen = true;
-		installEventFilter(this);
 		QObject::connect(this, &Label::doubleClicked, this, &Label::onDoubleClicked);
 	}
+}
+
+void Label::mouseMoveEvent(QMouseEvent* eve)
+{
+	QLabel::mouseMoveEvent(eve);
+	emit mouseMoved(QPoint(eve->x(), eve->y()));
 }
 
 bool Label::eventFilter(QObject* tar, QEvent* eve)
@@ -39,9 +45,31 @@ bool Label::eventFilter(QObject* tar, QEvent* eve)
 	{
 		return res;
 	}
-	if ((tar == this) && (eve->type() == QEvent::MouseButtonDblClick))
+	if (tar == this)
 	{
-		emit doubleClicked();
+		switch (eve->type())
+		{
+		case QEvent::MouseButtonDblClick:
+		{
+			emit doubleClicked();
+		}
+		break;
+		case QEvent::MouseButtonPress:
+		{
+			auto leftRight = qApp->mouseButtons();
+			if (leftRight == Qt::LeftButton)
+			{
+				emit leftClicked();
+			}
+			else if (leftRight == Qt::RightButton)
+			{
+				emit rightClicked();
+			}
+		}
+		break;
+		default:
+			break;
+		}
 	}
 	return res;
 }
