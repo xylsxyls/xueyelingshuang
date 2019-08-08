@@ -59,14 +59,21 @@ void PopDialogManager::popDialog(DialogParam& param)
         }
         inputDialog->setTip(inputDialogParam.m_editTip);
         inputDialog->setAcceptButton(inputDialogParam.m_buttonText, ACCEPT_BUTTON);
-        if (inputDialogParam.m_isPassword)
-        {
-            inputDialog->setPasswordInputBox(inputDialogParam.m_defaultText, &(inputDialogParam.m_editText), inputDialogParam.m_maxLength);
-        }
-        else
-        {
-            inputDialog->setLineEdit(inputDialogParam.m_defaultText, &(inputDialogParam.m_editText), inputDialogParam.m_maxLength);
-        }
+		if (inputDialogParam.m_vecInputEx.empty())
+		{
+			if (inputDialogParam.m_isPassword)
+			{
+				inputDialog->setPasswordInputBox(inputDialogParam.m_defaultText, &(inputDialogParam.m_editText), inputDialogParam.m_maxLength);
+			}
+			else
+			{
+				inputDialog->setLineEdit(inputDialogParam.m_defaultText, &(inputDialogParam.m_editText), inputDialogParam.m_maxLength);
+			}
+		}
+		else
+		{
+			inputDialog->setInputEx(&inputDialogParam.m_vecInputEx);
+		}
 		inputDialog->setEscAltF4Enable(inputDialogParam.m_enableExit);
 		inputDialog->setExitVisible(inputDialogParam.m_enableExit);
         param.m_dialogId = dialogId;

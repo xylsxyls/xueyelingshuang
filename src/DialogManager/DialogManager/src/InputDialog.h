@@ -1,5 +1,6 @@
 #pragma once
 #include "PopDialog.h"
+#include "DialogType.h"
 
 class LineEdit;
 class CPasswordInputBox;
@@ -39,6 +40,11 @@ public:
     */
     void setAcceptButton(const QString& acceptText, DialogResult acceptDone);
 
+	/** 设置扩展内容
+	@param [in] inputEx 扩展内容
+	*/
+	void setInputEx(std::vector<InputEx>* inputEx);
+
 protected:
     void resizeEvent(QResizeEvent* eve);
     void closeEvent(QCloseEvent* eve);
@@ -50,5 +56,7 @@ private:
 	LineEdit* m_edit;
     CPasswordInputBox* m_passwordInputBox;
 	QString* m_editText;
+	std::vector<InputEx>* m_inputEx;
+	std::vector<std::pair<Label*, LineEdit*>> m_inputExControls;
 	bool m_isPassword;
 };

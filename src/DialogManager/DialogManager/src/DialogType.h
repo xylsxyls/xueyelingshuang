@@ -1035,6 +1035,30 @@ struct TipDialogParam : public DialogParam
     }
 };
 
+/** 扩展输入
+*/
+struct InputEx
+{
+	//左侧提示
+	QString m_tip;
+	//输入框内默认内容
+	QString m_defaultText;
+	//窗口关闭时传出输入框内的内容，out
+	QString m_editText;
+	//是否是密码框
+	bool m_isPassword;
+	//最大长度，如果没有最大长度为-1
+	qint32 m_maxLength;
+
+	/** 构造函数
+	*/
+	InputEx()
+	{
+		m_isPassword = false;
+		m_maxLength = -1;
+	}
+};
+
 /** 输入框
 */
 struct InputDialogParam : public DialogParam
@@ -1051,6 +1075,8 @@ struct InputDialogParam : public DialogParam
     bool m_isPassword;
 	//最大长度，如果没有最大长度为-1
     qint32 m_maxLength;
+	//扩展输入，如果这里有值则为多个输入类型
+	std::vector<InputEx> m_vecInputEx;
 	//是否可以主动关闭
 	bool m_enableExit;
 
