@@ -72,6 +72,10 @@ public:
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0)) const;
 
+	std::vector<std::vector<std::string>> readTest(const std::string& stock,
+		const IntDateTime& beginTime = IntDateTime(0, 0),
+		const IntDateTime& endTime = IntDateTime(0, 0)) const;
+
 	/** 获取当前日期是否存在
 	@param [in] stock gupiao代码
 	@param [in] date 日期
@@ -118,6 +122,22 @@ protected:
 	@param [in] stock gupiao代码
 	*/
 	void createMarketHead(const std::string& stock);
+
+	/** 从redis中取数据，没有则从mysql中移植到redis
+	@param [in] stock gupiao代码
+	@param [in] beginTime 开始时间，默认参数表示最早时间
+	@param [in] endTime 结束时间，默认参数表示最晚时间
+	@param [in] redisDbIndex 选择存入的redis数据库索引
+	@param [in] mysqlDbName 源数据所在数据库名
+	@param [in] mysqlFields 取出源数据需要的字段，英文逗号分隔
+	@return 返回表
+	*/
+	std::vector<std::vector<std::string>> redisFromMysql(const std::string& stock,
+		const IntDateTime& beginTime,
+		const IntDateTime& endTime,
+		int32_t redisDbIndex,
+		const std::string& mysqlDbName,
+		const std::string& mysqlFields) const;
 
 private:
 	//数据库连接类

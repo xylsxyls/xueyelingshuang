@@ -143,89 +143,22 @@ void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vec
 
 std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
 {
-	IntDateTime useBeginTime = beginTime;
-	IntDateTime useEndTime = endTime;
-	if (beginTime.empty())
-	{
-		useBeginTime.setTime(19700101, 0);
-	}
-	if (endTime.empty())
-	{
-		useEndTime.setTime(31500101, 0);
-	}
-	std::vector<std::vector<std::string>> result;
-	m_redis.selectDbIndex(0);
-	auto spResultSet = m_redis.getOrderGroupByScore(stock, useBeginTime.getDate(), useEndTime.getDate());
-	if (spResultSet->toCount() == 0)
-	{
-		if (!m_redis.getOrderGroupByScore(stock, 0, 0)->toGroup().empty())
-		{
-			return result;
-		}
-		m_mysql.selectDb("stockmarket");
-		result = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "*", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(IntDateTime("1970-01-01").dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(IntDateTime("3150-01-01").dateToString()))))->toVector();
-
-		std::vector<std::pair<int32_t, std::string>> orderGroup;
-		orderGroup.push_back(std::pair<int32_t, std::string>(0, stock));
-		int32_t lineIndex = -1;
-		while (lineIndex++ != result.size() - 1)
-		{
-			std::string strLine;
-			const std::vector<std::string>& vecLine = result[lineIndex];
-			int32_t index = -1;
-			while (index++ != vecLine.size() - 2)
-			{
-				strLine.append(vecLine[index] + ",");
-			}
-			strLine.append(vecLine[index]);
-			orderGroup.push_back(std::pair<int32_t, std::string>(IntDateTime(vecLine[0]).getDate(), strLine));
-		}
-		if (!m_redis.setOrderGroups(stock, orderGroup))
-		{
-			RCSend("setOrderGroups error = %s", stock.c_str());
-		}
-		return result;
-	}
-	std::vector<std::string> vecLine;
-	int32_t index = -1;
-	while (index++ != spResultSet->toReply()->elements - 1)
-	{
-		CStringManager::split(vecLine, spResultSet->toReply()->element[index]->str, ',');
-		result.push_back(vecLine);
-	}
-	return result;
+	return redisFromMysql(stock, beginTime, endTime, 0, "stockmarket", "*");
 }
 
 std::vector<std::vector<std::string>> StockMysql::readWr(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
 {
-	m_mysql.selectDb("stockindex");
-	IntDateTime useBeginTime = beginTime;
-	IntDateTime useEndTime = endTime;
-	if (beginTime.empty())
-	{
-		useBeginTime.setTime(19700101, 0);
-	}
-	if (endTime.empty())
-	{
-		useEndTime.setTime(31500101, 0);
-	}
-	return m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date,wr10,wr20", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(useBeginTime.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(useEndTime.dateToString()))))->toVector();
+	return redisFromMysql(stock, beginTime, endTime, 1, "stockindex", "date,wr10,wr20");
 }
 
 std::vector<std::vector<std::string>> StockMysql::readRsi(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
 {
-	m_mysql.selectDb("stockindex");
-	IntDateTime useBeginTime = beginTime;
-	IntDateTime useEndTime = endTime;
-	if (beginTime.empty())
-	{
-		useBeginTime.setTime(19700101, 0);
-	}
-	if (endTime.empty())
-	{
-		useEndTime.setTime(31500101, 0);
-	}
-	return m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date,rsi6,rsi12,rsi24", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(useBeginTime.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(useEndTime.dateToString()))))->toVector();
+	return redisFromMysql(stock, beginTime, endTime, 2, "stockindex", "date,rsi6,rsi12,rsi24");
+}
+
+std::vector<std::vector<std::string>> StockMysql::readTest(const std::string& stock, const IntDateTime& beginTime /*= IntDateTime(0, 0)*/, const IntDateTime& endTime /*= IntDateTime(0, 0)*/) const
+{
+	return redisFromMysql(stock, beginTime, endTime, 3, "stockindex", "date,wr10,wr20,rsi6,rsi12,rsi24");
 }
 
 bool StockMysql::dateExist(const std::string& stock, const IntDateTime& date) const
@@ -299,6 +232,69 @@ void StockMysql::createMarketHead(const std::string& stock)
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableString(stock, vecFields)));
 }
 
+std::vector<std::vector<std::string>> StockMysql::redisFromMysql(const std::string& stock,
+	const IntDateTime& beginTime,
+	const IntDateTime& endTime,
+	int32_t redisDbIndex,
+	const std::string& mysqlDbName,
+	const std::string& mysqlFields) const
+{
+	IntDateTime useBeginTime = beginTime;
+	IntDateTime useEndTime = endTime;
+	if (beginTime.empty())
+	{
+		useBeginTime.setTime(19700101, 0);
+	}
+	if (endTime.empty())
+	{
+		useEndTime.setTime(31500101, 0);
+	}
+	std::vector<std::vector<std::string>> result;
+	m_redis.selectDbIndex(redisDbIndex);
+	auto spResultSet = m_redis.getOrderGroupByScore(stock, useBeginTime.getDate(), useEndTime.getDate());
+	if (spResultSet->toCount() == 0)
+	{
+		//如果没有实际数据同时有第一项则表示该gupiao没有有效数据，返回空
+		if (!m_redis.getOrderGroupByScore(stock, 0, 0)->toGroup().empty())
+		{
+			return result;
+		}
+
+		//mysql移植到redis
+		m_mysql.selectDb(mysqlDbName);
+		result = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, mysqlFields, SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(useBeginTime.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(useEndTime.dateToString()))))->toVector();
+
+		std::vector<std::pair<int32_t, std::string>> orderGroup;
+		orderGroup.push_back(std::pair<int32_t, std::string>(0, stock));
+		int32_t lineIndex = -1;
+		while (lineIndex++ != result.size() - 1)
+		{
+			std::string strLine;
+			const std::vector<std::string>& vecLine = result[lineIndex];
+			int32_t index = -1;
+			while (index++ != vecLine.size() - 2)
+			{
+				strLine.append(vecLine[index] + ",");
+			}
+			strLine.append(vecLine[index]);
+			orderGroup.push_back(std::pair<int32_t, std::string>(IntDateTime(vecLine[0]).getDate(), strLine));
+		}
+		if (!m_redis.setOrderGroups(stock, orderGroup))
+		{
+			RCSend("setOrderGroups error = %s, redisDbIndex = %d", stock.c_str(), redisDbIndex);
+		}
+		return result;
+	}
+	std::vector<std::string> vecLine;
+	int32_t index = -1;
+	while (index++ != spResultSet->toReply()->elements - 1)
+	{
+		CStringManager::split(vecLine, spResultSet->toReply()->element[index]->str, ',');
+		result.push_back(vecLine);
+	}
+	return result;
+}
+
 //int main()
 //{
 //	IntDateTime ss(0, 0);
@@ -316,8 +312,24 @@ void StockMysql::createMarketHead(const std::string& stock)
 //	while (index++ != vecAllStock.size() - 1)
 //	{
 //		//auto result = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString(vecAllStock[index], "*", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(IntDateTime("1970-01-01").dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(IntDateTime("3150-01-01").dateToString()))))->toVector();
-//		//vecAllStock[index]
-//		auto sss1 = db->readMarket(vecAllStock[index], beginTime, endTime);
+//		//vecAllStock[index] , beginTime, endTime
+//		auto sss1 = db->readRsi(vecAllStock[index]);
+//		//auto sss2 = db->readWr(vecAllStock[index]);
+//		//auto sss3 = db->readTest(vecAllStock[index]);
+//		//if (result != sss1)
+//		//{
+//		//	RCSend("error compare = %s", vecAllStock[index].c_str());
+//		//}
+//		RCSend("%d", index + 1);
+//	}
+//	index = -1;
+//	while (index++ != vecAllStock.size() - 1)
+//	{
+//		//auto result = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString(vecAllStock[index], "*", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(IntDateTime("1970-01-01").dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(IntDateTime("3150-01-01").dateToString()))))->toVector();
+//		//vecAllStock[index] , beginTime, endTime
+//		//auto sss1 = db->readRsi(vecAllStock[index]);
+//		//auto sss2 = db->readWr(vecAllStock[index]);
+//		//auto sss3 = db->readTest(vecAllStock[index]);
 //		//if (result != sss1)
 //		//{
 //		//	RCSend("error compare = %s", vecAllStock[index].c_str());
