@@ -141,83 +141,183 @@ void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vec
 //	return result;
 //}
 
-std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
+std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& stock,
+	const IntDateTime& beginTime,
+	const IntDateTime& endTime) const
 {
-	return redisFromMysql(stock, beginTime, endTime, 0, "stockmarket", "*");
+	std::vector<std::string> vecDbName;
+	std::vector<std::string> vecDbField;
+	vecDbName.push_back("stockmarket");
+	vecDbField.push_back("*");
+	return redisFromMysql(stock, beginTime, endTime, 0, vecDbName, vecDbField);
 }
 
-std::vector<std::vector<std::string>> StockMysql::readWr(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
+std::vector<std::vector<std::string>> StockMysql::readIndicator(const std::string& stock,
+	const IntDateTime& beginTime,
+	const IntDateTime& endTime) const
 {
-	return redisFromMysql(stock, beginTime, endTime, 1, "stockindex", "date,wr10,wr20");
+	std::vector<std::string> vecDbName;
+	std::vector<std::string> vecDbField;
+	vecDbName.push_back("stockindex");
+	vecDbName.push_back("stockindex");
+	vecDbField.push_back("date,wr10,wr20");
+	vecDbField.push_back("rsi6,rsi12,rsi24");
+	return redisFromMysql(stock, beginTime, endTime, 1, vecDbName, vecDbField);
 }
 
-std::vector<std::vector<std::string>> StockMysql::readRsi(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
+void StockMysql::saveMarketDataIndex() const
 {
-	return redisFromMysql(stock, beginTime, endTime, 2, "stockindex", "date,rsi6,rsi12,rsi24");
+	std::map<std::string, std::string> hashMap;
+	hashMap["date"] = "0";
+	hashMap["market"] = "1,2,3,4";
+	m_redis.setHashMap("marketdataindex", hashMap);
 }
 
-std::vector<std::vector<std::string>> StockMysql::readTest(const std::string& stock, const IntDateTime& beginTime /*= IntDateTime(0, 0)*/, const IntDateTime& endTime /*= IntDateTime(0, 0)*/) const
+std::map<std::string, std::vector<int32_t>> StockMysql::getMarketDataIndex() const
 {
-	return redisFromMysql(stock, beginTime, endTime, 3, "stockindex", "date,wr10,wr20,rsi6,rsi12,rsi24");
+	return getIndex("marketdataindex");
+}
+
+void StockMysql::saveIndicatorDataIndex() const
+{
+	std::map<std::string, std::string> hashMap;
+	hashMap["date"] = "0";
+	hashMap["wr"] = "1,2";
+	hashMap["rsi"] = "3,4,5";
+	m_redis.setHashMap("indicatordataindex", hashMap);
+}
+
+std::map<std::string, std::vector<int32_t>> StockMysql::getIndicatorDataIndex() const
+{
+	return getIndex("indicatordataindex");
+}
+
+void StockMysql::saveAllDataIndex() const
+{
+	std::map<std::string, std::string> hashMap;
+	hashMap["date"] = "0";
+	hashMap["market"] = "1,2,3,4";
+	hashMap["wr"] = "5,6";
+	hashMap["rsi"] = "7,8,9";
+	m_redis.setHashMap("alldataindex", hashMap);
+}
+
+std::map<std::string, std::vector<int32_t>> StockMysql::getAllDataIndex() const
+{
+	return getIndex("alldataindex");
+}
+
+std::vector<std::vector<std::string>> StockMysql::readAll(const std::string& stock, const IntDateTime& beginTime /*= IntDateTime(0, 0)*/, const IntDateTime& endTime /*= IntDateTime(0, 0)*/) const
+{
+	std::vector<std::string> vecDbName;
+	std::vector<std::string> vecDbField;
+	vecDbName.push_back("stockmarket");
+	vecDbName.push_back("stockindex");
+	vecDbName.push_back("stockindex");
+	vecDbField.push_back("*");
+	vecDbField.push_back("wr10,wr20");
+	vecDbField.push_back("rsi6,rsi12,rsi24");
+	return redisFromMysql(stock, beginTime, endTime, 2, vecDbName, vecDbField);
 }
 
 bool StockMysql::dateExist(const std::string& stock, const IntDateTime& date) const
 {
-	m_mysql.selectDb("stockmarket");
-	return !(m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "*", SqlString::fieldStrToDate("date") + "=" + SqlString::strToDate(date.dateToString()))))->toVector().empty());
+	return m_redis.getOrderGroupByScore(stock, date.getDate(), date.getDate())->toGroup().size() == 1;
 }
 
 IntDateTime StockMysql::beginDate(const std::string& stock) const
 {
-	m_mysql.selectDb("stockmarket");
-	std::string minSelect = SqlString::selectString(stock, SqlString::sqlMin(SqlString::fieldStrToDate("date")));
-	auto vec = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date", SqlString::fieldStrToDate("date") + "=(" + minSelect + ")")))->toVector();
-	if (vec.empty())
+	std::vector<std::string> firstDate = m_redis.getOrderGroupByIndex(stock, 1, 1)->toGroup();
+	if (firstDate.empty())
 	{
 		return IntDateTime(0, 0);
 	}
-	return vec[0][0];
+	return IntDateTime(*firstDate.begin());
 }
 
 IntDateTime StockMysql::endDate(const std::string& stock) const
 {
-	std::string maxSelect = SqlString::selectString(stock, SqlString::sqlMax(SqlString::fieldStrToDate("date")));
-	auto vec = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date", SqlString::fieldStrToDate("date") + "=(" + maxSelect + ")")))->toVector();
-	if (vec.empty())
+	int32_t count = (int32_t)m_redis.getOrderGroupCount(stock);
+	if (count <= 1)
 	{
 		return IntDateTime(0, 0);
 	}
-	return vec[0][0];
+	std::vector<std::string> endDate = m_redis.getOrderGroupByIndex(stock, count - 1, count - 1)->toGroup();
+	if (endDate.empty())
+	{
+		return IntDateTime(0, 0);
+	}
+	return IntDateTime(*endDate.begin());
 }
 
 IntDateTime StockMysql::getDatePre(const std::string& stock, const IntDateTime& date) const
 {
-	m_mysql.selectDb("stockmarket");
-	std::string maxSelect = SqlString::selectString(stock, SqlString::sqlMax(SqlString::fieldStrToDate("date")), SqlString::fieldStrToDate("date") + "<" + SqlString::strToDate(date.dateToString()));
-	auto vec = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date", SqlString::fieldStrToDate("date") + "=(" + maxSelect + ")")))->toVector();
-	if (vec.empty())
+	int32_t count = (int32_t)m_redis.getOrderGroupCount(stock);
+	if (count <= 1)
 	{
 		return IntDateTime(0, 0);
 	}
-	return vec[0][0];
+	
+	auto dayData = m_redis.getOrderGroupByScore(stock, date.getDate(), date.getDate())->toGroup();
+	int32_t datePreCount = (int32_t)m_redis.getOrderGroupCountByScore(stock, 19700101, date.getDate());
+	if (dayData.empty())
+	{
+		if (datePreCount == 0)
+		{
+			return IntDateTime(0, 0);
+		}
+		return IntDateTime(m_redis.getOrderGroupByIndex(stock, datePreCount, datePreCount)->toGroup()[0]);
+	}
+	if (datePreCount <= 1)
+	{
+		return IntDateTime(0, 0);
+	}
+	return IntDateTime(m_redis.getOrderGroupByIndex(stock, datePreCount - 1, datePreCount - 1)->toGroup()[0]);
 }
 
 IntDateTime StockMysql::getDateNext(const std::string& stock, const IntDateTime& date) const
 {
-	m_mysql.selectDb("stockmarket");
-	std::string minSelect = SqlString::selectString(stock, SqlString::sqlMin(SqlString::fieldStrToDate("date")), SqlString::fieldStrToDate("date") + ">" + SqlString::strToDate(date.dateToString()));
-	auto vec = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "date", SqlString::fieldStrToDate("date") + "=(" + minSelect + ")")))->toVector();
-	if (vec.empty())
+	int32_t count = (int32_t)m_redis.getOrderGroupCount(stock);
+	if (count <= 1)
 	{
 		return IntDateTime(0, 0);
 	}
-	return vec[0][0];
+
+	IntDateTime lastDate = endDate(stock);
+	if (date >= lastDate)
+	{
+		return IntDateTime(0, 0);
+	}
+	auto dayData = m_redis.getOrderGroupByScore(stock, date.getDate(), date.getDate())->toGroup();
+	int32_t dateNextCount = (int32_t)m_redis.getOrderGroupCountByScore(stock, date.getDate(), lastDate.getDate());
+	if (dayData.empty())
+	{
+		return IntDateTime(m_redis.getOrderGroupByIndex(stock, count - dateNextCount, count - dateNextCount)->toGroup()[0]);
+	}
+	return IntDateTime(m_redis.getOrderGroupByIndex(stock, count - dateNextCount + 1, count - dateNextCount + 1)->toGroup()[0]);
 }
 
-BigNumber StockMysql::getDays(const std::string& stock, const IntDateTime& date1, const IntDateTime& date2)
+BigNumber StockMysql::getDays(const std::string& stock, const IntDateTime& dateBegin, const IntDateTime& dateEnd) const
 {
-	m_mysql.selectDb("stockmarket");
-	return atoi(m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, "COUNT(*)", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(date1.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(date2.dateToString()))))->toVector()[0][0].c_str());
+	return (int32_t)m_redis.getOrderGroupCountByScore(stock, dateBegin.getDate(), dateEnd.getDate());
+}
+
+void StockMysql::initRedis()
+{
+	int32_t begin = ::GetTickCount();
+	std::vector<std::string> vecAllStock = allStock();
+	int32_t index = -1;
+	while (index++ != vecAllStock.size() - 1)
+	{
+		auto sss4 = readMarket(vecAllStock[index]);
+		auto sss5 = readIndicator(vecAllStock[index]);
+		auto sss3 = readAll(vecAllStock[index]);
+		RCSend("%d", index + 1);
+	}
+	saveMarketDataIndex();
+	saveIndicatorDataIndex();
+	saveAllDataIndex();
+	RCSend("init end time = %.2lf·Ö", (::GetTickCount() - begin) / 60000.0);
 }
 
 void StockMysql::createMarketHead(const std::string& stock)
@@ -236,8 +336,8 @@ std::vector<std::vector<std::string>> StockMysql::redisFromMysql(const std::stri
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	int32_t redisDbIndex,
-	const std::string& mysqlDbName,
-	const std::string& mysqlFields) const
+	const std::vector<std::string>& mysqlDbName,
+	const std::vector<std::string>& mysqlFields) const
 {
 	IntDateTime useBeginTime = beginTime;
 	IntDateTime useEndTime = endTime;
@@ -250,6 +350,10 @@ std::vector<std::vector<std::string>> StockMysql::redisFromMysql(const std::stri
 		useEndTime.setTime(31500101, 0);
 	}
 	std::vector<std::vector<std::string>> result;
+	if (mysqlDbName.size() != mysqlFields.size())
+	{
+		return result;
+	}
 	m_redis.selectDbIndex(redisDbIndex);
 	auto spResultSet = m_redis.getOrderGroupByScore(stock, useBeginTime.getDate(), useEndTime.getDate());
 	if (spResultSet->toCount() == 0)
@@ -260,25 +364,46 @@ std::vector<std::vector<std::string>> StockMysql::redisFromMysql(const std::stri
 			return result;
 		}
 
+		std::vector<std::vector<std::vector<std::string>>> allDbData;
 		//mysqlÒÆÖ²µ½redis
-		m_mysql.selectDb(mysqlDbName);
-		result = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, mysqlFields, SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(useBeginTime.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(useEndTime.dateToString()))))->toVector();
-
-		std::vector<std::pair<int32_t, std::string>> orderGroup;
-		orderGroup.push_back(std::pair<int32_t, std::string>(0, stock));
-		int32_t lineIndex = -1;
-		while (lineIndex++ != result.size() - 1)
+		int32_t dbIndex = -1;
+		while (dbIndex++ != mysqlDbName.size() - 1)
 		{
-			std::string strLine;
-			const std::vector<std::string>& vecLine = result[lineIndex];
-			int32_t index = -1;
-			while (index++ != vecLine.size() - 2)
-			{
-				strLine.append(vecLine[index] + ",");
-			}
-			strLine.append(vecLine[index]);
-			orderGroup.push_back(std::pair<int32_t, std::string>(IntDateTime(vecLine[0]).getDate(), strLine));
+			m_mysql.selectDb(mysqlDbName[dbIndex]);
+			allDbData.push_back(m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock, mysqlFields[dbIndex], SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(useBeginTime.dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(useEndTime.dateToString()))))->toVector());
 		}
+		
+		std::vector<std::pair<int32_t, std::string>> orderGroup;
+		dbIndex = -1;
+		while (dbIndex++ != allDbData.size() - 1)
+		{
+			const std::vector<std::vector<std::string>>& dbResult = allDbData[dbIndex];
+			int32_t lineIndex = -1;
+			while (lineIndex++ != dbResult.size() - 1)
+			{
+				if (lineIndex == orderGroup.size())
+				{
+					orderGroup.push_back(std::pair<int32_t, std::string>());
+				}
+				std::string& strLine = orderGroup[lineIndex].second;
+				const std::vector<std::string>& vecLine = dbResult[lineIndex];
+				int32_t index = -1;
+				while (index++ != vecLine.size() - 1)
+				{
+					strLine.append(vecLine[index] + ",");
+				}
+				if (dbIndex == allDbData.size() - 1)
+				{
+					strLine.pop_back();
+				}
+				if (dbIndex == 0)
+				{
+					orderGroup[lineIndex].first = IntDateTime(vecLine[0]).getDate();
+				}
+			}
+		}
+		orderGroup.push_back(std::pair<int32_t, std::string>(0, stock));
+		
 		if (!m_redis.setOrderGroups(stock, orderGroup))
 		{
 			RCSend("setOrderGroups error = %s, redisDbIndex = %d", stock.c_str(), redisDbIndex);
@@ -295,48 +420,47 @@ std::vector<std::vector<std::string>> StockMysql::redisFromMysql(const std::stri
 	return result;
 }
 
+std::map<std::string, std::vector<int32_t>> StockMysql::getIndex(const std::string& indexHashMapName) const
+{
+	m_redis.selectDbIndex(0);
+	std::map<std::string, std::vector<int32_t>> result;
+	auto hashMap = m_redis.getHashValues(indexHashMapName)->toHashMap();
+	for (auto itIndex = hashMap.begin(); itIndex != hashMap.end(); ++itIndex)
+	{
+		std::vector<std::string> vecIndex;
+		CStringManager::split(vecIndex, itIndex->second, ',');
+		int32_t index = -1;
+		while (index++ != vecIndex.size() - 1)
+		{
+			result[itIndex->first].push_back(atoi(vecIndex[index].c_str()));
+		}
+	}
+	return result;
+}
+
 //int main()
 //{
-//	IntDateTime ss(0, 0);
-//	
-//	RCSend("begin = %d", ::GetTickCount());
-//
 //	//MysqlCpp mysql;
 //	//mysql.connect("127.0.0.1", 3306, "root", "");
 //	//mysql.selectDb("stockmarket");
-//	IntDateTime beginTime = "2015-01-01";
-//	IntDateTime endTime = "2019-04-30";
+//	//IntDateTime beginTime = "2015-01-01";
+//	//IntDateTime endTime = "2019-04-30";
 //	std::shared_ptr<StockMysql> db = StockMysql::newCase();
-//	std::vector<std::string> vecAllStock = db->allStock();
-//	int32_t index = -1;
-//	while (index++ != vecAllStock.size() - 1)
-//	{
-//		//auto result = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString(vecAllStock[index], "*", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(IntDateTime("1970-01-01").dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(IntDateTime("3150-01-01").dateToString()))))->toVector();
-//		//vecAllStock[index] , beginTime, endTime
-//		auto sss1 = db->readRsi(vecAllStock[index]);
-//		//auto sss2 = db->readWr(vecAllStock[index]);
-//		//auto sss3 = db->readTest(vecAllStock[index]);
-//		//if (result != sss1)
-//		//{
-//		//	RCSend("error compare = %s", vecAllStock[index].c_str());
-//		//}
-//		RCSend("%d", index + 1);
-//	}
-//	index = -1;
-//	while (index++ != vecAllStock.size() - 1)
-//	{
-//		//auto result = mysql.execute(mysql.PreparedStatementCreator(SqlString::selectString(vecAllStock[index], "*", SqlString::fieldStrToDate("date") + ">=" + SqlString::strToDate(IntDateTime("1970-01-01").dateToString()) + " and " + SqlString::fieldStrToDate("date") + " <= " + SqlString::strToDate(IntDateTime("3150-01-01").dateToString()))))->toVector();
-//		//vecAllStock[index] , beginTime, endTime
-//		//auto sss1 = db->readRsi(vecAllStock[index]);
-//		//auto sss2 = db->readWr(vecAllStock[index]);
-//		//auto sss3 = db->readTest(vecAllStock[index]);
-//		//if (result != sss1)
-//		//{
-//		//	RCSend("error compare = %s", vecAllStock[index].c_str());
-//		//}
-//		RCSend("%d", index + 1);
-//	}
-//	RCSend("end = %d", ::GetTickCount());
+//
+//	db->initRedis();
+//
+//	//std::string stockTest = "603826";
+//	//bool isExist = db->dateExist(stockTest, "2019-04-30");
+//	//bool isExist1 = db->dateExist(stockTest, "2019-04-29");
+//	//bool isExist2 = db->dateExist(stockTest, "2019-04-28");
+//	//bool isExist3 = db->dateExist(stockTest, "2019-04-27");
+//	//bool isExist4 = db->dateExist(stockTest, "2019-04-26");
+//	//IntDateTime date1 = db->beginDate(stockTest);
+//	//IntDateTime date2 = db->endDate(stockTest);
+//	//IntDateTime date3 = db->getDatePre(stockTest, "2017-04-15");
+//	//IntDateTime date4 = db->getDateNext(stockTest, "2017-04-15");
+//	//BigNumber num5 = db->getDays(stockTest, "2017-04-01", "2019-05-09");
+//
 //	getchar();
 //	return 0;
 //}

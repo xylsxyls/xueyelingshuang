@@ -52,29 +52,52 @@ public:
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0)) const;
 
-	/** 读取wr
+	/** 保存hangqing数据索引值
+	*/
+	void saveMarketDataIndex() const;
+
+	/** 获取hangqing数据索引值
+	@return 返回hangqing数据索引值
+	*/
+	std::map<std::string, std::vector<int32_t>> getMarketDataIndex() const;
+
+	/** 读取zhibiao
 	@param [in] stock gupiao代码
 	@param [in] beginTime 开始时间，默认参数表示最早时间
 	@param [in] endTime 结束时间，默认参数表示最晚时间
-	@return 返回wr表
+	@return 返回zhibiao表
 	*/
-	std::vector<std::vector<std::string>> readWr(const std::string& stock,
+	std::vector<std::vector<std::string>> readIndicator(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0)) const;
 
-	/** 读取rsi
+	/** 保存zhibiao数据索引值
+	*/
+	void saveIndicatorDataIndex() const;
+
+	/** 获取zhibiao数据索引值
+	@return 返回zhibiao数据索引值
+	*/
+	std::map<std::string, std::vector<int32_t>> getIndicatorDataIndex() const;
+
+	/** 读取所有数据
 	@param [in] stock gupiao代码
 	@param [in] beginTime 开始时间，默认参数表示最早时间
 	@param [in] endTime 结束时间，默认参数表示最晚时间
-	@return 返回wr表
+	@return 返回所有数据表
 	*/
-	std::vector<std::vector<std::string>> readRsi(const std::string& stock,
+	std::vector<std::vector<std::string>> readAll(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0)) const;
 
-	std::vector<std::vector<std::string>> readTest(const std::string& stock,
-		const IntDateTime& beginTime = IntDateTime(0, 0),
-		const IntDateTime& endTime = IntDateTime(0, 0)) const;
+	/** 保存所有数据索引值
+	*/
+	void saveAllDataIndex() const;
+
+	/** 获取所有数据索引值
+	@return 返回所有数据索引值
+	*/
+	std::map<std::string, std::vector<int32_t>> getAllDataIndex() const;
 
 	/** 获取当前日期是否存在
 	@param [in] stock gupiao代码
@@ -111,11 +134,15 @@ public:
 
 	/** 获取两个日期之间的jiaoyiri天数
 	@param [in] stock gupiao代码
-	@param [in] date1 jiaoyiri日期1，1小
-	@param [in] date2 jiaoyiri日期2，2大
+	@param [in] dateBegin jiaoyiri日期1，1小
+	@param [in] dateEnd jiaoyiri日期2，2大
 	@return 返回间隔天数，包括头尾
 	*/
-	BigNumber getDays(const std::string& stock, const IntDateTime& date1, const IntDateTime& date2);
+	BigNumber getDays(const std::string& stock, const IntDateTime& dateBegin, const IntDateTime& dateEnd) const;
+
+	/** 转移数据到redis
+	*/
+	void initRedis();
 
 protected:
 	/** 新开一个kaigaodishou的表
@@ -136,8 +163,10 @@ protected:
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		int32_t redisDbIndex,
-		const std::string& mysqlDbName,
-		const std::string& mysqlFields) const;
+		const std::vector<std::string>& mysqlDbName,
+		const std::vector<std::string>& mysqlFields) const;
+
+	std::map<std::string, std::vector<int32_t>> getIndex(const std::string& indexHashMapName) const;
 
 private:
 	//数据库连接类
