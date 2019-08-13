@@ -3,48 +3,57 @@
 #include "StockMysql/StockMysqlAPI.h"
 #include "StockDay.h"
 
-StockMarket::StockMarket()
+StockMarket::StockMarket():
+m_isLoadPreDate(false)
 {
-	m_spStockMysql = StockMysql::newCase();
+	m_date.clear();
 }
 
-void StockMarket::load(const std::string& stock,
-	const IntDateTime& beginTime,
-	const IntDateTime& endTime)
+void StockMarket::loadFromDb(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
+{
+	m_stock = stock;
+	IntDateTime preDate = StockMysql::instance().getDatePre(stock, beginTime);
+	m_isLoadPreDate = !(preDate.empty());
+	m_market = StockMysql::instance().readMarket(stock, m_isLoadPreDate ? preDate : beginTime, endTime);
+}
+
+void StockMarket::load()
 {
 	clear();
-	m_stock = stock;
-	std::vector<std::vector<std::string>> vecMarket = m_spStockMysql->readMarket(stock, beginTime, endTime);
-	if (vecMarket.empty())
+	
+	if (m_market.empty())
 	{
 		return;
 	}
-	
-	IntDateTime preDate = m_spStockMysql->getDatePre(stock, beginTime);
-	std::shared_ptr<StockDay> spFirstDay(new StockDay);
-	m_date = vecMarket[0][0];
-	spFirstDay->load(stock,
-		vecMarket[0][0],
-		vecMarket[0][1].c_str(),
-		vecMarket[0][2].c_str(),
-		vecMarket[0][3].c_str(),
-		vecMarket[0][4].c_str(),
-		preDate.empty() ? (BigNumber(vecMarket[0][1].c_str()) / 1.1).toPrec(2) : m_spStockMysql->readMarket(stock, preDate, preDate)[0][4].c_str());
-	m_history[vecMarket[0][0]] = spFirstDay;
+
+	if (!m_isLoadPreDate)
+	{
+		std::shared_ptr<StockDay> spFirstDay(new StockDay);
+		m_date = m_market[0][0];
+		spFirstDay->load(m_stock,
+			m_market[0][0],
+			m_market[0][1].c_str(),
+			m_market[0][2].c_str(),
+			m_market[0][3].c_str(),
+			m_market[0][4].c_str(),
+			(BigNumber(m_market[0][1].c_str()) / 1.1).toPrec(2));
+		m_history[m_market[0][0]] = spFirstDay;
+	}
 
 	int32_t dayIndex = 0;
-	while (dayIndex++ != vecMarket.size() - 1)
+	while (dayIndex++ != m_market.size() - 1)
 	{
 		std::shared_ptr<StockDay> spDay(new StockDay);
-		spDay->load(stock,
-			vecMarket[dayIndex][0],
-			vecMarket[dayIndex][1].c_str(),
-			vecMarket[dayIndex][2].c_str(),
-			vecMarket[dayIndex][3].c_str(),
-			vecMarket[dayIndex][4].c_str(),
-			vecMarket[dayIndex - 1][4].c_str());
-		m_history[vecMarket[dayIndex][0]] = spDay;
+		spDay->load(m_stock,
+			m_market[dayIndex][0],
+			m_market[dayIndex][1].c_str(),
+			m_market[dayIndex][2].c_str(),
+			m_market[dayIndex][3].c_str(),
+			m_market[dayIndex][4].c_str(),
+			m_market[dayIndex - 1][4].c_str());
+		m_history[m_market[dayIndex][0]] = spDay;
 	}
+	m_market.clear();
 }
 
 std::string StockMarket::stock() const
@@ -59,8 +68,6 @@ std::string StockMarket::name() const
 
 void StockMarket::clear()
 {
-	m_stock.clear();
-	m_name.clear();
 	m_date.clear();
 	m_history.clear();
 }
@@ -153,7 +160,8 @@ void StockMarket::setStock(const std::string& stock)
 std::shared_ptr<StockDay> StockMarket::stockDay(const IntDateTime& date) const
 {
 	StockMarket day;
-	day.load(m_stock, date, date);
+	day.loadFromDb(m_stock, date, date);
+	day.load();
 	return day.day();
 }
 
@@ -319,12 +327,12 @@ std::shared_ptr<StockDay> StockMarket::stockDay(const IntDateTime& date) const
 
 bool StockMarket::dateExist(const IntDateTime& date) const
 {
-	return m_spStockMysql->dateExist(m_stock, date);
+	return StockMysql::instance().dateExist(m_stock, date);
 }
 
 IntDateTime StockMarket::beginDate()
 {
-	return m_spStockMysql->beginDate(m_stock);
+	return StockMysql::instance().beginDate(m_stock);
 }
 
 //bool StockMarket::getDatePre(const IntDateTime& date, IntDateTime& preDate) const
@@ -344,7 +352,7 @@ IntDateTime StockMarket::beginDate()
 
 IntDateTime StockMarket::getDatePre(const IntDateTime& date) const
 {
-	return m_spStockMysql->getDatePre(m_stock, date);
+	return StockMysql::instance().getDatePre(m_stock, date);
 }
 
 //bool StockMarket::getDateNext(const IntDateTime& date, IntDateTime& nextDate) const
@@ -364,7 +372,7 @@ IntDateTime StockMarket::getDatePre(const IntDateTime& date) const
 
 IntDateTime StockMarket::getDateNext(const IntDateTime& date) const
 {
-	return m_spStockMysql->getDateNext(m_stock, date);
+	return StockMysql::instance().getDateNext(m_stock, date);
 }
 
 //bool StockMarket::getMarketPre(const IntDateTime& date, IntDateTime& preDate, std::vector<BigNumber>& preData) const
@@ -405,7 +413,7 @@ BigNumber StockMarket::getDays(const IntDateTime& date1, const IntDateTime& date
 	{
 		return 1;
 	}
-	return m_spStockMysql->getDays(m_stock, date1, date2);
+	return StockMysql::instance().getDays(m_stock, date1, date2);
 }
 
 //bool StockMarket::getMarketPre(const IntDateTime& date, int32_t days, std::map<IntDateTime, std::vector<BigNumber>>& preDaysData) const
@@ -459,14 +467,33 @@ BigNumber StockMarket::getDays(const IntDateTime& date1, const IntDateTime& date
 //	return true;
 //}
 
-int main()
-{
-	StockMarket market;
-	market.load("603826", "2019-01-01", "2019-04-30");
-	do 
-	{
-		auto ss = market.day();
-		int x = 3;
-	} while (market.next());
-	return 0;
-}
+//int main()
+//{
+//	auto allStock = StockMysql::instance().allStock();
+//	int32_t begin = ::GetTickCount();
+//
+//	CStopWatch stopWatch4;
+//	
+//	int32_t index = -1;
+//	while (index++ != allStock.size() - 1)
+//	{
+//		StockMarket market;
+//		stopWatch4.Run();
+//		//market.loadFromDb("603826","2017-04-15","2019-05-30");
+//		market.loadFromDb(allStock[index]);
+//		market.load();
+//		stopWatch4.Stop();
+//		RCSend("%d", index + 1);
+//	}
+//	RCSend("time = %.2lf",(::GetTickCount() - begin) / 60000.0);
+//	
+//	StockMarket market;
+//	market.printStopWatch();
+//	RCSend("4 = %d", stopWatch4.GetWatchTime());
+//	//do 
+//	//{
+//	//	auto ss = market.day();
+//	//	int x = 3;
+//	//} while (market.next());
+//	return 0;
+//}

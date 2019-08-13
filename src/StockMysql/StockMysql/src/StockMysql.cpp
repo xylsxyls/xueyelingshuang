@@ -13,6 +13,12 @@ std::shared_ptr<StockMysql> StockMysql::newCase()
 	return std::shared_ptr<StockMysql>(new StockMysql);
 }
 
+StockMysql& StockMysql::instance()
+{
+	static StockMysql s_stockMysql;
+	return s_stockMysql;
+}
+
 void StockMysql::init()
 {
 	if (!m_mysql.connect("127.0.0.1", 3306, "root", ""))

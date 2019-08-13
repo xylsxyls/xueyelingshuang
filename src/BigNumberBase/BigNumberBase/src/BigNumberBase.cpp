@@ -37,7 +37,8 @@ m_fixedPrec(-1),
 m_fixedPrecFlag(HALF_ADJUST)
 {
 	m_gmp = new GmpInt;
-	std::vector<std::string> vecNum = CStringManager::split(num, ".");
+	std::vector<std::string> vecNum;
+	CStringManager::split(vecNum, num, '.');
 	if (vecNum.size() == 1)
 	{
 		mpz_init_set_str(m_gmp->m_integer, num, 10);

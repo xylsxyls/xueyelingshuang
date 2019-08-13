@@ -17,14 +17,18 @@ public:
 	StockMarket();
 
 public:
-	/** 加载gupiao历史hangqing
+	/** 从数据库中加载数据
 	@param [in] stock gupiao代码
 	@param [in] beginTime 开始加载时间，包括头
 	@param [in] endTime 结束加载时间，包括尾
 	*/
-	void load(const std::string& stock,
+	void loadFromDb(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0));
+
+	/** 加载gupiao历史hangqing，将数据库数据转换为可用数据
+	*/
+	void load();
 
 	/** 获取gupiao代码
 	@return 返回gupiao代码
@@ -140,8 +144,10 @@ private:
 	IntDateTime m_date;
 	//日期，开高低收，索引对应Histroy枚举
 	std::map<IntDateTime, std::shared_ptr<StockDay>> m_history;
-	//数据库
-	std::shared_ptr<StockMysql> m_spStockMysql;
+	//数据库中加载到的数据，一旦初始化结束之后会全部清空
+	std::vector<std::vector<std::string>> m_market;
+	//是否加载了上一天的hangqing
+	bool m_isLoadPreDate;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

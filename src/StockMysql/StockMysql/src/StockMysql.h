@@ -21,6 +21,11 @@ public:
 	*/
 	static std::shared_ptr<StockMysql> newCase();
 
+	/** 返回单一实例
+	@return 返回单一实例
+	*/
+	static StockMysql& instance();
+
 	/** 初始化
 	*/
 	void init();
