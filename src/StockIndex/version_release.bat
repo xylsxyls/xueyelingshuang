@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" StockIndex 32 dll release same
