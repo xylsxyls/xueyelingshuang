@@ -1,27 +1,31 @@
 #include "StockWrIndicator.h"
 #include "StockWr.h"
-#include "StockMysql/StockMysqlAPI.h"
 
 StockWrIndicator::StockWrIndicator()
 {
-	m_spStockMysql = StockMysql::newCase();
+
 }
 
-void StockWrIndicator::load(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
+void StockWrIndicator::setRedisData(const std::string& stock, const std::vector<std::vector<std::string>>& vecIndicator)
+{
+	m_stock = stock;
+	m_vecRedisIndicator = vecIndicator;
+}
+
+void StockWrIndicator::load()
 {
 	clear();
-	m_stock = stock;
-	std::vector<std::vector<std::string>> vecIndicator = m_spStockMysql->readWr(stock, beginTime, endTime);
 	int32_t index = -1;
-	while (index++ != vecIndicator.size() - 1)
+	while (index++ != m_vecRedisIndicator.size() - 1)
 	{
 		std::shared_ptr<StockWr> spStockWr(new StockWr);
-		spStockWr->m_date = vecIndicator[index][0];
-		spStockWr->m_wr10 = vecIndicator[index][1].c_str();
-		spStockWr->m_wr20 = vecIndicator[index][2].c_str();
+		spStockWr->m_date = m_vecRedisIndicator[index][0];
+		spStockWr->m_wr10 = m_vecRedisIndicator[index][1].c_str();
+		spStockWr->m_wr20 = m_vecRedisIndicator[index][2].c_str();
 		m_indicator[spStockWr->m_date] = spStockWr;
 	}
 	calc();
+	m_vecRedisIndicator.clear();
 }
 
 std::shared_ptr<StockWr> StockWrIndicator::day(const IntDateTime& date)
@@ -36,7 +40,6 @@ std::shared_ptr<StockWr> StockWrIndicator::day(const IntDateTime& date)
 
 void StockWrIndicator::clear()
 {
-	m_stock.clear();
 	m_indicator.clear();
 }
 

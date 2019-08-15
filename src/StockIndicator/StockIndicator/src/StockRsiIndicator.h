@@ -6,13 +6,13 @@
 #include "StockIndicatorMacro.h"
 
 class StockRsi;
-class StockMysql;
 class StockIndicatorAPI StockRsiIndicator
 {
 public:
 	StockRsiIndicator();
 
 public:
+	void setRedisData(const std::string& stock, const std::vector<std::vector<std::string>>& vecIndicator);
 	void load(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0));
@@ -33,7 +33,7 @@ public:
 #endif
 	std::string m_stock;
 	std::map<IntDateTime, std::shared_ptr<StockRsi>> m_indicator;
-	std::shared_ptr<StockMysql> m_spStockMysql;
+	std::vector<std::vector<std::string>> m_vecRedisIndicator;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

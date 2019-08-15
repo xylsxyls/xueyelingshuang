@@ -6,16 +6,14 @@
 #include <map>
 
 class StockWr;
-class StockMysql;
 class StockIndicatorAPI StockWrIndicator
 {
 public:
 	StockWrIndicator();
 
 public:
-	void load(const std::string& stock,
-		const IntDateTime& beginTime = IntDateTime(0, 0),
-		const IntDateTime& endTime = IntDateTime(0, 0));
+	void setRedisData(const std::string& stock, const std::vector<std::vector<std::string>>& vecIndicator);
+	void load();
 
 	std::shared_ptr<StockWr> day(const IntDateTime& date);
 
@@ -33,7 +31,7 @@ public:
 #endif
 	std::string m_stock;
 	std::map<IntDateTime, std::shared_ptr<StockWr>> m_indicator;
-	std::shared_ptr<StockMysql> m_spStockMysql;
+	std::vector<std::vector<std::string>> m_vecRedisIndicator;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
