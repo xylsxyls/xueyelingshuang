@@ -13,9 +13,7 @@ public:
 
 public:
 	void setRedisData(const std::string& stock, const std::vector<std::vector<std::string>>& vecIndicator);
-	void load(const std::string& stock,
-		const IntDateTime& beginTime = IntDateTime(0, 0),
-		const IntDateTime& endTime = IntDateTime(0, 0));
+	void load();
 
 	std::shared_ptr<StockRsi> day(const IntDateTime& date);
 

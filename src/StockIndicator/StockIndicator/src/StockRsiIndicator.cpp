@@ -12,10 +12,9 @@ void StockRsiIndicator::setRedisData(const std::string& stock, const std::vector
 	m_vecRedisIndicator = vecIndicator;
 }
 
-void StockRsiIndicator::load(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
+void StockRsiIndicator::load()
 {
 	clear();
-	m_stock = stock;
 	int32_t index = -1;
 	while (index++ != m_vecRedisIndicator.size() - 1)
 	{
@@ -27,6 +26,7 @@ void StockRsiIndicator::load(const std::string& stock, const IntDateTime& beginT
 		m_indicator[spStockRsi->m_date] = spStockRsi;
 	}
 	calc();
+	m_vecRedisIndicator.clear();
 }
 
 std::shared_ptr<StockRsi> StockRsiIndicator::day(const IntDateTime& date)
