@@ -16,52 +16,33 @@ StockIndicator& StockIndicator::instance()
 
 void StockIndicator::loadFromRedis(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
 {
+	m_indicatorIndex = StockMysql::instance().getIndicatorDataIndex();
+	m_loadStock = stock;
 	m_redisIndicatorData = StockMysql::instance().readIndicator(stock, beginTime, endTime);
 }
 
 void StockIndicator::clear()
 {
-	m_redisIndicatorData.clear();
+	m_indicatorIndex.clear();
+	m_loadStock.clear();
+	m_redisIndicatorData = nullptr;
 }
 
-std::shared_ptr<StockWrIndicator> StockIndicator::wr(const std::string& stock,
-	const IntDateTime& beginTime, 
-	const IntDateTime& endTime)
+std::shared_ptr<StockWrIndicator> StockIndicator::wr()
 {
-	std::vector<std::vector<std::string>> redisData;
-	int32_t lineIndex = -1;
-	while (lineIndex++ != m_redisIndicatorData.size() - 1)
-	{
-		redisData.push_back(std::vector<std::string>());
-		const std::vector<std::string>& vecLine = m_redisIndicatorData[lineIndex];
-		redisData.back().push_back(vecLine[0]);
-		redisData.back().push_back(vecLine[1]);
-		redisData.back().push_back(vecLine[2]);
-	}
-
+	const std::vector<int32_t>& indicatorIndex = m_indicatorIndex.find("wr")->second;
+	int32_t dateIndex = m_indicatorIndex.find("date")->second[0];
 	std::shared_ptr<StockWrIndicator> spStockWrIndicator(new StockWrIndicator);
-	spStockWrIndicator->setRedisData(stock, redisData);
+	spStockWrIndicator->setRedisData(m_loadStock, m_redisIndicatorData, dateIndex, indicatorIndex);
 	return spStockWrIndicator;
 }
 
-std::shared_ptr<StockRsiIndicator> StockIndicator::rsi(const std::string& stock,
-	const IntDateTime& beginTime,
-	const IntDateTime& endTime)
+std::shared_ptr<StockRsiIndicator> StockIndicator::rsi()
 {
-	std::vector<std::vector<std::string>> redisData;
-	int32_t lineIndex = -1;
-	while (lineIndex++ != m_redisIndicatorData.size() - 1)
-	{
-		redisData.push_back(std::vector<std::string>());
-		const std::vector<std::string>& vecLine = m_redisIndicatorData[lineIndex];
-		redisData.back().push_back(vecLine[0]);
-		redisData.back().push_back(vecLine[3]);
-		redisData.back().push_back(vecLine[4]);
-		redisData.back().push_back(vecLine[5]);
-	}
-
+	const std::vector<int32_t>& indicatorIndex = m_indicatorIndex.find("rsi")->second;
+	int32_t dateIndex = m_indicatorIndex.find("date")->second[0];
 	std::shared_ptr<StockRsiIndicator> spStockRsiIndicator(new StockRsiIndicator);
-	spStockRsiIndicator->setRedisData(stock, redisData);
+	spStockRsiIndicator->setRedisData(m_loadStock, m_redisIndicatorData, dateIndex, indicatorIndex);
 	return spStockRsiIndicator;
 }
 

@@ -1,32 +1,38 @@
 #include "StockRsiIndicator.h"
 #include "StockRsi.h"
 
-StockRsiIndicator::StockRsiIndicator()
+StockRsiIndicator::StockRsiIndicator():
+m_dateIndex(0)
 {
 
 }
 
-void StockRsiIndicator::setRedisData(const std::string& stock, const std::vector<std::vector<std::string>>& vecIndicator)
+void StockRsiIndicator::setRedisData(const std::string& stock,
+	const std::shared_ptr<std::vector<std::vector<std::string>>>& vecIndicator,
+	int32_t dateIndex,
+	const std::vector<int32_t>& indicatorIndex)
 {
 	m_stock = stock;
 	m_vecRedisIndicator = vecIndicator;
+	m_dateIndex = dateIndex;
+	m_indicatorIndex = indicatorIndex;
 }
 
 void StockRsiIndicator::load()
 {
 	clear();
 	int32_t index = -1;
-	while (index++ != m_vecRedisIndicator.size() - 1)
+	while (index++ != m_vecRedisIndicator->size() - 1)
 	{
 		std::shared_ptr<StockRsi> spStockRsi(new StockRsi);
-		spStockRsi->m_date = m_vecRedisIndicator[index][0];
-		spStockRsi->m_rsi6 = m_vecRedisIndicator[index][1].c_str();
-		spStockRsi->m_rsi12 = m_vecRedisIndicator[index][2].c_str();
-		spStockRsi->m_rsi24 = m_vecRedisIndicator[index][3].c_str();
+		spStockRsi->m_date = (*m_vecRedisIndicator)[index][m_dateIndex];
+		spStockRsi->m_rsi6 = (*m_vecRedisIndicator)[index][m_indicatorIndex[0]].c_str();
+		spStockRsi->m_rsi12 = (*m_vecRedisIndicator)[index][m_indicatorIndex[1]].c_str();
+		spStockRsi->m_rsi24 = (*m_vecRedisIndicator)[index][m_indicatorIndex[2]].c_str();
 		m_indicator[spStockRsi->m_date] = spStockRsi;
 	}
 	calc();
-	m_vecRedisIndicator.clear();
+	m_vecRedisIndicator = nullptr;
 }
 
 std::shared_ptr<StockRsi> StockRsiIndicator::day(const IntDateTime& date)

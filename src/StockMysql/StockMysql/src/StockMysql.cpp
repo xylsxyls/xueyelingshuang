@@ -147,7 +147,7 @@ void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vec
 //	return result;
 //}
 
-std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& stock,
+std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readMarket(const std::string& stock,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime) const
 {
@@ -158,7 +158,7 @@ std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& 
 	return redisFromMysql(stock, beginTime, endTime, 0, vecDbName, vecDbField);
 }
 
-std::vector<std::vector<std::string>> StockMysql::readIndicator(const std::string& stock,
+std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readIndicator(const std::string& stock,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime) const
 {
@@ -173,6 +173,7 @@ std::vector<std::vector<std::string>> StockMysql::readIndicator(const std::strin
 
 void StockMysql::saveMarketDataIndex() const
 {
+	m_redis.selectDbIndex(0);
 	std::map<std::string, std::string> hashMap;
 	hashMap["date"] = "0";
 	hashMap["market"] = "1,2,3,4";
@@ -186,6 +187,7 @@ std::map<std::string, std::vector<int32_t>> StockMysql::getMarketDataIndex() con
 
 void StockMysql::saveIndicatorDataIndex() const
 {
+	m_redis.selectDbIndex(0);
 	std::map<std::string, std::string> hashMap;
 	hashMap["date"] = "0";
 	hashMap["wr"] = "1,2";
@@ -200,6 +202,7 @@ std::map<std::string, std::vector<int32_t>> StockMysql::getIndicatorDataIndex() 
 
 void StockMysql::saveAllDataIndex() const
 {
+	m_redis.selectDbIndex(0);
 	std::map<std::string, std::string> hashMap;
 	hashMap["date"] = "0";
 	hashMap["market"] = "1,2,3,4";
@@ -213,7 +216,7 @@ std::map<std::string, std::vector<int32_t>> StockMysql::getAllDataIndex() const
 	return getIndex("alldataindex");
 }
 
-std::vector<std::vector<std::string>> StockMysql::readAll(const std::string& stock, const IntDateTime& beginTime /*= IntDateTime(0, 0)*/, const IntDateTime& endTime /*= IntDateTime(0, 0)*/) const
+std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readAll(const std::string& stock, const IntDateTime& beginTime /*= IntDateTime(0, 0)*/, const IntDateTime& endTime /*= IntDateTime(0, 0)*/) const
 {
 	std::vector<std::string> vecDbName;
 	std::vector<std::string> vecDbField;
@@ -338,7 +341,7 @@ void StockMysql::createMarketHead(const std::string& stock)
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableString(stock, vecFields)));
 }
 
-std::vector<std::vector<std::string>> StockMysql::redisFromMysql(const std::string& stock,
+std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::redisFromMysql(const std::string& stock,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	int32_t redisDbIndex,
@@ -355,7 +358,7 @@ std::vector<std::vector<std::string>> StockMysql::redisFromMysql(const std::stri
 	{
 		useEndTime.setTime(31500101, 0);
 	}
-	std::vector<std::vector<std::string>> result;
+	std::shared_ptr<std::vector<std::vector<std::string>>> result(new std::vector<std::vector<std::string>>);
 	if (mysqlDbName.size() != mysqlFields.size())
 	{
 		return result;
@@ -421,7 +424,7 @@ std::vector<std::vector<std::string>> StockMysql::redisFromMysql(const std::stri
 	while (index++ != spResultSet->toReply()->elements - 1)
 	{
 		CStringManager::split(vecLine, spResultSet->toReply()->element[index]->str, ',');
-		result.push_back(vecLine);
+		result->push_back(vecLine);
 	}
 	return result;
 }

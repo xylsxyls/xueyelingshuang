@@ -21,7 +21,7 @@ void StockMarket::load()
 {
 	clear();
 	
-	if (m_market.empty())
+	if (m_market->empty())
 	{
 		return;
 	}
@@ -29,31 +29,31 @@ void StockMarket::load()
 	if (!m_isLoadPreDate)
 	{
 		std::shared_ptr<StockDay> spFirstDay(new StockDay);
-		m_date = m_market[0][0];
+		m_date = (*m_market)[0][0];
 		spFirstDay->load(m_stock,
-			m_market[0][0],
-			m_market[0][1].c_str(),
-			m_market[0][2].c_str(),
-			m_market[0][3].c_str(),
-			m_market[0][4].c_str(),
-			(BigNumber(m_market[0][1].c_str()) / 1.1).toPrec(2));
-		m_history[m_market[0][0]] = spFirstDay;
+			(*m_market)[0][0],
+			(*m_market)[0][1].c_str(),
+			(*m_market)[0][2].c_str(),
+			(*m_market)[0][3].c_str(),
+			(*m_market)[0][4].c_str(),
+			(BigNumber((*m_market)[0][1].c_str()) / 1.1).toPrec(2));
+		m_history[(*m_market)[0][0]] = spFirstDay;
 	}
 
 	int32_t dayIndex = 0;
-	while (dayIndex++ != m_market.size() - 1)
+	while (dayIndex++ != m_market->size() - 1)
 	{
 		std::shared_ptr<StockDay> spDay(new StockDay);
 		spDay->load(m_stock,
-			m_market[dayIndex][0],
-			m_market[dayIndex][1].c_str(),
-			m_market[dayIndex][2].c_str(),
-			m_market[dayIndex][3].c_str(),
-			m_market[dayIndex][4].c_str(),
-			m_market[dayIndex - 1][4].c_str());
-		m_history[m_market[dayIndex][0]] = spDay;
+			(*m_market)[dayIndex][0],
+			(*m_market)[dayIndex][1].c_str(),
+			(*m_market)[dayIndex][2].c_str(),
+			(*m_market)[dayIndex][3].c_str(),
+			(*m_market)[dayIndex][4].c_str(),
+			(*m_market)[dayIndex - 1][4].c_str());
+		m_history[(*m_market)[dayIndex][0]] = spDay;
 	}
-	m_market.clear();
+	m_market = nullptr;
 }
 
 std::string StockMarket::stock() const

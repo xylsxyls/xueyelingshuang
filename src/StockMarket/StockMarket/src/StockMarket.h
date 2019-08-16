@@ -145,7 +145,7 @@ private:
 	//日期，开高低收，索引对应Histroy枚举
 	std::map<IntDateTime, std::shared_ptr<StockDay>> m_history;
 	//数据库中加载到的数据，一旦初始化结束之后会全部清空
-	std::vector<std::vector<std::string>> m_market;
+	std::shared_ptr<std::vector<std::vector<std::string>>> m_market;
 	//是否加载了上一天的hangqing
 	bool m_isLoadPreDate;
 #ifdef _MSC_VER

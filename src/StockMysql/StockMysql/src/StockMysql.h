@@ -53,7 +53,7 @@ public:
 	@param [in] endTime 结束时间，默认参数表示最晚时间
 	@return 返回kaigaodishou表
 	*/
-	std::vector<std::vector<std::string>> readMarket(const std::string& stock,
+	std::shared_ptr<std::vector<std::vector<std::string>>> readMarket(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0)) const;
 
@@ -72,7 +72,7 @@ public:
 	@param [in] endTime 结束时间，默认参数表示最晚时间
 	@return 返回zhibiao表
 	*/
-	std::vector<std::vector<std::string>> readIndicator(const std::string& stock,
+	std::shared_ptr<std::vector<std::vector<std::string>>> readIndicator(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0)) const;
 
@@ -91,7 +91,7 @@ public:
 	@param [in] endTime 结束时间，默认参数表示最晚时间
 	@return 返回所有数据表
 	*/
-	std::vector<std::vector<std::string>> readAll(const std::string& stock,
+	std::shared_ptr<std::vector<std::vector<std::string>>> readAll(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0)) const;
 
@@ -164,7 +164,7 @@ protected:
 	@param [in] mysqlFields 取出源数据需要的字段，英文逗号分隔
 	@return 返回表
 	*/
-	std::vector<std::vector<std::string>> redisFromMysql(const std::string& stock,
+	std::shared_ptr<std::vector<std::vector<std::string>>> redisFromMysql(const std::string& stock,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		int32_t redisDbIndex,
