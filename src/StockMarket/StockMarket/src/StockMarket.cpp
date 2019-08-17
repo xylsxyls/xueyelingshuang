@@ -53,6 +53,7 @@ void StockMarket::load()
 			(*m_market)[dayIndex - 1][4].c_str());
 		m_history[(*m_market)[dayIndex][0]] = spDay;
 	}
+	setFirstDate();
 	m_market = nullptr;
 }
 

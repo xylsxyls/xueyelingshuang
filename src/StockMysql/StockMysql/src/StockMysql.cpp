@@ -2,6 +2,7 @@
 #include "MysqlCpp/MysqlCppAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "hiredisinclude/hiredis.h"
+#include "CSystem/CSystemAPI.h"
 
 StockMysql::StockMysql()
 {
@@ -21,14 +22,19 @@ StockMysql& StockMysql::instance()
 
 void StockMysql::init()
 {
-	if (!m_mysql.connect("127.0.0.1", 3306, "root", ""))
-	{
-		::MessageBox(nullptr, "数据库连接失败\n", nullptr, 0);
-		system("pause");
-	}
 	if (!m_redis.connect("127.0.0.1"))
 	{
 		::MessageBox(nullptr, "redis连接失败\n", nullptr, 0);
+		system("pause");
+	}
+
+	if (CSystem::processPid(L"mysqld.exe").empty())
+	{
+		return;
+	}
+	if (!m_mysql.connect("127.0.0.1", 3306, "root", ""))
+	{
+		::MessageBox(nullptr, "数据库连接失败\n", nullptr, 0);
 		system("pause");
 	}
 }

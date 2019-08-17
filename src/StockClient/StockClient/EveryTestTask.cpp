@@ -6,33 +6,17 @@
 
 void EveryTestTask::DoTask()
 {
-	//RCSend("1");
-	//return;
 	RCSend("%d", ::GetTickCount());
 	std::string stock = m_stock;
-	//RCSend("%s", m_stock.c_str());
-	IntDateTime beginTime = "2014-02-27";
-	IntDateTime endTime = "2019-02-27";
-
-	//std::shared_ptr<StockWrIndicator> spStockWrIndicatorTest(new StockWrIndicator);
-	//spStockWrIndicatorTest->load(stock, beginTime, endTime);
-	//std::shared_ptr<StockWrIndicator> spStockWrIndicator = StockIndicator::instance().wr(stock, beginTime, endTime);
-	//std::shared_ptr<StockRsiIndicator> spStockRsiIndicator = StockIndicator::instance().rsi(stock, beginTime, endTime);
-	//RCSend("1");
-	//return;
 	
 	CStopWatch marketWatch;
-	std::shared_ptr<StockMarket> m_spMarket(new StockMarket);
-	m_spMarket->load(stock, beginTime, endTime);
+	m_spMarket->load();
+	m_spStockWrIndicator->load();
+	m_spStockRsiIndicator->load();
 	int32_t marketWatchTime = marketWatch.GetWatchTime();
+
 	StockFund fund;
 	fund.add(100000);
-	std::shared_ptr<StockWrIndicator> m_spStockWrIndicator = StockIndicator::instance().wr(stock, beginTime, endTime);
-	std::shared_ptr<StockRsiIndicator> m_spStockRsiIndicator = StockIndicator::instance().rsi(stock, beginTime, endTime);
-	//std::shared_ptr<StockWrIndicator> spStockWrIndicator(new StockWrIndicator);
-	//spStockWrIndicator->load(stock, beginTime, endTime);
-	//std::shared_ptr<StockRsiIndicator> spStockRsiIndicator(new StockRsiIndicator);
-	//spStockRsiIndicator->load(stock, beginTime, endTime);
 	CStopWatch indexWatch;
 	do
 	{
@@ -51,32 +35,42 @@ void EveryTestTask::DoTask()
 		BigNumber wr10 = m_spStockWrIndicator->day(time)->wr10();
 		BigNumber rsi6 = m_spStockRsiIndicator->day(time)->rsi6();
 		BigNumber rsi24 = m_spStockRsiIndicator->day(time)->rsi24();
+
+		BigNumber chg = 0;
+		fund.stockChg(m_spMarket->stock(), m_spMarket->day(), chg);
 	
 		//BigNumber wr10 = StockIndex::wr(10, time, market);
 		//BigNumber rsi6 = StockIndex::rsi(6, time, market);
 		//BigNumber rsi24 = StockIndex::rsi(24, time, market);
 	
-		if (fund.stockNum() == 0 && wr10 >= 95 && rsi24 <= 45)
+		if (fund.stockNum() == 0 && wr10 >= 90 && rsi24 <= 45)
 		{
 			fund.buyStock(close, 0.5, m_spMarket->day());
 		}
-		else if (fund.stockNum() == 1 && wr10 >= 95 && rsi24 <= 45)
+		else if (fund.stockNum() == 1 && wr10 >= 90 && rsi24 <= 45)
 		{
 			fund.buyStock(close, 1, m_spMarket->day());
 		}
-		else if (fund.stockNum() == 1 && wr10 < 50)
+		else if ((fund.stockNum() == 1 && wr10 < 10 && chg > 10))
 		{
-			BigNumber chg = 0;
-			fund.stockChg(m_spMarket->stock(), m_spMarket->day(), chg);
 			fund.sellStock(close, 1, m_spMarket->day());
 		}
 	} while (m_spMarket->next());
 	int32_t indexWatchTime = indexWatch.GetWatchTime();
 	BigNumber allFund = fund.allFund(m_spMarket->day());
-	RCSend("marketWatchTime = %d, indexWatchTime = %d, allFund = %s", marketWatchTime, indexWatchTime, allFund.toString().c_str());
+	RCSend("stock = %s, marketWatchTime = %d, indexWatchTime = %d, allFund = %s", stock.c_str(), marketWatchTime, indexWatchTime, allFund.toString().c_str());
 	std::vector<std::string> vec = fund.stockLog();
-	//RCSend("%s end", m_stock.c_str());
-	//RCSend("%d end", ::GetTickCount());
+	static BigNumber allStockFund = 0;
+	static int x = 0;
+	static std::mutex mu;
+	mu.lock();
+	allStockFund = allStockFund + allFund;
+	++x;
+	if (x == 3507)
+	{
+		RCSend("avg = %s", (allStockFund / 3507.0).toPrec(2).toString().c_str());
+	}
+	mu.unlock();
 }
 
 void EveryTestTask::setParam(const std::string& stock,
