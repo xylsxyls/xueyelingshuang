@@ -3,6 +3,13 @@
 #include "CStopWatch/CStopWatchAPI.h"
 #include "StockIndicator/StockIndicatorAPI.h"
 #include "StockMarket/StockMarketAPI.h"
+#include "StockClient.h"
+
+EveryTestTask::EveryTestTask():
+m_stockClient(nullptr)
+{
+
+}
 
 void EveryTestTask::DoTask()
 {
@@ -39,36 +46,34 @@ void EveryTestTask::DoTask()
 		BigNumber chg = 0;
 		fund.stockChg(m_spMarket->stock(), m_spMarket->day(), chg);
 	
-		//BigNumber wr10 = StockIndex::wr(10, time, market);
-		//BigNumber rsi6 = StockIndex::rsi(6, time, market);
-		//BigNumber rsi24 = StockIndex::rsi(24, time, market);
-	
-		if (fund.stockNum() == 0 && wr10 >= 90 && rsi24 <= 45)
-		{
-			fund.buyStock(close, 0.5, m_spMarket->day());
-		}
-		else if (fund.stockNum() == 1 && wr10 >= 90 && rsi24 <= 45)
+		if (fund.stockNum() == 0 && wr10 >= 90 && rsi24 >= 35 && rsi24 <= 40)
 		{
 			fund.buyStock(close, 1, m_spMarket->day());
 		}
-		else if ((fund.stockNum() == 1 && wr10 < 10 && chg > 10))
+		//else if (fund.stockNum() == 1 && wr10 >= 90 && rsi24 <= 45)
+		//{
+		//	fund.buyStock(close, 1, m_spMarket->day());
+		//}
+		//else if ((fund.stockNum() == 1 && chg < -20))
+		//{
+		//	fund.sellStock(close, 1, m_spMarket->day());
+		//}
+		else if ((fund.stockNum() == 1 && wr10 < 50 && chg > 100))
 		{
 			fund.sellStock(close, 1, m_spMarket->day());
 		}
 	} while (m_spMarket->next());
-	int32_t indexWatchTime = indexWatch.GetWatchTime();
 	BigNumber allFund = fund.allFund(m_spMarket->day());
-	RCSend("stock = %s, marketWatchTime = %d, indexWatchTime = %d, allFund = %s", stock.c_str(), marketWatchTime, indexWatchTime, allFund.toString().c_str());
-	std::vector<std::string> vec = fund.stockLog();
+	RCSend("stock = %s, allFund = %s", stock.c_str(), allFund.toString().c_str());
 	static BigNumber allStockFund = 0;
 	static int x = 0;
 	static std::mutex mu;
 	mu.lock();
 	allStockFund = allStockFund + allFund;
 	++x;
-	if (x == 3507)
+	if (x == m_stockClient->m_stockCount)
 	{
-		RCSend("avg = %s", (allStockFund / 3507.0).toPrec(2).toString().c_str());
+		RCSend("avg = %s", (allStockFund / m_stockClient->m_stockCount).toPrec(2).toString().c_str());
 	}
 	mu.unlock();
 }
@@ -76,15 +81,12 @@ void EveryTestTask::DoTask()
 void EveryTestTask::setParam(const std::string& stock,
 	const std::shared_ptr<StockMarket>& spMarket,
 	const std::shared_ptr<StockWrIndicator>& spStockWrIndicator,
-	const std::shared_ptr<StockRsiIndicator>& spStockRsiIndicator)
+	const std::shared_ptr<StockRsiIndicator>& spStockRsiIndicator,
+	StockClient* stockClient)
 {
 	m_stock = stock;
 	m_spMarket = spMarket;
 	m_spStockWrIndicator = spStockWrIndicator;
 	m_spStockRsiIndicator = spStockRsiIndicator;
-}
-
-void EveryTestTask::setParam(const std::string& stock)
-{
-	m_stock = stock;
+	m_stockClient = stockClient;
 }

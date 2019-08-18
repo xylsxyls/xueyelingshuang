@@ -149,6 +149,11 @@ public:
 	*/
 	void initRedis();
 
+	/** 保存所有gupiao代码
+	@param [in] allStock 所有gupiao代码
+	*/
+	void saveAllStock(const std::vector<std::vector<std::string>>& allStock);
+
 protected:
 	/** 新开一个kaigaodishou的表
 	@param [in] stock gupiao代码

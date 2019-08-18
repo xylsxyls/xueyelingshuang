@@ -335,6 +335,31 @@ void StockMysql::initRedis()
 	RCSend("init end time = %.2lf·Ö", (::GetTickCount() - begin) / 60000.0);
 }
 
+void StockMysql::saveAllStock(const std::vector<std::vector<std::string>>& allStock)
+{
+	m_mysql.selectDb("stockmarket");
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyTableString("stock")));
+	std::vector<std::string> vecFields;
+	vecFields.push_back("stock varchar(6) primary key");
+	vecFields.push_back("name varchar(63)");
+	vecFields.push_back("isST varchar(1)");
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableString("stock", vecFields)), false);
+
+	int32_t index = -1;
+	while (index++ != allStock.size() - 1)
+	{
+		const std::string& stock = allStock[index][0];
+		const std::string& name = allStock[index][1];
+		const std::string& isST = allStock[index][2];
+		auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString("stock", "stock,name,isST"));
+		prepare->setString(0, stock);
+		prepare->setString(1, name);
+		prepare->setString(2, isST);
+		m_mysql.execute(prepare, false);
+	}
+	m_mysql.commit();
+}
+
 void StockMysql::createMarketHead(const std::string& stock)
 {
 	m_mysql.selectDb("stockmarket");

@@ -8,14 +8,24 @@
 #include "DialogManager/DialogManagerAPI.h"
 #include "StockMarket/StockMarketAPI.h"
 #include "StockIndicator/StockIndicatorAPI.h"
+#include "EveryTestSendTask.h"
+#include "StockClientLogicManager.h"
+#include "SaveAllStockTask.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
-	m_threadCount(0)
+	m_threadCount(0),
+	m_sendTaskThreadId(0),
+	m_stockCount(0),
+	m_everyTestButton(nullptr),
+	m_openTonghuashunButton(nullptr),
+	m_saveAllStockButton(nullptr)
 {
 	ui.setupUi(this);
 	m_stockEdit = new LineEdit(this);
-	m_everyTest = new COriginalButton(this);
+	m_everyTestButton = new COriginalButton(this);
+	m_openTonghuashunButton = new COriginalButton(this);
+	m_saveAllStockButton = new COriginalButton(this);
 	init();
 }
 
@@ -34,11 +44,25 @@ void StockClient::init()
 	QPalette pattle;
 	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
 	setPalette(pattle);
-	m_everyTest->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
-	QObject::connect(m_everyTest, &COriginalButton::clicked, this, &StockClient::onEveryTestClicked);
+
+	m_everyTestButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_everyTestButton->setText(QStringLiteral("单元测试"));
+	QObject::connect(m_everyTestButton, &COriginalButton::clicked, this, &StockClient::onEveryTestButtonClicked);
+	
+	m_openTonghuashunButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_openTonghuashunButton->setText(QStringLiteral("打开tonghuashun"));
+	QObject::connect(m_openTonghuashunButton, &COriginalButton::clicked, this, &StockClient::onOpenTonghuashunButtonClicked);
+
+	m_saveAllStockButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_saveAllStockButton->setText(QStringLiteral("保存所有gupiao"));
+	QObject::connect(m_saveAllStockButton, &COriginalButton::clicked, this, &StockClient::onSaveAllStockButtonClicked);
+
+	QObject::connect(&StockClientLogicManager::instance(), &StockClientLogicManager::taskTip, this, &StockClient::onTaskTip, Qt::QueuedConnection);
 
 	m_stockEdit->setText("1,3507");
+	m_stockEdit->setVisible(false);
 
+	m_sendTaskThreadId = CTaskThreadManager::Instance().Init();
 	int32_t index = -1;
 	while (index++ != m_threadCount - 1)
 	{
@@ -48,7 +72,7 @@ void StockClient::init()
 
 bool StockClient::check()
 {
-	return m_everyTest != nullptr &&
+	return m_everyTestButton != nullptr &&
 		m_stockEdit != nullptr;
 }
 
@@ -61,34 +85,43 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 		return;
 	}
 	m_stockEdit->setGeometry(100, 30, 100, 30);
-	m_everyTest->setGeometry(360, 120, 160, 80);
+	m_openTonghuashunButton->setGeometry(0, 0, 100, 30);
+	m_everyTestButton->setGeometry(360, 120, 160, 80);
+	m_saveAllStockButton->setGeometry(110, 0, 100, 30);
 }
 
-void StockClient::onEveryTestClicked()
+void StockClient::closeEvent(QCloseEvent* eve)
 {
-	std::string beginEnd = m_stockEdit->text().toStdString();
-	std::vector<std::string> vecStock = StockMysql::instance().allStock();
-	std::vector<std::string> vecBeginEnd = CStringManager::split(beginEnd, ",");
+	QMainWindow::closeEvent(eve);
+	setVisible(false);
+#ifdef _DEBUG
+	CSystem::killProcess(CSystem::processPid(L"StockClientd")[0]);
+#else
+	CSystem::killProcess(CSystem::processPid(L"StockClient")[0]);
+#endif
+}
 
-	IntDateTime beginTime = "2014-02-27";
-	IntDateTime endTime = "2019-02-27";
+void StockClient::onEveryTestButtonClicked()
+{
+	std::shared_ptr<EveryTestSendTask> spEveryTestSendTask(new EveryTestSendTask);
+	spEveryTestSendTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spEveryTestSendTask);
+}
 
-	int32_t threadIndex = -1;
-	int32_t index = atoi(vecBeginEnd[0].c_str()) - 2;
-	while (index++ != atoi(vecBeginEnd[1].c_str()) - 1)
-	{
-		//RCSend("index = %d", index + 1);
-		std::shared_ptr<EveryTestTask> spEveryTestTask(new EveryTestTask);
-		std::shared_ptr<StockMarket> spMarket(new StockMarket);
-		spMarket->loadFromDb(vecStock[index], beginTime, endTime);
-		StockIndicator::instance().loadFromRedis(vecStock[index], beginTime, endTime);
-		std::shared_ptr<StockWrIndicator> spStockWrIndicator = StockIndicator::instance().wr();
-		std::shared_ptr<StockRsiIndicator> spStockRsiIndicator = StockIndicator::instance().rsi();
-		spEveryTestTask->setParam(vecStock[index], spMarket, spStockWrIndicator, spStockRsiIndicator);
-		CTaskThreadManager::Instance().GetThreadInterface(m_threadId[(++threadIndex) % m_threadCount])->PostTask(spEveryTestTask);
-	}
-	
-	
+void StockClient::onOpenTonghuashunButtonClicked()
+{
+	StockClientLogicManager::instance().openTonghuashun();
+}
+
+void StockClient::onSaveAllStockButtonClicked()
+{
+	std::shared_ptr<SaveAllStockTask> spSaveAllStockTask(new SaveAllStockTask);
+	spSaveAllStockTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllStockTask);
+}
+
+void StockClient::onTaskTip()
+{
 	TipDialogParam tipDialogParam;
 	tipDialogParam.m_tip = QStringLiteral("所有任务发送完毕");
 	tipDialogParam.m_parent = windowHandle();

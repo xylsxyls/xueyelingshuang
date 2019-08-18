@@ -33,6 +33,15 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="task">
+      <UniqueIdentifier>{fd7c440f-2d43-46cf-b531-50c7cb5c95be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="send">
+      <UniqueIdentifier>{da8130d2-f304-4814-ab1b-82daf98097a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="logic">
+      <UniqueIdentifier>{783d1a8a-db09-4333-9df4-25efe88015fd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -51,7 +60,22 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EveryTestTask.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="EveryTestSendTask.cpp">
+      <Filter>send</Filter>
+    </ClCompile>
+    <ClCompile Include="StockClientLogicManager.cpp">
+      <Filter>logic</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_StockClientLogicManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_StockClientLogicManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveAllStockTask.cpp">
+      <Filter>task</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -67,10 +91,19 @@
     <CustomBuild Include="StockClient.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="StockClientLogicManager.h">
+      <Filter>logic</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EveryTestTask.h">
-      <Filter>Header Files</Filter>
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="EveryTestSendTask.h">
+      <Filter>send</Filter>
+    </ClInclude>
+    <ClInclude Include="SaveAllStockTask.h">
+      <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

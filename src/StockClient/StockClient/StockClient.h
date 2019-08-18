@@ -21,9 +21,21 @@ protected:
 
 protected:
 	void resizeEvent(QResizeEvent* eve);
+	void closeEvent(QCloseEvent* eve);
 
 private slots:
-	void onEveryTestClicked();
+	void onEveryTestButtonClicked();
+	void onOpenTonghuashunButtonClicked();
+	void onSaveAllStockButtonClicked();
+	void onTaskTip();
+
+public:
+	//线程池
+	std::vector<uint32_t> m_threadId;
+	//线程数
+	int32_t m_threadCount;
+	//gupiao个数
+	int32_t m_stockCount;
 
 private:
 	Ui::StockClientClass ui;
@@ -31,11 +43,13 @@ private:
 	LineEdit* m_stockEdit;
 	//单元测评
 	//测试一只gupiao每个时间节点介入时一次shouyi平均值
-	COriginalButton* m_everyTest;
-	//线程池
-	std::vector<uint32_t> m_threadId;
-	//线程数
-	int32_t m_threadCount;
+	COriginalButton* m_everyTestButton;
+	//打开tonghuashun
+	COriginalButton* m_openTonghuashunButton;
+	//保存所有gupiao
+	COriginalButton* m_saveAllStockButton;
+	//发送任务线程
+	uint32_t m_sendTaskThreadId;
 };
 
 #endif // StockClient_H
