@@ -27,7 +27,8 @@ private slots:
 	void onEveryTestButtonClicked();
 	void onOpenTonghuashunButtonClicked();
 	void onSaveAllStockButtonClicked();
-	void onTaskTip();
+	void onSaveAllMarketButtonClicked();
+	void onTaskTip(const QString tip);
 
 public:
 	//线程池
@@ -48,6 +49,8 @@ private:
 	COriginalButton* m_openTonghuashunButton;
 	//保存所有gupiao
 	COriginalButton* m_saveAllStockButton;
+	//保存所有hangqing文件
+	COriginalButton* m_saveAllMarketButton;
 	//发送任务线程
 	uint32_t m_sendTaskThreadId;
 };

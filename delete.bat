@@ -81,6 +81,9 @@ rmdir /q /s "%~dp0src\QtTest1\QtTest1\GeneratedFiles\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\QtClient\.vs\"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\StockClient\StockClient\GeneratedFiles\"
+::------------------------------------------------------------
+
 
 ::-------------------删除控制台临时文件-----------------------
 rmdir /q /s "%~dp0src\ConsoleTest\ConsoleTest\Debug\"

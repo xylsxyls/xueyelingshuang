@@ -22,20 +22,30 @@ StockMysql& StockMysql::instance()
 
 void StockMysql::init()
 {
-	if (!m_redis.connect("127.0.0.1"))
+	if (CSystem::GetSystemVersionNum() < 655360)
 	{
-		::MessageBox(nullptr, "redis连接失败\n", nullptr, 0);
-		system("pause");
+		if (!m_mysql.connect("192.168.1.2", 3306, "root", ""))
+		{
+			::MessageBox(nullptr, "数据库连接失败\n", nullptr, 0);
+			system("pause");
+		}
+	}
+	if (!CSystem::processPid(L"redis-server.exe").empty())
+	{
+		if (!m_redis.connect("127.0.0.1"))
+		{
+			::MessageBox(nullptr, "redis连接失败\n", nullptr, 0);
+			system("pause");
+		}
 	}
 
-	if (CSystem::processPid(L"mysqld.exe").empty())
+	if (!CSystem::processPid(L"mysqld.exe").empty())
 	{
-		return;
-	}
-	if (!m_mysql.connect("127.0.0.1", 3306, "root", ""))
-	{
-		::MessageBox(nullptr, "数据库连接失败\n", nullptr, 0);
-		system("pause");
+		if (!m_mysql.connect("127.0.0.1", 3306, "root", ""))
+		{
+			::MessageBox(nullptr, "数据库连接失败\n", nullptr, 0);
+			system("pause");
+		}
 	}
 }
 
@@ -44,18 +54,24 @@ std::vector<std::string> StockMysql::allStock() const
 	m_redis.selectDbIndex(0);
 	if (!m_redis.keyExist("stock"))
 	{
-		m_mysql.selectDb("stockmarket");
-		std::vector<std::string> group;
-		auto allStock = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("stock")))->toVector();
-		int32_t index = -1;
-		while (index++ != allStock.size() - 1)
-		{
-			group.push_back(allStock[index][0]);
-		}
+		std::vector<std::string> group = allStockFromMysql();
 		m_redis.setGroups("stock", group);
 		return group;
 	}
 	return m_redis.getGroup("stock")->toGroup();
+}
+
+std::vector<std::string> StockMysql::allStockFromMysql() const
+{
+	m_mysql.selectDb("stockmarket");
+	std::vector<std::string> result;
+	auto allStock = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("stock")))->toVector();
+	int32_t index = -1;
+	while (index++ != allStock.size() - 1)
+	{
+		result.push_back(allStock[index][0]);
+	}
+	return result;
 }
 
 void StockMysql::addStock(const std::string& stock)

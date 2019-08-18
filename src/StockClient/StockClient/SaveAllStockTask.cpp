@@ -16,8 +16,8 @@ m_stockClient(nullptr)
 
 void SaveAllStockTask::DoTask()
 {
-	//std::string allStockPath = CSystem::GetCurrentExePath() + "all_stock.txt";
-	std::string allStockPath = "D:\\xueyelingshuang\\lib\\all_stock.txt";
+	std::string allStockPath = CSystem::GetCurrentExePath() + "all_stock.txt";
+	//std::string allStockPath = "D:\\xueyelingshuang\\lib\\all_stock.txt";
 	StockClientLogicManager::instance().openTonghuashun();
 	CSystem::Sleep(8000);
 	CMouse::MoveAbsolute(xyls::Point(7, 94));
@@ -33,6 +33,8 @@ void SaveAllStockTask::DoTask()
 	CMouse::MoveOpposite(xyls::Point(160, 0));
 	CMouse::LeftClick();
 	CSystem::Sleep(1000);
+	CMouse::MoveAbsolute(xyls::Point(959, 289));
+	CMouse::LeftClick();
 	CSystem::setClipboardData((HWND)m_stockClient->winId(), allStockPath);
 	CKeyboard::KeyDown(CKeyboard::Ctrl);
 	CKeyboard::KeyDown('V');

@@ -181,6 +181,7 @@
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="EveryTestSendTask.cpp" />
+    <ClCompile Include="SaveAllMarketTask.cpp" />
     <ClCompile Include="SaveAllStockTask.cpp" />
     <ClCompile Include="StockClient.cpp" />
     <ClCompile Include="StockClientLogicManager.cpp" />
@@ -280,6 +281,7 @@
   <ItemGroup>
     <ClInclude Include="EveryTestTask.h" />
     <ClInclude Include="EveryTestSendTask.h" />
+    <ClInclude Include="SaveAllMarketTask.h" />
     <ClInclude Include="SaveAllStockTask.h" />
     <CustomBuild Include="StockClientLogicManager.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

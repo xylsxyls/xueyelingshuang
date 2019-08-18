@@ -36,6 +36,11 @@ public:
 	*/
 	std::vector<std::string> allStock() const;
 
+	/** 从mysql获取所有gupiao代码
+	@return 返回所有gupiao代码
+	*/
+	std::vector<std::string> allStockFromMysql() const;
+
 	/** 添加一个gupiao代码到gupiao集合
 	@param [in] stock gupiao代码
 	*/
