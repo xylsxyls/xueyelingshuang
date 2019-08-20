@@ -110,10 +110,11 @@ void StockClient::closeEvent(QCloseEvent* eve)
 {
 	QMainWindow::closeEvent(eve);
 	setVisible(false);
+	CTaskThreadManager::Instance().UninitAll();
 #ifdef _DEBUG
-	CSystem::killProcess(CSystem::processPid(L"StockClientd")[0]);
+	CSystem::killProcess(CSystem::processPid(L"StockClientd.exe")[0]);
 #else
-	CSystem::killProcess(CSystem::processPid(L"StockClient")[0]);
+	CSystem::killProcess(CSystem::processPid(L"StockClient.exe")[0]);
 #endif
 }
 
@@ -161,4 +162,5 @@ void StockClient::onTaskTip(const QString tip)
 	tipDialogParam.m_tip = tip;
 	tipDialogParam.m_parent = windowHandle();
 	DialogManager::instance().makeDialog(tipDialogParam);
+	RCSend("error stock = %s", CStringManager::UnicodeToAnsi(tip.toStdWString()).c_str());
 }

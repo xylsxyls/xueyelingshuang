@@ -50,19 +50,11 @@ protected:
 	virtual void calc() = 0;
 
 protected:
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
 	std::string m_stock;
 	std::map<IntDateTime, std::shared_ptr<StockType>> m_indicator;
 	std::shared_ptr<std::vector<std::vector<std::string>>> m_vecRedisIndicator;
 	int32_t m_dateIndex;
 	std::vector<int32_t> m_indicatorIndex;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-	
 };
 
 #include "IndicatorManagerBase.inl"

@@ -38,8 +38,6 @@ public:
 	int32_t m_threadCount;
 	//gupiao个数
 	int32_t m_stockCount;
-	//有问题的代码集合
-	std::vector<std::string> m_vecErrorStock;
 
 private:
 	Ui::StockClientClass ui;

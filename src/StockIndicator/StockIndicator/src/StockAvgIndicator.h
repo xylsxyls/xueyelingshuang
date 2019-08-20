@@ -4,10 +4,18 @@
 
 struct StockAvg;
 
-/** wr相关zhibiao
+/** avg相关zhibiao
 */
-class StockIndicatorAPI StockAvgIndicator : public IndicatorManagerBase < StockAvg >
+class StockIndicatorAPI StockAvgIndicator :
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	public IndicatorManagerBase < StockAvg >
 {
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 public:
 	/** 从原始数据加载到可用数据
 	*/
