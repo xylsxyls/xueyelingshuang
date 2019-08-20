@@ -39,9 +39,9 @@ void EveryTestTask::DoTask()
 			continue;
 		}
 	
-		BigNumber wr10 = m_spStockWrIndicator->day(time)->wr10();
-		BigNumber rsi6 = m_spStockRsiIndicator->day(time)->rsi6();
-		BigNumber rsi24 = m_spStockRsiIndicator->day(time)->rsi24();
+		BigNumber wr10 = m_spStockWrIndicator->day(time)->m_wr10;
+		BigNumber rsi6 = m_spStockRsiIndicator->day(time)->m_rsi6;
+		BigNumber rsi24 = m_spStockRsiIndicator->day(time)->m_rsi24;
 
 		BigNumber chg = 0;
 		fund.stockChg(m_spMarket->stock(), m_spMarket->day(), chg);

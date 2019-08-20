@@ -80,6 +80,9 @@
     <ClCompile Include="SaveAllMarketTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="CheckAllStockTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -109,6 +112,9 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="SaveAllMarketTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="CheckAllStockTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>

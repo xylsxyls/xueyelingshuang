@@ -12,6 +12,7 @@
 #include "StockClientLogicManager.h"
 #include "SaveAllStockTask.h"
 #include "SaveAllMarketTask.h"
+#include "CheckAllStockTask.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -21,7 +22,8 @@ StockClient::StockClient(QWidget* parent)
 	m_everyTestButton(nullptr),
 	m_openTonghuashunButton(nullptr),
 	m_saveAllStockButton(nullptr),
-	m_saveAllMarketButton(nullptr)
+	m_saveAllMarketButton(nullptr),
+	m_checkAllMarketButton(nullptr)
 {
 	ui.setupUi(this);
 	m_stockEdit = new LineEdit(this);
@@ -29,6 +31,7 @@ StockClient::StockClient(QWidget* parent)
 	m_openTonghuashunButton = new COriginalButton(this);
 	m_saveAllStockButton = new COriginalButton(this);
 	m_saveAllMarketButton = new COriginalButton(this);
+	m_checkAllMarketButton = new COriginalButton(this);
 	init();
 }
 
@@ -64,6 +67,10 @@ void StockClient::init()
 	m_saveAllMarketButton->setText(QStringLiteral("保存所有hangqing"));
 	QObject::connect(m_saveAllMarketButton, &COriginalButton::clicked, this, &StockClient::onSaveAllMarketButtonClicked);
 
+	m_checkAllMarketButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_checkAllMarketButton->setText(QStringLiteral("检测所有hangqing"));
+	QObject::connect(m_checkAllMarketButton, &COriginalButton::clicked, this, &StockClient::onCheckAllMarketButtonClicked);
+
 	QObject::connect(&StockClientLogicManager::instance(), &StockClientLogicManager::taskTip, this, &StockClient::onTaskTip, Qt::QueuedConnection);
 
 	m_stockEdit->setText("1,3507");
@@ -96,6 +103,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	m_everyTestButton->setGeometry(360, 120, 160, 80);
 	m_saveAllStockButton->setGeometry(110, 0, 100, 30);
 	m_saveAllMarketButton->setGeometry(220, 0, 100, 30);
+	m_checkAllMarketButton->setGeometry(330, 0, 100, 30);
 }
 
 void StockClient::closeEvent(QCloseEvent* eve)
@@ -138,6 +146,13 @@ void StockClient::onSaveAllMarketButtonClicked()
 	std::shared_ptr<SaveAllMarketTask> spSaveAllMarketTask(new SaveAllMarketTask);
 	spSaveAllMarketTask->setParam(atoi(inputDialogParam.m_editText.toStdString().c_str()) - 1, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllMarketTask);
+}
+
+void StockClient::onCheckAllMarketButtonClicked()
+{
+	std::shared_ptr<CheckAllStockTask> spCheckAllStockTask(new CheckAllStockTask);
+	spCheckAllStockTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spCheckAllStockTask);
 }
 
 void StockClient::onTaskTip(const QString tip)

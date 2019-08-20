@@ -2,11 +2,11 @@
 #include "IndicatorManagerBase.h"
 #include "StockIndicatorMacro.h"
 
-struct StockRsi;
+struct StockAvg;
 
-/** rsi相关zhibiao
+/** wr相关zhibiao
 */
-class StockIndicatorAPI StockRsiIndicator : public IndicatorManagerBase < StockRsi >
+class StockIndicatorAPI StockAvgIndicator : public IndicatorManagerBase < StockAvg >
 {
 public:
 	/** 从原始数据加载到可用数据

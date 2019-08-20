@@ -709,6 +709,31 @@ RECT CSystem::rectValid(const RECT& rect)
     return result;
 }
 
+std::string CSystem::timetToStr(time_t timet, bool isLocal)
+{
+	char buf[20];
+	buf[19] = 0;
+	if (isLocal)
+	{
+		//转为本地时间
+		tm* local = localtime(&timet);
+		sprintf(buf,
+			"%04d-%02d-%d %02d:%02d:%02d",
+			local->tm_year + 1900,
+			local->tm_mon + 1,
+			local->tm_mday,
+			local->tm_hour,
+			local->tm_min,
+			local->tm_sec);
+	}
+	else
+	{
+		//转为格林威治时间
+		strftime(buf, 64, "%Y-%m-%d %H:%M:%S", gmtime(&timet));
+	}
+	return buf;
+}
+
 //int main()
 //{
 //	CSystem::setClipboardData(CSystem::GetConsoleHwnd(), "12as34");

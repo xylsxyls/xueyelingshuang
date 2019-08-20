@@ -13,6 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="indicator">
+      <UniqueIdentifier>{6574b332-8a77-432d-9e6a-e002fc697f9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="indicator\wr">
+      <UniqueIdentifier>{b0282433-245a-489f-8157-8f8ed29211d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="indicator\rsi">
+      <UniqueIdentifier>{706a96cb-7b0c-47e3-b964-254a5ce012d1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="indicator\avg">
+      <UniqueIdentifier>{fb807d5a-43ad-470c-a17e-a91675e1842b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="base">
+      <UniqueIdentifier>{beb9bb07-0833-4951-a04f-3875150c24e7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\StockIndicator.h">
@@ -25,39 +40,45 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\StockWr.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockRsi.h">
-      <Filter>头文件</Filter>
+      <Filter>indicator\wr</Filter>
     </ClInclude>
     <ClInclude Include="..\src\StockWrIndicator.h">
-      <Filter>头文件</Filter>
+      <Filter>indicator\wr</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\IndicatorBase.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="..\src\StockRsi.h">
+      <Filter>indicator\rsi</Filter>
     </ClInclude>
     <ClInclude Include="..\src\StockRsiIndicator.h">
-      <Filter>头文件</Filter>
+      <Filter>indicator\rsi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockAvgIndicator.h">
+      <Filter>indicator\avg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockAvg.h">
+      <Filter>indicator\avg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\IndicatorBase.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\IndicatorManagerBase.h">
+      <Filter>base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockIndicator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\StockRsi.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockWr.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\StockWrIndicator.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\IndicatorBase.cpp">
-      <Filter>源文件</Filter>
+      <Filter>indicator\wr</Filter>
     </ClCompile>
     <ClCompile Include="..\src\StockRsiIndicator.cpp">
-      <Filter>源文件</Filter>
+      <Filter>indicator\rsi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockAvgIndicator.cpp">
+      <Filter>indicator\avg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\IndicatorManagerBase.inl">
+      <Filter>base</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -152,6 +152,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CheckAllStockTask.cpp" />
     <ClCompile Include="EveryTestTask.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_StockClient.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -279,6 +280,7 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CheckAllStockTask.h" />
     <ClInclude Include="EveryTestTask.h" />
     <ClInclude Include="EveryTestSendTask.h" />
     <ClInclude Include="SaveAllMarketTask.h" />

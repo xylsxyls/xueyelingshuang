@@ -1,23 +1,6 @@
 #include "StockWrIndicator.h"
 #include "StockWr.h"
 
-StockWrIndicator::StockWrIndicator():
-m_dateIndex(0)
-{
-
-}
-
-void StockWrIndicator::setRedisData(const std::string& stock,
-	const std::shared_ptr<std::vector<std::vector<std::string>>>& vecIndicator,
-	int32_t dateIndex,
-	const std::vector<int32_t>& indicatorIndex)
-{
-	m_stock = stock;
-	m_vecRedisIndicator = vecIndicator;
-	m_dateIndex = dateIndex;
-	m_indicatorIndex = indicatorIndex;
-}
-
 void StockWrIndicator::load()
 {
 	clear();
@@ -33,26 +16,6 @@ void StockWrIndicator::load()
 	}
 	calc();
 	m_vecRedisIndicator = nullptr;
-}
-
-std::shared_ptr<StockWr> StockWrIndicator::day(const IntDateTime& date)
-{
-	auto itDate = m_indicator.find(date);
-	if (itDate == m_indicator.end())
-	{
-		return std::shared_ptr<StockWr>();
-	}
-	return itDate->second;
-}
-
-void StockWrIndicator::clear()
-{
-	m_indicator.clear();
-}
-
-bool StockWrIndicator::empty()
-{
-	return m_indicator.empty();
 }
 
 void StockWrIndicator::calc()

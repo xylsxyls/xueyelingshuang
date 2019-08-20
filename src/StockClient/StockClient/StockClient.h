@@ -28,6 +28,7 @@ private slots:
 	void onOpenTonghuashunButtonClicked();
 	void onSaveAllStockButtonClicked();
 	void onSaveAllMarketButtonClicked();
+	void onCheckAllMarketButtonClicked();
 	void onTaskTip(const QString tip);
 
 public:
@@ -37,6 +38,8 @@ public:
 	int32_t m_threadCount;
 	//gupiao个数
 	int32_t m_stockCount;
+	//有问题的代码集合
+	std::vector<std::string> m_vecErrorStock;
 
 private:
 	Ui::StockClientClass ui;
@@ -51,6 +54,8 @@ private:
 	COriginalButton* m_saveAllStockButton;
 	//保存所有hangqing文件
 	COriginalButton* m_saveAllMarketButton;
+	//检测所有hangqing文件
+	COriginalButton* m_checkAllMarketButton;
 	//发送任务线程
 	uint32_t m_sendTaskThreadId;
 };
