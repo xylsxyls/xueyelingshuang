@@ -90,7 +90,9 @@ public:
 	static bool ShellCopy(const char* from, const char* dest);
 	//?获取操作系统版本号
 	static int32_t GetSystemVersionNum();
-	//?获取进程PID，耗时10毫秒左右
+	//获取第一个和名字匹配的进程pid，填空表示获取本进程
+	static int32_t processFirstPid(const std::wstring& processName = L"");
+	//?获取进程PID，耗时10毫秒左右，填空表示获取本进程
 	static std::vector<int32_t> processPid(const std::wstring& processName = L"");
 	//?获取进程名，耗时10毫秒左右
 	static std::wstring processName(int32_t pid);

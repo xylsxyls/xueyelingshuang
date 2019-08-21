@@ -10,7 +10,7 @@ m_readKey(nullptr),
 m_readIndex(0),
 m_readPosition(0)
 {
-	m_pid = CSystem::processPid();
+	m_pid = CSystem::processPid()[0];
 }
 
 SharedMemoryManager& SharedMemoryManager::instance()

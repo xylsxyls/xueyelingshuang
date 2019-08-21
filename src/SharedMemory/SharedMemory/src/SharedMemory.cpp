@@ -152,7 +152,7 @@ SharedMemory* SharedMemory::createPid()
 	{
 		return nullptr;
 	}
-	*((int32_t*)memory) = CSystem::processPid();
+	*((int32_t*)memory) = CSystem::processPid()[0];
 	return pid;
 }
 

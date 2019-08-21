@@ -6,7 +6,7 @@
 HandleManager::HandleManager():
 m_pid(0)
 {
-	m_pid = CSystem::processPid();
+	m_pid = CSystem::processPid()[0];
 }
 
 HandleManager& HandleManager::instance()

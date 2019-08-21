@@ -78,4 +78,6 @@ public:
 	static int64_t atoi64(const char* str);
 
 	static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
+
+	static std::wstring AnsiToUnicode(const std::string& strSrc);
 };

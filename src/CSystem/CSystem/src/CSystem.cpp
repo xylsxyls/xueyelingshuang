@@ -400,6 +400,30 @@ int32_t CSystem::GetSystemVersionNum()
 	return dwVersion;
 }
 
+int32_t CSystem::processFirstPid(const std::wstring& processName)
+{
+	if (processName.empty())
+	{
+		return GetCurrentProcessId();
+	}
+	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (INVALID_HANDLE_VALUE == hSnapshot)
+	{
+		return 0;
+	}
+	PROCESSENTRY32W pe = { sizeof(pe) };
+	for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
+	{
+		if (std::wstring(pe.szExeFile) == processName)
+		{
+			::CloseHandle(hSnapshot);
+			return pe.th32ProcessID;
+		}
+	}
+	::CloseHandle(hSnapshot);
+	return 0;
+}
+
 std::vector<int32_t> CSystem::processPid(const std::wstring& processName)
 {
 	std::vector<int32_t> result;

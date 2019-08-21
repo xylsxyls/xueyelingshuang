@@ -10,12 +10,13 @@
 #include "ThreadManager.h"
 #include "CreateDataTask.h"
 #include "CreateKeyTask.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 ProcessWork::ProcessWork():
 m_callback(nullptr),
 m_processPid(0)
 {
-	m_processPid = CSystem::processPid();
+	m_processPid = CSystem::processPid()[0];
 }
 
 ProcessWork& ProcessWork::instance()
@@ -142,5 +143,10 @@ void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, Correspo
 
 void ProcessWork::send(const char* buffer, int32_t length, const std::string& processName, CorrespondParam::ProtocolId protocolId)
 {
-	send(buffer, length, CSystem::processPid(processName), protocolId);
+	std::vector<int32_t> vecPid = CSystem::processPid(CStringManager::AnsiToUnicode(processName));
+	if (vecPid.empty())
+	{
+		return;
+	}
+	send(buffer, length, vecPid[0], protocolId);
 }

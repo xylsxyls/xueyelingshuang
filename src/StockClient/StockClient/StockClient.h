@@ -38,6 +38,8 @@ public:
 	int32_t m_threadCount;
 	//gupiao个数
 	int32_t m_stockCount;
+	//发送任务线程
+	uint32_t m_sendTaskThreadId;
 
 private:
 	Ui::StockClientClass ui;
@@ -54,8 +56,6 @@ private:
 	COriginalButton* m_saveAllMarketButton;
 	//检测所有hangqing文件
 	COriginalButton* m_checkAllMarketButton;
-	//发送任务线程
-	uint32_t m_sendTaskThreadId;
 };
 
 #endif // StockClient_H

@@ -10,10 +10,13 @@ public:
 public:
 	void DoTask();
 
-	void setParam(int32_t beginIndex, StockClient* stockClient);
+	void setParam(int32_t beginIndex,
+		StockClient* stockClient,
+		const std::vector<std::string>& allStock = std::vector<std::string>());
 
 protected:
 	int32_t m_beginIndex;
 	StockClient* m_stockClient;
 	int32_t m_opposite;
+	std::vector<std::string> m_allStock;
 };

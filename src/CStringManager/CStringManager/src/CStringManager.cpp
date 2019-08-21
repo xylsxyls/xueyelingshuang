@@ -377,3 +377,26 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 
 	return strRet;
 }
+
+std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
+{
+	// 分配目标空间
+	int iAllocSize = static_cast<int>(strSrc.size() + 10);
+	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
+	if (NULL == pwszBuffer)
+	{
+		return L"";
+	}
+	int iCharsRet = MultiByteToWideChar(CP_ACP, 0, strSrc.c_str(),
+		static_cast<int>(strSrc.size()),
+		pwszBuffer, iAllocSize);
+	std::wstring wstrRet;
+	if (0 < iCharsRet)
+	{
+		wstrRet.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
+	}
+
+	delete[] pwszBuffer;
+
+	return wstrRet;
+}

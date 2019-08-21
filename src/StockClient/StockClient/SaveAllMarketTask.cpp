@@ -17,7 +17,11 @@ m_stockClient(nullptr)
 
 void SaveAllMarketTask::DoTask()
 {
-	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
+	if (m_allStock.empty())
+	{
+		m_allStock = StockMysql::instance().allStockFromMysql();
+	}
+	
 	CSystem::CreateDir(CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\");
 	std::string marketFolder = CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\";
 	//std::string marketFolder = "D:\\xueyelingshuang\\lib\\CurrentAllMarketFile\\";
@@ -28,13 +32,13 @@ void SaveAllMarketTask::DoTask()
 	CMouse::MoveOpposite(xyls::Point(46, 188), 50);
 	CMouse::LeftDoubleClick();
 	int32_t index = m_beginIndex - 1;
-	while (index++ != allStock.size() - 1)
+	while (index++ != m_allStock.size() - 1)
 	{
-		const std::string& marketFilePath = marketFolder + allStock[index] + ".txt";
+		const std::string& marketFilePath = marketFolder + m_allStock[index] + ".txt";
 		CMouse::MoveAbsolute(xyls::Point(179, 189), 0);
 		CMouse::LeftClick();
 		CSystem::Sleep(200);
-		CKeyboard::InputString(allStock[index] + "\n");
+		CKeyboard::InputString(m_allStock[index] + "\n");
 		CSystem::Sleep(1000);
 		CMouse::RightClick();
 		CMouse::MoveAbsolute(xyls::Point(179 + 93, 189 + 163), 50);
@@ -76,8 +80,9 @@ void SaveAllMarketTask::DoTask()
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("所有hangqing保存完成，01357,0中英文逗号分隔时间和星期"));
 }
 
-void SaveAllMarketTask::setParam(int32_t beginIndex, StockClient* stockClient)
+void SaveAllMarketTask::setParam(int32_t beginIndex, StockClient* stockClient, const std::vector<std::string>& allStock)
 {
 	m_beginIndex = beginIndex;
 	m_stockClient = stockClient;
+	m_allStock = allStock;
 }
