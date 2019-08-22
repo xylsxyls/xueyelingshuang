@@ -85,6 +85,7 @@ void StockMysql::addStock(const std::string& stock)
 
 void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vector<std::string>>& vecMarket)
 {
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyTableString(stock)));
 	createMarketHead(stock);
 	int32_t lineIndex = -1;
 	while (lineIndex++ != vecMarket.size() - 1)
@@ -95,8 +96,9 @@ void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vec
 		{
 			prepare->setString(index, vecMarket[lineIndex][index]);
 		}
-		m_mysql.execute(prepare);
+		m_mysql.execute(prepare, false);
 	}
+	m_mysql.commit();
 }
 
 //std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
@@ -392,6 +394,8 @@ void StockMysql::saveIndicator(const std::string& indicatorType,
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyDatabaseString(indicatorDbName)));
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createDatabaseString(indicatorDbName)));
 
+	m_mysql.selectDb(indicatorDbName);
+
 	std::vector<std::string> vecFields = CStringManager::split(fields, ",");
 	vecFields[0].append(" varchar(10) primary key");
 
@@ -401,8 +405,11 @@ void StockMysql::saveIndicator(const std::string& indicatorType,
 		vecFields[index].append(" varchar(8)");
 	}
 
+	int32_t saveIndex = -1;
 	for (auto itStock = indicatorData.begin(); itStock != indicatorData.end(); ++itStock)
 	{
+		++saveIndex;
+		RCSend("save%s = %d", indicatorType.c_str(), saveIndex + 1);
 		const std::string& stock = itStock->first;
 		const std::vector<std::vector<std::string>>& data = itStock->second;
 		m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableIfNotExistString(stock, vecFields)), false);
@@ -428,10 +435,10 @@ void StockMysql::createMarketHead(const std::string& stock)
 	m_mysql.selectDb("stockmarket");
 	std::vector<std::string> vecFields;
 	vecFields.push_back("date varchar(10)");
-	vecFields.push_back("open varchar(7)");
-	vecFields.push_back("high varchar(7)");
-	vecFields.push_back("low varchar(7)");
-	vecFields.push_back("close varchar(7)");
+	vecFields.push_back("open varchar(8)");
+	vecFields.push_back("high varchar(8)");
+	vecFields.push_back("low varchar(8)");
+	vecFields.push_back("close varchar(8)");
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableString(stock, vecFields)));
 }
 

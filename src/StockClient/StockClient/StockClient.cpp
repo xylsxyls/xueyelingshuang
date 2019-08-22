@@ -83,15 +83,15 @@ void StockClient::init()
 
 	m_saveMarketToMysqlButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_saveMarketToMysqlButton->setText(QStringLiteral("hangqing入库"));
-	QObject::connect(m_saveMarketToMysqlButton, &COriginalButton::clicked, this, &StockClient::onCheckAllMarketButtonClicked);
+	QObject::connect(m_saveMarketToMysqlButton, &COriginalButton::clicked, this, &StockClient::onSaveMarketToMysqlButtonClicked);
 
 	m_saveIndicatorToMysqlButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_saveIndicatorToMysqlButton->setText(QStringLiteral("计算zhibiao并入库"));
-	QObject::connect(m_saveIndicatorToMysqlButton, &COriginalButton::clicked, this, &StockClient::onCheckAllMarketButtonClicked);
+	QObject::connect(m_saveIndicatorToMysqlButton, &COriginalButton::clicked, this, &StockClient::onSaveIndicatorToMysqlButtonClicked);
 
 	m_initRedisButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_initRedisButton->setText(QStringLiteral("初始化redis"));
-	QObject::connect(m_initRedisButton, &COriginalButton::clicked, this, &StockClient::onCheckAllMarketButtonClicked);
+	QObject::connect(m_initRedisButton, &COriginalButton::clicked, this, &StockClient::onInitRedisButtonClicked);
 
 	m_sendTaskThreadId = CTaskThreadManager::Instance().Init();
 	int32_t index = -1;

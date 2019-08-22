@@ -74,7 +74,7 @@ std::map<IntDateTime, BigNumber> StockIndicatorHelper::rsiTongHuaShun(int32_t da
 		BigNumber riseFall = stockMarket.day()->riseFallValue();
 		riseAvg = (riseAvg * (days - 1) + (riseFall > 0 ? riseFall : 0)).toPrec(16) / days;
 		allAvg = (allAvg * (days - 1) + riseFall.abs()).toPrec(16) / days;
-		mapRsi[date] = (++dateIndex >= days ? (riseAvg / allAvg.zero() * 100).toPrec(2) : BigNumber(100).toPrec(2));
+		mapRsi[stockMarket.date()] = (++dateIndex >= days ? (riseAvg / allAvg.zero() * 100).toPrec(2) : BigNumber(100).toPrec(2));
 	}
 	return mapRsi;
 }

@@ -37,6 +37,7 @@ void StockIndicator::saveWr()
 	int32_t index = -1;
 	while (index++ != allStock.size() - 1)
 	{
+		RCSend("calcWr = %d", index + 1);
 		const std::string& stock = allStock[index];
 		indicatorData[stock];
 		StockMarket market;
@@ -67,6 +68,7 @@ void StockIndicator::saveRsi()
 	int32_t index = -1;
 	while (index++ != allStock.size() - 1)
 	{
+		RCSend("calcRsi = %d", index + 1);
 		const std::string& stock = allStock[index];
 		StockMarket market;
 		market.loadFromMysql(stock);

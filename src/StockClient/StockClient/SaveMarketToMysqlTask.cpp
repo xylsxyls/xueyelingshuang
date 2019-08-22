@@ -18,6 +18,7 @@ void SaveMarketToMysqlTask::DoTask()
 	int32_t index = -1;
 	while (index++ != allStock.size() - 1)
 	{
+		RCSend("saveMarket = %d", index + 1);
 		const std::string& stock = allStock[index];
 		std::string marketFilePath = marketDir + stock + ".txt";
 		StockMarketHelper::saveMarketToMysql(stock, marketFilePath);
