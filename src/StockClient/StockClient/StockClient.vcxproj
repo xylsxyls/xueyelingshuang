@@ -180,10 +180,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="InitRedisTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="EveryTestSendTask.cpp" />
     <ClCompile Include="SaveAllMarketTask.cpp" />
     <ClCompile Include="SaveAllStockTask.cpp" />
+    <ClCompile Include="SaveIndicatorToMysqlTask.cpp" />
+    <ClCompile Include="SaveMarketToMysqlTask.cpp" />
     <ClCompile Include="StockClient.cpp" />
     <ClCompile Include="StockClientLogicManager.cpp" />
   </ItemGroup>
@@ -283,8 +286,11 @@
     <ClInclude Include="CheckAllStockTask.h" />
     <ClInclude Include="EveryTestTask.h" />
     <ClInclude Include="EveryTestSendTask.h" />
+    <ClInclude Include="InitRedisTask.h" />
     <ClInclude Include="SaveAllMarketTask.h" />
     <ClInclude Include="SaveAllStockTask.h" />
+    <ClInclude Include="SaveIndicatorToMysqlTask.h" />
+    <ClInclude Include="SaveMarketToMysqlTask.h" />
     <CustomBuild Include="StockClientLogicManager.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing StockClientLogicManager.h...</Message>

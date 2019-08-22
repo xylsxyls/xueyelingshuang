@@ -180,14 +180,22 @@ std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readMarket(co
 	return redisFromMysql(stock, beginTime, endTime, 0, vecDbName, vecDbField);
 }
 
+std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readMarketFromMysql(const std::string& stock)
+{
+	std::shared_ptr<std::vector<std::vector<std::string>>> result(new std::vector<std::vector<std::string>>);
+	m_mysql.selectDb("stockmarket");
+	*result = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString(stock)))->toVector();
+	return result;
+}
+
 std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readIndicator(const std::string& stock,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime) const
 {
 	std::vector<std::string> vecDbName;
 	std::vector<std::string> vecDbField;
-	vecDbName.push_back("stockindex");
-	vecDbName.push_back("stockindex");
+	vecDbName.push_back("stockwr");
+	vecDbName.push_back("stockrsi");
 	vecDbField.push_back("date,wr10,wr20");
 	vecDbField.push_back("rsi6,rsi12,rsi24");
 	return redisFromMysql(stock, beginTime, endTime, 1, vecDbName, vecDbField);
@@ -243,8 +251,8 @@ std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readAll(const
 	std::vector<std::string> vecDbName;
 	std::vector<std::string> vecDbField;
 	vecDbName.push_back("stockmarket");
-	vecDbName.push_back("stockindex");
-	vecDbName.push_back("stockindex");
+	vecDbName.push_back("stockwr");
+	vecDbName.push_back("stockrsi");
 	vecDbField.push_back("*");
 	vecDbField.push_back("wr10,wr20");
 	vecDbField.push_back("rsi6,rsi12,rsi24");
@@ -374,6 +382,45 @@ void StockMysql::saveAllStock(const std::vector<std::vector<std::string>>& allSt
 		m_mysql.execute(prepare, false);
 	}
 	m_mysql.commit();
+}
+
+void StockMysql::saveIndicator(const std::string& indicatorType,
+	const std::string& fields,
+	const std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData)
+{
+	std::string indicatorDbName = "stock" + indicatorType;
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyDatabaseString(indicatorDbName)));
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createDatabaseString(indicatorDbName)));
+
+	std::vector<std::string> vecFields = CStringManager::split(fields, ",");
+	vecFields[0].append(" varchar(10) primary key");
+
+	int32_t index = 0;
+	while (index++ != vecFields.size() - 1)
+	{
+		vecFields[index].append(" varchar(8)");
+	}
+
+	for (auto itStock = indicatorData.begin(); itStock != indicatorData.end(); ++itStock)
+	{
+		const std::string& stock = itStock->first;
+		const std::vector<std::vector<std::string>>& data = itStock->second;
+		m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableIfNotExistString(stock, vecFields)), false);
+
+		int32_t lineIndex = -1;
+		while (lineIndex++ != data.size() - 1)
+		{
+			auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString(stock, fields));
+			const std::vector<std::string>& vecLine = data[lineIndex];
+			int32_t index = -1;
+			while (index++ != vecLine.size() - 1)
+			{
+				prepare->setString(index, vecLine[index]);
+			}
+			m_mysql.execute(prepare, false);
+		}
+		m_mysql.commit();
+	}
 }
 
 void StockMysql::createMarketHead(const std::string& stock)

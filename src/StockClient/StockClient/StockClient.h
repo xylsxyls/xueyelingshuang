@@ -24,12 +24,15 @@ protected:
 	void closeEvent(QCloseEvent* eve);
 
 private slots:
+	void onTaskTip(const QString tip);
 	void onEveryTestButtonClicked();
 	void onOpenTonghuashunButtonClicked();
 	void onSaveAllStockButtonClicked();
 	void onSaveAllMarketButtonClicked();
 	void onCheckAllMarketButtonClicked();
-	void onTaskTip(const QString tip);
+	void onSaveMarketToMysqlButtonClicked();
+	void onSaveIndicatorToMysqlButtonClicked();
+	void onInitRedisButtonClicked();
 
 public:
 	//线程池
@@ -43,8 +46,6 @@ public:
 
 private:
 	Ui::StockClientClass ui;
-	//单个gupiao输入框
-	LineEdit* m_stockEdit;
 	//单元测评
 	//测试一只gupiao每个时间节点介入时一次shouyi平均值
 	COriginalButton* m_everyTestButton;
@@ -56,6 +57,12 @@ private:
 	COriginalButton* m_saveAllMarketButton;
 	//检测所有hangqing文件
 	COriginalButton* m_checkAllMarketButton;
+	//hangqing存入mysql
+	COriginalButton* m_saveMarketToMysqlButton;
+	//计算zhibiao并存入mysql
+	COriginalButton* m_saveIndicatorToMysqlButton;
+	//初始化redis
+	COriginalButton* m_initRedisButton;
 };
 
 #endif // StockClient_H

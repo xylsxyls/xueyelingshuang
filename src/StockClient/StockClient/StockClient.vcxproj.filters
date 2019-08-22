@@ -83,6 +83,15 @@
     <ClCompile Include="CheckAllStockTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="InitRedisTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveIndicatorToMysqlTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveMarketToMysqlTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -115,6 +124,15 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="CheckAllStockTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="InitRedisTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="SaveMarketToMysqlTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="SaveIndicatorToMysqlTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>

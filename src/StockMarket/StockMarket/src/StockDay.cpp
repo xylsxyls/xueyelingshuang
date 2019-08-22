@@ -47,6 +47,11 @@ BigNumber StockDay::close() const
 	return m_close;
 }
 
+BigNumber StockDay::preClose() const
+{
+	return m_preClose;
+}
+
 BigNumber StockDay::upValue() const
 {
 	return m_high - BigNumber::maxNumber(m_open, m_close);

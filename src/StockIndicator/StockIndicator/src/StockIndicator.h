@@ -33,6 +33,14 @@ public:
 	*/
 	void clear();
 
+	/** 存储wr
+	*/
+	void saveWr();
+
+	/** 存储rsi
+	*/
+	void saveRsi();
+
 	/** 获取wr相关接口
 	@return 返回wr相关接口
 	*/

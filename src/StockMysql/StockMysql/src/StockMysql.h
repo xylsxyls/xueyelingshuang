@@ -62,6 +62,12 @@ public:
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0)) const;
 
+	/** 从mysql中读取kaigaodishou
+	@param [in] stock gupiao代码
+	@return 返回kaigaodishou表
+	*/
+	std::shared_ptr<std::vector<std::vector<std::string>>> readMarketFromMysql(const std::string& stock);
+
 	/** 保存hangqing数据索引值
 	*/
 	void saveMarketDataIndex() const;
@@ -158,6 +164,15 @@ public:
 	@param [in] allStock 所有gupiao代码
 	*/
 	void saveAllStock(const std::vector<std::vector<std::string>>& allStock);
+
+	/** 保存zhibiao
+	@param [in] indicatorType zhibiao类型
+	@param [in] fields 表头，英文逗号分隔，date开头
+	@param [in] indicatorData 数据
+	*/
+	void saveIndicator(const std::string& indicatorType,
+		const std::string& fields,
+		const std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData);
 
 protected:
 	/** 新开一个kaigaodishou的表

@@ -7,6 +7,7 @@
 
 class StockDay;
 class StockMysql;
+struct StockData;
 /** hangqing管理
 */
 class StockMarketAPI StockMarket
@@ -16,15 +17,31 @@ public:
 	*/
 	StockMarket();
 
+	/** 拷贝构造
+	@param [in] stockMarket 拷贝类
+	*/
+	StockMarket(const StockMarket& stockMarket);
+
+	/** 赋值
+	@param [in] stockMarket 拷贝类
+	@return 返回本类
+	*/
+	StockMarket operator=(const StockMarket& stockMarket);
+
 public:
 	/** 从数据库中加载数据
 	@param [in] stock gupiao代码
 	@param [in] beginTime 开始加载时间，包括头
 	@param [in] endTime 结束加载时间，包括尾
 	*/
-	void loadFromDb(const std::string& stock,
+	void loadFromRedis(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0));
+
+	/** 从mysql中加载数据
+	@param [in] stock gupiao代码
+	*/
+	void loadFromMysql(const std::string& stock);
 
 	/** 加载gupiao历史hangqing，将数据库数据转换为可用数据
 	*/
@@ -40,7 +57,7 @@ public:
 	*/
 	std::string name() const;
 
-	/** 是否为空
+	/** hangqing是否为空
 	*/
 	bool empty() const;
 
@@ -136,17 +153,13 @@ private:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	//gupiao代码
-	std::string m_stock;
-	//gupiao名
-	std::string m_name;
+	//加载后的数据，拷贝类共享
+	std::shared_ptr<StockData> m_stockData;
 	//日期
 	IntDateTime m_date;
-	//日期，开高低收，索引对应Histroy枚举
-	std::map<IntDateTime, std::shared_ptr<StockDay>> m_history;
-	//数据库中加载到的数据，一旦初始化结束之后会全部清空
+	//数据库中加载到的数据，一旦初始化结束之后会全部清空，这个数据不会被拷贝
 	std::shared_ptr<std::vector<std::vector<std::string>>> m_market;
-	//是否加载了上一天的hangqing
+	//是否加载了上一天的hangqing，这个数据不会被拷贝
 	bool m_isLoadPreDate;
 #ifdef _MSC_VER
 #pragma warning(pop)

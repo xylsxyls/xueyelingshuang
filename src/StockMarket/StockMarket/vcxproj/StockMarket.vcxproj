@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\StockData.h" />
     <ClInclude Include="..\src\StockDay.h" />
     <ClInclude Include="..\src\StockMarketAPI.h" />
     <ClInclude Include="..\src\StockMarketHelper.h" />

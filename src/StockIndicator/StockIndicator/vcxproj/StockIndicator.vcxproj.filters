@@ -28,6 +28,9 @@
     <Filter Include="base">
       <UniqueIdentifier>{beb9bb07-0833-4951-a04f-3875150c24e7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="helper">
+      <UniqueIdentifier>{53cda853-4fff-4daf-915b-eacf2b3d32cc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\StockIndicator.h">
@@ -63,6 +66,9 @@
     <ClInclude Include="..\src\IndicatorManagerBase.h">
       <Filter>base</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\StockIndicatorHelper.h">
+      <Filter>helper</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockIndicator.cpp">
@@ -79,6 +85,9 @@
     </ClCompile>
     <ClCompile Include="..\src\IndicatorManagerBase.inl">
       <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockIndicatorHelper.cpp">
+      <Filter>helper</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
