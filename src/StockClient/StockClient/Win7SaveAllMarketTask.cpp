@@ -41,18 +41,18 @@ void Win7SaveAllMarketTask::DoTask()
 	while (index++ < m_end - 1)
 	{
 		const std::string& marketFilePath = marketFolder + m_allStock[index] + ".txt";
-		CMouse::MoveAbsolute(xyls::Point(179, 189), 0);
+		CMouse::MoveAbsolute(xyls::Point(408, 250), 0);
 		CMouse::LeftClick();
 		CSystem::Sleep(200);
 		CKeyboard::InputString(m_allStock[index] + "\n");
 		CSystem::Sleep(1000);
 		CMouse::RightClick();
-		CMouse::MoveAbsolute(xyls::Point(179 + 93, 189 + 163), 50);
+		CMouse::MoveAbsolute(xyls::Point(539, 392), 50);
 		CMouse::LeftClick();
-		CMouse::MoveAbsolute(xyls::Point(189 + 93 + 160, 189 + 163), 50);
+		CMouse::MoveAbsolute(xyls::Point(539 + 160, 392), 50);
 		CMouse::LeftClick();
 		CSystem::Sleep(1000);
-		CMouse::MoveAbsolute(xyls::Point(959, 289), 0);
+		CMouse::MoveAbsolute(xyls::Point(953, 356), 0);
 		CMouse::LeftClick();
 		CSystem::setClipboardData((HWND)m_stockClient->winId(), marketFilePath);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
@@ -60,26 +60,26 @@ void Win7SaveAllMarketTask::DoTask()
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('V');
 		CSystem::Sleep(200);
-		CMouse::MoveAbsolute(xyls::Point(1082, 733), 0);
+		CMouse::MoveAbsolute(xyls::Point(1074, 671), 0);
 		CMouse::LeftClick();
 		CSystem::Sleep(500);
-		CMouse::MoveAbsolute(xyls::Point(1085, 666), 0);
+		CMouse::MoveAbsolute(xyls::Point(1085, 632), 0);
 		CMouse::LeftClick();
-		CMouse::MoveAbsolute(xyls::Point(852, 327), 0);
+		CMouse::MoveAbsolute(xyls::Point(889, 390), 0);
 		CMouse::LeftClick();
-		CMouse::MoveOpposite(xyls::Point(0, 19), 0);
+		CMouse::MoveOpposite(xyls::Point(0, 15), 0);
 		CMouse::LeftClick();
-		CMouse::MoveOpposite(xyls::Point(0, 19), 0);
+		CMouse::MoveOpposite(xyls::Point(0, 15), 0);
 		CMouse::LeftClick();
-		CMouse::MoveOpposite(xyls::Point(0, 19), 0);
+		CMouse::MoveOpposite(xyls::Point(0, 15), 0);
 		CMouse::LeftClick();
-		CMouse::MoveOpposite(xyls::Point(0, 19), 0);
+		CMouse::MoveOpposite(xyls::Point(0, 15), 0);
 		CMouse::LeftClick();
 		CSystem::Sleep(500);
-		CMouse::MoveAbsolute(xyls::Point(1082, 733), 0);
+		CMouse::MoveAbsolute(xyls::Point(1074, 671), 0);
 		CMouse::LeftClick();
 		CSystem::Sleep(2000);
-		CMouse::MoveAbsolute(xyls::Point(1082, 733), 0);
+		CMouse::MoveAbsolute(xyls::Point(1074, 671), 0);
 		CMouse::LeftClick();
 	}
 	
