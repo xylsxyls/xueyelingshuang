@@ -149,6 +149,26 @@ bool HiRedis::keyExist(const std::string& key) const
 	return command("exists " + key)->toInt64() == 1;
 }
 
+bool HiRedis::hashMapExist(const std::string& mapName) const
+{
+	return keyExist(mapName);
+}
+
+bool HiRedis::tableExist(const std::string& tableName) const
+{
+	return keyExist(tableName);
+}
+
+bool HiRedis::groupExist(const std::string& key) const
+{
+	return keyExist(key);
+}
+
+bool HiRedis::orderGroupExist(const std::string& key) const
+{
+	return keyExist(key);
+}
+
 std::shared_ptr<HiRedisResultSet> HiRedis::getValue(const std::string& key) const
 {
 	return command("get " + key);

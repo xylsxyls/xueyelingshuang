@@ -6,6 +6,10 @@
 
 class StockWrIndicator;
 class StockRsiIndicator;
+class StockAvgIndicator;
+struct StockAvg;
+/** zhibiao管理类
+*/
 class StockIndicatorAPI StockIndicator
 {
 protected:
@@ -25,7 +29,16 @@ public:
 	@param [in] beginTime 开始时间
 	@param [in] endTime 结束时间
 	*/
-	void loadFromRedis(const std::string& stock,
+	void loadIndicatorFromRedis(const std::string& stock,
+		const IntDateTime& beginTime = IntDateTime(0, 0),
+		const IntDateTime& endTime = IntDateTime(0, 0));
+
+	/** 从redis中加载原始数据，加载完后需要立刻通过具体zhibiao接口获取使用
+	@param [in] stock gupiao代码
+	@param [in] beginTime 开始时间
+	@param [in] endTime 结束时间
+	*/
+	void loadCalcFromRedis(const std::string& stock,
 		const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0));
 
@@ -41,6 +54,12 @@ public:
 	*/
 	void saveRsi();
 
+	/** 存储avg
+	@param [in] stock gupiao代码
+	@param [in] avgData junxian数据
+	*/
+	void saveAvg(const std::string& stock, const std::map<IntDateTime, std::shared_ptr<StockAvg>>& avgData);
+
 	/** 获取wr相关接口
 	@return 返回wr相关接口
 	*/
@@ -51,14 +70,21 @@ public:
 	*/
 	std::shared_ptr<StockRsiIndicator> rsi();
 
+	/** 获取avg相关接口
+	@return 返回avg相关接口
+	*/
+	std::shared_ptr<StockAvgIndicator> avg();
+
 protected:
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::shared_ptr<std::vector<std::vector<std::string>>> m_redisIndicatorData;
 	std::string m_loadStock;
 	std::map<std::string, std::vector<int32_t>> m_indicatorIndex;
+	std::shared_ptr<std::vector<std::vector<std::string>>> m_redisIndicatorData;
+	std::map<std::string, std::vector<int32_t>> m_calcIndex;
+	std::shared_ptr<std::vector<std::vector<std::string>>> m_redisCalcData;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

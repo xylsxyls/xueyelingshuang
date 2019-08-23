@@ -10,7 +10,7 @@ void StockAvgIndicator::load()
 	{
 		std::shared_ptr<StockAvg> spStockAvg(new StockAvg);
 		spStockAvg->m_date = (*m_vecRedisIndicator)[index][m_dateIndex];
-		spStockAvg->m_avg9_30 = (*m_vecRedisIndicator)[index][m_indicatorIndex[0]].c_str();
+		spStockAvg->m_avg09_30 = (*m_vecRedisIndicator)[index][m_indicatorIndex[0]].c_str();
 		spStockAvg->m_avg10_00 = (*m_vecRedisIndicator)[index][m_indicatorIndex[1]].c_str();
 		spStockAvg->m_avg10_30 = (*m_vecRedisIndicator)[index][m_indicatorIndex[2]].c_str();
 		spStockAvg->m_avg11_00 = (*m_vecRedisIndicator)[index][m_indicatorIndex[3]].c_str();

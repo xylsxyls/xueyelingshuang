@@ -91,10 +91,35 @@ public:
 	*/
 	void saveIndicatorDataIndex() const;
 
+	/** 存储计算数据
+	@param [in] stock gupiao代码
+	@param [in] calcData 计算数据
+	*/
+	void saveCalc(const std::string& stock, const std::map<IntDateTime, std::vector<std::string>>& calcData);
+
+	/** 读取计算数据
+	@param [in] stock gupiao代码
+	@param [in] beginTime 开始时间，默认参数表示最早时间
+	@param [in] endTime 结束时间，默认参数表示最晚时间
+	@return 返回计算数据表
+	*/
+	std::shared_ptr<std::vector<std::vector<std::string>>> readCalc(const std::string& stock,
+		const IntDateTime& beginTime = IntDateTime(0, 0),
+		const IntDateTime& endTime = IntDateTime(0, 0)) const;
+
 	/** 获取zhibiao数据索引值
 	@return 返回zhibiao数据索引值
 	*/
 	std::map<std::string, std::vector<int32_t>> getIndicatorDataIndex() const;
+
+	/** 保存计算数据索引值
+	*/
+	void saveCalcDataIndex() const;
+
+	/** 获取计算数据索引值
+	@return 返回计算数据索引值
+	*/
+	std::map<std::string, std::vector<int32_t>> getCalcDataIndex() const;
 
 	/** 读取所有数据
 	@param [in] stock gupiao代码

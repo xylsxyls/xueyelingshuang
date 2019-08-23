@@ -227,9 +227,83 @@ void StockMysql::saveIndicatorDataIndex() const
 	m_redis.setHashMap("indicatordataindex", hashMap);
 }
 
+void StockMysql::saveCalc(const std::string& stock, const std::map<IntDateTime, std::vector<std::string>>& calcData)
+{
+	m_redis.selectDbIndex(3);
+	if (!m_redis.orderGroupExist(stock))
+	{
+		m_redis.setOrderGroup(stock, 0, stock);
+	}
+
+	std::vector<std::pair<int32_t, std::string>> vecGroup;
+	for (auto itDate = calcData.begin(); itDate != calcData.end(); ++itDate)
+	{
+		const IntDateTime& date = itDate->first;
+		const std::vector<std::string>& data = itDate->second;
+		vecGroup.push_back(std::pair<int32_t, std::string>());
+		vecGroup.back().first = date.getDate();
+		std::string& line = vecGroup.back().second;
+		line.append(date.dateToString());
+		int32_t index = -1;
+		while (index++ != data.size() - 2)
+		{
+			line.append(data[index]);
+			line.push_back(',');
+		}
+		line.append(data[index]);
+	}
+	m_redis.setOrderGroups(stock, vecGroup);
+}
+
+std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readCalc(const std::string& stock,
+	const IntDateTime& beginTime,
+	const IntDateTime& endTime) const
+{
+	IntDateTime useBeginTime = beginTime;
+	IntDateTime useEndTime = endTime;
+	if (beginTime.empty())
+	{
+		useBeginTime.setTime(19700101, 0);
+	}
+	if (endTime.empty())
+	{
+		useEndTime.setTime(31500101, 0);
+	}
+
+	m_redis.selectDbIndex(3);
+	auto spResultSet = m_redis.getOrderGroupByScore(stock, useBeginTime.getDate(), useEndTime.getDate());
+	if (spResultSet->toCount() == 0)
+	{
+		return std::shared_ptr<std::vector<std::vector<std::string>>>();
+	}
+	std::shared_ptr<std::vector<std::vector<std::string>>> result(new std::vector<std::vector<std::string>>);
+	std::vector<std::string> vecLine;
+	int32_t index = -1;
+	while (index++ != spResultSet->toReply()->elements - 1)
+	{
+		CStringManager::split(vecLine, spResultSet->toReply()->element[index]->str, ',');
+		result->push_back(vecLine);
+	}
+	return result;
+}
+
 std::map<std::string, std::vector<int32_t>> StockMysql::getIndicatorDataIndex() const
 {
 	return getIndex("indicatordataindex");
+}
+
+void StockMysql::saveCalcDataIndex() const
+{
+	m_redis.selectDbIndex(0);
+	std::map<std::string, std::string> hashMap;
+	hashMap["date"] = "0";
+	hashMap["avg"] = "1,2,3,4,5,6,7,8,9,10,11";
+	m_redis.setHashMap("calcdataindex", hashMap);
+}
+
+std::map<std::string, std::vector<int32_t>> StockMysql::getCalcDataIndex() const
+{
+	return getIndex("calcdataindex");
 }
 
 void StockMysql::saveAllDataIndex() const
@@ -358,6 +432,7 @@ void StockMysql::initRedis()
 	saveMarketDataIndex();
 	saveIndicatorDataIndex();
 	saveAllDataIndex();
+	saveCalcDataIndex();
 	RCSend("init end time = %.2lf·Ö", (::GetTickCount() - begin) / 60000.0);
 }
 

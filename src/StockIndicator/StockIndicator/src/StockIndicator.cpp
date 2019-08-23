@@ -1,9 +1,11 @@
 #include "StockIndicator.h"
 #include "StockWrIndicator.h"
 #include "StockRsiIndicator.h"
+#include "StockAvgIndicator.h"
 #include "StockMysql/StockMysqlAPI.h"
 #include "StockMarket/StockMarketAPI.h"
 #include "StockIndicatorHelper.h"
+#include "StockAvg.h"
 
 StockIndicator::StockIndicator()
 {
@@ -16,11 +18,18 @@ StockIndicator& StockIndicator::instance()
 	return s_stockIndicator;
 }
 
-void StockIndicator::loadFromRedis(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
+void StockIndicator::loadIndicatorFromRedis(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
 {
-	m_indicatorIndex = StockMysql::instance().getIndicatorDataIndex();
 	m_loadStock = stock;
+	m_indicatorIndex = StockMysql::instance().getIndicatorDataIndex();
 	m_redisIndicatorData = StockMysql::instance().readIndicator(stock, beginTime, endTime);
+}
+
+void StockIndicator::loadCalcFromRedis(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime)
+{
+	m_loadStock = stock;
+	m_calcIndex = StockMysql::instance().getCalcDataIndex();
+	m_redisCalcData = StockMysql::instance().readCalc(stock, beginTime, endTime);
 }
 
 void StockIndicator::clear()
@@ -96,6 +105,54 @@ void StockIndicator::saveRsi()
 	StockMysql::instance().saveIndicator("rsi", "date,rsi6,rsi12,rsi24", indicatorData);
 }
 
+void StockIndicator::saveAvg(const std::string& stock, const std::map<IntDateTime, std::shared_ptr<StockAvg>>& avgData)
+{
+	std::map<std::string, std::vector<int32_t>> calcDataIndex = StockMysql::instance().getCalcDataIndex();
+	if (calcDataIndex.empty())
+	{
+		StockMysql::instance().saveCalcDataIndex();
+		calcDataIndex = StockMysql::instance().getCalcDataIndex();
+	}
+	int32_t dateIndex = calcDataIndex.find("date")->second[0];
+	const std::vector<int32_t>& calcIndex = calcDataIndex.find("avg")->second;
+
+	std::map<IntDateTime, std::vector<std::string>> saveCalcData;
+	for (auto itDate = avgData.begin(); itDate != avgData.end(); ++itDate)
+	{
+		const IntDateTime& date = itDate->first;
+		const std::shared_ptr<StockAvg>& stockAvg = itDate->second;
+		saveCalcData[date];
+		std::shared_ptr<std::vector<std::vector<std::string>>> dateData = StockMysql::instance().readCalc(stock, date, date);
+		std::vector<std::string>& saveCalcDateData = saveCalcData.find(date)->second;
+		if (dateData->empty())
+		{
+			saveCalcDateData.push_back(stockAvg->m_avg09_30.toString());
+			saveCalcDateData.push_back(stockAvg->m_avg10_00.toString());
+			saveCalcDateData.push_back(stockAvg->m_avg10_30.toString());
+			saveCalcDateData.push_back(stockAvg->m_avg11_00.toString());
+			saveCalcDateData.push_back(stockAvg->m_avg11_30.toString());
+			saveCalcDateData.push_back(stockAvg->m_avg13_30.toString());
+			saveCalcDateData.push_back(stockAvg->m_avg14_00.toString());
+			saveCalcDateData.push_back(stockAvg->m_avg14_30.toString());
+			saveCalcDateData.push_back(stockAvg->m_avg15_00.toString());
+		}
+		else
+		{
+			saveCalcDateData = (*dateData)[0];
+			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg09_30.toString();
+			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg10_00.toString();
+			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg10_30.toString();
+			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg11_00.toString();
+			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg11_30.toString();
+			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg13_30.toString();
+			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg14_00.toString();
+			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg14_30.toString();
+			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg15_00.toString();
+		}
+	}
+	StockMysql::instance().saveCalc(stock, saveCalcData);
+}
+
 std::shared_ptr<StockWrIndicator> StockIndicator::wr()
 {
 	const std::vector<int32_t>& indicatorIndex = m_indicatorIndex.find("wr")->second;
@@ -112,6 +169,15 @@ std::shared_ptr<StockRsiIndicator> StockIndicator::rsi()
 	std::shared_ptr<StockRsiIndicator> spStockRsiIndicator(new StockRsiIndicator);
 	spStockRsiIndicator->setRedisData(m_loadStock, m_redisIndicatorData, dateIndex, indicatorIndex);
 	return spStockRsiIndicator;
+}
+
+std::shared_ptr<StockAvgIndicator> StockIndicator::avg()
+{
+	const std::vector<int32_t>& calcIndex = m_calcIndex.find("avg")->second;
+	int32_t dateIndex = m_calcIndex.find("date")->second[0];
+	std::shared_ptr<StockAvgIndicator> spStockAvgIndicator(new StockAvgIndicator);
+	spStockAvgIndicator->setRedisData(m_loadStock, m_redisCalcData, dateIndex, calcIndex);
+	return spStockAvgIndicator;
 }
 
 //int main()
