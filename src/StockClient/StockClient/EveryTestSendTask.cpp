@@ -26,7 +26,7 @@ void EveryTestSendTask::DoTask()
 		std::shared_ptr<EveryTestTask> spEveryTestTask(new EveryTestTask);
 		std::shared_ptr<StockMarket> spMarket(new StockMarket);
 		spMarket->loadFromRedis(vecStock[index], beginTime, endTime);
-		StockIndicator::instance().loadFromRedis(vecStock[index], beginTime, endTime);
+		StockIndicator::instance().loadIndicatorFromRedis(vecStock[index], beginTime, endTime);
 		std::shared_ptr<StockWrIndicator> spStockWrIndicator = StockIndicator::instance().wr();
 		std::shared_ptr<StockRsiIndicator> spStockRsiIndicator = StockIndicator::instance().rsi();
 		spEveryTestTask->setParam(vecStock[index], spMarket, spStockWrIndicator, spStockRsiIndicator, m_stockClient);

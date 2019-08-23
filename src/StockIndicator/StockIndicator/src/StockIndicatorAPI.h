@@ -5,6 +5,7 @@
 #include "StockRsiIndicator.h"
 #include "StockWr.h"
 #include "StockRsi.h"
+#include "StockAvg.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockIndicatord.lib")

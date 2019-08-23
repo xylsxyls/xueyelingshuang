@@ -34,6 +34,7 @@ private slots:
 	void onSaveMarketToMysqlButtonClicked();
 	void onSaveIndicatorToMysqlButtonClicked();
 	void onInitRedisButtonClicked();
+	void onAddAvgButtonClicked();
 
 public:
 	//线程池
@@ -66,6 +67,8 @@ private:
 	COriginalButton* m_saveIndicatorToMysqlButton;
 	//初始化redis
 	COriginalButton* m_initRedisButton;
+	//增加avg
+	COriginalButton* m_addAvgButton;
 };
 
 #endif // StockClient_H

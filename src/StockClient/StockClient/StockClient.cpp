@@ -30,7 +30,8 @@ StockClient::StockClient(QWidget* parent)
 	m_checkAllMarketButton(nullptr),
 	m_saveMarketToMysqlButton(nullptr),
 	m_saveIndicatorToMysqlButton(nullptr),
-	m_initRedisButton(nullptr)
+	m_initRedisButton(nullptr),
+	m_addAvgButton(nullptr)
 {
 	ui.setupUi(this);
 	m_everyTestButton = new COriginalButton(this);
@@ -42,6 +43,7 @@ StockClient::StockClient(QWidget* parent)
 	m_saveMarketToMysqlButton = new COriginalButton(this);
 	m_saveIndicatorToMysqlButton = new COriginalButton(this);
 	m_initRedisButton = new COriginalButton(this);
+	m_addAvgButton = new COriginalButton(this);
 	init();
 }
 
@@ -99,6 +101,10 @@ void StockClient::init()
 	m_initRedisButton->setText(QStringLiteral("初始化redis"));
 	QObject::connect(m_initRedisButton, &COriginalButton::clicked, this, &StockClient::onInitRedisButtonClicked);
 
+	m_addAvgButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_addAvgButton->setText(QStringLiteral("增加avg"));
+	QObject::connect(m_addAvgButton, &COriginalButton::clicked, this, &StockClient::onAddAvgButtonClicked);
+
 	m_sendTaskThreadId = CTaskThreadManager::Instance().Init();
 	int32_t index = -1;
 	while (index++ != m_threadCount - 1)
@@ -130,6 +136,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_saveIndicatorToMysqlButton);
 	vecButton.push_back(m_initRedisButton);
 	vecButton.push_back(m_everyTestButton);
+	vecButton.push_back(m_addAvgButton);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -248,6 +255,66 @@ void StockClient::onInitRedisButtonClicked()
 	std::shared_ptr<InitRedisTask> spInitRedisTaskTask(new InitRedisTask);
 	spInitRedisTaskTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spInitRedisTaskTask);
+}
+
+void StockClient::onAddAvgButtonClicked()
+{
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_tip = QStringLiteral("gupiao");
+	line.m_defaultText = QStringLiteral("000000");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("日期");
+	line.m_defaultText = QStringLiteral("1970-01-01");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("09:30");
+	line.m_defaultText = QStringLiteral("0");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("10:00");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("10:30");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("11:00");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("11:30");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("13:30");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("14:00");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("14:30");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("15:00");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("最高");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("最低");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入一天的avg数据：");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+
+	const std::string& stock = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
+	IntDateTime date = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
+	std::map<IntDateTime, std::shared_ptr<StockAvg>> avgData;
+	avgData[date];
+	std::shared_ptr<StockAvg>& stockAvg = avgData.find(date)->second;
+	stockAvg->m_avg09_30 = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	stockAvg->m_avg10_00 = inputDialogParam.m_vecInputEx[3].m_editText.toStdString().c_str();
+	stockAvg->m_avg10_30 = inputDialogParam.m_vecInputEx[4].m_editText.toStdString().c_str();
+	stockAvg->m_avg11_00 = inputDialogParam.m_vecInputEx[5].m_editText.toStdString().c_str();
+	stockAvg->m_avg11_30 = inputDialogParam.m_vecInputEx[6].m_editText.toStdString().c_str();
+	stockAvg->m_avg13_30 = inputDialogParam.m_vecInputEx[7].m_editText.toStdString().c_str();
+	stockAvg->m_avg14_00 = inputDialogParam.m_vecInputEx[8].m_editText.toStdString().c_str();
+	stockAvg->m_avg14_30 = inputDialogParam.m_vecInputEx[9].m_editText.toStdString().c_str();
+	stockAvg->m_avg15_00 = inputDialogParam.m_vecInputEx[10].m_editText.toStdString().c_str();
+	stockAvg->m_avgHigh = inputDialogParam.m_vecInputEx[11].m_editText.toStdString().c_str();
+	stockAvg->m_avgLow = inputDialogParam.m_vecInputEx[12].m_editText.toStdString().c_str();
+	StockIndicator::instance().saveAvg(stock, avgData);
 }
 
 void StockClient::onTaskTip(const QString tip)
