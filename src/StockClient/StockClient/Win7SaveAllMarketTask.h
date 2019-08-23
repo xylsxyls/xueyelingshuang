@@ -2,10 +2,10 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
 class StockClient;
-class SaveAllMarketTask : public CTask
+class Win7SaveAllMarketTask : public CTask
 {
 public:
-	SaveAllMarketTask();
+	Win7SaveAllMarketTask();
 
 public:
 	void DoTask();

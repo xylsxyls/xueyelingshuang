@@ -1,4 +1,4 @@
-#include "SaveAllMarketTask.h"
+#include "Win7SaveAllMarketTask.h"
 #include "StockClientLogicManager.h"
 #include "CSystem/CSystemAPI.h"
 #include "CMouse/CMouseAPI.h"
@@ -8,7 +8,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "StockMysql/StockMysqlAPI.h"
 
-SaveAllMarketTask::SaveAllMarketTask():
+Win7SaveAllMarketTask::Win7SaveAllMarketTask():
 m_beginIndex(0),
 m_end(0),
 m_stockClient(nullptr)
@@ -16,7 +16,7 @@ m_stockClient(nullptr)
 	
 }
 
-void SaveAllMarketTask::DoTask()
+void Win7SaveAllMarketTask::DoTask()
 {
 	if (m_allStock.empty())
 	{
@@ -86,7 +86,7 @@ void SaveAllMarketTask::DoTask()
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("所有hangqing保存完成，01357,0中英文逗号分隔时间和星期"));
 }
 
-void SaveAllMarketTask::setParam(int32_t beginIndex, int32_t endIndex, StockClient* stockClient, const std::vector<std::string>& allStock)
+void Win7SaveAllMarketTask::setParam(int32_t beginIndex, int32_t endIndex, StockClient* stockClient, const std::vector<std::string>& allStock)
 {
 	m_beginIndex = beginIndex;
 	m_end = endIndex;

@@ -16,6 +16,7 @@
 #include "SaveMarketToMysqlTask.h"
 #include "SaveIndicatorToMysqlTask.h"
 #include "InitRedisTask.h"
+#include "Win7SaveAllMarketTask.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -35,6 +36,7 @@ StockClient::StockClient(QWidget* parent)
 	m_everyTestButton = new COriginalButton(this);
 	m_openTonghuashunButton = new COriginalButton(this);
 	m_saveAllStockButton = new COriginalButton(this);
+	m_win7SaveAllMarketButton = new COriginalButton(this);
 	m_saveAllMarketButton = new COriginalButton(this);
 	m_checkAllMarketButton = new COriginalButton(this);
 	m_saveMarketToMysqlButton = new COriginalButton(this);
@@ -77,6 +79,10 @@ void StockClient::init()
 	m_saveAllMarketButton->setText(QStringLiteral("保存所有hangqing"));
 	QObject::connect(m_saveAllMarketButton, &COriginalButton::clicked, this, &StockClient::onSaveAllMarketButtonClicked);
 
+	m_win7SaveAllMarketButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_win7SaveAllMarketButton->setText(QStringLiteral("win7保存所有hangqing"));
+	QObject::connect(m_win7SaveAllMarketButton, &COriginalButton::clicked, this, &StockClient::onWin7SaveAllMarketButtonClicked);
+
 	m_checkAllMarketButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_checkAllMarketButton->setText(QStringLiteral("检测所有hangqing"));
 	QObject::connect(m_checkAllMarketButton, &COriginalButton::clicked, this, &StockClient::onCheckAllMarketButtonClicked);
@@ -114,14 +120,27 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	{
 		return;
 	}
-	m_openTonghuashunButton->setGeometry(0, 0, 100, 30);
-	m_everyTestButton->setGeometry(360, 120, 160, 80);
-	m_saveAllStockButton->setGeometry(110, 0, 100, 30);
-	m_saveAllMarketButton->setGeometry(220, 0, 100, 30);
-	m_checkAllMarketButton->setGeometry(330, 0, 100, 30);
-	m_saveMarketToMysqlButton->setGeometry(440, 0, 100, 30);
-	m_saveIndicatorToMysqlButton->setGeometry(0, 40, 100, 30);
-	m_initRedisButton->setGeometry(110, 40, 100, 30);
+	std::vector<COriginalButton*> vecButton;
+	vecButton.push_back(m_openTonghuashunButton);
+	vecButton.push_back(m_saveAllStockButton);
+	vecButton.push_back(m_win7SaveAllMarketButton);
+	vecButton.push_back(m_saveAllMarketButton);
+	vecButton.push_back(m_checkAllMarketButton);
+	vecButton.push_back(m_saveMarketToMysqlButton);
+	vecButton.push_back(m_saveIndicatorToMysqlButton);
+	vecButton.push_back(m_initRedisButton);
+	vecButton.push_back(m_everyTestButton);
+
+	int32_t cowCount = 4;
+	int32_t width = 140;
+	int32_t height = 30;
+	int32_t space = 10;
+
+	int32_t index = -1;
+	while (index++ != vecButton.size() - 1)
+	{
+		vecButton[index]->setGeometry(index % cowCount * (width + space), index / cowCount * (height + space), width, height);
+	}
 }
 
 void StockClient::closeEvent(QCloseEvent* eve)
@@ -155,15 +174,51 @@ void StockClient::onSaveAllStockButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllStockTask);
 }
 
+void StockClient::onWin7SaveAllMarketButtonClicked()
+{
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_defaultText = QStringLiteral("1");
+	line.m_tip = QStringLiteral("开始");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_defaultText = QStringLiteral("0");
+	line.m_tip = QStringLiteral("结束");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入开始和结束的序号，包括头尾");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != DialogResult::ACCEPT_BUTTON)
+	{
+		return;
+	}
+	std::shared_ptr<Win7SaveAllMarketTask> spWin7SaveAllMarketTask(new Win7SaveAllMarketTask);
+	spWin7SaveAllMarketTask->setParam(atoi(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str()) - 1,
+		atoi(inputDialogParam.m_vecInputEx[1].m_editText.toStdString().c_str()),
+		this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spWin7SaveAllMarketTask);
+}
+
 void StockClient::onSaveAllMarketButtonClicked()
 {
 	InputDialogParam inputDialogParam;
-	inputDialogParam.m_defaultText = QStringLiteral("1");
-	inputDialogParam.m_editTip = QStringLiteral("请输入从第几个开始");
+	InputEx line;
+	line.m_defaultText = QStringLiteral("1");
+	line.m_tip = QStringLiteral("开始");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_defaultText = QStringLiteral("0");
+	line.m_tip = QStringLiteral("结束");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入开始和结束的序号，包括头尾");
 	inputDialogParam.m_parent = windowHandle();
 	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != DialogResult::ACCEPT_BUTTON)
+	{
+		return;
+	}
 	std::shared_ptr<SaveAllMarketTask> spSaveAllMarketTask(new SaveAllMarketTask);
-	spSaveAllMarketTask->setParam(atoi(inputDialogParam.m_editText.toStdString().c_str()) - 1, this);
+	spSaveAllMarketTask->setParam(atoi(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str()) - 1,
+		atoi(inputDialogParam.m_vecInputEx[1].m_editText.toStdString().c_str()),
+		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllMarketTask);
 }
 

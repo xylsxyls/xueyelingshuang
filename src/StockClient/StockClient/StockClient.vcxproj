@@ -189,6 +189,7 @@
     <ClCompile Include="SaveMarketToMysqlTask.cpp" />
     <ClCompile Include="StockClient.cpp" />
     <ClCompile Include="StockClientLogicManager.cpp" />
+    <ClCompile Include="Win7SaveAllMarketTask.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.h">
@@ -291,6 +292,7 @@
     <ClInclude Include="SaveAllStockTask.h" />
     <ClInclude Include="SaveIndicatorToMysqlTask.h" />
     <ClInclude Include="SaveMarketToMysqlTask.h" />
+    <ClInclude Include="Win7SaveAllMarketTask.h" />
     <CustomBuild Include="StockClientLogicManager.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing StockClientLogicManager.h...</Message>

@@ -28,6 +28,7 @@ private slots:
 	void onEveryTestButtonClicked();
 	void onOpenTonghuashunButtonClicked();
 	void onSaveAllStockButtonClicked();
+	void onWin7SaveAllMarketButtonClicked();
 	void onSaveAllMarketButtonClicked();
 	void onCheckAllMarketButtonClicked();
 	void onSaveMarketToMysqlButtonClicked();
@@ -53,6 +54,8 @@ private:
 	COriginalButton* m_openTonghuashunButton;
 	//保存所有gupiao
 	COriginalButton* m_saveAllStockButton;
+	//win7保存所有hangqing文件
+	COriginalButton* m_win7SaveAllMarketButton;
 	//保存所有hangqing文件
 	COriginalButton* m_saveAllMarketButton;
 	//检测所有hangqing文件

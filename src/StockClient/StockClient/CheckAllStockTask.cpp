@@ -56,7 +56,7 @@ void CheckAllStockTask::DoTask()
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("´íÎóµÄgupiao´úÂë£º%1").arg(allErrorStock.c_str()));
 
 	std::shared_ptr<SaveAllMarketTask> spSaveAllMarketTask(new SaveAllMarketTask);
-	spSaveAllMarketTask->setParam(0, m_stockClient, m_vecErrorStock);
+	spSaveAllMarketTask->setParam(0, 0, m_stockClient, m_vecErrorStock);
 	CTaskThreadManager::Instance().GetThreadInterface(m_stockClient->m_sendTaskThreadId)->PostTask(spSaveAllMarketTask);
 }
 

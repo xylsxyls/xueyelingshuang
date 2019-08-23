@@ -92,6 +92,9 @@
     <ClCompile Include="SaveMarketToMysqlTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="Win7SaveAllMarketTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -133,6 +136,9 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="SaveIndicatorToMysqlTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="Win7SaveAllMarketTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>
