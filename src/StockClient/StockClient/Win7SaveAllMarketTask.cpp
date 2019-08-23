@@ -44,7 +44,7 @@ void Win7SaveAllMarketTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(408, 250), 0);
 		CMouse::LeftClick();
 		CSystem::Sleep(500);
-		CKeyboard::InputString(m_allStock[index] + "\n", 50);
+		CKeyboard::InputString(m_allStock[index] + "\n", 100);
 		CSystem::Sleep(1000);
 		CMouse::RightClick();
 		CMouse::MoveAbsolute(xyls::Point(539, 412), 50);
