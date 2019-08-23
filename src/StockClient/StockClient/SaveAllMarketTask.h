@@ -15,9 +15,12 @@ public:
 		StockClient* stockClient,
 		const std::vector<std::string>& allStock = std::vector<std::string>());
 
+	void StopTask();
+
 protected:
 	int32_t m_beginIndex;
 	int32_t m_end;
 	StockClient* m_stockClient;
 	std::vector<std::string> m_allStock;
+	std::atomic<bool> m_exit;
 };

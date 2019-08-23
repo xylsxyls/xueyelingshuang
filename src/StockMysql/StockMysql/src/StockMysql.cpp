@@ -63,7 +63,7 @@ std::vector<std::string> StockMysql::allStock() const
 
 std::vector<std::string> StockMysql::allStockFromMysql() const
 {
-	m_mysql.selectDb("stockmarket");
+	m_mysql.selectDb("stockname");
 	std::vector<std::string> result;
 	auto allStock = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("stock")))->toVector();
 	int32_t index = -1;
@@ -76,7 +76,7 @@ std::vector<std::string> StockMysql::allStockFromMysql() const
 
 void StockMysql::addStock(const std::string& stock)
 {
-	m_mysql.selectDb("stockmarket");
+	m_mysql.selectDb("stockname");
 	auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString("stock", "stock,name"));
 	prepare->setString(0, stock);
 	prepare->setString(1, "");
@@ -99,6 +99,16 @@ void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vec
 		m_mysql.execute(prepare, false);
 	}
 	m_mysql.commit();
+}
+
+void StockMysql::deleteMarketDb()
+{
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyDatabaseString("stockmarket")));
+}
+
+void StockMysql::createMarketDb()
+{
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createDatabaseString("stockmarket")));
 }
 
 //std::vector<std::vector<std::string>> StockMysql::readMarket(const std::string& stock, const IntDateTime& beginTime, const IntDateTime& endTime) const
@@ -438,7 +448,9 @@ void StockMysql::initRedis()
 
 void StockMysql::saveAllStock(const std::vector<std::vector<std::string>>& allStock)
 {
-	m_mysql.selectDb("stockmarket");
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyDatabaseString("stockname")));
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createDatabaseString("stockname")));
+	m_mysql.selectDb("stockname");
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyTableString("stock")));
 	std::vector<std::string> vecFields;
 	vecFields.push_back("stock varchar(6) primary key");

@@ -11,7 +11,8 @@
 SaveAllMarketTask::SaveAllMarketTask():
 m_beginIndex(0),
 m_end(0),
-m_stockClient(nullptr)
+m_stockClient(nullptr),
+m_exit(false)
 {
 	
 }
@@ -40,6 +41,10 @@ void SaveAllMarketTask::DoTask()
 	int32_t index = m_beginIndex - 1;
 	while (index++ < m_end - 1)
 	{
+		if (m_exit)
+		{
+			return;
+		}
 		const std::string& marketFilePath = marketFolder + m_allStock[index] + ".txt";
 		CMouse::MoveAbsolute(xyls::Point(179, 189), 0);
 		CMouse::LeftClick();
@@ -92,4 +97,9 @@ void SaveAllMarketTask::setParam(int32_t beginIndex, int32_t endIndex, StockClie
 	m_end = endIndex;
 	m_stockClient = stockClient;
 	m_allStock = allStock;
+}
+
+void SaveAllMarketTask::StopTask()
+{
+	m_exit = true;
 }

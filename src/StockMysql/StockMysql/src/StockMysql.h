@@ -52,6 +52,14 @@ public:
 	*/
 	void saveMarket(const std::string& stock, const std::vector<std::vector<std::string>>& vecMarket);
 
+	/** 删除hangqing数据库
+	*/
+	void deleteMarketDb();
+
+	/** 创建hangqing数据库
+	*/
+	void createMarketDb();
+
 	/** 读取kaigaodishou
 	@param [in] stock gupiao代码
 	@param [in] beginTime 开始时间，默认参数表示最早时间

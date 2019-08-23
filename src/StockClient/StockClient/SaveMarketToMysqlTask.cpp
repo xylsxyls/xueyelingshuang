@@ -15,6 +15,8 @@ void SaveMarketToMysqlTask::DoTask()
 	std::string marketDir = CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\";
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
 
+	StockMysql::instance().deleteMarketDb();
+	StockMysql::instance().createMarketDb();
 	int32_t index = -1;
 	while (index++ != allStock.size() - 1)
 	{

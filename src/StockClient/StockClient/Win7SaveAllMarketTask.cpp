@@ -11,7 +11,8 @@
 Win7SaveAllMarketTask::Win7SaveAllMarketTask():
 m_beginIndex(0),
 m_end(0),
-m_stockClient(nullptr)
+m_stockClient(nullptr),
+m_exit(false)
 {
 	
 }
@@ -40,6 +41,10 @@ void Win7SaveAllMarketTask::DoTask()
 	int32_t index = m_beginIndex - 1;
 	while (index++ < m_end - 1)
 	{
+		if (m_exit)
+		{
+			return;
+		}
 		const std::string& marketFilePath = marketFolder + m_allStock[index] + ".txt";
 		CMouse::MoveAbsolute(xyls::Point(408, 250), 0);
 		CMouse::LeftClick();
@@ -92,4 +97,9 @@ void Win7SaveAllMarketTask::setParam(int32_t beginIndex, int32_t endIndex, Stock
 	m_end = endIndex;
 	m_stockClient = stockClient;
 	m_allStock = allStock;
+}
+
+void Win7SaveAllMarketTask::StopTask()
+{
+	m_exit = true;
 }
