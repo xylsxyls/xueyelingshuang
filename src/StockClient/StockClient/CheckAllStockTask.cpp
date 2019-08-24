@@ -5,6 +5,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "StockClientLogicManager.h"
 #include "SaveAllMarketTask.h"
+#include "Win7SaveAllMarketTask.h"
 
 CheckAllStockTask::CheckAllStockTask()
 {
@@ -55,6 +56,13 @@ void CheckAllStockTask::DoTask()
 	allErrorStock.append(m_vecErrorStock[index]);
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("´íÎóµÄgupiao´úÂë£º%1").arg(allErrorStock.c_str()));
 
+	if (CSystem::GetSystemVersionNum() < 655360)
+	{
+		std::shared_ptr<Win7SaveAllMarketTask> spWin7SaveAllMarketTask(new Win7SaveAllMarketTask);
+		spWin7SaveAllMarketTask->setParam(0, 0, m_stockClient, m_vecErrorStock);
+		CTaskThreadManager::Instance().GetThreadInterface(m_stockClient->m_sendTaskThreadId)->PostTask(spWin7SaveAllMarketTask);
+		return;
+	}
 	std::shared_ptr<SaveAllMarketTask> spSaveAllMarketTask(new SaveAllMarketTask);
 	spSaveAllMarketTask->setParam(0, 0, m_stockClient, m_vecErrorStock);
 	CTaskThreadManager::Instance().GetThreadInterface(m_stockClient->m_sendTaskThreadId)->PostTask(spSaveAllMarketTask);
