@@ -245,8 +245,25 @@ void StockClient::onSaveMarketToMysqlButtonClicked()
 
 void StockClient::onSaveIndicatorToMysqlButtonClicked()
 {
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_defaultText = QStringLiteral("1");
+	line.m_tip = "wr";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = "rsi";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("需要计算的填1");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+
 	std::shared_ptr<SaveIndicatorToMysqlTask> spSaveIndicatorToMysqlTask(new SaveIndicatorToMysqlTask);
-	spSaveIndicatorToMysqlTask->setParam(this);
+	spSaveIndicatorToMysqlTask->setParam(atoi(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str()) == 1,
+		atoi(inputDialogParam.m_vecInputEx[1].m_editText.toStdString().c_str()) == 1,
+		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveIndicatorToMysqlTask);
 }
 

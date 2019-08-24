@@ -10,8 +10,10 @@ public:
 public:
 	void DoTask();
 
-	void setParam(StockClient* stockClient);
+	void setParam(bool wr, bool rsi, StockClient* stockClient);
 
 protected:
+	bool m_wr;
+	bool m_rsi;
 	StockClient* m_stockClient;
 };
