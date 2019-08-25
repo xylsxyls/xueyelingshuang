@@ -115,7 +115,7 @@ std::string SqlString::sqlMax(const std::string& field)
 	return "MAX(" + field + ")";
 }
 
-std::string SqlString::selectAllTableName(const std::string& tableName)
+std::string SqlString::selectAllTableName(const std::string& dbName)
 {
-	return "select table_name from information_schema.tables where table_schema='" + tableName + "'";
+	return "select table_name from information_schema.tables where table_schema='" + dbName + "'";
 }

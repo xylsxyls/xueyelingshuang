@@ -37,5 +37,5 @@ public:
 
 	static std::string sqlMax(const std::string& field);
 
-	static std::string selectAllTableName(const std::string& tableName);
+	static std::string selectAllTableName(const std::string& dbName);
 };
