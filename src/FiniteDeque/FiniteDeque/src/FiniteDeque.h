@@ -33,25 +33,25 @@ public:
 
 	/** 追加
 	@param [in] element 元素
-	@return 返回是否添加成功
+	@return 返回是否被限制或流动
 	*/
 	bool push_back(const Type& element);
 
 	/** 队列头添加
 	@param [in] element 元素
-	@return 返回是否添加成功
+	@return 返回是否被限制或流动
 	*/
 	bool push_front(const Type& element);
 
 	/** 追加，消耗添加元素
 	@param [in] element 元素
-	@return 返回是否添加成功
+	@return 返回是否被限制或流动
 	*/
 	bool emplace_back(const Type& element);
 
 	/** 队列头添加，消耗添加元素
 	@param [in] element 元素
-	@return 返回是否添加成功
+	@return 返回是否被限制或流动
 	*/
 	bool emplace_front(const Type& element);
 

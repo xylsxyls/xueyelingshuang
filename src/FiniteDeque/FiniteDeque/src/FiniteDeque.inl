@@ -19,13 +19,15 @@ void FiniteDeque<Type>::setFinite(size_t num, FiniteType finiteType)
 template <class Type>
 bool FiniteDeque<Type>::push_back(const Type& element)
 {
+	bool result = false;
 	switch (m_finiteType)
 	{
 	case FINITE:
 	{
 		if (size() >= m_finite)
 		{
-			return false;
+			result = true;
+			break;
 		}
 		std::deque<Type>::push_back(element);
 	}
@@ -35,6 +37,7 @@ bool FiniteDeque<Type>::push_back(const Type& element)
 		while (size() >= m_finite)
 		{
 			std::deque<Type>::pop_front();
+			result = true;
 		}
 		std::deque<Type>::push_back(element);
 	}
@@ -42,19 +45,21 @@ bool FiniteDeque<Type>::push_back(const Type& element)
 	default:
 		break;
 	}
-	return true;
+	return result;
 }
 
 template <class Type>
 bool FiniteDeque<Type>::push_front(const Type& element)
 {
+	bool result = false;
 	switch (m_finiteType)
 	{
 	case FINITE:
 	{
 		if (size() >= m_finite)
 		{
-			return false;
+			result = true;
+			break;
 		}
 		std::deque<Type>::push_front(element);
 	}
@@ -64,6 +69,7 @@ bool FiniteDeque<Type>::push_front(const Type& element)
 		while (size() >= m_finite)
 		{
 			std::deque<Type>::pop_back();
+			result = true;
 		}
 		std::deque<Type>::push_front(element);
 	}
@@ -71,19 +77,21 @@ bool FiniteDeque<Type>::push_front(const Type& element)
 	default:
 		break;
 	}
-	return true;
+	return result;
 }
 
 template <class Type>
 bool FiniteDeque<Type>::emplace_back(const Type& element)
 {
+	bool result = false;
 	switch (m_finiteType)
 	{
 	case FINITE:
 	{
 		if (size() >= m_finite)
 		{
-			return false;
+			result = true;
+			break;
 		}
 		std::deque<Type>::emplace_back(element);
 	}
@@ -93,6 +101,7 @@ bool FiniteDeque<Type>::emplace_back(const Type& element)
 		while (size() >= m_finite)
 		{
 			std::deque<Type>::pop_front();
+			result = true;
 		}
 		std::deque<Type>::emplace_back(element);
 	}
@@ -100,19 +109,21 @@ bool FiniteDeque<Type>::emplace_back(const Type& element)
 	default:
 		break;
 	}
-	return true;
+	return result;
 }
 
 template <class Type>
 bool FiniteDeque<Type>::emplace_front(const Type& element)
 {
+	bool result = false;
 	switch (m_finiteType)
 	{
 	case FINITE:
 	{
 		if (size() >= m_finite)
 		{
-			return false;
+			result = true;
+			break;
 		}
 		std::deque<Type>::emplace_front(element);
 	}
@@ -122,6 +133,7 @@ bool FiniteDeque<Type>::emplace_front(const Type& element)
 		while (size() >= m_finite)
 		{
 			std::deque<Type>::pop_back();
+			result = true;
 		}
 		std::deque<Type>::emplace_front(element);
 	}
@@ -129,7 +141,7 @@ bool FiniteDeque<Type>::emplace_front(const Type& element)
 	default:
 		break;
 	}
-	return true;
+	return result;
 }
 
 #endif
