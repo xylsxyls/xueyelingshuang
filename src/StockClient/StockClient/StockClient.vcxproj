@@ -183,12 +183,15 @@
     <ClCompile Include="InitRedisTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="EveryTestSendTask.cpp" />
+    <ClCompile Include="MairubishengTask.cpp" />
     <ClCompile Include="SaveAllMarketTask.cpp" />
     <ClCompile Include="SaveAllStockTask.cpp" />
     <ClCompile Include="SaveIndicatorToMysqlTask.cpp" />
     <ClCompile Include="SaveMarketToMysqlTask.cpp" />
+    <ClCompile Include="SaveTodayMarketFileTask.cpp" />
     <ClCompile Include="StockClient.cpp" />
     <ClCompile Include="StockClientLogicManager.cpp" />
+    <ClCompile Include="TodayMarketFileToMemoryTask.cpp" />
     <ClCompile Include="Win7SaveAllMarketTask.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -288,10 +291,13 @@
     <ClInclude Include="EveryTestTask.h" />
     <ClInclude Include="EveryTestSendTask.h" />
     <ClInclude Include="InitRedisTask.h" />
+    <ClInclude Include="MairubishengTask.h" />
     <ClInclude Include="SaveAllMarketTask.h" />
     <ClInclude Include="SaveAllStockTask.h" />
     <ClInclude Include="SaveIndicatorToMysqlTask.h" />
     <ClInclude Include="SaveMarketToMysqlTask.h" />
+    <ClInclude Include="SaveTodayMarketFileTask.h" />
+    <ClInclude Include="TodayMarketFileToMemoryTask.h" />
     <ClInclude Include="Win7SaveAllMarketTask.h" />
     <CustomBuild Include="StockClientLogicManager.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

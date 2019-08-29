@@ -153,7 +153,8 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	}
 	else if (CHook::IsKeyUp(wParam))
 	{
-		if (vkCode == 107)
+		//+ 107
+		if (vkCode == 13)
 		{
 			enter = !enter;
 		}

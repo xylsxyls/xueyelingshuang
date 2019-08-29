@@ -17,6 +17,9 @@
 #include "SaveIndicatorToMysqlTask.h"
 #include "InitRedisTask.h"
 #include "Win7SaveAllMarketTask.h"
+#include "SaveTodayMarketFileTask.h"
+#include "TodayMarketFileToMemoryTask.h"
+#include "MairubishengTask.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -31,7 +34,8 @@ StockClient::StockClient(QWidget* parent)
 	m_saveMarketToMysqlButton(nullptr),
 	m_saveIndicatorToMysqlButton(nullptr),
 	m_initRedisButton(nullptr),
-	m_addAvgButton(nullptr)
+	m_addAvgButton(nullptr),
+	m_mairubishengButton(nullptr)
 {
 	ui.setupUi(this);
 	m_everyTestButton = new COriginalButton(this);
@@ -44,6 +48,7 @@ StockClient::StockClient(QWidget* parent)
 	m_saveIndicatorToMysqlButton = new COriginalButton(this);
 	m_initRedisButton = new COriginalButton(this);
 	m_addAvgButton = new COriginalButton(this);
+	m_mairubishengButton = new COriginalButton(this);
 	init();
 }
 
@@ -105,6 +110,10 @@ void StockClient::init()
 	m_addAvgButton->setText(QStringLiteral("增加avg"));
 	QObject::connect(m_addAvgButton, &COriginalButton::clicked, this, &StockClient::onAddAvgButtonClicked);
 
+	m_mairubishengButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_mairubishengButton->setText(QStringLiteral("mairubisheng"));
+	QObject::connect(m_mairubishengButton, &COriginalButton::clicked, this, &StockClient::onMairubishengButtonClicked);
+
 	m_sendTaskThreadId = CTaskThreadManager::Instance().Init();
 	int32_t index = -1;
 	while (index++ != m_threadCount - 1)
@@ -137,6 +146,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_initRedisButton);
 	vecButton.push_back(m_everyTestButton);
 	vecButton.push_back(m_addAvgButton);
+	vecButton.push_back(m_mairubishengButton);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -176,6 +186,14 @@ void StockClient::onOpenTonghuashunButtonClicked()
 
 void StockClient::onSaveAllStockButtonClicked()
 {
+	std::shared_ptr<SaveTodayMarketFileTask> spSaveTodayMarketFileTask(new SaveTodayMarketFileTask);
+	spSaveTodayMarketFileTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveTodayMarketFileTask);
+
+	std::shared_ptr<TodayMarketFileToMemoryTask> spTodayMarketFileToMemoryTask(new TodayMarketFileToMemoryTask);
+	spTodayMarketFileToMemoryTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTodayMarketFileToMemoryTask);
+
 	std::shared_ptr<SaveAllStockTask> spSaveAllStockTask(new SaveAllStockTask);
 	spSaveAllStockTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllStockTask);
@@ -231,6 +249,10 @@ void StockClient::onSaveAllMarketButtonClicked()
 
 void StockClient::onCheckAllMarketButtonClicked()
 {
+	std::shared_ptr<TodayMarketFileToMemoryTask> spTodayMarketFileToMemoryTask(new TodayMarketFileToMemoryTask);
+	spTodayMarketFileToMemoryTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTodayMarketFileToMemoryTask);
+
 	std::shared_ptr<CheckAllStockTask> spCheckAllStockTask(new CheckAllStockTask);
 	spCheckAllStockTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spCheckAllStockTask);
@@ -332,6 +354,31 @@ void StockClient::onAddAvgButtonClicked()
 	stockAvg->m_avgHigh = inputDialogParam.m_vecInputEx[11].m_editText.toStdString().c_str();
 	stockAvg->m_avgLow = inputDialogParam.m_vecInputEx[12].m_editText.toStdString().c_str();
 	StockIndicator::instance().saveAvg(stock, avgData);
+}
+
+void StockClient::onMairubishengButtonClicked()
+{
+	InputDialogParam inputDialogParam;
+	inputDialogParam.m_editTip = QStringLiteral("请输入间隔时间（毫秒）");
+	inputDialogParam.m_defaultText = QStringLiteral("2500");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+
+	std::shared_ptr<SaveTodayMarketFileTask> spSaveTodayMarketFileTask(new SaveTodayMarketFileTask);
+	spSaveTodayMarketFileTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveTodayMarketFileTask);
+
+	std::shared_ptr<TodayMarketFileToMemoryTask> spTodayMarketFileToMemoryTask(new TodayMarketFileToMemoryTask);
+	spTodayMarketFileToMemoryTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTodayMarketFileToMemoryTask);
+
+	std::shared_ptr<MairubishengTask> spMairubishengTask(new MairubishengTask);
+	spMairubishengTask->setParam(atoi(inputDialogParam.m_editText.toStdString().c_str()), this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spMairubishengTask);
 }
 
 void StockClient::onTaskTip(const QString tip)

@@ -3,8 +3,7 @@
 #include "CMouse/CMouseAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include <atlimage.h>
-#include "CStopWatch/CStopWatchAPI.h"
-#include "CGetPath/CGetPathAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubleClick, const xyls::Rect& rect, const xyls::Rect& move)
 {
@@ -92,8 +91,8 @@ bool ScreenScript::WaitForPic(const std::string& path,
 							  int32_t timeOut,
 							  int32_t searchIntervalTime)
 {
-	CStopWatch watch;
-	while ((int32_t)watch.GetWatchTime() <= timeOut)
+	int32_t beginTime = ::GetTickCount();
+	while ((int32_t)(::GetTickCount() - beginTime) <= timeOut)
 	{
 		if (FindPic(path, rect))
 		{
@@ -118,7 +117,7 @@ bool ScreenScript::WaitClickPic(const std::string& path,
 
 std::string ScreenScript::GetBmpPath(const std::string& path)
 {
-	std::string curExePath = CGetPath::GetCurrentExePath();
+	std::string curExePath = CSystem::GetCurrentExePath();
 	if (CSystem::DirOrFileAccess(curExePath + "ScreenScriptTemp") == false)
 	{
 		if(!CSystem::CreateDir(curExePath + "ScreenScriptTemp"))
@@ -126,7 +125,7 @@ std::string ScreenScript::GetBmpPath(const std::string& path)
 			return "";
 		}
 	}
-	std::string bmpPath = curExePath + "ScreenScriptTemp\\" + CGetPath::GetName(path, 3) + ".bmp";
+	std::string bmpPath = curExePath + "ScreenScriptTemp\\" + CSystem::GetName(path, 3) + ".bmp";
 	if (CSystem::DirOrFileAccess(bmpPath) == false)
 	{
 		if (!CScreen::ChangeToBmp(bmpPath, path))

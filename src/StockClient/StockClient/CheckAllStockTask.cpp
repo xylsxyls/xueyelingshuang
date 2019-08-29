@@ -15,16 +15,16 @@ CheckAllStockTask::CheckAllStockTask()
 void CheckAllStockTask::DoTask()
 {
 	std::string marketFolder = CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\";
-	Ctxt allStockTxt(CSystem::GetCurrentExePath() + "all_stock.txt");
-	allStockTxt.LoadTxt(Ctxt::SPLIT, "\t");
+	//Ctxt allStockTxt(CSystem::GetCurrentExePath() + "all_stock.txt");
+	//allStockTxt.LoadTxt(Ctxt::SPLIT, "\t");
 
-	int32_t index = 0;
-	while (index++ != allStockTxt.m_vectxt.size() - 2)
+	int32_t index = -1;
+	while (index++ != m_stockClient->m_todayMarket.size() - 1)
 	{
-		RCSend("%d", index);
-		const std::vector<std::string>& vecLine = allStockTxt.m_vectxt[index];
-		std::string stock = CStringManager::Mid(vecLine[0], 2, 6);
-		const std::string& stockClose = vecLine[vecLine.size() == 6 ? 3 : 2];
+		RCSend("check = %d", index + 1);
+		const std::vector<std::string>& vecLine = m_stockClient->m_todayMarket[index];
+		const std::string& stock = vecLine[0];
+		const std::string& stockClose = vecLine[3];
 		std::string marketPath = marketFolder + stock + ".txt";
 		if (!CSystem::fileExist(marketPath))
 		{

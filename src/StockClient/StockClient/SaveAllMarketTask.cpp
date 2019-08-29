@@ -29,11 +29,9 @@ void SaveAllMarketTask::DoTask()
 		m_end = m_allStock.size();
 	}
 	
-	CSystem::CreateDir(CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\");
 	std::string marketFolder = CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\";
-	//std::string marketFolder = "D:\\xueyelingshuang\\lib\\CurrentAllMarketFile\\";
+	CSystem::CreateDir(marketFolder);
 	StockClientLogicManager::instance().openTonghuashun();
-	CSystem::Sleep(8000);
 	CMouse::MoveAbsolute(xyls::Point(98, 7), 50);
 	CMouse::LeftClick();
 	CMouse::MoveOpposite(xyls::Point(46, 188), 50);
@@ -49,7 +47,7 @@ void SaveAllMarketTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(179, 189), 0);
 		CMouse::LeftClick();
 		CSystem::Sleep(200);
-		CKeyboard::InputString(m_allStock[index] + "\n");
+		CKeyboard::InputString(m_allStock[index] + "\n", 100);
 		CSystem::Sleep(1000);
 		CMouse::RightClick();
 		CMouse::MoveAbsolute(xyls::Point(179 + 93, 189 + 163), 50);

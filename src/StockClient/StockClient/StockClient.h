@@ -35,6 +35,7 @@ private slots:
 	void onSaveIndicatorToMysqlButtonClicked();
 	void onInitRedisButtonClicked();
 	void onAddAvgButtonClicked();
+	void onMairubishengButtonClicked();
 
 public:
 	//线程池
@@ -45,6 +46,8 @@ public:
 	int32_t m_stockCount;
 	//发送任务线程
 	uint32_t m_sendTaskThreadId;
+	//当天hangqing
+	std::vector<std::vector<std::string>> m_todayMarket;
 
 private:
 	Ui::StockClientClass ui;
@@ -69,6 +72,8 @@ private:
 	COriginalButton* m_initRedisButton;
 	//增加avg
 	COriginalButton* m_addAvgButton;
+	//mairubisheng
+	COriginalButton* m_mairubishengButton;
 };
 
 #endif // StockClient_H

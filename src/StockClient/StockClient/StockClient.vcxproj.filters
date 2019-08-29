@@ -95,6 +95,15 @@
     <ClCompile Include="Win7SaveAllMarketTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="MairubishengTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveTodayMarketFileTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="TodayMarketFileToMemoryTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -139,6 +148,15 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="Win7SaveAllMarketTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="MairubishengTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="SaveTodayMarketFileTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="TodayMarketFileToMemoryTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>
