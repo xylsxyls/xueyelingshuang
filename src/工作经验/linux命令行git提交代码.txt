@@ -1,0 +1,6 @@
+git add 文件
+git add -u
+git commit -m '注释'
+git push
+提交前查看修改过的部分
+git diff

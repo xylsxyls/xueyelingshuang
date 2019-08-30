@@ -1,0 +1,17 @@
+gdb调试报错:Missing separate debuginfos
+HappyBoyLi关注0人评论2716人阅读2018-09-29 01:20:07
+在centos7上面gdb调试程序时候，报错信息是：
+Missing separate debuginfos, use: debuginfo-install glibc-2.17-157.el7_3.5.x86_64
+
+解决方案：
+1 先修改"/etc/yum.repos.d/CentOS-Debuginfo.repo"文件的 enable=1；有时候该文件不存在，则需要手工创建此文件并加入以下内容：
+
+[debug]
+name=CentOS-7 - Debuginfo
+baseurl=http://debuginfo.centos.org/7/$basearch/ 
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-Debug-7 
+enabled=1
+2 执行sudo yum install -y glibc 
+3 执行debuginfo-install glibc 
+即可解决该问题！
