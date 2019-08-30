@@ -1,0 +1,3 @@
+sudo hwclock --set --date '2016-01-08  15:15:15'    //设置硬件时间
+sudo hwclock  --hctosys                //设置系统时间和硬件时间同步
+sudo clock -w                                //保存时钟

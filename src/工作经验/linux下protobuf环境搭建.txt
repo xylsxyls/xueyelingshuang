@@ -1,0 +1,13 @@
+autoconf
+automake
+libtool
+curl (used to download gmock)
+make
+g++
+unzip
+
+
+./autogen.sh
+./configure --enable-shared
+make -j16
+make install
