@@ -11,7 +11,7 @@
 class GmpInt
 {
 public:
-	static void TenExp(mpz_t& num, int32_t exp);
+	static inline void TenExp(mpz_t& num, int32_t exp);
 
 	mpz_t m_integer;
 };

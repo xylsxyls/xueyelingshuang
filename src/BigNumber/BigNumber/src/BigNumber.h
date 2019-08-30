@@ -40,15 +40,15 @@ public:
     BigNumber operator = (const BigNumber& num);
 
 public:
-	friend BigNumber operator + (const BigNumber& x, const BigNumber& y)
+	friend inline BigNumber operator + (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::add(x, y);
 	}
-	friend BigNumber operator - (const BigNumber& x, const BigNumber& y)
+	friend inline BigNumber operator - (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::sub(x, y);
 	}
-	friend BigNumber operator * (const BigNumber& x, const BigNumber& y)
+	friend inline BigNumber operator * (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::mul(x, y);
 	}
@@ -57,24 +57,24 @@ public:
 	{
 		return BigNumber::div(x, y);
 	}
-	friend BigNumber operator % (const BigNumber& x, const BigNumber& y)
+	friend inline BigNumber operator % (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::mod(x, y);
 	}
 
-	friend bool operator == (const BigNumber& x, const BigNumber& y)
+	friend inline bool operator == (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::equal(x, y);
 	}
-	friend bool operator != (const BigNumber& x, const BigNumber& y)
+	friend inline bool operator != (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::notEqual(x, y);
 	}
-	friend bool operator >  (const BigNumber& x, const BigNumber& y)
+	friend inline bool operator >  (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::bigThan(x, y);
 	}
-	friend bool operator >= (const BigNumber& x, const BigNumber& y)
+	friend inline bool operator >= (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::bigEqual(x, y);
 	}
@@ -82,27 +82,27 @@ public:
 	{
 		return BigNumber::smallThan(x, y);
 	}
-	friend bool operator <= (const BigNumber& x, const BigNumber& y)
+	friend inline bool operator <= (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::smallEqual(x, y);
 	}
 
-	BigNumber operator ++ ();//前++
-	BigNumber operator -- ();//前--
-	BigNumber operator ++ (int);//后++
-	BigNumber operator -- (int);//后--
+	inline BigNumber operator ++ ();//前++
+	inline BigNumber operator -- ();//前--
+	inline BigNumber operator ++ (int);//后++
+	inline BigNumber operator -- (int);//后--
 
-	BigNumber pow(const BigNumber& powNum, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
+	inline BigNumber pow(const BigNumber& powNum, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
 	std::string toString() const;
 
 	/** 返回数若为除数，且为0时不崩溃，除后返回0，含有精度
 	*/
-	BigNumber zero() const;
+	inline BigNumber zero() const;
 
-	BigNumber abs() const;
+	inline BigNumber abs() const;
 
-    BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST) const;
+	inline BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST) const;
 
 	//以下3函数都是返回本身
 	BigNumber& setPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
@@ -112,22 +112,22 @@ public:
 	//除法规则
 	BigNumber& setDivParam(int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
-	static BigNumber minNumber(const BigNumber& x, const BigNumber& y);
-	static BigNumber maxNumber(const BigNumber& x, const BigNumber& y);
+	static inline BigNumber minNumber(const BigNumber& x, const BigNumber& y);
+	static inline BigNumber maxNumber(const BigNumber& x, const BigNumber& y);
 
 private:
-	static BigNumber add(const BigNumber& x, const BigNumber& y);
-	static BigNumber sub(const BigNumber& x, const BigNumber& y);
-	static BigNumber mul(const BigNumber& x, const BigNumber& y);
-	static BigNumber div(const BigNumber& x, const BigNumber& y);
-	static BigNumber mod(const BigNumber& x, const BigNumber& y);
+	static inline BigNumber add(const BigNumber& x, const BigNumber& y);
+	static inline BigNumber sub(const BigNumber& x, const BigNumber& y);
+	static inline BigNumber mul(const BigNumber& x, const BigNumber& y);
+	static inline BigNumber div(const BigNumber& x, const BigNumber& y);
+	static inline BigNumber mod(const BigNumber& x, const BigNumber& y);
 
-	static bool equal(const BigNumber& x, const BigNumber& y);
-	static bool notEqual(const BigNumber& x, const BigNumber& y);
-	static bool bigThan(const BigNumber& x, const BigNumber& y);
-	static bool bigEqual(const BigNumber& x, const BigNumber& y);
-	static bool smallThan(const BigNumber& x, const BigNumber& y);
-	static bool smallEqual(const BigNumber& x, const BigNumber& y);
+	static inline bool equal(const BigNumber& x, const BigNumber& y);
+	static inline bool notEqual(const BigNumber& x, const BigNumber& y);
+	static inline bool bigThan(const BigNumber& x, const BigNumber& y);
+	static inline bool bigEqual(const BigNumber& x, const BigNumber& y);
+	static inline bool smallThan(const BigNumber& x, const BigNumber& y);
+	static inline bool smallEqual(const BigNumber& x, const BigNumber& y);
 
 private:
 #ifdef _MSC_VER
