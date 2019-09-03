@@ -1,0 +1,32 @@
+
+https://blog.csdn.net/Mr_zhliang/article/details/83546996
+
+
+1 sudo apt-get install build-essential autoconf libtool libgflags-dev libgtest-dev clang libc++-dev pkg-config unzip
+
+2 git clone -b $(curl -L http://grpc.io/release) https://github.com/grpc/grpc
+
+3 cd grpc
+
+4 git submodule update --init
+
+5 make
+
+6 sudo make install
+
+7 cd third_party/protobuf
+
+8 sudo ./autogen.sh
+
+9 sudo ./configure
+
+10 make
+
+11 sudo make install
+--------------------- 
+作者：时暑 
+来源：CSDN 
+原文：https://blog.csdn.net/wjb123sw99/article/details/84860494 
+版权声明：本文为博主原创文章，转载请附上博文链接！
+
+https://blog.csdn.net/wjb123sw99/article/details/84860494

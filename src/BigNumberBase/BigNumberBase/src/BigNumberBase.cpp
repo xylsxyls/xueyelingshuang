@@ -286,8 +286,8 @@ BigNumberBase::BigNumberCompare BigNumberBase::Compare(const BigNumberBase& x, c
 {
 	BigNumberBase result = sub(x, y);
 	std::string strResult = result.toString();
-	char firstChara = strResult[0];
-	char lastChara = strResult[strResult.size() - 1];
+	char firstChara = strResult.front();
+	char lastChara = strResult.back();
 	if (firstChara == '-')
 	{
 		return BigNumberCompare::SMALL;

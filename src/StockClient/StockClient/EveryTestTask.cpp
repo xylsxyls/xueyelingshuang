@@ -13,7 +13,6 @@ m_stockClient(nullptr)
 
 void EveryTestTask::DoTask()
 {
-	RCSend("%d", ::GetTickCount());
 	std::string stock = m_stock;
 	
 	CStopWatch marketWatch;
@@ -64,6 +63,12 @@ void EveryTestTask::DoTask()
 		}
 	} while (m_spMarket->next());
 	BigNumber allFund = fund.allFund(m_spMarket->day());
+	//auto stockLog = fund.stockLog();
+	//int32_t lineIndex = -1;
+	//while (lineIndex++ != stockLog.size() - 1)
+	//{
+	//	RCSend("stocklog = %s", stockLog[lineIndex].c_str());
+	//}
 	RCSend("stock = %s, allFund = %s", stock.c_str(), allFund.toString().c_str());
 	static BigNumber allStockFund = 0;
 	static int x = 0;

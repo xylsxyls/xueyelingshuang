@@ -339,20 +339,12 @@ std::string CStringManager::GetMidString(const std::string& src, const std::stri
 
 uint64_t CStringManager::atoui64(const char* str)
 {
-	uint64_t result;
-	std::stringstream strValue;
-	strValue << str;
-	strValue >> result;
-	return result;
+	return _strtoui64(str, nullptr, 10);
 }
 
 int64_t CStringManager::atoi64(const char* str)
 {
-	int64_t result;
-	std::stringstream strValue;
-	strValue << str;
-	strValue >> result;
-	return result;
+	return _atoi64(str);
 }
 
 std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
