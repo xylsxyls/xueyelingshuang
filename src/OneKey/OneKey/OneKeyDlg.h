@@ -36,4 +36,5 @@ public:
 	CButton m_button;
 	CComboBox m_type;
 	afx_msg void OnSelchangeCombo1();
+	CEdit m_edit;
 };

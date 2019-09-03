@@ -15,6 +15,7 @@
 #include "CSmallFlashTask.h"
 #include "CWeqTask.h"
 #include "CRightClickTask.h"
+#include "IntoGameTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -84,6 +85,7 @@ void COneKeyDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_BUTTON1, m_button);
 	DDX_Control(pDX, IDC_COMBO1, m_type);
+	DDX_Control(pDX, IDC_EDIT1, m_edit);
 }
 
 BEGIN_MESSAGE_MAP(COneKeyDlg, CDialogEx)
@@ -297,6 +299,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 	m_type.AddString("刀锋");
 	m_type.AddString("劫");
+	m_type.AddString("进游戏");
 	m_type.SelectString(0, "刀锋");
 	m_button.SetFocus();
 	g_threadId = CTaskThreadManager::Instance().Init();
@@ -360,6 +363,7 @@ HCURSOR COneKeyDlg::OnQueryDragIcon()
 void COneKeyDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->StopCurTask();
 }
 
 
@@ -385,5 +389,16 @@ void COneKeyDlg::OnSelchangeCombo1()
 	else if (str == "劫")
 	{
 		type = 2;
+	}
+	else if (str == "进游戏")
+	{
+		type = 3;
+		CString strTime;
+		m_edit.GetWindowText(strTime);
+		int32_t time = atoi(strTime.GetBuffer());
+		strTime.ReleaseBuffer();
+		std::shared_ptr<IntoGameTask> spIntoGameTask(new IntoGameTask);
+		spIntoGameTask->setParam(time);
+		CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->PostTask(spIntoGameTask);
 	}
 }
