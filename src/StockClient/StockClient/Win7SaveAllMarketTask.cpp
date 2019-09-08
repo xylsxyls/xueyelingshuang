@@ -31,8 +31,6 @@ void Win7SaveAllMarketTask::DoTask()
 	
 	CSystem::CreateDir(CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\");
 	std::string marketFolder = CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\";
-	//std::string marketFolder = "D:\\xueyelingshuang\\lib\\CurrentAllMarketFile\\";
-	StockClientLogicManager::instance().openTonghuashun();
 	CMouse::MoveAbsolute(xyls::Point(98, 7), 50);
 	CMouse::LeftClick();
 	CMouse::MoveOpposite(xyls::Point(46, 188), 50);

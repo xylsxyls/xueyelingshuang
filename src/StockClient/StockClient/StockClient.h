@@ -36,6 +36,7 @@ private slots:
 	void onInitRedisButtonClicked();
 	void onAddAvgButtonClicked();
 	void onMairubishengButtonClicked();
+	void onShowAvgButtonClicked();
 
 public:
 	//œﬂ≥Ã≥ÿ
@@ -74,6 +75,8 @@ private:
 	COriginalButton* m_addAvgButton;
 	//mairubisheng
 	COriginalButton* m_mairubishengButton;
+	//œ‘ æavg
+	COriginalButton* m_showAvgButton;
 };
 
 #endif // StockClient_H

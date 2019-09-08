@@ -126,7 +126,7 @@ void StockIndicator::saveAvg(const std::string& stock, const std::map<IntDateTim
 		saveCalcData[date];
 		std::shared_ptr<std::vector<std::vector<std::string>>> dateData = StockMysql::instance().readCalc(stock, date, date);
 		std::vector<std::string>& saveCalcDateData = saveCalcData.find(date)->second;
-		if (dateData->empty())
+		if (dateData == nullptr)
 		{
 			saveCalcDateData.push_back(stockAvg->m_avg09_30.toString());
 			saveCalcDateData.push_back(stockAvg->m_avg10_00.toString());

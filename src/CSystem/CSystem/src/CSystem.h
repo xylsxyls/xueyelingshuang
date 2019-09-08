@@ -126,6 +126,8 @@ public:
 	static RECT rectValid(const RECT& rect);
 	//time_t转化为字符串时间，如果不是本地时间就是格林威治时间
 	static std::string timetToStr(time_t timet, bool isLocal = true);
+	//获取common中的文件名路径
+	static std::string commonFile(const std::string& name);
 
 public:
     static bool ifRedirFrobid;

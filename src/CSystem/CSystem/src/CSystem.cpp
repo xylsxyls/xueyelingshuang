@@ -758,8 +758,41 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
 	return buf;
 }
 
+std::string CSystem::commonFile(const std::string& name)
+{
+	double version = 0;
+	std::string strVersion;
+	std::string path = CSystem::GetEnvironment("xueyelingshuang") + "common\\" + name + "\\";
+	//文件句柄  
+	long hFile = 0;
+	//文件信息  
+	struct _finddata_t fileinfo;
+	std::string p;
+	if ((hFile = _findfirst(p.assign(path).append("\\*").c_str(), &fileinfo)) != -1)
+	{
+		do
+		{
+			std::string fileName(fileinfo.name);
+			auto index = fileName.find_first_of(name);
+			if (index != -1)
+			{
+				std::string strFileVersion = fileName.substr(name.length(), fileName.length() - name.length());
+				double fileVersion = atof(strFileVersion.c_str());
+				if (fileVersion > version)
+				{
+					version = fileVersion;
+					strVersion = strFileVersion;
+				}
+			}
+		} while (_findnext(hFile, &fileinfo) == 0);
+		_findclose(hFile);
+	}
+	return path + name + strVersion;
+}
+
 //int main()
 //{
+//	auto sss2 = CSystem::commonFile("FileReplace");
 //	CSystem::setClipboardData(CSystem::GetConsoleHwnd(), "12as34");
 //	//CSystem system;
 //	double x = CSystem::GetCPUSpeedGHz();

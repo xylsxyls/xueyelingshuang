@@ -17,9 +17,10 @@ public:
 	*/
 	static StockClientLogicManager& instance();
 
-	/** 打开tonghuashun
+	/** 获取tonghuashun路径
+	@return 返回tonghuashun路径
 	*/
-	void openTonghuashun();
+	std::string tonghuashunPath();
 
 Q_SIGNALS:
 	/** 发送任务完成信号

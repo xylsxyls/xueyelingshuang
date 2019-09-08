@@ -12,15 +12,9 @@ StockClientLogicManager& StockClientLogicManager::instance()
 	return s_stockClientLogicManager;
 }
 
-void StockClientLogicManager::openTonghuashun()
+std::string StockClientLogicManager::tonghuashunPath()
 {
-	if (CSystem::processFirstPid(L"hexin.exe") != 0)
-	{
-		Sleep(3000);
-		return;
-	}
-	ShellExecute(NULL, L"open", L"C:\\同花顺软件\\同花顺\\hexin.exe", NULL, NULL, SW_SHOW);
-	Sleep(8000);
+	return "C:\\同花顺软件\\同花顺\\hexin.exe";
 }
 
 void StockClientLogicManager::init()

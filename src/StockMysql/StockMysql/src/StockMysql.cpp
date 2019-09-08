@@ -255,12 +255,11 @@ void StockMysql::saveCalc(const std::string& stock, const std::map<IntDateTime, 
 		std::string& line = vecGroup.back().second;
 		line.append(date.dateToString());
 		int32_t index = -1;
-		while (index++ != data.size() - 2)
+		while (index++ != data.size() - 1)
 		{
-			line.append(data[index]);
 			line.push_back(',');
+			line.append(data[index]);
 		}
-		line.append(data[index]);
 	}
 	m_redis.setOrderGroups(stock, vecGroup);
 }

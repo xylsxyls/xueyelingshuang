@@ -104,6 +104,9 @@
     <ClCompile Include="TodayMarketFileToMemoryTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="OpenProcessTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -157,6 +160,9 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="TodayMarketFileToMemoryTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="OpenProcessTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>

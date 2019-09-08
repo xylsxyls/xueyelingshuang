@@ -15,9 +15,6 @@ CheckAllStockTask::CheckAllStockTask()
 void CheckAllStockTask::DoTask()
 {
 	std::string marketFolder = CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\";
-	//Ctxt allStockTxt(CSystem::GetCurrentExePath() + "all_stock.txt");
-	//allStockTxt.LoadTxt(Ctxt::SPLIT, "\t");
-
 	int32_t index = -1;
 	while (index++ != m_stockClient->m_todayMarket.size() - 1)
 	{

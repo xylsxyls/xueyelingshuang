@@ -19,6 +19,7 @@ void EveryTestSendTask::DoTask()
 	IntDateTime endTime = "2019-01-01";
 
 	std::vector<std::string> vecStock = StockMysql::instance().allStock();
+	std::sort(vecStock.begin(), vecStock.end());
 	m_stockClient->m_stockCount = vecStock.size();
 	int32_t index = -1;
 	while (index++ != vecStock.size() - 1)
