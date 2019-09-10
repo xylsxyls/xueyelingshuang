@@ -1,2 +1,1 @@
-std::chrono::milliseconds dura(500);
-		std::this_thread::sleep_for(dura);
+std::this_thread::sleep_for(std::chrono::milliseconds(1000));
