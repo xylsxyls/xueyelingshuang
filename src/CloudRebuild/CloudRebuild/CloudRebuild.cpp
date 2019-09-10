@@ -45,8 +45,11 @@ int main()
 	std::string srcPath = projectPath + projectName + "\\src\\";
 	std::string includePath = xueyePath + "include\\" + projectName + "\\";
 
-	//执行准备脚本（准备脚本中有依赖库的调用）
-	system(("call" + SPACE + MARK(beforeBatPath) + SPACE + bit + SPACE + dlllib + SPACE + debugRelease + (allSame == "" ? "" : (SPACE + allSame))).c_str());
+	if (allSame != "only")
+	{
+		//执行准备脚本（准备脚本中有依赖库的调用）
+		system(("call" + SPACE + MARK(beforeBatPath) + SPACE + bit + SPACE + dlllib + SPACE + debugRelease + (allSame == "" ? "" : (SPACE + allSame))).c_str());
+	}
 	
 	//编译工程
 	if (bit == "32")
