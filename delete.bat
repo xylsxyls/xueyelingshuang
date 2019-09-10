@@ -77,11 +77,14 @@ rmdir /q /s "%~dp0src\11Controls\11Controls\GeneratedFiles\"
 rmdir /q /s "%~dp0src\11Controls\11Controls\include\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\QtTest\QtTest\GeneratedFiles\"
+del "%~dp0src\QtTest\QtTest\QtTest.vcxproj.user"
 rmdir /q /s "%~dp0src\QtTest1\QtTest1\GeneratedFiles\"
+del "%~dp0src\QtTest1\QtTest1\QtTest1.vcxproj.user"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\QtClient\.vs\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\StockClient\StockClient\GeneratedFiles\"
+del "%~dp0src\StockClient\StockClient\StockClient.vcxproj.user"
 ::------------------------------------------------------------
 
 
