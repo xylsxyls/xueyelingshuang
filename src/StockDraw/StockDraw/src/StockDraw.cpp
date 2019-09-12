@@ -12,9 +12,9 @@ StockDraw& StockDraw::instance()
 	return s_stockDraw;
 }
 
-void StockDraw::showAvgKLine()
+void StockDraw::showAvgKLine(const std::string& stock, const IntDateTime& beginDate, const IntDateTime& endDate)
 {
 	StockDrawWidget stockDrawWidget;
-	stockDrawWidget.setAvgParam();
+	stockDrawWidget.setAvgParam(stock, beginDate, endDate);
 	stockDrawWidget.exec();
 }

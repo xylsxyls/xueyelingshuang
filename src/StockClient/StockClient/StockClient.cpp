@@ -368,7 +368,7 @@ void StockClient::onAddAvgButtonClicked()
 		return;
 	}
 
-	const std::string& stock = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
+	std::string stock = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime date = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 	std::map<IntDateTime, std::shared_ptr<StockAvg>> avgData;
 	avgData[date] = std::shared_ptr<StockAvg>(new StockAvg);
@@ -422,7 +422,30 @@ void StockClient::onMairubishengButtonClicked()
 
 void StockClient::onShowAvgButtonClicked()
 {
-	StockDraw::instance().showAvgKLine();
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_tip = QStringLiteral("gupiao");
+	line.m_defaultText = QStringLiteral("002912");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("开始日期");
+	line.m_defaultText = QStringLiteral("2019-09-12");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("结束日期");
+	line.m_defaultText = QStringLiteral("2019-09-12");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入需要展示的avg数据：");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+
+	std::string stock = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
+	IntDateTime beginDate = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
+	IntDateTime endDate = inputDialogParam.m_vecInputEx[2].m_editText.toStdString();
+
+	StockDraw::instance().showAvgKLine(stock, beginDate, endDate);
 }
 
 void StockClient::onTaskTip(const QString tip)

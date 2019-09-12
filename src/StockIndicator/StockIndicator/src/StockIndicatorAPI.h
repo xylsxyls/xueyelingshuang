@@ -3,6 +3,7 @@
 #include "StockIndicator.h"
 #include "StockWrIndicator.h"
 #include "StockRsiIndicator.h"
+#include "StockAvgIndicator.h"
 #include "StockWr.h"
 #include "StockRsi.h"
 #include "StockAvg.h"
