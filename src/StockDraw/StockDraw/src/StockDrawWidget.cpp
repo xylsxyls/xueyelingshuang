@@ -26,15 +26,16 @@ void StockDrawWidget::init()
 
 void StockDrawWidget::setAvgParam(const std::string& stock, const IntDateTime& beginDate, const IntDateTime& endDate)
 {
-	std::map<IntDateTime, std::vector<BigNumber>> marketTemp;
-	marketTemp["2019-09-12"].push_back(109.28);
-	marketTemp["2019-09-12"].push_back(109.28);
-	marketTemp["2019-09-12"].push_back(108.70);
-	marketTemp["2019-09-12"].push_back(108.70);
-	drawMarket(stock, marketTemp);
-	return;
+	//std::map<IntDateTime, std::vector<BigNumber>> marketTemp;
+	//marketTemp["2019-09-12"].push_back(109.28);
+	//marketTemp["2019-09-12"].push_back(109.28);
+	//marketTemp["2019-09-12"].push_back(108.70);
+	//marketTemp["2019-09-12"].push_back(108.70);
+	//drawMarket(stock, marketTemp);
+	//return;
 	StockIndicator::instance().loadCalcFromRedis(stock, beginDate, endDate);
 	std::shared_ptr<StockAvgIndicator> spDrawAvg = StockIndicator::instance().avg();
+	spDrawAvg->load();
 	StockMarket stockMarket;
 	stockMarket.loadFromRedis(stock, beginDate, endDate);
 	stockMarket.load();
@@ -69,6 +70,7 @@ void StockDrawWidget::drawOneKLine(QPainter& painter,
 	const std::vector<BigNumber>& dayMarket)
 {
 	BigNumber dayAmplitude = dayMarket[1] - dayMarket[2];
+	BigNumber dayRaise = dayMarket[3] - dayMarket[0];
 	BigNumber amplitude = maxHigh - minLow;
 	BigNumber drawHeight = dayAmplitude * height / amplitude.toPrec(16);
 	BigNumber openy = y + (maxHigh - dayMarket[0]) * height / amplitude.toPrec(16);
@@ -83,9 +85,9 @@ void StockDrawWidget::drawOneKLine(QPainter& painter,
 	int32_t xMid = width / 2 + x;
 	int32_t xRight = x + width - 1;
 
-	if (dayAmplitude >= 0)
+	if (dayRaise >= 0)
 	{
-		if (dayAmplitude == 0)
+		if (dayRaise == 0)
 		{
 			painter.setPen("#FFFFFF");
 		}
@@ -141,7 +143,7 @@ void StockDrawWidget::drawOneKLine(QPainter& painter,
 		dayMarketPoints[9].setX(xMid);
 		dayMarketPoints[9].setY(drawOpeny);
 		painter.drawPolyline(dayMarketPoints, 10);
-		painter.fillRect(xLeft, drawOpeny, width, drawOpeny - drawClosey, "#0000FF");
+		painter.fillRect(xLeft, drawOpeny, width, drawClosey - drawOpeny, "#0000FF");
 	}
 }
 

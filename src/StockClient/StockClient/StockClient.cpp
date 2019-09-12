@@ -428,10 +428,10 @@ void StockClient::onShowAvgButtonClicked()
 	line.m_defaultText = QStringLiteral("002912");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("开始日期");
-	line.m_defaultText = QStringLiteral("2019-09-12");
+	line.m_defaultText = QStringLiteral("2019-08-19");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = QStringLiteral("2019-09-12");
+	line.m_defaultText = QStringLiteral("2019-08-23");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要展示的avg数据：");
 	inputDialogParam.m_parent = windowHandle();
