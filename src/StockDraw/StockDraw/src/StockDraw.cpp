@@ -15,6 +15,7 @@ StockDraw& StockDraw::instance()
 void StockDraw::showAvgKLine(const std::string& stock, const IntDateTime& beginDate, const IntDateTime& endDate)
 {
 	StockDrawWidget stockDrawWidget;
-	stockDrawWidget.setAvgParam(stock, beginDate, endDate);
+	stockDrawWidget.setMarketParam(stock, beginDate, endDate);
+	stockDrawWidget.setAvgMarketParam(stock, beginDate, endDate);
 	stockDrawWidget.exec();
 }

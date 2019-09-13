@@ -24,7 +24,7 @@ void StockDrawWidget::init()
 	resize(1280, 720);
 }
 
-void StockDrawWidget::setAvgParam(const std::string& stock, const IntDateTime& beginDate, const IntDateTime& endDate)
+void StockDrawWidget::setAvgMarketParam(const std::string& stock, const IntDateTime& beginDate, const IntDateTime& endDate)
 {
 	//std::map<IntDateTime, std::vector<BigNumber>> marketTemp;
 	//marketTemp["2019-09-12"].push_back(109.28);
@@ -36,9 +36,18 @@ void StockDrawWidget::setAvgParam(const std::string& stock, const IntDateTime& b
 	StockIndicator::instance().loadCalcFromRedis(stock, beginDate, endDate);
 	std::shared_ptr<StockAvgIndicator> spDrawAvg = StockIndicator::instance().avg();
 	spDrawAvg->load();
+	if (spDrawAvg->empty())
+	{
+		return;
+	}
+
 	StockMarket stockMarket;
 	stockMarket.loadFromRedis(stock, beginDate, endDate);
 	stockMarket.load();
+	if (stockMarket.empty())
+	{
+		return;
+	}
 
 	std::map<IntDateTime, std::vector<BigNumber>> market;
 	do 
@@ -51,11 +60,32 @@ void StockDrawWidget::setAvgParam(const std::string& stock, const IntDateTime& b
 		dayMarket.push_back(spStockAvg->m_avgLow);
 		dayMarket.push_back(spStockAvg->m_avg15_00);
 	} while (stockMarket.next());
-	drawMarket(stock, market);
+	m_stock = stock;
+	m_avgMarket = market;
 }
 
-void StockDrawWidget::drawMarket(const std::string& stock, const std::map<IntDateTime, std::vector<BigNumber>>& market)
+void StockDrawWidget::setMarketParam(const std::string& stock, const IntDateTime& beginDate, const IntDateTime& endDate)
 {
+	StockMarket stockMarket;
+	stockMarket.loadFromRedis(stock, beginDate, endDate);
+	stockMarket.load();
+
+	if (stockMarket.empty())
+	{
+		return;
+	}
+
+	std::map<IntDateTime, std::vector<BigNumber>> market;
+	do
+	{
+		IntDateTime date = stockMarket.date();
+		std::shared_ptr<StockDay> spStockDay = stockMarket.day();
+		std::vector<BigNumber>& dayMarket = market[date];
+		dayMarket.push_back(spStockDay->open());
+		dayMarket.push_back(spStockDay->high());
+		dayMarket.push_back(spStockDay->low());
+		dayMarket.push_back(spStockDay->close());
+	} while (stockMarket.next());
 	m_stock = stock;
 	m_market = market;
 }
@@ -65,6 +95,9 @@ void StockDrawWidget::drawOneKLine(QPainter& painter,
 	int32_t width,
 	int32_t y,
 	int32_t height,
+	const QColor& rise,
+	const QColor& fall,
+	const QColor& flat,
 	const BigNumber& maxHigh,
 	const BigNumber& minLow,
 	const std::vector<BigNumber>& dayMarket)
@@ -89,11 +122,11 @@ void StockDrawWidget::drawOneKLine(QPainter& painter,
 	{
 		if (dayRaise == 0)
 		{
-			painter.setPen("#FFFFFF");
+			painter.setPen(flat);
 		}
 		else
 		{
-			painter.setPen("#FF6600");
+			painter.setPen(rise);
 		}
 		QPoint dayMarketPoints[10];
 		dayMarketPoints[0].setX(xMid);
@@ -120,7 +153,7 @@ void StockDrawWidget::drawOneKLine(QPainter& painter,
 	}
 	else
 	{
-		painter.setPen("#0000FF");
+		painter.setPen(fall);
 		QPoint dayMarketPoints[10];
 		dayMarketPoints[0].setX(xMid);
 		dayMarketPoints[0].setY(drawHighy);
@@ -143,7 +176,30 @@ void StockDrawWidget::drawOneKLine(QPainter& painter,
 		dayMarketPoints[9].setX(xMid);
 		dayMarketPoints[9].setY(drawOpeny);
 		painter.drawPolyline(dayMarketPoints, 10);
-		painter.fillRect(xLeft, drawOpeny, width, drawClosey - drawOpeny, "#0000FF");
+		painter.fillRect(xLeft, drawOpeny, width, drawClosey - drawOpeny, fall);
+	}
+}
+
+void StockDrawWidget::drawKLine(QPainter& painter,
+	int32_t x,
+	int32_t width,
+	int32_t y,
+	int32_t height,
+	int32_t space,
+	const QColor& rise,
+	const QColor& fall,
+	const QColor& flat,
+	const std::map<IntDateTime, std::vector<BigNumber>>& market)
+{
+	BigNumber maxHigh;
+	BigNumber minLow;
+	getMaxHighMinLow(maxHigh, minLow);
+
+	for (auto itMarket = market.begin(); itMarket != market.end(); ++itMarket)
+	{
+		const std::vector<BigNumber>& dayMarket = itMarket->second;
+		drawOneKLine(painter, x, width, y, height, rise, fall, flat, maxHigh, minLow, dayMarket);
+		x += (width + space);
 	}
 }
 
@@ -188,15 +244,8 @@ void StockDrawWidget::paintEvent(QPaintEvent* eve)
 	int32_t width = 5 * 2 + 1;
 	int32_t y = 50;
 	int32_t height = this->height() - y * 2;
-	BigNumber maxHigh;
-	BigNumber minLow;
-	getMaxHighMinLow(maxHigh, minLow);
 	int32_t space = 5;
-	
-	for (auto itMarket = m_market.begin(); itMarket != m_market.end(); ++itMarket)
-	{
-		std::vector<BigNumber>& dayMarket = itMarket->second;
-		drawOneKLine(painter, x, width, y, height, maxHigh, minLow, dayMarket);
-		x += (width + space);
-	}
+
+	drawKLine(painter, x, width, y, height, space, "#FF0000", "#00FF00", "#FFFF00", m_market);
+	drawKLine(painter, x, width, y, height, space, "#FF6600", "#0000FF", "#FFFFFF", m_avgMarket);
 }
