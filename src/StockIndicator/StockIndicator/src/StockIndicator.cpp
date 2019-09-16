@@ -143,17 +143,18 @@ void StockIndicator::saveAvg(const std::string& stock, const std::map<IntDateTim
 		else
 		{
 			saveCalcDateData = (*dateData)[0];
-			saveCalcDateData[calcIndex[0]] = stockAvg->m_avg09_30.toString();
-			saveCalcDateData[calcIndex[1]] = stockAvg->m_avg10_00.toString();
-			saveCalcDateData[calcIndex[2]] = stockAvg->m_avg10_30.toString();
-			saveCalcDateData[calcIndex[3]] = stockAvg->m_avg11_00.toString();
-			saveCalcDateData[calcIndex[4]] = stockAvg->m_avg11_30.toString();
-			saveCalcDateData[calcIndex[5]] = stockAvg->m_avg13_30.toString();
-			saveCalcDateData[calcIndex[6]] = stockAvg->m_avg14_00.toString();
-			saveCalcDateData[calcIndex[7]] = stockAvg->m_avg14_30.toString();
-			saveCalcDateData[calcIndex[8]] = stockAvg->m_avg15_00.toString();
-			saveCalcDateData[calcIndex[9]] = stockAvg->m_avgHigh.toString();
-			saveCalcDateData[calcIndex[10]] = stockAvg->m_avgLow.toString();
+			saveCalcDateData.erase(saveCalcDateData.begin());
+			saveCalcDateData[calcIndex[0] - 1] = stockAvg->m_avg09_30.toString();
+			saveCalcDateData[calcIndex[1] - 1] = stockAvg->m_avg10_00.toString();
+			saveCalcDateData[calcIndex[2] - 1] = stockAvg->m_avg10_30.toString();
+			saveCalcDateData[calcIndex[3] - 1] = stockAvg->m_avg11_00.toString();
+			saveCalcDateData[calcIndex[4] - 1] = stockAvg->m_avg11_30.toString();
+			saveCalcDateData[calcIndex[5] - 1] = stockAvg->m_avg13_30.toString();
+			saveCalcDateData[calcIndex[6] - 1] = stockAvg->m_avg14_00.toString();
+			saveCalcDateData[calcIndex[7] - 1] = stockAvg->m_avg14_30.toString();
+			saveCalcDateData[calcIndex[8] - 1] = stockAvg->m_avg15_00.toString();
+			saveCalcDateData[calcIndex[9] - 1] = stockAvg->m_avgHigh.toString();
+			saveCalcDateData[calcIndex[10] - 1] = stockAvg->m_avgLow.toString();
 		}
 	}
 	StockMysql::instance().saveCalc(stock, saveCalcData);

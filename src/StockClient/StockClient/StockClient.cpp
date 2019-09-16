@@ -332,10 +332,10 @@ void StockClient::onAddAvgButtonClicked()
 	InputDialogParam inputDialogParam;
 	InputEx line;
 	line.m_tip = QStringLiteral("gupiao");
-	line.m_defaultText = QStringLiteral("000000");
+	line.m_defaultText = QStringLiteral("002912");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("日期");
-	line.m_defaultText = QStringLiteral("1970-01-01");
+	line.m_defaultText = QStringLiteral("2019-08-01");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("09:30");
 	line.m_defaultText = QStringLiteral("0");
@@ -428,10 +428,10 @@ void StockClient::onShowAvgButtonClicked()
 	line.m_defaultText = QStringLiteral("002912");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("开始日期");
-	line.m_defaultText = QStringLiteral("2019-08-19");
+	line.m_defaultText = QStringLiteral("2019-06-21");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = QStringLiteral("2019-08-23");
+	line.m_defaultText = QStringLiteral("2019-09-16");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要展示的avg数据：");
 	inputDialogParam.m_parent = windowHandle();

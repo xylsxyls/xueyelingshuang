@@ -249,6 +249,7 @@ void StockMysql::saveCalc(const std::string& stock, const std::map<IntDateTime, 
 	for (auto itDate = calcData.begin(); itDate != calcData.end(); ++itDate)
 	{
 		const IntDateTime& date = itDate->first;
+		m_redis.deleteOrderGroupElementsByScore(stock, date.getDate(), date.getDate());
 		const std::vector<std::string>& data = itDate->second;
 		vecGroup.push_back(std::pair<int32_t, std::string>());
 		vecGroup.back().first = date.getDate();

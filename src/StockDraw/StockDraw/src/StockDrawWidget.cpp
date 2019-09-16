@@ -41,25 +41,39 @@ void StockDrawWidget::setAvgMarketParam(const std::string& stock, const IntDateT
 		return;
 	}
 
-	StockMarket stockMarket;
-	stockMarket.loadFromRedis(stock, beginDate, endDate);
-	stockMarket.load();
-	if (stockMarket.empty())
-	{
-		return;
-	}
+	//StockMarket stockMarket;
+	//stockMarket.loadFromRedis(stock, beginDate, endDate);
+	//stockMarket.load();
+	//if (stockMarket.empty())
+	//{
+	//	return;
+	//}
 
+	IntDateTime date = beginDate;
 	std::map<IntDateTime, std::vector<BigNumber>> market;
-	do 
+	while (true)
 	{
-		IntDateTime date = stockMarket.date();
 		std::shared_ptr<StockAvg> spStockAvg = spDrawAvg->day(date);
+		if (spStockAvg == nullptr)
+		{
+			if (date == endDate)
+			{
+				break;
+			}
+			date = date + 86400;
+			continue;
+		}
 		std::vector<BigNumber>& dayMarket = market[date];
 		dayMarket.push_back(spStockAvg->m_avg10_30);
 		dayMarket.push_back(spStockAvg->m_avgHigh);
 		dayMarket.push_back(spStockAvg->m_avgLow);
 		dayMarket.push_back(spStockAvg->m_avg15_00);
-	} while (stockMarket.next());
+		if (date == endDate)
+		{
+			break;
+		}
+		date = date + 86400;
+	}
 	m_stock = stock;
 	m_avgMarket = market;
 }
