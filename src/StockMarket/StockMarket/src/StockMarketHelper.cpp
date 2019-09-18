@@ -34,3 +34,12 @@ void StockMarketHelper::saveMarketToMysql(const std::string& stock, const std::s
 	}
 	StockMysql::instance().saveMarket(stock, vecMarket);
 }
+
+void StockMarketHelper::updateDateMarketToMysql(const std::string& stock, const IntDateTime& date, const std::vector<std::string>& market)
+{
+	std::vector<std::vector<std::string>> vecMarket;
+	vecMarket.push_back(market);
+	std::vector<std::string>& dateMarket = vecMarket.back();
+	dateMarket.insert(dateMarket.begin(), date.dateToString());
+	StockMysql::instance().saveMarket(stock, vecMarket);
+}

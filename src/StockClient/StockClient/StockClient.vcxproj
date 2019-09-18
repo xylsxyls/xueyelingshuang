@@ -193,6 +193,7 @@
     <ClCompile Include="StockClient.cpp" />
     <ClCompile Include="StockClientLogicManager.cpp" />
     <ClCompile Include="TodayMarketFileToMemoryTask.cpp" />
+    <ClCompile Include="UpdateTodayMarketTask.cpp" />
     <ClCompile Include="Win7SaveAllMarketTask.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -300,6 +301,7 @@
     <ClInclude Include="SaveMarketToMysqlTask.h" />
     <ClInclude Include="SaveTodayMarketFileTask.h" />
     <ClInclude Include="TodayMarketFileToMemoryTask.h" />
+    <ClInclude Include="UpdateTodayMarketTask.h" />
     <ClInclude Include="Win7SaveAllMarketTask.h" />
     <CustomBuild Include="StockClientLogicManager.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

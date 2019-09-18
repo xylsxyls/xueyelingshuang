@@ -1,5 +1,6 @@
 #pragma once
 #include "StockMarketMacro.h"
+#include "IntDateTime/IntDateTimeAPI.h"
 
 class StockMarketAPI StockMarketHelper
 {
@@ -9,4 +10,11 @@ public:
 	@param [in] file 下载的原始文件
 	*/
 	static void saveMarketToMysql(const std::string& stock, const std::string& file);
+
+	/** 更新当天hangqing
+	@param [in] stock gupiao代码
+	@param [in] date 日期
+	@param [in] market 当天hangqing
+	*/
+	static void updateDateMarketToMysql(const std::string& stock, const IntDateTime& date, const std::vector<std::string>& market);
 };

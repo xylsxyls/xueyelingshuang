@@ -30,6 +30,13 @@ void TodayMarketFileToMemoryTask::DoTask()
 	while (index++ != txt.m_vectxt.size() - 2)
 	{
 		std::vector<std::string>& vecLine = txt.m_vectxt[index];
+		if (vecLine.size() == 14)
+		{
+			auto it = vecLine.begin();
+			++it;
+			++it;
+			vecLine.erase(it);
+		}
 		m_stockClient->m_todayMarket.push_back(std::vector<std::string>());
 		std::string stock = vecLine[0];
 		stock = CStringManager::Mid(stock, 2, 6);
@@ -37,8 +44,17 @@ void TodayMarketFileToMemoryTask::DoTask()
 		std::string& name = vecLine[1];
 		m_stockClient->m_todayMarket.back().push_back(name);
 		m_stockClient->m_todayMarket.back().push_back((CStringManager::Replace(name, "ST", "ST") != 0) ? "1" : "0");
-		const std::string& stockClose = vecLine[vecLine.size() == 6 ? 3 : 2];
+
+		const std::string& stockOpen = vecLine[6];
+		m_stockClient->m_todayMarket.back().push_back(stockOpen);
+		const std::string& stockHigh = vecLine[8];
+		m_stockClient->m_todayMarket.back().push_back(stockHigh);
+		const std::string& stockLow = vecLine[10];
+		m_stockClient->m_todayMarket.back().push_back(stockLow);
+		const std::string& stockClose = vecLine[2];
 		m_stockClient->m_todayMarket.back().push_back(stockClose);
+		const std::string& stockPreClose = vecLine[4];
+		m_stockClient->m_todayMarket.back().push_back(stockPreClose);
 	}
 	std::sort(m_stockClient->m_todayMarket.begin(), m_stockClient->m_todayMarket.end(), sortFun);
 }

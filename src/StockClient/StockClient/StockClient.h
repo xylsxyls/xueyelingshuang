@@ -37,6 +37,7 @@ private slots:
 	void onAddAvgButtonClicked();
 	void onMairubishengButtonClicked();
 	void onShowAvgButtonClicked();
+	void onUpdateTodayMarketButtonClicked();
 
 public:
 	//线程池
@@ -47,7 +48,7 @@ public:
 	int32_t m_stockCount;
 	//发送任务线程
 	uint32_t m_sendTaskThreadId;
-	//当天hangqing
+	//当天hangqing，daima，名称，isST，kaigaodishou，zuoshou
 	std::vector<std::vector<std::string>> m_todayMarket;
 
 private:
@@ -77,6 +78,8 @@ private:
 	COriginalButton* m_mairubishengButton;
 	//显示avg
 	COriginalButton* m_showAvgButton;
+	//更新当天hangqing
+	COriginalButton* m_updateTodayMarketButton;
 };
 
 #endif // StockClient_H

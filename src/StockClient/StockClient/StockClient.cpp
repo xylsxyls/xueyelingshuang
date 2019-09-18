@@ -21,6 +21,7 @@
 #include "TodayMarketFileToMemoryTask.h"
 #include "MairubishengTask.h"
 #include "OpenProcessTask.h"
+#include "UpdateTodayMarketTask.h"
 #include "StockDraw/StockDrawAPI.h"
 
 StockClient::StockClient(QWidget* parent)
@@ -38,7 +39,8 @@ StockClient::StockClient(QWidget* parent)
 	m_initRedisButton(nullptr),
 	m_addAvgButton(nullptr),
 	m_mairubishengButton(nullptr),
-	m_showAvgButton(nullptr)
+	m_showAvgButton(nullptr),
+	m_updateTodayMarketButton(nullptr)
 {
 	ui.setupUi(this);
 	m_everyTestButton = new COriginalButton(this);
@@ -53,6 +55,7 @@ StockClient::StockClient(QWidget* parent)
 	m_addAvgButton = new COriginalButton(this);
 	m_mairubishengButton = new COriginalButton(this);
 	m_showAvgButton = new COriginalButton(this);
+	m_updateTodayMarketButton = new COriginalButton(this);
 	init();
 }
 
@@ -124,6 +127,10 @@ void StockClient::init()
 	m_showAvgButton->setText(QStringLiteral("显示avg"));
 	QObject::connect(m_showAvgButton, &COriginalButton::clicked, this, &StockClient::onShowAvgButtonClicked);
 
+	m_updateTodayMarketButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_updateTodayMarketButton->setText(QStringLiteral("更新当天hangqing"));
+	QObject::connect(m_updateTodayMarketButton, &COriginalButton::clicked, this, &StockClient::onUpdateTodayMarketButtonClicked);
+
 	m_sendTaskThreadId = CTaskThreadManager::Instance().Init();
 	int32_t index = -1;
 	while (index++ != m_threadCount - 1)
@@ -158,6 +165,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_addAvgButton);
 	vecButton.push_back(m_mairubishengButton);
 	vecButton.push_back(m_showAvgButton);
+	vecButton.push_back(m_updateTodayMarketButton);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -446,6 +454,25 @@ void StockClient::onShowAvgButtonClicked()
 	IntDateTime endDate = inputDialogParam.m_vecInputEx[2].m_editText.toStdString();
 
 	StockDraw::instance().showAvgKLine(stock, beginDate, endDate);
+}
+
+void StockClient::onUpdateTodayMarketButtonClicked()
+{
+	std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
+	spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);
+
+	std::shared_ptr<SaveTodayMarketFileTask> spSaveTodayMarketFileTask(new SaveTodayMarketFileTask);
+	spSaveTodayMarketFileTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveTodayMarketFileTask);
+
+	std::shared_ptr<TodayMarketFileToMemoryTask> spTodayMarketFileToMemoryTask(new TodayMarketFileToMemoryTask);
+	spTodayMarketFileToMemoryTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTodayMarketFileToMemoryTask);
+
+	std::shared_ptr<UpdateTodayMarketTask> spUpdateTodayMarketTask(new UpdateTodayMarketTask);
+	spUpdateTodayMarketTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayMarketTask);
 }
 
 void StockClient::onTaskTip(const QString tip)
