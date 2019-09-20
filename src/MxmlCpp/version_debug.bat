@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" MxmlCpp 32 dll debug same
