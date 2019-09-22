@@ -49,8 +49,9 @@ public:
 	/** 存储kaigaodishou
 	@param [in] stock gupiao代码
 	@param [in] vecMarket gupiao代码
+	@param [in] isUpdate 如果是更新则不会在开始前删除整张表并且具备更新功能
 	*/
-	void saveMarket(const std::string& stock, const std::vector<std::vector<std::string>>& vecMarket);
+	void saveMarket(const std::string& stock, const std::vector<std::vector<std::string>>& vecMarket, bool isUpdate = false);
 
 	/** 删除hangqing数据库
 	*/
@@ -202,10 +203,12 @@ public:
 	@param [in] indicatorType zhibiao类型
 	@param [in] fields 表头，英文逗号分隔，date开头
 	@param [in] indicatorData 数据
+	@param [in] isUpdate 如果是更新则在插入前不会删除整张表，并且具备更新功能
 	*/
 	void saveIndicator(const std::string& indicatorType,
 		const std::string& fields,
-		const std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData);
+		const std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
+		bool isUpdate = false);
 
 protected:
 	/** 新开一个kaigaodishou的表

@@ -83,13 +83,21 @@ void StockMysql::addStock(const std::string& stock)
 	m_mysql.execute(prepare);
 }
 
-void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vector<std::string>>& vecMarket)
+void StockMysql::saveMarket(const std::string& stock, const std::vector<std::vector<std::string>>& vecMarket, bool isUpdate)
 {
-	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyTableString(stock)));
-	createMarketHead(stock);
+	m_mysql.selectDb("stockmarket");
+	if (!isUpdate)
+	{
+		m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyTableString(stock)));
+		createMarketHead(stock);
+	}
 	int32_t lineIndex = -1;
 	while (lineIndex++ != vecMarket.size() - 1)
 	{
+		if (isUpdate)
+		{
+			m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::deleteString(stock, "date='" + vecMarket[lineIndex][0] + "'")));
+		}
 		auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString(stock, "date,open,high,low,close"));
 		int32_t index = -1;
 		while (index++ != vecMarket[lineIndex].size() - 1)
@@ -475,12 +483,17 @@ void StockMysql::saveAllStock(const std::vector<std::vector<std::string>>& allSt
 
 void StockMysql::saveIndicator(const std::string& indicatorType,
 	const std::string& fields,
-	const std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData)
+	const std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
+	bool isUpdate)
 {
 	std::string indicatorDbName = "stock" + indicatorType;
-	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyDatabaseString(indicatorDbName)));
-	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createDatabaseString(indicatorDbName)));
-
+	if (!isUpdate)
+	{
+		RCSend("正在删除%s数据库...", indicatorType.c_str());
+		m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyDatabaseString(indicatorDbName)));
+		RCSend("正在创建%s数据库...", indicatorType.c_str());
+		m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createDatabaseString(indicatorDbName)));
+	}
 	m_mysql.selectDb(indicatorDbName);
 
 	std::vector<std::string> vecFields = CStringManager::split(fields, ",");
@@ -504,8 +517,12 @@ void StockMysql::saveIndicator(const std::string& indicatorType,
 		int32_t lineIndex = -1;
 		while (lineIndex++ != data.size() - 1)
 		{
-			auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString(stock, fields));
 			const std::vector<std::string>& vecLine = data[lineIndex];
+			if (isUpdate)
+			{
+				m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::deleteString(stock, "date='" + vecLine[0] + "'")));
+			}
+			auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString(stock, fields));
 			int32_t index = -1;
 			while (index++ != vecLine.size() - 1)
 			{
@@ -521,7 +538,7 @@ void StockMysql::createMarketHead(const std::string& stock)
 {
 	m_mysql.selectDb("stockmarket");
 	std::vector<std::string> vecFields;
-	vecFields.push_back("date varchar(10)");
+	vecFields.push_back("date varchar(10) primary key");
 	vecFields.push_back("open varchar(8)");
 	vecFields.push_back("high varchar(8)");
 	vecFields.push_back("low varchar(8)");

@@ -185,16 +185,17 @@
     <ClCompile Include="EveryTestSendTask.cpp" />
     <ClCompile Include="MairubishengTask.cpp" />
     <ClCompile Include="OpenProcessTask.cpp" />
-    <ClCompile Include="SaveAllMarketTask.cpp" />
     <ClCompile Include="SaveAllStockTask.cpp" />
+    <ClCompile Include="SaveGroupMarketTask.cpp" />
     <ClCompile Include="SaveIndicatorToMysqlTask.cpp" />
     <ClCompile Include="SaveMarketToMysqlTask.cpp" />
     <ClCompile Include="SaveTodayMarketFileTask.cpp" />
     <ClCompile Include="StockClient.cpp" />
     <ClCompile Include="StockClientLogicManager.cpp" />
     <ClCompile Include="TodayMarketFileToMemoryTask.cpp" />
+    <ClCompile Include="UpdateTodayIndicatorTask.cpp" />
     <ClCompile Include="UpdateTodayMarketTask.cpp" />
-    <ClCompile Include="Win7SaveAllMarketTask.cpp" />
+    <ClCompile Include="Win7SaveGroupMarketTask.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.h">
@@ -290,19 +291,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CheckAllStockTask.h" />
-    <ClInclude Include="EveryTestTask.h" />
     <ClInclude Include="EveryTestSendTask.h" />
+    <ClInclude Include="EveryTestTask.h" />
     <ClInclude Include="InitRedisTask.h" />
     <ClInclude Include="MairubishengTask.h" />
     <ClInclude Include="OpenProcessTask.h" />
-    <ClInclude Include="SaveAllMarketTask.h" />
     <ClInclude Include="SaveAllStockTask.h" />
+    <ClInclude Include="SaveGroupMarketTask.h" />
     <ClInclude Include="SaveIndicatorToMysqlTask.h" />
     <ClInclude Include="SaveMarketToMysqlTask.h" />
     <ClInclude Include="SaveTodayMarketFileTask.h" />
+    <ClInclude Include="StockParam.h" />
     <ClInclude Include="TodayMarketFileToMemoryTask.h" />
+    <ClInclude Include="UpdateTodayIndicatorTask.h" />
     <ClInclude Include="UpdateTodayMarketTask.h" />
-    <ClInclude Include="Win7SaveAllMarketTask.h" />
+    <ClInclude Include="Win7SaveGroupMarketTask.h" />
     <CustomBuild Include="StockClientLogicManager.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing StockClientLogicManager.h...</Message>

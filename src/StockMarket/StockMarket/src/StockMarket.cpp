@@ -116,13 +116,14 @@ IntDateTime StockMarket::date() const
 	return m_date;
 }
 
-void StockMarket::setDate(const IntDateTime& date)
+bool StockMarket::setDate(const IntDateTime& date)
 {
 	if (m_stockData->m_history.find(date) == m_stockData->m_history.end())
 	{
-		return;
+		return false;
 	}
 	m_date = date;
+	return true;
 }
 
 void StockMarket::setFirstDate()

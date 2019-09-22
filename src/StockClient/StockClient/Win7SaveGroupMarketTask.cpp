@@ -1,4 +1,4 @@
-#include "Win7SaveAllMarketTask.h"
+#include "Win7SaveGroupMarketTask.h"
 #include "StockClientLogicManager.h"
 #include "CSystem/CSystemAPI.h"
 #include "CMouse/CMouseAPI.h"
@@ -8,7 +8,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "StockMysql/StockMysqlAPI.h"
 
-Win7SaveAllMarketTask::Win7SaveAllMarketTask():
+Win7SaveGroupMarketTask::Win7SaveGroupMarketTask():
 m_beginIndex(0),
 m_end(0),
 m_stockClient(nullptr),
@@ -17,16 +17,16 @@ m_exit(false)
 	
 }
 
-void Win7SaveAllMarketTask::DoTask()
+void Win7SaveGroupMarketTask::DoTask()
 {
-	if (m_allStock.empty())
+	if (m_groupStock.empty())
 	{
-		m_allStock = StockMysql::instance().allStockFromMysql();
+		m_groupStock = StockMysql::instance().allStockFromMysql();
 	}
 
 	if (m_end == 0)
 	{
-		m_end = m_allStock.size();
+		m_end = m_groupStock.size();
 	}
 	
 	CSystem::CreateDir(CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\");
@@ -42,11 +42,11 @@ void Win7SaveAllMarketTask::DoTask()
 		{
 			return;
 		}
-		const std::string& marketFilePath = marketFolder + m_allStock[index] + ".txt";
+		const std::string& marketFilePath = marketFolder + m_groupStock[index] + ".txt";
 		CMouse::MoveAbsolute(xyls::Point(408, 250), 0);
 		CMouse::LeftClick();
 		CSystem::Sleep(500);
-		CKeyboard::InputString(m_allStock[index] + "\n", 100);
+		CKeyboard::InputString(m_groupStock[index] + "\n", 100);
 		CSystem::Sleep(1000);
 		CMouse::RightClick();
 		CMouse::MoveAbsolute(xyls::Point(539, 412), 50);
@@ -88,15 +88,15 @@ void Win7SaveAllMarketTask::DoTask()
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("所有hangqing保存完成，01357,0中英文逗号分隔时间和星期"));
 }
 
-void Win7SaveAllMarketTask::setParam(int32_t beginIndex, int32_t endIndex, StockClient* stockClient, const std::vector<std::string>& allStock)
+void Win7SaveGroupMarketTask::setParam(int32_t beginIndex, int32_t endIndex, StockClient* stockClient, const std::vector<std::string>& groupStock)
 {
 	m_beginIndex = beginIndex;
 	m_end = endIndex;
 	m_stockClient = stockClient;
-	m_allStock = allStock;
+	m_groupStock = groupStock;
 }
 
-void Win7SaveAllMarketTask::StopTask()
+void Win7SaveGroupMarketTask::StopTask()
 {
 	m_exit = true;
 }

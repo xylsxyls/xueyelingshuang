@@ -107,6 +107,66 @@ void StockIndicator::saveRsi()
 	StockMysql::instance().saveIndicator("rsi", "date,rsi6,rsi12,rsi24", indicatorData);
 }
 
+void StockIndicator::saveDateWr(const IntDateTime& date)
+{
+	std::map<std::string, std::vector<std::vector<std::string>>> indicatorData;
+	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
+	int32_t index = -1;
+	while (index++ != allStock.size() - 1)
+	{
+		RCSend("calcWr = %d", index + 1);
+		const std::string& stock = allStock[index];
+		StockMarket market;
+		market.loadFromMysql(stock);
+		market.load();
+		if (!market.setDate(date))
+		{
+			continue;
+		}
+		indicatorData[stock];
+		auto& stockData = indicatorData.find(stock)->second;
+		stockData.push_back(std::vector<std::string>());
+		auto& stockDataBack = stockData.back();
+		stockDataBack.push_back(date.dateToString());
+		stockDataBack.push_back(StockIndicatorHelper::wr(10, date, market).toString());
+		stockDataBack.push_back(StockIndicatorHelper::wr(20, date, market).toString());
+	}
+	StockMysql::instance().saveIndicator("wr", "date,wr10,wr20", indicatorData, true);
+}
+
+void StockIndicator::saveDateRsi(const IntDateTime& date)
+{
+	std::map<std::string, std::vector<std::vector<std::string>>> indicatorData;
+	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
+	int32_t index = -1;
+	while (index++ != allStock.size() - 1)
+	{
+		RCSend("calcRsi = %d", index + 1);
+		const std::string& stock = allStock[index];
+		StockMarket market;
+		market.loadFromMysql(stock);
+		market.load();
+		if (!market.setDate(date))
+		{
+			continue;
+		}
+		indicatorData[stock];
+		
+		std::map<IntDateTime, BigNumber> rsi6Indicator = StockIndicatorHelper::rsiTongHuaShun(6, market);
+		std::map<IntDateTime, BigNumber> rsi12Indicator = StockIndicatorHelper::rsiTongHuaShun(12, market);
+		std::map<IntDateTime, BigNumber> rsi24Indicator = StockIndicatorHelper::rsiTongHuaShun(24, market);
+
+		auto& stockData = indicatorData.find(stock)->second;
+		stockData.push_back(std::vector<std::string>());
+		std::vector<std::string>& vecLine = stockData.back();
+		vecLine.push_back(date.dateToString());
+		vecLine.push_back(rsi6Indicator.rbegin()->second.toString());
+		vecLine.push_back(rsi12Indicator.rbegin()->second.toString());
+		vecLine.push_back(rsi24Indicator.rbegin()->second.toString());
+	}
+	StockMysql::instance().saveIndicator("rsi", "date,rsi6,rsi12,rsi24", indicatorData, true);
+}
+
 void StockIndicator::saveAvg(const std::string& stock, const std::map<IntDateTime, std::shared_ptr<StockAvg>>& avgData)
 {
 	std::map<std::string, std::vector<int32_t>> calcDataIndex = StockMysql::instance().getCalcDataIndex();

@@ -77,8 +77,9 @@ public:
 
 	/** 设入内置日期
 	@param [in] date 日期
+	@return 返回是否设置成功，不成功表示该日期不存在
 	*/
-	void setDate(const IntDateTime& date);
+	bool setDate(const IntDateTime& date);
 
 	/** 设入加载的第一天
 	*/

@@ -1,4 +1,4 @@
-#include "SaveAllMarketTask.h"
+#include "SaveGroupMarketTask.h"
 #include "StockClientLogicManager.h"
 #include "CSystem/CSystemAPI.h"
 #include "CMouse/CMouseAPI.h"
@@ -8,7 +8,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "StockMysql/StockMysqlAPI.h"
 
-SaveAllMarketTask::SaveAllMarketTask():
+SaveGroupMarketTask::SaveGroupMarketTask():
 m_beginIndex(0),
 m_end(0),
 m_stockClient(nullptr),
@@ -17,16 +17,16 @@ m_exit(false)
 	
 }
 
-void SaveAllMarketTask::DoTask()
+void SaveGroupMarketTask::DoTask()
 {
-	if (m_allStock.empty())
+	if (m_groupStock.empty())
 	{
-		m_allStock = StockMysql::instance().allStockFromMysql();
+		m_groupStock = StockMysql::instance().allStockFromMysql();
 	}
 
 	if (m_end == 0)
 	{
-		m_end = m_allStock.size();
+		m_end = m_groupStock.size();
 	}
 	
 	std::string marketFolder = CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\";
@@ -42,11 +42,11 @@ void SaveAllMarketTask::DoTask()
 		{
 			return;
 		}
-		const std::string& marketFilePath = marketFolder + m_allStock[index] + ".txt";
+		const std::string& marketFilePath = marketFolder + m_groupStock[index] + ".txt";
 		CMouse::MoveAbsolute(xyls::Point(179, 189), 0);
 		CMouse::LeftClick();
 		CSystem::Sleep(200);
-		CKeyboard::InputString(m_allStock[index] + "\n", 100);
+		CKeyboard::InputString(m_groupStock[index] + "\n", 100);
 		CSystem::Sleep(1000);
 		CMouse::RightClick();
 		CMouse::MoveAbsolute(xyls::Point(179 + 93, 189 + 163), 50);
@@ -88,15 +88,15 @@ void SaveAllMarketTask::DoTask()
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("所有hangqing保存完成，01357,0中英文逗号分隔时间和星期"));
 }
 
-void SaveAllMarketTask::setParam(int32_t beginIndex, int32_t endIndex, StockClient* stockClient, const std::vector<std::string>& allStock)
+void SaveGroupMarketTask::setParam(int32_t beginIndex, int32_t end, StockClient* stockClient, const std::vector<std::string>& groupStock)
 {
 	m_beginIndex = beginIndex;
-	m_end = endIndex;
+	m_end = end;
 	m_stockClient = stockClient;
-	m_allStock = allStock;
+	m_groupStock = groupStock;
 }
 
-void SaveAllMarketTask::StopTask()
+void SaveGroupMarketTask::StopTask()
 {
 	m_exit = true;
 }

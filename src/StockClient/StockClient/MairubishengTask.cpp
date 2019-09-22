@@ -41,7 +41,7 @@ void MairubishengTask::DoTask()
 		{
 			continue;
 		}
-		BigNumber price = m_stockClient->m_todayMarket[index][3].c_str();
+		BigNumber price = m_stockClient->m_todayMarket[index][6].c_str();
 		if (price < 10)
 		{
 			continue;

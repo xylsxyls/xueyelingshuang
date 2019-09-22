@@ -59,9 +59,6 @@
     <ClCompile Include="StockClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EveryTestTask.cpp">
-      <Filter>task</Filter>
-    </ClCompile>
     <ClCompile Include="EveryTestSendTask.cpp">
       <Filter>send</Filter>
     </ClCompile>
@@ -74,16 +71,25 @@
     <ClCompile Include="GeneratedFiles\Release\moc_StockClientLogicManager.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="SaveAllStockTask.cpp">
-      <Filter>task</Filter>
-    </ClCompile>
-    <ClCompile Include="SaveAllMarketTask.cpp">
-      <Filter>task</Filter>
-    </ClCompile>
     <ClCompile Include="CheckAllStockTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="EveryTestTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
     <ClCompile Include="InitRedisTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="MairubishengTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="OpenProcessTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveAllStockTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveGroupMarketTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
     <ClCompile Include="SaveIndicatorToMysqlTask.cpp">
@@ -92,22 +98,19 @@
     <ClCompile Include="SaveMarketToMysqlTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
-    <ClCompile Include="Win7SaveAllMarketTask.cpp">
-      <Filter>task</Filter>
-    </ClCompile>
-    <ClCompile Include="MairubishengTask.cpp">
-      <Filter>task</Filter>
-    </ClCompile>
     <ClCompile Include="SaveTodayMarketFileTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
     <ClCompile Include="TodayMarketFileToMemoryTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
-    <ClCompile Include="OpenProcessTask.cpp">
+    <ClCompile Include="UpdateTodayMarketTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
-    <ClCompile Include="UpdateTodayMarketTask.cpp">
+    <ClCompile Include="Win7SaveGroupMarketTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="UpdateTodayIndicatorTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
   </ItemGroup>
@@ -129,34 +132,34 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EveryTestTask.h">
-      <Filter>task</Filter>
-    </ClInclude>
     <ClInclude Include="EveryTestSendTask.h">
       <Filter>send</Filter>
     </ClInclude>
-    <ClInclude Include="SaveAllStockTask.h">
-      <Filter>task</Filter>
-    </ClInclude>
-    <ClInclude Include="SaveAllMarketTask.h">
-      <Filter>task</Filter>
-    </ClInclude>
     <ClInclude Include="CheckAllStockTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="EveryTestTask.h">
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="InitRedisTask.h">
       <Filter>task</Filter>
     </ClInclude>
-    <ClInclude Include="SaveMarketToMysqlTask.h">
+    <ClInclude Include="MairubishengTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="OpenProcessTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="SaveAllStockTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="SaveGroupMarketTask.h">
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="SaveIndicatorToMysqlTask.h">
       <Filter>task</Filter>
     </ClInclude>
-    <ClInclude Include="Win7SaveAllMarketTask.h">
-      <Filter>task</Filter>
-    </ClInclude>
-    <ClInclude Include="MairubishengTask.h">
+    <ClInclude Include="SaveMarketToMysqlTask.h">
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="SaveTodayMarketFileTask.h">
@@ -165,11 +168,17 @@
     <ClInclude Include="TodayMarketFileToMemoryTask.h">
       <Filter>task</Filter>
     </ClInclude>
-    <ClInclude Include="OpenProcessTask.h">
-      <Filter>task</Filter>
-    </ClInclude>
     <ClInclude Include="UpdateTodayMarketTask.h">
       <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="Win7SaveGroupMarketTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="UpdateTodayIndicatorTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="StockParam.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

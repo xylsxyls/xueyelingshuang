@@ -46,16 +46,17 @@ void TodayMarketFileToMemoryTask::DoTask()
 		m_stockClient->m_todayMarket.back().push_back((CStringManager::Replace(name, "ST", "ST") != 0) ? "1" : "0");
 
 		const std::string& stockOpen = vecLine[6];
-		m_stockClient->m_todayMarket.back().push_back(stockOpen);
+		m_stockClient->m_todayMarket.back().push_back(BigNumber(stockOpen.c_str()).toPrec(2).toString());
 		const std::string& stockHigh = vecLine[8];
-		m_stockClient->m_todayMarket.back().push_back(stockHigh);
+		m_stockClient->m_todayMarket.back().push_back(BigNumber(stockHigh.c_str()).toPrec(2).toString());
 		const std::string& stockLow = vecLine[10];
-		m_stockClient->m_todayMarket.back().push_back(stockLow);
+		m_stockClient->m_todayMarket.back().push_back(BigNumber(stockLow.c_str()).toPrec(2).toString());
 		const std::string& stockClose = vecLine[2];
-		m_stockClient->m_todayMarket.back().push_back(stockClose);
+		m_stockClient->m_todayMarket.back().push_back(BigNumber(stockClose.c_str()).toPrec(2).toString());
 		const std::string& stockPreClose = vecLine[4];
-		m_stockClient->m_todayMarket.back().push_back(stockPreClose);
+		m_stockClient->m_todayMarket.back().push_back(BigNumber(stockPreClose.c_str()).toPrec(2).toString());
 	}
+	m_stockClient->m_risestStock = m_stockClient->m_todayMarket[0][0];
 	std::sort(m_stockClient->m_todayMarket.begin(), m_stockClient->m_todayMarket.end(), sortFun);
 }
 

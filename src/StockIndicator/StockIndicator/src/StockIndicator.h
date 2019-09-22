@@ -54,6 +54,16 @@ public:
 	*/
 	void saveRsi();
 
+	/** 存储某一天的wr
+	@param [in] date 日期
+	*/
+	void saveDateWr(const IntDateTime& date);
+
+	/** 存储某一天的rsi
+	@param [in] date 日期
+	*/
+	void saveDateRsi(const IntDateTime& date);
+
 	/** 存储avg
 	@param [in] stock gupiao代码
 	@param [in] avgData junxian数据

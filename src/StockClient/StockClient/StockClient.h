@@ -4,6 +4,7 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_StockClient.h"
 #include <memory>
+#include "IntDateTime/IntDateTimeAPI.h"
 
 class LineEdit;
 class COriginalButton;
@@ -19,6 +20,8 @@ protected:
 	void init();
 	bool check();
 
+	bool askPassword();
+
 protected:
 	void resizeEvent(QResizeEvent* eve);
 	void closeEvent(QCloseEvent* eve);
@@ -28,8 +31,8 @@ private slots:
 	void onEveryTestButtonClicked();
 	void onOpenTonghuashunButtonClicked();
 	void onSaveAllStockButtonClicked();
-	void onWin7SaveAllMarketButtonClicked();
-	void onSaveAllMarketButtonClicked();
+	void onWin7SaveGroupMarketButtonClicked();
+	void onSaveGroupMarketButtonClicked();
 	void onCheckAllMarketButtonClicked();
 	void onSaveMarketToMysqlButtonClicked();
 	void onSaveIndicatorToMysqlButtonClicked();
@@ -38,6 +41,8 @@ private slots:
 	void onMairubishengButtonClicked();
 	void onShowAvgButtonClicked();
 	void onUpdateTodayMarketButtonClicked();
+	void onUpdateTodayIndicatorButtonClicked();
+	void onEverydayTaskButtonClicked();
 
 public:
 	//线程池
@@ -50,6 +55,12 @@ public:
 	uint32_t m_sendTaskThreadId;
 	//当天hangqing，daima，名称，isST，kaigaodishou，zuoshou
 	std::vector<std::vector<std::string>> m_todayMarket;
+	//当天zhangfu最高的gupiao
+	std::string m_risestStock;
+	//是否有当天的hangqing文件
+	bool m_hasRisestFile;
+	//当天日期
+	IntDateTime m_today;
 
 private:
 	Ui::StockClientClass ui;
@@ -61,9 +72,9 @@ private:
 	//保存所有gupiao
 	COriginalButton* m_saveAllStockButton;
 	//win7保存所有hangqing文件
-	COriginalButton* m_win7SaveAllMarketButton;
+	COriginalButton* m_win7SaveGroupMarketButton;
 	//保存所有hangqing文件
-	COriginalButton* m_saveAllMarketButton;
+	COriginalButton* m_saveGroupMarketButton;
 	//检测所有hangqing文件
 	COriginalButton* m_checkAllMarketButton;
 	//hangqing存入mysql
@@ -80,6 +91,10 @@ private:
 	COriginalButton* m_showAvgButton;
 	//更新当天hangqing
 	COriginalButton* m_updateTodayMarketButton;
+	//更新当天zhibiao
+	COriginalButton* m_updateTodayIndicatorButton;
+	//每日任务
+	COriginalButton* m_everydayTaskButton;
 };
 
 #endif // StockClient_H

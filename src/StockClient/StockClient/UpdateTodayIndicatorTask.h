@@ -2,19 +2,15 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
 class StockClient;
-class UpdateTodayMarketTask : public CTask
+class UpdateTodayIndicatorTask : public CTask
 {
 public:
-	UpdateTodayMarketTask();
+	UpdateTodayIndicatorTask();
 
 public:
 	void DoTask();
 
 	void setParam(StockClient* stockClient);
-
-	virtual bool ReExecute();
-
-	virtual CTask* Clone();
 
 protected:
 	StockClient* m_stockClient;

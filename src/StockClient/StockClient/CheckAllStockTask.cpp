@@ -4,8 +4,8 @@
 #include "StockClient.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "StockClientLogicManager.h"
-#include "SaveAllMarketTask.h"
-#include "Win7SaveAllMarketTask.h"
+#include "SaveGroupMarketTask.h"
+#include "Win7SaveGroupMarketTask.h"
 
 CheckAllStockTask::CheckAllStockTask()
 {
@@ -21,7 +21,7 @@ void CheckAllStockTask::DoTask()
 		RCSend("check = %d", index + 1);
 		const std::vector<std::string>& vecLine = m_stockClient->m_todayMarket[index];
 		const std::string& stock = vecLine[0];
-		const std::string& stockClose = vecLine[3];
+		const std::string& stockClose = vecLine[6];
 		std::string marketPath = marketFolder + stock + ".txt";
 		if (!CSystem::fileExist(marketPath))
 		{
@@ -55,12 +55,12 @@ void CheckAllStockTask::DoTask()
 
 	if (CSystem::GetSystemVersionNum() < 655360)
 	{
-		std::shared_ptr<Win7SaveAllMarketTask> spWin7SaveAllMarketTask(new Win7SaveAllMarketTask);
+		std::shared_ptr<Win7SaveGroupMarketTask> spWin7SaveAllMarketTask(new Win7SaveGroupMarketTask);
 		spWin7SaveAllMarketTask->setParam(0, 0, m_stockClient, m_vecErrorStock);
 		CTaskThreadManager::Instance().GetThreadInterface(m_stockClient->m_sendTaskThreadId)->PostTask(spWin7SaveAllMarketTask);
 		return;
 	}
-	std::shared_ptr<SaveAllMarketTask> spSaveAllMarketTask(new SaveAllMarketTask);
+	std::shared_ptr<SaveGroupMarketTask> spSaveAllMarketTask(new SaveGroupMarketTask);
 	spSaveAllMarketTask->setParam(0, 0, m_stockClient, m_vecErrorStock);
 	CTaskThreadManager::Instance().GetThreadInterface(m_stockClient->m_sendTaskThreadId)->PostTask(spSaveAllMarketTask);
 }
