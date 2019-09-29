@@ -33,6 +33,12 @@ public:
 	*/
 	static std::map<IntDateTime, BigNumber> rsiTongHuaShun(int32_t days, StockMarket& stockMarket);
 
+	/** sarzhibiao
+	@param [in] stockMarket hangqing
+	@return ·µ»ØsarËùÓĞzhibiao
+	*/
+	static std::map<IntDateTime, BigNumber> sar(StockMarket& stockMarket);
+
 protected:
 	static BigNumber SMA(const BigNumber& X, const BigNumber& N, const BigNumber& M);
 	static BigNumber MAX(const BigNumber& X, const BigNumber& Y);

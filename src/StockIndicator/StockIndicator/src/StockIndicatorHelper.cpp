@@ -79,6 +79,11 @@ std::map<IntDateTime, BigNumber> StockIndicatorHelper::rsiTongHuaShun(int32_t da
 	return mapRsi;
 }
 
+std::map<IntDateTime, BigNumber> StockIndicatorHelper::sar(StockMarket& stockMarket)
+{
+
+}
+
 BigNumber StockIndicatorHelper::SMA(const BigNumber& X, const BigNumber& N, const BigNumber& M)
 {
 	if (N <= M)

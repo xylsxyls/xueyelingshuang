@@ -31,6 +31,9 @@
     <Filter Include="helper">
       <UniqueIdentifier>{53cda853-4fff-4daf-915b-eacf2b3d32cc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="indicator\sar">
+      <UniqueIdentifier>{80c7b5f9-9b2e-4cca-866c-5968ec3e77de}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\StockIndicator.h">
@@ -69,6 +72,12 @@
     <ClInclude Include="..\src\StockIndicatorHelper.h">
       <Filter>helper</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\StockSar.h">
+      <Filter>indicator\sar</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockSarIndicator.h">
+      <Filter>indicator\sar</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockIndicator.cpp">
@@ -88,6 +97,9 @@
     </ClCompile>
     <ClCompile Include="..\src\StockIndicatorHelper.cpp">
       <Filter>helper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockSarIndicator.cpp">
+      <Filter>indicator\sar</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

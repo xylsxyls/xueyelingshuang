@@ -29,6 +29,8 @@
     <ClInclude Include="..\src\StockIndicator.h" />
     <ClInclude Include="..\src\StockRsi.h" />
     <ClInclude Include="..\src\StockRsiIndicator.h" />
+    <ClInclude Include="..\src\StockSar.h" />
+    <ClInclude Include="..\src\StockSarIndicator.h" />
     <ClInclude Include="..\src\StockWr.h" />
     <ClInclude Include="..\src\StockWrIndicator.h" />
   </ItemGroup>
@@ -38,6 +40,7 @@
     <ClCompile Include="..\src\StockIndicator.cpp" />
     <ClCompile Include="..\src\StockIndicatorHelper.cpp" />
     <ClCompile Include="..\src\StockRsiIndicator.cpp" />
+    <ClCompile Include="..\src\StockSarIndicator.cpp" />
     <ClCompile Include="..\src\StockWrIndicator.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
