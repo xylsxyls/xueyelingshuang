@@ -25,6 +25,31 @@ public:
 	*/
 	bool load(const std::string& xml);
 
+	/** 创建一个xml字符串，会销毁读取的字符串或上次创建的字符串
+	@return 返回是否创建成功
+	*/
+	bool create();
+
+	/** 添加子节点
+	@param [in] name 子节点名
+	@return 返回是否创建成功
+	*/
+	bool addChild(const std::string& name);
+
+	/** 添加有文字的节点
+	@param [in] name 子节点名
+	@param [in] text 子节点内容
+	@return 返回是否创建成功
+	*/
+	bool addChild(const std::string& name, const std::string& text);
+
+	/** 添加节点属性
+	@param [in] name 节点属性名
+	@param [in] attr 属性内容
+	@return 返回是否添加成功
+	*/
+	bool addAttr(const std::string& name, const std::string& attr);
+
 	/** 进入子节点
 	@param [in] element 子节点名称，子节点名称如果为空则进入第一个子节点
 	@param [in] attr 属性名称，有则进入到含有该属性的第一个节点
@@ -71,5 +96,5 @@ public:
 
 private:
 	mxml_node_t* m_xml;
-	mxml_node_t* m_xmlRead;
+	mxml_node_t* m_xmlVisit;
 };
