@@ -81,6 +81,11 @@ public:
 	*/
 	bool setDate(const IntDateTime& date);
 
+	/** 一共有多少天
+	@return 返回一共有多少天
+	*/
+	int32_t days();
+
 	/** 设入加载的第一天
 	*/
 	void setFirstDate();

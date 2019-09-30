@@ -367,6 +367,10 @@ void StockClient::onSaveIndicatorToMysqlButtonClicked()
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = "rsi";
 	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = "sar";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = "boll";
+	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("需要计算的填1");
 	inputDialogParam.m_parent = windowHandle();
 	DialogManager::instance().makeDialog(inputDialogParam);
@@ -378,6 +382,8 @@ void StockClient::onSaveIndicatorToMysqlButtonClicked()
 	std::shared_ptr<SaveIndicatorToMysqlTask> spSaveIndicatorToMysqlTask(new SaveIndicatorToMysqlTask);
 	spSaveIndicatorToMysqlTask->setParam(atoi(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str()) == 1,
 		atoi(inputDialogParam.m_vecInputEx[1].m_editText.toStdString().c_str()) == 1,
+		atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str()) == 1,
+		atoi(inputDialogParam.m_vecInputEx[3].m_editText.toStdString().c_str()) == 1,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveIndicatorToMysqlTask);
 }
@@ -583,9 +589,9 @@ void StockClient::onEverydayTaskButtonClicked()
 
 void StockClient::onTaskTip(const QString tip)
 {
+	RCSend("time = %d, tip = %s", (int32_t)::GetTickCount(), CStringManager::UnicodeToAnsi(tip.toStdWString()).c_str());
 	TipDialogParam tipDialogParam;
 	tipDialogParam.m_tip = tip;
 	tipDialogParam.m_parent = windowHandle();
 	DialogManager::instance().makeDialog(tipDialogParam);
-	RCSend("error stock = %s", CStringManager::UnicodeToAnsi(tip.toStdWString()).c_str());
 }

@@ -126,6 +126,11 @@ bool StockMarket::setDate(const IntDateTime& date)
 	return true;
 }
 
+int32_t StockMarket::days()
+{
+	return m_stockData->m_history.size();
+}
+
 void StockMarket::setFirstDate()
 {
 	if (m_stockData->m_history.empty())

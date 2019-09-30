@@ -6,6 +6,8 @@
 
 class StockWrIndicator;
 class StockRsiIndicator;
+class StockSarIndicator;
+class StockBollIndicator;
 class StockAvgIndicator;
 struct StockAvg;
 /** zhibiao管理类
@@ -54,6 +56,14 @@ public:
 	*/
 	void saveRsi();
 
+	/** 存储sar
+	*/
+	void saveSar();
+
+	/** 存储boll
+	*/
+	void saveBoll();
+
 	/** 存储某一天的wr
 	@param [in] date 日期
 	*/
@@ -63,6 +73,16 @@ public:
 	@param [in] date 日期
 	*/
 	void saveDateRsi(const IntDateTime& date);
+
+	/** 存储某一天的sar
+	@param [in] date 日期
+	*/
+	void saveDateSar(const IntDateTime& date);
+
+	/** 存储某一天的boll
+	@param [in] date 日期
+	*/
+	void saveDateBoll(const IntDateTime& date);
 
 	/** 存储avg
 	@param [in] stock gupiao代码
@@ -79,6 +99,16 @@ public:
 	@return 返回rsi相关接口
 	*/
 	std::shared_ptr<StockRsiIndicator> rsi();
+
+	/** 获取sar相关接口
+	@return 返回sar相关接口
+	*/
+	std::shared_ptr<StockSarIndicator> sar();
+
+	/** 获取boll相关接口
+	@return 返回boll相关接口
+	*/
+	std::shared_ptr<StockBollIndicator> boll();
 
 	/** 获取avg相关接口
 	@return 返回avg相关接口

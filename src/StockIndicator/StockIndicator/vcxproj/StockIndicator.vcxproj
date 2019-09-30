@@ -23,6 +23,8 @@
     <ClInclude Include="..\src\IndicatorManagerBase.h" />
     <ClInclude Include="..\src\StockAvg.h" />
     <ClInclude Include="..\src\StockAvgIndicator.h" />
+    <ClInclude Include="..\src\StockBoll.h" />
+    <ClInclude Include="..\src\StockBollIndicator.h" />
     <ClInclude Include="..\src\StockIndicatorAPI.h" />
     <ClInclude Include="..\src\StockIndicatorHelper.h" />
     <ClInclude Include="..\src\StockIndicatorMacro.h" />
@@ -37,6 +39,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\IndicatorManagerBase.inl" />
     <ClCompile Include="..\src\StockAvgIndicator.cpp" />
+    <ClCompile Include="..\src\StockBollIndicator.cpp" />
     <ClCompile Include="..\src\StockIndicator.cpp" />
     <ClCompile Include="..\src\StockIndicatorHelper.cpp" />
     <ClCompile Include="..\src\StockRsiIndicator.cpp" />

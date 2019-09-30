@@ -216,8 +216,12 @@ std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readIndicator
 	std::vector<std::string> vecDbField;
 	vecDbName.push_back("stockwr");
 	vecDbName.push_back("stockrsi");
+	vecDbName.push_back("stocksar");
+	vecDbName.push_back("stockboll");
 	vecDbField.push_back("date,wr10,wr20");
 	vecDbField.push_back("rsi6,rsi12,rsi24");
+	vecDbField.push_back("sar5,state5,sar10,state10,sar20,state20");
+	vecDbField.push_back("bollmid,bollup,bolldown");
 	return redisFromMysql(stock, beginTime, endTime, 1, vecDbName, vecDbField);
 }
 
@@ -242,6 +246,8 @@ void StockMysql::saveIndicatorDataIndex() const
 	hashMap["date"] = "0";
 	hashMap["wr"] = "1,2";
 	hashMap["rsi"] = "3,4,5";
+	hashMap["sar"] = "6,7,8,9,10,11";
+	hashMap["boll"] = "12,13,14";
 	m_redis.setHashMap("indicatordataindex", hashMap);
 }
 
@@ -332,6 +338,8 @@ void StockMysql::saveAllDataIndex() const
 	hashMap["market"] = "1,2,3,4";
 	hashMap["wr"] = "5,6";
 	hashMap["rsi"] = "7,8,9";
+	hashMap["sar"] = "10,11,12,13,14,15";
+	hashMap["boll"] = "16,17,18";
 	m_redis.setHashMap("alldataindex", hashMap);
 }
 
@@ -347,9 +355,13 @@ std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readAll(const
 	vecDbName.push_back("stockmarket");
 	vecDbName.push_back("stockwr");
 	vecDbName.push_back("stockrsi");
+	vecDbName.push_back("stocksar");
+	vecDbName.push_back("stockboll");
 	vecDbField.push_back("*");
 	vecDbField.push_back("wr10,wr20");
 	vecDbField.push_back("rsi6,rsi12,rsi24");
+	vecDbField.push_back("sar5,state5,sar10,state10,sar20,state20");
+	vecDbField.push_back("bollmid,bollup,bolldown");
 	return redisFromMysql(stock, beginTime, endTime, 2, vecDbName, vecDbField);
 }
 

@@ -35,9 +35,25 @@ public:
 
 	/** sarzhibiao
 	@param [in] stockMarket hangqing
-	@return 返回sar所有zhibiao
+	@return 返回sar所有zhibiao，zhibiao数值和状态，12340分别代表红，绿，红转绿，绿转红，无效值，与枚举值对应
 	*/
-	static std::map<IntDateTime, BigNumber> sar(StockMarket& stockMarket);
+	static std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar(StockMarket& stockMarket,
+		int32_t cycle,
+		const BigNumber& afBegin = "0.02",
+		const BigNumber& afSpeed = "0.02",
+		const BigNumber& afMax = "0.2");
+
+	/** bollzhibiao
+	@param [in] date 计算日期
+	@param [in] stockMarket hangqing
+	@param [in] days 周期
+	@param [in] expand 扩张系数
+	@return 返回bollzhibiao，如果不存在返回-1，中上下
+	*/
+	static std::pair < BigNumber, std::pair<BigNumber, BigNumber>> boll(const IntDateTime& date,
+		StockMarket& stockMarket,
+		int32_t days = 20,
+		const BigNumber& expand = 2);
 
 protected:
 	static BigNumber SMA(const BigNumber& X, const BigNumber& N, const BigNumber& M);
