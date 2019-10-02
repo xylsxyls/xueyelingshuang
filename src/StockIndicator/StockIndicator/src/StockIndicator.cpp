@@ -8,6 +8,8 @@
 #include "StockMarket/StockMarketAPI.h"
 #include "StockIndicatorHelper.h"
 #include "StockAvg.h"
+#include "StockSar.h"
+#include "StockBoll.h"
 
 StockIndicator::StockIndicator()
 {
@@ -111,42 +113,48 @@ void StockIndicator::saveRsi()
 
 void StockIndicator::saveSar()
 {
-	std::map<std::string, std::vector<std::vector<std::string>>> indicatorData;
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	int32_t index = -1;
-	while (index++ != allStock.size() - 1)
+	std::vector<std::vector<std::string>> vecAllStock = split(allStock);
+	int32_t num = 0;
+	int32_t groupIndex = -1;
+	while (groupIndex++ != vecAllStock.size() - 1)
 	{
-		RCSend("calcSar = %d", index + 1);
-		const std::string& stock = allStock[index];
-		indicatorData[stock];
-		StockMarket market;
-		market.loadFromMysql(stock);
-		market.load();
-		std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar5Indicator = StockIndicatorHelper::sar(market, 5);
-		std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar10Indicator = StockIndicatorHelper::sar(market, 10);
-		std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar20Indicator = StockIndicatorHelper::sar(market, 20);
-
-		auto& stockData = indicatorData.find(stock)->second;
-		auto itSar5 = sar5Indicator.begin();
-		auto itSar10 = sar10Indicator.begin();
-		auto itSar20 = sar20Indicator.begin();
-		for (; itSar5 != sar5Indicator.end();)
+		std::map<std::string, std::vector<std::vector<std::string>>> indicatorData;
+		int32_t index = -1;
+		while (index++ != vecAllStock[groupIndex].size() - 1)
 		{
-			indicatorData[stock].push_back(std::vector<std::string>());
-			std::vector<std::string>& vecLine = stockData.back();
-			vecLine.push_back(itSar5->first.dateToString());
-			vecLine.push_back(itSar5->second.first.toString());
-			vecLine.push_back(std::to_string(itSar5->second.second));
-			vecLine.push_back(itSar10->second.first.toString());
-			vecLine.push_back(std::to_string(itSar10->second.second));
-			vecLine.push_back(itSar20->second.first.toString());
-			vecLine.push_back(std::to_string(itSar20->second.second));
-			++itSar5;
-			++itSar10;
-			++itSar20;
+			RCSend("calcSar = %d", ++num);
+			const std::string& stock = vecAllStock[groupIndex][index];
+			indicatorData[stock];
+			StockMarket market;
+			market.loadFromMysql(stock);
+			market.load();
+			std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar5Indicator = StockIndicatorHelper::sar(market, 5);
+			std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar10Indicator = StockIndicatorHelper::sar(market, 10);
+			std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar20Indicator = StockIndicatorHelper::sar(market, 20);
+
+			auto& stockData = indicatorData.find(stock)->second;
+			auto itSar5 = sar5Indicator.begin();
+			auto itSar10 = sar10Indicator.begin();
+			auto itSar20 = sar20Indicator.begin();
+			for (; itSar5 != sar5Indicator.end();)
+			{
+				indicatorData[stock].push_back(std::vector<std::string>());
+				std::vector<std::string>& vecLine = stockData.back();
+				vecLine.push_back(itSar5->first.dateToString());
+				vecLine.push_back(itSar5->second.first.toString());
+				vecLine.push_back(std::to_string(itSar5->second.second));
+				vecLine.push_back(itSar10->second.first.toString());
+				vecLine.push_back(std::to_string(itSar10->second.second));
+				vecLine.push_back(itSar20->second.first.toString());
+				vecLine.push_back(std::to_string(itSar20->second.second));
+				++itSar5;
+				++itSar10;
+				++itSar20;
+			}
 		}
+		StockMysql::instance().saveIndicator("sar", "date,sar5,state5,sar10,state10,sar20,state20", indicatorData, groupIndex != 0);
 	}
-	StockMysql::instance().saveIndicator("sar", "date,sar5,state5,sar10,state10,sar20,state20", indicatorData);
 }
 
 void StockIndicator::saveBoll()
@@ -406,11 +414,47 @@ std::shared_ptr<StockAvgIndicator> StockIndicator::avg()
 	return spStockAvgIndicator;
 }
 
+std::vector<std::vector<std::string>> StockIndicator::split(const std::vector<std::string>& allStock, int32_t num)
+{
+	std::vector<std::vector<std::string>> result;
+	int32_t index = -1;
+	while (true)
+	{
+		int32_t count = num;
+		result.push_back(std::vector<std::string>());
+		while (count-- != 0)
+		{
+			result.back().push_back(allStock[++index]);
+			if (index == allStock.size() - 1)
+			{
+				return result;
+			}
+		}
+	}
+	return result;
+}
+
 //int main()
 //{
 //	StockMarket stockMarket;
-//	stockMarket.loadFromMysql("600206");
+//	stockMarket.loadFromMysql("603826");
 //	stockMarket.load();
-//	std::pair < BigNumber, std::pair<BigNumber, BigNumber>> boll = StockIndicatorHelper::boll("2019-08-09", stockMarket);
+//	StockIndicator::instance().loadIndicatorFromRedis("603826");
+//	std::shared_ptr<StockSarIndicator> spSar = StockIndicator::instance().sar();
+//	spSar->load();
+//	printf("%s\n", spSar->day("2019-09-30")->m_sar5.toString().c_str());
+//	printf("%s\n", spSar->day("2019-09-30")->m_sar10.toString().c_str());
+//	printf("%s\n", spSar->day("2019-09-30")->m_sar20.toString().c_str());
+//	printf("%d\n", spSar->day("2019-09-30")->m_sarState5);
+//	printf("%d\n", spSar->day("2019-09-30")->m_sarState10);
+//	printf("%d\n", spSar->day("2019-09-30")->m_sarState20);
+//	std::shared_ptr<StockBollIndicator> spBoll = StockIndicator::instance().boll();
+//	spBoll->load();
+//	printf("%s\n", spBoll->day("2019-09-30")->m_mid.toString().c_str());
+//	printf("%s\n", spBoll->day("2019-09-30")->m_up.toString().c_str());
+//	printf("%s\n", spBoll->day("2019-09-30")->m_down.toString().c_str());
+//	auto boll = StockIndicatorHelper::wr(20,"2019-09-30", stockMarket);
+//	printf("%s", boll.toString().c_str());
+//	getchar();
 //	return 0;
 //}

@@ -160,6 +160,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			enter = !enter;
 		}
+		if (vkCode == 107)
+		{
+			enter = false;
+		}
 		else if (vkCode == 'W')
 		{
 			wDown = false;

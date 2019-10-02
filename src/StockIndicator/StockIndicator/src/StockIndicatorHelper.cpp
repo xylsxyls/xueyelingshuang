@@ -11,6 +11,10 @@ BigNumber StockIndicatorHelper::wr(int32_t days, const IntDateTime& date, StockM
 	while (spStockMarket.previous())
 	{
 		--days;
+		if (days == 0)
+		{
+			return ((high - close) / (high - low).toPrec(6).zero() * 100).toPrec(2);
+		}
 		BigNumber currentHigh = spStockMarket.day()->high();
 		BigNumber currentLow = spStockMarket.day()->low();
 		if (currentHigh > high)
@@ -20,10 +24,6 @@ BigNumber StockIndicatorHelper::wr(int32_t days, const IntDateTime& date, StockM
 		if (currentLow < low)
 		{
 			low = currentLow;
-		}
-		if (days == 0)
-		{
-			return ((high - close) / (high - low).toPrec(6).zero() * 100).toPrec(2);
 		}
 	}
 	return -1;

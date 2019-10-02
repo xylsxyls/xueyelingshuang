@@ -9,7 +9,12 @@ void StockSarIndicator::load()
 	{
 		std::shared_ptr<StockSar> spStockSar(new StockSar);
 		spStockSar->m_date = (*m_vecRedisIndicator)[index][m_dateIndex];
-		spStockSar->m_sar = (*m_vecRedisIndicator)[index][m_indicatorIndex[0]].c_str();
+		spStockSar->m_sar5 = (*m_vecRedisIndicator)[index][m_indicatorIndex[0]].c_str();
+		spStockSar->m_sarState5 = (StockSar::SarState)atoi((*m_vecRedisIndicator)[index][m_indicatorIndex[1]].c_str());
+		spStockSar->m_sar10 = (*m_vecRedisIndicator)[index][m_indicatorIndex[2]].c_str();
+		spStockSar->m_sarState10 = (StockSar::SarState)atoi((*m_vecRedisIndicator)[index][m_indicatorIndex[3]].c_str());
+		spStockSar->m_sar20 = (*m_vecRedisIndicator)[index][m_indicatorIndex[4]].c_str();
+		spStockSar->m_sarState20 = (StockSar::SarState)atoi((*m_vecRedisIndicator)[index][m_indicatorIndex[5]].c_str());
 		m_indicator[spStockSar->m_date] = spStockSar;
 	}
 	calc();

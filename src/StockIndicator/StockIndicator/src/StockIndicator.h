@@ -116,6 +116,9 @@ public:
 	std::shared_ptr<StockAvgIndicator> avg();
 
 protected:
+	std::vector<std::vector<std::string>> split(const std::vector<std::string>& allStock, int32_t num = 1000);
+
+protected:
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
