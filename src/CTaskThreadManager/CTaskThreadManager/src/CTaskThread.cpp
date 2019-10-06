@@ -134,10 +134,6 @@ void CTaskThread::WorkThread()
 				break;
 			}
 			::WaitForSingleObject(m_waitEvent, INFINITE);
-			if (m_waitForEndSignal)
-			{
-				break;
-			}
 		}
     }
 }
@@ -158,8 +154,8 @@ void CTaskThread::StopAllTaskUnlock()
 
 void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
 {
-	::SetEvent(m_waitEvent);
 	m_taskMap[taskLevel].push_back(spTask);
+	::SetEvent(m_waitEvent);
 	//如果添加任务的优先级高于当前任务则当前任务停止
 	if (m_spCurTask != nullptr && taskLevel > m_curTaskLevel)
 	{

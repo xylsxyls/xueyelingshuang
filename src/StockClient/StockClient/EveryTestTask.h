@@ -1,9 +1,9 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "IntDateTime/IntDateTimeAPI.h"
+#include "StockStrategy/StockStrategyAPI.h"
 
-class StockMarket;
-class StockWrIndicator;
-class StockRsiIndicator;
+class Strategy;
 class StockClient;
 
 class EveryTestTask : public CTask
@@ -13,16 +13,14 @@ public:
 
 	void DoTask();
 
-	void setParam(const std::string& stock,
-		const std::shared_ptr<StockMarket>& spMarket,
-		const std::shared_ptr<StockWrIndicator>& spStockWrIndicator,
-		const std::shared_ptr<StockRsiIndicator>& spStockRsiIndicator,
+	void setParam(StrategyEnum strategyEnum,
+		const IntDateTime& beginTime,
+		const IntDateTime& endTime,
 		StockClient* stockClient);
 
 private:
-	std::string m_stock;
-	std::shared_ptr<StockMarket> m_spMarket;
-	std::shared_ptr<StockWrIndicator> m_spStockWrIndicator;
-	std::shared_ptr<StockRsiIndicator> m_spStockRsiIndicator;
+	StrategyEnum m_strategyEnum;
+	IntDateTime m_beginTime;
+	IntDateTime m_endTime;
 	StockClient* m_stockClient;
 };

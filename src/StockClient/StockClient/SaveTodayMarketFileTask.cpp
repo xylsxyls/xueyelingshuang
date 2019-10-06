@@ -31,7 +31,9 @@ void SaveTodayMarketFileTask::DoTask()
 	CSystem::Sleep(1000);
 	CMouse::MoveAbsolute(xyls::Point(959, 289), 50);
 	CMouse::LeftClick();
+	Sleep(50);
 	CSystem::setClipboardData((HWND)m_stockClient->winId(), CSystem::GetCurrentExePath() + "all_stock.txt");
+	Sleep(50);
 	CKeyboard::KeyDown(CKeyboard::Ctrl);
 	CKeyboard::KeyDown('V');
 	CKeyboard::KeyUp(CKeyboard::Ctrl);

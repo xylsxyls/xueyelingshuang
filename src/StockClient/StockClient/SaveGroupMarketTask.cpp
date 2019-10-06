@@ -23,6 +23,10 @@ void SaveGroupMarketTask::DoTask()
 	{
 		m_groupStock = StockMysql::instance().allStockFromMysql();
 	}
+	if (m_groupStock.size() == 1 && m_groupStock[0].empty())
+	{
+		m_groupStock[0] = m_stockClient->m_risestStock;
+	}
 
 	if (m_end == 0)
 	{
@@ -94,6 +98,15 @@ void SaveGroupMarketTask::setParam(int32_t beginIndex, int32_t end, StockClient*
 	m_end = end;
 	m_stockClient = stockClient;
 	m_groupStock = groupStock;
+}
+
+void SaveGroupMarketTask::setParam(const std::string& stock, StockClient* stockClient)
+{
+	m_beginIndex = 0;
+	m_end = 1;
+	m_stockClient = stockClient;
+	m_groupStock.clear();
+	m_groupStock.push_back(stock);
 }
 
 void SaveGroupMarketTask::StopTask()

@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" StockForm 32 dll release same

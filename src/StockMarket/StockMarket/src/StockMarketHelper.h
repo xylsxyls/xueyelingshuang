@@ -17,4 +17,11 @@ public:
 	@param [in] market 当天hangqing
 	*/
 	static void updateDateMarketToMysql(const std::string& stock, const IntDateTime& date, const std::vector<std::string>& market);
+
+	/** 更新当天hangqing到redis
+	@param [in] stock gupiao代码
+	@param [in] date 日期
+	@param [in] market 当天hangqing
+	*/
+	static void updateDateMarketToRedis(const std::string& stock, const IntDateTime& date, const std::vector<std::string>& market);
 };

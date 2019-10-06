@@ -1,46 +1,37 @@
 #pragma once
 #include "StockStrategyMacro.h"
-#include "IntDateTime/IntDateTimeAPI.h"
+#include <memory>
 
 class Strategy;
-class StockFund;
+class StockMarket;
+class StockWrIndicator;
+class StockRsiIndicator;
+class StockSarIndicator;
+class StockBollIndicator;
+
+enum StrategyEnum
+{
+	STRATEGY_INIT,
+
+	SAR_RISE_BACK
+};
+
 class StockStrategyAPI StockStrategy
 {
-public:
-	/** 初始化
-	@param [in] strategy 策略
-	@param [in] stockFund 资金总仓
-	*/
-	void init(Strategy* strategy, StockFund* stockFund);
-
-	/** 回测
-	@param [in] vecStock 股票集合
-	@param [in] beginTime 开始时间
-	@param [in] endTime 结束时间
-	*/
-	void run(const std::vector<std::string>& vecStock, const IntDateTime& beginTime, const IntDateTime& endTime);
-
-	/** 出现的次数
-	@param [in] vecStock 股票集合
-	@param [in] beginTime 开始时间
-	@param [in] endTime 结束时间
-	*/
-	void times(const std::vector<std::string>& vecStock, const IntDateTime& beginTime, const IntDateTime& endTime);
-
-	/** 收益率统计，收益率，仓位比，持有天数，买入时间，卖出时间
-	@param [in] vecStock 股票集合
-	@param [in] beginTime 开始时间
-	@param [in] endTime 结束时间
-	*/
-	void profit(const std::vector<std::string>& vecStock, const IntDateTime& beginTime, const IntDateTime& endTime);
-
 protected:
-	/** 检测内部指针是否有效
-	@return 返回内部指针是否有效
-	*/
-	bool check();
+	StockStrategy();
 
-private:
-	Strategy* m_strategy;
-	StockFund* m_stockFund;
+public:
+	static StockStrategy& instance();
+
+public:
+	std::vector<std::string> strategyAllStock();
+
+	std::shared_ptr<Strategy> strategy(const std::string& stock,
+		const std::shared_ptr<StockMarket>& stockMarket,
+		const std::shared_ptr<StockWrIndicator>& stockWrIndicator,
+		const std::shared_ptr<StockRsiIndicator>& stockRsiIndicator,
+		const std::shared_ptr<StockSarIndicator>& stockSarIndicator,
+		const std::shared_ptr<StockBollIndicator>& stockBollIndicator,
+		StrategyEnum strategyEnum);
 };

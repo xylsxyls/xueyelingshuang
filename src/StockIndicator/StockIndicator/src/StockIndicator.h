@@ -64,6 +64,34 @@ public:
 	*/
 	void saveBoll();
 
+	/** 计算某一天的wr
+	@param [in] date 日期
+	@param [out] indicatorData 数据
+	@param [in] allStock 所有gupiao
+	*/
+	void dateWr(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock);
+
+	/** 计算某一天的rsi
+	@param [in] date 日期
+	@param [out] indicatorData 数据
+	@param [in] allStock 所有gupiao
+	*/
+	void dateRsi(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock);
+
+	/** 计算某一天的sar
+	@param [in] date 日期
+	@param [out] indicatorData 数据
+	@param [in] allStock 所有gupiao
+	*/
+	void dateSar(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock);
+
+	/** 计算某一天的boll
+	@param [in] date 日期
+	@param [out] indicatorData 数据
+	@param [in] allStock 所有gupiao
+	*/
+	void dateBoll(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock);
+
 	/** 存储某一天的wr
 	@param [in] date 日期
 	*/
@@ -89,6 +117,11 @@ public:
 	@param [in] avgData junxian数据
 	*/
 	void saveAvg(const std::string& stock, const std::map<IntDateTime, std::shared_ptr<StockAvg>>& avgData);
+
+	/** 更新某一天的zhibiao到redis
+	@param [in] date 日期
+	*/
+	void updateDateIndicatorToRedis(const IntDateTime& date);
 
 	/** 获取wr相关接口
 	@return 返回wr相关接口

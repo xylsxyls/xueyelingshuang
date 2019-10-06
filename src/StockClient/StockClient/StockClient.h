@@ -42,6 +42,8 @@ private slots:
 	void onShowAvgButtonClicked();
 	void onUpdateTodayMarketButtonClicked();
 	void onUpdateTodayIndicatorButtonClicked();
+	void onUpdateTodayRedisButtonClicked();
+	void onChooseStockButtonClicked();
 	void onEverydayTaskButtonClicked();
 
 public:
@@ -57,10 +59,10 @@ public:
 	std::vector<std::vector<std::string>> m_todayMarket;
 	//当天zhangfu最高的gupiao
 	std::string m_risestStock;
-	//是否有当天的hangqing文件
-	bool m_hasRisestFile;
 	//当天日期
 	IntDateTime m_today;
+	//过滤的gupiao
+	std::vector<std::string> m_allFilterStock;
 
 private:
 	Ui::StockClientClass ui;
@@ -93,6 +95,10 @@ private:
 	COriginalButton* m_updateTodayMarketButton;
 	//更新当天zhibiao
 	COriginalButton* m_updateTodayIndicatorButton;
+	//更新当天的redis
+	COriginalButton* m_updateTodayRedisButton;
+	//xuangu
+	COriginalButton* m_chooseStockButton;
 	//每日任务
 	COriginalButton* m_everydayTaskButton;
 };

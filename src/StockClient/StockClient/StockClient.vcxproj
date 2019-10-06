@@ -153,6 +153,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CheckAllStockTask.cpp" />
+    <ClCompile Include="ChooseStockTask.cpp" />
     <ClCompile Include="EveryTestTask.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_StockClient.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -180,9 +181,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="GetAllFilterStockTask.cpp" />
     <ClCompile Include="InitRedisTask.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="EveryTestSendTask.cpp" />
     <ClCompile Include="MairubishengTask.cpp" />
     <ClCompile Include="OpenProcessTask.cpp" />
     <ClCompile Include="SaveAllStockTask.cpp" />
@@ -195,6 +196,8 @@
     <ClCompile Include="TodayMarketFileToMemoryTask.cpp" />
     <ClCompile Include="UpdateTodayIndicatorTask.cpp" />
     <ClCompile Include="UpdateTodayMarketTask.cpp" />
+    <ClCompile Include="UpdateTodayRedisTask.cpp" />
+    <ClCompile Include="UpdateTodayToMemoryTask.cpp" />
     <ClCompile Include="Win7SaveGroupMarketTask.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -291,8 +294,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CheckAllStockTask.h" />
-    <ClInclude Include="EveryTestSendTask.h" />
+    <ClInclude Include="ChooseStockTask.h" />
     <ClInclude Include="EveryTestTask.h" />
+    <ClInclude Include="GetAllFilterStockTask.h" />
     <ClInclude Include="InitRedisTask.h" />
     <ClInclude Include="MairubishengTask.h" />
     <ClInclude Include="OpenProcessTask.h" />
@@ -305,6 +309,8 @@
     <ClInclude Include="TodayMarketFileToMemoryTask.h" />
     <ClInclude Include="UpdateTodayIndicatorTask.h" />
     <ClInclude Include="UpdateTodayMarketTask.h" />
+    <ClInclude Include="UpdateTodayRedisTask.h" />
+    <ClInclude Include="UpdateTodayToMemoryTask.h" />
     <ClInclude Include="Win7SaveGroupMarketTask.h" />
     <CustomBuild Include="StockClientLogicManager.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

@@ -43,7 +43,7 @@ public:
 	*/
 	void loadFromMysql(const std::string& stock);
 
-	/** 加载gupiao历史hangqing，将数据库数据转换为可用数据
+	/** 加载gupiao历史hangqing，将数据库数据转换为可用数据，如果是空数据则不会清空原有数据
 	*/
 	void load();
 
@@ -80,6 +80,13 @@ public:
 	@return 返回是否设置成功，不成功表示该日期不存在
 	*/
 	bool setDate(const IntDateTime& date);
+
+	/** 获取内存中的间隔天数
+	@param [in] date1 jiaoyiri日期1，1小
+	@param [in] date2 jiaoyiri日期2，2大
+	@return 返回内存中的间隔天数，包括头尾
+	*/
+	int32_t getMemoryDays(const IntDateTime& date1, const IntDateTime& date2);
 
 	/** 一共有多少天
 	@return 返回一共有多少天

@@ -1,40 +1,30 @@
 #pragma once
-#include "StockStrategyMacro.h"
-#include "StockMarket/StockMarketAPI.h"
-#include "StockIndex/StockIndexAPI.h"
-#include "StockHandle.h"
-#include <map>
-#include "StockFund/StockFundAPI.h"
+#include "BigNumber/BigNumberAPI.h"
+#include <vector>
+#include "IntDateTime/IntDateTimeAPI.h"
 
-class StockStrategyAPI Strategy
+/** 策略
+*/
+class Strategy
 {
-	friend class StockStrategy;
 public:
-	/** 构造函数
+	/** 加载必要数据
 	*/
-	Strategy();
+	virtual void load() = 0;
 
-	/** 析构函数
-	*/
-	virtual ~Strategy();
-
-public:
-	/** 策略
+	/** 单个gupiao是否需要mairu
 	@param [in] date 日期
-	@param [in] validStock 有效的股票集合，股票代码，股票行情，股票指标
-	@param [out] 传出买卖的股票，买为true，股票代码，冻结或解冻，都是正数
+	@param [out] price 价格
+	@param [out] date 百分比
+	@return 是否需要mairu
 	*/
-	virtual void strategy(const IntDateTime& date,
-		const std::map<std::string, std::pair<std::shared_ptr<StockMarket>, std::shared_ptr<StockIndex>>>& validStock,
-		std::vector<StockHandle>& vecStockHandle) = 0;
+	virtual bool buy(const IntDateTime& date, BigNumber& price, BigNumber& percent) = 0;
 
-protected:
-	/** 初始化，外部不需要调用
-	@param [in] stockFund 资金总仓
+	/** 单个gupiao是否需要maichu
+	@param [in] date 日期
+	@param [out] price 价格
+	@param [out] date 百分比
+	@return 是否需要maichu
 	*/
-	void init(StockFund* stockFund);
-
-protected:
-	//资金总仓
-	StockFund* m_stockFund;
+	virtual bool sell(const IntDateTime& date, BigNumber& price, BigNumber& percent) = 0;
 };

@@ -42,12 +42,12 @@ void StockMarket::loadFromMysql(const std::string& stock)
 
 void StockMarket::load()
 {
-	clear();
-	
-	if (m_market->empty())
+	if (m_market == nullptr || m_market->empty())
 	{
 		return;
 	}
+
+	clear();
 
 	if (!m_isLoadPreDate)
 	{
@@ -124,6 +124,34 @@ bool StockMarket::setDate(const IntDateTime& date)
 	}
 	m_date = date;
 	return true;
+}
+
+int32_t StockMarket::getMemoryDays(const IntDateTime& date1, const IntDateTime& date2)
+{
+	if (date1 > date2)
+	{
+		return 0;
+	}
+	auto itDate1 = m_stockData->m_history.find(date1);
+	auto itDate2 = m_stockData->m_history.find(date2);
+	if (itDate1 == m_stockData->m_history.end() || itDate2 == m_stockData->m_history.end())
+	{
+		return -1;
+	}
+	if (date1 == date2)
+	{
+		return 2;
+	}
+	int32_t day = 2;
+	while (true)
+	{
+		++day;
+		++itDate1;
+		if (itDate1 == itDate2)
+		{
+			return day;
+		}
+	}
 }
 
 int32_t StockMarket::days()
@@ -446,7 +474,7 @@ BigNumber StockMarket::getDays(const IntDateTime& date1, const IntDateTime& date
 	}
 	if (date1 == date2)
 	{
-		return 1;
+		return 2;
 	}
 	return StockMysql::instance().getDays(m_stockData->m_stock, date1, date2);
 }

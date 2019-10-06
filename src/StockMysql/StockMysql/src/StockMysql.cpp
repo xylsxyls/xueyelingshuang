@@ -74,6 +74,13 @@ std::vector<std::string> StockMysql::allStockFromMysql() const
 	return result;
 }
 
+std::vector<std::vector<std::string>> StockMysql::stockNameDb() const
+{
+	m_mysql.selectDb("stockname");
+	std::vector<std::string> result;
+	return m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("stock")))->toVector();
+}
+
 void StockMysql::addStock(const std::string& stock)
 {
 	m_mysql.selectDb("stockname");
@@ -346,6 +353,107 @@ void StockMysql::saveAllDataIndex() const
 std::map<std::string, std::vector<int32_t>> StockMysql::getAllDataIndex() const
 {
 	return getIndex("alldataindex");
+}
+
+void StockMysql::updateDateMarketToRedis(const std::string& stock, const IntDateTime& date, const std::vector<std::string>& market)
+{
+	std::map<std::string, std::vector<int32_t>> marketIndex = getMarketDataIndex();
+	m_redis.selectDbIndex(0);
+	if (!m_redis.keyExist(stock))
+	{
+		return;
+	}
+	std::vector<std::string> dateMarket = m_redis.getOrderGroupByScore(stock, date.getDate(), date.getDate())->toGroup();
+	if (!dateMarket.empty())
+	{
+		m_redis.deleteOrderGroupElementsByScore(stock, date.getDate(), date.getDate());
+	}
+	std::string redisDateMarket;
+	redisDateMarket.append(date.dateToString() + ",");
+	redisDateMarket.append(market[0] + ",");
+	redisDateMarket.append(market[1] + ",");
+	redisDateMarket.append(market[2] + ",");
+	redisDateMarket.append(market[3]);
+	m_redis.setOrderGroup(stock, date.getDate(), redisDateMarket);
+}
+
+void StockMysql::updateDateIndicatorToRedis(const IntDateTime& date,
+	const std::map<std::string, std::map<std::string, std::vector<std::string>>>& allIndicatorData)
+{
+	std::map<std::string, std::vector<int32_t>> indicatorIndex = getIndicatorDataIndex();
+	int32_t index = 0;
+	m_redis.selectDbIndex(1);
+	for (auto itIndicator = allIndicatorData.begin(); itIndicator != allIndicatorData.end(); ++itIndicator)
+	{
+		RCSend("update redis indicator = %d", ++index);
+		const std::string& stock = itIndicator->first;
+		const std::map<std::string, std::vector<std::string>>& indicatorMap = itIndicator->second;
+		if (!m_redis.keyExist(stock))
+		{
+			return;
+		}
+		std::vector<std::string> dateIndicator = m_redis.getOrderGroupByScore(stock, date.getDate(), date.getDate())->toGroup();
+		if (!dateIndicator.empty())
+		{
+			m_redis.deleteOrderGroupElementsByScore(stock, date.getDate(), date.getDate());
+		}
+		std::string redisDateMarket;
+		redisDateMarket.append(date.dateToString() + ",");
+		auto& wrIndex = indicatorIndex.find("wr")->second;
+		int32_t index = -1;
+		while (index++ != wrIndex.size() - 1)
+		{
+			redisDateMarket.append((indicatorMap.find("wr")->second)[index] + ",");
+		}
+		auto& rsiIndex = indicatorIndex.find("rsi")->second;
+		index = -1;
+		while (index++ != rsiIndex.size() - 1)
+		{
+			redisDateMarket.append((indicatorMap.find("rsi")->second)[index] + ",");
+		}
+		auto& sarIndex = indicatorIndex.find("sar")->second;
+		index = -1;
+		while (index++ != sarIndex.size() - 1)
+		{
+			redisDateMarket.append((indicatorMap.find("sar")->second)[index] + ",");
+		}
+		auto& bollIndex = indicatorIndex.find("boll")->second;
+		index = -1;
+		while (index++ != bollIndex.size() - 1)
+		{
+			redisDateMarket.append((indicatorMap.find("boll")->second)[index] + ",");
+		}
+		redisDateMarket.pop_back();
+		m_redis.setOrderGroup(stock, date.getDate(), redisDateMarket);
+	}
+}
+
+void StockMysql::updateAllDataRedis(const IntDateTime& date, const std::vector<std::string>& allStock) const
+{
+	int32_t index = -1;
+	while (index++ != allStock.size() - 1)
+	{
+		RCSend("update all data = %d", index + 1);
+		const std::string& stock = allStock[index];
+		m_redis.selectDbIndex(0);
+		std::vector<std::string> market = m_redis.getOrderGroupByScore(stock, date.getDate(), date.getDate())->toGroup();
+		if (market.empty() || market.size() >= 2)
+		{
+			continue;
+		}
+		std::string redisAlldata;
+		redisAlldata.append(market[0]);
+		m_redis.selectDbIndex(1);
+		std::string indicator = m_redis.getOrderGroupByScore(stock, date.getDate(), date.getDate())->toGroup()[0];
+		CStringManager::Delete(indicator, 0, date.dateToString().size());
+		redisAlldata.append(indicator);
+		m_redis.selectDbIndex(2);
+		if (!m_redis.getOrderGroupByScore(stock, date.getDate(), date.getDate())->toGroup().empty())
+		{
+			m_redis.deleteOrderGroupElementsByScore(stock, date.getDate(), date.getDate());
+		}
+		m_redis.setOrderGroup(stock, date.getDate(), redisAlldata);
+	}
 }
 
 std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readAll(const std::string& stock, const IntDateTime& beginTime /*= IntDateTime(0, 0)*/, const IntDateTime& endTime /*= IntDateTime(0, 0)*/) const

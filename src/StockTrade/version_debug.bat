@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" StockTrade 32 dll debug same

@@ -41,6 +41,11 @@ public:
 	*/
 	std::vector<std::string> allStockFromMysql() const;
 
+	/** 获取stockname中的所有数据
+	@return 返回stockname中的所有数据
+	*/
+	std::vector<std::vector<std::string>> stockNameDb() const;
+
 	/** 添加一个gupiao代码到gupiao集合
 	@param [in] stock gupiao代码
 	*/
@@ -148,6 +153,26 @@ public:
 	@return 返回所有数据索引值
 	*/
 	std::map<std::string, std::vector<int32_t>> getAllDataIndex() const;
+
+	/** 更新某一天hangqing到redis
+	@param [in] stock gupiao代码
+	@param [in] date 日期
+	@param [in] market hangiqng
+	*/
+	void updateDateMarketToRedis(const std::string& stock, const IntDateTime& date, const std::vector<std::string>& market);
+
+	/** 更新某一天的zhibiao到redis
+	@param [in] date 日期
+	@param [in] allIndicatorData 所有zhibiao数据
+	*/
+	void updateDateIndicatorToRedis(const IntDateTime& date,
+		const std::map<std::string, std::map<std::string, std::vector<std::string>>>& allIndicatorData);
+
+	/** 根据0和1索引值的redis更新所有数据的redis
+	@param [in] date 日期
+	@param [in] allStock 所有要更新的gupiao集合
+	*/
+	void updateAllDataRedis(const IntDateTime& date, const std::vector<std::string>& allStock) const;
 
 	/** 获取当前日期是否存在
 	@param [in] stock gupiao代码

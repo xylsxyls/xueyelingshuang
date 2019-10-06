@@ -43,3 +43,8 @@ void StockMarketHelper::updateDateMarketToMysql(const std::string& stock, const 
 	dateMarket.insert(dateMarket.begin(), date.dateToString());
 	StockMysql::instance().saveMarket(stock, vecMarket, true);
 }
+
+void StockMarketHelper::updateDateMarketToRedis(const std::string& stock, const IntDateTime& date, const std::vector<std::string>& market)
+{
+	StockMysql::instance().updateDateMarketToRedis(stock, date, market);
+}

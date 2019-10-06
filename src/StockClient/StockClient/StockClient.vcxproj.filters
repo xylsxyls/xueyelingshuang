@@ -36,9 +36,6 @@
     <Filter Include="task">
       <UniqueIdentifier>{fd7c440f-2d43-46cf-b531-50c7cb5c95be}</UniqueIdentifier>
     </Filter>
-    <Filter Include="send">
-      <UniqueIdentifier>{da8130d2-f304-4814-ab1b-82daf98097a0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="logic">
       <UniqueIdentifier>{783d1a8a-db09-4333-9df4-25efe88015fd}</UniqueIdentifier>
     </Filter>
@@ -58,9 +55,6 @@
     </ClCompile>
     <ClCompile Include="StockClient.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EveryTestSendTask.cpp">
-      <Filter>send</Filter>
     </ClCompile>
     <ClCompile Include="StockClientLogicManager.cpp">
       <Filter>logic</Filter>
@@ -113,6 +107,18 @@
     <ClCompile Include="UpdateTodayIndicatorTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="ChooseStockTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="GetAllFilterStockTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="UpdateTodayToMemoryTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="UpdateTodayRedisTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -132,9 +138,6 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EveryTestSendTask.h">
-      <Filter>send</Filter>
-    </ClInclude>
     <ClInclude Include="CheckAllStockTask.h">
       <Filter>task</Filter>
     </ClInclude>
@@ -179,6 +182,18 @@
     </ClInclude>
     <ClInclude Include="StockParam.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ChooseStockTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="GetAllFilterStockTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="UpdateTodayToMemoryTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="UpdateTodayRedisTask.h">
+      <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

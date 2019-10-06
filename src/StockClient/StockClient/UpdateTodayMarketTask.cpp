@@ -15,21 +15,6 @@ m_stockClient(nullptr)
 
 void UpdateTodayMarketTask::DoTask()
 {
-	if (!m_stockClient->m_hasRisestFile)
-	{
-		std::shared_ptr<SaveGroupMarketTask> spSaveGroupMarketTask(new SaveGroupMarketTask);
-		std::vector<std::string> groupStock;
-		groupStock.push_back(m_stockClient->m_risestStock);
-		spSaveGroupMarketTask->setParam(0, 1, m_stockClient, groupStock);
-		m_stockClient->m_hasRisestFile = true;
-		CTaskThreadManager::Instance().GetThreadInterface(m_stockClient->m_sendTaskThreadId)->PostTask(spSaveGroupMarketTask, 2);
-		return;
-	}
-
-	std::string risestStockMarketFile = CSystem::GetCurrentExePath() + "CurrentAllMarketFile\\" + m_stockClient->m_risestStock + ".txt";
-	Ctxt risestFile(risestStockMarketFile);
-	risestFile.LoadTxt(Ctxt::SPLIT, "\t");
-	m_stockClient->m_today = CStringManager::split(risestFile.m_vectxt[risestFile.m_vectxt.size() - 2][0], ",")[0];
 	std::vector<std::string> todayMarket;
 	todayMarket.push_back("");
 	todayMarket.push_back("");

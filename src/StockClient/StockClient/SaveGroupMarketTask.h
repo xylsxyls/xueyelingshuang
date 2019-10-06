@@ -15,6 +15,8 @@ public:
 		StockClient* stockClient,
 		const std::vector<std::string>& groupStock = std::vector<std::string>());
 
+	void setParam(const std::string& stock, StockClient* stockClient);
+
 	void StopTask();
 
 protected:

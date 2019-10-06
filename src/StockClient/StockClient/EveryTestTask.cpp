@@ -1,97 +1,30 @@
 #include "EveryTestTask.h"
-#include "StockFund/StockFundAPI.h"
-#include "CStopWatch/CStopWatchAPI.h"
-#include "StockIndicator/StockIndicatorAPI.h"
-#include "StockMarket/StockMarketAPI.h"
+#include "StockRetest/StockRetestAPI.h"
+#include "StockStrategy/StockStrategyAPI.h"
 #include "StockClient.h"
+#include "StockRetest/StockRetestAPI.h"
 
 EveryTestTask::EveryTestTask():
-m_stockClient(nullptr)
+m_stockClient(nullptr),
+m_strategyEnum(STRATEGY_INIT)
 {
 
 }
 
 void EveryTestTask::DoTask()
 {
-	std::string stock = m_stock;
-	
-	CStopWatch marketWatch;
-	m_spMarket->load();
-	m_spStockWrIndicator->load();
-	m_spStockRsiIndicator->load();
-	int32_t marketWatchTime = marketWatch.GetWatchTime();
-
-	StockFund fund;
-	fund.add(100000);
-	CStopWatch indexWatch;
-	do
-	{
-		IntDateTime time = m_spMarket->date();
-		if (time.empty())
-		{
-			break;
-		}
-	
-		BigNumber close = m_spMarket->day()->close();
-		if (close < 1)
-		{
-			continue;
-		}
-	
-		BigNumber wr10 = m_spStockWrIndicator->day(time)->m_wr10;
-		BigNumber rsi6 = m_spStockRsiIndicator->day(time)->m_rsi6;
-		BigNumber rsi24 = m_spStockRsiIndicator->day(time)->m_rsi24;
-
-		BigNumber chg = 0;
-		fund.stockChg(m_spMarket->stock(), m_spMarket->day(), chg);
-	
-		if (fund.stockNum() == 0 && wr10 >= 90 && rsi24 >= 35 && rsi24 <= 40)
-		{
-			fund.buyStock(close, 1, m_spMarket->day());
-		}
-		//else if (fund.stockNum() == 1 && wr10 >= 90 && rsi24 <= 45)
-		//{
-		//	fund.buyStock(close, 1, m_spMarket->day());
-		//}
-		//else if ((fund.stockNum() == 1 && chg < -20))
-		//{
-		//	fund.sellStock(close, 1, m_spMarket->day());
-		//}
-		else if ((fund.stockNum() == 1 && wr10 < 50 && chg > 100))
-		{
-			fund.sellStock(close, 1, m_spMarket->day());
-		}
-	} while (m_spMarket->next());
-	BigNumber allFund = fund.allFund(m_spMarket->day());
-	//auto stockLog = fund.stockLog();
-	//int32_t lineIndex = -1;
-	//while (lineIndex++ != stockLog.size() - 1)
-	//{
-	//	RCSend("stocklog = %s", stockLog[lineIndex].c_str());
-	//}
-	RCSend("stock = %s, allFund = %s", stock.c_str(), allFund.toString().c_str());
-	static BigNumber allStockFund = 0;
-	static int x = 0;
-	static std::mutex mu;
-	mu.lock();
-	allStockFund = allStockFund + allFund;
-	++x;
-	if (x == m_stockClient->m_stockCount)
-	{
-		RCSend("avg = %s", (allStockFund / m_stockClient->m_stockCount).toPrec(2).toString().c_str());
-	}
-	mu.unlock();
+	StockEveryRetest stockEveryRetest;
+	stockEveryRetest.init(m_strategyEnum, m_beginTime, m_endTime);
+	stockEveryRetest.run();
 }
 
-void EveryTestTask::setParam(const std::string& stock,
-	const std::shared_ptr<StockMarket>& spMarket,
-	const std::shared_ptr<StockWrIndicator>& spStockWrIndicator,
-	const std::shared_ptr<StockRsiIndicator>& spStockRsiIndicator,
+void EveryTestTask::setParam(StrategyEnum strategyEnum,
+	const IntDateTime& beginTime,
+	const IntDateTime& endTime,
 	StockClient* stockClient)
 {
-	m_stock = stock;
-	m_spMarket = spMarket;
-	m_spStockWrIndicator = spStockWrIndicator;
-	m_spStockRsiIndicator = spStockRsiIndicator;
+	m_strategyEnum = strategyEnum;
+	m_beginTime = beginTime;
+	m_endTime = endTime;
 	m_stockClient = stockClient;
 }
