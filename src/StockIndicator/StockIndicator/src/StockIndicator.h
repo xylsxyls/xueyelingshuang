@@ -10,6 +10,7 @@ class StockSarIndicator;
 class StockBollIndicator;
 class StockAvgIndicator;
 struct StockAvg;
+
 /** zhibiao管理类
 */
 class StockIndicatorAPI StockIndicator
@@ -120,8 +121,9 @@ public:
 
 	/** 更新某一天的zhibiao到redis
 	@param [in] date 日期
+	@param [in] useLast 如果上次有值就用上次的
 	*/
-	void updateDateIndicatorToRedis(const IntDateTime& date);
+	void updateDateIndicatorToRedis(const IntDateTime& date, bool useLast);
 
 	/** 获取wr相关接口
 	@return 返回wr相关接口
@@ -161,6 +163,11 @@ protected:
 	std::shared_ptr<std::vector<std::vector<std::string>>> m_redisIndicatorData;
 	std::map<std::string, std::vector<int32_t>> m_calcIndex;
 	std::shared_ptr<std::vector<std::vector<std::string>>> m_redisCalcData;
+
+	std::map<std::string, std::vector<std::vector<std::string>>> m_wrIndicatorData;
+	std::map<std::string, std::vector<std::vector<std::string>>> m_rsiIndicatorData;
+	std::map<std::string, std::vector<std::vector<std::string>>> m_sarIndicatorData;
+	std::map<std::string, std::vector<std::vector<std::string>>> m_bollIndicatorData;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

@@ -248,6 +248,8 @@ void StockClient::closeEvent(QCloseEvent* eve)
 
 void StockClient::onEveryTestButtonClicked()
 {
+	RCSend("time = %d", ::GetTickCount());
+
 	std::shared_ptr<EveryTestTask> spEveryTestTask(new EveryTestTask);
 	spEveryTestTask->setParam(SAR_RISE_BACK, "2016-01-01", "2019-09-01", this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spEveryTestTask);
@@ -408,6 +410,8 @@ void StockClient::onSaveIndicatorToMysqlButtonClicked()
 
 void StockClient::onUpdateTodayRedisButtonClicked()
 {
+	RCSend("time = %d", ::GetTickCount());
+
 	std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
 	spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);
@@ -429,7 +433,7 @@ void StockClient::onUpdateTodayRedisButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
 
 	std::shared_ptr<UpdateTodayRedisTask> spUpdateTodayRedisTask(new UpdateTodayRedisTask);
-	spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), this);
+	spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), false, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayRedisTask);
 }
 
@@ -611,6 +615,8 @@ void StockClient::onChooseStockButtonClicked()
 		return;
 	}
 
+	RCSend("time = %d", ::GetTickCount());
+
 	std::shared_ptr<OpenProcessTask> spOpenMessageTestTask(new OpenProcessTask);
 	spOpenMessageTestTask->setParam(CSystem::commonFile("MessageTest"));
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenMessageTestTask);
@@ -640,7 +646,7 @@ void StockClient::onChooseStockButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
 
 	std::shared_ptr<UpdateTodayRedisTask> spUpdateTodayRedisTask(new UpdateTodayRedisTask);
-	spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), this);
+	spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), false, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayRedisTask);
 
 	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
@@ -662,6 +668,8 @@ void StockClient::onEverydayTaskButtonClicked()
 	{
 		return;
 	}
+
+	RCSend("time = %d", ::GetTickCount());
 
 	std::shared_ptr<OpenProcessTask> spOpenMessageTestTask(new OpenProcessTask);
 	spOpenMessageTestTask->setParam(CSystem::commonFile("MessageTest"));
@@ -700,7 +708,7 @@ void StockClient::onEverydayTaskButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
 
 	std::shared_ptr<UpdateTodayRedisTask> spUpdateTodayRedisTask(new UpdateTodayRedisTask);
-	spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), this);
+	spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), true, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayRedisTask);
 
 	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);

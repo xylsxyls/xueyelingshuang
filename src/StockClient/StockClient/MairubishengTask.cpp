@@ -48,6 +48,15 @@ void MairubishengTask::DoTask()
 		}
 
 		const std::string& stock = m_stockClient->m_todayMarket[index][0];
+
+		if (!m_stockClient->m_allFilterStock.empty())
+		{
+			auto itStock = std::find(m_stockClient->m_allFilterStock.begin(), m_stockClient->m_allFilterStock.end(), stock);
+			if (itStock == m_stockClient->m_allFilterStock.end())
+			{
+				continue;
+			}
+		}
 		
 		CMouse::LeftClick();
 		Sleep(10);
@@ -56,7 +65,6 @@ void MairubishengTask::DoTask()
 		if (ScreenScript::FindPic(CSystem::GetCurrentExePath() + "mai.png", xyls::Rect(1320, 630, 1370, 769)))
 		{
 			vecValidStock.push_back(stock);
-			LOG_SEND("thread mairubisheng %s", stock.c_str());
 			RCSend("mairubisheng = %s", stock.c_str());
 		}
 	}

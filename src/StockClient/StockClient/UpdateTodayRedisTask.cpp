@@ -5,7 +5,8 @@
 #include "StockMysql/StockMysqlAPI.h"
 #include "StockClientLogicManager.h"
 
-UpdateTodayRedisTask::UpdateTodayRedisTask()
+UpdateTodayRedisTask::UpdateTodayRedisTask():
+m_useLast(false)
 {
 
 }
@@ -43,13 +44,14 @@ void UpdateTodayRedisTask::DoTask()
 		todayMarket[3] = close;
 		StockMarketHelper::updateDateMarketToRedis(stock, m_stockClient->m_today, todayMarket);
 	}
-	StockIndicator::instance().updateDateIndicatorToRedis(m_stockClient->m_today);
+	StockIndicator::instance().updateDateIndicatorToRedis(m_stockClient->m_today, m_useLast);
 	StockMysql::instance().updateAllDataRedis(m_stockClient->m_today, m_allUpdateStock);
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("redis更新完成"));
 }
 
-void UpdateTodayRedisTask::setParam(const std::vector<std::string>& allUpdateStock, StockClient* stockClient)
+void UpdateTodayRedisTask::setParam(const std::vector<std::string>& allUpdateStock, bool useLast, StockClient* stockClient)
 {
 	m_allUpdateStock = allUpdateStock;
+	m_useLast = useLast;
 	m_stockClient = stockClient;
 }

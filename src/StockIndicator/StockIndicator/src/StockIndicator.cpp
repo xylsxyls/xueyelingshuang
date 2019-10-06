@@ -310,34 +310,30 @@ void StockIndicator::dateBoll(const IntDateTime& date, std::map<std::string, std
 
 void StockIndicator::saveDateWr(const IntDateTime& date)
 {
-	std::map<std::string, std::vector<std::vector<std::string>>> indicatorData;
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	dateWr(date, indicatorData, allStock);
-	StockMysql::instance().saveIndicator("wr", "date,wr10,wr20", indicatorData, true);
+	dateWr(date, m_wrIndicatorData, allStock);
+	StockMysql::instance().saveIndicator("wr", "date,wr10,wr20", m_wrIndicatorData, true);
 }
 
 void StockIndicator::saveDateRsi(const IntDateTime& date)
 {
-	std::map<std::string, std::vector<std::vector<std::string>>> indicatorData;
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	dateRsi(date, indicatorData, allStock);
-	StockMysql::instance().saveIndicator("rsi", "date,rsi6,rsi12,rsi24", indicatorData, true);
+	dateRsi(date, m_rsiIndicatorData, allStock);
+	StockMysql::instance().saveIndicator("rsi", "date,rsi6,rsi12,rsi24", m_rsiIndicatorData, true);
 }
 
 void StockIndicator::saveDateSar(const IntDateTime& date)
 {
-	std::map<std::string, std::vector<std::vector<std::string>>> indicatorData;
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	dateSar(date, indicatorData, allStock);
-	StockMysql::instance().saveIndicator("sar", "date,sar5,state5,sar10,state10,sar20,state20", indicatorData, true);
+	dateSar(date, m_sarIndicatorData, allStock);
+	StockMysql::instance().saveIndicator("sar", "date,sar5,state5,sar10,state10,sar20,state20", m_sarIndicatorData, true);
 }
 
 void StockIndicator::saveDateBoll(const IntDateTime& date)
 {
-	std::map<std::string, std::vector<std::vector<std::string>>> indicatorData;
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	dateBoll(date, indicatorData, allStock);
-	StockMysql::instance().saveIndicator("boll", "date,bollmid,bollup,bolldown", indicatorData, true);
+	dateBoll(date, m_bollIndicatorData, allStock);
+	StockMysql::instance().saveIndicator("boll", "date,bollmid,bollup,bolldown", m_bollIndicatorData, true);
 }
 
 void StockIndicator::saveAvg(const std::string& stock, const std::map<IntDateTime, std::shared_ptr<StockAvg>>& avgData)
@@ -393,26 +389,25 @@ void StockIndicator::saveAvg(const std::string& stock, const std::map<IntDateTim
 	StockMysql::instance().saveCalc(stock, saveCalcData);
 }
 
-void StockIndicator::updateDateIndicatorToRedis(const IntDateTime& date)
+void StockIndicator::updateDateIndicatorToRedis(const IntDateTime& date, bool useLast)
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStock();
 
-	std::map<std::string, std::vector<std::vector<std::string>>> wrIndicatorData;
-	dateWr(date, wrIndicatorData, allStock);
-	std::map<std::string, std::vector<std::vector<std::string>>> rsiIndicatorData;
-	dateRsi(date, rsiIndicatorData, allStock);
-	std::map<std::string, std::vector<std::vector<std::string>>> sarIndicatorData;
-	dateSar(date, sarIndicatorData, allStock);
-	std::map<std::string, std::vector<std::vector<std::string>>> bollIndicatorData;
-	dateBoll(date, bollIndicatorData, allStock);
+	if (!useLast || m_wrIndicatorData.empty())
+	{
+		dateWr(date, m_wrIndicatorData, allStock);
+		dateRsi(date, m_rsiIndicatorData, allStock);
+		dateSar(date, m_sarIndicatorData, allStock);
+		dateBoll(date, m_bollIndicatorData, allStock);
+	}
 
 	std::map<std::string, std::map<std::string, std::vector<std::string>>> allIndicatorData;
 
-	auto itWrIndicator = wrIndicatorData.begin();
-	auto itRsiIndicator = rsiIndicatorData.begin();
-	auto itSarIndicator = sarIndicatorData.begin();
-	auto itBollIndicator = bollIndicatorData.begin();
-	for (; itWrIndicator != wrIndicatorData.end();)
+	auto itWrIndicator = m_wrIndicatorData.begin();
+	auto itRsiIndicator = m_rsiIndicatorData.begin();
+	auto itSarIndicator = m_sarIndicatorData.begin();
+	auto itBollIndicator = m_bollIndicatorData.begin();
+	for (; itWrIndicator != m_wrIndicatorData.end();)
 	{
 		itWrIndicator->second[0].erase(itWrIndicator->second[0].begin());
 		itRsiIndicator->second[0].erase(itRsiIndicator->second[0].begin());

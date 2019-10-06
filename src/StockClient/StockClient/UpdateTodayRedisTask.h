@@ -11,9 +11,10 @@ public:
 public:
 	void DoTask();
 
-	void setParam(const std::vector<std::string>& allUpdateStock, StockClient* stockClient);
+	void setParam(const std::vector<std::string>& allUpdateStock, bool useLast, StockClient* stockClient);
 
 private:
 	std::vector<std::string> m_allUpdateStock;
+	bool m_useLast;
 	StockClient* m_stockClient;
 };
