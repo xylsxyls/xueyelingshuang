@@ -7,6 +7,20 @@ extern std::atomic<bool> rightMouse;
 
 void CFlashTask::DoTask()
 {
+	CKeyboard::InputString("www", 0);
+	CKeyboard::KeyDown('N');
+	CKeyboard::KeyDown('Q');
+	CKeyboard::KeyUp('N');
+	CKeyboard::KeyUp('Q');
+	Sleep(350);
+	CKeyboard::InputString("r", 0);
+	CMouse::RightManyClick(6, 50);
+	Sleep(350);
+	Sleep(100);
+	CKeyboard::InputString("33333", 0);
+	Sleep(20);
+	
+	return;
     rightMouse = false;
 
 	Sleep(50);

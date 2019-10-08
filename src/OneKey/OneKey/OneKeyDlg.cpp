@@ -156,10 +156,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	else if (CHook::IsKeyUp(wParam))
 	{
 		//+ 107
-		if (vkCode == 13)
-		{
-			enter = !enter;
-		}
+		//if (vkCode == 13)
+		//{
+		//	enter = !enter;
+		//}
 		if (vkCode == 107)
 		{
 			enter = false;
@@ -218,11 +218,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CNoFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		else if (qDown && wDown && stopWatch.GetWatchTime() > 500)
+		else if (fiveDown && stopWatch.GetWatchTime() > 500)
 		{
 			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CqNoFlashTask> spTask;
-			spTask.reset(new CqNoFlashTask);
+			std::shared_ptr<CFlashTask> spTask;
+			spTask.reset(new CFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
 		else if (wDown && dDown && stopWatch.GetWatchTime() > 500)
@@ -235,9 +235,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (dDown && stopWatch.GetWatchTime() > 500)
 		{
 			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CSmallFlashTask> spTask;
-			spTask.reset(new CSmallFlashTask);
-			taskThread->PostTask(spTask, 1);
+			//std::shared_ptr<CSmallFlashTask> spTask;
+			//spTask.reset(new CSmallFlashTask);
+			//taskThread->PostTask(spTask, 1);
 		}
 		else if (wDown && threeDown && stopWatch.GetWatchTime() > 500)
 		{

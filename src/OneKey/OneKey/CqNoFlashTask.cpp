@@ -16,6 +16,28 @@ void CqNoFlashTask::DoTask()
     Sleep(250);*/
     //Sleep(100);
 
+	//CKeyboard::KeyDown('N');
+	//CKeyboard::KeyDown('Q');
+	//CKeyboard::KeyUp('N');
+	//CKeyboard::KeyUp('Q');
+	//CKeyboard::InputString("www", 0);
+	//Sleep(50);
+	//
+	//CKeyboard::InputString("www", 0);
+	//Sleep(100);
+	////CKeyboard::InputString("www", 0);
+	////Sleep(50);
+	////CKeyboard::InputString("www", 0);
+	////Sleep(50);
+	////CKeyboard::InputString("www", 0);
+	//CKeyboard::InputString("r", 100);
+	//Sleep(50);
+	//CKeyboard::InputString("www", 0);
+	//Sleep(250);
+	//CMouse::RightClick(150);
+	//CMouse::RightManyClick(5, 300);
+	//return;
+
 	CKeyboard::KeyDown('N');
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('N');
