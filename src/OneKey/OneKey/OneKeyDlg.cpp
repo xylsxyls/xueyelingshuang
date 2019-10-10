@@ -16,6 +16,7 @@
 #include "CWeqTask.h"
 #include "CRightClickTask.h"
 #include "IntoGameTask.h"
+#include "D:\\SendToMessageTest.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -31,6 +32,7 @@ bool dDown = false;
 bool fDown = false;
 bool qDown = false;
 bool rDown = false;
+bool aDown = false;
 bool threeDown = false;
 bool fiveDown = false;
 bool enter = false;
@@ -100,15 +102,22 @@ END_MESSAGE_MAP()
 LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
     // 请在这里添加消息处理代码
-    //RCSend("%d,%d,%d", nCode, wParam, lParam);
-    if (wParam == 516 || wParam == 517)
-    {
-        //RCSend("pin");
-        //if (rightMouse == false)
-        {
-            return 1;
-        }
-    }
+	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(g_threadId);
+    //if (wParam == 516 || wParam == 517)
+    //{
+    //    //RCSend("pin");
+    //    //if (rightMouse == false)
+    //    {
+    //        return 1;
+    //    }
+    //}
+	if (wParam == 519 && stopWatch.GetWatchTime() > 500)
+	{
+		stopWatch.SetWatchTime(0);
+		std::shared_ptr<CFlashTask> spTask;
+		spTask.reset(new CFlashTask);
+		taskThread->PostTask(spTask, 1);
+	}
     // 将事件传递到下一个钩子
     return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
 }
@@ -143,6 +152,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (vkCode == 'F')
 		{
 			fDown = true;
+		}
+		else if (vkCode == 'A')
+		{
+			aDown = false;
 		}
 		else if (vkCode == '3')
 		{
@@ -188,6 +201,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			fDown = false;
 		}
+		else if (vkCode == 'A')
+		{
+			aDown = true;
+		}
 		else if (vkCode == '3')
 		{
 			threeDown = false;
@@ -216,6 +233,14 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			stopWatch.SetWatchTime(0);
 			std::shared_ptr<CNoFlashTask> spTask;
 			spTask.reset(new CNoFlashTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		else if (aDown && stopWatch.GetWatchTime() > 500)
+		{
+			aDown = false;
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CFlashTask> spTask;
+			spTask.reset(new CFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
 		else if (fiveDown && stopWatch.GetWatchTime() > 500)
@@ -308,7 +333,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	m_button.SetFocus();
 	g_threadId = CTaskThreadManager::Instance().Init();
 	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);
-    //CHook::Init(WH_MOUSE_LL, MouseHookFun);
+    CHook::Init(WH_MOUSE_LL, MouseHookFun);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }

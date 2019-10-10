@@ -51,12 +51,12 @@ bool SarRiseBack::buy(const IntDateTime& date, BigNumber& price, BigNumber& perc
 	StockSar::SarState sar10State = m_spStockSarIndicator->day(date)->m_sarState10;
 	StockSar::SarState sar20State = m_spStockSarIndicator->day(date)->m_sarState20;
 
-	if (sar5State == StockSar::RED_TO_GREEN || sar10State == StockSar::RED_TO_GREEN || sar20State == StockSar::RED_TO_GREEN)
+	if (/*sar5State == StockSar::RED_TO_GREEN || */sar10State == StockSar::RED_TO_GREEN/* || sar20State == StockSar::RED_TO_GREEN*/)
 	{
 		if (sar5State == StockSar::RED_TO_GREEN)
 		{
 			percent = 80;
-			price = sar5;
+			price = sar10;
 		}
 		else if (sar10State == StockSar::RED_TO_GREEN)
 		{
@@ -82,6 +82,14 @@ bool SarRiseBack::sell(const IntDateTime& date, BigNumber& price, BigNumber& per
 	{
 		return false;
 	}
+	//if (m_spMarket->getMemoryDays(m_buyDate, date) == 5)
+	//{
+	//	BigNumber close = m_spMarket->day()->close();
+	//	price = close;
+	//	percent = 100;
+	//	m_isBuy = false;
+	//	return true;
+	//}
 	if (m_spMarket->getMemoryDays(m_buyDate, date) >= 5)
 	{
 		BigNumber close = m_spMarket->day()->close();

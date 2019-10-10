@@ -29,6 +29,7 @@ void ChooseStockTask::DoTask()
 	while (index-- != 0)
 	{
 		RCSend((buyStock[index].first + "," + buyStock[index].second.second.toString()).c_str());
+		LOG_SEND_ONLY_INFO((buyStock[index].first + "," + buyStock[index].second.second.toString()).c_str());
 	}
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("今日选中%1个").arg(buyStock.size()));
 }

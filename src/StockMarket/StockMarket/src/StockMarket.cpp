@@ -140,9 +140,9 @@ int32_t StockMarket::getMemoryDays(const IntDateTime& date1, const IntDateTime& 
 	}
 	if (date1 == date2)
 	{
-		return 2;
+		return 1;
 	}
-	int32_t day = 2;
+	int32_t day = 1;
 	while (true)
 	{
 		++day;
@@ -474,7 +474,7 @@ BigNumber StockMarket::getDays(const IntDateTime& date1, const IntDateTime& date
 	}
 	if (date1 == date2)
 	{
-		return 2;
+		return 1;
 	}
 	return StockMysql::instance().getDays(m_stockData->m_stock, date1, date2);
 }
