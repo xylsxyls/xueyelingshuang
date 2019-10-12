@@ -1,0 +1,5 @@
+git clone -b v1.15.0 https://github.com/grpc/grpc
+cd grpc
+git submodule update --init
+make
+sudo make install

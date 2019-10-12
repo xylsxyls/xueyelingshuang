@@ -1,0 +1,6 @@
+引用动态库，-L后不要有空格
+LIBS += -L"/usr/local/lib" \
+-L"sur/local/fftw3/lib" \
+-lfftw3 \
+引用静态库
+LIBS += "/usr/local/lib/libssl.a"

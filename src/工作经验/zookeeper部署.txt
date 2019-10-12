@@ -1,0 +1,1 @@
+zookeeper中data文件夹下的version-2和zookeeper_server.pid需要删掉才能重新部署

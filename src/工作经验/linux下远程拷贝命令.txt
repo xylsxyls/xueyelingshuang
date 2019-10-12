@@ -1,0 +1,2 @@
+scp /home/administrator/news.txt root@192.168.6.129:/etc/squid
+拷回来两个路径换一下就行

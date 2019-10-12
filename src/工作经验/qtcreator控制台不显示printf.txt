@@ -1,0 +1,4 @@
+printf执行后加
+fflush(stdout);
+如果是std::cout
+后面加std::endl
