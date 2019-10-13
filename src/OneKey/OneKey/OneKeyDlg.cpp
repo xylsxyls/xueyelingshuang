@@ -24,6 +24,7 @@
 
 CStopWatch stopWatch;
 CStopWatch sleepWatch;
+CStopWatch textWatch;
 
 int32_t type = 1;
 bool wDown = false;
@@ -169,10 +170,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	else if (CHook::IsKeyUp(wParam))
 	{
 		//+ 107
-		//if (vkCode == 13)
-		//{
-		//	enter = !enter;
-		//}
+		if (vkCode == 13)
+		{
+			textWatch.SetWatchTime(0);
+		}
 		if (vkCode == 107)
 		{
 			enter = false;
@@ -215,8 +216,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 	}
 
-	if (enter)
+	if (textWatch.GetWatchTime() < 10000)
 	{
+		aDown = false;
 		return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
 	}
 
@@ -260,9 +262,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (dDown && stopWatch.GetWatchTime() > 500)
 		{
 			stopWatch.SetWatchTime(0);
-			//std::shared_ptr<CSmallFlashTask> spTask;
-			//spTask.reset(new CSmallFlashTask);
-			//taskThread->PostTask(spTask, 1);
+			std::shared_ptr<CSmallFlashTask> spTask;
+			spTask.reset(new CSmallFlashTask);
+			taskThread->PostTask(spTask, 1);
 		}
 		else if (wDown && threeDown && stopWatch.GetWatchTime() > 500)
 		{

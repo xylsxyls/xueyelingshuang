@@ -27,7 +27,5 @@ void CSmallFlashTask::DoTask()
 	CMouse::RightClick(20);
 	CMouse::RightClick(20);
 	CMouse::RightClick(20);
-	CKeyboard::KeyDown('3');
-	CKeyboard::KeyUp('3');
     rightMouse = true;
 }
