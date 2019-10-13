@@ -1,0 +1,16 @@
+升级过程：
+1、源码找不到。。。这里附上源码http://ftp.gnu.org/gnu/gcc/，里面有各个版本，我根据需要下载安装了gcc4.9.0
+在Linux系统中下载用到命令行：wget http://ftp.gnu.org/gnu/gcc/gcc-4.9.0/gcc-4.9.0.tar.bz2
+wget是一个。。额。。不解释了
+2、下载好之后，解压文件：tar -jxvf gcc-4.9.0.tar.bz2
+3、解压完成，进入文件目录：cd gcc-4.9.0
+4、利用源码包里自带的工具下载所需要的依赖项：./contrib/download_prerequisites	//注意路径
+5、创建编译输出目录（自定）：mkdir build
+6、进入输出目录:cd build;
+7、生成Makefile：../configure --enable-checking=release --enable-languages=c,c++ --disable-multilib
+release版本——使用支持C/C++——multilib感觉是生成多个库的意思？
+8、编译：make -j4	//选项 -j4 是多核编译
+9、编译完成后，安装：make install
+10、检查一下是否安装成功：gcc -v	//查看gcc版本 如下：
+
+需要把当前窗口关掉重新进才能看到新的gcc版本信息

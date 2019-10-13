@@ -1,0 +1,6 @@
+sudo vi /etc/ld.so.conf
+在文件中一行一个路径
+路径有改动或者需要链接的库有变动执行
+/sbin/ldconfig -v
+查看链接的库
+ldconfig -v | grep "库名"

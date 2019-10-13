@@ -1,0 +1,45 @@
+pthread_attr_t attr;
+pthread_t pid;
+pthread_attr_init (&attr);
+pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_DETACHED);
+pthread_create(&pid, &attr,thread_callback, thread_arg);
+
+主线程
+pthread_join(pid,&retval);
+获取到的retval就是线程返回值void*
+
+#include <stdio.h>
+#include <pthread.h>
+ 
+void *cb_fn(void *arg)//线程回调函数
+{
+	printf("in cb_fn\n");
+ 
+	return (void*)"OK";
+}
+ 
+int main()
+{
+	int ret;
+	void *retval;
+	pthread_t pid;
+	
+	ret = pthread_create(&pid, NULL, cb_fn, NULL);
+	if(ret<0)
+	{
+		printf("pthread_create error,ret=%d\n",ret);
+		return -1;
+	}
+ 
+	pthread_join(pid,&retval);
+ 
+	printf("retval = %s\n",(char*)retval);
+ 
+	return 0;
+}
+
+gcc test.c -lpthread
+
+#./a.out
+in cb_fn
+retval = OK

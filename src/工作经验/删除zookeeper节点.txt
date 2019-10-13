@@ -1,0 +1,16 @@
+删除指令：
+
+delete path [version]
+
+删除指定节点数据，其version参数的作用于set指定一致
+
+ 
+
+delete /node_1/node_1_10000000001
+整个节点全删除
+
+注意：delete只能删除不包含子节点的节点，如果要删除的节点包含子节点，使用rmr命令
+
+ 
+
+rmr /node_1
