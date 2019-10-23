@@ -17,12 +17,14 @@
 #include "CRightClickTask.h"
 #include "IntoGameTask.h"
 #include "D:\\SendToMessageTest.h"
+#include "CqTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 CStopWatch stopWatch;
+CStopWatch w3StopWatch;
 CStopWatch sleepWatch;
 CStopWatch textWatch;
 
@@ -36,7 +38,7 @@ bool rDown = false;
 bool aDown = false;
 bool threeDown = false;
 bool fiveDown = false;
-bool enter = false;
+bool vkCodeOpen = false;
 
 std::atomic<bool> rightMouse = true;
 
@@ -176,7 +178,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		if (vkCode == 107)
 		{
-			enter = false;
+			vkCodeOpen = true;
+		}
+		else if (vkCode == 109)
+		{
+			vkCodeOpen = false;
 		}
 		else if (vkCode == 'W')
 		{
@@ -245,13 +251,13 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		else if (fiveDown && stopWatch.GetWatchTime() > 500)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CFlashTask> spTask;
-			spTask.reset(new CFlashTask);
-			taskThread->PostTask(spTask, 1);
-		}
+		//else if (fiveDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CFlashTask> spTask;
+		//	spTask.reset(new CFlashTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
 		else if (wDown && dDown && stopWatch.GetWatchTime() > 500)
 		{
 			stopWatch.SetWatchTime(0);
@@ -266,11 +272,18 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CSmallFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		else if (wDown && threeDown && stopWatch.GetWatchTime() > 500)
+		else if (wDown && threeDown && w3StopWatch.GetWatchTime() > 500)
 		{
-			stopWatch.SetWatchTime(0);
+			w3StopWatch.SetWatchTime(0);
 			std::shared_ptr<CqNoFlashTask> spTask;
 			spTask.reset(new CqNoFlashTask);
+			taskThread->PostTask(spTask, 2);
+		}
+		else if (vkCodeOpen && wDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CqTask> spTask;
+			spTask.reset(new CqTask);
 			taskThread->PostTask(spTask, 1);
 		}
 	}
@@ -333,6 +346,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	m_type.AddString("½øÓÎÏ·");
 	m_type.SelectString(0, "µ¶·æ");
 	m_button.SetFocus();
+	textWatch.SetWatchTime(10000);
 	g_threadId = CTaskThreadManager::Instance().Init();
 	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);
     CHook::Init(WH_MOUSE_LL, MouseHookFun);
