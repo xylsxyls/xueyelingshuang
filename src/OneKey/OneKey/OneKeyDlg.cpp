@@ -294,7 +294,8 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			stopWatch.SetWatchTime(0);
 			std::shared_ptr<CWeqTask> spTask;
 			CWeqTask* weqTask = new CWeqTask;
-			weqTask->setParam((sleepWatch.GetWatchTime()) > 20000 ? 20 : 0);
+			//(sleepWatch.GetWatchTime()) > 20000 ? 20 : 0
+			weqTask->setParam(50);
 			spTask.reset(weqTask);
 			taskThread->PostTask(spTask, 1);
 		}

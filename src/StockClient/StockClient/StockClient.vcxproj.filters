@@ -110,13 +110,19 @@
     <ClCompile Include="ChooseStockTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
-    <ClCompile Include="GetAllFilterStockTask.cpp">
-      <Filter>task</Filter>
-    </ClCompile>
     <ClCompile Include="UpdateTodayToMemoryTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
     <ClCompile Include="UpdateTodayRedisTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveAllFilterStockTaskToRedis.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveFilterStockTaskToMysql.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="GetFilterStockTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
   </ItemGroup>
@@ -186,13 +192,19 @@
     <ClInclude Include="ChooseStockTask.h">
       <Filter>task</Filter>
     </ClInclude>
-    <ClInclude Include="GetAllFilterStockTask.h">
-      <Filter>task</Filter>
-    </ClInclude>
     <ClInclude Include="UpdateTodayToMemoryTask.h">
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="UpdateTodayRedisTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="SaveAllFilterStockTaskToRedis.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="SaveFilterStockTaskToMysql.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="GetFilterStockTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>

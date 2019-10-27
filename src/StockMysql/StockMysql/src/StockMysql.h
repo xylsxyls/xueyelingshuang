@@ -235,6 +235,24 @@ public:
 		const std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
 		bool isUpdate = false);
 
+	/** 保存过滤的gupiao到mysql
+	@param [in] filterStock 过滤的gupiao
+	*/
+	void saveFilterStockToMysql(const std::map<IntDateTime, std::vector<std::string>>& filterStock);
+
+	/** 保存过滤的gupiao到redis
+	@param [in] beginTime 开始时间
+	@param [in] endTime 结束时间
+	*/
+	void saveFilterStockToRedis(const IntDateTime& beginTime = IntDateTime(0, 0),
+		const IntDateTime& endTime = IntDateTime(0, 0));
+
+	/** 读取过滤的gupiao
+	@param [in] date 日期
+	@return 返回过滤的gupiao
+	*/
+	std::vector<std::string> readFilterStockFromRedis(const IntDateTime& date);
+
 protected:
 	/** 新开一个kaigaodishou的表
 	@param [in] stock gupiao代码

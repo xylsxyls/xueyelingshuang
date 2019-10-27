@@ -3,6 +3,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "hiredisinclude/hiredis.h"
 #include "CSystem/CSystemAPI.h"
+#include <algorithm>
 
 StockMysql::StockMysql()
 {
@@ -430,6 +431,7 @@ void StockMysql::updateDateIndicatorToRedis(const IntDateTime& date,
 
 void StockMysql::updateAllDataRedis(const IntDateTime& date, const std::vector<std::string>& allStock) const
 {
+	return;
 	int32_t index = -1;
 	while (index++ != allStock.size() - 1)
 	{
@@ -458,6 +460,7 @@ void StockMysql::updateAllDataRedis(const IntDateTime& date, const std::vector<s
 
 std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::readAll(const std::string& stock, const IntDateTime& beginTime /*= IntDateTime(0, 0)*/, const IntDateTime& endTime /*= IntDateTime(0, 0)*/) const
 {
+	return std::shared_ptr<std::vector<std::vector<std::string>>>();
 	std::vector<std::string> vecDbName;
 	std::vector<std::string> vecDbField;
 	vecDbName.push_back("stockmarket");
@@ -571,6 +574,7 @@ void StockMysql::initRedis()
 	saveIndicatorDataIndex();
 	saveAllDataIndex();
 	saveCalcDataIndex();
+	saveFilterStockToRedis();
 	RCSend("init end time = %.2lf分", (::GetTickCount() - begin) / 60000.0);
 }
 
@@ -654,6 +658,81 @@ void StockMysql::saveIndicator(const std::string& indicatorType,
 	}
 }
 
+void StockMysql::saveFilterStockToMysql(const std::map<IntDateTime, std::vector<std::string>>& filterStock)
+{
+	m_mysql.selectDb("stockname");
+	std::vector<std::string> vecFields;
+	vecFields.push_back("date varchar(10) primary key");
+	vecFields.push_back("filterstock varchar(64000)");
+	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableIfNotExistString("filterstock", vecFields)));
+
+	for (auto itFilterStock = filterStock.begin(); itFilterStock != filterStock.end(); ++itFilterStock)
+	{
+		const IntDateTime& date = itFilterStock->first;
+		const std::vector<std::string>& allFilterStock = itFilterStock->second;
+
+		std::string allFilterStockStr;
+		int32_t index = -1;
+		while (index++ != allFilterStock.size() - 2)
+		{
+			allFilterStockStr.append(allFilterStock[index] + ",");
+		}
+		allFilterStockStr.append(allFilterStock[index]);
+
+		bool dateExist = !(m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("date", "date='" + date.dateToString() + "'")))->toVector().empty());
+		std::string sqlString;
+		if (dateExist)
+		{
+			auto prepare = m_mysql.PreparedStatementCreator(SqlString::updateString("filterstock", "filterstock", "date='" + date.dateToString() + "'"));
+			prepare->setString(0, allFilterStockStr);
+			m_mysql.execute(prepare);
+			continue;
+		}
+		auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString("filterstock", "date,filterstock"));
+		prepare->setString(0, date.dateToString());
+		prepare->setString(1, allFilterStockStr);
+		m_mysql.execute(prepare);
+	}
+}
+
+void StockMysql::saveFilterStockToRedis(const IntDateTime& beginTime, const IntDateTime& endTime)
+{
+	std::string whereString;
+	if (!beginTime.empty())
+	{
+		whereString = ">='" + beginTime.dateToString() + "'";
+	}
+	if (!endTime.empty())
+	{
+		if (!whereString.empty())
+		{
+			whereString.append(" and ");
+		}
+		whereString.append("<= '" + endTime.dateToString() + "'");
+	}
+	m_mysql.selectDb("stockname");
+	auto allStockFilter = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("filterstock", "date,filterstock", whereString)))->toVector();
+
+	m_redis.selectDbIndex(5);
+
+	int32_t index = -1;
+	while (index++ != allStockFilter.size() - 1)
+	{
+		const std::string& date = allStockFilter[index][0];
+		const std::string& filterStock = allStockFilter[index][1];
+		m_redis.deleteKey(date);
+		m_redis.setGroups(date, CStringManager::split(filterStock, ","));
+	}
+}
+
+std::vector<std::string> StockMysql::readFilterStockFromRedis(const IntDateTime& date)
+{
+	m_redis.selectDbIndex(5);
+	std::vector<std::string> result = m_redis.getGroup(date.dateToString())->toGroup();
+	std::sort(result.begin(), result.end());
+	return result;
+}
+
 void StockMysql::createMarketHead(const std::string& stock)
 {
 	m_mysql.selectDb("stockmarket");
@@ -694,6 +773,12 @@ std::shared_ptr<std::vector<std::vector<std::string>>> StockMysql::redisFromMysq
 	{
 		//如果没有实际数据同时有第一项则表示该gupiao没有有效数据，返回空
 		if (!m_redis.getOrderGroupByScore(stock, 0, 0)->toGroup().empty())
+		{
+			return result;
+		}
+
+		auto allStock = allStockFromMysql();
+		if (std::find(allStock.begin(), allStock.end(), stock) == allStock.end())
 		{
 			return result;
 		}

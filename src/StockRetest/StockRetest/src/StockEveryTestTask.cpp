@@ -59,18 +59,14 @@ void StockEveryTestTask::DoTask()
 		return;
 	}
 
+	std::vector<std::string> stockLog;
 	if (m_showStockLog)
 	{
-		auto stockLog = fund.stockLog();
-		int32_t lineIndex = -1;
-		while (lineIndex++ != stockLog.size() - 1)
-		{
-			RCSend("stocklog = %s", stockLog[lineIndex].c_str());
-		}
+		stockLog = fund.stockLog();
 	}
 
 	std::shared_ptr<StockEveryTestResultTask> spStockEveryTestResultTask(new StockEveryTestResultTask);
-	spStockEveryTestResultTask->setParam(m_stock, currentFund, m_allFund, m_allStockCount);
+	spStockEveryTestResultTask->setParam(m_stock, stockLog, currentFund, m_allFund, m_allStockCount);
 	CTaskThreadManager::Instance().GetThreadInterface(m_resultThreadId)->PostTask(spStockEveryTestResultTask);
 }
 

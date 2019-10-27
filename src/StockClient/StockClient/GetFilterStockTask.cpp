@@ -1,4 +1,4 @@
-#include "GetAllFilterStockTask.h"
+#include "GetFilterStockTask.h"
 #include "CMouse/CMouseAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
@@ -6,7 +6,7 @@
 #include "StockClient.h"
 #include "CStringManager/CStringManagerAPI.h"
 
-GetAllFilterStockTask::GetAllFilterStockTask():
+GetFilterStockTask::GetFilterStockTask():
 m_hWnd(nullptr),
 m_today(0, 0),
 m_stockClient(nullptr)
@@ -14,7 +14,7 @@ m_stockClient(nullptr)
 
 }
 
-void GetAllFilterStockTask::DoTask()
+void GetFilterStockTask::DoTask()
 {
 	if (m_today.empty())
 	{
@@ -26,7 +26,7 @@ void GetAllFilterStockTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(521, 38), 0);
 		CMouse::LeftClick();
 		Sleep(3000);
-		CMouse::MoveAbsolute(xyls::Point(715, 333), 0);
+		CMouse::MoveAbsolute(xyls::Point(285, 122), 0);
 		CMouse::LeftClick();
 		CSystem::setClipboardData(m_hWnd, SEARCH_STR);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
@@ -34,10 +34,10 @@ void GetAllFilterStockTask::DoTask()
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('V');
 		Sleep(100);
-		CMouse::MoveAbsolute(xyls::Point(1235, 331), 0);
+		CMouse::MoveAbsolute(xyls::Point(921, 122), 0);
 		CMouse::LeftClick();
 		Sleep(5000);
-		CMouse::MoveAbsolute(xyls::Point(388, 376), 0);
+		CMouse::MoveAbsolute(xyls::Point(527, 304), 0);
 		CMouse::LeftClick();
 		Sleep(1000);
 		CSystem::setClipboardData(m_hWnd, m_today.dateToString() + ".xls");
@@ -97,7 +97,7 @@ void GetAllFilterStockTask::DoTask()
 	CMouse::LeftClick();
 }
 
-void GetAllFilterStockTask::setParam(HWND hWnd, const IntDateTime& today, StockClient* stockClient)
+void GetFilterStockTask::setParam(HWND hWnd, const IntDateTime& today, StockClient* stockClient)
 {
 	m_hWnd = hWnd;
 	m_today = today;

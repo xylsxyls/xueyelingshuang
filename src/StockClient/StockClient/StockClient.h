@@ -44,6 +44,8 @@ private slots:
 	void onUpdateTodayIndicatorButtonClicked();
 	void onUpdateTodayRedisButtonClicked();
 	void onChooseStockButtonClicked();
+	void onSaveFilterStockToMysqlButtonClicked();
+	void onSaveFilterStockToRedisButtonClicked();
 	void onEverydayTaskButtonClicked();
 
 public:
@@ -59,7 +61,7 @@ public:
 	std::vector<std::vector<std::string>> m_todayMarket;
 	//当天zhangfu最高的gupiao
 	std::string m_risestStock;
-	//当天日期
+	//当天日期，需要改成智能指针
 	IntDateTime m_today;
 	//过滤的gupiao
 	std::vector<std::string> m_allFilterStock;
@@ -99,6 +101,10 @@ private:
 	COriginalButton* m_updateTodayRedisButton;
 	//xuangu
 	COriginalButton* m_chooseStockButton;
+	//存入过滤的gupiao到mysql
+	COriginalButton* m_saveFilterStockToMysqlButton;
+	//存入过滤的gupiao到redis
+	COriginalButton* m_saveFilterStockToRedisButton;
 	//每日任务
 	COriginalButton* m_everydayTaskButton;
 };

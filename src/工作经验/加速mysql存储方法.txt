@@ -1,0 +1,4 @@
+把my-default.ini改成my.ini
+在文件中添加
+innodb_flush_log_at_trx_commit=0
+有丢失数据风险

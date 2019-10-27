@@ -17,7 +17,7 @@ void ChooseStockTask::DoTask()
 	}
 	if (m_allStock.empty())
 	{
-		m_allStock = m_stockClient->m_allFilterStock.empty() ? StockMysql::instance().allStock() : m_stockClient->m_allFilterStock;
+		m_allStock = StockMysql::instance().readFilterStockFromRedis(m_date);
 	}
 
 	StockTrade stockTrade;

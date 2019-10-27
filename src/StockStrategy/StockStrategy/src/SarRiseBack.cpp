@@ -1,6 +1,7 @@
 #include "SarRiseBack.h"
 #include "StockMarket/StockMarketAPI.h"
 #include "StockIndicator/StockIndicatorAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 SarRiseBack::SarRiseBack():
 m_isBuy(false),
@@ -43,6 +44,12 @@ bool SarRiseBack::buy(const IntDateTime& date, BigNumber& price, BigNumber& perc
 		return false;
 	}
 
+	std::string stock = m_spMarket->stock();
+	if (CStringManager::Left(stock, 3) == "688")
+	{
+		return false;
+	}
+
 	BigNumber sar5 = m_spStockSarIndicator->day(date)->m_sar5;
 	BigNumber sar10 = m_spStockSarIndicator->day(date)->m_sar10;
 	BigNumber sar20 = m_spStockSarIndicator->day(date)->m_sar20;
@@ -53,20 +60,27 @@ bool SarRiseBack::buy(const IntDateTime& date, BigNumber& price, BigNumber& perc
 
 	if (/*sar5State == StockSar::RED_TO_GREEN || */sar10State == StockSar::RED_TO_GREEN/* || sar20State == StockSar::RED_TO_GREEN*/)
 	{
-		if (sar5State == StockSar::RED_TO_GREEN)
+		//if (sar10State == StockSar::RED_TO_GREEN)
+		//{
+		//	percent = 100;
+		//	price = close;
+		//}
+		/*else */if (sar5State == StockSar::RED_TO_GREEN)
 		{
+			//return false;
 			percent = 80;
-			price = sar10;
+			price = close;
 		}
 		else if (sar10State == StockSar::RED_TO_GREEN)
 		{
+			//return false;
 			percent = 100;
-			price = sar10;
+			price = close;
 		}
 		else
 		{
 			percent = 90;
-			price = sar20;
+			price = close;
 		}
 		m_isBuy = true;
 		m_buyDate = date;
@@ -82,7 +96,7 @@ bool SarRiseBack::sell(const IntDateTime& date, BigNumber& price, BigNumber& per
 	{
 		return false;
 	}
-	//if (m_spMarket->getMemoryDays(m_buyDate, date) == 5)
+	//if (m_spMarket->getMemoryDays(m_buyDate, date) == 2)
 	//{
 	//	BigNumber close = m_spMarket->day()->close();
 	//	price = close;
@@ -90,27 +104,25 @@ bool SarRiseBack::sell(const IntDateTime& date, BigNumber& price, BigNumber& per
 	//	m_isBuy = false;
 	//	return true;
 	//}
-	if (m_spMarket->getMemoryDays(m_buyDate, date) >= 5)
-	{
-		BigNumber close = m_spMarket->day()->close();
-		BigNumber chg = ((close / m_buyPrice.toPrec(2)) - 1) * 100;
-		if (chg < 2)
-		{
-			price = close;
-			percent = 100;
-			m_isBuy = false;
-			return true;
-		}
-	}
 	if (m_spMarket->day()->chgValue() > 9.5)
 	{
 		return false;
 	}
+	//if (m_spMarket->getMemoryDays(m_buyDate, date) >= 22)
+	//{
+	//	BigNumber close = m_spMarket->day()->close();
+	//	price = close;
+	//	percent = 100;
+	//	m_isBuy = false;
+	//	return true;
+	//}
 	BigNumber high = m_spMarket->day()->high();
+	BigNumber close = m_spMarket->day()->close();
 	BigNumber bollup = m_spStockBollIndicator->day(date)->m_up;
-	if (bollup <= high)
+	BigNumber bollmid = m_spStockBollIndicator->day(date)->m_mid;
+	if (bollup <= high || (bollmid + bollup) / 2 < close)
 	{
-		price = bollup;
+		price = close;
 		percent = 100;
 		m_isBuy = false;
 		return true;

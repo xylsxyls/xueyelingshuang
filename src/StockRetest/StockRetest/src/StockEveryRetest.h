@@ -14,6 +14,7 @@ public:
 
 public:
 	void init(StrategyEnum strategyEnum,
+		const std::vector<std::string>& allStock,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		bool showStockLog = false,
@@ -31,6 +32,7 @@ private:
 #pragma warning(disable:4251)
 #endif
 	std::vector<uint32_t> m_vecThreadId;
+	std::vector<std::string> m_allStock;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

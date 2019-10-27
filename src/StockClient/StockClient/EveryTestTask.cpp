@@ -14,7 +14,7 @@ m_strategyEnum(STRATEGY_INIT)
 void EveryTestTask::DoTask()
 {
 	StockEveryRetest stockEveryRetest;
-	stockEveryRetest.init(m_strategyEnum, m_beginTime, m_endTime);
+	stockEveryRetest.init(m_strategyEnum, m_stockClient->m_allFilterStock, m_beginTime, m_endTime, true);
 	stockEveryRetest.run();
 }
 

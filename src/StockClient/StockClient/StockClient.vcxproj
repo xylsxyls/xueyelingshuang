@@ -181,11 +181,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="GetAllFilterStockTask.cpp" />
+    <ClCompile Include="GetFilterStockTask.cpp" />
     <ClCompile Include="InitRedisTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MairubishengTask.cpp" />
     <ClCompile Include="OpenProcessTask.cpp" />
+    <ClCompile Include="SaveFilterStockTaskToMysql.cpp" />
+    <ClCompile Include="SaveAllFilterStockTaskToRedis.cpp" />
     <ClCompile Include="SaveAllStockTask.cpp" />
     <ClCompile Include="SaveGroupMarketTask.cpp" />
     <ClCompile Include="SaveIndicatorToMysqlTask.cpp" />
@@ -296,10 +298,12 @@
     <ClInclude Include="CheckAllStockTask.h" />
     <ClInclude Include="ChooseStockTask.h" />
     <ClInclude Include="EveryTestTask.h" />
-    <ClInclude Include="GetAllFilterStockTask.h" />
+    <ClInclude Include="GetFilterStockTask.h" />
     <ClInclude Include="InitRedisTask.h" />
     <ClInclude Include="MairubishengTask.h" />
     <ClInclude Include="OpenProcessTask.h" />
+    <ClInclude Include="SaveFilterStockTaskToMysql.h" />
+    <ClInclude Include="SaveAllFilterStockTaskToRedis.h" />
     <ClInclude Include="SaveAllStockTask.h" />
     <ClInclude Include="SaveGroupMarketTask.h" />
     <ClInclude Include="SaveIndicatorToMysqlTask.h" />

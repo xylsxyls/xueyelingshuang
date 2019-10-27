@@ -4,18 +4,17 @@
 
 class StockClient;
 
-class GetAllFilterStockTask : public CTask
+class SaveFilterStockTaskToMysql : public CTask
 {
 public:
-	GetAllFilterStockTask();
+	SaveFilterStockTaskToMysql();
 
 public:
 	void DoTask();
 
-	void setParam(HWND hWnd, const IntDateTime& today, StockClient* stockClient);
+	void setParam(const IntDateTime& today, StockClient* stockClient);
 
 private:
-	HWND m_hWnd;
 	IntDateTime m_today;
 	StockClient* m_stockClient;
 };
