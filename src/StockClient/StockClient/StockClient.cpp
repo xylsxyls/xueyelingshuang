@@ -768,7 +768,7 @@ void StockClient::onSaveFilterStockToRedisButtonClicked()
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 
 	std::shared_ptr<SaveAllFilterStockTaskToRedis> spSaveAllFilterStockTaskToRedis(new SaveAllFilterStockTaskToRedis);
-	spSaveAllFilterStockTaskToRedis->setParam(new IntDateTime(0, 0), new IntDateTime(0, 0), this);
+	spSaveAllFilterStockTaskToRedis->setParam(new IntDateTime(beginTime), new IntDateTime(endTime), this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
 }
 

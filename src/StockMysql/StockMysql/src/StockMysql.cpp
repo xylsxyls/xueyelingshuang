@@ -700,7 +700,7 @@ void StockMysql::saveFilterStockToRedis(const IntDateTime& beginTime, const IntD
 	std::string whereString;
 	if (!beginTime.empty())
 	{
-		whereString = ">='" + beginTime.dateToString() + "'";
+		whereString = "date>=" + SqlString::strToDate(beginTime.dateToString());
 	}
 	if (!endTime.empty())
 	{
@@ -708,7 +708,7 @@ void StockMysql::saveFilterStockToRedis(const IntDateTime& beginTime, const IntD
 		{
 			whereString.append(" and ");
 		}
-		whereString.append("<= '" + endTime.dateToString() + "'");
+		whereString.append("date<=" + SqlString::strToDate(endTime.dateToString()));
 	}
 	m_mysql.selectDb("stockname");
 	auto allStockFilter = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("filterstock", "date,filterstock", whereString)))->toVector();
