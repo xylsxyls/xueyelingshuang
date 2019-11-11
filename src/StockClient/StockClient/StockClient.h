@@ -46,6 +46,7 @@ private slots:
 	void onChooseStockButtonClicked();
 	void onSaveFilterStockToMysqlButtonClicked();
 	void onSaveFilterStockToRedisButtonClicked();
+	void onRealTestButtonClicked();
 	void onEverydayTaskButtonClicked();
 
 public:
@@ -105,6 +106,8 @@ private:
 	COriginalButton* m_saveFilterStockToMysqlButton;
 	//存入过滤的gupiao到redis
 	COriginalButton* m_saveFilterStockToRedisButton;
+	//模拟实际测试
+	COriginalButton* m_realTestButton;
 	//每日任务
 	COriginalButton* m_everydayTaskButton;
 };

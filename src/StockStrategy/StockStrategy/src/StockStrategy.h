@@ -1,6 +1,7 @@
 #pragma once
 #include "StockStrategyMacro.h"
 #include <memory>
+#include "IntDateTime/IntDateTimeAPI.h"
 
 class Strategy;
 class StockMarket;
@@ -25,13 +26,10 @@ public:
 	static StockStrategy& instance();
 
 public:
-	std::vector<std::string> strategyAllStock();
+	std::vector<std::string> strategyAllStock(StrategyEnum strategyEnum, const IntDateTime& beginTime, const IntDateTime& endTime);
+	std::vector<std::string> strategyStock(StrategyEnum strategyEnum, const IntDateTime& date);
 
 	std::shared_ptr<Strategy> strategy(const std::string& stock,
-		const std::shared_ptr<StockMarket>& stockMarket,
-		const std::shared_ptr<StockWrIndicator>& stockWrIndicator,
-		const std::shared_ptr<StockRsiIndicator>& stockRsiIndicator,
-		const std::shared_ptr<StockSarIndicator>& stockSarIndicator,
-		const std::shared_ptr<StockBollIndicator>& stockBollIndicator,
+		const std::shared_ptr<StockMarket>& spMarket,
 		StrategyEnum strategyEnum);
 };

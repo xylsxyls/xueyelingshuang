@@ -18,13 +18,19 @@ void StockEveryTestTask::DoTask()
 {
 	m_spMarket->load();
 	std::shared_ptr<StockMarket> spMarket(new StockMarket(*m_spMarket));
-	std::shared_ptr<Strategy> spStrategy = StockStrategy::instance().strategy(m_stock,
-		spMarket,
-		m_stockWrIndicator,
-		m_stockRsiIndicator,
-		m_stockSarIndicator,
-		m_stockBollIndicator,
-		m_strategyEnum);
+	std::shared_ptr<Strategy> spStrategy = StockStrategy::instance().strategy(m_stock, spMarket, m_strategyEnum);
+
+	switch (m_strategyEnum)
+	{
+	case SAR_RISE_BACK:
+	{
+		std::shared_ptr<SarRiseBack> spSarRiseBack = std::dynamic_pointer_cast<SarRiseBack>(spStrategy);
+		spSarRiseBack->init(StockIndicator::instance().sar(), StockIndicator::instance().boll());
+	}
+	break;
+	default:
+		break;
+	}
 	
 	spStrategy->load();
 
@@ -43,17 +49,22 @@ void StockEveryTestTask::DoTask()
 
 		BigNumber price;
 		BigNumber percent;
-		if (spStrategy->sell(date, price, percent))
+		std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>> buyInfo;
+		fund.buyInfo(m_stock, buyInfo);
+		if (spStrategy->sell(date, price, percent, buyInfo))
 		{
 			fund.sellStock(price, percent / BigNumber("100.0"), m_spMarket->day());
 		}
 
-		if (spStrategy->buy(date, price, percent))
+		fund.buyInfo(m_stock, buyInfo);
+		if (spStrategy->buy(date, price, percent, buyInfo))
 		{
 			fund.buyStock(price, percent / BigNumber("100.0"), m_spMarket->day());
 		}
 	} while (m_spMarket->next());
-	BigNumber currentFund = fund.allFund(m_spMarket->day());
+	std::map<std::string, std::shared_ptr<StockDay>> dayDate;
+	dayDate[m_stock] = m_spMarket->day();
+	BigNumber currentFund = fund.allFund(dayDate);
 	if (currentFund == money)
 	{
 		return;

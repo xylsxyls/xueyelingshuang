@@ -32,6 +32,7 @@
 #include "UpdateTodayRedisTask.h"
 #include "SaveFilterStockTaskToMysql.h"
 #include "SaveAllFilterStockTaskToRedis.h"
+#include "RealTestTask.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -56,6 +57,7 @@ StockClient::StockClient(QWidget* parent)
 	m_chooseStockButton(nullptr),
 	m_saveFilterStockToMysqlButton(nullptr),
 	m_saveFilterStockToRedisButton(nullptr),
+	m_realTestButton(nullptr),
 	m_everydayTaskButton(nullptr)
 {
 	ui.setupUi(this);
@@ -77,6 +79,7 @@ StockClient::StockClient(QWidget* parent)
 	m_chooseStockButton = new COriginalButton(this);
 	m_saveFilterStockToMysqlButton = new COriginalButton(this);
 	m_saveFilterStockToRedisButton = new COriginalButton(this);
+	m_realTestButton = new COriginalButton(this);
 	m_everydayTaskButton = new COriginalButton(this);
 	init();
 }
@@ -173,6 +176,10 @@ void StockClient::init()
 	m_saveFilterStockToRedisButton->setText(QStringLiteral("存入过滤gupiao到redis"));
 	QObject::connect(m_saveFilterStockToRedisButton, &COriginalButton::clicked, this, &StockClient::onSaveFilterStockToRedisButtonClicked);
 
+	m_realTestButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_realTestButton->setText(QStringLiteral("模拟实际测试"));
+	QObject::connect(m_realTestButton, &COriginalButton::clicked, this, &StockClient::onRealTestButtonClicked);
+
 	m_everydayTaskButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_everydayTaskButton->setText(QStringLiteral("每日任务"));
 	QObject::connect(m_everydayTaskButton, &COriginalButton::clicked, this, &StockClient::onEverydayTaskButtonClicked);
@@ -236,6 +243,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_chooseStockButton);
 	vecButton.push_back(m_saveFilterStockToMysqlButton);
 	vecButton.push_back(m_saveFilterStockToRedisButton);
+	vecButton.push_back(m_realTestButton);
 	vecButton.push_back(m_everydayTaskButton);
 
 	int32_t cowCount = 4;
@@ -266,9 +274,9 @@ void StockClient::onEveryTestButtonClicked()
 {
 	RCSend("time = %d", ::GetTickCount());
 
-	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-	spGetAllFilterStockTask->setParam((HWND)winId(), "2019-10-09", this);
-	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
+	//std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
+	//spGetAllFilterStockTask->setParam((HWND)winId(), "2019-10-09", this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
 
 	std::shared_ptr<EveryTestTask> spEveryTestTask(new EveryTestTask);
 	spEveryTestTask->setParam(SAR_RISE_BACK, "2019-08-01", "2019-09-30", this);
@@ -770,6 +778,13 @@ void StockClient::onSaveFilterStockToRedisButtonClicked()
 	std::shared_ptr<SaveAllFilterStockTaskToRedis> spSaveAllFilterStockTaskToRedis(new SaveAllFilterStockTaskToRedis);
 	spSaveAllFilterStockTaskToRedis->setParam(new IntDateTime(beginTime), new IntDateTime(endTime), this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
+}
+
+void StockClient::onRealTestButtonClicked()
+{
+	std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+	spRealTestTask->setParam(SAR_RISE_BACK, "2019-10-16", "2019-10-31", this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 
 void StockClient::onEverydayTaskButtonClicked()

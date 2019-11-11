@@ -186,6 +186,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MairubishengTask.cpp" />
     <ClCompile Include="OpenProcessTask.cpp" />
+    <ClCompile Include="RealTestTask.cpp" />
     <ClCompile Include="SaveFilterStockTaskToMysql.cpp" />
     <ClCompile Include="SaveAllFilterStockTaskToRedis.cpp" />
     <ClCompile Include="SaveAllStockTask.cpp" />
@@ -302,6 +303,7 @@
     <ClInclude Include="InitRedisTask.h" />
     <ClInclude Include="MairubishengTask.h" />
     <ClInclude Include="OpenProcessTask.h" />
+    <ClInclude Include="RealTestTask.h" />
     <ClInclude Include="SaveFilterStockTaskToMysql.h" />
     <ClInclude Include="SaveAllFilterStockTaskToRedis.h" />
     <ClInclude Include="SaveAllStockTask.h" />

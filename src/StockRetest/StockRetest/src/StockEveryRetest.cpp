@@ -53,7 +53,7 @@ void StockEveryRetest::init(StrategyEnum strategyEnum,
 
 void StockEveryRetest::run()
 {
-	std::vector<std::string> vecStock = m_allStock.empty() ? StockStrategy::instance().strategyAllStock() : m_allStock;
+	std::vector<std::string> vecStock = m_allStock.empty() ? StockStrategy::instance().strategyAllStock(m_strategyEnum, m_beginTime, m_endTime) : m_allStock;
 	std::sort(vecStock.begin(), vecStock.end());
 	int32_t threadCount = m_vecThreadId.size();
 	int32_t index = -1;

@@ -125,6 +125,9 @@
     <ClCompile Include="GetFilterStockTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="RealTestTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -205,6 +208,9 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="GetFilterStockTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="RealTestTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>

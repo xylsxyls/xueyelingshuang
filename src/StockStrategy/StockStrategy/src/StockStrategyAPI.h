@@ -2,6 +2,7 @@
 #define _StockStrategyAPI
 #include "StockStrategy.h"
 #include "Strategy.h"
+#include "SarRiseBack.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockStrategyd.lib")

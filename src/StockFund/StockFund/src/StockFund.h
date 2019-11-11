@@ -13,7 +13,7 @@ class StockFundAPI StockFund
 public:
 	/** 购买gupiao
 	@param [in] price 期望的购买jiage
-	@param [in] rate 使用的可用zijin比例
+	@param [in] rate 使用的可用zijin比例，0-1
 	@param [in] spStockDay gupiao当天hangqing
 	@return 返回是否购买成功，即是否能在期望jiage买到
 	*/
@@ -21,7 +21,7 @@ public:
 
 	/** 卖出gupiao
 	@param [in] price 期望的卖出jiage
-	@param [in] rate 卖出比例
+	@param [in] rate 卖出比例，0-1
 	@param [in] spStockDay gupiao当天hangqing
 	@return 返回是否卖出成功，即是否能在期望jiage卖出
 	*/
@@ -46,7 +46,7 @@ public:
 	@param [in] dayDate 包含数据的日期结构体
 	@return 返回总zijin
 	*/
-	BigNumber allFund(const std::shared_ptr<StockDay>& dayDate);
+	BigNumber allFund(const std::map<std::string, std::shared_ptr<StockDay>>& dayDate);
 
 	/** 计算所持gupiao在指定日期内的涨跌幅，已经放大100倍，包含百分号
 	@param [in] stock gupiao代码
@@ -107,6 +107,17 @@ public:
 	*/
 	bool hasFreezeFund() const;
 
+	/** 获取goumai信息
+	@param [in] stock gupiao代码
+	@param [out] buyInfo goumai信息
+	*/
+	void buyInfo(const std::string& stock, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& buyInfo);
+
+	/** 获取所有goumai信息
+	@param [out] allBuyInfo 所有goumai信息
+	*/
+	void allBuyInfo(std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>& allBuyInfo);
+
 private:
 	//可用zijin
 	BigNumber m_available;
@@ -122,7 +133,7 @@ private:
 	//std::map<std::string, std::shared_ptr<StockMarket>> m_stockMarket;
 	//买卖日志记录
 	std::vector<std::string> m_stockLog;
-	//买卖记录，gupiao代码，shouyi率，cangwei比，chigu天数，买入时间，卖出时间
+	//买卖记录，gupiao代码，shouyi率，/*cangwei比*/，chigu天数，买入时间，卖出时间
 	std::vector<std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>> m_dataLog;
 #ifdef _MSC_VER
 #pragma warning(pop)

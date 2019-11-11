@@ -113,7 +113,7 @@ bool StockFund::sellStock(const BigNumber& price, const BigNumber& rate, const s
 		log.append("卖出gupiao：" + stock + " " + "name" + "，");
 	}
 	vecTimes.push_back(date);
-	vecData.push_back((back / allFund(spStockDay)).toPrec(2));
+	//vecData.push_back((back / allFund(spStockDay)).toPrec(2));
 	vecData.push_back((date - vecTimes[0]) / 86400);
 	m_dataLog.push_back(std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>(vecData, vecTimes));
 
@@ -153,7 +153,7 @@ void StockFund::free(const BigNumber& rate)
 	m_stockLog.push_back(log);
 }
 
-BigNumber StockFund::allFund(const std::shared_ptr<StockDay>& dayDate)
+BigNumber StockFund::allFund(const std::map<std::string, std::shared_ptr<StockDay>>& dayDate)
 {
 	//IntDateTime lastTime = date;
 	BigNumber stockFund = 0;
@@ -179,7 +179,13 @@ BigNumber StockFund::allFund(const std::shared_ptr<StockDay>& dayDate)
 		{
 			position = position + vecDeal[index].second.second;
 		}
-		stockFund = stockFund + dayDate->close() * position;
+		auto itDayDate = dayDate.find(stock);
+		if (itDayDate == dayDate.end())
+		{
+			RCSend("价格不完整");
+			return 0;
+		}
+		stockFund = stockFund + itDayDate->second->close() * position;
 	}
 	BigNumber allFund = stockFund + m_available + m_freeze;
 	std::string log;
@@ -300,6 +306,22 @@ bool StockFund::hasAvailableFund() const
 bool StockFund::hasFreezeFund() const
 {
 	return m_freeze != 0;
+}
+
+void StockFund::buyInfo(const std::string& stock, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& buyInfo)
+{
+	buyInfo.clear();
+	auto itBuyInfo = m_stock.find(stock);
+	if (itBuyInfo == m_stock.end())
+	{
+		return;
+	}
+	buyInfo = itBuyInfo->second;
+}
+
+void StockFund::allBuyInfo(std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>& allBuyInfo)
+{
+	allBuyInfo = m_stock;
 }
 
 //#include "StockIndicator/StockIndicatorAPI.h"

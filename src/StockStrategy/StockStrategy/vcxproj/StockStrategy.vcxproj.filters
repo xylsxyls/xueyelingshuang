@@ -27,11 +27,11 @@
     <ClInclude Include="..\src\StockStrategyMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Strategy.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\SarRiseBack.h">
       <Filter>Strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Strategy.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -40,6 +40,9 @@
     </ClCompile>
     <ClCompile Include="..\src\SarRiseBack.cpp">
       <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Strategy.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

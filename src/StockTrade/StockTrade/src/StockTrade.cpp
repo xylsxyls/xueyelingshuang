@@ -16,13 +16,19 @@ void StockTrade::init(const IntDateTime& beginTime,
 		std::shared_ptr<StockMarket> spMarket(new StockMarket);
 		spMarket->loadFromRedis(stock, beginTime, endTime);
 		StockIndicator::instance().loadIndicatorFromRedis(stock, beginTime, endTime);
-		m_stockStrategyMap[stock] = StockStrategy::instance().strategy(stock,
-			spMarket,
-			StockIndicator::instance().wr(),
-			StockIndicator::instance().rsi(),
-			StockIndicator::instance().sar(),
-			StockIndicator::instance().boll(),
-			strategyEnum);
+		std::shared_ptr<Strategy> spStrategy = StockStrategy::instance().strategy(stock, spMarket, strategyEnum);
+		switch (strategyEnum)
+		{
+		case SAR_RISE_BACK:
+		{
+			std::shared_ptr<SarRiseBack> spSarRiseBack = std::dynamic_pointer_cast<SarRiseBack>(spStrategy);
+			spSarRiseBack->init(StockIndicator::instance().sar(), StockIndicator::instance().boll());
+		}
+		break;
+		default:
+			break;
+		}
+		m_stockStrategyMap[stock] = spStrategy;
 	}
 }
 
@@ -41,19 +47,26 @@ bool sortFun(const std::pair<std::string, std::pair<BigNumber, BigNumber>>& stoc
 	return stock1.second.second > stock2.second.second;
 }
 
-bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock, const IntDateTime& date)
+bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
+	const IntDateTime& date,
+	const std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>& allBuyInfo)
 {
 	bool result = false;
 	buyStock.clear();
 	for (auto itData = m_stockStrategyMap.begin(); itData != m_stockStrategyMap.end(); ++itData)
 	{
+		const std::string& stock = itData->first;
 		auto& stockStrategy = itData->second;
+		auto itBuyInfo = allBuyInfo.find(stock);
 		BigNumber price;
 		BigNumber percent;
-		if (stockStrategy->buy(date, price, percent))
+		if (stockStrategy->buy(date,
+			price,
+			percent,
+			itBuyInfo == allBuyInfo.end() ? std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>() : itBuyInfo->second))
 		{
 			std::pair<std::string, std::pair<BigNumber, BigNumber>> choose;
-			choose.first = itData->first;
+			choose.first = stock;
 			choose.second.first = price;
 			choose.second.second = percent;
 			buyStock.push_back(choose);
@@ -64,12 +77,27 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 	return result;
 }
 
-bool StockTrade::sell(const std::string& stock, const IntDateTime& date, BigNumber& price, BigNumber& percent)
+bool StockTrade::sell(const std::string& stock,
+	const IntDateTime& date,
+	BigNumber& price,
+	BigNumber& percent,
+	const std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& buyInfo)
 {
 	auto itStrategy = m_stockStrategyMap.find(stock);
 	if (itStrategy == m_stockStrategyMap.end())
 	{
 		return false;
 	}
-	return itStrategy->second->sell(date, price, percent);
+	return itStrategy->second->sell(date, price, percent, buyInfo);
+}
+
+std::shared_ptr<StockMarket> StockTrade::market(const std::string& stock)
+{
+	auto itStrategy = m_stockStrategyMap.find(stock);
+	if (itStrategy == m_stockStrategyMap.end())
+	{
+		return std::shared_ptr<StockMarket>();
+	}
+	std::shared_ptr<Strategy> strategy = itStrategy->second;
+	return strategy->market();
 }
