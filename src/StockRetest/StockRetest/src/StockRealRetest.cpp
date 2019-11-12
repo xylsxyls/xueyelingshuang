@@ -10,6 +10,7 @@
 #include "StockTrade/StockTradeAPI.h"
 #include "StockFund/StockFundAPI.h"
 #include "CStopWatch/CStopWatchAPI.h"
+#include <math.h>
 
 StockRealRetest::StockRealRetest():
 m_strategyEnum(STRATEGY_INIT),
@@ -64,13 +65,14 @@ void StockRealRetest::run()
 	//std::vector<std::string> vecStock = m_allStock.empty() ? StockMysql::instance().readFilterStockFromRedis() : m_allStock;
 	//std::sort(vecStock.begin(), vecStock.end());
 
-	int32_t money = 20000000;
+	int32_t money = 200000;
 	StockFund fund;
 	fund.add(money);
 
 	CStopWatch stopWatch;
 	StockTrade stockTrade;
-	stockTrade.init(m_beginTime, m_endTime, StockStrategy::instance().strategyAllStock(m_strategyEnum, m_beginTime, m_endTime), m_strategyEnum);
+	auto vecStrategyStock = StockStrategy::instance().strategyAllStock(m_strategyEnum, m_beginTime, m_endTime);
+	stockTrade.init(m_beginTime, m_endTime, vecStrategyStock, m_strategyEnum);
 	stockTrade.load();
 
 	std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>> buyInfo;
@@ -158,7 +160,7 @@ void StockRealRetest::change(std::vector<std::pair<std::string, std::pair<BigNum
 {
 	BigNumber allScore = 0;
 	int32_t index = -1;
-	while (index++ != buyStock.size() - 1)
+	while (index++ != (std::min)((int32_t)buyStock.size(), 10) - 1)
 	{
 		allScore = allScore + buyStock[index].second.second;
 	}
@@ -166,7 +168,7 @@ void StockRealRetest::change(std::vector<std::pair<std::string, std::pair<BigNum
 	while (index++ != buyStock.size() - 1)
 	{
 		BigNumber score = buyStock[index].second.second;
-		buyStock[index].second.second = score / allScore.toPrec(2).zero();
+		buyStock[index].second.second = score / BigNumber((std::max)(atoi(allScore.toString().c_str()), 100)).toPrec(2).zero();
 		allScore = allScore - score;
 	}
 }
