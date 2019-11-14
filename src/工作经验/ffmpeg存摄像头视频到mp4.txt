@@ -1,0 +1,1 @@
+ .\ffmpeg -i rtsp://admin:admin123@10.5.4.171 -rtsp_transport tcp -vcodec copy test3.mp4

@@ -1,0 +1,136 @@
+https://blog.csdn.net/zhang__rong/article/details/88647197
+
+#如果还没有 docker group 就添加一个：
+$sudo groupadd docker
+#将用户加入该 group 内。然后退出并重新登录就生效啦。
+$sudo gpasswd -a ${USER} docker
+#重启 docker 服务
+$systemctl restart docker
+#切换当前会话到新 group 或者重启 X 会话
+$newgrp - docker
+#注意:最后一步是必须的，否则因为 groups 命令获取到的是缓存的组信息，刚添加的组信息未能生效，
+#所以 docker images 执行时同样有错。
+————————————————
+版权声明：本文为CSDN博主「wilsonyx」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/qq_30505673/article/details/84768750
+
+2.2、更新系统
+
+使用root 权限登录 CentOS。确保 yum 包更新到最新。
+
+$ yum -y update
+2.3、卸载旧版本（如果安装过就版本的话）
+
+$ yum remove docker docker-common docker-selinux docker-engine
+如果安装过旧版本，就会卸载当前版本；如果没安装过，运行上面的命令也没关系，只是提示未安装
+
+
+
+image
+
+比较干净，没有需要删除的历史docker。
+
+2.4、安装需要的软件包
+
+yum-util 提供yum-config-manager功能，另外两个是devicemapper驱动依赖的
+
+$ yum install -y yum-utils device-mapper-persistent-data lvm2
+2.5、设置yum源，清华镜像仓库，速度很快
+
+yum -y install wget #如果没有安装wget则安装，如已安装则会跳过
+根据你的发行版下载repo文件:
+
+$ wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
+https://download.docker.com/linux/centos/docker-ce.repo
+
+把软件仓库地址替换为 TUNA:
+
+sed -i 's+download.docker.com+mirrors.tuna.tsinghua.edu.cn/docker-ce+' /etc/yum.repos.d/docker-ce.repo
+2.6、安装docker
+
+$ yum makecache fast # 清缓存
+ 
+$ yum install docker-ce # 安装docker-ce
+2.7、启动并加入开机启动
+
+$ systemctl start docker
+ 
+$ systemctl enable docker
+2.8、验证安装是否成功
+
+如果有client和service两部分，则表示docker安装启动都成功了
+
+$ docker version
+
+
+image
+
+3、安装Docker Compose
+
+以前使用 Docker 的时候，需要定义 Dockerfile 文件，然后使用 docker build、docker run 等命令操作容器。然而微服务架构的应用系统一般包含若干个微服务，每个微服务一般都会部署多个实例，如果每个微服务都要手动启停，那么效率之低，维护量之大可想而知。
+
+使用 Docker Compose 可以轻松、高效地管理容器，他是一个用于定义和运行多容器Docker的应用程序工具。
+
+3.1、运行命令下载 docker compose
+
+从国内镜像 get.daocloud.io 快速下载：
+
+curl -L https://get.daocloud.io/docker/compose/releases/download/1.23.2/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose 
+3.2、给执行文件添加执行权限
+
+chmod +x /usr/local/bin/docker-compose
+3.3、输入命令测试
+
+docker-compose --version
+如果是返回：
+
+docker-compose version 1.23.2, build 1110ad01
+
+则代表docker compose 安装成功！
+
+3.4、配置docker国内镜像
+
+为了确保docker能快速加载应用程序镜像，配置镜像列表，指向国内的镜像地址。
+
+修改 /etc/docker/daemon.json 文件并添加上 registry-mirrors 键值。
+
+vi /etc/docker/daemon.json
+在里面添加以下代码：
+
+{
+ 
+"registry-mirrors": ["[https://registry.docker-cn.com](https://registry.docker-cn.com)"]
+ 
+}
+修改保存后重启 Docker 以使配置生效。
+
+systemctl restart docker
+至此，docker环境安装完毕！
+
+4、自动化安装的脚本（后续我的项目都会编制相应的脚本，便于安装和维护）
+
+体验过整个安装过程后，是不是觉得有些麻烦？是的，命令行模式一步步执行确实很啰嗦，还不好记。所以，我为大家准备了全自动化的安装脚本，并已经上传到了github，请到github拉取试用！github地址为：https://github.com/tanbushi/install-docker
+
+拉取文件后，可以将 install-docker.sh 上传到虚拟机CentOS的任意目录里，或者将 install-docker.sh 拷入上一篇文章所建立和映射的共享文件夹下（文章里的示例路径为：F:\dockers），文章请参考：Docker搭建LNMP环境实战（四）：安装VMware Tools共享文件夹；在虚拟机CentOS里的 /mnt/hgfs/dockers 里访问到 install-docker.sh。
+
+给脚本 install-docker.sh 增加可执行权限
+
+$ chmod +x install-docker.sh
+执行 install-docker.sh 脚本文件
+
+$ ./install-docker.sh
+即可自动完成 docker 及 docker-compose 的安装！Good Lucky！
+
+5、自动化卸载docker的脚本
+
+在github地址为：https://github.com/tanbushi/install-docker的项目里有个uninstall_docker.sh，可以和install.sh进行类似处理
+
+执行 install-docker.sh 脚本文件
+
+$ ./uninstall-docker.sh
+即可自动完成 docker 的卸载！
+
+https://blog.csdn.net/wangmx1993328/article/category/7934575
+————————————————
+版权声明：本文为CSDN博主「张榕」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/zhang__rong/article/details/88647197
