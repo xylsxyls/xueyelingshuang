@@ -1,0 +1,1 @@
+call "%CLOUD_REBUILD%" Semaphore 32 lib debug same
