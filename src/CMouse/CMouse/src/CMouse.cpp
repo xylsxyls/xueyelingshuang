@@ -113,7 +113,7 @@ bool CMouse::RightManyClick(int32_t times, int32_t sleepTime)
 	return result;
 }
 
-bool CMouse::MoveAbsolute(xyls::Rect rect, int sleepTime)
+bool CMouse::MoveAbsolute(const xyls::Rect& rect, int sleepTime)
 {
     if (sleepTime == -1)
     {
@@ -169,7 +169,7 @@ bool CMouse::MoveAbsolute(xyls::Rect rect, int sleepTime)
 	}
 }
 
-bool CMouse::MoveOpposite(xyls::Rect rect, int32_t sleepTime)
+bool CMouse::MoveOpposite(const xyls::Rect& rect, int32_t sleepTime)
 {
 	xyls::Point currentPoint = GetCurrentPos();
     xyls::Rect rectAbsolute(currentPoint.x() + rect.Left(), currentPoint.y() + rect.Top(), currentPoint.x() + rect.Right(), currentPoint.y() + rect.Bottom());
@@ -191,6 +191,18 @@ xyls::Point CMouse::GetCurrentPos()
 	VARIANT x, y;
 	DmSoft::GetCursorPos(&x, &y);
 	return xyls::Point(x.intVal, y.intVal);
+}
+
+void CMouse::MoveClick(const xyls::Rect& rect, int32_t sleepTime)
+{
+	CMouse::MoveAbsolute(rect, sleepTime);
+	CMouse::LeftClick();
+}
+
+void CMouse::MoveDoubleClick(const xyls::Rect& rect, int32_t sleepTime)
+{
+	CMouse::MoveAbsolute(rect, sleepTime);
+	CMouse::LeftDoubleClick();
 }
 
 /*

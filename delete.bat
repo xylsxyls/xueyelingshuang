@@ -86,6 +86,9 @@ rmdir /q /s "%~dp0src\QtClient\.vs\"
 rmdir /q /s "%~dp0src\StockClient\StockClient\GeneratedFiles\"
 del "%~dp0src\StockClient\StockClient\StockClient.vcxproj.user"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\dtws\dtws\GeneratedFiles\"
+del "%~dp0src\dtws\dtws\dtws.vcxproj.user"
+::------------------------------------------------------------
 
 
 ::-------------------删除控制台临时文件-----------------------

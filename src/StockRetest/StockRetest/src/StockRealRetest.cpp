@@ -65,7 +65,7 @@ void StockRealRetest::run()
 	//std::vector<std::string> vecStock = m_allStock.empty() ? StockMysql::instance().readFilterStockFromRedis() : m_allStock;
 	//std::sort(vecStock.begin(), vecStock.end());
 
-	int32_t money = 200000;
+	BigNumber money = "20000000000";
 	StockFund fund;
 	fund.add(money);
 
@@ -160,7 +160,7 @@ void StockRealRetest::change(std::vector<std::pair<std::string, std::pair<BigNum
 {
 	BigNumber allScore = 0;
 	int32_t index = -1;
-	while (index++ != (std::min)((int32_t)buyStock.size(), 10) - 1)
+	while (index++ != (std::min)((int32_t)buyStock.size(), 5) - 1)
 	{
 		allScore = allScore + buyStock[index].second.second;
 	}

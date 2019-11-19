@@ -32,13 +32,17 @@ public:
     static bool RightManyClick(int32_t times, int32_t sleepTime = -1);
 	//?多击中键
 	//?移动鼠标从点到点，绝对坐标，完成时间，有轨迹，范围为50 - 1000毫秒中的一种，如果有出入，实际完成时间大于预设完成时间
-    static bool MoveAbsolute(xyls::Rect rect, int32_t sleepTime = -1);
+	static bool MoveAbsolute(const xyls::Rect& rect, int32_t sleepTime = -1);
 	//?移动鼠标从点到点，相对坐标，完成时间，有轨迹
-    static bool MoveOpposite(xyls::Rect rect, int32_t sleepTime = -1);
+	static bool MoveOpposite(const xyls::Rect& rect, int32_t sleepTime = -1);
 	//?鼠标中键向下滚动，滚动中键一格
 	static bool MidWheelDown();
 	//?鼠标中键向上滚动
 	static bool MidWheelUp();
 	//?获取鼠标当前位置，绝对坐标
 	static xyls::Point GetCurrentPos();
+	//?移动到指定位置单击
+	static void MoveClick(const xyls::Rect& rect, int32_t sleepTime = -1);
+	//?移动到指定位置单击
+	static void MoveDoubleClick(const xyls::Rect& rect, int32_t sleepTime = -1);
 };
