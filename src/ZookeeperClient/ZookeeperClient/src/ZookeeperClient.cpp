@@ -2,6 +2,7 @@
 #include <zookeeper/zookeeper.h>
 #include <string.h>
 #include <thread>
+#include "CStringManager/CStringManagerAPI.h"
 
 #ifdef _WIN32
 #pragma comment(lib, "ws2_32.lib")
@@ -9,7 +10,8 @@
 
 ZookeeperClient::ZookeeperClient():
 m_isConnect(false),
-m_handle(nullptr)
+m_handle(nullptr),
+m_isListenChildrenNodeChange(false)
 {
 
 }
@@ -19,7 +21,7 @@ ZookeeperClient::~ZookeeperClient()
 	Close();
 }
 
-int32_t ZookeeperClient::Connect(const std::string& host, const int32_t recv_timeout_ms)
+int32_t ZookeeperClient::Connect(const std::string& host, int32_t recv_timeout_ms)
 {
 	if (m_handle != nullptr)
 	{
@@ -51,45 +53,10 @@ int32_t ZookeeperClient::Close()
 
 int32_t ZookeeperClient::SearchNode(const std::string& path, ZookeeperList& nodeList)
 {
-	if (!m_isConnect)
+	int32_t ret = SearchValue(path, nodeList.m_value);
+	if (ret != E_ZM_OK)
 	{
-		printf("[%s]connect_state_(%d)\n", __FUNCTION__, (int32_t)m_isConnect);
-		return E_ZM_FAIL;
-	}
-
-	if (path.empty())
-	{
-		return E_ZM_OK;
-	}
-	
-	char buf[1024] = {};
-	// notice: len must be the size of buf, or there will appear some problem in getting the data of the node
-	int32_t len = 1024;
-	Stat stat;
-	int32_t ret = zoo_get(m_handle, path.c_str(), 0, buf, &len, &stat);
-	if (ret != ZOK)
-	{
-		return convertZookeeperResult(ret);
-	}
-	if (stat.dataLength > len)
-	{
-		nodeList.m_value.clear();
-		len = stat.dataLength;
-		nodeList.m_value.resize(len);
-		ret = zoo_get(m_handle, path.c_str(), 0, &(nodeList.m_value[0]), &len, &stat);
-		if (ret != ZOK)
-		{
-			return convertZookeeperResult(ret);
-		}
-		if (stat.dataLength > len)
-		{
-			printf("zookeeper get value error, path = %s\n", path.c_str());
-			return E_ZM_FAIL;
-		}
-	}
-	else
-	{
-		nodeList.m_value = std::string(buf, len);
+		return ret;
 	}
 	nodeList.m_name = path;
 	
@@ -117,10 +84,94 @@ int32_t ZookeeperClient::SearchNode(const std::string& path, ZookeeperList& node
 	return ret;
 }
 
+
+int32_t ZookeeperClient::SearchValue(const std::string& path, std::string& value)
+{
+	if (!m_isConnect)
+	{
+		printf("[%s]connect_state_(%d)\n", __FUNCTION__, (int32_t)m_isConnect);
+		return E_ZM_FAIL;
+	}
+
+	if (path.empty())
+	{
+		return E_ZM_OK;
+	}
+
+	char buf[1024] = {};
+	// notice: len must be the size of buf, or there will appear some problem in getting the data of the node
+	int32_t len = 1024;
+	Stat stat;
+	int32_t ret = zoo_get(m_handle, path.c_str(), 0, buf, &len, &stat);
+	if (ret != ZOK)
+	{
+		return convertZookeeperResult(ret);
+	}
+	if (stat.dataLength > len)
+	{
+		value.clear();
+		len = stat.dataLength;
+		value.resize(len);
+		ret = zoo_get(m_handle, path.c_str(), 0, &(value[0]), &len, &stat);
+		if (stat.dataLength > len)
+		{
+			printf("zookeeper get value error, path = %s\n", path.c_str());
+			return E_ZM_FAIL;
+		}
+		return convertZookeeperResult(ret);
+	}
+	value = std::string(buf, len);
+	return E_ZM_OK;
+}
+
+int32_t ZookeeperClient::ListenChildrenNode(const std::string& path, bool isListenChildrenNodeChange)
+{
+	int32_t ret = zoo_wget_children(m_handle, path.c_str(), ListenChildrener, this, nullptr);
+	if (ret != ZOK)
+	{
+		return convertZookeeperResult(ret);
+	}
+	
+	ZookeeperList list;
+	ret = SearchNode(path, list);
+	if (ret != E_ZM_OK)
+	{
+		return ret;
+	}
+	m_isListenChildrenNodeChange = isListenChildrenNodeChange;
+	std::set<std::string> childrenNode;
+	int32_t index = -1;
+	while (index++ != list.m_children.size() - 1)
+	{
+		childrenNode.insert(list.m_children[index].m_name);
+		if (m_isListenChildrenNodeChange)
+		{
+			ListenNode(list.m_children[index].m_name);
+		}
+	}
+	SetChildrenMemoryNode(path, childrenNode);
+	return E_ZM_OK;
+}
+
 int32_t ZookeeperClient::ListenNode(const std::string& path)
 {
-	int32_t ret = zoo_wget_children(m_handle, path.c_str(), Listener, this, nullptr);
-	return convertZookeeperResult(ret);
+	Stat stat;
+	char s;
+	int32_t len = 1;
+	int32_t ret = zoo_wget(m_handle, path.c_str(), Listener, this, &s, &len, &stat);
+	if (ret != ZOK)
+	{
+		return convertZookeeperResult(ret);
+	}
+	
+	std::string value;
+	ret = SearchValue(path, value);
+	if (ret != E_ZM_OK)
+	{
+		return ret;
+	}
+	SetMemoryNode(path, value);
+	return E_ZM_OK;
 }
 
 int32_t ZookeeperClient::CreateNode(const std::string& path,
@@ -190,14 +241,84 @@ int32_t ZookeeperClient::connectState() const
 	return m_isConnect;
 }
 
-void ZookeeperClient::ListenNodeDelete(int type, int state, const char* path)
+void ZookeeperClient::ListenNodeDeleted(const std::string& path, const std::string& node)
 {
-	printf("into listen node delete, path = %s\n", path);
+	printf("into listen node deleted, path = %s\n", path.c_str());
 }
 
-void ZookeeperClient::ListenNodeChange(int type, int state, const char* path, const ZookeeperList& zookeeperList)
+void ZookeeperClient::ListenNodeValueChanged(const std::string& path, const std::string& node, const std::string& value)
 {
-	printf("into listen node change, path = %s\n", path);
+	printf("into listen node value changed, path = %s\n", path.c_str());
+}
+
+void ZookeeperClient::ListenChildrenNodeChanged(const std::string& path, const std::string& node, const ZookeeperList& zookeeperList)
+{
+	printf("into listen children node changed, path = %s\n", path.c_str());
+}
+
+void ZookeeperClient::ListenChildrenFatherNodeDeleted(const std::string& path, const std::string& node)
+{
+	printf("into listen children father node deleted, path = %s\n", path.c_str());
+}
+
+void ZookeeperClient::SetMemoryNode(const std::string& path, const std::string& value)
+{
+	std::unique_lock<std::mutex> lock(m_nodeMutex);
+	m_nodeValueMap[path] = value;
+}
+
+void ZookeeperClient::EraseMemoryNode(const std::string& path)
+{
+	std::unique_lock<std::mutex> lock(m_nodeMutex);
+	auto itPath = m_nodeValueMap.find(path);
+	if (itPath == m_nodeValueMap.end())
+	{
+		return;
+	}
+	m_nodeValueMap.erase(itPath);
+}
+
+bool ZookeeperClient::GetMemoryNode(const std::string& path, std::string& value)
+{
+	std::unique_lock<std::mutex> lock(m_nodeMutex);
+	auto itPath = m_nodeValueMap.find(path);
+	if (itPath == m_nodeValueMap.end())
+	{
+		value.clear();
+		return false;
+	}
+	value = itPath->second;
+	return true;
+}
+
+void ZookeeperClient::SetChildrenMemoryNode(const std::string& path, const std::set<std::string>& childrenNode)
+{
+	std::unique_lock<std::mutex> lock(m_childrenNodeMutex);
+	m_childrenNodeMap[path] = childrenNode;
+}
+
+void ZookeeperClient::EraseChildrenFatherMemoryNode(const std::string& path)
+{
+	std::unique_lock<std::mutex> lock(m_childrenNodeMutex);
+	auto itChildrenFatherPath = m_childrenNodeMap.find(path);
+	if (itChildrenFatherPath == m_childrenNodeMap.end())
+	{
+		return;
+	}
+	m_childrenNodeMap.erase(itChildrenFatherPath);
+}
+
+bool ZookeeperClient::GetChildrenMemoryNode(const std::string& path, std::set<std::string>& childrenNode)
+{
+	std::unique_lock<std::mutex> lock(m_childrenNodeMutex);
+	auto itChildrenFatherPath = m_childrenNodeMap.find(path);
+	if (itChildrenFatherPath == m_childrenNodeMap.end())
+	{
+		childrenNode.clear();
+		return false;
+	}
+	childrenNode = itChildrenFatherPath->second;
+	return true;
 }
 
 void ZookeeperClient::Watcher(zhandle_t* zkh, int type, int state, const char* path, void* context)
@@ -237,27 +358,61 @@ void ZookeeperClient::Watcher(zhandle_t* zkh, int type, int state, const char* p
 void ZookeeperClient::Listener(zhandle_t* zkh, int type, int state, const char* path, void* context)
 {
 	auto zm = (ZookeeperClient*)context;
-	int32_t res = zoo_wget_children(zm->m_handle, path, Listener, zm, nullptr);
+	Stat stat;
+	char s[1] = {};
+	int32_t len = 1;
+	int32_t res = zoo_wget(zm->m_handle, path, Listener, zm, s, &len, &stat);
+	std::string node = CStringManager::Right(path, strlen(path) - CStringManager::ReserveFind(path, '/') - 1);
 	if (res != E_ZM_OK)
 	{
-		zm->ListenNodeDelete(type, state, path);
+		zm->EraseMemoryNode(path);
+		zm->ListenNodeDeleted(path, node);
+		return;
+	}
+	std::string value;
+	res = zm->SearchValue(path, value);
+	if (res != E_ZM_OK)
+	{
+		zm->EraseMemoryNode(path);
+		zm->ListenNodeDeleted(path, node);
+		return;
+	}
+	zm->SetMemoryNode(path, value);
+	zm->ListenNodeValueChanged(path, node, value);
+}
+
+void ZookeeperClient::ListenChildrener(zhandle_t* zkh, int type, int state, const char* path, void* context)
+{
+	auto zm = (ZookeeperClient*)context;
+	int32_t res = zoo_wget_children(zm->m_handle, path, ListenChildrener, zm, nullptr);
+	std::string node = CStringManager::Right(path, strlen(path) - CStringManager::ReserveFind(path, '/') - 1);
+	if (res != E_ZM_OK)
+	{
+		zm->EraseChildrenFatherMemoryNode(path);
+		zm->ListenChildrenFatherNodeDeleted(path, node);
 		return;
 	}
 	ZookeeperList nodeList;
 	res = zm->SearchNode(path, nodeList);
 	if (res != E_ZM_OK)
 	{
-		zm->ListenNodeDelete(type, state, path);
+		zm->EraseChildrenFatherMemoryNode(path);
+		zm->ListenChildrenFatherNodeDeleted(path, node);
 		return;
 	}
-	zm->ListenNodeChange(type, state, path, nodeList);
-	//Sleep(1000);
-	//LOG_SEND_LOCAL("zkh = %d,type = %d,state = %d,path = %s,context = %d", zkh, type, state, path, context);
 
-	//emit VideoLogicManager::instance().listenChanged();
-
-	//zoo_wget_children(zm->handle_, path, Watcher2, nullptr, nullptr);
-	//LOG_SEND_LOCAL("Watcher2:%s,%d", path, context);
+	std::set<std::string> childrenNode;
+	int32_t index = -1;
+	while (index++ != nodeList.m_children.size() - 1)
+	{
+		childrenNode.insert(nodeList.m_children[index].m_name);
+		if (zm->m_isListenChildrenNodeChange)
+		{
+			zm->ListenNode(nodeList.m_children[index].m_name);
+		}
+	}
+	zm->SetChildrenMemoryNode(path, childrenNode);
+	zm->ListenChildrenNodeChanged(path, node, nodeList);
 }
 
 int32_t ZookeeperClient::convertZookeeperResult(int32_t ret)
@@ -295,15 +450,15 @@ int32_t ZookeeperClient::convertZookeeperResult(int32_t ret)
 //{
 //	ZookeeperClient client1;
 //	int32_t res1 = client1.Connect("10.151.3.166:2181,10.151.3.166:2182,10.151.3.166:2183");
-//	client1.CreateNode("/clienttest", "clienttestvalue", ZookeeperNodeType::PERSISTENT_NODE);
-//	client1.CreateNode("/clienttest/test1", "test1value", ZookeeperNodeType::PERSISTENT_NODE);
-//	client1.CreateNode("/clienttest/test2", "test2value", ZookeeperNodeType::PERSISTENT_NODE);
-//	client1.CreateNode("/clienttest/test2/test1", "test2test1value", ZookeeperNodeType::PERSISTENT_NODE);
+//	client1.CreateNode("/clienttest", "clienttestvalue", ZookeeperNodeType::E_PERSISTENT_NODE);
+//	client1.CreateNode("/clienttest/test1", "test1value", ZookeeperNodeType::E_PERSISTENT_NODE);
+//	client1.CreateNode("/clienttest/test2", "test2value", ZookeeperNodeType::E_PERSISTENT_NODE);
+//	client1.CreateNode("/clienttest/test2/test1", "test2test1value", ZookeeperNodeType::E_PERSISTENT_NODE);
 //	//client1.ListenNode("/clienttest");
 //	ZookeeperClient client2;
 //	int32_t res2 = client2.Connect("10.151.3.166:2181,10.151.3.166:2182,10.151.3.166:2183", 10000);
-//	client2.ListenNode("/clienttest");
-//	client1.CreateNode("/clienttest/a1", "a1value", ZookeeperNodeType::EPHEMERAL_NODE);
+//	client2.ListenNode("/clienttest/test2/test");
+//	//client1.CreateNode("/clienttest/a1", "a1value", ZookeeperNodeType::E_EPHEMERAL_NODE);
 //	client1.DeleteNode("/clienttest/a1");
 //	getchar();
 //	return 0;

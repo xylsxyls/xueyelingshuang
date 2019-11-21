@@ -1,1 +1,2 @@
-sudo tcpdump -i enp129s0f0 host 10.5.4.171
+sudo tcpdump -i enp129s0f0 -w ./123.pcap host 10.5.4.171
+yum install tcpdump

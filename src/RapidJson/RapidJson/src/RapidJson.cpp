@@ -24,7 +24,7 @@ m_alloc(m_document.GetAllocator())
 
 bool RapidJson::parse(const std::string& json)
 {
-	return m_document.Parse(json.c_str()).HasParseError();
+	return !(m_document.Parse(json.c_str()).HasParseError());
 }
 
 bool RapidJson::hasMember(const std::string& key)
@@ -158,35 +158,40 @@ RapidJson& RapidJson::operator[](const std::string& key)
 	{
 		rapidjson::Value strKey(rapidjson::kStringType);
 		strKey.SetString(m_key.c_str(), m_alloc);
-		m_value = m_document[strKey];
+		m_value.CopyFrom(m_document[strKey], m_alloc);
 	}
 	return *this;
 }
 
-//int main()
-//{
-//	RapidJson json;
-//	json["1"] = 20;
-//	json["2"] = "2000000";
-//	json["2"] = "2000000";
-//	json["3"] = 40;
-//	std::vector<RapidJson> vecJson;
-//	vecJson.push_back(json);
-//	vecJson.push_back(json);
-//	json["4"] = 50;
-//	vecJson.push_back(json);
-//	json["5"] = vecJson;
-//	std::string result = json.toString();
-//	RapidJson json2;
-//	json2.parse(result);
-//	auto dss = json2.toString();
-//	dss = json2.toString();
-//	json2["6"] = "23";
-//	auto sdsd = json2["6"].toValue().GetString();
-//	dss = json2.toString();
-//	auto x = json2["5"].toArray();
-//	auto sss = RapidJson(x[2].toValue())["4"].toValue().GetInt();
-//	auto dsfsdsd = json2.toString();
-//	getchar();
-//	return 0;
-//}
+int main()
+{
+	RapidJson json;
+	json["1"] = 20;
+	json["2"] = "2000000";
+	json["2"] = "2000000";
+	json["3"] = 40;
+	std::string result2 = json.toString();
+	std::vector<RapidJson> x = json["3"].toArray();
+	std::string result = json.toString();
+	std::vector<RapidJson> x2 = json["3"].toArray();
+
+	//std::vector<RapidJson> vecJson;
+	//vecJson.push_back(json);
+	//vecJson.push_back(json);
+	//json["4"] = 50;
+	//vecJson.push_back(json);
+	//json["5"] = vecJson;
+	//std::string result = json.toString();
+	//RapidJson json2;
+	//json2.parse(result);
+	//auto dss = json2.toString();
+	//dss = json2.toString();
+	//json2["6"] = "23";
+	//auto sdsd = json2["6"].toValue().GetString();
+	//dss = json2.toString();
+	//auto x = json2["5"].toArray();
+	//auto sss = RapidJson(x[2].toValue())["4"].toValue().GetInt();
+	//auto dsfsdsd = json2.toString();
+	getchar();
+	return 0;
+}

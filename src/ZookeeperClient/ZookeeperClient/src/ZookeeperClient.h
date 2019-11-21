@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include "Semaphore/SemaphoreAPI.h"
 #include "ZookeeperClientMacro.h"
+#include <map>
+#include <set>
 
 enum ZookeeperResult
 {
@@ -67,7 +69,7 @@ public:
 	* E_ZM_OK 初始化连接成功
 	* E_ZM_FAIL 初始化连接失败.
 	*/
-	int32_t Connect(const std::string& host, const int32_t time_out_ms = 10000);
+	int32_t Connect(const std::string& host, int32_t time_out_ms = 10000);
 
 	/**
 	* \brief close the zookeeper handle and free up any resources.
@@ -101,6 +103,14 @@ public:
 	**/
 	int32_t SearchNode(const std::string& path, ZookeeperList& nodeList);
 
+	int32_t SearchValue(const std::string& path, std::string& value);
+
+	/** 监听子节点的创建和删除
+	*/
+	int32_t ListenChildrenNode(const std::string& path, bool isListenChildrenNodeChange = true);
+
+	/** 监听当前节点的修改和删除
+	*/
 	int32_t ListenNode(const std::string& path);
 
 	//int32_t SearchBrokersIds(std::string& brokers);
@@ -132,14 +142,37 @@ public:
 	**/
 	int32_t connectState() const;
 
-	virtual void ListenNodeDelete(int type, int state, const char* path);
+	//监听节点被删除
+	virtual void ListenNodeDeleted(const std::string& path, const std::string& node);
 
-	virtual void ListenNodeChange(int type, int state, const char* path, const ZookeeperList& zookeeperList);
+	//监听节点的值发生改变
+	virtual void ListenNodeValueChanged(const std::string& path, const std::string& node, const std::string& value);
+
+	//监听的子节点发生改变，如果同时需要监听子节点内容变化，需要在每次发生改变时重新监听每个节点，因为每个节点都可能是被删除后立刻添加的
+	virtual void ListenChildrenNodeChanged(const std::string& path, const std::string& node, const ZookeeperList& zookeeperList);
+
+	//监听子节点的父节点被删除
+	virtual void ListenChildrenFatherNodeDeleted(const std::string& path, const std::string& node);
+
+	bool GetMemoryNode(const std::string& path, std::string& value);
+
+	bool GetChildrenMemoryNode(const std::string& path, std::set<std::string>& childrenNode);
+
+protected:
+	void SetMemoryNode(const std::string& path, const std::string& value);
+
+	void EraseMemoryNode(const std::string& path);
+
+	void SetChildrenMemoryNode(const std::string& path, const std::set<std::string>& childrenNode);
+
+	void EraseChildrenFatherMemoryNode(const std::string& path);
 
 private:
 	static void Watcher(zhandle_t* zkh, int type, int state, const char* path, void* context);
 
 	static void Listener(zhandle_t* zkh, int type, int state, const char* path, void* context);
+
+	static void ListenChildrener(zhandle_t* zkh, int type, int state, const char* path, void* context);
 
 	int32_t convertZookeeperResult(int32_t ret);
 
@@ -149,9 +182,14 @@ private:
 #pragma warning(disable:4251)
 #endif
 	std::atomic<bool> m_isConnect;
+	std::mutex m_childrenNodeMutex;
+	std::mutex m_nodeMutex;
+	std::map<std::string, std::string> m_nodeValueMap;
+	std::map<std::string, std::set<std::string>> m_childrenNodeMap;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 	zhandle_t* m_handle;
 	Semaphore m_sem;
+	std::atomic<bool> m_isListenChildrenNodeChange;
 };
