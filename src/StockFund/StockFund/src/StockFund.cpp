@@ -153,7 +153,7 @@ void StockFund::free(const BigNumber& rate)
 	m_stockLog.push_back(log);
 }
 
-BigNumber StockFund::allFund(const std::map<std::string, std::shared_ptr<StockDay>>& dayDate)
+BigNumber StockFund::allFund(const std::map<std::string, std::shared_ptr<StockDay>>& allOwnedStockDayData)
 {
 	//IntDateTime lastTime = date;
 	BigNumber stockFund = 0;
@@ -179,8 +179,8 @@ BigNumber StockFund::allFund(const std::map<std::string, std::shared_ptr<StockDa
 		{
 			position = position + vecDeal[index].second.second;
 		}
-		auto itDayDate = dayDate.find(stock);
-		if (itDayDate == dayDate.end())
+		auto itDayDate = allOwnedStockDayData.find(stock);
+		if (itDayDate == allOwnedStockDayData.end())
 		{
 			RCSend("价格不完整");
 			return 0;
@@ -261,6 +261,15 @@ std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>> StockFund::
 std::vector<std::string> StockFund::stockLog() const
 {
 	return m_stockLog;
+}
+
+void StockFund::printStockLog() const
+{
+	int32_t index = -1;
+	while (index++ != m_stockLog.size() - 1)
+	{
+		RCSend("%s", m_stockLog[index].c_str());
+	}
 }
 
 std::vector<std::pair<std::vector<BigNumber>, std::vector<IntDateTime>>> StockFund::dataLog() const

@@ -36,6 +36,7 @@ void StockRealRetest::init(StrategyEnum strategyEnum,
 	const std::vector<std::string>& allStock,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
+	const BigNumber initialFund,
 	bool showStockLog,
 	int32_t threadCount)
 {
@@ -43,6 +44,7 @@ void StockRealRetest::init(StrategyEnum strategyEnum,
 	m_allStock = allStock;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
+	m_initialFund = initialFund;
 	m_showStockLog = showStockLog;
 	if (threadCount == 0)
 	{
@@ -62,16 +64,11 @@ void StockRealRetest::run()
 		return;
 	}
 
-	//std::vector<std::string> vecStock = m_allStock.empty() ? StockMysql::instance().readFilterStockFromRedis() : m_allStock;
-	//std::sort(vecStock.begin(), vecStock.end());
-
-	BigNumber money = "20000000000";
 	StockFund fund;
-	fund.add(money);
+	fund.add(m_initialFund);
 
-	CStopWatch stopWatch;
 	StockTrade stockTrade;
-	auto vecStrategyStock = StockStrategy::instance().strategyAllStock(m_strategyEnum, m_beginTime, m_endTime);
+	std::vector<std::string> vecStrategyStock = StockStrategy::instance().strategyAllStock(m_strategyEnum, m_beginTime, m_endTime);
 	stockTrade.init(m_beginTime, m_endTime, vecStrategyStock, m_strategyEnum);
 	stockTrade.load();
 
@@ -81,7 +78,12 @@ void StockRealRetest::run()
 	IntDateTime currentTime = m_beginTime;
 	do
 	{
-		RCSend(currentTime.dateToString().c_str());
+		std::map<std::string, std::shared_ptr<StockDay>> dayData;
+		stockTrade.stockDayData(fund.ownedStock(), currentTime, dayData);
+		BigNumber allFund = fund.allFund(dayData);
+		RCSend("date = %s, allFund = %s, profit = %s%%", currentTime.dateToString().c_str(),
+			allFund.toString().c_str(),
+			(((allFund - m_initialFund) / m_initialFund.toPrec(16).zero() * 100).toPrec(2)).toString().c_str());
 
 		std::vector<std::string> vecOwnStock = fund.ownedStock();
 		BigNumber price;
@@ -108,10 +110,8 @@ void StockRealRetest::run()
 			break;
 		}
 		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-		stopWatch.Run();
 		fund.allBuyInfo(allBuyInfo);
 		stockTrade.buy(buyStock, currentTime, allBuyInfo);
-		stopWatch.Stop();
 
 		if (buyStock.size() < 4)
 		{
@@ -136,24 +136,15 @@ void StockRealRetest::run()
 		currentTime = currentTime + 86400;
 	} while (currentTime <= m_endTime);
 	
-	std::vector<std::string> vecOwnStock = fund.ownedStock();
-	std::map<std::string, std::shared_ptr<StockDay>> dayDate;
-	int32_t index = -1;
-	while (index++ != vecOwnStock.size() - 1)
+	std::map<std::string, std::shared_ptr<StockDay>> dayData;
+	stockTrade.stockDayData(fund.ownedStock(), m_endTime, dayData);
+	BigNumber allFund = fund.allFund(dayData);
+	if (m_showStockLog)
 	{
-		const std::string& stock = vecOwnStock[index];
-		std::shared_ptr<StockMarket> spMarket = stockTrade.market(stock);
-		spMarket->setEndDate();
-		dayDate[stock] = spMarket->day();
+		fund.printStockLog();
 	}
-	BigNumber allFund = fund.allFund(dayDate);
-	index = -1;
-	std::vector<std::string> stockLog = fund.stockLog();
-	while (index++ != stockLog.size() - 1)
-	{
-		RCSend("%s", stockLog[index].c_str());
-	}
-	RCSend("allFund = %s, time = %d", allFund.toString().c_str(), stopWatch.GetWatchTime());
+	RCSend("allFund = %s, profit = %s%%", allFund.toString().c_str(),
+		(((allFund - m_initialFund) / m_initialFund.toPrec(16).zero() * 100).toPrec(2)).toString().c_str());
 }
 
 void StockRealRetest::change(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock)

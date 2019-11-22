@@ -43,10 +43,10 @@ public:
 	void free(const BigNumber& rate);
 
 	/** 总zijin
-	@param [in] dayDate 包含数据的日期结构体
+	@param [in] allOwnedStockDayData 包含数据的日期结构体
 	@return 返回总zijin
 	*/
-	BigNumber allFund(const std::map<std::string, std::shared_ptr<StockDay>>& dayDate);
+	BigNumber allFund(const std::map<std::string, std::shared_ptr<StockDay>>& allOwnedStockDayData);
 
 	/** 计算所持gupiao在指定日期内的涨跌幅，已经放大100倍，包含百分号
 	@param [in] stock gupiao代码
@@ -71,6 +71,10 @@ public:
 	@return 返回买卖日志记录
 	*/
 	std::vector<std::string> stockLog() const;
+
+	/** 打印买卖日志记录
+	*/
+	void printStockLog() const;
 
 	/** 获取买卖数据日志
 	@return 返回买卖数据日志

@@ -57,6 +57,16 @@ public:
 	*/
 	std::shared_ptr<StockMarket> market(const std::string& stock);
 
+	/** 获取指定日期指定gupiao集合的最新有效数据集合
+	@param [in] vecStock gupiao集合
+	@param [in] date 日期
+	@param [out] dayData 最新有效数据集合
+	@return 返回是否获取成功
+	*/
+	bool stockDayData(const std::vector<std::string>& vecStock,
+		const IntDateTime& date,
+		std::map<std::string, std::shared_ptr<StockDay>>& dayData);
+
 private:
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;

@@ -17,6 +17,7 @@ public:
 		const std::vector<std::string>& allStock,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
+		const BigNumber initialFund = 200000,
 		bool showStockLog = false,
 		int32_t threadCount = 0);
 
@@ -39,6 +40,6 @@ private:
 #pragma warning(pop)
 #endif
 	uint32_t m_resultThreadId;
-	BigNumber m_allFund;
+	BigNumber m_initialFund;
 	BigNumber m_allStockCount;
 };

@@ -126,6 +126,16 @@ bool StockMarket::setDate(const IntDateTime& date)
 	return true;
 }
 
+bool StockMarket::setLastDate(const IntDateTime& date)
+{
+	if (m_stockData->m_history.empty() || date < m_stockData->m_history.begin()->first)
+	{
+		return false;
+	}
+	m_date = (--m_stockData->m_history.upper_bound(date))->first;
+	return true;
+}
+
 int32_t StockMarket::getMemoryDays(const IntDateTime& date1, const IntDateTime& date2)
 {
 	if (date1 > date2)

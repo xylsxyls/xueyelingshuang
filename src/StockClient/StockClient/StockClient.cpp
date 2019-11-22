@@ -783,7 +783,7 @@ void StockClient::onSaveFilterStockToRedisButtonClicked()
 void StockClient::onRealTestButtonClicked()
 {
 	std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
-	spRealTestTask->setParam(SAR_RISE_BACK, "2019-10-15", "2019-11-15", this);
+	spRealTestTask->setParam(SAR_RISE_BACK, "2019-10-08", "2019-11-15", this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 

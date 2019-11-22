@@ -101,3 +101,25 @@ std::shared_ptr<StockMarket> StockTrade::market(const std::string& stock)
 	std::shared_ptr<Strategy> strategy = itStrategy->second;
 	return strategy->market();
 }
+
+bool StockTrade::stockDayData(const std::vector<std::string>& vecStock,
+	const IntDateTime& date,
+	std::map<std::string, std::shared_ptr<StockDay>>& dayData)
+{
+	dayData.clear();
+	int32_t index = -1;
+	while (index++ != vecStock.size() - 1)
+	{
+		const std::string& stock = vecStock[index];
+		std::shared_ptr<StockMarket> spMarket = market(stock);
+		if (spMarket == nullptr)
+		{
+			RCSend("获取了不存在的gupiao");
+			dayData.clear();
+			return false;
+		}
+		spMarket->setLastDate(date);
+		dayData[stock] = spMarket->day();
+	}
+	return true;
+}

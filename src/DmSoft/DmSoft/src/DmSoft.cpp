@@ -1,17 +1,26 @@
 #include <SDKDDKVer.h>
 #include "Cdmsoft.h"
 #include "DmSoft.h"
+#include <stdint.h>
+#include <io.h>
 
 Cdmsoft dmSoft;
 DmSoft dmsoft;
 DmSoft::DmSoft(){
-	WinExec("regsvr32 /s dm.dll", SW_HIDE);
-	//?注册
-	CoInitialize(NULL);
-	CLSID clsid;
-	//?利用“根名称.类名”获取CLSID，&就是把指针给函数，也就是传址
-	HRESULT hr = CLSIDFromProgID(OLESTR("dm.dmsoft"), &clsid);
-	dmSoft.CreateDispatch(clsid);
+	char szFilePath[1024] = {};
+	::GetModuleFileNameA(NULL, szFilePath, 1024);
+	std::string dmPath = szFilePath;
+	dmPath = dmPath.substr(0, (int32_t)dmPath.find_last_of("/\\") + 1) + "dm.dll";
+	if (::_access(dmPath.c_str(), 0) == 0)
+	{
+		WinExec(("regsvr32 /s " + dmPath).c_str(), SW_HIDE);
+		//?注册
+		CoInitialize(NULL);
+		CLSID clsid;
+		//?利用“根名称.类名”获取CLSID，&就是把指针给函数，也就是传址
+		HRESULT hr = CLSIDFromProgID(OLESTR("dm.dmsoft"), &clsid);
+		dmSoft.CreateDispatch(clsid);
+	}
 }
 
 string DmSoft::Ver(){
