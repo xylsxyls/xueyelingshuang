@@ -47,7 +47,7 @@ public:
 
 	/** Îö¹¹º¯Êı
 	*/
-	~ZookeeperClient();
+	virtual ~ZookeeperClient();
 
 public:
 	/**

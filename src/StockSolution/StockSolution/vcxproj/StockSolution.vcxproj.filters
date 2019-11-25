@@ -13,39 +13,48 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Strategy">
-      <UniqueIdentifier>{0c615c6f-c4ad-4bfb-a1c4-70739800bccd}</UniqueIdentifier>
+    <Filter Include="Solution">
+      <UniqueIdentifier>{768d152a-8bfb-410c-b17c-3b3e1bc9c306}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\StockStrategy.h">
+    <ClInclude Include="..\src\StockSolution.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StockStrategyAPI.h">
+    <ClInclude Include="..\src\StockSolutionAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StockStrategyMacro.h">
+    <ClInclude Include="..\src\StockSolutionMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SarRiseBack.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Strategy.h">
+    <ClInclude Include="..\src\Solution.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StrategyInfo.h">
+    <ClInclude Include="..\src\AvgFundHighScore.h">
+      <Filter>Solution</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SolutionInfo.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SarRiseBackInfo.h">
-      <Filter>Strategy</Filter>
+    <ClInclude Include="..\src\AvgFundHighScoreInfo.h">
+      <Filter>Solution</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SolutionAllInfo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AvgFundHighScoreAllInfo.h">
+      <Filter>Solution</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\StockStrategy.cpp">
+    <ClCompile Include="..\src\StockSolution.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SarRiseBack.cpp">
-      <Filter>Strategy</Filter>
+    <ClCompile Include="..\src\AvgFundHighScore.cpp">
+      <Filter>Solution</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Solution.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

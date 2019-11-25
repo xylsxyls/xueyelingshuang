@@ -17,26 +17,27 @@ m_showStockLog(false)
 void StockEveryTestTask::DoTask()
 {
 	m_spMarket->load();
-	std::shared_ptr<StockMarket> spMarket(new StockMarket(*m_spMarket));
-	std::shared_ptr<Strategy> spStrategy = StockStrategy::instance().strategy(m_stock, spMarket, m_strategyEnum);
-
-	switch (m_strategyEnum)
-	{
-	case SAR_RISE_BACK:
-	{
-		std::shared_ptr<SarRiseBack> spSarRiseBack = std::dynamic_pointer_cast<SarRiseBack>(spStrategy);
-		spSarRiseBack->init(StockIndicator::instance().sar(), StockIndicator::instance().boll());
-	}
-	break;
-	default:
-		break;
-	}
-	
-	spStrategy->load();
+	std::shared_ptr<Strategy> spStrategy = StockStrategy::instance().strategy(m_strategyEnum);
 
 	if (m_spMarket->empty())
 	{
 		return;
+	}
+
+	std::shared_ptr<StrategyInfo> spStrategyInfo;
+	switch (m_strategyEnum)
+	{
+	case SAR_RISE_BACK:
+	{
+		SarRiseBackInfo* sarRiseBackInfo = new SarRiseBackInfo;
+		sarRiseBackInfo->m_spMarket = m_spMarket;
+		sarRiseBackInfo->m_spSarIndicator = m_stockSarIndicator;
+		sarRiseBackInfo->m_spBollIndicator = m_stockBollIndicator;
+		spStrategyInfo.reset(sarRiseBackInfo);
+	}
+	break;
+	default:
+		break;
 	}
 
 	int32_t money = 100000;
@@ -49,15 +50,17 @@ void StockEveryTestTask::DoTask()
 
 		BigNumber price;
 		BigNumber percent;
-		std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>> buyInfo;
-		fund.buyInfo(m_stock, buyInfo);
-		if (spStrategy->sell(date, price, percent, buyInfo))
+		std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* allBuyInfo;
+		allBuyInfo = fund.allBuyInfo();
+		spStrategyInfo->m_allBuyInfo = allBuyInfo;
+		if (spStrategy->sell(date, price, percent, spStrategyInfo))
 		{
 			fund.sellStock(price, percent / BigNumber("100.0"), m_spMarket->day());
 		}
 
-		fund.buyInfo(m_stock, buyInfo);
-		if (spStrategy->buy(date, price, percent, buyInfo))
+		allBuyInfo = fund.allBuyInfo();
+		spStrategyInfo->m_allBuyInfo = allBuyInfo;
+		if (spStrategy->buy(date, price, percent, spStrategyInfo))
 		{
 			fund.buyStock(price, percent / BigNumber("100.0"), m_spMarket->day());
 		}

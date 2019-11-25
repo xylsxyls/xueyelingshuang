@@ -249,9 +249,9 @@ public:
 
 	/** 读取过滤的gupiao
 	@param [in] date 日期
-	@return 返回过滤的gupiao
+	@param [out] filterStock 过滤的gupiao
 	*/
-	std::vector<std::string> readFilterStockFromRedis(const IntDateTime& date);
+	void readFilterStockFromRedis(const IntDateTime& date, std::vector<std::string>& filterStock);
 
 protected:
 	/** 新开一个kaigaodishou的表

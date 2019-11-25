@@ -19,21 +19,24 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\SarRiseBack.h" />
-    <ClInclude Include="..\src\SarRiseBackInfo.h" />
-    <ClInclude Include="..\src\StockStrategyAPI.h" />
-    <ClInclude Include="..\src\StockStrategyMacro.h" />
-    <ClInclude Include="..\src\StockStrategy.h" />
-    <ClInclude Include="..\src\Strategy.h" />
-    <ClInclude Include="..\src\StrategyInfo.h" />
+    <ClInclude Include="..\src\AvgFundHighScore.h" />
+    <ClInclude Include="..\src\AvgFundHighScoreAllInfo.h" />
+    <ClInclude Include="..\src\AvgFundHighScoreInfo.h" />
+    <ClInclude Include="..\src\Solution.h" />
+    <ClInclude Include="..\src\SolutionAllInfo.h" />
+    <ClInclude Include="..\src\SolutionInfo.h" />
+    <ClInclude Include="..\src\StockSolutionAPI.h" />
+    <ClInclude Include="..\src\StockSolutionMacro.h" />
+    <ClInclude Include="..\src\StockSolution.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\SarRiseBack.cpp" />
-    <ClCompile Include="..\src\StockStrategy.cpp" />
+    <ClCompile Include="..\src\AvgFundHighScore.cpp" />
+    <ClCompile Include="..\src\Solution.cpp" />
+    <ClCompile Include="..\src\StockSolution.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
-    <RootNamespace>StockStrategy</RootNamespace>
+    <RootNamespace>StockSolution</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

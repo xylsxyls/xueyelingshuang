@@ -15,29 +15,18 @@ StockStrategy& StockStrategy::instance()
 	return s_stockStrategy;
 }
 
-std::vector<std::string> StockStrategy::strategyStock(StrategyEnum strategyEnum, const IntDateTime& date)
+void StockStrategy::strategyStock(const IntDateTime& date, std::vector<std::string>& filterStock)
 {
-	switch (strategyEnum)
+	StockMysql::instance().readFilterStockFromRedis(date, filterStock);
+	for (auto itFilterStock = filterStock.begin(); itFilterStock != filterStock.end();)
 	{
-	case SAR_RISE_BACK:
-	{
-		std::vector<std::string> filterStock = StockMysql::instance().readFilterStockFromRedis(date);
-		for (auto itFilterStock = filterStock.begin(); itFilterStock != filterStock.end();)
+		if (CStringManager::Left(*itFilterStock, 3) == "688")
 		{
-			if (CStringManager::Left(*itFilterStock, 3) == "688")
-			{
-				itFilterStock = filterStock.erase(itFilterStock);
-				continue;
-			}
-			++itFilterStock;
+			itFilterStock = filterStock.erase(itFilterStock);
+			continue;
 		}
-		return filterStock;
+		++itFilterStock;
 	}
-	break;
-	default:
-		break;
-	}
-	return std::vector<std::string>();
 }
 
 std::vector<std::string> StockStrategy::strategyAllStock(StrategyEnum strategyEnum, const IntDateTime& beginTime, const IntDateTime& endTime)
@@ -51,7 +40,8 @@ std::vector<std::string> StockStrategy::strategyAllStock(StrategyEnum strategyEn
 	IntDateTime currentTime = beginTime;
 	do 
 	{
-		std::vector<std::string> filterStock = strategyStock(strategyEnum, currentTime);
+		std::vector<std::string> filterStock;
+		strategyStock(currentTime, filterStock);
 		int32_t index = -1;
 		while (index++ != filterStock.size() - 1)
 		{
@@ -67,9 +57,7 @@ std::vector<std::string> StockStrategy::strategyAllStock(StrategyEnum strategyEn
 	return result;
 }
 
-std::shared_ptr<Strategy> StockStrategy::strategy(const std::string& stock,
-	const std::shared_ptr<StockMarket>& spMarket,
-	StrategyEnum strategyEnum)
+std::shared_ptr<Strategy> StockStrategy::strategy(StrategyEnum strategyEnum)
 {
 	std::shared_ptr<Strategy> strategy;
 	switch (strategyEnum)
@@ -82,6 +70,23 @@ std::shared_ptr<Strategy> StockStrategy::strategy(const std::string& stock,
 	default:
 		break;
 	}
-	strategy->init(spMarket);
 	return strategy;
+}
+
+std::set<std::string> StockStrategy::strategyNeedLoad(StrategyEnum strategyEnum)
+{
+	std::set<std::string> result;
+	switch (strategyEnum)
+	{
+	case SAR_RISE_BACK:
+	{
+		result.insert("market");
+		result.insert("sar");
+		result.insert("boll");
+	}
+	break;
+	default:
+		break;
+	}
+	return result;
 }

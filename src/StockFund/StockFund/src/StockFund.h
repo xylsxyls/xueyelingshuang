@@ -118,9 +118,9 @@ public:
 	void buyInfo(const std::string& stock, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>& buyInfo);
 
 	/** 获取所有goumai信息
-	@param [out] allBuyInfo 所有goumai信息
+	@return 所有goumai信息
 	*/
-	void allBuyInfo(std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>& allBuyInfo);
+	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* allBuyInfo();
 
 private:
 	//可用zijin

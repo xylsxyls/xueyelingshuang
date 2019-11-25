@@ -725,12 +725,11 @@ void StockMysql::saveFilterStockToRedis(const IntDateTime& beginTime, const IntD
 	}
 }
 
-std::vector<std::string> StockMysql::readFilterStockFromRedis(const IntDateTime& date)
+void StockMysql::readFilterStockFromRedis(const IntDateTime& date, std::vector<std::string>& filterStock)
 {
 	m_redis.selectDbIndex(5);
-	std::vector<std::string> result = m_redis.getGroup(date.dateToString())->toGroup();
-	std::sort(result.begin(), result.end());
-	return result;
+	filterStock = m_redis.getGroup(date.dateToString())->toGroup();
+	std::sort(filterStock.begin(), filterStock.end());
 }
 
 void StockMysql::createMarketHead(const std::string& stock)

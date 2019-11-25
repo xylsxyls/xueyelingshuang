@@ -328,9 +328,9 @@ void StockFund::buyInfo(const std::string& stock, std::vector<std::pair<IntDateT
 	buyInfo = itBuyInfo->second;
 }
 
-void StockFund::allBuyInfo(std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>& allBuyInfo)
+std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* StockFund::allBuyInfo()
 {
-	allBuyInfo = m_stock;
+	return &m_stock;
 }
 
 //#include "StockIndicator/StockIndicatorAPI.h"

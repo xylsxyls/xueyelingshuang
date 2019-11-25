@@ -2,6 +2,7 @@
 #include "StockStrategyMacro.h"
 #include <memory>
 #include "IntDateTime/IntDateTimeAPI.h"
+#include <set>
 
 class Strategy;
 class StockMarket;
@@ -27,9 +28,8 @@ public:
 
 public:
 	std::vector<std::string> strategyAllStock(StrategyEnum strategyEnum, const IntDateTime& beginTime, const IntDateTime& endTime);
-	std::vector<std::string> strategyStock(StrategyEnum strategyEnum, const IntDateTime& date);
+	void strategyStock(const IntDateTime& date, std::vector<std::string>& filterStock);
 
-	std::shared_ptr<Strategy> strategy(const std::string& stock,
-		const std::shared_ptr<StockMarket>& spMarket,
-		StrategyEnum strategyEnum);
+	std::shared_ptr<Strategy> strategy(StrategyEnum strategyEnum);
+	std::set<std::string> strategyNeedLoad(StrategyEnum strategyEnum);
 };

@@ -33,6 +33,7 @@
 #include "SaveFilterStockTaskToMysql.h"
 #include "SaveAllFilterStockTaskToRedis.h"
 #include "RealTestTask.h"
+#include "StockSolution/StockSolutionAPI.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -783,7 +784,7 @@ void StockClient::onSaveFilterStockToRedisButtonClicked()
 void StockClient::onRealTestButtonClicked()
 {
 	std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
-	spRealTestTask->setParam(SAR_RISE_BACK, "2019-10-08", "2019-11-15", this);
+	spRealTestTask->setParam(AVG_FUND_HIGH_SCORE, SAR_RISE_BACK, "2019-10-08", "2019-11-15", this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 
