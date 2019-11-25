@@ -38,7 +38,7 @@ bool rDown = false;
 bool aDown = false;
 bool threeDown = false;
 bool fiveDown = false;
-bool vkCodeOpen = false;
+bool vkCodeOpen = true;
 
 std::atomic<bool> rightMouse = true;
 
@@ -179,6 +179,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		if (vkCode == 107)
 		{
 			vkCodeOpen = true;
+			textWatch.SetWatchTime(10000);
 		}
 		else if (vkCode == 109)
 		{
@@ -251,13 +252,13 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		//else if (fiveDown && stopWatch.GetWatchTime() > 500)
-		//{
-		//	stopWatch.SetWatchTime(0);
-		//	std::shared_ptr<CFlashTask> spTask;
-		//	spTask.reset(new CFlashTask);
-		//	taskThread->PostTask(spTask, 1);
-		//}
+		else if (rDown/* && stopWatch.GetWatchTime() > 500*/)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CRightClickTask> spTask;
+			spTask.reset(new CRightClickTask);
+			taskThread->PostTask(spTask, 1);
+		}
 		else if (wDown && dDown && stopWatch.GetWatchTime() > 500)
 		{
 			stopWatch.SetWatchTime(0);

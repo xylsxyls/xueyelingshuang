@@ -155,6 +155,7 @@
     <ClCompile Include="BaseTask.cpp" />
     <ClCompile Include="CheckTask.cpp" />
     <ClCompile Include="ClearTask.cpp" />
+    <ClCompile Include="CollectTask.cpp" />
     <ClCompile Include="FengMingShanTask.cpp" />
     <ClCompile Include="FightTask.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_dtws.cpp">
@@ -280,6 +281,7 @@
     <ClInclude Include="BaseTask.h" />
     <ClInclude Include="CheckTask.h" />
     <ClInclude Include="ClearTask.h" />
+    <ClInclude Include="CollectTask.h" />
     <ClInclude Include="FengMingShanTask.h" />
     <ClInclude Include="FightTask.h" />
     <ClInclude Include="GlobalParam.h" />

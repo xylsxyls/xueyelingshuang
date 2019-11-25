@@ -86,6 +86,9 @@
     <ClCompile Include="BaseTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="CollectTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="dtws.qrc">
@@ -136,6 +139,9 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="BaseTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="CollectTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

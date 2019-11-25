@@ -18,7 +18,7 @@ void LoginTask::DoTask()
 	CKeyboard::InputString(m_password, 0);
 	CMouse::MoveClick(xyls::Point(589, 626), 10);
 	Sleep(1000);
-	CMouse::MoveClick(xyls::Point(1434, 783), 10);
+	CMouse::MoveClick(xyls::Point(1349, 826), 10);
 	Sleep(3000);
 	CMouse::MoveClick(xyls::Point(997, 943), 10);
 	Sleep(60000);

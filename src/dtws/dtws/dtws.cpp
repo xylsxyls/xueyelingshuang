@@ -14,6 +14,7 @@
 #include "TuLangTask.h"
 #include "WaiZuiTask.h"
 #include "FengMingShanTask.h"
+#include "CollectTask.h"
 
 dtws::dtws(QWidget* parent):
 QMainWindow(parent),
@@ -164,6 +165,7 @@ void dtws::onButtonClicked()
 		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1741, 286), 100));
 		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(904, 414), 100));
 		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(903, 544), 500));
+		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1207, 260), 500));
 		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1759, 302), 500));
 		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(785, 613), 3000));
 		spClickTask->setParam(m_checkWorkThreadId, vecClick);
@@ -211,7 +213,7 @@ void dtws::onButtonClicked()
 	{
 		std::shared_ptr<FightTask> spFightTask(new FightTask);
 		spFightTask->setStep(16);
-		spFightTask->setParam({ 1741, 286 }, 10000, 10, 10, { 1759, 302 });
+		spFightTask->setParam({ 1741, 286 }, 10000, 40, 40, { 1759, 302 });
 		m_workThread->PostTask(spFightTask);
 	}
 	case 17:
@@ -244,6 +246,7 @@ void dtws::onButtonClicked()
 		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1174, 925), 500));
 		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1174, 925), 500));
 		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1174, 925), 500));
+		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1174, 925), 500));
 		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1273, 198), 500));
 		spClickTask->setParam(m_checkWorkThreadId, vecClick);
 		m_workThread->PostTask(spClickTask);
@@ -256,20 +259,26 @@ void dtws::onButtonClicked()
 	}
 	case 22:
 	{
-		std::shared_ptr<ClickTask> spClickTask(new ClickTask);
-		spClickTask->setStep(22);
-		std::vector<std::pair<xyls::Point, int32_t>> vecClick;
-		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1741, 286), 500));
-		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(985, 477), 18000));
-		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(981, 471), 5000));
-		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(985, 477), 5000));
-		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(981, 471), 5000));
-		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(985, 477), 5000));
-		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(981, 471), 5000));
-		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1759, 302), 500));
-		vecClick.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(785, 613), 18000));
-		spClickTask->setParam(m_checkWorkThreadId, vecClick);
-		m_workThread->PostTask(spClickTask);
+		std::shared_ptr<ClickTask> spClickTask1(new ClickTask);
+		spClickTask1->setStep(22);
+		std::vector<std::pair<xyls::Point, int32_t>> vecClick1;
+		vecClick1.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1741, 286), 500));
+		vecClick1.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(985, 477), 18000));
+		vecClick1.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(981, 471), 5000));
+		spClickTask1->setParam(m_checkWorkThreadId, vecClick1);
+		m_workThread->PostTask(spClickTask1);
+
+		std::shared_ptr<CollectTask> spCollectTask(new CollectTask);
+		m_workThread->PostTask(spCollectTask);
+
+		std::shared_ptr<ClickTask> spClickTask2(new ClickTask);
+		spClickTask2->setStep(22);
+		std::vector<std::pair<xyls::Point, int32_t>> vecClick2;
+		vecClick2.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(981, 471), 5000));
+		vecClick2.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(1759, 302), 500));
+		vecClick2.push_back(std::pair<xyls::Point, int32_t>(xyls::Point(785, 613), 18000));
+		spClickTask2->setParam(m_checkWorkThreadId, vecClick2);
+		m_workThread->PostTask(spClickTask2);
 	}
 	case 23:
 	{
