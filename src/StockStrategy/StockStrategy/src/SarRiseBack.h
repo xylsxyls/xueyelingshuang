@@ -6,6 +6,8 @@
 class StockStrategyAPI SarRiseBack : public Strategy
 {
 public:
+	/** 构造函数
+	*/
 	SarRiseBack();
 
 public:
@@ -32,6 +34,11 @@ public:
 		BigNumber& price,
 		BigNumber& score,
 		const std::shared_ptr<StrategyInfo>& strategyInfo);
+
+	/** 获取gupiaochi个数，该函数需在运行buy之后使用
+	@return 返回gupiaochi个数
+	*/
+	virtual int32_t buyPollSize();
 
 private:
 	bool m_isBuy;

@@ -13,8 +13,8 @@
 #include <math.h>
 
 StockRealRetest::StockRealRetest():
-m_solutionEnum(SOLUTION_INIT),
-m_strategyEnum(STRATEGY_INIT),
+m_solutionType(SOLUTION_INIT),
+m_strategyType(STRATEGY_INIT),
 m_showStockLog(false),
 m_beginTime(0, 0),
 m_endTime(0, 0),
@@ -33,16 +33,16 @@ StockRealRetest::~StockRealRetest()
 	CTaskThreadManager::Instance().Uninit(m_resultThreadId);
 }
 
-void StockRealRetest::init(SolutionEnum solutionEnum,
-	StrategyEnum strategyEnum,
+void StockRealRetest::init(SolutionType solutionType,
+	StrategyType strategyType,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	const BigNumber initialFund,
 	bool showStockLog,
 	int32_t threadCount)
 {
-	m_solutionEnum = solutionEnum;
-	m_strategyEnum = strategyEnum;
+	m_solutionType = solutionType;
+	m_strategyType = strategyType;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
 	m_initialFund = initialFund;
@@ -61,9 +61,9 @@ void StockRealRetest::init(SolutionEnum solutionEnum,
 
 	m_trade.init(m_beginTime,
 		m_endTime,
-		StockStrategy::instance().strategyAllStock(m_strategyEnum, m_beginTime, m_endTime),
-		m_solutionEnum,
-		m_strategyEnum);
+		StockStrategy::instance().strategyAllStock(m_strategyType, m_beginTime, m_endTime),
+		m_solutionType,
+		m_strategyType);
 }
 
 void StockRealRetest::load()
@@ -78,25 +78,22 @@ void StockRealRetest::run()
 		return;
 	}
 
-	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* allBuyInfo;
-	
 	IntDateTime currentTime = m_beginTime;
 	do
 	{
 		std::vector<std::string> vecOwnStock = m_fund.ownedStock();
-		allBuyInfo = m_fund.allBuyInfo();
 		BigNumber price;
 		BigNumber rate;
 		int32_t index = -1;
 		while (index++ != vecOwnStock.size() - 1)
 		{
 			const std::string& stock = vecOwnStock[index];
-			if (!m_trade.sell(stock, currentTime, price, rate, allBuyInfo, m_solutionEnum, m_strategyEnum))
+			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
+			if (!spMarket->setDate(currentTime))
 			{
 				continue;
 			}
-			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
-			if (!spMarket->setDate(currentTime))
+			if (!m_trade.sell(stock, currentTime, price, rate, &m_fund, m_solutionType, m_strategyType))
 			{
 				continue;
 			}
@@ -108,8 +105,7 @@ void StockRealRetest::run()
 			break;
 		}
 		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-		allBuyInfo = m_fund.allBuyInfo();
-		m_trade.buy(buyStock, currentTime, allBuyInfo, m_solutionEnum, m_strategyEnum);
+		m_trade.buy(buyStock, currentTime, &m_fund, m_solutionType, m_strategyType);
 
 		index = -1;
 		while (index++ != buyStock.size() - 1)

@@ -30,6 +30,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\SarRiseBack.cpp" />
     <ClCompile Include="..\src\StockStrategy.cpp" />
+    <ClCompile Include="..\src\Strategy.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

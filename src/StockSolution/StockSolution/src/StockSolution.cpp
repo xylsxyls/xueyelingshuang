@@ -12,7 +12,7 @@ StockSolution& StockSolution::instance()
 	return s_stockSolution;
 }
 
-std::shared_ptr<Solution> StockSolution::solution(SolutionEnum strategyEnum)
+std::shared_ptr<Solution> StockSolution::solution(SolutionType strategyEnum)
 {
 	std::shared_ptr<Solution> spSolution;
 	switch (strategyEnum)

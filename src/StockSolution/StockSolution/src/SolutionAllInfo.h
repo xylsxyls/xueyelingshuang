@@ -4,6 +4,7 @@
 #include <memory>
 
 struct StrategyInfo;
+class StockFund;
 struct StockSolutionAPI SolutionAllInfo
 {
 #ifdef _MSC_VER
@@ -11,6 +12,7 @@ struct StockSolutionAPI SolutionAllInfo
 #pragma warning(disable:4251)
 #endif
 	std::map<std::string, std::shared_ptr<StrategyInfo>> m_strategyAllInfo;
+	StockFund* m_fund;
 	std::vector<std::string>* m_filterStock;
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -18,8 +20,12 @@ struct StockSolutionAPI SolutionAllInfo
 
 	SolutionAllInfo()
 	{
+		m_fund = nullptr;
 		m_filterStock = nullptr;
 	}
 
-	virtual ~SolutionAllInfo(){}
+	virtual ~SolutionAllInfo()
+	{
+
+	}
 };

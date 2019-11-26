@@ -18,5 +18,8 @@ struct StockSolutionAPI SolutionInfo
 		m_strategyInfo = nullptr;
 	}
 
-	virtual ~SolutionInfo(){}
+	virtual ~SolutionInfo()
+	{
+
+	}
 };

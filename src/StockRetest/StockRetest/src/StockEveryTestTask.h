@@ -24,7 +24,7 @@ public:
 		const std::shared_ptr<StockRsiIndicator>& stockRsiIndicator,
 		const std::shared_ptr<StockSarIndicator>& stockSarIndicator,
 		const std::shared_ptr<StockBollIndicator>& stockBollIndicator,
-		StrategyEnum strategyEnum,
+		StrategyType strategyType,
 		bool showStockLog,
 		uint32_t resultThreadId,
 		BigNumber* allFund,
@@ -37,7 +37,7 @@ private:
 	std::shared_ptr<StockRsiIndicator> m_stockRsiIndicator;
 	std::shared_ptr<StockSarIndicator> m_stockSarIndicator;
 	std::shared_ptr<StockBollIndicator> m_stockBollIndicator;
-	StrategyEnum m_strategyEnum;
+	StrategyType m_strategyType;
 	bool m_showStockLog;
 	uint32_t m_resultThreadId;
 	BigNumber* m_allFund;

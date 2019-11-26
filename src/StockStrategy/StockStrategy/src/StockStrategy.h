@@ -3,21 +3,9 @@
 #include <memory>
 #include "IntDateTime/IntDateTimeAPI.h"
 #include <set>
+#include "Strategy.h"
 
 class Strategy;
-class StockMarket;
-class StockWrIndicator;
-class StockRsiIndicator;
-class StockSarIndicator;
-class StockBollIndicator;
-
-enum StrategyEnum
-{
-	STRATEGY_INIT,
-
-	SAR_RISE_BACK
-};
-
 class StockStrategyAPI StockStrategy
 {
 protected:
@@ -27,9 +15,9 @@ public:
 	static StockStrategy& instance();
 
 public:
-	std::vector<std::string> strategyAllStock(StrategyEnum strategyEnum, const IntDateTime& beginTime, const IntDateTime& endTime);
+	std::vector<std::string> strategyAllStock(StrategyType strategyEnum, const IntDateTime& beginTime, const IntDateTime& endTime);
 	void strategyStock(const IntDateTime& date, std::vector<std::string>& filterStock);
 
-	std::shared_ptr<Strategy> strategy(StrategyEnum strategyEnum);
-	std::set<std::string> strategyNeedLoad(StrategyEnum strategyEnum);
+	std::shared_ptr<Strategy> strategy(StrategyType strategyEnum);
+	std::set<std::string> strategyNeedLoad(StrategyType strategyEnum);
 };

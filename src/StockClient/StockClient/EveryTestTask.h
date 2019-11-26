@@ -13,13 +13,13 @@ public:
 
 	void DoTask();
 
-	void setParam(StrategyEnum strategyEnum,
+	void setParam(StrategyType strategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		StockClient* stockClient);
 
 private:
-	StrategyEnum m_strategyEnum;
+	StrategyType m_strategyType;
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;
 	StockClient* m_stockClient;

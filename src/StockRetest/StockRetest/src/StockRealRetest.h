@@ -16,8 +16,8 @@ public:
 	~StockRealRetest();
 
 public:
-	void init(SolutionEnum solutionEnum,
-		StrategyEnum strategyEnum,
+	void init(SolutionType solutionType,
+		StrategyType strategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		const BigNumber initialFund = 200000,
@@ -31,8 +31,8 @@ public:
 	void printProfit(const IntDateTime& currentTime);
 
 private:
-	SolutionEnum m_solutionEnum;
-	StrategyEnum m_strategyEnum;
+	SolutionType m_solutionType;
+	StrategyType m_strategyType;
 	bool m_showStockLog;
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;

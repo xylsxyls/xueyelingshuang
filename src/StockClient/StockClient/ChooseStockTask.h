@@ -14,12 +14,12 @@ public:
 
 	void setParam(const IntDateTime& date,
 		const std::vector<std::string>& allStock,
-		StrategyEnum strategyEnum,
+		StrategyType strategyType,
 		StockClient* stockClient);
 
 private:
 	IntDateTime m_date;
 	std::vector<std::string> m_allStock;
-	StrategyEnum m_strategyEnum;
+	StrategyType m_strategyType;
 	StockClient* m_stockClient;
 };

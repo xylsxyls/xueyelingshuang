@@ -13,7 +13,7 @@ public:
 	~StockEveryRetest();
 
 public:
-	void init(StrategyEnum strategyEnum,
+	void init(StrategyType strategyType,
 		const std::vector<std::string>& allStock,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
@@ -23,7 +23,7 @@ public:
 	void run();
 
 private:
-	StrategyEnum m_strategyEnum;
+	StrategyType m_strategyType;
 	bool m_showStockLog;
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;

@@ -9,6 +9,12 @@
 
 class StockDay;
 class Solution;
+class StockFund;
+class StockMarket;
+class StockWrIndicator;
+class StockRsiIndicator;
+class StockSarIndicator;
+class StockBollIndicator;
 /** gupiaojiaoyi策略
 */
 class StockTradeAPI StockTrade
@@ -21,27 +27,27 @@ public:
 	@param [in] beginTime 开始时间
 	@param [in] endTime 结束时间
 	@param [in] allStock gupiaochi
-	@param [in] solutionEnum 解决方案类型
-	@param [in] strategyEnum 策略类型
+	@param [in] solutionType 解决方案类型
+	@param [in] strategyType 策略类型
 	*/
 	void init(const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		const std::vector<std::string>& allStock,
-		SolutionEnum solutionEnum,
-		StrategyEnum strategyEnum);
+		SolutionType solutionType,
+		StrategyType strategyType);
 
 	/** 初始化，把所有需要的内容全部加载好，加载好的信息供所有解决方案和策略共用
 	@param [in] beginTime 开始时间
 	@param [in] endTime 结束时间
 	@param [in] allStock gupiaochi
-	@param [in] solutionEnum 解决方案类型
-	@param [in] strategyEnum 策略类型
+	@param [in] solutionType 解决方案类型
+	@param [in] strategyType 策略类型
 	*/
 	void init(const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		const std::vector<std::string>& allStock,
-		const std::vector<SolutionEnum>& vecSolutionEnum,
-		const std::vector<StrategyEnum>& vecStrategyEnum);
+		const std::vector<SolutionType>& vecSolutionType,
+		const std::vector<StrategyType>& vecStrategyType);
 
 	/** 原始信息加载转化到可用信息
 	*/
@@ -50,14 +56,14 @@ public:
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,percent
 	@param [in] date 日期
-	@param [in] allBuyInfo 所有的已goumai信息
+	@param [in] stockFund zijin信息
 	@return 是否有选出的gupiao
 	*/
 	bool buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
 		const IntDateTime& date,
-		std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* allBuyInfo,
-		SolutionEnum solutionEnum,
-		StrategyEnum strategyEnum);
+		StockFund* stockFund,
+		SolutionType solutionType,
+		StrategyType strategyType);
 
 	/** 询问单只gupiao需不需要maichu
 	@param [in] stock gupiao代码
@@ -71,9 +77,9 @@ public:
 		const IntDateTime& date,
 		BigNumber& price,
 		BigNumber& rate,
-		std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* allBuyInfo,
-		SolutionEnum solutionEnum,
-		StrategyEnum strategyEnum);
+		StockFund* stockFund,
+		SolutionType solutionType,
+		StrategyType strategyType);
 
 	/** 获取内置的hangqing信息
 	@param [in] stock gupiao代码
@@ -91,6 +97,12 @@ public:
 		const IntDateTime& date,
 		std::map<std::string, std::shared_ptr<StockDay>>& dayData);
 
+protected:
+	std::shared_ptr<SolutionAllInfo> makeSolutionAllInfo(const IntDateTime& date,
+		StockFund* stockFund,
+		SolutionType solutionType,
+		StrategyType strategyType);
+
 private:
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -102,8 +114,8 @@ private:
 	std::map<std::string, std::shared_ptr<StockSarIndicator>> m_spSarIndicatorMap;
 	std::map<std::string, std::shared_ptr<StockBollIndicator>> m_spBollIndicatorMap;
 
-	std::map<SolutionEnum, std::shared_ptr<Solution>> m_solutionMap;
-	std::map<StrategyEnum, std::shared_ptr<Strategy>> m_strategyMap;
+	std::map<SolutionType, std::shared_ptr<Solution>> m_solutionMap;
+	std::map<StrategyType, std::shared_ptr<Strategy>> m_strategyMap;
 
 	std::vector<std::string> m_allStock;
 	std::map<IntDateTime, std::vector<std::string>> m_filterStock;

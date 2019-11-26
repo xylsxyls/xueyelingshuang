@@ -5,22 +5,28 @@
 #include <memory>
 #include "StockStrategyMacro.h"
 
+class StockFund;
 class StockMarket;
 struct StockStrategyAPI StrategyInfo
 {
-	virtual ~StrategyInfo(){}
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
 	std::shared_ptr<StockMarket> m_spMarket;
-	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* m_allBuyInfo;
+	StockFund* m_fund;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
 	StrategyInfo()
 	{
 		m_spMarket = nullptr;
-		m_allBuyInfo = nullptr;
+		m_fund = nullptr;
+	}
+
+	virtual ~StrategyInfo()
+	{
+
 	}
 };

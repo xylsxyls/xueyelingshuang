@@ -9,7 +9,7 @@
 #include <algorithm>
 
 StockEveryRetest::StockEveryRetest():
-m_strategyEnum(STRATEGY_INIT),
+m_strategyType(STRATEGY_INIT),
 m_showStockLog(false),
 m_beginTime(0, 0),
 m_endTime(0, 0),
@@ -28,14 +28,14 @@ StockEveryRetest::~StockEveryRetest()
 	CTaskThreadManager::Instance().Uninit(m_resultThreadId);
 }
 
-void StockEveryRetest::init(StrategyEnum strategyEnum,
+void StockEveryRetest::init(StrategyType strategyType,
 	const std::vector<std::string>& allStock,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	bool showStockLog,
 	int32_t threadCount)
 {
-	m_strategyEnum = strategyEnum;
+	m_strategyType = strategyType;
 	m_allStock = allStock;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
@@ -53,7 +53,7 @@ void StockEveryRetest::init(StrategyEnum strategyEnum,
 
 void StockEveryRetest::run()
 {
-	std::vector<std::string> vecStock = m_allStock.empty() ? StockStrategy::instance().strategyAllStock(m_strategyEnum, m_beginTime, m_endTime) : m_allStock;
+	std::vector<std::string> vecStock = m_allStock.empty() ? StockStrategy::instance().strategyAllStock(m_strategyType, m_beginTime, m_endTime) : m_allStock;
 	std::sort(vecStock.begin(), vecStock.end());
 	int32_t threadCount = m_vecThreadId.size();
 	int32_t index = -1;
@@ -74,7 +74,7 @@ void StockEveryRetest::run()
 			spStockRsiIndicator,
 			spStockSarIndicator,
 			spStockBollIndicator,
-			m_strategyEnum,
+			m_strategyType,
 			m_showStockLog,
 			m_resultThreadId,
 			&m_allFund,

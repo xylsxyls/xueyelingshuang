@@ -4,7 +4,13 @@
 #include "BigNumber/BigNumberAPI.h"
 #include <map>
 #include <memory>
-#include "StockSolutionMacro.h"
+
+enum SolutionType
+{
+	SOLUTION_INIT,
+
+	AVG_FUND_HIGH_SCORE
+};
 
 struct SolutionInfo;
 struct SolutionAllInfo;
@@ -25,7 +31,7 @@ public:
 	*/
 	virtual bool buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
 		const IntDateTime& date,
-		const std::shared_ptr<SolutionAllInfo>& allSolutionInfo) = 0;
+		const std::shared_ptr<SolutionAllInfo>& solutionAllInfo) = 0;
 
 	/** 询问单只gupiao需不需要maichu
 	@param [in] stock gupiao代码
@@ -38,7 +44,13 @@ public:
 	virtual bool sell(const IntDateTime& date,
 		BigNumber& price,
 		BigNumber& rate,
-		const std::shared_ptr<SolutionInfo>& solutionInfo) = 0;
+		const std::shared_ptr<SolutionInfo>& solutionInfo,
+		const std::shared_ptr<SolutionAllInfo>& solutionAllInfo) = 0;
+
+	SolutionType type()
+	{
+		return m_solutionType;
+	}
 
 protected:
 #ifdef _MSC_VER
@@ -49,4 +61,5 @@ protected:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+	SolutionType m_solutionType;
 };

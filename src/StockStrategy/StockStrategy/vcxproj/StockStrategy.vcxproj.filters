@@ -47,5 +47,8 @@
     <ClCompile Include="..\src\SarRiseBack.cpp">
       <Filter>Strategy</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\Strategy.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

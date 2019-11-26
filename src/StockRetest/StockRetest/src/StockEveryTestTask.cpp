@@ -17,7 +17,7 @@ m_showStockLog(false)
 void StockEveryTestTask::DoTask()
 {
 	m_spMarket->load();
-	std::shared_ptr<Strategy> spStrategy = StockStrategy::instance().strategy(m_strategyEnum);
+	std::shared_ptr<Strategy> spStrategy = StockStrategy::instance().strategy(m_strategyType);
 
 	if (m_spMarket->empty())
 	{
@@ -25,7 +25,7 @@ void StockEveryTestTask::DoTask()
 	}
 
 	std::shared_ptr<StrategyInfo> spStrategyInfo;
-	switch (m_strategyEnum)
+	switch (m_strategyType)
 	{
 	case SAR_RISE_BACK:
 	{
@@ -50,16 +50,13 @@ void StockEveryTestTask::DoTask()
 
 		BigNumber price;
 		BigNumber percent;
-		std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* allBuyInfo;
-		allBuyInfo = fund.allBuyInfo();
-		spStrategyInfo->m_allBuyInfo = allBuyInfo;
+		spStrategyInfo->m_fund = &fund;
 		if (spStrategy->sell(date, price, percent, spStrategyInfo))
 		{
 			fund.sellStock(price, percent / BigNumber("100.0"), m_spMarket->day());
 		}
 
-		allBuyInfo = fund.allBuyInfo();
-		spStrategyInfo->m_allBuyInfo = allBuyInfo;
+		spStrategyInfo->m_fund = &fund;
 		if (spStrategy->buy(date, price, percent, spStrategyInfo))
 		{
 			fund.buyStock(price, percent / BigNumber("100.0"), m_spMarket->day());
@@ -90,7 +87,7 @@ void StockEveryTestTask::setParam(const std::string& stock,
 	const std::shared_ptr<StockRsiIndicator>& stockRsiIndicator,
 	const std::shared_ptr<StockSarIndicator>& stockSarIndicator,
 	const std::shared_ptr<StockBollIndicator>& stockBollIndicator,
-	StrategyEnum strategyEnum,
+	StrategyType strategyType,
 	bool showStockLog,
 	uint32_t resultThreadId,
 	BigNumber* allFund,
@@ -102,7 +99,7 @@ void StockEveryTestTask::setParam(const std::string& stock,
 	m_stockRsiIndicator = stockRsiIndicator;
 	m_stockSarIndicator = stockSarIndicator;
 	m_stockBollIndicator = stockBollIndicator;
-	m_strategyEnum = strategyEnum;
+	m_strategyType = strategyType;
 	m_showStockLog = showStockLog;
 	m_resultThreadId = resultThreadId;
 	m_allFund = allFund;

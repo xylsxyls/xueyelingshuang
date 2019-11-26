@@ -29,7 +29,7 @@ void StockStrategy::strategyStock(const IntDateTime& date, std::vector<std::stri
 	}
 }
 
-std::vector<std::string> StockStrategy::strategyAllStock(StrategyEnum strategyEnum, const IntDateTime& beginTime, const IntDateTime& endTime)
+std::vector<std::string> StockStrategy::strategyAllStock(StrategyType strategyEnum, const IntDateTime& beginTime, const IntDateTime& endTime)
 {
 	if (beginTime > endTime)
 	{
@@ -57,7 +57,7 @@ std::vector<std::string> StockStrategy::strategyAllStock(StrategyEnum strategyEn
 	return result;
 }
 
-std::shared_ptr<Strategy> StockStrategy::strategy(StrategyEnum strategyEnum)
+std::shared_ptr<Strategy> StockStrategy::strategy(StrategyType strategyEnum)
 {
 	std::shared_ptr<Strategy> strategy;
 	switch (strategyEnum)
@@ -73,7 +73,7 @@ std::shared_ptr<Strategy> StockStrategy::strategy(StrategyEnum strategyEnum)
 	return strategy;
 }
 
-std::set<std::string> StockStrategy::strategyNeedLoad(StrategyEnum strategyEnum)
+std::set<std::string> StockStrategy::strategyNeedLoad(StrategyType strategyEnum)
 {
 	std::set<std::string> result;
 	switch (strategyEnum)

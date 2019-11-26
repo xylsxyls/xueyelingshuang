@@ -13,14 +13,14 @@ StockTrade::StockTrade()
 void StockTrade::init(const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	const std::vector<std::string>& allStock,
-	const std::vector<SolutionEnum>& vecSolutionEnum,
-	const std::vector<StrategyEnum>& vecStrategyEnum)
+	const std::vector<SolutionType>& vecSolutionType,
+	const std::vector<StrategyType>& vecStrategyType)
 {
 	std::set<std::string> allNeedLoad;
 	int32_t index = -1;
-	while (index++ != vecStrategyEnum.size() - 1)
+	while (index++ != vecStrategyType.size() - 1)
 	{
-		std::set<std::string> needLoad = StockStrategy::instance().strategyNeedLoad(vecStrategyEnum[index]);
+		std::set<std::string> needLoad = StockStrategy::instance().strategyNeedLoad(vecStrategyType[index]);
 		for (auto itNeedLoad = needLoad.begin(); itNeedLoad != needLoad.end(); ++itNeedLoad)
 		{
 			allNeedLoad.insert(*itNeedLoad);
@@ -72,30 +72,40 @@ void StockTrade::init(const IntDateTime& beginTime,
 	}
 	
 	index = -1;
-	while (index++ != vecSolutionEnum.size() - 1)
+	while (index++ != vecSolutionType.size() - 1)
 	{
-		std::shared_ptr<Solution> spSolution = StockSolution::instance().solution(vecSolutionEnum[index]);
-		m_solutionMap[vecSolutionEnum[index]] = spSolution;
+		std::shared_ptr<Solution> spSolution = StockSolution::instance().solution(vecSolutionType[index]);
+		switch (vecSolutionType[index])
+		{
+		case AVG_FUND_HIGH_SCORE:
+		{
+			std::dynamic_pointer_cast<AvgFundHighScore>(spSolution)->init(5, 5);
+		}
+		break;
+		default:
+			break;
+		}
+		m_solutionMap[vecSolutionType[index]] = spSolution;
 	}
 
 	index = -1;
-	while (index++ != vecStrategyEnum.size() - 1)
+	while (index++ != vecStrategyType.size() - 1)
 	{
-		std::shared_ptr<Strategy> spStrategy = StockStrategy::instance().strategy(vecStrategyEnum[index]);
-		m_strategyMap[vecStrategyEnum[index]] = spStrategy;
+		std::shared_ptr<Strategy> spStrategy = StockStrategy::instance().strategy(vecStrategyType[index]);
+		m_strategyMap[vecStrategyType[index]] = spStrategy;
 	}
 }
 
 void StockTrade::init(const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	const std::vector<std::string>& allStock,
-	SolutionEnum solutionEnum,
-	StrategyEnum strategyEnum)
+	SolutionType solutionType,
+	StrategyType strategyType)
 {
-	std::vector<SolutionEnum> vecSolutionEnum;
-	vecSolutionEnum.push_back(solutionEnum);
-	std::vector<StrategyEnum> vecStrategyEnum;
-	vecStrategyEnum.push_back(strategyEnum);
+	std::vector<SolutionType> vecSolutionEnum;
+	vecSolutionEnum.push_back(solutionType);
+	std::vector<StrategyType> vecStrategyEnum;
+	vecStrategyEnum.push_back(strategyType);
 	init(beginTime, endTime, allStock, vecSolutionEnum, vecStrategyEnum);
 }
 
@@ -131,18 +141,18 @@ bool sortFun(const std::pair<std::string, std::pair<BigNumber, BigNumber>>& stoc
 
 bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
 	const IntDateTime& date,
-	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* allBuyInfo,
-	SolutionEnum solutionEnum,
-	StrategyEnum strategyEnum)
+	StockFund* stockFund,
+	SolutionType solutionType,
+	StrategyType strategyType)
 {
 	buyStock.clear();
 
-	auto itSolution = m_solutionMap.find(solutionEnum);
+	auto itSolution = m_solutionMap.find(solutionType);
 	if (itSolution == m_solutionMap.end())
 	{
 		return false;
 	}
-	auto itStrategy = m_strategyMap.find(strategyEnum);
+	auto itStrategy = m_strategyMap.find(strategyType);
 	if (itStrategy == m_strategyMap.end())
 	{
 		return false;
@@ -150,59 +160,24 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 	const std::shared_ptr<Solution>& spSolution = itSolution->second;
 	const std::shared_ptr<Strategy>& spStrategy = itStrategy->second;
 	spSolution->init(spStrategy);
-	std::shared_ptr<SolutionAllInfo> spSolutionAllInfo;
-	switch (solutionEnum)
-	{
-	case AVG_FUND_HIGH_SCORE:
-	{
-		spSolutionAllInfo.reset(new AvgFundHighScoreAllInfo);
-	}
-	break;
-	default:
-		break;
-	}
-	spSolutionAllInfo->m_filterStock = &(m_filterStock.find(date)->second);
-
-	int32_t index = -1;
-	while (index++ != m_allStock.size() - 1)
-	{
-		const std::string& stock = m_allStock[index];
-		std::shared_ptr<StrategyInfo> spStrategyInfo;
-		switch (strategyEnum)
-		{
-		case SAR_RISE_BACK:
-		{
-			SarRiseBackInfo* sarRiseBackInfo = new SarRiseBackInfo;
-			sarRiseBackInfo->m_allBuyInfo = allBuyInfo;
-			sarRiseBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
-			sarRiseBackInfo->m_spSarIndicator = m_spSarIndicatorMap.find(stock)->second;
-			sarRiseBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
-			spStrategyInfo.reset(sarRiseBackInfo);
-		}
-		break;
-		default:
-			break;
-		}
-		spSolutionAllInfo->m_strategyAllInfo[stock] = spStrategyInfo;
-	}
 	
-	return spSolution->buy(buyStock, date, spSolutionAllInfo);
+	return spSolution->buy(buyStock, date, makeSolutionAllInfo(date, stockFund, solutionType, strategyType));
 }
 
 bool StockTrade::sell(const std::string& stock,
 	const IntDateTime& date,
 	BigNumber& price,
 	BigNumber& rate,
-	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>>* allBuyInfo,
-	SolutionEnum solutionEnum,
-	StrategyEnum strategyEnum)
+	StockFund* stockFund,
+	SolutionType solutionType,
+	StrategyType strategyType)
 {
-	auto itSolution = m_solutionMap.find(solutionEnum);
+	auto itSolution = m_solutionMap.find(solutionType);
 	if (itSolution == m_solutionMap.end())
 	{
 		return false;
 	}
-	auto itStrategy = m_strategyMap.find(strategyEnum);
+	auto itStrategy = m_strategyMap.find(strategyType);
 	if (itStrategy == m_strategyMap.end())
 	{
 		return false;
@@ -212,7 +187,7 @@ bool StockTrade::sell(const std::string& stock,
 	spSolution->init(spStrategy);
 
 	std::shared_ptr<SolutionInfo> spSolutionInfo;
-	switch (solutionEnum)
+	switch (solutionType)
 	{
 	case AVG_FUND_HIGH_SCORE:
 	{
@@ -224,12 +199,12 @@ bool StockTrade::sell(const std::string& stock,
 	}
 
 	std::shared_ptr<StrategyInfo> spStrategyInfo;
-	switch (strategyEnum)
+	switch (strategyType)
 	{
 	case SAR_RISE_BACK:
 	{
 		SarRiseBackInfo* sarRiseBackInfo = new SarRiseBackInfo;
-		sarRiseBackInfo->m_allBuyInfo = allBuyInfo;
+		sarRiseBackInfo->m_fund = stockFund;
 		sarRiseBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
 		sarRiseBackInfo->m_spSarIndicator = m_spSarIndicatorMap.find(stock)->second;
 		sarRiseBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
@@ -239,10 +214,9 @@ bool StockTrade::sell(const std::string& stock,
 	default:
 		break;
 	}
-
 	spSolutionInfo->m_strategyInfo = spStrategyInfo;
-
-	return spSolution->sell(date, price, rate, spSolutionInfo);
+	std::shared_ptr<SolutionAllInfo> solutionAllInfo = makeSolutionAllInfo(date, stockFund, solutionType, strategyType);
+	return spSolution->sell(date, price, rate, spSolutionInfo, solutionAllInfo);
 }
 
 std::shared_ptr<StockMarket> StockTrade::market(const std::string& stock)
@@ -275,4 +249,48 @@ bool StockTrade::stockDayData(const std::vector<std::string>& vecStock,
 		dayData[stock] = spMarket->day();
 	}
 	return true;
+}
+
+std::shared_ptr<SolutionAllInfo> StockTrade::makeSolutionAllInfo(const IntDateTime& date,
+	StockFund* stockFund,
+	SolutionType solutionType,
+	StrategyType strategyType)
+{
+	std::shared_ptr<SolutionAllInfo> spSolutionAllInfo;
+	switch (solutionType)
+	{
+	case AVG_FUND_HIGH_SCORE:
+	{
+		spSolutionAllInfo.reset(new AvgFundHighScoreAllInfo);
+	}
+	break;
+	default:
+		break;
+	}
+	spSolutionAllInfo->m_filterStock = &(m_filterStock.find(date)->second);
+
+	int32_t index = -1;
+	while (index++ != m_allStock.size() - 1)
+	{
+		const std::string& stock = m_allStock[index];
+		std::shared_ptr<StrategyInfo> spStrategyInfo;
+		switch (strategyType)
+		{
+		case SAR_RISE_BACK:
+		{
+			SarRiseBackInfo* sarRiseBackInfo = new SarRiseBackInfo;
+			sarRiseBackInfo->m_fund = stockFund;
+			sarRiseBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
+			sarRiseBackInfo->m_spSarIndicator = m_spSarIndicatorMap.find(stock)->second;
+			sarRiseBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
+			spStrategyInfo.reset(sarRiseBackInfo);
+		}
+		break;
+		default:
+			break;
+		}
+		spSolutionAllInfo->m_fund = stockFund;
+		spSolutionAllInfo->m_strategyAllInfo[stock] = spStrategyInfo;
+	}
+	return spSolutionAllInfo;
 }
