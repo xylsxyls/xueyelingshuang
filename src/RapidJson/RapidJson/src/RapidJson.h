@@ -51,6 +51,7 @@ public:
 	RapidJson operator=(int32_t value);
 	RapidJson operator=(const std::string& value);
 	RapidJson operator=(rapidjson::Value value);
+	RapidJson operator=(const RapidJson& value);
 	RapidJson operator=(std::vector<RapidJson>& value);
 	RapidJson& operator[](const std::string& key);
 
