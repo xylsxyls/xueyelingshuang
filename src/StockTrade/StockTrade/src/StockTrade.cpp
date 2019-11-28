@@ -4,6 +4,7 @@
 #include "StockStrategy/StockStrategyAPI.h"
 #include <algorithm>
 #include "StockSolution/StockSolutionAPI.h"
+#include "StockFund/StockFundAPI.h"
 
 StockTrade::StockTrade()
 {
@@ -164,10 +165,8 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 	return spSolution->buy(buyStock, date, makeSolutionAllInfo(date, stockFund, solutionType, strategyType));
 }
 
-bool StockTrade::sell(const std::string& stock,
+bool StockTrade::sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
 	const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& rate,
 	StockFund* stockFund,
 	SolutionType solutionType,
 	StrategyType strategyType)
@@ -185,38 +184,11 @@ bool StockTrade::sell(const std::string& stock,
 	const std::shared_ptr<Solution>& spSolution = itSolution->second;
 	const std::shared_ptr<Strategy>& spStrategy = itStrategy->second;
 	spSolution->init(spStrategy);
-
-	std::shared_ptr<SolutionInfo> spSolutionInfo;
-	switch (solutionType)
-	{
-	case AVG_FUND_HIGH_SCORE:
-	{
-		spSolutionInfo.reset(new AvgFundHighScoreInfo);
-	}
-	break;
-	default:
-		break;
-	}
-
-	std::shared_ptr<StrategyInfo> spStrategyInfo;
-	switch (strategyType)
-	{
-	case SAR_RISE_BACK:
-	{
-		SarRiseBackInfo* sarRiseBackInfo = new SarRiseBackInfo;
-		sarRiseBackInfo->m_fund = stockFund;
-		sarRiseBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
-		sarRiseBackInfo->m_spSarIndicator = m_spSarIndicatorMap.find(stock)->second;
-		sarRiseBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
-		spStrategyInfo.reset(sarRiseBackInfo);
-	}
-	break;
-	default:
-		break;
-	}
-	spSolutionInfo->m_strategyInfo = spStrategyInfo;
-	std::shared_ptr<SolutionAllInfo> solutionAllInfo = makeSolutionAllInfo(date, stockFund, solutionType, strategyType);
-	return spSolution->sell(date, price, rate, spSolutionInfo, solutionAllInfo);
+	std::shared_ptr<SolutionAllInfo> solutionAllInfo = makeSolutionAllInfo(date,
+		stockFund,
+		solutionType,
+		strategyType);
+	return spSolution->sell(sellStock, date, solutionAllInfo);
 }
 
 std::shared_ptr<StockMarket> StockTrade::market(const std::string& stock)
@@ -268,6 +240,7 @@ std::shared_ptr<SolutionAllInfo> StockTrade::makeSolutionAllInfo(const IntDateTi
 		break;
 	}
 	spSolutionAllInfo->m_filterStock = &(m_filterStock.find(date)->second);
+	spSolutionAllInfo->m_fund = stockFund;
 
 	int32_t index = -1;
 	while (index++ != m_allStock.size() - 1)
@@ -289,7 +262,7 @@ std::shared_ptr<SolutionAllInfo> StockTrade::makeSolutionAllInfo(const IntDateTi
 		default:
 			break;
 		}
-		spSolutionAllInfo->m_fund = stockFund;
+		
 		spSolutionAllInfo->m_strategyAllInfo[stock] = spStrategyInfo;
 	}
 	return spSolutionAllInfo;

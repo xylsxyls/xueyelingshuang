@@ -231,7 +231,18 @@ bool StockFund::stockChg(const std::string& stock, const std::shared_ptr<StockDa
 	return true;
 }
 
-std::vector<IntDateTime> StockFund::ownedTime(const std::string& stock)
+IntDateTime StockFund::firstBuyDate(const std::string& stock)
+{
+	IntDateTime firstDate(0, 0);
+	auto itStock = m_stock.find(stock);
+	if (itStock == m_stock.end() || itStock->second.empty())
+	{
+		return firstDate;
+	}
+	return itStock->second.front().first;
+}
+
+std::vector<IntDateTime> StockFund::ownedTime(const std::string& stock) const
 {
 	std::vector<IntDateTime> result;
 	auto itStock = m_stock.find(stock);

@@ -1,1 +1,1 @@
-call "%CLOUD_REBUILD%" StockTrade 32 dll release same
+call "%CLOUD_REBUILD%" StockTrade 32 dll release only

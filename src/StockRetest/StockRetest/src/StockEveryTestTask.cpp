@@ -50,14 +50,15 @@ void StockEveryTestTask::DoTask()
 
 		BigNumber price;
 		BigNumber percent;
+		BigNumber score;
 		spStrategyInfo->m_fund = &fund;
-		if (spStrategy->sell(date, price, percent, spStrategyInfo))
+		if (spStrategy->sell(date, price, percent, score, spStrategyInfo))
 		{
 			fund.sellStock(price, percent / BigNumber("100.0"), m_spMarket->day());
 		}
 
 		spStrategyInfo->m_fund = &fund;
-		if (spStrategy->buy(date, price, percent, spStrategyInfo))
+		if (spStrategy->buy(date, price, percent, score, spStrategyInfo))
 		{
 			fund.buyStock(price, percent / BigNumber("100.0"), m_spMarket->day());
 		}

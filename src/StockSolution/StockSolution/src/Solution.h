@@ -12,7 +12,6 @@ enum SolutionType
 	AVG_FUND_HIGH_SCORE
 };
 
-struct SolutionInfo;
 struct SolutionAllInfo;
 class Strategy;
 class StockSolutionAPI Solution
@@ -24,9 +23,9 @@ public:
 	void init(const std::shared_ptr<Strategy>& spStrategy);
 
 	/** 选出可以goumai的gupiao
-	@param [out] buyStock 选出的gupiao集合，stock,price,rate
+	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
-	@param [in] allBuyInfo 所有的已goumai信息
+	@param [in] solutionAllInfo 解决方案需要的信息
 	@return 是否有选出的gupiao
 	*/
 	virtual bool buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
@@ -34,23 +33,19 @@ public:
 		const std::shared_ptr<SolutionAllInfo>& solutionAllInfo) = 0;
 
 	/** 询问单只gupiao需不需要maichu
-	@param [in] stock gupiao代码
+	@param [in] sellStock maichu的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
-	@param [out] price maichu价格
-	@param [out] percent maichu比例，0-100
-	@param [in] buyInfo goumai信息
-	@return 返回询问的gupiao需不需要maichu
+	@param [in] solutionAllInfo 解决方案需要的信息
+	@return 返回是否有需要maichu的gupiao
 	*/
-	virtual bool sell(const IntDateTime& date,
-		BigNumber& price,
-		BigNumber& rate,
-		const std::shared_ptr<SolutionInfo>& solutionInfo,
+	virtual bool sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
+		const IntDateTime& date,
 		const std::shared_ptr<SolutionAllInfo>& solutionAllInfo) = 0;
 
-	SolutionType type()
-	{
-		return m_solutionType;
-	}
+	/** 获取解决方案类型
+	@return 返回解决方案类型
+	*/
+	SolutionType type();
 
 protected:
 #ifdef _MSC_VER

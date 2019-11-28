@@ -2,20 +2,26 @@
 #include "StockStrategy/StockStrategyAPI.h"
 #include <algorithm>
 #include "AvgFundHighScoreAllInfo.h"
-#include "AvgFundHighScoreInfo.h"
 #include "StockFund/StockFundAPI.h"
 #include "StockMarket/StockMarketAPI.h"
 
-bool sortFun(const std::pair<std::string, std::pair<BigNumber, BigNumber>>& stock1,
-	const std::pair<std::string, std::pair<BigNumber, BigNumber>>& stock2)
+bool sortFun(const std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>& stock1,
+	const std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>& stock2)
 {
-	return stock1.second.second > stock2.second.second;
+	if (stock1.second.second.first > stock2.second.second.first)
+	{
+		return true;
+	}
+	else if (stock1.second.second.first < stock2.second.second.first)
+	{
+		return false;
+	}
+	return stock1.second.second.second > stock2.second.second.second;
 }
 
 AvgFundHighScore::AvgFundHighScore():
 m_stockNum(0),
-m_minPollSize(0),
-m_sellNum(0)
+m_minPollSize(0)
 {
 	m_solutionType = AVG_FUND_HIGH_SCORE;
 }
@@ -30,86 +36,76 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumbe
 	const IntDateTime& date,
 	const std::shared_ptr<SolutionAllInfo>& solutionAllInfo)
 {
-	if (!strategyBuy(buyStock, date, solutionAllInfo))
+	buyStock.clear();
+	std::vector<std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>> strategyBuyStock;
+	if (!strategyBuy(strategyBuyStock, date, solutionAllInfo))
 	{
 		return false;
 	}
 
 	int32_t index = -1;
-	while (index++ != buyStock.size() - 1)
+	while (index++ != strategyBuyStock.size() - 1)
 	{
-		const std::string& stock = buyStock[index].first;
+		const std::string& stock = strategyBuyStock[index].first;
 		RCSend("date = %s, stock = %s", date.dateToString().c_str(), stock.c_str());
 	}
 
-	int32_t pollsize = m_spStrategy->buyPollSize();
-	RCSend("pollsize = %d", pollsize);
-
-	if (buyStock.size() < m_minPollSize)
+	if ((int32_t)strategyBuyStock.size() < m_minPollSize)
 	{
-		buyStock.clear();
 		return false;
 	}
 	
-	while (buyStock.size() > m_stockNum - solutionAllInfo->m_fund->allBuyInfo()->size())
+	while (strategyBuyStock.size() > m_stockNum - solutionAllInfo->m_fund->allBuyInfo()->size())
 	{
-		buyStock.erase(--buyStock.end());
+		strategyBuyStock.erase(--strategyBuyStock.end());
 	}
 
-	BigNumber allScore = 0;
+	BigNumber allPercent = m_stockNum * 100;
 	index = -1;
-	while (index++ != buyStock.size() - 1)
+	while (index++ != strategyBuyStock.size() - 1)
 	{
-		allScore = allScore + buyStock[index].second.second;
+		buyStock.push_back(std::pair<std::string, std::pair<BigNumber, BigNumber>>());
+		std::pair<std::string, std::pair<BigNumber, BigNumber>>& backStock = buyStock.back();
+		backStock.first = strategyBuyStock[index].first;
+		backStock.second.first = strategyBuyStock[index].second.first;
+		backStock.second.second = strategyBuyStock[index].second.second.first / allPercent.toPrec(2).zero();
+		allPercent = allPercent - 100;
 	}
-	index = -1;
-	while (index++ != buyStock.size() - 1)
-	{
-		BigNumber score = buyStock[index].second.second;
-		buyStock[index].second.second = score / BigNumber((std::max)(atoi(allScore.toString().c_str()), m_stockNum * 100)).toPrec(2).zero();
-		allScore = allScore - score;
-	}
-	m_sellNum = 0;
 	return true;
 }
 
-bool AvgFundHighScore::sell(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& rate,
-	const std::shared_ptr<SolutionInfo>& solutionInfo,
+bool AvgFundHighScore::sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
+	const IntDateTime& date,
 	const std::shared_ptr<SolutionAllInfo>& solutionAllInfo)
 {
-	const std::shared_ptr<AvgFundHighScoreInfo>& avgFundHighScoreInfo = std::dynamic_pointer_cast<AvgFundHighScoreInfo>(solutionInfo);
-	
-	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-	strategyBuy(buyStock, date, solutionAllInfo);
-
-	int32_t todayStockNum = buyStock.size();
-
-	const std::shared_ptr<StockMarket>& spMarket = avgFundHighScoreInfo->m_strategyInfo->m_spMarket;
-	BigNumber chg = 0;
-	solutionAllInfo->m_fund->stockChg(spMarket->stock(), spMarket->day(), chg);
-
-	BigNumber score = 0;
-	if (!m_spStrategy->sell(date, price, score, avgFundHighScoreInfo->m_strategyInfo))
+	sellStock.clear();
+	std::vector<std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>> strategySellStock;
+	if (!strategySell(strategySellStock, date, solutionAllInfo))
 	{
-		if (todayStockNum > 0 && chg > "0.2")
-		{
-			++m_sellNum;
-			if (m_sellNum > todayStockNum)
-			{
-				return false;
-			}
-			rate = 1;
-			return true;
-		}
 		return false;
 	}
-	rate = score / "100.0";
-	return true;
+
+	std::vector<std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>> strategyBuyStock;
+	strategyBuy(strategyBuyStock, date, solutionAllInfo);
+
+	int32_t index = -1;
+	for (auto itSellStock = strategySellStock.begin(); itSellStock != strategySellStock.end(); ++itSellStock)
+	{
+		if ((++index < (int32_t)strategyBuyStock.size() && (int32_t)strategyBuyStock.size() >= m_minPollSize) ||
+			itSellStock->second.second.second == 100)
+		{
+			sellStock.push_back(std::pair<std::string, std::pair<BigNumber, BigNumber>>());
+			std::pair<std::string, std::pair<BigNumber, BigNumber>>& backStock = sellStock.back();
+			backStock.first = itSellStock->first;
+			backStock.second.first = itSellStock->second.first;
+			backStock.second.second = itSellStock->second.second.first / "100.0";
+			continue;
+		}
+	}
+	return !sellStock.empty();
 }
 
-bool AvgFundHighScore::strategyBuy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
+bool AvgFundHighScore::strategyBuy(std::vector<std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>>& buyStock,
 	const IntDateTime& date,
 	const std::shared_ptr<SolutionAllInfo>& solutionAllInfo)
 {
@@ -124,21 +120,59 @@ bool AvgFundHighScore::strategyBuy(std::vector<std::pair<std::string, std::pair<
 	{
 		const std::string& stock = filterStock[index];
 		BigNumber price;
+		BigNumber percent;
 		BigNumber score;
 		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreAllInfo->m_strategyAllInfo.find(stock)->second;
 		if (m_spStrategy->buy(date,
 			price,
+			percent,
 			score,
 			spStrategyInfo))
 		{
-			std::pair<std::string, std::pair<BigNumber, BigNumber>> choose;
+			std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>> choose;
 			choose.first = stock;
 			choose.second.first = price;
-			choose.second.second = score;
+			choose.second.second.first = percent;
+			choose.second.second.second = score;
 			buyStock.push_back(choose);
 			result = true;
 		}
 	}
 	std::sort(buyStock.begin(), buyStock.end(), sortFun);
+	return result;
+}
+
+bool AvgFundHighScore::strategySell(std::vector<std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>>& sellStock,
+	const IntDateTime& date,
+	const std::shared_ptr<SolutionAllInfo>& solutionAllInfo)
+{
+	bool result = false;
+	sellStock.clear();
+	std::vector<std::string> vecOwnedStock = solutionAllInfo->m_fund->ownedStock();
+
+	int32_t index = -1;
+	while (index++ != vecOwnedStock.size() - 1)
+	{
+		const std::string& stock = vecOwnedStock[index];
+		auto& strategyInfo = solutionAllInfo->m_strategyAllInfo.find(stock)->second;
+		auto& spMarket = strategyInfo->m_spMarket;
+		BigNumber chg;
+		solutionAllInfo->m_fund->stockChg(spMarket->stock(), spMarket->day(), chg);
+
+		BigNumber price;
+		BigNumber percent;
+		BigNumber score;
+		if (m_spStrategy->sell(date, price, percent, score, strategyInfo))
+		{
+			std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>> sellChoose;
+			sellChoose.first = stock;
+			sellChoose.second.first = price;
+			sellChoose.second.second.first = percent;
+			sellChoose.second.second.second = score;
+			sellStock.push_back(sellChoose);
+			result = true;
+		}
+	}
+	std::sort(sellStock.begin(), sellStock.end(), sortFun);
 	return result;
 }

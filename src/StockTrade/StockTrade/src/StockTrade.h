@@ -54,9 +54,11 @@ public:
 	void load();
 
 	/** 选出可以goumai的gupiao
-	@param [out] buyStock 选出的gupiao集合，stock,price,percent
+	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
 	@param [in] stockFund zijin信息
+	@param [in] solutionType 解决方案类型
+	@param [in] strategyType 策略类型
 	@return 是否有选出的gupiao
 	*/
 	bool buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
@@ -66,17 +68,15 @@ public:
 		StrategyType strategyType);
 
 	/** 询问单只gupiao需不需要maichu
-	@param [in] stock gupiao代码
+	@param [in] sellStock maichu的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
-	@param [out] price maichu价格
-	@param [out] percent maichu比例，0-100
-	@param [in] buyInfo goumai信息
-	@return 返回询问的gupiao需不需要maichu
+	@param [in] stockFund zijin信息
+	@param [in] solutionType 解决方案类型
+	@param [in] strategyType 策略类型
+	@return 返回是否有需要maichu的gupiao
 	*/
-	bool sell(const std::string& stock,
+	bool sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
 		const IntDateTime& date,
-		BigNumber& price,
-		BigNumber& rate,
 		StockFund* stockFund,
 		SolutionType solutionType,
 		StrategyType strategyType);

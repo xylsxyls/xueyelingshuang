@@ -33,12 +33,6 @@
     <ClInclude Include="..\src\AvgFundHighScore.h">
       <Filter>Solution</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SolutionInfo.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AvgFundHighScoreInfo.h">
-      <Filter>Solution</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\SolutionAllInfo.h">
       <Filter>头文件</Filter>
     </ClInclude>

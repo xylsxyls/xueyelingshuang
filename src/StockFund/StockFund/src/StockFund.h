@@ -48,19 +48,25 @@ public:
 	*/
 	BigNumber allFund(const std::map<std::string, std::shared_ptr<StockDay>>& allOwnedStockDayData);
 
-	/** 计算所持gupiao在指定日期内的涨跌幅，已经放大100倍，包含百分号
+	/** 计算所持gupiao在指定日期内的zhangdiefu，已经放大100倍，包含百分号
 	@param [in] stock gupiao代码
 	@param [in] dayDate 包含数据的日期结构体
-	@param [out] chg 涨跌幅
+	@param [out] chg zhangdiefu
 	@return 返回是否获取成功
 	*/
 	bool stockChg(const std::string& stock, const std::shared_ptr<StockDay>& dateDay, BigNumber& chg) const;
+
+	/** 获取第一次mairu的时间
+	@param [in] stock gupiao代码
+	@return 返回第一次mairu的时间
+	*/
+	IntDateTime firstBuyDate(const std::string& stock);
 
 	/** 获取该gupiao的买入时间
 	@param [in] stock gupiao代码
 	@return 返回该gupiao的买入时间
 	*/
-	std::vector<IntDateTime> ownedTime(const std::string& stock);
+	std::vector<IntDateTime> ownedTime(const std::string& stock) const;
 
 	/** 获取某只gupiao的买卖情况
 	@return 返回某只gupiao的买卖情况

@@ -21,10 +21,8 @@
   <ItemGroup>
     <ClInclude Include="..\src\AvgFundHighScore.h" />
     <ClInclude Include="..\src\AvgFundHighScoreAllInfo.h" />
-    <ClInclude Include="..\src\AvgFundHighScoreInfo.h" />
     <ClInclude Include="..\src\Solution.h" />
     <ClInclude Include="..\src\SolutionAllInfo.h" />
-    <ClInclude Include="..\src\SolutionInfo.h" />
     <ClInclude Include="..\src\StockSolutionAPI.h" />
     <ClInclude Include="..\src\StockSolutionMacro.h" />
     <ClInclude Include="..\src\StockSolution.h" />

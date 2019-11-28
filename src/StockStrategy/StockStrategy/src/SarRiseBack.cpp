@@ -3,9 +3,9 @@
 #include "StockIndicator/StockIndicatorAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "SarRiseBackInfo.h"
+#include "StockFund/StockFundAPI.h"
 
 SarRiseBack::SarRiseBack():
-m_isBuy(false),
 m_buyDate(0, 0)
 {
 	m_strategyType = SAR_RISE_BACK;
@@ -13,6 +13,7 @@ m_buyDate(0, 0)
 
 bool SarRiseBack::buy(const IntDateTime& date,
 	BigNumber& price,
+	BigNumber& percent,
 	BigNumber& score,
 	const std::shared_ptr<StrategyInfo>& strategyInfo)
 {
@@ -50,11 +51,9 @@ bool SarRiseBack::buy(const IntDateTime& date,
 	BigNumber bollUp = spStockBollIndicator->day(date)->m_up;
 	BigNumber bollMid = spStockBollIndicator->day(date)->m_mid;
 	BigNumber bollDown = spStockBollIndicator->day(date)->m_down;
-	if (close >= (bollDown + bollMid) / 2 && close <= bollMid)
-	{
-		return false;
-	}
-
+	BigNumber bollUpMid = (bollUp + bollMid) / "2.0";
+	BigNumber bollDownMid = (bollDown + bollMid) / "2.0";
+	
 	BigNumber sar5 = spStockSarIndicator->day(date)->m_sar5;
 	BigNumber sar10 = spStockSarIndicator->day(date)->m_sar10;
 	BigNumber sar20 = spStockSarIndicator->day(date)->m_sar20;
@@ -70,34 +69,39 @@ bool SarRiseBack::buy(const IntDateTime& date,
 
 	if (sar5State == StockSar::RED_TO_GREEN && sar10State == StockSar::RED_TO_GREEN)
 	{
-		++m_buyPollSize;
-		score = 80;
-
-		if (close > bollMid)
+		if (close >= bollUpMid)
 		{
-			score = score + 10;
+			return false;
 		}
-
-		if (close > bollMid && close < (bollMid + bollUp) / "2.0")
+		else if (close > bollMid && close < bollUpMid)
 		{
-			score = score + 5;
-			if (low <= bollMid)
-			{
-				score = score + 5;
-			}
+			price = close;
+			percent = 100;
+			score = 10 / (1 - bollMid / close.toPrec(6)).toPrec(6);
+			return true;
 		}
-
-		price = close;
-		m_isBuy = true;
-		m_buyDate = date;
-		m_buyPrice = price;
-		return true;
+		else if (close >= bollDownMid && close <= bollMid)
+		{
+			return false;
+		}
+		else if (close > bollDown && close < bollDownMid)
+		{
+			price = close;
+			percent = 100;
+			score = 10 / (1 - bollDown / close.toPrec(6)).toPrec(6);
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 	return false;
 }
 
 bool SarRiseBack::sell(const IntDateTime& date,
 	BigNumber& price,
+	BigNumber& percent,
 	BigNumber& score,
 	const std::shared_ptr<StrategyInfo>& strategyInfo)
 {
@@ -112,39 +116,56 @@ bool SarRiseBack::sell(const IntDateTime& date,
 	{
 		return false;
 	}
-	if (spMarket->getMemoryDays(m_buyDate, date) == 5)
+
+	IntDateTime firstBuyDate = stockFund->firstBuyDate(spMarket->stock());
+
+	if (spMarket->getMemoryDays(firstBuyDate, date) == 5)
 	{
 		BigNumber close = spMarket->day()->close();
 		price = close;
+		percent = 100;
 		score = 100;
-		m_isBuy = false;
-		m_buyPollSize = 0;
 		return true;
 	}
 	if (spMarket->day()->chgValue() > 9.5)
 	{
 		return false;
 	}
-	//if (m_spMarket->getMemoryDays(m_buyDate, date) >= 22)
-	//{
-	//	BigNumber close = m_spMarket->day()->close();
-	//	price = close;
-	//	percent = 100;
-	//	m_isBuy = false;
-	//	return true;
-	//}
+
+	if (spMarket->day()->isLimitDown())
+	{
+		return false;
+	}
+
 	BigNumber high = spMarket->day()->high();
 	BigNumber close = spMarket->day()->close();
 	BigNumber bollup = spStockBollIndicator->day(date)->m_up;
 	BigNumber bollmid = spStockBollIndicator->day(date)->m_mid;
-	if (bollup <= high || (bollmid + bollup) / 2 < close)
+
+	BigNumber chg = 0;
+	if (stockFund->stockChg(spMarket->stock(), spMarket->day(), chg) && chg > "0.2")
 	{
 		price = close;
+		percent = 100;
+		score = 90;
+	}
+
+	if (bollup <= high)
+	{
+		price = bollup;
+		percent = 100;
 		score = 100;
-		m_isBuy = false;
-		m_buyPollSize = 0;
 		return true;
 	}
+
+	if ((bollmid + bollup) / 2 < close)
+	{
+		price = close;
+		percent = 100;
+		score = 100;
+		return true;
+	}
+
 	return false;
 }
 

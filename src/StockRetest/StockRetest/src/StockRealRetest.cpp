@@ -81,29 +81,26 @@ void StockRealRetest::run()
 	IntDateTime currentTime = m_beginTime;
 	do
 	{
-		std::vector<std::string> vecOwnStock = m_fund.ownedStock();
-		BigNumber price;
-		BigNumber rate;
+		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
+		m_trade.sell(sellStock, currentTime, &m_fund, m_solutionType, m_strategyType);
+
 		int32_t index = -1;
-		while (index++ != vecOwnStock.size() - 1)
+		while (index++ != sellStock.size() - 1)
 		{
-			const std::string& stock = vecOwnStock[index];
+			const std::string& stock = sellStock[index].first;
+			const BigNumber& price = sellStock[index].second.first;
+			const BigNumber& rate = sellStock[index].second.second;
 			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
-			if (!spMarket->setDate(currentTime))
-			{
-				continue;
-			}
-			if (!m_trade.sell(stock, currentTime, price, rate, &m_fund, m_solutionType, m_strategyType))
-			{
-				continue;
-			}
+			RCSend("maichu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
+				spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
 			m_fund.sellStock(price, rate, spMarket->day());
 		}
-		
+
 		if (currentTime == m_endTime)
 		{
 			break;
 		}
+
 		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
 		m_trade.buy(buyStock, currentTime, &m_fund, m_solutionType, m_strategyType);
 
@@ -114,10 +111,8 @@ void StockRealRetest::run()
 			const BigNumber& price = buyStock[index].second.first;
 			const BigNumber& rate = buyStock[index].second.second;
 			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
-			if (!spMarket->setDate(currentTime))
-			{
-				continue;
-			}
+			RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
+				spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
 			m_fund.buyStock(price, rate, spMarket->day());
 		}
 

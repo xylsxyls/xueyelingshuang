@@ -2,7 +2,6 @@
 #define _StockSolutionAPI
 #include "StockSolution.h"
 #include "AvgFundHighScore.h"
-#include "AvgFundHighScoreInfo.h"
 #include "AvgFundHighScoreAllInfo.h"
 
 #ifdef _DEBUG
