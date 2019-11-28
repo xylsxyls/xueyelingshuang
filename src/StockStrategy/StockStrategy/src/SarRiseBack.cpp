@@ -77,7 +77,7 @@ bool SarRiseBack::buy(const IntDateTime& date,
 		{
 			price = close;
 			percent = 100;
-			score = 10 / (1 - bollMid / close.toPrec(6)).toPrec(6);
+			score = 200 * (bollUp / close.toPrec(6) - 1).toPrec(6);
 			return true;
 		}
 		else if (close >= bollDownMid && close <= bollMid)
@@ -88,7 +88,7 @@ bool SarRiseBack::buy(const IntDateTime& date,
 		{
 			price = close;
 			percent = 100;
-			score = 10 / (1 - bollDown / close.toPrec(6)).toPrec(6);
+			score = 100 * (bollMid / close.toPrec(6) - 1).toPrec(6);
 			return true;
 		}
 		else
@@ -148,6 +148,18 @@ bool SarRiseBack::sell(const IntDateTime& date,
 		price = close;
 		percent = 100;
 		score = 90;
+	}
+
+	if (spMarket->getMemoryDays(firstBuyDate, date) == 3)
+	{
+		BigNumber chg = 0;
+		if (stockFund->stockChg(spMarket->stock(), spMarket->day(), chg) && chg > "0.2")
+		{
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
 	}
 
 	if (bollup <= high)

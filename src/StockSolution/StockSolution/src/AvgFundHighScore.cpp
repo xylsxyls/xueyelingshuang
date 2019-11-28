@@ -60,7 +60,7 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumbe
 		strategyBuyStock.erase(--strategyBuyStock.end());
 	}
 
-	BigNumber allPercent = m_stockNum * 100;
+	BigNumber allPercent = (int32_t)strategyBuyStock.size() * 100;
 	index = -1;
 	while (index++ != strategyBuyStock.size() - 1)
 	{
