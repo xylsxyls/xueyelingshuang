@@ -18,6 +18,7 @@
 #include "IntoGameTask.h"
 #include "D:\\SendToMessageTest.h"
 #include "CqTask.h"
+#include "CQreTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -305,6 +306,15 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			sleepWatch.SetWatchTime(0);
 		}
 	}
+	else if (type == 3)
+	{
+		if (threeDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CQreTask> spTask(new CQreTask);
+			taskThread->PostTask(spTask, 1);
+		}
+	}
 
 	Exit:
 	// 将事件传递到下一个钩子
@@ -345,6 +355,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 	m_type.AddString("刀锋");
 	m_type.AddString("劫");
+	m_type.AddString("妖姬");
 	m_type.AddString("进游戏");
 	m_type.SelectString(0, "刀锋");
 	m_button.SetFocus();
@@ -437,9 +448,13 @@ void COneKeyDlg::OnSelchangeCombo1()
 	{
 		type = 2;
 	}
-	else if (str == "进游戏")
+	else if (str == "妖姬")
 	{
 		type = 3;
+	}
+	else if (str == "进游戏")
+	{
+		type = 4;
 		CString strTime;
 		m_edit.GetWindowText(strTime);
 		int32_t time = atoi(strTime.GetBuffer());

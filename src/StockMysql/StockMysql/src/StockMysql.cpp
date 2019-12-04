@@ -728,7 +728,12 @@ void StockMysql::saveFilterStockToRedis(const IntDateTime& beginTime, const IntD
 void StockMysql::readFilterStockFromRedis(const IntDateTime& date, std::vector<std::string>& filterStock)
 {
 	m_redis.selectDbIndex(5);
-	filterStock = m_redis.getGroup(date.dateToString())->toGroup();
+	IntDateTime searchDay = date;
+	if (date < "2019-10-08")
+	{
+		searchDay = std::string("2019-10-08");
+	}
+	filterStock = m_redis.getGroup(searchDay.dateToString())->toGroup();
 	std::sort(filterStock.begin(), filterStock.end());
 }
 
