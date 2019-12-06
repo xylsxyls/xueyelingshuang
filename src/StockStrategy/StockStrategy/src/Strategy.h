@@ -10,7 +10,9 @@ enum StrategyType
 {
 	STRATEGY_INIT,
 
-	SAR_RISE_BACK
+	SAR_RISE_BACK,
+
+	SAR_RISE_BACK_COUNT
 };
 
 /** 策略
@@ -49,12 +51,7 @@ public:
 		BigNumber& price,
 		BigNumber& percent,
 		BigNumber& score,
-		const std::shared_ptr<StrategyInfo>& strategyInfo) = 0;
-
-	/** 获取gupiaochi个数，该函数需在运行buy之后使用
-	@return 返回gupiaochi个数
-	*/
-	virtual int32_t buyPollSize();
+		const std::shared_ptr<StrategyInfo>& strategyInfo);
 
 	/** 获取策略类型
 	@return 返回策略类型
@@ -62,6 +59,5 @@ public:
 	StrategyType type();
 
 protected:
-	int32_t m_buyPollSize;
 	StrategyType m_strategyType;
 };

@@ -1,15 +1,18 @@
 #include "Strategy.h"
 
 Strategy::Strategy():
-m_buyPollSize(0),
 m_strategyType(STRATEGY_INIT)
 {
 
 }
 
-int32_t Strategy::buyPollSize()
+bool Strategy::sell(const IntDateTime& date,
+	BigNumber& price,
+	BigNumber& percent,
+	BigNumber& score,
+	const std::shared_ptr<StrategyInfo>& strategyInfo)
 {
-	return m_buyPollSize;
+	return false;
 }
 
 StrategyType Strategy::type()

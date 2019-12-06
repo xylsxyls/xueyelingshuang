@@ -1,8 +1,8 @@
 #include "Solution.h"
 
-void Solution::init(const std::shared_ptr<Strategy>& spStrategy)
+void Solution::init(const std::vector<std::shared_ptr<Strategy>>& vecStrategy)
 {
-	m_spStrategy = spStrategy;
+	m_vecStrategy = vecStrategy;
 }
 
 SolutionType Solution::type()

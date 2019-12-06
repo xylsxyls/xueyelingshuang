@@ -65,7 +65,7 @@ public:
 		const IntDateTime& date,
 		StockFund* stockFund,
 		SolutionType solutionType,
-		StrategyType strategyType);
+		const std::vector<StrategyType>& vecStrategyType);
 
 	/** 询问单只gupiao需不需要maichu
 	@param [in] sellStock maichu的gupiao集合，stock,price,rate0-1
@@ -79,7 +79,7 @@ public:
 		const IntDateTime& date,
 		StockFund* stockFund,
 		SolutionType solutionType,
-		StrategyType strategyType);
+		const std::vector<StrategyType>& vecStrategyType);
 
 	/** 获取内置的hangqing信息
 	@param [in] stock gupiao代码

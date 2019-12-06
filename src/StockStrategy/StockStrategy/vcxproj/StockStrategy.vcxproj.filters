@@ -39,6 +39,9 @@
     <ClInclude Include="..\src\SarRiseBackInfo.h">
       <Filter>Strategy</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\SarRiseBackCount.h">
+      <Filter>Strategy</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockStrategy.cpp">
@@ -49,6 +52,9 @@
     </ClCompile>
     <ClCompile Include="..\src\Strategy.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SarRiseBackCount.cpp">
+      <Filter>Strategy</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

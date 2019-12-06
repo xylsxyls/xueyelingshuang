@@ -49,6 +49,13 @@ protected:
 		const IntDateTime& date,
 		const std::shared_ptr<SolutionAllInfo>& solutionAllInfo);
 
+	/** 获取可mairu的计数
+	@param[in] date 日期
+	@param[in] solutionAllInfo 解决方案需要的信息
+	@return 返回可mairu的计数
+	*/
+	int32_t strategyBuyCount(const IntDateTime& date, const std::shared_ptr<SolutionAllInfo>& solutionAllInfo);
+
 	/** 询问单只gupiao需不需要maichu
 	@param [in] sellStock maichu的gupiao集合，stock,price,score0-100
 	@param [in] date 日期

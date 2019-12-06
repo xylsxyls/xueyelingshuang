@@ -4,6 +4,7 @@
 #include "BigNumber/BigNumberAPI.h"
 #include <map>
 #include <memory>
+#include "StockStrategy/StockStrategyAPI.h"
 
 enum SolutionType
 {
@@ -13,14 +14,13 @@ enum SolutionType
 };
 
 struct SolutionAllInfo;
-class Strategy;
 class StockSolutionAPI Solution
 {
 public:
 	/** 设置策略
-	@param [in] spStrategy 策略
+	@param [in] spStrategy 策略，要求两个，第一个用于策略，第二个用于查看通过计数
 	*/
-	void init(const std::shared_ptr<Strategy>& spStrategy);
+	void init(const std::vector<std::shared_ptr<Strategy>>& vecStrategy);
 
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
@@ -52,7 +52,7 @@ protected:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::shared_ptr<Strategy> m_spStrategy;
+	std::vector<std::shared_ptr<Strategy>> m_vecStrategy;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

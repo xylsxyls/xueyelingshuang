@@ -5,8 +5,6 @@
 #include "StockMarket/StockMarketAPI.h"
 #include "Solution.h"
 
-
-
 class StockSolutionAPI StockSolution
 {
 protected:

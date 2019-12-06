@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\SarRiseBack.h" />
+    <ClInclude Include="..\src\SarRiseBackCount.h" />
     <ClInclude Include="..\src\SarRiseBackInfo.h" />
     <ClInclude Include="..\src\StockStrategyAPI.h" />
     <ClInclude Include="..\src\StockStrategyMacro.h" />
@@ -29,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\SarRiseBack.cpp" />
+    <ClCompile Include="..\src\SarRiseBackCount.cpp" />
     <ClCompile Include="..\src\StockStrategy.cpp" />
     <ClCompile Include="..\src\Strategy.cpp" />
   </ItemGroup>

@@ -5,8 +5,7 @@
 #include "SarRiseBackInfo.h"
 #include "StockFund/StockFundAPI.h"
 
-SarRiseBack::SarRiseBack():
-m_buyDate(0, 0)
+SarRiseBack::SarRiseBack()
 {
 	m_strategyType = SAR_RISE_BACK;
 }
@@ -179,11 +178,4 @@ bool SarRiseBack::sell(const IntDateTime& date,
 	}
 
 	return false;
-}
-
-int32_t SarRiseBack::buyPollSize()
-{
-	int32_t buyPollSize = m_buyPollSize;
-	m_buyPollSize = 0;
-	return buyPollSize;
 }
