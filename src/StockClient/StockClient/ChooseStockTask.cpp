@@ -21,11 +21,14 @@ void ChooseStockTask::DoTask()
 	}
 
 	StockTrade stockTrade;
-	stockTrade.init(m_date - 5 * 86400, m_date, m_allStock, SOLUTION_INIT, m_strategyType);
+	std::vector<StrategyType> vecStrategyType;
+	vecStrategyType.push_back(m_strategyType);
+	vecStrategyType.push_back(m_strategyType);
+	stockTrade.init(m_date - 5 * 86400, m_date, m_allStock, SOLUTION_INIT, vecStrategyType);
 	stockTrade.load();
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
 	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>> allBuyInfo;
-	stockTrade.buy(buyStock, m_date, nullptr, SOLUTION_INIT, m_strategyType);
+	stockTrade.buy(buyStock, m_date, nullptr, SOLUTION_INIT, vecStrategyType);
 	int32_t index = buyStock.size();
 	while (index-- != 0)
 	{

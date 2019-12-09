@@ -14,7 +14,6 @@
 
 StockRealRetest::StockRealRetest():
 m_solutionType(SOLUTION_INIT),
-m_strategyType(STRATEGY_INIT),
 m_showStockLog(false),
 m_beginTime(0, 0),
 m_endTime(0, 0),
@@ -34,7 +33,7 @@ StockRealRetest::~StockRealRetest()
 }
 
 void StockRealRetest::init(SolutionType solutionType,
-	StrategyType strategyType,
+	const std::vector<StrategyType>& vecStrategyType,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	const BigNumber initialFund,
@@ -42,7 +41,7 @@ void StockRealRetest::init(SolutionType solutionType,
 	int32_t threadCount)
 {
 	m_solutionType = solutionType;
-	m_strategyType = strategyType;
+	m_vecStrategyType = vecStrategyType;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
 	m_initialFund = initialFund;
@@ -61,9 +60,9 @@ void StockRealRetest::init(SolutionType solutionType,
 
 	m_trade.init(m_beginTime,
 		m_endTime,
-		StockStrategy::instance().strategyAllStock(m_strategyType, m_beginTime, m_endTime),
+		StockStrategy::instance().strategyAllStock(vecStrategyType[0], m_beginTime, m_endTime),
 		m_solutionType,
-		m_strategyType);
+		m_vecStrategyType);
 }
 
 void StockRealRetest::load()
@@ -82,7 +81,7 @@ void StockRealRetest::run()
 	do
 	{
 		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
-		m_trade.sell(sellStock, currentTime, &m_fund, m_solutionType, m_strategyType);
+		m_trade.sell(sellStock, currentTime, &m_fund, m_solutionType, m_vecStrategyType);
 
 		int32_t index = -1;
 		while (index++ != sellStock.size() - 1)
@@ -102,7 +101,7 @@ void StockRealRetest::run()
 		}
 
 		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-		m_trade.buy(buyStock, currentTime, &m_fund, m_solutionType, m_strategyType);
+		m_trade.buy(buyStock, currentTime, &m_fund, m_solutionType, m_vecStrategyType);
 
 		index = -1;
 		while (index++ != buyStock.size() - 1)

@@ -17,7 +17,7 @@ public:
 
 public:
 	void init(SolutionType solutionType,
-		StrategyType strategyType,
+		const std::vector<StrategyType>& vecStrategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		const BigNumber initialFund = 200000,
@@ -32,7 +32,6 @@ public:
 
 private:
 	SolutionType m_solutionType;
-	StrategyType m_strategyType;
 	bool m_showStockLog;
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;
@@ -40,6 +39,7 @@ private:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
+	std::vector<StrategyType> m_vecStrategyType;
 	std::vector<uint32_t> m_vecThreadId;
 #ifdef _MSC_VER
 #pragma warning(pop)

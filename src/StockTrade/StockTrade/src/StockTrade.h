@@ -34,7 +34,7 @@ public:
 		const IntDateTime& endTime,
 		const std::vector<std::string>& allStock,
 		SolutionType solutionType,
-		StrategyType strategyType);
+		const std::vector<StrategyType>& vecStrategyType);
 
 	/** 初始化，把所有需要的内容全部加载好，加载好的信息供所有解决方案和策略共用
 	@param [in] beginTime 开始时间
@@ -101,7 +101,7 @@ protected:
 	std::shared_ptr<SolutionAllInfo> makeSolutionAllInfo(const IntDateTime& date,
 		StockFund* stockFund,
 		SolutionType solutionType,
-		StrategyType strategyType);
+		const std::vector<StrategyType>& vecStrategyType);
 
 private:
 #ifdef _MSC_VER
