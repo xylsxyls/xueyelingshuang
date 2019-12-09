@@ -11,7 +11,7 @@ struct StockSolutionAPI SolutionAllInfo
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::map<std::string, std::shared_ptr<StrategyInfo>> m_strategyAllInfo;
+	std::map<std::string, std::vector<std::shared_ptr<StrategyInfo>>> m_strategyAllInfo;
 	StockFund* m_fund;
 	std::vector<std::string>* m_filterStock;
 #ifdef _MSC_VER

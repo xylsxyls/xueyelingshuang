@@ -165,7 +165,6 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 		vecStrategy.push_back(itStrategy->second);
 	}
 	spSolution->init(vecStrategy);
-	RCSend("size = %d", vecStrategyType.size());
 	return spSolution->buy(buyStock, date, makeSolutionAllInfo(date, stockFund, solutionType, vecStrategyType));
 }
 

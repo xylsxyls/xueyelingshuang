@@ -119,7 +119,7 @@ bool AvgFundHighScore::strategyBuy(std::vector<std::pair<std::string, std::pair<
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreAllInfo->m_strategyAllInfo.find(stock)->second;
+		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreAllInfo->m_strategyAllInfo.find(stock)->second[0];
 		if (m_vecStrategy[0]->buy(date,
 			price,
 			percent,
@@ -152,7 +152,7 @@ int32_t AvgFundHighScore::strategyBuyCount(const IntDateTime& date, const std::s
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreAllInfo->m_strategyAllInfo.find(stock)->second;
+		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreAllInfo->m_strategyAllInfo.find(stock)->second[1];
 		count += (int32_t)m_vecStrategy[1]->buy(date, price, percent, score, spStrategyInfo);
 	}
 	return count;
@@ -170,7 +170,7 @@ bool AvgFundHighScore::strategySell(std::vector<std::pair<std::string, std::pair
 	while (index++ != vecOwnedStock.size() - 1)
 	{
 		const std::string& stock = vecOwnedStock[index];
-		auto& strategyInfo = solutionAllInfo->m_strategyAllInfo.find(stock)->second;
+		auto& strategyInfo = solutionAllInfo->m_strategyAllInfo.find(stock)->second[0];
 		auto& spMarket = strategyInfo->m_spMarket;
 		BigNumber chg;
 		solutionAllInfo->m_fund->stockChg(spMarket->stock(), spMarket->day(), chg);
