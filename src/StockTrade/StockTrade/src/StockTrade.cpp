@@ -264,6 +264,7 @@ std::shared_ptr<SolutionAllInfo> StockTrade::makeSolutionAllInfo(const IntDateTi
 			switch (vecStrategyType[strategyIndex])
 			{
 			case SAR_RISE_BACK:
+			case SAR_RISE_BACK_COUNT:
 			{
 				SarRiseBackInfo* sarRiseBackInfo = new SarRiseBackInfo;
 				sarRiseBackInfo->m_fund = stockFund;

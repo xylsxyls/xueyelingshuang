@@ -14,14 +14,14 @@ public:
 	void DoTask();
 
 	void setParam(SolutionType solutionType,
-		StrategyType strategyType,
+		std::vector<StrategyType>& vecStrategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		StockClient* stockClient);
 
 private:
 	SolutionType m_solutionType;
-	StrategyType m_strategyType;
+	std::vector<StrategyType> m_vecStrategyType;
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;
 	StockClient* m_stockClient;

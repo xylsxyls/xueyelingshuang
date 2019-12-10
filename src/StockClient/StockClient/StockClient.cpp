@@ -651,7 +651,7 @@ void StockClient::onChooseStockButtonClicked()
 	line.m_tip = QStringLiteral("查询日期");
 	line.m_defaultText = IntDateTime().dateToString().c_str();
 	inputDialogParam.m_vecInputEx.push_back(line);
-	line.m_tip = QStringLiteral("是否重新获取");
+	line.m_tip = QStringLiteral("重获hangqing数据");
 	line.m_defaultText = QStringLiteral("1");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
@@ -784,7 +784,10 @@ void StockClient::onSaveFilterStockToRedisButtonClicked()
 void StockClient::onRealTestButtonClicked()
 {
 	std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
-	spRealTestTask->setParam(AVG_FUND_HIGH_SCORE, SAR_RISE_BACK, "2019-10-08", "2019-11-15", this);
+	std::vector<StrategyType> vecStrategyType;
+	vecStrategyType.push_back(SAR_RISE_BACK);
+	vecStrategyType.push_back(SAR_RISE_BACK);
+	spRealTestTask->setParam(AVG_FUND_HIGH_SCORE, vecStrategyType, "2019-10-08", "2019-11-15", this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 

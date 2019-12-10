@@ -61,11 +61,6 @@ bool SarRiseBack::buy(const IntDateTime& date,
 	StockSar::SarState sar10State = spStockSarIndicator->day(date)->m_sarState10;
 	StockSar::SarState sar20State = spStockSarIndicator->day(date)->m_sarState20;
 
-	if (sar5State == StockSar::RED_TO_GREEN || sar10State == StockSar::RED_TO_GREEN)
-	{
-		
-	}
-
 	if (sar5State == StockSar::RED_TO_GREEN && sar10State == StockSar::RED_TO_GREEN)
 	{
 		if (close >= bollUpMid)
