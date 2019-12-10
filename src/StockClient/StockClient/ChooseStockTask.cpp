@@ -3,6 +3,7 @@
 #include "StockClient.h"
 #include "StockClientLogicManager.h"
 #include "StockMysql/StockMysqlAPI.h"
+#include "StockFund/StockFundAPI.h"
 
 ChooseStockTask::ChooseStockTask()
 {
@@ -20,15 +21,18 @@ void ChooseStockTask::DoTask()
 		StockMysql::instance().readFilterStockFromRedis(m_date, m_allStock);
 	}
 
+	StockFund stockFund;
+	stockFund.add(200000);
+
 	StockTrade stockTrade;
 	std::vector<StrategyType> vecStrategyType;
 	vecStrategyType.push_back(m_strategyType);
 	vecStrategyType.push_back(m_strategyType);
-	stockTrade.init(m_date - 5 * 86400, m_date, m_allStock, SOLUTION_INIT, vecStrategyType);
+	stockTrade.init(m_date - 5 * 86400, m_date, m_allStock, AVG_FUND_HIGH_SCORE, vecStrategyType);
 	stockTrade.load();
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
 	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>> allBuyInfo;
-	stockTrade.buy(buyStock, m_date, nullptr, SOLUTION_INIT, vecStrategyType);
+	stockTrade.buy(buyStock, m_date, &stockFund, AVG_FUND_HIGH_SCORE, vecStrategyType);
 	int32_t index = buyStock.size();
 	while (index-- != 0)
 	{

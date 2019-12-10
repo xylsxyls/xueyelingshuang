@@ -69,6 +69,7 @@ void SaveTodayMarketFileTask::DoTask()
 	CSystem::Sleep(8000);
 	CMouse::MoveAbsolute(xyls::Point(1082, 733), 0);
 	CMouse::LeftClick();
+	CSystem::Sleep(500);
 }
 
 void SaveTodayMarketFileTask::setParam(StockClient* stockClient)

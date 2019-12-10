@@ -25,8 +25,11 @@ void GetFilterStockTask::DoTask()
 	{
 		CMouse::MoveAbsolute(xyls::Point(521, 38), 0);
 		CMouse::LeftClick();
+		Sleep(5000);
+		CMouse::MoveAbsolute(xyls::Point(1161, 105), 0);
+		CMouse::LeftClick();
 		Sleep(3000);
-		CMouse::MoveAbsolute(xyls::Point(285, 122), 0);
+		CMouse::MoveAbsolute(xyls::Point(645, 122), 0);
 		CMouse::LeftClick();
 		CSystem::setClipboardData(m_hWnd, SEARCH_STR);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
@@ -34,10 +37,10 @@ void GetFilterStockTask::DoTask()
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('V');
 		Sleep(100);
-		CMouse::MoveAbsolute(xyls::Point(921, 122), 0);
+		CMouse::MoveAbsolute(xyls::Point(1337, 121), 0);
 		CMouse::LeftClick();
 		Sleep(5000);
-		CMouse::MoveAbsolute(xyls::Point(527, 304), 0);
+		CMouse::MoveAbsolute(xyls::Point(423, 303), 0);
 		CMouse::LeftClick();
 		Sleep(1000);
 		CSystem::setClipboardData(m_hWnd, m_today.dateToString() + ".xls");
