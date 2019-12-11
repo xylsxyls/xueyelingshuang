@@ -165,7 +165,7 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 		vecStrategy.push_back(itStrategy->second);
 	}
 	spSolution->init(vecStrategy);
-	return spSolution->buy(buyStock, date, makeSolutionAllInfo(date, stockFund, solutionType, vecStrategyType));
+	return spSolution->buy(buyStock, date, makeSolutionInfo(date, stockFund, solutionType, vecStrategyType));
 }
 
 bool StockTrade::sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
@@ -194,11 +194,11 @@ bool StockTrade::sell(std::vector<std::pair<std::string, std::pair<BigNumber, Bi
 	}
 	spSolution->init(vecStrategy);
 
-	std::shared_ptr<SolutionAllInfo> solutionAllInfo = makeSolutionAllInfo(date,
+	std::shared_ptr<SolutionInfo> solutionInfo = makeSolutionInfo(date,
 		stockFund,
 		solutionType,
 		vecStrategyType);
-	return spSolution->sell(sellStock, date, solutionAllInfo);
+	return spSolution->sell(sellStock, date, solutionInfo);
 }
 
 std::shared_ptr<StockMarket> StockTrade::market(const std::string& stock)
@@ -233,30 +233,20 @@ bool StockTrade::stockDayData(const std::vector<std::string>& vecStock,
 	return true;
 }
 
-std::shared_ptr<SolutionAllInfo> StockTrade::makeSolutionAllInfo(const IntDateTime& date,
+std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& date,
 	StockFund* stockFund,
 	SolutionType solutionType,
 	const std::vector<StrategyType>& vecStrategyType)
 {
-	std::shared_ptr<SolutionAllInfo> spSolutionAllInfo;
-	switch (solutionType)
-	{
-	case AVG_FUND_HIGH_SCORE:
-	{
-		spSolutionAllInfo.reset(new AvgFundHighScoreAllInfo);
-	}
-	break;
-	default:
-		break;
-	}
-	spSolutionAllInfo->m_filterStock = &(m_filterStock.find(date)->second);
-	spSolutionAllInfo->m_fund = stockFund;
+	std::shared_ptr<SolutionInfo> spSolutionInfo = StockSolution::instance().solutionInfo(solutionType);
+	spSolutionInfo->m_filterStock = &(m_filterStock.find(date)->second);
+	spSolutionInfo->m_fund = stockFund;
 
 	int32_t index = -1;
 	while (index++ != m_allStock.size() - 1)
 	{
 		const std::string& stock = m_allStock[index];
-		std::vector<std::shared_ptr<StrategyInfo>>& vecStrategyInfoInAllInfo = spSolutionAllInfo->m_strategyAllInfo[stock];
+		std::vector<std::shared_ptr<StrategyInfo>>& vecStrategyInfo = spSolutionInfo->m_strategyAllInfo[stock];
 		int32_t strategyIndex = -1;
 		while (strategyIndex++ != vecStrategyType.size() - 1)
 		{
@@ -277,8 +267,8 @@ std::shared_ptr<SolutionAllInfo> StockTrade::makeSolutionAllInfo(const IntDateTi
 			default:
 				break;
 			}
-			vecStrategyInfoInAllInfo.push_back(spStrategyInfo);
+			vecStrategyInfo.push_back(spStrategyInfo);
 		}
 	}
-	return spSolutionAllInfo;
+	return spSolutionInfo;
 }

@@ -14,5 +14,7 @@ public:
 	static StockSolution& instance();
 
 public:
-	std::shared_ptr<Solution> solution(SolutionType strategyEnum);
+	std::shared_ptr<Solution> solution(SolutionType solutionType);
+
+	std::shared_ptr<SolutionInfo> solutionInfo(SolutionType solutionType);
 };

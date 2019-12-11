@@ -739,7 +739,7 @@ void StockClient::onSaveFilterStockToMysqlButtonClicked()
 		return;
 	}
 	IntDateTime currentTime = beginTime;
-	do 
+	do
 	{
 		std::string path = CSystem::GetCurrentExePath() + currentTime.dateToString() + ".xls";
 		if (CSystem::fileExist(path))

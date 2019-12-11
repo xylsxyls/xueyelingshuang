@@ -5,7 +5,7 @@
 
 struct StrategyInfo;
 class StockFund;
-struct StockSolutionAPI SolutionAllInfo
+struct StockSolutionAPI SolutionInfo
 {
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -18,13 +18,13 @@ struct StockSolutionAPI SolutionAllInfo
 #pragma warning(pop)
 #endif
 
-	SolutionAllInfo()
+	SolutionInfo()
 	{
 		m_fund = nullptr;
 		m_filterStock = nullptr;
 	}
 
-	virtual ~SolutionAllInfo()
+	virtual ~SolutionInfo()
 	{
 
 	}

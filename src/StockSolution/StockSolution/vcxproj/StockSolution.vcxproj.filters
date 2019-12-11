@@ -33,10 +33,16 @@
     <ClInclude Include="..\src\AvgFundHighScore.h">
       <Filter>Solution</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SolutionAllInfo.h">
+    <ClInclude Include="..\src\SolutionInfo.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AvgFundHighScoreAllInfo.h">
+    <ClInclude Include="..\src\AvgFundHighScoreInfo.h">
+      <Filter>Solution</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StrategySetInfo.h">
+      <Filter>Solution</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StrategySet.h">
       <Filter>Solution</Filter>
     </ClInclude>
   </ItemGroup>
@@ -49,6 +55,9 @@
     </ClCompile>
     <ClCompile Include="..\src\Solution.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StrategySet.cpp">
+      <Filter>Solution</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

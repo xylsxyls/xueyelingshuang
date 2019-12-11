@@ -1,1 +1,1 @@
-call "%CLOUD_REBUILD%" StockStrategy 32 dll debug same
+call "%CLOUD_REBUILD%" StockStrategy 32 dll debug only

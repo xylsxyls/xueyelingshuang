@@ -1,5 +1,8 @@
 #include "StockSolution.h"
 #include "AvgFundHighScore.h"
+#include "StrategySet.h"
+#include "AvgFundHighScoreInfo.h"
+#include "StrategySetInfo.h"
 
 StockSolution::StockSolution()
 {
@@ -12,18 +15,44 @@ StockSolution& StockSolution::instance()
 	return s_stockSolution;
 }
 
-std::shared_ptr<Solution> StockSolution::solution(SolutionType strategyEnum)
+std::shared_ptr<Solution> StockSolution::solution(SolutionType solutionType)
 {
 	std::shared_ptr<Solution> spSolution;
-	switch (strategyEnum)
+	switch (solutionType)
 	{
 	case AVG_FUND_HIGH_SCORE:
 	{
 		spSolution.reset(new AvgFundHighScore);
 	}
 	break;
+	case STRATEGY_SET:
+	{
+		spSolution.reset(new StrategySet);
+	}
+	break;
 	default:
 		break;
 	}
 	return spSolution;
+}
+
+std::shared_ptr<SolutionInfo> StockSolution::solutionInfo(SolutionType solutionType)
+{
+	std::shared_ptr<SolutionInfo> spSolutionInfo;
+	switch (solutionType)
+	{
+	case AVG_FUND_HIGH_SCORE:
+	{
+		spSolutionInfo.reset(new AvgFundHighScoreInfo);
+	}
+	break;
+	case STRATEGY_SET:
+	{
+		spSolutionInfo.reset(new StrategySetInfo);
+	}
+	break;
+	default:
+		break;
+	}
+	return spSolutionInfo;
 }

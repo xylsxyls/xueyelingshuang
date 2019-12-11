@@ -10,10 +10,12 @@ enum SolutionType
 {
 	SOLUTION_INIT,
 
-	AVG_FUND_HIGH_SCORE
+	AVG_FUND_HIGH_SCORE,
+
+	STRATEGY_SET
 };
 
-struct SolutionAllInfo;
+struct SolutionInfo;
 class StockSolutionAPI Solution
 {
 public:
@@ -25,22 +27,22 @@ public:
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
-	@param [in] solutionAllInfo 解决方案需要的信息
+	@param [in] solutionInfo 解决方案需要的信息
 	@return 是否有选出的gupiao
 	*/
 	virtual bool buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
 		const IntDateTime& date,
-		const std::shared_ptr<SolutionAllInfo>& solutionAllInfo) = 0;
+		const std::shared_ptr<SolutionInfo>& solutionInfo);
 
 	/** 询问单只gupiao需不需要maichu
 	@param [in] sellStock maichu的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
-	@param [in] solutionAllInfo 解决方案需要的信息
+	@param [in] solutionInfo 解决方案需要的信息
 	@return 返回是否有需要maichu的gupiao
 	*/
 	virtual bool sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
 		const IntDateTime& date,
-		const std::shared_ptr<SolutionAllInfo>& solutionAllInfo) = 0;
+		const std::shared_ptr<SolutionInfo>& solutionInfo);
 
 	/** 获取解决方案类型
 	@return 返回解决方案类型

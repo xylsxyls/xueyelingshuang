@@ -20,17 +20,20 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\AvgFundHighScore.h" />
-    <ClInclude Include="..\src\AvgFundHighScoreAllInfo.h" />
+    <ClInclude Include="..\src\AvgFundHighScoreInfo.h" />
     <ClInclude Include="..\src\Solution.h" />
-    <ClInclude Include="..\src\SolutionAllInfo.h" />
+    <ClInclude Include="..\src\SolutionInfo.h" />
     <ClInclude Include="..\src\StockSolutionAPI.h" />
     <ClInclude Include="..\src\StockSolutionMacro.h" />
     <ClInclude Include="..\src\StockSolution.h" />
+    <ClInclude Include="..\src\StrategySet.h" />
+    <ClInclude Include="..\src\StrategySetInfo.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\AvgFundHighScore.cpp" />
     <ClCompile Include="..\src\Solution.cpp" />
     <ClCompile Include="..\src\StockSolution.cpp" />
+    <ClCompile Include="..\src\StrategySet.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

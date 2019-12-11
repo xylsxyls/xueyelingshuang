@@ -98,7 +98,7 @@ public:
 		std::map<std::string, std::shared_ptr<StockDay>>& dayData);
 
 protected:
-	std::shared_ptr<SolutionAllInfo> makeSolutionAllInfo(const IntDateTime& date,
+	std::shared_ptr<SolutionInfo> makeSolutionInfo(const IntDateTime& date,
 		StockFund* stockFund,
 		SolutionType solutionType,
 		const std::vector<StrategyType>& vecStrategyType);
