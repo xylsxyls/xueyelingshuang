@@ -47,6 +47,7 @@ private slots:
 	void onSaveFilterStockToMysqlButtonClicked();
 	void onSaveFilterStockToRedisButtonClicked();
 	void onRealTestButtonClicked();
+	void onOnceTestButtonClicked();
 	void onEverydayTaskButtonClicked();
 
 public:
@@ -108,6 +109,8 @@ private:
 	COriginalButton* m_saveFilterStockToRedisButton;
 	//模拟实际测试
 	COriginalButton* m_realTestButton;
+	//单次模拟测试
+	COriginalButton* m_onceTestButton;
 	//每日任务
 	COriginalButton* m_everydayTaskButton;
 };

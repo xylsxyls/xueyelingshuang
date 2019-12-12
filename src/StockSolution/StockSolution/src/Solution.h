@@ -12,7 +12,9 @@ enum SolutionType
 
 	AVG_FUND_HIGH_SCORE,
 
-	STRATEGY_SET
+	STRATEGY_SET,
+
+	DISPOSABLE_STRATEGY
 };
 
 struct SolutionInfo;

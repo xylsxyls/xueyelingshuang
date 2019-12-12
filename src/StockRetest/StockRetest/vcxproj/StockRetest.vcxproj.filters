@@ -39,6 +39,9 @@
     <ClInclude Include="..\src\StockRealRetest.h">
       <Filter>Retest</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\StockOnceRetest.h">
+      <Filter>Retest</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockEveryTestResultTask.cpp">
@@ -51,6 +54,9 @@
       <Filter>Retest</Filter>
     </ClCompile>
     <ClCompile Include="..\src\StockRealRetest.cpp">
+      <Filter>Retest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockOnceRetest.cpp">
       <Filter>Retest</Filter>
     </ClCompile>
   </ItemGroup>

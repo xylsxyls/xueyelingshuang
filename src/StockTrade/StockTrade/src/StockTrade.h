@@ -65,7 +65,8 @@ public:
 		const IntDateTime& date,
 		StockFund* stockFund,
 		SolutionType solutionType,
-		const std::vector<StrategyType>& vecStrategyType);
+		const std::vector<StrategyType>& vecStrategyType,
+		const IntDateTime& onceDate = IntDateTime(0, 0));
 
 	/** 询问单只gupiao需不需要maichu
 	@param [in] sellStock maichu的gupiao集合，stock,price,rate0-1
@@ -101,7 +102,8 @@ protected:
 	std::shared_ptr<SolutionInfo> makeSolutionInfo(const IntDateTime& date,
 		StockFund* stockFund,
 		SolutionType solutionType,
-		const std::vector<StrategyType>& vecStrategyType);
+		const std::vector<StrategyType>& vecStrategyType,
+		const IntDateTime& onceDate);
 
 private:
 #ifdef _MSC_VER

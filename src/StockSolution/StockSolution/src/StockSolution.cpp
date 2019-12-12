@@ -1,8 +1,10 @@
 #include "StockSolution.h"
 #include "AvgFundHighScore.h"
 #include "StrategySet.h"
+#include "DisposableStrategy.h"
 #include "AvgFundHighScoreInfo.h"
 #include "StrategySetInfo.h"
+#include "DisposableStrategyInfo.h"
 
 StockSolution::StockSolution()
 {
@@ -30,6 +32,11 @@ std::shared_ptr<Solution> StockSolution::solution(SolutionType solutionType)
 		spSolution.reset(new StrategySet);
 	}
 	break;
+	case DISPOSABLE_STRATEGY:
+	{
+		spSolution.reset(new DisposableStrategy);
+	}
+	break;
 	default:
 		break;
 	}
@@ -49,6 +56,11 @@ std::shared_ptr<SolutionInfo> StockSolution::solutionInfo(SolutionType solutionT
 	case STRATEGY_SET:
 	{
 		spSolutionInfo.reset(new StrategySetInfo);
+	}
+	break;
+	case DISPOSABLE_STRATEGY:
+	{
+		spSolutionInfo.reset(new DisposableStrategyInfo);
 	}
 	break;
 	default:

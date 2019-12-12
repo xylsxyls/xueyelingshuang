@@ -33,6 +33,7 @@
 #include "SaveFilterStockTaskToMysql.h"
 #include "SaveAllFilterStockTaskToRedis.h"
 #include "RealTestTask.h"
+#include "OnceTestTask.h"
 #include "StockSolution/StockSolutionAPI.h"
 
 StockClient::StockClient(QWidget* parent)
@@ -59,6 +60,7 @@ StockClient::StockClient(QWidget* parent)
 	m_saveFilterStockToMysqlButton(nullptr),
 	m_saveFilterStockToRedisButton(nullptr),
 	m_realTestButton(nullptr),
+	m_onceTestButton(nullptr),
 	m_everydayTaskButton(nullptr)
 {
 	ui.setupUi(this);
@@ -81,6 +83,7 @@ StockClient::StockClient(QWidget* parent)
 	m_saveFilterStockToMysqlButton = new COriginalButton(this);
 	m_saveFilterStockToRedisButton = new COriginalButton(this);
 	m_realTestButton = new COriginalButton(this);
+	m_onceTestButton = new COriginalButton(this);
 	m_everydayTaskButton = new COriginalButton(this);
 	init();
 }
@@ -181,6 +184,10 @@ void StockClient::init()
 	m_realTestButton->setText(QStringLiteral("模拟实际测试"));
 	QObject::connect(m_realTestButton, &COriginalButton::clicked, this, &StockClient::onRealTestButtonClicked);
 
+	m_onceTestButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_onceTestButton->setText(QStringLiteral("单次模拟测试"));
+	QObject::connect(m_onceTestButton, &COriginalButton::clicked, this, &StockClient::onOnceTestButtonClicked);
+
 	m_everydayTaskButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_everydayTaskButton->setText(QStringLiteral("每日任务"));
 	QObject::connect(m_everydayTaskButton, &COriginalButton::clicked, this, &StockClient::onEverydayTaskButtonClicked);
@@ -245,6 +252,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_saveFilterStockToMysqlButton);
 	vecButton.push_back(m_saveFilterStockToRedisButton);
 	vecButton.push_back(m_realTestButton);
+	vecButton.push_back(m_onceTestButton);
 	vecButton.push_back(m_everydayTaskButton);
 
 	int32_t cowCount = 4;
@@ -789,6 +797,16 @@ void StockClient::onRealTestButtonClicked()
 	vecStrategyType.push_back(SAR_RISE_BACK);
 	spRealTestTask->setParam(AVG_FUND_HIGH_SCORE, vecStrategyType, "2019-10-08", "2019-11-15", this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+}
+
+void StockClient::onOnceTestButtonClicked()
+{
+	std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
+	std::vector<StrategyType> vecStrategyType;
+	vecStrategyType.push_back(SAR_RISE_BACK);
+	vecStrategyType.push_back(SAR_RISE_BACK);
+	spOnceTestTask->setParam(DISPOSABLE_STRATEGY, vecStrategyType, "2019-10-08", "2019-11-15", this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 }
 
 void StockClient::onEverydayTaskButtonClicked()

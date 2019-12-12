@@ -2,6 +2,7 @@
 #define _StockRetestAPI
 #include "StockEveryRetest.h"
 #include "StockRealRetest.h"
+#include "StockOnceRetest.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockRetestd.lib")

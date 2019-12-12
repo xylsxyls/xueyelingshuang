@@ -45,6 +45,12 @@
     <ClInclude Include="..\src\StrategySet.h">
       <Filter>Solution</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\DisposableStrategyInfo.h">
+      <Filter>Solution</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\DisposableStrategy.h">
+      <Filter>Solution</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockSolution.cpp">
@@ -57,6 +63,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\StrategySet.cpp">
+      <Filter>Solution</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DisposableStrategy.cpp">
       <Filter>Solution</Filter>
     </ClCompile>
   </ItemGroup>

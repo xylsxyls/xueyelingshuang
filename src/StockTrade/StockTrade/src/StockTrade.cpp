@@ -142,7 +142,8 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 	const IntDateTime& date,
 	StockFund* stockFund,
 	SolutionType solutionType,
-	const std::vector<StrategyType>& vecStrategyType)
+	const std::vector<StrategyType>& vecStrategyType,
+	const IntDateTime& onceDate)
 {
 	buyStock.clear();
 
@@ -165,7 +166,7 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 		vecStrategy.push_back(itStrategy->second);
 	}
 	spSolution->init(vecStrategy);
-	return spSolution->buy(buyStock, date, makeSolutionInfo(date, stockFund, solutionType, vecStrategyType));
+	return spSolution->buy(buyStock, date, makeSolutionInfo(date, stockFund, solutionType, vecStrategyType, onceDate));
 }
 
 bool StockTrade::sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
@@ -197,7 +198,8 @@ bool StockTrade::sell(std::vector<std::pair<std::string, std::pair<BigNumber, Bi
 	std::shared_ptr<SolutionInfo> solutionInfo = makeSolutionInfo(date,
 		stockFund,
 		solutionType,
-		vecStrategyType);
+		vecStrategyType,
+		IntDateTime(0, 0));
 	return spSolution->sell(sellStock, date, solutionInfo);
 }
 
@@ -236,11 +238,18 @@ bool StockTrade::stockDayData(const std::vector<std::string>& vecStock,
 std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& date,
 	StockFund* stockFund,
 	SolutionType solutionType,
-	const std::vector<StrategyType>& vecStrategyType)
+	const std::vector<StrategyType>& vecStrategyType,
+	const IntDateTime& onceDate)
 {
 	std::shared_ptr<SolutionInfo> spSolutionInfo = StockSolution::instance().solutionInfo(solutionType);
 	spSolutionInfo->m_filterStock = &(m_filterStock.find(date)->second);
 	spSolutionInfo->m_fund = stockFund;
+
+	if (solutionType == DISPOSABLE_STRATEGY)
+	{
+		const std::shared_ptr<DisposableStrategyInfo>& disposableStrategyInfo = std::dynamic_pointer_cast<DisposableStrategyInfo>(spSolutionInfo);
+		disposableStrategyInfo->m_onceDate = onceDate;
+	}
 
 	int32_t index = -1;
 	while (index++ != m_allStock.size() - 1)

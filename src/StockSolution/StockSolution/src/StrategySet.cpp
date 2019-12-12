@@ -5,7 +5,7 @@
 #include "StockFund/StockFundAPI.h"
 #include "StockMarket/StockMarketAPI.h"
 
-bool sortFun(const std::pair<std::string, std::pair<BigNumber, BigNumber>>& stock1,
+static bool sortFun(const std::pair<std::string, std::pair<BigNumber, BigNumber>>& stock1,
 	const std::pair<std::string, std::pair<BigNumber, BigNumber>>& stock2)
 {
 	if (stock1.second.second > stock2.second.second)

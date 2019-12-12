@@ -5,6 +5,8 @@
 #include "AvgFundHighScoreInfo.h"
 #include "StrategySet.h"
 #include "StrategySetInfo.h"
+#include "DisposableStrategy.h"
+#include "DisposableStrategyInfo.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockSolutiond.lib")
