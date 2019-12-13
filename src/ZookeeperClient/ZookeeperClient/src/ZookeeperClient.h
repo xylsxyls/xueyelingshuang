@@ -31,6 +31,8 @@ enum ZookeeperNodeType
 struct _zhandle;
 typedef struct _zhandle zhandle_t;
 
+typedef void(*watcher_fn)(zhandle_t* zh, int32_t type, int32_t state, const char* path, void* watcherCtx);
+
 typedef struct ZookeeperList
 {
 	std::string m_name;
@@ -101,11 +103,11 @@ public:
 	* E_ZM_INVALIDSTATE zhandle state is either ZOO_SESSION_EXPIRED_STATE or ZOO_AUTH_FAILED_STATE
 	* E_ZM_FAIL operation failed
 	**/
-	int32_t SearchNode(const std::string& path, ZookeeperList& nodeList);
+	int32_t SearchNode(const std::string& path, ZookeeperList& nodeList, watcher_fn watcher = nullptr, void* watcherCtx = nullptr);
 
-	int32_t SearchValue(const std::string& path, std::string& value);
+	int32_t SearchValue(const std::string& path, std::string& value, watcher_fn watcher = nullptr, void* watcherCtx = nullptr);
 
-	/** 监听子节点的创建和删除
+	/** 监听子节点的创建和删除，以及子节点内容的改变
 	*/
 	int32_t ListenChildrenNode(const std::string& path, bool isListenChildrenNodeChange = true);
 
@@ -151,7 +153,7 @@ public:
 	//监听的子节点发生改变，如果同时需要监听子节点内容变化，需要在每次发生改变时重新监听每个节点，因为每个节点都可能是被删除后立刻添加的
 	virtual void ListenChildrenNodeChanged(const std::string& path, const std::string& node, const ZookeeperList& zookeeperList);
 
-	//监听子节点的父节点被删除
+	//监听子节点的父节点被删除，正常不会触发，如果触发了可能会进来多次，小于等于子节点的个数
 	virtual void ListenChildrenFatherNodeDeleted(const std::string& path, const std::string& node);
 
 	bool GetMemoryNode(const std::string& path, std::string& value);
@@ -186,10 +188,10 @@ private:
 	std::mutex m_nodeMutex;
 	std::map<std::string, std::string> m_nodeValueMap;
 	std::map<std::string, std::set<std::string>> m_childrenNodeMap;
+	std::atomic<bool> m_isListenChildrenNodeChange;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 	zhandle_t* m_handle;
 	Semaphore m_sem;
-	std::atomic<bool> m_isListenChildrenNodeChange;
 };

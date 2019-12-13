@@ -51,7 +51,7 @@ int32_t ZookeeperClient::Close()
 	return convertZookeeperResult(ret);
 }
 
-int32_t ZookeeperClient::SearchNode(const std::string& path, ZookeeperList& nodeList)
+int32_t ZookeeperClient::SearchNode(const std::string& path, ZookeeperList& nodeList, watcher_fn watcher, void* watcherCtx)
 {
 	int32_t ret = SearchValue(path, nodeList.m_value);
 	if (ret != E_ZM_OK)
@@ -61,7 +61,7 @@ int32_t ZookeeperClient::SearchNode(const std::string& path, ZookeeperList& node
 	nodeList.m_name = path;
 	
 	String_vector strings;
-	ret = zoo_get_children(m_handle, path.c_str(), 0, &strings);
+	ret = zoo_wget_children(m_handle, path.c_str(), watcher, watcherCtx, &strings);
 	if (ret != ZOK)
 	{
 		return convertZookeeperResult(ret);
@@ -76,7 +76,7 @@ int32_t ZookeeperClient::SearchNode(const std::string& path, ZookeeperList& node
 			if (ret != E_ZM_OK)
 			{
 				printf("search path error, path = %s\n", (path + "/" + strings.data[index]).c_str());
-				return ret;
+				continue;
 			}
 		}
 	}
@@ -85,7 +85,7 @@ int32_t ZookeeperClient::SearchNode(const std::string& path, ZookeeperList& node
 }
 
 
-int32_t ZookeeperClient::SearchValue(const std::string& path, std::string& value)
+int32_t ZookeeperClient::SearchValue(const std::string& path, std::string& value, watcher_fn watcher, void* watcherCtx)
 {
 	if (!m_isConnect)
 	{
@@ -102,7 +102,7 @@ int32_t ZookeeperClient::SearchValue(const std::string& path, std::string& value
 	// notice: len must be the size of buf, or there will appear some problem in getting the data of the node
 	int32_t len = 1024;
 	Stat stat;
-	int32_t ret = zoo_get(m_handle, path.c_str(), 0, buf, &len, &stat);
+	int32_t ret = zoo_wget(m_handle, path.c_str(), watcher, watcherCtx, buf, &len, &stat);
 	if (ret != ZOK)
 	{
 		return convertZookeeperResult(ret);
@@ -112,7 +112,7 @@ int32_t ZookeeperClient::SearchValue(const std::string& path, std::string& value
 		value.clear();
 		len = stat.dataLength;
 		value.resize(len);
-		ret = zoo_get(m_handle, path.c_str(), 0, &(value[0]), &len, &stat);
+		ret = zoo_wget(m_handle, path.c_str(), watcher, watcherCtx, &(value[0]), &len, &stat);
 		if (stat.dataLength > len)
 		{
 			printf("zookeeper get value error, path = %s\n", path.c_str());
@@ -126,14 +126,8 @@ int32_t ZookeeperClient::SearchValue(const std::string& path, std::string& value
 
 int32_t ZookeeperClient::ListenChildrenNode(const std::string& path, bool isListenChildrenNodeChange)
 {
-	int32_t ret = zoo_wget_children(m_handle, path.c_str(), ListenChildrener, this, nullptr);
-	if (ret != ZOK)
-	{
-		return convertZookeeperResult(ret);
-	}
-	
 	ZookeeperList list;
-	ret = SearchNode(path, list);
+	int32_t ret = SearchNode(path, list, ListenChildrener, this);
 	if (ret != E_ZM_OK)
 	{
 		return ret;
@@ -155,17 +149,8 @@ int32_t ZookeeperClient::ListenChildrenNode(const std::string& path, bool isList
 
 int32_t ZookeeperClient::ListenNode(const std::string& path)
 {
-	Stat stat;
-	char s;
-	int32_t len = 1;
-	int32_t ret = zoo_wget(m_handle, path.c_str(), Listener, this, &s, &len, &stat);
-	if (ret != ZOK)
-	{
-		return convertZookeeperResult(ret);
-	}
-	
 	std::string value;
-	ret = SearchValue(path, value);
+	int32_t ret = SearchValue(path, value, Listener, this);
 	if (ret != E_ZM_OK)
 	{
 		return ret;
@@ -248,12 +233,12 @@ void ZookeeperClient::ListenNodeDeleted(const std::string& path, const std::stri
 
 void ZookeeperClient::ListenNodeValueChanged(const std::string& path, const std::string& node, const std::string& value)
 {
-	printf("into listen node value changed, path = %s\n", path.c_str());
+	printf("into listen node value changed, path = %s, value = %s\n", path.c_str(), value.c_str());
 }
 
 void ZookeeperClient::ListenChildrenNodeChanged(const std::string& path, const std::string& node, const ZookeeperList& zookeeperList)
 {
-	printf("into listen children node changed, path = %s\n", path.c_str());
+	printf("into listen children node changed, path = %s, size = %d\n", path.c_str(), zookeeperList.m_children.size());
 }
 
 void ZookeeperClient::ListenChildrenFatherNodeDeleted(const std::string& path, const std::string& node)
@@ -358,19 +343,9 @@ void ZookeeperClient::Watcher(zhandle_t* zkh, int type, int state, const char* p
 void ZookeeperClient::Listener(zhandle_t* zkh, int type, int state, const char* path, void* context)
 {
 	auto zm = (ZookeeperClient*)context;
-	Stat stat;
-	char s[1] = {};
-	int32_t len = 1;
-	int32_t res = zoo_wget(zm->m_handle, path, Listener, zm, s, &len, &stat);
-	std::string node = CStringManager::Right(path, strlen(path) - CStringManager::ReserveFind(path, '/') - 1);
-	if (res != E_ZM_OK)
-	{
-		zm->EraseMemoryNode(path);
-		zm->ListenNodeDeleted(path, node);
-		return;
-	}
 	std::string value;
-	res = zm->SearchValue(path, value);
+	int32_t res = zm->SearchValue(path, value, Listener, zm);
+	std::string node = CStringManager::Right(path, strlen(path) - CStringManager::ReserveFind(path, '/') - 1);
 	if (res != E_ZM_OK)
 	{
 		zm->EraseMemoryNode(path);
@@ -384,16 +359,9 @@ void ZookeeperClient::Listener(zhandle_t* zkh, int type, int state, const char* 
 void ZookeeperClient::ListenChildrener(zhandle_t* zkh, int type, int state, const char* path, void* context)
 {
 	auto zm = (ZookeeperClient*)context;
-	int32_t res = zoo_wget_children(zm->m_handle, path, ListenChildrener, zm, nullptr);
-	std::string node = CStringManager::Right(path, strlen(path) - CStringManager::ReserveFind(path, '/') - 1);
-	if (res != E_ZM_OK)
-	{
-		zm->EraseChildrenFatherMemoryNode(path);
-		zm->ListenChildrenFatherNodeDeleted(path, node);
-		return;
-	}
 	ZookeeperList nodeList;
-	res = zm->SearchNode(path, nodeList);
+	int32_t res = zm->SearchNode(path, nodeList, ListenChildrener, zm);
+	std::string node = CStringManager::Right(path, strlen(path) - CStringManager::ReserveFind(path, '/') - 1);
 	if (res != E_ZM_OK)
 	{
 		zm->EraseChildrenFatherMemoryNode(path);
@@ -457,9 +425,34 @@ int32_t ZookeeperClient::convertZookeeperResult(int32_t ret)
 //	//client1.ListenNode("/clienttest");
 //	ZookeeperClient client2;
 //	int32_t res2 = client2.Connect("10.151.3.166:2181,10.151.3.166:2182,10.151.3.166:2183", 10000);
-//	client2.ListenNode("/clienttest/test2/test");
-//	//client1.CreateNode("/clienttest/a1", "a1value", ZookeeperNodeType::E_EPHEMERAL_NODE);
-//	client1.DeleteNode("/clienttest/a1");
+//	client2.ListenNode("/clienttest/test2");
+//	client2.ListenChildrenNode("/clienttest/test2");
+//	client1.CreateNode("/clienttest/test2/a1", "a1value", ZookeeperNodeType::E_PERSISTENT_NODE);
+//	client1.CreateNode("/clienttest/test2/a2", "a2value", ZookeeperNodeType::E_EPHEMERAL_NODE);
+//	client1.CreateNode("/clienttest/test2/a3", "a3value", ZookeeperNodeType::E_EPHEMERAL_NODE);
+//	client1.CreateNode("/clienttest/test2/a4", "a4value", ZookeeperNodeType::E_EPHEMERAL_NODE);
+//	client1.CreateNode("/clienttest/test2/a5", "a5value", ZookeeperNodeType::E_EPHEMERAL_NODE);
+//	client1.CreateNode("/clienttest/test2/a6", "a6value", ZookeeperNodeType::E_EPHEMERAL_NODE);
+//	client1.CreateNode("/clienttest/test2/a7", "a7value", ZookeeperNodeType::E_EPHEMERAL_NODE);
+//	client1.CreateNode("/clienttest/test2/a8", "a8value", ZookeeperNodeType::E_EPHEMERAL_NODE);
+//	client1.CreateNode("/clienttest/test2/a9", "a9value", ZookeeperNodeType::E_EPHEMERAL_NODE);
+//	std::set<std::string> childrenNode;
+//	Sleep(1000);
+//	std::string value;
+//	client2.GetMemoryNode("/clienttest/test2/a9", value);
+//	client2.GetChildrenMemoryNode("/clienttest/test2", childrenNode);
+//	//int x = client1.DeleteNode("/clienttest/test2");
+//	//printf("x = %d", x);
+//	//client1.SetNode("/clienttest/test2/test1", "120");
+//	//client1.SetNode("/clienttest/test2/test1", "121");
+//	//client1.SetNode("/clienttest/test2/test1", "122");
+//	//client1.SetNode("/clienttest/test2/test1", "123");
+//	//client1.SetNode("/clienttest/test2/test1", "124");
+//	//client1.SetNode("/clienttest/test2/test1", "125");
+//	//client1.SetNode("/clienttest/test2/test1", "126");
+//	//client1.SetNode("/clienttest/test2/test1", "127");
+//	//client1.SetNode("/clienttest/test2/test1", "128");
+//	//client1.SetNode("/clienttest/test2/test1", "129");
 //	getchar();
 //	return 0;
 //}
