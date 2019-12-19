@@ -30,7 +30,7 @@ bool RapidJson::parse(const std::string& json)
 bool RapidJson::hasMember(const std::string& key)
 {
 	rapidjson::Value strKey(rapidjson::kStringType);
-	strKey.SetString(m_key.c_str(), m_alloc);
+	strKey.SetString(key.c_str(), m_alloc);
 	return m_document.HasMember(strKey);
 }
 
