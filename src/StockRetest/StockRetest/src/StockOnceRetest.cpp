@@ -78,11 +78,26 @@ void StockOnceRetest::run()
 	BigNumber allFund = 0;
 
 	IntDateTime calcTime = m_beginTime;
+	IntDateTime calcEndDate = m_endTime - 4 * 86400;
+	std::shared_ptr<StockMarket> spRunMarket = m_trade.market("600206");
+	while (true)
+	{
+		if (spRunMarket->getMemoryDays(calcEndDate, m_endTime) == 5)
+		{
+			break;
+		}
+	}
+
+	if (calcEndDate < m_beginTime)
+	{
+		return;
+	}
+	
 	int32_t day = 0;
 	do 
 	{
-		std::shared_ptr<StockMarket> spMarket = m_trade.market("600206");
-		if (!spMarket->setDate(calcTime))
+		
+		if (!spRunMarket->setDate(calcTime))
 		{
 			calcTime = calcTime + 86400;
 			continue;
@@ -145,7 +160,7 @@ void StockOnceRetest::run()
 
 		++day;
 		calcTime = calcTime + 86400;
-	} while (calcTime <= m_endTime - 4 * 86400);
+	} while (calcTime <= calcEndDate);
 
 	BigNumber onceAllFund = allFund / BigNumber(day).toPrec(6).zero();
 	

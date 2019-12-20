@@ -54,7 +54,7 @@ bool SarRiseBackCount::buy(const IntDateTime& date,
 		score = 100;
 		return true;
 	}
-	else if (sar5State == StockSar::RED_TO_GREEN || sar10State == StockSar::RED_TO_GREEN || sar20State == sar10State == StockSar::RED_TO_GREEN)
+	else if (sar5State == StockSar::RED_TO_GREEN || sar10State == StockSar::RED_TO_GREEN || sar20State == StockSar::RED_TO_GREEN)
 	{
 		percent = 100;
 		score = 80;

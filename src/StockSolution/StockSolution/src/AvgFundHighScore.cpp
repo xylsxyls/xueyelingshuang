@@ -88,9 +88,20 @@ bool AvgFundHighScore::sell(std::vector<std::pair<std::string, std::pair<BigNumb
 	int32_t index = -1;
 	for (auto itSellStock = strategySellStock.begin(); itSellStock != strategySellStock.end(); ++itSellStock)
 	{
-		if ((++index < (int32_t)strategyBuyStock.size() && strategyCount >= m_minPollSize) ||
-			itSellStock->second.second.second == 100)
+		if (itSellStock->second.second.second == 100)
 		{
+			sellStock.push_back(std::pair<std::string, std::pair<BigNumber, BigNumber>>());
+			std::pair<std::string, std::pair<BigNumber, BigNumber>>& backStock = sellStock.back();
+			backStock.first = itSellStock->first;
+			backStock.second.first = itSellStock->second.first;
+			backStock.second.second = itSellStock->second.second.first / "100.0";
+			continue;
+		}
+		else if (itSellStock->second.second.second == 90 &&
+			strategyCount >= m_minPollSize &&
+			++index < (int32_t)strategyBuyStock.size())
+		{
+			
 			sellStock.push_back(std::pair<std::string, std::pair<BigNumber, BigNumber>>());
 			std::pair<std::string, std::pair<BigNumber, BigNumber>>& backStock = sellStock.back();
 			backStock.first = itSellStock->first;
