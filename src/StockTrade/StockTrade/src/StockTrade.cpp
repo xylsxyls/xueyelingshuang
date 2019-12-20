@@ -80,7 +80,12 @@ void StockTrade::init(const IntDateTime& beginTime,
 		{
 		case AVG_FUND_HIGH_SCORE:
 		{
-			std::dynamic_pointer_cast<AvgFundHighScore>(spSolution)->init(5, 5);
+			(std::dynamic_pointer_cast<AvgFundHighScore>(spSolution))->init(5, 5);
+		}
+		break;
+		case DISPOSABLE_STRATEGY:
+		{
+			(std::dynamic_pointer_cast<DisposableStrategy>(spSolution))->init(0);
 		}
 		break;
 		default:

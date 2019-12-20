@@ -144,7 +144,7 @@ bool SarRiseBack::sell(const IntDateTime& date,
 		score = 90;
 	}
 
-	if (spMarket->getMemoryDays(firstBuyDate, date) == 3)
+	if (spMarket->getMemoryDays(firstBuyDate, date) == 4)
 	{
 		BigNumber chg = 0;
 		if (stockFund->stockChg(spMarket->stock(), spMarket->day(), chg) && chg > "0.2")

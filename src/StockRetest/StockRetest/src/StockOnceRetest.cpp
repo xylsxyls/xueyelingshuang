@@ -78,9 +78,16 @@ void StockOnceRetest::run()
 	BigNumber allFund = 0;
 
 	IntDateTime calcTime = m_beginTime;
-
+	int32_t day = 0;
 	do 
 	{
+		std::shared_ptr<StockMarket> spMarket = m_trade.market("600206");
+		if (!spMarket->setDate(calcTime))
+		{
+			calcTime = calcTime + 86400;
+			continue;
+		}
+
 		StockFund stockFund;
 		stockFund.add(m_initialFund);
 		IntDateTime currentTime = calcTime;
@@ -121,7 +128,7 @@ void StockOnceRetest::run()
 				stockFund.buyStock(price, rate, spMarket->day());
 			}
 
-			printProfit(&stockFund, currentTime);
+			//printProfit(&stockFund, currentTime);
 
 			currentTime = currentTime + 86400;
 		} while (currentTime <= m_endTime);
@@ -136,10 +143,10 @@ void StockOnceRetest::run()
 		m_trade.stockDayData(stockFund.ownedStock(), currentTime, dayData);
 		allFund = allFund + stockFund.allFund(dayData);
 
+		++day;
 		calcTime = calcTime + 86400;
-	} while (calcTime < m_endTime);
+	} while (calcTime <= m_endTime - 4 * 86400);
 
-	int32_t day = (m_endTime - m_beginTime) / 86400;
 	BigNumber onceAllFund = allFund / BigNumber(day).toPrec(6).zero();
 	
 	RCSend("once allfund = %s, profit = %s%%", onceAllFund.toString().c_str(), ((onceAllFund - m_initialFund) / m_initialFund.toPrec(6).zero() * 100).toString().c_str());
