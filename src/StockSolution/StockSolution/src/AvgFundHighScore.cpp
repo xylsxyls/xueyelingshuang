@@ -43,7 +43,7 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumbe
 		return false;
 	}
 
-	RCSend("date = %s, stocksize = %d", date.dateToString().c_str(), strategyBuyStock.size());
+	//RCSend("date = %s, stocksize = %d", date.dateToString().c_str(), strategyBuyStock.size());
 
 	if (strategyBuyCount(date, solutionInfo) < m_minPollSize)
 	{
@@ -67,8 +67,9 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumbe
 	{
 		strategyBuyStock.erase(--strategyBuyStock.end());
 	}
-
-	BigNumber allPercent = (int32_t)(m_stockNum - solutionInfo->m_fund->allBuyInfo()->size()) * 100;
+	//(m_stockNum - solutionInfo->m_fund->allBuyInfo()->size())
+	//strategyBuyStock.size()
+	BigNumber allPercent = (int32_t)strategyBuyStock.size() * 100;
 	int32_t index = -1;
 	while (index++ != strategyBuyStock.size() - 1)
 	{
