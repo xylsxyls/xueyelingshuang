@@ -718,7 +718,7 @@ void StockClient::onChooseStockButtonClicked()
 	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 	spChooseStockTask->setParam(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str(),
 		std::vector<std::string>(),
-		SAR_RISE_BACK_COUNT,
+		SAR_RISE_BACK,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 }

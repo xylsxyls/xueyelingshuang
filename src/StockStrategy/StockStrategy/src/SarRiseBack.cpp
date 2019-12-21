@@ -191,7 +191,7 @@ bool SarRiseBack::sell(const IntDateTime& date,
 
 	//4 * 1
 	//4 * 2
-	if ((bollup - bollmid) / 4 * 1 + bollmid < close)
+	if ((bollup - bollmid) / 4 * 1 + bollmid < close && chg > 0)
 	{
 		price = close;
 		percent = 100;
