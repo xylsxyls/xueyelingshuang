@@ -86,6 +86,7 @@ void StockOnceRetest::run()
 		{
 			break;
 		}
+		calcEndDate = calcEndDate - 86400;
 	}
 
 	if (calcEndDate < m_beginTime)

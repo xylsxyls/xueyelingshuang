@@ -54,7 +54,13 @@ bool DisposableStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNum
 	}
 
 	int32_t firstSize = strategyBuyStock.size();
+	if (firstSize < 5)
+	{
+		return false;
+	}
 	int32_t popSize = firstSize - firstSize / 2;
+	//int32_t popSize = firstSize <= 11 ? (firstSize - firstSize / 2) : (firstSize - 5);
+	//int32_t popSize = firstSize <= 5 ? 0 : (firstSize - 5);
 	while (popSize-- != 0)
 	{
 		strategyBuyStock.pop_back();

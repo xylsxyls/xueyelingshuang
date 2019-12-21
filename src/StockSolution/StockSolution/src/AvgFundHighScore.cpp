@@ -49,13 +49,26 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumbe
 	{
 		return false;
 	}
+
+	int32_t firstSize = strategyBuyStock.size();
+	int32_t popSize = firstSize - firstSize / 2;
+	//int32_t popSize = firstSize <= 11 ? (firstSize - firstSize / 2) : (firstSize - 5);
+	//int32_t popSize = firstSize <= 5 ? 0 : (firstSize - 5);
+	while (popSize-- != 0)
+	{
+		strategyBuyStock.pop_back();
+	}
+	if (strategyBuyStock.size() == 0)
+	{
+		return false;
+	}
 	
 	while (strategyBuyStock.size() > m_stockNum - solutionInfo->m_fund->allBuyInfo()->size())
 	{
 		strategyBuyStock.erase(--strategyBuyStock.end());
 	}
 
-	BigNumber allPercent = (int32_t)strategyBuyStock.size() * 100;
+	BigNumber allPercent = (int32_t)(m_stockNum - solutionInfo->m_fund->allBuyInfo()->size()) * 100;
 	int32_t index = -1;
 	while (index++ != strategyBuyStock.size() - 1)
 	{
