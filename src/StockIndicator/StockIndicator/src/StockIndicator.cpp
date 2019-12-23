@@ -461,26 +461,60 @@ void StockIndicator::updateDateIndicatorToRedis(const IntDateTime& date, bool us
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStock();
 
-	std::vector<uint32_t> vecThreadId;
-	int32_t coreCount = CSystem::GetCPUCoreCount();
-	int32_t index = -1;
-	while (index++ != coreCount - 1)
+	int32_t count = 4;
+	while (count-- != 0)
 	{
-		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
-	}
-	
-	if (!useLast || m_wrIndicatorData.empty())
-	{
-		dateWr(date, m_wrIndicatorData, allStock, false, vecThreadId);
-		dateRsi(date, m_rsiIndicatorData, allStock, false, vecThreadId);
-		dateSar(date, m_sarIndicatorData, allStock, false, vecThreadId);
-		dateBoll(date, m_bollIndicatorData, allStock, false, vecThreadId);
-	}
+		std::vector<uint32_t> vecThreadId;
+		int32_t coreCount = CSystem::GetCPUCoreCount();
+		int32_t index = -1;
+		while (index++ != coreCount - 1)
+		{
+			vecThreadId.push_back(CTaskThreadManager::Instance().Init());
+		}
 
-	index = -1;
-	while (index++ != coreCount - 1)
-	{
-		CTaskThreadManager::Instance().WaitForEnd(vecThreadId[index]);
+		switch (count)
+		{
+		case 0:
+		{
+			if (!useLast || m_wrIndicatorData.empty())
+			{
+				dateWr(date, m_wrIndicatorData, allStock, false, vecThreadId);
+			}
+		}
+		break;
+		case 1:
+		{
+			if (!useLast || m_rsiIndicatorData.empty())
+			{
+				dateRsi(date, m_rsiIndicatorData, allStock, false, vecThreadId);
+			}
+		}
+		break;
+		case 2:
+		{
+			if (!useLast || m_sarIndicatorData.empty())
+			{
+				dateSar(date, m_sarIndicatorData, allStock, false, vecThreadId);
+			}
+		}
+		break;
+		case 3:
+		{
+			if (!useLast || m_bollIndicatorData.empty())
+			{
+				dateBoll(date, m_bollIndicatorData, allStock, false, vecThreadId);
+			}
+		}
+		break;
+		default:
+			break;
+		}
+		
+		index = -1;
+		while (index++ != coreCount - 1)
+		{
+			CTaskThreadManager::Instance().WaitForEnd(vecThreadId[index]);
+		}
 	}
 
 	std::map<std::string, std::map<std::string, std::vector<std::string>>> allIndicatorData;
