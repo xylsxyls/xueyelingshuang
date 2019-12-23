@@ -28,3 +28,18 @@ goto StockMarket_end
 call "%CLOUD_REBUILD%" StockMarket %StockMarket_bit% %StockMarket_dlllib% %StockMarket_debugRelease%
 goto StockMarket_end
 :StockMarket_end
+
+::--------------------------------------------------------------------
+set CTaskThreadManager_dlllib=lib
+set CTaskThreadManager_bit=%1
+set CTaskThreadManager_debugRelease=%3
+set CTaskThreadManager_allSame=%4
+if "%4" == "same" (goto CTaskThreadManager_callSame) else (goto CTaskThreadManager_callSimple)
+:CTaskThreadManager_callSame
+set CTaskThreadManager_dlllib=%2
+call "%CLOUD_REBUILD%" CTaskThreadManager %CTaskThreadManager_bit% %CTaskThreadManager_dlllib% %CTaskThreadManager_debugRelease% %CTaskThreadManager_allSame%
+goto CTaskThreadManager_end
+:CTaskThreadManager_callSimple
+call "%CLOUD_REBUILD%" CTaskThreadManager %CTaskThreadManager_bit% %CTaskThreadManager_dlllib% %CTaskThreadManager_debugRelease%
+goto CTaskThreadManager_end
+:CTaskThreadManager_end
