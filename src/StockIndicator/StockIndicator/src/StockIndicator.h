@@ -69,29 +69,46 @@ public:
 	@param [in] date 日期
 	@param [out] indicatorData 数据
 	@param [in] allStock 所有gupiao
+	@param [in] loadFromMysql 是否从mysql中加载hangqing数据
 	*/
-	void dateWr(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock);
+	void dateWr(const IntDateTime& date,
+		std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
+		const std::vector<std::string>& allStock,
+		bool loadFromMysql,
+		const std::vector<uint32_t>& vecThreadId);
 
 	/** 计算某一天的rsi
 	@param [in] date 日期
 	@param [out] indicatorData 数据
 	@param [in] allStock 所有gupiao
 	*/
-	void dateRsi(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock);
+	void dateRsi(const IntDateTime& date,
+		std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
+		const std::vector<std::string>& allStock,
+		bool loadFromMysql,
+		const std::vector<uint32_t>& vecThreadId);
 
 	/** 计算某一天的sar
 	@param [in] date 日期
 	@param [out] indicatorData 数据
 	@param [in] allStock 所有gupiao
 	*/
-	void dateSar(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock);
+	void dateSar(const IntDateTime& date,
+		std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
+		const std::vector<std::string>& allStock,
+		bool loadFromMysql,
+		const std::vector<uint32_t>& vecThreadId);
 
 	/** 计算某一天的boll
 	@param [in] date 日期
 	@param [out] indicatorData 数据
 	@param [in] allStock 所有gupiao
 	*/
-	void dateBoll(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock);
+	void dateBoll(const IntDateTime& date, std::map<std::string,
+		std::vector<std::vector<std::string>>>& indicatorData,
+		const std::vector<std::string>& allStock,
+		bool loadFromMysql,
+		const std::vector<uint32_t>& vecThreadId);
 
 	/** 存储某一天的wr
 	@param [in] date 日期

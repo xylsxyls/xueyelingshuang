@@ -19,6 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\CalcDateBollTask.h" />
+    <ClInclude Include="..\src\CalcDateRsiTask.h" />
+    <ClInclude Include="..\src\CalcDateSarTask.h" />
+    <ClInclude Include="..\src\CalcDateWrTask.h" />
     <ClInclude Include="..\src\IndicatorBase.h" />
     <ClInclude Include="..\src\IndicatorManagerBase.h" />
     <ClInclude Include="..\src\StockAvg.h" />
@@ -37,6 +41,10 @@
     <ClInclude Include="..\src\StockWrIndicator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\CalcDateBollTask.cpp" />
+    <ClCompile Include="..\src\CalcDateRsiTask.cpp" />
+    <ClCompile Include="..\src\CalcDateSarTask.cpp" />
+    <ClCompile Include="..\src\CalcDateWrTask.cpp" />
     <ClCompile Include="..\src\IndicatorManagerBase.inl" />
     <ClCompile Include="..\src\StockAvgIndicator.cpp" />
     <ClCompile Include="..\src\StockBollIndicator.cpp" />

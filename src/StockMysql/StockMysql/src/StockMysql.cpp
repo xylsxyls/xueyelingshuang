@@ -358,7 +358,7 @@ std::map<std::string, std::vector<int32_t>> StockMysql::getAllDataIndex() const
 
 void StockMysql::updateDateMarketToRedis(const std::string& stock, const IntDateTime& date, const std::vector<std::string>& market)
 {
-	std::map<std::string, std::vector<int32_t>> marketIndex = getMarketDataIndex();
+	//std::map<std::string, std::vector<int32_t>> marketIndex = getMarketDataIndex();
 	m_redis.selectDbIndex(0);
 	if (!m_redis.keyExist(stock))
 	{

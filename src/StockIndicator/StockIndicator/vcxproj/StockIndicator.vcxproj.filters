@@ -37,6 +37,9 @@
     <Filter Include="indicator\boll">
       <UniqueIdentifier>{9bfa533b-4b8c-4f19-a0b9-34267bd7c1aa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="task">
+      <UniqueIdentifier>{a8cac04b-84aa-47b7-b893-9704ad691161}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\StockIndicator.h">
@@ -87,6 +90,18 @@
     <ClInclude Include="..\src\StockBoll.h">
       <Filter>indicator\boll</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\CalcDateBollTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CalcDateRsiTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CalcDateSarTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CalcDateWrTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockIndicator.cpp">
@@ -112,6 +127,18 @@
     </ClCompile>
     <ClCompile Include="..\src\StockBollIndicator.cpp">
       <Filter>indicator\boll</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CalcDateBollTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CalcDateRsiTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CalcDateSarTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CalcDateWrTask.cpp">
+      <Filter>task</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

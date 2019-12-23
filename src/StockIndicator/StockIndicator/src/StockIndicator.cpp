@@ -10,6 +10,11 @@
 #include "StockAvg.h"
 #include "StockSar.h"
 #include "StockBoll.h"
+#include "CalcDateWrTask.h"
+#include "CalcDateRsiTask.h"
+#include "CalcDateSarTask.h"
+#include "CalcDateBollTask.h"
+#include "CSystem/CSystemAPI.h"
 
 StockIndicator::StockIndicator()
 {
@@ -191,148 +196,211 @@ void StockIndicator::saveBoll()
 	StockMysql::instance().saveIndicator("boll", "date,bollmid,bollup,bolldown", indicatorData);
 }
 
-void StockIndicator::dateWr(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock)
+void StockIndicator::dateWr(const IntDateTime& date,
+	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
+	const std::vector<std::string>& allStock,
+	bool loadFromMysql,
+	const std::vector<uint32_t>& vecThreadId)
 {
 	indicatorData.clear();
+	int32_t threadIdCount = vecThreadId.size();
 	int32_t index = -1;
 	while (index++ != allStock.size() - 1)
 	{
 		RCSend("calcWr = %d", index + 1);
 		const std::string& stock = allStock[index];
-		StockMarket market;
-		market.loadFromMysql(stock);
-		market.load();
-		if (!market.setDate(date))
+		std::shared_ptr<StockMarket> spMarket(new StockMarket);
+		if (loadFromMysql)
 		{
-			continue;
+			spMarket->loadFromMysql(stock);
 		}
-		indicatorData[stock];
-		auto& stockData = indicatorData.find(stock)->second;
-		stockData.push_back(std::vector<std::string>());
-		auto& stockDataBack = stockData.back();
-		stockDataBack.push_back(date.dateToString());
-		stockDataBack.push_back(StockIndicatorHelper::wr(10, date, market).toString());
-		stockDataBack.push_back(StockIndicatorHelper::wr(20, date, market).toString());
+		else
+		{
+			spMarket->loadFromRedis(stock);
+		}
+
+		std::shared_ptr<CalcDateWrTask> spCalcDateWrTask(new CalcDateWrTask);
+		spCalcDateWrTask->setParam(date, spMarket, &indicatorData);
+		CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[index % threadIdCount])->PostTask(spCalcDateWrTask);
 	}
 }
 
-void StockIndicator::dateRsi(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock)
+void StockIndicator::dateRsi(const IntDateTime& date,
+	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
+	const std::vector<std::string>& allStock,
+	bool loadFromMysql,
+	const std::vector<uint32_t>& vecThreadId)
 {
 	indicatorData.clear();
+	int32_t threadIdCount = vecThreadId.size();
 	int32_t index = -1;
 	while (index++ != allStock.size() - 1)
 	{
 		RCSend("calcRsi = %d", index + 1);
 		const std::string& stock = allStock[index];
-		StockMarket market;
-		market.loadFromMysql(stock);
-		market.load();
-		if (!market.setDate(date))
+		std::shared_ptr<StockMarket> spMarket(new StockMarket);
+		if (loadFromMysql)
 		{
-			continue;
+			spMarket->loadFromMysql(stock);
 		}
-		indicatorData[stock];
+		else
+		{
+			spMarket->loadFromRedis(stock);
+		}
 
-		std::map<IntDateTime, BigNumber> rsi6Indicator = StockIndicatorHelper::rsiTongHuaShun(6, market);
-		std::map<IntDateTime, BigNumber> rsi12Indicator = StockIndicatorHelper::rsiTongHuaShun(12, market);
-		std::map<IntDateTime, BigNumber> rsi24Indicator = StockIndicatorHelper::rsiTongHuaShun(24, market);
-
-		auto& stockData = indicatorData.find(stock)->second;
-		stockData.push_back(std::vector<std::string>());
-		std::vector<std::string>& vecLine = stockData.back();
-		vecLine.push_back(date.dateToString());
-		vecLine.push_back(rsi6Indicator.find(date)->second.toString());
-		vecLine.push_back(rsi12Indicator.find(date)->second.toString());
-		vecLine.push_back(rsi24Indicator.find(date)->second.toString());
+		std::shared_ptr<CalcDateRsiTask> spCalcDateRsiTask(new CalcDateRsiTask);
+		spCalcDateRsiTask->setParam(date, spMarket, &indicatorData);
+		CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[index % threadIdCount])->PostTask(spCalcDateRsiTask);
 	}
 }
 
-void StockIndicator::dateSar(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock)
+void StockIndicator::dateSar(const IntDateTime& date,
+	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
+	const std::vector<std::string>& allStock,
+	bool loadFromMysql,
+	const std::vector<uint32_t>& vecThreadId)
 {
 	indicatorData.clear();
+	int32_t threadIdCount = vecThreadId.size();
 	int32_t index = -1;
 	while (index++ != allStock.size() - 1)
 	{
 		RCSend("calcSar = %d", index + 1);
 		const std::string& stock = allStock[index];
-		StockMarket market;
-		market.loadFromMysql(stock);
-		market.load();
-		if (!market.setDate(date))
+		std::shared_ptr<StockMarket> spMarket(new StockMarket);
+		if (loadFromMysql)
 		{
-			continue;
+			spMarket->loadFromMysql(stock);
 		}
-		indicatorData[stock];
-
-		std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar5Indicator = StockIndicatorHelper::sar(market, 5);
-		std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar10Indicator = StockIndicatorHelper::sar(market, 10);
-		std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar20Indicator = StockIndicatorHelper::sar(market, 20);
-
-		auto& stockData = indicatorData.find(stock)->second;
-		stockData.push_back(std::vector<std::string>());
-		std::vector<std::string>& vecLine = stockData.back();
-		vecLine.push_back(date.dateToString());
-		vecLine.push_back(sar5Indicator.find(date)->second.first.toString());
-		vecLine.push_back(std::to_string(sar5Indicator.find(date)->second.second));
-		vecLine.push_back(sar10Indicator.find(date)->second.first.toString());
-		vecLine.push_back(std::to_string(sar10Indicator.find(date)->second.second));
-		vecLine.push_back(sar20Indicator.find(date)->second.first.toString());
-		vecLine.push_back(std::to_string(sar20Indicator.find(date)->second.second));
+		else
+		{
+			spMarket->loadFromRedis(stock);
+		}
+		
+		std::shared_ptr<CalcDateSarTask> spCalcDateSarTask(new CalcDateSarTask);
+		spCalcDateSarTask->setParam(date, spMarket, &indicatorData);
+		CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[index % threadIdCount])->PostTask(spCalcDateSarTask);
 	}
 }
 
-void StockIndicator::dateBoll(const IntDateTime& date, std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData, const std::vector<std::string>& allStock)
+void StockIndicator::dateBoll(const IntDateTime& date,
+	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
+	const std::vector<std::string>& allStock,
+	bool loadFromMysql,
+	const std::vector<uint32_t>& vecThreadId)
 {
 	indicatorData.clear();
+	int32_t threadIdCount = vecThreadId.size();
 	int32_t index = -1;
 	while (index++ != allStock.size() - 1)
 	{
 		RCSend("calcBoll = %d", index + 1);
 		const std::string& stock = allStock[index];
-		StockMarket market;
-		market.loadFromMysql(stock);
-		market.load();
-		if (!market.setDate(date))
+		std::shared_ptr<StockMarket> spMarket(new StockMarket);
+		if (loadFromMysql)
 		{
-			continue;
+			spMarket->loadFromMysql(stock);
 		}
-		indicatorData[stock];
-		auto& stockData = indicatorData.find(stock)->second;
-		stockData.push_back(std::vector<std::string>());
-		auto& stockDataBack = stockData.back();
-		stockDataBack.push_back(date.dateToString());
-		std::pair<BigNumber, std::pair<BigNumber, BigNumber>> dayBoll = StockIndicatorHelper::boll(date, market);
-		stockDataBack.push_back(dayBoll.first.toString());
-		stockDataBack.push_back(dayBoll.second.first.toString());
-		stockDataBack.push_back(dayBoll.second.second.toString());
+		else
+		{
+			spMarket->loadFromRedis(stock);
+		}
+		
+		std::shared_ptr<CalcDateBollTask> spCalcDateBollTask(new CalcDateBollTask);
+		spCalcDateBollTask->setParam(date, spMarket, &indicatorData);
+		CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[index % threadIdCount])->PostTask(spCalcDateBollTask);
 	}
 }
 
 void StockIndicator::saveDateWr(const IntDateTime& date)
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	dateWr(date, m_wrIndicatorData, allStock);
+
+	std::vector<uint32_t> vecThreadId;
+	int32_t coreCount = CSystem::GetCPUCoreCount();
+	int32_t index = -1;
+	while (index++ != coreCount - 1)
+	{
+		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
+	}
+
+	dateWr(date, m_wrIndicatorData, allStock, true, vecThreadId);
+
+	index = -1;
+	while (index++ != coreCount - 1)
+	{
+		CTaskThreadManager::Instance().WaitForEnd(vecThreadId[index]);
+	}
+	
 	StockMysql::instance().saveIndicator("wr", "date,wr10,wr20", m_wrIndicatorData, true);
 }
 
 void StockIndicator::saveDateRsi(const IntDateTime& date)
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	dateRsi(date, m_rsiIndicatorData, allStock);
+
+	std::vector<uint32_t> vecThreadId;
+	int32_t coreCount = CSystem::GetCPUCoreCount();
+	int32_t index = -1;
+	while (index++ != coreCount - 1)
+	{
+		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
+	}
+
+	dateRsi(date, m_rsiIndicatorData, allStock, true, vecThreadId);
+
+	index = -1;
+	while (index++ != coreCount - 1)
+	{
+		CTaskThreadManager::Instance().WaitForEnd(vecThreadId[index]);
+	}
+
 	StockMysql::instance().saveIndicator("rsi", "date,rsi6,rsi12,rsi24", m_rsiIndicatorData, true);
 }
 
 void StockIndicator::saveDateSar(const IntDateTime& date)
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	dateSar(date, m_sarIndicatorData, allStock);
+
+	std::vector<uint32_t> vecThreadId;
+	int32_t coreCount = CSystem::GetCPUCoreCount();
+	int32_t index = -1;
+	while (index++ != coreCount - 1)
+	{
+		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
+	}
+
+	dateSar(date, m_sarIndicatorData, allStock, true, vecThreadId);
+
+	index = -1;
+	while (index++ != coreCount - 1)
+	{
+		CTaskThreadManager::Instance().WaitForEnd(vecThreadId[index]);
+	}
+
 	StockMysql::instance().saveIndicator("sar", "date,sar5,state5,sar10,state10,sar20,state20", m_sarIndicatorData, true);
 }
 
 void StockIndicator::saveDateBoll(const IntDateTime& date)
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	dateBoll(date, m_bollIndicatorData, allStock);
+
+	std::vector<uint32_t> vecThreadId;
+	int32_t coreCount = CSystem::GetCPUCoreCount();
+	int32_t index = -1;
+	while (index++ != coreCount - 1)
+	{
+		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
+	}
+
+	dateBoll(date, m_bollIndicatorData, allStock, true, vecThreadId);
+
+	index = -1;
+	while (index++ != coreCount - 1)
+	{
+		CTaskThreadManager::Instance().WaitForEnd(vecThreadId[index]);
+	}
+
 	StockMysql::instance().saveIndicator("boll", "date,bollmid,bollup,bolldown", m_bollIndicatorData, true);
 }
 
@@ -393,12 +461,26 @@ void StockIndicator::updateDateIndicatorToRedis(const IntDateTime& date, bool us
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStock();
 
+	std::vector<uint32_t> vecThreadId;
+	int32_t coreCount = CSystem::GetCPUCoreCount();
+	int32_t index = -1;
+	while (index++ != coreCount - 1)
+	{
+		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
+	}
+	
 	if (!useLast || m_wrIndicatorData.empty())
 	{
-		dateWr(date, m_wrIndicatorData, allStock);
-		dateRsi(date, m_rsiIndicatorData, allStock);
-		dateSar(date, m_sarIndicatorData, allStock);
-		dateBoll(date, m_bollIndicatorData, allStock);
+		dateWr(date, m_wrIndicatorData, allStock, false, vecThreadId);
+		dateRsi(date, m_rsiIndicatorData, allStock, false, vecThreadId);
+		dateSar(date, m_sarIndicatorData, allStock, false, vecThreadId);
+		dateBoll(date, m_bollIndicatorData, allStock, false, vecThreadId);
+	}
+
+	index = -1;
+	while (index++ != coreCount - 1)
+	{
+		CTaskThreadManager::Instance().WaitForEnd(vecThreadId[index]);
 	}
 
 	std::map<std::string, std::map<std::string, std::vector<std::string>>> allIndicatorData;
