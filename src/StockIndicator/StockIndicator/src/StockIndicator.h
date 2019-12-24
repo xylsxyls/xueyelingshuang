@@ -69,45 +69,16 @@ public:
 	/** 计算某一天的wr
 	@param [in] date 日期
 	@param [out] indicatorData 数据
-	@param [in] allMarket 数据
+	@param [in] allStock 所有gupiao
 	@param [in] vecThreadId 计算线程id
 	*/
-	void dateWr(const IntDateTime& date,
-		std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-		const std::vector<StockMarket>& allMarket,
-		const std::vector<uint32_t>& vecThreadId);
-
-	/** 计算某一天的rsi
-	@param [in] date 日期
-	@param [out] indicatorData 数据
-	@param [in] allMarket 数据
-	@param [in] vecThreadId 计算线程id
-	*/
-	void dateRsi(const IntDateTime& date,
-		std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-		const std::vector<StockMarket>& allMarket,
-		const std::vector<uint32_t>& vecThreadId);
-
-	/** 计算某一天的sar
-	@param [in] date 日期
-	@param [out] indicatorData 数据
-	@param [in] allMarket 数据
-	@param [in] vecThreadId 计算线程id
-	*/
-	void dateSar(const IntDateTime& date,
-		std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-		const std::vector<StockMarket>& allMarket,
-		const std::vector<uint32_t>& vecThreadId);
-
-	/** 计算某一天的boll
-	@param [in] date 日期
-	@param [out] indicatorData 数据
-	@param [in] allMarket 数据
-	@param [in] vecThreadId 计算线程id
-	*/
-	void dateBoll(const IntDateTime& date,
-		std::map<std::string,std::vector<std::vector<std::string>>>& indicatorData,
-		const std::vector<StockMarket>& allMarket,
+	void dateIndicator(const IntDateTime& date,
+		std::map<std::string, std::vector<std::vector<std::string>>>& wrIndicatorData,
+		std::map<std::string, std::vector<std::vector<std::string>>>& rsiIndicatorData,
+		std::map<std::string, std::vector<std::vector<std::string>>>& sarIndicatorData,
+		std::map<std::string, std::vector<std::vector<std::string>>>& bollIndicatorData,
+		const std::vector<std::string>& allStock,
+		bool loadFromMysql,
 		const std::vector<uint32_t>& vecThreadId);
 
 	/** 存储某一天的zhibiao

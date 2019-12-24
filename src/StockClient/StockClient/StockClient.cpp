@@ -449,6 +449,10 @@ void StockClient::onUpdateTodayRedisButtonClicked()
 {
 	RCSend("time = %d", ::GetTickCount());
 
+	std::shared_ptr<OpenProcessTask> spOpenMessageTestTask(new OpenProcessTask);
+	spOpenMessageTestTask->setParam(CSystem::commonFile("MessageTest"));
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenMessageTestTask);
+
 	std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
 	spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);

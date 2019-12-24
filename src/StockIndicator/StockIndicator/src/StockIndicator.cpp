@@ -195,70 +195,50 @@ void StockIndicator::saveBoll()
 	StockMysql::instance().saveIndicator("boll", "date,bollmid,bollup,bolldown", indicatorData);
 }
 
-void StockIndicator::dateWr(const IntDateTime& date,
-	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-	const std::vector<StockMarket>& allMarket,
+void StockIndicator::dateIndicator(const IntDateTime& date,
+	std::map<std::string, std::vector<std::vector<std::string>>>& wrIndicatorData,
+	std::map<std::string, std::vector<std::vector<std::string>>>& rsiIndicatorData,
+	std::map<std::string, std::vector<std::vector<std::string>>>& sarIndicatorData,
+	std::map<std::string, std::vector<std::vector<std::string>>>& bollIndicatorData,
+	const std::vector<std::string>& allStock,
+	bool loadFromMysql,
 	const std::vector<uint32_t>& vecThreadId)
 {
-	indicatorData.clear();
+	wrIndicatorData.clear();
+	rsiIndicatorData.clear();
+	sarIndicatorData.clear();
+	bollIndicatorData.clear();
 	int32_t threadIdCount = vecThreadId.size();
 	int32_t index = -1;
-	while (index++ != allMarket.size() - 1)
+	while (index++ != allStock.size() - 1)
 	{
-		RCSend("calcWr = %d", index + 1);
+		RCSend("calcIndicator = %d", index + 1);
+
+		StockMarket market;
+		if (loadFromMysql)
+		{
+			market.loadFromMysql(allStock[index]);
+		}
+		else
+		{
+			market.loadFromRedis(allStock[index]);
+		}
+		market.load();
+
 		std::shared_ptr<CalcDateWrTask> spCalcDateWrTask(new CalcDateWrTask);
-		spCalcDateWrTask->setParam(date, allMarket[index], &indicatorData);
+		spCalcDateWrTask->setParam(date, market, &wrIndicatorData);
 		CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[index % threadIdCount])->PostTask(spCalcDateWrTask);
-	}
-}
 
-void StockIndicator::dateRsi(const IntDateTime& date,
-	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-	const std::vector<StockMarket>& allMarket,
-	const std::vector<uint32_t>& vecThreadId)
-{
-	indicatorData.clear();
-	int32_t threadIdCount = vecThreadId.size();
-	int32_t index = -1;
-	while (index++ != allMarket.size() - 1)
-	{
-		RCSend("calcRsi = %d", index + 1);
 		std::shared_ptr<CalcDateRsiTask> spCalcDateRsiTask(new CalcDateRsiTask);
-		spCalcDateRsiTask->setParam(date, allMarket[index], &indicatorData);
+		spCalcDateRsiTask->setParam(date, market, &rsiIndicatorData);
 		CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[index % threadIdCount])->PostTask(spCalcDateRsiTask);
-	}
-}
 
-void StockIndicator::dateSar(const IntDateTime& date,
-	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-	const std::vector<StockMarket>& allMarket,
-	const std::vector<uint32_t>& vecThreadId)
-{
-	indicatorData.clear();
-	int32_t threadIdCount = vecThreadId.size();
-	int32_t index = -1;
-	while (index++ != allMarket.size() - 1)
-	{
-		RCSend("calcSar = %d", index + 1);
 		std::shared_ptr<CalcDateSarTask> spCalcDateSarTask(new CalcDateSarTask);
-		spCalcDateSarTask->setParam(date, allMarket[index], &indicatorData);
+		spCalcDateSarTask->setParam(date, market, &sarIndicatorData);
 		CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[index % threadIdCount])->PostTask(spCalcDateSarTask);
-	}
-}
 
-void StockIndicator::dateBoll(const IntDateTime& date,
-	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-	const std::vector<StockMarket>& allMarket,
-	const std::vector<uint32_t>& vecThreadId)
-{
-	indicatorData.clear();
-	int32_t threadIdCount = vecThreadId.size();
-	int32_t index = -1;
-	while (index++ != allMarket.size() - 1)
-	{
-		RCSend("calcBoll = %d", index + 1);
 		std::shared_ptr<CalcDateBollTask> spCalcDateBollTask(new CalcDateBollTask);
-		spCalcDateBollTask->setParam(date, allMarket[index], &indicatorData);
+		spCalcDateBollTask->setParam(date, market, &bollIndicatorData);
 		CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[index % threadIdCount])->PostTask(spCalcDateBollTask);
 	}
 }
@@ -266,29 +246,16 @@ void StockIndicator::dateBoll(const IntDateTime& date,
 void StockIndicator::saveDateIndicator(const IntDateTime& date)
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStockFromMysql();
-	std::vector<StockMarket> allMarket;
-	int32_t index = -1;
-	while (index++ != allStock.size() - 1)
-	{
-		const std::string& stock = allStock[index];
-		allMarket.push_back(StockMarket());
-		StockMarket& market = allMarket.back();
-		market.loadFromMysql(stock);
-		market.load();
-	}
 
 	std::vector<uint32_t> vecThreadId;
 	int32_t coreCount = CSystem::GetCPUCoreCount();
-	index = -1;
+	int32_t index = -1;
 	while (index++ != coreCount - 1)
 	{
 		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
 	}
 
-	dateWr(date, m_wrIndicatorData, allMarket, vecThreadId);
-	dateRsi(date, m_rsiIndicatorData, allMarket, vecThreadId);
-	dateSar(date, m_sarIndicatorData, allMarket, vecThreadId);
-	dateBoll(date, m_bollIndicatorData, allMarket, vecThreadId);
+	dateIndicator(date, m_wrIndicatorData, m_rsiIndicatorData, m_sarIndicatorData, m_bollIndicatorData, allStock, true, vecThreadId);
 
 	index = -1;
 	while (index++ != coreCount - 1)
@@ -359,20 +326,9 @@ void StockIndicator::updateDateIndicatorToRedis(const IntDateTime& date, bool us
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStock();
 
-	std::vector<StockMarket> allMarket;
-	int32_t index = -1;
-	while (index++ != allStock.size() - 1)
-	{
-		const std::string& stock = allStock[index];
-		allMarket.push_back(StockMarket());
-		StockMarket& market = allMarket.back();
-		market.loadFromRedis(stock);
-		market.load();
-	}
-
 	std::vector<uint32_t> vecThreadId;
 	int32_t coreCount = CSystem::GetCPUCoreCount();
-	index = -1;
+	int32_t index = -1;
 	while (index++ != coreCount - 1)
 	{
 		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
@@ -380,19 +336,7 @@ void StockIndicator::updateDateIndicatorToRedis(const IntDateTime& date, bool us
 
 	if (!useLast || m_wrIndicatorData.empty())
 	{
-		dateWr(date, m_wrIndicatorData, allMarket, vecThreadId);
-	}
-	if (!useLast || m_rsiIndicatorData.empty())
-	{
-		dateRsi(date, m_rsiIndicatorData, allMarket, vecThreadId);
-	}
-	if (!useLast || m_sarIndicatorData.empty())
-	{
-		dateSar(date, m_sarIndicatorData, allMarket, vecThreadId);
-	}
-	if (!useLast || m_bollIndicatorData.empty())
-	{
-		dateBoll(date, m_bollIndicatorData, allMarket, vecThreadId);
+		dateIndicator(date, m_wrIndicatorData, m_rsiIndicatorData, m_sarIndicatorData, m_bollIndicatorData, allStock, false, vecThreadId);
 	}
 
 	index = -1;
