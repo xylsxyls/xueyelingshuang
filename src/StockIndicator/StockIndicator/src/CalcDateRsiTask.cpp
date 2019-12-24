@@ -5,23 +5,22 @@
 CalcDateRsiTask::CalcDateRsiTask() :
 m_indicatorData(nullptr)
 {
-	m_spMarket = nullptr;
+
 }
 
 void CalcDateRsiTask::DoTask()
 {
-	m_spMarket->load();
-	if (!m_spMarket->setDate(m_date))
+	if (!m_market.setDate(m_date))
 	{
 		return;
 	}
 	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData = *m_indicatorData;
-	std::string stock = m_spMarket->stock();
+	std::string stock = m_market.stock();
 	indicatorData[stock];
 
-	std::map<IntDateTime, BigNumber> rsi6Indicator = StockIndicatorHelper::rsiTongHuaShun(6, *m_spMarket);
-	std::map<IntDateTime, BigNumber> rsi12Indicator = StockIndicatorHelper::rsiTongHuaShun(12, *m_spMarket);
-	std::map<IntDateTime, BigNumber> rsi24Indicator = StockIndicatorHelper::rsiTongHuaShun(24, *m_spMarket);
+	std::map<IntDateTime, BigNumber> rsi6Indicator = StockIndicatorHelper::rsiTongHuaShun(6, m_market);
+	std::map<IntDateTime, BigNumber> rsi12Indicator = StockIndicatorHelper::rsiTongHuaShun(12, m_market);
+	std::map<IntDateTime, BigNumber> rsi24Indicator = StockIndicatorHelper::rsiTongHuaShun(24, m_market);
 
 	auto& stockData = indicatorData.find(stock)->second;
 	stockData.push_back(std::vector<std::string>());
@@ -33,10 +32,10 @@ void CalcDateRsiTask::DoTask()
 }
 
 void CalcDateRsiTask::setParam(const IntDateTime& date,
-	const std::shared_ptr<StockMarket>& spMarket,
+	const StockMarket& market,
 	std::map<std::string, std::vector<std::vector<std::string>>>* indicatorData)
 {
 	m_date = date;
-	m_spMarket = spMarket;
+	m_market = market;
 	m_indicatorData = indicatorData;
 }

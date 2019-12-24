@@ -1,8 +1,8 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "IntDateTime/IntDateTimeAPI.h"
+#include "StockMarket/StockMarketAPI.h"
 
-class StockMarket;
 class CalcDateSarTask : public CTask
 {
 public:
@@ -12,11 +12,11 @@ public:
 	void DoTask();
 
 	void setParam(const IntDateTime& date,
-		const std::shared_ptr<StockMarket>& spMarket,
+		const StockMarket& market,
 		std::map<std::string, std::vector<std::vector<std::string>>>* indicatorData);
 
 private:
 	IntDateTime m_date;
-	std::shared_ptr<StockMarket> m_spMarket;
+	StockMarket m_market;
 	std::map<std::string, std::vector<std::vector<std::string>>>* m_indicatorData;
 };

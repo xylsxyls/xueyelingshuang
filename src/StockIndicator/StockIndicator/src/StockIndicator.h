@@ -3,6 +3,7 @@
 #include <memory>
 #include <map>
 #include "IntDateTime/IntDateTimeAPI.h"
+#include "StockMarket/StockMarketAPI.h"
 
 class StockWrIndicator;
 class StockRsiIndicator;
@@ -68,67 +69,51 @@ public:
 	/** 计算某一天的wr
 	@param [in] date 日期
 	@param [out] indicatorData 数据
-	@param [in] allStock 所有gupiao
-	@param [in] loadFromMysql 是否从mysql中加载hangqing数据
+	@param [in] allMarket 数据
+	@param [in] vecThreadId 计算线程id
 	*/
 	void dateWr(const IntDateTime& date,
 		std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-		const std::vector<std::string>& allStock,
-		bool loadFromMysql,
+		const std::vector<StockMarket>& allMarket,
 		const std::vector<uint32_t>& vecThreadId);
 
 	/** 计算某一天的rsi
 	@param [in] date 日期
 	@param [out] indicatorData 数据
-	@param [in] allStock 所有gupiao
+	@param [in] allMarket 数据
+	@param [in] vecThreadId 计算线程id
 	*/
 	void dateRsi(const IntDateTime& date,
 		std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-		const std::vector<std::string>& allStock,
-		bool loadFromMysql,
+		const std::vector<StockMarket>& allMarket,
 		const std::vector<uint32_t>& vecThreadId);
 
 	/** 计算某一天的sar
 	@param [in] date 日期
 	@param [out] indicatorData 数据
-	@param [in] allStock 所有gupiao
+	@param [in] allMarket 数据
+	@param [in] vecThreadId 计算线程id
 	*/
 	void dateSar(const IntDateTime& date,
 		std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData,
-		const std::vector<std::string>& allStock,
-		bool loadFromMysql,
+		const std::vector<StockMarket>& allMarket,
 		const std::vector<uint32_t>& vecThreadId);
 
 	/** 计算某一天的boll
 	@param [in] date 日期
 	@param [out] indicatorData 数据
-	@param [in] allStock 所有gupiao
+	@param [in] allMarket 数据
+	@param [in] vecThreadId 计算线程id
 	*/
-	void dateBoll(const IntDateTime& date, std::map<std::string,
-		std::vector<std::vector<std::string>>>& indicatorData,
-		const std::vector<std::string>& allStock,
-		bool loadFromMysql,
+	void dateBoll(const IntDateTime& date,
+		std::map<std::string,std::vector<std::vector<std::string>>>& indicatorData,
+		const std::vector<StockMarket>& allMarket,
 		const std::vector<uint32_t>& vecThreadId);
 
-	/** 存储某一天的wr
+	/** 存储某一天的zhibiao
 	@param [in] date 日期
 	*/
-	void saveDateWr(const IntDateTime& date);
-
-	/** 存储某一天的rsi
-	@param [in] date 日期
-	*/
-	void saveDateRsi(const IntDateTime& date);
-
-	/** 存储某一天的sar
-	@param [in] date 日期
-	*/
-	void saveDateSar(const IntDateTime& date);
-
-	/** 存储某一天的boll
-	@param [in] date 日期
-	*/
-	void saveDateBoll(const IntDateTime& date);
+	void saveDateIndicator(const IntDateTime& date);
 
 	/** 存储avg
 	@param [in] stock gupiao代码

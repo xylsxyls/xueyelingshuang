@@ -5,23 +5,22 @@
 CalcDateSarTask::CalcDateSarTask() :
 m_indicatorData(nullptr)
 {
-	m_spMarket = nullptr;
+
 }
 
 void CalcDateSarTask::DoTask()
 {
-	m_spMarket->load();
-	if (!m_spMarket->setDate(m_date))
+	if (!m_market.setDate(m_date))
 	{
 		return;
 	}
 	std::map<std::string, std::vector<std::vector<std::string>>>& indicatorData = *m_indicatorData;
-	std::string stock = m_spMarket->stock();
+	std::string stock = m_market.stock();
 	indicatorData[stock];
 
-	std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar5Indicator = StockIndicatorHelper::sar(*m_spMarket, 5);
-	std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar10Indicator = StockIndicatorHelper::sar(*m_spMarket, 10);
-	std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar20Indicator = StockIndicatorHelper::sar(*m_spMarket, 20);
+	std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar5Indicator = StockIndicatorHelper::sar(m_market, 5);
+	std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar10Indicator = StockIndicatorHelper::sar(m_market, 10);
+	std::map<IntDateTime, std::pair<BigNumber, int32_t>> sar20Indicator = StockIndicatorHelper::sar(m_market, 20);
 
 	auto& stockData = indicatorData.find(stock)->second;
 	stockData.push_back(std::vector<std::string>());
@@ -36,10 +35,10 @@ void CalcDateSarTask::DoTask()
 }
 
 void CalcDateSarTask::setParam(const IntDateTime& date,
-	const std::shared_ptr<StockMarket>& spMarket,
+	const StockMarket& market,
 	std::map<std::string, std::vector<std::vector<std::string>>>* indicatorData)
 {
 	m_date = date;
-	m_spMarket = spMarket;
+	m_market = market;
 	m_indicatorData = indicatorData;
 }
