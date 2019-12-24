@@ -155,6 +155,8 @@ public:
 
 	//监听子节点的父节点被删除，正常不会触发，如果触发了可能会进来多次，小于等于子节点的个数
 	virtual void ListenChildrenFatherNodeDeleted(const std::string& path, const std::string& node);
+	
+	virtual void ConnectEvent(bool isConnect);
 
 	bool GetMemoryNode(const std::string& path, std::string& value);
 

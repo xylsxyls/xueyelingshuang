@@ -246,6 +246,11 @@ void ZookeeperClient::ListenChildrenFatherNodeDeleted(const std::string& path, c
 	printf("into listen children father node deleted, path = %s\n", path.c_str());
 }
 
+void ZookeeperClient::ConnectEvent(bool isConnect)
+{
+    printf("into ConnectEvent, isConnect = %d\n", (int32_t)isConnect);
+}
+
 void ZookeeperClient::SetMemoryNode(const std::string& path, const std::string& value)
 {
 	std::unique_lock<std::mutex> lock(m_nodeMutex);
@@ -314,21 +319,24 @@ void ZookeeperClient::Watcher(zhandle_t* zkh, int type, int state, const char* p
 		if (state == ZOO_CONNECTED_STATE)
 		{
 			printf("session connected\n");
-			zm->m_isConnect = true;
-			zm->m_sem.notify();
+            zm->m_isConnect = true;
+            zm->ConnectEvent(true);
+            zm->m_sem.notify();
 		}
 		else if (state == ZOO_CONNECTING_STATE)
 		{
-			if (zm->m_isConnect)
+            if (zm->m_isConnect)
 			{
 				printf("session disconnected...\n");
+                zm->ConnectEvent(false);
 				//LOG_SEND_LOCAL("session disconnected...\n");
 			}
-			zm->m_isConnect = false;
+            zm->m_isConnect = false;
 		}
 		else if (state == ZOO_EXPIRED_SESSION_STATE)
 		{
-			zm->m_isConnect = false;
+            zm->m_isConnect = false;
+            zm->ConnectEvent(false);
 			//LOG_SEND_LOCAL("session ZOO_EXPIRED_SESSION_STATE...\n");
 		}
 	}
