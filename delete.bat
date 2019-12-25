@@ -31,6 +31,7 @@ rmdir /q /s "%~dp0src\HttpRequest\HttpRequest\vcxproj\GeneratedFiles\"
 rmdir /q /s "%~dp0src\EO_XmlSax2Parser\EO_XmlSax2Parser\vcxproj\GeneratedFiles\"
 rmdir /q /s "%~dp0src\QtControls\QtControls\vcxproj\GeneratedFiles\"
 rmdir /q /s "%~dp0src\DialogManager\DialogManager\vcxproj\GeneratedFiles\"
+rmdir /q /s "%~dp0src\StockDraw\StockDraw\vcxproj\GeneratedFiles\"
 
 rmdir /q /s "%~dp0src\QtClient\QtClient\vcxproj\GeneratedFiles\" 
 
