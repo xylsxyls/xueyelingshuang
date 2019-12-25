@@ -5,6 +5,7 @@
 #include "ui_StockClient.h"
 #include <memory>
 #include "IntDateTime/IntDateTimeAPI.h"
+#include "BigNumber/BigNumberAPI.h"
 
 class LineEdit;
 class COriginalButton;
@@ -48,6 +49,7 @@ private slots:
 	void onSaveFilterStockToRedisButtonClicked();
 	void onRealTestButtonClicked();
 	void onOnceTestButtonClicked();
+	void onEverydaySolutionButtonClicked();
 	void onEverydayTaskButtonClicked();
 
 public:
@@ -67,6 +69,10 @@ public:
 	IntDateTime m_today;
 	//过滤的gupiao
 	std::vector<std::string> m_allFilterStock;
+	//xuangu后当日mairu的gupiao
+	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> m_buyStock;
+	//xuangu后当日maichu的gupiao
+	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> m_sellStock;
 
 private:
 	Ui::StockClientClass ui;
@@ -111,6 +117,8 @@ private:
 	COriginalButton* m_realTestButton;
 	//单次模拟测试
 	COriginalButton* m_onceTestButton;
+	//每日策略
+	COriginalButton* m_everydaySolutionButton;
 	//每日任务
 	COriginalButton* m_everydayTaskButton;
 };

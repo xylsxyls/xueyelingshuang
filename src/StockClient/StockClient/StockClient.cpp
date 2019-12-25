@@ -35,6 +35,7 @@
 #include "RealTestTask.h"
 #include "OnceTestTask.h"
 #include "StockSolution/StockSolutionAPI.h"
+#include "EverydaySolutionTask.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -61,6 +62,7 @@ StockClient::StockClient(QWidget* parent)
 	m_saveFilterStockToRedisButton(nullptr),
 	m_realTestButton(nullptr),
 	m_onceTestButton(nullptr),
+	m_everydaySolutionButton(nullptr),
 	m_everydayTaskButton(nullptr)
 {
 	ui.setupUi(this);
@@ -84,6 +86,7 @@ StockClient::StockClient(QWidget* parent)
 	m_saveFilterStockToRedisButton = new COriginalButton(this);
 	m_realTestButton = new COriginalButton(this);
 	m_onceTestButton = new COriginalButton(this);
+	m_everydaySolutionButton = new COriginalButton(this);
 	m_everydayTaskButton = new COriginalButton(this);
 	init();
 }
@@ -188,6 +191,10 @@ void StockClient::init()
 	m_onceTestButton->setText(QStringLiteral("单次模拟测试"));
 	QObject::connect(m_onceTestButton, &COriginalButton::clicked, this, &StockClient::onOnceTestButtonClicked);
 
+	m_everydaySolutionButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_everydaySolutionButton->setText(QStringLiteral("每日方案"));
+	QObject::connect(m_everydaySolutionButton, &COriginalButton::clicked, this, &StockClient::onEverydaySolutionButtonClicked);
+
 	m_everydayTaskButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_everydayTaskButton->setText(QStringLiteral("每日任务"));
 	QObject::connect(m_everydayTaskButton, &COriginalButton::clicked, this, &StockClient::onEverydayTaskButtonClicked);
@@ -253,6 +260,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_saveFilterStockToRedisButton);
 	vecButton.push_back(m_realTestButton);
 	vecButton.push_back(m_onceTestButton);
+	vecButton.push_back(m_everydaySolutionButton);
 	vecButton.push_back(m_everydayTaskButton);
 
 	int32_t cowCount = 4;
@@ -447,8 +455,6 @@ void StockClient::onSaveIndicatorToMysqlButtonClicked()
 
 void StockClient::onUpdateTodayRedisButtonClicked()
 {
-	RCSend("time = %d", ::GetTickCount());
-
 	std::shared_ptr<OpenProcessTask> spOpenMessageTestTask(new OpenProcessTask);
 	spOpenMessageTestTask->setParam(CSystem::commonFile("MessageTest"));
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenMessageTestTask);
@@ -478,7 +484,7 @@ void StockClient::onUpdateTodayRedisButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayRedisTask);
 
 	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), this);
+	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), true, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
 
 	std::shared_ptr<SaveFilterStockTaskToMysql> spSaveAllFilterStockTaskToMysql(new SaveFilterStockTaskToMysql);
@@ -664,7 +670,7 @@ void StockClient::onChooseStockButtonClicked()
 	line.m_defaultText = IntDateTime().dateToString().c_str();
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("重获hangqing数据");
-	line.m_defaultText = QStringLiteral("1");
+	line.m_defaultText = QStringLiteral("0");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();
@@ -720,9 +726,13 @@ void StockClient::onChooseStockButtonClicked()
 	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
 
 	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
+	std::vector<StrategyType> vecStrategyType;
+	vecStrategyType.push_back(SAR_RISE_BACK);
+	vecStrategyType.push_back(SAR_RISE_BACK);
 	spChooseStockTask->setParam(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str(),
 		std::vector<std::string>(),
-		SAR_RISE_BACK,
+		vecStrategyType,
+		AVG_FUND_HIGH_SCORE,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 }
@@ -757,7 +767,7 @@ void StockClient::onSaveFilterStockToMysqlButtonClicked()
 		if (CSystem::fileExist(path))
 		{
 			std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-			spGetAllFilterStockTask->setParam((HWND)winId(), currentTime, this);
+			spGetAllFilterStockTask->setParam((HWND)winId(), currentTime, false, this);
 			CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
 
 			std::shared_ptr<SaveFilterStockTaskToMysql> spSaveAllFilterStockTaskToMysql(new SaveFilterStockTaskToMysql);
@@ -813,6 +823,66 @@ void StockClient::onOnceTestButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 }
 
+void StockClient::onEverydaySolutionButtonClicked()
+{
+	std::shared_ptr<OpenProcessTask> spOpenMessageTestTask(new OpenProcessTask);
+	spOpenMessageTestTask->setParam(CSystem::commonFile("MessageTest"));
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenMessageTestTask);
+
+	//std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
+	//spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);
+
+	StockDraw::instance().showSolution();
+
+	//std::shared_ptr<SaveTodayMarketFileTask> spSaveTodayMarketFileTask(new SaveTodayMarketFileTask);
+	//spSaveTodayMarketFileTask->setParam(this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveTodayMarketFileTask);
+	//
+	//std::shared_ptr<TodayMarketFileToMemoryTask> spTodayMarketFileToMemoryTask(new TodayMarketFileToMemoryTask);
+	//spTodayMarketFileToMemoryTask->setParam(this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTodayMarketFileToMemoryTask);
+	//
+	//std::shared_ptr<SaveGroupMarketTask> spSaveGroupMarketTask(new SaveGroupMarketTask);
+	//spSaveGroupMarketTask->setParam("", this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveGroupMarketTask);
+	//
+	//std::shared_ptr<UpdateTodayToMemoryTask> spUpdateTodayToMemoryTask(new UpdateTodayToMemoryTask);
+	//spUpdateTodayToMemoryTask->setParam(this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
+	//
+	//std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
+	//spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), true, this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
+	//
+	//std::shared_ptr<UpdateTodayRedisTask> spUpdateTodayRedisTask(new UpdateTodayRedisTask);
+	//spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), false, this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayRedisTask);
+	//
+	//std::shared_ptr<SaveFilterStockTaskToMysql> spSaveAllFilterStockTaskToMysql(new SaveFilterStockTaskToMysql);
+	//spSaveAllFilterStockTaskToMysql->setParam(IntDateTime(0, 0), this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToMysql);
+	//
+	//std::shared_ptr<SaveAllFilterStockTaskToRedis> spSaveAllFilterStockTaskToRedis(new SaveAllFilterStockTaskToRedis);
+	//spSaveAllFilterStockTaskToRedis->setParam(&m_today, &m_today, this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
+	//
+	//std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
+	//std::vector<StrategyType> vecStrategyType;
+	//vecStrategyType.push_back(SAR_RISE_BACK);
+	//vecStrategyType.push_back(SAR_RISE_BACK);
+	//spChooseStockTask->setParam(IntDateTime(0, 0),
+	//	std::vector<std::string>(),
+	//	vecStrategyType,
+	//	AVG_FUND_HIGH_SCORE,
+	//	this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
+
+	std::shared_ptr<EverydaySolutionTask> spEverydaySolutionTask(new EverydaySolutionTask);
+	spEverydaySolutionTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spEverydaySolutionTask);
+}
+
 void StockClient::onEverydayTaskButtonClicked()
 {
 	//InputDialogParam inputDialogParam;
@@ -852,7 +922,7 @@ void StockClient::onEverydayTaskButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
 
 	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), this);
+	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), false, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
 
 	std::shared_ptr<UpdateTodayMarketTask> spUpdateTodayMarketTask(new UpdateTodayMarketTask);
@@ -876,9 +946,13 @@ void StockClient::onEverydayTaskButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
 	
 	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
+	std::vector<StrategyType> vecStrategyType;
+	vecStrategyType.push_back(SAR_RISE_BACK);
+	vecStrategyType.push_back(SAR_RISE_BACK);
 	spChooseStockTask->setParam(IntDateTime(0, 0),
 		std::vector<std::string>(),
-		SAR_RISE_BACK,
+		vecStrategyType,
+		AVG_FUND_HIGH_SCORE,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 

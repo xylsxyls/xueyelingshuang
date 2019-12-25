@@ -4,6 +4,9 @@
 #include "StockClientLogicManager.h"
 #include "StockMysql/StockMysqlAPI.h"
 #include "StockFund/StockFundAPI.h"
+#include "ConfigManager/ConfigManagerAPI.h"
+#include "StockDraw/StockDrawAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 ChooseStockTask::ChooseStockTask()
 {
@@ -22,33 +25,56 @@ void ChooseStockTask::DoTask()
 	}
 
 	StockFund stockFund;
-	stockFund.add(200000);
+	stockFund.add(GLOBAL_CONFIG[TRADE_FUND].toString().c_str());
 
+	int32_t size = GLOBAL_CONFIG[TRADE_NOTE_SIZE].toInt32();
+	int32_t index = -1;
+	while (index++ != size - 1)
+	{
+		std::vector<std::string> vecTradeParam = CStringManager::split(GLOBAL_CONFIG[TRADE_NOTE][index].toString(), ",");
+		StockMarket market;
+		market.loadFromRedis(vecTradeParam[2]);
+		market.load();
+		market.setDate(vecTradeParam[3]);
+		stockFund.buyStock(vecTradeParam[0].c_str(), vecTradeParam[1].c_str(), market.day());
+	}
+	
 	StockTrade stockTrade;
-	std::vector<StrategyType> vecStrategyType;
-	vecStrategyType.push_back(m_strategyType);
-	vecStrategyType.push_back(m_strategyType);
-	stockTrade.init(m_date - 5 * 86400, m_date, m_allStock, AVG_FUND_HIGH_SCORE, vecStrategyType);
+	stockTrade.init(m_date - 5 * 86400, m_date, m_allStock, m_solutionType, m_vecStrategyType);
 	stockTrade.load();
+
+	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
+	stockTrade.sell(sellStock, m_date, &stockFund, m_solutionType, m_vecStrategyType);
+	index = sellStock.size();
+	while (index-- != 0)
+	{
+		RCSend((sellStock[index].first + "," + sellStock[index].second.second.toString()).c_str());
+		LOG_SEND_ONLY_INFO((sellStock[index].first + "," + sellStock[index].second.second.toString()).c_str());
+	}
+	m_stockClient->m_sellStock = sellStock;
+
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
 	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>> allBuyInfo;
-	stockTrade.buy(buyStock, m_date, &stockFund, AVG_FUND_HIGH_SCORE, vecStrategyType);
-	int32_t index = buyStock.size();
+	stockTrade.buy(buyStock, m_date, &stockFund, m_solutionType, m_vecStrategyType);
+	index = buyStock.size();
 	while (index-- != 0)
 	{
 		RCSend((buyStock[index].first + "," + buyStock[index].second.second.toString()).c_str());
 		LOG_SEND_ONLY_INFO((buyStock[index].first + "," + buyStock[index].second.second.toString()).c_str());
 	}
+	m_stockClient->m_buyStock = buyStock;
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("今日选中%1个").arg(buyStock.size()));
 }
 
 void ChooseStockTask::setParam(const IntDateTime& date,
 	const std::vector<std::string>& allStock,
-	StrategyType strategyType,
+	const std::vector<StrategyType>& vecStrategyType,
+	SolutionType solutionType,
 	StockClient* stockClient)
 {
 	m_date = date;
 	m_stockClient = stockClient;
 	m_allStock = allStock;
-	m_strategyType = strategyType;
+	m_vecStrategyType = vecStrategyType;
+	m_solutionType = solutionType;
 }

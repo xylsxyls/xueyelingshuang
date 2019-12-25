@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClCompile Include="CheckAllStockTask.cpp" />
     <ClCompile Include="ChooseStockTask.cpp" />
+    <ClCompile Include="EverydaySolutionTask.cpp" />
     <ClCompile Include="EveryTestTask.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_StockClient.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -299,6 +300,7 @@
   <ItemGroup>
     <ClInclude Include="CheckAllStockTask.h" />
     <ClInclude Include="ChooseStockTask.h" />
+    <ClInclude Include="EverydaySolutionTask.h" />
     <ClInclude Include="EveryTestTask.h" />
     <ClInclude Include="GetFilterStockTask.h" />
     <ClInclude Include="InitRedisTask.h" />

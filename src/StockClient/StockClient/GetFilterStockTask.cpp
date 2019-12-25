@@ -9,6 +9,7 @@
 GetFilterStockTask::GetFilterStockTask():
 m_hWnd(nullptr),
 m_today(0, 0),
+m_regain(false),
 m_stockClient(nullptr)
 {
 
@@ -21,7 +22,7 @@ void GetFilterStockTask::DoTask()
 		m_today = m_stockClient->m_today;
 	}
 	std::string filePath = CSystem::GetCurrentExePath() + m_today.dateToString() + ".xls";
-	if (!CSystem::fileExist(filePath))
+	if (m_regain || !CSystem::fileExist(filePath))
 	{
 		CMouse::MoveAbsolute(xyls::Point(521, 38), 0);
 		CMouse::LeftClick();
@@ -103,9 +104,10 @@ void GetFilterStockTask::DoTask()
 	CMouse::LeftClick();
 }
 
-void GetFilterStockTask::setParam(HWND hWnd, const IntDateTime& today, StockClient* stockClient)
+void GetFilterStockTask::setParam(HWND hWnd, const IntDateTime& today, bool regain, StockClient* stockClient)
 {
 	m_hWnd = hWnd;
 	m_today = today;
+	m_regain = regain;
 	m_stockClient = stockClient;
 }

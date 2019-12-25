@@ -12,10 +12,11 @@ public:
 public:
 	void DoTask();
 
-	void setParam(HWND hWnd, const IntDateTime& today, StockClient* stockClient);
+	void setParam(HWND hWnd, const IntDateTime& today, bool regain, StockClient* stockClient);
 
 private:
 	HWND m_hWnd;
 	IntDateTime m_today;
+	bool m_regain;
 	StockClient* m_stockClient;
 };

@@ -131,6 +131,9 @@
     <ClCompile Include="OnceTestTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="EverydaySolutionTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -217,6 +220,9 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="OnceTestTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="EverydaySolutionTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,6 +1,7 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "StockStrategy/StockStrategyAPI.h"
+#include "StockSolution/StockSolutionAPI.h"
 
 class StockClient;
 
@@ -14,12 +15,14 @@ public:
 
 	void setParam(const IntDateTime& date,
 		const std::vector<std::string>& allStock,
-		StrategyType strategyType,
+		const std::vector<StrategyType>& vecStrategyType,
+		SolutionType solutionType,
 		StockClient* stockClient);
 
 private:
 	IntDateTime m_date;
 	std::vector<std::string> m_allStock;
-	StrategyType m_strategyType;
+	std::vector<StrategyType> m_vecStrategyType;
+	SolutionType m_solutionType;
 	StockClient* m_stockClient;
 };
