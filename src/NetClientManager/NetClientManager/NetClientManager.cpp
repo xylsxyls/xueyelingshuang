@@ -30,7 +30,7 @@ int32_t main()
 	pid = SharedMemory::createPid();
 	ClientManagerReceive clientManagerReceive;
 	NetClient client;
-	client.connect("106.12.77.189", 5203, &clientManagerReceive);//106.12.77.189 127.0.0.1
+	client.connect("106.12.204.167", 5203, &clientManagerReceive);//106.12.77.189 127.0.0.1
 	ProcessReceive processReceive;
 	processReceive.setNetClient(&client);
 	ProcessWork::instance().initReceive(&processReceive);

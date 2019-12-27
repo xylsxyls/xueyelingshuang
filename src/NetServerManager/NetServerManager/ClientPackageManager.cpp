@@ -1,6 +1,7 @@
 #include "ClientPackageManager.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 ClientPackageManager::ClientPackageManager():
 m_clientId(0)
@@ -21,7 +22,16 @@ void ClientPackageManager::addClientPackage(ProtoMessage& message, uv_tcp_t* sen
 	std::map<int32_t, Variant> predefineMap;
 	message.getMap(predefineMap, PREDEFINE);
 	std::string serverName = predefineMap[SERVER_NAME].toString();
-	m_serverPackageMap[m_clientId] = ClientPackage(predefineMap[CLIENT_NAME].toString(), serverName, CSystem::processPid(serverName), predefineMap[LOGIN_NAME].toString(), sender);
+	int32_t pid = 0;
+	std::vector<int32_t> vecPid = CSystem::processPid(CStringManager::AnsiToUnicode(serverName));
+	if (!vecPid.empty())
+	{
+		pid = vecPid[0];
+	}
+	m_serverPackageMap[m_clientId] = ClientPackage(predefineMap[CLIENT_NAME].toString(),
+		serverName,
+		pid,
+		predefineMap[LOGIN_NAME].toString(), sender);
 	m_clientPtrMap[sender] = m_clientId;
 }
 

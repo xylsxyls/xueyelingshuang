@@ -95,7 +95,9 @@ public:
 	//?获取进程PID，耗时10毫秒左右，填空表示获取本进程
 	static std::vector<int32_t> processPid(const std::wstring& processName = L"");
 	//?获取进程名，耗时10毫秒左右
-	static std::wstring processName(int32_t pid);
+	static std::string processNameA(int32_t pid);
+	//?获取进程名，耗时10毫秒左右
+	static std::wstring processNameW(int32_t pid);
 	//?获取电脑名
 	static std::string getComputerName();
 	//返回本进程所在路径，带\符号

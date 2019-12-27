@@ -2,6 +2,7 @@
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "Compress/CompressAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 void ClientManagerReceive::serverConnected(uv_tcp_t* server)
 {
@@ -23,7 +24,11 @@ void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 		message.from(strMessage);
 		std::map<int32_t, Variant> predefineMap;
 		message.getMap(predefineMap, PREDEFINE);
-		clientPid = CSystem::processPid(predefineMap[CLIENT_NAME].toString());
+		std::vector<int32_t> vecClientPid = CSystem::processPid(CStringManager::AnsiToUnicode(predefineMap[CLIENT_NAME].toString()));
+		if (!vecClientPid.empty())
+		{
+			clientPid = vecClientPid[0];
+		}
 		addClientIdMap(sender, clientPid);
 		std::string strMessage;
 		message.toString(strMessage);
