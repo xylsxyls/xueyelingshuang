@@ -36,6 +36,7 @@
 #include "OnceTestTask.h"
 #include "StockSolution/StockSolutionAPI.h"
 #include "EverydaySolutionTask.h"
+#include "ConfigManager/ConfigManagerAPI.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -107,7 +108,25 @@ void StockClient::init()
 	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
 	setPalette(pattle);
 
+	StockDraw::instance();
+
 	m_threadCount = CSystem::GetCPUCoreCount() * 2;
+	GLOBAL_CONFIG[TRADE_FUND] = "200000";
+	GLOBAL_CONFIG[TRADE_NOTE] = "";
+	m_stockFund.add(GLOBAL_CONFIG[TRADE_FUND].toString().c_str());
+	
+	std::string configTradeNote = GLOBAL_CONFIG[TRADE_NOTE].toString();
+	std::vector<std::string> vecTradeNote = CStringManager::split(configTradeNote, "|");
+	int32_t index = -1;
+	while (!configTradeNote.empty() && index++ != vecTradeNote.size() - 1)
+	{
+		std::vector<std::string> vecTradeParam = CStringManager::split(vecTradeNote[index], ",");
+		StockMarket market;
+		market.loadFromRedis(vecTradeParam[0]);
+		market.load();
+		market.setDate(vecTradeParam[3]);
+		m_stockFund.buyStock(vecTradeParam[1].c_str(), vecTradeParam[2].c_str(), market.day());
+	}
 
 	QObject::connect(&StockClientLogicManager::instance(), &StockClientLogicManager::taskTip, this, &StockClient::onTaskTip, Qt::QueuedConnection);
 
@@ -200,7 +219,7 @@ void StockClient::init()
 	QObject::connect(m_everydayTaskButton, &COriginalButton::clicked, this, &StockClient::onEverydayTaskButtonClicked);
 
 	m_sendTaskThreadId = CTaskThreadManager::Instance().Init();
-	int32_t index = -1;
+	index = -1;
 	while (index++ != m_threadCount - 1)
 	{
 		m_threadId.push_back(CTaskThreadManager::Instance().Init());
@@ -733,6 +752,7 @@ void StockClient::onChooseStockButtonClicked()
 		std::vector<std::string>(),
 		vecStrategyType,
 		AVG_FUND_HIGH_SCORE,
+		nullptr,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 }
@@ -825,58 +845,67 @@ void StockClient::onOnceTestButtonClicked()
 
 void StockClient::onEverydaySolutionButtonClicked()
 {
+	InputDialogParam inputDialogParam;
+	inputDialogParam.m_editTip = QStringLiteral("是否重新获取过滤文件");
+	inputDialogParam.m_defaultText = QStringLiteral("1");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+
 	std::shared_ptr<OpenProcessTask> spOpenMessageTestTask(new OpenProcessTask);
 	spOpenMessageTestTask->setParam(CSystem::commonFile("MessageTest"));
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenMessageTestTask);
-
-	//std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
-	//spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);
-
-	StockDraw::instance().showSolution();
-
-	//std::shared_ptr<SaveTodayMarketFileTask> spSaveTodayMarketFileTask(new SaveTodayMarketFileTask);
-	//spSaveTodayMarketFileTask->setParam(this);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveTodayMarketFileTask);
-	//
-	//std::shared_ptr<TodayMarketFileToMemoryTask> spTodayMarketFileToMemoryTask(new TodayMarketFileToMemoryTask);
-	//spTodayMarketFileToMemoryTask->setParam(this);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTodayMarketFileToMemoryTask);
-	//
-	//std::shared_ptr<SaveGroupMarketTask> spSaveGroupMarketTask(new SaveGroupMarketTask);
-	//spSaveGroupMarketTask->setParam("", this);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveGroupMarketTask);
-	//
-	//std::shared_ptr<UpdateTodayToMemoryTask> spUpdateTodayToMemoryTask(new UpdateTodayToMemoryTask);
-	//spUpdateTodayToMemoryTask->setParam(this);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
-	//
-	//std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-	//spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), true, this);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
-	//
-	//std::shared_ptr<UpdateTodayRedisTask> spUpdateTodayRedisTask(new UpdateTodayRedisTask);
-	//spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), false, this);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayRedisTask);
-	//
-	//std::shared_ptr<SaveFilterStockTaskToMysql> spSaveAllFilterStockTaskToMysql(new SaveFilterStockTaskToMysql);
-	//spSaveAllFilterStockTaskToMysql->setParam(IntDateTime(0, 0), this);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToMysql);
-	//
-	//std::shared_ptr<SaveAllFilterStockTaskToRedis> spSaveAllFilterStockTaskToRedis(new SaveAllFilterStockTaskToRedis);
-	//spSaveAllFilterStockTaskToRedis->setParam(&m_today, &m_today, this);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
-	//
-	//std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
-	//std::vector<StrategyType> vecStrategyType;
-	//vecStrategyType.push_back(SAR_RISE_BACK);
-	//vecStrategyType.push_back(SAR_RISE_BACK);
-	//spChooseStockTask->setParam(IntDateTime(0, 0),
-	//	std::vector<std::string>(),
-	//	vecStrategyType,
-	//	AVG_FUND_HIGH_SCORE,
-	//	this);
-	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
+	
+	std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
+	spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);
+	
+	std::shared_ptr<SaveTodayMarketFileTask> spSaveTodayMarketFileTask(new SaveTodayMarketFileTask);
+	spSaveTodayMarketFileTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveTodayMarketFileTask);
+	
+	std::shared_ptr<TodayMarketFileToMemoryTask> spTodayMarketFileToMemoryTask(new TodayMarketFileToMemoryTask);
+	spTodayMarketFileToMemoryTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTodayMarketFileToMemoryTask);
+	
+	std::shared_ptr<SaveGroupMarketTask> spSaveGroupMarketTask(new SaveGroupMarketTask);
+	spSaveGroupMarketTask->setParam("", this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveGroupMarketTask);
+	
+	std::shared_ptr<UpdateTodayToMemoryTask> spUpdateTodayToMemoryTask(new UpdateTodayToMemoryTask);
+	spUpdateTodayToMemoryTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
+	
+	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
+	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), inputDialogParam.m_editText == "1", this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
+	
+	std::shared_ptr<UpdateTodayRedisTask> spUpdateTodayRedisTask(new UpdateTodayRedisTask);
+	spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), false, this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayRedisTask);
+	
+	std::shared_ptr<SaveFilterStockTaskToMysql> spSaveAllFilterStockTaskToMysql(new SaveFilterStockTaskToMysql);
+	spSaveAllFilterStockTaskToMysql->setParam(IntDateTime(0, 0), this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToMysql);
+	
+	std::shared_ptr<SaveAllFilterStockTaskToRedis> spSaveAllFilterStockTaskToRedis(new SaveAllFilterStockTaskToRedis);
+	spSaveAllFilterStockTaskToRedis->setParam(&m_today, &m_today, this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
+	
+	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
+	std::vector<StrategyType> vecStrategyType;
+	vecStrategyType.push_back(SAR_RISE_BACK);
+	vecStrategyType.push_back(SAR_RISE_BACK);
+	spChooseStockTask->setParam(IntDateTime(0, 0),
+		std::vector<std::string>(),
+		vecStrategyType,
+		AVG_FUND_HIGH_SCORE,
+		&m_stockFund,
+		this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 
 	std::shared_ptr<EverydaySolutionTask> spEverydaySolutionTask(new EverydaySolutionTask);
 	spEverydaySolutionTask->setParam(this);
@@ -885,15 +914,15 @@ void StockClient::onEverydaySolutionButtonClicked()
 
 void StockClient::onEverydayTaskButtonClicked()
 {
-	//InputDialogParam inputDialogParam;
-	//inputDialogParam.m_editTip = QStringLiteral("请输入间隔时间（毫秒）");
-	//inputDialogParam.m_defaultText = QStringLiteral("2500");
-	//inputDialogParam.m_parent = windowHandle();
-	//DialogManager::instance().makeDialog(inputDialogParam);
-	//if (inputDialogParam.m_result != ACCEPT_BUTTON)
-	//{
-	//	return;
-	//}
+	InputDialogParam inputDialogParam;
+	inputDialogParam.m_editTip = QStringLiteral("是否重新获取过滤文件");
+	inputDialogParam.m_defaultText = QStringLiteral("1");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
 
 	RCSend("time = %d", ::GetTickCount());
 
@@ -922,7 +951,7 @@ void StockClient::onEverydayTaskButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
 
 	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), false, this);
+	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), inputDialogParam.m_editText == "1", this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
 
 	std::shared_ptr<UpdateTodayMarketTask> spUpdateTodayMarketTask(new UpdateTodayMarketTask);
@@ -953,6 +982,7 @@ void StockClient::onEverydayTaskButtonClicked()
 		std::vector<std::string>(),
 		vecStrategyType,
 		AVG_FUND_HIGH_SCORE,
+		nullptr,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 

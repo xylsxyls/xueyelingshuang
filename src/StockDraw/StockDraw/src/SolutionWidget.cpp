@@ -5,11 +5,15 @@
 #include "DialogManager/DialogManagerAPI.h"
 #include "ConfigManager/ConfigManagerAPI.h"
 #include "StockDraw.h"
+#include "StockFund/StockFundAPI.h"
+#include "StockMarket/StockMarketAPI.h"
 
 SolutionWidget::SolutionWidget(QWidget* widget):
 m_time(nullptr),
 m_size(nullptr),
-m_hasBuy(nullptr)
+m_hasBuy(nullptr),
+m_sell(nullptr),
+m_allFund(nullptr)
 {
 	setParent(widget);
 	init();
@@ -29,7 +33,18 @@ void SolutionWidget::init()
 	m_size = new Label(this);
 	m_hasBuy = new COriginalButton(this);
 	m_hasBuy->setBkgColor(QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255));
+	m_hasBuy->setText(QStringLiteral("已入"));
 	QObject::connect(m_hasBuy, &COriginalButton::clicked, this, &SolutionWidget::onHasBuyButtonClicked);
+
+	m_sell = new COriginalButton(this);
+	m_sell->setBkgColor(QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255));
+	m_sell->setText(QStringLiteral("maichu"));
+	QObject::connect(m_sell, &COriginalButton::clicked, this, &SolutionWidget::onSellButtonClicked);
+
+	m_allFund = new COriginalButton(this);
+	m_allFund->setBkgColor(QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255));
+	m_allFund->setText(QStringLiteral("zijin"));
+	QObject::connect(m_allFund, &COriginalButton::clicked, this, &SolutionWidget::onAllFundButtonClicked);
 
 	int32_t index = -1;
 	while (index++ != 5 - 1)
@@ -58,12 +73,16 @@ void SolutionWidget::resizeEvent(QResizeEvent* eve)
 	m_time->setGeometry(20, 10, 200, 30);
 	m_size->setGeometry(280, 10, 200, 30);
 
+	m_allFund->setGeometry(50, 60, 80, 30);
+	m_sell->setGeometry(150, 60, 80, 30);
+	m_hasBuy->setGeometry(250, 60, 80, 30);
+
 	int32_t index = -1;
 	while (index++ != 5 - 1)
 	{
-		m_vecBuy[index]->setGeometry(280, 50 + index * 35, 200, 30);
-		m_vecSell[index]->setGeometry(30, 50 + index * 35, 200, 30);
-		m_vecBuyCancel[index]->setGeometry(500, 50 + index * 35, 80, 30);
+		m_vecBuy[index]->setGeometry(280, 120 + index * 35, 200, 30);
+		m_vecSell[index]->setGeometry(30, 120 + index * 35, 200, 30);
+		m_vecBuyCancel[index]->setGeometry(500, 120 + index * 35, 80, 30);
 	}
 }
 
@@ -130,7 +149,7 @@ void SolutionWidget::onHasBuyButtonClicked()
 {
 	InputDialogParam inputDialogParam;
 	InputEx line;
-	line.m_tip = QStringLiteral("zijin");
+	line.m_tip = QStringLiteral("gupiao");
 	line.m_defaultText = IntDateTime().dateToString().c_str();
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("jiage");
@@ -142,9 +161,6 @@ void SolutionWidget::onHasBuyButtonClicked()
 	line.m_tip = QStringLiteral("riqi");
 	line.m_defaultText = IntDateTime().dateToString().c_str();
 	inputDialogParam.m_vecInputEx.push_back(line);
-	line.m_tip = QStringLiteral("gupiao");
-	line.m_defaultText = IntDateTime().dateToString().c_str();
-	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入历史：");
 	inputDialogParam.m_parent = windowHandle();
 	DialogManager::instance().makeDialog(inputDialogParam);
@@ -152,14 +168,98 @@ void SolutionWidget::onHasBuyButtonClicked()
 	{
 		return;
 	}
-	BigNumber allFund = inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str();
+	std::string stock = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	BigNumber price = inputDialogParam.m_vecInputEx[1].m_editText.toStdString().c_str();
 	BigNumber position = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
 	IntDateTime date = inputDialogParam.m_vecInputEx[3].m_editText.toStdString();
-	std::string stock = inputDialogParam.m_vecInputEx[4].m_editText.toStdString();
-	BigNumber rate = price * (position + 30) / allFund.toPrec(6);
-	GLOBAL_CONFIG[TRADE_FUND] = allFund.toString();
-	int32_t size = GLOBAL_CONFIG[TRADE_NOTE_SIZE].toInt32();
-	GLOBAL_CONFIG[TRADE_NOTE_SIZE] = size + 1;
-	GLOBAL_CONFIG[TRADE_NOTE][size] = price.toString() + "," + rate.toString() + "," + date.toString() + "," + stock;
+	BigNumber rate = price * (position + 30) / BigNumber(GLOBAL_CONFIG[TRADE_FUND].toString().c_str()).toPrec(6);
+	std::string configTradeNote = GLOBAL_CONFIG[TRADE_NOTE].toString();
+	if (!configTradeNote.empty())
+	{
+		configTradeNote.push_back('|');
+	}
+	GLOBAL_CONFIG[TRADE_NOTE] = configTradeNote + stock + "," + price.toString() + "," + rate.toString() + "," + date.toString();
+
+	StockMarket market;
+	market.loadFromRedis(stock);
+	market.load();
+	if (!market.setDate(date))
+	{
+		return;
+	}
+	m_solutionWidgetParam.m_stockFund->buyStock(price, rate, market.day());
+}
+
+void SolutionWidget::onSellButtonClicked()
+{
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_tip = QStringLiteral("gupiao");
+	line.m_defaultText = "";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("jiage");
+	line.m_defaultText = "";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("riqi");
+	line.m_defaultText = IntDateTime().dateToString().c_str();
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入需要maichu的gupiao：");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+	std::string stock = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
+	BigNumber price = inputDialogParam.m_vecInputEx[1].m_editText.toStdString().c_str();
+	IntDateTime date = inputDialogParam.m_vecInputEx[2].m_editText.toStdString();
+	BigNumber rate = 1;
+	std::string configTradeNote = GLOBAL_CONFIG[TRADE_NOTE].toString();
+	if (configTradeNote.empty())
+	{
+		return;
+	}
+	std::vector<std::string> vecTradeNote = CStringManager::split(configTradeNote, "|");
+	for (auto itTradeNote = vecTradeNote.begin(); itTradeNote != vecTradeNote.end();)
+	{
+		if (CStringManager::split(*itTradeNote, ",")[0] == stock)
+		{
+			itTradeNote = vecTradeNote.erase(itTradeNote);
+			continue;
+		}
+		++itTradeNote;
+	}
+	configTradeNote.clear();
+	int32_t index = -1;
+	while (index++ != vecTradeNote.size() - 1)
+	{
+		configTradeNote.append(vecTradeNote[index] + "|");
+	}
+	if (!configTradeNote.empty())
+	{
+		configTradeNote.pop_back();
+	}
+	GLOBAL_CONFIG[TRADE_NOTE] = configTradeNote;
+	StockMarket market;
+	market.loadFromRedis(stock);
+	market.load();
+	if (!market.setDate(date))
+	{
+		return;
+	}
+	m_solutionWidgetParam.m_stockFund->sellStock(price, rate, market.day());
+}
+
+void SolutionWidget::onAllFundButtonClicked()
+{
+	InputDialogParam inputDialogParam;
+	inputDialogParam.m_editTip = QStringLiteral("请输入总zijin");
+	inputDialogParam.m_defaultText = QStringLiteral("200000");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+	GLOBAL_CONFIG[TRADE_FUND] = inputDialogParam.m_editText.toStdString();
 }

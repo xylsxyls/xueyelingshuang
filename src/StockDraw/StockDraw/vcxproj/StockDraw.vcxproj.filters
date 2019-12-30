@@ -53,11 +53,14 @@
     <ClCompile Include="GeneratedFiles\Release\moc_SolutionWidget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_StockDraw.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_StockDraw.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\StockDraw.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\StockDrawAPI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -74,6 +77,9 @@
   <ItemGroup>
     <CustomBuild Include="..\src\SolutionWidget.h">
       <Filter>widget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\src\StockDraw.h">
+      <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

@@ -30,6 +30,21 @@ goto StockIndicator_end
 :StockIndicator_end
 
 ::--------------------------------------------------------------------
+set StockFund_dlllib=lib
+set StockFund_bit=%1
+set StockFund_debugRelease=%3
+set StockFund_allSame=%4
+if "%4" == "same" (goto StockFund_callSame) else (goto StockFund_callSimple)
+:StockFund_callSame
+set StockFund_dlllib=%2
+call "%CLOUD_REBUILD%" StockFund %StockFund_bit% %StockFund_dlllib% %StockFund_debugRelease% %StockFund_allSame%
+goto StockFund_end
+:StockFund_callSimple
+call "%CLOUD_REBUILD%" StockFund %StockFund_bit% %StockFund_dlllib% %StockFund_debugRelease%
+goto StockFund_end
+:StockFund_end
+
+::--------------------------------------------------------------------
 set ConfigManager_dlllib=lib
 set ConfigManager_bit=%1
 set ConfigManager_debugRelease=%3
@@ -43,3 +58,18 @@ goto ConfigManager_end
 call "%CLOUD_REBUILD%" ConfigManager %ConfigManager_bit% %ConfigManager_dlllib% %ConfigManager_debugRelease%
 goto ConfigManager_end
 :ConfigManager_end
+
+::--------------------------------------------------------------------
+set DialogManager_dlllib=lib
+set DialogManager_bit=%1
+set DialogManager_debugRelease=%3
+set DialogManager_allSame=%4
+if "%4" == "same" (goto DialogManager_callSame) else (goto DialogManager_callSimple)
+:DialogManager_callSame
+set DialogManager_dlllib=%2
+call "%CLOUD_REBUILD%" DialogManager %DialogManager_bit% %DialogManager_dlllib% %DialogManager_debugRelease% %DialogManager_allSame%
+goto DialogManager_end
+:DialogManager_callSimple
+call "%CLOUD_REBUILD%" DialogManager %DialogManager_bit% %DialogManager_dlllib% %DialogManager_debugRelease%
+goto DialogManager_end
+:DialogManager_end

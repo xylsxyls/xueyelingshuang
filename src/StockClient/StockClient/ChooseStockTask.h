@@ -4,6 +4,7 @@
 #include "StockSolution/StockSolutionAPI.h"
 
 class StockClient;
+class StockFund;
 
 class ChooseStockTask : public CTask
 {
@@ -17,6 +18,7 @@ public:
 		const std::vector<std::string>& allStock,
 		const std::vector<StrategyType>& vecStrategyType,
 		SolutionType solutionType,
+		StockFund* stockFund,
 		StockClient* stockClient);
 
 private:
@@ -24,5 +26,6 @@ private:
 	std::vector<std::string> m_allStock;
 	std::vector<StrategyType> m_vecStrategyType;
 	SolutionType m_solutionType;
+	StockFund* m_stockFund;
 	StockClient* m_stockClient;
 };

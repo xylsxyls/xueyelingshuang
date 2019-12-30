@@ -6,6 +6,7 @@
 #include <memory>
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "BigNumber/BigNumberAPI.h"
+#include "StockFund/StockFundAPI.h"
 
 class LineEdit;
 class COriginalButton;
@@ -73,6 +74,8 @@ public:
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> m_buyStock;
 	//xuangu后当日maichu的gupiao
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> m_sellStock;
+	//实际zijin
+	StockFund m_stockFund;
 
 private:
 	Ui::StockClientClass ui;

@@ -2,17 +2,23 @@
 #include "StockDrawMacro.h"
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "SolutionWidgetParam.h"
+#include <QObject>
 
 enum
 {
+	/** 总zijin
+	*/
 	TRADE_FUND = 1,
-	TRADE_NOTE_SIZE,
+
+	/** jiaoyi记录
+	*/
 	TRADE_NOTE
 };
 
 class SolutionWidget;
-class StockDrawAPI StockDraw
+class StockDrawAPI StockDraw : public QObject
 {
+	Q_OBJECT
 protected:
 	/** 构造函数
 	*/
