@@ -109,11 +109,17 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 		{
 			break;
 		}
-		m_vecSell[index]->setText((m_solutionWidgetParam.m_sellStock[index].first +
-			m_solutionWidgetParam.m_sellStock[index].second.first.toString() +
+		m_vecSell[index]->setText((m_solutionWidgetParam.m_sellStock[index].first + " " +
+			m_solutionWidgetParam.m_sellStock[index].second.first.toString() + " " +
 			m_solutionWidgetParam.m_sellStock[index].second.second.toString()).c_str());
 	}
 
+	if (m_solutionWidgetParam.m_buyStock.empty())
+	{
+		return;
+	}
+
+	BigNumber allPersent = min((int32_t)m_solutionWidgetParam.m_buyStock.size(), 5);
 	index = -1;
 	while (index++ != m_solutionWidgetParam.m_buyStock.size() - 1)
 	{
@@ -121,9 +127,10 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 		{
 			break;
 		}
-		m_vecBuy[index]->setText((m_solutionWidgetParam.m_buyStock[index].first +
-			m_solutionWidgetParam.m_buyStock[index].second.first.toString() +
-			m_solutionWidgetParam.m_buyStock[index].second.second.toString()).c_str());
+		m_vecBuy[index]->setText((m_solutionWidgetParam.m_buyStock[index].first + " " + 
+			m_solutionWidgetParam.m_buyStock[index].second.first.toString() + " " + 
+			(1 / allPersent.toPrec(6)).toPrec(6).toString()).c_str());
+		allPersent = allPersent - 1;
 	}
 }
 

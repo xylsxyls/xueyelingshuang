@@ -19,7 +19,7 @@ void EverydaySolutionTask::DoTask()
 	solutionWidgetParam.m_buyStock = m_stockClient->m_buyStock;
 	solutionWidgetParam.m_sellStock = m_stockClient->m_sellStock;
 	solutionWidgetParam.m_stockFund = &m_stockClient->m_stockFund;
-	StockDraw::instance().showSolution();
+	StockDraw::instance().showSolution(solutionWidgetParam);
 }
 
 void EverydaySolutionTask::setParam(StockClient* stockClient)
