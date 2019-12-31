@@ -28,6 +28,7 @@ private:
 	void onHasBuyButtonClicked();
 	void onSellButtonClicked();
 	void onAllFundButtonClicked();
+	void onDefaultButtonClicked();
 
 private:
 	Label* m_time;
@@ -35,6 +36,10 @@ private:
 	COriginalButton* m_allFund;
 	COriginalButton* m_hasBuy;
 	COriginalButton* m_sell;
+	COriginalButton* m_default;
+	Label* m_filterSize;
+	Label* m_default1;
+	Label* m_default2;
 	std::vector<Label*> m_vecBuy;
 	std::vector<Label*> m_vecSell;
 	std::vector<COriginalButton*> m_vecBuyCancel;

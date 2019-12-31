@@ -7,13 +7,19 @@
 #include "StockDraw.h"
 #include "StockFund/StockFundAPI.h"
 #include "StockMarket/StockMarketAPI.h"
+#include "StockIndicator/StockIndicatorAPI.h"
+#include "StockMysql/StockMysqlAPI.h"
 
 SolutionWidget::SolutionWidget(QWidget* widget):
 m_time(nullptr),
 m_size(nullptr),
 m_hasBuy(nullptr),
 m_sell(nullptr),
-m_allFund(nullptr)
+m_allFund(nullptr),
+m_default(nullptr),
+m_filterSize(nullptr),
+m_default1(nullptr),
+m_default2(nullptr)
 {
 	setParent(widget);
 	init();
@@ -33,7 +39,7 @@ void SolutionWidget::init()
 	m_size = new Label(this);
 	m_hasBuy = new COriginalButton(this);
 	m_hasBuy->setBkgColor(QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255));
-	m_hasBuy->setText(QStringLiteral("已入"));
+	m_hasBuy->setText(QStringLiteral("mairu"));
 	QObject::connect(m_hasBuy, &COriginalButton::clicked, this, &SolutionWidget::onHasBuyButtonClicked);
 
 	m_sell = new COriginalButton(this);
@@ -45,6 +51,18 @@ void SolutionWidget::init()
 	m_allFund->setBkgColor(QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255));
 	m_allFund->setText(QStringLiteral("zijin"));
 	QObject::connect(m_allFund, &COriginalButton::clicked, this, &SolutionWidget::onAllFundButtonClicked);
+
+	m_default = new COriginalButton(this);
+	m_default->setBkgColor(QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255), QColor(255, 0, 255, 255));
+	m_default->setText(QStringLiteral("moren"));
+	QObject::connect(m_default, &COriginalButton::clicked, this, &SolutionWidget::onDefaultButtonClicked);
+
+	m_filterSize = new Label(this);
+	m_filterSize->setBackgroundColor(QColor(255, 0, 0, 255));
+	m_default1 = new Label(this);
+	m_default1->setBackgroundColor(QColor(255, 0, 0, 255));
+	m_default2 = new Label(this);
+	m_default2->setBackgroundColor(QColor(255, 0, 0, 255));
 
 	int32_t index = -1;
 	while (index++ != 5 - 1)
@@ -73,9 +91,14 @@ void SolutionWidget::resizeEvent(QResizeEvent* eve)
 	m_time->setGeometry(20, 10, 200, 30);
 	m_size->setGeometry(280, 10, 200, 30);
 
-	m_allFund->setGeometry(50, 60, 80, 30);
-	m_sell->setGeometry(150, 60, 80, 30);
-	m_hasBuy->setGeometry(250, 60, 80, 30);
+	m_allFund->setGeometry(30, 60, 60, 30);
+	m_sell->setGeometry(110, 60, 60, 30);
+	m_hasBuy->setGeometry(190, 60, 60, 30);
+	m_default->setGeometry(270, 60, 60, 30);
+
+	m_filterSize->setGeometry(350, 60, 40, 30);
+	m_default1->setGeometry(410, 40, 150, 30);
+	m_default2->setGeometry(410, 80, 150, 30);
 
 	int32_t index = -1;
 	while (index++ != 5 - 1)
@@ -132,6 +155,74 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 			(1 / allPersent.toPrec(6)).toPrec(6).toString()).c_str());
 		allPersent = allPersent - 1;
 	}
+
+	std::string defaultStock1 = GLOBAL_CONFIG[DEFAULT_STOCK_1].toString();
+	std::string defaultStock2 = GLOBAL_CONFIG[DEFAULT_STOCK_2].toString();
+
+	StockMarket market1;
+	market1.loadFromMysql(defaultStock1);
+	market1.load();
+	if (!market1.setDate(m_solutionWidgetParam.m_date))
+	{
+		return;
+	}
+	std::shared_ptr<StockDay> spDay1 = market1.day();
+	BigNumber open1 = spDay1->open();
+	BigNumber high1 = spDay1->high();
+	BigNumber low1 = spDay1->low();
+	BigNumber close1 = spDay1->close();
+
+	StockIndicator::instance().loadIndicatorFromRedis(defaultStock1);
+	std::shared_ptr<StockBollIndicator> spIndicator1 = StockIndicator::instance().boll();
+	spIndicator1->load();
+	std::shared_ptr<StockBoll> spBoll1 = spIndicator1->day(m_solutionWidgetParam.m_date);
+	BigNumber bollUp1 = spBoll1->m_up;
+	BigNumber bollMid1 = spBoll1->m_mid;
+	BigNumber bollDown1 = spBoll1->m_down;
+
+	m_default1->setText((open1.toString() + " " + 
+		high1.toString() + " " +
+		low1.toString() + " " +
+		close1.toString() + " " +
+		bollUp1.toString() + " " +
+		bollMid1.toString() + " " +
+		bollDown1.toString()).c_str());
+
+	StockMarket market2;
+	market2.loadFromMysql(defaultStock2);
+	market2.load();
+	if (!market2.setDate(m_solutionWidgetParam.m_date))
+	{
+		return;
+	}
+	std::shared_ptr<StockDay> spDay2 = market2.day();
+	BigNumber open2 = spDay2->open();
+	BigNumber high2 = spDay2->high();
+	BigNumber low2 = spDay2->low();
+	BigNumber close2 = spDay2->close();
+
+	StockIndicator::instance().loadIndicatorFromRedis(defaultStock2);
+	std::shared_ptr<StockBollIndicator> spIndicator2 = StockIndicator::instance().boll();
+	spIndicator2->load();
+	std::shared_ptr<StockBoll> spBoll2 = spIndicator2->day(m_solutionWidgetParam.m_date);
+	BigNumber bollUp2 = spBoll2->m_up;
+	BigNumber bollMid2 = spBoll2->m_mid;
+	BigNumber bollDown2 = spBoll2->m_down;
+
+	m_default2->setText((open2.toString() + " " +
+		high2.toString() + " " +
+		low2.toString() + " " +
+		close2.toString() + " " +
+		bollUp2.toString() + " " +
+		bollMid2.toString() + " " +
+		bollDown2.toString()).c_str());
+
+	std::vector<std::string> vecFilterStock;
+	StockMysql::instance().readFilterStockFromRedis(m_solutionWidgetParam.m_date, vecFilterStock);
+
+	int32_t vecFilterStockSize = vecFilterStock.size();
+
+	m_filterSize->setText(std::to_string(vecFilterStockSize).c_str());
 }
 
 void SolutionWidget::onBuyCancelButtonClicked()
@@ -269,4 +360,28 @@ void SolutionWidget::onAllFundButtonClicked()
 		return;
 	}
 	GLOBAL_CONFIG[TRADE_FUND] = inputDialogParam.m_editText.toStdString();
+}
+
+void SolutionWidget::onDefaultButtonClicked()
+{
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_tip = QStringLiteral("moren1");
+	line.m_defaultText = GLOBAL_CONFIG[DEFAULT_STOCK_1].toString().c_str();
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("moren2");
+	line.m_defaultText = GLOBAL_CONFIG[DEFAULT_STOCK_2].toString().c_str();
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入打印的gupiao：");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+
+	GLOBAL_CONFIG[DEFAULT_STOCK_1] = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
+	GLOBAL_CONFIG[DEFAULT_STOCK_2] = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
+
+	onSolutionSignal(m_solutionWidgetParam);
 }

@@ -12,7 +12,15 @@ enum
 
 	/** jiaoyi记录
 	*/
-	TRADE_NOTE
+	TRADE_NOTE,
+
+	/** 默认记录的gupiao
+	*/
+	DEFAULT_STOCK_1,
+
+	/** 默认记录的gupiao
+	*/
+	DEFAULT_STOCK_2,
 };
 
 class SolutionWidget;

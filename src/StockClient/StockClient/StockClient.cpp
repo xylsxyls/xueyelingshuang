@@ -37,6 +37,7 @@
 #include "StockSolution/StockSolutionAPI.h"
 #include "EverydaySolutionTask.h"
 #include "ConfigManager/ConfigManagerAPI.h"
+#include "MinimizeTask.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -858,43 +859,43 @@ void StockClient::onEverydaySolutionButtonClicked()
 	std::shared_ptr<OpenProcessTask> spOpenMessageTestTask(new OpenProcessTask);
 	spOpenMessageTestTask->setParam(CSystem::commonFile("MessageTest"));
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenMessageTestTask);
-	
+
 	std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
 	spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);
-	
+
 	std::shared_ptr<SaveTodayMarketFileTask> spSaveTodayMarketFileTask(new SaveTodayMarketFileTask);
 	spSaveTodayMarketFileTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveTodayMarketFileTask);
-	
+
 	std::shared_ptr<TodayMarketFileToMemoryTask> spTodayMarketFileToMemoryTask(new TodayMarketFileToMemoryTask);
 	spTodayMarketFileToMemoryTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTodayMarketFileToMemoryTask);
-	
+
 	std::shared_ptr<SaveGroupMarketTask> spSaveGroupMarketTask(new SaveGroupMarketTask);
 	spSaveGroupMarketTask->setParam("", this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveGroupMarketTask);
-	
+
 	std::shared_ptr<UpdateTodayToMemoryTask> spUpdateTodayToMemoryTask(new UpdateTodayToMemoryTask);
 	spUpdateTodayToMemoryTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
-	
+
 	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
 	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), inputDialogParam.m_editText == "1", this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
-	
+
 	std::shared_ptr<UpdateTodayRedisTask> spUpdateTodayRedisTask(new UpdateTodayRedisTask);
 	spUpdateTodayRedisTask->setParam(StockMysql::instance().allStock(), false, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayRedisTask);
-	
+
 	std::shared_ptr<SaveFilterStockTaskToMysql> spSaveAllFilterStockTaskToMysql(new SaveFilterStockTaskToMysql);
 	spSaveAllFilterStockTaskToMysql->setParam(IntDateTime(0, 0), this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToMysql);
-	
+
 	std::shared_ptr<SaveAllFilterStockTaskToRedis> spSaveAllFilterStockTaskToRedis(new SaveAllFilterStockTaskToRedis);
 	spSaveAllFilterStockTaskToRedis->setParam(&m_today, &m_today, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
-	
+
 	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 	std::vector<StrategyType> vecStrategyType;
 	vecStrategyType.push_back(SAR_RISE_BACK);
@@ -910,6 +911,9 @@ void StockClient::onEverydaySolutionButtonClicked()
 	std::shared_ptr<EverydaySolutionTask> spEverydaySolutionTask(new EverydaySolutionTask);
 	spEverydaySolutionTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spEverydaySolutionTask);
+
+	std::shared_ptr<MinimizeTask> spMinimizeTask(new MinimizeTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spMinimizeTask);
 }
 
 void StockClient::onEverydayTaskButtonClicked()
@@ -985,6 +989,9 @@ void StockClient::onEverydayTaskButtonClicked()
 		nullptr,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
+
+	std::shared_ptr<MinimizeTask> spMinimizeTask(new MinimizeTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spMinimizeTask);
 
 	//std::shared_ptr<MairubishengTask> spMairubishengTask(new MairubishengTask);
 	//spMairubishengTask->setParam(atoi(inputDialogParam.m_editText.toStdString().c_str()), this);
