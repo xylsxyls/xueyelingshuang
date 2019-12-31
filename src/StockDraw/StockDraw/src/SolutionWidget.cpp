@@ -58,20 +58,17 @@ void SolutionWidget::init()
 	QObject::connect(m_default, &COriginalButton::clicked, this, &SolutionWidget::onDefaultButtonClicked);
 
 	m_filterSize = new Label(this);
-	m_filterSize->setBackgroundColor(QColor(255, 0, 0, 255));
 	m_default1 = new Label(this);
-	m_default1->setBackgroundColor(QColor(255, 0, 0, 255));
 	m_default2 = new Label(this);
-	m_default2->setBackgroundColor(QColor(255, 0, 0, 255));
 
 	int32_t index = -1;
 	while (index++ != 5 - 1)
 	{
 		Label* buy = new Label(this);
-		buy->setBackgroundColor(QColor(255, 0, 0, 255));
+		buy->setTextColor(QColor(255, 0, 0, 255));
 		m_vecBuy.push_back(buy);
 		Label* sell = new Label(this);
-		sell->setBackgroundColor(QColor(0, 255, 0, 255));
+		sell->setTextColor(QColor(0, 255, 0, 255));
 		m_vecSell.push_back(sell);
 		COriginalButton* buyCancel = new COriginalButton(this);
 		buyCancel->setBkgColor(QColor(255, 255, 0, 255), QColor(255, 255, 0, 255), QColor(255, 255, 0, 255), QColor(255, 255, 0, 255));
@@ -91,14 +88,14 @@ void SolutionWidget::resizeEvent(QResizeEvent* eve)
 	m_time->setGeometry(20, 10, 200, 30);
 	m_size->setGeometry(280, 10, 200, 30);
 
-	m_allFund->setGeometry(30, 60, 60, 30);
-	m_sell->setGeometry(110, 60, 60, 30);
-	m_hasBuy->setGeometry(190, 60, 60, 30);
-	m_default->setGeometry(270, 60, 60, 30);
+	m_allFund->setGeometry(30, 60, 40, 30);
+	m_sell->setGeometry(80, 60, 40, 30);
+	m_hasBuy->setGeometry(130, 60, 40, 30);
+	m_default->setGeometry(180, 60, 40, 30);
 
-	m_filterSize->setGeometry(350, 60, 40, 30);
-	m_default1->setGeometry(410, 40, 150, 30);
-	m_default2->setGeometry(410, 80, 150, 30);
+	m_filterSize->setGeometry(230, 60, 30, 30);
+	m_default1->setGeometry(270, 40, 300, 30);
+	m_default2->setGeometry(270, 80, 300, 30);
 
 	int32_t index = -1;
 	while (index++ != 5 - 1)
@@ -134,7 +131,7 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 		}
 		m_vecSell[index]->setText((m_solutionWidgetParam.m_sellStock[index].first + " " +
 			m_solutionWidgetParam.m_sellStock[index].second.first.toString() + " " +
-			m_solutionWidgetParam.m_sellStock[index].second.second.toString()).c_str());
+			m_solutionWidgetParam.m_sellStock[index].second.second.toPrec(6).toString()).c_str());
 	}
 
 	if (m_solutionWidgetParam.m_buyStock.empty())
@@ -160,7 +157,7 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 	std::string defaultStock2 = GLOBAL_CONFIG[DEFAULT_STOCK_2].toString();
 
 	StockMarket market1;
-	market1.loadFromMysql(defaultStock1);
+	market1.loadFromRedis(defaultStock1);
 	market1.load();
 	if (!market1.setDate(m_solutionWidgetParam.m_date))
 	{
@@ -189,7 +186,7 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 		bollDown1.toString()).c_str());
 
 	StockMarket market2;
-	market2.loadFromMysql(defaultStock2);
+	market2.loadFromRedis(defaultStock2);
 	market2.load();
 	if (!market2.setDate(m_solutionWidgetParam.m_date))
 	{
@@ -248,13 +245,13 @@ void SolutionWidget::onHasBuyButtonClicked()
 	InputDialogParam inputDialogParam;
 	InputEx line;
 	line.m_tip = QStringLiteral("gupiao");
-	line.m_defaultText = IntDateTime().dateToString().c_str();
+	line.m_defaultText = "";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("jiage");
-	line.m_defaultText = IntDateTime().dateToString().c_str();
+	line.m_defaultText = "";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("cangwei");
-	line.m_defaultText = IntDateTime().dateToString().c_str();
+	line.m_defaultText = "";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("riqi");
 	line.m_defaultText = IntDateTime().dateToString().c_str();
@@ -276,7 +273,7 @@ void SolutionWidget::onHasBuyButtonClicked()
 	{
 		configTradeNote.push_back('|');
 	}
-	GLOBAL_CONFIG[TRADE_NOTE] = configTradeNote + stock + "," + price.toString() + "," + rate.toString() + "," + date.toString();
+	GLOBAL_CONFIG[TRADE_NOTE] = configTradeNote + stock + "," + price.toString() + "," + rate.toString() + "," + date.dateToString();
 
 	StockMarket market;
 	market.loadFromRedis(stock);
@@ -352,7 +349,7 @@ void SolutionWidget::onAllFundButtonClicked()
 {
 	InputDialogParam inputDialogParam;
 	inputDialogParam.m_editTip = QStringLiteral("«Î ‰»Î◊‹zijin");
-	inputDialogParam.m_defaultText = QStringLiteral("200000");
+	inputDialogParam.m_defaultText = GLOBAL_CONFIG[TRADE_FUND].toString().c_str();
 	inputDialogParam.m_parent = windowHandle();
 	DialogManager::instance().makeDialog(inputDialogParam);
 	if (inputDialogParam.m_result != ACCEPT_BUTTON)

@@ -48,8 +48,8 @@ void ChooseStockTask::DoTask()
 	int32_t index = sellStock.size();
 	while (index-- != 0)
 	{
-		RCSend((sellStock[index].first + "," + sellStock[index].second.second.toString()).c_str());
-		LOG_SEND_ONLY_INFO((sellStock[index].first + "," + sellStock[index].second.second.toString()).c_str());
+		RCSend(("sell " + sellStock[index].first + "," + sellStock[index].second.second.toPrec(6).toString()).c_str());
+		LOG_SEND_ONLY_INFO(("sell " + sellStock[index].first + "," + sellStock[index].second.second.toPrec(6).toString()).c_str());
 	}
 	m_stockClient->m_sellStock = sellStock;
 
@@ -59,8 +59,8 @@ void ChooseStockTask::DoTask()
 	index = buyStock.size();
 	while (index-- != 0)
 	{
-		RCSend((buyStock[index].first + "," + buyStock[index].second.second.toString()).c_str());
-		LOG_SEND_ONLY_INFO((buyStock[index].first + "," + buyStock[index].second.second.toString()).c_str());
+		RCSend(("buy " + buyStock[index].first + "," + buyStock[index].second.second.toPrec(6).toString()).c_str());
+		LOG_SEND_ONLY_INFO(("buy " + buyStock[index].first + "," + buyStock[index].second.second.toPrec(6).toString()).c_str());
 	}
 	m_stockClient->m_buyStock = buyStock;
 	if (m_stockFund == nullptr)

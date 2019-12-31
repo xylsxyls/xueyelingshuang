@@ -136,16 +136,16 @@ bool SarRiseBack::sell(const IntDateTime& date,
 		spMarket->previous();
 		stockFund->stockChg(spMarket->stock(), spMarket->day(), chg);
 		spMarket->next();
-		if (chg < 0)
+		if (chg < -3)
 		{
 			spMarket->previous();
 			spMarket->previous();
 			BigNumber buyPrice = spMarket->day()->close();
 			spMarket->next();
 			spMarket->next();
-			if (spMarket->day()->high() / "1.015" > buyPrice)
+			if (spMarket->day()->high() / "1.03" > buyPrice)
 			{
-				price = (buyPrice * "1.015").toPrec(2);
+				price = (buyPrice * "1.03").toPrec(2);
 				percent = 100;
 				score = 100;
 				return true;
