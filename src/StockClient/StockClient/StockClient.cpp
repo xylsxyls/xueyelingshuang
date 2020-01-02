@@ -824,21 +824,57 @@ void StockClient::onSaveFilterStockToRedisButtonClicked()
 
 void StockClient::onRealTestButtonClicked()
 {
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_tip = QStringLiteral("开始日期");
+	line.m_defaultText = "2019-10-08";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("结束日期");
+	line.m_defaultText = "2019-11-15";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
+	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
+
 	std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
 	std::vector<StrategyType> vecStrategyType;
 	vecStrategyType.push_back(SAR_RISE_BACK);
 	vecStrategyType.push_back(SAR_RISE_BACK);
-	spRealTestTask->setParam(AVG_FUND_HIGH_SCORE, vecStrategyType, "2019-10-08", "2019-11-15", this);
+	spRealTestTask->setParam(AVG_FUND_HIGH_SCORE, vecStrategyType, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 
 void StockClient::onOnceTestButtonClicked()
 {
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_tip = QStringLiteral("开始日期");
+	line.m_defaultText = "2019-10-08";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("结束日期");
+	line.m_defaultText = "2019-11-15";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
+	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
+
 	std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
 	std::vector<StrategyType> vecStrategyType;
 	vecStrategyType.push_back(SAR_RISE_BACK);
 	vecStrategyType.push_back(SAR_RISE_BACK);
-	spOnceTestTask->setParam(DISPOSABLE_STRATEGY, vecStrategyType, "2019-10-08", "2019-11-15", this);
+	spOnceTestTask->setParam(DISPOSABLE_STRATEGY, vecStrategyType, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 }
 

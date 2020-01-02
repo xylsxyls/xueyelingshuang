@@ -113,16 +113,6 @@ bool SarRiseBack::sell(const IntDateTime& date,
 
 	IntDateTime firstBuyDate = stockFund->firstBuyDate(spMarket->stock());
 
-	if (spMarket->day()->chgValue() > 9.5)
-	{
-		return false;
-	}
-
-	if (spMarket->day()->isLimitDown())
-	{
-		return false;
-	}
-
 	BigNumber high = spMarket->day()->high();
 	BigNumber close = spMarket->day()->close();
 	BigNumber bollup = spStockBollIndicator->day(date)->m_up;
@@ -152,21 +142,13 @@ bool SarRiseBack::sell(const IntDateTime& date,
 			}
 		}
 	}
+
 	if (chg > "100")
 	{
 		price = close;
 		percent = 100;
 		score = 90;
 		result = false;
-	}
-
-	if (spMarket->getMemoryDays(firstBuyDate, date) == 5)
-	{
-		BigNumber close = spMarket->day()->close();
-		price = close;
-		percent = 100;
-		score = 100;
-		return true;
 	}
 
 	//if (spMarket->getMemoryDays(firstBuyDate, date) == 4)
@@ -189,10 +171,29 @@ bool SarRiseBack::sell(const IntDateTime& date,
 		return true;
 	}
 
+	if (spMarket->day()->chgValue() > 9.5)
+	{
+		return false;
+	}
+
+	if (spMarket->day()->isLimitDown())
+	{
+		return false;
+	}
+
 	//4 * 1
 	//4 * 2
 	if ((bollup - bollmid) / 4 * 1 + bollmid < close && chg > 0)
 	{
+		price = close;
+		percent = 100;
+		score = 100;
+		return true;
+	}
+
+	if (spMarket->getMemoryDays(firstBuyDate, date) == 5)
+	{
+		BigNumber close = spMarket->day()->close();
 		price = close;
 		percent = 100;
 		score = 100;
