@@ -20,7 +20,7 @@ void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, Corr
 		printf("PROCESS_CLIENT_INIT, length = %d\n", length);
 		ProtoMessage message;
 		message.from(strBuffer);
-		addClientServerLoginName(message, CSystem::processNameA(sendPid));
+		addClientServerLoginName(message, CSystem::processName(sendPid));
 		std::string strMessage;
 		message.toString(strMessage);
 		std::string compressMessage;

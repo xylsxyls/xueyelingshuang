@@ -143,7 +143,7 @@ void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, Correspo
 
 void ProcessWork::send(const char* buffer, int32_t length, const std::string& processName, CorrespondParam::ProtocolId protocolId)
 {
-	std::vector<int32_t> vecPid = CSystem::processPid(CStringManager::AnsiToUnicode(processName));
+	std::vector<int32_t> vecPid = CSystem::processPid(processName);
 	if (vecPid.empty())
 	{
 		return;

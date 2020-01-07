@@ -17,7 +17,7 @@ void LogTask::DoTask()
 	m_message.getMap(m_messageMap);
 	if ((int32_t)m_messageMap[LOG_UNINIT] == (int32_t)true)
 	{
-		LogManager::instance().deleteFile();
+		LogManager::instance().deleteFile(0);
 		return;
 	}
 	if ((int32_t)m_messageMap[LOG_IS_WRITE_LOG] == (int32_t)true)
@@ -27,7 +27,8 @@ void LogTask::DoTask()
 		std::string logTime = IntDateTime(*(int32_t*)timePtr, *((int32_t*)timePtr + 1)).toString();
 		if (m_isNet)
 		{
-			LogManager::instance().print((LogManager::LogLevel)(int32_t)m_messageMap[LOG_LEVEL],
+			LogManager::instance().print(0,
+				(LogManager::LogLevel)(int32_t)m_messageMap[LOG_LEVEL],
 				m_messageMap[LOG_FILE_NAME].toString(),
 				m_messageMap[LOG_FUN_NAME].toString(),
 				m_messageMap[LOG_PROCESS_NAME].toString() + ".exe",
@@ -38,7 +39,8 @@ void LogTask::DoTask()
 				m_messageMap[LOG_BUFFER].toString().c_str());
 			return;
 		}
-		LogManager::instance().print((LogManager::LogLevel)(int32_t)m_messageMap[LOG_LEVEL],
+		LogManager::instance().print(0,
+			(LogManager::LogLevel)(int32_t)m_messageMap[LOG_LEVEL],
 			m_messageMap[LOG_FILE_NAME].toString(),
 			m_messageMap[LOG_FUN_NAME].toString(),
 			m_processName + ".exe",

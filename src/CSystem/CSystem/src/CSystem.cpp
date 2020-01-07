@@ -400,9 +400,10 @@ int32_t CSystem::GetSystemVersionNum()
 	return dwVersion;
 }
 
-int32_t CSystem::processFirstPid(const std::wstring& processName)
+int32_t CSystem::processFirstPid(const std::string& processName)
 {
-	if (processName.empty())
+	std::wstring processNameW = CSystem::AnsiToUnicode(processName);
+	if (processNameW.empty())
 	{
 		return GetCurrentProcessId();
 	}
@@ -414,7 +415,7 @@ int32_t CSystem::processFirstPid(const std::wstring& processName)
 	PROCESSENTRY32W pe = { sizeof(pe) };
 	for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
 	{
-		if (std::wstring(pe.szExeFile) == processName)
+		if (std::wstring(pe.szExeFile) == processNameW)
 		{
 			::CloseHandle(hSnapshot);
 			return pe.th32ProcessID;
@@ -424,10 +425,11 @@ int32_t CSystem::processFirstPid(const std::wstring& processName)
 	return 0;
 }
 
-std::vector<int32_t> CSystem::processPid(const std::wstring& processName)
+std::vector<int32_t> CSystem::processPid(const std::string& processName)
 {
+	std::wstring processNameW = CSystem::AnsiToUnicode(processName);
 	std::vector<int32_t> result;
-	if (processName.empty())
+	if (processNameW.empty())
 	{
 		result.push_back(GetCurrentProcessId());
 		return result;
@@ -440,7 +442,7 @@ std::vector<int32_t> CSystem::processPid(const std::wstring& processName)
 	PROCESSENTRY32W pe = { sizeof(pe) };
 	for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
 	{
-		if (std::wstring(pe.szExeFile) == processName)
+		if (std::wstring(pe.szExeFile) == processNameW)
 		{
 			result.push_back(pe.th32ProcessID);
 		}
@@ -449,7 +451,7 @@ std::vector<int32_t> CSystem::processPid(const std::wstring& processName)
 	return result;
 }
 
-std::string CSystem::processNameA(int32_t pid)
+std::string CSystem::processName(int32_t pid)
 {
 	std::string result;
 	PROCESSENTRY32 pe32 = { 0 };
@@ -811,6 +813,52 @@ std::string CSystem::commonFile(const std::string& name)
 		_findclose(hFile);
 	}
 	return path + name + strVersion;
+}
+
+std::string CSystem::UnicodeToAnsi(const std::wstring& wstrSrc)
+{
+	// 分配目标空间, 一个16位Unicode字符最多可以转为4个字节
+	int iAllocSize = static_cast<int>(wstrSrc.size() * 4 + 10);
+	char* pwszBuffer = new char[iAllocSize];
+	if (NULL == pwszBuffer)
+	{
+		return "";
+	}
+	int iCharsRet = ::WideCharToMultiByte(CP_ACP, 0, wstrSrc.c_str(),
+		static_cast<int>(wstrSrc.size()),
+		pwszBuffer, iAllocSize, NULL, NULL);
+	std::string strRet;
+	if (0 < iCharsRet)
+	{
+		strRet.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
+	}
+
+	delete[] pwszBuffer;
+
+	return strRet;
+}
+
+std::wstring CSystem::AnsiToUnicode(const std::string& strSrc)
+{
+	// 分配目标空间
+	int iAllocSize = static_cast<int>(strSrc.size() + 10);
+	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
+	if (NULL == pwszBuffer)
+	{
+		return L"";
+	}
+	int iCharsRet = MultiByteToWideChar(CP_ACP, 0, strSrc.c_str(),
+		static_cast<int>(strSrc.size()),
+		pwszBuffer, iAllocSize);
+	std::wstring wstrRet;
+	if (0 < iCharsRet)
+	{
+		wstrRet.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
+	}
+
+	delete[] pwszBuffer;
+
+	return wstrRet;
 }
 
 //int main()

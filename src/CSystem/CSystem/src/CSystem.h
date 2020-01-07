@@ -91,11 +91,11 @@ public:
 	//?获取操作系统版本号
 	static int32_t GetSystemVersionNum();
 	//获取第一个和名字匹配的进程pid，填空表示获取本进程
-	static int32_t processFirstPid(const std::wstring& processName = L"");
+	static int32_t processFirstPid(const std::string& processName = "");
 	//?获取进程PID，耗时10毫秒左右，填空表示获取本进程
-	static std::vector<int32_t> processPid(const std::wstring& processName = L"");
+	static std::vector<int32_t> processPid(const std::string& processName = "");
 	//?获取进程名，耗时10毫秒左右
-	static std::string processNameA(int32_t pid);
+	static std::string processName(int32_t pid);
 	//?获取进程名，耗时10毫秒左右
 	static std::wstring processNameW(int32_t pid);
 	//?获取电脑名
@@ -130,6 +130,10 @@ public:
 	static std::string timetToStr(time_t timet, bool isLocal = true);
 	//获取common中的文件名路径
 	static std::string commonFile(const std::string& name);
+	//unicode转ansi
+	static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
+	//ansi转unicode
+	static std::wstring AnsiToUnicode(const std::string& strSrc);
 
 public:
     static bool ifRedirFrobid;

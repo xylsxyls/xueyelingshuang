@@ -9,7 +9,7 @@
 LogReceive::LogReceive():
 m_netClientManagerPid(0)
 {
-	m_netClientManagerPid = CSystem::processPid("NetClientManager1.0.exe");
+	m_netClientManagerPid = CSystem::processFirstPid("NetClientManager1.0.exe");
 	auto screenThreadId = CTaskThreadManager::Instance().Init();
 	auto logThreadId = CTaskThreadManager::Instance().Init();
 	auto netThreadId = CTaskThreadManager::Instance().Init();

@@ -22,12 +22,7 @@ void ClientPackageManager::addClientPackage(ProtoMessage& message, uv_tcp_t* sen
 	std::map<int32_t, Variant> predefineMap;
 	message.getMap(predefineMap, PREDEFINE);
 	std::string serverName = predefineMap[SERVER_NAME].toString();
-	int32_t pid = 0;
-	std::vector<int32_t> vecPid = CSystem::processPid(CStringManager::AnsiToUnicode(serverName));
-	if (!vecPid.empty())
-	{
-		pid = vecPid[0];
-	}
+	int32_t pid = CSystem::processFirstPid(serverName);
 	m_serverPackageMap[m_clientId] = ClientPackage(predefineMap[CLIENT_NAME].toString(),
 		serverName,
 		pid,

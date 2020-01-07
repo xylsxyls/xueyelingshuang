@@ -7,6 +7,7 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "CDump/CDumpAPI.h"
+#include "LogManager/LogManagerAPI.h"
 
 SharedMemory* pid = nullptr;
 
@@ -29,10 +30,11 @@ int32_t main()
 {
 	CDump::declareDumpFile();
 	pid = SharedMemory::createPid();
+	LogManager::instance().init();
 	LogReceive logReceive;
 	ProcessWork::instance().initReceive(&logReceive);
 	NetSender::instance().init();
-	printf("ComputerName = %s, pid = %d\n", CSystem::getComputerName().c_str(), CSystem::processPid());
+	printf("ComputerName = %s, pid = %d\n", CSystem::getComputerName().c_str(), CSystem::processFirstPid());
 	while (true) Sleep(1000);
 	return 0;
 }

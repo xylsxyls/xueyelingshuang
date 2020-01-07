@@ -7,7 +7,6 @@
 void ClientManagerReceive::serverConnected(uv_tcp_t* server)
 {
 	printf("serverConnected = %d\n", server);
-	m_netClient->heart();
 }
 
 void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
@@ -24,11 +23,7 @@ void ClientManagerReceive::receive(uv_tcp_t* sender, char* buffer, int32_t lengt
 		message.from(strMessage);
 		std::map<int32_t, Variant> predefineMap;
 		message.getMap(predefineMap, PREDEFINE);
-		std::vector<int32_t> vecClientPid = CSystem::processPid(CStringManager::AnsiToUnicode(predefineMap[CLIENT_NAME].toString()));
-		if (!vecClientPid.empty())
-		{
-			clientPid = vecClientPid[0];
-		}
+		clientPid = CSystem::processFirstPid(predefineMap[CLIENT_NAME].toString());
 		addClientIdMap(sender, clientPid);
 		std::string strMessage;
 		message.toString(strMessage);
