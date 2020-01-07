@@ -23,7 +23,7 @@ int32_t main()
 {
 	CDump::declareDumpFile();
 
-	if (CSystem::deleteFile("LogTest1.0.log"))
+	if (CSystem::deleteFile("LogTest1.0.exe.log"))
 	{
 		return 0;
 	}
