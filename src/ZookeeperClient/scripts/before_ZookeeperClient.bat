@@ -22,12 +22,12 @@ xcopy /y /i /r /s "%xueyelingshuang%tools\zookeeper\include\*" "%xueyelingshuang
 
 if "%1" == "32" (goto ZookeeperClient_32) else (goto ZookeeperClient_64)
 :ZookeeperClient_32
-if "%2" == "release" (goto ZookeeperClient_release) else (goto ZookeeperClient_debug)
+if "%3" == "release" (goto ZookeeperClient_release) else (goto ZookeeperClient_debug)
 :ZookeeperClient_release
 xcopy /y /i /r /s "%xueyelingshuang%tools\zookeeper\win32\release\*.lib" "%xueyelingshuang%lib\"
 goto ZookeeperClient_end
 :ZookeeperClient_64
-if "%2" == "release" (goto ZookeeperClient_64_release) else (goto ZookeeperClient_64_debug)
+if "%3" == "release" (goto ZookeeperClient_64_release) else (goto ZookeeperClient_64_debug)
 :ZookeeperClient_64_debug
 xcopy /y /i /r /s "%xueyelingshuang%tools\zookeeper\win64\debug\*.lib" "%xueyelingshuang%lib\"
 goto ZookeeperClient_end

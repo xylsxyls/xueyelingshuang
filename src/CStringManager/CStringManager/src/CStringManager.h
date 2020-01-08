@@ -51,6 +51,8 @@ public:
 
 	static size_t Replace(std::string& str, char ch1, char ch2);
 
+#ifdef _WIN32
+
 	static void Format(std::string& str, const char* fmt, ...);
 
 	static std::string Format(const char* fmt, ...);
@@ -58,6 +60,8 @@ public:
 	static void Format(std::wstring& str, const wchar_t* fmt, ...);
 
 	static std::wstring Format(const wchar_t* fmt, ...);
+
+#endif
 
 	static void MakeReverse(std::string& str);
 
@@ -72,6 +76,8 @@ public:
 	//取出两个字符串中间的字符串，不包括头尾
 	static std::string GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString);
 
+#ifdef _WIN32
+
 	//?字符串转无符号长整型
 	static uint64_t atoui64(const char* str);
 
@@ -80,4 +86,13 @@ public:
 	static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
 
 	static std::wstring AnsiToUnicode(const std::string& strSrc);
+
+#else
+	static int32_t ansiToUtf8(const char* inbuf, size_t inlen, char* outbuf, size_t outlen);
+
+#endif
+
+    static std::string UrlEncode(const std::string& sIn);
+
+    static std::string UrlDecode(const std::string& sIn);
 };
