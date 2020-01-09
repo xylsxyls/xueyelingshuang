@@ -2,7 +2,7 @@
 #include "SQLite/SQLiteAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "UserConfigManager.h"
-#include "CGetPath/CGetPathAPI.h"
+#include "CSystem/CSystemAPI.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 
 ConfigManager::ConfigManager():
@@ -116,7 +116,7 @@ void ConfigManager::initSQLite()
 {
 	if (m_databasePath == "")
 	{
-		m_databasePath = CGetPath::GetCurrentExePath() + CGetPath::GetCurrentExeName() + ".db";
+		m_databasePath = CSystem::GetCurrentExePath() + CSystem::GetCurrentExeName() + ".db";
 	}
 	m_spConfig = nullptr;
 	m_spConfig.reset(new SQLite(m_databasePath));

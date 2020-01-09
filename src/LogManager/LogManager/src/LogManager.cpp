@@ -1,5 +1,4 @@
 #include "LogManager.h"
-#include "CGetPath/CGetPathAPI.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -9,7 +8,7 @@
 LogManager::LogManager():
 m_processMutex(nullptr)
 {
-	m_exeName = CGetPath::GetCurrentExeName();
+	m_exeName = CSystem::GetCurrentExeName();
 	m_exeName.append(".exe");
 	m_processMutex = new ProcessReadWriteMutex("LogManager_Mutex");
 }
@@ -35,7 +34,7 @@ void LogManager::init(int32_t fileId, const std::string& path)
 	std::string logPath;
 	if (fileId == 0)
 	{
-		logPath = CGetPath::GetCurrentExePath() + m_exeName + ".log";
+		logPath = CSystem::GetCurrentExePath() + m_exeName + ".log";
 	}
 	else
 	{

@@ -15,19 +15,19 @@ goto DllRelyTest_end
 :DllRelyTest_end
 
 ::--------------------------------------------------------------------
-set CGetPath_dlllib=lib
-set CGetPath_bit=%1
-set CGetPath_debugRelease=%3
-set CGetPath_allSame=%4
-if "%4" == "same" (goto CGetPath_callSame) else (goto CGetPath_callSimple)
-:CGetPath_callSame
-set CGetPath_dlllib=%2
-call "%CLOUD_REBUILD%" CGetPath %CGetPath_bit% %CGetPath_dlllib% %CGetPath_debugRelease% %CGetPath_allSame%
-goto CGetPath_end
-:CGetPath_callSimple
-call "%CLOUD_REBUILD%" CGetPath %CGetPath_bit% %CGetPath_dlllib% %CGetPath_debugRelease%
-goto CGetPath_end
-:CGetPath_end
+set CSystem_dlllib=lib
+set CSystem_bit=%1
+set CSystem_debugRelease=%3
+set CSystem_allSame=%4
+if "%4" == "same" (goto CSystem_callSame) else (goto CSystem_callSimple)
+:CSystem_callSame
+set CSystem_dlllib=%2
+call "%CLOUD_REBUILD%" CSystem %CSystem_bit% %CSystem_dlllib% %CSystem_debugRelease% %CSystem_allSame%
+goto CSystem_end
+:CSystem_callSimple
+call "%CLOUD_REBUILD%" CSystem %CSystem_bit% %CSystem_dlllib% %CSystem_debugRelease%
+goto CSystem_end
+:CSystem_end
 
 ::--------------------------------------------------------------------
 set ReadWriteMutex_dlllib=lib
