@@ -1,0 +1,18 @@
+docker run --name=ingress_build --privileged --net=host --restart=on-failure -v /etc/localtime:/etc/localtime -v /home/sensecrowd:/share -it analyzer_build:latest /bin/bash
+
+docker run --name=ingress_build --privileged --net=host --restart=on-failure -v /etc/localtime:/etc/localtime -v /home/sensecrowd/ingress_package/stream_ingress_service:/stream_ingress_service -it analyzer_build:latest /bin/bash
+
+docker run --name=ingress1 --privileged --net=host --restart=on-failure -v /etc/localtime:/etc/localtime -v /home/sensecrowd/ingress_package/stream_ingress_service:/stream_ingress_service -d analyzer_build:latest /stream_ingress_service/gb28181bin/run.sh
+
+#!bin/bash
+export LD_LIBRARY_PATH=${SHELL_DIR}/../libs
+./stream_ingress_service ../configs/config1.json
+
+sudo docker run --name=ingress_build --privileged --net=host --restart=on-failure -v /etc/localtime:/etc/localtime -v /home/sensecrowd:/share -it analyzer_build:latest /bin/bash
+sudo docker run --name=ingress_build --privileged --net=host --restart=on-failure -v /etc/localtime:/etc/localtime -v /home/yangnan:/share -it analyzer_build:10.0-cudnn7-devel-ubuntu14.04 /bin/bash
+sudo docker run --name=ingress_build --privileged --net=host --restart=on-failure -v /etc/localtime:/etc/localtime -v /home/yangnan:/share -v /data/yangnan:/sharedata -it analyzer_build:10.0-cudnn7-devel-ubuntu14.04 /bin/bash
+sudo docker run --name nginx --privileged --net=host --restart on-failure -v /etc/localtime:/etc/localtime -v /home/sensecrowd/nginx.conf:/etc/nginx/nginx.conf -v /data1/images:/images -d nginx:1.13.12
+sudo docker stop ingress_build
+sudo docker rm ingress_build
+sudo docker start 74cb79ab18fe
+sudo docker exec -it ingress_build /bin/bash

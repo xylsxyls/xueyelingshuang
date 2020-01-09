@@ -1,0 +1,3 @@
+nginx -c /usr/local/nginx/conf/nginx.conf
+service nginx restart
+systemctl stop nginx.service

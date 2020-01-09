@@ -1,0 +1,3 @@
+/etc/hosts
+/etc/resolv.conf
+两个文件中需要配置不同的域名

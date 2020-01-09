@@ -1,0 +1,4 @@
+char szFilePath[1024] = {};
+	::GetModuleFileNameA(NULL, szFilePath, 1024);
+	std::string path = szFilePath;
+	path = path.substr(0, (int32_t)path.find_last_of("/\\") + 1);
