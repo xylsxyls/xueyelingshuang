@@ -321,7 +321,7 @@ void ZookeeperClient::Watcher(zhandle_t* zkh, int type, int state, const char* p
 			printf("session connected\n");
             zm->m_isConnect = true;
             zm->ConnectEvent(true);
-            zm->m_sem.notify();
+            zm->m_sem.signal();
 		}
 		else if (state == ZOO_CONNECTING_STATE)
 		{

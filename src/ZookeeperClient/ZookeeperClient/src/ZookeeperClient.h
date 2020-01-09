@@ -191,9 +191,9 @@ private:
 	std::map<std::string, std::string> m_nodeValueMap;
 	std::map<std::string, std::set<std::string>> m_childrenNodeMap;
 	std::atomic<bool> m_isListenChildrenNodeChange;
+	Semaphore m_sem;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 	zhandle_t* m_handle;
-	Semaphore m_sem;
 };
