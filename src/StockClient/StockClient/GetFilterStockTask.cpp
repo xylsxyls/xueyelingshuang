@@ -66,6 +66,13 @@ void GetFilterStockTask::DoTask()
 		Sleep(50);
 		CMouse::MoveAbsolute(xyls::Point(782, 527), 0);
 		CMouse::LeftClick();
+		if (m_regain)
+		{
+			Sleep(50);
+			CKeyboard::KeyPress(CKeyboard::Left);
+			Sleep(50);
+			CKeyboard::InputString("\n");
+		}
 		Sleep(2000);
 	}
 	ShellExecuteA(NULL, "open", filePath.c_str(), NULL, NULL, SW_SHOW);

@@ -12,7 +12,7 @@ m_unfindTime(0)
 void OpenProcessTask::DoTask()
 {
 	std::string fileName = CSystem::GetName(m_path, 1);
-	if (CSystem::processFirstPid(CStringManager::AnsiToUnicode(fileName)) != 0)
+	if (CSystem::processFirstPid(fileName) != 0)
 	{
 		if (m_findTime != 0)
 		{

@@ -299,9 +299,9 @@ void StockClient::closeEvent(QCloseEvent* eve)
 	setVisible(false);
 	CTaskThreadManager::Instance().UninitAll();
 #ifdef _DEBUG
-	CSystem::killProcess(CSystem::processPid(L"StockClientd.exe")[0]);
+	CSystem::killProcess(CSystem::processFirstPid("StockClientd.exe"));
 #else
-	CSystem::killProcess(CSystem::processPid(L"StockClient.exe")[0]);
+	CSystem::killProcess(CSystem::processFirstPid("StockClient.exe"));
 #endif
 }
 

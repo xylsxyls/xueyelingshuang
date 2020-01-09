@@ -31,7 +31,7 @@ void StockMysql::init()
 			system("pause");
 		}
 	}
-	if (!CSystem::processPid(L"redis-server.exe").empty())
+	if (!CSystem::processPid("redis-server.exe").empty())
 	{
 		if (!m_redis.connect("127.0.0.1"))
 		{
@@ -40,7 +40,7 @@ void StockMysql::init()
 		}
 	}
 
-	if (!CSystem::processPid(L"mysqld.exe").empty())
+	if (!CSystem::processPid("mysqld.exe").empty())
 	{
 		if (!m_mysql.connect("127.0.0.1", 3306, "root", ""))
 		{
