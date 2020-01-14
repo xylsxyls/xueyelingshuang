@@ -698,18 +698,16 @@ void StockClient::onChooseStockButtonClicked()
 		return;
 	}
 
-	RCSend("time = %d", ::GetTickCount());
-
 	std::shared_ptr<OpenProcessTask> spOpenMessageTestTask(new OpenProcessTask);
 	spOpenMessageTestTask->setParam(CSystem::commonFile("MessageTest"));
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenMessageTestTask);
 
-	std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
-	spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
-	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);
-
 	if (inputDialogParam.m_vecInputEx[1].m_editText.toStdString() == "1")
 	{
+		std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
+		spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);
+
 		std::shared_ptr<SaveTodayMarketFileTask> spSaveTodayMarketFileTask(new SaveTodayMarketFileTask);
 		spSaveTodayMarketFileTask->setParam(this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveTodayMarketFileTask);
