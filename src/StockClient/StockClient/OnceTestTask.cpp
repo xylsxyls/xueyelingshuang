@@ -13,7 +13,7 @@ m_stockClient(nullptr)
 void OnceTestTask::DoTask()
 {
 	StockOnceRetest stockOnceRetest;
-	stockOnceRetest.init(m_solutionType, m_vecStrategyType, m_beginTime, m_endTime, "2000000000", true);
+	stockOnceRetest.init(m_solutionType, m_vecStrategyType, m_beginTime, m_endTime, "20000000000", true);
 	stockOnceRetest.load();
 	stockOnceRetest.run();
 }
