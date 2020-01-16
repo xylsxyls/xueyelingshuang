@@ -881,7 +881,7 @@ void StockClient::onEverydaySolutionButtonClicked()
 	InputDialogParam inputDialogParam;
 	InputEx line;
 	line.m_tip = QStringLiteral("是否重新获取过滤文件");
-	line.m_defaultText = QStringLiteral("1");
+	line.m_defaultText = QStringLiteral("0");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("日期");
 	line.m_defaultText = IntDateTime().dateToString().c_str();
@@ -893,6 +893,9 @@ void StockClient::onEverydaySolutionButtonClicked()
 	{
 		return;
 	}
+
+	RCSend("time = %d", ::GetTickCount());
+
 	bool regainFilter = atoi(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str()) == 1;
 	m_today = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 

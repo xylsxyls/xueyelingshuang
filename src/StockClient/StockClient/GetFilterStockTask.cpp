@@ -74,41 +74,44 @@ void GetFilterStockTask::DoTask()
 			CKeyboard::InputString("\n");
 		}
 		Sleep(2000);
+		//CSystem::deleteFile((CSystem::GetCurrentExePath() + m_today.dateToString() + ".xls").c_str());
+		//Sleep(50);
+		CMouse::MoveAbsolute(xyls::Point(10, 98), 0);
+		CMouse::LeftClick();
 	}
-	ShellExecuteA(NULL, "open", filePath.c_str(), NULL, NULL, SW_SHOW);
-	Sleep(4000);
-	CMouse::MoveAbsolute(xyls::Point(77, 190), 0);
-	CMouse::LeftClick();
-	Sleep(100);
-	CKeyboard::KeyDown(CKeyboard::Ctrl);
-	CKeyboard::KeyDown('C');
-	CKeyboard::KeyUp(CKeyboard::Ctrl);
-	CKeyboard::KeyUp('C');
-	Sleep(3000);
-	std::string data = CSystem::GetClipboardData(m_hWnd);
-	m_stockClient->m_allFilterStock = CStringManager::split(data, "\r\n");
-	if (m_stockClient->m_allFilterStock.empty())
+	if (m_regain || m_stockClient->m_allFilterStock.empty())
 	{
-		RCSend("filter stock empty");
-		return;
+		ShellExecuteA(NULL, "open", filePath.c_str(), NULL, NULL, SW_SHOW);
+		Sleep(4000);
+		CMouse::MoveAbsolute(xyls::Point(77, 190), 0);
+		CMouse::LeftClick();
+		Sleep(100);
+		CKeyboard::KeyDown(CKeyboard::Ctrl);
+		CKeyboard::KeyDown('C');
+		CKeyboard::KeyUp(CKeyboard::Ctrl);
+		CKeyboard::KeyUp('C');
+		Sleep(3000);
+		std::string data = CSystem::GetClipboardData(m_hWnd);
+		m_stockClient->m_allFilterStock = CStringManager::split(data, "\r\n");
+		if (m_stockClient->m_allFilterStock.empty())
+		{
+			RCSend("filter stock empty");
+			return;
+		}
+		m_stockClient->m_allFilterStock.erase(m_stockClient->m_allFilterStock.begin());
+		m_stockClient->m_allFilterStock.pop_back();
+		int32_t index = -1;
+		while (index++ != m_stockClient->m_allFilterStock.size() - 1)
+		{
+			m_stockClient->m_allFilterStock[index] = CStringManager::split(m_stockClient->m_allFilterStock[index], ".")[0];
+		}
+		std::sort(m_stockClient->m_allFilterStock.begin(), m_stockClient->m_allFilterStock.end());
+		CSystem::setClipboardData(m_hWnd, "");
+		Sleep(1000);
+		CMouse::MoveAbsolute(xyls::Point(1903, 7), 0);
+		CMouse::LeftClick();
+		Sleep(500);
 	}
-	m_stockClient->m_allFilterStock.erase(m_stockClient->m_allFilterStock.begin());
-	m_stockClient->m_allFilterStock.pop_back();
-	int32_t index = -1;
-	while (index++ != m_stockClient->m_allFilterStock.size() - 1)
-	{
-		m_stockClient->m_allFilterStock[index] = CStringManager::split(m_stockClient->m_allFilterStock[index], ".")[0];
-	}
-	std::sort(m_stockClient->m_allFilterStock.begin(), m_stockClient->m_allFilterStock.end());
-	CSystem::setClipboardData(m_hWnd, "");
-	Sleep(1000);
-	CMouse::MoveAbsolute(xyls::Point(1903, 7), 0);
-	CMouse::LeftClick();
-	Sleep(500);
-	//CSystem::deleteFile((CSystem::GetCurrentExePath() + m_today.dateToString() + ".xls").c_str());
-	//Sleep(50);
-	CMouse::MoveAbsolute(xyls::Point(10, 98), 0);
-	CMouse::LeftClick();
 }
 
 void GetFilterStockTask::setParam(HWND hWnd, const IntDateTime& today, bool regain, StockClient* stockClient)
