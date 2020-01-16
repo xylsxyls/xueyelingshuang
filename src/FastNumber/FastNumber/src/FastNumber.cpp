@@ -1,5 +1,6 @@
 #include "FastNumber.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include <math.h>
 
 //num*10µÄexp´Î·½
 static void TenExp(int64_t& num, int32_t exp)
@@ -175,6 +176,11 @@ FastNumber FastNumber::operator -- ()
 	m_num = toString();
 #endif
 	return *this;
+}
+
+FastNumber FastNumber::pow(const FastNumber& num)
+{
+	return ::pow(atof(toString().c_str()), atof(num.toString().c_str()));
 }
 
 FastNumber FastNumber::operator ++ (int)

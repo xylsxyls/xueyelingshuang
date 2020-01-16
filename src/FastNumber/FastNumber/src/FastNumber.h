@@ -106,6 +106,8 @@ public:
 	FastNumber operator ++ (int);//后++
 	FastNumber operator -- (int);//后--
 
+	FastNumber pow(const FastNumber& num);
+
 	std::string toString() const;
 
 	/** 返回数若为除数，且为0时不崩溃，除后返回0，含有精度

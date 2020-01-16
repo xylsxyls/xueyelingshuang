@@ -1,6 +1,7 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "StockStrategy/StockStrategyAPI.h"
+#include "BigNumber/BigNumberAPI.h"
 
 class Strategy;
 class StockMarket;
@@ -8,7 +9,6 @@ class StockWrIndicator;
 class StockRsiIndicator;
 class StockSarIndicator;
 class StockBollIndicator;
-class BigNumber;
 
 class StockEveryTestTask : public CTask
 {
