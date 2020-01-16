@@ -5,3 +5,7 @@ call "%CLOUD_REBUILD%" StockMarket 32 dll release only
 call "%CLOUD_REBUILD%" StockIndicator 32 dll release only
 call "%CLOUD_REBUILD%" StockDraw 32 dll release only
 call "%CLOUD_REBUILD%" StockFund 32 dll release only
+call "%CLOUD_REBUILD%" StockStrategy 32 dll release only
+call "%CLOUD_REBUILD%" StockSolution 32 dll release only
+call "%CLOUD_REBUILD%" StockTrade 32 dll release only
+call "%CLOUD_REBUILD%" StockRetest 32 dll release only
