@@ -984,7 +984,7 @@ void StockClient::onEverydayHelperButtonClicked()
 		const std::vector<std::string>& vecStockInfo = CStringManager::split(*itTradeNote, ",");
 		const std::string& stock = vecStockInfo[0];
 		BigNumber price = vecStockInfo[1].c_str();
-		StockIndicator::instance().loadCalcFromRedis(stock, m_today, m_today);
+		StockIndicator::instance().loadIndicatorFromRedis(stock, m_today, m_today);
 		std::shared_ptr<StockBollIndicator> spBollIndicator = StockIndicator::instance().boll();
 		spBollIndicator->load();
 		std::shared_ptr<StockBoll> spBoll = spBollIndicator->day(m_today);
