@@ -51,6 +51,7 @@ private slots:
 	void onRealTestButtonClicked();
 	void onOnceTestButtonClicked();
 	void onEverydaySolutionButtonClicked();
+	void onEverydayHelperButtonClicked();
 	void onEverydayTaskButtonClicked();
 
 public:
@@ -122,6 +123,8 @@ private:
 	COriginalButton* m_onceTestButton;
 	//每日策略
 	COriginalButton* m_everydaySolutionButton;
+	//每日帮助
+	COriginalButton* m_everydayHelperButton;
 	//每日任务
 	COriginalButton* m_everydayTaskButton;
 };

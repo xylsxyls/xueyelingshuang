@@ -65,6 +65,7 @@ StockClient::StockClient(QWidget* parent)
 	m_realTestButton(nullptr),
 	m_onceTestButton(nullptr),
 	m_everydaySolutionButton(nullptr),
+	m_everydayHelperButton(nullptr),
 	m_everydayTaskButton(nullptr)
 {
 	ui.setupUi(this);
@@ -89,6 +90,7 @@ StockClient::StockClient(QWidget* parent)
 	m_realTestButton = new COriginalButton(this);
 	m_onceTestButton = new COriginalButton(this);
 	m_everydaySolutionButton = new COriginalButton(this);
+	m_everydayHelperButton = new COriginalButton(this);
 	m_everydayTaskButton = new COriginalButton(this);
 	init();
 }
@@ -213,6 +215,10 @@ void StockClient::init()
 	m_everydaySolutionButton->setText(QStringLiteral("每日方案"));
 	QObject::connect(m_everydaySolutionButton, &COriginalButton::clicked, this, &StockClient::onEverydaySolutionButtonClicked);
 
+	m_everydayHelperButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_everydayHelperButton->setText(QStringLiteral("每日帮助"));
+	QObject::connect(m_everydayHelperButton, &COriginalButton::clicked, this, &StockClient::onEverydayHelperButtonClicked);
+
 	m_everydayTaskButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_everydayTaskButton->setText(QStringLiteral("每日任务"));
 	QObject::connect(m_everydayTaskButton, &COriginalButton::clicked, this, &StockClient::onEverydayTaskButtonClicked);
@@ -279,6 +285,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_realTestButton);
 	vecButton.push_back(m_onceTestButton);
 	vecButton.push_back(m_everydaySolutionButton);
+	vecButton.push_back(m_everydayHelperButton);
 	vecButton.push_back(m_everydayTaskButton);
 
 	int32_t cowCount = 4;
@@ -957,6 +964,40 @@ void StockClient::onEverydaySolutionButtonClicked()
 	std::shared_ptr<EverydaySolutionTask> spEverydaySolutionTask(new EverydaySolutionTask);
 	spEverydaySolutionTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spEverydaySolutionTask);
+}
+
+void StockClient::onEverydayHelperButtonClicked()
+{
+	if (m_today.empty())
+	{
+		return;
+	}
+	std::string configTradeNote = GLOBAL_CONFIG[TRADE_NOTE].toString();
+	if (configTradeNote.empty())
+	{
+		return;
+	}
+	std::string result;
+	std::vector<std::string> vecTradeNote = CStringManager::split(configTradeNote, "|");
+	for (auto itTradeNote = vecTradeNote.begin(); itTradeNote != vecTradeNote.end(); ++itTradeNote)
+	{
+		const std::vector<std::string>& vecStockInfo = CStringManager::split(*itTradeNote, ",");
+		const std::string& stock = vecStockInfo[0];
+		BigNumber price = vecStockInfo[1].c_str();
+		StockIndicator::instance().loadCalcFromRedis(stock, m_today, m_today);
+		std::shared_ptr<StockBollIndicator> spBollIndicator = StockIndicator::instance().boll();
+		spBollIndicator->load();
+		std::shared_ptr<StockBoll> spBoll = spBollIndicator->day(m_today);
+		BigNumber firstPrice = (price * "1.003").toPrec(2, BigNumber::ROUND_UP);
+		BigNumber secondPrice = ((spBoll->m_up - spBoll->m_mid) / "100.0" * 20 + spBoll->m_mid).toPrec(2, BigNumber::ROUND_UP);
+		BigNumber thirdPrice = ((spBoll->m_up - spBoll->m_mid) / "100.0" * 80 + spBoll->m_mid).toPrec(2, BigNumber::ROUND_UP);
+		result += (stock + " " + firstPrice.toString() + " " + secondPrice.toString() + " " + thirdPrice.toString() + "\n");
+	}
+	result.pop_back();
+	TipDialogParam tipDialogParam;
+	tipDialogParam.m_tip = result.c_str();
+	tipDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(tipDialogParam);
 }
 
 void StockClient::onEverydayTaskButtonClicked()
