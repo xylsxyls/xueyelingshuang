@@ -156,6 +156,7 @@ void StockFund::free(const BigNumber& rate)
 BigNumber StockFund::allFund(const std::map<std::string, std::shared_ptr<StockDay>>& allOwnedStockDayData)
 {
 	//IntDateTime lastTime = date;
+	IntDateTime date(0, 0);
 	BigNumber stockFund = 0;
 	for (auto itStock = m_stock.begin(); itStock != m_stock.end(); ++itStock)
 	{
@@ -186,10 +187,11 @@ BigNumber StockFund::allFund(const std::map<std::string, std::shared_ptr<StockDa
 			return 0;
 		}
 		stockFund = stockFund + itDayDate->second->close() * position;
+		date = itDayDate->second->date();
 	}
 	BigNumber allFund = stockFund + m_available + m_freeze;
 	std::string log;
-	log.append("目前总zichan：" + allFund.toString());
+	log.append("日期:" + date.dateToString() + "，目前总zichan：" + allFund.toString());
 	m_stockLog.push_back(log);
 	return allFund;
 }
