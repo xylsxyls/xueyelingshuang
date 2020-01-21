@@ -40,7 +40,7 @@ void ChooseStockTask::DoTask()
 	}
 	
 	StockTrade stockTrade;
-	stockTrade.init(m_date - 5 * 86400, m_date, m_allStock, m_solutionType, m_vecStrategyType);
+	stockTrade.init(m_date - 15 * 86400, m_date, m_allStock, m_solutionType, m_vecStrategyType);
 	stockTrade.load();
 
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
