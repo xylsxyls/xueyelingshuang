@@ -50,7 +50,7 @@ void GetFilterStockTask::DoTask()
 		Sleep(5000);
 		CMouse::MoveAbsolute(xyls::Point(423, 303), 0);
 		CMouse::LeftClick();
-		Sleep(1000);
+		Sleep(8000);
 		CSystem::setClipboardData(m_hWnd, m_today.dateToString() + ".xls");
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('V');
