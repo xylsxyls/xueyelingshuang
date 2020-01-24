@@ -26,7 +26,7 @@ void StockMysql::init()
 {
 	if (CSystem::GetSystemVersionNum() < 655360)
 	{
-		if (!m_mysql.connect("192.168.1.2", 3306, "root", ""))
+		if (!m_mysql.connect("192.168.1.9", 3306, "root", ""))
 		{
 			::MessageBox(nullptr, "数据库连接失败\n", nullptr, 0);
 			system("pause");
