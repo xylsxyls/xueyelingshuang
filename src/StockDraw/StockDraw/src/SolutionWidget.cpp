@@ -9,6 +9,7 @@
 #include "StockMarket/StockMarketAPI.h"
 #include "StockIndicator/StockIndicatorAPI.h"
 #include "StockMysql/StockMysqlAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 SolutionWidget::SolutionWidget(QWidget* widget):
 m_time(nullptr),
@@ -138,10 +139,10 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 			break;
 		}
 		const std::string& stock = m_solutionWidgetParam.m_sellStock[index].first;
-		m_vecSell[index]->setText((stock + " " +
-			mapName[stock] +
-			m_solutionWidgetParam.m_sellStock[index].second.first.toString() + " " +
-			m_solutionWidgetParam.m_sellStock[index].second.second.toPrec(2).toString()).c_str());
+		m_vecSell[index]->setText(QString::fromStdString(stock + " ") +
+			QString::fromStdWString(CStringManager::AnsiToUnicode(mapName[stock])) + " " +
+			QString::fromStdString(m_solutionWidgetParam.m_sellStock[index].second.first.toString() + " ") +
+			QString::fromStdString(m_solutionWidgetParam.m_sellStock[index].second.second.toPrec(2).toString()));
 	}
 
 	if (m_solutionWidgetParam.m_buyStock.empty())
@@ -158,10 +159,10 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 			break;
 		}
 		const std::string& stock = m_solutionWidgetParam.m_buyStock[index].first;
-		m_vecBuy[index]->setText((stock + " " +
-			mapName[stock] +
-			m_solutionWidgetParam.m_buyStock[index].second.first.toString() + " " + 
-			(1 / allPersent.toPrec(6)).toPrec(2).toString()).c_str());
+		m_vecBuy[index]->setText(QString::fromStdString(stock + " ") +
+			QString::fromStdWString(CStringManager::AnsiToUnicode(mapName[stock])) + " " +
+			QString::fromStdString(m_solutionWidgetParam.m_buyStock[index].second.first.toString() + " ") +
+			QString::fromStdString((1 / allPersent.toPrec(6)).toPrec(2).toString()));
 		allPersent = allPersent - 1;
 	}
 
