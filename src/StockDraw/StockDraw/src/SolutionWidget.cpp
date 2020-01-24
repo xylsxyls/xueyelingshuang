@@ -122,6 +122,14 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 		m_vecSell[index]->setText("");
 	}
 
+	std::map<std::string, std::string> mapName;
+	std::vector<std::vector<std::string>> vecName = StockMysql::instance().stockNameDb();
+	index = -1;
+	while (index++ != vecName.size() - 1)
+	{
+		mapName[vecName[index][0]] = mapName[vecName[index][1]];
+	}
+
 	index = -1;
 	while (index++ != m_solutionWidgetParam.m_sellStock.size() - 1)
 	{
@@ -129,9 +137,11 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 		{
 			break;
 		}
-		m_vecSell[index]->setText((m_solutionWidgetParam.m_sellStock[index].first + " " +
+		const std::string& stock = m_solutionWidgetParam.m_sellStock[index].first;
+		m_vecSell[index]->setText((stock + " " +
+			mapName[stock] +
 			m_solutionWidgetParam.m_sellStock[index].second.first.toString() + " " +
-			m_solutionWidgetParam.m_sellStock[index].second.second.toPrec(6).toString()).c_str());
+			m_solutionWidgetParam.m_sellStock[index].second.second.toPrec(2).toString()).c_str());
 	}
 
 	if (m_solutionWidgetParam.m_buyStock.empty())
@@ -147,9 +157,11 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 		{
 			break;
 		}
-		m_vecBuy[index]->setText((m_solutionWidgetParam.m_buyStock[index].first + " " + 
+		const std::string& stock = m_solutionWidgetParam.m_buyStock[index].first;
+		m_vecBuy[index]->setText((stock + " " +
+			mapName[stock] +
 			m_solutionWidgetParam.m_buyStock[index].second.first.toString() + " " + 
-			(1 / allPersent.toPrec(6)).toPrec(6).toString()).c_str());
+			(1 / allPersent.toPrec(6)).toPrec(2).toString()).c_str());
 		allPersent = allPersent - 1;
 	}
 

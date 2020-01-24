@@ -4,6 +4,7 @@
 #include "hiredisinclude/hiredis.h"
 #include "CSystem/CSystemAPI.h"
 #include <algorithm>
+#include "CBase64/CBase64API.h"
 
 StockMysql::StockMysql()
 {
@@ -78,8 +79,14 @@ std::vector<std::string> StockMysql::allStockFromMysql() const
 std::vector<std::vector<std::string>> StockMysql::stockNameDb() const
 {
 	m_mysql.selectDb("stockname");
-	std::vector<std::string> result;
-	return m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("stock")))->toVector();
+	std::vector<std::vector<std::string>> result = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("stock")))->toVector();
+	int32_t lineIndex = -1;
+	while (lineIndex++ != result.size() - 1)
+	{
+		std::string& name = result[lineIndex][1];
+		name = CBase64::decode(name.c_str(), name.length());
+	}
+	return result;
 }
 
 void StockMysql::addStock(const std::string& stock)
@@ -580,7 +587,6 @@ void StockMysql::initRedis()
 
 void StockMysql::saveAllStock(const std::vector<std::vector<std::string>>& allStock)
 {
-	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyDatabaseString("stockname")));
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createDatabaseString("stockname")));
 	m_mysql.selectDb("stockname");
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::destroyTableString("stock")));
@@ -598,7 +604,7 @@ void StockMysql::saveAllStock(const std::vector<std::vector<std::string>>& allSt
 		const std::string& isST = allStock[index][2];
 		auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString("stock", "stock,name,isST"));
 		prepare->setString(0, stock);
-		prepare->setString(1, name);
+		prepare->setString(1, CBase64::encode(name.c_str(), name.length()));
 		prepare->setString(2, isST);
 		m_mysql.execute(prepare, false);
 	}

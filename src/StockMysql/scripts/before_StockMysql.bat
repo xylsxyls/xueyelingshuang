@@ -73,3 +73,18 @@ goto HiRedis_end
 call "%CLOUD_REBUILD%" HiRedis %HiRedis_bit% %HiRedis_dlllib% %HiRedis_debugRelease%
 goto HiRedis_end
 :HiRedis_end
+
+::--------------------------------------------------------------------
+set CBase64_dlllib=lib
+set CBase64_bit=%1
+set CBase64_debugRelease=%3
+set CBase64_allSame=%4
+if "%4" == "same" (goto CBase64_callSame) else (goto CBase64_callSimple)
+:CBase64_callSame
+set CBase64_dlllib=%2
+call "%CLOUD_REBUILD%" CBase64 %CBase64_bit% %CBase64_dlllib% %CBase64_debugRelease% %CBase64_allSame%
+goto CBase64_end
+:CBase64_callSimple
+call "%CLOUD_REBUILD%" CBase64 %CBase64_bit% %CBase64_dlllib% %CBase64_debugRelease%
+goto CBase64_end
+:CBase64_end
