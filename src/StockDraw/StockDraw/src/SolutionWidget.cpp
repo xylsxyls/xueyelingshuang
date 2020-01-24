@@ -9,7 +9,6 @@
 #include "StockMarket/StockMarketAPI.h"
 #include "StockIndicator/StockIndicatorAPI.h"
 #include "StockMysql/StockMysqlAPI.h"
-#include "CStringManager/CStringManagerAPI.h"
 
 SolutionWidget::SolutionWidget(QWidget* widget):
 m_time(nullptr),
