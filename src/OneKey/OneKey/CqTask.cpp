@@ -11,7 +11,6 @@ m_exit(false)
 
 void CqTask::DoTask()
 {
-	RCSend("w");
 	int32_t count = 7;
 	while (count-- != 0)
 	{
