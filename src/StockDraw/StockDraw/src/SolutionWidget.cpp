@@ -127,7 +127,7 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 	index = -1;
 	while (index++ != vecName.size() - 1)
 	{
-		mapName[vecName[index][0]] = mapName[vecName[index][1]];
+		mapName[vecName[index][0]] = vecName[index][1];
 	}
 
 	index = -1;
