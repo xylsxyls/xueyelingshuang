@@ -116,6 +116,7 @@
     <ClInclude Include="CqNoFlashTask.h" />
     <ClInclude Include="CQreTask.h" />
     <ClInclude Include="CqTask.h" />
+    <ClInclude Include="CrFlashTask.h" />
     <ClInclude Include="CRightClickTask.h" />
     <ClInclude Include="CSmallFlashTask.h" />
     <ClInclude Include="CWeqTask.h" />
@@ -132,6 +133,7 @@
     <ClCompile Include="CqNoFlashTask.cpp" />
     <ClCompile Include="CQreTask.cpp" />
     <ClCompile Include="CqTask.cpp" />
+    <ClCompile Include="CrFlashTask.cpp" />
     <ClCompile Include="CRightClickTask.cpp" />
     <ClCompile Include="CSmallFlashTask.cpp" />
     <ClCompile Include="CWeqTask.cpp" />

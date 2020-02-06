@@ -19,6 +19,7 @@
 #include "D:\\SendToMessageTest.h"
 #include "CqTask.h"
 #include "CQreTask.h"
+#include "CrFlashTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -315,6 +316,23 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			taskThread->PostTask(spTask, 1);
 		}
 	}
+	else if (type == 4)
+	{
+		if (wDown && threeDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CrFlashTask> spTask(new CrFlashTask);
+			spTask->setParam(true);
+			taskThread->PostTask(spTask, 1);
+		}
+		else if (threeDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CrFlashTask> spTask(new CrFlashTask);
+			spTask->setParam(false);
+			taskThread->PostTask(spTask, 1);
+		}
+	}
 
 	Exit:
 	// 将事件传递到下一个钩子
@@ -356,6 +374,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	m_type.AddString("刀锋");
 	m_type.AddString("劫");
 	m_type.AddString("妖姬");
+	m_type.AddString("卡萨丁");
 	m_type.AddString("进游戏");
 	m_type.SelectString(0, "刀锋");
 	m_button.SetFocus();
@@ -452,9 +471,13 @@ void COneKeyDlg::OnSelchangeCombo1()
 	{
 		type = 3;
 	}
-	else if (str == "进游戏")
+	else if (str == "卡萨丁")
 	{
 		type = 4;
+	}
+	else if (str == "进游戏")
+	{
+		type = 5;
 		CString strTime;
 		m_edit.GetWindowText(strTime);
 		int32_t time = atoi(strTime.GetBuffer());

@@ -63,6 +63,9 @@
     <ClInclude Include="CQreTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="CrFlashTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -99,6 +102,9 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CQreTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CrFlashTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>
