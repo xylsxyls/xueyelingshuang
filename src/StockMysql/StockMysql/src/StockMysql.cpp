@@ -84,9 +84,21 @@ std::vector<std::vector<std::string>> StockMysql::stockNameDb() const
 	while (lineIndex++ != result.size() - 1)
 	{
 		std::string& name = result[lineIndex][1];
-		name = CBase64::decode(name.c_str(), name.length());
+		name = CBase64::decode(name.c_str(), name.length()).c_str();
 	}
 	return result;
+}
+
+std::map<std::string, std::string> StockMysql::stockNameMap() const
+{
+	std::map<std::string, std::string> mapName;
+	std::vector<std::vector<std::string>> vecName = stockNameDb();
+	int32_t index = -1;
+	while (index++ != vecName.size() - 1)
+	{
+		mapName[vecName[index][0]] = vecName[index][1];
+	}
+	return mapName;
 }
 
 void StockMysql::addStock(const std::string& stock)

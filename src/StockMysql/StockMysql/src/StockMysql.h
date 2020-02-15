@@ -46,6 +46,11 @@ public:
 	*/
 	std::vector<std::vector<std::string>> stockNameDb() const;
 
+	/** 获取从stockname中获取gupiao对应的名字
+	@return 返回gupiao和对应的名字
+	*/
+	std::map<std::string, std::string> stockNameMap() const;
+
 	/** 添加一个gupiao代码到gupiao集合
 	@param [in] stock gupiao代码
 	*/

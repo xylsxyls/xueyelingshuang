@@ -38,6 +38,8 @@ void ChooseStockTask::DoTask()
 	{
 		stockFund = m_stockFund;
 	}
+
+	std::map<std::string, std::string> stockNameMap = StockMysql::instance().stockNameMap();
 	
 	StockTrade stockTrade;
 	stockTrade.init(m_date - 15 * 86400, m_date, m_allStock, m_solutionType, m_vecStrategyType);
@@ -48,8 +50,8 @@ void ChooseStockTask::DoTask()
 	int32_t index = sellStock.size();
 	while (index-- != 0)
 	{
-		RCSend(("sell " + sellStock[index].first + "," + sellStock[index].second.second.toPrec(6).toString()).c_str());
-		LOG_SEND_ONLY_INFO(("sell " + sellStock[index].first + "," + sellStock[index].second.second.toPrec(6).toString()).c_str());
+		RCSend(("sell " + sellStock[index].first + " " + stockNameMap[sellStock[index].first] + " " + sellStock[index].second.second.toPrec(6).toString()).c_str());
+		LOG_SEND_ONLY_INFO(("sell " + sellStock[index].first + " " + stockNameMap[sellStock[index].first] + " " + sellStock[index].second.second.toPrec(6).toString()).c_str());
 	}
 	m_stockClient->m_sellStock = sellStock;
 
@@ -59,8 +61,8 @@ void ChooseStockTask::DoTask()
 	index = buyStock.size();
 	while (index-- != 0)
 	{
-		RCSend(("buy " + buyStock[index].first + "," + buyStock[index].second.second.toPrec(6).toString()).c_str());
-		LOG_SEND_ONLY_INFO(("buy " + buyStock[index].first + "," + buyStock[index].second.second.toPrec(6).toString()).c_str());
+		RCSend(("buy " + buyStock[index].first + " " + stockNameMap[buyStock[index].first] + " " + buyStock[index].second.second.toPrec(6).toString()).c_str());
+		LOG_SEND_ONLY_INFO(("buy " + buyStock[index].first + " " + stockNameMap[buyStock[index].first] + " " + buyStock[index].second.second.toPrec(6).toString()).c_str());
 	}
 	m_stockClient->m_buyStock = buyStock;
 	if (m_stockFund == nullptr)

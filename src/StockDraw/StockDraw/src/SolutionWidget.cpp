@@ -122,13 +122,7 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 		m_vecSell[index]->setText("");
 	}
 
-	std::map<std::string, std::string> mapName;
-	std::vector<std::vector<std::string>> vecName = StockMysql::instance().stockNameDb();
-	index = -1;
-	while (index++ != vecName.size() - 1)
-	{
-		mapName[vecName[index][0]] = vecName[index][1];
-	}
+	std::map<std::string, std::string> mapName = StockMysql::instance().stockNameMap();
 
 	index = -1;
 	while (index++ != m_solutionWidgetParam.m_sellStock.size() - 1)

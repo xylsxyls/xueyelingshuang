@@ -3,5 +3,6 @@
 
 void MinimizeTask::DoTask()
 {
-	CMouse::MoveClick(xyls::Point(1836, 9));
+	CMouse::MoveAbsolute(xyls::Point(1836, 9), 0);
+	CMouse::LeftClick();
 }
