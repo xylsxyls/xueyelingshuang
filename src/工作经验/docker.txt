@@ -16,3 +16,6 @@ sudo docker stop ingress_build
 sudo docker rm ingress_build
 sudo docker start 74cb79ab18fe
 sudo docker exec -it ingress_build /bin/bash
+
+sudo docker run --name=analyzer_yangnan --privileged --net=host --restart=on-failure -v /etc/localtime:/etc/localtime -v /root:/share -v /ceph/images:/ceph/images -it analyzer_build:cuda10_cudnn7_ubuntu14.04 /bin/bash
+
