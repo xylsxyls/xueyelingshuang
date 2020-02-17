@@ -24,11 +24,19 @@ protected:
 	void closeEvent(QCloseEvent* eve);
 
 private slots:
-	void onButtonClicked();
+	void onAccountButtonClicked();
+	void onSaButtonClicked();
+	void onQButtonClicked();
+	void onThree5ButtonClicked();
+	void onStopButtonClicked();
 
 private:
 	Ui::dtwsClass ui;
-	COriginalButton* m_button;
+	COriginalButton* m_account;
+	COriginalButton* m_sa;
+	COriginalButton* m_q;
+	COriginalButton* m_three5;
+	COriginalButton* m_stop;
 
 	uint32_t m_workThreadId;
 	uint32_t m_checkWorkThreadId;

@@ -89,6 +89,15 @@
     <ClCompile Include="CollectTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="QTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="SaTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="Three5Task.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="dtws.qrc">
@@ -142,6 +151,15 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="CollectTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="Three5Task.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="QTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="SaTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

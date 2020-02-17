@@ -181,6 +181,9 @@
     <ClCompile Include="dtws.cpp" />
     <ClCompile Include="MainTask.cpp" />
     <ClCompile Include="ClickTask.cpp" />
+    <ClCompile Include="QTask.cpp" />
+    <ClCompile Include="SaTask.cpp" />
+    <ClCompile Include="Three5Task.cpp" />
     <ClCompile Include="TieQiangTask.cpp" />
     <ClCompile Include="TuLangTask.cpp" />
     <ClCompile Include="WaiZuiTask.cpp" />
@@ -288,6 +291,9 @@
     <ClInclude Include="LoginTask.h" />
     <ClInclude Include="MainTask.h" />
     <ClInclude Include="ClickTask.h" />
+    <ClInclude Include="QTask.h" />
+    <ClInclude Include="SaTask.h" />
+    <ClInclude Include="Three5Task.h" />
     <ClInclude Include="TieQiangTask.h" />
     <ClInclude Include="TuLangTask.h" />
     <ClInclude Include="WaiZuiTask.h" />

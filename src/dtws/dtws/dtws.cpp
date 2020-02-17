@@ -15,6 +15,9 @@
 #include "WaiZuiTask.h"
 #include "FengMingShanTask.h"
 #include "CollectTask.h"
+#include "SaTask.h"
+#include "Three5Task.h"
+#include "QTask.h"
 
 dtws::dtws(QWidget* parent):
 QMainWindow(parent),
@@ -24,7 +27,11 @@ m_workThread(nullptr),
 m_checkWorkThread(nullptr)
 {
 	ui.setupUi(this);
-	m_button = new COriginalButton(this);
+	m_account = new COriginalButton(this);
+	m_sa = new COriginalButton(this);
+	m_q = new COriginalButton(this);
+	m_three5 = new COriginalButton(this);
+	m_stop = new COriginalButton(this);
 	init();
 }
 
@@ -42,8 +49,22 @@ void dtws::init()
 	QPalette pattle;
 	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
 	setPalette(pattle);
-	m_button->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
-	QObject::connect(m_button, &COriginalButton::clicked, this, &dtws::onButtonClicked);
+
+	m_account->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_account->setText(QStringLiteral("账号"));
+	QObject::connect(m_account, &COriginalButton::clicked, this, &dtws::onAccountButtonClicked);
+	m_sa->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_sa->setText(QStringLiteral("群"));
+	QObject::connect(m_sa, &COriginalButton::clicked, this, &dtws::onSaButtonClicked);
+	m_q->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_q->setText(QStringLiteral("单"));
+	QObject::connect(m_q, &COriginalButton::clicked, this, &dtws::onQButtonClicked);
+	m_three5->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_three5->setText(QStringLiteral("奶"));
+	QObject::connect(m_three5, &COriginalButton::clicked, this, &dtws::onThree5ButtonClicked);
+	m_stop->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_stop->setText(QStringLiteral("停止"));
+	QObject::connect(m_stop, &COriginalButton::clicked, this, &dtws::onStopButtonClicked);
 
 	m_workThreadId = CTaskThreadManager::Instance().Init();
 	m_checkWorkThreadId = CTaskThreadManager::Instance().Init();
@@ -54,7 +75,7 @@ void dtws::init()
 bool dtws::check()
 {
 	return true;
-	return m_button != nullptr;
+	return m_account != nullptr;
 }
 
 void dtws::resizeEvent(QResizeEvent* eve)
@@ -65,7 +86,23 @@ void dtws::resizeEvent(QResizeEvent* eve)
 	{
 		return;
 	}
-	m_button->setGeometry(360, 120, 160, 80);
+	std::vector<COriginalButton*> vecButton;
+	vecButton.push_back(m_account);
+	vecButton.push_back(m_sa);
+	vecButton.push_back(m_q);
+	vecButton.push_back(m_three5);
+	vecButton.push_back(m_stop);
+
+	int32_t cowCount = 4;
+	int32_t width = 140;
+	int32_t height = 30;
+	int32_t space = 10;
+
+	int32_t index = -1;
+	while (index++ != vecButton.size() - 1)
+	{
+		vecButton[index]->setGeometry(index % cowCount * (width + space), index / cowCount * (height + space), width, height);
+	}
 }
 
 void dtws::closeEvent(QCloseEvent* eve)
@@ -73,7 +110,7 @@ void dtws::closeEvent(QCloseEvent* eve)
 	CTaskThreadManager::Instance().UninitAll();
 }
 
-void dtws::onButtonClicked()
+void dtws::onAccountButtonClicked()
 {
 	InputDialogParam inputDialogParam;
 	inputDialogParam.m_editTip = QStringLiteral("请输入开始步骤");
@@ -736,5 +773,30 @@ void dtws::onButtonClicked()
 	default:
 		break;
 	}
-	
+}
+
+void dtws::onSaButtonClicked()
+{
+	m_workThread->StopCurTask();
+	std::shared_ptr<SaTask> spSaTask(new SaTask);
+	m_workThread->PostTask(spSaTask);
+}
+
+void dtws::onQButtonClicked()
+{
+	m_workThread->StopCurTask();
+	std::shared_ptr<QTask> spQTask(new QTask);
+	m_workThread->PostTask(spQTask);
+}
+
+void dtws::onThree5ButtonClicked()
+{
+	m_workThread->StopCurTask();
+	std::shared_ptr<Three5Task> spThree5Task(new Three5Task);
+	m_workThread->PostTask(spThree5Task);
+}
+
+void dtws::onStopButtonClicked()
+{
+	m_workThread->StopCurTask();
 }
