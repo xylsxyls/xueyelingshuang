@@ -4,6 +4,9 @@
 class SaTask : public CTask
 {
 public:
+	SaTask();
+
+public:
 	void DoTask();
 
 	void StopTask();

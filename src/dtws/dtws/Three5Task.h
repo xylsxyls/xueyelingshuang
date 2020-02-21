@@ -4,6 +4,9 @@
 class Three5Task : public CTask
 {
 public:
+	Three5Task();
+
+public:
 	void DoTask();
 
 	void StopTask();

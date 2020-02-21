@@ -4,6 +4,9 @@
 class QTask : public CTask
 {
 public:
+	QTask();
+
+public:
 	void DoTask();
 
 	void StopTask();

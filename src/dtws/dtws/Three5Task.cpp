@@ -2,9 +2,15 @@
 #include "CMouse/CMouseAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
 
+Three5Task::Three5Task():
+m_exit(false)
+{
+
+}
+
 void Three5Task::DoTask()
 {
-	while (m_exit)
+	while (!m_exit)
 	{
 		CMouse::MoveClick(xyls::Point(538, 1063), 0);
 		Sleep(100);
