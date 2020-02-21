@@ -5,6 +5,9 @@
 #include "CSystem/CSystemAPI.h"
 #include <algorithm>
 #include "CBase64/CBase64API.h"
+#include "ConfigManager/ConfigManagerAPI.h"
+
+#define MYSQL_IP 10000
 
 StockMysql::StockMysql()
 {
@@ -26,7 +29,7 @@ void StockMysql::init()
 {
 	if (CSystem::GetSystemVersionNum() < 655360)
 	{
-		if (!m_mysql.connect("192.168.1.9", 3306, "root", ""))
+		if (!m_mysql.connect(GLOBAL_CONFIG[MYSQL_IP].toString().c_str(), 3306, "root", ""))
 		{
 			::MessageBox(nullptr, "数据库连接失败\n", nullptr, 0);
 			system("pause");

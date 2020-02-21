@@ -88,3 +88,18 @@ goto CBase64_end
 call "%CLOUD_REBUILD%" CBase64 %CBase64_bit% %CBase64_dlllib% %CBase64_debugRelease%
 goto CBase64_end
 :CBase64_end
+
+::--------------------------------------------------------------------
+set ConfigManager_dlllib=lib
+set ConfigManager_bit=%1
+set ConfigManager_debugRelease=%3
+set ConfigManager_allSame=%4
+if "%4" == "same" (goto ConfigManager_callSame) else (goto ConfigManager_callSimple)
+:ConfigManager_callSame
+set ConfigManager_dlllib=%2
+call "%CLOUD_REBUILD%" ConfigManager %ConfigManager_bit% %ConfigManager_dlllib% %ConfigManager_debugRelease% %ConfigManager_allSame%
+goto ConfigManager_end
+:ConfigManager_callSimple
+call "%CLOUD_REBUILD%" ConfigManager %ConfigManager_bit% %ConfigManager_dlllib% %ConfigManager_debugRelease%
+goto ConfigManager_end
+:ConfigManager_end
