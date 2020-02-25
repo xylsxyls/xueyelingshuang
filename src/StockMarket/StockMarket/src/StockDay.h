@@ -70,7 +70,7 @@ public:
 	*/
 	BigNumber downValue() const;
 
-	/** 实体值
+	/** 实体值，总不为负
 	@param [in] date 日期
 	@return 返回实体值
 	*/

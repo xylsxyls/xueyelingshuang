@@ -157,9 +157,13 @@ void StockOnceRetest::run()
 
 		std::map<std::string, std::shared_ptr<StockDay>> dayData;
 		m_trade.stockDayData(stockFund.ownedStock(), currentTime, dayData);
-		allFund = allFund + stockFund.allFund(dayData);
 
-		++day;
+		BigNumber currentAllFund = stockFund.allFund(dayData);
+		if (currentAllFund != m_initialFund)
+		{
+			allFund = allFund + currentAllFund;
+			++day;
+		}
 		calcTime = calcTime + 86400;
 	} while (calcTime <= calcEndDate);
 

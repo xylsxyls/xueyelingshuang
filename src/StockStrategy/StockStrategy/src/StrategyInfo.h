@@ -15,6 +15,7 @@ struct StockStrategyAPI StrategyInfo
 #endif
 	std::shared_ptr<StockMarket> m_spMarket;
 	StockFund* m_fund;
+	int32_t m_minPollSize;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -23,6 +24,7 @@ struct StockStrategyAPI StrategyInfo
 	{
 		m_spMarket = nullptr;
 		m_fund = nullptr;
+		m_minPollSize = 0;
 	}
 
 	virtual ~StrategyInfo()

@@ -33,13 +33,13 @@ void StockTrade::init(const IntDateTime& beginTime,
 	while (index++ != m_allStock.size() - 1)
 	{
 		const std::string& stock = m_allStock[index];
-		StockIndicator::instance().loadIndicatorFromRedis(stock, beginTime, endTime);
+		StockIndicator::instance().loadIndicatorFromRedis(stock, beginTime - 30 * 86400, endTime);
 		for (auto itAllNeedLoad = allNeedLoad.begin(); itAllNeedLoad != allNeedLoad.end(); ++itAllNeedLoad)
 		{
 			if (*itAllNeedLoad == "market")
 			{
 				std::shared_ptr<StockMarket> spMarket(new StockMarket);
-				spMarket->loadFromRedis(stock, beginTime, endTime);
+				spMarket->loadFromRedis(stock, beginTime - 30 * 86400, endTime);
 				m_spMarketMap[stock] = spMarket;
 			}
 			else if (*itAllNeedLoad == "wr")
@@ -80,12 +80,7 @@ void StockTrade::init(const IntDateTime& beginTime,
 		{
 		case AVG_FUND_HIGH_SCORE:
 		{
-			(std::dynamic_pointer_cast<AvgFundHighScore>(spSolution))->init(5, 5);
-		}
-		break;
-		case DISPOSABLE_STRATEGY:
-		{
-			(std::dynamic_pointer_cast<DisposableStrategy>(spSolution))->init(0);
+			(std::dynamic_pointer_cast<AvgFundHighScore>(spSolution))->init(5);
 		}
 		break;
 		default:
@@ -274,6 +269,15 @@ std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& da
 				sarRiseBackInfo->m_fund = stockFund;
 				sarRiseBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
 				sarRiseBackInfo->m_spSarIndicator = m_spSarIndicatorMap.find(stock)->second;
+				sarRiseBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
+				spStrategyInfo.reset(sarRiseBackInfo);
+			}
+			break;
+			case CATCH_UP:
+			{
+				CatchUpInfo* sarRiseBackInfo = new CatchUpInfo;
+				sarRiseBackInfo->m_fund = stockFund;
+				sarRiseBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
 				sarRiseBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
 				spStrategyInfo.reset(sarRiseBackInfo);
 			}

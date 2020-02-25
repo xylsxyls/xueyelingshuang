@@ -25,11 +25,6 @@ m_minPollSize(0)
 	m_solutionType = DISPOSABLE_STRATEGY;
 }
 
-void DisposableStrategy::init(int32_t minPollSize)
-{
-	m_minPollSize = minPollSize;
-}
-
 bool DisposableStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
 	const IntDateTime& date,
 	const std::shared_ptr<SolutionInfo>& solutionInfo)
@@ -48,16 +43,12 @@ bool DisposableStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNum
 		return false;
 	}
 
-	if (strategyBuyCount(date, solutionInfo) < m_minPollSize)
+	if (strategyBuyCount(date, solutionInfo) < minPollSize(solutionInfo))
 	{
 		return false;
 	}
 
 	int32_t firstSize = strategyBuyStock.size();
-	if (firstSize < 5)
-	{
-		return false;
-	}
 	//int32_t popSize = firstSize - firstSize / 2;
 	int32_t popSize = firstSize <= 11 ? (firstSize - firstSize / 2) : (firstSize - 5);
 	//int32_t popSize = firstSize <= 5 ? 0 : (firstSize - 5);
@@ -198,4 +189,17 @@ bool DisposableStrategy::strategySell(std::vector<std::pair<std::string, std::pa
 	}
 	std::sort(sellStock.begin(), sellStock.end(), sortFun);
 	return result;
+}
+
+int32_t DisposableStrategy::minPollSize(const std::shared_ptr<SolutionInfo>& solutionInfo)
+{
+	if (solutionInfo->m_strategyAllInfo.empty())
+	{
+		return 0;
+	}
+	if (solutionInfo->m_strategyAllInfo.begin()->second.empty())
+	{
+		return 0;
+	}
+	return solutionInfo->m_strategyAllInfo.begin()->second[0]->m_minPollSize;
 }

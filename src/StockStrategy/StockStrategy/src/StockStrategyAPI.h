@@ -3,6 +3,8 @@
 #include "StockStrategy.h"
 #include "SarRiseBack.h"
 #include "SarRiseBackInfo.h"
+#include "CatchUp.h"
+#include "CatchUpInfo.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockStrategyd.lib")

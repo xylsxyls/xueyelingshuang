@@ -20,16 +20,14 @@ static bool sortFun(const std::pair<std::string, std::pair<BigNumber, std::pair<
 }
 
 AvgFundHighScore::AvgFundHighScore():
-m_stockNum(0),
-m_minPollSize(0)
+m_stockNum(0)
 {
 	m_solutionType = AVG_FUND_HIGH_SCORE;
 }
 
-void AvgFundHighScore::init(int32_t stockNum, int32_t minPollSize)
+void AvgFundHighScore::init(int32_t stockNum)
 {
 	m_stockNum = stockNum;
-	m_minPollSize = minPollSize;
 }
 
 bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
@@ -45,7 +43,7 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumbe
 
 	//RCSend("date = %s, stocksize = %d", date.dateToString().c_str(), strategyBuyStock.size());
 
-	if (strategyBuyCount(date, solutionInfo) < m_minPollSize)
+	if (strategyBuyCount(date, solutionInfo) < minPollSize(solutionInfo))
 	{
 		return false;
 	}
@@ -118,7 +116,7 @@ bool AvgFundHighScore::sell(std::vector<std::pair<std::string, std::pair<BigNumb
 			continue;
 		}
 		else if (itSellStock->second.second.second == 90 &&
-			strategyCount >= m_minPollSize &&
+			strategyCount >= minPollSize(solutionInfo) &&
 			++index < (int32_t)strategyBuyStock.size())
 		{
 			
@@ -220,4 +218,17 @@ bool AvgFundHighScore::strategySell(std::vector<std::pair<std::string, std::pair
 	}
 	std::sort(sellStock.begin(), sellStock.end(), sortFun);
 	return result;
+}
+
+int32_t AvgFundHighScore::minPollSize(const std::shared_ptr<SolutionInfo>& solutionInfo)
+{
+	if (solutionInfo->m_strategyAllInfo.empty())
+	{
+		return 0;
+	}
+	if (solutionInfo->m_strategyAllInfo.begin()->second.empty())
+	{
+		return 0;
+	}
+	return solutionInfo->m_strategyAllInfo.begin()->second[0]->m_minPollSize;
 }

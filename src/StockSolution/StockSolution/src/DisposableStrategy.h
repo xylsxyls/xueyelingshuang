@@ -12,11 +12,6 @@ public:
 	DisposableStrategy();
 
 public:
-	/** 初始化
-	@param [in] minPollSize 最小允许通过的gupiaochi个数
-	*/
-	void init(int32_t minPollSize);
-
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
@@ -64,6 +59,12 @@ protected:
 	bool strategySell(std::vector<std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>>& sellStock,
 		const IntDateTime& date,
 		const std::shared_ptr<SolutionInfo>& solutionInfo);
+
+	/** 获取最小通过个数
+	@param [in] solutionInfo 解决方案需要的信息
+	@return 返回最小通过个数
+	*/
+	int32_t minPollSize(const std::shared_ptr<SolutionInfo>& solutionInfo);
 
 protected:
 	int32_t m_minPollSize;
