@@ -30,7 +30,7 @@ void GetFilterStockTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(1161, 105), 0);
 		CMouse::LeftClick();
 		Sleep(1000);
-		CMouse::MoveAbsolute(xyls::Point(1161, 105), 0);
+		CMouse::MoveAbsolute(xyls::Point(1909, 105), 0);
 		CMouse::LeftClick();
 		Sleep(3000);
 		CMouse::MoveAbsolute(xyls::Point(649, 352), 0);

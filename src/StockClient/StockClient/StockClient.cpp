@@ -1003,8 +1003,14 @@ void StockClient::onEverydayHelperButtonClicked()
 void StockClient::onEverydayTaskButtonClicked()
 {
 	InputDialogParam inputDialogParam;
-	inputDialogParam.m_editTip = QStringLiteral("是否重新获取过滤文件");
-	inputDialogParam.m_defaultText = QStringLiteral("1");
+	InputEx line;
+	line.m_tip = QStringLiteral("是否重新获取过滤文件");
+	line.m_defaultText = QStringLiteral("1");
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("日期");
+	line.m_defaultText = IntDateTime().dateToString().c_str();
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入方案参数：");
 	inputDialogParam.m_parent = windowHandle();
 	DialogManager::instance().makeDialog(inputDialogParam);
 	if (inputDialogParam.m_result != ACCEPT_BUTTON)
@@ -1013,6 +1019,9 @@ void StockClient::onEverydayTaskButtonClicked()
 	}
 
 	RCSend("time = %d", ::GetTickCount());
+
+	bool regainFilter = atoi(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str()) == 1;
+	m_today = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 
 	std::shared_ptr<OpenProcessTask> spOpenMessageTestTask(new OpenProcessTask);
 	spOpenMessageTestTask->setParam(CSystem::commonFile("MessageTest"));
@@ -1030,16 +1039,16 @@ void StockClient::onEverydayTaskButtonClicked()
 	spTodayMarketFileToMemoryTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTodayMarketFileToMemoryTask);
 
-	std::shared_ptr<SaveGroupMarketTask> spSaveGroupMarketTask(new SaveGroupMarketTask);
-	spSaveGroupMarketTask->setParam("", this);
-	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveGroupMarketTask);
-
-	std::shared_ptr<UpdateTodayToMemoryTask> spUpdateTodayToMemoryTask(new UpdateTodayToMemoryTask);
-	spUpdateTodayToMemoryTask->setParam(this);
-	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
+	//std::shared_ptr<SaveGroupMarketTask> spSaveGroupMarketTask(new SaveGroupMarketTask);
+	//spSaveGroupMarketTask->setParam("", this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveGroupMarketTask);
+	//
+	//std::shared_ptr<UpdateTodayToMemoryTask> spUpdateTodayToMemoryTask(new UpdateTodayToMemoryTask);
+	//spUpdateTodayToMemoryTask->setParam(this);
+	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
 
 	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), inputDialogParam.m_editText == "1", this);
+	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), regainFilter, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
 
 	std::shared_ptr<MinimizeTask> spMinimizeTask(new MinimizeTask);
