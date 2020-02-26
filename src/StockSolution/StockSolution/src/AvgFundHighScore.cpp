@@ -49,10 +49,10 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumbe
 	}
 
 	int32_t firstSize = strategyBuyStock.size();
-	int32_t popSize = firstSize - firstSize / 2;
+	int32_t popBuySize = popSize(firstSize, solutionInfo);
 	//int32_t popSize = firstSize <= 11 ? (firstSize - firstSize / 2) : (firstSize - 5);
 	//int32_t popSize = firstSize <= 5 ? 0 : (firstSize - 5);
-	while (popSize-- != 0)
+	while (popBuySize-- != 0)
 	{
 		strategyBuyStock.pop_back();
 	}
@@ -231,4 +231,17 @@ int32_t AvgFundHighScore::minPollSize(const std::shared_ptr<SolutionInfo>& solut
 		return 0;
 	}
 	return solutionInfo->m_strategyAllInfo.begin()->second[0]->m_minPollSize;
+}
+
+int32_t AvgFundHighScore::popSize(int32_t buySize, const std::shared_ptr<SolutionInfo>& solutionInfo)
+{
+	if (solutionInfo->m_strategyAllInfo.empty())
+	{
+		return 0;
+	}
+	if (solutionInfo->m_strategyAllInfo.begin()->second.empty())
+	{
+		return 0;
+	}
+	return solutionInfo->m_strategyAllInfo.begin()->second[0]->popSize(buySize);
 }

@@ -51,6 +51,7 @@ bool CatchUp::buy(const IntDateTime& date,
 	BigNumber previousOpen = spMarket->day()->open();
 	BigNumber previousClose = spMarket->day()->close();
 	BigNumber previousEntity = spMarket->day()->entityValue();
+	BigNumber previousChg = spMarket->day()->chgValue();
 	spMarket->previous();
 	BigNumber previousPreviousChg = spMarket->day()->chgValue();
 	spMarket->next();
@@ -60,6 +61,7 @@ bool CatchUp::buy(const IntDateTime& date,
 	BigNumber upValue = spMarket->day()->upValue();
 
 	if (dayChg > 1 &&
+		previousChg > -2 &&
 		previousPreviousChg > 2 &&
 		previousOpen > previousClose &&
 		(open > previousClose && open < previousOpen) &&
@@ -72,20 +74,20 @@ bool CatchUp::buy(const IntDateTime& date,
 		score = 200 * (bollUp / bollMid.toPrec(6) - 1).toPrec(6);
 		return true;
 	}
-	else if (dayChg < 1 &&
-		previousPreviousChg > 2 &&
-		previousClose > previousOpen &&
-		(open > previousOpen && open < previousClose) &&
-		close > previousClose &&
-		(entity / previousEntity.toPrec(6) - 1).abs() < "0.8" &&
-		upValue / entity.toPrec(6) < "0.8" &&
-		open / previousOpen < "1.02")
-	{
-		price = close;
-		percent = 100;
-		score = 100 * (bollUp / bollMid.toPrec(6) - 1).toPrec(6);
-		return true;
-	}
+	//if (dayChg < 1 &&
+	//	previousPreviousChg > 2 &&
+	//	previousClose > previousOpen &&
+	//	(open > previousOpen && open < previousClose) &&
+	//	close > previousClose &&
+	//	(entity / previousEntity.toPrec(6) - 1).abs() < "0.8" &&
+	//	upValue / entity.toPrec(6) < "0.8" &&
+	//	open / previousOpen < "1.02")
+	//{
+	//	price = close;
+	//	percent = 100;
+	//	score = 100 * (bollUp / bollMid.toPrec(6) - 1).toPrec(6);
+	//	return true;
+	//}
 	return false;
 }
 
@@ -127,7 +129,7 @@ bool CatchUp::sell(const IntDateTime& date,
 		return false;
 	}
 
-	if (spMarket->getMemoryDays(firstBuyDate, date) >= 5)
+	if (spMarket->getMemoryDays(firstBuyDate, date) >= 3)
 	{
 		price = close;
 		percent = 100;

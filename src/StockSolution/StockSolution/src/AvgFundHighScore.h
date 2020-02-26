@@ -71,6 +71,12 @@ protected:
 	*/
 	int32_t minPollSize(const std::shared_ptr<SolutionInfo>& solutionInfo);
 
+	/** 获取去掉个数
+	@param [in] solutionInfo 解决方案需要的信息
+	@return 返回去掉个数
+	*/
+	int32_t popSize(int32_t buySize, const std::shared_ptr<SolutionInfo>& solutionInfo);
+
 protected:
 	int32_t m_stockNum;
 	int32_t m_minPollSize;

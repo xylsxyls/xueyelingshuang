@@ -20,4 +20,9 @@ struct StockStrategyAPI SarRiseBackInfo : public StrategyInfo
 	{
 		m_minPollSize = 5;
 	}
+
+	virtual int32_t popSize(int32_t buySize)
+	{
+		return buySize - buySize / 2;
+	}
 };

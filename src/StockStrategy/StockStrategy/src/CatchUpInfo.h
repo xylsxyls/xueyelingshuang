@@ -18,6 +18,11 @@ struct StockStrategyAPI CatchUpInfo : public StrategyInfo
 
 	CatchUpInfo()
 	{
-		m_minPollSize = 0;
+		m_minPollSize = 2;
+	}
+
+	virtual int32_t popSize(int32_t buySize)
+	{
+		return 0;
 	}
 };

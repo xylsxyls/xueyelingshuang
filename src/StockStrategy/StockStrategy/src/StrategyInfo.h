@@ -31,4 +31,6 @@ struct StockStrategyAPI StrategyInfo
 	{
 
 	}
+
+	virtual int32_t popSize(int32_t buySize) = 0;
 };
