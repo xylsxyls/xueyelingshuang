@@ -70,6 +70,36 @@ public:
 	*/
 	std::shared_ptr<StockDay> day() const;
 
+	/** 5rixian
+	@return 返回5rixian
+	*/
+	BigNumber fiveLine();
+
+	/** 10rixian
+	@return 返回10rixian
+	*/
+	BigNumber tenLine();
+
+	/** 20rixian
+	@return 返回20rixian
+	*/
+	BigNumber twentyLine();
+
+	/** 30rixian
+	@return 返回30rixian
+	*/
+	BigNumber thirtyLine();
+
+	/** nianxian
+	@return 返回nianxian
+	*/
+	BigNumber yearLine();
+
+	/** 任意rixian
+	@return 返回任意rixian
+	*/
+	BigNumber dayLine(int32_t days);
+
 	/** 获取当前内置日期
 	@return 返回当前内置日期
 	*/

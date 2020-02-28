@@ -5,6 +5,7 @@
 #include "SarRiseBackInfo.h"
 #include "CatchUp.h"
 #include "CatchUpInfo.h"
+#include "SarRiseBackThirtyLine.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockStrategyd.lib")

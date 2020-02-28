@@ -838,7 +838,7 @@ void StockClient::onRealTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-25";
+	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("1或3");
 	line.m_defaultText = "1";
@@ -869,7 +869,7 @@ void StockClient::onOnceTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-25";
+	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("1或3");
 	line.m_defaultText = "1";

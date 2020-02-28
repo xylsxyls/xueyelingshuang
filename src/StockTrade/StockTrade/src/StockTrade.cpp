@@ -33,13 +33,13 @@ void StockTrade::init(const IntDateTime& beginTime,
 	while (index++ != m_allStock.size() - 1)
 	{
 		const std::string& stock = m_allStock[index];
-		StockIndicator::instance().loadIndicatorFromRedis(stock, beginTime - 30 * 86400, endTime);
+		StockIndicator::instance().loadIndicatorFromRedis(stock, beginTime - 90 * 86400, endTime);
 		for (auto itAllNeedLoad = allNeedLoad.begin(); itAllNeedLoad != allNeedLoad.end(); ++itAllNeedLoad)
 		{
 			if (*itAllNeedLoad == "market")
 			{
 				std::shared_ptr<StockMarket> spMarket(new StockMarket);
-				spMarket->loadFromRedis(stock, beginTime - 30 * 86400, endTime);
+				spMarket->loadFromRedis(stock, beginTime - 90 * 86400, endTime);
 				m_spMarketMap[stock] = spMarket;
 			}
 			else if (*itAllNeedLoad == "wr")
@@ -264,6 +264,7 @@ std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& da
 			{
 			case SAR_RISE_BACK:
 			case SAR_RISE_BACK_COUNT:
+			case SAR_RISE_BACK_THIRTY_LINE:
 			{
 				SarRiseBackInfo* sarRiseBackInfo = new SarRiseBackInfo;
 				sarRiseBackInfo->m_fund = stockFund;

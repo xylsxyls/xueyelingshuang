@@ -111,6 +111,57 @@ std::shared_ptr<StockDay> StockMarket::day() const
 	return itDate->second;
 }
 
+BigNumber StockMarket::fiveLine()
+{
+	return dayLine(5);
+}
+
+BigNumber StockMarket::tenLine()
+{
+	return dayLine(10);
+}
+
+BigNumber StockMarket::twentyLine()
+{
+	return dayLine(20);
+}
+
+BigNumber StockMarket::thirtyLine()
+{
+	return dayLine(30);
+}
+
+BigNumber StockMarket::yearLine()
+{
+	return dayLine(250);
+}
+
+BigNumber StockMarket::dayLine(int32_t days)
+{
+	if (days <= 0)
+	{
+		return 0;
+	}
+	BigNumber allClose = day()->close();
+	if (days == 1)
+	{
+		return allClose;
+	}
+	IntDateTime date = m_date;
+	int32_t index = 0;
+	while (index++ != days - 1)
+	{
+		if (!previous())
+		{
+			setDate(date);
+			return 0;
+		}
+		allClose = allClose + day()->close();
+	}
+	setDate(date);
+	return (allClose.toPrec(6) / days).toPrec(2);
+}
+
 IntDateTime StockMarket::date() const
 {
 	return m_date;

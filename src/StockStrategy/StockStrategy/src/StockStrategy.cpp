@@ -5,6 +5,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "StockMysql/StockMysqlAPI.h"
 #include "CatchUp.h"
+#include "SarRiseBackThirtyLine.h"
 
 StockStrategy::StockStrategy()
 {
@@ -79,6 +80,11 @@ std::shared_ptr<Strategy> StockStrategy::strategy(StrategyType strategyEnum)
 		strategy.reset(new CatchUp);
 	}
 	break;
+	case SAR_RISE_BACK_THIRTY_LINE:
+	{
+		strategy.reset(new SarRiseBackThirtyLine);
+	}
+	break;
 	default:
 		break;
 	}
@@ -92,6 +98,7 @@ std::set<std::string> StockStrategy::strategyNeedLoad(StrategyType strategyEnum)
 	{
 	case SAR_RISE_BACK:
 	case SAR_RISE_BACK_COUNT:
+	case SAR_RISE_BACK_THIRTY_LINE:
 	{
 		result.insert("market");
 		result.insert("sar");

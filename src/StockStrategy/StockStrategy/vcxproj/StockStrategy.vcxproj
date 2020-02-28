@@ -24,6 +24,7 @@
     <ClInclude Include="..\src\SarRiseBack.h" />
     <ClInclude Include="..\src\SarRiseBackCount.h" />
     <ClInclude Include="..\src\SarRiseBackInfo.h" />
+    <ClInclude Include="..\src\SarRiseBackThirtyLine.h" />
     <ClInclude Include="..\src\StockStrategyAPI.h" />
     <ClInclude Include="..\src\StockStrategyMacro.h" />
     <ClInclude Include="..\src\StockStrategy.h" />
@@ -34,6 +35,7 @@
     <ClCompile Include="..\src\CatchUp.cpp" />
     <ClCompile Include="..\src\SarRiseBack.cpp" />
     <ClCompile Include="..\src\SarRiseBackCount.cpp" />
+    <ClCompile Include="..\src\SarRiseBackThirtyLine.cpp" />
     <ClCompile Include="..\src\StockStrategy.cpp" />
     <ClCompile Include="..\src\Strategy.cpp" />
   </ItemGroup>
