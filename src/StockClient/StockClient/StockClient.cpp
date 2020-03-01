@@ -697,7 +697,7 @@ void StockClient::onChooseStockButtonClicked()
 	line.m_tip = QStringLiteral("重获hangqing数据");
 	line.m_defaultText = QStringLiteral("0");
 	inputDialogParam.m_vecInputEx.push_back(line);
-	line.m_tip = QStringLiteral("1或3");
+	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "1";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
@@ -840,7 +840,7 @@ void StockClient::onRealTestButtonClicked()
 	line.m_tip = QStringLiteral("结束日期");
 	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
-	line.m_tip = QStringLiteral("1或3");
+	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "1";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
@@ -871,7 +871,7 @@ void StockClient::onOnceTestButtonClicked()
 	line.m_tip = QStringLiteral("结束日期");
 	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
-	line.m_tip = QStringLiteral("1或3");
+	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "1";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
@@ -958,29 +958,21 @@ void StockClient::onEverydaySolutionButtonClicked()
 	spSaveAllFilterStockTaskToRedis->setParam(&m_today, &m_today, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
 
-	std::shared_ptr<ChooseStockTask> spChooseStockTaskSarRiseBack(new ChooseStockTask);
-	std::vector<StrategyType> vecStrategyTypeSarRiseBack;
-	vecStrategyTypeSarRiseBack.push_back(SAR_RISE_BACK);
-	vecStrategyTypeSarRiseBack.push_back(SAR_RISE_BACK);
-	spChooseStockTaskSarRiseBack->setParam(IntDateTime(0, 0),
-		std::vector<std::string>(),
-		vecStrategyTypeSarRiseBack,
-		AVG_FUND_HIGH_SCORE,
-		&m_stockFund,
-		this);
-	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTaskSarRiseBack);
-
-	std::shared_ptr<ChooseStockTask> spChooseStockTaskCatchUp(new ChooseStockTask);
-	std::vector<StrategyType> vecStrategyTypeCatchUp;
-	vecStrategyTypeCatchUp.push_back(CATCH_UP);
-	vecStrategyTypeCatchUp.push_back(CATCH_UP);
-	spChooseStockTaskCatchUp->setParam(IntDateTime(0, 0),
-		std::vector<std::string>(),
-		vecStrategyTypeCatchUp,
-		AVG_FUND_HIGH_SCORE,
-		&m_stockFund,
-		this);
-	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTaskCatchUp);
+	int32_t index = SAR_RISE_BACK - 1;
+	while (index++ != STRATEGY_TYPE_SIZE - 1)
+	{
+		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
+		std::vector<StrategyType> vecStrategyType;
+		vecStrategyType.push_back((StrategyType)index);
+		vecStrategyType.push_back((StrategyType)index);
+		spChooseStockTask->setParam(IntDateTime(0, 0),
+			std::vector<std::string>(),
+			vecStrategyType,
+			AVG_FUND_HIGH_SCORE,
+			&m_stockFund,
+			this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
+	}
 
 	std::shared_ptr<EverydaySolutionTask> spEverydaySolutionTask(new EverydaySolutionTask);
 	spEverydaySolutionTask->setParam(this);
@@ -1095,29 +1087,21 @@ void StockClient::onEverydayTaskButtonClicked()
 	spSaveAllFilterStockTaskToRedis->setParam(&m_today, &m_today, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
 	
-	std::shared_ptr<ChooseStockTask> spChooseStockTaskSarRiseBack(new ChooseStockTask);
-	std::vector<StrategyType> vecStrategyTypeSarRiseBack;
-	vecStrategyTypeSarRiseBack.push_back(SAR_RISE_BACK);
-	vecStrategyTypeSarRiseBack.push_back(SAR_RISE_BACK);
-	spChooseStockTaskSarRiseBack->setParam(IntDateTime(0, 0),
-		std::vector<std::string>(),
-		vecStrategyTypeSarRiseBack,
-		AVG_FUND_HIGH_SCORE,
-		nullptr,
-		this);
-	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTaskSarRiseBack);
-
-	std::shared_ptr<ChooseStockTask> spChooseStockTaskCatchUp(new ChooseStockTask);
-	std::vector<StrategyType> vecStrategyTypeCatchUp;
-	vecStrategyTypeCatchUp.push_back(CATCH_UP);
-	vecStrategyTypeCatchUp.push_back(CATCH_UP);
-	spChooseStockTaskCatchUp->setParam(IntDateTime(0, 0),
-		std::vector<std::string>(),
-		vecStrategyTypeCatchUp,
-		AVG_FUND_HIGH_SCORE,
-		nullptr,
-		this);
-	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTaskCatchUp);
+	int32_t index = SAR_RISE_BACK - 1;
+	while (index++ != STRATEGY_TYPE_SIZE - 1)
+	{
+		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
+		std::vector<StrategyType> vecStrategyType;
+		vecStrategyType.push_back((StrategyType)index);
+		vecStrategyType.push_back((StrategyType)index);
+		spChooseStockTask->setParam(IntDateTime(0, 0),
+			std::vector<std::string>(),
+			vecStrategyType,
+			AVG_FUND_HIGH_SCORE,
+			&m_stockFund,
+			this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
+	}
 
 	//std::shared_ptr<MairubishengTask> spMairubishengTask(new MairubishengTask);
 	//spMairubishengTask->setParam(atoi(inputDialogParam.m_editText.toStdString().c_str()), this);

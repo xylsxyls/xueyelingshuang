@@ -21,6 +21,8 @@
   <ItemGroup>
     <ClInclude Include="..\src\CatchUp.h" />
     <ClInclude Include="..\src\CatchUpInfo.h" />
+    <ClInclude Include="..\src\LineBack.h" />
+    <ClInclude Include="..\src\LineBackInfo.h" />
     <ClInclude Include="..\src\SarRiseBack.h" />
     <ClInclude Include="..\src\SarRiseBackCount.h" />
     <ClInclude Include="..\src\SarRiseBackInfo.h" />
@@ -33,6 +35,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CatchUp.cpp" />
+    <ClCompile Include="..\src\LineBack.cpp" />
     <ClCompile Include="..\src\SarRiseBack.cpp" />
     <ClCompile Include="..\src\SarRiseBackCount.cpp" />
     <ClCompile Include="..\src\SarRiseBackThirtyLine.cpp" />

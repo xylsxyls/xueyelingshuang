@@ -283,6 +283,16 @@ std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& da
 				spStrategyInfo.reset(sarRiseBackInfo);
 			}
 			break;
+			case LINE_BACK:
+			{
+				LineBackInfo* lineBackInfo = new LineBackInfo;
+				lineBackInfo->m_fund = stockFund;
+				lineBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
+				lineBackInfo->m_spSarIndicator = m_spSarIndicatorMap.find(stock)->second;
+				lineBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
+				spStrategyInfo.reset(lineBackInfo);
+			}
+			break;
 			default:
 				break;
 			}

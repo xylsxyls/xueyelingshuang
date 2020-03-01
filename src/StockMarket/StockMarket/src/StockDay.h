@@ -59,43 +59,41 @@ public:
 	BigNumber preClose() const;
 
 	/** 上yingxian值
-	@param [in] date 日期
 	@return 返回上yingxian值
 	*/
 	BigNumber upValue() const;
 
 	/** 下yingxian值
-	@param [in] date 日期
 	@return 返回下yingxian值
 	*/
 	BigNumber downValue() const;
 
 	/** 实体值，总不为负
-	@param [in] date 日期
 	@return 返回实体值
 	*/
 	BigNumber entityValue() const;
 
 	/** zhangdie
-	@param [in] date 日期
 	@return 返回zhangdie
 	*/
 	BigNumber riseFallValue() const;
 
 	/** zhangdie幅，已乘以100，包含百分号
-	@param [in] date 日期
 	@return 返回zhangdie幅
 	*/
 	BigNumber chgValue() const;
 
+	/** zhen幅，已乘以100，包含百分号，总不为负
+	@return 返回zhen幅
+	*/
+	BigNumber amplitudeValue() const;
+
 	/** 是否是zhangting
-	@param [in] date 日期
 	@return 返回是否是zhangting
 	*/
 	bool isLimitUp() const;
 
 	/** 是否是dieting
-	@param [in] date 日期
 	@return 返回是否是dieting
 	*/
 	bool isLimitDown() const;

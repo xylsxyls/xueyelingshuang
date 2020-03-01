@@ -45,6 +45,8 @@ void ChooseStockTask::DoTask()
 	stockTrade.init(m_date - 15 * 86400, m_date, m_allStock, m_solutionType, m_vecStrategyType);
 	stockTrade.load();
 
+	RCSend("strategy type = %d", (int32_t)m_vecStrategyType[0]);
+
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
 	stockTrade.sell(sellStock, m_date, stockFund, m_solutionType, m_vecStrategyType);
 	int32_t index = sellStock.size();
