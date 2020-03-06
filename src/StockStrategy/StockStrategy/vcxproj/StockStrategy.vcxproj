@@ -35,9 +35,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CatchUp.cpp" />
+    <ClCompile Include="..\src\CatchUpInfo.cpp" />
     <ClCompile Include="..\src\LineBack.cpp" />
+    <ClCompile Include="..\src\LineBackInfo.cpp" />
     <ClCompile Include="..\src\SarRiseBack.cpp" />
     <ClCompile Include="..\src\SarRiseBackCount.cpp" />
+    <ClCompile Include="..\src\SarRiseBackInfo.cpp" />
     <ClCompile Include="..\src\SarRiseBackThirtyLine.cpp" />
     <ClCompile Include="..\src\StockStrategy.cpp" />
     <ClCompile Include="..\src\Strategy.cpp" />

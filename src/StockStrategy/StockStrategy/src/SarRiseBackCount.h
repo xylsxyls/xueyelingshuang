@@ -24,4 +24,9 @@ public:
 		BigNumber& percent,
 		BigNumber& score,
 		const std::shared_ptr<StrategyInfo>& strategyInfo);
+
+	/** 获取需要的zhibiao
+	@return 返回需要的zhibiao
+	*/
+	virtual std::set<std::string> needIndicator();
 };

@@ -148,7 +148,7 @@ bool AvgFundHighScore::strategyBuy(std::vector<std::pair<std::string, std::pair<
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreInfo->m_strategyAllInfo.find(stock)->second[0];
+		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first;
 		if (m_vecStrategy[0]->buy(date,
 			price,
 			percent,
@@ -181,7 +181,7 @@ int32_t AvgFundHighScore::strategyBuyCount(const IntDateTime& date, const std::s
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreInfo->m_strategyAllInfo.find(stock)->second[1];
+		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreInfo->m_strategyAllInfo.find(stock)->second.begin()->second.second;
 		count += (int32_t)m_vecStrategy[1]->buy(date, price, percent, score, spStrategyInfo);
 	}
 	return count;
@@ -199,7 +199,7 @@ bool AvgFundHighScore::strategySell(std::vector<std::pair<std::string, std::pair
 	while (index++ != vecOwnedStock.size() - 1)
 	{
 		const std::string& stock = vecOwnedStock[index];
-		auto& strategyInfo = solutionInfo->m_strategyAllInfo.find(stock)->second[0];
+		auto& strategyInfo = solutionInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first;
 		auto& spMarket = strategyInfo->m_spMarket;
 
 		BigNumber price;
@@ -230,7 +230,7 @@ int32_t AvgFundHighScore::minPollSize(const std::shared_ptr<SolutionInfo>& solut
 	{
 		return 0;
 	}
-	return solutionInfo->m_strategyAllInfo.begin()->second[0]->m_minPollSize;
+	return solutionInfo->m_strategyAllInfo.begin()->second.begin()->second.first->minPollSize();
 }
 
 int32_t AvgFundHighScore::popSize(int32_t buySize, const std::shared_ptr<SolutionInfo>& solutionInfo)
@@ -243,5 +243,5 @@ int32_t AvgFundHighScore::popSize(int32_t buySize, const std::shared_ptr<Solutio
 	{
 		return 0;
 	}
-	return solutionInfo->m_strategyAllInfo.begin()->second[0]->popSize(buySize);
+	return solutionInfo->m_strategyAllInfo.begin()->second.begin()->second.first->popSize(buySize);
 }

@@ -1,6 +1,11 @@
 #include "StockRsiIndicator.h"
 #include "StockRsi.h"
 
+StockRsiIndicator::StockRsiIndicator()
+{
+	m_type = "rsi";
+}
+
 void StockRsiIndicator::load()
 {
 	clear();
@@ -21,4 +26,9 @@ void StockRsiIndicator::load()
 void StockRsiIndicator::calc()
 {
 
+}
+
+std::shared_ptr<StockRsi> StockRsiIndicator::day(const IntDateTime& date)
+{
+	return std::dynamic_pointer_cast<StockRsi>(IndicatorManagerBase::day(date));
 }

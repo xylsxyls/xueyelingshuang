@@ -20,7 +20,7 @@ bool CatchUp::buy(const IntDateTime& date,
 
 	auto& stockFund = catchUpInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = catchUpInfo->m_spMarket;
-	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = catchUpInfo->m_spBollIndicator;
+	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = std::dynamic_pointer_cast<StockBollIndicator>(catchUpInfo->m_spIndicator.find("boll")->second);
 
 	if (!spMarket->setDate(date))
 	{
@@ -102,7 +102,7 @@ bool CatchUp::sell(const IntDateTime& date,
 	auto& stockFund = catchUpInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = catchUpInfo->m_spMarket;
 	std::string stock = spMarket->stock();
-	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = catchUpInfo->m_spBollIndicator;
+	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = std::dynamic_pointer_cast<StockBollIndicator>(catchUpInfo->m_spIndicator.find("boll")->second);
 
 	if (!spMarket->setDate(date))
 	{
@@ -137,5 +137,13 @@ bool CatchUp::sell(const IntDateTime& date,
 		return true;
 	}
 
+	return result;
+}
+
+std::set<std::string> CatchUp::needIndicator()
+{
+	std::set<std::string> result;
+	result.insert("sar");
+	result.insert("boll");
 	return result;
 }

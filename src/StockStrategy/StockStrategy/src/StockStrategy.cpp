@@ -7,6 +7,9 @@
 #include "CatchUp.h"
 #include "SarRiseBackThirtyLine.h"
 #include "LineBack.h"
+#include "SarRiseBackInfo.h"
+#include "CatchUpInfo.h"
+#include "LineBackInfo.h"
 
 StockStrategy::StockStrategy()
 {
@@ -33,7 +36,7 @@ void StockStrategy::strategyStock(const IntDateTime& date, std::vector<std::stri
 	}
 }
 
-std::vector<std::string> StockStrategy::strategyAllStock(StrategyType strategyEnum, const IntDateTime& beginTime, const IntDateTime& endTime)
+std::vector<std::string> StockStrategy::strategyAllStock(const IntDateTime& beginTime, const IntDateTime& endTime)
 {
 	if (beginTime > endTime)
 	{
@@ -97,29 +100,48 @@ std::shared_ptr<Strategy> StockStrategy::strategy(StrategyType strategyEnum)
 	return strategy;
 }
 
-std::set<std::string> StockStrategy::strategyNeedLoad(StrategyType strategyEnum)
+std::shared_ptr<StrategyInfo> StockStrategy::strategyInfo(StrategyType strategyEnum,
+	StockFund* stockFund,
+	const std::shared_ptr<StockMarket>& spMarket,
+	const std::map<std::string, std::shared_ptr<IndicatorManagerBase>>& spIndicator)
 {
-	std::set<std::string> result;
+	std::shared_ptr<StrategyInfo> spStrategyInfo;
 	switch (strategyEnum)
 	{
 	case SAR_RISE_BACK:
 	case SAR_RISE_BACK_COUNT:
 	case SAR_RISE_BACK_THIRTY_LINE:
-	case LINE_BACK:
 	{
-		result.insert("market");
-		result.insert("sar");
-		result.insert("boll");
+		spStrategyInfo.reset(new SarRiseBackInfo);
 	}
 	break;
 	case CATCH_UP:
 	{
-		result.insert("market");
-		result.insert("boll");
+		spStrategyInfo.reset(new CatchUpInfo);
+	}
+	break;
+	case LINE_BACK:
+	{
+		spStrategyInfo.reset(new LineBackInfo);
 	}
 	break;
 	default:
 		break;
 	}
-	return result;
+
+	spStrategyInfo->m_fund = stockFund;
+	spStrategyInfo->m_spMarket = spMarket;
+	std::set<std::string> needLoadIndicator = strategyNeedLoad(strategyEnum);
+	for (auto itNeedLoadIndicator = needLoadIndicator.begin(); itNeedLoadIndicator != needLoadIndicator.end(); ++itNeedLoadIndicator)
+	{
+		const std::string& indicatorType = *itNeedLoadIndicator;
+		spStrategyInfo->m_spIndicator[indicatorType] = spIndicator.find(indicatorType)->second;
+	}
+
+	return spStrategyInfo;
+}
+
+std::set<std::string> StockStrategy::strategyNeedLoad(StrategyType strategyEnum)
+{
+	return strategy(strategyEnum)->needIndicator();
 }

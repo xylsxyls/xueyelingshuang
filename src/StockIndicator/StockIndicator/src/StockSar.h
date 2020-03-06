@@ -37,11 +37,11 @@ struct StockIndicatorAPI StockSar : public IndicatorBase
 	BigNumber m_sar20;
 	SarState m_sarState20;
 
-
 	StockSar()
 	{
 		m_sarState5 = INIT;
 		m_sarState10 = INIT;
 		m_sarState20 = INIT;
+		m_type = "sar";
 	}
 };

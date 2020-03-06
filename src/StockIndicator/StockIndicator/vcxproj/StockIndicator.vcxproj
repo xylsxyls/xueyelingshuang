@@ -45,7 +45,7 @@
     <ClCompile Include="..\src\CalcDateRsiTask.cpp" />
     <ClCompile Include="..\src\CalcDateSarTask.cpp" />
     <ClCompile Include="..\src\CalcDateWrTask.cpp" />
-    <ClCompile Include="..\src\IndicatorManagerBase.inl" />
+    <ClCompile Include="..\src\IndicatorManagerBase.cpp" />
     <ClCompile Include="..\src\StockAvgIndicator.cpp" />
     <ClCompile Include="..\src\StockBollIndicator.cpp" />
     <ClCompile Include="..\src\StockIndicator.cpp" />

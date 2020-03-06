@@ -20,8 +20,8 @@ bool LineBack::buy(const IntDateTime& date,
 
 	auto& stockFund = lineBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = lineBackInfo->m_spMarket;
-	std::shared_ptr<StockSarIndicator>& spStockSarIndicator = lineBackInfo->m_spSarIndicator;
-	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = lineBackInfo->m_spBollIndicator;
+	std::shared_ptr<StockSarIndicator>& spStockSarIndicator = std::dynamic_pointer_cast<StockSarIndicator>(lineBackInfo->m_spIndicator.find("sar")->second);
+	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = std::dynamic_pointer_cast<StockBollIndicator>(lineBackInfo->m_spIndicator.find("boll")->second);
 
 	if (!spMarket->setDate(date))
 	{
@@ -110,7 +110,7 @@ bool LineBack::sell(const IntDateTime& date,
 	auto& stockFund = lineBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = lineBackInfo->m_spMarket;
 	std::string stock = spMarket->stock();
-	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = lineBackInfo->m_spBollIndicator;
+	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = std::dynamic_pointer_cast<StockBollIndicator>(lineBackInfo->m_spIndicator.find("boll")->second);
 
 	if (!spMarket->setDate(date))
 	{
@@ -145,5 +145,13 @@ bool LineBack::sell(const IntDateTime& date,
 		return true;
 	}
 
+	return result;
+}
+
+std::set<std::string> LineBack::needIndicator()
+{
+	std::set<std::string> result;
+	result.insert("sar");
+	result.insert("boll");
 	return result;
 }

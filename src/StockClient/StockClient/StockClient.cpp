@@ -698,7 +698,7 @@ void StockClient::onChooseStockButtonClicked()
 	line.m_defaultText = QStringLiteral("0");
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
-	line.m_defaultText = "1";
+	line.m_defaultText = "2";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();
@@ -841,7 +841,7 @@ void StockClient::onRealTestButtonClicked()
 	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
-	line.m_defaultText = "1";
+	line.m_defaultText = "2";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();
@@ -872,7 +872,7 @@ void StockClient::onOnceTestButtonClicked()
 	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
-	line.m_defaultText = "1";
+	line.m_defaultText = "2";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();

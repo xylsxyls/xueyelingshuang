@@ -1,6 +1,11 @@
 #include "StockBollIndicator.h"
 #include "StockBoll.h"
 
+StockBollIndicator::StockBollIndicator()
+{
+	m_type = "boll";
+}
+
 void StockBollIndicator::load()
 {
 	clear();
@@ -21,4 +26,9 @@ void StockBollIndicator::load()
 void StockBollIndicator::calc()
 {
 
+}
+
+std::shared_ptr<StockBoll> StockBollIndicator::day(const IntDateTime& date)
+{
+	return std::dynamic_pointer_cast<StockBoll>(IndicatorManagerBase::day(date));
 }

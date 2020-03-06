@@ -1,6 +1,11 @@
 #include "StockWrIndicator.h"
 #include "StockWr.h"
 
+StockWrIndicator::StockWrIndicator()
+{
+	m_type = "wr";
+}
+
 void StockWrIndicator::load()
 {
 	clear();
@@ -21,4 +26,9 @@ void StockWrIndicator::load()
 void StockWrIndicator::calc()
 {
 
+}
+
+std::shared_ptr<StockWr> StockWrIndicator::day(const IntDateTime& date)
+{
+	return std::dynamic_pointer_cast<StockWr>(IndicatorManagerBase::day(date));
 }

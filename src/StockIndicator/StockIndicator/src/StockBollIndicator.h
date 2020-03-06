@@ -6,20 +6,21 @@ struct StockBoll;
 
 /** boll相关zhibiao
 */
-class StockIndicatorAPI StockBollIndicator :
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-	public IndicatorManagerBase < StockBoll >
+class StockIndicatorAPI StockBollIndicator : public IndicatorManagerBase
 {
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+public:
+	StockBollIndicator();
+
 public:
 	/** 从原始数据加载到可用数据
 	*/
 	void load();
+
+	/** 获取指定日期zhibiao
+	@param [in] date 日期
+	@return 返回指定日期zhibiao
+	*/
+	std::shared_ptr<StockBoll> day(const IntDateTime& date);
 
 protected:
 	/** 计算衍生zhibiao

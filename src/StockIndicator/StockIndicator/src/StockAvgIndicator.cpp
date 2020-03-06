@@ -1,6 +1,11 @@
 #include "StockAvgIndicator.h"
 #include "StockAvg.h"
 
+StockAvgIndicator::StockAvgIndicator()
+{
+	m_type = "avg";
+}
+
 void StockAvgIndicator::load()
 {
 	clear();
@@ -30,4 +35,9 @@ void StockAvgIndicator::load()
 void StockAvgIndicator::calc()
 {
 
+}
+
+std::shared_ptr<StockAvg> StockAvgIndicator::day(const IntDateTime& date)
+{
+	return std::dynamic_pointer_cast<StockAvg>(IndicatorManagerBase::day(date));
 }

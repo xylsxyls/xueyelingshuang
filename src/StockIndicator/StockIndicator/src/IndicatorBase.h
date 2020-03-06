@@ -24,9 +24,16 @@ struct StockIndicatorAPI IndicatorBase
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
+	//¿‡–Õ
+	std::string m_type;
 	//gupiao¥˙¬Î
 	std::string m_stock;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
+	virtual ~IndicatorBase()
+	{
+
+	}
 };

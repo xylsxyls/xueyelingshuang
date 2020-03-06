@@ -24,40 +24,22 @@ void StockEveryTestTask::DoTask()
 		return;
 	}
 
-	std::shared_ptr<StrategyInfo> spStrategyInfo;
-	switch (m_strategyType)
-	{
-	case SAR_RISE_BACK:
-	{
-		SarRiseBackInfo* sarRiseBackInfo = new SarRiseBackInfo;
-		sarRiseBackInfo->m_spMarket = m_spMarket;
-		sarRiseBackInfo->m_spSarIndicator = m_stockSarIndicator;
-		sarRiseBackInfo->m_spBollIndicator = m_stockBollIndicator;
-		spStrategyInfo.reset(sarRiseBackInfo);
-	}
-	break;
-	default:
-		break;
-	}
-
 	int32_t money = 100000;
 
 	StockFund fund;
 	fund.add(money);
+	std::shared_ptr<StrategyInfo> spStrategyInfo = StockStrategy::instance().strategyInfo(m_strategyType, &fund, m_spMarket, m_spIndicator);
 	do
 	{
 		IntDateTime date = m_spMarket->date();
-
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		spStrategyInfo->m_fund = &fund;
 		if (spStrategy->sell(date, price, percent, score, spStrategyInfo))
 		{
 			fund.sellStock(price, percent / BigNumber("100.0"), m_spMarket->day());
 		}
 
-		spStrategyInfo->m_fund = &fund;
 		if (spStrategy->buy(date, price, percent, score, spStrategyInfo))
 		{
 			fund.buyStock(price, percent / BigNumber("100.0"), m_spMarket->day());
@@ -96,10 +78,10 @@ void StockEveryTestTask::setParam(const std::string& stock,
 {
 	m_stock = stock;
 	m_spMarket = spMarket;
-	m_stockWrIndicator = stockWrIndicator;
-	m_stockRsiIndicator = stockRsiIndicator;
-	m_stockSarIndicator = stockSarIndicator;
-	m_stockBollIndicator = stockBollIndicator;
+	m_spIndicator["wr"] = stockWrIndicator;
+	m_spIndicator["rsi"] = stockRsiIndicator;
+	m_spIndicator["sar"] = stockSarIndicator;
+	m_spIndicator["boll"] = stockBollIndicator;
 	m_strategyType = strategyType;
 	m_showStockLog = showStockLog;
 	m_resultThreadId = resultThreadId;

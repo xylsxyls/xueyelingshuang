@@ -61,6 +61,11 @@ public:
 		BigNumber& score,
 		const std::shared_ptr<StrategyInfo>& strategyInfo);
 
+	/** 获取需要的zhibiao
+	@return 返回需要的zhibiao
+	*/
+	virtual std::set<std::string> needIndicator();
+
 	/** 获取策略类型
 	@return 返回策略类型
 	*/

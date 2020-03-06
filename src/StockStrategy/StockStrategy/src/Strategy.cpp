@@ -15,6 +15,11 @@ bool Strategy::sell(const IntDateTime& date,
 	return false;
 }
 
+std::set<std::string> Strategy::needIndicator()
+{
+	return std::set<std::string>();
+}
+
 StrategyType Strategy::type()
 {
 	return m_strategyType;

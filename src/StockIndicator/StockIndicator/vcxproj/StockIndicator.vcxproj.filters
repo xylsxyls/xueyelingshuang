@@ -116,9 +116,6 @@
     <ClCompile Include="..\src\StockAvgIndicator.cpp">
       <Filter>indicator\avg</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\IndicatorManagerBase.inl">
-      <Filter>base</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\StockIndicatorHelper.cpp">
       <Filter>helper</Filter>
     </ClCompile>
@@ -139,6 +136,9 @@
     </ClCompile>
     <ClCompile Include="..\src\CalcDateWrTask.cpp">
       <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\IndicatorManagerBase.cpp">
+      <Filter>base</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

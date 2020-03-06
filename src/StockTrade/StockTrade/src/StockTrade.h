@@ -110,11 +110,10 @@ private:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
+	//stock
 	std::map<std::string, std::shared_ptr<StockMarket>> m_spMarketMap;
-	std::map<std::string, std::shared_ptr<StockWrIndicator>> m_spWrIndicatorMap;
-	std::map<std::string, std::shared_ptr<StockRsiIndicator>> m_spRsiIndicatorMap;
-	std::map<std::string, std::shared_ptr<StockSarIndicator>> m_spSarIndicatorMap;
-	std::map<std::string, std::shared_ptr<StockBollIndicator>> m_spBollIndicatorMap;
+	//stock, stocktype
+	std::map<std::string, std::map<std::string, std::shared_ptr<IndicatorManagerBase>>> m_spIndicatorMap;
 
 	std::map<SolutionType, std::shared_ptr<Solution>> m_solutionMap;
 	std::map<StrategyType, std::shared_ptr<Strategy>> m_strategyMap;

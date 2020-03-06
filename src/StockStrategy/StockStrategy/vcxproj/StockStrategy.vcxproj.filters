@@ -80,5 +80,14 @@
     <ClCompile Include="..\src\LineBack.cpp">
       <Filter>Strategy</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CatchUpInfo.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\LineBackInfo.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SarRiseBackInfo.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

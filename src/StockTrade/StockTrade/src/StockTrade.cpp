@@ -29,34 +29,36 @@ void StockTrade::init(const IntDateTime& beginTime,
 	}
 	
 	m_allStock = allStock;
+
+	int32_t moveDay = 90;
 	index = -1;
 	while (index++ != m_allStock.size() - 1)
 	{
 		const std::string& stock = m_allStock[index];
-		StockIndicator::instance().loadIndicatorFromRedis(stock, beginTime - 90 * 86400, endTime);
+		std::map<std::string, std::shared_ptr<IndicatorManagerBase>>& stockIndicatorMap = m_spIndicatorMap[stock];
+		
+		std::shared_ptr<StockMarket> spMarket(new StockMarket);
+		spMarket->loadFromRedis(stock, beginTime - moveDay * 86400, endTime);
+		m_spMarketMap[stock] = spMarket;
+
+		StockIndicator::instance().loadIndicatorFromRedis(stock, beginTime - moveDay * 86400, endTime);
 		for (auto itAllNeedLoad = allNeedLoad.begin(); itAllNeedLoad != allNeedLoad.end(); ++itAllNeedLoad)
 		{
-			if (*itAllNeedLoad == "market")
+			if (*itAllNeedLoad == "wr")
 			{
-				std::shared_ptr<StockMarket> spMarket(new StockMarket);
-				spMarket->loadFromRedis(stock, beginTime - 90 * 86400, endTime);
-				m_spMarketMap[stock] = spMarket;
-			}
-			else if (*itAllNeedLoad == "wr")
-			{
-				m_spWrIndicatorMap[stock] = StockIndicator::instance().wr();
+				stockIndicatorMap["wr"] = StockIndicator::instance().wr();
 			}
 			else if (*itAllNeedLoad == "rsi")
 			{
-				m_spRsiIndicatorMap[stock] = StockIndicator::instance().rsi();
+				stockIndicatorMap["rsi"] = StockIndicator::instance().rsi();
 			}
 			else if (*itAllNeedLoad == "sar")
 			{
-				m_spSarIndicatorMap[stock] = StockIndicator::instance().sar();
+				stockIndicatorMap["sar"] = StockIndicator::instance().sar();
 			}
 			else if (*itAllNeedLoad == "boll")
 			{
-				m_spBollIndicatorMap[stock] = StockIndicator::instance().boll();
+				stockIndicatorMap["boll"] = StockIndicator::instance().boll();
 			}
 		}
 	}
@@ -80,7 +82,7 @@ void StockTrade::init(const IntDateTime& beginTime,
 		{
 		case AVG_FUND_HIGH_SCORE:
 		{
-			(std::dynamic_pointer_cast<AvgFundHighScore>(spSolution))->init(5);
+			(std::dynamic_pointer_cast<AvgFundHighScore>(spSolution))->init(4);
 		}
 		break;
 		default:
@@ -114,21 +116,13 @@ void StockTrade::load()
 	{
 		itMarket->second->load();
 	}
-	for (auto itWrIndicator = m_spWrIndicatorMap.begin(); itWrIndicator != m_spWrIndicatorMap.end(); ++itWrIndicator)
+	for (auto itStockIndicatorMap = m_spIndicatorMap.begin(); itStockIndicatorMap != m_spIndicatorMap.end(); ++itStockIndicatorMap)
 	{
-		itWrIndicator->second->load();
-	}
-	for (auto itRsiIndicator = m_spRsiIndicatorMap.begin(); itRsiIndicator != m_spRsiIndicatorMap.end(); ++itRsiIndicator)
-	{
-		itRsiIndicator->second->load();
-	}
-	for (auto itSarIndicator = m_spSarIndicatorMap.begin(); itSarIndicator != m_spSarIndicatorMap.end(); ++itSarIndicator)
-	{
-		itSarIndicator->second->load();
-	}
-	for (auto itBollIndicator = m_spBollIndicatorMap.begin(); itBollIndicator != m_spBollIndicatorMap.end(); ++itBollIndicator)
-	{
-		itBollIndicator->second->load();
+		const std::map<std::string, std::shared_ptr<IndicatorManagerBase>>& spStockIndicator = itStockIndicatorMap->second;
+		for (auto itIndicator = spStockIndicator.begin(); itIndicator != spStockIndicator.end(); ++itIndicator)
+		{
+			itIndicator->second->load();
+		}
 	}
 }
 
@@ -255,48 +249,19 @@ std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& da
 	while (index++ != m_allStock.size() - 1)
 	{
 		const std::string& stock = m_allStock[index];
-		std::vector<std::shared_ptr<StrategyInfo>>& vecStrategyInfo = spSolutionInfo->m_strategyAllInfo[stock];
+		std::map<StrategyType, std::pair<std::shared_ptr<StrategyInfo>, std::shared_ptr<StrategyInfo>>>& mapStrategyInfo = spSolutionInfo->m_strategyAllInfo[stock];
 		int32_t strategyIndex = -1;
 		while (strategyIndex++ != vecStrategyType.size() - 1)
 		{
-			std::shared_ptr<StrategyInfo> spStrategyInfo;
-			switch (vecStrategyType[strategyIndex])
-			{
-			case SAR_RISE_BACK:
-			case SAR_RISE_BACK_COUNT:
-			case SAR_RISE_BACK_THIRTY_LINE:
-			{
-				SarRiseBackInfo* sarRiseBackInfo = new SarRiseBackInfo;
-				sarRiseBackInfo->m_fund = stockFund;
-				sarRiseBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
-				sarRiseBackInfo->m_spSarIndicator = m_spSarIndicatorMap.find(stock)->second;
-				sarRiseBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
-				spStrategyInfo.reset(sarRiseBackInfo);
-			}
-			break;
-			case CATCH_UP:
-			{
-				CatchUpInfo* sarRiseBackInfo = new CatchUpInfo;
-				sarRiseBackInfo->m_fund = stockFund;
-				sarRiseBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
-				sarRiseBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
-				spStrategyInfo.reset(sarRiseBackInfo);
-			}
-			break;
-			case LINE_BACK:
-			{
-				LineBackInfo* lineBackInfo = new LineBackInfo;
-				lineBackInfo->m_fund = stockFund;
-				lineBackInfo->m_spMarket = m_spMarketMap.find(stock)->second;
-				lineBackInfo->m_spSarIndicator = m_spSarIndicatorMap.find(stock)->second;
-				lineBackInfo->m_spBollIndicator = m_spBollIndicatorMap.find(stock)->second;
-				spStrategyInfo.reset(lineBackInfo);
-			}
-			break;
-			default:
-				break;
-			}
-			vecStrategyInfo.push_back(spStrategyInfo);
+			const StrategyType& strategyType = vecStrategyType[strategyIndex];
+			mapStrategyInfo[strategyType].first = StockStrategy::instance().strategyInfo(strategyType,
+				stockFund,
+				m_spMarketMap.find(stock)->second,
+				m_spIndicatorMap.find(stock)->second);
+			mapStrategyInfo[strategyType].second = StockStrategy::instance().strategyInfo(strategyType,
+				stockFund,
+				m_spMarketMap.find(stock)->second,
+				m_spIndicatorMap.find(stock)->second);
 		}
 	}
 	return spSolutionInfo;

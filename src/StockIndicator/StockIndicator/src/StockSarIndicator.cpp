@@ -1,6 +1,11 @@
 #include "StockSarIndicator.h"
 #include "StockSar.h"
 
+StockSarIndicator::StockSarIndicator()
+{
+	m_type = "sar";
+}
+
 void StockSarIndicator::load()
 {
 	clear();
@@ -24,4 +29,9 @@ void StockSarIndicator::load()
 void StockSarIndicator::calc()
 {
 
+}
+
+std::shared_ptr<StockSar> StockSarIndicator::day(const IntDateTime& date)
+{
+	return std::dynamic_pointer_cast<StockSar>(IndicatorManagerBase::day(date));
 }

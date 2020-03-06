@@ -6,20 +6,21 @@ struct StockAvg;
 
 /** avg相关zhibiao
 */
-class StockIndicatorAPI StockAvgIndicator :
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-	public IndicatorManagerBase < StockAvg >
+class StockIndicatorAPI StockAvgIndicator : public IndicatorManagerBase
 {
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+public:
+	StockAvgIndicator();
+
 public:
 	/** 从原始数据加载到可用数据
 	*/
 	void load();
+
+	/** 获取指定日期zhibiao
+	@param [in] date 日期
+	@return 返回指定日期zhibiao
+	*/
+	std::shared_ptr<StockAvg> day(const IntDateTime& date);
 
 protected:
 	/** 计算衍生zhibiao

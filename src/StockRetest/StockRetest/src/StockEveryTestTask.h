@@ -33,10 +33,7 @@ public:
 private:
 	std::string m_stock;
 	std::shared_ptr<StockMarket> m_spMarket;
-	std::shared_ptr<StockWrIndicator> m_stockWrIndicator;
-	std::shared_ptr<StockRsiIndicator> m_stockRsiIndicator;
-	std::shared_ptr<StockSarIndicator> m_stockSarIndicator;
-	std::shared_ptr<StockBollIndicator> m_stockBollIndicator;
+	std::map<std::string, std::shared_ptr<IndicatorManagerBase>> m_spIndicator;
 	StrategyType m_strategyType;
 	bool m_showStockLog;
 	uint32_t m_resultThreadId;
