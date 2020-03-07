@@ -59,13 +59,16 @@ public:
 	@param [in] stockFund zijin信息
 	@param [in] solutionType 解决方案类型
 	@param [in] strategyType 策略类型
+	@param [out] useStrategyType 使用的策略类型
+	@param [in] onceDate 计算单次lirun时每次进入的开始时间
 	@return 是否有选出的gupiao
 	*/
 	bool buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
 		const IntDateTime& date,
 		StockFund* stockFund,
 		SolutionType solutionType,
-		const std::vector<StrategyType>& vecStrategyType,
+		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
+		StrategyType& useStrategyType,
 		const IntDateTime& onceDate = IntDateTime(0, 0));
 
 	/** 询问单只gupiao需不需要maichu
@@ -80,7 +83,7 @@ public:
 		const IntDateTime& date,
 		StockFund* stockFund,
 		SolutionType solutionType,
-		const std::vector<StrategyType>& vecStrategyType);
+		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType);
 
 	/** 获取内置的hangqing信息
 	@param [in] stock gupiao代码
@@ -102,7 +105,7 @@ protected:
 	std::shared_ptr<SolutionInfo> makeSolutionInfo(const IntDateTime& date,
 		StockFund* stockFund,
 		SolutionType solutionType,
-		const std::vector<StrategyType>& vecStrategyType,
+		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 		const IntDateTime& onceDate);
 
 private:

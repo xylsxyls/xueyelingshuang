@@ -305,11 +305,7 @@ void StockClient::closeEvent(QCloseEvent* eve)
 	QMainWindow::closeEvent(eve);
 	setVisible(false);
 	CTaskThreadManager::Instance().UninitAll();
-#ifdef _DEBUG
-	CSystem::killProcess(CSystem::processFirstPid("StockClientd.exe"));
-#else
-	CSystem::killProcess(CSystem::processFirstPid("StockClient.exe"));
-#endif
+	CSystem::killProcess(CSystem::processFirstPid(CSystem::GetCurrentExeName() + ".exe"));
 }
 
 void StockClient::onEveryTestButtonClicked()
@@ -752,9 +748,10 @@ void StockClient::onChooseStockButtonClicked()
 	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
 
 	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
-	std::vector<StrategyType> vecStrategyType;
-	vecStrategyType.push_back((StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str()));
-	vecStrategyType.push_back((StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str()));
+	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+	vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
+	vecStrategyType.back().first = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
+	vecStrategyType.back().second = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
 	spChooseStockTask->setParam(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str(),
 		std::vector<std::string>(),
 		vecStrategyType,
@@ -852,12 +849,20 @@ void StockClient::onRealTestButtonClicked()
 	}
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
+	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
 
 	std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
-	std::vector<StrategyType> vecStrategyType;
-	vecStrategyType.push_back((StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str()));
-	vecStrategyType.push_back((StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str()));
-	spRealTestTask->setParam(AVG_FUND_HIGH_SCORE, vecStrategyType, beginTime, endTime, this);
+	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+	int32_t index = -1;
+	while (index++ != vecStrStrategyType.size() - 1)
+	{
+		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
+		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
+		vecStrategyType.back().first = strategyType;
+		vecStrategyType.back().second = strategyType;
+	}
+	spRealTestTask->setParam(INTEGRATED_STRATEGY, vecStrategyType, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 
@@ -885,9 +890,10 @@ void StockClient::onOnceTestButtonClicked()
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 
 	std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
-	std::vector<StrategyType> vecStrategyType;
-	vecStrategyType.push_back((StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str()));
-	vecStrategyType.push_back((StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str()));
+	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+	vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
+	vecStrategyType.back().first = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
+	vecStrategyType.back().second = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
 	spOnceTestTask->setParam(DISPOSABLE_STRATEGY, vecStrategyType, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 }
@@ -962,9 +968,10 @@ void StockClient::onEverydaySolutionButtonClicked()
 	while (index++ != STRATEGY_TYPE_SIZE - 1)
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
-		std::vector<StrategyType> vecStrategyType;
-		vecStrategyType.push_back((StrategyType)index);
-		vecStrategyType.push_back((StrategyType)index);
+		std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
+		vecStrategyType.back().first = (StrategyType)index;
+		vecStrategyType.back().second = (StrategyType)index;
 		spChooseStockTask->setParam(IntDateTime(0, 0),
 			std::vector<std::string>(),
 			vecStrategyType,
@@ -1091,9 +1098,10 @@ void StockClient::onEverydayTaskButtonClicked()
 	while (index++ != STRATEGY_TYPE_SIZE - 1)
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
-		std::vector<StrategyType> vecStrategyType;
-		vecStrategyType.push_back((StrategyType)index);
-		vecStrategyType.push_back((StrategyType)index);
+		std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
+		vecStrategyType.back().first = (StrategyType)index;
+		vecStrategyType.back().second = (StrategyType)index;
 		spChooseStockTask->setParam(IntDateTime(0, 0),
 			std::vector<std::string>(),
 			vecStrategyType,

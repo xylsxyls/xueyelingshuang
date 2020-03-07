@@ -17,7 +17,7 @@ public:
 
 public:
 	void init(SolutionType solutionType,
-		const std::vector<StrategyType>& vecStrategyType,
+		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		const BigNumber initialFund = 200000,
@@ -39,7 +39,7 @@ private:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::vector<StrategyType> m_vecStrategyType;
+	std::vector<std::pair<StrategyType, StrategyType>> m_vecStrategyType;
 	std::vector<uint32_t> m_vecThreadId;
 #ifdef _MSC_VER
 #pragma warning(pop)

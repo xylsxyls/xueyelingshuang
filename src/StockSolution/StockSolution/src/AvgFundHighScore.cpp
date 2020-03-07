@@ -149,7 +149,7 @@ bool AvgFundHighScore::strategyBuy(std::vector<std::pair<std::string, std::pair<
 		BigNumber percent;
 		BigNumber score;
 		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first;
-		if (m_vecStrategy[0]->buy(date,
+		if (m_vecStrategy[0].first->buy(date,
 			price,
 			percent,
 			score,
@@ -182,7 +182,7 @@ int32_t AvgFundHighScore::strategyBuyCount(const IntDateTime& date, const std::s
 		BigNumber percent;
 		BigNumber score;
 		const std::shared_ptr<StrategyInfo>& spStrategyInfo = avgFundHighScoreInfo->m_strategyAllInfo.find(stock)->second.begin()->second.second;
-		count += (int32_t)m_vecStrategy[1]->buy(date, price, percent, score, spStrategyInfo);
+		count += (int32_t)m_vecStrategy[0].second->buy(date, price, percent, score, spStrategyInfo);
 	}
 	return count;
 }
@@ -199,13 +199,46 @@ bool AvgFundHighScore::strategySell(std::vector<std::pair<std::string, std::pair
 	while (index++ != vecOwnedStock.size() - 1)
 	{
 		const std::string& stock = vecOwnedStock[index];
-		auto& strategyInfo = solutionInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first;
+		int32_t stockStrategyType = solutionInfo->m_fund->stockStrategy(stock);
+		auto& vecStrategyInfo = solutionInfo->m_strategyAllInfo.find(stock)->second;
+		std::shared_ptr<StrategyInfo> strategyInfo = nullptr;
+		int32_t strategyIndex = -1;
+		while (strategyIndex++ != vecStrategyInfo.size() - 1)
+		{
+			if (vecStrategyInfo[strategyIndex].first == stockStrategyType)
+			{
+				strategyInfo = vecStrategyInfo[strategyIndex].second.first;
+				break;
+			}
+		}
+		if (strategyInfo == nullptr)
+		{
+			RCSend("未发现策略类型，stock = %s", stock.c_str());
+			continue;
+		}
 		auto& spMarket = strategyInfo->m_spMarket;
 
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		if (m_vecStrategy[0]->sell(date, price, percent, score, strategyInfo))
+		std::shared_ptr<Strategy> sellStrategy = nullptr;
+
+		strategyIndex = -1;
+		while (strategyIndex++ != m_vecStrategy.size() - 1)
+		{
+			if (m_vecStrategy[strategyIndex].first->type() == stockStrategyType)
+			{
+				sellStrategy = m_vecStrategy[strategyIndex].first;
+				break;
+			}
+		}
+		if (sellStrategy == nullptr)
+		{
+			RCSend("未发现类型，stock = %s", stock.c_str());
+			continue;
+		}
+
+		if (sellStrategy->sell(date, price, percent, score, strategyInfo))
 		{
 			std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>> sellChoose;
 			sellChoose.first = stock;

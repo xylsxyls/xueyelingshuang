@@ -38,7 +38,7 @@ bool StrategySet::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Bi
 		BigNumber percent;
 		BigNumber score;
 		const std::shared_ptr<StrategyInfo>& spStrategyInfo = strategySetInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first;
-		if (m_vecStrategy[0]->buy(date,
+		if (m_vecStrategy[0].first->buy(date,
 			price,
 			percent,
 			score,

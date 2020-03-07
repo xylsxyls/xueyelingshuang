@@ -19,7 +19,7 @@ void OnceTestTask::DoTask()
 }
 
 void OnceTestTask::setParam(SolutionType solutionType,
-	std::vector<StrategyType>& vecStrategyType,
+	std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	StockClient* stockClient)

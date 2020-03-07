@@ -40,16 +40,30 @@ void ChooseStockTask::DoTask()
 	}
 
 	std::map<std::string, std::string> stockNameMap = StockMysql::instance().stockNameMap();
+
+	std::set<StrategyType> setType;
+	int32_t index = -1;
+	while (index++ != m_vecStrategyType.size() - 1)
+	{
+		setType.insert(m_vecStrategyType[index].first);
+		setType.insert(m_vecStrategyType[index].second);
+	}
+	std::vector<StrategyType> vecInitStrategyType;
+	for (auto itSetType = setType.begin(); itSetType != setType.end(); ++itSetType)
+	{
+		const StrategyType& strategyType = *itSetType;
+		vecInitStrategyType.push_back(strategyType);
+	}
 	
 	StockTrade stockTrade;
-	stockTrade.init(m_date - 15 * 86400, m_date, m_allStock, m_solutionType, m_vecStrategyType);
+	stockTrade.init(m_date - 90 * 86400, m_date, m_allStock, m_solutionType, vecInitStrategyType);
 	stockTrade.load();
 
-	RCSend("strategy type = %d", (int32_t)m_vecStrategyType[0]);
+	RCSend("strategy type = %d", (int32_t)m_vecStrategyType[0].first);
 
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
 	stockTrade.sell(sellStock, m_date, stockFund, m_solutionType, m_vecStrategyType);
-	int32_t index = sellStock.size();
+	index = sellStock.size();
 	while (index-- != 0)
 	{
 		RCSend(("sell " + sellStock[index].first + " " + stockNameMap[sellStock[index].first] + " " + sellStock[index].second.second.toPrec(6).toString()).c_str());
@@ -57,9 +71,9 @@ void ChooseStockTask::DoTask()
 	}
 	m_stockClient->m_sellStock = sellStock;
 
+	StrategyType useStrategyType = STRATEGY_INIT;
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>> allBuyInfo;
-	stockTrade.buy(buyStock, m_date, stockFund, m_solutionType, m_vecStrategyType);
+	stockTrade.buy(buyStock, m_date, stockFund, m_solutionType, m_vecStrategyType, useStrategyType);
 	index = buyStock.size();
 	while (index-- != 0)
 	{
@@ -76,7 +90,7 @@ void ChooseStockTask::DoTask()
 
 void ChooseStockTask::setParam(const IntDateTime& date,
 	const std::vector<std::string>& allStock,
-	const std::vector<StrategyType>& vecStrategyType,
+	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 	SolutionType solutionType,
 	StockFund* stockFund,
 	StockClient* stockClient)

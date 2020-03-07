@@ -120,7 +120,7 @@ bool DisposableStrategy::strategyBuy(std::vector<std::pair<std::string, std::pai
 		BigNumber percent;
 		BigNumber score;
 		const std::shared_ptr<StrategyInfo>& spStrategyInfo = disposableStrategyInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first;
-		if (m_vecStrategy[0]->buy(date,
+		if (m_vecStrategy[0].first->buy(date,
 			price,
 			percent,
 			score,
@@ -153,7 +153,7 @@ int32_t DisposableStrategy::strategyBuyCount(const IntDateTime& date, const std:
 		BigNumber percent;
 		BigNumber score;
 		const std::shared_ptr<StrategyInfo>& spStrategyInfo = disposableStrategyInfo->m_strategyAllInfo.find(stock)->second.begin()->second.second;
-		count += (int32_t)m_vecStrategy[1]->buy(date, price, percent, score, spStrategyInfo);
+		count += (int32_t)m_vecStrategy[0].second->buy(date, price, percent, score, spStrategyInfo);
 	}
 	return count;
 }
@@ -176,7 +176,7 @@ bool DisposableStrategy::strategySell(std::vector<std::pair<std::string, std::pa
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		if (m_vecStrategy[0]->sell(date, price, percent, score, strategyInfo))
+		if (m_vecStrategy[0].first->sell(date, price, percent, score, strategyInfo))
 		{
 			std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>> sellChoose;
 			sellChoose.first = stock;

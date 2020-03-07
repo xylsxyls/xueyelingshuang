@@ -33,7 +33,7 @@ StockOnceRetest::~StockOnceRetest()
 }
 
 void StockOnceRetest::init(SolutionType solutionType,
-	const std::vector<StrategyType>& vecStrategyType,
+	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	const BigNumber initialFund,
@@ -56,11 +56,25 @@ void StockOnceRetest::init(SolutionType solutionType,
 	}
 	m_resultThreadId = CTaskThreadManager::Instance().Init();
 
+	std::set<StrategyType> setType;
+	int32_t index = -1;
+	while (index++ != m_vecStrategyType.size() - 1)
+	{
+		setType.insert(m_vecStrategyType[index].first);
+		setType.insert(m_vecStrategyType[index].second);
+	}
+	std::vector<StrategyType> vecInitStrategyType;
+	for (auto itSetType = setType.begin(); itSetType != setType.end(); ++itSetType)
+	{
+		const StrategyType& strategyType = *itSetType;
+		vecInitStrategyType.push_back(strategyType);
+	}
+
 	m_trade.init(m_beginTime,
 		m_endTime,
 		StockStrategy::instance().strategyAllStock(m_beginTime, m_endTime),
 		m_solutionType,
-		m_vecStrategyType);
+		vecInitStrategyType);
 }
 
 void StockOnceRetest::load()
@@ -97,7 +111,6 @@ void StockOnceRetest::run()
 	int32_t day = 0;
 	do 
 	{
-		
 		if (!spRunMarket->setDate(calcTime))
 		{
 			calcTime = calcTime + 86400;
@@ -129,8 +142,9 @@ void StockOnceRetest::run()
 				break;
 			}
 
+			StrategyType useStrategyType = STRATEGY_INIT;
 			std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-			m_trade.buy(buyStock, currentTime, &stockFund, m_solutionType, m_vecStrategyType, calcTime);
+			m_trade.buy(buyStock, currentTime, &stockFund, m_solutionType, m_vecStrategyType, useStrategyType, calcTime);
 
 			index = -1;
 			while (index++ != buyStock.size() - 1)
@@ -141,7 +155,7 @@ void StockOnceRetest::run()
 				std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
 				RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
 					spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
-				stockFund.buyStock(price, rate, spMarket->day());
+				stockFund.buyStock(price, rate, spMarket->day(), useStrategyType);
 			}
 
 			//printProfit(&stockFund, currentTime);

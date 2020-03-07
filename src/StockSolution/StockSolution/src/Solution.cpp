@@ -1,6 +1,6 @@
 #include "Solution.h"
 
-void Solution::init(const std::vector<std::shared_ptr<Strategy>>& vecStrategy)
+void Solution::init(const std::vector<std::pair<std::shared_ptr<Strategy>, std::shared_ptr<Strategy>>>& vecStrategy)
 {
 	m_vecStrategy = vecStrategy;
 }

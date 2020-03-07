@@ -16,7 +16,7 @@ public:
 
 	void setParam(const IntDateTime& date,
 		const std::vector<std::string>& allStock,
-		const std::vector<StrategyType>& vecStrategyType,
+		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 		SolutionType solutionType,
 		StockFund* stockFund,
 		StockClient* stockClient);
@@ -24,7 +24,7 @@ public:
 private:
 	IntDateTime m_date;
 	std::vector<std::string> m_allStock;
-	std::vector<StrategyType> m_vecStrategyType;
+	std::vector<std::pair<StrategyType, StrategyType>> m_vecStrategyType;
 	SolutionType m_solutionType;
 	StockFund* m_stockFund;
 	StockClient* m_stockClient;

@@ -2,7 +2,7 @@
 #include "StockCharge/StockChargeAPI.h"
 #include "StockMarket/StockMarketAPI.h"
 
-bool StockFund::buyStock(const BigNumber& price, const BigNumber& rate, const std::shared_ptr<StockDay>& spStockDay)
+bool StockFund::buyStock(const BigNumber& price, const BigNumber& rate, const std::shared_ptr<StockDay>& spStockDay, int32_t strategyType)
 {
 	if (price < spStockDay->low() || price > spStockDay->high())
 	{
@@ -39,6 +39,8 @@ bool StockFund::buyStock(const BigNumber& price, const BigNumber& rate, const st
 	log.append("手续费：" + charge.toPrec(2).toString() + "，");
 	log.append("总消耗：" + consume.toPrec(2).toString());
 	m_stockLog.push_back(log);
+
+	m_stockStrategy[stock] = strategyType;
 
 	//if (m_stockMarket.find(stock) == m_stockMarket.end())
 	//{
@@ -123,6 +125,12 @@ bool StockFund::sellStock(const BigNumber& price, const BigNumber& rate, const s
 	log.append("手续费：" + charge.toPrec(2).toString() + "，");
 	log.append("总收回：" + back.toPrec(2).toString());
 	m_stockLog.push_back(log);
+
+	auto itStrategyType = m_stockStrategy.find(stock);
+	if (itStrategyType != m_stockStrategy.end())
+	{
+		m_stockStrategy.erase(itStrategyType);
+	}
 	return true;
 }
 
@@ -318,6 +326,16 @@ std::vector<std::string> StockFund::ownedStock() const
 		ownedStock.push_back(itStock->first);
 	}
 	return ownedStock;
+}
+
+int32_t StockFund::stockStrategy(const std::string& stock) const
+{
+	auto itStrategyType = m_stockStrategy.find(stock);
+	if (itStrategyType == m_stockStrategy.end())
+	{
+		return 0;
+	}
+	return itStrategyType->second;
 }
 
 bool StockFund::hasAvailableFund() const

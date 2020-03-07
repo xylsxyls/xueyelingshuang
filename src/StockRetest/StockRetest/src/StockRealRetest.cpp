@@ -33,7 +33,7 @@ StockRealRetest::~StockRealRetest()
 }
 
 void StockRealRetest::init(SolutionType solutionType,
-	const std::vector<StrategyType>& vecStrategyType,
+	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	const BigNumber initialFund,
@@ -58,11 +58,25 @@ void StockRealRetest::init(SolutionType solutionType,
 
 	m_fund.add(m_initialFund);
 
+	std::set<StrategyType> setType;
+	int32_t index = -1;
+	while (index++ != m_vecStrategyType.size() - 1)
+	{
+		setType.insert(m_vecStrategyType[index].first);
+		setType.insert(m_vecStrategyType[index].second);
+	}
+	std::vector<StrategyType> vecInitStrategyType;
+	for (auto itSetType = setType.begin(); itSetType != setType.end(); ++itSetType)
+	{
+		const StrategyType& strategyType = *itSetType;
+		vecInitStrategyType.push_back(strategyType);
+	}
+
 	m_trade.init(m_beginTime,
 		m_endTime,
 		StockStrategy::instance().strategyAllStock(m_beginTime, m_endTime),
 		m_solutionType,
-		m_vecStrategyType);
+		vecInitStrategyType);
 }
 
 void StockRealRetest::load()
@@ -101,7 +115,8 @@ void StockRealRetest::run()
 		}
 
 		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-		m_trade.buy(buyStock, currentTime, &m_fund, m_solutionType, m_vecStrategyType);
+		StrategyType useStrategyType = STRATEGY_INIT;
+		m_trade.buy(buyStock, currentTime, &m_fund, m_solutionType, m_vecStrategyType, useStrategyType);
 
 		index = -1;
 		while (index++ != buyStock.size() - 1)
@@ -112,7 +127,7 @@ void StockRealRetest::run()
 			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
 			RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
 				spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
-			m_fund.buyStock(price, rate, spMarket->day());
+			m_fund.buyStock(price, rate, spMarket->day(), useStrategyType);
 		}
 
 		printProfit(currentTime);

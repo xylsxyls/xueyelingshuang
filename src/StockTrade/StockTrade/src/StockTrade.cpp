@@ -85,6 +85,11 @@ void StockTrade::init(const IntDateTime& beginTime,
 			(std::dynamic_pointer_cast<AvgFundHighScore>(spSolution))->init(4);
 		}
 		break;
+		case INTEGRATED_STRATEGY:
+		{
+			(std::dynamic_pointer_cast<IntegratedStrategy>(spSolution))->init(4);
+		}
+		break;
 		default:
 			break;
 		}
@@ -136,7 +141,8 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 	const IntDateTime& date,
 	StockFund* stockFund,
 	SolutionType solutionType,
-	const std::vector<StrategyType>& vecStrategyType,
+	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
+	StrategyType& useStrategyType,
 	const IntDateTime& onceDate)
 {
 	buyStock.clear();
@@ -148,26 +154,39 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 	}
 	const std::shared_ptr<Solution>& spSolution = itSolution->second;
 
-	std::vector<std::shared_ptr<Strategy>> vecStrategy;
+	std::vector<std::pair<std::shared_ptr<Strategy>, std::shared_ptr<Strategy>>> vecStrategy;
 	int32_t index = -1;
 	while (index++ != vecStrategyType.size() - 1)
 	{
-		auto itStrategy = m_strategyMap.find(vecStrategyType[index]);
-		if (itStrategy == m_strategyMap.end())
+		auto itStrategyFirst = m_strategyMap.find(vecStrategyType[index].first);
+		if (itStrategyFirst == m_strategyMap.end())
 		{
 			return false;
 		}
-		vecStrategy.push_back(itStrategy->second);
+		auto itStrategySecond = m_strategyMap.find(vecStrategyType[index].second);
+		if (itStrategySecond == m_strategyMap.end())
+		{
+			return false;
+		}
+		vecStrategy.push_back(std::pair<std::shared_ptr<Strategy>, std::shared_ptr<Strategy>>());
+		vecStrategy.back().first = itStrategyFirst->second;
+		vecStrategy.back().second = itStrategySecond->second;
 	}
 	spSolution->init(vecStrategy);
-	return spSolution->buy(buyStock, date, makeSolutionInfo(date, stockFund, solutionType, vecStrategyType, onceDate));
+	std::shared_ptr<SolutionInfo> buySolutionInfo = makeSolutionInfo(date, stockFund, solutionType, vecStrategyType, onceDate);
+	if (!spSolution->buy(buyStock, date, buySolutionInfo))
+	{
+		return false;
+	}
+	useStrategyType = buySolutionInfo->m_strategyAllInfo.begin()->second.begin()->first;
+	return true;
 }
 
 bool StockTrade::sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
 	const IntDateTime& date,
 	StockFund* stockFund,
 	SolutionType solutionType,
-	const std::vector<StrategyType>& vecStrategyType)
+	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType)
 {
 	auto itSolution = m_solutionMap.find(solutionType);
 	if (itSolution == m_solutionMap.end())
@@ -176,16 +195,23 @@ bool StockTrade::sell(std::vector<std::pair<std::string, std::pair<BigNumber, Bi
 	}
 	const std::shared_ptr<Solution>& spSolution = itSolution->second;
 
-	std::vector<std::shared_ptr<Strategy>> vecStrategy;
+	std::vector<std::pair<std::shared_ptr<Strategy>, std::shared_ptr<Strategy>>> vecStrategy;
 	int32_t index = -1;
 	while (index++ != vecStrategyType.size() - 1)
 	{
-		auto itStrategy = m_strategyMap.find(vecStrategyType[index]);
-		if (itStrategy == m_strategyMap.end())
+		auto itStrategyFirst = m_strategyMap.find(vecStrategyType[index].first);
+		if (itStrategyFirst == m_strategyMap.end())
 		{
 			return false;
 		}
-		vecStrategy.push_back(itStrategy->second);
+		auto itStrategySecond = m_strategyMap.find(vecStrategyType[index].second);
+		if (itStrategySecond == m_strategyMap.end())
+		{
+			return false;
+		}
+		vecStrategy.push_back(std::pair<std::shared_ptr<Strategy>, std::shared_ptr<Strategy>>());
+		vecStrategy.back().first = itStrategyFirst->second;
+		vecStrategy.back().second = itStrategySecond->second;
 	}
 	spSolution->init(vecStrategy);
 
@@ -232,7 +258,7 @@ bool StockTrade::stockDayData(const std::vector<std::string>& vecStock,
 std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& date,
 	StockFund* stockFund,
 	SolutionType solutionType,
-	const std::vector<StrategyType>& vecStrategyType,
+	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 	const IntDateTime& onceDate)
 {
 	std::shared_ptr<SolutionInfo> spSolutionInfo = StockSolution::instance().solutionInfo(solutionType);
@@ -249,16 +275,19 @@ std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& da
 	while (index++ != m_allStock.size() - 1)
 	{
 		const std::string& stock = m_allStock[index];
-		std::map<StrategyType, std::pair<std::shared_ptr<StrategyInfo>, std::shared_ptr<StrategyInfo>>>& mapStrategyInfo = spSolutionInfo->m_strategyAllInfo[stock];
+		std::vector<std::pair<StrategyType, std::pair<std::shared_ptr<StrategyInfo>, std::shared_ptr<StrategyInfo>>>>& vecStrategyInfo = spSolutionInfo->m_strategyAllInfo[stock];
 		int32_t strategyIndex = -1;
 		while (strategyIndex++ != vecStrategyType.size() - 1)
 		{
-			const StrategyType& strategyType = vecStrategyType[strategyIndex];
-			mapStrategyInfo[strategyType].first = StockStrategy::instance().strategyInfo(strategyType,
+			const StrategyType& strategyTypeFirst = vecStrategyType[strategyIndex].first;
+			const StrategyType& strategyTypeSecond = vecStrategyType[strategyIndex].second;
+			vecStrategyInfo.push_back(std::pair<StrategyType, std::pair<std::shared_ptr<StrategyInfo>, std::shared_ptr<StrategyInfo>>>());
+			vecStrategyInfo.back().first = strategyTypeFirst;
+			vecStrategyInfo.back().second.first = StockStrategy::instance().strategyInfo(strategyTypeFirst,
 				stockFund,
 				m_spMarketMap.find(stock)->second,
 				m_spIndicatorMap.find(stock)->second);
-			mapStrategyInfo[strategyType].second = StockStrategy::instance().strategyInfo(strategyType,
+			vecStrategyInfo.back().second.second = StockStrategy::instance().strategyInfo(strategyTypeSecond,
 				stockFund,
 				m_spMarketMap.find(stock)->second,
 				m_spIndicatorMap.find(stock)->second);
