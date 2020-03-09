@@ -34,15 +34,19 @@ bool StrategySet::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Bi
 	while (index++ != filterStock.size() - 1)
 	{
 		const std::string& stock = filterStock[index];
+
+		std::shared_ptr<Strategy> spStrategy = strategy(m_useType);
+		std::shared_ptr<StrategyInfo> spStrategyInfo = strategySetInfo->strategyInfo(stock, strategySetInfo->m_useType);
+		if (spStrategy == nullptr || spStrategyInfo == nullptr)
+		{
+			RCSend("未发现使用类型5");
+			continue;
+		}
+
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		const std::shared_ptr<StrategyInfo>& spStrategyInfo = strategySetInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first;
-		if (m_vecStrategy[0].first->buy(date,
-			price,
-			percent,
-			score,
-			spStrategyInfo))
+		if (spStrategy->buy(date, price, percent, score, spStrategyInfo))
 		{
 			std::pair<std::string, std::pair<BigNumber, BigNumber>> choose;
 			choose.first = stock;

@@ -15,8 +15,9 @@ public:
 public:
 	/** 初始化
 	@param [in] stockNum gupiao个数
+	@param [in] vecStrategyType 执行类型
 	*/
-	void init(int32_t stockNum);
+	void init(int32_t stockNum, const std::vector<StrategyType>& vecStrategyType);
 
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
@@ -44,6 +45,7 @@ protected:
 #pragma warning(disable:4251)
 #endif
 	std::shared_ptr<AvgFundHighScore> m_avgSolution;
+	std::vector<StrategyType> m_vecStrategyType;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

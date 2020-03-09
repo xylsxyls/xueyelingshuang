@@ -38,6 +38,7 @@
     <ClCompile Include="..\src\DisposableStrategy.cpp" />
     <ClCompile Include="..\src\IntegratedStrategy.cpp" />
     <ClCompile Include="..\src\Solution.cpp" />
+    <ClCompile Include="..\src\SolutionInfo.cpp" />
     <ClCompile Include="..\src\StockSolution.cpp" />
     <ClCompile Include="..\src\StrategySet.cpp" />
   </ItemGroup>

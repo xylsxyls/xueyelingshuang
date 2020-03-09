@@ -13,40 +13,28 @@ IntegratedStrategy::IntegratedStrategy()
 	m_avgSolution = std::dynamic_pointer_cast<AvgFundHighScore>(StockSolution::instance().solution(AVG_FUND_HIGH_SCORE));
 }
 
-void IntegratedStrategy::init(int32_t stockNum)
+void IntegratedStrategy::init(int32_t stockNum, const std::vector<StrategyType>& vecStrategyType)
 {
 	m_avgSolution->init(stockNum);
+	m_vecStrategyType = vecStrategyType;
 }
 
 bool IntegratedStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
 	const IntDateTime& date,
 	const std::shared_ptr<SolutionInfo>& solutionInfo)
 {
-	if (solutionInfo->m_strategyAllInfo.empty())
-	{
-		return false;
-	}
+	m_avgSolution->Solution::init(m_mapStrategy);
 
-	std::vector<std::pair<std::shared_ptr<Strategy>, std::shared_ptr<Strategy>>> vecStrategy = m_vecStrategy;
-	
-	while (true)
+	int32_t index = -1;
+	while (index++ != m_vecStrategyType.size() - 1)
 	{
-		auto& strategyMap = solutionInfo->m_strategyAllInfo.begin()->second;
-		if (strategyMap.empty())
-		{
-			return false;
-		}
-		m_avgSolution->Solution::init(vecStrategy);
+		const StrategyType& useType = m_vecStrategyType[index];
+		m_avgSolution->setParam(useType);
+		solutionInfo->setParam(useType);
 		if (m_avgSolution->buy(buyStock, date, solutionInfo))
 		{
 			return true;
 		}
-		for (auto itStrategyInfo = solutionInfo->m_strategyAllInfo.begin(); itStrategyInfo != solutionInfo->m_strategyAllInfo.end(); ++itStrategyInfo)
-		{
-			auto& strategyInfoMap = itStrategyInfo->second;
-			strategyInfoMap.erase(strategyInfoMap.begin());
-		}
-		vecStrategy.erase(vecStrategy.begin());
 	}
 	return false;
 }
@@ -55,6 +43,6 @@ bool IntegratedStrategy::sell(std::vector<std::pair<std::string, std::pair<BigNu
 	const IntDateTime& date,
 	const std::shared_ptr<SolutionInfo>& solutionInfo)
 {
-	m_avgSolution->Solution::init(m_vecStrategy);
+	m_avgSolution->Solution::init(m_mapStrategy);
 	return m_avgSolution->sell(sellStock, date, solutionInfo);
 }

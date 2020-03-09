@@ -116,15 +116,19 @@ bool DisposableStrategy::strategyBuy(std::vector<std::pair<std::string, std::pai
 	while (index++ != filterStock.size() - 1)
 	{
 		const std::string& stock = filterStock[index];
+
+		std::shared_ptr<Strategy> spStrategy = strategy(m_useType);
+		std::shared_ptr<StrategyInfo> spStrategyInfo = disposableStrategyInfo->strategyInfo(stock, disposableStrategyInfo->m_useType);
+		if (spStrategy == nullptr || spStrategyInfo == nullptr)
+		{
+			RCSend("未发现使用类型3");
+			continue;
+		}
+
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		const std::shared_ptr<StrategyInfo>& spStrategyInfo = disposableStrategyInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first;
-		if (m_vecStrategy[0].first->buy(date,
-			price,
-			percent,
-			score,
-			spStrategyInfo))
+		if (spStrategy->buy(date, price, percent, score, spStrategyInfo))
 		{
 			std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>> choose;
 			choose.first = stock;
@@ -149,11 +153,19 @@ int32_t DisposableStrategy::strategyBuyCount(const IntDateTime& date, const std:
 	while (index++ != filterStock.size() - 1)
 	{
 		const std::string& stock = filterStock[index];
+
+		std::shared_ptr<Strategy> spStrategyCount = strategyCount(m_useType);
+		std::shared_ptr<StrategyInfo> spStrategyInfoCount = disposableStrategyInfo->strategyInfoCount(stock, disposableStrategyInfo->m_useType);
+		if (spStrategyCount == nullptr || spStrategyInfoCount == nullptr)
+		{
+			RCSend("未发现使用类型4");
+			continue;
+		}
+
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		const std::shared_ptr<StrategyInfo>& spStrategyInfo = disposableStrategyInfo->m_strategyAllInfo.find(stock)->second.begin()->second.second;
-		count += (int32_t)m_vecStrategy[0].second->buy(date, price, percent, score, spStrategyInfo);
+		count += (int32_t)spStrategyCount->buy(date, price, percent, score, spStrategyInfoCount);
 	}
 	return count;
 }
@@ -170,13 +182,19 @@ bool DisposableStrategy::strategySell(std::vector<std::pair<std::string, std::pa
 	while (index++ != vecOwnedStock.size() - 1)
 	{
 		const std::string& stock = vecOwnedStock[index];
-		auto& strategyInfo = solutionInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first;
-		auto& spMarket = strategyInfo->m_spMarket;
+
+		std::shared_ptr<Strategy> spStrategy = strategy(m_useType);
+		std::shared_ptr<StrategyInfo> spStrategyInfo = solutionInfo->strategyInfo(stock, solutionInfo->m_useType);
+		if (spStrategy == nullptr || spStrategyInfo == nullptr)
+		{
+			RCSend("未发现使用类型，stock = %s", stock.c_str());
+			continue;
+		}
 
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		if (m_vecStrategy[0].first->sell(date, price, percent, score, strategyInfo))
+		if (spStrategy->sell(date, price, percent, score, spStrategyInfo))
 		{
 			std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>> sellChoose;
 			sellChoose.first = stock;
@@ -189,30 +207,4 @@ bool DisposableStrategy::strategySell(std::vector<std::pair<std::string, std::pa
 	}
 	std::sort(sellStock.begin(), sellStock.end(), sortFun);
 	return result;
-}
-
-int32_t DisposableStrategy::minPollSize(const std::shared_ptr<SolutionInfo>& solutionInfo)
-{
-	if (solutionInfo->m_strategyAllInfo.empty())
-	{
-		return 0;
-	}
-	if (solutionInfo->m_strategyAllInfo.begin()->second.empty())
-	{
-		return 0;
-	}
-	return solutionInfo->m_strategyAllInfo.begin()->second.begin()->second.first->minPollSize();
-}
-
-int32_t DisposableStrategy::popSize(int32_t buySize, const std::shared_ptr<SolutionInfo>& solutionInfo)
-{
-	if (solutionInfo->m_strategyAllInfo.empty())
-	{
-		return 0;
-	}
-	if (solutionInfo->m_strategyAllInfo.begin()->second.empty())
-	{
-		return 0;
-	}
-	return solutionInfo->m_strategyAllInfo.begin()->second.begin()->second.first->popSize(buySize);
 }
