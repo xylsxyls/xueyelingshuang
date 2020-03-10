@@ -69,6 +69,9 @@
     <ClInclude Include="CEwqr1Task.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="CWewTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -111,6 +114,9 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CEwqr1Task.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CWewTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

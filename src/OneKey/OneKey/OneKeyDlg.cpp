@@ -21,6 +21,7 @@
 #include "CQreTask.h"
 #include "CrFlashTask.h"
 #include "CEwqr1Task.h"
+#include "CWewTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -301,6 +302,14 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			//(sleepWatch.GetWatchTime()) > 20000 ? 20 : 0
 			weqTask->setParam(50);
 			spTask.reset(weqTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		if (fiveDown && stopWatch.GetWatchTime() > 200)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CWewTask> spTask;
+			CWewTask* wewTask = new CWewTask;
+			spTask.reset(wewTask);
 			taskThread->PostTask(spTask, 1);
 		}
 		else if (rDown)
