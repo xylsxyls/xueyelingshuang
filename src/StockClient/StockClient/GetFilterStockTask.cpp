@@ -86,7 +86,9 @@ void GetFilterStockTask::DoTask()
 	if (m_regain || m_stockClient->m_allFilterStock.empty())
 	{
 		ShellExecuteA(NULL, "open", filePath.c_str(), NULL, NULL, SW_SHOW);
-		Sleep(4000);
+		Sleep(5000);
+		CMouse::MoveAbsolute(xyls::Point(1104, 574), 0);
+		CMouse::LeftClick();
 		CMouse::MoveAbsolute(xyls::Point(77, 190), 0);
 		CMouse::LeftClick();
 		Sleep(100);
