@@ -77,6 +77,11 @@ BigNumber StockDay::chgValue() const
 	return (((m_close / m_preClose.toPrec(6).zero()) - 1) * 100).toPrec(2);
 }
 
+BigNumber StockDay::openChgValue() const
+{
+	return (((m_open / m_preClose.toPrec(6).zero()) - 1) * 100).toPrec(2);
+}
+
 BigNumber StockDay::highChgValue() const
 {
 	return (((m_high / m_preClose.toPrec(6).zero()) - 1) * 100).toPrec(2);

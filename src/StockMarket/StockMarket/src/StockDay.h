@@ -83,6 +83,10 @@ public:
 	*/
 	BigNumber chgValue() const;
 
+	/** kaipanzhangdie幅，已乘以100，包含百分号
+	*/
+	BigNumber openChgValue() const;
+
 	/** 最高zhangdie幅，已乘以100，包含百分号
 	@return 返回最高zhangdie幅
 	*/

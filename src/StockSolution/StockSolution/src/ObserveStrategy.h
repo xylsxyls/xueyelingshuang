@@ -62,4 +62,5 @@ protected:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+	int32_t m_stockNum;
 };
