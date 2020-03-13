@@ -9,6 +9,8 @@
 #include "DisposableStrategyInfo.h"
 #include "IntegratedStrategy.h"
 #include "IntegratedStrategyInfo.h"
+#include "ObserveStrategy.h"
+#include "ObserveStrategyInfo.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockSolutiond.lib")

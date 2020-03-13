@@ -7,6 +7,8 @@
 #include "DisposableStrategyInfo.h"
 #include "IntegratedStrategy.h"
 #include "IntegratedStrategyInfo.h"
+#include "ObserveStrategy.h"
+#include "ObserveStrategyInfo.h"
 
 StockSolution::StockSolution()
 {
@@ -44,6 +46,11 @@ std::shared_ptr<Solution> StockSolution::solution(SolutionType solutionType)
 		spSolution.reset(new IntegratedStrategy);
 	}
 	break;
+	case OBSERVE_STRATEGY:
+	{
+		spSolution.reset(new ObserveStrategy);
+	}
+	break;
 	default:
 		break;
 	}
@@ -57,6 +64,7 @@ std::shared_ptr<SolutionInfo> StockSolution::solutionInfo(SolutionType solutionT
 	{
 	case AVG_FUND_HIGH_SCORE:
 	case INTEGRATED_STRATEGY:
+	case OBSERVE_STRATEGY:
 	{
 		spSolutionInfo.reset(new AvgFundHighScoreInfo);
 	}

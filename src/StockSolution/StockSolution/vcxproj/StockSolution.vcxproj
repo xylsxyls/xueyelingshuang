@@ -25,6 +25,8 @@
     <ClInclude Include="..\src\DisposableStrategyInfo.h" />
     <ClInclude Include="..\src\IntegratedStrategy.h" />
     <ClInclude Include="..\src\IntegratedStrategyInfo.h" />
+    <ClInclude Include="..\src\ObserveStrategy.h" />
+    <ClInclude Include="..\src\ObserveStrategyInfo.h" />
     <ClInclude Include="..\src\Solution.h" />
     <ClInclude Include="..\src\SolutionInfo.h" />
     <ClInclude Include="..\src\StockSolutionAPI.h" />
@@ -37,6 +39,7 @@
     <ClCompile Include="..\src\AvgFundHighScore.cpp" />
     <ClCompile Include="..\src\DisposableStrategy.cpp" />
     <ClCompile Include="..\src\IntegratedStrategy.cpp" />
+    <ClCompile Include="..\src\ObserveStrategy.cpp" />
     <ClCompile Include="..\src\Solution.cpp" />
     <ClCompile Include="..\src\SolutionInfo.cpp" />
     <ClCompile Include="..\src\StockSolution.cpp" />

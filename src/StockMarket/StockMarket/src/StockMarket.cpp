@@ -215,6 +215,25 @@ int32_t StockMarket::getMemoryDays(const IntDateTime& date1, const IntDateTime& 
 	}
 }
 
+IntDateTime StockMarket::getDateBefore(int32_t days)
+{
+	if (m_stockData->m_history.empty())
+	{
+		return IntDateTime(0, 0);
+	}
+
+	auto itCurrentDate = m_stockData->m_history.find(m_date);
+	auto itFirstDate = m_stockData->m_history.begin();
+	while (days-- != 0)
+	{
+		if (--itCurrentDate == itFirstDate)
+		{
+			return itFirstDate->first;
+		}
+	}
+	return itCurrentDate->first;
+}
+
 int32_t StockMarket::days()
 {
 	return m_stockData->m_history.size();

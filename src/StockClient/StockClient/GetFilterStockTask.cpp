@@ -89,6 +89,8 @@ void GetFilterStockTask::DoTask()
 		Sleep(5000);
 		CMouse::MoveAbsolute(xyls::Point(1104, 574), 0);
 		CMouse::LeftClick();
+		Sleep(1000);
+		CMouse::LeftClick();
 		CMouse::MoveAbsolute(xyls::Point(77, 190), 0);
 		CMouse::LeftClick();
 		Sleep(100);

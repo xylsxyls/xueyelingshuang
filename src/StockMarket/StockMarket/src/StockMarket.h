@@ -124,6 +124,12 @@ public:
 	*/
 	int32_t getMemoryDays(const IntDateTime& date1, const IntDateTime& date2);
 
+	/** 获取之前的jiaoyiri日期，不包括当天
+	@param [in] days 天数
+	@return 返回之前的jiaoyiri日期
+	*/
+	IntDateTime getDateBefore(int32_t days);
+
 	/** 一共有多少天
 	@return 返回一共有多少天
 	*/
