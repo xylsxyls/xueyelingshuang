@@ -8,17 +8,19 @@
 #include "AvgFundHighScore.h"
 
 ObserveStrategy::ObserveStrategy():
-m_stockNum(0)
+m_stockNum(0),
+m_calcDays(0)
 {
 	m_solutionType = OBSERVE_STRATEGY;
 	m_avgSolution = std::dynamic_pointer_cast<AvgFundHighScore>(StockSolution::instance().solution(AVG_FUND_HIGH_SCORE));
 }
 
-void ObserveStrategy::init(int32_t stockNum, StrategyType strategyType)
+void ObserveStrategy::init(int32_t stockNum, StrategyType strategyType, int32_t calcDays)
 {
 	m_stockNum = stockNum;
 	m_avgSolution->init(stockNum);
 	m_strategyType = strategyType;
+	m_calcDays = calcDays;
 }
 
 bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
@@ -31,7 +33,7 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 	solutionInfo->setParam(m_strategyType);
 
 	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> beforeDayBuyStock;
-	if (!m_avgSolution->buy(beforeDayBuyStock, getBeforeDay("000001", date, 2, solutionInfo), solutionInfo))
+	if (!m_avgSolution->buy(beforeDayBuyStock, getBeforeDay("000001", date, m_calcDays, solutionInfo), solutionInfo))
 	{
 		return false;
 	}
@@ -44,22 +46,19 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 		const std::string& stock = beforeDayBuyStock[index].first;
 		std::shared_ptr<StockMarket> spMarket = solutionInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first->m_spMarket;
 		BigNumber avgChgValue = 0;
-		if (!spMarket->setDate(getBeforeDay(stock, date, 1, solutionInfo)))
+		int32_t calcDays = m_calcDays;
+		while (calcDays-- != 0)
 		{
-			continue;
+			if (!spMarket->setDate(getBeforeDay(stock, date, calcDays, solutionInfo)))
+			{
+				RCSend("不存在的计算天数");
+				continue;
+			}
+			avgChgValue = avgChgValue + spMarket->day()->openChgValue() +
+				spMarket->day()->highChgValue() +
+				spMarket->day()->lowChgValue() +
+				spMarket->day()->chgValue();
 		}
-		avgChgValue = avgChgValue + spMarket->day()->openChgValue() +
-			spMarket->day()->highChgValue() + 
-			spMarket->day()->lowChgValue() +
-			spMarket->day()->chgValue();
-		if (!spMarket->setDate(date))
-		{
-			continue;
-		}
-		avgChgValue = avgChgValue + spMarket->day()->openChgValue() +
-			spMarket->day()->highChgValue() +
-			spMarket->day()->lowChgValue() +
-			spMarket->day()->chgValue();
 		beforeDayBuyStockMap[avgChgValue].push_back(beforeDayBuyStock[index]);
 	}
 
@@ -78,7 +77,6 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 			if ((int32_t)buyStock.size() >= m_stockNum)
 			{
 				break;
-				
 			}
 		}
 		if ((int32_t)buyStock.size() >= m_stockNum)

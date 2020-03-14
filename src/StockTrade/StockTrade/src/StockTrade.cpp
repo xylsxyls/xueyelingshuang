@@ -93,7 +93,7 @@ void StockTrade::init(const IntDateTime& beginTime,
 		break;
 		case OBSERVE_STRATEGY:
 		{
-			(std::dynamic_pointer_cast<ObserveStrategy>(spSolution))->init(4, vecStrategyType[0]);
+			(std::dynamic_pointer_cast<ObserveStrategy>(spSolution))->init(4, vecStrategyType[0], 2);
 		}
 		break;
 		default:
