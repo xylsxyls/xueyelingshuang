@@ -36,7 +36,7 @@ void StockDaysRetest::init(SolutionType solutionType,
 	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
-	const BigNumber initialFund,
+	const BigNumber& initialFund,
 	bool showStockLog,
 	int32_t threadCount)
 {
@@ -109,7 +109,6 @@ void StockDaysRetest::run()
 		IntDateTime currentTime = m_runMarket.date();
 		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
 		m_trade.sell(sellStock, currentTime, &m_fund, m_solutionType, m_vecStrategyType);
-
 		int32_t index = -1;
 		while (index++ != sellStock.size() - 1)
 		{
@@ -122,7 +121,7 @@ void StockDaysRetest::run()
 			m_fund.sellStock(price, rate, spMarket->day());
 		}
 
-		if (currentTime <= m_endTime)
+		if (currentTime >= m_endTime)
 		{
 			break;
 		}
@@ -130,7 +129,6 @@ void StockDaysRetest::run()
 		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
 		StrategyType useStrategyType = STRATEGY_INIT;
 		bool isBuy = m_trade.buy(buyStock, currentTime, &m_fund, m_solutionType, m_vecStrategyType, useStrategyType);
-
 		index = -1;
 		while (index++ != buyStock.size() - 1)
 		{
@@ -143,6 +141,7 @@ void StockDaysRetest::run()
 			m_fund.buyStock(price, rate, spMarket->day(), useStrategyType);
 		}
 
+		m_runMarket.next();
 		++days;
 		if (isBuy)
 		{
@@ -163,8 +162,6 @@ void StockDaysRetest::run()
 		BigNumber currentAvailableFund = m_fund.availableFund();
 
 		hasPercent = hasPercent + ((currentAllFund - currentAvailableFund) / currentAllFund.toPrec(6));
-		
-		m_runMarket.next();
 	}
 	
 	if (m_showStockLog)
@@ -172,9 +169,9 @@ void StockDaysRetest::run()
 		m_fund.printStockLog();
 	}
 
-	RCSend("day = %s, buy day = %s, day percent = %s", (hasDays / days.toPrec(6) * 100).toPrec(2),
-		(buyDays / days.toPrec(6) * 100).toPrec(2),
-		(hasPercent / hasDays.toPrec(6) * 100).toPrec(2));
+	RCSend("day = %s%%, buy day = %s%%, day percent = %s%%", (hasDays / days.toPrec(6).zero() * 100).toPrec(2).toString().c_str(),
+		(buyDays / days.toPrec(6).zero() * 100).toPrec(2).toString().c_str(),
+		(hasPercent / hasDays.toPrec(6).zero() * 100).toPrec(2).toString().c_str());
 }
 
 void StockDaysRetest::printProfit(const IntDateTime& currentTime)

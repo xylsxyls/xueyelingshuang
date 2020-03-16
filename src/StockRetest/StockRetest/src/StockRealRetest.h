@@ -20,7 +20,7 @@ public:
 		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
-		const BigNumber initialFund = 200000,
+		const BigNumber& initialFund = 200000,
 		bool showStockLog = false,
 		int32_t threadCount = 0);
 

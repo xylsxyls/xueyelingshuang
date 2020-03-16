@@ -179,6 +179,7 @@ bool StockTrade::buy(std::vector<std::pair<std::string, std::pair<BigNumber, Big
 		strategyPair.second = itStrategySecond->second;
 	}
 	spSolution->init(mapStrategy);
+	spSolution->setParam(vecStrategyType[0].first);
 	std::shared_ptr<SolutionInfo> buySolutionInfo = makeSolutionInfo(date, stockFund, solutionType, vecStrategyType, onceDate);
 	if (!spSolution->buy(buyStock, date, buySolutionInfo))
 	{
@@ -220,7 +221,7 @@ bool StockTrade::sell(std::vector<std::pair<std::string, std::pair<BigNumber, Bi
 		strategyPair.second = itStrategySecond->second;
 	}
 	spSolution->init(mapStrategy);
-
+	spSolution->setParam(vecStrategyType[0].first);
 	std::shared_ptr<SolutionInfo> solutionInfo = makeSolutionInfo(date,
 		stockFund,
 		solutionType,
@@ -275,6 +276,7 @@ std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& da
 	{
 		const std::shared_ptr<DisposableStrategyInfo>& disposableStrategyInfo = std::dynamic_pointer_cast<DisposableStrategyInfo>(spSolutionInfo);
 		disposableStrategyInfo->m_onceDate = onceDate;
+		disposableStrategyInfo->m_useType = vecStrategyType[0].first;
 	}
 	if (solutionType == AVG_FUND_HIGH_SCORE)
 	{

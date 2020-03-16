@@ -934,14 +934,22 @@ void StockClient::onDaysTestButtonClicked()
 	}
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
-	StrategyType strategyType = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
+	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
+
+	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+	int32_t index = -1;
+	while (index++ != vecStrStrategyType.size() - 1)
+	{
+		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
+		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
+		vecStrategyType.back().first = strategyType;
+		vecStrategyType.back().second = strategyType;
+	}
+
 	SolutionType solutionType = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY;
 
 	std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
-	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
-	vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-	vecStrategyType.back().first = strategyType;
-	vecStrategyType.back().second = strategyType;
 	spDaysTestTask->setParam(solutionType, vecStrategyType, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 }

@@ -36,7 +36,7 @@ void StockRankRetest::init(SolutionType solutionType,
 	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
-	const BigNumber initialFund,
+	const BigNumber& initialFund,
 	bool showStockLog,
 	int32_t threadCount)
 {
