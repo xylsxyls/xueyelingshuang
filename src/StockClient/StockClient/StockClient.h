@@ -50,6 +50,7 @@ private slots:
 	void onSaveFilterStockToRedisButtonClicked();
 	void onRealTestButtonClicked();
 	void onOnceTestButtonClicked();
+	void onDaysTestButtonClicked();
 	void onEverydaySolutionButtonClicked();
 	void onEverydayHelperButtonClicked();
 	void onEverydayTaskButtonClicked();
@@ -121,6 +122,8 @@ private:
 	COriginalButton* m_realTestButton;
 	//单次模拟测试
 	COriginalButton* m_onceTestButton;
+	//天数模拟测试
+	COriginalButton* m_daysTestButton;
 	//每日策略
 	COriginalButton* m_everydaySolutionButton;
 	//每日帮助

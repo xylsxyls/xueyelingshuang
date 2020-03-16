@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClCompile Include="CheckAllStockTask.cpp" />
     <ClCompile Include="ChooseStockTask.cpp" />
+    <ClCompile Include="DaysTestTask.cpp" />
     <ClCompile Include="EverydaySolutionTask.cpp" />
     <ClCompile Include="EveryTestTask.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_StockClient.cpp">
@@ -301,6 +302,7 @@
   <ItemGroup>
     <ClInclude Include="CheckAllStockTask.h" />
     <ClInclude Include="ChooseStockTask.h" />
+    <ClInclude Include="DaysTestTask.h" />
     <ClInclude Include="EverydaySolutionTask.h" />
     <ClInclude Include="EveryTestTask.h" />
     <ClInclude Include="GetFilterStockTask.h" />

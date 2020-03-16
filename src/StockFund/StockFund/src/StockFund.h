@@ -112,6 +112,11 @@ public:
 	*/
 	int32_t stockStrategy(const std::string& stock) const;
 
+	/** 获取可用zijin
+	@return 返回可用zijin
+	*/
+	BigNumber availableFund() const;
+
 	/** 是否还有可用zijin
 	@return 返回是否还有可用zijin
 	*/

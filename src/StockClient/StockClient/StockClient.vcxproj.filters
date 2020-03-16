@@ -137,6 +137,9 @@
     <ClCompile Include="MinimizeTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="DaysTestTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -229,6 +232,9 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="MinimizeTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="DaysTestTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>

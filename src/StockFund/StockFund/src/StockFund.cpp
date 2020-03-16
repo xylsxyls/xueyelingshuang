@@ -338,6 +338,11 @@ int32_t StockFund::stockStrategy(const std::string& stock) const
 	return itStrategyType->second;
 }
 
+BigNumber StockFund::availableFund() const
+{
+	return m_available;
+}
+
 bool StockFund::hasAvailableFund() const
 {
 	return m_available != 0;

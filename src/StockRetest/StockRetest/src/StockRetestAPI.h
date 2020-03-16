@@ -3,6 +3,8 @@
 #include "StockEveryRetest.h"
 #include "StockRealRetest.h"
 #include "StockOnceRetest.h"
+#include "StockDaysRetest.h"
+#include "StockRankRetest.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockRetestd.lib")
