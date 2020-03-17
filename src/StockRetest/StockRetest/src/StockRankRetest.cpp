@@ -11,6 +11,7 @@
 #include "StockFund/StockFundAPI.h"
 #include "CStopWatch/CStopWatchAPI.h"
 #include <math.h>
+#include "CStringManager/CStringManagerAPI.h"
 
 StockRankRetest::StockRankRetest():
 m_solutionType(SOLUTION_INIT),
@@ -72,6 +73,8 @@ void StockRankRetest::init(SolutionType solutionType,
 		vecInitStrategyType.push_back(strategyType);
 	}
 
+	m_runMarket.loadFromRedis("000001", m_beginTime, m_endTime);
+
 	m_trade.init(m_beginTime,
 		m_endTime,
 		StockStrategy::instance().strategyAllStock(m_beginTime, m_endTime),
@@ -82,6 +85,7 @@ void StockRankRetest::init(SolutionType solutionType,
 void StockRankRetest::load()
 {
 	m_trade.load();
+	m_runMarket.load();
 }
 
 void StockRankRetest::run()
@@ -91,55 +95,78 @@ void StockRankRetest::run()
 		return;
 	}
 
-	IntDateTime currentTime = m_beginTime;
-	do
+	if (!m_runMarket.setDate(m_beginTime))
 	{
-		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
-		m_trade.sell(sellStock, currentTime, &m_fund, m_solutionType, m_vecStrategyType);
+		return;
+	}
+	IntDateTime calcTime = m_runMarket.date();
+	
+	while (calcTime < m_endTime)
+	{
+		StockFund stockFund;
+		stockFund.add(m_initialFund);
+
+		StrategyType useStrategyType = STRATEGY_INIT;
+		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
+		if (!m_trade.buy(buyStock, calcTime, &stockFund, m_solutionType, m_vecStrategyType, useStrategyType))
+		{
+			m_runMarket.next();
+			calcTime = m_runMarket.date();
+			continue;
+		}
+		RCSend("date = %s", calcTime.dateToString().c_str());
+
+		std::vector<StockFund> vecStockFund;
+		std::vector<std::string> vecStockRank;
 
 		int32_t index = -1;
-		while (index++ != sellStock.size() - 1)
+		while (index++ != buyStock.size() - 1)
 		{
-			const std::string& stock = sellStock[index].first;
-			const BigNumber& price = sellStock[index].second.first;
-			const BigNumber& rate = sellStock[index].second.second;
+			vecStockFund.push_back(StockFund());
+			vecStockFund.back().add(m_initialFund);
+			const std::string& stock = buyStock[index].first;
+			const BigNumber& price = buyStock[index].second.first;
 			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
-			RCSend("maichu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
-				spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
-			m_fund.sellStock(price, rate, spMarket->day());
+			vecStockFund.back().buyStock(price, 1, spMarket->day(), useStrategyType);
+			vecStockRank.push_back(stock);
 		}
 
-		if (currentTime == m_endTime)
+		IntDateTime currentTime = calcTime;
+		int32_t dayIndex = -1;
+		while (dayIndex++ != 10 - 1)
 		{
-			break;
-		}
+			m_runMarket.setDate(currentTime);
+			if (!m_runMarket.next())
+			{
+				break;
+			}
+			currentTime = m_runMarket.date();
 
-		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-		StrategyType useStrategyType = STRATEGY_INIT;
-		m_trade.buy(buyStock, currentTime, &m_fund, m_solutionType, m_vecStrategyType, useStrategyType);
+			int32_t fundIndex = -1;
+			while (fundIndex++ != vecStockFund.size() - 1)
+			{
+				BigNumber allChg = 0;
+				StockFund& fund = vecStockFund[fundIndex];
+				std::string stock = fund.ownedStock()[0];
+				std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
+				spMarket->setDate(currentTime);
+				std::shared_ptr<StockDay> spDay = spMarket->day();
+				fund.stockChg(stock, spDay, allChg);
+				BigNumber dayChg = spDay->chgValue();
+				vecStockRank[fundIndex].append(CStringManager::Format(" (%d) %s%%,%s%%", dayIndex + 1, dayChg.toString().c_str(), allChg.toString().c_str()));
+			}
+		}
 
 		index = -1;
 		while (index++ != buyStock.size() - 1)
 		{
-			const std::string& stock = buyStock[index].first;
-			const BigNumber& price = buyStock[index].second.first;
-			const BigNumber& rate = buyStock[index].second.second;
-			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
-			RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
-				spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
-			m_fund.buyStock(price, rate, spMarket->day(), useStrategyType);
+			RCSend("%s", vecStockRank[index].c_str());
 		}
-
-		printProfit(currentTime);
-
-		currentTime = currentTime + 86400;
-	} while (currentTime <= m_endTime);
-	
-	if (m_showStockLog)
-	{
-		m_fund.printStockLog();
+		
+		m_runMarket.setDate(calcTime);
+		m_runMarket.next();
+		calcTime = m_runMarket.date();
 	}
-	printProfit(currentTime);
 }
 
 void StockRankRetest::printProfit(const IntDateTime& currentTime)

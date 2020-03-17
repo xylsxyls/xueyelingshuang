@@ -43,6 +43,7 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 	int32_t index = -1;
 	while (index++ != beforeDayBuyStock.size() - 1)
 	{
+		bool isSkip = false;
 		const std::string& stock = beforeDayBuyStock[index].first;
 		std::shared_ptr<StockMarket> spMarket = solutionInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first->m_spMarket;
 		BigNumber avgChgValue = 0;
@@ -51,13 +52,19 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 		{
 			if (!spMarket->setDate(getBeforeDay(stock, date, calcDays, solutionInfo)))
 			{
-				RCSend("不存在的计算天数");
-				continue;
+				//说明tingpai了
+				RCSend("tingpai, stock = %s, date = %s", stock.c_str(), date.dateToString().c_str());
+				isSkip = true;
+				break;
 			}
 			avgChgValue = avgChgValue + spMarket->day()->openChgValue() +
 				spMarket->day()->highChgValue() +
 				spMarket->day()->lowChgValue() +
 				spMarket->day()->chgValue();
+		}
+		if (isSkip)
+		{
+			continue;
 		}
 		beforeDayBuyStockMap[avgChgValue].push_back(beforeDayBuyStock[index]);
 	}

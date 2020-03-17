@@ -35,6 +35,7 @@
 #include "RealTestTask.h"
 #include "OnceTestTask.h"
 #include "DaysTestTask.h"
+#include "RankTestTask.h"
 #include "StockSolution/StockSolutionAPI.h"
 #include "EverydaySolutionTask.h"
 #include "ConfigManager/ConfigManagerAPI.h"
@@ -66,6 +67,7 @@ StockClient::StockClient(QWidget* parent)
 	m_realTestButton(nullptr),
 	m_onceTestButton(nullptr),
 	m_daysTestButton(nullptr),
+	m_rankTestButton(nullptr),
 	m_everydaySolutionButton(nullptr),
 	m_everydayHelperButton(nullptr),
 	m_everydayTaskButton(nullptr)
@@ -92,6 +94,7 @@ StockClient::StockClient(QWidget* parent)
 	m_realTestButton = new COriginalButton(this);
 	m_onceTestButton = new COriginalButton(this);
 	m_daysTestButton = new COriginalButton(this);
+	m_rankTestButton = new COriginalButton(this);
 	m_everydaySolutionButton = new COriginalButton(this);
 	m_everydayHelperButton = new COriginalButton(this);
 	m_everydayTaskButton = new COriginalButton(this);
@@ -218,6 +221,10 @@ void StockClient::init()
 	m_daysTestButton->setText(QStringLiteral("天数模拟测试"));
 	QObject::connect(m_daysTestButton, &COriginalButton::clicked, this, &StockClient::onDaysTestButtonClicked);
 
+	m_rankTestButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_rankTestButton->setText(QStringLiteral("排名模拟测试"));
+	QObject::connect(m_rankTestButton, &COriginalButton::clicked, this, &StockClient::onRankTestButtonClicked);
+
 	m_everydaySolutionButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_everydaySolutionButton->setText(QStringLiteral("每日方案"));
 	QObject::connect(m_everydaySolutionButton, &COriginalButton::clicked, this, &StockClient::onEverydaySolutionButtonClicked);
@@ -292,6 +299,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_realTestButton);
 	vecButton.push_back(m_onceTestButton);
 	vecButton.push_back(m_daysTestButton);
+	vecButton.push_back(m_rankTestButton);
 	vecButton.push_back(m_everydaySolutionButton);
 	vecButton.push_back(m_everydayHelperButton);
 	vecButton.push_back(m_everydayTaskButton);
@@ -952,6 +960,51 @@ void StockClient::onDaysTestButtonClicked()
 	std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
 	spDaysTestTask->setParam(solutionType, vecStrategyType, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
+}
+
+void StockClient::onRankTestButtonClicked()
+{
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_tip = QStringLiteral("开始日期");
+	line.m_defaultText = "2019-10-08";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("结束日期");
+	line.m_defaultText = "2020-02-28";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("2和以上");
+	line.m_defaultText = "2";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("是否观察");
+	line.m_defaultText = "0";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
+	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
+	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
+
+	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+	int32_t index = -1;
+	while (index++ != vecStrStrategyType.size() - 1)
+	{
+		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
+		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
+		vecStrategyType.back().first = strategyType;
+		vecStrategyType.back().second = strategyType;
+	}
+
+	SolutionType solutionType = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY;
+
+	std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
+	spRankTestTask->setParam(solutionType, vecStrategyType, beginTime, endTime, this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
 }
 
 void StockClient::onEverydaySolutionButtonClicked()

@@ -20,7 +20,7 @@ public:
 		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
-		const BigNumber& initialFund = 200000,
+		const BigNumber& initialFund = "20000000000",
 		bool showStockLog = false,
 		int32_t threadCount = 0);
 
@@ -49,4 +49,5 @@ private:
 	BigNumber m_allStockCount;
 	StockFund m_fund;
 	StockTrade m_trade;
+	StockMarket m_runMarket;
 };
