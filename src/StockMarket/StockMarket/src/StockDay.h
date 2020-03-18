@@ -97,6 +97,11 @@ public:
 	*/
 	BigNumber lowChgValue() const;
 
+	/** 四点junxianzhangdie幅，已乘以100，包含百分号
+	@return 返回四点junxianzhangdie幅
+	*/
+	BigNumber fourAvgChgValue() const;
+
 	/** zhen幅，已乘以100，包含百分号，总不为负
 	@return 返回zhen幅
 	*/

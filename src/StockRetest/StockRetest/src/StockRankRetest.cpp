@@ -110,7 +110,10 @@ void StockRankRetest::run()
 		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
 		if (!m_trade.buy(buyStock, calcTime, &stockFund, m_solutionType, m_vecStrategyType, useStrategyType))
 		{
-			m_runMarket.next();
+			if (!m_runMarket.next())
+			{
+				break;
+			}
 			calcTime = m_runMarket.date();
 			continue;
 		}
@@ -128,7 +131,11 @@ void StockRankRetest::run()
 			const BigNumber& price = buyStock[index].second.first;
 			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
 			vecStockFund.back().buyStock(price, 1, spMarket->day(), useStrategyType);
-			vecStockRank.push_back(stock);
+			spMarket->previous();
+			std::string preAvg = spMarket->day()->fourAvgChgValue().toString();
+			spMarket->next();
+			std::string avg = spMarket->day()->fourAvgChgValue().toString();
+			vecStockRank.push_back(stock + " " + preAvg + "%, " + avg + "%");
 		}
 
 		IntDateTime currentTime = calcTime;
@@ -164,7 +171,10 @@ void StockRankRetest::run()
 		}
 		
 		m_runMarket.setDate(calcTime);
-		m_runMarket.next();
+		if (!m_runMarket.next())
+		{
+			break;
+		}
 		calcTime = m_runMarket.date();
 	}
 }

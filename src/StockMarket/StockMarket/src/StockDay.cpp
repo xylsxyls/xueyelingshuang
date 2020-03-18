@@ -92,6 +92,11 @@ BigNumber StockDay::lowChgValue() const
 	return (((m_low / m_preClose.toPrec(6).zero()) - 1) * 100).toPrec(2);
 }
 
+BigNumber StockDay::fourAvgChgValue() const
+{
+	return ((openChgValue() + highChgValue() + lowChgValue() + chgValue()) / 4).toPrec(2);
+}
+
 BigNumber StockDay::amplitudeValue() const
 {
 	return ((m_high - m_low) / m_preClose.toPrec(6).zero() * 100).toPrec(2);

@@ -57,10 +57,7 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 				isSkip = true;
 				break;
 			}
-			avgChgValue = avgChgValue + spMarket->day()->openChgValue() +
-				spMarket->day()->highChgValue() +
-				spMarket->day()->lowChgValue() +
-				spMarket->day()->chgValue();
+			avgChgValue = avgChgValue + spMarket->day()->fourAvgChgValue();
 		}
 		if (isSkip)
 		{
