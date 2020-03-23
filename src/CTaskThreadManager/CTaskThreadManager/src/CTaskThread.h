@@ -47,7 +47,7 @@ public:
 	*/
 	int32_t GetCurTaskLevel();
 
-	/** 等待所有任务执行完成后退出
+	/** 等待所有任务执行完成后退出线程
 	*/
 	void WaitForEnd();
 
