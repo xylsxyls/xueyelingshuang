@@ -9,3 +9,8 @@ int32_t CatchUpInfo::popSize(int32_t buySize)
 {
 	return 0;
 }
+
+int32_t CatchUpInfo::stockNum()
+{
+	return 2;
+}

@@ -82,18 +82,17 @@ void StockTrade::init(const IntDateTime& beginTime,
 		{
 		case AVG_FUND_HIGH_SCORE:
 		{
-			(std::dynamic_pointer_cast<AvgFundHighScore>(spSolution))->init(4);
 			(std::dynamic_pointer_cast<AvgFundHighScore>(spSolution))->setParam(vecStrategyType[0]);
 		}
 		break;
 		case INTEGRATED_STRATEGY:
 		{
-			(std::dynamic_pointer_cast<IntegratedStrategy>(spSolution))->init(4, vecStrategyType);
+			(std::dynamic_pointer_cast<IntegratedStrategy>(spSolution))->init(vecStrategyType);
 		}
 		break;
 		case OBSERVE_STRATEGY:
 		{
-			(std::dynamic_pointer_cast<ObserveStrategy>(spSolution))->init(4, vecStrategyType[0], 2);
+			(std::dynamic_pointer_cast<ObserveStrategy>(spSolution))->init(vecStrategyType[0], 2);
 		}
 		break;
 		default:

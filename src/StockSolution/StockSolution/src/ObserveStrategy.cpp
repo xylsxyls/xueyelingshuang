@@ -8,17 +8,15 @@
 #include "AvgFundHighScore.h"
 
 ObserveStrategy::ObserveStrategy():
-m_stockNum(0),
+m_stockNum(4),
 m_calcDays(0)
 {
 	m_solutionType = OBSERVE_STRATEGY;
 	m_avgSolution = std::dynamic_pointer_cast<AvgFundHighScore>(StockSolution::instance().solution(AVG_FUND_HIGH_SCORE));
 }
 
-void ObserveStrategy::init(int32_t stockNum, StrategyType strategyType, int32_t calcDays)
+void ObserveStrategy::init(StrategyType strategyType, int32_t calcDays)
 {
-	m_stockNum = stockNum;
-	m_avgSolution->init(stockNum);
 	m_strategyType = strategyType;
 	m_calcDays = calcDays;
 }

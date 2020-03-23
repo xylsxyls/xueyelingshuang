@@ -14,10 +14,9 @@ public:
 
 public:
 	/** 初始化
-	@param [in] stockNum gupiao个数
 	@param [in] vecStrategyType 执行类型
 	*/
-	void init(int32_t stockNum, const std::vector<StrategyType>& vecStrategyType);
+	void init(const std::vector<StrategyType>& vecStrategyType);
 
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1

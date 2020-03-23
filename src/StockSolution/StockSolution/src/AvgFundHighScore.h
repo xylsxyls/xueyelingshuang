@@ -12,11 +12,6 @@ public:
 	AvgFundHighScore();
 
 public:
-	/** 初始化
-	@param [in] stockNum gupiao个数
-	*/
-	void init(int32_t stockNum);
-
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
@@ -64,8 +59,4 @@ protected:
 	bool strategySell(std::vector<std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>>& sellStock,
 		const IntDateTime& date,
 		const std::shared_ptr<SolutionInfo>& solutionInfo);
-
-protected:
-	int32_t m_stockNum;
-	int32_t m_minPollSize;
 };

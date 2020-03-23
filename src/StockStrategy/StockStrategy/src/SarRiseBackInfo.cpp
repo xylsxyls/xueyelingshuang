@@ -9,3 +9,8 @@ int32_t SarRiseBackInfo::popSize(int32_t buySize)
 {
 	return buySize - buySize / 2;
 }
+
+int32_t SarRiseBackInfo::stockNum()
+{
+	return 4;
+}

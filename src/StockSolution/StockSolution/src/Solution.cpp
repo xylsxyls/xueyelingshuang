@@ -77,3 +77,19 @@ int32_t Solution::popSize(int32_t buySize, const std::shared_ptr<SolutionInfo>& 
 	}
 	return itUseStrategy->second.second->popSize(buySize);
 }
+
+int32_t Solution::stockNum(const std::shared_ptr<SolutionInfo>& solutionInfo)
+{
+	if (solutionInfo->m_strategyAllInfo.empty())
+	{
+		return 0;
+	}
+	auto& strategyMap = solutionInfo->m_strategyAllInfo.begin()->second;
+	auto itUseStrategy = strategyMap.find(solutionInfo->m_useType);
+	if (itUseStrategy == strategyMap.end())
+	{
+		RCSend("未发现使用类型，minPollSize");
+		return 0;
+	}
+	return itUseStrategy->second.second->stockNum();
+}

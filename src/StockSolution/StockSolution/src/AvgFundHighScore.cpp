@@ -19,15 +19,9 @@ static bool sortFun(const std::pair<std::string, std::pair<BigNumber, std::pair<
 	return stock1.second.second.second > stock2.second.second.second;
 }
 
-AvgFundHighScore::AvgFundHighScore():
-m_stockNum(0)
+AvgFundHighScore::AvgFundHighScore()
 {
 	m_solutionType = AVG_FUND_HIGH_SCORE;
-}
-
-void AvgFundHighScore::init(int32_t stockNum)
-{
-	m_stockNum = stockNum;
 }
 
 bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
@@ -63,7 +57,7 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, std::pair<BigNumbe
 
 	auto strategyBuyStockTemp = strategyBuyStock;
 	
-	while (strategyBuyStockTemp.size() > m_stockNum - solutionInfo->m_fund->allBuyInfo()->size())
+	while (strategyBuyStockTemp.size() > stockNum(solutionInfo) - solutionInfo->m_fund->allBuyInfo()->size())
 	{
 		strategyBuyStockTemp.erase(--strategyBuyStockTemp.end());
 	}

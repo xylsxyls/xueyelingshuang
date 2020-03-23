@@ -13,9 +13,8 @@ IntegratedStrategy::IntegratedStrategy()
 	m_avgSolution = std::dynamic_pointer_cast<AvgFundHighScore>(StockSolution::instance().solution(AVG_FUND_HIGH_SCORE));
 }
 
-void IntegratedStrategy::init(int32_t stockNum, const std::vector<StrategyType>& vecStrategyType)
+void IntegratedStrategy::init(const std::vector<StrategyType>& vecStrategyType)
 {
-	m_avgSolution->init(stockNum);
 	m_vecStrategyType = vecStrategyType;
 }
 

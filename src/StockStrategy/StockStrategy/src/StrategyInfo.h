@@ -36,4 +36,6 @@ struct StockStrategyAPI StrategyInfo
 	virtual int32_t minPollSize() = 0;
 
 	virtual int32_t popSize(int32_t buySize) = 0;
+
+	virtual int32_t stockNum() = 0;
 };

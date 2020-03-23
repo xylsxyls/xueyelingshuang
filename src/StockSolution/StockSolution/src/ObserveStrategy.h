@@ -14,11 +14,10 @@ public:
 
 public:
 	/** 初始化
-	@param [in] stockNum gupiao个数
 	@param [in] strategyType 子类型
 	@param [in] calcDays 计算天数
 	*/
-	void init(int32_t stockNum, StrategyType strategyType, int32_t calcDays);
+	void init(StrategyType strategyType, int32_t calcDays);
 
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1

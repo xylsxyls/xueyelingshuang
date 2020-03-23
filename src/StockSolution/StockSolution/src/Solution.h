@@ -84,6 +84,12 @@ public:
 	*/
 	int32_t popSize(int32_t buySize, const std::shared_ptr<SolutionInfo>& solutionInfo);
 
+	/** 获取gupiao个数
+	@param [in] solutionInfo 解决方案需要的信息
+	@return 返回gupiao个数
+	*/
+	int32_t stockNum(const std::shared_ptr<SolutionInfo>& solutionInfo);
+
 protected:
 #ifdef _MSC_VER
 #pragma warning(push)
