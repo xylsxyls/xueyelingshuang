@@ -859,6 +859,9 @@ void StockClient::onRealTestButtonClicked()
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
 	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("是否观察");
+	line.m_defaultText = "0";
+	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();
 	DialogManager::instance().makeDialog(inputDialogParam);
@@ -869,6 +872,7 @@ void StockClient::onRealTestButtonClicked()
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	bool observe = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1";
 	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
 
 	std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
@@ -881,7 +885,7 @@ void StockClient::onRealTestButtonClicked()
 		vecStrategyType.back().first = strategyType;
 		vecStrategyType.back().second = strategyType;
 	}
-	spRealTestTask->setParam(INTEGRATED_STRATEGY, vecStrategyType, beginTime, endTime, this);
+	spRealTestTask->setParam(observe ? OBSERVE_STRATEGY: INTEGRATED_STRATEGY, vecStrategyType, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 
