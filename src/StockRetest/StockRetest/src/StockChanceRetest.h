@@ -7,13 +7,12 @@
 #include "StockFund/StockFundAPI.h"
 #include "StockTrade/StockTradeAPI.h"
 
-class Strategy;
-class StockRetestAPI StockOnceRetest
+class StockRetestAPI StockChanceRetest
 {
 public:
-	StockOnceRetest();
+	StockChanceRetest();
 
-	~StockOnceRetest();
+	~StockChanceRetest();
 
 public:
 	void init(SolutionType solutionType,
@@ -48,4 +47,5 @@ private:
 	BigNumber m_initialFund;
 	BigNumber m_allStockCount;
 	StockTrade m_trade;
+	StockMarket m_runMarket;
 };

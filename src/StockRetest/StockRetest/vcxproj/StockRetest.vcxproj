@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\StockChanceRetest.h" />
     <ClInclude Include="..\src\StockDaysRetest.h" />
     <ClInclude Include="..\src\StockOnceRetest.h" />
     <ClInclude Include="..\src\StockRankRetest.h" />
@@ -30,6 +31,7 @@
     <ClInclude Include="..\src\StockEveryRetest.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\StockChanceRetest.cpp" />
     <ClCompile Include="..\src\StockDaysRetest.cpp" />
     <ClCompile Include="..\src\StockOnceRetest.cpp" />
     <ClCompile Include="..\src\StockRankRetest.cpp" />

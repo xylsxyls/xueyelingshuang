@@ -10,6 +10,7 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
+#include <iterator> 
 
 size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect)
 {
