@@ -19,6 +19,8 @@ public:
 		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
+		int32_t holdDays = 0,
+		int32_t terminusNum = 5,
 		const BigNumber& initialFund = "20000000000",
 		bool showStockLog = false,
 		int32_t threadCount = 0);
@@ -28,6 +30,10 @@ public:
 	void run();
 
 	void printProfit(StockFund* stockFund, const IntDateTime& currentTime);
+
+	BigNumber profitPercent(const BigNumber& allFund);
+
+	std::string terminusToStr(const std::vector<BigNumber>& vecTerminus);
 
 private:
 	SolutionType m_solutionType;
@@ -48,4 +54,6 @@ private:
 	BigNumber m_allStockCount;
 	StockTrade m_trade;
 	StockMarket m_runMarket;
+	int32_t m_holdDays;
+	int32_t m_terminusNum;
 };

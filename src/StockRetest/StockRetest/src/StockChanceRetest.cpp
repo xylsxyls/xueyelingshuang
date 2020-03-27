@@ -17,7 +17,9 @@ m_solutionType(SOLUTION_INIT),
 m_showStockLog(false),
 m_beginTime(0, 0),
 m_endTime(0, 0),
-m_resultThreadId(0)
+m_resultThreadId(0),
+m_holdDays(0),
+m_terminusNum(0)
 {
 
 }
@@ -36,6 +38,8 @@ void StockChanceRetest::init(SolutionType solutionType,
 	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
+	int32_t holdDays,
+	int32_t terminusNum,
 	const BigNumber& initialFund,
 	bool showStockLog,
 	int32_t threadCount)
@@ -44,6 +48,8 @@ void StockChanceRetest::init(SolutionType solutionType,
 	m_vecStrategyType = vecStrategyType;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
+	m_holdDays = holdDays;
+	m_terminusNum = terminusNum;
 	m_initialFund = initialFund;
 	m_showStockLog = showStockLog;
 	if (threadCount == 0)
@@ -98,100 +104,151 @@ void StockChanceRetest::run()
 	}
 
 	BigNumber allFund = 0;
+	BigNumber plusAllFund = 0;
+	BigNumber minusAllFund = 0;
+
+	std::vector<BigNumber> vecAllFund;
 
 	IntDateTime calcTime = m_beginTime;
-	IntDateTime calcEndDate = m_endTime - 4 * 86400;
-	std::shared_ptr<StockMarket> spRunMarket = m_trade.market("600206");
+
+	int32_t buyDay = 0;
+	int32_t plusDay = 0;
 	while (true)
 	{
-		if (spRunMarket->getMemoryDays(calcEndDate, m_endTime) == 5)
-		{
-			break;
-		}
-		calcEndDate = calcEndDate - 86400;
-	}
-
-	if (calcEndDate < m_beginTime)
-	{
-		return;
-	}
-
-	int32_t day = 0;
-	do
-	{
-		if (!spRunMarket->setDate(calcTime))
-		{
-			calcTime = calcTime + 86400;
-			continue;
-		}
+		IntDateTime calcTime = m_runMarket.date();
 
 		StockFund stockFund;
 		stockFund.add(m_initialFund);
-		IntDateTime currentTime = calcTime;
-		do
+
+		StrategyType useStrategyType = STRATEGY_INIT;
+		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
+		m_trade.buy(buyStock, calcTime, &stockFund, m_solutionType, m_vecStrategyType, useStrategyType);
+
+		int32_t index = -1;
+		while (index++ != buyStock.size() - 1)
 		{
-			std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
-			m_trade.sell(sellStock, currentTime, &stockFund, m_solutionType, m_vecStrategyType);
+			const std::string& stock = buyStock[index].first;
+			const BigNumber& price = buyStock[index].second.first;
+			const BigNumber& rate = buyStock[index].second.second;
+			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
+			RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
+				spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
+			stockFund.buyStock(price, rate, spMarket->day(), useStrategyType);
+		}
 
-			int32_t index = -1;
-			while (index++ != sellStock.size() - 1)
-			{
-				const std::string& stock = sellStock[index].first;
-				const BigNumber& price = sellStock[index].second.first;
-				const BigNumber& rate = sellStock[index].second.second;
-				std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
-				RCSend("maichu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
-					spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
-				stockFund.sellStock(price, rate, spMarket->day());
-			}
-
-			if (currentTime == m_endTime)
+		StockMarket spRunMarket = m_runMarket;
+		spRunMarket.setDate(calcTime);
+		while (true)
+		{
+			if (!spRunMarket.next())
 			{
 				break;
 			}
-
-			StrategyType useStrategyType = STRATEGY_INIT;
-			std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-			m_trade.buy(buyStock, currentTime, &stockFund, m_solutionType, m_vecStrategyType, useStrategyType, calcTime);
-
-			index = -1;
-			while (index++ != buyStock.size() - 1)
+			IntDateTime currentTime = spRunMarket.date();
+			std::vector<std::string> ownedStock = stockFund.ownedStock();
+			if (ownedStock.empty())
 			{
-				const std::string& stock = buyStock[index].first;
-				const BigNumber& price = buyStock[index].second.first;
-				const BigNumber& rate = buyStock[index].second.second;
-				std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
-				RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
-					spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
-				stockFund.buyStock(price, rate, spMarket->day(), useStrategyType);
+				break;
 			}
+			if (m_holdDays == 0)
+			{
+				std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
+				m_trade.sell(sellStock, currentTime, &stockFund, m_solutionType, m_vecStrategyType);
 
-			//printProfit(&stockFund, currentTime);
-
-			currentTime = currentTime + 86400;
-		} while (currentTime <= m_endTime);
-
-		if (m_showStockLog)
-		{
-			stockFund.printStockLog();
-		}
-		printProfit(&stockFund, currentTime);
+				int32_t index = -1;
+				while (index++ != sellStock.size() - 1)
+				{
+					const std::string& stock = sellStock[index].first;
+					const BigNumber& price = sellStock[index].second.first;
+					const BigNumber& rate = sellStock[index].second.second;
+					std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
+					RCSend("maichu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
+						spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
+					stockFund.sellStock(price, rate, spMarket->day());
+				}
+			}
+			else
+			{
+				int32_t index = -1;
+				while (index++ != ownedStock.size() - 1)
+				{
+					const std::string& stock = ownedStock[index];
+					std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
+					IntDateTime firstBuyDate = stockFund.firstBuyDate(stock);
+					if (spMarket->getMemoryDays(firstBuyDate, currentTime) < m_holdDays)
+					{
+						continue;
+					}
+					BigNumber price = spMarket->day()->close();
+					RCSend("maichu, date = %s, stock = %s, price = %s, rate = 1.00", spMarket->date().dateToString().c_str(),
+						spMarket->stock().c_str(), spMarket->day()->close().toString().c_str());
+					stockFund.sellStock(price, 1, spMarket->day());
+				}
+			}
+		};
 
 		std::map<std::string, std::shared_ptr<StockDay>> dayData;
-		m_trade.stockDayData(stockFund.ownedStock(), currentTime, dayData);
+		m_trade.stockDayData(stockFund.ownedStock(), m_endTime, dayData);
 
 		BigNumber currentAllFund = stockFund.allFund(dayData);
 		if (currentAllFund != m_initialFund)
 		{
 			allFund = allFund + currentAllFund;
-			++day;
+			vecAllFund.push_back(currentAllFund);
+
+			if (currentAllFund < m_initialFund)
+			{
+				minusAllFund = minusAllFund + currentAllFund;
+			}
+			else
+			{
+				plusAllFund = plusAllFund + currentAllFund;
+				++plusDay;
+			}
+			++buyDay;
 		}
-		calcTime = calcTime + 86400;
-	} while (calcTime <= calcEndDate);
+		m_runMarket.next();
+	};
 
-	BigNumber onceAllFund = allFund / BigNumber(day).toPrec(6).zero();
+	std::sort(vecAllFund.begin(), vecAllFund.end());
+	std::vector<BigNumber> vecMinus;
+	std::vector<BigNumber> vecPlus;
+	int32_t index = -1;
+	while (index++ != vecAllFund.size() - 1)
+	{
+		const BigNumber& sortFund = vecAllFund[index];
+		if (sortFund < m_initialFund)
+		{
+			vecMinus.push_back(sortFund);
+		}
+		if ((int32_t)vecMinus.size() >= m_terminusNum)
+		{
+			break;
+		}
+	}
+	index = vecAllFund.size();
+	while (index-- != 0)
+	{
+		const BigNumber& sortFund = vecAllFund[index];
+		if (sortFund > m_initialFund)
+		{
+			vecPlus.push_back(sortFund);
+		}
+		if ((int32_t)vecPlus.size() >= m_terminusNum)
+		{
+			break;
+		}
+	}
 
-	RCSend("once allfund = %s, profit = %s%%", onceAllFund.toString().c_str(), ((onceAllFund - m_initialFund) / m_initialFund.toPrec(6).zero() * 100).toString().c_str());
+	BigNumber avgAllFund = allFund / BigNumber(buyDay).toPrec(6).zero();
+	BigNumber avgMinusAllFund = minusAllFund / BigNumber(buyDay - plusDay).toPrec(6).zero();
+	BigNumber avgPlusAllFund = plusAllFund / BigNumber(plusDay).toPrec(6).zero();
+
+	RCSend("plus: %s, minus: %s", terminusToStr(vecPlus).c_str(), terminusToStr(vecMinus).c_str());
+	RCSend("avgPlusAllFund = %s%%, avgMinusAllFund = %s%%, avgAllFund = %s%%",
+		profitPercent(avgPlusAllFund).toString().c_str(),
+		profitPercent(avgMinusAllFund).toString().c_str(),
+		profitPercent(avgAllFund).toString().c_str());
 }
 
 void StockChanceRetest::printProfit(StockFund* stockFund, const IntDateTime& currentTime)
@@ -202,4 +259,26 @@ void StockChanceRetest::printProfit(StockFund* stockFund, const IntDateTime& cur
 	RCSend("date = %s, allFund = %s, profit = %s%%", currentTime.dateToString().c_str(),
 		allFund.toString().c_str(),
 		(((allFund - m_initialFund) / m_initialFund.toPrec(16).zero() * 100).toPrec(2)).toString().c_str());
+}
+
+BigNumber StockChanceRetest::profitPercent(const BigNumber& allFund)
+{
+	return (allFund - m_initialFund) / m_initialFund.toPrec(6).zero() * 100;
+}
+
+std::string StockChanceRetest::terminusToStr(const std::vector<BigNumber>& vecTerminus)
+{
+	if (vecTerminus.empty())
+	{
+		return "null";
+	}
+	std::string result;
+	int32_t index = -1;
+	while (index++ != vecTerminus.size() - 2)
+	{
+		const BigNumber& terminus = vecTerminus[index];
+		result += terminus.toString() + ", ";
+	}
+	result += vecTerminus[index].toString();
+	return result;
 }
