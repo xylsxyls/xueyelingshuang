@@ -130,6 +130,7 @@ void StockRankRetest::run()
 			const std::string& stock = buyStock[index].first;
 			const BigNumber& price = buyStock[index].second.first;
 			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
+			spMarket->setDate(calcTime);
 			vecStockFund.back().buyStock(price, 1, spMarket->day(), useStrategyType);
 			spMarket->previous();
 			std::string preAvg = spMarket->day()->fourAvgChgValue().toString();

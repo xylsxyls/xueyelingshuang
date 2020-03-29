@@ -132,6 +132,7 @@ void StockOnceRetest::run()
 				const BigNumber& price = sellStock[index].second.first;
 				const BigNumber& rate = sellStock[index].second.second;
 				std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
+				spMarket->setDate(currentTime);
 				RCSend("maichu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
 					spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
 				stockFund.sellStock(price, rate, spMarket->day());
@@ -153,6 +154,7 @@ void StockOnceRetest::run()
 				const BigNumber& price = buyStock[index].second.first;
 				const BigNumber& rate = buyStock[index].second.second;
 				std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
+				spMarket->setDate(currentTime);
 				RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
 					spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
 				stockFund.buyStock(price, rate, spMarket->day(), useStrategyType);

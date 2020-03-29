@@ -96,6 +96,46 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 	{
 		buyStock[index].second.second = (BigNumber(1) / BigNumber((int32_t)buyStock.size() - index).toPrec(6)).toPrec(6);
 	}
+
+	/*if (buyStock.size() < 2)
+	{
+		buyStock.clear();
+		return false;
+	}
+	auto buyPair = buyStock[1];
+	buyPair.second.second = 1;
+	const std::string& stockBuy = buyPair.first;
+	std::shared_ptr<StockMarket> spStockBuyMarket = solutionInfo->m_strategyAllInfo.find(stockBuy)->second.begin()->second.first->m_spMarket;
+	spStockBuyMarket->setDate(getBeforeDay(stockBuy, date, 1, solutionInfo));
+	BigNumber firstAvg = spStockBuyMarket->day()->fourAvgChgValue();
+	BigNumber firstChg = spStockBuyMarket->day()->chgValue();
+	BigNumber firstOpenClose = spStockBuyMarket->day()->open() - spStockBuyMarket->day()->close();
+	spStockBuyMarket->next();
+	BigNumber secondAvg = spStockBuyMarket->day()->fourAvgChgValue();
+	BigNumber secondChg = spStockBuyMarket->day()->chgValue();
+	BigNumber secondOpenClose = spStockBuyMarket->day()->open() - spStockBuyMarket->day()->close();
+	buyStock.clear();
+	//if (firstAvg + secondAvg < 0)
+	//{
+	//	return false;
+	//}
+	if (firstChg + secondChg < 0)
+	{
+		return false;
+	}
+	//if (firstAvg < -3 || secondAvg < -3)
+	//{
+	//	return false;
+	//}
+	if (firstAvg < 1.5 && secondAvg < 1.5)
+	{
+		return false;
+	}
+	//if (firstOpenClose > 0 && secondOpenClose > 0)
+	//{
+	//	return false;
+	//}
+	buyStock.push_back(buyPair);*/
 	return true;
 }
 

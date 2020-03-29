@@ -152,6 +152,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ChanceTestTask.cpp" />
     <ClCompile Include="CheckAllStockTask.cpp" />
     <ClCompile Include="ChooseStockTask.cpp" />
     <ClCompile Include="DaysTestTask.cpp" />
@@ -301,6 +302,7 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ChanceTestTask.h" />
     <ClInclude Include="CheckAllStockTask.h" />
     <ClInclude Include="ChooseStockTask.h" />
     <ClInclude Include="DaysTestTask.h" />

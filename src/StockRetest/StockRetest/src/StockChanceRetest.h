@@ -19,7 +19,7 @@ public:
 		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
-		int32_t holdDays = 0,
+		int32_t maxHoldDays = 10,
 		int32_t terminusNum = 5,
 		const BigNumber& initialFund = "20000000000",
 		bool showStockLog = false,
@@ -54,6 +54,6 @@ private:
 	BigNumber m_allStockCount;
 	StockTrade m_trade;
 	StockMarket m_runMarket;
-	int32_t m_holdDays;
+	int32_t m_maxHoldDays;
 	int32_t m_terminusNum;
 };
