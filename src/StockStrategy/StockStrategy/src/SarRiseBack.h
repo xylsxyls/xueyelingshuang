@@ -39,6 +39,20 @@ public:
 		BigNumber& score,
 		const std::shared_ptr<StrategyInfo>& strategyInfo);
 
+	/** 观察类型单个gupiao是否需要maichu
+	@param [in] date 日期
+	@param [out] price 价格
+	@param [out] percent 百分比0-100
+	@param [out] score 分数
+	@param [in] strategyInfo 策略需要的信息
+	@return 是否需要maichu
+	*/
+	virtual bool observeSell(const IntDateTime& date,
+		BigNumber& price,
+		BigNumber& percent,
+		BigNumber& score,
+		const std::shared_ptr<StrategyInfo>& strategyInfo);
+
 	/** 获取需要的zhibiao
 	@return 返回需要的zhibiao
 	*/

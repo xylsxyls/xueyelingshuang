@@ -4,6 +4,7 @@ SolutionInfo::SolutionInfo()
 {
 	m_useType = STRATEGY_INIT;
 	m_fund = nullptr;
+	m_isObserve = false;
 	m_filterStock = nullptr;
 }
 

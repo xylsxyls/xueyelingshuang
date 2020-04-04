@@ -18,6 +18,8 @@ struct StockSolutionAPI SolutionInfo
 	std::vector<std::string>* m_filterStock;
 	//使用的类型，in,out
 	StrategyType m_useType;
+	//是否是观察类型
+	bool m_isObserve;
 	//stock，策略类型
 	std::map<std::string, std::map<StrategyType, std::pair<std::shared_ptr<StrategyInfo>, std::shared_ptr<StrategyInfo>>>> m_strategyAllInfo;
 #ifdef _MSC_VER

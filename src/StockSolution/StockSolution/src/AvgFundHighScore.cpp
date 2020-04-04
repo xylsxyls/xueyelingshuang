@@ -213,7 +213,16 @@ bool AvgFundHighScore::strategySell(std::vector<std::pair<std::string, std::pair
 		BigNumber price;
 		BigNumber percent;
 		BigNumber score;
-		if (spStrategy->sell(date, price, percent, score, spStrategyInfo))
+		bool hasSellStock = false;
+		if (solutionInfo->m_isObserve)
+		{
+			hasSellStock = spStrategy->observeSell(date, price, percent, score, spStrategyInfo);
+		}
+		else
+		{
+			hasSellStock = spStrategy->sell(date, price, percent, score, spStrategyInfo);
+		}
+		if (hasSellStock)
 		{
 			std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>> sellChoose;
 			sellChoose.first = stock;

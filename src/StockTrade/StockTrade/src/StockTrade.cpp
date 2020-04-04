@@ -281,6 +281,10 @@ std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(const IntDateTime& da
 	{
 		spSolutionInfo->m_useType = vecStrategyType[0].first;
 	}
+	if (solutionType == OBSERVE_STRATEGY)
+	{
+		spSolutionInfo->m_isObserve = true;
+	}
 
 	int32_t index = -1;
 	while (index++ != m_allStock.size() - 1)

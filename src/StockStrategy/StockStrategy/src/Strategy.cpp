@@ -15,6 +15,15 @@ bool Strategy::sell(const IntDateTime& date,
 	return false;
 }
 
+bool Strategy::observeSell(const IntDateTime& date,
+	BigNumber& price,
+	BigNumber& percent,
+	BigNumber& score,
+	const std::shared_ptr<StrategyInfo>& strategyInfo)
+{
+	return false;
+}
+
 std::set<std::string> Strategy::needIndicator()
 {
 	return std::set<std::string>();

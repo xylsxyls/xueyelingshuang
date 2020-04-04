@@ -221,6 +221,212 @@ bool SarRiseBack::sell(const IntDateTime& date,
 	return result;
 }
 
+bool SarRiseBack::observeSell(const IntDateTime& date,
+	BigNumber& price,
+	BigNumber& percent,
+	BigNumber& score,
+	const std::shared_ptr<StrategyInfo>& strategyInfo)
+{
+	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(strategyInfo);
+
+	auto& stockFund = sarRiseBackInfo->m_fund;
+	std::shared_ptr<StockMarket>& spMarket = sarRiseBackInfo->m_spMarket;
+	std::string stock = spMarket->stock();
+	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = std::dynamic_pointer_cast<StockBollIndicator>(sarRiseBackInfo->m_spIndicator.find("boll")->second);
+
+	if (!spMarket->setDate(date))
+	{
+		return false;
+	}
+
+	IntDateTime firstBuyDate = stockFund->firstBuyDate(stock);
+	int32_t holdDays = spMarket->getMemoryDays(firstBuyDate, date);
+	BigNumber open = spMarket->day()->open();
+	BigNumber high = spMarket->day()->high();
+	BigNumber low = spMarket->day()->low();
+	BigNumber close = spMarket->day()->close();
+	BigNumber chg = spMarket->day()->chgValue();
+	BigNumber bollup = spStockBollIndicator->day(date)->m_up;
+	BigNumber bollmid = spStockBollIndicator->day(date)->m_mid;
+
+	bool result = false;
+	BigNumber allChg = 0;
+	stockFund->stockChg(stock, spMarket->day(), allChg);
+
+	if (spMarket->day()->isLimitUp())
+	{
+		return false;
+	}
+
+	if (spMarket->day()->isLimitDown())
+	{
+		return false;
+	}
+
+	if (holdDays == 3)
+	{
+		if (allChg > 12)
+		{
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
+	}
+	else if (holdDays == 4)
+	{
+		if (allChg > "0.3")
+		{
+			spMarket->setDate(firstBuyDate);
+			BigNumber firstDayChg = spMarket->day()->chgValue();
+			if (firstDayChg > 3 && chg > 3)
+			{
+				spMarket->setDate(date);
+				return false;
+			}
+			spMarket->next();
+			BigNumber secondDayChg = spMarket->day()->chgValue();
+			BigNumber secondDayOpen = spMarket->day()->open();
+			BigNumber secondDayClose = spMarket->day()->close();
+			if (secondDayChg > 3 && secondDayClose > open && secondDayOpen < close)
+			{
+				spMarket->setDate(date);
+				return false;
+			}
+
+			spMarket->setDate(date);
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
+	}
+	else if (holdDays == 5)
+	{
+		spMarket->previous();
+		BigNumber threeDaysChg;
+		stockFund->stockChg(stock, spMarket->day(), threeDaysChg);
+		if (threeDaysChg > "0.3")
+		{
+			spMarket->setDate(firstBuyDate);
+			BigNumber buyPrice = spMarket->day()->close();
+
+			if (open < buyPrice * "1.003" && close > buyPrice * "1.003")
+			{
+				spMarket->setDate(date);
+				price = (buyPrice * "1.003").toPrec(2);;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+			if (open > buyPrice * "1.003" && low < buyPrice * "1.003")
+			{
+				spMarket->setDate(date);
+				price = (buyPrice * "1.003").toPrec(2);
+				percent = 100;
+				score = 100;
+				return true;
+			}
+
+			spMarket->setDate(date);
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
+		else if (chg > 0)
+		{
+			spMarket->setDate(firstBuyDate);
+			BigNumber buyPrice = spMarket->day()->close();
+			if (open > buyPrice * "1.003")
+			{
+				spMarket->setDate(date);
+				price = open;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+			if (high > buyPrice * "1.003")
+			{
+				spMarket->setDate(date);
+				price = (buyPrice * "1.003").toPrec(2);
+				percent = 100;
+				score = 100;
+				return true;
+			}
+
+			spMarket->setDate(date);
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
+	}
+	else if (holdDays >= 6)
+	{
+		spMarket->previous();
+		BigNumber fourDaysChg;
+		stockFund->stockChg(stock, spMarket->day(), fourDaysChg);
+		if (fourDaysChg < "0.3")
+		{
+			spMarket->setDate(firstBuyDate);
+			BigNumber buyPrice = spMarket->day()->close();
+			if (open > buyPrice * "1.003")
+			{
+				spMarket->setDate(date);
+				price = open;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+			if (high > buyPrice * "1.003")
+			{
+				spMarket->setDate(date);
+				price = (buyPrice * "1.003").toPrec(2);
+				percent = 100;
+				score = 100;
+				return true;
+			}
+
+			spMarket->setDate(date);
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
+		else
+		{
+			spMarket->setDate(firstBuyDate);
+			BigNumber buyPrice = spMarket->day()->close();
+
+			if (open < buyPrice * "1.003" && close > buyPrice * "1.003")
+			{
+				spMarket->setDate(date);
+				price = (buyPrice * "1.003").toPrec(2);
+				percent = 100;
+				score = 100;
+				return true;
+			}
+			if (open > buyPrice * "1.003" && low < buyPrice * "1.003")
+			{
+				spMarket->setDate(date);
+				price = (buyPrice * "1.003").toPrec(2);
+				percent = 100;
+				score = 100;
+				return true;
+			}
+
+			spMarket->setDate(date);
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 std::set<std::string> SarRiseBack::needIndicator()
 {
 	std::set<std::string> result;
