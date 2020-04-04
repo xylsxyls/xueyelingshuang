@@ -187,7 +187,7 @@ bool DisposableStrategy::strategySell(std::vector<std::pair<std::string, std::pa
 		std::shared_ptr<StrategyInfo> spStrategyInfo = solutionInfo->strategyInfo(stock, solutionInfo->m_useType);
 		if (spStrategy == nullptr || spStrategyInfo == nullptr)
 		{
-			RCSend("未发现使用类型，stock = %s", stock.c_str());
+			RCSend("未发现使用类型7，stock = %s", stock.c_str());
 			continue;
 		}
 

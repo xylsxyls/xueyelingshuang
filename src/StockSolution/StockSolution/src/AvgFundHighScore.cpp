@@ -206,7 +206,7 @@ bool AvgFundHighScore::strategySell(std::vector<std::pair<std::string, std::pair
 		std::shared_ptr<StrategyInfo> spStrategyInfo = solutionInfo->strategyInfo(stock, stockStrategyType);
 		if (spStrategy == nullptr || spStrategyInfo == nullptr)
 		{
-			RCSend("未发现使用类型，stock = %s", stock.c_str());
+			RCSend("未发现使用类型6，stock = %s", stock.c_str());
 			continue;
 		}
 

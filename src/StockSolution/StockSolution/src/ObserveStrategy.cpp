@@ -115,15 +115,22 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 	BigNumber secondChg = spStockBuyMarket->day()->chgValue();
 	BigNumber secondOpenClose = spStockBuyMarket->day()->open() - spStockBuyMarket->day()->close();
 
-	auto buyPairFirst = buyStock[0];
-	buyPairFirst.second.second = "0.5";
-	buyStock.clear();
+	index = -1;
+	while (index++ != buyStock.size() - 1)
+	{
+		buyStock[index].second.second = (index == 1 ? "1.00" : "0.00");
+	}
+
+	//auto buyPairFirst = buyStock[0];
+	//buyPairFirst.second.second = "0.5";
+	//buyStock.clear();
 	//if (firstAvg + secondAvg < 0)
 	//{
 	//	return false;
 	//}
 	if (firstChg + secondChg < 0)
 	{
+		buyStock[1].second.second = "0.00";
 		return false;
 	}
 	//if (firstAvg < -3 || secondAvg < -3)
@@ -140,7 +147,7 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 	//}
 
 	//buyStock.push_back(buyPairFirst);
-	buyStock.push_back(buyPair);
+	//buyStock.push_back(buyPair);
 	return true;
 }
 
