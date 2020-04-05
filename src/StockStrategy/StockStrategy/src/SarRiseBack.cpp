@@ -248,6 +248,14 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 	BigNumber chg = spMarket->day()->chgValue();
 	BigNumber bollup = spStockBollIndicator->day(date)->m_up;
 	BigNumber bollmid = spStockBollIndicator->day(date)->m_mid;
+	BigNumber costChg = "0.3";
+	BigNumber bigChg = "3";
+	spMarket->setDate(firstBuyDate);
+	BigNumber buyPrice = spMarket->day()->close();
+	BigNumber costPrice = (buyPrice * (1 + costChg / 100)).toPrec(2);
+	spMarket->next();
+	BigNumber firstDayChg = spMarket->day()->chgValue();
+	spMarket->setDate(date);
 
 	bool result = false;
 	BigNumber allChg = 0;
@@ -275,20 +283,18 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 	}
 	else if (holdDays == 4)
 	{
-		if (allChg > "0.3")
+		if (allChg > costChg)
 		{
-			spMarket->setDate(firstBuyDate);
-			BigNumber firstDayChg = spMarket->day()->chgValue();
-			if (firstDayChg > 3 && chg > 3)
+			if (firstDayChg > bigChg && chg > bigChg)
 			{
-				spMarket->setDate(date);
 				return false;
 			}
+			spMarket->setDate(firstBuyDate);
 			spMarket->next();
 			BigNumber secondDayChg = spMarket->day()->chgValue();
 			BigNumber secondDayOpen = spMarket->day()->open();
 			BigNumber secondDayClose = spMarket->day()->close();
-			if (secondDayChg > 3 && secondDayClose > open && secondDayOpen < close)
+			if (secondDayChg > bigChg && secondDayClose > open && secondDayOpen < close)
 			{
 				spMarket->setDate(date);
 				return false;
@@ -306,39 +312,32 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 		spMarket->previous();
 		BigNumber threeDaysChg;
 		stockFund->stockChg(stock, spMarket->day(), threeDaysChg);
-		if (threeDaysChg > "0.3")
+		//前3天在有yingli的情况下
+		if (threeDaysChg > costChg)
 		{
-			spMarket->setDate(firstBuyDate);
-			BigNumber buyPrice = spMarket->day()->close();
-
-			if (open < buyPrice * "1.003" && close > buyPrice * "1.003")
+			//第四天zuidi低于chengbenxian
+			if (low < costPrice && high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = (buyPrice * "1.003").toPrec(2);;
+				price = costPrice;
 				percent = 100;
 				score = 100;
 				return true;
 			}
-			if (open > buyPrice * "1.003" && low < buyPrice * "1.003")
+			if (chg > 0 || allChg > costChg)
 			{
 				spMarket->setDate(date);
-				price = (buyPrice * "1.003").toPrec(2);
+				price = close;
 				percent = 100;
 				score = 100;
 				return true;
 			}
-
-			spMarket->setDate(date);
-			price = close;
-			percent = 100;
-			score = 100;
-			return true;
 		}
+		//前三天kuiben但是今天shangzhang
 		else if (chg > 0)
 		{
-			spMarket->setDate(firstBuyDate);
-			BigNumber buyPrice = spMarket->day()->close();
-			if (open > buyPrice * "1.003")
+			//kaipan就huiben
+			if (open > costPrice)
 			{
 				spMarket->setDate(date);
 				price = open;
@@ -346,15 +345,16 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 				score = 100;
 				return true;
 			}
-			if (high > buyPrice * "1.003")
+			//zhongtuhuiben
+			else if (high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = (buyPrice * "1.003").toPrec(2);
+				price = costPrice;
 				percent = 100;
 				score = 100;
 				return true;
 			}
-
+			//前三天kuiben但是今天shangzhang没huiben就geroumai
 			spMarket->setDate(date);
 			price = close;
 			percent = 100;
@@ -367,11 +367,11 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 		spMarket->previous();
 		BigNumber fourDaysChg;
 		stockFund->stockChg(stock, spMarket->day(), fourDaysChg);
-		if (fourDaysChg < "0.3")
+		//前4天kuiben
+		if (fourDaysChg < costChg)
 		{
-			spMarket->setDate(firstBuyDate);
-			BigNumber buyPrice = spMarket->day()->close();
-			if (open > buyPrice * "1.003")
+			//kaipan回本kaipanmai
+			if (open > costPrice)
 			{
 				spMarket->setDate(date);
 				price = open;
@@ -379,49 +379,35 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 				score = 100;
 				return true;
 			}
-			if (high > buyPrice * "1.003")
+			//zhongtuhuibenzhongtumai
+			if (high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = (buyPrice * "1.003").toPrec(2);
+				price = costPrice;
 				percent = 100;
 				score = 100;
 				return true;
 			}
-
-			spMarket->setDate(date);
-			price = close;
-			percent = 100;
-			score = 100;
-			return true;
 		}
+		//yingli
 		else
 		{
-			spMarket->setDate(firstBuyDate);
-			BigNumber buyPrice = spMarket->day()->close();
-
-			if (open < buyPrice * "1.003" && close > buyPrice * "1.003")
+			//zhongtuhuiben
+			if (low < costPrice && high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = (buyPrice * "1.003").toPrec(2);
+				price = costPrice;
 				percent = 100;
 				score = 100;
 				return true;
 			}
-			if (open > buyPrice * "1.003" && low < buyPrice * "1.003")
-			{
-				spMarket->setDate(date);
-				price = (buyPrice * "1.003").toPrec(2);
-				percent = 100;
-				score = 100;
-				return true;
-			}
-
-			spMarket->setDate(date);
-			price = close;
-			percent = 100;
-			score = 100;
-			return true;
 		}
+		//第五天一定qingcang
+		spMarket->setDate(date);
+		price = close;
+		percent = 100;
+		score = 100;
+		return true;
 	}
 
 	return false;

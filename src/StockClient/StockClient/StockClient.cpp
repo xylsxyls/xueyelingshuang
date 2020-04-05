@@ -1035,6 +1035,9 @@ void StockClient::onChanceTestButtonClicked()
 	line.m_tip = QStringLiteral("是否观察");
 	line.m_defaultText = "0";
 	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("最大天数");
+	line.m_defaultText = "10";
+	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();
 	DialogManager::instance().makeDialog(inputDialogParam);
@@ -1059,8 +1062,10 @@ void StockClient::onChanceTestButtonClicked()
 
 	SolutionType solutionType = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY;
 
+	int32_t maxDay = atoi(inputDialogParam.m_vecInputEx[4].m_editText.toStdString().c_str());
+
 	std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
-	spChanceTestTask->setParam(solutionType, vecStrategyType, beginTime, endTime, this);
+	spChanceTestTask->setParam(solutionType, vecStrategyType, beginTime, endTime, maxDay, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
 }
 

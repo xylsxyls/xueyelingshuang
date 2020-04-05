@@ -111,6 +111,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CDwqrTask.h" />
     <ClInclude Include="CEwqr1Task.h" />
     <ClInclude Include="CFlashTask.h" />
     <ClInclude Include="CNoFlashTask.h" />
@@ -130,6 +131,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CDwqrTask.cpp" />
     <ClCompile Include="CEwqr1Task.cpp" />
     <ClCompile Include="CFlashTask.cpp" />
     <ClCompile Include="CNoFlashTask.cpp" />

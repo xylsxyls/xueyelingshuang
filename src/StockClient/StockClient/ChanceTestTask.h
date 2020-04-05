@@ -17,6 +17,7 @@ public:
 		std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
+		int32_t maxDay,
 		StockClient* stockClient);
 
 private:
@@ -24,5 +25,6 @@ private:
 	std::vector<std::pair<StrategyType, StrategyType>> m_vecStrategyType;
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;
+	int32_t m_maxDay;
 	StockClient* m_stockClient;
 };

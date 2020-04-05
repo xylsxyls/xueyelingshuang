@@ -22,6 +22,7 @@
 #include "CrFlashTask.h"
 #include "CEwqr1Task.h"
 #include "CWewTask.h"
+#include "CDwqrTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -42,7 +43,7 @@ bool rDown = false;
 bool aDown = false;
 bool threeDown = false;
 bool fiveDown = false;
-bool vkCodeOpen = true;
+bool vkCodeOpen = false;
 
 std::atomic<bool> rightMouse = true;
 
@@ -256,11 +257,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		else if (rDown/* && stopWatch.GetWatchTime() > 500*/)
+		else if (fiveDown && stopWatch.GetWatchTime() > 500)
 		{
 			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CRightClickTask> spTask;
-			spTask.reset(new CRightClickTask);
+			std::shared_ptr<CDwqrTask> spTask;
+			spTask.reset(new CDwqrTask);
 			taskThread->PostTask(spTask, 1);
 		}
 		else if (wDown && dDown && stopWatch.GetWatchTime() > 500)

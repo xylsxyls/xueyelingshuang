@@ -110,16 +110,28 @@ bool CatchUp::sell(const IntDateTime& date,
 	}
 
 	IntDateTime firstBuyDate = stockFund->firstBuyDate(stock);
+	int32_t holdDays = spMarket->getMemoryDays(firstBuyDate, date);
+	BigNumber open = spMarket->day()->open();
 	BigNumber high = spMarket->day()->high();
+	BigNumber low = spMarket->day()->low();
 	BigNumber close = spMarket->day()->close();
+	BigNumber chg = spMarket->day()->chgValue();
 	BigNumber bollup = spStockBollIndicator->day(date)->m_up;
 	BigNumber bollmid = spStockBollIndicator->day(date)->m_mid;
+	BigNumber costChg = "0.3";
+	BigNumber bigChg = "3";
+	spMarket->setDate(firstBuyDate);
+	BigNumber buyPrice = spMarket->day()->close();
+	BigNumber costPrice = (buyPrice * (1 + costChg / 100)).toPrec(2);
+	spMarket->next();
+	BigNumber firstDayChg = spMarket->day()->chgValue();
+	spMarket->setDate(date);
 
 	bool result = false;
-	BigNumber chg = 0;
-	stockFund->stockChg(stock, spMarket->day(), chg);
+	BigNumber allChg = 0;
+	stockFund->stockChg(stock, spMarket->day(), allChg);
 
-	if (spMarket->day()->chgValue() > 9.5)
+	if (spMarket->day()->isLimitUp())
 	{
 		return false;
 	}
@@ -129,15 +141,146 @@ bool CatchUp::sell(const IntDateTime& date,
 		return false;
 	}
 
-	if (spMarket->getMemoryDays(firstBuyDate, date) >= 3)
+	if (holdDays == 3)
 	{
+		if (allChg > 12)
+		{
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
+	}
+	else if (holdDays == 4)
+	{
+		if (allChg > costChg)
+		{
+			if (firstDayChg > bigChg && chg > bigChg)
+			{
+				return false;
+			}
+			spMarket->setDate(firstBuyDate);
+			spMarket->next();
+			BigNumber secondDayChg = spMarket->day()->chgValue();
+			BigNumber secondDayOpen = spMarket->day()->open();
+			BigNumber secondDayClose = spMarket->day()->close();
+			if (secondDayChg > bigChg && secondDayClose > open && secondDayOpen < close)
+			{
+				spMarket->setDate(date);
+				return false;
+			}
+
+			spMarket->setDate(date);
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
+	}
+	else if (holdDays == 5)
+	{
+		spMarket->previous();
+		BigNumber threeDaysChg;
+		stockFund->stockChg(stock, spMarket->day(), threeDaysChg);
+		//前3天在有yingli的情况下
+		if (threeDaysChg > costChg)
+		{
+			//第四天zuidi低于chengbenxian
+			if (low < costPrice && high > costPrice)
+			{
+				spMarket->setDate(date);
+				price = costPrice;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+			if (chg > 0 || allChg > costChg)
+			{
+				spMarket->setDate(date);
+				price = close;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+		}
+		//前三天kuiben但是今天shangzhang
+		else if (chg > 0)
+		{
+			//kaipan就huiben
+			if (open > costPrice)
+			{
+				spMarket->setDate(date);
+				price = open;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+			//zhongtuhuiben
+			else if (high > costPrice)
+			{
+				spMarket->setDate(date);
+				price = costPrice;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+			//前三天kuiben但是今天shangzhang没huiben就geroumai
+			spMarket->setDate(date);
+			price = close;
+			percent = 100;
+			score = 100;
+			return true;
+		}
+	}
+	else if (holdDays >= 6)
+	{
+		spMarket->previous();
+		BigNumber fourDaysChg;
+		stockFund->stockChg(stock, spMarket->day(), fourDaysChg);
+		//前4天kuiben
+		if (fourDaysChg < costChg)
+		{
+			//kaipan回本kaipanmai
+			if (open > costPrice)
+			{
+				spMarket->setDate(date);
+				price = open;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+			//zhongtuhuibenzhongtumai
+			if (high > costPrice)
+			{
+				spMarket->setDate(date);
+				price = costPrice;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+		}
+		//yingli
+		else
+		{
+			//zhongtuhuiben
+			if (low < costPrice && high > costPrice)
+			{
+				spMarket->setDate(date);
+				price = costPrice;
+				percent = 100;
+				score = 100;
+				return true;
+			}
+		}
+		//第五天一定qingcang
+		spMarket->setDate(date);
 		price = close;
 		percent = 100;
 		score = 100;
 		return true;
 	}
 
-	return result;
+	return false;
 }
 
 std::set<std::string> CatchUp::needIndicator()
