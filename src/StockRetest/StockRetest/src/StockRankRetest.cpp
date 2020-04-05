@@ -95,10 +95,7 @@ void StockRankRetest::run()
 		return;
 	}
 
-	if (!m_runMarket.setDate(m_beginTime))
-	{
-		return;
-	}
+	m_runMarket.setFirstDate();
 	IntDateTime calcTime = m_runMarket.date();
 	
 	while (calcTime < m_endTime)

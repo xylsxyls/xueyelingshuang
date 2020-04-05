@@ -104,18 +104,13 @@ void StockChanceRetest::run()
 	int32_t holdIndex = -1;
 	while (holdIndex++ != m_maxHoldDays - 1)
 	{
-		if (!m_runMarket.setDate(m_beginTime))
-		{
-			return;
-		}
+		m_runMarket.setFirstDate();
 
 		BigNumber allFund = 0;
 		BigNumber plusAllFund = 0;
 		BigNumber minusAllFund = 0;
 
 		std::vector<BigNumber> vecAllFund;
-
-		IntDateTime calcTime = m_beginTime;
 
 		BigNumber buyDay = 0;
 		BigNumber plusDay = 0;

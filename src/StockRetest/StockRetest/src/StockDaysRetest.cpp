@@ -94,10 +94,7 @@ void StockDaysRetest::run()
 		return;
 	}
 
-	if (!m_runMarket.setDate(m_beginTime))
-	{
-		return;
-	}
+	m_runMarket.setFirstDate();
 
 	BigNumber hasDays = 0;
 	BigNumber days = 0;
