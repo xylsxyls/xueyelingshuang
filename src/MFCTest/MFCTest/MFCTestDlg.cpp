@@ -6,7 +6,6 @@
 #include "MFCTest.h"
 #include "MFCTestDlg.h"
 #include "afxdialogex.h"
-#include "../../../tools/DebugTest/SendToMessageTest.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
