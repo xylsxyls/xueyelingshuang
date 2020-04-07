@@ -13,7 +13,7 @@ public:
 	CMFCTest1Dlg(CWnd* pParent = NULL);	// 标准构造函数
 
 // 对话框数据
-	enum { IDD = IDD_MFCTEST_DIALOG };
+	enum { IDD = IDD_MFCTEST1_DIALOG };
 
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持

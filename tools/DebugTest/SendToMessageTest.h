@@ -1,5 +1,11 @@
 #pragma once
 #include <string>
+
+#ifdef NO_WARN_MBCS_MFC_DEPRECATION
+#include <SDKDDKVer.h>
+#include <afxwin.h>
+#endif
+
 #include <windows.h>
 #include <vector>
 #include <tchar.h>
