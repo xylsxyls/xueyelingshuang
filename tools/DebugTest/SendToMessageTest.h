@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-#ifdef NO_WARN_MBCS_MFC_DEPRECATION
+#ifdef MFC_APP
 #include <SDKDDKVer.h>
 #include <afxwin.h>
 #endif
