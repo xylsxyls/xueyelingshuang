@@ -27,6 +27,7 @@
     <ClInclude Include="..\src\SarRiseBackCount.h" />
     <ClInclude Include="..\src\SarRiseBackInfo.h" />
     <ClInclude Include="..\src\SarRiseBackThirtyLine.h" />
+    <ClInclude Include="..\src\StockInfo.h" />
     <ClInclude Include="..\src\StockStrategyAPI.h" />
     <ClInclude Include="..\src\StockStrategyMacro.h" />
     <ClInclude Include="..\src\StockStrategy.h" />

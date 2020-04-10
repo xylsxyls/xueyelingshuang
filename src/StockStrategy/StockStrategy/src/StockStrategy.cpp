@@ -105,6 +105,27 @@ std::shared_ptr<StrategyInfo> StockStrategy::strategyInfo(StrategyType strategyE
 	const std::shared_ptr<StockMarket>& spMarket,
 	const std::map<std::string, std::shared_ptr<IndicatorManagerBase>>& spIndicator)
 {
+	std::shared_ptr<StrategyInfo> spStrategyInfo = strategyInfoNew(strategyEnum);
+
+	spStrategyInfo->m_fund = stockFund;
+	spStrategyInfo->m_spMarket = spMarket;
+	std::set<std::string> needLoadIndicator = spStrategyInfo->needIndicator();
+	for (auto itNeedLoadIndicator = needLoadIndicator.begin(); itNeedLoadIndicator != needLoadIndicator.end(); ++itNeedLoadIndicator)
+	{
+		const std::string& indicatorType = *itNeedLoadIndicator;
+		spStrategyInfo->m_spIndicator[indicatorType] = spIndicator.find(indicatorType)->second;
+	}
+
+	return spStrategyInfo;
+}
+
+std::set<std::string> StockStrategy::strategyNeedLoad(StrategyType strategyEnum)
+{
+	return strategyInfoNew(strategyEnum)->needIndicator();
+}
+
+std::shared_ptr<StrategyInfo> StockStrategy::strategyInfoNew(StrategyType strategyEnum)
+{
 	std::shared_ptr<StrategyInfo> spStrategyInfo;
 	switch (strategyEnum)
 	{
@@ -128,20 +149,5 @@ std::shared_ptr<StrategyInfo> StockStrategy::strategyInfo(StrategyType strategyE
 	default:
 		break;
 	}
-
-	spStrategyInfo->m_fund = stockFund;
-	spStrategyInfo->m_spMarket = spMarket;
-	std::set<std::string> needLoadIndicator = strategyNeedLoad(strategyEnum);
-	for (auto itNeedLoadIndicator = needLoadIndicator.begin(); itNeedLoadIndicator != needLoadIndicator.end(); ++itNeedLoadIndicator)
-	{
-		const std::string& indicatorType = *itNeedLoadIndicator;
-		spStrategyInfo->m_spIndicator[indicatorType] = spIndicator.find(indicatorType)->second;
-	}
-
 	return spStrategyInfo;
-}
-
-std::set<std::string> StockStrategy::strategyNeedLoad(StrategyType strategyEnum)
-{
-	return strategy(strategyEnum)->needIndicator();
 }

@@ -33,7 +33,7 @@ StockOnceRetest::~StockOnceRetest()
 }
 
 void StockOnceRetest::init(SolutionType solutionType,
-	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
+	const std::vector<ChooseParam>& vecChooseParam,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	const BigNumber& initialFund,
@@ -41,7 +41,7 @@ void StockOnceRetest::init(SolutionType solutionType,
 	int32_t threadCount)
 {
 	m_solutionType = solutionType;
-	m_vecStrategyType = vecStrategyType;
+	m_vecChooseParam = vecChooseParam;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
 	m_initialFund = initialFund;
@@ -56,25 +56,11 @@ void StockOnceRetest::init(SolutionType solutionType,
 	}
 	m_resultThreadId = CTaskThreadManager::Instance().Init();
 
-	std::set<StrategyType> setType;
-	int32_t index = -1;
-	while (index++ != m_vecStrategyType.size() - 1)
-	{
-		setType.insert(m_vecStrategyType[index].first);
-		setType.insert(m_vecStrategyType[index].second);
-	}
-	std::vector<StrategyType> vecInitStrategyType;
-	for (auto itSetType = setType.begin(); itSetType != setType.end(); ++itSetType)
-	{
-		const StrategyType& strategyType = *itSetType;
-		vecInitStrategyType.push_back(strategyType);
-	}
-
 	m_trade.init(m_beginTime,
 		m_endTime,
 		StockStrategy::instance().strategyAllStock(m_beginTime, m_endTime),
 		m_solutionType,
-		vecInitStrategyType);
+		m_vecChooseParam);
 }
 
 void StockOnceRetest::load()
@@ -119,18 +105,24 @@ void StockOnceRetest::run()
 
 		StockFund stockFund;
 		stockFund.add(m_initialFund);
+
+		TradeParam tradeParam;
+		tradeParam.m_stockFund = &stockFund;
+		tradeParam.m_onceDate = calcTime;
+		m_trade.setTradeParam(m_solutionType, tradeParam);
+
 		IntDateTime currentTime = calcTime;
 		do
 		{
-			std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> sellStock;
-			m_trade.sell(sellStock, currentTime, &stockFund, m_solutionType, m_vecStrategyType);
+			std::vector<std::pair<std::string, StockInfo>> sellStock;
+			m_trade.sell(sellStock, currentTime, m_solutionType);
 
 			int32_t index = -1;
 			while (index++ != sellStock.size() - 1)
 			{
 				const std::string& stock = sellStock[index].first;
-				const BigNumber& price = sellStock[index].second.first;
-				const BigNumber& rate = sellStock[index].second.second;
+				const BigNumber& price = sellStock[index].second.m_price;
+				const BigNumber& rate = sellStock[index].second.m_rate;
 				std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
 				spMarket->setDate(currentTime);
 				RCSend("maichu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
@@ -144,15 +136,15 @@ void StockOnceRetest::run()
 			}
 
 			StrategyType useStrategyType = STRATEGY_INIT;
-			std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-			m_trade.buy(buyStock, currentTime, &stockFund, m_solutionType, m_vecStrategyType, useStrategyType, calcTime);
+			std::vector<std::pair<std::string, StockInfo>> buyStock;
+			m_trade.buy(buyStock, currentTime, m_solutionType, useStrategyType);
 
 			index = -1;
 			while (index++ != buyStock.size() - 1)
 			{
 				const std::string& stock = buyStock[index].first;
-				const BigNumber& price = buyStock[index].second.first;
-				const BigNumber& rate = buyStock[index].second.second;
+				const BigNumber& price = buyStock[index].second.m_price;
+				const BigNumber& rate = buyStock[index].second.m_rate;
 				std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
 				spMarket->setDate(currentTime);
 				RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),

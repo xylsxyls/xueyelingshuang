@@ -10,13 +10,9 @@ LineBack::LineBack()
 	m_strategyType = LINE_BACK;
 }
 
-bool LineBack::buy(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool LineBack::buy(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<LineBackInfo>& lineBackInfo = std::dynamic_pointer_cast<LineBackInfo>(strategyInfo);
+	const std::shared_ptr<LineBackInfo>& lineBackInfo = std::dynamic_pointer_cast<LineBackInfo>(m_strategyInfo);
 
 	auto& stockFund = lineBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = lineBackInfo->m_spMarket;
@@ -77,9 +73,9 @@ bool LineBack::buy(const IntDateTime& date,
 		close > thirtyLine &&
 		close < thirtyLine.toPrec(6) * "1.03")
 	{
-		price = close;
-		percent = 100;
-		score = 200 * (bollUp / bollMid.toPrec(6) - 1).toPrec(6);
+		stockInfo.m_price = close;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 200 * (bollUp / bollMid.toPrec(6) - 1).toPrec(6);
 		return true;
 	}
 	//if (dayChg < 1 &&
@@ -99,13 +95,9 @@ bool LineBack::buy(const IntDateTime& date,
 	return false;
 }
 
-bool LineBack::sell(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool LineBack::sell(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<LineBackInfo>& lineBackInfo = std::dynamic_pointer_cast<LineBackInfo>(strategyInfo);
+	const std::shared_ptr<LineBackInfo>& lineBackInfo = std::dynamic_pointer_cast<LineBackInfo>(m_strategyInfo);
 
 	auto& stockFund = lineBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = lineBackInfo->m_spMarket;
@@ -139,19 +131,11 @@ bool LineBack::sell(const IntDateTime& date,
 
 	if (spMarket->getMemoryDays(firstBuyDate, date) >= 2)
 	{
-		price = close;
-		percent = 100;
-		score = 100;
+		stockInfo.m_price = close;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 100;
 		return true;
 	}
 
-	return result;
-}
-
-std::set<std::string> LineBack::needIndicator()
-{
-	std::set<std::string> result;
-	result.insert("sar");
-	result.insert("boll");
 	return result;
 }

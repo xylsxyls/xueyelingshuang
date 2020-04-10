@@ -36,12 +36,6 @@
     <ClInclude Include="..\src\SolutionInfo.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AvgFundHighScoreInfo.h">
-      <Filter>Solution</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StrategySetInfo.h">
-      <Filter>Solution</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\StrategySet.h">
       <Filter>Solution</Filter>
     </ClInclude>
@@ -51,17 +45,17 @@
     <ClInclude Include="..\src\DisposableStrategy.h">
       <Filter>Solution</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\IntegratedStrategyInfo.h">
-      <Filter>Solution</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\IntegratedStrategy.h">
       <Filter>Solution</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ObserveStrategy.h">
       <Filter>Solution</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ObserveStrategyInfo.h">
-      <Filter>Solution</Filter>
+    <ClInclude Include="..\src\StrategyStruct.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ChooseParam.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

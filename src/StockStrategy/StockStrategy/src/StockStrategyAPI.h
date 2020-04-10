@@ -8,6 +8,7 @@
 #include "SarRiseBackThirtyLine.h"
 #include "LineBack.h"
 #include "LineBackInfo.h"
+#include "StockInfo.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockStrategyd.lib")

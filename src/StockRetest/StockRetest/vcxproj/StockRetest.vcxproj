@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\RetestParam.h" />
     <ClInclude Include="..\src\StockChanceRetest.h" />
     <ClInclude Include="..\src\StockDaysRetest.h" />
     <ClInclude Include="..\src\StockOnceRetest.h" />

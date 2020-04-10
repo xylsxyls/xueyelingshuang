@@ -5,6 +5,7 @@
 #include <memory>
 #include "StockStrategyMacro.h"
 #include "StrategyInfo.h"
+#include "StockInfo.h"
 
 enum StrategyType
 {
@@ -33,52 +34,31 @@ public:
 	Strategy();
 
 public:
+	/** 设置策略信息
+	@param [in] strategyInfo 策略信息
+	*/
+	void setStrategyInfo(const std::shared_ptr<StrategyInfo>& strategyInfo);
+
 	/** 单个gupiao是否需要mairu
 	@param [in] date 日期
-	@param [out] price 价格
-	@param [out] percent 百分比0-100
-	@param [out] score 分数
-	@param [in] strategyInfo 策略需要的信息
+	@param [in] stockInfo 选中信息
 	@return 是否需要mairu
 	*/
-	virtual bool buy(const IntDateTime& date,
-		BigNumber& price,
-		BigNumber& percent,
-		BigNumber& score,
-		const std::shared_ptr<StrategyInfo>& strategyInfo) = 0;
+	virtual bool buy(const IntDateTime& date, StockInfo& stockInfo) = 0;
 
 	/** 单个gupiao是否需要maichu
 	@param [in] date 日期
-	@param [out] price 价格
-	@param [out] percent 百分比0-100
-	@param [out] score 分数
-	@param [in] strategyInfo 策略需要的信息
+	@param [in] stockInfo 选中信息
 	@return 是否需要maichu
 	*/
-	virtual bool sell(const IntDateTime& date,
-		BigNumber& price,
-		BigNumber& percent,
-		BigNumber& score,
-		const std::shared_ptr<StrategyInfo>& strategyInfo);
+	virtual bool sell(const IntDateTime& date, StockInfo& stockInfo);
 
 	/** 观察类型单个gupiao是否需要maichu
 	@param [in] date 日期
-	@param [out] price 价格
-	@param [out] percent 百分比0-100
-	@param [out] score 分数
-	@param [in] strategyInfo 策略需要的信息
+	@param [in] stockInfo 选中信息
 	@return 是否需要maichu
 	*/
-	virtual bool observeSell(const IntDateTime& date,
-		BigNumber& price,
-		BigNumber& percent,
-		BigNumber& score,
-		const std::shared_ptr<StrategyInfo>& strategyInfo);
-
-	/** 获取需要的zhibiao
-	@return 返回需要的zhibiao
-	*/
-	virtual std::set<std::string> needIndicator();
+	virtual bool observeSell(const IntDateTime& date, StockInfo& stockInfo);
 
 	/** 获取策略类型
 	@return 返回策略类型
@@ -87,4 +67,14 @@ public:
 
 protected:
 	StrategyType m_strategyType;
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	std::shared_ptr<StrategyInfo> m_strategyInfo;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 };

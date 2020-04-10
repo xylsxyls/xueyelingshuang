@@ -10,13 +10,9 @@ SarRiseBack::SarRiseBack()
 	m_strategyType = SAR_RISE_BACK;
 }
 
-bool SarRiseBack::buy(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool SarRiseBack::buy(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(strategyInfo);
+	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(m_strategyInfo);
 
 	auto& stockFund = sarRiseBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = sarRiseBackInfo->m_spMarket;
@@ -69,9 +65,9 @@ bool SarRiseBack::buy(const IntDateTime& date,
 		//}
 		if (close > bollMid && close < ((bollUp - bollMid) / "100.0" * 50 + bollMid))
 		{
-			price = close;
-			percent = 100;
-			score = 200 * (bollUp / close.toPrec(6) - 1).toPrec(6);
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 200 * (bollUp / close.toPrec(6) - 1).toPrec(6);
 			return true;
 		}
 		//else if (close >= bollDownMid && close <= bollMid)
@@ -80,9 +76,9 @@ bool SarRiseBack::buy(const IntDateTime& date,
 		//}
 		else if (close > bollDown && close < ((bollMid - bollDown) / "100.0" * 50 + bollDown))
 		{
-			price = close;
-			percent = 100;
-			score = 100 * (bollMid / close.toPrec(6) - 1).toPrec(6);
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100 * (bollMid / close.toPrec(6) - 1).toPrec(6);
 			return true;
 		}
 		else
@@ -93,13 +89,9 @@ bool SarRiseBack::buy(const IntDateTime& date,
 	return false;
 }
 
-bool SarRiseBack::sell(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool SarRiseBack::sell(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(strategyInfo);
+	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(m_strategyInfo);
 
 	auto& stockFund = sarRiseBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = sarRiseBackInfo->m_spMarket;
@@ -128,9 +120,9 @@ bool SarRiseBack::sell(const IntDateTime& date,
 			BigNumber sell = ((bollup - bollmid) / "100.0" * 80 + bollmid).toPrec(2);
 			if (spMarket->day()->high() > sell)
 			{
-				price = sell;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = sell;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 		}
@@ -150,9 +142,9 @@ bool SarRiseBack::sell(const IntDateTime& date,
 			spMarket->next();
 			if (spMarket->day()->high() / "1.03" > buyPrice)
 			{
-				price = (buyPrice * "1.03").toPrec(2);
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = (buyPrice * "1.03").toPrec(2);
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 		}
@@ -160,9 +152,9 @@ bool SarRiseBack::sell(const IntDateTime& date,
 
 	if (chg > "100")
 	{
-		price = close;
-		percent = 100;
-		score = 90;
+		stockInfo.m_price = close;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 90;
 		result = false;
 	}
 
@@ -180,9 +172,9 @@ bool SarRiseBack::sell(const IntDateTime& date,
 
 	if (bollup <= high)
 	{
-		price = bollup;
-		percent = 100;
-		score = 100;
+		stockInfo.m_price = bollup;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 100;
 		return true;
 	}
 
@@ -202,9 +194,9 @@ bool SarRiseBack::sell(const IntDateTime& date,
 	{
 		if (((bollup - bollmid) / "100.0" * 20 + bollmid) < close && chg > "0.3")
 		{
-			price = close;
-			percent = 100;
-			score = 100;
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100;
 			return true;
 		}
 	}
@@ -212,22 +204,18 @@ bool SarRiseBack::sell(const IntDateTime& date,
 
 	if (spMarket->getMemoryDays(firstBuyDate, date) >= 5)
 	{
-		price = spMarket->day()->close();
-		percent = 100;
-		score = 100;
+		stockInfo.m_price = spMarket->day()->close();
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 100;
 		return true;
 	}
 
 	return result;
 }
 
-bool SarRiseBack::observeSell(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool SarRiseBack::observeSell(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(strategyInfo);
+	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(m_strategyInfo);
 
 	auto& stockFund = sarRiseBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = sarRiseBackInfo->m_spMarket;
@@ -275,9 +263,9 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 	{
 		if (allChg > 12)
 		{
-			price = close;
-			percent = 100;
-			score = 100;
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100;
 			return true;
 		}
 	}
@@ -301,9 +289,9 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 			}
 
 			spMarket->setDate(date);
-			price = close;
-			percent = 100;
-			score = 100;
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100;
 			return true;
 		}
 	}
@@ -319,17 +307,17 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 			if (low < costPrice && high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = costPrice;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = costPrice;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 			if (chg > 0 || allChg > costChg)
 			{
 				spMarket->setDate(date);
-				price = close;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = close;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 		}
@@ -340,25 +328,25 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 			if (open > costPrice)
 			{
 				spMarket->setDate(date);
-				price = open;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = open;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 			//zhongtuhuiben
 			else if (high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = costPrice;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = costPrice;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 			//前三天kuiben但是今天shangzhang没huiben就geroumai
 			spMarket->setDate(date);
-			price = close;
-			percent = 100;
-			score = 100;
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100;
 			return true;
 		}
 	}
@@ -374,18 +362,18 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 			if (open > costPrice)
 			{
 				spMarket->setDate(date);
-				price = open;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = open;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 			//zhongtuhuibenzhongtumai
 			if (high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = costPrice;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = costPrice;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 		}
@@ -396,27 +384,19 @@ bool SarRiseBack::observeSell(const IntDateTime& date,
 			if (low < costPrice && high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = costPrice;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = costPrice;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 		}
 		//第五天一定qingcang
 		spMarket->setDate(date);
-		price = close;
-		percent = 100;
-		score = 100;
+		stockInfo.m_price = close;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 100;
 		return true;
 	}
 
 	return false;
-}
-
-std::set<std::string> SarRiseBack::needIndicator()
-{
-	std::set<std::string> result;
-	result.insert("sar");
-	result.insert("boll");
-	return result;
 }

@@ -14,3 +14,11 @@ int32_t SarRiseBackInfo::stockNum()
 {
 	return 4;
 }
+
+std::set<std::string> SarRiseBackInfo::needIndicator()
+{
+	std::set<std::string> result;
+	result.insert("sar");
+	result.insert("boll");
+	return result;
+}

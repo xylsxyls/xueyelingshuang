@@ -14,3 +14,11 @@ int32_t LineBackInfo::stockNum()
 {
 	return 4;
 }
+
+std::set<std::string> LineBackInfo::needIndicator()
+{
+	std::set<std::string> result;
+	result.insert("sar");
+	result.insert("boll");
+	return result;
+}

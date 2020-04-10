@@ -13,19 +13,19 @@ m_stockClient(nullptr)
 void RankTestTask::DoTask()
 {
 	StockRankRetest stockRankRetest;
-	stockRankRetest.init(m_solutionType, m_vecStrategyType, m_beginTime, m_endTime);
+	stockRankRetest.init(m_solutionType, m_vecChooseParam, m_beginTime, m_endTime);
 	stockRankRetest.load();
 	stockRankRetest.run();
 }
 
 void RankTestTask::setParam(SolutionType solutionType,
-	std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
+	const std::vector<ChooseParam>& vecChooseParam,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	StockClient* stockClient)
 {
 	m_solutionType = solutionType;
-	m_vecStrategyType = vecStrategyType;
+	m_vecChooseParam = vecChooseParam;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
 	m_stockClient = stockClient;

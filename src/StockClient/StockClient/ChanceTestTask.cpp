@@ -14,20 +14,20 @@ m_stockClient(nullptr)
 void ChanceTestTask::DoTask()
 {
 	StockChanceRetest stockChanceRetest;
-	stockChanceRetest.init(m_solutionType, m_vecStrategyType, m_beginTime, m_endTime, m_maxDay);
+	stockChanceRetest.init(m_solutionType, m_vecChooseParam, m_beginTime, m_endTime, m_maxDay);
 	stockChanceRetest.load();
 	stockChanceRetest.run();
 }
 
 void ChanceTestTask::setParam(SolutionType solutionType,
-	std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
+	std::vector<ChooseParam>& vecChooseParam,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	int32_t maxDay,
 	StockClient* stockClient)
 {
 	m_solutionType = solutionType;
-	m_vecStrategyType = vecStrategyType;
+	m_vecChooseParam = vecChooseParam;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
 	m_maxDay = maxDay;

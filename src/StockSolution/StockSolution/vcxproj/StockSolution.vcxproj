@@ -20,20 +20,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\AvgFundHighScore.h" />
-    <ClInclude Include="..\src\AvgFundHighScoreInfo.h" />
+    <ClInclude Include="..\src\ChooseParam.h" />
     <ClInclude Include="..\src\DisposableStrategy.h" />
     <ClInclude Include="..\src\DisposableStrategyInfo.h" />
     <ClInclude Include="..\src\IntegratedStrategy.h" />
-    <ClInclude Include="..\src\IntegratedStrategyInfo.h" />
     <ClInclude Include="..\src\ObserveStrategy.h" />
-    <ClInclude Include="..\src\ObserveStrategyInfo.h" />
     <ClInclude Include="..\src\Solution.h" />
     <ClInclude Include="..\src\SolutionInfo.h" />
     <ClInclude Include="..\src\StockSolutionAPI.h" />
     <ClInclude Include="..\src\StockSolutionMacro.h" />
     <ClInclude Include="..\src\StockSolution.h" />
     <ClInclude Include="..\src\StrategySet.h" />
-    <ClInclude Include="..\src\StrategySetInfo.h" />
+    <ClInclude Include="..\src\StrategyStruct.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\AvgFundHighScore.cpp" />

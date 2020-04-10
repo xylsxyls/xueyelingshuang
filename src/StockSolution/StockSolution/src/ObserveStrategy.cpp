@@ -21,34 +21,35 @@ void ObserveStrategy::init(StrategyType strategyType, int32_t calcDays)
 	m_calcDays = calcDays;
 }
 
-bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
-	const IntDateTime& date,
-	const std::shared_ptr<SolutionInfo>& solutionInfo)
+void ObserveStrategy::setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo)
 {
-	m_avgSolution->Solution::init(m_mapStrategy);
+	m_solutionInfo = solutionInfo;
+	m_avgSolution->setSolutionInfo(solutionInfo);
+}
 
-	m_avgSolution->setParam(m_strategyType);
-	solutionInfo->setParam(m_strategyType);
+bool ObserveStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date)
+{
+	m_solutionInfo->m_chooseParam.m_useType = m_strategyType;
 
-	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> beforeDayBuyStock;
-	if (!m_avgSolution->buy(beforeDayBuyStock, getBeforeDay("000001", date, m_calcDays, solutionInfo), solutionInfo))
+	std::vector<std::pair<std::string, StockInfo>> beforeDayBuyStock;
+	if (!m_avgSolution->buy(beforeDayBuyStock, getBeforeDay("000001", date, m_calcDays)))
 	{
 		return false;
 	}
 
-	std::map<BigNumber, std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>> beforeDayBuyStockMap;
+	std::map<BigNumber, std::vector<std::pair<std::string, StockInfo>>> beforeDayBuyStockMap;
 
 	int32_t index = -1;
 	while (index++ != beforeDayBuyStock.size() - 1)
 	{
 		bool isSkip = false;
 		const std::string& stock = beforeDayBuyStock[index].first;
-		std::shared_ptr<StockMarket> spMarket = solutionInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first->m_spMarket;
+		std::shared_ptr<StockMarket> spMarket = getMarket(stock);
 		BigNumber avgChgValue = 0;
 		int32_t calcDays = m_calcDays;
 		while (calcDays-- != 0)
 		{
-			if (!spMarket->setDate(getBeforeDay(stock, date, calcDays, solutionInfo)))
+			if (!spMarket->setDate(getBeforeDay(stock, date, calcDays)))
 			{
 				//ËµÃ÷tingpaiÁË
 				RCSend("tingpai, stock = %s, date = %s", stock.c_str(), date.dateToString().c_str());
@@ -71,10 +72,9 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 		while (index++ != vecStock.size() - 1)
 		{
 			const std::string& stock = vecStock[index].first;
-			std::shared_ptr<StockMarket> spMarket = solutionInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first->m_spMarket;
+			std::shared_ptr<StockMarket> spMarket = getMarket(stock);
 			spMarket->setDate(date);
-			vecStock[index].second.first = spMarket->day()->close();
-			vecStock[index].second.second = 1;
+			vecStock[index].second.m_price = spMarket->day()->close();
 			buyStock.push_back(vecStock[index]);
 			if ((int32_t)buyStock.size() >= m_stockNum)
 			{
@@ -86,27 +86,14 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 			break;
 		}
 	}
-	if (buyStock.empty())
-	{
-		return false;
-	}
-
-	index = -1;
-	while (index++ != buyStock.size() - 1)
-	{
-		buyStock[index].second.second = (BigNumber(1) / BigNumber((int32_t)buyStock.size() - index).toPrec(6)).toPrec(6);
-	}
 
 	if (buyStock.size() < 2)
 	{
-		buyStock.clear();
 		return false;
 	}
-	auto buyPair = buyStock[1];
-	buyPair.second.second = 1;
-	const std::string& stockBuy = buyPair.first;
-	std::shared_ptr<StockMarket> spStockBuyMarket = solutionInfo->m_strategyAllInfo.find(stockBuy)->second.begin()->second.first->m_spMarket;
-	spStockBuyMarket->setDate(getBeforeDay(stockBuy, date, 1, solutionInfo));
+	const std::string& stockBuy = buyStock[1].first;
+	std::shared_ptr<StockMarket> spStockBuyMarket = getMarket(stockBuy);
+	spStockBuyMarket->setDate(getBeforeDay(stockBuy, date, 1));
 	BigNumber firstAvg = spStockBuyMarket->day()->fourAvgChgValue();
 	BigNumber firstChg = spStockBuyMarket->day()->chgValue();
 	BigNumber firstOpenClose = spStockBuyMarket->day()->open() - spStockBuyMarket->day()->close();
@@ -118,7 +105,7 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 	index = -1;
 	while (index++ != buyStock.size() - 1)
 	{
-		buyStock[index].second.second = (index == 1 ? "1.00" : "0.00");
+		buyStock[index].second.m_rate = (index == 1 ? "1.00" : "0.00");
 	}
 
 	//auto buyPairFirst = buyStock[0];
@@ -130,7 +117,7 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 	//}
 	if (firstChg + secondChg < 0)
 	{
-		buyStock[1].second.second = "0.00";
+		buyStock[1].second.m_rate = "0.00";
 		return false;
 	}
 	//if (firstAvg < -3 || secondAvg < -3)
@@ -145,33 +132,29 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber
 	//{
 	//	return false;
 	//}
-
-	//buyStock.push_back(buyPairFirst);
-	//buyStock.push_back(buyPair);
 	return true;
 }
 
-bool ObserveStrategy::sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
-	const IntDateTime& date,
-	const std::shared_ptr<SolutionInfo>& solutionInfo)
+bool ObserveStrategy::sell(std::vector<std::pair<std::string, StockInfo>>& sellStock, const IntDateTime& date)
 {
-	m_avgSolution->Solution::init(m_mapStrategy);
-	return m_avgSolution->sell(sellStock, date, solutionInfo);
+	return m_avgSolution->sell(sellStock, date);
 }
 
-IntDateTime ObserveStrategy::getBeforeDay(const std::string& stock,
-	const IntDateTime& date,
-	int32_t days,
-	const std::shared_ptr<SolutionInfo>& solutionInfo)
+IntDateTime ObserveStrategy::getBeforeDay(const std::string& stock, const IntDateTime& date, int32_t days)
 {
-	if (solutionInfo->m_strategyAllInfo.find(stock) == solutionInfo->m_strategyAllInfo.end())
+	if (m_solutionInfo->m_allStrategyInfo.find(stock) == m_solutionInfo->m_allStrategyInfo.end())
 	{
 		return IntDateTime(0, 0);
 	}
-	std::shared_ptr<StockMarket> spMarket = solutionInfo->m_strategyAllInfo.find(stock)->second.begin()->second.first->m_spMarket;
+	std::shared_ptr<StockMarket> spMarket = getMarket(stock);
 	if (!spMarket->setDate(date))
 	{
 		return IntDateTime(0, 0);
 	}
 	return spMarket->getDateBefore(days);
+}
+
+std::shared_ptr<StockMarket> ObserveStrategy::getMarket(const std::string& stock)
+{
+	return m_solutionInfo->m_allStrategyInfo.find(stock)->second.find(m_solutionInfo->m_chooseParam.m_useType)->second.m_strategyInfo->m_spMarket;
 }

@@ -58,4 +58,7 @@ public:
 	@return 返回策略需要的zhibiao结合
 	*/
 	std::set<std::string> strategyNeedLoad(StrategyType strategyEnum);
+
+protected:
+	std::shared_ptr<StrategyInfo> strategyInfoNew(StrategyType strategyEnum);
 };

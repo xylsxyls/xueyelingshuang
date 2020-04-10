@@ -7,6 +7,7 @@
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "BigNumber/BigNumberAPI.h"
 #include "StockFund/StockFundAPI.h"
+#include "StockStrategy/StockStrategyAPI.h"
 
 class LineEdit;
 class COriginalButton;
@@ -75,9 +76,9 @@ public:
 	//过滤的gupiao
 	std::vector<std::string> m_allFilterStock;
 	//xuangu后当日mairu的gupiao
-	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> m_buyStock;
+	std::vector<std::pair<std::string, StockInfo>> m_buyStock;
 	//xuangu后当日maichu的gupiao
-	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> m_sellStock;
+	std::vector<std::pair<std::string, StockInfo>> m_sellStock;
 	//实际zijin
 	StockFund m_stockFund;
 

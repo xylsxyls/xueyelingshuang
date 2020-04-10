@@ -11,6 +11,7 @@
 #include "IntegratedStrategyInfo.h"
 #include "ObserveStrategy.h"
 #include "ObserveStrategyInfo.h"
+#include "ChooseParam.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockSolutiond.lib")

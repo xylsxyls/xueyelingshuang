@@ -775,13 +775,13 @@ void StockClient::onChooseStockButtonClicked()
 	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
 
 	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
-	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
-	vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-	vecStrategyType.back().first = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
-	vecStrategyType.back().second = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
+	std::vector<ChooseParam> vecChooseParam;
+	vecChooseParam.push_back(ChooseParam());
+	vecChooseParam.back().m_useType = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
+	vecChooseParam.back().m_useCountType = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
 	spChooseStockTask->setParam(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str(),
 		std::vector<std::string>(),
-		vecStrategyType,
+		vecChooseParam,
 		inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : AVG_FUND_HIGH_SCORE,
 		nullptr,
 		this);
@@ -884,16 +884,16 @@ void StockClient::onRealTestButtonClicked()
 	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
 
 	std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
-	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+	std::vector<ChooseParam> vecChooseParam;
 	int32_t index = -1;
 	while (index++ != vecStrStrategyType.size() - 1)
 	{
 		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
-		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-		vecStrategyType.back().first = strategyType;
-		vecStrategyType.back().second = strategyType;
+		vecChooseParam.push_back(ChooseParam());
+		vecChooseParam.back().m_useType = strategyType;
+		vecChooseParam.back().m_useCountType = strategyType;
 	}
-	spRealTestTask->setParam(observe ? OBSERVE_STRATEGY: INTEGRATED_STRATEGY, vecStrategyType, beginTime, endTime, this);
+	spRealTestTask->setParam(observe ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 
@@ -921,11 +921,11 @@ void StockClient::onOnceTestButtonClicked()
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 
 	std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
-	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
-	vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-	vecStrategyType.back().first = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
-	vecStrategyType.back().second = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
-	spOnceTestTask->setParam(DISPOSABLE_STRATEGY, vecStrategyType, beginTime, endTime, this);
+	std::vector<ChooseParam> vecChooseParam;
+	vecChooseParam.push_back(ChooseParam());
+	vecChooseParam.back().m_useType = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
+	vecChooseParam.back().m_useCountType = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
+	spOnceTestTask->setParam(DISPOSABLE_STRATEGY, vecChooseParam, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 }
 
@@ -957,20 +957,20 @@ void StockClient::onDaysTestButtonClicked()
 	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
 	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
 
-	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+	std::vector<ChooseParam> vecChooseParam;
 	int32_t index = -1;
 	while (index++ != vecStrStrategyType.size() - 1)
 	{
 		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
-		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-		vecStrategyType.back().first = strategyType;
-		vecStrategyType.back().second = strategyType;
+		vecChooseParam.push_back(ChooseParam());
+		vecChooseParam.back().m_useType = strategyType;
+		vecChooseParam.back().m_useCountType = strategyType;
 	}
 
 	SolutionType solutionType = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY;
 
 	std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
-	spDaysTestTask->setParam(solutionType, vecStrategyType, beginTime, endTime, this);
+	spDaysTestTask->setParam(solutionType, vecChooseParam, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 }
 
@@ -1002,20 +1002,20 @@ void StockClient::onRankTestButtonClicked()
 	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
 	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
 
-	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+	std::vector<ChooseParam> vecChooseParam;
 	int32_t index = -1;
 	while (index++ != vecStrStrategyType.size() - 1)
 	{
 		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
-		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-		vecStrategyType.back().first = strategyType;
-		vecStrategyType.back().second = strategyType;
+		vecChooseParam.push_back(ChooseParam());
+		vecChooseParam.back().m_useType = strategyType;
+		vecChooseParam.back().m_useCountType = strategyType;
 	}
 
 	SolutionType solutionType = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY;
 
 	std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
-	spRankTestTask->setParam(solutionType, vecStrategyType, beginTime, endTime, this);
+	spRankTestTask->setParam(solutionType, vecChooseParam, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
 }
 
@@ -1050,14 +1050,14 @@ void StockClient::onChanceTestButtonClicked()
 	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
 	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
 
-	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
+	std::vector<ChooseParam> vecChooseParam;
 	int32_t index = -1;
 	while (index++ != vecStrStrategyType.size() - 1)
 	{
 		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
-		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-		vecStrategyType.back().first = strategyType;
-		vecStrategyType.back().second = strategyType;
+		vecChooseParam.push_back(ChooseParam());
+		vecChooseParam.back().m_useType = strategyType;
+		vecChooseParam.back().m_useCountType = strategyType;
 	}
 
 	SolutionType solutionType = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY;
@@ -1065,7 +1065,7 @@ void StockClient::onChanceTestButtonClicked()
 	int32_t maxDay = atoi(inputDialogParam.m_vecInputEx[4].m_editText.toStdString().c_str());
 
 	std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
-	spChanceTestTask->setParam(solutionType, vecStrategyType, beginTime, endTime, maxDay, this);
+	spChanceTestTask->setParam(solutionType, vecChooseParam, beginTime, endTime, maxDay, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
 }
 
@@ -1139,13 +1139,13 @@ void StockClient::onEverydaySolutionButtonClicked()
 	while (index++ != STRATEGY_TYPE_SIZE - 1)
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
-		std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
-		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-		vecStrategyType.back().first = (StrategyType)index;
-		vecStrategyType.back().second = (StrategyType)index;
+		std::vector<ChooseParam> vecChooseParam;
+		vecChooseParam.push_back(ChooseParam());
+		vecChooseParam.back().m_useType = (StrategyType)index;
+		vecChooseParam.back().m_useCountType = (StrategyType)index;
 		spChooseStockTask->setParam(IntDateTime(0, 0),
 			std::vector<std::string>(),
-			vecStrategyType,
+			vecChooseParam,
 			AVG_FUND_HIGH_SCORE,
 			&m_stockFund,
 			this);
@@ -1177,13 +1177,13 @@ void StockClient::onEverydaySolutionButtonClicked()
 	//	this);
 	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask2);
 	std::shared_ptr<ChooseStockTask> spChooseStockTask3(new ChooseStockTask);
-	std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
-	vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-	vecStrategyType.back().first = SAR_RISE_BACK;
-	vecStrategyType.back().second = SAR_RISE_BACK;
+	std::vector<ChooseParam> vecChooseParam;
+	vecChooseParam.push_back(ChooseParam());
+	vecChooseParam.back().m_useType = SAR_RISE_BACK;
+	vecChooseParam.back().m_useCountType = SAR_RISE_BACK;
 	spChooseStockTask3->setParam(IntDateTime(0, 0),
 		std::vector<std::string>(),
-		vecStrategyType,
+		vecChooseParam,
 		OBSERVE_STRATEGY,
 		&m_stockFund,
 		this);
@@ -1306,18 +1306,32 @@ void StockClient::onEverydayTaskButtonClicked()
 	while (index++ != STRATEGY_TYPE_SIZE - 1)
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
-		std::vector<std::pair<StrategyType, StrategyType>> vecStrategyType;
-		vecStrategyType.push_back(std::pair<StrategyType, StrategyType>());
-		vecStrategyType.back().first = (StrategyType)index;
-		vecStrategyType.back().second = (StrategyType)index;
+		std::vector<ChooseParam> vecChooseParam;
+		vecChooseParam.push_back(ChooseParam());
+		vecChooseParam.back().m_useType = (StrategyType)index;
+		vecChooseParam.back().m_useCountType = (StrategyType)index;
 		spChooseStockTask->setParam(IntDateTime(0, 0),
 			std::vector<std::string>(),
-			vecStrategyType,
+			vecChooseParam,
 			AVG_FUND_HIGH_SCORE,
 			&m_stockFund,
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
+
+	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
+	std::vector<ChooseParam> vecChooseParam;
+	vecChooseParam.push_back(ChooseParam());
+	vecChooseParam.back().m_useType = SAR_RISE_BACK;
+	vecChooseParam.back().m_useCountType = SAR_RISE_BACK;
+	vecChooseParam.back().m_isObserve = true;
+	spChooseStockTask->setParam(IntDateTime(0, 0),
+		std::vector<std::string>(),
+		vecChooseParam,
+		AVG_FUND_HIGH_SCORE,
+		&m_stockFund,
+		this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 
 	//std::shared_ptr<MairubishengTask> spMairubishengTask(new MairubishengTask);
 	//spMairubishengTask->setParam(atoi(inputDialogParam.m_editText.toStdString().c_str()), this);

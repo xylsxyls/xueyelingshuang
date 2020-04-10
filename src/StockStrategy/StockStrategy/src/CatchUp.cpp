@@ -10,13 +10,9 @@ CatchUp::CatchUp()
 	m_strategyType = CATCH_UP;
 }
 
-bool CatchUp::buy(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool CatchUp::buy(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<CatchUpInfo>& catchUpInfo = std::dynamic_pointer_cast<CatchUpInfo>(strategyInfo);
+	const std::shared_ptr<CatchUpInfo>& catchUpInfo = std::dynamic_pointer_cast<CatchUpInfo>(m_strategyInfo);
 
 	auto& stockFund = catchUpInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = catchUpInfo->m_spMarket;
@@ -69,9 +65,9 @@ bool CatchUp::buy(const IntDateTime& date,
 		(entity / previousEntity.toPrec(6) - 1).abs() < "0.8" &&
 		upValue / entity.toPrec(6) < "0.8")
 	{
-		price = close;
-		percent = 100;
-		score = 200 * (bollUp / bollMid.toPrec(6) - 1).toPrec(6);
+		stockInfo.m_price = close;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 200 * (bollUp / bollMid.toPrec(6) - 1).toPrec(6);
 		return true;
 	}
 	//if (dayChg < 1 &&
@@ -91,13 +87,9 @@ bool CatchUp::buy(const IntDateTime& date,
 	return false;
 }
 
-bool CatchUp::sell(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool CatchUp::sell(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<CatchUpInfo>& catchUpInfo = std::dynamic_pointer_cast<CatchUpInfo>(strategyInfo);
+	const std::shared_ptr<CatchUpInfo>& catchUpInfo = std::dynamic_pointer_cast<CatchUpInfo>(m_strategyInfo);
 
 	auto& stockFund = catchUpInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = catchUpInfo->m_spMarket;
@@ -145,9 +137,9 @@ bool CatchUp::sell(const IntDateTime& date,
 	{
 		if (allChg > 12)
 		{
-			price = close;
-			percent = 100;
-			score = 100;
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100;
 			return true;
 		}
 	}
@@ -171,9 +163,9 @@ bool CatchUp::sell(const IntDateTime& date,
 			}
 
 			spMarket->setDate(date);
-			price = close;
-			percent = 100;
-			score = 100;
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100;
 			return true;
 		}
 	}
@@ -189,17 +181,17 @@ bool CatchUp::sell(const IntDateTime& date,
 			if (low < costPrice && high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = costPrice;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = costPrice;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 			if (chg > 0 || allChg > costChg)
 			{
 				spMarket->setDate(date);
-				price = close;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = close;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 		}
@@ -210,25 +202,25 @@ bool CatchUp::sell(const IntDateTime& date,
 			if (open > costPrice)
 			{
 				spMarket->setDate(date);
-				price = open;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = open;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 			//zhongtuhuiben
 			else if (high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = costPrice;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = costPrice;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 			//前三天kuiben但是今天shangzhang没huiben就geroumai
 			spMarket->setDate(date);
-			price = close;
-			percent = 100;
-			score = 100;
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100;
 			return true;
 		}
 	}
@@ -244,18 +236,18 @@ bool CatchUp::sell(const IntDateTime& date,
 			if (open > costPrice)
 			{
 				spMarket->setDate(date);
-				price = open;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = open;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 			//zhongtuhuibenzhongtumai
 			if (high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = costPrice;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = costPrice;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 		}
@@ -266,27 +258,19 @@ bool CatchUp::sell(const IntDateTime& date,
 			if (low < costPrice && high > costPrice)
 			{
 				spMarket->setDate(date);
-				price = costPrice;
-				percent = 100;
-				score = 100;
+				stockInfo.m_price = costPrice;
+				stockInfo.m_percent = 100;
+				stockInfo.m_score = 100;
 				return true;
 			}
 		}
 		//第五天一定qingcang
 		spMarket->setDate(date);
-		price = close;
-		percent = 100;
-		score = 100;
+		stockInfo.m_price = close;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 100;
 		return true;
 	}
 
 	return false;
-}
-
-std::set<std::string> CatchUp::needIndicator()
-{
-	std::set<std::string> result;
-	result.insert("sar");
-	result.insert("boll");
-	return result;
 }

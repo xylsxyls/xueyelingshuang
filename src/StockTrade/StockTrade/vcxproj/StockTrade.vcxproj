@@ -22,6 +22,7 @@
     <ClInclude Include="..\src\StockTradeAPI.h" />
     <ClInclude Include="..\src\StockTradeMacro.h" />
     <ClInclude Include="..\src\StockTrade.h" />
+    <ClInclude Include="..\src\TradeParam.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockTrade.cpp" />

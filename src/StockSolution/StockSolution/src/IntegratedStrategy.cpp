@@ -13,24 +13,25 @@ IntegratedStrategy::IntegratedStrategy()
 	m_avgSolution = std::dynamic_pointer_cast<AvgFundHighScore>(StockSolution::instance().solution(AVG_FUND_HIGH_SCORE));
 }
 
-void IntegratedStrategy::init(const std::vector<StrategyType>& vecStrategyType)
+void IntegratedStrategy::init(const std::vector<ChooseParam>& vecChooseParam)
 {
-	m_vecStrategyType = vecStrategyType;
+	m_vecChooseParam = vecChooseParam;
 }
 
-bool IntegratedStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
-	const IntDateTime& date,
-	const std::shared_ptr<SolutionInfo>& solutionInfo)
+void IntegratedStrategy::setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo)
 {
-	m_avgSolution->Solution::init(m_mapStrategy);
+	m_solutionInfo = solutionInfo;
+	m_avgSolution->setSolutionInfo(solutionInfo);
+}
 
+bool IntegratedStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date)
+{
 	int32_t index = -1;
-	while (index++ != m_vecStrategyType.size() - 1)
+	while (index++ != m_vecChooseParam.size() - 1)
 	{
-		const StrategyType& useType = m_vecStrategyType[index];
-		m_avgSolution->setParam(useType);
-		solutionInfo->setParam(useType);
-		if (m_avgSolution->buy(buyStock, date, solutionInfo))
+		const ChooseParam& chooseParam = m_vecChooseParam[index];
+		m_avgSolution->setChooseParam(chooseParam);
+		if (m_avgSolution->buy(buyStock, date))
 		{
 			return true;
 		}
@@ -38,10 +39,7 @@ bool IntegratedStrategy::buy(std::vector<std::pair<std::string, std::pair<BigNum
 	return false;
 }
 
-bool IntegratedStrategy::sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
-	const IntDateTime& date,
-	const std::shared_ptr<SolutionInfo>& solutionInfo)
+bool IntegratedStrategy::sell(std::vector<std::pair<std::string, StockInfo>>& sellStock, const IntDateTime& date)
 {
-	m_avgSolution->Solution::init(m_mapStrategy);
-	return m_avgSolution->sell(sellStock, date, solutionInfo);
+	return m_avgSolution->sell(sellStock, date);
 }

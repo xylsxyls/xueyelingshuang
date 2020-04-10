@@ -15,22 +15,16 @@ public:
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
-	@param [in] solutionInfo 解决方案需要的信息
-	@return 是否有选出的gupiao
+	@return 是否有选出的gupiao，集合不为0不代表有goumai的gupiao
 	*/
-	virtual bool buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
-		const IntDateTime& date,
-		const std::shared_ptr<SolutionInfo>& solutionInfo);
+	virtual bool buy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date);
 
 	/** 询问单只gupiao需不需要maichu
 	@param [in] sellStock maichu的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
-	@param [in] solutionInfo 解决方案需要的信息
-	@return 返回是否有需要maichu的gupiao
+	@return 返回是否有需要maichu的gupiao，集合不为0不代表有maichu的gupiao
 	*/
-	virtual bool sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
-		const IntDateTime& date,
-		const std::shared_ptr<SolutionInfo>& solutionInfo);
+	virtual bool sell(std::vector<std::pair<std::string, StockInfo>>& sellStock, const IntDateTime& date);
 
 protected:
 	/** 根据策略选出可以goumai的gupiao
@@ -39,16 +33,14 @@ protected:
 	@param [in] solutionInfo 解决方案需要的信息
 	@return 是否有选出的gupiao
 	*/
-	bool strategyBuy(std::vector<std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>>& buyStock,
-		const IntDateTime& date,
-		const std::shared_ptr<SolutionInfo>& solutionInfo);
+	bool strategyBuy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date);
 
 	/** 获取可mairu的计数
 	@param[in] date 日期
 	@param[in] solutionInfo 解决方案需要的信息
 	@return 返回可mairu的计数
 	*/
-	int32_t strategyBuyCount(const IntDateTime& date, const std::shared_ptr<SolutionInfo>& solutionInfo);
+	int32_t strategyBuyCount(const IntDateTime& date);
 
 	/** 询问单只gupiao需不需要maichu
 	@param [in] sellStock maichu的gupiao集合，stock,price,score0-100
@@ -56,7 +48,5 @@ protected:
 	@param [in] solutionInfo 解决方案需要的信息
 	@return 返回是否有需要maichu的gupiao
 	*/
-	bool strategySell(std::vector<std::pair<std::string, std::pair<BigNumber, std::pair<BigNumber, BigNumber>>>>& sellStock,
-		const IntDateTime& date,
-		const std::shared_ptr<SolutionInfo>& solutionInfo);
+	bool strategySell(std::vector<std::pair<std::string, StockInfo>>& sellStock, const IntDateTime& date);
 };

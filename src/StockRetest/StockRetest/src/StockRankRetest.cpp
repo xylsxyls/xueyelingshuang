@@ -34,7 +34,7 @@ StockRankRetest::~StockRankRetest()
 }
 
 void StockRankRetest::init(SolutionType solutionType,
-	const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
+	const std::vector<ChooseParam>& vecChooseParam,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	const BigNumber& initialFund,
@@ -42,7 +42,7 @@ void StockRankRetest::init(SolutionType solutionType,
 	int32_t threadCount)
 {
 	m_solutionType = solutionType;
-	m_vecStrategyType = vecStrategyType;
+	m_vecChooseParam = vecChooseParam;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
 	m_initialFund = initialFund;
@@ -59,27 +59,13 @@ void StockRankRetest::init(SolutionType solutionType,
 
 	m_fund.add(m_initialFund);
 
-	std::set<StrategyType> setType;
-	int32_t index = -1;
-	while (index++ != m_vecStrategyType.size() - 1)
-	{
-		setType.insert(m_vecStrategyType[index].first);
-		setType.insert(m_vecStrategyType[index].second);
-	}
-	std::vector<StrategyType> vecInitStrategyType;
-	for (auto itSetType = setType.begin(); itSetType != setType.end(); ++itSetType)
-	{
-		const StrategyType& strategyType = *itSetType;
-		vecInitStrategyType.push_back(strategyType);
-	}
-
 	m_runMarket.loadFromRedis("000001", m_beginTime, m_endTime);
 
 	m_trade.init(m_beginTime,
 		m_endTime,
 		StockStrategy::instance().strategyAllStock(m_beginTime, m_endTime),
 		m_solutionType,
-		vecInitStrategyType);
+		m_vecChooseParam);
 }
 
 void StockRankRetest::load()
@@ -103,9 +89,13 @@ void StockRankRetest::run()
 		StockFund stockFund;
 		stockFund.add(m_initialFund);
 
+		TradeParam tradeParam;
+		tradeParam.m_stockFund = &stockFund;
+		m_trade.setTradeParam(m_solutionType, tradeParam);
+
 		StrategyType useStrategyType = STRATEGY_INIT;
-		std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> buyStock;
-		if (!m_trade.buy(buyStock, calcTime, &stockFund, m_solutionType, m_vecStrategyType, useStrategyType))
+		std::vector<std::pair<std::string, StockInfo>> buyStock;
+		if (!m_trade.buy(buyStock, calcTime, m_solutionType, useStrategyType))
 		{
 			if (!m_runMarket.next())
 			{
@@ -125,7 +115,7 @@ void StockRankRetest::run()
 			vecStockFund.push_back(StockFund());
 			vecStockFund.back().add(m_initialFund);
 			const std::string& stock = buyStock[index].first;
-			const BigNumber& price = buyStock[index].second.first;
+			const BigNumber& price = buyStock[index].second.m_price;
 			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
 			spMarket->setDate(calcTime);
 			vecStockFund.back().buyStock(price, 1, spMarket->day(), useStrategyType);

@@ -51,6 +51,9 @@
     <ClInclude Include="..\src\StockChanceRetest.h">
       <Filter>Retest</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\RetestParam.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockEveryTestResultTask.cpp">

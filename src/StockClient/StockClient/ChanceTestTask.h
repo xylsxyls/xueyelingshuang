@@ -14,7 +14,7 @@ public:
 	void DoTask();
 
 	void setParam(SolutionType solutionType,
-		std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
+		std::vector<ChooseParam>& vecChooseParam,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
 		int32_t maxDay,
@@ -22,7 +22,7 @@ public:
 
 private:
 	SolutionType m_solutionType;
-	std::vector<std::pair<StrategyType, StrategyType>> m_vecStrategyType;
+	std::vector<ChooseParam> m_vecChooseParam;
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;
 	int32_t m_maxDay;

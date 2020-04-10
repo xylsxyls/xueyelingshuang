@@ -3,14 +3,15 @@
 #include <QMetaType>
 #include "BigNumber/BigNumberAPI.h"
 #include "StockDrawMacro.h"
+#include "StockStrategy/StockStrategyAPI.h"
 
 class StockFund;
 
 struct StockDrawAPI SolutionWidgetParam
 {
 	IntDateTime m_date;
-	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> m_buyStock;
-	std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>> m_sellStock;
+	std::vector<std::pair<std::string, StockInfo>> m_buyStock;
+	std::vector<std::pair<std::string, StockInfo>> m_sellStock;
 	StockFund* m_stockFund;
 
 	SolutionWidgetParam()

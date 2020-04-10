@@ -10,13 +10,9 @@ SarRiseBackThirtyLine::SarRiseBackThirtyLine()
 	m_strategyType = SAR_RISE_BACK_THIRTY_LINE;
 }
 
-bool SarRiseBackThirtyLine::buy(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool SarRiseBackThirtyLine::buy(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(strategyInfo);
+	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(m_strategyInfo);
 
 	auto& stockFund = sarRiseBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = sarRiseBackInfo->m_spMarket;
@@ -87,9 +83,9 @@ bool SarRiseBackThirtyLine::buy(const IntDateTime& date,
 		//}
 		if (close > bollMid && close < ((bollUp - bollMid) / "100.0" * 50 + bollMid))
 		{
-			price = close;
-			percent = 100;
-			score = 200 * (bollUp / close.toPrec(6) - 1).toPrec(6);
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 200 * (bollUp / close.toPrec(6) - 1).toPrec(6);
 			return true;
 		}
 		//else if (close >= bollDownMid && close <= bollMid)
@@ -98,9 +94,9 @@ bool SarRiseBackThirtyLine::buy(const IntDateTime& date,
 		//}
 		else if (close > bollDown && close < ((bollMid - bollDown) / "100.0" * 50 + bollDown))
 		{
-			price = close;
-			percent = 100;
-			score = 100 * (bollMid / close.toPrec(6) - 1).toPrec(6);
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100 * (bollMid / close.toPrec(6) - 1).toPrec(6);
 			return true;
 		}
 		else
@@ -111,13 +107,9 @@ bool SarRiseBackThirtyLine::buy(const IntDateTime& date,
 	return false;
 }
 
-bool SarRiseBackThirtyLine::sell(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool SarRiseBackThirtyLine::sell(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(strategyInfo);
+	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(m_strategyInfo);
 
 	auto& stockFund = sarRiseBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = sarRiseBackInfo->m_spMarket;
@@ -178,9 +170,9 @@ bool SarRiseBackThirtyLine::sell(const IntDateTime& date,
 
 	if (chg > "100")
 	{
-		price = close;
-		percent = 100;
-		score = 90;
+		stockInfo.m_price = close;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 90;
 		result = false;
 	}
 
@@ -198,9 +190,9 @@ bool SarRiseBackThirtyLine::sell(const IntDateTime& date,
 
 	if (bollup <= high)
 	{
-		price = bollup;
-		percent = 100;
-		score = 100;
+		stockInfo.m_price = bollup;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 100;
 		return true;
 	}
 
@@ -220,9 +212,9 @@ bool SarRiseBackThirtyLine::sell(const IntDateTime& date,
 	{
 		if (((bollup - bollmid) / "100.0" * 75 + bollmid) < close && chg > "0.3")
 		{
-			price = close;
-			percent = 100;
-			score = 100;
+			stockInfo.m_price = close;
+			stockInfo.m_percent = 100;
+			stockInfo.m_score = 100;
 			return true;
 		}
 	}
@@ -230,19 +222,11 @@ bool SarRiseBackThirtyLine::sell(const IntDateTime& date,
 
 	if (spMarket->getMemoryDays(firstBuyDate, date) >= 15)
 	{
-		price = spMarket->day()->close();
-		percent = 100;
-		score = 100;
+		stockInfo.m_price = spMarket->day()->close();
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 100;
 		return true;
 	}
 
-	return result;
-}
-
-std::set<std::string> SarRiseBackThirtyLine::needIndicator()
-{
-	std::set<std::string> result;
-	result.insert("sar");
-	result.insert("boll");
 	return result;
 }

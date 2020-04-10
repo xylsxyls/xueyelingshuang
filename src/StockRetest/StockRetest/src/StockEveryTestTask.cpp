@@ -32,17 +32,16 @@ void StockEveryTestTask::DoTask()
 	do
 	{
 		IntDateTime date = m_spMarket->date();
-		BigNumber price;
-		BigNumber percent;
-		BigNumber score;
-		if (spStrategy->sell(date, price, percent, score, spStrategyInfo))
+		spStrategy->setStrategyInfo(spStrategyInfo);
+		StockInfo stockInfo;
+		if (spStrategy->sell(date, stockInfo))
 		{
-			fund.sellStock(price, percent / BigNumber("100.0"), m_spMarket->day());
+			fund.sellStock(stockInfo.m_price, stockInfo.m_percent / BigNumber("100.0"), m_spMarket->day());
 		}
 
-		if (spStrategy->buy(date, price, percent, score, spStrategyInfo))
+		if (spStrategy->buy(date, stockInfo))
 		{
-			fund.buyStock(price, percent / BigNumber("100.0"), m_spMarket->day());
+			fund.buyStock(stockInfo.m_price, stockInfo.m_percent / BigNumber("100.0"), m_spMarket->day());
 		}
 	} while (m_spMarket->next());
 	std::map<std::string, std::shared_ptr<StockDay>> dayDate;

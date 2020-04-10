@@ -6,6 +6,7 @@
 #include "StockSolution/StockSolutionAPI.h"
 #include <map>
 #include <memory>
+#include "TradeParam.h"
 
 class StockDay;
 class Solution;
@@ -34,7 +35,7 @@ public:
 		const IntDateTime& endTime,
 		const std::vector<std::string>& allStock,
 		SolutionType solutionType,
-		const std::vector<StrategyType>& vecStrategyType);
+		const std::vector<ChooseParam>& vecChooseParam);
 
 	/** 初始化，把所有需要的内容全部加载好，加载好的信息供所有解决方案和策略共用
 	@param [in] beginTime 开始时间
@@ -47,11 +48,17 @@ public:
 		const IntDateTime& endTime,
 		const std::vector<std::string>& allStock,
 		const std::vector<SolutionType>& vecSolutionType,
-		const std::vector<StrategyType>& vecStrategyType);
+		const std::vector<ChooseParam>& vecChooseParam);
 
 	/** 原始信息加载转化到可用信息
 	*/
 	void load();
+
+	/** 设置jiaoyi参数
+	@param [in] solutionType 解决方案类型
+	@param [in] tradeParam jiaoyi参数
+	*/
+	void setTradeParam(SolutionType solutionType, const TradeParam& tradeParam);
 
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
@@ -63,13 +70,10 @@ public:
 	@param [in] onceDate 计算单次lirun时每次进入的开始时间
 	@return 是否有选出的gupiao
 	*/
-	bool buy(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& buyStock,
+	bool buy(std::vector<std::pair<std::string, StockInfo>>& buyStock,
 		const IntDateTime& date,
-		StockFund* stockFund,
 		SolutionType solutionType,
-		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
-		StrategyType& useStrategyType,
-		const IntDateTime& onceDate = IntDateTime(0, 0));
+		StrategyType& useStrategyType);
 
 	/** 询问单只gupiao需不需要maichu
 	@param [in] sellStock maichu的gupiao集合，stock,price,rate0-1
@@ -79,11 +83,9 @@ public:
 	@param [in] strategyType 策略类型
 	@return 返回是否有需要maichu的gupiao
 	*/
-	bool sell(std::vector<std::pair<std::string, std::pair<BigNumber, BigNumber>>>& sellStock,
+	bool sell(std::vector<std::pair<std::string, StockInfo>>& sellStock,
 		const IntDateTime& date,
-		StockFund* stockFund,
-		SolutionType solutionType,
-		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType);
+		SolutionType solutionType);
 
 	/** 获取内置的hangqing信息
 	@param [in] stock gupiao代码
@@ -102,11 +104,8 @@ public:
 		std::map<std::string, std::shared_ptr<StockDay>>& dayData);
 
 protected:
-	std::shared_ptr<SolutionInfo> makeSolutionInfo(const IntDateTime& date,
-		StockFund* stockFund,
-		SolutionType solutionType,
-		const std::vector<std::pair<StrategyType, StrategyType>>& vecStrategyType,
-		const IntDateTime& onceDate);
+	std::shared_ptr<SolutionInfo> makeSolutionInfo(SolutionType solutionType,
+		const std::vector<ChooseParam>& vecStrategyType);
 
 private:
 #ifdef _MSC_VER
@@ -120,6 +119,7 @@ private:
 
 	std::map<SolutionType, std::shared_ptr<Solution>> m_solutionMap;
 	std::map<StrategyType, std::shared_ptr<Strategy>> m_strategyMap;
+	std::map<StrategyType, std::shared_ptr<StrategyInfo>> m_strategyInfoMap;
 
 	std::vector<std::string> m_allStock;
 	std::map<IntDateTime, std::vector<std::string>> m_filterStock;

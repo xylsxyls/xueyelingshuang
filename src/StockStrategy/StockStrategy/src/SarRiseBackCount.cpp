@@ -9,13 +9,9 @@ SarRiseBackCount::SarRiseBackCount()
 	m_strategyType = SAR_RISE_BACK_COUNT;
 }
 
-bool SarRiseBackCount::buy(const IntDateTime& date,
-	BigNumber& price,
-	BigNumber& percent,
-	BigNumber& score,
-	const std::shared_ptr<StrategyInfo>& strategyInfo)
+bool SarRiseBackCount::buy(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(strategyInfo);
+	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(m_strategyInfo);
 
 	auto& stockFund = sarRiseBackInfo->m_fund;
 	std::shared_ptr<StockMarket>& spMarket = sarRiseBackInfo->m_spMarket;
@@ -50,23 +46,15 @@ bool SarRiseBackCount::buy(const IntDateTime& date,
 
 	if (sar5State == StockSar::RED_TO_GREEN && sar10State == StockSar::RED_TO_GREEN)
 	{
-		percent = 100;
-		score = 100;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 100;
 		return true;
 	}
 	else if (sar5State == StockSar::RED_TO_GREEN || sar10State == StockSar::RED_TO_GREEN || sar20State == StockSar::RED_TO_GREEN)
 	{
-		percent = 100;
-		score = 80;
+		stockInfo.m_percent = 100;
+		stockInfo.m_score = 80;
 		return true;
 	}
 	return false;
-}
-
-std::set<std::string> SarRiseBackCount::needIndicator()
-{
-	std::set<std::string> result;
-	result.insert("sar");
-	result.insert("boll");
-	return result;
 }
