@@ -6,6 +6,7 @@
 #include <map>
 
 class StockDay;
+struct ChooseParam;
 /** gupiao账户zijin管理
 */
 class StockFundAPI StockFund
@@ -17,7 +18,10 @@ public:
 	@param [in] spStockDay gupiao当天hangqing
 	@return 返回是否购买成功，即是否能在期望jiage买到
 	*/
-	bool buyStock(const BigNumber& price, const BigNumber& rate, const std::shared_ptr<StockDay>& spStockDay, int32_t strategyType = 0);
+	bool buyStock(const BigNumber& price,
+		const BigNumber& rate,
+		const std::shared_ptr<StockDay>& spStockDay,
+		const std::shared_ptr<ChooseParam>& spChooseParam = nullptr);
 
 	/** 卖出gupiao
 	@param [in] price 期望的卖出jiage
@@ -107,10 +111,10 @@ public:
 	*/
 	std::vector<std::string> ownedStock() const;
 
-	/** 获取gupiao对应策略
-	@return 返回gupiao对应策略
+	/** 获取gupiao对应选择方案
+	@return 返回gupiao对应选择方案
 	*/
-	int32_t stockStrategy(const std::string& stock) const;
+	std::shared_ptr<ChooseParam> stockChooseParam(const std::string& stock) const;
 
 	/** 获取可用zijin
 	@return 返回可用zijin
@@ -150,7 +154,7 @@ private:
 	//gupiao代码，购买日期（成本zijin，gupiaocangwei）组
 	std::map<std::string, std::vector<std::pair<IntDateTime, std::pair<BigNumber, BigNumber>>>> m_stock;
 	//gupiao代码，策略
-	std::map<std::string, int32_t> m_stockStrategy;
+	std::map<std::string, std::shared_ptr<ChooseParam>> m_stockChooseParam;
 	//gupiaohangqing
 	//std::map<std::string, std::shared_ptr<StockMarket>> m_stockMarket;
 	//买卖日志记录

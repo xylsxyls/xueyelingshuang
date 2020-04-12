@@ -1,9 +1,9 @@
 #include "AvgFundHighScore.h"
 #include "StockStrategy/StockStrategyAPI.h"
 #include <algorithm>
-#include "AvgFundHighScoreInfo.h"
 #include "StockFund/StockFundAPI.h"
 #include "StockMarket/StockMarketAPI.h"
+#include "SolutionInfo.h"
 
 static bool sortFun(const std::pair<std::string, StockInfo>& stock1,
 	const std::pair<std::string, StockInfo>& stock2)
@@ -138,7 +138,7 @@ int32_t AvgFundHighScore::strategyBuyCount(const IntDateTime& date)
 	{
 		const std::string& stock = filterStock[index];
 		std::shared_ptr<Strategy> spStrategyCount = m_solutionInfo->strategyCount();
-		std::shared_ptr<StrategyInfo> spStrategyInfoCount = m_solutionInfo->strategyCountInfo(m_solutionInfo->m_chooseParam.m_useType, stock);
+		std::shared_ptr<StrategyInfo> spStrategyInfoCount = m_solutionInfo->strategyCountInfo(m_solutionInfo->m_chooseParam.m_useCountType, stock);
 		if (spStrategyCount == nullptr || spStrategyInfoCount == nullptr)
 		{
 			RCSend("未发现使用类型2");
@@ -160,9 +160,9 @@ bool AvgFundHighScore::strategySell(std::vector<std::pair<std::string, StockInfo
 	while (index++ != vecOwnedStock.size() - 1)
 	{
 		const std::string& stock = vecOwnedStock[index];
-		StrategyType stockStrategyType = (StrategyType)m_solutionInfo->m_fund->stockStrategy(stock);
-		std::shared_ptr<Strategy> spStrategy = m_solutionInfo->strategy(stockStrategyType);
-		std::shared_ptr<StrategyInfo> spStrategyInfo = m_solutionInfo->strategyInfo(stockStrategyType, stock);
+		std::shared_ptr<ChooseParam> spChooseParam = m_solutionInfo->m_fund->stockChooseParam(stock);
+		std::shared_ptr<Strategy> spStrategy = m_solutionInfo->strategy(spChooseParam->m_useType);
+		std::shared_ptr<StrategyInfo> spStrategyInfo = m_solutionInfo->strategyInfo(spChooseParam->m_useType, stock);
 		if (spStrategy == nullptr || spStrategyInfo == nullptr)
 		{
 			RCSend("未发现使用类型6，stock = %s", stock.c_str());

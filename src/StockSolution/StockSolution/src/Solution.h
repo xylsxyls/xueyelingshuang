@@ -7,21 +7,6 @@
 #include "StockStrategy/StockStrategyAPI.h"
 #include "ChooseParam.h"
 
-enum SolutionType
-{
-	SOLUTION_INIT,
-
-	AVG_FUND_HIGH_SCORE,
-
-	STRATEGY_SET,
-
-	DISPOSABLE_STRATEGY,
-
-	INTEGRATED_STRATEGY,
-
-	OBSERVE_STRATEGY
-};
-
 struct SolutionInfo;
 class StockSolutionAPI Solution
 {

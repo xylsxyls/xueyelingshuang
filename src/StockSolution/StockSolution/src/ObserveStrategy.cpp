@@ -1,38 +1,65 @@
 #include "ObserveStrategy.h"
 #include "StockStrategy/StockStrategyAPI.h"
 #include <algorithm>
-#include "ObserveStrategyInfo.h"
 #include "StockFund/StockFundAPI.h"
 #include "StockMarket/StockMarketAPI.h"
 #include "StockSolution.h"
 #include "AvgFundHighScore.h"
+#include "SolutionInfo.h"
 
 ObserveStrategy::ObserveStrategy():
 m_stockNum(4),
-m_calcDays(0)
+m_calcDays(2)
 {
 	m_solutionType = OBSERVE_STRATEGY;
-	m_avgSolution = std::dynamic_pointer_cast<AvgFundHighScore>(StockSolution::instance().solution(AVG_FUND_HIGH_SCORE));
+	
 }
 
-void ObserveStrategy::init(StrategyType strategyType, int32_t calcDays)
+void ObserveStrategy::init(int32_t stockNum, int32_t calcDays)
 {
-	m_strategyType = strategyType;
+	m_stockNum = stockNum;
 	m_calcDays = calcDays;
 }
 
 void ObserveStrategy::setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo)
 {
 	m_solutionInfo = solutionInfo;
-	m_avgSolution->setSolutionInfo(solutionInfo);
+}
+
+void ObserveStrategy::setStrategyType(StrategyType useType, StrategyType useCountType)
+{
+	m_solutionInfo->m_chooseParam.m_useType = useType;
+	m_solutionInfo->m_chooseParam.m_useCountType = useCountType;
+}
+
+void ObserveStrategy::setSolutionType(SolutionType solutionType)
+{
+	if (m_useSolution == nullptr)
+	{
+		m_useSolution = StockSolution::instance().solution(solutionType);
+		m_useSolution->setSolutionInfo(m_solutionInfo);
+		m_solutionMap[solutionType] = m_useSolution;
+		return;
+	}
+	if (m_useSolution->type() == solutionType)
+	{
+		return;
+	}
+	auto itSolution = m_solutionMap.find(solutionType);
+	if (itSolution == m_solutionMap.end())
+	{
+		m_useSolution = StockSolution::instance().solution(solutionType);
+		m_useSolution->setSolutionInfo(m_solutionInfo);
+		m_solutionMap[solutionType] = m_useSolution;
+		return;
+	}
+	m_useSolution = itSolution->second;
 }
 
 bool ObserveStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date)
 {
-	m_solutionInfo->m_chooseParam.m_useType = m_strategyType;
-
 	std::vector<std::pair<std::string, StockInfo>> beforeDayBuyStock;
-	if (!m_avgSolution->buy(beforeDayBuyStock, getBeforeDay("000001", date, m_calcDays)))
+	if (!m_useSolution->buy(beforeDayBuyStock, getBeforeDay("000001", date, m_calcDays)))
 	{
 		return false;
 	}
@@ -137,7 +164,7 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buySto
 
 bool ObserveStrategy::sell(std::vector<std::pair<std::string, StockInfo>>& sellStock, const IntDateTime& date)
 {
-	return m_avgSolution->sell(sellStock, date);
+	return m_useSolution->sell(sellStock, date);
 }
 
 IntDateTime ObserveStrategy::getBeforeDay(const std::string& stock, const IntDateTime& date, int32_t days)

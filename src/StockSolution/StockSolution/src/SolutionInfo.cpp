@@ -29,7 +29,7 @@ std::shared_ptr<Strategy> SolutionInfo::strategyCount(StrategyType useType)
 {
 	if (useType == STRATEGY_INIT)
 	{
-		useType = m_chooseParam.m_useType;
+		useType = m_chooseParam.m_useCountType;
 	}
 	std::map<StrategyType, StrategyStruct>::iterator itUseStrategy = m_allStrategy.find(useType);
 	if (itUseStrategy == m_allStrategy.end())
@@ -85,7 +85,7 @@ std::shared_ptr<StrategyInfo> SolutionInfo::strategyCountInfo(StrategyType useTy
 	}
 	if (useType == STRATEGY_INIT)
 	{
-		useType = m_chooseParam.m_useType;
+		useType = m_chooseParam.m_useCountType;
 	}
 	auto itUseStrategy = itStrategyMap->second.find(useType);
 	if (itUseStrategy == itStrategyMap->second.end())

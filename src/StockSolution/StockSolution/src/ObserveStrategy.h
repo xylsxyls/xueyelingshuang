@@ -14,15 +14,26 @@ public:
 
 public:
 	/** 初始化
-	@param [in] strategyType 子类型
+	@param [in] stockNum 允许goumai的gupiao个数
 	@param [in] calcDays 计算天数
 	*/
-	void init(StrategyType strategyType, int32_t calcDays);
+	void init(int32_t stockNum, int32_t calcDays);
 
 	/** 设置参数
 	@param [in] solutionInfo 解决方案信息
 	*/
 	void setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo);
+
+	/** 设置策略，需在设置参数之后
+	@param [in] useType 策略类型
+	@param [in] useCountType 计数策略类型
+	*/
+	void setStrategyType(StrategyType useType, StrategyType useCountType);
+
+	/** 设置使用的方案类型
+	@param [in] solutionType 使用的方案类型
+	*/
+	void setSolutionType(SolutionType solutionType);
 
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
@@ -58,7 +69,8 @@ protected:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::shared_ptr<AvgFundHighScore> m_avgSolution;
+	std::map<SolutionType, std::shared_ptr<Solution>> m_solutionMap;
+	std::shared_ptr<Solution> m_useSolution;
 	StrategyType m_strategyType;
 #ifdef _MSC_VER
 #pragma warning(pop)

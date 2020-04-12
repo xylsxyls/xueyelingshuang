@@ -1,16 +1,16 @@
 #include "IntegratedStrategy.h"
 #include "StockStrategy/StockStrategyAPI.h"
 #include <algorithm>
-#include "IntegratedStrategyInfo.h"
 #include "StockFund/StockFundAPI.h"
 #include "StockMarket/StockMarketAPI.h"
 #include "StockSolution.h"
 #include "AvgFundHighScore.h"
+#include "ObserveStrategy.h"
+#include "SolutionInfo.h"
 
 IntegratedStrategy::IntegratedStrategy()
 {
 	m_solutionType = INTEGRATED_STRATEGY;
-	m_avgSolution = std::dynamic_pointer_cast<AvgFundHighScore>(StockSolution::instance().solution(AVG_FUND_HIGH_SCORE));
 }
 
 void IntegratedStrategy::init(const std::vector<ChooseParam>& vecChooseParam)
@@ -21,7 +21,6 @@ void IntegratedStrategy::init(const std::vector<ChooseParam>& vecChooseParam)
 void IntegratedStrategy::setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo)
 {
 	m_solutionInfo = solutionInfo;
-	m_avgSolution->setSolutionInfo(solutionInfo);
 }
 
 bool IntegratedStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date)
@@ -30,8 +29,8 @@ bool IntegratedStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buy
 	while (index++ != m_vecChooseParam.size() - 1)
 	{
 		const ChooseParam& chooseParam = m_vecChooseParam[index];
-		m_avgSolution->setChooseParam(chooseParam);
-		if (m_avgSolution->buy(buyStock, date))
+		setEveryChooseParam(chooseParam);
+		if (m_useSolution->buy(buyStock, date))
 		{
 			return true;
 		}
@@ -41,5 +40,57 @@ bool IntegratedStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buy
 
 bool IntegratedStrategy::sell(std::vector<std::pair<std::string, StockInfo>>& sellStock, const IntDateTime& date)
 {
-	return m_avgSolution->sell(sellStock, date);
+	sellStock.clear();
+	std::vector<std::string> vecOwnedStock = m_solutionInfo->m_fund->ownedStock();
+
+	bool result = false;
+	int32_t index = -1;
+	while (index++ != vecOwnedStock.size() - 1)
+	{
+		const std::string& stock = vecOwnedStock[index];
+		std::shared_ptr<ChooseParam> spChooseParam = m_solutionInfo->m_fund->stockChooseParam(stock);
+		changeUseSolution(spChooseParam->m_isObserve ? OBSERVE_STRATEGY : spChooseParam->m_solutionType);
+		std::vector<std::pair<std::string, StockInfo>> solutionSellStock;
+		result = (result || m_useSolution->sell(solutionSellStock, date));
+		int32_t index = -1;
+		while (index++ != solutionSellStock.size() - 1)
+		{
+			sellStock.push_back(solutionSellStock[index]);
+		}
+	}
+	return result;
+}
+
+void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam)
+{
+	if (chooseParam.m_isObserve)
+	{
+		changeUseSolution(OBSERVE_STRATEGY);
+		std::shared_ptr<ObserveStrategy> observeSolution = std::dynamic_pointer_cast<ObserveStrategy>(m_useSolution);
+		observeSolution->setStrategyType(chooseParam.m_useType, chooseParam.m_useCountType);
+		observeSolution->setSolutionType(chooseParam.m_solutionType);
+	}
+	else
+	{
+		changeUseSolution(chooseParam.m_solutionType);
+		m_useSolution->setChooseParam(chooseParam);
+	}
+}
+
+void IntegratedStrategy::changeUseSolution(SolutionType solutionType)
+{
+	auto itSolution = m_solutionMap.find(solutionType);
+	if (itSolution == m_solutionMap.end())
+	{
+		m_useSolution = StockSolution::instance().solution(solutionType);
+		m_useSolution->setSolutionInfo(m_solutionInfo);
+		if (solutionType == OBSERVE_STRATEGY)
+		{
+			std::shared_ptr<ObserveStrategy> observeSolution = std::dynamic_pointer_cast<ObserveStrategy>(m_useSolution);
+			observeSolution->init(4, 2);
+		}
+		m_solutionMap[solutionType] = m_useSolution;
+		return;
+	}
+	m_useSolution = itSolution->second;
 }

@@ -1,9 +1,9 @@
 #include "StrategySet.h"
 #include "StockStrategy/StockStrategyAPI.h"
 #include <algorithm>
-#include "StrategySetInfo.h"
 #include "StockFund/StockFundAPI.h"
 #include "StockMarket/StockMarketAPI.h"
+#include "SolutionInfo.h"
 
 static bool sortFun(const std::pair<std::string, StockInfo>& stock1,
 	const std::pair<std::string, StockInfo>& stock2)

@@ -5,6 +5,7 @@
 
 class Strategy;
 class AvgFundHighScore;
+class ObserveStrategy;
 struct SolutionInfo;
 class StockSolutionAPI IntegratedStrategy : public Solution
 {
@@ -39,11 +40,17 @@ public:
 	virtual bool sell(std::vector<std::pair<std::string, StockInfo>>& sellStock, const IntDateTime& date);
 
 protected:
+	void setEveryChooseParam(const ChooseParam& chooseParam);
+
+	void changeUseSolution(SolutionType solutionType);
+
+protected:
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::shared_ptr<AvgFundHighScore> m_avgSolution;
+	std::map<SolutionType, std::shared_ptr<Solution>> m_solutionMap;
+	std::shared_ptr<Solution> m_useSolution;
 	std::vector<ChooseParam> m_vecChooseParam;
 #ifdef _MSC_VER
 #pragma warning(pop)
