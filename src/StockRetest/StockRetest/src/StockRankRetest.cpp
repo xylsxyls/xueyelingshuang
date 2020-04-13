@@ -93,9 +93,9 @@ void StockRankRetest::run()
 		tradeParam.m_stockFund = &stockFund;
 		m_trade.setTradeParam(m_solutionType, tradeParam);
 
-		StrategyType useStrategyType = STRATEGY_INIT;
+		std::shared_ptr<ChooseParam> useChooseParam;
 		std::vector<std::pair<std::string, StockInfo>> buyStock;
-		if (!m_trade.buy(buyStock, calcTime, m_solutionType, useStrategyType))
+		if (!m_trade.buy(buyStock, calcTime, m_solutionType, useChooseParam))
 		{
 			if (!m_runMarket.next())
 			{
@@ -118,7 +118,7 @@ void StockRankRetest::run()
 			const BigNumber& price = buyStock[index].second.m_price;
 			std::shared_ptr<StockMarket> spMarket = m_trade.market(stock);
 			spMarket->setDate(calcTime);
-			vecStockFund.back().buyStock(price, 1, spMarket->day(), useStrategyType);
+			vecStockFund.back().buyStock(price, 1, spMarket->day(), useChooseParam);
 			spMarket->previous();
 			std::string preAvg = spMarket->day()->fourAvgChgValue().toString();
 			spMarket->next();

@@ -61,9 +61,9 @@ void ChooseStockTask::DoTask()
 	}
 	m_stockClient->m_sellStock = sellStock;
 
-	StrategyType useStrategyType = STRATEGY_INIT;
+	std::shared_ptr<ChooseParam> useChooseParam;
 	std::vector<std::pair<std::string, StockInfo>> buyStock;
-	stockTrade.buy(buyStock, m_date, m_solutionType, useStrategyType);
+	stockTrade.buy(buyStock, m_date, m_solutionType, useChooseParam);
 	index = buyStock.size();
 	while (index-- != 0)
 	{

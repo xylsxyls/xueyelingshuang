@@ -111,9 +111,9 @@ void StockChanceRetest::run()
 			tradeParam.m_stockFund = &stockFund;
 			m_trade.setTradeParam(m_solutionType, tradeParam);
 
-			StrategyType useStrategyType = STRATEGY_INIT;
+			std::shared_ptr<ChooseParam> useChooseParam;
 			std::vector<std::pair<std::string, StockInfo>> buyStock;
-			m_trade.buy(buyStock, calcTime, m_solutionType, useStrategyType);
+			m_trade.buy(buyStock, calcTime, m_solutionType, useChooseParam);
 
 			int32_t index = -1;
 			while (index++ != buyStock.size() - 1)
@@ -127,7 +127,7 @@ void StockChanceRetest::run()
 					holdIndex,
 					spMarket->date().dateToString().c_str(),
 					spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
-				stockFund.buyStock(price, rate, spMarket->day(), useStrategyType);
+				stockFund.buyStock(price, rate, spMarket->day(), useChooseParam);
 			}
 
 			StockMarket spRunMarket = m_runMarket;

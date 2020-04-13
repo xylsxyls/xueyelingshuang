@@ -135,9 +135,9 @@ void StockOnceRetest::run()
 				break;
 			}
 
-			StrategyType useStrategyType = STRATEGY_INIT;
+			std::shared_ptr<ChooseParam> useChooseParam;
 			std::vector<std::pair<std::string, StockInfo>> buyStock;
-			m_trade.buy(buyStock, currentTime, m_solutionType, useStrategyType);
+			m_trade.buy(buyStock, currentTime, m_solutionType, useChooseParam);
 
 			index = -1;
 			while (index++ != buyStock.size() - 1)
@@ -149,7 +149,7 @@ void StockOnceRetest::run()
 				spMarket->setDate(currentTime);
 				RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
 					spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
-				stockFund.buyStock(price, rate, spMarket->day(), useStrategyType);
+				stockFund.buyStock(price, rate, spMarket->day(), useChooseParam);
 			}
 
 			//printProfit(&stockFund, currentTime);

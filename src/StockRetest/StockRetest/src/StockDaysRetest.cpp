@@ -115,8 +115,8 @@ void StockDaysRetest::run()
 		}
 
 		std::vector<std::pair<std::string, StockInfo>> buyStock;
-		StrategyType useStrategyType = STRATEGY_INIT;
-		bool isBuy = m_trade.buy(buyStock, currentTime, m_solutionType, useStrategyType);
+		std::shared_ptr<ChooseParam> useChooseParam;
+		bool isBuy = m_trade.buy(buyStock, currentTime, m_solutionType, useChooseParam);
 		index = -1;
 		while (index++ != buyStock.size() - 1)
 		{
@@ -127,7 +127,7 @@ void StockDaysRetest::run()
 			spMarket->setDate(currentTime);
 			RCSend("mairu, date = %s, stock = %s, price = %s, rate = %s", spMarket->date().dateToString().c_str(),
 				spMarket->stock().c_str(), price.toString().c_str(), rate.toString().c_str());
-			m_fund.buyStock(price, rate, spMarket->day(), useStrategyType);
+			m_fund.buyStock(price, rate, spMarket->day(), useChooseParam);
 		}
 
 		m_runMarket.next();

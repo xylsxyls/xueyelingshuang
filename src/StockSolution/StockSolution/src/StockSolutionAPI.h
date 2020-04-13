@@ -2,15 +2,11 @@
 #define _StockSolutionAPI
 #include "StockSolution.h"
 #include "AvgFundHighScore.h"
-#include "AvgFundHighScoreInfo.h"
 #include "StrategySet.h"
-#include "StrategySetInfo.h"
 #include "DisposableStrategy.h"
 #include "DisposableStrategyInfo.h"
 #include "IntegratedStrategy.h"
-#include "IntegratedStrategyInfo.h"
 #include "ObserveStrategy.h"
-#include "ObserveStrategyInfo.h"
 #include "ChooseParam.h"
 
 #ifdef _DEBUG

@@ -63,24 +63,19 @@ public:
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
-	@param [in] stockFund zijin信息
-	@param [in] solutionType 解决方案类型
-	@param [in] strategyType 策略类型
-	@param [out] useStrategyType 使用的策略类型
-	@param [in] onceDate 计算单次lirun时每次进入的开始时间
+	@param [in] solutionType 使用的解决方案类型
+	@param [in] useChooseParam 使用的选择参数
 	@return 是否有选出的gupiao
 	*/
 	bool buy(std::vector<std::pair<std::string, StockInfo>>& buyStock,
 		const IntDateTime& date,
 		SolutionType solutionType,
-		StrategyType& useStrategyType);
+		std::shared_ptr<ChooseParam>& useChooseParam);
 
 	/** 询问单只gupiao需不需要maichu
 	@param [in] sellStock maichu的gupiao集合，stock,price,rate0-1
 	@param [in] date 日期
-	@param [in] stockFund zijin信息
-	@param [in] solutionType 解决方案类型
-	@param [in] strategyType 策略类型
+	@param [in] solutionType 使用的解决方案类型
 	@return 返回是否有需要maichu的gupiao
 	*/
 	bool sell(std::vector<std::pair<std::string, StockInfo>>& sellStock,

@@ -179,7 +179,7 @@ void StockTrade::setTradeParam(SolutionType solutionType, const TradeParam& trad
 bool StockTrade::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock,
 	const IntDateTime& date,
 	SolutionType solutionType,
-	StrategyType& useStrategyType)
+	std::shared_ptr<ChooseParam>& useChooseParam)
 {
 	buyStock.clear();
 
@@ -194,7 +194,8 @@ bool StockTrade::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock,
 	{
 		return false;
 	}
-	useStrategyType = spSolution->chooseParam().m_useType;
+
+	useChooseParam.reset(new ChooseParam(spSolution->chooseParam()));
 	return true;
 }
 
