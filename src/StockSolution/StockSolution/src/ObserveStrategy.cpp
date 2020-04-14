@@ -12,7 +12,6 @@ m_stockNum(4),
 m_calcDays(2)
 {
 	m_solutionType = OBSERVE_STRATEGY;
-	
 }
 
 void ObserveStrategy::init(int32_t stockNum, int32_t calcDays)
@@ -183,5 +182,5 @@ IntDateTime ObserveStrategy::getBeforeDay(const std::string& stock, const IntDat
 
 std::shared_ptr<StockMarket> ObserveStrategy::getMarket(const std::string& stock)
 {
-	return m_solutionInfo->m_allStrategyInfo.find(stock)->second.find(m_solutionInfo->m_chooseParam.m_useType)->second.m_strategyInfo->m_spMarket;
+	return m_solutionInfo->m_allStrategyInfo.find(stock)->second.find(m_solutionInfo->m_chooseParam.m_useType)->second->m_spMarket;
 }

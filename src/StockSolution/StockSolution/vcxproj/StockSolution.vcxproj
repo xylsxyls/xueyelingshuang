@@ -31,7 +31,6 @@
     <ClInclude Include="..\src\StockSolutionMacro.h" />
     <ClInclude Include="..\src\StockSolution.h" />
     <ClInclude Include="..\src\StrategySet.h" />
-    <ClInclude Include="..\src\StrategyStruct.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\AvgFundHighScore.cpp" />
@@ -44,7 +43,7 @@
     <ClCompile Include="..\src\StrategySet.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{07BE5C32-0D76-4597-9890-ACA5561FFEA8}</ProjectGuid>
     <RootNamespace>StockSolution</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

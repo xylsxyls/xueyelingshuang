@@ -81,6 +81,8 @@ void StockRealRetest::run()
 	tradeParam.m_stockFund = &m_fund;
 	m_trade.setTradeParam(m_solutionType, tradeParam);
 
+	::MessageBox(0, 0, 0, 0);
+
 	IntDateTime currentTime = m_beginTime;
 	do
 	{

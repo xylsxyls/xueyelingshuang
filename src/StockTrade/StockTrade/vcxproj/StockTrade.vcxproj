@@ -28,7 +28,7 @@
     <ClCompile Include="..\src\StockTrade.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{0EA004B2-F0D4-407E-BEDC-F2E159AF2CCE}</ProjectGuid>
     <RootNamespace>StockTrade</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

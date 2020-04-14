@@ -17,12 +17,12 @@ std::shared_ptr<Strategy> SolutionInfo::strategy(StrategyType useType)
 	{
 		useType = m_chooseParam.m_useType;
 	}
-	std::map<StrategyType, StrategyStruct>::iterator itUseStrategy = m_allStrategy.find(useType);
+	std::map<StrategyType, std::shared_ptr<Strategy>>::iterator itUseStrategy = m_allStrategy.find(useType);
 	if (itUseStrategy == m_allStrategy.end())
 	{
 		return std::shared_ptr<Strategy>();
 	}
-	return itUseStrategy->second.m_strategy;
+	return itUseStrategy->second;
 }
 
 std::shared_ptr<Strategy> SolutionInfo::strategyCount(StrategyType useType)
@@ -31,17 +31,17 @@ std::shared_ptr<Strategy> SolutionInfo::strategyCount(StrategyType useType)
 	{
 		useType = m_chooseParam.m_useCountType;
 	}
-	std::map<StrategyType, StrategyStruct>::iterator itUseStrategy = m_allStrategy.find(useType);
+	std::map<StrategyType, std::shared_ptr<Strategy>>::iterator itUseStrategy = m_allStrategy.find(useType);
 	if (itUseStrategy == m_allStrategy.end())
 	{
 		return std::shared_ptr<Strategy>();
 	}
-	return itUseStrategy->second.m_strategyCount;
+	return itUseStrategy->second;
 }
 
 std::shared_ptr<StrategyInfo> SolutionInfo::strategyInfo(StrategyType useType, const std::string& stock)
 {
-	std::map<std::string, std::map<StrategyType, StrategyInfoStruct>>::iterator itStrategyMap = m_allStrategyInfo.find(stock);
+	std::map<std::string, std::map<StrategyType, std::shared_ptr<StrategyInfo>>>::iterator itStrategyMap = m_allStrategyInfo.find(stock);
 	if (stock.empty())
 	{
 		itStrategyMap = m_allStrategyInfo.begin();
@@ -64,12 +64,12 @@ std::shared_ptr<StrategyInfo> SolutionInfo::strategyInfo(StrategyType useType, c
 	{
 		return std::shared_ptr<StrategyInfo>();
 	}
-	return itUseStrategy->second.m_strategyInfo;
+	return itUseStrategy->second;
 }
 
 std::shared_ptr<StrategyInfo> SolutionInfo::strategyCountInfo(StrategyType useType, const std::string& stock)
 {
-	std::map<std::string, std::map<StrategyType, StrategyInfoStruct>>::iterator itStrategyMap = m_allStrategyInfo.find(stock);
+	std::map<std::string, std::map<StrategyType, std::shared_ptr<StrategyInfo>>>::iterator itStrategyMap = m_allStrategyInfo.find(stock);
 	if (stock.empty())
 	{
 		itStrategyMap = m_allStrategyInfo.begin();
@@ -92,5 +92,5 @@ std::shared_ptr<StrategyInfo> SolutionInfo::strategyCountInfo(StrategyType useTy
 	{
 		return std::shared_ptr<StrategyInfo>();
 	}
-	return itUseStrategy->second.m_strategyCountInfo;
+	return itUseStrategy->second;
 }

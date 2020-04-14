@@ -3,7 +3,6 @@
 #include <map>
 #include <memory>
 #include "StockStrategy/StockStrategyAPI.h"
-#include "StrategyStruct.h"
 #include "ChooseParam.h"
 
 struct StrategyInfo;
@@ -21,9 +20,9 @@ struct StockSolutionAPI SolutionInfo
 	//选择参数，in,out
 	ChooseParam m_chooseParam;
 	//策略类型
-	std::map<StrategyType, StrategyStruct> m_allStrategy;
+	std::map<StrategyType, std::shared_ptr<Strategy>> m_allStrategy;
 	//stock，策略类型
-	std::map<std::string, std::map<StrategyType, StrategyInfoStruct>> m_allStrategyInfo;
+	std::map<std::string, std::map<StrategyType, std::shared_ptr<StrategyInfo>>> m_allStrategyInfo;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

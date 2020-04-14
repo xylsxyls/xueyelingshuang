@@ -114,7 +114,7 @@ private:
 
 	std::map<SolutionType, std::shared_ptr<Solution>> m_solutionMap;
 	std::map<StrategyType, std::shared_ptr<Strategy>> m_strategyMap;
-	std::map<StrategyType, std::shared_ptr<StrategyInfo>> m_strategyInfoMap;
+	std::map<std::string, std::map<StrategyType, std::shared_ptr<StrategyInfo>>> m_strategyInfoMap;
 
 	std::vector<std::string> m_allStock;
 	std::map<IntDateTime, std::vector<std::string>> m_filterStock;

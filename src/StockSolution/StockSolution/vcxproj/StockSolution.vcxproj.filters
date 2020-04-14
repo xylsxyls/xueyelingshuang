@@ -51,9 +51,6 @@
     <ClInclude Include="..\src\ObserveStrategy.h">
       <Filter>Solution</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StrategyStruct.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\ChooseParam.h">
       <Filter>头文件</Filter>
     </ClInclude>

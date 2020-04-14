@@ -862,7 +862,7 @@ void StockClient::onRealTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2019-10-31";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -892,8 +892,10 @@ void StockClient::onRealTestButtonClicked()
 		vecChooseParam.push_back(ChooseParam());
 		vecChooseParam.back().m_useType = strategyType;
 		vecChooseParam.back().m_useCountType = strategyType;
+		vecChooseParam.back().m_isObserve = observe;
+		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
 	}
-	spRealTestTask->setParam(observe ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, this);
+	spRealTestTask->setParam(INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 
@@ -905,7 +907,7 @@ void StockClient::onOnceTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2019-10-31";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -937,7 +939,7 @@ void StockClient::onDaysTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2019-10-31";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -982,7 +984,7 @@ void StockClient::onRankTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2019-10-31";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -1027,7 +1029,7 @@ void StockClient::onChanceTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2019-10-31";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";

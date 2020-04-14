@@ -78,6 +78,40 @@ void StockTrade::init(const IntDateTime& beginTime,
 			break;
 		}
 	}
+
+	index = -1;
+	while (index++ != vecChooseParam.size() - 1)
+	{
+		const StrategyType& useType = vecChooseParam[index].m_useType;
+		m_strategyMap[useType] = StockStrategy::instance().strategy(useType);
+
+		int32_t stockIndex = -1;
+		while (stockIndex++ != m_allStock.size() - 1)
+		{
+			const std::string& stock = m_allStock[stockIndex];
+			m_strategyInfoMap[stock][useType] = StockStrategy::instance().strategyInfo(useType,
+				nullptr,
+				m_spMarketMap.find(stock)->second,
+				m_spIndicatorMap.find(stock)->second);
+		}
+
+		const StrategyType& useCountType = vecChooseParam[index].m_useCountType;
+		if (useCountType == useType)
+		{
+			continue;
+		}
+		m_strategyMap[useCountType] = StockStrategy::instance().strategy(useCountType);
+
+		stockIndex = -1;
+		while (stockIndex++ != m_allStock.size() - 1)
+		{
+			const std::string& stock = m_allStock[stockIndex];
+			m_strategyInfoMap[stock][useCountType] = StockStrategy::instance().strategyInfo(useCountType,
+				nullptr,
+				m_spMarketMap.find(stock)->second,
+				m_spIndicatorMap.find(stock)->second);
+		}
+	}
 	
 	index = -1;
 	while (index++ != vecSolutionType.size() - 1)
@@ -103,7 +137,7 @@ void StockTrade::init(const IntDateTime& beginTime,
 		case OBSERVE_STRATEGY:
 		{
 			std::shared_ptr<ObserveStrategy> spObserveStrategy = std::dynamic_pointer_cast<ObserveStrategy>(spSolution);
-			spObserveStrategy->init(vecChooseParam[0].m_useType, 2);
+			spObserveStrategy->init(4, 2);
 			spObserveStrategy->setSolutionInfo(makeSolutionInfo(solutionType, vecChooseParam));
 		}
 		break;
@@ -117,19 +151,6 @@ void StockTrade::init(const IntDateTime& beginTime,
 			break;
 		}
 		m_solutionMap[vecSolutionType[index]] = spSolution;
-	}
-
-	index = -1;
-	while (index++ != vecChooseParam.size() - 1)
-	{
-		const StrategyType& useType = vecChooseParam[index].m_useType;
-		m_strategyMap[useType] = StockStrategy::instance().strategy(useType);
-		const StrategyType& useCountType = vecChooseParam[index].m_useCountType;
-		if (useCountType == useType)
-		{
-			continue;
-		}
-		m_strategyMap[useCountType] = StockStrategy::instance().strategy(useCountType);
 	}
 }
 
@@ -275,16 +296,16 @@ std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(SolutionType solution
 		while (strategyIndex++ != vecChooseParam.size() - 1)
 		{
 			const StrategyType& strategyTypeFirst = vecChooseParam[strategyIndex].m_useType;
+			spSolutionInfo->m_allStrategy[strategyTypeFirst] = m_strategyMap.find(strategyTypeFirst)->second;
+			spSolutionInfo->m_allStrategyInfo[stock][strategyTypeFirst] = m_strategyInfoMap.find(stock)->second.find(strategyTypeFirst)->second;
+
 			const StrategyType& strategyTypeSecond = vecChooseParam[strategyIndex].m_useCountType;
-			auto& strategyInfoPair = spSolutionInfo->m_allStrategyInfo[stock][strategyTypeFirst];
-			strategyInfoPair.m_strategyInfo = StockStrategy::instance().strategyInfo(strategyTypeFirst,
-				nullptr,
-				m_spMarketMap.find(stock)->second,
-				m_spIndicatorMap.find(stock)->second);
-			strategyInfoPair.m_strategyCountInfo = StockStrategy::instance().strategyInfo(strategyTypeSecond,
-				nullptr,
-				m_spMarketMap.find(stock)->second,
-				m_spIndicatorMap.find(stock)->second);
+			if (strategyTypeSecond == strategyTypeFirst)
+			{
+				continue;
+			}
+			spSolutionInfo->m_allStrategy[strategyTypeSecond] = m_strategyMap.find(strategyTypeSecond)->second;
+			spSolutionInfo->m_allStrategyInfo[stock][strategyTypeSecond] = m_strategyInfoMap.find(stock)->second.find(strategyTypeSecond)->second;
 		}
 	}
 	return spSolutionInfo;

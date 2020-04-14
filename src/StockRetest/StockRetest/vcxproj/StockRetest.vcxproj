@@ -42,7 +42,7 @@
     <ClCompile Include="..\src\StockEveryTestTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{359FBF71-1C46-4CAA-B564-882D6383D55C}</ProjectGuid>
     <RootNamespace>StockRetest</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
