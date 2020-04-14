@@ -150,6 +150,7 @@ int32_t DisposableStrategy::strategyBuyCount(const IntDateTime& date)
 			RCSend("未发现使用类型4");
 			continue;
 		}
+		spStrategyCount->setStrategyInfo(spStrategyInfoCount);
 		StockInfo stockInfo;
 		count += (int32_t)spStrategyCount->buy(date, stockInfo);
 	}

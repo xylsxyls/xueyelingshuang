@@ -774,15 +774,18 @@ void StockClient::onChooseStockButtonClicked()
 	//spSaveAllFilterStockTaskToRedis->setParam(&m_today, &m_today, this);
 	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSaveAllFilterStockTaskToRedis);
 
+	bool observe = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1";
 	std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 	std::vector<ChooseParam> vecChooseParam;
 	vecChooseParam.push_back(ChooseParam());
 	vecChooseParam.back().m_useType = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
 	vecChooseParam.back().m_useCountType = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
+	vecChooseParam.back().m_isObserve = observe;
+	vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
 	spChooseStockTask->setParam(inputDialogParam.m_vecInputEx[0].m_editText.toStdString().c_str(),
 		std::vector<std::string>(),
 		vecChooseParam,
-		inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : AVG_FUND_HIGH_SCORE,
+		INTEGRATED_STRATEGY,
 		nullptr,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
@@ -957,6 +960,7 @@ void StockClient::onDaysTestButtonClicked()
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	bool observe = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1";
 	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
 
 	std::vector<ChooseParam> vecChooseParam;
@@ -967,12 +971,12 @@ void StockClient::onDaysTestButtonClicked()
 		vecChooseParam.push_back(ChooseParam());
 		vecChooseParam.back().m_useType = strategyType;
 		vecChooseParam.back().m_useCountType = strategyType;
+		vecChooseParam.back().m_isObserve = observe;
+		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
 	}
 
-	SolutionType solutionType = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY;
-
 	std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
-	spDaysTestTask->setParam(solutionType, vecChooseParam, beginTime, endTime, this);
+	spDaysTestTask->setParam(INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 }
 
@@ -1002,6 +1006,7 @@ void StockClient::onRankTestButtonClicked()
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	bool observe = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1";
 	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
 
 	std::vector<ChooseParam> vecChooseParam;
@@ -1012,12 +1017,12 @@ void StockClient::onRankTestButtonClicked()
 		vecChooseParam.push_back(ChooseParam());
 		vecChooseParam.back().m_useType = strategyType;
 		vecChooseParam.back().m_useCountType = strategyType;
+		vecChooseParam.back().m_isObserve = observe;
+		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
 	}
 
-	SolutionType solutionType = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY;
-
 	std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
-	spRankTestTask->setParam(solutionType, vecChooseParam, beginTime, endTime, this);
+	spRankTestTask->setParam(INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
 }
 
@@ -1050,6 +1055,9 @@ void StockClient::onChanceTestButtonClicked()
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
 	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	bool observe = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1";
+	int32_t maxDay = atoi(inputDialogParam.m_vecInputEx[4].m_editText.toStdString().c_str());
+
 	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
 
 	std::vector<ChooseParam> vecChooseParam;
@@ -1060,14 +1068,12 @@ void StockClient::onChanceTestButtonClicked()
 		vecChooseParam.push_back(ChooseParam());
 		vecChooseParam.back().m_useType = strategyType;
 		vecChooseParam.back().m_useCountType = strategyType;
+		vecChooseParam.back().m_isObserve = observe;
+		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
 	}
 
-	SolutionType solutionType = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1" ? OBSERVE_STRATEGY : INTEGRATED_STRATEGY;
-
-	int32_t maxDay = atoi(inputDialogParam.m_vecInputEx[4].m_editText.toStdString().c_str());
-
 	std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
-	spChanceTestTask->setParam(solutionType, vecChooseParam, beginTime, endTime, maxDay, this);
+	spChanceTestTask->setParam(INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, maxDay, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
 }
 
@@ -1145,6 +1151,8 @@ void StockClient::onEverydaySolutionButtonClicked()
 		vecChooseParam.push_back(ChooseParam());
 		vecChooseParam.back().m_useType = (StrategyType)index;
 		vecChooseParam.back().m_useCountType = (StrategyType)index;
+		vecChooseParam.back().m_isObserve = false;
+		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
 		spChooseStockTask->setParam(IntDateTime(0, 0),
 			std::vector<std::string>(),
 			vecChooseParam,
@@ -1183,10 +1191,12 @@ void StockClient::onEverydaySolutionButtonClicked()
 	vecChooseParam.push_back(ChooseParam());
 	vecChooseParam.back().m_useType = SAR_RISE_BACK;
 	vecChooseParam.back().m_useCountType = SAR_RISE_BACK;
+	vecChooseParam.back().m_isObserve = true;
+	vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
 	spChooseStockTask3->setParam(IntDateTime(0, 0),
 		std::vector<std::string>(),
 		vecChooseParam,
-		OBSERVE_STRATEGY,
+		INTEGRATED_STRATEGY,
 		&m_stockFund,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask3);
@@ -1312,6 +1322,8 @@ void StockClient::onEverydayTaskButtonClicked()
 		vecChooseParam.push_back(ChooseParam());
 		vecChooseParam.back().m_useType = (StrategyType)index;
 		vecChooseParam.back().m_useCountType = (StrategyType)index;
+		vecChooseParam.back().m_isObserve = false;
+		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
 		spChooseStockTask->setParam(IntDateTime(0, 0),
 			std::vector<std::string>(),
 			vecChooseParam,
@@ -1327,10 +1339,11 @@ void StockClient::onEverydayTaskButtonClicked()
 	vecChooseParam.back().m_useType = SAR_RISE_BACK;
 	vecChooseParam.back().m_useCountType = SAR_RISE_BACK;
 	vecChooseParam.back().m_isObserve = true;
+	vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
 	spChooseStockTask->setParam(IntDateTime(0, 0),
 		std::vector<std::string>(),
 		vecChooseParam,
-		AVG_FUND_HIGH_SCORE,
+		INTEGRATED_STRATEGY,
 		&m_stockFund,
 		this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);

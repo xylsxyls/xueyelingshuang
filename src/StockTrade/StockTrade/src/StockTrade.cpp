@@ -120,36 +120,23 @@ void StockTrade::init(const IntDateTime& beginTime,
 		const SolutionType& solutionType = vecSolutionType[index];
 		switch (solutionType)
 		{
-		case AVG_FUND_HIGH_SCORE:
-		{
-			std::shared_ptr<AvgFundHighScore> spAvgFundHighScore = std::dynamic_pointer_cast<AvgFundHighScore>(spSolution);
-			spAvgFundHighScore->setSolutionInfo(makeSolutionInfo(solutionType, vecChooseParam));
-			spAvgFundHighScore->setChooseParam(vecChooseParam[0]);
-		}
-		break;
 		case INTEGRATED_STRATEGY:
 		{
 			std::shared_ptr<IntegratedStrategy> spIntegratedStrategy = std::dynamic_pointer_cast<IntegratedStrategy>(spSolution);
 			spIntegratedStrategy->init(vecChooseParam);
-			spIntegratedStrategy->setSolutionInfo(makeSolutionInfo(solutionType, vecChooseParam));
 		}
 		break;
 		case OBSERVE_STRATEGY:
 		{
 			std::shared_ptr<ObserveStrategy> spObserveStrategy = std::dynamic_pointer_cast<ObserveStrategy>(spSolution);
 			spObserveStrategy->init(4, 2);
-			spObserveStrategy->setSolutionInfo(makeSolutionInfo(solutionType, vecChooseParam));
-		}
-		break;
-		case DISPOSABLE_STRATEGY:
-		{
-			std::shared_ptr<DisposableStrategy> spDisposableStrategy = std::dynamic_pointer_cast<DisposableStrategy>(spSolution);
-			spDisposableStrategy->setSolutionInfo(makeSolutionInfo(solutionType, vecChooseParam));
 		}
 		break;
 		default:
 			break;
 		}
+		spSolution->setSolutionInfo(makeSolutionInfo(solutionType, vecChooseParam));
+		spSolution->setChooseParam(vecChooseParam[0]);
 		m_solutionMap[vecSolutionType[index]] = spSolution;
 	}
 }

@@ -58,7 +58,7 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, StockInfo>>& buySt
 	{
 		return false;
 	}
-	BigNumber allPercent = (stockNum - hasBuyStockNum) * 100;
+	BigNumber allPercent = min((stockNum - hasBuyStockNum), (int32_t)buyStock.size()) * 100;
 	
 	int32_t index = -1;
 	while (index++ != buyStock.size() - 1)
@@ -137,10 +137,6 @@ int32_t AvgFundHighScore::strategyBuyCount(const IntDateTime& date)
 	while (index++ != filterStock.size() - 1)
 	{
 		const std::string& stock = filterStock[index];
-		if (stock == "603160")
-		{
-			int x = 3;
-		}
 		std::shared_ptr<Strategy> spStrategyCount = m_solutionInfo->strategyCount();
 		std::shared_ptr<StrategyInfo> spStrategyInfoCount = m_solutionInfo->strategyCountInfo(m_solutionInfo->m_chooseParam.m_useCountType, stock);
 		if (spStrategyCount == nullptr || spStrategyInfoCount == nullptr)
@@ -148,6 +144,7 @@ int32_t AvgFundHighScore::strategyBuyCount(const IntDateTime& date)
 			RCSend("未发现使用类型2");
 			continue;
 		}
+		spStrategyCount->setStrategyInfo(spStrategyInfoCount);
 		StockInfo stockInfo;
 		count += (int32_t)spStrategyCount->buy(date, stockInfo);
 	}
