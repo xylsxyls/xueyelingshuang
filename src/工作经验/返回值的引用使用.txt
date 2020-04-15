@@ -1,0 +1,4 @@
+std::string str = a.vector()[0];
+const std::string& str = a.vector()[0];
+第二种str只在当前行有效，第三行如果是printf("str = %s", str.c_str());是打印不出来的
+但是如果是printf("str = %s", a.vector()[0].c_str());是可以打印出来的

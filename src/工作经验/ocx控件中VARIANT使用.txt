@@ -1,0 +1,58 @@
+数组使用
+AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	VARIANT vaResult;
+	VariantInit(&vaResult);
+	VariantClear(&vaResult);
+
+	// TODO: 在此添加调度处理程序代码
+
+	std::vector<std::string> vecCamera;
+	if (m_ocxClient->cameraList(vecCamera) == 0)
+	{
+		return vaResult;
+	}
+
+	LOGINFO("CameraList.size = %d", vecCamera.size());
+	int32_t index = -1;
+	while (index++ != vecCamera.size() - 1)
+	{
+		LOGINFO("CameraList.name = %s", vecCamera[index].c_str());
+	}
+
+	LPSAFEARRAY psa = NULL;
+	SAFEARRAYBOUND sa;
+	sa.lLbound = 0;
+	sa.cElements = (ULONG)vecCamera.size();
+	psa = SafeArrayCreate(VT_VARIANT, 1, &sa);
+	LPVARIANT rgElems;
+	SafeArrayAccessData(psa, (void**)&rgElems);
+
+	int32_t cameraIndex = -1;
+	while (cameraIndex++ != vecCamera.size() - 1)
+	{
+		rgElems[cameraIndex].vt = VT_BSTR;
+		BSTR cameraName = CStringA(vecCamera[cameraIndex].c_str()).AllocSysString();
+		rgElems[cameraIndex].bstrVal = cameraName;
+		::SysFreeString(cameraName);
+	}
+
+	SafeArrayUnaccessData(psa);
+	vaResult.vt = VT_ARRAY | VT_VARIANT;
+	vaResult.parray = psa;
+
+	return vaResult;
+	
+	
+	单个使用
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	VARIANT vaResult;
+	VariantInit(&vaResult);
+
+	// TODO: 在此添加调度处理程序代码
+	vaResult.vt = VT_BSTR;
+	BSTR ssss = CStringA("1234").AllocSysString();
+	vaResult.bstrVal = ssss;
+	::SysFreeString(ssss);
+	return vaResult;
