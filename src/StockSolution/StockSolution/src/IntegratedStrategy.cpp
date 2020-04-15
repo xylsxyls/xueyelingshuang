@@ -49,7 +49,7 @@ bool IntegratedStrategy::sell(std::vector<std::pair<std::string, StockInfo>>& se
 	{
 		const std::string& stock = vecOwnedStock[index];
 		std::shared_ptr<ChooseParam> spChooseParam = m_solutionInfo->m_fund->stockChooseParam(stock);
-		changeUseSolution(spChooseParam->m_isObserve ? OBSERVE_STRATEGY : spChooseParam->m_solutionType);
+		setEveryChooseParam(*spChooseParam);
 		std::vector<std::pair<std::string, StockInfo>> solutionSellStock;
 		result = (result || m_useSolution->sell(solutionSellStock, date));
 		int32_t index = -1;

@@ -257,23 +257,7 @@ std::shared_ptr<SolutionInfo> StockTrade::makeSolutionInfo(SolutionType solution
 	const std::vector<ChooseParam>& vecChooseParam)
 {
 	std::shared_ptr<SolutionInfo> spSolutionInfo = StockSolution::instance().solutionInfo(solutionType);
-	//spSolutionInfo->m_filterStock = &(m_filterStock.find(date)->second);
-	//spSolutionInfo->m_fund = stockFund;
-
-	if (solutionType == DISPOSABLE_STRATEGY)
-	{
-		const std::shared_ptr<DisposableStrategyInfo>& disposableStrategyInfo = std::dynamic_pointer_cast<DisposableStrategyInfo>(spSolutionInfo);
-		//disposableStrategyInfo->m_onceDate = onceDate;
-		disposableStrategyInfo->m_chooseParam.m_useType = vecChooseParam[0].m_useType;
-	}
-	if (solutionType == AVG_FUND_HIGH_SCORE)
-	{
-		spSolutionInfo->m_chooseParam.m_useType = vecChooseParam[0].m_useType;
-	}
-	if (solutionType == OBSERVE_STRATEGY)
-	{
-		spSolutionInfo->m_chooseParam.m_isObserve = true;
-	}
+	spSolutionInfo->m_chooseParam = vecChooseParam[0];
 
 	int32_t index = -1;
 	while (index++ != m_allStock.size() - 1)

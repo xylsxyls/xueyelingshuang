@@ -8,6 +8,7 @@
 #include "BigNumber/BigNumberAPI.h"
 #include "StockFund/StockFundAPI.h"
 #include "StockStrategy/StockStrategyAPI.h"
+#include "StockSolution/StockSolutionAPI.h"
 
 class LineEdit;
 class COriginalButton;
@@ -57,6 +58,9 @@ private slots:
 	void onEverydaySolutionButtonClicked();
 	void onEverydayHelperButtonClicked();
 	void onEverydayTaskButtonClicked();
+
+protected:
+	std::vector<ChooseParam> toChooseParam(const std::string& allStrategyType, SolutionType solutionType);
 
 public:
 	//Ïß³Ì³Ø

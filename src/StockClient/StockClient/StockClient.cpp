@@ -1,6 +1,5 @@
 #include "StockClient.h"
 #include "QtControls/COriginalButton.h"
-#include "QtControls/LineEdit.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "EveryTestTask.h"
 #include "StockMysql/StockMysqlAPI.h"
@@ -25,7 +24,6 @@
 #include "UpdateTodayIndicatorTask.h"
 #include "StockDraw/StockDrawAPI.h"
 #include "StockParam.h"
-#include "StockStrategy/StockStrategyAPI.h"
 #include "ChooseStockTask.h"
 #include "GetFilterStockTask.h"
 #include "UpdateTodayToMemoryTask.h"
@@ -37,9 +35,9 @@
 #include "DaysTestTask.h"
 #include "RankTestTask.h"
 #include "ChanceTestTask.h"
-#include "StockSolution/StockSolutionAPI.h"
 #include "EverydaySolutionTask.h"
 #include "ConfigManager/ConfigManagerAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 #include "MinimizeTask.h"
 
 StockClient::StockClient(QWidget* parent)
@@ -865,13 +863,10 @@ void StockClient::onRealTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2019-10-31";
+	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
-	inputDialogParam.m_vecInputEx.push_back(line);
-	line.m_tip = QStringLiteral("是否观察");
-	line.m_defaultText = "0";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();
@@ -882,23 +877,9 @@ void StockClient::onRealTestButtonClicked()
 	}
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
-	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
-	bool observe = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1";
-	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
-
+	std::string allStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
 	std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
-	std::vector<ChooseParam> vecChooseParam;
-	int32_t index = -1;
-	while (index++ != vecStrStrategyType.size() - 1)
-	{
-		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
-		vecChooseParam.push_back(ChooseParam());
-		vecChooseParam.back().m_useType = strategyType;
-		vecChooseParam.back().m_useCountType = strategyType;
-		vecChooseParam.back().m_isObserve = observe;
-		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
-	}
-	spRealTestTask->setParam(INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, this);
+	spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 }
 
@@ -910,7 +891,7 @@ void StockClient::onOnceTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2019-10-31";
+	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -924,13 +905,9 @@ void StockClient::onOnceTestButtonClicked()
 	}
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
-
+	std::string allStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString();
 	std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
-	std::vector<ChooseParam> vecChooseParam;
-	vecChooseParam.push_back(ChooseParam());
-	vecChooseParam.back().m_useType = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
-	vecChooseParam.back().m_useCountType = (StrategyType)atoi(inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str());
-	spOnceTestTask->setParam(DISPOSABLE_STRATEGY, vecChooseParam, beginTime, endTime, this);
+	spOnceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, DISPOSABLE_STRATEGY), beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 }
 
@@ -942,13 +919,10 @@ void StockClient::onDaysTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2019-10-31";
+	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
-	inputDialogParam.m_vecInputEx.push_back(line);
-	line.m_tip = QStringLiteral("是否观察");
-	line.m_defaultText = "0";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();
@@ -959,24 +933,10 @@ void StockClient::onDaysTestButtonClicked()
 	}
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
-	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
-	bool observe = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1";
-	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
-
-	std::vector<ChooseParam> vecChooseParam;
-	int32_t index = -1;
-	while (index++ != vecStrStrategyType.size() - 1)
-	{
-		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
-		vecChooseParam.push_back(ChooseParam());
-		vecChooseParam.back().m_useType = strategyType;
-		vecChooseParam.back().m_useCountType = strategyType;
-		vecChooseParam.back().m_isObserve = observe;
-		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
-	}
+	std::string allStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
 
 	std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
-	spDaysTestTask->setParam(INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, this);
+	spDaysTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 }
 
@@ -988,13 +948,10 @@ void StockClient::onRankTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2019-10-31";
+	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
-	inputDialogParam.m_vecInputEx.push_back(line);
-	line.m_tip = QStringLiteral("是否观察");
-	line.m_defaultText = "0";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();
@@ -1005,24 +962,10 @@ void StockClient::onRankTestButtonClicked()
 	}
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
-	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
-	bool observe = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1";
-	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
-
-	std::vector<ChooseParam> vecChooseParam;
-	int32_t index = -1;
-	while (index++ != vecStrStrategyType.size() - 1)
-	{
-		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
-		vecChooseParam.push_back(ChooseParam());
-		vecChooseParam.back().m_useType = strategyType;
-		vecChooseParam.back().m_useCountType = strategyType;
-		vecChooseParam.back().m_isObserve = observe;
-		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
-	}
-
+	std::string allStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	
 	std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
-	spRankTestTask->setParam(INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, this);
+	spRankTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
 }
 
@@ -1034,13 +977,10 @@ void StockClient::onChanceTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2019-10-31";
+	line.m_defaultText = "2020-02-28";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
-	inputDialogParam.m_vecInputEx.push_back(line);
-	line.m_tip = QStringLiteral("是否观察");
-	line.m_defaultText = "0";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("最大天数");
 	line.m_defaultText = "10";
@@ -1054,26 +994,11 @@ void StockClient::onChanceTestButtonClicked()
 	}
 	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
 	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
-	std::string strStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
-	bool observe = inputDialogParam.m_vecInputEx[3].m_editText.toStdString() == "1";
-	int32_t maxDay = atoi(inputDialogParam.m_vecInputEx[4].m_editText.toStdString().c_str());
-
-	std::vector<std::string> vecStrStrategyType = CStringManager::split(strStrategyType, ",");
-
-	std::vector<ChooseParam> vecChooseParam;
-	int32_t index = -1;
-	while (index++ != vecStrStrategyType.size() - 1)
-	{
-		StrategyType strategyType = (StrategyType)atoi(vecStrStrategyType[index].c_str());
-		vecChooseParam.push_back(ChooseParam());
-		vecChooseParam.back().m_useType = strategyType;
-		vecChooseParam.back().m_useCountType = strategyType;
-		vecChooseParam.back().m_isObserve = observe;
-		vecChooseParam.back().m_solutionType = AVG_FUND_HIGH_SCORE;
-	}
+	std::string allStrategyType = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	int32_t maxDay = atoi(inputDialogParam.m_vecInputEx[3].m_editText.toStdString().c_str());
 
 	std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
-	spChanceTestTask->setParam(INTEGRATED_STRATEGY, vecChooseParam, beginTime, endTime, maxDay, this);
+	spChanceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, maxDay, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
 }
 
@@ -1351,6 +1276,39 @@ void StockClient::onEverydayTaskButtonClicked()
 	//std::shared_ptr<MairubishengTask> spMairubishengTask(new MairubishengTask);
 	//spMairubishengTask->setParam(atoi(inputDialogParam.m_editText.toStdString().c_str()), this);
 	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spMairubishengTask);
+}
+
+std::vector<ChooseParam> StockClient::toChooseParam(const std::string& allStrategyType, SolutionType solutionType)
+{
+	std::vector<ChooseParam> vecChooseParam;
+	std::vector<std::string> vecAllStrategyType = CStringManager::split(allStrategyType, ",");
+	if (vecAllStrategyType.empty())
+	{
+		return vecChooseParam;
+	}
+	
+	int32_t index = -1;
+	while (index++ != vecAllStrategyType.size() - 1)
+	{
+		const std::string& everyStrategyType = vecAllStrategyType[index];
+		std::vector<std::string> vecStrategyType = CStringManager::split(everyStrategyType, ".");
+		if (vecStrategyType.size() > 2 || vecStrategyType.size() == 0)
+		{
+			return std::vector<ChooseParam>();
+		}
+		StrategyType strategyType = (StrategyType)atoi(vecStrategyType[0].c_str());
+		bool observe = false;
+		if (vecStrategyType.size() == 2)
+		{
+			observe = (bool)atoi(vecStrategyType[1].c_str());
+		}
+		vecChooseParam.push_back(ChooseParam());
+		vecChooseParam.back().m_useType = strategyType;
+		vecChooseParam.back().m_useCountType = strategyType;
+		vecChooseParam.back().m_isObserve = observe;
+		vecChooseParam.back().m_solutionType = solutionType;
+	}
+	return vecChooseParam;
 }
 
 void StockClient::onTaskTip(const QString tip)
