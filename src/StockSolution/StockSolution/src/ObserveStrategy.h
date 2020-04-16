@@ -19,21 +19,10 @@ public:
 	*/
 	void init(int32_t stockNum, int32_t calcDays);
 
-	/** 设置参数
-	@param [in] solutionInfo 解决方案信息
+	/** 设置使用的方案
+	@param [in] spSolution 使用的方案
 	*/
-	void setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo);
-
-	/** 设置策略，需在设置参数之后
-	@param [in] useType 策略类型
-	@param [in] useCountType 计数策略类型
-	*/
-	void setStrategyType(StrategyType useType, StrategyType useCountType);
-
-	/** 设置使用的方案类型
-	@param [in] solutionType 使用的方案类型
-	*/
-	void setSolutionType(SolutionType solutionType);
+	void setSolution(const std::shared_ptr<Solution>& spSolution);
 
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1

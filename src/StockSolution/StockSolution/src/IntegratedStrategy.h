@@ -2,6 +2,7 @@
 #include "Solution.h"
 #include <memory>
 #include "ChooseParam.h"
+#include <map>
 
 class Strategy;
 class AvgFundHighScore;
@@ -18,7 +19,7 @@ public:
 	/** 初始化
 	@param [in] vecStrategyType 执行类型
 	*/
-	void init(const std::vector<ChooseParam>& vecChooseParam);
+	void init(const std::vector<ChooseParam>& vecChooseParam, std::map<SolutionType, std::shared_ptr<Solution>>* solutionMap);
 
 	/** 设置参数
 	@param [in] solutionInfo 解决方案信息
@@ -49,9 +50,9 @@ protected:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::map<SolutionType, std::shared_ptr<Solution>> m_solutionMap;
 	std::shared_ptr<Solution> m_useSolution;
 	std::vector<ChooseParam> m_vecChooseParam;
+	std::map<SolutionType, std::shared_ptr<Solution>>* m_solutionMap;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

@@ -79,9 +79,16 @@ void StockTrade::init(const IntDateTime& beginTime,
 		}
 	}
 
+	std::set<SolutionType> solutionTypeSet;
+
 	index = -1;
 	while (index++ != vecChooseParam.size() - 1)
 	{
+		solutionTypeSet.insert(vecChooseParam[index].m_solutionType);
+		if (vecChooseParam[index].m_isObserve)
+		{
+			solutionTypeSet.insert(OBSERVE_STRATEGY);
+		}
 		const StrategyType& useType = vecChooseParam[index].m_useType;
 		m_strategyMap[useType] = StockStrategy::instance().strategy(useType);
 
@@ -112,18 +119,23 @@ void StockTrade::init(const IntDateTime& beginTime,
 				m_spIndicatorMap.find(stock)->second);
 		}
 	}
-	
+
 	index = -1;
 	while (index++ != vecSolutionType.size() - 1)
 	{
-		std::shared_ptr<Solution> spSolution = StockSolution::instance().solution(vecSolutionType[index]);
-		const SolutionType& solutionType = vecSolutionType[index];
+		solutionTypeSet.insert(vecSolutionType[index]);
+	}
+
+	for (auto itSolutionType = solutionTypeSet.begin(); itSolutionType != solutionTypeSet.end(); ++itSolutionType)
+	{
+		const SolutionType& solutionType = *itSolutionType;
+		std::shared_ptr<Solution> spSolution = StockSolution::instance().solution(solutionType);
 		switch (solutionType)
 		{
 		case INTEGRATED_STRATEGY:
 		{
 			std::shared_ptr<IntegratedStrategy> spIntegratedStrategy = std::dynamic_pointer_cast<IntegratedStrategy>(spSolution);
-			spIntegratedStrategy->init(vecChooseParam);
+			spIntegratedStrategy->init(vecChooseParam, &m_solutionMap);
 		}
 		break;
 		case OBSERVE_STRATEGY:
@@ -137,7 +149,7 @@ void StockTrade::init(const IntDateTime& beginTime,
 		}
 		spSolution->setSolutionInfo(makeSolutionInfo(solutionType, vecChooseParam));
 		spSolution->setChooseParam(vecChooseParam[0]);
-		m_solutionMap[vecSolutionType[index]] = spSolution;
+		m_solutionMap[solutionType] = spSolution;
 	}
 }
 

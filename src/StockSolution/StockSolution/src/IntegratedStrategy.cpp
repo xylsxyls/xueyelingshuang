@@ -13,9 +13,11 @@ IntegratedStrategy::IntegratedStrategy()
 	m_solutionType = INTEGRATED_STRATEGY;
 }
 
-void IntegratedStrategy::init(const std::vector<ChooseParam>& vecChooseParam)
+void IntegratedStrategy::init(const std::vector<ChooseParam>& vecChooseParam,
+	std::map<SolutionType, std::shared_ptr<Solution>>* solutionMap)
 {
 	m_vecChooseParam = vecChooseParam;
+	m_solutionMap = solutionMap;
 }
 
 void IntegratedStrategy::setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo)
@@ -67,8 +69,9 @@ void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam)
 	{
 		changeUseSolution(OBSERVE_STRATEGY);
 		std::shared_ptr<ObserveStrategy> observeSolution = std::dynamic_pointer_cast<ObserveStrategy>(m_useSolution);
-		observeSolution->setStrategyType(chooseParam.m_useType, chooseParam.m_useCountType);
-		observeSolution->setSolutionType(chooseParam.m_solutionType);
+		std::shared_ptr<Solution> observeUseSolution = m_solutionMap->find(chooseParam.m_solutionType)->second;
+		observeUseSolution->setChooseParam(chooseParam);
+		observeSolution->setSolution(observeUseSolution);
 	}
 	else
 	{
@@ -79,17 +82,10 @@ void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam)
 
 void IntegratedStrategy::changeUseSolution(SolutionType solutionType)
 {
-	auto itSolution = m_solutionMap.find(solutionType);
-	if (itSolution == m_solutionMap.end())
+	auto itSolution = m_solutionMap->find(solutionType);
+	if (itSolution == m_solutionMap->end())
 	{
-		m_useSolution = StockSolution::instance().solution(solutionType);
-		m_useSolution->setSolutionInfo(m_solutionInfo);
-		if (solutionType == OBSERVE_STRATEGY)
-		{
-			std::shared_ptr<ObserveStrategy> observeSolution = std::dynamic_pointer_cast<ObserveStrategy>(m_useSolution);
-			observeSolution->init(4, 2);
-		}
-		m_solutionMap[solutionType] = m_useSolution;
+		m_useSolution = nullptr;
 		return;
 	}
 	m_useSolution = itSolution->second;

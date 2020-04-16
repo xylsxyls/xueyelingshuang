@@ -20,39 +20,9 @@ void ObserveStrategy::init(int32_t stockNum, int32_t calcDays)
 	m_calcDays = calcDays;
 }
 
-void ObserveStrategy::setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo)
+void ObserveStrategy::setSolution(const std::shared_ptr<Solution>& spSolution)
 {
-	m_solutionInfo = solutionInfo;
-}
-
-void ObserveStrategy::setStrategyType(StrategyType useType, StrategyType useCountType)
-{
-	m_solutionInfo->m_chooseParam.m_useType = useType;
-	m_solutionInfo->m_chooseParam.m_useCountType = useCountType;
-}
-
-void ObserveStrategy::setSolutionType(SolutionType solutionType)
-{
-	if (m_useSolution == nullptr)
-	{
-		m_useSolution = StockSolution::instance().solution(solutionType);
-		m_useSolution->setSolutionInfo(m_solutionInfo);
-		m_solutionMap[solutionType] = m_useSolution;
-		return;
-	}
-	if (m_useSolution->type() == solutionType)
-	{
-		return;
-	}
-	auto itSolution = m_solutionMap.find(solutionType);
-	if (itSolution == m_solutionMap.end())
-	{
-		m_useSolution = StockSolution::instance().solution(solutionType);
-		m_useSolution->setSolutionInfo(m_solutionInfo);
-		m_solutionMap[solutionType] = m_useSolution;
-		return;
-	}
-	m_useSolution = itSolution->second;
+	m_useSolution = spSolution;
 }
 
 bool ObserveStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date)
