@@ -110,6 +110,7 @@ void StockOnceRetest::run()
 		tradeParam.m_stockFund = &stockFund;
 		tradeParam.m_onceDate = calcTime;
 		m_trade.setTradeParam(m_solutionType, tradeParam);
+		m_trade.setTradeParam(DISPOSABLE_STRATEGY, tradeParam);
 
 		IntDateTime currentTime = calcTime;
 		do

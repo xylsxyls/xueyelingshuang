@@ -64,7 +64,7 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, StockInfo>>& buySt
 	while (index++ != buyStock.size() - 1)
 	{
 		std::pair<std::string, StockInfo>& stockInfoPair = buyStock[index];
-		stockInfoPair.second.m_rate = stockInfoPair.second.m_percent / allPercent.toPrec(2);
+		stockInfoPair.second.m_rate = stockInfoPair.second.m_percent / allPercent.toPrec(2).zero();
 		allPercent = allPercent - 100;
 		if (allPercent == 0)
 		{

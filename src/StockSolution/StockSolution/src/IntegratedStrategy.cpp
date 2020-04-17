@@ -70,12 +70,16 @@ void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam)
 		changeUseSolution(OBSERVE_STRATEGY);
 		std::shared_ptr<ObserveStrategy> observeSolution = std::dynamic_pointer_cast<ObserveStrategy>(m_useSolution);
 		std::shared_ptr<Solution> observeUseSolution = m_solutionMap->find(chooseParam.m_solutionType)->second;
+		observeUseSolution->setStockFund(m_solutionInfo->m_fund);
+		observeUseSolution->setFilterStock(m_solutionInfo->m_filterStock);
 		observeUseSolution->setChooseParam(chooseParam);
 		observeSolution->setSolution(observeUseSolution);
 	}
 	else
 	{
 		changeUseSolution(chooseParam.m_solutionType);
+		m_useSolution->setStockFund(m_solutionInfo->m_fund);
+		m_useSolution->setFilterStock(m_solutionInfo->m_filterStock);
 		m_useSolution->setChooseParam(chooseParam);
 	}
 }
