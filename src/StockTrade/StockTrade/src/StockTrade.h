@@ -97,28 +97,4 @@ public:
 	bool stockDayData(const std::vector<std::string>& vecStock,
 		const IntDateTime& date,
 		std::map<std::string, std::shared_ptr<StockDay>>& dayData);
-
-protected:
-	std::shared_ptr<SolutionInfo> makeSolutionInfo(SolutionType solutionType,
-		const std::vector<ChooseParam>& vecStrategyType);
-
-private:
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-	//stock
-	std::map<std::string, std::shared_ptr<StockMarket>> m_spMarketMap;
-	//stock, stocktype
-	std::map<std::string, std::map<std::string, std::shared_ptr<IndicatorManagerBase>>> m_spIndicatorMap;
-
-	std::map<SolutionType, std::shared_ptr<Solution>> m_solutionMap;
-	std::map<StrategyType, std::shared_ptr<Strategy>> m_strategyMap;
-	std::map<std::string, std::map<StrategyType, std::shared_ptr<StrategyInfo>>> m_strategyInfoMap;
-
-	std::vector<std::string> m_allStock;
-	std::map<IntDateTime, std::vector<std::string>> m_filterStock;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 };
