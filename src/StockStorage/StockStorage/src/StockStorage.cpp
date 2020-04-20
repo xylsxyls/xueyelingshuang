@@ -1,4 +1,8 @@
 #include "StockStorage.h"
+#include "StockMarket/StockMarketAPI.h"
+#include "StockIndicator/StockIndicatorAPI.h"
+#include "StockStrategy/StockStrategyAPI.h"
+#include "StockSolution/StockSolutionAPI.h"
 
 StockStorage::StockStorage():
 m_moveDay(0)
@@ -94,7 +98,7 @@ void StockStorage::loadSolution(const std::set<SolutionType>& allSolutionType, c
 		case INTEGRATED_STRATEGY:
 		{
 			std::shared_ptr<IntegratedStrategy> spIntegratedStrategy = std::dynamic_pointer_cast<IntegratedStrategy>(spSolution);
-			spIntegratedStrategy->init(vecChooseParam, &m_solutionMap);
+			spIntegratedStrategy->init(vecChooseParam, this);
 		}
 		break;
 		case OBSERVE_STRATEGY:

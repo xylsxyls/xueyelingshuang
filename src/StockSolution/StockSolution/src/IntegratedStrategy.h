@@ -1,13 +1,14 @@
 #pragma once
 #include "Solution.h"
 #include <memory>
-#include "ChooseParam.h"
+#include "StockType/StockTypeAPI.h"
 #include <map>
 
 class Strategy;
 class AvgFundHighScore;
 class ObserveStrategy;
 struct SolutionInfo;
+class StockStorageBase;
 class StockSolutionAPI IntegratedStrategy : public Solution
 {
 public:
@@ -19,12 +20,7 @@ public:
 	/** 初始化
 	@param [in] vecStrategyType 执行类型
 	*/
-	void init(const std::vector<ChooseParam>& vecChooseParam, std::map<SolutionType, std::shared_ptr<Solution>>* solutionMap);
-
-	/** 设置参数
-	@param [in] solutionInfo 解决方案信息
-	*/
-	void setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo);
+	void init(const std::vector<ChooseParam>& vecChooseParam, StockStorageBase* storage);
 
 	/** 选出可以goumai的gupiao
 	@param [out] buyStock 选出的gupiao集合，stock,price,rate0-1
@@ -41,9 +37,10 @@ public:
 	virtual bool sell(std::vector<std::pair<std::string, StockInfo>>& sellStock, const IntDateTime& date);
 
 protected:
+	/** 设置每项选择
+	@param [in] chooseParam 每项选择
+	*/
 	void setEveryChooseParam(const ChooseParam& chooseParam);
-
-	void changeUseSolution(SolutionType solutionType);
 
 protected:
 #ifdef _MSC_VER
@@ -52,7 +49,7 @@ protected:
 #endif
 	std::shared_ptr<Solution> m_useSolution;
 	std::vector<ChooseParam> m_vecChooseParam;
-	std::map<SolutionType, std::shared_ptr<Solution>>* m_solutionMap;
+	StockStorageBase* m_storage;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

@@ -7,7 +7,6 @@
 #include "DisposableStrategyInfo.h"
 #include "IntegratedStrategy.h"
 #include "ObserveStrategy.h"
-#include "ChooseParam.h"
 
 #ifdef _DEBUG
 #pragma comment(lib,"StockSolutiond.lib")

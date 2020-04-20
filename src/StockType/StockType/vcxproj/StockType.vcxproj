@@ -19,16 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\StockStorageAPI.h" />
-    <ClInclude Include="..\src\StockStorageMacro.h" />
-    <ClInclude Include="..\src\StockStorage.h" />
+    <ClInclude Include="..\src\StockTypeAPI.h" />
+    <ClInclude Include="..\src\StockTypeMacro.h" />
+    <ClInclude Include="..\src\StockType.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\StockStorage.cpp" />
+    <ClCompile Include="..\src\StockType.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{AC3EE704-8C8E-48D4-B255-BD16EC866382}</ProjectGuid>
-    <RootNamespace>StockStorage</RootNamespace>
+    <ProjectGuid>{81448C37-E781-4BFB-8B2B-B074819F2EEC}</ProjectGuid>
+    <RootNamespace>StockType</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

@@ -5,24 +5,7 @@
 #include <memory>
 #include "StockStrategyMacro.h"
 #include "StrategyInfo.h"
-#include "StockInfo.h"
-
-enum StrategyType
-{
-	STRATEGY_INIT,
-
-	SAR_RISE_BACK_COUNT,
-
-	SAR_RISE_BACK,
-
-	CATCH_UP,
-
-	SAR_RISE_BACK_THIRTY_LINE,
-
-	LINE_BACK,
-
-	STRATEGY_TYPE_SIZE
-};
+#include "StockType/StockTypeAPI.h"
 
 /** ²ßÂÔ
 */
@@ -67,7 +50,6 @@ public:
 
 protected:
 	StrategyType m_strategyType;
-
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
@@ -76,5 +58,4 @@ protected:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
 };

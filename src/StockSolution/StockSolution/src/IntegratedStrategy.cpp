@@ -13,16 +13,10 @@ IntegratedStrategy::IntegratedStrategy()
 	m_solutionType = INTEGRATED_STRATEGY;
 }
 
-void IntegratedStrategy::init(const std::vector<ChooseParam>& vecChooseParam,
-	std::map<SolutionType, std::shared_ptr<Solution>>* solutionMap)
+void IntegratedStrategy::init(const std::vector<ChooseParam>& vecChooseParam, StockStorageBase* storage)
 {
 	m_vecChooseParam = vecChooseParam;
-	m_solutionMap = solutionMap;
-}
-
-void IntegratedStrategy::setSolutionInfo(const std::shared_ptr<SolutionInfo>& solutionInfo)
-{
-	m_solutionInfo = solutionInfo;
+	m_storage = storage;
 }
 
 bool IntegratedStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date)
@@ -67,9 +61,9 @@ void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam)
 {
 	if (chooseParam.m_isObserve)
 	{
-		changeUseSolution(OBSERVE_STRATEGY);
+		m_useSolution = m_storage->solution(OBSERVE_STRATEGY);
 		std::shared_ptr<ObserveStrategy> observeSolution = std::dynamic_pointer_cast<ObserveStrategy>(m_useSolution);
-		std::shared_ptr<Solution> observeUseSolution = m_solutionMap->find(chooseParam.m_solutionType)->second;
+		std::shared_ptr<Solution> observeUseSolution = m_storage->solution(chooseParam.m_solutionType);
 		observeUseSolution->setStockFund(m_solutionInfo->m_fund);
 		observeUseSolution->setFilterStock(m_solutionInfo->m_filterStock);
 		observeUseSolution->setChooseParam(chooseParam);
@@ -77,20 +71,9 @@ void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam)
 	}
 	else
 	{
-		changeUseSolution(chooseParam.m_solutionType);
+		m_useSolution = m_storage->solution(chooseParam.m_solutionType);
 		m_useSolution->setStockFund(m_solutionInfo->m_fund);
 		m_useSolution->setFilterStock(m_solutionInfo->m_filterStock);
 		m_useSolution->setChooseParam(chooseParam);
 	}
-}
-
-void IntegratedStrategy::changeUseSolution(SolutionType solutionType)
-{
-	auto itSolution = m_solutionMap->find(solutionType);
-	if (itSolution == m_solutionMap->end())
-	{
-		m_useSolution = nullptr;
-		return;
-	}
-	m_useSolution = itSolution->second;
 }

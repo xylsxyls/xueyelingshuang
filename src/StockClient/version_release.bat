@@ -6,6 +6,7 @@ call "%CLOUD_REBUILD%" CStopWatch 32 dll release only
 call "%CLOUD_REBUILD%" ScreenScript 32 dll release same
 call "%CLOUD_REBUILD%" CKeyboard 32 dll release only
 call "%CLOUD_REBUILD%" CDump 32 dll release only
+call "%CLOUD_REBUILD%" StockType 32 dll release only
 call "%CLOUD_REBUILD%" StockStrategy 32 dll release only
 call "%CLOUD_REBUILD%" StockDraw 32 dll release only
 call "%CLOUD_REBUILD%" StockSolution 32 dll release only

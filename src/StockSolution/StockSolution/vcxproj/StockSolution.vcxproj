@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\AvgFundHighScore.h" />
-    <ClInclude Include="..\src\ChooseParam.h" />
     <ClInclude Include="..\src\DisposableStrategy.h" />
     <ClInclude Include="..\src\DisposableStrategyInfo.h" />
     <ClInclude Include="..\src\IntegratedStrategy.h" />

@@ -3,7 +3,7 @@
 #include <map>
 #include <memory>
 #include "StockStrategy/StockStrategyAPI.h"
-#include "ChooseParam.h"
+#include "StockType/StockTypeAPI.h"
 
 struct StrategyInfo;
 class StockFund;

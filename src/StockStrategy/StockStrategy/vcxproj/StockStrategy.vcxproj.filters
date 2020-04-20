@@ -57,9 +57,6 @@
     <ClInclude Include="..\src\LineBack.h">
       <Filter>Strategy</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StockInfo.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockStrategy.cpp">

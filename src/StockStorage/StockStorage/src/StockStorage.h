@@ -5,14 +5,19 @@
 #include <stdint.h>
 #include <memory>
 #include "IntDateTime/IntDateTimeAPI.h"
-#include "StockSolution/StockSolutionAPI.h"
+#include "StockType/StockTypeAPI.h"
+#include <set>
 
 class StockMarket;
 class IndicatorManagerBase;
+class Solution;
+struct SolutionInfo;
+class Strategy;
+struct StrategyInfo;
 
 /** 常用数据储存类，load类函数按顺序加载
 */
-class StockStorageAPI StockStorage
+class StockStorageAPI StockStorage : public StockStorageBase
 {
 protected:
 	StockStorage();
