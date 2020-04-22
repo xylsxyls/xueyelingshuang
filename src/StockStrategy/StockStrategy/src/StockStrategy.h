@@ -59,6 +59,12 @@ public:
 	*/
 	std::set<std::string> strategyNeedLoad(StrategyType strategyEnum);
 
+	/** 获取策略需要提前的jiaoyiri天数
+	@param [in] strategyEnum 策略类型
+	@return 返回策略需要提前的jiaoyiri天数
+	*/
+	int32_t strategyNeedMoveDay(StrategyType strategyEnum);
+
 protected:
 	std::shared_ptr<StrategyInfo> strategyInfoNew(StrategyType strategyEnum);
 };

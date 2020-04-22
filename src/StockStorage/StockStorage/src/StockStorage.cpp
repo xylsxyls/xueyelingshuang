@@ -25,6 +25,11 @@ void StockStorage::init(const std::vector<std::string>& allStock,
 	m_moveDay = moveDay;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
+	m_spRunMarket.reset(new StockMarket);
+	m_spRunMarket->loadFromRedis("000001", m_beginTime - 2 * 365 * 86400, m_endTime);
+	m_spRunMarket->load();
+	m_spRunMarket->setLastDate(m_beginTime);
+	m_moveBeginTime = m_spRunMarket->getDateBefore(m_moveDay);
 }
 
 void StockStorage::loadMarket()
@@ -35,7 +40,7 @@ void StockStorage::loadMarket()
 	{
 		const std::string& stock = m_allStock[index];
 		std::shared_ptr<StockMarket> spMarket(new StockMarket);
-		spMarket->loadFromRedis(stock, m_beginTime - m_moveDay * 86400, m_endTime);
+		spMarket->loadFromRedis(stock, m_moveBeginTime, m_endTime);
 		m_spMarketMap[stock] = spMarket;
 	}
 }
@@ -49,7 +54,7 @@ void StockStorage::loadIndicator(const std::set<std::string>& allNeedLoad)
 		const std::string& stock = m_allStock[index];
 		std::map<std::string, std::shared_ptr<IndicatorManagerBase>>& stockIndicatorMap = m_spIndicatorMap[stock];
 
-		StockIndicator::instance().loadIndicatorFromRedis(stock, m_beginTime - m_moveDay * 86400, m_endTime);
+		StockIndicator::instance().loadIndicatorFromRedis(stock, m_moveBeginTime, m_endTime);
 		for (auto itAllNeedLoad = allNeedLoad.begin(); itAllNeedLoad != allNeedLoad.end(); ++itAllNeedLoad)
 		{
 			if (*itAllNeedLoad == "wr")

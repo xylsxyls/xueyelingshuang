@@ -124,6 +124,11 @@ std::set<std::string> StockStrategy::strategyNeedLoad(StrategyType strategyEnum)
 	return strategyInfoNew(strategyEnum)->needIndicator();
 }
 
+int32_t StockStrategy::strategyNeedMoveDay(StrategyType strategyEnum)
+{
+	return strategyInfoNew(strategyEnum)->needMoveDay();
+}
+
 std::shared_ptr<StrategyInfo> StockStrategy::strategyInfoNew(StrategyType strategyEnum)
 {
 	std::shared_ptr<StrategyInfo> spStrategyInfo;

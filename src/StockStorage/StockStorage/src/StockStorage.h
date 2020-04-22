@@ -78,7 +78,9 @@ protected:
 	int32_t m_moveDay;
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;
+	IntDateTime m_moveBeginTime;
 	std::map<IntDateTime, std::vector<std::string>> m_filterStock;
+	std::shared_ptr<StockMarket> m_spRunMarket;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

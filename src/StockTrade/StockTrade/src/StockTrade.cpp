@@ -18,26 +18,10 @@ void StockTrade::init(const IntDateTime& beginTime,
 	const std::vector<SolutionType>& vecSolutionType,
 	const std::vector<ChooseParam>& vecChooseParam)
 {
-	std::set<std::string> allNeedLoad;
-	int32_t index = -1;
-	while (index++ != vecChooseParam.size() - 1)
-	{
-		std::set<std::string> needLoad = StockStrategy::instance().strategyNeedLoad(vecChooseParam[index].m_useType);
-		for (auto itNeedLoad = needLoad.begin(); itNeedLoad != needLoad.end(); ++itNeedLoad)
-		{
-			allNeedLoad.insert(*itNeedLoad);
-		}
-		needLoad = StockStrategy::instance().strategyNeedLoad(vecChooseParam[index].m_useCountType);
-		for (auto itNeedLoad = needLoad.begin(); itNeedLoad != needLoad.end(); ++itNeedLoad)
-		{
-			allNeedLoad.insert(*itNeedLoad);
-		}
-	}
-
 	std::set<SolutionType> solutionTypeSet;
 	std::set<StrategyType> strategyTypeSet;
 
-	index = -1;
+	int32_t index = -1;
 	while (index++ != vecChooseParam.size() - 1)
 	{
 		solutionTypeSet.insert(vecChooseParam[index].m_solutionType);
@@ -58,7 +42,24 @@ void StockTrade::init(const IntDateTime& beginTime,
 		solutionTypeSet.insert(vecSolutionType[index]);
 	}
 
-	StockStorage::instance().init(allStock, 90, beginTime, endTime);
+	int32_t allNeedMoveDay = 0;
+	std::set<std::string> allNeedLoad;
+	for (auto itStrategyType = strategyTypeSet.begin(); itStrategyType != strategyTypeSet.end(); ++itStrategyType)
+	{
+		const StrategyType& strategyType = *itStrategyType;
+		std::set<std::string> needLoad = StockStrategy::instance().strategyNeedLoad(strategyType);
+		for (auto itNeedLoad = needLoad.begin(); itNeedLoad != needLoad.end(); ++itNeedLoad)
+		{
+			allNeedLoad.insert(*itNeedLoad);
+		}
+		int32_t needMoveDay = StockStrategy::instance().strategyNeedMoveDay(strategyType);
+		if (allNeedMoveDay < needMoveDay)
+		{
+			allNeedMoveDay = needMoveDay;
+		}
+	}
+
+	StockStorage::instance().init(allStock, allNeedMoveDay, beginTime, endTime);
 	StockStorage::instance().loadMarket();
 	StockStorage::instance().loadIndicator(allNeedLoad);
 	StockStorage::instance().loadFilterStock();

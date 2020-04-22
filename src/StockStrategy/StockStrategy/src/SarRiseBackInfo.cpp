@@ -22,3 +22,8 @@ std::set<std::string> SarRiseBackInfo::needIndicator()
 	result.insert("boll");
 	return result;
 }
+
+int32_t SarRiseBackInfo::needMoveDay()
+{
+	return 2;
+}

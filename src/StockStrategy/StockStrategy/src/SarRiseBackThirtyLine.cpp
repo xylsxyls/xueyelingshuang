@@ -12,12 +12,10 @@ SarRiseBackThirtyLine::SarRiseBackThirtyLine()
 
 bool SarRiseBackThirtyLine::buy(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(m_strategyInfo);
-
-	auto& stockFund = sarRiseBackInfo->m_fund;
-	std::shared_ptr<StockMarket>& spMarket = sarRiseBackInfo->m_spMarket;
-	std::shared_ptr<StockSarIndicator>& spStockSarIndicator = std::dynamic_pointer_cast<StockSarIndicator>(sarRiseBackInfo->m_spIndicator.find("sar")->second);
-	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = std::dynamic_pointer_cast<StockBollIndicator>(sarRiseBackInfo->m_spIndicator.find("boll")->second);
+	auto& stockFund = m_strategyInfo->m_fund;
+	std::shared_ptr<StockMarket>& spMarket = m_strategyInfo->m_spMarket;
+	std::shared_ptr<StockSarIndicator>& spStockSarIndicator = std::dynamic_pointer_cast<StockSarIndicator>(m_strategyInfo->m_spIndicator.find("sar")->second);
+	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = std::dynamic_pointer_cast<StockBollIndicator>(m_strategyInfo->m_spIndicator.find("boll")->second);
 	
 	if (!spMarket->setDate(date))
 	{
@@ -109,12 +107,10 @@ bool SarRiseBackThirtyLine::buy(const IntDateTime& date, StockInfo& stockInfo)
 
 bool SarRiseBackThirtyLine::sell(const IntDateTime& date, StockInfo& stockInfo)
 {
-	const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(m_strategyInfo);
-
-	auto& stockFund = sarRiseBackInfo->m_fund;
-	std::shared_ptr<StockMarket>& spMarket = sarRiseBackInfo->m_spMarket;
-	std::shared_ptr<StockSarIndicator>& spStockSarIndicator = std::dynamic_pointer_cast<StockSarIndicator>(sarRiseBackInfo->m_spIndicator.find("sar")->second);
-	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = std::dynamic_pointer_cast<StockBollIndicator>(sarRiseBackInfo->m_spIndicator.find("boll")->second);
+	auto& stockFund = m_strategyInfo->m_fund;
+	std::shared_ptr<StockMarket>& spMarket = m_strategyInfo->m_spMarket;
+	std::shared_ptr<StockSarIndicator>& spStockSarIndicator = std::dynamic_pointer_cast<StockSarIndicator>(m_strategyInfo->m_spIndicator.find("sar")->second);
+	std::shared_ptr<StockBollIndicator>& spStockBollIndicator = std::dynamic_pointer_cast<StockBollIndicator>(m_strategyInfo->m_spIndicator.find("boll")->second);
 
 	if (!spMarket->setDate(date))
 	{

@@ -18,7 +18,11 @@ int32_t CatchUpInfo::stockNum()
 std::set<std::string> CatchUpInfo::needIndicator()
 {
 	std::set<std::string> result;
-	result.insert("sar");
 	result.insert("boll");
 	return result;
+}
+
+int32_t CatchUpInfo::needMoveDay()
+{
+	return 2 + 2;
 }

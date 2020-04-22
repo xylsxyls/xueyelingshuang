@@ -22,3 +22,8 @@ std::set<std::string> LineBackInfo::needIndicator()
 	result.insert("boll");
 	return result;
 }
+
+int32_t LineBackInfo::needMoveDay()
+{
+	return 32 + 2;
+}

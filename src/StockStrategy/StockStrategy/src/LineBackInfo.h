@@ -23,4 +23,9 @@ struct StockStrategyAPI LineBackInfo : public StrategyInfo
 	@return 返回需要的zhibiao
 	*/
 	virtual std::set<std::string> needIndicator();
+
+	/** 获取需要提前的jiaoyiri天数
+	@return 返回需要提前的jiaoyiri天数
+	*/
+	virtual int32_t needMoveDay();
 };
