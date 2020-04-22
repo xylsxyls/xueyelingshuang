@@ -18,3 +18,11 @@ CString GetRegOcxPath(CString classid){
 	CString result = temp.Left(temp.ReverseFind('\\') + 1);
 	return result;
 }
+
+TCHAR moduleName[MAX_PATH] = { 0 };
+	GetModuleFileName(AfxGetInstanceHandle(), moduleName, MAX_PATH);
+	TCHAR _strLongPath[MAX_PATH] = _T("\0");
+	::GetLongPathName(moduleName, _strLongPath, MAX_PATH);
+	CString strPath(_strLongPath);
+	strPath = strPath.Left(strPath.ReverseFind(_T('\\')) + 1);
+	return strPath;

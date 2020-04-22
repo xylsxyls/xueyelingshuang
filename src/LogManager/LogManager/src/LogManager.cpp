@@ -32,7 +32,7 @@ LogManager& LogManager::instance()
 void LogManager::init(int32_t fileId, const std::string& path)
 {
 	std::string logPath;
-	if (fileId == 0)
+	if (path.empty())
 	{
 		logPath = CSystem::GetCurrentExePath() + m_exeName + ".log";
 	}
