@@ -6,6 +6,7 @@
 #include "CatchUp.h"
 #include "CatchUpInfo.h"
 #include "SarRiseBackThirtyLine.h"
+#include "SarRiseBackThirtyLineInfo.h"
 #include "LineBack.h"
 #include "LineBackInfo.h"
 

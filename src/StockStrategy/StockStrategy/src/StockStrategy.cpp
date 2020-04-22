@@ -10,6 +10,7 @@
 #include "SarRiseBackInfo.h"
 #include "CatchUpInfo.h"
 #include "LineBackInfo.h"
+#include "SarRiseBackThirtyLineInfo.h"
 
 StockStrategy::StockStrategy()
 {
@@ -136,9 +137,13 @@ std::shared_ptr<StrategyInfo> StockStrategy::strategyInfoNew(StrategyType strate
 	{
 	case SAR_RISE_BACK:
 	case SAR_RISE_BACK_COUNT:
-	case SAR_RISE_BACK_THIRTY_LINE:
 	{
 		spStrategyInfo.reset(new SarRiseBackInfo);
+	}
+	break;
+	case SAR_RISE_BACK_THIRTY_LINE:
+	{
+		spStrategyInfo.reset(new SarRiseBackThirtyLineInfo);
 	}
 	break;
 	case CATCH_UP:
