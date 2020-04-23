@@ -9,15 +9,17 @@
 
 ObserveStrategy::ObserveStrategy():
 m_stockNum(4),
-m_calcDays(2)
+m_calcDays(2),
+m_storage(nullptr)
 {
 	m_solutionType = OBSERVE_STRATEGY;
 }
 
-void ObserveStrategy::init(int32_t stockNum, int32_t calcDays)
+void ObserveStrategy::init(int32_t stockNum, int32_t calcDays, StockStorageBase* storage)
 {
 	m_stockNum = stockNum;
 	m_calcDays = calcDays;
+	m_storage = storage;
 }
 
 void ObserveStrategy::setSolution(const std::shared_ptr<Solution>& spSolution)
@@ -27,8 +29,9 @@ void ObserveStrategy::setSolution(const std::shared_ptr<Solution>& spSolution)
 
 bool ObserveStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date)
 {
+	buyStock.clear();
 	std::vector<std::pair<std::string, StockInfo>> beforeDayBuyStock;
-	if (!m_useSolution->buy(beforeDayBuyStock, getBeforeDay("000001", date, m_calcDays)))
+	if (!m_useSolution->buy(beforeDayBuyStock, m_storage->moveDay(date, m_calcDays)))
 	{
 		return false;
 	}
@@ -45,7 +48,7 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buySto
 		int32_t calcDays = m_calcDays;
 		while (calcDays-- != 0)
 		{
-			if (!spMarket->setDate(getBeforeDay(stock, date, calcDays)))
+			if (!spMarket->setDate(m_storage->moveDay(date, calcDays)))
 			{
 				//ËµÃ÷tingpaiÁË
 				RCSend("tingpai, stock = %s, date = %s", stock.c_str(), date.dateToString().c_str());
@@ -89,7 +92,7 @@ bool ObserveStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buySto
 	}
 	const std::string& stockBuy = buyStock[1].first;
 	std::shared_ptr<StockMarket> spStockBuyMarket = getMarket(stockBuy);
-	spStockBuyMarket->setDate(getBeforeDay(stockBuy, date, 1));
+	spStockBuyMarket->setDate(m_storage->moveDay(date, 1));
 	BigNumber firstAvg = spStockBuyMarket->day()->fourAvgChgValue();
 	BigNumber firstChg = spStockBuyMarket->day()->chgValue();
 	BigNumber firstOpenClose = spStockBuyMarket->day()->open() - spStockBuyMarket->day()->close();
@@ -136,18 +139,9 @@ bool ObserveStrategy::sell(std::vector<std::pair<std::string, StockInfo>>& sellS
 	return m_useSolution->sell(sellStock, date);
 }
 
-IntDateTime ObserveStrategy::getBeforeDay(const std::string& stock, const IntDateTime& date, int32_t days)
+int32_t ObserveStrategy::calcDays()
 {
-	if (m_solutionInfo->m_allStrategyInfo.find(stock) == m_solutionInfo->m_allStrategyInfo.end())
-	{
-		return IntDateTime(0, 0);
-	}
-	std::shared_ptr<StockMarket> spMarket = getMarket(stock);
-	if (!spMarket->setDate(date))
-	{
-		return IntDateTime(0, 0);
-	}
-	return spMarket->getDateBefore(days);
+	return m_calcDays;
 }
 
 std::shared_ptr<StockMarket> ObserveStrategy::getMarket(const std::string& stock)

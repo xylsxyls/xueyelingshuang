@@ -58,19 +58,18 @@ void StockDaysRetest::init(SolutionType solutionType,
 
 	m_fund.add(m_initialFund);
 
-	m_runMarket.loadFromRedis("000001", m_beginTime, m_endTime);
-
 	m_trade.init(m_beginTime,
 		m_endTime,
 		StockStrategy::instance().strategyAllStock(m_beginTime, m_endTime),
 		m_solutionType,
 		m_vecChooseParam);
+
+	m_runMarket = *m_trade.runMarket();
 }
 
 void StockDaysRetest::load()
 {
 	m_trade.load();
-	m_runMarket.load();
 }
 
 void StockDaysRetest::run()
@@ -80,7 +79,7 @@ void StockDaysRetest::run()
 		return;
 	}
 
-	m_runMarket.setFirstDate();
+	m_runMarket.setNewDate(m_beginTime);
 
 	TradeParam tradeParam;
 	tradeParam.m_stockFund = &m_fund;

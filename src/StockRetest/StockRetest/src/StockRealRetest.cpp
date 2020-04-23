@@ -63,6 +63,8 @@ void StockRealRetest::init(SolutionType solutionType,
 		StockStrategy::instance().strategyAllStock(m_beginTime, m_endTime),
 		m_solutionType,
 		m_vecChooseParam);
+
+	m_runMarket = *m_trade.runMarket();
 }
 
 void StockRealRetest::load()
@@ -81,9 +83,17 @@ void StockRealRetest::run()
 	tradeParam.m_stockFund = &m_fund;
 	m_trade.setTradeParam(m_solutionType, tradeParam);
 
-	IntDateTime currentTime = m_beginTime;
+	m_runMarket.setNewDate(m_beginTime);
+	IntDateTime currentTime = m_runMarket.date();
 	do
 	{
+		currentTime = m_runMarket.date();
+		if (currentTime > m_endTime)
+		{
+			m_runMarket.previous();
+			currentTime = m_runMarket.date();
+			break;
+		}
 		std::vector<std::pair<std::string, StockInfo>> sellStock;
 		m_trade.sell(sellStock, currentTime, m_solutionType);
 
@@ -123,9 +133,7 @@ void StockRealRetest::run()
 		}
 
 		printProfit(currentTime);
-
-		currentTime = currentTime + 86400;
-	} while (currentTime <= m_endTime);
+	} while (m_runMarket.next());
 	
 	if (m_showStockLog)
 	{

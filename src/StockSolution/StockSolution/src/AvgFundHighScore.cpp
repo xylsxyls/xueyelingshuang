@@ -53,7 +53,14 @@ bool AvgFundHighScore::buy(std::vector<std::pair<std::string, StockInfo>>& buySt
 	}
 
 	int32_t stockNum = m_solutionInfo->strategyInfo()->stockNum();
-	int32_t hasBuyStockNum = m_solutionInfo->m_fund->allBuyInfo()->size();
+	auto allBuyInfo = m_solutionInfo->m_fund->allBuyInfo();
+	int32_t hasBuyStockNum = 0;
+	for (auto itInfo = allBuyInfo->begin(); itInfo != allBuyInfo->end(); ++itInfo)
+	{
+		const std::string& stock = itInfo->first;
+		hasBuyStockNum += (int32_t)(*(m_solutionInfo->m_fund->stockChooseParam(stock)) == m_solutionInfo->m_chooseParam);
+	}
+	
 	if (stockNum <= hasBuyStockNum)
 	{
 		return false;

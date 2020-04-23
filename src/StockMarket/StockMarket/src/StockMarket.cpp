@@ -20,8 +20,8 @@ StockMarket::StockMarket(const StockMarket& stockMarket)
 
 StockMarket StockMarket::operator=(const StockMarket& stockMarket)
 {
-	m_stockData = stockMarket.m_stockData;
 	m_date = stockMarket.m_date;
+	m_stockData = stockMarket.m_stockData;
 	return *this;
 }
 
@@ -184,6 +184,16 @@ bool StockMarket::setLastDate(const IntDateTime& date)
 		return false;
 	}
 	m_date = (--m_stockData->m_history.upper_bound(date))->first;
+	return true;
+}
+
+bool StockMarket::setNewDate(const IntDateTime& date)
+{
+	if (m_stockData->m_history.empty() || date > m_stockData->m_history.rbegin()->first)
+	{
+		return false;
+	}
+	m_date = m_stockData->m_history.lower_bound(date)->first;
 	return true;
 }
 

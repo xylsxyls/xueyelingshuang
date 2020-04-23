@@ -139,6 +139,11 @@ std::shared_ptr<StockMarket> StockTrade::market(const std::string& stock)
 	return StockStorage::instance().market(stock);
 }
 
+std::shared_ptr<StockMarket> StockTrade::runMarket()
+{
+	return StockStorage::instance().runMarket();
+}
+
 bool StockTrade::stockDayData(const std::vector<std::string>& vecStock,
 	const IntDateTime& date,
 	std::map<std::string, std::shared_ptr<StockDay>>& dayData)

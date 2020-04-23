@@ -88,6 +88,11 @@ public:
 	*/
 	std::shared_ptr<StockMarket> market(const std::string& stock);
 
+	/** 获取运行hangqing
+	@return 返回运行hangqing
+	*/
+	std::shared_ptr<StockMarket> runMarket();
+
 	/** 获取指定日期指定gupiao集合的最新有效数据集合
 	@param [in] vecStock gupiao集合
 	@param [in] date 日期

@@ -63,18 +63,17 @@ void StockChanceRetest::init(SolutionType solutionType,
 	}
 	m_resultThreadId = CTaskThreadManager::Instance().Init();
 
-	m_runMarket.loadFromRedis("000001", m_beginTime, m_endTime);
-
 	m_trade.init(m_beginTime,
 		m_endTime,
 		StockStrategy::instance().strategyAllStock(m_beginTime, m_endTime),
 		m_solutionType,
 		m_vecChooseParam);
+
+	m_runMarket = *m_trade.runMarket();
 }
 
 void StockChanceRetest::load()
 {
-	m_runMarket.load();
 	m_trade.load();
 }
 
@@ -90,7 +89,7 @@ void StockChanceRetest::run()
 	int32_t holdIndex = -1;
 	while (holdIndex++ != m_maxHoldDays - 1)
 	{
-		m_runMarket.setFirstDate();
+		m_runMarket.setNewDate(m_beginTime);
 
 		BigNumber allFund = 0;
 		BigNumber plusAllFund = 0;

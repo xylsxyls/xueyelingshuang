@@ -57,6 +57,10 @@ public:
 
 	std::shared_ptr<StockMarket> market(const std::string& stock);
 
+	std::shared_ptr<StockMarket> runMarket();
+
+	IntDateTime moveDay(const IntDateTime& date, int32_t day, const std::shared_ptr<StockMarket>& runMarket = nullptr);
+
 	void load();
 
 protected:

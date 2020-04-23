@@ -63,6 +63,12 @@ struct StockTypeAPI ChooseParam
 	/** 构造函数
 	*/
 	ChooseParam();
+
+	/** 是否等于
+	@param [in] chooseParam 选择参数
+	@return 返回是否等于
+	*/
+	bool operator==(const ChooseParam& chooseParam);
 };
 
 class Solution;
@@ -85,4 +91,6 @@ public:
 	virtual std::shared_ptr<StrategyInfo> strategyInfo(StrategyType solutionType, const std::string& stock) = 0;
 
 	virtual std::shared_ptr<StockMarket> market(const std::string& stock) = 0;
+
+	virtual IntDateTime moveDay(const IntDateTime& date, int32_t day, const std::shared_ptr<StockMarket>& runMarket = nullptr) = 0;
 };

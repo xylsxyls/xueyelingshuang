@@ -117,6 +117,12 @@ public:
 	*/
 	bool setLastDate(const IntDateTime& date);
 
+	/** 设入最新有效日期，如果当天不存在则进入下一个有效日期
+	@param [in] date 日期
+	@return 返回是否设置成功，不成功表示该日期大于结束日期
+	*/
+	bool setNewDate(const IntDateTime& date);
+
 	/** 获取内存中的间隔天数
 	@param [in] date1 jiaoyiri日期1，1小
 	@param [in] date2 jiaoyiri日期2，2大

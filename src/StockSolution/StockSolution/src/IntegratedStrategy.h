@@ -39,8 +39,9 @@ public:
 protected:
 	/** 设置每项选择
 	@param [in] chooseParam 每项选择
+	@param [in] date 当前日期
 	*/
-	void setEveryChooseParam(const ChooseParam& chooseParam);
+	void setEveryChooseParam(const ChooseParam& chooseParam, const IntDateTime& date);
 
 protected:
 #ifdef _MSC_VER

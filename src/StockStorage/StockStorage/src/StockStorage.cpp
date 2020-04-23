@@ -80,7 +80,7 @@ void StockStorage::loadIndicator(const std::set<std::string>& allNeedLoad)
 void StockStorage::loadFilterStock()
 {
 	m_filterStock.clear();
-	IntDateTime currentTime = m_beginTime;
+	IntDateTime currentTime = m_moveBeginTime;
 	while (true)
 	{
 		StockStrategy::instance().strategyStock(currentTime, m_filterStock[currentTime]);
@@ -109,7 +109,7 @@ void StockStorage::loadSolution(const std::set<SolutionType>& allSolutionType, c
 		case OBSERVE_STRATEGY:
 		{
 			std::shared_ptr<ObserveStrategy> spObserveStrategy = std::dynamic_pointer_cast<ObserveStrategy>(spSolution);
-			spObserveStrategy->init(4, 2);
+			spObserveStrategy->init(4, 2, this);
 		}
 		break;
 		default:
@@ -234,6 +234,33 @@ std::shared_ptr<StockMarket> StockStorage::market(const std::string& stock)
 		return nullptr;
 	}
 	return itMarket->second;
+}
+
+std::shared_ptr<StockMarket> StockStorage::runMarket()
+{
+	return m_spRunMarket;
+}
+
+IntDateTime StockStorage::moveDay(const IntDateTime& date, int32_t day, const std::shared_ptr<StockMarket>& runMarket)
+{
+	if (day < 0)
+	{
+		return IntDateTime(0, 0);
+	}
+	if (day == 0)
+	{
+		return date;
+	}
+	std::shared_ptr<StockMarket> spRunMarket = (runMarket != nullptr ? runMarket : m_spRunMarket);
+	if (!spRunMarket->setDate(date))
+	{
+		if (!spRunMarket->setLastDate(date))
+		{
+			return IntDateTime(0, 0);
+		}
+		return spRunMarket->getDateBefore(day - 1);
+	}
+	return spRunMarket->getDateBefore(day);
 }
 
 void StockStorage::load()

@@ -21,11 +21,12 @@ void IntegratedStrategy::init(const std::vector<ChooseParam>& vecChooseParam, St
 
 bool IntegratedStrategy::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock, const IntDateTime& date)
 {
+	buyStock.clear();
 	int32_t index = -1;
 	while (index++ != m_vecChooseParam.size() - 1)
 	{
 		const ChooseParam& chooseParam = m_vecChooseParam[index];
-		setEveryChooseParam(chooseParam);
+		setEveryChooseParam(chooseParam, date);
 		if (m_useSolution->buy(buyStock, date))
 		{
 			return true;
@@ -45,7 +46,7 @@ bool IntegratedStrategy::sell(std::vector<std::pair<std::string, StockInfo>>& se
 	{
 		const std::string& stock = vecOwnedStock[index];
 		std::shared_ptr<ChooseParam> spChooseParam = m_solutionInfo->m_fund->stockChooseParam(stock);
-		setEveryChooseParam(*spChooseParam);
+		setEveryChooseParam(*spChooseParam, date);
 		std::vector<std::pair<std::string, StockInfo>> solutionSellStock;
 		result = (result || m_useSolution->sell(solutionSellStock, date));
 		int32_t index = -1;
@@ -57,7 +58,7 @@ bool IntegratedStrategy::sell(std::vector<std::pair<std::string, StockInfo>>& se
 	return result;
 }
 
-void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam)
+void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam, const IntDateTime& date)
 {
 	if (chooseParam.m_isObserve)
 	{
@@ -65,7 +66,7 @@ void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam)
 		std::shared_ptr<ObserveStrategy> observeSolution = std::dynamic_pointer_cast<ObserveStrategy>(m_useSolution);
 		std::shared_ptr<Solution> observeUseSolution = m_storage->solution(chooseParam.m_solutionType);
 		observeUseSolution->setStockFund(m_solutionInfo->m_fund);
-		observeUseSolution->setFilterStock(m_solutionInfo->m_filterStock);
+		observeUseSolution->setFilterStock(m_storage->filterStock(m_storage->moveDay(date, observeSolution->calcDays())));
 		observeUseSolution->setChooseParam(chooseParam);
 		observeSolution->setSolution(observeUseSolution);
 	}
@@ -76,4 +77,5 @@ void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam)
 		m_useSolution->setFilterStock(m_solutionInfo->m_filterStock);
 		m_useSolution->setChooseParam(chooseParam);
 	}
+	m_solutionInfo->m_chooseParam = chooseParam;
 }

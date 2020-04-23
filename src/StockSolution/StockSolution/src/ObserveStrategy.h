@@ -5,6 +5,7 @@
 class Strategy;
 class AvgFundHighScore;
 struct SolutionInfo;
+class StockStorageBase;
 class StockSolutionAPI ObserveStrategy : public Solution
 {
 public:
@@ -16,8 +17,9 @@ public:
 	/** 初始化
 	@param [in] stockNum 允许goumai的gupiao个数
 	@param [in] calcDays 计算天数
+	@param [in] storage 仓库
 	*/
-	void init(int32_t stockNum, int32_t calcDays);
+	void init(int32_t stockNum, int32_t calcDays, StockStorageBase* storage);
 
 	/** 设置使用的方案
 	@param [in] spSolution 使用的方案
@@ -38,15 +40,12 @@ public:
 	*/
 	virtual bool sell(std::vector<std::pair<std::string, StockInfo>>& sellStock, const IntDateTime& date);
 
-protected:
-	/** 获取向前日期
-	@param [in] stock gupiao代码
-	@param [in] date 日期
-	@param [in] days 向前的天数
-	@return 返回向前日期
+	/** 获取计算天数
+	@return 返回计算天数
 	*/
-	IntDateTime getBeforeDay(const std::string& stock, const IntDateTime& date, int32_t days);
+	int32_t calcDays();
 
+protected:
 	/** 获取对应的hangqing信息
 	@param [in] stock gupiao代码
 	@return 返回hangqing信息
@@ -66,4 +65,5 @@ protected:
 #endif
 	int32_t m_stockNum;
 	int32_t m_calcDays;
+	StockStorageBase* m_storage;
 };

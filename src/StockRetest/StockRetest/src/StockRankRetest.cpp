@@ -59,19 +59,18 @@ void StockRankRetest::init(SolutionType solutionType,
 
 	m_fund.add(m_initialFund);
 
-	m_runMarket.loadFromRedis("000001", m_beginTime, m_endTime);
-
 	m_trade.init(m_beginTime,
 		m_endTime,
 		StockStrategy::instance().strategyAllStock(m_beginTime, m_endTime),
 		m_solutionType,
 		m_vecChooseParam);
+
+	m_runMarket = *m_trade.runMarket();
 }
 
 void StockRankRetest::load()
 {
 	m_trade.load();
-	m_runMarket.load();
 }
 
 void StockRankRetest::run()
@@ -81,7 +80,7 @@ void StockRankRetest::run()
 		return;
 	}
 
-	m_runMarket.setFirstDate();
+	m_runMarket.setNewDate(m_beginTime);
 	IntDateTime calcTime = m_runMarket.date();
 	
 	while (calcTime < m_endTime)
