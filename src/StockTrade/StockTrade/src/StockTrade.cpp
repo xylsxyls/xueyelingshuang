@@ -14,9 +14,9 @@ StockTrade::StockTrade()
 
 void StockTrade::init(const IntDateTime& beginTime,
 	const IntDateTime& endTime,
-	const std::vector<std::string>& allStock,
 	const std::vector<SolutionType>& vecSolutionType,
-	const std::vector<ChooseParam>& vecChooseParam)
+	const std::vector<ChooseParam>& vecChooseParam,
+	const std::vector<std::string>& allStock)
 {
 	std::set<SolutionType> solutionTypeSet;
 	std::set<StrategyType> strategyTypeSet;
@@ -71,13 +71,13 @@ void StockTrade::init(const IntDateTime& beginTime,
 
 void StockTrade::init(const IntDateTime& beginTime,
 	const IntDateTime& endTime,
-	const std::vector<std::string>& allStock,
 	SolutionType solutionType,
-	const std::vector<ChooseParam>& vecChooseParam)
+	const std::vector<ChooseParam>& vecChooseParam,
+	const std::vector<std::string>& allStock)
 {
 	std::vector<SolutionType> vecSolutionEnum;
 	vecSolutionEnum.push_back(solutionType);
-	init(beginTime, endTime, allStock, vecSolutionEnum, vecChooseParam);
+	init(beginTime, endTime, vecSolutionEnum, vecChooseParam, allStock);
 }
 
 void StockTrade::load()

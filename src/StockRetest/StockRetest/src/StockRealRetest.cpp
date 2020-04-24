@@ -60,7 +60,6 @@ void StockRealRetest::init(SolutionType solutionType,
 
 	m_trade.init(m_beginTime,
 		m_endTime,
-		StockStrategy::instance().strategyAllStock(m_beginTime - 10 * 86400, m_endTime),
 		m_solutionType,
 		m_vecChooseParam);
 

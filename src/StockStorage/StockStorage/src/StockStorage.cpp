@@ -21,7 +21,6 @@ void StockStorage::init(const std::vector<std::string>& allStock,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime)
 {
-	m_allStock = allStock;
 	m_moveDay = moveDay;
 	m_beginTime = beginTime;
 	m_endTime = endTime;
@@ -30,6 +29,7 @@ void StockStorage::init(const std::vector<std::string>& allStock,
 	m_spRunMarket->load();
 	m_spRunMarket->setLastDate(m_beginTime);
 	m_moveBeginTime = m_spRunMarket->getDateBefore(m_moveDay);
+	m_allStock = allStock.empty() ? StockStrategy::instance().strategyAllStock(m_moveBeginTime, m_endTime) : allStock;
 }
 
 void StockStorage::loadMarket()

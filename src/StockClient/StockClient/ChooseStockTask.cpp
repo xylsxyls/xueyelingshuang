@@ -23,10 +23,10 @@ void ChooseStockTask::DoTask()
 	{
 		m_date = m_stockClient->m_today;
 	}
-	if (m_allStock.empty())
-	{
-		StockMysql::instance().readFilterStockFromRedis(m_date, m_allStock);
-	}
+	//if (m_allStock.empty())
+	//{
+	//	StockMysql::instance().readFilterStockFromRedis(m_date, m_allStock);
+	//}
 
 	StockFund* stockFund = nullptr;
 	if (m_stockFund == nullptr)
@@ -42,7 +42,7 @@ void ChooseStockTask::DoTask()
 	std::map<std::string, std::string> stockNameMap = StockMysql::instance().stockNameMap();
 	
 	StockTrade stockTrade;
-	stockTrade.init(m_date - 90 * 86400, m_date, m_allStock, m_solutionType, m_vecChooseParam);
+	stockTrade.init(m_date, m_date, m_solutionType, m_vecChooseParam);
 	stockTrade.load();
 
 	TradeParam tradeParam;

@@ -27,28 +27,28 @@ public:
 	/** 初始化，把所有需要的内容全部加载好，加载好的信息供所有解决方案和策略共用
 	@param [in] beginTime 开始时间
 	@param [in] endTime 结束时间
-	@param [in] allStock gupiaochi
 	@param [in] solutionType 解决方案类型
 	@param [in] strategyType 策略类型
+	@param [in] allStock gupiaochi
 	*/
 	void init(const IntDateTime& beginTime,
 		const IntDateTime& endTime,
-		const std::vector<std::string>& allStock,
 		SolutionType solutionType,
-		const std::vector<ChooseParam>& vecChooseParam);
+		const std::vector<ChooseParam>& vecChooseParam,
+		const std::vector<std::string>& allStock = std::vector<std::string>());
 
 	/** 初始化，把所有需要的内容全部加载好，加载好的信息供所有解决方案和策略共用
 	@param [in] beginTime 开始时间
 	@param [in] endTime 结束时间
-	@param [in] allStock gupiaochi
 	@param [in] solutionType 解决方案类型
 	@param [in] strategyType 策略类型
+	@param [in] allStock gupiaochi
 	*/
 	void init(const IntDateTime& beginTime,
 		const IntDateTime& endTime,
-		const std::vector<std::string>& allStock,
 		const std::vector<SolutionType>& vecSolutionType,
-		const std::vector<ChooseParam>& vecChooseParam);
+		const std::vector<ChooseParam>& vecChooseParam,
+		const std::vector<std::string>& allStock = std::vector<std::string>());
 
 	/** 原始信息加载转化到可用信息
 	*/
