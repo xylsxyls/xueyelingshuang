@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "CBase64/CBase64API.h"
 #include "ConfigManager/ConfigManagerAPI.h"
+#include <set>
 
 #define MYSQL_IP 10000
 
@@ -757,10 +758,34 @@ void StockMysql::readFilterStockFromRedis(const IntDateTime& date, std::vector<s
 	
 	filterStock = m_redis.getGroup(searchDay.dateToString())->toGroup();
 
-	while (filterStock.size() < 1500)
+	if (filterStock.size() > 1500)
+	{
+		std::sort(filterStock.begin(), filterStock.end());
+		return;
+	}
+
+	std::set<std::string> filterStockSet;
+	int32_t index = -1;
+	while (index++ != filterStock.size() - 1)
+	{
+		filterStockSet.insert(filterStock[index]);
+	}
+
+	while (filterStockSet.size() < 1500)
 	{
 		searchDay = searchDay - 86400;
-		filterStock = m_redis.getGroup(searchDay.dateToString())->toGroup();
+		std::vector<std::string> vecFilterStock = m_redis.getGroup(searchDay.dateToString())->toGroup();
+		int32_t index = -1;
+		while (index++ != vecFilterStock.size() - 1)
+		{
+			filterStockSet.insert(vecFilterStock[index]);
+		}
+	}
+
+	filterStock.clear();
+	for (auto itStock = filterStockSet.begin(); itStock != filterStockSet.end(); ++itStock)
+	{
+		filterStock.push_back(*itStock);
 	}
 
 	std::sort(filterStock.begin(), filterStock.end());

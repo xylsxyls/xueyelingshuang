@@ -12,6 +12,11 @@ StockTrade::StockTrade()
 
 }
 
+StockTrade::~StockTrade()
+{
+	StockStorage::instance().clear();
+}
+
 void StockTrade::init(const IntDateTime& beginTime,
 	const IntDateTime& endTime,
 	const std::vector<SolutionType>& vecSolutionType,

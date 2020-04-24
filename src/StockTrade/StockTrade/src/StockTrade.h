@@ -21,7 +21,13 @@ class StockBollIndicator;
 class StockTradeAPI StockTrade
 {
 public:
+	/** 构造函数
+	*/
 	StockTrade();
+
+	/** 析构函数
+	*/
+	~StockTrade();
 
 public:
 	/** 初始化，把所有需要的内容全部加载好，加载好的信息供所有解决方案和策略共用

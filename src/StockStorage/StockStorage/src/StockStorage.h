@@ -45,6 +45,8 @@ public:
 
 	void loadSolution(const std::set<SolutionType>& allSolutionType, const std::vector<ChooseParam>& vecChooseParam);
 
+	void clear();
+
 	std::vector<std::string>* filterStock(const IntDateTime& date);
 
 	std::shared_ptr<Solution> solution(SolutionType solutionType);

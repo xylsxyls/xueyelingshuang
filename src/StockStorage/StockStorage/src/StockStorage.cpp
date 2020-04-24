@@ -121,6 +121,23 @@ void StockStorage::loadSolution(const std::set<SolutionType>& allSolutionType, c
 	}
 }
 
+void StockStorage::clear()
+{
+	m_spMarketMap.clear();
+	m_spIndicatorMap.clear();
+	m_solutionMap.clear();
+	m_solutionInfoMap.clear();
+	m_strategyMap.clear();
+	m_strategyInfoMap.clear();
+	m_allStock.clear();
+	m_moveDay = 0;
+	m_beginTime.clear();
+	m_endTime.clear();
+	m_moveBeginTime.clear();
+	m_filterStock.clear();
+	m_spRunMarket = nullptr;
+}
+
 std::vector<std::string>* StockStorage::filterStock(const IntDateTime& date)
 {
 	auto itFilterStock = m_filterStock.find(date);
