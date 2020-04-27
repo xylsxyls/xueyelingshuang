@@ -169,6 +169,10 @@ bool AvgFundHighScore::strategySell(std::vector<std::pair<std::string, StockInfo
 	{
 		const std::string& stock = vecOwnedStock[index];
 		std::shared_ptr<ChooseParam> spChooseParam = m_solutionInfo->m_fund->stockChooseParam(stock);
+		if (*spChooseParam != m_solutionInfo->m_chooseParam)
+		{
+			continue;
+		}
 		std::shared_ptr<Strategy> spStrategy = m_solutionInfo->strategy(spChooseParam->m_useType);
 		std::shared_ptr<StrategyInfo> spStrategyInfo = m_solutionInfo->strategyInfo(spChooseParam->m_useType, stock);
 		if (spStrategy == nullptr || spStrategyInfo == nullptr)

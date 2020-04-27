@@ -15,3 +15,11 @@ bool ChooseParam::operator==(const ChooseParam& chooseParam)
 		m_isObserve == chooseParam.m_isObserve &&
 		m_solutionType == chooseParam.m_solutionType;
 }
+
+bool ChooseParam::operator!=(const ChooseParam& chooseParam)
+{
+	return m_useType != chooseParam.m_useType ||
+		m_useCountType != chooseParam.m_useCountType ||
+		m_isObserve != chooseParam.m_isObserve ||
+		m_solutionType != chooseParam.m_solutionType;
+}

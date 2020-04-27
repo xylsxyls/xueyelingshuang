@@ -69,6 +69,54 @@ struct StockTypeAPI ChooseParam
 	@return 返回是否等于
 	*/
 	bool operator==(const ChooseParam& chooseParam);
+
+	/** 是否不等于
+	@param [in] chooseParam 选择参数
+	@return 返回是否等于
+	*/
+	bool operator!=(const ChooseParam& chooseParam);
+
+	/** 是否不等于
+	@param [in] chooseParam1 选择参数1
+	@param [in] chooseParam2 选择参数2
+	@return 返回是否等于
+	*/
+	friend bool operator< (const ChooseParam& chooseParam1, const ChooseParam& chooseParam2)
+	{
+		if (chooseParam1.m_solutionType < chooseParam2.m_solutionType)
+		{
+			return true;
+		}
+		if (chooseParam1.m_solutionType > chooseParam2.m_solutionType)
+		{
+			return false;
+		}
+		if (chooseParam1.m_useType < chooseParam2.m_useType)
+		{
+			return true;
+		}
+		if (chooseParam1.m_useType > chooseParam2.m_useType)
+		{
+			return false;
+		}
+		if (chooseParam1.m_useCountType < chooseParam2.m_useCountType)
+		{
+			return true;
+		}
+		if (chooseParam1.m_useCountType > chooseParam2.m_useCountType)
+		{
+			return false;
+		}
+		if (chooseParam1.m_isObserve < chooseParam2.m_isObserve)
+		{
+			return true;
+		}
+		if (chooseParam1.m_isObserve > chooseParam2.m_isObserve)
+		{
+			return false;
+		}
+		return false;
+	}
 };
 
 class Solution;

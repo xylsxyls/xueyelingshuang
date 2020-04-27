@@ -40,21 +40,35 @@ bool IntegratedStrategy::sell(std::vector<std::pair<std::string, StockInfo>>& se
 	sellStock.clear();
 	std::vector<std::string> vecOwnedStock = m_solutionInfo->m_fund->ownedStock();
 
+	std::set<ChooseParam> chooseParamSet;
+
 	bool result = false;
 	int32_t index = -1;
 	while (index++ != vecOwnedStock.size() - 1)
 	{
 		const std::string& stock = vecOwnedStock[index];
 		std::shared_ptr<ChooseParam> spChooseParam = m_solutionInfo->m_fund->stockChooseParam(stock);
-		setEveryChooseParam(*spChooseParam, date);
+		chooseParamSet.insert(*spChooseParam);
+	}
+
+	for (auto itChooseParam = chooseParamSet.begin(); itChooseParam != chooseParamSet.end(); ++itChooseParam)
+	{
+		setEveryChooseParam(*itChooseParam, date);
 		std::vector<std::pair<std::string, StockInfo>> solutionSellStock;
-		result = (result || m_useSolution->sell(solutionSellStock, date));
+		result = (m_useSolution->sell(solutionSellStock, date) || result);
 		int32_t index = -1;
 		while (index++ != solutionSellStock.size() - 1)
 		{
 			sellStock.push_back(solutionSellStock[index]);
+			RCSend("sellstock = %s, useType = %d, useCountType = %d, isObserve = %d, solutionType = %d",
+				solutionSellStock[index].first.c_str(),
+				itChooseParam->m_useType,
+				itChooseParam->m_useCountType,
+				(int32_t)itChooseParam->m_isObserve,
+				itChooseParam->m_solutionType);
 		}
 	}
+	
 	return result;
 }
 
