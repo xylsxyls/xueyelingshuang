@@ -27,7 +27,7 @@
     <ClCompile Include="..\src\StockMysql.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{269C91FA-723A-4997-B693-D29BE018FEAE}</ProjectGuid>
     <RootNamespace>StockMysql</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

@@ -79,7 +79,9 @@ public:
 		std::map<std::string, std::vector<std::vector<std::string>>>& bollIndicatorData,
 		const std::vector<std::string>& allStock,
 		bool loadFromMysql,
-		const std::vector<uint32_t>& vecThreadId);
+		const std::vector<uint32_t>& vecThreadId,
+		int32_t arrayIndex,
+		int32_t arraySize);
 
 	/** 存储某一天的zhibiao
 	@param [in] date 日期

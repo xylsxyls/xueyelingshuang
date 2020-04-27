@@ -102,6 +102,9 @@
     <ClInclude Include="..\src\CalcDateWrTask.h">
       <Filter>task</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\AssignCalcTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockIndicator.cpp">
@@ -139,6 +142,9 @@
     </ClCompile>
     <ClCompile Include="..\src\IndicatorManagerBase.cpp">
       <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AssignCalcTask.cpp">
+      <Filter>task</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

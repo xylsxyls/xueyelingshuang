@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\AssignCalcTask.h" />
     <ClInclude Include="..\src\CalcDateBollTask.h" />
     <ClInclude Include="..\src\CalcDateRsiTask.h" />
     <ClInclude Include="..\src\CalcDateSarTask.h" />
@@ -41,6 +42,7 @@
     <ClInclude Include="..\src\StockWrIndicator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\AssignCalcTask.cpp" />
     <ClCompile Include="..\src\CalcDateBollTask.cpp" />
     <ClCompile Include="..\src\CalcDateRsiTask.cpp" />
     <ClCompile Include="..\src\CalcDateSarTask.cpp" />
@@ -55,7 +57,7 @@
     <ClCompile Include="..\src\StockWrIndicator.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{6EE66652-9F44-4AD0-9663-7EB1F32E640A}</ProjectGuid>
     <RootNamespace>StockIndicator</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
