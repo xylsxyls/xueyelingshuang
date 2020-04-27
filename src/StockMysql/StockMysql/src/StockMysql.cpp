@@ -680,18 +680,20 @@ void StockMysql::saveIndicator(const std::string& indicatorType,
 	}
 }
 
-void StockMysql::saveFilterStockToMysql(const std::map<IntDateTime, std::vector<std::string>>& filterStock)
+void StockMysql::saveFilterStockToMysql(const std::map<IntDateTime, std::vector<std::vector<std::string>>>& filterStock)
 {
 	m_mysql.selectDb("stockname");
 	std::vector<std::string> vecFields;
 	vecFields.push_back("date varchar(10) primary key");
 	vecFields.push_back("filterstock varchar(64000)");
+	vecFields.push_back("liftbanstock varchar(64000)");
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableIfNotExistString("filterstock", vecFields)));
 
 	for (auto itFilterStock = filterStock.begin(); itFilterStock != filterStock.end(); ++itFilterStock)
 	{
 		const IntDateTime& date = itFilterStock->first;
-		const std::vector<std::string>& allFilterStock = itFilterStock->second;
+		const std::vector<std::string>& allFilterStock = itFilterStock->second[0];
+		const std::vector<std::string>& listBanStock = itFilterStock->second[1];
 
 		std::string allFilterStockStr;
 		int32_t index = -1;
@@ -701,18 +703,28 @@ void StockMysql::saveFilterStockToMysql(const std::map<IntDateTime, std::vector<
 		}
 		allFilterStockStr.append(allFilterStock[index]);
 
+		std::string listBanStockStr;
+		 index = -1;
+		while (index++ != listBanStock.size() - 2)
+		{
+			listBanStockStr.append(listBanStock[index] + ",");
+		}
+		listBanStockStr.append(listBanStock[index]);
+
 		bool dateExist = !(m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("date", "date='" + date.dateToString() + "'")))->toVector().empty());
 		std::string sqlString;
 		if (dateExist)
 		{
-			auto prepare = m_mysql.PreparedStatementCreator(SqlString::updateString("filterstock", "filterstock", "date='" + date.dateToString() + "'"));
+			auto prepare = m_mysql.PreparedStatementCreator(SqlString::updateString("filterstock", "filterstock,liftbanstock", "date='" + date.dateToString() + "'"));
 			prepare->setString(0, allFilterStockStr);
+			prepare->setString(1, listBanStockStr);
 			m_mysql.execute(prepare);
 			continue;
 		}
-		auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString("filterstock", "date,filterstock"));
+		auto prepare = m_mysql.PreparedStatementCreator(SqlString::insertString("filterstock", "date,filterstock,liftbanstock"));
 		prepare->setString(0, date.dateToString());
 		prepare->setString(1, allFilterStockStr);
+		prepare->setString(2, listBanStockStr);
 		m_mysql.execute(prepare);
 	}
 }
@@ -733,7 +745,7 @@ void StockMysql::saveFilterStockToRedis(const IntDateTime& beginTime, const IntD
 		whereString.append("date<=" + SqlString::strToDate(endTime.dateToString()));
 	}
 	m_mysql.selectDb("stockname");
-	auto allStockFilter = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("filterstock", "date,filterstock", whereString)))->toVector();
+	auto allStockFilter = m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("filterstock", "date,filterstock,liftbanstock", whereString)))->toVector();
 
 	m_redis.selectDbIndex(5);
 
@@ -742,8 +754,15 @@ void StockMysql::saveFilterStockToRedis(const IntDateTime& beginTime, const IntD
 	{
 		const std::string& date = allStockFilter[index][0];
 		const std::string& filterStock = allStockFilter[index][1];
+		const std::string& listBanStock = allStockFilter[index][2];
+
+		std::vector<std::string> vecFilterStock = CStringManager::split(filterStock, ",");
+		std::vector<std::string> vecListBanStock = CStringManager::split(listBanStock, ",");
+
+		filterRemove(vecFilterStock, vecListBanStock);
+
 		m_redis.deleteKey(date);
-		m_redis.setGroups(date, CStringManager::split(filterStock, ","));
+		m_redis.setGroups(date, vecFilterStock);
 	}
 }
 
@@ -913,6 +932,32 @@ std::map<std::string, std::vector<int32_t>> StockMysql::getIndex(const std::stri
 		}
 	}
 	return result;
+}
+
+void StockMysql::filterRemove(std::vector<std::string>& destVec, const std::vector<std::string>& srcVec)
+{
+	std::set<std::string> set;
+	int32_t index = -1;
+	while (index++ != destVec.size() - 1)
+	{
+		set.insert(destVec[index]);
+	}
+	index = -1;
+	while (index++ != srcVec.size() - 1)
+	{
+		auto itStock = set.find(srcVec[index]);
+		if (itStock == set.end())
+		{
+			continue;
+		}
+		set.erase(itStock);
+	}
+	destVec.clear();
+	for (auto itResultStock = set.begin(); itResultStock != set.end(); ++itResultStock)
+	{
+		destVec.push_back(*itResultStock);
+	}
+	std::sort(destVec.begin(), destVec.end());
 }
 
 //int main()

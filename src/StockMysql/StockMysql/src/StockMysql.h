@@ -243,7 +243,7 @@ public:
 	/** 保存过滤的gupiao到mysql
 	@param [in] filterStock 过滤的gupiao
 	*/
-	void saveFilterStockToMysql(const std::map<IntDateTime, std::vector<std::string>>& filterStock);
+	void saveFilterStockToMysql(const std::map<IntDateTime, std::vector<std::vector<std::string>>>& filterStock);
 
 	/** 保存过滤的gupiao到redis
 	@param [in] beginTime 开始时间
@@ -281,6 +281,12 @@ protected:
 		const std::vector<std::string>& mysqlFields) const;
 
 	std::map<std::string, std::vector<int32_t>> getIndex(const std::string& indexHashMapName) const;
+
+	/** 去除部分数据
+	@param [in, out] destVec 目标数据
+	@param [in] srcVec 源数据
+	*/
+	void filterRemove(std::vector<std::string>& destVec, const std::vector<std::string>& srcVec);
 
 private:
 	//数据库连接类

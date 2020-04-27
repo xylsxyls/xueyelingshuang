@@ -79,6 +79,8 @@ public:
 	IntDateTime m_today;
 	//过滤的gupiao
 	std::vector<std::string> m_allFilterStock;
+	//jiejin的gupiao
+	std::vector<std::string> m_liftBanStock;
 	//xuangu后当日mairu的gupiao
 	std::vector<std::pair<std::string, StockInfo>> m_buyStock;
 	//xuangu后当日maichu的gupiao

@@ -2,13 +2,13 @@
 #include "CMouse/CMouseAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
-#include "StockParam.h"
 #include "StockClient.h"
 #include "CStringManager/CStringManagerAPI.h"
 
 GetFilterStockTask::GetFilterStockTask():
 m_hWnd(nullptr),
 m_today(0, 0),
+m_vecResult(nullptr),
 m_regain(false),
 m_stockClient(nullptr)
 {
@@ -21,7 +21,7 @@ void GetFilterStockTask::DoTask()
 	{
 		m_today = m_stockClient->m_today;
 	}
-	std::string filePath = CSystem::GetCurrentExePath() + m_today.dateToString() + ".xls";
+	std::string filePath = CSystem::GetCurrentExePath() + m_today.dateToString() + m_fileName + ".xls";
 	if (m_regain || !CSystem::fileExist(filePath))
 	{
 		CMouse::MoveAbsolute(xyls::Point(521, 38), 0);
@@ -35,7 +35,7 @@ void GetFilterStockTask::DoTask()
 		Sleep(3000);
 		CMouse::MoveAbsolute(xyls::Point(649, 352), 0);
 		CMouse::LeftClick();
-		CSystem::setClipboardData(m_hWnd, SEARCH_STR);
+		CSystem::setClipboardData(m_hWnd, m_searchStr);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('A');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
@@ -51,7 +51,14 @@ void GetFilterStockTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(423, 303), 0);
 		CMouse::LeftClick();
 		Sleep(8000);
-		CSystem::setClipboardData(m_hWnd, m_today.dateToString() + ".xls");
+		CMouse::MoveAbsolute(xyls::Point(294, 542), 0);
+		CMouse::LeftClick();
+		Sleep(50);
+		CSystem::setClipboardData(m_hWnd, m_today.dateToString() + m_fileName + ".xls");
+		CKeyboard::KeyDown(CKeyboard::Ctrl);
+		CKeyboard::KeyDown('A');
+		CKeyboard::KeyUp(CKeyboard::Ctrl);
+		CKeyboard::KeyUp('A');
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('V');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
@@ -62,13 +69,18 @@ void GetFilterStockTask::DoTask()
 		Sleep(50);
 		CSystem::setClipboardData(m_hWnd, CSystem::GetCurrentExePath());
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
+		CKeyboard::KeyDown('A');
+		CKeyboard::KeyUp(CKeyboard::Ctrl);
+		CKeyboard::KeyUp('A');
+		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('V');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('V');
 		Sleep(50);
-		CKeyboard::InputString("\n");
+		CMouse::MoveAbsolute(xyls::Point(774, 156), 0);
+		CMouse::LeftClick();
 		Sleep(50);
-		CMouse::MoveAbsolute(xyls::Point(782, 527), 0);
+		CMouse::MoveAbsolute(xyls::Point(850, 615), 0);
 		CMouse::LeftClick();
 		if (m_regain)
 		{
@@ -80,10 +92,13 @@ void GetFilterStockTask::DoTask()
 		Sleep(2000);
 		//CSystem::deleteFile((CSystem::GetCurrentExePath() + m_today.dateToString() + ".xls").c_str());
 		//Sleep(50);
+		CMouse::MoveAbsolute(xyls::Point(1688, 122), 0);
+		CMouse::LeftClick();
+		Sleep(1000);
 		CMouse::MoveAbsolute(xyls::Point(10, 98), 0);
 		CMouse::LeftClick();
 	}
-	if (m_regain || m_stockClient->m_allFilterStock.empty())
+	if (m_regain || m_vecResult->empty())
 	{
 		ShellExecuteA(NULL, "open", filePath.c_str(), NULL, NULL, SW_SHOW);
 		Sleep(5000);
@@ -100,20 +115,20 @@ void GetFilterStockTask::DoTask()
 		CKeyboard::KeyUp('C');
 		Sleep(3000);
 		std::string data = CSystem::GetClipboardData(m_hWnd);
-		m_stockClient->m_allFilterStock = CStringManager::split(data, "\r\n");
-		if (m_stockClient->m_allFilterStock.empty())
+		*m_vecResult = CStringManager::split(data, "\r\n");
+		if (m_vecResult->empty())
 		{
-			RCSend("filter stock empty");
+			RCSend("vec result stock empty, fileName = %s", m_fileName.c_str());
 			return;
 		}
-		m_stockClient->m_allFilterStock.erase(m_stockClient->m_allFilterStock.begin());
-		m_stockClient->m_allFilterStock.pop_back();
+		m_vecResult->erase(m_vecResult->begin());
+		m_vecResult->pop_back();
 		int32_t index = -1;
-		while (index++ != m_stockClient->m_allFilterStock.size() - 1)
+		while (index++ != m_vecResult->size() - 1)
 		{
-			m_stockClient->m_allFilterStock[index] = CStringManager::split(m_stockClient->m_allFilterStock[index], ".")[0];
+			(*m_vecResult)[index] = CStringManager::split((*m_vecResult)[index], ".")[0];
 		}
-		std::sort(m_stockClient->m_allFilterStock.begin(), m_stockClient->m_allFilterStock.end());
+		std::sort(m_vecResult->begin(), m_vecResult->end());
 		CSystem::setClipboardData(m_hWnd, "");
 		Sleep(1000);
 		CMouse::MoveAbsolute(xyls::Point(1903, 7), 0);
@@ -122,10 +137,18 @@ void GetFilterStockTask::DoTask()
 	}
 }
 
-void GetFilterStockTask::setParam(HWND hWnd, const IntDateTime& today, bool regain, StockClient* stockClient)
+void GetFilterStockTask::setParam(HWND hWnd,
+	const IntDateTime& today,
+	const std::string& searchStr,
+	std::vector<std::string>* vecResult,
+	const std::string& fileName,
+	bool regain,
+	StockClient* stockClient)
 {
 	m_hWnd = hWnd;
 	m_today = today;
+	m_vecResult = vecResult;
+	m_fileName = fileName;
 	m_regain = regain;
 	m_stockClient = stockClient;
 }

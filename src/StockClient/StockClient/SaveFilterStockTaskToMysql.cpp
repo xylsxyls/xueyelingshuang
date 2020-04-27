@@ -15,8 +15,10 @@ void SaveFilterStockTaskToMysql::DoTask()
 	{
 		m_today = m_stockClient->m_today;
 	}
-	std::map<IntDateTime, std::vector<std::string>> filterStock;
-	filterStock[m_today] = m_stockClient->m_allFilterStock;
+
+	std::map<IntDateTime, std::vector<std::vector<std::string>>> filterStock;
+	filterStock[m_today].push_back(m_stockClient->m_allFilterStock);
+	filterStock[m_today].push_back(m_stockClient->m_liftBanStock);
 	StockMysql::instance().saveFilterStockToMysql(filterStock);
 }
 

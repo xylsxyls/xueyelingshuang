@@ -39,6 +39,7 @@
 #include "ConfigManager/ConfigManagerAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "MinimizeTask.h"
+#include "StockParam.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -527,8 +528,12 @@ void StockClient::onUpdateTodayRedisButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayRedisTask);
 
 	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), true, this);
+	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), SEARCH_STR, &m_allFilterStock, "", true, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
+
+	std::shared_ptr<GetFilterStockTask> spGetLiftBanStockTask(new GetFilterStockTask);
+	spGetLiftBanStockTask->setParam((HWND)winId(), IntDateTime(0, 0), LIFTBAN_STR, &m_liftBanStock, LIFTBAN_NAME, true, this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetLiftBanStockTask);
 
 	std::shared_ptr<SaveFilterStockTaskToMysql> spSaveAllFilterStockTaskToMysql(new SaveFilterStockTaskToMysql);
 	spSaveAllFilterStockTaskToMysql->setParam(IntDateTime(0, 0), this);
@@ -818,9 +823,15 @@ void StockClient::onSaveFilterStockToMysqlButtonClicked()
 		std::string path = CSystem::GetCurrentExePath() + currentTime.dateToString() + ".xls";
 		if (CSystem::fileExist(path))
 		{
+			m_allFilterStock.clear();
 			std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-			spGetAllFilterStockTask->setParam((HWND)winId(), currentTime, false, this);
+			spGetAllFilterStockTask->setParam((HWND)winId(), currentTime, SEARCH_STR, &m_allFilterStock, "", false, this);
 			CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
+
+			m_liftBanStock.clear();
+			std::shared_ptr<GetFilterStockTask> spGetLiftBanStockTask(new GetFilterStockTask);
+			spGetLiftBanStockTask->setParam((HWND)winId(), currentTime, LIFTBAN_STR, &m_liftBanStock, LIFTBAN_NAME, false, this);
+			CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetLiftBanStockTask);
 
 			std::shared_ptr<SaveFilterStockTaskToMysql> spSaveAllFilterStockTaskToMysql(new SaveFilterStockTaskToMysql);
 			spSaveAllFilterStockTaskToMysql->setParam(currentTime, this);
@@ -1050,8 +1061,12 @@ void StockClient::onEverydaySolutionButtonClicked()
 	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
 
 	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), regainFilter, this);
+	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), SEARCH_STR, &m_allFilterStock, "", regainFilter, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
+
+	std::shared_ptr<GetFilterStockTask> spGetLiftBanStockTask(new GetFilterStockTask);
+	spGetLiftBanStockTask->setParam((HWND)winId(), IntDateTime(0, 0), LIFTBAN_STR, &m_liftBanStock, LIFTBAN_NAME, regainFilter, this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetLiftBanStockTask);
 
 	std::shared_ptr<MinimizeTask> spMinimizeTask(new MinimizeTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spMinimizeTask);
@@ -1213,8 +1228,12 @@ void StockClient::onEverydayTaskButtonClicked()
 	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spUpdateTodayToMemoryTask);
 
 	std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);
-	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), regainFilter, this);
+	spGetAllFilterStockTask->setParam((HWND)winId(), IntDateTime(0, 0), SEARCH_STR, &m_allFilterStock, "", regainFilter, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetAllFilterStockTask);
+
+	std::shared_ptr<GetFilterStockTask> spGetLiftBanStockTask(new GetFilterStockTask);
+	spGetLiftBanStockTask->setParam((HWND)winId(), IntDateTime(0, 0), LIFTBAN_STR, &m_liftBanStock, LIFTBAN_NAME, regainFilter, this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spGetLiftBanStockTask);
 
 	std::shared_ptr<MinimizeTask> spMinimizeTask(new MinimizeTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spMinimizeTask);
