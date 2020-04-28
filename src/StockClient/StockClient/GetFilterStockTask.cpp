@@ -36,10 +36,12 @@ void GetFilterStockTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(649, 352), 0);
 		CMouse::LeftClick();
 		CSystem::setClipboardData(m_hWnd, m_searchStr);
+		Sleep(200);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('A');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('A');
+		Sleep(50);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('V');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
@@ -55,23 +57,27 @@ void GetFilterStockTask::DoTask()
 		CMouse::LeftClick();
 		Sleep(50);
 		CSystem::setClipboardData(m_hWnd, m_today.dateToString() + m_fileName + ".xls");
+		Sleep(200);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('A');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('A');
+		Sleep(50);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('V');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('V');
 		Sleep(200);
-		CMouse::MoveAbsolute(xyls::Point(459, 65), 0);
+		CMouse::MoveAbsolute(xyls::Point(508, 154), 0);
 		CMouse::LeftClick();
 		Sleep(50);
 		CSystem::setClipboardData(m_hWnd, CSystem::GetCurrentExePath());
+		Sleep(200);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('A');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('A');
+		Sleep(50);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('V');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
@@ -79,7 +85,7 @@ void GetFilterStockTask::DoTask()
 		Sleep(50);
 		CMouse::MoveAbsolute(xyls::Point(774, 156), 0);
 		CMouse::LeftClick();
-		Sleep(50);
+		Sleep(200);
 		CMouse::MoveAbsolute(xyls::Point(850, 615), 0);
 		CMouse::LeftClick();
 		if (m_regain)
@@ -147,6 +153,7 @@ void GetFilterStockTask::setParam(HWND hWnd,
 {
 	m_hWnd = hWnd;
 	m_today = today;
+	m_searchStr = searchStr;
 	m_vecResult = vecResult;
 	m_fileName = fileName;
 	m_regain = regain;

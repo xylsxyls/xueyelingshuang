@@ -685,8 +685,8 @@ void StockMysql::saveFilterStockToMysql(const std::map<IntDateTime, std::vector<
 	m_mysql.selectDb("stockname");
 	std::vector<std::string> vecFields;
 	vecFields.push_back("date varchar(10) primary key");
-	vecFields.push_back("filterstock varchar(64000)");
-	vecFields.push_back("liftbanstock varchar(64000)");
+	vecFields.push_back("filterstock varchar(42000)");
+	vecFields.push_back("liftbanstock varchar(14000)");
 	m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::createTableIfNotExistString("filterstock", vecFields)));
 
 	for (auto itFilterStock = filterStock.begin(); itFilterStock != filterStock.end(); ++itFilterStock)
@@ -704,15 +704,14 @@ void StockMysql::saveFilterStockToMysql(const std::map<IntDateTime, std::vector<
 		allFilterStockStr.append(allFilterStock[index]);
 
 		std::string listBanStockStr;
-		 index = -1;
+		index = -1;
 		while (index++ != listBanStock.size() - 2)
 		{
 			listBanStockStr.append(listBanStock[index] + ",");
 		}
 		listBanStockStr.append(listBanStock[index]);
 
-		bool dateExist = !(m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("date", "date='" + date.dateToString() + "'")))->toVector().empty());
-		std::string sqlString;
+		bool dateExist = !(m_mysql.execute(m_mysql.PreparedStatementCreator(SqlString::selectString("filterstock", "date", "date='" + date.dateToString() + "'")))->toVector().empty());
 		if (dateExist)
 		{
 			auto prepare = m_mysql.PreparedStatementCreator(SqlString::updateString("filterstock", "filterstock,liftbanstock", "date='" + date.dateToString() + "'"));
