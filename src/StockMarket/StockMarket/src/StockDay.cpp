@@ -1,4 +1,5 @@
 #include "StockDay.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 void StockDay::load(const std::string& stock,
 	const IntDateTime& date,
@@ -104,10 +105,24 @@ BigNumber StockDay::amplitudeValue() const
 
 bool StockDay::isLimitUp() const
 {
-	return (m_preClose.toPrec(6) * 1.1).toPrec(2) <= m_close;
+	return (m_preClose.toPrec(6) * (1 + getLimit())).toPrec(2) <= m_close;
 }
 
 bool StockDay::isLimitDown() const
 {
-	return (m_preClose.toPrec(6) * 0.9).toPrec(2) >= m_close;
+	return (m_preClose.toPrec(6) * (1 - getLimit())).toPrec(2) >= m_close;
+}
+
+BigNumber StockDay::getLimit() const
+{
+	BigNumber limit = "0.1";
+	if (CStringManager::Left(m_stock, 3) == "688")
+	{
+		limit = "0.2";
+	}
+	else if ((CStringManager::Left(m_stock, 3) == "300") && (m_date > "2020-10-07"))
+	{
+		limit = "0.2";
+	}
+	return limit;
 }

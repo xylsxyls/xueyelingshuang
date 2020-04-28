@@ -118,6 +118,12 @@ public:
 	bool isLimitDown() const;
 
 protected:
+	/** 获取最大zhangdiefu
+	@return 返回最大zhangdiefu
+	*/
+	BigNumber getLimit() const;
+
+protected:
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
