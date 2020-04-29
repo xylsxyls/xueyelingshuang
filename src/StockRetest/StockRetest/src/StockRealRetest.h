@@ -20,6 +20,7 @@ public:
 		const std::vector<ChooseParam>& vecChooseParam,
 		const IntDateTime& beginTime,
 		const IntDateTime& endTime,
+		const std::vector<std::string>& allStock = std::vector<std::string>(),
 		const BigNumber& initialFund = 200000,
 		bool showStockLog = false,
 		int32_t threadCount = 0);

@@ -19,7 +19,9 @@ enum StrategyType
 
 	LINE_BACK,
 
-	STRATEGY_TYPE_SIZE
+	STRATEGY_TYPE_SIZE,
+
+	T_ADD_0
 };
 
 enum SolutionType

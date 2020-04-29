@@ -80,6 +80,7 @@ protected:
 	std::map<StrategyType, std::shared_ptr<Strategy>> m_strategyMap;
 	std::map<std::string, std::map<StrategyType, std::shared_ptr<StrategyInfo>>> m_strategyInfoMap;
 
+	bool m_isCustomize;
 	std::vector<std::string> m_allStock;
 	int32_t m_moveDay;
 	IntDateTime m_beginTime;

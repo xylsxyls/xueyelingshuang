@@ -13,7 +13,7 @@ m_stockClient(nullptr)
 void RealTestTask::DoTask()
 {
 	StockRealRetest stockRealRetest;
-	stockRealRetest.init(m_solutionType, m_vecChooseParam, m_beginTime, m_endTime, 200000, true);
+	stockRealRetest.init(m_solutionType, m_vecChooseParam, m_beginTime, m_endTime, std::vector<std::string>(), 200000, true);
 	stockRealRetest.load();
 	stockRealRetest.run();
 }

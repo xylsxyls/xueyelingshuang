@@ -40,6 +40,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "MinimizeTask.h"
 #include "StockParam.h"
+#include "SyntheticalTestTask.h"
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -69,6 +70,7 @@ StockClient::StockClient(QWidget* parent)
 	m_daysTestButton(nullptr),
 	m_rankTestButton(nullptr),
 	m_chanceTestButton(nullptr),
+	m_syntheticalTestButton(nullptr),
 	m_everydaySolutionButton(nullptr),
 	m_everydayHelperButton(nullptr),
 	m_everydayTaskButton(nullptr)
@@ -97,6 +99,7 @@ StockClient::StockClient(QWidget* parent)
 	m_daysTestButton = new COriginalButton(this);
 	m_rankTestButton = new COriginalButton(this);
 	m_chanceTestButton = new COriginalButton(this);
+	m_syntheticalTestButton = new COriginalButton(this);
 	m_everydaySolutionButton = new COriginalButton(this);
 	m_everydayHelperButton = new COriginalButton(this);
 	m_everydayTaskButton = new COriginalButton(this);
@@ -231,6 +234,10 @@ void StockClient::init()
 	m_chanceTestButton->setText(QStringLiteral("几率模拟测试"));
 	QObject::connect(m_chanceTestButton, &COriginalButton::clicked, this, &StockClient::onChanceTestButtonClicked);
 
+	m_syntheticalTestButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_syntheticalTestButton->setText(QStringLiteral("综合模拟测试"));
+	QObject::connect(m_syntheticalTestButton, &COriginalButton::clicked, this, &StockClient::onSyntheticalTestButtonClicked);
+
 	m_everydaySolutionButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_everydaySolutionButton->setText(QStringLiteral("每日方案"));
 	QObject::connect(m_everydaySolutionButton, &COriginalButton::clicked, this, &StockClient::onEverydaySolutionButtonClicked);
@@ -307,6 +314,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_daysTestButton);
 	vecButton.push_back(m_rankTestButton);
 	vecButton.push_back(m_chanceTestButton);
+	vecButton.push_back(m_syntheticalTestButton);
 	vecButton.push_back(m_everydaySolutionButton);
 	vecButton.push_back(m_everydayHelperButton);
 	vecButton.push_back(m_everydayTaskButton);
@@ -1011,6 +1019,36 @@ void StockClient::onChanceTestButtonClicked()
 	std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
 	spChanceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, maxDay, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
+}
+
+void StockClient::onSyntheticalTestButtonClicked()
+{
+	InputDialogParam inputDialogParam;
+	InputEx line;
+	line.m_tip = QStringLiteral("开始日期");
+	line.m_defaultText = "2019-10-08";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("结束日期");
+	line.m_defaultText = "2020-02-28";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	line.m_tip = QStringLiteral("开始数值");
+	line.m_defaultText = "2913.57";
+	inputDialogParam.m_vecInputEx.push_back(line);
+	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
+	inputDialogParam.m_parent = windowHandle();
+	DialogManager::instance().makeDialog(inputDialogParam);
+	if (inputDialogParam.m_result != ACCEPT_BUTTON)
+	{
+		return;
+	}
+	IntDateTime beginTime = inputDialogParam.m_vecInputEx[0].m_editText.toStdString();
+	IntDateTime endTime = inputDialogParam.m_vecInputEx[1].m_editText.toStdString();
+	BigNumber beginValue = inputDialogParam.m_vecInputEx[2].m_editText.toStdString().c_str();
+	std::shared_ptr<SyntheticalTestTask> spSyntheticalTestTask(new SyntheticalTestTask);
+	std::vector<std::string> allStock = StockMysql::instance().allStock();
+	//std::vector<std::string> allStock = StockStrategy::instance().strategyAllStock(beginTime, endTime);
+	spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 }
 
 void StockClient::onEverydaySolutionButtonClicked()

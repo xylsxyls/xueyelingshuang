@@ -36,6 +36,7 @@ void StockRealRetest::init(SolutionType solutionType,
 	const std::vector<ChooseParam>& vecChooseParam,
 	const IntDateTime& beginTime,
 	const IntDateTime& endTime,
+	const std::vector<std::string>& allStock,
 	const BigNumber& initialFund,
 	bool showStockLog,
 	int32_t threadCount)
@@ -61,7 +62,8 @@ void StockRealRetest::init(SolutionType solutionType,
 	m_trade.init(m_beginTime,
 		m_endTime,
 		m_solutionType,
-		m_vecChooseParam);
+		m_vecChooseParam,
+		allStock);
 
 	m_runMarket = *m_trade.runMarket();
 }

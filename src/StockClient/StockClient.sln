@@ -23,6 +23,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StockIndicator", "..\StockI
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StockMysql", "..\StockMysql\StockMysql\vcxproj\StockMysql.vcxproj", "{269C91FA-723A-4997-B693-D29BE018FEAE}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StockDraw", "..\StockDraw\StockDraw\vcxproj\StockDraw.vcxproj", "{1CE10752-1370-47DE-8DF8-4F7D48371D32}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -111,6 +113,14 @@ Global
 		{269C91FA-723A-4997-B693-D29BE018FEAE}.Release|Win32.Build.0 = Release|Win32
 		{269C91FA-723A-4997-B693-D29BE018FEAE}.Release|x64.ActiveCfg = Release|x64
 		{269C91FA-723A-4997-B693-D29BE018FEAE}.Release|x64.Build.0 = Release|x64
+		{1CE10752-1370-47DE-8DF8-4F7D48371D32}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1CE10752-1370-47DE-8DF8-4F7D48371D32}.Debug|Win32.Build.0 = Debug|Win32
+		{1CE10752-1370-47DE-8DF8-4F7D48371D32}.Debug|x64.ActiveCfg = Debug|x64
+		{1CE10752-1370-47DE-8DF8-4F7D48371D32}.Debug|x64.Build.0 = Debug|x64
+		{1CE10752-1370-47DE-8DF8-4F7D48371D32}.Release|Win32.ActiveCfg = Release|Win32
+		{1CE10752-1370-47DE-8DF8-4F7D48371D32}.Release|Win32.Build.0 = Release|Win32
+		{1CE10752-1370-47DE-8DF8-4F7D48371D32}.Release|x64.ActiveCfg = Release|x64
+		{1CE10752-1370-47DE-8DF8-4F7D48371D32}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

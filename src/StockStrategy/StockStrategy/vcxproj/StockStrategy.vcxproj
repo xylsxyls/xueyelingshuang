@@ -33,6 +33,8 @@
     <ClInclude Include="..\src\StockStrategy.h" />
     <ClInclude Include="..\src\Strategy.h" />
     <ClInclude Include="..\src\StrategyInfo.h" />
+    <ClInclude Include="..\src\T0.h" />
+    <ClInclude Include="..\src\T0Info.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CatchUp.cpp" />
@@ -46,6 +48,8 @@
     <ClCompile Include="..\src\SarRiseBackThirtyLineInfo.cpp" />
     <ClCompile Include="..\src\StockStrategy.cpp" />
     <ClCompile Include="..\src\Strategy.cpp" />
+    <ClCompile Include="..\src\T0.cpp" />
+    <ClCompile Include="..\src\T0Info.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

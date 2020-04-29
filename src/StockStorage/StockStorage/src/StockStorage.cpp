@@ -5,7 +5,8 @@
 #include "StockSolution/StockSolutionAPI.h"
 
 StockStorage::StockStorage():
-m_moveDay(0)
+m_moveDay(0),
+m_isCustomize(false)
 {
 
 }
@@ -30,6 +31,7 @@ void StockStorage::init(const std::vector<std::string>& allStock,
 	m_spRunMarket->setLastDate(m_beginTime);
 	m_moveBeginTime = m_spRunMarket->getDateBefore(m_moveDay);
 	m_allStock = allStock.empty() ? StockStrategy::instance().strategyAllStock(m_moveBeginTime, m_endTime) : allStock;
+	m_isCustomize = !allStock.empty();
 }
 
 void StockStorage::loadMarket()
@@ -80,6 +82,10 @@ void StockStorage::loadIndicator(const std::set<std::string>& allNeedLoad)
 void StockStorage::loadFilterStock()
 {
 	m_filterStock.clear();
+	if (m_isCustomize)
+	{
+		return;
+	}
 	IntDateTime currentTime = m_moveBeginTime;
 	while (true)
 	{
@@ -140,6 +146,10 @@ void StockStorage::clear()
 
 std::vector<std::string>* StockStorage::filterStock(const IntDateTime& date)
 {
+	if (m_isCustomize)
+	{
+		return &m_allStock;
+	}
 	auto itFilterStock = m_filterStock.find(date);
 	if (itFilterStock == m_filterStock.end())
 	{

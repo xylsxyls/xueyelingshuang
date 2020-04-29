@@ -60,6 +60,12 @@
     <ClInclude Include="..\src\SarRiseBackThirtyLineInfo.h">
       <Filter>Strategy</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\T0.h">
+      <Filter>Strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\T0Info.h">
+      <Filter>Strategy</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockStrategy.cpp">
@@ -93,6 +99,12 @@
       <Filter>Strategy</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SarRiseBackThirtyLineInfo.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\T0.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\T0Info.cpp">
       <Filter>Strategy</Filter>
     </ClCompile>
   </ItemGroup>
