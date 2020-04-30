@@ -54,7 +54,7 @@ void SyntheticalTestTask::DoTask()
 		BigNumber currentChg = allChg / num.toPrec(16);
 		profit = profit * currentChg;
 		profitValue = profitValue * currentChg;
-		RCSend("date = %s, chg = %s%%, profit = %s%%",
+		RCSend("date = %s, chg = %s%%, profit = %s%%, profitValue = %s",
 			currentTime.dateToString().c_str(),
 			((currentChg - 1) * 100).toPrec(2).toString().c_str(),
 			((profit - 1) * 100).toPrec(2).toString().c_str(),
