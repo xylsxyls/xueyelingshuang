@@ -25,48 +25,6 @@ StockStrategy& StockStrategy::instance()
 	return s_stockStrategy;
 }
 
-void StockStrategy::strategyStock(const IntDateTime& date, std::vector<std::string>& filterStock)
-{
-	StockMysql::instance().readRiseUpStockFromRedis(date, filterStock);
-	for (auto itFilterStock = filterStock.begin(); itFilterStock != filterStock.end();)
-	{
-		if (CStringManager::Left(*itFilterStock, 3) == "688")
-		{
-			itFilterStock = filterStock.erase(itFilterStock);
-			continue;
-		}
-		++itFilterStock;
-	}
-}
-
-std::vector<std::string> StockStrategy::strategyAllStock(const IntDateTime& beginTime, const IntDateTime& endTime)
-{
-	if (beginTime > endTime)
-	{
-		return std::vector<std::string>();
-	}
-	std::vector<std::string> result;
-	std::map<std::string, int32_t> allFilterStock;
-	IntDateTime currentTime = beginTime;
-	do 
-	{
-		std::vector<std::string> filterStock;
-		strategyStock(currentTime, filterStock);
-		int32_t index = -1;
-		while (index++ != filterStock.size() - 1)
-		{
-			allFilterStock[filterStock[index]] = 0;
-		}
-		currentTime = currentTime + 86400;
-	} while (currentTime <= endTime);
-
-	for (auto itAllFilterStock = allFilterStock.begin(); itAllFilterStock != allFilterStock.end(); ++itAllFilterStock)
-	{
-		result.push_back(itAllFilterStock->first);
-	}
-	return result;
-}
-
 std::shared_ptr<Strategy> StockStrategy::strategy(StrategyType strategyEnum)
 {
 	std::shared_ptr<Strategy> strategy;

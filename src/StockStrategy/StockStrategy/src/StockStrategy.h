@@ -22,19 +22,6 @@ public:
 	static StockStrategy& instance();
 
 public:
-	/** 获取时间段内gupiaochi里所有出现的gupiao集合
-	@param [in] beginTime 开始时间
-	@param [in] endTime 结束时间
-	@return 返回时间段内gupiaochi里所有出现的gupiao集合
-	*/
-	std::vector<std::string> strategyAllStock(const IntDateTime& beginTime, const IntDateTime& endTime);
-
-	/** 获取某一天的gupiaochi集合
-	@param [in] date 日期
-	@param [out] filterStock gupiaochi
-	*/
-	void strategyStock(const IntDateTime& date, std::vector<std::string>& filterStock);
-
 	/** 获取策略
 	@param [in] strategyEnum 策略类型
 	@return 返回策略
