@@ -249,14 +249,33 @@ public:
 	@param [in] beginTime 开始时间
 	@param [in] endTime 结束时间
 	*/
-	void saveFilterStockToRedis(const IntDateTime& beginTime = IntDateTime(0, 0),
+	void saveAllFilterStockToRedis(const IntDateTime& beginTime = IntDateTime(0, 0),
 		const IntDateTime& endTime = IntDateTime(0, 0));
 
 	/** 读取过滤的gupiao
 	@param [in] date 日期
 	@param [out] filterStock 过滤的gupiao
 	*/
-	void readFilterStockFromRedis(const IntDateTime& date, std::vector<std::string>& filterStock);
+	void readRiseUpStockFromRedis(const IntDateTime& date, std::vector<std::string>& riseUpStock);
+
+	/** 读取过滤的gupiao
+	@param [in] date 日期
+	@param [out] filterStock 过滤的gupiao
+	*/
+	void readLiftBanStockFromRedis(const IntDateTime& date, std::vector<std::string>& liftBanStock);
+
+public:
+	/** 去除部分数据
+	@param [in, out] destVec 目标数据
+	@param [in] srcVec 源数据
+	*/
+	static void filterRemove(std::vector<std::string>& destVec, const std::vector<std::string>& srcVec);
+
+	/** 合并数据
+	@param [in, out] destVec 目标数据
+	@param [in] srcVec 源数据
+	*/
+	static void filterMerge(std::vector<std::string>& destVec, const std::vector<std::vector<std::string>>& srcVec);
 
 protected:
 	/** 新开一个kaigaodishou的表
@@ -282,11 +301,7 @@ protected:
 
 	std::map<std::string, std::vector<int32_t>> getIndex(const std::string& indexHashMapName) const;
 
-	/** 去除部分数据
-	@param [in, out] destVec 目标数据
-	@param [in] srcVec 源数据
-	*/
-	void filterRemove(std::vector<std::string>& destVec, const std::vector<std::string>& srcVec);
+	
 
 private:
 	//数据库连接类

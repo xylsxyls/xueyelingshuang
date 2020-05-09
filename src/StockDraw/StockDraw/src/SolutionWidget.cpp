@@ -221,7 +221,7 @@ void SolutionWidget::onSolutionSignal(SolutionWidgetParam solutionWidgetParam)
 		bollDown2.toString()).c_str());
 
 	std::vector<std::string> vecFilterStock;
-	StockMysql::instance().readFilterStockFromRedis(m_solutionWidgetParam.m_date, vecFilterStock);
+	StockMysql::instance().readRiseUpStockFromRedis(m_solutionWidgetParam.m_date, vecFilterStock);
 
 	int32_t vecFilterStockSize = vecFilterStock.size();
 

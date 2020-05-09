@@ -597,7 +597,7 @@ void StockMysql::initRedis()
 	saveIndicatorDataIndex();
 	saveAllDataIndex();
 	saveCalcDataIndex();
-	saveFilterStockToRedis();
+	saveAllFilterStockToRedis();
 	RCSend("init end time = %.2lf·Ö", (::GetTickCount() - begin) / 60000.0);
 }
 
@@ -728,7 +728,7 @@ void StockMysql::saveFilterStockToMysql(const std::map<IntDateTime, std::vector<
 	}
 }
 
-void StockMysql::saveFilterStockToRedis(const IntDateTime& beginTime, const IntDateTime& endTime)
+void StockMysql::saveAllFilterStockToRedis(const IntDateTime& beginTime, const IntDateTime& endTime)
 {
 	std::string whereString;
 	if (!beginTime.empty())
@@ -756,16 +756,16 @@ void StockMysql::saveFilterStockToRedis(const IntDateTime& beginTime, const IntD
 		const std::string& listBanStock = allStockFilter[index][2];
 
 		std::vector<std::string> vecFilterStock = CStringManager::split(filterStock, ",");
-		std::vector<std::string> vecListBanStock = CStringManager::split(listBanStock, ",");
-
-		filterRemove(vecFilterStock, vecListBanStock);
-
 		m_redis.deleteKey(date);
 		m_redis.setGroups(date, vecFilterStock);
+
+		std::vector<std::string> vecListBanStock = CStringManager::split(listBanStock, ",");
+		m_redis.deleteKey(date + "LiftBan");
+		m_redis.setGroups(date + "LiftBan", vecListBanStock);
 	}
 }
 
-void StockMysql::readFilterStockFromRedis(const IntDateTime& date, std::vector<std::string>& filterStock)
+void StockMysql::readRiseUpStockFromRedis(const IntDateTime& date, std::vector<std::string>& riseUpStock)
 {
 	m_redis.selectDbIndex(5);
 	IntDateTime searchDay = date;
@@ -774,19 +774,19 @@ void StockMysql::readFilterStockFromRedis(const IntDateTime& date, std::vector<s
 		searchDay = std::string("2019-10-08");
 	}
 	
-	filterStock = m_redis.getGroup(searchDay.dateToString())->toGroup();
+	riseUpStock = m_redis.getGroup(searchDay.dateToString())->toGroup();
 
-	if (filterStock.size() > 1500)
+	if (riseUpStock.size() > 1500)
 	{
-		std::sort(filterStock.begin(), filterStock.end());
+		std::sort(riseUpStock.begin(), riseUpStock.end());
 		return;
 	}
 
 	std::set<std::string> filterStockSet;
 	int32_t index = -1;
-	while (index++ != filterStock.size() - 1)
+	while (index++ != riseUpStock.size() - 1)
 	{
-		filterStockSet.insert(filterStock[index]);
+		filterStockSet.insert(riseUpStock[index]);
 	}
 
 	while (filterStockSet.size() < 1500)
@@ -800,13 +800,27 @@ void StockMysql::readFilterStockFromRedis(const IntDateTime& date, std::vector<s
 		}
 	}
 
-	filterStock.clear();
+	riseUpStock.clear();
 	for (auto itStock = filterStockSet.begin(); itStock != filterStockSet.end(); ++itStock)
 	{
-		filterStock.push_back(*itStock);
+		riseUpStock.push_back(*itStock);
 	}
 
-	std::sort(filterStock.begin(), filterStock.end());
+	std::sort(riseUpStock.begin(), riseUpStock.end());
+}
+
+void StockMysql::readLiftBanStockFromRedis(const IntDateTime& date, std::vector<std::string>& liftBanStock)
+{
+	m_redis.selectDbIndex(5);
+	IntDateTime searchDay = date;
+	if (date < "2020-04-28" && date > "2020-01-28")
+	{
+		searchDay = std::string("2020-04-28");
+	}
+
+	liftBanStock = m_redis.getGroup(searchDay.dateToString() + "LiftBan")->toGroup();
+
+	std::sort(liftBanStock.begin(), liftBanStock.end());
 }
 
 void StockMysql::createMarketHead(const std::string& stock)
@@ -953,6 +967,28 @@ void StockMysql::filterRemove(std::vector<std::string>& destVec, const std::vect
 	}
 	destVec.clear();
 	for (auto itResultStock = set.begin(); itResultStock != set.end(); ++itResultStock)
+	{
+		destVec.push_back(*itResultStock);
+	}
+	std::sort(destVec.begin(), destVec.end());
+}
+
+void StockMysql::filterMerge(std::vector<std::string>& destVec, const std::vector<std::vector<std::string>>& srcVec)
+{
+	std::set<std::string> result;
+	int32_t groupIndex = -1;
+	while (groupIndex++ != srcVec.size() - 1)
+	{
+		const std::vector<std::string>& vecData = srcVec[groupIndex];
+		int32_t index = -1;
+		while (index++ != vecData.size() - 1)
+		{
+			const std::string& stock = vecData[index];
+			result.insert(stock);
+		}
+	}
+	destVec.clear();
+	for (auto itResultStock = result.begin(); itResultStock != result.end(); ++itResultStock)
 	{
 		destVec.push_back(*itResultStock);
 	}

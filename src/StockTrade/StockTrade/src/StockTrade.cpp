@@ -64,11 +64,10 @@ void StockTrade::init(const IntDateTime& beginTime,
 		}
 	}
 
-	StockStorage::instance().init(allStock, allNeedMoveDay, beginTime, endTime);
+	StockStorage::instance().init(beginTime, endTime, allNeedMoveDay, allStock);
+	StockStorage::instance().loadStrategy(strategyTypeSet);
 	StockStorage::instance().loadMarket();
 	StockStorage::instance().loadIndicator(allNeedLoad);
-	StockStorage::instance().loadFilterStock();
-	StockStorage::instance().loadStrategy(strategyTypeSet);
 	StockStorage::instance().loadStrategyInfo(strategyTypeSet);
 	StockStorage::instance().loadSolutionInfo(solutionTypeSet, strategyTypeSet);
 	StockStorage::instance().loadSolution(solutionTypeSet, vecChooseParam);
@@ -116,7 +115,7 @@ bool StockTrade::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock,
 	{
 		return false;
 	}
-	spSolution->setFilterStock(StockStorage::instance().filterStock(date));
+	spSolution->setFilterStock(StockStorage::instance().filterStock(useChooseParam->m_useType, date));
 	if (!spSolution->buy(buyStock, date))
 	{
 		return false;
@@ -135,7 +134,7 @@ bool StockTrade::sell(std::vector<std::pair<std::string, StockInfo>>& sellStock,
 	{
 		return false;
 	}
-	spSolution->setFilterStock(StockStorage::instance().filterStock(date));
+	spSolution->setFilterStock(nullptr);
 	return spSolution->sell(sellStock, date);
 }
 

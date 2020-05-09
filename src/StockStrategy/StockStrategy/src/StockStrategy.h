@@ -53,11 +53,17 @@ public:
 		const std::shared_ptr<StockMarket>& spMarket,
 		const std::map<std::string, std::shared_ptr<IndicatorManagerBase>>& spIndicator);
 
-	/** 获取策略需要的zhibiao结合
+	/** 获取策略需要的zhibiao集合
 	@param [in] strategyEnum 策略类型
-	@return 返回策略需要的zhibiao结合
+	@return 返回策略需要的zhibiao集合
 	*/
 	std::set<std::string> strategyNeedLoad(StrategyType strategyEnum);
+
+	/** 获取策略需要的gupiaochi
+	@param [in] strategyEnum 策略类型
+	@return 返回策略需要的gupiaochi
+	*/
+	StockLoadInfo strategyStockLoadInfo(StrategyType strategyEnum);
 
 	/** 获取策略需要提前的jiaoyiri天数
 	@param [in] strategyEnum 策略类型

@@ -24,6 +24,11 @@ struct StockStrategyAPI LineBackInfo : public StrategyInfo
 	*/
 	virtual std::set<std::string> needIndicator();
 
+	/** 需要的gupiaochi
+	@return 返回需要的gupiaochi
+	*/
+	virtual StockLoadInfo needStockLoadInfo();
+
 	/** 获取需要提前的jiaoyiri天数
 	@return 返回需要提前的jiaoyiri天数
 	*/

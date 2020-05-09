@@ -23,6 +23,15 @@ std::set<std::string> SarRiseBackThirtyLineInfo::needIndicator()
 	return result;
 }
 
+StockLoadInfo SarRiseBackThirtyLineInfo::needStockLoadInfo()
+{
+	StockLoadInfo result;
+	result.m_filterType = RISE_UP;
+	result.m_isDislodge688 = true;
+	result.m_isDislodgeLiftBan = true;
+	return result;
+}
+
 int32_t SarRiseBackThirtyLineInfo::needMoveDay()
 {
 	return 31 + 2;

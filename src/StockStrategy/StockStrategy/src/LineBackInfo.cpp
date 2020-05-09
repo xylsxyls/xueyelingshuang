@@ -23,6 +23,15 @@ std::set<std::string> LineBackInfo::needIndicator()
 	return result;
 }
 
+StockLoadInfo LineBackInfo::needStockLoadInfo()
+{
+	StockLoadInfo result;
+	result.m_filterType = RISE_UP;
+	result.m_isDislodge688 = true;
+	result.m_isDislodgeLiftBan = true;
+	return result;
+}
+
 int32_t LineBackInfo::needMoveDay()
 {
 	return 32 + 2;

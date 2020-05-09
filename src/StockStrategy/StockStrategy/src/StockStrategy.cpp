@@ -27,7 +27,7 @@ StockStrategy& StockStrategy::instance()
 
 void StockStrategy::strategyStock(const IntDateTime& date, std::vector<std::string>& filterStock)
 {
-	StockMysql::instance().readFilterStockFromRedis(date, filterStock);
+	StockMysql::instance().readRiseUpStockFromRedis(date, filterStock);
 	for (auto itFilterStock = filterStock.begin(); itFilterStock != filterStock.end();)
 	{
 		if (CStringManager::Left(*itFilterStock, 3) == "688")
@@ -130,6 +130,11 @@ std::shared_ptr<StrategyInfo> StockStrategy::strategyInfo(StrategyType strategyE
 std::set<std::string> StockStrategy::strategyNeedLoad(StrategyType strategyEnum)
 {
 	return strategyInfoNew(strategyEnum)->needIndicator();
+}
+
+StockLoadInfo StockStrategy::strategyStockLoadInfo(StrategyType strategyEnum)
+{
+	return strategyInfoNew(strategyEnum)->needStockLoadInfo();
 }
 
 int32_t StockStrategy::strategyNeedMoveDay(StrategyType strategyEnum)

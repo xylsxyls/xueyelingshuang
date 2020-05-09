@@ -13,7 +13,7 @@ m_stockClient(nullptr)
 
 void SyntheticalTestTask::DoTask()
 {
-	StockStorage::instance().init(m_allStock, 1, m_beginTime, m_endTime);
+	StockStorage::instance().init(m_beginTime, m_endTime, 1, m_allStock);
 	StockStorage::instance().loadMarket();
 	StockStorage::instance().load();
 	StockMarket runMarket = *StockStorage::instance().runMarket();

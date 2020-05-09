@@ -5,6 +5,17 @@
 #include <memory>
 #include "IntDateTime/IntDateTimeAPI.h"
 
+enum FilterType
+{
+	FILTER_INIT,
+
+	ALL_STOCK,
+
+	RISE_UP,
+
+	FALL_DOWN,
+};
+
 enum StrategyType
 {
 	STRATEGY_INIT,
@@ -37,6 +48,37 @@ enum SolutionType
 	INTEGRATED_STRATEGY,
 
 	OBSERVE_STRATEGY
+};
+
+struct StockTypeAPI StockLoadInfo
+{
+	//是否是自定义
+	bool m_isCustomize;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	//所有gupiao，在自定义下有效
+	std::vector<std::string> m_allStock;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	//是否yejizengzhang
+	FilterType m_filterType;
+	//是否去除jiejin
+	bool m_isDislodgeLiftBan;
+	//是否是kechuangban
+	bool m_isDislodge688;
+
+	/** 构造函数
+	*/
+	StockLoadInfo()
+	{
+		m_isCustomize = false;
+		m_filterType = FILTER_INIT;
+		m_isDislodgeLiftBan = false;
+		m_isDislodge688 = false;
+	}
 };
 
 struct StockTypeAPI StockInfo
@@ -130,7 +172,7 @@ class StockMarket;
 class StockTypeAPI StockStorageBase
 {
 public:
-	virtual std::vector<std::string>* filterStock(const IntDateTime& date) = 0;
+	virtual std::vector<std::string>* filterStock(StrategyType strategyType, const IntDateTime& date) = 0;
 
 	virtual std::shared_ptr<Solution> solution(SolutionType solutionType) = 0;
 

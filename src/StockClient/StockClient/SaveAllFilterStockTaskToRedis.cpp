@@ -12,7 +12,7 @@ m_stockClient(nullptr)
 
 void SaveAllFilterStockTaskToRedis::DoTask()
 {
-	StockMysql::instance().saveFilterStockToRedis(*m_beginTime, *m_endTime);
+	StockMysql::instance().saveAllFilterStockToRedis(*m_beginTime, *m_endTime);
 	emit StockClientLogicManager::instance().taskTip(QStringLiteral("更新redis过滤完成"));
 }
 

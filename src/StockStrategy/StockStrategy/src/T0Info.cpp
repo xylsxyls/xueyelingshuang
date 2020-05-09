@@ -21,6 +21,15 @@ std::set<std::string> T0Info::needIndicator()
 	return result;
 }
 
+StockLoadInfo T0Info::needStockLoadInfo()
+{
+	StockLoadInfo result;
+	result.m_filterType = RISE_UP;
+	result.m_isDislodge688 = true;
+	result.m_isDislodgeLiftBan = true;
+	return result;
+}
+
 int32_t T0Info::needMoveDay()
 {
 	return 2;

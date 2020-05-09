@@ -3,6 +3,8 @@
 #include "StockIndicator/StockIndicatorAPI.h"
 #include "StockStrategy/StockStrategyAPI.h"
 #include "StockSolution/StockSolutionAPI.h"
+#include "StockMysql/StockMysqlAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 StockStorage::StockStorage():
 m_moveDay(0),
@@ -17,10 +19,10 @@ StockStorage& StockStorage::instance()
 	return s_stockStorage;
 }
 
-void StockStorage::init(const std::vector<std::string>& allStock,
+void StockStorage::init(const IntDateTime& beginTime,
+	const IntDateTime& endTime,
 	int32_t moveDay,
-	const IntDateTime& beginTime,
-	const IntDateTime& endTime)
+	const std::vector<std::string>& allStock)
 {
 	m_moveDay = moveDay;
 	m_beginTime = beginTime;
@@ -28,10 +30,16 @@ void StockStorage::init(const std::vector<std::string>& allStock,
 	m_spRunMarket.reset(new StockMarket);
 	m_spRunMarket->loadFromRedis("000001", m_beginTime - 2 * 365 * 86400, m_endTime);
 	m_spRunMarket->load();
-	m_spRunMarket->setLastDate(m_beginTime);
 	m_moveBeginTime = m_spRunMarket->getDateBefore(m_moveDay);
-	m_allStock = allStock.empty() ? StockStrategy::instance().strategyAllStock(m_moveBeginTime, m_endTime) : allStock;
-	m_isCustomize = !allStock.empty();
+
+	if (!allStock.empty())
+	{
+		m_allStock = allStock;
+		m_isCustomize = true;
+		return;
+	}
+	m_isCustomize = false;
+	m_allStock.clear();
 }
 
 void StockStorage::loadMarket()
@@ -79,19 +87,62 @@ void StockStorage::loadIndicator(const std::set<std::string>& allNeedLoad)
 	}
 }
 
-void StockStorage::loadFilterStock()
+void StockStorage::loadFilterStock(StrategyType strategyType, const StockLoadInfo& stockLoadInfo)
 {
 	m_filterStock.clear();
 	if (m_isCustomize)
 	{
 		return;
 	}
-	IntDateTime currentTime = m_moveBeginTime;
+
+	std::vector<std::string> allStock = StockMysql::instance().allStock();
+	m_spRunMarket->setLastDate(m_moveBeginTime);
+	std::map<IntDateTime, std::vector<std::string>>& filterMap = m_filterStock[strategyType];
 	while (true)
 	{
-		StockStrategy::instance().strategyStock(currentTime, m_filterStock[currentTime]);
-		currentTime = currentTime + 86400;
-		if (currentTime > m_endTime)
+		IntDateTime date = m_spRunMarket->date();
+		if (date > m_endTime)
+		{
+			break;
+		}
+
+		std::vector<std::string>& dayVec = filterMap[date];
+		switch (stockLoadInfo.m_filterType)
+		{
+		case ALL_STOCK:
+		{
+			dayVec = allStock;
+		}
+		break;
+		case RISE_UP:
+		{
+			StockMysql::instance().readRiseUpStockFromRedis(date, dayVec);
+		}
+		break;
+		case FALL_DOWN:
+		{
+			dayVec = allStock;
+			std::vector<std::string> vecRiseUp;
+			StockMysql::instance().readRiseUpStockFromRedis(date, vecRiseUp);
+			StockMysql::filterRemove(dayVec, vecRiseUp);
+		}
+		break;
+		default:
+			break;
+		}
+		
+		if (stockLoadInfo.m_isDislodge688)
+		{
+			dislodge688(dayVec);
+		}
+		if (stockLoadInfo.m_isDislodgeLiftBan)
+		{
+			std::vector<std::string> liftBanStock;
+			StockMysql::instance().readLiftBanStockFromRedis(date, liftBanStock);
+			StockMysql::filterRemove(dayVec, liftBanStock);
+		}
+
+		if (!m_spRunMarket->next())
 		{
 			break;
 		}
@@ -144,14 +195,19 @@ void StockStorage::clear()
 	m_spRunMarket = nullptr;
 }
 
-std::vector<std::string>* StockStorage::filterStock(const IntDateTime& date)
+std::vector<std::string>* StockStorage::filterStock(StrategyType strategyType, const IntDateTime& date)
 {
 	if (m_isCustomize)
 	{
 		return &m_allStock;
 	}
-	auto itFilterStock = m_filterStock.find(date);
-	if (itFilterStock == m_filterStock.end())
+	auto itFilterMap = m_filterStock.find(strategyType);
+	if (itFilterMap == m_filterStock.end())
+	{
+		return nullptr;
+	}
+	auto itFilterStock = itFilterMap->second.find(date);
+	if (itFilterStock == itFilterMap->second.end())
 	{
 		return nullptr;
 	}
@@ -161,11 +217,30 @@ std::vector<std::string>* StockStorage::filterStock(const IntDateTime& date)
 void StockStorage::loadStrategy(const std::set<StrategyType>& allStrategyType)
 {
 	m_strategyMap.clear();
+	m_filterStock.clear();
 	for (auto itStrategyType = allStrategyType.begin(); itStrategyType != allStrategyType.end(); ++itStrategyType)
 	{
 		const StrategyType& strategyType = *itStrategyType;
 		m_strategyMap[strategyType] = StockStrategy::instance().strategy(strategyType);
+		loadFilterStock(strategyType, StockStrategy::instance().strategyStockLoadInfo(strategyType));
 	}
+	
+	std::vector<std::vector<std::string>> allStock;
+	allStock.push_back(std::vector<std::string>());
+	for (auto itFilterMap = m_filterStock.begin(); itFilterMap != m_filterStock.end(); ++itFilterMap)
+	{
+		const std::map<IntDateTime, std::vector<std::string>>& filterMap = itFilterMap->second;
+		for (auto itDayFilter = filterMap.begin(); itDayFilter != filterMap.end(); ++itDayFilter)
+		{
+			const std::vector<std::string>& filterStock = itDayFilter->second;
+			int32_t index = -1;
+			while (index++ != filterStock.size() - 1)
+			{
+				allStock.back().push_back(filterStock[index]);
+			}
+		}
+	}
+	StockMysql::filterMerge(m_allStock, allStock);
 }
 
 void StockStorage::loadSolutionInfo(const std::set<SolutionType>& allSolutionType, const std::set<StrategyType>& allStrategyType)
@@ -303,5 +378,19 @@ void StockStorage::load()
 		{
 			itIndicator->second->load();
 		}
+	}
+}
+
+void StockStorage::dislodge688(std::vector<std::string>& allStock)
+{
+	for (auto itStock = allStock.begin(); itStock != allStock.end();)
+	{
+		const std::string& stock = *itStock;
+		if (CStringManager::Left(stock, 3) == "688")
+		{
+			itStock = allStock.erase(itStock);
+			continue;
+		}
+		++itStock;
 	}
 }

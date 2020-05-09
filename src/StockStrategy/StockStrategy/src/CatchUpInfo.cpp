@@ -22,6 +22,15 @@ std::set<std::string> CatchUpInfo::needIndicator()
 	return result;
 }
 
+StockLoadInfo CatchUpInfo::needStockLoadInfo()
+{
+	StockLoadInfo result;
+	result.m_filterType = RISE_UP;
+	result.m_isDislodge688 = true;
+	result.m_isDislodgeLiftBan = true;
+	return result;
+}
+
 int32_t CatchUpInfo::needMoveDay()
 {
 	return 2 + 2;

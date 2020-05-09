@@ -79,8 +79,12 @@ void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam, con
 		m_useSolution = m_storage->solution(OBSERVE_STRATEGY);
 		std::shared_ptr<ObserveStrategy> observeSolution = std::dynamic_pointer_cast<ObserveStrategy>(m_useSolution);
 		std::shared_ptr<Solution> observeUseSolution = m_storage->solution(chooseParam.m_solutionType);
+		
 		observeUseSolution->setStockFund(m_solutionInfo->m_fund);
-		observeUseSolution->setFilterStock(m_storage->filterStock(m_storage->moveDay(date, observeSolution->calcDays())));
+
+		IntDateTime moveDate = m_storage->moveDay(date, observeSolution->calcDays());
+		observeUseSolution->setFilterStock(m_storage->filterStock(chooseParam.m_useType, moveDate));
+
 		observeUseSolution->setChooseParam(chooseParam);
 		observeSolution->setSolution(observeUseSolution);
 	}
@@ -88,7 +92,7 @@ void IntegratedStrategy::setEveryChooseParam(const ChooseParam& chooseParam, con
 	{
 		m_useSolution = m_storage->solution(chooseParam.m_solutionType);
 		m_useSolution->setStockFund(m_solutionInfo->m_fund);
-		m_useSolution->setFilterStock(m_solutionInfo->m_filterStock);
+		m_useSolution->setFilterStock(m_storage->filterStock(chooseParam.m_useType, date));
 		m_useSolution->setChooseParam(chooseParam);
 	}
 	m_solutionInfo->m_chooseParam = chooseParam;

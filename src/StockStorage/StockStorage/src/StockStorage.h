@@ -26,18 +26,16 @@ public:
 	static StockStorage& instance();
 
 public:
-	void init(const std::vector<std::string>& allStock,
+	void init(const IntDateTime& beginTime,
+		const IntDateTime& endTime,
 		int32_t moveDay,
-		const IntDateTime& beginTime,
-		const IntDateTime& endTime);
+		const std::vector<std::string>& allStock);
+
+	void loadStrategy(const std::set<StrategyType>& allStrategyType);
 
 	void loadMarket();
 
 	void loadIndicator(const std::set<std::string>& allNeedLoad);
-
-	void loadFilterStock();
-
-	void loadStrategy(const std::set<StrategyType>& allStrategyType);
 
 	void loadStrategyInfo(const std::set<StrategyType>& allStrategyType);
 
@@ -47,7 +45,7 @@ public:
 
 	void clear();
 
-	std::vector<std::string>* filterStock(const IntDateTime& date);
+	std::vector<std::string>* filterStock(StrategyType strategyType, const IntDateTime& date);
 
 	std::shared_ptr<Solution> solution(SolutionType solutionType);
 
@@ -64,6 +62,11 @@ public:
 	IntDateTime moveDay(const IntDateTime& date, int32_t day, const std::shared_ptr<StockMarket>& runMarket = nullptr);
 
 	void load();
+
+protected:
+	void dislodge688(std::vector<std::string>& allStock);
+
+	void loadFilterStock(StrategyType strategyType, const StockLoadInfo& stockLoadInfo);
 
 protected:
 #ifdef _MSC_VER
@@ -86,7 +89,7 @@ protected:
 	IntDateTime m_beginTime;
 	IntDateTime m_endTime;
 	IntDateTime m_moveBeginTime;
-	std::map<IntDateTime, std::vector<std::string>> m_filterStock;
+	std::map<StrategyType, std::map<IntDateTime, std::vector<std::string>>> m_filterStock;
 	std::shared_ptr<StockMarket> m_spRunMarket;
 #ifdef _MSC_VER
 #pragma warning(pop)
