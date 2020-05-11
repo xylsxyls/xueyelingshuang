@@ -30,6 +30,7 @@ void StockStorage::init(const IntDateTime& beginTime,
 	m_spRunMarket.reset(new StockMarket);
 	m_spRunMarket->loadFromRedis("000001", m_beginTime - 2 * 365 * 86400, m_endTime);
 	m_spRunMarket->load();
+	m_spRunMarket->setNewDate(m_beginTime);
 	m_moveBeginTime = m_spRunMarket->getDateBefore(m_moveDay);
 
 	if (!allStock.empty())

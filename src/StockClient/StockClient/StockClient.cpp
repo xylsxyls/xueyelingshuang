@@ -1026,13 +1026,13 @@ void StockClient::onSyntheticalTestButtonClicked()
 	InputDialogParam inputDialogParam;
 	InputEx line;
 	line.m_tip = QStringLiteral("开始日期");
-	line.m_defaultText = "2019-10-08";
+	line.m_defaultText = IntDateTime().dateToString().c_str();
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = IntDateTime().dateToString().c_str();
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("开始数值");
-	line.m_defaultText = "2913.57";
+	line.m_defaultText = "2905.19";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	inputDialogParam.m_editTip = QStringLiteral("请输入需要选择参数：");
 	inputDialogParam.m_parent = windowHandle();

@@ -21,6 +21,7 @@ void SyntheticalTestTask::DoTask()
 	BigNumber profit = 1;
 	BigNumber profitValue = m_beginValue;
 	runMarket.setNewDate(m_beginTime);
+	runMarket.previous();
 	while (runMarket.next())
 	{
 		IntDateTime currentTime = runMarket.date();
