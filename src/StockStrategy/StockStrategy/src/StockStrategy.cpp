@@ -11,6 +11,8 @@
 #include "CatchUpInfo.h"
 #include "LineBackInfo.h"
 #include "SarRiseBackThirtyLineInfo.h"
+#include "Reconstruction.h"
+#include "ReconstructionInfo.h"
 #include "T0.h"
 #include "T0Info.h"
 
@@ -53,6 +55,11 @@ std::shared_ptr<Strategy> StockStrategy::strategy(StrategyType strategyEnum)
 	case LINE_BACK:
 	{
 		strategy.reset(new LineBack);
+	}
+	break;
+	case RECONSTRUCTION:
+	{
+		strategy.reset(new Reconstruction);
 	}
 	break;
 	case T_ADD_0:
@@ -124,6 +131,11 @@ std::shared_ptr<StrategyInfo> StockStrategy::strategyInfoNew(StrategyType strate
 	case LINE_BACK:
 	{
 		spStrategyInfo.reset(new LineBackInfo);
+	}
+	break;
+	case RECONSTRUCTION:
+	{
+		spStrategyInfo.reset(new ReconstructionInfo);
 	}
 	break;
 	case T_ADD_0:

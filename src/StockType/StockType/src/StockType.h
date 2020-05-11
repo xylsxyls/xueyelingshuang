@@ -30,6 +30,8 @@ enum StrategyType
 
 	LINE_BACK,
 
+	RECONSTRUCTION,
+
 	STRATEGY_TYPE_SIZE,
 
 	T_ADD_0

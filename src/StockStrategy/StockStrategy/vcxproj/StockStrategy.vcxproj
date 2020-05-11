@@ -23,6 +23,8 @@
     <ClInclude Include="..\src\CatchUpInfo.h" />
     <ClInclude Include="..\src\LineBack.h" />
     <ClInclude Include="..\src\LineBackInfo.h" />
+    <ClInclude Include="..\src\Reconstruction.h" />
+    <ClInclude Include="..\src\ReconstructionInfo.h" />
     <ClInclude Include="..\src\SarRiseBack.h" />
     <ClInclude Include="..\src\SarRiseBackCount.h" />
     <ClInclude Include="..\src\SarRiseBackInfo.h" />
@@ -41,6 +43,8 @@
     <ClCompile Include="..\src\CatchUpInfo.cpp" />
     <ClCompile Include="..\src\LineBack.cpp" />
     <ClCompile Include="..\src\LineBackInfo.cpp" />
+    <ClCompile Include="..\src\Reconstruction.cpp" />
+    <ClCompile Include="..\src\ReconstructionInfo.cpp" />
     <ClCompile Include="..\src\SarRiseBack.cpp" />
     <ClCompile Include="..\src\SarRiseBackCount.cpp" />
     <ClCompile Include="..\src\SarRiseBackInfo.cpp" />

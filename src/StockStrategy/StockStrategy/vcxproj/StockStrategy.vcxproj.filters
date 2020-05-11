@@ -66,6 +66,12 @@
     <ClInclude Include="..\src\T0Info.h">
       <Filter>Strategy</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\ReconstructionInfo.h">
+      <Filter>Strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Reconstruction.h">
+      <Filter>Strategy</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockStrategy.cpp">
@@ -105,6 +111,12 @@
       <Filter>Strategy</Filter>
     </ClCompile>
     <ClCompile Include="..\src\T0Info.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Reconstruction.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ReconstructionInfo.cpp">
       <Filter>Strategy</Filter>
     </ClCompile>
   </ItemGroup>
