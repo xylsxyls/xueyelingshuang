@@ -13,6 +13,8 @@
 #include "SarRiseBackThirtyLineInfo.h"
 #include "Reconstruction.h"
 #include "ReconstructionInfo.h"
+#include "Upward.h"
+#include "UpwardInfo.h"
 #include "T0.h"
 #include "T0Info.h"
 
@@ -60,6 +62,11 @@ std::shared_ptr<Strategy> StockStrategy::strategy(StrategyType strategyEnum)
 	case RECONSTRUCTION:
 	{
 		strategy.reset(new Reconstruction);
+	}
+	break;
+	case UPWARD:
+	{
+		strategy.reset(new Upward);
 	}
 	break;
 	case T_ADD_0:
@@ -136,6 +143,11 @@ std::shared_ptr<StrategyInfo> StockStrategy::strategyInfoNew(StrategyType strate
 	case RECONSTRUCTION:
 	{
 		spStrategyInfo.reset(new ReconstructionInfo);
+	}
+	break;
+	case UPWARD:
+	{
+		spStrategyInfo.reset(new UpwardInfo);
 	}
 	break;
 	case T_ADD_0:

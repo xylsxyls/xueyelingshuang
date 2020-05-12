@@ -90,7 +90,6 @@ void StockStorage::loadIndicator(const std::set<std::string>& allNeedLoad)
 
 void StockStorage::loadFilterStock(StrategyType strategyType, const StockLoadInfo& stockLoadInfo)
 {
-	m_filterStock.clear();
 	if (m_isCustomize)
 	{
 		return;

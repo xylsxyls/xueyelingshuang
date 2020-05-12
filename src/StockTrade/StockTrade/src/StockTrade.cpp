@@ -115,7 +115,8 @@ bool StockTrade::buy(std::vector<std::pair<std::string, StockInfo>>& buyStock,
 	{
 		return false;
 	}
-	spSolution->setFilterStock(StockStorage::instance().filterStock(useChooseParam->m_useType, date));
+	//spSolution->setFilterStock(StockStorage::instance().filterStock(useChooseParam->m_useType, date));
+	spSolution->setFilterStock(nullptr);
 	if (!spSolution->buy(buyStock, date))
 	{
 		return false;

@@ -72,6 +72,12 @@
     <ClInclude Include="..\src\Reconstruction.h">
       <Filter>Strategy</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\UpwardInfo.h">
+      <Filter>Strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Upward.h">
+      <Filter>Strategy</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockStrategy.cpp">
@@ -117,6 +123,12 @@
       <Filter>Strategy</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ReconstructionInfo.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Upward.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UpwardInfo.cpp">
       <Filter>Strategy</Filter>
     </ClCompile>
   </ItemGroup>
