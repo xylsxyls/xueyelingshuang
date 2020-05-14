@@ -203,6 +203,7 @@
     <ClCompile Include="StockClient.cpp" />
     <ClCompile Include="StockClientLogicManager.cpp" />
     <ClCompile Include="SyntheticalTestTask.cpp" />
+    <ClCompile Include="TipTask.cpp" />
     <ClCompile Include="TodayMarketFileToMemoryTask.cpp" />
     <ClCompile Include="UpdateTodayIndicatorTask.cpp" />
     <ClCompile Include="UpdateTodayMarketTask.cpp" />
@@ -326,6 +327,7 @@
     <ClInclude Include="SaveTodayMarketFileTask.h" />
     <ClInclude Include="StockParam.h" />
     <ClInclude Include="SyntheticalTestTask.h" />
+    <ClInclude Include="TipTask.h" />
     <ClInclude Include="TodayMarketFileToMemoryTask.h" />
     <ClInclude Include="UpdateTodayIndicatorTask.h" />
     <ClInclude Include="UpdateTodayMarketTask.h" />

@@ -225,22 +225,25 @@ void StockStorage::loadStrategy(const std::set<StrategyType>& allStrategyType)
 		loadFilterStock(strategyType, StockStrategy::instance().strategyStockLoadInfo(strategyType));
 	}
 	
-	std::vector<std::vector<std::string>> allStock;
-	allStock.push_back(std::vector<std::string>());
-	for (auto itFilterMap = m_filterStock.begin(); itFilterMap != m_filterStock.end(); ++itFilterMap)
+	if (!m_isCustomize)
 	{
-		const std::map<IntDateTime, std::vector<std::string>>& filterMap = itFilterMap->second;
-		for (auto itDayFilter = filterMap.begin(); itDayFilter != filterMap.end(); ++itDayFilter)
+		std::vector<std::vector<std::string>> allStock;
+		allStock.push_back(std::vector<std::string>());
+		for (auto itFilterMap = m_filterStock.begin(); itFilterMap != m_filterStock.end(); ++itFilterMap)
 		{
-			const std::vector<std::string>& filterStock = itDayFilter->second;
-			int32_t index = -1;
-			while (index++ != filterStock.size() - 1)
+			const std::map<IntDateTime, std::vector<std::string>>& filterMap = itFilterMap->second;
+			for (auto itDayFilter = filterMap.begin(); itDayFilter != filterMap.end(); ++itDayFilter)
 			{
-				allStock.back().push_back(filterStock[index]);
+				const std::vector<std::string>& filterStock = itDayFilter->second;
+				int32_t index = -1;
+				while (index++ != filterStock.size() - 1)
+				{
+					allStock.back().push_back(filterStock[index]);
+				}
 			}
 		}
+		StockMysql::filterMerge(m_allStock, allStock);
 	}
-	StockMysql::filterMerge(m_allStock, allStock);
 }
 
 void StockStorage::loadSolutionInfo(const std::set<SolutionType>& allSolutionType, const std::set<StrategyType>& allStrategyType)

@@ -43,8 +43,6 @@ void StockRankRetest::init(SolutionType solutionType,
 {
 	m_solutionType = solutionType;
 	m_vecChooseParam = vecChooseParam;
-	m_beginTime = beginTime;
-	m_endTime = endTime;
 	m_initialFund = initialFund;
 	m_showStockLog = showStockLog;
 	if (threadCount == 0)
@@ -59,12 +57,16 @@ void StockRankRetest::init(SolutionType solutionType,
 
 	m_fund.add(m_initialFund);
 
-	m_trade.init(m_beginTime,
-		m_endTime,
+	m_trade.init(beginTime,
+		endTime,
 		m_solutionType,
 		m_vecChooseParam);
 
 	m_runMarket = *m_trade.runMarket();
+	m_runMarket.setNewDate(beginTime);
+	m_beginTime = m_runMarket.date();
+	m_runMarket.setLastDate(endTime);
+	m_endTime = m_runMarket.date();
 }
 
 void StockRankRetest::load()

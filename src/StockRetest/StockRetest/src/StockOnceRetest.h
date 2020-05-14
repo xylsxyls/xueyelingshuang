@@ -48,4 +48,5 @@ private:
 	BigNumber m_initialFund;
 	BigNumber m_allStockCount;
 	StockTrade m_trade;
+	StockMarket m_runMarket;
 };

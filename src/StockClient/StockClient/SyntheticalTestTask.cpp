@@ -13,6 +13,10 @@ m_stockClient(nullptr)
 
 void SyntheticalTestTask::DoTask()
 {
+	if (m_beginTime > m_endTime)
+	{
+		return;
+	}
 	StockStorage::instance().init(m_beginTime, m_endTime, 1, m_allStock);
 	StockStorage::instance().loadMarket();
 	StockStorage::instance().load();

@@ -12,8 +12,14 @@ m_stockClient(nullptr)
 
 void RealTestTask::DoTask()
 {
+	if (m_beginTime > m_endTime)
+	{
+		return;
+	}
 	StockRealRetest stockRealRetest;
-	stockRealRetest.init(m_solutionType, m_vecChooseParam, m_beginTime, m_endTime, std::vector<std::string>(), 200000, true);
+	std::vector<std::string> allStock;
+	//allStock.push_back("300037");
+	stockRealRetest.init(m_solutionType, m_vecChooseParam, m_beginTime, m_endTime, allStock, 200000, true);
 	stockRealRetest.load();
 	stockRealRetest.run();
 }

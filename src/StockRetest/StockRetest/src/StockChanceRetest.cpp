@@ -47,8 +47,6 @@ void StockChanceRetest::init(SolutionType solutionType,
 {
 	m_solutionType = solutionType;
 	m_vecChooseParam = vecChooseParam;
-	m_beginTime = beginTime;
-	m_endTime = endTime;
 	m_maxHoldDays = maxHoldDays;
 	m_terminusNum = terminusNum;
 	m_initialFund = initialFund;
@@ -63,12 +61,16 @@ void StockChanceRetest::init(SolutionType solutionType,
 	}
 	m_resultThreadId = CTaskThreadManager::Instance().Init();
 
-	m_trade.init(m_beginTime,
-		m_endTime,
+	m_trade.init(beginTime,
+		endTime,
 		m_solutionType,
 		m_vecChooseParam);
 
 	m_runMarket = *m_trade.runMarket();
+	m_runMarket.setNewDate(beginTime);
+	m_beginTime = m_runMarket.date();
+	m_runMarket.setLastDate(endTime);
+	m_endTime = m_runMarket.date();
 }
 
 void StockChanceRetest::load()

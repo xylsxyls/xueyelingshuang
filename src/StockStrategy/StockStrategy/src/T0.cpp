@@ -24,6 +24,7 @@ bool T0::buy(const IntDateTime& date, StockInfo& stockInfo)
 		return false;
 	}
 	BigNumber open = spMarket->day()->open();
+	BigNumber high = spMarket->day()->high();
 	BigNumber low = spMarket->day()->low();
 	BigNumber close = spMarket->day()->close();
 
@@ -32,7 +33,7 @@ bool T0::buy(const IntDateTime& date, StockInfo& stockInfo)
 	{
 		return false;
 	}
-	BigNumber buyPrice = (open * "0.995").toPrec(2);
+	BigNumber buyPrice = (high * "0.995").toPrec(2);
 	stockInfo.m_price = (buyPrice >= low ? buyPrice : close);
 	stockInfo.m_percent = 100;
 	stockInfo.m_score = 100;
@@ -51,8 +52,8 @@ bool T0::sell(const IntDateTime& date, StockInfo& stockInfo)
 		return false;
 	}
 
-	BigNumber open = spMarket->day()->open();
-	stockInfo.m_price = open;
+	BigNumber high = spMarket->day()->high();
+	stockInfo.m_price = high;
 	stockInfo.m_percent = 100;
 	stockInfo.m_score = 100;
 	return true;

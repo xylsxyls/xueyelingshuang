@@ -13,6 +13,10 @@ m_stockClient(nullptr)
 
 void ChanceTestTask::DoTask()
 {
+	if (m_beginTime > m_endTime)
+	{
+		return;
+	}
 	StockChanceRetest stockChanceRetest;
 	stockChanceRetest.init(m_solutionType, m_vecChooseParam, m_beginTime, m_endTime, m_maxDay);
 	stockChanceRetest.load();

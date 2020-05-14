@@ -149,6 +149,9 @@
     <ClCompile Include="SyntheticalTestTask.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="TipTask.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="StockClient.qrc">
@@ -253,6 +256,9 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="SyntheticalTestTask.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="TipTask.h">
       <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>

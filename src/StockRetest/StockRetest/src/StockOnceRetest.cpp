@@ -42,8 +42,6 @@ void StockOnceRetest::init(SolutionType solutionType,
 {
 	m_solutionType = solutionType;
 	m_vecChooseParam = vecChooseParam;
-	m_beginTime = beginTime;
-	m_endTime = endTime;
 	m_initialFund = initialFund;
 	m_showStockLog = showStockLog;
 	if (threadCount == 0)
@@ -56,10 +54,16 @@ void StockOnceRetest::init(SolutionType solutionType,
 	}
 	m_resultThreadId = CTaskThreadManager::Instance().Init();
 
-	m_trade.init(m_beginTime,
-		m_endTime,
+	m_trade.init(beginTime,
+		endTime,
 		m_solutionType,
 		m_vecChooseParam);
+
+	m_runMarket = *m_trade.runMarket();
+	m_runMarket.setNewDate(beginTime);
+	m_beginTime = m_runMarket.date();
+	m_runMarket.setLastDate(endTime);
+	m_endTime = m_runMarket.date();
 }
 
 void StockOnceRetest::load()
@@ -77,31 +81,26 @@ void StockOnceRetest::run()
 	BigNumber allFund = 0;
 
 	IntDateTime calcTime = m_beginTime;
-	IntDateTime calcEndDate = m_endTime - 4 * 86400;
-	std::shared_ptr<StockMarket> spRunMarket = m_trade.market("600206");
-	while (true)
+	m_runMarket.setDate(m_endTime);
+	int32_t count = 4;
+	while (count-- != 0)
 	{
-		if (spRunMarket->getMemoryDays(calcEndDate, m_endTime) == 5)
-		{
-			break;
-		}
-		calcEndDate = calcEndDate - 86400;
+		m_runMarket.previous();
 	}
 
-	if (calcEndDate < m_beginTime)
+	IntDateTime calcEndDate = m_runMarket.date();
+
+	if (calcEndDate <= m_beginTime)
 	{
 		return;
 	}
+
+	m_runMarket.setDate(m_beginTime);
+	StockMarket runMarket = m_runMarket;
 	
 	int32_t day = 0;
-	do 
+	do
 	{
-		if (!spRunMarket->setDate(calcTime))
-		{
-			calcTime = calcTime + 86400;
-			continue;
-		}
-
 		StockFund stockFund;
 		stockFund.add(m_initialFund);
 
@@ -112,6 +111,7 @@ void StockOnceRetest::run()
 		m_trade.setTradeParam(DISPOSABLE_STRATEGY, tradeParam);
 
 		IntDateTime currentTime = calcTime;
+		runMarket.setDate(currentTime);
 		do
 		{
 			std::vector<std::pair<std::string, StockInfo>> sellStock;
@@ -154,7 +154,8 @@ void StockOnceRetest::run()
 
 			//printProfit(&stockFund, currentTime);
 
-			currentTime = currentTime + 86400;
+			runMarket.next();
+			currentTime = runMarket.date();
 		} while (currentTime <= m_endTime);
 
 		if (m_showStockLog)
@@ -172,7 +173,11 @@ void StockOnceRetest::run()
 			allFund = allFund + currentAllFund;
 			++day;
 		}
-		calcTime = calcTime + 86400;
+		if (!m_runMarket.next())
+		{
+			break;
+		}
+		calcTime = m_runMarket.date();
 	} while (calcTime <= calcEndDate);
 
 	BigNumber onceAllFund = allFund / BigNumber(day).toPrec(6).zero();

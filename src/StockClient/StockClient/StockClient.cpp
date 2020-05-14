@@ -41,6 +41,9 @@
 #include "MinimizeTask.h"
 #include "StockParam.h"
 #include "SyntheticalTestTask.h"
+#include "TipTask.h"
+
+#define TipSend(str) CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(std::shared_ptr<TipTask>(new TipTask(str)))
 
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
@@ -71,6 +74,7 @@ StockClient::StockClient(QWidget* parent)
 	m_rankTestButton(nullptr),
 	m_chanceTestButton(nullptr),
 	m_syntheticalTestButton(nullptr),
+	m_arithmeticsTestButton(nullptr),
 	m_everydaySolutionButton(nullptr),
 	m_everydayHelperButton(nullptr),
 	m_everydayTaskButton(nullptr)
@@ -100,6 +104,7 @@ StockClient::StockClient(QWidget* parent)
 	m_rankTestButton = new COriginalButton(this);
 	m_chanceTestButton = new COriginalButton(this);
 	m_syntheticalTestButton = new COriginalButton(this);
+	m_arithmeticsTestButton = new COriginalButton(this);
 	m_everydaySolutionButton = new COriginalButton(this);
 	m_everydayHelperButton = new COriginalButton(this);
 	m_everydayTaskButton = new COriginalButton(this);
@@ -238,6 +243,10 @@ void StockClient::init()
 	m_syntheticalTestButton->setText(QStringLiteral("综合模拟测试"));
 	QObject::connect(m_syntheticalTestButton, &COriginalButton::clicked, this, &StockClient::onSyntheticalTestButtonClicked);
 
+	m_arithmeticsTestButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_arithmeticsTestButton->setText(QStringLiteral("运算测试"));
+	QObject::connect(m_arithmeticsTestButton, &COriginalButton::clicked, this, &StockClient::onArithmeticsTestButtonClicked);
+
 	m_everydaySolutionButton->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	m_everydaySolutionButton->setText(QStringLiteral("每日方案"));
 	QObject::connect(m_everydaySolutionButton, &COriginalButton::clicked, this, &StockClient::onEverydaySolutionButtonClicked);
@@ -315,6 +324,7 @@ void StockClient::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_rankTestButton);
 	vecButton.push_back(m_chanceTestButton);
 	vecButton.push_back(m_syntheticalTestButton);
+	vecButton.push_back(m_arithmeticsTestButton);
 	vecButton.push_back(m_everydaySolutionButton);
 	vecButton.push_back(m_everydayHelperButton);
 	vecButton.push_back(m_everydayTaskButton);
@@ -882,7 +892,7 @@ void StockClient::onRealTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2020-05-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -910,7 +920,7 @@ void StockClient::onOnceTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2020-05-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -938,7 +948,7 @@ void StockClient::onDaysTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2020-05-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -967,7 +977,7 @@ void StockClient::onRankTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2020-05-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -996,7 +1006,7 @@ void StockClient::onChanceTestButtonClicked()
 	line.m_defaultText = "2019-10-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("结束日期");
-	line.m_defaultText = "2020-02-28";
+	line.m_defaultText = "2020-05-08";
 	inputDialogParam.m_vecInputEx.push_back(line);
 	line.m_tip = QStringLiteral("2和以上");
 	line.m_defaultText = "2";
@@ -1049,6 +1059,181 @@ void StockClient::onSyntheticalTestButtonClicked()
 	//std::vector<std::string> allStock = StockStrategy::instance().strategyAllStock(beginTime, endTime);
 	spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
+}
+
+void StockClient::onArithmeticsTestButtonClicked()
+{
+	TipSend("real");
+	{
+		IntDateTime beginTime = "2019-10-08";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "2";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("real2");
+	{
+		IntDateTime beginTime = "2019-10-08";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "3";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("real3");
+	{
+		IntDateTime beginTime = "2019-10-08";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "5";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("real4");
+	{
+		IntDateTime beginTime = "2019-10-08";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "3,2.1";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("real5");
+	{
+		IntDateTime beginTime = "2019-10-08";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "3,5,2.1";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("real6");
+	{
+		IntDateTime beginTime = "2019-10-05";
+		IntDateTime endTime = "2019-11-17";
+		std::string allStrategyType = "2";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("real7");
+	{
+		IntDateTime beginTime = "2019-10-05";
+		IntDateTime endTime = "2019-11-17";
+		std::string allStrategyType = "5";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("real8");
+	{
+		IntDateTime beginTime = "2019-01-01";
+		IntDateTime endTime = "2019-12-31";
+		std::string allStrategyType = "5";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("real9");
+	{
+		IntDateTime beginTime = "2020-04-28";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "3,2.1";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("real10");
+	{
+		IntDateTime beginTime = "2019-10-05";
+		IntDateTime endTime = "2019-11-17";
+		std::string allStrategyType = "2.1";
+		std::shared_ptr<RealTestTask> spRealTestTask(new RealTestTask);
+		spRealTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
+	}
+	
+	TipSend("once");
+	{
+		IntDateTime beginTime = "2019-10-08";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "2";
+		std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
+		spOnceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, DISPOSABLE_STRATEGY), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
+	}
+	
+	TipSend("once2");
+	{
+		IntDateTime beginTime = "2019-10-08";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "3";
+		std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
+		spOnceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, DISPOSABLE_STRATEGY), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
+	}
+	
+	TipSend("once3");
+	{
+		IntDateTime beginTime = "2019-10-08";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "5";
+		std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
+		spOnceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, DISPOSABLE_STRATEGY), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
+	}
+
+	TipSend("once4");
+	{
+		IntDateTime beginTime = "2019-10-05";
+		IntDateTime endTime = "2019-11-17";
+		std::string allStrategyType = "2";
+		std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
+		spOnceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, DISPOSABLE_STRATEGY), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
+	}
+
+	TipSend("once5");
+	{
+		IntDateTime beginTime = "2019-10-05";
+		IntDateTime endTime = "2019-11-17";
+		std::string allStrategyType = "5";
+		std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
+		spOnceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, DISPOSABLE_STRATEGY), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
+	}
+
+	TipSend("once6");
+	{
+		IntDateTime beginTime = "2019-01-01";
+		IntDateTime endTime = "2019-12-31";
+		std::string allStrategyType = "5";
+		std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
+		spOnceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, DISPOSABLE_STRATEGY), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
+	}
+
+	TipSend("once7");
+	{
+		IntDateTime beginTime = "2019-10-05";
+		IntDateTime endTime = "2019-11-17";
+		std::string allStrategyType = "2.1";
+		std::shared_ptr<OnceTestTask> spOnceTestTask(new OnceTestTask);
+		spOnceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, DISPOSABLE_STRATEGY), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
+	}
+
+	TipSend("Arithmetics End");
 }
 
 void StockClient::onEverydaySolutionButtonClicked()

@@ -56,6 +56,7 @@ private slots:
 	void onRankTestButtonClicked();
 	void onChanceTestButtonClicked();
 	void onSyntheticalTestButtonClicked();
+	void onArithmeticsTestButtonClicked();
 	void onEverydaySolutionButtonClicked();
 	void onEverydayHelperButtonClicked();
 	void onEverydayTaskButtonClicked();
@@ -140,6 +141,8 @@ private:
 	COriginalButton* m_chanceTestButton;
 	//综合模拟测试
 	COriginalButton* m_syntheticalTestButton;
+	//运算测试
+	COriginalButton* m_arithmeticsTestButton;
 	//每日策略
 	COriginalButton* m_everydaySolutionButton;
 	//每日帮助

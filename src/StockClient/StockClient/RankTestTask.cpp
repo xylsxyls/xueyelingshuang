@@ -12,6 +12,10 @@ m_stockClient(nullptr)
 
 void RankTestTask::DoTask()
 {
+	if (m_beginTime > m_endTime)
+	{
+		return;
+	}
 	StockRankRetest stockRankRetest;
 	stockRankRetest.init(m_solutionType, m_vecChooseParam, m_beginTime, m_endTime);
 	stockRankRetest.load();

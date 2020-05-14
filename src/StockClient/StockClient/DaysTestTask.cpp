@@ -12,6 +12,10 @@ m_stockClient(nullptr)
 
 void DaysTestTask::DoTask()
 {
+	if (m_beginTime > m_endTime)
+	{
+		return;
+	}
 	StockDaysRetest stockDaysRetest;
 	stockDaysRetest.init(m_solutionType, m_vecChooseParam, m_beginTime, m_endTime);
 	stockDaysRetest.load();
