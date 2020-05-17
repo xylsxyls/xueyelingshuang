@@ -28,6 +28,25 @@ void ChooseStockTask::DoTask()
 	//	StockMysql::instance().readFilterStockFromRedis(m_date, m_allStock);
 	//}
 
+	std::string sendString = "%s, strategy type = %d";
+	if (m_vecChooseParam[0].m_isObserve)
+	{
+		sendString += ".1";
+	}
+	RCSend(sendString.c_str(), m_date.dateToString().c_str(), (int32_t)m_vecChooseParam[0].m_useType);
+
+	std::map<std::string, std::string> stockNameMap = StockMysql::instance().stockNameMap();
+	
+	StockTrade stockTrade;
+	stockTrade.init(m_date, m_date, m_solutionType, m_vecChooseParam);
+	stockTrade.load();
+
+	if (!stockTrade.runMarket()->setDate(m_date))
+	{
+		emit StockClientLogicManager::instance().taskTip(QStringLiteral("ΩÒ»’–›œ¢"));
+		return;
+	}
+
 	StockFund* stockFund = nullptr;
 	if (m_stockFund == nullptr)
 	{
@@ -39,17 +58,9 @@ void ChooseStockTask::DoTask()
 		stockFund = m_stockFund;
 	}
 
-	std::map<std::string, std::string> stockNameMap = StockMysql::instance().stockNameMap();
-	
-	StockTrade stockTrade;
-	stockTrade.init(m_date, m_date, m_solutionType, m_vecChooseParam);
-	stockTrade.load();
-
 	TradeParam tradeParam;
 	tradeParam.m_stockFund = stockFund;
 	stockTrade.setTradeParam(m_solutionType, tradeParam);
-
-	RCSend("%s, strategy type = %d", m_date.dateToString().c_str(), (int32_t)m_vecChooseParam[0].m_useType);
 
 	std::vector<std::pair<std::string, StockInfo>> sellStock;
 	stockTrade.sell(sellStock, m_date, m_solutionType);
