@@ -1054,6 +1054,8 @@ void StockClient::onSyntheticalTestButtonClicked()
 
 void StockClient::onArithmeticsTestButtonClicked()
 {
+	std::vector<std::string> allStock = StockMysql::instance().allStock();
+
 	TipSend("real");
 	{
 		IntDateTime beginTime = "2019-10-08";
@@ -1310,7 +1312,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 
 	TipSend("day");
 	{
-		IntDateTime beginTime = "2020-04-28";
+		IntDateTime beginTime = "2020-03-28";
 		IntDateTime endTime = "2020-05-08";
 		std::string allStrategyType = "2.1";
 
@@ -1344,7 +1346,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 	TipSend("day4");
 	{
 		IntDateTime beginTime = "2020-01-02";
-		IntDateTime endTime = "2020-01-22";
+		IntDateTime endTime = "2020-05-08";
 		std::string allStrategyType = "3";
 
 		std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
@@ -1355,7 +1357,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 	TipSend("day5");
 	{
 		IntDateTime beginTime = "2020-01-02";
-		IntDateTime endTime = "2020-01-22";
+		IntDateTime endTime = "2020-05-08";
 		std::string allStrategyType = "3,2.1";
 
 		std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
@@ -1366,7 +1368,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 	TipSend("day6");
 	{
 		IntDateTime beginTime = "2020-01-01";
-		IntDateTime endTime = "2020-01-25";
+		IntDateTime endTime = "2020-05-02";
 		std::string allStrategyType = "2.1,5,3";
 
 		std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
@@ -1376,7 +1378,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 
 	TipSend("rank");
 	{
-		IntDateTime beginTime = "2020-04-28";
+		IntDateTime beginTime = "2020-03-28";
 		IntDateTime endTime = "2020-05-08";
 		std::string allStrategyType = "2.1";
 
@@ -1399,7 +1401,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 	TipSend("rank3");
 	{
 		IntDateTime beginTime = "2020-01-02";
-		IntDateTime endTime = "2020-01-22";
+		IntDateTime endTime = "2020-05-08";
 		std::string allStrategyType = "2";
 
 		std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
@@ -1410,7 +1412,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 	TipSend("rank4");
 	{
 		IntDateTime beginTime = "2020-01-02";
-		IntDateTime endTime = "2020-01-22";
+		IntDateTime endTime = "2020-05-08";
 		std::string allStrategyType = "3";
 
 		std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
@@ -1484,7 +1486,6 @@ void StockClient::onArithmeticsTestButtonClicked()
 		IntDateTime endTime = "2020-05-08";
 		BigNumber beginValue = "3050.12";
 		std::shared_ptr<SyntheticalTestTask> spSyntheticalTestTask(new SyntheticalTestTask);
-		std::vector<std::string> allStock = StockMysql::instance().allStock();
 		spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
@@ -1495,7 +1496,6 @@ void StockClient::onArithmeticsTestButtonClicked()
 		IntDateTime endTime = "2020-05-09";
 		BigNumber beginValue = "3050.12";
 		std::shared_ptr<SyntheticalTestTask> spSyntheticalTestTask(new SyntheticalTestTask);
-		std::vector<std::string> allStock = StockMysql::instance().allStock();
 		spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
@@ -1506,7 +1506,6 @@ void StockClient::onArithmeticsTestButtonClicked()
 		IntDateTime endTime = "2020-05-09";
 		BigNumber beginValue = "2895.34";
 		std::shared_ptr<SyntheticalTestTask> spSyntheticalTestTask(new SyntheticalTestTask);
-		std::vector<std::string> allStock = StockMysql::instance().allStock();
 		spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
@@ -1517,7 +1516,6 @@ void StockClient::onArithmeticsTestButtonClicked()
 		IntDateTime endTime = "2020-05-08";
 		BigNumber beginValue = "2871.52";
 		std::shared_ptr<SyntheticalTestTask> spSyntheticalTestTask(new SyntheticalTestTask);
-		std::vector<std::string> allStock = StockMysql::instance().allStock();
 		spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
