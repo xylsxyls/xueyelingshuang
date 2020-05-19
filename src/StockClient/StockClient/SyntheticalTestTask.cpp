@@ -21,10 +21,14 @@ void SyntheticalTestTask::DoTask()
 	StockStorage::instance().loadMarket();
 	StockStorage::instance().load();
 	StockMarket runMarket = *StockStorage::instance().runMarket();
-
 	BigNumber profit = 1;
 	BigNumber profitValue = m_beginValue;
-	runMarket.setNewDate(m_beginTime);
+	if (!runMarket.setNewDate(m_beginTime))
+	{
+		StockStorage::instance().clear();
+		RCSend("范围内无有效日期");
+		return;
+	}
 	runMarket.previous();
 	while (runMarket.next())
 	{
