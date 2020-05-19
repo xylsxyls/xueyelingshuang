@@ -1223,7 +1223,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		spOnceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, DISPOSABLE_STRATEGY), beginTime, endTime, this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 	}
-
+	
 	TipSend("choose");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
@@ -1235,7 +1235,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
-
+	
 	TipSend("choose2");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
@@ -1247,7 +1247,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
-
+	
 	TipSend("choose3");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
@@ -1259,7 +1259,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
-
+	
 	TipSend("choose4");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
@@ -1271,7 +1271,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
-
+	
 	TipSend("choose5");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
@@ -1283,7 +1283,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
-
+	
 	TipSend("choose6");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
@@ -1295,7 +1295,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
-
+	
 	TipSend("choose7");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
@@ -1306,6 +1306,220 @@ void StockClient::onArithmeticsTestButtonClicked()
 			nullptr,
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
+	}
+
+	TipSend("day");
+	{
+		IntDateTime beginTime = "2020-04-28";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "2.1";
+
+		std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
+		spDaysTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
+	}
+
+	TipSend("day2");
+	{
+		IntDateTime beginTime = "2020-01-01";
+		IntDateTime endTime = "2020-05-09";
+		std::string allStrategyType = "2.1";
+
+		std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
+		spDaysTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
+	}
+
+	TipSend("day3");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-01-22";
+		std::string allStrategyType = "2";
+
+		std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
+		spDaysTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
+	}
+
+	TipSend("day4");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-01-22";
+		std::string allStrategyType = "3";
+
+		std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
+		spDaysTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
+	}
+
+	TipSend("day5");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-01-22";
+		std::string allStrategyType = "3,2.1";
+
+		std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
+		spDaysTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
+	}
+
+	TipSend("day6");
+	{
+		IntDateTime beginTime = "2020-01-01";
+		IntDateTime endTime = "2020-01-25";
+		std::string allStrategyType = "2.1,5,3";
+
+		std::shared_ptr<DaysTestTask> spDaysTestTask(new DaysTestTask);
+		spDaysTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
+	}
+
+	TipSend("rank");
+	{
+		IntDateTime beginTime = "2020-04-28";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "2.1";
+
+		std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
+		spRankTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
+	}
+	
+	TipSend("rank2");
+	{
+		IntDateTime beginTime = "2020-01-01";
+		IntDateTime endTime = "2020-05-09";
+		std::string allStrategyType = "2.1";
+
+		std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
+		spRankTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
+	}
+
+	TipSend("rank3");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-01-22";
+		std::string allStrategyType = "2";
+
+		std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
+		spRankTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
+	}
+
+	TipSend("rank4");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-01-22";
+		std::string allStrategyType = "3";
+
+		std::shared_ptr<RankTestTask> spRankTestTask(new RankTestTask);
+		spRankTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
+	}
+
+	TipSend("chance");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-03-02";
+		std::string allStrategyType = "2.1";
+		int32_t maxDay = 10;
+
+		std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
+		spChanceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, maxDay, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
+	}
+
+	TipSend("chance2");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-03-02";
+		std::string allStrategyType = "2.1";
+		int32_t maxDay = 1;
+
+		std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
+		spChanceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, maxDay, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
+	}
+
+	TipSend("chance3");
+	{
+		IntDateTime beginTime = "2020-01-01";
+		IntDateTime endTime = "2020-05-09";
+		std::string allStrategyType = "2.1";
+		int32_t maxDay = 1;
+
+		std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
+		spChanceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, maxDay, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
+	}
+
+	TipSend("chance4");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "2";
+		int32_t maxDay = 1;
+
+		std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
+		spChanceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, maxDay, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
+	}
+
+	TipSend("chance5");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-05-08";
+		std::string allStrategyType = "3";
+		int32_t maxDay = 5;
+
+		std::shared_ptr<ChanceTestTask> spChanceTestTask(new ChanceTestTask);
+		spChanceTestTask->setParam(INTEGRATED_STRATEGY, toChooseParam(allStrategyType, AVG_FUND_HIGH_SCORE), beginTime, endTime, maxDay, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
+	}
+
+	TipSend("synthetical");
+	{
+		IntDateTime beginTime = "2020-01-02";
+		IntDateTime endTime = "2020-05-08";
+		BigNumber beginValue = "3050.12";
+		std::shared_ptr<SyntheticalTestTask> spSyntheticalTestTask(new SyntheticalTestTask);
+		std::vector<std::string> allStock = StockMysql::instance().allStock();
+		spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
+	}
+
+	TipSend("synthetical2");
+	{
+		IntDateTime beginTime = "2020-01-01";
+		IntDateTime endTime = "2020-05-09";
+		BigNumber beginValue = "3050.12";
+		std::shared_ptr<SyntheticalTestTask> spSyntheticalTestTask(new SyntheticalTestTask);
+		std::vector<std::string> allStock = StockMysql::instance().allStock();
+		spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
+	}
+
+	TipSend("synthetical3");
+	{
+		IntDateTime beginTime = "2020-05-09";
+		IntDateTime endTime = "2020-05-09";
+		BigNumber beginValue = "2895.34";
+		std::shared_ptr<SyntheticalTestTask> spSyntheticalTestTask(new SyntheticalTestTask);
+		std::vector<std::string> allStock = StockMysql::instance().allStock();
+		spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
+	}
+
+	TipSend("synthetical4");
+	{
+		IntDateTime beginTime = "2020-05-08";
+		IntDateTime endTime = "2020-05-08";
+		BigNumber beginValue = "2871.52";
+		std::shared_ptr<SyntheticalTestTask> spSyntheticalTestTask(new SyntheticalTestTask);
+		std::vector<std::string> allStock = StockMysql::instance().allStock();
+		spSyntheticalTestTask->setParam(beginValue, beginTime, endTime, allStock, this);
+		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
 
 	TipSend("Arithmetics End");
