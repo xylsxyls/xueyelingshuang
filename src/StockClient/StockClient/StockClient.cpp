@@ -43,8 +43,6 @@
 #include "SyntheticalTestTask.h"
 #include "TipTask.h"
 
-#define TipSend(str) CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(std::shared_ptr<TipTask>(new TipTask(str)))
-
 StockClient::StockClient(QWidget* parent)
 	: QMainWindow(parent),
 	m_threadCount(0),
@@ -1056,7 +1054,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 {
 	std::vector<std::string> allStock = StockMysql::instance().allStock();
 
-	TipSend("real");
+	tipSend("real");
 	{
 		IntDateTime beginTime = "2019-10-08";
 		IntDateTime endTime = "2020-05-08";
@@ -1066,7 +1064,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("real2");
+	tipSend("real2");
 	{
 		IntDateTime beginTime = "2019-10-08";
 		IntDateTime endTime = "2020-05-08";
@@ -1076,7 +1074,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("real3");
+	tipSend("real3");
 	{
 		IntDateTime beginTime = "2019-10-08";
 		IntDateTime endTime = "2020-05-08";
@@ -1086,7 +1084,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("real4");
+	tipSend("real4");
 	{
 		IntDateTime beginTime = "2019-10-08";
 		IntDateTime endTime = "2020-05-08";
@@ -1096,7 +1094,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("real5");
+	tipSend("real5");
 	{
 		IntDateTime beginTime = "2019-10-08";
 		IntDateTime endTime = "2020-05-08";
@@ -1106,7 +1104,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("real6");
+	tipSend("real6");
 	{
 		IntDateTime beginTime = "2019-10-05";
 		IntDateTime endTime = "2019-11-17";
@@ -1116,7 +1114,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("real7");
+	tipSend("real7");
 	{
 		IntDateTime beginTime = "2019-10-05";
 		IntDateTime endTime = "2019-11-17";
@@ -1126,7 +1124,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("real8");
+	tipSend("real8");
 	{
 		IntDateTime beginTime = "2019-01-01";
 		IntDateTime endTime = "2019-12-31";
@@ -1136,7 +1134,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("real9");
+	tipSend("real9");
 	{
 		IntDateTime beginTime = "2020-04-28";
 		IntDateTime endTime = "2020-05-08";
@@ -1146,7 +1144,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("real10");
+	tipSend("real10");
 	{
 		IntDateTime beginTime = "2019-10-05";
 		IntDateTime endTime = "2019-11-17";
@@ -1156,7 +1154,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRealTestTask);
 	}
 	
-	TipSend("once");
+	tipSend("once");
 	{
 		IntDateTime beginTime = "2019-10-08";
 		IntDateTime endTime = "2020-05-08";
@@ -1166,7 +1164,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 	}
 	
-	TipSend("once2");
+	tipSend("once2");
 	{
 		IntDateTime beginTime = "2019-10-08";
 		IntDateTime endTime = "2020-05-08";
@@ -1176,7 +1174,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 	}
 	
-	TipSend("once3");
+	tipSend("once3");
 	{
 		IntDateTime beginTime = "2019-10-08";
 		IntDateTime endTime = "2020-05-08";
@@ -1186,7 +1184,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 	}
 	
-	TipSend("once4");
+	tipSend("once4");
 	{
 		IntDateTime beginTime = "2019-10-05";
 		IntDateTime endTime = "2019-11-17";
@@ -1196,7 +1194,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 	}
 	
-	TipSend("once5");
+	tipSend("once5");
 	{
 		IntDateTime beginTime = "2019-10-05";
 		IntDateTime endTime = "2019-11-17";
@@ -1206,7 +1204,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 	}
 	
-	TipSend("once6");
+	tipSend("once6");
 	{
 		IntDateTime beginTime = "2019-01-01";
 		IntDateTime endTime = "2019-12-31";
@@ -1216,7 +1214,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 	}
 	
-	TipSend("once7");
+	tipSend("once7");
 	{
 		IntDateTime beginTime = "2019-10-05";
 		IntDateTime endTime = "2019-11-17";
@@ -1226,7 +1224,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOnceTestTask);
 	}
 	
-	TipSend("choose");
+	tipSend("choose");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 		spChooseStockTask->setParam("2021-04-16",
@@ -1238,7 +1236,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
 	
-	TipSend("choose2");
+	tipSend("choose2");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 		spChooseStockTask->setParam("2021-04-17",
@@ -1250,7 +1248,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
 	
-	TipSend("choose3");
+	tipSend("choose3");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 		spChooseStockTask->setParam("2020-05-01",
@@ -1262,7 +1260,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
 	
-	TipSend("choose4");
+	tipSend("choose4");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 		spChooseStockTask->setParam("2019-09-27",
@@ -1274,7 +1272,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
 	
-	TipSend("choose5");
+	tipSend("choose5");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 		spChooseStockTask->setParam("2020-01-02",
@@ -1286,7 +1284,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
 	
-	TipSend("choose6");
+	tipSend("choose6");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 		spChooseStockTask->setParam("2020-01-02",
@@ -1298,7 +1296,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
 	
-	TipSend("choose7");
+	tipSend("choose7");
 	{
 		std::shared_ptr<ChooseStockTask> spChooseStockTask(new ChooseStockTask);
 		spChooseStockTask->setParam("2020-01-02",
@@ -1310,7 +1308,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
 	}
 	
-	TipSend("day");
+	tipSend("day");
 	{
 		IntDateTime beginTime = "2020-03-28";
 		IntDateTime endTime = "2020-05-08";
@@ -1321,7 +1319,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 	}
 	
-	TipSend("day2");
+	tipSend("day2");
 	{
 		IntDateTime beginTime = "2020-01-01";
 		IntDateTime endTime = "2020-05-09";
@@ -1332,7 +1330,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 	}
 	
-	TipSend("day3");
+	tipSend("day3");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-01-22";
@@ -1343,7 +1341,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 	}
 	
-	TipSend("day4");
+	tipSend("day4");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-05-08";
@@ -1354,7 +1352,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 	}
 	
-	TipSend("day5");
+	tipSend("day5");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-05-08";
@@ -1365,7 +1363,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 	}
 	
-	TipSend("day6");
+	tipSend("day6");
 	{
 		IntDateTime beginTime = "2020-01-01";
 		IntDateTime endTime = "2020-05-02";
@@ -1376,7 +1374,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spDaysTestTask);
 	}
 	
-	TipSend("rank");
+	tipSend("rank");
 	{
 		IntDateTime beginTime = "2020-03-28";
 		IntDateTime endTime = "2020-05-08";
@@ -1387,7 +1385,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
 	}
 	
-	TipSend("rank2");
+	tipSend("rank2");
 	{
 		IntDateTime beginTime = "2020-01-01";
 		IntDateTime endTime = "2020-05-09";
@@ -1398,7 +1396,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
 	}
 	
-	TipSend("rank3");
+	tipSend("rank3");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-05-08";
@@ -1409,7 +1407,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
 	}
 	
-	TipSend("rank4");
+	tipSend("rank4");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-05-08";
@@ -1420,7 +1418,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spRankTestTask);
 	}
 	
-	TipSend("chance");
+	tipSend("chance");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-03-02";
@@ -1432,7 +1430,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
 	}
 	
-	TipSend("chance2");
+	tipSend("chance2");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-03-02";
@@ -1444,7 +1442,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
 	}
 	
-	TipSend("chance3");
+	tipSend("chance3");
 	{
 		IntDateTime beginTime = "2020-01-01";
 		IntDateTime endTime = "2020-05-09";
@@ -1456,7 +1454,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
 	}
 	
-	TipSend("chance4");
+	tipSend("chance4");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-05-08";
@@ -1468,7 +1466,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
 	}
 	
-	TipSend("chance5");
+	tipSend("chance5");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-05-08";
@@ -1480,7 +1478,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChanceTestTask);
 	}
 	
-	TipSend("synthetical");
+	tipSend("synthetical");
 	{
 		IntDateTime beginTime = "2020-01-02";
 		IntDateTime endTime = "2020-05-08";
@@ -1490,7 +1488,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
 	
-	TipSend("synthetical2");
+	tipSend("synthetical2");
 	{
 		IntDateTime beginTime = "2020-01-01";
 		IntDateTime endTime = "2020-05-09";
@@ -1500,7 +1498,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
 
-	TipSend("synthetical3");
+	tipSend("synthetical3");
 	{
 		IntDateTime beginTime = "2020-05-09";
 		IntDateTime endTime = "2020-05-09";
@@ -1510,7 +1508,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
 
-	TipSend("synthetical4");
+	tipSend("synthetical4");
 	{
 		IntDateTime beginTime = "2020-05-02";
 		IntDateTime endTime = "2020-05-02";
@@ -1520,7 +1518,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
 
-	TipSend("synthetical5");
+	tipSend("synthetical5");
 	{
 		IntDateTime beginTime = "2020-05-02";
 		IntDateTime endTime = "2020-05-03";
@@ -1530,7 +1528,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
 
-	TipSend("synthetical6");
+	tipSend("synthetical6");
 	{
 		IntDateTime beginTime = "2020-05-02";
 		IntDateTime endTime = "2020-05-06";
@@ -1540,7 +1538,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
 
-	TipSend("synthetical7");
+	tipSend("synthetical7");
 	{
 		IntDateTime beginTime = "2020-05-08";
 		IntDateTime endTime = "2020-05-08";
@@ -1550,7 +1548,7 @@ void StockClient::onArithmeticsTestButtonClicked()
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spSyntheticalTestTask);
 	}
 
-	TipSend("Arithmetics End");
+	tipSend("Arithmetics End");
 }
 
 void StockClient::onEverydaySolutionButtonClicked()
@@ -1837,6 +1835,13 @@ void StockClient::onEverydayTaskButtonClicked()
 	//CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spMairubishengTask);
 }
 
+void StockClient::tipSend(const std::string& tip)
+{
+	std::shared_ptr<TipTask> spTipTask(new TipTask);
+	spTipTask->setParam(tip);
+	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spTipTask);
+}
+
 std::vector<ChooseParam> StockClient::toChooseParam(const std::string& allStrategyType, SolutionType solutionType)
 {
 	std::vector<ChooseParam> vecChooseParam;
@@ -1872,7 +1877,7 @@ std::vector<ChooseParam> StockClient::toChooseParam(const std::string& allStrate
 
 void StockClient::onTaskTip(const QString tip)
 {
-	RCSend("time = %d, tip = %s", (int32_t)::GetTickCount(), CStringManager::UnicodeToAnsi(tip.toStdWString()).c_str());
+	RCSend("tip = %s", CStringManager::UnicodeToAnsi(tip.toStdWString()).c_str());
 	//TipDialogParam tipDialogParam;
 	//tipDialogParam.m_tip = tip;
 	//tipDialogParam.m_parent = windowHandle();

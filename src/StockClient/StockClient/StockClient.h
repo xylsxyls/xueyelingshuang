@@ -62,6 +62,7 @@ private slots:
 	void onEverydayTaskButtonClicked();
 
 protected:
+	void tipSend(const std::string& tip);
 	std::vector<ChooseParam> toChooseParam(const std::string& allStrategyType, SolutionType solutionType);
 
 public:

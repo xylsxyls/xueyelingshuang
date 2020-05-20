@@ -4,10 +4,12 @@
 class TipTask : public CTask
 {
 public:
-	TipTask(const std::string& tip);
+	TipTask();
 
 public:
 	void DoTask();
+
+	void setParam(const std::string& tip);
 
 private:
 	std::string m_tip;
