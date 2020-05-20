@@ -5326,7 +5326,7 @@ mairu, date = 2020-04-01, stock = 300166, price = 14.25, rate = 0.00
 mairu, date = 2020-04-01, stock = 300253, price = 21.21, rate = 1.00
 mairu, date = 2020-04-01, stock = 002733, price = 20.39, rate = 0.00
 day
-time = 420151984, tip = 今日选中7个
+tip = 今日选中7个
 buy 300207 欣旺达 0.500000
 buy 000028 国药一致 1.000000
 buy 002853 皮阿诺 0.000000
@@ -5336,33 +5336,33 @@ buy 603331 百达精工 0.000000
 buy 002465 海格通信 0.000000
 2020-01-02, strategy type = 3
 choose7
-time = 420151093, tip = 今日选中4个
+tip = 今日选中4个
 buy 300042 朗科科技 0.000000
 buy 002745 木林森 1.000000
 buy 600206 有研新材 0.000000
 buy 300394 天孚通信 0.000000
 2020-01-02, strategy type = 2.1
 choose6
-time = 420150312, tip = 今日选中3个
+tip = 今日选中3个
 buy 002019 亿帆医药 0.000000
 buy 300146 汤臣倍健 0.000000
 buy 600519 贵州茅台 0.000000
 2020-01-02, strategy type = 2
 choose5
-time = 420149546, tip = 今日选中4个
+tip = 今日选中4个
 buy 300257 开山股份 0.000000
 buy 300746 汉嘉设计 1.000000
 buy 002364 中恒电气 0.000000
 buy 600668 尖峰集团 0.000000
 2019-09-27, strategy type = 2.1
 choose4
-time = 420148765, tip = 今日休息
+tip = 今日休息
 2020-05-01, strategy type = 2.1
 choose3
-time = 420147718, tip = 今日休息
+tip = 今日休息
 2021-04-17, strategy type = 2.1
 choose2
-time = 420146562, tip = 今日休息
+tip = 今日休息
 2021-04-16, strategy type = 2.1
 choose
 once allfund = 20345792189.8190909090909091, profit = 1.7289609490954500%
