@@ -1634,7 +1634,7 @@ void StockClient::onEverydaySolutionButtonClicked()
 		spChooseStockTask->setParam(IntDateTime(0, 0),
 			std::vector<std::string>(),
 			vecChooseParam,
-			AVG_FUND_HIGH_SCORE,
+			INTEGRATED_STRATEGY,
 			&m_stockFund,
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
@@ -1809,7 +1809,7 @@ void StockClient::onEverydayTaskButtonClicked()
 		spChooseStockTask->setParam(IntDateTime(0, 0),
 			std::vector<std::string>(),
 			vecChooseParam,
-			AVG_FUND_HIGH_SCORE,
+			INTEGRATED_STRATEGY,
 			&m_stockFund,
 			this);
 		CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spChooseStockTask);
