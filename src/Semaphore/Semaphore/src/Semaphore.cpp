@@ -40,3 +40,9 @@ void Semaphore::eventWait()
 	std::unique_lock<std::mutex> lock(m_mtx);
 	m_cv.wait(lock);
 }
+
+void Semaphore::eventWait(int32_t timeOut)
+{
+	std::unique_lock<std::mutex> lock(m_mtx);
+	m_cv.wait_for(lock, std::chrono::milliseconds(timeOut));
+}

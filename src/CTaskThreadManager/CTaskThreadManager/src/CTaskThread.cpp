@@ -1,11 +1,20 @@
 #include "CTaskThread.h"
-#include <assert.h>
-#include <windows.h>
+#include "Semaphore/SemaphoreAPI.h"
 
 CTaskThread::CTaskThread(int32_t threadId) :
-m_threadId(threadId)
+m_threadId(threadId),
+m_semaphore(nullptr),
+m_hasExitSignal(false),
+m_waitForEndSignal(false),
+m_curTaskLevel(0)
 {
+	m_semaphore = new Semaphore;
+}
 
+CTaskThread::~CTaskThread()
+{
+	delete m_semaphore;
+	m_semaphore = nullptr;
 }
 
 bool CTaskThread::CreateThread()
@@ -18,7 +27,7 @@ bool CTaskThread::CreateThread()
         return false;
     }
     m_spWorkThread.reset(pThread);
-	m_waitEvent = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+	
     return true;
 }
 
@@ -33,7 +42,7 @@ void CTaskThread::SetExitSignal()
     m_hasExitSignal = true;
     //设置了退出信号就立即把当前任务停止
 	StopCurTask();
-	::SetEvent(m_waitEvent);
+	m_semaphore->event();
 }
 
 void CTaskThread::WaitForExit()
@@ -43,7 +52,7 @@ void CTaskThread::WaitForExit()
     {
         m_spWorkThread->join();
         m_spWorkThread.reset(nullptr);
-		::CloseHandle(m_waitEvent);
+		//::CloseHandle(m_semaphore);
     }
 }
 
@@ -79,8 +88,8 @@ void CTaskThread::SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLev
         return;
     }
 
-	HANDLE waitForSend = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
-	spTask->SetWaitForSendHandle(waitForSend);
+	Semaphore wairForSendSemaphore;
+	spTask->SetWaitForSendHandle(&wairForSendSemaphore);
     PostTask(spTask, taskLevel);
     
     bool inWhile = true;
@@ -90,9 +99,9 @@ void CTaskThread::SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLev
         {
             break;
         }
-        ::WaitForSingleObject(waitForSend, 50);
+		wairForSendSemaphore.eventWait(50);
     }
-	::CloseHandle(waitForSend);
+	//::CloseHandle(waitForSend);
 	spTask->SetWaitForSendHandle(nullptr);
 }
 
@@ -121,10 +130,10 @@ void CTaskThread::WorkThread()
         if (m_spCurTask != nullptr)
         {
             m_spCurTask->DoTask();
-			HANDLE waitForSend = m_spCurTask->GetWaitForSendHandle();
+			Semaphore* waitForSend = m_spCurTask->GetWaitForSendHandle();
 			if (waitForSend != nullptr)
 			{
-				::SetEvent(waitForSend);
+				waitForSend->event();
 			}
         }
 		else
@@ -133,7 +142,7 @@ void CTaskThread::WorkThread()
 			{
 				break;
 			}
-			::WaitForSingleObject(m_waitEvent, INFINITE);
+			m_semaphore->eventWait();
 		}
     }
 }
@@ -155,7 +164,7 @@ void CTaskThread::StopAllTaskUnlock()
 void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
 {
 	m_taskMap[taskLevel].push_back(spTask);
-	::SetEvent(m_waitEvent);
+	m_semaphore->event();
 	//如果添加任务的优先级高于当前任务则当前任务停止
 	if (m_spCurTask != nullptr && taskLevel > m_curTaskLevel)
 	{
@@ -190,22 +199,17 @@ void CTaskThread::PopToCurTask()
 		m_spCurTask = nullptr;
 		m_spCurTaskBk = nullptr;
 		m_curTaskLevel = 0;
-		::ResetEvent(m_waitEvent);
+		//::ResetEvent(m_semaphore);
 		return;
 	}
 	//如果有任务，取出最后一个优先级的队列任务集合
 	std::unique_lock<std::mutex> lock(m_mutex);
 	auto itTaskList = --(m_taskMap.end());
 	std::list<std::shared_ptr<CTask>>& listTask = itTaskList->second;
-	//将最后一个优先级队列的首个任务取出
+	//将最后一个优先级队列的首个任务取出，只要有集合就必须有任务
 	m_spCurTask = listTask.front();
 	m_spCurTaskBk.reset(m_spCurTask->Clone());
 	m_curTaskLevel = itTaskList->first;
-	//只要有集合就必须有任务
-	if (m_spCurTask == nullptr)
-	{
-		assert(0);
-	}
 	listTask.pop_front();
 	//如果该级别队列中没有任务则删除该级别在map中的节点
 	if (listTask.empty())
@@ -287,6 +291,6 @@ int32_t CTaskThread::GetCurTaskLevel()
 void CTaskThread::WaitForEnd()
 {
 	m_waitForEndSignal = true;
-	::SetEvent(m_waitEvent);
+	m_semaphore->event();
 	WaitForExit();
 }

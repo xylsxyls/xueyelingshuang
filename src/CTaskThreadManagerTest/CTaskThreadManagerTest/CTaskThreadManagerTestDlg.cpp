@@ -208,18 +208,7 @@ void CCTaskThreadManagerTestDlg::OnBnClickedButton3()
 {
     // TODO: Add your control notification handler code here
     auto taskThread1 = CTaskThreadManager::Instance().GetThreadInterface(1);
-    std::map<int32_t, int32_t> taskCountMap1;
-    taskThread1->GetWaitTaskCount(taskCountMap1);
-
-    CString count;
-    for (auto itTaskCount = taskCountMap1.begin(); itTaskCount != taskCountMap1.end(); ++itTaskCount)
-    {
-        CString one;
-        one.Format("%d:%d ", itTaskCount->first, itTaskCount->second);
-        count = count + one;
-    }
-    RCSend("%s", count.GetBuffer());
-    count.ReleaseBuffer();
+	RCSend("%d", taskThread1->GetWaitTaskCount());
 }
 
 
@@ -227,18 +216,7 @@ void CCTaskThreadManagerTestDlg::OnBnClickedButton7()
 {
     // TODO: Add your control notification handler code here
     auto taskThread2 = CTaskThreadManager::Instance().GetThreadInterface(2);
-    std::map<int32_t, int32_t> taskCountMap2;
-    taskThread2->GetWaitTaskCount(taskCountMap2);
-
-    CString count;
-    for (auto itTaskCount = taskCountMap2.begin(); itTaskCount != taskCountMap2.end(); ++itTaskCount)
-    {
-        CString one;
-        one.Format("%d:%d ", itTaskCount->first, itTaskCount->second);
-        count = count + one;
-    }
-    RCSend("%s", count.GetBuffer());
-    count.ReleaseBuffer();
+	RCSend("%d", taskThread2->GetWaitTaskCount());
 }
 
 
@@ -307,7 +285,7 @@ void CCTaskThreadManagerTestDlg::OnBnClickedButton14()
         //生成任务等级
         int32_t taskLevel = CRandom::Int(1, 10);
         //生成线程号
-        int32_t threadId = CRandom::Int(1, 20);
+        int32_t threadId = CRandom::Int(1, 40);
         //随机选择任务
         int32_t taskType = CRandom::Int(0, 9);
         //是否停止所有任务
@@ -328,13 +306,18 @@ void CCTaskThreadManagerTestDlg::OnBnClickedButton14()
         if (Time > 15000)
         {
 			auto thread = CTaskThreadManager::Instance().GetThreadInterface(2);
-			std::map<int32_t, int32_t> taskCountMap;
-			thread->GetWaitTaskCount(taskCountMap);
-			RCSend("开始删除,taskCountMap.size() = %d", taskCountMap[1]);
+			if (thread == nullptr)
+			{
+				thread = CTaskThreadManager::Instance().GetThreadInterface(22);
+				RCSend("开始删除, threadId = 22, waitTaskCount = %d", thread->GetWaitTaskCount());
+			}
+			else
+			{
+				RCSend("开始删除, threadId = 2, waitTaskCount = %d", thread->GetWaitTaskCount());
+			}
             CTaskThreadManager::Instance().UninitAll();
-            int x = 3;
-            x = 3;
-			RCSend("完成,%d", CTaskThreadManager::Instance().GetThreadInterface(1).get());
+			RCSend("完成, 1 = %d", CTaskThreadManager::Instance().GetThreadInterface(1).get());
+			RCSend("完成, 21 = %d", CTaskThreadManager::Instance().GetThreadInterface(21).get());
 			break;
         }
     }

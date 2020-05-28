@@ -1,13 +1,15 @@
 #include "CTask.h"
 
 CTask::CTask() :
-m_taskId(1)
+m_taskId(1),
+m_waitForSend(nullptr)
 {
 
 }
 
 CTask::CTask(int32_t taskId) :
-m_taskId(taskId)
+m_taskId(taskId),
+m_waitForSend(nullptr)
 {
 
 }
@@ -32,12 +34,12 @@ int32_t CTask::GetTaskId()
     return m_taskId;
 }
 
-void CTask::SetWaitForSendHandle(HANDLE waitForSend)
+void CTask::SetWaitForSendHandle(Semaphore* waitForSend)
 {
 	m_waitForSend = waitForSend;
 }
 
-HANDLE CTask::GetWaitForSendHandle()
+Semaphore* CTask::GetWaitForSendHandle()
 {
 	return m_waitForSend;
 }

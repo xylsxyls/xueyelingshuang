@@ -78,8 +78,9 @@ std::shared_ptr<CTask> CTaskFactory::CreateTask(int32_t taskType, int32_t taskId
     return spTask;
 }
 
-CPrintTask1::CPrintTask1(int32_t taskId) :
-    CTask(taskId)
+CPrintTask1::CPrintTask1(int32_t taskId):
+CTask(taskId),
+m_hasExitSignal(false)
 {
 
 }
@@ -87,24 +88,23 @@ CPrintTask1::CPrintTask1(int32_t taskId) :
 void CPrintTask1::DoTask()
 {
     printf("DoTaskBegin1\n");
+	int i = -1;
     while (i++ != 4)
     {
-        if (m_hasExitSignal == true)
+        if (m_hasExitSignal)
         {
             break;
         }
-        RCSend("DoTask1_%d", i + 1);
+		RCSend("DoTask1_%d, taskId = %d", i + 1, GetTaskId());
         std::chrono::milliseconds dura(1000);
         std::this_thread::sleep_for(dura);
     }
 
     printf("DoTaskEnd1\n");
-    m_hasExecuted = true;
 }
 
-void CPrintTask1::StopTask(bool ifChoke)
+void CPrintTask1::StopTask()
 {
-    ifChoke = ifChoke;
     m_hasExitSignal = true;
     printf("StopTask1\n");
     return;
@@ -115,18 +115,14 @@ bool CPrintTask1::ReExecute()
     return true;
 }
 
-bool CPrintTask1::HasExecuted()
-{
-    return m_hasExecuted;
-}
-
 CTask* CPrintTask1::Clone()
 {
     return new CPrintTask1(GetTaskId());
 }
 
 CPrintTask2::CPrintTask2(int32_t taskId) :
-    CTask(taskId)
+CTask(taskId),
+m_hasExitSignal(false)
 {
 
 }
@@ -137,22 +133,20 @@ void CPrintTask2::DoTask()
     int i = -1;
     while (i++ != 4)
     {
-        if (m_hasExitSignal == true)
+        if (m_hasExitSignal)
         {
             break;
         }
-        RCSend("DoTask2_%d", i + 1);
+		RCSend("DoTask2_%d, taskId = %d", i + 1, GetTaskId());
         std::chrono::milliseconds dura(1000);
         std::this_thread::sleep_for(dura);
     }
 
     printf("DoTaskEnd2\n");
-    m_hasExecuted = true;
 }
 
-void CPrintTask2::StopTask(bool ifChoke)
+void CPrintTask2::StopTask()
 {
-    ifChoke = ifChoke;
     m_hasExitSignal = true;
     printf("StopTask2\n");
     return;
@@ -164,18 +158,14 @@ bool CPrintTask2::ReExecute()
     return true;
 }
 
-bool CPrintTask2::HasExecuted()
-{
-    return m_hasExecuted;
-}
-
 CTask* CPrintTask2::Clone()
 {
     return new CPrintTask2(GetTaskId());
 }
 
 CPrintTask3::CPrintTask3(int32_t taskId) :
-    CTask(taskId)
+CTask(taskId),
+m_hasExitSignal(false)
 {
 
 }
@@ -186,22 +176,20 @@ void CPrintTask3::DoTask()
     int i = -1;
     while (i++ != 4)
     {
-        if (m_hasExitSignal == true)
+        if (m_hasExitSignal)
         {
             break;
         }
-        RCSend("DoTask3_%d", i + 1);
+		RCSend("DoTask3_%d, taskId = %d", i + 1, GetTaskId());
         std::chrono::milliseconds dura(1000);
         std::this_thread::sleep_for(dura);
     }
 
     printf("DoTaskEnd3\n");
-    m_hasExecuted = true;
 }
 
-void CPrintTask3::StopTask(bool ifChoke)
+void CPrintTask3::StopTask()
 {
-    ifChoke = ifChoke;
     m_hasExitSignal = true;
     printf("StopTask3\n");
     return;
@@ -218,26 +206,19 @@ CTask* CPrintTask3::Clone()
     return new CPrintTask3(GetTaskId());
 }
 
-bool CPrintTask3::HasExecuted()
-{
-    return m_hasExecuted;
-}
-
-const int32_t testNum = 10000;
-
 CTestTask1::CTestTask1(int32_t taskId) :
-CTask(taskId)
+CTask(taskId),
+m_hasExitSignal(false)
 {
 
 }
 
 void CTestTask1::DoTask()
 {
-	
     int32_t i = 10;
     while (i-- != 0)
     {
-        if (m_hasExitSignal == true)
+        if (m_hasExitSignal)
         {
             break;
         }
@@ -260,13 +241,10 @@ void CTestTask1::DoTask()
         }
         taskThread->PostTask(CTaskFactory::CreateTask(TEST_TASK_1 + taskType, taskId), taskLevel);
     }
-
-    m_hasExecuted = true;
 }
 
-void CTestTask1::StopTask(bool ifChoke)
+void CTestTask1::StopTask()
 {
-    ifChoke = ifChoke;
     m_hasExitSignal = true;
     return;
 }
@@ -279,11 +257,6 @@ bool CTestTask1::ReExecute()
 CTask* CTestTask1::Clone()
 {
     return new CTestTask1(GetTaskId());
-}
-
-bool CTestTask1::HasExecuted()
-{
-    return m_hasExecuted;
 }
 
 CTestTask2::CTestTask2(int32_t taskId):

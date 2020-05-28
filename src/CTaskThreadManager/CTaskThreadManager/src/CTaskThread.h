@@ -7,6 +7,8 @@
 #include <mutex>
 #include <atomic>
 
+class Semaphore;
+
 class CTaskThreadManagerAPI CTaskThread
 {
     friend class CTaskThreadManager;
@@ -50,6 +52,9 @@ public:
 	/** 等待所有任务执行完成后退出线程
 	*/
 	void WaitForEnd();
+
+public:
+	~CTaskThread();
 
 private:
     CTaskThread(int32_t threadId);
@@ -109,24 +114,24 @@ private:
 
     /* 线程是否有退出信号
     */
-    std::atomic<bool> m_hasExitSignal = false;
+    std::atomic<bool> m_hasExitSignal;
 
 	/** 等待所有任务执行完的退出信号
 	*/
-	std::atomic<bool> m_waitForEndSignal = false;
+	std::atomic<bool> m_waitForEndSignal;
 
 	/* 正在执行任务的优先级
 	*/
-	std::atomic<int32_t> m_curTaskLevel = 0;
+	std::atomic<int32_t> m_curTaskLevel;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
     
     /* 线程ID
     */
-    int32_t m_threadId = 0;
+    int32_t m_threadId;
 
 	/* 等待事件
 	*/
-	HANDLE m_waitEvent;
+	Semaphore* m_semaphore;
 };

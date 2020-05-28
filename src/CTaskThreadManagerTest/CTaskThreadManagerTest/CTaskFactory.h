@@ -32,15 +32,12 @@ class CPrintTask1 : public CTask
 public:
     CPrintTask1(int32_t taskId);
     virtual void DoTask();
-    virtual void StopTask(bool ifChoke);
+    virtual void StopTask();
     virtual bool ReExecute();
-    virtual bool HasExecuted();
     virtual CTask* Clone();
 
 private:
-    bool m_hasExitSignal = false;
-    bool m_hasExecuted = false;
-    int32_t i = -1;
+	std::atomic<bool> m_hasExitSignal;
 };
 
 class CPrintTask2 : public CTask
@@ -48,14 +45,12 @@ class CPrintTask2 : public CTask
 public:
     CPrintTask2(int32_t taskId);
     virtual void DoTask();
-    virtual void StopTask(bool ifChoke);
+    virtual void StopTask();
     virtual bool ReExecute();
-    virtual bool HasExecuted();
     virtual CTask* Clone();
 
 private:
-    bool m_hasExitSignal = false;
-    bool m_hasExecuted = false;
+	std::atomic<bool> m_hasExitSignal;
 };
 
 class CPrintTask3 : public CTask
@@ -63,14 +58,12 @@ class CPrintTask3 : public CTask
 public:
     CPrintTask3(int32_t taskId);
     virtual void DoTask();
-    virtual void StopTask(bool ifChoke);
+    virtual void StopTask();
     virtual bool ReExecute();
     virtual CTask* Clone();
-    virtual bool HasExecuted();
 
 private:
-    bool m_hasExitSignal = false;
-    bool m_hasExecuted = false;
+	std::atomic<bool> m_hasExitSignal;
 };
 
 class CTestTask1 : public CTask
@@ -78,14 +71,12 @@ class CTestTask1 : public CTask
 public:
     CTestTask1(int32_t taskId);
     virtual void DoTask();
-    virtual void StopTask(bool ifChoke);
+    virtual void StopTask();
     virtual bool ReExecute();
     virtual CTask* Clone();
-    virtual bool HasExecuted();
 
 private:
-    std::atomic<bool> m_hasExitSignal = false;
-    std::atomic<bool> m_hasExecuted = false;
+    std::atomic<bool> m_hasExitSignal;
 };
 
 class CTestTask2 : public CTestTask1

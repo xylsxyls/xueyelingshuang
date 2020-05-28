@@ -33,6 +33,10 @@ public:
 	*/
 	void eventWait();
 
+	/** 事件的等待
+	*/
+	void eventWait(int32_t timeOut);
+
 private:
 #ifdef _MSC_VER
 #pragma warning(push)
