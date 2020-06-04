@@ -1,16 +1,12 @@
 #pragma once
-#include "LibuvTcpMacro.h"
 #include <stdint.h>
-#include <vector>
-#include <map>
-#include <atomic>
+#include <mutex>
+#include "LibuvTcpMacro.h"
 
 typedef struct uv_tcp_s uv_tcp_t;
 typedef struct uv_loop_s uv_loop_t;
 typedef struct uv_async_s uv_async_t;
 typedef void(*uv_async_cb)(uv_async_t* handle);
-class ReceiveCallback;
-class ReadWriteMutex;
 template<class QElmType>
 class LockFreeQueue;
 
@@ -22,54 +18,38 @@ public:
 	virtual ~LibuvTcp();
 
 public:
-	void initClient(const char* ip, int32_t port, ReceiveCallback* callback);
+	void initClient(const char* ip, int32_t port);
 
-	void initServer(int32_t port, ReceiveCallback* callback, int32_t backlog = 128);
+	void initServer(int32_t port, int32_t backlog = 128);
 
-	void clientLoop();
+	void loop();
 
-	void serverLoop();
+	void send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t protocolId);
 
-	void send(char* text);
+	uv_loop_t* loopPtr();
 
-	char* getText(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t protocolId);
+	bool isClient();
 
-public:
-	ReadWriteMutex* clientPtrToLoopMutex();
+	void close(uv_tcp_t* tcp);
 
-	std::map<uv_tcp_t*, uv_loop_t*>& clientPtrToLoopMap();
+	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length);
 
-	std::vector<uv_loop_t*>& vecServerLoop();
+	virtual void clientConnected(uv_tcp_t* client);
 
-	std::atomic<int32_t> workIndex();
-
-	int32_t coreCount();
-
-	ReceiveCallback* callback();
+	virtual void serverConnected(uv_tcp_t* server);
 
 protected:
-	int32_t m_coreCount;
-	uv_loop_t* m_serverLoop;
-
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::vector<uv_loop_t*> m_vecServerLoop;
-	std::map<uv_loop_t*, uv_async_t*> m_loopToAsyncHandleMap;
-	std::map<uv_loop_t*, LockFreeQueue<char*>*> m_loopToQueueMap;
-	
-	ReadWriteMutex* m_clientPtrToLoopMutex;
-	std::map<uv_tcp_t*, uv_loop_t*> m_clientPtrToLoopMap;
-	std::atomic<int32_t> m_workIndex;
+	std::mutex m_queueMutex;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-	
-	uv_loop_t* m_clientLoop;
-	uv_async_t* m_asyncHandle;
 	LockFreeQueue<char*>* m_queue;
-
-	ReceiveCallback* m_receiveCallback;
+	uv_loop_t* m_loop;
+	uv_async_t* m_asyncHandle;
 	bool m_isClient;
+	uint32_t m_loopThreadId;
 };

@@ -30,36 +30,6 @@ goto CTaskThreadManager_end
 :CTaskThreadManager_end
 
 ::--------------------------------------------------------------------
-set CSystem_dlllib=lib
-set CSystem_bit=%1
-set CSystem_debugRelease=%3
-set CSystem_allSame=%4
-if "%4" == "same" (goto CSystem_callSame) else (goto CSystem_callSimple)
-:CSystem_callSame
-set CSystem_dlllib=%2
-call "%CLOUD_REBUILD%" CSystem %CSystem_bit% %CSystem_dlllib% %CSystem_debugRelease% %CSystem_allSame%
-goto CSystem_end
-:CSystem_callSimple
-call "%CLOUD_REBUILD%" CSystem %CSystem_bit% %CSystem_dlllib% %CSystem_debugRelease%
-goto CSystem_end
-:CSystem_end
-
-::--------------------------------------------------------------------
-set ReadWriteMutex_dlllib=lib
-set ReadWriteMutex_bit=%1
-set ReadWriteMutex_debugRelease=%3
-set ReadWriteMutex_allSame=%4
-if "%4" == "same" (goto ReadWriteMutex_callSame) else (goto ReadWriteMutex_callSimple)
-:ReadWriteMutex_callSame
-set ReadWriteMutex_dlllib=%2
-call "%CLOUD_REBUILD%" ReadWriteMutex %ReadWriteMutex_bit% %ReadWriteMutex_dlllib% %ReadWriteMutex_debugRelease% %ReadWriteMutex_allSame%
-goto ReadWriteMutex_end
-:ReadWriteMutex_callSimple
-call "%CLOUD_REBUILD%" ReadWriteMutex %ReadWriteMutex_bit% %ReadWriteMutex_dlllib% %ReadWriteMutex_debugRelease%
-goto ReadWriteMutex_end
-:ReadWriteMutex_end
-
-::--------------------------------------------------------------------
 set LockFreeQueue_dlllib=lib
 set LockFreeQueue_bit=%1
 set LockFreeQueue_debugRelease=%3

@@ -1,34 +1,64 @@
 #include "WorkTask.h"
-#include "CallbackBase.h"
+#include "LibuvTcp/LibuvTcpAPI.h"
+#include "NetClient.h"
+#include "NetServer.h"
 
 WorkTask::WorkTask():
-m_client(nullptr),
+m_sender(nullptr),
 m_buffer(nullptr),
-m_length(0),
-m_callback(nullptr)
+m_length(0)
 {
 
-}
-
-void WorkTask::setCallback(CallbackBase* callback)
-{
-	m_callback = callback;
-}
-
-void WorkTask::setParam(uv_tcp_t* client, char* buffer, int32_t length)
-{
-	m_client = client;
-	m_buffer = buffer;
-	m_length = length;
 }
 
 void WorkTask::DoTask()
 {
-	m_callback->receive(m_client, m_buffer + 4, m_length - 4, (CorrespondParam::ProtocolId)(*(int32_t*)m_buffer));
+	CorrespondParam::ProtocolId protocolId = (CorrespondParam::ProtocolId)(*(int32_t*)m_buffer);
+	
+	if (m_libuvTcp->isClient())
+	{
+		if (protocolId == CorrespondParam::HEART)
+		{
+			((NetClient*)m_libuvTcp)->onHeart();
+		}
+		else
+		{
+			((NetClient*)m_libuvTcp)->onReceive(m_buffer + 4, m_length - 4, protocolId);
+		}
+	}
+	else
+	{
+		if (protocolId == CorrespondParam::HEART)
+		{
+			((NetServer*)m_libuvTcp)->onHeart();
+		}
+		else
+		{
+			((NetServer*)m_libuvTcp)->onReceive(m_sender, m_buffer + 4, m_length - 4, protocolId);
+		}
+	}
+
+	//if (m_libuvTcp->isClient())
+	//{
+	//	((NetClient*)m_libuvTcp)->onReceive(m_buffer + 4, m_length - 4, (CorrespondParam::ProtocolId)(m_i));
+	//}
+	//else
+	//{
+	//	((NetServer*)m_libuvTcp)->onReceive(m_sender, m_buffer + 4, m_length - 4, (CorrespondParam::ProtocolId)(m_i));
+	//}
+
 	if (m_buffer == nullptr)
 	{
 		//加了protocolId之后包大小不可能为0
 		return;
 	}
 	::free(m_buffer);
+}
+
+void WorkTask::setParam(uv_tcp_t* sender, char* buffer, int32_t length, LibuvTcp* libuvTcp)
+{
+	m_sender = sender;
+	m_buffer = buffer;
+	m_length = length;
+	m_libuvTcp = libuvTcp;
 }

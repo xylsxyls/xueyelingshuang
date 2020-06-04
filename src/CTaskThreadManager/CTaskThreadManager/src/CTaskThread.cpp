@@ -42,7 +42,7 @@ void CTaskThread::SetExitSignal()
     m_hasExitSignal = true;
     //设置了退出信号就立即把当前任务停止
 	StopCurTask();
-	m_semaphore->event();
+	m_semaphore->signal();
 }
 
 void CTaskThread::WaitForExit()
@@ -136,14 +136,7 @@ void CTaskThread::WorkThread()
 				waitForSend->event();
 			}
         }
-		else
-		{
-			if (m_waitForEndSignal)
-			{
-				break;
-			}
-			m_semaphore->eventWait();
-		}
+		m_semaphore->wait();
     }
 }
 
@@ -164,7 +157,6 @@ void CTaskThread::StopAllTaskUnlock()
 void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
 {
 	m_taskMap[taskLevel].push_back(spTask);
-	m_semaphore->event();
 	//如果添加任务的优先级高于当前任务则当前任务停止
 	if (m_spCurTask != nullptr && taskLevel > m_curTaskLevel)
 	{
@@ -173,9 +165,11 @@ void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t t
 		{
 			m_taskMap[m_curTaskLevel].push_front(m_spCurTaskBk);
 			m_spCurTaskBk = nullptr;
+			m_semaphore->signal();
 		}
 		StopCurTask();
 	}
+	m_semaphore->signal();
 }
 
 bool CTaskThread::HasTask()
@@ -291,6 +285,6 @@ int32_t CTaskThread::GetCurTaskLevel()
 void CTaskThread::WaitForEnd()
 {
 	m_waitForEndSignal = true;
-	m_semaphore->event();
+	m_semaphore->signal();
 	WaitForExit();
 }

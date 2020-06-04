@@ -17,16 +17,14 @@ public:
 	WorkTask();
 
 public:
-	void setCallback(CallbackBase* callback);
-	
-	void setParam(uv_tcp_t* client, char* buffer, int32_t length);
-
 	virtual void DoTask();
+
+	void setParam(uv_tcp_t* sender, char* buffer, int32_t length, LibuvTcp* libuvTcp);
 	
 private:
-	uv_tcp_t* m_client;
+	uv_tcp_t* m_sender;
 	char* m_buffer;
 	int32_t m_length;
 	int32_t m_protocolId;
-	CallbackBase* m_callback;
+	LibuvTcp* m_libuvTcp;
 };

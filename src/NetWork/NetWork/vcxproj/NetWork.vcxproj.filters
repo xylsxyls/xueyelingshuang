@@ -22,11 +22,8 @@
     <Filter Include="Task">
       <UniqueIdentifier>{a3e9c31f-91c1-488d-92cc-03919b83b429}</UniqueIdentifier>
     </Filter>
-    <Filter Include="CallbackBase">
-      <UniqueIdentifier>{4830ae88-56dc-4ccc-bf8e-a226495a3328}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NetWorkThreadManager">
-      <UniqueIdentifier>{6e284a1f-6d9a-40d9-9028-20cef5e5798b}</UniqueIdentifier>
+    <Filter Include="NetWorkHelper">
+      <UniqueIdentifier>{338841ad-31f4-4c7c-bb5f-0f49503f67af}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -39,76 +36,34 @@
     <ClInclude Include="..\src\NetClient.h">
       <Filter>Client</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ClientCallback.h">
-      <Filter>Client</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\NetServer.h">
       <Filter>Server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ServerCallback.h">
-      <Filter>Server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SendTask.h">
-      <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="..\src\WorkTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CallbackBase.h">
-      <Filter>CallbackBase</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\NetWorkThreadManager.h">
-      <Filter>NetWorkThreadManager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ReceiveCallbackBase.h">
-      <Filter>CallbackBase</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ClientCallbackBase.h">
-      <Filter>CallbackBase</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ServerCallbackBase.h">
-      <Filter>CallbackBase</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\HeartTask.h">
       <Filter>Task</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\NetWorkHelper.h">
+      <Filter>NetWorkHelper</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\ClientCallback.cpp">
-      <Filter>Client</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\NetClient.cpp">
       <Filter>Client</Filter>
     </ClCompile>
     <ClCompile Include="..\src\NetServer.cpp">
       <Filter>Server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ServerCallback.cpp">
-      <Filter>Server</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\WorkTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SendTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\CallbackBase.cpp">
-      <Filter>CallbackBase</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\NetWorkThreadManager.cpp">
-      <Filter>NetWorkThreadManager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ReceiveCallbackBase.cpp">
-      <Filter>CallbackBase</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ClientCallbackBase.cpp">
-      <Filter>CallbackBase</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ServerCallbackBase.cpp">
-      <Filter>CallbackBase</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\HeartTask.cpp">
       <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\NetWorkHelper.cpp">
+      <Filter>NetWorkHelper</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

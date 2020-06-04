@@ -1,46 +1,47 @@
 #pragma once
-#include "NetWorkMacro.h"
 #include <stdint.h>
 #include <string>
-#include <map>
 #include <vector>
-#include <list>
 #include "CorrespondParam/CorrespondParamAPI.h"
+#include "LibuvTcp/LibuvTcpAPI.h"
+#include <memory>
+#include "NetWorkMacro.h"
 
 class LibuvTcp;
-class ServerCallback;
-class ServerCallbackBase;
 typedef struct uv_tcp_s uv_tcp_t;
-class ReadWriteMutex;
+class CTaskThread;
 
-class NetWorkAPI NetServer
+class NetWorkAPI NetServer : public LibuvTcp
 {
 public:
 	NetServer();
 
 public:
-	void listen(int32_t port, ServerCallback* callback);
+	void listen(int32_t port);
 
-	void send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId, uv_tcp_t* dest);
+	void send(uv_tcp_t* client, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
 
-public:
-	ReadWriteMutex* clientPtrToThreadIdMutex();
+	virtual void onReceive(uv_tcp_t* client, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
+	
+	virtual void onClientConnected(uv_tcp_t* client);
 
-	std::map<uv_tcp_t*, uint32_t>& clientPtrToThreadIdMap();
-
+	virtual void onHeart();
+	
 protected:
-	LibuvTcp* m_libuvTcp;
+	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length);
+	
+	virtual void clientConnected(uv_tcp_t* client);
 
 protected:
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::map<uv_tcp_t*, uint32_t> m_clientPtrToThreadIdMap;
-	ReadWriteMutex* m_clientPtrToThreadIdMutex;
+	std::vector<uv_tcp_t*> m_vecClient;
+	std::shared_ptr<CTaskThread> m_receiveThread;
+	std::string m_receiveArea;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-	ServerCallbackBase* m_serverCallbackBase;
-	
+	uint32_t m_receiveThreadId;
 };

@@ -1,6 +1,5 @@
 #include "HeartTask.h"
 #include "NetClient.h"
-#include "D:\\SendToMessageTest.h"
 
 HeartTask::HeartTask():
 m_time(0),
@@ -15,7 +14,7 @@ void HeartTask::DoTask()
 	while (!m_stop)
 	{
 		m_netClient->send("", 0, CorrespondParam::HEART);
-		Sleep(m_time);
+		std::this_thread::sleep_for(std::chrono::milliseconds(m_time));
 	}
 }
 
