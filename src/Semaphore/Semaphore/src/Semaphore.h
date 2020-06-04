@@ -21,6 +21,33 @@ public:
 	*/
 	void wait();
 
+#ifdef _MSC_VER
+
+	/** 进程信号量的创建
+	@param [in] name 名字
+	@param [in] signalCount 同时接受的最大信号量个数
+	*/
+	void createProcessSemaphore(const std::string& name, int32_t signalCount = 800000000);
+
+	/** 打开信号量
+	@param [in] name 名字
+	*/
+	void openProcessSemaphore(const std::string& name);
+
+	/** 关闭信号量
+	*/
+	void closeProcessSemaphore();
+
+	/** 进程信号
+	*/
+	void processSignal();
+
+	/** 进程等待
+	*/
+	void processWait();
+
+#endif
+
 	/** 事件通知，多个事件同时等待只会通知一个，必须进入了eventWait，通知才有效果，一对一，允许一对多
 	*/
 	void event();
@@ -48,4 +75,8 @@ private:
 #pragma warning(pop)
 #endif
 	int32_t m_count;
+
+#ifdef _MSC_VER
+	HANDLE m_processHandle;
+#endif
 };
