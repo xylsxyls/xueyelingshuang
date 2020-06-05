@@ -31,11 +31,6 @@ public:
 public:
 	static std::string mapName(HANDLE memoryHandle, int32_t bufferSize = 1024);
 
-	static SharedMemory* createPid();
-
-	//有后缀名，传空为第一次，如果有值则直接读
-	static int32_t readPid(const std::string& exeName, SharedMemory*& pid);
-
 protected:
 	void open(bool bReadOnly);
 

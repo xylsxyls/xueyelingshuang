@@ -1,22 +1,25 @@
 #include "ProcessWork.h"
-#include "ProcessHelper.h"
-#include "HandleManager.h"
 #include "SharedMemory/SharedMemoryAPI.h"
-#include "LogManager/LogManagerAPI.h"
-#include "ReceiveTask.h"
 #include "CSystem/CSystemAPI.h"
-#include "ProcessMutexManager.h"
-#include "SharedMemoryManager.h"
-#include "ThreadManager.h"
-#include "CreateDataTask.h"
-#include "CreateKeyTask.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include "Semaphore/SemaphoreAPI.h"
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "AssignTask.h"
+#include "ReadTask.h"
 
 ProcessWork::ProcessWork():
+m_thisProcessPid(0),
 m_callback(nullptr),
-m_processPid(0)
+m_assignSemaphore(nullptr),
+m_assignEndSemaphore(nullptr),
+m_readSemaphore(nullptr),
+m_readEndSemaphore(nullptr),
+m_area(nullptr),
+m_assginThreadId(0),
+m_readThreadId(0),
+m_receiveThreadId(0)
 {
-	m_processPid = CSystem::processPid()[0];
+	m_thisProcessPid = CSystem::processFirstPid();
 }
 
 ProcessWork& ProcessWork::instance()
@@ -25,128 +28,148 @@ ProcessWork& ProcessWork::instance()
 	return ProcessWork;
 }
 
-void ProcessWork::uninit()
-{
-	SharedMemoryManager::instance().uninit();
-	ThreadManager::instance().uninit();
-	ProcessMutexManager::instance().uninit();
-	HandleManager::instance().uninit();
-}
-
-void ProcessWork::initReceive(ProcessReceiveCallback* callback)
+void ProcessWork::initReceive(ProcessReceiveCallback* callback, int32_t areaCount, int32_t receiveSize)
 {
 	m_callback = callback;
 
-	SharedMemoryManager::instance().initReceiveMemory();
+	m_area = new SharedMemory(CStringManager::Format("ProcessArea_%d", m_thisProcessPid), 8);
 
-	CreateKeyTask* createKeyTask = new CreateKeyTask;
-	createKeyTask->setClient(this);
-	std::shared_ptr<CreateKeyTask> spCreateKeyTask;
-	spCreateKeyTask.reset(createKeyTask);
-	ThreadManager::instance().postCreateKeyTask(spCreateKeyTask);
+	m_assignSemaphore = new Semaphore;
+	m_assignEndSemaphore = new Semaphore;
+	m_readSemaphore = new Semaphore;
+	m_readEndSemaphore = new Semaphore;
 
-	CreateDataTask* createDataTask = new CreateDataTask;
-	createDataTask->setClient(this);
-	std::shared_ptr<CreateDataTask> spCreateDataTask;
-	spCreateDataTask.reset(createDataTask);
-	ThreadManager::instance().postCreateDataTask(spCreateDataTask);
+	m_assignSemaphore->createProcessSemaphore(CStringManager::Format("ProcessAssgin_%d", m_thisProcessPid));
+	m_assignEndSemaphore->createProcessSemaphore(CStringManager::Format("ProcessAssginEnd_%d", m_thisProcessPid));
+	m_readSemaphore->createProcessSemaphore(CStringManager::Format("ProcessRead_%d", m_thisProcessPid));
+	m_readEndSemaphore->createProcessSemaphore(CStringManager::Format("ProcessReadEnd_%d", m_thisProcessPid));
 
-	ReceiveTask* receiveTask = new ReceiveTask;
-	receiveTask->setClient(this);
-	std::shared_ptr<ReceiveTask> spReceiveTask;
-	spReceiveTask.reset(receiveTask);
-	ThreadManager::instance().postReceiveTask(spReceiveTask);
+	int32_t index = -1;
+	while (index++ != areaCount - 1)
+	{
+		std::shared_ptr<SharedMemory> spSharedMemory(new SharedMemory(CStringManager::Format("ProcessArea_%d_%d", m_thisProcessPid, index + 1), receiveSize));
+		m_memoryMap[index + 1].first = spSharedMemory;
+		std::shared_ptr<std::atomic<bool>> spUsed(new std::atomic<bool>(false));
+		m_memoryMap[index + 1].second = spUsed;
+	}
+
+	m_assginThreadId = CTaskThreadManager::Instance().Init();
+	m_readThreadId = CTaskThreadManager::Instance().Init();
+	m_receiveThreadId = CTaskThreadManager::Instance().Init();
+
+	std::shared_ptr<AssignTask> spAssignTask(new AssignTask);
+	spAssignTask->setParam(m_assignSemaphore, m_assignEndSemaphore, m_area, &m_memoryMap);
+	CTaskThreadManager::Instance().GetThreadInterface(m_assginThreadId)->PostTask(spAssignTask);
+
+	std::shared_ptr<ReadTask> spReadTask(new ReadTask);
+	spReadTask->setParam(m_callback, m_readSemaphore, m_readEndSemaphore, m_area, &m_memoryMap, CTaskThreadManager::Instance().GetThreadInterface(m_receiveThreadId));
+	CTaskThreadManager::Instance().GetThreadInterface(m_readThreadId)->PostTask(spReadTask);
 }
 
-void ProcessWork::send(const char* buffer, int32_t length, int32_t pid, CorrespondParam::ProtocolId protocolId)
+void ProcessWork::uninitReceive()
 {
-	if (pid == 0)
+	CTaskThreadManager::Instance().Uninit(m_assginThreadId);
+	CTaskThreadManager::Instance().Uninit(m_readThreadId);
+	CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
+	m_memoryMap.clear();
+	m_assignSemaphore->closeProcessSemaphore();
+	m_assignEndSemaphore->closeProcessSemaphore();
+	m_readSemaphore->closeProcessSemaphore();
+	m_readEndSemaphore->closeProcessSemaphore();
+	delete m_assignSemaphore;
+	delete m_assignEndSemaphore;
+	delete m_readSemaphore;
+	delete m_readEndSemaphore;
+	delete m_area;
+
+	m_assignSemaphore = nullptr;
+	m_assignEndSemaphore = nullptr;
+	m_readSemaphore = nullptr;
+	m_readEndSemaphore = nullptr;
+	m_area = nullptr;
+
+	m_assginThreadId = 0;
+	m_readThreadId = 0;
+	m_receiveThreadId = 0;
+	m_callback = nullptr;
+}
+
+void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+{
+	if (destPid == 0)
 	{
-		LOGERROR("pid == 0");
 		return;
 	}
-	void* data = nullptr;
-	int32_t sendIndex = 0;
-	int32_t sendBegin = 0;
+
+	int32_t assign = 0;
+	SharedMemory destArea(CStringManager::Format("ProcessArea_%d", destPid));
+	void* area = destArea.writeWithoutLock();
+
+	ProcessReadWriteMutex destProcessAssignMutex(CStringManager::Format("ProcessAssginMutex_%d", destPid));
+	ProcessReadWriteMutex destProcessReadMutex(CStringManager::Format("ProcessReadMutex_%d", destPid));
+
+	Semaphore destAssignSemaphore;
+	Semaphore destAssignEndSemaphore;
+	Semaphore destReadSemaphore;
+	Semaphore destReadEndSemaphore;
+
+	destAssignSemaphore.openProcessSemaphore(CStringManager::Format("ProcessAssgin_%d", destPid));
+	destAssignEndSemaphore.openProcessSemaphore(CStringManager::Format("ProcessAssginEnd_%d", destPid));
+	destReadSemaphore.openProcessSemaphore(CStringManager::Format("ProcessRead_%d", destPid));
+	destReadEndSemaphore.openProcessSemaphore(CStringManager::Format("ProcessReadEnd_%d", destPid));
+
+	//申请缓存区号
 	{
-		WriteLock writeLock(*(ProcessMutexManager::instance().positionMutex(pid)));
-		
-		//修改发送位置
-		if (!SharedMemoryManager::instance().addDataPosition(pid, length))
-		{
-			//如果不成功就申请新共享内存
-			::ReleaseSemaphore(HandleManager::instance().createDataHandle(pid, true), 1, nullptr);
-			::WaitForSingleObject(HandleManager::instance().createDataEndHandle(pid, true), INFINITE);
-			//进入下一段数据内存
-			if (!SharedMemoryManager::instance().raiseSendData(pid, length))
-			{
-				LOGERROR("raiseSendData error");
-			}
-		}
-
-		//获取发送数据内存，最新
-		SharedMemory* sendData = SharedMemoryManager::instance().getCurrentSendData(pid);
-
-		//修改当前共享内存已使用大小
-		SharedMemoryManager::instance().addDataAlreadyUsed(pid, length);
-		data = sendData->writeWithoutLock();
-		if (data == nullptr)
-		{
-			LOGERROR("data == nullptr");
-		}
-
-		sendIndex = SharedMemoryManager::instance().sendDataIndex(pid);
-		sendBegin = SharedMemoryManager::instance().sendDataPosition(pid) - length;
+		WriteLock writeLock(destProcessAssignMutex);
+		destAssignSemaphore.processSignal();
+		destAssignEndSemaphore.processWait();
+		//读取申请的缓存区号
+		assign = (int32_t)(*((int32_t*)area));
+	}
+	SharedMemory sharedMemory(CStringManager::Format("ProcessArea_%d_%d", destPid, assign));
+	void* memory = sharedMemory.writeWithoutLock();
+	*((int32_t*)memory) = m_thisProcessPid;
+	*((int32_t*)memory + 1) = length + 4;
+	*((int32_t*)memory + 2) = (int32_t)protocolId;
+	::memcpy((char*)memory + 12, buffer, length);
+	//申请目标读取
+	{
+		WriteLock writeLock(destProcessReadMutex);
+		destReadEndSemaphore.processWait();
+		//把写好的缓存区号写进去
+		*((int32_t*)area + 1) = assign;
+		destReadSemaphore.processSignal();
 	}
 
-	//拷贝
-	::memcpy((char*)data + sendBegin, buffer, length);
-
-	{
-		WriteLock writeLock(*(ProcessMutexManager::instance().positionMutex(pid)));
-		
-		//修改钥匙位置
-		if (!SharedMemoryManager::instance().addKeyPosition(pid))
-		{
-			//如果不成功就申请新共享内存
-			::ReleaseSemaphore(HandleManager::instance().createKeyHandle(pid, true), 1, nullptr);
-			::WaitForSingleObject(HandleManager::instance().createKeyEndHandle(pid, true), INFINITE);
-			//切换至当前
-			//ProcessHelper::changeToCurrentKey(&m_key, m_position);
-			//进入下一段钥匙内存
-			if (!SharedMemoryManager::instance().raiseSendKey(pid))
-			{
-				LOGERROR("raiseSendKey error");
-			}
-		}
-
-		//切换至当前
-		//SharedMemoryManager::instance().changeToCurrentKey(pid);
-
-		KeyPackage keyPackage;
-		keyPackage.m_sendPid = m_processPid;
-		keyPackage.m_receivePid = pid;
-		keyPackage.m_length = length;
-		keyPackage.m_protocal = protocolId;
-		keyPackage.m_index = sendIndex;
-		keyPackage.m_begin = sendBegin;
-		//先切换到当前钥匙内存再写入钥匙
-		if (!SharedMemoryManager::instance().writeKey(pid, keyPackage))
-		{
-			LOGERROR("writeKey false");
-		}
-	}
-	
-	//通知
-	::ReleaseSemaphore(HandleManager::instance().assignHandle(pid, true), 1, nullptr);
+	destAssignSemaphore.closeProcessSemaphore();
+	destAssignEndSemaphore.closeProcessSemaphore();
+	destReadSemaphore.closeProcessSemaphore();
+	destReadEndSemaphore.closeProcessSemaphore();
 }
 
-void ProcessWork::send(const char* buffer, int32_t length, const std::string& processName, CorrespondParam::ProtocolId protocolId)
+void ProcessWork::send(const std::string& processName, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
 	std::vector<int32_t> vecPid = CSystem::processPid(processName);
 	if (vecPid.empty())
 	{
 		return;
 	}
-	send(buffer, length, vecPid[0], protocolId);
+	send(vecPid[0], buffer, length, protocolId);
 }
+
+//class Receive : public ProcessReceiveCallback
+//{
+//public:
+//	void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+//	{
+//		RCSend("%s", buffer);
+//	}
+//};
+//
+//int32_t main()
+//{
+//	Receive receive;
+//	ProcessWork::instance().initReceive(&receive, 20000);
+//	getchar();
+//	return 0;
+//}

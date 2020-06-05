@@ -19,38 +19,19 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\CreateDataTask.h" />
-    <ClInclude Include="..\src\CreateKeyTask.h" />
-    <ClInclude Include="..\src\DeleteDataTask.h" />
-    <ClInclude Include="..\src\DeleteKeyTask.h" />
-    <ClInclude Include="..\src\HandleManager.h" />
-    <ClInclude Include="..\src\HandlePackage.h" />
-    <ClInclude Include="..\src\KeyPackage.h" />
-    <ClInclude Include="..\src\MemroyPackage.h" />
-    <ClInclude Include="..\src\ProcessHelper.h" />
-    <ClInclude Include="..\src\ProcessMutexManager.h" />
+    <ClInclude Include="..\src\AssignTask.h" />
+    <ClInclude Include="..\src\ProcessReceiveCallback.h" />
     <ClInclude Include="..\src\ProcessWorkAPI.h" />
     <ClInclude Include="..\src\ProcessWorkMacro.h" />
     <ClInclude Include="..\src\ProcessWork.h" />
-    <ClInclude Include="..\src\ProcessWorkTask.h" />
-    <ClInclude Include="..\src\ReceiveCallback.h" />
+    <ClInclude Include="..\src\ReadTask.h" />
     <ClInclude Include="..\src\ReceiveTask.h" />
-    <ClInclude Include="..\src\SharedMemoryManager.h" />
-    <ClInclude Include="..\src\ThreadManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\CreateDataTask.cpp" />
-    <ClCompile Include="..\src\CreateKeyTask.cpp" />
-    <ClCompile Include="..\src\DeleteDataTask.cpp" />
-    <ClCompile Include="..\src\DeleteKeyTask.cpp" />
-    <ClCompile Include="..\src\HandleManager.cpp" />
-    <ClCompile Include="..\src\ProcessHelper.cpp" />
-    <ClCompile Include="..\src\ProcessMutexManager.cpp" />
+    <ClCompile Include="..\src\AssignTask.cpp" />
     <ClCompile Include="..\src\ProcessWork.cpp" />
-    <ClCompile Include="..\src\ProcessWorkTask.cpp" />
+    <ClCompile Include="..\src\ReadTask.cpp" />
     <ClCompile Include="..\src\ReceiveTask.cpp" />
-    <ClCompile Include="..\src\SharedMemoryManager.cpp" />
-    <ClCompile Include="..\src\ThreadManager.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8209383E-9A8F-4F50-B583-7173B6100B3C}</ProjectGuid>

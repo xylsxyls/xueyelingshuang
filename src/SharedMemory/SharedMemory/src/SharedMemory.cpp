@@ -144,32 +144,6 @@ std::string SharedMemory::mapName(HANDLE memoryHandle, int32_t bufferSize)
 	return pszFilename;
 }
 
-SharedMemory* SharedMemory::createPid()
-{
-	SharedMemory* pid = new SharedMemory(CSystem::GetCurrentExeName() + "_pid", sizeof(int32_t));
-	void* memory = pid->writeWithoutLock();
-	if (memory == nullptr)
-	{
-		return nullptr;
-	}
-	*((int32_t*)memory) = CSystem::processPid()[0];
-	return pid;
-}
-
-int32_t SharedMemory::readPid(const std::string& exeName, SharedMemory*& pid)
-{
-	if (pid == nullptr)
-	{
-		pid = new SharedMemory(CSystem::GetName(exeName, 3) + "_pid");
-	}
-	void* memory = pid->readWithoutLock();
-	if (memory == nullptr)
-	{
-		return 0;
-	}
-	return *((int32_t*)memory);
-}
-
 void* SharedMemory::memory()
 {
 	return m_memoryPtr;

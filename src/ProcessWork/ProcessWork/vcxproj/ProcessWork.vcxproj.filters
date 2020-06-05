@@ -13,17 +13,8 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="ReceiveCallback">
-      <UniqueIdentifier>{61f48079-8755-4835-a25a-6e87664a178b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Task">
       <UniqueIdentifier>{0c52e382-fda8-4403-88ad-cebd51cda4da}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Manager">
-      <UniqueIdentifier>{c02dc956-6cf7-4b1d-b392-b3513ec20bfa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Helper">
-      <UniqueIdentifier>{2fb6bda5-a9ea-4f45-88f5-42348d997423}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,50 +27,17 @@
     <ClInclude Include="..\src\ProcessWorkMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ReceiveCallback.h">
-      <Filter>ReceiveCallback</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\ReceiveTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\HandleManager.h">
-      <Filter>Manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SharedMemoryManager.h">
-      <Filter>Manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ProcessMutexManager.h">
-      <Filter>Manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CreateKeyTask.h">
+    <ClInclude Include="..\src\AssignTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CreateDataTask.h">
+    <ClInclude Include="..\src\ReadTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\DeleteKeyTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\DeleteDataTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ThreadManager.h">
-      <Filter>Manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ProcessHelper.h">
-      <Filter>Helper</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\KeyPackage.h">
-      <Filter>Helper</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\HandlePackage.h">
-      <Filter>Helper</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\MemroyPackage.h">
-      <Filter>Helper</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ProcessWorkTask.h">
-      <Filter>Task</Filter>
+    <ClInclude Include="..\src\ProcessReceiveCallback.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -89,34 +47,10 @@
     <ClCompile Include="..\src\ReceiveTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\HandleManager.cpp">
-      <Filter>Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\SharedMemoryManager.cpp">
-      <Filter>Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ProcessMutexManager.cpp">
-      <Filter>Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\CreateDataTask.cpp">
+    <ClCompile Include="..\src\ReadTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\CreateKeyTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\DeleteDataTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\DeleteKeyTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ThreadManager.cpp">
-      <Filter>Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ProcessHelper.cpp">
-      <Filter>Helper</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ProcessWorkTask.cpp">
+    <ClCompile Include="..\src\AssignTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
   </ItemGroup>
