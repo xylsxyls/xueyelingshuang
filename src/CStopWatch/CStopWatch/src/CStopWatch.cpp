@@ -1,5 +1,6 @@
 #include "CStopWatch.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include <windows.h>
 
 class CStopWatchCountDownTask : public CTask
 {
