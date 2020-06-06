@@ -38,6 +38,7 @@ bool wDown = false;
 bool eDown = false;
 bool dDown = false;
 bool fDown = false;
+bool cDown = false;
 bool qDown = false;
 bool rDown = false;
 bool aDown = false;
@@ -161,6 +162,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			fDown = true;
 		}
+		else if (vkCode == 'C')
+		{
+			cDown = true;
+		}
 		else if (vkCode == 'A')
 		{
 			aDown = false;
@@ -214,6 +219,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			fDown = false;
 		}
+		else if (vkCode == 'C')
+		{
+			cDown = false;
+		}
 		else if (vkCode == 'A')
 		{
 			aDown = true;
@@ -247,6 +256,13 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			stopWatch.SetWatchTime(0);
 			std::shared_ptr<CNoFlashTask> spTask;
 			spTask.reset(new CNoFlashTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		if (cDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CFlashTask> spTask;
+			spTask.reset(new CFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
 		else if (aDown && stopWatch.GetWatchTime() > 500)
