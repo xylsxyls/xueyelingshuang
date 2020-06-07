@@ -38,6 +38,8 @@ void CqNoFlashTask::DoTask()
 	//CMouse::RightManyClick(5, 300);
 	//return;
 
+	CKeyboard::InputString("www", 0);
+
 	CKeyboard::KeyDown('N');
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('N');

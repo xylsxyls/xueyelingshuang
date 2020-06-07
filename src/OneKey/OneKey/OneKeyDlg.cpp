@@ -32,12 +32,15 @@ CStopWatch stopWatch;
 CStopWatch w3StopWatch;
 CStopWatch sleepWatch;
 CStopWatch textWatch;
+CStopWatch tWatch;
+CStopWatch test;
 
 int32_t type = 1;
 bool wDown = false;
 bool eDown = false;
 bool dDown = false;
 bool fDown = false;
+bool tDown = false;
 bool cDown = false;
 bool qDown = false;
 bool rDown = false;
@@ -45,6 +48,7 @@ bool aDown = false;
 bool threeDown = false;
 bool fiveDown = false;
 bool vkCodeOpen = false;
+bool leftDown = false;
 
 std::atomic<bool> rightMouse = true;
 
@@ -120,6 +124,15 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
     //        return 1;
     //    }
     //}
+	if (wParam == 513)
+	{
+		leftDown = true;
+		tWatch.SetWatchTime(0);
+	}
+	else if (wParam == 514)
+	{
+		leftDown = false;
+	}
 	if (wParam == 519 && stopWatch.GetWatchTime() > 500)
 	{
 		stopWatch.SetWatchTime(0);
@@ -165,6 +178,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (vkCode == 'C')
 		{
 			cDown = true;
+		}
+		else if (vkCode == 'T')
+		{
+			test.SetWatchTime(0);
+			tDown = false;
 		}
 		else if (vkCode == 'A')
 		{
@@ -223,6 +241,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			cDown = false;
 		}
+		else if (vkCode == 'T' && tWatch.GetWatchTime() > 1000)
+		{
+			RCSend("%d", test.GetWatchTime());
+			tDown = true;
+		}
 		else if (vkCode == 'A')
 		{
 			aDown = true;
@@ -240,6 +263,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	if (textWatch.GetWatchTime() < 10000)
 	{
 		aDown = false;
+		tDown = false;
 		return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
 	}
 
@@ -258,8 +282,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CNoFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		if (cDown && stopWatch.GetWatchTime() > 500)
+		if (tDown && stopWatch.GetWatchTime() > 500)
 		{
+			tDown = false;
 			stopWatch.SetWatchTime(0);
 			std::shared_ptr<CFlashTask> spTask;
 			spTask.reset(new CFlashTask);
@@ -300,6 +325,13 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			std::shared_ptr<CqNoFlashTask> spTask;
 			spTask.reset(new CqNoFlashTask);
 			taskThread->PostTask(spTask, 2);
+		}
+		else if (cDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CqNoFlashTask> spTask;
+			spTask.reset(new CqNoFlashTask);
+			taskThread->PostTask(spTask, 1);
 		}
 		else if (vkCodeOpen && wDown && stopWatch.GetWatchTime() > 500)
 		{
