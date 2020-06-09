@@ -38,7 +38,8 @@ class CorrespondParamAPI CorrespondParam
 public:
 	enum ProtocolId
 	{
-		CLIENT_INIT = 0,
+		INIT,
+		CLIENT_INIT,
 		SERVER_INIT,
 		PROTO_MESSAGE,
 		JSON,

@@ -3,34 +3,34 @@
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "ProcessReceiveCallback.h"
 
-ReceiveTask::ReceiveTask():
-m_assign(0),
+ReceiveTask::ReceiveTask(const char* buffer, int32_t length):
+m_sendPid(0),
+m_length(0),
+m_buffer(nullptr),
 m_callback(nullptr),
-m_memoryMap(nullptr)
+m_protocolId(CorrespondParam::ProtocolId::INIT)
 {
-	
+	m_buffer = new char[length + 1];
+	m_buffer[length] = 0;
+	::memcpy(m_buffer, buffer, length);
+	m_length = length;
+}
+
+ReceiveTask::~ReceiveTask()
+{
+	delete[] m_buffer;
 }
 
 void ReceiveTask::DoTask()
 {
-	auto& memoryPair = m_memoryMap->find(m_assign)->second;
-	void* memory = memoryPair.first->writeWithoutLock();
-	int32_t sendPid = *(int32_t*)memory;
-	int32_t length = *((int32_t*)memory + 1) - 4;
-	CorrespondParam::ProtocolId protocolId = (CorrespondParam::ProtocolId)*((int32_t*)memory + 2);
-	char* buffer = new char[length + 1];
-	buffer[length] = 0;
-	::memcpy(buffer, (char*)memory + 12, length);
-	*(memoryPair.second) = false;
-	m_callback->receive(sendPid, buffer, length, protocolId);
-	delete[] buffer;
+	m_callback->receive(m_sendPid, m_buffer, m_length, m_protocolId);
 }
 
-void ReceiveTask::setParam(int32_t assign,
+void ReceiveTask::setParam(int32_t sendPid,
 	ProcessReceiveCallback* callback,
-	std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* memoryMap)
+	CorrespondParam::ProtocolId protocolId)
 {
-	m_assign = assign;
+	m_sendPid = sendPid;
 	m_callback = callback;
-	m_memoryMap = memoryMap;
+	m_protocolId = protocolId;
 }

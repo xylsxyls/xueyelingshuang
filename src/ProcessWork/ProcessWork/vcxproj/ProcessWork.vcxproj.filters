@@ -39,6 +39,12 @@
     <ClInclude Include="..\src\ProcessReceiveCallback.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\SendTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CopyTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ProcessWork.cpp">
@@ -51,6 +57,12 @@
       <Filter>Task</Filter>
     </ClCompile>
     <ClCompile Include="..\src\AssignTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SendTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CopyTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
   </ItemGroup>

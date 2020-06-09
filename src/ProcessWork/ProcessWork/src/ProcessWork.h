@@ -28,10 +28,10 @@ public:
 public:
 	/** 初始化接收模块
 	@param [in] callback 接收回调类
+	@param [in] receiveSize 单个共享内存接收区大小，1M
 	@param [in] areaCount 缓存块个数
-	@param [in] receiveSize 共享内存大小
 	*/
-	void initReceive(ProcessReceiveCallback* callback, int32_t areaCount, int32_t receiveSize = 1048576);
+	void initReceive(ProcessReceiveCallback* callback, int32_t receiveSize = 1 * 1024 * 1024, int32_t areaCount = 100);
 
 	/** 销毁接收模块资源
 	*/
@@ -69,7 +69,10 @@ protected:
 	Semaphore* m_readSemaphore;
 	Semaphore* m_readEndSemaphore;
 	SharedMemory* m_area;
+	SharedMemory* m_pid;
 	uint32_t m_assginThreadId;
 	uint32_t m_readThreadId;
+	uint32_t m_copyThreadId;
 	uint32_t m_receiveThreadId;
+	uint32_t m_sendThreadId;
 };

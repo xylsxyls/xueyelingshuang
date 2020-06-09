@@ -11,6 +11,8 @@ public:
 	CTask();
     CTask(int32_t taskId);
 
+	virtual ~CTask();
+
 public:
     virtual void DoTask() = 0;
 	//当需要中断时加上

@@ -27,7 +27,7 @@ void AssignTask::DoTask()
 		{
 			for (auto itMemory = m_memoryMap->begin(); itMemory != m_memoryMap->end(); ++itMemory)
 			{
-				if (itMemory->second.second)
+				if (!(*(itMemory->second.second)))
 				{
 					assign = itMemory->first;
 					*(itMemory->second.second) = true;

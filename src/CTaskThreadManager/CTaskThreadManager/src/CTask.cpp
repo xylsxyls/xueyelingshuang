@@ -14,6 +14,11 @@ m_waitForSend(nullptr)
 
 }
 
+CTask::~CTask()
+{
+
+}
+
 void CTask::StopTask()
 {
 	return;

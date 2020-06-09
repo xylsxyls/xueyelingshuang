@@ -2,50 +2,36 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
 class ProcessReceiveCallback;
-class Semaphore;
 class SharedMemory;
 
-/** 接收任务
+/** 拷贝任务
 */
-class ReadTask : public CTask
+class CopyTask : public CTask
 {
 public:
 	/** 构造函数
 	*/
-	ReadTask();
+	CopyTask();
 
 public:
 	/** 执行任务
 	*/
 	void DoTask();
 
-	/** 停止任务
-	*/
-	void StopTask();
-
 	/** 设置参数
+	@param [in] assign 读取的缓存区号
 	@param [in] callback 接收回调类
-	@param [in] readSemaphore 读取信号
-	@param [in] readEndSemaphore 读取完毕信号
-	@param [in] area 缓存区号缓存
 	@param [in] memoryMap 共享内存组
-	@param [in] receiveThread 接收线程
+	@param [in] receiveThread 处理线程
 	*/
-	void setParam(ProcessReceiveCallback* callback,
-		Semaphore* readSemaphore,
-		Semaphore* readEndSemaphore,
-		SharedMemory* area,
+	void setParam(int32_t assign,
+		ProcessReceiveCallback* callback,
 		std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* memoryMap,
-		const std::shared_ptr<CTaskThread>& copyThread,
 		const std::shared_ptr<CTaskThread>& receiveThread);
 
 private:
-	std::atomic<bool> m_exit;
+	int32_t m_assign;
 	ProcessReceiveCallback* m_callback;
-	Semaphore* m_readSemaphore;
-	Semaphore* m_readEndSemaphore;
-	SharedMemory* m_area;
 	std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* m_memoryMap;
-	std::shared_ptr<CTaskThread> m_copyThread;
 	std::shared_ptr<CTaskThread> m_receiveThread;
 };

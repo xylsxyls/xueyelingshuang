@@ -1,5 +1,6 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "CorrespondParam/CorrespondParamAPI.h"
 
 class ProcessReceiveCallback;
 class SharedMemory;
@@ -10,8 +11,14 @@ class ReceiveTask : public CTask
 {
 public:
 	/** 构造函数
+	@param[in] buffer 数据首地址
+	@param[in] length 长度
 	*/
-	ReceiveTask();
+	ReceiveTask(const char* buffer, int32_t length);
+
+	/** 析构函数
+	*/
+	~ReceiveTask();
 
 public:
 	/** 执行任务
@@ -19,16 +26,18 @@ public:
 	void DoTask();
 
 	/** 设置参数
-	@param [in] assign 读取的缓存区号
+	@param [in] sendPid 发送者的pid
 	@param [in] callback 接收回调类
-	@param [in] memoryMap 共享内存组
+	@param [in] protocolId 数据编码方式
 	*/
-	void setParam(int32_t assign,
+	void setParam(int32_t sendPid,
 		ProcessReceiveCallback* callback,
-		std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* memoryMap);
+		CorrespondParam::ProtocolId protocolId);
 
 private:
-	int32_t m_assign;
+	int32_t m_sendPid;
+	CorrespondParam::ProtocolId m_protocolId;
 	ProcessReceiveCallback* m_callback;
-	std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* m_memoryMap;
+	char* m_buffer;
+	int32_t m_length;
 };
