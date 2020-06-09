@@ -37,7 +37,7 @@ public:
 	*/
 	void uninitReceive();
 
-	/** 向服务端发送字符串，无序，有先发后到的情况
+	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况
 	@param [in] destPid 目标进程pid
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
@@ -45,7 +45,7 @@ public:
 	*/
 	void send(int32_t destPid, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId = CorrespondParam::PROTO_MESSAGE);
 
-	/** 向服务端发送字符串，无序，有先发后到的情况
+	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况
 	@param [in] processName 目标进程名，带后缀
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
