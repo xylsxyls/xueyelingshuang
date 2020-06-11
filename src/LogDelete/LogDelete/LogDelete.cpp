@@ -30,5 +30,7 @@ int32_t main()
 	message[LOG_UNINIT] = (int32_t)true;
 	std::string strMessage = message.toString();
 	ProcessWork::instance().send("LogTest1.0", strMessage.c_str(), strMessage.length());
+	Sleep(100);
+	ProcessWork::instance().uninit();
 	return 0;
 }
