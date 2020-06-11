@@ -1,10 +1,9 @@
 #include "NetSender.h"
 #include "ProcessWork/ProcessWorkAPI.h"
-#include "SharedMemory/SharedMemoryAPI.h"
+#include "ProtoMessage/ProtoMessageAPI.h"
+#include "CSystem/CSystemAPI.h"
 
-NetSender::NetSender():
-m_clientManagerPid(nullptr),
-m_serverManagerPid(nullptr)
+NetSender::NetSender()
 {
 
 }
@@ -15,12 +14,28 @@ NetSender& NetSender::instance()
 	return s_netSender;
 }
 
-void NetSender::init(const char* buffer, int32_t length, bool isServer)
+void NetSender::init(ProtoMessage& message, CorrespondParam::ProtocolId protocolId, bool isServer /*= false*/)
 {
-	send(buffer, length, isServer ? CorrespondParam::SERVER_INIT : CorrespondParam::CLIENT_INIT, isServer);
+	if (!isServer)
+	{
+		message[CLIENT_PID] = CSystem::processFirstPid();
+	}
+	std::string strMessage = message.toString();
+	ProcessWork::instance().send(isServer ? "NetServerManager1.0" : "NetClientManager1.0",
+		strMessage.c_str(),
+		strMessage.length(),
+		protocolId);
 }
 
-void NetSender::send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId, bool isServer)
+void NetSender::send(ProtoMessage& message, bool isServer)
 {
-	ProcessWork::instance().send(buffer, length, isServer ? SharedMemory::readPid("NetServerManager1.0.exe", m_serverManagerPid) : SharedMemory::readPid("NetClientManager1.0.exe", m_clientManagerPid), protocolId);
+	if (!isServer)
+	{
+		message[CLIENT_PID] = CSystem::processFirstPid();
+	}
+	std::string strMessage = message.toString();
+	ProcessWork::instance().send(isServer ? "NetServerManager1.0" : "NetClientManager1.0",
+		strMessage.c_str(),
+		strMessage.length(),
+		CorrespondParam::ProtocolId::PROTO_MESSAGE);
 }

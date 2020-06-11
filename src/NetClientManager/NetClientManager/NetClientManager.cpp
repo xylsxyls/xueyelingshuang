@@ -1,14 +1,11 @@
 #include "NetClientManager.h"
 #include <stdint.h>
-#include <stdio.h>
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ProcessReceive.h"
-#include "NetWork/NetWorkAPI.h"
-#include "ClientManagerReceive.h"
-#include "SharedMemory/SharedMemoryAPI.h"
+#include "Client.h"
 #include "CDump/CDumpAPI.h"
 
-SharedMemory* pid = nullptr;
+bool g_exit = false;
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -16,8 +13,9 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
+		ProcessWork::instance().uninitReceive();
 		ProcessWork::instance().uninit();
-		delete pid;
+		g_exit = true;
 	}
 	return FALSE;
 }
@@ -27,13 +25,17 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 int32_t main()
 {
 	CDump::declareDumpFile();
-	pid = SharedMemory::createPid();
-	ClientManagerReceive clientManagerReceive;
-	NetClient client;
-	client.connect("106.12.204.167", 5203, &clientManagerReceive);//106.12.77.189 127.0.0.1
+
+	Client client;
+	client.connect("106.12.204.167", 5203);//106.12.77.189 127.0.0.1 106.12.204.167
+
 	ProcessReceive processReceive;
-	processReceive.setNetClient(&client);
 	ProcessWork::instance().initReceive(&processReceive);
-	while (true) Sleep(1000);
+	processReceive.setClient(&client);
+
+	while (!g_exit)
+	{
+		Sleep(1000);
+	}
 	return 0;
 }

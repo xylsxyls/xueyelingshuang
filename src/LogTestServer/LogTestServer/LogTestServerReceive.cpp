@@ -4,77 +4,60 @@
 #include "Cini/CiniAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
-#include "LogTask.h"
 
 LogTestServerReceive::LogTestServerReceive()
 {
 	m_iniPath = CSystem::GetCurrentExePath() + "Config.ini";
-	m_logThread = CTaskThreadManager::Instance().GetThreadInterface(CTaskThreadManager::Instance().Init());
 }
 
-void LogTestServerReceive::receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId)
+void LogTestServerReceive::receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
+	std::string strBuffer(buffer, length);
+	ProtoMessage message;
+	message.from(strBuffer);
+	int32_t clientPid = message.getMap()[CLIENT_PID];
+	int32_t connectId = message.getMap()[CONNECT_ID];
 	switch (protocolId)
 	{
 	case CorrespondParam::CLIENT_INIT:
 	{
-		printf("CLIENT_INIT, length = %d\n", length);
-		ProtoMessage message;
-		message.from(std::string(buffer + sizeof(int32_t), length - sizeof(int32_t)));
-		int32_t clientId = getClientId(buffer, length);
-		std::map<int32_t, Variant> predefineMap;
-		message.getMap(predefineMap, PREDEFINE);
-		std::string loginName = predefineMap[LOGIN_NAME].toString();
-		NetLineManager::instance().addConnect(loginName, clientId);
-		std::string strMessage = set4ClientId(clientId);
-		std::string protoMsg;
-		message.toString(protoMsg);
-		strMessage.append(protoMsg);
-		printf("logtest client init,loginName = %s,clientId = %d, send to netserver\n", loginName.c_str(), clientId);
-		NetSender::instance().send(strMessage.c_str(), strMessage.length(), CorrespondParam::CLIENT_INIT, true);
+		printf("CLIENT_INIT LogTestServer, length = %d\n", length);
+		std::string loginName = message.getMap()[LOGIN_NAME];
+
+		NetLineManager::instance().addConnect(loginName, clientPid, connectId);
+
+		NetSender::instance().init(message, CorrespondParam::ProtocolId::CLIENT_INIT, true);
 		return;
 	}
 	case CorrespondParam::SERVER_INIT:
 	{
-		printf("SERVER_INIT\n");
+		printf("SERVER_INIT LogTestServer\n");
 		return;
 	}
 	case CorrespondParam::PROTO_MESSAGE:
 	{
-		//printf("PROTO_MESSAGE, length = %d\n", length);
-		LogTask* logTask = new LogTask;
-		logTask->setParam(std::string(buffer + sizeof(int32_t), length - sizeof(int32_t)), getClientId(buffer, length), m_iniPath);
-		std::shared_ptr<LogTask> spLogTask;
-		spLogTask.reset(logTask);
-		m_logThread->PostTask(spLogTask);
-		break;
-	}
-	case CorrespondParam::JSON:
-	{
-		break;
-	}
-	case CorrespondParam::XML:
-	{
+		std::string loginName = NetLineManager::instance().findLoginName(clientPid, connectId);
+		Cini ini(m_iniPath);
+		std::string collectComputerName = ini.readIni("CollectComputerName");
+		std::vector<std::string> vecComputerName = CStringManager::split(collectComputerName, ",");
+		int32_t index = -1;
+		while (index++ != vecComputerName.size() - 1)
+		{
+			auto& computerName = vecComputerName[index];
+			std::vector<std::pair<int32_t, int32_t>> vecClient = NetLineManager::instance().findConnect(computerName);
+			//因为没有断线机制，只发送最后一个同登录名用户
+			if (vecClient.empty())
+			{
+				continue;
+			}
+			message[LOG_LOGIN_NAME] = loginName;
+			message[CLIENT_PID] = vecClient.back().first;
+			message[CONNECT_ID] = vecClient.back().second;
+			NetSender::instance().send(message, true);
+		}
 		break;
 	}
 	default:
 		break;
 	}
-}
-
-int32_t LogTestServerReceive::getClientId(const char* buffer, int32_t length)
-{
-	if (length < 4)
-	{
-		return 0;
-	}
-	return *(int32_t*)buffer;
-}
-
-std::string LogTestServerReceive::set4ClientId(int32_t clientId)
-{
-	std::string strClientId;
-	strClientId.resize(sizeof(int32_t));
-	*(int32_t*)(&strClientId[0]) = clientId;
-	return strClientId;
 }

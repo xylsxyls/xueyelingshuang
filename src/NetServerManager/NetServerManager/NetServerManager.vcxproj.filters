@@ -18,16 +18,13 @@
     <ClInclude Include="NetServerManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ServerManagerReceive.h">
+    <ClInclude Include="Server.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ServerManagerProcessReceive.h">
+    <ClInclude Include="ServerProcessReceive.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ClientPackage.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="ClientPackageManager.h">
+    <ClInclude Include="NetLineManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,13 +32,13 @@
     <ClCompile Include="NetServerManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="ServerManagerReceive.cpp">
+    <ClCompile Include="Server.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="ServerManagerProcessReceive.cpp">
+    <ClCompile Include="ServerProcessReceive.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="ClientPackageManager.cpp">
+    <ClCompile Include="NetLineManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

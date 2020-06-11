@@ -8,8 +8,9 @@
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "CDump/CDumpAPI.h"
 #include "LogManager/LogManagerAPI.h"
+#include "CorrespondParam/CorrespondParamAPI.h"
 
-SharedMemory* pid = nullptr;
+bool g_exit = false;
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -17,9 +18,9 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
+		ProcessWork::instance().uninitReceive();
 		ProcessWork::instance().uninit();
-		delete pid;
-		//CTaskThreadManager::Instance().UninitAll();
+		g_exit = true;
 	}
 	return FALSE;
 }
@@ -29,12 +30,22 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 int32_t main()
 {
 	CDump::declareDumpFile();
-	pid = SharedMemory::createPid();
+
 	LogManager::instance().init();
+
 	LogReceive logReceive;
 	ProcessWork::instance().initReceive(&logReceive);
-	NetSender::instance().init();
-	printf("ComputerName = %s, pid = %d\n", CSystem::getComputerName().c_str(), CSystem::processFirstPid());
-	while (true) Sleep(1000);
+
+	int32_t clientPid = CSystem::processFirstPid();
+	ProtoMessage message;
+	message[SERVER_NAME] = "LogTestServer1.0";
+	NetSender::instance().init(message, CorrespondParam::ProtocolId::CLIENT_INIT);
+
+	printf("ComputerName = %s, pid = %d\n", CSystem::getComputerName().c_str(), clientPid);
+
+	while (!g_exit)
+	{
+		Sleep(1000);
+	}
 	return 0;
 }

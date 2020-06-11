@@ -1,67 +1,44 @@
 #include "ProcessReceive.h"
-#include "NetWork/NetWorkAPI.h"
+#include "Client.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "Compress/CompressAPI.h"
 
 ProcessReceive::ProcessReceive():
-m_netClient(nullptr)
+m_client(nullptr)
 {
 	m_computerName = CSystem::getComputerName();
 }
 
-void ProcessReceive::receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocalId)
+void ProcessReceive::receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocalId)
 {
 	std::string strBuffer(buffer, length);
 	switch (protocalId)
 	{
 	case CorrespondParam::CLIENT_INIT:
 	{
-		printf("PROCESS_CLIENT_INIT, length = %d\n", length);
+		printf("CLIENT_INIT process, length = %d\n", length);
 		ProtoMessage message;
 		message.from(strBuffer);
-		addClientServerLoginName(message, CSystem::processName(sendPid));
-		std::string strMessage;
-		message.toString(strMessage);
-		std::string compressMessage;
-		Compress::zlibCompress(compressMessage, strMessage, 9);
-		m_netClient->send(compressMessage.c_str(), compressMessage.length(), protocalId);
-		return;
+		//客户端进程本身的初始化信息存入
+		message[CLIENT_NAME] = CSystem::GetName(CSystem::processName(sendPid), 3);
+		message[LOGIN_NAME] = m_computerName;
+		//打包
+		message.toString(strBuffer);
 	}
-	case CorrespondParam::PROTO_MESSAGE:
-	{
-		//printf("PROTO_MESSAGE, length = %d\n", length);
-		break;
-	}
-	case CorrespondParam::JSON:
-	{
-		break;
-	}
-	case CorrespondParam::XML:
-	{
-		break;
-	}
+	break;
 	default:
 		break;
 	}
 	
+	//压缩
 	std::string compressMessage;
 	Compress::zlibCompress(compressMessage, strBuffer, 9);
-	m_netClient->send(compressMessage.c_str(), compressMessage.length(), protocalId);
+	//发送
+	m_client->send(compressMessage.c_str(), compressMessage.length(), protocalId);
 }
 
-void ProcessReceive::setNetClient(NetClient* netClient)
+void ProcessReceive::setClient(Client* client)
 {
-	m_netClient = netClient;
-}
-
-void ProcessReceive::addClientServerLoginName(ProtoMessage& message, const std::string& clientName)
-{
-	std::string serverName = clientName;
-	CStringManager::Insert(serverName, clientName.length() - 7, "Server");
-	std::map<int32_t, Variant> predefineMap;
-	predefineMap[CLIENT_NAME] = clientName;
-	predefineMap[SERVER_NAME] = serverName;
-	predefineMap[LOGIN_NAME] = m_computerName;
-	message.setKeyMap(predefineMap, PREDEFINE);
+	m_client = client;
 }

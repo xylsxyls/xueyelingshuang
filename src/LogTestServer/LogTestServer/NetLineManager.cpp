@@ -11,29 +11,26 @@ NetLineManager& NetLineManager::instance()
 	return s_netLineManager;
 }
 
-void NetLineManager::addConnect(const std::string& loginName, int32_t clientId)
+void NetLineManager::addConnect(const std::string& loginName, int32_t clientPid, int32_t connectId)
 {
-	std::unique_lock<std::mutex> mu(m_mutex);
-	m_connectedMap[loginName].push_back(clientId);
-	m_loginNameMap[clientId] = loginName;
+	m_connectedMap[std::pair<int32_t, int32_t>(clientPid, connectId)] = loginName;
+	m_loginNameMap[loginName].push_back(std::pair<int32_t, int32_t>(clientPid, connectId));
 }
 
-std::vector<int32_t> NetLineManager::findConnect(const std::string& loginName)
+std::vector<std::pair<int32_t, int32_t>> NetLineManager::findConnect(const std::string& loginName)
 {
-	std::unique_lock<std::mutex> mu(m_mutex);
-	auto it = m_connectedMap.find(loginName);
-	if (it == m_connectedMap.end())
+	auto it = m_loginNameMap.find(loginName);
+	if (it == m_loginNameMap.end())
 	{
-		return std::vector<int32_t>();
+		return std::vector<std::pair<int32_t, int32_t>>();
 	}
 	return it->second;
 }
 
-std::string NetLineManager::findLoginName(int32_t clientId)
+std::string NetLineManager::findLoginName(int32_t clientPid, int32_t connectId)
 {
-	std::unique_lock<std::mutex> mu(m_mutex);
-	auto it = m_loginNameMap.find(clientId);
-	if (it == m_loginNameMap.end())
+	auto it = m_connectedMap.find(std::pair<int32_t, int32_t>(clientPid, connectId));
+	if (it == m_connectedMap.end())
 	{
 		return "";
 	}

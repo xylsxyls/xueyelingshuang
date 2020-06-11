@@ -11,11 +11,8 @@ LogSenderAPI LogSenderInterface& logInstance()
 }
 
 LogSender::LogSender():
-m_message(nullptr),
-m_logTestPid(nullptr),
-m_pid(0)
+m_message(nullptr)
 {
-	m_computerName = CSystem::getComputerName();
 	m_message = new ProtoMessage;
 }
 
@@ -36,8 +33,8 @@ LogSender& LogSender::instance()
 
 void LogSender::logSend(const LogPackage& package, const char* format, ...)
 {
-	m_pid = SharedMemory::readPid("LogTest1.0.exe", m_logTestPid);
-	if (m_pid == 0)
+	SharedMemory sharedMemory("ProcessArea_LogTest1.0");
+	if (sharedMemory.writeWithoutLock() == nullptr)
 	{
 		return;
 	}
@@ -75,7 +72,7 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 
 void LogSender::send(const char* buffer, int32_t length)
 {
-	ProcessWork::instance().send(buffer, length, m_pid, CorrespondParam::PROTO_MESSAGE);
+	ProcessWork::instance().send("LogTest1.0", buffer, length, CorrespondParam::PROTO_MESSAGE);
 }
 
 void LogSender::uninit()

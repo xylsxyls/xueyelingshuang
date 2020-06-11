@@ -11,18 +11,29 @@ class LogReceive : public ProcessReceiveCallback
 public:
 	LogReceive();
 
+	~LogReceive();
+
 public:
-	virtual void receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId);
+	/** 接收函数
+	@param [in] sendPid 发送进程ID
+	@param [in] buffer 数据内存
+	@param [in] length 数据长度
+	@param [in] protocolId 发送数据协议
+	*/
+	virtual void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
 
 	void receiveFromNet(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
 
-	void sendToNet(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocolId);
+	void sendToNet(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
 
 	std::string getSenderName(int32_t sendPid);
 
 protected:
 	int32_t m_netClientManagerPid;
 	std::map<int32_t, std::string> m_sendMap;
+	uint32_t m_screenThreadId;
+	uint32_t m_logThreadId;
+	uint32_t m_netThreadId;
 	std::shared_ptr<CTaskThread> m_screenThread;
 	std::shared_ptr<CTaskThread> m_logThread;
 	std::shared_ptr<CTaskThread> m_netThread;

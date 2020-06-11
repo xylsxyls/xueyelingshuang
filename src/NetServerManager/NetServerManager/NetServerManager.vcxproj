@@ -149,17 +149,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ClientPackageManager.h" />
+    <ClInclude Include="NetLineManager.h" />
     <ClInclude Include="NetServerManager.h" />
-    <ClInclude Include="ServerManagerProcessReceive.h" />
-    <ClInclude Include="ServerManagerReceive.h" />
-    <ClInclude Include="ClientPackage.h" />
+    <ClInclude Include="ServerProcessReceive.h" />
+    <ClInclude Include="Server.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ClientPackageManager.cpp" />
+    <ClCompile Include="NetLineManager.cpp" />
     <ClCompile Include="NetServerManager.cpp" />
-    <ClCompile Include="ServerManagerProcessReceive.cpp" />
-    <ClCompile Include="ServerManagerReceive.cpp" />
+    <ClCompile Include="ServerProcessReceive.cpp" />
+    <ClCompile Include="Server.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

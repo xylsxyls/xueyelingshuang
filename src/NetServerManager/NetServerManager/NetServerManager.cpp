@@ -1,13 +1,14 @@
 #include "NetServerManager.h"
 #include <stdint.h>
 #include <stdio.h>
-#include "ServerManagerReceive.h"
-#include "ServerManagerProcessReceive.h"
+#include "Server.h"
+#include "ServerProcessReceive.h"
 #include <mutex>
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "CDump/CDumpAPI.h"
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
-SharedMemory* pid = nullptr;
+bool g_exit = false;
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -15,8 +16,9 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
+		ProcessWork::instance().uninitReceive();
 		ProcessWork::instance().uninit();
-		delete pid;
+		g_exit = false;
 	}
 	return FALSE;
 }
@@ -27,17 +29,16 @@ int32_t main()
 {
 	CDump::declareDumpFile();
 
-	pid = SharedMemory::createPid();
+	Server server;
+	server.listen(5203);
 
-	ServerManagerReceive serverManagerReceive;
+	ServerProcessReceive serverProcessReceive;
+	serverProcessReceive.setServer(&server);
+	ProcessWork::instance().initReceive(&serverProcessReceive);
 
-	NetServer server;
-	server.listen(5203, &serverManagerReceive);
-
-	ServerManagerProcessReceive serverManagerProcessReceive;
-	serverManagerProcessReceive.setServer(&server);
-	ProcessWork::instance().initReceive(&serverManagerProcessReceive);
-
-	while (true) Sleep(1000);
+	while (!g_exit)
+	{
+		Sleep(1000);
+	}
 	return 0;
 }

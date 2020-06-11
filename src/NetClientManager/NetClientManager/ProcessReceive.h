@@ -3,7 +3,7 @@
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 
-class NetClient;
+class Client;
 
 class ProcessReceive : public ProcessReceiveCallback
 {
@@ -11,13 +11,20 @@ public:
 	ProcessReceive();
 
 public:
-	virtual void receive(char* buffer, int32_t length, int32_t sendPid, CorrespondParam::ProtocolId protocalId);
+	/** 接收函数
+	@param [in] sendPid 发送进程ID
+	@param [in] buffer 数据内存
+	@param [in] length 数据长度
+	@param [in] protocolId 发送数据协议
+	*/
+	virtual void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
 
-	void setNetClient(NetClient* netClient);
-
-	void addClientServerLoginName(ProtoMessage& message, const std::string& clientName);
+	/** 设置客户端
+	@param [in] client 客户端
+	*/
+	void setClient(Client* client);
 
 protected:
-	NetClient* m_netClient;
+	Client* m_client;
 	std::string m_computerName;
 };

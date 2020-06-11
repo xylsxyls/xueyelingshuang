@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Task">
-      <UniqueIdentifier>{16d1e69a-2093-4e90-8651-5cb718c56926}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LogTestServer.h">
@@ -27,9 +24,6 @@
     <ClInclude Include="NetLineManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="LogTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LogTestServer.cpp">
@@ -40,9 +34,6 @@
     </ClCompile>
     <ClCompile Include="NetLineManager.cpp">
       <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="LogTask.cpp">
-      <Filter>Task</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

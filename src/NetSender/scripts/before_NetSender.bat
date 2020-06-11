@@ -28,3 +28,18 @@ goto ProcessWork_end
 call "%CLOUD_REBUILD%" ProcessWork %ProcessWork_bit% %ProcessWork_dlllib% %ProcessWork_debugRelease%
 goto ProcessWork_end
 :ProcessWork_end
+
+::--------------------------------------------------------------------
+set ProtoMessage_dlllib=lib
+set ProtoMessage_bit=%1
+set ProtoMessage_debugRelease=%3
+set ProtoMessage_allSame=%4
+if "%4" == "same" (goto ProtoMessage_callSame) else (goto ProtoMessage_callSimple)
+:ProtoMessage_callSame
+set ProtoMessage_dlllib=%2
+call "%CLOUD_REBUILD%" ProtoMessage %ProtoMessage_bit% %ProtoMessage_dlllib% %ProtoMessage_debugRelease% %ProtoMessage_allSame%
+goto ProtoMessage_end
+:ProtoMessage_callSimple
+call "%CLOUD_REBUILD%" ProtoMessage %ProtoMessage_bit% %ProtoMessage_dlllib% %ProtoMessage_debugRelease%
+goto ProtoMessage_end
+:ProtoMessage_end

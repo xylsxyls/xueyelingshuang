@@ -23,6 +23,7 @@ m_receiveThreadId(0),
 m_sendThreadId(0)
 {
 	m_thisProcessPid = CSystem::processFirstPid();
+	m_sendThreadId = CTaskThreadManager::Instance().Init();
 }
 
 ProcessWork& ProcessWork::instance()
@@ -64,7 +65,6 @@ void ProcessWork::initReceive(ProcessReceiveCallback* callback, int32_t receiveS
 	m_readThreadId = CTaskThreadManager::Instance().Init();
 	m_copyThreadId = CTaskThreadManager::Instance().Init();
 	m_receiveThreadId = CTaskThreadManager::Instance().Init();
-	m_sendThreadId = CTaskThreadManager::Instance().Init();
 
 	std::shared_ptr<AssignTask> spAssignTask(new AssignTask);
 	spAssignTask->setParam(m_assignSemaphore, m_assignEndSemaphore, m_area, &m_memoryMap);
@@ -83,7 +83,6 @@ void ProcessWork::initReceive(ProcessReceiveCallback* callback, int32_t receiveS
 
 void ProcessWork::uninitReceive()
 {
-	CTaskThreadManager::Instance().Uninit(m_sendThreadId);
 	CTaskThreadManager::Instance().Uninit(m_assginThreadId);
 	CTaskThreadManager::Instance().Uninit(m_readThreadId);
 	CTaskThreadManager::Instance().Uninit(m_copyThreadId);
@@ -108,7 +107,6 @@ void ProcessWork::uninitReceive()
 	m_readEndSemaphore = nullptr;
 	m_area = nullptr;
 
-	m_sendThreadId = 0;
 	m_assginThreadId = 0;
 	m_readThreadId = 0;
 	m_copyThreadId = 0;
@@ -116,9 +114,15 @@ void ProcessWork::uninitReceive()
 	m_callback = nullptr;
 }
 
+void ProcessWork::uninit()
+{
+	CTaskThreadManager::Instance().Uninit(m_sendThreadId);
+	m_sendThreadId = 0;
+}
+
 void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
-	if (destPid <= 0 || buffer == nullptr || length == 0)
+	if (destPid <= 0 || (buffer == nullptr && length != 0))
 	{
 		return;
 	}
@@ -134,7 +138,7 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Corr
 
 void ProcessWork::send(const std::string& processName, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
-	if (buffer == nullptr || length == 0)
+	if (buffer == nullptr && length != 0)
 	{
 		return;
 	}

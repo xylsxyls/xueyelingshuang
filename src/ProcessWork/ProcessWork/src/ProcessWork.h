@@ -37,6 +37,10 @@ public:
 	*/
 	void uninitReceive();
 
+	/** 销毁资源
+	*/
+	void uninit();
+
 	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况
 	@param [in] destPid 目标进程pid
 	@param [in] buffer 字符串地址

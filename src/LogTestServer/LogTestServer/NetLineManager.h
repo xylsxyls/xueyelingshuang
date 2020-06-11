@@ -21,24 +21,28 @@ public:
 
 	/** 添加连接
 	@param [in] loginName 客户端登录名
-	@param [in] clientId 客户端ID
+	@param [in] clientPid 客户端PID
+	@param [in] connectId 服务器端的客户端ID
 	*/
-	void addConnect(const std::string& loginName, int32_t clientId);
+	void addConnect(const std::string& loginName, int32_t clientPid, int32_t connectId);
 
 	/** 查询连接
 	@param [in] loginName 客户端登录名
 	@return 返回连接指针数组
 	*/
-	std::vector<int32_t> findConnect(const std::string& loginName);
+	std::vector<std::pair<int32_t, int32_t>> findConnect(const std::string& loginName);
 
 	/** 查询登陆名
-	@param [in] clientId 客户端ID
+	@param [in] clientPid 客户端PID
+	@param [in] connectId 服务器端的客户端ID
 	@return 返回登陆名
 	*/
-	std::string findLoginName(int32_t clientId);
+	std::string findLoginName(int32_t clientPid, int32_t connectId);
 
 private:
-	std::map<std::string, std::vector<int32_t>> m_connectedMap;
-	std::map<int32_t, std::string> m_loginNameMap;
+	//clientPid, connectId, loginName
+	std::map<std::pair<int32_t, int32_t>, std::string> m_connectedMap;
+	//loginName, vecClient clientPid, connectId
+	std::map<std::string, std::vector<std::pair<int32_t, int32_t>>> m_loginNameMap;
 	std::mutex m_mutex;
 };

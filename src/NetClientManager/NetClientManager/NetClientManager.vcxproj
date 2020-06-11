@@ -149,12 +149,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ClientManagerReceive.h" />
+    <ClInclude Include="Client.h" />
     <ClInclude Include="NetClientManager.h" />
     <ClInclude Include="ProcessReceive.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ClientManagerReceive.cpp" />
+    <ClCompile Include="Client.cpp" />
     <ClCompile Include="NetClientManager.cpp" />
     <ClCompile Include="ProcessReceive.cpp" />
   </ItemGroup>

@@ -4,7 +4,6 @@
 #include "LogPackage.h"
 
 class ProtoMessage;
-class SharedMemory;
 
 class LogSenderAPI LogSenderInterface
 {
@@ -38,15 +37,5 @@ protected:
 	void send(const char* buffer, int32_t length);
 
 private:
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-	std::string m_computerName;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 	ProtoMessage* m_message;
-	SharedMemory* m_logTestPid;
-	int32_t m_pid;
 };

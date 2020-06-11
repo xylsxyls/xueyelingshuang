@@ -6,13 +6,17 @@
 #include "NetSender/NetSenderAPI.h"
 #include "CDump/CDumpAPI.h"
 
+bool g_exit = false;
+
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
 	if (eve == CTRL_CLOSE_EVENT)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
+		ProcessWork::instance().uninitReceive();
 		ProcessWork::instance().uninit();
+		g_exit = true;
 	}
 	return FALSE;
 }
@@ -22,10 +26,16 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 int32_t main()
 {
 	CDump::declareDumpFile();
+
 	LogTestServerReceive receive;
 	ProcessWork::instance().initReceive(&receive);
-	NetSender::instance().init(nullptr, 0, true);
-	while (true) Sleep(1000);
-	getchar();
+
+	ProtoMessage message;
+	NetSender::instance().init(message, CorrespondParam::ProtocolId::SERVER_INIT, true);
+
+	while (!g_exit)
+	{
+		Sleep(1000);
+	}
 	return 0;
 }

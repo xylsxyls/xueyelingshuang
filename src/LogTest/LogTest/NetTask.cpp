@@ -10,10 +10,8 @@ void NetTask::DoTask()
 	m_message.getMap(m_messageMap);
 	if ((int32_t)m_messageMap[LOG_IS_SEND_NET] == (int32_t)true)
 	{
-		//printf("send to netclient\n");
 		m_message[LOG_PROCESS_NAME] = m_processName;
-		std::string& strMessage = m_message.toString();
-		NetSender::instance().send(strMessage.c_str(), strMessage.length(), m_protocolId);
+		NetSender::instance().send(m_message);
 	}
 }
 
