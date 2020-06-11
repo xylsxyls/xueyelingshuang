@@ -1,8 +1,6 @@
 #include "LogDelete.h"
 #include <stdint.h>
-#include <stdio.h>
 #include "ProtoMessage/ProtoMessageAPI.h"
-#include "CorrespondParam/CorrespondParamAPI.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "CDump/CDumpAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -12,7 +10,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	if (eve == CTRL_CLOSE_EVENT)
 	{
 		//关闭退出事件
-		//RCSend("close LogDelete");
+		ProcessWork::instance().uninit();
 	}
 	return FALSE;
 }
@@ -31,6 +29,6 @@ int32_t main()
 	ProtoMessage message;
 	message[LOG_UNINIT] = (int32_t)true;
 	std::string strMessage = message.toString();
-	ProcessWork::instance().send(strMessage.c_str(), strMessage.length(), "LogTest1.0.exe");
+	ProcessWork::instance().send("LogTest1.0", strMessage.c_str(), strMessage.length());
 	return 0;
 }

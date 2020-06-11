@@ -43,3 +43,18 @@ goto ProtoMessage_end
 call "%CLOUD_REBUILD%" ProtoMessage %ProtoMessage_bit% %ProtoMessage_dlllib% %ProtoMessage_debugRelease%
 goto ProtoMessage_end
 :ProtoMessage_end
+
+::--------------------------------------------------------------------
+set IntDateTime_dlllib=lib
+set IntDateTime_bit=%1
+set IntDateTime_debugRelease=%3
+set IntDateTime_allSame=%4
+if "%4" == "same" (goto IntDateTime_callSame) else (goto IntDateTime_callSimple)
+:IntDateTime_callSame
+set IntDateTime_dlllib=%2
+call "%CLOUD_REBUILD%" IntDateTime %IntDateTime_bit% %IntDateTime_dlllib% %IntDateTime_debugRelease% %IntDateTime_allSame%
+goto IntDateTime_end
+:IntDateTime_callSimple
+call "%CLOUD_REBUILD%" IntDateTime %IntDateTime_bit% %IntDateTime_dlllib% %IntDateTime_debugRelease%
+goto IntDateTime_end
+:IntDateTime_end
