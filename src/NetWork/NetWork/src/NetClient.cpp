@@ -38,7 +38,7 @@ void NetClient::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 	{
 		return;
 	}
-	NetWorkHelper::receive(m_server, buffer, length, m_receiveArea, m_receiveThread, this);
+	NetWorkHelper::receive(sender, buffer, length, m_receiveArea, m_receiveThread, this);
 }
 
 void NetClient::onReceive(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)

@@ -5,6 +5,7 @@
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include <memory>
+#include <map>
 #include "NetWorkMacro.h"
 
 class LibuvTcp;
@@ -39,7 +40,7 @@ protected:
 #endif
 	std::vector<uv_tcp_t*> m_vecClient;
 	std::shared_ptr<CTaskThread> m_receiveThread;
-	std::string m_receiveArea;
+	std::map<uv_tcp_t*, std::string> m_receiveAreaMap;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

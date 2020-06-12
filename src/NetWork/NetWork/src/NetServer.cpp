@@ -32,7 +32,7 @@ void NetServer::onHeart()
 
 void NetServer::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 {
-	NetWorkHelper::receive(sender, buffer, length, m_receiveArea, m_receiveThread, this);
+	NetWorkHelper::receive(sender, buffer, length, m_receiveAreaMap[sender], m_receiveThread, this);
 }
 
 void NetServer::onReceive(uv_tcp_t* client, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
