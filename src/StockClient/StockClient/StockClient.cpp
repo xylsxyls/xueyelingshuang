@@ -1746,7 +1746,7 @@ void StockClient::onEverydayTaskButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenMessageTestTask);
 
 	std::shared_ptr<OpenProcessTask> spOpenProcessTask(new OpenProcessTask);
-	spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 1000, 8000);
+	spOpenProcessTask->setParam(StockClientLogicManager::instance().tonghuashunPath(), 3000, 12000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_sendTaskThreadId)->PostTask(spOpenProcessTask);
 
 	std::shared_ptr<SaveTodayMarketFileTask> spSaveTodayMarketFileTask(new SaveTodayMarketFileTask);
