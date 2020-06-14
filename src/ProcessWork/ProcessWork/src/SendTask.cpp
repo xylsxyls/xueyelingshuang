@@ -37,6 +37,10 @@ void SendTask::DoTask()
 	int32_t assign = 0;
 	SharedMemory destArea(CStringManager::Format("ProcessArea_%d", m_destPid));
 	void* area = destArea.writeWithoutLock();
+	if (area == nullptr)
+	{
+		return;
+	}
 
 	ProcessReadWriteMutex destProcessAssignMutex(CStringManager::Format("ProcessAssginMutex_%d", m_destPid));
 	ProcessReadWriteMutex destProcessReadMutex(CStringManager::Format("ProcessReadMutex_%d", m_destPid));
@@ -61,6 +65,14 @@ void SendTask::DoTask()
 	}
 	SharedMemory sharedMemory(CStringManager::Format("ProcessArea_%d_%d", m_destPid, assign));
 	void* memory = sharedMemory.writeWithoutLock();
+	if (memory == nullptr)
+	{
+		destAssignSemaphore.closeProcessSemaphore();
+		destAssignEndSemaphore.closeProcessSemaphore();
+		destReadSemaphore.closeProcessSemaphore();
+		destReadEndSemaphore.closeProcessSemaphore();
+		return;
+	}
 	*((int32_t*)memory) = m_thisProcessPid;
 	*((int32_t*)memory + 1) = m_length + 4;
 	*((int32_t*)memory + 2) = (int32_t)m_protocolId;
