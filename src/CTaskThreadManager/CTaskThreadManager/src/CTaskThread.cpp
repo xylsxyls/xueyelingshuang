@@ -136,6 +136,10 @@ void CTaskThread::WorkThread()
 				waitForSend->event();
 			}
         }
+		else if (m_waitForEndSignal)
+		{
+			break;
+		}
 		m_semaphore->wait();
     }
 }
