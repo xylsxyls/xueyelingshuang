@@ -29,10 +29,10 @@ void GetFilterStockTask::DoTask()
 		Sleep(8000);
 		CMouse::MoveAbsolute(xyls::Point(1161, 105), 0);
 		CMouse::LeftClick();
-		Sleep(500);
+		Sleep(5000);
 		CMouse::MoveAbsolute(xyls::Point(1909, 105), 0);
 		CMouse::LeftClick();
-		Sleep(5000);
+		Sleep(1000);
 		CMouse::MoveAbsolute(xyls::Point(649, 352), 0);
 		CMouse::LeftClick();
 		CSystem::setClipboardData(m_hWnd, m_searchStr);
