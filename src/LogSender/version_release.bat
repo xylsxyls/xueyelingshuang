@@ -1,1 +1,1 @@
-call "%CLOUD_REBUILD%" LogSender 64 dll release
+call "%CLOUD_REBUILD%" LogSender 32 dll release
