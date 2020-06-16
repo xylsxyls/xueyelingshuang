@@ -57,6 +57,10 @@ public:
 	*/
 	void send(const std::string& processName, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId = CorrespondParam::PROTO_MESSAGE);
 
+	/** 阻塞函数，等待发送任务全部执行后返回，该函数返回则表示已将数据全部写入共享内存并已通知对方进程，结束后会更换线程号
+	*/
+	void waitForSendEnd();
+
 protected:
 #ifdef _MSC_VER
 #pragma warning(push)

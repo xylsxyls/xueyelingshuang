@@ -70,6 +70,11 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	send(strMessage.c_str(), strMessage.length());
 }
 
+void LogSender::wait()
+{
+	ProcessWork::instance().waitForSendEnd();
+}
+
 void LogSender::send(const char* buffer, int32_t length)
 {
 	ProcessWork::instance().send("LogTest1.0", buffer, length, CorrespondParam::PROTO_MESSAGE);

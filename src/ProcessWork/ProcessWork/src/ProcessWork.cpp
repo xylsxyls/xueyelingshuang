@@ -152,6 +152,12 @@ void ProcessWork::send(const std::string& processName, const char* buffer, int32
 	sendThread->PostTask(spSendTask);
 }
 
+void ProcessWork::waitForSendEnd()
+{
+	CTaskThreadManager::Instance().WaitForEnd(m_sendThreadId);
+	m_sendThreadId = CTaskThreadManager::Instance().Init();
+}
+
 //#include "ProcessWork/ProcessWorkAPI.h"
 //#include "CSystem/CSystemAPI.h"
 //#include "CStringManager/CStringManagerAPI.h"

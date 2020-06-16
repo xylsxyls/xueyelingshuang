@@ -10,6 +10,8 @@ class LogSenderAPI LogSenderInterface
 public:
 	virtual void logSend(const LogPackage& package, const char* format, ...) = 0;
 
+	virtual void wait() = 0;
+
 	virtual void uninit() = 0;
 };
 
@@ -30,6 +32,8 @@ public:
 
 public:
 	void logSend(const LogPackage& package, const char* format, ...);
+
+	void wait();
 
 	void uninit();
 
