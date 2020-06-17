@@ -84,3 +84,23 @@ void LogSender::uninit()
 {
 	ProcessWork::instance().uninit();
 }
+
+//int32_t main(int32_t argc, char** argv)
+//{
+//	int32_t count = 0;
+//	if (argc == 1)
+//	{
+//		count = 1;
+//	}
+//	else
+//	{
+//		count = atoi(argv[1]);
+//	}
+//	while (count-- != 0)
+//	{
+//		LOG_SEND("123456");
+//	}
+//	LOG_SEND_WAIT();
+//	LOG_SEND_UNINIT();
+//	return 0;
+//}
