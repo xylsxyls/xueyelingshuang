@@ -20,10 +20,9 @@ m_assginThreadId(0),
 m_readThreadId(0),
 m_copyThreadId(0),
 m_receiveThreadId(0),
-m_sendThreadId(0)
+m_postThreadId(0)
 {
 	m_thisProcessPid = CSystem::processFirstPid();
-	m_sendThreadId = CTaskThreadManager::Instance().Init();
 }
 
 ProcessWork& ProcessWork::instance()
@@ -114,13 +113,96 @@ void ProcessWork::uninitReceive()
 	m_callback = nullptr;
 }
 
-void ProcessWork::uninit()
+void ProcessWork::initPostThread()
 {
-	CTaskThreadManager::Instance().Uninit(m_sendThreadId);
-	m_sendThreadId = 0;
+	m_postThreadId = CTaskThreadManager::Instance().Init();
+}
+
+void ProcessWork::uninitPostThread()
+{
+	CTaskThreadManager::Instance().Uninit(m_postThreadId);
+	m_postThreadId = 0;
 }
 
 void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+{
+	if (destPid <= 0)
+	{
+		return;
+	}
+
+	int32_t assign = 0;
+	SharedMemory destArea(CStringManager::Format("ProcessArea_%d", destPid));
+	void* area = destArea.writeWithoutLock();
+	if (area == nullptr)
+	{
+		return;
+	}
+
+	ProcessReadWriteMutex destProcessAssignMutex(CStringManager::Format("ProcessAssginMutex_%d", destPid));
+	ProcessReadWriteMutex destProcessReadMutex(CStringManager::Format("ProcessReadMutex_%d", destPid));
+
+	Semaphore destAssignSemaphore;
+	Semaphore destAssignEndSemaphore;
+	Semaphore destReadSemaphore;
+	Semaphore destReadEndSemaphore;
+
+	destAssignSemaphore.openProcessSemaphore(CStringManager::Format("ProcessAssgin_%d", destPid));
+	destAssignEndSemaphore.openProcessSemaphore(CStringManager::Format("ProcessAssginEnd_%d", destPid));
+	destReadSemaphore.openProcessSemaphore(CStringManager::Format("ProcessRead_%d", destPid));
+	destReadEndSemaphore.openProcessSemaphore(CStringManager::Format("ProcessReadEnd_%d", destPid));
+
+	//申请缓存区号
+	{
+		std::unique_lock<std::mutex> lock(m_assignMutex);
+		WriteLock writeLock(destProcessAssignMutex);
+		destAssignSemaphore.processSignal();
+		destAssignEndSemaphore.processWait();
+		//读取申请的缓存区号
+		assign = (int32_t)(*((int32_t*)area));
+	}
+	SharedMemory sharedMemory(CStringManager::Format("ProcessArea_%d_%d", destPid, assign));
+	void* memory = sharedMemory.writeWithoutLock();
+	if (memory == nullptr)
+	{
+		destAssignSemaphore.closeProcessSemaphore();
+		destAssignEndSemaphore.closeProcessSemaphore();
+		destReadSemaphore.closeProcessSemaphore();
+		destReadEndSemaphore.closeProcessSemaphore();
+		return;
+	}
+	*((int32_t*)memory) = m_thisProcessPid;
+	*((int32_t*)memory + 1) = length + 4;
+	*((int32_t*)memory + 2) = (int32_t)protocolId;
+	::memcpy((char*)memory + 12, buffer, length);
+	//申请目标读取
+	{
+		std::unique_lock<std::mutex> lock(m_readMutex);
+		WriteLock writeLock(destProcessReadMutex);
+		destReadEndSemaphore.processWait();
+		//把写好的缓存区号写进去
+		*((int32_t*)area + 1) = assign;
+		destReadSemaphore.processSignal();
+	}
+
+	destAssignSemaphore.closeProcessSemaphore();
+	destAssignEndSemaphore.closeProcessSemaphore();
+	destReadSemaphore.closeProcessSemaphore();
+	destReadEndSemaphore.closeProcessSemaphore();
+}
+
+void ProcessWork::send(const std::string& processName, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+{
+	SharedMemory destArea(CStringManager::Format("ProcessArea_%s", processName.c_str()));
+	void* pid = destArea.writeWithoutLock();
+	if (pid == nullptr)
+	{
+		return;
+	}
+	send(*(int32_t*)pid, buffer, length, protocolId);
+}
+
+void ProcessWork::post(int32_t destPid, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
 	if (destPid <= 0 || (buffer == nullptr && length != 0))
 	{
@@ -128,15 +210,15 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Corr
 	}
 	std::shared_ptr<SendTask> spSendTask(new SendTask(buffer, length));
 	spSendTask->setParam(m_thisProcessPid, destPid, "", protocolId);
-	std::shared_ptr<CTaskThread> sendThread = CTaskThreadManager::Instance().GetThreadInterface(m_sendThreadId);
-	if (sendThread == nullptr)
+	std::shared_ptr<CTaskThread> postThread = CTaskThreadManager::Instance().GetThreadInterface(m_postThreadId);
+	if (postThread == nullptr)
 	{
 		return;
 	}
-	sendThread->PostTask(spSendTask);
+	postThread->PostTask(spSendTask);
 }
 
-void ProcessWork::send(const std::string& processName, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+void ProcessWork::post(const std::string& processName, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
 	if (buffer == nullptr && length != 0)
 	{
@@ -144,18 +226,22 @@ void ProcessWork::send(const std::string& processName, const char* buffer, int32
 	}
 	std::shared_ptr<SendTask> spSendTask(new SendTask(buffer, length));
 	spSendTask->setParam(m_thisProcessPid, 0, processName, protocolId);
-	std::shared_ptr<CTaskThread> sendThread = CTaskThreadManager::Instance().GetThreadInterface(m_sendThreadId);
-	if (sendThread == nullptr)
+	std::shared_ptr<CTaskThread> postThread = CTaskThreadManager::Instance().GetThreadInterface(m_postThreadId);
+	if (postThread == nullptr)
 	{
 		return;
 	}
-	sendThread->PostTask(spSendTask);
+	postThread->PostTask(spSendTask);
 }
 
-void ProcessWork::waitForSendEnd()
+void ProcessWork::waitForPostEnd()
 {
-	CTaskThreadManager::Instance().WaitForEnd(m_sendThreadId);
-	m_sendThreadId = CTaskThreadManager::Instance().Init();
+	if (m_postThreadId == 0)
+	{
+		return;
+	}
+	CTaskThreadManager::Instance().WaitForEnd(m_postThreadId);
+	m_postThreadId = CTaskThreadManager::Instance().Init();
 }
 
 //#include "ProcessWork/ProcessWorkAPI.h"
