@@ -9,10 +9,6 @@ class LogSenderAPI LogSenderInterface
 {
 public:
 	virtual void logSend(const LogPackage& package, const char* format, ...) = 0;
-
-	virtual void wait() = 0;
-
-	virtual void uninit() = 0;
 };
 
 extern "C"
@@ -32,10 +28,6 @@ public:
 
 public:
 	void logSend(const LogPackage& package, const char* format, ...);
-
-	void wait();
-
-	void uninit();
 
 protected:
 	void send(const char* buffer, int32_t length);

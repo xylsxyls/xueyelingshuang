@@ -10,8 +10,6 @@
 #define LOG_SEND_WARNING(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_WARNING, true, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
 #define LOG_SEND_ERROR(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_ERROR, true, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
 #define LOG_SEND_FATAL(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_FATAL, true, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
-#define LOG_SEND_WAIT() if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->wait();}
-#define LOG_SEND_UNINIT() if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->uninit();}
 
 typedef LogSenderInterface&(*LogSenderInstance)();
 

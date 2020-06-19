@@ -14,7 +14,6 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninitReceive();
-		ProcessWork::instance().uninit();
 		g_exit = true;
 	}
 	return FALSE;
