@@ -1,6 +1,4 @@
 #include "NetSender.h"
-#include "ProcessWork/ProcessWorkAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
 #include "CSystem/CSystemAPI.h"
 
 NetSender::NetSender()
@@ -35,6 +33,39 @@ void NetSender::send(ProtoMessage& message, bool isServer)
 	}
 	std::string strMessage = message.toString();
 	ProcessWork::instance().send(isServer ? "NetServerManager1.0" : "NetClientManager1.0",
+		strMessage.c_str(),
+		strMessage.length(),
+		CorrespondParam::ProtocolId::PROTO_MESSAGE);
+}
+
+void NetSender::initPostThread()
+{
+	ProcessWork::instance().initPostThread();
+}
+
+void NetSender::initReceive(ProcessReceiveCallback* callback, int32_t receiveSize, int32_t areaCount)
+{
+	ProcessWork::instance().initReceive(callback, receiveSize, areaCount);
+}
+
+void NetSender::uninitReceive()
+{
+	ProcessWork::instance().uninitReceive();
+}
+
+void NetSender::uninitPostThread()
+{
+	ProcessWork::instance().uninitPostThread();
+}
+
+void NetSender::post(ProtoMessage& message, bool isServer)
+{
+	if (!isServer)
+	{
+		message[CLIENT_PID] = CSystem::processFirstPid();
+	}
+	std::string strMessage = message.toString();
+	ProcessWork::instance().post(isServer ? "NetServerManager1.0" : "NetClientManager1.0",
 		strMessage.c_str(),
 		strMessage.length(),
 		CorrespondParam::ProtocolId::PROTO_MESSAGE);

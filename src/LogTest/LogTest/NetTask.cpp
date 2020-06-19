@@ -11,7 +11,7 @@ void NetTask::DoTask()
 	if ((int32_t)m_messageMap[LOG_IS_SEND_NET] == (int32_t)true)
 	{
 		m_message[LOG_PROCESS_NAME] = m_processName;
-		NetSender::instance().send(m_message);
+		NetSender::instance().post(m_message);
 	}
 }
 

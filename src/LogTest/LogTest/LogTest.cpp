@@ -4,8 +4,6 @@
 #include "LogReceive.h"
 #include "NetSender/NetSenderAPI.h"
 #include "CSystem/CSystemAPI.h"
-#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "SharedMemory/SharedMemoryAPI.h"
 #include "CDump/CDumpAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
@@ -18,7 +16,8 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		ProcessWork::instance().uninitReceive();
+		NetSender::instance().uninitPostThread();
+		NetSender::instance().uninitReceive();
 		g_exit = true;
 	}
 	return FALSE;
@@ -32,15 +31,15 @@ int32_t main()
 
 	LogManager::instance().init();
 
+	NetSender::instance().initPostThread();
 	LogReceive logReceive;
-	ProcessWork::instance().initReceive(&logReceive);
+	NetSender::instance().initReceive(&logReceive);
 
-	int32_t clientPid = CSystem::processFirstPid();
 	ProtoMessage message;
 	message[SERVER_NAME] = "LogTestServer1.0";
 	NetSender::instance().init(message, CorrespondParam::ProtocolId::CLIENT_INIT);
 
-	printf("ComputerName = %s, pid = %d\n", CSystem::getComputerName().c_str(), clientPid);
+	printf("ComputerName = %s, pid = %d\n", CSystem::getComputerName().c_str(), CSystem::processFirstPid());
 
 	while (!g_exit)
 	{

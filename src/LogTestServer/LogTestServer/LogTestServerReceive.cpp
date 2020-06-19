@@ -53,7 +53,7 @@ void LogTestServerReceive::receive(int32_t sendPid, char* buffer, int32_t length
 			message[LOG_LOGIN_NAME] = loginName;
 			message[CLIENT_PID] = vecClient.back().first;
 			message[CONNECT_ID] = vecClient.back().second;
-			NetSender::instance().send(message, true);
+			NetSender::instance().post(message, true);
 		}
 		break;
 	}

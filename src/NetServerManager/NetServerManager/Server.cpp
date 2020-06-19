@@ -45,5 +45,5 @@ void Server::onReceive(uv_tcp_t* client, char* buffer, int32_t length, Correspon
 		break;
 	}
 	message.toString(strMessage);
-	ProcessWork::instance().send(serverName, strMessage.c_str(), strMessage.length(), protocolId);
+	ProcessWork::instance().post(serverName, strMessage.c_str(), strMessage.length(), protocolId);
 }

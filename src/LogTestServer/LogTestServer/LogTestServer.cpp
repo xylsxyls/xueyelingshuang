@@ -1,7 +1,6 @@
 #include "LogTestServer.h"
 #include <stdint.h>
-#include <stdio.h>
-#include "ProcessWork/ProcessWorkAPI.h"
+#include "NetSender/NetSenderAPI.h"
 #include "LogTestServerReceive.h"
 #include "NetSender/NetSenderAPI.h"
 #include "CDump/CDumpAPI.h"
@@ -14,7 +13,8 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		ProcessWork::instance().uninitReceive();
+		NetSender::instance().uninitPostThread();
+		NetSender::instance().uninitReceive();
 		g_exit = true;
 	}
 	return FALSE;
@@ -27,7 +27,8 @@ int32_t main()
 	CDump::declareDumpFile();
 
 	LogTestServerReceive receive;
-	ProcessWork::instance().initReceive(&receive);
+	NetSender::instance().initPostThread();
+	NetSender::instance().initReceive(&receive);
 
 	ProtoMessage message;
 	NetSender::instance().init(message, CorrespondParam::ProtocolId::SERVER_INIT, true);

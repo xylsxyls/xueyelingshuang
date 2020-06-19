@@ -90,7 +90,5 @@ void LogSender::send(const char* buffer, int32_t length)
 //	{
 //		LOG_SEND("123456");
 //	}
-//	LOG_SEND_WAIT();
-//	LOG_SEND_UNINIT();
 //	return 0;
 //}

@@ -3,7 +3,10 @@
 #include <stdint.h>
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
+#include "ProcessWork/ProcessWorkAPI.h"
 
+/** 网络发送接收类，调用顺序就是函数顺序
+*/
 class NetSenderAPI NetSender
 {
 protected:
@@ -13,7 +16,17 @@ public:
 	static NetSender& instance();
 
 public:
+	void initPostThread();
+
+	void initReceive(ProcessReceiveCallback* callback, int32_t receiveSize = 1 * 1024 * 1024, int32_t areaCount = 100);
+
 	void init(ProtoMessage& message, CorrespondParam::ProtocolId protocolId, bool isServer = false);
 
 	void send(ProtoMessage& message, bool isServer = false);
+
+	void post(ProtoMessage& message, bool isServer = false);
+
+	void uninitPostThread();
+
+	void uninitReceive();
 };

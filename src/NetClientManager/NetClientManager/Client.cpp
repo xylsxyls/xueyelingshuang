@@ -29,5 +29,5 @@ void Client::onReceive(char* buffer, int32_t length, CorrespondParam::ProtocolId
 	default:
 		break;
 	}
-	ProcessWork::instance().send(clientPid, strMessage.c_str(), strMessage.length(), protocolId);
+	ProcessWork::instance().post(clientPid, strMessage.c_str(), strMessage.length(), protocolId);
 }

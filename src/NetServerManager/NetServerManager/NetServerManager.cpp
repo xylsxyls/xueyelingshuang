@@ -16,6 +16,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
+		ProcessWork::instance().uninitPostThread();
 		ProcessWork::instance().uninitReceive();
 		g_exit = false;
 	}
@@ -28,12 +29,13 @@ int32_t main()
 {
 	CDump::declareDumpFile();
 
-	Server server;
-	server.listen(5203);
-
 	ServerProcessReceive serverProcessReceive;
-	serverProcessReceive.setServer(&server);
+	ProcessWork::instance().initPostThread();
 	ProcessWork::instance().initReceive(&serverProcessReceive);
+
+	Server server;
+	serverProcessReceive.setServer(&server);
+	server.listen(5203);
 
 	while (!g_exit)
 	{
