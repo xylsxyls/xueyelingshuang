@@ -2,6 +2,9 @@
 #include <condition_variable>
 #include <mutex>
 #include "SemaphoreMacro.h"
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
 
 /** 信号类，包含信号量和事件
 */
