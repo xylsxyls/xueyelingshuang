@@ -282,14 +282,14 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CNoFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		if (tDown && stopWatch.GetWatchTime() > 500)
-		{
-			tDown = false;
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CFlashTask> spTask;
-			spTask.reset(new CFlashTask);
-			taskThread->PostTask(spTask, 1);
-		}
+		//if (tDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	tDown = false;
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CFlashTask> spTask;
+		//	spTask.reset(new CFlashTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
 		else if (aDown && stopWatch.GetWatchTime() > 500)
 		{
 			aDown = false;
@@ -326,13 +326,13 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CqNoFlashTask);
 			taskThread->PostTask(spTask, 2);
 		}
-		else if (cDown && stopWatch.GetWatchTime() > 500)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CqNoFlashTask> spTask;
-			spTask.reset(new CqNoFlashTask);
-			taskThread->PostTask(spTask, 1);
-		}
+		//else if (cDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CqNoFlashTask> spTask;
+		//	spTask.reset(new CqNoFlashTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
 		else if (vkCodeOpen && wDown && stopWatch.GetWatchTime() > 500)
 		{
 			stopWatch.SetWatchTime(0);
