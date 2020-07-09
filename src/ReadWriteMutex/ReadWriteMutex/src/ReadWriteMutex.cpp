@@ -1,35 +1,36 @@
 #include "ReadWriteMutex.h"
-#include <windows.h>
 
-ReadWriteMutex::ReadWriteMutex():
-m_mutex(nullptr)
+ReadWriteMutex::ReadWriteMutex()
 {
-	m_mutex = new SRWLOCK;
-	InitializeSRWLock(m_mutex);
-}
 
-ReadWriteMutex::~ReadWriteMutex()
-{
-	delete (SRWLOCK*)m_mutex;
-	m_mutex = nullptr;
 }
 
 void ReadWriteMutex::read()
 {
-	AcquireSRWLockExclusive(m_mutex);
+	m_readMutex.lock();
+	if (++m_readCount == 1)
+	{
+		m_writeMutex.lock();
+	}
+	m_readMutex.unlock();
 }
 
 void ReadWriteMutex::unread()
 {
-	ReleaseSRWLockExclusive(m_mutex);
+	m_readMutex.lock();
+	if (--m_readCount == 0)
+	{
+		m_writeMutex.unlock();
+	}
+	m_readMutex.unlock();
 }
 
 void ReadWriteMutex::write()
 {
-	AcquireSRWLockShared(m_mutex);
+	m_writeMutex.lock();
 }
 
 void ReadWriteMutex::unwrite()
 {
-	ReleaseSRWLockShared(m_mutex);
+	m_writeMutex.unlock();
 }

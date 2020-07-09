@@ -11,5 +11,5 @@ public:
 	~ReadLock();
 
 private:
-	ReadWriteMutexBase *m_mutex;
+	ReadWriteMutexBase* m_mutex;
 };

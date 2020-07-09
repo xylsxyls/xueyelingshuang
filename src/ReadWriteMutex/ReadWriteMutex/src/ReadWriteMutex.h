@@ -1,16 +1,11 @@
 #pragma once
-#include "ReadWriteMutexMacro.h"
 #include "ReadWriteMutexBase.h"
-
-struct _RTL_SRWLOCK;
-typedef _RTL_SRWLOCK RTL_SRWLOCK;
-typedef RTL_SRWLOCK SRWLOCK;
+#include <mutex>
 
 class ReadWriteMutexAPI ReadWriteMutex : public ReadWriteMutexBase
 {
 public:
 	ReadWriteMutex();
-	~ReadWriteMutex();
 
 public:
 	virtual void read();
@@ -19,5 +14,8 @@ public:
 	virtual void unwrite();
 
 private:
-	SRWLOCK* m_mutex;
+	std::mutex m_readMutex;
+	std::mutex m_writeMutex;
+	//已加读锁个数
+	int32_t m_readCount;
 };
