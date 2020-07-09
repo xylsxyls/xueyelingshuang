@@ -157,7 +157,7 @@ void RecursionFindFile(const std::string& strPath, const std::string& FileStr, s
             //2表示找文件后缀名
             case 2:
             {
-                if (CGetPath::GetName(tempFilePath, 2) == FileStr)
+				if (CStringManager::MakeLower(CGetPath::GetName(tempFilePath, 2)) == CStringManager::MakeLower(FileStr))
                 {
                     pPathVector->push_back(tempFilePath);
                 }
