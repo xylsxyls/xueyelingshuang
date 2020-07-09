@@ -14,8 +14,15 @@ public:
 	virtual void unwrite();
 
 private:
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
 	std::mutex m_readMutex;
 	std::mutex m_writeMutex;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 	//已加读锁个数
 	int32_t m_readCount;
 };

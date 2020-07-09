@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\FileReadWriteMutex.h" />
     <ClInclude Include="..\src\ProcessReadWriteMutex.h" />
     <ClInclude Include="..\src\ReadLock.h" />
     <ClInclude Include="..\src\ReadWriteMutexAPI.h" />
@@ -28,6 +29,7 @@
     <ClInclude Include="..\src\WriteLock.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\FileReadWriteMutex.cpp" />
     <ClCompile Include="..\src\ProcessReadWriteMutex.cpp" />
     <ClCompile Include="..\src\ReadLock.cpp" />
     <ClCompile Include="..\src\ReadWriteMutex.cpp" />

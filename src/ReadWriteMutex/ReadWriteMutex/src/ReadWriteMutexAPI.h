@@ -2,6 +2,7 @@
 #define _ReadWriteMutexAPI
 #include "ReadWriteMutex.h"
 #include "ProcessReadWriteMutex.h"
+#include "FileReadWriteMutex.h"
 #include "ReadLock.h"
 #include "WriteLock.h"
 
