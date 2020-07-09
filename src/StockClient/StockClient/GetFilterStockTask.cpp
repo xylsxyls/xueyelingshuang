@@ -133,6 +133,8 @@ void GetFilterStockTask::DoTask()
 		while (index++ != m_vecResult->size() - 1)
 		{
 			(*m_vecResult)[index] = CStringManager::split((*m_vecResult)[index], ".")[0];
+			CStringManager::Replace((*m_vecResult)[index], "\"", "");
+			CStringManager::Replace((*m_vecResult)[index], "\t", "");
 		}
 		std::sort(m_vecResult->begin(), m_vecResult->end());
 		CSystem::setClipboardData(m_hWnd, "");
