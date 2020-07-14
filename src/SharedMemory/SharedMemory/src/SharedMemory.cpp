@@ -3,7 +3,6 @@
 #include <psapi.h>
 #include <TCHAR.H>
 #include <strsafe.h>
-#include "CSystem/CSystemAPI.h"
 
 SharedMemory::SharedMemory(const std::string& name, uint32_t size):
 m_memoryHandle(nullptr),
@@ -11,7 +10,6 @@ m_memoryPtr(nullptr),
 m_readMemoryPtr(nullptr),
 m_writeMemoryPtr(nullptr),
 m_memoryName(name),
-m_processReadWriteMutex((name + "_lock").c_str()),
 m_size(0)
 {
 	if (size != 0)
@@ -149,28 +147,6 @@ void* SharedMemory::memory()
 	return m_memoryPtr;
 }
 
-void SharedMemory::read()
-{
-	m_processReadWriteMutex.read();
-	readWithoutLock();
-}
-
-void SharedMemory::unread()
-{
-	m_processReadWriteMutex.unread();
-}
-
-void SharedMemory::write()
-{
-	m_processReadWriteMutex.write();
-	writeWithoutLock();
-}
-
-void SharedMemory::unwrite()
-{
-	m_processReadWriteMutex.unwrite();
-}
-
 void* SharedMemory::readWithoutLock()
 {
 	if (m_readMemoryPtr != nullptr)
@@ -209,21 +185,21 @@ void* SharedMemory::writeWithoutLock()
 	return m_memoryPtr;
 }
 
-bool SharedMemory::trywrite()
-{
-	if (!m_processReadWriteMutex.trywrite())
-	{
-		return false;
-	}
-	open(false);
-	if (m_memoryHandle == nullptr)
-	{
-		m_processReadWriteMutex.unwrite();
-		return false;
-	}
-	m_memoryPtr = m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-	return true;
-}
+//bool SharedMemory::trywrite()
+//{
+//	if (!m_processReadWriteMutex.trywrite())
+//	{
+//		return false;
+//	}
+//	open(false);
+//	if (m_memoryHandle == nullptr)
+//	{
+//		m_processReadWriteMutex.unwrite();
+//		return false;
+//	}
+//	m_memoryPtr = m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+//	return true;
+//}
 
 void SharedMemory::close()
 {

@@ -2,9 +2,10 @@
 #include "SharedMemoryMacro.h"
 #include <stdint.h>
 #include <string>
-#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 
-class SharedMemoryAPI SharedMemory : public ReadWriteMutexBase
+typedef void* HANDLE;
+
+class SharedMemoryAPI SharedMemory
 {
 public:
 	/** ¹¹Ôìº¯Êý
@@ -18,13 +19,8 @@ public:
 	uint32_t size();
 	std::string mapName();
 	void* memory();
-	virtual void read();
-	virtual void unread();
-	virtual void write();
-	virtual void unwrite();
 	void* readWithoutLock();
 	void* writeWithoutLock();
-	bool trywrite();
 	void close();
 	void clear();
 
@@ -51,6 +47,5 @@ private:
 	void* m_memoryPtr;
 	void* m_readMemoryPtr;
 	void* m_writeMemoryPtr;
-	ProcessReadWriteMutex m_processReadWriteMutex;
 	uint32_t m_size;
 };
