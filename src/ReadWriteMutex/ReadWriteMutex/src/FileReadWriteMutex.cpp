@@ -1,10 +1,29 @@
 #include "FileReadWriteMutex.h"
+#ifdef _MSC_VER
 #include <windows.h>
 #include <thread>
+#elif __linux__
+#include <fcntl.h>
+#endif
+
+std::string FileReadWriteMutex::s_tempDir = FileReadWriteMutex::tempDir();
 
 FileReadWriteMutex::FileReadWriteMutex(const std::string& fileName)
 {
-	m_fileName = fileName + ".lock";
+	if (fileName.find_first_of('/') >= 0 || fileName.find_first_of('\\') >= 0)
+	{
+		m_fileName = fileName;
+	}
+	else
+	{
+		m_fileName = fileName + ".lock";
+	}
+#ifdef _MSC_VER
+	m_fileName = s_tempDir + m_fileName;
+#elif __linux__
+	m_fileName = "/tmp/" + m_fileName;
+	m_fd = open(m_fileName.c_str(), O_RDWR);
+#endif
 }
 
 void FileReadWriteMutex::read()
@@ -14,6 +33,7 @@ void FileReadWriteMutex::read()
 
 void FileReadWriteMutex::write()
 {
+#ifdef _MSC_VER
 	while (true)
 	{
 		m_file = CreateFileA(m_fileName.c_str(), GENERIC_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
@@ -24,6 +44,19 @@ void FileReadWriteMutex::write()
 		CloseHandle(m_file);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
+#elif __linux__
+	if(m_fd < 0)
+	{
+		printf("open file failed, m_fd = %d\n", m_fd);
+		return;
+	}
+	int result = lockf(m_fd, F_LOCK, 0);
+	if (result < 0)
+	{
+		printf("lockf function failed, result = %d\n", result);
+		return;
+	}
+#endif
 }
 
 void FileReadWriteMutex::unread()
@@ -33,7 +66,47 @@ void FileReadWriteMutex::unread()
 
 void FileReadWriteMutex::unwrite()
 {
+#ifdef _MSC_VER
 	UnlockFile(m_file, 0, 0, 0, 0);
 	CloseHandle(m_file);
 	DeleteFileA(m_fileName.c_str());
+#elif __linux__
+	if (m_fd < 0)
+	{
+		printf("open file failed, m_fd = %d\n", m_fd);
+		return;
+	}
+	int result = lockf(m_fd, F_ULOCK, 0);
+	if (result < 0)
+	{
+		printf("unlock lockf function failed, result = %d\n", result);
+		return;
+	}
+#endif
 }
+
+#ifdef __linux__
+void FileReadWriteMutex::trywrite()
+{
+	if(m_fd < 0)
+	{
+		printf("open file failed, m_fd = %d\n", m_fd);
+		return;
+	}
+	int result = lockf(m_fd, F_TLOCK, 0);
+	if (result < 0)
+	{
+		printf("lockf function failed, result = %d\n", result);
+		return;
+	}
+}
+#endif
+
+#ifdef _MSC_VER
+std::string FileReadWriteMutex::tempDir()
+{
+	TCHAR szPath[MAX_PATH] = { 0 };
+	GetTempPathA(MAX_PATH, szPath);
+	return szPath;
+}
+#endif

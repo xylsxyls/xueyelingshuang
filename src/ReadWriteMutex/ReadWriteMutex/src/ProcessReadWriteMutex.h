@@ -3,6 +3,7 @@
 #include <string>
 #include "ReadWriteMutexBase.h"
 
+#ifdef _MSC_VER
 typedef void* HANDLE;
 
 class ReadWriteMutexAPI ProcessReadWriteMutex : public ReadWriteMutexBase
@@ -21,3 +22,9 @@ public:
 private:
 	HANDLE m_hLock;
 };
+#elif __linux__
+class ReadWriteMutexAPI ProcessReadWriteMutex : public FileReadWriteMutex
+{
+
+};
+#endif

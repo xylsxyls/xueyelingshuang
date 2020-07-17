@@ -1,6 +1,9 @@
 #include "ProcessReadWriteMutex.h"
+#ifdef _MSC_VER
 #include <windows.h>
+#endif
 
+#ifdef _MSC_VER
 ProcessReadWriteMutex::ProcessReadWriteMutex(const std::string& name) :
 m_hLock(nullptr)
 {
@@ -56,3 +59,4 @@ bool ProcessReadWriteMutex::trywrite()
 {
 	return (::WaitForSingleObject(m_hLock, 0) == WAIT_OBJECT_0) ? 1 : 0;
 }
+#endif
