@@ -32,6 +32,7 @@ CStopWatch stopWatch;
 CStopWatch w3StopWatch;
 CStopWatch sleepWatch;
 CStopWatch textWatch;
+CStopWatch openWatch;
 CStopWatch tWatch;
 CStopWatch test;
 
@@ -219,6 +220,8 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		else if (vkCode == 'E')
 		{
+			vkCodeOpen = true;
+			openWatch.SetWatchTime(0);
 			eDown = false;
 		}
 		else if (vkCode == 'D')
@@ -333,7 +336,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		//	spTask.reset(new CqNoFlashTask);
 		//	taskThread->PostTask(spTask, 1);
 		//}
-		else if (vkCodeOpen && wDown && stopWatch.GetWatchTime() > 500)
+		else if (vkCodeOpen && wDown && stopWatch.GetWatchTime() > 500 && openWatch.GetWatchTime() < 10000)
 		{
 			stopWatch.SetWatchTime(0);
 			std::shared_ptr<CqTask> spTask;

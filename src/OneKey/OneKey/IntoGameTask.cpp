@@ -17,7 +17,7 @@ void IntoGameTask::DoTask()
 	{
 		CMouse::MoveAbsolute(xyls::Point(858, 843));
 		CMouse::LeftClick();
-		Sleep(2000);
+		Sleep(3000);
 		if (m_exit)
 		{
 			return;
@@ -30,11 +30,11 @@ void IntoGameTask::DoTask()
 			}
 			CMouse::MoveAbsolute(xyls::Point(952, 716));
 			CMouse::LeftClick();
-			Sleep(2000);
+			Sleep(3000);
 		}
 		CMouse::MoveAbsolute(xyls::Point(764, 847));
 		CMouse::LeftClick();
-		Sleep(2000);
+		Sleep(3000);
 		count = 40;
 	}
 }
