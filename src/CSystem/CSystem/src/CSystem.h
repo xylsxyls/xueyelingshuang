@@ -134,6 +134,8 @@ public:
 	static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
 	//ansi转unicode
 	static std::wstring AnsiToUnicode(const std::string& strSrc);
+	//读取文件
+	std::string readFile(const std::string& path);
 
 public:
     static bool ifRedirFrobid;
