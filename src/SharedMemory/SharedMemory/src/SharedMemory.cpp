@@ -73,10 +73,10 @@ SharedMemory::~SharedMemory()
 		::CloseHandle(m_memoryHandle);
 		m_memoryHandle = nullptr;
 	}
-#elif
+#elif __linux__
 	if(m_size != 0)
 	{
-		if(shmctl(shmid, IPC_RMID, 0) == -1)   
+		if(shmctl(m_shmid, IPC_RMID, 0) == -1)   
 		{
 			printf("shmctl(IPC_RMID) failed\n");
 		}
@@ -113,7 +113,7 @@ uint32_t SharedMemory::realSize()
 		return 0;
 	}
 	struct shmid_ds shmbuffer;
-	//¶Á¹²ÏíÄÚ´æ½á¹¹struct shmid_ds
+	//è¯»å…±äº«å†…å­˜ç»“æž„struct shmid_ds
 	shmctl(m_shmid, IPC_STAT, &shmbuffer);
 	return shmbuffer.shm_segsz;
 #endif
@@ -340,7 +340,7 @@ void SharedMemory::open(bool bReadOnly)
 		{
 			if (index + 2 > m_memoryName.size())
 			{
-				if (name.size() % 2 == 1)
+				if (m_memoryName.size() % 2 == 1)
 				{
 					key += m_memoryName[index];
 				}
@@ -358,7 +358,7 @@ void SharedMemory::open(bool bReadOnly)
 #endif
 }
 
-////Ð´
+////å†™
 //int32_t main()
 //{
 //	SharedMemory mem("mmsa", 4095);
@@ -372,7 +372,7 @@ void SharedMemory::open(bool bReadOnly)
 //	return 0;
 //}
 //
-////¶Á
+////è¯»
 //int32_t main()
 //{
 //	SharedMemory mem("mmsa");

@@ -1,12 +1,20 @@
 #pragma once
 
-#ifdef _ReadWriteMutexAPI
-#define ReadWriteMutexAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _ReadWriteMutexAPI
+        #define ReadWriteMutexAPI _declspec(dllimport)
+    #else
+        #define ReadWriteMutexAPI _declspec(dllexport)
+    #endif
 #else
-#define ReadWriteMutexAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define ReadWriteMutexAPI __attribute__ ((visibility("default")))
+    #else
+	    #define ReadWriteMutexAPI
+    #endif
 #endif
 
 #if defined(STATIC_LIB)
-#undef ReadWriteMutexAPI
-#define ReadWriteMutexAPI 
+    #undef ReadWriteMutexAPI
+    #define ReadWriteMutexAPI 
 #endif

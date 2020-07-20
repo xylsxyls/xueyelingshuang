@@ -18,10 +18,8 @@ FileReadWriteMutex::FileReadWriteMutex(const std::string& fileName)
 	{
 		m_fileName = fileName + ".lock";
 	}
-#ifdef _MSC_VER
 	m_fileName = s_tempDir + m_fileName;
-#elif __linux__
-	m_fileName = "/tmp/" + m_fileName;
+#ifdef __linux__
 	m_fd = open(m_fileName.c_str(), O_RDWR);
 #endif
 }
@@ -102,11 +100,14 @@ void FileReadWriteMutex::trywrite()
 }
 #endif
 
-#ifdef _MSC_VER
+
 std::string FileReadWriteMutex::tempDir()
 {
+#ifdef _MSC_VER
 	TCHAR szPath[MAX_PATH] = { 0 };
 	GetTempPathA(MAX_PATH, szPath);
 	return szPath;
-}
+#elif __linux__
+	return "/tmp/";
 #endif
+}

@@ -3,6 +3,10 @@
 #include <string>
 #include "ReadWriteMutexBase.h"
 
+#ifdef __linux__
+#include "FileReadWriteMutex.h"
+#endif
+
 #ifdef _MSC_VER
 typedef void* HANDLE;
 
