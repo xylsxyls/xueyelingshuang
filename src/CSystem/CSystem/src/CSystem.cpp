@@ -861,6 +861,16 @@ std::wstring CSystem::AnsiToUnicode(const std::string& strSrc)
 	return wstrRet;
 }
 
+std::string CSystem::readFile(const std::string& path)
+{
+	std::ifstream license_file(path.c_str());
+	if (!license_file)
+	{
+		return "";
+	}
+	return std::string((std::istreambuf_iterator<char>(license_file)), std::istreambuf_iterator<char>());
+}
+
 //int main()
 //{
 //	auto sss2 = CSystem::commonFile("FileReplace");
