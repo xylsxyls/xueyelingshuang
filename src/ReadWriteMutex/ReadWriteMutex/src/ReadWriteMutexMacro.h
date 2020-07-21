@@ -10,7 +10,7 @@
     #if defined(__GNUC__) && __GNUC__ >= 4
         #define ReadWriteMutexAPI __attribute__ ((visibility("default")))
     #else
-	    #define ReadWriteMutexAPI
+        #define ReadWriteMutexAPI
     #endif
 #endif
 

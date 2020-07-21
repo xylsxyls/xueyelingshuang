@@ -2,17 +2,19 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
 	if (eve == CTRL_CLOSE_EVENT)
 	{
-		//¹Ø±ÕÍË³öÊÂ¼þ
+		//å…³é—­é€€å‡ºäº‹ä»¶
 		//RCSend("close ConsoleTest1");
 	}
 	return FALSE;
 }
 
 int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+#endif
 
 int32_t main()
 {
