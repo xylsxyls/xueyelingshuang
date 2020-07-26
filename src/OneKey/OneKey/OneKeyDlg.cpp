@@ -303,10 +303,21 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		else if (fiveDown && stopWatch.GetWatchTime() > 500)
 		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CDwqrTask> spTask;
-			spTask.reset(new CDwqrTask);
-			taskThread->PostTask(spTask, 1);
+			if (openWatch.GetWatchTime() < 3000)
+			{
+				stopWatch.SetWatchTime(0);
+				std::shared_ptr<CDwqrTask> spTask;
+				spTask.reset(new CDwqrTask);
+				taskThread->PostTask(spTask, 1);
+			}
+			else
+			{
+				RCSend("1");
+				stopWatch.SetWatchTime(0);
+				std::shared_ptr<CqNoFlashTask> spTask;
+				spTask.reset(new CqNoFlashTask);
+				taskThread->PostTask(spTask, 2);
+			}
 		}
 		else if (wDown && dDown && stopWatch.GetWatchTime() > 500)
 		{
