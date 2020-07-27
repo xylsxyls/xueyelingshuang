@@ -871,6 +871,12 @@ std::string CSystem::readFile(const std::string& path)
 	return std::string((std::istreambuf_iterator<char>(license_file)), std::istreambuf_iterator<char>());
 }
 
+void CSystem::saveFile(const std::string& content, const std::string& path)
+{
+	std::ofstream file(path.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
+	file << content;
+}
+
 //int main()
 //{
 //	auto sss2 = CSystem::commonFile("FileReplace");

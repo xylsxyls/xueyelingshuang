@@ -53,7 +53,7 @@ void GetFilterStockTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(423, 303), 0);
 		CMouse::LeftClick();
 		Sleep(8000);
-		CMouse::MoveAbsolute(xyls::Point(294, 542), 0);
+		CMouse::MoveAbsolute(xyls::Point(283, 456), 0);
 		CMouse::LeftClick();
 		Sleep(50);
 		CSystem::setClipboardData(m_hWnd, m_today.dateToString() + m_fileName + ".xls");
@@ -68,7 +68,7 @@ void GetFilterStockTask::DoTask()
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('V');
 		Sleep(200);
-		CMouse::MoveAbsolute(xyls::Point(508, 154), 0);
+		CMouse::MoveAbsolute(xyls::Point(434, 67), 0);
 		CMouse::LeftClick();
 		Sleep(50);
 		CSystem::setClipboardData(m_hWnd, CSystem::GetCurrentExePath());
@@ -83,10 +83,10 @@ void GetFilterStockTask::DoTask()
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('V');
 		Sleep(50);
-		CMouse::MoveAbsolute(xyls::Point(774, 156), 0);
+		CMouse::MoveAbsolute(xyls::Point(715, 66), 0);
 		CMouse::LeftClick();
 		Sleep(200);
-		CMouse::MoveAbsolute(xyls::Point(850, 615), 0);
+		CMouse::MoveAbsolute(xyls::Point(786, 527), 0);
 		CMouse::LeftClick();
 		if (m_regain)
 		{
@@ -109,6 +109,9 @@ void GetFilterStockTask::DoTask()
 		ShellExecuteA(NULL, "open", filePath.c_str(), NULL, NULL, SW_SHOW);
 		Sleep(5000);
 		CMouse::MoveAbsolute(xyls::Point(1104, 574), 0);
+		CMouse::LeftClick();
+		Sleep(1000);
+		CMouse::MoveAbsolute(xyls::Point(1906, 148), 0);
 		CMouse::LeftClick();
 		Sleep(1000);
 		CMouse::LeftClick();

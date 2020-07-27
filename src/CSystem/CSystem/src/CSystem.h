@@ -135,7 +135,9 @@ public:
 	//ansi转unicode
 	static std::wstring AnsiToUnicode(const std::string& strSrc);
 	//读取文件
-	std::string readFile(const std::string& path);
+	static std::string readFile(const std::string& path);
+	//保存文件
+	static void saveFile(const std::string& content, const std::string& path);
 
 public:
     static bool ifRedirFrobid;
