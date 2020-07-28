@@ -113,7 +113,7 @@ uint32_t SharedMemory::realSize()
 		return 0;
 	}
 	struct shmid_ds shmbuffer;
-	//è¯»å…±äº«å†…å­˜ç»“æž„struct shmid_ds
+	//¶Á¹²ÏíÄÚ´æ½á¹¹struct shmid_ds
 	shmctl(m_shmid, IPC_STAT, &shmbuffer);
 	return shmbuffer.shm_segsz;
 #endif
@@ -358,7 +358,7 @@ void SharedMemory::open(bool bReadOnly)
 #endif
 }
 
-////å†™
+////Ð´
 //int32_t main()
 //{
 //	SharedMemory mem("mmsa", 4095);
@@ -372,7 +372,7 @@ void SharedMemory::open(bool bReadOnly)
 //	return 0;
 //}
 //
-////è¯»
+////¶Á
 //int32_t main()
 //{
 //	SharedMemory mem("mmsa");

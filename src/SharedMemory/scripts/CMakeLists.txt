@@ -1,6 +1,6 @@
-#设置CMAKE最低版本
+#����CMAKE��Ͱ汾
 CMAKE_MINIMUM_REQUIRED(VERSION 3.1.1)
-#设置项目名称
+#������Ŀ����
 SET(PROJECT_NAME SharedMemory)
 SET(CMAKE_CXX_STANDARD 11)
 
@@ -21,7 +21,7 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 endif()
 
-#建立项目
+#������Ŀ
 PROJECT(${PROJECT_NAME})
 
 MESSAGE("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
@@ -30,18 +30,18 @@ SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
 
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../include/)
 
-#获取代码，在项目中，将所有代码都放在src文件夹中
+#��ȡ���룬����Ŀ�У������д��붼����src�ļ�����
 AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/../SharedMemory/src/ DIR_SRCS)
-#编译可执行程序
+#�����ִ�г���
 #ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS})
 
 if(${DLLLIB} STREQUAL "dll")
-#如果要生成动态链接库
+#���Ҫ���ɶ�̬���ӿ�
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${DIR_SRCS})
 elseif(${DLLLIB} STREQUAL "lib")
-#如果要生成静态链接库
+#���Ҫ���ɾ�̬���ӿ�
 ADD_LIBRARY(${PROJECT_NAME} STATIC ${DIR_SRCS})
 endif()
 
-#添加链接库
+#�������ӿ�
 LINK_DIRECTORIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/)
