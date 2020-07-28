@@ -124,7 +124,7 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 	::vsprintf_s(&str[0], size + 1, format, args);
 	va_end(args);
 	std::string fileMacroTemp;
-	int32_t nRight = fileMacro.find_last_of("/\\");
+	size_t nRight = fileMacro.find_last_of("/\\");
 	fileMacroTemp = CStringManager::Mid(fileMacro, nRight + 1, fileMacro.length() - nRight - 1);
 	
 	WriteLock writelock(*m_processMutex);
