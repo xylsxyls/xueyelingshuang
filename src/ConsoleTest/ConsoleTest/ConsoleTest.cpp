@@ -7,7 +7,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
 	if (eve == CTRL_CLOSE_EVENT)
 	{
-		//å…³é—­é€€å‡ºäº‹ä»¶
+		//¹Ø±ÕÍË³öÊÂ¼þ
 		//RCSend("close ConsoleTest1");
 	}
 	return FALSE;
