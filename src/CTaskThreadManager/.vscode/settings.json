@@ -1,0 +1,4 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/scripts",
+    "cmake.configureArgs": ["-DLIBRARIES_RELY=libSemaphore.so", "-DBIT=64", "-DDLLLIB=dll", "-DDEBUGRELEASE=debug"]
+}
