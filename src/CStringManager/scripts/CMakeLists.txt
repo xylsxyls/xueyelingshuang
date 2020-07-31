@@ -7,12 +7,12 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 if(${DEBUGRELEASE} STREQUAL "debug")
 #设置项目名称
-SET(PROJECT_NAME CTaskThreadManagerd)
+SET(PROJECT_NAME CStringManagerd)
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -g -ggdb ")
 SET(CMAKE_BUILD_TYPE "Debug")
 elseif(${DEBUGRELEASE} STREQUAL "release")
 #设置项目名称
-SET(PROJECT_NAME CTaskThreadManager)
+SET(PROJECT_NAME CStringManager)
 SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3")
 SET(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -46,7 +46,7 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERY
 endforeach ()
 
 #获取代码，在项目中，将所有代码都放在src文件夹中
-AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/../CTaskThreadManager/src/ DIR_SRCS)
+AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/../CStringManager/src/ DIR_SRCS)
 #编译可执行程序
 #ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS})
 
