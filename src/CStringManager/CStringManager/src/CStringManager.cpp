@@ -1,18 +1,11 @@
 #include "CStringManager.h"
-//#include <stdarg.h>
 #include <algorithm>
-//#include <sstream>
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <iconv.h>
+#include <string.h>
 #endif
-//#include <stdlib.h>
-//#include <string.h>
-//#include <iterator>
-//#include <locale.h>
-//#include <wchar.h>
-//#include <cstdlib>
 
 size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect)
 {
@@ -303,7 +296,7 @@ std::wstring CStringManager::Format(const wchar_t* fmt, ...)
 
 void CStringManager::MakeReverse(std::string& str)
 {
-	std::reverse(str.begin(),str.end());
+	std::reverse(str.begin(), str.end());
 }
 
 std::string CStringManager::MakeUpper(const std::string& src)
