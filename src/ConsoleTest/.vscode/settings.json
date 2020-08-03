@@ -1,3 +1,8 @@
 {
-    "cmake.sourceDirectory": "${workspaceFolder}/ConsoleTest"
+    "cmake.sourceDirectory": "${workspaceFolder}/ConsoleTest",
+    "cmake.configureArgs": [
+        //"-DLIBRARIES_RELY=libCStringManagerd.so",
+        "-DBIT=64",
+        "-DDEBUGRELEASE=debug"
+    ]
 }

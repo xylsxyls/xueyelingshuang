@@ -1,16 +1,18 @@
 #include "CStringManager.h"
-#include <stdarg.h>
+//#include <stdarg.h>
 #include <algorithm>
-#include <stdint.h>
-#include <sstream>
+//#include <sstream>
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <iconv.h>
 #endif
-#include <stdlib.h>
-#include <string.h>
-#include <iterator> 
+//#include <stdlib.h>
+//#include <string.h>
+//#include <iterator>
+//#include <locale.h>
+//#include <wchar.h>
+//#include <cstdlib>
 
 size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect)
 {
@@ -352,20 +354,132 @@ std::string CStringManager::GetMidString(const std::string& src, const std::stri
 	return Mid(src, left + 1, right - left - 1);
 }
 
-#ifdef _WIN32
-
 uint64_t CStringManager::atoui64(const char* str)
 {
+#ifdef _WIN32
 	return _strtoui64(str, nullptr, 10);
+#elif __linux__
+	return 0;
+#endif
 }
 
 int64_t CStringManager::atoi64(const char* str)
 {
+#ifdef _WIN32
 	return _atoi64(str);
+#elif __linux__
+	return 0;
+#endif
 }
+
+#ifdef __linux__
+
+static std::wstring StringToWString(const char *pc)
+{
+	if (pc == nullptr)
+	{
+		return L"";
+	}
+	char* old = setlocale(LC_CTYPE, "zh_CN.gbk");//"Chinese-simplified" windows "zh_CN.gb2312" linux
+	size_t destlen = mbstowcs(0, pc, 0);
+	if (destlen == (size_t)(-1))
+	{
+		setlocale(LC_CTYPE, old);
+		return L"";
+	}
+	size_t size_of_wc = destlen + 1;
+	wchar_t* pw = (wchar_t*)calloc(size_of_wc, sizeof(wchar_t));
+	auto mbstowcs_result = mbstowcs(pw, pc, size_of_wc);
+	if (mbstowcs_result == (size_t)(-1))
+	{
+		setlocale(LC_CTYPE, old);
+		return L"";
+	}
+	std::wstring result = pw;
+	delete[] pw;
+	setlocale(LC_CTYPE, old);
+	return result;
+}
+
+static std::string WStringToString(const wchar_t* pw)
+{
+	if (pw == nullptr)
+	{
+		return "";
+	}
+
+	char* old = setlocale(LC_CTYPE, "zh_CN.gbk");
+	size_t destlen = wcstombs(0, pw, 0);
+	if (destlen == (size_t)(-1))
+	{
+		setlocale(LC_CTYPE, old);
+		return "";
+	}
+
+	size_t size_of_wc = destlen + 1;
+	char* pc = (char*)calloc(size_of_wc, sizeof(char));
+	if (pc == nullptr)
+	{
+		setlocale(LC_CTYPE, old);
+		return "";
+	}
+
+	auto wcstombs_result = wcstombs(pc, pw, size_of_wc);
+	if (wcstombs_result == (size_t)(-1))
+	{
+		setlocale(LC_CTYPE, old);
+		return "";
+	}
+	std::string result = pc;
+	delete[] pc;
+	setlocale(LC_CTYPE, old);
+	return result;
+}
+
+static int32_t code_convert(const char* from_charset, const char* to_charset, const char* inbuf, size_t inlen, char* outbuf, size_t* outlen)
+{
+	iconv_t cd;
+	char** pin = (char**)&inbuf;
+	char** pout = &outbuf;
+
+	cd = iconv_open(to_charset, from_charset);
+	if (cd == 0)
+	{
+		return -1;
+	}
+	size_t outLength = *outlen;
+	//memset(outbuf, 0, outLength);
+	if (iconv(cd, pin, &inlen, pout, outlen) == -1)
+	{
+		return -1;
+	}
+	*outlen = outLength - *outlen;
+	iconv_close(cd);
+	return 0;
+}
+
+static std::string code_convert_string(const char* from_charset, const char* to_charset, const std::string& src)
+{
+	if(src.empty())
+	{
+		return "";
+	}
+	size_t outLength = src.size() * 6;
+	char* out = new char[outLength];
+	if (code_convert(from_charset, to_charset, src.c_str(), src.size(), out, &outLength) != 0)
+	{
+		return "";
+	}
+	std::string result(out, outLength);
+	delete[] out;
+	return result;
+}
+
+#endif
 
 std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 {
+#ifdef _WIN32
 	// 分配目标空间, 一个16位Unicode字符最多可以转为4个字节
 	int iAllocSize = static_cast<int>(wstrSrc.size() * 4 + 10);
 	char* pwszBuffer = new char[iAllocSize];
@@ -383,12 +497,15 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 	}
 
 	delete[] pwszBuffer;
-
 	return strRet;
+#elif __linux__
+	return WStringToString(wstrSrc.c_str());
+#endif
 }
 
 std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 {
+#ifdef _WIN32
 	// 分配目标空间
 	int iAllocSize = static_cast<int>(strSrc.size() + 10);
 	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
@@ -406,45 +523,132 @@ std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 	}
 
 	delete[] pwszBuffer;
-
 	return wstrRet;
-}
-
-#else
-
-int32_t code_convert(const char* from_charset, const char* to_charset, const char* inbuf, size_t inlen, char* outbuf, size_t outlen)
-{
-	iconv_t cd;
-	char** pin = (char**)&inbuf;
-	char** pout = &outbuf;
-
-	cd = iconv_open(to_charset, from_charset);
-	if (cd == 0)
-	{
-		return -1;
-	}
-	memset(outbuf, 0, outlen);
-	if (iconv(cd, pin, &inlen, pout, &outlen) == -1)
-	{
-		return -1;
-	}
-	iconv_close(cd);
-	return 0;
-}
-
-int32_t CStringManager::ansiToUtf8(const char* inbuf, size_t inlen, char* outbuf, size_t outlen)
-{
-	return code_convert("gb2312", "utf-8", inbuf, inlen, outbuf, outlen);
-}
-
+#elif __linux__
+	return StringToWString(strSrc.c_str());
 #endif
+}
 
-inline unsigned char toHex(const unsigned char &x)
+std::string CStringManager::AnsiToUtf8(const std::string& strSrc)
+{
+#ifdef _WIN32
+	// 分配目标空间, 长度为 Ansi 编码的两倍
+	int iAllocSize = static_cast<int>(strSrc.size() * 2 + 10);
+	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
+	if (NULL == pwszBuffer)
+	{
+		return "";
+	}
+	int iCharsRet = MultiByteToWideChar(CP_ACP, 0, strSrc.c_str(),
+		static_cast<int>(strSrc.size()),
+		pwszBuffer, iAllocSize);
+	//成功
+	std::wstring wstrTemp;
+	if (0 < iCharsRet)
+	{
+		wstrTemp.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
+	}
+
+	// 释放内存
+	delete[] pwszBuffer;
+	return UnicodeToUtf8(wstrTemp);
+#elif __linux__
+	return code_convert_string("gb2312", "utf-8//TRANSLIT", strSrc);
+#endif
+}
+
+std::string CStringManager::Utf8ToAnsi(const std::string& strSrc)
+{
+#ifdef _WIN32
+	std::wstring wstrTemp = Utf8ToUnicode(strSrc);
+
+	// 分配目标空间, 长度为 Ansi 编码的两倍
+	int iAllocSize = static_cast<int>(strSrc.size() * 2 + 10);
+	char* pszBuffer = new char[iAllocSize];
+	if (NULL == pszBuffer)
+	{
+		return "";
+	}
+	int iCharsRet = WideCharToMultiByte(CP_ACP, 0, wstrTemp.c_str(),
+		static_cast<int>(wstrTemp.size()),
+		pszBuffer, iAllocSize, NULL, NULL);
+	// 成功
+	std::string strRet;
+	if (0 < iCharsRet)
+	{
+		strRet.assign(pszBuffer, static_cast<size_t>(iCharsRet));
+	}
+
+	// 释放内存
+	delete[] pszBuffer;
+	return strRet;
+#elif __linux__
+	return code_convert_string("utf-8", "gb2312//TRANSLIT", strSrc);
+#endif
+}
+
+std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
+{
+#ifdef _WIN32
+	// 分配目标空间, 一个16位Unicode字符最多可以转为4个字节
+	int iAllocSize = static_cast<int>(wstrSrc.size() * 4 + 10);
+	char* pszBuffer = new char[iAllocSize];
+	if (NULL == pszBuffer)
+	{
+		return "";
+	}
+	int iCharsRet = WideCharToMultiByte(CP_UTF8, 0, wstrSrc.c_str(),
+		static_cast<int>(wstrSrc.size()),
+		pszBuffer, iAllocSize, NULL, NULL);
+	// 成功
+	std::string strRet;
+	if (0 < iCharsRet)
+	{
+		strRet.assign(pszBuffer, static_cast<size_t>(iCharsRet));
+	}
+
+	// 释放内存
+	delete[] pszBuffer;
+	return strRet;
+#elif __linux__
+	return AnsiToUtf8(UnicodeToAnsi(wstrSrc));
+#endif
+}
+
+std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
+{
+#ifdef _WIN32
+	// 分配目标空间 
+	int iAllocSize = static_cast<int>(strSrc.size() + 10);
+	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
+	if (NULL == pwszBuffer)
+	{
+		return L"";
+	}
+	int iCharsRet = MultiByteToWideChar(CP_UTF8, 0, strSrc.c_str(),
+		static_cast<int>(strSrc.size()),
+		pwszBuffer, iAllocSize);
+	// 成功
+	std::wstring wstrRet;
+	if (0 < iCharsRet)
+	{
+		wstrRet.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
+	}
+
+	// 释放内存
+	delete[] pwszBuffer;
+	return wstrRet;
+#elif __linux__
+	return AnsiToUnicode(Utf8ToAnsi(strSrc));
+#endif
+}
+
+static inline unsigned char toHex(const unsigned char &x)
 {
     return x > 9 ? x -10 + 'A': x + '0';
 }
 
-inline unsigned char fromHex(const unsigned char &x)
+static inline unsigned char fromHex(const unsigned char &x)
 {
     return isdigit(x) ? x-'0' : x-'A'+10;
 }

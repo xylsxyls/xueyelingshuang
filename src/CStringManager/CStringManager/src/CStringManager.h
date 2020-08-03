@@ -76,21 +76,22 @@ public:
 	//取出两个字符串中间的字符串，不包括头尾
 	static std::string GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString);
 
-#ifdef _WIN32
-
 	//?字符串转无符号长整型
 	static uint64_t atoui64(const char* str);
 
 	static int64_t atoi64(const char* str);
 
-	static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
-
 	static std::wstring AnsiToUnicode(const std::string& strSrc);
 
-#else
-	static int32_t ansiToUtf8(const char* inbuf, size_t inlen, char* outbuf, size_t outlen);
+	static std::string UnicodeToAnsi(const std::wstring& wstrSrc);
 
-#endif
+	static std::string AnsiToUtf8(const std::string& strSrc);
+	
+	static std::string Utf8ToAnsi(const std::string& strSrc);
+
+	static std::string UnicodeToUtf8(const std::wstring& wstrSrc);
+
+	static std::wstring Utf8ToUnicode(const std::string& strSrc);
 
     static std::string UrlEncode(const std::string& sIn);
 
