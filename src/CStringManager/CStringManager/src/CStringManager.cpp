@@ -6,6 +6,9 @@
 #include <iconv.h>
 #include <string.h>
 #endif
+#if (_MSC_VER == 1900)
+#include <iterator>
+#endif
 
 size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect)
 {
@@ -349,20 +352,12 @@ std::string CStringManager::GetMidString(const std::string& src, const std::stri
 
 uint64_t CStringManager::atoui64(const char* str)
 {
-#ifdef _WIN32
-	return _strtoui64(str, nullptr, 10);
-#elif __linux__
-	return 0;
-#endif
+	return strtoull(str, nullptr, 10);
 }
 
 int64_t CStringManager::atoi64(const char* str)
 {
-#ifdef _WIN32
-	return _atoi64(str);
-#elif __linux__
-	return 0;
-#endif
+	return strtoll(str, nullptr, 10);
 }
 
 #ifdef __linux__
