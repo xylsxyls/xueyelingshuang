@@ -5,6 +5,7 @@
 #else
 #include <iconv.h>
 #include <string.h>
+#include <stdarg.h>
 #endif
 #if (_MSC_VER == 1900)
 #include <iterator>
@@ -229,19 +230,27 @@ size_t CStringManager::Replace(std::string& str, char ch1, char ch2)
 	return count;
 }
 
-#ifdef _WIN32
-
 void CStringManager::Format(std::string& str, const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
+#ifdef _WIN32
 	int size = _vscprintf(fmt, args);
+#elif __linux__
+	va_list argcopy;
+	va_copy(argcopy, args);
+	int size = vsnprintf(nullptr, 0, fmt, argcopy);
+#endif
 	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
 	str.resize(size);
 	if (size != 0)
 	{
+#ifdef _WIN32
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
 		vsprintf_s(&str[0], size + 1, fmt, args);
+#elif __linux__
+		vsnprintf(&str[0], size + 1, fmt, args);
+#endif
 	}
 	va_end(args);
 }
@@ -251,51 +260,97 @@ std::string CStringManager::Format(const char* fmt, ...)
 	std::string result;
     va_list args;
     va_start(args, fmt);
+#ifdef _WIN32
     int size = _vscprintf(fmt, args);
+#elif __linux__
+	va_list argcopy;
+	va_copy(argcopy, args);
+	int size = vsnprintf(nullptr, 0, fmt, argcopy);
+#endif
     //?resize分配后string类会自动在最后分配\0，resize(5)则总长6
     result.resize(size);
 	if (size != 0)
 	{
+#ifdef _WIN32
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
 		vsprintf_s(&result[0], size + 1, fmt, args);
+#elif __linux__
+		vsnprintf(&result[0], size + 1, fmt, args);
+#endif
 	}
     va_end(args);
     return result;
 }
 
-void CStringManager::Format(std::wstring& str, const wchar_t* fmt, ...)
+void CStringManager::Format(std::wstring& wstr, const wchar_t* wfmt, ...)
 {
+#ifdef _WIN32
 	va_list args;
-	va_start(args, fmt);
-	int size = _vscwprintf(fmt, args);
+	va_start(args, wfmt);
+	int size = _vscwprintf(wfmt, args);
 	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
-	str.resize(size);
+	wstr.resize(size);
 	if (size != 0)
 	{
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
-		vswprintf_s(&str[0], size + 1, fmt, args);
+		vswprintf_s(&wstr[0], size + 1, wfmt, args);
 	}
 	va_end(args);
+#elif __linux__
+	//linux下unicode参数传入了vswprintf也无法识别，传入ansi参数在vswprintf下也会自动转成unicode，所以可以整体转换
+	//vswprintf函数无法在不提供长度时获取缓冲区长度
+	std::string strFmt = UnicodeToAnsi(wfmt);
+	std::string str;
+	va_list args;
+	va_start(args, wfmt);
+	va_list argcopy;
+	va_copy(argcopy, args);
+	int size = vsnprintf(nullptr, 0, strFmt.c_str(), argcopy);
+	str.resize(size);
+	if (size != 0)
+	{
+		vsnprintf(&str[0], size + 1, strFmt.c_str(), args);
+	}
+	va_end(args);
+	wstr = AnsiToUnicode(str);
+#endif
 }
 
-std::wstring CStringManager::Format(const wchar_t* fmt, ...)
+std::wstring CStringManager::Format(const wchar_t* wfmt, ...)
 {
+#ifdef _WIN32
 	std::wstring result;
 	va_list args;
-	va_start(args, fmt);
-	int size = _vscwprintf(fmt, args);
+	va_start(args, wfmt);
+	int size = _vscwprintf(wfmt, args);
 	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
 	result.resize(size);
 	if (size != 0)
 	{
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
-		vswprintf_s(&result[0], size + 1, fmt, args);
+		vswprintf_s(&result[0], size + 1, wfmt, args);
 	}
 	va_end(args);
 	return result;
-}
-
+#elif __linux__
+	//linux下unicode参数传入了vswprintf也无法识别，传入ansi参数在vswprintf下也会自动转成unicode，所以可以整体转换
+	//vswprintf函数无法在不提供长度时获取缓冲区长度
+	std::string strFmt = UnicodeToAnsi(wfmt);
+	std::string str;
+	va_list args;
+	va_start(args, wfmt);
+	va_list argcopy;
+	va_copy(argcopy, args);
+	int size = vsnprintf(nullptr, 0, strFmt.c_str(), argcopy);
+	str.resize(size);
+	if (size != 0)
+	{
+		vsnprintf(&str[0], size + 1, strFmt.c_str(), args);
+	}
+	va_end(args);
+	return AnsiToUnicode(str);
 #endif
+}
 
 void CStringManager::MakeReverse(std::string& str)
 {

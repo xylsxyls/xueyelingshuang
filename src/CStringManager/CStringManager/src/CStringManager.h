@@ -51,17 +51,14 @@ public:
 
 	static size_t Replace(std::string& str, char ch1, char ch2);
 
-#ifdef _WIN32
-
 	static void Format(std::string& str, const char* fmt, ...);
 
 	static std::string Format(const char* fmt, ...);
 
+	//linux下的CStringManager::Format(L"%s", "代码");相当于windows的CStringManager::Format(L"%s", L"代码");
 	static void Format(std::wstring& str, const wchar_t* fmt, ...);
 
 	static std::wstring Format(const wchar_t* fmt, ...);
-
-#endif
 
 	static void MakeReverse(std::string& str);
 
