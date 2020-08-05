@@ -50,7 +50,7 @@ void GetFilterStockTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(1332, 350), 0);
 		CMouse::LeftClick();
 		Sleep(8000);
-		CMouse::MoveAbsolute(xyls::Point(423, 303), 0);
+		CMouse::MoveAbsolute(xyls::Point(430, 346), 0);
 		CMouse::LeftClick();
 		Sleep(8000);
 		CMouse::MoveAbsolute(xyls::Point(283, 456), 0);
@@ -111,7 +111,7 @@ void GetFilterStockTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(1104, 574), 0);
 		CMouse::LeftClick();
 		Sleep(1000);
-		CMouse::MoveAbsolute(xyls::Point(1906, 148), 0);
+		CMouse::MoveAbsolute(xyls::Point(1906, 141), 0);
 		CMouse::LeftClick();
 		Sleep(1000);
 		CMouse::LeftClick();
@@ -130,15 +130,26 @@ void GetFilterStockTask::DoTask()
 			RCSend("vec result stock empty, fileName = %s", m_fileName.c_str());
 			return;
 		}
+
 		m_vecResult->erase(m_vecResult->begin());
-		m_vecResult->pop_back();
+		
 		int32_t index = -1;
 		while (index++ != m_vecResult->size() - 1)
 		{
 			(*m_vecResult)[index] = CStringManager::split((*m_vecResult)[index], ".")[0];
 			CStringManager::Replace((*m_vecResult)[index], "\"", "");
 			CStringManager::Replace((*m_vecResult)[index], "\t", "");
+			if ((*m_vecResult)[index].size() != 6)
+			{
+				break;
+			}
 		}
+		int32_t popCount = m_vecResult->size() - index;
+		while (popCount-- != 0)
+		{
+			m_vecResult->pop_back();
+		}
+
 		std::sort(m_vecResult->begin(), m_vecResult->end());
 		CSystem::setClipboardData(m_hWnd, "");
 		Sleep(1000);
