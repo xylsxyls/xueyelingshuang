@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _CTaskThreadManagerAPI
-#define CTaskThreadManagerAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _CTaskThreadManagerAPI
+        #define CTaskThreadManagerAPI _declspec(dllimport)
+    #else
+        #define CTaskThreadManagerAPI _declspec(dllexport)
+    #endif
 #else
-#define CTaskThreadManagerAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define CTaskThreadManagerAPI __attribute__ ((visibility("default")))
+    #else
+        #define CTaskThreadManagerAPI
+    #endif
 #endif

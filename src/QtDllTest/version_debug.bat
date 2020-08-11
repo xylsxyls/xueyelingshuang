@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" QtDllTest 32 dll debug same

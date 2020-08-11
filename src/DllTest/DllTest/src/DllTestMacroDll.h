@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _DllTestAPI
-#define DllTestAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _DllTestAPI
+        #define DllTestAPI _declspec(dllimport)
+    #else
+        #define DllTestAPI _declspec(dllexport)
+    #endif
 #else
-#define DllTestAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define DllTestAPI __attribute__ ((visibility("default")))
+    #else
+        #define DllTestAPI
+    #endif
 #endif

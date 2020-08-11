@@ -15,6 +15,6 @@
 #endif
 
 #if defined(STATIC_LIB)
-    #undef CTaskThreadManager
-    #define CTaskThreadManager
+    #undef CTaskThreadManagerAPI
+    #define CTaskThreadManagerAPI
 #endif
