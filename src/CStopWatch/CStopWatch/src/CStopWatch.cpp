@@ -42,7 +42,7 @@ std::string CStopWatch::GetWatchStrTime()
 
 unsigned long CStopWatch::GetWatchTime()
 {
-	return m_stopOrRun == false ? m_stopTime - m_time : ::GetTickCount() - m_time;
+	return m_stopOrRun == false ? m_stopTime - m_time : GetOpenTime() - m_time;
 }
 
 void CStopWatch::SetWatchTime(unsigned long SetTime)
@@ -82,11 +82,11 @@ unsigned long CStopWatch::GetOpenTime()
 #endif
 }
 
-int main()
-{
-	CStopWatch a;
-	Sleep(1050);
-	printf("%s", a.GetWatchStrTime().c_str());
-	getchar();
-	return 0;
-}
+//int main()
+//{
+//	CStopWatch a;
+//	Sleep(1050);
+//	printf("%s", a.GetWatchStrTime().c_str());
+//	getchar();
+//	return 0;
+//}
