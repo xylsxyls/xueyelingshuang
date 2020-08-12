@@ -1,14 +1,7 @@
 #pragma once
 #include "CStopWatchMacro.h"
 #include <stdint.h>
-
-/** 倒计时任务基类指针
-*/
-class CountDownTask
-{
-public:
-	virtual void DoTask() = 0;
-};
+#include <string>
 
 class CStopWatchAPI CStopWatch
 {
@@ -16,10 +9,6 @@ public:
 	/** 构造函数
 	*/
 	CStopWatch();
-
-	/** 析构函数
-	*/
-	~CStopWatch();
 
 public:
 	//时分秒是连一起的，如果是1小时1分1秒的时间，秒数返回的就是1秒，不是总秒数
@@ -31,6 +20,9 @@ public:
 
 	//查看走的秒数
 	double GetSeconds();
+
+	//查看走的总时间
+	std::string GetWatchStrTime();
 
 	//查看走的毫秒数，总毫秒数
 	unsigned long GetWatchTime();
@@ -44,14 +36,9 @@ public:
 	//停止走时间
 	void Stop();
 
-	//倒计时做一件事，再次调用则重置倒计时时间，该函数可以在多线程中调用，已加锁，如果threadId=0则创建，否则调用该ID线程
-	static void CountDown(unsigned long countDownMsec, CountDownTask* task, int32_t taskId, int32_t& threadId);
-
-	//放弃执行
-	static void DiscardCountDown(int32_t taskId, int32_t threadId);
-
-	//清空线程
-	static void destroyThread(int32_t threadId);
+protected:
+	//获取开机以来的时间
+	unsigned long GetOpenTime();
 
 private:
 	//凡是unsigned long的都是毫秒为单位，int的是分钟或者小时的整形，double是秒为单位

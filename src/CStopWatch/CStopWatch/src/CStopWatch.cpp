@@ -1,74 +1,16 @@
 #include "CStopWatch.h"
-#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#ifdef _WIN32
 #include <windows.h>
-
-class CStopWatchCountDownTask : public CTask
-{
-public:
-	CStopWatchCountDownTask(int32_t taskId) :
-		m_countDownMsec(0),
-		m_task(nullptr)
-	{
-		m_taskId = taskId;
-		m_handle = CreateEvent(NULL, TRUE, FALSE, NULL);
-	}
-	~CStopWatchCountDownTask()
-	{
-		::CloseHandle(m_handle);
-	}
-
-public:
-	void setCountDownSeconds(unsigned long countDownMsec)
-	{
-		m_countDownMsec = countDownMsec;
-	}
-
-	void setCountDownTask(CountDownTask* task)
-	{
-		m_task = task;
-	}
-
-	void DoTask()
-	{
-		auto res = ::WaitForSingleObject(m_handle, m_countDownMsec);
-		switch (res)
-		{
-		//如果是超时说明需要执行任务了
-		case WAIT_TIMEOUT:
-		{
-			if (m_task != nullptr)
-			{
-				m_task->DoTask();
-			}
-			break;
-		}
-		default:
-			break;
-		}
-	}
-
-	void StopTask()
-	{
-		::SetEvent(m_handle);
-	}
-
-private:
-	unsigned long m_countDownMsec;
-	CountDownTask* m_task;
-	HANDLE m_handle;
-};
+#elif __linux__
+#include <time.h>
+#endif
 
 CStopWatch::CStopWatch():
 m_stopTime(0),
 m_runTime(0),
 m_stopOrRun(true)
 {
-	m_time = ::GetTickCount();
-}
-
-CStopWatch::~CStopWatch()
-{
-
+	m_time = GetOpenTime();
 }
 
 int32_t CStopWatch::GetHour()
@@ -84,6 +26,18 @@ int32_t CStopWatch::GetMinute()
 double CStopWatch::GetSeconds()
 {
 	return (GetWatchTime() - GetHour() * 3600000 - GetMinute() * 60000) / 1000.0;
+}
+
+std::string CStopWatch::GetWatchStrTime()
+{
+	int32_t hour = GetHour();
+	std::string strHour = (hour != 0) ? (std::to_string(hour) + "时") : "";
+	int32_t minute = GetMinute();
+	std::string strMinute = (minute != 0) ? (std::to_string(minute) + "分") : "";
+	double seconds = GetSeconds();
+	char szSecond[32] = {};
+	sprintf(szSecond, "%.3lf秒", seconds);
+	return strHour + strMinute + szSecond;
 }
 
 unsigned long CStopWatch::GetWatchTime()
@@ -103,7 +57,7 @@ void CStopWatch::Run()
 		return;
 	}
 	m_stopOrRun = true;
-	m_runTime = ::GetTickCount();
+	m_runTime = GetOpenTime();
 	m_time = m_time + m_runTime - m_stopTime;
 }
 
@@ -114,64 +68,25 @@ void CStopWatch::Stop()
 		return;
 	}
 	m_stopOrRun = false;
-	m_stopTime = ::GetTickCount();
+	m_stopTime = GetOpenTime();
 }
 
-void CStopWatch::CountDown(unsigned long countDownMsec, CountDownTask* task, int32_t taskId, int32_t& threadId)
+unsigned long CStopWatch::GetOpenTime()
 {
-	if (threadId == 0)
-	{
-		threadId = CTaskThreadManager::Instance().Init();
-	}
-	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(threadId);
-	if (taskThread == nullptr)
-	{
-		return;
-	}
-	std::shared_ptr<CStopWatchCountDownTask> countDownTask;
-	countDownTask.reset(new CStopWatchCountDownTask(taskId));
-	if (countDownTask == nullptr)
-	{
-		return;
-	}
-	countDownTask->setCountDownTask(task);
-	countDownTask->setCountDownSeconds(countDownMsec);
-	taskThread->PostTask(countDownTask, 1);
+#ifdef _WIN32
+	return ::GetTickCount();
+#elif __linux__
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+#endif
 }
 
-void CStopWatch::DiscardCountDown(int32_t taskId, int32_t threadId)
+int main()
 {
-	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(threadId);
-	if (taskThread == nullptr)
-	{
-		return;
-	}
-	taskThread->StopTask(taskId, 1);
+	CStopWatch a;
+	Sleep(1050);
+	printf("%s", a.GetWatchStrTime().c_str());
+	getchar();
+	return 0;
 }
-
-void CStopWatch::destroyThread(int32_t threadId)
-{
-	CTaskThreadManager::Instance().Uninit(threadId);
-}
-
-//class Task : public CountDownTask
-//{
-//public:
-//	virtual void DoTask()
-//	{
-//		printf("1");
-//	}
-//};
-//
-//int main()
-//{
-//	int32_t threadId = 0;
-//	CStopWatch::CountDown(5000, new Task, 1, threadId);
-//	int32_t threadId2 = 0;
-//	CStopWatch::CountDown(5000, new Task, 2, threadId);
-//	Sleep(3000);
-//	CStopWatch::DiscardCountDown(1, threadId);
-//	
-//	getchar();
-//	return 0;
-//}
