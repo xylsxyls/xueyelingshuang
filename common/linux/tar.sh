@@ -1,0 +1,1 @@
+tar -zcvf ../../../xueyelingshuang.tar.gz ../../../xueyelingshuang/
