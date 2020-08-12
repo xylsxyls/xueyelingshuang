@@ -1,5 +1,8 @@
 #include "CloudRebuild.h"
 #include <string>
+#ifdef __linux__
+#include <unistd.h>
+#endif
 
 #define SPACE std::string(" ")
 #define MARK(src) ("\"" + src + "\"")
@@ -42,13 +45,21 @@ int main(int argc, char** argv)
 	std::string pyPath = projectPath + "scripts" + PATHLEVEL + "rebuild_" + projectName + ".py";
 #elif __linux__
 	//linux下CMakeLists文件路径
-	std::string cmakelistsPath = projectPath + "scripts" + PATHLEVEL + "CMakeLists.txt";
+	std::string cmakelistsPath = projectPath + "scripts" + PATHLEVEL;
 	//linux下build目录
-	std::string buildPath = projectPath + "scripts" + PATHLEVEL + "build" + PATHLEVEL;
+	std::string buildPath = cmakelistsPath + "build" + PATHLEVEL;
+	//lib目录
+	std::string libPath = xueyePath + "lib" + PATHLEVEL;
 #endif
 
 	std::string srcPath = projectPath + projectName + PATHLEVEL + "src" + PATHLEVEL;
 	std::string includePath = xueyePath + "include" + PATHLEVEL + projectName + PATHLEVEL;
+
+	std::string d;
+	if (debugRelease != "release")
+	{
+		d = "d";
+	}
 
 	std::string deleteFileCommand;
 #ifdef _WIN32
@@ -67,10 +78,14 @@ int main(int argc, char** argv)
 #ifdef _WIN32
 	system((MARK(pyPath) + SPACE + bit + SPACE + dlllib + SPACE + debugRelease).c_str());
 #elif __linux__
-	system("mkdir" + SPACE + buildPath);
-	system("cd" + SPACE + buildPath);
-	system("cmake" + SPACE + "-DBIT=" + bit + SPACE + "-DDLLLIB=" + dlllib + SPACE + "-DDEBUGRELEASE=" + debugRelease + SPACE + buildPath);
-	system("make" + SPACE + "-j8");
+	system(("rm" + SPACE + "-f" + SPACE + MARK(libPath + "lib" + projectName + d + (dlllib == "dll" ? ".so" : ".a"))).c_str());
+	system(("mkdir" + SPACE + "-p" + SPACE + MARK(buildPath)).c_str());
+	char oldWorkPath[1024] = {};
+	getcwd(oldWorkPath, 1024);
+	chdir(buildPath.c_str());
+	system(("cmake" + SPACE + "-DBIT=" + bit + SPACE + "-DDLLLIB=" + dlllib + SPACE + "-DDEBUGRELEASE=" + debugRelease + SPACE + MARK(cmakelistsPath)).c_str());
+	system(("make" + SPACE + "-j8").c_str());
+	chdir(oldWorkPath);
 #endif
 
 #ifdef _WIN32
@@ -78,8 +93,12 @@ int main(int argc, char** argv)
 	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.h") + SPACE + MARK(includePath)).c_str());
 	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.inl") + SPACE + MARK(includePath)).c_str());
 #elif __linux__
-	system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath + "*.h") + SPACE + MARK(includePath)).c_str());
-	system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath + "*.inl") + SPACE + MARK(includePath)).c_str());
+	if(projectName != "DllRelyTest")
+	{
+		system(("mkdir" + SPACE + "-p" + SPACE + MARK(includePath)).c_str());
+	}
+	system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath) + "*.h" + SPACE + MARK(includePath)).c_str());
+	system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath) + "*.inl" + SPACE + MARK(includePath)).c_str());
 #endif
 
 	//删除宏文件，并且替换特定的宏文件
@@ -102,15 +121,11 @@ int main(int argc, char** argv)
 	system(("del" + SPACE + "@AutomationLog.txt").c_str());
 	system(("del" + SPACE + MARK(projectPath + "scripts" + PATHLEVEL + "@AutomationLog.txt")).c_str());
 	system(("del" + SPACE + MARK(projectPath + "scripts" + PATHLEVEL + "msbuild.log")).c_str());
-	std::string d;
-	if (debugRelease != "release")
-	{
-		d = "d";
-	}
+	
 	system(("del" + SPACE + MARK(xueyePath + "lib" + PATHLEVEL + projectName + d + ".ilk")).c_str());
 	system(("del" + SPACE + MARK(xueyePath + "lib" + PATHLEVEL + projectName + d + ".exp")).c_str());
 #elif __linux__
-	system(("rm" + SPACE + "-rf" + SPACE + MARK(projectPath + "scripts" + PATHLEVEL + "build")).c_str());
+	system(("rm" + SPACE + "-rf" + SPACE + MARK(buildPath)).c_str());
 #endif
 
 	//执行后期脚本
