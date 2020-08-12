@@ -1,6 +1,5 @@
 chmod 777 ../CloudRebuild/CloudRebuild1.2
 chmod 777 ./*.sh
-chmod 777 ../../*/*.sh
 chmod 777 ../../*/*/*.sh
 chmod 777 ../../*/*/*/*.sh
 
