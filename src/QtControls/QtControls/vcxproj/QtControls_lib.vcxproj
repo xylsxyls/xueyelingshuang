@@ -1085,6 +1085,7 @@
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -1107,6 +1108,7 @@
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -1128,6 +1130,7 @@
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -1150,6 +1153,7 @@
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

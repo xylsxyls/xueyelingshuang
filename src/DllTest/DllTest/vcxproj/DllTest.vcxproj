@@ -105,6 +105,8 @@
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -119,6 +121,8 @@
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -135,6 +139,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -153,6 +158,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;%(AdditionalLibraryDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
