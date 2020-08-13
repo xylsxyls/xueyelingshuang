@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef CStringManagerAPI
-    #define CStringManagerAPI
+    #define CStringManagerAPI 
 #endif

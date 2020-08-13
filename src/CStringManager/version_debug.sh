@@ -1,0 +1,1 @@
+$CLOUD_REBUILD CStringManager 32 dll debug same
