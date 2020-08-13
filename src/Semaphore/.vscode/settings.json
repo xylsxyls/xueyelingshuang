@@ -1,4 +1,4 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/scripts",
-    "cmake.configureArgs": ["-DLIBRARIES_RELY=", "-DBIT=64", "-DDLLLIB=dll", "-DDEBUGRELEASE=debug"]
+    "cmake.configureArgs": ["-DLIBRARIESRELY=", "-DBIT=64", "-DDLLLIB=dll", "-DDEBUGRELEASE=debug"]
 }

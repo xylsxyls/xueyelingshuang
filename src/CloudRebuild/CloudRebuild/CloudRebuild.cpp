@@ -2,6 +2,8 @@
 #include <string>
 #ifdef __linux__
 #include <unistd.h>
+#include <vector>
+#include <fstream>
 #endif
 
 #define SPACE std::string(" ")
@@ -10,6 +12,41 @@
 #define PATHLEVEL std::string("\\")
 #elif __linux__
 #define PATHLEVEL std::string("/")
+#endif
+
+#ifdef __linux__
+
+static void Split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
+{
+	result.clear();
+	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
+	size_t separate_characterLen = separate_character.length();
+	size_t lastPosition = 0;
+	int32_t index = -1;
+	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
+	{
+		result.push_back(splitString.substr(lastPosition, index - lastPosition));
+		lastPosition = index + separate_characterLen;
+	}
+	//?截取最后一个分隔符后的内容
+	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
+	result.push_back(splitString.substr(lastPosition));
+}
+
+static void LoadTxtWithSplit(std::vector<std::vector<std::string>>& vectxt, const std::string& strPath, const std::string& strSplit)
+{
+	vectxt.clear();
+	std::ifstream myfile(strPath);
+	std::string strLine;
+	std::vector<std::string> vecLine;
+	while (getline(myfile, strLine))
+	{
+		Split(vecLine, strLine, strSplit);
+		vectxt.push_back(vecLine);
+	}
+	myfile.close();
+	myfile.clear();
+}
 #endif
 
 int main(int argc, char** argv)
@@ -78,13 +115,48 @@ int main(int argc, char** argv)
 #ifdef _WIN32
 	system((MARK(pyPath) + SPACE + bit + SPACE + dlllib + SPACE + debugRelease).c_str());
 #elif __linux__
+	std::vector<std::string> vecRely;
+	std::vector<std::vector<std::string>> vectxt;
+	LoadTxtWithSplit(vectxt, beforeBatPath, " ");
+	int32_t index = -1;
+	while(index++ != vectxt.size() - 1)
+	{
+		std::vector<std::string>& vecLine = vectxt[index];
+		if(vecLine.empty() || vecLine[0] != "\"$CLOUD_REBUILD\"")
+		{
+			continue;
+		}
+		if(vecLine.size() == 1)
+		{
+			printf("error line sh = %s", beforeBatPath.c_str());
+			sleep(50);
+			continue;
+		}
+		if(vecLine[1] == "DllRelyTest")
+		{
+			continue;
+		}
+		vecRely.push_back(vecLine[1]);
+	}
+	std::string librariesRely;
+	index = -1;
+	while (index++ != vecRely.size() - 1)
+	{
+		std::string& rely = vecRely[index];
+		librariesRely = librariesRely + "lib" + rely + d + ((allSame == "librely" ? "lib" : dlllib) == "dll" ? ".so" : ".a");
+		if(index != vecRely.size() - 1)
+		{
+			librariesRely.append(";");
+		}
+	}
+
 	system(("rm" + SPACE + "-f" + SPACE + MARK(libPath + "lib" + projectName + d + (dlllib == "dll" ? ".so" : ".a"))).c_str());
 	system(("mkdir" + SPACE + "-p" + SPACE + MARK(buildPath)).c_str());
 	char oldWorkPath[1024] = {};
 	getcwd(oldWorkPath, 1024);
 	chdir(buildPath.c_str());
-	system(("cmake" + SPACE + "-DBIT=" + bit + SPACE + "-DDLLLIB=" + dlllib + SPACE + "-DDEBUGRELEASE=" + debugRelease + SPACE + MARK(cmakelistsPath)).c_str());
-	system(("make" + SPACE + "-j8").c_str());
+	system(("cmake" + SPACE + "-DBIT=" + bit + SPACE + "-DDLLLIB=" + dlllib + SPACE + "-DDEBUGRELEASE=" + debugRelease + SPACE + "-DLIBRARIESRELY=" + librariesRely + SPACE + MARK(cmakelistsPath)).c_str());
+	system(("make" + SPACE + "-j" + std::to_string(sysconf(_SC_NPROCESSORS_ONLN) * 2)).c_str());
 	chdir(oldWorkPath);
 #endif
 
