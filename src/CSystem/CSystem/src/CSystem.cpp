@@ -788,8 +788,12 @@ std::string CSystem::commonFile(const std::string& name)
 	double version = 0;
 	std::string strVersion;
 	std::string path = CSystem::GetEnvironment("xueyelingshuang") + "common\\" + name + "\\";
-	//文件句柄  
+	//文件句柄
+#ifdef _WIN64
+	intptr_t hFile = 0;
+#elif _WIN32
 	long hFile = 0;
+#endif
 	//文件信息  
 	struct _finddata_t fileinfo;
 	std::string p;
