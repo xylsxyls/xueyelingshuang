@@ -3,6 +3,7 @@
 #define _QssStringAPI
 #endif
 #include "QssString.h"
+#include "QssHelper.h"
 
 #ifdef _WIN32
 #if defined _DEBUG
