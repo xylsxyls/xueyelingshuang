@@ -25,17 +25,14 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\QssHelper.cpp">
+    <ClCompile Include="..\src\QssString.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\QssString.cpp">
+    <ClCompile Include="..\src\QssHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\QssHelper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\QssString.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -43,6 +40,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\QssStringMacro.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\QssHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
