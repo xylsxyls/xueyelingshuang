@@ -4,12 +4,12 @@ SET(CMAKE_CXX_STANDARD 11)
 
 if(${DEBUGRELEASE} STREQUAL "debug")
 #设置项目名称
-SET(PROJECT_NAME ConsoleTestd)
+SET(PROJECT_NAME ConsoleTest1d)
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -g -ggdb ")
 SET(CMAKE_BUILD_TYPE "Debug")
 elseif(${DEBUGRELEASE} STREQUAL "release")
 #设置项目名称
-SET(PROJECT_NAME ConsoleTest)
+SET(PROJECT_NAME ConsoleTest1)
 SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3")
 SET(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -27,7 +27,7 @@ endif()
 PROJECT(${PROJECT_NAME})
 
 #MESSAGE("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
-#${PROJECT_SOURCE_DIR}="xueyelingshuang/src/ConsoleTest/ConsoleTest"
+#${PROJECT_SOURCE_DIR}="xueyelingshuang/src/ConsoleTest1/ConsoleTest1"
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
 #SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
 

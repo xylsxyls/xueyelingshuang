@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "${workspaceFolder}/ConsoleTest/",
+    "cmake.sourceDirectory": "${workspaceFolder}/ConsoleTest1/",
     "cmake.configureArgs": [
         "-DLIBRARIESRELY=",
         "-DBIT=64",
