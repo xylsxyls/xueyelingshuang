@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <vector>
 #include <fstream>
+#include <dirent.h>
 #endif
 
 #define SPACE std::string(" ")
@@ -46,6 +47,18 @@ static void LoadTxtWithSplit(std::vector<std::vector<std::string>>& vectxt, cons
 	}
 	myfile.close();
 	myfile.clear();
+}
+
+//文件夹地址，文件列表
+void FindDirFile(const char* dirPath,std::vector<std::string>& vec)
+{
+    struct dirent* pDirent = nullptr;
+    DIR* pDir = opendir(dirPath);
+    while ((pDirent = readdir(pDir)) != NULL)
+	{
+        vec.push_back(std::string(pDirent->d_name));
+    }
+    closedir(pDir);
 }
 #endif
 
@@ -128,7 +141,7 @@ int main(int argc, char** argv)
 		}
 		if(vecLine.size() == 1)
 		{
-			printf("error line sh = %s", beforeBatPath.c_str());
+			printf("error line sh = %s\n", beforeBatPath.c_str());
 			sleep(50);
 			continue;
 		}
@@ -143,14 +156,30 @@ int main(int argc, char** argv)
 	while (index++ != vecRely.size() - 1)
 	{
 		std::string& rely = vecRely[index];
-		librariesRely = librariesRely + "lib" + rely + d + ((allSame == "librely" ? "lib" : dlllib) == "dll" ? ".so" : ".a");
+		std::string relyDll = "lib" + rely + d + ".so";
+		std::string relyLib = "lib" + rely + d + ".a";
+		if (::access((libPath + relyDll).c_str(), 0) == 0)
+		{
+			librariesRely = librariesRely + relyDll;
+		}
+		else if (::access((libPath + relyLib).c_str(), 0) == 0)
+		{
+			librariesRely = librariesRely + relyLib;
+		}
+		else
+		{
+			printf(("need " + relyDll + " or " + relyLib + "\n").c_str());
+			sleep(50);
+			continue;
+		}
 		if(index != vecRely.size() - 1)
 		{
 			librariesRely.append(";");
 		}
 	}
 
-	system(("rm" + SPACE + "-f" + SPACE + MARK(libPath + "lib" + projectName + d + (dlllib == "dll" ? ".so" : ".a"))).c_str());
+	system(("rm" + SPACE + "-f" + SPACE + MARK(libPath + "lib" + projectName + d + ".so")).c_str());
+	system(("rm" + SPACE + "-f" + SPACE + MARK(libPath + "lib" + projectName + d + ".a")).c_str());
 	system(("mkdir" + SPACE + "-p" + SPACE + MARK(buildPath)).c_str());
 	char oldWorkPath[1024] = {};
 	getcwd(oldWorkPath, 1024);
@@ -165,12 +194,33 @@ int main(int argc, char** argv)
 	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.h") + SPACE + MARK(includePath)).c_str());
 	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.inl") + SPACE + MARK(includePath)).c_str());
 #elif __linux__
-	if(projectName != "DllRelyTest")
+	if (projectName != "DllRelyTest")
 	{
 		system(("mkdir" + SPACE + "-p" + SPACE + MARK(includePath)).c_str());
 	}
+	//linux下无法拷贝自定义目录下的文件
 	system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath) + "*.h" + SPACE + MARK(includePath)).c_str());
-	system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath) + "*.inl" + SPACE + MARK(includePath)).c_str());
+	std::vector<std::string> vecFile;
+	FindDirFile(srcPath.c_str(), vecFile);
+	bool hasInl = false;
+	index = -1;
+	while (index++ != vecFile.size() - 1)
+	{
+		std::string& fileName = vecFile[index];
+		if (fileName.size() <= 4)
+		{
+			continue;
+		}
+		if (fileName.substr(fileName.size() - 4, 4) == ".inl")
+		{
+			hasInl = true;
+			break;
+		}
+	}
+	if (hasInl)
+	{
+		system(("cp" + SPACE + "-f" + SPACE + MARK(srcPath) + "*.inl" + SPACE + MARK(includePath)).c_str());
+	}
 #endif
 
 	//删除宏文件，并且替换特定的宏文件
