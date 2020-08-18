@@ -106,12 +106,12 @@ void getParam(const std::vector<std::string>& vecMainParam, bool& isFile, EnumRe
 		break;
 		case 4:
 		{
-			//匹配群体换
+			//匹配群替换
 			if (CStringManager::MakeLower(vecMainParam[index]) == "-replace")
 			{
 				replaceCommand = REPLACE;
 			}
-			//单行包含匹配则整行群体换
+			//单行包含匹配则整行群替换
 			else if (CStringManager::MakeLower(vecMainParam[index]) == "-line")
 			{
 				replaceCommand = LINE;
