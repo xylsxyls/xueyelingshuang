@@ -6,13 +6,6 @@
 #include <vector>
 #include "CSystemMacro.h"
 
-#define SafeDelete(ptr) \
-if (ptr != nullptr)\
-{\
-	delete ptr;\
-	ptr = nullptr;\
-}
-
 class CSystemAPI CSystem
 {
 public:
@@ -90,20 +83,32 @@ public:
 	static bool ShellCopy(const char* from, const char* dest);
 	//?获取操作系统版本号
 	static int32_t GetSystemVersionNum();
-	//获取第一个和名字匹配的进程pid，填空表示获取本进程
-	static int32_t processFirstPid(const std::string& processName = "");
-	//?获取进程PID，耗时10毫秒左右，填空表示获取本进程
-	static std::vector<int32_t> processPid(const std::string& processName = "");
+	//?获取本进程pid
+	static uint32_t currentProcessPid();
+	//?获取第一个和名字匹配的进程pid
+	static uint32_t processFirstPid(const std::string& processName);
+	//?获取进程PID，耗时10毫秒左右
+	static std::vector<uint32_t> processPid(const std::string& processName);
+	//?获取第一个和名字匹配的进程pid
+	static uint32_t processFirstPid(const std::wstring& processNameW);
+	//?获取进程PID，耗时10毫秒左右
+	static std::vector<uint32_t> processPid(const std::wstring& processNameW);
 	//?获取进程名，耗时10毫秒左右
-	static std::string processName(int32_t pid);
+	static std::string processName(uint32_t pid);
 	//?获取进程名，耗时10毫秒左右
-	static std::wstring processNameW(int32_t pid);
+	static std::wstring processNameW(uint32_t pid);
+	//根据pid获取窗口句柄
+	static HWND GetHwndByProcessId(uint32_t dwProcessId);
 	//?获取电脑名
 	static std::string getComputerName();
 	//返回本进程所在路径，带\符号
 	static std::string GetCurrentExePath();
 	//返回进程名，没有后缀名
 	static std::string GetCurrentExeName();
+	//获取临时目录
+	static std::string GetSystemTempPath();
+	//返回ocx所在路径，带\符号
+	static std::string GetRegOcxPath(const std::string& classid);
 	//获取文件相关信息，flag1表示获取文件全名，flag2表示获取文件后缀名，flag3表示获取文件名，flag4表示获取前面的路径带\\符号
 	static std::string GetName(const std::string& path, int32_t flag);
 	//删除文件

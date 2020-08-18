@@ -1,43 +1,8 @@
 #include <SDKDDKVer.h>
-#include <afxdlgs.h>
 #include <afxdisp.h>
 #include "CGetPath.h"
-#include <shlobj.h>
-#include <Tlhelp32.h>
 #include "CStringManager/CStringManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
-
-std::string CGetPath::GetRegOcxPath(const std::string& classid)
-{
-	std::string strSubKey;
-	HKEY hKey;
-	LPBYTE lpData;
-    CStringManager::Format(strSubKey, _T("CLSID\\{%s}\\InprocServer32"), classid);
-    RegOpenKeyEx(HKEY_CLASSES_ROOT, strSubKey.c_str(), 0, KEY_READ, &hKey);
-	DWORD dwType = REG_SZ;
-    lpData = new BYTE[1024];
-    memset(lpData, 0, 1024);
-	DWORD cbData = 1024;
-    RegQueryValueEx(hKey, _T(""), NULL, &dwType, lpData, &cbData);
-	std::string temp;
-	temp = (char*)lpData;
-    std::string result = temp.substr(temp.find_last_of('\\') + 1);
-	return result;
-}
-
-std::string CGetPath::GetCurrentExePath()
-{
-	char szFilePath[1024] = {};
-	::GetModuleFileName(NULL, szFilePath, 1024);
-    return CGetPath::GetName(szFilePath, 4);
-}
-
-std::string CGetPath::GetCurrentExeName()
-{
-	char szFilePath[1024] = {};
-	::GetModuleFileName(NULL, szFilePath, 1024);
-	return CGetPath::GetName(szFilePath, 3);
-}
 
 std::string CGetPath::GetFolderFromWindow(HWND hWnd)
 {
@@ -45,14 +10,14 @@ std::string CGetPath::GetFolderFromWindow(HWND hWnd)
 	BROWSEINFO stBrowseInfo;
 	memset(&stBrowseInfo, 0, sizeof(stBrowseInfo));
 	stBrowseInfo.hwndOwner = hWnd;
-	stBrowseInfo.lpszTitle = _T("请选择文件夹");
+	stBrowseInfo.lpszTitle = "请选择文件夹";
 	stBrowseInfo.ulFlags = BIF_NEWDIALOGSTYLE;
 	LPITEMIDLIST pidl = SHBrowseForFolder(&stBrowseInfo);
 	if(pidl)
     {
 		TCHAR szfolderPath[MAX_PATH] = {};
 		SHGetPathFromIDList(pidl, szfolderPath);
-		CStringManager::Format(cstrSelectPath, _T("%s"), szfolderPath);
+		CStringManager::Format(cstrSelectPath, "%s", szfolderPath);
 		LPMALLOC lpMalloc;
 		if(SUCCEEDED(SHGetMalloc(&lpMalloc)))
         {
@@ -67,8 +32,6 @@ std::string CGetPath::GetFolderFromWindow(HWND hWnd)
 	return cstrSelectPath;
 }
 
-#define NDEBUG
-
 std::string CGetPath::GetFileFromWindow(HWND hwnd)
 {
 	TCHAR szBuffer[MAX_PATH] = { 0 };
@@ -76,9 +39,9 @@ std::string CGetPath::GetFileFromWindow(HWND hwnd)
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = hwnd;
     //"Exe文件(*.exe)*.exe所有文件(*.*)*.*"
-	ofn.lpstrFilter = _T("所有文件(*.*)*.*");
+	ofn.lpstrFilter = "所有文件(*.*)*.*";
     //默认的文件路径 
-	ofn.lpstrInitialDir = _T("");
+	ofn.lpstrInitialDir = "";
     //存放文件的缓冲区 
 	ofn.lpstrFile = szBuffer;
 	ofn.nMaxFile = sizeof(szBuffer) / sizeof(*szBuffer);
@@ -90,15 +53,16 @@ std::string CGetPath::GetFileFromWindow(HWND hwnd)
 }
 
 #ifdef WTL
-std::std::string RCGetPath::GetFileFromWindow(HWND hwnd){
+std::string CGetPath::GetFileFromWTLWindow(HWND hwnd)
+{
     wchar_t* filter = L"image files (*.png)\0*.png\0All Files (*.*)\0*.*\0\0";
     CFileDialog dlg(true, 0, 0, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST, filter, hwnd);
-    if (dlg.DoModal() == IDOK){
-        std::wstd::string ss = dlg.m_szFileName;
-        UnicodeToAnsi(ss);
-        return UnicodeToAnsi(ss);
+    if (dlg.DoModal() != IDOK)
+	{
+		return "";
     }
-    else return "";
+	std::wstring ss = dlg.m_szFileName;
+	return CStringManager::UnicodeToAnsi(ss);
 }
 #endif
 
@@ -181,7 +145,7 @@ std::vector<std::string> CGetPath::FindFilePath(const std::string& FileStr, cons
     std::string path = strPath;
     if (path == "")
     {
-        path = CGetPath::GetCurrentExePath();
+        path = CSystem::GetCurrentExePath();
         path.erase(--path.end());
 	}
     //禁用系统重定向，防止64位系统访问System32时进入到SysWOW64中
@@ -194,92 +158,30 @@ std::vector<std::string> CGetPath::FindFilePath(const std::string& FileStr, cons
 	return VecPath;
 }
 
-std::vector<int32_t> CGetPath::GetProcessID(const std::string& strProcessName)
-{
-	HANDLE myhProcess;
-	PROCESSENTRY32 mype;
-	mype.dwSize = sizeof(PROCESSENTRY32); 
-	BOOL mybRet;
-	//进行进程快照
-    //TH32CS_SNAPPROCESS快照所有进程
-    myhProcess = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	//开始进程查找
-    mybRet = Process32First(myhProcess, &mype);
-	std::vector<int32_t> vec;
-	//循环比较，得出ProcessID
-	while(mybRet)
-    {
-        if (strProcessName == mype.szExeFile)
-        {
-            vec.push_back(mype.th32ProcessID);
-        }
-		mybRet = Process32Next(myhProcess,&mype);
-	}
-	return vec;
-}
-
-typedef struct
-{
-	HWND  hWnd ;
-	DWORD dwPid;
-}WNDINFO;
-
-BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
-{   
-	WNDINFO* pInfo = (WNDINFO*)lParam;
-	DWORD dwProcessId = 0;
-	GetWindowThreadProcessId(hWnd, &dwProcessId);
-	if(dwProcessId == pInfo->dwPid)
-    {
-		pInfo->hWnd = hWnd;
-		return FALSE;
-	}
-	return TRUE;
-}
-
-HWND CGetPath::GetHwndByProcessId(DWORD dwProcessId)
-{
-    WNDINFO info = { 0 };
-	info.hWnd = NULL;
-	info.dwPid = dwProcessId;
-    EnumWindows(EnumWindowsProc, (LPARAM)&info);
-	return info.hWnd;
-}
-
 std::string CGetPath::GetName(const std::string& path, int32_t flag)
 {
-    int32_t left = (int32_t)path.find_last_of("/\\");
-    std::string name = CStringManager::Mid(path, left + 1, path.length() - left - 1);
+	int32_t left = (int32_t)path.find_last_of("/\\");
+	std::string name = path.substr(left + 1, path.length() - left - 1);
 	int32_t point = (int32_t)name.find_last_of(".");
-    switch (flag)
-    {
-        case 1:
-        {
-            return name;
-        }
-        case 2:
-        {
-            return CStringManager::Mid(name, point + 1, point == -1 ? 0 : name.length() - point - 1);
-        }
-        case 3:
-        {
-            return CStringManager::Mid(name, 0, point == -1 ? name.length() : point);
-        }
-        case 4:
-        {
-            return CStringManager::Mid(path, 0, left + 1);
-        }
-        default:
-            return "";
-    }
-}
-
-std::string CGetPath::GetAppdataRoamingPath()
-{
-	TCHAR szPath[MAX_PATH] = { 0 };
-	if (::SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, szPath) < 0)
+	switch (flag)
 	{
+	case 1:
+	{
+		return name;
+	}
+	case 2:
+	{
+		return name.substr(point + 1, point == -1 ? 0 : name.length() - point - 1);
+	}
+	case 3:
+	{
+		return name.substr(0, point == -1 ? name.length() : point);
+	}
+	case 4:
+	{
+		return path.substr(0, left + 1);
+	}
+	default:
 		return "";
 	}
-	return szPath;
 }

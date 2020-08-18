@@ -9,6 +9,9 @@
 #include <conio.h>
 #include <tlhelp32.h>
 #include <tchar.h>
+
+#include <shlobj.h>
+
 #include <iostream>
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
@@ -400,15 +403,43 @@ int32_t CSystem::GetSystemVersionNum()
 	return dwVersion;
 }
 
-int32_t CSystem::processFirstPid(const std::string& processName)
+uint32_t CSystem::currentProcessPid()
 {
-	std::wstring processNameW = CSystem::AnsiToUnicode(processName);
-	if (processNameW.empty())
+	return GetCurrentProcessId();
+}
+
+uint32_t CSystem::processFirstPid(const std::string& processName)
+{
+	if (processName.empty())
 	{
-		return GetCurrentProcessId();
+		return 0;
 	}
 	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (INVALID_HANDLE_VALUE == hSnapshot)
+	if (hSnapshot == INVALID_HANDLE_VALUE)
+	{
+		return 0;
+	}
+	PROCESSENTRY32 pe = { sizeof(pe) };
+	for (BOOL ret = Process32First(hSnapshot, &pe); ret; ret = ::Process32Next(hSnapshot, &pe))
+	{
+		if (std::string(pe.szExeFile) == processName)
+		{
+			::CloseHandle(hSnapshot);
+			return pe.th32ProcessID;
+		}
+	}
+	::CloseHandle(hSnapshot);
+	return 0;
+}
+
+uint32_t CSystem::processFirstPid(const std::wstring& processNameW)
+{
+	if (processNameW.empty())
+	{
+		return 0;
+	}
+	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE)
 	{
 		return 0;
 	}
@@ -425,17 +456,39 @@ int32_t CSystem::processFirstPid(const std::string& processName)
 	return 0;
 }
 
-std::vector<int32_t> CSystem::processPid(const std::string& processName)
+std::vector<uint32_t> CSystem::processPid(const std::string& processName)
 {
-	std::wstring processNameW = CSystem::AnsiToUnicode(processName);
-	std::vector<int32_t> result;
-	if (processNameW.empty())
+	std::vector<uint32_t> result;
+	if (processName.empty())
 	{
-		result.push_back(GetCurrentProcessId());
 		return result;
 	}
 	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (INVALID_HANDLE_VALUE == hSnapshot)
+	if (hSnapshot == INVALID_HANDLE_VALUE)
+	{
+		return result;
+	}
+	PROCESSENTRY32 pe = { sizeof(pe) };
+	for (BOOL ret = Process32First(hSnapshot, &pe); ret; ret = ::Process32Next(hSnapshot, &pe))
+	{
+		if (std::string(pe.szExeFile) == processName)
+		{
+			result.push_back(pe.th32ProcessID);
+		}
+	}
+	::CloseHandle(hSnapshot);
+	return result;
+}
+
+std::vector<uint32_t> CSystem::processPid(const std::wstring& processNameW)
+{
+	std::vector<uint32_t> result;
+	if (processNameW.empty())
+	{
+		return result;
+	}
+	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE)
 	{
 		return result;
 	}
@@ -451,7 +504,7 @@ std::vector<int32_t> CSystem::processPid(const std::string& processName)
 	return result;
 }
 
-std::string CSystem::processName(int32_t pid)
+std::string CSystem::processName(uint32_t pid)
 {
 	std::string result;
 	PROCESSENTRY32 pe32 = { 0 };
@@ -474,7 +527,7 @@ std::string CSystem::processName(int32_t pid)
 	return result;
 }
 
-std::wstring CSystem::processNameW(int32_t pid)
+std::wstring CSystem::processNameW(uint32_t pid)
 {
 	std::wstring result;
 	PROCESSENTRY32W pe32 = { 0 };
@@ -497,6 +550,34 @@ std::wstring CSystem::processNameW(int32_t pid)
 	return result;
 }
 
+typedef struct WNDINFO
+{
+	HWND  hWnd;
+	DWORD dwPid;
+}WNDINFO;
+
+BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
+{
+	WNDINFO* pInfo = (WNDINFO*)lParam;
+	DWORD dwProcessId = 0;
+	GetWindowThreadProcessId(hWnd, &dwProcessId);
+	if (dwProcessId == pInfo->dwPid)
+	{
+		pInfo->hWnd = hWnd;
+		return FALSE;
+	}
+	return TRUE;
+}
+
+HWND CSystem::GetHwndByProcessId(uint32_t dwProcessId)
+{
+	WNDINFO info = { 0 };
+	info.hWnd = NULL;
+	info.dwPid = dwProcessId;
+	EnumWindows(EnumWindowsProc, (LPARAM)&info);
+	return info.hWnd;
+}
+
 std::string CSystem::getComputerName()
 {
 	char computerName[256] = {};
@@ -517,6 +598,32 @@ std::string CSystem::GetCurrentExeName()
 	char szFilePath[1024] = {};
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
 	return CSystem::GetName(szFilePath, 3);
+}
+
+std::string CSystem::GetSystemTempPath()
+{
+	char szPath[MAX_PATH] = {};
+	if (::SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, szPath) < 0)
+	{
+		return "";
+	}
+	return szPath;
+}
+
+std::string CSystem::GetRegOcxPath(const std::string& classid)
+{
+	HKEY hKey;
+	RegOpenKeyEx(HKEY_CLASSES_ROOT, ("CLSID\\{" + classid + "}\\InprocServer32").c_str(), 0, KEY_READ, &hKey);
+	DWORD dwType = REG_SZ;
+	LPBYTE lpData = new BYTE[1024];
+	memset(lpData, 0, 1024);
+	DWORD cbData = 1024;
+	RegQueryValueEx(hKey, _T(""), NULL, &dwType, lpData, &cbData);
+	std::string temp;
+	temp = (char*)lpData;
+	std::string result = temp.substr(temp.find_last_of('\\') + 1);
+	delete[] lpData;
+	return result;
 }
 
 std::string CSystem::GetName(const std::string& path, int32_t flag)
