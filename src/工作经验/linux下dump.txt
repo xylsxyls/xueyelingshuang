@@ -1,0 +1,101 @@
+linux下用gdb实现程序宕机时自动打印调用堆栈(太完美了) (2014-08-13 16:25:05)转载▼
+标签： it 宕机 堆栈 程序 文件 	分类： 共享
+linux下程序运行几天莫名其妙宕机了，不能还原现场，找到宕机原因就很无语了。
+一个解决办法是使用core文件，但是对于大型服务器文件，动辄几百M的core文件是在有点伤不起，于是想到程序宕机时自动打印调用堆栈。简单实用。
+废话不多说，直接上方案：
+方案1：使用gdb指令列表文件启动程序并监控之
+启动指令 gdb -x gdb_start.ini
+以下是gdb_start.ini文件内容：
+file MyApplication
+set pagination off
+shell rm ./logs/gdb_crash.log
+set logging file ./logs/gdb_crash.log
+set logging on
+handle SIG32 nostop noprint
+handle SIGPIPE nostop noprint
+handle SIGSEGV stop
+handle SIGFPE stop
+handle SIGILL stop
+handle SIGABRT stop
+handle SIGSYS stop
+r 6660
+print "crash time:"
+shell date >> ./logs/gdb_crash.log
+print "crash frame:"
+info f
+print "crash locals:"
+info locals
+print "crash callstack:"
+bt
+set logging off
+quit
+
+这样程序宕机时将在gdb_crash.log中记录以下信息，太完美了：
+Program received signal SIGFPE, Arithmetic exception.
+0x0804874a in make_crash (nCrashType=1) at crash.c:50
+50 z = 1/z;
+$1 = "crash time:"
+2014年 08月 13日 星期三 15:47:37 CST
+$2 = "crash frame:"
+Stack level 0, frame at 0xbf9e7900:
+eip = 0x804874a in make_crash (crash.c:50); saved eip 0x8048911
+called by frame at 0xbf9e7930
+source language c.
+Arglist at 0xbf9e78f8, args: nCrashType=1
+Locals at 0xbf9e78f8, Previous frame's sp is 0xbf9e7900
+Saved registers:
+ebp at 0xbf9e78f8, edi at 0xbf9e78f4, eip at 0xbf9e78fc
+$3 = "crash locals:"
+z = 0
+__PRETTY_FUNCTION__ = "make_crash"
+$4 = "crash callstack:"
+#0  0x0804874a in make_crash (nCrashType=1) at crash.c:50
+#1  0x08048911 in test_crash () at crash.c:105
+#2  0x08048930 in main () at crash.c:119
+
+
+方案2：程序内设置宕机监控代码
+#include [stdio.h]
+#include [stdlib.h]
+#include [signal.h]
+#include [string.h]
+#include[unistd.h]
+
+void crash_dump(int signo)
+{
+char buf[1024];
+char cmd[1024];
+FILE *fh;
+
+printf("crash detected: crash_dump(%d)", signo);
+
+snprintf(buf, sizeof(buf), "/proc/%d/cmdline", getpid());
+if(!(fh = fopen(buf, "r")))
+exit(0);
+if(!fgets(buf, sizeof(buf), fh))
+exit(0);
+fclose(fh);
+if(buf[strlen(buf) - 1] == '/n')
+buf[strlen(buf) - 1] = '/0';
+snprintf(cmd, sizeof(cmd), "date > ./crash.log", buf, getpid());
+printf(cmd);
+system(cmd);
+snprintf(cmd, sizeof(cmd), "gdb %s %d -ex=bt >> ./crash.log", buf, getpid());
+printf(cmd);
+system(cmd);
+
+exit(-1);
+}
+
+int main(int argc, char* argv[])
+{
+//宕机输出调用堆栈
+signal(SIGSEGV, &crash_dump);
+signal(SIGFPE, &crash_dump);
+signal(SIGINT, &crash_dump);
+signal(SIGILL, &crash_dump);
+signal(SIGABRT, &crash_dump);
+//real code...
+
+return 0;
+}

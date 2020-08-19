@@ -1,0 +1,6 @@
+sudo apt-get install dconf-tools
+ 
+  终端中输入命令：$ dconf-editor
+ 
+  依次点开->org->gnome->gedit->preferences->encodings
+改为GB2312

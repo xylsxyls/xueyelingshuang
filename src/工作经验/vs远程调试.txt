@@ -1,0 +1,7 @@
+Remote Debugger
+打开64位的msvsmon.exe
+防火墙关掉
+选择windows验证，时间设为900秒
+vs附加到进程选择默认
+第二行输入ip:port
+勾选显示所有进程

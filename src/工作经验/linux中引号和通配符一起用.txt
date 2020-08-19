@@ -1,0 +1,4 @@
+cp "/home/xylsxyls/xueyelingshuang/src/Semaphore/Semaphore/src/*.h" "/home/xylsxyls/xueyelingshuang/include/Semaphore/"
+这样是不允许的
+cp "/home/xylsxyls/xueyelingshuang/src/Semaphore/Semaphore/src/"*.h "/home/xylsxyls/xueyelingshuang/include/Semaphore/"
+要改成这样

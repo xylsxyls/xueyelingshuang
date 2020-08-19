@@ -1,0 +1,1 @@
+文件->首选项->设置 右侧 Text Editor->Files->Encoding 选择gb2312

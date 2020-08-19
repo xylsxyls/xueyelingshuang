@@ -1,0 +1,6 @@
+sudo localedef -f GB2312 -i zh_CN zh_CN.GB2312
+sudo localedef -f UTF-8 -i zh_CN zh_CN.UTF-8
+
+只执行下面两行
+sudo locale-gen zh_CN.GBK
+sudo update-locale LANG=zh_CN.GBK

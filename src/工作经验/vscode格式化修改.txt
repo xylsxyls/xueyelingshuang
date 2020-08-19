@@ -1,0 +1,5 @@
+安装clang-format
+扩展设置将C_Cpp.clang_format_fallbackStyle值从Visual Studio改为Google
+设置中右侧搜索clang-format.executable
+改为C:\\Users\\yangnan\\.vscode\\extensions\\ms-vscode.cpptools-0.28.3\\LLVM\\bin\\clang-format
+Alt+Shift+F格式化

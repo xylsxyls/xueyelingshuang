@@ -1,0 +1,19 @@
+std::vector<std::string> VARIANTToVecString(const VARIANT& variant)
+{
+	std::vector<std::string> result;
+	if (variant.parray == nullptr)
+	{
+		return result;
+	}
+	int32_t length = variant.parray->rgsabound->cElements;
+	VARIANT* buf;
+	SafeArrayAccessData(variant.parray, (void **)&buf);
+	int32_t index = -1;
+	while (index++ != length - 1)
+	{
+		std::string str = _com_util::ConvertBSTRToString(buf[index].bstrVal);
+		result.push_back(str);
+	}
+	SafeArrayUnaccessData(variant.parray);
+	return result;
+}

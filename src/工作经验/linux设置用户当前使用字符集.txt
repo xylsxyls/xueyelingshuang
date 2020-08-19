@@ -1,0 +1,2 @@
+设置当前用户使用的字符集
+export LANG=zh_CN.GBK

@@ -1,0 +1,3 @@
+char oldWorkPath[1024] = {};
+	getcwd(oldWorkPath, 1024);
+	chdir(buildPath.c_str());
