@@ -1,12 +1,20 @@
 #pragma once
 
-#ifdef _CGetPathAPI
-#define CGetPathAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _CGetPathAPI
+        #define CGetPathAPI _declspec(dllimport)
+    #else
+        #define CGetPathAPI _declspec(dllexport)
+    #endif
 #else
-#define CGetPathAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define CGetPathAPI __attribute__ ((visibility("default")))
+    #else
+        #define CGetPathAPI
+    #endif
 #endif
 
 #if defined(STATIC_LIB)
-#undef CGetPathAPI
-#define CGetPathAPI 
+    #undef CGetPathAPI
+    #define CGetPathAPI 
 #endif

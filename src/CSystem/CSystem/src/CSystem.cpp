@@ -9,9 +9,8 @@
 #include <conio.h>
 #include <tlhelp32.h>
 #include <tchar.h>
-
 #include <shlobj.h>
-
+#include <queue>
 #include <iostream>
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
@@ -607,7 +606,7 @@ std::string CSystem::GetSystemTempPath()
 	{
 		return "";
 	}
-	return szPath;
+	return std::string(szPath) + "\\";
 }
 
 std::string CSystem::GetRegOcxPath(const std::string& classid)
@@ -986,6 +985,109 @@ void CSystem::saveFile(const std::string& content, const std::string& path)
 {
 	std::ofstream file(path.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
 	file << content;
+}
+
+std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
+	int32_t flag,
+	const std::string& fileStr,
+	std::vector<std::string>* unVisitPath)
+{
+	std::string dir = strPath;
+	if (dir.empty())
+	{
+		dir = CSystem::GetCurrentExePath();
+	}
+	if (dir.back() != '\\')
+	{
+		dir.push_back('\\');
+	}
+	dir.push_back('*');
+
+	if (unVisitPath != nullptr)
+	{
+		unVisitPath->clear();
+	}
+
+	std::vector<std::string> result;
+	_finddata_t fileDir;
+
+	//用队列实现递归
+	std::queue<std::string> queue_dir;
+	queue_dir.push(std::string(dir));
+
+	while (!queue_dir.empty())
+	{
+		std::string curDir = queue_dir.front();
+		queue_dir.pop();
+		auto lfDir = _findfirst(curDir.c_str(), &fileDir);
+		//如果是-1表示该文件夹不可访问
+		if (lfDir == -1)
+		{
+			if (unVisitPath != nullptr)
+			{
+				curDir.pop_back();
+				unVisitPath->emplace_back(curDir);
+			}
+			continue;
+		}
+		while (_findnext(lfDir, &fileDir) == 0)
+		{
+			std::string strName = fileDir.name;
+			//是目录，加入队列
+			if ((fileDir.attrib >= 16 && fileDir.attrib <= 23) || (fileDir.attrib >= 48 && fileDir.attrib <= 55))
+			{
+				//去掉当前目录和上一级目录
+				if (strName == "." || strName == "..")
+				{
+					continue;
+				}
+				//减去最后一个*号
+				std::string tmpstr = curDir;
+				tmpstr.pop_back();
+				tmpstr.append(strName);
+				//把当前目录放到队列中以便下一次遍历
+				queue_dir.emplace(tmpstr.append("\\*"));
+				continue;
+			}
+			std::string tmpfilename = curDir;
+			tmpfilename.pop_back();
+			switch (flag)
+			{
+				//1表示找文件全名，带后缀名
+			case 1:
+			{
+				if (strName == fileStr)
+				{
+					result.emplace_back(tmpfilename.append(strName));
+				}
+			}
+			break;
+			//2表示找文件后缀名
+			case 2:
+			{
+				std::string lowerFileStr;
+				std::transform(fileStr.begin(), fileStr.end(), std::back_inserter(lowerFileStr), ::tolower);
+				std::string nameSuffix = CSystem::GetName(strName, 2);
+				std::string lowerNameSuffix;
+				std::transform(nameSuffix.begin(), nameSuffix.end(), std::back_inserter(lowerNameSuffix), ::tolower);
+				if (lowerFileStr == lowerNameSuffix)
+				{
+					result.emplace_back(tmpfilename.append(strName));
+				}
+			}
+			break;
+			//3表示查找所有文件，不做过滤全部添加进来
+			case 3:
+			{
+				result.emplace_back(tmpfilename.append(strName));
+			}
+			break;
+			default:
+				break;
+			}
+		}
+	}
+	return result;
 }
 
 //int main()

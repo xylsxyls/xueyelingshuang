@@ -37,7 +37,7 @@ public:
 	static void CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over);
 	//?获取当前操作系统位数
 	static int GetSystemBits();
-	//?禁用重定向
+	//?禁用重定向，64位系统访问System32时会进入到SysWOW64中
 	static void ForbidRedir();
 	//?恢复重定向
 	static void RecoveryRedir();
@@ -143,6 +143,17 @@ public:
 	static std::string readFile(const std::string& path);
 	//保存文件
 	static void saveFile(const std::string& content, const std::string& path);
+	/** 查找文件，内部没有禁止路径重定向
+	@param [in] strPath 必须传文件夹路径，寻找文件夹以下，如果传空字符串则查找exe所在路径，带不带\都可以
+	@param [in] flag 1表示查找文件，2表示查找文件后缀名，3表示查找所有文件，fileStr不起作用
+	@param [in] fileStr 传文件名带后缀名或后缀名不带点，不查找文件夹
+	@param [in] unVisitPath 把当前文件夹下不可访问的文件夹列出来，传空代表不存储，所有文件夹路径带\符号
+	@return 返回所有查找到文件的绝对路径
+	*/
+	static std::vector<std::string> findFilePath(const std::string& strPath,
+		int32_t flag = 3,
+		const std::string& fileStr = "",
+		std::vector<std::string>* unVisitPath = nullptr);
 
 public:
     static bool ifRedirFrobid;
