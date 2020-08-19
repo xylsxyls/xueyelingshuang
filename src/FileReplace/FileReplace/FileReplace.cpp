@@ -4,7 +4,6 @@
 #include "CSystem/CSystemAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "FileTask.h"
-#include "CGetPath/CGetPathAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
@@ -43,7 +42,7 @@ void fileReplace(bool isFile, EnumReplaceCommand replaceCommand, const std::stri
 	}
 	else
 	{
-		std::vector<std::string> vecPath = CGetPath::FindFilePath("", folder, 3);
+		std::vector<std::string> vecPath = CSystem::findFilePath(folder);
 		int32_t index = -1;
 		while (index++ != vecPath.size() - 1)
 		{

@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef _MSC_VER
-    #ifdef _CStringManagerAPI
+    #ifdef _CtxtAPI
         #define CtxtAPI _declspec(dllimport)
     #else
         #define CtxtAPI _declspec(dllexport)
@@ -15,6 +15,6 @@
 #endif
 
 #if defined(STATIC_LIB)
-    #undef Ctxt
-    #define Ctxt
+    #undef CtxtAPI
+    #define CtxtAPI 
 #endif
