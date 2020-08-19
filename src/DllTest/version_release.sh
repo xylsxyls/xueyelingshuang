@@ -1,1 +1,1 @@
-$CLOUD_REBUILD DllTest 32 dll release same
+"$CLOUD_REBUILD" DllTest 32 dll release same
