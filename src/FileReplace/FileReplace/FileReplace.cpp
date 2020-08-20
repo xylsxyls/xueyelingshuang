@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include "CSystem/CSystemAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "FileTask.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include "ReplaceType.h"
+#include "ReplaceNameTask.h"
+#include "ReplaceContentTask.h"
 
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -18,143 +20,205 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 
 int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
-void fileReplace(bool isFile, EnumReplaceCommand replaceCommand, const std::string& fileName, const std::string& folder, const std::string& oldStr, const std::string& newStr)
+void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replaceParam)
 {
-	int32_t count = CSystem::GetCPUCoreCount() * 2;
-	std::vector<uint32_t> vecThreadId;
-	int32_t threadIndex = (isFile ? (count - 2) : (-1));
-	while (threadIndex++ != count - 1)
+	std::vector<std::string> vecParam = vecMainParam;
+
+	if (CStringManager::MakeLower(vecParam[0]) == "-file")
 	{
-		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
+		replaceParam.m_replaceType = REPLACE_FILE;
+		replaceParam.m_filePath = vecParam[1];
+		vecParam.pop_back();
+		vecParam.pop_back();
 	}
-	if (vecThreadId.empty())
+	else if (CStringManager::MakeLower(vecParam[0]) == "-dir")
 	{
-		return;
+		replaceParam.m_replaceType = REPLACE_DIR;
+		replaceParam.m_folder = vecParam[1];
+		if (replaceParam.m_folder.back() != '\\')
+		{
+			replaceParam.m_folder.push_back('\\');
+		}
+		vecParam.pop_back();
+		vecParam.pop_back();
+	}
+	else if (CStringManager::MakeLower(vecParam[0]) == "-files")
+	{
+		replaceParam.m_replaceType = REPLACE_FILES;
+		replaceParam.m_folder = vecParam[1];
+		if (replaceParam.m_folder.back() != '\\')
+		{
+			replaceParam.m_folder.push_back('\\');
+		}
+		replaceParam.m_fileName = vecParam[2];
+		replaceParam.m_isMatchCase = (vecParam[3] != "0");
+		vecParam.pop_back();
+		vecParam.pop_back();
+		vecParam.pop_back();
+		vecParam.pop_back();
 	}
 
-	if (isFile)
+	if (CStringManager::MakeLower(vecParam[0]) == "-replace")
 	{
-		FileTask* fileTask = new FileTask;
-		fileTask->setParam(folder + fileName, replaceCommand, oldStr, newStr);
-		std::shared_ptr<FileTask> spFileTask;
-		spFileTask.reset(fileTask);
-		CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[0])->PostTask(spFileTask);
+		replaceParam.m_replaceCommand = REPLACE;
+		replaceParam.m_oldStr = vecParam[1];
+		replaceParam.m_newStr = vecParam[2];
+		vecParam.pop_back();
+		vecParam.pop_back();
+		vecParam.pop_back();
 	}
-	else
+	else if (CStringManager::MakeLower(vecParam[0]) == "-line")
 	{
-		std::vector<std::string> vecPath = CSystem::findFilePath(folder);
-		int32_t index = -1;
-		while (index++ != vecPath.size() - 1)
-		{
-			std::string name = CSystem::GetName(vecPath[index], 1);
-			if (CStringManager::Replace(name, fileName, fileName) != 0)
-			{
-				FileTask* fileTask = new FileTask;
-				fileTask->setParam(vecPath[index], replaceCommand, oldStr, newStr);
-				std::shared_ptr<FileTask> spFileTask;
-				spFileTask.reset(fileTask);
-				CTaskThreadManager::Instance().GetThreadInterface(vecThreadId[index % count])->PostTask(spFileTask);
-			}
-		}
+		replaceParam.m_replaceCommand = LINE;
+		replaceParam.m_oldPart = vecParam[1];
+		replaceParam.m_newLine = vecParam[2];
+		vecParam.pop_back();
+		vecParam.pop_back();
+		vecParam.pop_back();
 	}
-	threadIndex = (isFile ? (count - 2) : (-1));
-	while (threadIndex++ != count - 1)
+	else if (CStringManager::MakeLower(vecParam[0]) == "-name")
 	{
-		CTaskThreadManager::Instance().WaitForEnd(vecThreadId[isFile ? 0 : threadIndex]);
+		replaceParam.m_replaceCommand = NAME;
+		replaceParam.m_oldName = vecParam[1];
+		replaceParam.m_newName = vecParam[2];
+		replaceParam.m_isNameMatchCase = (vecParam[3] != "0");
+		vecParam.pop_back();
+		vecParam.pop_back();
+		vecParam.pop_back();
+		vecParam.pop_back();
+	}
+	else if (CStringManager::MakeLower(vecParam[0]) == "-part")
+	{
+		replaceParam.m_replaceCommand = PART;
+		replaceParam.m_oldPart = vecParam[1];
+		replaceParam.m_oldStr = vecParam[2];
+		replaceParam.m_newStr = vecParam[3];
+		vecParam.pop_back();
+		vecParam.pop_back();
+		vecParam.pop_back();
+		vecParam.pop_back();
+	}
+
+	if (vecParam.size() == 2)
+	{
+		replaceParam.m_beginLine = atoi(vecParam[0].c_str());
+		replaceParam.m_endLine = atoi(vecParam[1].c_str());
 	}
 }
 
-void getParam(const std::vector<std::string>& vecMainParam, bool& isFile, EnumReplaceCommand& replaceCommand, std::string& fileName, std::string& folder, std::string& oldStr, std::string& newStr)
+std::vector<std::shared_ptr<CTask>> AnalyzeParam(const ReplaceParam& replaceParam)
 {
-	if (vecMainParam.size() != 7)
+	std::vector<std::string> vecFiles;
+	switch (replaceParam.m_replaceType)
 	{
-		return;
+	case REPLACE_FILE:
+	{
+		vecFiles.push_back(replaceParam.m_filePath);
 	}
-	int32_t index = -1;
-	while (index++ != vecMainParam.size() - 1)
+	break;
+	case REPLACE_DIR:
 	{
-		switch (index)
+		vecFiles = CSystem::findFilePath(replaceParam.m_folder);
+	}
+	break;
+	case REPLACE_FILES:
+	{
+		std::vector<std::string> vecAllFiles = CSystem::findFilePath(replaceParam.m_folder);
+		int32_t index = -1;
+		while (index++ != vecAllFiles.size() - 1)
 		{
-		case 1:
-		{
-			//单个文件替换
-			if (CStringManager::MakeLower(vecMainParam[index]) == "-file")
+			const std::string& path = vecAllFiles[index];
+			std::string name = CSystem::GetName(path, 1);
+			if (replaceParam.m_isMatchCase)
 			{
-				isFile = true;
+				if (CStringManager::Find(name, replaceParam.m_fileName) != -1)
+				{
+					vecFiles.push_back(path);
+				}
 			}
-			//文件夹下文件名包含匹配群替换
-			else if (CStringManager::MakeLower(vecMainParam[index]) == "-dir")
+			else
 			{
-				isFile = false;
+				if (CStringManager::Find(CStringManager::MakeLower(name), CStringManager::MakeLower(replaceParam.m_fileName)) != -1)
+				{
+					vecFiles.push_back(path);
+				}
 			}
-		}
-		break;
-		case 2:
-		{
-			folder = vecMainParam[index];
-			if (folder.back() != '\\' && folder.back() != '/')
-			{
-				folder.push_back('/');
-			}
-		}
-		break;
-		case 3:
-		{
-			fileName = vecMainParam[index];
-		}
-		break;
-		case 4:
-		{
-			//匹配群替换
-			if (CStringManager::MakeLower(vecMainParam[index]) == "-replace")
-			{
-				replaceCommand = REPLACE;
-			}
-			//单行包含匹配则整行群替换
-			else if (CStringManager::MakeLower(vecMainParam[index]) == "-line")
-			{
-				replaceCommand = LINE;
-			}
-			else if (CStringManager::MakeLower(vecMainParam[index]) == "-name")
-			{
-				replaceCommand = NAME;
-			}
-		}
-		break;
-		case 5:
-		{
-			oldStr = vecMainParam[index];
-		}
-		break;
-		case 6:
-		{
-			newStr = vecMainParam[index];
-		}
-		break;
-		default:
-			break;
 		}
 	}
+	break;
+	default:
+		break;
+	}
+
+	std::vector<std::shared_ptr<CTask>> vecTask;
+	if (replaceParam.m_replaceCommand == NAME)
+	{
+		int32_t index = -1;
+		while (index++ != vecFiles.size() - 1)
+		{
+			ReplaceNameParam replaceNameParam;
+			replaceNameParam.m_filePath = vecFiles[index];
+			replaceNameParam.m_isNameMatchCase = replaceParam.m_isNameMatchCase;
+			replaceNameParam.m_oldName = replaceParam.m_oldName;
+			replaceNameParam.m_newName = replaceParam.m_newName;
+			std::shared_ptr<ReplaceNameTask> spReplaceNameTask(new ReplaceNameTask);
+			spReplaceNameTask->setParam(replaceNameParam);
+			vecTask.push_back(spReplaceNameTask);
+		}
+	}
+	else
+	{
+		int32_t index = -1;
+		while (index++ != vecFiles.size() - 1)
+		{
+			ReplaceContentParam replaceContentParam;
+			replaceContentParam.m_replaceCommand = replaceParam.m_replaceCommand;
+			replaceContentParam.m_filePath = vecFiles[index];
+			replaceContentParam.m_oldStr = replaceParam.m_oldStr;
+			replaceContentParam.m_newStr = replaceParam.m_newStr;
+			replaceContentParam.m_newLine = replaceParam.m_newLine;
+			replaceContentParam.m_oldPart = replaceParam.m_oldPart;
+			replaceContentParam.m_beginLine = replaceParam.m_beginLine;
+			replaceContentParam.m_endLine = replaceParam.m_endLine;
+			std::shared_ptr<ReplaceContentTask> spReplaceContentTask(new ReplaceContentTask);
+			spReplaceContentTask->setParam(replaceContentParam);
+			vecTask.push_back(spReplaceContentTask);
+		}
+	}
+	return vecTask;
 }
 
 int32_t main()
 {
 	std::vector<std::string> vecMainParam = CSystem::mainParam();
-	//是否是文件或文件夹
-	bool isFile = true;
-	//是否是单行包含匹配群体换或匹配群体换
-	EnumReplaceCommand replaceCommand = REPLACE;
-	//文件名或匹配的部分文件名，包含后缀
-	std::string fileName;
-	//文件路径
-	std::string folder;
-	//匹配的字符串
-	std::string oldStr;
-	//更换的字符串或行
-	std::string newStr;
+	ReplaceParam replaceParam;
 
-	getParam(vecMainParam, isFile, replaceCommand, fileName, folder, oldStr, newStr);
-	fileReplace(isFile, replaceCommand, fileName, folder, oldStr, newStr);
-
+	getParam(vecMainParam, replaceParam);
+	std::vector<std::shared_ptr<CTask>> vecTask = AnalyzeParam(replaceParam);
+	if (vecTask.empty())
+	{
+		return 0;
+	}
+	size_t threadCount = CSystem::GetCPUCoreCount() * 2;
+	if (vecTask.size() < threadCount)
+	{
+		threadCount = vecTask.size();
+	}
+	std::vector<uint32_t> vecThread;
+	int32_t index = -1;
+	while (index++ != threadCount - 1)
+	{
+		vecThread.push_back(CTaskThreadManager::Instance().Init());
+	}
+	index = -1;
+	while (index++ != vecTask.size() - 1)
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(vecThread[index % threadCount])->PostTask(vecTask[index]);
+	}
+	index = -1;
+	while (index++ != vecThread.size() - 1)
+	{
+		CTaskThreadManager::Instance().WaitForEnd(vecThread[index]);
+	}
 	return 0;
 }

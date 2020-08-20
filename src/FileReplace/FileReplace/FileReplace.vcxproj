@@ -73,7 +73,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)1.0</TargetName>
+    <TargetName>$(ProjectName)1.1</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
@@ -83,7 +83,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)1.0</TargetName>
+    <TargetName>$(ProjectName)1.1</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -151,11 +151,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="FileReplace.h" />
-    <ClInclude Include="FileTask.h" />
+    <ClInclude Include="ReplaceContentTask.h" />
+    <ClInclude Include="ReplaceNameTask.h" />
+    <ClInclude Include="ReplaceType.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileReplace.cpp" />
-    <ClCompile Include="FileTask.cpp" />
+    <ClCompile Include="ReplaceContentTask.cpp" />
+    <ClCompile Include="ReplaceNameTask.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

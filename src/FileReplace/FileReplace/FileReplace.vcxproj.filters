@@ -13,21 +13,33 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Task">
+      <UniqueIdentifier>{ab1f2c96-8a4d-48fc-921c-fc1d1ece2b34}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FileReplace.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="FileTask.h">
+    <ClInclude Include="ReplaceType.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ReplaceNameTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="ReplaceContentTask.h">
+      <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileReplace.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="FileTask.cpp">
-      <Filter>源文件</Filter>
+    <ClCompile Include="ReplaceNameTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="ReplaceContentTask.cpp">
+      <Filter>Task</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
