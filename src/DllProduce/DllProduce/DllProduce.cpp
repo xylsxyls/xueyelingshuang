@@ -1,5 +1,5 @@
 #include "DllProduce.h"
-#include "CGetPath/CGetPathAPI.h"
+#include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <stdint.h>
 #include "Ctxt/CtxtAPI.h"
@@ -21,11 +21,11 @@ int32_t main()
 		vecRelyClassName.clear();
 	}
 
-	std::string changeClassName = CGetPath::GetCurrentExePath();
+	std::string changeClassName = CSystem::GetCurrentExePath();
 	changeClassName.pop_back();
 	changeClassName = CStringManager::Right(changeClassName, changeClassName.size() - changeClassName.find_last_of("/\\") - 1);
-	std::string strPath = CGetPath::GetCurrentExePath();
-	std::vector<std::string> vecPath = CGetPath::FindFilePath("", strPath, 3);
+	std::string strPath = CSystem::GetCurrentExePath();
+	std::vector<std::string> vecPath = CSystem::findFilePath(strPath);
 	std::vector<std::string> vecPathBk = vecPath;
 	int32_t index = -1;
 	while (index++ != vecPath.size() - 1)
@@ -36,7 +36,7 @@ int32_t main()
 			continue;
 		}
 		system(("echo f | xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(vecPathBk[index]) + SPACE + MARK(vecPath[index])).c_str());
-		std::string strEnd = CGetPath::GetName(vecPath[index], 2);
+		std::string strEnd = CSystem::GetName(vecPath[index], 2);
 		if (strEnd == "h" ||
 			strEnd == "cpp" ||
 			strEnd == "bat" ||
@@ -46,7 +46,7 @@ int32_t main()
 			strEnd == "sln")
 		{
 			Ctxt txt(vecPath[index]);
-			txt.LoadTxt(3, "");
+			txt.LoadTxt(Ctxt::Load::ONE_LINE);
 			int32_t line = -1;
 			while (line++ != txt.m_vectxt.size() - 1)
 			{
@@ -60,7 +60,7 @@ int32_t main()
 			if (vecPath[index].find(std::string() + "before_" + className + ".bat") != -1)
 			{
 				Ctxt txt(vecPath[index]);
-				txt.LoadTxt(3, "");
+				txt.LoadTxt(Ctxt::Load::ONE_LINE);
 				std::vector<std::vector<std::string>> vectxtBk = txt.m_vectxt;
 				int32_t line = -1;
 				while (line++ != vectxtBk.size() - 1)
