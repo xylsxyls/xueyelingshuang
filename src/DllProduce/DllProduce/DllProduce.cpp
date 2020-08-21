@@ -5,7 +5,7 @@
 #include "Ctxt/CtxtAPI.h"
 
 #define SPACE std::string(" ")
-#define MARK(src) ("\"" + src + "\"")
+#define MARK(src) ("\"" + std::string(src) + "\"")
 
 int32_t main()
 {
@@ -21,66 +21,45 @@ int32_t main()
 		vecRelyClassName.clear();
 	}
 
-	std::string changeClassName = CSystem::GetCurrentExePath();
-	changeClassName.pop_back();
-	changeClassName = CStringManager::Right(changeClassName, changeClassName.size() - changeClassName.find_last_of("/\\") - 1);
-	std::string strPath = CSystem::GetCurrentExePath();
-	std::vector<std::string> vecPath = CSystem::findFilePath(strPath);
-	std::vector<std::string> vecPathBk = vecPath;
+	std::string changeClassName = "DllTest";
+	std::string changeRelyClassName = "DllRelyTest";
+	std::string dllTestPath = CSystem::GetCurrentExePath();
+	std::string newClassPath = dllTestPath;
+	newClassPath.pop_back();
+	newClassPath = CSystem::GetName(newClassPath, 4) + className + "\\";
+
+	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(dllTestPath + "*") + SPACE + MARK(newClassPath)).c_str());
+	CSystem::deleteFile((newClassPath + "DllProduce1.2.exe").c_str());
+	CSystem::deleteFile((newClassPath + "DllProduce1.2").c_str());
+
+	system(("call" + SPACE + MARK("%FILE_REPLACE%") + SPACE + "-dir" + SPACE + newClassPath + SPACE + "-replace" + SPACE + changeClassName + SPACE + className).c_str());
+	system(("call" + SPACE + MARK("%FILE_REPLACE%") + SPACE + "-dir" + SPACE + newClassPath + SPACE + "-name" + SPACE + changeClassName + SPACE + className + SPACE + "1").c_str());
+
+	CSystem::rename(newClassPath + changeClassName, newClassPath + className);
+
+	std::string beforeShPath = newClassPath + "scripts\\before_" + className + ".sh";
+	Ctxt beforeSh(beforeShPath);
+	beforeSh.LoadTxt(Ctxt::Load::ONE_LINE);
+	std::vector<std::string> emptyLine;
+	emptyLine.push_back("\r");
 	int32_t index = -1;
-	while (index++ != vecPath.size() - 1)
+	while (index++ != vecRelyClassName.size() - 1)
 	{
-		CStringManager::Replace(vecPath[index], changeClassName, className);
-		if (vecPath[index].find("DllProduce1.1.exe") != -1)
-		{
-			continue;
-		}
-		system(("echo f | xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(vecPathBk[index]) + SPACE + MARK(vecPath[index])).c_str());
-		std::string strEnd = CSystem::GetName(vecPath[index], 2);
-		if (strEnd == "h" ||
-			strEnd == "cpp" ||
-			strEnd == "bat" ||
-			strEnd == "py" ||
-			strEnd == "vcxproj" ||
-			strEnd == "filters" || 
-			strEnd == "sln")
-		{
-			Ctxt txt(vecPath[index]);
-			txt.LoadTxt(Ctxt::Load::ONE_LINE);
-			int32_t line = -1;
-			while (line++ != txt.m_vectxt.size() - 1)
-			{
-				CStringManager::Replace(txt.m_vectxt[line][0], changeClassName, className);
-			}
-			txt.Save();
-		}
-		int32_t relyIndex = -1;
-		while (relyIndex++ != vecRelyClassName.size() - 1)
-		{
-			if (vecPath[index].find(std::string() + "before_" + className + ".bat") != -1)
-			{
-				Ctxt txt(vecPath[index]);
-				txt.LoadTxt(Ctxt::Load::ONE_LINE);
-				std::vector<std::vector<std::string>> vectxtBk = txt.m_vectxt;
-				int32_t line = -1;
-				while (line++ != vectxtBk.size() - 1)
-				{
-					CStringManager::Replace(vectxtBk[line][0], "DllRelyTest", vecRelyClassName[relyIndex]);
-				}
-				//替换后把前15行添加到末尾
-				int32_t lineBk = -1;
-				while (lineBk++ != vectxtBk.size() - 1)
-				{
-					if (lineBk == 15)
-					{
-						break;
-					}
-					txt.m_vectxt.push_back(vectxtBk[lineBk]);
-				}
-				txt.Save();
-			}
-		}
+		beforeSh.m_vectxt.push_back(emptyLine);
+		beforeSh.m_vectxt.push_back(beforeSh.m_vectxt[2]);
+		beforeSh.m_vectxt.push_back(beforeSh.m_vectxt[3]);
+		beforeSh.m_vectxt.push_back(beforeSh.m_vectxt[4]);
+		beforeSh.m_vectxt.push_back(beforeSh.m_vectxt[5]);
+		beforeSh.m_vectxt.push_back(beforeSh.m_vectxt[6]);
+		beforeSh.m_vectxt.push_back(beforeSh.m_vectxt[7]);
 	}
+	beforeSh.Save();
 	
+	index = -1;
+	while (index++ != vecRelyClassName.size() - 1)
+	{
+		system(("call" + SPACE + MARK("%FILE_REPLACE%") + SPACE + "-file" + SPACE + beforeShPath + SPACE + "-replace" + SPACE + changeRelyClassName + SPACE + vecRelyClassName[index] + SPACE + std::to_string(10 + index * 7) + SPACE + std::to_string(16 + index * 7)).c_str());
+	}
+
 	return 0;
 }

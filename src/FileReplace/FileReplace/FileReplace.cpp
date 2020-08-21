@@ -23,13 +23,14 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replaceParam)
 {
 	std::vector<std::string> vecParam = vecMainParam;
+	vecParam.erase(vecParam.begin());
 
 	if (CStringManager::MakeLower(vecParam[0]) == "-file")
 	{
 		replaceParam.m_replaceType = REPLACE_FILE;
 		replaceParam.m_filePath = vecParam[1];
-		vecParam.pop_back();
-		vecParam.pop_back();
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
 	}
 	else if (CStringManager::MakeLower(vecParam[0]) == "-dir")
 	{
@@ -39,8 +40,8 @@ void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replac
 		{
 			replaceParam.m_folder.push_back('\\');
 		}
-		vecParam.pop_back();
-		vecParam.pop_back();
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
 	}
 	else if (CStringManager::MakeLower(vecParam[0]) == "-files")
 	{
@@ -52,10 +53,10 @@ void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replac
 		}
 		replaceParam.m_fileName = vecParam[2];
 		replaceParam.m_isMatchCase = (vecParam[3] != "0");
-		vecParam.pop_back();
-		vecParam.pop_back();
-		vecParam.pop_back();
-		vecParam.pop_back();
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
 	}
 
 	if (CStringManager::MakeLower(vecParam[0]) == "-replace")
@@ -63,18 +64,18 @@ void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replac
 		replaceParam.m_replaceCommand = REPLACE;
 		replaceParam.m_oldStr = vecParam[1];
 		replaceParam.m_newStr = vecParam[2];
-		vecParam.pop_back();
-		vecParam.pop_back();
-		vecParam.pop_back();
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
 	}
 	else if (CStringManager::MakeLower(vecParam[0]) == "-line")
 	{
 		replaceParam.m_replaceCommand = LINE;
 		replaceParam.m_oldPart = vecParam[1];
 		replaceParam.m_newLine = vecParam[2];
-		vecParam.pop_back();
-		vecParam.pop_back();
-		vecParam.pop_back();
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
 	}
 	else if (CStringManager::MakeLower(vecParam[0]) == "-name")
 	{
@@ -82,10 +83,10 @@ void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replac
 		replaceParam.m_oldName = vecParam[1];
 		replaceParam.m_newName = vecParam[2];
 		replaceParam.m_isNameMatchCase = (vecParam[3] != "0");
-		vecParam.pop_back();
-		vecParam.pop_back();
-		vecParam.pop_back();
-		vecParam.pop_back();
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
 	}
 	else if (CStringManager::MakeLower(vecParam[0]) == "-part")
 	{
@@ -93,10 +94,10 @@ void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replac
 		replaceParam.m_oldPart = vecParam[1];
 		replaceParam.m_oldStr = vecParam[2];
 		replaceParam.m_newStr = vecParam[3];
-		vecParam.pop_back();
-		vecParam.pop_back();
-		vecParam.pop_back();
-		vecParam.pop_back();
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
 	}
 
 	if (vecParam.size() == 2)
