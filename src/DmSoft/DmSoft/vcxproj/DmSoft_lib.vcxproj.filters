@@ -10,6 +10,7 @@
     <ClInclude Include="..\src\DmSoftMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\Cdmsoft.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">

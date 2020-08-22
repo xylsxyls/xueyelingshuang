@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\Cdmsoft.h" />
     <ClInclude Include="..\src\DmSoftAPI.h" />
     <ClInclude Include="..\src\DmSoftMacro.h" />
     <ClInclude Include="..\src\DmSoft.h" />

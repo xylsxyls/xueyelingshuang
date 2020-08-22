@@ -24,6 +24,9 @@
     <ClInclude Include="..\src\DmSoftMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\Cdmsoft.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\DmSoft.cpp">

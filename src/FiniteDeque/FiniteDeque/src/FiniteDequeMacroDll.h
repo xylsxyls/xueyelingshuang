@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _FiniteDequeAPI
-#define FiniteDequeAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _FiniteDequeAPI
+        #define FiniteDequeAPI _declspec(dllimport)
+    #else
+        #define FiniteDequeAPI _declspec(dllexport)
+    #endif
 #else
-#define FiniteDequeAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define FiniteDequeAPI __attribute__ ((visibility("default")))
+    #else
+        #define FiniteDequeAPI
+    #endif
 #endif

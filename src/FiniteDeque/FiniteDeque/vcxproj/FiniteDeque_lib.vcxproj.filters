@@ -20,8 +20,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\src\FiniteDeque.inl">
-      <Filter>源文件</Filter>
-    </None>
+    <None Include="..\src\FiniteDeque.inl" />
   </ItemGroup>
 </Project>

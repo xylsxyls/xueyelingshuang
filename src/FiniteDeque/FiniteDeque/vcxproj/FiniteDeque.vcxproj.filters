@@ -26,8 +26,8 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\FiniteDeque.inl">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <None Include="..\src\FiniteDeque.inl">
+      <Filter>头文件</Filter>
+    </None>
   </ItemGroup>
 </Project>
