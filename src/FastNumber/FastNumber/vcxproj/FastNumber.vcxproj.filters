@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\BigNumberAPI.h">
+    <ClInclude Include="..\src\FastNumber.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\FastNumber.h">
+    <ClInclude Include="..\src\FastNumberAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\FastNumberMacro.h">

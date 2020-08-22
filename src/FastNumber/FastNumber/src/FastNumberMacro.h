@@ -1,12 +1,20 @@
 #pragma once
 
-#ifdef _FastNumberAPI
-#define FastNumberAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _FastNumberAPI
+        #define FastNumberAPI _declspec(dllimport)
+    #else
+        #define FastNumberAPI _declspec(dllexport)
+    #endif
 #else
-#define FastNumberAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define FastNumberAPI __attribute__ ((visibility("default")))
+    #else
+        #define FastNumberAPI
+    #endif
 #endif
 
 #if defined(STATIC_LIB)
-#undef FastNumberAPI
-#define FastNumberAPI 
+    #undef FastNumberAPI
+    #define FastNumberAPI 
 #endif
