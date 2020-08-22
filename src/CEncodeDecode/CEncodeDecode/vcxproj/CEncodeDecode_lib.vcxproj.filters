@@ -10,15 +10,9 @@
     <ClInclude Include="..\src\CEncodeDecodeMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AES.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\aes_encryptor.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\MD5.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
+    <ClInclude Include="..\src\AES.h" />
+    <ClInclude Include="..\src\aes_encryptor.h" />
+    <ClInclude Include="..\src\MD5.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -32,14 +26,8 @@
     <ClCompile Include="..\src\CEncodeDecode.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\aes_encryptor.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AES.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\MD5.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <ClCompile Include="..\src\AES.cpp" />
+    <ClCompile Include="..\src\aes_encryptor.cpp" />
+    <ClCompile Include="..\src\MD5.cpp" />
   </ItemGroup>
 </Project>

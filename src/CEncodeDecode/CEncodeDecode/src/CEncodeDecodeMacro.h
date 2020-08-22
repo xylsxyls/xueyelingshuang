@@ -1,12 +1,20 @@
 #pragma once
 
-#ifdef _CEncodeDecodeAPI
-#define CEncodeDecodeAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _CEncodeDecodeAPI
+        #define CEncodeDecodeAPI _declspec(dllimport)
+    #else
+        #define CEncodeDecodeAPI _declspec(dllexport)
+    #endif
 #else
-#define CEncodeDecodeAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define CEncodeDecodeAPI __attribute__ ((visibility("default")))
+    #else
+        #define CEncodeDecodeAPI
+    #endif
 #endif
 
 #if defined(STATIC_LIB)
-#undef CEncodeDecodeAPI
-#define CEncodeDecodeAPI 
+    #undef CEncodeDecodeAPI
+    #define CEncodeDecodeAPI 
 #endif
