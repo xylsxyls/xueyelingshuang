@@ -25,8 +25,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\src\CSystem.inl">
-      <Filter>头文件</Filter>
-    </None>
+    <None Include="..\src\CSystem.inl" />
   </ItemGroup>
 </Project>
