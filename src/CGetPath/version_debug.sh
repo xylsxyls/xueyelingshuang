@@ -1,1 +1,1 @@
-$CLOUD_REBUILD CGetPath 32 dll debug same
+"$CLOUD_REBUILD" CGetPath 32 dll debug same
