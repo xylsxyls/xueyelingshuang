@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _CorrespondParamAPI
-#define CorrespondParamAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _CorrespondParamAPI
+        #define CorrespondParamAPI _declspec(dllimport)
+    #else
+        #define CorrespondParamAPI _declspec(dllexport)
+    #endif
 #else
-#define CorrespondParamAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define CorrespondParamAPI __attribute__ ((visibility("default")))
+    #else
+        #define CorrespondParamAPI
+    #endif
 #endif
