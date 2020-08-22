@@ -21,7 +21,9 @@ int32_t main()
 		vecRelyClassName.clear();
 	}
 
-	std::string changeClassName = "DllTest";
+	std::string currentPath = CSystem::GetCurrentExePath();
+	currentPath.pop_back();
+	std::string changeClassName = CSystem::GetName(currentPath, 1);
 	std::string changeRelyClassName = "DllRelyTest";
 	std::string dllTestPath = CSystem::GetCurrentExePath();
 	std::string newClassPath = dllTestPath;

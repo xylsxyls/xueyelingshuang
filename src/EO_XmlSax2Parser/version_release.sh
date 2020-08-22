@@ -1,1 +1,1 @@
-$CLOUD_REBUILD EO_XmlSax2Parser 32 dll release same
+"$CLOUD_REBUILD" EO_XmlSax2Parser 32 dll release same
