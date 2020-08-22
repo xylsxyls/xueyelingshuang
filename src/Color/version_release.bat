@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" Color 32 dll release same
