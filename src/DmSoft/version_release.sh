@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" DmSoft 32 dll release same
