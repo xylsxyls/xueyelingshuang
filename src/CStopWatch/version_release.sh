@@ -1,1 +1,1 @@
-$CLOUD_REBUILD CStopWatch 32 dll release same
+"$CLOUD_REBUILD" CStopWatch 32 dll release same
