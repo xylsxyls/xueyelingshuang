@@ -10,6 +10,7 @@
     <ClInclude Include="..\src\HiRedisMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\HiRedisResultSet.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -23,5 +24,6 @@
     <ClCompile Include="..\src\HiRedis.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\HiRedisResultSet.cpp" />
   </ItemGroup>
 </Project>

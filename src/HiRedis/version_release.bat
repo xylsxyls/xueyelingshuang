@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" HiRedis 32 dll release same
