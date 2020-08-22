@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" CCharset 32 dll debug same
