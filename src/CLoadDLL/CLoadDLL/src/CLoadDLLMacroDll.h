@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _CLoadDLLAPI
-#define CLoadDLLAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _CLoadDLLAPI
+        #define CLoadDLLAPI _declspec(dllimport)
+    #else
+        #define CLoadDLLAPI _declspec(dllexport)
+    #endif
 #else
-#define CLoadDLLAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define CLoadDLLAPI __attribute__ ((visibility("default")))
+    #else
+        #define CLoadDLLAPI
+    #endif
 #endif
