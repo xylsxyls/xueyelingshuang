@@ -1,2 +1,1 @@
 "$CLOUD_REBUILD" HiRedis 32 dll debug same
-sleep 5
