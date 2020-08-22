@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _BigNumberBaseAPI
-#define BigNumberBaseAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _BigNumberBaseAPI
+        #define BigNumberBaseAPI _declspec(dllimport)
+    #else
+        #define BigNumberBaseAPI _declspec(dllexport)
+    #endif
 #else
-#define BigNumberBaseAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define BigNumberBaseAPI __attribute__ ((visibility("default")))
+    #else
+        #define BigNumberBaseAPI
+    #endif
 #endif
