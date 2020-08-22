@@ -10,6 +10,7 @@
     <ClInclude Include="..\src\CiniMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\SimpleIni.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">

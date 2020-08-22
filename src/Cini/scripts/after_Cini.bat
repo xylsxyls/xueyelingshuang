@@ -1,1 +1,0 @@
-del %xueyelingshuang%\include\Cini\SimpleIni.h
