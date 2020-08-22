@@ -1,6 +1,7 @@
 #pragma once
 #include "CompressMacro.h"
 #include <stdint.h>
+#include <string>
 
 class CompressAPI Compress
 {

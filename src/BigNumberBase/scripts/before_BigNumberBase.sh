@@ -15,6 +15,7 @@ CStringManager_debugRelease=$3
 CStringManager_allSame=$4
 "$CLOUD_REBUILD" CStringManager $CStringManager_bit $CStringManager_dlllib $CStringManager_debugRelease $CStringManager_allSame
 
+#--------------------------------------------------------------------
 SHELL_FOLDER=$(cd $(dirname $0); pwd)
 xueyelingshuang=$SHELL_FOLDER/../../..
 

@@ -1,12 +1,20 @@
 #pragma once
 
-#ifdef _CompressAPI
-#define CompressAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _CompressAPI
+        #define CompressAPI _declspec(dllimport)
+    #else
+        #define CompressAPI _declspec(dllexport)
+    #endif
 #else
-#define CompressAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define CompressAPI __attribute__ ((visibility("default")))
+    #else
+        #define CompressAPI
+    #endif
 #endif
 
 #if defined(STATIC_LIB)
-#undef CompressAPI
-#define CompressAPI 
+    #undef CompressAPI
+    #define CompressAPI 
 #endif
