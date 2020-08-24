@@ -1,1 +1,1 @@
-$CLOUD_REBUILD CTaskThreadManager 32 dll release same
+"$CLOUD_REBUILD" CTaskThreadManager 32 dll release same

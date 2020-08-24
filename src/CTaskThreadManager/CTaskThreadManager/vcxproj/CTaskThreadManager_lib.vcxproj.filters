@@ -10,12 +10,8 @@
     <ClInclude Include="..\src\CTaskThreadManagerMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CTask.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CTaskThread.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
+    <ClInclude Include="..\src\CTask.h" />
+    <ClInclude Include="..\src\CTaskThread.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -29,11 +25,7 @@
     <ClCompile Include="..\src\CTaskThreadManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\CTask.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\CTaskThread.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <ClCompile Include="..\src\CTask.cpp" />
+    <ClCompile Include="..\src\CTaskThread.cpp" />
   </ItemGroup>
 </Project>
