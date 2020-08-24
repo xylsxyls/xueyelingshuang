@@ -43,7 +43,7 @@ int32_t main()
 	Ctxt beforeSh(beforeShPath);
 	beforeSh.LoadTxt(Ctxt::Load::ONE_LINE);
 	std::vector<std::string> emptyLine;
-	emptyLine.push_back("\r");
+	emptyLine.push_back("");
 	int32_t index = -1;
 	while (index++ != vecRelyClassName.size() - 1)
 	{

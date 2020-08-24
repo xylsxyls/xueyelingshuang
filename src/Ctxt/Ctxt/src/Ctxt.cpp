@@ -5,7 +5,7 @@
 Ctxt::Ctxt(const std::string& strPath)
 {
 	m_strPath = strPath;
-	m_txt = new std::ofstream(strPath.c_str(), std::ios::app);
+	m_txt = new std::ofstream(strPath.c_str(), std::ios::app | std::ios::binary);
 }
 
 Ctxt::~Ctxt()
@@ -136,7 +136,7 @@ void Ctxt::AddLineWithoutOpenFile(const char* fmt, ...)
 #endif
 	}
 	va_end(args);
-    *(std::ofstream*)m_txt << result << std::endl;
+    *(std::ofstream*)m_txt << result << "\r\n";
 }
 
 bool Ctxt::SaveAs(const std::string& path)
@@ -158,7 +158,7 @@ bool Ctxt::SaveAs(const std::string& path)
 		{
 			strLine.append(vecLine[partIndex]);
 		}
-		Write(pFile, (lineIndex == m_vectxt.size() - 1) ? "%s" : "%s\n", strLine.c_str());
+		Write(pFile, (lineIndex == m_vectxt.size() - 1) ? "%s" : "%s\r\n", strLine.c_str());
 	}
 	::fclose(pFile);
 	pFile = nullptr;
@@ -210,8 +210,9 @@ void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
 	int32_t begin = 0;
 	int32_t end = 0;
 	std::vector<std::string> vecLine;
-	while (getline(myfile, strLine))
+	do 
 	{
+		getline(myfile, strLine);
 		vecLine.clear();
 		//分出得到第一对截取点，第0个和第2个就是首和尾
 		pointToPointIndex = -1;
@@ -222,7 +223,7 @@ void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
 			vecLine.push_back(strLine.substr(begin - 1, end - begin + 1));
 		}
 		m_vectxt.push_back(vecLine);
-	}
+	} while (!myfile.eof());
 	myfile.close();
 	myfile.clear();
 }
@@ -232,11 +233,12 @@ void Ctxt::LoadTxtWithSplit(const std::string& strSplit)
 	std::ifstream myfile(m_strPath);
 	std::string strLine;
 	std::vector<std::string> vecLine;
-	while (getline(myfile, strLine))
+	do 
 	{
+		getline(myfile, strLine);
 		Split(vecLine, strLine, strSplit);
 		m_vectxt.push_back(vecLine);
-	}
+	} while (!myfile.eof());
 	myfile.close();
 	myfile.clear();
 }
@@ -246,12 +248,13 @@ void Ctxt::LoadTxtWithOneLine()
 	std::ifstream myfile(m_strPath);
 	std::string strLine;
 	std::vector<std::string> vecLine;
-	while (getline(myfile, strLine))
+	do 
 	{
+		getline(myfile, strLine);
 		vecLine.clear();
 		vecLine.push_back(strLine);
 		m_vectxt.push_back(vecLine);
-	}
+	} while (!myfile.eof());
 	myfile.close();
 	myfile.clear();
 }

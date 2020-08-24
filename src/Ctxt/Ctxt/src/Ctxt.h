@@ -7,6 +7,7 @@
 class CtxtAPI Ctxt
 {
 public:
+	//以\r\n为行结束符
 	enum Load
 	{
 		POINT_TO_POINT = 1,

@@ -973,7 +973,7 @@ std::wstring CSystem::AnsiToUnicode(const std::string& strSrc)
 
 std::string CSystem::readFile(const std::string& path)
 {
-	std::ifstream license_file(path.c_str());
+	std::ifstream license_file(path.c_str(), std::ios::binary);
 	if (!license_file)
 	{
 		return "";
