@@ -30,7 +30,7 @@ endif()
 PROJECT(${PROJECT_NAME})
 
 #MESSAGE("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
-#${PROJECT_SOURCE_DIR}="xueyelingshuang/src/DllTest/scripts"
+#${PROJECT_SOURCE_DIR}="xueyelingshuang/src/Semaphore/scripts"
 #SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin/)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
 

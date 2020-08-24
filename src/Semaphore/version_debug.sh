@@ -1,1 +1,1 @@
-$CLOUD_REBUILD Semaphore 32 dll debug same
+"$CLOUD_REBUILD" Semaphore 32 dll debug same
