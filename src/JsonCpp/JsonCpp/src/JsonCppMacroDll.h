@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _JsonCppAPI
-#define JSON_API _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _JsonCppAPI
+        #define JsonCppAPI _declspec(dllimport)
+    #else
+        #define JsonCppAPI _declspec(dllexport)
+    #endif
 #else
-#define JSON_API _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define JsonCppAPI __attribute__ ((visibility("default")))
+    #else
+        #define JsonCppAPI
+    #endif
 #endif

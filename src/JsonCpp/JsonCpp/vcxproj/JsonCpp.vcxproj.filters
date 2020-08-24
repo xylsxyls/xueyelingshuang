@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\JsonCppAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\JsonCppMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\json_batchallocator.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\json\writer.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\json\autolink.h">
@@ -43,6 +43,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\json\value.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\json\writer.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -20,17 +20,19 @@ Update = False
 Copy = False
 CleanAll = False
 BuildTimeout = 30*60
+Bit = 'Win32'
+Dlllib = 'dll'
 MSBuild = None
 IncrediBuild = None
 UseMSBuild = True #默认用MSBuild编译，如果为False则用IncrediBuild编译
 
 #不同项目只需修改下面5个变量
-SlnFile = '../JsonCpp_lib.sln' #相对于本py脚本路径的相对路径
+SlnFile = '../JsonCpp.sln' #相对于本py脚本路径的相对路径
 UpdateDir = [] #相对于本py脚本路径的相对路径，填空不更新
 ExecBatList = [] #相对于本py脚本路径的相对路径，编译前调用的脚本，可填空，执行bat会先cd到bat目录再执行
-MSBuildFirstProjects = [r'JsonCpp_lib'] #使用MSBuild需要工程文件在解决方案sln中的路径
+MSBuildFirstProjects = [r'JsonCpp'] #使用MSBuild需要工程文件在解决方案sln中的路径
      # MSBuild首先编译的项目，填空不指定顺序
-IncrediBuildFirstProjects = ['JsonCpp_lib'] #使用IncrediBuild只需工程名字
+IncrediBuildFirstProjects = ['JsonCpp'] #使用IncrediBuild只需工程名字
      #IncrediBuild首先编译的项目，填空不指定顺序
 
 class ConsoleColor():
@@ -156,7 +158,10 @@ class Logger():
 
 
 def GetMSBuildPath():
-    cmd = 'call "%VS120COMNTOOLS%..\\..\\VC\\vcvarsall.bat" x86\nwhere msbuild'
+    if Bit == 'Win32':
+        cmd = 'call "%VS120COMNTOOLS%..\\..\\VC\\vcvarsall.bat" x86\nwhere msbuild'
+    elif Bit == 'x64':
+        cmd = 'call "%VS120COMNTOOLS%..\\..\\VC\\vcvarsall.bat" amd64\nwhere msbuild'
     ftemp = open('GetMSBuildPath.bat', 'wt')
     ftemp.write(cmd)
     ftemp.close()
@@ -251,18 +256,18 @@ def BuildAllProjects():
             else:
                 cmds.append('{0} {1} /t:Clean /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType))
         for project in MSBuildFirstProjects:
-            cmds.append('{0} {1} /t:{2} /p:Configuration={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile,  project, BuildType))
-        cmds.append('{0} {1} /p:Configuration={2} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType))
+            cmds.append('{0} {1} /t:{2} /p:Configuration={3};platform={4} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile,  project, BuildType, Bit))
+        cmds.append('{0} {1} /p:Configuration={2};platform={3} /nologo /maxcpucount /filelogger /consoleloggerparameters:ErrorsOnly'.format(MSBuild, SlnFile, BuildType, Bit))
     else: #IncrediBuild
         if IsRebuild:
             if CleanAll:
-                cmds.append('"{0}" {1} /clean /cfg="{2}|Win32" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, 'Debug'))
-                cmds.append('"{0}" {1} /clean /cfg="{2}|Win32" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, 'Release'))
+                cmds.append('"{0}" {1} /clean /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, 'Debug', Bit))
+                cmds.append('"{0}" {1} /clean /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, 'Release', Bit))
             else:
-                cmds.append('"{0}" {1} /clean /cfg="{2}|Win32" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, BuildType))
+                cmds.append('"{0}" {1} /clean /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, BuildType, Bit))
         for project in IncrediBuildFirstProjects:
-            cmds.append('"{0}" {1} /build /prj={2} /cfg="{3}|Win32" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, project, BuildType))
-        cmds.append('"{0}" {1} /build /cfg="{2}|Win32" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, BuildType))
+            cmds.append('"{0}" {1} /build /prj={2} /cfg="{3}|{4}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, project, BuildType, Bit))
+        cmds.append('"{0}" {1} /build /cfg="{2}|{3}" /nologo /out=IncrediBuild.log'.format(IncrediBuild, SlnFile, BuildType, Bit))
     for cmd in cmds:
         buildSuccess = BuildProject(cmd)
         if not buildSuccess:
@@ -313,6 +318,13 @@ if __name__ == '__main__':
     start_time = time.time()
     if 'debug' in sys.argv:
         BuildType = 'Debug'
+    if 'lib' in sys.argv:
+        Dlllib = 'lib'
+        SlnFile = '../JsonCpp_lib.sln'
+        MSBuildFirstProjects = [r'JsonCpp_lib']
+        IncrediBuildFirstProjects = ['JsonCpp_lib']
+    if '64' in sys.argv:
+        Bit = 'x64'
     if 'build' in sys.argv:
         IsRebuild = False
         Build = 'Build'

@@ -1,3 +1,3 @@
 #pragma once
 
-#define JSON_API 
+#define JsonCppAPI 
