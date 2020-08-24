@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" LogManager 32 dll release same

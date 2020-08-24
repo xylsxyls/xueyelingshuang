@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" LogManager 32 dll debug same
