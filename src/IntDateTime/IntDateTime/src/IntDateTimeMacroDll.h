@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _IntDateTimeAPI
-#define IntDateTimeAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _IntDateTimeAPI
+        #define IntDateTimeAPI _declspec(dllimport)
+    #else
+        #define IntDateTimeAPI _declspec(dllexport)
+    #endif
 #else
-#define IntDateTimeAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define IntDateTimeAPI __attribute__ ((visibility("default")))
+    #else
+        #define IntDateTimeAPI
+    #endif
 #endif
