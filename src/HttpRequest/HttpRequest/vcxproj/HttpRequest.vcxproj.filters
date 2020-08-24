@@ -24,15 +24,23 @@
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
     <Filter Include="Generated Files\Debug">
-      <UniqueIdentifier>{5a10f8c5-535b-4e88-be7a-446b5d413deb}</UniqueIdentifier>
+      <UniqueIdentifier>{3b9e3243-76ac-4a14-b56c-e2078e108683}</UniqueIdentifier>
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
     <Filter Include="Generated Files\Release">
-      <UniqueIdentifier>{733655f7-4a4a-44af-807a-981cc6c03ad4}</UniqueIdentifier>
+      <UniqueIdentifier>{4dee986f-6d29-4ac4-89ac-02011eb7a6ec}</UniqueIdentifier>
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\HttpRequestAPI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HttpRequestMacro.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\HttpRequest.cpp">
@@ -49,13 +57,5 @@
     <CustomBuild Include="..\src\HttpRequest.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\src\HttpRequestAPI.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\HttpRequestMacro.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
