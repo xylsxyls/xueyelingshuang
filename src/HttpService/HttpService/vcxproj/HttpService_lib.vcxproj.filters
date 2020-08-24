@@ -10,7 +10,6 @@
     <ClInclude Include="..\src\HttpServiceMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\HttpInterface.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -24,6 +23,5 @@
     <ClCompile Include="..\src\HttpService.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\HttpInterface.cpp" />
   </ItemGroup>
 </Project>

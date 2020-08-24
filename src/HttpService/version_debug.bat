@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" HttpService 32 lib debug same
