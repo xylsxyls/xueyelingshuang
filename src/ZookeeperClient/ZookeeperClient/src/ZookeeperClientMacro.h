@@ -1,12 +1,20 @@
 #pragma once
 
-#ifdef _ZookeeperClientAPI
-#define ZookeeperClientAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _ZookeeperClientAPI
+        #define ZookeeperClientAPI _declspec(dllimport)
+    #else
+        #define ZookeeperClientAPI _declspec(dllexport)
+    #endif
 #else
-#define ZookeeperClientAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define ZookeeperClientAPI __attribute__ ((visibility("default")))
+    #else
+        #define ZookeeperClientAPI
+    #endif
 #endif
 
 #if defined(STATIC_LIB)
-#undef ZookeeperClientAPI
-#define ZookeeperClientAPI 
+    #undef ZookeeperClientAPI
+    #define ZookeeperClientAPI 
 #endif
