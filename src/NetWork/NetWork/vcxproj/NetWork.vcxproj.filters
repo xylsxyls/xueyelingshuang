@@ -13,18 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Client">
-      <UniqueIdentifier>{37eacb2f-8406-480a-9b68-32bfb33723e8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Server">
-      <UniqueIdentifier>{cdf07516-62ad-485b-8ffd-32813c61e19a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Task">
-      <UniqueIdentifier>{a3e9c31f-91c1-488d-92cc-03919b83b429}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NetWorkHelper">
-      <UniqueIdentifier>{338841ad-31f4-4c7c-bb5f-0f49503f67af}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetWorkAPI.h">
@@ -33,37 +21,37 @@
     <ClInclude Include="..\src\NetWorkMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\HeartTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\NetClient.h">
-      <Filter>Client</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\NetServer.h">
-      <Filter>Server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\WorkTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\HeartTask.h">
-      <Filter>Task</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\NetWorkHelper.h">
-      <Filter>NetWorkHelper</Filter>
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WorkTask.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\HeartTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\NetClient.cpp">
-      <Filter>Client</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\NetServer.cpp">
-      <Filter>Server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\WorkTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\HeartTask.cpp">
-      <Filter>Task</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\NetWorkHelper.cpp">
-      <Filter>NetWorkHelper</Filter>
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\WorkTask.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
