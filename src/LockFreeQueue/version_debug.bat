@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" LockFreeQueue 32 dll debug same

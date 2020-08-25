@@ -12,6 +12,7 @@
 #include <shlobj.h>
 #include <queue>
 #include <iostream>
+#include <iterator>
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
 
