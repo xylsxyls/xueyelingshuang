@@ -40,7 +40,11 @@ TipLabelManager::TipLabelManager()
 
 TipLabelManager::~TipLabelManager()
 {
-	SafeDelete(m_tipLabel);
+	if (m_tipLabel != nullptr)
+	{
+		delete m_tipLabel;
+		m_tipLabel = nullptr;
+	}
 }
 
 void TipLabelManager::init()

@@ -1,1 +1,1 @@
-$CLOUD_REBUILD QtControls 32 dll release same
+"$CLOUD_REBUILD" QtControls 32 dll release same
