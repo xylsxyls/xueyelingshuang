@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _MxmlCppAPI
-#define MxmlCppAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _MxmlCppAPI
+        #define MxmlCppAPI _declspec(dllimport)
+    #else
+        #define MxmlCppAPI _declspec(dllexport)
+    #endif
 #else
-#define MxmlCppAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define MxmlCppAPI __attribute__ ((visibility("default")))
+    #else
+        #define MxmlCppAPI
+    #endif
 #endif
