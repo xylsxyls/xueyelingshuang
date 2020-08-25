@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" RapidJson 32 dll release same
