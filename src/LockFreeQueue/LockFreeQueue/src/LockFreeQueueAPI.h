@@ -4,10 +4,10 @@
 #endif
 #include "LockFreeQueue.h"
 
-#ifdef _WIN32
-#if defined _DEBUG
-#pragma comment(lib,"LockFreeQueued.lib")
-#else
-#pragma comment(lib,"LockFreeQueue.lib")
-#endif
-#endif
+//#ifdef _WIN32
+//#if defined _DEBUG
+//#pragma comment(lib,"LockFreeQueued.lib")
+//#else
+//#pragma comment(lib,"LockFreeQueue.lib")
+//#endif
+//#endif
