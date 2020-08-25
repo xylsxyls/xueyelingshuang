@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" Rect 32 dll debug same
