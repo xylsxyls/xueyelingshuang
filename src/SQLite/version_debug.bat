@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" SQLite 32 dll debug same
