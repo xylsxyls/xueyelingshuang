@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _SqlStringAPI
-#define SqlStringAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _SqlStringAPI
+        #define SqlStringAPI _declspec(dllimport)
+    #else
+        #define SqlStringAPI _declspec(dllexport)
+    #endif
 #else
-#define SqlStringAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define SqlStringAPI __attribute__ ((visibility("default")))
+    #else
+        #define SqlStringAPI
+    #endif
 #endif

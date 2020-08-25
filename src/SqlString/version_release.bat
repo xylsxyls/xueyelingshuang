@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" SqlString 32 dll release same
