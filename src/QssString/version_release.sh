@@ -1,1 +1,1 @@
-$CLOUD_REBUILD QssString 32 dll release same
+"$CLOUD_REBUILD" QssString 32 dll release same

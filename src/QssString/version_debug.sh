@@ -1,1 +1,1 @@
-$CLOUD_REBUILD QssString 32 dll debug same
+"$CLOUD_REBUILD" QssString 32 dll debug same
