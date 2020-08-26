@@ -10,6 +10,7 @@
     <ClInclude Include="..\src\ManagerBaseMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\SingletonBase.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -23,5 +24,9 @@
     <ClCompile Include="..\src\ManagerBase.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\ManagerBase.inl" />
+    <None Include="..\src\SingletonBase.inl" />
   </ItemGroup>
 </Project>

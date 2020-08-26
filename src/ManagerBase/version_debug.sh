@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" ManagerBase 32 dll debug same

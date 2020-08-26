@@ -29,6 +29,11 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\ManagerBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\src\ManagerBase.inl">
       <Filter>头文件</Filter>
     </None>
