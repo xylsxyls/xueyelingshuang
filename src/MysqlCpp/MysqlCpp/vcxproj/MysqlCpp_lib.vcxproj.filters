@@ -10,6 +10,9 @@
     <ClInclude Include="..\src\MysqlCppMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\MysqlCppPrepareStatement.h" />
+    <ClInclude Include="..\src\MysqlCppResultSet.h" />
+    <ClInclude Include="..\src\MysqlSqlString.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -23,5 +26,8 @@
     <ClCompile Include="..\src\MysqlCpp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\MysqlCppPrepareStatement.cpp" />
+    <ClCompile Include="..\src\MysqlCppResultSet.cpp" />
+    <ClCompile Include="..\src\MysqlSqlString.cpp" />
   </ItemGroup>
 </Project>
