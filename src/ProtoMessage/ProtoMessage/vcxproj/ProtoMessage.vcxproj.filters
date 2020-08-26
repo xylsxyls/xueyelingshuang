@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="ProtoFile">
-      <UniqueIdentifier>{7f8b9cc6-9375-4d26-b636-fce1964e6582}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ProtoMessage.h">
@@ -28,7 +25,7 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ProtoMessage.pb.h">
-      <Filter>ProtoFile</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -36,12 +33,7 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ProtoMessage.pb.cc">
-      <Filter>ProtoFile</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\src\ProtoMessage.proto">
-      <Filter>ProtoFile</Filter>
-    </None>
   </ItemGroup>
 </Project>
