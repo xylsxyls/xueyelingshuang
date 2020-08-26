@@ -27,15 +27,15 @@ SHELL_FOLDER=$(cd $(dirname $0); pwd)
 xueyelingshuang=$SHELL_FOLDER/../../..
 
 #该写法支持目录下含有子目录和空格
-httpserviceincludesrcpath="$xueyelingshuang/tools/zookeeper/include/"
-httpserviceincludedestpath="$xueyelingshuang/include/zookeeper/"
-if [ ! -d "$httpserviceincludedestpath" ]
+srcpath="$xueyelingshuang/tools/zookeeper/include/"
+destpath="$xueyelingshuang/include/zookeeper/"
+if [ ! -d "$destpath" ]
 then
-    mkdir -p "$httpserviceincludedestpath"
+    mkdir -p "$destpath"
 fi
-for file in $(ls "$httpserviceincludesrcpath")
+for file in $(ls "$srcpath")
 do
-    cp -rf "$httpserviceincludesrcpath$file" "$httpserviceincludedestpath"
+    cp -rf "$srcpath$file" "$destpath"
 done
 
 if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
