@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" ScreenScript 32 dll debug same
