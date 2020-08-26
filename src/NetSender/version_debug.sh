@@ -1,1 +1,1 @@
-"$CLOUD_REBUILD" NetSender 64 dll release same
+"$CLOUD_REBUILD" NetSender 32 dll debug same
