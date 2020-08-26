@@ -6,6 +6,7 @@
 #include "AssignTask.h"
 #include "ReadTask.h"
 #include "SendTask.h"
+#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 
 ProcessWork::ProcessWork():
 m_thisProcessPid(0),
@@ -22,7 +23,7 @@ m_copyThreadId(0),
 m_receiveThreadId(0),
 m_postThreadId(0)
 {
-	m_thisProcessPid = CSystem::processFirstPid();
+	m_thisProcessPid = CSystem::currentProcessPid();
 }
 
 ProcessWork& ProcessWork::instance()

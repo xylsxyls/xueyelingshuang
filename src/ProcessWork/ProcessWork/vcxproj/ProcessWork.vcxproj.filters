@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Task">
-      <UniqueIdentifier>{0c52e382-fda8-4403-88ad-cebd51cda4da}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ProcessWork.h">
@@ -27,43 +24,43 @@
     <ClInclude Include="..\src\ProcessWorkMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ReceiveTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\AssignTask.h">
-      <Filter>Task</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ReadTask.h">
-      <Filter>Task</Filter>
+    <ClInclude Include="..\src\CopyTask.h">
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ProcessReceiveCallback.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SendTask.h">
-      <Filter>Task</Filter>
+    <ClInclude Include="..\src\ReadTask.h">
+      <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\CopyTask.h">
-      <Filter>Task</Filter>
+    <ClInclude Include="..\src\ReceiveTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SendTask.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ProcessWork.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ReceiveTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ReadTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\AssignTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\SendTask.cpp">
-      <Filter>Task</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CopyTask.cpp">
-      <Filter>Task</Filter>
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ReadTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ReceiveTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SendTask.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

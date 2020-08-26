@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _ProcessWorkAPI
-#define ProcessWorkAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _ProcessWorkAPI
+        #define ProcessWorkAPI _declspec(dllimport)
+    #else
+        #define ProcessWorkAPI _declspec(dllexport)
+    #endif
 #else
-#define ProcessWorkAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define ProcessWorkAPI __attribute__ ((visibility("default")))
+    #else
+        #define ProcessWorkAPI
+    #endif
 #endif
