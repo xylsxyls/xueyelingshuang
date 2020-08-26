@@ -10,7 +10,7 @@ DllRelyTest_allSame=$4
 
 #--------------------------------------------------------------------
 BigNumberBase_bit=$1
-BigNumberBase_dlllib=$2
+BigNumberBase_dlllib=lib
 BigNumberBase_debugRelease=$3
 BigNumberBase_allSame=$4
 "$CLOUD_REBUILD" BigNumberBase $BigNumberBase_bit $BigNumberBase_dlllib $BigNumberBase_debugRelease $BigNumberBase_allSame
