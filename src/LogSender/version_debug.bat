@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" LogSender 32 dll debug same
