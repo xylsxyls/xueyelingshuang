@@ -1,12 +1,20 @@
 #pragma once
 
-#ifdef _CKeyboardAPI
-#define CKeyboardAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _CKeyboardAPI
+        #define CKeyboardAPI _declspec(dllimport)
+    #else
+        #define CKeyboardAPI _declspec(dllexport)
+    #endif
 #else
-#define CKeyboardAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define CKeyboardAPI __attribute__ ((visibility("default")))
+    #else
+        #define CKeyboardAPI
+    #endif
 #endif
 
 #if defined(STATIC_LIB)
-#undef CKeyboardAPI
-#define CKeyboardAPI 
+    #undef CKeyboardAPI
+    #define CKeyboardAPI 
 #endif
