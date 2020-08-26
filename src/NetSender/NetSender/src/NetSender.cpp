@@ -16,7 +16,7 @@ void NetSender::init(ProtoMessage& message, CorrespondParam::ProtocolId protocol
 {
 	if (!isServer)
 	{
-		message[CLIENT_PID] = CSystem::processFirstPid();
+		message[CLIENT_PID] = (int32_t)CSystem::currentProcessPid();
 	}
 	std::string strMessage = message.toString();
 	ProcessWork::instance().send(isServer ? "NetServerManager1.0" : "NetClientManager1.0",
@@ -29,7 +29,7 @@ void NetSender::send(ProtoMessage& message, bool isServer)
 {
 	if (!isServer)
 	{
-		message[CLIENT_PID] = CSystem::processFirstPid();
+		message[CLIENT_PID] = (int32_t)CSystem::currentProcessPid();
 	}
 	std::string strMessage = message.toString();
 	ProcessWork::instance().send(isServer ? "NetServerManager1.0" : "NetClientManager1.0",
@@ -62,7 +62,7 @@ void NetSender::post(ProtoMessage& message, bool isServer)
 {
 	if (!isServer)
 	{
-		message[CLIENT_PID] = CSystem::processFirstPid();
+		message[CLIENT_PID] = (int32_t)CSystem::currentProcessPid();
 	}
 	std::string strMessage = message.toString();
 	ProcessWork::instance().post(isServer ? "NetServerManager1.0" : "NetClientManager1.0",

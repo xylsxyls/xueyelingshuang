@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" NetSender 32 dll debug same
