@@ -13,33 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="indicator">
-      <UniqueIdentifier>{6574b332-8a77-432d-9e6a-e002fc697f9e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="indicator\wr">
-      <UniqueIdentifier>{b0282433-245a-489f-8157-8f8ed29211d9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="indicator\rsi">
-      <UniqueIdentifier>{706a96cb-7b0c-47e3-b964-254a5ce012d1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="indicator\avg">
-      <UniqueIdentifier>{fb807d5a-43ad-470c-a17e-a91675e1842b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base">
-      <UniqueIdentifier>{beb9bb07-0833-4951-a04f-3875150c24e7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="helper">
-      <UniqueIdentifier>{53cda853-4fff-4daf-915b-eacf2b3d32cc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="indicator\sar">
-      <UniqueIdentifier>{80c7b5f9-9b2e-4cca-866c-5968ec3e77de}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="indicator\boll">
-      <UniqueIdentifier>{9bfa533b-4b8c-4f19-a0b9-34267bd7c1aa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="task">
-      <UniqueIdentifier>{a8cac04b-84aa-47b7-b893-9704ad691161}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\StockIndicator.h">
@@ -51,100 +24,100 @@
     <ClInclude Include="..\src\StockIndicatorMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StockWr.h">
-      <Filter>indicator\wr</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockWrIndicator.h">
-      <Filter>indicator\wr</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockRsi.h">
-      <Filter>indicator\rsi</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockRsiIndicator.h">
-      <Filter>indicator\rsi</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockAvgIndicator.h">
-      <Filter>indicator\avg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockAvg.h">
-      <Filter>indicator\avg</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\IndicatorBase.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\IndicatorManagerBase.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockIndicatorHelper.h">
-      <Filter>helper</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockSar.h">
-      <Filter>indicator\sar</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockSarIndicator.h">
-      <Filter>indicator\sar</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockBollIndicator.h">
-      <Filter>indicator\boll</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockBoll.h">
-      <Filter>indicator\boll</Filter>
+    <ClInclude Include="..\src\AssignCalcTask.h">
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CalcDateBollTask.h">
-      <Filter>task</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CalcDateRsiTask.h">
-      <Filter>task</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CalcDateSarTask.h">
-      <Filter>task</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CalcDateWrTask.h">
-      <Filter>task</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AssignCalcTask.h">
-      <Filter>task</Filter>
+    <ClInclude Include="..\src\IndicatorBase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\IndicatorManagerBase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockAvg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockAvgIndicator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockBoll.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockBollIndicator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockIndicatorHelper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockRsi.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockRsiIndicator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockSar.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockSarIndicator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockWr.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockWrIndicator.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockIndicator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\StockWrIndicator.cpp">
-      <Filter>indicator\wr</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockRsiIndicator.cpp">
-      <Filter>indicator\rsi</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockAvgIndicator.cpp">
-      <Filter>indicator\avg</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockIndicatorHelper.cpp">
-      <Filter>helper</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockSarIndicator.cpp">
-      <Filter>indicator\sar</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockBollIndicator.cpp">
-      <Filter>indicator\boll</Filter>
+    <ClCompile Include="..\src\AssignCalcTask.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CalcDateBollTask.cpp">
-      <Filter>task</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CalcDateRsiTask.cpp">
-      <Filter>task</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CalcDateSarTask.cpp">
-      <Filter>task</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CalcDateWrTask.cpp">
-      <Filter>task</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\IndicatorManagerBase.cpp">
-      <Filter>base</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\AssignCalcTask.cpp">
-      <Filter>task</Filter>
+    <ClCompile Include="..\src\StockAvgIndicator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockBollIndicator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockIndicatorHelper.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockRsiIndicator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockSarIndicator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockWrIndicator.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

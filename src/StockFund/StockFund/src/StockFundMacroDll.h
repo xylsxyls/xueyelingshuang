@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _StockFundAPI
-#define StockFundAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _StockFundAPI
+        #define StockFundAPI _declspec(dllimport)
+    #else
+        #define StockFundAPI _declspec(dllexport)
+    #endif
 #else
-#define StockFundAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define StockFundAPI __attribute__ ((visibility("default")))
+    #else
+        #define StockFundAPI
+    #endif
 #endif

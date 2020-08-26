@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Strategy">
-      <UniqueIdentifier>{0c615c6f-c4ad-4bfb-a1c4-70739800bccd}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\StockStrategy.h">
@@ -27,8 +24,38 @@
     <ClInclude Include="..\src\StockStrategyMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\CatchUp.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CatchUpInfo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LineBack.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LineBackInfo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Reconstruction.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ReconstructionInfo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\SarRiseBack.h">
-      <Filter>Strategy</Filter>
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SarRiseBackCount.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SarRiseBackInfo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SarRiseBackThirtyLine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SarRiseBackThirtyLineInfo.h">
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Strategy.h">
       <Filter>头文件</Filter>
@@ -36,100 +63,70 @@
     <ClInclude Include="..\src\StrategyInfo.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SarRiseBackInfo.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SarRiseBackCount.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CatchUpInfo.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CatchUp.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SarRiseBackThirtyLine.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\LineBackInfo.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\LineBack.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SarRiseBackThirtyLineInfo.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\T0.h">
-      <Filter>Strategy</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\T0Info.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ReconstructionInfo.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Reconstruction.h">
-      <Filter>Strategy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UpwardInfo.h">
-      <Filter>Strategy</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Upward.h">
-      <Filter>Strategy</Filter>
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UpwardInfo.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\StockStrategy.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CatchUp.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CatchUpInfo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\LineBack.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\LineBackInfo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Reconstruction.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ReconstructionInfo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\SarRiseBack.cpp">
-      <Filter>Strategy</Filter>
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SarRiseBackCount.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SarRiseBackInfo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SarRiseBackThirtyLine.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SarRiseBackThirtyLineInfo.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Strategy.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SarRiseBackCount.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\CatchUp.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\SarRiseBackThirtyLine.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\LineBack.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\CatchUpInfo.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\LineBackInfo.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\SarRiseBackInfo.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\SarRiseBackThirtyLineInfo.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\T0.cpp">
-      <Filter>Strategy</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\T0Info.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\Reconstruction.cpp">
-      <Filter>Strategy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ReconstructionInfo.cpp">
-      <Filter>Strategy</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Upward.cpp">
-      <Filter>Strategy</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\UpwardInfo.cpp">
-      <Filter>Strategy</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

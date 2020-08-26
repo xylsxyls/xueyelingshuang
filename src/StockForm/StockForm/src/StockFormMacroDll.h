@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _StockFormAPI
-#define StockFormAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _StockFormAPI
+        #define StockFormAPI _declspec(dllimport)
+    #else
+        #define StockFormAPI _declspec(dllexport)
+    #endif
 #else
-#define StockFormAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define StockFormAPI __attribute__ ((visibility("default")))
+    #else
+        #define StockFormAPI
+    #endif
 #endif

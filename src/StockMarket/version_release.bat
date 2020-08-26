@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" StockMarket 32 dll release only

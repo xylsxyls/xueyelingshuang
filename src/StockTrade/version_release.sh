@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" StockTrade 32 dll release same

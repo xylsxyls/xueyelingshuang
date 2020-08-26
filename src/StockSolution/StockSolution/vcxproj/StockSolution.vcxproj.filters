@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Solution">
-      <UniqueIdentifier>{768d152a-8bfb-410c-b17c-3b3e1bc9c306}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\StockSolution.h">
@@ -27,29 +24,29 @@
     <ClInclude Include="..\src\StockSolutionMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Solution.h">
+    <ClInclude Include="..\src\AvgFundHighScore.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AvgFundHighScore.h">
-      <Filter>Solution</Filter>
+    <ClInclude Include="..\src\DisposableStrategy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\DisposableStrategyInfo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\IntegratedStrategy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ObserveStrategy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Solution.h">
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SolutionInfo.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\StrategySet.h">
-      <Filter>Solution</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\DisposableStrategyInfo.h">
-      <Filter>Solution</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\DisposableStrategy.h">
-      <Filter>Solution</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\IntegratedStrategy.h">
-      <Filter>Solution</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ObserveStrategy.h">
-      <Filter>Solution</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -57,25 +54,25 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\AvgFundHighScore.cpp">
-      <Filter>Solution</Filter>
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DisposableStrategy.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\IntegratedStrategy.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ObserveStrategy.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Solution.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\StrategySet.cpp">
-      <Filter>Solution</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\DisposableStrategy.cpp">
-      <Filter>Solution</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\IntegratedStrategy.cpp">
-      <Filter>Solution</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\SolutionInfo.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ObserveStrategy.cpp">
-      <Filter>Solution</Filter>
+    <ClCompile Include="..\src\StrategySet.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

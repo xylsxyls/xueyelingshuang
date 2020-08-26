@@ -1,5 +1,7 @@
 #pragma once
+#ifdef _WIN32
 #define _StockIndicatorAPI
+#endif
 #include "StockIndicator.h"
 #include "StockWrIndicator.h"
 #include "StockRsiIndicator.h"
@@ -12,8 +14,10 @@
 #include "StockBoll.h"
 #include "StockAvg.h"
 
-#ifdef _DEBUG
+#ifdef _WIN32
+#if defined _DEBUG
 #pragma comment(lib,"StockIndicatord.lib")
 #else
 #pragma comment(lib,"StockIndicator.lib")
+#endif
 #endif

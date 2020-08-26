@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" StockType 32 dll release only

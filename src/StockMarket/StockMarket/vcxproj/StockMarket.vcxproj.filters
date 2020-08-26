@@ -24,13 +24,13 @@
     <ClInclude Include="..\src\StockMarketMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\StockData.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\StockDay.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\StockMarketHelper.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockData.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

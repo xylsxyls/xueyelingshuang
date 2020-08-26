@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" StockRetest 32 dll release only

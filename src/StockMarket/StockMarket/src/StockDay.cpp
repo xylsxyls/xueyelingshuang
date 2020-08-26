@@ -120,7 +120,7 @@ BigNumber StockDay::getLimit() const
 	{
 		limit = "0.2";
 	}
-	else if ((CStringManager::Left(m_stock, 3) == "300") && (m_date > "2020-10-07"))
+	else if ((CStringManager::Left(m_stock, 3) == "300") && (m_date >= "2020-08-24"))
 	{
 		limit = "0.2";
 	}

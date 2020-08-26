@@ -3,6 +3,7 @@
 #define _HiRedisAPI
 #endif
 #include "HiRedis.h"
+#include "HiRedisResultSet.h"
 
 #ifdef _WIN32
 #if defined _DEBUG

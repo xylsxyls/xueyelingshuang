@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _StockMysqlAPI
-#define StockMysqlAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _StockMysqlAPI
+        #define StockMysqlAPI _declspec(dllimport)
+    #else
+        #define StockMysqlAPI _declspec(dllexport)
+    #endif
 #else
-#define StockMysqlAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define StockMysqlAPI __attribute__ ((visibility("default")))
+    #else
+        #define StockMysqlAPI
+    #endif
 #endif

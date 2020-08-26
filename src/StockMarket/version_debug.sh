@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" StockMarket 32 dll debug same

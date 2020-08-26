@@ -13,12 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Task">
-      <UniqueIdentifier>{d149c48c-e399-4a30-a42f-651636703e5f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Retest">
-      <UniqueIdentifier>{5b6497a2-0c0a-4e2f-8b31-f95887036dea}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\StockRetestAPI.h">
@@ -27,58 +21,58 @@
     <ClInclude Include="..\src\StockRetestMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StockEveryTestTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockEveryTestResultTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockEveryRetest.h">
-      <Filter>Retest</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockRealRetest.h">
-      <Filter>Retest</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockOnceRetest.h">
-      <Filter>Retest</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockRankRetest.h">
-      <Filter>Retest</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockDaysRetest.h">
-      <Filter>Retest</Filter>
+    <ClInclude Include="..\src\RetestParam.h">
+      <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\StockChanceRetest.h">
-      <Filter>Retest</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\RetestParam.h">
+    <ClInclude Include="..\src\StockDaysRetest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockEveryRetest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockEveryTestResultTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockEveryTestTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockOnceRetest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockRankRetest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockRealRetest.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\StockEveryTestResultTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockEveryTestTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockEveryRetest.cpp">
-      <Filter>Retest</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockRealRetest.cpp">
-      <Filter>Retest</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockOnceRetest.cpp">
-      <Filter>Retest</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockRankRetest.cpp">
-      <Filter>Retest</Filter>
+    <ClCompile Include="..\src\StockChanceRetest.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\StockDaysRetest.cpp">
-      <Filter>Retest</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\StockChanceRetest.cpp">
-      <Filter>Retest</Filter>
+    <ClCompile Include="..\src\StockEveryRetest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockEveryTestResultTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockEveryTestTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockOnceRetest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockRankRetest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockRealRetest.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -1,12 +1,20 @@
 #pragma once
 
-#ifdef _StockTypeAPI
-#define StockTypeAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _StockTypeAPI
+        #define StockTypeAPI _declspec(dllimport)
+    #else
+        #define StockTypeAPI _declspec(dllexport)
+    #endif
 #else
-#define StockTypeAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define StockTypeAPI __attribute__ ((visibility("default")))
+    #else
+        #define StockTypeAPI
+    #endif
 #endif
 
 #if defined(STATIC_LIB)
-#undef StockTypeAPI
-#define StockTypeAPI 
+    #undef StockTypeAPI
+    #define StockTypeAPI 
 #endif

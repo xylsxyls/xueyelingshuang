@@ -1,7 +1,15 @@
 #pragma once
 
-#ifdef _StockStorageAPI
-#define StockStorageAPI _declspec(dllimport)
+#ifdef _MSC_VER
+    #ifdef _StockStorageAPI
+        #define StockStorageAPI _declspec(dllimport)
+    #else
+        #define StockStorageAPI _declspec(dllexport)
+    #endif
 #else
-#define StockStorageAPI _declspec(dllexport)
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define StockStorageAPI __attribute__ ((visibility("default")))
+    #else
+        #define StockStorageAPI
+    #endif
 #endif

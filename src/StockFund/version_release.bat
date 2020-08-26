@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" StockFund 32 dll release only

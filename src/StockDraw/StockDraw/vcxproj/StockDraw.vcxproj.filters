@@ -23,30 +23,35 @@
       <Extensions>moc;h;cpp</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
-    <Filter Include="widget">
-      <UniqueIdentifier>{bc330d94-c736-4301-90fa-672f0d9d882b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Generated Files\Debug">
-      <UniqueIdentifier>{4b075fdf-1665-4553-a117-908976eba32b}</UniqueIdentifier>
+      <UniqueIdentifier>{5f1c2e69-3506-4d07-a497-6328aac6d34e}</UniqueIdentifier>
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
     <Filter Include="Generated Files\Release">
-      <UniqueIdentifier>{f30732ac-fd58-4cfa-9bd9-2bf927401f8d}</UniqueIdentifier>
+      <UniqueIdentifier>{7e24408b-3258-463d-b3f5-1d2898fff8fe}</UniqueIdentifier>
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="widget">
+      <UniqueIdentifier>{ae16ba7a-997f-49fd-bce3-9558ba04bdb6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\StockDraw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StockDrawWidget.cpp">
+    <ClInclude Include="..\src\StockDrawAPI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StockDrawMacro.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SolutionWidgetParam.h">
       <Filter>widget</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\SolutionWidget.cpp">
+    </ClInclude>
+    <ClInclude Include="..\src\StockDrawWidget.h">
       <Filter>widget</Filter>
-    </ClCompile>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="GeneratedFiles\Debug\moc_SolutionWidget.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -59,27 +64,22 @@
     <ClCompile Include="GeneratedFiles\Release\moc_StockDraw.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\StockDrawWidget.cpp">
+      <Filter>widget</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SolutionWidget.cpp">
+      <Filter>widget</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StockDraw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\StockDrawAPI.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockDrawMacro.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\StockDrawWidget.h">
-      <Filter>widget</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SolutionWidgetParam.h">
-      <Filter>widget</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\src\SolutionWidget.h">
-      <Filter>widget</Filter>
-    </CustomBuild>
     <CustomBuild Include="..\src\StockDraw.h">
       <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\src\SolutionWidget.h">
+      <Filter>widget</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

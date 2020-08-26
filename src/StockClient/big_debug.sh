@@ -1,0 +1,13 @@
+"$CLOUD_REBUILD" BigNumber 32 dll debug same
+"$CLOUD_REBUILD" StockMysql 32 dll debug only
+"$CLOUD_REBUILD" StockCharge 32 dll debug only
+"$CLOUD_REBUILD" StockMarket 32 dll debug only
+"$CLOUD_REBUILD" StockIndicator 32 dll debug only
+"$CLOUD_REBUILD" StockFund 32 dll debug only
+"$CLOUD_REBUILD" StockType 32 dll debug only
+"$CLOUD_REBUILD" StockStrategy 32 dll debug only
+"$CLOUD_REBUILD" StockDraw 32 dll debug only
+"$CLOUD_REBUILD" StockSolution 32 dll debug only
+"$CLOUD_REBUILD" StockStorage 32 dll debug only
+"$CLOUD_REBUILD" StockTrade 32 dll debug only
+"$CLOUD_REBUILD" StockRetest 32 dll debug only

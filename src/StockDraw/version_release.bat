@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" StockDraw 32 dll release only

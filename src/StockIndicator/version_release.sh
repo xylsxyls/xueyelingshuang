@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" StockIndicator 32 dll release same
