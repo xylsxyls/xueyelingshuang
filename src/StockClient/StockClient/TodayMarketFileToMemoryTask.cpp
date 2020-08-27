@@ -24,13 +24,17 @@ void TodayMarketFileToMemoryTask::DoTask()
 	m_stockClient->m_todayMarket.clear();
 
 	std::string allStockPath = CSystem::GetCurrentExePath() + "all_stock.txt";
-	CSystem::saveFile(CStringManager::Replace(CSystem::readFile(allStockPath).c_str(), "\r", "\n"), allStockPath);
+	CSystem::saveFile(CStringManager::Replace(CSystem::readFile(allStockPath).c_str(), "\r", "\r\n"), allStockPath);
 	Ctxt txt(allStockPath);
 	txt.LoadTxt(Ctxt::SPLIT, "\t");
 	int32_t index = 0;
-	while (index++ != txt.m_vectxt.size() - 2)
+	while (index++ != txt.m_vectxt.size() - 1)
 	{
 		std::vector<std::string>& vecLine = txt.m_vectxt[index];
+		if (vecLine.size() == 1)
+		{
+			continue;
+		}
 		m_stockClient->m_todayMarket.push_back(std::vector<std::string>());
 		std::string stock = vecLine[0];
 		stock = CStringManager::Mid(stock, 2, 6);
