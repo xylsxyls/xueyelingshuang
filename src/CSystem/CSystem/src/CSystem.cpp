@@ -1,5 +1,5 @@
 #include "CSystem.h"
-#if (_MSC_VER >= 1800)
+#if (_MSC_VER >= 1800 || __linux__)
 #include <thread>
 #endif
 #include <objbase.h>
@@ -16,113 +16,12 @@
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
 
-double CSystem::GetCPUSpeedGHz()
-{
-#ifdef _WIN64
-	return 0;
-#elif _WIN32
-	//?先是存放计时次数，后存放固定时间间隔值
-	unsigned long int       ticks;
-	//?存放两固定时刻的CPU内置时钟值，值的含意为计数
-	unsigned long int       stock0, stock1;
-	//?存放内置时钟值之差，好固定时段的计数值 
-	unsigned long int       cycles;
-	//?存放频率，为了提高精度，采用了相邻的测的5个频率的平均值
-	unsigned long int       freq[5] = { 0, 0, 0, 0, 0 };
-	//?循环次数
-	unsigned long int       nums = 0;
-	//?存放频率之和
-	unsigned long int       total = 0;
-	LARGE_INTEGER       t0, t1;
-	LARGE_INTEGER       countfreq;
-	//?返回高精度的计数频率，即每秒多少次;
-	if (!QueryPerformanceFrequency(&countfreq))
-	{
-		return 0.0f;
-	}
-	//?返回特定进程的优先级;
-	DWORD priority_class = GetPriorityClass(GetCurrentProcess());
-	//?返回特定线程的优先级;
-	int   thread_priority = GetThreadPriority(GetCurrentThread());
-	//?将当前进程设成实时进程;
-	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
-	//?设定线程优先级;
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-	do
-	{
-		nums++;
-		freq[4] = freq[3];
-		freq[3] = freq[2];
-		freq[2] = freq[1];
-		freq[1] = freq[0];
-		//?返回高精度计数的值;
-		QueryPerformanceCounter(&t0);
-		t1.LowPart = t0.LowPart;
-		t1.HighPart = t0.HighPart;
-		//?这句中的50和后面相同语句中的1000是一个经验值，起的作用是控制时间间隔，可以
-		//?调节这两个值来实现最佳时间间隔。
-		while ((unsigned long int)t1.LowPart - (unsigned long int)t0.LowPart < 10)
-		{
-			QueryPerformanceCounter(&t1);
-		}
-		_asm
-		{
-			//?启动读取CPU的内置时钟，其返回值是个64位的整数，高32到EDX，低32到EAX里
-			rdtsc
-				//?高位部份在短暂时间内是不会有变化的，故无需读出对比
-				mov stock0, EAX
-		}
-		//? 重置初始时刻
-		t0.LowPart = t1.LowPart;
-		t0.HighPart = t1.HighPart;
-		while ((unsigned long int)t1.LowPart - (unsigned long int)t0.LowPart < 1000)
-		{
-			QueryPerformanceCounter(&t1);
-		}
-		_asm
-		{
-			rdtsc
-				mov  stock1, EAX
-		}
-		cycles = stock1 - stock0;
-		ticks = (unsigned long int) t1.LowPart - (unsigned long int) t0.LowPart;
-		ticks = ticks * 1000000;
-		ticks = ticks / countfreq.LowPart;
-		if (ticks % countfreq.LowPart > countfreq.LowPart / 2)
-		{
-			//? 使数据收敛
-			ticks++;
-		}
-		//? 求出频率，单位：MHz
-		freq[0] = cycles / ticks;
-		if (cycles%ticks > ticks / 2)
-		{
-			//? 使数据收敛
-			freq[0]++;
-		}
-		total = (freq[0] + freq[1] + freq[2] + freq[3] + freq[4]);
-	} while ((nums < 5) || (nums < 100) && ((abs(5 * (long)freq[0] - (long)total) < 5)
-		|| (abs(5 * (long)freq[1] - (long)total) < 5) || (abs(5 * (long)freq[2] - (long)total) < 5)
-		|| (abs(5 * (long)freq[3] - (long)total) < 5) || (abs(5 * (long)freq[4] - (long)total) < 5)
-		));
-	//?条件循环，以确保循环不少于5次，在大于5次后确保达到一定的精度后退出
-	if (total / 5 != (total + 1) / 5)
-	{
-		//? 使数据收敛
-		total++;
-	}
-	//? 恢复进程及线程的优先级别;
-	SetPriorityClass(GetCurrentProcess(), priority_class);
-	SetThreadPriority(GetCurrentThread(), thread_priority);
-	return double(total) / 5.0 / 1000.0;
-#endif
-}
-
+#ifdef _WIN32
 RECT CSystem::GetTaskbarRect()
 {
-	HWND h = ::FindWindowA("Shell_TrayWnd","");
+	HWND h = ::FindWindowA("Shell_TrayWnd", "");
 	RECT r;
-	::GetWindowRect(h,&r);
+	::GetWindowRect(h, &r);
 	return r;
 }
 
@@ -173,16 +72,313 @@ POINT CSystem::screenCenterPoint()
 	return point;
 }
 
+void CSystem::setClipboardData(HWND hWnd, const std::string& str)
+{
+	//打开剪贴板
+	if (::OpenClipboard(hWnd))
+	{
+		HANDLE hClip;
+		char* pBuf;
+		//清空剪贴板
+		::EmptyClipboard();
+
+		//写入数据
+		hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
+		pBuf = (char*)::GlobalLock(hClip);
+		::strcpy(pBuf, str.c_str());
+		//解锁
+		::GlobalUnlock(hClip);
+		//设置格式
+		::SetClipboardData(CF_TEXT, hClip);
+
+		//关闭剪贴板
+		::CloseClipboard();
+	}
+}
+
+std::string CSystem::GetClipboardData(HWND hWnd)
+{
+	char* pBuf = nullptr;
+	//打开剪贴板
+	if (::OpenClipboard(hWnd))
+	{
+		//判断格式是否是我们所需要
+		if (::IsClipboardFormatAvailable(CF_TEXT))
+		{
+			HANDLE hClip;
+			//读取数据  
+			hClip = ::GetClipboardData(CF_TEXT);
+			pBuf = (char*)::GlobalLock(hClip);
+			::GlobalUnlock(hClip);
+			::CloseClipboard();
+		}
+	}
+	if (pBuf == nullptr)
+	{
+		return std::string();
+	}
+	return pBuf;
+}
+
+HWND CSystem::GetConsoleHwnd()
+{
+	const int32_t bufsize = 1024;
+	//This is what is returned to the caller.
+	HWND hwndFound;
+	// Contains fabricated
+	char pszNewWindowTitle[bufsize];
+	// WindowTitle.
+	// Contains original
+	char pszOldWindowTitle[bufsize];
+	// WindowTitle.
+	// Fetch current window title.
+	GetConsoleTitleA(pszOldWindowTitle, bufsize);
+	// Format a "unique" NewWindowTitle.
+	sprintf(pszNewWindowTitle, "%d/%d", GetTickCount(), GetCurrentProcessId());
+	// Change current window title.
+	SetConsoleTitleA(pszNewWindowTitle);
+	// Ensure window title has been updated.
+	Sleep(40);
+	// Look for NewWindowTitle.
+	hwndFound = FindWindowA(NULL, pszNewWindowTitle);
+	// Restore original window title.
+	SetConsoleTitleA(pszOldWindowTitle);
+	return(hwndFound);
+}
+
+typedef struct WNDINFO
+{
+	HWND  hWnd;
+	DWORD dwPid;
+}WNDINFO;
+
+BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
+{
+	WNDINFO* pInfo = (WNDINFO*)lParam;
+	DWORD dwProcessId = 0;
+	GetWindowThreadProcessId(hWnd, &dwProcessId);
+	if (dwProcessId == pInfo->dwPid)
+	{
+		pInfo->hWnd = hWnd;
+		return FALSE;
+	}
+	return TRUE;
+}
+
+HWND CSystem::GetHwndByProcessId(uint32_t dwProcessId)
+{
+	WNDINFO info = { 0 };
+	info.hWnd = NULL;
+	info.dwPid = dwProcessId;
+	EnumWindows(EnumWindowsProc, (LPARAM)&info);
+	return info.hWnd;
+}
+
+RECT CSystem::rectValid(const RECT& rect)
+{
+	RECT result = rect;
+	if (result.left < 0)
+	{
+		result.left = 0;
+	}
+	if (result.top < 0)
+	{
+		result.top = 0;
+	}
+	if (result.right < 0)
+	{
+		result.right = 0;
+	}
+	if (result.bottom < 0)
+	{
+		result.bottom = 0;
+	}
+	return result;
+}
+
+std::string CSystem::GetRegOcxPath(const std::string& classid)
+{
+	HKEY hKey;
+	RegOpenKeyEx(HKEY_CLASSES_ROOT, ("CLSID\\{" + classid + "}\\InprocServer32").c_str(), 0, KEY_READ, &hKey);
+	DWORD dwType = REG_SZ;
+	LPBYTE lpData = new BYTE[1024];
+	memset(lpData, 0, 1024);
+	DWORD cbData = 1024;
+	RegQueryValueEx(hKey, _T(""), NULL, &dwType, lpData, &cbData);
+	std::string temp;
+	temp = (char*)lpData;
+	std::string result = temp.substr(temp.find_last_of('\\') + 1);
+	delete[] lpData;
+	return result;
+}
+
+void* CSystem::ForbidRedir()
+{
+	if (GetSystemBits() != 64)
+	{
+		return nullptr;
+	}
+	void* oldValue = nullptr;
+	Wow64DisableWow64FsRedirection(&oldValue);
+	return oldValue;
+}
+
+void CSystem::RecoveryRedir(void* oldValue)
+{
+	if (GetSystemBits() != 64)
+	{
+		return;
+	}
+	Wow64RevertWow64FsRedirection(oldValue);
+}
+
 int CSystem::GetVisibleHeight()
 {
 	return GetSystemMetrics(SM_CYFULLSCREEN);
 }
 
+void CSystem::OpenFolder(const std::string& folder)
+{
+	ShellExecuteA(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
+}
+
+void CSystem::OpenFolderAndSelectFile(const std::string& file)
+{
+	ShellExecuteA(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
+}
+
+void CSystem::OpenFile(const std::string& file)
+{
+	ShellExecuteA(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
+}
+
+void CSystem::OpenWebPage(const std::string& webPage)
+{
+	ShellExecuteA(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
+}
+
+bool CSystem::isMouseLeftDown()
+{
+	return ((::GetAsyncKeyState(MOUSE_MOVED) & 0x8000) ? 1 : 0);
+}
+
+bool CSystem::isMouseRightDown()
+{
+	return ((::GetAsyncKeyState(MOUSE_EVENT) & 0x8000) ? 1 : 0);
+}
+
+bool CSystem::isMouseMidDown()
+{
+	return ((::GetAsyncKeyState(MOUSE_WHEELED) & 0x8000) ? 1 : 0);
+}
+#endif
+
+double CSystem::GetCPUSpeedGHz()
+{
+#ifdef _WIN64
+	return 0;
+#elif _WIN32
+	//先是存放计时次数，后存放固定时间间隔值
+	unsigned long int       ticks;
+	//存放两固定时刻的CPU内置时钟值，值的含意为计数
+	unsigned long int       stock0, stock1;
+	//存放内置时钟值之差，好固定时段的计数值 
+	unsigned long int       cycles;
+	//存放频率，为了提高精度，采用了相邻的测的5个频率的平均值
+	unsigned long int       freq[5] = { 0, 0, 0, 0, 0 };
+	//循环次数
+	unsigned long int       nums = 0;
+	//存放频率之和
+	unsigned long int       total = 0;
+	LARGE_INTEGER       t0, t1;
+	LARGE_INTEGER       countfreq;
+	//返回高精度的计数频率，即每秒多少次;
+	if (!QueryPerformanceFrequency(&countfreq))
+	{
+		return 0.0f;
+	}
+	//返回特定进程的优先级;
+	DWORD priority_class = GetPriorityClass(GetCurrentProcess());
+	//返回特定线程的优先级;
+	int   thread_priority = GetThreadPriority(GetCurrentThread());
+	//将当前进程设成实时进程;
+	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+	//设定线程优先级;
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+	do
+	{
+		nums++;
+		freq[4] = freq[3];
+		freq[3] = freq[2];
+		freq[2] = freq[1];
+		freq[1] = freq[0];
+		//返回高精度计数的值;
+		QueryPerformanceCounter(&t0);
+		t1.LowPart = t0.LowPart;
+		t1.HighPart = t0.HighPart;
+		//这句中的50和后面相同语句中的1000是一个经验值，起的作用是控制时间间隔，可以
+		//调节这两个值来实现最佳时间间隔。
+		while ((unsigned long int)t1.LowPart - (unsigned long int)t0.LowPart < 10)
+		{
+			QueryPerformanceCounter(&t1);
+		}
+		_asm
+		{
+			//启动读取CPU的内置时钟，其返回值是个64位的整数，高32到EDX，低32到EAX里
+			rdtsc
+				//高位部份在短暂时间内是不会有变化的，故无需读出对比
+				mov stock0, EAX
+		}
+		// 重置初始时刻
+		t0.LowPart = t1.LowPart;
+		t0.HighPart = t1.HighPart;
+		while ((unsigned long int)t1.LowPart - (unsigned long int)t0.LowPart < 1000)
+		{
+			QueryPerformanceCounter(&t1);
+		}
+		_asm
+		{
+			rdtsc
+				mov  stock1, EAX
+		}
+		cycles = stock1 - stock0;
+		ticks = (unsigned long int) t1.LowPart - (unsigned long int) t0.LowPart;
+		ticks = ticks * 1000000;
+		ticks = ticks / countfreq.LowPart;
+		if (ticks % countfreq.LowPart > countfreq.LowPart / 2)
+		{
+			// 使数据收敛
+			ticks++;
+		}
+		// 求出频率，单位：MHz
+		freq[0] = cycles / ticks;
+		if (cycles%ticks > ticks / 2)
+		{
+			// 使数据收敛
+			freq[0]++;
+		}
+		total = (freq[0] + freq[1] + freq[2] + freq[3] + freq[4]);
+	} while ((nums < 5) || (nums < 100) && ((abs(5 * (long)freq[0] - (long)total) < 5)
+		|| (abs(5 * (long)freq[1] - (long)total) < 5) || (abs(5 * (long)freq[2] - (long)total) < 5)
+		|| (abs(5 * (long)freq[3] - (long)total) < 5) || (abs(5 * (long)freq[4] - (long)total) < 5)
+		));
+	//条件循环，以确保循环不少于5次，在大于5次后确保达到一定的精度后退出
+	if (total / 5 != (total + 1) / 5)
+	{
+		// 使数据收敛
+		total++;
+	}
+	// 恢复进程及线程的优先级别;
+	SetPriorityClass(GetCurrentProcess(), priority_class);
+	SetThreadPriority(GetCurrentThread(), thread_priority);
+	return double(total) / 5.0 / 1000.0;
+#endif
+}
+
 void CSystem::Sleep(long long milliseconds)
 {
-#if (_MSC_VER >= 1800)
-	std::chrono::milliseconds dura(milliseconds);
-	std::this_thread::sleep_for(dura);
+#if (_MSC_VER >= 1800 || __linux__)
+	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 #endif
 }
 
@@ -190,9 +386,15 @@ std::string CSystem::uuid(int flag)
 {
 	char buffer[64] = { 0 };
 	GUID guid;
-	if (CoCreateGuid(&guid)) return "";
+	if (CoCreateGuid(&guid))
+	{
+		return "";
+	}
 	std::string strFormat = "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X";
-	if (flag == 0) strFormat = "%08X%04X%04X%02X%02X%02X%02X%02X%02X%02X%02X";
+	if (flag == 0)
+	{
+		strFormat = "%08X%04X%04X%02X%02X%02X%02X%02X%02X%02X%02X";
+	}
 	_snprintf(buffer, sizeof(buffer),
 		strFormat.c_str(),
 		guid.Data1, guid.Data2, guid.Data3,
@@ -202,39 +404,9 @@ std::string CSystem::uuid(int flag)
 	return buffer;
 }
 
-void CSystem::OpenFolder(const std::string& folder)
-{
-    CSystem::ForbidRedir();
-    ShellExecuteA(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
-    CSystem::RecoveryRedir();
-}
-
-void CSystem::OpenFolderAndSelectFile(const std::string& file)
-{
-    CSystem::ForbidRedir();
-    ShellExecuteA(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
-    CSystem::RecoveryRedir();
-}
-
-void CSystem::OpenFile(const std::string& file)
-{
-    CSystem::ForbidRedir();
-    ShellExecuteA(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
-    CSystem::RecoveryRedir();
-}
-
-void CSystem::OpenWebPage(const std::string& webPage)
-{
-    CSystem::ForbidRedir();
-    ShellExecuteA(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
-    CSystem::RecoveryRedir();
-}
-
 void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over)
 {
-    CSystem::ForbidRedir();
 	::CopyFileA(srcFile.c_str(), dstFile.c_str(), over == false);
-    CSystem::RecoveryRedir();
 }
 
 //安全的取得真实系统信息  
@@ -324,16 +496,21 @@ std::string CSystem::PasswordScanf()
 	char ch;
 	while ((ch = ::_getch()) != '\r')
 	{
-		if (ch != 8)//不是回撤就录入
+		//不是Backspace就录入
+		if (ch != 8)
 		{
 			password.push_back(ch);
-			putchar('*');//并且输出*号
+			//并且输出*号
+			putchar('*');
 		}
 		else
 		{
-			putchar('\b');//这里是删除一个，我们通过输出回撤符 /b，回撤一格，
-			putchar(' ');//再显示空格符把刚才的*给盖住，
-			putchar('\b');//然后再 回撤一格等待录入。
+			//这里是删除一个，我们通过输出回撤符 /b，回撤一格，
+			putchar('\b');
+			//再显示空格符把刚才的*给盖住，
+			putchar(' ');
+			//然后再 回撤一格等待录入。
+			putchar('\b');
 		}
 	}
 	return password;
@@ -550,34 +727,6 @@ std::wstring CSystem::processNameW(uint32_t pid)
 	return result;
 }
 
-typedef struct WNDINFO
-{
-	HWND  hWnd;
-	DWORD dwPid;
-}WNDINFO;
-
-BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
-{
-	WNDINFO* pInfo = (WNDINFO*)lParam;
-	DWORD dwProcessId = 0;
-	GetWindowThreadProcessId(hWnd, &dwProcessId);
-	if (dwProcessId == pInfo->dwPid)
-	{
-		pInfo->hWnd = hWnd;
-		return FALSE;
-	}
-	return TRUE;
-}
-
-HWND CSystem::GetHwndByProcessId(uint32_t dwProcessId)
-{
-	WNDINFO info = { 0 };
-	info.hWnd = NULL;
-	info.dwPid = dwProcessId;
-	EnumWindows(EnumWindowsProc, (LPARAM)&info);
-	return info.hWnd;
-}
-
 std::string CSystem::getComputerName()
 {
 	char computerName[256] = {};
@@ -608,22 +757,6 @@ std::string CSystem::GetSystemTempPath()
 		return "";
 	}
 	return std::string(szPath) + "\\";
-}
-
-std::string CSystem::GetRegOcxPath(const std::string& classid)
-{
-	HKEY hKey;
-	RegOpenKeyEx(HKEY_CLASSES_ROOT, ("CLSID\\{" + classid + "}\\InprocServer32").c_str(), 0, KEY_READ, &hKey);
-	DWORD dwType = REG_SZ;
-	LPBYTE lpData = new BYTE[1024];
-	memset(lpData, 0, 1024);
-	DWORD cbData = 1024;
-	RegQueryValueEx(hKey, _T(""), NULL, &dwType, lpData, &cbData);
-	std::string temp;
-	temp = (char*)lpData;
-	std::string result = temp.substr(temp.find_last_of('\\') + 1);
-	delete[] lpData;
-	return result;
 }
 
 std::string CSystem::GetName(const std::string& path, int32_t flag)
@@ -698,27 +831,6 @@ bool CSystem::fileExist(const std::string& filePath)
 	return ::_access(filePath.c_str(), 0) == 0;
 }
 
-bool CSystem::ifRedirFrobid = false;
-PVOID CSystem::oldValue = nullptr;
-
-void CSystem::ForbidRedir()
-{
-    if (ifRedirFrobid == false && GetSystemBits() == 64)
-    {
-        Wow64DisableWow64FsRedirection(&oldValue);
-        ifRedirFrobid = true;
-    }
-}
-
-void CSystem::RecoveryRedir()
-{
-    if (ifRedirFrobid == true && GetSystemBits() == 64)
-    {
-        Wow64RevertWow64FsRedirection(oldValue);
-        ifRedirFrobid = false;
-    }
-}
-
 std::string CSystem::GetSysUserName()
 {
     DWORD size = 1024;
@@ -732,54 +844,6 @@ int CSystem::GetCPUCount()
 	SYSTEM_INFO si;
 	::GetSystemInfo(&si);
 	return si.dwNumberOfProcessors;
-}
-
-void CSystem::setClipboardData(HWND hWnd, const std::string& str)
-{
-	//打开剪贴板
-	if (::OpenClipboard(hWnd))
-	{
-		HANDLE hClip;
-		char* pBuf;
-		//清空剪贴板
-		::EmptyClipboard();
-
-		//写入数据
-		hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
-		pBuf = (char*)::GlobalLock(hClip);
-		::strcpy(pBuf, str.c_str());
-		//解锁
-		::GlobalUnlock(hClip);
-		//设置格式
-		::SetClipboardData(CF_TEXT, hClip);
-
-		//关闭剪贴板
-		::CloseClipboard();
-	}
-}
-
-std::string CSystem::GetClipboardData(HWND hWnd)
-{
-	char* pBuf = nullptr;
-	//打开剪贴板
-	if (::OpenClipboard(hWnd))
-	{
-		//判断格式是否是我们所需要
-		if (::IsClipboardFormatAvailable(CF_TEXT))
-		{
-			HANDLE hClip;
-			//读取数据  
-			hClip = ::GetClipboardData(CF_TEXT);
-			pBuf = (char*)::GlobalLock(hClip);
-			::GlobalUnlock(hClip);
-			::CloseClipboard();
-		}
-	}
-	if (pBuf == nullptr)
-	{
-		return std::string();
-	}
-	return pBuf;
 }
 
 std::string CSystem::GetEnvironment(const char* name)
@@ -800,69 +864,6 @@ bool CSystem::DestroyDir(const std::string& dir)
 bool CSystem::DirOrFileAccess(const std::string& dir)
 {
 	return _access(dir.c_str(), 0) == 0;
-}
-
-HWND CSystem::GetConsoleHwnd()
-{
-	const int32_t bufsize = 1024;
-	//This is what is returned to the caller.
-	HWND hwndFound;
-	// Contains fabricated
-	char pszNewWindowTitle[bufsize];
-	// WindowTitle.
-	// Contains original
-	char pszOldWindowTitle[bufsize];
-	// WindowTitle.
-	// Fetch current window title.
-	GetConsoleTitleA(pszOldWindowTitle, bufsize);
-	// Format a "unique" NewWindowTitle.
-	sprintf(pszNewWindowTitle, "%d/%d", GetTickCount(), GetCurrentProcessId());
-	// Change current window title.
-	SetConsoleTitleA(pszNewWindowTitle);
-	// Ensure window title has been updated.
-	Sleep(40);
-	// Look for NewWindowTitle.
-	hwndFound = FindWindowA(NULL, pszNewWindowTitle);
-	// Restore original window title.
-	SetConsoleTitleA(pszOldWindowTitle);
-	return(hwndFound);
-}
-
-bool CSystem::isMouseLeftDown()
-{
-	return ((::GetAsyncKeyState(MOUSE_MOVED) & 0x8000) ? 1 : 0);
-}
-
-bool CSystem::isMouseRightDown()
-{
-	return ((::GetAsyncKeyState(MOUSE_EVENT) & 0x8000) ? 1 : 0);
-}
-
-bool CSystem::isMouseMidDown()
-{
-	return ((::GetAsyncKeyState(MOUSE_WHEELED) & 0x8000) ? 1 : 0);
-}
-
-RECT CSystem::rectValid(const RECT& rect)
-{
-	RECT result = rect;
-    if (result.left < 0)
-    {
-		result.left = 0;
-    }
-    if (result.top < 0)
-    {
-		result.top = 0;
-    }
-    if (result.right < 0)
-    {
-		result.right = 0;
-    }
-    if (result.bottom < 0)
-    {
-		result.bottom = 0;
-    }
-    return result;
 }
 
 std::string CSystem::timetToStr(time_t timet, bool isLocal)
@@ -924,52 +925,6 @@ std::string CSystem::commonFile(const std::string& name)
 		_findclose(hFile);
 	}
 	return path + name + strVersion;
-}
-
-std::string CSystem::UnicodeToAnsi(const std::wstring& wstrSrc)
-{
-	// 分配目标空间, 一个16位Unicode字符最多可以转为4个字节
-	int iAllocSize = static_cast<int>(wstrSrc.size() * 4 + 10);
-	char* pwszBuffer = new char[iAllocSize];
-	if (NULL == pwszBuffer)
-	{
-		return "";
-	}
-	int iCharsRet = ::WideCharToMultiByte(CP_ACP, 0, wstrSrc.c_str(),
-		static_cast<int>(wstrSrc.size()),
-		pwszBuffer, iAllocSize, NULL, NULL);
-	std::string strRet;
-	if (0 < iCharsRet)
-	{
-		strRet.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
-	}
-
-	delete[] pwszBuffer;
-
-	return strRet;
-}
-
-std::wstring CSystem::AnsiToUnicode(const std::string& strSrc)
-{
-	// 分配目标空间
-	int iAllocSize = static_cast<int>(strSrc.size() + 10);
-	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
-	if (NULL == pwszBuffer)
-	{
-		return L"";
-	}
-	int iCharsRet = MultiByteToWideChar(CP_ACP, 0, strSrc.c_str(),
-		static_cast<int>(strSrc.size()),
-		pwszBuffer, iAllocSize);
-	std::wstring wstrRet;
-	if (0 < iCharsRet)
-	{
-		wstrRet.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
-	}
-
-	delete[] pwszBuffer;
-
-	return wstrRet;
 }
 
 std::string CSystem::readFile(const std::string& path)
@@ -1103,7 +1058,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 //	int sss = CSystem::GetVisibleHeight();
 //	int screenwidth=GetSystemMetrics(SM_CXFULLSCREEN);
 //	int screenheight=GetSystemMetrics(SM_CYFULLSCREEN);
-//	//?以下两个函数获取的是真正屏幕的大小，即实际的大小
+//	//以下两个函数获取的是真正屏幕的大小，即实际的大小
 //	int screenwidth_real=GetSystemMetrics(SM_CXSCREEN);
 //	int screenheight_real=GetSystemMetrics(SM_CYSCREEN);
 //	CSystem::Sleep(1000);
