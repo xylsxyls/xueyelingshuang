@@ -35,6 +35,15 @@ void TodayMarketFileToMemoryTask::DoTask()
 		{
 			continue;
 		}
+		for (auto itIndex = vecLine.begin(); itIndex != vecLine.end();)
+		{
+			if (itIndex->empty())
+			{
+				itIndex = vecLine.erase(itIndex);
+				continue;
+			}
+			++itIndex;
+		}
 		m_stockClient->m_todayMarket.push_back(std::vector<std::string>());
 		std::string stock = vecLine[0];
 		stock = CStringManager::Mid(stock, 2, 6);
