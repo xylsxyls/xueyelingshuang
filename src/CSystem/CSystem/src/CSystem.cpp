@@ -2,14 +2,19 @@
 #if (_MSC_VER >= 1800 || __linux__)
 #include <thread>
 #endif
+#ifdef _WIN32
 #include <objbase.h>
 #include <direct.h>
 #include <io.h>
-#include <fstream>
 #include <conio.h>
 #include <tlhelp32.h>
 #include <tchar.h>
 #include <shlobj.h>
+#elif __linux__
+#include <unistd.h>
+#include <termios.h>
+#endif
+#include <fstream>
 #include <queue>
 #include <iostream>
 #include <iterator>
@@ -372,6 +377,8 @@ double CSystem::GetCPUSpeedGHz()
 	SetPriorityClass(GetCurrentProcess(), priority_class);
 	SetThreadPriority(GetCurrentThread(), thread_priority);
 	return double(total) / 5.0 / 1000.0;
+#elif __linux__
+	return 0;
 #endif
 }
 
@@ -384,6 +391,7 @@ void CSystem::Sleep(long long milliseconds)
 
 std::string CSystem::uuid(int flag)
 {
+#ifdef _WIN32
 	char buffer[64] = { 0 };
 	GUID guid;
 	if (CoCreateGuid(&guid))
@@ -402,13 +410,25 @@ std::string CSystem::uuid(int flag)
 		guid.Data4[3], guid.Data4[4], guid.Data4[5],
 		guid.Data4[6], guid.Data4[7]);
 	return buffer;
+#elif __linux__
+	return CSystem::readFile("/proc/sys/kernel/random/uuid");
+#endif
 }
 
 void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over)
 {
+#ifdef _WIN32
 	::CopyFileA(srcFile.c_str(), dstFile.c_str(), over == false);
+#elif __linux__
+	if(CSystem::fileExist(dstFile) && !over)
+	{
+		return;
+	}
+	system(("cp -f " + srcFile + " " + dstFile).c_str());
+#endif	
 }
 
+#ifdef _WIN32
 //安全的取得真实系统信息  
 VOID SafeGetNativeSystemInfo(__out LPSYSTEM_INFO lpSystemInfo)
 {
@@ -427,9 +447,11 @@ VOID SafeGetNativeSystemInfo(__out LPSYSTEM_INFO lpSystemInfo)
         GetSystemInfo(lpSystemInfo);
     }
 }
+#endif
 
 int CSystem::GetSystemBits()
 {
+#ifdef _WIN32
     SYSTEM_INFO si;
     SafeGetNativeSystemInfo(&si);
     if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 ||
@@ -438,6 +460,16 @@ int CSystem::GetSystemBits()
         return 64;
     }
     return 32;
+#elif __linux__
+	char c = 'a';
+	char* temp = &c;
+	int32_t ptrSize = sizeof(temp);
+	if (ptrSize == 8)
+	{
+		return 64;
+	}
+	return 32;
+#endif
 }
 
 void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path)
@@ -489,6 +521,21 @@ std::vector<std::string> CSystem::exeParam()
 	}
 	return result;
 }
+
+#ifdef __linux__
+int _getch()
+{
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr( STDIN_FILENO, &oldt );
+    newt = oldt;
+    newt.c_lflag &= ~( ICANON | ECHO );
+    tcsetattr( STDIN_FILENO, TCSANOW, &newt );
+    ch = getchar();
+    tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
+    return ch;
+}
+#endif
 
 std::string CSystem::PasswordScanf()
 {
