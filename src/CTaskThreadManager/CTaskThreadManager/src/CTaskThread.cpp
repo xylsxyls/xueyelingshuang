@@ -1,4 +1,5 @@
 #include "CTaskThread.h"
+#include <functional>
 #include "Semaphore/SemaphoreAPI.h"
 
 CTaskThread::CTaskThread(int32_t threadId) :
