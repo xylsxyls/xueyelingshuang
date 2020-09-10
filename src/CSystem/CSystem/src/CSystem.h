@@ -52,6 +52,14 @@ public:
 	static bool isMouseRightDown();
 	//判断当前鼠标中键是否按下
 	static bool isMouseMidDown();
+	//包含目录的拷贝，可以自动创建文件夹，同步函数
+	static bool ShellCopy(const char* from, const char* dest);
+	//获取第一个和名字匹配的进程pid
+	static uint32_t processFirstPid(const std::wstring& processNameW);
+	//获取进程PID，耗时10毫秒左右
+	static std::vector<uint32_t> processPid(const std::wstring& processNameW);
+	//获取进程名，耗时10毫秒左右
+	static std::wstring processNameW(uint32_t pid);
 #endif
 	//实测CPU主频
 	static double GetCPUSpeedGHz();
@@ -65,16 +73,14 @@ public:
 	static int GetSystemBits();
 	//获取当前系统用户名，类似Administrator
 	static std::string GetSysUserName();
-	//获得本机中处理器的数量
-	static int GetCPUCount();
 	//获取环境变量值
 	static std::string GetEnvironment(const char* name);
-	//创建目录
+	//创建目录，目录存在或者创建多级不存在的目录会返回false
 	static bool CreateDir(const std::string& dir);
-	//销毁目录
+	//销毁目录，只能删除空文件夹
 	static bool DestroyDir(const std::string& dir);
 	//检测目录或文件是否存在
-	static bool DirOrFileAccess(const std::string& dir);
+	static bool DirOrFileExist(const std::string& dir);
 	//创建动态的二维数组，返回空代表失败，不为空则全部成功创建
 	template <typename TypeClass>
 	static TypeClass** CreateDyadicArray(int32_t row, int32_t column);
@@ -87,32 +93,27 @@ public:
 	static void OutputVector(const std::vector<std::string>& stringVector, const std::string& path = "");
     //清空scanf缓存区
     static void ClearScanf();
-	//获取执行参数列表
-	static std::vector<std::string> exeParam();
+	//获取执行参数列表，windows下不会读取参数，linux下会读取，第一个是可执行文件的绝对路径
+	static std::vector<std::string> exeParam(int argc = 0, char** argv = nullptr);
 	//获取密码
 	static std::string PasswordScanf();
+	//获取系统命令执行结果
+	static int32_t SystemCommand(const std::string& command, std::string& result);
 	//获取线程ID号
 	static uint32_t SystemThreadId();
-	//获取CPU核数
+	//获取CPU线程数，双核四线程即获取到4，四核四线程获取到4，和设备管理器中CPU数量一致
+	//线程池数量如果是纯计算则直接使用线程数，如果含有数据库数据交互、文件上传下载、网络数据传输这些IO阻塞则乘以一个系数，一般是2
 	static int32_t GetCPUCoreCount();
-	//包含目录的拷贝，可以自动创建文件夹，同步函数
-	static bool ShellCopy(const char* from, const char* dest);
-	//获取操作系统版本号
+	//获取操作系统版本号，linux下为1604，1804...
 	static int32_t GetSystemVersionNum();
 	//获取本进程pid
 	static uint32_t currentProcessPid();
-	//获取第一个和名字匹配的进程pid
+	//获取第一个和名字匹配的进程pid，linux下为最后一个打开的该名字的进程
 	static uint32_t processFirstPid(const std::string& processName);
 	//获取进程PID，耗时10毫秒左右
 	static std::vector<uint32_t> processPid(const std::string& processName);
-	//获取第一个和名字匹配的进程pid
-	static uint32_t processFirstPid(const std::wstring& processNameW);
-	//获取进程PID，耗时10毫秒左右
-	static std::vector<uint32_t> processPid(const std::wstring& processNameW);
 	//获取进程名，耗时10毫秒左右
 	static std::string processName(uint32_t pid);
-	//获取进程名，耗时10毫秒左右
-	static std::wstring processNameW(uint32_t pid);
 	//获取电脑名
 	static std::string getComputerName();
 	//返回本进程所在路径，带\符号
@@ -129,12 +130,8 @@ public:
 	static std::string inputString(const std::string& tip);
 	//关闭进程
 	static void killProcess(int32_t pid);
-	//获取所有的命令行参数，第一个为文件路径
-	static std::vector<std::string> mainParam();
 	//重命名，传目录则重命名目录，传文件重命名文件，新文件或空目录若已存在则先删除，新目录不可以是老目录的子目录
 	static bool rename(const std::string& oldPath, const std::string& newPath);
-	//文件是否存在
-	static bool fileExist(const std::string& filePath);
 	//time_t转化为字符串时间，如果不是本地时间就是格林威治时间
 	static std::string timetToStr(time_t timet, bool isLocal = true);
 	//获取common中的文件名路径
@@ -147,12 +144,14 @@ public:
 	@param [in] strPath 必须传文件夹路径，寻找文件夹以下，如果传空字符串则查找exe所在路径，带不带\都可以
 	@param [in] flag 1表示查找文件，2表示查找文件后缀名，3表示查找所有文件，fileStr不起作用
 	@param [in] fileStr 传文件名带后缀名或后缀名不带点，不查找文件夹
+	@param [in] EveryFilePath 在每添加一个文件路径之前调用此函数
 	@param [in] unVisitPath 把当前文件夹下不可访问的文件夹列出来，传空代表不存储，所有文件夹路径带\符号
 	@return 返回所有查找到文件的绝对路径
 	*/
 	static std::vector<std::string> findFilePath(const std::string& strPath,
 		int32_t flag = 3,
 		const std::string& fileStr = "",
+		void (*EveryFilePath)(const std::string&) = nullptr,
 		std::vector<std::string>* unVisitPath = nullptr);
 };
 

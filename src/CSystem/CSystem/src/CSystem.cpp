@@ -10,16 +10,20 @@
 #include <tlhelp32.h>
 #include <tchar.h>
 #include <shlobj.h>
+#pragma comment(lib, "shell32.lib")
+#pragma warning(disable: 4200)
 #elif __linux__
 #include <unistd.h>
+#include <pwd.h>
 #include <termios.h>
+#include <sys/stat.h>
+#include <algorithm>
+#include <dirent.h>
 #endif
 #include <fstream>
 #include <queue>
 #include <iostream>
 #include <iterator>
-#pragma comment(lib, "shell32.lib")
-#pragma warning(disable: 4200)
 
 #ifdef _WIN32
 RECT CSystem::GetTaskbarRect()
@@ -276,6 +280,102 @@ bool CSystem::isMouseMidDown()
 {
 	return ((::GetAsyncKeyState(MOUSE_WHEELED) & 0x8000) ? 1 : 0);
 }
+
+bool CSystem::ShellCopy(const char* from, const char* dest)
+{
+	SHFILEOPSTRUCTA fileOp = { 0 };
+	fileOp.wFunc = FO_COPY;
+	char newFrom[MAX_PATH];
+	_tcscpy_s(newFrom, from);
+	newFrom[_tcsclen(from) + 1] = 0;
+	fileOp.pFrom = newFrom;
+	char newTo[MAX_PATH];
+	_tcscpy_s(newTo, dest);
+	newTo[_tcsclen(dest) + 1] = 0;
+	fileOp.pTo = newTo;
+	fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
+	return SHFileOperationA(&fileOp) == 0;
+}
+
+uint32_t CSystem::processFirstPid(const std::wstring& processNameW)
+{
+	if (processNameW.empty())
+	{
+		return 0;
+	}
+	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE)
+	{
+		return 0;
+	}
+	PROCESSENTRY32W pe = { sizeof(pe) };
+	for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
+	{
+		if (std::wstring(pe.szExeFile) == processNameW)
+		{
+			::CloseHandle(hSnapshot);
+			return pe.th32ProcessID;
+		}
+	}
+	::CloseHandle(hSnapshot);
+	return 0;
+}
+
+std::vector<uint32_t> CSystem::processPid(const std::wstring& processNameW)
+{
+	std::vector<uint32_t> result;
+	if (processNameW.empty())
+	{
+		return result;
+	}
+	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE)
+	{
+		return result;
+	}
+	PROCESSENTRY32W pe = { sizeof(pe) };
+	for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
+	{
+		if (std::wstring(pe.szExeFile) == processNameW)
+		{
+			result.push_back(pe.th32ProcessID);
+		}
+	}
+	::CloseHandle(hSnapshot);
+	return result;
+}
+
+std::wstring CSystem::processNameW(uint32_t pid)
+{
+	std::wstring result;
+	PROCESSENTRY32W pe32 = { 0 };
+	HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (snapshot != INVALID_HANDLE_VALUE)
+	{
+		pe32.dwSize = sizeof(PROCESSENTRY32W);
+		if (::Process32FirstW(snapshot, &pe32))
+		{
+			do{
+				if (pe32.th32ProcessID == pid)
+				{
+					result = pe32.szExeFile;
+					break;
+				}
+			} while (::Process32NextW(snapshot, &pe32));
+		}
+		::CloseHandle(snapshot);
+	}
+	return result;
+}
+#endif
+
+#ifdef __linux__
+static inline uint64_t get_cycle_count()
+{
+	unsigned int lo,hi;
+	__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+	return ((uint64_t)hi << 32) | lo;
+}
 #endif
 
 double CSystem::GetCPUSpeedGHz()
@@ -378,7 +478,11 @@ double CSystem::GetCPUSpeedGHz()
 	SetThreadPriority(GetCurrentThread(), thread_priority);
 	return double(total) / 5.0 / 1000.0;
 #elif __linux__
-	return 0;
+	int delayms = 700;
+	uint64_t oldTime = get_cycle_count();
+	usleep(delayms * 1000);
+	uint64_t newTime = get_cycle_count();
+	return ((newTime - oldTime) / (delayms * 1000)) / 1000.0;
 #endif
 }
 
@@ -420,7 +524,7 @@ void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFil
 #ifdef _WIN32
 	::CopyFileA(srcFile.c_str(), dstFile.c_str(), over == false);
 #elif __linux__
-	if(CSystem::fileExist(dstFile) && !over)
+	if(CSystem::DirOrFileExist(dstFile) && !over)
 	{
 		return;
 	}
@@ -461,10 +565,12 @@ int CSystem::GetSystemBits()
     }
     return 32;
 #elif __linux__
-	char c = 'a';
-	char* temp = &c;
-	int32_t ptrSize = sizeof(temp);
-	if (ptrSize == 8)
+	std::string result;
+	if (SystemCommand("uname -a", result) == -1 || result.empty())
+	{
+		return 0;
+	}
+	if (result.find("x86_64") >= 0)
 	{
 		return 64;
 	}
@@ -474,10 +580,10 @@ int CSystem::GetSystemBits()
 
 void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path)
 {
-	std::ofstream file(path.c_str(), std::ios::app);
+	std::ofstream file(path.c_str(), std::ios::binary | std::ios::app);
     for (auto itData = stringMap.begin(); itData != stringMap.end(); ++itData)
     {
-		if (path == "")
+		if (path.empty())
 		{
 			printf("[%s] = %s\n", itData->first.c_str(), itData->second.c_str());
 		}
@@ -490,10 +596,10 @@ void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, con
 
 void CSystem::OutputVector(const std::vector<std::string>& stringVector, const std::string& path)
 {
-	std::ofstream file(path.c_str(), std::ios::app);
+	std::ofstream file(path.c_str(), std::ios::binary | std::ios::app);
     for (auto itData = stringVector.begin(); itData != stringVector.end(); ++itData)
     {
-		if (path == "")
+		if (path.empty())
 		{
 			printf("%s\n", itData->c_str());
 		}
@@ -512,13 +618,20 @@ void CSystem::ClearScanf()
     scanf("%*c");
 }
 
-std::vector<std::string> CSystem::exeParam()
+std::vector<std::string> CSystem::exeParam(int argc, char** argv)
 {
 	std::vector<std::string> result;
+#ifdef _WIN32
 	for (int32_t index = 0; index < __argc; ++index)
 	{
 		result.push_back(__argv[index]);
 	}
+#elif __linux__
+for (int32_t index = 0; index < argc; ++index)
+	{
+		result.push_back(argv[index]);
+	}
+#endif
 	return result;
 }
 
@@ -563,40 +676,92 @@ std::string CSystem::PasswordScanf()
 	return password;
 }
 
+int32_t CSystem::SystemCommand(const std::string& command, std::string& result)
+{
+	if (command.size() == 0)
+	{
+		//command is empty
+		return -1;
+	}
+	char buffer[1024] = {};
+	std::string fresult;
+#ifdef _WIN32
+	FILE *pin = _popen(command.c_str(), "r");
+#elif __linux__
+	FILE *pin = popen(command.c_str(), "r");
+#endif
+	if (!pin)
+	{
+		//popen failed
+		return -1;
+	}
+	result.clear();
+	while (!feof(pin))
+	{
+		if (fgets(buffer, sizeof(buffer), pin) != nullptr)
+		{
+			fresult += buffer;
+		}
+	}
+	result = fresult;
+	//-1:pclose failed; else shell ret
+#ifdef _WIN32
+	return _pclose(pin);
+#elif __linux__
+	return pclose(pin);
+#endif
+}
+
 uint32_t CSystem::SystemThreadId()
 {
 #ifdef _WIN32
 	return ::GetCurrentThreadId();
-#else
-	return ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
+	//return ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
+#elif __linux__
+	std::thread::id threadId = std::this_thread::get_id();
+	return (uint32_t)(*(__gthread_t*)(char*)(&threadId));
 #endif
 }
 
 int32_t CSystem::GetCPUCoreCount()
 {
+#ifdef _WIN32
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 	return si.dwNumberOfProcessors;
+#elif __linux__
+	std::string result;
+	if (SystemCommand("grep 'processor' /proc/cpuinfo | sort -u | wc -l", result) == -1 || result.empty())
+	{
+		return 0;
+	}
+	result.pop_back();
+	return atoi(result.c_str());
+#endif
 }
 
-bool CSystem::ShellCopy(const char* from, const char* dest)
+#ifdef __linux__
+static void Split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
 {
-	SHFILEOPSTRUCTA fileOp = { 0 };
-	fileOp.wFunc = FO_COPY;
-	char newFrom[MAX_PATH];
-	_tcscpy_s(newFrom, from);
-	newFrom[_tcsclen(from) + 1] = 0;
-	fileOp.pFrom = newFrom;
-	char newTo[MAX_PATH];
-	_tcscpy_s(newTo, dest);
-	newTo[_tcsclen(dest) + 1] = 0;
-	fileOp.pTo = newTo;
-	fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
-	return SHFileOperationA(&fileOp) == 0;
+	result.clear();
+	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
+	size_t separate_characterLen = separate_character.length();
+	size_t lastPosition = 0;
+	int32_t index = -1;
+	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
+	{
+		result.push_back(splitString.substr(lastPosition, index - lastPosition));
+		lastPosition = index + separate_characterLen;
+	}
+	//?截取最后一个分隔符后的内容
+	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
+	result.push_back(splitString.substr(lastPosition));
 }
+#endif
 
 int32_t CSystem::GetSystemVersionNum()
 {
+#ifdef _WIN32
 	DWORD dwVersion = 0;
 	HMODULE hinstDLL = LoadLibraryExW(L"kernel32.dll", NULL, LOAD_LIBRARY_AS_DATAFILE);
 	if (hinstDLL != NULL)
@@ -625,15 +790,42 @@ int32_t CSystem::GetSystemVersionNum()
 		FreeLibrary(hinstDLL);
 	}
 	return dwVersion;
+#elif __linux__
+	std::string result;
+	if (SystemCommand("cat /etc/issue", result) == -1 || result.empty())
+	{
+		return 0;
+	}
+	result.pop_back();
+
+	std::vector<std::string> vec;
+	Split(vec, result, " ");
+	if(vec.size() < 2)
+	{
+		return 0;
+	}
+	std::vector<std::string> vecOs;
+	Split(vecOs, vec[1], ".");
+	if(vecOs.size() < 2)
+	{
+		return 0;
+	}
+	return atoi((vecOs[0] + vecOs[1]).c_str());
+#endif
 }
 
 uint32_t CSystem::currentProcessPid()
 {
+#ifdef _WIN32
 	return GetCurrentProcessId();
+#elif __linux__
+	return getpid();
+#endif
 }
 
 uint32_t CSystem::processFirstPid(const std::string& processName)
 {
+#ifdef _WIN32
 	if (processName.empty())
 	{
 		return 0;
@@ -653,35 +845,26 @@ uint32_t CSystem::processFirstPid(const std::string& processName)
 		}
 	}
 	::CloseHandle(hSnapshot);
-	return 0;
-}
-
-uint32_t CSystem::processFirstPid(const std::wstring& processNameW)
-{
-	if (processNameW.empty())
+#elif __linux__
+	std::string result;
+	if (SystemCommand("pidof " + processName, result) == -1 || result.empty())
 	{
 		return 0;
 	}
-	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (hSnapshot == INVALID_HANDLE_VALUE)
+	result.pop_back();
+	std::vector<std::string> vecPid;
+	Split(vecPid, result, " ");
+	if(vecPid.empty())
 	{
 		return 0;
 	}
-	PROCESSENTRY32W pe = { sizeof(pe) };
-	for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
-	{
-		if (std::wstring(pe.szExeFile) == processNameW)
-		{
-			::CloseHandle(hSnapshot);
-			return pe.th32ProcessID;
-		}
-	}
-	::CloseHandle(hSnapshot);
-	return 0;
+	return atoi(vecPid[0].c_str());
+#endif
 }
 
 std::vector<uint32_t> CSystem::processPid(const std::string& processName)
 {
+#ifdef _WIN32
 	std::vector<uint32_t> result;
 	if (processName.empty())
 	{
@@ -702,34 +885,32 @@ std::vector<uint32_t> CSystem::processPid(const std::string& processName)
 	}
 	::CloseHandle(hSnapshot);
 	return result;
-}
-
-std::vector<uint32_t> CSystem::processPid(const std::wstring& processNameW)
-{
-	std::vector<uint32_t> result;
-	if (processNameW.empty())
+#elif __linux__
+	std::vector<uint32_t> vecResult;
+	std::string result;
+	if (SystemCommand("pidof " + processName, result) == -1 || result.empty())
 	{
-		return result;
+		return vecResult;
 	}
-	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (hSnapshot == INVALID_HANDLE_VALUE)
+	result.pop_back();
+	std::vector<std::string> vecPid;
+	Split(vecPid, result, " ");
+	if(vecPid.empty())
 	{
-		return result;
+		return vecResult;
 	}
-	PROCESSENTRY32W pe = { sizeof(pe) };
-	for (BOOL ret = Process32FirstW(hSnapshot, &pe); ret; ret = ::Process32NextW(hSnapshot, &pe))
+	int32_t index = -1;
+	while (index++ != vecPid.size() - 1)
 	{
-		if (std::wstring(pe.szExeFile) == processNameW)
-		{
-			result.push_back(pe.th32ProcessID);
-		}
+		vecResult.push_back(atoi(vecPid[index].c_str()));
 	}
-	::CloseHandle(hSnapshot);
-	return result;
+	return vecResult;
+#endif
 }
 
 std::string CSystem::processName(uint32_t pid)
 {
+#ifdef _WIN32
 	std::string result;
 	PROCESSENTRY32 pe32 = { 0 };
 	HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -749,61 +930,62 @@ std::string CSystem::processName(uint32_t pid)
 		::CloseHandle(snapshot);
 	}
 	return result;
-}
-
-std::wstring CSystem::processNameW(uint32_t pid)
-{
-	std::wstring result;
-	PROCESSENTRY32W pe32 = { 0 };
-	HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (snapshot != INVALID_HANDLE_VALUE)
+#elif __linux__
+	std::string result;
+	if (SystemCommand("cat /proc/" + std::to_string(pid) + "/cmdline", result) == -1 || result.empty())
 	{
-		pe32.dwSize = sizeof(PROCESSENTRY32W);
-		if (::Process32FirstW(snapshot, &pe32))
-		{
-			do{
-				if (pe32.th32ProcessID == pid)
-				{
-					result = pe32.szExeFile;
-					break;
-				}
-			} while (::Process32NextW(snapshot, &pe32));
-		}
-		::CloseHandle(snapshot);
+		return "";
 	}
-	return result;
+	return CSystem::GetName(result, 3);
+#endif
 }
 
 std::string CSystem::getComputerName()
 {
 	char computerName[256] = {};
+#ifdef _WIN32
 	DWORD length = 256;
 	GetComputerNameA(computerName, &length);
+#elif __linux__
+	gethostname(computerName, 256);
+#endif
 	return computerName;
 }
 
 std::string CSystem::GetCurrentExePath()
 {
 	char szFilePath[1024] = {};
+#ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
+#elif __linux__
+	::readlink("/proc/self/exe", szFilePath, 1024);
+#endif
 	return CSystem::GetName(szFilePath, 4);
 }
 
 std::string CSystem::GetCurrentExeName()
 {
 	char szFilePath[1024] = {};
+#ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
+#elif __linux__
+	::readlink("/proc/self/exe", szFilePath, 1024);
+#endif
 	return CSystem::GetName(szFilePath, 3);
 }
 
 std::string CSystem::GetSystemTempPath()
 {
+#ifdef _WIN32
 	char szPath[MAX_PATH] = {};
 	if (::SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, szPath) < 0)
 	{
 		return "";
 	}
 	return std::string(szPath) + "\\";
+#elif __linux__
+	return "/tmp/";
+#endif
 }
 
 std::string CSystem::GetName(const std::string& path, int32_t flag)
@@ -853,19 +1035,13 @@ std::string CSystem::inputString(const std::string& tip)
 
 void CSystem::killProcess(int32_t pid)
 {
+#ifdef _WIN32
 	char command[256] = {};
 	::_snprintf(command, 256, "taskkill /f /pid %d", pid);
 	::WinExec(command, SW_HIDE);
-}
-
-std::vector<std::string> CSystem::mainParam()
-{
-	std::vector<std::string> result;
-	for (int32_t index = 0; index < __argc; ++index)
-	{
-		result.push_back(__argv[index]);
-	}
-	return result;
+#elif __linux__
+	system(("kill -9 " + std::to_string(pid)).c_str());
+#endif
 }
 
 bool CSystem::rename(const std::string& oldPath, const std::string& newPath)
@@ -873,24 +1049,20 @@ bool CSystem::rename(const std::string& oldPath, const std::string& newPath)
 	return ::rename(oldPath.c_str(), newPath.c_str()) == 0;
 }
 
-bool CSystem::fileExist(const std::string& filePath)
-{
-	return ::_access(filePath.c_str(), 0) == 0;
-}
-
 std::string CSystem::GetSysUserName()
 {
+#ifdef _WIN32
     DWORD size = 1024;
     char szName[1024] = {};
     ::GetUserNameA(szName, &size);
     return szName;
-}
-
-int CSystem::GetCPUCount()
-{
-	SYSTEM_INFO si;
-	::GetSystemInfo(&si);
-	return si.dwNumberOfProcessors;
+#elif __linux__
+	uid_t userid;
+    struct passwd* pwd;
+    userid = getuid();
+    pwd = getpwuid(userid);
+    return pwd->pw_name;
+#endif
 }
 
 std::string CSystem::GetEnvironment(const char* name)
@@ -900,17 +1072,29 @@ std::string CSystem::GetEnvironment(const char* name)
 
 bool CSystem::CreateDir(const std::string& dir)
 {
+#ifdef _WIN32
 	return _mkdir(dir.c_str()) == 0;
+#elif __linux__
+	return mkdir(dir.c_str() ,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0;
+#endif
 }
 
 bool CSystem::DestroyDir(const std::string& dir)
 {
+#ifdef _WIN32
 	return _rmdir(dir.c_str()) == 0;
+#elif __linux__
+	return rmdir(dir.c_str()) == 0;
+#endif
 }
 
-bool CSystem::DirOrFileAccess(const std::string& dir)
+bool CSystem::DirOrFileExist(const std::string& dir)
 {
+#ifdef _WIN32
 	return _access(dir.c_str(), 0) == 0;
+#elif __linux__
+	return access(dir.c_str(), 0) == 0;
+#endif
 }
 
 std::string CSystem::timetToStr(time_t timet, bool isLocal)
@@ -940,38 +1124,47 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
 
 std::string CSystem::commonFile(const std::string& name)
 {
-	double version = 0;
-	std::string strVersion;
-	std::string path = CSystem::GetEnvironment("xueyelingshuang") + "common\\" + name + "\\";
-	//文件句柄
-#ifdef _WIN64
-	intptr_t hFile = 0;
-#elif _WIN32
-	long hFile = 0;
+#ifdef _WIN32
+	std::string path = CSystem::GetEnvironment("XUEYELINGSHUANG") + "common\\";
+#elif __linux__
+	std::string path = CSystem::GetEnvironment("XUEYELINGSHUANG") + "common/";
 #endif
-	//文件信息  
-	struct _finddata_t fileinfo;
-	std::string p;
-	if ((hFile = _findfirst(p.assign(path).append("\\*").c_str(), &fileinfo)) != -1)
+	double version = 0;
+	std::string result;
+	std::vector<std::string> vecPath = CSystem::findFilePath(path, 3);
+	int32_t index = -1;
+	while (index++ != vecPath.size() - 1)
 	{
-		do
+		const std::string& filePath = vecPath[index];
+		std::string fileName = CSystem::GetName(filePath, 1);
+		std::string fileSuffix = CSystem::GetName(filePath, 2);
+#ifdef _WIN32
+		if(fileSuffix != "exe")
 		{
-			std::string fileName(fileinfo.name);
-			auto index = fileName.find_first_of(name);
-			if (index != -1)
+			continue;
+		}
+		fileName.pop_back();
+		fileName.pop_back();
+		fileName.pop_back();
+		fileName.pop_back();
+#elif __linux__
+		if (std::count(fileName.begin(), fileName.end(), '.') != 1)
+		{
+			continue;
+		}
+#endif
+		if (fileName.find(name) == 0)
+		{
+			std::string strVersion = fileName.substr(name.size(), fileName.size() - name.size());
+			double curVersion = atof(strVersion.c_str());
+			if (curVersion > version)
 			{
-				std::string strFileVersion = fileName.substr(name.length(), fileName.length() - name.length());
-				double fileVersion = atof(strFileVersion.c_str());
-				if (fileVersion > version)
-				{
-					version = fileVersion;
-					strVersion = strFileVersion;
-				}
+				version = curVersion;
+				result = filePath;
 			}
-		} while (_findnext(hFile, &fileinfo) == 0);
-		_findclose(hFile);
+		}
 	}
-	return path + name + strVersion;
+	return result;
 }
 
 std::string CSystem::readFile(const std::string& path)
@@ -993,6 +1186,7 @@ void CSystem::saveFile(const std::string& content, const std::string& path)
 std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	int32_t flag,
 	const std::string& fileStr,
+	void (*EveryFilePath)(const std::string&),
 	std::vector<std::string>* unVisitPath)
 {
 	std::string dir = strPath;
@@ -1000,11 +1194,18 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	{
 		dir = CSystem::GetCurrentExePath();
 	}
-	if (dir.back() != '\\')
+#ifdef _WIN32
+	char level = '\\';
+#elif __linux__
+	char level = '/';
+#endif
+	if (dir.back() != level)
 	{
-		dir.push_back('\\');
+		dir.push_back(level);
 	}
+#ifdef _WIN32
 	dir.push_back('*');
+#endif
 
 	if (unVisitPath != nullptr)
 	{
@@ -1012,7 +1213,11 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	}
 
 	std::vector<std::string> result;
+#ifdef _WIN32
 	_finddata_t fileDir;
+#elif __linux__
+	struct dirent *pDirent = nullptr;
+#endif
 
 	//用队列实现递归
 	std::queue<std::string> queue_dir;
@@ -1022,9 +1227,18 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	{
 		std::string curDir = queue_dir.front();
 		queue_dir.pop();
+#ifdef _WIN32
 		auto lfDir = _findfirst(curDir.c_str(), &fileDir);
+#elif __linux__
+		DIR* pDir = opendir(curDir.c_str());
+#endif
+
 		//如果是-1表示该文件夹不可访问
+#ifdef _WIN32
 		if (lfDir == -1)
+#elif __linux__
+		if (pDir == nullptr)
+#endif
 		{
 			if (unVisitPath != nullptr)
 			{
@@ -1033,11 +1247,23 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 			}
 			continue;
 		}
+#ifdef _WIN32
 		while (_findnext(lfDir, &fileDir) == 0)
+#elif __linux__
+		while ((pDirent = readdir(pDir)) != 0)
+#endif
 		{
+#ifdef _WIN32
 			std::string strName = fileDir.name;
+#elif __linux__
+			std::string strName = pDirent->d_name;
+#endif
 			//是目录，加入队列
+#ifdef _WIN32
 			if ((fileDir.attrib >= 16 && fileDir.attrib <= 23) || (fileDir.attrib >= 48 && fileDir.attrib <= 55))
+#elif __linux__
+			if (pDirent->d_type == DT_DIR)
+#endif
 			{
 				//去掉当前目录和上一级目录
 				if (strName == "." || strName == "..")
@@ -1046,14 +1272,22 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 				}
 				//减去最后一个*号
 				std::string tmpstr = curDir;
+#ifdef _WIN32
 				tmpstr.pop_back();
+#endif
 				tmpstr.append(strName);
 				//把当前目录放到队列中以便下一次遍历
-				queue_dir.emplace(tmpstr.append("\\*"));
+				tmpstr.push_back(level);
+#ifdef _WIN32
+				tmpstr.push_back('*');
+#endif
+				queue_dir.emplace(tmpstr);
 				continue;
 			}
 			std::string tmpfilename = curDir;
+#ifdef _WIN32
 			tmpfilename.pop_back();
+#endif
 			switch (flag)
 			{
 				//1表示找文件全名，带后缀名
@@ -1061,7 +1295,12 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 			{
 				if (strName == fileStr)
 				{
-					result.emplace_back(tmpfilename.append(strName));
+					tmpfilename.append(strName);
+					if (EveryFilePath != nullptr)
+					{
+						EveryFilePath(tmpfilename);
+					}
+					result.emplace_back(tmpfilename);
 				}
 			}
 			break;
@@ -1075,20 +1314,35 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 				std::transform(nameSuffix.begin(), nameSuffix.end(), std::back_inserter(lowerNameSuffix), ::tolower);
 				if (lowerFileStr == lowerNameSuffix)
 				{
-					result.emplace_back(tmpfilename.append(strName));
+					tmpfilename.append(strName);
+					if (EveryFilePath != nullptr)
+					{
+						EveryFilePath(tmpfilename);
+					}
+					result.emplace_back(tmpfilename);
 				}
 			}
 			break;
 			//3表示查找所有文件，不做过滤全部添加进来
 			case 3:
 			{
-				result.emplace_back(tmpfilename.append(strName));
+				tmpfilename.append(strName);
+				if (EveryFilePath != nullptr)
+				{
+					EveryFilePath(tmpfilename);
+				}
+				result.emplace_back(tmpfilename);
 			}
 			break;
 			default:
 				break;
 			}
 		}
+#ifdef _WIN32
+		_findclose(lfDir);
+#elif __linux__
+		closedir(pDir);
+#endif
 	}
 	return result;
 }
