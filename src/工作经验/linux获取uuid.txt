@@ -1,0 +1,4 @@
+随机uuid
+cat /proc/sys/kernel/random/uuid
+获取系统固定uuid
+sudo dmidecode -s system-uuid | tr 'A-Z' 'a-z'
