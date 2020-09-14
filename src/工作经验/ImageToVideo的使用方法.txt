@@ -1,0 +1,8 @@
+%XUEYELINGSHUANG%common\ImageToVideo\ImageToVideo1.0.exe D:\VID20200729112218.avi D:\image\image%d.jpg 100 512 30
+生成的视频路径
+图片路径格式
+开始的帧序号，包括该序号
+结束的帧序号，包括该序号
+帧率
+
+只支持转avi

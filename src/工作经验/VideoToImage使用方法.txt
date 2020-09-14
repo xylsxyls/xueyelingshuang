@@ -1,0 +1,4 @@
+%XUEYELINGSHUANG%common\VideoToImage\VideoToImage1.0.exe D:\VID20200729112216.mp4 D:\image\image%d.jpg 100
+生成视频路径
+图片路径格式
+开始的序号，包括该序号
