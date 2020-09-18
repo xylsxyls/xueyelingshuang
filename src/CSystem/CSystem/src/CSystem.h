@@ -97,8 +97,8 @@ public:
 	static std::vector<std::string> exeParam(int argc = 0, char** argv = nullptr);
 	//获取密码
 	static std::string PasswordScanf();
-	//获取系统命令执行结果
-	static int32_t SystemCommand(const std::string& command, std::string& result);
+	//获取系统命令执行结果，如果是false则只能执行一句，如果是true可以|findstr
+	static int32_t SystemCommand(const std::string& command, std::string& result, bool isShowCmd = false);
 	//获取线程ID号
 	static uint32_t SystemThreadId();
 	//获取CPU线程数，双核四线程即获取到4，四核四线程获取到4，和设备管理器中CPU数量一致
