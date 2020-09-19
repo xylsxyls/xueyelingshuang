@@ -1,0 +1,22 @@
+BUILD_SHARED_LIBS不打勾
+BUILD_opencv_world打勾
+BUILD_WITH_STATIC_CRT不打勾
+
+批生成中ALL_BUILD和INSTALL4项打勾
+包含vc12/staticlib中所有静态库
+IlmImfd.lib
+ippicvmt.lib
+libjasperd.lib
+libjpegd.lib
+libpngd.lib
+libtiffd.lib
+libwebpd.lib
+opencv_world320d.lib 
+zlibd.lib
+
+不同版本需要的库有差异
+使用工程中增加
+#pragma comment(lib, "vfw32")
+动态库拷贝
+opencv_ffmpeg320.dll
+opencv_ffmpeg320_64.dll
