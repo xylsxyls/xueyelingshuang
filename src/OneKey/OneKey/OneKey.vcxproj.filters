@@ -75,6 +75,12 @@
     <ClInclude Include="CDwqrTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="Cqrw3Task.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="Cqdrw3Task.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -123,6 +129,12 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CDwqrTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="Cqrw3Task.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="Cqdrw3Task.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

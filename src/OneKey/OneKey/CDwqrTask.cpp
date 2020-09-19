@@ -7,7 +7,7 @@ void CDwqrTask::DoTask()
 {
 	//Sleep(20);
 	CKeyboard::InputString("d", 0);
-	CKeyboard::InputString("wwwww", 20);
+	CKeyboard::InputString("wwwwwww", 20);
 	CKeyboard::KeyDown('N');
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('N');
