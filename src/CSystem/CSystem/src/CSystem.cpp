@@ -381,6 +381,7 @@ static inline uint64_t get_cycle_count()
 double CSystem::GetCPUSpeedGHz()
 {
 #ifdef _WIN64
+	//VC++默认只支持32位的内联汇编，若要支持64位，需要安装Intel C++ Compiler XE
 	return 0;
 #elif _WIN32
 	//先是存放计时次数，后存放固定时间间隔值
@@ -502,10 +503,10 @@ std::string CSystem::uuid(int flag)
 	{
 		return "";
 	}
-	std::string strFormat = "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X";
+	std::string strFormat = "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x";
 	if (flag == 0)
 	{
-		strFormat = "%08X%04X%04X%02X%02X%02X%02X%02X%02X%02X%02X";
+		strFormat = "%08x%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x";
 	}
 	_snprintf(buffer, sizeof(buffer),
 		strFormat.c_str(),
@@ -515,7 +516,25 @@ std::string CSystem::uuid(int flag)
 		guid.Data4[6], guid.Data4[7]);
 	return buffer;
 #elif __linux__
-	return CSystem::readFile("/proc/sys/kernel/random/uuid");
+	std::string result = CSystem::readFile("/proc/sys/kernel/random/uuid");
+	if(result.empty())
+	{
+		return "";
+	}
+	result.pop_back();
+	if (flag == 0)
+	{
+		for(auto it = result.begin();it != result.end();)
+		{
+			if(*it == '-')
+			{
+				it = result.erase(it);
+				continue;
+			}
+			++it;
+		}
+	}
+	return result;
 #endif
 }
 
@@ -652,12 +671,19 @@ int _getch()
 
 std::string CSystem::PasswordScanf()
 {
+#ifdef _WIN32
+	char returnCode = '\r';
+	char backspace = 8;
+#elif __linux__
+	char returnCode = '\n';
+	char backspace = 127;
+#endif
 	std::string password;
 	char ch;
-	while ((ch = ::_getch()) != '\r')
+	while ((ch = ::_getch()) != returnCode)
 	{
 		//不是Backspace就录入
-		if (ch != 8)
+		if (ch != backspace)
 		{
 			password.push_back(ch);
 			//并且输出*号
@@ -671,8 +697,13 @@ std::string CSystem::PasswordScanf()
 			putchar(' ');
 			//然后再 回撤一格等待录入。
 			putchar('\b');
+			if (!password.empty())
+			{
+				password.pop_back();
+			}
 		}
 	}
+	printf("\n");
 	return password;
 }
 

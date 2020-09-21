@@ -61,11 +61,11 @@ public:
 	//获取进程名，耗时10毫秒左右
 	static std::wstring processNameW(uint32_t pid);
 #endif
-	//实测CPU主频
+	//实测CPU主频，GHz位单位
 	static double GetCPUSpeedGHz();
 	//跨平台Sleep，毫秒
 	static void Sleep(long long milliseconds);
-	//生成UUID，传入1表示带-，传0表示不带
+	//生成UUID，传入1表示带-，传0表示不带，小写
 	static std::string uuid(int flag = 1);
 	//复制文件
 	static void CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over);
@@ -75,11 +75,11 @@ public:
 	static std::string GetSysUserName();
 	//获取环境变量值
 	static std::string GetEnvironment(const char* name);
-	//创建目录，目录存在或者创建多级不存在的目录会返回false
+	//创建目录，目录存在或者创建多级不存在的目录会返回false，带不带\都可以
 	static bool CreateDir(const std::string& dir);
-	//销毁目录，只能删除空文件夹
+	//销毁目录，只能删除空文件夹，带不带\都可以
 	static bool DestroyDir(const std::string& dir);
-	//检测目录或文件是否存在
+	//检测目录或文件是否存在，检测目录带不带\都可以，同一目录原本就不可能出现文件夹和文件重名的情况
 	static bool DirOrFileExist(const std::string& dir);
 	//创建动态的二维数组，返回空代表失败，不为空则全部成功创建
 	template <typename TypeClass>
@@ -110,7 +110,7 @@ public:
 	static uint32_t currentProcessPid();
 	//获取第一个和名字匹配的进程pid，linux下为最后一个打开的该名字的进程
 	static uint32_t processFirstPid(const std::string& processName);
-	//获取进程PID，耗时10毫秒左右
+	//获取进程PID，耗时10毫秒左右，linux下后打开的进程号在前面
 	static std::vector<uint32_t> processPid(const std::string& processName);
 	//获取进程名，耗时10毫秒左右
 	static std::string processName(uint32_t pid);
@@ -120,17 +120,18 @@ public:
 	static std::string GetCurrentExePath();
 	//返回进程名，没有后缀名
 	static std::string GetCurrentExeName();
-	//获取临时目录
+	//获取临时目录，带\符号
 	static std::string GetSystemTempPath();
 	//获取文件相关信息，flag1表示获取文件全名，flag2表示获取文件后缀名，flag3表示获取文件名，flag4表示获取前面的路径带\\符号
 	static std::string GetName(const std::string& path, int32_t flag);
-	//删除文件
+	//删除文件，windows下只能删除文件不能删除文件夹，linux下可以删除文件或空文件夹，带不带\都可以
 	static bool deleteFile(const char* path);
 	//控制台带提示输入
 	static std::string inputString(const std::string& tip);
 	//关闭进程
 	static void killProcess(int32_t pid);
-	//重命名，传目录则重命名目录，传文件重命名文件，新文件或空目录若已存在则先删除，新目录不可以是老目录的子目录
+	//重命名，传目录则重命名目录，传文件重命名文件，新文件或空目录若已存在则先删除，新目录不可以是老目录的子目录，新目录若不是空目录重命名不成功
+	//新目录可以是不存在的目录，但不可以多级不存在，老目录内部可以有文件和文件夹，新文件可以不存在，老目录或老文件在重命名成功后会被删除
 	static bool rename(const std::string& oldPath, const std::string& newPath);
 	//time_t转化为字符串时间，如果不是本地时间就是格林威治时间
 	static std::string timetToStr(time_t timet, bool isLocal = true);
