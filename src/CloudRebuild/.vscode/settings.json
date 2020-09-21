@@ -2,7 +2,7 @@
     "cmake.sourceDirectory": "${workspaceFolder}/CloudRebuild",
     "cmake.configureArgs": [
         "-DLIBRARIESRELY=",
-        "-DBIT=64",
+        "-DBIT=32",
         "-DDEBUGRELEASE=release"
     ]
 }

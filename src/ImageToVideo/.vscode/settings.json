@@ -2,7 +2,7 @@
     "cmake.sourceDirectory": "${workspaceFolder}/ImageToVideo/",
     "cmake.configureArgs": [
         "-DLIBRARIESRELY=",
-        "-DBIT=64",
+        "-DBIT=32",
         "-DDEBUGRELEASE=debug"
     ]
 }
