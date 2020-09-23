@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/FileReplace/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=libCTaskThreadManagerd.so;libCSystemd.so;libCStringManagerd.so;libCtxtd.so",
+        "-DBIT=32",
+        "-DDEBUGRELEASE=debug"
+    ]
+}

@@ -8,6 +8,7 @@
 #include "ReplaceNameTask.h"
 #include "ReplaceContentTask.h"
 
+#ifdef _WIN32
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
 	if (eve == CTRL_CLOSE_EVENT)
@@ -19,6 +20,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 }
 
 int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+#endif
 
 void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replaceParam)
 {
@@ -189,9 +191,9 @@ std::vector<std::shared_ptr<CTask>> AnalyzeParam(const ReplaceParam& replacePara
 	return vecTask;
 }
 
-int32_t main()
+int32_t main(int argc, char** argv)
 {
-	std::vector<std::string> vecMainParam = CSystem::mainParam();
+	std::vector<std::string> vecMainParam = CSystem::exeParam(argc, argv);
 	ReplaceParam replaceParam;
 
 	getParam(vecMainParam, replaceParam);
