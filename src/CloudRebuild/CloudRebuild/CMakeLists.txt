@@ -10,7 +10,7 @@ SET(CMAKE_BUILD_TYPE "Debug")
 elseif(${DEBUGRELEASE} STREQUAL "release")
 #设置项目名称
 SET(PROJECT_NAME CloudRebuild1.2)
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -static -O0")
 SET(CMAKE_BUILD_TYPE "Release")
 endif()
 
