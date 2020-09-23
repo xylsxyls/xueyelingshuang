@@ -589,7 +589,7 @@ int CSystem::GetSystemBits()
 	{
 		return 0;
 	}
-	if (result.find("x86_64") >= 0)
+	if (result.find("x86_64") != -1)
 	{
 		return 64;
 	}

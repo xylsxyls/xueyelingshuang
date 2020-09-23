@@ -10,7 +10,7 @@ std::string FileReadWriteMutex::s_tempDir = FileReadWriteMutex::tempDir();
 
 FileReadWriteMutex::FileReadWriteMutex(const std::string& fileName)
 {
-	if (fileName.find_first_of('/') >= 0 || fileName.find_first_of('\\') >= 0)
+	if (fileName.find_first_of('/') != -1 || fileName.find_first_of('\\') != -1)
 	{
 		m_fileName = fileName;
 	}
