@@ -168,7 +168,7 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			printf(("need " + relyDll + " or " + relyLib + "\n").c_str());
+			printf("%s\n", ("need " + relyDll + " or " + relyLib).c_str());
 			sleep(50);
 			continue;
 		}
