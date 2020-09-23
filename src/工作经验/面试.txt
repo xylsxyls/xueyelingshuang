@@ -20,3 +20,34 @@ int MyStrlen(char* pStr);
 void OutPutLog(string logPath,int MaxSize,string PrintStr,...);
 
 3.有两颗A药丸，两颗B药丸，AB两种药丸颜色形状味道完全一样，现在4颗药丸混在一起了，要求上午吃一颗A一颗B，下午吃一颗A一颗B，怎么做
+
+void removedahua(std::map<int, std::string> cameraMap)
+{
+	for (auto it = cameraMap.begin(); it != cameraMap.end(); ++it)
+	{
+		if (it->second.find("dahua") >= 0)
+		{
+			cameraMap.erase(it);
+		}
+	}
+}
+
+int main()
+{
+	//接入系统给每个摄像头分配的唯一ID，不同的摄像头名
+	std::map<int, std::string> cameraMap;
+	//初始化
+	{
+		cameraMap[10855063] = "RTSP_dahua101";
+		cameraMap[20630142] = "GB28181_dahua201";
+		cameraMap[10386479] = "GB28181_dahua202";
+		cameraMap[20412040] = "RTSP_keda101";
+		cameraMap[30101020] = "ONVIF_keda301";
+		cameraMap[10256703] = "RTMP_keda401";
+		//...
+	}
+	//移除大华摄像头
+	removedahua(cameraMap);
+	getchar();
+	return 0;
+}
