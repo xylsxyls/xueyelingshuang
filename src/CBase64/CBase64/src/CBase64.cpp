@@ -72,7 +72,7 @@ std::string CBase64::encode(const char* str, int32_t bytes, Base64Options option
 	//Q_ASSERT((options & OmitTrailingEquals) || (out == tmp.size() + tmp.data()));
 	if (options & OmitTrailingEquals)
 	{
-		tmp.substr(0, out - tmp.data());
+		tmp = tmp.substr(0, out - tmp.data());
 	}
 	return tmp;
 }
@@ -137,6 +137,5 @@ std::string CBase64::decode(const char* str, int32_t bytes, Base64Options option
 		}
 	}
 
-	tmp.substr(0, offset);
-	return tmp;
+	return tmp.substr(0, offset);
 }
