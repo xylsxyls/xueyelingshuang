@@ -1,0 +1,2 @@
+yum install glibc-static
+sudo apt-get install libc6-dev

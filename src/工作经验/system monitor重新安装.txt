@@ -1,0 +1,2 @@
+snap remove gnome-system-monitor
+snap install gnome-system-monitor
