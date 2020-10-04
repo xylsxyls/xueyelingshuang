@@ -348,6 +348,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					stopWatch.SetWatchTime(0);
 					std::shared_ptr<CqNoFlashTask> spTask;
 					spTask.reset(new CqNoFlashTask);
+					spTask->setParam(400);
 					taskThread->PostTask(spTask, 2);
 				}
 			}
@@ -384,11 +385,12 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask.reset(new CSmallFlashTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		else if (wDown && threeDown && w3StopWatch.GetWatchTime() > 5000 && stopWatch.GetWatchTime() > 3000)
+		else if (wDown && threeDown && w3StopWatch.GetWatchTime() > 3000 && stopWatch.GetWatchTime() > 3000)
 		{
 			w3StopWatch.SetWatchTime(0);
 			std::shared_ptr<CqNoFlashTask> spTask;
 			spTask.reset(new CqNoFlashTask);
+			spTask->setParam(290);
 			taskThread->PostTask(spTask, 2);
 		}
 		//else if (cDown && stopWatch.GetWatchTime() > 500)
