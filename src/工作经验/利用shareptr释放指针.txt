@@ -1,0 +1,6 @@
+std::shared_ptr<int> sp_eyestate_result(nullptr, [=](void *)
+	{
+		st_release_eyestate_result(eyestate_result, eyestate_result_num);
+	});
+[=]表示把附近的局部变量全部传进来，void*是shareptr构造时规定的传参，传入第一个参数，就是填nullptr的参数，int类型没有特别要求
+如果有多个这样的变量，在释放时会先释放后定义的
