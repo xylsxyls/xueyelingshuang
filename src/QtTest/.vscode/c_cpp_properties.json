@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/QtTest/",
+                "${workspaceFolder}/build/",
+                "${workspaceFolder}/../../include/",
+                "${QT5GCC64}/include/",
+                "${QT5GCC64}/include/QtCore/",
+                "${QT5GCC64}/include/QtGui/",
+                "${QT5GCC64}/include/QtGui/",
+                "${QT5GCC64}/include/QtWidgets/"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}

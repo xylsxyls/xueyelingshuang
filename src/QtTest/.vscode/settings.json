@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/QtTest/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=",
+        "-DBIT=64",
+        "-DDEBUGRELEASE=debug"
+    ]
+}
