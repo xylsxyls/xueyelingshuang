@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/DllProduce/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=libCStringManager.a;libCSystem.a;libCtxt.a",
+        "-DBIT=32",
+        "-DDEBUGRELEASE=release"
+    ]
+}
