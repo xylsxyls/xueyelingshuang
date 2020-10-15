@@ -1,4 +1,4 @@
-#����CMAKE��Ͱ汾
+﻿#设置CMAKE最低版本
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.1)
 SET(CMAKE_CXX_STANDARD 11)
 
@@ -6,13 +6,13 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
 if(${DEBUGRELEASE} STREQUAL "debug")
-#������Ŀ����
-SET(PROJECT_NAME EO_XmlSax2Parserd)
+#设置项目名称
+SET(PROJECT_NAME ConfigManagerd)
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
 SET(CMAKE_BUILD_TYPE "Debug")
 elseif(${DEBUGRELEASE} STREQUAL "release")
-#������Ŀ����
-SET(PROJECT_NAME EO_XmlSax2Parser)
+#设置项目名称
+SET(PROJECT_NAME ConfigManager)
 SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
 SET(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -28,31 +28,31 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 SET(QT5_GCC "$ENV{QT5GCC64}")
 endif()
 
-#������Ŀ
+#建立项目
 PROJECT(${PROJECT_NAME})
 
 #MESSAGE("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
-#${PROJECT_SOURCE_DIR}="xueyelingshuang/src/EO_XmlSax2Parser/script"
+#${PROJECT_SOURCE_DIR}="xueyelingshuang/src/ConfigManager/script"
 #SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/../../../lib/)
 
-#���Ӱ���Ŀ¼
+#添加包含目录
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../include/)
 
-#���ӿ�Ŀ¼
+#添加库目录
 LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../../lib/)
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON) 
 
-#����QT��
+#添加QT库
 SET(CMAKE_AUTOMOC ON)
 
 SET(Qt5_DIR "${QT5_GCC}/lib/cmake/Qt5")
 
 INCLUDE_DIRECTORIES("${QT5_GCC}/include/")
 
-#����Qt������
-SET(QTRELY Widgets;Core;Gui;Xml)
+#添加Qt依赖库
+SET(QTRELY Widgets;Core;Gui)
 
 list(APPEND QTRELYLIST ${QTRELY})
 foreach (EVERYQTRELY ${QTRELYLIST})
@@ -61,23 +61,23 @@ FIND_PACKAGE(Qt5${EVERYQTRELY})
 INCLUDE_DIRECTORIES("${QT5_GCC}/include/Qt${EVERYQTRELY}/")
 endforeach ()
 
-#���ҵ�ǰ�ļ����е�����Դ�����ļ���Ҳ����ͨ��Set��������ļ�����Ϊһ������
-AUX_SOURCE_DIRECTORY("${PROJECT_SOURCE_DIR}/../EO_XmlSax2Parser/src/" DIR_SRCS)
-#���ҵ�ǰ�ļ��������е�ui�ļ�
-FILE(GLOB UI_FILES "${PROJECT_SOURCE_DIR}/../EO_XmlSax2Parser/src/*.ui") 
-#ת��UI�ļ�
+#查找当前文件夹中的所有源代码文件，也可以通过Set命令将所有文件设置为一个变量
+AUX_SOURCE_DIRECTORY("${PROJECT_SOURCE_DIR}/../ConfigManager/src/" DIR_SRCS)
+#查找当前文件夹中所有的ui文件
+FILE(GLOB UI_FILES "${PROJECT_SOURCE_DIR}/../ConfigManager/src/*.ui") 
+#转换UI文件
 QT5_WRAP_UI(WRAP_FILES ${UI_FILES})
-#����qrc
-#SET(RCC_FILES "${PROJECT_SOURCE_DIR}/../EO_XmlSax2Parser/src/EO_XmlSax2Parser.qrc")
+#设置qrc
+#SET(RCC_FILES "${PROJECT_SOURCE_DIR}/../ConfigManager/src/ConfigManager.qrc")
 
-#�����ִ�г���
+#编译可执行程序
 #ADD_EXECUTABLE(${PROJECT_NAME} ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES})
 
 if(${DLLLIB} STREQUAL "dll")
-#���Ҫ���ɶ�̬���ӿ�
+#如果要生成动态链接库
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES})
 elseif(${DLLLIB} STREQUAL "lib")
-#���Ҫ���ɾ�̬���ӿ�
+#如果要生成静态链接库
 ADD_LIBRARY(${PROJECT_NAME} STATIC ${DIR_SRCS} ${RCC_FILES} ${WRAP_FILES})
 endif()
 
@@ -85,7 +85,7 @@ foreach (EVERYQTRELY ${QTRELYLIST})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} "${QT5_GCC}/lib/libQt5${EVERYQTRELY}.so")
 endforeach ()
 
-#���ӿ�
+#添加库
 list(APPEND LIBRARYLIST ${LIBRARIESRELY})
 foreach (EVERYLIBRARY ${LIBRARYLIST})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})

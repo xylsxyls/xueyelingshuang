@@ -59,4 +59,11 @@ bool ProcessReadWriteMutex::trywrite()
 {
 	return (::WaitForSingleObject(m_hLock, 0) == WAIT_OBJECT_0) ? 1 : 0;
 }
+
+#elif __linux__
+ProcessReadWriteMutex::ProcessReadWriteMutex(const std::string& name):
+FileReadWriteMutex(name)
+{
+
+}
 #endif

@@ -184,7 +184,7 @@ int main(int argc, char** argv)
 	char oldWorkPath[1024] = {};
 	getcwd(oldWorkPath, 1024);
 	chdir(buildPath.c_str());
-	system(("cmake" + SPACE + "-DBIT=" + bit + SPACE + "-DDLLLIB=" + dlllib + SPACE + "-DDEBUGRELEASE=" + debugRelease + SPACE + "-DLIBRARIESRELY=" + librariesRely + SPACE + MARK(cmakelistsPath)).c_str());
+	system(("cmake" + SPACE + "-DBIT=" + bit + SPACE + "-DDLLLIB=" + dlllib + SPACE + "-DDEBUGRELEASE=" + debugRelease + SPACE + "-DLIBRARIESRELY=" + MARK(librariesRely) + SPACE + MARK(cmakelistsPath)).c_str());
 	system(("make" + SPACE + "-j").c_str());
 	chdir(oldWorkPath);
 #endif

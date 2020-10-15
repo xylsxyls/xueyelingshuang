@@ -2,7 +2,9 @@
 #include "ReadWriteMutexBase.h"
 #include <string>
 
+#ifdef _MSC_VER
 typedef void* HANDLE;
+#endif
 
 class ReadWriteMutexAPI FileReadWriteMutex : public ReadWriteMutexBase
 {

@@ -4,7 +4,6 @@
 #include "SQLiteResultSet.h"
 #include <QStringList>
 #include "CStringManager/CStringManagerAPI.h"
-#include "CCharset/CCharsetAPI.h"
 #include <QSqlError>
 
 SQLite::SQLite(const std::string& dbFilePath) :
@@ -134,7 +133,7 @@ void SQLite::init(const std::string& dbFilePath)
 		return;
 	}
 	//Êý¾Ý¿âÃû
-	m_db->setDatabaseName(QString::fromStdWString(CCharset::AnsiToUnicode(dbFilePath)));
+	m_db->setDatabaseName(QString::fromStdWString(CStringManager::AnsiToUnicode(dbFilePath)));
 }
 
 void SQLite::free()

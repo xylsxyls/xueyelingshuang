@@ -1,7 +1,7 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/scripts/",
     "cmake.configureArgs": [
-        "-DLIBRARIESRELY=",
+        "-DLIBRARIESRELY=libCSystemd.so;libSQLited.so;libReadWriteMutexd.so",
         "-DBIT=32",
         "-DDLLLIB=dll",
         "-DDEBUGRELEASE=debug"

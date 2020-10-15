@@ -27,8 +27,11 @@ private:
 	HANDLE m_hLock;
 };
 #elif __linux__
+
 class ReadWriteMutexAPI ProcessReadWriteMutex : public FileReadWriteMutex
 {
-
+public:
+	ProcessReadWriteMutex(const std::string& name);
 };
+
 #endif
