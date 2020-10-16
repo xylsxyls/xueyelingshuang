@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" WidgetFactory 32 dll release same

@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" WidgetFactory 32 dll debug same
