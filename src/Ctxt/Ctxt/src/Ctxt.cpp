@@ -213,6 +213,12 @@ void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
 	do 
 	{
 		getline(myfile, strLine);
+#ifdef __linux__
+		if((!(strLine.empty())) && (strLine.back() == '\r'))
+		{
+			strLine.pop_back();
+		}
+#endif
 		vecLine.clear();
 		//分出得到第一对截取点，第0个和第2个就是首和尾
 		pointToPointIndex = -1;
@@ -236,6 +242,12 @@ void Ctxt::LoadTxtWithSplit(const std::string& strSplit)
 	do 
 	{
 		getline(myfile, strLine);
+#ifdef __linux__
+		if((!(strLine.empty())) && (strLine.back() == '\r'))
+		{
+			strLine.pop_back();
+		}
+#endif
 		Split(vecLine, strLine, strSplit);
 		m_vectxt.push_back(vecLine);
 	} while (!myfile.eof());
@@ -251,6 +263,12 @@ void Ctxt::LoadTxtWithOneLine()
 	do 
 	{
 		getline(myfile, strLine);
+#ifdef __linux__
+		if((!(strLine.empty())) && (strLine.back() == '\r'))
+		{
+			strLine.pop_back();
+		}
+#endif
 		vecLine.clear();
 		vecLine.push_back(strLine);
 		m_vectxt.push_back(vecLine);

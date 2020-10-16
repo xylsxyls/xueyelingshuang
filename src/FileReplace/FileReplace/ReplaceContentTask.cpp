@@ -1,6 +1,7 @@
 #include "ReplaceContentTask.h"
 #include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 ReplaceContentTask::ReplaceContentTask()
 {
@@ -9,6 +10,20 @@ ReplaceContentTask::ReplaceContentTask()
 
 void ReplaceContentTask::DoTask()
 {
+	if (m_replaceContentParam.m_replaceCommand == ENTER)
+	{
+		std::string fileContent = CSystem::readFile(m_replaceContentParam.m_filePath);
+		if (m_replaceContentParam.m_enter == 1)
+		{
+			CStringManager::Replace(fileContent, "\n", "\r\n");
+		}
+		else if (m_replaceContentParam.m_enter == 0)
+		{
+			CStringManager::Replace(fileContent, "\r\n", "\n");
+		}
+		CSystem::saveFile(fileContent, m_replaceContentParam.m_filePath);
+		return;
+	}
 	Ctxt file(m_replaceContentParam.m_filePath);
 	file.LoadTxt(Ctxt::ONE_LINE);
 	if (m_replaceContentParam.m_beginLine == 0)

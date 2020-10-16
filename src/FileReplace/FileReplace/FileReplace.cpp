@@ -24,6 +24,11 @@ int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replaceParam)
 {
+#ifdef _MSC_VER
+	char pathLevel = '\\';
+#elif __linux__
+	char pathLevel = '/';
+#endif
 	std::vector<std::string> vecParam = vecMainParam;
 	vecParam.erase(vecParam.begin());
 
@@ -38,9 +43,9 @@ void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replac
 	{
 		replaceParam.m_replaceType = REPLACE_DIR;
 		replaceParam.m_folder = vecParam[1];
-		if (replaceParam.m_folder.back() != '\\')
+		if (replaceParam.m_folder.back() != pathLevel)
 		{
-			replaceParam.m_folder.push_back('\\');
+			replaceParam.m_folder.push_back(pathLevel);
 		}
 		vecParam.erase(vecParam.begin());
 		vecParam.erase(vecParam.begin());
@@ -49,9 +54,9 @@ void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replac
 	{
 		replaceParam.m_replaceType = REPLACE_FILES;
 		replaceParam.m_folder = vecParam[1];
-		if (replaceParam.m_folder.back() != '\\')
+		if (replaceParam.m_folder.back() != pathLevel)
 		{
-			replaceParam.m_folder.push_back('\\');
+			replaceParam.m_folder.push_back(pathLevel);
 		}
 		replaceParam.m_fileName = vecParam[2];
 		replaceParam.m_isMatchCase = (vecParam[3] != "0");
@@ -98,6 +103,13 @@ void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replac
 		replaceParam.m_newStr = vecParam[3];
 		vecParam.erase(vecParam.begin());
 		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+		vecParam.erase(vecParam.begin());
+	}
+	else if (CStringManager::MakeLower(vecParam[0]) == "-enter")
+	{
+		replaceParam.m_replaceCommand = ENTER;
+		replaceParam.m_enter = atoi(vecParam[1].c_str());
 		vecParam.erase(vecParam.begin());
 		vecParam.erase(vecParam.begin());
 	}

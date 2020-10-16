@@ -87,5 +87,7 @@ int32_t main()
 		system((fileReplaceCommandHead + SPACE + "-file" + SPACE + beforeShPath + SPACE + "-replace" + SPACE + changeRelyClassName + SPACE + vecRelyClassName[index] + SPACE + std::to_string(10 + index * 7) + SPACE + std::to_string(16 + index * 7)).c_str());
 	}
 
+	system((fileReplaceCommandHead + SPACE + "-files" + SPACE + newClassPath + SPACE + ".sh" + SPACE + "1" + SPACE + "-enter" + SPACE + "0").c_str());
+
 	return 0;
 }

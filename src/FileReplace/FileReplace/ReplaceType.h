@@ -19,7 +19,9 @@ enum ReplaceCommandEnum
 	//文件重命名，3个参数，匹配的部分文件名，替换部分文件名的字符串，匹配的部分文件名是否区分大小写，1表示区分，0表示不区分
 	NAME,
 	//行部分匹配，行内匹配替换，3个参数，部分匹配的内容，行内匹配的字符串，替换的字符串
-	PART
+	PART,
+	//全文件换行符替换，一个参数，1表示把\n换成\r\n，1表示windows通用方式，0表示把\r\n换成\n，0表示linux通用方式
+	ENTER
 };
 
 struct ReplaceParam
@@ -50,6 +52,8 @@ struct ReplaceParam
 	bool m_isNameMatchCase;
 	//行内部分匹配内容
 	std::string m_oldPart;
+	//换行符，1表示\r\n，0表示\n
+	int32_t m_enter;
 	//开始替换的行序号，从1开始
 	int32_t m_beginLine;
 	//结束替换的行序号，从1开始
@@ -63,6 +67,7 @@ struct ReplaceParam
 		m_replaceCommand = REPLACE;
 		m_isMatchCase = true;
 		m_isNameMatchCase = true;
+		m_enter = 0;
 		m_beginLine = 0;
 		m_endLine = 0;
 	}
@@ -101,8 +106,20 @@ struct ReplaceContentParam
 	std::string m_newLine;
 	//行内部分匹配内容
 	std::string m_oldPart;
+	//换行符，1表示\r\n，0表示\n
+	int32_t m_enter;
 	//开始替换的行序号，从1开始
 	int32_t m_beginLine;
 	//结束替换的行序号，从1开始
 	int32_t m_endLine;
+
+	/** 构造函数
+	*/
+	ReplaceContentParam()
+	{
+		m_replaceCommand = REPLACE;
+		m_enter = 0;
+		m_beginLine = 0;
+		m_endLine = 0;
+	}
 };
