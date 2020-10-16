@@ -44,15 +44,22 @@ void CqNoFlashTask::DoTask()
 	//CMouse::RightManyClick(5, 300);
 	//return;
 
-	CKeyboard::InputString("www", 0);
+	CKeyboard::KeyDown('W');
+	CKeyboard::KeyUp('W');
+	Sleep(250);
 
-	CKeyboard::KeyDown('Q');
-	CKeyboard::KeyUp('Q');
+	//CKeyboard::KeyDown('Q');
+	//CKeyboard::KeyUp('Q');
 	CKeyboard::KeyDown('D');
 	CKeyboard::KeyUp('D');
+	CKeyboard::KeyDown('F');
+	CKeyboard::KeyUp('F');
+	CKeyboard::KeyDown('Q');
+	CKeyboard::KeyUp('Q');
 	
-	Sleep(m_sleepTime);
-    CKeyboard::InputString("fr", 0);
+	//Sleep(m_sleepTime);
+	Sleep(150);
+    CKeyboard::InputString("r", 0);
 
 	Sleep(40);
 	CMouse::RightClick(0);
@@ -64,7 +71,7 @@ void CqNoFlashTask::DoTask()
 	CKeyboard::InputString("q", 0);
 	CMouse::RightClick(150);
 	CMouse::RightManyClick(2, 100);
-	Sleep(50);
+	Sleep(100);
 	CKeyboard::InputString("3", 0);
 	Sleep(500);
 	CKeyboard::InputString("q", 0);

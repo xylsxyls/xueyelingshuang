@@ -324,19 +324,23 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		//	spTask.reset(new CFlashTask);
 		//	taskThread->PostTask(spTask, 1);
 		//}
-		else if (aDown && stopWatch.GetWatchTime() > 3000)
+		else if (aDown && stopWatch.GetWatchTime() > 500)
 		{
-			//aDown = false;
 			stopWatch.SetWatchTime(0);
-			std::shared_ptr<Cqrw3Task> spTask;
-			spTask.reset(new Cqrw3Task);
+			std::shared_ptr<CNoFlashTask> spTask;
+			spTask.reset(new CNoFlashTask);
 			taskThread->PostTask(spTask, 1);
+			//aDown = false;
+			//stopWatch.SetWatchTime(0);
+			//std::shared_ptr<Cqrw3Task> spTask;
+			//spTask.reset(new Cqrw3Task);
+			//taskThread->PostTask(spTask, 1);
 		}
 		else if (fiveDown && stopWatch.GetWatchTime() > 500)
 		{
 			if (superWatch.GetWatchTime() < 10000)
 			{
-				if (openWatch.GetWatchTime() < 3000)
+				if (openWatch.GetWatchTime() < 500)
 				{
 					stopWatch.SetWatchTime(0);
 					std::shared_ptr<CDwqrTask> spTask;
@@ -353,7 +357,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			}
 			else
 			{
-				if (openWatch.GetWatchTime() < 3000)
+				if (openWatch.GetWatchTime() < 500)
 				{
 					stopWatch.SetWatchTime(0);
 					std::shared_ptr<CDwqrTask> spTask;
@@ -378,13 +382,13 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		//	spTask.reset(new CFlashTask);
 		//	taskThread->PostTask(spTask, 1);
 		//}
-		else if (dDown && stopWatch.GetWatchTime() > 3000)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CSmallFlashTask> spTask;
-			spTask.reset(new CSmallFlashTask);
-			taskThread->PostTask(spTask, 1);
-		}
+		//else if (dDown && stopWatch.GetWatchTime() > 3000)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CSmallFlashTask> spTask;
+		//	spTask.reset(new CSmallFlashTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
 		else if (wDown && threeDown && w3StopWatch.GetWatchTime() > 3000)
 		{
 			w3StopWatch.SetWatchTime(0);
@@ -404,7 +408,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			vkCodeOpen = false;
 			stopWatch.SetWatchTime(0);
-			openWatch.SetWatchTime(5000);
+			openWatch.SetWatchTime(3000);
 			std::shared_ptr<CqTask> spTask;
 			spTask.reset(new CqTask);
 			taskThread->PostTask(spTask, 1);
