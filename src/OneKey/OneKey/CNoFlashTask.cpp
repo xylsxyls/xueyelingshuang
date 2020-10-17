@@ -23,16 +23,18 @@ void CNoFlashTask::DoTask()
 	Sleep(350);
 	CKeyboard::InputString("r", 0);
 	
-	Sleep(40);
+	Sleep(30);
+	CKeyboard::InputString("r", 0);
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('Q');
 	CMouse::RightClick();
-	Sleep(40);
+	Sleep(30);
 	
+	CKeyboard::InputString("r", 0);
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('Q');
 	CMouse::RightClick();
-	Sleep(40);
+	Sleep(80);
 
 	CKeyboard::InputString("3", 0);
 	CKeyboard::KeyDown('Q');

@@ -545,6 +545,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	m_type.AddString("½øÓÎÏ·");
 	m_type.SelectString(0, "µ¶·æ");
 	m_button.SetFocus();
+	superWatch.SetWatchTime(10000);
 	textWatch.SetWatchTime(10000);
 	g_threadId = CTaskThreadManager::Instance().Init();
 	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);

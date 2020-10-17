@@ -54,12 +54,12 @@ void CqNoFlashTask::DoTask()
 	CKeyboard::KeyUp('D');
 	CKeyboard::KeyDown('F');
 	CKeyboard::KeyUp('F');
-	CKeyboard::KeyDown('Q');
-	CKeyboard::KeyUp('Q');
+	//CKeyboard::KeyDown('Q');
+	//CKeyboard::KeyUp('Q');
 	
 	//Sleep(m_sleepTime);
-	Sleep(150);
-    CKeyboard::InputString("r", 0);
+	Sleep(50);
+    CKeyboard::InputString("rq", 0);
 
 	Sleep(40);
 	CMouse::RightClick(0);
