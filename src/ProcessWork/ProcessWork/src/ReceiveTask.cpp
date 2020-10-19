@@ -2,6 +2,7 @@
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "ProcessReceiveCallback.h"
+#include <string.h>
 
 ReceiveTask::ReceiveTask(const char* buffer, int32_t length):
 m_sendPid(0),

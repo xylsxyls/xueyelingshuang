@@ -7,6 +7,7 @@
 #include "ReadTask.h"
 #include "SendTask.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
+#include <string.h>
 
 ProcessWork::ProcessWork():
 m_thisProcessPid(0),

@@ -4,6 +4,7 @@
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
 #include "ProcessWork.h"
+#include <string.h>
 
 SendTask::SendTask(const char* buffer, int32_t length):
 m_thisProcessPid(0),
