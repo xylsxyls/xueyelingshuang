@@ -21,21 +21,21 @@ std::string CBase64::encode(const char* str, int32_t bytes, Base64Options option
 	{
 		// encode 3 bytes at a time
 		int chunk = 0;
-		chunk |= int(unsigned char(str[i++])) << 16;
+		chunk |= (int)((unsigned char)(str[i++])) << 16;
 		if (i == bytes)
 		{
 			padlen = 2;
 		}
 		else
 		{
-			chunk |= int(unsigned char(str[i++])) << 8;
+			chunk |= (int)((unsigned char)(str[i++])) << 8;
 			if (i == bytes)
 			{
 				padlen = 1;
 			}
 			else
 			{
-				chunk |= int(unsigned char(str[i++]));
+				chunk |= (int)((unsigned char)(str[i++]));
 			}
 		}
 
