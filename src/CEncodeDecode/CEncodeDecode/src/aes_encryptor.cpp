@@ -3,6 +3,10 @@
 #include <string.h>
 #include <fstream>
 
+#if _MSC_VER
+#define snprintf _snprintf
+#endif
+
 AesEncryptor::AesEncryptor(unsigned char* key)
 {
 	m_pEncryptor = new AES(key);
@@ -17,7 +21,8 @@ void AesEncryptor::Byte2Hex(const unsigned char* src, int len, char* dest)
 {
 	for (int i = 0; i < len; ++i)
 	{
-		sprintf_s(dest + i * 2, 3, "%02X", src[i]);
+		//sprintf_s(dest + i * 2, 3, "%02X", src[i]);
+		snprintf(dest + i * 2, 2, "%02X", src[i]);
 	}
 }
 
@@ -53,7 +58,8 @@ std::string AesEncryptor::EncryptString(const std::string& strInfor)
 	int spaceLength = 16 - (nLength % 16);
 	unsigned char* pBuffer = new unsigned char[nLength + spaceLength];
 	memset(pBuffer, '\0', nLength + spaceLength);
-	memcpy_s(pBuffer, nLength + spaceLength, strInfor.c_str(), nLength);
+	//memcpy_s(pBuffer, nLength + spaceLength, strInfor.c_str(), nLength);
+	memcpy(pBuffer, strInfor.c_str(), nLength);
 	m_pEncryptor->Cipher(pBuffer, nLength + spaceLength);
 
 	// 这里需要把得到的字符数组转换成十六进制字符串 
