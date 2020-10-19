@@ -60,10 +60,12 @@ public:
 	//? return 返回之后的矩形，如果过小不会放大
 	Rect SetIn(const Rect& bkRect);
 
+#ifdef _MSC_VER
 	//? 获取重叠矩形
 	//? param [in] bkRect 背景矩形
 	//? return 返回重叠部分的矩形
 	Rect Over(const Rect& bkRect);
+#endif
 
 	//? 获取tan角，高/宽
 	//? 返回tan角

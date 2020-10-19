@@ -387,12 +387,14 @@ Rect Rect::SetIn(const Rect& bkRect)
 	}
 }
 
+#ifdef _MSC_VER
 Rect Rect::Over(const Rect& otherRect)
 {
     RECT rect;
     ::IntersectRect(&rect, &(RECT(*this)), &(RECT(otherRect)));
     return Rect(rect);
 }
+#endif
 
 double Rect::Gettan() const
 {
