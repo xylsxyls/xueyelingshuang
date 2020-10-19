@@ -3,7 +3,7 @@
 #include "Point/PointAPI.h"
 #include <stdint.h>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include <windows.h>
 #endif
 
@@ -13,7 +13,7 @@ namespace xyls
 class RectAPI Rect
 {
 public:
-#ifdef _WIN32
+#ifdef _MSC_VER
 	Rect(const RECT& rect);
 #endif
 
@@ -23,6 +23,8 @@ public:
 	Rect(const Point& point);
     //中心到四周距离
     Rect(const Point& point, int32_t margin);
+
+public:
     void SetRect(int32_t left, int32_t top, int32_t right, int32_t bottom);
 	void SetRect(const Point& point);
 	int GetWidth()const;
@@ -67,7 +69,7 @@ public:
 	//? 返回tan角
 	double Gettan() const;
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 	operator RECT() const;
 #endif
 

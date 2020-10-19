@@ -27,7 +27,7 @@ Rect::Rect(const Point& origin, int32_t width, int32_t height)
     m_bottom = origin.y() + height;
 }
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 Rect::Rect(const RECT& rect)
 {
     m_left = rect.left;
@@ -399,7 +399,7 @@ double Rect::Gettan() const
 	return GetHeight() / (double)GetWidth();
 }
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 Rect::operator RECT() const
 {
     RECT rect;

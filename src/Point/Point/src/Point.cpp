@@ -15,11 +15,13 @@ Point::Point(int32_t x, int32_t y)
     m_y = y;
 }
 
+#ifdef _MSC_VER
 Point::Point(const POINT& point)
 {
     m_x = point.x;
     m_y = point.y;
 }
+#endif
 
 void Point::SetPoint(int32_t x, int32_t y)
 {
