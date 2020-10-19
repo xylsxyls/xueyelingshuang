@@ -3,6 +3,7 @@
 #include "aes_encryptor.h"
 #include <vector>
 #include <time.h>
+#include <string.h>
 
 std::string CEncodeDecode::MD5Decode(const std::string& src)
 {

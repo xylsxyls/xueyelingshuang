@@ -1,4 +1,4 @@
-#include "aes.h"
+#include "AES.h"
 #include <string.h>
 
 AES::AES(unsigned char* key)
