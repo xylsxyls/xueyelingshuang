@@ -22,4 +22,7 @@
   <ItemGroup>
     <None Include="..\src\FiniteDeque.inl" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\FiniteDeque.cpp" />
+  </ItemGroup>
 </Project>

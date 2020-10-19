@@ -26,6 +26,9 @@
   <ItemGroup>
     <None Include="..\src\FiniteDeque.inl" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\FiniteDeque.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>
     <RootNamespace>FiniteDeque</RootNamespace>
