@@ -11,8 +11,8 @@ public:
 	AesEncryptor(unsigned char* key);
 	~AesEncryptor(void);
 
-	std::string EncryptString(std::string strInfor);
-	std::string DecryptString(std::string strMessage);
+	std::string EncryptString(const std::string& strInfor);
+	std::string DecryptString(const std::string& strMessage);
 
 	void EncryptTxtFile(const char* inputFileName, const char* outputFileName);
 	void DecryptTxtFile(const char* inputFileName, const char* outputFileName);
@@ -26,4 +26,4 @@ private:
 	AES* m_pEncryptor;
 };
 
-#endif        // SRC_UTILS_AES_ENCRYPTOR_H
+#endif //SRC_UTILS_AES_ENCRYPTOR_H

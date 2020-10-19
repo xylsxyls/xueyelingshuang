@@ -1,82 +1,108 @@
 #include "CEncodeDecode.h"
 #include "MD5.h"
 #include "aes_encryptor.h"
+#include <vector>
+#include <time.h>
 
-string CEncodeDecode::MD5Decode(string src){
+std::string CEncodeDecode::MD5Decode(const std::string& src)
+{
 	return MD5(src).toString();
 }
 
-string CEncodeDecode::AESEncode(string key,string src){
+std::string CEncodeDecode::AESEncode(const std::string& key, const std::string& src)
+{
 	int nKey = key.size();
-	unsigned char* pKey = NULL;
-	if(nKey < 16){
-		pKey = (unsigned char*)calloc(16,1);
-		memcpy(pKey,key.c_str(),key.length());
+	unsigned char* pKey = nullptr;
+	if (nKey < 16)
+	{
+		pKey = (unsigned char*)calloc(16, 1);
+		memcpy(pKey, key.c_str(), key.length());
 	}
-	AesEncryptor *aes = NULL;
-	if(nKey < 16) aes = new AesEncryptor(pKey);
-	else aes = new AesEncryptor((unsigned char*)key.c_str());
-	string strResult = aes->EncryptString(src);
+	AesEncryptor* aes = nullptr;
+	if (nKey < 16)
+	{
+		aes = new AesEncryptor(pKey);
+	}
+	else
+	{
+		aes = new AesEncryptor((unsigned char*)key.c_str());
+	}
+	std::string strResult = aes->EncryptString(src);
 	delete[] pKey;
 	delete aes;
 	return strResult;
 }
 
-string CEncodeDecode::AESDecode(string key,string src){
+std::string CEncodeDecode::AESDecode(const std::string& key, const std::string& src)
+{
 	int nKey = key.size();
-	unsigned char* pKey = NULL;
-	if(nKey < 16){
-		pKey = (unsigned char*)calloc(16,1);
-		memcpy(pKey,key.c_str(),key.length());
+	unsigned char* pKey = nullptr;
+	if (nKey < 16)
+	{
+		pKey = (unsigned char*)calloc(16, 1);
+		memcpy(pKey, key.c_str(), key.length());
 	}
-	AesEncryptor *aes = NULL;
-	if(nKey < 16) aes = new AesEncryptor(pKey);
-	else aes = new AesEncryptor((unsigned char*)key.c_str());
-	string strResult = aes->DecryptString(src);
+	AesEncryptor* aes = nullptr;
+	if (nKey < 16)
+	{
+		aes = new AesEncryptor(pKey);
+	}
+	else
+	{
+		aes = new AesEncryptor((unsigned char*)key.c_str());
+	}
+	std::string strResult = aes->DecryptString(src);
 	delete[] pKey;
 	delete aes;
 	return strResult;
 }
 
-#include <vector>
-#include <time.h>
-using namespace std;
-
-string Randomstring(int nMin,int nMax,vector<char> vecCharacter){
-	if(nMin < 0 || nMax < 0 || nMax - nMin < 0) return "";
+/*
+static std::string Randomstring(int nMin, int nMax, const std::vector<char>& vecCharacter)
+{
+	if (nMin < 0 || nMax < 0 || nMax - nMin < 0)
+	{
+		return "";
+	}
 	srand((unsigned int)time(0));
 	int nLength = rand() % (nMax - nMin + 1) + nMin;
 	int nSize = vecCharacter.size();
-	string strResult = "";
-	while(strResult.length() < (unsigned int)nLength){
+	std::string strResult;
+	while (strResult.length() < (unsigned int)nLength)
+	{
 		strResult = strResult + vecCharacter.at(rand() % nSize);
 	}
 	return strResult;
 }
 
-/*
-int main(){
+int main()
+{
 	vector<char> vecCharacter;
 	char i = 64;
-	while(i++ != 90){
+	while (i++ != 90)
+	{
 		vecCharacter.push_back(i);
 	}
 	i = 96;
-	while(i++ != 122){
+	while (i++ != 122)
+	{
 		vecCharacter.push_back(i);
 	}
 	i = 47;
-	while(i++ != 57){
+	while (i++ != 57)
+	{
 		vecCharacter.push_back(i);
 	}
-	while(1){
-		string strKey = Randomstring(1,17,vecCharacter);
-		string strMessage = Randomstring(1,4096,vecCharacter);
+	while (1)
+	{
+		string strKey = Randomstring(1, 17, vecCharacter);
+		string strMessage = Randomstring(1, 4096, vecCharacter);
 		CEncodeDecode encode;
-		string strEncode = encode.AESEncode(strKey,strMessage);
+		string strEncode = encode.AESEncode(strKey, strMessage);
 		CEncodeDecode decode;
-		string strDecode = decode.AESDecode(strKey,strEncode);
-		if(strDecode != strMessage){
+		string strDecode = decode.AESDecode(strKey, strEncode);
+		if (strDecode != strMessage)
+		{
 			printf("1");
 		}
 	}
