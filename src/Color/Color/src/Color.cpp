@@ -3,7 +3,12 @@
 
 xyls::Color::Color(unsigned char r, unsigned char g, unsigned char b)
 {
-	this->Color::Color(r, g, b, 0, 0, 0);
+	m_r = r;
+	m_g = g;
+	m_b = b;
+	m_rc = 0;
+	m_gc = 0;
+	m_bc = 0;
 }
 
 xyls::Color::Color(unsigned char r, unsigned char g, unsigned char b, unsigned char rc, unsigned char gc, unsigned char bc)
