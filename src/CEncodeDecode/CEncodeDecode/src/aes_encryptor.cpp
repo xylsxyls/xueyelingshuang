@@ -22,7 +22,7 @@ void AesEncryptor::Byte2Hex(const unsigned char* src, int len, char* dest)
 	for (int i = 0; i < len; ++i)
 	{
 		//sprintf_s(dest + i * 2, 3, "%02X", src[i]);
-		snprintf(dest + i * 2, 2, "%02X", src[i]);
+		snprintf(dest + i * 2, 3, "%02X", src[i]);
 	}
 }
 
