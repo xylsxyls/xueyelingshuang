@@ -1,5 +1,6 @@
 #include "RSA.h"
 #include <time.h>
+#include <string.h>
 
 RSA::RSA()
 {
@@ -599,9 +600,9 @@ std::string RSA::tencrypto(int e[RSA_MAX], int n[RSA_MAX], const char* text)/*//
 {
 	int i, k, count, temp, c;
 	char ch;
-	struct slink *p, *p1, *p2;
-	struct slink *h;
-	h = p = p1 = p2 = (struct slink *)malloc(LEN);
+	struct RSA::slink *p, *p1, *p2;
+	struct RSA::slink *h;
+	h = p = p1 = p2 = (struct RSA::slink *)malloc(LEN);
 	h = NULL;
 	if (text == NULL)
 	{
@@ -638,12 +639,12 @@ std::string RSA::tencrypto(int e[RSA_MAX], int n[RSA_MAX], const char* text)/*//
 			h = p1;
 		else p2->next = p1;
 		p2 = p1;
-		p1 = (struct slink *)malloc(LEN);
+		p1 = (struct RSA::slink *)malloc(LEN);
 	}
 	p2->next = NULL;
 
 	std::string res;
-	p = p1 = (struct slink *)malloc(LEN);
+	p = p1 = (struct RSA::slink *)malloc(LEN);
 	p = h;
 	if (h != NULL)
 		do
@@ -672,7 +673,7 @@ std::string RSA::tencrypto(int e[RSA_MAX], int n[RSA_MAX], const char* text)/*//
 				res += ch;
 			}
 			p = p->next;
-			p1 = (struct slink *)malloc(LEN);
+			p1 = (struct RSA::slink *)malloc(LEN);
 		} while (p != NULL);
 		return res;
 }
@@ -687,13 +688,13 @@ std::string RSA::tencrypto(int e[RSA_MAX], int n[RSA_MAX], const char* text)/*//
 */
 std::string RSA::tdecrypto(int d[RSA_MAX], int n[RSA_MAX], const std::string& text)
 {
-	struct slink *h, *p1, *p2;
+	struct RSA::slink *h, *p1, *p2;
 	char ch;
 	int i, j, k, c, count, temp;
 	i = 0;
 	j = 3;
 	count = 0;
-	h = p1 = p2 = (struct slink *)malloc(LEN);
+	h = p1 = p2 = (struct RSA::slink *)malloc(LEN);
 
 	int kk;
 	for (kk = 0; kk < (int)text.length(); kk++)
@@ -728,13 +729,13 @@ std::string RSA::tdecrypto(int d[RSA_MAX], int n[RSA_MAX], const std::string& te
 					h = p1;
 				else p2->next = p1;
 				p2 = p1;
-				p1 = (struct slink *)malloc(LEN);
+				p1 = (struct RSA::slink *)malloc(LEN);
 			}
 		}
 	}
 	p2->next = NULL;
 
-	p2 = (struct slink *)malloc(LEN);
+	p2 = (struct RSA::slink *)malloc(LEN);
 	p1 = h;
 	k = 0;
 	std::string res;
@@ -753,7 +754,7 @@ std::string RSA::tdecrypto(int d[RSA_MAX], int n[RSA_MAX], const std::string& te
 			res += ch;
 			k++;
 			p1 = p1->next;
-			p2 = (struct slink *)malloc(LEN);
+			p2 = (struct RSA::slink *)malloc(LEN);
 		} while (p1 != NULL);
 		return res;
 }

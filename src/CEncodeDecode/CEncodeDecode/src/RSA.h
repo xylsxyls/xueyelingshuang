@@ -5,7 +5,7 @@
 
 //! MAX是数组的最大个数，LEN为结构体slink的占用内存空间大小 */
 #define RSA_MAX 100
-#define LEN sizeof(struct slink)
+#define LEN sizeof(struct RSA::slink)
 //! 能够进行动态链接库编译的RSA类
 /*!
 @see class _declspec(dllexport) RSA
