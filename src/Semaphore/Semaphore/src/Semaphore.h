@@ -4,6 +4,9 @@
 #include "SemaphoreMacro.h"
 #ifdef _MSC_VER
 #include <windows.h>
+#elif __linux__
+#include <semaphore.h>
+#include <string>
 #endif
 
 /** 信号类，包含信号量和事件
@@ -23,8 +26,6 @@ public:
 	/** 信号量的等待
 	*/
 	void wait();
-
-#ifdef _MSC_VER
 
 	/** 进程信号量的创建
 	@param [in] name 名字
@@ -48,8 +49,6 @@ public:
 	/** 进程等待
 	*/
 	void processWait();
-
-#endif
 
 	/** 事件通知，多个事件同时等待只会通知一个，必须进入了eventWait，通知才有效果，一对一，允许一对多
 	*/
@@ -80,6 +79,9 @@ private:
 	int32_t m_count;
 
 #ifdef _MSC_VER
-	HANDLE m_processHandle;
+	HANDLE m_processSemaphore;
+#elif __linux__
+	sem_t* m_processSemaphore;
+	std::string m_name;
 #endif
 };

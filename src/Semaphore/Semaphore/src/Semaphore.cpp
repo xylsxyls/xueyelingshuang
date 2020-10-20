@@ -1,9 +1,10 @@
 #include "Semaphore.h"
+#ifdef __linux__
+#include <fcntl.h>
+#endif
 
 Semaphore::Semaphore():
-#ifdef _MSC_VER
-m_processHandle(nullptr),
-#endif
+m_processSemaphore(nullptr),
 m_count(0)
 {
 
@@ -26,55 +27,78 @@ void Semaphore::wait()
 	--m_count;
 }
 
-#ifdef _MSC_VER
-
 void Semaphore::createProcessSemaphore(const std::string& name, int32_t signalCount)
 {
-	if (m_processHandle != nullptr)
+	if (m_processSemaphore != nullptr)
 	{
 		return;
 	}
-	m_processHandle = ::CreateSemaphore(nullptr, 0, signalCount, name.c_str());
+#ifdef _MSC_VER
+	m_processSemaphore = ::CreateSemaphore(nullptr, 0, signalCount, name.c_str());
+#elif __linux__
+	m_processSemaphore = ::sem_open(name.c_str(), O_CREAT, 0644, 1);
+	m_name = name;
+#endif
 }
 
 void Semaphore::openProcessSemaphore(const std::string& name)
 {
-	if (m_processHandle != nullptr)
+	if (m_processSemaphore != nullptr)
 	{
 		return;
 	}
-	m_processHandle = ::OpenSemaphore(SEMAPHORE_ALL_ACCESS, false, name.c_str());
+#ifdef _MSC_VER
+	m_processSemaphore = ::OpenSemaphore(SEMAPHORE_ALL_ACCESS, false, name.c_str());
+#elif __linux__
+	m_processSemaphore = ::sem_open(name.c_str(), O_CREAT, 0644, 0);
+#endif
 }
 
 void Semaphore::closeProcessSemaphore()
 {
-	if (m_processHandle == nullptr)
+	if (m_processSemaphore != nullptr)
 	{
 		return;
 	}
-	::CloseHandle(m_processHandle);
-	m_processHandle = nullptr;
+#ifdef _MSC_VER
+	::CloseHandle(m_processSemaphore);
+#elif __linux__
+	::sem_close(m_processSemaphore);
+	if (!m_name.empty())
+	{
+		::sem_unlink(m_name.c_str());
+		m_name.clear();
+	}
+#endif
+	m_processSemaphore = nullptr;
 }
 
 void Semaphore::processSignal()
 {
-	if (m_processHandle == nullptr)
+	if (m_processSemaphore == nullptr)
 	{
 		return;
 	}
-	::ReleaseSemaphore(m_processHandle, 1, nullptr);
+#ifdef _MSC_VER
+	::ReleaseSemaphore(m_processSemaphore, 1, nullptr);
+#elif __linux__
+	::sem_post(m_processSemaphore);
+#endif
+	
 }
 
 void Semaphore::processWait()
 {
-	if (m_processHandle == nullptr)
+	if (m_processSemaphore == nullptr)
 	{
 		return;
 	}
-	::WaitForSingleObject(m_processHandle, INFINITE);
-}
-
+#ifdef _MSC_VER
+	::WaitForSingleObject(m_processSemaphore, INFINITE);
+#elif __linux__
+	::sem_wait(m_processSemaphore);
 #endif
+}
 
 void Semaphore::event()
 {
