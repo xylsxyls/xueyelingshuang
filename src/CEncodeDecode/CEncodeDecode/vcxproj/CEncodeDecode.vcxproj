@@ -25,12 +25,14 @@
     <ClInclude Include="..\src\CEncodeDecodeMacro.h" />
     <ClInclude Include="..\src\CEncodeDecode.h" />
     <ClInclude Include="..\src\MD5.h" />
+    <ClInclude Include="..\src\RSA.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\AES.cpp" />
     <ClCompile Include="..\src\aes_encryptor.cpp" />
     <ClCompile Include="..\src\CEncodeDecode.cpp" />
     <ClCompile Include="..\src\MD5.cpp" />
+    <ClCompile Include="..\src\RSA.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

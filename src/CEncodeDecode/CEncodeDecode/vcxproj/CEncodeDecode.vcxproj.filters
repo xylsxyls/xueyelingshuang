@@ -33,6 +33,9 @@
     <ClInclude Include="..\src\MD5.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\RSA.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CEncodeDecode.cpp">
@@ -45,6 +48,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\MD5.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RSA.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
