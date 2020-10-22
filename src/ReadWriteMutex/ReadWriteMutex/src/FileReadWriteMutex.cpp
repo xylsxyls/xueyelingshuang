@@ -21,7 +21,7 @@ FileReadWriteMutex::FileReadWriteMutex(const std::string& fileName)
 	}
 	m_fileName = s_tempDir + m_fileName;	
 #ifdef __linux__
-	system("touch " + "\"" + m_fileName + "\"");
+	system(("touch \"" + m_fileName + "\"").c_str());
 	m_fd = open(m_fileName.c_str(), O_RDWR);
 #endif
 }
