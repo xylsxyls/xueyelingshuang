@@ -13,6 +13,7 @@
     <ClInclude Include="..\src\AES.h" />
     <ClInclude Include="..\src\aes_encryptor.h" />
     <ClInclude Include="..\src\MD5.h" />
+    <ClInclude Include="..\src\RSA.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -29,5 +30,6 @@
     <ClCompile Include="..\src\AES.cpp" />
     <ClCompile Include="..\src\aes_encryptor.cpp" />
     <ClCompile Include="..\src\MD5.cpp" />
+    <ClCompile Include="..\src\RSA.cpp" />
   </ItemGroup>
 </Project>
