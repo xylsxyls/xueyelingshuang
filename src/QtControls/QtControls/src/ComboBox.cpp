@@ -375,7 +375,8 @@ void ComboBox::hidePopup()
 	m_imageStateMap[NORMAL][DISABLED] = m_dropDownImgDisabled;
 	ControlBase::setImageStateMap(m_imageStateMap, m_imagePath, m_dropDownImgStateCount, L"border-image", L"down-arrow", true);
 	QComboBox::hidePopup();
-	event(&(QEvent(QEvent::HoverLeave)));
+	QEvent eve(QEvent::HoverLeave);
+	event(&eve);
 }
 
 void ComboBox::keyPressEvent(QKeyEvent* eve)

@@ -28,8 +28,6 @@ public:
 	static HWND GetConsoleHwnd();
 	//根据pid获取窗口句柄
 	static HWND GetHwndByProcessId(uint32_t dwProcessId);
-	//将QRect中4个点中小于0的点换成0
-	static RECT rectValid(const RECT& rect);
 	//返回ocx所在路径，带\符号
 	static std::string GetRegOcxPath(const std::string& classid);
 	//禁用重定向，64位系统访问System32时会进入到SysWOW64中
@@ -87,6 +85,12 @@ public:
 	//销毁动态的二位数组，内部有判空
 	template <typename TypeClass>
 	static void DestroyDyadicArray(TypeClass** classPtr, int32_t row);
+	//将RECT中4个点中小于0的点换成0
+	template <typename TRECT>
+	static TRECT rectValid(const TRECT& rect);
+	//将QRect中4个点中小于0的点换成0
+	template <typename TQRect>
+	static TQRect qrectValid(const TQRect& rect);
     //打印map
 	static void OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path = "");
     //打印vector

@@ -3,7 +3,9 @@
 #include "QtControls/COriginalButton.h"
 #include "QtControls/CGeneralStyle.h"
 #include "QtControls/ProgressBar.h"
+#ifdef _MSC_VER
 #include <Windows.h>
+#endif
 #include "DialogManager.h"
 #include "QtControls/LineEdit.h"
 #include "DialogHelper.h"
@@ -218,6 +220,7 @@ void DownloadOperateDialog::resizeEvent(QResizeEvent* eve)
     m_downloadSlow->setGeometry(QRect(16, 179, 255, 18));
 }
 
+#ifdef _MSC_VER
 void DownloadOperateDialog::setClipboardData(HWND hWnd, const std::string& str)
 {
 	//´ò¿ª¼ôÌù°å
@@ -241,6 +244,7 @@ void DownloadOperateDialog::setClipboardData(HWND hWnd, const std::string& str)
 		::CloseClipboard();
 	}
 }
+#endif
 
 bool DownloadOperateDialog::check()
 {
@@ -388,7 +392,9 @@ void DownloadOperateDialog::onCopyDownloadAddr()
     {
         return;
     }
+#ifdef _MSC_VER
 	setClipboardData((HWND)winId(), CStringManager::UnicodeToAnsi(m_downloadAddrEdit->text().toStdWString()));
+#endif
 	emit copyDownloadAddr(m_downloadAddrEdit->text());
 }
 
@@ -398,6 +404,8 @@ void DownloadOperateDialog::onCopyPath()
     {
         return;
     }
+#ifdef _MSC_VER
 	setClipboardData((HWND)winId(), CStringManager::UnicodeToAnsi(m_pathEdit->text().toStdWString()));
+#endif
 	emit copyPath(m_pathEdit->text());
 }

@@ -183,28 +183,6 @@ HWND CSystem::GetHwndByProcessId(uint32_t dwProcessId)
 	return info.hWnd;
 }
 
-RECT CSystem::rectValid(const RECT& rect)
-{
-	RECT result = rect;
-	if (result.left < 0)
-	{
-		result.left = 0;
-	}
-	if (result.top < 0)
-	{
-		result.top = 0;
-	}
-	if (result.right < 0)
-	{
-		result.right = 0;
-	}
-	if (result.bottom < 0)
-	{
-		result.bottom = 0;
-	}
-	return result;
-}
-
 std::string CSystem::GetRegOcxPath(const std::string& classid)
 {
 	HKEY hKey;

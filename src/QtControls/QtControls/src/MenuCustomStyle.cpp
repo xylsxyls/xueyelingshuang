@@ -18,5 +18,5 @@ int MenuCustomStyle::pixelMetric(PixelMetric pm, const QStyleOption * opt, const
 	{
 		return m_size;
 	}
-	return __super::pixelMetric(pm, opt, widget);
+	return QProxyStyle::pixelMetric(pm, opt, widget);
 }

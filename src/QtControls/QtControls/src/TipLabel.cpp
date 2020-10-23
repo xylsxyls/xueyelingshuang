@@ -1,5 +1,7 @@
 #include "TipLabel.h"
+#ifdef _MSC_VER
 #include <Windows.h>
+#endif
 
 TipLabel::TipLabel(QWidget* parent) :
 Label(parent),
@@ -70,6 +72,7 @@ void TipLabel::timerEvent(QTimerEvent* eve)
 bool TipLabel::nativeEvent(const QByteArray& eventType, void* message, long* result)
 {
 	bool res = Label::nativeEvent(eventType, message, result);
+#ifdef _MSC_VER
 	if (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG")
 	{
 		MSG* msg = static_cast<MSG *>(message);
@@ -94,5 +97,6 @@ bool TipLabel::nativeEvent(const QByteArray& eventType, void* message, long* res
 		break;
 		}
 	}
+#endif
 	return res;
 }

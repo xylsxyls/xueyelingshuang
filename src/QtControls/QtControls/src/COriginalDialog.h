@@ -18,7 +18,7 @@ private:
 	int      mTouchBorderWidth;
 	int      mCustomerTitleBarHeight;
 	QRect    mCustomerTitleBarRect;
-	bool     mDwmInitialized;
+	//bool     mDwmInitialized;
 	bool     mAltF4Enable;
 
 protected:
@@ -52,4 +52,4 @@ public:
     bool altF4Enable();
 };
 
-#endif // CORIGINALDIALOG_H
+#endif //CORIGINALDIALOG_H

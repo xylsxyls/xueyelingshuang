@@ -5,6 +5,7 @@
 #if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 #include <QWebView>
+#include <QMutex>
 #include "QtControlsMacro.h"
 
 class QtControlsAPI WebPage : public QWebPage

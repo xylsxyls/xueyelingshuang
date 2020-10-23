@@ -76,8 +76,9 @@ void NotifyDialog::beginExitAnimation()
 
     //先将所有控件设为禁用
     auto childs = children();
-    for each (QObject* var in childs)
+    for (auto itChild = childs.begin(); itChild != childs.end(); ++itChild)
     {
+        QObject* var = *itChild;
         QWidget* widget = qobject_cast<QWidget*>(var);
         if (widget)
         {
@@ -125,9 +126,15 @@ void NotifyDialog::resizeEvent(QResizeEvent* eve)
     m_exit->setGeometry(QRect(width() - 34, 1, 34, 31));
     m_time->setGeometry(QRect(7, height() - 13, width() - 5, 13));
 
+#ifdef _MSC_VER
     POINT rightBottom = CSystem::taskbarRightBottomPoint();
     m_beginRect.setRect(rightBottom.x - width(), rightBottom.y - height(), width(), height());
     m_endRect.setRect(rightBottom.x - width(), rightBottom.y, width(), height());
+#elif __linux__
+    QPoint rightBottom = {1920, 1032};
+    m_beginRect.setRect(rightBottom.x() - width(), rightBottom.y() - height(), width(), height());
+    m_endRect.setRect(rightBottom.x() - width(), rightBottom.y(), width(), height());
+#endif
 }
 
 void NotifyDialog::end()

@@ -3,7 +3,9 @@
 #include "EO_XmlSax2Parser/EO_XmlSax2ParserAPI.h"
 #include <QDebug>
 #include <QPainter>
+#ifdef _MSC_VER
 #include <Windows.h>
+#endif
 #include "DialogHelper.h"
 
 CExpressionDialog::CExpressionDialog(QWidget *parent)
@@ -72,6 +74,7 @@ void CExpressionDialog::paintEvent(QPaintEvent *e)
 bool CExpressionDialog::nativeEvent(const QByteArray &eventType, void *message, long *result)
 {
     bool res = QDialog::nativeEvent(eventType, message, result);
+#ifdef _MSC_VER
     if (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG") {
         MSG* msg = static_cast<MSG *>(message);
         switch (msg->message)
@@ -85,6 +88,7 @@ bool CExpressionDialog::nativeEvent(const QByteArray &eventType, void *message, 
             break;
         }
     }
+#endif
 
     return res;
 }

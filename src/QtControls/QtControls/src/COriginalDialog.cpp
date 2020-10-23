@@ -1,6 +1,8 @@
 #include "COriginalDialog.h"
 #include <QWindow>
+#ifdef _MSC_VER
 #include <Windows.h>
+#endif
 #include <QApplication>
 #include <QLabel>
 
@@ -10,10 +12,10 @@
 #define WM_DWMCOMPOSITIONCHANGED        0x031E
 #endif
 
-COriginalDialog::COriginalDialog(QWidget *parent)
+COriginalDialog::COriginalDialog(QWidget* parent)
 	:QDialog(parent)
 	,mTouchBorderWidth(6)
-	,mDwmInitialized(false)
+	//,mDwmInitialized(false)
     ,mAltF4Enable(true)
 {
 	setCustomerTitleBarHeight(0);
@@ -33,6 +35,7 @@ COriginalDialog::~COriginalDialog()
 
 long COriginalDialog::onNcHitTest(QPoint pt)
 {
+#ifdef _MSC_VER
 	RECT windowRect;
 	::GetWindowRect(HWND(this->winId()), &windowRect);
 	QRect rcClient;
@@ -233,6 +236,9 @@ long COriginalDialog::onNcHitTest(QPoint pt)
 	}
 
 	return HTCLIENT;
+#elif __linux__
+	return 0;
+#endif
 }
 
 void COriginalDialog::resizeEvent(QResizeEvent *e)
@@ -243,6 +249,7 @@ void COriginalDialog::resizeEvent(QResizeEvent *e)
 
 bool COriginalDialog::nativeEvent(const QByteArray &eventType, void *message, long *result)
 {
+#ifdef _MSC_VER
 	if (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG") {
 		MSG* msg = static_cast<MSG *>(message);
 		switch (msg->message)
@@ -376,7 +383,7 @@ bool COriginalDialog::nativeEvent(const QByteArray &eventType, void *message, lo
 			break;
 		}
 	}
-
+#endif
 	return QDialog::nativeEvent(eventType, message, result);
 }
 
@@ -495,7 +502,11 @@ QWindow* COriginalDialog::getAncestorHandle(QWindow* window)
         return nullptr;
     }
     QWindow* realTransientWindow = nullptr;
+#ifdef _MSC_VER
     WId ancetorId = (WId)::GetAncestor(HWND(window->winId()), GA_ROOT);
+#elif __linux__
+	return nullptr;
+#endif
     QWidget* topLevelWidget = QWidget::find(ancetorId);
     if (topLevelWidget)
     {
@@ -514,10 +525,12 @@ QWindow* COriginalDialog::getAncestorHandle(QWindow* window)
         }
     }
     //如果是不同进程
+#ifdef _MSC_VER
     if ((realTransientWindow == nullptr) && (::IsWindow(HWND(ancetorId)) == TRUE))
     {
         realTransientWindow = QWindow::fromWinId(ancetorId);
     }
+#endif
     return realTransientWindow;
 }
 

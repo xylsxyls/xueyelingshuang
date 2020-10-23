@@ -152,18 +152,5 @@ std::ofstream& DialogHelper::logFile()
 
 QRect DialogHelper::rectValid(const QRect& rect)
 {
-	RECT srcRect;
-	srcRect.left = rect.left();
-	srcRect.top = rect.top();
-	srcRect.right = rect.right();
-	srcRect.bottom = rect.bottom();
-
-	RECT destRect = CSystem::rectValid(srcRect);
-
-	QRect result;
-	result.setLeft(destRect.left);
-	result.setTop(destRect.top);
-	result.setRight(destRect.right);
-	result.setBottom(destRect.bottom);
-	return result;
+	return CSystem::qrectValid<QRect>(rect);
 }

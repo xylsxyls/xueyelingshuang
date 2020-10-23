@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QColor>
 #include <QFont>
-#include <tchar.h>
 #include "QtControlsMacro.h"
 
 class Label;
@@ -113,4 +112,4 @@ public:
 
 };
 
-#endif // CGENERALSTYLE_H
+#endif //CGENERALSTYLE_H

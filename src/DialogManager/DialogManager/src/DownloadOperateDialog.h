@@ -110,8 +110,10 @@ private slots:
 	void onCopyDownloadAddr();
 	void onCopyPath();
 
+#ifdef _MSC_VER
 private:
     void setClipboardData(HWND hWnd, const std::string& str);
+#endif
 
 private:
 	Label* m_tip;

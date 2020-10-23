@@ -16,8 +16,9 @@ m_title(nullptr)
 DialogBase::~DialogBase()
 {
     auto childs = children();
-    for each (QObject* var in childs)
+    for (auto itChild = childs.begin(); itChild != childs.end(); ++itChild)
     {
+        QObject* var = *itChild;
         QWidget* widget = qobject_cast<QWidget*>(var);
         if (widget)
         {
@@ -78,8 +79,9 @@ void DialogBase::show()
 void DialogBase::listenAllControls()
 {
     auto childs = children();
-    for each (QObject* var in childs)
+    for (auto itChild = childs.begin(); itChild != childs.end(); ++itChild)
     {
+        QObject* var = *itChild;
         QWidget* widget = qobject_cast<QWidget*>(var);
         if (widget)
         {

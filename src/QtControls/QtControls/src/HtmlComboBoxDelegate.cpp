@@ -65,19 +65,8 @@ void HtmlComboBoxDelegate::paint(QPainter* painter,
 											  -m_htmlComboBox->m_bottomOrigin -
 											  m_htmlComboBox->m_itemBorderWidth);
 
-		RECT rect;
-		rect.left = drawRect.left();
-		rect.top = drawRect.top();
-		rect.right = drawRect.right();
-		rect.bottom = drawRect.bottom();
-		RECT drawRectResize = CSystem::rectValid(rect);
-		QRect qdrawRectResize;
-		qdrawRectResize.setLeft(drawRectResize.left);
-		qdrawRectResize.setTop(drawRectResize.top);
-		qdrawRectResize.setRight(drawRectResize.right);
-		qdrawRectResize.setBottom(drawRectResize.bottom);
 		CGeneralStyle::instance()->drawHtmlTextByLabel(painter,
-													   qdrawRectResize,
+													   CSystem::qrectValid<QRect>(drawRect),
 													   index.data().toString(),
 													   Qt::AlignLeft | Qt::AlignVCenter);
 	}
