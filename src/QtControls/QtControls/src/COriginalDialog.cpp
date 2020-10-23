@@ -505,7 +505,8 @@ QWindow* COriginalDialog::getAncestorHandle(QWindow* window)
 #ifdef _MSC_VER
     WId ancetorId = (WId)::GetAncestor(HWND(window->winId()), GA_ROOT);
 #elif __linux__
-	return nullptr;
+    WId ancetorId = 0;
+    return nullptr;
 #endif
     QWidget* topLevelWidget = QWidget::find(ancetorId);
     if (topLevelWidget)
