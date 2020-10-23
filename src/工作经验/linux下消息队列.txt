@@ -1,0 +1,2 @@
+ipcs -q
+ipcrm -q msqid

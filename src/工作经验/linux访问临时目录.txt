@@ -1,0 +1,2 @@
+在打开文件前要加上
+system(("touch \"" + m_fileName + "\"").c_str());
