@@ -22,7 +22,7 @@ void GetFilterStockTask::DoTask()
 		m_today = m_stockClient->m_today;
 	}
 	std::string filePath = CSystem::GetCurrentExePath() + m_today.dateToString() + m_fileName + ".xls";
-	if (m_regain || !CSystem::fileExist(filePath))
+	if (m_regain || !CSystem::DirOrFileExist(filePath))
 	{
 		CMouse::MoveAbsolute(xyls::Point(521, 38), 0);
 		CMouse::LeftClick();

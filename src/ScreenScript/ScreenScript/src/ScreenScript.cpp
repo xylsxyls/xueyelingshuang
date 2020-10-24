@@ -118,7 +118,7 @@ bool ScreenScript::WaitClickPic(const std::string& path,
 std::string ScreenScript::GetBmpPath(const std::string& path)
 {
 	std::string curExePath = CSystem::GetCurrentExePath();
-	if (CSystem::DirOrFileAccess(curExePath + "ScreenScriptTemp") == false)
+	if (CSystem::DirOrFileExist(curExePath + "ScreenScriptTemp") == false)
 	{
 		if(!CSystem::CreateDir(curExePath + "ScreenScriptTemp"))
 		{
@@ -126,7 +126,7 @@ std::string ScreenScript::GetBmpPath(const std::string& path)
 		}
 	}
 	std::string bmpPath = curExePath + "ScreenScriptTemp\\" + CSystem::GetName(path, 3) + ".bmp";
-	if (CSystem::DirOrFileAccess(bmpPath) == false)
+	if (CSystem::DirOrFileExist(bmpPath) == false)
 	{
 		if (!CScreen::ChangeToBmp(bmpPath, path))
 		{

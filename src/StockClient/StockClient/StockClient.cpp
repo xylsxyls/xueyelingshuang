@@ -828,7 +828,7 @@ void StockClient::onSaveFilterStockToMysqlButtonClicked()
 	do
 	{
 		std::string path = CSystem::GetCurrentExePath() + currentTime.dateToString() + ".xls";
-		if (CSystem::fileExist(path))
+		if (CSystem::DirOrFileExist(path))
 		{
 			m_allFilterStock.clear();
 			std::shared_ptr<GetFilterStockTask> spGetAllFilterStockTask(new GetFilterStockTask);

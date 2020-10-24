@@ -23,7 +23,7 @@ void CheckAllStockTask::DoTask()
 		const std::string& stock = vecLine[0];
 		const std::string& stockClose = vecLine[6];
 		std::string marketPath = marketFolder + stock + ".txt";
-		if (!CSystem::fileExist(marketPath))
+		if (!CSystem::DirOrFileExist(marketPath))
 		{
 			m_vecErrorStock.push_back(stock);
 			continue;
