@@ -19,7 +19,7 @@ void CGeneralStyle::initPath()
 
 	exeDir.cdUp(); // w3l   or  output
 
-	qDebug() << exeDir.path();
+	//qDebug() << exeDir.path();
 	if(exeDir.path().split("/").last() == "W3L")
 	{
 		bool res = true;

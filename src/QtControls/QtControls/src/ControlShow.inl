@@ -27,7 +27,21 @@ ControlShow<QBase>::~ControlShow()
 template <class QBase>
 std::wstring ControlShow<QBase>::className()
 {
-	return QString::fromStdString(CStringManager::Replace(typeid(*this).name(), "class ", "")).toStdWString();
+	std::string className = typeid(*this).name();
+#ifdef _MSC_VER
+	CStringManager::Replace(className, "class ", "");
+#elif __linux__
+	for (auto it = className.begin(); it != className.end();)
+	{
+		if (*it >= 48 && *it <= 57)
+		{
+			it = className.erase(it);
+			continue;
+		}
+		break;
+	}
+#endif
+	return QString::fromStdString(className).toStdWString();
 }
 
 template <class QBase>
