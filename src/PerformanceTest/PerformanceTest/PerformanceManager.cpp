@@ -6,10 +6,14 @@
 #include <QString>
 #include "CSystem/CSystemAPI.h"
 
-PerformanceManager::PerformanceManager():
-m_cpuCoreCount(0)
+PerformanceManager::PerformanceManager()
+#ifdef __linux__
+	:m_cpuCoreCount(0)
+#endif
 {
+#ifdef __linux__
 	m_cpuCoreCount = CSystem::GetCPUCoreCount();
+#endif
 }
 
 PerformanceManager& PerformanceManager::instance()
