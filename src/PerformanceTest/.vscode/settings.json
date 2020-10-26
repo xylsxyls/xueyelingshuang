@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/PerformanceTest/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=libDialogManager.a;libQtControls.a;libQssString.a;libCStringManager.a;libCtxt.a;libCSystem.a;libEO_XmlSax2Parser.a;libCTaskThreadManager.a;libSemaphore.a",
+        "-DBIT=32",
+        "-DDEBUGRELEASE=release"
+    ]
+}

@@ -11,7 +11,9 @@ m_pid(0)
 
 void CpuTask::DoTask()
 {
+#ifdef _MSC_VER
 	PerformanceManager::instance().addCPUPid(m_pid);
+#endif
 	while (!m_exit)
 	{
 		PerformanceManager::instance().modifyCpuPerformance(m_pid, PerformanceManager::instance().CPUOccupation(m_pid));

@@ -1,4 +1,5 @@
 #pragma once
+#ifdef _MSC_VER
 #include <Windows.h> 
 //原理：调用GetProcessTimes()，并与上次调用得到的结果相减，即得到某段时间内CPU的使用时间
 //C++ 获取特定进程规定CPU使用率  原文：http://blog.csdn.net/liuqx97bb/article/details/52058657
@@ -63,3 +64,4 @@ public:
 	//-1 即为失败或进程已退出； 如果成功，首次调用会返回-2（中途用setpid更改了PID后首次调用也会返回-2）
  	float get_cpu_usage();  
 };
+#endif

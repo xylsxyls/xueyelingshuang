@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/PerformanceTest/",
+                "${workspaceFolder}/build/",
+                "${workspaceFolder}/../../include/",
+                "${QT5GCC32}/include/",
+                "${QT5GCC32}/include/QtWidgets/",
+                "${QT5GCC32}/include/QtCore/",
+                "${QT5GCC32}/include/QtGui/"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}

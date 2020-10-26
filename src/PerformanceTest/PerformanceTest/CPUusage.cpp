@@ -1,5 +1,6 @@
 #include "CPUusage.h"
 
+#ifdef _MSC_VER
 float CPUusage::get_cpu_usage()
 {
 	FILETIME now;
@@ -74,3 +75,4 @@ int CPUusage::get_processor_number()
 	GetSystemInfo(&info);
 	return info.dwNumberOfProcessors;
 }
+#endif

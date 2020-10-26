@@ -6,9 +6,10 @@
 #include <QString>
 #include "CSystem/CSystemAPI.h"
 
-PerformanceManager::PerformanceManager()
+PerformanceManager::PerformanceManager():
+m_cpuCoreCount(0)
 {
-
+	m_cpuCoreCount = CSystem::GetCPUCoreCount();
 }
 
 PerformanceManager& PerformanceManager::instance()
@@ -17,6 +18,7 @@ PerformanceManager& PerformanceManager::instance()
 	return s_performanceManager;
 }
 
+#ifdef _MSC_VER
 void PerformanceManager::addCPUPid(uint32_t pid)
 {
 	auto it = m_cpu.find(pid);
@@ -25,16 +27,6 @@ void PerformanceManager::addCPUPid(uint32_t pid)
 		return;
 	}
 	m_cpu[pid].setpid(pid);
-}
-
-std::string PerformanceManager::CPUOccupation(uint32_t pid)
-{
-	auto it = m_cpu.find(pid);
-	if (it == m_cpu.end())
-	{
-		return "";
-	}
-	return CStringManager::Format("%.2f", it->second.get_cpu_usage());
 }
 
 void PerformanceManager::removeCPUPid(uint32_t pid)
@@ -46,9 +38,47 @@ void PerformanceManager::removeCPUPid(uint32_t pid)
 	}
 	m_cpu.erase(it);
 }
+#endif
+
+std::string PerformanceManager::CPUOccupation(uint32_t pid)
+{
+#ifdef _MSC_VER
+	auto it = m_cpu.find(pid);
+	if (it == m_cpu.end())
+	{
+		return "";
+	}
+	return CStringManager::Format("%.2f", it->second.get_cpu_usage());
+#elif __linux__
+	std::string result;
+	CSystem::SystemCommand("ps -H -eo pid,%cpu | grep " + std::to_string(pid), result, true);
+	std::vector<std::string> everyProcess = CStringManager::split(result, "\n");
+	int32_t index = -1;
+	while (index++ != everyProcess.size() - 1)
+	{
+		std::vector<std::string> vecNode = CStringManager::split(everyProcess[index], " ");
+		for (auto it = vecNode.begin(); it != vecNode.end();)
+		{
+			if (*it == "")
+			{
+				it = vecNode.erase(it);
+				continue;
+			}
+			++it;
+		}
+		if (vecNode.size() != 2 || (atoi(vecNode[0].c_str()) != (int32_t)pid))
+		{
+			continue;
+		}
+		return CStringManager::Format("%.2f", atof(vecNode[1].c_str()) / (double)m_cpuCoreCount);
+	}
+	return "";
+#endif
+}
 
 std::string PerformanceManager::MemoryOccupation(uint32_t pid)
 {
+#ifdef _MSC_VER
 	QProcess p;
 	p.start("tasklist /FI \"PID EQ " + QString::number(pid) + " \"");
 	p.waitForFinished();
@@ -70,6 +100,41 @@ std::string PerformanceManager::MemoryOccupation(uint32_t pid)
 	result = QString::number(usedMem.toDouble() / 1024, 'g', 4);
 	p.close();
 	return result.toStdString();
+#elif __linux__
+	std::string result;
+	CSystem::SystemCommand("cat /proc/" + std::to_string(pid) + "/status | grep RSS", result, true);
+	std::vector<std::string> everyTarget = CStringManager::split(result, "\n");
+	int32_t index = -1;
+	while (index++ != everyTarget.size() - 1)
+	{
+		std::vector<std::string> vecNode = CStringManager::split(everyTarget[index], " ");
+		for (auto it = vecNode.begin(); it != vecNode.end();)
+		{
+			if (*it == "")
+			{
+				it = vecNode.erase(it);
+				continue;
+			}
+			++it;
+		}
+		std::string& nodeName = vecNode[0];
+		for (auto it = nodeName.begin(); it != nodeName.end();)
+		{
+			if (*it == '\t' || *it == ':')
+			{
+				it = nodeName.erase(it);
+				continue;
+			}
+			++it;
+		}
+		if (vecNode.size() != 3 || (CStringManager::MakeLower(nodeName) != "vmrss"))
+		{
+			continue;
+		}
+		return CStringManager::Format("%.2f", atof(vecNode[1].c_str()) / 1024.0);
+	}
+	return "";
+#endif
 }
 
 std::string PerformanceManager::currentTime()
@@ -79,7 +144,6 @@ std::string PerformanceManager::currentTime()
 
 std::string PerformanceManager::performanceWindowString()
 {
-	
 	std::string result;
 	for (auto it = m_performance.begin(); it != m_performance.end(); ++it)
 	{
