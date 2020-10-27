@@ -4,25 +4,16 @@
 #include <stdint.h>
 #include "CiniMacro.h"
 
-template<class SI_CHAR, class SI_STRLESS, class SI_CONVERTER>
-class CSimpleIniTempl;
-template<class SI_CHAR>
-struct SI_NoCase;
-template<class SI_CHAR>
-class SI_ConvertA;
-typedef CSimpleIniTempl < char, SI_NoCase<char>, SI_ConvertA<char> > CSimpleIniA;
-
 /** ini操作类
 */
 class CiniAPI Cini
 {
 public:
 	/** 构造函数
-	@param [in] iniPath 文件路径
-	@param [in] useSimpleIni 是否使用SimpleIni开源库
-	@param [in] iniPath 文件是否是utf-8编码，不是的话就是ANSI格式
+	@param [in] iniPath 文件路径，windows下使用ansi或utf-8，linux下只能使用utf-8，都是无BOM
+	@param [in] useSimpleIni 是否使用SimpleIni开源库，linux下一定使用开源库
 	*/
-	Cini(const std::string& iniPath, bool useSimpleIni = false, bool isUtf8 = true);
+	Cini(const std::string& iniPath, bool useSimpleIni = false);
 
 public:
 	/** 设置Windows系统API读取时缓冲区最大程度，默认是1024
@@ -87,7 +78,6 @@ private:
 	int32_t m_length;
 	int32_t m_sectionNum;
 	bool m_useSimpleIni;
-	bool m_isUtf8;
-	CSimpleIniA* m_simpleIni;
+	void* m_simpleIni;
 	bool m_loadSuccess;
 };

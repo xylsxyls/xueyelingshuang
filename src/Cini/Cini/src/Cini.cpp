@@ -1,25 +1,29 @@
 #include "Cini.h"
+#ifdef _MSC_VER
 #include <windows.h>
+#endif
 #include <vector>
 #include "SimpleIni.h"
 
-Cini::Cini(const std::string& iniPath, bool useSimpleIni, bool isUtf8):
+Cini::Cini(const std::string& iniPath, bool useSimpleIni):
 m_useSimpleIni(false),
-m_isUtf8(true),
 m_length(1024),
 m_sectionNum(1024),
 m_simpleIni(nullptr),
 m_loadSuccess(false)
 {
 	m_iniPath = iniPath;
+#ifdef _MSC_VER
 	m_useSimpleIni = useSimpleIni;
-	m_isUtf8 = isUtf8;
+#elif __linux__
+	m_useSimpleIni = true;
+#endif
 	if (m_useSimpleIni)
 	{
-		m_simpleIni = new CSimpleIni(isUtf8);
+		m_simpleIni = new CSimpleIniA(true);
 		if (m_simpleIni != nullptr)
 		{
-			m_loadSuccess = (m_simpleIni->LoadFile(iniPath.c_str()) == SI_OK);
+			m_loadSuccess = (((CSimpleIniA*)m_simpleIni)->LoadFile(iniPath.c_str()) == SI_OK);
 		}
 	}
 }
@@ -38,9 +42,10 @@ std::string Cini::readIni(const std::string& key, const std::string& section) co
 {
 	if (m_loadSuccess)
 	{
-		return m_simpleIni->GetValue(section.c_str(), key.c_str(), "");
+		return ((CSimpleIniA*)m_simpleIni)->GetValue(section.c_str(), key.c_str(), "");
 	}
 
+#ifdef _MSC_VER
 	if (m_length == 0)
 	{
 		return "";
@@ -50,18 +55,23 @@ std::string Cini::readIni(const std::string& key, const std::string& section) co
 	GetPrivateProfileStringA(section.c_str(), key.c_str(), "", &value[0], m_length, m_iniPath.c_str());
 	value.resize(strlen(&value[0]));
 	return value;
+#elif __linux__
+	return "";
+#endif
 }
 
 void Cini::writeIni(const std::string& key, const std::string& value, const std::string& section) const
 {
 	if (m_loadSuccess)
 	{
-		m_simpleIni->SetValue(section.c_str(), key.c_str(), value.c_str(), nullptr, true);
-		m_simpleIni->SaveFile(m_iniPath.c_str(), m_isUtf8);
+		((CSimpleIniA*)m_simpleIni)->SetValue(section.c_str(), key.c_str(), value.c_str(), nullptr, true);
+		((CSimpleIniA*)m_simpleIni)->SaveFile(m_iniPath.c_str(), false);
 		return;
 	}
 
+#ifdef _MSC_VER
 	WritePrivateProfileStringA(section.c_str(), key.c_str(), value.c_str(), m_iniPath.c_str());
+#endif
 }
 
 std::vector<std::string> Cini::getAllSection() const
@@ -69,7 +79,7 @@ std::vector<std::string> Cini::getAllSection() const
 	if (m_loadSuccess)
 	{
 		CSimpleIniTempl<char, SI_NoCase<char>, SI_ConvertA<char>>::TNamesDepend sections;
-		m_simpleIni->GetAllSections(sections);
+		((CSimpleIniA*)m_simpleIni)->GetAllSections(sections);
 		std::vector<std::string> result;
 		for (auto it = sections.begin(); it != sections.end(); ++it)
 		{
@@ -78,6 +88,7 @@ std::vector<std::string> Cini::getAllSection() const
 		return result;
 	}
 
+#ifdef _MSC_VER
 	std::vector<std::string> vecSection;
 	int32_t iLength = 0;
 	int32_t iPos = 0;
@@ -112,6 +123,9 @@ std::vector<std::string> Cini::getAllSection() const
 	delete[] chSectionNames;
 	delete[] chSection;
 	return vecSection;
+#elif __linux__
+	return std::vector<std::string>();
+#endif
 }
 
 std::vector<std::string> Cini::getAllKey(const std::string& section) const
@@ -119,7 +133,7 @@ std::vector<std::string> Cini::getAllKey(const std::string& section) const
 	if (m_loadSuccess)
 	{
 		CSimpleIniTempl<char, SI_NoCase<char>, SI_ConvertA<char>>::TNamesDepend sections;
-		m_simpleIni->GetAllKeys(section.c_str(), sections);
+		((CSimpleIniA*)m_simpleIni)->GetAllKeys(section.c_str(), sections);
 		std::vector<std::string> result;
 		for (auto it = sections.begin(); it != sections.end(); ++it)
 		{
@@ -135,7 +149,7 @@ std::string Cini::getFirstKey(const std::string& section) const
 	if (m_loadSuccess)
 	{
 		CSimpleIniTempl<char, SI_NoCase<char>, SI_ConvertA<char>>::TNamesDepend sections;
-		m_simpleIni->GetAllKeys(section.c_str(), sections);
+		((CSimpleIniA*)m_simpleIni)->GetAllKeys(section.c_str(), sections);
 		if (sections.empty())
 		{
 			return "";
@@ -143,22 +157,28 @@ std::string Cini::getFirstKey(const std::string& section) const
 		return sections.begin()->pItem;
 	}
 
+#ifdef _MSC_VER
 	std::string result;
 	result.resize(m_length);
 	GetPrivateProfileStringA(section.c_str(), nullptr, "", &result[0], m_length, m_iniPath.c_str());
 	result.resize(strlen(&result[0]));
 	return result;
+#elif __linux__
+	return "";
+#endif
 }
 
 void Cini::deleteKey(const std::string& key, const std::string& section) const
 {
 	if (m_loadSuccess)
 	{
-		m_simpleIni->Delete(section.c_str(), key.c_str());
-		m_simpleIni->SaveFile(m_iniPath.c_str(), m_isUtf8);
+		((CSimpleIniA*)m_simpleIni)->Delete(section.c_str(), key.c_str());
+		((CSimpleIniA*)m_simpleIni)->SaveFile(m_iniPath.c_str(), false);
 		return;
 	}
+#ifdef _MSC_VER
 	WritePrivateProfileStringA(section.c_str(), key.c_str(), nullptr, m_iniPath.c_str());
+#endif
 }
 
 void Cini::deleteSection(const std::string& section) const
@@ -169,12 +189,14 @@ void Cini::deleteSection(const std::string& section) const
 		int32_t index = -1;
 		while (index++ != vecKeys.size() - 1)
 		{
-			m_simpleIni->Delete(section.c_str(), vecKeys[index].c_str(), true);
+			((CSimpleIniA*)m_simpleIni)->Delete(section.c_str(), vecKeys[index].c_str(), true);
 		}
-		m_simpleIni->SaveFile(m_iniPath.c_str(), m_isUtf8);
+		((CSimpleIniA*)m_simpleIni)->SaveFile(m_iniPath.c_str(), false);
 		return;
 	}
+#ifdef _MSC_VER
 	WritePrivateProfileSectionA(section.c_str(), nullptr, m_iniPath.c_str());
+#endif
 }
 
 //int32_t main()
