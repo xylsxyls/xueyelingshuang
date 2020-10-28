@@ -1,10 +1,12 @@
 #include "MxmlCpp.h"
 #include "mxml.h"
 #include <stdint.h>
+#ifdef _MSC_VER
 #ifdef _WIN64
 #pragma comment(lib, "mxmlstat_64.lib")
 #else
 #pragma comment(lib, "mxmlstat_32.lib")
+#endif
 #endif
 
 MxmlCpp::MxmlCpp():

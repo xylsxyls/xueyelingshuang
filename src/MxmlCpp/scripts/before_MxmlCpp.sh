@@ -19,16 +19,24 @@ do
     cp -rf "$httpserviceincludepath$file" "$xueyelingshuang/include/"
 done
 
+mxmllib32="mxmlstat_32.lib"
+mxmllib64="mxmlstat_64.lib"
+
+if [[ "$OSTYPE" =~ ^linux ]]; then
+    mxmllib32="libmxmlstat_32.a"
+    mxmllib64="libmxmlstat_64.a"
+fi
+
 if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
 then
-    cp -rf "$xueyelingshuang/tools/mxml/lib/mxmlstat_32.lib" "$xueyelingshuang/lib/"
+    cp -rf "$xueyelingshuang/tools/mxml/lib/$mxmllib32" "$xueyelingshuang/lib/"
 elif [[ $1 == '32' ]] && [[ $3 == 'release' ]]
 then
-    cp -rf "$xueyelingshuang/tools/mxml/lib/mxmlstat_32.lib" "$xueyelingshuang/lib/"
+    cp -rf "$xueyelingshuang/tools/mxml/lib/$mxmllib32" "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'debug' ]]
 then
-    cp -rf "$xueyelingshuang/tools/mxml/lib/mxmlstat_64.lib" "$xueyelingshuang/lib/"
+    cp -rf "$xueyelingshuang/tools/mxml/lib/$mxmllib64" "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'release' ]]
 then
-    cp -rf "$xueyelingshuang/tools/mxml/lib/mxmlstat_64.lib" "$xueyelingshuang/lib/"
+    cp -rf "$xueyelingshuang/tools/mxml/lib/$mxmllib64" "$xueyelingshuang/lib/"
 fi

@@ -218,7 +218,7 @@ int main(int argc, char** argv)
 	if (allSame != "only")
 	{
 		//执行准备脚本（准备脚本中有依赖库的调用）
-		system(("sh" + SPACE + MARK(beforeBatPath) + SPACE + bit + SPACE + (allSame == "librely" ? "lib" : dlllib) + SPACE + debugRelease + SPACE + "same").c_str());
+		system(("bash" + SPACE + MARK(beforeBatPath) + SPACE + bit + SPACE + (allSame == "librely" ? "lib" : dlllib) + SPACE + debugRelease + SPACE + "same").c_str());
 	}
 	
 	//编译工程
@@ -238,7 +238,7 @@ int main(int argc, char** argv)
 		}
 		if(vecLine.size() == 1)
 		{
-			printf("error line sh = %s\n", beforeBatPath.c_str());
+			printf("error line shell = %s\n", beforeBatPath.c_str());
 			sleep(50);
 			continue;
 		}
@@ -355,6 +355,6 @@ int main(int argc, char** argv)
 #endif
 
 	//执行后期脚本
-	system(("sh" + SPACE + MARK(afterBatPath)).c_str());
+	system(("bash" + SPACE + MARK(afterBatPath)).c_str());
 	return 0;
 }
