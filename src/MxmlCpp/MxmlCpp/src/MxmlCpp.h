@@ -7,7 +7,7 @@ typedef struct _mxml_node_s mxml_node_t;
 
 /** xml解析类
 */
-class MxmlCpp
+class MxmlCppAPI MxmlCpp
 {
 public:
 	/** 构造函数
