@@ -19,7 +19,7 @@ CStringManager_allSame=$4
 SHELL_FOLDER=$(cd $(dirname $0); pwd)
 xueyelingshuang=$SHELL_FOLDER/../../..
 
-#璇ュ啓娉曟敮鎸佺洰褰曚笅鍚湁瀛愮洰褰曞拰绌烘牸
+#该写法支持目录下含有子目录和空格
 httpserviceincludepath="$xueyelingshuang/tools/civetweb/include/"
 if [ ! -d "$xueyelingshuang/include/civetweb/" ]
 then
@@ -30,16 +30,33 @@ do
     cp -rf "$httpserviceincludepath$file" "$xueyelingshuang/include/civetweb/"
 done
 
+civetweblib32="civetwebstatic32"
+civetweblib64="civetwebstatic64"
+libsuffix=".lib"
+
+if [[ $3 == 'debug' ]]; then
+    libdebugrelease="d"
+else
+    libdebugrelease=""
+fi
+
+if [[ "$OSTYPE" =~ ^linux ]]; then
+    civetweblib32="libcivetwebstatic32"
+    civetweblib64="libcivetwebstatic64"
+    libsuffix=".a"
+    libdebugrelease=""
+fi
+
 if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
 then
-    cp -rf "$xueyelingshuang/tools/civetweb/win32/debug/"*.lib "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/civetweb/lib/"$civetweblib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 elif [[ $1 == '32' ]] && [[ $3 == 'release' ]]
 then
-    cp -rf "$xueyelingshuang/tools/civetweb/win32/release/"*.lib "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/civetweb/lib/"$civetweblib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'debug' ]]
 then
-    cp -rf "$xueyelingshuang/tools/civetweb/win64/debug/"*.lib "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/civetweb/lib/"$civetweblib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'release' ]]
 then
-    cp -rf "$xueyelingshuang/tools/civetweb/win64/release/"*.lib "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/civetweb/lib/"$civetweblib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 fi

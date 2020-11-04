@@ -17,12 +17,12 @@ bool HttpInterface::HttpPostReceive(const std::string& request)
 
 void HttpInterface::WriteSuccess()
 {
-	mg_printf(conn_, "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nConnection: close\r\n\r\n");
+	mg_printf(conn_, "%s", "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nConnection: close\r\n\r\n");
 }
 
 void HttpInterface::WriteResult(const std::string& result)
 {
-	mg_printf(conn_, result.c_str());
+	mg_printf(conn_, "%s", result.c_str());
 }
 
 bool HttpInterface::handleGet(CivetServer* server, struct mg_connection* conn)
