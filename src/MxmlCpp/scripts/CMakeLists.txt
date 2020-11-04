@@ -64,7 +64,7 @@ endforeach ()
 
 #添加第三方库
 if(${BIT} STREQUAL "32")
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libmxmlstat_32.a)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libmxmlstatic32.a)
 elseif(${BIT} STREQUAL "64")
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libmxmlstat_64.a)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libmxmlstatic64.a)
 endif()

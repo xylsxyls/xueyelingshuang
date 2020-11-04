@@ -23,8 +23,8 @@ mxmllib32="mxmlstat_32.lib"
 mxmllib64="mxmlstat_64.lib"
 
 if [[ "$OSTYPE" =~ ^linux ]]; then
-    mxmllib32="libmxmlstat_32.a"
-    mxmllib64="libmxmlstat_64.a"
+    mxmllib32="libmxmlstatic32.a"
+    mxmllib64="libmxmlstatic64.a"
 fi
 
 if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
