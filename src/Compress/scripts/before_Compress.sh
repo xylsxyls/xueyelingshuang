@@ -20,7 +20,7 @@ do
 done
 
 zliblib32="zlibstat_32.lib"
-zliblib64="zlibstat_32.lib"
+zliblib64="zlibstat_64.lib"
 
 if [[ "$OSTYPE" =~ ^linux ]]; then
     zliblib32="libzstatic32.a"
