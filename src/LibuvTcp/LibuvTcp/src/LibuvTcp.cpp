@@ -1,9 +1,10 @@
 #include "LibuvTcp.h"
-#include "libuv/uv.h"
+#include "uv.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include "RunLoopTask.h"
 #include <mutex>
 #include <memory>
+#include <string.h>
 
 void onAsyncCallback(uv_async_t* handle);
 
@@ -120,7 +121,7 @@ void onAsyncCallback(uv_async_t* handle)
 	char* text = nullptr;
 	while (queue->pop(&text))
 	{
-#ifdef _WIN64
+#if defined _WIN64 || defined __x86_64__
 		uv_tcp_t* dest = (uv_tcp_t*)(*(int64_t*)text);
 		int32_t ptrSize = 8;
 #else
@@ -229,13 +230,13 @@ void LibuvTcp::loop()
 
 void LibuvTcp::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t protocolId)
 {
-#ifdef _WIN64
+#if defined _WIN64 || defined __x86_64__
 	int32_t ptrSize = 8;
 #else
 	int32_t ptrSize = 4;
 #endif // _WIN64
 	char* text = (char*)::malloc(length + ptrSize + 8);
-#ifdef _WIN64
+#if defined _WIN64 || defined __x86_64__
 	*(int64_t*)text = (int64_t)dest;
 #else
 	*(int32_t*)text = (int32_t)dest;
