@@ -41,7 +41,7 @@ m_fixedPrecFlag(HALF_ADJUST)
 	}
 	else if (vecNum.size() == 2)
 	{
-		m_prec = vecNum[1].size();
+		m_prec = (int32_t)vecNum[1].size();
 		std::string strNum = num;
 		CStringManager::Replace(strNum, ".", "");
 		mpz_init_set_str(m_gmp->m_integer, strNum.c_str(), 10);
@@ -290,7 +290,7 @@ BigNumberBase::BigNumberCompare BigNumberBase::Compare(const BigNumberBase& x, c
 	}
 	else
 	{
-		int32_t count = mpz_sizeinbase(result.m_gmp->m_integer, 10);
+		auto count = mpz_sizeinbase(result.m_gmp->m_integer, 10);
 		if (count == 1 && firstChara == '0' && lastChara == '0')
 		{
 			return BigNumberCompare::EQUAL;
@@ -301,7 +301,7 @@ BigNumberBase::BigNumberCompare BigNumberBase::Compare(const BigNumberBase& x, c
 
 std::string BigNumberBase::toString() const
 {
-	int32_t count = mpz_sizeinbase(m_gmp->m_integer, 10);
+	auto count = mpz_sizeinbase(m_gmp->m_integer, 10);
 	char* num = (char*)::malloc(count + 2);
 	mpz_get_str(num, 10, m_gmp->m_integer);
 	std::string result = num;
@@ -311,8 +311,8 @@ std::string BigNumberBase::toString() const
 		return result;
 	}
 	bool isMinus = (result[0] == '-');
-	int32_t countValid = result.size() - (isMinus ? 1 : 0);
-	int32_t insertCount = m_prec - countValid + 1;
+	auto countValid = result.size() - (isMinus ? 1 : 0);
+	auto insertCount = m_prec - countValid + 1;
 	if (insertCount > 0)
 	{
 		result.insert(isMinus ? 1 : 0, insertCount, '0');
