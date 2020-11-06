@@ -9,6 +9,10 @@ UserConfigManager& UserConfigManager::instance()
 
 void UserConfigManager::setUserId(uint64_t userId)
 {
+#ifdef _MSC_VER
 	m_tableName = CStringManager::Format("user_%I64u", userId);
+#elif __linux__
+	m_tableName = CStringManager::Format("user_%llu", userId);
+#endif
 	createTableIfNotExist(m_tableName);
 }

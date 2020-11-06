@@ -206,7 +206,11 @@ FastNumber FastNumber::operator -- (int)
 std::string FastNumber::toString() const
 {
 	std::string result;
+#ifdef _MSC_VER
 	CStringManager::Format(result, "%I64d", m_base);
+#elif __linux__
+	CStringManager::Format(result, "%lld", m_base);
+#endif
 	if (m_prec == 0)
 	{
 		return result;

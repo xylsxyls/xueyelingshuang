@@ -232,7 +232,11 @@ void Variant::toString(std::string& result) const
 	}
 	case UINT64:
 	{
+#ifdef _MSC_VER
 		CStringManager::Format(result, "%I64u", *(uint64_t*)m_data);
+#elif __linux__
+		CStringManager::Format(result, "%llu", *(uint64_t*)m_data);
+#endif
 		break;
 	}
 	case DOUBLE:
