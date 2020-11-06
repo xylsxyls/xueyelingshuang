@@ -2,11 +2,7 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include <math.h>
 #include "gmp.h"
-#ifdef _WIN64
-#pragma comment(lib, "libgmp.dll.lib")
-#elif _WIN32
-#pragma comment(lib, "gmp.lib")
-#endif
+#include <string.h>
 
 class GmpInt
 {
@@ -80,7 +76,7 @@ void GmpInt::TenExp(mpz_t& num, int32_t exp)
 		return;
 	}
 	char* szExp = (char*)malloc(exp + 2);
-	memset(szExp, 48, exp + 1);
+	::memset(szExp, 48, exp + 1);
 	szExp[exp + 1] = 0;
 	szExp[0] = 49;
 	mpz_t mpzExp;
@@ -373,7 +369,7 @@ void BigNumberBase::setPrec(int32_t prec, PrecFlag flag)
 
 	int32_t exp = m_prec - prec;
 	char* szExp = (char*)malloc(exp + 2);
-	memset(szExp, 48, exp + 1);
+	::memset(szExp, 48, exp + 1);
 	szExp[exp + 1] = 0;
 	szExp[0] = 49;
 	mpz_t mpzExp;
