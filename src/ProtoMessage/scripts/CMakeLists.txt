@@ -61,3 +61,10 @@ list(APPEND LIBRARYLIST ${LIBRARIESRELY})
 foreach (EVERYLIBRARY ${LIBRARYLIST})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERYLIBRARY})
 endforeach ()
+
+#添加第三方库
+if(${BIT} STREQUAL "32")
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libprotobuf-litestatic32.a)
+elseif(${BIT} STREQUAL "64")
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libprotobuf-litestatic64.a)
+endif()
