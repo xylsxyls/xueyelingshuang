@@ -108,6 +108,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <DisableSpecificWarnings>4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -149,6 +150,7 @@
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -172,6 +174,7 @@
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

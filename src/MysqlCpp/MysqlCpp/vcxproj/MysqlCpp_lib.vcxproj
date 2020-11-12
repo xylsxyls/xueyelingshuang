@@ -113,6 +113,7 @@
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -150,6 +151,7 @@
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -171,6 +173,7 @@
       <PreprocessorDefinitions>STATIC_LIB;NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
