@@ -2,6 +2,7 @@
 #include <map>
 #include <string>
 #include <stdint.h>
+#include <vector>
 #include "HiRedisMacro.h"
 
 struct redisReply;

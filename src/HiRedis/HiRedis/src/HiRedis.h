@@ -2,6 +2,7 @@
 #include "HiRedisMacro.h"
 #include <memory>
 #include <map>
+#include <vector>
 
 class HiRedisResultSet;
 struct redisContext;

@@ -3,14 +3,6 @@
 #include "HiRedisResultSet.h"
 #include "CStringManager/CStringManagerAPI.h"
 
-#ifdef _DEBUG
-#pragma comment(lib,"hiredis_d.lib")
-#pragma comment(lib,"Win32_Interop_d.lib")
-#else
-#pragma comment(lib,"hiredis_r.lib")
-#pragma comment(lib,"Win32_Interop_r.lib")
-#endif
-
 HiRedis::HiRedis():
 m_redis(nullptr)
 {
