@@ -1,0 +1,3 @@
+CC="gcc -m32" ./configure --target="i386-linux"
+CFLAGS="-m32" ./configure
+./configure --help

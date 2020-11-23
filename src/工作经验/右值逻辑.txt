@@ -1,0 +1,15 @@
+std::vector<std::string>&& bb()
+{
+	std::vector<std::string> vec;
+	int32_t count = 10000;
+	while (count-- != 0)
+	{
+		vec.push_back("123456");
+	}
+	return std::move(vec);
+}
+
+std::vector<std::string> b = bb();
+
+这种会崩溃
+返回值必须是左值，&&或者&都不能用
