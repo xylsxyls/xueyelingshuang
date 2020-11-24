@@ -4,5 +4,6 @@ export CLOUD_REBUILD=/home/xylsxyls/xueyelingshuang/common/CloudRebuild/CloudReb
 export FILE_REPLACE=/home/xylsxyls/xueyelingshuang/common/FileReplace/FileReplace1.1
 export QT5GCC32=/home/xylsxyls/Qt5.5.1_32/5.5/gcc/
 export QT5GCC64=/home/xylsxyls/Qt5.5.1_64/5.5/gcc_64/
+export BOOST_ROOT=/home/xylsxyls/boost/boost_1_58_0/
 关闭文件
 source /etc/profile
