@@ -13,22 +13,15 @@
 #include "cppconn/resultset.h"
 #include "cppconn/prepared_statement.h"
 #include "mysql_driver.h"
-#include "cppconn/driver.h"  
-#include "cppconn/statement.h"  
-#include "cppconn/metadata.h"  
+#include "cppconn/driver.h"
+#include "cppconn/statement.h"
+#include "cppconn/metadata.h"
 #include "cppconn/exception.h"
 
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-#ifdef _WIN64
-#pragma comment(lib, "mysqlcppconn_64.lib")
-#pragma comment(lib, "mysqlcppconn-static_64.lib")
-#elif _WIN32
-#pragma comment(lib, "mysqlcppconn.lib")
-#pragma comment(lib, "mysqlcppconn-static.lib")
-#endif
 
 MysqlCpp::MysqlCpp():
 m_driver(nullptr),
