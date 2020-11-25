@@ -126,7 +126,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;CPPCONN_LIB_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
@@ -165,7 +165,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\include\;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;_CRT_SECURE_NO_WARNINGS;CPPCONN_LIB_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\tools\DebugTest\SendToMessageTest.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
