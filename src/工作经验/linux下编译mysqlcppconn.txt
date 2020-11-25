@@ -1,0 +1,6 @@
+$cmake /home/ding/download/mysql-connector-c++-1.1.12 -DBOOST_ROOT=/usr/include/boost \
+-DCMAKE_ENABLE_C++11=1 \
+-DMYSQL_INCLUDE_DIR=/home/ding/forge_cpp/LinuxProject/lib/mysql-connector-c/include \
+-DMYSQL_LIB_DIR=/home/ding/forge_cpp/LinuxProject/lib/mysql-connector-c/lib
+
+使用默认脚本编译之前必须把mysql的32位和64位都装了才行，并且生成动态库的时候只会生成其中一个对应的，要编两次，生成之后使用时32位的mysqlcppconn可以连64位的mysql

@@ -1,0 +1,2 @@
+预编译宏里增加
+CPPCONN_LIB_BUILD

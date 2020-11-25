@@ -1,0 +1,16 @@
+cmake C:/Users/yangnan/Downloads/mysql-connector-cpp-1.1.5 -DBOOST_ROOT=D:/boost/boost_1_58_0 -DCMAKE_ENABLE_C++11=1 -DMYSQL_INCLUDE_DIR=D:/mysql-5.6.24-win32/include -DMYSQL_LIB_DIR=D:/mysql-5.6.24-win32/lib -G "Visual Studio 12 2013"
+
+
+修改CMakeLists.txt用CMake-gui编译
+
+SET(CONNECTOR_PLATFORM "win32")
+SET(BOOST_ROOT "D:/boost/boost_1_58_0")
+SET(CMAKE_ENABLE_C++11 1)
+SET(MYSQL_INCLUDE_DIR "C:/Users/yangnan/Downloads/mysql-5.6.24-win32/include")
+SET(MYSQL_LIB_DIR "C:/Users/yangnan/Downloads/mysql-5.6.24-win32/lib")
+
+SET(CONNECTOR_PLATFORM "winx64")
+SET(BOOST_ROOT "D:/boost/boost_1_58_0")
+SET(CMAKE_ENABLE_C++11 1)
+SET(MYSQL_INCLUDE_DIR "C:/Users/yangnan/Downloads/mysql-5.6.24-winx64/include")
+SET(MYSQL_LIB_DIR "C:/Users/yangnan/Downloads/mysql-5.6.24-winx64/lib")
