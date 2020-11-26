@@ -28,7 +28,9 @@ xueyelingshuang=$SHELL_FOLDER/../../..
 
 libname="mysqlcpp"
 windowslibname="mysqlcppconn"
-linuxlibname="libmysqlcppconn.so.7"
+linuxlibname="libmysqlcppconn"
+windowsdllname="libmysql.dll"
+linuxdllname="libmysqlclient.so.18"
 includecreatedir=0
 
 #该写法支持目录下含有子目录和空格
@@ -48,6 +50,7 @@ done
 
 lib32=$windowslibname"static32"
 lib64=$windowslibname"static64"
+dllname=$windowsdllname
 libsuffix=".lib"
 
 if [[ $3 == 'debug' ]]; then
@@ -57,38 +60,27 @@ else
 fi
 
 if [[ "$OSTYPE" =~ ^linux ]]; then
-    lib32=$linuxlibname
-    lib64=$linuxlibname
-    libsuffix=""
+    lib32=$linuxlibname"static32"
+    lib64=$linuxlibname"static64"
+    dllname=$linuxdllname
+    libsuffix=".a"
     libdebugrelease=""
 fi
 
 if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
 then
     cp -rf $xueyelingshuang"/tools/"$libname"/lib/x86/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/x86/"$dllname "$xueyelingshuang/lib/"
 elif [[ $1 == '32' ]] && [[ $3 == 'release' ]]
 then
     cp -rf $xueyelingshuang"/tools/"$libname"/lib/x86/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/x86/"$dllname "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'debug' ]]
 then
     cp -rf $xueyelingshuang"/tools/"$libname"/lib/x64/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/x64/"$dllname "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'release' ]]
 then
     cp -rf $xueyelingshuang"/tools/"$libname"/lib/x64/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
-fi
-
-if [[ "$OSTYPE" =~ ^msys ]]; then
-    if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
-    then
-        cp -rf $xueyelingshuang"/tools/"$libname"/lib/x86/libmysql.dll" "$xueyelingshuang/lib/"
-    elif [[ $1 == '32' ]] && [[ $3 == 'release' ]]
-    then
-        cp -rf $xueyelingshuang"/tools/"$libname"/lib/x86/libmysql.dll" "$xueyelingshuang/lib/"
-    elif [[ $1 == '64' ]] && [[ $3 == 'debug' ]]
-    then
-        cp -rf $xueyelingshuang"/tools/"$libname"/lib/x64/libmysql.dll" "$xueyelingshuang/lib/"
-    elif [[ $1 == '64' ]] && [[ $3 == 'release' ]]
-    then
-        cp -rf $xueyelingshuang"/tools/"$libname"/lib/x64/libmysql.dll" "$xueyelingshuang/lib/"
-    fi
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/x64/"$dllname "$xueyelingshuang/lib/"
 fi

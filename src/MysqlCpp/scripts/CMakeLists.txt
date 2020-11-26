@@ -33,6 +33,7 @@ endif()
 PROJECT(${PROJECT_NAME})
 
 add_definitions(-w)
+add_definitions(-D CPPCONN_LIB_BUILD)
 
 #MESSAGE("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
 #${PROJECT_SOURCE_DIR}="xueyelingshuang/src/MysqlCpp/scripts"
@@ -66,4 +67,9 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/${EVERY
 endforeach ()
 
 #添加第三方库
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libmysqlcppconn.so.7)
+if(${BIT} STREQUAL "32")
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libmysqlcppconnstatic32.a)
+elseif(${BIT} STREQUAL "64")
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libmysqlcppconnstatic64.a)
+endif()
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/../../../lib/libmysqlclient.so.18)
