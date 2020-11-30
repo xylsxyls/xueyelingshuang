@@ -238,7 +238,7 @@ void ZookeeperClient::ListenNodeValueChanged(const std::string& path, const std:
 
 void ZookeeperClient::ListenChildrenNodeChanged(const std::string& path, const std::string& node, const ZookeeperList& zookeeperList)
 {
-	printf("into listen children node changed, path = %s, size = %d\n", path.c_str(), zookeeperList.m_children.size());
+	printf("into listen children node changed, path = %s, size = %d\n", path.c_str(), (int32_t)zookeeperList.m_children.size());
 }
 
 void ZookeeperClient::ListenChildrenFatherNodeDeleted(const std::string& path, const std::string& node)

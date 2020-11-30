@@ -26,28 +26,73 @@ CStringManager_allSame=$4
 SHELL_FOLDER=$(cd $(dirname $0); pwd)
 xueyelingshuang=$SHELL_FOLDER/../../..
 
-#璇ュ啓娉曟敮鎸佺洰褰曚笅鍚湁瀛愮洰褰曞拰绌烘牸
-srcpath="$xueyelingshuang/tools/zookeeper/include/"
-destpath="$xueyelingshuang/include/zookeeper/"
-if [ ! -d "$destpath" ]
-then
-    mkdir -p "$destpath"
+libname="zookeeper"
+windowslibname="zookeeper"
+linuxlibname="libzookeeper_mt"
+includecreatedir=1
+
+#该写法支持目录下含有子目录和空格
+includepath=$xueyelingshuang"/tools/"$libname"/include/"
+copyincludepath=$xueyelingshuang"/include/"
+if [[ $includecreatedir == 1 ]]; then
+    copyincludepath=$xueyelingshuang"/include/"$libname"/"
 fi
-for file in $(ls "$srcpath")
+if [ ! -d $copyincludepath ]
+then
+    mkdir -p $copyincludepath
+fi
+for file in $(ls $includepath)
 do
-    cp -rf "$srcpath$file" "$destpath"
+    cp -rf $includepath$file $copyincludepath
 done
+
+lib32=$windowslibname"static32"
+lib64=$windowslibname"static64"
+libsuffix=".lib"
+
+if [[ $3 == 'debug' ]]; then
+    libdebugrelease="d"
+else
+    libdebugrelease=""
+fi
+
+if [[ "$OSTYPE" =~ ^linux ]]; then
+    lib32=$linuxlibname"static32"
+    lib64=$linuxlibname"static64"
+    libsuffix=".a"
+    libdebugrelease=""
+fi
 
 if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
 then
-    cp -rf "$xueyelingshuang/tools/zookeeper/win32/debug/"*.lib "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 elif [[ $1 == '32' ]] && [[ $3 == 'release' ]]
 then
-    cp -rf "$xueyelingshuang/tools/zookeeper/win32/release/"*.lib "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'debug' ]]
 then
-    cp -rf "$xueyelingshuang/tools/zookeeper/win64/debug/"*.lib "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'release' ]]
 then
-    cp -rf "$xueyelingshuang/tools/zookeeper/win64/release/"*.lib "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+fi
+
+if [[ "$OSTYPE" =~ ^msys ]]; then
+    windowslibname="hashtable"
+    lib32=$windowslibname"static32"
+    lib64=$windowslibname"static64"
+
+    if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
+    then
+        cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    elif [[ $1 == '32' ]] && [[ $3 == 'release' ]]
+    then
+        cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    elif [[ $1 == '64' ]] && [[ $3 == 'debug' ]]
+    then
+        cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    elif [[ $1 == '64' ]] && [[ $3 == 'release' ]]
+    then
+        cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    fi
 fi
