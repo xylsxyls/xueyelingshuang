@@ -111,7 +111,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>hashtable.lib;zookeeper.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>hashtablestatic32d.lib;zookeeperstatic32d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMTD.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -129,7 +129,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>hashtable.lib;zookeeper.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>hashtablestatic64d.lib;zookeeperstatic64d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMTD.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -150,7 +150,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>hashtable.lib;zookeeper.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>hashtablestatic32.lib;zookeeperstatic32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMT.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -171,7 +171,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>hashtable.lib;zookeeper.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>hashtablestatic64.lib;zookeeperstatic64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMT.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
