@@ -577,7 +577,7 @@ int CSystem::GetSystemBits()
 
 void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path)
 {
-	std::ofstream file(path.c_str(), std::ios::binary | std::ios::app);
+	std::ofstream file(path.c_str(), std::ios_base::binary | std::ios_base::app);
     for (auto itData = stringMap.begin(); itData != stringMap.end(); ++itData)
     {
 		if (path.empty())
@@ -589,11 +589,12 @@ void CSystem::OutputMap(const std::map<std::string, std::string>& stringMap, con
 			file << "[" << itData->first.c_str() << "] = " << itData->second.c_str() << "\n";
 		}
     }
+	file.close();
 }
 
 void CSystem::OutputVector(const std::vector<std::string>& stringVector, const std::string& path)
 {
-	std::ofstream file(path.c_str(), std::ios::binary | std::ios::app);
+	std::ofstream file(path.c_str(), std::ios_base::binary | std::ios_base::app);
     for (auto itData = stringVector.begin(); itData != stringVector.end(); ++itData)
     {
 		if (path.empty())
@@ -605,6 +606,7 @@ void CSystem::OutputVector(const std::vector<std::string>& stringVector, const s
 			file << itData->c_str() << "\n";
 		}
     }
+	file.close();
 }
 
 void CSystem::ClearScanf()
@@ -1223,18 +1225,21 @@ std::string CSystem::commonFile(const std::string& name)
 
 std::string CSystem::readFile(const std::string& path)
 {
-	std::ifstream license_file(path.c_str(), std::ios::binary);
-	if (!license_file)
+	std::ifstream file(path.c_str(), std::ios_base::in | std::ios_base::binary);
+	if (!file.is_open())
 	{
 		return "";
 	}
-	return std::string((std::istreambuf_iterator<char>(license_file)), std::istreambuf_iterator<char>());
+	std::string result((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	file.close();
+	return result;
 }
 
 void CSystem::saveFile(const std::string& content, const std::string& path)
 {
-	std::ofstream file(path.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
+	std::ofstream file(path.c_str(), std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
 	file << content;
+	file.close();
 }
 
 std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
