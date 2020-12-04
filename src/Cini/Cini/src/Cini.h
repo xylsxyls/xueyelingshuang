@@ -15,6 +15,10 @@ public:
 	*/
 	Cini(const std::string& iniPath, bool useSimpleIni = false);
 
+	/** 析构函数
+	*/
+	~Cini();
+
 public:
 	/** 设置Windows系统API读取时缓冲区最大程度，默认是1024
 	@param [in] length 最大长度

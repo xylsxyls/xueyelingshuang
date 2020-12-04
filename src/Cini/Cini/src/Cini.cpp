@@ -28,6 +28,14 @@ m_loadSuccess(false)
 	}
 }
 
+Cini::~Cini()
+{
+	if (m_useSimpleIni && m_simpleIni != nullptr)
+	{
+		delete ((CSimpleIniA*)m_simpleIni);
+	}
+}
+
 void Cini::setMaxLength(int32_t length)
 {
 	m_length = length;
