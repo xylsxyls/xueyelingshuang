@@ -7,7 +7,8 @@
 #include <stdarg.h>
 
 LogManager::LogManager():
-m_processMutex(nullptr)
+m_processMutex(nullptr),
+m_log(false)
 {
 	m_exeName = CSystem::GetCurrentExeName();
 	m_exeName.append(".exe");
@@ -30,8 +31,13 @@ LogManager& LogManager::instance()
 	return s_logManager;
 }
 
-void LogManager::init(int32_t fileId, const std::string& path)
+void LogManager::init(int32_t fileId, const std::string& path, bool log)
 {
+	m_log = log;
+	if (!log)
+	{
+		return;
+	}
 	std::string logPath;
 	if (path.empty())
 	{
@@ -41,14 +47,17 @@ void LogManager::init(int32_t fileId, const std::string& path)
 	{
 		logPath = path;
 	}
-	
-	std::ofstream* logFile = new std::ofstream(logPath.c_str(), std::ios::app);
-	if (logFile == nullptr)
+
+	if (m_logMap.find(fileId) == m_logMap.end())
 	{
-		return;
+		std::ofstream* logFile = new std::ofstream(logPath.c_str(), std::ios::app);
+		if (logFile == nullptr || !logFile->is_open())
+		{
+			return;
+		}
+		m_logMap[fileId] = std::pair<std::string, std::ofstream*>(path, logFile);
+		LOGBEGIN(fileId, "");
 	}
-	m_logMap[fileId] = std::pair<std::string, std::ofstream*>(path, logFile);
-	LOGBEGIN(fileId, "");
 }
 
 void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...)
@@ -60,7 +69,7 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 
 	if ((fileId == 0) && (m_logMap.find(0) == m_logMap.end()))
 	{
-		init();
+		init(0, "", m_log);
 	}
 
 	std::ofstream* logFile = getLogFile(fileId);

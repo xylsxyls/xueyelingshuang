@@ -49,7 +49,7 @@ public:
 	static LogManager& instance();
 
 public:
-	void init(int32_t fileId = 0, const std::string& path = "");
+	void init(int32_t fileId = 0, const std::string& path = "", bool log = true);
 
 	void print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...);
 
@@ -75,4 +75,5 @@ private:
 #pragma warning(pop)
 #endif
 	ProcessReadWriteMutex* m_processMutex;
+	bool m_log;
 };
