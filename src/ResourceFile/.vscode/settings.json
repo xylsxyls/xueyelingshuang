@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/ResourceFile/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=libCSystem.a",
+        "-DBIT=32",
+        "-DDEBUGRELEASE=release"
+    ]
+}
