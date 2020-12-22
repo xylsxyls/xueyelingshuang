@@ -17,9 +17,9 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 #endif
 
-int32_t main()
+int32_t main(int argc, char** argv)
 {
-	std::vector<std::string> vecParam = CSystem::exeParam();
+	std::vector<std::string> vecParam = CSystem::exeParam(argc, argv);
 	if (vecParam.size() != 2)
 	{
 		printf("请拖动文件到exe\n");
