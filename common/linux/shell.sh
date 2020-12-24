@@ -1,6 +1,7 @@
 chmod 777 ../CloudRebuild/CloudRebuild1.2
 chmod 777 ../FileReplace/FileReplace1.1
 chmod 777 ../PerformanceTest/PerformanceTest1.0
+chmod 777 ../ResourceFile/ResourceFile1.0
 chmod 777 ./*.sh
 chmod 777 ../../*/*/*.sh
 chmod 777 ../../*/*/*/*.sh
