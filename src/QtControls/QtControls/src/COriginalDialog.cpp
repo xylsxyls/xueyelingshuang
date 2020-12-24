@@ -821,6 +821,7 @@ COriginalDialog::TouchType COriginalDialog::getTouchType(const QPoint& clientPos
 
 void COriginalDialog::setTouchBorderWidth(int n)
 {
+#ifdef __linux__
 	if (mEastWest.isNull())
 	{
 		mEastWest.loadFromData(QByteArray::fromStdString(eastWestResizeCursor));
@@ -837,6 +838,7 @@ void COriginalDialog::setTouchBorderWidth(int n)
 	{
 		mNorthWestSouthEast.loadFromData(QByteArray::fromStdString(northWestSouthEastResizeCursor));
 	}
+#endif
 	mTouchBorderWidth = n;
 }
 

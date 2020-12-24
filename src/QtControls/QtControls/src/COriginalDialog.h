@@ -36,11 +36,8 @@ public:
 signals:
 	//使用Qt::QueuedConnection
 	void ncActiveChanged(bool ncActive);
-
-#ifdef _MSC_VER
-	//使用Qt::QueuedConnection 鼠标激活是2，键盘激活是1，非激活为0
+	//使用Qt::QueuedConnection 鼠标激活是2，键盘激活是1，非激活为0，只可在windows下使用
 	void activeChanged(int activeType);
-#endif
 
 protected:
 #ifdef _MSC_VER
