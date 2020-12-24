@@ -371,6 +371,15 @@
     <ClCompile Include="GeneratedFiles\Release\moc_Widget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\PushButton.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PushButton.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PushButton.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\src\BackgroundLabel.h">
@@ -476,6 +485,9 @@
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="..\src\Widget.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\src\PushButton.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>

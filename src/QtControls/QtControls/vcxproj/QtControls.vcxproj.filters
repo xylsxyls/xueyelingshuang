@@ -140,6 +140,9 @@
     <CustomBuild Include="..\src\CheckBox.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\src\PushButton.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GeneratedFiles\Debug\moc_ChooseComboBox.cpp">
@@ -477,6 +480,15 @@
     </ClCompile>
     <ClCompile Include="..\src\ChooseComboBox.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PushButton.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_PushButton.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_PushButton.cpp">
+      <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
