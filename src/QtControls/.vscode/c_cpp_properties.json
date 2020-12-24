@@ -13,7 +13,8 @@
                 "${QT5GCC32}/include/QtNetwork/",
                 "${QT5GCC32}/include/QtWebKit/",
                 "${QT5GCC32}/include/QtWebKitWidgets/",
-                "${QT5GCC32}/include/QtXml/"
+                "${QT5GCC32}/include/QtXml/",
+                "${QT5GCC32}/include/QtX11Extras/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

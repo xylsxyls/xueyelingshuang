@@ -55,7 +55,7 @@ SET(Qt5_DIR "${QT5_GCC}/lib/cmake/Qt5")
 INCLUDE_DIRECTORIES("${QT5_GCC}/include/")
 
 #ÃÌº”Qt“¿¿µø‚
-SET(QTRELY Widgets;Core;Gui;Network;WebKit;WebKitWidgets;Xml)
+SET(QTRELY Widgets;Core;Gui;Network;WebKit;WebKitWidgets;Xml;X11Extras)
 
 list(APPEND QTRELYLIST ${QTRELY})
 foreach (EVERYQTRELY ${QTRELYLIST})

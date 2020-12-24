@@ -1,6 +1,11 @@
 #include "TipLabel.h"
 #ifdef _MSC_VER
 #include <Windows.h>
+#elif __linux__
+#include <xcb/xcb.h>
+#include <xcb/xfixes.h>
+#include <X11/Xlib.h>
+#include <QX11Info>
 #endif
 
 TipLabel::TipLabel(QWidget* parent) :
@@ -95,6 +100,42 @@ bool TipLabel::nativeEvent(const QByteArray& eventType, void* message, long* res
 			return true;
 		}
 		break;
+		}
+	}
+#elif __linux__
+	if (eventType == "xcb_generic_event_t")
+	{
+		xcb_generic_event_t* msg = static_cast<xcb_generic_event_t*>(message);
+		//if (msg->response_type != 35 && msg->response_type != 150 && msg->response_type != 28)
+		//{
+		//	printf("%d\n", (int32_t)msg->response_type);
+		//}
+		
+		//激活是9，后台是10，鼠标离开是8，鼠标进入是7,18是关闭
+		switch (msg->response_type)
+		{
+		case XCB_FOCUS_IN:
+		{
+			if (!m_hasFocus)
+			{
+				raise();
+			}
+		}
+		break;
+		case XCB_FOCUS_OUT:
+		{
+			if (m_hasFocus)
+			{
+				close();
+			}
+			else
+			{
+				raise();
+			}
+		}
+		break;
+		default:
+			break;
 		}
 	}
 #endif
