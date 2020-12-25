@@ -1,44 +1,45 @@
 #include "stdafx.h"
-#include "CNoFlashTask.h"
+#include "CwrqTask.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
 
 extern std::atomic<bool> rightMouse;
 
-void CNoFlashTask::DoTask()
+void CwrqTask::DoTask()
 {
     rightMouse = false;
 
 	CKeyboard::KeyDown('W');
 	CKeyboard::KeyUp('W');
+	Sleep(300);
 	
-	CMouse::RightClick();
-	CKeyboard::KeyDown('S');
-	CKeyboard::KeyUp('S');
+	//CMouse::RightClick();
+	CKeyboard::KeyDown('R');
+	CKeyboard::KeyUp('R');
 	
 	//CKeyboard::InputString("r", 0);
 	CKeyboard::KeyDown('Q');
 	CKeyboard::KeyUp('Q');
 	//CMouse::RightClick();
-	Sleep(300);
-	CKeyboard::InputString("r", 0);
+	//Sleep(350);
+	//CKeyboard::InputString("r", 0);
 	
-	Sleep(30);
-	CKeyboard::InputString("r", 0);
-	CKeyboard::KeyDown('Q');
-	CKeyboard::KeyUp('Q');
+	//Sleep(30);
+	//CKeyboard::InputString("r", 0);
+	//CKeyboard::KeyDown('Q');
+	//CKeyboard::KeyUp('Q');
 	CMouse::RightClick();
 	Sleep(30);
 	
-	CKeyboard::InputString("r", 0);
-	CKeyboard::KeyDown('Q');
-	CKeyboard::KeyUp('Q');
+	//CKeyboard::InputString("r", 0);
+	//CKeyboard::KeyDown('Q');
+	//CKeyboard::KeyUp('Q');
 	CMouse::RightClick();
 	Sleep(80);
 
 	//CKeyboard::InputString("3", 0);
-	CKeyboard::KeyDown('Q');
-	CKeyboard::KeyUp('Q');
+	//CKeyboard::KeyDown('Q');
+	//CKeyboard::KeyUp('Q');
 	CMouse::RightClick();
 	//CMouse::RightManyClick(2, 100);
 	////CKeyboard::InputString("q", 0);

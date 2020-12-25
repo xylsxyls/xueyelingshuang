@@ -125,9 +125,11 @@
     <ClInclude Include="CqTask.h" />
     <ClInclude Include="CrFlashTask.h" />
     <ClInclude Include="CRightClickTask.h" />
+    <ClInclude Include="CrqTask.h" />
     <ClInclude Include="CSmallFlashTask.h" />
     <ClInclude Include="CWeqTask.h" />
     <ClInclude Include="CWewTask.h" />
+    <ClInclude Include="CwrqTask.h" />
     <ClInclude Include="IntoGameTask.h" />
     <ClInclude Include="OneKey.h" />
     <ClInclude Include="OneKeyDlg.h" />
@@ -147,9 +149,11 @@
     <ClCompile Include="CqTask.cpp" />
     <ClCompile Include="CrFlashTask.cpp" />
     <ClCompile Include="CRightClickTask.cpp" />
+    <ClCompile Include="CrqTask.cpp" />
     <ClCompile Include="CSmallFlashTask.cpp" />
     <ClCompile Include="CWeqTask.cpp" />
     <ClCompile Include="CWewTask.cpp" />
+    <ClCompile Include="CwrqTask.h.cpp" />
     <ClCompile Include="IntoGameTask.cpp" />
     <ClCompile Include="OneKey.cpp" />
     <ClCompile Include="OneKeyDlg.cpp" />

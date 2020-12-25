@@ -31,7 +31,7 @@ void CDwqrTask::DoTask()
 	CKeyboard::InputString("qqqqqq", 10);
 	CKeyboard::InputString("wwwwww", 10);
 	Sleep(50);
-	CKeyboard::InputString("3", 0);
+	//CKeyboard::InputString("3", 0);
 	CKeyboard::InputString("rrrrrf", 10);
 	Sleep(500);
 	CKeyboard::InputString("qqqqqqq", 10);

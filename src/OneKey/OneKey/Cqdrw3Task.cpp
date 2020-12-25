@@ -34,5 +34,5 @@ void Cqdrw3Task::DoTask()
 	Sleep(80);
 	CMouse::RightClick(0);
 	Sleep(300);
-	CKeyboard::InputString("3", 20);
+	//CKeyboard::InputString("3", 20);
 }
