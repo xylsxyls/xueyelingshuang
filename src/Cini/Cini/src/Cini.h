@@ -30,13 +30,13 @@ public:
 	*/
 	void setMaxSection(int32_t sectionNum);
 
-	/** 读取数据
+	/** 读取数据，windows下线程，进程安全
 	@param [in] key 键值
 	@param [in] section 节点值
 	*/
 	std::string readIni(const std::string& key, const std::string& section = "Section") const;
 
-	/** 写入数据
+	/** 写入数据，windows下线程，进程安全
 	@param [in] key 键值，不存在则创建，存在则修改
 	@param [in] value 数据
 	@param [in] section 节点值

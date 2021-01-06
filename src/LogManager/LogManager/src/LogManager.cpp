@@ -8,7 +8,7 @@
 
 LogManager::LogManager():
 m_processMutex(nullptr),
-m_log(false)
+m_log(true)
 {
 	m_exeName = CSystem::GetCurrentExeName();
 	m_exeName.append(".exe");
