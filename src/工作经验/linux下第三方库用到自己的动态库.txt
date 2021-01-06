@@ -1,0 +1,4 @@
+必须增加
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,rpath=.")
+这样会自动加载可执行文件同级目录的动态库
+动态库调动态库才需要这句话

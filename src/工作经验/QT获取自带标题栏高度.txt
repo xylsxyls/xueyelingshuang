@@ -1,0 +1,2 @@
+QRect desktopRect = QApplication::desktop()->availableGeometry();
+int iTitleBarHeight = style()->pixelMetric(QStyle::PM_TitleBarHeight); // 获取标题栏高度
