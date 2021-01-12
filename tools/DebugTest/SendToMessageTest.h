@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+#ifdef _MSC_VER
+
 #ifdef MFC_APP
 #include <SDKDDKVer.h>
 #include <afxwin.h>
@@ -11,7 +13,7 @@
 #include <tchar.h>
 #pragma comment(lib, "User32.lib")
 
-//ÔÚcaseºó¼ÓÈëÅĞ¿ÕºÍ´æ´¢£¬ÅĞ¿ÕÔÚImageSaveÀàÖĞÊµÏÖ
+//åœ¨caseååŠ å…¥åˆ¤ç©ºå’Œå­˜å‚¨ï¼Œåˆ¤ç©ºåœ¨ImageSaveç±»ä¸­å®ç°
 #define ImageSaveTest(pic, name, saveFlag) \
     {\
         if (pic == nullptr)\
@@ -71,14 +73,14 @@ public:
 
 #if (_MSC_VER >= 1500)
 		int size = _vscprintf(fmt, args);
-		//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+		//?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 		result.resize(size);
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vsprintf_s(&result[0], size + 1, fmt, args);
 #else
 		result.resize(10240);
 		::memset(&result[0], 0, 10240);
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		_vsnprintf(&result[0], 10240, fmt, args);
 		result.resize(strlen(&result[0]));
 #endif
@@ -114,8 +116,8 @@ public:
 
 #define RCSend SendToMessage::SendToMessageTest
 #define RCPage const bool pageTest = RCSend("%s %d", __FILE__, __LINE__)
-#define RCFunIn RCSend("%s ½øÈë%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
-#define RCFunOut RCSend("%s Àë¿ª%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
+#define RCFunIn RCSend("%s è¿›å…¥%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
+#define RCFunOut RCSend("%s ç¦»å¼€%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
 #ifdef _UNICODE
 #define RCFun FunLog SendToMessageLog(SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str())
 #else
@@ -184,18 +186,205 @@ public:
     FunLog(const std::string& funName):
         strFun(funName)
     {
-        RCSend("½øÈë%s", strFun.c_str());
+        RCSend("è¿›å…¥%s", strFun.c_str());
     }
 
     ~FunLog()
     {
-        RCSend("Àë¿ª%s", strFun.c_str());
+        RCSend("ç¦»å¼€%s", strFun.c_str());
     }
 
 private:
-    /* ´æ´¢º¯ÊıÃû£¬ÕâÀï²»ÄÜÓÃconst&£¬ÒòÎª½øÈëÎö¹¹Ö®ºó£¬__FUNCTION__»á±ä³É¿Õ
+    /* å­˜å‚¨å‡½æ•°åï¼Œè¿™é‡Œä¸èƒ½ç”¨const&ï¼Œå› ä¸ºè¿›å…¥ææ„ä¹‹åï¼Œ__FUNCTION__ä¼šå˜æˆç©º
     */
     std::string strFun;
 };
 
 const SendToMessage messageTest;
+
+#elif __linux__
+
+#include <iconv.h>
+#include <string.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <sys/msg.h>
+#include <sys/stat.h>
+
+#define MSG_BUFFER_SIZE_FOR_MESSAGETEST 10240
+
+struct msgtypeformessagetest
+{
+    long m_type;
+    char m_buffer[MSG_BUFFER_SIZE_FOR_MESSAGETEST];
+};
+
+/** ä¸“é—¨ç”¨äºlinuxä¸‹çš„è¿›ç¨‹é€šä¿¡ï¼Œå¦‚æœå¤šå¯¹å¤šï¼Œå•æ¡ä¿¡æ¯æœ€å¤š10240å­—èŠ‚ï¼Œ1å¯¹1æ²¡æœ‰ä¸Šé™
+*/
+class MsgLinuxForMessageTest
+{
+public:
+    /** æ„é€ å‡½æ•°
+    @param [in] path å­˜åœ¨çš„æ–‡ä»¶è·¯å¾„ï¼Œä¸¤è¾¹è¿›ç¨‹è¦ç›¸åŒ
+    @param [in] isCreate æ˜¯å¦æ˜¯åˆ›å»ºè€…
+    */
+	MsgLinuxForMessageTest(const std::string& path, bool isCreate):
+    m_msgid(-1),
+    m_isCreate(false)
+    {
+        m_isCreate = isCreate;
+    	key_t key = ftok(path.c_str(), 'a');
+        if (key != -1)
+        {
+            m_msgid = msgget(key, m_isCreate ? (S_IRUSR | S_IWUSR | IPC_CREAT | IPC_EXCL) : (S_IRUSR | S_IWUSR));
+            if (m_msgid == -1)
+            {
+                m_msgid = msgget(key, S_IRUSR | S_IWUSR);
+                msqid_ds mds;
+                msgctl(m_msgid, IPC_RMID, &mds);
+                m_msgid = msgget(key, m_isCreate ? (S_IRUSR | S_IWUSR | IPC_CREAT | IPC_EXCL) : (S_IRUSR | S_IWUSR));
+            }
+        }
+    }
+
+    /** ææ„å‡½æ•°
+    */
+    ~MsgLinuxForMessageTest()
+    {
+        destroy();
+    }
+
+public:
+    /** å‘é€
+    @param [in] src å‘é€çš„å†…å®¹
+    @param [in] type å‘é€çš„ç±»å‹
+    @return è¿”å›æ˜¯å¦å‘é€æˆåŠŸ
+    */
+    bool send(const std::string& src, long type = 1)
+    {
+        struct msgtypeformessagetest msg;
+        msg.m_type = type;
+
+        int32_t sendSize = 0;
+        int32_t remainSize = src.size();
+        int32_t currentPos = 0;
+        while (currentPos < src.size())
+        {
+            if (remainSize >= MSG_BUFFER_SIZE_FOR_MESSAGETEST)
+            {
+                remainSize -= MSG_BUFFER_SIZE_FOR_MESSAGETEST;
+                sendSize = MSG_BUFFER_SIZE_FOR_MESSAGETEST;
+            }
+            else
+            {
+                sendSize = remainSize;
+            }
+
+            ::memcpy(msg.m_buffer, (char*)&(src[currentPos]), sendSize);
+
+            int res = msgsnd(m_msgid, &msg, sendSize, 0);
+            if (res != 0)
+            {
+                return false;
+            }
+            currentPos += sendSize;
+        }
+        if (remainSize == 0)
+        {
+            int res = msgsnd(m_msgid, &msg, 0, 0);
+            if (res != 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** é”€æ¯é˜Ÿåˆ—ï¼Œç”¨äºæ¥æ”¶ç«¯é€€å‡ºrecvå‡½æ•°ï¼Œå¤šçº¿ç¨‹è°ƒç”¨
+    */
+    void destroy()
+    {
+        if (m_msgid != -1 && m_isCreate)
+        {
+            msqid_ds mds;
+            int res = msgctl(m_msgid, IPC_RMID, &mds);
+        	if (res != 0)
+            {
+                printf("msgctl error = %d\n", res);
+	        }
+            m_msgid = -1;
+        }
+    }
+
+protected:
+    //æ¶ˆæ¯é˜Ÿåˆ—IDï¼Œä¸å­˜åœ¨åˆ™ä¸º-1
+    int m_msgid;
+    //æ˜¯å¦æ˜¯é˜Ÿåˆ—åˆ›å»ºè€…
+    bool m_isCreate;
+};
+
+#define RCSend SendToMessage::SendToMessageTest
+
+class SendToMessage
+{
+public:
+    SendToMessage()
+    {
+
+    }
+    
+public:
+    static bool SendToMessageTest(const char* fmt, ...)
+    {
+        if (access("/tmp/MessageTestLinux.file", 0) != 0)
+        {
+            if (m_msg != nullptr)
+            {
+                delete m_msg;
+                m_msg = nullptr;
+            }
+            return false;
+        }
+
+        std::string str;
+        va_list args;
+	    va_start(args, fmt);
+#ifdef _WIN32
+	    int size = _vscprintf(fmt, args);
+#elif __linux__
+	    va_list argcopy;
+	    va_copy(argcopy, args);
+	    int size = vsnprintf(nullptr, 0, fmt, argcopy);
+#endif
+	    //?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
+	    str.resize(size);
+	    if (size != 0)
+	    {
+#ifdef _WIN32
+		    //?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
+		    vsprintf_s(&str[0], size + 1, fmt, args);
+#elif __linux__
+		    vsnprintf(&str[0], size + 1, fmt, args);
+#endif
+	    }
+	    va_end(args);
+
+        static uint32_t currentPid = 0;
+
+        if (m_msg == nullptr)
+        {
+            m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
+            currentPid = getpid();
+            m_msg->send(std::to_string(currentPid), 1);
+        }
+
+        return m_msg->send(str, currentPid);
+    }
+
+private:
+    static MsgLinuxForMessageTest* m_msg;
+};
+
+MsgLinuxForMessageTest* SendToMessage::m_msg = nullptr;
+
+#endif

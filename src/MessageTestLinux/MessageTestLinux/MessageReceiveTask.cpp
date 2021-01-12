@@ -14,7 +14,7 @@ m_exit(false)
 
 void MessageReceiveTask::DoTask()
 {
-    m_client->m_msg = new MsgLinux(CSystem::GetCurrentExePath() + CSystem::GetCurrentExeName(), true);
+    m_client->m_msg = new MsgLinux("/tmp/MessageTestLinux.file", true);
     m_client->m_addStringThreadId = CTaskThreadManager::Instance().Init();
     std::shared_ptr<AddStringTask> spAddStringTask(new AddStringTask);
     spAddStringTask->setParam(m_client);
@@ -32,11 +32,13 @@ void MessageReceiveTask::DoTask()
         uint32_t newPid = (uint32_t)atoi(pid.c_str());
         {
             std::unique_lock<std::mutex> lock(m_client->m_pidMutex);
-            if (m_client->m_pid.find(newPid) == m_client->m_pid.end())
+            if (m_client->m_pid.find(newPid) != m_client->m_pid.end())
             {
-                m_client->m_pid.insert(newPid);
+                continue;
             }
             uint32_t threadId = CTaskThreadManager::Instance().Init();
+            m_client->m_pid.insert(newPid);
+            m_client->m_pidThreadId[newPid] = threadId;
             std::shared_ptr<MessagePidTask> spMessagePidTask(new MessagePidTask);
             spMessagePidTask->setParam(newPid, m_client);
             CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spMessagePidTask);

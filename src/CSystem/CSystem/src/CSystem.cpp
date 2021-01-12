@@ -996,6 +996,17 @@ std::string CSystem::processName(uint32_t pid)
 #endif
 }
 
+uint32_t CSystem::GetTickCount()
+{
+#ifdef _MSC_VER
+	return ::GetTickCount();
+#elif __linux__
+	struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+#endif
+}
+
 std::string CSystem::getComputerName()
 {
 	char computerName[256] = {};

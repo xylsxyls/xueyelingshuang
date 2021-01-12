@@ -9,13 +9,6 @@ AddStringTask::AddStringTask():
 
 }
 
-unsigned long GetTickCount()
-{
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
-}
-
 void AddStringTask::DoTask()
 {
     std::string line;
@@ -23,6 +16,10 @@ void AddStringTask::DoTask()
     {
         while (!m_client->m_listReceiveStr.empty())
         {
+            if (m_exit)
+            {
+                return;
+            }
             m_client->m_listReceiveStr.pop(&line);
             {
                 std::unique_lock<std::mutex> lock(m_client->m_showMutex);
@@ -37,6 +34,7 @@ void AddStringTask::DoTask()
                 }
                 ++m_client->m_screenCount;
             }
+            m_client->m_update = true;
         }
         CSystem::Sleep(10);
     }

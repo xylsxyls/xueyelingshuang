@@ -8,6 +8,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "MsgLinux/MsgLinuxAPI.h"
 #include "MessageReceiveTask.h"
+#include "MessageRecoverTask.h"
 #include <QTimer>
 
 MessageTestLinux::MessageTestLinux(QWidget* parent):
@@ -26,8 +27,10 @@ MessageTestLinux::MessageTestLinux(QWidget* parent):
 	m_appointFilePath(nullptr),
 	m_receiveThreadId(0),
 	m_addStringThreadId(0),
-	m_receiveStringThreadId(0),
-	m_msg(nullptr)
+	m_recoverThreadId(0),
+	m_msg(nullptr),
+	m_isChange(false),
+	m_update(false)
 {
 	init();
 }
@@ -56,7 +59,7 @@ void MessageTestLinux::init()
 	m_textEdit->setBorderColor(QColor(204, 204, 204));
 	m_textEdit->setBackgroundColor(QColor(240, 240, 240));
 	m_textEdit->setFontSize(12);
-	m_textEdit->setFontFamily(QStringLiteral("微软雅黑"));
+	m_textEdit->setFontFamily(QStringLiteral("Calibri"));
 	QTextBlockFormat blockFormat;
 	blockFormat.setLineHeight(1, QTextBlockFormat::LineDistanceHeight);
 	auto textCursor = m_textEdit->textCursor();
@@ -116,6 +119,8 @@ void MessageTestLinux::init()
 	m_appointFilePath->resize(180, 28);
 	m_appointFilePath->setFontSize(12);
 
+	setWindowTitle("MessageTest1.0");
+
 	QTimer *timer = new QTimer(this);
 	QObject::connect(timer, SIGNAL(timeout()), this, SLOT(updateWindow()));
 	timer->start(100);
@@ -123,12 +128,18 @@ void MessageTestLinux::init()
 	m_showStr.setFinite(32);
 
 	m_listAllStr.push_front(QString());
-	m_receiveStringThreadId = CTaskThreadManager::Instance().Init();
+
+	m_recoverThreadId = CTaskThreadManager::Instance().Init();
+	std::shared_ptr<MessageRecoverTask> spMessageRecoverTask(new MessageRecoverTask);
+	spMessageRecoverTask->setParam(this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_recoverThreadId)->PostTask(spMessageRecoverTask);
 
 	m_receiveThreadId = CTaskThreadManager::Instance().Init();
 	std::shared_ptr<MessageReceiveTask> spMessageReceiveTask(new MessageReceiveTask);
 	spMessageReceiveTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_receiveThreadId)->PostTask(spMessageReceiveTask);
+
+	CSystem::saveFile("123", "/tmp/MessageTestLinux.file");
 
 	//int iTitleBarHeight = style()->pixelMetric(QStyle::PM_TitleBarHeight); // 获取标题栏高度
 
@@ -165,9 +176,49 @@ void MessageTestLinux::resizeEvent(QResizeEvent* eve)
 	m_appointFilePath->move(windowWidth - 213 + 17, 452);
 }
 
+void MessageTestLinux::closeEvent(QCloseEvent* eve)
+{
+	CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
+	m_receiveThreadId = 0;
+
+	{
+		std::unique_lock<std::mutex> lock(m_pidMutex);
+    	for (auto it = m_pid.begin(); it != m_pid.end();)
+    	{
+    	    if (!CSystem::processName(*it).empty())
+    	    {
+    	        printf("end pid = %d\n", (int32_t)*it);
+    	        CTaskThreadManager::Instance().Uninit(m_pidThreadId[*it]);
+				m_pidThreadId.erase(m_pidThreadId.find(*it));
+    	        it = m_pid.erase(it);
+    	        continue;
+    	    }
+    	    ++it;
+    	}
+	}
+
+	CTaskThreadManager::Instance().Uninit(m_addStringThreadId);
+	m_addStringThreadId = 0;
+
+	CTaskThreadManager::Instance().Uninit(m_recoverThreadId);
+	m_recoverThreadId = 0;
+
+	CSystem::deleteFile("/tmp/MessageTestLinux.file");
+
+	//CTaskThreadManager::Instance().UninitAll();
+	
+	QDialog::closeEvent(eve);
+}
+
 void MessageTestLinux::onChangeClicked()
 {
-
+	m_isChange = !m_isChange;
+	m_change->setText(m_isChange ? QStringLiteral("更改完毕") : QStringLiteral("更改屏幕"));
+	m_textEdit->setEnabled(m_isChange);
+	m_textEdit->setBorderColor(m_isChange ? QColor(23, 23, 23) : QColor(204, 204, 204));
+	m_textEdit->setBackgroundColor(m_isChange ? QColor(255, 255, 255) : QColor(240, 240, 240));
+	m_textEdit->repaint();
+	m_update = true;
 }
 
 void MessageTestLinux::onRefreshClicked()
@@ -187,6 +238,7 @@ void MessageTestLinux::onClearClicked()
 		m_listAllStr.push_front(QString());
 		m_screenCount = 0;
 	}
+	m_update = true;
 }
 
 void MessageTestLinux::onToFileClicked()
@@ -201,6 +253,21 @@ void MessageTestLinux::onToAppointFileClicked()
 
 void MessageTestLinux::updateWindow()
 {
+	if (!m_update)
+	{
+		return;
+	}
+	if (m_isChange)
+	{
+		std::unique_lock<std::mutex> lock(m_addStringMutex);
+		QString allText;
+		for (auto it = m_listAllStr.begin(); it != m_listAllStr.end(); ++it)
+		{
+			allText += *it;
+		}
+		m_textEdit->setText(allText);
+	}
+	else
 	{
 		std::unique_lock<std::mutex> lock(m_showMutex);
 		std::string show;
@@ -215,6 +282,7 @@ void MessageTestLinux::updateWindow()
 		m_textEdit->setText(QString::fromStdString(show));
 	}
 	m_screen->setText(QStringLiteral("当前屏幕容量：") + QString::fromStdString(std::to_string(m_screenCount)));
+	m_update = false;
 }
 
 void MessageTestLinux::onButtonClicked()

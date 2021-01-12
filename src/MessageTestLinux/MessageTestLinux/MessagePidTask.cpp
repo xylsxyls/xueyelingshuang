@@ -13,23 +13,17 @@ MessagePidTask::MessagePidTask():
 
 void MessagePidTask::DoTask()
 {
-    auto taskThread = CTaskThreadManager::Instance().GetThreadInterface(m_client->m_receiveStringThreadId);
     std::string message;
     while (!m_exit)
     {
         m_client->m_msg->recv(message, m_pid);
-        if (message == "-1")
+        if (message == "-1" && m_exit)
         {
+            printf("exit pid = %d\n", m_pid);
             break;
         }
         std::unique_lock<std::mutex> lock(m_client->m_receiveStringMutex);
         m_client->m_listReceiveStr.push(message);
-        //{
-        //    
-        //    std::shared_ptr<ReceiveStringTask> spReceiveStringTask(new ReceiveStringTask);
-        //    spReceiveStringTask->setParam(message, m_client);
-        //    taskThread->PostTask(spReceiveStringTask);
-        //}
     }
 }
 

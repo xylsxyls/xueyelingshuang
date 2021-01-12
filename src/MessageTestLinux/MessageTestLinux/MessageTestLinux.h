@@ -27,8 +27,8 @@ class MessageTestLinux : public QDialog
 public:
 	friend class MessageReceiveTask;
 	friend class MessagePidTask;
+	friend class MessageRecoverTask;
 	friend class AddStringTask;
-	friend class ReceiveStringTask;
 	
 public:
 	MessageTestLinux(QWidget* parent = nullptr);
@@ -40,6 +40,7 @@ protected:
 
 protected:
 	void resizeEvent(QResizeEvent* eve);
+	void closeEvent(QCloseEvent* eve);
 
 private slots:
 	void onButtonClicked();
@@ -65,7 +66,7 @@ private:
 	LineEdit* m_appointFilePath;
 	uint32_t m_receiveThreadId;
 	uint32_t m_addStringThreadId;
-	uint32_t m_receiveStringThreadId;
+	uint32_t m_recoverThreadId;
 	MsgLinux* m_msg;
 	std::mutex m_addStringMutex;
 	std::list<QString> m_listAllStr;
@@ -75,6 +76,9 @@ private:
 	FiniteDeque<std::string> m_showStr;
 	std::mutex m_pidMutex;
 	std::set<uint32_t> m_pid;
+	std::map<uint32_t, uint32_t> m_pidThreadId;
+	std::atomic<bool> m_isChange;
+	std::atomic<bool> m_update;
 };
 
 #endif // QTTEST_H

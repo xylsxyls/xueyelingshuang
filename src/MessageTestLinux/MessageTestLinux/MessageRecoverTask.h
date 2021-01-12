@@ -3,20 +3,19 @@
 
 class MessageTestLinux;
 
-class MessagePidTask : public CTask
+class MessageRecoverTask : public CTask
 {
 public:
-    MessagePidTask();
+    MessageRecoverTask();
 
 public:
     void DoTask();
 
     void StopTask();
 
-    void setParam(int32_t pid, MessageTestLinux* client);
+    void setParam(MessageTestLinux* client);
 
 private:
-    int32_t m_pid;
     MessageTestLinux* m_client;
     std::atomic<bool> m_exit;
 };
