@@ -101,7 +101,7 @@ void MsgLinux::destroy()
         int res = msgctl(m_msgid, IPC_RMID, &mds);
     	if (res != 0)
         {
-            printf("msgctl error = %d\n", res);
+            printf("msgctl error = %d, msgid = %d\n", res, m_msgid);
 	    }
         m_msgid = -1;
     }

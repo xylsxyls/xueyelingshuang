@@ -129,6 +129,8 @@ void MessageTestLinux::init()
 
 	m_listAllStr.push_front(QString());
 
+	CSystem::saveFile("123", "/tmp/MessageTestLinux.file");
+
 	m_recoverThreadId = CTaskThreadManager::Instance().Init();
 	std::shared_ptr<MessageRecoverTask> spMessageRecoverTask(new MessageRecoverTask);
 	spMessageRecoverTask->setParam(this);
@@ -138,8 +140,6 @@ void MessageTestLinux::init()
 	std::shared_ptr<MessageReceiveTask> spMessageReceiveTask(new MessageReceiveTask);
 	spMessageReceiveTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_receiveThreadId)->PostTask(spMessageReceiveTask);
-
-	CSystem::saveFile("123", "/tmp/MessageTestLinux.file");
 
 	//int iTitleBarHeight = style()->pixelMetric(QStyle::PM_TitleBarHeight); // 获取标题栏高度
 

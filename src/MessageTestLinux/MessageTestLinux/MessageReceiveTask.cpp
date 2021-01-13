@@ -23,10 +23,16 @@ void MessageReceiveTask::DoTask()
     std::string pid;
     while(!m_exit)
     {
-        m_client->m_msg->recv(pid, 1);
+        bool result = m_client->m_msg->recv(pid, 1);
         if (pid == "-1")
         {
             break;
+        }
+        if (!result)
+        {
+            delete m_client->m_msg;
+            m_client->m_msg = new MsgLinux("/tmp/MessageTestLinux.file", true);
+            continue;
         }
         printf("pid begin = %s\n", pid.c_str());
         uint32_t newPid = (uint32_t)atoi(pid.c_str());
