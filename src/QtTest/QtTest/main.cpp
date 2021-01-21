@@ -2,7 +2,7 @@
 #include <QtWidgets/QApplication>
 #include <stdint.h>
 
-#ifdef __linux__
+#ifdef __unix__
 #include <signal.h>
 #include <stdlib.h>
 

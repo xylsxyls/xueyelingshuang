@@ -17,7 +17,7 @@ public:
 	virtual void unread();
 	virtual void unwrite();
 
-#ifdef __linux__
+#ifdef __unix__
 	void trywrite();
 #endif
 
@@ -26,7 +26,7 @@ public:
 private:
 #ifdef _MSC_VER
 	HANDLE m_file;
-#elif __linux__
+#elif __unix__
 	int m_fd;
 #endif
 #ifdef _MSC_VER

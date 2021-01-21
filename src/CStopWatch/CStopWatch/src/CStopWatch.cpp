@@ -1,7 +1,7 @@
 #include "CStopWatch.h"
 #ifdef _WIN32
 #include <windows.h>
-#elif __linux__
+#elif __unix__
 #include <time.h>
 #endif
 
@@ -75,7 +75,7 @@ unsigned long CStopWatch::GetOpenTime()
 {
 #ifdef _WIN32
 	return ::GetTickCount();
-#elif __linux__
+#elif __unix__
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);

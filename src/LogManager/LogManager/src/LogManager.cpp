@@ -130,7 +130,7 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 	va_start(args, format);
 #ifdef _WIN32
 	int size = _vscprintf(format, args);
-#elif __linux__
+#elif __unix__
 	va_list argcopy;
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, format, argcopy);
@@ -142,7 +142,7 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 #ifdef _WIN32
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
 		vsprintf_s(&str[0], size + 1, format, args);
-#elif __linux__
+#elif __unix__
 		vsnprintf(&str[0], size + 1, format, args);
 #endif
 	}

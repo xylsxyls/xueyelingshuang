@@ -3,7 +3,7 @@
 
 #include <QDialog>
 #include "QtControlsMacro.h"
-#ifdef __linux__
+#ifdef __unix__
 #include <QCloseEvent>
 #endif
 
@@ -47,7 +47,7 @@ protected:
 	virtual bool nativeEvent(const QByteArray& eventType, void* message, long* result);
     virtual void altF4PressedEvent();
 	bool eventFilter(QObject* tar, QEvent* eve);
-#ifdef __linux__
+#ifdef __unix__
 	void closeEvent(QCloseEvent* eve);
 	void close();
 	enum TouchType
@@ -73,7 +73,7 @@ private:
 	QRect    mCustomerTitleBarRect;
 	//bool     mDwmInitialized;
 	bool     mAltF4Enable;
-#ifdef __linux__
+#ifdef __unix__
 	bool     mAltPress;
 	bool     mAltF4Close;
 	QCloseEvent* mAltCloseEve;

@@ -1,6 +1,6 @@
 #include "CloudRebuild.h"
 #include <string>
-#ifdef __linux__
+#ifdef __unix__
 #include <unistd.h>
 #include <vector>
 #include <fstream>
@@ -11,11 +11,11 @@
 #define MARK(src) ("\"" + src + "\"")
 #ifdef _WIN32
 #define PATHLEVEL std::string("\\")
-#elif __linux__
+#elif __unix__
 #define PATHLEVEL std::string("/")
 #endif
 
-#ifdef __linux__
+#ifdef __unix__
 
 int32_t SystemCommand(const std::string& command, std::string& result, bool isShowCmd)
 {
@@ -72,7 +72,7 @@ int32_t SystemCommand(const std::string& command, std::string& result, bool isSh
 	std::string fresult;
 #ifdef _WIN32
 	FILE *pin = _popen(command.c_str(), "r");
-#elif __linux__
+#elif __unix__
 	FILE *pin = popen(command.c_str(), "r");
 #endif
 	if (!pin)
@@ -92,7 +92,7 @@ int32_t SystemCommand(const std::string& command, std::string& result, bool isSh
 	//-1:pclose failed; else shell ret
 #ifdef _WIN32
 	return _pclose(pin);
-#elif __linux__
+#elif __unix__
 	return pclose(pin);
 #endif
 }
@@ -103,7 +103,7 @@ int32_t GetCPUCoreCount()
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 	return si.dwNumberOfProcessors;
-#elif __linux__
+#elif __unix__
 	std::string result;
 	if (SystemCommand("grep 'processor' /proc/cpuinfo | sort -u | wc -l", result, true) == -1 || result.empty())
 	{
@@ -190,7 +190,7 @@ int main(int argc, char** argv)
 #ifdef _WIN32
 	//32位自动化编译python脚本路径
 	std::string pyPath = projectPath + "scripts" + PATHLEVEL + "rebuild_" + projectName + ".py";
-#elif __linux__
+#elif __unix__
 	//linux下CMakeLists文件路径
 	std::string cmakelistsPath = projectPath + "scripts" + PATHLEVEL;
 	//linux下build目录
@@ -211,7 +211,7 @@ int main(int argc, char** argv)
 	std::string deleteFileCommand;
 #ifdef _WIN32
 	deleteFileCommand = "del";
-#elif __linux__
+#elif __unix__
 	deleteFileCommand = "rm";
 #endif
 
@@ -224,7 +224,7 @@ int main(int argc, char** argv)
 	//编译工程
 #ifdef _WIN32
 	system((MARK(pyPath) + SPACE + bit + SPACE + dlllib + SPACE + debugRelease).c_str());
-#elif __linux__
+#elif __unix__
 	std::vector<std::string> vecRely;
 	std::vector<std::vector<std::string>> vectxt;
 	LoadTxtWithSplit(vectxt, beforeBatPath, " ");
@@ -297,7 +297,7 @@ int main(int argc, char** argv)
 	//向公共部分提供文件，有的时候可能没有inl文件
 	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.h") + SPACE + MARK(includePath)).c_str());
 	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(srcPath + "*.inl") + SPACE + MARK(includePath)).c_str());
-#elif __linux__
+#elif __unix__
 	if (projectName != "DllRelyTest")
 	{
 		system(("mkdir" + SPACE + "-p" + SPACE + MARK(includePath)).c_str());
@@ -350,7 +350,7 @@ int main(int argc, char** argv)
 	
 	system(("del" + SPACE + MARK(xueyePath + "lib" + PATHLEVEL + projectName + d + ".ilk")).c_str());
 	system(("del" + SPACE + MARK(xueyePath + "lib" + PATHLEVEL + projectName + d + ".exp")).c_str());
-#elif __linux__
+#elif __unix__
 	system(("rm" + SPACE + "-rf" + SPACE + MARK(buildPath)).c_str());
 #endif
 

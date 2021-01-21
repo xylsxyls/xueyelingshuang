@@ -7,11 +7,11 @@
 #include "CSystem/CSystemAPI.h"
 
 PerformanceManager::PerformanceManager()
-#ifdef __linux__
+#ifdef __unix__
 	:m_cpuCoreCount(0)
 #endif
 {
-#ifdef __linux__
+#ifdef __unix__
 	m_cpuCoreCount = CSystem::GetCPUCoreCount();
 #endif
 }
@@ -53,7 +53,7 @@ std::string PerformanceManager::CPUOccupation(uint32_t pid)
 		return "";
 	}
 	return CStringManager::Format("%.2f", it->second.get_cpu_usage());
-#elif __linux__
+#elif __unix__
 	std::string result;
 	CSystem::SystemCommand("ps -H -eo pid,%cpu | grep " + std::to_string(pid), result, true);
 	std::vector<std::string> everyProcess = CStringManager::split(result, "\n");
@@ -104,7 +104,7 @@ std::string PerformanceManager::MemoryOccupation(uint32_t pid)
 	result = QString::number(usedMem.toDouble() / 1024, 'g', 4);
 	p.close();
 	return result.toStdString();
-#elif __linux__
+#elif __unix__
 	std::string result;
 	CSystem::SystemCommand("cat /proc/" + std::to_string(pid) + "/status | grep RSS", result, true);
 	std::vector<std::string> everyTarget = CStringManager::split(result, "\n");

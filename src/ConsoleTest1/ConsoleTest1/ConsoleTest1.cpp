@@ -1,7 +1,7 @@
 #include "ConsoleTest1.h"
 #include <stdint.h>
 #include <stdio.h>
-#ifdef __linux__
+#ifdef __unix__
 #include <signal.h>
 #include <stdlib.h>
 #endif
@@ -19,7 +19,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 
 int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
-#elif __linux__
+#elif __unix__
 //ctrl+c消息捕获函数
 void CtrlCMessage(int eve)
 {

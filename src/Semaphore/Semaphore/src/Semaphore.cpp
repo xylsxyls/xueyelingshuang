@@ -1,5 +1,5 @@
 #include "Semaphore.h"
-#ifdef __linux__
+#ifdef __unix__
 #include <fcntl.h>
 #endif
 
@@ -35,7 +35,7 @@ void Semaphore::createProcessSemaphore(const std::string& name, int32_t signalCo
 	}
 #ifdef _MSC_VER
 	m_processSemaphore = ::CreateSemaphore(nullptr, 0, signalCount, name.c_str());
-#elif __linux__
+#elif __unix__
 	m_processSemaphore = ::sem_open(name.c_str(), O_CREAT, 0644, 1);
 	m_name = name;
 #endif
@@ -49,7 +49,7 @@ void Semaphore::openProcessSemaphore(const std::string& name)
 	}
 #ifdef _MSC_VER
 	m_processSemaphore = ::OpenSemaphore(SEMAPHORE_ALL_ACCESS, false, name.c_str());
-#elif __linux__
+#elif __unix__
 	m_processSemaphore = ::sem_open(name.c_str(), O_CREAT, 0644, 0);
 #endif
 }
@@ -62,7 +62,7 @@ void Semaphore::closeProcessSemaphore()
 	}
 #ifdef _MSC_VER
 	::CloseHandle(m_processSemaphore);
-#elif __linux__
+#elif __unix__
 	::sem_close(m_processSemaphore);
 	if (!m_name.empty())
 	{
@@ -81,7 +81,7 @@ void Semaphore::processSignal()
 	}
 #ifdef _MSC_VER
 	::ReleaseSemaphore(m_processSemaphore, 1, nullptr);
-#elif __linux__
+#elif __unix__
 	::sem_post(m_processSemaphore);
 #endif
 	
@@ -95,7 +95,7 @@ void Semaphore::processWait()
 	}
 #ifdef _MSC_VER
 	::WaitForSingleObject(m_processSemaphore, INFINITE);
-#elif __linux__
+#elif __unix__
 	::sem_wait(m_processSemaphore);
 #endif
 }

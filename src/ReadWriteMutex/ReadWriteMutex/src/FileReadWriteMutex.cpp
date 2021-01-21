@@ -2,7 +2,7 @@
 #ifdef _MSC_VER
 #include <windows.h>
 #include <thread>
-#elif __linux__
+#elif __unix__
 #include <fcntl.h>
 #include <stdlib.h>
 #endif
@@ -20,7 +20,7 @@ FileReadWriteMutex::FileReadWriteMutex(const std::string& fileName)
 		m_fileName = fileName + ".lock";
 	}
 	m_fileName = s_tempDir + m_fileName;	
-#ifdef __linux__
+#ifdef __unix__
 	system(("touch \"" + m_fileName + "\"").c_str());
 	m_fd = open(m_fileName.c_str(), O_RDWR);
 #endif
@@ -44,7 +44,7 @@ void FileReadWriteMutex::write()
 		CloseHandle(m_file);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-#elif __linux__
+#elif __unix__
 	if(m_fd < 0)
 	{
 		printf("open file failed, m_fd = %d\n", m_fd);
@@ -70,7 +70,7 @@ void FileReadWriteMutex::unwrite()
 	UnlockFile(m_file, 0, 0, 0, 0);
 	CloseHandle(m_file);
 	DeleteFileA(m_fileName.c_str());
-#elif __linux__
+#elif __unix__
 	if (m_fd < 0)
 	{
 		printf("open file failed, m_fd = %d\n", m_fd);
@@ -85,7 +85,7 @@ void FileReadWriteMutex::unwrite()
 #endif
 }
 
-#ifdef __linux__
+#ifdef __unix__
 void FileReadWriteMutex::trywrite()
 {
 	if(m_fd < 0)
@@ -109,7 +109,7 @@ std::string FileReadWriteMutex::tempDir()
 	TCHAR szPath[MAX_PATH] = { 0 };
 	GetTempPathA(MAX_PATH, szPath);
 	return szPath;
-#elif __linux__
+#elif __unix__
 	return "/tmp/";
 #endif
 }

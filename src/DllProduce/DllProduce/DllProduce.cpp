@@ -11,14 +11,14 @@ int32_t main()
 {
 #ifdef _MSC_VER
 	printf("输入目标类名\n");
-#elif __linux__
+#elif __unix__
 	printf(CStringManager::AnsiToUtf8("输入目标类名\n").c_str());
 #endif
 	char className[1024] = {};
 	scanf("%s", className);
 #ifdef _MSC_VER
 	printf("输入依赖类名，英文逗号分隔\n");
-#elif __linux__
+#elif __unix__
 	printf(CStringManager::AnsiToUtf8("输入依赖类名，英文逗号分隔\n").c_str());
 #endif
 	
@@ -32,7 +32,7 @@ int32_t main()
 
 #ifdef _MSC_VER
 	std::string pathLevel = "\\";
-#elif __linux__
+#elif __unix__
 	std::string pathLevel = "/";
 #endif
 
@@ -47,7 +47,7 @@ int32_t main()
 
 #ifdef _MSC_VER
 	system(("xcopy" + SPACE + "/y /i /r /s" + SPACE + MARK(dllTestPath + "*") + SPACE + MARK(newClassPath)).c_str());
-#elif __linux__
+#elif __unix__
 	system(("cp" + SPACE + "-r" + SPACE + MARK(dllTestPath) + SPACE + MARK(newClassPath)).c_str());
 #endif
 	CSystem::deleteFile((newClassPath + "DllProduce1.2.exe").c_str());
@@ -55,7 +55,7 @@ int32_t main()
 
 #ifdef _MSC_VER
 	std::string fileReplaceCommandHead = "call" + SPACE + MARK("%FILE_REPLACE%");
-#elif __linux__
+#elif __unix__
 	std::string fileReplaceCommandHead = MARK("$FILE_REPLACE");
 #endif
 	system((fileReplaceCommandHead + SPACE + "-dir" + SPACE + newClassPath + SPACE + "-replace" + SPACE + changeClassName + SPACE + className).c_str());

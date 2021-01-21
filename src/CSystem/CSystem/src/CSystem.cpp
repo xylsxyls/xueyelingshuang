@@ -1,5 +1,5 @@
 #include "CSystem.h"
-#if (_MSC_VER >= 1800 || __linux__)
+#if (_MSC_VER >= 1800 || __unix__)
 #include <thread>
 #endif
 #ifdef _WIN32
@@ -12,7 +12,7 @@
 #include <shlobj.h>
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
-#elif __linux__
+#elif __unix__
 #include <unistd.h>
 #include <pwd.h>
 #include <termios.h>
@@ -347,7 +347,7 @@ std::wstring CSystem::processNameW(uint32_t pid)
 }
 #endif
 
-#ifdef __linux__
+#ifdef __unix__
 static inline uint64_t get_cycle_count()
 {
 	unsigned int lo,hi;
@@ -456,7 +456,7 @@ double CSystem::GetCPUSpeedGHz()
 	SetPriorityClass(GetCurrentProcess(), priority_class);
 	SetThreadPriority(GetCurrentThread(), thread_priority);
 	return double(total) / 5.0 / 1000.0;
-#elif __linux__
+#elif __unix__
 	int delayms = 700;
 	uint64_t oldTime = get_cycle_count();
 	usleep(delayms * 1000);
@@ -467,7 +467,7 @@ double CSystem::GetCPUSpeedGHz()
 
 void CSystem::Sleep(long long milliseconds)
 {
-#if (_MSC_VER >= 1800 || __linux__)
+#if (_MSC_VER >= 1800 || __unix__)
 	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 #endif
 }
@@ -493,7 +493,7 @@ std::string CSystem::uuid(int flag)
 		guid.Data4[3], guid.Data4[4], guid.Data4[5],
 		guid.Data4[6], guid.Data4[7]);
 	return buffer;
-#elif __linux__
+#elif __unix__
 	std::string result = CSystem::readFile("/proc/sys/kernel/random/uuid");
 	if(result.empty())
 	{
@@ -520,7 +520,7 @@ void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFil
 {
 #ifdef _WIN32
 	::CopyFileA(srcFile.c_str(), dstFile.c_str(), over == false);
-#elif __linux__
+#elif __unix__
 	if(CSystem::DirOrFileExist(dstFile) && !over)
 	{
 		return;
@@ -561,7 +561,7 @@ int CSystem::GetSystemBits()
         return 64;
     }
     return 32;
-#elif __linux__
+#elif __unix__
 	std::string result;
 	if (SystemCommand("uname -a", result) == -1 || result.empty())
 	{
@@ -625,7 +625,7 @@ std::vector<std::string> CSystem::exeParam(int argc, char** argv)
 	{
 		result.push_back(__argv[index]);
 	}
-#elif __linux__
+#elif __unix__
 for (int32_t index = 0; index < argc; ++index)
 	{
 		result.push_back(argv[index]);
@@ -634,7 +634,7 @@ for (int32_t index = 0; index < argc; ++index)
 	return result;
 }
 
-#ifdef __linux__
+#ifdef __unix__
 int _getch()
 {
     struct termios oldt, newt;
@@ -654,7 +654,7 @@ std::string CSystem::PasswordScanf()
 #ifdef _WIN32
 	char returnCode = '\r';
 	char backspace = 8;
-#elif __linux__
+#elif __unix__
 	char returnCode = '\n';
 	char backspace = 127;
 #endif
@@ -742,7 +742,7 @@ int32_t CSystem::SystemCommand(const std::string& command, std::string& result, 
 	std::string fresult;
 #ifdef _WIN32
 	FILE *pin = _popen(command.c_str(), "r");
-#elif __linux__
+#elif __unix__
 	FILE *pin = popen(command.c_str(), "r");
 #endif
 	if (!pin)
@@ -762,7 +762,7 @@ int32_t CSystem::SystemCommand(const std::string& command, std::string& result, 
 	//-1:pclose failed; else shell ret
 #ifdef _WIN32
 	return _pclose(pin);
-#elif __linux__
+#elif __unix__
 	return pclose(pin);
 #endif
 }
@@ -772,7 +772,7 @@ uint32_t CSystem::SystemThreadId()
 #ifdef _WIN32
 	return ::GetCurrentThreadId();
 	//return ((_Thrd_t*)(char*)&(std::this_thread::get_id()))->_Id;
-#elif __linux__
+#elif __unix__
 	std::thread::id threadId = std::this_thread::get_id();
 	return (uint32_t)(*(__gthread_t*)(char*)(&threadId));
 #endif
@@ -784,7 +784,7 @@ int32_t CSystem::GetCPUCoreCount()
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 	return si.dwNumberOfProcessors;
-#elif __linux__
+#elif __unix__
 	std::string result;
 	if (SystemCommand("grep 'processor' /proc/cpuinfo | sort -u | wc -l", result) == -1 || result.empty())
 	{
@@ -795,7 +795,7 @@ int32_t CSystem::GetCPUCoreCount()
 #endif
 }
 
-#ifdef __linux__
+#ifdef __unix__
 static void Split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
 {
 	result.clear();
@@ -845,7 +845,7 @@ int32_t CSystem::GetSystemVersionNum()
 		FreeLibrary(hinstDLL);
 	}
 	return dwVersion;
-#elif __linux__
+#elif __unix__
 	std::string result;
 	if (SystemCommand("cat /etc/issue", result) == -1 || result.empty())
 	{
@@ -873,7 +873,7 @@ uint32_t CSystem::currentProcessPid()
 {
 #ifdef _WIN32
 	return GetCurrentProcessId();
-#elif __linux__
+#elif __unix__
 	return getpid();
 #endif
 }
@@ -901,7 +901,7 @@ uint32_t CSystem::processFirstPid(const std::string& processName)
 	}
 	::CloseHandle(hSnapshot);
 	return 0;
-#elif __linux__
+#elif __unix__
 	std::string result;
 	if (SystemCommand("pidof " + processName, result) == -1 || result.empty())
 	{
@@ -941,7 +941,7 @@ std::vector<uint32_t> CSystem::processPid(const std::string& processName)
 	}
 	::CloseHandle(hSnapshot);
 	return result;
-#elif __linux__
+#elif __unix__
 	std::vector<uint32_t> vecResult;
 	std::string result;
 	if (SystemCommand("pidof " + processName, result) == -1 || result.empty())
@@ -986,7 +986,7 @@ std::string CSystem::processName(uint32_t pid)
 		::CloseHandle(snapshot);
 	}
 	return result;
-#elif __linux__
+#elif __unix__
 	std::string result;
 	if (SystemCommand("cat /proc/" + std::to_string(pid) + "/cmdline", result) == -1 || result.empty())
 	{
@@ -1000,7 +1000,7 @@ uint32_t CSystem::GetTickCount()
 {
 #ifdef _MSC_VER
 	return ::GetTickCount();
-#elif __linux__
+#elif __unix__
 	struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
@@ -1013,7 +1013,7 @@ std::string CSystem::getComputerName()
 #ifdef _WIN32
 	DWORD length = 256;
 	GetComputerNameA(computerName, &length);
-#elif __linux__
+#elif __unix__
 	gethostname(computerName, 256);
 #endif
 	return computerName;
@@ -1024,7 +1024,7 @@ std::string CSystem::GetCurrentExePath()
 	char szFilePath[1024] = {};
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
-#elif __linux__
+#elif __unix__
 	::readlink("/proc/self/exe", szFilePath, 1024);
 #endif
 	return CSystem::GetName(szFilePath, 4);
@@ -1035,7 +1035,7 @@ std::string CSystem::GetCurrentExeName()
 	char szFilePath[1024] = {};
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
-#elif __linux__
+#elif __unix__
 	::readlink("/proc/self/exe", szFilePath, 1024);
 #endif
 	return CSystem::GetName(szFilePath, 3);
@@ -1050,7 +1050,7 @@ std::string CSystem::GetSystemTempPath()
 		return "";
 	}
 	return std::string(szPath) + "\\";
-#elif __linux__
+#elif __unix__
 	return "/tmp/";
 #endif
 }
@@ -1106,7 +1106,7 @@ void CSystem::killProcess(int32_t pid)
 	char command[256] = {};
 	::_snprintf(command, 256, "taskkill /f /pid %d", pid);
 	::WinExec(command, SW_HIDE);
-#elif __linux__
+#elif __unix__
 	system(("kill -9 " + std::to_string(pid)).c_str());
 #endif
 }
@@ -1123,7 +1123,7 @@ std::string CSystem::GetSysUserName()
     char szName[1024] = {};
     ::GetUserNameA(szName, &size);
     return szName;
-#elif __linux__
+#elif __unix__
 	uid_t userid;
     struct passwd* pwd;
     userid = getuid();
@@ -1141,7 +1141,7 @@ bool CSystem::CreateDir(const std::string& dir)
 {
 #ifdef _WIN32
 	return _mkdir(dir.c_str()) == 0;
-#elif __linux__
+#elif __unix__
 	return mkdir(dir.c_str() ,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0;
 #endif
 }
@@ -1150,7 +1150,7 @@ bool CSystem::DestroyDir(const std::string& dir)
 {
 #ifdef _WIN32
 	return _rmdir(dir.c_str()) == 0;
-#elif __linux__
+#elif __unix__
 	return rmdir(dir.c_str()) == 0;
 #endif
 }
@@ -1159,7 +1159,7 @@ bool CSystem::DirOrFileExist(const std::string& dir)
 {
 #ifdef _WIN32
 	return _access(dir.c_str(), 0) == 0;
-#elif __linux__
+#elif __unix__
 	return access(dir.c_str(), 0) == 0;
 #endif
 }
@@ -1193,7 +1193,7 @@ std::string CSystem::commonFile(const std::string& name)
 {
 #ifdef _WIN32
 	std::string path = CSystem::GetEnvironment("XUEYELINGSHUANG") + "common\\";
-#elif __linux__
+#elif __unix__
 	std::string path = CSystem::GetEnvironment("XUEYELINGSHUANG") + "common/";
 #endif
 	double version = 0;
@@ -1214,7 +1214,7 @@ std::string CSystem::commonFile(const std::string& name)
 		fileName.pop_back();
 		fileName.pop_back();
 		fileName.pop_back();
-#elif __linux__
+#elif __unix__
 		if (std::count(fileName.begin(), fileName.end(), '.') != 1)
 		{
 			continue;
@@ -1266,7 +1266,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	}
 #ifdef _WIN32
 	char level = '\\';
-#elif __linux__
+#elif __unix__
 	char level = '/';
 #endif
 	if (dir.back() != level)
@@ -1285,7 +1285,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	std::vector<std::string> result;
 #ifdef _WIN32
 	_finddata_t fileDir;
-#elif __linux__
+#elif __unix__
 	struct dirent *pDirent = nullptr;
 #endif
 
@@ -1299,14 +1299,14 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 		queue_dir.pop();
 #ifdef _WIN32
 		auto lfDir = _findfirst(curDir.c_str(), &fileDir);
-#elif __linux__
+#elif __unix__
 		DIR* pDir = opendir(curDir.c_str());
 #endif
 
 		//如果是-1表示该文件夹不可访问
 #ifdef _WIN32
 		if (lfDir == -1)
-#elif __linux__
+#elif __unix__
 		if (pDir == nullptr)
 #endif
 		{
@@ -1319,19 +1319,19 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 		}
 #ifdef _WIN32
 		while (_findnext(lfDir, &fileDir) == 0)
-#elif __linux__
+#elif __unix__
 		while ((pDirent = readdir(pDir)) != 0)
 #endif
 		{
 #ifdef _WIN32
 			std::string strName = fileDir.name;
-#elif __linux__
+#elif __unix__
 			std::string strName = pDirent->d_name;
 #endif
 			//是目录，加入队列
 #ifdef _WIN32
 			if ((fileDir.attrib >= 16 && fileDir.attrib <= 23) || (fileDir.attrib >= 48 && fileDir.attrib <= 55))
-#elif __linux__
+#elif __unix__
 			if (pDirent->d_type == DT_DIR)
 #endif
 			{
@@ -1410,7 +1410,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 		}
 #ifdef _WIN32
 		_findclose(lfDir);
-#elif __linux__
+#elif __unix__
 		closedir(pDir);
 #endif
 	}

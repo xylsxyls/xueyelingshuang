@@ -47,7 +47,7 @@ int32_t main(int argc, char** argv)
 			line = content.size() / 100;
 #ifdef _MSC_VER
 			end = "\r\n";
-#elif __linux__
+#elif __unix__
 			end = "\n";
 #endif
 		}

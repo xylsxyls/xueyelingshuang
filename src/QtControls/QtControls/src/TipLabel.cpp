@@ -1,7 +1,7 @@
 #include "TipLabel.h"
 #ifdef _MSC_VER
 #include <Windows.h>
-#elif __linux__
+#elif __unix__
 #include <xcb/xcb.h>
 #include <xcb/xfixes.h>
 #include <X11/Xlib.h>
@@ -102,7 +102,7 @@ bool TipLabel::nativeEvent(const QByteArray& eventType, void* message, long* res
 		break;
 		}
 	}
-#elif __linux__
+#elif __unix__
 	if (eventType == "xcb_generic_event_t")
 	{
 		xcb_generic_event_t* msg = static_cast<xcb_generic_event_t*>(message);

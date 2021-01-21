@@ -234,7 +234,7 @@ void Variant::toString(std::string& result) const
 	{
 #ifdef _MSC_VER
 		CStringManager::Format(result, "%I64u", *(uint64_t*)m_data);
-#elif __linux__
+#elif __unix__
 		CStringManager::Format(result, "%llu", *(uint64_t*)m_data);
 #endif
 		break;

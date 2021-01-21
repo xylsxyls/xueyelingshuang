@@ -236,7 +236,7 @@ void CStringManager::Format(std::string& str, const char* fmt, ...)
 	va_start(args, fmt);
 #ifdef _WIN32
 	int size = _vscprintf(fmt, args);
-#elif __linux__
+#elif __unix__
 	va_list argcopy;
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
@@ -248,7 +248,7 @@ void CStringManager::Format(std::string& str, const char* fmt, ...)
 #ifdef _WIN32
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
 		vsprintf_s(&str[0], size + 1, fmt, args);
-#elif __linux__
+#elif __unix__
 		vsnprintf(&str[0], size + 1, fmt, args);
 #endif
 	}
@@ -262,7 +262,7 @@ std::string CStringManager::Format(const char* fmt, ...)
     va_start(args, fmt);
 #ifdef _WIN32
     int size = _vscprintf(fmt, args);
-#elif __linux__
+#elif __unix__
 	va_list argcopy;
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
@@ -274,7 +274,7 @@ std::string CStringManager::Format(const char* fmt, ...)
 #ifdef _WIN32
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
 		vsprintf_s(&result[0], size + 1, fmt, args);
-#elif __linux__
+#elif __unix__
 		vsnprintf(&result[0], size + 1, fmt, args);
 #endif
 	}
@@ -296,7 +296,7 @@ void CStringManager::Format(std::wstring& wstr, const wchar_t* wfmt, ...)
 		vswprintf_s(&wstr[0], size + 1, wfmt, args);
 	}
 	va_end(args);
-#elif __linux__
+#elif __unix__
 	//linux下unicode参数传入了vswprintf也无法识别，传入ansi参数在vswprintf下也会自动转成unicode，所以可以整体转换
 	//vswprintf函数无法在不提供长度时获取缓冲区长度
 	std::string strFmt = UnicodeToAnsi(wfmt);
@@ -332,7 +332,7 @@ std::wstring CStringManager::Format(const wchar_t* wfmt, ...)
 	}
 	va_end(args);
 	return result;
-#elif __linux__
+#elif __unix__
 	//linux下unicode参数传入了vswprintf也无法识别，传入ansi参数在vswprintf下也会自动转成unicode，所以可以整体转换
 	//vswprintf函数无法在不提供长度时获取缓冲区长度
 	std::string strFmt = UnicodeToAnsi(wfmt);
@@ -415,7 +415,7 @@ int64_t CStringManager::atoi64(const char* str)
 	return strtoll(str, nullptr, 10);
 }
 
-#ifdef __linux__
+#ifdef __unix__
 
 static std::wstring StringToWString(const char *pc)
 {
@@ -541,7 +541,7 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 
 	delete[] pwszBuffer;
 	return strRet;
-#elif __linux__
+#elif __unix__
 	return WStringToString(wstrSrc.c_str());
 #endif
 }
@@ -567,7 +567,7 @@ std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 
 	delete[] pwszBuffer;
 	return wstrRet;
-#elif __linux__
+#elif __unix__
 	return StringToWString(strSrc.c_str());
 #endif
 }
@@ -595,7 +595,7 @@ std::string CStringManager::AnsiToUtf8(const std::string& strSrc)
 	// 释放内存
 	delete[] pwszBuffer;
 	return UnicodeToUtf8(wstrTemp);
-#elif __linux__
+#elif __unix__
 	return code_convert_string("gb2312", "utf-8//TRANSLIT", strSrc);
 #endif
 }
@@ -625,7 +625,7 @@ std::string CStringManager::Utf8ToAnsi(const std::string& strSrc)
 	// 释放内存
 	delete[] pszBuffer;
 	return strRet;
-#elif __linux__
+#elif __unix__
 	return code_convert_string("utf-8", "gb2312//TRANSLIT", strSrc);
 #endif
 }
@@ -653,7 +653,7 @@ std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
 	// 释放内存
 	delete[] pszBuffer;
 	return strRet;
-#elif __linux__
+#elif __unix__
 	return AnsiToUtf8(UnicodeToAnsi(wstrSrc));
 #endif
 }
@@ -681,7 +681,7 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 	// 释放内存
 	delete[] pwszBuffer;
 	return wstrRet;
-#elif __linux__
+#elif __unix__
 	return AnsiToUnicode(Utf8ToAnsi(strSrc));
 #endif
 }

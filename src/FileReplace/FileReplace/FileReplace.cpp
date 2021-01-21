@@ -26,7 +26,7 @@ void getParam(const std::vector<std::string>& vecMainParam, ReplaceParam& replac
 {
 #ifdef _MSC_VER
 	char pathLevel = '\\';
-#elif __linux__
+#elif __unix__
 	char pathLevel = '/';
 #endif
 	std::vector<std::string> vecParam = vecMainParam;

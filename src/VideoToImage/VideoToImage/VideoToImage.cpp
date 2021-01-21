@@ -86,7 +86,7 @@ int32_t main()
 
 #ifdef _WIN32
 	std::string level = "\\";
-#elif __linux__
+#elif __unix__
 	std::string level = "/";
 #endif
 

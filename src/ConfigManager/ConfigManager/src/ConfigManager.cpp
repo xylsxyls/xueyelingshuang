@@ -127,7 +127,7 @@ void ConfigManager::setUserId(uint64_t userId)
 {
 #ifdef _MSC_VER
 	m_tableName = CStringManager::Format("user_%I64u", userId);
-#elif __linux__
+#elif __unix__
 	m_tableName = CStringManager::Format("user_%llu", userId);
 #endif
 	createTableIfNotExist(m_tableName);
@@ -205,7 +205,7 @@ void ConfigManager::addConfig(int32_t key, uint64_t value, int32_t section)
 {
 #ifdef _MSC_VER
 	addConfigBase(key, CStringManager::Format("%I64u", value), TYPE_UINT64, section);
-#elif __linux__
+#elif __unix__
 	addConfigBase(key, CStringManager::Format("%llu", value), TYPE_UINT64, section);
 #endif
 }

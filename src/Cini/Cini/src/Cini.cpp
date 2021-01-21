@@ -15,7 +15,7 @@ m_loadSuccess(false)
 	m_iniPath = iniPath;
 #ifdef _MSC_VER
 	m_useSimpleIni = useSimpleIni;
-#elif __linux__
+#elif __unix__
 	m_useSimpleIni = true;
 #endif
 	if (m_useSimpleIni)
@@ -63,7 +63,7 @@ std::string Cini::readIni(const std::string& key, const std::string& section) co
 	GetPrivateProfileStringA(section.c_str(), key.c_str(), "", &value[0], m_length, m_iniPath.c_str());
 	value.resize(strlen(&value[0]));
 	return value;
-#elif __linux__
+#elif __unix__
 	return "";
 #endif
 }
@@ -131,7 +131,7 @@ std::vector<std::string> Cini::getAllSection() const
 	delete[] chSectionNames;
 	delete[] chSection;
 	return vecSection;
-#elif __linux__
+#elif __unix__
 	return std::vector<std::string>();
 #endif
 }
@@ -171,7 +171,7 @@ std::string Cini::getFirstKey(const std::string& section) const
 	GetPrivateProfileStringA(section.c_str(), nullptr, "", &result[0], m_length, m_iniPath.c_str());
 	result.resize(strlen(&result[0]));
 	return result;
-#elif __linux__
+#elif __unix__
 	return "";
 #endif
 }

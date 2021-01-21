@@ -4,7 +4,7 @@
 #include "SemaphoreMacro.h"
 #ifdef _MSC_VER
 #include <windows.h>
-#elif __linux__
+#elif __unix__
 #include <semaphore.h>
 #include <string>
 #endif
@@ -80,7 +80,7 @@ private:
 
 #ifdef _MSC_VER
 	HANDLE m_processSemaphore;
-#elif __linux__
+#elif __unix__
 	sem_t* m_processSemaphore;
 	std::string m_name;
 #endif

@@ -130,7 +130,7 @@ void NotifyDialog::resizeEvent(QResizeEvent* eve)
     POINT rightBottom = CSystem::taskbarRightBottomPoint();
     m_beginRect.setRect(rightBottom.x - width(), rightBottom.y - height(), width(), height());
     m_endRect.setRect(rightBottom.x - width(), rightBottom.y, width(), height());
-#elif __linux__
+#elif __unix__
     QPoint rightBottom = {1920, 1032};
     m_beginRect.setRect(rightBottom.x() - width(), rightBottom.y() - height(), width(), height());
     m_endRect.setRect(rightBottom.x() - width(), rightBottom.y(), width(), height());

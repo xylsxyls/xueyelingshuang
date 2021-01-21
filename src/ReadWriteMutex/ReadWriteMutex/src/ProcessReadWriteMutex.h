@@ -3,7 +3,7 @@
 #include <string>
 #include "ReadWriteMutexBase.h"
 
-#ifdef __linux__
+#ifdef __unix__
 #include "FileReadWriteMutex.h"
 #endif
 
@@ -26,7 +26,7 @@ public:
 private:
 	HANDLE m_hLock;
 };
-#elif __linux__
+#elif __unix__
 
 class ReadWriteMutexAPI ProcessReadWriteMutex : public FileReadWriteMutex
 {

@@ -1,5 +1,5 @@
 #include "SharedMemory.h"
-#ifdef __linux__
+#ifdef __unix__
 #include <string.h>
 #include <sys/shm.h>
 #else
@@ -14,7 +14,7 @@ SharedMemory::SharedMemory(const std::string& name, uint32_t size):
 m_memoryHandle(nullptr),
 m_readMemoryPtr(nullptr),
 m_writeMemoryPtr(nullptr),
-#elif __linux__
+#elif __unix__
 m_shmid(0),
 #endif
 m_memoryPtr(nullptr),
@@ -25,7 +25,7 @@ m_size(0)
 	{
 #ifdef _MSC_VER
 		m_memoryHandle = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, name.empty() ? nullptr : name.c_str());
-#elif __linux__
+#elif __unix__
 		int32_t key = 0;
 		int32_t index = 0;
 		if(!name.empty())
@@ -73,7 +73,7 @@ SharedMemory::~SharedMemory()
 		::CloseHandle(m_memoryHandle);
 		m_memoryHandle = nullptr;
 	}
-#elif __linux__
+#elif __unix__
 	if(m_size != 0)
 	{
 		if(shmctl(m_shmid, IPC_RMID, 0) == -1)   
@@ -103,7 +103,7 @@ uint32_t SharedMemory::realSize()
 	MEMORY_BASIC_INFORMATION mem_info;
 	::VirtualQuery(::MapViewOfFile(m_memoryHandle, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0), &mem_info, sizeof(mem_info));
 	return mem_info.RegionSize;
-#elif __linux__
+#elif __unix__
 	if(m_shmid == 0)
 	{
 		open(true);
@@ -147,7 +147,7 @@ void* SharedMemory::readWithoutLock()
 	m_readMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_READ, 0, 0, 0);
 	m_memoryPtr = m_readMemoryPtr;
 	return m_memoryPtr;
-#elif __linux__
+#elif __unix__
 	return writeWithoutLock();
 #endif
 }
@@ -169,7 +169,7 @@ void* SharedMemory::writeWithoutLock()
 	}
 	m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 	m_memoryPtr = m_writeMemoryPtr;
-#elif __linux__
+#elif __unix__
 	if (m_shmid == 0)
 	{
 		open(false);
@@ -213,7 +213,7 @@ void SharedMemory::close()
 		::UnmapViewOfFile(m_writeMemoryPtr);
 		m_writeMemoryPtr = nullptr;
 	}
-#elif __linux__
+#elif __unix__
 	if(m_memoryPtr != nullptr)
 	{
 		if (shmdt(m_memoryPtr) == -1)
@@ -331,7 +331,7 @@ void SharedMemory::open(bool bReadOnly)
 {
 #ifdef _MSC_VER
 	m_memoryHandle = ::OpenFileMapping(bReadOnly ? FILE_MAP_READ : FILE_MAP_ALL_ACCESS, FALSE, m_memoryName.empty() ? NULL : m_memoryName.c_str());
-#elif __linux__
+#elif __unix__
 	int32_t key = 0;
 	int32_t index = 0;
 	if (!m_memoryName.empty())

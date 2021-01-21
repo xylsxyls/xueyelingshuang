@@ -30,7 +30,7 @@ std::wstring ControlShow<QBase>::className()
 	std::string className = typeid(*this).name();
 #ifdef _MSC_VER
 	CStringManager::Replace(className, "class ", "");
-#elif __linux__
+#elif __unix__
 	for (auto it = className.begin(); it != className.end();)
 	{
 		if (*it >= 48 && *it <= 57)

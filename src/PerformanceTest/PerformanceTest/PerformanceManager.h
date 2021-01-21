@@ -37,7 +37,7 @@ public:
 private:
 #ifdef _MSC_VER
 	std::map<uint32_t, CPUusage> m_cpu;
-#elif __linux__
+#elif __unix__
 	int32_t m_cpuCoreCount;
 #endif
 	std::map<uint32_t, std::vector<std::string>> m_performance;

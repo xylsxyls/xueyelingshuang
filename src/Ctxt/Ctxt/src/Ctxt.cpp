@@ -92,7 +92,7 @@ void Ctxt::Write(FILE* pFile, const char* fmt, ...)
 	va_start(args, fmt);
 #ifdef _WIN32
 	int size = _vscprintf(fmt, args);
-#elif __linux__
+#elif __unix__
 	va_list argcopy;
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
@@ -104,7 +104,7 @@ void Ctxt::Write(FILE* pFile, const char* fmt, ...)
 #ifdef _WIN32
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
 		vsprintf_s(&result[0], size + 1, fmt, args);
-#elif __linux__
+#elif __unix__
 		vsnprintf(&result[0], size + 1, fmt, args);
 #endif
 	}
@@ -119,7 +119,7 @@ void Ctxt::AddLineWithoutOpenFile(const char* fmt, ...)
 	va_start(args, fmt);
 #ifdef _WIN32
 	int size = _vscprintf(fmt, args);
-#elif __linux__
+#elif __unix__
 	va_list argcopy;
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
@@ -131,7 +131,7 @@ void Ctxt::AddLineWithoutOpenFile(const char* fmt, ...)
 #ifdef _WIN32
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
 		vsprintf_s(&result[0], size + 1, fmt, args);
-#elif __linux__
+#elif __unix__
 		vsnprintf(&result[0], size + 1, fmt, args);
 #endif
 	}
@@ -213,7 +213,7 @@ void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
 	do 
 	{
 		getline(myfile, strLine);
-#ifdef __linux__
+#ifdef __unix__
 		if((!(strLine.empty())) && (strLine.back() == '\r'))
 		{
 			strLine.pop_back();
@@ -242,7 +242,7 @@ void Ctxt::LoadTxtWithSplit(const std::string& strSplit)
 	do 
 	{
 		getline(myfile, strLine);
-#ifdef __linux__
+#ifdef __unix__
 		if((!(strLine.empty())) && (strLine.back() == '\r'))
 		{
 			strLine.pop_back();
@@ -263,7 +263,7 @@ void Ctxt::LoadTxtWithOneLine()
 	do 
 	{
 		getline(myfile, strLine);
-#ifdef __linux__
+#ifdef __unix__
 		if((!(strLine.empty())) && (strLine.back() == '\r'))
 		{
 			strLine.pop_back();

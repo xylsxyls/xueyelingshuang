@@ -82,7 +82,7 @@ private:
 	HANDLE m_memoryHandle;
 	void* m_readMemoryPtr;
 	void* m_writeMemoryPtr;
-#elif __linux__
+#elif __unix__
 	int m_shmid;
 #endif
 	void* m_memoryPtr;

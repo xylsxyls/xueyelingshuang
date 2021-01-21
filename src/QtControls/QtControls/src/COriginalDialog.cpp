@@ -2,7 +2,7 @@
 #include <QWindow>
 #ifdef _MSC_VER
 #include <Windows.h>
-#elif __linux__
+#elif __unix__
 #include <xcb/xcb.h>
 #include <xcb/xfixes.h>
 #include <X11/Xlib.h>
@@ -17,7 +17,7 @@
 #define WM_DWMCOMPOSITIONCHANGED        0x031E
 #endif
 
-#ifdef __linux__
+#ifdef __unix__
 
 std::string eastWestResizeCursor = {-119, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0,
 0, 16, 0, 0, 0, 16, 8, 6, 0, 0, 0, 31, -13, -1, 97, 0, 0, 0, 69, 73, 68, 65, 84, 120, -100, 98, 96,
@@ -62,7 +62,7 @@ COriginalDialog::COriginalDialog(QWidget* parent)
 	,mTouchBorderWidth(0)
 	//,mDwmInitialized(false)
     ,mAltF4Enable(true)
-#ifdef __linux__
+#ifdef __unix__
 	,mAltPress(false)
 	,mAltF4Close(false)
 #endif
@@ -422,7 +422,7 @@ bool COriginalDialog::nativeEvent(const QByteArray& eventType, void* message, lo
 			break;
 		}
 	}
-#elif __linux__
+#elif __unix__
 	if (eventType == "xcb_generic_event_t")
 	{
 		xcb_generic_event_t* msg = static_cast<xcb_generic_event_t*>(message);
@@ -669,7 +669,7 @@ void COriginalDialog::altF4PressedEvent()
 {
 #ifdef _MSC_VER
 	close();
-#elif __linux__
+#elif __unix__
 	if (mAltCloseEve == nullptr)
 	{
 		printf("mAltCloseEve nullptr error\n");
@@ -702,7 +702,7 @@ bool COriginalDialog::eventFilter(QObject* tar, QEvent* eve)
 	return res;
 }
 
-#ifdef __linux__
+#ifdef __unix__
 void COriginalDialog::closeEvent(QCloseEvent* eve)
 {
 	if (mAltPress)
@@ -821,7 +821,7 @@ COriginalDialog::TouchType COriginalDialog::getTouchType(const QPoint& clientPos
 
 void COriginalDialog::setTouchBorderWidth(int n)
 {
-#ifdef __linux__
+#ifdef __unix__
 	if (mEastWest.isNull())
 	{
 		mEastWest.loadFromData(QByteArray::fromStdString(eastWestResizeCursor));
@@ -888,7 +888,7 @@ QWindow* COriginalDialog::getAncestorHandle(QWindow* window)
     QWindow* realTransientWindow = nullptr;
 #ifdef _MSC_VER
     WId ancetorId = (WId)::GetAncestor(HWND(window->winId()), GA_ROOT);
-#elif __linux__
+#elif __unix__
     WId ancetorId = 0;
     return nullptr;
 #endif
