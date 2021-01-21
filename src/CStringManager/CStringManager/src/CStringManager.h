@@ -90,7 +90,7 @@ public:
 
 	static std::wstring Utf8ToUnicode(const std::string& strSrc);
 
-    static std::string UrlEncode(const std::string& sIn);
+	static std::string UrlEncode(const std::string& sIn);
 
-    static std::string UrlDecode(const std::string& sIn);
+	static std::string UrlDecode(const std::string& sIn);
 };
