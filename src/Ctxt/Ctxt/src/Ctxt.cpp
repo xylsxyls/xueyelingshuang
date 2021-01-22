@@ -90,7 +90,7 @@ void Ctxt::Write(FILE* pFile, const char* fmt, ...)
 	std::string result;
 	va_list args;
 	va_start(args, fmt);
-#ifdef _WIN32
+#ifdef _MSC_VER
 	int size = _vscprintf(fmt, args);
 #elif __unix__
 	va_list argcopy;
@@ -101,7 +101,7 @@ void Ctxt::Write(FILE* pFile, const char* fmt, ...)
 	result.resize(size);
 	if (size != 0)
 	{
-#ifdef _WIN32
+#ifdef _MSC_VER
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
 		vsprintf_s(&result[0], size + 1, fmt, args);
 #elif __unix__
@@ -117,7 +117,7 @@ void Ctxt::AddLineWithoutOpenFile(const char* fmt, ...)
 	std::string result;
 	va_list args;
 	va_start(args, fmt);
-#ifdef _WIN32
+#ifdef _MSC_VER
 	int size = _vscprintf(fmt, args);
 #elif __unix__
 	va_list argcopy;
@@ -128,7 +128,7 @@ void Ctxt::AddLineWithoutOpenFile(const char* fmt, ...)
 	result.resize(size);
 	if (size != 0)
 	{
-#ifdef _WIN32
+#ifdef _MSC_VER
 		//?即便分配了足够内存，长度必须加1，否则会崩溃
 		vsprintf_s(&result[0], size + 1, fmt, args);
 #elif __unix__
@@ -136,7 +136,11 @@ void Ctxt::AddLineWithoutOpenFile(const char* fmt, ...)
 #endif
 	}
 	va_end(args);
-    *(std::ofstream*)m_txt << result << "\r\n";
+#ifdef _MSC_VER
+	*(std::ofstream*)m_txt << result << "\r" << std::endl;
+#elif __unix__
+	*(std::ofstream*)m_txt << result << std::endl;
+#endif
 }
 
 bool Ctxt::SaveAs(const std::string& path)
@@ -158,7 +162,11 @@ bool Ctxt::SaveAs(const std::string& path)
 		{
 			strLine.append(vecLine[partIndex]);
 		}
+#ifdef _MSC_VER
 		Write(pFile, (lineIndex == m_vectxt.size() - 1) ? "%s" : "%s\r\n", strLine.c_str());
+#elif __unix__
+		Write(pFile, (lineIndex == m_vectxt.size() - 1) ? "%s" : "%s\n", strLine.c_str());
+#endif
 	}
 	::fclose(pFile);
 	pFile = nullptr;
