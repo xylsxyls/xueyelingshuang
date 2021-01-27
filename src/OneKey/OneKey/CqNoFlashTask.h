@@ -7,7 +7,9 @@ public:
 	CqNoFlashTask();
 
 public:
-    void DoTask();
+	void DoTask();
+
+	void oldDoTask();
 
 	void setParam(int32_t sleepTime);
 

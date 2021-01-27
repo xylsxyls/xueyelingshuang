@@ -4,7 +4,7 @@
 
 void CrqTask::DoTask()
 {
-	Sleep(300);
+	//Sleep(300);
 
-	CKeyboard::InputString("rq", 0);
+	CKeyboard::InputString("q", 0);
 }
