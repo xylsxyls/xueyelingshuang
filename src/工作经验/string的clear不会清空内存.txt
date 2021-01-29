@@ -1,0 +1,1 @@
+string的clear不会清空内存

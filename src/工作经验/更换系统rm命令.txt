@@ -1,0 +1,6 @@
+sudo apt-get install trash-cli -y
+
+给trash命令添加别名"rm"，覆盖系统rm命令。
+vi ~/.bashrc
+加入：alias rm="trash"
+重启
