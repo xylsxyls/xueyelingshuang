@@ -1256,7 +1256,7 @@ void CSystem::saveFile(const std::string& content, const std::string& path)
 std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	int32_t flag,
 	const std::string& fileStr,
-	void (*EveryFilePath)(const std::string&),
+	bool (*EveryFilePath)(const std::string&),
 	std::vector<std::string>* unVisitPath)
 {
 	std::string dir = strPath;
@@ -1354,6 +1354,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 				queue_dir.emplace(tmpstr);
 				continue;
 			}
+			bool isExit = false;
 			std::string tmpfilename = curDir;
 #ifdef _WIN32
 			tmpfilename.pop_back();
@@ -1368,7 +1369,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 					tmpfilename.append(strName);
 					if (EveryFilePath != nullptr)
 					{
-						EveryFilePath(tmpfilename);
+						isExit = EveryFilePath(tmpfilename);
 					}
 					result.emplace_back(tmpfilename);
 				}
@@ -1387,7 +1388,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 					tmpfilename.append(strName);
 					if (EveryFilePath != nullptr)
 					{
-						EveryFilePath(tmpfilename);
+						isExit = EveryFilePath(tmpfilename);
 					}
 					result.emplace_back(tmpfilename);
 				}
@@ -1399,12 +1400,16 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 				tmpfilename.append(strName);
 				if (EveryFilePath != nullptr)
 				{
-					EveryFilePath(tmpfilename);
+					isExit = EveryFilePath(tmpfilename);
 				}
 				result.emplace_back(tmpfilename);
 			}
 			break;
 			default:
+				break;
+			}
+			if (isExit)
+			{
 				break;
 			}
 		}

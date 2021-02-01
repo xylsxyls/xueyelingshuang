@@ -5,6 +5,7 @@
 #include "QtControls/CheckBox.h"
 #include "QtControls/TextEdit.h"
 #include "QtControls/ComboBox.h"
+#include "SearchPathTask.h"
 
 FindTextLinux::FindTextLinux(QWidget* parent)
 	: QDialog(parent),
@@ -21,7 +22,8 @@ FindTextLinux::FindTextLinux(QWidget* parent)
 	m_searchButton(nullptr),
 	m_charsetLabel(nullptr),
 	m_charset(nullptr),
-	m_searchText(nullptr)
+	m_searchText(nullptr),
+	m_searchPathThreadId(0)
 {
 	//m_button = new COriginalButton(this);
 	init();
@@ -103,6 +105,7 @@ void FindTextLinux::init()
 	m_searchButton->setText(QStringLiteral("搜索"));
 	m_searchButton->setFontSize(12);
 	m_searchButton->setGeometry(706, 73, 94, 27);
+	QObject::connect(m_searchButton, &PushButton::clicked, this, &FindTextLinux::onSearchButtonClicked);
 
 	m_charsetLabel = new Label(this);
 	m_charsetLabel->setText(QStringLiteral("同一位置在不同字符集\n下多次找到时只显示"));
@@ -133,6 +136,8 @@ void FindTextLinux::init()
 	m_searchText->setEnabled(false);
 	m_searchText->setBorderColor(QColor(23, 23, 23));
 	m_searchText->setBackgroundColor(QColor(240, 240, 240));
+
+	m_searchPathThreadId = CTaskThreadManager::Instance().Init();
 }
 
 bool FindTextLinux::check()
@@ -154,6 +159,13 @@ void FindTextLinux::resizeEvent(QResizeEvent* eve)
 	m_search->resize(219, 21);
 	m_searchText->resize(windowWidth - 26 * 2, windowHeight - 139 - 49);
 	//m_button->setGeometry(360, 120, 160, 80);
+}
+
+void FindTextLinux::closeEvent(QCloseEvent* eve)
+{
+	CTaskThreadManager::Instance().Uninit(m_searchPathThreadId);
+	m_searchPathThreadId = 0;
+	QDialog::closeEvent(eve);
 }
 
 void FindTextLinux::onButtonClicked()
@@ -193,4 +205,12 @@ void FindTextLinux::onFormatButtonClicked()
 		m_formatButton->setText(QStringLiteral("不搜索的格式："));
 		m_format->setText(QStringLiteral(".exe"));
 	}
+}
+
+void FindTextLinux::onSearchButtonClicked()
+{
+	m_searchButton->setEnabled(false);
+	std::shared_ptr<SearchPathTask> spSearchPathTask(new SearchPathTask);
+	spSearchPathTask->setParam();
+	CTaskThreadManager::Instance().GetThreadInterface(m_searchPathThreadId)->PostTask(spSearchPathTask);
 }

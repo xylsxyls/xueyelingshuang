@@ -151,14 +151,14 @@ public:
 	@param [in] strPath 必须传文件夹路径，寻找文件夹以下，如果传空字符串则查找exe所在路径，带不带\都可以
 	@param [in] flag 1表示查找文件，2表示查找文件后缀名，3表示查找所有文件，fileStr不起作用
 	@param [in] fileStr 传文件名带后缀名或后缀名不带点，不查找文件夹
-	@param [in] EveryFilePath 在每添加一个文件路径之前调用此函数
+	@param [in] EveryFilePath 在每添加一个文件路径之前调用此函数，返回true表示中断搜索，继续搜索返回false
 	@param [in] unVisitPath 把当前文件夹下不可访问的文件夹列出来，传空代表不存储，所有文件夹路径带\符号
 	@return 返回所有查找到文件的绝对路径
 	*/
 	static std::vector<std::string> findFilePath(const std::string& strPath,
 		int32_t flag = 3,
 		const std::string& fileStr = "",
-		void (*EveryFilePath)(const std::string&) = nullptr,
+		bool (*EveryFilePath)(const std::string&) = nullptr,
 		std::vector<std::string>* unVisitPath = nullptr);
 };
 

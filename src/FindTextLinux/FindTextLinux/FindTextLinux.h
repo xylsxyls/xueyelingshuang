@@ -25,11 +25,13 @@ protected:
 
 protected:
 	void resizeEvent(QResizeEvent* eve);
+	void closeEvent(QCloseEvent* eve);
 
 private slots:
 	void onButtonClicked();
 	void onCurrentIndexChanged(int index);
 	void onFormatButtonClicked();
+	void onSearchButtonClicked();
 
 private:
 	Label* m_pathLabel;
@@ -46,6 +48,7 @@ private:
 	Label* m_charsetLabel;
 	ComboBox* m_charset;
 	TextEdit* m_searchText;
+	uint32_t m_searchPathThreadId;
 };
 
 #endif // FINDTEXTLINUX_H
