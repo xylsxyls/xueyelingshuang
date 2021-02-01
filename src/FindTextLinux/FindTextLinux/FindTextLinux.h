@@ -9,6 +9,8 @@ class PushButton;
 class Label;
 class LineEdit;
 class CheckBox;
+class ComboBox;
+class TextEdit;
 
 class FindTextLinux : public QDialog
 {
@@ -26,6 +28,8 @@ protected:
 
 private slots:
 	void onButtonClicked();
+	void onCurrentIndexChanged(int index);
+	void onFormatButtonClicked();
 
 private:
 	Label* m_pathLabel;
@@ -38,6 +42,10 @@ private:
 	CheckBox* m_suffix;
 	CheckBox* m_matchCase;
 	CheckBox* m_searchName;
+	PushButton* m_searchButton;
+	Label* m_charsetLabel;
+	ComboBox* m_charset;
+	TextEdit* m_searchText;
 };
 
 #endif // FINDTEXTLINUX_H
