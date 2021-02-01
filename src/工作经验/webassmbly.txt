@@ -1,0 +1,39 @@
+https://blog.csdn.net/weixin_30435261/article/details/97874814
+https://cloud.tencent.com/developer/news/690454
+https://blog.csdn.net/weixin_30435261/article/details/97874814
+https://blog.csdn.net/h_372101/article/details/107415365
+https://www.cntofu.com/book/150/zh/ch3-runtime/ch3-03-fs.md
+https://www.cntofu.com/book/150/zh/ch2-c-js/ch2-04-data-exchange.md
+https://zhuanlan.zhihu.com/p/158586853
+https://zhuanlan.zhihu.com/p/305601273
+https://blog.csdn.net/hbuxiaofei/article/details/108542835
+https://baijiahao.baidu.com/s?id=1617283920644138765&wfr=spider&for=pc
+chrome://flags
+
+emrun --no_browser --port 8080 sample.html
+http://<ip>:8080/sample.html
+-s USE_PTHREADS=1 -s PTHREAD_POOL_SIZE=15
+-s NODERAWFS=1 -lnodefs.js -lidbfs.js
+禁用异常捕获
+-s NODEJS_CATCH_EXIT=0 -s NODEJS_CATCH_REJECTION=0
+#include <emscripten/emscripten.h>
+int EMSCRIPTEN_KEEPALIVE hello(int argc, char ** argv)
+
+-s "EXTRA_EXPORTED_RUNTIME_METHODS = ['ccall'，'cwrap']"
+
+#ifndef EM_PORT_API
+#	if defined(__EMSCRIPTEN__)
+#		include <emscripten.h>
+#		if defined(__cplusplus)
+#			define EM_PORT_API(rettype) extern "C" rettype EMSCRIPTEN_KEEPALIVE
+#		else
+#			define EM_PORT_API(rettype) rettype EMSCRIPTEN_KEEPALIVE
+#		endif
+#	else
+#		if defined(__cplusplus)
+#			define EM_PORT_API(rettype) extern "C" rettype
+#		else
+#			define EM_PORT_API(rettype) rettype
+#		endif
+#	endif
+#endif

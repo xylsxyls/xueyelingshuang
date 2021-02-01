@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=MessageTest1.0
+Comment=MessageTest1.0
+Exec=/home/xylsxyls/xueyelingshuang/common/MessageTest/MessageTest1.0
+Terminal=false
+Type=Application
+Categories=Application;Development;
+
+在/usr/share/applications中创建MessageTest1.0.desktop
+然后拖到桌面，再双击信任

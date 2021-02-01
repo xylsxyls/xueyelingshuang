@@ -1,0 +1,39 @@
+下载库
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install 2.0.12
+./emsdk activate 2.0.12
+用emcc -v查看是否正确安装
+之后每个新开的终端都要先执行source ./emsdk_env.sh
+
+编译库或者执行文件
+1.编译库
+生成静态库，必须是32位，兼容cmake，调用命令是emcmake cmake ..
+cmake的-D参数都可以正常传递，cmake中有些命令不可用例如-finput-charset='gb2312'
+-fPIC和-m32要加上，如果使用了线程需要加-pthread，emmake make生成.a文件
+2.生成执行文件
+分为html和js，所依赖的库必须都是通过emcmake和emmake编译出来的库
+增加编译参数
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-s EXIT_RUNTIME=1")
+如果使用了线程
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-s USE_PTHREADS=1 -s EXIT_RUNTIME=1")
+如果编译html
+SET(CMAKE_EXECUTABLE_SUFFIX ".html")
+如果编译js
+SET(CMAKE_EXECUTABLE_SUFFIX ".js")
+emcmake和emmake生成文件
+用一个终端开启服务，sample是PROJECT_NAME，需要进入到生成路径下
+emrun --no_browser --port 8080 sample.html
+在浏览器中访问进行调试，<ip>是本机地址
+http://<ip>:8080/sample.html
+
+代码改动
+区分linux平台的宏__linux__不可用，可以改成__unix__
+多进程，共享内存，消息队列不可用，多线程可以，std::thread和pthread都可以用
+文件读写需要使用特定方式，ifstream和ofstream试过都可以用
+建议把文件读写的部分全部去掉，改为传参，wasm对文件读写支持不好
+wasm本质是把C++语言翻译成js语言，所以和系统相关的库都不可以用，例如windows.h这些都不可以用
+
+测试
+建议把每个功能模块都测试下，wasm在编译的时候不报错不代表可以正常运行，可能在执行的时候抛出异常，程序卡死
+一般来说卡死和使用了系统函数相关，wasm对单步调试支持不好，建议用printf看调试信息

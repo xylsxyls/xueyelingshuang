@@ -1,0 +1,4 @@
+cmake编译不过
+将C:\Program Files (x86)\Windows Kits\8.1\bin\x86中的rc.exe 和 rcdll.dll拷贝到
+
+C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin目录下，就可以了

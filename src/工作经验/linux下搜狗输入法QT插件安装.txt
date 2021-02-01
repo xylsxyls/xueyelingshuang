@@ -1,0 +1,20 @@
+https://blog.csdn.net/flfihpv259/article/details/51556464
+https://blog.csdn.net/boris519618/article/details/101944081
+
+set(Qt5_DIR /home/xylsxyls/Qt5.5.1_64/5.5/gcc_64/)
+set(CMAKE_PREFIX_PATH /home/xylsxyls/Qt5.5.1_64/5.5/gcc_64/)
+#set(Qt5_DIR /home/xylsxyls/Qt5.5.1_32/5.5/gcc/)
+#set(CMAKE_PREFIX_PATH /home/xylsxyls/Qt5.5.1_32/5.5/gcc/)
+
+#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+
+target_link_libraries(FcitxQt5WidgetsAddons PRIVATE "/usr/lib/i386-linux-gnu/libfcitx-config.so")
+target_link_libraries(FcitxQt5WidgetsAddons PRIVATE "/usr/lib/i386-linux-gnu/libfcitx-core.so")
+target_link_libraries(FcitxQt5WidgetsAddons PRIVATE "/usr/lib/i386-linux-gnu/libfcitx-gclient.so")
+target_link_libraries(FcitxQt5WidgetsAddons PRIVATE "/usr/lib/i386-linux-gnu/libfcitx-qt.so")
+target_link_libraries(FcitxQt5WidgetsAddons PRIVATE "/usr/lib/i386-linux-gnu/libfcitx-utils.so")
+
+其余的不加private
+每个都要加-m32
+编64位不用
