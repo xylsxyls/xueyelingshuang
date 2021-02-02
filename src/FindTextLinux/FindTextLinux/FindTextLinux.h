@@ -16,6 +16,9 @@ class FindTextLinux : public QDialog
 {
 	Q_OBJECT
 public:
+	friend class SearchPathTask;
+
+public:
 	FindTextLinux(QWidget* parent = nullptr);
 	~FindTextLinux();
 
@@ -49,6 +52,7 @@ private:
 	ComboBox* m_charset;
 	TextEdit* m_searchText;
 	uint32_t m_searchPathThreadId;
+	QString m_text;
 };
 
 #endif // FINDTEXTLINUX_H

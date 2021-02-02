@@ -6,6 +6,7 @@
 #include "QtControls/TextEdit.h"
 #include "QtControls/ComboBox.h"
 #include "SearchPathTask.h"
+#include "CSystem/CSystemAPI.h"
 
 FindTextLinux::FindTextLinux(QWidget* parent)
 	: QDialog(parent),
@@ -68,7 +69,7 @@ void FindTextLinux::init()
 	m_format = new LineEdit(this);
 	m_format->setGeometry(117, 76, 177, 21);
 	m_format->setFontSize(12);
-	m_format->setText(".exe");
+	m_format->setText(QStringLiteral(".exe"));
 
 	m_searchLabel = new Label(this);
 	m_searchLabel->setText(QStringLiteral("搜索内容"));
@@ -210,7 +211,18 @@ void FindTextLinux::onFormatButtonClicked()
 void FindTextLinux::onSearchButtonClicked()
 {
 	m_searchButton->setEnabled(false);
+	std::string path = m_path->text().toStdString();
+	if (path.empty())
+	{
+		path = "/home/" + CSystem::GetSysUserName() + "/xueyelingshuang/src/工作经验/";
+	}
+	std::string format = m_format->text().toStdString();
+	std::string search = m_search->text().toStdString();
+	bool hasSuffix = m_suffix->isChecked();
+	bool isMatchCase = m_matchCase->isChecked();
+	bool isSearchName = m_searchName->isChecked();
+	std::string charset = m_charset->currentText().toStdString();
 	std::shared_ptr<SearchPathTask> spSearchPathTask(new SearchPathTask);
-	spSearchPathTask->setParam();
+	spSearchPathTask->setParam(path, m_searchFormat, format, search, hasSuffix, isMatchCase, isSearchName, charset, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_searchPathThreadId)->PostTask(spSearchPathTask);
 }
