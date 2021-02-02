@@ -1256,7 +1256,7 @@ void CSystem::saveFile(const std::string& content, const std::string& path)
 std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	int32_t flag,
 	const std::string& fileStr,
-	bool (*EveryFilePath)(const std::string&),
+	const std::function<bool (const std::string&)>& EveryFilePath,
 	std::vector<std::string>* unVisitPath)
 {
 	std::string dir = strPath;

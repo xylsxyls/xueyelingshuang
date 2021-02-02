@@ -139,6 +139,15 @@ void FindTextLinux::init()
 	m_searchText->setBackgroundColor(QColor(240, 240, 240));
 
 	m_searchPathThreadId = CTaskThreadManager::Instance().Init();
+
+	int32_t coreCount = CSystem::GetCPUCoreCount() * 2;
+	int32_t index = -1;
+	while (index++ != coreCount - 1)
+	{
+		m_vecSearchFileThreadId.push_back(CTaskThreadManager::Instance().Init());
+	}
+
+	QObject::connect(this, &FindTextLinux::searchEnd, this, &FindTextLinux::onSearchEnd, Qt::QueuedConnection);
 }
 
 bool FindTextLinux::check()
@@ -225,4 +234,10 @@ void FindTextLinux::onSearchButtonClicked()
 	std::shared_ptr<SearchPathTask> spSearchPathTask(new SearchPathTask);
 	spSearchPathTask->setParam(path, m_searchFormat, format, search, hasSuffix, isMatchCase, isSearchName, charset, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_searchPathThreadId)->PostTask(spSearchPathTask);
+}
+
+void FindTextLinux::onSearchEnd()
+{
+	m_searchButton->setEnabled(true);
+	m_searchText->setText(m_text);
 }

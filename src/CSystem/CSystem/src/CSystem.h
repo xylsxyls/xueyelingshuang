@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <map>
 #include <vector>
+#include <functional>
 #include "CSystemMacro.h"
 
 class CSystemAPI CSystem
@@ -158,7 +159,7 @@ public:
 	static std::vector<std::string> findFilePath(const std::string& strPath,
 		int32_t flag = 3,
 		const std::string& fileStr = "",
-		bool (*EveryFilePath)(const std::string&) = nullptr,
+		const std::function<bool (const std::string&)>& EveryFilePath = nullptr,
 		std::vector<std::string>* unVisitPath = nullptr);
 };
 

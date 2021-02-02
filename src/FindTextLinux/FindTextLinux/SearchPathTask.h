@@ -1,10 +1,13 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include <vector>
+#include <string>
 
 class FindTextLinux;
 
 class SearchPathTask : public CTask
 {
+    friend class EveryFilePath;
 public:
     SearchPathTask();
 
@@ -31,5 +34,6 @@ private:
 	bool m_isSearchName;
 	std::string m_charset;
     FindTextLinux* m_client;
+    std::vector<std::string> m_vecFormat;
     std::atomic<bool> m_exit;
 };

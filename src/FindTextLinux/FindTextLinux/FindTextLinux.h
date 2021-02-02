@@ -17,10 +17,14 @@ class FindTextLinux : public QDialog
 	Q_OBJECT
 public:
 	friend class SearchPathTask;
+	friend class EveryFilePath;
 
 public:
 	FindTextLinux(QWidget* parent = nullptr);
 	~FindTextLinux();
+
+Q_SIGNALS:
+    void searchEnd();
 
 protected:
 	void init();
@@ -35,6 +39,7 @@ private slots:
 	void onCurrentIndexChanged(int index);
 	void onFormatButtonClicked();
 	void onSearchButtonClicked();
+	void onSearchEnd();
 
 private:
 	Label* m_pathLabel;
@@ -53,6 +58,7 @@ private:
 	TextEdit* m_searchText;
 	uint32_t m_searchPathThreadId;
 	QString m_text;
+	std::vector<uint32_t> m_vecSearchFileThreadId;
 };
 
 #endif // FINDTEXTLINUX_H
