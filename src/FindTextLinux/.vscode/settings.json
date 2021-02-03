@@ -1,7 +1,7 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/FindTextLinux/",
     "cmake.configureArgs": [
-        "-DLIBRARIESRELY=libCStringManagerd.so;libQssStringd.so;libQtControlsd.so;libCTaskThreadManagerd.so;libCSystemd.so",
+        "-DLIBRARIESRELY=libCStringManagerd.so;libQssStringd.so;libQtControlsd.so;libCTaskThreadManagerd.so;libCSystemd.so;libCtxtd.so",
         "-DBIT=32",
         "-DDEBUGRELEASE=debug"
     ]

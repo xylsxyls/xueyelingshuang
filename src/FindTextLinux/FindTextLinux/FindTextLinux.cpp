@@ -24,7 +24,8 @@ FindTextLinux::FindTextLinux(QWidget* parent)
 	m_charsetLabel(nullptr),
 	m_charset(nullptr),
 	m_searchText(nullptr),
-	m_searchPathThreadId(0)
+	m_searchPathThreadId(0),
+	m_coreCount(0)
 {
 	//m_button = new COriginalButton(this);
 	init();
@@ -87,6 +88,7 @@ void FindTextLinux::init()
 	m_suffix->move(258, 101);
 	m_suffix->setBackgroundColor(QColor(0, 0, 0, 0));
 	m_suffix->setFocusPolicy(Qt::NoFocus);
+	m_suffix->setChecked(true);
 
 	m_matchCase = new CheckBox(this);
 	m_matchCase->setText(QStringLiteral("区分大小写"));
@@ -134,18 +136,13 @@ void FindTextLinux::init()
 	m_searchText = new TextEdit(this);
 	m_searchText->move(26, 139);
 	m_searchText->setFontSize(12);
-	m_searchText->setEnabled(false);
+	m_searchText->setReadOnly(true);
 	m_searchText->setBorderColor(QColor(23, 23, 23));
 	m_searchText->setBackgroundColor(QColor(240, 240, 240));
 
 	m_searchPathThreadId = CTaskThreadManager::Instance().Init();
 
-	int32_t coreCount = CSystem::GetCPUCoreCount() * 2;
-	int32_t index = -1;
-	while (index++ != coreCount - 1)
-	{
-		m_vecSearchFileThreadId.push_back(CTaskThreadManager::Instance().Init());
-	}
+	m_coreCount = CSystem::GetCPUCoreCount();
 
 	QObject::connect(this, &FindTextLinux::searchEnd, this, &FindTextLinux::onSearchEnd, Qt::QueuedConnection);
 }

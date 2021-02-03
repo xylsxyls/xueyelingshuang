@@ -51,9 +51,9 @@ public:
         {
             static int32_t searchFileThreadIndex = -1;
             std::shared_ptr<SearchFileTask> spSearchFileTask(new SearchFileTask);
-            spSearchFileTask->setParam();
-            int32_t threadIndex = ++searchFileThreadIndex % m_task->m_client->m_vecSearchFileThreadId.size();
-            uint32_t threadId = m_task->m_client->m_vecSearchFileThreadId[threadIndex];
+            spSearchFileTask->setParam(path, search, m_task);
+            int32_t threadIndex = ++searchFileThreadIndex % m_task->m_vecSearchFileThreadId.size();
+            uint32_t threadId = m_task->m_vecSearchFileThreadId[threadIndex];
             CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spSearchFileTask);
         }
         return m_task->m_exit;
@@ -69,22 +69,56 @@ m_searchFormat(false),
 m_hasSuffix(false),
 m_isMatchCase(false),
 m_isSearchName(false),
-m_client(nullptr)
+m_client(nullptr),
+m_searchResultThreadId(0)
 {
 
 }
 
 void SearchPathTask::DoTask()
 {
+    m_client->m_text.clear();
     if ((!CSystem::DirOrFileExist(m_path)) || (m_searchFormat && m_format.empty()))
     {
-        m_client->m_text.clear();
         emit m_client->searchEnd();
         return;
     }
+    
+    int32_t index = -1;
+    while (index++ != m_client->m_coreCount * 2 - 1)
+    {
+        m_vecSearchFileThreadId.push_back(CTaskThreadManager::Instance().Init());
+    }
+    m_searchResultThreadId = CTaskThreadManager::Instance().Init();
+
     CStringManager::split(m_vecFormat, m_format, '.');
     std::vector<std::string> vecPath = CSystem::findFilePath(m_path, 3, "", EveryFilePath(this));
-    RCSend("vecPath.size() = %d", vecPath.size());
+    if (m_exit)
+    {
+        int32_t index = -1;
+        while (index++ != m_vecSearchFileThreadId.size() - 1)
+        {
+            CTaskThreadManager::Instance().Uninit(m_vecSearchFileThreadId[index]);
+        }
+        m_vecSearchFileThreadId.clear();
+        CTaskThreadManager::Instance().Uninit(m_searchResultThreadId);
+        m_searchResultThreadId = 0;
+        return;
+    }
+    index = -1;
+    while (index++ != m_vecSearchFileThreadId.size() - 1)
+    {
+        CTaskThreadManager::Instance().WaitForEnd(m_vecSearchFileThreadId[index]);
+    }
+    m_vecSearchFileThreadId.clear();
+    CTaskThreadManager::Instance().WaitForEnd(m_searchResultThreadId);
+    m_searchResultThreadId = 0;
+    emit m_client->searchEnd();
+}
+
+void SearchPathTask::StopTask()
+{
+    m_exit = true;
 }
 
 void SearchPathTask::setParam(const std::string& path,

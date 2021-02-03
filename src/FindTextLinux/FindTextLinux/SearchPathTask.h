@@ -8,11 +8,15 @@ class FindTextLinux;
 class SearchPathTask : public CTask
 {
     friend class EveryFilePath;
+    friend class SearchFileTask;
+    friend class SearchResultTask;
 public:
     SearchPathTask();
 
 public:
     void DoTask();
+
+    void StopTask();
 
     void setParam(const std::string& path,
         bool searchFormat,
@@ -35,5 +39,7 @@ private:
 	std::string m_charset;
     FindTextLinux* m_client;
     std::vector<std::string> m_vecFormat;
+    std::vector<uint32_t> m_vecSearchFileThreadId;
+    uint32_t m_searchResultThreadId;
     std::atomic<bool> m_exit;
 };
