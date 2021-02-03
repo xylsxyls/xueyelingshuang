@@ -36,7 +36,6 @@ protected:
 	void closeEvent(QCloseEvent* eve);
 
 private slots:
-	void onButtonClicked();
 	void onCurrentIndexChanged(int index);
 	void onFormatButtonClicked();
 	void onSearchButtonClicked();

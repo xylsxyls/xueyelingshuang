@@ -22,8 +22,6 @@ public:
 public:
     bool operator()(const std::string& path)
     {
-        RCSend("path = %s", path.c_str());
-
         std::string suffix = CSystem::GetName(path, 2);
         bool hasFormat = (std::find(m_task->m_vecFormat.begin(), m_task->m_vecFormat.end(), suffix) != m_task->m_vecFormat.end());
         if ((m_task->m_searchFormat && !hasFormat) || (!m_task->m_searchFormat && hasFormat))
@@ -44,14 +42,18 @@ public:
         bool isFind = (CStringManager::Find(fileName, search) != std::string::npos);
         if (m_task->m_isSearchName)
         {
-            m_task->m_client->m_text += (QString::fromStdString(path) + "\n");
-            return m_task->m_exit;
+            if (isFind)
+            {
+                m_task->m_client->m_text += "-------------------------------------------------------------------------------------------------------------------------------------------------------\n";
+                m_task->m_client->m_text += (QString::fromStdString(path) + "\n\n\n");
+                return m_task->m_exit;
+            }
         }
         else
         {
             static int32_t searchFileThreadIndex = -1;
             std::shared_ptr<SearchFileTask> spSearchFileTask(new SearchFileTask);
-            spSearchFileTask->setParam(path, search, m_task);
+            spSearchFileTask->setParam(path, isFind, search, m_task);
             int32_t threadIndex = ++searchFileThreadIndex % m_task->m_vecSearchFileThreadId.size();
             uint32_t threadId = m_task->m_vecSearchFileThreadId[threadIndex];
             CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spSearchFileTask);

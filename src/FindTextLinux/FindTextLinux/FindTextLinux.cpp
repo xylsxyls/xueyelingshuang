@@ -27,7 +27,6 @@ FindTextLinux::FindTextLinux(QWidget* parent)
 	m_searchPathThreadId(0),
 	m_coreCount(0)
 {
-	//m_button = new COriginalButton(this);
 	init();
 }
 
@@ -165,7 +164,6 @@ void FindTextLinux::resizeEvent(QResizeEvent* eve)
 	m_path->resize(480, 21);
 	m_search->resize(219, 21);
 	m_searchText->resize(windowWidth - 26 * 2, windowHeight - 139 - 49);
-	//m_button->setGeometry(360, 120, 160, 80);
 }
 
 void FindTextLinux::closeEvent(QCloseEvent* eve)
@@ -173,14 +171,6 @@ void FindTextLinux::closeEvent(QCloseEvent* eve)
 	CTaskThreadManager::Instance().Uninit(m_searchPathThreadId);
 	m_searchPathThreadId = 0;
 	QDialog::closeEvent(eve);
-}
-
-void FindTextLinux::onButtonClicked()
-{
-	//TipDialogParam tipDialogParam;
-	//tipDialogParam.m_tip = QStringLiteral("µã»÷");
-	//tipDialogParam.m_parent = windowHandle();
-	//DialogManager::instance().makeDialog(tipDialogParam);
 }
 
 void FindTextLinux::onCurrentIndexChanged(int index)

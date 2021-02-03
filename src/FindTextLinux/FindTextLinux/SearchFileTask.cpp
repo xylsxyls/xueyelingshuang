@@ -14,6 +14,11 @@ m_task(nullptr)
 void SearchFileTask::DoTask()
 {
     std::string result;
+    if (m_isPathFind)
+    {
+        result += "-------------------------------------------------------------------------------------------------------------------------------------------------------\n";
+        result += (m_path + "\n\n");
+    }
     Ctxt file(m_path);
     file.LoadTxt(Ctxt::ONE_LINE);
     int32_t index = -1;
@@ -27,9 +32,12 @@ void SearchFileTask::DoTask()
         std::string charset;
         if (m_task->m_charset == "GBK")
         {
-            if (CStringManager::Find(line, m_search) != std::string::npos)
+            std::string gbkLine;
+            getGbkLine(index, line, gbkLine);
+            if (CStringManager::Find(gbkLine, m_search) != std::string::npos)
             {
                 charset = "GBK";
+                line = gbkLine;
             }
             else
             {
@@ -38,12 +46,11 @@ void SearchFileTask::DoTask()
                 if (CStringManager::Find(unicodeLine, m_search) != std::string::npos)
                 {
                     charset = "unicode";
+                    line = unicodeLine;
                 }
                 else
                 {
-                    std::string utf8Line;
-                    getUtf8Line(index, line, utf8Line);
-                    if (CStringManager::Find(utf8Line, m_search) != std::string::npos)
+                    if (CStringManager::Find(line, m_search) != std::string::npos)
                     {
                         charset = "UTF-8";
                     }
@@ -57,18 +64,20 @@ void SearchFileTask::DoTask()
             if (CStringManager::Find(unicodeLine, m_search) != std::string::npos)
             {
                 charset = "unicode";
+                line = unicodeLine;
             }
             else
             {
-                if (CStringManager::Find(line, m_search) != std::string::npos)
+                std::string gbkLine;
+                getGbkLine(index, line, gbkLine);
+                if (CStringManager::Find(gbkLine, m_search) != std::string::npos)
                 {
                     charset = "GBK";
+                    line = gbkLine;
                 }
                 else
                 {
-                    std::string utf8Line;
-                    getUtf8Line(index, line, utf8Line);
-                    if (CStringManager::Find(utf8Line, m_search) != std::string::npos)
+                    if (CStringManager::Find(line, m_search) != std::string::npos)
                     {
                         charset = "UTF-8";
                     }
@@ -77,17 +86,18 @@ void SearchFileTask::DoTask()
         }
         else if (m_task->m_charset == "UTF-8")
         {
-            std::string utf8Line;
-            getUtf8Line(index, line, utf8Line);
-            if (CStringManager::Find(utf8Line, m_search) != std::string::npos)
+            if (CStringManager::Find(line, m_search) != std::string::npos)
             {
                 charset = "UTF-8";
             }
             else
             {
-                if (CStringManager::Find(line, m_search) != std::string::npos)
+                std::string gbkLine;
+                getGbkLine(index, line, gbkLine);
+                if (CStringManager::Find(gbkLine, m_search) != std::string::npos)
                 {
                     charset = "GBK";
+                    line = gbkLine;
                 }
                 else
                 {
@@ -96,6 +106,7 @@ void SearchFileTask::DoTask()
                     if (CStringManager::Find(unicodeLine, m_search) != std::string::npos)
                     {
                         charset = "unicode";
+                        line = unicodeLine;
                     }
                 }
             }
@@ -121,10 +132,12 @@ void SearchFileTask::DoTask()
 }
 
 void SearchFileTask::setParam(const std::string& path,
+    bool isPathFind,
     const std::string& search,
     SearchPathTask* task)
 {
     m_path = path;
+    m_isPathFind = isPathFind;
     m_search = search;
     m_task = task;
 }
@@ -178,6 +191,11 @@ int32_t SearchFileTask::getUnicodeOffset(int32_t lineIndex, const std::string& l
 		}
 	}
 	return offset;
+}
+
+void SearchFileTask::getGbkLine(int32_t lineIndex, const std::string& line, std::string& gbkLine)
+{
+    gbkLine = CStringManager::AnsiToUtf8(line);
 }
 
 void SearchFileTask::getUnicodeLine(int32_t lineIndex, const std::string& line, std::string& unicodeLine)
