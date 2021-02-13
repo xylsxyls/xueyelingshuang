@@ -1,221 +1,156 @@
 #include "AutoPlayGame.h"
-#include <stdint.h>
-#include <stdio.h>
-#include "CRandom/CRandomAPI.h"
-#include "Storage/StorageAPI.h"
-#include "Point/PointAPI.h"
-#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include <iostream>
-#include "CMouse/CMouseAPI.h"
-#include "CKeyboard/CKeyboardAPI.h"
-#include "CSystem/CSystemAPI.h"
-#include "CDump/CDumpAPI.h"
-#include "CStopWatch/CStopWatchAPI.h"
-#include "ScreenScript/ScreenScriptAPI.h"
-#include "CStringManager/CStringManagerAPI.h"
+//#include "11Controls/controls/COriginalButton.h"
+//#include "11Controls/controls/DialogManager.h"
+#include "QtControls/ComboBox.h"
+#include "QtControls/COriginalButton.h"
+#include "AutoPlayGameTask.h"
+#include "CHook/CHookAPI.h"
 
-Storage storage;
-int32_t beginPlay;
-int32_t computer = 1;
-int32_t camp = 1;
+uint32_t* g_playThreadId = nullptr;
 
-class SkillTask : public CountDownTask
+LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
-public:
-    void DoTask()
-    {
-        CKeyboard::KeyDown(CKeyboard::Ctrl);
-        CKeyboard::KeyDown('R');
-        CKeyboard::KeyUp(CKeyboard::Ctrl);
-        CKeyboard::KeyUp('R');
-        //CKeyboard::KeyDown(CKeyboard::Ctrl);
-        //CKeyboard::KeyDown('W');
-        //CKeyboard::KeyUp(CKeyboard::Ctrl);
-        //CKeyboard::KeyUp('W');
-        CKeyboard::KeyDown(CKeyboard::Ctrl);
-        CKeyboard::KeyDown('E');
-        CKeyboard::KeyUp(CKeyboard::Ctrl);
-        CKeyboard::KeyUp('E');
-        CKeyboard::KeyDown(CKeyboard::Ctrl);
-        CKeyboard::KeyDown('Q');
-        CKeyboard::KeyUp(CKeyboard::Ctrl);
-        CKeyboard::KeyUp('Q');
-        
+	// 请在这里添加消息处理代码
 
-        int32_t threadId = 0;
-        CStopWatch::CountDown(3 * 60 * 1000, new SkillTask, 1, threadId);
-    }
-};
+	const DWORD& vkCode = CHook::GetVkCode(lParam);
 
-class AutoTask : public CTask
+	if (CHook::IsKeyDown(wParam))
+	{
+		//F12
+		if (vkCode == 123)
+		{
+			CTaskThreadManager::Instance().Uninit(*g_playThreadId);
+			*g_playThreadId = CTaskThreadManager::Instance().Init();
+		}
+	}
+	else if (CHook::IsKeyUp(wParam))
+	{
+
+	}
+
+	// 将事件传递到下一个钩子
+	return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
+}
+
+AutoPlayGame::AutoPlayGame(QWidget* parent):
+	QMainWindow(parent),
+	m_group(nullptr),
+	m_hero(nullptr),
+	m_scene(nullptr),
+	m_teammate1(nullptr),
+	m_teammate2(nullptr),
+	m_begin(nullptr),
+	m_end(nullptr),
+	m_playThreadId(0)
 {
-public:
-    void DoTask()
-    {
-        Sleep(5000);
-        while (true)
-        {
-            if (beginPlay == 1)
-            {
-                beginPlay = 3;
-                goto GAME;
-            }
-            else if (beginPlay == 2)
-            {
-                beginPlay = 4;
-               // goto CHOOSE;
-            }
-        GAME:
-            int32_t threadId = 0;
-            CStopWatch::CountDown(10000, new SkillTask, 1, threadId);
-            while (true)
-            {
-                xyls::Point point = storage.find<xyls::Point>(CRandom::Int(camp * camp, camp * 3));
-                CMouse::MoveAbsolute(xyls::Rect(point, 3));
-                CMouse::RightClick();
-                Sleep(30000);
-                CMouse::MoveAbsolute(point);
-                CMouse::LeftClick();
+	ui.setupUi(this);
+	//m_button = new COriginalButton(this);
+	init();
+}
 
-                CKeyboard::InputString("eeqq");
-                int32_t count = 20;
-                while (count-- != 0)
-                {
-                    CMouse::MoveAbsolute(xyls::Rect(CSystem::screenCenterPoint(), 100), 100);
-                    CMouse::RightClick(200);
-                }
-
-                ScreenScript::FindClick("shi.png");
-                ScreenScript::FindClick("OtherOk.png");
-                ScreenScript::FindClick("EndShop.png");
-
-                if (ScreenScript::FindClick("EndGame.png"))
-                {
-					break;
-                }
-
-                if (ScreenScript::FindClick("BackHome.png"))
-                {
-					break;
-                }
-
-                if (ScreenScript::FindClick("PlayAgain.png"))
-                {
-					break;
-                }
-            }
-			if (beginPlay == 3)
-			{
-				return;
-			}
-            //CHOOSE:
-            //    while (true)
-            //    {
-            //        ScreenScript::FindClick("Play.png");
-            //        ScreenScript::FindClick("Rank.png");
-            //        ScreenScript::FindClick("Confirm.png");
-            //		ScreenScript::FindClick("PlayAgain.png");
-            //		ScreenScript::FindClick("OtherOk.png");
-            //		ScreenScript::FindClick("OtherOk2.png");
-            //        ScreenScript::FindClick("EndFriend.png");
-            //        ScreenScript::FindClick("ErrorOk.png");
-            //        ScreenScript::FindClick("Choose.png");
-            //        ScreenScript::FindClick("zhonglu.png");
-            //        ScreenScript::FindClick("daye.png");
-            //        ScreenScript::FindClick("Begin.png");
-            //		ScreenScript::FindClick("Agree.png");
-            //        ScreenScript::FindClick("NoBody.png");
-            //        ScreenScript::FindClick("Forbidden.png");
-            //        if (ScreenScript::FindClick("First.png"))
-            //        {
-            //            Sleep(1000);
-            //        }
-            //        if (ScreenScript::FindClick("Second.png"))
-            //        {
-            //            Sleep(1000);
-            //        }
-            //        if (ScreenScript::FindClick("Third.png"))
-            //        {
-            //            Sleep(1000);
-            //        }
-            //		if (ScreenScript::FindClick("Fourth.png"))
-            //		{
-            //			Sleep(1000);
-            //		}
-            //		if (ScreenScript::FindClick("Fifth.png"))
-            //		{
-            //			Sleep(1000);
-            //		}
-            //		if (ScreenScript::FindClick("Sixth.png"))
-            //		{
-            //			Sleep(1000);
-            //		}
-            //        ScreenScript::FindClick("OK.png");
-            //        if (ScreenScript::FindPic(CStringManager::Format("lan%d.png", computer)))
-            //        {
-            //            camp = 1;
-            //            break;
-            //        }
-            //        else if (ScreenScript::FindPic(CStringManager::Format("zi%d.png", computer)))
-            //        {
-            //            camp = 2;
-            //            break;
-            //        }
-            //    }
-            }
-    }
-};
-
-int32_t main()
+AutoPlayGame::~AutoPlayGame()
 {
-    CDump::declareDumpFile();
-    xyls::Rect rect(CSystem::GetWindowResolution());
-    if (rect == xyls::Rect(0, 0, 1366, 768))
-    {
-        computer = 1;
-    }
-    else if(rect == xyls::Rect(0, 0, 1920, 1080))
-    {
-        computer = 2;
-    }
+	CTaskThreadManager::Instance().Uninit(m_playThreadId);
+	m_playThreadId = 0;
+}
 
-    printf("从哪里开始，游戏开始1，选择开始2\n");
-    int32_t begin = 1;
-    std::cin >> begin;
-    beginPlay = begin;
+void AutoPlayGame::init()
+{
+	if (!check())
+	{
+		return;
+	}
+	QPalette pattle;
+	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
+	setPalette(pattle);
+	//m_button->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	//QObject::connect(m_button, &COriginalButton::clicked, this, &AutoPlayGame::onButtonClicked);
 
-    if (beginPlay == 1)
-    {
-        printf("请输入阵营，蓝方1，紫方2\n");
-        std::cin >> camp;
-    }
+	m_group = new ComboBox(this);
+	m_group->addItem(QStringLiteral("蓝方"));
+	m_group->addItem(QStringLiteral("紫方"));
+	m_group->setHidden(true);
 
-    auto threadId = CTaskThreadManager::Instance().Init();
-    auto thread = CTaskThreadManager::Instance().GetThreadInterface(threadId);
-    
-    if (computer == 1)
-    {
-        storage.add(1, xyls::Point(1204, 657));
-        storage.add(2, xyls::Point(1223, 681));
-        storage.add(3, xyls::Point(1277, 728));
-        storage.add(4, xyls::Point(1256, 609));
-        storage.add(5, xyls::Point(1313, 655));
-        storage.add(6, xyls::Point(1333, 682));
-    }
-    else if (computer == 2)
-    {
-        storage.add(1, xyls::Point(1689, 924));
-        storage.add(2, xyls::Point(1720, 958));
-        storage.add(3, xyls::Point(1798, 1023));
-        storage.add(4, xyls::Point(1767, 856));
-        storage.add(5, xyls::Point(1845, 923));
-        storage.add(6, xyls::Point(1872, 956));
-    }
+	m_hero = new ComboBox(this);
+	m_hero->addItem(QStringLiteral("刀锋"));
+	m_hero->addItem(QStringLiteral("猫"));
 
-    std::shared_ptr<AutoTask> spLanTask;
-    spLanTask.reset(new AutoTask);
-    thread->PostTask(spLanTask, 1);
-    
-    system("pause");
-	return 0;
+	m_scene = new ComboBox(this);
+	m_scene->addItem(QStringLiteral("游戏内"));
+	m_scene->addItem(QStringLiteral("游戏外"));
+
+	m_teammate1 = new ComboBox(this);
+	m_teammate1->addItem(QStringLiteral("F1"));
+	m_teammate1->addItem(QStringLiteral("F2"));
+	m_teammate1->addItem(QStringLiteral("F3"));
+	m_teammate1->addItem(QStringLiteral("F4"));
+	m_teammate1->addItem(QStringLiteral("F5"));
+
+	m_teammate2 = new ComboBox(this);
+	m_teammate2->addItem(QStringLiteral("F1"));
+	m_teammate2->addItem(QStringLiteral("F2"));
+	m_teammate2->addItem(QStringLiteral("F3"));
+	m_teammate2->addItem(QStringLiteral("F4"));
+	m_teammate2->addItem(QStringLiteral("F5"));
+	
+	m_begin = new COriginalButton(this);
+	m_begin->setText(QStringLiteral("开始"));
+	m_begin->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_begin, &COriginalButton::clicked, this, &AutoPlayGame::onBeginClicked);
+
+	CHook::Init(WH_KEYBOARD_LL, HookFun);
+
+	m_end = new COriginalButton(this);
+	m_end->setText(QStringLiteral("结束"));
+	m_end->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_end, &COriginalButton::clicked, this, &AutoPlayGame::onEndClicked);
+
+	g_playThreadId = &m_playThreadId;
+	m_playThreadId = CTaskThreadManager::Instance().Init();
+}
+
+bool AutoPlayGame::check()
+{
+	return true;
+}
+
+void AutoPlayGame::resizeEvent(QResizeEvent* eve)
+{
+	QMainWindow::resizeEvent(eve);
+
+	if (!check())
+	{
+		return;
+	}
+	m_scene->setGeometry(50, 50, 100, 30);
+	m_hero->setGeometry(50, 150, 100, 30);
+	m_group->setGeometry(250, 150, 100, 30);
+	m_teammate1->setGeometry(50, 250, 100, 30);
+	m_teammate2->setGeometry(250, 250, 100, 30);
+	m_begin->setGeometry(400, 80, 150, 60);
+	m_end->setGeometry(400, 260, 150, 60);
+}
+
+void AutoPlayGame::closeEvent(QCloseEvent* eve)
+{
+	CTaskThreadManager::Instance().Uninit(m_playThreadId);
+	m_playThreadId = 0;
+	CHook::Uninit();
+	QMainWindow::closeEvent(eve);
+}
+
+void AutoPlayGame::onBeginClicked()
+{
+	std::shared_ptr<AutoPlayGameTask> spAutoPlayGameTask(new AutoPlayGameTask);
+	spAutoPlayGameTask->setParam(CStringManager::UnicodeToAnsi(m_hero->currentText().toStdWString()),
+		CStringManager::UnicodeToAnsi(m_scene->currentText().toStdWString()),
+		CStringManager::UnicodeToAnsi(m_teammate1->currentText().toStdWString()),
+		CStringManager::UnicodeToAnsi(m_teammate2->currentText().toStdWString()));
+	CTaskThreadManager::Instance().GetThreadInterface(m_playThreadId)->PostTask(spAutoPlayGameTask);
+}
+
+void AutoPlayGame::onEndClicked()
+{
+	CTaskThreadManager::Instance().Uninit(m_playThreadId);
+	m_playThreadId = CTaskThreadManager::Instance().Init();
 }
