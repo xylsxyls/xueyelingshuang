@@ -82,6 +82,9 @@ del "%~dp0src\QtTest\QtTest\QtTest.vcxproj.user"
 rmdir /q /s "%~dp0src\QtTest1\QtTest1\GeneratedFiles\"
 del "%~dp0src\QtTest1\QtTest1\QtTest1.vcxproj.user"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\AutoPlayGame\AutoPlayGame\GeneratedFiles\"
+del "%~dp0src\AutoPlayGame\AutoPlayGame\AutoPlayGame.vcxproj.user"
+::------------------------------------------------------------
 rmdir /q /s "%~dp0src\PerformanceTest\PerformanceTest\GeneratedFiles\"
 del "%~dp0src\PerformanceTest\PerformanceTest\PerformanceTest.vcxproj.user"
 ::------------------------------------------------------------

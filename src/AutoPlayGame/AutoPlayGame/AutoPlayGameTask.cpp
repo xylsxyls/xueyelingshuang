@@ -27,7 +27,6 @@ void AutoPlayGameTask::DoTask()
 				spAttackTask->setParam((count / 60) % 2 == 1 ? m_teammate1 : m_teammate2);
 				CTaskThreadManager::Instance().GetThreadInterface(m_gameThreadId)->PostTask(spAttackTask);
 			}
-			RCSend("all send");
 			int32_t sayCount = 18;
 			int32_t sayType = 9;
 			int32_t sayIndex = 0;
@@ -91,8 +90,6 @@ void AutoPlayGameTask::DoTask()
 
 	CTaskThreadManager::Instance().Uninit(m_gameThreadId);
 	m_gameThreadId = 0;
-	
-	RCSend("leave");
 }
 
 void AutoPlayGameTask::StopTask()

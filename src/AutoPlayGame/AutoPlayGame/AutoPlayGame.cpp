@@ -85,6 +85,7 @@ void AutoPlayGame::init()
 	m_teammate1->addItem(QStringLiteral("F3"));
 	m_teammate1->addItem(QStringLiteral("F4"));
 	m_teammate1->addItem(QStringLiteral("F5"));
+	m_teammate1->setCurrentIndex(1);
 
 	m_teammate2 = new ComboBox(this);
 	m_teammate2->addItem(QStringLiteral("F1"));
@@ -92,6 +93,7 @@ void AutoPlayGame::init()
 	m_teammate2->addItem(QStringLiteral("F3"));
 	m_teammate2->addItem(QStringLiteral("F4"));
 	m_teammate2->addItem(QStringLiteral("F5"));
+	m_teammate2->setCurrentIndex(2);
 	
 	m_begin = new COriginalButton(this);
 	m_begin->setText(QStringLiteral("¿ªÊ¼"));
