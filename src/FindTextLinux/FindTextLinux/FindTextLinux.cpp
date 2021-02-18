@@ -7,6 +7,7 @@
 #include "QtControls/ComboBox.h"
 #include "SearchPathTask.h"
 #include "CSystem/CSystemAPI.h"
+#include <QApplication>
 
 FindTextLinux::FindTextLinux(QWidget* parent)
 	: QDialog(parent),
@@ -225,6 +226,9 @@ void FindTextLinux::onSearchButtonClicked()
 
 void FindTextLinux::onSearchEnd()
 {
-	m_searchButton->setEnabled(true);
+	m_searchButton->setText(QStringLiteral("µÈ´ýÏÔÊ¾"));
+	qApp->processEvents();
 	m_searchText->setText(m_text);
+	m_searchButton->setText(QStringLiteral("ËÑË÷"));
+	m_searchButton->setEnabled(true);
 }

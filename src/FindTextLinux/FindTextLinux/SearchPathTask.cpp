@@ -2,7 +2,6 @@
 #include "CSystem/CSystemAPI.h"
 #include "FindTextLinux.h"
 #include "CStringManager/CStringManagerAPI.h"
-#include "SendToMessageTest.h"
 #include "SearchFileTask.h"
 
 class EveryFilePath
@@ -94,6 +93,10 @@ void SearchPathTask::DoTask()
     m_searchResultThreadId = CTaskThreadManager::Instance().Init();
 
     CStringManager::split(m_vecFormat, m_format, '.');
+    if (!m_vecFormat.empty())
+    {
+        m_vecFormat.erase(m_vecFormat.begin());
+    }
     std::vector<std::string> vecPath = CSystem::findFilePath(m_path, 3, "", EveryFilePath(this));
     if (m_exit)
     {

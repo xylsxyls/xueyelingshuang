@@ -119,6 +119,8 @@ public:
 	static std::vector<uint32_t> processPid(const std::string& processName);
 	//获取进程名，耗时10毫秒左右
 	static std::string processName(uint32_t pid);
+	//获取本进程所占内存，单位字节，linux下只准确到kb
+	static uint64_t currentMemory();
 	//获取时间
 	static uint32_t GetTickCount();
 	//获取电脑名

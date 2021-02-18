@@ -996,6 +996,20 @@ std::string CSystem::processName(uint32_t pid)
 #endif
 }
 
+uint64_t CSystem::currentMemory()
+{
+#ifdef _MSC_VER
+	PROCESS_MEMORY_COUNTERS pmc;
+	GetProcessMemoryInfo(::GetCurrentProcess(), &pmc, sizeof(pmc));
+	return pmc.WorkingSetSize;
+#elif __unix__
+	std::string stat_info = CSystem::readFile("/proc/self/status");
+	int32_t first = stat_info.find("\nVmRSS:", 0);
+	std::string memory = stat_info.substr(first + 7, stat_info.find_first_of('\n', first + 1) - first - 9);
+	return strtoull(memory.c_str(), nullptr, 10) * 1024;
+#endif
+}
+
 uint32_t CSystem::GetTickCount()
 {
 #ifdef _MSC_VER
