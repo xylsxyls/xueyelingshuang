@@ -6,6 +6,8 @@
 #include <iconv.h>
 #include <string.h>
 #include <stdarg.h>
+#include <codecvt>
+#include <locale>
 #endif
 #if (_MSC_VER == 1900)
 #include <iterator>
@@ -417,67 +419,16 @@ int64_t CStringManager::atoi64(const char* str)
 
 #ifdef __unix__
 
-static std::wstring StringToWString(const char *pc)
+class chs_codecvt : public std::codecvt_byname<wchar_t, char, std::mbstate_t>
 {
-	if (pc == nullptr)
+public:
+	//zh_CN.GBK or .936
+	chs_codecvt():
+		codecvt_byname("zh_CN.GBK")
 	{
-		return L"";
-	}
-	char* old = setlocale(LC_CTYPE, "zh_CN.gbk");//"Chinese-simplified" windows "zh_CN.gb2312" linux
-	size_t destlen = mbstowcs(0, pc, 0);
-	if (destlen == (size_t)(-1))
-	{
-		setlocale(LC_CTYPE, old);
-		return L"";
-	}
-	size_t size_of_wc = destlen + 1;
-	wchar_t* pw = (wchar_t*)calloc(size_of_wc, sizeof(wchar_t));
-	auto mbstowcs_result = mbstowcs(pw, pc, size_of_wc);
-	if (mbstowcs_result == (size_t)(-1))
-	{
-		setlocale(LC_CTYPE, old);
-		return L"";
-	}
-	std::wstring result = pw;
-	delete[] pw;
-	setlocale(LC_CTYPE, old);
-	return result;
-}
 
-static std::string WStringToString(const wchar_t* pw)
-{
-	if (pw == nullptr)
-	{
-		return "";
 	}
-
-	char* old = setlocale(LC_CTYPE, "zh_CN.gbk");
-	size_t destlen = wcstombs(0, pw, 0);
-	if (destlen == (size_t)(-1))
-	{
-		setlocale(LC_CTYPE, old);
-		return "";
-	}
-
-	size_t size_of_wc = destlen + 1;
-	char* pc = (char*)calloc(size_of_wc, sizeof(char));
-	if (pc == nullptr)
-	{
-		setlocale(LC_CTYPE, old);
-		return "";
-	}
-
-	auto wcstombs_result = wcstombs(pc, pw, size_of_wc);
-	if (wcstombs_result == (size_t)(-1))
-	{
-		setlocale(LC_CTYPE, old);
-		return "";
-	}
-	std::string result = pc;
-	delete[] pc;
-	setlocale(LC_CTYPE, old);
-	return result;
-}
+};
 
 static int32_t code_convert(const char* from_charset, const char* to_charset, const char* inbuf, size_t inlen, char* outbuf, size_t* outlen)
 {
@@ -542,7 +493,18 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 	delete[] pwszBuffer;
 	return strRet;
 #elif __unix__
-	return WStringToString(wstrSrc.c_str());
+	std::string str;
+	try
+	{
+		std::wstring_convert<chs_codecvt> converter;
+		str = converter.to_bytes(wstrSrc);
+	}
+	catch (const std::exception & e)
+	{
+		//std::cout << e.what() << std::endl;
+		return str;
+	}
+	return str;
 #endif
 }
 
@@ -568,7 +530,18 @@ std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 	delete[] pwszBuffer;
 	return wstrRet;
 #elif __unix__
-	return StringToWString(strSrc.c_str());
+	std::wstring wstr;
+	try
+	{
+		std::wstring_convert<chs_codecvt> converter;
+		wstr = converter.from_bytes(strSrc);
+	}
+	catch (const std::exception & e)
+	{
+		//std::cout << e.what() << std::endl;
+		return wstr;
+	}
+	return wstr;
 #endif
 }
 
@@ -596,7 +569,8 @@ std::string CStringManager::AnsiToUtf8(const std::string& strSrc)
 	delete[] pwszBuffer;
 	return UnicodeToUtf8(wstrTemp);
 #elif __unix__
-	return code_convert_string("gb2312", "utf-8//TRANSLIT", strSrc);
+	return UnicodeToUtf8(AnsiToUnicode(strSrc));
+	//return code_convert_string("gb2312", "utf-8//TRANSLIT", strSrc);
 #endif
 }
 
@@ -626,7 +600,8 @@ std::string CStringManager::Utf8ToAnsi(const std::string& strSrc)
 	delete[] pszBuffer;
 	return strRet;
 #elif __unix__
-	return code_convert_string("utf-8", "gb2312//TRANSLIT", strSrc);
+	return UnicodeToAnsi(Utf8ToUnicode(strSrc));
+	//return code_convert_string("utf-8", "gb2312//TRANSLIT", strSrc);
 #endif
 }
 
@@ -654,7 +629,19 @@ std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
 	delete[] pszBuffer;
 	return strRet;
 #elif __unix__
-	return AnsiToUtf8(UnicodeToAnsi(wstrSrc));
+	std::string str;
+	try
+	{
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv;
+		str = wcv.to_bytes(wstrSrc);
+	}
+	catch (const std::exception& e)
+	{
+		//e.what();
+		return str;
+	}
+	return str;
+	//return AnsiToUtf8(UnicodeToAnsi(wstrSrc));
 #endif
 }
 
@@ -682,7 +669,19 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 	delete[] pwszBuffer;
 	return wstrRet;
 #elif __unix__
-	return AnsiToUnicode(Utf8ToAnsi(strSrc));
+	std::wstring wstr;
+	try
+	{
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv;
+		wstr = wcv.from_bytes(strSrc);
+	}
+	catch (const std::exception& e)
+	{
+		//e.what();
+		return wstr;
+	}
+	return wstr;
+	//return AnsiToUnicode(Utf8ToAnsi(strSrc));
 #endif
 }
 
