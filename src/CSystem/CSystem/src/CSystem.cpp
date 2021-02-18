@@ -10,6 +10,7 @@
 #include <tlhelp32.h>
 #include <tchar.h>
 #include <shlobj.h>
+#include <psapi.h>
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
 #elif __unix__
