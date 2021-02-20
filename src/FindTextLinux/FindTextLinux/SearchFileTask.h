@@ -1,5 +1,6 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include <vector>
 
 class SearchPathTask;
 
@@ -20,15 +21,18 @@ public:
 
 	int32_t getUnicodeOffset(int32_t lineIndex, const std::string& line);
 
-    void getGbkLine(int32_t lineIndex, const std::string& line, std::string& gbkLine);
+    void getGbkLine(int32_t lineIndex, const std::string& line, std::string& gbkLine, std::string& gbkLineNotMatchCase);
 
-    void getUnicodeLine(int32_t lineIndex, const std::string& line, std::string& unicodeLine);
+    void getUnicodeLine(int32_t lineIndex, std::string& unicodeLine, std::string& unicodeLineNotMatchCase);
 
-    void getUtf8Line(int32_t lineIndex, const std::string& line, std::string& utf8Line);
+    void getUtf8Line(const std::string& line, std::string& utf8LineNotMatchCase);
+
+    void getUnicodeTxt();
 
 private:
     std::string m_path;
     bool m_isPathFind;
 	std::string m_search;
 	SearchPathTask* m_task;
+    std::vector<std::vector<std::wstring>> m_wvectxt;
 };

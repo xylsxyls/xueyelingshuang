@@ -4,6 +4,9 @@
 #include "CStringManager/CStringManagerAPI.h"
 #include "SearchResultTask.h"
 #include <string.h>
+#include <fstream>
+#include <locale>
+#include <codecvt>
 
 SearchFileTask::SearchFileTask():
 m_task(nullptr)
@@ -19,97 +22,119 @@ void SearchFileTask::DoTask()
         result += "-------------------------------------------------------------------------------------------------------------------------------------------------------\n";
         result += (m_path + "\n\n");
     }
+
     Ctxt file(m_path);
     file.LoadTxt(Ctxt::ONE_LINE);
+    getUnicodeTxt();
     int32_t index = -1;
     while (index++ != file.m_vectxt.size() - 1)
     {
         std::string& line = file.m_vectxt[index][0];
-        if (!m_task->m_isMatchCase)
-        {
-            line = CStringManager::MakeLower(line);
-        }
         std::string charset;
+        int32_t charsetNum = 0;
         if (m_task->m_charset == "GBK")
         {
-            std::string gbkLine;
-            getGbkLine(index, line, gbkLine);
-            if (CStringManager::Find(gbkLine, m_search) != std::string::npos)
-            {
-                charset = "GBK";
-                line = gbkLine;
-            }
-            else
-            {
-                std::string unicodeLine;
-                getUnicodeLine(index, line, unicodeLine);
-                if (CStringManager::Find(unicodeLine, m_search) != std::string::npos)
-                {
-                    charset = "unicode";
-                    line = unicodeLine;
-                }
-                else
-                {
-                    if (CStringManager::Find(line, m_search) != std::string::npos)
-                    {
-                        charset = "UTF-8";
-                    }
-                }
-            }
+            charsetNum = 1;
         }
         else if (m_task->m_charset == "unicode")
         {
-            std::string unicodeLine;
-            getUnicodeLine(index, line, unicodeLine);
-            if (CStringManager::Find(unicodeLine, m_search) != std::string::npos)
-            {
-                charset = "unicode";
-                line = unicodeLine;
-            }
-            else
-            {
-                std::string gbkLine;
-                getGbkLine(index, line, gbkLine);
-                if (CStringManager::Find(gbkLine, m_search) != std::string::npos)
-                {
-                    charset = "GBK";
-                    line = gbkLine;
-                }
-                else
-                {
-                    if (CStringManager::Find(line, m_search) != std::string::npos)
-                    {
-                        charset = "UTF-8";
-                    }
-                }
-            }
+            charsetNum = 2;
         }
         else if (m_task->m_charset == "UTF-8")
         {
-            if (CStringManager::Find(line, m_search) != std::string::npos)
+            charsetNum = 3;
+        }
+        switch (charsetNum)
+        {
+        case 1:
+        {
+            std::string gbkLine;
+            std::string gbkLineNotMatchCase;
+            getGbkLine(index, line, gbkLine, gbkLineNotMatchCase);
+            if (CStringManager::Find(m_task->m_isMatchCase ? gbkLine : gbkLineNotMatchCase, m_search) != std::string::npos)
+            {
+                charset = "GBK";
+                line = gbkLine;
+                break;
+            }
+            std::string unicodeLine;
+            std::string unicodeLineNotMatchCase;
+            getUnicodeLine(index, unicodeLine, unicodeLineNotMatchCase);
+            if (CStringManager::Find(m_task->m_isMatchCase ? unicodeLine : unicodeLineNotMatchCase, m_search) != std::string::npos)
+            {
+                charset = "unicode";
+                line = unicodeLine;
+                break;
+            }
+            std::string utf8LineNotMatchCase;
+            getUtf8Line(line, utf8LineNotMatchCase);
+            if (CStringManager::Find(m_task->m_isMatchCase ? line : utf8LineNotMatchCase, m_search) != std::string::npos)
             {
                 charset = "UTF-8";
+                break;
             }
-            else
+        }
+        break;
+        case 2:
+        {
+            std::string unicodeLine;
+            std::string unicodeLineNotMatchCase;
+            getUnicodeLine(index, unicodeLine, unicodeLineNotMatchCase);
+            if (CStringManager::Find(m_task->m_isMatchCase ? unicodeLine : unicodeLineNotMatchCase, m_search) != std::string::npos)
             {
-                std::string gbkLine;
-                getGbkLine(index, line, gbkLine);
-                if (CStringManager::Find(gbkLine, m_search) != std::string::npos)
-                {
-                    charset = "GBK";
-                    line = gbkLine;
-                }
-                else
-                {
-                    std::string unicodeLine;
-                    getUnicodeLine(index, line, unicodeLine);
-                    if (CStringManager::Find(unicodeLine, m_search) != std::string::npos)
-                    {
-                        charset = "unicode";
-                        line = unicodeLine;
-                    }
-                }
+                charset = "unicode";
+                line = unicodeLine;
+                break;
             }
+            std::string gbkLine;
+            std::string gbkLineNotMatchCase;
+            getGbkLine(index, line, gbkLine, gbkLineNotMatchCase);
+            if (CStringManager::Find(m_task->m_isMatchCase ? gbkLine : gbkLineNotMatchCase, m_search) != std::string::npos)
+            {
+                charset = "GBK";
+                line = gbkLine;
+                break;
+            }
+            std::string utf8LineNotMatchCase;
+            getUtf8Line(line, utf8LineNotMatchCase);
+            if (CStringManager::Find(m_task->m_isMatchCase ? line : utf8LineNotMatchCase, m_search) != std::string::npos)
+            {
+                charset = "UTF-8";
+                break;
+            }
+        }
+        break;
+        case 3:
+        {
+            std::string utf8LineNotMatchCase;
+            getUtf8Line(line, utf8LineNotMatchCase);
+            if (CStringManager::Find(m_task->m_isMatchCase ? line : utf8LineNotMatchCase, m_search) != std::string::npos)
+            {
+                charset = "UTF-8";
+                break;
+            }
+            std::string gbkLine;
+            std::string gbkLineNotMatchCase;
+            getGbkLine(index, line, gbkLine, gbkLineNotMatchCase);
+            if (CStringManager::Find(m_task->m_isMatchCase ? gbkLine : gbkLineNotMatchCase, m_search) != std::string::npos)
+            {
+                charset = "GBK";
+                line = gbkLine;
+                break;
+            }
+            std::string unicodeLine;
+            std::string unicodeLineNotMatchCase;
+            getUnicodeLine(index, unicodeLine, unicodeLineNotMatchCase);
+            if (CStringManager::Find(m_task->m_isMatchCase ? unicodeLine : unicodeLineNotMatchCase, m_search) != std::string::npos)
+            {
+                charset = "unicode";
+                line = unicodeLine;
+                break;
+            }
+        }
+        break;
+        default:
+            break;
         }
         if (charset.empty())
         {
@@ -120,7 +145,7 @@ void SearchFileTask::DoTask()
             result += "-------------------------------------------------------------------------------------------------------------------------------------------------------\n";
             result += (m_path + "\n\n");
         }
-        result += ("line:" + std::to_string(index + 1) + "£¬" + charset + "£º" + line + "\n");
+        result += ("line:" + std::to_string(index + 1) + "£¬" + charset + "£º" + line.c_str() + "\n");
     }
     if (result.empty())
     {
@@ -193,24 +218,62 @@ int32_t SearchFileTask::getUnicodeOffset(int32_t lineIndex, const std::string& l
 	return offset;
 }
 
-void SearchFileTask::getGbkLine(int32_t lineIndex, const std::string& line, std::string& gbkLine)
+void SearchFileTask::getGbkLine(int32_t lineIndex, const std::string& line, std::string& gbkLine, std::string& gbkLineNotMatchCase)
 {
     gbkLine = CStringManager::AnsiToUtf8(line);
+    if (!m_task->m_isMatchCase)
+    {
+        gbkLineNotMatchCase = CStringManager::MakeLower(gbkLine);
+    }
 }
 
-void SearchFileTask::getUnicodeLine(int32_t lineIndex, const std::string& line, std::string& unicodeLine)
+void SearchFileTask::getUnicodeLine(int32_t lineIndex, std::string& unicodeLine, std::string& unicodeLineNotMatchCase)
 {
-    char* szLineBk = new char[line.length() + 4];
-	::memcpy(szLineBk, line.c_str(), line.length());
-	szLineBk[line.length() + 0] = 0;
-	szLineBk[line.length() + 1] = 0;
-	szLineBk[line.length() + 2] = 0;
-	szLineBk[line.length() + 3] = 0;
-	unicodeLine = CStringManager::UnicodeToAnsi((wchar_t*)&szLineBk[getUnicodeOffset(lineIndex, line)]);
-    delete[] szLineBk;
+    if (m_wvectxt.size() <= lineIndex)
+    {
+        return;
+    }
+    unicodeLine = CStringManager::UnicodeToUtf8(m_wvectxt[lineIndex][0]);
+    if (!m_task->m_isMatchCase)
+    {
+        unicodeLineNotMatchCase = CStringManager::MakeLower(unicodeLine);
+    }
 }
 
-void SearchFileTask::getUtf8Line(int32_t lineIndex, const std::string& line, std::string& utf8Line)
+void SearchFileTask::getUtf8Line(const std::string& line, std::string& utf8LineNotMatchCase)
 {
-    utf8Line = CStringManager::Utf8ToAnsi(&line[0] + getUtf8Offset(lineIndex, line));
+    if (!m_task->m_isMatchCase)
+    {
+        utf8LineNotMatchCase = CStringManager::MakeLower(line);
+    }
+}
+
+void SearchFileTask::getUnicodeTxt()
+{
+	std::wifstream myfile(m_path);
+	if (!myfile.is_open())
+	{
+		return;
+	}
+
+	myfile.imbue(std::locale(myfile.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>));
+
+	std::wstring strLine;
+	std::vector<std::wstring> vecLine;
+    bool hasLine = true;
+	do 
+	{
+        hasLine = (bool)getline(myfile, strLine);
+#ifdef __unix__
+		if((!(strLine.empty())) && (strLine.back() == '\r'))
+		{
+			strLine.pop_back();
+		}
+#endif
+		vecLine.clear();
+		vecLine.push_back(strLine);
+		m_wvectxt.push_back(vecLine);
+	} while (!myfile.eof() && hasLine);
+	myfile.close();
+	myfile.clear();
 }
