@@ -120,7 +120,7 @@ void FindTextLinux::init()
 	m_charset->addItem(QStringLiteral("unicode"));
 	m_charset->addItem(QStringLiteral("UTF-8"));
 	m_charset->setFontSize(12);
-	m_charset->setGeometry(524, 104, 66, 22);
+	m_charset->setGeometry(524, 104, 68, 22);
 	m_charset->setTextOrigin(3);
 	m_charset->setFontFace(QStringLiteral("ËÎÌו"));
 	m_charset->setBackgroundColor(QColor(225, 225, 225));
@@ -182,11 +182,11 @@ void FindTextLinux::onCurrentIndexChanged(int index)
 	}
 	else if(index == 1)
 	{
-		m_charset->setListOrigin(38);
+		m_charset->setListOrigin(41);
 	}
 	else if(index == 2)
 	{
-		m_charset->setListOrigin(55);
+		m_charset->setListOrigin(61);
 	}
 }
 
