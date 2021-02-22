@@ -60,11 +60,7 @@ void MessageTestLinux::init()
 	m_textEdit->setBackgroundColor(QColor(240, 240, 240));
 	m_textEdit->setFontSize(12);
 	m_textEdit->setFontFamily(QStringLiteral("Calibri"));
-	QTextBlockFormat blockFormat;
-	blockFormat.setLineHeight(1, QTextBlockFormat::LineDistanceHeight);
-	auto textCursor = m_textEdit->textCursor();
-	textCursor.setBlockFormat(blockFormat);
-	m_textEdit->setTextCursor(textCursor);
+	m_textEdit->ControlBorderForNormalHoverDisabled::setTextColor(QColor(100, 100, 100));
 
 	m_area = new Label(this);
 	m_area->setText(QStringLiteral("当前缓冲区剩余展示量：") + QString::fromStdString(std::to_string(m_areaCount)));
@@ -217,6 +213,7 @@ void MessageTestLinux::onChangeClicked()
 	m_textEdit->setEnabled(m_isChange);
 	m_textEdit->setBorderColor(m_isChange ? QColor(23, 23, 23) : QColor(204, 204, 204));
 	m_textEdit->setBackgroundColor(m_isChange ? QColor(255, 255, 255) : QColor(240, 240, 240));
+	m_textEdit->ControlBorderForNormalHoverDisabled::setTextColor(m_isChange ? QColor(12, 12, 12) : QColor(100, 100, 100));
 	m_textEdit->repaint();
 	m_update = true;
 }

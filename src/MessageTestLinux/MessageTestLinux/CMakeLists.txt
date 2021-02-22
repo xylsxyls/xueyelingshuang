@@ -18,7 +18,7 @@ SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
 SET(CMAKE_BUILD_TYPE "Debug")
 elseif(${DEBUGRELEASE} STREQUAL "release")
 #设置项目名称
-SET(PROJECT_NAME MessageTestLinux)
+SET(PROJECT_NAME MessageTest1.0)
 SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
 SET(CMAKE_BUILD_TYPE "Release")
 endif()
