@@ -1,6 +1,9 @@
 #include "FindTextLinux.h"
 #include <QtWidgets/QApplication>
 #include <stdint.h>
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+
+extern uint32_t* g_searchPathThreadId;
 
 #ifdef __unix__
 #include <signal.h>
@@ -13,8 +16,10 @@ void CtrlCMessage(int eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
+		CTaskThreadManager::Instance().Uninit(*g_searchPathThreadId);
+		*g_searchPathThreadId = 0;
 		exit(0);
-	}	
+	}
 }
 
 struct CtrlC

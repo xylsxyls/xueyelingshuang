@@ -57,7 +57,7 @@ private:
 	ComboBox* m_charset;
 	TextEdit* m_searchText;
 	uint32_t m_searchPathThreadId;
-	int32_t m_coreCount;
+	int32_t m_threadCount;
 	QString m_text;
 };
 

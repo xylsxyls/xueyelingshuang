@@ -9,6 +9,8 @@
 #include "CSystem/CSystemAPI.h"
 #include <QApplication>
 
+uint32_t* g_searchPathThreadId = nullptr;
+
 FindTextLinux::FindTextLinux(QWidget* parent)
 	: QDialog(parent),
 	m_pathLabel(nullptr),
@@ -26,7 +28,7 @@ FindTextLinux::FindTextLinux(QWidget* parent)
 	m_charset(nullptr),
 	m_searchText(nullptr),
 	m_searchPathThreadId(0),
-	m_coreCount(0)
+	m_threadCount(0)
 {
 	init();
 }
@@ -141,8 +143,9 @@ void FindTextLinux::init()
 	m_searchText->setBackgroundColor(QColor(240, 240, 240));
 
 	m_searchPathThreadId = CTaskThreadManager::Instance().Init();
+	g_searchPathThreadId = &m_searchPathThreadId;
 
-	m_coreCount = CSystem::GetCPUCoreCount();
+	m_threadCount = CSystem::GetCPUCoreCount() * 3;
 
 	QObject::connect(this, &FindTextLinux::searchEnd, this, &FindTextLinux::onSearchEnd, Qt::QueuedConnection);
 }

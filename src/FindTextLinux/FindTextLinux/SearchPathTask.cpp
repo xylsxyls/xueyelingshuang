@@ -86,7 +86,7 @@ void SearchPathTask::DoTask()
     }
     
     int32_t index = -1;
-    while (index++ != m_client->m_coreCount * 2 - 1)
+    while (index++ != m_client->m_threadCount - 1)
     {
         m_vecSearchFileThreadId.push_back(CTaskThreadManager::Instance().Init());
     }
