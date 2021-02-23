@@ -11,6 +11,10 @@ chmod 777 ../../*/*/*/*.sh
 chmod 777 ../../src/DllTest/DllProduce1.2
 chmod 777 ../../src/QtDllTest/DllProduce1.2
 chmod 777 ../../tools/protobuf/protoc
+chmod 777 ../../tools/git/git-diff.sh
+
+echo "[diff]" >> ../../.git/config
+echo -e "\texternal = ./tools/git/git-diff.sh" >> ../../.git/config
 
 #sudo gedit /etc/profile
 #export XUEYELINGSHUANG=/home/xylsxyls/xueyelingshuang/
