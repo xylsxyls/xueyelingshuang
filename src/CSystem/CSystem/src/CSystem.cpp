@@ -1034,6 +1034,24 @@ std::string CSystem::getComputerName()
 	return computerName;
 }
 
+//NB: XP+ solution!
+static HMODULE GetCurrentModule()
+{
+	HMODULE hModule = NULL;
+	GetModuleHandleEx(
+		GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+		(LPCTSTR)GetCurrentModule,
+		&hModule);
+	return hModule;
+}
+
+std::string CSystem::GetCurrentDllPath()
+{
+	char szFilePath[1024] = {};
+	::GetModuleFileNameA(GetCurrentModule(), szFilePath, 1024);
+	return CSystem::GetName(szFilePath, 4);
+}
+
 std::string CSystem::GetCurrentExePath()
 {
 	char szFilePath[1024] = {};

@@ -125,6 +125,8 @@ public:
 	static uint32_t GetTickCount();
 	//获取电脑名
 	static std::string getComputerName();
+	//获取动态库所在路径
+	static std::string GetCurrentDllPath();
 	//返回本进程所在路径，带\符号
 	static std::string GetCurrentExePath();
 	//返回进程名，没有后缀名
