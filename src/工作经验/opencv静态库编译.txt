@@ -14,6 +14,21 @@ libwebpd.lib
 opencv_world320d.lib 
 zlibd.lib
 
+ade.lib
+ippicvmt.lib
+IlmImfd.lib
+ippiwd.lib
+ittnotifyd.lib
+libjasperd.lib
+libjpeg-turbod.lib
+libpngd.lib
+libprotobufd.lib
+libtiffd.lib
+libwebpd.lib
+quircd.lib
+zlibd.lib
+opencv_world420d.lib
+
 不同版本需要的库有差异
 使用工程中增加
 #pragma comment(lib, "vfw32")
