@@ -7,8 +7,34 @@
 #include "boost/filesystem.hpp"
 #include "boost/filesystem/fstream.hpp"
 #endif
-#include "CStringManager/CStringManagerAPI.h"
 #pragma comment(lib, "shlwapi.lib")
+
+static std::string Format(const char* fmt, ...)
+{
+	std::string result;
+	va_list args;
+	va_start(args, fmt);
+#ifdef _WIN32
+	int size = _vscprintf(fmt, args);
+#elif __unix__
+	va_list argcopy;
+	va_copy(argcopy, args);
+	int size = vsnprintf(nullptr, 0, fmt, argcopy);
+#endif
+	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
+	result.resize(size);
+	if (size != 0)
+	{
+#ifdef _WIN32
+		//?即便分配了足够内存，长度必须加1，否则会崩溃
+		vsprintf_s(&result[0], size + 1, fmt, args);
+#elif __unix__
+		vsnprintf(&result[0], size + 1, fmt, args);
+#endif
+	}
+	va_end(args);
+	return result;
+}
 
 #if _MSC_VER <= 1800
 class CErrorLog
@@ -100,7 +126,7 @@ public:
 			memoryStatus.dwLength = sizeof(memoryStatus);
 			GlobalMemoryStatusEx(&memoryStatus);
 
-			objThis << CStringManager::Format("Memory: [Available]%I64uM / [Total]%I64uM \n",
+			objThis << Format("Memory: [Available]%I64uM / [Total]%I64uM \n",
 				memoryStatus.ullAvailPhys >> 20, memoryStatus.ullTotalPhys >> 20);
 		}
 
@@ -114,14 +140,14 @@ public:
 				sysPath = sysPath.root_path();
 
 				boost::filesystem::space_info si = boost::filesystem::space(sysPath, ec);
-				objThis << CStringManager::Format("system Disk: [Available]%I64uM / [Total]%I64uM\n", si.available >> 20, si.capacity >> 20);
+				objThis << Format("system Disk: [Available]%I64uM / [Total]%I64uM\n", si.available >> 20, si.capacity >> 20);
 			}
 
 			boost::filesystem::path abs_path = boost::filesystem::system_complete(m_filePath, ec);
 			if (sysPath.empty() || sysPath != abs_path.root_path())
 			{
 				boost::filesystem::space_info si = boost::filesystem::space(abs_path.root_path(), ec);
-				objThis << CStringManager::Format("game Disk: [Available]%I64uM / [Total]%I64uM\n", si.available >> 20, si.capacity >> 20);
+				objThis << Format("game Disk: [Available]%I64uM / [Total]%I64uM\n", si.available >> 20, si.capacity >> 20);
 			}
 
 			objThis << "\n";
@@ -132,20 +158,27 @@ public:
 			PCONTEXT pContext = pExInfo->ContextRecord;
 			MEMORY_BASIC_INFORMATION memInfo = { 0 };
 			CHAR szCrashModule[_MAX_PATH] = "Unknown";
+#ifdef _WIN64
+			if (VirtualQuery((void *)pExInfo->ContextRecord->Rip, &memInfo, sizeof(memInfo)))
+			{
+				GetModuleFileNameA((HINSTANCE)memInfo.AllocationBase, szCrashModule, _MAX_PATH);
+			}
+#else
 			if (VirtualQuery((void *)pExInfo->ContextRecord->Eip, &memInfo, sizeof(memInfo)))
 			{
 				GetModuleFileNameA((HINSTANCE)memInfo.AllocationBase, szCrashModule, _MAX_PATH);
 			}
-			objThis << CStringManager::Format("Error Module: %s \n", szCrashModule);
-			objThis << CStringManager::Format("Code: 0x%08x \n", pException->ExceptionCode);
-			objThis << CStringManager::Format("Flag: 0x%08x \n", pException->ExceptionFlags);
-			objThis << CStringManager::Format("Addr: 0x%08x \n", pException->ExceptionAddress);
+#endif
+			objThis << Format("Error Module: %s \n", szCrashModule);
+			objThis << Format("Code: 0x%08x \n", pException->ExceptionCode);
+			objThis << Format("Flag: 0x%08x \n", pException->ExceptionFlags);
+			objThis << Format("Addr: 0x%08x \n", pException->ExceptionAddress);
 
 			if (EXCEPTION_ACCESS_VIOLATION == pException->ExceptionCode)
 			{
 				for (int i = 0; i < (int)pException->NumberParameters; i++)
 				{
-					objThis << CStringManager::Format("%d: %d(0x%08x) \n", i, pException->ExceptionInformation[i], pException->ExceptionInformation[i]);
+					objThis << Format("%d: %d(0x%08x) \n", i, pException->ExceptionInformation[i], pException->ExceptionInformation[i]);
 				}
 				if (pException->NumberParameters >= 2)
 				{
@@ -158,30 +191,48 @@ public:
 					{
 						strReadWriteFlag = "Read from";
 					}
-					objThis << CStringManager::Format("%s location %08x caused an access violation. \n",
+					objThis << Format("%s location %08x caused an access violation. \n",
 						strReadWriteFlag.c_str(), pException->ExceptionInformation[1]);
 				}
 			}
-			objThis << CStringManager::Format("Caused error at %04x:%08x. \n", pContext->SegCs, pContext->Eip);
+#ifdef _WIN64
+			objThis << Format("Caused error at %04x:%08x. \n", pContext->SegCs, pContext->Rip);
 
 			objThis << " \nRegisters: \n";
-			objThis << CStringManager::Format("EAX=%08x CS=%04x EIP=%08x EFLGS=%08x \n",
+			objThis << Format("EAX=%08x CS=%04x EIP=%08x EFLGS=%08x \n",
+				pContext->Rax, pContext->SegCs, pContext->Rip, pContext->EFlags);
+			objThis << Format("EBX=%08x SS=%04x ESP=%08x EBP=%08x \n",
+				pContext->Rbx, pContext->SegSs, pContext->Rsp, pContext->Rbp);
+			objThis << Format("ECX=%08x DS=%04x ESI=%08x FS=%04x \n",
+				pContext->Rcx, pContext->SegDs, pContext->Rsi, pContext->SegFs);
+			objThis << Format("EDX=%08x ES=%04x EDI=%08x GS=%04x \n",
+				pContext->Rdx, pContext->SegEs, pContext->Rdi, pContext->SegGs);
+#else
+			objThis << Format("Caused error at %04x:%08x. \n", pContext->SegCs, pContext->Eip);
+
+			objThis << " \nRegisters: \n";
+			objThis << Format("EAX=%08x CS=%04x EIP=%08x EFLGS=%08x \n",
 				pContext->Eax, pContext->SegCs, pContext->Eip, pContext->EFlags);
-			objThis << CStringManager::Format("EBX=%08x SS=%04x ESP=%08x EBP=%08x \n",
+			objThis << Format("EBX=%08x SS=%04x ESP=%08x EBP=%08x \n",
 				pContext->Ebx, pContext->SegSs, pContext->Esp, pContext->Ebp);
-			objThis << CStringManager::Format("ECX=%08x DS=%04x ESI=%08x FS=%04x \n",
+			objThis << Format("ECX=%08x DS=%04x ESI=%08x FS=%04x \n",
 				pContext->Ecx, pContext->SegDs, pContext->Esi, pContext->SegFs);
-			objThis << CStringManager::Format("EDX=%08x ES=%04x EDI=%08x GS=%04x \n",
+			objThis << Format("EDX=%08x ES=%04x EDI=%08x GS=%04x \n",
 				pContext->Edx, pContext->SegEs, pContext->Edi, pContext->SegGs);
+#endif
 
 			int NumCodeBytes = 16;	// Number of code bytes to record.
 
 			objThis << "Bytes at CS:EIP: \n";
+#ifdef _WIN64
+			unsigned char *code = (unsigned char*)pContext->Rip;
+#else
 			unsigned char *code = (unsigned char*)pContext->Eip;
+#endif
 			BOOL bInvalidEipAddr = !IsBadReadPtr(code, NumCodeBytes);
 			if (bInvalidEipAddr)
 			{
-				objThis << CStringManager::Format("cannot access Eip addr: %p", code);
+				objThis << Format("cannot access Eip addr: %p", code);
 			}
 			else
 			{
@@ -191,16 +242,25 @@ public:
 					{
 						break;
 					}
-					objThis << CStringManager::Format("%02x ", code[codebyte]);
+					objThis << Format("%02x ", code[codebyte]);
 				}
 			}
 
 			objThis << " \n\nCall Stack: \n";
 
+#ifdef _WIN64
+			DWORD64 pc = pContext->Rip;
+			PDWORD64 pFrame, pPrevFrame;
+#else
 			DWORD pc = pContext->Eip;
 			PDWORD pFrame, pPrevFrame;
+#endif
 
+#ifdef _WIN64
+			pFrame = (PDWORD64)pContext->Rbp;
+#else
 			pFrame = (PDWORD)pContext->Ebp;
+#endif
 			// Can two DWORDs be read from the supposed frame address?          
 			while (pc != 0 && !IsBadWritePtr(pFrame, sizeof(PVOID) * 2))
 			{
@@ -218,16 +278,23 @@ public:
 				{
 					break;
 				}
-				objThis << CStringManager::Format("%08X %04X:%08X %s \n", pc, section, offset, szModule);
+				objThis << Format("%08X %04X:%08X %s \n", pc, section, offset, szModule);
 
 				pc = pFrame[1];
 
 				pPrevFrame = pFrame;
 
+#ifdef _WIN64
+				pFrame = (PDWORD64)pFrame[0]; // precede to next higher frame on stack
+
+				if ((DWORD64)pFrame & 3)    // Frame pointer must be aligned on a
+					break;                  // DWORD boundary.  Bail if not so.
+#else
 				pFrame = (PDWORD)pFrame[0]; // precede to next higher frame on stack
 
 				if ((DWORD)pFrame & 3)    // Frame pointer must be aligned on a
 					break;                  // DWORD boundary.  Bail if not so.
+#endif
 
 				if (pFrame <= pPrevFrame)
 					break;
@@ -363,7 +430,8 @@ namespace WIN32DUMP
 		HMODULE hDll = ::LoadLibraryA("DBGHELP.DLL");
 		if (hDll == NULL)
 		{
-			if (bShowErrors) {
+			if (bShowErrors)
+			{
 				// Do *NOT* localize that string (in fact, do not use MFC to load it)!
 				//MessageBox(NULL, L"DBGHELP.DLL not found. Please install a DBGHELP.DLL. \n \n" DBGHELP_HINT, m_szAppName, MB_ICONSTOP | MB_OK);
 			}
@@ -373,7 +441,8 @@ namespace WIN32DUMP
 			*ppfnMiniDumpWriteDump = GetProcAddress(hDll, "MiniDumpWriteDump");
 			if (*ppfnMiniDumpWriteDump == NULL)
 			{
-				if (bShowErrors) {
+				if (bShowErrors)
+				{
 					// Do *NOT* localize that string (in fact, do not use MFC to load it)!
 					//MessageBox(NULL, L"DBGHELP.DLL found is too old. Please upgrade to version 5.1 (or later) of DBGHELP.DLL. \n \n" DBGHELP_HINT, m_szAppName, MB_ICONSTOP | MB_OK);
 				}
