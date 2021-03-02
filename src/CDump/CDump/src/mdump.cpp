@@ -199,13 +199,13 @@ public:
 			objThis << Format("Caused error at %04x:%08x. \n", pContext->SegCs, pContext->Rip);
 
 			objThis << " \nRegisters: \n";
-			objThis << Format("EAX=%08x CS=%04x EIP=%08x EFLGS=%08x \n",
+			objThis << Format("RAX=%08x CS=%04x RIP=%08x EFLGS=%08x \n",
 				pContext->Rax, pContext->SegCs, pContext->Rip, pContext->EFlags);
-			objThis << Format("EBX=%08x SS=%04x ESP=%08x EBP=%08x \n",
+			objThis << Format("RBX=%08x SS=%04x RSP=%08x RBP=%08x \n",
 				pContext->Rbx, pContext->SegSs, pContext->Rsp, pContext->Rbp);
-			objThis << Format("ECX=%08x DS=%04x ESI=%08x FS=%04x \n",
+			objThis << Format("RCX=%08x DS=%04x RSI=%08x FS=%04x \n",
 				pContext->Rcx, pContext->SegDs, pContext->Rsi, pContext->SegFs);
-			objThis << Format("EDX=%08x ES=%04x EDI=%08x GS=%04x \n",
+			objThis << Format("RDX=%08x ES=%04x RDI=%08x GS=%04x \n",
 				pContext->Rdx, pContext->SegEs, pContext->Rdi, pContext->SegGs);
 #else
 			objThis << Format("Caused error at %04x:%08x. \n", pContext->SegCs, pContext->Eip);
@@ -223,16 +223,21 @@ public:
 
 			int NumCodeBytes = 16;	// Number of code bytes to record.
 
-			objThis << "Bytes at CS:EIP: \n";
 #ifdef _WIN64
+			objThis << "Bytes at CS:RIP: \n";
 			unsigned char *code = (unsigned char*)pContext->Rip;
 #else
+			objThis << "Bytes at CS:EIP: \n";
 			unsigned char *code = (unsigned char*)pContext->Eip;
 #endif
 			BOOL bInvalidEipAddr = !IsBadReadPtr(code, NumCodeBytes);
 			if (bInvalidEipAddr)
 			{
+#ifdef _WIN64
+				objThis << Format("cannot access Rip addr: %p", code);
+#else
 				objThis << Format("cannot access Eip addr: %p", code);
+#endif
 			}
 			else
 			{
@@ -420,9 +425,13 @@ namespace WIN32DUMP
 		}
 	}
 
+#ifdef _WIN64
+#define DBGHELP_HINT L("You can get the required DBGHELP.DLL by downloading the \"User Mode Process Dumper\" from \"Microsoft Download Center\". \n \n") \
+    L("Extract the \"User Mode Process Dumper\" and locate the \"x64\" folder. Copy the DBGHELP.DLL from the \"x64\" folder into your 11GameBox installation folder and/or into your Windows system/system32 folder.")
+#else
 #define DBGHELP_HINT L("You can get the required DBGHELP.DLL by downloading the \"User Mode Process Dumper\" from \"Microsoft Download Center\". \n \n") \
     L("Extract the \"User Mode Process Dumper\" and locate the \"x86\" folder. Copy the DBGHELP.DLL from the \"x86\" folder into your 11GameBox installation folder and/or into your Windows system/system32 folder.")
-
+#endif
 
 	HMODULE CMiniDumper::GetDebugHelperDll(FARPROC* ppfnMiniDumpWriteDump, bool bShowErrors)
 	{

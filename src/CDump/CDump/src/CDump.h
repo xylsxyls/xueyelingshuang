@@ -2,6 +2,8 @@
 #include "CDumpMacro.h"
 #include <string>
 
+/** vs2013版本有崩溃日志输出，其余没有
+*/
 class CDumpAPI CDump
 {
 public:
