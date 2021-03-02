@@ -1,4 +1,7 @@
 #include "mdump.h"
+
+#ifdef _MSC_VER
+
 #include <windows.h>
 #include <dbghelp.h>
 #include <Shlwapi.h>
@@ -608,3 +611,5 @@ namespace WIN32DUMP
 		return lRetValue;
 	}
 }
+
+#endif

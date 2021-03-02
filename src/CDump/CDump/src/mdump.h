@@ -1,6 +1,7 @@
-#ifndef _MDUMP_H_
-#define _MDUMP_H_
+#ifndef __MDUMP_H__
+#define __MDUMP_H__
 
+#ifdef _MSC_VER
 #include <windows.h>
 //#include <functional>
 
@@ -29,4 +30,6 @@ namespace WIN32DUMP
 	extern CMiniDumper theCrashDumper;
 }
 
-#endif //_MDUMP_H_
+#endif
+
+#endif //__MDUMP_H__
