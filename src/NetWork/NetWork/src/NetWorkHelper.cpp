@@ -1,5 +1,8 @@
 #include "NetWorkHelper.h"
 #include "WorkTask.h"
+#ifdef __unix__
+#include <string.h>
+#endif
 
 void NetWorkHelper::receive(uv_tcp_t* sender,
 	char* buffer,
