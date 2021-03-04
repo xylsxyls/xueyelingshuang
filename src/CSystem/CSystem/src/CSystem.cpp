@@ -20,6 +20,8 @@
 #include <sys/stat.h>
 #include <algorithm>
 #include <dirent.h>
+#include <dlfcn.h>
+#include <string.h>
 #endif
 #include <fstream>
 #include <queue>
@@ -1034,6 +1036,7 @@ std::string CSystem::getComputerName()
 	return computerName;
 }
 
+#ifdef _MSC_VER
 //NB: XP+ solution!
 static HMODULE GetCurrentModule()
 {
@@ -1044,11 +1047,27 @@ static HMODULE GetCurrentModule()
 		&hModule);
 	return hModule;
 }
+#elif __unix__
+static char* GetModuleCurPath(char* sCurPath)
+{
+   	std::string wdir;
+   	Dl_info dl_info;
+   	dladdr((void*)GetModuleCurPath, &dl_info);
+   	std::string path(dl_info.dli_fname);
+   	wdir = path.substr(0, path.find_last_of('/') + 1);
+   	strcpy(sCurPath, wdir.c_str());
+   	return sCurPath;
+}
+#endif
 
 std::string CSystem::GetCurrentDllPath()
 {
 	char szFilePath[1024] = {};
+#ifdef _MSC_VER
 	::GetModuleFileNameA(GetCurrentModule(), szFilePath, 1024);
+#elif __unix__
+	GetModuleCurPath(szFilePath);
+#endif
 	return CSystem::GetName(szFilePath, 4);
 }
 
