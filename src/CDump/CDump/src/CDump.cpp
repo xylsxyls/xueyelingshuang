@@ -56,10 +56,11 @@ static std::string GetCurrentExeName()
 	char szFilePath[1024] = {};
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
+	return GetName(szFilePath, 3);
 #elif __unix__
 	::readlink("/proc/self/exe", szFilePath, 1024);
+	return GetName(szFilePath, 1);
 #endif
-	return GetName(szFilePath, 3);
 }
 
 #ifdef __unix__
