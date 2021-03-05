@@ -6,7 +6,7 @@
 
 void Server::onClientConnected(uv_tcp_t* client)
 {
-	printf("clientConnected = %d\n", client);
+	printf("clientConnected = %p\n", client);
 }
 
 void Server::onReceive(uv_tcp_t* client, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)

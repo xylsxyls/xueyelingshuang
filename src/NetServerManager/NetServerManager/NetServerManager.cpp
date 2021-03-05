@@ -7,9 +7,15 @@
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "CDump/CDumpAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
 
 bool g_exit = false;
 
+#ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
 	if (eve == CTRL_CLOSE_EVENT)
@@ -18,12 +24,42 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninitPostThread();
 		ProcessWork::instance().uninitReceive();
-		g_exit = false;
+		g_exit = true;
 	}
 	return FALSE;
 }
 
 int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		ProcessWork::instance().uninitPostThread();
+		ProcessWork::instance().uninitReceive();
+		g_exit = true;
+		exit(0);
+	}	
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
 
 int32_t main()
 {
@@ -39,7 +75,7 @@ int32_t main()
 
 	while (!g_exit)
 	{
-		Sleep(1000);
+		CSystem::Sleep(1000);
 	}
 	return 0;
 }
