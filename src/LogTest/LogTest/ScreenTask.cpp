@@ -1,5 +1,8 @@
 #include "ScreenTask.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
+#ifdef __unix__
+#include "SendToMessageTest.h"
+#endif
 
 ScreenTask::ScreenTask():
 m_isNet(false)

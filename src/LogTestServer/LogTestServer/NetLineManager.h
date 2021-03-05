@@ -2,6 +2,7 @@
 #include <map>
 #include <stdint.h>
 #include <mutex>
+#include <vector>
 
 typedef struct uv_tcp_s uv_tcp_t;
 /** 网络连接管理
