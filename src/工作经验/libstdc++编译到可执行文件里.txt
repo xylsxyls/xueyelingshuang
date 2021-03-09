@@ -1,0 +1,1 @@
+release的编译选项里加-static
