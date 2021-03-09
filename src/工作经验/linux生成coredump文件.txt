@@ -1,0 +1,6 @@
+进入root用户
+sudo -i
+echo ./core.%e.%t.%p> /proc/sys/kernel/core_pattern
+
+在执行exe前执行
+ulimit -c unlimited

@@ -1,0 +1,33 @@
+//if (isScreenShot)
+	//{
+	//	if (pRgbWriter == nullptr && pIrWriter == nullptr)
+	//	{
+	//		QString s_path = ms_Workspace + "/" + ms_Stage + "/" + ms_Label + "/O_" + ms_Operator + "/CID_" + ms_CameraID + "/CP_" + ms_CameraPose + "/L_" + ms_Light +
+	//			"/FID_" + ms_FaceID + "/AT_" + ms_AttackType + "/PROP_" + ms_Prop + "/BG_" + ms_BG + "/DIS_" + ms_DIS + "/HI_" + ms_HI + "/EXP_" + ms_EXP +
+	//			"/ScreenShots";
+	//		QString currentTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmsszzz");
+	//		QString screenShotsPath = ms_selected_path + "/" + s_path + "/" + currentTime;
+	//		QDir().mkpath(screenShotsPath);
+	//
+	//		QString s_rgb_avi = screenShotsPath + "/rgb.avi";
+	//		QString s_ir_avi = screenShotsPath + "/ir.avi";
+	//
+	//		//OpenCV 库函数，创建视频写入器
+	//		pRgbWriter = new cv::VideoWriter(s_rgb_avi.toStdString().c_str(), CV_FOURCC('M', 'J', 'P', 'G'), 15, cvSize(m_frame_rgb.cols, m_frame_ir.rows));
+	//		pIrWriter = new cv::VideoWriter(s_ir_avi.toStdString().c_str(), CV_FOURCC('M', 'J', 'P', 'G'), 15, cvSize(m_frame_ir.cols, m_frame_ir.rows));
+	//	}
+	//
+	//	*pRgbWriter << m_frame_rgb;
+	//	*pIrWriter << m_frame_ir;
+	//}
+	//else
+	//{
+	//	if (pRgbWriter != nullptr && pIrWriter != nullptr)
+	//	{
+	//		//释放资源
+	//		delete pRgbWriter;
+	//		delete pIrWriter;
+	//		pRgbWriter = nullptr;
+	//		pIrWriter = nullptr;
+	//	}
+	//}
