@@ -1,13 +1,13 @@
 #include "ProtoMessage.h"
 #include "ProtoMessage.pb.h"
 #if defined _WIN64 && defined _DEBUG
-#pragma comment(lib, "libprotobuf-lite_64d.lib")
+#pragma comment(lib, "libprotobuf-litestatic64d.lib")
 #elif defined _WIN64
-#pragma comment(lib, "libprotobuf-lite_64.lib")
+#pragma comment(lib, "libprotobuf-litestatic64.lib")
 #elif defined _DEBUG
-#pragma comment(lib, "libprotobuf-lite_32d.lib")
+#pragma comment(lib, "libprotobuf-litestatic32d.lib")
 #else
-#pragma comment(lib, "libprotobuf-lite_32.lib")
+#pragma comment(lib, "libprotobuf-litestatic32.lib")
 #endif
 
 ProtoMessage::ProtoMessage():

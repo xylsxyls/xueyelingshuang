@@ -1,5 +1,7 @@
 #pragma once
+#ifdef _WIN32
 #define _LogSenderAPI
+#endif
 #include "LogSender.h"
 
 #define LOG_SEND(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, true, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}

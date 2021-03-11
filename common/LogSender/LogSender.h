@@ -1,6 +1,7 @@
 #pragma once
 #include "LogSenderMacro.h"
 #include <stdint.h>
+#include <mutex>
 #include "LogPackage.h"
 
 class ProtoMessage;
@@ -34,4 +35,12 @@ protected:
 
 private:
 	ProtoMessage* m_message;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	std::mutex m_messageMutex;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 };
