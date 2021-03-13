@@ -6,7 +6,7 @@
 #include <dbghelp.h>
 #include <Shlwapi.h>
 #include <time.h>
-#if _MSC_VER <= 1800
+#if _MSC_VER <= 1900
 #include "boost/filesystem.hpp"
 #include "boost/filesystem/fstream.hpp"
 #endif
@@ -39,7 +39,58 @@ static std::string Format(const char* fmt, ...)
 	return result;
 }
 
-#if _MSC_VER <= 1800
+static std::string GetName(const std::string& path, int32_t flag)
+{
+	int32_t left = (int32_t)path.find_last_of("/\\");
+	std::string name = path.substr(left + 1, path.length() - left - 1);
+	int32_t point = (int32_t)name.find_last_of(".");
+	switch (flag)
+	{
+	case 1:
+	{
+		return name;
+	}
+	case 2:
+	{
+		return name.substr(point + 1, point == -1 ? 0 : name.length() - point - 1);
+	}
+	case 3:
+	{
+		return name.substr(0, point == -1 ? name.length() : point);
+	}
+	case 4:
+	{
+		return path.substr(0, left + 1);
+	}
+	default:
+		return "";
+	}
+}
+
+static std::string GetCurrentExePath()
+{
+	char szFilePath[1024] = {};
+#ifdef _WIN32
+	::GetModuleFileNameA(NULL, szFilePath, 1024);
+#elif __unix__
+	::readlink("/proc/self/exe", szFilePath, 1024);
+#endif
+	return GetName(szFilePath, 4);
+}
+
+static std::string GetCurrentExeName()
+{
+	char szFilePath[1024] = {};
+#ifdef _WIN32
+	::GetModuleFileNameA(NULL, szFilePath, 1024);
+	return GetName(szFilePath, 3);
+#elif __unix__
+	::readlink("/proc/self/exe", szFilePath, 1024);
+	return GetName(szFilePath, 1);
+#endif
+}
+
+#if _MSC_VER <= 1900
 class CErrorLog
 {
 public:
@@ -470,8 +521,14 @@ namespace WIN32DUMP
 		MINIDUMPWRITEDUMP pfnMiniDumpWriteDump = NULL;
 		HMODULE hDll = GetDebugHelperDll((FARPROC*)&pfnMiniDumpWriteDump, true);
 
-#if _MSC_VER <= 1800
-		CErrorLog errLog(boost::filesystem::path(m_szDumpDir) / L"err.log");
+#if _MSC_VER <= 1900
+		SYSTEMTIME sys_time;
+		GetLocalTime(&sys_time);
+		std::string currentTime = Format("%4d%02d%02d_%02d_%02d_%02d_%03d",
+			sys_time.wYear, sys_time.wMonth, sys_time.wDay,
+			sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
+		std::string errorLogName = GetCurrentExeName() + "_" + currentTime + ".log";
+		CErrorLog errLog(boost::filesystem::path(m_szDumpDir) / errorLogName);
 		errLog.saveExcecptInfo(pExceptionInfo);
 #endif
 		if (hDll)
@@ -537,7 +594,7 @@ namespace WIN32DUMP
 						szResult[_countof(szResult) - 1] = L'\0';
 						lRetValue = EXCEPTION_EXECUTE_HANDLER;
 
-#if _MSC_VER <= 1800
+#if _MSC_VER <= 1900
 						errLog << "Catch a critical error! \n";
 						errLog << std::string(szResult);
 #endif
@@ -548,7 +605,7 @@ namespace WIN32DUMP
 						_snprintf(szResult, _countof(szResult) - 1, "Failed to save dump file to \"%s\". \n Error: %u\n", szDumpPath, GetLastError());
 						szResult[_countof(szResult) - 1] = L'\0';
 
-#if _MSC_VER <= 1800
+#if _MSC_VER <= 1900
 						errLog << szResult;
 #endif
 					}
@@ -560,14 +617,14 @@ namespace WIN32DUMP
 					_snprintf(szResult, _countof(szResult) - 1, "Failed to create dump file \"%s\". \n Error: %u\n", szDumpPath, GetLastError());
 					szResult[_countof(szResult) - 1] = L'\0';
 
-#if _MSC_VER <= 1800
+#if _MSC_VER <= 1900
 					errLog << szResult;
 #endif
 				}
 			}
 			else
 			{
-#if _MSC_VER <= 1800
+#if _MSC_VER <= 1900
 				errLog << "Catch a critical error! Get MiniDumpWriteDump api from debug helper dll failed!\n";
 #endif
 			}
@@ -578,7 +635,7 @@ namespace WIN32DUMP
 		}
 		else
 		{
-#if _MSC_VER <= 1800
+#if _MSC_VER <= 1900
 			errLog << "Catch a critical error! Load dbghelp.dll failed!\n";
 #endif
 		}
@@ -594,7 +651,7 @@ namespace WIN32DUMP
 		//	}
 		//}
 
-#if _MSC_VER <= 1800
+#if _MSC_VER <= 1900
 		errLog << "\n\n";
 
 		//if (szResult[0] != L('\0'))
