@@ -176,7 +176,7 @@ bool CEncodeDecode::SM2Key(std::string& publicKeyX, std::string& publicKeyY, std
 	
 	privateKey.append((char*)key_pair.pri_key, 32);
 
-	publicKeyX.append((char*)key_pair.pub_key + hasPrefix ? 0 : 1, hasPrefix ? 33 : 32);
+	publicKeyX.append((char*)key_pair.pub_key + (hasPrefix ? 0 : 1), (hasPrefix ? 33 : 32));
 	publicKeyY.append((char*)key_pair.pub_key + 33, 32);
 	return true;
 }
