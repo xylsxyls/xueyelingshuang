@@ -207,7 +207,7 @@ bool CEncodeDecode::SM2Encode(const std::string& publicKeyX,
 	c3.resize(32);
 	
 	int32_t error_code = sm2_encrypt_data_test((const unsigned char*)(&src[0]),
-		src.size(),
+		(int)src.size(),
 		(const unsigned char*)(&(xKey + publicKeyY)[0]),
 		(unsigned char*)(&c1[0]),
 		(unsigned char*)(&c3[0]),
@@ -248,7 +248,7 @@ std::string CEncodeDecode::SM2Decode(const std::string& privateKey,
 	int32_t error_code = sm2_decrypt2((const unsigned char*)(&c1[0]),
 		(const unsigned char*)(&c3[0]),
 		(const unsigned char*)(&c2[0]),
-		c2.size(),
+		(int)c2.size(),
 		(const unsigned char*)(&privateKey[0]),
 		(unsigned char*)(&result[0]));
 	if (error_code != 0)

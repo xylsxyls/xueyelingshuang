@@ -19,6 +19,7 @@ public:
 
 #ifdef USE_OPENSSL
 	//sm2加密，前缀为0x04，publicKeyX和c1可能有前缀，长度为33和65，密文新版排序为C1C3C2，旧版为C1C2C3
+	//加密长度不可以超过int32_t上限
 	static bool SM2Key(std::string& publicKeyX,
 		std::string& publicKeyY,
 		std::string& privateKey,
