@@ -7,6 +7,10 @@
 #include "RSA.h"
 #include <stdint.h>
 #include <memory>
+#include "sm2_cipher_error_codes.h"
+#include "sm2_create_key_pair.h"
+#include "sm2_encrypt_and_decrypt.h"
+#include "sm4.h"
 
 static void Split(std::vector<std::string>& result, const std::string& splitString, char separate_character)
 {
@@ -28,7 +32,7 @@ std::string CEncodeDecode::MD5Encode(const std::string& src)
 
 std::string CEncodeDecode::AESEncode(const std::string& key, const std::string& src)
 {
-	int nKey = key.size();
+	int nKey = (int)key.size();
 	unsigned char* pKey = nullptr;
 	if (nKey < 16)
 	{
@@ -52,7 +56,7 @@ std::string CEncodeDecode::AESEncode(const std::string& key, const std::string& 
 
 std::string CEncodeDecode::AESDecode(const std::string& key, const std::string& src)
 {
-	int nKey = key.size();
+	int nKey = (int)key.size();
 	unsigned char* pKey = nullptr;
 	if (nKey < 16)
 	{
@@ -150,6 +154,141 @@ std::string CEncodeDecode::RSADecode(const std::string& privateKey, const std::s
 	}
 	RSA rsa;
 	return rsa.tdecrypto(d.get(), n.get(), src);
+}
+
+#ifdef USE_OPENSSL
+
+bool CEncodeDecode::SM2Key(std::string& publicKeyX, std::string& publicKeyY, std::string& privateKey, bool hasPrefix)
+{
+	privateKey.clear();
+	publicKeyX.clear();
+	publicKeyY.clear();
+
+	SM2_KEY_PAIR key_pair;
+	memset((void*)&key_pair, 0, sizeof(SM2_KEY_PAIR));
+
+	int32_t error_code = sm2_create_key_pair(&key_pair);
+	if (error_code != 0)
+	{
+		printf("Create SM2 key pair failed, error_code = %d\n", error_code);
+		return false;
+	}
+	
+	privateKey.append((char*)key_pair.pri_key, 32);
+
+	publicKeyX.append((char*)key_pair.pub_key + hasPrefix ? 0 : 1, hasPrefix ? 33 : 32);
+	publicKeyY.append((char*)key_pair.pub_key + 33, 32);
+	return true;
+}
+
+bool CEncodeDecode::SM2Encode(const std::string& publicKeyX,
+	const std::string& publicKeyY,
+	const std::string& src,
+	std::string& c1,
+	std::string& c2,
+	std::string& c3)
+{
+	c1.clear();
+	c2.clear();
+	c3.clear();
+	if ((publicKeyX.size() != 32 && publicKeyX.size() != 33) || publicKeyY.size() != 32 || src.empty())
+	{
+		return false;
+	}
+	std::string xKey = publicKeyX;
+	if (xKey.size() == 32)
+	{
+		char prefix = 4;
+		xKey.insert(0, 1, prefix);
+	}
+
+	c1.resize(65);
+	c2.resize(src.size());
+	c3.resize(32);
+	
+	int32_t error_code = sm2_encrypt_data_test((const unsigned char*)(&src[0]),
+		src.size(),
+		(const unsigned char*)(&(xKey + publicKeyY)[0]),
+		(unsigned char*)(&c1[0]),
+		(unsigned char*)(&c3[0]),
+		(unsigned char*)(&c2[0]));
+	if (error_code != 0)
+	{
+		c1.clear();
+		c2.clear();
+		c3.clear();
+		printf("Create SM2 ciphertext failed, error_code = %d\n", error_code);
+		return false;
+	}
+	if (publicKeyX.size() == 32)
+	{
+		c1 = c1.substr(1, 32);
+	}
+	return true;
+}
+
+std::string CEncodeDecode::SM2Decode(const std::string& privateKey,
+	const std::string& c1,
+	const std::string& c2,
+	const std::string& c3)
+{
+	if ((c1.size() != 65 && c1.size() != 64) || c3.size() != 32 || c2.empty() || privateKey.size() != 32)
+	{
+		return "";
+	}
+	std::string result;
+	result.resize(c2.size());
+	std::string prefixC1 = c1;
+	if (prefixC1.size() == 64)
+	{
+		char prefix = 4;
+		prefixC1.insert(0, 1, prefix);
+	}
+
+	int32_t error_code = sm2_decrypt2((const unsigned char*)(&c1[0]),
+		(const unsigned char*)(&c3[0]),
+		(const unsigned char*)(&c2[0]),
+		c2.size(),
+		(const unsigned char*)(&privateKey[0]),
+		(unsigned char*)(&result[0]));
+	if (error_code != 0)
+	{
+		result.clear();
+		printf("Decrypt SM2 ciphertext failed, error_code = %d\n", error_code);
+		return "";
+	}
+	return result;
+}
+
+#endif
+
+std::string CEncodeDecode::SM4Encode(const std::string& key, const std::string& src)
+{
+	if (key.size() != 16 || src.size() != 16)
+	{
+		return "";
+	}
+	std::string result;
+	result.resize(16);
+	sm4_context ctx;
+	//encrypt standard testing vector
+	sm4_setkey_enc(&ctx, (unsigned char*)(&key[0]));
+	sm4_crypt_ecb(&ctx, 1, 16, (unsigned char*)(&src[0]), (unsigned char*)(&result[0]));
+	return result;
+}
+
+std::string CEncodeDecode::SM4Decode(const std::string& key, const std::string& ciphertext)
+{
+	if (key.size() != 16 || ciphertext.size() != 16)
+	{
+		return "";
+	}
+	std::string result;
+	result.resize(16);
+	sm4_context ctx;
+	sm4_setkey_dec(&ctx, (unsigned char*)(&key[0]));
+	sm4_crypt_ecb(&ctx, 0, 16, (unsigned char*)(&ciphertext[0]), (unsigned char*)(&result[0]));
+	return result;
 }
 
 /*

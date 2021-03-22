@@ -54,7 +54,7 @@ int AesEncryptor::Char2Int(char c)
 
 std::string AesEncryptor::EncryptString(const std::string& strInfor)
 {
-	int nLength = strInfor.length();
+	int nLength = (int)strInfor.length();
 	int spaceLength = 16 - (nLength % 16);
 	unsigned char* pBuffer = new unsigned char[nLength + spaceLength];
 	memset(pBuffer, '\0', nLength + spaceLength);
@@ -76,11 +76,11 @@ std::string AesEncryptor::EncryptString(const std::string& strInfor)
 
 std::string AesEncryptor::DecryptString(const std::string& strMessage)
 {
-	int nLength = strMessage.length() / 2;
+	int nLength = (int)strMessage.length() / 2;
 	unsigned char* pBuffer = new unsigned char[nLength + 1];
 	pBuffer[nLength] = 0;
 	memset(pBuffer, '\0', nLength);
-	Hex2Byte(strMessage.c_str(), strMessage.length(), pBuffer);
+	Hex2Byte(strMessage.c_str(), (int)strMessage.length(), pBuffer);
 
 	m_pEncryptor->InvCipher(pBuffer, nLength);
 	std::string retValue((char*)pBuffer);

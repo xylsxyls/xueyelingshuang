@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="SM2">
+      <UniqueIdentifier>{2c58abfb-7428-4107-912b-5986c3e82e79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SM4">
+      <UniqueIdentifier>{ae6574e5-9b86-4f41-bbfc-d260de800aff}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CEncodeDecode.h">
@@ -36,6 +42,18 @@
     <ClInclude Include="..\src\RSA.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\sm2_cipher_error_codes.h">
+      <Filter>SM2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\sm2_create_key_pair.h">
+      <Filter>SM2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\sm2_encrypt_and_decrypt.h">
+      <Filter>SM2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\sm4.h">
+      <Filter>SM4</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CEncodeDecode.cpp">
@@ -52,6 +70,15 @@
     </ClCompile>
     <ClCompile Include="..\src\RSA.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\sm2_create_key_pair.c">
+      <Filter>SM2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\sm2_encrypt_and_decrypt.c">
+      <Filter>SM2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\sm4.c">
+      <Filter>SM4</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
