@@ -262,12 +262,8 @@ std::string CEncodeDecode::SM2Decode(const std::string& privateKey,
 
 #endif
 
-std::string CEncodeDecode::SM4Encode(const std::string& key, const std::string& src)
+static std::string SM4Encode16(const std::string& key, const std::string& src)
 {
-	if (key.size() != 16 || src.size() != 16)
-	{
-		return "";
-	}
 	std::string result;
 	result.resize(16);
 	sm4_context ctx;
@@ -277,17 +273,45 @@ std::string CEncodeDecode::SM4Encode(const std::string& key, const std::string& 
 	return result;
 }
 
-std::string CEncodeDecode::SM4Decode(const std::string& key, const std::string& ciphertext)
+static std::string SM4Decode16(const std::string& key, const std::string& ciphertext)
 {
-	if (key.size() != 16 || ciphertext.size() != 16)
-	{
-		return "";
-	}
 	std::string result;
 	result.resize(16);
 	sm4_context ctx;
 	sm4_setkey_dec(&ctx, (unsigned char*)(&key[0]));
 	sm4_crypt_ecb(&ctx, 0, 16, (unsigned char*)(&ciphertext[0]), (unsigned char*)(&result[0]));
+	return result;
+}
+
+std::string CEncodeDecode::SM4Encode(const std::string& key, const std::string& src)
+{
+	if (key.size() != 16 || (src.size() % 16 != 0) || src.empty())
+	{
+		return "";
+	}
+	std::string result;
+	size_t index = -1;
+	size_t count = src.size() / 16;
+	while (index++ != count - 1)
+	{
+		result.append(SM4Encode16(key, src.substr(index * 16, 16)));
+	}
+	return result;
+}
+
+std::string CEncodeDecode::SM4Decode(const std::string& key, const std::string& ciphertext)
+{
+	if (key.size() != 16 || (ciphertext.size() % 16 != 0) || ciphertext.empty())
+	{
+		return "";
+	}
+	std::string result;
+	size_t index = -1;
+	size_t count = ciphertext.size() / 16;
+	while (index++ != count - 1)
+	{
+		result.append(SM4Decode16(key, ciphertext.substr(index * 16, 16)));
+	}
 	return result;
 }
 

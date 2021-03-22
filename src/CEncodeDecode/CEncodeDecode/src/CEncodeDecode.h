@@ -36,7 +36,7 @@ public:
 		const std::string& c3);
 #endif
 
-	//sm4加密，key自定义，key和src必须都是16字节，内部都可以含有\0
+	//sm4加密，key自定义，key必须是16字节，src必须是16的整数倍，内部都可以含有\0
 	static std::string SM4Encode(const std::string& key, const std::string& src);
 	static std::string SM4Decode(const std::string& key, const std::string& ciphertext);
 };
