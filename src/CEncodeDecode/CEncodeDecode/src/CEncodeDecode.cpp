@@ -262,39 +262,22 @@ std::string CEncodeDecode::SM2Decode(const std::string& privateKey,
 
 #endif
 
-static std::string SM4Encode16(const std::string& key, const std::string& src)
-{
-	std::string result;
-	result.resize(16);
-	sm4_context ctx;
-	//encrypt standard testing vector
-	sm4_setkey_enc(&ctx, (unsigned char*)(&key[0]));
-	sm4_crypt_ecb(&ctx, 1, 16, (unsigned char*)(&src[0]), (unsigned char*)(&result[0]));
-	return result;
-}
-
-static std::string SM4Decode16(const std::string& key, const std::string& ciphertext)
-{
-	std::string result;
-	result.resize(16);
-	sm4_context ctx;
-	sm4_setkey_dec(&ctx, (unsigned char*)(&key[0]));
-	sm4_crypt_ecb(&ctx, 0, 16, (unsigned char*)(&ciphertext[0]), (unsigned char*)(&result[0]));
-	return result;
-}
-
 std::string CEncodeDecode::SM4Encode(const std::string& key, const std::string& src)
 {
 	if (key.size() != 16 || (src.size() % 16 != 0) || src.empty())
 	{
 		return "";
 	}
+	sm4_context ctx;
+	//encrypt standard testing vector
+	sm4_setkey_enc(&ctx, (unsigned char*)(&key[0]));
 	std::string result;
+	result.resize(src.size());
 	size_t index = -1;
 	size_t count = src.size() / 16;
 	while (index++ != count - 1)
 	{
-		result.append(SM4Encode16(key, src.substr(index * 16, 16)));
+		sm4_crypt_ecb(&ctx, 1, 16, (unsigned char*)(&src[index * 16]), (unsigned char*)(&result[index * 16]));
 	}
 	return result;
 }
@@ -305,12 +288,15 @@ std::string CEncodeDecode::SM4Decode(const std::string& key, const std::string& 
 	{
 		return "";
 	}
+	sm4_context ctx;
+	sm4_setkey_dec(&ctx, (unsigned char*)(&key[0]));
 	std::string result;
+	result.resize(ciphertext.size());
 	size_t index = -1;
 	size_t count = ciphertext.size() / 16;
 	while (index++ != count - 1)
 	{
-		result.append(SM4Decode16(key, ciphertext.substr(index * 16, 16)));
+		sm4_crypt_ecb(&ctx, 0, 16, (unsigned char*)(&ciphertext[index * 16]), (unsigned char*)(&result[index * 16]));
 	}
 	return result;
 }
