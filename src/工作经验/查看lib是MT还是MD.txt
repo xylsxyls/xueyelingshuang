@@ -1,0 +1,3 @@
+dumpbin.exe /directives xxx.lib
+MSVCRT表示MD
+LIBCMT表示MT

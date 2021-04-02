@@ -1,0 +1,37 @@
+perl configure no-shared no-asm no-tests --release VC-WIN64A --prefix="D:\openssl-OpenSSL_1_1_1h\lib"
+nmake
+nmake install
+装ActivePerl-5.26
+装nasm
+将ActivePerl配置文件400行左右的括号内注释掉
+将rc.exe路径配置到系统环境变量中，选vs2015中的路径
+lib文件夹要手动创建
+运行要用vs的控制台，对应32位和64位，32位用VC-WIN32
+安装完之后在创建的lib文件夹中有对应的文件
+默认是MT可以打开makefile确认，群替换MD到MT
+需要加上ws2_32.lib crypt32.lib
+
+Config.pm
+## Prevent calling Win32::Console::DESTROY on a STDOUT handle
+my $console;
+sub _warn {
+#    my($msg) = @_;
+#    unless (-t STDOUT) {
+#	print "\n$msg\n";
+#	return;
+#    }
+#    require Win32::Console;
+#    unless ($console) {
+#	$console = Win32::Console->new(Win32::Console::STD_OUTPUT_HANDLE());
+#    }
+#    my($col,undef) = $console->Size;
+#    print "\n";
+#    my $attr = $console->Attr;
+#    $console->Attr($Win32::Console::FG_RED | $Win32::Console::BG_WHITE);
+#    for (split(/\n/, "$msg")) {
+#	$_ .= " " while length() < $col-1;
+#	print "$_\n";
+#    }
+#    $console->Attr($attr);
+#    print "\n";
+}

@@ -1,0 +1,5 @@
+SYSTEMTIME sys_time;
+	GetLocalTime(&sys_time);
+	std::string currentTime = CStringManager::Format("%4d%02d%02d_%02d_%02d_%02d_%03d",
+		sys_time.wYear, sys_time.wMonth, sys_time.wDay,
+		sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);

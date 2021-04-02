@@ -1,0 +1,1 @@
+用depends打开，有MSVCR或者MSVCP依赖的就是md
