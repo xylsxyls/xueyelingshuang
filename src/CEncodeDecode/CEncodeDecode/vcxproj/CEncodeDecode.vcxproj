@@ -25,7 +25,7 @@
     <ClInclude Include="..\src\CEncodeDecodeMacro.h" />
     <ClInclude Include="..\src\CEncodeDecode.h" />
     <ClInclude Include="..\src\MD5.h" />
-    <ClInclude Include="..\src\RSA.h" />
+    <ClInclude Include="..\src\RsaAlgorithm.h" />
     <ClInclude Include="..\src\sm2_cipher_error_codes.h" />
     <ClInclude Include="..\src\sm2_create_key_pair.h" />
     <ClInclude Include="..\src\sm2_encrypt_and_decrypt.h" />
@@ -36,7 +36,7 @@
     <ClCompile Include="..\src\aes_encryptor.cpp" />
     <ClCompile Include="..\src\CEncodeDecode.cpp" />
     <ClCompile Include="..\src\MD5.cpp" />
-    <ClCompile Include="..\src\RSA.cpp" />
+    <ClCompile Include="..\src\RsaAlgorithm.cpp" />
     <ClCompile Include="..\src\sm2_create_key_pair.c" />
     <ClCompile Include="..\src\sm2_encrypt_and_decrypt.c" />
     <ClCompile Include="..\src\sm4.c" />

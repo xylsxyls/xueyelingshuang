@@ -13,11 +13,11 @@
     <ClInclude Include="..\src\AES.h" />
     <ClInclude Include="..\src\aes_encryptor.h" />
     <ClInclude Include="..\src\MD5.h" />
-    <ClInclude Include="..\src\RSA.h" />
     <ClInclude Include="..\src\sm2_cipher_error_codes.h" />
     <ClInclude Include="..\src\sm2_create_key_pair.h" />
     <ClInclude Include="..\src\sm2_encrypt_and_decrypt.h" />
     <ClInclude Include="..\src\sm4.h" />
+    <ClInclude Include="..\src\RsaAlgorithm.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -34,9 +34,9 @@
     <ClCompile Include="..\src\AES.cpp" />
     <ClCompile Include="..\src\aes_encryptor.cpp" />
     <ClCompile Include="..\src\MD5.cpp" />
-    <ClCompile Include="..\src\RSA.cpp" />
     <ClCompile Include="..\src\sm2_create_key_pair.c" />
     <ClCompile Include="..\src\sm2_encrypt_and_decrypt.c" />
     <ClCompile Include="..\src\sm4.c" />
+    <ClCompile Include="..\src\RsaAlgorithm.cpp" />
   </ItemGroup>
 </Project>

@@ -39,9 +39,6 @@
     <ClInclude Include="..\src\MD5.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\RSA.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\sm2_cipher_error_codes.h">
       <Filter>SM2</Filter>
     </ClInclude>
@@ -53,6 +50,9 @@
     </ClInclude>
     <ClInclude Include="..\src\sm4.h">
       <Filter>SM4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\RsaAlgorithm.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -68,9 +68,6 @@
     <ClCompile Include="..\src\MD5.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\RSA.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\sm2_create_key_pair.c">
       <Filter>SM2</Filter>
     </ClCompile>
@@ -79,6 +76,9 @@
     </ClCompile>
     <ClCompile Include="..\src\sm4.c">
       <Filter>SM4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RsaAlgorithm.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

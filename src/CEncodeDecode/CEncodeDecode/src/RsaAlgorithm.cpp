@@ -1,19 +1,19 @@
-#include "RSA.h"
+#include "RsaAlgorithm.h"
 #include <time.h>
 #include <string.h>
 
-RSA::RSA()
+RsaAlgorithm::RsaAlgorithm()
 {
 
 }
 
-RSA::~RSA()
+RsaAlgorithm::~RsaAlgorithm()
 {
 
 }
 
 /*----------------------------´´½¨×Ô¼ºµÄ´óÊýÔËËã¿â---------------------------------*/
-int RSA::cmp(int a1[RSA_MAX], int a2[RSA_MAX])
+int RsaAlgorithm::cmp(int a1[RSA_ALGORITHM_MAX], int a2[RSA_ALGORITHM_MAX])
 {
 	int l1, l2;
 	int i;
@@ -33,15 +33,15 @@ int RSA::cmp(int a1[RSA_MAX], int a2[RSA_MAX])
 	return 0;
 }
 
-void RSA::mov(int a[RSA_MAX], int *b)
+void RsaAlgorithm::mov(int a[RSA_ALGORITHM_MAX], int *b)
 {
 	int j;
-	for (j = 0; j<RSA_MAX; j++)
+	for (j = 0; j<RSA_ALGORITHM_MAX; j++)
 		b[j] = a[j];
 	return;
 }
 
-void RSA::mul(int a1[RSA_MAX], int a2[RSA_MAX], int *c)
+void RsaAlgorithm::mul(int a1[RSA_ALGORITHM_MAX], int a2[RSA_ALGORITHM_MAX], int *c)
 {
 	int i, j;
 	int y;
@@ -49,14 +49,14 @@ void RSA::mul(int a1[RSA_MAX], int a2[RSA_MAX], int *c)
 	int z;
 	int w;
 	int l1, l2;
-	l1 = a1[RSA_MAX - 1];
-	l2 = a2[RSA_MAX - 1];
-	if (a1[RSA_MAX - 2] == '-'&& a2[RSA_MAX - 2] == '-')
-		c[RSA_MAX - 2] = 0;
-	else if (a1[RSA_MAX - 2] == '-')
-		c[RSA_MAX - 2] = '-';
-	else if (a2[RSA_MAX - 2] == '-')
-		c[RSA_MAX - 2] = '-';
+	l1 = a1[RSA_ALGORITHM_MAX - 1];
+	l2 = a2[RSA_ALGORITHM_MAX - 1];
+	if (a1[RSA_ALGORITHM_MAX - 2] == '-'&& a2[RSA_ALGORITHM_MAX - 2] == '-')
+		c[RSA_ALGORITHM_MAX - 2] = 0;
+	else if (a1[RSA_ALGORITHM_MAX - 2] == '-')
+		c[RSA_ALGORITHM_MAX - 2] = '-';
+	else if (a2[RSA_ALGORITHM_MAX - 2] == '-')
+		c[RSA_ALGORITHM_MAX - 2] = '-';
 	for (i = 0; i<l1; i++)
 	{
 		for (j = 0; j<l2; j++)
@@ -72,29 +72,29 @@ void RSA::mul(int a1[RSA_MAX], int a2[RSA_MAX], int *c)
 	}
 	w = l1 + l2;
 	if (c[w - 1] == 0)w = w - 1;
-	c[RSA_MAX - 1] = w;
+	c[RSA_ALGORITHM_MAX - 1] = w;
 	return;
 }
 
-void RSA::add(int a1[RSA_MAX], int a2[RSA_MAX], int *c)
+void RsaAlgorithm::add(int a1[RSA_ALGORITHM_MAX], int a2[RSA_ALGORITHM_MAX], int *c)
 {
 	int i, l1, l2;
-	int len, temp[RSA_MAX];
+	int len, temp[RSA_ALGORITHM_MAX];
 	int k = 0;
-	l1 = a1[RSA_MAX - 1];
-	l2 = a2[RSA_MAX - 1];
-	if ((a1[RSA_MAX - 2] == '-') && (a2[RSA_MAX - 2] == '-'))
+	l1 = a1[RSA_ALGORITHM_MAX - 1];
+	l2 = a2[RSA_ALGORITHM_MAX - 1];
+	if ((a1[RSA_ALGORITHM_MAX - 2] == '-') && (a2[RSA_ALGORITHM_MAX - 2] == '-'))
 	{
-		c[RSA_MAX - 2] = '-';
+		c[RSA_ALGORITHM_MAX - 2] = '-';
 	}
-	else if (a1[RSA_MAX - 2] == '-')
+	else if (a1[RSA_ALGORITHM_MAX - 2] == '-')
 	{
 		mov(a1, temp);
-		temp[RSA_MAX - 2] = 0;
+		temp[RSA_ALGORITHM_MAX - 2] = 0;
 		sub(a2, temp, c);
 		return;
 	}
-	else if (a2[RSA_MAX - 2] == '-')
+	else if (a2[RSA_ALGORITHM_MAX - 2] == '-')
 	{
 		mov(a2, temp);
 		temp[98] = 0;
@@ -141,33 +141,33 @@ void RSA::add(int a1[RSA_MAX], int a2[RSA_MAX], int *c)
 	return;
 }
 
-void RSA::sub(int a1[RSA_MAX], int a2[RSA_MAX], int *c)
+void RsaAlgorithm::sub(int a1[RSA_ALGORITHM_MAX], int a2[RSA_ALGORITHM_MAX], int *c)
 {
 	int i, l1, l2;
-	int len, t1[RSA_MAX], t2[RSA_MAX];
+	int len, t1[RSA_ALGORITHM_MAX], t2[RSA_ALGORITHM_MAX];
 	int k = 0;
-	l1 = a1[RSA_MAX - 1];
-	l2 = a2[RSA_MAX - 1];
-	if ((a1[RSA_MAX - 2] == '-') && (a2[RSA_MAX - 2] == '-'))
+	l1 = a1[RSA_ALGORITHM_MAX - 1];
+	l2 = a2[RSA_ALGORITHM_MAX - 1];
+	if ((a1[RSA_ALGORITHM_MAX - 2] == '-') && (a2[RSA_ALGORITHM_MAX - 2] == '-'))
 	{
 		mov(a1, t1);
 		mov(a2, t2);
-		t1[RSA_MAX - 2] = 0;
-		t2[RSA_MAX - 2] = 0;
+		t1[RSA_ALGORITHM_MAX - 2] = 0;
+		t2[RSA_ALGORITHM_MAX - 2] = 0;
 		sub(t2, t1, c);
 		return;
 	}
-	else if (a2[RSA_MAX - 2] == '-')
+	else if (a2[RSA_ALGORITHM_MAX - 2] == '-')
 	{
 		mov(a2, t2);
-		t2[RSA_MAX - 2] = 0;
+		t2[RSA_ALGORITHM_MAX - 2] = 0;
 		add(a1, t2, c);
 		return;
 	}
-	else if (a1[RSA_MAX - 2] == '-')
+	else if (a1[RSA_ALGORITHM_MAX - 2] == '-')
 	{
 		mov(a2, t2);
-		t2[RSA_MAX - 2] = '-';
+		t2[RSA_ALGORITHM_MAX - 2] = '-';
 		add(a1, t2, c);
 		return;
 	}
@@ -218,7 +218,7 @@ void RSA::sub(int a1[RSA_MAX], int a2[RSA_MAX], int *c)
 	else
 		if (cmp(a1, a2) == (-1))
 		{
-			c[RSA_MAX - 2] = '-';
+			c[RSA_ALGORITHM_MAX - 2] = '-';
 			len = l1;
 			for (i = 0; i<len; i++)
 			{
@@ -263,13 +263,13 @@ void RSA::sub(int a1[RSA_MAX], int a2[RSA_MAX], int *c)
 			len = 1;
 			c[len - 1] = 0;
 		}
-	c[RSA_MAX - 1] = len;
+	c[RSA_ALGORITHM_MAX - 1] = len;
 	return;
 }
 
-void RSA::mod(int a[RSA_MAX], int b[RSA_MAX], int  *c)/*/c=a mod b//×¢Òâ£º¾­¼ìÑéÖªµÀ´Ë´¦AºÍCµÄÊý×é¶¼¸Ä±äÁË¡£*/
+void RsaAlgorithm::mod(int a[RSA_ALGORITHM_MAX], int b[RSA_ALGORITHM_MAX], int  *c)/*/c=a mod b//×¢Òâ£º¾­¼ìÑéÖªµÀ´Ë´¦AºÍCµÄÊý×é¶¼¸Ä±äÁË¡£*/
 {
-	int d[RSA_MAX] = {};
+	int d[RSA_ALGORITHM_MAX] = {};
 	mov(a, d);
 	while (cmp(d, b) != (-1))/*/c=a-b-b-b-b-b.......until(c<b)*/
 	{
@@ -279,40 +279,40 @@ void RSA::mod(int a[RSA_MAX], int b[RSA_MAX], int  *c)/*/c=a mod b//×¢Òâ£º¾­¼ìÑé
 	return;
 }
 
-void RSA::divt(int t[RSA_MAX], int b[RSA_MAX], int  *c, int *w)/*//ÊÔÉÌ·¨//µ÷ÓÃÒÔºówÎªa mod b, CÎªa  div b;*/
+void RsaAlgorithm::divt(int t[RSA_ALGORITHM_MAX], int b[RSA_ALGORITHM_MAX], int  *c, int *w)/*//ÊÔÉÌ·¨//µ÷ÓÃÒÔºówÎªa mod b, CÎªa  div b;*/
 {
 	int a1, b1, i, j, m;/*wÓÃÓÚÔÝÊ±±£´æÊý¾Ý*/
-	int d[RSA_MAX], e[RSA_MAX], f[RSA_MAX], g[RSA_MAX], a[RSA_MAX];
+	int d[RSA_ALGORITHM_MAX], e[RSA_ALGORITHM_MAX], f[RSA_ALGORITHM_MAX], g[RSA_ALGORITHM_MAX], a[RSA_ALGORITHM_MAX];
 	mov(t, a);
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		e[i] = 0;
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		d[i] = 0;
-	for (i = 0; i<RSA_MAX; i++) g[i] = 0;
-	a1 = a[RSA_MAX - 1];
-	b1 = b[RSA_MAX - 1];
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++) g[i] = 0;
+	a1 = a[RSA_ALGORITHM_MAX - 1];
+	b1 = b[RSA_ALGORITHM_MAX - 1];
 	if (cmp(a, b) == (-1))
 	{
 		c[0] = 0;
-		c[RSA_MAX - 1] = 1;
+		c[RSA_ALGORITHM_MAX - 1] = 1;
 		mov(t, w);
 		return;
 	}
 	else if (cmp(a, b) == 0)
 	{
 		c[0] = 1;
-		c[RSA_MAX - 1] = 1;
+		c[RSA_ALGORITHM_MAX - 1] = 1;
 		w[0] = 0;
-		w[RSA_MAX - 1] = 1;
+		w[RSA_ALGORITHM_MAX - 1] = 1;
 		return;
 	}
 	m = (a1 - b1);
 	for (i = m; i >= 0; i--)/*341245/3=341245-300000*1--->41245-30000*1--->11245-3000*3--->2245-300*7--->145-30*4=25--->25-3*8=1*/
 	{
-		for (j = 0; j<RSA_MAX; j++)
+		for (j = 0; j<RSA_ALGORITHM_MAX; j++)
 			d[j] = 0;
 		d[i] = 1;
-		d[RSA_MAX - 1] = i + 1;
+		d[RSA_ALGORITHM_MAX - 1] = i + 1;
 		mov(b, g);
 		mul(g, d, e);
 		while (cmp(a, e) != (-1))
@@ -321,20 +321,20 @@ void RSA::divt(int t[RSA_MAX], int b[RSA_MAX], int  *c, int *w)/*//ÊÔÉÌ·¨//µ÷ÓÃÒ
 			sub(a, e, f);
 			mov(f, a);/*f¸´ÖÆ¸øg*/
 		}
-		for (j = i; j<RSA_MAX; j++)/*¸ßÎ»ÇåÁã*/
+		for (j = i; j<RSA_ALGORITHM_MAX; j++)/*¸ßÎ»ÇåÁã*/
 			e[j] = 0;
 	}
 	mov(a, w);
-	if (c[m] == 0) c[RSA_MAX - 1] = m;
-	else c[RSA_MAX - 1] = m + 1;
+	if (c[m] == 0) c[RSA_ALGORITHM_MAX - 1] = m;
+	else c[RSA_ALGORITHM_MAX - 1] = m + 1;
 	return;
 }
 
-void RSA::mulmod(int a[RSA_MAX], int b[RSA_MAX], int n[RSA_MAX], int *m)/*½â¾ö ÁË m=a*b mod n;*/
+void RsaAlgorithm::mulmod(int a[RSA_ALGORITHM_MAX], int b[RSA_ALGORITHM_MAX], int n[RSA_ALGORITHM_MAX], int *m)/*½â¾ö ÁË m=a*b mod n;*/
 {
-	int c[RSA_MAX], d[RSA_MAX];
+	int c[RSA_ALGORITHM_MAX], d[RSA_ALGORITHM_MAX];
 	int i;
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		d[i] = c[i] = 0;
 	mul(a, b, c);
 	divt(c, n, d, m);
@@ -343,62 +343,62 @@ void RSA::mulmod(int a[RSA_MAX], int b[RSA_MAX], int n[RSA_MAX], int *m)/*½â¾ö Á
 	//printf("\nm  length is :  %d \n",m[MAX-1]);
 }
 /*-------------½ÓÏÂÀ´µÄÖØµãÈÎÎñÊÇÒª×ÅÊÖ½â¾ö m=a^p  mod nµÄº¯ÊýÎÊÌâ------------*/
-void RSA::expmod(int a[RSA_MAX], int p[RSA_MAX], int n[RSA_MAX], int *m)
+void RsaAlgorithm::expmod(int a[RSA_ALGORITHM_MAX], int p[RSA_ALGORITHM_MAX], int n[RSA_ALGORITHM_MAX], int *m)
 {
-	int t[RSA_MAX], l[RSA_MAX], temp[RSA_MAX]; /*/t·ÅÈë2£¬l·ÅÈë1£»*/
-	int w[RSA_MAX], s[RSA_MAX], c[RSA_MAX], b[RSA_MAX], i;
-	for (i = 0; i<RSA_MAX - 1; i++)
+	int t[RSA_ALGORITHM_MAX], l[RSA_ALGORITHM_MAX], temp[RSA_ALGORITHM_MAX]; /*/t·ÅÈë2£¬l·ÅÈë1£»*/
+	int w[RSA_ALGORITHM_MAX], s[RSA_ALGORITHM_MAX], c[RSA_ALGORITHM_MAX], b[RSA_ALGORITHM_MAX], i;
+	for (i = 0; i<RSA_ALGORITHM_MAX - 1; i++)
 		b[i] = l[i] = t[i] = w[i] = 0;
-	t[0] = 2; t[RSA_MAX - 1] = 1;
-	l[0] = 1; l[RSA_MAX - 1] = 1;
+	t[0] = 2; t[RSA_ALGORITHM_MAX - 1] = 1;
+	l[0] = 1; l[RSA_ALGORITHM_MAX - 1] = 1;
 	mov(l, temp);
 	mov(a, m);
 	mov(p, b);
 	while (cmp(b, l) != 0)
 	{
-		for (i = 0; i<RSA_MAX; i++)
+		for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 			w[i] = c[i] = 0;
 		divt(b, t, w, c);/*// c=p mod 2  w= p /2*/
 		mov(w, b);/*//p=p/2*/
 		if (cmp(c, l) == 0) /*/ÓàÊýc==1*/
 		{
-			for (i = 0; i<RSA_MAX; i++)
+			for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 				w[i] = 0;
 			mul(temp, m, w);
 			mov(w, temp);
-			for (i = 0; i<RSA_MAX; i++)
+			for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 				w[i] = c[i] = 0;
 			divt(temp, n, w, c);/* /cÎªÓàc=temp % n£¬wÎªÉÌw=temp/n */
 			mov(c, temp);
 		}
-		for (i = 0; i<RSA_MAX; i++)
+		for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 			s[i] = 0;
 		mul(m, m, s);//s=a*a
-		for (i = 0; i<RSA_MAX; i++)
+		for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 			c[i] = 0;
 		divt(s, n, w, c);/*/w=s/n;c=s mod n*/
 		mov(c, m);
 	}
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		s[i] = 0;
 	mul(m, temp, s);
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		c[i] = 0;
 	divt(s, n, w, c);
 	mov(c, m);/*ÓàÊýs¸øm*/
-	m[RSA_MAX - 2] = a[RSA_MAX - 2];/*ÎªºóÃæµÄºº×ÖÏÔÊ¾ÐèÒª£¬ÓÃµÚ99Î»×öÎª±ê¼Ç*/
+	m[RSA_ALGORITHM_MAX - 2] = a[RSA_ALGORITHM_MAX - 2];/*ÎªºóÃæµÄºº×ÖÏÔÊ¾ÐèÒª£¬ÓÃµÚ99Î»×öÎª±ê¼Ç*/
 	return;/*/k=temp*k%n;*/
 }
 
-int RSA::is_prime_san(int p[RSA_MAX])
+int RsaAlgorithm::is_prime_san(int p[RSA_ALGORITHM_MAX])
 {
-	int i, a[RSA_MAX], t[RSA_MAX], s[RSA_MAX], o[RSA_MAX];
-	for (i = 0; i<RSA_MAX; i++)
+	int i, a[RSA_ALGORITHM_MAX], t[RSA_ALGORITHM_MAX], s[RSA_ALGORITHM_MAX], o[RSA_ALGORITHM_MAX];
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		s[i] = o[i] = a[i] = t[i] = 0;
 	t[0] = 1;
-	t[RSA_MAX - 1] = 1;
+	t[RSA_ALGORITHM_MAX - 1] = 1;
 	a[0] = 2;// { 2,3,5,7 }
-	a[RSA_MAX - 1] = 1;
+	a[RSA_ALGORITHM_MAX - 1] = 1;
 	sub(p, t, s);
 	expmod(a, s, p, o);
 	if (cmp(o, t) != 0)
@@ -406,21 +406,21 @@ int RSA::is_prime_san(int p[RSA_MAX])
 		return 0;
 	}
 	a[0] = 3;
-	for (i = 0; i<RSA_MAX; i++)  o[i] = 0;
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)  o[i] = 0;
 	expmod(a, s, p, o);
 	if (cmp(o, t) != 0)
 	{
 		return 0;
 	}
 	a[0] = 5;
-	for (i = 0; i<RSA_MAX; i++)  o[i] = 0;
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)  o[i] = 0;
 	expmod(a, s, p, o);
 	if (cmp(o, t) != 0)
 	{
 		return 0;
 	}
 	a[0] = 7;
-	for (i = 0; i<RSA_MAX; i++)  o[i] = 0;
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)  o[i] = 0;
 	expmod(a, s, p, o);
 	if (cmp(o, t) != 0)
 	{
@@ -429,14 +429,14 @@ int RSA::is_prime_san(int p[RSA_MAX])
 	return 1;
 }
 
-int RSA::coprime(int e[RSA_MAX], int s[RSA_MAX]) /* ÅÐ¶ÏÁ½¸ö´óÊýÖ®¼äÊÇ·ñ»¥ÖÊ*/
+int RsaAlgorithm::coprime(int e[RSA_ALGORITHM_MAX], int s[RSA_ALGORITHM_MAX]) /* ÅÐ¶ÏÁ½¸ö´óÊýÖ®¼äÊÇ·ñ»¥ÖÊ*/
 {
-	int a[RSA_MAX], b[RSA_MAX], c[RSA_MAX], d[RSA_MAX], o[RSA_MAX], l[RSA_MAX];
+	int a[RSA_ALGORITHM_MAX], b[RSA_ALGORITHM_MAX], c[RSA_ALGORITHM_MAX], d[RSA_ALGORITHM_MAX], o[RSA_ALGORITHM_MAX], l[RSA_ALGORITHM_MAX];
 	int i;
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		l[i] = o[i] = c[i] = d[i] = 0;
-	o[0] = 0; o[RSA_MAX - 1] = 1;
-	l[0] = 1; l[RSA_MAX - 1] = 1;
+	o[0] = 0; o[RSA_ALGORITHM_MAX - 1] = 1;
+	l[0] = 1; l[RSA_ALGORITHM_MAX - 1] = 1;
 	mov(e, b);
 	mov(s, a);
 	do
@@ -445,7 +445,7 @@ int RSA::coprime(int e[RSA_MAX], int s[RSA_MAX]) /* ÅÐ¶ÏÁ½¸ö´óÊýÖ®¼äÊÇ·ñ»¥ÖÊ*/
 		{
 			return 1;
 		}
-		for (i = 0; i<RSA_MAX; i++)
+		for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 			c[i] = 0;
 		divt(a, b, d, c);
 		mov(b, a);/*b--->a*/
@@ -455,19 +455,19 @@ int RSA::coprime(int e[RSA_MAX], int s[RSA_MAX]) /* ÅÐ¶ÏÁ½¸ö´óÊýÖ®¼äÊÇ·ñ»¥ÖÊ*/
 	return 0;
 }
 
-void RSA::prime_random(int *p, int *q)
+void RsaAlgorithm::prime_random(int *p, int *q)
 {
 	int i, k;
 	time_t t;
 	p[0] = 1;
 	q[0] = 3;
-	p[RSA_MAX - 1] = 10;
-	q[RSA_MAX - 1] = 11;
+	p[RSA_ALGORITHM_MAX - 1] = 10;
+	q[RSA_ALGORITHM_MAX - 1] = 11;
 	do
 	{
 		t = time(NULL);
 		srand((unsigned long)t);
-		for (i = 1; i<p[RSA_MAX - 1] - 1; i++)
+		for (i = 1; i<p[RSA_ALGORITHM_MAX - 1] - 1; i++)
 		{
 			k = rand() % 10;
 			p[i] = k;
@@ -477,13 +477,13 @@ void RSA::prime_random(int *p, int *q)
 		{
 			k = rand() % 10;
 		}
-		p[p[RSA_MAX - 1] - 1] = k;
+		p[p[RSA_ALGORITHM_MAX - 1] - 1] = k;
 	} while ((is_prime_san(p)) != 1);
 	do
 	{
 		t = time(NULL);
 		srand((unsigned long)t);
-		for (i = 1; i<q[RSA_MAX - 1]; i++)
+		for (i = 1; i<q[RSA_ALGORITHM_MAX - 1]; i++)
 		{
 			k = rand() % 10;
 			q[i] = k;
@@ -492,49 +492,49 @@ void RSA::prime_random(int *p, int *q)
 	return;
 }
 
-void RSA::erand(int e[RSA_MAX], int m[RSA_MAX])
+void RsaAlgorithm::erand(int e[RSA_ALGORITHM_MAX], int m[RSA_ALGORITHM_MAX])
 {
 	int i, k;
 	time_t t;
-	e[RSA_MAX - 1] = 5;
+	e[RSA_ALGORITHM_MAX - 1] = 5;
 	do
 	{
 		t = time(NULL);
 		srand((unsigned long)t);
-		for (i = 0; i<e[RSA_MAX - 1] - 1; i++)
+		for (i = 0; i<e[RSA_ALGORITHM_MAX - 1] - 1; i++)
 		{
 			k = rand() % 10;
 			e[i] = k;
 		}
 		while ((k = rand() % 10) == 0)
 			k = rand() % 10;
-		e[e[RSA_MAX - 1] - 1] = k;
+		e[e[RSA_ALGORITHM_MAX - 1] - 1] = k;
 	} while (coprime(e, m) != 1);
 	return;
 }
 
-void RSA::rsad(int e[RSA_MAX], int g[RSA_MAX], int *d)
+void RsaAlgorithm::rsad(int e[RSA_ALGORITHM_MAX], int g[RSA_ALGORITHM_MAX], int *d)
 {
-	int r[RSA_MAX], n1[RSA_MAX], n2[RSA_MAX], k[RSA_MAX], w[RSA_MAX];
-	int i, t[RSA_MAX], b1[RSA_MAX], b2[RSA_MAX], temp[RSA_MAX];
+	int r[RSA_ALGORITHM_MAX], n1[RSA_ALGORITHM_MAX], n2[RSA_ALGORITHM_MAX], k[RSA_ALGORITHM_MAX], w[RSA_ALGORITHM_MAX];
+	int i, t[RSA_ALGORITHM_MAX], b1[RSA_ALGORITHM_MAX], b2[RSA_ALGORITHM_MAX], temp[RSA_ALGORITHM_MAX];
 	mov(g, n1);
 	mov(e, n2);
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		k[i] = w[i] = r[i] = temp[i] = b1[i] = b2[i] = t[i] = 0;
-	b1[RSA_MAX - 1] = 0; b1[0] = 0;/*/b1=0;*/
-	b2[RSA_MAX - 1] = 1; b2[0] = 1;/*/b2=1;*/
+	b1[RSA_ALGORITHM_MAX - 1] = 0; b1[0] = 0;/*/b1=0;*/
+	b2[RSA_ALGORITHM_MAX - 1] = 1; b2[0] = 1;/*/b2=1;*/
 	while (1)
 	{
-		for (i = 0; i<RSA_MAX; i++)
+		for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 			k[i] = w[i] = 0;
 		divt(n1, n2, k, w);/*/k=n1/n2;*/
-		for (i = 0; i<RSA_MAX; i++)
+		for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 			temp[i] = 0;
 		mul(k, n2, temp);/*/temp=k*n2;*/
-		for (i = 0; i<RSA_MAX; i++)
+		for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 			r[i] = 0;
 		sub(n1, temp, r);
-		if ((r[RSA_MAX - 1] == 1) && (r[0] == 0))/*/r=0*/
+		if ((r[RSA_ALGORITHM_MAX - 1] == 1) && (r[0] == 0))/*/r=0*/
 		{
 			break;
 		}
@@ -543,25 +543,25 @@ void RSA::rsad(int e[RSA_MAX], int g[RSA_MAX], int *d)
 			mov(n2, n1);/*/n1=n2;*/
 			mov(r, n2);/*/n2=r;*/
 			mov(b2, t);/*/t=b2;*/
-			for (i = 0; i<RSA_MAX; i++)
+			for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 				temp[i] = 0;
 			mul(k, b2, temp);/*/b2=b1-k*b2;*/
-			for (i = 0; i<RSA_MAX; i++)
+			for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 				b2[i] = 0;
 			sub(b1, temp, b2);
 			mov(t, b1);
 		}
 	}
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		t[i] = 0;
 	add(b2, g, t);
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		temp[i] = d[i] = 0;
 	divt(t, g, temp, d);
 }
 
 /*/Çó½âÃÜÃÜÔ¿dµÄº¯Êý(¸ù¾ÝEuclidËã·¨)96403770511368768000*/
-unsigned long RSA::rsa(unsigned long p, unsigned long q, unsigned long e)  /*/Çó½âÃÜÃÜÔ¿dµÄº¯Êý(¸ù¾ÝEuclidËã·¨)*/
+unsigned long RsaAlgorithm::rsa(unsigned long p, unsigned long q, unsigned long e)  /*/Çó½âÃÜÃÜÔ¿dµÄº¯Êý(¸ù¾ÝEuclidËã·¨)*/
 {
 	unsigned long g, k, r, n1, n2, t;
 	unsigned long b1 = 0, b2 = 1;
@@ -596,13 +596,13 @@ unsigned long RSA::rsa(unsigned long p, unsigned long q, unsigned long e)  /*/Çó
 * @pre \e ½øÐÐ¼ÓÃÜµÄ¹ý³ÌÖÐ½øÐÐÁËÊý¾ÝÀàÐÍµÄ×ª»»
 * @see e£¬d£¬n & text
 */
-std::string RSA::tencrypto(int e[RSA_MAX], int n[RSA_MAX], const char* text)/*//¶ÔÓÐÐèÒªµÄÎÄ¼þ½øÐÐ¼ÓÃÜ*/
+std::string RsaAlgorithm::tencrypto(int e[RSA_ALGORITHM_MAX], int n[RSA_ALGORITHM_MAX], const char* text)/*//¶ÔÓÐÐèÒªµÄÎÄ¼þ½øÐÐ¼ÓÃÜ*/
 {
 	int i, k, count, temp, c;
 	char ch;
-	struct RSA::slink *p, *p1, *p2;
-	struct RSA::slink *h;
-	h = p = p1 = p2 = (struct RSA::slink *)malloc(LEN);
+	struct RsaAlgorithm::slink *p, *p1, *p2;
+	struct RsaAlgorithm::slink *h;
+	h = p = p1 = p2 = (struct RsaAlgorithm::slink *)malloc(RSA_ALGORITHM_LEN);
 	h = NULL;
 	if (text == NULL)
 	{
@@ -618,11 +618,11 @@ std::string RSA::tencrypto(int e[RSA_MAX], int n[RSA_MAX], const char* text)/*//
 		if (c<0)
 		{
 			c = abs(c);/*/°Ñ¸ºÊýÈ¡Õý²¢ÇÒ×öÒ»¸ö±ê¼Ç*/
-			p1->bignum[RSA_MAX - 2] = '0';
+			p1->bignum[RSA_ALGORITHM_MAX - 2] = '0';
 		}
 		else
 		{
-			p1->bignum[RSA_MAX - 2] = '1';
+			p1->bignum[RSA_ALGORITHM_MAX - 2] = '1';
 		}
 
 		while (c / 10 != 0)
@@ -633,47 +633,47 @@ std::string RSA::tencrypto(int e[RSA_MAX], int n[RSA_MAX], const char* text)/*//
 			k++;
 		}
 		p1->bignum[k] = c;
-		p1->bignum[RSA_MAX - 1] = k + 1;
+		p1->bignum[RSA_ALGORITHM_MAX - 1] = k + 1;
 		count = count + 1;
 		if (count == 1)
 			h = p1;
 		else p2->next = p1;
 		p2 = p1;
-		p1 = (struct RSA::slink *)malloc(LEN);
+		p1 = (struct RsaAlgorithm::slink *)malloc(RSA_ALGORITHM_LEN);
 	}
 	p2->next = NULL;
 
 	std::string res;
-	p = p1 = (struct RSA::slink *)malloc(LEN);
+	p = p1 = (struct RsaAlgorithm::slink *)malloc(RSA_ALGORITHM_LEN);
 	p = h;
 	if (h != NULL)
 		do
 		{
 			expmod(p->bignum, e, n, p1->bignum);
-			ch = p1->bignum[RSA_MAX - 2];
+			ch = p1->bignum[RSA_ALGORITHM_MAX - 2];
 			res += ch;
-			if ((p1->bignum[RSA_MAX - 1] / 10) == 0)/*/ÅÐ¶Ïp1->bignum[99]µÄÊÇ·ñ´óÓÚÊ®£»*/
+			if ((p1->bignum[RSA_ALGORITHM_MAX - 1] / 10) == 0)/*/ÅÐ¶Ïp1->bignum[99]µÄÊÇ·ñ´óÓÚÊ®£»*/
 			{
 				ch = 0 + 48;
 				res += ch;
-				ch = p1->bignum[RSA_MAX - 1] + 48;
+				ch = p1->bignum[RSA_ALGORITHM_MAX - 1] + 48;
 				res += ch;
 			}
 			else
 			{
-				ch = p1->bignum[RSA_MAX - 1] / 10 + 48;
+				ch = p1->bignum[RSA_ALGORITHM_MAX - 1] / 10 + 48;
 				res += ch;
-				ch = p1->bignum[RSA_MAX - 1] % 10 + 48;
+				ch = p1->bignum[RSA_ALGORITHM_MAX - 1] % 10 + 48;
 				res += ch;
 			}
 
-			for (i = 0; i<p1->bignum[RSA_MAX - 1]; i++)
+			for (i = 0; i<p1->bignum[RSA_ALGORITHM_MAX - 1]; i++)
 			{
 				ch = p1->bignum[i] + 48;
 				res += ch;
 			}
 			p = p->next;
-			p1 = (struct RSA::slink *)malloc(LEN);
+			p1 = (struct RsaAlgorithm::slink *)malloc(RSA_ALGORITHM_LEN);
 		} while (p != NULL);
 		return res;
 }
@@ -686,15 +686,15 @@ std::string RSA::tencrypto(int e[RSA_MAX], int n[RSA_MAX], const char* text)/*//
 * @pre \e ½øÐÐ½âÃÜµÄ¹ý³ÌÖÐ½øÐÐÁËÊý¾ÝÀàÐÍµÄ×ª»»
 * @see e£¬d£¬n & text
 */
-std::string RSA::tdecrypto(int d[RSA_MAX], int n[RSA_MAX], const std::string& text)
+std::string RsaAlgorithm::tdecrypto(int d[RSA_ALGORITHM_MAX], int n[RSA_ALGORITHM_MAX], const std::string& text)
 {
-	struct RSA::slink *h, *p1, *p2;
+	struct RsaAlgorithm::slink *h, *p1, *p2;
 	char ch;
 	int i, j, k, c, count, temp;
 	i = 0;
 	j = 3;
 	count = 0;
-	h = p1 = p2 = (struct RSA::slink *)malloc(LEN);
+	h = p1 = p2 = (struct RsaAlgorithm::slink *)malloc(RSA_ALGORITHM_LEN);
 
 	int kk;
 	for (kk = 0; kk < (int)text.length(); kk++)
@@ -703,7 +703,7 @@ std::string RSA::tdecrypto(int d[RSA_MAX], int n[RSA_MAX], const std::string& te
 		c = ch;
 		if (j == 3)
 		{
-			p1->bignum[RSA_MAX - 2] = c;
+			p1->bignum[RSA_ALGORITHM_MAX - 2] = c;
 			j--;
 		}
 		else if (j == 2)
@@ -713,14 +713,14 @@ std::string RSA::tdecrypto(int d[RSA_MAX], int n[RSA_MAX], const std::string& te
 		}
 		else if (j == 1)
 		{
-			p1->bignum[RSA_MAX - 1] = temp * 10 + c - 48;
+			p1->bignum[RSA_ALGORITHM_MAX - 1] = temp * 10 + c - 48;
 			j--;
 		}
 		else if (j == 0)
 		{
 			p1->bignum[i] = c - 48;
 			i++;
-			if (i == p1->bignum[RSA_MAX - 1])
+			if (i == p1->bignum[RSA_ALGORITHM_MAX - 1])
 			{
 				i = 0;
 				j = 3;
@@ -729,24 +729,24 @@ std::string RSA::tdecrypto(int d[RSA_MAX], int n[RSA_MAX], const std::string& te
 					h = p1;
 				else p2->next = p1;
 				p2 = p1;
-				p1 = (struct RSA::slink *)malloc(LEN);
+				p1 = (struct RsaAlgorithm::slink *)malloc(RSA_ALGORITHM_LEN);
 			}
 		}
 	}
 	p2->next = NULL;
 
-	p2 = (struct RSA::slink *)malloc(LEN);
+	p2 = (struct RsaAlgorithm::slink *)malloc(RSA_ALGORITHM_LEN);
 	p1 = h;
 	k = 0;
 	std::string res;
 	if (h != NULL)/*/tempÎªÔÝ´æASIICÂëµÄintÖµ*/
 		do
 		{
-			for (i = 0; i<RSA_MAX; i++)
+			for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 				p2->bignum[i] = 0;
 			expmod(p1->bignum, d, n, p2->bignum);
 			temp = p2->bignum[0] + p2->bignum[1] * 10 + p2->bignum[2] * 100;
-			if ((p2->bignum[RSA_MAX - 2]) == '0')
+			if ((p2->bignum[RSA_ALGORITHM_MAX - 2]) == '0')
 			{
 				temp = 0 - temp;
 			}/*/×ª»¯ÎªÕýÈ·µÄASIICÂë£¬Èç-78-96ÐÎ³Éºº×Ö	*/
@@ -754,7 +754,7 @@ std::string RSA::tdecrypto(int d[RSA_MAX], int n[RSA_MAX], const std::string& te
 			res += ch;
 			k++;
 			p1 = p1->next;
-			p2 = (struct RSA::slink *)malloc(LEN);
+			p2 = (struct RsaAlgorithm::slink *)malloc(RSA_ALGORITHM_LEN);
 		} while (p1 != NULL);
 		return res;
 }
@@ -769,9 +769,9 @@ std::string RSA::tdecrypto(int d[RSA_MAX], int n[RSA_MAX], const std::string& te
 * @pre \e ²úÉúµÄÃÜÔ¿´æ´¢ÔÚ¶¨ÒåµÄÀàÖÐ±äÁ¿ÖÐ
 * @see e£¬d£¬n
 */
-bool RSA::RSAKey()
+bool RsaAlgorithm::RSAKey()
 {
-	for (i = 0; i<RSA_MAX; i++)
+	for (i = 0; i<RSA_ALGORITHM_MAX; i++)
 		m[i] = p[i] = q[i] = n[i] = d[i] = e[i] = 0;/*/¼òµ¥³õÊ¼»¯Ò»ÏÂ*/
 	prime_random(p, q);/*/Ëæ»ú²úÉúÁ½¸ö´óËØÊý*/
 	mul(p, q, n);

@@ -288,7 +288,7 @@ clean_up:
 }
 
 /*********************************************************/
-int sm2_encrypt2(const unsigned char *message,
+int sm2_encrypt_code(const unsigned char *message,
                 const int message_len,
 		const unsigned char *pub_key,
 		unsigned char *c1,
@@ -551,7 +551,7 @@ clean_up:
 }
 
 /*********************************************************/
-int sm2_decrypt2(const unsigned char *c1,
+int sm2_decrypt_code(const unsigned char *c1,
                 const unsigned char *c3,
 		const unsigned char *c2,
 		const int c2_len,

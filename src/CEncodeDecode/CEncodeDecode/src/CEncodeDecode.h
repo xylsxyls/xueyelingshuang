@@ -2,6 +2,8 @@
 #include <string>
 #include "CEncodeDecodeMacro.h"
 
+typedef struct x509_st X509;
+
 class CEncodeDecodeAPI CEncodeDecode
 {
 public:
@@ -17,8 +19,9 @@ public:
 	static std::string RSAEncode(const std::string& publicKey, const char* src);
 	static std::string RSADecode(const std::string& privateKey, const std::string& src);
 
-#ifdef USE_OPENSSL
+	//此接口需要用到openssl，编译的时候需要加预定义宏USE_OPENSSL
 	//sm2加密，前缀为0x04，publicKeyX和c1可能有前缀，长度为33和65，密文新版排序为C1C3C2，旧版为C1C2C3
+	//publicKeyX带前缀0x04，则加密出的c1会带，publicKeyX不带，则c1不带，解密时c1带不带都可以
 	//加密长度不可以超过int32_t上限
 	static bool SM2Key(std::string& publicKeyX,
 		std::string& publicKeyY,
@@ -34,9 +37,14 @@ public:
 		const std::string& c1,
 		const std::string& c2,
 		const std::string& c3);
-#endif
 
 	//sm4加密，key自定义，key必须是16字节，src必须是16的整数倍，内部都可以含有\0
 	static std::string SM4Encode(const std::string& key, const std::string& src);
 	static std::string SM4Decode(const std::string& key, const std::string& ciphertext);
+
+	//此接口需要用到openssl，编译的时候需要加预定义宏USE_OPENSSL
+	//cer证书相关
+	static X509* getCert(const std::string& path);
+	static void releaseCert(X509* cert);
+	static std::string getPublicKey(X509* cert);
 };

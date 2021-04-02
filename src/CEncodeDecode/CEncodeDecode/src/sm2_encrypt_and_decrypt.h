@@ -84,7 +84,7 @@ int sm2_encrypt_data_test(const unsigned char *message,
 5. c2 is a octet string. Its length equals the length 
    of input message.
 **************************************************/
-int sm2_encrypt2(const unsigned char *message,
+int sm2_encrypt_code(const unsigned char *message,
                 const int message_len,
 		const unsigned char *pub_key,
 		unsigned char *c1,
@@ -117,7 +117,7 @@ int sm2_encrypt2(const unsigned char *message,
    equal to c2_len.
 5. pri_key is a octet string of 32 byte length.
 **************************************************/
-int sm2_decrypt2(const unsigned char *c1,
+int sm2_decrypt_code(const unsigned char *c1,
                 const unsigned char *c3,
 		const unsigned char *c2,
 		const int c2_len,
