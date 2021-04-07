@@ -108,8 +108,9 @@ uint32_t SharedMemory::realSize()
 	{
 		open(true);
 	}
-	if(m_shmid == 0)
+	if(m_shmid == -1)
 	{
+		m_shmid = 0;
 		return 0;
 	}
 	struct shmid_ds shmbuffer;
@@ -174,8 +175,9 @@ void* SharedMemory::writeWithoutLock()
 	{
 		open(false);
 	}
-	if (m_shmid == 0)
+	if (m_shmid == -1)
 	{
+		m_shmid = 0;
 		return nullptr;
 	}
 	m_memoryPtr = shmat(m_shmid, (void*)0, 0);

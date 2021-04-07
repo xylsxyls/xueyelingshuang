@@ -36,7 +36,7 @@ void Semaphore::createProcessSemaphore(const std::string& name, int32_t signalCo
 #ifdef _MSC_VER
 	m_processSemaphore = ::CreateSemaphore(nullptr, 0, signalCount, name.c_str());
 #elif __unix__
-	m_processSemaphore = ::sem_open(name.c_str(), O_CREAT, 0644, 1);
+	m_processSemaphore = ::sem_open(name.c_str(), O_CREAT, 0644, 0);
 	m_name = name;
 #endif
 }
