@@ -31,8 +31,9 @@ public:
 	@param [in] callback 接收回调类
 	@param [in] receiveSize 单个共享内存接收区大小，1M
 	@param [in] areaCount 缓存块个数
+	@return 返回是否初始化成功
 	*/
-	void initReceive(ProcessReceiveCallback* callback, int32_t receiveSize = 1 * 1024 * 1024, int32_t areaCount = 100);
+	bool initReceive(ProcessReceiveCallback* callback, int32_t receiveSize = 1 * 1024 * 1024, int32_t areaCount = 100);
 
 	/** 销毁接收模块资源
 	*/

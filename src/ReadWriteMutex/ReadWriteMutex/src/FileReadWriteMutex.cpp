@@ -5,6 +5,7 @@
 #elif __unix__
 #include <fcntl.h>
 #include <stdlib.h>
+#include <unistd.h>
 #endif
 
 std::string FileReadWriteMutex::s_tempDir = FileReadWriteMutex::tempDir();
@@ -19,10 +20,20 @@ FileReadWriteMutex::FileReadWriteMutex(const std::string& fileName)
 	{
 		m_fileName = fileName + ".lock";
 	}
-	m_fileName = s_tempDir + m_fileName;	
+	m_fileName = s_tempDir + m_fileName;
 #ifdef __unix__
 	system(("touch \"" + m_fileName + "\"").c_str());
 	m_fd = open(m_fileName.c_str(), O_RDWR);
+#endif
+}
+
+FileReadWriteMutex::~FileReadWriteMutex()
+{
+#ifdef __unix__
+	if (m_fd != -1)
+	{
+		close(m_fd);
+	}
 #endif
 }
 

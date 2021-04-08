@@ -33,13 +33,27 @@ ProcessWork& ProcessWork::instance()
 	return ProcessWork;
 }
 
-void ProcessWork::initReceive(ProcessReceiveCallback* callback, int32_t receiveSize, int32_t areaCount)
+bool ProcessWork::initReceive(ProcessReceiveCallback* callback, int32_t receiveSize, int32_t areaCount)
 {
 	m_callback = callback;
 
-	m_area = new SharedMemory(CStringManager::Format("ProcessArea_%d", m_thisProcessPid), 8);
+	m_area = new SharedMemory(CStringManager::Format("ProcessArea_%d", m_thisProcessPid), 8, false);
+	if (m_area->isFailed())
+	{
+		delete m_area;
+		m_area = nullptr;
+		return false;
+	}
 
-	m_pid = new SharedMemory(CStringManager::Format("ProcessArea_%s", CSystem::GetCurrentExeName().c_str()), 4);
+	m_pid = new SharedMemory(CStringManager::Format("ProcessArea_%s", CSystem::GetCurrentExeName().c_str()), 4, false);
+	if (m_area->isFailed())
+	{
+		delete m_area;
+		m_area = nullptr;
+		delete m_pid;
+		m_pid = nullptr;
+		return false;
+	}
 	void* pid = m_pid->writeWithoutLock();
 	*(int32_t*)pid = m_thisProcessPid;
 
@@ -53,13 +67,18 @@ void ProcessWork::initReceive(ProcessReceiveCallback* callback, int32_t receiveS
 	m_readSemaphore->createProcessSemaphore(CStringManager::Format("ProcessRead_%d", m_thisProcessPid));
 	m_readEndSemaphore->createProcessSemaphore(CStringManager::Format("ProcessReadEnd_%d", m_thisProcessPid));
 
+	int32_t memoryIndex = 0;
 	int32_t index = -1;
 	while (index++ != areaCount - 1)
 	{
-		std::shared_ptr<SharedMemory> spSharedMemory(new SharedMemory(CStringManager::Format("ProcessArea_%d_%d", m_thisProcessPid, index + 1), receiveSize));
-		m_memoryMap[index + 1].first = spSharedMemory;
+		std::shared_ptr<SharedMemory> spSharedMemory;
+		do
+		{
+			spSharedMemory.reset(new SharedMemory(CStringManager::Format("ProcessArea_%d_%d", m_thisProcessPid, ++memoryIndex), receiveSize, false));
+		} while (spSharedMemory->isFailed());
+		m_memoryMap[memoryIndex].first = spSharedMemory;
 		std::shared_ptr<std::atomic<bool>> spUsed(new std::atomic<bool>(false));
-		m_memoryMap[index + 1].second = spUsed;
+		m_memoryMap[memoryIndex].second = spUsed;
 	}
 
 	m_assginThreadId = CTaskThreadManager::Instance().Init();
@@ -80,6 +99,8 @@ void ProcessWork::initReceive(ProcessReceiveCallback* callback, int32_t receiveS
 		CTaskThreadManager::Instance().GetThreadInterface(m_copyThreadId),
 		CTaskThreadManager::Instance().GetThreadInterface(m_receiveThreadId));
 	CTaskThreadManager::Instance().GetThreadInterface(m_readThreadId)->PostTask(spReadTask);
+	
+	return true;
 }
 
 void ProcessWork::uninitReceive()

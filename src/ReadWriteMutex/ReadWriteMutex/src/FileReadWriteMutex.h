@@ -11,6 +11,8 @@ class ReadWriteMutexAPI FileReadWriteMutex : public ReadWriteMutexBase
 public:
 	FileReadWriteMutex(const std::string& fileName);
 
+	~FileReadWriteMutex();
+
 public:
 	virtual void read();
 	virtual void write();

@@ -9,13 +9,13 @@
 #include <strsafe.h>
 #endif
 
-SharedMemory::SharedMemory(const std::string& name, uint32_t size):
+SharedMemory::SharedMemory(const std::string& name, uint32_t size, bool isAllowExist):
 #ifdef _MSC_VER
 m_memoryHandle(nullptr),
 m_readMemoryPtr(nullptr),
 m_writeMemoryPtr(nullptr),
 #elif __unix__
-m_shmid(0),
+m_shmid(-1),
 #endif
 m_memoryPtr(nullptr),
 m_memoryName(name),
@@ -26,29 +26,7 @@ m_size(0)
 #ifdef _MSC_VER
 		m_memoryHandle = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, name.empty() ? nullptr : name.c_str());
 #elif __unix__
-		int32_t key = 0;
-		int32_t index = 0;
-		if(!name.empty())
-		{
-			while(true)
-			{
-				if(index + 2 > name.size())
-				{
-					if(name.size() % 2 == 1)
-					{
-						key += name[index];
-					}
-					break;
-				}
-				key += name[index] * name[index + 1];
-				index += 2;
-			}
-		}
-		else
-		{
-			key = 1000;
-		}
-		m_shmid = shmget((key_t)key, size, 0666|IPC_CREAT);
+		m_shmid = shmget((key_t)nameToKey(name), size, (isAllowExist ? (0666 | IPC_CREAT) : (0666 | IPC_EXCL | IPC_CREAT)));
 #endif
 		m_size = size;
 	}
@@ -74,13 +52,22 @@ SharedMemory::~SharedMemory()
 		m_memoryHandle = nullptr;
 	}
 #elif __unix__
-	if(m_size != 0)
+	if(m_size != 0 && m_shmid != -1)
 	{
-		if(shmctl(m_shmid, IPC_RMID, 0) == -1)   
+		if(shmctl(m_shmid, IPC_RMID, 0) == -1)
 		{
-			printf("shmctl(IPC_RMID) failed\n");
+			printf("shmctl(IPC_RMID) failed, mapName = %s\n", m_memoryName.c_str());
 		}
 	}
+#endif
+}
+
+bool SharedMemory::isFailed()
+{
+#ifdef _MSC_VER
+	return (m_memoryHandle == nullptr);
+#elif __unix__
+	return (m_shmid == -1);
 #endif
 }
 
@@ -104,13 +91,12 @@ uint32_t SharedMemory::realSize()
 	::VirtualQuery(::MapViewOfFile(m_memoryHandle, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0), &mem_info, sizeof(mem_info));
 	return mem_info.RegionSize;
 #elif __unix__
-	if(m_shmid == 0)
+	if(m_shmid == -1)
 	{
 		open(true);
 	}
 	if(m_shmid == -1)
 	{
-		m_shmid = 0;
 		return 0;
 	}
 	struct shmid_ds shmbuffer;
@@ -171,16 +157,24 @@ void* SharedMemory::writeWithoutLock()
 	m_writeMemoryPtr = ::MapViewOfFile(m_memoryHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 	m_memoryPtr = m_writeMemoryPtr;
 #elif __unix__
-	if (m_shmid == 0)
+	if (m_memoryPtr != nullptr)
+	{
+		return m_memoryPtr;
+	}
+	if (m_shmid == -1)
 	{
 		open(false);
 	}
 	if (m_shmid == -1)
 	{
-		m_shmid = 0;
 		return nullptr;
 	}
 	m_memoryPtr = shmat(m_shmid, (void*)0, 0);
+	if ((int32_t)m_memoryPtr == -1)
+	{
+		m_memoryPtr = nullptr;
+		return nullptr;
+	}
 #endif
 	return m_memoryPtr;
 }
@@ -210,7 +204,7 @@ void SharedMemory::close()
 		m_readMemoryPtr = nullptr;
 	}
 
-	if (m_writeMemoryPtr)
+	if (m_writeMemoryPtr != nullptr)
 	{
 		::UnmapViewOfFile(m_writeMemoryPtr);
 		m_writeMemoryPtr = nullptr;
@@ -334,31 +328,40 @@ void SharedMemory::open(bool bReadOnly)
 #ifdef _MSC_VER
 	m_memoryHandle = ::OpenFileMapping(bReadOnly ? FILE_MAP_READ : FILE_MAP_ALL_ACCESS, FALSE, m_memoryName.empty() ? NULL : m_memoryName.c_str());
 #elif __unix__
-	int32_t key = 0;
-	int32_t index = 0;
-	if (!m_memoryName.empty())
-	{
-		while (true)
-		{
-			if (index + 2 > m_memoryName.size())
-			{
-				if (m_memoryName.size() % 2 == 1)
-				{
-					key += m_memoryName[index];
-				}
-				break;
-			}
-			key += m_memoryName[index] * m_memoryName[index + 1];
-			index += 2;
-		}
-	}
-	else
-	{
-		key = 1000;
-	}
-	m_shmid = shmget((key_t)key, 0, 0666 | IPC_CREAT);
+	m_shmid = shmget((key_t)nameToKey(m_memoryName), 0, 0666 | IPC_CREAT);
 #endif
 }
+
+#ifdef __unix__
+int SharedMemory::nameToKey(const std::string& name)
+{
+	if (name.empty())
+	{
+		return 1000;
+	}
+
+	int key = 0;
+	int32_t index = 0;
+	
+	while(true)
+	{
+		if(index + 2 > name.size())
+		{
+			if(name.size() % 2 == 1)
+			{
+				key += name[index];
+			}
+			break;
+		}
+		key += name[index] * name[index + 1] + 
+		(name[index + 1] - name[index]) + 
+		(name[index] >> 1) * (name[index + 1] << 3) * (name[index + 1] >> 4);
+		index += 2;
+	}
+
+	return key;
+}
+#endif
 
 ////д
 //int32_t main()
