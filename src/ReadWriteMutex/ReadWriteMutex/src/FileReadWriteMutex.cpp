@@ -61,11 +61,26 @@ void FileReadWriteMutex::write()
 		printf("open file failed, m_fd = %d\n", m_fd);
 		return;
 	}
-	int result = lockf(m_fd, F_LOCK, 0);
-	if (result < 0)
+	bool isFailed = false;
+	int32_t times = 0;
+	int32_t timesCount = 10000;
+	while (true)
 	{
-		printf("lockf function failed, result = %d\n", result);
-		return;
+		int result = lockf(m_fd, F_LOCK, 0);
+		if (result >= 0)
+		{
+			if (isFailed && times >= timesCount)
+			{
+				printf("success lockf function, result = %d, m_fileName = %s, m_fd = %d\n", result, m_fileName.c_str(), m_fd);
+			}
+			break;
+		}
+		++times;
+		isFailed = true;
+		if (times % timesCount == 0)
+		{
+			printf("warning lockf function failed times = %d, result = %d, m_fileName = %s, m_fd = %d\n", times, result, m_fileName.c_str(), m_fd);
+		}
 	}
 #endif
 }

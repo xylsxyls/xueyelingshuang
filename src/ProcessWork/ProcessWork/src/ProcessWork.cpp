@@ -55,6 +55,10 @@ bool ProcessWork::initReceive(ProcessReceiveCallback* callback, int32_t receiveS
 		return false;
 	}
 	void* pid = m_pid->writeWithoutLock();
+	if (pid == nullptr)
+	{
+		printf("init pid nullptr\n");
+	}
 	*(int32_t*)pid = m_thisProcessPid;
 
 	m_assignSemaphore = new Semaphore;

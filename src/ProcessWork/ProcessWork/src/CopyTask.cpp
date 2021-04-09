@@ -16,6 +16,10 @@ void CopyTask::DoTask()
 {
 	auto& memoryPair = m_memoryMap->find(m_assign)->second;
 	void* memory = memoryPair.first->writeWithoutLock();
+	if (memory == nullptr)
+	{
+		printf("CopyTask memory nullptr\n");
+	}
 	int32_t sendPid = *(int32_t*)memory;
 	int32_t length = *((int32_t*)memory + 1) - 4;
 	CorrespondParam::ProtocolId protocolId = (CorrespondParam::ProtocolId)*((int32_t*)memory + 2);

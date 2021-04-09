@@ -15,6 +15,10 @@ m_memoryMap(nullptr)
 void AssignTask::DoTask()
 {
 	void* area = m_area->writeWithoutLock();
+	if (area == nullptr)
+	{
+		printf("AssignTask area nullptr\n");
+	}
 	while (true)
 	{
 		m_assignSemaphore->processWait();

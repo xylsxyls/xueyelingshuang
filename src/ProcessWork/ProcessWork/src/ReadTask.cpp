@@ -20,6 +20,10 @@ void ReadTask::DoTask()
 {
 	m_readEndSemaphore->processSignal();
 	void* area = m_area->writeWithoutLock();
+	if (area == nullptr)
+	{
+		printf("ReadTask area nullptr\n");
+	}
 	while (true)
 	{
 		m_readSemaphore->processWait();
