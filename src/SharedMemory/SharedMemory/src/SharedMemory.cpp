@@ -198,7 +198,7 @@ void* SharedMemory::writeWithoutLock()
 void SharedMemory::close()
 {
 #ifdef _MSC_VER
-	if (m_readMemoryPtr)
+	if (m_readMemoryPtr != nullptr)
 	{
 		::UnmapViewOfFile(m_readMemoryPtr);
 		m_readMemoryPtr = nullptr;

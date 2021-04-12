@@ -11,7 +11,7 @@ public:
 	/** 构造函数
 	@param [in] name 共享内存名
 	@param [in] size 共享内存大小，如果是0表示打开
-	@param [in] isAllowExist 是否允许申请之前存在，linux下可能出现不同字符串对应同一个数字的情况，不代表申请失败说明之前存在
+	@param [in] isAllowExist 是否允许申请之前存在，windows下申请方一定是false，linux下可能出现不同字符串对应同一个数字的情况，申请失败不一定表示之前存在
 	*/
 	SharedMemory(const std::string& name, uint32_t size = 0, bool isAllowExist = true);
 
