@@ -8,6 +8,7 @@ class CTaskThreadManagerAPI CTask
 {
 	friend class CTaskThread;
 public:
+	//不要在构造和析构里做耗时操作，会降低发送任务的效率，但不会内存泄露或崩溃
 	CTask();
     CTask(int32_t taskId);
 

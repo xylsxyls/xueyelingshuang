@@ -10,6 +10,11 @@ m_count(0)
 
 }
 
+Semaphore::~Semaphore()
+{
+	closeProcessSemaphore();
+}
+
 void Semaphore::signal()
 {
 	std::unique_lock<std::mutex> lock(m_mtx);
@@ -56,7 +61,7 @@ void Semaphore::openProcessSemaphore(const std::string& name)
 
 void Semaphore::closeProcessSemaphore()
 {
-	if (m_processSemaphore != nullptr)
+	if (m_processSemaphore == nullptr)
 	{
 		return;
 	}

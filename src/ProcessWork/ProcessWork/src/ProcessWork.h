@@ -6,10 +6,12 @@
 #include <atomic>
 #include <mutex>
 #include "ProcessWorkMacro.h"
+#include "FiniteDeque/FiniteDequeAPI.h"
 
 class SharedMemory;
 class ProcessReceiveCallback;
 class Semaphore;
+class ProcessReadWriteMutex;
 
 /** 进程通信类
 */
@@ -29,15 +31,20 @@ public:
 public:
 	/** 初始化接收模块
 	@param [in] callback 接收回调类
-	@param [in] receiveSize 单个共享内存接收区大小，1M
+	@param [in] receiveSize 单个共享内存接收区大小，500K
 	@param [in] areaCount 缓存块个数
+	@param [in] flow 缓存资源数，一般向几个进程发就给几个资源
 	@return 返回是否初始化成功
 	*/
-	bool initReceive(ProcessReceiveCallback* callback, int32_t receiveSize = 1 * 1024 * 1024, int32_t areaCount = 100);
+	bool initReceive(ProcessReceiveCallback* callback, int32_t receiveSize = 500 * 1024, int32_t areaCount = 100, int32_t flow = 10);
 
 	/** 销毁接收模块资源
 	*/
 	void uninitReceive();
+
+	/** 清空发送模块的缓存资源
+	*/
+	void clear();
 
 	/** 初始化发送线程
 	*/
@@ -46,8 +53,8 @@ public:
 	/** 销毁发送线程
 	*/
 	void uninitPostThread();
-
-	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方
+	
+	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方，需业务保证对方进程存在，1.6万包/s
 	@param [in] destPid 目标进程pid
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
@@ -55,7 +62,7 @@ public:
 	*/
 	void send(int32_t destPid, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId = CorrespondParam::PROTO_MESSAGE);
 
-	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方
+	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方，1.2万包/s
 	@param [in] processName 目标进程名，带后缀
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
@@ -107,4 +114,21 @@ protected:
 	uint32_t m_copyThreadId;
 	uint32_t m_receiveThreadId;
 	uint32_t m_postThreadId;
+
+	int32_t m_flow;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	FiniteDeque<std::pair<int32_t, std::shared_ptr<SharedMemory>>> m_sendProcessDeque;
+	std::mutex m_sendProcessDequeMutex;
+	FiniteDeque<std::pair<std::string, std::shared_ptr<SharedMemory>>> m_sendMemoryDeque;
+	std::mutex m_sendMemoryDequeMutex;
+	FiniteDeque<std::pair<int32_t, std::shared_ptr<ProcessReadWriteMutex>[2]>> m_sendMutexDeque;
+	std::mutex m_sendMutexDequeMutex;
+	FiniteDeque<std::pair<int32_t, std::shared_ptr<Semaphore>[4]>> m_sendSemaphoreDeque;
+	std::mutex m_sendSemaphoreDequeMutex;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 };

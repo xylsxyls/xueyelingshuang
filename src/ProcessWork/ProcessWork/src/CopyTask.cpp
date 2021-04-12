@@ -23,9 +23,9 @@ void CopyTask::DoTask()
 	int32_t sendPid = *(int32_t*)memory;
 	int32_t length = *((int32_t*)memory + 1) - 4;
 	CorrespondParam::ProtocolId protocolId = (CorrespondParam::ProtocolId)*((int32_t*)memory + 2);
-	std::shared_ptr<ReceiveTask> spReceiveTask(new ReceiveTask((char*)memory + 12, length));
+	std::shared_ptr<ReceiveTask> spReceiveTask(new ReceiveTask);
+	spReceiveTask->setParam((char*)memory + 12, length, sendPid, m_callback, protocolId);
 	*(memoryPair.second) = false;
-	spReceiveTask->setParam(sendPid, m_callback, protocolId);
 	m_receiveThread->PostTask(spReceiveTask);
 }
 

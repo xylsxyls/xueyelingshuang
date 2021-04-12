@@ -11,10 +11,8 @@ class ReceiveTask : public CTask
 {
 public:
 	/** 构造函数
-	@param[in] buffer 数据首地址
-	@param[in] length 长度
 	*/
-	ReceiveTask(const char* buffer, int32_t length);
+	ReceiveTask();
 
 	/** 析构函数
 	*/
@@ -26,11 +24,15 @@ public:
 	void DoTask();
 
 	/** 设置参数
+	@param [in] buffer 数据首地址
+	@param [in] length 长度
 	@param [in] sendPid 发送者的pid
 	@param [in] callback 接收回调类
 	@param [in] protocolId 数据编码方式
 	*/
-	void setParam(int32_t sendPid,
+	void setParam(const char* buffer,
+		int32_t length,
+		int32_t sendPid,
 		ProcessReceiveCallback* callback,
 		CorrespondParam::ProtocolId protocolId);
 

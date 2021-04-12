@@ -49,3 +49,10 @@ ReadWriteMutex_dlllib=$2
 ReadWriteMutex_debugRelease=$3
 ReadWriteMutex_allSame=$4
 "$CLOUD_REBUILD" ReadWriteMutex $ReadWriteMutex_bit $ReadWriteMutex_dlllib $ReadWriteMutex_debugRelease $ReadWriteMutex_allSame
+
+#--------------------------------------------------------------------
+FiniteDeque_bit=$1
+FiniteDeque_dlllib=$2
+FiniteDeque_debugRelease=$3
+FiniteDeque_allSame=$4
+"$CLOUD_REBUILD" FiniteDeque $FiniteDeque_bit $FiniteDeque_dlllib $FiniteDeque_debugRelease $FiniteDeque_allSame

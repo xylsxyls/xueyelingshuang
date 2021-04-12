@@ -141,6 +141,13 @@ void CTaskThread::WorkThread()
 		{
 			break;
 		}
+		//任务执行完之后清空指针执行task析构
+		{
+			std::unique_lock<std::mutex> lock(m_mutex);
+			m_spCurTask = nullptr;
+			m_spCurTaskBk = nullptr;
+			m_curTaskLevel = 0;
+		}
 		m_semaphore->wait();
     }
 }

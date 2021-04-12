@@ -18,6 +18,10 @@ public:
 	*/
 	Semaphore();
 
+	/** 析构函数
+	*/
+	~Semaphore();
+
 public:
 	/** 信号量的通知，通知几次wait允许通过几次，wait之前通知一次则wait执行时允许通过，一对一，不允许一对多
 	*/
@@ -38,7 +42,7 @@ public:
 	*/
 	void openProcessSemaphore(const std::string& name);
 
-	/** 关闭信号量
+	/** 关闭信号量，在析构中也会执行，重复执行不会崩溃
 	*/
 	void closeProcessSemaphore();
 
