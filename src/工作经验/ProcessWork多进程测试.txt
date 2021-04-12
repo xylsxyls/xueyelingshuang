@@ -27,7 +27,9 @@ cp ConsoleTest ConsoleTest_9
 #include <stdlib.h>
 #endif
 #include "ProcessWork/ProcessWorkAPI.h"
+#ifdef __unix__
 #include "SendToMessageTest.h"
+#endif
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CDump/CDumpAPI.h"
@@ -39,6 +41,8 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
+		ProcessWork::instance().clear();
+		ProcessWork::instance().uninitReceive();
 	}
 	return FALSE;
 }
@@ -54,9 +58,10 @@ void CtrlCMessage(int eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		//ProcessWork::instance().uninitPostThread();
+		ProcessWork::instance().clear();
 		ProcessWork::instance().uninitReceive();
 		exit(0);
-	}	
+	}
 }
 
 struct CtrlC
@@ -121,14 +126,18 @@ int32_t main()
 		ProcessReceive receive;
 		bool result = ProcessWork::instance().initReceive(&receive);
 		printf("result = %d\n", result);
+#ifdef _MSC_VER
+		CSystem::Sleep(5000 + whileCountIndex * 90000);
+#elif __unix__
 		CSystem::Sleep(5000 + whileCountIndex * 60000);
+#endif
 		printf("%s begin\n", name.c_str());
 		int32_t index = -1;
-		while(index++ != 10000 - 1)
+		while (index++ != 10000 - 1)
 		{
 			std::string sendMessage = std::to_string(index);
 			int32_t sendIndex = -1;
-			while(sendIndex++ != COUNT)
+			while (sendIndex++ != COUNT)
 			{
 				if (sendIndex <= currentIndex)
 				{
@@ -142,7 +151,11 @@ int32_t main()
 		printf("%s end\n", name.c_str());
 
 		//CSystem::Sleep(60000);
+#ifdef _MSC_VER
+		CSystem::Sleep(120000 + whileCountIndex * 60000);
+#elif __unix__
 		CSystem::Sleep(90000 + whileCountIndex * 60000);
+#endif
 
 		ProcessWork::instance().clear();
 		//ProcessWork::instance().uninitPostThread();

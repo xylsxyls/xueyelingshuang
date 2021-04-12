@@ -54,7 +54,8 @@ public:
 	*/
 	void uninitPostThread();
 	
-	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方，需业务保证对方进程存在，1.6万包/s
+	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方，需业务保证对方进程存在
+	windows下发送速度9.6万/s，接收速度2.3万/s，linux下发送速度1.6万包/s，接收速度1.6万包/s
 	@param [in] destPid 目标进程pid
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
@@ -62,7 +63,8 @@ public:
 	*/
 	void send(int32_t destPid, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId = CorrespondParam::PROTO_MESSAGE);
 
-	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方，1.2万包/s
+	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方
+	windows下发送速度5万包/s，接收速度2.5万包/s，linux下发送速度1.2万包/s，接收速度1.2万包/s
 	@param [in] processName 目标进程名，带后缀
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
