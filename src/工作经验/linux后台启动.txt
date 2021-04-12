@@ -1,0 +1,3 @@
+./ConsoleTest &
+getchar();挡不住退出
+需要用sleep

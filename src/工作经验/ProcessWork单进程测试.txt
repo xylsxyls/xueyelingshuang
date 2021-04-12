@@ -1,0 +1,123 @@
+#include "ConsoleTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include "ProcessWork/ProcessWorkAPI.h"
+#include "SendToMessageTest.h"
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
+#include "CStopWatch/CStopWatchAPI.h"
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	printf("eve = %d\n", eve);
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		printf("ctrl\n");
+		CTaskThreadManager::Instance().UninitAll();
+		ProcessWork::instance().uninitReceive();
+		exit(0);
+	}	
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+class ProcessReceive : public ProcessReceiveCallback
+{
+public:
+	/** 接收虚函数
+	@param [in] sendPid 发送进程ID
+	@param [in] buffer 数据内存
+	@param [in] length 数据长度
+	@param [in] protocolId 发送数据协议
+	*/
+	virtual void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+	{
+		RCSend("sendPid = %d, buffer = %s, length = %d, protocolId = %d", sendPid, buffer, length, (int32_t)protocolId);
+	}
+};
+
+class Task : public CTask
+{
+public:
+	Task():
+		m_exit(false)
+	{
+
+	}
+
+	void DoTask()
+	{
+		CStopWatch watch;
+		uint32_t pid = CSystem::currentProcessPid();
+		int32_t index = -1;
+		while((index++ != 1000000 - 1) && !m_exit)
+		{
+			//std::string sendMessage = std::to_string(index);
+			//ProcessWork::instance().send(pid, sendMessage.c_str(), sendMessage.size());
+			ProcessWork::instance().send("ConsoleTest", "123456", 6);
+		}
+		printf("watch = %d\n", (int32_t)watch.GetWatchTime());
+	}
+
+	void StopTask()
+	{
+		printf("stop\n");
+		m_exit = true;
+	}
+
+private:
+	std::atomic<bool> m_exit;
+};
+
+int32_t main()
+{
+	ProcessReceive receive;
+	bool result = ProcessWork::instance().initReceive(&receive);
+	printf("result = %d\n", result);
+	
+	int32_t count = 1;
+	while(count--!=0)
+	{
+		uint32_t threadId = CTaskThreadManager::Instance().Init();
+		std::shared_ptr<Task> spTask(new Task);
+		CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spTask);
+	}
+	
+	printf("end\n");
+	getchar();
+	return 0;
+}

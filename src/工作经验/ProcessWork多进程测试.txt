@@ -1,0 +1,156 @@
+cp ConsoleTest ConsoleTest_0
+cp ConsoleTest ConsoleTest_1
+cp ConsoleTest ConsoleTest_2
+cp ConsoleTest ConsoleTest_3
+cp ConsoleTest ConsoleTest_4
+cp ConsoleTest ConsoleTest_5
+cp ConsoleTest ConsoleTest_6
+cp ConsoleTest ConsoleTest_7
+cp ConsoleTest ConsoleTest_8
+cp ConsoleTest ConsoleTest_9
+./ConsoleTest_0 &
+./ConsoleTest_1 &
+./ConsoleTest_2 &
+./ConsoleTest_3 &
+./ConsoleTest_4 &
+./ConsoleTest_5 &
+./ConsoleTest_6 &
+./ConsoleTest_7 &
+./ConsoleTest_8 &
+./ConsoleTest_9 &
+
+#include "ConsoleTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include "ProcessWork/ProcessWorkAPI.h"
+#include "SendToMessageTest.h"
+#include "CSystem/CSystemAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
+#include "CDump/CDumpAPI.h"
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		//ProcessWork::instance().uninitPostThread();
+		ProcessWork::instance().uninitReceive();
+		exit(0);
+	}	
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+#define COUNT 9
+#define COUNTNUM '9'
+
+class ProcessReceive : public ProcessReceiveCallback
+{
+public:
+	/** 接收虚函数
+	@param [in] sendPid 发送进程ID
+	@param [in] buffer 数据内存
+	@param [in] length 数据长度
+	@param [in] protocolId 发送数据协议
+	*/
+	virtual void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+	{
+		RCSend("sendPid = %d, buffer = %s, length = %d, protocolId = %d", sendPid, buffer, length, (int32_t)protocolId);
+
+		std::string name = CSystem::GetCurrentExeName();
+		int32_t currentIndex = name.back() - 48;
+		if (name.back() == COUNTNUM)
+		{
+			return;
+		}
+		std::string sendMessage = "1234567890";
+		std::string sendName = CStringManager::Format("ConsoleTest_%d", ++currentIndex);
+		ProcessWork::instance().send(sendName, sendMessage.c_str(), sendMessage.size());
+	}
+};
+
+/** 测试方式：把编译出的ConsoleTest改为ConsoleTest_0到9，同时启动，有20秒等待时间，输出165万行表示正常运行
+*/
+int32_t main()
+{
+	CDump::declareDumpFile();
+	int32_t whileCountIndex = -1;
+	while (whileCountIndex++ != 5 - 1)
+	{
+		bool isLast = false;
+		std::string name = CSystem::GetCurrentExeName();
+		int32_t currentIndex = name.back() - 48;
+		if (name.back() == COUNTNUM)
+		{
+			isLast = true;
+		}
+
+		ProcessReceive receive;
+		bool result = ProcessWork::instance().initReceive(&receive);
+		printf("result = %d\n", result);
+		CSystem::Sleep(5000 + whileCountIndex * 60000);
+		printf("%s begin\n", name.c_str());
+		int32_t index = -1;
+		while(index++ != 10000 - 1)
+		{
+			std::string sendMessage = std::to_string(index);
+			int32_t sendIndex = -1;
+			while(sendIndex++ != COUNT)
+			{
+				if (sendIndex <= currentIndex)
+				{
+					continue;
+				}
+				std::string sendName = CStringManager::Format("ConsoleTest_%d", sendIndex);
+				ProcessWork::instance().send(sendName, sendMessage.c_str(), sendMessage.size());
+			}
+		}
+
+		printf("%s end\n", name.c_str());
+
+		//CSystem::Sleep(60000);
+		CSystem::Sleep(90000 + whileCountIndex * 60000);
+
+		ProcessWork::instance().clear();
+		//ProcessWork::instance().uninitPostThread();
+		ProcessWork::instance().uninitReceive();
+
+		printf("uninit all, name = %s\n", name.c_str());
+	}
+
+	CSystem::Sleep(60000 * 60 * 24);
+	return 0;
+}
