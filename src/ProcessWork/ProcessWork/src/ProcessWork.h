@@ -65,7 +65,7 @@ public:
 
 	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方
 	windows下发送速度5万包/s，接收速度2.5万包/s，linux下发送速度1.2万包/s，接收速度1.2万包/s
-	@param [in] processName 目标进程名，带后缀
+	@param [in] processName 目标进程名，windows下不带后缀名，linux下全名
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
 	@param [in] protocolId 协议号

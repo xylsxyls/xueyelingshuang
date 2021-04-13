@@ -74,7 +74,7 @@ std::vector<std::string> CStringManager::split(const std::string& splitString, c
 
 std::vector<std::wstring> CStringManager::split(const std::wstring& splitString, const std::wstring& separate_character)
 {
-    std::vector<std::wstring> strs;
+	std::vector<std::wstring> strs;
 	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
 	size_t separate_characterLen = separate_character.length();
 	size_t lastPosition = 0;
@@ -260,17 +260,17 @@ void CStringManager::Format(std::string& str, const char* fmt, ...)
 std::string CStringManager::Format(const char* fmt, ...)
 {
 	std::string result;
-    va_list args;
-    va_start(args, fmt);
+	va_list args;
+	va_start(args, fmt);
 #ifdef _WIN32
-    int size = _vscprintf(fmt, args);
+	int size = _vscprintf(fmt, args);
 #elif __unix__
 	va_list argcopy;
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-    //?resize分配后string类会自动在最后分配\0，resize(5)则总长6
-    result.resize(size);
+	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
+	result.resize(size);
 	if (size != 0)
 	{
 #ifdef _WIN32
@@ -280,8 +280,8 @@ std::string CStringManager::Format(const char* fmt, ...)
 		vsnprintf(&result[0], size + 1, fmt, args);
 #endif
 	}
-    va_end(args);
-    return result;
+	va_end(args);
+	return result;
 }
 
 void CStringManager::Format(std::wstring& wstr, const wchar_t* wfmt, ...)
@@ -363,10 +363,10 @@ std::string CStringManager::MakeUpper(const std::string& src)
 {
 	std::string dst;
 #if defined _MSC_VER && (_MSC_VER < 1800)
-    return dst;
+	return dst;
 #endif
-    //如果dst是有值的话则第三个参数传dst.begin()，从头开始覆盖
-    std::transform(src.begin(), src.end(), std::back_inserter(dst), ::toupper);
+	//如果dst是有值的话则第三个参数传dst.begin()，从头开始覆盖
+	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::toupper);
 	return dst;
 }
 
@@ -374,9 +374,9 @@ std::string CStringManager::MakeLower(const std::string& src)
 {
 	std::string dst;
 #if defined _MSC_VER && (_MSC_VER < 1800)
-    return dst;
+	return dst;
 #endif
-    std::transform(src.begin(), src.end(), std::back_inserter(dst), ::tolower);
+	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::tolower);
 	return dst;
 }
 
@@ -384,9 +384,9 @@ std::wstring CStringManager::MakeUpper(const std::wstring& src)
 {
 	std::wstring dst;
 #if defined _MSC_VER && (_MSC_VER < 1800)
-    return dst;
+	return dst;
 #endif
-    std::transform(src.begin(), src.end(), std::back_inserter(dst), ::toupper);
+	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::toupper);
 	return dst;
 }
 
@@ -394,16 +394,16 @@ std::wstring CStringManager::MakeLower(const std::wstring& src)
 {
 	std::wstring dst;
 #if defined _MSC_VER && (_MSC_VER < 1800)
-    return dst;
+	return dst;
 #endif
-    std::transform(src.begin(), src.end(), std::back_inserter(dst), ::tolower);
+	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::tolower);
 	return dst;
 }
 
 std::string CStringManager::GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString)
 {
-    int32_t left = (int32_t)src.find(leftString);
-    int32_t right = (int32_t)src.find(rightString);
+	int32_t left = (int32_t)src.find(leftString);
+	int32_t right = (int32_t)src.find(rightString);
 	return Mid(src, left + 1, right - left - 1);
 }
 
@@ -687,61 +687,61 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 
 static inline unsigned char toHex(const unsigned char &x)
 {
-    return x > 9 ? x -10 + 'A': x + '0';
+	return x > 9 ? x -10 + 'A': x + '0';
 }
 
 static inline unsigned char fromHex(const unsigned char &x)
 {
-    return isdigit(x) ? x-'0' : x-'A'+10;
+	return isdigit(x) ? x-'0' : x-'A'+10;
 }
 
 std::string CStringManager::UrlEncode(const std::string& sIn)
 {
-    std::string sOut;
-    for( size_t ix = 0; ix < sIn.size(); ix++ )
-    {
-        unsigned char buf[4];
-        ::memset( buf, 0, 4 );
-        if( isalnum( (unsigned char)sIn[ix] ) )
-        {
-            buf[0] = sIn[ix];
-        }
-        //else if ( isspace( (BYTE)sIn[ix] ) ) //貌似把空格编码成%20或者+都可以
-        //{
-        //    buf[0] = '+';
-        //}
-        else
-        {
-            buf[0] = '%';
-            buf[1] = toHex( (unsigned char)sIn[ix] >> 4 );
-            buf[2] = toHex( (unsigned char)sIn[ix] % 16);
-        }
-        sOut += (char *)buf;
-    }
-    return sOut;
+	std::string sOut;
+	for( size_t ix = 0; ix < sIn.size(); ix++ )
+	{
+		unsigned char buf[4];
+		::memset( buf, 0, 4 );
+		if( isalnum( (unsigned char)sIn[ix] ) )
+		{
+			buf[0] = sIn[ix];
+		}
+		//else if ( isspace( (BYTE)sIn[ix] ) ) //貌似把空格编码成%20或者+都可以
+		//{
+		//	buf[0] = '+';
+		//}
+		else
+		{
+			buf[0] = '%';
+			buf[1] = toHex( (unsigned char)sIn[ix] >> 4 );
+			buf[2] = toHex( (unsigned char)sIn[ix] % 16);
+		}
+		sOut += (char *)buf;
+	}
+	return sOut;
 }
 
 std::string CStringManager::UrlDecode(const std::string& sIn)
 {
-    std::string sOut;
-    for( size_t ix = 0; ix < sIn.size(); ix++ )
-    {
-        unsigned char ch = 0;
-        if(sIn[ix]=='%')
-        {
-            ch = (fromHex(sIn[ix+1])<<4);
-            ch |= fromHex(sIn[ix+2]);
-            ix += 2;
-        }
-        else if(sIn[ix] == '+')
-        {
-            ch = ' ';
-        }
-        else
-        {
-            ch = sIn[ix];
-        }
-        sOut += (char)ch;
-    }
-    return sOut;
+	std::string sOut;
+	for( size_t ix = 0; ix < sIn.size(); ix++ )
+	{
+		unsigned char ch = 0;
+		if(sIn[ix]=='%')
+		{
+			ch = (fromHex(sIn[ix+1])<<4);
+			ch |= fromHex(sIn[ix+2]);
+			ix += 2;
+		}
+		else if(sIn[ix] == '+')
+		{
+			ch = ' ';
+		}
+		else
+		{
+			ch = sIn[ix];
+		}
+		sOut += (char)ch;
+	}
+	return sOut;
 }

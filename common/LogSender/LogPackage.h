@@ -1,6 +1,10 @@
 #pragma once
 
+#ifdef _MSC_VER
 struct __declspec(novtable) LogPackage
+#elif __unix__
+struct LogPackage
+#endif
 {
 public:
 	enum LogLevel

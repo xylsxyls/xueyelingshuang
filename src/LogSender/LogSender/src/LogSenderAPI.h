@@ -3,6 +3,10 @@
 #define _LogSenderAPI
 #endif
 #include "LogSender.h"
+#ifdef __unix__
+#include <unistd.h>
+#include <dlfcn.h>
+#endif
 
 #define LOG_SEND(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, true, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
 #define LOG_SEND_LOCAL(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, false, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
@@ -26,6 +30,18 @@ protected:
 
 	}
 
+	/** 析构函数
+	*/
+	~LogSenderManager()
+	{
+#ifdef _MSC_VER
+		::FreeLibrary(m_interface);
+#elif __unix__
+		::dlclose(m_interface);
+#endif
+	}
+
+
 public:
 	/** 单一实例
 	@return 返回单一实例
@@ -47,19 +63,34 @@ public:
 		if (m_dllHinstance == nullptr)
 		{
 			char szFilePath[1024] = {};
+#ifdef _MSC_VER
 			::GetModuleFileNameA(NULL, szFilePath, 1024);
+#elif __unix__
+			::readlink("/proc/self/exe", szFilePath, 1024);
+#endif
 			std::string path = szFilePath;
 			int32_t left = (int32_t)path.find_last_of("/\\");
-			std::string name = path.substr(left + 1, path.length() - left - 1);
-			int32_t point = (int32_t)name.find_last_of(".");
+#ifdef _MSC_VER
 			std::string exeDllPath = path.substr(0, left + 1) + "LogSender.dll";
 			m_dllHinstance = ::LoadLibraryExA(exeDllPath.c_str(), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+#elif __unix__
+			std::string exeDllPath = path.substr(0, left + 1) + "libLogSender.so";
+			m_dllHinstance = ::dlopen(exeDllPath.c_str(), RTLD_LAZY);
+#endif
 			if (m_dllHinstance == nullptr)
 			{
+#ifdef _MSC_VER
 				m_dllHinstance = ::LoadLibraryExA("D:/xueyelingshuang/common/LogSender/LogSender.dll", 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+#elif __unix__
+				m_dllHinstance = ::dlopen("/home/xylsxyls/xueyelingshuang/common/LogSender/libLogSender.so", RTLD_LAZY);
+#endif
 				if (m_dllHinstance == nullptr)
 				{
+#ifdef _MSC_VER
 					m_dllHinstance = ::LoadLibraryExA("D:/LogSender/LogSender.dll", 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+#elif __unix__
+					m_dllHinstance = ::dlopen("/tmp/LogSender/libLogSender.so", RTLD_LAZY);
+#endif
 				}
 			}
 		}
@@ -71,7 +102,11 @@ public:
 
 		if (m_logInstance == nullptr)
 		{
+#ifdef _MSC_VER
 			m_logInstance = (LogSenderInstance)::GetProcAddress(m_dllHinstance, "logInstance");
+#elif __unix__
+			m_logInstance = (LogSenderInstance)::dlsym(m_dllHinstance, "logInstance");
+#endif
 		}
 		
 		if (m_logInstance == nullptr)
@@ -84,6 +119,10 @@ public:
 
 protected:
 	LogSenderInterface* m_interface;
+#ifdef _MSC_VER
 	HINSTANCE m_dllHinstance;
+#elif __unix__
+	void* m_dllHinstance;
+#endif
 	LogSenderInstance m_logInstance;
 };

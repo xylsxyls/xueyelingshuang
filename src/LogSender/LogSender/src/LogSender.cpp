@@ -4,6 +4,9 @@
 #include "CSystem/CSystemAPI.h"
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "SharedMemory/SharedMemoryAPI.h"
+#ifdef __unix__
+#include <stdarg.h>
+#endif
 
 LogSenderAPI LogSenderInterface& logInstance()
 {
@@ -40,13 +43,26 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	}
 
 	std::string str;
-	va_list args = nullptr;
+	va_list args;
 	va_start(args, format);
-	int32_t size = ::_vscprintf(format, args);
+#ifdef _WIN32
+	int size = _vscprintf(format, args);
+#elif __unix__
+	va_list argcopy;
+	va_copy(argcopy, args);
+	int size = vsnprintf(nullptr, 0, format, argcopy);
+#endif
 	//?resize分配后string类会自动在最后分配\0，resize(5)则总长6
 	str.resize(size);
-	//?即便分配了足够内存，长度必须加1，否则会崩溃
-	::vsprintf_s(&str[0], size + 1, format, args);
+	if (size != 0)
+	{
+#ifdef _WIN32
+		//?即便分配了足够内存，长度必须加1，否则会崩溃
+		vsprintf_s(&str[0], size + 1, format, args);
+#elif __unix__
+		vsnprintf(&str[0], size + 1, format, args);
+#endif
+	}
 	va_end(args);
 
 	uint64_t time = 0;
