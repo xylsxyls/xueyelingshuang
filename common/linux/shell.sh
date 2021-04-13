@@ -5,6 +5,7 @@ chmod 777 ../ResourceFile/ResourceFile1.0
 chmod 777 ../MessageTest/MessageTest1.0
 chmod 777 ../FindText/FindText1.0
 chmod 777 ../Launch/Launch1.0
+chmod 777 ../LogTest/LogTest1.0
 chmod 777 ./*.sh
 chmod 777 ../../*/*/*.sh
 chmod 777 ../../*/*/*/*.sh
