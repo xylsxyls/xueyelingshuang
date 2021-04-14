@@ -31,7 +31,7 @@ void LogTask::DoTask()
 				(LogManager::LogLevel)(int32_t)m_messageMap[LOG_LEVEL],
 				m_messageMap[LOG_FILE_NAME].toString(),
 				m_messageMap[LOG_FUN_NAME].toString(),
-				m_messageMap[LOG_PROCESS_NAME].toString() + ".exe",
+				m_messageMap[LOG_PROCESS_NAME].toString(),
 				logTime,
 				(int32_t)(m_messageMap[LOG_THREAD_ID]),
 				"NET %s %s",
@@ -39,11 +39,24 @@ void LogTask::DoTask()
 				m_messageMap[LOG_BUFFER].toString().c_str());
 			return;
 		}
-		LogManager::instance().print(0,
+		static int32_t newFileId = 0;
+		int32_t fileId = 0;
+		std::string logName = m_messageMap[LOG_NAME].toString();
+		if (!logName.empty())
+		{
+			logName.append(".log");
+			fileId = LogManager::instance().findFileId(logName);
+			if (fileId == -1)
+			{
+				LogManager::instance().init(++newFileId, logName);
+				fileId = newFileId;
+			}
+		}
+		LogManager::instance().print(fileId,
 			(LogManager::LogLevel)(int32_t)m_messageMap[LOG_LEVEL],
 			m_messageMap[LOG_FILE_NAME].toString(),
 			m_messageMap[LOG_FUN_NAME].toString(),
-			m_processName + ".exe",
+			m_processName,
 			logTime,
 			(int32_t)(m_messageMap[LOG_THREAD_ID]),
 			"%s",

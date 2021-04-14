@@ -28,6 +28,8 @@ public:
 	const char* m_fileName;
 	//输出日志的函数名
 	const char* m_funName;
+	//日志文件的文件名
+	const char* m_logName;
 
 	/** 构造函数
 	*/
@@ -36,7 +38,8 @@ public:
 		bool isSendScreen,
 		bool isWriteLog,
 		const char* fileName,
-		const char* funName)
+		const char* funName,
+		const char* logName)
 	{
 		m_logLevel = logLevel;
 		m_isSendNet = isSendNet;
@@ -44,5 +47,6 @@ public:
 		m_isWriteLog = isWriteLog;
 		m_fileName = fileName;
 		m_funName = funName;
+		m_logName = logName;
 	}
 };

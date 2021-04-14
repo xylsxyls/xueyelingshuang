@@ -8,14 +8,23 @@
 #include <dlfcn.h>
 #endif
 
-#define LOG_SEND(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, true, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
-#define LOG_SEND_LOCAL(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, false, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
-#define LOG_SEND_DEBUG(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_DEBUG, false, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
-#define LOG_SEND_ONLY_INFO(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, false, false, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
-#define LOG_SEND_INFO(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, false, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
-#define LOG_SEND_WARNING(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_WARNING, true, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
-#define LOG_SEND_ERROR(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_ERROR, true, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
-#define LOG_SEND_FATAL(format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_FATAL, true, true, true, __FILE__, __FUNCTION__), format, ##__VA_ARGS__);}
+#define LOG_SEND(format, ...) LOG_SEND_EX("", format, ##__VA_ARGS__)
+#define LOG_SEND_LOCAL(logName, format, ...) LOG_SEND_LOCAL_EX("", format, ##__VA_ARGS__)
+#define LOG_SEND_DEBUG(logName, format, ...) LOG_SEND_DEBUG_EX("", format, ##__VA_ARGS__)
+#define LOG_SEND_ONLY_INFO(logName, format, ...) LOG_SEND_ONLY_INFO_EX("", format, ##__VA_ARGS__)
+#define LOG_SEND_INFO(logName, format, ...) LOG_SEND_INFO_EX("", format, ##__VA_ARGS__)
+#define LOG_SEND_WARNING(logName, format, ...) LOG_SEND_WARNING_EX("", format, ##__VA_ARGS__)
+#define LOG_SEND_ERROR(logName, format, ...) LOG_SEND_ERROR_EX("", format, ##__VA_ARGS__)
+#define LOG_SEND_FATAL(logName, format, ...) LOG_SEND_FATAL_EX("", format, ##__VA_ARGS__)
+
+#define LOG_SEND_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, true, true, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
+#define LOG_SEND_LOCAL_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, false, true, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
+#define LOG_SEND_DEBUG_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_DEBUG, false, true, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
+#define LOG_SEND_ONLY_INFO_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, false, false, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
+#define LOG_SEND_INFO_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, false, true, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
+#define LOG_SEND_WARNING_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_WARNING, true, true, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
+#define LOG_SEND_ERROR_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_ERROR, true, true, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
+#define LOG_SEND_FATAL_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_FATAL, true, true, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
 
 typedef LogSenderInterface&(*LogSenderInstance)();
 

@@ -81,6 +81,7 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 		(*m_message)[LOG_IS_WRITE_LOG] = (int32_t)package.m_isWriteLog;
 		(*m_message)[LOG_THREAD_ID] = (int32_t)CSystem::SystemThreadId();
 
+		(*m_message)[LOG_NAME] = package.m_logName;
 		(*m_message)[LOG_FILE_NAME] = package.m_fileName;
 		(*m_message)[LOG_FUN_NAME] = package.m_funName;
 		(*m_message)[LOG_BUFFER] = str;

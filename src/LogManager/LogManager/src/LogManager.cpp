@@ -10,8 +10,7 @@ LogManager::LogManager():
 m_processMutex(nullptr),
 m_log(true)
 {
-	m_exeName = CSystem::GetCurrentExeName();
-	m_exeName.append(".exe");
+	m_exeName = CSystem::GetCurrentExeFullName();
 	m_processMutex = new ProcessReadWriteMutex("LogManager_Mutex");
 }
 
@@ -205,6 +204,18 @@ void LogManager::deleteFile(int32_t fileId)
 	std::string logPath = getLogPath(fileId);
 	uninit(fileId);
 	CSystem::deleteFile(logPath.c_str());
+}
+
+int32_t LogManager::findFileId(const std::string& path)
+{
+	for (auto itLog = m_logMap.begin(); itLog != m_logMap.end(); ++itLog)
+	{
+		if (itLog->second.first == path)
+		{
+			return itLog->first;
+		}
+	}
+	return -1;
 }
 
 std::ofstream* LogManager::getLogFile(int32_t fileId)

@@ -49,6 +49,7 @@ public:
 	static LogManager& instance();
 
 public:
+	//初始化和反初始化不能和printf并行
 	void init(int32_t fileId = 0, const std::string& path = "", bool log = true);
 
 	void print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...);
@@ -58,6 +59,8 @@ public:
 	void uninitAll();
 
 	void deleteFile(int32_t fileId);
+
+	int32_t findFileId(const std::string& path);
 
 protected:
 	std::ofstream* getLogFile(int32_t fileId);

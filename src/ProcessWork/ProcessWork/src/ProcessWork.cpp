@@ -57,9 +57,7 @@ bool ProcessWork::initReceive(ProcessReceiveCallback* callback, int32_t receiveS
 #ifdef _MSC_VER
 	std::string currentExeName = CSystem::GetCurrentExeName();
 #elif __unix__
-	char szFilePath[1024] = {};
-	::readlink("/proc/self/exe", szFilePath, 1024);
-	std::string currentExeName = CSystem::GetName(szFilePath, 1);
+	std::string currentExeName = CSystem::GetCurrentExeFullName();
 #endif
 	m_pid = new SharedMemory(CStringManager::Format("ProcessArea_%s", currentExeName.c_str()), 4, false);
 	if (m_area->isFailed())

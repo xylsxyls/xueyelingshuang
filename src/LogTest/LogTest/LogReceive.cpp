@@ -9,7 +9,11 @@
 LogReceive::LogReceive():
 m_netClientManagerPid(0)
 {
+#ifdef _MSC_VER
 	m_netClientManagerPid = CSystem::processFirstPid("NetClientManager1.0.exe");
+#elif __unix__
+	m_netClientManagerPid = CSystem::processFirstPid("NetClientManager1.0");
+#endif
 
 	m_screenThreadId = CTaskThreadManager::Instance().Init();
 	m_logThreadId = CTaskThreadManager::Instance().Init();
@@ -93,7 +97,7 @@ std::string LogReceive::getSenderName(int32_t sendPid)
 	{
 		return it->second;
 	}
-	std::string processName = CSystem::GetName(CSystem::processName(sendPid), 3);
+	std::string processName = CSystem::GetName(CSystem::processName(sendPid), 1);
 	m_sendMap[sendPid] = processName;
 	return processName;
 }

@@ -1093,6 +1093,17 @@ std::string CSystem::GetCurrentExeName()
 	return CSystem::GetName(szFilePath, 3);
 }
 
+std::string CSystem::GetCurrentExeFullName()
+{
+	char szFilePath[1024] = {};
+#ifdef _WIN32
+	::GetModuleFileNameA(NULL, szFilePath, 1024);
+#elif __unix__
+	::readlink("/proc/self/exe", szFilePath, 1024);
+#endif
+	return CSystem::GetName(szFilePath, 1);
+}
+
 std::string CSystem::GetSystemTempPath()
 {
 #ifdef _WIN32
