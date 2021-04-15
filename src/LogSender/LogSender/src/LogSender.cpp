@@ -89,7 +89,7 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 		(*m_message).toString(strMessage);
 	}
 	
-	send(strMessage.c_str(), strMessage.length());
+	send(strMessage.c_str(), (int32_t)strMessage.length());
 }
 
 void LogSender::send(const char* buffer, int32_t length)

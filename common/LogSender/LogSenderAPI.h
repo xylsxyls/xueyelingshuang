@@ -44,9 +44,9 @@ protected:
 	~LogSenderManager()
 	{
 #ifdef _MSC_VER
-		::FreeLibrary(m_interface);
+		::FreeLibrary(m_dllHinstance);
 #elif __unix__
-		::dlclose(m_interface);
+		::dlclose(m_dllHinstance);
 #endif
 	}
 
