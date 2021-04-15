@@ -6,7 +6,9 @@
 NetClient::NetClient() :
 m_server(nullptr),
 m_receiveThreadId(0),
-m_heartThreadId(0)
+m_heartThreadId(0),
+m_receiveThread(nullptr),
+m_heartThread(nullptr)
 {
 
 }

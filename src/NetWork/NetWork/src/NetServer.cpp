@@ -2,7 +2,9 @@
 #include "NetWorkHelper.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
-NetServer::NetServer()
+NetServer::NetServer():
+m_receiveThread(nullptr),
+m_receiveThreadId(0)
 {
 
 }
