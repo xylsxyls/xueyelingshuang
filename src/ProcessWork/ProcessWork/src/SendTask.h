@@ -8,10 +8,8 @@ class SendTask : public CTask
 {
 public:
 	/** 构造函数
-	@param[in] buffer 数据首地址
-	@param[in] length 长度
 	*/
-	SendTask(const char* buffer, int32_t length);
+	SendTask();
 
 	/** 析构函数
 	*/
@@ -23,12 +21,16 @@ public:
 	void DoTask();
 
 	/** 设置参数
+	@param [in] buffer 数据首地址
+	@param [in] length 长度
 	@param [in] thisProcessId 当前进程pid
 	@param [in] destPid 目标进程pid
 	@param [in] processName 目标进程名，不带后缀
 	@param [in] protocolId 编码方式
 	*/
-	void setParam(int32_t thisProcessId,
+	void setParam(const char* buffer,
+		int32_t length,
+		int32_t thisProcessId,
 		int32_t destPid,
 		const std::string& processName,
 		CorrespondParam::ProtocolId protocolId);

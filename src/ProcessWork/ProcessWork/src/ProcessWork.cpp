@@ -356,8 +356,8 @@ void ProcessWork::post(int32_t destPid, const char* buffer, int32_t length, Corr
 	{
 		return;
 	}
-	std::shared_ptr<SendTask> spSendTask(new SendTask(buffer, length));
-	spSendTask->setParam(m_thisProcessPid, destPid, "", protocolId);
+	std::shared_ptr<SendTask> spSendTask(new SendTask);
+	spSendTask->setParam(buffer, length, m_thisProcessPid, destPid, "", protocolId);
 	std::shared_ptr<CTaskThread> postThread = CTaskThreadManager::Instance().GetThreadInterface(m_postThreadId);
 	if (postThread == nullptr)
 	{
@@ -372,8 +372,8 @@ void ProcessWork::post(const std::string& processName, const char* buffer, int32
 	{
 		return;
 	}
-	std::shared_ptr<SendTask> spSendTask(new SendTask(buffer, length));
-	spSendTask->setParam(m_thisProcessPid, 0, processName, protocolId);
+	std::shared_ptr<SendTask> spSendTask(new SendTask);
+	spSendTask->setParam(buffer, length, m_thisProcessPid, 0, processName, protocolId);
 	std::shared_ptr<CTaskThread> postThread = CTaskThreadManager::Instance().GetThreadInterface(m_postThreadId);
 	if (postThread == nullptr)
 	{
