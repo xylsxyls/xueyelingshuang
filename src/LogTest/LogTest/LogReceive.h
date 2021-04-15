@@ -33,9 +33,13 @@ protected:
 	std::map<int32_t, std::string> m_sendMap;
 	uint32_t m_screenThreadId;
 	uint32_t m_logThreadId;
+	uint32_t m_logDeleteThreadId;
 	uint32_t m_netThreadId;
 	std::shared_ptr<CTaskThread> m_screenThread;
 	std::shared_ptr<CTaskThread> m_logThread;
+	std::shared_ptr<CTaskThread> m_logDeleteThread;
 	std::shared_ptr<CTaskThread> m_netThread;
 	ProtoMessage m_message;
+	std::atomic<bool> m_needSendDeleteLog;
+	std::atomic<int32_t> m_lastLogTime;
 };

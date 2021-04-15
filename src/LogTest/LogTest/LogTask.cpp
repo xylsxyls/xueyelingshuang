@@ -17,7 +17,7 @@ void LogTask::DoTask()
 	m_message.getMap(m_messageMap);
 	if ((int32_t)m_messageMap[LOG_UNINIT] == (int32_t)true)
 	{
-		LogManager::instance().deleteFile(0);
+		LogManager::instance().uninitAll();
 		return;
 	}
 	if ((int32_t)m_messageMap[LOG_IS_WRITE_LOG] == (int32_t)true)

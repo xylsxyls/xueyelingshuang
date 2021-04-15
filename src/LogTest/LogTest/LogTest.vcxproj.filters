@@ -33,6 +33,9 @@
     <ClInclude Include="LogTest.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="LogDeleteTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LogReceive.cpp">
@@ -49,6 +52,9 @@
     </ClCompile>
     <ClCompile Include="LogTest.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LogDeleteTask.cpp">
+      <Filter>Task</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
