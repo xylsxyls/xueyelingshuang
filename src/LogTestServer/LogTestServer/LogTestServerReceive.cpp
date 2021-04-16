@@ -7,7 +7,7 @@
 
 LogTestServerReceive::LogTestServerReceive()
 {
-	m_iniPath = CSystem::GetCurrentExePath() + "Config.ini";
+	m_iniPath = CSystem::GetCurrentExePath() + "LogTestServerConfig.ini";
 }
 
 void LogTestServerReceive::receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)

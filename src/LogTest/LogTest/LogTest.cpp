@@ -64,7 +64,7 @@ int32_t main()
 {
 	CDump::declareDumpFile();
 
-	LogManager::instance().init();
+	LogManager::instance().set(true, false);
 
 	NetSender::instance().initPostThread();
 	LogReceive logReceive;

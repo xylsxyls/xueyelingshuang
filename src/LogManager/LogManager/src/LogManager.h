@@ -3,6 +3,7 @@
 #include <string>
 #include <stdint.h>
 #include <map>
+#include <atomic>
 
 //LOGDEBUG在release下不会输进日志文件
 #define LOGDEBUG(format, ...) LogManager::instance().print(0, LogManager::LOG_DEBUG, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
@@ -50,7 +51,10 @@ public:
 
 public:
 	//初始化和反初始化不能和printf并行
-	void init(int32_t fileId = 0, const std::string& path = "", bool log = true);
+	void init(int32_t fileId = 0, const std::string& path = "");
+
+	//该接口会动态应用到所有日志文件
+	void set(bool writeLog, bool writeBeginEnd);
 
 	void print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...);
 
@@ -74,9 +78,10 @@ private:
 #endif
 	std::string m_exeName;
 	std::map<int32_t, std::pair<std::string, std::ofstream*>> m_logMap;
+	std::atomic<bool> m_writeBeginEnd;
+	std::atomic<bool> m_writeLog;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 	ProcessReadWriteMutex* m_processMutex;
-	bool m_log;
 };

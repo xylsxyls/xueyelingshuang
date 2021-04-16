@@ -8,7 +8,8 @@
 
 LogManager::LogManager():
 m_processMutex(nullptr),
-m_log(true)
+m_writeLog(true),
+m_writeBeginEnd(true)
 {
 	m_exeName = CSystem::GetCurrentExeFullName();
 	m_processMutex = new ProcessReadWriteMutex("LogManager_Mutex");
@@ -30,33 +31,41 @@ LogManager& LogManager::instance()
 	return s_logManager;
 }
 
-void LogManager::init(int32_t fileId, const std::string& path, bool log)
+void LogManager::init(int32_t fileId, const std::string& path)
 {
-	m_log = log;
-	if (!log)
+	if (!m_writeLog)
 	{
 		return;
 	}
-	std::string logPath;
-	if (path.empty())
-	{
-		logPath = CSystem::GetCurrentExePath() + m_exeName + ".log";
-	}
-	else
-	{
-		logPath = path;
-	}
-
+	
 	if (m_logMap.find(fileId) == m_logMap.end())
 	{
+		std::string logPath;
+		if (path.empty())
+		{
+			logPath = CSystem::GetCurrentExePath() + m_exeName + ".log";
+		}
+		else
+		{
+			logPath = path;
+		}
 		std::ofstream* logFile = new std::ofstream(logPath.c_str(), std::ios::app);
 		if (logFile == nullptr || !logFile->is_open())
 		{
 			return;
 		}
 		m_logMap[fileId] = std::pair<std::string, std::ofstream*>(path, logFile);
-		LOGBEGIN(fileId, "");
+		if (m_writeBeginEnd)
+		{
+			LOGBEGIN(fileId, "");
+		}
 	}
+}
+
+void LogManager::set(bool writeLog, bool writeBeginEnd)
+{
+	m_writeLog = writeLog;
+	m_writeBeginEnd = writeBeginEnd;
 }
 
 void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...)
@@ -68,7 +77,7 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 
 	if ((fileId == 0) && (m_logMap.find(0) == m_logMap.end()))
 	{
-		init(0, "", m_log);
+		init(0, "");
 	}
 
 	std::ofstream* logFile = getLogFile(fileId);
@@ -152,7 +161,7 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 	fileMacroTemp = CStringManager::Mid(fileMacro, nRight + 1, fileMacro.length() - nRight - 1);
 	
 	WriteLock writelock(*m_processMutex);
-	if (flag == LOG_BEGIN)
+	if (flag == LOG_BEGIN && m_writeBeginEnd)
 	{
 		bool isFileEmpty = true;
 		std::ofstream* newLogFile = new std::ofstream(getLogPath(fileId), std::ios::in | std::ios::out | std::ios::app);
@@ -174,7 +183,10 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 
 void LogManager::uninit(int32_t fileId)
 {
-	LOGEND(fileId, "");
+	if (m_writeBeginEnd)
+	{
+		LOGEND(fileId, "");
+	}
 	auto itLog = m_logMap.find(fileId);
 	if (itLog == m_logMap.end())
 	{
