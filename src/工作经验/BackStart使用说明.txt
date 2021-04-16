@@ -1,0 +1,6 @@
+创建ini文件BackStartConfig.ini
+5000是毫秒，不同进程英文逗号分隔，没有参数就不写，空格按照示例写，不能多写
+可执行文件的路径可以带空格，名字不能带空格
+windows下不带.exe，linux下全名
+[Section]
+start="5000 NetClientManager1.0 param1 param2,10000 LogTest1.0 param1 param2,0 Test1.0"

@@ -1,0 +1,70 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>rep_print_medcan.CAB</title>
+</head>
+<body>
+<!--<div style="width:600px;height:600px; background:blue;">-->
+
+<!--<object style="width:100%;height: 100%" id="Rep_Print_MedCan21"CLASSID="CLSID:EA572513-6C7E-4409-B2C0-7B45AB528C05"></object>-->
+<!-- 1066 541 -->
+<object style="width:960px;height:487px" id="Rep_Print_MedCan21" CLASSID="CLSID:DEEB6F38-BC4F-43E7-8C36-DAA2FBE2029F"></object>
+
+<!--</div>-->
+<button id="btn_open" onclick="btn_oepn()">打开摄像头</button>
+<button id="btn_close" onclick="btn_close()">关闭摄像头</button>	
+<button id="btnTest" onclick="startDetect()">开始活体检测</button>
+<button id="btnTest" onclick="getCameraList()">获取摄像头列表</button>		
+<script type="text/javascript">
+        <!--var plugin = document.getElementById('plugin');-->
+        <!--var btnTest = document.getElementById('btnTest');-->
+	
+        //测试插件 CODEBASE="./MFCActiveXControl1.ocx"
+        <!--btnTest.onmouseup = function (event) {plugin.testPlugin();}-->
+	function btn_oepn()
+	{		
+	 if(window.navigator.platform == "Win32")
+  alert("IE是32位的！");
+ else
+  alert("IE是64位的！");
+	    var myocx = document.getElementById("Rep_Print_MedCan21");
+		alert(2);
+		var res = myocx.Init();
+		alert(res);
+		//var iresult = myocx.OpenCamera(0);
+		//myocx.StartDetect(0,1,10);
+		//myocx.StartDetect(1,1,10)
+		//alert(iresult);
+
+	}
+	function btn_close()
+	{
+		var myocx = document.getElementById("Rep_Print_MedCan21");
+		myocx.CloseCamera();
+	}
+	
+	function startDetect()
+	{		
+	    var myocx = document.getElementById("Rep_Print_MedCan21");
+		//myocx.ShowFaceRect(1)
+		//var iresult = myocx.OpenCamera(0);
+		//myocx.StartDetect(0,1,10);
+		//myocx.StartDetect(1,1,10)
+		//alert(iresult);
+	}
+	
+	function getCameraList()
+	{
+		var myocx = document.getElementById("Rep_Print_MedCan21");
+		var iresult = myocx.GetCameraList();
+		alert(iresult);
+	}
+	
+</script>
+<script language="javascript" for="Rep_Print_MedCan21" event="test3()" type="text/javascript"> 
+    alert("event test3()");
+</script>  
+<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Del</kbd> 
+</body>
+</html>

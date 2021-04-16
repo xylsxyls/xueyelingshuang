@@ -1,0 +1,35 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312" />
+<meta http-equiv="X-UA_Compatible" content="IE=11">
+<title>Demo_OCX网页加载</title>
+<script src="td_video.js"></script>
+<script type="text/javascript">
+function init(){
+TiandyVideo.InitAndOpenCamera();
+TiandyVideo.ShowFaceRect(1);
+}
+function initasync(){
+TiandyVideo.InitAndOpenCameraAsync();
+}
+function start(){
+TiandyVideo.StartDetect(640,480,10000);
+}
+function uninit(){
+TiandyVideo.Uninit();
+TiandyVideo.CloseCameraAsync();
+}
+
+</script>
+</head>
+<body>
+<div id="ocxDiv" style="width:640px;height:480px;border:red 1px solid ;">
+<OBJECT id="TiandyVideo" classid="clsid:E38BAE9B-E033-4118-A8D1-D8B34EEA9794" width="100%" height="100%"></OBJECT>
+</div>
+<BUTTON type="button" id="btnSubmit" onclick="init();">同步初始化</BUTTON>
+<BUTTON type="button" id="btnSubmit1" onclick="initasync();">异步初始化</BUTTON>
+<BUTTON type="button" id="btnSubmit2" onclick="start();">开始检测</BUTTON>
+<BUTTON type="button" id="btnSubmit3" onclick="uninit();">反初始化</BUTTON>
+</body>
+</html>
