@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/BackStart/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=libCStringManager.so;libCSystem.so;libCini.so",
+        "-DBIT=32",
+        "-DDEBUGRELEASE=release"
+    ]
+}
