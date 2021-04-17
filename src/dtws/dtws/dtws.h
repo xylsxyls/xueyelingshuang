@@ -1,19 +1,17 @@
-#ifndef DTWS_H
-#define DTWS_H
+#ifndef QTTEST_H
+#define QTTEST_H
 
 #include <QtWidgets/QMainWindow>
-#include "ui_dtws.h"
-#include <memory>
+#include "ui_Dtws.h"
 
 class COriginalButton;
-class CTaskThread;
 
-class dtws : public QMainWindow
+class Dtws : public QMainWindow
 {
 	Q_OBJECT
 public:
-	dtws(QWidget* parent = nullptr);
-	~dtws();
+	Dtws(QWidget* parent = nullptr);
+	~Dtws();
 
 protected:
 	void init();
@@ -25,23 +23,15 @@ protected:
 
 private slots:
 	void onAccountButtonClicked();
-	void onSaButtonClicked();
-	void onQButtonClicked();
-	void onThree5ButtonClicked();
-	void onStopButtonClicked();
+	void onFollowButtonClicked();
+	void onHealButtonClicked();
 
 private:
-	Ui::dtwsClass ui;
+	Ui::DtwsClass ui;
 	COriginalButton* m_account;
-	COriginalButton* m_sa;
-	COriginalButton* m_q;
-	COriginalButton* m_three5;
-	COriginalButton* m_stop;
-
-	uint32_t m_workThreadId;
-	uint32_t m_checkWorkThreadId;
-	std::shared_ptr<CTaskThread> m_workThread;
-	std::shared_ptr<CTaskThread> m_checkWorkThread;
+	COriginalButton* m_follow;
+	COriginalButton* m_heal;
+	uint32_t m_threadId;
 };
 
-#endif // DTWS_H
+#endif // QTTEST_H

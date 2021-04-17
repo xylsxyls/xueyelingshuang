@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "${workspaceFolder}/Dtws2/",
+    "cmake.sourceDirectory": "${workspaceFolder}/Dtws/",
     "cmake.configureArgs": [
         "-DLIBRARIESRELY=",
         "-DBIT=32",

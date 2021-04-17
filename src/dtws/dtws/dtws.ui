@@ -1,8 +1,8 @@
 <UI version="4.0" >
- <class>dtwsClass</class>
- <widget class="QMainWindow" name="dtwsClass" >
+ <class>DtwsClass</class>
+ <widget class="QMainWindow" name="DtwsClass" >
   <property name="objectName" >
-   <string notr="true">dtwsClass</string>
+   <string notr="true">DtwsClass</string>
   </property>
   <property name="geometry" >
    <rect>
@@ -13,7 +13,7 @@
    </rect>
   </property>
   <property name="windowTitle" >
-   <string>dtws</string>
+   <string>Dtws</string>
   </property>
   <widget class="QMenuBar" name="menuBar" />
   <widget class="QToolBar" name="mainToolBar" />
@@ -23,7 +23,7 @@
  <layoutDefault spacing="6" margin="11" />
  <pixmapfunction></pixmapfunction>
  <resources>
-   <include location="dtws.qrc"/>
+   <include location="Dtws.qrc"/>
  </resources>
  <connections/>
 </UI>

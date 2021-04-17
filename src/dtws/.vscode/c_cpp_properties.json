@@ -3,7 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/Dtws2/",
+                "${workspaceFolder}/Dtws/",
                 "${workspaceFolder}/build/",
                 "${workspaceFolder}/../../include/",
                 "${QT5GCC32}/include/",
