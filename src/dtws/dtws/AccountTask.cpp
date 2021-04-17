@@ -16,9 +16,9 @@ void AccountTask::DoTask()
 		CMouse::LeftClick();
 		CMouse::LeftClick();
 
-		Sleep(2000);
+		Sleep(5000);
 		CMouse::MoveAbsolute(xyls::Point(918, 653), 50);
-		Sleep(1000);
+		Sleep(3000);
 		CMouse::MoveAbsolute(xyls::Point(918, 653), 50);
 
 		CMouse::MoveAbsolute(xyls::Point(907, 754), 50);
