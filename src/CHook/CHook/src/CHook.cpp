@@ -1,10 +1,9 @@
 #include "CHook.h"
 #pragma data_seg("HookData")
-#pragma data_seg()
-#pragma comment(linker,"/SECTION:HookData,RWS")
-
 HHOOK CHook::s_hHook = nullptr;
 HINSTANCE CHook::s_hInstDLL = nullptr;
+#pragma data_seg()
+#pragma comment(linker,"/SECTION:HookData,RWS")
 
 BOOL APIENTRY DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {

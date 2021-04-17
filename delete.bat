@@ -88,6 +88,12 @@ del "%~dp0src\AutoPlayGame\AutoPlayGame\AutoPlayGame.vcxproj.user"
 rmdir /q /s "%~dp0src\PerformanceTest\PerformanceTest\GeneratedFiles\"
 del "%~dp0src\PerformanceTest\PerformanceTest\PerformanceTest.vcxproj.user"
 ::------------------------------------------------------------
+rmdir /q /s "%~dp0src\GetPoint\GetPoint\GeneratedFiles\"
+del "%~dp0src\GetPoint\GetPoint\GetPoint.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\Dtws2\Dtws2\GeneratedFiles\"
+del "%~dp0src\Dtws2\Dtws2\Dtws2.vcxproj.user"
+::------------------------------------------------------------
 rmdir /q /s "%~dp0src\QtClient\.vs\"
 ::------------------------------------------------------------
 rmdir /q /s "%~dp0src\StockClient\StockClient\GeneratedFiles\"
