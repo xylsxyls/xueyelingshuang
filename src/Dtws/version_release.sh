@@ -1,0 +1,8 @@
+"$CLOUD_REBUILD" Cini 32 lib release same
+"$CLOUD_REBUILD" CHook 32 lib release same
+"$CLOUD_REBUILD" DialogManager 32 lib release same
+"$CLOUD_REBUILD" NetSender 32 lib release same
+"$CLOUD_REBUILD" CMouse 32 dll release librely
+"$CLOUD_REBUILD" CScreen 32 dll release librely
+"$CLOUD_REBUILD" ScreenScript 32 dll release only
+"$CLOUD_REBUILD" CKeyboard 32 dll release only
