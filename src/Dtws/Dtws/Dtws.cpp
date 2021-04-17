@@ -9,7 +9,7 @@
 #include "HealTask.h"
 #include "CHook/CHookAPI.h"
 
-xyls::Point g_accountPoint[3] = { { 508, 1064 }, { 569, 1060 }, { 628, 1057 } };
+xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
 int32_t g_accountCount = 3;
 uint32_t* g_threadId = nullptr;
 

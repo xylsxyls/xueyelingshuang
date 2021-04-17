@@ -16,7 +16,7 @@ void AccountTask::DoTask()
 		CMouse::LeftClick();
 		CMouse::LeftClick();
 
-		Sleep(2000);
+		Sleep(1500);
 		CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
 		CMouse::LeftClick();
 		Sleep(1000);
@@ -30,7 +30,7 @@ void AccountTask::DoTask()
 			CMouse::LeftClick();
 		}
 	}
-	Sleep(30000);
+	Sleep(15000);
 	std::vector<std::string> accountName;
 	if (g_accountCount == 3)
 	{
