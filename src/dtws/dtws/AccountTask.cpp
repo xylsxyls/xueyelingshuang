@@ -17,9 +17,11 @@ void AccountTask::DoTask()
 		CMouse::LeftClick();
 
 		Sleep(5000);
-		CMouse::MoveAbsolute(xyls::Point(918, 653), 50);
+		CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
+		CMouse::LeftClick();
 		Sleep(3000);
-		CMouse::MoveAbsolute(xyls::Point(918, 653), 50);
+		CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
+		CMouse::LeftClick();
 
 		CMouse::MoveAbsolute(xyls::Point(907, 754), 50);
 		int32_t count = 3;
