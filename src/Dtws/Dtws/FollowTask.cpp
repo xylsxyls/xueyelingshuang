@@ -8,7 +8,13 @@ extern int32_t g_accountCount;
 
 void FollowTask::DoTask()
 {
-	Sleep(2000);
+	Sleep(1500);
+	if (g_accountCount != 1)
+	{
+		//µã»÷ÈÎÎñÀ¸
+		CMouse::MoveAbsolute(xyls::Point(463, 1061), 10);
+		CMouse::LeftClick();
+	}
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
 	{
@@ -18,10 +24,10 @@ void FollowTask::DoTask()
 			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 50);
 			CMouse::LeftClick();
 		}
-		Sleep(200);
+		Sleep(100);
 		//¸úËæ
 		CKeyboard::KeyPress(CKeyboard::F2);
-		Sleep(200);
+		Sleep(300);
 		CKeyboard::InputString("4");
 	}
 }

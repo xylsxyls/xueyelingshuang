@@ -14,8 +14,10 @@ m_exit(false)
 void HealTask::DoTask()
 {
 	Sleep(1000);
+	int32_t times = 0;
 	while (!m_exit)
 	{
+		++times;
 		int32_t accountIndex = -1;
 		while (accountIndex++ != g_accountCount - 1)
 		{
@@ -26,6 +28,10 @@ void HealTask::DoTask()
 				CMouse::LeftClick();
 			}
 			Sleep(200);
+			if (times == 1)
+			{
+				CKeyboard::KeyPress(CKeyboard::Right);
+			}
 			//²¹³ä
 			CKeyboard::InputString("5");
 			Sleep(2000);
