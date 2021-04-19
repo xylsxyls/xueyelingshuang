@@ -18,7 +18,7 @@ public:
 public:
 	void initPostThread();
 
-	void initReceive(ProcessReceiveCallback* callback, int32_t receiveSize = 1 * 1024 * 1024, int32_t areaCount = 100);
+	void initReceive(ProcessReceiveCallback* callback, int32_t receiveSize = 500 * 1024, int32_t areaCount = 50);
 
 	void init(ProtoMessage& message, CorrespondParam::ProtocolId protocolId, bool isServer = false);
 
