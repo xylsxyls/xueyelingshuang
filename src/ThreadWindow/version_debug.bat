@@ -1,1 +1,0 @@
-call "%CLOUD_REBUILD%" ThreadWindow 32 dll debug same

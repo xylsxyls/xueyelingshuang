@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Task">
-      <UniqueIdentifier>{4aec15d5-9e63-4027-bedb-95f6eb7ee85d}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ThreadWindow.h">
@@ -28,7 +25,7 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\WindowTask.h">
-      <Filter>Task</Filter>
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -36,7 +33,7 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\WindowTask.cpp">
-      <Filter>Task</Filter>
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

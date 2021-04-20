@@ -1,13 +1,18 @@
 #include "WindowTask.h"
+#include "Semaphore/SemaphoreAPI.h"
 
 WindowTask::WindowTask():
 m_wndProc(nullptr),
 m_visible(false),
 m_exit(false),
-m_hasExit(false),
-m_hWnd(nullptr)
+m_hWnd(nullptr),
+m_semaphore(nullptr),
+m_hasTitle(false)
 {
-
+	m_rect.left = 0;
+	m_rect.top = 0;
+	m_rect.right = 0;
+	m_rect.bottom = 0;
 }
 
 void WindowTask::DoTask()
@@ -23,12 +28,22 @@ void WindowTask::DoTask()
 	wcex.hCursor = 0;//LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground = 0;//(HBRUSH)(COLOR_WINDOW+1);
 	wcex.lpszMenuName = 0;//MAKEINTRESOURCE(IDC_WIN32PROJECT1);
-	wcex.lpszClassName = "Win32ThreadWindow";//szWindowClass;
+	wcex.lpszClassName = m_windowName.c_str();//szWindowClass;
 	wcex.hIconSm = 0;//LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 	::RegisterClassEx(&wcex);
 
-	*m_hWnd = ::CreateWindow(wcex.lpszClassName, wcex.lpszClassName, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, wcex.hInstance, NULL);
+	*m_hWnd = ::CreateWindow(wcex.lpszClassName, wcex.lpszClassName, m_hasTitle ? WS_OVERLAPPEDWINDOW :
+		WS_OVERLAPPED |
+		WS_SYSMENU | 
+		WS_MINIMIZEBOX | 
+		WS_MAXIMIZEBOX |
+		WS_POPUP,
+		m_rect.left, m_rect.top, m_rect.right - m_rect.left, m_rect.bottom - m_rect.top, NULL, NULL, wcex.hInstance, NULL);
+	//加载系统自带鼠标样式
+	HCURSOR hCursor = ::LoadCursor(NULL, IDC_ARROW);
+	::SetClassLong(*m_hWnd, GCL_HCURSOR, (LONG)hCursor);
+
+	m_semaphore->signal();
 	
 	if (m_visible)
 	{
@@ -46,7 +61,6 @@ void WindowTask::DoTask()
 			::DispatchMessage(&msg);
 		}
 	}
-	m_hasExit = true;
 }
 
 void WindowTask::setHwnd(HWND* hWnd)
@@ -54,14 +68,30 @@ void WindowTask::setHwnd(HWND* hWnd)
 	m_hWnd = hWnd;
 }
 
+void WindowTask::setSemaphore(Semaphore* semaphore)
+{
+	m_semaphore = semaphore;
+}
+
+void WindowTask::setWindowPos(const RECT& rect)
+{
+	m_rect = rect;
+}
+
+void WindowTask::setHasTitle(bool hasTitle)
+{
+	m_hasTitle = hasTitle;
+}
+
+void WindowTask::setWindowName(const std::string& windowName)
+{
+	m_windowName = windowName;
+}
+
 void WindowTask::StopTask()
 {
 	m_exit = true;
-	while (!m_hasExit)
-	{
-		::SendMessage(*m_hWnd, WM_QUIT, NULL, NULL);
-		Sleep(1);
-	}
+	::SendMessage(*m_hWnd, WM_QUIT, NULL, NULL);
 }
 
 void WindowTask::setCallback(LRESULT (CALLBACK* wndProc)(HWND, UINT, WPARAM, LPARAM))
