@@ -52,7 +52,7 @@ public:
 	*/
 	HDC GetHDC();
 
-	/** 释放HDC
+	/** 释放HDC，该接口会在Destroy中调用
 	*/
 	void ReleaseHDC();
 
