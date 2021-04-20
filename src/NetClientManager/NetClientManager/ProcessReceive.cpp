@@ -10,6 +10,7 @@ m_client(nullptr)
 	m_computerName = CSystem::getComputerName();
 }
 
+//从本地进程接收
 void ProcessReceive::receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocalId)
 {
 	std::string strBuffer(buffer, length);

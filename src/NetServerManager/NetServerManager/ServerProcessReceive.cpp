@@ -10,6 +10,7 @@ m_server(nullptr)
 
 }
 
+//从本地服务器接收
 void ServerProcessReceive::receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
 	ProtoMessage message;

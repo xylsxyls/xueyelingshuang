@@ -9,6 +9,7 @@ void Server::onClientConnected(uv_tcp_t* client)
 	printf("clientConnected = %p\n", client);
 }
 
+//从网络端接收
 void Server::onReceive(uv_tcp_t* client, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
 	//解压

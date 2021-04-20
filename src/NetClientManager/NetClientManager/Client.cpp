@@ -10,6 +10,7 @@ void Client::onServerConnected()
 	printf("serverConnected\n");
 }
 
+//从网络端接收
 void Client::onReceive(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
 {
 	//解压
