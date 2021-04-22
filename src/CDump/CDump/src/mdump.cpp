@@ -2,11 +2,13 @@
 
 #ifdef _MSC_VER
 
-#include <windows.h>
 #include <dbghelp.h>
 #include <Shlwapi.h>
 #include <time.h>
-#if _MSC_VER <= 1900
+#include <fstream>
+#include <stdint.h>
+//用boost库可以在日志中查看磁盘剩余空间
+#ifdef USE_BOOST
 #include "boost/filesystem.hpp"
 #include "boost/filesystem/fstream.hpp"
 #endif
@@ -94,7 +96,7 @@ static std::string GetCurrentExeName()
 class CErrorLog
 {
 public:
-	CErrorLog(const boost::filesystem::path& p) : m_filePath(p)
+	CErrorLog(const std::string& p) : m_filePath(p)
 	{
 		try
 		{
@@ -121,13 +123,13 @@ public:
 			m_logFile.close();
 	}
 
-	boost::filesystem::fstream& operator << (const char* pStr)
+	std::ofstream& operator << (const char* pStr)
 	{
 		append(std::string(pStr));
 		return m_logFile;
 	}
 
-	boost::filesystem::fstream& operator << (const std::string& s)
+	std::ofstream& operator << (const std::string& s)
 	{
 		append(s);
 		return m_logFile;
@@ -174,7 +176,8 @@ public:
 		CErrorLog& objThis = (*this);
 		append("System Information:\n");
 
-		{ //内存
+		{
+			//内存
 			MEMORYSTATUSEX memoryStatus;
 			memset(&memoryStatus, sizeof(memoryStatus), 0);
 			memoryStatus.dwLength = sizeof(memoryStatus);
@@ -184,7 +187,9 @@ public:
 				memoryStatus.ullAvailPhys >> 20, memoryStatus.ullTotalPhys >> 20);
 		}
 
-		{ // 磁盘空间
+#ifdef USE_BOOST
+		{
+			// 磁盘空间
 			TCHAR szWinDir[_MAX_PATH] = { 0 };
 			boost::filesystem::path sysPath;
 			boost::system::error_code ec;
@@ -192,22 +197,23 @@ public:
 			{
 				sysPath = szWinDir;
 				sysPath = sysPath.root_path();
-
+			
 				boost::filesystem::space_info si = boost::filesystem::space(sysPath, ec);
 				objThis << Format("system Disk: [Available]%I64uM / [Total]%I64uM\n", si.available >> 20, si.capacity >> 20);
 			}
-
+			
 			boost::filesystem::path abs_path = boost::filesystem::system_complete(m_filePath, ec);
 			if (sysPath.empty() || sysPath != abs_path.root_path())
 			{
 				boost::filesystem::space_info si = boost::filesystem::space(abs_path.root_path(), ec);
 				objThis << Format("game Disk: [Available]%I64uM / [Total]%I64uM\n", si.available >> 20, si.capacity >> 20);
 			}
-
 			objThis << "\n";
 		}
+#endif
 
-		{ // Error info
+		{
+			// Error info
 			PEXCEPTION_RECORD pException = pExInfo->ExceptionRecord;
 			PCONTEXT pContext = pExInfo->ContextRecord;
 			MEMORY_BASIC_INFORMATION memInfo = { 0 };
@@ -414,8 +420,8 @@ private:
 		return FALSE;   // Should never get here!
 	}
 private:
-	boost::filesystem::fstream m_logFile;
-	boost::filesystem::path    m_filePath;
+	std::ofstream m_logFile;
+	std::string m_filePath;
 };
 
 #endif
@@ -521,16 +527,15 @@ namespace WIN32DUMP
 		MINIDUMPWRITEDUMP pfnMiniDumpWriteDump = NULL;
 		HMODULE hDll = GetDebugHelperDll((FARPROC*)&pfnMiniDumpWriteDump, true);
 
-#if _MSC_VER <= 1900
 		SYSTEMTIME sys_time;
 		GetLocalTime(&sys_time);
 		std::string currentTime = Format("%4d%02d%02d_%02d_%02d_%02d_%03d",
 			sys_time.wYear, sys_time.wMonth, sys_time.wDay,
 			sys_time.wHour, sys_time.wMinute, sys_time.wSecond, sys_time.wMilliseconds);
 		std::string errorLogName = GetCurrentExeName() + "_" + currentTime + ".log";
-		CErrorLog errLog(boost::filesystem::path(m_szDumpDir) / errorLogName);
+		CErrorLog errLog(std::string(m_szDumpDir) + "/" + errorLogName);
 		errLog.saveExcecptInfo(pExceptionInfo);
-#endif
+
 		if (hDll)
 		{
 			if (pfnMiniDumpWriteDump)
@@ -594,10 +599,8 @@ namespace WIN32DUMP
 						szResult[_countof(szResult) - 1] = L'\0';
 						lRetValue = EXCEPTION_EXECUTE_HANDLER;
 
-#if _MSC_VER <= 1900
 						errLog << "Catch a critical error! \n";
 						errLog << std::string(szResult);
-#endif
 					}
 					else
 					{
@@ -605,9 +608,7 @@ namespace WIN32DUMP
 						_snprintf(szResult, _countof(szResult) - 1, "Failed to save dump file to \"%s\". \n Error: %u\n", szDumpPath, GetLastError());
 						szResult[_countof(szResult) - 1] = L'\0';
 
-#if _MSC_VER <= 1900
 						errLog << szResult;
-#endif
 					}
 
 				}
@@ -617,16 +618,12 @@ namespace WIN32DUMP
 					_snprintf(szResult, _countof(szResult) - 1, "Failed to create dump file \"%s\". \n Error: %u\n", szDumpPath, GetLastError());
 					szResult[_countof(szResult) - 1] = L'\0';
 
-#if _MSC_VER <= 1900
 					errLog << szResult;
-#endif
 				}
 			}
 			else
 			{
-#if _MSC_VER <= 1900
 				errLog << "Catch a critical error! Get MiniDumpWriteDump api from debug helper dll failed!\n";
-#endif
 			}
 
 			FreeLibrary(hDll);
@@ -635,9 +632,7 @@ namespace WIN32DUMP
 		}
 		else
 		{
-#if _MSC_VER <= 1900
 			errLog << "Catch a critical error! Load dbghelp.dll failed!\n";
-#endif
 		}
 
 		//if( ms_func_after_catching_unhandled_exeception )
@@ -651,17 +646,15 @@ namespace WIN32DUMP
 		//	}
 		//}
 
-#if _MSC_VER <= 1900
 		errLog << "\n\n";
 
 		//if (szResult[0] != L('\0'))
 		//	MessageBox(NULL, szResult, m_szAppName, MB_ICONINFORMATION | MB_OK);
 		errLog.close();
-#endif
 #ifndef _DEBUG
 		// Exit the process only in release builds, so that in debug builds the exceptio is passed to a possible
 		// installed debugger
-		Sleep(100);
+		Sleep(500);
 		//ExitProcess(0);
 		TerminateProcess(GetCurrentProcess(), -1);
 #endif

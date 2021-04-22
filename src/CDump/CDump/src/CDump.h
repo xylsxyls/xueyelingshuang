@@ -2,7 +2,7 @@
 #include "CDumpMacro.h"
 #include <string>
 
-/** vs2013版本有崩溃日志输出，其余没有
+/** 会同时输出dump文件和崩溃前堆栈信息记录文件
 */
 class CDumpAPI CDump
 {
