@@ -2,7 +2,14 @@
 
 #ifdef _MSC_VER
 
-#include <dbghelp.h>
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4091)
+#endif
+#include <Dbghelp.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 #include <Shlwapi.h>
 #include <time.h>
 #include <fstream>
@@ -330,7 +337,8 @@ public:
 			while (pc != 0 && !IsBadWritePtr(pFrame, sizeof(PVOID) * 2))
 			{
 				TCHAR szModule[MAX_PATH] = { 0 };
-				DWORD section = 0, offset = 0;
+				DWORD section = 0;
+				SIZE_T offset = 0;
 
 				try
 				{
@@ -343,7 +351,11 @@ public:
 				{
 					break;
 				}
+#ifdef _WIN64
+				objThis << Format("%08X %04X:%016X %s \n", pc, section, offset, szModule);
+#else
 				objThis << Format("%08X %04X:%08X %s \n", pc, section, offset, szModule);
+#endif
 
 				pc = pFrame[1];
 
@@ -370,14 +382,14 @@ public:
 	}
 
 private:
-	BOOL GetLogicalAddress(PVOID addr, PTSTR szModule, DWORD len, DWORD& section, DWORD& offset)
+	BOOL GetLogicalAddress(PVOID addr, PTSTR szModule, DWORD len, DWORD& section, SIZE_T& offset)
 	{
 		MEMORY_BASIC_INFORMATION mbi;
 
 		if (!VirtualQuery(addr, &mbi, sizeof(mbi)))
 			return FALSE;
 
-		DWORD hMod = (DWORD)mbi.AllocationBase;
+		HMODULE hMod = (HMODULE)mbi.AllocationBase;
 
 		if (!hMod)
 			return FALSE;
@@ -393,7 +405,7 @@ private:
 
 		PIMAGE_SECTION_HEADER pSection = IMAGE_FIRST_SECTION(pNtHdr);
 
-		DWORD rva = (DWORD)addr - hMod; // RVA is offset from module load address
+		SIZE_T rva = (SIZE_T)addr - (SIZE_T)hMod; // RVA is offset from module load address
 
 		// Iterate through the section table, looking for the one that encompasses
 		// the linear address.

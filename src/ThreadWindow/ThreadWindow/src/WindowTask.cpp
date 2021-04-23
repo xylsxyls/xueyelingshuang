@@ -41,7 +41,11 @@ void WindowTask::DoTask()
 		m_rect.left, m_rect.top, m_rect.right - m_rect.left, m_rect.bottom - m_rect.top, NULL, NULL, wcex.hInstance, NULL);
 	//加载系统自带鼠标样式
 	HCURSOR hCursor = ::LoadCursor(NULL, IDC_ARROW);
+#ifdef _WIN64
+	::SetClassLongPtr(*m_hWnd, GCLP_HCURSOR, (LONG_PTR)hCursor);
+#else
 	::SetClassLong(*m_hWnd, GCL_HCURSOR, (LONG)hCursor);
+#endif
 
 	m_semaphore->signal();
 	
