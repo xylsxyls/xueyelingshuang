@@ -41,7 +41,8 @@ Dtws::Dtws(QWidget* parent):
 	m_threadId(0),
 	m_account(nullptr),
 	m_follow(nullptr),
-	m_heal(nullptr)
+	m_heal(nullptr),
+	m_followHeal(nullptr)
 {
 	ui.setupUi(this);
 	init();
@@ -81,6 +82,11 @@ void Dtws::init()
 	m_heal->setText(QStringLiteral("²¹³ä"));
 	m_heal->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_heal, &COriginalButton::clicked, this, &Dtws::onHealButtonClicked);
+
+	m_followHeal = new COriginalButton(this);
+	m_followHeal->setText(QStringLiteral("¸úËæ²¹³ä"));
+	m_followHeal->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_followHeal, &COriginalButton::clicked, this, &Dtws::onFollowHealButtonClicked);
 }
 
 bool Dtws::check()
@@ -100,6 +106,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_account);
 	vecButton.push_back(m_follow);
 	vecButton.push_back(m_heal);
+	vecButton.push_back(m_followHeal);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -140,4 +147,12 @@ void Dtws::onHealButtonClicked()
 	showMinimized();
 	std::shared_ptr<HealTask> spHealTask(new HealTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spHealTask);
+}
+
+void Dtws::onFollowHealButtonClicked()
+{
+	showMinimized();
+	std::shared_ptr<FollowTask> spFollowTask(new FollowTask);
+	spFollowTask->setParam(true);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spFollowTask);
 }

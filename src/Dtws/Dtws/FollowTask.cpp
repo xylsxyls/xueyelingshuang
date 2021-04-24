@@ -6,6 +6,12 @@
 extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
 
+FollowTask::FollowTask():
+m_isHeal(false)
+{
+
+}
+
 void FollowTask::DoTask()
 {
 	Sleep(1000);
@@ -42,6 +48,14 @@ void FollowTask::DoTask()
 		//¸úËæ
 		CKeyboard::InputString("4");
 	}
-	CMouse::MoveAbsolute(xyls::Point(396, 1056), 0);
-	CMouse::LeftClick();
+	if (m_isHeal)
+	{
+		CMouse::MoveAbsolute(xyls::Point(396, 1056), 0);
+		CMouse::LeftClick();
+	}
+}
+
+void FollowTask::setParam(bool isHeal)
+{
+	m_isHeal = isHeal;
 }

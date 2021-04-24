@@ -25,12 +25,14 @@ private slots:
 	void onAccountButtonClicked();
 	void onFollowButtonClicked();
 	void onHealButtonClicked();
+	void onFollowHealButtonClicked();
 
 private:
 	Ui::DtwsClass ui;
 	COriginalButton* m_account;
 	COriginalButton* m_follow;
 	COriginalButton* m_heal;
+	COriginalButton* m_followHeal;
 	uint32_t m_threadId;
 };
 
