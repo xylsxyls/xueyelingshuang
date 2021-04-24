@@ -8,11 +8,11 @@ extern int32_t g_accountCount;
 
 void FollowTask::DoTask()
 {
-	Sleep(1500);
+	Sleep(1000);
 	if (g_accountCount != 1)
 	{
 		//点击任务栏
-		CMouse::MoveAbsolute(xyls::Point(463, 1061), 10);
+		CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
 		CMouse::LeftClick();
 	}
 	int32_t accountIndex = -1;
@@ -21,13 +21,27 @@ void FollowTask::DoTask()
 		if (g_accountCount != 1)
 		{
 			//点击任务栏
-			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 50);
+			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
 			CMouse::LeftClick();
 		}
-		Sleep(100);
+		Sleep(10);
 		//跟随
 		CKeyboard::KeyPress(CKeyboard::F2);
-		Sleep(300);
+	}
+
+	accountIndex = -1;
+	while (accountIndex++ != g_accountCount - 1)
+	{
+		if (g_accountCount != 1)
+		{
+			//点击任务栏
+			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
+			CMouse::LeftClick();
+		}
+		Sleep(10);
+		//跟随
 		CKeyboard::InputString("4");
 	}
+	CMouse::MoveAbsolute(xyls::Point(396, 1056), 0);
+	CMouse::LeftClick();
 }
