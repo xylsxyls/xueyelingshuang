@@ -65,6 +65,8 @@ void WindowTask::DoTask()
 			::DispatchMessage(&msg);
 		}
 	}
+	::CloseWindow(*m_hWnd);
+	::DestroyWindow(*m_hWnd);
 }
 
 void WindowTask::setHwnd(HWND* hWnd)
@@ -95,7 +97,7 @@ void WindowTask::setWindowName(const std::string& windowName)
 void WindowTask::StopTask()
 {
 	m_exit = true;
-	::SendMessage(*m_hWnd, WM_QUIT, NULL, NULL);
+	::PostMessage(*m_hWnd, WM_QUIT, NULL, NULL);
 }
 
 void WindowTask::setCallback(LRESULT (CALLBACK* wndProc)(HWND, UINT, WPARAM, LPARAM))
