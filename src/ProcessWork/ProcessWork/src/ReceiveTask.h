@@ -28,18 +28,18 @@ public:
 	@param [in] length 长度
 	@param [in] sendPid 发送者的pid
 	@param [in] callback 接收回调类
-	@param [in] protocolId 数据编码方式
+	@param [in] type 数据类型
 	*/
 	void setParam(const char* buffer,
 		int32_t length,
 		int32_t sendPid,
-		ProcessReceiveCallback* callback,
-		CorrespondParam::ProtocolId protocolId);
+		std::vector<ProcessReceiveCallback*>* callback,
+		MessageType type);
 
 private:
 	int32_t m_sendPid;
-	CorrespondParam::ProtocolId m_protocolId;
-	ProcessReceiveCallback* m_callback;
+	MessageType m_type;
+	std::vector<ProcessReceiveCallback*>* m_callback;
 	char* m_buffer;
 	int32_t m_length;
 };

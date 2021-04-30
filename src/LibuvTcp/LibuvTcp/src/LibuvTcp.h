@@ -32,7 +32,7 @@ public:
 
 	void close(uv_tcp_t* tcp);
 
-	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length);
+	virtual void receive(uv_tcp_t* sender, const char* buffer, int32_t length);
 
 	virtual void clientConnected(uv_tcp_t* client);
 

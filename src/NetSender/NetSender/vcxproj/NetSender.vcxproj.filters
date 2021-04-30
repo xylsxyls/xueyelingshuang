@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="callback">
+      <UniqueIdentifier>{4b8979e9-9a83-43fb-b9e4-804c4e06b82c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\NetSender.h">
@@ -24,10 +27,22 @@
     <ClInclude Include="..\src\NetSenderMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\ClientReceiveCallback.h">
+      <Filter>callback</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ServerReceiveCallback.h">
+      <Filter>callback</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\NetSender.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ClientReceiveCallback.cpp">
+      <Filter>callback</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ServerReceiveCallback.cpp">
+      <Filter>callback</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

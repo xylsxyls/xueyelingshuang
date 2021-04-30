@@ -64,7 +64,8 @@ int32_t main()
 
 	ProcessReceive processReceive;
 	ProcessWork::instance().initPostThread();
-	ProcessWork::instance().initReceive(&processReceive);
+	ProcessWork::instance().addProcessReceiveCallback(&processReceive);
+	ProcessWork::instance().initReceive();
 
 	Client client;
 	processReceive.setClient(&client);

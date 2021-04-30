@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Line">
+      <UniqueIdentifier>{05546ba6-6d25-4d4f-a758-2856d7b4e878}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NetServerManager.h">
@@ -24,8 +27,14 @@
     <ClInclude Include="ServerProcessReceive.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ClientLineManager.h">
+      <Filter>Line</Filter>
+    </ClInclude>
     <ClInclude Include="NetLineManager.h">
-      <Filter>头文件</Filter>
+      <Filter>Line</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerLineManager.h">
+      <Filter>Line</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -38,8 +47,14 @@
     <ClCompile Include="ServerProcessReceive.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ClientLineManager.cpp">
+      <Filter>Line</Filter>
+    </ClCompile>
     <ClCompile Include="NetLineManager.cpp">
-      <Filter>源文件</Filter>
+      <Filter>Line</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerLineManager.cpp">
+      <Filter>Line</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

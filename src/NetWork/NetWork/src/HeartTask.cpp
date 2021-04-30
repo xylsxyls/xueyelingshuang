@@ -13,7 +13,7 @@ void HeartTask::DoTask()
 {
 	while (!m_stop)
 	{
-		m_netClient->send("", 0, CorrespondParam::HEART);
+		m_netClient->send("", 0, MessageType::HEART);
 		std::this_thread::sleep_for(std::chrono::milliseconds(m_time));
 	}
 }

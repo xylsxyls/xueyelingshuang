@@ -149,14 +149,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ClientLineManager.h" />
     <ClInclude Include="NetLineManager.h" />
     <ClInclude Include="NetServerManager.h" />
+    <ClInclude Include="ServerLineManager.h" />
     <ClInclude Include="ServerProcessReceive.h" />
     <ClInclude Include="Server.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ClientLineManager.cpp" />
     <ClCompile Include="NetLineManager.cpp" />
     <ClCompile Include="NetServerManager.cpp" />
+    <ClCompile Include="ServerLineManager.cpp" />
     <ClCompile Include="ServerProcessReceive.cpp" />
     <ClCompile Include="Server.cpp" />
   </ItemGroup>

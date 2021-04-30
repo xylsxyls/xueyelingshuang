@@ -273,7 +273,7 @@ void LibuvTcp::close(uv_tcp_t* tcp)
 	uv_close((uv_handle_t*)tcp, nullptr);
 }
 
-void LibuvTcp::receive(uv_tcp_t* sender, char* buffer, int32_t length)
+void LibuvTcp::receive(uv_tcp_t* sender, const char* buffer, int32_t length)
 {
 	printf("sender = %p, buffer = %p, length = %d\n", sender, buffer, length);
 }

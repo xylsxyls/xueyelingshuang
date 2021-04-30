@@ -1,5 +1,6 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include <vector>
 
 class ProcessReceiveCallback;
 class Semaphore;
@@ -31,7 +32,7 @@ public:
 	@param [in] memoryMap 共享内存组
 	@param [in] receiveThread 接收线程
 	*/
-	void setParam(ProcessReceiveCallback* callback,
+	void setParam(std::vector<ProcessReceiveCallback*>* callback,
 		Semaphore* readSemaphore,
 		Semaphore* readEndSemaphore,
 		SharedMemory* area,
@@ -41,7 +42,7 @@ public:
 
 private:
 	std::atomic<bool> m_exit;
-	ProcessReceiveCallback* m_callback;
+	std::vector<ProcessReceiveCallback*>* m_callback;
 	Semaphore* m_readSemaphore;
 	Semaphore* m_readEndSemaphore;
 	SharedMemory* m_area;

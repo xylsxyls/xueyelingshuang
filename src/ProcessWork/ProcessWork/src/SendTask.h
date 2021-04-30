@@ -26,14 +26,14 @@ public:
 	@param [in] thisProcessId 当前进程pid
 	@param [in] destPid 目标进程pid
 	@param [in] processName 目标进程名，不带后缀
-	@param [in] protocolId 编码方式
+	@param [in] type 数据类型
 	*/
 	void setParam(const char* buffer,
 		int32_t length,
 		int32_t thisProcessId,
 		int32_t destPid,
 		const std::string& processName,
-		CorrespondParam::ProtocolId protocolId);
+		MessageType type);
 
 private:
 	int32_t m_thisProcessPid;
@@ -41,5 +41,5 @@ private:
 	std::string m_processName;
 	char* m_buffer;
 	int32_t m_length;
-	CorrespondParam::ProtocolId m_protocolId;
+	MessageType m_type;
 };

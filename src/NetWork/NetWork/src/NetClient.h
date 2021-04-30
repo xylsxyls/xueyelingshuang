@@ -15,14 +15,14 @@ public:
 
 public:
 	void connect(const char* ip, int32_t port, bool sendHeart = true);
-	void send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId = CorrespondParam::PROTO_MESSAGE);
-	virtual void onReceive(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
+	void send(const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
+	virtual void onReceive(const char* buffer, int32_t length, MessageType type);
 	virtual void onServerConnected();
 	void heart(int32_t time = 5000);
 	virtual void onHeart();
 
 protected:
-	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length);
+	virtual void receive(uv_tcp_t* sender, const char* buffer, int32_t length);
 	virtual void serverConnected(uv_tcp_t* server);
 
 protected:

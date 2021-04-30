@@ -5,7 +5,7 @@
 #endif
 
 void NetWorkHelper::receive(uv_tcp_t* sender,
-	char* buffer,
+	const char* buffer,
 	int32_t length,
 	std::string& receiveArea,
 	const std::shared_ptr<CTaskThread>& receiveThread,

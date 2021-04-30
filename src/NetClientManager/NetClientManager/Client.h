@@ -7,5 +7,5 @@ class Client : public NetClient
 public:
 	virtual void onServerConnected();
 
-	virtual void onReceive(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
+	virtual void onReceive(const char* buffer, int32_t length, MessageType type);
 };

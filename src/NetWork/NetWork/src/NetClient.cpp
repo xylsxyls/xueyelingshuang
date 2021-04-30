@@ -25,16 +25,16 @@ void NetClient::connect(const char* ip, int32_t port, bool sendHeart)
 	}
 }
 
-void NetClient::send(const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+void NetClient::send(const char* buffer, int32_t length, MessageType type)
 {
 	if (m_server == nullptr)
 	{
 		return;
 	}
-	LibuvTcp::send(m_server, buffer, length, protocolId);
+	LibuvTcp::send(m_server, buffer, length, type);
 }
 
-void NetClient::receive(uv_tcp_t* sender, char* buffer, int32_t length)
+void NetClient::receive(uv_tcp_t* sender, const char* buffer, int32_t length)
 {
 	if (m_server == nullptr)
 	{
@@ -43,7 +43,7 @@ void NetClient::receive(uv_tcp_t* sender, char* buffer, int32_t length)
 	NetWorkHelper::receive(sender, buffer, length, m_receiveArea, m_receiveThread, this);
 }
 
-void NetClient::onReceive(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+void NetClient::onReceive(const char* buffer, int32_t length, MessageType type)
 {
 	
 }

@@ -1,9 +1,10 @@
 #include "NetSender.h"
 #include "CSystem/CSystemAPI.h"
 
-NetSender::NetSender()
+NetSender::NetSender():
+m_currentProcessPid(0)
 {
-
+	m_currentProcessPid = (int32_t)CSystem::currentProcessPid();
 }
 
 NetSender& NetSender::instance()
@@ -12,61 +13,96 @@ NetSender& NetSender::instance()
 	return s_netSender;
 }
 
-void NetSender::init(ProtoMessage& message, CorrespondParam::ProtocolId protocolId, bool isServer /*= false*/)
+void NetSender::sendServer(int32_t serverId, const char* buffer, int32_t length)
 {
-	if (!isServer)
-	{
-		message[CLIENT_PID] = (int32_t)CSystem::currentProcessPid();
-	}
+	std::string sendBuffer;
+	sendBuffer.resize(length + 8);
+	*(int32_t*)(&sendBuffer[0]) = serverId;
+	*((int32_t*)(&sendBuffer[0]) + 1) = m_currentProcessPid;
+	::memcpy((char*)((int32_t*)(&sendBuffer[0]) + 2), buffer, length);
+	ProcessWork::instance().send("NetServerManager1.0",
+		sendBuffer.c_str(),
+		sendBuffer.size(),
+		MessageType::MESSAGE);
+}
+
+void NetSender::sendClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length)
+{
+	std::string sendBuffer;
+	sendBuffer.resize(length + 8);
+	*(int32_t*)(&sendBuffer[0]) = connectId;
+	*((int32_t*)(&sendBuffer[0]) + 1) = clientPid;
+	::memcpy((char*)((int32_t*)(&sendBuffer[0]) + 2), buffer, length);
+	ProcessWork::instance().send("NetServerManager1.0",
+		sendBuffer.c_str(),
+		sendBuffer.size(),
+		MessageType::SERVER_MESSAGE);
+}
+
+void NetSender::postServer(int32_t serverId, const char* buffer, int32_t length)
+{
+	std::string sendBuffer;
+	sendBuffer.resize(length + 8);
+	*(int32_t*)(&sendBuffer[0]) = serverId;
+	*((int32_t*)(&sendBuffer[0]) + 1) = m_currentProcessPid;
+	::memcpy((char*)((int32_t*)(&sendBuffer[0]) + 2), buffer, length);
+	ProcessWork::instance().post("NetServerManager1.0",
+		sendBuffer.c_str(),
+		sendBuffer.size(),
+		MessageType::MESSAGE);
+}
+
+void NetSender::postClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length)
+{
+	std::string sendBuffer;
+	sendBuffer.resize(length + 8);
+	*(int32_t*)(&sendBuffer[0]) = connectId;
+	*((int32_t*)(&sendBuffer[0]) + 1) = clientPid;
+	::memcpy((char*)((int32_t*)(&sendBuffer[0]) + 2), buffer, length);
+	ProcessWork::instance().post("NetServerManager1.0",
+		sendBuffer.c_str(),
+		sendBuffer.size(),
+		MessageType::SERVER_MESSAGE);
+}
+
+void NetSender::initClientReceive(ClientReceiveCallback* callback)
+{
+	ProcessWork::instance().addProcessReceiveCallback(callback);
+}
+
+void NetSender::initClient(int32_t serverId, const std::string& serverName, const std::string& initInfo)
+{
+	//客户端将自己的进程号名字及要发的服务进程名和初始化附带信息发送给服务端
+	ProtoMessage message;
+	message[CLIENT_PID] = m_currentProcessPid;
+	message[CLIENT_NAME] = CSystem::GetCurrentExeFullName();
+	message[SERVER_ID] = serverId;
+	message[SERVER_NAME] = serverName;
+	message[CLIENT_INIT_INFO] = initInfo;
 	std::string strMessage = message.toString();
-	ProcessWork::instance().send(isServer ? "NetServerManager1.0" : "NetClientManager1.0",
+	ProcessWork::instance().send("NetServerManager1.0",
 		strMessage.c_str(),
 		strMessage.length(),
-		protocolId);
+		MessageType::CLIENT_INIT);
 }
 
-void NetSender::send(ProtoMessage& message, bool isServer)
+void NetSender::clientInitResponse(int32_t connectId, int32_t clientPid, const std::string& responseInfo)
 {
-	if (!isServer)
-	{
-		message[CLIENT_PID] = (int32_t)CSystem::currentProcessPid();
-	}
+	ProtoMessage message;
+	message[CONNECT_ID] = connectId;
+	message[CLIENT_PID] = clientPid;
+	message[CLIENT_INIT_RESPONSE_INFO] = responseInfo;
 	std::string strMessage = message.toString();
-	ProcessWork::instance().send(isServer ? "NetServerManager1.0" : "NetClientManager1.0",
+	ProcessWork::instance().send("NetServerManager1.0",
 		strMessage.c_str(),
 		strMessage.length(),
-		CorrespondParam::ProtocolId::PROTO_MESSAGE);
+		MessageType::CLIENT_INIT_RESPONSE);
 }
 
-void NetSender::initPostThread()
+void NetSender::initServer(const std::string& initInfo)
 {
-	ProcessWork::instance().initPostThread();
-}
-
-void NetSender::initReceive(ProcessReceiveCallback* callback, int32_t receiveSize, int32_t areaCount)
-{
-	ProcessWork::instance().initReceive(callback, receiveSize, areaCount);
-}
-
-void NetSender::uninitReceive()
-{
-	ProcessWork::instance().uninitReceive();
-}
-
-void NetSender::uninitPostThread()
-{
-	ProcessWork::instance().uninitPostThread();
-}
-
-void NetSender::post(ProtoMessage& message, bool isServer)
-{
-	if (!isServer)
-	{
-		message[CLIENT_PID] = (int32_t)CSystem::currentProcessPid();
-	}
-	std::string strMessage = message.toString();
-	ProcessWork::instance().post(isServer ? "NetServerManager1.0" : "NetClientManager1.0",
-		strMessage.c_str(),
-		strMessage.length(),
-		CorrespondParam::ProtocolId::PROTO_MESSAGE);
+	ProcessWork::instance().send("NetServerManager1.0",
+		initInfo.c_str(),
+		initInfo.length(),
+		MessageType::SERVER_INIT);
 }

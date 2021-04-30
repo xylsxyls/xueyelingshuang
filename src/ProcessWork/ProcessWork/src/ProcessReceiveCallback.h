@@ -10,7 +10,7 @@ public:
 	@param [in] sendPid 发送进程ID
 	@param [in] buffer 数据内存
 	@param [in] length 数据长度
-	@param [in] protocolId 发送数据协议
+	@param [in] type 数据类型
 	*/
-	virtual void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId) = 0;
+	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type) = 0;
 };

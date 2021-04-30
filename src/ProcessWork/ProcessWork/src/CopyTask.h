@@ -25,13 +25,13 @@ public:
 	@param [in] receiveThread 处理线程
 	*/
 	void setParam(int32_t assign,
-		ProcessReceiveCallback* callback,
+		std::vector<ProcessReceiveCallback*>* callback,
 		std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* memoryMap,
 		const std::shared_ptr<CTaskThread>& receiveThread);
 
 private:
 	int32_t m_assign;
-	ProcessReceiveCallback* m_callback;
+	std::vector<ProcessReceiveCallback*>* m_callback;
 	std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* m_memoryMap;
 	std::shared_ptr<CTaskThread> m_receiveThread;
 };

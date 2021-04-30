@@ -13,28 +13,28 @@ m_length(0)
 
 void WorkTask::DoTask()
 {
-	CorrespondParam::ProtocolId protocolId = (CorrespondParam::ProtocolId)(*(int32_t*)m_buffer);
+	MessageType type = (MessageType)(*(int32_t*)m_buffer);
 	
 	if (m_libuvTcp->isClient())
 	{
-		if (protocolId == CorrespondParam::HEART)
+		if (type == MessageType::HEART)
 		{
 			((NetClient*)m_libuvTcp)->onHeart();
 		}
 		else
 		{
-			((NetClient*)m_libuvTcp)->onReceive(m_buffer + 4, m_length - 4, protocolId);
+			((NetClient*)m_libuvTcp)->onReceive(m_buffer + 4, m_length - 4, type);
 		}
 	}
 	else
 	{
-		if (protocolId == CorrespondParam::HEART)
+		if (type == MessageType::HEART)
 		{
 			((NetServer*)m_libuvTcp)->onHeart();
 		}
 		else
 		{
-			((NetServer*)m_libuvTcp)->onReceive(m_sender, m_buffer + 4, m_length - 4, protocolId);
+			((NetServer*)m_libuvTcp)->onReceive(m_sender, m_buffer + 4, m_length - 4, type);
 		}
 	}
 

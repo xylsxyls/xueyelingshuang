@@ -9,7 +9,7 @@ m_sendPid(0),
 m_length(0),
 m_buffer(nullptr),
 m_callback(nullptr),
-m_protocolId(CorrespondParam::ProtocolId::INIT)
+m_type(MessageType::INIT)
 {
 	
 }
@@ -24,7 +24,10 @@ ReceiveTask::~ReceiveTask()
 
 void ReceiveTask::DoTask()
 {
-	m_callback->receive(m_sendPid, m_buffer, m_length, m_protocolId);
+	for (auto itCallback = m_callback->begin(); itCallback != m_callback->end(); ++itCallback)
+	{
+		(*itCallback)->receive(m_sendPid, m_buffer, m_length, m_type);
+	}
 	delete[] m_buffer;
 	m_buffer = nullptr;
 }
@@ -32,8 +35,8 @@ void ReceiveTask::DoTask()
 void ReceiveTask::setParam(const char* buffer,
 	int32_t length,
 	int32_t sendPid,
-	ProcessReceiveCallback* callback,
-	CorrespondParam::ProtocolId protocolId)
+	std::vector<ProcessReceiveCallback*>* callback,
+	MessageType type)
 {
 	m_buffer = new char[length + 1];
 	m_buffer[length] = 0;
@@ -41,5 +44,5 @@ void ReceiveTask::setParam(const char* buffer,
 	m_length = length;
 	m_sendPid = sendPid;
 	m_callback = callback;
-	m_protocolId = protocolId;
+	m_type = type;
 }

@@ -20,16 +20,16 @@ public:
 public:
 	void listen(int32_t port);
 
-	void send(uv_tcp_t* client, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
+	void send(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type);
 
-	virtual void onReceive(uv_tcp_t* client, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
+	virtual void onReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type);
 	
 	virtual void onClientConnected(uv_tcp_t* client);
 
 	virtual void onHeart();
 	
 protected:
-	virtual void receive(uv_tcp_t* sender, char* buffer, int32_t length);
+	virtual void receive(uv_tcp_t* sender, const char* buffer, int32_t length);
 	
 	virtual void clientConnected(uv_tcp_t* client);
 

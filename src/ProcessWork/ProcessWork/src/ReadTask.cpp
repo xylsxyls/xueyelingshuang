@@ -45,7 +45,7 @@ void ReadTask::StopTask()
 	m_readSemaphore->processSignal();
 }
 
-void ReadTask::setParam(ProcessReceiveCallback* callback,
+void ReadTask::setParam(std::vector<ProcessReceiveCallback*>* callback,
 	Semaphore* readSemaphore,
 	Semaphore* readEndSemaphore,
 	SharedMemory* area,

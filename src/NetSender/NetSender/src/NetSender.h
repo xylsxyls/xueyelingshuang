@@ -4,8 +4,10 @@
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "ProcessWork/ProcessWorkAPI.h"
+#include "ClientReceiveCallback.h"
+#include "ServerReceiveCallback.h"
 
-/** 网络发送接收类，调用顺序就是函数顺序
+/** 网络发送接收类
 */
 class NetSenderAPI NetSender
 {
@@ -16,17 +18,25 @@ public:
 	static NetSender& instance();
 
 public:
-	void initPostThread();
+	void initClientReceive(ClientReceiveCallback* callback);
 
-	void initReceive(ProcessReceiveCallback* callback, int32_t receiveSize = 500 * 1024, int32_t areaCount = 50);
+	void initServerReceive(ServerReceiveCallback* callback);
 
-	void init(ProtoMessage& message, CorrespondParam::ProtocolId protocolId, bool isServer = false);
+	void initClient(int32_t serverId, const std::string& serverName, const std::string& initInfo);
 
-	void send(ProtoMessage& message, bool isServer = false);
+	void clientInitResponse(int32_t connectId, int32_t clientPid, const std::string& responseInfo);
 
-	void post(ProtoMessage& message, bool isServer = false);
+	void initServer(const std::string& initInfo);
 
-	void uninitPostThread();
+	void sendServer(int32_t serverId, const char* buffer, int32_t length);
 
-	void uninitReceive();
+	void sendClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length);
+
+	//如使用post需先初始化ProcessWork中的postThread
+	void postServer(int32_t serverId, const char* buffer, int32_t length);
+
+	void postClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length);
+
+private:
+	int32_t m_currentProcessPid;
 };

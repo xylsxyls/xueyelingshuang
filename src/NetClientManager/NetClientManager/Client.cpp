@@ -11,24 +11,32 @@ void Client::onServerConnected()
 }
 
 //从网络端接收
-void Client::onReceive(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+void Client::onReceive(const char* buffer, int32_t length, MessageType type)
 {
 	//解压
 	std::string strMessage;
 	Compress::zlibUnCompress(strMessage, std::string(buffer, length));
-	//获取pid
-	ProtoMessage message;
-	message.from(strMessage);
-	int32_t clientPid = message.getMap()[CLIENT_PID];
-	switch (protocolId)
+	
+	switch (type)
 	{
-	case CorrespondParam::CLIENT_INIT:
+	case MessageType::CLIENT_INIT_RESPONSE:
 	{
-		printf("CLIENT_INIT NetClientManager, length = %d\n", length);
+		ProtoMessage message;
+		message.from(strMessage);
+		int32_t clientPid = message.getMap()[CLIENT_PID];
+		printf("CLIENT_INIT_RESPONSE, length = %d\n", length);
+		ProcessWork::instance().post(clientPid, strMessage.c_str(), strMessage.length(), type);
+		return;
+	}
+	break;
+	case MessageType::SERVER_MESSAGE:
+	{
+		int32_t clientPid = *((int32_t*)(&strMessage[0]) + 1);
+		ProcessWork::instance().post(clientPid, strMessage.c_str(), strMessage.length(), type);
+		return;
 	}
 	break;
 	default:
 		break;
 	}
-	ProcessWork::instance().post(clientPid, strMessage.c_str(), strMessage.length(), protocolId);
 }

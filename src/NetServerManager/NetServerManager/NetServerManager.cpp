@@ -67,7 +67,8 @@ int32_t main()
 
 	ServerProcessReceive serverProcessReceive;
 	ProcessWork::instance().initPostThread();
-	ProcessWork::instance().initReceive(&serverProcessReceive);
+	ProcessWork::instance().addProcessReceiveCallback(&serverProcessReceive);
+	ProcessWork::instance().initReceive();
 
 	Server server;
 	serverProcessReceive.setServer(&server);

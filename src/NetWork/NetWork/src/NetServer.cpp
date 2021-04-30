@@ -17,9 +17,9 @@ void NetServer::listen(int32_t port)
 	loop();
 }
 
-void NetServer::send(uv_tcp_t* client, const char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+void NetServer::send(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
 {
-	LibuvTcp::send(client, buffer, length, protocolId);
+	LibuvTcp::send(client, buffer, length, type);
 }
 
 void NetServer::onClientConnected(uv_tcp_t* client)
@@ -32,12 +32,12 @@ void NetServer::onHeart()
 
 }
 
-void NetServer::receive(uv_tcp_t* sender, char* buffer, int32_t length)
+void NetServer::receive(uv_tcp_t* sender, const char* buffer, int32_t length)
 {
 	NetWorkHelper::receive(sender, buffer, length, m_receiveAreaMap[sender], m_receiveThread, this);
 }
 
-void NetServer::onReceive(uv_tcp_t* client, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+void NetServer::onReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
 {
 
 }

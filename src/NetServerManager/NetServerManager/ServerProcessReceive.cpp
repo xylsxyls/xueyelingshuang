@@ -3,6 +3,8 @@
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "Compress/CompressAPI.h"
 #include "NetLineManager.h"
+#include "ServerLineManager.h"
+#include "CSystem/CSystemAPI.h"
 
 ServerProcessReceive::ServerProcessReceive():
 m_server(nullptr)
@@ -11,30 +13,46 @@ m_server(nullptr)
 }
 
 //从本地服务器接收
-void ServerProcessReceive::receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+void ServerProcessReceive::receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
 {
-	ProtoMessage message;
-	message.from(std::string(buffer, length));
-	uv_tcp_t* client = NetLineManager::instance().findClient((int32_t)message.getMap()[CONNECT_ID]);
-	switch (protocolId)
+	switch (type)
 	{
-	case CorrespondParam::CLIENT_INIT:
+	case MessageType::CLIENT_INIT_RESPONSE:
 	{
-		printf("CLIENT_INIT process, length = %d\n", length);
-	}
-	break;
-	case CorrespondParam::SERVER_INIT:
-	{
-		printf("SERVER_INIT process, length = %d\n", length);
-		ProcessWork::instance().send(sendPid, buffer, length, protocolId);
+		printf("CLIENT_INIT_RESPONSE, length = %d\n", length);
+		ProtoMessage message;
+		message.from(std::string(buffer, length));
+		int32_t connectId = message.getMap()[CONNECT_ID];
+		uv_tcp_t* client = NetLineManager::instance().findClient(connectId);
+		std::string strMessage;
+		Compress::zlibCompress(strMessage, std::string(buffer, length), 9);
+		m_server->send(client, strMessage.c_str(), strMessage.length(), type);
 		return;
 	}
+	break;
+	case MessageType::SERVER_INIT:
+	{
+		std::string serverName = CSystem::processName(sendPid);
+		printf("SERVER_INIT processName = %s, length = %d\n", serverName.c_str(), length);
+		ServerLineManager::instance().addServerPid(sendPid, serverName);
+		ProcessWork::instance().send(sendPid, buffer, length, NET_SERVER_SERVER_INIT_RESPONSE);
+		return;
+	}
+	case MessageType::SERVER_MESSAGE:
+	{
+		int32_t connectId = *(int32_t*)buffer;
+		int32_t serverId = ServerLineManager::instance().findServerId(sendPid);
+		*(int32_t*)buffer = serverId;
+		uv_tcp_t* client = NetLineManager::instance().findClient(connectId);
+		std::string strMessage;
+		Compress::zlibCompress(strMessage, std::string(buffer, length), 9);
+		m_server->send(client, strMessage.c_str(), strMessage.length(), type);
+		return;
+	}
+	break;
 	default:
 		break;
 	}
-	std::string strMessage;
-	Compress::zlibCompress(strMessage, std::string(buffer, length), 9);
-	m_server->send(client, strMessage.c_str(), strMessage.length(), protocolId);
 }
 
 void ServerProcessReceive::setServer(Server* server)
