@@ -34,6 +34,7 @@ void FollowTask::DoTask()
 		//¸úËæ
 		CKeyboard::KeyPress(CKeyboard::F2);
 	}
+	Sleep(100);
 
 	accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
