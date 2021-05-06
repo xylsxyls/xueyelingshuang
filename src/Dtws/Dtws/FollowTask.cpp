@@ -14,7 +14,7 @@ m_isHeal(false)
 
 void FollowTask::DoTask()
 {
-	Sleep(1000);
+	Sleep(1500);
 	if (g_accountCount != 1)
 	{
 		//µã»÷ÈÎÎñÀ¸
