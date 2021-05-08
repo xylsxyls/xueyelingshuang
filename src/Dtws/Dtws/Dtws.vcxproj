@@ -183,6 +183,7 @@
     <ClCompile Include="HealTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Dtws.cpp" />
+    <ClCompile Include="SkillTask.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.h">
@@ -280,6 +281,7 @@
     <ClInclude Include="AccountTask.h" />
     <ClInclude Include="FollowTask.h" />
     <ClInclude Include="HealTask.h" />
+    <ClInclude Include="SkillTask.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

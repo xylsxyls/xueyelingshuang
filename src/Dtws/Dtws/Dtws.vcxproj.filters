@@ -62,6 +62,9 @@
     <ClCompile Include="HealTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="SkillTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -85,6 +88,9 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="HealTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="SkillTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

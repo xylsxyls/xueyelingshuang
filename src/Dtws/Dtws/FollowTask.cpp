@@ -47,7 +47,7 @@ void FollowTask::DoTask()
 		}
 		Sleep(10);
 		//¸úËæ
-		CKeyboard::InputString("4");
+		CKeyboard::InputString("444");
 	}
 	if (m_isHeal)
 	{

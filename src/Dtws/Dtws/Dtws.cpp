@@ -7,6 +7,7 @@
 #include "Point/PointAPI.h"
 #include "FollowTask.h"
 #include "HealTask.h"
+#include "SkillTask.h"
 #include "CHook/CHookAPI.h"
 
 xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
@@ -42,7 +43,8 @@ Dtws::Dtws(QWidget* parent):
 	m_account(nullptr),
 	m_follow(nullptr),
 	m_heal(nullptr),
-	m_followHeal(nullptr)
+	m_followHeal(nullptr),
+	m_skill(nullptr)
 {
 	ui.setupUi(this);
 	init();
@@ -87,6 +89,11 @@ void Dtws::init()
 	m_followHeal->setText(QStringLiteral("¸úËæ²¹³ä"));
 	m_followHeal->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_followHeal, &COriginalButton::clicked, this, &Dtws::onFollowHealButtonClicked);
+
+	m_skill = new COriginalButton(this);
+	m_skill->setText(QStringLiteral("¼¼ÄÜ"));
+	m_skill->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_skill, &COriginalButton::clicked, this, &Dtws::onSkillButtonClicked);
 }
 
 bool Dtws::check()
@@ -107,6 +114,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_follow);
 	vecButton.push_back(m_heal);
 	vecButton.push_back(m_followHeal);
+	vecButton.push_back(m_skill);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -155,4 +163,11 @@ void Dtws::onFollowHealButtonClicked()
 	std::shared_ptr<FollowTask> spFollowTask(new FollowTask);
 	spFollowTask->setParam(true);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spFollowTask);
+}
+
+void Dtws::onSkillButtonClicked()
+{
+	showMinimized();
+	std::shared_ptr<SkillTask> spSkillTask(new SkillTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSkillTask);
 }

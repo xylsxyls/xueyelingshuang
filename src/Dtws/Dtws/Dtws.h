@@ -26,6 +26,7 @@ private slots:
 	void onFollowButtonClicked();
 	void onHealButtonClicked();
 	void onFollowHealButtonClicked();
+	void onSkillButtonClicked();
 
 private:
 	Ui::DtwsClass ui;
@@ -33,6 +34,7 @@ private:
 	COriginalButton* m_follow;
 	COriginalButton* m_heal;
 	COriginalButton* m_followHeal;
+	COriginalButton* m_skill;
 	uint32_t m_threadId;
 };
 
