@@ -8,14 +8,16 @@
 #include <dlfcn.h>
 #endif
 
-#define LOG_SEND(format, ...) LOG_SEND_EX("", format, ##__VA_ARGS__)
-#define LOG_SEND_LOCAL(logName, format, ...) LOG_SEND_LOCAL_EX("", format, ##__VA_ARGS__)
-#define LOG_SEND_DEBUG(logName, format, ...) LOG_SEND_DEBUG_EX("", format, ##__VA_ARGS__)
-#define LOG_SEND_ONLY_INFO(logName, format, ...) LOG_SEND_ONLY_INFO_EX("", format, ##__VA_ARGS__)
-#define LOG_SEND_INFO(logName, format, ...) LOG_SEND_INFO_EX("", format, ##__VA_ARGS__)
-#define LOG_SEND_WARNING(logName, format, ...) LOG_SEND_WARNING_EX("", format, ##__VA_ARGS__)
-#define LOG_SEND_ERROR(logName, format, ...) LOG_SEND_ERROR_EX("", format, ##__VA_ARGS__)
-#define LOG_SEND_FATAL(logName, format, ...) LOG_SEND_FATAL_EX("", format, ##__VA_ARGS__)
+#define LOG_NAME_SET(name) LogSenderManager::instance().setLogName(name)
+
+#define LOG_SEND(format, ...) LOG_SEND_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
+#define LOG_SEND_LOCAL(logName, format, ...) LOG_SEND_LOCAL_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
+#define LOG_SEND_DEBUG(logName, format, ...) LOG_SEND_DEBUG_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
+#define LOG_SEND_ONLY_INFO(logName, format, ...) LOG_SEND_ONLY_INFO_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
+#define LOG_SEND_INFO(logName, format, ...) LOG_SEND_INFO_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
+#define LOG_SEND_WARNING(logName, format, ...) LOG_SEND_WARNING_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
+#define LOG_SEND_ERROR(logName, format, ...) LOG_SEND_ERROR_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
+#define LOG_SEND_FATAL(logName, format, ...) LOG_SEND_FATAL_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 
 #define LOG_SEND_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, true, true, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
 #define LOG_SEND_LOCAL_EX(logName, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(LogPackage::LOG_INFO, false, true, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
@@ -62,6 +64,16 @@ public:
 	}
 
 public:
+	void setLogName(const std::string& logName)
+	{
+		m_logName = logName;
+	}
+
+	std::string logName()
+	{
+		return m_logName;
+	}
+
 	LogSenderInterface* getInterface()
 	{
 		if (m_interface != nullptr)
@@ -127,6 +139,7 @@ public:
 	}
 
 protected:
+	std::string m_logName;
 	LogSenderInterface* m_interface;
 #ifdef _MSC_VER
 	HINSTANCE m_dllHinstance;
