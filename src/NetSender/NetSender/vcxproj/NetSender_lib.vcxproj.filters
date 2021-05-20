@@ -10,6 +10,8 @@
     <ClInclude Include="..\src\NetSenderMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\ClientReceiveCallback.h" />
+    <ClInclude Include="..\src\ServerReceiveCallback.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -23,5 +25,7 @@
     <ClCompile Include="..\src\NetSender.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\ClientReceiveCallback.cpp" />
+    <ClCompile Include="..\src\ServerReceiveCallback.cpp" />
   </ItemGroup>
 </Project>

@@ -19,12 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\ClientReceiveCallback.h" />
     <ClInclude Include="..\src\NetSenderAPI.h" />
     <ClInclude Include="..\src\NetSenderMacro.h" />
     <ClInclude Include="..\src\NetSender.h" />
+    <ClInclude Include="..\src\ServerReceiveCallback.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\ClientReceiveCallback.cpp" />
     <ClCompile Include="..\src\NetSender.cpp" />
+    <ClCompile Include="..\src\ServerReceiveCallback.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>
