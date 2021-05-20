@@ -1,45 +1,58 @@
 #pragma once
-#include "NetSender/NetSenderAPI.h"
+#include "ProcessWork/ProcessWorkAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
-#include <memory>
 #include "ProtoMessage/ProtoMessageAPI.h"
+#include <memory>
 
 class CTaskThread;
 
 class LogReceive : public ProcessReceiveCallback
 {
 public:
+	/** 构造函数
+	*/
 	LogReceive();
 
-	~LogReceive();
-
 public:
-	/** 接收函数
+	/** 接收虚函数
 	@param [in] sendPid 发送进程ID
 	@param [in] buffer 数据内存
 	@param [in] length 数据长度
-	@param [in] protocolId 发送数据协议
+	@param [in] type 数据类型
 	*/
-	virtual void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
+	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type);
 
-	void receiveFromNet(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
-
-	void sendToNet(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId);
-
+	/** 获取发送进程名
+	@param [in] sendPid 发送进程PID
+	@return 返回发送进程名
+	*/
 	std::string getSenderName(int32_t sendPid);
 
+	/** 设置发送线程
+	@param [in] spScreenThread 屏幕展示线程
+	@param [in] spLogThread 日志线程
+	@param [in] spLogThread 日志线程
+	*/
+	void setThread(const std::shared_ptr<CTaskThread>& spScreenThread,
+		const std::shared_ptr<CTaskThread>& spLogThread,
+		const std::shared_ptr<CTaskThread>& spNetThread);
+
+	/** 设置最后一次日志时间接收值
+	@param [in] lastLogTime 最后一次日志时间接收值
+	*/
+	void setLastLogTime(std::atomic<int32_t>* lastLogTime);
+
+	/** 设置登录名
+	@param [in] loginName 登录名
+	*/
+	void setLoginName(const std::string& loginName);
+
 protected:
-	int32_t m_netClientManagerPid;
 	std::map<int32_t, std::string> m_sendMap;
-	uint32_t m_screenThreadId;
-	uint32_t m_logThreadId;
-	uint32_t m_logDeleteThreadId;
-	uint32_t m_netThreadId;
-	std::shared_ptr<CTaskThread> m_screenThread;
-	std::shared_ptr<CTaskThread> m_logThread;
-	std::shared_ptr<CTaskThread> m_logDeleteThread;
-	std::shared_ptr<CTaskThread> m_netThread;
+	std::shared_ptr<CTaskThread> m_spScreenThread;
+	std::shared_ptr<CTaskThread> m_spLogThread;
+	std::shared_ptr<CTaskThread> m_spNetThread;
 	ProtoMessage m_message;
-	std::atomic<bool> m_needSendDeleteLog;
-	std::atomic<int32_t> m_lastLogTime;
+	std::atomic<int32_t>* m_lastLogTime;
+	std::string m_loginName;
 };

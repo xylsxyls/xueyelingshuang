@@ -10,54 +10,39 @@ LogTestServerReceive::LogTestServerReceive()
 	m_iniPath = CSystem::GetCurrentExePath() + "LogTestServerConfig.ini";
 }
 
-void LogTestServerReceive::receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+void LogTestServerReceive::clientInit(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length)
 {
-	std::string strBuffer(buffer, length);
-	ProtoMessage message;
-	message.from(strBuffer);
-	int32_t clientPid = message.getMap()[CLIENT_PID];
-	int32_t connectId = message.getMap()[CONNECT_ID];
-	switch (protocolId)
-	{
-	case CorrespondParam::CLIENT_INIT:
-	{
-		printf("CLIENT_INIT LogTestServer, length = %d\n", length);
-		std::string loginName = message.getMap()[LOGIN_NAME];
+	printf("CLIENT_INIT, connectId = %d, clientPid = %d, buffer = %s\n", connectId, clientPid, buffer);
+	std::string loginName = buffer;
 
-		NetLineManager::instance().addConnect(loginName, clientPid, connectId);
+	NetLineManager::instance().addConnect(loginName, connectId, clientPid);
 
-		NetSender::instance().init(message, CorrespondParam::ProtocolId::CLIENT_INIT, true);
-		return;
-	}
-	case CorrespondParam::SERVER_INIT:
+	NetSender::instance().sendClientInitResponse(connectId, clientPid, "LogTestServer has received");
+}
+
+void LogTestServerReceive::serverInitResponse(const char* buffer, int32_t length)
+{
+	printf("SERVER_INIT LogTestServer, buffer = %s\n", buffer);
+}
+
+void LogTestServerReceive::ClientMessage(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length)
+{
+	std::string loginName = NetLineManager::instance().findLoginName(connectId, clientPid);
+	Cini ini(m_iniPath);
+	std::string collectComputerName = ini.readIni("CollectComputerName");
+	std::vector<std::string> vecComputerName = CStringManager::split(collectComputerName, ",");
+	int32_t index = -1;
+	while (index++ != vecComputerName.size() - 1)
 	{
-		printf("SERVER_INIT LogTestServer\n");
-		return;
-	}
-	case CorrespondParam::PROTO_MESSAGE:
-	{
-		std::string loginName = NetLineManager::instance().findLoginName(clientPid, connectId);
-		Cini ini(m_iniPath);
-		std::string collectComputerName = ini.readIni("CollectComputerName");
-		std::vector<std::string> vecComputerName = CStringManager::split(collectComputerName, ",");
-		int32_t index = -1;
-		while (index++ != vecComputerName.size() - 1)
+		auto& computerName = vecComputerName[index];
+		std::vector<std::pair<int32_t, int32_t>> vecClient = NetLineManager::instance().findConnect(computerName);
+		//因为没有断线机制，只发送最后一个同登录名用户
+		if (vecClient.empty())
 		{
-			auto& computerName = vecComputerName[index];
-			std::vector<std::pair<int32_t, int32_t>> vecClient = NetLineManager::instance().findConnect(computerName);
-			//因为没有断线机制，只发送最后一个同登录名用户
-			if (vecClient.empty())
-			{
-				continue;
-			}
-			message[LOG_LOGIN_NAME] = loginName;
-			message[CLIENT_PID] = vecClient.back().first;
-			message[CONNECT_ID] = vecClient.back().second;
-			NetSender::instance().post(message, true);
+			continue;
 		}
-		break;
-	}
-	default:
-		break;
+		int32_t connectId = vecClient.back().first;
+		int32_t clientPid = vecClient.back().second;
+		NetSender::instance().postClient(connectId, clientPid, buffer, length);
 	}
 }

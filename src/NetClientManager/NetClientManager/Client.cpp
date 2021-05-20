@@ -36,6 +36,17 @@ void Client::onReceive(const char* buffer, int32_t length, MessageType type)
 		return;
 	}
 	break;
+	case MessageType::NET_SERVER_MESSAGE:
+	{
+		int32_t clientPid = *((int32_t*)(&strMessage[0]));
+		if (clientPid == 0)
+		{
+			return;
+		}
+		ProcessWork::instance().post(clientPid, strMessage.c_str(), strMessage.length(), type);
+		return;
+	}
+	break;
 	default:
 		break;
 	}

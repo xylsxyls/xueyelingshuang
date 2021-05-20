@@ -16,11 +16,11 @@
     <Filter Include="Task">
       <UniqueIdentifier>{5791b90c-8638-4f20-aa01-59d1a014a4ce}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Receive">
+      <UniqueIdentifier>{56ba2ef6-e492-4dd7-bb33-fd62826a4fc6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LogReceive.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="LogTask.h">
       <Filter>Task</Filter>
     </ClInclude>
@@ -36,11 +36,14 @@
     <ClInclude Include="LogDeleteTask.h">
       <Filter>Task</Filter>
     </ClInclude>
+    <ClInclude Include="NetReceive.h">
+      <Filter>Receive</Filter>
+    </ClInclude>
+    <ClInclude Include="LogReceive.h">
+      <Filter>Receive</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LogReceive.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="LogTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
@@ -55,6 +58,12 @@
     </ClCompile>
     <ClCompile Include="LogDeleteTask.cpp">
       <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="LogReceive.cpp">
+      <Filter>Receive</Filter>
+    </ClCompile>
+    <ClCompile Include="NetReceive.cpp">
+      <Filter>Receive</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -2,7 +2,7 @@
 #if (_MSC_VER >= 1800 || __unix__)
 #include <thread>
 #endif
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include <objbase.h>
 #include <direct.h>
 #include <io.h>
@@ -11,6 +11,11 @@
 #include <tchar.h>
 #include <shlobj.h>
 #include <psapi.h>
+#include <dshow.h>
+#include <comdef.h>
+#include <SetupAPI.h>
+#pragma comment(lib, "strmiids.lib")
+#pragma comment(lib, "setupapi.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma warning(disable: 4200)
 #elif __unix__
@@ -28,7 +33,24 @@
 #include <iostream>
 #include <iterator>
 
-#ifdef _WIN32
+static void Split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
+{
+	result.clear();
+	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
+	size_t separate_characterLen = separate_character.length();
+	size_t lastPosition = 0;
+	int32_t index = -1;
+	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
+	{
+		result.push_back(splitString.substr(lastPosition, index - lastPosition));
+		lastPosition = index + separate_characterLen;
+	}
+	//?截取最后一个分隔符后的内容
+	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
+	result.push_back(splitString.substr(lastPosition));
+}
+
+#ifdef _MSC_VER
 RECT CSystem::GetTaskbarRect()
 {
 	HWND h = ::FindWindowA("Shell_TrayWnd", "");
@@ -348,6 +370,156 @@ std::wstring CSystem::processNameW(uint32_t pid)
 	}
 	return result;
 }
+
+std::vector<std::string> CSystem::processMountDll(uint32_t pid)
+{
+	std::vector<std::string> result;
+	HANDLE hShot = ::CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, pid);
+	if (hShot == INVALID_HANDLE_VALUE)
+	{
+		return result;
+	}
+	
+	MODULEENTRY32 te = { sizeof(te) };
+	BOOL bRet = ::Module32First(hShot, &te);
+	while (bRet)
+	{
+		result.push_back(te.szModule);
+		bRet = ::Module32Next(hShot, &te);
+	}
+	::CloseHandle(hShot);
+	return result;
+}
+
+static HRESULT EnumerateDevices(REFGUID category, IEnumMoniker **ppEnum)
+{
+	// Create the System Device Enumerator.
+	ICreateDevEnum* pDevEnum = nullptr;
+	HRESULT hr = ::CoCreateInstance(CLSID_SystemDeviceEnum, nullptr,
+		CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pDevEnum));
+	if (SUCCEEDED(hr))
+	{
+		// Create an enumerator for the category.
+		hr = pDevEnum->CreateClassEnumerator(category, ppEnum, 0);
+		if (hr == S_FALSE)
+		{
+			hr = VFW_E_NOT_FOUND;  // The category is empty. Treat as an error.
+		}
+		pDevEnum->Release();
+	}
+	return hr;
+}
+
+static void DisplayDeviceInformation(IEnumMoniker *pEnum, std::vector<std::string>& list)
+{
+	IMoniker *pMoniker = nullptr;
+
+	while (pEnum->Next(1, &pMoniker, nullptr) == S_OK)
+	{
+		IPropertyBag* pPropBag = nullptr;
+		HRESULT hr = pMoniker->BindToStorage(nullptr, nullptr, IID_PPV_ARGS(&pPropBag));
+		if (FAILED(hr))
+		{
+			pMoniker->Release();
+			continue;
+		}
+
+		VARIANT var;
+		::VariantInit(&var);
+
+		// Get description or friendly name.
+		hr = pPropBag->Read(L"Description", &var, nullptr);
+		if (FAILED(hr))
+		{
+			hr = pPropBag->Read(L"FriendlyName", &var, nullptr);
+		}
+		if (SUCCEEDED(hr))
+		{
+			std::string name = _com_util::ConvertBSTRToString(var.bstrVal);
+			//            printf("%s\n", name.c_str());//设备名称
+			list.push_back(name);
+			::VariantClear(&var);
+		}
+		hr = pPropBag->Write(L"FriendlyName", &var);
+		// WaveInID applies only to audio capture devices.
+		hr = pPropBag->Read(L"WaveInID", &var, nullptr);
+		if (SUCCEEDED(hr))
+		{
+			//            printf("WaveIn ID: %d\n", var.lVal);////设备ID
+			::VariantClear(&var);
+		}
+		hr = pPropBag->Read(L"DevicePath", &var, nullptr);
+		if (SUCCEEDED(hr))
+		{
+			// The device path is not intended for display.
+			//            printf("Device path: %S\n", var.bstrVal);
+			::VariantClear(&var);
+		}
+
+		pPropBag->Release();
+		pMoniker->Release();
+	}
+}
+
+std::vector<std::string> CSystem::allCameraName()
+{
+	std::vector<std::string> result;
+	HRESULT hr = ::CoInitialize(nullptr);
+	if (SUCCEEDED(hr)) {
+		IEnumMoniker* pEnum = nullptr;
+		hr = EnumerateDevices(CLSID_VideoInputDeviceCategory, &pEnum);
+		if (SUCCEEDED(hr)) {
+			DisplayDeviceInformation(pEnum, result);
+			pEnum->Release();
+		}
+		//麦克风...........
+		//        hr = EnumerateDevices(CLSID_AudioInputDeviceCategory, &pEnum);
+		//        if (SUCCEEDED(hr)){
+		//            DisplayDeviceInformation(pEnum,list);
+		//            pEnum->Release();
+		//        }
+		::CoUninitialize();
+	}
+	return result;
+}
+
+std::map<std::string, std::vector<std::string>> CSystem::allDeviceInfo()
+{
+	std::map<std::string, std::vector<std::string>> allDeviceInfo;
+	DWORD dwFlag = (DIGCF_ALLCLASSES | DIGCF_PRESENT);
+	HDEVINFO hDevInfo = ::SetupDiGetClassDevs(NULL, NULL, NULL, dwFlag);
+	if (INVALID_HANDLE_VALUE == hDevInfo)
+	{
+		return allDeviceInfo;
+	}
+
+	SP_DEVINFO_DATA sDevInfoData;
+	sDevInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+
+	//Device Identification Strings
+	TCHAR szDIS[MAX_PATH] = {};
+	DWORD nSize = 0;
+
+	for (int i = 0; ::SetupDiEnumDeviceInfo(hDevInfo, i, &sDevInfoData); i++)
+	{
+		nSize = 0;
+		if (!::SetupDiGetDeviceInstanceId(hDevInfo, &sDevInfoData, szDIS, sizeof(szDIS), &nSize))
+		{
+			break;
+		}
+
+		std::vector<std::string> vecDeviceInfo;
+		Split(vecDeviceInfo, szDIS, "\\");
+		if (vecDeviceInfo.empty())
+		{
+			continue;
+		}
+		allDeviceInfo[vecDeviceInfo[0]].push_back(szDIS);
+	}
+	::SetupDiDestroyDeviceInfoList(hDevInfo);
+	return allDeviceInfo;
+}
+
 #endif
 
 #ifdef __unix__
@@ -797,25 +969,6 @@ int32_t CSystem::GetCPUCoreCount()
 	return atoi(result.c_str());
 #endif
 }
-
-#ifdef __unix__
-static void Split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
-{
-	result.clear();
-	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
-	size_t separate_characterLen = separate_character.length();
-	size_t lastPosition = 0;
-	int32_t index = -1;
-	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
-	{
-		result.push_back(splitString.substr(lastPosition, index - lastPosition));
-		lastPosition = index + separate_characterLen;
-	}
-	//?截取最后一个分隔符后的内容
-	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
-	result.push_back(splitString.substr(lastPosition));
-}
-#endif
 
 int32_t CSystem::GetSystemVersionNum()
 {

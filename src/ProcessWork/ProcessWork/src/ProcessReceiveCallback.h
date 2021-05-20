@@ -1,9 +1,10 @@
 #pragma once
 #include <stdint.h>
+#include "ProcessWorkMacro.h"
 
 /** 接收回调类
 */
-class ProcessReceiveCallback
+class ProcessWorkAPI ProcessReceiveCallback
 {
 public:
 	/** 接收虚函数

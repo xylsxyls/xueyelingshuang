@@ -11,13 +11,15 @@ void NetTask::DoTask()
 	if ((int32_t)m_messageMap[LOG_IS_SEND_NET] == (int32_t)true)
 	{
 		m_message[LOG_PROCESS_NAME] = m_processName;
-		NetSender::instance().post(m_message);
+		m_message[LOG_LOGIN_NAME] = m_loginName;
+		std::string strMessage = m_message.toString();
+		NetSender::instance().postServer(PROJECT_LOGTEST, strMessage.c_str(), strMessage.size());
 	}
 }
 
-void NetTask::setParam(const std::string& buffer, const std::string& processName, CorrespondParam::ProtocolId protocolId)
+void NetTask::setParam(const std::string& buffer, const std::string& processName, const std::string& loginName)
 {
 	m_buffer = buffer;
 	m_processName = processName;
-	m_protocolId = protocolId;
+	m_loginName = loginName;
 }

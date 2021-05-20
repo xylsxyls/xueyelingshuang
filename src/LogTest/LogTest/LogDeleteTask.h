@@ -11,11 +11,10 @@ public:
 
 	void StopTask();
 
-	void setParam(std::atomic<bool>* needSendDeleteLog, std::atomic<int32_t>* lastLogTime, const std::shared_ptr<CTaskThread>& logThread);
+	void setParam(std::atomic<int32_t>* lastLogTime, const std::shared_ptr<CTaskThread>& spLogThread);
 
 private:
-	std::atomic<bool>* m_needSendDeleteLog;
 	std::atomic<int32_t>* m_lastLogTime;
-	std::shared_ptr<CTaskThread> m_logThread;
+	std::shared_ptr<CTaskThread> m_spLogThread;
 	std::atomic<bool> m_exit;
 };

@@ -19,8 +19,8 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		NetSender::instance().uninitPostThread();
-		NetSender::instance().uninitReceive();
+		ProcessWork::instance().uninitPostThread();
+		ProcessWork::instance().uninitReceive();
 		g_exit = true;
 	}
 	return FALSE;
@@ -58,16 +58,18 @@ struct CtrlC
 CtrlC g_ctrlc;
 #endif
 
+#define LOGTEST_SERVER_VERSION "1.1"
+
 int32_t main()
 {
 	CDump::declareDumpFile();
 
 	LogTestServerReceive receive;
-	NetSender::instance().initPostThread();
-	NetSender::instance().initReceive(&receive);
+	ProcessWork::instance().initPostThread();
+	NetSender::instance().initServerReceive(&receive);
+	ProcessWork::instance().initReceive();
 
-	ProtoMessage message;
-	NetSender::instance().init(message, CorrespondParam::ProtocolId::SERVER_INIT, true);
+	NetSender::instance().initServer(std::string("LogTestServer") + LOGTEST_SERVER_VERSION + " init");
 
 	while (!g_exit)
 	{

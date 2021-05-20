@@ -36,7 +36,7 @@ LogSender& LogSender::instance()
 
 void LogSender::logSend(const LogPackage& package, const char* format, ...)
 {
-	SharedMemory sharedMemory("ProcessArea_LogTest1.0");
+	SharedMemory sharedMemory("ProcessArea_LogTest" + LOGTEST_CLIENT_VERSION);
 	if (sharedMemory.writeWithoutLock() == nullptr)
 	{
 		return;
@@ -94,7 +94,7 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 
 void LogSender::send(const char* buffer, int32_t length)
 {
-	ProcessWork::instance().send("LogTest1.0", buffer, length, CorrespondParam::PROTO_MESSAGE);
+	ProcessWork::instance().send("LogTest" + LOGTEST_CLIENT_VERSION, buffer, length, LOGTEST_MESSAGE);
 }
 
 //int32_t main(int32_t argc, char** argv)

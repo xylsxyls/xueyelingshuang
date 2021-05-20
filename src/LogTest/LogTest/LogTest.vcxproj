@@ -68,21 +68,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)1.0</TargetName>
+    <TargetName>$(ProjectName)1.1</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)1.0</TargetName>
+    <TargetName>$(ProjectName)1.1</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)d</TargetName>
+    <TargetName>$(ProjectName)1.1</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(ProjectDir)..\..\..\lib\</OutDir>
     <IntDir>$(ProjectDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)1.1</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -153,6 +154,7 @@
     <ClInclude Include="LogReceive.h" />
     <ClInclude Include="LogTask.h" />
     <ClInclude Include="LogTest.h" />
+    <ClInclude Include="NetReceive.h" />
     <ClInclude Include="NetTask.h" />
     <ClInclude Include="ScreenTask.h" />
   </ItemGroup>
@@ -161,6 +163,7 @@
     <ClCompile Include="LogReceive.cpp" />
     <ClCompile Include="LogTask.cpp" />
     <ClCompile Include="LogTest.cpp" />
+    <ClCompile Include="NetReceive.cpp" />
     <ClCompile Include="NetTask.cpp" />
     <ClCompile Include="ScreenTask.cpp" />
   </ItemGroup>

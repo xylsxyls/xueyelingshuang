@@ -59,6 +59,12 @@ public:
 	static std::vector<uint32_t> processPid(const std::wstring& processNameW);
 	//获取进程名，耗时10毫秒左右
 	static std::wstring processNameW(uint32_t pid);
+	//获取指定pid进程所有挂载的动态库，第一个固定为exe进程名，如果为空说明获取失败
+	static std::vector<std::string> processMountDll(uint32_t pid);
+	//获取所有摄像头名，内部会调用CoUninitialize
+	static std::vector<std::string> allCameraName();
+	//获取所有设备信息，左边为设备类型，右边为指定类型的所有设备信息
+	static std::map<std::string, std::vector<std::string>> allDeviceInfo();
 #endif
 	//实测CPU主频，GHz位单位
 	static double GetCPUSpeedGHz();

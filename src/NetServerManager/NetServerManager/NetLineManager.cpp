@@ -14,13 +14,14 @@ NetLineManager& NetLineManager::instance()
 
 int32_t NetLineManager::addConnect(uv_tcp_t* client)
 {
+	std::unique_lock<std::mutex> lock(m_connectIdMutex);
 	m_connectIdMap[++m_connectId] = client;
-	m_connectClientMap[client] = m_connectId;
 	return m_connectId;
 }
 
 uv_tcp_t* NetLineManager::findClient(int32_t connectId)
 {
+	std::unique_lock<std::mutex> lock(m_connectIdMutex);
 	auto itClient = m_connectIdMap.find(connectId);
 	if (itClient == m_connectIdMap.end())
 	{
@@ -31,10 +32,13 @@ uv_tcp_t* NetLineManager::findClient(int32_t connectId)
 
 int32_t NetLineManager::findConnectId(uv_tcp_t* client)
 {
-	auto itId = m_connectClientMap.find(client);
-	if (itId == m_connectClientMap.end())
+	std::unique_lock<std::mutex> lock(m_connectIdMutex);
+	for (auto itClient = m_connectIdMap.begin(); itClient != m_connectIdMap.end(); ++itClient)
 	{
-		return 0;
+		if (itClient->second == client)
+		{
+			return itClient->first;
+		}
 	}
-	return itId->second;
+	return 0;
 }

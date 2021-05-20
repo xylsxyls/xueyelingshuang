@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\LogPackage.h" />
     <ClInclude Include="..\src\LogSenderAPI.h" />
     <ClInclude Include="..\src\LogSenderMacro.h" />
     <ClInclude Include="..\src\LogSender.h" />

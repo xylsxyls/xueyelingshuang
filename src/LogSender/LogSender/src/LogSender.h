@@ -6,6 +6,8 @@
 
 class ProtoMessage;
 
+const std::string LOGTEST_CLIENT_VERSION = "1.1";
+
 class LogSenderAPI LogSenderInterface
 {
 public:

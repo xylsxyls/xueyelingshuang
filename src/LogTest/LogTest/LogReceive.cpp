@@ -8,112 +8,42 @@
 #include "LogDeleteTask.h"
 
 LogReceive::LogReceive():
-m_netClientManagerPid(0),
-m_screenThreadId(0),
-m_logThreadId(0),
-m_logDeleteThreadId(0),
-m_netThreadId(0),
-m_screenThread(nullptr),
-m_logThread(nullptr),
-m_logDeleteThread(nullptr),
-m_netThread(nullptr),
-m_needSendDeleteLog(false),
-m_lastLogTime(0)
+m_spScreenThread(nullptr),
+m_spLogThread(nullptr),
+m_spNetThread(nullptr),
+m_lastLogTime(nullptr)
 {
-#ifdef _MSC_VER
-	m_netClientManagerPid = CSystem::processFirstPid("NetClientManager1.0.exe");
-#elif __unix__
-	m_netClientManagerPid = CSystem::processFirstPid("NetClientManager1.0");
-#endif
-
-	m_screenThreadId = CTaskThreadManager::Instance().Init();
-	m_logThreadId = CTaskThreadManager::Instance().Init();
-	m_logDeleteThreadId = CTaskThreadManager::Instance().Init();
-	m_netThreadId = CTaskThreadManager::Instance().Init();
-
-	m_screenThread = CTaskThreadManager::Instance().GetThreadInterface(m_screenThreadId);
-	m_logThread = CTaskThreadManager::Instance().GetThreadInterface(m_logThreadId);
-	m_logDeleteThread = CTaskThreadManager::Instance().GetThreadInterface(m_logDeleteThreadId);
-	m_netThread = CTaskThreadManager::Instance().GetThreadInterface(m_netThreadId);
-
-	m_lastLogTime = CSystem::GetTickCount();
-
-	std::shared_ptr<LogDeleteTask> spLogDeleteTask(new LogDeleteTask);
-	spLogDeleteTask->setParam(&m_needSendDeleteLog, &m_lastLogTime, m_logThread);
-	m_logDeleteThread->PostTask(spLogDeleteTask);
+	
 }
 
-LogReceive::~LogReceive()
+void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
 {
-	CTaskThreadManager::Instance().Uninit(m_screenThreadId);
-	CTaskThreadManager::Instance().Uninit(m_logDeleteThreadId);
-	CTaskThreadManager::Instance().Uninit(m_logThreadId);
-	CTaskThreadManager::Instance().Uninit(m_netThreadId);
-}
-
-void LogReceive::receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
-{
-	if (sendPid == m_netClientManagerPid)
+	switch (type)
 	{
-		//从网络端接收
-		receiveFromNet(buffer, length, protocolId);
-	}
-	else
+	case LOGTEST_MESSAGE:
 	{
 		//发送给网络端
-		sendToNet(sendPid, buffer, length, protocolId);
-	}
-}
-
-void LogReceive::receiveFromNet(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
-{
-	switch (protocolId)
-	{
-	case CorrespondParam::CLIENT_INIT:
-	{
-		printf("CLIENT_INIT process, length = %d\n", length);
-		return;
-	}
-	case CorrespondParam::PROTO_MESSAGE:
-	{
+		std::string processName = getSenderName(sendPid);
 		std::string strBuffer(buffer, length);
 
 		std::shared_ptr<ScreenTask> spScreenTask(new ScreenTask);
-		spScreenTask->setParam(true, strBuffer);
-		m_screenThread->PostTask(spScreenTask);
+		spScreenTask->setParam(false, strBuffer);
+		m_spScreenThread->PostTask(spScreenTask);
 
 		std::shared_ptr<LogTask> spLogTask(new LogTask);
-		spLogTask->setParam(true, strBuffer);
-		m_logThread->PostTask(spLogTask);
+		spLogTask->setParam(false, strBuffer, processName);
+		m_spLogThread->PostTask(spLogTask);
 
-		m_needSendDeleteLog = true;
-		m_lastLogTime = CSystem::GetTickCount();
+		*m_lastLogTime = CSystem::GetTickCount();
+
+		std::shared_ptr<NetTask> spNetTask(new NetTask);
+		spNetTask->setParam(strBuffer, processName, m_loginName);
+		m_spNetThread->PostTask(spNetTask);
 	}
 	break;
 	default:
 		break;
 	}
-}
-
-void LogReceive::sendToNet(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
-{
-	std::string processName = getSenderName(sendPid);
-	std::string strBuffer(buffer, length);
-
-	std::shared_ptr<ScreenTask> spScreenTask(new ScreenTask);
-	spScreenTask->setParam(false, strBuffer);
-	m_screenThread->PostTask(spScreenTask);
-	
-	std::shared_ptr<LogTask> spLogTask(new LogTask);
-	spLogTask->setParam(false, strBuffer, processName);
-	m_logThread->PostTask(spLogTask);
-
-	m_needSendDeleteLog = true;
-	m_lastLogTime = CSystem::GetTickCount();
-	
-	std::shared_ptr<NetTask> spNetTask(new NetTask);
-	spNetTask->setParam(strBuffer, processName, protocolId);
-	m_netThread->PostTask(spNetTask);
 }
 
 std::string LogReceive::getSenderName(int32_t sendPid)
@@ -126,4 +56,23 @@ std::string LogReceive::getSenderName(int32_t sendPid)
 	std::string processName = CSystem::GetName(CSystem::processName(sendPid), 1);
 	m_sendMap[sendPid] = processName;
 	return processName;
+}
+
+void LogReceive::setThread(const std::shared_ptr<CTaskThread>& spScreenThread,
+	const std::shared_ptr<CTaskThread>& spLogThread,
+	const std::shared_ptr<CTaskThread>& spNetThread)
+{
+	m_spScreenThread = spScreenThread;
+	m_spLogThread = spLogThread;
+	m_spNetThread = spNetThread;
+}
+
+void LogReceive::setLastLogTime(std::atomic<int32_t>* lastLogTime)
+{
+	m_lastLogTime = lastLogTime;
+}
+
+void LogReceive::setLoginName(const std::string& loginName)
+{
+	m_loginName = loginName;
 }

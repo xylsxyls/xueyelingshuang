@@ -24,8 +24,10 @@ void ServerProcessReceive::receive(int32_t sendPid, const char* buffer, int32_t 
 		message.from(std::string(buffer, length));
 		int32_t connectId = message.getMap()[CONNECT_ID];
 		uv_tcp_t* client = NetLineManager::instance().findClient(connectId);
+		int32_t serverId = ServerLineManager::instance().findServerId(sendPid);
+		message[SERVER_ID] = serverId;
 		std::string strMessage;
-		Compress::zlibCompress(strMessage, std::string(buffer, length), 9);
+		Compress::zlibCompress(strMessage, message.toString(), 9);
 		m_server->send(client, strMessage.c_str(), strMessage.length(), type);
 		return;
 	}
@@ -33,9 +35,9 @@ void ServerProcessReceive::receive(int32_t sendPid, const char* buffer, int32_t 
 	case MessageType::SERVER_INIT:
 	{
 		std::string serverName = CSystem::processName(sendPid);
-		printf("SERVER_INIT processName = %s, length = %d\n", serverName.c_str(), length);
+		printf("SERVER_INIT processName = %s, buffer = %s\n", serverName.c_str(), buffer);
 		ServerLineManager::instance().addServerPid(sendPid, serverName);
-		ProcessWork::instance().send(sendPid, buffer, length, NET_SERVER_SERVER_INIT_RESPONSE);
+		ProcessWork::instance().send(sendPid, buffer, length, SERVER_INIT_RESPONSE);
 		return;
 	}
 	case MessageType::SERVER_MESSAGE:

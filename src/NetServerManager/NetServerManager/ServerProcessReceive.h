@@ -8,6 +8,8 @@ class Server;
 class ServerProcessReceive : public ProcessReceiveCallback
 {
 public:
+	/** 构造函数
+	*/
 	ServerProcessReceive();
 
 public:
@@ -19,9 +21,10 @@ public:
 	*/
 	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type);
 
+	/** 设置服务端指针
+	@param [in] server 服务端指针
+	*/
 	void setServer(Server* server);
-
-	uv_tcp_t* getClientPtr(const char* buffer, int32_t length);
 
 protected:
 	Server* m_server;

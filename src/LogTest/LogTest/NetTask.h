@@ -9,12 +9,12 @@ class NetTask : public CTask
 public:
 	virtual void DoTask();
 
-	void setParam(const std::string& buffer, const std::string& processName, CorrespondParam::ProtocolId protocolId);
+	void setParam(const std::string& buffer, const std::string& processName, const std::string& loginName);
 
 private:
 	std::string m_buffer;
 	std::string m_processName;
-	CorrespondParam::ProtocolId m_protocolId;
+	std::string m_loginName;
 	ProtoMessage m_message;
 	std::map<int32_t, Variant> m_messageMap;
 };
