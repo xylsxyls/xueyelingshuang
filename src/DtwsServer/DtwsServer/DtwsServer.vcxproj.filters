@@ -18,9 +18,21 @@
     <ClInclude Include="DtwsServer.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ServerReceive.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientLineManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DtwsServer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerReceive.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientLineManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

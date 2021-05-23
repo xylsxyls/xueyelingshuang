@@ -9,6 +9,10 @@
 #include "HealTask.h"
 #include "SkillTask.h"
 #include "CHook/CHookAPI.h"
+#include "ClientReceive.h"
+#include "CSystem/CSystemAPI.h"
+
+#define DTWS_SERVER_VERSION "1.0"
 
 xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
 int32_t g_accountCount = 3;
@@ -44,7 +48,8 @@ Dtws::Dtws(QWidget* parent):
 	m_follow(nullptr),
 	m_heal(nullptr),
 	m_followHeal(nullptr),
-	m_skill(nullptr)
+	m_skill(nullptr),
+	m_clientReceive(nullptr)
 {
 	ui.setupUi(this);
 	init();
@@ -61,6 +66,12 @@ void Dtws::init()
 	{
 		return;
 	}
+
+	m_clientReceive = new ClientReceive;
+	NetSender::instance().initClientReceive(m_clientReceive);
+	ProcessWork::instance().initReceive();
+	NetSender::instance().initClient(PROJECT_DTWS, std::string("DtwsServer") + DTWS_SERVER_VERSION, CSystem::getComputerName());
+
 	QPalette pattle;
 	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
 	setPalette(pattle);
@@ -133,6 +144,9 @@ void Dtws::closeEvent(QCloseEvent* eve)
 	CHook::Uninit();
 	CTaskThreadManager::Instance().Uninit(m_threadId);
 	m_threadId = 0;
+	ProcessWork::instance().uninitReceive();
+	delete m_clientReceive;
+	m_clientReceive = nullptr;
 	QMainWindow::closeEvent(eve);
 }
 

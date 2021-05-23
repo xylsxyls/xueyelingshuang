@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #endif
 #include "NetSender/NetSenderAPI.h"
+#include "ServerReceive.h"
+#include "CSystem/CSystemAPI.h"
+
+std::atomic<bool> g_exit = false;
 
 #ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)
@@ -14,6 +18,8 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close DtwsServer");
+		ProcessWork::instance().uninitReceive();
+		g_exit = true;
 	}
 	return FALSE;
 }
@@ -47,9 +53,18 @@ struct CtrlC
 CtrlC g_ctrlc;
 #endif
 
+#define DTWS_SERVER_VERSION "1.0"
+
 int32_t main()
 {
+	ServerReceive receive;
+	NetSender::instance().initServerReceive(&receive);
+	ProcessWork::instance().initReceive();
+	NetSender::instance().initServer(std::string("DtwsServer") + DTWS_SERVER_VERSION + " init");
 	
-	getchar();
+	while (!g_exit)
+	{
+		CSystem::Sleep(1);
+	}
 	return 0;
 }

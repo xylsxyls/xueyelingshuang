@@ -36,6 +36,9 @@
     <Filter Include="Task">
       <UniqueIdentifier>{5f4631c7-2249-4a13-92d8-625c8a9bfe98}</UniqueIdentifier>
     </Filter>
+    <Filter Include="receive">
+      <UniqueIdentifier>{8e04ff27-092b-4e80-8a91-6d2f00aabf65}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -65,6 +68,9 @@
     <ClCompile Include="SkillTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="ClientReceive.cpp">
+      <Filter>receive</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -92,6 +98,9 @@
     </ClInclude>
     <ClInclude Include="SkillTask.h">
       <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientReceive.h">
+      <Filter>receive</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

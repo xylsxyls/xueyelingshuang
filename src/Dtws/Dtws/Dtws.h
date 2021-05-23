@@ -5,6 +5,7 @@
 #include "ui_Dtws.h"
 
 class COriginalButton;
+class ClientReceive;
 
 class Dtws : public QMainWindow
 {
@@ -36,6 +37,7 @@ private:
 	COriginalButton* m_followHeal;
 	COriginalButton* m_skill;
 	uint32_t m_threadId;
+	ClientReceive* m_clientReceive;
 };
 
 #endif // QTTEST_H
