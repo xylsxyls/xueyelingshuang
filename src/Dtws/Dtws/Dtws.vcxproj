@@ -161,7 +161,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AccountTask.cpp" />
+    <ClCompile Include="ATask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
+    <ClCompile Include="FiveTask.cpp" />
     <ClCompile Include="FollowTask.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_Dtws.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -280,7 +282,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AccountTask.h" />
+    <ClInclude Include="ATask.h" />
     <ClInclude Include="ClientReceive.h" />
+    <ClInclude Include="FiveTask.h" />
     <ClInclude Include="FollowTask.h" />
     <ClInclude Include="HealTask.h" />
     <ClInclude Include="SkillTask.h" />

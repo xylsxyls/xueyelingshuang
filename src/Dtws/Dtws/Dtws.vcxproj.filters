@@ -71,6 +71,12 @@
     <ClCompile Include="ClientReceive.cpp">
       <Filter>receive</Filter>
     </ClCompile>
+    <ClCompile Include="FiveTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="ATask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -101,6 +107,12 @@
     </ClInclude>
     <ClInclude Include="ClientReceive.h">
       <Filter>receive</Filter>
+    </ClInclude>
+    <ClInclude Include="FiveTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="ATask.h">
+      <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

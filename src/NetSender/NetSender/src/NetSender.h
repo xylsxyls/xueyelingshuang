@@ -31,19 +31,31 @@ public:
 
 	void initServer(const std::string& initInfo);
 
+	void sendServer(int32_t serverId, const std::string& message);
+
 	void sendServer(int32_t serverId, const char* buffer, int32_t length);
+
+	void sendClient(int32_t connectId, int32_t clientPid, const std::string& message);
 
 	void sendClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length);
 
 	//如使用post需先初始化ProcessWork中的postThread
+	void postServer(int32_t serverId, const std::string& message);
+
 	void postServer(int32_t serverId, const char* buffer, int32_t length);
+
+	void postClient(int32_t connectId, int32_t clientPid, const std::string& message);
 
 	void postClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length);
 
 	//服务端管理进程主动发送消息，如果clientPid为0表示发给客户端管理进程，该函数为消息组装
+	std::string netServerMessage(int32_t clientPid, const std::string& message);
+
 	std::string netServerMessage(int32_t clientPid, const char* buffer, int32_t length);
 
 	//客户端管理进程主动发送消息，如果clientPid为0表示发给服务端管理进程，该函数为消息组装
+	std::string netClientMessage(int32_t serverId, const std::string& message);
+
 	std::string netClientMessage(int32_t serverId, const char* buffer, int32_t length);
 
 private:

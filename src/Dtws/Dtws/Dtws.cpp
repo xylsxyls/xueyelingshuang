@@ -11,12 +11,16 @@
 #include "CHook/CHookAPI.h"
 #include "ClientReceive.h"
 #include "CSystem/CSystemAPI.h"
+#include "FiveTask.h"
+#include "ATask.h"
+#include "CStopWatch/CStopWatchAPI.h"
 
 #define DTWS_SERVER_VERSION "1.0"
 
 xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
-int32_t g_accountCount = 3;
+int32_t g_accountCount = 1;
 uint32_t* g_threadId = nullptr;
+CStopWatch g_stopWatch;
 
 LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -29,7 +33,38 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		//deleteº¸
 		case 46:
 		{
-			CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopCurTask();
+			//CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopCurTask();
+			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_STOP));
+		}
+		break;
+		case '4':
+		{
+			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_FOLLOW));
+		}
+		break;
+		case 'T':
+		{
+			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_HEAL));
+		}
+		break;
+		case '5':
+		{
+			if (g_stopWatch.GetWatchTime() > 2000)
+			{
+				g_stopWatch.SetWatchTime(0);
+				std::shared_ptr<FiveTask> spFiveTask(new FiveTask);
+				CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spFiveTask);
+			}
+		}
+		break;
+		case 'A':
+		{
+			if (g_stopWatch.GetWatchTime() > 2000)
+			{
+				g_stopWatch.SetWatchTime(0);
+				std::shared_ptr<ATask> spATask(new ATask);
+				CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spATask);
+			}
 		}
 		break;
 		default:
@@ -67,10 +102,11 @@ void Dtws::init()
 		return;
 	}
 
+	std::string computerName = CSystem::getComputerName();
 	m_clientReceive = new ClientReceive;
 	NetSender::instance().initClientReceive(m_clientReceive);
 	ProcessWork::instance().initReceive();
-	NetSender::instance().initClient(PROJECT_DTWS, std::string("DtwsServer") + DTWS_SERVER_VERSION, CSystem::getComputerName());
+	NetSender::instance().initClient(PROJECT_DTWS, std::string("DtwsServer") + DTWS_SERVER_VERSION, computerName);
 
 	QPalette pattle;
 	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
@@ -79,7 +115,14 @@ void Dtws::init()
 	m_threadId = CTaskThreadManager::Instance().Init();
 	g_threadId = &m_threadId;
 
-	CHook::Init(WH_KEYBOARD_LL, HookFun);
+	if (computerName == "CN0614001185W")
+	{
+		CHook::Init(WH_KEYBOARD_LL, HookFun);
+	}
+	else if (computerName == "QQJJQPZPPWSYCVN")
+	{
+		g_accountCount = 3;
+	}
 
 	m_account = new COriginalButton(this);
 	m_account->setText(QStringLiteral("’À∫≈"));

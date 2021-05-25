@@ -33,6 +33,11 @@ void NetSender::sendServer(int32_t serverId, const char* buffer, int32_t length)
 		MessageType::MESSAGE);
 }
 
+void NetSender::sendServer(int32_t serverId, const std::string& message)
+{
+	sendServer(serverId, message.c_str(), message.size());
+}
+
 void NetSender::sendClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length)
 {
 	std::string sendBuffer;
@@ -46,6 +51,11 @@ void NetSender::sendClient(int32_t connectId, int32_t clientPid, const char* buf
 		MessageType::SERVER_MESSAGE);
 }
 
+void NetSender::sendClient(int32_t connectId, int32_t clientPid, const std::string& message)
+{
+	sendClient(connectId, clientPid, message.c_str(), message.size());
+}
+
 void NetSender::postServer(int32_t serverId, const char* buffer, int32_t length)
 {
 	std::string sendBuffer;
@@ -57,6 +67,11 @@ void NetSender::postServer(int32_t serverId, const char* buffer, int32_t length)
 		sendBuffer.c_str(),
 		sendBuffer.size(),
 		MessageType::MESSAGE);
+}
+
+void NetSender::postServer(int32_t serverId, const std::string& message)
+{
+	postServer(serverId, message.c_str(), message.size());
 }
 
 void NetSender::postClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length)
@@ -73,6 +88,11 @@ void NetSender::postClient(int32_t connectId, int32_t clientPid, const char* buf
 		MessageType::SERVER_MESSAGE);
 }
 
+void NetSender::postClient(int32_t connectId, int32_t clientPid, const std::string& message)
+{
+	postClient(connectId, clientPid, message.c_str(), message.size());
+}
+
 std::string NetSender::netServerMessage(int32_t clientPid, const char* buffer, int32_t length)
 {
 	std::string sendBuffer;
@@ -80,6 +100,11 @@ std::string NetSender::netServerMessage(int32_t clientPid, const char* buffer, i
 	*((int32_t*)(&sendBuffer[0])) = clientPid;
 	::memcpy((char*)((int32_t*)(&sendBuffer[0]) + 1), buffer, length);
 	return sendBuffer;
+}
+
+std::string NetSender::netServerMessage(int32_t clientPid, const std::string& message)
+{
+	return netServerMessage(clientPid, message.c_str(), message.size());
 }
 
 std::string NetSender::netClientMessage(int32_t serverId, const char* buffer, int32_t length)
@@ -90,6 +115,11 @@ std::string NetSender::netClientMessage(int32_t serverId, const char* buffer, in
 	*((int32_t*)(&sendBuffer[0]) + 1) = m_currentProcessPid;
 	::memcpy((char*)((int32_t*)(&sendBuffer[0]) + 2), buffer, length);
 	return sendBuffer;
+}
+
+std::string NetSender::netClientMessage(int32_t serverId, const std::string& message)
+{
+	return netClientMessage(serverId, message.c_str(), message.size());
 }
 
 void NetSender::initClientReceive(ClientReceiveCallback* callback)

@@ -1,5 +1,6 @@
 "$CLOUD_REBUILD" Cini 32 lib release same
 "$CLOUD_REBUILD" CHook 32 lib release same
+"$CLOUD_REBUILD" CStopWatch 32 lib release same
 "$CLOUD_REBUILD" DialogManager 32 lib release same
 "$CLOUD_REBUILD" NetSender 32 lib release same
 "$CLOUD_REBUILD" CMouse 32 dll release librely
