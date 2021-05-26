@@ -19,7 +19,7 @@ void FollowTask::DoTask()
 	{
 		//点击任务栏
 		CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
-		CMouse::LeftClick();
+		CMouse::LeftClick(0);
 	}
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
@@ -28,17 +28,17 @@ void FollowTask::DoTask()
 		{
 			//点击任务栏
 			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
-			CMouse::LeftClick();
+			CMouse::LeftClick(0);
 		}
-		Sleep(50);
+		Sleep(10);
 		//跟随
 		CKeyboard::KeyPress(CKeyboard::F2);
-		Sleep(50);
+		Sleep(10);
 		CKeyboard::KeyPress(CKeyboard::F2);
-		Sleep(50);
+		Sleep(10);
 		CKeyboard::KeyPress(CKeyboard::F2);
 	}
-	Sleep(100);
+	Sleep(50);
 
 	accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
@@ -47,7 +47,7 @@ void FollowTask::DoTask()
 		{
 			//点击任务栏
 			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
-			CMouse::LeftClick();
+			CMouse::LeftClick(0);
 		}
 		Sleep(10);
 		//跟随
