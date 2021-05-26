@@ -13,7 +13,7 @@ m_exit(false)
 
 void HealTask::DoTask()
 {
-	Sleep(1000);
+	//Sleep(1000);
 	int32_t times = 0;
 	while (!m_exit)
 	{
