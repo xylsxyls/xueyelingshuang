@@ -24,10 +24,10 @@ void ServerReceive::ClientMessage(int32_t connectId, int32_t clientPid, const ch
 	int32_t index = -1;
 	while (index++ != vecClient.size() - 1)
 	{
-		//if ((vecClient[index].first == connectId) && (vecClient[index].second == clientPid))
-		//{
-		//	continue;
-		//}
+		if ((vecClient[index].first == connectId) && (vecClient[index].second == clientPid))
+		{
+			continue;
+		}
 		NetSender::instance().sendClient(vecClient[index].first, vecClient[index].second, buffer, length);
 	}
 }

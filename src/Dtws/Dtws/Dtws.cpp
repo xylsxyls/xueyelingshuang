@@ -115,7 +115,7 @@ void Dtws::init()
 	m_threadId = CTaskThreadManager::Instance().Init();
 	g_threadId = &m_threadId;
 
-	if (computerName == "CN0614001185W")
+	if (computerName == "SC-202007261854" || computerName == "CN0614001185W")
 	{
 		CHook::Init(WH_KEYBOARD_LL, HookFun);
 	}
