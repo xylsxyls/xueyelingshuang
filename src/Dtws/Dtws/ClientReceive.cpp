@@ -18,11 +18,12 @@ void ClientReceive::clientInitResponse(int32_t serverId, const char* buffer, int
 void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t length)
 {
 	RCSend("serverId = %d, buffer = %s, length = %d", serverId, buffer, length);
+	return;
 	switch (atoi(buffer))
 	{
 	case DTWS_STOP:
 	{
-		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopCurTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 	}
 	break;
 	case DTWS_FOLLOW:
