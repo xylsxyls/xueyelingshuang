@@ -60,7 +60,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("5");
 		}
-		Sleep(5000);
+		Sleep(6200);
 		if (m_exit)
 		{
 			return;
