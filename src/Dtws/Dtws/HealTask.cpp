@@ -60,7 +60,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("5");
 		}
-		Sleep(6200);
+		Sleep(6800);
 		if (m_exit)
 		{
 			return;
@@ -72,9 +72,9 @@ void HealTask::DoTask()
 			//点击任务栏
 			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
 			CMouse::LeftClick(0);
-			Sleep(20);
+			Sleep(50);
 			CKeyboard::KeyPress(CKeyboard::F2);
-			Sleep(20);
+			Sleep(50);
 			CKeyboard::InputString("6");
 		}
 		Sleep(1200);
@@ -119,9 +119,9 @@ void HealTask::DoTask()
 			//点击任务栏
 			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
 			CMouse::LeftClick(0);
-			Sleep(20);
+			Sleep(50);
 			CKeyboard::KeyPress(CKeyboard::F1);
-			Sleep(20);
+			Sleep(50);
 			CKeyboard::InputString("6");
 		}
 		Sleep(1200);
