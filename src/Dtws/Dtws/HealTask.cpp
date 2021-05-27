@@ -20,7 +20,7 @@ void HealTask::DoTask()
 		{
 			//²¹³ä
 			CKeyboard::InputString("5");
-			Sleep(3800);
+			Sleep(6000);
 			CKeyboard::KeyPress(CKeyboard::F2);
 			Sleep(50);
 			CKeyboard::InputString("6");
@@ -134,9 +134,9 @@ void HealTask::StopTask()
 
 void HealTask::Sleep(int32_t time)
 {
-	int32_t count = time / 10;
+	int32_t count = time / 16;
 	while (count-- != 0 && !m_exit)
 	{
-		::Sleep(10);
+		::Sleep(16);
 	}
 }
