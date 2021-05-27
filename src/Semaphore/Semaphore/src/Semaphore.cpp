@@ -32,6 +32,20 @@ void Semaphore::wait()
 	--m_count;
 }
 
+bool Semaphore::wait(int32_t timeout)
+{
+	std::unique_lock<std::mutex> lock(m_mtx);
+	while (m_count == 0)
+	{
+		if (m_cv.wait_for(lock, std::chrono::milliseconds(timeout)) == std::cv_status::timeout)
+		{
+			return false;
+		}
+	}
+	--m_count;
+	return true;
+}
+
 void Semaphore::createProcessSemaphore(const std::string& name, int32_t signalCount)
 {
 	if (m_processSemaphore != nullptr)
@@ -105,6 +119,36 @@ void Semaphore::processWait()
 #endif
 }
 
+bool Semaphore::processWait(int32_t timeout)
+{
+	if (m_processSemaphore == nullptr)
+	{
+		return false;
+	}
+#ifdef _MSC_VER
+	DWORD dwResult = ::WaitForSingleObject(m_processSemaphore, timeout);
+	if (dwResult == WAIT_OBJECT_0)
+	{
+		return true;
+	}
+	else if (dwResult == WAIT_TIMEOUT)
+	{
+		return false;
+	}
+	return false;
+#elif __unix__
+	//struct timespec ts;
+	//clock_gettime(CLOCK_REALTIME, &ts);
+	//ts.tv_sec += 2; // ≥¨ ±2√Î
+	//int ret = tp_sem_timedwait(&m_sem, &ts);
+	//if (ret != 0)
+	//{
+	//	return -1;
+	//}
+	::sem_wait(m_processSemaphore);
+#endif
+}
+
 void Semaphore::event()
 {
 	std::unique_lock<std::mutex> lock(m_mtx);
@@ -123,8 +167,12 @@ void Semaphore::eventWait()
 	m_cv.wait(lock);
 }
 
-void Semaphore::eventWait(int32_t timeOut)
+bool Semaphore::eventWait(int32_t timeout)
 {
 	std::unique_lock<std::mutex> lock(m_mtx);
-	m_cv.wait_for(lock, std::chrono::milliseconds(timeOut));
+	if (m_cv.wait_for(lock, std::chrono::milliseconds(timeout)) == std::cv_status::timeout)
+	{
+		return false;
+	}
+	return true;
 }

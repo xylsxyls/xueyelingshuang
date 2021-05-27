@@ -305,7 +305,13 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 		std::unique_lock<std::mutex> lock(m_assignMutex);
 		WriteLock writeLock(*destProcessAssignMutex);
 		destAssignSemaphore->processSignal();
-		destAssignEndSemaphore->processWait();
+		while (!destAssignEndSemaphore->processWait(100))
+		{
+			if (CSystem::processName(destPid).empty())
+			{
+				return;
+			}
+		}
 		//读取申请的缓存区号
 		assign = (int32_t)(*((int32_t*)area));
 	}
@@ -343,7 +349,13 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 	{
 		std::unique_lock<std::mutex> lock(m_readMutex);
 		WriteLock writeLock(*destProcessReadMutex);
-		destReadEndSemaphore->processWait();
+		while (!destReadEndSemaphore->processWait(100))
+		{
+			if (CSystem::processName(destPid).empty())
+			{
+				return;
+			}
+		}
 		//把写好的缓存区号写进去
 		*((int32_t*)area + 1) = assign;
 		destReadSemaphore->processSignal();

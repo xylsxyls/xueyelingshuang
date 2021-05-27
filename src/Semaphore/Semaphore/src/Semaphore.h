@@ -31,6 +31,12 @@ public:
 	*/
 	void wait();
 
+	/** 信号量的等待
+	@param [in] timeout 等待时间，单位毫秒
+	@return 如果是参数是-1则一定返回true，如果参数是时间，超时返回false，等待到信号返回true
+	*/
+	bool wait(int32_t timeout);
+
 	/** 进程信号量的创建
 	@param [in] name 名字
 	@param [in] signalCount 同时接受的最大信号量个数
@@ -54,6 +60,12 @@ public:
 	*/
 	void processWait();
 
+	/** 进程等待
+	@param [in] timeout 超时时间
+	@return 等到信号返回true，超时或未初始化返回false
+	*/
+	bool processWait(int32_t timeout);
+
 	/** 事件通知，多个事件同时等待只会通知一个，必须进入了eventWait，通知才有效果，一对一，允许一对多
 	*/
 	void event();
@@ -67,8 +79,9 @@ public:
 	void eventWait();
 
 	/** 事件的等待
+	@param [in] timeout 
 	*/
-	void eventWait(int32_t timeOut);
+	bool eventWait(int32_t timeout);
 
 private:
 #ifdef _MSC_VER

@@ -1,2 +1,14 @@
 std::thread* pThread;
 pThread = new std::thread(std::bind(&CEverydayTimeCaller::WaitToCallThread,this,vecTimeAndFlag,spi));
+
+void ThreadFun(int n)
+{
+	
+}
+std::thread thread(ThreadFun, n);
+
+void ThreadFun(int& n)
+{
+	
+}
+std::thread thread(ThreadFun, std::ref(n));
