@@ -20,19 +20,19 @@ void HealTask::DoTask()
 		{
 			//²¹³ä
 			CKeyboard::InputString("5");
-			Sleep(3800);
+			Sleep(3500);
 			CKeyboard::KeyPress(CKeyboard::F2);
 			Sleep(50);
 			CKeyboard::InputString("6");
-			Sleep(700);
+			Sleep(800);
 			CKeyboard::InputString("8");
 			Sleep(1400);
 			CKeyboard::InputString("7");
-			Sleep(700);
+			Sleep(800);
 			CKeyboard::KeyPress(CKeyboard::F1);
 			Sleep(20);
 			CKeyboard::InputString("6");
-			Sleep(700);
+			Sleep(800);
 		}
 		return;
 	}
