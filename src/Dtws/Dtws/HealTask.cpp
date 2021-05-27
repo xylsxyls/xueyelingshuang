@@ -20,7 +20,7 @@ void HealTask::DoTask()
 		{
 			//²¹³ä
 			CKeyboard::InputString("5");
-			Sleep(5800);
+			Sleep(3800);
 			CKeyboard::KeyPress(CKeyboard::F2);
 			Sleep(50);
 			CKeyboard::InputString("6");
