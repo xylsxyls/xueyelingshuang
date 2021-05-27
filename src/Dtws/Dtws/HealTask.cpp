@@ -60,7 +60,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("5");
 		}
-		Sleep(3500);
+		Sleep(5000);
 		if (m_exit)
 		{
 			return;
@@ -77,7 +77,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("6");
 		}
-		Sleep(800);
+		Sleep(1200);
 		if (m_exit)
 		{
 			return;
@@ -92,7 +92,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("8");
 		}
-		Sleep(800);
+		Sleep(1200);
 		if (m_exit)
 		{
 			return;
@@ -107,7 +107,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("7");
 		}
-		Sleep(800);
+		Sleep(1200);
 		if (m_exit)
 		{
 			return;
@@ -124,7 +124,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("6");
 		}
-		Sleep(800);
+		Sleep(1200);
 	}
 }
 

@@ -4,6 +4,7 @@
 
 void ATask::DoTask()
 {
+	return;
 	CSystem::Sleep(1150);
 	CKeyboard::KeyDown('3');
 	CSystem::Sleep(700);
