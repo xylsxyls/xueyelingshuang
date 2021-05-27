@@ -21,12 +21,18 @@ void HealTask::DoTask()
 			//²¹³ä
 			CKeyboard::InputString("5");
 			Sleep(5800);
+			CKeyboard::KeyPress(CKeyboard::F2);
+			Sleep(50);
 			CKeyboard::InputString("6");
 			Sleep(1000);
 			CKeyboard::InputString("8");
 			Sleep(1000);
 			CKeyboard::InputString("7");
-			Sleep(2500);
+			Sleep(2000);
+			CKeyboard::KeyPress(CKeyboard::F1);
+			Sleep(20);
+			CKeyboard::InputString("6");
+			Sleep(1000);
 		}
 		return;
 	}
@@ -54,6 +60,10 @@ void HealTask::DoTask()
 			CKeyboard::InputString("5");
 		}
 		Sleep(5000);
+		if (m_exit)
+		{
+			return;
+		}
 
 		accountIndex = -1;
 		while (accountIndex++ != g_accountCount - 1)
@@ -62,9 +72,15 @@ void HealTask::DoTask()
 			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
 			CMouse::LeftClick(0);
 			Sleep(20);
+			CKeyboard::KeyPress(CKeyboard::F2);
+			Sleep(20);
 			CKeyboard::InputString("6");
 		}
 		Sleep(1000);
+		if (m_exit)
+		{
+			return;
+		}
 
 		accountIndex = -1;
 		while (accountIndex++ != g_accountCount - 1)
@@ -76,6 +92,10 @@ void HealTask::DoTask()
 			CKeyboard::InputString("8");
 		}
 		Sleep(1000);
+		if (m_exit)
+		{
+			return;
+		}
 
 		accountIndex = -1;
 		while (accountIndex++ != g_accountCount - 1)
@@ -86,7 +106,24 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("7");
 		}
-		Sleep(2700);
+		Sleep(2000);
+		if (m_exit)
+		{
+			return;
+		}
+
+		accountIndex = -1;
+		while (accountIndex++ != g_accountCount - 1)
+		{
+			//µã»÷ÈÎÎñÀ¸
+			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
+			CMouse::LeftClick(0);
+			Sleep(20);
+			CKeyboard::KeyPress(CKeyboard::F1);
+			Sleep(20);
+			CKeyboard::InputString("6");
+		}
+		Sleep(1000);
 	}
 }
 
