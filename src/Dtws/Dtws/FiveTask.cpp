@@ -4,9 +4,10 @@
 
 void FiveTask::DoTask()
 {
-	CSystem::Sleep(600);
+	CSystem::Sleep(950);
 	CKeyboard::KeyPress('5');
+	CSystem::Sleep(1100);
 	CKeyboard::KeyDown('Q');
-	CSystem::Sleep(800);
+	CSystem::Sleep(1150);
 	CKeyboard::KeyUp('Q');
 }

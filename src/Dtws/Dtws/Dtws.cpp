@@ -49,7 +49,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		break;
 		case '5':
 		{
-			if (g_stopWatch.GetWatchTime() > 2000)
+			if (g_stopWatch.GetWatchTime() > 10000)
 			{
 				g_stopWatch.SetWatchTime(0);
 				std::shared_ptr<FiveTask> spFiveTask(new FiveTask);
@@ -59,7 +59,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		break;
 		case 'A':
 		{
-			if (g_stopWatch.GetWatchTime() > 2000)
+			if (g_stopWatch.GetWatchTime() > 10000)
 			{
 				g_stopWatch.SetWatchTime(0);
 				std::shared_ptr<ATask> spATask(new ATask);
