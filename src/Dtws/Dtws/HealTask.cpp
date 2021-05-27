@@ -15,7 +15,7 @@ void HealTask::DoTask()
 {
 	if (g_accountCount == 1)
 	{
-		CKeyboard::KeyPress(CKeyboard::Right);
+		CKeyboard::KeyPress(CKeyboard::Right, 50);
 		Sleep(800);
 		while (!m_exit)
 		{
@@ -60,7 +60,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("5");
 		}
-		Sleep(3200);
+		Sleep(3500);
 		if (m_exit)
 		{
 			return;
@@ -77,7 +77,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("6");
 		}
-		Sleep(700);
+		Sleep(800);
 		if (m_exit)
 		{
 			return;
@@ -92,7 +92,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("8");
 		}
-		Sleep(700);
+		Sleep(800);
 		if (m_exit)
 		{
 			return;
@@ -107,7 +107,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("7");
 		}
-		Sleep(700);
+		Sleep(800);
 		if (m_exit)
 		{
 			return;
@@ -124,7 +124,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("6");
 		}
-		Sleep(700);
+		Sleep(800);
 	}
 }
 
