@@ -18,7 +18,6 @@ void ClientReceive::clientInitResponse(int32_t serverId, const char* buffer, int
 void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t length)
 {
 	RCSend("serverId = %d, buffer = %s, length = %d", serverId, buffer, length);
-	return;
 	switch (atoi(buffer))
 	{
 	case DTWS_STOP:
@@ -28,12 +27,14 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_FOLLOW:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 		std::shared_ptr<FollowTask> spFollowTask(new FollowTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spFollowTask);
 	}
 	break;
 	case DTWS_HEAL:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 		std::shared_ptr<HealTask> spHealTask(new HealTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spHealTask);
 	}
