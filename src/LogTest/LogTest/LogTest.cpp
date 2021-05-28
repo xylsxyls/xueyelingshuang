@@ -110,7 +110,12 @@ int32_t main()
 
 	printf("wait for server response ...\n");
 	NetSender::instance().initClient(PROJECT_LOGTEST, std::string("LogTestServer") + LOGTEST_SERVER_VERSION, loginName);
-	initResponseSemaphore.wait();
+
+	bool initResult = initResponseSemaphore.wait(1000);
+	if (!initResult)
+	{
+		printf("cannot find NetClientManager\n");
+	}
 	printf("ComputerName = %s, pid = %d\n", CSystem::getComputerName().c_str(), CSystem::currentProcessPid());
 
 	while (!g_exit)

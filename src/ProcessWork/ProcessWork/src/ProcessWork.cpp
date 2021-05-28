@@ -76,7 +76,6 @@ bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t fl
 	{
 		printf("init pid nullptr\n");
 	}
-	*(int32_t*)pid = m_thisProcessPid;
 
 	m_assignSemaphore = new Semaphore;
 	m_assignEndSemaphore = new Semaphore;
@@ -120,12 +119,17 @@ bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t fl
 		CTaskThreadManager::Instance().GetThreadInterface(m_copyThreadId),
 		CTaskThreadManager::Instance().GetThreadInterface(m_receiveThreadId));
 	CTaskThreadManager::Instance().GetThreadInterface(m_readThreadId)->PostTask(spReadTask);
+
+	*(int32_t*)pid = m_thisProcessPid;
 	
 	return true;
 }
 
 void ProcessWork::uninitReceive()
 {
+	delete m_pid;
+	m_pid = nullptr;
+
 	CTaskThreadManager::Instance().Uninit(m_assginThreadId);
 	CTaskThreadManager::Instance().Uninit(m_readThreadId);
 	CTaskThreadManager::Instance().Uninit(m_copyThreadId);
@@ -142,7 +146,6 @@ void ProcessWork::uninitReceive()
 	delete m_readSemaphore;
 	delete m_readEndSemaphore;
 	delete m_area;
-	delete m_pid;
 
 	m_assignSemaphore = nullptr;
 	m_assignEndSemaphore = nullptr;

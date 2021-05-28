@@ -2,6 +2,9 @@
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include "IntDateTime/IntDateTimeAPI.h"
+#include "ProcessWork/ProcessWorkAPI.h"
+
+extern bool g_exit;
 
 LogTask::LogTask():
 m_isNet(false)
@@ -15,6 +18,13 @@ void LogTask::DoTask()
 	m_message.from(m_buffer);
 	m_messageMap.clear();
 	m_message.getMap(m_messageMap);
+	if ((int32_t)m_messageMap[LOG_CLOSE] == (int32_t)true)
+	{
+		ProcessWork::instance().uninitPostThread();
+		ProcessWork::instance().uninitReceive();
+		g_exit = true;
+		return;
+	}
 	if ((int32_t)m_messageMap[LOG_UNINIT] == (int32_t)true)
 	{
 		LogManager::instance().uninitAll();

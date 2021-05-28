@@ -34,6 +34,15 @@ LogSender& LogSender::instance()
 	return logSender;
 }
 
+void LogSender::logTestOpen()
+{
+	std::string path = CSystem::GetCurrentDllPath() + "LogTest" + LOGTEST_CLIENT_VERSION;
+#ifdef _MSC_VER
+	path.append(".exe");
+#endif
+	::ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_HIDE);
+}
+
 void LogSender::logSend(const LogPackage& package, const char* format, ...)
 {
 	SharedMemory sharedMemory("ProcessArea_LogTest" + LOGTEST_CLIENT_VERSION);
@@ -90,6 +99,41 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	}
 	
 	send(strMessage.c_str(), (int32_t)strMessage.length());
+}
+
+void LogSender::logTestClose()
+{
+	SharedMemory sharedMemory("ProcessArea_LogTest" + LOGTEST_CLIENT_VERSION);
+	if (sharedMemory.writeWithoutLock() == nullptr)
+	{
+		return;
+	}
+
+	std::string strMessage;
+	{
+		std::unique_lock<std::mutex> lock(m_messageMutex);
+		(*m_message)[LOG_CLOSE] = (int32_t)true;
+		(*m_message).toString(strMessage);
+	}
+
+	send(strMessage.c_str(), (int32_t)strMessage.length());
+}
+
+bool LogSender::logTestExist()
+{
+	SharedMemory sharedMemory("ProcessArea_LogTest" + LOGTEST_CLIENT_VERSION);
+	void* logTestMemory = sharedMemory.writeWithoutLock();
+	if (logTestMemory == nullptr)
+	{
+		return false;
+	}
+
+	int32_t logTestPid = *(int32_t*)logTestMemory;
+	std::string logTestName = "LogTest" + LOGTEST_CLIENT_VERSION;
+#ifdef _MSC_VER
+	logTestName.append(".exe");
+#endif
+	return (CSystem::processFirstPid(logTestName) == logTestPid);
 }
 
 void LogSender::send(const char* buffer, int32_t length)
