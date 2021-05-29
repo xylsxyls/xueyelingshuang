@@ -30,13 +30,13 @@ void FollowTask::DoTask()
 			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
 			CMouse::LeftClick(0);
 		}
-		Sleep(10);
+		Sleep(50);
 		//¸úËæ
-		CKeyboard::KeyPress(CKeyboard::F2);
+		CKeyboard::KeyPress(CKeyboard::F2, 0);
 		Sleep(10);
-		CKeyboard::KeyPress(CKeyboard::F2);
+		CKeyboard::KeyPress(CKeyboard::F2, 0);
 		Sleep(10);
-		CKeyboard::KeyPress(CKeyboard::F2);
+		CKeyboard::KeyPress(CKeyboard::F2, 0);
 	}
 	Sleep(50);
 
