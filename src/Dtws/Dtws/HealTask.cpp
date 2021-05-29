@@ -15,31 +15,32 @@ void HealTask::DoTask()
 {
 	if (g_accountCount == 1)
 	{
-		Sleep(4000);
+		Sleep(2300);
 		CKeyboard::KeyPress(CKeyboard::Right, 0);
-		Sleep(800);
 		while (!m_exit)
 		{
 			//补充
+			//CKeyboard::KeyPress(CKeyboard::F1);
+			//Sleep(20);
+			//CKeyboard::InputString("6");
+			//Sleep(800);
 			CKeyboard::InputString("5");
-			Sleep(3500);
+			Sleep(3600);
 			CKeyboard::KeyPress(CKeyboard::F2);
 			Sleep(50);
 			CKeyboard::InputString("6");
 			Sleep(800);
 			CKeyboard::InputString("8");
-			Sleep(1400);
-			CKeyboard::InputString("7");
-			Sleep(800);
-			CKeyboard::KeyPress(CKeyboard::F1);
-			Sleep(20);
-			CKeyboard::InputString("6");
-			Sleep(800);
+			Sleep(1900);
 		}
 		return;
 	}
 
-	Sleep(3000);
+	//点击任务栏
+	CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
+	CMouse::LeftClick(0);
+
+	Sleep(2300);
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
 	{
@@ -59,24 +60,13 @@ void HealTask::DoTask()
 			//点击任务栏
 			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
 			CMouse::LeftClick(0);
-			Sleep(50);
-			CKeyboard::KeyPress(CKeyboard::F1, 0);
-			Sleep(50);
-			CKeyboard::InputString("6", 0);
-		}
-		Sleep(1000);
-
-		accountIndex = -1;
-		while (accountIndex++ != g_accountCount - 1)
-		{
-			//点击任务栏
-			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
-			CMouse::LeftClick(0);
 			Sleep(20);
 			CKeyboard::InputString("5");
-			Sleep(2000);
+			Sleep(600);
+			CKeyboard::KeyPress(CKeyboard::F2);
+			Sleep(1200);
 		}
-		Sleep(1800);
+		Sleep(1200);
 		if (m_exit)
 		{
 			return;
@@ -89,15 +79,10 @@ void HealTask::DoTask()
 			CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
 			CMouse::LeftClick(0);
 			Sleep(50);
-			CKeyboard::KeyPress(CKeyboard::F2);
-			Sleep(50);
 			CKeyboard::InputString("6", 0);
-			Sleep(1000);
-			CKeyboard::InputString("7", 0);
-			Sleep(1000);
+			Sleep(1500);
 			CKeyboard::InputString("8", 0);
 		}
-		Sleep(1000);
 	}
 }
 
