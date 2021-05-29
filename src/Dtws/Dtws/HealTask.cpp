@@ -16,7 +16,7 @@ void HealTask::DoTask()
 	if (g_accountCount == 1)
 	{
 		Sleep(2300);
-		CKeyboard::KeyPress(CKeyboard::Right, 0);
+		CKeyboard::KeyPress(CKeyboard::Right, 20);
 		while (!m_exit)
 		{
 			//²¹³ä
