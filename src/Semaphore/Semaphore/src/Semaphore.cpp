@@ -137,15 +137,16 @@ bool Semaphore::processWait(int32_t timeout)
 	}
 	return false;
 #elif __unix__
-	//struct timespec ts;
-	//clock_gettime(CLOCK_REALTIME, &ts);
-	//ts.tv_sec += 2; // ≥¨ ±2√Î
-	//int ret = tp_sem_timedwait(&m_sem, &ts);
-	//if (ret != 0)
-	//{
-	//	return -1;
-	//}
-	::sem_wait(m_processSemaphore);
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	ts.tv_sec += ((timeout / 1000) + ((ts.tv_nsec + ((timeout % 1000) * 1000000))) / 1000000000);
+	ts.tv_nsec = (ts.tv_nsec + ((timeout % 1000) * 1000000)) % 1000000000;
+	int ret = sem_timedwait(m_processSemaphore, &ts);
+	if (ret == 0)
+	{
+	    return true;
+	}
+	return false;
 #endif
 }
 
