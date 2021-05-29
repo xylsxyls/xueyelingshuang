@@ -11,7 +11,13 @@ const std::string LOGTEST_CLIENT_VERSION = "1.1";
 class LogSenderAPI LogSenderInterface
 {
 public:
+	virtual bool logTestExist() = 0;
+
+	virtual void logTestOpen() = 0;
+
 	virtual void logSend(const LogPackage& package, const char* format, ...) = 0;
+
+	virtual void logTestClose() = 0;
 };
 
 extern "C"
@@ -30,7 +36,13 @@ public:
 	static LogSender& instance();
 
 public:
+	bool logTestExist();
+
+	void logTestOpen();
+
 	void logSend(const LogPackage& package, const char* format, ...);
+
+	void logTestClose();
 
 protected:
 	void send(const char* buffer, int32_t length);

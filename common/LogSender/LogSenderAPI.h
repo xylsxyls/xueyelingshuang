@@ -8,6 +8,10 @@
 #include <dlfcn.h>
 #endif
 
+#define LOG_TEST_EXIST LogSenderManager::instance().getInterface()->logTestExist
+#define LOG_TEST_OPEN LogSenderManager::instance().getInterface()->logTestOpen
+#define LOG_TEST_CLOSE LogSenderManager::instance().getInterface()->logTestClose
+
 #define LOG_NAME_SET(name) LogSenderManager::instance().setLogName(name)
 
 #define LOG_SEND(format, ...) LOG_SEND_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
@@ -91,26 +95,42 @@ public:
 #endif
 			std::string path = szFilePath;
 			int32_t left = (int32_t)path.find_last_of("/\\");
+			std::string dllName = "LogSender";
 #ifdef _MSC_VER
-			std::string exeDllPath = path.substr(0, left + 1) + "LogSender.dll";
+#ifdef _WIN64
+			dllName.append("_64.dll");
+#else
+			dllName.append(".dll");
+#endif
+#else
+#ifdef __x86_64__
+			dllName.append("_64.so");
+			dllName = "lib" + dllName;
+#elif __i386__
+			dllName.append(".so");
+			dllName = "lib" + dllName;
+#endif
+#endif
+#ifdef _MSC_VER
+			std::string exeDllPath = path.substr(0, left + 1) + dllName;
 			m_dllHinstance = ::LoadLibraryExA(exeDllPath.c_str(), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
 #elif __unix__
-			std::string exeDllPath = path.substr(0, left + 1) + "libLogSender.so";
+			std::string exeDllPath = path.substr(0, left + 1) + dllName;
 			m_dllHinstance = ::dlopen(exeDllPath.c_str(), RTLD_LAZY);
 #endif
 			if (m_dllHinstance == nullptr)
 			{
 #ifdef _MSC_VER
-				m_dllHinstance = ::LoadLibraryExA("D:/xueyelingshuang/common/LogSender/LogSender.dll", 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+				m_dllHinstance = ::LoadLibraryExA(("D:/xueyelingshuang/common/LogSender/" + dllName).c_str(), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
 #elif __unix__
-				m_dllHinstance = ::dlopen("/home/xylsxyls/xueyelingshuang/common/LogSender/libLogSender.so", RTLD_LAZY);
+				m_dllHinstance = ::dlopen(("/home/xylsxyls/xueyelingshuang/common/LogSender/" + dllName).c_str(), RTLD_LAZY);
 #endif
 				if (m_dllHinstance == nullptr)
 				{
 #ifdef _MSC_VER
-					m_dllHinstance = ::LoadLibraryExA("D:/LogSender/LogSender.dll", 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+					m_dllHinstance = ::LoadLibraryExA(("D:/LogSender/" + dllName).c_str(), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
 #elif __unix__
-					m_dllHinstance = ::dlopen("/tmp/LogSender/libLogSender.so", RTLD_LAZY);
+					m_dllHinstance = ::dlopen(("/tmp/LogSender/" + dllName).c_str(), RTLD_LAZY);
 #endif
 				}
 			}
