@@ -47,8 +47,8 @@ void HealTask::DoTask()
 		//µã»÷ÈÎÎñÀ¸
 		CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
 		CMouse::LeftClick(0);
-		Sleep(20);
-		CKeyboard::KeyPress(CKeyboard::Right, 0);
+		Sleep(100);
+		CKeyboard::KeyPress(CKeyboard::Right, 20);
 	}
 
 	while (!m_exit)
@@ -63,7 +63,7 @@ void HealTask::DoTask()
 			Sleep(20);
 			CKeyboard::InputString("5");
 			Sleep(600);
-			CKeyboard::KeyPress(CKeyboard::F2);
+			CKeyboard::KeyPress(CKeyboard::F2, 0);
 			Sleep(1200);
 		}
 		Sleep(1200);
