@@ -41,6 +41,10 @@ void LogSender::logTestOpen()
 	path.append(".exe");
 #endif
 	::ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_HIDE);
+	while (!logTestExist())
+	{
+		CSystem::Sleep(1);
+	}
 }
 
 void LogSender::logSend(const LogPackage& package, const char* format, ...)
@@ -112,6 +116,7 @@ void LogSender::logTestClose()
 	std::string strMessage;
 	{
 		std::unique_lock<std::mutex> lock(m_messageMutex);
+		m_message->clear();
 		(*m_message)[LOG_CLOSE] = (int32_t)true;
 		(*m_message).toString(strMessage);
 	}
