@@ -13,6 +13,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "FiveTask.h"
 #include "ATask.h"
+#include "WaterTask.h"
 #include "CStopWatch/CStopWatchAPI.h"
 
 #define DTWS_SERVER_VERSION "1.0"
@@ -21,13 +22,16 @@ xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
 int32_t g_accountCount = 1;
 uint32_t* g_threadId = nullptr;
 CStopWatch g_stopWatch;
+bool g_altDown = false;
 
 LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	// 请在这里添加消息处理代码
+	RCSend("code1 = %d, wParam = %d, lParam = %d", nCode, wParam, lParam);
 	if (CHook::IsKeyDown(wParam))
 	{
 		DWORD code = CHook::GetVkCode(lParam);
+		RCSend("code2 = %d", code);
 		switch (code)
 		{
 		//delete键
@@ -35,6 +39,20 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			//CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopCurTask();
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_STOP));
+		}
+		break;
+		//alt键
+		case 164:
+		{
+			g_altDown = true;
+		}
+		break;
+		case '2':
+		{
+			if (g_altDown)
+			{
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_RISE));
+			}
 		}
 		break;
 		case '4':
@@ -71,6 +89,21 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 	}
+	else if (CHook::IsKeyUp(wParam))
+	{
+		DWORD code = CHook::GetVkCode(lParam);
+		switch (code)
+		{
+		//alt键
+		case 164:
+		{
+			g_altDown = false;
+		}
+		break;
+		default:
+			break;
+		}
+	}
 
 	// 将事件传递到下一个钩子
 	return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
@@ -84,6 +117,7 @@ Dtws::Dtws(QWidget* parent):
 	m_heal(nullptr),
 	m_followHeal(nullptr),
 	m_skill(nullptr),
+	m_water(nullptr),
 	m_clientReceive(nullptr)
 {
 	ui.setupUi(this);
@@ -148,6 +182,11 @@ void Dtws::init()
 	m_skill->setText(QStringLiteral("技能"));
 	m_skill->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_skill, &COriginalButton::clicked, this, &Dtws::onSkillButtonClicked);
+
+	m_water = new COriginalButton(this);
+	m_water->setText(QStringLiteral("采水"));
+	m_water->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_water, &COriginalButton::clicked, this, &Dtws::onWaterButtonClicked);
 }
 
 bool Dtws::check()
@@ -169,6 +208,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_heal);
 	vecButton.push_back(m_followHeal);
 	vecButton.push_back(m_skill);
+	vecButton.push_back(m_water);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -227,4 +267,11 @@ void Dtws::onSkillButtonClicked()
 	showMinimized();
 	std::shared_ptr<SkillTask> spSkillTask(new SkillTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSkillTask);
+}
+
+void Dtws::onWaterButtonClicked()
+{
+	showMinimized();
+	std::shared_ptr<WaterTask> spWaterTask(new WaterTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spWaterTask);
 }

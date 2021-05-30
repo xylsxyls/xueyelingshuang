@@ -186,7 +186,9 @@
     <ClCompile Include="HealTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Dtws.cpp" />
+    <ClCompile Include="RiseTask.cpp" />
     <ClCompile Include="SkillTask.cpp" />
+    <ClCompile Include="WaterTask.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.h">
@@ -287,7 +289,9 @@
     <ClInclude Include="FiveTask.h" />
     <ClInclude Include="FollowTask.h" />
     <ClInclude Include="HealTask.h" />
+    <ClInclude Include="RiseTask.h" />
     <ClInclude Include="SkillTask.h" />
+    <ClInclude Include="WaterTask.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

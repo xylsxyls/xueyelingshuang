@@ -77,6 +77,12 @@
     <ClCompile Include="ATask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="RiseTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="WaterTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -112,6 +118,12 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="ATask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="RiseTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="WaterTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

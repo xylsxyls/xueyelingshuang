@@ -29,7 +29,8 @@ enum
 
 	DTWS_STOP = 20000,
 	DTWS_FOLLOW,
-	DTWS_HEAL
+	DTWS_HEAL,
+	DTWS_RISE
 };
 
 enum StockEnum

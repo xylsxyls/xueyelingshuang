@@ -34,5 +34,5 @@ bool CHook::IsKeyUp(WPARAM wParam)
 
 bool CHook::IsKeyDown(WPARAM wParam)
 {
-	return wParam == WM_KEYDOWN;
+	return wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN;
 }

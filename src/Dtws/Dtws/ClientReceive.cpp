@@ -1,6 +1,7 @@
 #include "ClientReceive.h"
 #include "FollowTask.h"
 #include "HealTask.h"
+#include "RiseTask.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
 extern uint32_t* g_threadId;
@@ -37,6 +38,13 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 		std::shared_ptr<HealTask> spHealTask(new HealTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spHealTask);
+	}
+	break;
+	case DTWS_RISE:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+		std::shared_ptr<RiseTask> spRiseTask(new RiseTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spRiseTask);
 	}
 	break;
 	default:
