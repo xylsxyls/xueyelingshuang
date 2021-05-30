@@ -25,13 +25,13 @@ void HealTask::DoTask()
 			//CKeyboard::InputString("6");
 			//Sleep(800);
 			CKeyboard::InputString("5");
-			Sleep(3600);
+			Sleep(3700);
 			CKeyboard::KeyPress(CKeyboard::F2);
 			Sleep(50);
 			CKeyboard::InputString("6");
 			Sleep(800);
 			CKeyboard::InputString("8");
-			Sleep(1900);
+			Sleep(1500);
 		}
 		return;
 	}
@@ -82,8 +82,9 @@ void HealTask::DoTask()
 			CMouse::LeftClick(0);
 			Sleep(50);
 			CKeyboard::InputString("6", 0);
-			Sleep(1500);
+			Sleep(1600);
 			CKeyboard::InputString("8", 0);
+			Sleep(300);
 		}
 	}
 }
