@@ -15,9 +15,8 @@ void HealTask::DoTask()
 {
 	if (g_accountCount == 1)
 	{
-		Sleep(2300);
 		CKeyboard::KeyPress(CKeyboard::Right, 20);
-		Sleep(100);
+		Sleep(2300);
 		while (!m_exit)
 		{
 			//²¹³ä
@@ -40,8 +39,8 @@ void HealTask::DoTask()
 	//µã»÷ÈÎÎñÀ¸
 	CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
 	CMouse::LeftClick(0);
-
-	Sleep(2300);
+	Sleep(100);
+	
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
 	{
@@ -51,6 +50,8 @@ void HealTask::DoTask()
 		Sleep(100);
 		CKeyboard::KeyPress(CKeyboard::Right, 20);
 	}
+
+	Sleep(2300);
 
 	while (!m_exit)
 	{
