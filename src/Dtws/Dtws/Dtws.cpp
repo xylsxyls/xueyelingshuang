@@ -14,6 +14,7 @@
 #include "FiveTask.h"
 #include "ATask.h"
 #include "WaterTask.h"
+#include "SmallTask.h"
 #include "CStopWatch/CStopWatchAPI.h"
 
 #define DTWS_SERVER_VERSION "1.0"
@@ -118,6 +119,7 @@ Dtws::Dtws(QWidget* parent):
 	m_followHeal(nullptr),
 	m_skill(nullptr),
 	m_water(nullptr),
+	m_small(nullptr),
 	m_clientReceive(nullptr)
 {
 	ui.setupUi(this);
@@ -187,6 +189,11 @@ void Dtws::init()
 	m_water->setText(QStringLiteral("²ÉË®"));
 	m_water->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_water, &COriginalButton::clicked, this, &Dtws::onWaterButtonClicked);
+
+	m_small = new COriginalButton(this);
+	m_small->setText(QStringLiteral("ËõÐ¡"));
+	m_small->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_small, &COriginalButton::clicked, this, &Dtws::onSmallButtonClicked);
 }
 
 bool Dtws::check()
@@ -209,6 +216,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_followHeal);
 	vecButton.push_back(m_skill);
 	vecButton.push_back(m_water);
+	vecButton.push_back(m_small);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -274,4 +282,11 @@ void Dtws::onWaterButtonClicked()
 	showMinimized();
 	std::shared_ptr<WaterTask> spWaterTask(new WaterTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spWaterTask);
+}
+
+void Dtws::onSmallButtonClicked()
+{
+	showMinimized();
+	std::shared_ptr<SmallTask> spSmallTask(new SmallTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSmallTask);
 }

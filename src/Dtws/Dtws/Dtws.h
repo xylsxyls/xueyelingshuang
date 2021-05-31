@@ -29,6 +29,7 @@ private slots:
 	void onFollowHealButtonClicked();
 	void onSkillButtonClicked();
 	void onWaterButtonClicked();
+	void onSmallButtonClicked();
 
 private:
 	Ui::DtwsClass ui;
@@ -38,6 +39,7 @@ private:
 	COriginalButton* m_followHeal;
 	COriginalButton* m_skill;
 	COriginalButton* m_water;
+	COriginalButton* m_small;
 	uint32_t m_threadId;
 	ClientReceive* m_clientReceive;
 };

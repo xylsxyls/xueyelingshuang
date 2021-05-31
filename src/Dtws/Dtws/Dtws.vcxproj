@@ -188,6 +188,7 @@
     <ClCompile Include="Dtws.cpp" />
     <ClCompile Include="RiseTask.cpp" />
     <ClCompile Include="SkillTask.cpp" />
+    <ClCompile Include="SmallTask.cpp" />
     <ClCompile Include="WaterTask.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -291,6 +292,7 @@
     <ClInclude Include="HealTask.h" />
     <ClInclude Include="RiseTask.h" />
     <ClInclude Include="SkillTask.h" />
+    <ClInclude Include="SmallTask.h" />
     <ClInclude Include="WaterTask.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
