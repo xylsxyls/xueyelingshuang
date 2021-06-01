@@ -1,6 +1,7 @@
 #include "AccountTask.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
@@ -17,11 +18,14 @@ void AccountTask::DoTask()
 		CMouse::LeftClick();
 
 		Sleep(3000);
-		CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
-		CMouse::LeftClick();
-		Sleep(1000);
-		CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
-		CMouse::LeftClick();
+		if (g_accountCount != 1)
+		{
+			CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
+			CMouse::LeftClick();
+			Sleep(1000);
+			CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
+			CMouse::LeftClick();
+		}
 
 		CMouse::MoveAbsolute(xyls::Point(907, 754), 50);
 		int32_t count = 3;
@@ -37,6 +41,17 @@ void AccountTask::DoTask()
 		accountName.push_back("dtws2xiayindao\tyangnan\n");
 		accountName.push_back("dtws2baihuaguxi\tyangnan\n");
 		accountName.push_back("dtws2baihuayixi\tyangnan\n");
+	}
+	else if (g_accountCount == 1)
+	{
+		if (CSystem::getComputerName() == "SC-202007261854")
+		{
+			accountName.push_back("dtws2shaolin\tyangnan\n");
+		}
+		else
+		{
+			accountName.push_back("dtws2hanbingmen\tyangnan\n");
+		}
 	}
 	
 	accountIndex = -1;
@@ -109,6 +124,9 @@ void AccountTask::DoTask()
 		//点击关闭顶部
 		CMouse::MoveAbsolute(xyls::Point(921, 47), 50);
 		CMouse::LeftClick();
+		//点击关闭国家
+		CMouse::MoveAbsolute(xyls::Point(1391, 234), 50);
+		CMouse::LeftClick();
 		//F11
 		CKeyboard::KeyPress(CKeyboard::F11);
 		//点击关闭中间
@@ -129,6 +147,4 @@ void AccountTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(1398, 306), 50);
 		CMouse::LeftClick();
 	}
-	
-	//CKeyboard::InputString("12");
 }
