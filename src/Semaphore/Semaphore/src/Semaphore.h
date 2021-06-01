@@ -32,7 +32,7 @@ public:
 	void wait();
 
 	/** 信号量的等待
-	@param [in] timeout 等待时间，单位毫秒
+	@param [in] timeout 超时时间，单位毫秒
 	@return 如果是参数是-1则一定返回true，如果参数是时间，超时返回false，等待到信号返回true
 	*/
 	bool wait(int32_t timeout);
@@ -61,7 +61,7 @@ public:
 	void processWait();
 
 	/** 进程等待
-	@param [in] timeout 超时时间
+	@param [in] timeout 超时时间，单位毫秒
 	@return 等到信号返回true，超时或未初始化返回false
 	*/
 	bool processWait(int32_t timeout);
@@ -79,7 +79,7 @@ public:
 	void eventWait();
 
 	/** 事件的等待
-	@param [in] timeout 
+	@param [in] timeout 超时时间，单位毫秒
 	*/
 	bool eventWait(int32_t timeout);
 
