@@ -70,7 +70,7 @@ void LogManager::set(bool writeLog, bool writeBeginEnd)
 
 void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...)
 {
-	if (m_processMutex == nullptr)
+	if (m_processMutex == nullptr || !m_writeLog)
 	{
 		return;
 	}
