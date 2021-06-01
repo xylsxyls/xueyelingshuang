@@ -123,6 +123,11 @@ void LogSender::logTestClose()
 	}
 
 	send(strMessage.c_str(), (int32_t)strMessage.length());
+
+	while (logTestExist())
+	{
+		CSystem::Sleep(1);
+	}
 }
 
 void LogSender::set(bool dealLog)
