@@ -119,6 +119,28 @@ void LogSender::logTestClose()
 		m_message->clear();
 		(*m_message)[LOG_CLOSE] = (int32_t)true;
 		(*m_message).toString(strMessage);
+		m_message->clear();
+	}
+
+	send(strMessage.c_str(), (int32_t)strMessage.length());
+}
+
+void LogSender::set(bool writeLog)
+{
+	SharedMemory sharedMemory("ProcessArea_LogTest" + LOGTEST_CLIENT_VERSION);
+	if (sharedMemory.writeWithoutLock() == nullptr)
+	{
+		return;
+	}
+
+	std::string strMessage;
+	{
+		std::unique_lock<std::mutex> lock(m_messageMutex);
+		m_message->clear();
+		(*m_message)[LOG_SET] = (int32_t)true;
+		(*m_message)[LOG_SET_WRITE_LOG] = (int32_t)writeLog;
+		(*m_message).toString(strMessage);
+		m_message->clear();
 	}
 
 	send(strMessage.c_str(), (int32_t)strMessage.length());

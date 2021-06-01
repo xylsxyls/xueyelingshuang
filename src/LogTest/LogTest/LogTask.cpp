@@ -30,6 +30,11 @@ void LogTask::DoTask()
 		LogManager::instance().uninitAll();
 		return;
 	}
+	if ((int32_t)m_messageMap[LOG_SET] == (int32_t)true)
+	{
+		LogManager::instance().set(((int32_t)m_messageMap[LOG_SET_WRITE_LOG]) == 1, false);
+		return;
+	}
 	if ((int32_t)m_messageMap[LOG_IS_WRITE_LOG] == (int32_t)true)
 	{
 		uint64_t time = m_messageMap[LOG_INT_DATE_TIME];
