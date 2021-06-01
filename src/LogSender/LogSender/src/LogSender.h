@@ -19,7 +19,7 @@ public:
 
 	virtual void logTestClose() = 0;
 
-	virtual void set(bool writeLog) = 0;
+	virtual void set(bool dealLog) = 0;
 };
 
 extern "C"
@@ -46,7 +46,7 @@ public:
 
 	void logTestClose();
 
-	void set(bool writeLog);
+	void set(bool dealLog);
 
 protected:
 	void send(const char* buffer, int32_t length);

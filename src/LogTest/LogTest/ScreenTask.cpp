@@ -5,6 +5,7 @@
 #endif
 
 ScreenTask::ScreenTask():
+m_isDeal(true),
 m_isNet(false)
 {
 
@@ -16,6 +17,15 @@ void ScreenTask::DoTask()
 	m_message.from(m_buffer);
 	m_messageMap.clear();
 	m_message.getMap(m_messageMap);
+	if ((int32_t)m_messageMap[LOG_SET] == (int32_t)true)
+	{
+		m_isDeal = (int32_t)m_messageMap[LOG_SET_DEAL_LOG];
+		return;
+	}
+	if (!m_isDeal)
+	{
+		return;
+	}
 	if ((int32_t)m_messageMap[LOG_IS_SEND_SCREEN] == (int32_t)true)
 	{
 		if (m_isNet)

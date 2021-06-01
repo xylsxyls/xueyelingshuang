@@ -32,7 +32,7 @@ void LogTask::DoTask()
 	}
 	if ((int32_t)m_messageMap[LOG_SET] == (int32_t)true)
 	{
-		LogManager::instance().set(((int32_t)m_messageMap[LOG_SET_WRITE_LOG]) == 1, false);
+		LogManager::instance().set(((int32_t)m_messageMap[LOG_SET_DEAL_LOG]) == 1, false);
 		return;
 	}
 	if ((int32_t)m_messageMap[LOG_IS_WRITE_LOG] == (int32_t)true)
