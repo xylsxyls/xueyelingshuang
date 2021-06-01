@@ -16,7 +16,7 @@ void NetTask::DoTask()
 	m_message.getMap(m_messageMap);
 	if ((int32_t)m_messageMap[LOG_SET] == (int32_t)true)
 	{
-		m_isDeal = (int32_t)m_messageMap[LOG_SET_DEAL_LOG];
+		m_isDeal = ((int32_t)m_messageMap[LOG_SET_DEAL_LOG] == 1);
 		return;
 	}
 	if (!m_isDeal)
