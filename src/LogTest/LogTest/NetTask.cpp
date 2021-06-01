@@ -2,11 +2,7 @@
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "NetSender/NetSenderAPI.h"
 
-NetTask::NetTask():
-m_isDeal(true)
-{
-
-}
+static bool g_isDeal = true;
 
 void NetTask::DoTask()
 {
@@ -16,10 +12,10 @@ void NetTask::DoTask()
 	m_message.getMap(m_messageMap);
 	if ((int32_t)m_messageMap[LOG_SET] == (int32_t)true)
 	{
-		m_isDeal = ((int32_t)m_messageMap[LOG_SET_DEAL_LOG] == 1);
+		g_isDeal = ((int32_t)m_messageMap[LOG_SET_DEAL_LOG] == 1);
 		return;
 	}
-	if (!m_isDeal)
+	if (!g_isDeal)
 	{
 		return;
 	}
