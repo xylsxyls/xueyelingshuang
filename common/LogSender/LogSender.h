@@ -18,6 +18,8 @@ public:
 	virtual void logSend(const LogPackage& package, const char* format, ...) = 0;
 
 	virtual void logTestClose() = 0;
+
+	virtual void set(bool writeLog) = 0;
 };
 
 extern "C"
@@ -43,6 +45,8 @@ public:
 	void logSend(const LogPackage& package, const char* format, ...);
 
 	void logTestClose();
+
+	void set(bool writeLog);
 
 protected:
 	void send(const char* buffer, int32_t length);
