@@ -6,6 +6,7 @@
 #include "ServerLineManager.h"
 #include "ClientLineManager.h"
 #include "NetSender/NetSenderAPI.h"
+#include <string.h>
 
 void Server::onClientConnected(uv_tcp_t* client)
 {

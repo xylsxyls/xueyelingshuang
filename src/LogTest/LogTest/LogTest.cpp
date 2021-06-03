@@ -42,8 +42,8 @@ void CtrlCMessage(int eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		NetSender::instance().uninitPostThread();
-		NetSender::instance().uninitReceive();
+		ProcessWork::instance().uninitPostThread();
+		ProcessWork::instance().uninitReceive();
 		g_exit = true;
 		exit(0);
 	}	
@@ -83,7 +83,8 @@ int32_t main()
 	std::shared_ptr<CTaskThread> spLogDeleteThread = CTaskThreadManager::Instance().GetThreadInterface(logDeleteThreadId);
 	std::shared_ptr<CTaskThread> spNetThread = CTaskThreadManager::Instance().GetThreadInterface(netThreadId);
 
-	std::atomic<int32_t> lastLogTime = CSystem::GetTickCount();
+	std::atomic<int32_t> lastLogTime;
+	lastLogTime = (int32_t)CSystem::GetTickCount();
 
 	std::shared_ptr<LogDeleteTask> spLogDeleteTask(new LogDeleteTask);
 	spLogDeleteTask->setParam(&lastLogTime, spLogThread);

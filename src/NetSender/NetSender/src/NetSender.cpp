@@ -1,5 +1,6 @@
 #include "NetSender.h"
 #include "CSystem/CSystemAPI.h"
+#include <string.h>
 
 #define NET_CLIENT_VERSION "1.1"
 #define NET_SERVER_VERSION "1.1"

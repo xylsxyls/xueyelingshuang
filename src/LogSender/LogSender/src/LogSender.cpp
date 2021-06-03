@@ -39,8 +39,11 @@ void LogSender::logTestOpen()
 	std::string path = CSystem::GetCurrentDllPath() + "LogTest" + LOGTEST_CLIENT_VERSION;
 #ifdef _MSC_VER
 	path.append(".exe");
-#endif
 	::ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_HIDE);
+#elif __unix__
+	std::string result;
+	CSystem::SystemCommand((path + " &").c_str(), result, true);
+#endif
 	while (!logTestExist())
 	{
 		CSystem::Sleep(1);

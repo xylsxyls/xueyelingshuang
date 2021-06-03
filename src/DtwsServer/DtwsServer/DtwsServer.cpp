@@ -9,7 +9,7 @@
 #include "ServerReceive.h"
 #include "CSystem/CSystemAPI.h"
 
-std::atomic<bool> g_exit = false;
+bool g_exit = false;
 
 #ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)

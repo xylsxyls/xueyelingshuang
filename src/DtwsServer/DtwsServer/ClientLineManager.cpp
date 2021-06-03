@@ -1,4 +1,5 @@
 #include "ClientLineManager.h"
+#include <vector>
 
 ClientLineManager::ClientLineManager()
 {

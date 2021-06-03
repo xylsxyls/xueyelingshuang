@@ -1,6 +1,7 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
+#include <vector>
 
 class ProcessReceiveCallback;
 class SharedMemory;

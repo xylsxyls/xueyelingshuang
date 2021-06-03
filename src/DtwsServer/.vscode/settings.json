@@ -1,8 +1,8 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/DtwsServer/",
     "cmake.configureArgs": [
-        "-DLIBRARIESRELY=",
+        "-DLIBRARIESRELY=libNetSender.a;libProcessWork.a;libProtoMessage.a;libVariant.a;libSharedMemory.a;libReadWriteMutex.a;libprotobuf-litestatic32.a;libFiniteDeque.a;libCorrespondParam.a;libCTaskThreadManager.a;libSemaphore.a;libCSystem.a;libCStringManager.a",
         "-DBIT=32",
-        "-DDEBUGRELEASE=debug"
+        "-DDEBUGRELEASE=release"
     ]
 }

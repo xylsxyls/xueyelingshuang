@@ -5,6 +5,7 @@
 #include <map>
 #include <atomic>
 #include <mutex>
+#include <vector>
 #include "ProcessWorkMacro.h"
 #include "FiniteDeque/FiniteDequeAPI.h"
 
