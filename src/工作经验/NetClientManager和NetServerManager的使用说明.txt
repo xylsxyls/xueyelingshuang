@@ -1,0 +1,17 @@
+每个项目的客户端必须有自己的账号，同一台电脑上可以开启多个同名客户端，账号可以重复
+账号如果重复则说明两个客户端的权限相同
+不同的电脑上可以登录相同的账号
+目前账号不带密码
+每个账号都会带上uuid
+NetClientManager初始化会发送本机loginname后面会换成机器码
+NetServerManager接收NetClientManager的初始化数据，存储[loginname]=tcp*
+项目初始化
+项目会发送account和需要连接的servername及代号
+NetClientManager会为项目分配uuid，将uuid，account，servername及代号一起发送给NetServerManager
+NetClientManager会记录发送的进程pid和uuid，存储[uuid]=pid
+NetServerManager存储[tcp][uuid][代号]=servername
+项目发送时只传server代号和需要发送的内容，由NetClientManager增加uuid一起发送
+NetServerManager根据uuid和server代号，找到具体的进程名再转发
+项目服务端回消息时发送uuid和具体信息
+
+同一个项目服务端名字唯一，客户端名字可以相同有多个

@@ -1,0 +1,50 @@
+不要在动态库的全局变量中创建std线程，windows底下会卡死，linux下运行正常
+包括全局类的构造函数中也不能创建
+如果不是动态库，直接在可执行文件中的全局变量里创建也正常
+如果是静态库则正常
+如果放在init等函数中也正常
+把windows下std线程换成CreateThread也正常
+
+#include <thread>
+#include "SendToMessageTest.h"
+
+void ThreadFun(int n)
+{
+	RCSend("ThreadFun = %d", n);
+}
+
+//DWORD WINAPI ThreadFunc(LPVOID param)
+//{
+//	RCSend("ThreadFunc = %d", param);
+//	return 0;
+//}
+
+class B
+{
+public:
+	B()
+	{
+		RCSend("B create");
+		try
+		{
+			std::thread* thread = new std::thread(ThreadFun, 1);
+			//HANDLE hThread;
+			//DWORD  threadId;
+			//RCSend("init begin");
+			//hThread = CreateThread(NULL, 0, ThreadFunc, 0, 0, &threadId);
+		}
+		catch (...)
+		{
+			RCSend("123456");
+		}
+		
+		RCSend("B create end");
+	}
+};
+
+B* b = new B;
+
+void Thread::init()
+{
+	RCSend("Thread::init");
+}
