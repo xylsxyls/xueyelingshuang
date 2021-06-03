@@ -26,9 +26,9 @@ void SmallTask::DoTask()
 		Sleep(50);
 	}
 
-	CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
-	CMouse::LeftClick(0);
-	Sleep(100);
+	//CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
+	//CMouse::LeftClick(0);
+	//Sleep(100);
 
 	int32_t index = -1;
 	while (index++ != g_accountCount - 1)

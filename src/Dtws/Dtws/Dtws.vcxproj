@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClCompile Include="AccountTask.cpp" />
     <ClCompile Include="ATask.cpp" />
+    <ClCompile Include="AttackTask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
     <ClCompile Include="FiveTask.cpp" />
     <ClCompile Include="FollowTask.cpp" />
@@ -286,6 +287,7 @@
   <ItemGroup>
     <ClInclude Include="AccountTask.h" />
     <ClInclude Include="ATask.h" />
+    <ClInclude Include="AttackTask.h" />
     <ClInclude Include="ClientReceive.h" />
     <ClInclude Include="FiveTask.h" />
     <ClInclude Include="FollowTask.h" />

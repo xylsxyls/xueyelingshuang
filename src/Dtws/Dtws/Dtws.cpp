@@ -24,15 +24,14 @@ int32_t g_accountCount = 1;
 uint32_t* g_threadId = nullptr;
 CStopWatch g_stopWatch;
 bool g_altDown = false;
+bool g_ctrlDown = false;
 
 LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	// 请在这里添加消息处理代码
-	RCSend("code1 = %d, wParam = %d, lParam = %d", nCode, wParam, lParam);
 	if (CHook::IsKeyDown(wParam))
 	{
 		DWORD code = CHook::GetVkCode(lParam);
-		RCSend("code2 = %d", code);
 		switch (code)
 		{
 		//delete键
@@ -48,11 +47,21 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			g_altDown = true;
 		}
 		break;
+		//ctrl键
+		case 162:
+		{
+			g_ctrlDown = true;
+		}
+		break;
 		case '2':
 		{
 			if (g_altDown)
 			{
 				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_RISE));
+			}
+			if (g_ctrlDown)
+			{
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_ATTACK));
 			}
 		}
 		break;
@@ -99,6 +108,12 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		case 164:
 		{
 			g_altDown = false;
+		}
+		break;
+		//ctrl键
+		case 162:
+		{
+			g_ctrlDown = true;
 		}
 		break;
 		default:
