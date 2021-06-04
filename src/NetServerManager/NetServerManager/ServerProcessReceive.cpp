@@ -35,6 +35,9 @@ void ServerProcessReceive::receive(int32_t sendPid, const char* buffer, int32_t 
 	case MessageType::SERVER_INIT:
 	{
 		std::string serverName = CSystem::processName(sendPid);
+#ifdef _MSC_VER
+		serverName = CSystem::GetName(serverName, 3);
+#endif
 		printf("SERVER_INIT processName = %s, buffer = %s\n", serverName.c_str(), buffer);
 		ServerLineManager::instance().addServerPid(sendPid, serverName);
 		ProcessWork::instance().send(sendPid, buffer, length, SERVER_INIT_RESPONSE);

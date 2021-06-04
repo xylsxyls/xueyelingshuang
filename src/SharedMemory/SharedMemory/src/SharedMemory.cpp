@@ -170,7 +170,7 @@ void* SharedMemory::writeWithoutLock()
 		return nullptr;
 	}
 	m_memoryPtr = shmat(m_shmid, (void*)0, 0);
-	if ((int32_t)m_memoryPtr == -1)
+	if ((size_t)m_memoryPtr == -1)
 	{
 		m_memoryPtr = nullptr;
 		return nullptr;

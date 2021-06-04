@@ -140,11 +140,7 @@ void NetSender::initClient(int32_t serverId, const std::string& serverName, cons
 	message[CLIENT_PID] = m_currentProcessPid;
 	message[CLIENT_NAME] = m_currentExeFullName;
 	message[SERVER_ID] = serverId;
-#ifdef _MSC_VER
-	message[SERVER_NAME] = serverName + ".exe";
-#elif __unix__
 	message[SERVER_NAME] = serverName;
-#endif
 	message[CLIENT_INIT_INFO] = initInfo;
 	std::string strMessage = message.toString();
 	ProcessWork::instance().send(m_netClientManagerName,

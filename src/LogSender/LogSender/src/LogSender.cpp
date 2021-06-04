@@ -41,8 +41,7 @@ void LogSender::logTestOpen()
 	path.append(".exe");
 	::ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_HIDE);
 #elif __unix__
-	std::string result;
-	CSystem::SystemCommand((path + " &").c_str(), result, true);
+	system(("setsid " + path + " &").c_str());
 #endif
 	while (!logTestExist())
 	{

@@ -336,6 +336,7 @@ public:
 public:
     static bool SendToMessageTest(const char* fmt, ...)
     {
+        static MsgLinuxForMessageTest* m_msg = nullptr;
         if (access("/tmp/MessageTestLinux.file", 0) != 0)
         {
             if (m_msg != nullptr)
@@ -386,11 +387,6 @@ public:
         }
         return result;
     }
-
-private:
-    static MsgLinuxForMessageTest* m_msg;
 };
-
-MsgLinuxForMessageTest* SendToMessage::m_msg = nullptr;
 
 #endif
