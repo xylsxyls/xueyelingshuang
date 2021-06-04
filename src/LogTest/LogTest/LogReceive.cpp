@@ -53,7 +53,7 @@ std::string LogReceive::getSenderName(int32_t sendPid)
 	{
 		return it->second;
 	}
-	std::string processName = CSystem::GetName(CSystem::processName(sendPid), 1);
+	std::string processName = CSystem::processName(sendPid);
 	m_sendMap[sendPid] = processName;
 	return processName;
 }

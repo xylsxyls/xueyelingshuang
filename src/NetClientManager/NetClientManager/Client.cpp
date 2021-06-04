@@ -24,7 +24,7 @@ void Client::onReceive(const char* buffer, int32_t length, MessageType type)
 		ProtoMessage message;
 		message.from(strMessage);
 		int32_t clientPid = message.getMap()[CLIENT_PID];
-		printf("CLIENT_INIT_RESPONSE, length = %d\n", length);
+		printf("CLIENT_INIT_RESPONSE, clientPid = %d, length = %d\n", clientPid, length);
 		ProcessWork::instance().post(clientPid, strMessage.c_str(), strMessage.length(), type);
 		return;
 	}
