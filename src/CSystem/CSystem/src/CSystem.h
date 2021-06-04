@@ -123,7 +123,7 @@ public:
 	static uint32_t processFirstPid(const std::string& processName);
 	//获取进程PID，耗时10毫秒左右，linux下后打开的进程号在前面
 	static std::vector<uint32_t> processPid(const std::string& processName);
-	//获取进程名，耗时10毫秒左右
+	//获取进程全名，耗时10毫秒左右
 	static std::string processName(uint32_t pid);
 	//获取本进程所占内存，单位字节，linux下只准确到kb
 	static uint64_t currentMemory();

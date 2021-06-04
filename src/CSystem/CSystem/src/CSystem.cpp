@@ -1148,7 +1148,7 @@ std::string CSystem::processName(uint32_t pid)
 	{
 		return "";
 	}
-	return CSystem::GetName(result, 3);
+	return CSystem::GetName(result, 1);
 #endif
 }
 
