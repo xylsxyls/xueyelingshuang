@@ -38,7 +38,7 @@ void AttackTask::DoTask()
 			Sleep(50);
 			CKeyboard::InputString("\t2");
 		}
-		Sleep(6000);
+		Sleep(3800);
 
 		accountIndex = -1;
 		while (accountIndex++ != g_accountCount - 1)
@@ -56,7 +56,7 @@ void AttackTask::DoTask()
 			Sleep(50);
 			CKeyboard::InputString("1");
 		}
-		Sleep(800);
+		Sleep(400);
 
 		accountIndex = -1;
 		while (accountIndex++ != g_accountCount - 1)
@@ -74,7 +74,7 @@ void AttackTask::DoTask()
 			Sleep(50);
 			CKeyboard::InputString("1");
 		}
-		Sleep(800);
+		Sleep(400);
 
 		accountIndex = -1;
 		while (accountIndex++ != g_accountCount - 1)
@@ -92,7 +92,7 @@ void AttackTask::DoTask()
 			Sleep(50);
 			CKeyboard::InputString("1");
 		}
-		Sleep(2000);
+		Sleep(1000);
 	}
 }
 
