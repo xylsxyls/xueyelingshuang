@@ -16,6 +16,7 @@
 #include "WaterTask.h"
 #include "SmallTask.h"
 #include "CStopWatch/CStopWatchAPI.h"
+#include "QtControls/ComboBox.h"
 
 #define DTWS_SERVER_VERSION "1.0"
 
@@ -25,6 +26,7 @@ uint32_t* g_threadId = nullptr;
 CStopWatch g_stopWatch;
 bool g_altDown = false;
 bool g_ctrlDown = false;
+bool g_muqing = true;
 
 LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -135,6 +137,7 @@ Dtws::Dtws(QWidget* parent):
 	m_skill(nullptr),
 	m_water(nullptr),
 	m_small(nullptr),
+	m_muqing(nullptr),
 	m_clientReceive(nullptr)
 {
 	ui.setupUi(this);
@@ -209,6 +212,11 @@ void Dtws::init()
 	m_small->setText(QStringLiteral("Àı–°"));
 	m_small->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_small, &COriginalButton::clicked, this, &Dtws::onSmallButtonClicked);
+
+	m_muqing = new COriginalButton(this);
+	m_muqing->setText(QStringLiteral("„Â«Á¡Ë‘∆’Ø"));
+	m_muqing->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_muqing, &COriginalButton::clicked, this, &Dtws::onMuqingButtonClicked);
 }
 
 bool Dtws::check()
@@ -232,6 +240,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_skill);
 	vecButton.push_back(m_water);
 	vecButton.push_back(m_small);
+	vecButton.push_back(m_muqing);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -304,4 +313,10 @@ void Dtws::onSmallButtonClicked()
 	showMinimized();
 	std::shared_ptr<SmallTask> spSmallTask(new SmallTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSmallTask);
+}
+
+void Dtws::onMuqingButtonClicked()
+{
+	g_muqing = !g_muqing;
+	m_muqing->setText(g_muqing ? QStringLiteral("„Â«Á¡Ë‘∆’Ø") : QStringLiteral("„Â«Á∞Ÿª®“Ω"));
 }

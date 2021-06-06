@@ -4,6 +4,7 @@
 
 extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
+extern bool g_muqing;
 
 HealTask::HealTask():
 m_exit(false)
@@ -15,23 +16,42 @@ void HealTask::DoTask()
 {
 	if (g_accountCount == 1)
 	{
-		CKeyboard::KeyPress(CKeyboard::Right, 20);
-		Sleep(2300);
-		while (!m_exit)
+		if (g_muqing)
 		{
-			//²¹³ä
-			//CKeyboard::KeyPress(CKeyboard::F1);
-			//Sleep(20);
-			//CKeyboard::InputString("6");
-			//Sleep(800);
-			CKeyboard::InputString("5");
-			Sleep(3700);
-			CKeyboard::KeyPress(CKeyboard::F2);
-			Sleep(50);
-			CKeyboard::InputString("6");
+			CKeyboard::KeyPress(CKeyboard::Right, 20);
+			Sleep(2300);
+			while (!m_exit)
+			{
+				//²¹³ä
+				//CKeyboard::KeyPress(CKeyboard::F1);
+				//Sleep(20);
+				//CKeyboard::InputString("6");
+				//Sleep(800);
+				CKeyboard::InputString("5");
+				Sleep(3700);
+				CKeyboard::KeyPress(CKeyboard::F2);
+				Sleep(50);
+				CKeyboard::InputString("6");
+				Sleep(800);
+				CKeyboard::InputString("8");
+				Sleep(1500);
+			}
+		}
+		else
+		{
+			CKeyboard::KeyPress(CKeyboard::Right, 20);
+			Sleep(2300);
+			CKeyboard::KeyDown('8');
 			Sleep(800);
-			CKeyboard::InputString("8");
-			Sleep(1500);
+			CKeyboard::KeyUp('8');
+			Sleep(3500);
+			while (!m_exit)
+			{
+				CKeyboard::KeyPress(CKeyboard::F2);
+				Sleep(50);
+				CKeyboard::InputString("5");
+				Sleep(1600);
+			}
 		}
 		return;
 	}

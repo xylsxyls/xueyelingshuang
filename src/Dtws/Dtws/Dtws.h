@@ -30,6 +30,7 @@ private slots:
 	void onSkillButtonClicked();
 	void onWaterButtonClicked();
 	void onSmallButtonClicked();
+	void onMuqingButtonClicked();
 
 private:
 	Ui::DtwsClass ui;
@@ -40,6 +41,7 @@ private:
 	COriginalButton* m_skill;
 	COriginalButton* m_water;
 	COriginalButton* m_small;
+	COriginalButton* m_muqing;
 	uint32_t m_threadId;
 	ClientReceive* m_clientReceive;
 };
