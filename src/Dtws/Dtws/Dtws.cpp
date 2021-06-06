@@ -113,7 +113,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		//ctrl¼ü
 		case 162:
 		{
-			g_ctrlDown = true;
+			g_ctrlDown = false;
 		}
 		break;
 		default:
