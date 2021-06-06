@@ -42,7 +42,7 @@ void SmallTask::DoTask()
 
 		if (index == 0)
 		{
-			CMouse::MoveAbsolute(xyls::Point(817, 296), 0);
+			CMouse::MoveAbsolute(xyls::Point(817, 300), 0);
 			CMouse::LeftDown();
 			Sleep(100);
 			CMouse::MoveAbsolute(xyls::Point(817, 13));
