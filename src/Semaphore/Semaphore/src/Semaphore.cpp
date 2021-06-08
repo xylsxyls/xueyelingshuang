@@ -123,6 +123,10 @@ void Semaphore::closeProcessSemaphore()
 		m_processSemaphoreId = -1;
 		return;
 	}
+	if (m_processSemaphoreId == -1)
+	{
+		return;
+	}
 	//É¾³ýÐÅºÅÁ¿
 	union semun sem_union;
 	if(semctl(m_processSemaphoreId, 0, IPC_RMID, sem_union) == -1)
