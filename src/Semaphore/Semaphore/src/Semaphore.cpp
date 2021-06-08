@@ -1,10 +1,23 @@
 #include "Semaphore.h"
 #ifdef __unix__
-#include <fcntl.h>
+#include <sys/sem.h>
+#endif
+
+#ifdef __unix__
+union semun
+{
+	int val;
+	struct semid_ds* buf;
+	unsigned short* arry;
+};
 #endif
 
 Semaphore::Semaphore():
+#ifdef _MSC_VER
 m_processSemaphore(nullptr),
+#elif __unix__
+m_processSemaphoreId(-1),
+#endif
 m_count(0)
 {
 
@@ -48,84 +61,134 @@ bool Semaphore::wait(int32_t timeout)
 
 void Semaphore::createProcessSemaphore(const std::string& name, int32_t signalCount)
 {
+#ifdef _MSC_VER
 	if (m_processSemaphore != nullptr)
 	{
 		return;
 	}
-#ifdef _MSC_VER
 	m_processSemaphore = ::CreateSemaphore(nullptr, 0, signalCount, name.c_str());
 #elif __unix__
-	m_processSemaphore = ::sem_open(name.c_str(), O_CREAT, 0644, 0);
+	if (m_processSemaphoreId != -1)
+	{
+		return;
+	}
+	std::string fileName = "/dev/shm/sem." + name;
+	system(("touch \"" + fileName + "\"").c_str());
+	m_processSemaphoreId = semget(ftok(fileName.c_str(), 0), 1, 0644 | IPC_CREAT);
+	union semun sem_union;
+	sem_union.val = 0;
+	if(semctl(m_processSemaphoreId, 0, SETVAL, sem_union) == -1)
+	{
+		printf("create semphore failed, name = %s, Id = %d\n", name.c_str(), m_processSemaphoreId);
+	}
 	m_name = name;
 #endif
 }
 
 void Semaphore::openProcessSemaphore(const std::string& name)
 {
+#ifdef _MSC_VER
 	if (m_processSemaphore != nullptr)
 	{
 		return;
 	}
-#ifdef _MSC_VER
 	m_processSemaphore = ::OpenSemaphore(SEMAPHORE_ALL_ACCESS, false, name.c_str());
 #elif __unix__
-	m_processSemaphore = ::sem_open(name.c_str(), O_CREAT, 0644, 0);
+	if (m_processSemaphoreId != -1)
+	{
+		return;
+	}
+	std::string fileName = "/dev/shm/sem." + name;
+	key_t key = ftok(fileName.c_str(), 0);
+	if (key == -1)
+	{
+		return;
+	}
+	m_processSemaphoreId = semget(key, 1, 0644 | IPC_CREAT);
 #endif
 }
 
 void Semaphore::closeProcessSemaphore()
 {
+#ifdef _MSC_VER
 	if (m_processSemaphore == nullptr)
 	{
 		return;
 	}
-#ifdef _MSC_VER
 	::CloseHandle(m_processSemaphore);
-#elif __unix__
-	::sem_close(m_processSemaphore);
-	if (!m_name.empty())
-	{
-		::sem_unlink(m_name.c_str());
-		m_name.clear();
-	}
-#endif
 	m_processSemaphore = nullptr;
+#elif __unix__
+	if (m_name.empty())
+	{
+		m_processSemaphoreId = -1;
+		return;
+	}
+	//É¾³ýÐÅºÅÁ¿
+	union semun sem_union;
+	if(semctl(m_processSemaphoreId, 0, IPC_RMID, sem_union) == -1)
+	{
+		printf("Failed to delete semaphore, name = %s, Id = %d\n", m_name.c_str(), m_processSemaphoreId);
+	}
+	m_processSemaphoreId = -1;
+	system(("rm \"/dev/shm/sem." + m_name + "\"").c_str());
+#endif
 }
 
 void Semaphore::processSignal()
 {
+#ifdef _MSC_VER
 	if (m_processSemaphore == nullptr)
 	{
 		return;
 	}
-#ifdef _MSC_VER
 	::ReleaseSemaphore(m_processSemaphore, 1, nullptr);
 #elif __unix__
-	::sem_post(m_processSemaphore);
+	if (m_processSemaphoreId == -1)
+	{
+		return;
+	}
+	struct sembuf sem;
+	sem.sem_num = 0;
+	sem.sem_op = 1;
+	sem.sem_flg = SEM_UNDO;
+	if(semop(m_processSemaphoreId, &sem, 1) == -1)
+	{
+		printf("processSignal failed, name = %s, Id = %d\n", m_name.c_str(), m_processSemaphoreId);
+	}
 #endif
-	
 }
 
 void Semaphore::processWait()
 {
+#ifdef _MSC_VER
 	if (m_processSemaphore == nullptr)
 	{
 		return;
 	}
-#ifdef _MSC_VER
 	::WaitForSingleObject(m_processSemaphore, INFINITE);
 #elif __unix__
-	::sem_wait(m_processSemaphore);
+	if (m_processSemaphoreId == -1)
+	{
+		return;
+	}
+	struct sembuf sem;
+	sem.sem_num = 0;
+	sem.sem_op = -1;
+	sem.sem_flg = SEM_UNDO;
+	if(semop(m_processSemaphoreId, &sem, 1) == -1)
+	{
+		printf("processWait failed, name = %s, Id = %d\n", m_name.c_str(), m_processSemaphoreId);
+	}
 #endif
 }
 
 bool Semaphore::processWait(int32_t timeout)
 {
+#ifdef _MSC_VER
 	if (m_processSemaphore == nullptr)
 	{
 		return false;
 	}
-#ifdef _MSC_VER
 	DWORD dwResult = ::WaitForSingleObject(m_processSemaphore, timeout);
 	if (dwResult == WAIT_OBJECT_0)
 	{
@@ -137,14 +200,20 @@ bool Semaphore::processWait(int32_t timeout)
 	}
 	return false;
 #elif __unix__
-	struct timespec ts;
-	clock_gettime(CLOCK_REALTIME, &ts);
-	ts.tv_sec += ((timeout / 1000) + ((ts.tv_nsec + ((timeout % 1000) * 1000000))) / 1000000000);
-	ts.tv_nsec = (ts.tv_nsec + ((timeout % 1000) * 1000000)) % 1000000000;
-	int ret = sem_timedwait(m_processSemaphore, &ts);
-	if (ret == 0)
+	if (m_processSemaphoreId == -1)
 	{
-	    return true;
+		return false;
+	}
+	struct sembuf sem;
+	sem.sem_num = 0;
+	sem.sem_op = -1;
+	sem.sem_flg = SEM_UNDO;
+	struct timespec ts;
+	ts.tv_sec = timeout / 1000;
+	ts.tv_nsec = (timeout % 1000) * 1000 * 1000;
+	if (semtimedop(m_processSemaphoreId, &sem, 1, &ts) == 0)
+	{
+		return true;
 	}
 	return false;
 #endif

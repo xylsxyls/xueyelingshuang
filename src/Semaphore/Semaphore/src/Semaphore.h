@@ -5,7 +5,6 @@
 #ifdef _MSC_VER
 #include <windows.h>
 #elif __unix__
-#include <semaphore.h>
 #include <string>
 #endif
 
@@ -39,7 +38,7 @@ public:
 
 	/** 进程信号量的创建
 	@param [in] name 名字
-	@param [in] signalCount 同时接受的最大信号量个数
+	@param [in] signalCount 同时接受的最大信号量个数，该参数只在windows下使用
 	*/
 	void createProcessSemaphore(const std::string& name, int32_t signalCount = 800000000);
 
@@ -52,7 +51,7 @@ public:
 	*/
 	void closeProcessSemaphore();
 
-	/** 进程信号
+	/** 进程信号，linux下在进程关掉之后，之前的通知会失效，Semaphore的析构不受影响
 	*/
 	void processSignal();
 
@@ -98,7 +97,7 @@ private:
 #ifdef _MSC_VER
 	HANDLE m_processSemaphore;
 #elif __unix__
-	sem_t* m_processSemaphore;
+	int m_processSemaphoreId;
 	std::string m_name;
 #endif
 };
