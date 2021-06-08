@@ -26,7 +26,9 @@ m_size(0)
 #ifdef _MSC_VER
 		m_memoryHandle = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, name.empty() ? nullptr : name.c_str());
 #elif __unix__
-		m_shmid = shmget((key_t)nameToKey(name), size, (isAllowExist ? (0666 | IPC_CREAT) : (0666 | IPC_EXCL | IPC_CREAT)));
+		std::string fileName = "/dev/shm/SharedMemory." + name;
+		system(("touch \"" + fileName + "\"").c_str());
+		m_shmid = shmget(ftok(fileName.c_str(), 0), size, (isAllowExist ? (0666 | IPC_CREAT) : (0666 | IPC_EXCL | IPC_CREAT)));
 #endif
 		m_size = size;
 	}
@@ -58,6 +60,7 @@ SharedMemory::~SharedMemory()
 		{
 			printf("shmctl(IPC_RMID) failed, mapName = %s\n", m_memoryName.c_str());
 		}
+		system(("rm \"/dev/shm/SharedMemory." + m_memoryName + "\"").c_str());
 	}
 #endif
 }
@@ -328,40 +331,14 @@ void SharedMemory::open(bool bReadOnly)
 #ifdef _MSC_VER
 	m_memoryHandle = ::OpenFileMapping(bReadOnly ? FILE_MAP_READ : FILE_MAP_ALL_ACCESS, FALSE, m_memoryName.empty() ? NULL : m_memoryName.c_str());
 #elif __unix__
-	m_shmid = shmget((key_t)nameToKey(m_memoryName), 0, 0666 | IPC_CREAT);
+	key_t key = ftok(("/dev/shm/SharedMemory." + m_memoryName).c_str(), 0);
+	if (key == -1)
+	{
+		return;
+	}
+	m_shmid = shmget(key, 0, 0666 | IPC_CREAT);
 #endif
 }
-
-#ifdef __unix__
-int SharedMemory::nameToKey(const std::string& name)
-{
-	if (name.empty())
-	{
-		return 1000;
-	}
-
-	int key = 0;
-	int32_t index = 0;
-	
-	while(true)
-	{
-		if(index + 2 > name.size())
-		{
-			if(name.size() % 2 == 1)
-			{
-				key += name[index];
-			}
-			break;
-		}
-		key += name[index] * name[index + 1] + 
-		(name[index + 1] - name[index]) + 
-		(name[index] >> 1) * (name[index + 1] << 3) * (name[index + 1] >> 4);
-		index += 2;
-	}
-
-	return key;
-}
-#endif
 
 ////д
 //int32_t main()

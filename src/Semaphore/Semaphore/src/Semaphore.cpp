@@ -72,7 +72,7 @@ void Semaphore::createProcessSemaphore(const std::string& name, int32_t signalCo
 	{
 		return;
 	}
-	std::string fileName = "/dev/shm/sem." + name;
+	std::string fileName = "/dev/shm/Semaphore." + name;
 	system(("touch \"" + fileName + "\"").c_str());
 	m_processSemaphoreId = semget(ftok(fileName.c_str(), 0), 1, 0644 | IPC_CREAT);
 	union semun sem_union;
@@ -98,8 +98,7 @@ void Semaphore::openProcessSemaphore(const std::string& name)
 	{
 		return;
 	}
-	std::string fileName = "/dev/shm/sem." + name;
-	key_t key = ftok(fileName.c_str(), 0);
+	key_t key = ftok(("/dev/shm/Semaphore." + name).c_str(), 0);
 	if (key == -1)
 	{
 		return;
@@ -134,7 +133,7 @@ void Semaphore::closeProcessSemaphore()
 		printf("Failed to delete semaphore, name = %s, Id = %d\n", m_name.c_str(), m_processSemaphoreId);
 	}
 	m_processSemaphoreId = -1;
-	system(("rm \"/dev/shm/sem." + m_name + "\"").c_str());
+	system(("rm \"/dev/shm/Semaphore." + m_name + "\"").c_str());
 #endif
 }
 

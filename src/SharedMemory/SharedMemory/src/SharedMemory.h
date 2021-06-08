@@ -72,9 +72,6 @@ public:
 
 protected:
 	void open(bool bReadOnly);
-#ifdef __unix__
-	int nameToKey(const std::string& name);
-#endif
 
 private:
 #ifdef _MSC_VER
