@@ -5,9 +5,11 @@
 
 extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
+extern bool g_hook;
 
 void AccountTask::DoTask()
 {
+	g_hook = false;
 	Sleep(2000);
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
@@ -147,4 +149,5 @@ void AccountTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(1398, 306), 50);
 		CMouse::LeftClick();
 	}
+	g_hook = true;
 }

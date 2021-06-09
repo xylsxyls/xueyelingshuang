@@ -6,6 +6,10 @@ extern int32_t g_accountCount;
 
 void SmallTask::DoTask()
 {
+	if (g_accountCount != 3)
+	{
+		return;
+	}
 	Sleep(1500);
 	//µã»÷ÈÎÎñÀ¸
 	int32_t count = 3;

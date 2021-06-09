@@ -27,10 +27,15 @@ CStopWatch g_stopWatch;
 bool g_altDown = false;
 bool g_ctrlDown = false;
 bool g_muqing = true;
+bool g_hook = true;
 
 LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	// 请在这里添加消息处理代码
+	if (!g_hook)
+	{
+		return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
+	}
 	if (CHook::IsKeyDown(wParam))
 	{
 		DWORD code = CHook::GetVkCode(lParam);
@@ -270,6 +275,8 @@ void Dtws::onAccountButtonClicked()
 	showMinimized();
 	std::shared_ptr<AccountTask> spAccountTask(new AccountTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spAccountTask);
+	std::shared_ptr<SmallTask> spSmallTask(new SmallTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSmallTask);
 }
 
 void Dtws::onFollowButtonClicked()
