@@ -8,6 +8,7 @@
 #include <dlfcn.h>
 #endif
 
+#define LOG_TEST_UNIQUE_OPEN LogSenderManager::instance().getInterface()->logTestUniqueOpen
 #define LOG_TEST_EXIST LogSenderManager::instance().getInterface()->logTestExist
 #define LOG_TEST_OPEN LogSenderManager::instance().getInterface()->logTestOpen
 #define LOG_TEST_CLOSE LogSenderManager::instance().getInterface()->logTestClose

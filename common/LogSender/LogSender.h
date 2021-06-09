@@ -11,6 +11,8 @@ const std::string LOGTEST_CLIENT_VERSION = "1.1";
 class LogSenderAPI LogSenderInterface
 {
 public:
+	virtual void logTestUniqueOpen() = 0;
+
 	virtual bool logTestExist() = 0;
 
 	virtual void logTestOpen() = 0;
@@ -38,6 +40,8 @@ public:
 	static LogSender& instance();
 
 public:
+	void logTestUniqueOpen();
+
 	bool logTestExist();
 
 	void logTestOpen();
