@@ -89,6 +89,15 @@
     <ClCompile Include="AttackTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="GoTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="FindTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="AcceptTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -136,6 +145,15 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="AttackTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="GoTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="FindTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="AcceptTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>
