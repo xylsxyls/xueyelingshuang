@@ -12,6 +12,7 @@ m_exit(false)
 
 void SkillTask::DoTask()
 {
+	xyls::Point lastPos;
 	std::string currentExePath = CSystem::GetCurrentExePath();
 	int32_t index = -1;
 	while (!m_exit)
@@ -22,9 +23,14 @@ void SkillTask::DoTask()
 		Sleep(1000);
 		if (++index % 5 == 0)
 		{
-			CMouse::MoveAbsolute(xyls::Point(817, 13), 0);
-			CMouse::LeftClick();
-			CKeyboard::InputString("`");
+			xyls::Point currentPos = CMouse::GetCurrentPos();
+			if (lastPos.x() == currentPos.x() && lastPos.y() == currentPos.y())
+			{
+				CMouse::MoveAbsolute(xyls::Point(817, 13), 0);
+				CMouse::LeftClick();
+				CKeyboard::InputString("`");
+			}
+			lastPos = currentPos;
 		}
 	}
 }
