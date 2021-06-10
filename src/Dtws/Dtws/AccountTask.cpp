@@ -36,7 +36,7 @@ void AccountTask::DoTask()
 			CMouse::LeftClick();
 		}
 	}
-	Sleep(20000);
+	Sleep(g_accountCount == 1 ? 15000 : 20000);
 	std::vector<std::string> accountName;
 	if (g_accountCount == 3)
 	{
@@ -112,7 +112,7 @@ void AccountTask::DoTask()
 		CMouse::LeftClick();
 	}
 
-	Sleep(30000);
+	Sleep(g_accountCount == 1 ? 20000 : 30000);
 
 	accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
