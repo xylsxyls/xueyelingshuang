@@ -20,7 +20,7 @@ m_readSemaphore(nullptr),
 m_readEndSemaphore(nullptr),
 m_area(nullptr),
 m_pid(nullptr),
-m_assginThreadId(0),
+m_assignThreadId(0),
 m_readThreadId(0),
 m_copyThreadId(0),
 m_receiveThreadId(0),
@@ -82,8 +82,8 @@ bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t fl
 	m_readSemaphore = new Semaphore;
 	m_readEndSemaphore = new Semaphore;
 
-	m_assignSemaphore->createProcessSemaphore(CStringManager::Format("ProcessAssgin_%d", m_thisProcessPid));
-	m_assignEndSemaphore->createProcessSemaphore(CStringManager::Format("ProcessAssginEnd_%d", m_thisProcessPid));
+	m_assignSemaphore->createProcessSemaphore(CStringManager::Format("ProcessAssign_%d", m_thisProcessPid));
+	m_assignEndSemaphore->createProcessSemaphore(CStringManager::Format("ProcessAssignEnd_%d", m_thisProcessPid));
 	m_readSemaphore->createProcessSemaphore(CStringManager::Format("ProcessRead_%d", m_thisProcessPid));
 	m_readEndSemaphore->createProcessSemaphore(CStringManager::Format("ProcessReadEnd_%d", m_thisProcessPid));
 
@@ -101,14 +101,14 @@ bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t fl
 		m_memoryMap[memoryIndex].second = spUsed;
 	}
 
-	m_assginThreadId = CTaskThreadManager::Instance().Init();
+	m_assignThreadId = CTaskThreadManager::Instance().Init();
 	m_readThreadId = CTaskThreadManager::Instance().Init();
 	m_copyThreadId = CTaskThreadManager::Instance().Init();
 	m_receiveThreadId = CTaskThreadManager::Instance().Init();
 
 	std::shared_ptr<AssignTask> spAssignTask(new AssignTask);
 	spAssignTask->setParam(m_assignSemaphore, m_assignEndSemaphore, m_area, &m_memoryMap);
-	CTaskThreadManager::Instance().GetThreadInterface(m_assginThreadId)->PostTask(spAssignTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_assignThreadId)->PostTask(spAssignTask);
 
 	std::shared_ptr<ReadTask> spReadTask(new ReadTask);
 	spReadTask->setParam(&m_callback,
@@ -130,7 +130,7 @@ void ProcessWork::uninitReceive()
 	delete m_pid;
 	m_pid = nullptr;
 
-	CTaskThreadManager::Instance().Uninit(m_assginThreadId);
+	CTaskThreadManager::Instance().Uninit(m_assignThreadId);
 	CTaskThreadManager::Instance().Uninit(m_readThreadId);
 	CTaskThreadManager::Instance().Uninit(m_copyThreadId);
 	CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
@@ -153,7 +153,7 @@ void ProcessWork::uninitReceive()
 	m_readEndSemaphore = nullptr;
 	m_area = nullptr;
 
-	m_assginThreadId = 0;
+	m_assignThreadId = 0;
 	m_readThreadId = 0;
 	m_copyThreadId = 0;
 	m_receiveThreadId = 0;
@@ -251,7 +251,7 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 	
 	if (destProcessAssignMutex == nullptr || destProcessReadMutex == nullptr)
 	{
-		destProcessAssignMutex.reset(new ProcessReadWriteMutex(CStringManager::Format("ProcessAssginMutex_%d", destPid)));
+		destProcessAssignMutex.reset(new ProcessReadWriteMutex(CStringManager::Format("ProcessAssignMutex_%d", destPid)));
 		destProcessReadMutex.reset(new ProcessReadWriteMutex(CStringManager::Format("ProcessReadMutex_%d", destPid)));
 		std::pair<int32_t, std::shared_ptr<ProcessReadWriteMutex>[2]> pair;
 		pair.first = destPid;
@@ -289,8 +289,8 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 		destAssignEndSemaphore.reset(new Semaphore);
 		destReadSemaphore.reset(new Semaphore);
 		destReadEndSemaphore.reset(new Semaphore);
-		destAssignSemaphore->openProcessSemaphore(CStringManager::Format("ProcessAssgin_%d", destPid));
-		destAssignEndSemaphore->openProcessSemaphore(CStringManager::Format("ProcessAssginEnd_%d", destPid));
+		destAssignSemaphore->openProcessSemaphore(CStringManager::Format("ProcessAssign_%d", destPid));
+		destAssignEndSemaphore->openProcessSemaphore(CStringManager::Format("ProcessAssignEnd_%d", destPid));
 		destReadSemaphore->openProcessSemaphore(CStringManager::Format("ProcessRead_%d", destPid));
 		destReadEndSemaphore->openProcessSemaphore(CStringManager::Format("ProcessReadEnd_%d", destPid));
 		std::pair<int32_t, std::shared_ptr<Semaphore>[4]> pair;

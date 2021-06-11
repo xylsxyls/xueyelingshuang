@@ -116,7 +116,7 @@ protected:
 	Semaphore* m_readEndSemaphore;
 	SharedMemory* m_area;
 	SharedMemory* m_pid;
-	uint32_t m_assginThreadId;
+	uint32_t m_assignThreadId;
 	uint32_t m_readThreadId;
 	uint32_t m_copyThreadId;
 	uint32_t m_receiveThreadId;
