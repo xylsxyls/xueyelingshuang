@@ -154,7 +154,7 @@ void Semaphore::processSignal()
 	struct sembuf sem;
 	sem.sem_num = 0;
 	sem.sem_op = 1;
-	sem.sem_flg = SEM_UNDO;
+	sem.sem_flg = 0;
 	if(semop(m_processSemaphoreId, &sem, 1) == -1)
 	{
 		std::thread::id threadId = std::this_thread::get_id();
@@ -180,7 +180,7 @@ void Semaphore::processWait()
 	struct sembuf sem;
 	sem.sem_num = 0;
 	sem.sem_op = -1;
-	sem.sem_flg = SEM_UNDO;
+	sem.sem_flg = 0;
 	int32_t result = 0;
 	while((result = semop(m_processSemaphoreId, &sem, 1)) == -1 && errno == EINTR);
 	if (result == 0)
@@ -218,7 +218,7 @@ bool Semaphore::processWait(int32_t timeout)
 	struct sembuf sem;
 	sem.sem_num = 0;
 	sem.sem_op = -1;
-	sem.sem_flg = SEM_UNDO;
+	sem.sem_flg = 0;
 	struct timespec ts;
 	ts.tv_sec = timeout / 1000;
 	ts.tv_nsec = (timeout % 1000) * 1000 * 1000;
