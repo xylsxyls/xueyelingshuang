@@ -1,6 +1,7 @@
 #include "Semaphore.h"
 #ifdef __unix__
 #include <sys/sem.h>
+#include <thread>
 #endif
 
 #ifdef __unix__
@@ -156,7 +157,9 @@ void Semaphore::processSignal()
 	sem.sem_flg = SEM_UNDO;
 	if(semop(m_processSemaphoreId, &sem, 1) == -1)
 	{
-		printf("processSignal failed, name = %s, Id = %d\n", m_name.c_str(), m_processSemaphoreId);
+		std::thread::id threadId = std::this_thread::get_id();
+		int32_t currentThreadId = (int32_t)(uint32_t)(*(__gthread_t*)(char*)(&threadId));
+		printf("processSignal failed, errno = %d, name = %s, Id = %d, threadId = %d\n", errno, m_name.c_str(), m_processSemaphoreId, currentThreadId);
 	}
 #endif
 }
@@ -178,10 +181,15 @@ void Semaphore::processWait()
 	sem.sem_num = 0;
 	sem.sem_op = -1;
 	sem.sem_flg = SEM_UNDO;
-	if(semop(m_processSemaphoreId, &sem, 1) == -1)
+	int32_t result = 0;
+	while((result = semop(m_processSemaphoreId, &sem, 1)) == -1 && errno == EINTR);
+	if (result == 0)
 	{
-		printf("processWait failed, name = %s, Id = %d\n", m_name.c_str(), m_processSemaphoreId);
+		return;
 	}
+	std::thread::id threadId = std::this_thread::get_id();
+	int32_t currentThreadId = (int32_t)(uint32_t)(*(__gthread_t*)(char*)(&threadId));
+	printf("processWait failed, result = %d, errno = %d, name = %s, Id = %d, threadId = %d\n", result, errno, m_name.c_str(), m_processSemaphoreId, currentThreadId);
 #endif
 }
 
@@ -214,10 +222,21 @@ bool Semaphore::processWait(int32_t timeout)
 	struct timespec ts;
 	ts.tv_sec = timeout / 1000;
 	ts.tv_nsec = (timeout % 1000) * 1000 * 1000;
-	if (semtimedop(m_processSemaphoreId, &sem, 1, &ts) == 0)
+	int32_t result = 0;
+	while ((result = semtimedop(m_processSemaphoreId, &sem, 1, &ts)) == -1 && errno == EINTR);
+	//errno只有在错误时才会更新
+	if (result == 0)
 	{
 		return true;
 	}
+	//超时
+	else if (result == -1 && errno == EAGAIN)
+	{
+		return false;
+	}
+	std::thread::id threadId = std::this_thread::get_id();
+	int32_t currentThreadId = (int32_t)(uint32_t)(*(__gthread_t*)(char*)(&threadId));
+	printf("semtimedop failed, result = %d, errno = %d, name = %s, Id = %d, threadId = %d\n", result, errno, m_name.c_str(), m_processSemaphoreId, currentThreadId);
 	return false;
 #endif
 }
