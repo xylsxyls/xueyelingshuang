@@ -12,6 +12,7 @@ m_exit(false)
 
 void SkillTask::DoTask()
 {
+	int32_t x = 817;
 	xyls::Point lastPos;
 	std::string currentExePath = CSystem::GetCurrentExePath();
 	int32_t index = -1;
@@ -23,15 +24,19 @@ void SkillTask::DoTask()
 			CKeyboard::InputString("\t");
 			Sleep(200);
 		}
-		ScreenScript::FindClick(currentExePath + "res\\shoufu.png", true, false, xyls::Rect(xyls::Point(904, 557), 96, 80));
+		if (ScreenScript::FindClick(currentExePath + "res\\shoufu.png", true, false, xyls::Rect(xyls::Point(904, 557), 96, 80)))
+		{
+			Sleep(15000);
+			x -= 100;
+		}
 		Sleep(1000);
 		if (++index % 5 == 0)
 		{
 			if (lastPos.x() == currentPos.x() && lastPos.y() == currentPos.y())
 			{
-				CMouse::MoveAbsolute(xyls::Point(817, 13), 0);
-				CMouse::LeftClick();
-				CKeyboard::InputString("`");
+				CMouse::MoveAbsolute(xyls::Point(x, 13), 0);
+				CMouse::LeftClick(0);
+				CKeyboard::InputString("`", 0);
 			}
 			lastPos = currentPos;
 		}
