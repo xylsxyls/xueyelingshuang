@@ -1,5 +1,6 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "Rect/RectAPI.h"
 
 class AcceptTask : public CTask
 {
@@ -9,9 +10,10 @@ public:
 public:
 	void DoTask();
 
-	void setParam(const std::string& findPic, int32_t times);
+	void setParam(const xyls::Rect& findPicRect, int32_t times);
 
 private:
+	xyls::Rect m_findPicRect;
 	std::string m_findPic;
 	int32_t m_times;
 };

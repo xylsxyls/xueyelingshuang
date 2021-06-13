@@ -17,11 +17,17 @@
 #include "SmallTask.h"
 #include "CStopWatch/CStopWatchAPI.h"
 #include "QtControls/ComboBox.h"
+#include "Rect/RectAPI.h"
+#include "JidiTask.h"
 
 #define DTWS_SERVER_VERSION "1.0"
 
 xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
+xyls::Rect g_rightTopRect[3] = { { 1498, 196, 1593, 260 }, { 1199, 486, 1298, 555 }, { 1808, 490, 1920, 550 } };
+xyls::Point g_clickTop[3] = { { 455, 11 }, { 123, 321 }, { 1738, 322 } };
+xyls::Rect g_talkheadRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, { 992, 325, 1333, 757 } };
 int32_t g_accountCount = 1;
+uint32_t* g_taskThreadId = nullptr;
 uint32_t* g_threadId = nullptr;
 CStopWatch g_stopWatch;
 bool g_altDown = false;
@@ -143,6 +149,7 @@ Dtws::Dtws(QWidget* parent):
 	m_water(nullptr),
 	m_small(nullptr),
 	m_muqing(nullptr),
+	m_jidi(nullptr),
 	m_clientReceive(nullptr)
 {
 	ui.setupUi(this);
@@ -170,6 +177,9 @@ void Dtws::init()
 	QPalette pattle;
 	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
 	setPalette(pattle);
+
+	m_taskThreadId = CTaskThreadManager::Instance().Init();
+	g_taskThreadId = &m_taskThreadId;
 
 	m_threadId = CTaskThreadManager::Instance().Init();
 	g_threadId = &m_threadId;
@@ -222,6 +232,11 @@ void Dtws::init()
 	m_muqing->setText(QStringLiteral("„Â«Á¡Ë‘∆’Ø"));
 	m_muqing->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_muqing, &COriginalButton::clicked, this, &Dtws::onMuqingButtonClicked);
+
+	m_jidi = new COriginalButton(this);
+	m_jidi->setText(QStringLiteral("ª˘µÿ"));
+	m_jidi->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_jidi, &COriginalButton::clicked, this, &Dtws::onJidiButtonClicked);
 }
 
 bool Dtws::check()
@@ -246,6 +261,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_water);
 	vecButton.push_back(m_small);
 	vecButton.push_back(m_muqing);
+	vecButton.push_back(m_jidi);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -326,4 +342,11 @@ void Dtws::onMuqingButtonClicked()
 {
 	g_muqing = !g_muqing;
 	m_muqing->setText(g_muqing ? QStringLiteral("„Â«Á¡Ë‘∆’Ø") : QStringLiteral("„Â«Á∞Ÿª®“Ω"));
+}
+
+void Dtws::onJidiButtonClicked()
+{
+	showMinimized();
+	std::shared_ptr<JidiTask> spJidiTask(new JidiTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_taskThreadId)->PostTask(spJidiTask);
 }

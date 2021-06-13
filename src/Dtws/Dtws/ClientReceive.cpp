@@ -5,6 +5,7 @@
 #include "AttackTask.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
+extern uint32_t* g_taskThreadId;
 extern uint32_t* g_threadId;
 
 ClientReceive::ClientReceive()

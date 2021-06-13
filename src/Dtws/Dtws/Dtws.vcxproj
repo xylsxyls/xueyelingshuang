@@ -188,6 +188,7 @@
     </ClCompile>
     <ClCompile Include="GoTask.cpp" />
     <ClCompile Include="HealTask.cpp" />
+    <ClCompile Include="JidiTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Dtws.cpp" />
     <ClCompile Include="RiseTask.cpp" />
@@ -298,6 +299,7 @@
     <ClInclude Include="FollowTask.h" />
     <ClInclude Include="GoTask.h" />
     <ClInclude Include="HealTask.h" />
+    <ClInclude Include="JidiTask.h" />
     <ClInclude Include="RiseTask.h" />
     <ClInclude Include="SkillTask.h" />
     <ClInclude Include="SmallTask.h" />

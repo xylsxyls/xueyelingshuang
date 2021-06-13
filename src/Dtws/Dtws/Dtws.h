@@ -31,6 +31,7 @@ private slots:
 	void onWaterButtonClicked();
 	void onSmallButtonClicked();
 	void onMuqingButtonClicked();
+	void onJidiButtonClicked();
 
 private:
 	Ui::DtwsClass ui;
@@ -42,7 +43,9 @@ private:
 	COriginalButton* m_water;
 	COriginalButton* m_small;
 	COriginalButton* m_muqing;
+	COriginalButton* m_jidi;
 	uint32_t m_threadId;
+	uint32_t m_taskThreadId;
 	ClientReceive* m_clientReceive;
 };
 

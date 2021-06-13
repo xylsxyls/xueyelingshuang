@@ -2,6 +2,8 @@
 #include "ScreenScript/ScreenScriptAPI.h"
 #include "CMouse/CMouseAPI.h"
 
+extern xyls::Point g_clickTop[3];
+
 FindTask::FindTask():
 m_isFind(nullptr),
 m_findEnd(nullptr),
@@ -17,7 +19,8 @@ void FindTask::DoTask()
 		return;
 	}
 	*m_isFind = false;
-	CMouse::MoveAbsolute(m_click);
+	CMouse::MoveAbsolute(m_click, 0);
+	CMouse::LeftClick(0);
 	Sleep(200);
 	if (m_exit)
 	{
@@ -27,7 +30,7 @@ void FindTask::DoTask()
 	int32_t count = 3;
 	while (count-- != 0)
 	{
-		if (ScreenScript::FindPic(m_findPic))
+		if (!ScreenScript::FindPic(m_findPic, m_findPicRect).empty())
 		{
 			*m_isFind = true;
 			break;
@@ -50,13 +53,14 @@ bool FindTask::ReExecute()
 CTask* FindTask::Clone()
 {
 	m_clone = new FindTask;
-	m_clone->setParam(m_click, m_findPic, m_isFind, m_findEnd);
+	m_clone->setParam(m_click, m_findPicRect, m_findPic, m_isFind, m_findEnd);
 	return m_clone;
 }
 
-void FindTask::setParam(const xyls::Point& click, const std::string& findPic, bool* isFind, Semaphore* findEnd)
+void FindTask::setParam(const xyls::Point& click, const xyls::Rect& findPicRect, const std::string& findPic, bool* isFind, Semaphore* findEnd)
 {
 	m_click = click;
+	m_findPicRect = findPicRect;
 	m_findPic = findPic;
 	m_isFind = isFind;
 	m_findEnd = findEnd;
