@@ -351,5 +351,8 @@ void Dtws::onJidiButtonClicked()
 	showMinimized();
 	std::shared_ptr<JidiTask> spJidiTask(new JidiTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_taskThreadId)->PostTask(spJidiTask);
-	NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_JIDI));
+	if (CSystem::getComputerName() == "SC-202007261854")
+	{
+		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_JIDI));
+	}
 }
