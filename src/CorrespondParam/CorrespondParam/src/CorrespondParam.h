@@ -33,7 +33,8 @@ enum
 	DTWS_FOLLOW,
 	DTWS_HEAL,
 	DTWS_RISE,
-	DTWS_ATTACK
+	DTWS_ATTACK,
+	DTWS_JIDI
 };
 
 enum StockEnum

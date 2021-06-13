@@ -23,7 +23,7 @@
 #define DTWS_SERVER_VERSION "1.0"
 
 xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
-xyls::Rect g_rightTopRect[3] = { { 1498, 196, 1593, 260 }, { 1199, 486, 1298, 555 }, { 1808, 490, 1920, 550 } };
+xyls::Rect g_rightTopRect[3] = { { 1534, 169, 1654, 262 }, { 1211, 477, 1340, 569 }, { 1854, 486, 1920, 561 } };
 xyls::Point g_clickTop[3] = { { 455, 11 }, { 123, 321 }, { 1738, 322 } };
 xyls::Rect g_talkheadRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, { 992, 325, 1333, 757 } };
 int32_t g_accountCount = 1;
@@ -278,6 +278,8 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 void Dtws::closeEvent(QCloseEvent* eve)
 {
 	CHook::Uninit();
+	CTaskThreadManager::Instance().Uninit(m_taskThreadId);
+	m_taskThreadId = 0;
 	CTaskThreadManager::Instance().Uninit(m_threadId);
 	m_threadId = 0;
 	ProcessWork::instance().uninitReceive();
@@ -349,4 +351,5 @@ void Dtws::onJidiButtonClicked()
 	showMinimized();
 	std::shared_ptr<JidiTask> spJidiTask(new JidiTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_taskThreadId)->PostTask(spJidiTask);
+	NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_JIDI));
 }

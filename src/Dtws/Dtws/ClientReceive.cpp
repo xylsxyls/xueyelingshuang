@@ -3,6 +3,7 @@
 #include "HealTask.h"
 #include "RiseTask.h"
 #include "AttackTask.h"
+#include "JidiTask.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
 extern uint32_t* g_taskThreadId;
@@ -25,11 +26,13 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	{
 	case DTWS_STOP:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 	}
 	break;
 	case DTWS_FOLLOW:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 		std::shared_ptr<FollowTask> spFollowTask(new FollowTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spFollowTask);
@@ -37,6 +40,7 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_HEAL:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 		std::shared_ptr<HealTask> spHealTask(new HealTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spHealTask);
@@ -44,6 +48,7 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_RISE:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 		std::shared_ptr<RiseTask> spRiseTask(new RiseTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spRiseTask);
@@ -51,9 +56,18 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_ATTACK:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 		std::shared_ptr<AttackTask> spAttackTask(new AttackTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spAttackTask);
+	}
+	break;
+	case DTWS_JIDI:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+		std::shared_ptr<JidiTask> spJidiTask(new JidiTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spJidiTask);
 	}
 	break;
 	default:
