@@ -50,7 +50,8 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		//delete¼ü
 		case 46:
 		{
-			//CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopCurTask();
+			CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+			CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_STOP));
 		}
 		break;
