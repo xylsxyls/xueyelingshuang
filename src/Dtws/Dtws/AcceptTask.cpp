@@ -3,6 +3,8 @@
 #include "CMouse/CMouseAPI.h"
 #include "CSystem/CSystemAPI.h"
 
+extern int32_t g_accountCount;
+
 AcceptTask::AcceptTask():
 m_times(0)
 {
@@ -11,6 +13,13 @@ m_times(0)
 
 void AcceptTask::DoTask()
 {
+	if (g_accountCount != 1)
+	{
+		CMouse::MoveAbsolute(m_click, 0);
+		CMouse::LeftClick(0);
+		Sleep(200);
+	}
+
 	std::string currentExePath = CSystem::GetCurrentExePath();
 	ScreenScript::FindPic(currentExePath + "res\\talkhead.png", m_findPicRect, true, 0);
 	CMouse::MoveOpposite(xyls::Point(63, 418), 0);
@@ -22,8 +31,9 @@ void AcceptTask::DoTask()
 	}
 }
 
-void AcceptTask::setParam(const xyls::Rect& findPicRect, int32_t times)
+void AcceptTask::setParam(const xyls::Point& click, const xyls::Rect& findPicRect, int32_t times)
 {
+	m_click = click;
 	m_findPicRect = findPicRect;
 	m_times = times;
 }

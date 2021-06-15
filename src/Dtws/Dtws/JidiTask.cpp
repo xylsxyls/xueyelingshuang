@@ -44,8 +44,8 @@ void JidiTask::DoTask()
 	if (isFind)
 	{
 		std::shared_ptr<AcceptTask> spAcceptTask(new AcceptTask);
-		spAcceptTask->setParam(g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex], 1);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spAcceptTask);
+		spAcceptTask->setParam(g_clickTop[m_clientIndex], g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex], 1);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spAcceptTask, 2);
 	}
 }
 

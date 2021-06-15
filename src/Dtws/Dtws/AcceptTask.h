@@ -10,9 +10,10 @@ public:
 public:
 	void DoTask();
 
-	void setParam(const xyls::Rect& findPicRect, int32_t times);
+	void setParam(const xyls::Point& click, const xyls::Rect& findPicRect, int32_t times);
 
 private:
+	xyls::Point m_click;
 	xyls::Rect m_findPicRect;
 	std::string m_findPic;
 	int32_t m_times;
