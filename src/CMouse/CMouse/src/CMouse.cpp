@@ -52,6 +52,11 @@ bool CMouse::RightClick(int32_t sleepTime)
 	return result;
 }
 
+bool CMouse::MiddleClick()
+{
+	return DmSoft::MiddleClick() == 1;
+}
+
 bool CMouse::LeftDoubleClick(int32_t sleepTime)
 {
 	//?ªÒ»°…¢¡–

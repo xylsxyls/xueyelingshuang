@@ -18,7 +18,7 @@ void GoTask::DoTask()
 	if (g_accountCount != 1)
 	{
 		CMouse::MoveAbsolute(m_clickTopPoint, 0);
-		CMouse::LeftClick(0);
+		CMouse::MiddleClick();
 		Sleep(50);
 	}
 

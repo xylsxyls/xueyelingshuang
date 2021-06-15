@@ -21,6 +21,7 @@ public:
 	//?单击右键
     static bool RightClick(int32_t sleepTime = -1);
 	//?单击中键
+	static bool MiddleClick();
 	//?双击左键，间隔时间范围为100 - 300毫秒
     static bool LeftDoubleClick(int32_t sleepTime = -1);
 	//?双击右键

@@ -28,7 +28,7 @@ void FindTask::DoTask()
 	if (g_accountCount != 1)
 	{
 		CMouse::MoveAbsolute(m_click, 0);
-		CMouse::LeftClick(0);
+		CMouse::MiddleClick();
 		Sleep(200);
 	}
 	if (m_exit)
