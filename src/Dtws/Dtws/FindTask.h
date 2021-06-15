@@ -9,6 +9,8 @@ class FindTask : public CTask
 public:
 	FindTask();
 
+	~FindTask();
+
 public:
 	void DoTask();
 

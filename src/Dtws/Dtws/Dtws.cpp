@@ -19,6 +19,7 @@
 #include "QtControls/ComboBox.h"
 #include "Rect/RectAPI.h"
 #include "JidiTask.h"
+#include "AssignThreadTask.h"
 
 #define DTWS_SERVER_VERSION "1.0"
 
@@ -350,8 +351,18 @@ void Dtws::onMuqingButtonClicked()
 void Dtws::onJidiButtonClicked()
 {
 	showMinimized();
-	std::shared_ptr<JidiTask> spJidiTask(new JidiTask);
-	CTaskThreadManager::Instance().GetThreadInterface(m_taskThreadId)->PostTask(spJidiTask);
+	std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+	std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+	int32_t index = -1;
+	while (index++ != g_accountCount - 1)
+	{
+		JidiTask* jidiTask = new JidiTask;
+		jidiTask->setParam(index);
+		std::shared_ptr<CTask> spJidiTask(jidiTask);
+		vecSpDoTask.push_back(spJidiTask);
+	}
+	spAssignThreadTask->setParam(vecSpDoTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_taskThreadId)->PostTask(spAssignThreadTask);
 	if (CSystem::getComputerName() == "SC-202007261854")
 	{
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_JIDI));

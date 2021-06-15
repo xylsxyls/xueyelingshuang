@@ -2,6 +2,7 @@
 #include "ScreenScript/ScreenScriptAPI.h"
 #include "CMouse/CMouseAPI.h"
 
+extern int32_t g_accountCount;
 extern xyls::Point g_clickTop[3];
 
 FindTask::FindTask():
@@ -12,6 +13,11 @@ m_exit(false)
 
 }
 
+FindTask::~FindTask()
+{
+	m_findEnd->signal();
+}
+
 void FindTask::DoTask()
 {
 	if (m_exit)
@@ -19,9 +25,12 @@ void FindTask::DoTask()
 		return;
 	}
 	*m_isFind = false;
-	CMouse::MoveAbsolute(m_click, 0);
-	CMouse::LeftClick(0);
-	Sleep(200);
+	if (g_accountCount != 1)
+	{
+		CMouse::MoveAbsolute(m_click, 0);
+		CMouse::LeftClick(0);
+		Sleep(200);
+	}
 	if (m_exit)
 	{
 		return;
@@ -36,7 +45,6 @@ void FindTask::DoTask()
 			break;
 		}
 	}
-	m_findEnd->signal();
 }
 
 void FindTask::StopTask()

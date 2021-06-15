@@ -4,10 +4,12 @@
 #include "RiseTask.h"
 #include "AttackTask.h"
 #include "JidiTask.h"
+#include "AssignThreadTask.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
 extern uint32_t* g_taskThreadId;
 extern uint32_t* g_threadId;
+extern int32_t g_accountCount;
 
 ClientReceive::ClientReceive()
 {
@@ -66,8 +68,19 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
-		std::shared_ptr<JidiTask> spJidiTask(new JidiTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spJidiTask);
+
+		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+		int32_t index = -1;
+		while (index++ != g_accountCount - 1)
+		{
+			JidiTask* jidiTask = new JidiTask;
+			jidiTask->setParam(index);
+			std::shared_ptr<CTask> spJidiTask(jidiTask);
+			vecSpDoTask.push_back(spJidiTask);
+		}
+		spAssignThreadTask->setParam(vecSpDoTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
 	}
 	break;
 	default:
