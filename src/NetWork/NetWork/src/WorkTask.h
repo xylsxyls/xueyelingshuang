@@ -25,6 +25,5 @@ private:
 	uv_tcp_t* m_sender;
 	char* m_buffer;
 	int32_t m_length;
-	int32_t m_protocolId;
 	LibuvTcp* m_libuvTcp;
 };

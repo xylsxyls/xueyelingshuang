@@ -427,7 +427,7 @@ void ProcessWork::waitForPostEnd()
 //class Receive : public ProcessReceiveCallback
 //{
 //public:
-//	void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+//	void receive(int32_t sendPid, char* buffer, int32_t length, int32_t type)
 //	{
 //		RCSend("num = %d, %s", num, buffer);
 //		ProcessWork::instance().send("ConsoleTest" + std::to_string(num + 1), "123456", 6);

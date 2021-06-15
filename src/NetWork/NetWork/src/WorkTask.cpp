@@ -40,16 +40,16 @@ void WorkTask::DoTask()
 
 	//if (m_libuvTcp->isClient())
 	//{
-	//	((NetClient*)m_libuvTcp)->onReceive(m_buffer + 4, m_length - 4, (CorrespondParam::ProtocolId)(m_i));
+	//	((NetClient*)m_libuvTcp)->onReceive(m_buffer + 4, m_length - 4, (int32_t)(m_i));
 	//}
 	//else
 	//{
-	//	((NetServer*)m_libuvTcp)->onReceive(m_sender, m_buffer + 4, m_length - 4, (CorrespondParam::ProtocolId)(m_i));
+	//	((NetServer*)m_libuvTcp)->onReceive(m_sender, m_buffer + 4, m_length - 4, (int32_t)(m_i));
 	//}
 
 	if (m_buffer == nullptr)
 	{
-		//加了protocolId之后包大小不可能为0
+		//加了type之后包大小不可能为0
 		return;
 	}
 	::free(m_buffer);

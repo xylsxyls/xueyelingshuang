@@ -228,7 +228,7 @@ void LibuvTcp::loop()
 	thread->PostTask(spTask);
 }
 
-void LibuvTcp::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t protocolId)
+void LibuvTcp::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t type)
 {
 #if defined _WIN64 || defined __x86_64__
 	int32_t ptrSize = 8;
@@ -243,7 +243,7 @@ void LibuvTcp::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t 
 #endif // _WIN64
 	
 	*((int32_t*)(text + ptrSize)) = length + 4;
-	*((int32_t*)(text + ptrSize + 4)) = protocolId;
+	*((int32_t*)(text + ptrSize + 4)) = type;
 	::memcpy(text + ptrSize + 8, buffer, length);
 
 	{

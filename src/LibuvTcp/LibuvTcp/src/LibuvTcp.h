@@ -24,7 +24,7 @@ public:
 
 	void loop();
 
-	void send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t protocolId);
+	void send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t type);
 
 	uv_loop_t* loopPtr();
 

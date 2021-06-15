@@ -72,7 +72,7 @@ void NetServer::clientConnected(uv_tcp_t* client)
 //class Client : public NetClient
 //{
 //public:
-//	virtual void onReceive(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+//	virtual void onReceive(char* buffer, int32_t length, int32_t type)
 //	{
 //		std::unique_lock<std::mutex> lock(g_mu);
 //		RCSend("client = %s", buffer);
@@ -94,7 +94,7 @@ void NetServer::clientConnected(uv_tcp_t* client)
 //class Client2 : public NetClient
 //{
 //public:
-//	virtual void onReceive(char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+//	virtual void onReceive(char* buffer, int32_t length, int32_t type)
 //	{
 //		printf("client2 = %s\n", buffer);
 //		int x = 3;
@@ -110,7 +110,7 @@ void NetServer::clientConnected(uv_tcp_t* client)
 //class Server : public NetServer
 //{
 //public:
-//	virtual void onReceive(uv_tcp_t* client, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+//	virtual void onReceive(uv_tcp_t* client, char* buffer, int32_t length, int32_t type)
 //	{
 //		{
 //			std::unique_lock<std::mutex> lock(g_mu);
@@ -126,7 +126,7 @@ void NetServer::clientConnected(uv_tcp_t* client)
 //			{
 //				//::MessageBox(0, 0, 0, 0);
 //			}
-//			RCSend("%d_%s", (int32_t)protocolId, str.c_str());
+//			RCSend("%d_%s", type, str.c_str());
 //		}
 //
 //		send(client, "server received", 15, CorrespondParam::CLIENT_INIT);
