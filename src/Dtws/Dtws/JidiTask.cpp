@@ -28,22 +28,25 @@ void JidiTask::DoTask()
 	spGoTask->setParam(g_clickTop[m_clientIndex], g_accountCount == 1 ? xyls::Rect(1869, 189, 1920, 249) : g_rightTopRect[m_clientIndex], "¸ÊÈª¹È½ÓÒýÈË", 1);
 	CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spGoTask);
 
-	//bool isFind = false;
-	//while (!m_exit && !isFind)
-	//{
-	//	Semaphore findSemaphore;
-	//	std::shared_ptr<FindTask> spFindTask(new FindTask);
-	//	spFindTask->setParam(g_clickTop[m_clientIndex], g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex], currentExePath + "res\\talkhead.png", &isFind, &findSemaphore);
-	//	CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spFindTask);
-	//	findSemaphore.wait();
-	//	Sleep(1000);
-	//}
-	//if (isFind)
-	//{
-	//	std::shared_ptr<AcceptTask> spAcceptTask(new AcceptTask);
-	//	spAcceptTask->setParam(g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex], 1);
-	//	CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spAcceptTask);
-	//}
+	bool isFind = false;
+	while (!m_exit && !isFind)
+	{
+		Semaphore findSemaphore;
+		std::shared_ptr<FindTask> spFindTask(new FindTask);
+		spFindTask->setParam(g_clickTop[m_clientIndex], g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex], currentExePath + "res\\talkhead.png", &isFind, &findSemaphore);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spFindTask);
+		findSemaphore.wait();
+		if (!isFind)
+		{
+			Sleep(1000);
+		}
+	}
+	if (isFind)
+	{
+		std::shared_ptr<AcceptTask> spAcceptTask(new AcceptTask);
+		spAcceptTask->setParam(g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex], 1);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spAcceptTask);
+	}
 }
 
 void JidiTask::StopTask()

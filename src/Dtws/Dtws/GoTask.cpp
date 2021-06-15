@@ -3,7 +3,6 @@
 #include "ScreenScript/ScreenScriptAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
-#include "CScreen/CScreenAPI.h"
 
 extern xyls::Rect g_rightTopRect[3];
 extern int32_t g_accountCount;
@@ -20,12 +19,22 @@ void GoTask::DoTask()
 	{
 		CMouse::MoveAbsolute(m_clickTopPoint, 0);
 		CMouse::LeftClick(0);
-		Sleep(200);
+		Sleep(50);
 	}
 
 	std::string currentExePath = CSystem::GetCurrentExePath();
 	ScreenScript::FindClick(currentExePath + "res\\go.png", true, false, m_placeRect, 0);
-	Sleep(g_accountCount == 1 ? 400 : 100);
+	int32_t findTimes = 0;
+	while (ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900)).empty())
+	{
+		++findTimes;
+		Sleep(50);
+		if (findTimes % 10 == 0)
+		{
+			ScreenScript::FindClick(currentExePath + "res\\go.png", true, false, m_placeRect, 0);
+		}
+	}
+
 	xyls::Point picPoint = ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900), true, 0);
 	CMouse::MoveOpposite(xyls::Point(-100, 0), 0);
 	CMouse::LeftClick(0);
