@@ -107,6 +107,12 @@
     <ClCompile Include="GoFindClickTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="ConvoyTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="WaitTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -172,6 +178,12 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="GoFindClickTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvoyTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="WaitTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

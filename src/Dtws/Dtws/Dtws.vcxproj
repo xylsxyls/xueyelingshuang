@@ -166,6 +166,7 @@
     <ClCompile Include="ATask.cpp" />
     <ClCompile Include="AttackTask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
+    <ClCompile Include="ConvoyTask.cpp" />
     <ClCompile Include="FindTask.cpp" />
     <ClCompile Include="FiveTask.cpp" />
     <ClCompile Include="FollowTask.cpp" />
@@ -196,6 +197,7 @@
     <ClCompile Include="RiseTask.cpp" />
     <ClCompile Include="SkillTask.cpp" />
     <ClCompile Include="SmallTask.cpp" />
+    <ClCompile Include="WaitTask.cpp" />
     <ClCompile Include="WaterTask.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -297,6 +299,7 @@
     <ClInclude Include="ATask.h" />
     <ClInclude Include="AttackTask.h" />
     <ClInclude Include="ClientReceive.h" />
+    <ClInclude Include="ConvoyTask.h" />
     <ClInclude Include="FindTask.h" />
     <ClInclude Include="FiveTask.h" />
     <ClInclude Include="FollowTask.h" />
@@ -307,6 +310,7 @@
     <ClInclude Include="RiseTask.h" />
     <ClInclude Include="SkillTask.h" />
     <ClInclude Include="SmallTask.h" />
+    <ClInclude Include="WaitTask.h" />
     <ClInclude Include="WaterTask.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

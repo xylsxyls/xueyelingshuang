@@ -32,6 +32,7 @@ private slots:
 	void onSmallButtonClicked();
 	void onMuqingButtonClicked();
 	void onJidiButtonClicked();
+	void onLacheButtonClicked();
 
 private:
 	Ui::DtwsClass ui;
@@ -44,6 +45,7 @@ private:
 	COriginalButton* m_small;
 	COriginalButton* m_muqing;
 	COriginalButton* m_jidi;
+	COriginalButton* m_lache;
 	uint32_t m_threadId;
 	uint32_t m_taskThreadId;
 	ClientReceive* m_clientReceive;

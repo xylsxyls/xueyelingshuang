@@ -15,12 +15,9 @@ m_clickIndex(0)
 
 void GoTask::DoTask()
 {
-	if (g_accountCount != 1)
-	{
-		CMouse::MoveAbsolute(m_clickTopPoint, 0);
-		CMouse::MiddleClick();
-		Sleep(50);
-	}
+	CMouse::MoveAbsolute(m_click, 0);
+	CMouse::MiddleClick();
+	Sleep(50);
 
 	std::string currentExePath = CSystem::GetCurrentExePath();
 	ScreenScript::FindClick(currentExePath + "res\\go.png", true, false, m_placeRect, 0);
@@ -53,9 +50,9 @@ void GoTask::DoTask()
 	CMouse::LeftDoubleClick(0);
 }
 
-void GoTask::setParam(const xyls::Point& clickTopPoint, const xyls::Rect& placeRect, const std::string& placeName, int32_t clickIndex)
+void GoTask::setParam(const xyls::Point& click, const xyls::Rect& placeRect, const std::string& placeName, int32_t clickIndex)
 {
-	m_clickTopPoint = clickTopPoint;
+	m_click = click;
 	m_placeRect = placeRect;
 	m_placeName = placeName;
 	m_clickIndex = clickIndex;

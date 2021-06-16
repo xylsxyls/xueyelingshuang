@@ -20,6 +20,7 @@
 #include "Rect/RectAPI.h"
 #include "JidiTask.h"
 #include "AssignThreadTask.h"
+#include "ConvoyTask.h"
 
 #define DTWS_SERVER_VERSION "1.0"
 
@@ -27,6 +28,7 @@ xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
 xyls::Rect g_rightTopRect[3] = { { 1534, 169, 1654, 262 }, { 1211, 477, 1340, 569 }, { 1854, 486, 1920, 561 } };
 xyls::Point g_clickTop[3] = { { 455, 11 }, { 123, 321 }, { 1738, 322 } };
 xyls::Rect g_talkheadRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, { 992, 325, 1333, 757 } };
+xyls::Rect g_chatRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, { 992, 325, 1333, 757 } };
 int32_t g_accountCount = 1;
 uint32_t* g_taskThreadId = nullptr;
 uint32_t* g_threadId = nullptr;
@@ -152,6 +154,7 @@ Dtws::Dtws(QWidget* parent):
 	m_small(nullptr),
 	m_muqing(nullptr),
 	m_jidi(nullptr),
+	m_lache(nullptr),
 	m_clientReceive(nullptr)
 {
 	ui.setupUi(this);
@@ -239,6 +242,11 @@ void Dtws::init()
 	m_jidi->setText(QStringLiteral("基地"));
 	m_jidi->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_jidi, &COriginalButton::clicked, this, &Dtws::onJidiButtonClicked);
+
+	m_lache = new COriginalButton(this);
+	m_lache->setText(QStringLiteral("拉车"));
+	m_lache->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_lache, &COriginalButton::clicked, this, &Dtws::onLacheButtonClicked);
 }
 
 bool Dtws::check()
@@ -264,6 +272,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_small);
 	vecButton.push_back(m_muqing);
 	vecButton.push_back(m_jidi);
+	vecButton.push_back(m_lache);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -367,4 +376,21 @@ void Dtws::onJidiButtonClicked()
 	{
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_JIDI));
 	}
+}
+
+void Dtws::onLacheButtonClicked()
+{
+	showMinimized();
+	std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+	std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+	int32_t index = -1;
+	while (index++ != g_accountCount - 1)
+	{
+		ConvoyTask* convoyTask = new ConvoyTask;
+		convoyTask->setParam(1500, index, "东北", 0, 2);
+		std::shared_ptr<CTask> spConvoyTask(convoyTask);
+		vecSpDoTask.push_back(spConvoyTask);
+	}
+	spAssignThreadTask->setParam(vecSpDoTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_taskThreadId)->PostTask(spAssignThreadTask);
 }
