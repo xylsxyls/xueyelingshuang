@@ -75,7 +75,7 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (index++ != g_accountCount - 1)
 		{
 			JidiTask* jidiTask = new JidiTask;
-			jidiTask->setParam(index);
+			jidiTask->setParam(0, index);
 			std::shared_ptr<CTask> spJidiTask(jidiTask);
 			vecSpDoTask.push_back(spJidiTask);
 		}

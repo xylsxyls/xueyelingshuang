@@ -104,6 +104,9 @@
     <ClCompile Include="AssignThreadTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="GoFindClickTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -166,6 +169,9 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="AssignThreadTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="GoFindClickTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

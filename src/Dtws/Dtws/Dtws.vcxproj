@@ -187,6 +187,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="GoFindClickTask.cpp" />
     <ClCompile Include="GoTask.cpp" />
     <ClCompile Include="HealTask.cpp" />
     <ClCompile Include="JidiTask.cpp" />
@@ -299,6 +300,7 @@
     <ClInclude Include="FindTask.h" />
     <ClInclude Include="FiveTask.h" />
     <ClInclude Include="FollowTask.h" />
+    <ClInclude Include="GoFindClickTask.h" />
     <ClInclude Include="GoTask.h" />
     <ClInclude Include="HealTask.h" />
     <ClInclude Include="JidiTask.h" />

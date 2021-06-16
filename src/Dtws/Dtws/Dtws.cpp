@@ -357,7 +357,7 @@ void Dtws::onJidiButtonClicked()
 	while (index++ != g_accountCount - 1)
 	{
 		JidiTask* jidiTask = new JidiTask;
-		jidiTask->setParam(index);
+		jidiTask->setParam(1500, index);
 		std::shared_ptr<CTask> spJidiTask(jidiTask);
 		vecSpDoTask.push_back(spJidiTask);
 	}
