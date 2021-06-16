@@ -8,14 +8,15 @@ void WaitTask::DoTask()
 	CMouse::MiddleClick();
 	Sleep(100);
 
-	CKeyboard::KeyPress(CKeyboard::Right, 0);
-
-	CKeyboard::KeyPress('0', 0);
-	CKeyboard::KeyPress('0', 0);
-	CKeyboard::KeyPress('0', 0);
-	CKeyboard::KeyPress('0', 0);
-	CKeyboard::KeyPress('0', 0);
-	CKeyboard::KeyPress('0', 0);
+	CKeyboard::KeyPress(CKeyboard::Right);
+	CKeyboard::KeyPress(96);
+	CKeyboard::KeyPress(96);
+	CKeyboard::KeyPress(96);
+	CKeyboard::KeyPress(96);
+	CKeyboard::KeyPress(96);
+	CKeyboard::KeyPress(96);
+	CKeyboard::KeyPress(96);
+	CKeyboard::KeyPress(96);
 }
 
 void WaitTask::setParam(const xyls::Point& click)

@@ -28,7 +28,7 @@ xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
 xyls::Rect g_rightTopRect[3] = { { 1534, 169, 1654, 262 }, { 1211, 477, 1340, 569 }, { 1854, 486, 1920, 561 } };
 xyls::Point g_clickTop[3] = { { 455, 11 }, { 123, 321 }, { 1738, 322 } };
 xyls::Rect g_talkheadRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, { 992, 325, 1333, 757 } };
-xyls::Rect g_chatRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, { 992, 325, 1333, 757 } };
+xyls::Rect g_chatRect[3] = { { 324, 465, 670, 677 }, { 0, 774, 350, 984 }, { 632, 772, 984, 988 } };
 int32_t g_accountCount = 1;
 uint32_t* g_taskThreadId = nullptr;
 uint32_t* g_threadId = nullptr;
@@ -387,7 +387,7 @@ void Dtws::onLacheButtonClicked()
 	while (index++ != g_accountCount - 1)
 	{
 		ConvoyTask* convoyTask = new ConvoyTask;
-		convoyTask->setParam(1500, index, "东北", 0, 2);
+		convoyTask->setParam(1500, index, "东北义军", 0, 2);
 		std::shared_ptr<CTask> spConvoyTask(convoyTask);
 		vecSpDoTask.push_back(spConvoyTask);
 	}

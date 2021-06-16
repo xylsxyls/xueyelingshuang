@@ -54,7 +54,7 @@ void ConvoyTask::DoTask()
 		Semaphore findErrorSemaphore;
 		std::shared_ptr<FindTask> spFindErrorTask(new FindTask);
 		spFindErrorTask->setParam(g_clickTop[m_clientIndex],
-			g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_chatRect[m_clientIndex],
+			g_accountCount == 1 ? xyls::Rect(0, 770, 348, 1009) : g_chatRect[m_clientIndex],
 			currentExePath + "res\\jiaohumaer.png",
 			&isFindError,
 			&findErrorSemaphore);
