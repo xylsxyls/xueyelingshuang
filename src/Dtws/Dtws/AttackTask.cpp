@@ -2,8 +2,8 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
 
-extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
+extern xyls::Point g_clickTop[3];
 
 AttackTask::AttackTask():
 m_exit(false)
@@ -38,8 +38,8 @@ void AttackTask::DoTask()
 	}
 
 	//点击任务栏
-	CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
-	CMouse::LeftClick(0);
+	//CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
+	//CMouse::LeftClick(0);
 
 	std::vector<std::pair<std::string, int32_t>> vecSkill;
 	vecSkill.push_back(std::pair<std::string, int32_t>("\t2", 3400));
@@ -62,8 +62,8 @@ void AttackTask::DoTask()
 				if (g_accountCount != 1)
 				{
 					//点击任务栏
-					CMouse::MoveAbsolute(g_accountPoint[accountIndex], 0);
-					CMouse::LeftClick(0);
+					CMouse::MoveAbsolute(g_clickTop[accountIndex], 0);
+					CMouse::MiddleClick();
 				}
 				Sleep(50);
 				CKeyboard::InputString(vecSkill[skillIndex].first, 0);

@@ -17,8 +17,8 @@ void AcceptTask::DoTask()
 	{
 		CMouse::MoveAbsolute(m_click, 0);
 		CMouse::MiddleClick();
-		Sleep(200);
 	}
+	Sleep(g_accountCount == 1 ? 200 : 300);
 
 	std::string currentExePath = CSystem::GetCurrentExePath();
 	ScreenScript::FindPic(currentExePath + "res\\talkhead.png", m_findPicRect, true, 0);
