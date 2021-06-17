@@ -46,9 +46,19 @@ void GoTask::DoTask()
 	CKeyboard::KeyUp('V');
 	CMouse::MoveAbsolute(picPoint, 0);
 	CMouse::LeftClick(0);
-	Sleep(300);
 	CMouse::MoveOpposite(xyls::Point(0, -305 + m_clickIndex * 45), 0);
-	CMouse::LeftDoubleClick(0);
+	int32_t xunCount = 0;
+	do
+	{
+		++xunCount;
+		if (xunCount > 20)
+		{
+			break;
+		}
+		Sleep(50);
+		CMouse::LeftDoubleClick(0);
+		Sleep(50);
+	} while (!ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900)).empty());
 }
 
 void GoTask::setParam(const xyls::Point& click, const xyls::Rect& placeRect, const std::string& placeName, int32_t clickIndex)
