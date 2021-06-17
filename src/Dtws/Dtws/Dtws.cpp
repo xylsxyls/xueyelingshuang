@@ -18,9 +18,9 @@
 #include "CStopWatch/CStopWatchAPI.h"
 #include "QtControls/ComboBox.h"
 #include "Rect/RectAPI.h"
-#include "JidiTask.h"
 #include "AssignThreadTask.h"
 #include "ConvoyTask.h"
+#include "GoFindClickTask.h"
 
 #define DTWS_SERVER_VERSION "1.0"
 
@@ -37,6 +37,9 @@ bool g_altDown = false;
 bool g_ctrlDown = false;
 bool g_muqing = true;
 bool g_hook = true;
+bool g_isBigLache = true;
+Dtws* g_dtws = nullptr;
+
 
 LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -109,6 +112,126 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				g_stopWatch.SetWatchTime(0);
 				std::shared_ptr<ATask> spATask(new ATask);
 				CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spATask);
+			}
+		}
+		break;
+		case 100:
+		{
+			if (g_stopWatch.GetWatchTime() > 5000)
+			{
+				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+				int32_t clientIndex = -1;
+				while (clientIndex++ != g_accountCount - 1)
+				{
+					GoFindClickTask* goFindClickTask = new GoFindClickTask;
+					goFindClickTask->setParam(500, clientIndex, "", 3, 1);
+					std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
+					vecSpDoTask.push_back(spGoFindClickTask);
+				}
+				spAssignThreadTask->setParam(vecSpDoTask);
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_BINGJIANCUN));
+			}
+		}
+		break;
+		case 101:
+		{
+			if (g_stopWatch.GetWatchTime() > 5000)
+			{
+				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+				int32_t clientIndex = -1;
+				while (clientIndex++ != g_accountCount - 1)
+				{
+					ConvoyTask* convoyTask = new ConvoyTask;
+					convoyTask->setParam(0, clientIndex, "", 0, 2);
+					std::shared_ptr<CTask> spConvoyTask(convoyTask);
+					vecSpDoTask.push_back(spConvoyTask);
+				}
+				spAssignThreadTask->setParam(vecSpDoTask);
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_MUFENGLIN));
+			}
+		}
+		break;
+		case 102:
+		{
+			if (g_stopWatch.GetWatchTime() > 5000)
+			{
+				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+				int32_t clientIndex = -1;
+				while (clientIndex++ != g_accountCount - 1)
+				{
+					ConvoyTask* convoyTask = new ConvoyTask;
+					convoyTask->setParam(0, clientIndex, "", 0, 2);
+					std::shared_ptr<CTask> spConvoyTask(convoyTask);
+					vecSpDoTask.push_back(spConvoyTask);
+				}
+				spAssignThreadTask->setParam(vecSpDoTask);
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_MUFENGLIN));
+			}
+		}
+		break;
+		case 103:
+		{
+			if (g_stopWatch.GetWatchTime() > 5000)
+			{
+				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+				int32_t clientIndex = -1;
+				while (clientIndex++ != g_accountCount - 1)
+				{
+					ConvoyTask* convoyTask = new ConvoyTask;
+					convoyTask->setParam(0, clientIndex, "", 0, 2);
+					std::shared_ptr<CTask> spConvoyTask(convoyTask);
+					vecSpDoTask.push_back(spConvoyTask);
+				}
+				spAssignThreadTask->setParam(vecSpDoTask);
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_HUILUODAO));
+			}
+		}
+		break;
+		case 104:
+		{
+			if (g_stopWatch.GetWatchTime() > 5000)
+			{
+				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+				int32_t clientIndex = -1;
+				while (clientIndex++ != g_accountCount - 1)
+				{
+					ConvoyTask* convoyTask = new ConvoyTask;
+					convoyTask->setParam(0, clientIndex, "", 0, 2);
+					std::shared_ptr<CTask> spConvoyTask(convoyTask);
+					vecSpDoTask.push_back(spConvoyTask);
+				}
+				spAssignThreadTask->setParam(vecSpDoTask);
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_LONGMENSHIKU));
+			}
+		}
+		break;
+		case 105:
+		{
+			if (g_stopWatch.GetWatchTime() > 5000)
+			{
+				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+				int32_t clientIndex = -1;
+				while (clientIndex++ != g_accountCount - 1)
+				{
+					ConvoyTask* convoyTask = new ConvoyTask;
+					convoyTask->setParam(0, clientIndex, "", 0, 2);
+					std::shared_ptr<CTask> spConvoyTask(convoyTask);
+					vecSpDoTask.push_back(spConvoyTask);
+				}
+				spAssignThreadTask->setParam(vecSpDoTask);
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_DALEIGONG));
 			}
 		}
 		break;
@@ -243,10 +366,17 @@ void Dtws::init()
 	m_jidi->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_jidi, &COriginalButton::clicked, this, &Dtws::onJidiButtonClicked);
 
+	m_changshougong = new COriginalButton(this);
+	m_changshougong->setText(QStringLiteral("长寿宫"));
+	m_changshougong->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_changshougong, &COriginalButton::clicked, this, &Dtws::onChangshougongButtonClicked);
+
 	m_lache = new COriginalButton(this);
-	m_lache->setText(QStringLiteral("拉车"));
+	m_lache->setText(QStringLiteral("大车"));
 	m_lache->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_lache, &COriginalButton::clicked, this, &Dtws::onLacheButtonClicked);
+	QObject::connect(this, &Dtws::changeLacheText, this, &Dtws::onChangeLacheText, Qt::QueuedConnection);
+	g_dtws = this;
 }
 
 bool Dtws::check()
@@ -272,6 +402,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_small);
 	vecButton.push_back(m_muqing);
 	vecButton.push_back(m_jidi);
+	vecButton.push_back(m_changshougong);
 	vecButton.push_back(m_lache);
 
 	int32_t cowCount = 4;
@@ -362,35 +493,54 @@ void Dtws::onJidiButtonClicked()
 	showMinimized();
 	std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 	std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-	int32_t index = -1;
-	while (index++ != g_accountCount - 1)
+	int32_t clientIndex = -1;
+	while (clientIndex++ != g_accountCount - 1)
 	{
-		JidiTask* jidiTask = new JidiTask;
-		jidiTask->setParam(1500, index);
-		std::shared_ptr<CTask> spJidiTask(jidiTask);
-		vecSpDoTask.push_back(spJidiTask);
+		GoFindClickTask* goFindClickTask = new GoFindClickTask;
+		goFindClickTask->setParam(1500, clientIndex, "甘泉谷接引人", 0, 1);
+		std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
+		vecSpDoTask.push_back(spGoFindClickTask);
 	}
 	spAssignThreadTask->setParam(vecSpDoTask);
-	CTaskThreadManager::Instance().GetThreadInterface(m_taskThreadId)->PostTask(spAssignThreadTask);
+	CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
 	if (CSystem::getComputerName() == "SC-202007261854")
 	{
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_JIDI));
 	}
 }
 
-void Dtws::onLacheButtonClicked()
+void Dtws::onChangshougongButtonClicked()
 {
 	showMinimized();
 	std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 	std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-	int32_t index = -1;
-	while (index++ != g_accountCount - 1)
+	int32_t clientIndex = -1;
+	while (clientIndex++ != g_accountCount - 1)
 	{
-		ConvoyTask* convoyTask = new ConvoyTask;
-		convoyTask->setParam(1500, index, "东北义军", 0, 2);
-		std::shared_ptr<CTask> spConvoyTask(convoyTask);
-		vecSpDoTask.push_back(spConvoyTask);
+		GoFindClickTask* goFindClickTask = new GoFindClickTask;
+		goFindClickTask->setParam(0, clientIndex, "长寿宫", 0, 0);
+		std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
+		vecSpDoTask.push_back(spGoFindClickTask);
 	}
 	spAssignThreadTask->setParam(vecSpDoTask);
-	CTaskThreadManager::Instance().GetThreadInterface(m_taskThreadId)->PostTask(spAssignThreadTask);
+	CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+	if (CSystem::getComputerName() == "SC-202007261854")
+	{
+		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_CHANGSHOUGONG));
+	}
+}
+
+void Dtws::onLacheButtonClicked()
+{
+	if (CSystem::getComputerName() == "SC-202007261854")
+	{
+		g_isBigLache = !g_isBigLache;
+		m_lache->setText(g_isBigLache ? QStringLiteral("大车") : QStringLiteral("小车"));
+		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(g_isBigLache ? DTWS_DACHE : DTWS_XIAOCHE));
+	}
+}
+
+void Dtws::onChangeLacheText()
+{
+	m_lache->setText(g_isBigLache ? QStringLiteral("大车") : QStringLiteral("小车"));
 }

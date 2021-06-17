@@ -31,7 +31,10 @@ void GoFindClickTask::DoTask()
 	std::string currentExePath = CSystem::GetCurrentExePath();
 
 	std::shared_ptr<GoTask> spGoTask(new GoTask);
-	spGoTask->setParam(g_clickTop[m_clientIndex], g_accountCount == 1 ? xyls::Rect(1869, 189, 1920, 249) : g_rightTopRect[m_clientIndex], m_placeName, m_clickIndex);
+	spGoTask->setParam(g_accountCount == 1 ? xyls::Point(149, 9) : g_clickTop[m_clientIndex],
+		g_accountCount == 1 ? xyls::Rect(1869, 189, 1920, 249) : g_rightTopRect[m_clientIndex],
+		m_placeName,
+		m_clickIndex);
 	CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spGoTask);
 
 	bool isFind = false;
@@ -50,7 +53,9 @@ void GoFindClickTask::DoTask()
 	if (isFind)
 	{
 		std::shared_ptr<AcceptTask> spAcceptTask(new AcceptTask);
-		spAcceptTask->setParam(g_clickTop[m_clientIndex], g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex], m_findClickTimes);
+		spAcceptTask->setParam(g_accountCount == 1 ? xyls::Point(149, 9) : g_clickTop[m_clientIndex],
+			g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex],
+			m_findClickTimes);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spAcceptTask, 2);
 	}
 }

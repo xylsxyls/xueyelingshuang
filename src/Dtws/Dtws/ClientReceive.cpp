@@ -3,13 +3,17 @@
 #include "HealTask.h"
 #include "RiseTask.h"
 #include "AttackTask.h"
-#include "JidiTask.h"
 #include "AssignThreadTask.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "ConvoyTask.h"
+#include "Dtws.h"
+#include "GoFindClickTask.h"
 
 extern uint32_t* g_taskThreadId;
 extern uint32_t* g_threadId;
 extern int32_t g_accountCount;
+extern bool g_isBigLache;
+extern Dtws* g_dtws;
 
 ClientReceive::ClientReceive()
 {
@@ -71,13 +75,121 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 
 		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-		int32_t index = -1;
-		while (index++ != g_accountCount - 1)
+		int32_t clientIndex = -1;
+		while (clientIndex++ != g_accountCount - 1)
 		{
-			JidiTask* jidiTask = new JidiTask;
-			jidiTask->setParam(0, index);
-			std::shared_ptr<CTask> spJidiTask(jidiTask);
-			vecSpDoTask.push_back(spJidiTask);
+			GoFindClickTask* goFindClickTask = new GoFindClickTask;
+			goFindClickTask->setParam(0, clientIndex, "甘泉谷接引人", 0, 1);
+			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
+			vecSpDoTask.push_back(spGoFindClickTask);
+		}
+		spAssignThreadTask->setParam(vecSpDoTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+	}
+	break;
+	case DTWS_CHANGSHOUGONG:
+	{
+		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+		int32_t clientIndex = -1;
+		while (clientIndex++ != g_accountCount - 1)
+		{
+			GoFindClickTask* goFindClickTask = new GoFindClickTask;
+			goFindClickTask->setParam(0, clientIndex, "长寿宫", 0, 0);
+			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
+			vecSpDoTask.push_back(spGoFindClickTask);
+		}
+		spAssignThreadTask->setParam(vecSpDoTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+	}
+	break;
+	case DTWS_DACHE:
+	{
+		g_isBigLache = true;
+		emit g_dtws->changeLacheText();
+	}
+	break;
+	case DTWS_XIAOCHE:
+	{
+		g_isBigLache = false;
+		emit g_dtws->changeLacheText();
+	}
+	break;
+	case DTWS_BINGJIANCUN:
+	{
+		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+		int32_t clientIndex = -1;
+		while (clientIndex++ != g_accountCount - 1)
+		{
+			GoFindClickTask* goFindClickTask = new GoFindClickTask;
+			goFindClickTask->setParam(0, clientIndex, "", 3, 1);
+			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
+			vecSpDoTask.push_back(spGoFindClickTask);
+		}
+		spAssignThreadTask->setParam(vecSpDoTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+	}
+	break;
+	case DTWS_MUFENGLIN:
+	{
+		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+		int32_t clientIndex = -1;
+		while (clientIndex++ != g_accountCount - 1)
+		{
+			ConvoyTask* convoyTask = new ConvoyTask;
+			convoyTask->setParam(0, clientIndex, "", 0, 2);
+			std::shared_ptr<CTask> spConvoyTask(convoyTask);
+			vecSpDoTask.push_back(spConvoyTask);
+		}
+		spAssignThreadTask->setParam(vecSpDoTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+	}
+	break;
+	case DTWS_HUILUODAO:
+	{
+		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+		int32_t clientIndex = -1;
+		while (clientIndex++ != g_accountCount - 1)
+		{
+			ConvoyTask* convoyTask = new ConvoyTask;
+			convoyTask->setParam(0, clientIndex, "", 1, 2);
+			std::shared_ptr<CTask> spConvoyTask(convoyTask);
+			vecSpDoTask.push_back(spConvoyTask);
+		}
+		spAssignThreadTask->setParam(vecSpDoTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+	}
+	break;
+	case DTWS_LONGMENSHIKU:
+	{
+		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+		int32_t clientIndex = -1;
+		while (clientIndex++ != g_accountCount - 1)
+		{
+			ConvoyTask* convoyTask = new ConvoyTask;
+			convoyTask->setParam(0, clientIndex, "", 1, 2);
+			std::shared_ptr<CTask> spConvoyTask(convoyTask);
+			vecSpDoTask.push_back(spConvoyTask);
+		}
+		spAssignThreadTask->setParam(vecSpDoTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+	}
+	break;
+	case DTWS_DALEIGONG:
+	{
+		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+		int32_t clientIndex = -1;
+		while (clientIndex++ != g_accountCount - 1)
+		{
+			ConvoyTask* convoyTask = new ConvoyTask;
+			convoyTask->setParam(0, clientIndex, "", 1, 2);
+			std::shared_ptr<CTask> spConvoyTask(convoyTask);
+			vecSpDoTask.push_back(spConvoyTask);
 		}
 		spAssignThreadTask->setParam(vecSpDoTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);

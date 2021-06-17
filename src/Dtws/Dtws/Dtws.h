@@ -22,6 +22,9 @@ protected:
 	void resizeEvent(QResizeEvent* eve);
 	void closeEvent(QCloseEvent* eve);
 
+Q_SIGNALS:
+	void changeLacheText();
+
 private slots:
 	void onAccountButtonClicked();
 	void onFollowButtonClicked();
@@ -32,7 +35,9 @@ private slots:
 	void onSmallButtonClicked();
 	void onMuqingButtonClicked();
 	void onJidiButtonClicked();
+	void onChangshougongButtonClicked();
 	void onLacheButtonClicked();
+	void onChangeLacheText();
 
 private:
 	Ui::DtwsClass ui;
@@ -45,6 +50,7 @@ private:
 	COriginalButton* m_small;
 	COriginalButton* m_muqing;
 	COriginalButton* m_jidi;
+	COriginalButton* m_changshougong;
 	COriginalButton* m_lache;
 	uint32_t m_threadId;
 	uint32_t m_taskThreadId;
