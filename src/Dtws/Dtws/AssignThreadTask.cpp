@@ -2,24 +2,49 @@
 
 extern int32_t g_accountCount;
 
-void AssignThreadTask::DoTask()
+
+AssignThreadTask::AssignThreadTask():
+m_exit(false)
 {
-	if (m_vecSpDoTask.size() != g_accountCount)
-	{
-		m_isInit.signal();
-		return;
-	}
 	int32_t index = -1;
 	while (index++ != g_accountCount - 1)
 	{
 		uint32_t threadId = CTaskThreadManager::Instance().Init();
 		m_vecThreadId.push_back(threadId);
-		CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(m_vecSpDoTask[index]);
+	}
+}
+
+
+AssignThreadTask::~AssignThreadTask()
+{
+	int32_t index = -1;
+	while (index++ != g_accountCount - 1)
+	{
+		CTaskThreadManager::Instance().Uninit(m_vecThreadId[index]);
+	}
+	m_vecThreadId.clear();
+}
+
+void AssignThreadTask::DoTask()
+{
+	if (m_vecSpDoTask.size() != g_accountCount)
+	{
+		return;
+	}
+	{
+		std::unique_lock<std::mutex> lock(m_isInit);
+		if (m_exit)
+		{
+			return;
+		}
+		int32_t index = -1;
+		while (index++ != g_accountCount - 1)
+		{
+			CTaskThreadManager::Instance().GetThreadInterface(m_vecThreadId[index])->PostTask(m_vecSpDoTask[index]);
+		}
 	}
 
-	m_isInit.signal();
-
-	index = -1;
+	int32_t index = -1;
 	while (index++ != g_accountCount - 1)
 	{
 		CTaskThreadManager::Instance().WaitForEnd(m_vecThreadId[index]);
@@ -28,17 +53,17 @@ void AssignThreadTask::DoTask()
 
 void AssignThreadTask::StopTask()
 {
-	m_isInit.wait();
+	std::unique_lock<std::mutex> lock(m_isInit);
 	int32_t index = -1;
 	while (index++ != g_accountCount - 1)
 	{
 		auto taskThread = CTaskThreadManager::Instance().GetThreadInterface(m_vecThreadId[index]);
-		if (taskThread == nullptr)
+		if (taskThread != nullptr)
 		{
-			continue;
+			taskThread->StopAllTask();
 		}
-		taskThread->StopAllTask();
 	}
+	m_exit = true;
 }
 
 void AssignThreadTask::setParam(const std::vector<std::shared_ptr<CTask>>& vecSpDoTask)

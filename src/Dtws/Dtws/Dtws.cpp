@@ -125,7 +125,11 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					GoFindClickTask* goFindClickTask = new GoFindClickTask;
-					goFindClickTask->setParam(500, clientIndex, "", 3, 1);
+					goFindClickTask->setParam(1000,
+						clientIndex,
+						g_isBigLache ? "东北义军" : "冰雷镖局",
+						g_isBigLache ? 3 : 2,
+						0);
 					std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 					vecSpDoTask.push_back(spGoFindClickTask);
 				}
@@ -145,7 +149,11 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					ConvoyTask* convoyTask = new ConvoyTask;
-					convoyTask->setParam(0, clientIndex, "", 0, 2);
+					convoyTask->setParam(1000,
+						clientIndex,
+						g_isBigLache ? "东北义军" : "冰雷镖局",
+						g_isBigLache ? 0 : 0,
+						2);
 					std::shared_ptr<CTask> spConvoyTask(convoyTask);
 					vecSpDoTask.push_back(spConvoyTask);
 				}
@@ -165,13 +173,17 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					ConvoyTask* convoyTask = new ConvoyTask;
-					convoyTask->setParam(0, clientIndex, "", 0, 2);
+					convoyTask->setParam(1000,
+						clientIndex,
+						g_isBigLache ? "东北义军" : "冰雷镖局",
+						g_isBigLache ? 1 : 1,
+						2);
 					std::shared_ptr<CTask> spConvoyTask(convoyTask);
 					vecSpDoTask.push_back(spConvoyTask);
 				}
 				spAssignThreadTask->setParam(vecSpDoTask);
 				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
-				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_MUFENGLIN));
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_HUILUODAO));
 			}
 		}
 		break;
@@ -185,13 +197,17 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					ConvoyTask* convoyTask = new ConvoyTask;
-					convoyTask->setParam(0, clientIndex, "", 0, 2);
+					convoyTask->setParam(1000,
+						clientIndex,
+						g_isBigLache ? "东北义军" : "冰雷镖局",
+						g_isBigLache ? 4 : 3,
+						2);
 					std::shared_ptr<CTask> spConvoyTask(convoyTask);
 					vecSpDoTask.push_back(spConvoyTask);
 				}
 				spAssignThreadTask->setParam(vecSpDoTask);
 				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
-				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_HUILUODAO));
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_LONGMENSHIKU));
 			}
 		}
 		break;
@@ -205,27 +221,11 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					ConvoyTask* convoyTask = new ConvoyTask;
-					convoyTask->setParam(0, clientIndex, "", 0, 2);
-					std::shared_ptr<CTask> spConvoyTask(convoyTask);
-					vecSpDoTask.push_back(spConvoyTask);
-				}
-				spAssignThreadTask->setParam(vecSpDoTask);
-				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
-				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_LONGMENSHIKU));
-			}
-		}
-		break;
-		case 105:
-		{
-			if (g_stopWatch.GetWatchTime() > 5000)
-			{
-				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-				int32_t clientIndex = -1;
-				while (clientIndex++ != g_accountCount - 1)
-				{
-					ConvoyTask* convoyTask = new ConvoyTask;
-					convoyTask->setParam(0, clientIndex, "", 0, 2);
+					convoyTask->setParam(1000,
+						clientIndex,
+						g_isBigLache ? "东北义军" : "皮货商",
+						g_isBigLache ? 2 : 0,
+						2);
 					std::shared_ptr<CTask> spConvoyTask(convoyTask);
 					vecSpDoTask.push_back(spConvoyTask);
 				}
@@ -518,7 +518,7 @@ void Dtws::onChangshougongButtonClicked()
 	while (clientIndex++ != g_accountCount - 1)
 	{
 		GoFindClickTask* goFindClickTask = new GoFindClickTask;
-		goFindClickTask->setParam(0, clientIndex, "长寿宫", 0, 0);
+		goFindClickTask->setParam(1000, clientIndex, "平寇真人", 0, 0);
 		std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 		vecSpDoTask.push_back(spGoFindClickTask);
 	}

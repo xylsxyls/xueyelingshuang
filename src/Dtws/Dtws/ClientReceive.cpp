@@ -95,7 +95,7 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			GoFindClickTask* goFindClickTask = new GoFindClickTask;
-			goFindClickTask->setParam(0, clientIndex, "长寿宫", 0, 0);
+			goFindClickTask->setParam(0, clientIndex, "平寇真人", 0, 0);
 			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 			vecSpDoTask.push_back(spGoFindClickTask);
 		}
@@ -123,7 +123,11 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			GoFindClickTask* goFindClickTask = new GoFindClickTask;
-			goFindClickTask->setParam(0, clientIndex, "", 3, 1);
+			goFindClickTask->setParam(0,
+				clientIndex,
+				g_isBigLache ? "东北义军" : "冰雷镖局",
+				g_isBigLache ? 3 : 2,
+				0);
 			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 			vecSpDoTask.push_back(spGoFindClickTask);
 		}
@@ -139,7 +143,11 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			ConvoyTask* convoyTask = new ConvoyTask;
-			convoyTask->setParam(0, clientIndex, "", 0, 2);
+			convoyTask->setParam(0,
+				clientIndex,
+				g_isBigLache ? "东北义军" : "冰雷镖局",
+				g_isBigLache ? 0 : 0,
+				2);
 			std::shared_ptr<CTask> spConvoyTask(convoyTask);
 			vecSpDoTask.push_back(spConvoyTask);
 		}
@@ -155,7 +163,11 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			ConvoyTask* convoyTask = new ConvoyTask;
-			convoyTask->setParam(0, clientIndex, "", 1, 2);
+			convoyTask->setParam(0,
+				clientIndex,
+				g_isBigLache ? "东北义军" : "冰雷镖局",
+				g_isBigLache ? 1 : 1,
+				2);
 			std::shared_ptr<CTask> spConvoyTask(convoyTask);
 			vecSpDoTask.push_back(spConvoyTask);
 		}
@@ -171,7 +183,11 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			ConvoyTask* convoyTask = new ConvoyTask;
-			convoyTask->setParam(0, clientIndex, "", 1, 2);
+			convoyTask->setParam(0,
+				clientIndex,
+				g_isBigLache ? "东北义军" : "冰雷镖局",
+				g_isBigLache ? 4 : 3,
+				2);
 			std::shared_ptr<CTask> spConvoyTask(convoyTask);
 			vecSpDoTask.push_back(spConvoyTask);
 		}
@@ -187,7 +203,11 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			ConvoyTask* convoyTask = new ConvoyTask;
-			convoyTask->setParam(0, clientIndex, "", 1, 2);
+			convoyTask->setParam(0,
+				clientIndex,
+				g_isBigLache ? "东北义军" : "皮货商",
+				g_isBigLache ? 2 : 0,
+				2);
 			std::shared_ptr<CTask> spConvoyTask(convoyTask);
 			vecSpDoTask.push_back(spConvoyTask);
 		}
