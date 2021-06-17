@@ -89,6 +89,9 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_CHANGSHOUGONG:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 		int32_t clientIndex = -1;
@@ -117,6 +120,9 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_BINGJIANCUN:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 		int32_t clientIndex = -1;
@@ -137,6 +143,9 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_MUFENGLIN:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 		int32_t clientIndex = -1;
@@ -157,6 +166,9 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_HUILUODAO:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 		int32_t clientIndex = -1;
@@ -177,6 +189,9 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_LONGMENSHIKU:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 		int32_t clientIndex = -1;
@@ -197,6 +212,9 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	break;
 	case DTWS_DALEIGONG:
 	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 		int32_t clientIndex = -1;

@@ -120,6 +120,9 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+				CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 				int32_t clientIndex = -1;
@@ -144,6 +147,9 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+				CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 				int32_t clientIndex = -1;
@@ -168,6 +174,9 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+				CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 				int32_t clientIndex = -1;
@@ -192,6 +201,9 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+				CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 				int32_t clientIndex = -1;
@@ -216,6 +228,9 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
+				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+				CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 				std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 				std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 				int32_t clientIndex = -1;

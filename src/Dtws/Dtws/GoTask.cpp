@@ -46,6 +46,7 @@ void GoTask::DoTask()
 	CKeyboard::KeyUp('V');
 	CMouse::MoveAbsolute(picPoint, 0);
 	CMouse::LeftClick(0);
+	Sleep(300);
 	CMouse::MoveOpposite(xyls::Point(0, -305 + m_clickIndex * 45), 0);
 	CMouse::LeftDoubleClick(0);
 }
