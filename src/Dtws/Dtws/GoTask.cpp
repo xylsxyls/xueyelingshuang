@@ -57,7 +57,7 @@ void GoTask::DoTask()
 		}
 		Sleep(50);
 		CMouse::LeftDoubleClick(0);
-		Sleep(500);
+		Sleep(200);
 	} while (!ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900)).empty());
 }
 
