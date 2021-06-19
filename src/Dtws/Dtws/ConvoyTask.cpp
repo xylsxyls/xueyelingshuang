@@ -13,6 +13,9 @@ extern xyls::Rect g_talkheadRect[3];
 extern xyls::Rect g_chatRect[3];
 
 ConvoyTask::ConvoyTask():
+m_preSleepTime(0),
+m_clientIndex(0),
+m_clickIndex(0),
 m_exit(false)
 {
 
@@ -74,14 +77,14 @@ void ConvoyTask::DoTask()
 			CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spGoTask, 2);
 			continue;
 		}
-		Sleep(1000);
+		Sleep(500);
 	}
 	if (isFind)
 	{
 		std::shared_ptr<AcceptTask> spAcceptTask(new AcceptTask);
 		spAcceptTask->setParam(g_accountCount == 1 ? xyls::Point(149, 9) : g_clickTop[m_clientIndex],
 			g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex],
-			m_findClickTimes);
+			m_acceptPoint);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spAcceptTask, 2);
 	}
 }
@@ -92,13 +95,17 @@ void ConvoyTask::StopTask()
 	m_sleep.signal();
 }
 
-void ConvoyTask::setParam(int32_t preSleepTime, int32_t clientIndex, const std::string& placeName, int32_t clickIndex, int32_t findClickTimes)
+void ConvoyTask::setParam(int32_t preSleepTime,
+	int32_t clientIndex,
+	const std::string& placeName,
+	int32_t clickIndex,
+	const std::vector<xyls::Point>& acceptPoint)
 {
 	m_preSleepTime = preSleepTime;
 	m_clientIndex = clientIndex;
 	m_placeName = placeName;
 	m_clickIndex = clickIndex;
-	m_findClickTimes = findClickTimes;
+	m_acceptPoint = acceptPoint;
 }
 
 void ConvoyTask::Sleep(int32_t time)

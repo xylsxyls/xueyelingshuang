@@ -5,8 +5,7 @@
 
 extern int32_t g_accountCount;
 
-AcceptTask::AcceptTask():
-m_times(0)
+AcceptTask::AcceptTask()
 {
 
 }
@@ -21,19 +20,21 @@ void AcceptTask::DoTask()
 	Sleep(g_accountCount == 1 ? 200 : 300);
 
 	std::string currentExePath = CSystem::GetCurrentExePath();
-	ScreenScript::FindPic(currentExePath + "res\\talkhead.png", m_findPicRect, true, 0);
-	CMouse::MoveOpposite(xyls::Point(63, 418), 0);
+	xyls::Point findPoint = ScreenScript::FindPic(currentExePath + "res\\talkhead.png", m_findPicRect);
+
 	int32_t index = -1;
-	while (index++ != m_times - 1)
+	while (index++ != m_acceptPoint.size() - 1)
 	{
-		CMouse::LeftClick();
+		CMouse::MoveAbsolute(findPoint, 0);
+		CMouse::MoveOpposite(m_acceptPoint[index], 0);
+		CMouse::LeftClick(0);
 		Sleep(800);
 	}
 }
 
-void AcceptTask::setParam(const xyls::Point& click, const xyls::Rect& findPicRect, int32_t times)
+void AcceptTask::setParam(const xyls::Point& click, const xyls::Rect& findPicRect, const std::vector<xyls::Point>& acceptPoint)
 {
 	m_click = click;
 	m_findPicRect = findPicRect;
-	m_times = times;
+	m_acceptPoint = acceptPoint;
 }

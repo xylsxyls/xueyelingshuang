@@ -30,6 +30,8 @@ xyls::Point g_clickTop[3] = { { 455, 11 }, { 123, 321 }, { 1738, 322 } };
 xyls::Rect g_talkheadRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, { 992, 325, 1333, 757 } };
 xyls::Rect g_chatRect[3] = { { 324, 465, 670, 677 }, { 0, 774, 350, 984 }, { 632, 772, 984, 988 } };
 xyls::Rect g_bloodRect[3] = { { 571, 61, 1156, 149 }, { 566, 377, 827, 470 }, { 1202, 384, 1464, 460 } };
+xyls::Point g_accept = { 63, 418 };
+xyls::Point g_get = { 64, 326 };
 int32_t g_accountCount = 1;
 uint32_t* g_taskThreadId = nullptr;
 uint32_t* g_threadId = nullptr;
@@ -131,9 +133,9 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					GoFindClickTask* goFindClickTask = new GoFindClickTask;
 					goFindClickTask->setParam(1000,
 						clientIndex,
-						g_isBigLache ? "东北义军" : "冰雷镖局",
+						g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 						g_isBigLache ? 3 : 2,
-						0);
+						std::vector<xyls::Point>());
 					std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 					vecSpDoTask.push_back(spGoFindClickTask);
 				}
@@ -156,11 +158,14 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					ConvoyTask* convoyTask = new ConvoyTask;
+					std::vector<xyls::Point> vecAcceptPoint;
+					vecAcceptPoint.push_back(g_get);
+					vecAcceptPoint.push_back(g_accept);
 					convoyTask->setParam(1000,
 						clientIndex,
-						g_isBigLache ? "东北义军" : "冰雷镖局",
+						g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 						g_isBigLache ? 0 : 0,
-						2);
+						vecAcceptPoint);
 					std::shared_ptr<CTask> spConvoyTask(convoyTask);
 					vecSpDoTask.push_back(spConvoyTask);
 				}
@@ -183,11 +188,14 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					ConvoyTask* convoyTask = new ConvoyTask;
+					std::vector<xyls::Point> vecAcceptPoint;
+					vecAcceptPoint.push_back(g_get);
+					vecAcceptPoint.push_back(g_accept);
 					convoyTask->setParam(1000,
 						clientIndex,
-						g_isBigLache ? "东北义军" : "冰雷镖局",
+						g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 						g_isBigLache ? 1 : 1,
-						2);
+						vecAcceptPoint);
 					std::shared_ptr<CTask> spConvoyTask(convoyTask);
 					vecSpDoTask.push_back(spConvoyTask);
 				}
@@ -210,11 +218,14 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					ConvoyTask* convoyTask = new ConvoyTask;
+					std::vector<xyls::Point> vecAcceptPoint;
+					vecAcceptPoint.push_back(g_get);
+					vecAcceptPoint.push_back(g_accept);
 					convoyTask->setParam(1000,
 						clientIndex,
-						g_isBigLache ? "东北义军" : "冰雷镖局",
+						g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 						g_isBigLache ? 4 : 3,
-						2);
+						vecAcceptPoint);
 					std::shared_ptr<CTask> spConvoyTask(convoyTask);
 					vecSpDoTask.push_back(spConvoyTask);
 				}
@@ -237,11 +248,14 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					ConvoyTask* convoyTask = new ConvoyTask;
+					std::vector<xyls::Point> vecAcceptPoint;
+					vecAcceptPoint.push_back(g_accept);
+					vecAcceptPoint.push_back(g_accept);
 					convoyTask->setParam(1000,
 						clientIndex,
-						g_isBigLache ? "东北义军" : "皮货商",
+						g_isBigLache ? "dongbeiyijun" : "pihuoshang",
 						g_isBigLache ? 2 : 0,
-						2);
+						vecAcceptPoint);
 					std::shared_ptr<CTask> spConvoyTask(convoyTask);
 					vecSpDoTask.push_back(spConvoyTask);
 				}
@@ -513,7 +527,9 @@ void Dtws::onJidiButtonClicked()
 	while (clientIndex++ != g_accountCount - 1)
 	{
 		GoFindClickTask* goFindClickTask = new GoFindClickTask;
-		goFindClickTask->setParam(1500, clientIndex, "甘泉谷接引人", 0, 1);
+		std::vector<xyls::Point> vecAcceptPoint;
+		vecAcceptPoint.push_back(g_accept);
+		goFindClickTask->setParam(1500, clientIndex, "ganquangujieyinren", 0, vecAcceptPoint);
 		std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 		vecSpDoTask.push_back(spGoFindClickTask);
 	}
@@ -534,7 +550,7 @@ void Dtws::onChangshougongButtonClicked()
 	while (clientIndex++ != g_accountCount - 1)
 	{
 		GoFindClickTask* goFindClickTask = new GoFindClickTask;
-		goFindClickTask->setParam(1000, clientIndex, "平寇真人", 0, 0);
+		goFindClickTask->setParam(1000, clientIndex, "pingkouzhenren", 0, std::vector<xyls::Point>());
 		std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 		vecSpDoTask.push_back(spGoFindClickTask);
 	}

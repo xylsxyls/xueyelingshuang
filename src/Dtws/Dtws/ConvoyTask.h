@@ -1,6 +1,8 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
+#include <vector>
+#include "Point/PointAPI.h"
 
 class ConvoyTask : public CTask
 {
@@ -12,7 +14,11 @@ public:
 
 	void StopTask();
 
-	void setParam(int32_t preSleepTime, int32_t clientIndex, const std::string& placeName, int32_t clickIndex, int32_t findClickTimes);
+	void setParam(int32_t preSleepTime,
+		int32_t clientIndex,
+		const std::string& placeName,
+		int32_t clickIndex,
+		const std::vector<xyls::Point>& acceptPoint);
 
 	void Sleep(int32_t time);
 
@@ -22,6 +28,6 @@ private:
 	int32_t m_clientIndex;
 	std::string m_placeName;
 	int32_t m_clickIndex;
-	int32_t m_findClickTimes;
+	std::vector<xyls::Point> m_acceptPoint;
 	std::atomic<bool> m_exit;
 };

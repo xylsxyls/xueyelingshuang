@@ -14,6 +14,8 @@ extern uint32_t* g_threadId;
 extern int32_t g_accountCount;
 extern bool g_isBigLache;
 extern Dtws* g_dtws;
+extern xyls::Point g_accept;
+extern xyls::Point g_get;
 
 ClientReceive::ClientReceive()
 {
@@ -79,7 +81,9 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			GoFindClickTask* goFindClickTask = new GoFindClickTask;
-			goFindClickTask->setParam(0, clientIndex, "甘泉谷接引人", 0, 1);
+			std::vector<xyls::Point> vecAcceptPoint;
+			vecAcceptPoint.push_back(g_accept);
+			goFindClickTask->setParam(0, clientIndex, "ganquangujieyinren", 0, vecAcceptPoint);
 			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 			vecSpDoTask.push_back(spGoFindClickTask);
 		}
@@ -98,7 +102,7 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			GoFindClickTask* goFindClickTask = new GoFindClickTask;
-			goFindClickTask->setParam(0, clientIndex, "平寇真人", 0, 0);
+			goFindClickTask->setParam(0, clientIndex, "pingkouzhenren", 0, std::vector<xyls::Point>());
 			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 			vecSpDoTask.push_back(spGoFindClickTask);
 		}
@@ -131,9 +135,9 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 			GoFindClickTask* goFindClickTask = new GoFindClickTask;
 			goFindClickTask->setParam(0,
 				clientIndex,
-				g_isBigLache ? "东北义军" : "冰雷镖局",
+				g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 				g_isBigLache ? 3 : 2,
-				0);
+				std::vector<xyls::Point>());
 			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 			vecSpDoTask.push_back(spGoFindClickTask);
 		}
@@ -152,11 +156,14 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			ConvoyTask* convoyTask = new ConvoyTask;
+			std::vector<xyls::Point> vecAcceptPoint;
+			vecAcceptPoint.push_back(g_get);
+			vecAcceptPoint.push_back(g_accept);
 			convoyTask->setParam(0,
 				clientIndex,
-				g_isBigLache ? "东北义军" : "冰雷镖局",
+				g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 				g_isBigLache ? 0 : 0,
-				2);
+				vecAcceptPoint);
 			std::shared_ptr<CTask> spConvoyTask(convoyTask);
 			vecSpDoTask.push_back(spConvoyTask);
 		}
@@ -175,11 +182,14 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			ConvoyTask* convoyTask = new ConvoyTask;
+			std::vector<xyls::Point> vecAcceptPoint;
+			vecAcceptPoint.push_back(g_get);
+			vecAcceptPoint.push_back(g_accept);
 			convoyTask->setParam(0,
 				clientIndex,
-				g_isBigLache ? "东北义军" : "冰雷镖局",
+				g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 				g_isBigLache ? 1 : 1,
-				2);
+				vecAcceptPoint);
 			std::shared_ptr<CTask> spConvoyTask(convoyTask);
 			vecSpDoTask.push_back(spConvoyTask);
 		}
@@ -198,11 +208,14 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			ConvoyTask* convoyTask = new ConvoyTask;
+			std::vector<xyls::Point> vecAcceptPoint;
+			vecAcceptPoint.push_back(g_get);
+			vecAcceptPoint.push_back(g_accept);
 			convoyTask->setParam(0,
 				clientIndex,
-				g_isBigLache ? "东北义军" : "冰雷镖局",
+				g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 				g_isBigLache ? 4 : 3,
-				2);
+				vecAcceptPoint);
 			std::shared_ptr<CTask> spConvoyTask(convoyTask);
 			vecSpDoTask.push_back(spConvoyTask);
 		}
@@ -221,11 +234,14 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		while (clientIndex++ != g_accountCount - 1)
 		{
 			ConvoyTask* convoyTask = new ConvoyTask;
+			std::vector<xyls::Point> vecAcceptPoint;
+			vecAcceptPoint.push_back(g_accept);
+			vecAcceptPoint.push_back(g_accept);
 			convoyTask->setParam(0,
 				clientIndex,
-				g_isBigLache ? "东北义军" : "皮货商",
+				g_isBigLache ? "dongbeiyijun" : "pihuoshang",
 				g_isBigLache ? 2 : 0,
-				2);
+				vecAcceptPoint);
 			std::shared_ptr<CTask> spConvoyTask(convoyTask);
 			vecSpDoTask.push_back(spConvoyTask);
 		}

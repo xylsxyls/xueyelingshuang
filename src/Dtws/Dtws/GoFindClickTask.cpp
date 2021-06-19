@@ -15,7 +15,6 @@ GoFindClickTask::GoFindClickTask():
 m_preSleepTime(0),
 m_clientIndex(0),
 m_clickIndex(0),
-m_findClickTimes(0),
 m_exit(false)
 {
 
@@ -73,7 +72,7 @@ void GoFindClickTask::DoTask()
 		std::shared_ptr<AcceptTask> spAcceptTask(new AcceptTask);
 		spAcceptTask->setParam(g_accountCount == 1 ? xyls::Point(149, 9) : g_clickTop[m_clientIndex],
 			g_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_talkheadRect[m_clientIndex],
-			m_findClickTimes);
+			m_acceptPoint);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spAcceptTask, 2);
 	}
 }
@@ -84,13 +83,17 @@ void GoFindClickTask::StopTask()
 	m_sleep.signal();
 }
 
-void GoFindClickTask::setParam(int32_t preSleepTime, int32_t clientIndex, const std::string& placeName, int32_t clickIndex, int32_t findClickTimes)
+void GoFindClickTask::setParam(int32_t preSleepTime,
+	int32_t clientIndex,
+	const std::string& placeName,
+	int32_t clickIndex,
+	const std::vector<xyls::Point>& acceptPoint)
 {
 	m_preSleepTime = preSleepTime;
 	m_clientIndex = clientIndex;
 	m_placeName = placeName;
 	m_clickIndex = clickIndex;
-	m_findClickTimes = findClickTimes;
+	m_acceptPoint = acceptPoint;
 }
 
 void GoFindClickTask::Sleep(int32_t time)
