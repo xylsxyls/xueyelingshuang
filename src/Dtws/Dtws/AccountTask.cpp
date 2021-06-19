@@ -36,7 +36,7 @@ void AccountTask::DoTask()
 			CMouse::LeftClick();
 		}
 	}
-	Sleep(g_accountCount == 1 ? 15000 : 20000);
+	Sleep(g_accountCount == 1 ? 18000 : 20000);
 	std::vector<std::string> accountName;
 	if (g_accountCount == 3)
 	{
