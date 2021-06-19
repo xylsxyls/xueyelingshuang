@@ -26,6 +26,10 @@ void SubmitTask::DoTask()
 		Sleep(50);
 		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(1713, 287) : g_taskPoint[accountIndex], 0);
 		CMouse::LeftClick(0);
+		xyls::Point downPoint = g_taskPoint[accountIndex];
+		downPoint.SetY(downPoint.y() + 15);
+		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(1713, 302) : downPoint, 0);
+		CMouse::LeftClick(0);
 	}
 }
 
