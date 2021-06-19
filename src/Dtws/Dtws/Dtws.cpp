@@ -134,7 +134,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				while (clientIndex++ != g_accountCount - 1)
 				{
 					GoFindClickTask* goFindClickTask = new GoFindClickTask;
-					goFindClickTask->setParam(1000,
+					goFindClickTask->setParam(600,
 						clientIndex,
 						g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 						g_isBigLache ? 3 : 2,
@@ -164,7 +164,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					std::vector<xyls::Point> vecAcceptPoint;
 					vecAcceptPoint.push_back(g_get);
 					vecAcceptPoint.push_back(g_accept);
-					convoyTask->setParam(1000,
+					convoyTask->setParam(600,
 						clientIndex,
 						g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 						g_isBigLache ? 0 : 0,
@@ -194,7 +194,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					std::vector<xyls::Point> vecAcceptPoint;
 					vecAcceptPoint.push_back(g_get);
 					vecAcceptPoint.push_back(g_accept);
-					convoyTask->setParam(1000,
+					convoyTask->setParam(600,
 						clientIndex,
 						g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 						g_isBigLache ? 1 : 1,
@@ -224,7 +224,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					std::vector<xyls::Point> vecAcceptPoint;
 					vecAcceptPoint.push_back(g_get);
 					vecAcceptPoint.push_back(g_accept);
-					convoyTask->setParam(1000,
+					convoyTask->setParam(600,
 						clientIndex,
 						g_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
 						g_isBigLache ? 4 : 3,
@@ -254,7 +254,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					std::vector<xyls::Point> vecAcceptPoint;
 					vecAcceptPoint.push_back(g_accept);
 					vecAcceptPoint.push_back(g_accept);
-					convoyTask->setParam(1000,
+					convoyTask->setParam(600,
 						clientIndex,
 						g_isBigLache ? "dongbeiyijun" : "pihuoshang",
 						g_isBigLache ? 2 : 0,
@@ -555,7 +555,7 @@ void Dtws::onJidiButtonClicked()
 		GoFindClickTask* goFindClickTask = new GoFindClickTask;
 		std::vector<xyls::Point> vecAcceptPoint;
 		vecAcceptPoint.push_back(g_accept);
-		goFindClickTask->setParam(1500, clientIndex, "ganquangujieyinren", 0, vecAcceptPoint);
+		goFindClickTask->setParam(1000, clientIndex, "ganquangujieyinren", 0, vecAcceptPoint);
 		std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
 		vecSpDoTask.push_back(spGoFindClickTask);
 	}

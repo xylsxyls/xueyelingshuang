@@ -44,7 +44,7 @@ void GoTask::DoTask()
 	//CKeyboard::KeyDown('V');
 	//CKeyboard::KeyUp(CKeyboard::Ctrl);
 	//CKeyboard::KeyUp('V');
-	Sleep(50);
+	Sleep(200);
 	CKeyboard::InputString(m_placeName + " ", 0);
 	Sleep(50);
 	CMouse::MoveAbsolute(picPoint, 0);
