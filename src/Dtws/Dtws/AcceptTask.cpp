@@ -27,7 +27,7 @@ void AcceptTask::DoTask()
 	{
 		CMouse::MoveAbsolute(findPoint, 0);
 		CMouse::MoveOpposite(m_acceptPoint[index], 0);
-		CMouse::LeftClick(0);
+		CMouse::LeftClick();
 		Sleep(800);
 	}
 }
