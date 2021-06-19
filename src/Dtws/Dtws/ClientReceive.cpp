@@ -265,7 +265,6 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		}
 		spAssignThreadTask->setParam(vecSpDoTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
-		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_SUBMIT));
 	}
 	break;
 	default:
