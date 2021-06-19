@@ -196,6 +196,7 @@
     <ClCompile Include="RiseTask.cpp" />
     <ClCompile Include="SkillTask.cpp" />
     <ClCompile Include="SmallTask.cpp" />
+    <ClCompile Include="SubmitTask.cpp" />
     <ClCompile Include="WaitTask.cpp" />
     <ClCompile Include="WaterTask.cpp" />
   </ItemGroup>
@@ -308,6 +309,7 @@
     <ClInclude Include="RiseTask.h" />
     <ClInclude Include="SkillTask.h" />
     <ClInclude Include="SmallTask.h" />
+    <ClInclude Include="SubmitTask.h" />
     <ClInclude Include="WaitTask.h" />
     <ClInclude Include="WaterTask.h" />
   </ItemGroup>

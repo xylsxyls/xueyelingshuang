@@ -62,14 +62,20 @@ bool CKeyboard::KeyManyPress(const vector<int32_t>& vecCode, int32_t sleepTime)
 	while (i++ != vecCode.size() - 1)
     {
 		result = result && KeyDown(vecCode.at(i));
-		Sleep(vecSleepTime.at(i));
+		if (sleepTime != 0)
+		{
+			Sleep(vecSleepTime.at(i));
+		}
 	}
 	int32_t j = i;
 	i = -1;
 	while (i++ != vecCode.size() - 2)
     {
 		result = result && KeyUp(vecCode.at(i));
-		Sleep(vecSleepTime.at(j++));
+		if (sleepTime != 0)
+		{
+			Sleep(vecSleepTime.at(j++));
+		}
 	}
 	result = result && KeyUp(vecCode.at(i));
 	return result;

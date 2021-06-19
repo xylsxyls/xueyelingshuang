@@ -8,6 +8,7 @@
 #include "ConvoyTask.h"
 #include "Dtws.h"
 #include "GoFindClickTask.h"
+#include "SubmitTask.h"
 
 extern uint32_t* g_taskThreadId;
 extern uint32_t* g_threadId;
@@ -247,6 +248,24 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		}
 		spAssignThreadTask->setParam(vecSpDoTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+	}
+	break;
+	case DTWS_SUBMIT:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
+		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+		int32_t clientIndex = -1;
+		while (clientIndex++ != g_accountCount - 1)
+		{
+			std::shared_ptr<CTask> spSubmitTask(new SubmitTask);
+			vecSpDoTask.push_back(spSubmitTask);
+		}
+		spAssignThreadTask->setParam(vecSpDoTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_SUBMIT));
 	}
 	break;
 	default:

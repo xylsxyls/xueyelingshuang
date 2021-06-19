@@ -21,6 +21,7 @@
 #include "AssignThreadTask.h"
 #include "ConvoyTask.h"
 #include "GoFindClickTask.h"
+#include "SubmitTask.h"
 
 #define DTWS_SERVER_VERSION "1.0"
 
@@ -30,6 +31,7 @@ xyls::Point g_clickTop[3] = { { 455, 11 }, { 123, 321 }, { 1738, 322 } };
 xyls::Rect g_talkheadRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, { 992, 325, 1333, 757 } };
 xyls::Rect g_chatRect[3] = { { 324, 465, 670, 677 }, { 0, 774, 350, 984 }, { 632, 772, 984, 988 } };
 xyls::Rect g_bloodRect[3] = { { 571, 61, 1156, 149 }, { 566, 377, 827, 470 }, { 1202, 384, 1464, 460 } };
+xyls::Point g_taskPoint[3] = { { 1361, 288 }, { 1039, 595 }, { 1675, 592 } };
 xyls::Point g_accept = { 63, 418 };
 xyls::Point g_get = { 64, 326 };
 int32_t g_accountCount = 1;
@@ -54,6 +56,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	if (CHook::IsKeyDown(wParam))
 	{
 		DWORD code = CHook::GetVkCode(lParam);
+		RCSend("code = %d", code);
 		switch (code)
 		{
 		//delete¼ü
@@ -263,6 +266,26 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
 				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_DALEIGONG));
 			}
+		}
+		break;
+		case 109:
+		{
+			CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+			CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
+			std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
+			std::vector<std::shared_ptr<CTask>> vecSpDoTask;
+			int32_t clientIndex = -1;
+			while (clientIndex++ != g_accountCount - 1)
+			{
+				SubmitTask* submitTask = new SubmitTask;
+				submitTask->setParam(500);
+				std::shared_ptr<CTask> spSubmitTask(submitTask);
+				vecSpDoTask.push_back(spSubmitTask);
+			}
+			spAssignThreadTask->setParam(vecSpDoTask);
+			CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_SUBMIT));
 		}
 		break;
 		default:
@@ -521,6 +544,9 @@ void Dtws::onMuqingButtonClicked()
 void Dtws::onJidiButtonClicked()
 {
 	showMinimized();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 	std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 	std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 	int32_t clientIndex = -1;
@@ -544,6 +570,9 @@ void Dtws::onJidiButtonClicked()
 void Dtws::onChangshougongButtonClicked()
 {
 	showMinimized();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+
 	std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
 	std::vector<std::shared_ptr<CTask>> vecSpDoTask;
 	int32_t clientIndex = -1;
