@@ -24,7 +24,7 @@ void SubmitTask::DoTask()
 		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(149, 9) : g_clickTop[accountIndex], 0);
 		CMouse::MiddleClick();
 		Sleep(50);
-		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(1678, 285) : g_taskPoint[accountIndex], 0);
+		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(1718, 285) : g_taskPoint[accountIndex], 0);
 		CMouse::LeftClick(0);
 	}
 }
