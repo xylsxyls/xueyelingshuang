@@ -3,7 +3,7 @@
 #include <string>
 #include <memory>
 
-class QSqlDatabase;
+struct SqliteDatabase;
 class SQLitePrepareStatement;
 class SQLiteResultSet;
 
@@ -50,7 +50,7 @@ public:
 	bool isOpen();
 
 	/** 创建一个用于增删改查的类
-	@param [in] sqlString sql字符串
+	@param [in] sqlString sql字符串，字段长度不起作用
 	@return 返回操作条件语句的类
 	*/
 	SQLitePrepareStatement preparedCreator(const std::string& sqlString);
@@ -73,10 +73,14 @@ public:
 	*/
 	void rollback();
 
-protected:
-	void init(const std::string& path);
-	void free();
-
 private:
-	QSqlDatabase* m_db;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	std::string m_dbFilePath;
+	std::shared_ptr<SqliteDatabase> m_spDb;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 };

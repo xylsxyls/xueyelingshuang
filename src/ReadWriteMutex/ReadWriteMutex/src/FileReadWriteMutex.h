@@ -9,7 +9,10 @@ typedef void* HANDLE;
 class ReadWriteMutexAPI FileReadWriteMutex : public ReadWriteMutexBase
 {
 public:
-	FileReadWriteMutex(const std::string& fileName);
+	/** 构造函数
+	@param [in] filePath 文件路径，如果是名字会在临时路径下创建文件
+	*/
+	FileReadWriteMutex(const std::string& filePath);
 
 	~FileReadWriteMutex();
 
@@ -36,8 +39,9 @@ private:
 #pragma warning(disable:4251)
 #endif
 	static std::string s_tempDir;
-	std::string m_fileName;
+	std::string m_filePath;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+	bool m_isName;
 };

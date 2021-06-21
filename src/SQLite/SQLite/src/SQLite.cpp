@@ -1,62 +1,84 @@
 #include "SQLite.h"
-#include <QSqlQuery>
 #include "SQLitePrepareStatement.h"
 #include "SQLiteResultSet.h"
-#include <QStringList>
 #include "CStringManager/CStringManagerAPI.h"
-#include <QSqlError>
+#include "sqlite3.h"
+#include "SqliteDatabase.h"
 
 SQLite::SQLite(const std::string& dbFilePath) :
-m_db(nullptr)
+m_dbFilePath(dbFilePath),
+m_spDb(nullptr)
 {
-	QSqlDatabase::drivers();
-	m_db = new QSqlDatabase(QSqlDatabase::addDatabase("QSQLITE", "SQLite"));
-
-	init(dbFilePath);
+	
 }
 
 SQLite::~SQLite()
 {
-	free();
+	close();
 }
 
 void SQLite::open(PragmaFlag pragmaFlag)
 {
-	if (m_db == nullptr)
+	if (m_spDb != nullptr)
 	{
 		return;
 	}
-	//打开数据库连接 调用 open() 方法打开数据库物理连接。在打开连接之前，连接不可用
-	if (!m_db->open())
+
+	m_spDb.reset(new SqliteDatabase);
+	int32_t result = sqlite3_open(m_dbFilePath.c_str(), &m_spDb->m_db);
+	if (result != 0)
 	{
-		QString error = m_db->lastError().text();
-		free();
+		printf("open sqlite failed, result = %d\n", result);
 		return;
 	}
-	m_db->exec(CStringManager::Format("PRAGMA synchronous = %d;", (int32_t)pragmaFlag).c_str());
+
+	char* errorMessage = nullptr;
+	result = sqlite3_exec(m_spDb->m_db, CStringManager::Format("PRAGMA synchronous = %d;", (int32_t)pragmaFlag).c_str(), nullptr, nullptr, &errorMessage);
+	if (result != 0)
+	{
+		printf("open init error, result = %d, errorMessage = %s\n", result, errorMessage);
+		sqlite3_free(&errorMessage);
+	}
 }
 
 void SQLite::close()
 {
-	if (m_db == nullptr)
+	if (m_spDb == nullptr)
 	{
 		return;
 	}
-	m_db->close();
+	if (m_spDb->m_stmt != nullptr)
+	{
+		int32_t result = sqlite3_finalize(m_spDb->m_stmt);
+		if (result != 0)
+		{
+			printf("~SqliteStmt sqlite3_finalize failed, result = %d\n", result);
+		}
+		m_spDb->m_stmt = nullptr;
+		m_spDb->m_stepResult = 0;
+		m_spDb->m_isBeginRead = false;
+	}
+
+	if (m_spDb->m_db != nullptr)
+	{
+		int32_t result = sqlite3_close(m_spDb->m_db);
+		if (result != 0)
+		{
+			printf("sqlite3_close failed, result = %d\n", result);
+		}
+		m_spDb->m_db = nullptr;
+	}
+	m_spDb = nullptr;
 }
 
 bool SQLite::isOpen()
 {
-	if (m_db == nullptr)
-	{
-		return false;
-	}
-	return m_db->isOpen();
+	return m_spDb != nullptr;
 }
 
 SQLitePrepareStatement SQLite::preparedCreator(const std::string& sqlString)
 {
-	SQLitePrepareStatement prepareQuery(m_db);
+	SQLitePrepareStatement prepareQuery(m_spDb);
 	prepareQuery.prepare(sqlString.c_str());
 	return prepareQuery;
 }
@@ -80,13 +102,19 @@ SQLiteResultSet SQLite::execute(SQLitePrepareStatement& spPrepareQuery)
 
 void SQLite::transaction()
 {
-	if (m_db == nullptr)
+	if (m_spDb == nullptr)
 	{
 		return;
 	}
 	try
 	{
-		m_db->transaction();
+		char* errorMessage = nullptr;
+		int32_t result = sqlite3_exec(m_spDb->m_db, "begin transaction;", nullptr, nullptr, &errorMessage);
+		if (result != 0)
+		{
+			printf("transaction failed, result = %d, errorMessage = %s\n", result, errorMessage);
+			sqlite3_free(&errorMessage);
+		}
 	}
 	catch (...)
 	{
@@ -96,13 +124,19 @@ void SQLite::transaction()
 
 void SQLite::commit()
 {
-	if (m_db == nullptr)
+	if (m_spDb == nullptr)
 	{
 		return;
 	}
 	try
 	{
-		m_db->commit();
+		char* errorMessage = nullptr;
+		int32_t result = sqlite3_exec(m_spDb->m_db, "commit transaction;", nullptr, nullptr, &errorMessage);
+		if (result != 0)
+		{
+			printf("commit failed, result = %d, errorMessage = %s\n", result, errorMessage);
+			sqlite3_free(&errorMessage);
+		}
 	}
 	catch (...)
 	{
@@ -112,13 +146,19 @@ void SQLite::commit()
 
 void SQLite::rollback()
 {
-	if (m_db == nullptr)
+	if (m_spDb == nullptr)
 	{
 		return;
 	}
 	try
 	{
-		m_db->rollback();
+		char* errorMessage = nullptr;
+		int32_t result = sqlite3_exec(m_spDb->m_db, "rollback transaction;", nullptr, nullptr, &errorMessage);
+		if (result != 0)
+		{
+			printf("rollback failed, result = %d, errorMessage = %s\n", result, errorMessage);
+			sqlite3_free(&errorMessage);
+		}
 	}
 	catch (...)
 	{
@@ -126,29 +166,57 @@ void SQLite::rollback()
 	}
 }
 
-void SQLite::init(const std::string& dbFilePath)
-{
-	if (m_db == nullptr)
-	{
-		return;
-	}
-	//数据库名
-	m_db->setDatabaseName(QString::fromStdWString(CStringManager::AnsiToUnicode(dbFilePath)));
-}
-
-void SQLite::free()
-{
-	if (m_db != nullptr)
-	{
-		//释放数据库连接
-		delete m_db;
-		m_db = nullptr;
-		QSqlDatabase::removeDatabase("SQLite");
-	}
-}
-
+//#include "SqlString/SqlStringAPI.h"
+//#include "CSystem/CSystemAPI.h"
+//
 //int main()
 //{
+//	
+//	{
+//		SQLite lite(CSystem::GetCurrentExePath() + "test.db");
+//		lite.open();
+//		std::vector<std::string> vecField;
+//		vecField.push_back("id2 interger");
+//		vecField.push_back("nAme varchar(20)");
+//		std::string sqlString = SqlString::selectString("e123", "id2,name");
+//		auto prepare = lite.preparedCreator(sqlString);
+//		//prepare.setInt(0, 2);
+//		//prepare.setString(1, "22");
+//		//std::string setText = "a123456789012345678901111111111111111111111111111111111123";
+//		//setText.push_back('\0');
+//		//setText.append("1213");
+//		//prepare.setString(1, setText);
+//		//prepare.exec();
+//		//prepare.reset();
+//		//prepare.setString(1, "23");
+//		//prepare.exec();
+//
+//		
+//		SQLiteResultSet result = lite.execute(prepare);
+//		//std::vector<std::vector<std::string>> vecResult = result.toVector();
+//		int32_t rowCount = result.rowsCount();
+//		rowCount = result.rowsCount();
+//		int xxd = result.rowsAffected();
+//		int x = result.getInt(0);
+//		std::string xx = result.getString("name");
+//		lite.close();
+//		//lite.execute(prepare);
+//		
+//	}
+//	//lite.close();
+//	int x = 3;
+//
+//	//std::vector<std::string> vecField;
+//	//vecField.push_back("id interger");
+//	//vecField.push_back("name varchar(20)");
+//	//std::string sqlString = SqlString::createTableString("d123", vecField);
+//	//sqlite3* m_db = nullptr;
+//	//sqlite3_open((CSystem::GetCurrentExePath() + "test.db").c_str(), &m_db);
+//	//char* errorMessage = nullptr;
+//	//sqlite3_exec(m_db, CStringManager::Format("PRAGMA synchronous = %d;", (int32_t)0).c_str(), nullptr, nullptr, &errorMessage);
+//	//sqlite3_stmt* m_stmt = nullptr;
+//	//int32_t result = sqlite3_prepare(m_db, sqlString.c_str(), sqlString.size(), &m_stmt, nullptr);
+//	//sqlite3_step(m_stmt);
 //	return 0;
 //}
 

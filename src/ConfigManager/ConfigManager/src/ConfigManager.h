@@ -86,10 +86,12 @@ DELETE_USER_CONFIG(最近在玩游戏名配置枚举值);
 
 #define SAVE_LENGTH 104857600 //4294967295
 
+//USER可以和GLOBAL穿插混用
+
 #define GET_MACRO(_1, _2, NAME,...) NAME
 
-#define DELETE_GLOBAL_CONFIG_FUN_1(key) ConfigManager::instance().deleteConfig(key)
-#define DELETE_GLOBAL_CONFIG_FUN_2(section, key) ConfigManager::instance().deleteConfig(section, key)
+#define DELETE_GLOBAL_CONFIG_FUN_1(key) ConfigManager::instance().getGlobalConfig().deleteConfig(key)
+#define DELETE_GLOBAL_CONFIG_FUN_2(section, key) ConfigManager::instance().getGlobalConfig().deleteConfig(section, key)
 #define DELETE_GLOBAL_CONFIG(...) GET_MACRO(__VA_ARGS__, DELETE_GLOBAL_CONFIG_FUN_2, DELETE_GLOBAL_CONFIG_FUN_1)(__VA_ARGS__)
 
 #define DELETE_USER_CONFIG_FUN_1(key) (*(ConfigManager::instance().getUserConfigManager())).deleteConfig(key)
@@ -98,8 +100,8 @@ DELETE_USER_CONFIG(最近在玩游戏名配置枚举值);
 
 #define INIT_CONFIG(dbPath) ConfigManager::instance().init(dbPath)
 #define GLOBAL_CONFIG ConfigManager::instance().getGlobalConfig()
-#define USER_CONFIG ConfigManager::instance()
-#define SET_CONFIG_USERID(userId) ConfigManager::instance().setUserId(userId)
+#define USER_CONFIG (*ConfigManager::instance().getUserConfigManager())
+#define SET_CONFIG_USERID(userId) ConfigManager::instance().getUserConfigManager()->setUserId(userId)
 
 //暂时不可用
 //#define CONFIG_BEGIN ConfigManager::instance().transaction()
@@ -108,7 +110,7 @@ DELETE_USER_CONFIG(最近在玩游戏名配置枚举值);
 class SQLite;
 class UserConfigManager;
 class SQLiteResultSet;
-class ProcessReadWriteMutex;
+class FileReadWriteMutex;
 
 /** 配置管理类
 */
@@ -303,7 +305,7 @@ protected:
 #pragma warning(disable:4251)
 #endif
 	std::shared_ptr<SQLite> m_spConfig;
-	std::shared_ptr<ProcessReadWriteMutex> m_spProcessMutex;
+	std::shared_ptr<FileReadWriteMutex> m_spProcessMutex;
 	std::string m_tableName;
 	std::string m_databasePath;
 #ifdef _MSC_VER

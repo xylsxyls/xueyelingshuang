@@ -10,20 +10,21 @@
 
 std::string FileReadWriteMutex::s_tempDir = FileReadWriteMutex::tempDir();
 
-FileReadWriteMutex::FileReadWriteMutex(const std::string& fileName)
+FileReadWriteMutex::FileReadWriteMutex(const std::string& filePath)
 {
-	if (fileName.find_first_of('/') != -1 || fileName.find_first_of('\\') != -1)
+	if (filePath.find_first_of('/') != -1 || filePath.find_first_of('\\') != -1)
 	{
-		m_fileName = fileName;
+		m_filePath = filePath;
+		m_isName = false;
 	}
 	else
 	{
-		m_fileName = fileName + ".lock";
+		m_filePath = s_tempDir + filePath + ".lock";
+		m_isName = true;
 	}
-	m_fileName = s_tempDir + m_fileName;
 #ifdef __unix__
-	system(("touch \"" + m_fileName + "\"").c_str());
-	m_fd = open(m_fileName.c_str(), O_RDWR);
+	system(("touch \"" + m_filePath + "\"").c_str());
+	m_fd = open(m_filePath.c_str(), O_RDWR);
 #endif
 }
 
@@ -47,7 +48,7 @@ void FileReadWriteMutex::write()
 #ifdef _MSC_VER
 	while (true)
 	{
-		m_file = CreateFileA(m_fileName.c_str(), GENERIC_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+		m_file = CreateFileA(m_filePath.c_str(), GENERIC_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 		if (LockFile(m_file, 0, 0, 0, 0) == TRUE)
 		{
 			break;
@@ -71,7 +72,7 @@ void FileReadWriteMutex::write()
 		{
 			if (isFailed && times >= timesCount)
 			{
-				printf("success lockf function, result = %d, m_fileName = %s, m_fd = %d\n", result, m_fileName.c_str(), m_fd);
+				printf("success lockf function, result = %d, m_filePath = %s, m_fd = %d\n", result, m_filePath.c_str(), m_fd);
 			}
 			break;
 		}
@@ -79,7 +80,7 @@ void FileReadWriteMutex::write()
 		isFailed = true;
 		if (times % timesCount == 0)
 		{
-			printf("warning lockf function failed times = %d, result = %d, m_fileName = %s, m_fd = %d\n", times, result, m_fileName.c_str(), m_fd);
+			printf("warning lockf function failed times = %d, result = %d, m_filePath = %s, m_fd = %d\n", times, result, m_filePath.c_str(), m_fd);
 		}
 	}
 #endif
@@ -95,7 +96,10 @@ void FileReadWriteMutex::unwrite()
 #ifdef _MSC_VER
 	UnlockFile(m_file, 0, 0, 0, 0);
 	CloseHandle(m_file);
-	DeleteFileA(m_fileName.c_str());
+	if (m_isName)
+	{
+		//DeleteFileA(m_filePath.c_str());
+	}
 #elif __unix__
 	if (m_fd < 0)
 	{

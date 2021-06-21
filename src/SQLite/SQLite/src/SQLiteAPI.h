@@ -3,9 +3,9 @@
 #define _SQLiteAPI
 #endif
 #include "SQLite.h"
-#include "SQLiteSqlString.h"
 #include "SQLitePrepareStatement.h"
 #include "SQLiteResultSet.h"
+#include "sqlite3.h"
 
 #ifdef _WIN32
 #if defined _DEBUG

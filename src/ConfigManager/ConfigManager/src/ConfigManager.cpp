@@ -4,6 +4,7 @@
 #include "UserConfigManager.h"
 #include "CSystem/CSystemAPI.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
+#include "SqlString/SqlStringAPI.h"
 
 ConfigManager::ConfigManager():
 m_key(0),
@@ -12,7 +13,7 @@ m_spConfig(nullptr),
 m_spProcessMutex(nullptr),
 m_tableName("g_config")
 {
-	m_spProcessMutex.reset(new ProcessReadWriteMutex("ConfigManagerProcessMutex"));
+	m_spProcessMutex.reset(new FileReadWriteMutex("ConfigManagerFileMutex"));
 }
 
 ConfigManager& ConfigManager::instance()
@@ -110,6 +111,7 @@ std::string ConfigManager::toString()
 void ConfigManager::init(const std::string& configPath)
 {
 	m_databasePath = configPath;
+	UserConfigManager::instance().m_databasePath = m_databasePath;
 }
 
 void ConfigManager::initSQLite()
@@ -120,6 +122,8 @@ void ConfigManager::initSQLite()
 	}
 	m_spConfig = nullptr;
 	m_spConfig.reset(new SQLite(m_databasePath));
+	UserConfigManager::instance().m_spConfig = m_spConfig;
+	UserConfigManager::instance().m_spProcessMutex = m_spProcessMutex;
 	createTableIfNotExist("g_config");
 }
 
@@ -168,7 +172,8 @@ void ConfigManager::deleteConfig(int32_t section, int32_t key)
 	}
 	WriteLock writeLock(*m_spProcessMutex);
 	m_spConfig->open();
-	SQLitePrepareStatement prepareStatement = m_spConfig->preparedCreator(SQLiteSqlString::deleteString(m_tableName, CStringManager::Format("key='%d_%d'", section, key)));
+	std::string deletestring = SqlString::deleteString(m_tableName, CStringManager::Format("key='%d_%d'", section, key));
+	SQLitePrepareStatement prepareStatement = m_spConfig->preparedCreator(SqlString::deleteString(m_tableName, CStringManager::Format("key='%d_%d'", section, key)));
 	m_spConfig->execute(prepareStatement);
 	m_spConfig->close();
 }
@@ -244,7 +249,7 @@ bool ConfigManager::hasConfigBase(int32_t key, int32_t section)
 	}
 	WriteLock writeLock(*m_spProcessMutex);
 	m_spConfig->open();
-	SQLitePrepareStatement prepareStatement = m_spConfig->preparedCreator(SQLiteSqlString::selectString(m_tableName, "key", CStringManager::Format("key='%d_%d'", section, key)));
+	SQLitePrepareStatement prepareStatement = m_spConfig->preparedCreator(SqlString::selectString(m_tableName, "key", CStringManager::Format("key='%d_%d'", section, key)));
 	auto result = m_spConfig->execute(prepareStatement);
 	if (!result.next())
 	{
@@ -263,7 +268,7 @@ bool ConfigManager::updateConfigBase(int32_t key, const std::string& value, cons
 	}
 	WriteLock writeLock(*m_spProcessMutex);
 	m_spConfig->open();
-	std::string updateString = SQLiteSqlString::updateString(m_tableName.c_str(), "data,type", CStringManager::Format("key='%d_%d'", section, key));
+	std::string updateString = SqlString::updateString(m_tableName.c_str(), "data,type", CStringManager::Format("key='%d_%d'", section, key));
 	auto prepare = m_spConfig->preparedCreator(updateString);
 	prepare.setBlob(0, value);
 	prepare.setString(1, type);
@@ -280,7 +285,7 @@ bool ConfigManager::insertConfigBase(int32_t key, const std::string& value, cons
 	}
 	WriteLock writeLock(*m_spProcessMutex);
 	m_spConfig->open();
-	std::string insertString = SQLiteSqlString::insertString(m_tableName.c_str(), "key,data,type");
+	std::string insertString = SqlString::insertString(m_tableName.c_str(), "key,data,type");
 	auto prepare = m_spConfig->preparedCreator(insertString);
 	prepare.setString(0, CStringManager::Format("%d_%d", section, key));
 	prepare.setBlob(1, value);
@@ -298,7 +303,7 @@ std::string ConfigManager::getConfigBase(int32_t key, int32_t section)
 		return "";
 	}
 	WriteLock writeLock(*m_spProcessMutex);
-	std::string selectString = SQLiteSqlString::selectString(m_tableName.c_str(), "data", CStringManager::Format("key='%d_%d'", section, key));
+	std::string selectString = SqlString::selectString(m_tableName.c_str(), "data", CStringManager::Format("key='%d_%d'", section, key));
 	m_spConfig->open();
 	SQLitePrepareStatement prepareStatement = m_spConfig->preparedCreator(selectString);
 	auto sqlResult = m_spConfig->execute(prepareStatement);
@@ -318,7 +323,7 @@ std::string ConfigManager::getConfigType(int32_t key, int32_t section)
 	{
 		return "";
 	}
-	std::string selectString = SQLiteSqlString::selectString(m_tableName.c_str(), "type", CStringManager::Format("key='%d_%d'", section, key));
+	std::string selectString = SqlString::selectString(m_tableName.c_str(), "type", CStringManager::Format("key='%d_%d'", section, key));
 	WriteLock writeLock(*m_spProcessMutex);
 	m_spConfig->open();
 	SQLitePrepareStatement prepareStatement = m_spConfig->preparedCreator(selectString);
@@ -343,7 +348,7 @@ void ConfigManager::createTableIfNotExist(const std::string& tableName)
 	vecField.push_back("key varchar(20) primary key");
 	vecField.push_back(CStringManager::Format("data blob(%u)", SAVE_LENGTH));
 	vecField.push_back("type varchar(20)");
-	std::string sqlString = SQLiteSqlString::createTableIfNotExistString(tableName.c_str(), vecField);
+	std::string sqlString = SqlString::createTableIfNotExistString(tableName.c_str(), vecField);
 	WriteLock writeLock(*m_spProcessMutex);
 	m_spConfig->open();
 	SQLitePrepareStatement prepareStatement = m_spConfig->preparedCreator(sqlString);

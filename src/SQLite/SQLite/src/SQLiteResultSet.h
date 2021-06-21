@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-class QSqlQuery;
 class SQLitePrepareStatement;
+struct SqliteDatabase;
 
 class SQLiteAPI SQLiteResultSet
 {
@@ -26,6 +26,7 @@ public:
 public:
 	bool empty();
 
+	//字段名取出时会按照创建的大小写填写，但是读取时不区分大小写
 	std::string getBlob(uint32_t columnIndex) const;
 	std::string getBlob(const std::string& columnLabel) const;
 
@@ -47,11 +48,14 @@ public:
 	uint64_t getUInt64(uint32_t columnIndex) const;
 	uint64_t getUInt64(const std::string& columnLabel) const;
 
+	//无论带不带\0会全部取出来
 	std::string getString(uint32_t columnIndex) const;
 	std::string getString(const std::string& columnLabel) const;
 
 	bool next();
-	bool previous();
+
+	//搜索结果的所有字段名，会按存储时的大小写给出，搜索时不区分大小写
+	std::vector<std::string> tableName();
 
 	int32_t rowsAffected();
 
@@ -66,7 +70,9 @@ private:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::shared_ptr<QSqlQuery> m_spSqlQuery;
+	std::shared_ptr<SqliteDatabase> m_spDb;
+	std::vector<std::string> m_vecTableName;
+	std::vector<std::string> m_vecTableNameBase;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

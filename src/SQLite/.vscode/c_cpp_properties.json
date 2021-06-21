@@ -4,13 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/build/",
-                "${workspaceFolder}/../../include/",
-                "${QT5GCC32}/include/",
-                "${QT5GCC32}/include/QtWidgets/",
-                "${QT5GCC32}/include/QtCore/",
-                "${QT5GCC32}/include/QtGui/",
-				"${QT5GCC32}/include/QtSql/"
+                "${workspaceFolder}/../../include/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
