@@ -1,0 +1,1 @@
+"$CLOUD_REBUILD" QSQLite 32 dll release same
