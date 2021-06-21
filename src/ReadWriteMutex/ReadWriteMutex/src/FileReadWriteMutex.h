@@ -10,7 +10,7 @@ class ReadWriteMutexAPI FileReadWriteMutex : public ReadWriteMutexBase
 {
 public:
 	/** 构造函数
-	@param [in] filePath 文件路径，如果是名字会在临时路径下创建文件
+	@param [in] filePath 文件路径，如果是名字会在临时路径下创建文件，windows下会删除临时文件，如果传入绝对路径则不删除
 	*/
 	FileReadWriteMutex(const std::string& filePath);
 

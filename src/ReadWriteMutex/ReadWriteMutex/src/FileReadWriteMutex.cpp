@@ -46,14 +46,18 @@ void FileReadWriteMutex::read()
 void FileReadWriteMutex::write()
 {
 #ifdef _MSC_VER
-	while (true)
+	int32_t count = 10000;
+	while (count-- != 0)
 	{
-		m_file = CreateFileA(m_filePath.c_str(), GENERIC_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-		if (LockFile(m_file, 0, 0, 0, 0) == TRUE)
+		m_file = CreateFileA(m_filePath.c_str(), GENERIC_WRITE | GENERIC_READ, FILE_SHARE_WRITE | FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		OVERLAPPED oapped;
+		if (LockFileEx(m_file, LOCKFILE_EXCLUSIVE_LOCK, (DWORD)0, (DWORD)1, (DWORD)0, &oapped) == TRUE)
 		{
 			break;
 		}
 		CloseHandle(m_file);
+		//windows下不应该打印这句
+		printf("lock file error, lastError = %d\n", (int32_t)::GetLastError());
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 #elif __unix__
@@ -94,11 +98,12 @@ void FileReadWriteMutex::unread()
 void FileReadWriteMutex::unwrite()
 {
 #ifdef _MSC_VER
-	UnlockFile(m_file, 0, 0, 0, 0);
+	OVERLAPPED oapped;
+	UnlockFileEx(m_file, (DWORD)0, (DWORD)1, (DWORD)0, &oapped);
 	CloseHandle(m_file);
 	if (m_isName)
 	{
-		//DeleteFileA(m_filePath.c_str());
+		DeleteFileA(m_filePath.c_str());
 	}
 #elif __unix__
 	if (m_fd < 0)
