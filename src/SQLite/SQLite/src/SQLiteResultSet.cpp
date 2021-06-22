@@ -3,6 +3,7 @@
 #include "sqlite3.h"
 #include "SqliteDatabase.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include <algorithm>
 
 SQLiteResultSet::SQLiteResultSet() :
 m_spDb(nullptr)
