@@ -69,7 +69,7 @@ public:
 	*/
 	void commit();
 
-	/** 回滚
+	/** 回滚，会结束掉上一次的transaction，需要重新开启事务
 	*/
 	void rollback();
 
