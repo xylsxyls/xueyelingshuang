@@ -1,0 +1,2 @@
+因为wait会被其他不相关的信号打断，属于慢系统
+类似Ctrl+C或者timer信号，都会打断wait，linux下必现

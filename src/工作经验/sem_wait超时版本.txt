@@ -1,0 +1,19 @@
+struct timespec ts;
+
+	clock_gettime(CLOCK_REALTIME, &ts);
+
+	ts.tv_sec += ((timeout / 1000) + ((ts.tv_nsec + ((timeout % 1000) * 1000000))) / 1000000000);
+
+	ts.tv_nsec = (ts.tv_nsec + ((timeout % 1000) * 1000000)) % 1000000000;
+
+	int ret = sem_timedwait(m_processSemaphore, &ts);
+
+	if (ret == 0)
+
+	{
+
+	    return true;
+
+	}
+
+	return false;

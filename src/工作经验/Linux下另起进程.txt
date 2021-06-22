@@ -1,0 +1,3 @@
+setsid命令可以新开进程，需要加 &
+不能使用CSystem::SystemCommand，当前进程不会有返回所以会一直阻塞
+需要使用system

@@ -1,0 +1,12 @@
+标志位设为SEM_UNDO
+
+struct sembuf sem;
+	sem.sem_num = 0;
+	sem.sem_op = 1;
+	sem.sem_flg = SEM_UNDO;
+	if(semop(m_processSemaphoreId, &sem, 1) == -1)
+
+但是一个信号量的信号值最多30000个左右
+这样的信号量在kill进程或者崩溃时系统会帮助释放该进程增加的所有信号量
+
+sem.sem_flg填0则不会有30000上限
