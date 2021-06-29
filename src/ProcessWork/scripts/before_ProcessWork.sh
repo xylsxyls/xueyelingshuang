@@ -56,3 +56,10 @@ FiniteDeque_dlllib=$2
 FiniteDeque_debugRelease=$3
 FiniteDeque_allSame=$4
 "$CLOUD_REBUILD" FiniteDeque $FiniteDeque_bit $FiniteDeque_dlllib $FiniteDeque_debugRelease $FiniteDeque_allSame
+
+#--------------------------------------------------------------------
+AtomicMath_bit=$1
+AtomicMath_dlllib=$2
+AtomicMath_debugRelease=$3
+AtomicMath_allSame=$4
+"$CLOUD_REBUILD" AtomicMath $AtomicMath_bit $AtomicMath_dlllib $AtomicMath_debugRelease $AtomicMath_allSame
