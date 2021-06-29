@@ -102,7 +102,8 @@ protected:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>> m_memoryMap;
+	std::map<int32_t, std::shared_ptr<SharedMemory>> m_memoryMap;
+	//std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>> m_memoryMap;
 	std::mutex m_assignMutex;
 	std::mutex m_readMutex;
 	std::vector<ProcessReceiveCallback*> m_callback;
@@ -110,30 +111,29 @@ protected:
 #pragma warning(pop)
 #endif
 	int32_t m_thisProcessPid;
-	Semaphore* m_assignSemaphore;
-	Semaphore* m_assignEndSemaphore;
 	Semaphore* m_readSemaphore;
-	Semaphore* m_readEndSemaphore;
-	SharedMemory* m_area;
+	SharedMemory* m_areaAssign;
+	SharedMemory* m_areaRead;
+	//SharedMemory* m_area;
 	SharedMemory* m_pid;
-	uint32_t m_assignThreadId;
 	uint32_t m_readThreadId;
 	uint32_t m_copyThreadId;
 	uint32_t m_receiveThreadId;
 	uint32_t m_postThreadId;
 
+	int32_t m_areaCount;
 	int32_t m_flow;
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	FiniteDeque<std::pair<int32_t, std::shared_ptr<SharedMemory>>> m_sendProcessDeque;
-	std::mutex m_sendProcessDequeMutex;
+	FiniteDeque<std::pair<int32_t, std::shared_ptr<SharedMemory>>> m_sendProcessAssignDeque;
+	std::mutex m_sendProcessAssignDequeMutex;
+	FiniteDeque<std::pair<int32_t, std::shared_ptr<SharedMemory>>> m_sendProcessReadDeque;
+	std::mutex m_sendProcessReadDequeMutex;
 	FiniteDeque<std::pair<std::string, std::shared_ptr<SharedMemory>>> m_sendMemoryDeque;
 	std::mutex m_sendMemoryDequeMutex;
-	FiniteDeque<std::pair<int32_t, std::shared_ptr<ProcessReadWriteMutex>[2]>> m_sendMutexDeque;
-	std::mutex m_sendMutexDequeMutex;
-	FiniteDeque<std::pair<int32_t, std::shared_ptr<Semaphore>[4]>> m_sendSemaphoreDeque;
+	FiniteDeque<std::pair<int32_t, std::shared_ptr<Semaphore>>> m_sendSemaphoreDeque;
 	std::mutex m_sendSemaphoreDequeMutex;
 #ifdef _MSC_VER
 #pragma warning(pop)

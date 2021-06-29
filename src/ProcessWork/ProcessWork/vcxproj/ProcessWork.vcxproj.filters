@@ -24,9 +24,6 @@
     <ClInclude Include="..\src\ProcessWorkMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AssignTask.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\CopyTask.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -45,9 +42,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ProcessWork.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AssignTask.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CopyTask.cpp">

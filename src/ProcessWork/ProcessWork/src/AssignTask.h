@@ -24,18 +24,15 @@ public:
 	/** 设置参数
 	@param [in] assignSemaphore 申请信号
 	@param [in] assignEndSemaphore 申请完毕信号
-	@param [in] area 缓冲区号缓存
-	@param [in] memoryMap 共享内存组
+	@param [in] areaAssign 缓冲区号缓存队列
 	*/
 	void setParam(Semaphore* assignSemaphore,
 		Semaphore* assignEndSemaphore,
-		SharedMemory* area,
-		std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* memoryMap);
+		SharedMemory* areaAssign);
 
 private:
-	std::atomic<bool> m_exit;
 	Semaphore* m_assignSemaphore;
 	Semaphore* m_assignEndSemaphore;
-	SharedMemory* m_area;
-	std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* m_memoryMap;
+	SharedMemory* m_areaAssign;
+	std::atomic<bool> m_exit;
 };

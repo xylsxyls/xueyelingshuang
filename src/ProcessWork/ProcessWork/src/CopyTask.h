@@ -22,17 +22,20 @@ public:
 	/** 设置参数
 	@param [in] assign 读取的缓存区号
 	@param [in] callback 接收回调类
+	@param [in] areaAssign 缓存区号分配缓存队列
 	@param [in] memoryMap 共享内存组
 	@param [in] receiveThread 处理线程
 	*/
 	void setParam(int32_t assign,
 		std::vector<ProcessReceiveCallback*>* callback,
-		std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* memoryMap,
+		SharedMemory* areaAssign,
+		std::map<int32_t, std::shared_ptr<SharedMemory>>* memoryMap,
 		const std::shared_ptr<CTaskThread>& receiveThread);
 
 private:
 	int32_t m_assign;
 	std::vector<ProcessReceiveCallback*>* m_callback;
-	std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>>* m_memoryMap;
+	SharedMemory* m_areaAssign;
+	std::map<int32_t, std::shared_ptr<SharedMemory>>* m_memoryMap;
 	std::shared_ptr<CTaskThread> m_receiveThread;
 };

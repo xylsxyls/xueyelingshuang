@@ -3,28 +3,26 @@
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
-#include "AssignTask.h"
 #include "ReadTask.h"
 #include "SendTask.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #include <string.h>
+#include "AtomicMath/AtomicMathAPI.h"
 #ifdef __unix__
 #include <unistd.h>
 #endif
 
 ProcessWork::ProcessWork():
 m_thisProcessPid(0),
-m_assignSemaphore(nullptr),
-m_assignEndSemaphore(nullptr),
 m_readSemaphore(nullptr),
-m_readEndSemaphore(nullptr),
-m_area(nullptr),
+m_areaAssign(nullptr),
+m_areaRead(nullptr),
 m_pid(nullptr),
-m_assignThreadId(0),
 m_readThreadId(0),
 m_copyThreadId(0),
 m_receiveThreadId(0),
 m_postThreadId(0),
+m_areaCount(0),
 m_flow(0)
 {
 	m_thisProcessPid = CSystem::currentProcessPid();
@@ -43,30 +41,44 @@ void ProcessWork::addProcessReceiveCallback(ProcessReceiveCallback* callback)
 
 bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t flow)
 {
+	m_areaCount = areaCount;
 	m_flow = flow;
-	m_sendProcessDeque.setFinite(m_flow);
-	m_sendMemoryDeque.setFinite(m_flow * m_flow);
-	m_sendMutexDeque.setFinite(m_flow);
+	m_sendProcessAssignDeque.setFinite(m_flow);
+	m_sendMemoryDeque.setFinite(m_areaCount * m_flow);
 	m_sendSemaphoreDeque.setFinite(m_flow);
 
-	m_area = new SharedMemory(CStringManager::Format("ProcessArea_%d", m_thisProcessPid), 8, false);
-	if (m_area->isFailed())
+	m_areaAssign = new SharedMemory(CStringManager::Format("ProcessAreaAssign_%d", m_thisProcessPid), 4 + m_areaCount * 2 * 4, false);
+	if (m_areaAssign->isFailed())
 	{
-		delete m_area;
-		m_area = nullptr;
+		delete m_areaAssign;
+		m_areaAssign = nullptr;
 		return false;
 	}
+	m_areaAssign->clear();
+
+	m_areaRead = new SharedMemory(CStringManager::Format("ProcessAreaRead_%d", m_thisProcessPid), 4 * 2 + m_areaCount * 2 * 4, false);
+	if (m_areaRead->isFailed())
+	{
+		delete m_areaAssign;
+		m_areaAssign = nullptr;
+		delete m_areaRead;
+		m_areaRead = nullptr;
+		return false;
+	}
+	m_areaRead->clear();
 
 #ifdef _MSC_VER
 	std::string currentExeName = CSystem::GetCurrentExeName();
 #elif __unix__
 	std::string currentExeName = CSystem::GetCurrentExeFullName();
 #endif
-	m_pid = new SharedMemory(CStringManager::Format("ProcessArea_%s", currentExeName.c_str()), 4, false);
-	if (m_area->isFailed())
+	m_pid = new SharedMemory(CStringManager::Format("ProcessArea_%s", currentExeName.c_str()), 4, true);
+	if (m_pid->isFailed())
 	{
-		delete m_area;
-		m_area = nullptr;
+		delete m_areaAssign;
+		m_areaAssign = nullptr;
+		delete m_areaRead;
+		m_areaRead = nullptr;
 		delete m_pid;
 		m_pid = nullptr;
 		return false;
@@ -77,16 +89,12 @@ bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t fl
 		printf("init pid nullptr\n");
 	}
 
-	m_assignSemaphore = new Semaphore;
-	m_assignEndSemaphore = new Semaphore;
 	m_readSemaphore = new Semaphore;
-	m_readEndSemaphore = new Semaphore;
 
-	m_assignSemaphore->createProcessSemaphore(CStringManager::Format("ProcessAssign_%d", m_thisProcessPid));
-	m_assignEndSemaphore->createProcessSemaphore(CStringManager::Format("ProcessAssignEnd_%d", m_thisProcessPid));
 	m_readSemaphore->createProcessSemaphore(CStringManager::Format("ProcessRead_%d", m_thisProcessPid));
-	m_readEndSemaphore->createProcessSemaphore(CStringManager::Format("ProcessReadEnd_%d", m_thisProcessPid));
 
+	void* areaAssign = m_areaAssign->writeWithoutLock();
+	*(int32_t*)areaAssign = m_areaCount;
 	int32_t memoryIndex = 0;
 	int32_t index = -1;
 	while (index++ != areaCount - 1)
@@ -96,25 +104,19 @@ bool ProcessWork::initReceive(int32_t receiveSize, int32_t areaCount, int32_t fl
 		{
 			spSharedMemory.reset(new SharedMemory(CStringManager::Format("ProcessArea_%d_%d", m_thisProcessPid, ++memoryIndex), receiveSize, false));
 		} while (spSharedMemory->isFailed());
-		m_memoryMap[memoryIndex].first = spSharedMemory;
-		std::shared_ptr<std::atomic<bool>> spUsed(new std::atomic<bool>(false));
-		m_memoryMap[memoryIndex].second = spUsed;
+		*((int32_t*)areaAssign + 1 + index * 2) = memoryIndex;
+		m_memoryMap[memoryIndex] = spSharedMemory;
 	}
 
-	m_assignThreadId = CTaskThreadManager::Instance().Init();
 	m_readThreadId = CTaskThreadManager::Instance().Init();
 	m_copyThreadId = CTaskThreadManager::Instance().Init();
 	m_receiveThreadId = CTaskThreadManager::Instance().Init();
 
-	std::shared_ptr<AssignTask> spAssignTask(new AssignTask);
-	spAssignTask->setParam(m_assignSemaphore, m_assignEndSemaphore, m_area, &m_memoryMap);
-	CTaskThreadManager::Instance().GetThreadInterface(m_assignThreadId)->PostTask(spAssignTask);
-
 	std::shared_ptr<ReadTask> spReadTask(new ReadTask);
 	spReadTask->setParam(&m_callback,
 		m_readSemaphore,
-		m_readEndSemaphore,
-		m_area,
+		m_areaAssign,
+		m_areaRead,
 		&m_memoryMap,
 		CTaskThreadManager::Instance().GetThreadInterface(m_copyThreadId),
 		CTaskThreadManager::Instance().GetThreadInterface(m_receiveThreadId));
@@ -130,30 +132,21 @@ void ProcessWork::uninitReceive()
 	delete m_pid;
 	m_pid = nullptr;
 
-	CTaskThreadManager::Instance().Uninit(m_assignThreadId);
 	CTaskThreadManager::Instance().Uninit(m_readThreadId);
 	CTaskThreadManager::Instance().Uninit(m_copyThreadId);
 	CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
-
 	m_memoryMap.clear();
-	m_assignSemaphore->closeProcessSemaphore();
-	m_assignEndSemaphore->closeProcessSemaphore();
+
 	m_readSemaphore->closeProcessSemaphore();
-	m_readEndSemaphore->closeProcessSemaphore();
 
-	delete m_assignSemaphore;
-	delete m_assignEndSemaphore;
 	delete m_readSemaphore;
-	delete m_readEndSemaphore;
-	delete m_area;
+	delete m_areaAssign;
+	delete m_areaRead;
 
-	m_assignSemaphore = nullptr;
-	m_assignEndSemaphore = nullptr;
 	m_readSemaphore = nullptr;
-	m_readEndSemaphore = nullptr;
-	m_area = nullptr;
+	m_areaAssign = nullptr;
+	m_areaRead = nullptr;
 
-	m_assignThreadId = 0;
 	m_readThreadId = 0;
 	m_copyThreadId = 0;
 	m_receiveThreadId = 0;
@@ -163,16 +156,16 @@ void ProcessWork::uninitReceive()
 void ProcessWork::clear()
 {
 	{
-		std::unique_lock<std::mutex> lock(m_sendProcessDequeMutex);
-		m_sendProcessDeque.clear();
+		std::unique_lock<std::mutex> lock(m_sendProcessAssignDequeMutex);
+		m_sendProcessAssignDeque.clear();
+	}
+	{
+		std::unique_lock<std::mutex> lock(m_sendProcessReadDequeMutex);
+		m_sendProcessReadDeque.clear();
 	}
 	{
 		std::unique_lock<std::mutex> lock(m_sendMemoryDequeMutex);
 		m_sendMemoryDeque.clear();
-	}
-	{
-		std::unique_lock<std::mutex> lock(m_sendMutexDequeMutex);
-		m_sendMutexDeque.clear();
 	}
 	{
 		std::unique_lock<std::mutex> lock(m_sendSemaphoreDequeMutex);
@@ -207,116 +200,107 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 	{
 		return;
 	}
-
-	int32_t assign = 0;
-	std::shared_ptr<SharedMemory> destArea;
+	
+	std::shared_ptr<SharedMemory> destAreaAssign;
 	{
-		std::unique_lock<std::mutex> lock(m_sendProcessDequeMutex);
-		for (auto it = m_sendProcessDeque.begin(); it != m_sendProcessDeque.end(); ++it)
+		std::unique_lock<std::mutex> lock(m_sendProcessAssignDequeMutex);
+		for (auto it = m_sendProcessAssignDeque.begin(); it != m_sendProcessAssignDeque.end(); ++it)
 		{
 			if (it->first == destPid)
 			{
-				destArea = it->second;
+				destAreaAssign = it->second;
 				break;
 			}
 		}
 	}
-	if (destArea == nullptr)
+	if (destAreaAssign == nullptr)
 	{
-		destArea.reset(new SharedMemory(CStringManager::Format("ProcessArea_%d", destPid)));
-		std::unique_lock<std::mutex> lock(m_sendProcessDequeMutex);
-		m_sendProcessDeque.push_back(std::pair<int32_t, std::shared_ptr<SharedMemory>>(destPid, destArea));
+		destAreaAssign.reset(new SharedMemory(CStringManager::Format("ProcessAreaAssign_%d", destPid)));
+		std::unique_lock<std::mutex> lock(m_sendProcessAssignDequeMutex);
+		m_sendProcessAssignDeque.push_back(std::pair<int32_t, std::shared_ptr<SharedMemory>>(destPid, destAreaAssign));
 	}
-
-	void* area = destArea->writeWithoutLock();
-	if (area == nullptr)
+	
+	void* areaAssign = destAreaAssign->writeWithoutLock();
+	if (areaAssign == nullptr)
 	{
 		return;
 	}
-
-	std::shared_ptr<ProcessReadWriteMutex> destProcessAssignMutex;
-	std::shared_ptr<ProcessReadWriteMutex> destProcessReadMutex;
+	
+	std::shared_ptr<SharedMemory> destAreaRead;
 	{
-		std::unique_lock<std::mutex> lock(m_sendMutexDequeMutex);
-		for (auto it = m_sendMutexDeque.begin(); it != m_sendMutexDeque.end(); ++it)
+		std::unique_lock<std::mutex> lock(m_sendProcessReadDequeMutex);
+		for (auto it = m_sendProcessReadDeque.begin(); it != m_sendProcessReadDeque.end(); ++it)
 		{
 			if (it->first == destPid)
 			{
-				destProcessAssignMutex = it->second[0];
-				destProcessReadMutex = it->second[1];
+				destAreaRead = it->second;
 				break;
 			}
 		}
 	}
-	
-	if (destProcessAssignMutex == nullptr || destProcessReadMutex == nullptr)
+	if (destAreaRead == nullptr)
 	{
-		destProcessAssignMutex.reset(new ProcessReadWriteMutex(CStringManager::Format("ProcessAssignMutex_%d", destPid)));
-		destProcessReadMutex.reset(new ProcessReadWriteMutex(CStringManager::Format("ProcessReadMutex_%d", destPid)));
-		std::pair<int32_t, std::shared_ptr<ProcessReadWriteMutex>[2]> pair;
-		pair.first = destPid;
-		pair.second[0] = destProcessAssignMutex;
-		pair.second[1] = destProcessReadMutex;
-		std::unique_lock<std::mutex> lock(m_sendMutexDequeMutex);
-		m_sendMutexDeque.push_back(pair);
+		destAreaRead.reset(new SharedMemory(CStringManager::Format("ProcessAreaRead_%d", destPid)));
+		std::unique_lock<std::mutex> lock(m_sendProcessReadDequeMutex);
+		m_sendProcessReadDeque.push_back(std::pair<int32_t, std::shared_ptr<SharedMemory>>(destPid, destAreaRead));
 	}
-
-	std::shared_ptr<Semaphore> destAssignSemaphore;
-	std::shared_ptr<Semaphore> destAssignEndSemaphore;
+	
+	void* areaRead = destAreaRead->writeWithoutLock();
+	if (areaRead == nullptr)
+	{
+		return;
+	}
+	
 	std::shared_ptr<Semaphore> destReadSemaphore;
-	std::shared_ptr<Semaphore> destReadEndSemaphore;
 	{
 		std::unique_lock<std::mutex> lock(m_sendSemaphoreDequeMutex);
 		for (auto it = m_sendSemaphoreDeque.begin(); it != m_sendSemaphoreDeque.end(); ++it)
 		{
 			if (it->first == destPid)
 			{
-				destAssignSemaphore = it->second[0];
-				destAssignEndSemaphore = it->second[1];
-				destReadSemaphore = it->second[2];
-				destReadEndSemaphore = it->second[3];
+				destReadSemaphore = it->second;
 				break;
 			}
 		}
 	}
 	
-	if (destAssignSemaphore == nullptr ||
-		destAssignEndSemaphore == nullptr ||
-		destReadSemaphore == nullptr ||
-		destReadEndSemaphore == nullptr)
+	if (destReadSemaphore == nullptr)
 	{
-		destAssignSemaphore.reset(new Semaphore);
-		destAssignEndSemaphore.reset(new Semaphore);
 		destReadSemaphore.reset(new Semaphore);
-		destReadEndSemaphore.reset(new Semaphore);
-		destAssignSemaphore->openProcessSemaphore(CStringManager::Format("ProcessAssign_%d", destPid));
-		destAssignEndSemaphore->openProcessSemaphore(CStringManager::Format("ProcessAssignEnd_%d", destPid));
 		destReadSemaphore->openProcessSemaphore(CStringManager::Format("ProcessRead_%d", destPid));
-		destReadEndSemaphore->openProcessSemaphore(CStringManager::Format("ProcessReadEnd_%d", destPid));
-		std::pair<int32_t, std::shared_ptr<Semaphore>[4]> pair;
+		std::pair<int32_t, std::shared_ptr<Semaphore>> pair;
 		pair.first = destPid;
-		pair.second[0] = destAssignSemaphore;
-		pair.second[1] = destAssignEndSemaphore;
-		pair.second[2] = destReadSemaphore;
-		pair.second[3] = destReadEndSemaphore;
+		pair.second = destReadSemaphore;
 		std::unique_lock<std::mutex> lock(m_sendSemaphoreDequeMutex);
 		m_sendSemaphoreDeque.push_back(pair);
 	}
-
+	
+	int32_t areaCount = *(int32_t*)areaAssign;
+	int32_t assign = 0;
 	//申请缓存区号
 	{
-		std::unique_lock<std::mutex> lock(m_assignMutex);
-		WriteLock writeLock(*destProcessAssignMutex);
-		destAssignSemaphore->processSignal();
-		while (!destAssignEndSemaphore->processWait(100))
+		do 
 		{
-			if (CSystem::processName(destPid).empty())
+			int32_t index = -1;
+			while (index++ != areaCount - 1)
 			{
-				return;
+				int32_t& areaOwn = *((int32_t*)areaAssign + 1 + index * 2 + 1);
+				if (areaOwn == 0)
+				{
+					if (AtomicMath::selfAddOne(&areaOwn) == 1)
+					{
+						//读取申请的缓存区号
+						assign = *((int32_t*)areaAssign + 1 + index * 2);
+						break;
+					}
+					break;
+				}
 			}
-		}
-		//读取申请的缓存区号
-		assign = (int32_t)(*((int32_t*)area));
+			if (assign != 0)
+			{
+				break;
+			}
+		} while (!CSystem::processName(destPid).empty());
 	}
 
 	std::string sendMemoryName = CStringManager::Format("ProcessArea_%d_%d", destPid, assign);
@@ -350,17 +334,39 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 	::memcpy((char*)memory + 12, buffer, length);
 	//申请目标读取
 	{
-		std::unique_lock<std::mutex> lock(m_readMutex);
-		WriteLock writeLock(*destProcessReadMutex);
-		while (!destReadEndSemaphore->processWait(100))
+		int32_t& write = *(int32_t*)areaRead;
+		int32_t* beginReadPtr = (int32_t*)areaRead + 2;
+		int32_t writeIndex = write % areaCount;
+		if (writeIndex < 0)
 		{
-			if (CSystem::processName(destPid).empty())
+			writeIndex += areaCount;
+		}
+		//int32_t errorBeginTime = ::GetTickCount();
+		while (true)
+		{
+			//前4字节为0，后4字节拿到1
+			if ((*(beginReadPtr + writeIndex * 2) == 0) && (AtomicMath::selfAddOne(beginReadPtr + writeIndex * 2 + 1) == 1))
 			{
-				return;
+				//把写好的缓存区号写进去
+				*(beginReadPtr + writeIndex * 2) = assign;
+				//局部会出现write值被旧值覆盖，但出现新的send后会重新写入正确的值，为了防止抢占到之后崩溃
+				write = writeIndex + 1;
+				if (write >= areaCount)
+				{
+					AtomicMath::selfSub(&write, areaCount);
+				}
+				break;
+			}
+			++writeIndex;
+			if (writeIndex == areaCount)
+			{
+				writeIndex = 0;
 			}
 		}
-		//把写好的缓存区号写进去
-		*((int32_t*)area + 1) = assign;
+		//if (::GetTickCount() - errorBeginTime != 0)
+		//{
+		//	RCSend("errorCount = %d", ::GetTickCount() - errorBeginTime);
+		//}
 		destReadSemaphore->processSignal();
 	}
 }
