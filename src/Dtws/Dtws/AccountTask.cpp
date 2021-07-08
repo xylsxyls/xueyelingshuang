@@ -36,23 +36,23 @@ void AccountTask::DoTask()
 			CMouse::LeftClick();
 		}
 	}
-	Sleep(g_accountCount == 1 ? 18000 : 20000);
+	Sleep(g_accountCount == 1 ? 22000 : 25000);
 	std::vector<std::string> accountName;
 	if (g_accountCount == 3)
 	{
-		accountName.push_back("dtws2xiayindao\tyangnan\n");
-		accountName.push_back("dtws2baihuaguxi\tyangnan\n");
-		accountName.push_back("dtws2baihuayixi\tyangnan\n");
+		accountName.push_back("dtws2xiayindao");
+		accountName.push_back("dtws2baihuaguxi");
+		accountName.push_back("dtws2baihuayixi");
 	}
 	else if (g_accountCount == 1)
 	{
 		if (CSystem::getComputerName() == "SC-202007261854")
 		{
-			accountName.push_back("dtws2shaolin\tyangnan\n");
+			accountName.push_back("dtws2shaolin");
 		}
 		else
 		{
-			accountName.push_back("dtws2hanbingmen\tyangnan\n");
+			accountName.push_back("dtws2hanbingmen");
 		}
 	}
 	
@@ -74,6 +74,8 @@ void AccountTask::DoTask()
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('A');
 		CKeyboard::InputString(accountName[accountIndex]);
+		CKeyboard::KeyPress(CKeyboard::Shift);
+		CKeyboard::InputString("\tyangnan\n");
 	}
 
 	accountIndex = -1;
