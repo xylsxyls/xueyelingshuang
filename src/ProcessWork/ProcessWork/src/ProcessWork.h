@@ -1,18 +1,15 @@
 #pragma once
-#include <stdint.h>
 #include "CorrespondParam/CorrespondParamAPI.h"
+#include "ReadWriteMutex/ReadWriteMutexAPI.h"
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "Semaphore/SemaphoreAPI.h"
 #include <memory>
 #include <map>
-#include <atomic>
-#include <mutex>
-#include <vector>
+#include <unordered_map>
 #include "ProcessWorkMacro.h"
-#include "FiniteDeque/FiniteDequeAPI.h"
 
 class SharedMemory;
 class ProcessReceiveCallback;
-class Semaphore;
-class ProcessReadWriteMutex;
 
 /** 进程通信类
 */
@@ -38,16 +35,24 @@ public:
 	/** 初始化接收模块
 	@param [in] receiveSize 单个共享内存接收区大小，500K
 	@param [in] areaCount 缓存块个数
-	@param [in] flow 缓存资源数，一般向几个进程发就给几个资源
 	@return 返回是否初始化成功
 	*/
-	bool initReceive(int32_t receiveSize = 500 * 1024, int32_t areaCount = 100, int32_t flow = 3);
+	bool initReceive(int32_t receiveSize = 500 * 1024, int32_t areaCount = 100);
 
 	/** 销毁接收模块资源
 	*/
 	void uninitReceive();
 
-	/** 清空发送模块的缓存资源
+	/** 清空发送模块指定pid的资源，不涉及存储pid的缓冲区map
+	@param [in] destPid 指定pid
+	*/
+	void clearDestPid(int32_t destPid);
+
+	/** 清空发送模块不用的缓存资源
+	*/
+	void clearUseless();
+
+	/** 清空发送模块的所有缓存资源
 	*/
 	void clear();
 
@@ -60,7 +65,7 @@ public:
 	void uninitPostThread();
 	
 	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方，需业务保证对方进程存在
-	windows下发送速度1.2万/s，接收速度1.2万/s，linux下发送速度1.6万包/s，接收速度1.6万包/s
+	windows下发送速度65.9万/s，接收速度65.9万/s，linux下发送速度1.6万包/s，接收速度1.2万包/s
 	@param [in] destPid 目标进程pid
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
@@ -68,8 +73,15 @@ public:
 	*/
 	void send(int32_t destPid, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
 
+	/** 向服务端发送数据
+	@param [in] destPid 目标进程pid
+	@param [in] message 发送内容
+	@param [in] type 发送数据类型
+	*/
+	void send(int32_t destPid, const std::string& message, MessageType type = MessageType::MESSAGE);
+
 	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方
-	windows下发送速度5万包/s，接收速度2.5万包/s，linux下发送速度1.2万包/s，接收速度1.2万包/s
+	windows下发送速度63.6万包/s，接收速度63.6万包/s，xp方案为43万包/s，多进程，5进程40万包/s，10进程，42.1万包/s，20进程53.8万包/s，linux下发送速度1.2万包/s，接收速度1.2万包/s
 	@param [in] processName 目标进程名，windows下不带后缀名，linux下全名
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
@@ -77,7 +89,14 @@ public:
 	*/
 	void send(const std::string& processName, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
 
-	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况
+	/** 向服务端发送数据
+	@param [in] processName 目标进程名，windows下不带后缀名，linux下全名
+	@param [in] message 发送内容
+	@param [in] type 发送数据类型
+	*/
+	void send(const std::string& processName, const std::string& message, MessageType type = MessageType::MESSAGE);
+
+	/** 向服务端发送字符串，单进程有序，多进程无序，单进程单线程有序，多进程或多线程可能出现先发后到
 	@param [in] destPid 目标进程pid
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
@@ -85,13 +104,28 @@ public:
 	*/
 	void post(int32_t destPid, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
 
-	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况
+	/** 向服务端发送字符串，单进程有序，多进程无序，单进程单线程有序，多进程或多线程可能出现先发后到
+	@param [in] destPid 目标进程pid
+	@param [in] message 发送内容
+	@param [in] type 发送数据类型
+	*/
+	void post(int32_t destPid, const std::string& message, MessageType type = MessageType::MESSAGE);
+
+	/** 向服务端发送字符串，单进程有序，多进程无序，单进程单线程有序，多进程或多线程可能出现先发后到
+	当有11条线程同时调用时，和send的速度基本一致，超过11条性能大幅下降，1条线程发送速度355.9万包/s
 	@param [in] processName 目标进程名，带后缀
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
 	@param [in] type 发送数据类型
 	*/
 	void post(const std::string& processName, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
+
+	/** 向服务端发送字符串，单进程有序，多进程无序，单进程单线程有序，多进程或多线程可能出现先发后到
+	@param [in] processName 目标进程名，带后缀
+	@param [in] message 发送内容
+	@param [in] type 发送数据类型
+	*/
+	void post(const std::string& processName, const std::string& message, MessageType type = MessageType::MESSAGE);
 
 	/** 阻塞函数，等待发送任务全部执行后返回，该函数返回则表示已将数据全部写入共享内存并已通知对方进程，结束后会更换线程号
 	*/
@@ -103,9 +137,6 @@ protected:
 #pragma warning(disable:4251)
 #endif
 	std::map<int32_t, std::shared_ptr<SharedMemory>> m_memoryMap;
-	//std::map<int32_t, std::pair<std::shared_ptr<SharedMemory>, std::shared_ptr<std::atomic<bool>>>> m_memoryMap;
-	std::mutex m_assignMutex;
-	std::mutex m_readMutex;
 	std::vector<ProcessReceiveCallback*> m_callback;
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -114,27 +145,41 @@ protected:
 	Semaphore* m_readSemaphore;
 	SharedMemory* m_areaAssign;
 	SharedMemory* m_areaRead;
-	//SharedMemory* m_area;
 	SharedMemory* m_pid;
+	uint32_t m_scanThreadId;
 	uint32_t m_readThreadId;
 	uint32_t m_copyThreadId;
 	uint32_t m_receiveThreadId;
 	uint32_t m_postThreadId;
-
-	int32_t m_areaCount;
-	int32_t m_flow;
+	uint32_t m_postNameThreadId;
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	FiniteDeque<std::pair<int32_t, std::shared_ptr<SharedMemory>>> m_sendProcessAssignDeque;
-	std::mutex m_sendProcessAssignDequeMutex;
-	FiniteDeque<std::pair<int32_t, std::shared_ptr<SharedMemory>>> m_sendProcessReadDeque;
-	std::mutex m_sendProcessReadDequeMutex;
-	FiniteDeque<std::pair<std::string, std::shared_ptr<SharedMemory>>> m_sendMemoryDeque;
-	std::mutex m_sendMemoryDequeMutex;
-	FiniteDeque<std::pair<int32_t, std::shared_ptr<Semaphore>>> m_sendSemaphoreDeque;
-	std::mutex m_sendSemaphoreDequeMutex;
+	ReadWriteMutex m_sendProcessAssignMapMutex;
+	std::map<int32_t, std::shared_ptr<SharedMemory>> m_sendProcessAssignMap;
+	ReadWriteMutex m_sendProcessReadMapMutex;
+	std::map<int32_t, std::shared_ptr<SharedMemory>> m_sendProcessReadMap;
+	ReadWriteMutex m_sendMemoryMapMutex;
+	std::unordered_map<std::string, std::shared_ptr<SharedMemory>> m_sendMemoryMap;
+	ReadWriteMutex m_sendSemaphoreMapMutex;
+	std::map<int32_t, std::shared_ptr<Semaphore>> m_sendSemaphoreMap;
+	ReadWriteMutex m_sendNameMemoryMapMutex;
+	std::map<std::string, std::pair<int32_t, std::shared_ptr<SharedMemory>>> m_sendNameMemoryMap;
+
+	LockFreeQueue<int32_t> m_assignQueue;
+	Semaphore m_assignSemaphore;
+	LockFreeQueue<char*> m_receiveQueue;
+	Semaphore m_receiveSemaphore;
+
+	ReadWriteMutex m_postMutex;
+	std::atomic<bool> m_waitEndPost;
+	LockFreeQueue<char*> m_postQueue;
+	Semaphore m_postSemaphore;
+	ReadWriteMutex m_postNameMutex;
+	std::atomic<bool> m_waitEndPostName;
+	LockFreeQueue<char*> m_postNameQueue;
+	Semaphore m_postNameSemaphore;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

@@ -1,10 +1,10 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "CorrespondParam/CorrespondParamAPI.h"
 #include <vector>
+#include "LockFreeQueue/LockFreeQueueAPI.h"
 
 class ProcessReceiveCallback;
-class SharedMemory;
+class Semaphore;
 
 /** 接收任务
 */
@@ -15,32 +15,27 @@ public:
 	*/
 	ReceiveTask();
 
-	/** 析构函数
-	*/
-	~ReceiveTask();
-
 public:
 	/** 执行任务
 	*/
 	void DoTask();
 
-	/** 设置参数
-	@param [in] buffer 数据首地址
-	@param [in] length 长度
-	@param [in] sendPid 发送者的pid
-	@param [in] callback 接收回调类
-	@param [in] type 数据类型
+	/** 中断任务
 	*/
-	void setParam(const char* buffer,
-		int32_t length,
-		int32_t sendPid,
-		std::vector<ProcessReceiveCallback*>* callback,
-		MessageType type);
+	void StopTask();
+
+	/** 设置参数
+	@param [in] callback 接收回调类
+	@param [in] receiveQueue 接收队列
+	@param [in] receiveSemaphore 接收信号量
+	*/
+	void setParam(std::vector<ProcessReceiveCallback*>* callback,
+		LockFreeQueue<char*>* receiveQueue,
+		Semaphore* receiveSemaphore);
 
 private:
-	int32_t m_sendPid;
-	MessageType m_type;
 	std::vector<ProcessReceiveCallback*>* m_callback;
-	char* m_buffer;
-	int32_t m_length;
+	LockFreeQueue<char*>* m_receiveQueue;
+	Semaphore* m_receiveSemaphore;
+	std::atomic<bool> m_exit;
 };

@@ -1,0 +1,196 @@
+ConsoleTest
+#include "ConsoleTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include "ProcessWork/ProcessWorkAPI.h"
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		ProcessWork::instance().uninitReceive();
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		//ProcessWork::instance().uninitPostThread();
+		ProcessWork::instance().clear();
+		ProcessWork::instance().uninitReceive();
+		exit(0);
+	}
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+int32_t num = 0;
+
+class Receive : public ProcessReceiveCallback
+{
+public:
+	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
+	{
+		++num;
+		if (num % 100000 == 0)
+		{
+			RCSend("num = %d", num);
+		}
+	}
+};
+
+int32_t main()
+{
+	Receive receive;
+	ProcessWork::instance().addProcessReceiveCallback(&receive);
+	ProcessWork::instance().initReceive(1024, 1000);
+
+	getchar();
+	return 0;
+}
+
+
+ConsoleTest1
+#include "ConsoleTest1.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include "ProcessWork/ProcessWorkAPI.h"
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "CStopWatch/CStopWatchAPI.h"
+#include "CSystem/CSystemAPI.h"
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest1");
+		ProcessWork::instance().uninitPostThread();
+		CTaskThreadManager::Instance().UninitAll();
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		exit(0);
+	}
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+int32_t g_sendCount = 0;
+int32_t g_sendThreadCount = 0;
+
+class Task : public CTask
+{
+public:
+	Task() :
+		m_exit(false)
+	{
+
+	}
+
+	void DoTask()
+	{
+		//uint32_t threadId = CSystem::SystemThreadId();
+		//RCSend("threadId = %d", threadId);
+		static CStopWatch watch;
+		int32_t index = -1;
+		while ((index++ != g_sendCount - 1) && !m_exit)
+		{
+			ProcessWork::instance().post("ConsoleTest", "123456", 6);
+		}
+		printf("watch = %d\n", (int32_t)watch.GetWatchTime());
+	}
+
+	void StopTask()
+	{
+		printf("stop\n");
+		m_exit = true;
+	}
+
+private:
+	std::atomic<bool> m_exit;
+};
+
+int32_t main()
+{
+	ProcessWork::instance().initPostThread();
+
+	g_sendCount = 100000;
+	g_sendThreadCount = 10;
+
+	std::vector<std::shared_ptr<CTaskThread>> vecThread;
+	std::vector<std::shared_ptr<Task>> vecTask;
+	int32_t count = g_sendThreadCount;
+	while (count-- != 0)
+	{
+		std::shared_ptr<Task> spTask(new Task);
+		vecTask.push_back(spTask);
+		uint32_t threadId = CTaskThreadManager::Instance().Init();
+		vecThread.push_back(CTaskThreadManager::Instance().GetThreadInterface(threadId));
+	}
+	count = g_sendThreadCount;
+	while (count-- != 0)
+	{
+		vecThread[count]->PostTask(vecTask[count]);
+	}
+
+	getchar();
+	return 0;
+}

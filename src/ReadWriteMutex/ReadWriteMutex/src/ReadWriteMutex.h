@@ -2,6 +2,13 @@
 #include "ReadWriteMutexBase.h"
 #include <mutex>
 
+//#define __SUPPORT_XP__
+
+#ifdef __SUPPORT_XP__
+#include <atomic>
+#include <condition_variable>
+#endif
+
 class ReadWriteMutexAPI ReadWriteMutex : public ReadWriteMutexBase
 {
 public:
@@ -15,14 +22,26 @@ public:
 
 private:
 #ifdef _MSC_VER
+	
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::mutex m_readMutex;
+
+#ifdef __SUPPORT_XP__
+	//已加读锁个数
+	std::atomic<int32_t> m_readCount;
 	std::mutex m_writeMutex;
+	std::condition_variable m_condition;
+#else
+	SRWLOCK m_writeMutex;
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-	//已加读锁个数
-	int32_t m_readCount;
+
+#elif __unix__
+	std::mutex m_writeMutex;
+#endif
 };

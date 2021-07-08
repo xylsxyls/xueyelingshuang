@@ -26,6 +26,8 @@
     <ClInclude Include="..\src\ProcessWork.h" />
     <ClInclude Include="..\src\ReadTask.h" />
     <ClInclude Include="..\src\ReceiveTask.h" />
+    <ClInclude Include="..\src\ScanTask.h" />
+    <ClInclude Include="..\src\SendNameTask.h" />
     <ClInclude Include="..\src\SendTask.h" />
   </ItemGroup>
   <ItemGroup>
@@ -33,6 +35,8 @@
     <ClCompile Include="..\src\ProcessWork.cpp" />
     <ClCompile Include="..\src\ReadTask.cpp" />
     <ClCompile Include="..\src\ReceiveTask.cpp" />
+    <ClCompile Include="..\src\ScanTask.cpp" />
+    <ClCompile Include="..\src\SendNameTask.cpp" />
     <ClCompile Include="..\src\SendTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

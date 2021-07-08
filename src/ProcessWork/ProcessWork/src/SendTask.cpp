@@ -1,55 +1,47 @@
 #include "SendTask.h"
-#include "SharedMemory/SharedMemoryAPI.h"
-#include "CStringManager/CStringManagerAPI.h"
-#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
 #include "ProcessWork.h"
-#include <string.h>
+#include "CorrespondParam/CorrespondParamAPI.h"
 
 SendTask::SendTask():
-m_thisProcessPid(0),
-m_destPid(0),
-m_buffer(nullptr),
-m_length(0),
-m_type(MessageType::INIT)
+m_waitEndPost(nullptr),
+m_postQueue(nullptr),
+m_postSemaphore(nullptr),
+m_exit(false)
 {
 
-}
-
-SendTask::~SendTask()
-{
-	if (m_buffer != nullptr)
-	{
-		delete[] m_buffer;
-	}
 }
 
 void SendTask::DoTask()
 {
-	if (m_destPid == 0)
+	while (!m_exit)
 	{
-		ProcessWork::instance().send(m_processName, m_buffer, m_length, m_type);
+		m_postSemaphore->wait();
+		if (m_exit || (*m_waitEndPost && m_postQueue->empty()))
+		{
+			break;
+		}
+
+		char* postBuffer = nullptr;
+		m_postQueue->pop(&postBuffer);
+		ProcessWork::instance().send(*(int32_t*)postBuffer,
+			postBuffer + 12,
+			*((int32_t*)postBuffer + 1),
+			(MessageType)*((int32_t*)postBuffer + 2));
+
+		delete[] postBuffer;
 	}
-	else
-	{
-		ProcessWork::instance().send(m_destPid, m_buffer, m_length, m_type);
-	}
-	delete[] m_buffer;
-	m_buffer = nullptr;
 }
 
-void SendTask::setParam(const char* buffer,
-	int32_t length,
-	int32_t thisProcessId,
-	int32_t destPid,
-	const std::string& processName,
-	MessageType type)
+void SendTask::StopTask()
 {
-	m_buffer = new char[length];
-	::memcpy(m_buffer, buffer, length);
-	m_length = length;
-	m_thisProcessPid = thisProcessId;
-	m_destPid = destPid;
-	m_processName = processName;
-	m_type = type;
+	m_exit = true;
+	m_postSemaphore->signal();
+}
+
+void SendTask::setParam(std::atomic<bool>* waitEndPost, LockFreeQueue<char*>* postQueue, Semaphore* postSemaphore)
+{
+	m_waitEndPost = waitEndPost;
+	m_postQueue = postQueue;
+	m_postSemaphore = postSemaphore;
 }

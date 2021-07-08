@@ -1,48 +1,53 @@
 #include "ReceiveTask.h"
-#include "SharedMemory/SharedMemoryAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "ProcessReceiveCallback.h"
-#include <string.h>
+#include "Semaphore/SemaphoreAPI.h"
 
 ReceiveTask::ReceiveTask():
-m_sendPid(0),
-m_length(0),
-m_buffer(nullptr),
 m_callback(nullptr),
-m_type(MessageType::INIT)
+m_receiveQueue(nullptr),
+m_receiveSemaphore(nullptr),
+m_exit(false)
 {
 	
 }
 
-ReceiveTask::~ReceiveTask()
-{
-	if (m_buffer != nullptr)
-	{
-		delete[] m_buffer;
-	}
-}
-
 void ReceiveTask::DoTask()
 {
-	for (auto itCallback = m_callback->begin(); itCallback != m_callback->end(); ++itCallback)
+	while (!m_exit)
 	{
-		(*itCallback)->receive(m_sendPid, m_buffer, m_length, m_type);
+		m_receiveSemaphore->wait();
+		if (m_exit)
+		{
+			break;
+		}
+		char* receive = nullptr;
+		m_receiveQueue->pop(&receive);
+
+		int32_t sendPid = *(int32_t*)receive;
+		int32_t length = *((int32_t*)receive + 1) - 4;
+		MessageType type = (MessageType)*((int32_t*)receive + 2);
+
+		for (auto itCallback = m_callback->begin(); itCallback != m_callback->end(); ++itCallback)
+		{
+			(*itCallback)->receive(sendPid, receive + 12, length, type);
+		}
+
+		delete[] receive;
 	}
-	delete[] m_buffer;
-	m_buffer = nullptr;
 }
 
-void ReceiveTask::setParam(const char* buffer,
-	int32_t length,
-	int32_t sendPid,
-	std::vector<ProcessReceiveCallback*>* callback,
-	MessageType type)
+void ReceiveTask::StopTask()
 {
-	m_buffer = new char[length + 1];
-	m_buffer[length] = 0;
-	::memcpy(m_buffer, buffer, length);
-	m_length = length;
-	m_sendPid = sendPid;
+	m_exit = true;
+	m_receiveSemaphore->signal();
+}
+
+void ReceiveTask::setParam(std::vector<ProcessReceiveCallback*>* callback,
+	LockFreeQueue<char*>* receiveQueue,
+	Semaphore* receiveSemaphore)
+{
 	m_callback = callback;
-	m_type = type;
+	m_receiveQueue = receiveQueue;
+	m_receiveSemaphore = receiveSemaphore;
 }

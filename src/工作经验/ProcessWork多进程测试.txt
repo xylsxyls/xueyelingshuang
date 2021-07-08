@@ -33,6 +33,7 @@ cp ConsoleTest ConsoleTest_9
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CDump/CDumpAPI.h"
+#include "LogManager/LogManagerAPI.h"
 
 #ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)
@@ -91,9 +92,9 @@ public:
 	@param [in] length 数据长度
 	@param [in] protocolId 发送数据协议
 	*/
-	virtual void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
 	{
-		RCSend("sendPid = %d, buffer = %s, length = %d, protocolId = %d", sendPid, buffer, length, (int32_t)protocolId);
+		LOGINFO("sendPid = %d, buffer = %s, length = %d, protocolId = %d", sendPid, buffer, length, (int32_t)type);
 
 		std::string name = CSystem::GetCurrentExeName();
 		int32_t currentIndex = name.back() - 48;
@@ -107,63 +108,62 @@ public:
 	}
 };
 
-/** 测试方式：把编译出的ConsoleTest改为ConsoleTest_0到9，同时启动，有20秒等待时间，输出165万行表示正常运行
+/** 测试方式：把编译出的ConsoleTest改为ConsoleTest_0到9，同时启动，有20秒等待时间，日志中总输出165万行表示正常运行
 */
 int32_t main()
 {
 	CDump::declareDumpFile();
-	int32_t whileCountIndex = -1;
-	while (whileCountIndex++ != 5 - 1)
+	
+	bool isLast = false;
+	std::string name = CSystem::GetCurrentExeName();
+	int32_t currentIndex = name.back() - 48;
+	if (name.back() == COUNTNUM)
 	{
-		bool isLast = false;
-		std::string name = CSystem::GetCurrentExeName();
-		int32_t currentIndex = name.back() - 48;
-		if (name.back() == COUNTNUM)
-		{
-			isLast = true;
-		}
-
-		ProcessReceive receive;
-		bool result = ProcessWork::instance().initReceive(&receive);
-		printf("result = %d\n", result);
-#ifdef _MSC_VER
-		CSystem::Sleep(5000 + whileCountIndex * 90000);
-#elif __unix__
-		CSystem::Sleep(5000 + whileCountIndex * 60000);
-#endif
-		printf("%s begin\n", name.c_str());
-		int32_t index = -1;
-		while (index++ != 10000 - 1)
-		{
-			std::string sendMessage = std::to_string(index);
-			int32_t sendIndex = -1;
-			while (sendIndex++ != COUNT)
-			{
-				if (sendIndex <= currentIndex)
-				{
-					continue;
-				}
-				std::string sendName = CStringManager::Format("ConsoleTest_%d", sendIndex);
-				ProcessWork::instance().send(sendName, sendMessage.c_str(), sendMessage.size());
-			}
-		}
-
-		printf("%s end\n", name.c_str());
-
-		//CSystem::Sleep(60000);
-#ifdef _MSC_VER
-		CSystem::Sleep(120000 + whileCountIndex * 60000);
-#elif __unix__
-		CSystem::Sleep(90000 + whileCountIndex * 60000);
-#endif
-
-		ProcessWork::instance().clear();
-		//ProcessWork::instance().uninitPostThread();
-		ProcessWork::instance().uninitReceive();
-
-		printf("uninit all, name = %s\n", name.c_str());
+		isLast = true;
 	}
 
+	ProcessReceive receive;
+	ProcessWork::instance().addProcessReceiveCallback(&receive);
+	bool result = ProcessWork::instance().initReceive(1024);
+	printf("result = %d\n", result);
+#ifdef _MSC_VER
+	CSystem::Sleep(20000);
+#elif __unix__
+	CSystem::Sleep(20000);
+#endif
+	printf("%s begin\n", name.c_str());
+	int32_t index = -1;
+	while (index++ != 10000 - 1)
+	{
+		std::string sendMessage = std::to_string(index);
+		int32_t sendIndex = -1;
+		while (sendIndex++ != COUNT)
+		{
+			if (sendIndex <= currentIndex)
+			{
+				continue;
+			}
+			std::string sendName = CStringManager::Format("ConsoleTest_%d", sendIndex);
+			ProcessWork::instance().send(sendName, sendMessage.c_str(), sendMessage.size());
+		}
+	}
+
+	printf("%s end\n", name.c_str());
+
+	//CSystem::Sleep(60000);
+#ifdef _MSC_VER
+	CSystem::Sleep(120000);
+#elif __unix__
+	CSystem::Sleep(90000);
+#endif
+
+	//ProcessWork::instance().clear();
+	//ProcessWork::instance().uninitPostThread();
+	//ProcessWork::instance().uninitReceive();
+
+	printf("uninit all, name = %s\n", name.c_str());
+
+	RCSend("uninit");
 	CSystem::Sleep(60000 * 60 * 24);
 	return 0;
 }

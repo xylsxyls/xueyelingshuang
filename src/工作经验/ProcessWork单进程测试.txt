@@ -22,6 +22,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().clear();
 		ProcessWork::instance().uninitReceive();
+		CTaskThreadManager::Instance().UninitAll();
 	}
 	return FALSE;
 }
@@ -59,6 +60,8 @@ struct CtrlC
 CtrlC g_ctrlc;
 #endif
 
+std::atomic<int32_t> g_allReceiveCount = 0;
+
 class ProcessReceive : public ProcessReceiveCallback
 {
 public:
@@ -68,11 +71,13 @@ public:
 	@param [in] length 数据长度
 	@param [in] protocolId 发送数据协议
 	*/
-	virtual void receive(int32_t sendPid, char* buffer, int32_t length, CorrespondParam::ProtocolId protocolId)
+	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
 	{
-		RCSend("sendPid = %d, buffer = %s, length = %d, protocolId = %d", sendPid, buffer, length, (int32_t)protocolId);
+		RCSend("sendPid = %d, buffer = %s, length = %d, protocolId = %d, count = %d", sendPid, buffer, length, (int32_t)type, (int32_t)(++g_allReceiveCount));
 	}
 };
+
+std::mutex g_mutex;
 
 class Task : public CTask
 {
@@ -85,14 +90,17 @@ public:
 
 	void DoTask()
 	{
-		CStopWatch watch;
 		uint32_t pid = CSystem::currentProcessPid();
+		CStopWatch watch;
 		int32_t index = -1;
-		while ((index++ != 1000000 - 1) && !m_exit)
+		while ((index++ != 100000 - 1) && !m_exit)
 		{
 			//std::string sendMessage = std::to_string(index);
 			//ProcessWork::instance().send(pid, sendMessage.c_str(), sendMessage.size());
-			ProcessWork::instance().send("ConsoleTest", "123456", 6);
+			//g_mutex.lock();
+			ProcessWork::instance().send("ConsoleTest", "1234", 4);
+			//ProcessWork::instance().send("ConsoleTest", "123456", 6);
+			//g_mutex.unlock();
 		}
 		printf("watch = %d\n", (int32_t)watch.GetWatchTime());
 	}
@@ -110,10 +118,11 @@ private:
 int32_t main()
 {
 	ProcessReceive receive;
-	bool result = ProcessWork::instance().initReceive(&receive);
+	ProcessWork::instance().addProcessReceiveCallback(&receive);
+	bool result = ProcessWork::instance().initReceive(1024, 1100);
 	printf("result = %d\n", result);
 
-	int32_t count = 1;
+	int32_t count = 10;
 	while (count-- != 0)
 	{
 		uint32_t threadId = CTaskThreadManager::Instance().Init();

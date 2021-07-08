@@ -51,11 +51,11 @@ ReadWriteMutex_allSame=$4
 "$CLOUD_REBUILD" ReadWriteMutex $ReadWriteMutex_bit $ReadWriteMutex_dlllib $ReadWriteMutex_debugRelease $ReadWriteMutex_allSame
 
 #--------------------------------------------------------------------
-FiniteDeque_bit=$1
-FiniteDeque_dlllib=$2
-FiniteDeque_debugRelease=$3
-FiniteDeque_allSame=$4
-"$CLOUD_REBUILD" FiniteDeque $FiniteDeque_bit $FiniteDeque_dlllib $FiniteDeque_debugRelease $FiniteDeque_allSame
+LockFreeQueue_bit=$1
+LockFreeQueue_dlllib=$2
+LockFreeQueue_debugRelease=$3
+LockFreeQueue_allSame=$4
+"$CLOUD_REBUILD" LockFreeQueue $LockFreeQueue_bit $LockFreeQueue_dlllib $LockFreeQueue_debugRelease $LockFreeQueue_allSame
 
 #--------------------------------------------------------------------
 AtomicMath_bit=$1

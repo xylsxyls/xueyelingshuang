@@ -1,59 +1,81 @@
 #include "CopyTask.h"
 #include "SharedMemory/SharedMemoryAPI.h"
-#include "CorrespondParam/CorrespondParamAPI.h"
-#include "ReceiveTask.h"
+#include "Semaphore/SemaphoreAPI.h"
 
 CopyTask::CopyTask() :
-m_assign(0),
-m_callback(nullptr),
+m_areaAssign(nullptr),
 m_memoryMap(nullptr),
-m_receiveThread(nullptr)
+m_assignQueue(nullptr),
+m_assignSemaphore(nullptr),
+m_receiveQueue(nullptr),
+m_receiveSemaphore(nullptr),
+m_exit(false)
 {
 	
 }
 
 void CopyTask::DoTask()
 {
-	void* memory = m_memoryMap->find(m_assign)->second->writeWithoutLock();
-	if (memory == nullptr)
-	{
-		printf("CopyTask memory nullptr\n");
-	}
 	void* areaAssign = m_areaAssign->writeWithoutLock();
 	if (areaAssign == nullptr)
 	{
 		printf("CopyTask areaAssign nullptr\n");
 	}
 	int32_t areaCount = *(int32_t*)areaAssign;
-	int32_t sendPid = *(int32_t*)memory;
-	int32_t length = *((int32_t*)memory + 1) - 4;
-	MessageType type = (MessageType)*((int32_t*)memory + 2);
-	std::shared_ptr<ReceiveTask> spReceiveTask(new ReceiveTask);
-	spReceiveTask->setParam((char*)memory + 12, length, sendPid, m_callback, type);
 
-	int32_t index = -1;
-	while (index++ != areaCount - 1)
+	while (!m_exit)
 	{
-		if (*((int32_t*)areaAssign + 1 + index * 3) == m_assign)
+		m_assignSemaphore->wait();
+		if (m_exit)
 		{
-			*((int32_t*)areaAssign + 1 + index * 3 + 2) = 0;
-			*((int32_t*)areaAssign + 1 + index * 3 + 1) = 0;
 			break;
 		}
-	}
+		int32_t assign = 0;
+		m_assignQueue->pop(&assign);
 
-	m_receiveThread->PostTask(spReceiveTask);
+		void* memory = m_memoryMap->find(assign)->second->writeWithoutLock();
+		if (memory == nullptr)
+		{
+			printf("CopyTask memory nullptr\n");
+		}
+
+		int32_t length = *((int32_t*)memory + 1) - 4 + 12;
+		char* receive = new char[length + 1];
+		receive[length] = 0;
+		::memcpy(receive, (char*)memory, length);
+
+		int32_t index = -1;
+		while (index++ != areaCount - 1)
+		{
+			if (*((int32_t*)areaAssign + 1 + index * 2) == assign)
+			{
+				*((int32_t*)areaAssign + 1 + index * 2 + 1) = 0;
+				break;
+			}
+		}
+
+		m_receiveQueue->push(receive);
+		m_receiveSemaphore->signal();
+	}
 }
 
-void CopyTask::setParam(int32_t assign,
-	std::vector<ProcessReceiveCallback*>* callback,
-	SharedMemory* areaAssign,
-	std::map<int32_t, std::shared_ptr<SharedMemory>>* memoryMap,
-	const std::shared_ptr<CTaskThread>& receiveThread)
+void CopyTask::StopTask()
 {
-	m_assign = assign;
-	m_callback = callback;
+	m_exit = true;
+	m_assignSemaphore->signal();
+}
+
+void CopyTask::setParam(SharedMemory* areaAssign,
+	std::map<int32_t, std::shared_ptr<SharedMemory>>* memoryMap,
+	LockFreeQueue<int32_t>* assignQueue,
+	Semaphore* assignSemaphore,
+	LockFreeQueue<char*>* receiveQueue,
+	Semaphore* receiveSemaphore)
+{
 	m_areaAssign = areaAssign;
 	m_memoryMap = memoryMap;
-	m_receiveThread = receiveThread;
+	m_assignQueue = assignQueue;
+	m_assignSemaphore = assignSemaphore;
+	m_receiveQueue = receiveQueue;
+	m_receiveSemaphore = receiveSemaphore;
 }

@@ -1,8 +1,7 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include <vector>
+#include "LockFreeQueue/LockFreeQueueAPI.h"
 
-class ProcessReceiveCallback;
 class Semaphore;
 class SharedMemory;
 
@@ -25,30 +24,23 @@ public:
 	void StopTask();
 
 	/** 设置参数
-	@param [in] callback 接收回调类
 	@param [in] readSemaphore 读取信号
-	@param [in] readEndSemaphore 读取完毕信号
-	@param [in] areaAssign 缓存区号分配缓存队列
+	@param [in] areaCount 缓存区个数
 	@param [in] areaRead 缓存区号读取缓存队列
-	@param [in] memoryMap 所有缓冲区
-	@param [in] copyThread 拷贝线程
-	@param [in] receiveThread 接收线程
+	@param [in] assignQueue 分配号队列
+	@param [in] assignSemaphore 分配号信号量
 	*/
-	void setParam(std::vector<ProcessReceiveCallback*>* callback,
-		Semaphore* readSemaphore,
-		SharedMemory* areaAssign,
+	void setParam(Semaphore* readSemaphore,
+		int32_t areaCount,
 		SharedMemory* areaRead,
-		std::map<int32_t, std::shared_ptr<SharedMemory>>* memoryMap,
-		const std::shared_ptr<CTaskThread>& copyThread,
-		const std::shared_ptr<CTaskThread>& receiveThread);
+		LockFreeQueue<int32_t>* assignQueue,
+		Semaphore* assignSemaphore);
 
 private:
-	std::atomic<bool> m_exit;
-	std::vector<ProcessReceiveCallback*>* m_callback;
 	Semaphore* m_readSemaphore;
-	SharedMemory* m_areaAssign;
+	int32_t m_areaCount;
 	SharedMemory* m_areaRead;
-	std::map<int32_t, std::shared_ptr<SharedMemory>>* m_memoryMap;
-	std::shared_ptr<CTaskThread> m_copyThread;
-	std::shared_ptr<CTaskThread> m_receiveThread;
+	LockFreeQueue<int32_t>* m_assignQueue;
+	Semaphore* m_assignSemaphore;
+	std::atomic<bool> m_exit;
 };

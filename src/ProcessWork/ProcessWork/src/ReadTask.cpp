@@ -1,29 +1,27 @@
 #include "ReadTask.h"
 #include "Semaphore/SemaphoreAPI.h"
 #include "SharedMemory/SharedMemoryAPI.h"
-#include "CopyTask.h"
 #include "CSystem/CSystemAPI.h"
 
 ReadTask::ReadTask():
-m_exit(false),
-m_callback(nullptr),
-m_readSemaphore(nullptr),
+m_readSemaphore(false),
+m_areaCount(0),
 m_areaRead(nullptr),
-m_copyThread(nullptr),
-m_receiveThread(nullptr)
+m_assignQueue(nullptr),
+m_assignSemaphore(nullptr),
+m_exit(false)
 {
 	
 }
 
 void ReadTask::DoTask()
 {
-	//m_readEndSemaphore->processSignal();
 	void* areaRead = m_areaRead->writeWithoutLock();
 	if (areaRead == nullptr)
 	{
-		printf("ReadTask area nullptr\n");
+		printf("ReadTask areaRead nullptr\n");
 	}
-	int32_t areaCount = m_memoryMap->size();
+
 	while (true)
 	{
 		m_readSemaphore->processWait();
@@ -32,41 +30,57 @@ void ReadTask::DoTask()
 			break;
 		}
 
-		while (!m_exit)
+		int32_t& read = *((int32_t*)areaRead + 1);
+		int32_t* beginReadPtr = (int32_t*)areaRead + 2;
+		volatile int32_t& readPoint = *(beginReadPtr + read * 2 + 1);
+		volatile int32_t& readAssign = *(beginReadPtr + read * 2);
+		int32_t readCount = 0;
+		int32_t beginReadTime = 0;
+		bool isFind = true;
+		while ((readPoint == 0 || readAssign == 0) && !m_exit)
 		{
-			int32_t& read = *((int32_t*)areaRead + 1);
-			int32_t* beginReadPtr = (int32_t*)areaRead + 2;
-			int32_t& readPoint = *(beginReadPtr + read * 2 + 1);
-			if (readPoint == 0)
+			++readCount;
+			if (readCount == 10)
 			{
-				break;
+				beginReadTime = CSystem::GetTickCount();
 			}
-			int32_t assign = *(beginReadPtr + read * 2);
-			if (assign == 0)
+			else if (readCount > 10)
 			{
-				CSystem::Sleep(100);
-				if (*(beginReadPtr + read * 2) == 0)
+				//超过100毫秒仍然读不到正常数据时说明发送程序抢占到节点后崩溃了
+				if (CSystem::GetTickCount() - beginReadTime > 5000)
 				{
 					read += 1;
-					if (read == areaCount)
+					if (read == m_areaCount)
 					{
 						read = 0;
 					}
+					readAssign = 0;
 					readPoint = 0;
-					continue;
+					printf("find error point\n");
+					isFind = false;
+					break;
 				}
-				assign = *(beginReadPtr + read * 2);
 			}
-			*(beginReadPtr + read * 2) = 0;
-			*(beginReadPtr + read * 2 + 1) = 0;
-			read += 1;
-			if (read == areaCount)
-			{
-				read = 0;
-			}
-			std::shared_ptr<CopyTask> spCopyTask(new CopyTask);
-			spCopyTask->setParam(assign, m_callback, m_areaAssign, m_memoryMap, m_receiveThread);
-			m_copyThread->PostTask(spCopyTask);
+		}
+		if (m_exit)
+		{
+			break;
+		}
+		if (!isFind)
+		{
+			continue;
+		}
+		
+		int32_t assign = readAssign;
+		m_assignQueue->push(assign);
+		m_assignSemaphore->signal();
+
+		*(beginReadPtr + read * 2) = 0;
+		*(beginReadPtr + read * 2 + 1) = 0;
+		read += 1;
+		if (read == m_areaCount)
+		{
+			read = 0;
 		}
 	}
 }
@@ -77,19 +91,15 @@ void ReadTask::StopTask()
 	m_readSemaphore->processSignal();
 }
 
-void ReadTask::setParam(std::vector<ProcessReceiveCallback*>* callback,
-	Semaphore* readSemaphore,
-	SharedMemory* areaAssign,
+void ReadTask::setParam(Semaphore* readSemaphore,
+	int32_t areaCount,
 	SharedMemory* areaRead,
-	std::map<int32_t, std::shared_ptr<SharedMemory>>* memoryMap,
-	const std::shared_ptr<CTaskThread>& copyThread,
-	const std::shared_ptr<CTaskThread>& receiveThread)
+	LockFreeQueue<int32_t>* assignQueue,
+	Semaphore* assignSemaphore)
 {
-	m_callback = callback;
 	m_readSemaphore = readSemaphore;
-	m_areaAssign = areaAssign;
+	m_areaCount = areaCount;
 	m_areaRead = areaRead;
-	m_memoryMap = memoryMap;
-	m_copyThread = copyThread;
-	m_receiveThread = receiveThread;
+	m_assignQueue = assignQueue;
+	m_assignSemaphore = assignSemaphore;
 }

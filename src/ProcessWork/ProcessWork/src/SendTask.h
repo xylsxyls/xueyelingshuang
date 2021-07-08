@@ -1,7 +1,8 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "CorrespondParam/CorrespondParamAPI.h"
+#include "LockFreeQueue/LockFreeQueueAPI.h"
 
+class Semaphore;
 /** 发送任务
 */
 class SendTask : public CTask
@@ -11,35 +12,25 @@ public:
 	*/
 	SendTask();
 
-	/** 析构函数
-	*/
-	~SendTask();
-
 public:
 	/** 执行任务
 	*/
 	void DoTask();
 
-	/** 设置参数
-	@param [in] buffer 数据首地址
-	@param [in] length 长度
-	@param [in] thisProcessId 当前进程pid
-	@param [in] destPid 目标进程pid
-	@param [in] processName 目标进程名，不带后缀
-	@param [in] type 数据类型
+	/** 中断任务
 	*/
-	void setParam(const char* buffer,
-		int32_t length,
-		int32_t thisProcessId,
-		int32_t destPid,
-		const std::string& processName,
-		MessageType type);
+	void StopTask();
+
+	/** 设置参数
+	@param [in] waitEndPost 发送结束后是否退出循环
+	@param [in] postQueue 发送数据队列
+	@param [in] postSemaphore 发送信号量
+	*/
+	void setParam(std::atomic<bool>* waitEndPost, LockFreeQueue<char*>* postQueue, Semaphore* postSemaphore);
 
 private:
-	int32_t m_thisProcessPid;
-	int32_t m_destPid;
-	std::string m_processName;
-	char* m_buffer;
-	int32_t m_length;
-	MessageType m_type;
+	std::atomic<bool>* m_waitEndPost;
+	LockFreeQueue<char*>* m_postQueue;
+	Semaphore* m_postSemaphore;
+	std::atomic<bool> m_exit;
 };

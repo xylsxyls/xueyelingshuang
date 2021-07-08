@@ -1,0 +1,7 @@
+while (*readPoint == 0)
+{
+	continue;
+}
+
+访问readPoint只会第一次从内存中读，后面都是从寄存器中读
+如果该内存被多线程访问，会造成写线程饿死，必须声明volatile

@@ -14,7 +14,9 @@ public:
 	*/
 	FileReadWriteMutex(const std::string& filePath);
 
-	~FileReadWriteMutex();
+	/** Îö¹¹º¯Êý
+	*/
+	virtual ~FileReadWriteMutex();
 
 public:
 	virtual void read();

@@ -1,0 +1,2 @@
+利用compare_exchange_strong
+和expect值一致是改为desire值，并给出true返回，由此决定是否上锁，外面用while循环
