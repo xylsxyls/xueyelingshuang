@@ -7,6 +7,9 @@ ConsoleTest
 #include <stdlib.h>
 #endif
 #include "ProcessWork/ProcessWorkAPI.h"
+#ifdef __unix__
+#include "SendToMessageTest.h"
+#endif
 
 #ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)
@@ -30,8 +33,6 @@ void CtrlCMessage(int eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		//ProcessWork::instance().uninitPostThread();
-		ProcessWork::instance().clear();
 		ProcessWork::instance().uninitReceive();
 		exit(0);
 	}
@@ -114,6 +115,8 @@ void CtrlCMessage(int eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
+		ProcessWork::instance().uninitPostThread();
+		CTaskThreadManager::Instance().UninitAll();
 		exit(0);
 	}
 }

@@ -175,6 +175,7 @@ void ProcessWork::uninitReceive()
 
 	m_memoryMap.clear();
 	m_callback.clear();
+	clear();
 	
 	if (m_readSemaphore != nullptr)
 	{

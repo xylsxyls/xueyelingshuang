@@ -42,7 +42,6 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		ProcessWork::instance().clear();
 		ProcessWork::instance().uninitReceive();
 	}
 	return FALSE;
@@ -58,8 +57,6 @@ void CtrlCMessage(int eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		//ProcessWork::instance().uninitPostThread();
-		ProcessWork::instance().clear();
 		ProcessWork::instance().uninitReceive();
 		exit(0);
 	}
