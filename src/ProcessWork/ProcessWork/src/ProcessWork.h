@@ -67,7 +67,7 @@ public:
 	void uninitPostThread();
 	
 	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方，需业务保证对方进程存在
-	windows下发送速度65.9万/s，接收速度65.9万/s，linux下发送速度43.7万包/s，接收速度43.7万包/s
+	windows下发送速度70.9万/s，接收速度70.9万/s，linux下发送速度45.9万包/s，接收速度45.9万包/s
 	@param [in] destPid 目标进程pid
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
@@ -83,7 +83,7 @@ public:
 	void send(int32_t destPid, const std::string& message, MessageType type = MessageType::MESSAGE);
 
 	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方
-	windows下发送速度63.6万包/s，接收速度63.6万包/s，xp方案为43万包/s，多进程，5进程40万包/s，10进程，42.1万包/s，20进程53.8万包/s，linux下发送速度37.6万包/s，接收速度37.6万包/s
+	windows下发送速度67.3万包/s，接收速度67.3万包/s，xp方案为51万包/s，多进程，5进程43.9万包/s，10进程，36.7万包/s，20进程57.2万包/s，linux下发送速度38.4万包/s，接收速度38.4万包/s
 	@param [in] processName 目标进程名，windows下不带后缀名，linux下全名
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
@@ -114,7 +114,7 @@ public:
 	void post(int32_t destPid, const std::string& message, MessageType type = MessageType::MESSAGE);
 
 	/** 向服务端发送字符串，单进程有序，多进程无序，单进程单线程有序，多进程或多线程可能出现先发后到
-	当有11条线程同时调用时，和send的速度基本一致，超过11条性能大幅下降，1条线程发送速度355.9万包/s
+	当有11条线程同时调用时，是send的3倍速度，12条线程是send的3分之1速度，超过11条性能大幅下降，1条线程发送速度410.2万包/s
 	@param [in] processName 目标进程名，带后缀
 	@param [in] buffer 字符串地址
 	@param [in] length 长度
