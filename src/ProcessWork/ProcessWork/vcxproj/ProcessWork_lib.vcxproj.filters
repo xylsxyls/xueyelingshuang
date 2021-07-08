@@ -10,12 +10,13 @@
     <ClInclude Include="..\src\ProcessWorkMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AssignTask.h" />
     <ClInclude Include="..\src\CopyTask.h" />
     <ClInclude Include="..\src\ProcessReceiveCallback.h" />
     <ClInclude Include="..\src\ReadTask.h" />
     <ClInclude Include="..\src\ReceiveTask.h" />
     <ClInclude Include="..\src\SendTask.h" />
+    <ClInclude Include="..\src\ScanTask.h" />
+    <ClInclude Include="..\src\SendNameTask.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -29,10 +30,11 @@
     <ClCompile Include="..\src\ProcessWork.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\AssignTask.cpp" />
     <ClCompile Include="..\src\CopyTask.cpp" />
     <ClCompile Include="..\src\ReadTask.cpp" />
     <ClCompile Include="..\src\ReceiveTask.cpp" />
     <ClCompile Include="..\src\SendTask.cpp" />
+    <ClCompile Include="..\src\ScanTask.cpp" />
+    <ClCompile Include="..\src\SendNameTask.cpp" />
   </ItemGroup>
 </Project>
