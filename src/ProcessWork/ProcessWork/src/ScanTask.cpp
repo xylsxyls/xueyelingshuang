@@ -27,6 +27,10 @@ void ScanTask::DoTask()
 			int32_t assignPoint = *((int32_t*)areaAssign + 1 + index * 2 + 1);
 			if (assignPoint == 0)
 			{
+				if (index == areaCount - 1)
+				{
+					Sleep(5000);
+				}
 				continue;
 			}
 			Sleep(1000);
