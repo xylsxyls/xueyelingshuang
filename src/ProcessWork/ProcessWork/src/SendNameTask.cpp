@@ -2,9 +2,10 @@
 #include "Semaphore/SemaphoreAPI.h"
 #include "ProcessWork.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
+#include <string.h>
 
 SendNameTask::SendNameTask():
-m_waitEndPostName(false),
+m_waitEndPostName(nullptr),
 m_postNameQueue(nullptr),
 m_postNameSemaphore(nullptr),
 m_exit(false)

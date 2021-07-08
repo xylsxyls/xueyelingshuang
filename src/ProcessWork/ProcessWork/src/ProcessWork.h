@@ -6,6 +6,8 @@
 #include <memory>
 #include <map>
 #include <unordered_map>
+#include <vector>
+#include <atomic>
 #include "ProcessWorkMacro.h"
 
 class SharedMemory;

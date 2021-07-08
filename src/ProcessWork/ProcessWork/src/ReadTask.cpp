@@ -4,7 +4,7 @@
 #include "CSystem/CSystemAPI.h"
 
 ReadTask::ReadTask():
-m_readSemaphore(false),
+m_readSemaphore(nullptr),
 m_areaCount(0),
 m_areaRead(nullptr),
 m_assignQueue(nullptr),

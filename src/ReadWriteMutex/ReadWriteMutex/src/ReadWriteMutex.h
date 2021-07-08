@@ -4,15 +4,23 @@
 
 //#define __SUPPORT_XP__
 
+#ifdef _MSC_VER
 #ifdef __SUPPORT_XP__
 #include <atomic>
 #include <condition_variable>
+#endif
+#elif __unix__
+#include <pthread.h>
 #endif
 
 class ReadWriteMutexAPI ReadWriteMutex : public ReadWriteMutexBase
 {
 public:
 	ReadWriteMutex();
+
+#ifdef __unix__
+	virtual ~ReadWriteMutex();
+#endif
 
 public:
 	virtual void read();
@@ -42,6 +50,6 @@ private:
 #endif
 
 #elif __unix__
-	std::mutex m_writeMutex;
+	pthread_rwlock_t m_writeMutex;
 #endif
 };
