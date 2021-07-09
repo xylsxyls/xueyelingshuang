@@ -1,0 +1,21 @@
+syntax = "proto3";
+package logtest;
+option optimize_for = LITE_RUNTIME;
+
+/** 消息返回码
+*/
+message LogTestMessage
+{
+	uint64 logIntDateTime = 1;
+	int32 logLevel = 2;
+	bool logIsSendNet = 3;
+	bool logIsSendScreen = 4;
+	bool logIsWriteLog = 5;
+	uint32 logThreadId = 6;
+	string logName = 7;
+	string logFileName = 8;
+	string logFunName = 9;
+	string logProcessName = 10;
+	string logLoginName = 11
+	string logBuffer = 12;
+}

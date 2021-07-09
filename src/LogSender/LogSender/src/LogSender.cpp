@@ -60,12 +60,6 @@ void LogSender::logTestOpen()
 
 void LogSender::logSend(const LogPackage& package, const char* format, ...)
 {
-	SharedMemory sharedMemory("ProcessArea_LogTest" + LOGTEST_CLIENT_VERSION);
-	if (sharedMemory.writeWithoutLock() == nullptr)
-	{
-		return;
-	}
-
 	std::string str;
 	va_list args;
 	va_start(args, format);
@@ -97,20 +91,20 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 
 	std::string strMessage;
 	{
-		std::unique_lock<std::mutex> lock(m_messageMutex);
-		(*m_message)[LOG_INT_DATE_TIME] = time;
-		(*m_message)[LOG_LEVEL] = package.m_logLevel;
-		(*m_message)[LOG_IS_SEND_NET] = (int32_t)package.m_isSendNet;
-		(*m_message)[LOG_IS_SEND_SCREEN] = (int32_t)package.m_isSendScreen;
-		(*m_message)[LOG_IS_WRITE_LOG] = (int32_t)package.m_isWriteLog;
-		(*m_message)[LOG_THREAD_ID] = (int32_t)CSystem::SystemThreadId();
+		ProtoMessage message;
+		message[LOG_INT_DATE_TIME] = time;
+		message[LOG_LEVEL] = package.m_logLevel;
+		message[LOG_IS_SEND_NET] = (int32_t)package.m_isSendNet;
+		message[LOG_IS_SEND_SCREEN] = (int32_t)package.m_isSendScreen;
+		message[LOG_IS_WRITE_LOG] = (int32_t)package.m_isWriteLog;
+		message[LOG_THREAD_ID] = (int32_t)CSystem::SystemThreadId();
 
-		(*m_message)[LOG_NAME] = package.m_logName;
-		(*m_message)[LOG_FILE_NAME] = package.m_fileName;
-		(*m_message)[LOG_FUN_NAME] = package.m_funName;
-		(*m_message)[LOG_BUFFER] = str;
+		message[LOG_NAME] = package.m_logName;
+		message[LOG_FILE_NAME] = package.m_fileName;
+		message[LOG_FUN_NAME] = package.m_funName;
+		message[LOG_BUFFER] = str;
 
-		(*m_message).toString(strMessage);
+		message.toString(strMessage);
 	}
 	
 	send(strMessage.c_str(), (int32_t)strMessage.length());
@@ -183,21 +177,3 @@ void LogSender::send(const char* buffer, int32_t length)
 {
 	ProcessWork::instance().send("LogTest" + LOGTEST_CLIENT_VERSION, buffer, length, LOGTEST_MESSAGE);
 }
-
-//int32_t main(int32_t argc, char** argv)
-//{
-//	int32_t count = 0;
-//	if (argc == 1)
-//	{
-//		count = 1;
-//	}
-//	else
-//	{
-//		count = atoi(argv[1]);
-//	}
-//	while (count-- != 0)
-//	{
-//		LOG_SEND("123456");
-//	}
-//	return 0;
-//}
