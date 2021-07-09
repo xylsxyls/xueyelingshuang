@@ -17,6 +17,7 @@
 
 #define LOG_NAME_SET(name) LogSenderManager::instance().setLogName(name)
 
+//第一次发送日志必须单线程完成，发送模块单一实例的初始化必须单线程完成
 #define LOG_SEND(format, ...) LOG_SEND_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_DEBUG(format, ...) LOG_SEND_DEBUG_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_INFO(format, ...) LOG_SEND_INFO_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
