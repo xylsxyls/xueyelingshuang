@@ -1,0 +1,139 @@
+#include "ConsoleTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
+#include "CDump/CDumpAPI.h"
+
+#ifdef __unix__
+#include "/home/xylsxyls/xueyelingshuang/common/LogSender/LogSenderAPI.h"
+#endif
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		exit(0);
+	}	
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+int32_t g_sendCount = 0;
+int32_t g_sendThreadCount = 1;
+
+class Task : public CTask
+{
+public:
+	void DoTask()
+	{
+		int32_t index = -1;
+		while (index++ != g_sendCount - 1)
+		{
+			LOG_SEND("123456");
+		}
+	}
+};
+
+int32_t main(int argc, char** argv)
+{
+	CDump::declareDumpFile();
+	std::vector<std::string> vecParam = CSystem::exeParam(argc, argv);
+	if (vecParam.empty())
+	{
+		return 0;
+	}
+	else if (vecParam.size() == 1)
+	{
+		LOG_SEND("123456");
+		return 0;
+	}
+	else if (vecParam.size() == 2)
+	{
+		g_sendCount = std::atoi(vecParam[1].c_str());
+	}
+	else if (vecParam.size() == 3)
+	{
+		g_sendCount = std::atoi(vecParam[1].c_str());
+		g_sendThreadCount = std::atoi(vecParam[2].c_str());
+	}
+
+	if (g_sendThreadCount <= 1)
+	{
+		if (g_sendCount >= 1)
+		{
+			int32_t index = -1;
+			while (index++ != g_sendCount - 1)
+			{
+				LOG_SEND("123456");
+			}
+		}
+		else
+		{
+			LOG_SEND("123456");
+		}
+		return 0;
+	}
+
+	std::vector<uint32_t> vecThreadId;
+	std::vector<std::shared_ptr<Task>> vecTask;
+	std::vector<std::shared_ptr<CTaskThread>> vecTaskThread;
+
+	int32_t index = -1;
+	while (index++ != g_sendThreadCount - 1)
+	{
+		vecTask.push_back(std::shared_ptr<Task>(new Task));
+		vecThreadId.push_back(CTaskThreadManager::Instance().Init());
+		vecTaskThread.push_back(CTaskThreadManager::Instance().GetThreadInterface(vecThreadId.back()));
+	}
+
+	LOG_SEND("ProcessWork instance init in one thread for send");
+	
+	index = -1;
+	while (index++ != g_sendThreadCount - 1)
+	{
+		vecTaskThread[index]->PostTask(vecTask[index]);
+	}
+
+	index = -1;
+	while (index++ != g_sendThreadCount - 1)
+	{
+		CTaskThreadManager::Instance().WaitForEnd(vecThreadId[index]);
+	}
+
+	return 0;
+}
