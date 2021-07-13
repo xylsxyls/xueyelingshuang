@@ -34,6 +34,7 @@ void ScreenTask::DoTask()
 			{
 				RCSend("NET %s %s", m_message.logloginname().c_str(), m_message.logbuffer().c_str());
 			}
+			continue;
 		}
 		if (m_message.ParseFromString(m_buffer))
 		{
