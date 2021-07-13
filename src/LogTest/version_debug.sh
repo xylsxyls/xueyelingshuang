@@ -4,7 +4,7 @@
 
 #--------------------------------------------------------------------
 SHELL_FOLDER=$(cd $(dirname $0); pwd)
-xueyelingshuang=$SHELL_FOLDER/../../..
+xueyelingshuang=$SHELL_FOLDER/../..
 
 protocname="protoc.exe"
 
