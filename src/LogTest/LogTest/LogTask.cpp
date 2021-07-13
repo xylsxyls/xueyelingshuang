@@ -1,87 +1,97 @@
 #include "LogTask.h"
-#include "CorrespondParam/CorrespondParamAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include "IntDateTime/IntDateTimeAPI.h"
-#include "ProcessWork/ProcessWorkAPI.h"
-
-extern bool g_exit;
+#include "Semaphore/SemaphoreAPI.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 LogTask::LogTask():
-m_isNet(false)
+m_logSemaphore(nullptr),
+m_logQueue(nullptr),
+m_exit(false)
 {
 
 }
 
 void LogTask::DoTask()
 {
-	m_message.clear();
-	m_message.from(m_buffer);
-	m_messageMap.clear();
-	m_message.getMap(m_messageMap);
-	if ((int32_t)m_messageMap[LOG_CLOSE] == (int32_t)true)
+	while (!m_exit)
 	{
-		ProcessWork::instance().uninitPostThread();
-		ProcessWork::instance().uninitReceive();
-		g_exit = true;
-		return;
-	}
-	if ((int32_t)m_messageMap[LOG_UNINIT] == (int32_t)true)
-	{
-		LogManager::instance().uninitAll();
-		return;
-	}
-	if ((int32_t)m_messageMap[LOG_SET] == (int32_t)true)
-	{
-		LogManager::instance().set(((int32_t)m_messageMap[LOG_SET_DEAL_LOG]) == 1, false);
-		return;
-	}
-	if ((int32_t)m_messageMap[LOG_IS_WRITE_LOG] == (int32_t)true)
-	{
-		uint64_t time = m_messageMap[LOG_INT_DATE_TIME];
-		uint64_t* timePtr = &time;
-		std::string logTime = IntDateTime(*(int32_t*)timePtr, *((int32_t*)timePtr + 1)).toString();
-		if (m_isNet)
+		m_logSemaphore->wait();
+		if (m_exit)
 		{
-			LogManager::instance().print(0,
-				(LogManager::LogLevel)(int32_t)m_messageMap[LOG_LEVEL],
-				m_messageMap[LOG_FILE_NAME].toString(),
-				m_messageMap[LOG_FUN_NAME].toString(),
-				m_messageMap[LOG_PROCESS_NAME].toString(),
-				logTime,
-				(int32_t)(m_messageMap[LOG_THREAD_ID]),
-				"NET %s %s",
-				m_messageMap[LOG_LOGIN_NAME].toString().c_str(),
-				m_messageMap[LOG_BUFFER].toString().c_str());
 			return;
 		}
-		static int32_t newFileId = 0;
-		int32_t fileId = 0;
-		std::string logName = m_messageMap[LOG_NAME].toString();
-		if (!logName.empty())
+
+		m_logQueue->pop(&m_buffer);
+
+		if (m_buffer == "logUninit")
 		{
-			logName.append(".log");
-			fileId = LogManager::instance().findFileId(logName);
-			if (fileId == -1)
+			LogManager::instance().uninitAll();
+			continue;
+		}
+
+		if (m_buffer.size() >= 3 && CStringManager::Right(m_buffer, 3) == "NET")
+		{
+			m_buffer.pop_back();
+			m_buffer.pop_back();
+			m_buffer.pop_back();
+			if (m_message.ParseFromString(m_buffer))
 			{
-				LogManager::instance().init(++newFileId, logName);
-				fileId = newFileId;
+				uint64_t time = m_message.logintdatetime();
+				uint64_t* timePtr = &time;
+				std::string logTime = IntDateTime(*(int32_t*)timePtr, *((int32_t*)timePtr + 1)).toString();
+				LogManager::instance().print(0,
+					(LogManager::LogLevel)(int32_t)m_message.loglevel(),
+					m_message.logfilename(),
+					m_message.logfunname(),
+					m_message.logprocessname(),
+					logTime,
+					(int32_t)(m_message.logthreadid()),
+					"NET %s %s",
+					m_message.logloginname().c_str(),
+					m_message.logbuffer().c_str());
 			}
 		}
-		LogManager::instance().print(fileId,
-			(LogManager::LogLevel)(int32_t)m_messageMap[LOG_LEVEL],
-			m_messageMap[LOG_FILE_NAME].toString(),
-			m_messageMap[LOG_FUN_NAME].toString(),
-			m_processName,
-			logTime,
-			(int32_t)(m_messageMap[LOG_THREAD_ID]),
-			"%s",
-			m_messageMap[LOG_BUFFER].toString().c_str());
+
+		if (m_message.ParseFromString(m_buffer))
+		{
+			static int32_t newFileId = 0;
+			int32_t fileId = 0;
+			std::string logName = m_message.logname();
+			if (!logName.empty())
+			{
+				logName.append(".log");
+				fileId = LogManager::instance().findFileId(logName);
+				if (fileId == -1)
+				{
+					LogManager::instance().init(++newFileId, logName);
+					fileId = newFileId;
+				}
+			}
+			uint64_t time = m_message.logintdatetime();
+			uint64_t* timePtr = &time;
+			std::string logTime = IntDateTime(*(int32_t*)timePtr, *((int32_t*)timePtr + 1)).toString();
+			LogManager::instance().print(fileId,
+				(LogManager::LogLevel)(int32_t)m_message.loglevel(),
+				m_message.logfilename(),
+				m_message.logfunname(),
+				m_message.logprocessname(),
+				logTime,
+				(int32_t)(m_message.logthreadid()),
+				"%s",
+				m_message.logbuffer().c_str());
+		}
 	}
 }
 
-void LogTask::setParam(bool isNet, const std::string& buffer, const std::string& processName)
+void LogTask::StopTask()
 {
-	m_isNet = isNet;
-	m_buffer = buffer;
-	m_processName = processName;
+	m_exit = true;
+	m_logSemaphore->signal();
+}
+
+void LogTask::setParam(Semaphore* logSemaphore, LockFreeQueue<std::string>* logQueue)
+{
+	m_logSemaphore = logSemaphore;
+	m_logQueue = logQueue;
 }

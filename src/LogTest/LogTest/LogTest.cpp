@@ -11,12 +11,21 @@
 #include "Semaphore/SemaphoreAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "LogDeleteTask.h"
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "ScreenTask.h"
+#include "LogTask.h"
+#include "NetTask.h"
+#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #ifdef __unix__
 #include <signal.h>
 #include <stdlib.h>
 #endif
 
 bool g_exit = false;
+uint32_t g_screenThreadId = 0;
+uint32_t g_logThreadId = 0;
+uint32_t g_logDeleteThreadId = 0;
+uint32_t g_netThreadId = 0;
 
 #ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)
@@ -25,8 +34,13 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		ProcessWork::instance().uninitPostThread();
 		ProcessWork::instance().uninitReceive();
+		
+		CTaskThreadManager::Instance().Uninit(g_screenThreadId);
+		CTaskThreadManager::Instance().Uninit(g_logDeleteThreadId);
+		CTaskThreadManager::Instance().Uninit(g_logThreadId);
+		CTaskThreadManager::Instance().Uninit(g_netThreadId);
+
 		g_exit = true;
 	}
 	return FALSE;
@@ -64,7 +78,7 @@ struct CtrlC
 CtrlC g_ctrlc;
 #endif
 
-#define LOGTEST_CLIENT_VERSION "1.1"
+#define LOGTEST_CLIENT_VERSION "1.2"
 #define LOGTEST_SERVER_VERSION "1.1"
 
 int32_t main()
@@ -73,38 +87,53 @@ int32_t main()
 
 	LogManager::instance().set(true, false);
 
-	uint32_t screenThreadId = CTaskThreadManager::Instance().Init();
-	uint32_t logThreadId = CTaskThreadManager::Instance().Init();
-	uint32_t logDeleteThreadId = CTaskThreadManager::Instance().Init();
-	uint32_t netThreadId = CTaskThreadManager::Instance().Init();
+	g_screenThreadId = CTaskThreadManager::Instance().Init();
+	g_logThreadId = CTaskThreadManager::Instance().Init();
+	g_logDeleteThreadId = CTaskThreadManager::Instance().Init();
+	g_netThreadId = CTaskThreadManager::Instance().Init();
 
-	std::shared_ptr<CTaskThread> spScreenThread = CTaskThreadManager::Instance().GetThreadInterface(screenThreadId);
-	std::shared_ptr<CTaskThread> spLogThread = CTaskThreadManager::Instance().GetThreadInterface(logThreadId);
-	std::shared_ptr<CTaskThread> spLogDeleteThread = CTaskThreadManager::Instance().GetThreadInterface(logDeleteThreadId);
-	std::shared_ptr<CTaskThread> spNetThread = CTaskThreadManager::Instance().GetThreadInterface(netThreadId);
+	ReadWriteMutex screenMutex;
+	Semaphore screenSemaphore;
+	LockFreeQueue<std::string> screenQueue;
+	ReadWriteMutex logMutex;
+	Semaphore logSemaphore;
+	LockFreeQueue<std::string> logQueue;
+	Semaphore netSemaphore;
+	LockFreeQueue<std::string> netQueue;
+
+	std::shared_ptr<ScreenTask> spScreenTask(new ScreenTask);
+	spScreenTask->setParam(&screenSemaphore, &screenQueue);
+	CTaskThreadManager::Instance().GetThreadInterface(g_screenThreadId)->PostTask(spScreenTask);
+
+	std::shared_ptr<LogTask> spLogTask(new LogTask);
+	spLogTask->setParam(&logSemaphore, &logQueue);
+	CTaskThreadManager::Instance().GetThreadInterface(g_logThreadId)->PostTask(spLogTask);
+
+	std::shared_ptr<NetTask> spNetTask(new NetTask);
+	spNetTask->setParam(&netSemaphore, &netQueue);
+	CTaskThreadManager::Instance().GetThreadInterface(g_netThreadId)->PostTask(spNetTask);
 
 	std::atomic<int32_t> lastLogTime;
 	lastLogTime = (int32_t)CSystem::GetTickCount();
 
 	std::shared_ptr<LogDeleteTask> spLogDeleteTask(new LogDeleteTask);
-	spLogDeleteTask->setParam(&lastLogTime, spLogThread);
-	spLogDeleteThread->PostTask(spLogDeleteTask);
+	spLogDeleteTask->setParam(&logMutex, &logSemaphore, &logQueue, &lastLogTime);
+	CTaskThreadManager::Instance().GetThreadInterface(g_logDeleteThreadId)->PostTask(spLogDeleteTask);
 
 	Semaphore initResponseSemaphore;
 
 	ProcessWork::instance().initPostThread();
 	NetReceive netReceive;
 	netReceive.setInitResponseSemaphore(&initResponseSemaphore);
-	netReceive.setThread(spScreenThread, spLogThread);
+	netReceive.setArea(&screenMutex, &screenSemaphore, &screenQueue, &logMutex, &logSemaphore, &logQueue);
 	netReceive.setLastLogTime(&lastLogTime);
 	NetSender::instance().initClientReceive(&netReceive);
 
 	std::string loginName = CSystem::getComputerName();
 
 	LogReceive logReceive;
-	logReceive.setThread(spScreenThread, spLogThread, spNetThread);
+	logReceive.setArea(&screenMutex, &screenSemaphore, &screenQueue, &logMutex, &logSemaphore, &logQueue, &netSemaphore, &netQueue);
 	logReceive.setLastLogTime(&lastLogTime);
-	logReceive.setLoginName(loginName);
 	ProcessWork::instance().addProcessReceiveCallback(&logReceive);
 
 	ProcessWork::instance().initReceive();
@@ -124,9 +153,9 @@ int32_t main()
 		CSystem::Sleep(1);
 	}
 
-	CTaskThreadManager::Instance().Uninit(screenThreadId);
-	CTaskThreadManager::Instance().Uninit(logDeleteThreadId);
-	CTaskThreadManager::Instance().Uninit(logThreadId);
-	CTaskThreadManager::Instance().Uninit(netThreadId);
+	CTaskThreadManager::Instance().Uninit(g_screenThreadId);
+	CTaskThreadManager::Instance().Uninit(g_logDeleteThreadId);
+	CTaskThreadManager::Instance().Uninit(g_logThreadId);
+	CTaskThreadManager::Instance().Uninit(g_netThreadId);
 	return 0;
 }

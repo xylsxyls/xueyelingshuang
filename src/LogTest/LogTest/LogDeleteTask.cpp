@@ -1,11 +1,12 @@
 #include "LogDeleteTask.h"
 #include "CSystem/CSystemAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
-#include "CorrespondParam/CorrespondParamAPI.h"
-#include "LogTask.h"
+#include "Semaphore/SemaphoreAPI.h"
+#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 
 LogDeleteTask::LogDeleteTask():
-m_spLogThread(nullptr),
+m_logMutex(nullptr),
+m_logSemaphore(nullptr),
+m_logQueue(nullptr),
 m_lastLogTime(nullptr),
 m_exit(false)
 {
@@ -19,12 +20,11 @@ void LogDeleteTask::DoTask()
 	{
 		if ((*m_lastLogTime != lastLogTime) && (CSystem::GetTickCount() - *m_lastLogTime > 5000) && ((*m_lastLogTime) != 0))
 		{
-			ProtoMessage message;
-			message[LOG_UNINIT] = (int32_t)true;
-			std::string strMessage = message.toString();
-			std::shared_ptr<LogTask> spLogTask(new LogTask);
-			spLogTask->setParam(false, strMessage, "");
-			m_spLogThread->PostTask(spLogTask);
+			{
+				WriteLock writeLock(*m_logMutex);
+				m_logQueue->push("logUninit");
+			}
+			m_logSemaphore->signal();
 			lastLogTime = *m_lastLogTime;
 		}
 		CSystem::Sleep(1);
@@ -36,8 +36,13 @@ void LogDeleteTask::StopTask()
 	m_exit = true;
 }
 
-void LogDeleteTask::setParam(std::atomic<int32_t>* lastLogTime, const std::shared_ptr<CTaskThread>& spLogThread)
+void LogDeleteTask::setParam(ReadWriteMutex* logMutex,
+	Semaphore* logSemaphore,
+	LockFreeQueue<std::string>* logQueue,
+	std::atomic<int32_t>* lastLogTime)
 {
+	m_logMutex = logMutex;
+	m_logSemaphore = logSemaphore;
+	m_logQueue = logQueue;
 	m_lastLogTime = lastLogTime;
-	m_spLogThread = spLogThread;
 }

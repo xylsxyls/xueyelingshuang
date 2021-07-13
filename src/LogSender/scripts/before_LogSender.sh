@@ -28,3 +28,14 @@ IntDateTime_dlllib=$2
 IntDateTime_debugRelease=$3
 IntDateTime_allSame=$4
 "$CLOUD_REBUILD" IntDateTime $IntDateTime_bit $IntDateTime_dlllib $IntDateTime_debugRelease $IntDateTime_allSame
+
+#--------------------------------------------------------------------
+SHELL_FOLDER=$(cd $(dirname $0); pwd)
+xueyelingshuang=$SHELL_FOLDER/../../..
+
+protocname="protoc.exe"
+
+if [[ "$OSTYPE" =~ ^linux ]]; then
+    protocname="protoc"
+fi
+$xueyelingshuang"/tools/protobuf/"$protocname -I=$xueyelingshuang"/src/LogTest/LogTest" --cpp_out=$xueyelingshuang"/src/LogSender/LogSender/src" $xueyelingshuang"/src/LogTest/LogTest/LogTestMessage.proto"

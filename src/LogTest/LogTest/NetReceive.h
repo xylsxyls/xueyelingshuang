@@ -1,10 +1,10 @@
 #pragma once
 #include "NetSender/NetSenderAPI.h"
-#include "CorrespondParam/CorrespondParamAPI.h"
-#include <memory>
+#include "LockFreeQueue/LockFreeQueueAPI.h"
 
+class ReadWriteMutex;
 class Semaphore;
-class CTaskThread;
+
 class NetReceive : public ClientReceiveCallback
 {
 public:
@@ -30,13 +30,18 @@ public:
 	/** 设置初始化信号量接收类
 	@param [in] semaphore 初始化信号量接收类
 	*/
-	void setInitResponseSemaphore(Semaphore* semaphore);
+	void setInitResponseSemaphore(Semaphore* initResponseSemaphore);
 
-	/** 设置发送线程
+	/** 设置缓冲区
 	@param [in] spScreenThread 屏幕展示线程
 	@param [in] spScreenThread 日志线程
 	*/
-	void setThread(const std::shared_ptr<CTaskThread>& spScreenThread, const std::shared_ptr<CTaskThread>& spLogThread);
+	void setArea(ReadWriteMutex* screenMutex,
+		Semaphore* screenSemaphore,
+		LockFreeQueue<std::string>* screenQueue,
+		ReadWriteMutex* logMutex,
+		Semaphore* logSemaphore,
+		LockFreeQueue<std::string>* logQueue);
 
 	/** 设置最后一次日志时间接收值
 	@param [in] lastLogTime 最后一次日志时间接收值
@@ -44,8 +49,12 @@ public:
 	void setLastLogTime(std::atomic<int32_t>* lastLogTime);
 
 private:
-	Semaphore* m_semaphore;
+	Semaphore* m_initResponseSemaphore;
+	ReadWriteMutex* m_screenMutex;
+	Semaphore* m_screenSemaphore;
+	LockFreeQueue<std::string>* m_screenQueue;
+	ReadWriteMutex* m_logMutex;
+	Semaphore* m_logSemaphore;
+	LockFreeQueue<std::string>* m_logQueue;
 	std::atomic<int32_t>* m_lastLogTime;
-	std::shared_ptr<CTaskThread> m_spScreenThread;
-	std::shared_ptr<CTaskThread> m_spLogThread;
 };

@@ -42,6 +42,9 @@
     <ClInclude Include="LogReceive.h">
       <Filter>Receive</Filter>
     </ClInclude>
+    <ClInclude Include="LogTestMessage.pb.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LogTask.cpp">
@@ -64,6 +67,9 @@
     </ClCompile>
     <ClCompile Include="NetReceive.cpp">
       <Filter>Receive</Filter>
+    </ClCompile>
+    <ClCompile Include="LogTestMessage.pb.cc">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

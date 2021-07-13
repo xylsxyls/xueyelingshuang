@@ -7,25 +7,17 @@
 #ifdef __unix__
 #include <stdarg.h>
 #endif
+#include "LogTestMessage.pb.h"
 
 LogSenderAPI LogSenderInterface& logInstance()
 {
 	return LogSender::instance();
 }
 
-LogSender::LogSender():
-m_message(nullptr)
+LogSender::LogSender()
 {
-	m_message = new ProtoMessage;
-}
-
-LogSender::~LogSender()
-{
-	if (m_message != nullptr)
-	{
-		delete m_message;
-		m_message = nullptr;
-	}
+	m_processName = CSystem::GetCurrentExeFullName();
+	m_loginName = CSystem::getComputerName();
 }
 
 LogSender& LogSender::instance()
@@ -89,25 +81,35 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	*((int32_t*)timePtr) = currentTime.getDate();
 	*((int32_t*)timePtr + 1) = currentTime.getTime();
 
-	std::string strMessage;
+	bool isSend = false;
+	bool isLocal = false;
+	logtest::LogTestMessage message;
+	message.set_logintdatetime(time);
+	message.set_loglevel(package.m_logLevel);
+	message.set_logthreadid(CSystem::SystemThreadId());
+	message.set_logname(package.m_logName);
+	message.set_logfilename(package.m_fileName);
+	message.set_logfunname(package.m_funName);
+	if (package.m_isWriteLog)
 	{
-		ProtoMessage message;
-		message[LOG_INT_DATE_TIME] = time;
-		message[LOG_LEVEL] = package.m_logLevel;
-		message[LOG_IS_SEND_NET] = (int32_t)package.m_isSendNet;
-		message[LOG_IS_SEND_SCREEN] = (int32_t)package.m_isSendScreen;
-		message[LOG_IS_WRITE_LOG] = (int32_t)package.m_isWriteLog;
-		message[LOG_THREAD_ID] = (int32_t)CSystem::SystemThreadId();
+		message.set_logprocessname(m_processName);
+	}
+	if (package.m_isSendNet)
+	{
+		message.set_logprocessname(m_processName);
+		message.set_logloginname(m_loginName);
+		isSend = true;
+	}
+	message.set_logbuffer(str);
+	std::string strMessage;
+	message.SerializeToString(&strMessage);
 
-		message[LOG_NAME] = package.m_logName;
-		message[LOG_FILE_NAME] = package.m_fileName;
-		message[LOG_FUN_NAME] = package.m_funName;
-		message[LOG_BUFFER] = str;
-
-		message.toString(strMessage);
+	if (package.m_isSendScreen)
+	{
+		isLocal = true;
 	}
 	
-	send(strMessage.c_str(), (int32_t)strMessage.length());
+	send(strMessage, isSend ? LOGTEST_SEND_MESSAGE : isLocal ? LOGTEST_LOCAL_MESSAGE : LOGTEST_ONLY_MESSAGE);
 }
 
 void LogSender::logTestClose()
@@ -118,16 +120,12 @@ void LogSender::logTestClose()
 		return;
 	}
 
+	ProtoMessage message;
+	message[LOG_CLOSE] = (int32_t)true;
 	std::string strMessage;
-	{
-		std::unique_lock<std::mutex> lock(m_messageMutex);
-		m_message->clear();
-		(*m_message)[LOG_CLOSE] = (int32_t)true;
-		(*m_message).toString(strMessage);
-		m_message->clear();
-	}
+	message.toString(strMessage);
 
-	send(strMessage.c_str(), (int32_t)strMessage.length());
+	send(strMessage, LOGTEST_MESSAGE);
 
 	while (logTestExist())
 	{
@@ -143,17 +141,13 @@ void LogSender::set(bool dealLog)
 		return;
 	}
 
+	ProtoMessage message;
+	message[LOG_SET] = (int32_t)true;
+	message[LOG_SET_DEAL_LOG] = (int32_t)dealLog;
 	std::string strMessage;
-	{
-		std::unique_lock<std::mutex> lock(m_messageMutex);
-		m_message->clear();
-		(*m_message)[LOG_SET] = (int32_t)true;
-		(*m_message)[LOG_SET_DEAL_LOG] = (int32_t)dealLog;
-		(*m_message).toString(strMessage);
-		m_message->clear();
-	}
+	message.toString(strMessage);
 
-	send(strMessage.c_str(), (int32_t)strMessage.length());
+	send(strMessage, LOGTEST_MESSAGE);
 }
 
 bool LogSender::logTestExist()
@@ -173,7 +167,7 @@ bool LogSender::logTestExist()
 	return (CSystem::processFirstPid(logTestName) == logTestPid);
 }
 
-void LogSender::send(const char* buffer, int32_t length)
+void LogSender::send(const std::string& message, int32_t type)
 {
-	ProcessWork::instance().send("LogTest" + LOGTEST_CLIENT_VERSION, buffer, length, LOGTEST_MESSAGE);
+	ProcessWork::instance().send("LogTest" + LOGTEST_CLIENT_VERSION, message, (MessageType)type);
 }

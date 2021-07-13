@@ -8,14 +8,11 @@ message LogTestMessage
 {
 	uint64 logIntDateTime = 1;
 	int32 logLevel = 2;
-	bool logIsSendNet = 3;
-	bool logIsSendScreen = 4;
-	bool logIsWriteLog = 5;
-	uint32 logThreadId = 6;
-	string logName = 7;
-	string logFileName = 8;
-	string logFunName = 9;
-	string logProcessName = 10;
-	string logLoginName = 11
-	string logBuffer = 12;
+	uint32 logThreadId = 3;
+	string logName = 4;
+	string logFileName = 5;
+	string logFunName = 6;
+	string logProcessName = 7;
+	string logLoginName = 8;
+	string logBuffer = 9;
 }

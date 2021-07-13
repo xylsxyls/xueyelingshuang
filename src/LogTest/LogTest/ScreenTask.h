@@ -1,7 +1,9 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
-#include "Variant/VariantAPI.h"
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "LogTestMessage.pb.h"
+
+class Semaphore;
 
 class ScreenTask : public CTask
 {
@@ -11,11 +13,14 @@ public:
 public:
 	virtual void DoTask();
 
-	void setParam(bool isNet, const std::string& buffer);
+	void StopTask();
+
+	void setParam(Semaphore* screenSemaphore, LockFreeQueue<std::string>* screenQueue);
 
 private:
+	Semaphore* m_screenSemaphore;
+	LockFreeQueue<std::string>* m_screenQueue;
 	std::string m_buffer;
-	bool m_isNet;
-	ProtoMessage m_message;
-	std::map<int32_t, Variant> m_messageMap;
+	logtest::LogTestMessage m_message;
+	std::atomic<bool> m_exit;
 };

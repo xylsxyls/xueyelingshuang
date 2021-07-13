@@ -2,9 +2,11 @@
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
-#include <memory>
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "Variant/VariantAPI.h"
 
-class CTaskThread;
+class ReadWriteMutex;
+class Semaphore;
 
 class LogReceive : public ProcessReceiveCallback
 {
@@ -22,37 +24,35 @@ public:
 	*/
 	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type);
 
-	/** 获取发送进程名
-	@param [in] sendPid 发送进程PID
-	@return 返回发送进程名
-	*/
-	std::string getSenderName(int32_t sendPid);
-
 	/** 设置发送线程
 	@param [in] spScreenThread 屏幕展示线程
 	@param [in] spLogThread 日志线程
 	@param [in] spLogThread 日志线程
 	*/
-	void setThread(const std::shared_ptr<CTaskThread>& spScreenThread,
-		const std::shared_ptr<CTaskThread>& spLogThread,
-		const std::shared_ptr<CTaskThread>& spNetThread);
+	void setArea(ReadWriteMutex* screenMutex,
+		Semaphore* screenSemaphore,
+		LockFreeQueue<std::string>* screenQueue,
+		ReadWriteMutex* logMutex,
+		Semaphore* logSemaphore,
+		LockFreeQueue<std::string>* logQueue,
+		Semaphore* netSemaphore,
+		LockFreeQueue<std::string>* netQueue);
 
 	/** 设置最后一次日志时间接收值
 	@param [in] lastLogTime 最后一次日志时间接收值
 	*/
 	void setLastLogTime(std::atomic<int32_t>* lastLogTime);
 
-	/** 设置登录名
-	@param [in] loginName 登录名
-	*/
-	void setLoginName(const std::string& loginName);
-
 protected:
-	std::map<int32_t, std::string> m_sendMap;
-	std::shared_ptr<CTaskThread> m_spScreenThread;
-	std::shared_ptr<CTaskThread> m_spLogThread;
-	std::shared_ptr<CTaskThread> m_spNetThread;
-	ProtoMessage m_message;
+	ReadWriteMutex* m_screenMutex;
+	Semaphore* m_screenSemaphore;
+	LockFreeQueue<std::string>* m_screenQueue;
+	ReadWriteMutex* m_logMutex;
+	Semaphore* m_logSemaphore;
+	LockFreeQueue<std::string>* m_logQueue;
+	Semaphore* m_netSemaphore;
+	LockFreeQueue<std::string>* m_netQueue;
 	std::atomic<int32_t>* m_lastLogTime;
-	std::string m_loginName;
+	ProtoMessage m_message;
+	std::map<int32_t, Variant> m_messageMap;
 };

@@ -1,5 +1,9 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+
+class ReadWriteMutex;
+class Semaphore;
 
 class LogDeleteTask : public CTask
 {
@@ -11,10 +15,15 @@ public:
 
 	void StopTask();
 
-	void setParam(std::atomic<int32_t>* lastLogTime, const std::shared_ptr<CTaskThread>& spLogThread);
+	void setParam(ReadWriteMutex* logMutex,
+		Semaphore* logSemaphore,
+		LockFreeQueue<std::string>* logQueue,
+		std::atomic<int32_t>* lastLogTime);
 
 private:
+	ReadWriteMutex* m_logMutex;
+	Semaphore* m_logSemaphore;
+	LockFreeQueue<std::string>* m_logQueue;
 	std::atomic<int32_t>* m_lastLogTime;
-	std::shared_ptr<CTaskThread> m_spLogThread;
 	std::atomic<bool> m_exit;
 };

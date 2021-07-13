@@ -26,7 +26,7 @@ namespace std
 {
 	typedef basic_ofstream<char, char_traits<char> > ofstream;
 };
-class ProcessReadWriteMutex;
+class ReadWriteMutexBase;
 
 class LogManagerAPI LogManager
 {
@@ -56,6 +56,8 @@ public:
 	//该接口会动态应用到所有日志文件
 	void set(bool writeLog, bool writeBeginEnd);
 
+	void changeMutex(bool isProcessMutex);
+
 	void print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...);
 
 	void uninit(int32_t fileId);
@@ -80,8 +82,9 @@ private:
 	std::map<int32_t, std::pair<std::string, std::ofstream*>> m_logMap;
 	std::atomic<bool> m_writeBeginEnd;
 	std::atomic<bool> m_writeLog;
+	bool m_isProcessMutex;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-	ProcessReadWriteMutex* m_processMutex;
+	ReadWriteMutexBase* m_writeMutex;
 };

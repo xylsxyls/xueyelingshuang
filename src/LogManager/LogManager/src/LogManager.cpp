@@ -7,21 +7,22 @@
 #include <stdarg.h>
 
 LogManager::LogManager():
-m_processMutex(nullptr),
+m_writeMutex(nullptr),
 m_writeLog(true),
-m_writeBeginEnd(true)
+m_writeBeginEnd(true),
+m_isProcessMutex(false)
 {
 	m_exeName = CSystem::GetCurrentExeFullName();
-	m_processMutex = new ProcessReadWriteMutex("LogManager_Mutex");
+	m_writeMutex = new ReadWriteMutex;
 }
 
 LogManager::~LogManager()
 {
 	uninitAll();
-	if (m_processMutex != nullptr)
+	if (m_writeMutex != nullptr)
 	{
-		delete m_processMutex;
-		m_processMutex = nullptr;
+		delete m_writeMutex;
+		m_writeMutex = nullptr;
 	}
 }
 
@@ -68,9 +69,29 @@ void LogManager::set(bool writeLog, bool writeBeginEnd)
 	m_writeBeginEnd = writeBeginEnd;
 }
 
+void LogManager::changeMutex(bool isProcessMutex)
+{
+	if (isProcessMutex == m_isProcessMutex)
+	{
+		return;
+	}
+
+	m_isProcessMutex = isProcessMutex;
+	if (m_isProcessMutex)
+	{
+		delete m_writeMutex;
+		m_writeMutex = new ProcessReadWriteMutex("LogManager_Mutex");
+	}
+	else
+	{
+		delete m_writeMutex;
+		m_writeMutex = new ReadWriteMutex;
+	}
+}
+
 void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...)
 {
-	if (m_processMutex == nullptr || !m_writeLog)
+	if (m_writeMutex == nullptr || !m_writeLog)
 	{
 		return;
 	}
@@ -160,7 +181,7 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 	size_t nRight = fileMacro.find_last_of("/\\");
 	fileMacroTemp = CStringManager::Mid(fileMacro, nRight + 1, fileMacro.length() - nRight - 1);
 	
-	WriteLock writelock(*m_processMutex);
+	WriteLock writelock(*m_writeMutex);
 	if (flag == LOG_BEGIN && m_writeBeginEnd)
 	{
 		bool isFileEmpty = true;

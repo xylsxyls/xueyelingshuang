@@ -6,7 +6,7 @@
 
 class ProtoMessage;
 
-const std::string LOGTEST_CLIENT_VERSION = "1.1";
+const std::string LOGTEST_CLIENT_VERSION = "1.2";
 
 class LogSenderAPI LogSenderInterface
 {
@@ -34,8 +34,6 @@ class LogSenderAPI LogSender : public LogSenderInterface
 protected:
 	LogSender();
 
-	~LogSender();
-
 public:
 	static LogSender& instance();
 
@@ -53,15 +51,15 @@ public:
 	void set(bool dealLog);
 
 protected:
-	void send(const char* buffer, int32_t length);
+	void send(const std::string& message, int32_t type);
 
 private:
-	ProtoMessage* m_message;
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	std::mutex m_messageMutex;
+	std::string m_processName;
+	std::string m_loginName;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

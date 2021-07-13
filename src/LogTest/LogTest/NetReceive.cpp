@@ -5,44 +5,62 @@
 #include "Semaphore/SemaphoreAPI.h"
 
 NetReceive::NetReceive():
-m_semaphore(nullptr),
-m_lastLogTime(nullptr),
-m_spScreenThread(nullptr),
-m_spLogThread(nullptr)
+m_initResponseSemaphore(nullptr),
+m_screenMutex(nullptr),
+m_screenSemaphore(nullptr),
+m_screenQueue(nullptr),
+m_logMutex(nullptr),
+m_logSemaphore(nullptr),
+m_logQueue(nullptr),
+m_lastLogTime(nullptr)
 {
-
+	
 }
 
 void NetReceive::clientInitResponse(int32_t serverId, const char* buffer, int32_t length)
 {
 	printf("CLIENT_INIT response, serverId = %d, buffer = %s, length = %d\n", serverId, buffer, length);
-	m_semaphore->signal();
+	m_initResponseSemaphore->signal();
 }
 
 void NetReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t length)
 {
 	std::string strBuffer(buffer, length);
+	strBuffer.append("NET");
 
-	std::shared_ptr<ScreenTask> spScreenTask(new ScreenTask);
-	spScreenTask->setParam(true, strBuffer);
-	m_spScreenThread->PostTask(spScreenTask);
+	{
+		WriteLock writeLock(*m_screenMutex);
+		m_screenQueue->push(strBuffer);
+	}
+	m_screenSemaphore->signal();
 
-	std::shared_ptr<LogTask> spLogTask(new LogTask);
-	spLogTask->setParam(true, strBuffer);
-	m_spLogThread->PostTask(spLogTask);
+	{
+		WriteLock writeLock(*m_logMutex);
+		m_logQueue->push(strBuffer);
+	}
+	m_logSemaphore->signal();
 
 	*m_lastLogTime = CSystem::GetTickCount();
 }
 
-void NetReceive::setInitResponseSemaphore(Semaphore* semaphore)
+void NetReceive::setInitResponseSemaphore(Semaphore* initResponseSemaphore)
 {
-	m_semaphore = semaphore;
+	m_initResponseSemaphore = initResponseSemaphore;
 }
 
-void NetReceive::setThread(const std::shared_ptr<CTaskThread>& spScreenThread, const std::shared_ptr<CTaskThread>& spLogThread)
+void NetReceive::setArea(ReadWriteMutex* screenMutex,
+	Semaphore* screenSemaphore,
+	LockFreeQueue<std::string>* screenQueue,
+	ReadWriteMutex* logMutex,
+	Semaphore* logSemaphore,
+	LockFreeQueue<std::string>* logQueue)
 {
-	m_spScreenThread = spScreenThread;
-	m_spLogThread = spLogThread;
+	m_screenMutex = screenMutex;
+	m_screenSemaphore = screenSemaphore;
+	m_screenQueue = screenQueue;
+	m_logMutex = logMutex;
+	m_logSemaphore = logSemaphore;
+	m_logQueue = logQueue;
 }
 
 void NetReceive::setLastLogTime(std::atomic<int32_t>* lastLogTime)

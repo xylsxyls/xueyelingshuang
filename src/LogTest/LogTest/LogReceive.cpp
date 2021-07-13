@@ -4,13 +4,19 @@
 #include "LogTask.h"
 #include "NetTask.h"
 #include "LogManager/LogManagerAPI.h"
-#include "NetSender/NetSenderAPI.h"
-#include "LogDeleteTask.h"
+#include "Semaphore/SemaphoreAPI.h"
+
+extern bool g_exit;
 
 LogReceive::LogReceive():
-m_spScreenThread(nullptr),
-m_spLogThread(nullptr),
-m_spNetThread(nullptr),
+m_screenMutex(nullptr),
+m_screenSemaphore(nullptr),
+m_screenQueue(nullptr),
+m_logMutex(nullptr),
+m_logSemaphore(nullptr),
+m_logQueue(nullptr),
+m_netSemaphore(nullptr),
+m_netQueue(nullptr),
 m_lastLogTime(nullptr)
 {
 	
@@ -18,27 +24,78 @@ m_lastLogTime(nullptr)
 
 void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
 {
+	std::string strBuffer(buffer, length);
+
 	switch (type)
 	{
+	//工程消息
 	case LOGTEST_MESSAGE:
 	{
-		//发送给网络端
-		std::string processName = getSenderName(sendPid);
-		std::string strBuffer(buffer, length);
+		m_message.clear();
+		m_message.from(strBuffer);
+		m_messageMap.clear();
+		m_message.getMap(m_messageMap);
+		if ((int32_t)m_messageMap[LOG_CLOSE] == (int32_t)true)
+		{
+			ProcessWork::instance().uninitReceive();
+			g_exit = true;
+			return;
+		}
 
-		std::shared_ptr<ScreenTask> spScreenTask(new ScreenTask);
-		spScreenTask->setParam(false, strBuffer);
-		m_spScreenThread->PostTask(spScreenTask);
+		if ((int32_t)m_messageMap[LOG_SET] == (int32_t)true)
+		{
+			LogManager::instance().set(((int32_t)m_messageMap[LOG_SET_DEAL_LOG]) == 1, false);
+			return;
+		}
+	}
+	break;
+	//发送给网络端
+	case LOGTEST_SEND_MESSAGE:
+	{
+		{
+			WriteLock writeLock(*m_screenMutex);
+			m_screenQueue->push(strBuffer);
+		}
+		m_screenSemaphore->signal();
 
-		std::shared_ptr<LogTask> spLogTask(new LogTask);
-		spLogTask->setParam(false, strBuffer, processName);
-		m_spLogThread->PostTask(spLogTask);
+		{
+			WriteLock writeLock(*m_logMutex);
+			m_logQueue->push(strBuffer);
+		}
+		m_logSemaphore->signal();
 
 		*m_lastLogTime = CSystem::GetTickCount();
 
-		std::shared_ptr<NetTask> spNetTask(new NetTask);
-		spNetTask->setParam(strBuffer, processName, m_loginName);
-		m_spNetThread->PostTask(spNetTask);
+		m_netQueue->push(strBuffer);
+		m_netSemaphore->signal();
+	}
+	break;
+	case LOGTEST_LOCAL_MESSAGE:
+	{
+		{
+			WriteLock writeLock(*m_screenMutex);
+			m_screenQueue->push(strBuffer);
+		}
+		m_screenSemaphore->signal();
+
+		{
+			WriteLock writeLock(*m_logMutex);
+			m_logQueue->push(strBuffer);
+		}
+		m_logSemaphore->signal();
+
+		*m_lastLogTime = CSystem::GetTickCount();
+	}
+	break;
+	case LOGTEST_ONLY_MESSAGE:
+	{
+		{
+			WriteLock writeLock(*m_logMutex);
+			m_logQueue->push(strBuffer);
+		}
+		m_logSemaphore->signal();
+
+		*m_lastLogTime = CSystem::GetTickCount();
 	}
 	break;
 	default:
@@ -46,33 +103,26 @@ void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, Me
 	}
 }
 
-std::string LogReceive::getSenderName(int32_t sendPid)
+void LogReceive::setArea(ReadWriteMutex* screenMutex,
+	Semaphore* screenSemaphore,
+	LockFreeQueue<std::string>* screenQueue,
+	ReadWriteMutex* logMutex,
+	Semaphore* logSemaphore,
+	LockFreeQueue<std::string>* logQueue,
+	Semaphore* netSemaphore,
+	LockFreeQueue<std::string>* netQueue)
 {
-	auto it = m_sendMap.find(sendPid);
-	if (it != m_sendMap.end())
-	{
-		return it->second;
-	}
-	std::string processName = CSystem::processName(sendPid);
-	m_sendMap[sendPid] = processName;
-	return processName;
-}
-
-void LogReceive::setThread(const std::shared_ptr<CTaskThread>& spScreenThread,
-	const std::shared_ptr<CTaskThread>& spLogThread,
-	const std::shared_ptr<CTaskThread>& spNetThread)
-{
-	m_spScreenThread = spScreenThread;
-	m_spLogThread = spLogThread;
-	m_spNetThread = spNetThread;
+	m_screenMutex = screenMutex;
+	m_screenSemaphore = screenSemaphore;
+	m_screenQueue = screenQueue;
+	m_logMutex = logMutex;
+	m_logSemaphore = logSemaphore;
+	m_logQueue = logQueue;
+	m_netSemaphore = netSemaphore;
+	m_netQueue = netQueue;
 }
 
 void LogReceive::setLastLogTime(std::atomic<int32_t>* lastLogTime)
 {
 	m_lastLogTime = lastLogTime;
-}
-
-void LogReceive::setLoginName(const std::string& loginName)
-{
-	m_loginName = loginName;
 }

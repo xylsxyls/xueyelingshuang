@@ -1,36 +1,37 @@
 #include "NetTask.h"
-#include "CorrespondParam/CorrespondParamAPI.h"
 #include "NetSender/NetSenderAPI.h"
+#include "CorrespondParam/CorrespondParamAPI.h"
 
-static bool g_isDeal = true;
+NetTask::NetTask():
+m_netSemaphore(nullptr),
+m_netQueue(nullptr),
+m_exit(false)
+{
+
+}
 
 void NetTask::DoTask()
 {
-	m_message.clear();
-	m_message.from(m_buffer);
-	m_messageMap.clear();
-	m_message.getMap(m_messageMap);
-	if ((int32_t)m_messageMap[LOG_SET] == (int32_t)true)
+	while (!m_exit)
 	{
-		g_isDeal = ((int32_t)m_messageMap[LOG_SET_DEAL_LOG] == 1);
-		return;
-	}
-	if (!g_isDeal)
-	{
-		return;
-	}
-	if ((int32_t)m_messageMap[LOG_IS_SEND_NET] == (int32_t)true)
-	{
-		m_message[LOG_PROCESS_NAME] = m_processName;
-		m_message[LOG_LOGIN_NAME] = m_loginName;
-		std::string strMessage = m_message.toString();
-		NetSender::instance().postServer(PROJECT_LOGTEST, strMessage.c_str(), strMessage.size());
+		m_netSemaphore->wait();
+		if (m_exit)
+		{
+			return;
+		}
+		m_netQueue->pop(&m_buffer);
+		NetSender::instance().postServer(PROJECT_LOGTEST, m_buffer);
 	}
 }
 
-void NetTask::setParam(const std::string& buffer, const std::string& processName, const std::string& loginName)
+void NetTask::StopTask()
 {
-	m_buffer = buffer;
-	m_processName = processName;
-	m_loginName = loginName;
+	m_exit = true;
+	m_netSemaphore->signal();
+}
+
+void NetTask::setParam(Semaphore* netSemaphore, LockFreeQueue<std::string>* netQueue)
+{
+	m_netSemaphore = netSemaphore;
+	m_netQueue = netQueue;
 }

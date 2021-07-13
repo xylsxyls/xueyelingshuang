@@ -33,6 +33,7 @@
     <ClCompile Include="..\src\ProcessReadWriteMutex.cpp" />
     <ClCompile Include="..\src\ReadLock.cpp" />
     <ClCompile Include="..\src\ReadWriteMutex.cpp" />
+    <ClCompile Include="..\src\ReadWriteMutexBase.cpp" />
     <ClCompile Include="..\src\WriteLock.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -1,7 +1,9 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "ProtoMessage/ProtoMessageAPI.h"
-#include "Variant/VariantAPI.h"
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "LogTestMessage.pb.h"
+
+class Semaphore;
 
 class LogTask : public CTask
 {
@@ -11,12 +13,14 @@ public:
 public:
 	virtual void DoTask();
 
-	void setParam(bool isNet, const std::string& buffer, const std::string& processName = "");
+	void StopTask();
+
+	void setParam(Semaphore* logSemaphore, LockFreeQueue<std::string>* logQueue);
 
 private:
+	Semaphore* m_logSemaphore;
+	LockFreeQueue<std::string>* m_logQueue;
 	std::string m_buffer;
-	std::string m_processName;
-	bool m_isNet;
-	ProtoMessage m_message;
-	std::map<int32_t, Variant> m_messageMap;
+	logtest::LogTestMessage m_message;
+	std::atomic<bool> m_exit;
 };
