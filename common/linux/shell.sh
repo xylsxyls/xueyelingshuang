@@ -9,7 +9,7 @@ chmod 777 ../NetServerManager/NetServerManager1.1
 chmod 777 ../LogTestServer/LogTestServer1.1
 chmod 777 ../DtwsServer/DtwsServer1.0
 chmod 777 ../NetClientManager/NetClientManager1.1
-chmod 777 ../LogTest/LogTest1.1
+chmod 777 ../LogTest/LogTest1.2
 chmod 777 ../LogSender/LogSendTest
 chmod 777 ./*.sh
 chmod 777 ../../*/*/*.sh
