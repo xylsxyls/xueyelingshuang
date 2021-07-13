@@ -1,0 +1,187 @@
+#include "ConsoleTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include "CRandom/CRandomAPI.h"
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		exit(0);
+	}	
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+int32_t main()
+{
+	//1-1000分，随机100个数字
+	//3组，每组100个
+	//1组，挑选出最大的数
+	//2组，如果遇到比最大数还大的就选中
+	//3组，每过3分之1就把最大数改为下一级，直到选中，如果仍然没有则选择最后一个
+	//选中的数在总300个中的百分比排名
+
+	std::map<int, std::pair<int, std::map<int, int>>> mapResult;
+
+	int32_t allError = 0;
+
+	int32_t calcCount = 1000;
+	while (calcCount-- != 0)
+	{
+		std::map<int, int> vec1;
+		std::vector<int> vec2;
+		std::vector<int> vec3;
+		int32_t count = 100;
+		while (count-- != 0)
+		{
+			vec1[CRandom::Int(1, 1000)] = 0;
+			vec2.push_back(CRandom::Int(1, 1000));
+			vec3.push_back(CRandom::Int(1, 1000));
+		}
+
+		int32_t result = 0;
+		auto itStandard = vec1.rbegin();
+		int32_t standard = itStandard->first;
+
+		//第二阶段
+		int32_t index = -1;
+		while (index++ != vec2.size() - 1)
+		{
+			if (vec2[index] > standard)
+			{
+				result = vec2[index];
+				break;
+			}
+		}
+
+		int level = 0;
+		//第三阶段
+		if (result == 0)
+		{
+			int32_t lastLevel = vec3.size() / 3;
+			int32_t lastIndex = -1;
+			while (lastIndex++ != vec3.size() - 1)
+			{
+				if (lastIndex >= lastLevel)
+				{
+					++level;
+					lastLevel = (vec3.size() - lastIndex) / 3 + lastLevel;
+					++itStandard;
+					if (itStandard == vec1.rend())
+					{
+						--itStandard;
+					}
+					standard = itStandard->first;
+				}
+				if (vec3[lastIndex] > standard)
+				{
+					result = vec3[lastIndex];
+					break;
+				}
+			}
+		}
+
+		int error = 0;
+		//收尾阶段
+		if (result == 0)
+		{
+			++error;
+			result = *vec3.rbegin();
+		}
+
+		//排名
+		std::map<int, int> vecAll;
+		for (auto it = vec1.begin(); it != vec1.end(); ++it)
+		{
+			vecAll[it->first] = 0;
+		}
+
+		index = -1;
+		while (index++ != vec2.size() - 1)
+		{
+			vecAll[vec2[index]] = 0;
+		}
+
+		index = -1;
+		while (index++ != vec3.size() - 1)
+		{
+			vecAll[vec3[index]] = 0;
+		}
+
+		double percent = 0;
+		int rank = 0;
+		for (auto it = vecAll.rbegin(); it != vecAll.rend(); ++it)
+		{
+			++rank;
+			if (it->first == result)
+			{
+				percent = rank / 300.0;
+				break;
+			}
+		}
+
+		//printf("rank = %d, percent = %lf, level = %d, error = %d\n", rank, percent, level, error);
+
+		if (mapResult.find(rank) == mapResult.end())
+		{
+			std::map<int, int> vecLevel;
+			vecLevel[level] = 1;
+			mapResult[rank] = std::pair<int, std::map<int, int>>(1, vecLevel);
+		}
+		else
+		{
+			std::pair<int, std::map<int, int>>& pair = mapResult[rank];
+			++pair.first;
+			if (pair.second.find(level) == pair.second.end())
+			{
+				pair.second[level] = 1;
+			}
+			else
+			{
+				++(pair.second[level]);
+			}
+		}
+		allError += error;
+	}
+
+	//结论
+	//选到第一名的概率有3分之1，选到前1%的概率有3分之2，选到前%3的概率有10分之9，一直降级直到选中最后一个的概率有5%
+	printf("allError = %d\n", allError);
+	getchar();
+	return 0;
+}
