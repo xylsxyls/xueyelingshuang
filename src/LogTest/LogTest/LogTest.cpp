@@ -158,6 +158,8 @@ int32_t main()
 		CSystem::Sleep(1);
 	}
 
+	ProcessWork::instance().uninitReceive();
+
 	CTaskThreadManager::Instance().Uninit(g_screenThreadId);
 	CTaskThreadManager::Instance().Uninit(g_logDeleteThreadId);
 	CTaskThreadManager::Instance().Uninit(g_logThreadId);

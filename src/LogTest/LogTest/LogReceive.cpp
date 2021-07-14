@@ -37,7 +37,6 @@ void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, Me
 		m_message.getMap(m_messageMap);
 		if ((int32_t)m_messageMap[LOG_CLOSE] == (int32_t)true)
 		{
-			ProcessWork::instance().uninitReceive();
 			g_exit = true;
 			return;
 		}
