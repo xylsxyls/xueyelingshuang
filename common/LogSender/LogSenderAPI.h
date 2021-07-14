@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #endif
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
 
 #define LOG_TEST_UNIQUE_OPEN LogSenderManager::instance().getInterface()->logTestUniqueOpen
 #define LOG_TEST_EXIST LogSenderManager::instance().getInterface()->logTestExist
