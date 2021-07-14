@@ -34,6 +34,8 @@ void CtrlCMessage(int eve)
 	{
 		//关闭退出事件
 		//RCSend("close DtwsServer");
+		ProcessWork::instance().uninitReceive();
+		g_exit = true;
 		exit(0);
 	}	
 }

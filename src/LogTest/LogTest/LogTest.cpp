@@ -56,8 +56,13 @@ void CtrlCMessage(int eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		ProcessWork::instance().uninitPostThread();
 		ProcessWork::instance().uninitReceive();
+
+		CTaskThreadManager::Instance().Uninit(g_screenThreadId);
+		CTaskThreadManager::Instance().Uninit(g_logDeleteThreadId);
+		CTaskThreadManager::Instance().Uninit(g_logThreadId);
+		CTaskThreadManager::Instance().Uninit(g_netThreadId);
+
 		g_exit = true;
 		exit(0);
 	}	
