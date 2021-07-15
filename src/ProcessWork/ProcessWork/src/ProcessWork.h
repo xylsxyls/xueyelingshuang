@@ -69,7 +69,7 @@ public:
 	/** 向服务端发送字符串，单进程有序，多进程无序，有先发后到的情况，该函数执行完则表示数据已写入共享内存并通知对方，需业务保证对方进程存在
 	windows下发送速度70.9万/s，接收速度70.9万/s，linux下发送速度45.9万包/s，接收速度45.9万包/s
 	@param [in] destPid 目标进程pid
-	@param [in] buffer 字符串地址
+	@param [in] buffer 字符串地址，空包填nullptr
 	@param [in] length 长度
 	@param [in] type 发送数据类型
 	*/
@@ -77,7 +77,7 @@ public:
 
 	/** 向服务端发送数据
 	@param [in] destPid 目标进程pid
-	@param [in] message 发送内容
+	@param [in] message 发送内容，可以为空字符串，等同于nullptr
 	@param [in] type 发送数据类型
 	*/
 	void send(int32_t destPid, const std::string& message, MessageType type = MessageType::MESSAGE);

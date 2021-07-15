@@ -30,7 +30,7 @@ void ReceiveTask::DoTask()
 
 		for (auto itCallback = m_callback->begin(); itCallback != m_callback->end(); ++itCallback)
 		{
-			(*itCallback)->receive(sendPid, receive + 12, length, type);
+			(*itCallback)->receive(sendPid, length == 0 ? nullptr : receive + 12, length, type);
 		}
 
 		delete[] receive;

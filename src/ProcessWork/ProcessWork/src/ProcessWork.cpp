@@ -451,7 +451,10 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 	*((int32_t*)memory) = m_thisProcessPid;
 	*((int32_t*)memory + 1) = length + 4;
 	*((int32_t*)memory + 2) = (int32_t)type;
-	::memcpy((char*)memory + 12, buffer, length);
+	if (length != 0)
+	{
+		::memcpy((char*)memory + 12, buffer, length);
+	}
 
 	//…Í«Îƒø±Í∂¡»°
 	{
@@ -536,12 +539,12 @@ void ProcessWork::send(const std::string& processName, const char* buffer, int32
 
 void ProcessWork::send(int32_t destPid, const std::string& message, MessageType type)
 {
-	send(destPid, message.c_str(), message.size(), type);
+	send(destPid, message.empty() ? nullptr : message.c_str(), message.size(), type);
 }
 
 void ProcessWork::send(const std::string& processName, const std::string& message, MessageType type)
 {
-	send(processName, message.c_str(), message.size(), type);
+	send(processName, message.empty() ? nullptr : message.c_str(), message.size(), type);
 }
 
 void ProcessWork::post(int32_t destPid, const char* buffer, int32_t length, MessageType type)
@@ -555,7 +558,10 @@ void ProcessWork::post(int32_t destPid, const char* buffer, int32_t length, Mess
 	*(int32_t*)postBuffer = destPid;
 	*((int32_t*)postBuffer + 1) = length;
 	*((int32_t*)postBuffer + 2) = type;
-	::memcpy(postBuffer + 12, buffer, length);
+	if (length != 0)
+	{
+		::memcpy(postBuffer + 12, buffer, length);
+	}
 
 	{
 		WriteLock writeLock(m_postMutex);
@@ -576,7 +582,10 @@ void ProcessWork::post(const std::string& processName, const char* buffer, int32
 	::memcpy(postNameBuffer, processName.c_str(), nameLength + 1);
 	*((int32_t*)(postNameBuffer + nameLength + 1)) = length;
 	*((int32_t*)(postNameBuffer + nameLength + 1) + 1) = type;
-	::memcpy(postNameBuffer + nameLength + 1 + 8, buffer, length);
+	if (length != 0)
+	{
+		::memcpy(postNameBuffer + nameLength + 1 + 8, buffer, length);
+	}
 
 	{
 		WriteLock writeLock(m_postNameMutex);
@@ -587,12 +596,12 @@ void ProcessWork::post(const std::string& processName, const char* buffer, int32
 
 void ProcessWork::post(int32_t destPid, const std::string& message, MessageType type)
 {
-	post(destPid, message.c_str(), message.size(), type);
+	post(destPid, message.empty() ? nullptr : message.c_str(), message.size(), type);
 }
 
 void ProcessWork::post(const std::string& processName, const std::string& message, MessageType type)
 {
-	post(processName, message.c_str(), message.size(), type);
+	post(processName, message.empty() ? nullptr : message.c_str(), message.size(), type);
 }
 
 void ProcessWork::waitForPostEnd()

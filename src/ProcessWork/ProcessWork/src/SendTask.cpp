@@ -25,7 +25,7 @@ void SendTask::DoTask()
 		char* postBuffer = nullptr;
 		m_postQueue->pop(&postBuffer);
 		ProcessWork::instance().send(*(int32_t*)postBuffer,
-			postBuffer + 12,
+			(*((int32_t*)postBuffer + 1) == 0) ? nullptr : (postBuffer + 12),
 			*((int32_t*)postBuffer + 1),
 			(MessageType)*((int32_t*)postBuffer + 2));
 

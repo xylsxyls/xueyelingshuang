@@ -27,7 +27,7 @@ void SendNameTask::DoTask()
 		int32_t nameLength = strlen(postNameBuffer);
 
 		ProcessWork::instance().send(postNameBuffer,
-			postNameBuffer + nameLength + 1 + 8,
+			(*((int32_t*)(postNameBuffer + nameLength + 1)) == 0) ? nullptr : (postNameBuffer + nameLength + 1 + 8),
 			*((int32_t*)(postNameBuffer + nameLength + 1)),
 			(MessageType)*((int32_t*)(postNameBuffer + nameLength + 1) + 1));
 
