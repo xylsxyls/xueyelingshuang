@@ -32,4 +32,12 @@ public:
 	@return 返回减之后的值
 	*/
 	static int32_t selfSub(int32_t* ptr, int32_t value);
+
+	/** 比较之后交换
+	@param [in] ptr 4字节内存地址，可以用于共享内存
+	@param [in] oldValue 是否和内存中原本的值一致
+	@param [in] newValue 如果一致则修改为新的值
+	@return 成功更换值返回true
+	*/
+	static bool compareAndSwap(int32_t* ptr, int32_t oldValue, int32_t newValue);
 };
