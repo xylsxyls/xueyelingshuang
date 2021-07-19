@@ -451,8 +451,8 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 		return;
 	}
 	*((int32_t*)memory) = m_thisProcessPid;
-	*(int32_t*)memory = (int32_t)type;
-	*((int32_t*)memory + 1) = length;
+	*((int32_t*)memory + 1) = (int32_t)type;
+	*((int32_t*)memory + 2) = length;
 	if (length != 0)
 	{
 		::memcpy((char*)memory + 12, buffer, length);
