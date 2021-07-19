@@ -555,8 +555,8 @@ void ProcessWork::post(int32_t destPid, const char* buffer, int32_t length, Mess
 
 	char* postBuffer = new char[12 + length];
 	*(int32_t*)postBuffer = destPid;
-	*((int32_t*)postBuffer + 1) = length;
-	*((int32_t*)postBuffer + 2) = type;
+	*((int32_t*)postBuffer + 1) = type;
+	*((int32_t*)postBuffer + 2) = length;
 	if (length != 0)
 	{
 		::memcpy(postBuffer + 12, buffer, length);
@@ -579,8 +579,8 @@ void ProcessWork::post(const std::string& processName, const char* buffer, int32
 	int32_t nameLength = strlen(processName.c_str());
 	char* postNameBuffer = new char[nameLength + 1 + 8 + length];
 	::memcpy(postNameBuffer, processName.c_str(), nameLength + 1);
-	*((int32_t*)(postNameBuffer + nameLength + 1)) = length;
-	*((int32_t*)(postNameBuffer + nameLength + 1) + 1) = type;
+	*((int32_t*)(postNameBuffer + nameLength + 1)) = type;
+	*((int32_t*)(postNameBuffer + nameLength + 1) + 1) = length;
 	if (length != 0)
 	{
 		::memcpy(postNameBuffer + nameLength + 1 + 8, buffer, length);
