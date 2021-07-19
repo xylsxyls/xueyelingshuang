@@ -400,15 +400,11 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 			int32_t index = -1;
 			while (index++ != areaCount - 1)
 			{
-				int32_t& areaOwn = *((int32_t*)areaAssign + 1 + index * 2 + 1);
-				if (areaOwn == 0)
+				if (AtomicMath::compareAndSwap((int32_t*)areaAssign + 1 + index * 2 + 1, 0, m_thisProcessPid))
 				{
-					if (AtomicMath::selfAddOne(&areaOwn) == 1)
-					{
-						//读取申请的缓存区号
-						assign = *((int32_t*)areaAssign + 1 + index * 2);
-						break;
-					}
+					//读取申请的缓存区号
+					assign = *((int32_t*)areaAssign + 1 + index * 2);
+					break;
 				}
 			}
 			if (assign != 0)
@@ -449,8 +445,8 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 		return;
 	}
 	*((int32_t*)memory) = m_thisProcessPid;
-	*((int32_t*)memory + 1) = length + 4;
-	*((int32_t*)memory + 2) = (int32_t)type;
+	*(int32_t*)memory = (int32_t)type;
+	*((int32_t*)memory + 1) = length;
 	if (length != 0)
 	{
 		::memcpy((char*)memory + 12, buffer, length);
@@ -468,11 +464,14 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 		while (true)
 		{
 			//前4字节为0，后4字节拿到1
-			if ((*(beginReadPtr + writeIndex * 2) == 0) && (AtomicMath::selfAddOne(beginReadPtr + writeIndex * 2 + 1) == 1))
+			if ((*(beginReadPtr + writeIndex * 2) == 0) && (AtomicMath::compareAndSwap(beginReadPtr + writeIndex * 2 + 1, 0, m_thisProcessPid)))
 			{
 				//把写好的缓存区号写进去
 				*(beginReadPtr + writeIndex * 2) = assign;
 				//局部会出现write值被旧值覆盖，但出现新的send后会重新写入正确的值，为了防止抢占到之后崩溃
+				//不可以写write = writeIndex + 1;因为会出现前面的后写入，导致存储顺序出错
+				//0 0  0 0  0 0  0 0  0 2145  0 7896  0 5468  12 5489，第五第六格写入通知，但是第五格后写入
+				//一旦在这里崩溃无法保证后续几个包之内的顺序，且会出现少通知最后一个包的情况
 				int32_t currentWrite = AtomicMath::selfAddOne(&write);
 				if (currentWrite >= areaCount)
 				{

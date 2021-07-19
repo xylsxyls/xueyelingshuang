@@ -42,8 +42,7 @@ int32_t AtomicMath::selfSub(int32_t* ptr, int32_t value)
 bool AtomicMath::compareAndSwap(int32_t* ptr, int32_t oldValue, int32_t newValue)
 {
 #ifdef _MSC_VER
-	InterlockedCompareExchange((uint32_t*)ptr, (uint32_t)newValue, (uint32_t)oldValue);
-	return (*ptr == newValue);
+	return (InterlockedCompareExchange((uint32_t*)ptr, (uint32_t)newValue, (uint32_t)oldValue) == (uint32_t)oldValue);
 #elif __unix__
 	return __sync_bool_compare_and_swap((uint32_t*)ptr, (uint32_t)oldValue, (uint32_t)newValue);
 #endif

@@ -2,6 +2,7 @@
 #include "Semaphore/SemaphoreAPI.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "AtomicMath/AtomicMathAPI.h"
 
 ReadTask::ReadTask():
 m_readSemaphore(nullptr),
@@ -30,6 +31,7 @@ void ReadTask::DoTask()
 			break;
 		}
 
+		int32_t* write = (int32_t*)areaRead;
 		int32_t& read = *((int32_t*)areaRead + 1);
 		int32_t* beginReadPtr = (int32_t*)areaRead + 2;
 		volatile int32_t& readPoint = *(beginReadPtr + read * 2 + 1);
@@ -46,9 +48,17 @@ void ReadTask::DoTask()
 			}
 			else if (readCount > 10)
 			{
-				//超过100毫秒仍然读不到正常数据时说明发送程序抢占到节点后崩溃了
-				if (CSystem::GetTickCount() - beginReadTime > 5000)
+				//超过1000毫秒仍然读不到正常数据时需要检测发送程序是否崩溃了
+				if (CSystem::GetTickCount() - beginReadTime > 1000)
 				{
+					if (!CSystem::processName(readPoint).empty())
+					{
+						readCount = 0;
+						continue;
+					}
+					//到这里说明发送程序抢占到节点后崩溃了，此时的通知是下一个包的通知，所以需要在这里补一次
+					AtomicMath::selfAddOne(write);
+					m_readSemaphore->processSignal();
 					read += 1;
 					if (read == m_areaCount)
 					{

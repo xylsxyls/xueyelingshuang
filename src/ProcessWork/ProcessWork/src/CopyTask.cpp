@@ -40,7 +40,7 @@ void CopyTask::DoTask()
 			printf("CopyTask memory nullptr\n");
 		}
 
-		int32_t length = *((int32_t*)memory + 1) - 4 + 12;
+		int32_t length = *((int32_t*)memory + 2) + 12;
 		char* receive = new char[length + 1];
 		receive[length] = 0;
 		::memcpy(receive, (char*)memory, length);

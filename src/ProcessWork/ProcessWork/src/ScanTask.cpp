@@ -1,6 +1,7 @@
 #include "ScanTask.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "AtomicMath/AtomicMathAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 ScanTask::ScanTask():
 m_areaAssign(nullptr),
@@ -43,14 +44,19 @@ void ScanTask::DoTask()
 			{
 				continue;
 			}
-			int32_t addAssignPoint = AtomicMath::selfAdd((int32_t*)areaAssign + 1 + index * 2 + 1, areaCount);
+			//过了一秒后发现两个Point相等则怀疑发送进程是否崩溃了
 			Sleep(5000);
 			if (m_exit)
 			{
 				break;
 			}
-			int32_t lastAssignPoint = *((int32_t*)areaAssign + 1 + index * 2 + 1);
-			if (lastAssignPoint != addAssignPoint)
+			int32_t currentAssignPointForFiveSeconds = *((int32_t*)areaAssign + 1 + index * 2 + 1);
+			if (currentAssignPoint != currentAssignPointForFiveSeconds)
+			{
+				continue;
+			}
+			//如果过了5秒发现两个Point仍然相等，则检测发送进程是否崩溃了
+			if (!CSystem::processName(assignPoint).empty())
 			{
 				continue;
 			}

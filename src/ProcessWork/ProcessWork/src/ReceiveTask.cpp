@@ -25,8 +25,8 @@ void ReceiveTask::DoTask()
 		m_receiveQueue->pop(&receive);
 
 		int32_t sendPid = *(int32_t*)receive;
-		int32_t length = *((int32_t*)receive + 1) - 4;
-		MessageType type = (MessageType)*((int32_t*)receive + 2);
+		MessageType type = (MessageType)*((int32_t*)receive + 1);
+		int32_t length = *((int32_t*)receive + 2);
 
 		for (auto itCallback = m_callback->begin(); itCallback != m_callback->end(); ++itCallback)
 		{
