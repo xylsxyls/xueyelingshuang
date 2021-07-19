@@ -395,7 +395,8 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 	int32_t assign = 0;
 	//…Í«Îª∫¥Ê«¯∫≈
 	{
-		do
+		int32_t searchCount = 0;
+		while (true)
 		{
 			int32_t index = -1;
 			while (index++ != areaCount - 1)
@@ -411,8 +412,13 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 			{
 				break;
 			}
+			++searchCount;
+			if ((searchCount % 10 == 0) && CSystem::processName(destPid).empty())
+			{
+				break;
+			}
 			//RCSend("cannot has assign");
-		} while (!CSystem::processName(destPid).empty());
+		}
 	}
 
 	if (assign == 0)

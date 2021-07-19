@@ -49,7 +49,7 @@ void ReadTask::DoTask()
 			else if (readCount > 10)
 			{
 				//超过1000毫秒仍然读不到正常数据时需要检测发送程序是否崩溃了
-				if (CSystem::GetTickCount() - beginReadTime > 1000)
+				if (CSystem::GetTickCount() - beginReadTime > 5000)
 				{
 					if (!CSystem::processName(readPoint).empty())
 					{
