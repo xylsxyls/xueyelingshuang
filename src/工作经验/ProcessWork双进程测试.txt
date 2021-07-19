@@ -89,7 +89,6 @@ ConsoleTest1
 #endif
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "CStopWatch/CStopWatchAPI.h"
 #include "CSystem/CSystemAPI.h"
 
 #ifdef _MSC_VER
@@ -152,13 +151,21 @@ public:
 	{
 		//uint32_t threadId = CSystem::SystemThreadId();
 		//RCSend("threadId = %d", threadId);
-		static CStopWatch watch;
+		static int32_t beginTime = ::GetTickCount();
 		int32_t index = -1;
 		while ((index++ != g_sendCount - 1) && !m_exit)
 		{
-			ProcessWork::instance().post("ConsoleTest", "123456", 6);
+			//if (index % 2 == 1)
+			//{
+			//	ProcessWork::instance().post(4040, "123456", 6);
+			//}
+			//else
+			//{
+			//	ProcessWork::instance().send(4040, "123456", 6);
+			//}
+			ProcessWork::instance().send("ConsoleTest", "123456", 6);
 		}
-		printf("watch = %d\n", (int32_t)watch.GetWatchTime());
+		printf("watch = %d\n", ::GetTickCount() - beginTime);
 	}
 
 	void StopTask()
@@ -175,8 +182,8 @@ int32_t main()
 {
 	ProcessWork::instance().initPostThread();
 
-	g_sendCount = 100000;
-	g_sendThreadCount = 10;
+	g_sendCount = 10000000;
+	g_sendThreadCount = 1;
 
 	std::vector<std::shared_ptr<CTaskThread>> vecThread;
 	std::vector<std::shared_ptr<Task>> vecTask;
