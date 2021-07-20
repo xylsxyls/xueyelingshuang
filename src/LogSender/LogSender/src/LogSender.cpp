@@ -37,7 +37,7 @@ void LogSender::logTestUniqueOpen()
 
 void LogSender::logTestUniqueClose()
 {
-	if (logTestExist())
+	if (!logTestExist())
 	{
 		return;
 	}
