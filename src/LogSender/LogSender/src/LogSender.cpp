@@ -35,6 +35,15 @@ void LogSender::logTestUniqueOpen()
 	logTestOpen();
 }
 
+void LogSender::logTestUniqueClose()
+{
+	if (logTestExist())
+	{
+		return;
+	}
+	logTestClose();
+}
+
 void LogSender::logTestOpen()
 {
 	std::string path = CSystem::GetCurrentDllPath() + "LogTest" + LOGTEST_CLIENT_VERSION;

@@ -415,6 +415,7 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 			++searchCount;
 			if ((searchCount % 10 == 0) && CSystem::processName(destPid).empty())
 			{
+				clearUseless();
 				break;
 			}
 			//RCSend("cannot has assign");

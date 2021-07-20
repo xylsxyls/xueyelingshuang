@@ -13,6 +13,8 @@ class LogSenderAPI LogSenderInterface
 public:
 	virtual void logTestUniqueOpen() = 0;
 
+	virtual void logTestUniqueClose() = 0;
+
 	virtual bool logTestExist() = 0;
 
 	virtual void logTestOpen() = 0;
@@ -39,6 +41,8 @@ public:
 
 public:
 	void logTestUniqueOpen();
+
+	void logTestUniqueClose();
 
 	bool logTestExist();
 
