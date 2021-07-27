@@ -36,6 +36,15 @@
     <ClInclude Include="..\src\WorkTask.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\RunLoopTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ClientTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ServerTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\HeartTask.cpp">
@@ -51,6 +60,15 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\WorkTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RunLoopTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ClientTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ServerTask.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

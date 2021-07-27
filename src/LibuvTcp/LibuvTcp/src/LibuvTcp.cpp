@@ -1,48 +1,66 @@
 #include "LibuvTcp.h"
 #include "uv.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
-#include "RunLoopTask.h"
 #include <mutex>
 #include <memory>
 #include <string.h>
-
-void onAsyncCallback(uv_async_t* handle);
+#include <atomic>
+#include "LibuvClient.h"
+#include "LibuvServer.h"
 
 LibuvTcp::LibuvTcp():
-m_isClient(false),
-m_asyncHandle(nullptr),
-m_queue(nullptr),
-m_loopThreadId(0)
+m_libuv(nullptr)
 {
 	
 }
 
 LibuvTcp::~LibuvTcp()
 {
-
+	
 }
 
 void onRead(uv_stream_t* sender, ssize_t nread, const uv_buf_t* buf)
 {
 	//RCSend("receive, threadId = %d",CSystem::SystemThreadId());
+	LibuvBase* libuv = (LibuvBase*)sender->data;
+	LibuvTcp* libuvTcp = libuv->m_libuvTcp;
 	//分配好的缓存在这里使用，使用完后最后回释放，=0为读取成功，但是没有读取到任何数据而已 
 	if (nread < 0)
 	{
 		//读取到的数据大小小于零，表示读取出错 
-		if (nread != UV_EOF)
+		if (nread == uv_errno_t::UV_EOF || nread == uv_errno_t::UV_ECONNRESET)
 		{
-			printf("Read error %s\n", uv_err_name(nread));
+			printf("tcp disconnected\n");
 		}
-		uv_close((uv_handle_t*)sender, nullptr);
+		else
+		{
+			printf("Read error %s, nread = %d\n", uv_err_name(nread), nread);
+		}
 		::free(buf->base);
+		
+		libuvTcp->uvDisconnectedClear((uv_tcp_t*)sender);
+		if (libuv->m_isClient)
+		{
+			libuvTcp->stop();
+			libuvTcp->uvServerDisconnected((uv_tcp_t*)sender);
+		}
+		else
+		{
+			LibuvServer* libuvServer = (LibuvServer*)libuv;
+			libuvTcp->close((uv_tcp_t*)sender);
+			auto it = std::find(libuvServer->m_vecClient.begin(), libuvServer->m_vecClient.end(), (uv_tcp_t*)sender);
+			if (it != libuvServer->m_vecClient.end())
+			{
+				libuvServer->m_vecClient.erase(it);
+			}
+			libuvTcp->uvClientDisconnected((uv_tcp_t*)sender);
+		}
 		return;
 	}
 	//实际读取到了内容
-	LibuvTcp* libuvTcp = (LibuvTcp*)sender->data;
 	libuvTcp->receive((uv_tcp_t*)sender, buf->base, nread);
 	//确保这句代码一定会在最后面执行，不要在中间突然退出函数，否则就内存泄露了 
 	::free(buf->base);
-	//RCSend("receive end, threadId = %d", CSystem::SystemThreadId());
 }
 
 void StartRead(uv_tcp_t* sender)
@@ -60,23 +78,49 @@ void StartRead(uv_tcp_t* sender)
 	}
 }
 
+void onAsyncClosed(uv_handle_t* handle)
+{
+	delete (uv_async_t*)handle;
+}
+
+void onTcpClosed(uv_handle_t* handle)
+{
+	delete (uv_tcp_t*)handle;
+}
+
+void onClientClosed(uv_handle_t* handle)
+{
+	LibuvClient* libuvClient = (LibuvClient*)handle->data;
+	delete libuvClient->m_connect;
+	delete (uv_tcp_t*)handle;
+}
+
 //客户端连上服务端的回调（客户端函数）
 void onServerConnected(uv_connect_t* connect, int status)
 {
+	LibuvClient* libuv = (LibuvClient*)connect->data;
+	LibuvTcp* libuvTcp = libuv->m_libuvTcp;
 	if (status < 0)
 	{
-		printf("connect error: %s!\n", uv_strerror(status));
+		libuvTcp->uvServerNotFindClear();
+		libuvTcp->stop();
+		libuvTcp->uvServerNotFind();
 		return;
 	}
 	printf("connect success!\n");
 
-	LibuvTcp* libuvTcp = (LibuvTcp*)connect->data;
-	uv_tcp_t* server = (uv_tcp_t*)connect->handle;
-	server->data = libuvTcp;
-	libuvTcp->serverConnected(server);
+	if ((uv_tcp_t*)connect->handle != libuv->m_dest)
+	{
+		printf("dest error\n");
+	}
+
+	//实际时间为10秒
+	uv_tcp_keepalive(libuv->m_dest, 1, 5);
+
+	libuvTcp->uvServerConnected(libuv->m_dest);
 
 	//开始读取客户端发送的数据，并设置好接收缓存分配的函数alloc_buffer和读取完毕后的回调函数echo_read 
-	StartRead(server);
+	StartRead(libuv->m_dest);
 }
 
 //客户端连上服务端的回调（服务端函数）
@@ -89,38 +133,46 @@ void onClientConnected(uv_stream_t* server, int status)
 		return;
 	}
 
-	LibuvTcp* libuvTcp = (LibuvTcp*)server->data;
+	LibuvServer* libuv = (LibuvServer*)server->data;
+	LibuvTcp* libuvTcp = (LibuvTcp*)libuv->m_libuvTcp;
 
 	//分配内存
 	uv_tcp_t* client = new uv_tcp_t;
 
 	//将全局的主循环和处理连接的对象关联起来
-	uv_tcp_init(libuvTcp->loopPtr(), client);
+	uv_tcp_init(libuv->m_loop, client);
 
 	//存入类地址
-	client->data = libuvTcp;
+	client->data = libuv;
 
 	//接收服务端对象
 	if (uv_accept((uv_stream_t*)server, (uv_stream_t*)client) != 0)
 	{
 		//读取失败，释放处理对象
 		printf("accept error\n");
-		uv_close((uv_handle_t*)client, NULL);
+		uv_close((uv_handle_t*)client, onTcpClosed);
 		return;
 	}
+
+	//必须在accept之后执行，否则无效
+	uv_tcp_keepalive(client, 1, 5);
 
 	//开始读取客户端发送的数据，并设置好接收缓存分配的函数alloc_buffer和读取完毕后的回调函数echo_read
 	StartRead(client);
 
-	libuvTcp->clientConnected(client);
+	libuv->m_vecClient.push_back(client);
+
+	libuvTcp->uvClientConnected(client);
 }
 
 void onAsyncCallback(uv_async_t* handle)
 {
-	LockFreeQueue<char*>* queue = (LockFreeQueue<char*>*)handle->data;
+	//RCSend("threadId = %d", CSystem::SystemThreadId());
+	LockFreeQueue<char*>* queue = ((LibuvBase*)handle->data)->m_queue;
 	char* text = nullptr;
 	while (queue->pop(&text))
 	{
+		//RCSend("exe = %s, text = %s", CSystem::GetCurrentExeName().c_str(), text);
 #if defined _WIN64 || defined __x86_64__
 		uv_tcp_t* dest = (uv_tcp_t*)(*(int64_t*)text);
 		int32_t ptrSize = 8;
@@ -156,80 +208,159 @@ void onAsyncCallback(uv_async_t* handle)
 			::free(req);
 		});
 	}
-	
-	return;
 }
 
-void LibuvTcp::initClient(const char* ip, int32_t port)
+void onAsyncCloseCallback(uv_async_t* handle)
 {
-	m_isClient = true;
+	//RCSend("close threadId = %d", CSystem::SystemThreadId());
+	LibuvBase* libuv = (LibuvBase*)handle->data;
+	if (libuv == nullptr)
+	{
+		return;
+	}
+	handle->data = nullptr;
 
-	m_loop = new uv_loop_t;
-	uv_loop_init(m_loop);
-	m_asyncHandle = new uv_async_t;
-	uv_async_init(m_loop, m_asyncHandle, onAsyncCallback);
-	m_queue = new LockFreeQueue < char* >;
-	m_asyncHandle->data = m_queue;
-	m_loopThreadId = CTaskThreadManager::Instance().Init();
+	uv_close((uv_handle_t*)libuv->m_asyncHandle, onAsyncClosed);
+	
+	if (libuv->m_isClient)
+	{
+		LibuvClient* libuvClient = (LibuvClient*)libuv;
+		uv_close((uv_handle_t*)libuvClient->m_dest, onClientClosed);
+	}
+	else
+	{
+		LibuvServer* libuvServer = (LibuvServer*)libuv;
+		int32_t index = -1;
+		while (index++ != libuvServer->m_vecClient.size() - 1)
+		{
+			uv_close((uv_handle_t*)libuvServer->m_vecClient[index], onTcpClosed);
+		}
+		libuvServer->m_vecClient.clear();
+		uv_close((uv_handle_t*)libuvServer->m_server, onTcpClosed);
+	}
 
+	uv_close((uv_handle_t*)libuv->m_asyncCloseHandle, onAsyncClosed);
+}
+
+bool LibuvTcp::initClient(const char* ip, int32_t port)
+{
+	LibuvClient* libuv = new LibuvClient;
+	m_libuv = libuv;
+
+	libuv->m_libuvTcp = this;
+
+	uv_loop_init(libuv->m_loop);
+	libuv->m_asyncHandle->data = libuv;
+	uv_async_init(libuv->m_loop, libuv->m_asyncHandle, onAsyncCallback);
+
+	libuv->m_asyncCloseHandle->data = libuv;
+	uv_async_init(libuv->m_loop, libuv->m_asyncCloseHandle, onAsyncCloseCallback);
+	
 	struct sockaddr_in dest;
 	uv_ip4_addr(ip, port, &dest);
 
-	uv_tcp_t* client = new uv_tcp_t;
-	uv_tcp_init(m_loop, client);
-	uv_connect_t* connect = new uv_connect_t;
-	connect->data = this;
-	int32_t ret = uv_tcp_connect(connect, client, (const struct sockaddr*)&dest, onServerConnected);
+	uv_tcp_init(libuv->m_loop, libuv->m_dest);
+	libuv->m_dest->data = libuv;
+	libuv->m_connect->data = libuv;
+	int32_t ret = uv_tcp_connect(libuv->m_connect, libuv->m_dest, (const struct sockaddr*)&dest, onServerConnected);
 	if (ret != 0)
 	{
+		uv_close((uv_handle_t*)libuv->m_asyncHandle, onAsyncClosed);
+		uv_close((uv_handle_t*)libuv->m_dest, onClientClosed);
+		uv_close((uv_handle_t*)libuv->m_asyncCloseHandle, onAsyncClosed);
+		int res = uv_loop_close(libuv->m_loop);
+		delete libuv->m_queue;
+		delete libuv->m_loop;
+		delete m_libuv;
+		m_libuv = nullptr;
 		printf("Connect error: %s\n", uv_strerror(ret));
-		return;
+		return false;
 	}
+	return true;
 }
 
-void LibuvTcp::initServer(int32_t port, int32_t backlog)
+bool LibuvTcp::initServer(int32_t port, int32_t backlog)
 {
-	m_isClient = false;
+	LibuvServer* libuv = new LibuvServer;
+	m_libuv = libuv;
 
-	m_loop = new uv_loop_t;
-	uv_loop_init(m_loop);
-	m_asyncHandle = new uv_async_t;
-	uv_async_init(m_loop, m_asyncHandle, onAsyncCallback);
-	m_queue = new LockFreeQueue < char* >;
-	m_asyncHandle->data = m_queue;
-	m_loopThreadId = CTaskThreadManager::Instance().Init();
+	libuv->m_libuvTcp = this;
 
-	//TCP服务端对象
-	uv_tcp_t* server = new uv_tcp_t;
-	//初始化，将TCP服务端对象和主循环绑定在一起
-	uv_tcp_init(m_loop, server);
+	uv_loop_init(libuv->m_loop);
 
+	libuv->m_asyncHandle->data = libuv;
+	uv_async_init(libuv->m_loop, libuv->m_asyncHandle, onAsyncCallback);
+
+	libuv->m_asyncCloseHandle->data = libuv;
+	uv_async_init(libuv->m_loop, libuv->m_asyncCloseHandle, onAsyncCloseCallback);
+	
 	//存入类地址
-	server->data = this;
+	libuv->m_server->data = libuv;
+	//初始化，将TCP服务端对象和主循环绑定在一起
+	uv_tcp_init(libuv->m_loop, libuv->m_server);
 
 	struct sockaddr_in addr;
 	//创建IP地址和端口，服务器使用0.0.0.0代表任意地址，公网服务器使用，客户端可以通过公网IP连接。如果是局域网，则填写局域网IP。 
 	uv_ip4_addr("0.0.0.0", port, &addr);
 	//将服务端对象和地址绑定，供后续监听端口使用。 
-	uv_tcp_bind(server, (const struct sockaddr*)&addr, 0);
+	uv_tcp_bind(libuv->m_server, (const struct sockaddr*)&addr, 0);
 	//进行端口监听，同时关联监听后进来的连接的回调函数
-	int res = uv_listen((uv_stream_t*)server, backlog, onClientConnected);
+	int res = uv_listen((uv_stream_t*)libuv->m_server, backlog, onClientConnected);
 	if (res != 0)
 	{
+		uv_close((uv_handle_t*)libuv->m_asyncHandle, onAsyncClosed);
+		uv_close((uv_handle_t*)libuv->m_server, onTcpClosed);
+		uv_close((uv_handle_t*)libuv->m_asyncCloseHandle, onAsyncClosed);
+		int res = uv_loop_close(libuv->m_loop);
+		delete libuv->m_queue;
+		delete libuv->m_loop;
+		delete m_libuv;
+		m_libuv = nullptr;
 		printf("Listen error %s\n", uv_strerror(res));
+		return false;
 	}
+	return true;
 }
 
 void LibuvTcp::loop()
 {
-	auto thread = CTaskThreadManager::Instance().GetThreadInterface(m_loopThreadId);
-	std::shared_ptr<RunLoopTask> spTask(new RunLoopTask);
-	spTask->setLoop(m_loop);
-	thread->PostTask(spTask);
+	LibuvBase* libuv = m_libuv;
+	do 
+	{
+		int32_t res = uv_run(libuv->m_loop, UV_RUN_DEFAULT);
+		if (res != 0)
+		{
+			printf("loop end %s, res = %d\n", uv_err_name(res), res);
+		}
+	} while (uv_loop_close(libuv->m_loop) != 0);
+	char* message = nullptr;
+	while (libuv->m_queue->pop(&message))
+	{
+		::free(message);
+	}
+	delete libuv->m_queue;
+	libuv->m_queue = nullptr;
+	delete libuv->m_loop;
+	libuv->m_loop = nullptr;
+}
+
+void LibuvTcp::stop()
+{
+	if (m_libuv == nullptr)
+	{
+		return;
+	}
+	uv_async_send(m_libuv->m_asyncCloseHandle);
+	m_libuv = nullptr;
 }
 
 void LibuvTcp::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t type)
 {
+	if (dest == nullptr || (buffer == nullptr && length != 0))
+	{
+		return;
+	}
+
 #if defined _WIN64 || defined __x86_64__
 	int32_t ptrSize = 8;
 #else
@@ -244,14 +375,17 @@ void LibuvTcp::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t 
 	
 	*((int32_t*)(text + ptrSize)) = length + 4;
 	*((int32_t*)(text + ptrSize + 4)) = type;
-	::memcpy(text + ptrSize + 8, buffer, length);
+	if (buffer != nullptr)
+	{
+		::memcpy(text + ptrSize + 8, buffer, length);
+	}
 
 	{
-		std::unique_lock<std::mutex> lock(m_queueMutex);
-		m_queue->push(text);
+		std::unique_lock<std::mutex> lock(m_libuv->m_queueMutex);
+		m_libuv->m_queue->push(text);
 	}
 	
-	int sendres = uv_async_send(m_asyncHandle);
+	int sendres = uv_async_send(m_libuv->m_asyncHandle);
 	if (sendres != 0)
 	{
 		printf("uv_async_send error\n");
@@ -260,17 +394,17 @@ void LibuvTcp::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t 
 
 uv_loop_t* LibuvTcp::loopPtr()
 {
-	return m_loop;
+	return m_libuv->m_loop;
 }
 
 bool LibuvTcp::isClient()
 {
-	return m_isClient;
+	return m_libuv->m_isClient;
 }
 
 void LibuvTcp::close(uv_tcp_t* tcp)
 {
-	uv_close((uv_handle_t*)tcp, nullptr);
+	uv_close((uv_handle_t*)tcp, onTcpClosed);
 }
 
 void LibuvTcp::receive(uv_tcp_t* sender, const char* buffer, int32_t length)
@@ -278,14 +412,39 @@ void LibuvTcp::receive(uv_tcp_t* sender, const char* buffer, int32_t length)
 	printf("sender = %p, buffer = %p, length = %d\n", sender, buffer, length);
 }
 
-void LibuvTcp::clientConnected(uv_tcp_t* client)
+void LibuvTcp::uvClientConnected(uv_tcp_t* client)
 {
 	printf("client = %p\n", client);
 }
 
-void LibuvTcp::serverConnected(uv_tcp_t* server)
+void LibuvTcp::uvClientDisconnected(uv_tcp_t* client)
+{
+	printf("client disconnect = %p\n", client);
+}
+
+void LibuvTcp::uvServerConnected(uv_tcp_t* server)
 {
 	printf("server = %p\n", server);
+}
+
+void LibuvTcp::uvServerNotFind()
+{
+	printf("server not find\n");
+}
+
+void LibuvTcp::uvServerNotFindClear()
+{
+
+}
+
+void LibuvTcp::uvServerDisconnected(uv_tcp_t* server)
+{
+	printf("server disconnect = %p\n", server);
+}
+
+void LibuvTcp::uvDisconnectedClear(uv_tcp_t* tcp)
+{
+
 }
 
 //class Client : public LibuvTcp

@@ -19,17 +19,21 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\LibuvBase.h" />
+    <ClInclude Include="..\src\LibuvClient.h" />
+    <ClInclude Include="..\src\LibuvServer.h" />
     <ClInclude Include="..\src\LibuvTcpAPI.h" />
     <ClInclude Include="..\src\LibuvTcpMacro.h" />
     <ClInclude Include="..\src\LibuvTcp.h" />
-    <ClInclude Include="..\src\RunLoopTask.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\LibuvBase.cpp" />
+    <ClCompile Include="..\src\LibuvClient.cpp" />
+    <ClCompile Include="..\src\LibuvServer.cpp" />
     <ClCompile Include="..\src\LibuvTcp.cpp" />
-    <ClCompile Include="..\src\RunLoopTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
+    <ProjectGuid>{72991609-5BD7-42A6-B894-4785BF7C305F}</ProjectGuid>
     <RootNamespace>LibuvTcp</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

@@ -19,23 +19,29 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\ClientTask.h" />
     <ClInclude Include="..\src\HeartTask.h" />
     <ClInclude Include="..\src\NetClient.h" />
     <ClInclude Include="..\src\NetServer.h" />
     <ClInclude Include="..\src\NetWorkAPI.h" />
     <ClInclude Include="..\src\NetWorkHelper.h" />
     <ClInclude Include="..\src\NetWorkMacro.h" />
+    <ClInclude Include="..\src\RunLoopTask.h" />
+    <ClInclude Include="..\src\ServerTask.h" />
     <ClInclude Include="..\src\WorkTask.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\ClientTask.cpp" />
     <ClCompile Include="..\src\HeartTask.cpp" />
     <ClCompile Include="..\src\NetClient.cpp" />
     <ClCompile Include="..\src\NetServer.cpp" />
     <ClCompile Include="..\src\NetWorkHelper.cpp" />
+    <ClCompile Include="..\src\RunLoopTask.cpp" />
+    <ClCompile Include="..\src\ServerTask.cpp" />
     <ClCompile Include="..\src\WorkTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>
+    <ProjectGuid>{24514D57-7F86-4BF4-9D0C-4C6E96A2CA21}</ProjectGuid>
     <RootNamespace>NetWork</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

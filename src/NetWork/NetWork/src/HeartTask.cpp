@@ -4,23 +4,28 @@
 HeartTask::HeartTask():
 m_time(0),
 m_netClient(nullptr),
-m_stop(false)
+m_exit(false)
 {
 
 }
 
 void HeartTask::DoTask()
 {
-	while (!m_stop)
+	while (!m_exit)
 	{
-		m_netClient->send("", 0, MessageType::HEART);
-		std::this_thread::sleep_for(std::chrono::milliseconds(m_time));
+		m_sleep.wait(m_time);
+		if (m_exit)
+		{
+			return;
+		}
+		m_netClient->send(nullptr, 0, MessageType::HEART);
 	}
 }
 
 void HeartTask::StopTask()
 {
-	m_stop = true;
+	m_exit = true;
+	m_sleep.signal();
 }
 
 void HeartTask::setParam(int32_t time, NetClient* netClient)

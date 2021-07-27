@@ -24,7 +24,13 @@
     <ClInclude Include="..\src\LibuvTcpMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\RunLoopTask.h">
+    <ClInclude Include="..\src\LibuvServer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LibuvBase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LibuvClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -32,7 +38,13 @@
     <ClCompile Include="..\src\LibuvTcp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\RunLoopTask.cpp">
+    <ClCompile Include="..\src\LibuvBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\LibuvClient.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\LibuvServer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

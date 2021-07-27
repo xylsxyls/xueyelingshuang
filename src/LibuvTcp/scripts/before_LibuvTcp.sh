@@ -9,18 +9,18 @@ DllRelyTest_allSame=$4
 !EOF!
 
 #--------------------------------------------------------------------
-CTaskThreadManager_bit=$1
-CTaskThreadManager_dlllib=$2
-CTaskThreadManager_debugRelease=$3
-CTaskThreadManager_allSame=$4
-"$CLOUD_REBUILD" CTaskThreadManager $CTaskThreadManager_bit $CTaskThreadManager_dlllib $CTaskThreadManager_debugRelease $CTaskThreadManager_allSame
-
-#--------------------------------------------------------------------
 LockFreeQueue_bit=$1
 LockFreeQueue_dlllib=$2
 LockFreeQueue_debugRelease=$3
 LockFreeQueue_allSame=$4
 "$CLOUD_REBUILD" LockFreeQueue $LockFreeQueue_bit $LockFreeQueue_dlllib $LockFreeQueue_debugRelease $LockFreeQueue_allSame
+
+#--------------------------------------------------------------------
+Semaphore_bit=$1
+Semaphore_dlllib=$2
+Semaphore_debugRelease=$3
+Semaphore_allSame=$4
+"$CLOUD_REBUILD" Semaphore $Semaphore_bit $Semaphore_dlllib $Semaphore_debugRelease $Semaphore_allSame
 
 #--------------------------------------------------------------------
 SHELL_FOLDER=$(cd $(dirname $0); pwd)

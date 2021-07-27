@@ -1,5 +1,6 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "Semaphore/SemaphoreAPI.h"
 
 class NetClient;
 class HeartTask : public CTask
@@ -17,5 +18,6 @@ public:
 private:
 	int32_t m_time;
 	NetClient* m_netClient;
-	std::atomic<bool> m_stop;
+	Semaphore m_sleep;
+	std::atomic<bool> m_exit;
 };

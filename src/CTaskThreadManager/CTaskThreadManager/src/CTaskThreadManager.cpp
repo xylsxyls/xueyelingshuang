@@ -124,6 +124,12 @@ std::shared_ptr<CTaskThread> CTaskThreadManager::GetThreadInterface(uint32_t thr
 	return itThread->second;
 }
 
+int32_t CTaskThreadManager::Count()
+{
+	std::unique_lock<std::mutex> lock(m_mutex);
+	return (int32_t)m_spThreadMap.size();
+}
+
 uint32_t CTaskThreadManager::GetThreadId()
 {
 	return ++m_threadId;

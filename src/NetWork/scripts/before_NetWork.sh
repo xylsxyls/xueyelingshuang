@@ -21,3 +21,10 @@ LibuvTcp_dlllib=$2
 LibuvTcp_debugRelease=$3
 LibuvTcp_allSame=$4
 "$CLOUD_REBUILD" LibuvTcp $LibuvTcp_bit $LibuvTcp_dlllib $LibuvTcp_debugRelease $LibuvTcp_allSame
+
+#--------------------------------------------------------------------
+CTaskThreadManager_bit=$1
+CTaskThreadManager_dlllib=$2
+CTaskThreadManager_debugRelease=$3
+CTaskThreadManager_allSame=$4
+"$CLOUD_REBUILD" CTaskThreadManager $CTaskThreadManager_bit $CTaskThreadManager_dlllib $CTaskThreadManager_debugRelease $CTaskThreadManager_allSame

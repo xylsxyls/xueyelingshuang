@@ -1,14 +1,11 @@
 #pragma once
 #include <stdint.h>
-#include <mutex>
 #include "LibuvTcpMacro.h"
 
 typedef struct uv_tcp_s uv_tcp_t;
 typedef struct uv_loop_s uv_loop_t;
-typedef struct uv_async_s uv_async_t;
-typedef void(*uv_async_cb)(uv_async_t* handle);
-template<class QElmType>
-class LockFreeQueue;
+
+struct LibuvBase;
 
 class LibuvTcpAPI LibuvTcp
 {
@@ -18,11 +15,13 @@ public:
 	virtual ~LibuvTcp();
 
 public:
-	void initClient(const char* ip, int32_t port);
+	bool initClient(const char* ip, int32_t port);
 
-	void initServer(int32_t port, int32_t backlog = 128);
+	bool initServer(int32_t port, int32_t backlog = 128);
 
 	void loop();
+
+	void stop();
 
 	void send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t type);
 
@@ -34,22 +33,22 @@ public:
 
 	virtual void receive(uv_tcp_t* sender, const char* buffer, int32_t length);
 
-	virtual void clientConnected(uv_tcp_t* client);
+	virtual void uvClientConnected(uv_tcp_t* client);
 
-	virtual void serverConnected(uv_tcp_t* server);
+	//执行完该函数之后会关闭连接
+	virtual void uvClientDisconnected(uv_tcp_t* client);
 
-protected:
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-	std::mutex m_queueMutex;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-	LockFreeQueue<char*>* m_queue;
-	uv_loop_t* m_loop;
-	uv_async_t* m_asyncHandle;
-	bool m_isClient;
-	uint32_t m_loopThreadId;
+	virtual void uvServerConnected(uv_tcp_t* server);
+
+	virtual void uvServerNotFind();
+
+	virtual void uvServerNotFindClear();
+
+	//网络断开10秒后会提示断开
+	virtual void uvServerDisconnected(uv_tcp_t* server);
+
+	virtual void uvDisconnectedClear(uv_tcp_t* tcp);
+
+public:
+	LibuvBase* m_libuv;
 };

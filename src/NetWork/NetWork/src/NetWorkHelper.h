@@ -14,6 +14,6 @@ public:
 		const char* buffer,
 		int32_t length,
 		std::string& sendArea,
-		const std::shared_ptr<CTaskThread>& workThread,
+		uint32_t receiveThreadId,
 		LibuvTcp* libuvTcp);
 };

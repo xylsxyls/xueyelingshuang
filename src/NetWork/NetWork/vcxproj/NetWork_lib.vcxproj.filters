@@ -12,6 +12,9 @@
     <ClInclude Include="..\src\NetServer.h" />
     <ClInclude Include="..\src\NetWorkHelper.h" />
     <ClInclude Include="..\src\WorkTask.h" />
+    <ClInclude Include="..\src\RunLoopTask.h" />
+    <ClInclude Include="..\src\ClientTask.h" />
+    <ClInclude Include="..\src\ServerTask.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -27,5 +30,8 @@
     <ClCompile Include="..\src\NetServer.cpp" />
     <ClCompile Include="..\src\NetWorkHelper.cpp" />
     <ClCompile Include="..\src\WorkTask.cpp" />
+    <ClCompile Include="..\src\RunLoopTask.cpp" />
+    <ClCompile Include="..\src\ClientTask.cpp" />
+    <ClCompile Include="..\src\ServerTask.cpp" />
   </ItemGroup>
 </Project>

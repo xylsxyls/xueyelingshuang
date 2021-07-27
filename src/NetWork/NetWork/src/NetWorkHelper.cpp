@@ -8,7 +8,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 	const char* buffer,
 	int32_t length,
 	std::string& receiveArea,
-	const std::shared_ptr<CTaskThread>& receiveThread,
+	uint32_t receiveThreadId,
 	LibuvTcp* libuvTcp)
 {
 	int32_t vernier = 0;
@@ -76,7 +76,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			//	::MessageBox(0, 0, 0, 0);
 			//}
 		}
-		receiveThread->PostTask(spWorkTask, 1);
+		CTaskThreadManager::Instance().GetThreadInterface(receiveThreadId)->PostTask(spWorkTask);
 		//Çå¿Õ»º³åÇø
 		receiveArea.clear();
 	}
@@ -131,7 +131,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			//	::MessageBox(0, 0, 0, 0);
 			//}
 		}
-		receiveThread->PostTask(spWorkTask, 1);
+		CTaskThreadManager::Instance().GetThreadInterface(receiveThreadId)->PostTask(spWorkTask);
 		vernier += tagLength;
 	}
 }
