@@ -23,7 +23,7 @@ public:
 
 	void stop();
 
-	//需保证uv_tcp_t*为第一个，length为第二个，后面是包体，length指的是后面包体+length本身4字节的长度
+	//需保证uv_tcp_t*为第一个，length为第二个，后面是包体，length指的是后面包体的长度，不包括length本身长度
 	void send(const char* buffer);
 
 	uv_loop_t* loopPtr();

@@ -1,6 +1,6 @@
 #include "NetClient.h"
 #include "HeartTask.h"
-#include "WorkTask.h"
+#include "ReceiveTask.h"
 #include "NetWorkHelper.h"
 #include "RunLoopTask.h"
 #include "ClientTask.h"
@@ -74,7 +74,7 @@ void NetClient::receive(uv_tcp_t* sender, const char* buffer, int32_t length)
 	{
 		return;
 	}
-	NetWorkHelper::receive(sender, buffer, length, m_receiveArea, m_receiveThreadId, this);
+	NetWorkHelper::receive(sender, buffer, length, m_receiveArea, &m_receiveQueue, &m_receiveSemaphore);
 }
 
 void NetClient::onReceive(const char* buffer, int32_t length, MessageType type)

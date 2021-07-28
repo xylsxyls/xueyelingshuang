@@ -8,6 +8,8 @@
 #include <map>
 #include <atomic>
 #include "NetWorkMacro.h"
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "Semaphore/SemaphoreAPI.h"
 
 class LibuvTcp;
 typedef struct uv_tcp_s uv_tcp_t;
@@ -55,6 +57,8 @@ protected:
 	std::atomic<bool> m_isListen;
 	std::vector<uv_tcp_t*> m_allClient;
 	std::map<uv_tcp_t*, std::string> m_receiveAreaMap;
+	LockFreeQueue<char*> m_receiveQueue;
+	Semaphore m_receiveSemaphore;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

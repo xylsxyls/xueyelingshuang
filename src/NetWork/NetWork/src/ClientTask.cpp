@@ -1,5 +1,6 @@
 #include "ClientTask.h"
 #include "NetClient.h"
+#include "ReceiveTask.h"
 
 ClientTask::ClientTask():
 m_port(0),
@@ -17,6 +18,10 @@ void ClientTask::DoTask()
 	}
 
 	m_netClient->m_receiveThreadId = CTaskThreadManager::Instance().Init();
+
+	std::shared_ptr<ReceiveTask> spReceiveTask(new ReceiveTask);
+	spReceiveTask->setParam(&m_netClient->m_receiveQueue, &m_netClient->m_receiveSemaphore, m_netClient);
+	CTaskThreadManager::Instance().GetThreadInterface(m_netClient->m_receiveThreadId)->PostTask(spReceiveTask);
 	
 	m_netClient->loop();
 	if (m_isSendHeart)

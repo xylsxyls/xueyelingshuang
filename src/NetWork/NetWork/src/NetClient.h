@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 #include <atomic>
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "Semaphore/SemaphoreAPI.h"
 
 class CTaskThread;
 typedef struct uv_tcp_s uv_tcp_t;
@@ -49,6 +51,8 @@ protected:
 #endif
 	std::atomic<bool> m_isConnected;
 	std::string m_receiveArea;
+	LockFreeQueue<char*> m_receiveQueue;
+	Semaphore m_receiveSemaphore;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

@@ -1,8 +1,9 @@
 #include "NetWorkHelper.h"
-#include "WorkTask.h"
+#include "ReceiveTask.h"
 #ifdef __unix__
 #include <string.h>
 #endif
+#include "Semaphore/SemaphoreAPI.h"
 
 char* NetWorkHelper::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t type)
 {
@@ -31,12 +32,17 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 	const char* buffer,
 	int32_t length,
 	std::string& receiveArea,
-	uint32_t receiveThreadId,
-	LibuvTcp* libuvTcp)
+	LockFreeQueue<char*>* receiveQueue,
+	Semaphore* receiveSemaphore)
 {
 	int32_t vernier = 0;
 	char* tagBuffer = nullptr;
 	int32_t tagLength = 0;
+#if defined _WIN64 || defined __x86_64__
+	int32_t ptrSize = 8;
+#else
+	int32_t ptrSize = 4;
+#endif
 
 	//缓冲区里有值
 	if (!receiveArea.empty())
@@ -70,20 +76,15 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 		receiveArea.append(buffer + vernier, addSize);
 		vernier += addSize;
 		//receive
-		std::shared_ptr<WorkTask> spWorkTask(new WorkTask);
-		//如果包大小为0则给空指针
-		if (tagLength == 0)
+		char* allocBuffer = (char*)::malloc(ptrSize + 4 + (tagLength == 0 ? tagLength : (tagLength + 1)));
+		*(uv_tcp_t**)allocBuffer = sender;
+		*(int32_t*)(allocBuffer + ptrSize) = tagLength;
+		if (tagLength != 0)
 		{
-			spWorkTask->setParam(sender, nullptr, 0, libuvTcp);
+			::memcpy(allocBuffer + ptrSize + 4, &receiveArea[4], tagLength + 1);
 		}
-		else
-		{
-			char* allocBuffer = (char*)::malloc(tagLength + 1);
-			allocBuffer[tagLength] = 0;
-			::memcpy(allocBuffer, &receiveArea[4], tagLength);
-			spWorkTask->setParam(sender, allocBuffer, tagLength, libuvTcp);
-		}
-		CTaskThreadManager::Instance().GetThreadInterface(receiveThreadId)->PostTask(spWorkTask);
+		receiveQueue->push(allocBuffer);
+		receiveSemaphore->signal();
 		//清空缓冲区
 		receiveArea.clear();
 	}
@@ -109,20 +110,17 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			return;
 		}
 		//剩余值可以填满一个包
-		std::shared_ptr<WorkTask> spWorkTask(new WorkTask);
-		//如果包大小为0则给空指针
-		if (tagLength == 0)
+		char* allocBuffer = (char*)::malloc(ptrSize + 4 + (tagLength == 0 ? tagLength : (tagLength + 1)));
+		*(uv_tcp_t**)allocBuffer = sender;
+		*(int32_t*)(allocBuffer + ptrSize) = tagLength;
+		if (tagLength != 0)
 		{
-			spWorkTask->setParam(sender, nullptr, 0, libuvTcp);
+			::memcpy(allocBuffer + ptrSize + 4, buffer + vernier, tagLength);
+			allocBuffer[ptrSize + 4 + (tagLength == 0 ? tagLength : (tagLength + 1)) - 1] = 0;
 		}
-		else
-		{
-			char* allocBuffer = (char*)::malloc(tagLength + 1);
-			allocBuffer[tagLength] = 0;
-			::memcpy(allocBuffer, buffer + vernier, tagLength);
-			spWorkTask->setParam(sender, allocBuffer, tagLength, libuvTcp);
-		}
-		CTaskThreadManager::Instance().GetThreadInterface(receiveThreadId)->PostTask(spWorkTask);
+		receiveQueue->push(allocBuffer);
+		receiveSemaphore->signal();
+		
 		vernier += tagLength;
 	}
 }

@@ -2,10 +2,12 @@
 #include <stdint.h>
 #include <memory>
 #include <string>
+#include "LockFreeQueue/LockFreeQueueAPI.h"
 
 class CTaskThread;
 typedef struct uv_tcp_s uv_tcp_t;
 class LibuvTcp;
+class Semaphore;
 
 class NetWorkHelper
 {
@@ -16,6 +18,6 @@ public:
 		const char* buffer,
 		int32_t length,
 		std::string& sendArea,
-		uint32_t receiveThreadId,
-		LibuvTcp* libuvTcp);
+		LockFreeQueue<char*>* receiveQueue,
+		Semaphore* receiveSemaphore);
 };
