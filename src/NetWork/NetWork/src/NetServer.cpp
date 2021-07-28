@@ -52,7 +52,11 @@ void NetServer::close()
 
 void NetServer::send(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
 {
-	LibuvTcp::send(client, buffer, length, type);
+	if (client == nullptr || (buffer == nullptr && length != 0))
+	{
+		return;
+	}
+	LibuvTcp::send(NetWorkHelper::send(client, buffer, length, type));
 }
 
 void NetServer::onClientConnected(uv_tcp_t* client)

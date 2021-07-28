@@ -61,11 +61,11 @@ void NetClient::close()
 
 void NetClient::send(const char* buffer, int32_t length, MessageType type)
 {
-	if (m_destServer == nullptr)
+	if (m_destServer == nullptr || (buffer == nullptr && length != 0))
 	{
 		return;
 	}
-	LibuvTcp::send(m_destServer, buffer, length, type);
+	LibuvTcp::send(NetWorkHelper::send(m_destServer, buffer, length, type));
 }
 
 void NetClient::receive(uv_tcp_t* sender, const char* buffer, int32_t length)

@@ -23,7 +23,8 @@ public:
 
 	void stop();
 
-	void send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t type);
+	//需保证uv_tcp_t*为第一个，length为第二个，后面是包体，length指的是后面包体+length本身4字节的长度
+	void send(const char* buffer);
 
 	uv_loop_t* loopPtr();
 

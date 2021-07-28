@@ -4,6 +4,29 @@
 #include <string.h>
 #endif
 
+char* NetWorkHelper::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t type)
+{
+#if defined _WIN64 || defined __x86_64__
+	int32_t ptrSize = 8;
+#else
+	int32_t ptrSize = 4;
+#endif // _WIN64
+	char* text = (char*)::malloc(length + ptrSize + 8);
+#if defined _WIN64 || defined __x86_64__
+	*(int64_t*)text = (int64_t)dest;
+#else
+	*(int32_t*)text = (int32_t)dest;
+#endif // _WIN64
+
+	*((int32_t*)(text + ptrSize)) = length + 4;
+	*((int32_t*)(text + ptrSize + 4)) = type;
+	if (buffer != nullptr)
+	{
+		::memcpy(text + ptrSize + 8, buffer, length);
+	}
+	return text;
+}
+
 void NetWorkHelper::receive(uv_tcp_t* sender,
 	const char* buffer,
 	int32_t length,
@@ -59,22 +82,6 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			allocBuffer[tagLength] = 0;
 			::memcpy(allocBuffer, &receiveArea[4], tagLength);
 			spWorkTask->setParam(sender, allocBuffer, tagLength, libuvTcp);
-			//std::string str(allocBuffer, tagLength);
-			
-			//std::string printStr;
-			//int32_t index = -1;
-			//while (index++ != str.size() - 1)
-			//{
-			//	printStr += std::to_string((int32_t)str[index]);
-			//	printStr.push_back(' ');
-			//}
-			//RCSend("1 = %s", printStr);
-			//RCSend("1");
-			//
-			//if (allocBuffer[tagLength - 1] == 120)
-			//{
-			//	::MessageBox(0, 0, 0, 0);
-			//}
 		}
 		CTaskThreadManager::Instance().GetThreadInterface(receiveThreadId)->PostTask(spWorkTask);
 		//Çå¿Õ»º³åÇø
@@ -114,22 +121,6 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			allocBuffer[tagLength] = 0;
 			::memcpy(allocBuffer, buffer + vernier, tagLength);
 			spWorkTask->setParam(sender, allocBuffer, tagLength, libuvTcp);
-			//std::string str(allocBuffer, tagLength);
-			
-			//std::string printStr;
-			//int32_t index = -1;
-			//while (index++ != str.size() - 1)
-			//{
-			//	printStr += std::to_string((int32_t)str[index]);
-			//	printStr.push_back(' ');
-			//}
-			//RCSend("2 = %s", printStr);
-			//RCSend("2");
-			//
-			//if (allocBuffer[tagLength - 1] == 120)
-			//{
-			//	::MessageBox(0, 0, 0, 0);
-			//}
 		}
 		CTaskThreadManager::Instance().GetThreadInterface(receiveThreadId)->PostTask(spWorkTask);
 		vernier += tagLength;

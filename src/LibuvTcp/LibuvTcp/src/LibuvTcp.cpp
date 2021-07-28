@@ -354,37 +354,18 @@ void LibuvTcp::stop()
 	m_libuv = nullptr;
 }
 
-void LibuvTcp::send(uv_tcp_t* dest, const char* buffer, int32_t length, int32_t type)
+void LibuvTcp::send(const char* buffer)
 {
-	if (dest == nullptr || (buffer == nullptr && length != 0))
+	if (buffer == nullptr)
 	{
 		return;
 	}
 
-#if defined _WIN64 || defined __x86_64__
-	int32_t ptrSize = 8;
-#else
-	int32_t ptrSize = 4;
-#endif // _WIN64
-	char* text = (char*)::malloc(length + ptrSize + 8);
-#if defined _WIN64 || defined __x86_64__
-	*(int64_t*)text = (int64_t)dest;
-#else
-	*(int32_t*)text = (int32_t)dest;
-#endif // _WIN64
-	
-	*((int32_t*)(text + ptrSize)) = length + 4;
-	*((int32_t*)(text + ptrSize + 4)) = type;
-	if (buffer != nullptr)
-	{
-		::memcpy(text + ptrSize + 8, buffer, length);
-	}
-
 	{
 		std::unique_lock<std::mutex> lock(m_libuv->m_queueMutex);
-		m_libuv->m_queue->push(text);
+		m_libuv->m_queue->push((char*)buffer);
 	}
-	
+
 	int sendres = uv_async_send(m_libuv->m_asyncHandle);
 	if (sendres != 0)
 	{
