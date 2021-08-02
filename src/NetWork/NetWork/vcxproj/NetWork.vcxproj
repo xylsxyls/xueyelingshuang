@@ -19,7 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\Area.h" />
     <ClInclude Include="..\src\ClientTask.h" />
+    <ClInclude Include="..\src\HeadTask.h" />
     <ClInclude Include="..\src\HeartTask.h" />
     <ClInclude Include="..\src\NetClient.h" />
     <ClInclude Include="..\src\NetServer.h" />
@@ -31,7 +33,9 @@
     <ClInclude Include="..\src\ReceiveTask.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\Area.cpp" />
     <ClCompile Include="..\src\ClientTask.cpp" />
+    <ClCompile Include="..\src\HeadTask.cpp" />
     <ClCompile Include="..\src\HeartTask.cpp" />
     <ClCompile Include="..\src\NetClient.cpp" />
     <ClCompile Include="..\src\NetServer.cpp" />

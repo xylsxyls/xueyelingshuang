@@ -1,6 +1,7 @@
 #include "ServerTask.h"
 #include "NetServer.h"
 #include "ReceiveTask.h"
+#include "HeadTask.h"
 
 ServerTask::ServerTask():
 m_port(0),
@@ -21,6 +22,8 @@ void ServerTask::DoTask()
 	std::shared_ptr<ReceiveTask> spReceiveTask(new ReceiveTask);
 	spReceiveTask->setParam(&m_netServer->m_receiveQueue, &m_netServer->m_receiveSemaphore, m_netServer);
 	CTaskThreadManager::Instance().GetThreadInterface(m_netServer->m_receiveThreadId)->PostTask(spReceiveTask);
+
+	m_netServer->head();
 
 	m_netServer->loop();
 }

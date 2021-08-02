@@ -23,6 +23,9 @@ public:
 
 	void stop();
 
+	//申请send空间
+	char* memoryForSend(int32_t length);
+
 	//需保证uv_tcp_t*为第一个，length为第二个，后面是包体，length指的是后面包体的长度，不包括length本身长度
 	void send(const char* buffer);
 

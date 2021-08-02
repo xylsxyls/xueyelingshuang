@@ -354,6 +354,11 @@ void LibuvTcp::stop()
 	m_libuv = nullptr;
 }
 
+char* LibuvTcp::memoryForSend(int32_t length)
+{
+	return (char*)::malloc(length);
+}
+
 void LibuvTcp::send(const char* buffer)
 {
 	if (buffer == nullptr)

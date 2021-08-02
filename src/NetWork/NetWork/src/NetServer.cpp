@@ -3,18 +3,27 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "RunLoopTask.h"
 #include "ServerTask.h"
+#include "HeadTask.h"
 
 NetServer::NetServer():
 m_isListen(false),
 m_receiveThreadId(0),
-m_loopThreadId(0)
+m_headThreadId(0),
+m_loopThreadId(0),
+m_firstMessageLength(0)
 {
-
+	m_head[0] = 0;
+	m_head[1] = 0;
 }
 
 NetServer::~NetServer()
 {
 	
+}
+
+void NetServer::setFirstMessageLength(int32_t length)
+{
+	m_firstMessageLength = length;
 }
 
 void NetServer::listen(int32_t port)
@@ -35,6 +44,12 @@ void NetServer::listen(int32_t port)
 
 void NetServer::close()
 {
+	if (m_headThreadId != 0)
+	{
+		CTaskThreadManager::Instance().Uninit(m_headThreadId);
+		m_headThreadId = 0;
+	}
+
 	if (m_receiveThreadId != 0)
 	{
 		CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
@@ -50,13 +65,53 @@ void NetServer::close()
 	m_isListen = false;
 }
 
+void NetServer::sendFirstMessage(uv_tcp_t* client, const char* buffer, int32_t length)
+{
+	if (client == nullptr || (buffer == nullptr && length != 0))
+	{
+		return;
+	}
+	LibuvTcp::send(NetWorkHelper::send(this, client, buffer, length, MessageType::FIRST_MESSAGE));
+}
+
+void NetServer::sendFirstMessage(uv_tcp_t* client, const std::string& message)
+{
+	sendFirstMessage(client, message.c_str(), message.size());
+}
+
 void NetServer::send(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
 {
 	if (client == nullptr || (buffer == nullptr && length != 0))
 	{
 		return;
 	}
-	LibuvTcp::send(NetWorkHelper::send(client, buffer, length, type));
+	if (m_head[0] == 0)
+	{
+		printf("server head number error\n");
+	}
+	LibuvTcp::send(NetWorkHelper::send(this, client, buffer, length, type, m_head[0]));
+}
+
+void NetServer::send(uv_tcp_t* client, const std::string& message, MessageType type)
+{
+	send(client, message.c_str(), message.size(), type);
+}
+
+void NetServer::head()
+{
+	if (m_headThreadId == 0)
+	{
+		m_headThreadId = CTaskThreadManager::Instance().Init();
+	}
+
+	std::shared_ptr<HeadTask> spHeadTask(new HeadTask);
+	spHeadTask->setParam(10000, this);
+	CTaskThreadManager::Instance().GetThreadInterface(m_headThreadId)->PostTask(spHeadTask);
+}
+
+bool NetServer::onFirstReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
+{
+	return false;
 }
 
 void NetServer::onClientConnected(uv_tcp_t* client)
@@ -74,9 +129,14 @@ void NetServer::onHeart()
 
 }
 
+int32_t NetServer::headNumber()
+{
+	return 0;
+}
+
 void NetServer::receive(uv_tcp_t* sender, const char* buffer, int32_t length)
 {
-	NetWorkHelper::receive(sender, buffer, length, m_receiveAreaMap[sender], &m_receiveQueue, &m_receiveSemaphore);
+	NetWorkHelper::receive(sender, buffer, length, m_receiveAreaMap[sender], &m_receiveQueue, &m_receiveSemaphore, this);
 }
 
 void NetServer::onReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
@@ -102,6 +162,11 @@ void NetServer::uvDisconnectedClear(uv_tcp_t* tcp)
 	{
 		m_allClient.erase(it);
 	}
+	auto itArea = m_receiveAreaMap.find(tcp);
+	if (itArea != m_receiveAreaMap.end())
+	{
+		m_receiveAreaMap.erase(itArea);
+	}
 }
 
 void NetServer::loop()
@@ -113,6 +178,28 @@ void NetServer::loop()
 	std::shared_ptr<RunLoopTask> spRunLoopTask(new RunLoopTask);
 	spRunLoopTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_loopThreadId)->PostTask(spRunLoopTask);
+}
+
+void NetServer::asyncClose()
+{
+	if (m_headThreadId != 0)
+	{
+		CTaskThreadManager::Instance().Uninit(m_headThreadId);
+		m_headThreadId = 0;
+	}
+
+	if (m_receiveThreadId != 0)
+	{
+		CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
+		m_receiveThreadId = 0;
+	}
+
+	if (m_loopThreadId != 0)
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(m_loopThreadId)->StopAllTask();
+	}
+
+	m_isListen = false;
 }
 
 //#include "ConsoleTest.h"

@@ -12,11 +12,10 @@ public:
 public:
 	void DoTask();
 
-	void setParam(const std::string& ip, int32_t port, bool isSendHeart, NetClient* netClient);
+	void setParam(const std::string& ip, int32_t port, NetClient* netClient);
 
 private:
 	std::string m_ip;
 	int32_t m_port;
-	bool m_isSendHeart;
 	NetClient* m_netClient;
 };

@@ -44,9 +44,14 @@ void ReceiveTask::DoTask()
 			{
 				((NetClient*)m_libuvTcp)->onHeart();
 			}
+			else if (type == MessageType::HEAD)
+			{
+				((NetClient*)m_libuvTcp)->m_head[1] = ((NetClient*)m_libuvTcp)->m_head[0];
+				((NetClient*)m_libuvTcp)->m_head[0] = *(int32_t*)(buffer + ptrSize + 12);
+			}
 			else
 			{
-				((NetClient*)m_libuvTcp)->onReceive((length == 0 ? nullptr : (buffer + ptrSize + 8)), length - 4, type);
+				((NetClient*)m_libuvTcp)->onReceive((length == 0 ? nullptr : (buffer + ptrSize + 12)), length - 8, type);
 			}
 		}
 		else
@@ -57,7 +62,7 @@ void ReceiveTask::DoTask()
 			}
 			else
 			{
-				((NetServer*)m_libuvTcp)->onReceive(sender, (length == 0 ? nullptr : (buffer + ptrSize + 8)), length - 4, type);
+				((NetServer*)m_libuvTcp)->onReceive(sender, (length == 0 ? nullptr : (buffer + ptrSize + 12)), length - 8, type);
 			}
 		}
 

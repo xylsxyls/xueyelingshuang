@@ -4,7 +4,6 @@
 
 ClientTask::ClientTask():
 m_port(0),
-m_isSendHeart(false),
 m_netClient(nullptr)
 {
 
@@ -24,16 +23,11 @@ void ClientTask::DoTask()
 	CTaskThreadManager::Instance().GetThreadInterface(m_netClient->m_receiveThreadId)->PostTask(spReceiveTask);
 	
 	m_netClient->loop();
-	if (m_isSendHeart)
-	{
-		m_netClient->heart();
-	}
 }
 
-void ClientTask::setParam(const std::string& ip, int32_t port, bool isSendHeart, NetClient* netClient)
+void ClientTask::setParam(const std::string& ip, int32_t port, NetClient* netClient)
 {
 	m_ip = ip;
 	m_port = port;
-	m_isSendHeart = isSendHeart;
 	m_netClient = netClient;
 }

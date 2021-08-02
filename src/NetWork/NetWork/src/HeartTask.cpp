@@ -18,7 +18,10 @@ void HeartTask::DoTask()
 		{
 			return;
 		}
-		m_netClient->send(nullptr, 0, MessageType::HEART);
+		if (m_netClient->m_isConnected)
+		{
+			m_netClient->send(nullptr, 0, MessageType::HEART);
+		}
 	}
 }
 
