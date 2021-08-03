@@ -1,0 +1,386 @@
+ConsoleTest
+#include "ConsoleTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include "NetWork/NetWorkAPI.h"
+#include <windows.h>
+//#include "D:\\SendToMessageTest.h"
+//#include "CSystem/CSystemAPI.h"
+
+std::atomic<int32_t> g_count = 0;
+int32_t g_beginTime = 0;
+
+class Server : public NetServer
+{
+public:
+	Server()
+	{
+
+	}
+
+public:
+	virtual bool onFirstReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
+	{
+		printf("first buffer = %s\n", buffer);
+		sendFirstMessage(client, buffer, length);
+		return true;
+	}
+
+	virtual void onReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
+	{
+		++g_count;
+		if (g_count == 1)
+		{
+			g_beginTime = ::GetTickCount();
+		}
+		if (g_count % 100000 == 0)
+		{
+			RCSend("g_count = %d, time = %d", g_count, ::GetTickCount() - g_beginTime);
+		}
+	}
+
+	virtual void onClientConnected(uv_tcp_t* client)
+	{
+		printf("client connected\n");
+	}
+
+	virtual void onClientDisconnected(uv_tcp_t* client)
+	{
+		printf("client disconnected\n");
+	}
+
+	virtual void onHeart()
+	{
+		printf("client heart\n");
+	}
+
+	virtual int32_t headNumber()
+	{
+		return 50;
+	}
+};
+
+std::vector<Server*> g_vecServer;
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		int32_t index = -1;
+		while (index++ != g_vecServer.size() - 1)
+		{
+			g_vecServer[index]->close();
+			delete g_vecServer[index];
+		}
+		g_vecServer.clear();
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		server.close();
+		exit(0);
+	}
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+int32_t main()
+{
+	int32_t serverCount = 10;
+	int32_t index = -1;
+	while (index++ != serverCount - 1)
+	{
+		Server* server = new Server;
+		server->setFirstMessageLength(8);
+		server->listen(9060 + index);
+		g_vecServer.push_back(server);
+	}
+	
+	getchar();
+	return 0;
+}
+
+ConsoleTest1
+#include "ConsoleTest1.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include "NetWork/NetWorkAPI.h"
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+
+class Client : public NetClient
+{
+public:
+	Client()
+	{
+
+	}
+
+public:
+	virtual bool onFirstReceive(const char* buffer, int32_t length, MessageType type)
+	{
+		printf("first buffer = %s\n", buffer);
+		return true;
+	}
+
+	virtual void onFirstHead()
+	{
+		printf("first head\n");
+		m_headSemaphore.signal();
+	}
+
+	virtual void onReceive(const char* buffer, int32_t length, MessageType type)
+	{
+		printf("buffer = %s\n", buffer);
+	}
+
+	virtual void onServerConnected()
+	{
+		printf("server connected\n");
+		sendFirstMessage("12345678");
+	}
+
+	virtual void onServerNotFind()
+	{
+		printf("server not find\n");
+	}
+
+	virtual void onServerDisconnected()
+	{
+		printf("server disconnected\n");
+	}
+
+	virtual void onHeart()
+	{
+		printf("server heart\n");
+	}
+
+	Semaphore m_headSemaphore;
+};
+
+class Task;
+std::vector<Client*> g_vecClient;
+std::vector<uint32_t> g_connectThreadId1;
+std::vector<std::shared_ptr<CTaskThread>> g_connectThreadId2;
+std::vector<std::shared_ptr<Task>> g_vecTask;
+uint32_t g_vecThreadId;
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest1");
+		//RCSend("%d", g_vecClient.size());
+		int32_t index = -1;
+		while (index++ != g_vecClient.size() - 1)
+		{
+			g_vecClient[index]->close();
+			delete g_vecClient[index];
+		}
+
+		//RCSend("thread count = %d", CTaskThreadManager::Instance().Count());
+
+		g_vecClient.clear();
+		g_connectThreadId2.clear();
+		index = -1;
+		while (index++ != g_connectThreadId1.size() - 1)
+		{
+			CTaskThreadManager::Instance().Uninit(g_connectThreadId1[index]);
+		}
+		g_connectThreadId1.clear();
+		g_vecTask.clear();
+
+		CTaskThreadManager::Instance().Uninit(g_vecThreadId);
+
+		//CTaskThreadManager::Instance().UninitAll();
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		//RCSend("%d", g_vecClient.size());
+		int32_t index = -1;
+		while (index++ != g_vecClient.size() - 1)
+		{
+			g_vecClient[index]->close();
+		}
+
+		//RCSend("thread count = %d", CTaskThreadManager::Instance().Count());
+
+		g_vecClient.clear();
+		g_connectThreadId2.clear();
+		index = -1;
+		while (index++ != g_connectThreadId1.size() - 1)
+		{
+			CTaskThreadManager::Instance().Uninit(g_connectThreadId1[index]);
+		}
+		g_connectThreadId1.clear();
+		g_vecTask.clear();
+
+		CTaskThreadManager::Instance().Uninit(g_vecThreadId);
+		exit(0);
+	}
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+class vecTask : public CTask
+{
+public:
+	void DoTask()
+	{
+		int32_t index = -1;
+		while (index++ != m_vecClient.size() - 1)
+		{
+			g_vecClient.push_back(m_vecClient[index]);
+		}
+	}
+
+	void setParam(const std::vector<Client*>& vecClient)
+	{
+		m_vecClient = vecClient;
+	}
+
+	std::vector<Client*> m_vecClient;
+};
+
+class Task : public CTask
+{
+public:
+	Task() :
+		m_clientCount(0),
+		m_sendCount(0)
+	{
+
+	}
+
+	void DoTask()
+	{
+		std::vector<Client*> vecClient;
+		Client* clients = nullptr;
+		int32_t index = -1;
+		while (index++ != m_clientCount - 1)
+		{
+			clients = new Client;
+			vecClient.push_back(clients);
+			clients->setFirstMessageLength(8);
+			clients->connect("127.0.0.1", m_port);
+		}
+		index = -1;
+		while (index++ != m_clientCount - 1)
+		{
+			vecClient[index]->m_headSemaphore.wait();
+		}
+		int32_t sendIndex = -1;
+		while (sendIndex++ != m_sendCount - 1)
+		{
+			index = -1;
+			while (index++ != m_clientCount - 1)
+			{
+				vecClient[index]->send("123456", 6);
+			}
+		}
+
+		std::shared_ptr<vecTask> spVecTask(new vecTask);
+		spVecTask->setParam(vecClient);
+		CTaskThreadManager::Instance().GetThreadInterface(g_vecThreadId)->PostTask(spVecTask);
+	}
+
+	void setParam(int32_t clientCount, int32_t sendCount, int32_t port)
+	{
+		m_clientCount = clientCount;
+		m_sendCount = sendCount;
+		m_port = port;
+	}
+
+	int32_t m_clientCount;
+	int32_t m_sendCount;
+	int32_t m_port;
+};
+
+int32_t main()
+{
+	int32_t threadCount = 10;
+	int32_t clientCount = 10;
+	int32_t sendCount = 100000;
+
+	g_vecThreadId = CTaskThreadManager::Instance().Init();
+
+	int32_t index = -1;
+	while (index++ != threadCount - 1)
+	{
+		uint32_t threadId = CTaskThreadManager::Instance().Init();
+		g_connectThreadId1.push_back(threadId);
+		g_connectThreadId2.push_back(CTaskThreadManager::Instance().GetThreadInterface(threadId));
+		std::shared_ptr<Task> spTask(new Task);
+		spTask->setParam(clientCount, sendCount, 9060 + index);
+		g_vecTask.push_back(spTask);
+	}
+
+	index = -1;
+	while (index++ != threadCount - 1)
+	{
+		g_connectThreadId2[index]->PostTask(g_vecTask[index]);
+	}
+
+	printf("end\n");
+	getchar();
+	return 0;
+}

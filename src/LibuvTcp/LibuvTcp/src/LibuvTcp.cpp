@@ -200,8 +200,9 @@ void onAsyncCallback(uv_async_t* handle)
 		{
 			if (status != 0)
 			{
-				//状态值status不为0表示发送数据失败。 
-				printf("Write error %s\n", uv_strerror(status));
+				//状态值status不为0表示发送数据失败。
+				//当要发送时服务端崩溃了会发送失败，在执行完失败返回后会有断开通知
+				//printf("Write error %s\n", uv_strerror(status));
 			}
 			//不管发送数据成功与否，都要执行下面的函数释放资源，以免内存泄露
 			::free(((char*)req->data));
