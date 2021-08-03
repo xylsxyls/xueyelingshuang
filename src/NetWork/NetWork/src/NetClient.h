@@ -34,6 +34,7 @@ public:
 	void send(const std::string& message, MessageType type = MessageType::MESSAGE);
 	void heart(int32_t time = 5000);
 	virtual bool onFirstReceive(const char* buffer, int32_t length, MessageType type);
+	virtual void onFirstHead();
 	virtual void onReceive(const char* buffer, int32_t length, MessageType type);
 	virtual void onServerConnected();
 	virtual void onServerNotFind();

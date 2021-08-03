@@ -62,6 +62,8 @@ void NetServer::close()
 		m_loopThreadId = 0;
 	}
 
+	m_head[0] = 0;
+	m_head[1] = 0;
 	m_isListen = false;
 }
 
@@ -199,6 +201,8 @@ void NetServer::asyncClose()
 		CTaskThreadManager::Instance().GetThreadInterface(m_loopThreadId)->StopAllTask();
 	}
 
+	m_head[0] = 0;
+	m_head[1] = 0;
 	m_isListen = false;
 }
 

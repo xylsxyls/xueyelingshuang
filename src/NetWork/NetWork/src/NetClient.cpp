@@ -66,6 +66,8 @@ void NetClient::close()
 		m_loopThreadId = 0;
 	}
 
+	m_head[0] = 0;
+	m_head[1] = 0;
 	m_isSendHeart = false;
 	m_isConnected = false;
 }
@@ -101,6 +103,11 @@ void NetClient::send(const std::string& message, MessageType type)
 bool NetClient::onFirstReceive(const char* buffer, int32_t length, MessageType type)
 {
 	return false;
+}
+
+void NetClient::onFirstHead()
+{
+
 }
 
 void NetClient::receive(uv_tcp_t* sender, const char* buffer, int32_t length)
@@ -145,6 +152,8 @@ void NetClient::uvServerNotFind()
 
 void NetClient::uvServerNotFindClear()
 {
+	m_isSendHeart = false;
+
 	if (m_heartThreadId != 0)
 	{
 		CTaskThreadManager::Instance().Uninit(m_heartThreadId);
@@ -167,6 +176,7 @@ void NetClient::uvServerDisconnected(uv_tcp_t* server)
 void NetClient::uvDisconnectedClear(uv_tcp_t* tcp)
 {
 	m_isConnected = false;
+	m_isSendHeart = false;
 
 	if (m_heartThreadId != 0)
 	{
@@ -179,6 +189,9 @@ void NetClient::uvDisconnectedClear(uv_tcp_t* tcp)
 		CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
 		m_receiveThreadId = 0;
 	}
+
+	m_head[0] = 0;
+	m_head[1] = 0;
 }
 
 void NetClient::loop()
@@ -206,6 +219,9 @@ void NetClient::asyncClose()
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(m_loopThreadId)->StopAllTask();
 	}
+
+	m_head[0] = 0;
+	m_head[1] = 0;
 
 	m_isSendHeart = false;
 	m_isConnected = false;
