@@ -88,7 +88,7 @@ void AccountTask::DoTask()
 			CMouse::LeftClick();
 		}
 		//点击大区
-		CMouse::MoveAbsolute(xyls::Point(409, 796), 50);
+		CMouse::MoveAbsolute(xyls::Point(409, 766), 50);
 		CMouse::LeftClick();
 		//点击小区
 		CMouse::MoveAbsolute(xyls::Point(1410, 357), 50);
