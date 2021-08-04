@@ -4,6 +4,7 @@
 #include "RunLoopTask.h"
 #include "ServerTask.h"
 #include "HeadTask.h"
+#include <algorithm>
 
 NetServer::NetServer():
 m_isListen(false),
