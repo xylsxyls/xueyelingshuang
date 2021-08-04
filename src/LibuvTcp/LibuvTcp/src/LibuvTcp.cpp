@@ -7,6 +7,7 @@
 #include <atomic>
 #include "LibuvClient.h"
 #include "LibuvServer.h"
+#include <algorithm>
 
 LibuvTcp::LibuvTcp():
 m_libuv(nullptr)
