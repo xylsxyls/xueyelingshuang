@@ -7,13 +7,15 @@
     <ClInclude Include="..\src\NetWorkMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\Area.h" />
+    <ClInclude Include="..\src\ClientTask.h" />
+    <ClInclude Include="..\src\HeadTask.h" />
     <ClInclude Include="..\src\HeartTask.h" />
     <ClInclude Include="..\src\NetClient.h" />
     <ClInclude Include="..\src\NetServer.h" />
     <ClInclude Include="..\src\NetWorkHelper.h" />
-    <ClInclude Include="..\src\WorkTask.h" />
+    <ClInclude Include="..\src\ReceiveTask.h" />
     <ClInclude Include="..\src\RunLoopTask.h" />
-    <ClInclude Include="..\src\ClientTask.h" />
     <ClInclude Include="..\src\ServerTask.h" />
   </ItemGroup>
   <ItemGroup>
@@ -25,13 +27,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\Area.cpp" />
+    <ClCompile Include="..\src\ClientTask.cpp" />
+    <ClCompile Include="..\src\HeadTask.cpp" />
     <ClCompile Include="..\src\HeartTask.cpp" />
     <ClCompile Include="..\src\NetClient.cpp" />
     <ClCompile Include="..\src\NetServer.cpp" />
     <ClCompile Include="..\src\NetWorkHelper.cpp" />
-    <ClCompile Include="..\src\WorkTask.cpp" />
+    <ClCompile Include="..\src\ReceiveTask.cpp" />
     <ClCompile Include="..\src\RunLoopTask.cpp" />
-    <ClCompile Include="..\src\ClientTask.cpp" />
     <ClCompile Include="..\src\ServerTask.cpp" />
   </ItemGroup>
 </Project>
