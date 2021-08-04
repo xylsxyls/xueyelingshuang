@@ -7,11 +7,14 @@ ConsoleTest
 #include <stdlib.h>
 #endif
 #include "NetWork/NetWorkAPI.h"
+#ifdef _MSC_VER
 #include <windows.h>
-//#include "D:\\SendToMessageTest.h"
-//#include "CSystem/CSystemAPI.h"
+#elif __unix__
+#include "SendToMessageTest.h"
+#endif
+#include "CSystem/CSystemAPI.h"
 
-std::atomic<int32_t> g_count = 0;
+std::atomic<int32_t> g_count;
 int32_t g_beginTime = 0;
 
 class Server : public NetServer
@@ -35,11 +38,11 @@ public:
 		++g_count;
 		if (g_count == 1)
 		{
-			g_beginTime = ::GetTickCount();
+			g_beginTime = CSystem::GetTickCount();
 		}
 		if (g_count % 100000 == 0)
 		{
-			RCSend("g_count = %d, time = %d", g_count, ::GetTickCount() - g_beginTime);
+			RCSend("g_count = %d, time = %d", (int32_t)g_count, (int32_t)(CSystem::GetTickCount() - g_beginTime));
 		}
 	}
 
@@ -94,7 +97,13 @@ void CtrlCMessage(int eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
-		server.close();
+		int32_t index = -1;
+		while (index++ != g_vecServer.size() - 1)
+		{
+			g_vecServer[index]->close();
+			delete g_vecServer[index];
+		}
+		g_vecServer.clear();
 		exit(0);
 	}
 }
@@ -116,6 +125,7 @@ CtrlC g_ctrlc;
 
 int32_t main()
 {
+	g_count = 0;
 	int32_t serverCount = 10;
 	int32_t index = -1;
 	while (index++ != serverCount - 1)
