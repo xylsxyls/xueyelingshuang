@@ -28,9 +28,9 @@
     <ClInclude Include="..\src\NetWorkAPI.h" />
     <ClInclude Include="..\src\NetWorkHelper.h" />
     <ClInclude Include="..\src\NetWorkMacro.h" />
+    <ClInclude Include="..\src\ReceiveNetTask.h" />
     <ClInclude Include="..\src\RunLoopTask.h" />
     <ClInclude Include="..\src\ServerTask.h" />
-    <ClInclude Include="..\src\ReceiveTask.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Area.cpp" />
@@ -40,9 +40,9 @@
     <ClCompile Include="..\src\NetClient.cpp" />
     <ClCompile Include="..\src\NetServer.cpp" />
     <ClCompile Include="..\src\NetWorkHelper.cpp" />
+    <ClCompile Include="..\src\ReceiveNetTask.cpp" />
     <ClCompile Include="..\src\RunLoopTask.cpp" />
     <ClCompile Include="..\src\ServerTask.cpp" />
-    <ClCompile Include="..\src\ReceiveTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>

@@ -28,7 +28,7 @@
     <ClInclude Include="..\src\NetWorkAPI.h" />
     <ClInclude Include="..\src\NetWorkHelper.h" />
     <ClInclude Include="..\src\NetWorkMacro.h" />
-    <ClInclude Include="..\src\ReceiveTask.h" />
+    <ClInclude Include="..\src\ReceiveNetTask.h" />
     <ClInclude Include="..\src\RunLoopTask.h" />
     <ClInclude Include="..\src\ServerTask.h" />
   </ItemGroup>
@@ -40,7 +40,7 @@
     <ClCompile Include="..\src\NetClient.cpp" />
     <ClCompile Include="..\src\NetServer.cpp" />
     <ClCompile Include="..\src\NetWorkHelper.cpp" />
-    <ClCompile Include="..\src\ReceiveTask.cpp" />
+    <ClCompile Include="..\src\ReceiveNetTask.cpp" />
     <ClCompile Include="..\src\RunLoopTask.cpp" />
     <ClCompile Include="..\src\ServerTask.cpp" />
   </ItemGroup>

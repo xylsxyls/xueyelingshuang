@@ -2,3 +2,4 @@
 "$CLOUD_REBUILD" NetWork 32 lib release same
 "$CLOUD_REBUILD" CDump 32 lib release same
 "$CLOUD_REBUILD" Compress 32 lib release same
+"$CLOUD_REBUILD" CRandom 32 lib release same

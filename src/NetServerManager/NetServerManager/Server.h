@@ -7,7 +7,13 @@
 class Server : public NetServer
 {
 public:
-	virtual void onClientConnected(uv_tcp_t* client);
+	virtual bool onFirstReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type);
 
 	virtual void onReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type);
+
+	virtual void onClientConnected(uv_tcp_t* client);
+
+	virtual void onClientDisconnected(uv_tcp_t* client);
+
+	virtual int32_t headNumber();
 };

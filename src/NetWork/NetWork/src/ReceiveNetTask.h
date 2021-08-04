@@ -12,10 +12,10 @@ class LibuvTcp;
 class CallbackBase;
 typedef struct uv_tcp_s uv_tcp_t;
 
-class ReceiveTask : public CTask
+class ReceiveNetTask : public CTask
 {
 public:
-	ReceiveTask();
+	ReceiveNetTask();
 
 public:
 	void DoTask();

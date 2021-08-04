@@ -1,10 +1,10 @@
-#include "ReceiveTask.h"
+#include "ReceiveNetTask.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include "NetClient.h"
 #include "NetServer.h"
 #include "Semaphore/SemaphoreAPI.h"
 
-ReceiveTask::ReceiveTask():
+ReceiveNetTask::ReceiveNetTask():
 m_receiveQueue(nullptr),
 m_receiveSemaphore(nullptr),
 m_libuvTcp(nullptr),
@@ -13,7 +13,7 @@ m_exit(false)
 	
 }
 
-void ReceiveTask::DoTask()
+void ReceiveNetTask::DoTask()
 {
 #if defined _WIN64 || defined __x86_64__
 	int32_t ptrSize = 8;
@@ -90,13 +90,13 @@ void ReceiveTask::DoTask()
 	}
 }
 
-void ReceiveTask::StopTask()
+void ReceiveNetTask::StopTask()
 {
 	m_exit = true;
 	m_receiveSemaphore->signal();
 }
 
-void ReceiveTask::setParam(LockFreeQueue<char*>* receiveQueue, Semaphore* receiveSemaphore, LibuvTcp* libuvTcp)
+void ReceiveNetTask::setParam(LockFreeQueue<char*>* receiveQueue, Semaphore* receiveSemaphore, LibuvTcp* libuvTcp)
 {
 	m_receiveQueue = receiveQueue;
 	m_receiveSemaphore = receiveSemaphore;

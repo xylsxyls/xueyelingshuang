@@ -18,7 +18,7 @@ class NetWorkAPI NetClient : protected LibuvTcp
 	friend class ClientTask;
 	friend class NetWorkHelper;
 	friend class HeartTask;
-	friend class ReceiveTask;
+	friend class ReceiveNetTask;
 public:
 	NetClient();
 
@@ -26,7 +26,7 @@ public:
 
 public:
 	void setFirstMessageLength(int32_t length);
-	void connect(const char* ip, int32_t port, bool isSendHeart = true);
+	void connect(const char* ip, int32_t port, int32_t waitTime = 0, bool isSendHeart = true);
 	void close();
 	void sendFirstMessage(const char* buffer, int32_t length);
 	void sendFirstMessage(const std::string& message);

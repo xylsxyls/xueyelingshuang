@@ -70,6 +70,7 @@ int32_t main()
 
 	Server server;
 	serverProcessReceive.setServer(&server);
+	server.setFirstMessageLength(16);
 	server.listen(5203);
 
 	while (!g_exit)

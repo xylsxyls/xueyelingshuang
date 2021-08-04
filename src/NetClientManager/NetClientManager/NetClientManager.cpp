@@ -56,6 +56,9 @@ struct CtrlC
 CtrlC g_ctrlc;
 #endif
 
+std::string g_ip = "106.12.204.167";
+int32_t g_port = 5203;
+
 int32_t main()
 {
 	CDump::declareDumpFile();
@@ -68,7 +71,8 @@ int32_t main()
 	Client client;
 	processReceive.setClient(&client);
 
-	client.connect("106.12.204.167", 5203);//106.12.77.189 127.0.0.1 106.12.204.167
+	client.setFirstMessageLength(16);
+	client.connect(g_ip.c_str(), g_port);//106.12.77.189 127.0.0.1 106.12.204.167
 
 	while (!g_exit)
 	{

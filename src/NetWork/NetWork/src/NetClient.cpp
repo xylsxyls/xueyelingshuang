@@ -1,6 +1,6 @@
 #include "NetClient.h"
 #include "HeartTask.h"
-#include "ReceiveTask.h"
+#include "ReceiveNetTask.h"
 #include "NetWorkHelper.h"
 #include "RunLoopTask.h"
 #include "ClientTask.h"
@@ -28,7 +28,7 @@ void NetClient::setFirstMessageLength(int32_t length)
 	m_firstMessageLength = length;
 }
 
-void NetClient::connect(const char* ip, int32_t port, bool isSendHeart)
+void NetClient::connect(const char* ip, int32_t port, int32_t waitTime, bool isSendHeart)
 {
 	if (m_isConnected)
 	{
@@ -40,7 +40,7 @@ void NetClient::connect(const char* ip, int32_t port, bool isSendHeart)
 	m_loopThreadId = CTaskThreadManager::Instance().Init();
 
 	std::shared_ptr<ClientTask> spClientTask(new ClientTask);
-	spClientTask->setParam(ip, port, this);
+	spClientTask->setParam(waitTime, ip, port, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_loopThreadId)->PostTask(spClientTask);
 	
 	m_isConnected = true;

@@ -7,11 +7,13 @@
 #include "ClientLineManager.h"
 #include "NetSender/NetSenderAPI.h"
 #include <string.h>
+#include "CRandom/CRandomAPI.h"
 
-void Server::onClientConnected(uv_tcp_t* client)
+bool Server::onFirstReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
 {
-	printf("clientConnected = %p\n", client);
-	NetLineManager::instance().addConnect(client);
+	printf("%s\n");
+	sendFirstMessage(client, "NetManager Login");
+	return true;
 }
 
 //¥”Õ¯¬Á∂ÀΩ” ’
@@ -71,4 +73,20 @@ void Server::onReceive(uv_tcp_t* client, const char* buffer, int32_t length, Mes
 		break;
 	}
 	ProcessWork::instance().post(serverPid, strMessage.c_str(), strMessage.size(), type);
+}
+
+void Server::onClientConnected(uv_tcp_t* client)
+{
+	printf("clientConnected = %p\n", client);
+	NetLineManager::instance().addConnect(client);
+}
+
+void Server::onClientDisconnected(uv_tcp_t* client)
+{
+	printf("client disconnected\n");
+}
+
+int32_t Server::headNumber()
+{
+	return CRandom::Int(100000, 999999);
 }
