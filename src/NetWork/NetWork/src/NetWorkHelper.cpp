@@ -54,6 +54,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 	int32_t vernier = 0;
 	char* tagBuffer = nullptr;
 	int32_t tagLength = 0;
+	MessageType type = INIT;
 	int32_t head = 0;
 #if defined _WIN64 || defined __x86_64__
 	int32_t ptrSize = 8;
@@ -85,7 +86,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 		//计算包大小，tagLength表示type+包体总大小
 		tagLength = *(int32_t*)(&receiveArea.m_area[0]);
 		int32_t firstMessageLength = tagLength - 4;
-		MessageType type = (MessageType)*(int32_t*)(&receiveArea.m_area[4]);
+		type = (MessageType)*(int32_t*)(&receiveArea.m_area[4]);
 		if (type != FIRST_MESSAGE || firstMessageLength != (netClient != nullptr ? netClient->m_firstMessageLength : netServer->m_firstMessageLength))
 		{
 			receiveArea.m_isReceiveFirst = true;
@@ -155,14 +156,22 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 		//缓冲区已经有12个字节了
 		//计算包大小，tagLength表示type+head+包体总大小
 		tagLength = *(int32_t*)(&receiveArea.m_area[0]);
+		type = (MessageType)(*(int32_t*)(&receiveArea.m_area[4]));
 		head = *(int32_t*)(&receiveArea.m_area[8]);
 		//出现可信连接的包头异常情况则当前所有接收内容全部丢掉，在这里会发生丢包现象
-		if (netServer != nullptr && head != netServer->m_head[0] && head != netServer->m_head[1])
+		if (netServer != nullptr &&
+			type != MessageType::HEAD &&
+			head != netServer->m_head[0] &&
+			head != netServer->m_head[1])
 		{
 			receiveArea.m_area.clear();
 			return;
 		}
-		if (netClient != nullptr && netClient->m_head[0] != 0 && head != netClient->m_head[0] && head != netClient->m_head[1])
+		if (netClient != nullptr &&
+			type != MessageType::HEAD &&
+			netClient->m_head[0] != 0 &&
+			head != netClient->m_head[0] &&
+			head != netClient->m_head[1])
 		{
 			receiveArea.m_area.clear();
 			return;
