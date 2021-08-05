@@ -11,4 +11,6 @@ struct Area
 	std::string m_area;
 
 	Area();
+
+	void clear();
 };

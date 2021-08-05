@@ -99,7 +99,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			else
 			{
 				netServer->onFirstReceive(sender, nullptr, firstMessageLength, type);
-				netServer->asyncClose();
+				libuvTcp->close(sender);
 			}
 			return;
 		}
@@ -132,7 +132,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			receiveArea.m_isFirstPass = netServer->onFirstReceive(sender, &receiveArea.m_area[8], tagLength - 4, type);
 			if (!receiveArea.m_isFirstPass)
 			{
-				netServer->asyncClose();
+				libuvTcp->close(sender);
 			}
 			else
 			{

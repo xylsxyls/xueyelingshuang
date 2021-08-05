@@ -10,7 +10,18 @@ extern int32_t g_port;
 
 bool Client::onFirstReceive(const char* buffer, int32_t length, MessageType type)
 {
-	printf("%s\n", buffer);
+	if (buffer == nullptr)
+	{
+		return false;
+	}
+	if (std::string(buffer, length) == "NetManager Login")
+	{
+		printf("server response success\n");
+	}
+	else
+	{
+		printf("first receive error = %s\n", buffer);
+	}
 	return true;
 }
 

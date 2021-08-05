@@ -37,7 +37,10 @@ void NetClient::connect(const char* ip, int32_t port, int32_t waitTime, bool isS
 
 	m_isSendHeart = isSendHeart;
 	
-	m_loopThreadId = CTaskThreadManager::Instance().Init();
+	if (m_loopThreadId == 0)
+	{
+		m_loopThreadId = CTaskThreadManager::Instance().Init();
+	}
 
 	std::shared_ptr<ClientTask> spClientTask(new ClientTask);
 	spClientTask->setParam(waitTime, ip, port, this);
@@ -54,18 +57,19 @@ void NetClient::close()
 		m_heartThreadId = 0;
 	}
 
-	if (m_receiveThreadId != 0)
-	{
-		CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
-		m_receiveThreadId = 0;
-	}
-
 	if (m_loopThreadId != 0)
 	{
 		CTaskThreadManager::Instance().Uninit(m_loopThreadId);
 		m_loopThreadId = 0;
 	}
 
+	if (m_receiveThreadId != 0)
+	{
+		CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
+		m_receiveThreadId = 0;
+	}
+
+	m_receiveArea.clear();
 	m_head[0] = 0;
 	m_head[1] = 0;
 	m_isSendHeart = false;
@@ -152,6 +156,7 @@ void NetClient::uvServerNotFind()
 
 void NetClient::uvServerNotFindClear()
 {
+	m_isConnected = false;
 	m_isSendHeart = false;
 
 	if (m_heartThreadId != 0)
@@ -190,6 +195,8 @@ void NetClient::uvDisconnectedClear(uv_tcp_t* tcp)
 		m_receiveThreadId = 0;
 	}
 
+	m_receiveArea.clear();
+
 	m_head[0] = 0;
 	m_head[1] = 0;
 }
@@ -209,16 +216,18 @@ void NetClient::asyncClose()
 		m_heartThreadId = 0;
 	}
 
+	if (m_loopThreadId != 0)
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(m_loopThreadId)->StopAllTask();
+	}
+
 	if (m_receiveThreadId != 0)
 	{
 		CTaskThreadManager::Instance().Uninit(m_receiveThreadId);
 		m_receiveThreadId = 0;
 	}
 
-	if (m_loopThreadId != 0)
-	{
-		CTaskThreadManager::Instance().GetThreadInterface(m_loopThreadId)->StopAllTask();
-	}
+	m_receiveArea.clear();
 
 	m_head[0] = 0;
 	m_head[1] = 0;

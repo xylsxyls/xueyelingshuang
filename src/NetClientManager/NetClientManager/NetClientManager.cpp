@@ -11,6 +11,7 @@
 #endif
 
 bool g_exit = false;
+Client* g_client = nullptr;
 
 #ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)
@@ -20,6 +21,10 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninitReceive();
+		if (g_client != nullptr)
+		{
+			g_client->close();
+		}
 		g_exit = true;
 	}
 	return FALSE;
@@ -36,6 +41,10 @@ void CtrlCMessage(int eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninitReceive();
+		if (g_client != nullptr)
+		{
+			g_client->close();
+		}
 		g_exit = true;
 		exit(0);
 	}	
@@ -56,7 +65,7 @@ struct CtrlC
 CtrlC g_ctrlc;
 #endif
 
-std::string g_ip = "106.12.204.167";
+std::string g_ip = "106.12.204.167";//106.12.204.167
 int32_t g_port = 5203;
 
 int32_t main()
@@ -69,6 +78,7 @@ int32_t main()
 	ProcessWork::instance().initReceive();
 
 	Client client;
+	g_client = &client;
 	processReceive.setClient(&client);
 
 	client.setFirstMessageLength(16);

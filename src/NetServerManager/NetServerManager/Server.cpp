@@ -11,7 +11,18 @@
 
 bool Server::onFirstReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
 {
-	printf("%s\n");
+	if (buffer == nullptr)
+	{
+		return false;
+	}
+	if (std::string(buffer, length) == "NetManager Login")
+	{
+		printf("client login success\n");
+	}
+	else
+	{
+		printf("first receive error = %s\n", buffer);
+	}
 	sendFirstMessage(client, "NetManager Login");
 	return true;
 }

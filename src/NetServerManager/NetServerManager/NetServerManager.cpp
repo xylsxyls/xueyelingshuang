@@ -14,6 +14,7 @@
 #endif
 
 bool g_exit = false;
+Server* g_server = nullptr;
 
 #ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)
@@ -23,6 +24,10 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninitReceive();
+		if (g_server != nullptr)
+		{
+			g_server->close();
+		}
 		g_exit = true;
 	}
 	return FALSE;
@@ -39,6 +44,10 @@ void CtrlCMessage(int eve)
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninitReceive();
+		if (g_server != nullptr)
+		{
+			g_server->close();
+		}
 		g_exit = true;
 		exit(0);
 	}	
@@ -69,6 +78,7 @@ int32_t main()
 	ProcessWork::instance().initReceive();
 
 	Server server;
+	g_server = &server;
 	serverProcessReceive.setServer(&server);
 	server.setFirstMessageLength(16);
 	server.listen(5203);
