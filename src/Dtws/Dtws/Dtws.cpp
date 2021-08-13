@@ -56,7 +56,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	if (CHook::IsKeyDown(wParam))
 	{
 		DWORD code = CHook::GetVkCode(lParam);
-		RCSend("code = %d", code);
+		//RCSend("code = %d", code);
 		switch (code)
 		{
 		//delete¼ü

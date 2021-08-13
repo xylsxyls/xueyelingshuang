@@ -16,8 +16,6 @@ void HeadTask::DoTask()
 		if (m_netServer->m_isListen)
 		{
 			int32_t headNum = m_netServer->headNumber();
-			m_netServer->m_head[1] = m_netServer->m_head[0];
-			m_netServer->m_head[0] = headNum;
 			int32_t index = -1;
 			while (index++ != m_netServer->m_allClient.size() - 1)
 			{
@@ -29,6 +27,8 @@ void HeadTask::DoTask()
 					m_netServer->send(client, (const char*)&headNum, 4, MessageType::HEAD);
 				}
 			}
+			m_netServer->m_head[1] = m_netServer->m_head[0];
+			m_netServer->m_head[0] = headNum;
 		}
 		m_sleep.wait(m_time);
 	}
