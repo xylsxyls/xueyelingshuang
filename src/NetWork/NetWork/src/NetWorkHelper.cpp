@@ -146,7 +146,6 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 
 	while (true)
 	{
-		//necessary函数第一次进入有问题
 		//先收到12个字节
 		if (!necessaryReceive(buffer, length, 12, vernier, receiveArea.m_area))
 		{
@@ -159,20 +158,34 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 		type = (MessageType)(*(int32_t*)(&receiveArea.m_area[4]));
 		head = *(int32_t*)(&receiveArea.m_area[8]);
 		//出现可信连接的包头异常情况则当前所有接收内容全部丢掉，在这里会发生丢包现象
+		int32_t head0 = 0;
+		int32_t head1 = 0;
+		if (netServer != nullptr)
+		{
+			head0 = netServer->m_head[0];
+			head1 = netServer->m_head[1];
+		}
+		if (netClient != nullptr)
+		{
+			head0 = netClient->m_head[0];
+			head1 = netClient->m_head[1];
+		}
 		if (netServer != nullptr &&
 			type != MessageType::HEAD &&
-			head != netServer->m_head[0] &&
-			head != netServer->m_head[1])
+			head != head0 &&
+			head != head1)
 		{
+			printf("server clear area, type = %d, head0 = %d, head1 = %d, head = %d\n", type, head0, head1, head);
 			receiveArea.m_area.clear();
 			return;
 		}
 		if (netClient != nullptr &&
 			type != MessageType::HEAD &&
-			netClient->m_head[0] != 0 &&
-			head != netClient->m_head[0] &&
-			head != netClient->m_head[1])
+			head0 != 0 &&
+			head != head0 &&
+			head != head1)
 		{
+			printf("client clear area, type = %d, head0 = %d, head1 = %d, head = %d\n", type, head0, head1, head);
 			receiveArea.m_area.clear();
 			return;
 		}
@@ -182,6 +195,18 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 		if (!necessaryReceive(buffer, length, tagLength + 4, vernier, receiveArea.m_area))
 		{
 			return;
+		}
+		if (netClient != nullptr && type == MessageType::HEAD)
+		{
+			((NetClient*)libuvTcp)->m_head[1] = ((NetClient*)libuvTcp)->m_head[0];
+			((NetClient*)libuvTcp)->m_head[0] = *(int32_t*)(&receiveArea.m_area[12]);
+			//如果不是第一个
+			if (head0 != 0)
+			{
+				//清空缓冲区
+				receiveArea.m_area.clear();
+				continue;
+			}
 		}
 		//receive
 		char* allocBuffer = (char*)::malloc(ptrSize + 4 + (tagLength == 8 ? tagLength : (tagLength + 1)));

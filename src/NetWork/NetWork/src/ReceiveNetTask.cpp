@@ -46,13 +46,8 @@ void ReceiveNetTask::DoTask()
 			}
 			else if (type == MessageType::HEAD)
 			{
-				bool isFirst = (((NetClient*)m_libuvTcp)->m_head[0] == 0);
-				((NetClient*)m_libuvTcp)->m_head[1] = ((NetClient*)m_libuvTcp)->m_head[0];
-				((NetClient*)m_libuvTcp)->m_head[0] = *(int32_t*)(buffer + ptrSize + 12);
-				if (isFirst)
-				{
-					((NetClient*)m_libuvTcp)->onFirstHead();
-				}
+				//只有第一个会放进来
+				((NetClient*)m_libuvTcp)->onFirstHead();
 			}
 			else
 			{
