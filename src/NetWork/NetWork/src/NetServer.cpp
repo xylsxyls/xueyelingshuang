@@ -108,7 +108,7 @@ void NetServer::head()
 	}
 
 	std::shared_ptr<HeadTask> spHeadTask(new HeadTask);
-	spHeadTask->setParam(10000, this);
+	spHeadTask->setParam(60000 * 10, this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_headThreadId)->PostTask(spHeadTask);
 }
 
