@@ -27,6 +27,7 @@
 #include "Cqdrw3Task.h"
 #include "CwrqTask.h"
 #include "CrqTask.h"
+#include "SpaceTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -52,6 +53,7 @@ bool cDown = false;
 bool qDown = false;
 bool rDown = false;
 bool aDown = false;
+bool gDown = false;
 bool threeDown = false;
 bool fiveDown = false;
 bool vkCodeOpen = false;
@@ -198,6 +200,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			aDown = true;
 		}
+		else if (vkCode == 'G')
+		{
+			gDown = true;
+		}
 		else if (vkCode == '3')
 		{
 			threeDown = true;
@@ -275,6 +281,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (vkCode == 'A')
 		{
 			aDown = false;
+		}
+		else if (vkCode == 'G')
+		{
+			gDown = false;
 		}
 		else if (vkCode == '3')
 		{
@@ -517,6 +527,21 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			taskThread->PostTask(spTask, 1);
 		}
 	}
+	else if (type == 7)
+	{
+		if (eDown && vkCode == 'E' && stopWatch.GetWatchTime() > 500)
+		{
+			//stopWatch.SetWatchTime(0);
+			std::shared_ptr<SpaceTask> spTask(new SpaceTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		else if (gDown && vkCode == 'G' && stopWatch.GetWatchTime() > 500)
+		{
+			//stopWatch.SetWatchTime(0);
+			std::shared_ptr<SpaceTask> spTask(new SpaceTask);
+			taskThread->PostTask(spTask, 1);
+		}
+	}
 
 	Exit:
 	// 将事件传递到下一个钩子
@@ -561,7 +586,9 @@ BOOL COneKeyDlg::OnInitDialog()
 	m_type.AddString("卡萨丁");
 	m_type.AddString("卡特琳娜");
 	m_type.AddString("进游戏");
-	m_type.SelectString(0, "刀锋");
+	m_type.AddString("王者");
+	m_type.SelectString(6, "王者");
+	type = 7;
 	m_button.SetFocus();
 	superWatch.SetWatchTime(10000);
 	textWatch.SetWatchTime(10000);
@@ -675,5 +702,9 @@ void COneKeyDlg::OnSelchangeCombo1()
 		std::shared_ptr<IntoGameTask> spIntoGameTask(new IntoGameTask);
 		spIntoGameTask->setParam(time);
 		CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->PostTask(spIntoGameTask);
+	}
+	else if (str == "王者")
+	{
+		type = 7;
 	}
 }
