@@ -1,0 +1,19 @@
+#define _CRTDBG_MAP_ALLOC
+//放一句之后
+_CrtDumpMemoryLeaks();
+//放程序开头
+_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+
+优点：可以检测malloc，可以检测new，可以探测第三方库是否有泄漏
+缺点：必须要debug，不跨平台，只能针对单个语句检测
+
+vld
+main函数文件包含vld.h
+
+优点：可以检测malloc，可以检测new，只需要操作一个文件
+缺点：必须要debug，不跨平台，不能探测第三方库
+
+debugnew
+把.h和.cpp包含到工程中
+优点：跨平台，可以在release中使用
+缺点：不能检测malloc，不能探测第三方库，每个检测的cpp都要包含debugnew.h
