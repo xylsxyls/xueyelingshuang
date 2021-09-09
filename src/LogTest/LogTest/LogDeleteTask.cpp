@@ -1,10 +1,8 @@
 #include "LogDeleteTask.h"
 #include "CSystem/CSystemAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
-#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 
 LogDeleteTask::LogDeleteTask():
-m_logMutex(nullptr),
 m_logSemaphore(nullptr),
 m_logQueue(nullptr),
 m_lastLogTime(nullptr),
@@ -20,10 +18,7 @@ void LogDeleteTask::DoTask()
 	{
 		if ((*m_lastLogTime != lastLogTime) && (CSystem::GetTickCount() - *m_lastLogTime > 5000) && ((*m_lastLogTime) != 0))
 		{
-			{
-				WriteLock writeLock(*m_logMutex);
-				m_logQueue->push("logUninit");
-			}
+			m_logQueue->push("logUninit");
 			m_logSemaphore->signal();
 			lastLogTime = *m_lastLogTime;
 		}
@@ -36,12 +31,10 @@ void LogDeleteTask::StopTask()
 	m_exit = true;
 }
 
-void LogDeleteTask::setParam(ReadWriteMutex* logMutex,
-	Semaphore* logSemaphore,
+void LogDeleteTask::setParam(Semaphore* logSemaphore,
 	LockFreeQueue<std::string>* logQueue,
 	std::atomic<int32_t>* lastLogTime)
 {
-	m_logMutex = logMutex;
 	m_logSemaphore = logSemaphore;
 	m_logQueue = logQueue;
 	m_lastLogTime = lastLogTime;

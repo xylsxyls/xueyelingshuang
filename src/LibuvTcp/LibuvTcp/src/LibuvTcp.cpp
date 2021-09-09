@@ -368,10 +368,7 @@ void LibuvTcp::send(const char* buffer)
 		return;
 	}
 
-	{
-		std::unique_lock<std::mutex> lock(m_libuv->m_queueMutex);
-		m_libuv->m_queue->push((char*)buffer);
-	}
+	m_libuv->m_queue->push((char*)buffer);
 
 	int sendres = uv_async_send(m_libuv->m_asyncHandle);
 	if (sendres != 0)

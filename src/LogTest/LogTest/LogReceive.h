@@ -5,7 +5,6 @@
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include "Variant/VariantAPI.h"
 
-class ReadWriteMutex;
 class Semaphore;
 
 class LogReceive : public ProcessReceiveCallback
@@ -29,10 +28,8 @@ public:
 	@param [in] spLogThread 日志线程
 	@param [in] spLogThread 日志线程
 	*/
-	void setArea(ReadWriteMutex* screenMutex,
-		Semaphore* screenSemaphore,
+	void setArea(Semaphore* screenSemaphore,
 		LockFreeQueue<std::string>* screenQueue,
-		ReadWriteMutex* logMutex,
 		Semaphore* logSemaphore,
 		LockFreeQueue<std::string>* logQueue,
 		Semaphore* netSemaphore,
@@ -44,10 +41,8 @@ public:
 	void setLastLogTime(std::atomic<int32_t>* lastLogTime);
 
 protected:
-	ReadWriteMutex* m_screenMutex;
 	Semaphore* m_screenSemaphore;
 	LockFreeQueue<std::string>* m_screenQueue;
-	ReadWriteMutex* m_logMutex;
 	Semaphore* m_logSemaphore;
 	LockFreeQueue<std::string>* m_logQueue;
 	Semaphore* m_netSemaphore;

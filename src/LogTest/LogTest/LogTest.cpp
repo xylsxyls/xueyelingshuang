@@ -15,7 +15,6 @@
 #include "ScreenTask.h"
 #include "LogTask.h"
 #include "NetTask.h"
-#include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #ifdef __unix__
 #include <signal.h>
 #include <stdlib.h>
@@ -97,10 +96,8 @@ int32_t main()
 	g_logDeleteThreadId = CTaskThreadManager::Instance().Init();
 	g_netThreadId = CTaskThreadManager::Instance().Init();
 
-	ReadWriteMutex screenMutex;
 	Semaphore screenSemaphore;
 	LockFreeQueue<std::string> screenQueue;
-	ReadWriteMutex logMutex;
 	Semaphore logSemaphore;
 	LockFreeQueue<std::string> logQueue;
 	Semaphore netSemaphore;
@@ -122,7 +119,7 @@ int32_t main()
 	lastLogTime = (int32_t)CSystem::GetTickCount();
 
 	std::shared_ptr<LogDeleteTask> spLogDeleteTask(new LogDeleteTask);
-	spLogDeleteTask->setParam(&logMutex, &logSemaphore, &logQueue, &lastLogTime);
+	spLogDeleteTask->setParam(&logSemaphore, &logQueue, &lastLogTime);
 	CTaskThreadManager::Instance().GetThreadInterface(g_logDeleteThreadId)->PostTask(spLogDeleteTask);
 
 	Semaphore initResponseSemaphore;
@@ -130,14 +127,14 @@ int32_t main()
 	ProcessWork::instance().initPostThread();
 	NetReceive netReceive;
 	netReceive.setInitResponseSemaphore(&initResponseSemaphore);
-	netReceive.setArea(&screenMutex, &screenSemaphore, &screenQueue, &logMutex, &logSemaphore, &logQueue);
+	netReceive.setArea(&screenSemaphore, &screenQueue, &logSemaphore, &logQueue);
 	netReceive.setLastLogTime(&lastLogTime);
 	NetSender::instance().initClientReceive(&netReceive);
 
 	std::string loginName = CSystem::getComputerName();
 
 	LogReceive logReceive;
-	logReceive.setArea(&screenMutex, &screenSemaphore, &screenQueue, &logMutex, &logSemaphore, &logQueue, &netSemaphore, &netQueue);
+	logReceive.setArea(&screenSemaphore, &screenQueue, &logSemaphore, &logQueue, &netSemaphore, &netQueue);
 	logReceive.setLastLogTime(&lastLogTime);
 	ProcessWork::instance().addProcessReceiveCallback(&logReceive);
 

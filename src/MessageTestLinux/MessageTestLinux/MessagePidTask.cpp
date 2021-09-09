@@ -22,7 +22,6 @@ void MessagePidTask::DoTask()
             printf("exit pid = %d\n", m_pid);
             break;
         }
-        std::unique_lock<std::mutex> lock(m_client->m_receiveStringMutex);
         m_client->m_listReceiveStr.push(message);
     }
 }

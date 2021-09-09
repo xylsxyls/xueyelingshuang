@@ -50,6 +50,18 @@
     <ClCompile Include="MessageTestLinux.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AddStringTask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MessagePidTask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MessageReceiveTask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MessageRecoverTask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="MessageTestLinux.qrc">
@@ -64,5 +76,19 @@
     <CustomBuild Include="MessageTestLinux.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AddStringTask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MessagePidTask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MessageReceiveTask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MessageRecoverTask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

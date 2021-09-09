@@ -569,10 +569,7 @@ void ProcessWork::post(int32_t destPid, const char* buffer, int32_t length, Mess
 		::memcpy(postBuffer + 12, buffer, length);
 	}
 
-	{
-		WriteLock writeLock(m_postMutex);
-		m_postQueue.push(postBuffer);
-	}
+	m_postQueue.push(postBuffer);
 	m_postSemaphore.signal();
 }
 
@@ -593,10 +590,7 @@ void ProcessWork::post(const std::string& processName, const char* buffer, int32
 		::memcpy(postNameBuffer + nameLength + 1 + 8, buffer, length);
 	}
 
-	{
-		WriteLock writeLock(m_postNameMutex);
-		m_postNameQueue.push(postNameBuffer);
-	}
+	m_postNameQueue.push(postNameBuffer);
 	m_postNameSemaphore.signal();
 }
 

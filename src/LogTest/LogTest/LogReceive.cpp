@@ -9,10 +9,8 @@
 extern bool g_exit;
 
 LogReceive::LogReceive():
-m_screenMutex(nullptr),
 m_screenSemaphore(nullptr),
 m_screenQueue(nullptr),
-m_logMutex(nullptr),
 m_logSemaphore(nullptr),
 m_logQueue(nullptr),
 m_netSemaphore(nullptr),
@@ -51,16 +49,10 @@ void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, Me
 	//·¢ËÍ¸øÍøÂç¶Ë
 	case LOGTEST_SEND_MESSAGE:
 	{
-		{
-			WriteLock writeLock(*m_screenMutex);
-			m_screenQueue->push(strBuffer);
-		}
+		m_screenQueue->push(strBuffer);
 		m_screenSemaphore->signal();
 
-		{
-			WriteLock writeLock(*m_logMutex);
-			m_logQueue->push(strBuffer);
-		}
+		m_logQueue->push(strBuffer);
 		m_logSemaphore->signal();
 
 		*m_lastLogTime = CSystem::GetTickCount();
@@ -71,16 +63,10 @@ void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, Me
 	break;
 	case LOGTEST_LOCAL_MESSAGE:
 	{
-		{
-			WriteLock writeLock(*m_screenMutex);
-			m_screenQueue->push(strBuffer);
-		}
+		m_screenQueue->push(strBuffer);
 		m_screenSemaphore->signal();
 
-		{
-			WriteLock writeLock(*m_logMutex);
-			m_logQueue->push(strBuffer);
-		}
+		m_logQueue->push(strBuffer);
 		m_logSemaphore->signal();
 
 		*m_lastLogTime = CSystem::GetTickCount();
@@ -88,10 +74,7 @@ void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, Me
 	break;
 	case LOGTEST_ONLY_MESSAGE:
 	{
-		{
-			WriteLock writeLock(*m_logMutex);
-			m_logQueue->push(strBuffer);
-		}
+		m_logQueue->push(strBuffer);
 		m_logSemaphore->signal();
 
 		*m_lastLogTime = CSystem::GetTickCount();
@@ -102,19 +85,15 @@ void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, Me
 	}
 }
 
-void LogReceive::setArea(ReadWriteMutex* screenMutex,
-	Semaphore* screenSemaphore,
+void LogReceive::setArea(Semaphore* screenSemaphore,
 	LockFreeQueue<std::string>* screenQueue,
-	ReadWriteMutex* logMutex,
 	Semaphore* logSemaphore,
 	LockFreeQueue<std::string>* logQueue,
 	Semaphore* netSemaphore,
 	LockFreeQueue<std::string>* netQueue)
 {
-	m_screenMutex = screenMutex;
 	m_screenSemaphore = screenSemaphore;
 	m_screenQueue = screenQueue;
-	m_logMutex = logMutex;
 	m_logSemaphore = logSemaphore;
 	m_logQueue = logQueue;
 	m_netSemaphore = netSemaphore;

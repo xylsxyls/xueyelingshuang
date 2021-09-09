@@ -174,11 +174,9 @@ protected:
 	LockFreeQueue<char*> m_receiveQueue;
 	Semaphore m_receiveSemaphore;
 
-	ReadWriteMutex m_postMutex;
 	std::atomic<bool> m_waitEndPost;
 	LockFreeQueue<char*> m_postQueue;
 	Semaphore m_postSemaphore;
-	ReadWriteMutex m_postNameMutex;
 	std::atomic<bool> m_waitEndPostName;
 	LockFreeQueue<char*> m_postNameQueue;
 	Semaphore m_postNameSemaphore;

@@ -2,7 +2,6 @@
 #include "NetSender/NetSenderAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 
-class ReadWriteMutex;
 class Semaphore;
 
 class NetReceive : public ClientReceiveCallback
@@ -36,10 +35,8 @@ public:
 	@param [in] spScreenThread 屏幕展示线程
 	@param [in] spScreenThread 日志线程
 	*/
-	void setArea(ReadWriteMutex* screenMutex,
-		Semaphore* screenSemaphore,
+	void setArea(Semaphore* screenSemaphore,
 		LockFreeQueue<std::string>* screenQueue,
-		ReadWriteMutex* logMutex,
 		Semaphore* logSemaphore,
 		LockFreeQueue<std::string>* logQueue);
 
@@ -50,10 +47,8 @@ public:
 
 private:
 	Semaphore* m_initResponseSemaphore;
-	ReadWriteMutex* m_screenMutex;
 	Semaphore* m_screenSemaphore;
 	LockFreeQueue<std::string>* m_screenQueue;
-	ReadWriteMutex* m_logMutex;
 	Semaphore* m_logSemaphore;
 	LockFreeQueue<std::string>* m_logQueue;
 	std::atomic<int32_t>* m_lastLogTime;

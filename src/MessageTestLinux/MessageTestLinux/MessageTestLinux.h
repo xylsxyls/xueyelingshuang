@@ -70,7 +70,6 @@ private:
 	MsgLinux* m_msg;
 	std::mutex m_addStringMutex;
 	std::list<QString> m_listAllStr;
-	std::mutex m_receiveStringMutex;
 	LockFreeQueue<std::string> m_listReceiveStr;
 	std::mutex m_showMutex;
 	FiniteDeque<std::string> m_showStr;

@@ -14,7 +14,6 @@ struct LibuvBase
 	LibuvTcp* m_libuvTcp;
 	uv_loop_t* m_loop;
 	uv_async_t* m_asyncHandle;
-	std::mutex m_queueMutex;
 	LockFreeQueue<char*>* m_queue;
 	uv_async_t* m_asyncCloseHandle;
 	bool m_isClient;
