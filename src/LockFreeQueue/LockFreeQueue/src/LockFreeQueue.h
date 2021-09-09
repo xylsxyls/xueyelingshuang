@@ -1,16 +1,17 @@
 #pragma once
 #include "LockFreeQueueMacro.h"
 #include <stdint.h>
+#include <atomic>
 
-template<class QElmType>
-struct qnode
+template<class QueueElmentType>
+struct QueueNode
 {
-	qnode();
-	struct qnode *m_next;
-	QElmType m_data;
+	QueueNode();
+	struct QueueNode* m_next;
+	QueueElmentType m_data;
 };
 
-template<class QElmType>
+template<class QueueElmentType>
 class LockFreeQueue
 {
 public:
@@ -20,14 +21,15 @@ public:
 public:
 	bool init();
 	void destroy();
-	bool push(const QElmType& e);
-	bool pop(QElmType* e);
+	bool push(const QueueElmentType& e);
+	bool pop(QueueElmentType* e);
 	bool empty();
 	int32_t size();
 
 private:
-	struct qnode<QElmType>* volatile m_front;
-	struct qnode<QElmType>* volatile m_rear;
+	struct QueueNode<QueueElmentType>* volatile m_front;
+	struct QueueNode<QueueElmentType>* volatile m_rear;
+	std::atomic<int32_t> m_count;
 };
 
 #include "LockFreeQueue.inl"

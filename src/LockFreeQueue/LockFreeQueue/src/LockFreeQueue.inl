@@ -1,31 +1,35 @@
 #ifndef _LOCK_FREE_QUEUE_H__
 #define _LOCK_FREE_QUEUE_H__
 #include "LockFreeQueue.h"
+#include "AtomicMath/AtomicMathAPI.h"
 
-template<class QElmType>
-qnode<QElmType>::qnode():
+template<class QueueElmentType>
+QueueNode<QueueElmentType>::QueueNode():
 m_next(nullptr)
 {
 
 }
 
-template<class QElmType>
-LockFreeQueue<QElmType>::LockFreeQueue()
+template<class QueueElmentType>
+LockFreeQueue<QueueElmentType>::LockFreeQueue():
+m_front(nullptr),
+m_rear(nullptr),
+m_count(0)
 {
 	init();
 }
 
-template<class QElmType>
-LockFreeQueue<QElmType>::~LockFreeQueue()
+template<class QueueElmentType>
+LockFreeQueue<QueueElmentType>::~LockFreeQueue()
 {
 	destroy();
 }
 
-template<class QElmType>
-bool LockFreeQueue<QElmType>::init()
+template<class QueueElmentType>
+bool LockFreeQueue<QueueElmentType>::init()
 {
-	m_front = m_rear = new qnode < QElmType > ;
-	if (!m_front)
+	m_front = m_rear = new QueueNode<QueueElmentType>;
+	if (m_front == nullptr)
 	{
 		return false;
 	}
@@ -34,68 +38,79 @@ bool LockFreeQueue<QElmType>::init()
 	return true;
 }
 
-template<class QElmType>
-void LockFreeQueue<QElmType>::destroy()
+template<class QueueElmentType>
+void LockFreeQueue<QueueElmentType>::destroy()
 {
-	while (m_front)
+	while (m_front != nullptr)
 	{
 		m_rear = m_front->m_next;
 		delete m_front;
 		m_front = m_rear;
 	}
+	m_count = 0;
 }
 
-template<class QElmType>
-bool LockFreeQueue<QElmType>::push(const QElmType& e)
+template<class QueueElmentType>
+bool LockFreeQueue<QueueElmentType>::push(const QueueElmentType& e)
 {
-	struct qnode<QElmType> *p = new qnode < QElmType > ;
-	if (!p)
+	struct QueueNode<QueueElmentType>* p = new QueueNode<QueueElmentType>;
+	if (p == nullptr)
 	{
 		return false;
 	}
-	p->m_next = nullptr;
-	m_rear->m_next = p;
-	m_rear->m_data = e;
-	m_rear = p;
-	return true;
-}
-
-template<class QElmType>
-bool LockFreeQueue<QElmType>::pop(QElmType *e)
-{
-	if (m_front == m_rear)
+	while (true)
 	{
-		return false;
+#if defined _WIN64 || defined __x86_64__
+		if (AtomicMath::compareAndSwap((int64_t*)&m_rear->m_next, 0, (int64_t)p))
+#else
+		if (AtomicMath::compareAndSwap((int32_t*)&m_rear->m_next, 0, (int32_t)p))
+#endif
+		{
+			m_rear->m_data = e;
+			m_rear = p;
+			++m_count;
+			break;
+		}
 	}
-
-	struct qnode<QElmType> *p = m_front;
-	*e = p->m_data;
-	m_front = p->m_next;
-	delete p;
 	return true;
 }
 
-template<class QElmType>
-bool LockFreeQueue<QElmType>::empty()
+template<class QueueElmentType>
+bool LockFreeQueue<QueueElmentType>::pop(QueueElmentType* e)
+{
+	while (true)
+	{
+		if (m_front == m_rear)
+		{
+			return false;
+		}
+		struct QueueNode<QueueElmentType>* p = m_front;
+#if defined _WIN64 || defined __x86_64__
+		if (AtomicMath::compareAndSwap((int64_t*)&m_front, (int64_t)p, (int64_t)m_front->m_next))
+#else
+		if (AtomicMath::compareAndSwap((int32_t*)&m_front, (int32_t)p, (int32_t)m_front->m_next))
+#endif
+		{
+			*e = p->m_data;
+			delete p;
+			--m_count;
+			break;
+		}
+	}
+	
+	return true;
+}
+
+template<class QueueElmentType>
+bool LockFreeQueue<QueueElmentType>::empty()
 {
 	return m_front == m_rear;
 }
 
-template<class QElmType>
-int32_t LockFreeQueue<QElmType>::size()
+template<class QueueElmentType>
+int32_t LockFreeQueue<QueueElmentType>::size()
 {
-	if (empty())
-	{
-		return 0;
-	}
-	int32_t size = 1;
-	struct qnode<QElmType>* volatile pfront = m_front;
-	while (pfront->m_next != m_rear)
-	{
-		pfront = pfront->m_next;
-		++size;
-	}
-	return size;
+	return m_count;
 }
 
 #endif
