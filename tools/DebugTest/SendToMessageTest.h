@@ -10,6 +10,7 @@
 
 #include <windows.h>
 #include <vector>
+#include <set>
 #include <tchar.h>
 #pragma comment(lib, "User32.lib")
 
@@ -115,6 +116,7 @@ public:
 };
 
 #define RCSend SendToMessage::SendToMessageTest
+#define RCOnce SendToMessage::OnceToMessageTest
 #define RCPage const bool pageTest = RCSend("%s %d", __FILE__, __LINE__)
 #define RCFunIn RCSend("%s ½øÈë%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
 #define RCFunOut RCSend("%s Àë¿ª%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
@@ -166,6 +168,42 @@ public:
         copyData.cbData = (DWORD)str.length();
         return ::SendMessage(receiveWindow, WM_COPYDATA, (WPARAM)NULL/*m_hWnd*/, (LPARAM)&copyData) == 1;
     }
+
+	static bool OnceToMessageTest(const char* fmt, ...)
+	{
+		std::string str;
+		va_list args = NULL;
+		va_start(args, fmt);
+
+#if (_MSC_VER >= 1500)
+		int size = _vscprintf(fmt, args);
+		str.resize(size);
+		if (size != 0)
+		{
+			vsprintf_s(&str[0], size + 1, fmt, args);
+		}
+#else
+		str.resize(10240);
+		::memset(&str[0], 0, 10240);
+		_vsnprintf(&str[0], 10240, fmt, args);
+		str.resize(strlen(&str[0]));
+#endif
+		va_end(args);
+
+		static std::set<std::string> s_onceHasSend;
+		if (s_onceHasSend.find(str) != s_onceHasSend.end())
+		{
+			return false;
+		}
+		s_onceHasSend.insert(str);
+
+		HWND receiveWindow = ::FindWindowA(NULL, "MessageTest1.3");
+		if (receiveWindow == NULL) return false;
+		COPYDATASTRUCT copyData = { 0 };
+		copyData.lpData = (PVOID)str.c_str();
+		copyData.cbData = (DWORD)str.length();
+		return ::SendMessage(receiveWindow, WM_COPYDATA, (WPARAM)NULL/*m_hWnd*/, (LPARAM)&copyData) == 1;
+	}
 
 #ifdef _UNICODE
     static std::string TCHAR2STRING(const TCHAR *STR)
