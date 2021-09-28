@@ -12,9 +12,9 @@
 #pragma comment(lib, "Dbghelp.lib")
 #endif
 
-#define LOG_FILE
-#ifdef LOG_FILE
-#define LOG_FILE_NAME "MemoryTest.log"
+#define MEMORY_LOG_FILE
+#ifdef MEMORY_LOG_FILE
+#define MEMORY_LOG_FILE_NAME "MemoryTest.log"
 #endif
 
 #define MEMORY_PICTURE MemoryTestTrace::instance().memoryPicture
@@ -169,8 +169,8 @@ private:
 	MemoryTestTrace():
 		m_totalSize(0)
 	{
-#if defined(LOG_FILE)
-		m_logfile = fopen((GetCurrentExePath() + GetCurrentExeName() + LOG_FILE_NAME).c_str(), "wt");
+#if defined(MEMORY_LOG_FILE)
+		m_logfile = fopen((GetCurrentExePath() + GetCurrentExeName() + MEMORY_LOG_FILE_NAME).c_str(), "wt");
 		if (m_logfile == nullptr)
 		{
 			printf(" Error! file: debugnew.log can not open@!\n");
@@ -188,7 +188,7 @@ private:
 	{
 		MemoryReady::instance().uninit();
 		dump(false);
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 		if (m_logfile != nullptr)
 		{
 			fclose(m_logfile);
@@ -215,7 +215,7 @@ public:
 		file = strrchr(file, '//') == NULL ? file : strrchr(file, '//') + 1;
 		m_totalSize += size;
 		m_entry[p] = MemoryEntry(ShowTraceStack(), file, line, size);
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 		if (m_logfile != nullptr)
 		{
 			fprintf(m_logfile, "*N p = 0x%p, size = %6d,  %-22s, Line: %4d.  totalsize = %8d\n", p, size, file, line, m_totalSize);
@@ -234,7 +234,7 @@ public:
 		const char* file = "third library file";
 		m_totalSize += size;
 		m_entry[p] = MemoryEntry(ShowTraceStack(), file, 0, size);
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 		if (m_logfile != nullptr)
 		{
 			fprintf(m_logfile, "*N p = 0x%p, size = %6d,  %-22s, Line: %4d.  totalsize = %8d\n", p, size, file, 0, m_totalSize);
@@ -255,7 +255,7 @@ public:
 		{
 			size_t size = (*it).second.size();
 			m_totalSize -= size;
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 			if (m_logfile != nullptr)
 			{
 				fprintf(m_logfile, "#D p = 0x%p, size = %6u.%39stotalsize = %8d\n", p, size, "-----------------------------------  ", m_totalSize);
@@ -266,7 +266,7 @@ public:
 		}
 		else
 		{
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 			if (m_logfile != nullptr)
 			{
 				fprintf(m_logfile, "#D p = 0x%p. error point!!!\n", p);
@@ -294,7 +294,7 @@ public:
 		{
 			printf("%d memory leaks detected\n", (int32_t)m_entry.size());
 			RCSend("%d memory leaks detected", (int32_t)m_entry.size());
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 			if (m_logfile != nullptr)
 			{
 				fprintf(m_logfile, "\n\n***%d memory leaks detected\n", (int32_t)m_entry.size());
@@ -313,7 +313,7 @@ public:
 #if defined _WIN64 || defined __x86_64__
 					printf("0x%p, %s, %d, size = %I64d\n%s\n", p, file, line, size, stack.c_str());
 					RCSend("0x%p, %s, %d, size = %I64d", p, file, line, size);
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 					if (m_logfile != nullptr)
 					{
 						fprintf(m_logfile, "0x%p, %s, %d, size = %I64d\n%s\n", p, file, line, size, stack.c_str());
@@ -323,7 +323,7 @@ public:
 #else
 					printf("0x%p, %s, %d, size = %d\n%s\n", p, file, line, size, stack.c_str());
 					RCSend("0x%p, %s, %d, size = %d", p, file, line, size);
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 					if (m_logfile != nullptr)
 					{
 						fprintf(m_logfile, "0x%p, %s, %d, size = %d\n%s\n", p, file, line, size, stack.c_str());
@@ -337,7 +337,7 @@ public:
 #if defined _WIN64 || defined __x86_64__
 					printf("0x%p, %s, %d, size = %I64d\n", p, file, line, size);
 					RCSend("0x%p, %s, %d, size = %I64d", p, file, line, size);
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 					if (m_logfile != nullptr)
 					{
 						fprintf(m_logfile, "0x%p, %s, %d, size = %I64d\n", p, file, line, size);
@@ -347,7 +347,7 @@ public:
 #else
 					printf("0x%p, %s, %d, size = %d\n", p, file, line, size);
 					RCSend("0x%p, %s, %d, size = %d", p, file, line, size);
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 					if (m_logfile != nullptr)
 					{
 						fprintf(m_logfile, "0x%p, %s, %d, size = %d\n", p, file, line, size);
@@ -362,7 +362,7 @@ public:
 		{
 			printf("no leaks detected\n");
 			RCSend("no leaks detected");
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 			if (m_logfile != nullptr)
 			{
 				fprintf(m_logfile, "no leaks detected\n");
@@ -477,7 +477,7 @@ private:
 	std::map<void*, MemoryEntry> m_entry;
 	MemoryRecursiveMutex m_mutex;
 	size_t m_totalSize;
-#if defined(LOG_FILE)
+#if defined(MEMORY_LOG_FILE)
 	FILE* m_logfile;
 #endif
 };
