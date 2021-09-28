@@ -55,7 +55,8 @@ std::string CEncodeDecode::AESEncode(const std::string& key, const std::string& 
 	unsigned char* pKey = nullptr;
 	if (nKey < 16)
 	{
-		pKey = (unsigned char*)calloc(16, 1);
+		pKey = new unsigned char[16];
+		memset(pKey, 0, 16);
 		memcpy(pKey, key.c_str(), key.length());
 	}
 	AesEncryptor* aes = nullptr;
@@ -79,7 +80,8 @@ std::string CEncodeDecode::AESDecode(const std::string& key, const std::string& 
 	unsigned char* pKey = nullptr;
 	if (nKey < 16)
 	{
-		pKey = (unsigned char*)calloc(16, 1);
+		pKey = new unsigned char[16];
+		memset(pKey, 0, 16);
 		memcpy(pKey, key.c_str(), key.length());
 	}
 	AesEncryptor* aes = nullptr;

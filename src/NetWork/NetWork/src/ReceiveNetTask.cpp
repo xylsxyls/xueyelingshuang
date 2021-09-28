@@ -71,7 +71,7 @@ void ReceiveNetTask::DoTask()
 			//加了type之后包大小不可能为0
 			continue;
 		}
-		::free(buffer);
+		delete[] buffer;
 	}
 
 	while (!m_receiveQueue->empty())
@@ -80,7 +80,7 @@ void ReceiveNetTask::DoTask()
 		m_receiveQueue->pop(&buffer);
 		if (buffer != nullptr)
 		{
-			free(buffer);
+			delete[] buffer;
 		}
 	}
 }

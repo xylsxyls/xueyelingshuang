@@ -209,7 +209,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			}
 		}
 		//receive
-		char* allocBuffer = (char*)::malloc(ptrSize + 4 + (tagLength == 8 ? tagLength : (tagLength + 1)));
+		char* allocBuffer = new char[ptrSize + 4 + (tagLength == 8 ? tagLength : (tagLength + 1))];
 		*(uv_tcp_t**)allocBuffer = sender;
 		::memcpy(allocBuffer + ptrSize, &receiveArea.m_area[0], 12);
 		if (tagLength != 8)

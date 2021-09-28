@@ -37,7 +37,7 @@ void onRead(uv_stream_t* sender, ssize_t nread, const uv_buf_t* buf)
 		{
 			printf("Read error %s, nread = %d\n", uv_err_name(nread), nread);
 		}
-		::free(buf->base);
+		delete[] buf->base;
 		
 		libuvTcp->uvDisconnectedClear((uv_tcp_t*)sender);
 		if (libuv->m_isClient)
@@ -61,7 +61,7 @@ void onRead(uv_stream_t* sender, ssize_t nread, const uv_buf_t* buf)
 	//实际读取到了内容
 	libuvTcp->receive((uv_tcp_t*)sender, buf->base, nread);
 	//确保这句代码一定会在最后面执行，不要在中间突然退出函数，否则就内存泄露了 
-	::free(buf->base);
+	delete[] buf->base;
 }
 
 void StartRead(uv_tcp_t* sender)
@@ -70,7 +70,7 @@ void StartRead(uv_tcp_t* sender)
 		[](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 	{
 		//分配接收缓存内存和设置建议大小，小于等于实际大小 
-		buf->base = (char*)malloc(suggested_size);
+		buf->base = new char[suggested_size];
 		buf->len = suggested_size;
 	}, onRead);
 	if (res != 0)
@@ -187,8 +187,8 @@ void onAsyncCallback(uv_async_t* handle)
 
 		//为回复客户端数据创建一个写数据对象uv_write_t，写数据对象内存将会在写完后的回调函数中释放 
 		//因为发送完的数据在发送完毕后无论成功与否，都会释放内存。如果一定要确保发送出去，那么请自己存储好发送的数据，直到echo_write执行完再释放。 
-		uv_write_t* req = (uv_write_t*)::malloc(sizeof(uv_write_t));
-		//char* bufferAlloc = (char*)::malloc(length);
+		uv_write_t* req = new uv_write_t;
+		//char* bufferAlloc = new char[length];
 		//memcpy(bufferAlloc, buffer, length);
 		//用缓存中的起始地址和大小初始化写数据对象
 		req->data = text;
@@ -206,8 +206,8 @@ void onAsyncCallback(uv_async_t* handle)
 				//printf("Write error %s\n", uv_strerror(status));
 			}
 			//不管发送数据成功与否，都要执行下面的函数释放资源，以免内存泄露
-			::free(((char*)req->data));
-			::free(req);
+			delete[] (char*)req->data;
+			delete req;
 		});
 	}
 }
@@ -242,6 +242,17 @@ void onAsyncCloseCallback(uv_async_t* handle)
 	}
 
 	uv_close((uv_handle_t*)libuv->m_asyncCloseHandle, onAsyncClosed);
+
+	if (libuv->m_isClient)
+	{
+		LibuvClient* libuvClient = (LibuvClient*)libuv;
+		delete libuvClient;
+	}
+	else
+	{
+		LibuvServer* libuvServer = (LibuvServer*)libuv;
+		delete libuvServer;
+	}
 }
 
 bool LibuvTcp::initClient(const char* ip, int32_t port)
@@ -338,7 +349,7 @@ void LibuvTcp::loop()
 	char* message = nullptr;
 	while (libuv->m_queue->pop(&message))
 	{
-		::free(message);
+		delete[] message;
 	}
 	delete libuv->m_queue;
 	libuv->m_queue = nullptr;
@@ -358,7 +369,7 @@ void LibuvTcp::stop()
 
 char* LibuvTcp::memoryForSend(int32_t length)
 {
-	return (char*)::malloc(length);
+	return new char[length];
 }
 
 void LibuvTcp::send(const char* buffer)

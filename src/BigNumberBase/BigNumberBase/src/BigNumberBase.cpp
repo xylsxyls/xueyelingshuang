@@ -75,7 +75,7 @@ void GmpInt::TenExp(mpz_t& num, int32_t exp)
 	{
 		return;
 	}
-	char* szExp = (char*)malloc(exp + 2);
+	char* szExp = new char[exp + 2];
 	::memset(szExp, 48, exp + 1);
 	szExp[exp + 1] = 0;
 	szExp[0] = 49;
@@ -83,7 +83,7 @@ void GmpInt::TenExp(mpz_t& num, int32_t exp)
 	mpz_init_set_str(mpzExp, szExp, 10);
 	mpz_mul(num, num, mpzExp);
 	mpz_clear(mpzExp);
-	::free(szExp);
+	delete[] szExp;
 }
 
 BigNumberBase BigNumberBase::add(const BigNumberBase& x, const BigNumberBase& y)
@@ -302,12 +302,12 @@ BigNumberBase::BigNumberCompare BigNumberBase::Compare(const BigNumberBase& x, c
 std::string BigNumberBase::toString() const
 {
 	auto count = mpz_sizeinbase(m_gmp->m_integer, 10);
-	char* num = (char*)::malloc(count + 2);
+	char* num = new char[count + 2];
 	mpz_get_str(num, 10, m_gmp->m_integer);
 	std::string result = num;
 	if (m_prec == 0)
 	{
-		::free(num);
+		delete[] num;
 		return result;
 	}
 	bool isMinus = (result[0] == '-');
@@ -318,7 +318,7 @@ std::string BigNumberBase::toString() const
 		result.insert(isMinus ? 1 : 0, insertCount, '0');
 	}
 	result.insert(result.size() - m_prec, 1, '.');
-	::free(num);
+	delete[] num;
 	return result;
 }
 
@@ -368,7 +368,7 @@ void BigNumberBase::setPrec(int32_t prec, PrecFlag flag)
 	}
 
 	int32_t exp = m_prec - prec;
-	char* szExp = (char*)malloc(exp + 2);
+	char* szExp = new char[exp + 2];
 	::memset(szExp, 48, exp + 1);
 	szExp[exp + 1] = 0;
 	szExp[0] = 49;
@@ -397,7 +397,7 @@ void BigNumberBase::setPrec(int32_t prec, PrecFlag flag)
 	}
 
 	mpz_clear(mpzExp);
-	::free(szExp);
+	delete[] szExp;
 	m_prec = prec;
 }
 
