@@ -28,6 +28,7 @@
 #include "CwrqTask.h"
 #include "CrqTask.h"
 #include "SpaceTask.h"
+#include "SpeakTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -61,6 +62,7 @@ bool leftDown = false;
 bool ctrlDown = false;
 bool ctrl3Down = false;
 bool tabDown = false;
+bool zeroDown = false;
 
 std::atomic<bool> rightMouse = true;
 
@@ -227,13 +229,18 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			tabDown = true;
 			superWatch.SetWatchTime(10000);
 		}
+		else if (vkCode == 96)
+		{
+			zeroDown = true;
+			textWatch.SetWatchTime(11000);
+		}
 	}
 	else if (CHook::IsKeyUp(wParam))
 	{
 		//+ 107
 		if (vkCode == 13)
 		{
-			textWatch.SetWatchTime(0);
+			textWatch.SetWatchTime(type == 7 ? 11000 : 0);
 		}
 		if (vkCode == 107)
 		{
@@ -305,6 +312,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (vkCode == 9)
 		{
 			tabDown = false;
+		}
+		else if (vkCode == 96)
+		{
+			zeroDown = false;
 		}
 	}
 
@@ -535,10 +546,16 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			std::shared_ptr<SpaceTask> spTask(new SpaceTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		else if (gDown && vkCode == 'G' && stopWatch.GetWatchTime() > 500)
+		//else if (gDown && vkCode == 'G' && stopWatch.GetWatchTime() > 500)
+		//{
+		//	//stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<SpaceTask> spTask(new SpaceTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
+		else if (zeroDown && stopWatch.GetWatchTime() > 500)
 		{
-			//stopWatch.SetWatchTime(0);
-			std::shared_ptr<SpaceTask> spTask(new SpaceTask);
+			textWatch.SetWatchTime(0);
+			std::shared_ptr<SpeakTask> spTask(new SpeakTask);
 			taskThread->PostTask(spTask, 1);
 		}
 	}

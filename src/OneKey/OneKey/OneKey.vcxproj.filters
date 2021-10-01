@@ -90,6 +90,9 @@
     <ClInclude Include="SpaceTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="SpeakTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -153,6 +156,9 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="SpaceTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="SpeakTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

@@ -135,6 +135,7 @@
     <ClInclude Include="OneKeyDlg.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SpaceTask.h" />
+    <ClInclude Include="SpeakTask.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -159,6 +160,7 @@
     <ClCompile Include="OneKey.cpp" />
     <ClCompile Include="OneKeyDlg.cpp" />
     <ClCompile Include="SpaceTask.cpp" />
+    <ClCompile Include="SpeakTask.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
