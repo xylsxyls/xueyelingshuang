@@ -63,6 +63,7 @@ bool ctrlDown = false;
 bool ctrl3Down = false;
 bool tabDown = false;
 bool zeroDown = false;
+bool oneDown = false;
 
 std::atomic<bool> rightMouse = true;
 
@@ -234,6 +235,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			zeroDown = true;
 			textWatch.SetWatchTime(11000);
 		}
+		else if (vkCode == 97)
+		{
+			oneDown = true;
+			textWatch.SetWatchTime(0);
+		}
 	}
 	else if (CHook::IsKeyUp(wParam))
 	{
@@ -316,6 +322,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (vkCode == 96)
 		{
 			zeroDown = false;
+		}
+		else if (vkCode == 97)
+		{
+			oneDown = false;
 		}
 	}
 
