@@ -29,6 +29,8 @@
 #include "CrqTask.h"
 #include "SpaceTask.h"
 #include "SpeakTask.h"
+#include "CrfTask.h"
+#include "CClickTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -566,6 +568,18 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			textWatch.SetWatchTime(0);
 			std::shared_ptr<SpeakTask> spTask(new SpeakTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		else if (ctrlDown && threeDown && stopWatch.GetWatchTime() > 500)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CrfTask> spTask(new CrfTask);
+			taskThread->PostTask(spTask, 1);
+		}
+		else if (ctrlDown && wDown&& stopWatch.GetWatchTime() > 1000)
+		{
+			stopWatch.SetWatchTime(0);
+			std::shared_ptr<CClickTask> spTask(new CClickTask);
 			taskThread->PostTask(spTask, 1);
 		}
 	}

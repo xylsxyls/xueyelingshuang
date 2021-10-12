@@ -114,6 +114,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CClickTask.h" />
     <ClInclude Include="CDwqrTask.h" />
     <ClInclude Include="CEwqr1Task.h" />
     <ClInclude Include="CFlashTask.h" />
@@ -124,6 +125,7 @@
     <ClInclude Include="Cqrw3Task.h" />
     <ClInclude Include="CqTask.h" />
     <ClInclude Include="CrFlashTask.h" />
+    <ClInclude Include="CrfTask.h" />
     <ClInclude Include="CRightClickTask.h" />
     <ClInclude Include="CrqTask.h" />
     <ClInclude Include="CSmallFlashTask.h" />
@@ -140,6 +142,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CClickTask.cpp" />
     <ClCompile Include="CDwqrTask.cpp" />
     <ClCompile Include="CEwqr1Task.cpp" />
     <ClCompile Include="CFlashTask.cpp" />
@@ -150,6 +153,7 @@
     <ClCompile Include="Cqrw3Task.cpp" />
     <ClCompile Include="CqTask.cpp" />
     <ClCompile Include="CrFlashTask.cpp" />
+    <ClCompile Include="CrfTask.cpp" />
     <ClCompile Include="CRightClickTask.cpp" />
     <ClCompile Include="CrqTask.cpp" />
     <ClCompile Include="CSmallFlashTask.cpp" />
