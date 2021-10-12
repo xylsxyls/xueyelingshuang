@@ -49,6 +49,12 @@ void LogSender::logTestOpen()
 	std::string path = CSystem::GetCurrentDllPath() + "LogTest" + LOGTEST_CLIENT_VERSION;
 #ifdef _MSC_VER
 	path.append(".exe");
+#endif
+	if (!CSystem::DirOrFileExist(path))
+	{
+		return;
+	}
+#ifdef _MSC_VER
 	::ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_HIDE);
 #elif __unix__
 	system(("setsid " + path + " &").c_str());

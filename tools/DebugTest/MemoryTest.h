@@ -173,7 +173,7 @@ private:
 		m_logfile = fopen((GetCurrentExePath() + GetCurrentExeName() + MEMORY_LOG_FILE_NAME).c_str(), "wt");
 		if (m_logfile == nullptr)
 		{
-			printf(" Error! file: debugnew.log can not open@!\n");
+			printf(("Error! file: " + std::string(MEMORY_LOG_FILE_NAME) + " can not open!\n").c_str());
 		}
 		else
 		{
