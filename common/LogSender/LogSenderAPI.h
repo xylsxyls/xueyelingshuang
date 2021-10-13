@@ -11,13 +11,13 @@
 #include <windows.h>
 #endif
 
-#define LOG_TEST_UNIQUE_OPEN LogSenderManager::instance().getInterface()->logTestUniqueOpen
-#define LOG_TEST_UNIQUE_CLOSE LogSenderManager::instance().getInterface()->logTestUniqueClose
-#define LOG_TEST_EXIST LogSenderManager::instance().getInterface()->logTestExist
-#define LOG_TEST_OPEN LogSenderManager::instance().getInterface()->logTestOpen
-#define LOG_TEST_CLOSE LogSenderManager::instance().getInterface()->logTestClose
+#define LOG_TEST_UNIQUE_OPEN if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestUniqueOpen
+#define LOG_TEST_UNIQUE_CLOSE if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestUniqueClose
+#define LOG_TEST_EXIST if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestExist
+#define LOG_TEST_OPEN if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestOpen
+#define LOG_TEST_CLOSE if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestClose
 //是否处理日志
-#define LOG_TEST_SET(dealLog) LogSenderManager::instance().getInterface()->set(dealLog)
+#define LOG_TEST_SET(dealLog) if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->set(dealLog)
 
 #define LOG_NAME_SET(name) LogSenderManager::instance().setLogName(name)
 
