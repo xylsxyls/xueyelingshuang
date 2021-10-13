@@ -1452,21 +1452,31 @@ std::string CSystem::commonFile(const std::string& name)
 
 std::string CSystem::readFile(const std::string& path)
 {
-	std::ifstream file(path.c_str(), std::ios_base::in | std::ios_base::binary);
-	if (!file.is_open())
+	FILE* file = fopen(path.c_str(), "rb");
+	if (file == nullptr)
 	{
 		return "";
 	}
-	std::string result((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-	file.close();
+	fseek(file, 0, SEEK_END);
+	long length = ftell(file);
+	fseek(file, 0, SEEK_SET);
+	std::string result;
+	result.resize(length);
+	fread(&result[0], 1, length, file);
+	fclose(file);
 	return result;
 }
 
 void CSystem::saveFile(const std::string& content, const std::string& path)
 {
-	std::ofstream file(path.c_str(), std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-	file << content;
-	file.close();
+	FILE* file = fopen(path.c_str(), "wb");
+	if (file == nullptr)
+	{
+		return;
+	}
+	fwrite(content.c_str(), 1, content.size(), file);
+	fflush(file);
+	fclose(file);
 }
 
 std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
