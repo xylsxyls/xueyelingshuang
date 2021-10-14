@@ -1,7 +1,6 @@
 #pragma once
 #include "WebSocketWorkMacro.h"
 #include <stdint.h>
-#include "CorrespondParam/CorrespondParamAPI.h"
 
 struct WebSocketClientParam;
 
@@ -14,13 +13,13 @@ public:
 	~WebSocketClient();
 
 public:
-	bool connect(const char* ip, int32_t port, bool hasTls = true, int32_t waitTime = 0);
+	bool connect(const char* ip, int32_t port, bool hasTls = false);
 
 	void run();
 
-	void send(const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
+	void send(const char* buffer, int32_t length);
 
-	void send(const std::string& message, MessageType type = MessageType::MESSAGE);
+	void send(const std::string& message);
 
 	void exit();
 
@@ -28,7 +27,7 @@ public:
 
 	virtual void onServerConnected();
 
-	virtual void onReceive(const char* buffer, int32_t length, MessageType type);
+	virtual void onReceive(const std::string& buffer);
 
 	virtual void onServerDisconnected();
 

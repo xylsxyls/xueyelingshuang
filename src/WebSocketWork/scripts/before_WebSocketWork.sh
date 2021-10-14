@@ -16,13 +16,6 @@ CTaskThreadManager_allSame=$4
 "$CLOUD_REBUILD" CTaskThreadManager $CTaskThreadManager_bit $CTaskThreadManager_dlllib $CTaskThreadManager_debugRelease $CTaskThreadManager_allSame
 
 #--------------------------------------------------------------------
-CorrespondParam_bit=$1
-CorrespondParam_dlllib=$2
-CorrespondParam_debugRelease=$3
-CorrespondParam_allSame=$4
-"$CLOUD_REBUILD" CorrespondParam $CorrespondParam_bit $CorrespondParam_dlllib $CorrespondParam_debugRelease $CorrespondParam_allSame
-
-#--------------------------------------------------------------------
 SHELL_FOLDER=$(cd $(dirname $0); pwd)
 xueyelingshuang=$SHELL_FOLDER/../../..
 

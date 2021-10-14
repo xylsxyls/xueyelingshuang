@@ -59,35 +59,7 @@ void onMessage(WebSocketServer* server,
 	websocketpp::connection_hdl hdl,
 	websocketpp::config::asio::message_type::ptr msg)
 {
-	std::string strMessage = msg->get_payload();
-	if (strMessage.size() < 4)
-	{
-		printf("error string size = %d\n", strMessage.size());
-		return;
-	}
-	server->onReceive(hdl._Get(), &strMessage[4], strMessage.size() - 4, (MessageType)*((int32_t*)&strMessage[0]));
-	//std::cout << "on_message called with hdl: " << hdl.lock().get()
-	//	<< " and message: " << msg->get_payload() << std::endl;
-
-	//std::thread* thread = new std::thread(ThreadFun, s, hdl, msg);
-
-	//static int32_t time = ::GetTickCount();
-	//++g_count;
-	//if (g_count % 1000 == 0)
-	//{
-	//	RCSend("time = %d, count = %d", ::GetTickCount() - time, (int32_t)g_count);
-	//}
-	//std::string message = msg->get_payload();
-
-
-	//try
-	//{
-	//	s->send(hdl, msg->get_payload(), msg->get_opcode());
-	//}
-	//catch (websocketpp::exception const & e)
-	//{
-	//	std::cout << "Echo failed because: " << "(" << e.what() << ")" << std::endl;
-	//}
+	server->onReceive(hdl._Get(), msg->get_payload());
 }
 
 void onHttp(WebSocketServer* server, websocketpp::connection_hdl hdl)
@@ -98,7 +70,7 @@ void onHttp(WebSocketServer* server, websocketpp::connection_hdl hdl)
 		websocketpp::http::parser::request rt = con->get_request();
 		const std::string& strUri = rt.get_uri();
 		const std::string& strMethod = rt.get_method();
-		const std::string& strBody = rt.get_body();	//只针对post时有数据
+		const std::string& strBody = rt.get_body(); //只针对post时有数据
 		const std::string& strHost = rt.get_header("host");
 		const std::string& strContentType = rt.get_header("Content-type");
 		const std::string& strVersion = rt.get_version();
@@ -151,7 +123,7 @@ websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> onTlsInit(Tls
 	//std::cout << "on_tls_init called with hdl: " << hdl.lock().get() << std::endl;
 	//std::cout << "using TLS mode: " << (mode == MOZILLA_MODERN ? "Mozilla Modern" : "Mozilla Intermediate") << std::endl;
 
-	websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> ctx = websocketpp::lib::make_shared<websocketpp::lib::asio::ssl::context>(websocketpp::lib::asio::ssl::context::sslv23);
+	websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> ctx = websocketpp::lib::make_shared<websocketpp::lib::asio::ssl::context>(websocketpp::lib::asio::ssl::context::sslv23);//tlsv1 sslv23
 
 	try
 	{
@@ -298,45 +270,25 @@ void WebSocketServer::close(void* client, const std::string& reason)
 	}
 }
 
-void WebSocketServer::send(void* client, const char* buffer, int32_t length, MessageType type)
+void WebSocketServer::send(void* client, const char* buffer, int32_t length)
 {
-	websocketpp::connection_hdl clientHdl = m_server->findClientHdl(client);
-	if (clientHdl._Get() == nullptr)
-	{
-		return;
-	}
-	std::string strMessage;
-	strMessage.resize(length + 4);
-	*(int32_t*)&strMessage[0] = type;
-	::memcpy((char*)&strMessage[4], buffer, length);
-	if (m_server->m_hasTls)
-	{
-		m_server->m_tlsServer.send(clientHdl, strMessage, websocketpp::frame::opcode::text);
-	}
-	else
-	{
-		m_server->m_noTlsServer.send(clientHdl, strMessage, websocketpp::frame::opcode::text);
-	}
+	send(client, std::string(buffer, length));
 }
 
-void WebSocketServer::send(void* client, const std::string& message, MessageType type)
+void WebSocketServer::send(void* client, const std::string& message)
 {
 	websocketpp::connection_hdl clientHdl = m_server->findClientHdl(client);
 	if (clientHdl._Get() == nullptr)
 	{
 		return;
 	}
-	std::string strMessage;
-	strMessage.resize(message.size() + 4);
-	*(int32_t*)&strMessage[0] = type;
-	::memcpy((char*)&strMessage[4], message.c_str(), message.size());
 	if (m_server->m_hasTls)
 	{
-		m_server->m_tlsServer.send(clientHdl, strMessage, websocketpp::frame::opcode::text);
+		m_server->m_tlsServer.send(clientHdl, message, websocketpp::frame::opcode::text);
 	}
 	else
 	{
-		m_server->m_noTlsServer.send(clientHdl, strMessage, websocketpp::frame::opcode::text);
+		m_server->m_noTlsServer.send(clientHdl, message, websocketpp::frame::opcode::text);
 	}
 }
 
@@ -345,7 +297,7 @@ void WebSocketServer::onClientConnected(void* client)
 
 }
 
-void WebSocketServer::onReceive(void* client, const char* buffer, int32_t length, MessageType type)
+void WebSocketServer::onReceive(void* client, const std::string& buffer)
 {
 
 }

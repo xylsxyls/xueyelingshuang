@@ -35,13 +35,7 @@ void onClose(WebSocketClient* client, websocketpp::connection_hdl hdl)
 
 void onMessage(WebSocketClient* client, websocketpp::connection_hdl hdl, websocketpp::config::asio_client::message_type::ptr msg)
 {
-	std::string strMessage = msg->get_payload();
-	if (strMessage.size() < 4)
-	{
-		printf("error string size = %d\n", strMessage.size());
-		return;
-	}
-	client->onReceive(&strMessage[4], strMessage.size() - 4, (MessageType)*((int32_t*)(&strMessage[0])));
+	client->onReceive(msg->get_payload());
 }
 
 websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> onTlsInit(const char* hostname,
@@ -49,10 +43,21 @@ websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> onTlsInit(con
 {
 	websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> ctx = 
 		websocketpp::lib::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
+
+	try
+	{
+		ctx->set_options(boost::asio::ssl::context::default_workarounds |
+			boost::asio::ssl::context::no_sslv2 |
+			boost::asio::ssl::context::single_dh_use);
+	}
+	catch (std::exception& e)
+	{
+		std::cout << e.what() << std::endl;
+	}
 	return ctx;
 }
 
-bool WebSocketClient::connect(const char* ip, int32_t port, bool hasTls, int32_t waitTime)
+bool WebSocketClient::connect(const char* ip, int32_t port, bool hasTls)
 {
 	m_client->m_hasTls = hasTls;
 	if (m_client->m_hasTls)
@@ -153,43 +158,25 @@ void WebSocketClient::stop()
 	}
 }
 
-void WebSocketClient::send(const char* buffer, int32_t length, MessageType type)
+void WebSocketClient::send(const char* buffer, int32_t length)
 {
-	if (m_client->m_serverHdl._Get() == nullptr)
-	{
-		return;
-	}
-	std::string strMessage;
-	strMessage.resize(length + 4);
-	*(int32_t*)&strMessage[0] = type;
-	::memcpy((char*)&strMessage[4], buffer, length);
-	if (m_client->m_hasTls)
-	{
-		m_client->m_tlsClient.send(m_client->m_serverHdl, strMessage, websocketpp::frame::opcode::text);
-	}
-	else
-	{
-		m_client->m_noTlsClient.send(m_client->m_serverHdl, strMessage, websocketpp::frame::opcode::text);
-	}
+	send(std::string(buffer, length));
 }
 
-void WebSocketClient::send(const std::string& message, MessageType type)
+void WebSocketClient::send(const std::string& message)
 {
 	if (m_client->m_serverHdl._Get() == nullptr)
 	{
 		return;
 	}
-	std::string strMessage;
-	strMessage.resize(message.size() + 4);
-	*(int32_t*)&strMessage[0] = type;
-	::memcpy((char*)&strMessage[4], message.c_str(), message.size());
+
 	if (m_client->m_hasTls)
 	{
-		m_client->m_tlsClient.send(m_client->m_serverHdl, strMessage, websocketpp::frame::opcode::text);
+		m_client->m_tlsClient.send(m_client->m_serverHdl, message, websocketpp::frame::opcode::text);
 	}
 	else
 	{
-		m_client->m_noTlsClient.send(m_client->m_serverHdl, strMessage, websocketpp::frame::opcode::text);
+		m_client->m_noTlsClient.send(m_client->m_serverHdl, message, websocketpp::frame::opcode::text);
 	}
 }
 
@@ -226,7 +213,7 @@ void WebSocketClient::onServerConnected()
 
 }
 
-void WebSocketClient::onReceive(const char* buffer, int32_t length, MessageType type)
+void WebSocketClient::onReceive(const std::string& buffer)
 {
 
 }
