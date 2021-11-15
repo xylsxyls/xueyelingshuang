@@ -1177,6 +1177,41 @@ uint32_t CSystem::GetTickCount()
 #endif
 }
 
+std::chrono::high_resolution_clock::time_point CSystem::GetHighTickCount()
+{
+	return std::chrono::high_resolution_clock::now();
+}
+
+int32_t CSystem::GetHighTickCountMilliRunTime(const std::chrono::high_resolution_clock::time_point& beginTime)
+{
+	return (int32_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - beginTime).count();
+}
+
+int32_t CSystem::GetHighTickCountMicroRunTime(const std::chrono::high_resolution_clock::time_point& beginTime)
+{
+	return (int32_t)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - beginTime).count();
+}
+
+int64_t CSystem::GetHighTickCountNanoRunTime(const std::chrono::high_resolution_clock::time_point& beginTime)
+{
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginTime).count();
+}
+
+int32_t CSystem::GetMilliRunTime(const std::chrono::high_resolution_clock::time_point& endTime, const std::chrono::high_resolution_clock::time_point& beginTime)
+{
+	return (int32_t)std::chrono::duration_cast<std::chrono::milliseconds>(endTime - beginTime).count();
+}
+
+int32_t CSystem::GetMicroRunTime(const std::chrono::high_resolution_clock::time_point& endTime, const std::chrono::high_resolution_clock::time_point& beginTime)
+{
+	return (int32_t)std::chrono::duration_cast<std::chrono::microseconds>(endTime - beginTime).count();
+}
+
+int64_t CSystem::GetNanoRunTime(const std::chrono::high_resolution_clock::time_point& endTime, const std::chrono::high_resolution_clock::time_point& beginTime)
+{
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - beginTime).count();
+}
+
 std::string CSystem::getComputerName()
 {
 	char computerName[256] = {};

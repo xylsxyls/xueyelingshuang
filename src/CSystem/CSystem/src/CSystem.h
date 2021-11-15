@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <map>
 #include <vector>
+#include <chrono>
 #include <functional>
 #include "CSystemMacro.h"
 
@@ -129,6 +130,20 @@ public:
 	static uint64_t currentMemory();
 	//获取时间
 	static uint32_t GetTickCount();
+	//获取高精度时间
+	static std::chrono::high_resolution_clock::time_point GetHighTickCount();
+	//获取执行时间，毫秒，包含int64_t到int32_t的强转
+	static int32_t GetHighTickCountMilliRunTime(const std::chrono::high_resolution_clock::time_point& beginTime);
+	//获取执行时间，微秒，包含int64_t到int32_t的强转
+	static int32_t GetHighTickCountMicroRunTime(const std::chrono::high_resolution_clock::time_point& beginTime);
+	//获取执行时间，纳秒
+	static int64_t GetHighTickCountNanoRunTime(const std::chrono::high_resolution_clock::time_point& beginTime);
+	//获取执行时间，毫秒，包含int64_t到int32_t的强转
+	static int32_t GetMilliRunTime(const std::chrono::high_resolution_clock::time_point& endTime, const std::chrono::high_resolution_clock::time_point& beginTime);
+	//获取执行时间，微秒，包含int64_t到int32_t的强转
+	static int32_t GetMicroRunTime(const std::chrono::high_resolution_clock::time_point& endTime, const std::chrono::high_resolution_clock::time_point& beginTime);
+	//获取执行时间，纳秒
+	static int64_t GetNanoRunTime(const std::chrono::high_resolution_clock::time_point& endTime, const std::chrono::high_resolution_clock::time_point& beginTime);
 	//获取电脑名
 	static std::string getComputerName();
 	//获取动态库所在路径

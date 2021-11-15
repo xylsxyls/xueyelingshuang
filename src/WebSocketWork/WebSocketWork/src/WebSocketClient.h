@@ -1,6 +1,7 @@
 #pragma once
 #include "WebSocketWorkMacro.h"
 #include <stdint.h>
+#include <string>
 
 struct WebSocketClientParam;
 
