@@ -87,9 +87,6 @@
     <ClInclude Include="CrqTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
-    <ClInclude Include="SpaceTask.h">
-      <Filter>CTask</Filter>
-    </ClInclude>
     <ClInclude Include="SpeakTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
@@ -97,6 +94,24 @@
       <Filter>CTask</Filter>
     </ClInclude>
     <ClInclude Include="CClickTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="MoveTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CqMoreTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="HeroTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CwqTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CKeyTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CSleepTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
   </ItemGroup>
@@ -161,9 +176,6 @@
     <ClCompile Include="CrqTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
-    <ClCompile Include="SpaceTask.cpp">
-      <Filter>CTask</Filter>
-    </ClCompile>
     <ClCompile Include="SpeakTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
@@ -171,6 +183,24 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CClickTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="MoveTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CqMoreTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="HeroTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CwqTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CKeyTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CSleepTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

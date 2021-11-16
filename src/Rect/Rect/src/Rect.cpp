@@ -134,6 +134,11 @@ void Rect::SetBottom(int32_t bottom)
     m_bottom = bottom;
 }
 
+bool Rect::contain(const xyls::Point& point)
+{
+	return point.x() >= m_left && point.y() >= m_top && point.x() <= m_right && point.y() <= m_bottom;
+}
+
 bool Rect::operator==(const Rect& rect) const
 {
 	return m_left == rect.m_left && m_top == rect.m_top && m_right == rect.m_right && m_bottom == rect.m_bottom;

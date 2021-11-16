@@ -5,6 +5,6 @@
 void CrfTask::DoTask()
 {
 	CKeyboard::KeyPress('R', 0);
-	Sleep(150);
+	Sleep(300);
 	CKeyboard::KeyPress('F', 0);
 }

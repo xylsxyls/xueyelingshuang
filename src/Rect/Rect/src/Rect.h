@@ -43,6 +43,9 @@ public:
     void SetRight(int32_t right);
     void SetBottom(int32_t bottom);
 
+	//包含边
+	bool contain(const xyls::Point& point);
+
 	bool operator==(const Rect& rect) const;
 
 	//?是否是水平线
