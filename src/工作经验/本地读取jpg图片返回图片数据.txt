@@ -1,0 +1,27 @@
+std::string readBase64JpgDataFromFile(const std::string& path)
+{
+	//从指定的路径szImagePath中读取文件句柄
+	HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	//获得图片文件的大小，用来分配全局内存
+	DWORD dwFileSize = GetFileSize(hFile, NULL);
+	//给图片分配全局内存
+	HGLOBAL hImageMemory = GlobalAlloc(GMEM_MOVEABLE, dwFileSize);
+	//锁定内存
+	void* pImageMemory = GlobalLock(hImageMemory);
+	//保存实际读取的文件大小
+	DWORD dwReadedSize = 0;
+	//读取图片到全局内存当中
+	ReadFile(hFile, pImageMemory, dwFileSize, &dwReadedSize, NULL);
+	std::string face;
+	face.resize(dwReadedSize);
+	//把内存中的JPG格式图片数据拷贝到频道1发送缓冲区中
+	memcpy((void*)(&face[0]), (void*)pImageMemory, dwReadedSize);
+	//解锁内存
+	GlobalUnlock(hImageMemory);
+	//释放全局内存
+	GlobalFree(hImageMemory);
+	//关闭文件句柄
+	CloseHandle(hFile);
+	face = CBase64::encode(face.c_str(), face.size());
+	return face;
+}

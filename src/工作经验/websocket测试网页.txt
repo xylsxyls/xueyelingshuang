@@ -1,0 +1,3 @@
+http://www.websocket-test.com/
+http://coolaf.com/tool/chattest
+https://www.piesocket.com/websocket-tester#

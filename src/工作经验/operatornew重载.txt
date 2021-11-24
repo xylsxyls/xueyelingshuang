@@ -1,0 +1,15 @@
+void* operator new (size_t classSize, int paraA, int paraB, int paraC);
+
+    写法： ClassA *pClassA = new (paraA, paraB, paraC)ClassA;
+
+所以
+
+#define new new(__FILE__, __LINE__)
+
+必须放在定义的operator new之后
+
+operator delete自定义参数只在new抛出异常时才会被调用
+
+正常重载
+
+void operator delete(void* p)

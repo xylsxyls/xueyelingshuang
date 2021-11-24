@@ -1,0 +1,179 @@
+//release下运行，得到的result.txt中0-9各100万个表示正常
+
+#include "ConsoleTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "Ctxt/CtxtAPI.h"
+#ifdef __unix__
+#include "SendToMessageTest.h"
+#endif
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		exit(0);
+	}	
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+class Task : public CTask
+{
+public:
+	void DoTask()
+	{
+		int32_t count = 1000000;
+		while (count-- != 0)
+		{
+			m_queue->push(m_num);
+		}
+		RCSend("end");
+	}
+
+	void setParam(LockFreeQueue<int>* queue, int num)
+	{
+		m_queue = queue;
+		m_num = num;
+	}
+
+private:
+	int m_num;
+	LockFreeQueue<int>* m_queue;
+};
+
+class TaskDelete : public CTask
+{
+public:
+	void DoTask()
+	{
+		int32_t count = 1000000;
+		while (count-- != 0)
+		{
+			int popNum = 0;
+			m_queue->pop(&popNum);
+			m_deleteQueue->push(popNum);
+		}
+		RCSend("end");
+	}
+
+	void setParam(LockFreeQueue<int>* queue, LockFreeQueue<int>* deleteQueue)
+	{
+		m_queue = queue;
+		m_deleteQueue = deleteQueue;
+	}
+
+private:
+	int m_num;
+	LockFreeQueue<int>* m_queue;
+	LockFreeQueue<int>* m_deleteQueue;
+};
+
+int32_t main()
+{
+	LockFreeQueue<int> queue;
+	LockFreeQueue<int> deleteQueue;
+
+	std::vector<uint32_t> vecThreadId;
+	std::vector<std::shared_ptr<CTaskThread>> vecThread;
+	std::vector<std::shared_ptr<Task>> vecTask;
+	std::vector<std::shared_ptr<TaskDelete>> vecDeleteTask;
+	int32_t count = 10;
+	while (count-- != 0)
+	{
+		uint32_t threadId = CTaskThreadManager::Instance().Init();
+		vecThreadId.push_back(threadId);
+		vecThread.push_back(CTaskThreadManager::Instance().GetThreadInterface(threadId));
+		std::shared_ptr<Task> spTask(new Task);
+		spTask->setParam(&queue, count);
+		vecTask.push_back(spTask);
+		std::shared_ptr<TaskDelete> spDeleteTask(new TaskDelete);
+		spDeleteTask->setParam(&queue, &deleteQueue);
+		vecDeleteTask.push_back(spDeleteTask);
+	}
+
+	int32_t index = -1;
+	while (index++ != 10 - 1)
+	{
+		vecThread[index]->PostTask(vecTask[index]);
+	}
+
+#ifdef _MSC_VER
+	Sleep(5000);
+#elif __unix__
+	sleep(5);
+#endif
+	RCSend("size = %d", queue.size());
+
+	index = -1;
+	while (index++ != 10 - 1)
+	{
+		vecThread[index]->PostTask(vecDeleteTask[index]);
+	}
+
+#ifdef _MSC_VER
+	Sleep(5000);
+#elif __unix__
+	sleep(5);
+#endif
+	RCSend("size = %d", queue.size());
+	RCSend("size = %d", deleteQueue.size());
+
+#ifdef _MSC_VER
+	Ctxt txt("D:\\xueyelingshuang\\lib\\result.txt");
+#elif __unix__
+	Ctxt txt("/home/xylsxyls/xueyelingshuang/lib/result.txt");
+#endif
+	int savecount = 0;
+	while (!deleteQueue.empty())
+	{
+		int x = 0;
+		deleteQueue.pop(&x);
+		txt.AddLineWithoutOpenFile("%d", x);
+		++savecount;
+		if (savecount % 100000 == 0)
+		{
+			RCSend("saveCount = %d", savecount);
+		}
+	}
+	RCSend("save end");
+
+	getchar();
+	return 0;
+}
