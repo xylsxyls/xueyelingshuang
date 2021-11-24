@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/Camera/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=",
+        "-DBIT=32",
+        "-DDEBUGRELEASE=debug"
+    ]
+}

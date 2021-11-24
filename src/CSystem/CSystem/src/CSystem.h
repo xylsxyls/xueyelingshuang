@@ -156,7 +156,9 @@ public:
 	static std::string GetCurrentExeFullName();
 	//获取临时目录，带\符号
 	static std::string GetSystemTempPath();
-	//获取文件相关信息，flag1表示获取文件全名，flag2表示获取文件后缀名，flag3表示获取文件名，flag4表示获取前面的路径带\\符号
+	//获取文件相关信息
+	//flag1表示获取文件全名，flag2表示获取文件后缀名，如果文件名没有点，则后缀名为空
+	//flag3表示获取文件名，flag4表示获取前面的路径带\\符号
 	static std::string GetName(const std::string& path, int32_t flag);
 	//删除文件，windows下只能删除文件不能删除文件夹，linux下可以删除文件或空文件夹，带不带\都可以
 	static bool deleteFile(const char* path);
@@ -178,7 +180,7 @@ public:
 	/** 查找文件，内部没有禁止路径重定向
 	@param [in] strPath 必须传文件夹路径，寻找文件夹以下，如果传空字符串则查找exe所在路径，带不带\都可以
 	@param [in] flag 1表示查找文件，2表示查找文件后缀名，3表示查找所有文件，fileStr不起作用
-	@param [in] fileStr 传文件名带后缀名或后缀名不带点，不查找文件夹
+	@param [in] fileStr 传文件名带后缀名或后缀名不带点，多个后缀名点分隔，如果填2传空或分隔后有空字符串则会搜索不含后缀名的文件，不查找文件夹
 	@param [in] EveryFilePath 在每添加一个文件路径之前调用此函数，返回true表示中断搜索，继续搜索返回false
 	@param [in] unVisitPath 把当前文件夹下不可访问的文件夹列出来，传空代表不存储，所有文件夹路径带\符号
 	@return 返回所有查找到文件的绝对路径

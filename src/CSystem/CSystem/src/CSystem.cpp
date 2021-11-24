@@ -33,6 +33,19 @@
 #include <iostream>
 #include <iterator>
 
+static void Split(std::vector<std::string>& result, const std::string& splitString, char separate_character)
+{
+	result.clear();
+	size_t lastPosition = 0;
+	int32_t index = -1;
+	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
+	{
+		result.push_back(splitString.substr(lastPosition, index - lastPosition));
+		lastPosition = index + 1;
+	}
+	result.push_back(splitString.substr(lastPosition));
+}
+
 static void Split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
 {
 	result.clear();
@@ -1578,6 +1591,15 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 			}
 			continue;
 		}
+
+		std::vector<std::string> vecLowerFileStr;
+		if (flag == 2)
+		{
+			std::string lowerFileStr;
+			std::transform(fileStr.begin(), fileStr.end(), std::back_inserter(lowerFileStr), ::tolower);
+			Split(vecLowerFileStr, lowerFileStr, '.');
+		}
+
 #ifdef _WIN32
 		while (_findnext(lfDir, &fileDir) == 0)
 #elif __unix__
@@ -1622,7 +1644,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 #endif
 			switch (flag)
 			{
-				//1表示找文件全名，带后缀名
+			//1表示找文件全名，带后缀名
 			case 1:
 			{
 				if (strName == fileStr)
@@ -1639,12 +1661,11 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 			//2表示找文件后缀名
 			case 2:
 			{
-				std::string lowerFileStr;
-				std::transform(fileStr.begin(), fileStr.end(), std::back_inserter(lowerFileStr), ::tolower);
 				std::string nameSuffix = CSystem::GetName(strName, 2);
 				std::string lowerNameSuffix;
 				std::transform(nameSuffix.begin(), nameSuffix.end(), std::back_inserter(lowerNameSuffix), ::tolower);
-				if (lowerFileStr == lowerNameSuffix)
+				if ((vecLowerFileStr.empty() && lowerNameSuffix.empty()) ||
+					(!vecLowerFileStr.empty() && std::find(vecLowerFileStr.begin(), vecLowerFileStr.end(), lowerNameSuffix) != vecLowerFileStr.end()))
 				{
 					tmpfilename.append(strName);
 					if (EveryFilePath != nullptr)
