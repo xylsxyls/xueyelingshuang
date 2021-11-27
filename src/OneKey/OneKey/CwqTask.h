@@ -15,6 +15,8 @@ public:
 
 	void Sleep(int32_t sleepTime);
 
+	void KeyPressE(bool edit);
+
 private:
 	bool m_isR;
 };

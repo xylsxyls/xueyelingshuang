@@ -114,6 +114,9 @@
     <ClInclude Include="CSleepTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="CrTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -201,6 +204,9 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CSleepTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CrTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

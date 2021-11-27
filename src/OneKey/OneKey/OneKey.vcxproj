@@ -130,6 +130,7 @@
     <ClInclude Include="CrfTask.h" />
     <ClInclude Include="CRightClickTask.h" />
     <ClInclude Include="CrqTask.h" />
+    <ClInclude Include="CrTask.h" />
     <ClInclude Include="CSleepTask.h" />
     <ClInclude Include="CSmallFlashTask.h" />
     <ClInclude Include="CWeqTask.h" />
@@ -163,6 +164,7 @@
     <ClCompile Include="CrfTask.cpp" />
     <ClCompile Include="CRightClickTask.cpp" />
     <ClCompile Include="CrqTask.cpp" />
+    <ClCompile Include="CrTask.cpp" />
     <ClCompile Include="CSleepTask.cpp" />
     <ClCompile Include="CSmallFlashTask.cpp" />
     <ClCompile Include="CWeqTask.cpp" />
