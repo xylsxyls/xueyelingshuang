@@ -5,6 +5,7 @@
 #include "ReadWriteMutex.h"
 #include "ProcessReadWriteMutex.h"
 #include "FileReadWriteMutex.h"
+#include "RecursiveReadWriteMutex.h"
 #include "ReadLock.h"
 #include "WriteLock.h"
 

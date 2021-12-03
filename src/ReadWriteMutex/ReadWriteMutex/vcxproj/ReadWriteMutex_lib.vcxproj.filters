@@ -15,6 +15,7 @@
     <ClInclude Include="..\src\ReadLock.h" />
     <ClInclude Include="..\src\ReadWriteMutexBase.h" />
     <ClInclude Include="..\src\WriteLock.h" />
+    <ClInclude Include="..\src\RecursiveReadWriteMutex.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="源文件">
@@ -33,5 +34,6 @@
     <ClCompile Include="..\src\ReadLock.cpp" />
     <ClCompile Include="..\src\WriteLock.cpp" />
     <ClCompile Include="..\src\ReadWriteMutexBase.cpp" />
+    <ClCompile Include="..\src\RecursiveReadWriteMutex.cpp" />
   </ItemGroup>
 </Project>

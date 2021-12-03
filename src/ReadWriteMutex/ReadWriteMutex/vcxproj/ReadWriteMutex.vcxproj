@@ -26,6 +26,7 @@
     <ClInclude Include="..\src\ReadWriteMutexBase.h" />
     <ClInclude Include="..\src\ReadWriteMutexMacro.h" />
     <ClInclude Include="..\src\ReadWriteMutex.h" />
+    <ClInclude Include="..\src\RecursiveReadWriteMutex.h" />
     <ClInclude Include="..\src\WriteLock.h" />
   </ItemGroup>
   <ItemGroup>
@@ -34,6 +35,7 @@
     <ClCompile Include="..\src\ReadLock.cpp" />
     <ClCompile Include="..\src\ReadWriteMutex.cpp" />
     <ClCompile Include="..\src\ReadWriteMutexBase.cpp" />
+    <ClCompile Include="..\src\RecursiveReadWriteMutex.cpp" />
     <ClCompile Include="..\src\WriteLock.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

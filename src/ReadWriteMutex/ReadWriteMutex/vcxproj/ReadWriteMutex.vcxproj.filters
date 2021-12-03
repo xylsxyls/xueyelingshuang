@@ -39,6 +39,9 @@
     <ClInclude Include="..\src\WriteLock.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\RecursiveReadWriteMutex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ReadWriteMutex.cpp">
@@ -57,6 +60,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ReadWriteMutexBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RecursiveReadWriteMutex.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
