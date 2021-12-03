@@ -15,7 +15,7 @@ m_lockCount(0)
 RecursiveReadWriteMutex::~RecursiveReadWriteMutex()
 {
 #ifdef _MSC_VER
-	::DeleteCriticalSection(&m_lock);
+	DeleteCriticalSection(&m_lock);
 #elif __unix__
 	pthread_mutex_destroy(&m_lock);
 	pthread_mutexattr_destroy(&m_attr);

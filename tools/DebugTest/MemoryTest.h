@@ -1,7 +1,8 @@
-#ifndef __DEBUGNEW_H__
-#define __DEBUGNEW_H__
+#ifndef __MEMORY_TEST_H__
+#define __MEMORY_TEST_H__
 
 #include <map>
+#include <unordered_map>
 #include <atomic>
 
 #ifdef _MSC_VER
@@ -26,24 +27,43 @@ public:
 	MemoryRecursiveMutex():
 		m_lockCount(0)
 	{
+#ifdef _MSC_VER
 		InitializeCriticalSection(&m_lock);
+#elif __unix__
+		pthread_mutexattr_init(&m_attr);
+		pthread_mutexattr_settype(&m_attr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&m_lock, &m_attr);
+#endif
 	}
 
 	~MemoryRecursiveMutex()
 	{
+#ifdef _MSC_VER
 		DeleteCriticalSection(&m_lock);
+#elif __unix__
+		pthread_mutex_destroy(&m_lock);
+		pthread_mutexattr_destroy(&m_attr);
+#endif
 	}
 
 	void lock()
 	{
+#ifdef _MSC_VER
 		EnterCriticalSection(&m_lock);
+#elif __unix__
+		pthread_mutex_lock(&m_lock);
+#endif
 		++m_lockCount;
 	}
 
 	void unlock()
 	{
 		--m_lockCount;
+#ifdef _MSC_VER
 		LeaveCriticalSection(&m_lock);
+#elif __unix__
+		pthread_mutex_unlock(&m_lock);
+#endif
 	}
 
 	int lockCount()
@@ -52,8 +72,13 @@ public:
 	}
 
 private:
-	int m_lockCount;
+#ifdef _MSC_VER
 	CRITICAL_SECTION m_lock;
+#elif __unix__
+	pthread_mutex_t m_lock;
+	pthread_mutexattr_t m_attr;
+#endif
+	int m_lockCount;
 };
 
 class MemoryUniqueLock
@@ -288,7 +313,6 @@ public:
 
 	void dump(bool isPrintStack)
 	{
-		void* sss = this;
 		MemoryUniqueLock lock(m_mutex);
 		if (!m_entry.empty())
 		{
@@ -301,7 +325,13 @@ public:
 				fflush(m_logfile);
 			}
 #endif
+			std::map<void*, MemoryEntry> entryMap;
 			for (auto it = m_entry.begin(); it != m_entry.end(); ++it)
+			{
+				entryMap[it->first] = it->second;
+			}
+
+			for (auto it = entryMap.begin(); it != entryMap.end(); ++it)
 			{
 				void* p = it->first;
 				std::string stack = it->second.stack();
@@ -403,7 +433,7 @@ public:
 			if (SymFromAddr(process, address, &displacementSym, pSymbol) &&
 				SymGetLineFromAddr64(process, address, &displacementLine, &line))
 			{
-				_snprintf(szFrameInfo, sizeof(szFrameInfo), "\t%s() at %s : %d (0x%p)\n",
+				_snprintf(szFrameInfo, sizeof(szFrameInfo), "\t%s() at %s : %d (0x%I64u)\n",
 					pSymbol->Name, line.FileName, line.LineNumber, pSymbol->Address);
 			}
 			else
@@ -474,7 +504,7 @@ public:
 	}
 	
 private:
-	std::map<void*, MemoryEntry> m_entry;
+	std::unordered_map<void*, MemoryEntry> m_entry;
 	MemoryRecursiveMutex m_mutex;
 	size_t m_totalSize;
 #if defined(MEMORY_LOG_FILE)
@@ -611,4 +641,4 @@ inline void* DebugRealloc(void* memory, size_t newSize, const char* file, int li
 #define calloc(count, size) DebugCalloc(count, size, __FILE__, __LINE__)
 #define realloc(memory, newSize) DebugRealloc(memory, newSize, __FILE__, __LINE__)
 
-#endif // __DEBUGNEW_H__
+#endif // __MEMORY_TEST_H__

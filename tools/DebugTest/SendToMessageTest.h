@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __SEND_TO_MESSAGE_TEST_H__
+#define __SEND_TO_MESSAGE_TEST_H__
 #include <string>
 
 #ifdef _MSC_VER
@@ -428,3 +429,4 @@ public:
 };
 
 #endif
+#endif // __SEND_TO_MESSAGE_TEST_H__
