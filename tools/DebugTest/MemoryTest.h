@@ -9,8 +9,9 @@
 #include <windows.h>
 #include <dbghelp.h>
 #include "D:\\SendToMessageTest.h"
-
 #pragma comment(lib, "Dbghelp.lib")
+#elif __unix__
+#include "SendToMessageTest.h"
 #endif
 
 #define MEMORY_LOG_FILE
@@ -404,6 +405,7 @@ public:
 
 	std::string ShowTraceStack()
 	{
+#ifdef _MSC_VER
 		const int MAX_STACK_FRAMES = 12;
 		void* pStack[MAX_STACK_FRAMES] = {};
 		const int STACK_INFO_LEN = 1024;
@@ -451,6 +453,26 @@ public:
 			strcat(szStackInfo, szFrameInfo);
 		}
 		return szStackInfo;
+#elif __unix__
+		std::thread::id threadId = std::this_thread::get_id();
+		std::string result = "stack traceback, threadId = " + std::to_string((int32_t)(*(__gthread_t*)(char*)(&threadId))) + "\n";
+		void* buffer[1024] = {};
+		int32_t nptrs = backtrace(buffer, 1024);
+		std::string enter = "\n";
+		char** strings = backtrace_symbols(buffer, nptrs);
+		if (strings == nullptr)
+		{
+			result = "memory use up" + enter;
+			return result;
+		}
+		int32_t index = -1;
+		while (index++ != nptrs - 1)
+		{
+			std::string stack = strings[index];
+			result += ("[" + std::to_string(index) + "] " + stack + enter);
+		}
+		free(strings);
+#endif
 	}
 
 	std::string GetCurrentExePath()
