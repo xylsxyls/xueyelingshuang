@@ -158,7 +158,11 @@ struct PrintEntry
 			}
 			std::string sizeStr;
 #if defined _WIN64 || defined __x86_64__
+#ifdef _MSC_VER
 			sizeStr = "%I64d";
+#elif __unix__
+			sizeStr = "%lld";
+#endif
 #else
 			sizeStr = "%d";
 #endif
@@ -332,8 +336,7 @@ private:
 			PrintEntry printText;
 			printText.m_preText = "new, delete list:";
 			printText.m_isfPrintf = true;
-			std::string sss = printText.printStr();
-			fprintf(m_logfile, printText.printStr().c_str());
+			fprintf(m_logfile, "%s", printText.printStr().c_str());
 			fflush(m_logfile);
 		}
 #endif
