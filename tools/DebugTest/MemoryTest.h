@@ -19,12 +19,13 @@
 #endif
 
 #define MEMORY_LOG_FILE
+//#define MEMORY_LIST
 #ifdef MEMORY_LOG_FILE
 #define MEMORY_LOG_FILE_NAME "MemoryTest.log"
 #endif
 
-#define MEMORY_PICTURE MemoryTestTrace::instance().memoryPicture
-#define MEMORY_STACK_PICTURE MemoryTestTrace::instance().memoryStackPicture
+#define MEMORY_PICTURE(id) MemoryTestTrace::instance().memoryPicture(id)
+#define MEMORY_STACK_PICTURE(id) MemoryTestTrace::instance().memoryStackPicture(id)
 
 class MemoryRecursiveMutex
 {
@@ -102,6 +103,124 @@ public:
 
 private:
 	MemoryRecursiveMutex& m_mutex;
+};
+
+struct PrintEntry
+{
+	void* m_p;
+	const char* m_file;
+	int32_t m_line;
+	size_t m_size;
+	size_t m_totalSize;
+	size_t m_entrySize;
+	std::string m_stack;
+	bool m_isPrintf;
+	bool m_isRCSend;
+	bool m_isfPrintf;
+	std::string m_preText;
+	std::string m_nextText;
+
+	PrintEntry():
+		m_p(nullptr),
+		m_file(nullptr),
+		m_line(-1),
+		m_size(-1),
+		m_totalSize(-1),
+		m_entrySize(-1),
+		m_isPrintf(false),
+		m_isRCSend(false),
+		m_isfPrintf(false)
+	{
+		
+	}
+
+	std::string printStr()
+	{
+		m_printStr.clear();
+		if (m_isPrintf || m_isRCSend || m_isfPrintf)
+		{
+			m_printStr = m_preText;
+			std::string pstr;
+#ifdef _MSC_VER
+			pstr = "0x%p";
+#elif __unix__
+			pstr = "%p";
+#endif
+			if (m_p != nullptr)
+			{
+				appendEntry();
+				m_printStr.append("p = " + pstr);
+			}
+			if (m_file != nullptr)
+			{
+				appendEntry();
+				m_printStr.append("file = %s");
+			}
+			std::string sizeStr;
+#if defined _WIN64 || defined __x86_64__
+			sizeStr = "%I64d";
+#else
+			sizeStr = "%d";
+#endif
+			if (m_line != -1)
+			{
+				appendEntry();
+				m_printStr.append("line = " + sizeStr);
+			}
+			
+			if (m_size != -1)
+			{
+				appendEntry();
+				m_printStr.append("size = " + sizeStr);
+			}
+			
+			if (m_totalSize != -1)
+			{
+				appendEntry();
+				m_printStr.append("totalSize = " + sizeStr);
+			}
+			
+			if (m_entrySize != -1)
+			{
+				appendEntry();
+				m_printStr.append("entrySize = " + sizeStr);
+			}
+			if (!m_nextText.empty())
+			{
+				appendEntry();
+				m_printStr.append(m_nextText);
+			}
+			if (!m_stack.empty())
+			{
+				if (!m_printStr.empty())
+				{
+					m_printStr.push_back('\n');
+				}
+				m_printStr.append("%s");
+			}
+			if (m_isPrintf)
+			{
+				m_printStr.push_back('\n');
+			}
+			if (m_isfPrintf)
+			{
+				m_printStr.push_back('\n');
+			}
+		}
+		return m_printStr;
+	}
+
+	void appendEntry()
+	{
+		if (m_printStr.empty())
+		{
+			return;
+		}
+		m_printStr.append(", ");
+	}
+
+private:
+	std::string m_printStr;
 };
 
 class MemoryEntry
@@ -198,16 +317,23 @@ class MemoryTestTrace
 private:
 	MemoryTestTrace():
 		m_totalSize(0)
+#if defined(MEMORY_LOG_FILE)
+		, m_logfile(nullptr)
+#endif
 	{
 #if defined(MEMORY_LOG_FILE)
 		m_logfile = fopen((GetCurrentExePath() + GetCurrentExeName() + MEMORY_LOG_FILE_NAME).c_str(), "wt");
 		if (m_logfile == nullptr)
 		{
-			printf("%s", ("Error! file: " + std::string(MEMORY_LOG_FILE_NAME) + " can not open!\n").c_str());
+			printf("can not open file = %s\n", std::string(MEMORY_LOG_FILE_NAME).c_str());
 		}
 		else
 		{
-			fprintf(m_logfile, "new, delete list:\n");
+			PrintEntry printText;
+			printText.m_preText = "new, delete list:";
+			printText.m_isfPrintf = true;
+			std::string sss = printText.printStr();
+			fprintf(m_logfile, printText.printStr().c_str());
 			fflush(m_logfile);
 		}
 #endif
@@ -217,7 +343,7 @@ private:
 	~MemoryTestTrace()
 	{
 		MemoryReady::instance().uninit();
-		dump(false);
+		dump(0, true);
 #if defined(MEMORY_LOG_FILE)
 		if (m_logfile != nullptr)
 		{
@@ -241,13 +367,27 @@ public:
 		{
 			return;
 		}
-		file = (strrchr(file, (int)'/') == nullptr ? file : strrchr(file, (int)'/') + 1);
+		const char* fileName = file;
+		if (file != nullptr)
+		{
+			std::string strFile = file;
+			int32_t left = (int32_t)strFile.find_last_of("/\\");
+			fileName = (left == -1 ? file : &file[left + 1]);
+		}
 		m_totalSize += size;
-		m_entry[p] = MemoryEntry(ShowTraceStack(), file, line, size);
-#if defined(MEMORY_LOG_FILE)
+		m_entry[p] = MemoryEntry(ShowTraceStack(), fileName, line, size);
+#if defined(MEMORY_LOG_FILE) && defined(MEMORY_LIST)
 		if (m_logfile != nullptr)
 		{
-			fprintf(m_logfile, "*N p = 0x%p, size = %06d, %s, Line: %d.  totalsize = %d\n", p, (int32_t)size, file, line, (int32_t)m_totalSize);
+			PrintEntry printText;
+			printText.m_preText = "new";
+			printText.m_p = p;
+			printText.m_file = fileName;
+			printText.m_line = line;
+			printText.m_size = size;
+			printText.m_totalSize = m_totalSize;
+			printText.m_isfPrintf = true;
+			fprintf(m_logfile, printText.printStr().c_str(), p, fileName, line, size, m_totalSize);
 			fflush(m_logfile);
 		}
 #endif
@@ -263,10 +403,18 @@ public:
 		const char* file = "third library file";
 		m_totalSize += size;
 		m_entry[p] = MemoryEntry(ShowTraceStack(), file, 0, size);
-#if defined(MEMORY_LOG_FILE)
+#if defined(MEMORY_LOG_FILE) && defined(MEMORY_LIST)
 		if (m_logfile != nullptr)
 		{
-			fprintf(m_logfile, "*N p = 0x%p, size = %06d,  %-22s, Line: %04d.  totalsize = %08d\n", p, (int32_t)size, file, 0, (int32_t)m_totalSize);
+			PrintEntry printText;
+			printText.m_preText = "new";
+			printText.m_p = p;
+			printText.m_file = file;
+			printText.m_line = 0;
+			printText.m_size = size;
+			printText.m_totalSize = m_totalSize;
+			printText.m_isfPrintf = true;
+			fprintf(m_logfile, printText.printStr().c_str(), p, file, 0, size, m_totalSize);
 			fflush(m_logfile);
 		}
 #endif
@@ -284,10 +432,16 @@ public:
 		{
 			size_t size = (*it).second.size();
 			m_totalSize -= size;
-#if defined(MEMORY_LOG_FILE)
+#if defined(MEMORY_LOG_FILE) && defined(MEMORY_LIST)
 			if (m_logfile != nullptr)
 			{
-				fprintf(m_logfile, "#D p = 0x%p, size = %6u.%39stotalsize = %8d\n", p, (int32_t)size, "-----------------------------------  ", (int32_t)m_totalSize);
+				PrintEntry printText;
+				printText.m_preText = "delete";
+				printText.m_p = p;
+				printText.m_size = size;
+				printText.m_totalSize = m_totalSize;
+				printText.m_isfPrintf = true;
+				fprintf(m_logfile, printText.printStr().c_str(), p, size, m_totalSize);
 				fflush(m_logfile);
 			}
 #endif
@@ -295,37 +449,51 @@ public:
 		}
 		else
 		{
-#if defined(MEMORY_LOG_FILE)
+#if defined(MEMORY_LOG_FILE) && defined(MEMORY_LIST)
 			if (m_logfile != nullptr)
 			{
-				fprintf(m_logfile, "#D p = 0x%p. error point!!!\n", p);
+				PrintEntry printText;
+				printText.m_preText = "delete";
+				printText.m_p = p;
+				printText.m_nextText = "error point";
+				printText.m_isfPrintf = true;
+				fprintf(m_logfile, printText.printStr().c_str(), p);
 				fflush(m_logfile);
 			}
 #endif
 		}
 	}
 
-	void memoryPicture()
+	void memoryPicture(int id)
 	{
-		dump(false);
+		dump(id, false);
 	}
 
-	void memoryStackPicture()
+	void memoryStackPicture(int id)
 	{
-		dump(true);
+		dump(id, true);
 	}
 
-	void dump(bool isPrintStack)
+	void dump(int id, bool isPrintStack)
 	{
 		MemoryUniqueLock lock(m_mutex);
 		if (!m_entry.empty())
 		{
-			printf("%d memory leaks detected\n", (int32_t)m_entry.size());
-			RCSend("%d memory leaks detected", (int32_t)m_entry.size());
+			PrintEntry printText;
+			printText.m_preText = ("id = " + std::to_string(id) + ", memory leaks detected");
+			printText.m_entrySize = m_entry.size();
+			printText.m_isPrintf = true;
+			printf(printText.printStr().c_str(), m_entry.size());
+			printText.m_isPrintf = false;
+			printText.m_isRCSend = true;
+			RCSend(printText.printStr().c_str(), m_entry.size());
 #if defined(MEMORY_LOG_FILE)
 			if (m_logfile != nullptr)
 			{
-				fprintf(m_logfile, "\n\n***%d memory leaks detected\n", (int32_t)m_entry.size());
+				fprintf(m_logfile, "\n");
+				printText.m_isRCSend = false;
+				printText.m_isfPrintf = true;
+				fprintf(m_logfile, printText.printStr().c_str(), m_entry.size());
 				fflush(m_logfile);
 			}
 #endif
@@ -342,64 +510,54 @@ public:
 				const char* file = it->second.file();
 				int line = it->second.line();
 				size_t size = it->second.size();
-				if (isPrintStack)
+
+				PrintEntry printText;
+				printText.m_p = p;
+				printText.m_file = file;
+				printText.m_line = line;
+				printText.m_size = size;
+				printText.m_isPrintf = true;
+				printf(printText.printStr().c_str(), p, file, line, size);
+				printText.m_isPrintf = false;
+				printText.m_isRCSend = true;
+				RCSend(printText.printStr().c_str(), p, file, line, size);
+#if defined(MEMORY_LOG_FILE)
+				if (m_logfile != nullptr)
 				{
-#if defined _WIN64 || defined __x86_64__
-					printf("0x%p, %s, %d, size = %I64d\n%s\n", p, file, line, size, stack.c_str());
-					RCSend("0x%p, %s, %d, size = %I64d", p, file, line, size);
-#if defined(MEMORY_LOG_FILE)
-					if (m_logfile != nullptr)
+					if (isPrintStack)
 					{
-						fprintf(m_logfile, "0x%p, %s, %d, size = %I64d\n%s\n", p, file, line, size, stack.c_str());
-						fflush(m_logfile);
+						printText.m_stack = stack;
 					}
-#endif
-#else
-					printf("0x%p, %s, %d, size = %d\n%s\n", p, file, line, size, stack.c_str());
-					RCSend("0x%p, %s, %d, size = %d", p, file, line, size);
-#if defined(MEMORY_LOG_FILE)
-					if (m_logfile != nullptr)
+					printText.m_isRCSend = false;
+					printText.m_isfPrintf = true;
+					if (isPrintStack)
 					{
-						fprintf(m_logfile, "0x%p, %s, %d, size = %d\n%s\n", p, file, line, size, stack.c_str());
-						fflush(m_logfile);
+						fprintf(m_logfile, printText.printStr().c_str(), p, file, line, size, stack.c_str());
 					}
-#endif
-#endif // _WIN64
+					else
+					{
+						fprintf(m_logfile, printText.printStr().c_str(), p, file, line, size);
+					}
+					fflush(m_logfile);
 				}
-				else
-				{
-#if defined _WIN64 || defined __x86_64__
-					printf("0x%p, %s, %d, size = %I64d\n", p, file, line, size);
-					RCSend("0x%p, %s, %d, size = %I64d", p, file, line, size);
-#if defined(MEMORY_LOG_FILE)
-					if (m_logfile != nullptr)
-					{
-						fprintf(m_logfile, "0x%p, %s, %d, size = %I64d\n", p, file, line, size);
-						fflush(m_logfile);
-					}
 #endif
-#else
-					printf("0x%p, %s, %d, size = %d\n", p, file, line, size);
-					RCSend("0x%p, %s, %d, size = %d", p, file, line, size);
-#if defined(MEMORY_LOG_FILE)
-					if (m_logfile != nullptr)
-					{
-						fprintf(m_logfile, "0x%p, %s, %d, size = %d\n", p, file, line, size);
-						fflush(m_logfile);
-					}
-#endif
-#endif // _WIN64
-				}
 			}
 		}
 		else
 		{
-			printf("no leaks detected\n");
-			RCSend("no leaks detected");
+			PrintEntry printText;
+			printText.m_preText = ("id = " + std::to_string(id) + ", no leaks detected");
+			printText.m_isPrintf = true;
+			printf("%s", printText.printStr().c_str());
+			printText.m_isPrintf = false;
+			printText.m_isRCSend = true;
+			RCSend("%s", printText.printStr().c_str());
 #if defined(MEMORY_LOG_FILE)
 			if (m_logfile != nullptr)
 			{
-				fprintf(m_logfile, "no leaks detected\n");
+				printText.m_isRCSend = false;
+				printText.m_isfPrintf = true;
+				fprintf(m_logfile, "%s", printText.printStr().c_str());
 				fflush(m_logfile);
 			}
 #endif
@@ -450,7 +608,7 @@ public:
 				}
 				else
 				{
-					_snprintf(szFrameInfo, sizeof(szFrameInfo), "\tcannot find stack, last error = %d\n", lastError);
+					_snprintf(szFrameInfo, sizeof(szFrameInfo), "\tcannot find stack, last error = %u\n", lastError);
 				}
 			}
 			strcat(szStackInfo, szFrameInfo);
@@ -461,18 +619,17 @@ public:
 		std::string result = "stack traceback, threadId = " + std::to_string((uint32_t)(*(__gthread_t*)(char*)(&threadId))) + "\n";
 		void* buffer[1024] = {};
 		int32_t nptrs = backtrace(buffer, 1024);
-		std::string enter = "\n";
 		char** strings = backtrace_symbols(buffer, nptrs);
 		if (strings == nullptr)
 		{
-			result = "memory use up" + enter;
+			result = "memory use up\n";
 			return result;
 		}
 		int32_t index = -1;
 		while (index++ != nptrs - 1)
 		{
 			std::string stack = strings[index];
-			result += ("[" + std::to_string(index) + "] " + stack + enter);
+			result += ("[" + std::to_string(index) + "] " + stack + "\n");
 		}
 		free(strings);
 #endif
@@ -570,7 +727,11 @@ inline void* operator new[](size_t size, const char* file, int line)
 
 inline void operator delete(void* p, const char* file, int line)
 {
+#ifdef _MSC_VER
+	printf("into operator delete p = 0x%p, file = %s, line = %d\n", p, file, line);
+#elif __unix__
 	printf("into operator delete p = %p, file = %s, line = %d\n", p, file, line);
+#endif
 	file = nullptr;
 	line = 0;
 	if (MemoryReady::instance().isReady())
@@ -582,7 +743,12 @@ inline void operator delete(void* p, const char* file, int line)
 
 inline void operator delete[](void* p, const char* file, int line)
 {
+#ifdef _MSC_VER
+	printf("into operator delete[] p = 0x%p, file = %s, line = %d\n", p, file, line);
+#elif __unix__
 	printf("into operator delete[] p = %p, file = %s, line = %d\n", p, file, line);
+#endif
+	
 	file = nullptr;
 	line = 0;
 	if (MemoryReady::instance().isReady())
