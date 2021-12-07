@@ -11,6 +11,10 @@
 #include "D:\\SendToMessageTest.h"
 #pragma comment(lib, "Dbghelp.lib")
 #elif __unix__
+#include <thread>
+#include <execinfo.h>
+#include <string.h>
+#include <pthread.h>
 #include "SendToMessageTest.h"
 #endif
 
@@ -199,7 +203,7 @@ private:
 		m_logfile = fopen((GetCurrentExePath() + GetCurrentExeName() + MEMORY_LOG_FILE_NAME).c_str(), "wt");
 		if (m_logfile == nullptr)
 		{
-			printf(("Error! file: " + std::string(MEMORY_LOG_FILE_NAME) + " can not open!\n").c_str());
+			printf("%s", ("Error! file: " + std::string(MEMORY_LOG_FILE_NAME) + " can not open!\n").c_str());
 		}
 		else
 		{
@@ -232,19 +236,18 @@ public:
 public:
 	void add(void* p, const char* file, int line, size_t size)
 	{
-		void* sss = this;
 		MemoryUniqueLock lock(m_mutex);
 		if (m_mutex.lockCount() >= 2)
 		{
 			return;
 		}
-		file = strrchr(file, '//') == NULL ? file : strrchr(file, '//') + 1;
+		file = (strrchr(file, (int)'/') == nullptr ? file : strrchr(file, (int)'/') + 1);
 		m_totalSize += size;
 		m_entry[p] = MemoryEntry(ShowTraceStack(), file, line, size);
 #if defined(MEMORY_LOG_FILE)
 		if (m_logfile != nullptr)
 		{
-			fprintf(m_logfile, "*N p = 0x%p, size = %6d,  %-22s, Line: %4d.  totalsize = %8d\n", p, size, file, line, m_totalSize);
+			fprintf(m_logfile, "*N p = 0x%p, size = %06d, %s, Line: %d.  totalsize = %d\n", p, (int32_t)size, file, line, (int32_t)m_totalSize);
 			fflush(m_logfile);
 		}
 #endif
@@ -263,7 +266,7 @@ public:
 #if defined(MEMORY_LOG_FILE)
 		if (m_logfile != nullptr)
 		{
-			fprintf(m_logfile, "*N p = 0x%p, size = %6d,  %-22s, Line: %4d.  totalsize = %8d\n", p, size, file, 0, m_totalSize);
+			fprintf(m_logfile, "*N p = 0x%p, size = %06d,  %-22s, Line: %04d.  totalsize = %08d\n", p, (int32_t)size, file, 0, (int32_t)m_totalSize);
 			fflush(m_logfile);
 		}
 #endif
@@ -284,7 +287,7 @@ public:
 #if defined(MEMORY_LOG_FILE)
 			if (m_logfile != nullptr)
 			{
-				fprintf(m_logfile, "#D p = 0x%p, size = %6u.%39stotalsize = %8d\n", p, size, "-----------------------------------  ", m_totalSize);
+				fprintf(m_logfile, "#D p = 0x%p, size = %6u.%39stotalsize = %8d\n", p, (int32_t)size, "-----------------------------------  ", (int32_t)m_totalSize);
 				fflush(m_logfile);
 			}
 #endif
@@ -416,7 +419,7 @@ public:
 		SymInitialize(process, NULL, TRUE);
 		WORD frames = CaptureStackBackTrace(0, MAX_STACK_FRAMES, pStack, NULL);
 
-		_snprintf(szStackInfo, sizeof(szStackInfo), "stack traceback, threadId = %d\n", (int32_t)::GetCurrentThreadId());
+		_snprintf(szStackInfo, sizeof(szStackInfo), "stack traceback, threadId = %u\n", (uint32_t)::GetCurrentThreadId());
 
 		for (WORD i = 0; i < frames; ++i)
 		{
@@ -455,7 +458,7 @@ public:
 		return szStackInfo;
 #elif __unix__
 		std::thread::id threadId = std::this_thread::get_id();
-		std::string result = "stack traceback, threadId = " + std::to_string((int32_t)(*(__gthread_t*)(char*)(&threadId))) + "\n";
+		std::string result = "stack traceback, threadId = " + std::to_string((uint32_t)(*(__gthread_t*)(char*)(&threadId))) + "\n";
 		void* buffer[1024] = {};
 		int32_t nptrs = backtrace(buffer, 1024);
 		std::string enter = "\n";
