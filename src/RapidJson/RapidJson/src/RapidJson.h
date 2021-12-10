@@ -38,7 +38,7 @@ public:
 	*/
 	std::string toString();
 
-	/** 转化为具体的值
+	/** 转化为具体的值，值在类内只有一份，如果要保存必须用实体接，用引用接必须直接使用，不能多个同时传入变长参数
 	@return 返回转化的具体的值
 	*/
 	const rapidjson::Value& toValue();
