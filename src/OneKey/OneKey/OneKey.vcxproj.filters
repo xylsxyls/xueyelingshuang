@@ -117,6 +117,18 @@
     <ClInclude Include="CrTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="CwrTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CqfwrTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CfwrTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CClickR.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -207,6 +219,18 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CrTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CwrTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CqfwrTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CfwrTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CClickR.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

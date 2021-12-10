@@ -39,6 +39,10 @@
 #include "CKeyTask.h"
 #include "CSleepTask.h"
 #include "CrTask.h"
+#include "CwrTask.h"
+#include "CqfwrTask.h"
+#include "CfwrTask.h"
+#include "CClickR.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -55,14 +59,23 @@ CStopWatch superWatch;
 CStopWatch oneWatch;
 CStopWatch twoWatch;
 CStopWatch threeWatch;
+CStopWatch fourWatch;
+CStopWatch fiveWatch;
 CStopWatch moveWatch;
 CStopWatch rightDownWatch;
 CStopWatch ctrlWatch;
+CStopWatch ctrlUpWatch;
 CStopWatch qWatch;
 CStopWatch wWatch;
 CStopWatch eWatch;
 CStopWatch rWatch;
+CStopWatch tWatch;
 CStopWatch spaceWatch;
+CStopWatch keyOneWatch;
+CStopWatch keyTwoWatch;
+CStopWatch keyThreeWatch;
+CStopWatch keyFourWatch;
+CStopWatch keyFiveWatch;
 
 int32_t type = 1;
 bool wDown = false;
@@ -97,9 +110,13 @@ bool keyFourDown = false;
 bool keyFiveDown = false;
 bool keySixDown = false;
 bool keySevenDown = false;
+bool qKey = false;
+bool currentT = false;
+bool clickMap = false;
 
 int32_t code1 = 'H';
 int32_t code2 = 'C';
+int32_t eCount = 0;
 
 std::atomic<bool> rightMouse = true;
 
@@ -242,49 +259,55 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			//	code1 = 101;
 			//	code2 = 0;
 			//}
-			if (qWatch.GetWatchTime() < 5000 && stopWatch.GetWatchTime() > 300)
+			if (qWatch.GetWatchTime() < 3500 &&
+				oneWatch.GetWatchTime() > 2000 &&
+				twoWatch.GetWatchTime() > 2000 &&
+				threeWatch.GetWatchTime() > 2000 &&
+				fourWatch.GetWatchTime() > 2000 &&
+				fiveWatch.GetWatchTime() > 2000 &&
+				stopWatch.GetWatchTime() > 300)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CwqTask> spTask(new CwqTask);
-				spTask->setParam(false);
+				spTask->setParam(false, false);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if (rWatch.GetWatchTime() < 5000)
-			{
-				{
-					std::shared_ptr<CSleepTask> spTask(new CSleepTask);
-					spTask->setParam(100);
-					taskThread->PostTask(spTask, 1);
-				}
-				{
-					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					spTask->setParam('E', true);
-					taskThread->PostTask(spTask, 1);
-				}
-				{
-					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					spTask->setParam('E', false);
-					taskThread->PostTask(spTask, 1);
-				}
-			}
-			else if (wWatch.GetWatchTime() < 3000)
-			{
-				{
-					std::shared_ptr<CSleepTask> spTask(new CSleepTask);
-					spTask->setParam(100);
-					taskThread->PostTask(spTask, 1);
-				}
-				{
-					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					spTask->setParam('E', true);
-					taskThread->PostTask(spTask, 1);
-				}
-				{
-					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					spTask->setParam('E', false);
-					taskThread->PostTask(spTask, 1);
-				}
-			}
+			//else if (rWatch.GetWatchTime() < 5000 && stopWatch.GetWatchTime() > 300)
+			//{
+			//	{
+			//		std::shared_ptr<CSleepTask> spTask(new CSleepTask);
+			//		spTask->setParam(100);
+			//		taskThread->PostTask(spTask, 1);
+			//	}
+			//	{
+			//		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			//		spTask->setParam('E', true);
+			//		taskThread->PostTask(spTask, 1);
+			//	}
+			//	{
+			//		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			//		spTask->setParam('E', false);
+			//		taskThread->PostTask(spTask, 1);
+			//	}
+			//}
+			//else if (wWatch.GetWatchTime() < 3000 && stopWatch.GetWatchTime() > 300)
+			//{
+			//	{
+			//		std::shared_ptr<CSleepTask> spTask(new CSleepTask);
+			//		spTask->setParam(100);
+			//		taskThread->PostTask(spTask, 1);
+			//	}
+			//	{
+			//		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			//		spTask->setParam('E', true);
+			//		taskThread->PostTask(spTask, 1);
+			//	}
+			//	{
+			//		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			//		spTask->setParam('E', false);
+			//		taskThread->PostTask(spTask, 1);
+			//	}
+			//}
 		}
 	}
 	else if (rightDown)
@@ -309,7 +332,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	// 请在这里添加消息处理代码
 	const DWORD& vkCode = CHook::GetVkCode(lParam);
 
+	bool wUp = false;
 	bool rUp = false;
+	bool tUp = false;
+	bool ctrlUp = false;
 	bool spaceUp = false;
 	if (CHook::IsKeyDown(wParam))
 	{
@@ -368,7 +394,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (vkCode == '3')
 		{
 			threeDown = true;
-			threeWatch.SetWatchTime(0);
+			//threeWatch.SetWatchTime(0);
 			if (ctrlDown)
 			{
 				ctrl3Down = true;
@@ -448,6 +474,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		else if (vkCode == 'W')
 		{
+			wUp = true;
 			wDown = false;
 		}
 		else if (vkCode == 'E')
@@ -479,6 +506,8 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		else if (vkCode == 'T')
 		{
+			tUp = true;
+			currentT = false;
 			tDown = false;
 		}
 		else if (vkCode == 'A')
@@ -524,6 +553,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		else if (vkCode == 162)
 		{
+			ctrlUp = true;
 			ctrlDown = false;
 		}
 		else if (vkCode == 9)
@@ -784,6 +814,22 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	{
 		if (qDown || wDown || eDown || rDown)
 		{
+			if (type == 10)
+			{
+				if (qDown)
+				{
+					qKey = true;
+				}
+				if (wDown || eDown || rDown)
+				{
+					qKey = false;
+				}
+				if (qDown || wDown)
+				{
+					eCount = 0;
+				}
+			}
+			
 			moveWatch.SetWatchTime(0);
 			if (vDown)
 			{
@@ -804,32 +850,51 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		if (ctrlDown && eDown)
 		{
-			if (type != 10)
+			if (code1 != 'G')
 			{
-				if (code1 != 'G')
-				{
-					code1 = 'G';
-				}
-				else if (type == 10)
-				{
-					code1 = 0;
-				}
-				else
-				{
-					code1 = 'H';
-				}
+				code1 = 'G';
+			}
+			else if (type == 10)
+			{
+				code1 = 0;
+			}
+			else
+			{
+				code1 = 'H';
 			}
 		}
 		else if (eDown && vkCode == 'E')
 		{
 			//eWatch.SetWatchTime(0);
+			if (type == 10)
+			{
+				++eCount;
+				if (eCount == 4)
+				{
+					{
+						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+						spTask->setParam('H', true);
+						taskThread->PostTask(spTask, 1);
+					}
+					{
+						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+						spTask->setParam('H', false);
+						taskThread->PostTask(spTask, 1);
+					}
+					{
+						std::shared_ptr<CSleepTask> spTask(new CSleepTask);
+						spTask->setParam(100);
+						taskThread->PostTask(spTask, 1);
+					}
+				}
+			}
 			std::shared_ptr<HeroTask> spTask(new HeroTask);
 			spTask->setParam(code1, code2);
 			taskThread->PostTask(spTask, 2);
 		}
 		else if (keyZeroDown && stopWatch.GetWatchTime() > 500)
 		{
-			textWatch.SetWatchTime(0);
+			//textWatch.SetWatchTime(0);
 			std::shared_ptr<SpeakTask> spTask(new SpeakTask);
 			taskThread->PostTask(spTask, 1);
 		}
@@ -856,6 +921,12 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CqMoreTask> spTask(new CqMoreTask);
 				spTask->setParam(true);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (aDown && stopWatch.GetWatchTime() > 1000)
+			{
+				stopWatch.SetWatchTime(0);
+				std::shared_ptr<CqfwrTask> spTask(new CqfwrTask);
 				taskThread->PostTask(spTask, 1);
 			}
 		}
@@ -948,28 +1019,33 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (type == 10)
 		{
 			std::string keyText;
-			if (keyOneDown)
+			if (keyOneDown && keyOneWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
+				keyOneWatch.SetWatchTime(0);
 				keyText = "1";
 			}
-			else if (keyTwoDown)
+			if (keyTwoDown && keyTwoWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
+				keyTwoWatch.SetWatchTime(0);
 				keyText = "2";
 			}
-			else if (keyThreeDown)
+			if (keyThreeDown && keyThreeWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
+				keyThreeWatch.SetWatchTime(0);
 				keyText = "3";
 			}
-			else if (keyFourDown)
+			if (keyFourDown && keyFourWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
+				keyFourWatch.SetWatchTime(0);
 				keyText = "4";
 			}
-			else if (keyFiveDown)
+			if (keyFiveDown && keyFiveWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
+				keyFiveWatch.SetWatchTime(0);
 				keyText = "5";
 			}
 
-			if (!keyText.empty() && threeWatch.GetWatchTime() > 1000 && twoWatch.GetWatchTime() > 1000)
+			if (!keyText.empty())
 			{
 				char str[1024] = {};
 				::GetWindowTextA(g_editWnd, str, 1024);
@@ -1016,21 +1092,41 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			if (spaceUp && spaceWatch.GetWatchTime() > 500)
 			{
 				spaceWatch.SetWatchTime(0);
+				if (qWatch.GetWatchTime() > 3000)
 				{
-					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					spTask->setParam('H', true);
-					taskThread->PostTask(spTask, 1);
-				}
-				{
-					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					spTask->setParam('H', false);
-					taskThread->PostTask(spTask, 1);
+					{
+						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+						spTask->setParam('H', true);
+						taskThread->PostTask(spTask, 1);
+					}
+					{
+						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+						spTask->setParam('H', false);
+						taskThread->PostTask(spTask, 1);
+					}
 				}
 				code1 = 0;
 				code2 = 'C';
 				taskThread->StopAllTask();
 			}
-			else if (threeDown && (qWatch.GetWatchTime() < 5000 || rWatch.GetWatchTime() < 5000) && stopWatch.GetWatchTime() > 300)
+			else if (qKey && fiveDown && qWatch.GetWatchTime() < 3500 && stopWatch.GetWatchTime() > 300)
+			{
+				fiveWatch.SetWatchTime(0);
+				stopWatch.SetWatchTime(0);
+				std::shared_ptr<CfwrTask> spTask(new CfwrTask);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (qKey && fourDown && qWatch.GetWatchTime() < 3500 && stopWatch.GetWatchTime() > 300)
+			{
+				fourWatch.SetWatchTime(0);
+				stopWatch.SetWatchTime(0);
+				std::shared_ptr<CfwrTask> spTask(new CfwrTask);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if ((rWatch.GetWatchTime() < 5000 && qWatch.GetWatchTime() > 5000 || qKey) &&
+				threeDown &&
+				(qWatch.GetWatchTime() < 5000 || rWatch.GetWatchTime() < 5000) &&
+				stopWatch.GetWatchTime() > 300)
 			{
 				threeWatch.SetWatchTime(0);
 				stopWatch.SetWatchTime(0);
@@ -1047,21 +1143,45 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					taskThread->PostTask(spTask, 1);
 				}
 			}
-			else if (twoDown && qWatch.GetWatchTime() < 5000 && stopWatch.GetWatchTime() > 300)
+			else if ((rWatch.GetWatchTime() < 5000 && qWatch.GetWatchTime() > 5000 || qKey) &&
+				twoDown &&
+				(qWatch.GetWatchTime() < 5000 || rWatch.GetWatchTime() < 5000) &&
+				stopWatch.GetWatchTime() > 300)
 			{
 				twoWatch.SetWatchTime(0);
 				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CwqTask> spTask(new CwqTask);
-				spTask->setParam(false);
-				taskThread->PostTask(spTask, 1);
+				if (qWatch.GetWatchTime() < 5000)
+				{
+					std::shared_ptr<CwqTask> spTask(new CwqTask);
+					spTask->setParam(false);
+					taskThread->PostTask(spTask, 1);
+				}
+				else
+				{
+					std::shared_ptr<CwqTask> spTask(new CwqTask);
+					spTask->setParam(true);
+					taskThread->PostTask(spTask, 1);
+				}
 			}
-			else if (oneDown && qWatch.GetWatchTime() < 5000 && stopWatch.GetWatchTime() > 300)
+			else if ((rWatch.GetWatchTime() < 5000 && qWatch.GetWatchTime() > 5000 || qKey) &&
+				oneDown &&
+				(qWatch.GetWatchTime() < 5000 || rWatch.GetWatchTime() < 5000) &&
+				stopWatch.GetWatchTime() > 300)
 			{
 				oneWatch.SetWatchTime(0);
 				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CwqTask> spTask(new CwqTask);
-				spTask->setParam(false);
-				taskThread->PostTask(spTask, 1);
+				if (qWatch.GetWatchTime() < 5000)
+				{
+					std::shared_ptr<CwqTask> spTask(new CwqTask);
+					spTask->setParam(false);
+					taskThread->PostTask(spTask, 1);
+				}
+				else
+				{
+					std::shared_ptr<CwqTask> spTask(new CwqTask);
+					spTask->setParam(true);
+					taskThread->PostTask(spTask, 1);
+				}
 			}
 			else if (ctrlDown && rDown && stopWatch.GetWatchTime() > 500)
 			{
@@ -1082,6 +1202,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				spTask->setParam('X', false);
 				taskThread->PostTask(spTask, 1);
 			}
+			else if ((ctrlDown && wUp) || (ctrlUpWatch.GetWatchTime() < 800 && wUp) && stopWatch.GetWatchTime() > 500)
+			{
+				std::shared_ptr<CwrTask> spTask(new CwrTask);
+				taskThread->PostTask(spTask, 1);
+			}
 			else if (qDown)
 			{
 				qWatch.SetWatchTime(0);
@@ -1093,6 +1218,60 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			else if (rDown)
 			{
 				rWatch.SetWatchTime(0);
+			}
+			else if (tDown)
+			{
+				if (!currentT)
+				{
+					currentT = true;
+					tWatch.SetWatchTime(0);
+				}
+				else if (tWatch.GetWatchTime() > 200)
+				{
+					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+					spTask->setParam('M', true);
+					taskThread->PostTask(spTask, 1);
+					clickMap = true;
+				}
+			}
+			if (ctrlUp)
+			{
+				ctrlUpWatch.SetWatchTime(0);
+			}
+			if (tUp && clickMap)
+			{
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('M', false);
+				taskThread->PostTask(spTask, 1);
+				clickMap = false;
+			}
+			if (tUp && tWatch.GetWatchTime() < 200 && stopWatch.GetWatchTime() > 500)
+			{
+				stopWatch.SetWatchTime(0);
+				if (oneWatch.GetWatchTime() > 5000 &&
+					twoWatch.GetWatchTime() > 5000 &&
+					threeWatch.GetWatchTime() > 5000 &&
+					fourWatch.GetWatchTime() > 5000 &&
+					fiveWatch.GetWatchTime() > 5000)
+				{
+					{
+						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+						spTask->setParam('H', true);
+						taskThread->PostTask(spTask, 1);
+					}
+					{
+						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+						spTask->setParam('H', false);
+						taskThread->PostTask(spTask, 1);
+					}
+					{
+						std::shared_ptr<CSleepTask> spTask(new CSleepTask);
+						spTask->setParam(100);
+						taskThread->PostTask(spTask, 1);
+					}
+				}
+				std::shared_ptr<CClickR> spTask(new CClickR);
+				taskThread->PostTask(spTask);
 			}
 		}
 	}
@@ -1151,6 +1330,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	superWatch.SetWatchTime(10000);
 	textWatch.SetWatchTime(10000);
 	ctrlWatch.SetWatchTime(10000);
+	ctrlUpWatch.SetWatchTime(10000);
 	qWatch.SetWatchTime(10000);
 	wWatch.SetWatchTime(10000);
 	eWatch.SetWatchTime(10000);

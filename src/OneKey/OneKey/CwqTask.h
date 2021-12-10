@@ -9,14 +9,21 @@ public:
 public:
 	void DoTask();
 
-	void setParam(bool isR);
+	void setParam(bool isR, bool isF = true);
 
 	void KeyPress(int32_t vkCode);
 
 	void Sleep(int32_t sleepTime);
 
-	void KeyPressE(bool edit);
+	void KeyPressE();
+
+	void KeyPressF();
+
+	void LockHero(bool edit);
+
+	void Lock3();
 
 private:
 	bool m_isR;
+	bool m_isF;
 };

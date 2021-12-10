@@ -114,13 +114,16 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CClickR.h" />
     <ClInclude Include="CClickTask.h" />
     <ClInclude Include="CDwqrTask.h" />
     <ClInclude Include="CEwqr1Task.h" />
     <ClInclude Include="CFlashTask.h" />
+    <ClInclude Include="CfwrTask.h" />
     <ClInclude Include="CKeyTask.h" />
     <ClInclude Include="CNoFlashTask.h" />
     <ClInclude Include="Cqdrw3Task.h" />
+    <ClInclude Include="CqfwrTask.h" />
     <ClInclude Include="CqMoreTask.h" />
     <ClInclude Include="CqNoFlashTask.h" />
     <ClInclude Include="CQreTask.h" />
@@ -137,6 +140,7 @@
     <ClInclude Include="CWewTask.h" />
     <ClInclude Include="CwqTask.h" />
     <ClInclude Include="CwrqTask.h" />
+    <ClInclude Include="CwrTask.h" />
     <ClInclude Include="IntoGameTask.h" />
     <ClInclude Include="MoveTask.h" />
     <ClInclude Include="OneKey.h" />
@@ -148,13 +152,16 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CClickR.cpp" />
     <ClCompile Include="CClickTask.cpp" />
     <ClCompile Include="CDwqrTask.cpp" />
     <ClCompile Include="CEwqr1Task.cpp" />
     <ClCompile Include="CFlashTask.cpp" />
+    <ClCompile Include="CfwrTask.cpp" />
     <ClCompile Include="CKeyTask.cpp" />
     <ClCompile Include="CNoFlashTask.cpp" />
     <ClCompile Include="Cqdrw3Task.cpp" />
+    <ClCompile Include="CqfwrTask.cpp" />
     <ClCompile Include="CqMoreTask.cpp" />
     <ClCompile Include="CqNoFlashTask.cpp" />
     <ClCompile Include="CQreTask.cpp" />
@@ -171,6 +178,7 @@
     <ClCompile Include="CWewTask.cpp" />
     <ClCompile Include="CwqTask.cpp" />
     <ClCompile Include="CwrqTask.h.cpp" />
+    <ClCompile Include="CwrTask.cpp" />
     <ClCompile Include="IntoGameTask.cpp" />
     <ClCompile Include="MoveTask.cpp" />
     <ClCompile Include="OneKey.cpp" />
