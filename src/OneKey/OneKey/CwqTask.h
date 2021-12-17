@@ -1,5 +1,6 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "Semaphore/SemaphoreAPI.h"
 
 class CwqTask : public CTask
 {
@@ -9,21 +10,24 @@ public:
 public:
 	void DoTask();
 
-	void setParam(bool isR, bool isF = true);
+	void StopTask();
 
-	void KeyPress(int32_t vkCode);
+	void setParam(bool isR, bool isF, int32_t key);
 
-	void Sleep(int32_t sleepTime);
+	bool Sleep(int32_t sleepTime);
 
 	void KeyPressE();
 
 	void KeyPressF();
 
-	void LockHero(bool edit);
+	bool LockHero();
 
 	void Lock3();
 
 private:
 	bool m_isR;
 	bool m_isF;
+	int32_t m_key;
+	Semaphore m_sleep;
+	std::atomic<bool> m_exit;
 };

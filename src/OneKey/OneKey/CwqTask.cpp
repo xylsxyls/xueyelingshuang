@@ -19,7 +19,8 @@ extern CStopWatch spaceWatch;
 
 CwqTask::CwqTask():
 m_isR(false),
-m_isF(false)
+m_isF(false),
+m_exit(false)
 {
 
 }
@@ -28,78 +29,96 @@ void CwqTask::DoTask()
 {
 	if (m_isR)
 	{
-		LockHero(false);
+		if (LockHero())
+		{
+			return;
+		}
 		CKeyboard::KeyPress('W', 0);
-		::Sleep(150);
+		Sleep(150);
 		KeyPressE();
-		::Sleep(100);
+		Sleep(100);
 		KeyPressF();
-		::Sleep(100);
+		Sleep(100);
 		CKeyboard::KeyPress('Q', 0);
-		::Sleep(350);
+		Sleep(350);
 		KeyPressE();
 	}
 	else
 	{
 		//每次按键之后都要锁定，可能因为w导致目标改变
-		LockHero(true);
+		if (LockHero())
+		{
+			RCSend("end");
+			return;
+		}
 		KeyPressE();
-		::Sleep(100);
+		if (Sleep(100))
+		{
+			RCSend("end100");
+			return;
+		}
 		if (m_isF)
 		{
 			KeyPressF();
 		}
-		::Sleep(50);
+		if (Sleep(50))
+		{
+			RCSend("end50");
+			return;
+		}
+		RCSend("w");
 		CKeyboard::KeyPress('W', 0);
-		::Sleep(50);
+		if (Sleep(50))
+		{
+			RCSend("end501");
+			return;
+		}
 		CKeyboard::KeyPress('W', 0);
-		::Sleep(50);
+		if (Sleep(50))
+		{
+			RCSend("end502");
+			return;
+		}
 		CKeyboard::KeyPress('W', 0);
-		::Sleep(50);
+		if (Sleep(50))
+		{
+			RCSend("end503");
+			return;
+		}
 		Lock3();
 		KeyPressE();
 		CKeyboard::KeyPress('W', 0);
-		::Sleep(50);
+		Sleep(50);
 		Lock3();
 		KeyPressE();
-		::Sleep(50);
+		Sleep(50);
 		Lock3();
 		KeyPressE();
-		::Sleep(50);
+		Sleep(50);
 		Lock3();
 		KeyPressE();
-		::Sleep(50);
+		Sleep(50);
 		Lock3();
 		KeyPressE();
 	}
 }
 
-void CwqTask::setParam(bool isR, bool isF)
+void CwqTask::StopTask()
+{
+	m_exit = true;
+	m_sleep.signal();
+}
+
+void CwqTask::setParam(bool isR, bool isF, int32_t key)
 {
 	m_isR = isR;
 	m_isF = isF;
+	m_key = key;
 }
 
-void CwqTask::KeyPress(int32_t vkCode)
+bool CwqTask::Sleep(int32_t sleepTime)
 {
-	{
-		std::shared_ptr<CKeyTask> spKeyTask(new CKeyTask);
-		spKeyTask->setParam(vkCode, true);
-		CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->PostTask(spKeyTask);
-	}
-
-	{
-		std::shared_ptr<CKeyTask> spKeyTask(new CKeyTask);
-		spKeyTask->setParam(vkCode, false);
-		CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->PostTask(spKeyTask);
-	}
-}
-
-void CwqTask::Sleep(int32_t sleepTime)
-{
-	std::shared_ptr<CSleepTask> spSleepTask(new CSleepTask);
-	spSleepTask->setParam(sleepTime);
-	CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->PostTask(spSleepTask);
+	return m_sleep.wait(sleepTime);
 }
 
 void CwqTask::KeyPressE()
@@ -122,52 +141,52 @@ void CwqTask::KeyPressF()
 	CMouse::MoveAbsolute(currentPos, 0);
 }
 
-void CwqTask::LockHero(bool edit)
+bool CwqTask::LockHero()
 {
-	if (edit && threeWatch.GetWatchTime() < 1000)
+	switch (m_key)
 	{
-		char text[1024] = {};
-		::GetWindowTextA(g_editWnd, text, 1024);
-		std::string str = text;
-		if (str.size() == 1)
+	case 0:
+	{
+
+	}
+	break;
+	case 2:
+	{
+		CKeyboard::KeyPress('H', 0);
+	}
+	break;
+	case 3:
+	{
+		if (!m_isR)
 		{
-			CKeyboard::KeyPress(str[0] + 48, 0);
-			//::Sleep(100);
-		}
-		else if (str.size() >= 2)
-		{
-			CKeyboard::KeyPress(str[0] + 48, 0);
-			::Sleep(100);
-			CKeyboard::KeyPress(str[1] + 48, 0);
-			CKeyboard::KeyPress(str[0] + 48, 0);
-			//::Sleep(100);
-		}
-		else
-		{
-			CKeyboard::KeyPress('H', 0);
-			//::Sleep(100);
+			char text[1024] = {};
+			::GetWindowTextA(g_editWnd, text, 1024);
+			std::string str = text;
+			if (str.size() == 1)
+			{
+				CKeyboard::KeyPress(str[0] + 48, 0);
+			}
+			else if (str.size() >= 2)
+			{
+				CKeyboard::KeyPress(str[0] + 48, 0);
+				if (Sleep(100))
+				{
+					return true;
+				}
+				CKeyboard::KeyPress(str[1] + 48, 0);
+				CKeyboard::KeyPress(str[0] + 48, 0);
+			}
+			else
+			{
+				CKeyboard::KeyPress('H', 0);
+			}
 		}
 	}
-	if (oneWatch.GetWatchTime() < 1000)
-	{
-		char text[1024] = {};
-		::GetWindowTextA(g_editWnd, text, 1024);
-		std::string str = text;
-		if (str.size() >= 2)
-		{
-			CKeyboard::KeyPress(str[1] + 48, 0);
-		}
+	break;
+	default:
+		break;
 	}
-	if (twoWatch.GetWatchTime() < 1000)
-	{
-		char text[1024] = {};
-		::GetWindowTextA(g_editWnd, text, 1024);
-		std::string str = text;
-		if (!str.empty())
-		{
-			CKeyboard::KeyPress(str[0] + 48, 0);
-		}
-	}
+	return false;
 }
 
 void CwqTask::Lock3()

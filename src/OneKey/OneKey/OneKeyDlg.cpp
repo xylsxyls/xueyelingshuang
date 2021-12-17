@@ -51,6 +51,8 @@
 HWND g_editWnd = nullptr;
 
 CStopWatch stopWatch;
+CStopWatch leftWatch;
+CStopWatch rightWatch;
 CStopWatch w3StopWatch;
 CStopWatch sleepWatch;
 CStopWatch textWatch;
@@ -77,46 +79,34 @@ CStopWatch keyThreeWatch;
 CStopWatch keyFourWatch;
 CStopWatch keyFiveWatch;
 
+CStopWatch keyWatch[255] = {};
+
 int32_t type = 1;
-bool wDown = false;
-bool eDown = false;
-bool dDown = false;
-bool fDown = false;
-bool tDown = false;
-bool cDown = false;
-bool qDown = false;
-bool rDown = false;
-bool aDown = false;
-bool gDown = false;
-bool vDown = false;
-bool spaceDown = false;
-bool oneDown = false;
-bool twoDown = false;
-bool threeDown = false;
-bool fourDown = false;
-bool fiveDown = false;
-bool vkCodeOpen = false;
-bool leftDown = false;
-bool rightDown = false;
-bool altDown = false;
-bool ctrlDown = false;
-bool ctrl3Down = false;
-bool tabDown = false;
-bool keyZeroDown = false;
-bool keyOneDown = false;
-bool keyTwoDown = false;
-bool keyThreeDown = false;
-bool keyFourDown = false;
-bool keyFiveDown = false;
-bool keySixDown = false;
-bool keySevenDown = false;
-bool qKey = false;
-bool currentT = false;
+
+unsigned char g_preKey = 0;
+unsigned char g_lastKey = 0;
+unsigned char g_currentKey = 0;
+
+bool g_leftHasDown = false;
+bool g_rightHasDown = false;
+bool g_hasMove = false;
+
+#define SPACE 32
+#define ALT 164
+#define CTRL 162
+#define TAB 9
+#define KEY 48
+#define ENTER 13
+#define PLUS 107
+#define MINUS 109
+
+bool g_keyHasDown[256] = {};
+
 bool clickMap = false;
+bool g_moveUse = false;
 
 int32_t code1 = 'H';
 int32_t code2 = 'C';
-int32_t eCount = 0;
 
 std::atomic<bool> rightMouse = true;
 
@@ -178,6 +168,7 @@ BEGIN_MESSAGE_MAP(COneKeyDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON1, &COneKeyDlg::OnBnClickedButton1)
 	ON_WM_DESTROY()
 	ON_CBN_SELCHANGE(IDC_COMBO1, &COneKeyDlg::OnSelchangeCombo1)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
@@ -185,40 +176,44 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
     // 请在这里添加消息处理代码
 	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(g_threadId);
 
-	xyls::Point currentPos = CMouse::GetCurrentPos();
-	if (type >= 7)
-	{
-		if ((currentPos.x() < 2 || currentPos.x() > 1918 || currentPos.y() < 2 || currentPos.y() > 1078) && 
-			!vDown &&
-			moveWatch.GetWatchTime() > 1000000)
-		{
-			vDown = true;
-			CKeyboard::KeyDown('V');
-		}
-	}
-
+	bool leftDown = false;
 	bool leftUp = false;
+	bool rightDown = false;
 	bool rightUp = false;
 	
 	if (wParam == 513)
 	{
-		leftDown = true;
-		leftUp = false;
+		if (!g_leftHasDown)
+		{
+			leftDown = true;
+			g_leftHasDown = true;
+			leftWatch.SetWatchTime(0);
+		}
 	}
 	else if (wParam == 514)
 	{
-		leftDown = false;
-		leftUp = true;
+		if (g_leftHasDown)
+		{
+			leftUp = true;
+			g_leftHasDown = false;
+		}
 	}
 	else if (wParam == 516)
 	{
-		rightDown = true;
-		rightUp = false;
+		if (!g_rightHasDown)
+		{
+			rightDown = true;
+			g_rightHasDown = true;
+			rightWatch.SetWatchTime(0);
+		}
 	}
 	else if (wParam == 517)
 	{
-		rightDown = false;
-		rightUp = true;
+		if (g_rightHasDown)
+		{
+			rightUp = true;
+			g_rightHasDown = false;
+		}
 	}
 
 	if (textWatch.GetWatchTime() < 10000)
@@ -226,103 +221,40 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
 	}
 
-	if (leftDown)
+	xyls::Point currentPos = CMouse::GetCurrentPos();
+	if (type >= 7)
 	{
-		
-	}
-	else if (leftUp)
-	{
+		if (g_moveUse &&
+			(currentPos.x() < 2 || currentPos.x() > 1918 || currentPos.y() < 2 || currentPos.y() > 1078) &&
+			!g_hasMove)
+		{
+			g_hasMove = true;
+			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			spTask->setParam('V', true);
+			taskThread->PostTask(spTask);
+		}
+		else if (rightUp && g_hasMove)
+		{
+			g_moveUse = false;
+			g_hasMove = false;
+			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			spTask->setParam('V', false);
+			taskThread->PostTask(spTask);
+		}
+
 		if (type == 10)
 		{
-			//if (xyls::Rect(xyls::Point(1164, 748), 80, 80).contain(currentPos))
-			//{
-			//	code1 = 97;
-			//	code2 = 0;
-			//}
-			//else if (xyls::Rect(xyls::Point(1202, 631), 80, 80).contain(currentPos))
-			//{
-			//	code1 = 98;
-			//	code2 = 0;
-			//}
-			//else if (xyls::Rect(xyls::Point(1276, 523), 80, 80).contain(currentPos))
-			//{
-			//	code1 = 99;
-			//	code2 = 0;
-			//}
-			//else if (xyls::Rect(xyls::Point(1376, 444), 80, 80).contain(currentPos))
-			//{
-			//	code1 = 100;
-			//	code2 = 0;
-			//}
-			//else if (xyls::Rect(xyls::Point(1489, 389), 80, 80).contain(currentPos))
-			//{
-			//	code1 = 101;
-			//	code2 = 0;
-			//}
-			if (qWatch.GetWatchTime() < 3500 &&
-				oneWatch.GetWatchTime() > 2000 &&
-				twoWatch.GetWatchTime() > 2000 &&
-				threeWatch.GetWatchTime() > 2000 &&
-				fourWatch.GetWatchTime() > 2000 &&
-				fiveWatch.GetWatchTime() > 2000 &&
-				stopWatch.GetWatchTime() > 300)
+			if (qWatch.GetWatchTime() < 3500 && g_lastKey == 'Q')
 			{
 				stopWatch.SetWatchTime(0);
+				taskThread->StopAllTask();
 				std::shared_ptr<CwqTask> spTask(new CwqTask);
-				spTask->setParam(false, false);
+				spTask->setParam(false, false, 0);
 				taskThread->PostTask(spTask, 1);
 			}
-			//else if (rWatch.GetWatchTime() < 5000 && stopWatch.GetWatchTime() > 300)
-			//{
-			//	{
-			//		std::shared_ptr<CSleepTask> spTask(new CSleepTask);
-			//		spTask->setParam(100);
-			//		taskThread->PostTask(spTask, 1);
-			//	}
-			//	{
-			//		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-			//		spTask->setParam('E', true);
-			//		taskThread->PostTask(spTask, 1);
-			//	}
-			//	{
-			//		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-			//		spTask->setParam('E', false);
-			//		taskThread->PostTask(spTask, 1);
-			//	}
-			//}
-			//else if (wWatch.GetWatchTime() < 3000 && stopWatch.GetWatchTime() > 300)
-			//{
-			//	{
-			//		std::shared_ptr<CSleepTask> spTask(new CSleepTask);
-			//		spTask->setParam(100);
-			//		taskThread->PostTask(spTask, 1);
-			//	}
-			//	{
-			//		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-			//		spTask->setParam('E', true);
-			//		taskThread->PostTask(spTask, 1);
-			//	}
-			//	{
-			//		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-			//		spTask->setParam('E', false);
-			//		taskThread->PostTask(spTask, 1);
-			//	}
-			//}
 		}
 	}
-	else if (rightDown)
-	{
-		
-	}
-	else if (rightUp)
-	{
-		if (type >= 7 && vDown)
-		{
-			CKeyboard::KeyUp('V');
-			moveWatch.SetWatchTime(0);
-			vDown = false;
-		}
-	}
+
     // 将事件传递到下一个钩子
     return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
 }
@@ -332,265 +264,33 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	// 请在这里添加消息处理代码
 	const DWORD& vkCode = CHook::GetVkCode(lParam);
 
-	bool wUp = false;
-	bool rUp = false;
-	bool tUp = false;
-	bool ctrlUp = false;
-	bool spaceUp = false;
+	bool keyDown[256] = {};
+	bool keyUp[256] = {};
+
 	if (CHook::IsKeyDown(wParam))
 	{
-		if (vkCode == 'W')
+		if (vkCode <= 255)
 		{
-			wDown = true;
-		}
-		else if (vkCode == 'E')
-		{
-			eDown = true;
-		}
-		else if (vkCode == 'D')
-		{
-			dDown = true;
-		}
-		else if (vkCode == 'Q')
-		{
-			qDown = true;
-		}
-        else if (vkCode == 'R')
-        {
-            rDown = true;
-        }
-		else if (vkCode == 'F')
-		{
-			fDown = true;
-		}
-		else if (vkCode == 'C')
-		{
-			cDown = true;
-		}
-		else if (vkCode == 'T')
-		{
-			tDown = true;
-		}
-		else if (vkCode == 'A')
-		{
-			aDown = true;
-		}
-		else if (vkCode == 'G')
-		{
-			gDown = true;
-		}
-		else if (vkCode == 32)
-		{
-			spaceDown = true;
-		}
-		else if (vkCode == '1')
-		{
-			oneDown = true;
-		}
-		else if (vkCode == '2')
-		{
-			twoDown = true;
-		}
-		else if (vkCode == '3')
-		{
-			threeDown = true;
-			//threeWatch.SetWatchTime(0);
-			if (ctrlDown)
+			if (!g_keyHasDown[vkCode])
 			{
-				ctrl3Down = true;
-				superWatch.SetWatchTime(0);
+				keyDown[vkCode] = true;
+				g_keyHasDown[vkCode] = true;
+				keyWatch[vkCode].SetWatchTime(0);
+				g_preKey = g_lastKey;
+				g_lastKey = g_currentKey;
+				g_currentKey = (unsigned char)vkCode;
 			}
-		}
-		else if (vkCode == '4')
-		{
-			fourDown = true;
-		}
-		else if (vkCode == '5')
-		{
-			fiveDown = true;
-		}
-		else if (vkCode == 164)
-		{
-			altDown = true;
-		}
-		else if (vkCode == 162)
-		{
-			ctrlDown = true;
-		}
-		else if (vkCode == 9)
-		{
-			tabDown = true;
-			superWatch.SetWatchTime(10000);
-		}
-		else if (vkCode == 96)
-		{
-			keyZeroDown = true;
-			textWatch.SetWatchTime(11000);
-		}
-		else if (vkCode == 97)
-		{
-			keyOneDown = true;
-		}
-		else if (vkCode == 98)
-		{
-			keyTwoDown = true;
-		}
-		else if (vkCode == 99)
-		{
-			keyThreeDown = true;
-		}
-		else if (vkCode == 100)
-		{
-			keyFourDown = true;
-		}
-		else if (vkCode == 101)
-		{
-			keyFiveDown = true;
-		}
-		else if (vkCode == 102)
-		{
-			keySixDown = true;
-		}
-		else if (vkCode == 103)
-		{
-			keySevenDown = true;
 		}
 	}
 	else if (CHook::IsKeyUp(wParam))
 	{
-		//+ 107
-		if (vkCode == 13)
+		if (vkCode <= 255)
 		{
-			textWatch.SetWatchTime(type >= 7 ? 11000 : 0);
-		}
-		if (vkCode == 107)
-		{
-			vkCodeOpen = true;
-			textWatch.SetWatchTime(type >= 7 ? 0 : 10000);
-		}
-		else if (vkCode == 109)
-		{
-			vkCodeOpen = false;
-		}
-		else if (vkCode == 'W')
-		{
-			wUp = true;
-			wDown = false;
-		}
-		else if (vkCode == 'E')
-		{
-			vkCodeOpen = true;
-			openWatch.SetWatchTime(0);
-			eDown = false;
-		}
-		else if (vkCode == 'D')
-		{
-			dDown = false;
-		}
-		else if (vkCode == 'Q')
-		{
-			qDown = false;
-		}
-        else if (vkCode == 'R')
-        {
-            rDown = false;
-			rUp = true;
-        }
-		else if (vkCode == 'F')
-		{
-			fDown = false;
-		}
-		else if (vkCode == 'C')
-		{
-			cDown = false;
-		}
-		else if (vkCode == 'T')
-		{
-			tUp = true;
-			currentT = false;
-			tDown = false;
-		}
-		else if (vkCode == 'A')
-		{
-			aDown = false;
-		}
-		else if (vkCode == 'G')
-		{
-			gDown = false;
-		}
-		else if (vkCode == 32)
-		{
-			spaceDown = false;
-			spaceUp = true;
-		}
-		else if (vkCode == '1')
-		{
-			oneDown = false;
-		}
-		else if (vkCode == '2')
-		{
-			twoDown = false;
-		}
-		else if (vkCode == '3')
-		{
-			threeDown = false;
-			if (ctrl3Down)
+			if (g_keyHasDown[vkCode])
 			{
-				ctrl3Down = false;
+				keyUp[vkCode] = true;
+				g_keyHasDown[vkCode] = false;
 			}
-		}
-		else if (vkCode == '4')
-		{
-			fourDown = false;
-		}
-		else if (vkCode == '5')
-		{
-			fiveDown = false;
-		}
-		else if (vkCode == 164)
-		{
-			altDown = false;
-		}
-		else if (vkCode == 162)
-		{
-			ctrlUp = true;
-			ctrlDown = false;
-		}
-		else if (vkCode == 9)
-		{
-			tabDown = false;
-		}
-		else if (vkCode == 96)
-		{
-			keyZeroDown = false;
-		}
-		else if (vkCode == 97)
-		{
-			keyOneDown = false;
-		}
-		else if (vkCode == 98)
-		{
-			keyTwoDown = false;
-		}
-		else if (vkCode == 99)
-		{
-			keyThreeDown = false;
-		}
-		else if (vkCode == 100)
-		{
-			keyFourDown = false;
-		}
-		else if (vkCode == 101)
-		{
-			keyFiveDown = false;
-		}
-		else if (vkCode == 102)
-		{
-			keySixDown = false;
-		}
-		else if (vkCode == 103)
-		{
-			keySevenDown = false;
 		}
 	}
 
@@ -607,7 +307,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 
 	if (type == 1)
 	{
-		if (wDown && eDown && stopWatch.GetWatchTime() > 3000)
+		if (g_keyHasDown['W'] && keyDown['E'] && stopWatch.GetWatchTime() > 3000)
 		{
 			stopWatch.SetWatchTime(0);
 			std::shared_ptr<CNoFlashTask> spTask;
@@ -622,7 +322,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		//	spTask.reset(new CFlashTask);
 		//	taskThread->PostTask(spTask, 1);
 		//}
-		else if (aDown && stopWatch.GetWatchTime() > 500)
+		else if (keyDown['A'] && stopWatch.GetWatchTime() > 500)
 		{
 			stopWatch.SetWatchTime(0);
 			std::shared_ptr<CwrqTask> spTask;
@@ -640,43 +340,43 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		//	std::shared_ptr<CQreTask> spTask(new CQreTask);
 		//	taskThread->PostTask(spTask, 1);
 		//}
-		else if (fiveDown && stopWatch.GetWatchTime() > 500)
+		else if (keyDown['5'] && stopWatch.GetWatchTime() > 500)
 		{
-			if (superWatch.GetWatchTime() < 10000)
-			{
-				if (openWatch.GetWatchTime() < 500)
-				{
-					stopWatch.SetWatchTime(0);
-					std::shared_ptr<CDwqrTask> spTask;
-					spTask.reset(new CDwqrTask);
-					taskThread->PostTask(spTask, 1);
-				}
-				else
-				{
-					stopWatch.SetWatchTime(0);
-					std::shared_ptr<Cqdrw3Task> spTask;
-					spTask.reset(new Cqdrw3Task);
-					taskThread->PostTask(spTask, 2);
-				}
-			}
-			else
-			{
-				if (openWatch.GetWatchTime() < 500)
-				{
-					stopWatch.SetWatchTime(0);
-					std::shared_ptr<CDwqrTask> spTask;
-					spTask.reset(new CDwqrTask);
-					taskThread->PostTask(spTask, 1);
-				}
-				else
-				{
-					stopWatch.SetWatchTime(0);
-					std::shared_ptr<CqNoFlashTask> spTask;
-					spTask.reset(new CqNoFlashTask);
-					spTask->setParam(400);
-					taskThread->PostTask(spTask, 2);
-				}
-			}
+			//if (superWatch.GetWatchTime() < 10000)
+			//{
+			//	if (openWatch.GetWatchTime() < 500)
+			//	{
+			//		stopWatch.SetWatchTime(0);
+			//		std::shared_ptr<CDwqrTask> spTask;
+			//		spTask.reset(new CDwqrTask);
+			//		taskThread->PostTask(spTask, 1);
+			//	}
+			//	else
+			//	{
+			//		stopWatch.SetWatchTime(0);
+			//		std::shared_ptr<Cqdrw3Task> spTask;
+			//		spTask.reset(new Cqdrw3Task);
+			//		taskThread->PostTask(spTask, 2);
+			//	}
+			//}
+			//else
+			//{
+			//	if (openWatch.GetWatchTime() < 500)
+			//	{
+			//		stopWatch.SetWatchTime(0);
+			//		std::shared_ptr<CDwqrTask> spTask;
+			//		spTask.reset(new CDwqrTask);
+			//		taskThread->PostTask(spTask, 1);
+			//	}
+			//	else
+			//	{
+			//		stopWatch.SetWatchTime(0);
+			//		std::shared_ptr<CqNoFlashTask> spTask;
+			//		spTask.reset(new CqNoFlashTask);
+			//		spTask->setParam(400);
+			//		taskThread->PostTask(spTask, 2);
+			//	}
+			//}
 		}
 		//else if (wDown && dDown && stopWatch.GetWatchTime() > 500)
 		//{
@@ -707,23 +407,23 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		//	spTask.reset(new CqNoFlashTask);
 		//	taskThread->PostTask(spTask, 1);
 		//}
-		else if (vkCodeOpen && wDown && stopWatch.GetWatchTime() > 3000 && openWatch.GetWatchTime() < 3000)
-		{
-			vkCodeOpen = false;
-			stopWatch.SetWatchTime(0);
-			openWatch.SetWatchTime(3000);
-			std::shared_ptr<CqTask> spTask;
-			spTask.reset(new CqTask);
-			taskThread->PostTask(spTask, 1);
-		}
-		else if (wDown && threeWatch.GetWatchTime() < 1500 && stopWatch.GetWatchTime() > 500)
-		{
-			stopWatch.SetWatchTime(0);
-			threeWatch.SetWatchTime(3000);
-			std::shared_ptr<CrqTask> spTask;
-			spTask.reset(new CrqTask);
-			taskThread->PostTask(spTask, 1);
-		}
+		//else if (vkCodeOpen && wDown && stopWatch.GetWatchTime() > 3000 && openWatch.GetWatchTime() < 3000)
+		//{
+		//	vkCodeOpen = false;
+		//	stopWatch.SetWatchTime(0);
+		//	openWatch.SetWatchTime(3000);
+		//	std::shared_ptr<CqTask> spTask;
+		//	spTask.reset(new CqTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
+		//else if (wDown && threeWatch.GetWatchTime() < 1500 && stopWatch.GetWatchTime() > 500)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	threeWatch.SetWatchTime(3000);
+		//	std::shared_ptr<CrqTask> spTask;
+		//	spTask.reset(new CrqTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
 		
 		//else if (qDown && stopWatch.GetWatchTime() > 3000 && superWatch.GetWatchTime() < 10000)
 		//{
@@ -736,119 +436,99 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	}
 	else if (type == 2)
 	{
-		if (threeDown && stopWatch.GetWatchTime() > 200)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CWeqTask> spTask;
-			CWeqTask* weqTask = new CWeqTask;
-			//(sleepWatch.GetWatchTime()) > 20000 ? 20 : 0
-			weqTask->setParam(50);
-			spTask.reset(weqTask);
-			taskThread->PostTask(spTask, 1);
-		}
-		if (fiveDown && stopWatch.GetWatchTime() > 200)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CWewTask> spTask;
-			CWewTask* wewTask = new CWewTask;
-			spTask.reset(wewTask);
-			taskThread->PostTask(spTask, 1);
-		}
-		else if (rDown)
-		{
-			sleepWatch.SetWatchTime(0);
-		}
+		//if (threeDown && stopWatch.GetWatchTime() > 200)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CWeqTask> spTask;
+		//	CWeqTask* weqTask = new CWeqTask;
+		//	//(sleepWatch.GetWatchTime()) > 20000 ? 20 : 0
+		//	weqTask->setParam(50);
+		//	spTask.reset(weqTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
+		//if (fiveDown && stopWatch.GetWatchTime() > 200)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CWewTask> spTask;
+		//	CWewTask* wewTask = new CWewTask;
+		//	spTask.reset(wewTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
+		//else if (rDown)
+		//{
+		//	sleepWatch.SetWatchTime(0);
+		//}
 	}
 	else if (type == 3)
 	{
-		if (threeDown && stopWatch.GetWatchTime() > 500)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CQreTask> spTask(new CQreTask);
-			taskThread->PostTask(spTask, 1);
-		}
+		//if (threeDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CQreTask> spTask(new CQreTask);
+		//	taskThread->PostTask(spTask, 1);
+		//}
 	}
 	else if (type == 4)
 	{
-		if (wDown && threeDown && stopWatch.GetWatchTime() > 500)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CrFlashTask> spTask(new CrFlashTask);
-			spTask->setParam(true);
-			taskThread->PostTask(spTask, 1);
-		}
-		else if (threeDown && stopWatch.GetWatchTime() > 500)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CrFlashTask> spTask(new CrFlashTask);
-			spTask->setParam(false);
-			taskThread->PostTask(spTask, 1);
-		}
+		//if (wDown && threeDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CrFlashTask> spTask(new CrFlashTask);
+		//	spTask->setParam(true);
+		//	taskThread->PostTask(spTask, 1);
+		//}
+		//else if (threeDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CrFlashTask> spTask(new CrFlashTask);
+		//	spTask->setParam(false);
+		//	taskThread->PostTask(spTask, 1);
+		//}
 	}
 	else if (type == 5)
 	{
-		if (threeDown && stopWatch.GetWatchTime() > 500)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CEwqr1Task> spTask(new CEwqr1Task);
-			spTask->setParam(false, false);
-			taskThread->PostTask(spTask, 1);
-		}
-		else if (fiveDown && stopWatch.GetWatchTime() > 500)
-		{
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CEwqr1Task> spTask(new CEwqr1Task);
-			spTask->setParam(true, true);
-			taskThread->PostTask(spTask, 1);
-		}
-		else if (aDown && stopWatch.GetWatchTime() > 500)
-		{
-			aDown = false;
-			stopWatch.SetWatchTime(0);
-			std::shared_ptr<CEwqr1Task> spTask(new CEwqr1Task);
-			spTask->setParam(false, true);
-			taskThread->PostTask(spTask, 1);
-		}
+		//if (threeDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CEwqr1Task> spTask(new CEwqr1Task);
+		//	spTask->setParam(false, false);
+		//	taskThread->PostTask(spTask, 1);
+		//}
+		//else if (fiveDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CEwqr1Task> spTask(new CEwqr1Task);
+		//	spTask->setParam(true, true);
+		//	taskThread->PostTask(spTask, 1);
+		//}
+		//else if (aDown && stopWatch.GetWatchTime() > 500)
+		//{
+		//	aDown = false;
+		//	stopWatch.SetWatchTime(0);
+		//	std::shared_ptr<CEwqr1Task> spTask(new CEwqr1Task);
+		//	spTask->setParam(false, true);
+		//	taskThread->PostTask(spTask, 1);
+		//}
 	}
 	else if (type >= 7)
 	{
-		if (qDown || wDown || eDown || rDown)
+		if (keyUp[PLUS])
 		{
-			if (type == 10)
+			textWatch.SetWatchTime(0);
+		}
+		else if (keyUp[MINUS])
+		{
+			textWatch.SetWatchTime(11000);
+		}
+
+		if (keyUp[SPACE])
+		{
+			if (!(type == 10 && g_lastKey == 'Q'))
 			{
-				if (qDown)
-				{
-					qKey = true;
-				}
-				if (wDown || eDown || rDown)
-				{
-					qKey = false;
-				}
-				if (qDown || wDown)
-				{
-					eCount = 0;
-				}
-			}
-			
-			moveWatch.SetWatchTime(0);
-			if (vDown)
-			{
-				CKeyboard::KeyUp('V');
-				vDown = false;
+				g_moveUse = true;
 			}
 		}
-		if (spaceDown)
-		{
-			if (type == 10 && qWatch.GetWatchTime() < 3000)
-			{
-				moveWatch.SetWatchTime(0);
-			}
-			else
-			{
-				moveWatch.SetWatchTime(1100000);
-			}
-		}
-		if (ctrlDown && eDown)
+		if (g_keyHasDown[CTRL] && keyDown['E'])
 		{
 			if (code1 != 'G')
 			{
@@ -863,67 +543,60 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				code1 = 'H';
 			}
 		}
-		else if (eDown && vkCode == 'E')
+		else if (keyDown['E'])
 		{
-			//eWatch.SetWatchTime(0);
-			if (type == 10)
-			{
-				++eCount;
-				if (eCount == 4)
-				{
-					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('H', true);
-						taskThread->PostTask(spTask, 1);
-					}
-					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('H', false);
-						taskThread->PostTask(spTask, 1);
-					}
-					{
-						std::shared_ptr<CSleepTask> spTask(new CSleepTask);
-						spTask->setParam(100);
-						taskThread->PostTask(spTask, 1);
-					}
-				}
-			}
 			std::shared_ptr<HeroTask> spTask(new HeroTask);
 			spTask->setParam(code1, code2);
 			taskThread->PostTask(spTask, 2);
 		}
-		else if (keyZeroDown && stopWatch.GetWatchTime() > 500)
+		else if (keyDown[KEY + '0'])
 		{
-			//textWatch.SetWatchTime(0);
 			std::shared_ptr<SpeakTask> spTask(new SpeakTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		if (type != 10 && type != 9)
+		if (type != 9)
 		{
-			if (rDown && stopWatch.GetWatchTime() > 500)
+			if (keyDown['R'] && stopWatch.GetWatchTime() > 500)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 				spTask->setParam('X', true);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if (rUp)
+			else if (keyUp['R'] && stopWatch.GetWatchTime() > 500)
 			{
+				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 				spTask->setParam('X', false);
 				taskThread->PostTask(spTask, 1);
 			}
 		}
+		if (type != 10)
+		{
+			if (keyDown['T'] && stopWatch.GetWatchTime() > 500)
+			{
+				stopWatch.SetWatchTime(0);
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('M', true);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (keyUp['T'])
+			{
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('M', false);
+				taskThread->PostTask(spTask, 1);
+			}
+		}
 		if (type == 8)
 		{
-			if (wDown && qDown && stopWatch.GetWatchTime() > 1000)
+			if (g_keyHasDown['W'] && keyDown['Q'] && stopWatch.GetWatchTime() > 1000)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CqMoreTask> spTask(new CqMoreTask);
 				spTask->setParam(true);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if (aDown && stopWatch.GetWatchTime() > 1000)
+			else if (keyDown['A'] && stopWatch.GetWatchTime() > 1000)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CqfwrTask> spTask(new CqfwrTask);
@@ -932,116 +605,46 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		else if (type == 9)
 		{
-			if (ctrlDown && wDown && stopWatch.GetWatchTime() > 1000)
+			if (g_keyHasDown[CTRL] && keyDown['W'] && stopWatch.GetWatchTime() > 1000)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CClickTask> spTask(new CClickTask);
 				spTask->setParam(0, true);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if (rDown && stopWatch.GetWatchTime() > 500)
+			else if (keyDown['R'] && stopWatch.GetWatchTime() > 500)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CrfTask> spTask(new CrfTask);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && oneDown && spaceDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(1, true);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && twoDown && spaceDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(2, true);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && threeDown && spaceDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(3, true);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && fourDown && spaceDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(4, true);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && fiveDown && spaceDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(5, true);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && oneDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(1, false);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && twoDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(2, false);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && threeDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(3, false);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && fourDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(4, false);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (ctrlDown && fiveDown && stopWatch.GetWatchTime() > 1000)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CClickTask> spTask(new CClickTask);
-				spTask->setParam(5, false);
 				taskThread->PostTask(spTask, 1);
 			}
 		}
 		else if (type == 10)
 		{
 			std::string keyText;
-			if (keyOneDown && keyOneWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
+			if (keyDown[KEY + '1'] && keyWatch[KEY + '1'].GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
-				keyOneWatch.SetWatchTime(0);
+				keyWatch[KEY + '1'].SetWatchTime(0);
 				keyText = "1";
 			}
-			if (keyTwoDown && keyTwoWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
+			if (keyDown[KEY + '2'] && keyWatch[KEY + '2'].GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
-				keyTwoWatch.SetWatchTime(0);
+				keyWatch[KEY + '2'].SetWatchTime(0);
 				keyText = "2";
 			}
-			if (keyThreeDown && keyThreeWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
+			if (keyDown[KEY + '3'] && keyWatch[KEY + '3'].GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
-				keyThreeWatch.SetWatchTime(0);
+				keyWatch[KEY + '3'].SetWatchTime(0);
 				keyText = "3";
 			}
-			if (keyFourDown && keyFourWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
+			if (keyDown[KEY + '4'] && keyWatch[KEY + '4'].GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
-				keyFourWatch.SetWatchTime(0);
+				keyWatch[KEY + '4'].SetWatchTime(0);
 				keyText = "4";
 			}
-			if (keyFiveDown && keyFiveWatch.GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
+			if (keyDown[KEY + '5'] && keyWatch[KEY + '5'].GetWatchTime() > 1000 && stopWatch.GetWatchTime() > 2000)
 			{
-				keyFiveWatch.SetWatchTime(0);
+				keyWatch[KEY + '5'].SetWatchTime(0);
 				keyText = "5";
 			}
 
@@ -1058,12 +661,13 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				::SetWindowTextA(g_editWnd, text.c_str());
 			}
 
-			if (keySixDown)
+			if (keyDown[KEY + '6'])
 			{
 				::SetWindowTextA(g_editWnd, "");
 			}
-			else if (keySevenDown)
+			else if (keyDown[KEY + '7'] && keyWatch[KEY + '7'].GetWatchTime() > 500)
 			{
+				keyWatch[KEY + '7'].SetWatchTime(0);
 				char str[1024] = {};
 				::GetWindowTextA(g_editWnd, str, 1024);
 				std::string text = str;
@@ -1074,25 +678,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				::SetWindowTextA(g_editWnd, text.c_str());
 			}
 
-			if (altDown && stopWatch.GetWatchTime() > 500)
+			if (keyUp[SPACE])
 			{
-				stopWatch.SetWatchTime(0);
-				{
-					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					spTask->setParam('G', true);
-					taskThread->PostTask(spTask, 1);
-				}
-				{
-					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					spTask->setParam('G', false);
-					taskThread->PostTask(spTask, 1);
-				}
-			}
-
-			if (spaceUp && spaceWatch.GetWatchTime() > 500)
-			{
-				spaceWatch.SetWatchTime(0);
-				if (qWatch.GetWatchTime() > 3000)
+				if (keyWatch['Q'].GetWatchTime() > 3000)
 				{
 					{
 						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
@@ -1109,169 +697,110 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				code2 = 'C';
 				taskThread->StopAllTask();
 			}
-			else if (qKey && fiveDown && qWatch.GetWatchTime() < 3500 && stopWatch.GetWatchTime() > 300)
+			else if (keyDown['5'] && (g_lastKey == 'Q') && keyWatch['Q'].GetWatchTime() < 3500 && stopWatch.GetWatchTime() > 300)
 			{
-				fiveWatch.SetWatchTime(0);
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CfwrTask> spTask(new CfwrTask);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if (qKey && fourDown && qWatch.GetWatchTime() < 3500 && stopWatch.GetWatchTime() > 300)
+			else if (keyDown['4'] && (g_lastKey == 'Q') && keyWatch['Q'].GetWatchTime() < 3500 && stopWatch.GetWatchTime() > 300)
 			{
-				fourWatch.SetWatchTime(0);
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CfwrTask> spTask(new CfwrTask);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if ((rWatch.GetWatchTime() < 5000 && qWatch.GetWatchTime() > 5000 || qKey) &&
-				threeDown &&
-				(qWatch.GetWatchTime() < 5000 || rWatch.GetWatchTime() < 5000) &&
-				stopWatch.GetWatchTime() > 300)
+			else if (keyDown['3'])
 			{
-				threeWatch.SetWatchTime(0);
-				stopWatch.SetWatchTime(0);
-				if (qWatch.GetWatchTime() < 5000)
+				RCSend("3");
+				taskThread->StopAllTask();
+				if ((g_lastKey == 'Q') && keyWatch['Q'].GetWatchTime() < 3500)
 				{
+					stopWatch.SetWatchTime(0);
 					std::shared_ptr<CwqTask> spTask(new CwqTask);
-					spTask->setParam(false);
+					spTask->setParam(false, true, 3);
 					taskThread->PostTask(spTask, 1);
 				}
-				else
+				else if (keyWatch['Q'].GetWatchTime() < 3500)
 				{
+					stopWatch.SetWatchTime(0);
 					std::shared_ptr<CwqTask> spTask(new CwqTask);
-					spTask->setParam(true);
+					spTask->setParam(false, true, 3);
+					taskThread->PostTask(spTask, 1);
+				}
+				else if (keyWatch['R'].GetWatchTime() < 5000)
+				{
+					stopWatch.SetWatchTime(0);
+					std::shared_ptr<CwqTask> spTask(new CwqTask);
+					spTask->setParam(true, true, 3);
 					taskThread->PostTask(spTask, 1);
 				}
 			}
-			else if ((rWatch.GetWatchTime() < 5000 && qWatch.GetWatchTime() > 5000 || qKey) &&
-				twoDown &&
-				(qWatch.GetWatchTime() < 5000 || rWatch.GetWatchTime() < 5000) &&
-				stopWatch.GetWatchTime() > 300)
+			else if (keyDown['2'] && stopWatch.GetWatchTime() > 300)
 			{
-				twoWatch.SetWatchTime(0);
-				stopWatch.SetWatchTime(0);
-				if (qWatch.GetWatchTime() < 5000)
+				if ((g_lastKey == 'Q') && keyWatch['Q'].GetWatchTime() < 3500)
 				{
+					stopWatch.SetWatchTime(0);
 					std::shared_ptr<CwqTask> spTask(new CwqTask);
-					spTask->setParam(false);
+					spTask->setParam(false, true, 2);
 					taskThread->PostTask(spTask, 1);
 				}
-				else
+				else if (keyWatch['R'].GetWatchTime() < 5000)
 				{
+					stopWatch.SetWatchTime(0);
 					std::shared_ptr<CwqTask> spTask(new CwqTask);
-					spTask->setParam(true);
+					spTask->setParam(true, true, 2);
 					taskThread->PostTask(spTask, 1);
 				}
 			}
-			else if ((rWatch.GetWatchTime() < 5000 && qWatch.GetWatchTime() > 5000 || qKey) &&
-				oneDown &&
-				(qWatch.GetWatchTime() < 5000 || rWatch.GetWatchTime() < 5000) &&
-				stopWatch.GetWatchTime() > 300)
-			{
-				oneWatch.SetWatchTime(0);
-				stopWatch.SetWatchTime(0);
-				if (qWatch.GetWatchTime() < 5000)
-				{
-					std::shared_ptr<CwqTask> spTask(new CwqTask);
-					spTask->setParam(false);
-					taskThread->PostTask(spTask, 1);
-				}
-				else
-				{
-					std::shared_ptr<CwqTask> spTask(new CwqTask);
-					spTask->setParam(true);
-					taskThread->PostTask(spTask, 1);
-				}
-			}
-			else if (ctrlDown && rDown && stopWatch.GetWatchTime() > 500)
+			else if (g_keyHasDown[CTRL] && keyDown['R'] && stopWatch.GetWatchTime() > 500)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CrTask> spTask(new CrTask);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if (rDown && stopWatch.GetWatchTime() > 500)
+			else if ((g_keyHasDown[CTRL] && keyUp['W']) && stopWatch.GetWatchTime() > 500)
 			{
 				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-				spTask->setParam('X', true);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (rUp)
-			{
-				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-				spTask->setParam('X', false);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if ((ctrlDown && wUp) || (ctrlUpWatch.GetWatchTime() < 800 && wUp) && stopWatch.GetWatchTime() > 500)
-			{
 				std::shared_ptr<CwrTask> spTask(new CwrTask);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if (qDown)
+			else if (keyUp['T'])
 			{
-				qWatch.SetWatchTime(0);
-			}
-			else if (wDown)
-			{
-				wWatch.SetWatchTime(0);
-			}
-			else if (rDown)
-			{
-				rWatch.SetWatchTime(0);
-			}
-			else if (tDown)
-			{
-				if (!currentT)
+				if (clickMap)
 				{
-					currentT = true;
-					tWatch.SetWatchTime(0);
-				}
-				else if (tWatch.GetWatchTime() > 200)
-				{
+					clickMap = false;
 					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					spTask->setParam('M', true);
+					spTask->setParam('M', false);
 					taskThread->PostTask(spTask, 1);
-					clickMap = true;
 				}
-			}
-			if (ctrlUp)
-			{
-				ctrlUpWatch.SetWatchTime(0);
-			}
-			if (tUp && clickMap)
-			{
-				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-				spTask->setParam('M', false);
-				taskThread->PostTask(spTask, 1);
-				clickMap = false;
-			}
-			if (tUp && tWatch.GetWatchTime() < 200 && stopWatch.GetWatchTime() > 500)
-			{
-				stopWatch.SetWatchTime(0);
-				if (oneWatch.GetWatchTime() > 5000 &&
-					twoWatch.GetWatchTime() > 5000 &&
-					threeWatch.GetWatchTime() > 5000 &&
-					fourWatch.GetWatchTime() > 5000 &&
-					fiveWatch.GetWatchTime() > 5000)
+				else
 				{
+					stopWatch.SetWatchTime(0);
+					if (keyWatch['1'].GetWatchTime() > 5000 &&
+						keyWatch['2'].GetWatchTime() > 5000 &&
+						keyWatch['3'].GetWatchTime() > 5000 &&
+						keyWatch['4'].GetWatchTime() > 5000 &&
+						keyWatch['5'].GetWatchTime() > 5000)
 					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('H', true);
-						taskThread->PostTask(spTask, 1);
+						{
+							std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+							spTask->setParam('H', true);
+							taskThread->PostTask(spTask, 1);
+						}
+						{
+							std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+							spTask->setParam('H', false);
+							taskThread->PostTask(spTask, 1);
+						}
+						{
+							std::shared_ptr<CSleepTask> spTask(new CSleepTask);
+							spTask->setParam(100);
+							taskThread->PostTask(spTask, 1);
+						}
 					}
-					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('H', false);
-						taskThread->PostTask(spTask, 1);
-					}
-					{
-						std::shared_ptr<CSleepTask> spTask(new CSleepTask);
-						spTask->setParam(100);
-						taskThread->PostTask(spTask, 1);
-					}
+					std::shared_ptr<CClickR> spTask(new CClickR);
+					taskThread->PostTask(spTask);
 				}
-				std::shared_ptr<CClickR> spTask(new CClickR);
-				taskThread->PostTask(spTask);
 			}
 		}
 	}
@@ -1314,29 +843,27 @@ BOOL COneKeyDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	g_editWnd = m_edit.m_hWnd;
-	m_type.AddString("刀锋");
-	m_type.AddString("劫");
-	m_type.AddString("妖姬");
-	m_type.AddString("卡萨丁");
-	m_type.AddString("卡特琳娜");
-	m_type.AddString("进游戏");
-	m_type.AddString("王者");
-	m_type.AddString("诸葛亮");
-	m_type.AddString("钟馗");
-	m_type.AddString("司马懿");
-	m_type.SelectString(7, "诸葛亮");
+	m_type.AddString("df");
+	m_type.AddString("j");
+	m_type.AddString("yj");
+	m_type.AddString("ksd");
+	m_type.AddString("ktln");
+	m_type.AddString("jyx");
+	m_type.AddString("wz");
+	m_type.AddString("zgl");
+	m_type.AddString("zk");
+	m_type.AddString("smy");
+	m_type.SelectString(7, "zgl");
 	type = 8;
 	m_button.SetFocus();
-	superWatch.SetWatchTime(10000);
 	textWatch.SetWatchTime(10000);
-	ctrlWatch.SetWatchTime(10000);
-	ctrlUpWatch.SetWatchTime(10000);
-	qWatch.SetWatchTime(10000);
-	wWatch.SetWatchTime(10000);
-	eWatch.SetWatchTime(10000);
-	rWatch.SetWatchTime(10000);
-	moveWatch.SetWatchTime(0);
+	int32_t index = -1;
+	while (index++ != 256 - 1)
+	{
+		keyWatch[index].SetWatchTime(10000);
+	}
 	g_threadId = CTaskThreadManager::Instance().Init();
+	SetTimer(1000, 10, nullptr);
 	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);
     CHook::Init(WH_MOUSE_LL, MouseHookFun);
 
@@ -1360,6 +887,147 @@ void COneKeyDlg::OnSysCommand(UINT nID, LPARAM lParam)
 //  来绘制该图标。对于使用文档/视图模型的 MFC 应用程序，
 //  这将由框架自动完成。
 
+HBITMAP JPEGByteArrayToHBITMAP(const std::string& jpgFrame, IPicture** pIPicture)
+{
+	if (jpgFrame.empty())
+	{
+		return nullptr;
+	}
+	size_t nSize = jpgFrame.size();
+	HGLOBAL hMem = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE | GMEM_NODISCARD, nSize);
+	IStream* pStream = nullptr;
+	//用全局内存初使化IStream接口指针
+	CreateStreamOnHGlobal(hMem, false, &pStream);
+	pStream->Write(jpgFrame.c_str(), (ULONG)nSize, nullptr);
+	ULARGE_INTEGER pos;
+	LARGE_INTEGER iMove;
+	iMove.QuadPart = 0;
+	pStream->Seek(iMove, STREAM_SEEK_SET, &pos);
+	//用OleLoadPicture获得IPicture接口指针
+	OleLoadPicture(pStream, 0, false, IID_IPicture, (LPVOID*)pIPicture);
+	HBITMAP result = nullptr;
+	(*pIPicture)->get_Handle((OLE_HANDLE*)&result);
+	//释放pIStream
+	pStream->Release();
+	//释放可移动缓冲区资源
+	GlobalFree(hMem);
+	return result;
+}
+
+RECT ShowRect(const RECT& srcRect, const RECT& backgroundRect)
+{
+	auto srcWidth = srcRect.right - srcRect.left;
+	auto srcHeight = srcRect.bottom - srcRect.top;
+	auto backgroundWidth = backgroundRect.right - backgroundRect.left;
+	auto backgroundHeight = backgroundRect.bottom - backgroundRect.top;
+	double srcTan = srcHeight / (double)srcWidth;
+	double backgroundTan = backgroundHeight / (double)backgroundWidth;
+	if (srcTan < backgroundTan)
+	{
+		int height = (int)(srcHeight * (double)backgroundWidth / srcWidth);
+		int heightChange = (int)((backgroundHeight - height) / 2.0);
+		return RECT{ backgroundRect.left, backgroundRect.top + heightChange, backgroundRect.right, backgroundRect.bottom - heightChange };
+	}
+	else
+	{
+		int width = (int)(srcWidth * (double)backgroundHeight / srcHeight);
+		int widthChange = (int)((backgroundWidth - width) / 2.0);
+		return RECT{ backgroundRect.left + widthChange, backgroundRect.top, backgroundRect.right - widthChange, backgroundRect.bottom };
+	}
+}
+
+void DrawHBitmapToHdc(HDC hDC, RECT drawRect, HBITMAP hBitmap, COLORREF backgroundColor, int32_t blendPercent)
+{
+	int32_t width = drawRect.right - drawRect.left;
+	int32_t height = drawRect.bottom - drawRect.top;
+
+	//首先定义一个与屏幕显示兼容的内存显示设备
+	HDC hMemDC = ::CreateCompatibleDC(nullptr);
+	//定义一个与屏幕显示兼容的位图对象
+	HBITMAP hMemBitmap = ::CreateCompatibleBitmap(hDC, width, height);
+	//这时还不能绘图，因为没有地方画
+	//将位图选入到内存显示设备中
+	//只有选入了位图的内存显示设备才有地方绘图，画到指定的位图上
+	auto oldHBITMAP = ::SelectObject(hMemDC, hMemBitmap);
+
+	//先用背景色将位图清除干净
+	HBRUSH hBrush = ::CreateSolidBrush(backgroundColor);
+	RECT memRect = { 0, 0, width, height };
+	::FillRect(hMemDC, &memRect, hBrush);
+	::DeleteObject(hBrush);
+
+	if (hBitmap != nullptr)
+	{
+		BITMAP bitmap;
+		//获取位图尺寸	
+		GetObject(hBitmap, sizeof(BITMAP), &bitmap);
+		//位图大小
+		int32_t imgWidth = bitmap.bmWidth;
+		int32_t imgHeight = bitmap.bmHeight;
+
+		if (imgWidth != 0 && imgHeight != 0)
+		{
+			HDC hImgDC = CreateCompatibleDC(nullptr);
+			auto oldImgHBITMAP = ::SelectObject(hImgDC, hBitmap);
+
+			RECT srcRect = { 0, 0, imgWidth, imgHeight };
+			RECT imgRect = ShowRect(srcRect, RECT{ 0, 0, width, height });
+			int oldMode = ::SetStretchBltMode(hMemDC, HALFTONE);
+			::StretchBlt(hMemDC, imgRect.left, imgRect.top, imgRect.right - imgRect.left, imgRect.bottom - imgRect.top,
+				hImgDC, srcRect.left, srcRect.top, srcRect.right - srcRect.left, srcRect.bottom - srcRect.top, SRCCOPY);
+			::SetStretchBltMode(hMemDC, oldMode);
+
+			::SelectObject(hImgDC, oldImgHBITMAP);
+			::DeleteDC(hImgDC);
+		}
+	}
+
+	if (blendPercent == 100)
+	{
+		//将内存中的图拷贝到屏幕上进行显示
+		::BitBlt(hDC, drawRect.left, drawRect.top, width, height, hMemDC, 0, 0, SRCCOPY);
+	}
+	else
+	{
+		BLENDFUNCTION blend = { 0 };
+		blend.BlendOp = AC_SRC_OVER;
+		blend.BlendFlags = 0;
+		blend.AlphaFormat = 0;
+		blend.SourceConstantAlpha = blendPercent;
+		//将内存中的图拷贝到屏幕上进行显示
+		::AlphaBlend(hDC, drawRect.left, drawRect.top, width, height, hMemDC, 0, 0, width, height, blend);
+	}
+
+	//绘图完成后的清理
+	::SelectObject(hMemDC, oldHBITMAP);
+	::DeleteObject(hMemBitmap);
+	::DeleteDC(hMemDC);
+}
+
+HBITMAP GetDCImageToHBitmap(HDC hDC, RECT dcRect)
+{
+	HDC hMemDC = ::CreateCompatibleDC(hDC);
+	int32_t imgWidth = dcRect.right - dcRect.left;
+	int32_t imgHeight = dcRect.bottom - dcRect.top;
+	HBITMAP hBitmap = ::CreateCompatibleBitmap(hDC, imgWidth, imgHeight);
+	HBITMAP hOldBitmap = (HBITMAP)::SelectObject(hMemDC, hBitmap);
+	::BitBlt(hMemDC, 0, 0, imgWidth, imgHeight, hDC, dcRect.left, dcRect.top, SRCCOPY);
+	hBitmap = (HBITMAP)::SelectObject(hMemDC, hOldBitmap);
+	::DeleteDC(hMemDC);
+	return hBitmap;
+}
+
+void DrawJpgToHdc(HDC hDC, RECT drawRect, const std::string& jpgFrame, COLORREF backgroundColor, int32_t blendPercent)
+{
+	IPicture* pIPicture = nullptr;
+	HBITMAP hBitmap = JPEGByteArrayToHBITMAP(jpgFrame, &pIPicture);
+	DrawHBitmapToHdc(hDC, drawRect, hBitmap, backgroundColor, blendPercent);
+	if (hBitmap != nullptr)
+	{
+		pIPicture->Release();
+	}
+}
+
 void COneKeyDlg::OnPaint()
 {
 	if (IsIconic())
@@ -1381,6 +1049,11 @@ void COneKeyDlg::OnPaint()
 	}
 	else
 	{
+		CPaintDC dc(this);
+		//std::string image = readJpgDataFromFile("D:\\xueyelingshuang\\ScreenShot\\abc.bmp");
+		HBITMAP xxx = GetDCImageToHBitmap(CWnd::GetDesktopWindow()->GetDC()->m_hDC, RECT{ 0, 0, 500, 600 });
+		DrawHBitmapToHdc(dc.m_hDC, RECT{ 0, 0, 200, 200 }, xxx, RGB(100, 100, 100), 100);
+		::DeleteObject(xxx);
 		CDialogEx::OnPaint();
 	}
 }
@@ -1392,12 +1065,20 @@ HCURSOR COneKeyDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-
+void SaveBitmap(CString strFilePath, HBITMAP hBitmap)
+{
+	if (hBitmap)
+	{
+		CImage imgTemp;
+		imgTemp.Attach(hBitmap);
+		imgTemp.Save(strFilePath);
+	}
+}
 
 void COneKeyDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->StopCurTask();
+	//CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->StopCurTask();
 }
 
 
@@ -1416,27 +1097,27 @@ void COneKeyDlg::OnSelchangeCombo1()
 	// TODO:  在此添加控件通知处理程序代码
 	CString str;
 	m_type.GetWindowText(str);
-	if (str == "刀锋")
+	if (str == "df")
 	{
 		type = 1;
 	}
-	else if (str == "劫")
+	else if (str == "j")
 	{
 		type = 2;
 	}
-	else if (str == "妖姬")
+	else if (str == "yj")
 	{
 		type = 3;
 	}
-	else if (str == "卡萨丁")
+	else if (str == "ksd")
 	{
 		type = 4;
 	}
-	else if (str == "卡特琳娜")
+	else if (str == "ktln")
 	{
 		type = 5;
 	}
-	else if (str == "进游戏")
+	else if (str == "jyx")
 	{
 		type = 6;
 		CString strTime;
@@ -1447,28 +1128,56 @@ void COneKeyDlg::OnSelchangeCombo1()
 		spIntoGameTask->setParam(time);
 		CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->PostTask(spIntoGameTask);
 	}
-	else if (str == "王者")
+	else if (str == "wz")
 	{
 		type = 7;
 		code1 = 'H';
 		code2 = 'C';
 	}
-	else if (str == "诸葛亮")
+	else if (str == "zgl")
 	{
 		type = 8;
 		code1 = 'H';
 		code2 = 'C';
 	}
-	else if (str == "钟馗")
+	else if (str == "zk")
 	{
 		type = 9;
 		code1 = 'H';
 		code2 = 'C';
 	}
-	else if (str == "司马懿")
+	else if (str == "smy")
 	{
 		type = 10;
 		code1 = 0;
 		code2 = 'C';
 	}
+}
+
+void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO:  在此添加消息处理程序代码和/或调用默认值
+
+	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(g_threadId);
+	if (taskThread == nullptr)
+	{
+		CDialogEx::OnTimer(nIDEvent);
+		return;
+	}
+
+	if (nIDEvent == 1000)
+	{
+		if (type == 10)
+		{
+			if (!clickMap && g_keyHasDown['T'] && keyWatch['T'].GetWatchTime() > 200)
+			{
+				clickMap = true;
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('M', true);
+				taskThread->PostTask(spTask, 1);
+			}
+		}
+	}
+
+	CDialogEx::OnTimer(nIDEvent);
 }

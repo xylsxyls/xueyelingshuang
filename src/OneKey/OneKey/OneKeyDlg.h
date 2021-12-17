@@ -37,4 +37,5 @@ public:
 	CComboBox m_type;
 	afx_msg void OnSelchangeCombo1();
 	CEdit m_edit;
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };
