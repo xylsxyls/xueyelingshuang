@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "CqfwrTask.h"
 #include "CKeyBoard/CKeyboardAPI.h"
+#include "D:\\SendToMessageTest.h"
 
 void CqfwrTask::DoTask()
 {

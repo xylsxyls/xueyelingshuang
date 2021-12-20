@@ -138,6 +138,9 @@
     <ClInclude Include="CSmallFlashTask.h" />
     <ClInclude Include="CWeqTask.h" />
     <ClInclude Include="CWewTask.h" />
+    <ClInclude Include="Cwq2nofTask.h" />
+    <ClInclude Include="Cwq2Task.h" />
+    <ClInclude Include="CwqAllTask.h" />
     <ClInclude Include="CwqTask.h" />
     <ClInclude Include="CwrqTask.h" />
     <ClInclude Include="CwrTask.h" />
@@ -176,6 +179,9 @@
     <ClCompile Include="CSmallFlashTask.cpp" />
     <ClCompile Include="CWeqTask.cpp" />
     <ClCompile Include="CWewTask.cpp" />
+    <ClCompile Include="Cwq2nofTask.cpp" />
+    <ClCompile Include="Cwq2Task.cpp" />
+    <ClCompile Include="CwqAllTask.cpp" />
     <ClCompile Include="CwqTask.cpp" />
     <ClCompile Include="CwrqTask.h.cpp" />
     <ClCompile Include="CwrTask.cpp" />

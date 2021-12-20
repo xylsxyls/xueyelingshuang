@@ -2,17 +2,19 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
 
-class CwqTask : public CTask
+class CwqAllTask : public CTask
 {
 public:
-	CwqTask();
+	CwqAllTask();
 
 public:
 	void DoTask();
 
 	void StopTask();
 
-	void setParam(bool isR, bool isF, int32_t key, bool isLast);
+	void LockHero(const std::string& text);
+
+	void ClickHero(char heroNum);
 
 	bool Sleep(int32_t sleepTime);
 
@@ -20,15 +22,10 @@ public:
 
 	void KeyPressF();
 
-	bool LockHero();
-
-	void Lock3();
+	void setParam(bool isEdit);
 
 private:
-	bool m_isR;
-	bool m_isF;
-	int32_t m_key;
-	bool m_isLast;
+	bool m_isEdit;
 	Semaphore m_sleep;
 	std::atomic<bool> m_exit;
 };

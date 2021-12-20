@@ -4,6 +4,8 @@
 #include "D:\\SendToMessageTest.h"
 
 CqTask::CqTask():
+m_times(0),
+m_sleepTime(0),
 m_exit(false)
 {
 
@@ -11,19 +13,38 @@ m_exit(false)
 
 void CqTask::DoTask()
 {
-	int32_t count = 7;
+	if (m_sleepTime != 0)
+	{
+		if (Sleep(m_sleepTime))
+		{
+			return;
+		}
+	}
+	int32_t count = m_times;
 	while (count-- != 0)
 	{
 		if (m_exit)
 		{
 			return;
 		}
-		CKeyboard::InputString("q", 0);
-		Sleep(50);
+		CKeyboard::KeyPress('Q', 0);
+		Sleep(10);
 	}
 }
 
 void CqTask::StopTask()
 {
 	m_exit = true;
+	m_sleep.signal();
+}
+
+void CqTask::setParam(int32_t times, int32_t sleepTime)
+{
+	m_times = times;
+	m_sleepTime = sleepTime;
+}
+
+bool CqTask::Sleep(int32_t time)
+{
+	return m_sleep.wait(time);
 }

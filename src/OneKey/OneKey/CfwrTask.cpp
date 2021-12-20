@@ -3,13 +3,13 @@
 #include "CKeyBoard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
 #include "CStopWatch/CStopWatchAPI.h"
+#include "OneKey.h"
+#include "D:\\SendToMessageTest.h"
 
 extern int32_t code1;
 extern int32_t code2;
 extern HWND g_editWnd;
-extern CStopWatch fourWatch;
-extern CStopWatch fiveWatch;
-extern CStopWatch spaceWatch;
+extern CStopWatch keyWatch[256];
 
 void CfwrTask::DoTask()
 {
@@ -26,13 +26,17 @@ void CfwrTask::DoTask()
 	KeyPressR();
 	Sleep(50);
 	KeyPressR();
+	Sleep(50);
+	KeyPressR();
+	Sleep(50);
+	KeyPressR();
 }
 
 void CfwrTask::KeyPressE()
 {
-	if (spaceWatch.GetWatchTime() > 3000)
+	if (keyWatch[VK_SPACE].GetWatchTime() > 3000)
 	{
-		if (fiveWatch.GetWatchTime() < 1000)
+		if (keyWatch['5'].GetWatchTime() < 1000)
 		{
 			char text[1024] = {};
 			::GetWindowTextA(g_editWnd, text, 1024);
@@ -42,7 +46,7 @@ void CfwrTask::KeyPressE()
 				CKeyboard::KeyPress(str[0] + 48, 0);
 			}
 		}
-		if (fourWatch.GetWatchTime() < 1000)
+		if (keyWatch['4'].GetWatchTime() < 1000)
 		{
 			char text[1024] = {};
 			::GetWindowTextA(g_editWnd, text, 1024);

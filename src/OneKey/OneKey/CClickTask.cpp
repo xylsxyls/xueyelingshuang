@@ -3,6 +3,7 @@
 #include "CMouse/CMouseAPI.h"
 #include "CKeyBoard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
+#include "D:\\SendToMessageTest.h"
 
 CClickTask::CClickTask():
 m_ctrlCode(0),

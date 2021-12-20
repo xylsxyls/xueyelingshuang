@@ -12,15 +12,12 @@ extern int32_t code1;
 extern int32_t code2;
 extern bool rightDown;
 extern HWND g_editWnd;
-extern CStopWatch oneWatch;
-extern CStopWatch twoWatch;
-extern CStopWatch threeWatch;
-extern CStopWatch spaceWatch;
 
 CwqTask::CwqTask():
 m_isR(false),
 m_isF(false),
-m_exit(false)
+m_exit(false),
+m_isLast(false)
 {
 
 }
@@ -29,10 +26,10 @@ void CwqTask::DoTask()
 {
 	if (m_isR)
 	{
-		if (LockHero())
-		{
-			return;
-		}
+		//if (LockHero())
+		//{
+		//	return;
+		//}
 		CKeyboard::KeyPress('W', 0);
 		Sleep(150);
 		KeyPressE();
@@ -46,60 +43,61 @@ void CwqTask::DoTask()
 	else
 	{
 		//每次按键之后都要锁定，可能因为w导致目标改变
-		if (LockHero())
-		{
-			RCSend("end");
-			return;
-		}
-		KeyPressE();
-		if (Sleep(100))
-		{
-			RCSend("end100");
-			return;
-		}
-		if (m_isF)
-		{
-			KeyPressF();
-		}
-		if (Sleep(50))
-		{
-			RCSend("end50");
-			return;
-		}
-		RCSend("w");
-		CKeyboard::KeyPress('W', 0);
-		if (Sleep(50))
-		{
-			RCSend("end501");
-			return;
-		}
-		CKeyboard::KeyPress('W', 0);
-		if (Sleep(50))
-		{
-			RCSend("end502");
-			return;
-		}
-		CKeyboard::KeyPress('W', 0);
-		if (Sleep(50))
-		{
-			RCSend("end503");
-			return;
-		}
-		Lock3();
-		KeyPressE();
-		CKeyboard::KeyPress('W', 0);
-		Sleep(50);
-		Lock3();
-		KeyPressE();
-		Sleep(50);
-		Lock3();
-		KeyPressE();
-		Sleep(50);
-		Lock3();
-		KeyPressE();
-		Sleep(50);
-		Lock3();
-		KeyPressE();
+		//if (LockHero())
+		//{
+		//	RCSend("end");
+		//	return;
+		//}
+		//KeyPressE();
+		//if (Sleep(100))
+		//{
+		//	RCSend("end100");
+		//	return;
+		//}
+		//
+		//if (m_isF)
+		//{
+		//	KeyPressF();
+		//}
+		//if (Sleep(50))
+		//{
+		//	RCSend("end50");
+		//	return;
+		//}
+		//RCSend("w");
+		//CKeyboard::KeyPress('W', 0);
+		//if (Sleep(50))
+		//{
+		//	RCSend("end501");
+		//	return;
+		//}
+		//CKeyboard::KeyPress('W', 0);
+		//if (Sleep(50))
+		//{
+		//	RCSend("end502");
+		//	return;
+		//}
+		//CKeyboard::KeyPress('W', 0);
+		//if (Sleep(50))
+		//{
+		//	RCSend("end503");
+		//	return;
+		//}
+		//Lock3();
+		//KeyPressE();
+		//CKeyboard::KeyPress('W', 0);
+		//Sleep(50);
+		//Lock3();
+		//KeyPressE();
+		//Sleep(50);
+		//Lock3();
+		//KeyPressE();
+		//Sleep(50);
+		//Lock3();
+		//KeyPressE();
+		//Sleep(50);
+		//Lock3();
+		//KeyPressE();
 	}
 }
 
@@ -109,11 +107,12 @@ void CwqTask::StopTask()
 	m_sleep.signal();
 }
 
-void CwqTask::setParam(bool isR, bool isF, int32_t key)
+void CwqTask::setParam(bool isR, bool isF, int32_t key, bool isLast)
 {
 	m_isR = isR;
 	m_isF = isF;
 	m_key = key;
+	m_isLast = isLast;
 }
 
 bool CwqTask::Sleep(int32_t sleepTime)
@@ -125,11 +124,11 @@ void CwqTask::KeyPressE()
 {
 	if (code1 != 0)
 	{
-		CKeyboard::KeyPress(code1, 0);
+		//CKeyboard::KeyPress(code1, 0);
 	}
 	if (code2 != 0)
 	{
-		CKeyboard::KeyPress(code2, 0);
+		CKeyboard::KeyPress('C', 0);
 	}
 }
 
@@ -153,6 +152,10 @@ bool CwqTask::LockHero()
 	case 2:
 	{
 		CKeyboard::KeyPress('H', 0);
+		if (Sleep(100))
+		{
+			return true;
+		}
 	}
 	break;
 	case 3:
@@ -164,21 +167,47 @@ bool CwqTask::LockHero()
 			std::string str = text;
 			if (str.size() == 1)
 			{
-				CKeyboard::KeyPress(str[0] + 48, 0);
-			}
-			else if (str.size() >= 2)
-			{
-				CKeyboard::KeyPress(str[0] + 48, 0);
+				if (m_isLast)
+				{
+					CKeyboard::KeyPress('H', 0);
+				}
+				else
+				{
+					CKeyboard::KeyPress(str[0] + 48, 0);
+				}
 				if (Sleep(100))
 				{
 					return true;
 				}
-				CKeyboard::KeyPress(str[1] + 48, 0);
-				CKeyboard::KeyPress(str[0] + 48, 0);
+			}
+			else if (str.size() >= 2)
+			{
+				if (m_isLast)
+				{
+					CKeyboard::KeyPress(str[1] + 48, 0);
+					if (Sleep(100))
+					{
+						return true;
+					}
+				}
+				else
+				{
+					CKeyboard::KeyPress(str[0] + 48, 0);
+					if (Sleep(100))
+					{
+						return true;
+					}
+					CKeyboard::KeyPress(str[1] + 48, 0);
+					CKeyboard::KeyPress(str[0] + 48, 0);
+				}
 			}
 			else
 			{
 				CKeyboard::KeyPress('H', 0);
+				if (Sleep(100))
+				{
+					return true;
+				}
 			}
 		}
 	}
@@ -191,15 +220,32 @@ bool CwqTask::LockHero()
 
 void CwqTask::Lock3()
 {
-	if (threeWatch.GetWatchTime() < 1000)
-	{
-		char text[1024] = {};
-		::GetWindowTextA(g_editWnd, text, 1024);
-		std::string str = text;
-		if (str.size() >= 1)
-		{
-			CKeyboard::KeyPress(str[0] + 48, 0);
-			//::Sleep(100);
-		}
-	}
+	//if (threeWatch.GetWatchTime() < 1000)
+	//{
+	//	char text[1024] = {};
+	//	::GetWindowTextA(g_editWnd, text, 1024);
+	//	std::string str = text;
+	//	if (str.size() == 1)
+	//	{
+	//		if (m_isLast)
+	//		{
+	//			CKeyboard::KeyPress('H', 0);
+	//		}
+	//		else
+	//		{
+	//			CKeyboard::KeyPress(str[0] + 48, 0);
+	//		}
+	//	}
+	//	else if (str.size() >= 2)
+	//	{
+	//		if (m_isLast)
+	//		{
+	//			CKeyboard::KeyPress(str[1] + 48, 0);
+	//		}
+	//		else
+	//		{
+	//			CKeyboard::KeyPress(str[0] + 48, 0);
+	//		}
+	//	}
+	//}
 }
