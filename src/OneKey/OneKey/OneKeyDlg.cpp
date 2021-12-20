@@ -46,6 +46,7 @@
 #include "CwqAllTask.h"
 #include "Cwq2Task.h"
 #include "Cwq2nofTask.h"
+#include "CScreen/CScreenAPI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -59,7 +60,7 @@ CStopWatch stopWatch;
 CStopWatch textWatch;
 CStopWatch moveWatch;
 
-CStopWatch keyWatch[255] = {};
+CStopWatch keyWatch[256] = {};
 
 int32_t type = 1;
 
@@ -71,6 +72,20 @@ bool g_leftHasDown = false;
 bool g_rightHasDown = false;
 bool g_hasMove = false;
 bool g_qKey = false;
+bool g_checkHero = false;
+
+xyls::Point g_heroHeadPoint[5] = { { 1164, 748 }, { 1202, 631 }, { 1276, 523 }, { 1376, 444 }, { 1489, 389 } };
+int32_t g_side = 80;
+const int32_t g_checkSize = 2;
+xyls::Point g_heroHeadCheck[g_checkSize] = { { 42, 5 }, { 10, 8 } };
+int32_t g_checkSide = 2;
+const int32_t g_checkColorSize = 2;
+xyls::Color g_checkColor[g_checkSize][g_checkColorSize] = { { xyls::Color(30, 30, 30), xyls::Color(30, 30, 30) },
+{ xyls::Color(30, 30, 30), xyls::Color(30, 30, 30) } };
+std::vector<int32_t> g_vecUpdate;
+
+xyls::Point g_heroHeadShowPoint = { 230, 220 };
+int32_t g_heroHeadSpace = 20;
 
 #define SPACE 32
 #define ALT 164
@@ -654,12 +669,17 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				{
 					text = text.substr(text.size() - 2, 2);
 				}
+				if (text.size() == 2)
+				{
+					g_checkHero = false;
+				}
 				::SetWindowTextA(g_editWnd, text.c_str());
 			}
 
 			if (keyDown[KEY + '6'])
 			{
 				::SetWindowTextA(g_editWnd, "");
+				g_checkHero = true;
 			}
 			else if (keyDown[KEY + '7'])
 			{
@@ -847,6 +867,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+	
 	g_editWnd = m_edit.m_hWnd;
 	m_type.AddString("df");
 	m_type.AddString("j");
@@ -868,6 +889,19 @@ BOOL COneKeyDlg::OnInitDialog()
 		keyWatch[index].SetWatchTime(10000);
 	}
 	g_threadId = CTaskThreadManager::Instance().Init();
+
+	int32_t groupIndex = -1;
+	while (groupIndex++ != g_checkSize - 1)
+	{
+		std::vector<xyls::Color> vecColor;
+		int32_t colorIndex = -1;
+		while (colorIndex++ != g_checkColorSize - 1)
+		{
+			vecColor.push_back(g_checkColor[groupIndex][colorIndex]);
+		}
+		m_vecCheckColor.push_back(vecColor);
+	}
+
 	SetTimer(1000, 10, nullptr);
 	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);
     CHook::Init(WH_MOUSE_LL, MouseHookFun);
@@ -1055,10 +1089,25 @@ void COneKeyDlg::OnPaint()
 	else
 	{
 		CPaintDC dc(this);
-		//std::string image = readJpgDataFromFile("D:\\xueyelingshuang\\ScreenShot\\abc.bmp");
-		HBITMAP xxx = GetDCImageToHBitmap(CWnd::GetDesktopWindow()->GetDC()->m_hDC, RECT{ 0, 0, 500, 600 });
-		DrawHBitmapToHdc(dc.m_hDC, RECT{ 0, 0, 200, 200 }, xxx, RGB(100, 100, 100), 100);
-		::DeleteObject(xxx);
+		
+		int32_t index = -1;
+		while (g_checkHero && (index++ != g_vecUpdate.size() - 1))
+		{
+			xyls::Rect rect = xyls::Rect(g_heroHeadPoint[g_vecUpdate[index]], g_side, g_side);
+			CDC* desk = CWnd::GetDesktopWindow()->GetDC();
+			HBITMAP hero = GetDCImageToHBitmap(desk->m_hDC, rect);
+			DrawHBitmapToHdc(dc.m_hDC,
+				xyls::Rect{ xyls::Point(g_heroHeadShowPoint.x() + g_vecUpdate[index] * (g_side / 2 + g_heroHeadSpace),
+				g_heroHeadShowPoint.y()),
+				g_side / 2,
+				g_side / 2},
+				hero,
+				RGB(100, 100, 100),
+				100);
+			::DeleteObject(hero);
+			CWnd::GetDesktopWindow()->ReleaseDC(desk);
+		}
+		
 		CDialogEx::OnPaint();
 	}
 }
@@ -1100,6 +1149,7 @@ void COneKeyDlg::OnDestroy()
 void COneKeyDlg::OnSelchangeCombo1()
 {
 	// TODO:  在此添加控件通知处理程序代码
+	g_checkHero = false;
 	CString str;
 	m_type.GetWindowText(str);
 	if (str == "df")
@@ -1156,6 +1206,7 @@ void COneKeyDlg::OnSelchangeCombo1()
 		type = 10;
 		code1 = 0;
 		code2 = 'C';
+		g_checkHero = true;
 	}
 }
 
@@ -1181,6 +1232,40 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 				spTask->setParam('M', true);
 				taskThread->PostTask(spTask, 1);
 			}
+		}
+	}
+
+	g_vecUpdate.clear();
+	static int xx = 0;
+	++xx;
+	if (g_checkHero && (xx % 100 == 0))
+	{
+		int32_t heroIndex = -1;
+		while (heroIndex++ != 5 - 1)
+		{
+			bool isFind = true;
+			int32_t checkIndex = -1;
+			while (checkIndex++ != g_checkSize - 1)
+			{
+				xyls::Rect check = xyls::Rect(xyls::Point(g_heroHeadPoint[heroIndex].x() +
+					g_heroHeadCheck[checkIndex].x(),
+					g_heroHeadPoint[heroIndex].y() +
+					g_heroHeadCheck[checkIndex].y()),
+					g_checkSide,
+					g_checkSide);
+				int32_t x;
+				int32_t y;
+				isFind = isFind && CScreen::FindColor(check, m_vecCheckColor[checkIndex], x, y, 0.7);
+			}
+			if (isFind)
+			{
+				g_vecUpdate.push_back(heroIndex);
+			}
+		}
+	
+		if (!g_vecUpdate.empty())
+		{
+			Invalidate(false);
 		}
 	}
 
