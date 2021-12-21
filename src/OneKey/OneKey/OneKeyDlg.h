@@ -41,4 +41,7 @@ public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 
 	std::vector<std::vector<xyls::Color>> m_vecCheckColor;
+	CWnd* m_deskWnd;
+	CDC* m_deskCDC;
+	HDC m_deskHDC;
 };

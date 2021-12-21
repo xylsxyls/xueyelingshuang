@@ -46,7 +46,7 @@
 #include "CwqAllTask.h"
 #include "Cwq2Task.h"
 #include "Cwq2nofTask.h"
-#include "CScreen/CScreenAPI.h"
+#include "CSystem/CSystemAPI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -145,7 +145,9 @@ END_MESSAGE_MAP()
 
 
 COneKeyDlg::COneKeyDlg(CWnd* pParent /*=NULL*/)
-	: CDialogEx(COneKeyDlg::IDD, pParent)
+	: CDialogEx(COneKeyDlg::IDD, pParent),
+	m_deskWnd(nullptr),
+	m_deskCDC(nullptr)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -680,6 +682,17 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			if (keyDown[KEY + '6'])
 			{
 				::SetWindowTextA(g_editWnd, "");
+				std::string path = CSystem::GetCurrentExePath() + "HeroHead\\";
+				
+				if (CSystem::DirOrFileExist(path))
+				{
+					int32_t index = 99;
+					while (index++ != 600 - 1)
+					{
+						CSystem::deleteFile((path + std::to_string(index) + ".jpg").c_str());
+					}
+				}
+
 				g_checkHero = true;
 			}
 			else if (keyDown[KEY + '7'])
@@ -903,6 +916,10 @@ BOOL COneKeyDlg::OnInitDialog()
 		m_vecCheckColor.push_back(vecColor);
 	}
 
+	m_deskWnd = CWnd::GetDesktopWindow();
+	m_deskCDC = m_deskWnd->GetDC();
+	m_deskHDC = m_deskCDC->m_hDC;
+
 	SetTimer(1000, 10, nullptr);
 	CHook::Init(WH_KEYBOARD_LL, KeyboardHookFun);
     CHook::Init(WH_MOUSE_LL, MouseHookFun);
@@ -1091,23 +1108,23 @@ void COneKeyDlg::OnPaint()
 	{
 		CPaintDC dc(this);
 		
-		int32_t index = -1;
-		while (g_checkHero && (index++ != g_vecUpdate.size() - 1))
-		{
-			xyls::Rect rect = xyls::Rect(g_heroHeadPoint[g_vecUpdate[index]], g_side, g_side);
-			CDC* desk = CWnd::GetDesktopWindow()->GetDC();
-			HBITMAP hero = GetDCImageToHBitmap(desk->m_hDC, rect);
-			DrawHBitmapToHdc(dc.m_hDC,
-				xyls::Rect{ xyls::Point(g_heroHeadShowPoint.x() + g_vecUpdate[index] * (g_showSide + g_heroHeadSpace),
-				g_heroHeadShowPoint.y()),
-				g_showSide,
-				g_showSide },
-				hero,
-				RGB(100, 100, 100),
-				95);
-			::DeleteObject(hero);
-			CWnd::GetDesktopWindow()->ReleaseDC(desk);
-		}
+		//int32_t index = -1;
+		//while (g_checkHero && (index++ != g_vecUpdate.size() - 1))
+		//{
+		//	xyls::Rect rect = xyls::Rect(g_heroHeadPoint[g_vecUpdate[index]], g_side, g_side);
+		//	CDC* desk = CWnd::GetDesktopWindow()->GetDC();
+		//	HBITMAP hero = GetDCImageToHBitmap(desk->m_hDC, rect);
+		//	DrawHBitmapToHdc(dc.m_hDC,
+		//		xyls::Rect{ xyls::Point(g_heroHeadShowPoint.x() + g_vecUpdate[index] * (g_showSide + g_heroHeadSpace),
+		//		g_heroHeadShowPoint.y()),
+		//		g_showSide,
+		//		g_showSide },
+		//		hero,
+		//		RGB(100, 100, 100),
+		//		95);
+		//	::DeleteObject(hero);
+		//	CWnd::GetDesktopWindow()->ReleaseDC(desk);
+		//}
 		
 		CDialogEx::OnPaint();
 	}
@@ -1144,6 +1161,18 @@ void COneKeyDlg::OnDestroy()
 	// TODO:  在此处添加消息处理程序代码
 	CHook::Uninit();
 	CTaskThreadManager::Instance().UninitAll();
+	m_deskWnd->ReleaseDC(m_deskCDC);
+
+	std::string path = CSystem::GetCurrentExePath() + "HeroHead\\";
+	if (CSystem::DirOrFileExist(path))
+	{
+		int32_t index = 99;
+		while (index++ != 600 - 1)
+		{
+			CSystem::deleteFile((path + std::to_string(index) + ".jpg").c_str());
+		}
+		CSystem::DestroyDir(path);
+	}
 }
 
 
@@ -1151,6 +1180,16 @@ void COneKeyDlg::OnSelchangeCombo1()
 {
 	// TODO:  在此添加控件通知处理程序代码
 	g_checkHero = false;
+	std::string path = CSystem::GetCurrentExePath() + "HeroHead\\";
+	if (CSystem::DirOrFileExist(path))
+	{
+		int32_t index = 99;
+		while (index++ != 600 - 1)
+		{
+			CSystem::deleteFile((path + std::to_string(index) + ".jpg").c_str());
+		}
+		CSystem::DestroyDir(path);
+	}
 	CString str;
 	m_type.GetWindowText(str);
 	if (str == "df")
@@ -1207,6 +1246,7 @@ void COneKeyDlg::OnSelchangeCombo1()
 		type = 10;
 		code1 = 0;
 		code2 = 'C';
+		CSystem::CreateDir(path);
 		g_checkHero = true;
 	}
 }
@@ -1236,38 +1276,21 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 		}
 	}
 
-	g_vecUpdate.clear();
-	static int xx = 0;
-	++xx;
-	if (g_checkHero && (xx % 100 == 0))
+	static int times = -1;
+	++times;
+	if (g_checkHero && (times % 60 == 0))
 	{
-		int32_t heroIndex = -1;
-		while (heroIndex++ != 5 - 1)
-		{
-			bool isFind = true;
-			int32_t checkIndex = -1;//g_checkSize
-			while (checkIndex++ != 1 - 1)
-			{
-				xyls::Rect check = xyls::Rect(xyls::Point(g_heroHeadPoint[heroIndex].x() +
-					g_heroHeadCheck[checkIndex].x(),
-					g_heroHeadPoint[heroIndex].y() +
-					g_heroHeadCheck[checkIndex].y()),
-					g_checkSide,
-					g_checkSide);
-				int32_t x;
-				int32_t y;
-				isFind = isFind && CScreen::FindColor(check, m_vecCheckColor[checkIndex], x, y, 0.6);
-			}
-			if (isFind)
-			{
-				g_vecUpdate.push_back(heroIndex);
-			}
-		}
-	
-		if (!g_vecUpdate.empty())
-		{
-			Invalidate(false);
-		}
+		int32_t heroIndex = times / 60 % 5;
+		int32_t heroName = times / 300 % 100;
+
+		xyls::Rect heroHead = xyls::Rect(g_heroHeadPoint[heroIndex], g_side, g_side);
+
+		HBITMAP imgHeroHead = GetDCImageToHBitmap(m_deskHDC, heroHead);
+		char path[256] = {};
+		sprintf(path, "%sHeroHead\\%d%02d.jpg", CSystem::GetCurrentExePath().c_str(), heroIndex + 1, heroName);
+		SaveBitmap(path, imgHeroHead);
+
+		::DeleteObject(imgHeroHead);
 	}
 
 	CDialogEx::OnTimer(nIDEvent);
