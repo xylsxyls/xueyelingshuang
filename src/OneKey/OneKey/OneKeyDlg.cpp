@@ -74,17 +74,18 @@ bool g_hasMove = false;
 bool g_qKey = false;
 bool g_checkHero = false;
 
-xyls::Point g_heroHeadPoint[5] = { { 1164, 748 }, { 1202, 631 }, { 1276, 523 }, { 1376, 444 }, { 1489, 389 } };
-int32_t g_side = 80;
+xyls::Point g_heroHeadPoint[5] = { { 1151, 739 }, { 1192, 620 }, { 1266, 514 }, { 1367, 437 }, { 1483, 383 } };
+int32_t g_side = 96;
 const int32_t g_checkSize = 2;
-xyls::Point g_heroHeadCheck[g_checkSize] = { { 42, 5 }, { 10, 8 } };
-int32_t g_checkSide = 2;
-const int32_t g_checkColorSize = 2;
-xyls::Color g_checkColor[g_checkSize][g_checkColorSize] = { { xyls::Color(30, 30, 30), xyls::Color(30, 30, 30) },
-{ xyls::Color(30, 30, 30), xyls::Color(30, 30, 30) } };
+xyls::Point g_heroHeadCheck[g_checkSize] = { { 63, 5 }, { 15, 15 } };
+int32_t g_checkSide = 3;
+const int32_t g_checkColorSize = 2;//xyls::Color(32, 151, 196) xyls::Color(26, 147, 190) xyls::Color(30, 30, 30)
+xyls::Color g_checkColor[g_checkSize][g_checkColorSize] = { { xyls::Color(32, 151, 196), xyls::Color(193, 28, 25) },
+{ xyls::Color(26, 147, 190), xyls::Color(36, 37, 19) } };
 std::vector<int32_t> g_vecUpdate;
 
 xyls::Point g_heroHeadShowPoint = { 230, 220 };
+int32_t g_showSide = 40;
 int32_t g_heroHeadSpace = 20;
 
 #define SPACE 32
@@ -1097,13 +1098,13 @@ void COneKeyDlg::OnPaint()
 			CDC* desk = CWnd::GetDesktopWindow()->GetDC();
 			HBITMAP hero = GetDCImageToHBitmap(desk->m_hDC, rect);
 			DrawHBitmapToHdc(dc.m_hDC,
-				xyls::Rect{ xyls::Point(g_heroHeadShowPoint.x() + g_vecUpdate[index] * (g_side / 2 + g_heroHeadSpace),
+				xyls::Rect{ xyls::Point(g_heroHeadShowPoint.x() + g_vecUpdate[index] * (g_showSide + g_heroHeadSpace),
 				g_heroHeadShowPoint.y()),
-				g_side / 2,
-				g_side / 2},
+				g_showSide,
+				g_showSide },
 				hero,
 				RGB(100, 100, 100),
-				100);
+				95);
 			::DeleteObject(hero);
 			CWnd::GetDesktopWindow()->ReleaseDC(desk);
 		}
@@ -1244,8 +1245,8 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 		while (heroIndex++ != 5 - 1)
 		{
 			bool isFind = true;
-			int32_t checkIndex = -1;
-			while (checkIndex++ != g_checkSize - 1)
+			int32_t checkIndex = -1;//g_checkSize
+			while (checkIndex++ != 1 - 1)
 			{
 				xyls::Rect check = xyls::Rect(xyls::Point(g_heroHeadPoint[heroIndex].x() +
 					g_heroHeadCheck[checkIndex].x(),
@@ -1255,7 +1256,7 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 					g_checkSide);
 				int32_t x;
 				int32_t y;
-				isFind = isFind && CScreen::FindColor(check, m_vecCheckColor[checkIndex], x, y, 0.7);
+				isFind = isFind && CScreen::FindColor(check, m_vecCheckColor[checkIndex], x, y, 0.6);
 			}
 			if (isFind)
 			{
