@@ -885,17 +885,17 @@ BOOL COneKeyDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 	
 	g_editWnd = m_edit.m_hWnd;
-	m_type.AddString("df");
-	m_type.AddString("j");
-	m_type.AddString("yj");
-	m_type.AddString("ksd");
-	m_type.AddString("ktln");
-	m_type.AddString("jyx");
-	m_type.AddString("wz");
-	m_type.AddString("zgl");
-	m_type.AddString("zk");
-	m_type.AddString("smy");
-	m_type.SelectString(7, "zgl");
+	m_type.AddString("刀锋");
+	m_type.AddString("劫");
+	m_type.AddString("妖姬");
+	m_type.AddString("卡萨丁");
+	m_type.AddString("卡特琳娜");
+	m_type.AddString("进游戏");
+	m_type.AddString("王者");
+	m_type.AddString("诸葛亮");
+	m_type.AddString("钟馗");
+	m_type.AddString("司马懿");
+	m_type.SelectString(7, "诸葛亮");
 	type = 8;
 	m_button.SetFocus();
 	textWatch.SetWatchTime(10000);
@@ -1194,27 +1194,27 @@ void COneKeyDlg::OnSelchangeCombo1()
 	}
 	CString str;
 	m_type.GetWindowText(str);
-	if (str == "df")
+	if (str == "刀锋")
 	{
 		type = 1;
 	}
-	else if (str == "j")
+	else if (str == "劫")
 	{
 		type = 2;
 	}
-	else if (str == "yj")
+	else if (str == "妖姬")
 	{
 		type = 3;
 	}
-	else if (str == "ksd")
+	else if (str == "卡萨丁")
 	{
 		type = 4;
 	}
-	else if (str == "ktln")
+	else if (str == "卡特琳娜")
 	{
 		type = 5;
 	}
-	else if (str == "jyx")
+	else if (str == "进游戏")
 	{
 		type = 6;
 		CString strTime;
@@ -1225,25 +1225,25 @@ void COneKeyDlg::OnSelchangeCombo1()
 		spIntoGameTask->setParam(time);
 		CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->PostTask(spIntoGameTask);
 	}
-	else if (str == "wz")
+	else if (str == "王者")
 	{
 		type = 7;
 		code1 = 'H';
 		code2 = 'C';
 	}
-	else if (str == "zgl")
+	else if (str == "诸葛亮")
 	{
 		type = 8;
 		code1 = 'H';
 		code2 = 'C';
 	}
-	else if (str == "zk")
+	else if (str == "钟馗")
 	{
 		type = 9;
 		code1 = 'H';
 		code2 = 'C';
 	}
-	else if (str == "smy")
+	else if (str == "司马懿")
 	{
 		type = 10;
 		code1 = 0;
