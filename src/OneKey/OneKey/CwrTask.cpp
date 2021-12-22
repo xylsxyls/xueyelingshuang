@@ -6,6 +6,7 @@
 void CwrTask::DoTask()
 {
 	CKeyboard::KeyPress('H', 0);
+	CKeyboard::KeyUp('W');
 	Sleep(100);
 	KeyPressF();
 	Sleep(100);

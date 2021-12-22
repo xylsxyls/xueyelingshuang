@@ -80,8 +80,8 @@ const int32_t g_checkSize = 2;
 xyls::Point g_heroHeadCheck[g_checkSize] = { { 63, 5 }, { 15, 15 } };
 int32_t g_checkSide = 3;
 const int32_t g_checkColorSize = 2;//xyls::Color(32, 151, 196) xyls::Color(26, 147, 190) xyls::Color(30, 30, 30)
-xyls::Color g_checkColor[g_checkSize][g_checkColorSize] = { { xyls::Color(32, 151, 196), xyls::Color(193, 28, 25) },
-{ xyls::Color(26, 147, 190), xyls::Color(36, 37, 19) } };
+//xyls::Color g_checkColor[g_checkSize][g_checkColorSize] = { { xyls::Color(32, 151, 196), xyls::Color(193, 28, 25) },
+//{ xyls::Color(26, 147, 190), xyls::Color(36, 37, 19) } };
 std::vector<int32_t> g_vecUpdate;
 
 xyls::Point g_heroHeadShowPoint = { 230, 220 };
@@ -662,21 +662,23 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				keyText = "5";
 			}
 
+			char str[1024] = {};
+			::GetWindowTextA(g_editWnd, str, 1024);
+
 			if (!keyText.empty())
 			{
-				char str[1024] = {};
-				::GetWindowTextA(g_editWnd, str, 1024);
 				std::string text = str;
 				text += keyText;
 				if (text.size() > 2)
 				{
 					text = text.substr(text.size() - 2, 2);
 				}
-				if (text.size() == 2)
-				{
-					g_checkHero = false;
-				}
 				::SetWindowTextA(g_editWnd, text.c_str());
+			}
+
+			if (strlen(str) >= 2)
+			{
+				g_checkHero = false;
 			}
 
 			if (keyDown[KEY + '6'])
@@ -797,7 +799,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				std::shared_ptr<CrTask> spTask(new CrTask);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if ((g_keyHasDown[CTRL] && keyUp['W']) && stopWatch.GetWatchTime() > 500)
+			else if ((g_keyHasDown[CTRL] && keyDown['W']) && stopWatch.GetWatchTime() > 500)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CwrTask> spTask(new CwrTask);
@@ -904,17 +906,17 @@ BOOL COneKeyDlg::OnInitDialog()
 	}
 	g_threadId = CTaskThreadManager::Instance().Init();
 
-	int32_t groupIndex = -1;
-	while (groupIndex++ != g_checkSize - 1)
-	{
-		std::vector<xyls::Color> vecColor;
-		int32_t colorIndex = -1;
-		while (colorIndex++ != g_checkColorSize - 1)
-		{
-			vecColor.push_back(g_checkColor[groupIndex][colorIndex]);
-		}
-		m_vecCheckColor.push_back(vecColor);
-	}
+	//int32_t groupIndex = -1;
+	//while (groupIndex++ != g_checkSize - 1)
+	//{
+	//	std::vector<xyls::Color> vecColor;
+	//	int32_t colorIndex = -1;
+	//	while (colorIndex++ != g_checkColorSize - 1)
+	//	{
+	//		vecColor.push_back(g_checkColor[groupIndex][colorIndex]);
+	//	}
+	//	m_vecCheckColor.push_back(vecColor);
+	//}
 
 	m_deskWnd = CWnd::GetDesktopWindow();
 	m_deskCDC = m_deskWnd->GetDC();

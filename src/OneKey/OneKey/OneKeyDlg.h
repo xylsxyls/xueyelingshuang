@@ -5,7 +5,6 @@
 #pragma once
 #include "afxwin.h"
 #include <vector>
-#include "Color/ColorAPI.h"
 
 // COneKeyDlg ¶Ô»°¿ò
 class COneKeyDlg : public CDialogEx
@@ -40,7 +39,7 @@ public:
 	CEdit m_edit;
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 
-	std::vector<std::vector<xyls::Color>> m_vecCheckColor;
+	//std::vector<std::vector<xyls::Color>> m_vecCheckColor;
 	CWnd* m_deskWnd;
 	CDC* m_deskCDC;
 	HDC m_deskHDC;
