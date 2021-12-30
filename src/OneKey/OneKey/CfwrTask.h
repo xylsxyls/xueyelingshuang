@@ -4,6 +4,9 @@
 class CfwrTask : public CTask
 {
 public:
+	CfwrTask();
+
+public:
 	void DoTask();
 
 	void KeyPressE();
@@ -11,4 +14,9 @@ public:
 	void KeyPressF();
 
 	void KeyPressR();
+
+	void setParam(int32_t editIndex);
+
+private:
+	int32_t m_editIndex;
 };

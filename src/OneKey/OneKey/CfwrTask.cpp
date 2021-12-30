@@ -11,9 +11,27 @@ extern int32_t code2;
 extern HWND g_editWnd;
 extern CStopWatch keyWatch[256];
 
+CfwrTask::CfwrTask():
+m_editIndex(0)
+{
+
+}
+
 void CfwrTask::DoTask()
 {
-	KeyPressE();
+	char str[1024] = {};
+	::GetWindowTextA(g_editWnd, str, 1024);
+
+	std::string text = str;
+
+	if (text.size() <= m_editIndex)
+	{
+		KeyPressE();
+	}
+	else
+	{
+		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+	}
 	Sleep(100);
 	CMouse::RightClick(0);
 	Sleep(150);
@@ -34,37 +52,13 @@ void CfwrTask::DoTask()
 
 void CfwrTask::KeyPressE()
 {
-	if (keyWatch[VK_SPACE].GetWatchTime() > 3000)
+	//if (code1 != 0)
+	//{
+	//	CKeyboard::KeyPress(code1, 0);
+	//}
+	//if (code2 != 0)
 	{
-		if (keyWatch['5'].GetWatchTime() < 1000)
-		{
-			char text[1024] = {};
-			::GetWindowTextA(g_editWnd, text, 1024);
-			std::string str = text;
-			if (!str.empty())
-			{
-				CKeyboard::KeyPress(str[0] + 48, 0);
-			}
-		}
-		if (keyWatch['4'].GetWatchTime() < 1000)
-		{
-			char text[1024] = {};
-			::GetWindowTextA(g_editWnd, text, 1024);
-			std::string str = text;
-			if (str.size() >= 2)
-			{
-				CKeyboard::KeyPress(str[1] + 48, 0);
-			}
-		}
-	}
-
-	if (code1 != 0)
-	{
-		CKeyboard::KeyPress(code1, 0);
-	}
-	if (code2 != 0)
-	{
-		CKeyboard::KeyPress(code2, 0);
+		CKeyboard::KeyPress('C', 0);
 	}
 }
 
@@ -82,4 +76,9 @@ void CfwrTask::KeyPressR()
 	CMouse::MoveAbsolute(xyls::Point(1714, 598), 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
+}
+
+void CfwrTask::setParam(int32_t editIndex)
+{
+	m_editIndex = editIndex;
 }

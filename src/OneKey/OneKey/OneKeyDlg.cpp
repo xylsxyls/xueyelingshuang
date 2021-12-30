@@ -746,38 +746,61 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			//	spTask->setParam(60, 500);
 			//	taskThread->PostTask(spTask, 1);
 			//}
-			else if (g_qKey && keyDown['5'] && (g_lastKey == 'Q') && keyWatch['Q'].GetWatchTime() < 3500 && stopWatch.GetWatchTime() > 300)
+
+			if (g_qKey && keyWatch['Q'].GetWatchTime() < 3500)
 			{
-				//taskThread->StopAllTask();
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CfwrTask> spTask(new CfwrTask);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (g_qKey && keyDown['4'] && (g_lastKey == 'Q') && keyWatch['Q'].GetWatchTime() < 3500 && stopWatch.GetWatchTime() > 300)
-			{
-				//taskThread->StopAllTask();
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CfwrTask> spTask(new CfwrTask);
-				taskThread->PostTask(spTask, 1);
-			}
-			else if (keyDown['3'])
-			{
-				//taskThread->StopAllTask();
-				if (g_qKey && !g_keyHasDown[CTRL] && keyWatch['Q'].GetWatchTime() < 3500)
+				int32_t editIndex = -1;
+				if (keyDown['1'])
 				{
-					stopWatch.SetWatchTime(0);
-					std::shared_ptr<CwqAllTask> spTask(new CwqAllTask);
-					spTask->setParam(true);
-					taskThread->PostTask(spTask, 1);
+					editIndex = 4;
 				}
-				else if (g_qKey && g_keyHasDown[CTRL])
+				else if (keyDown['2'])
 				{
-					stopWatch.SetWatchTime(0);
-					std::shared_ptr<Cwq2Task> spTask(new Cwq2Task);
-					spTask->setParam(2);
-					taskThread->PostTask(spTask, 1);
+					editIndex = 1;
 				}
-				else if (keyWatch['R'].GetWatchTime() < 5000)
+				else if (keyDown['3'])
+				{
+					editIndex = 0;
+				}
+				else if (keyDown['4'])
+				{
+					editIndex = 2;
+				}
+				else if (keyDown['5'])
+				{
+					editIndex = 3;
+				}
+				if (editIndex != -1)
+				{
+					if (editIndex == 0)
+					{
+						stopWatch.SetWatchTime(0);
+						std::shared_ptr<CwqAllTask> spTask(new CwqAllTask);
+						spTask->setParam(true);
+						taskThread->PostTask(spTask, 1);
+					}
+					else
+					{
+						if (g_keyHasDown[CTRL])
+						{
+							stopWatch.SetWatchTime(0);
+							std::shared_ptr<CfwrTask> spTask(new CfwrTask);
+							spTask->setParam(editIndex);
+							taskThread->PostTask(spTask, 1);
+						}
+						else
+						{
+							stopWatch.SetWatchTime(0);
+							std::shared_ptr<Cwq2Task> spTask(new Cwq2Task);
+							spTask->setParam(editIndex);
+							taskThread->PostTask(spTask, 1);
+						}
+					}
+				}
+			}
+			else if (keyWatch['R'].GetWatchTime() < 5000)
+			{
+				if (keyDown['3'])
 				{
 					stopWatch.SetWatchTime(0);
 					std::shared_ptr<CwqTask> spTask(new CwqTask);
@@ -785,36 +808,8 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					taskThread->PostTask(spTask, 1);
 				}
 			}
-			else if (g_qKey && keyDown['2'] && stopWatch.GetWatchTime() > 300)
-			{
-				//taskThread->StopAllTask();
-				if (!g_keyHasDown[CTRL] && keyWatch['Q'].GetWatchTime() < 3500)
-				{
-					stopWatch.SetWatchTime(0);
-					std::shared_ptr<Cwq2Task> spTask(new Cwq2Task);
-					spTask->setParam(1);
-					taskThread->PostTask(spTask, 1);
-				}
-				else if (g_qKey && g_keyHasDown[CTRL])
-				{
-					stopWatch.SetWatchTime(0);
-					std::shared_ptr<Cwq2Task> spTask(new Cwq2Task);
-					spTask->setParam(3);
-					taskThread->PostTask(spTask, 1);
-				}
-			}
-			else if (g_qKey && keyDown['1'] && stopWatch.GetWatchTime() > 300)
-			{
-				//taskThread->StopAllTask();
-				if (!g_keyHasDown[CTRL] && keyWatch['Q'].GetWatchTime() < 3500)
-				{
-					stopWatch.SetWatchTime(0);
-					std::shared_ptr<Cwq2Task> spTask(new Cwq2Task);
-					spTask->setParam(4);
-					taskThread->PostTask(spTask, 1);
-				}
-			}
-			else if (g_keyHasDown[CTRL] && keyDown['R'] && stopWatch.GetWatchTime() > 500)
+
+			if (g_keyHasDown[CTRL] && keyDown['R'] && stopWatch.GetWatchTime() > 500)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CrTask> spTask(new CrTask);
