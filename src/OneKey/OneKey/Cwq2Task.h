@@ -20,7 +20,10 @@ public:
 
 	void ClickHero(char heroNum);
 
+	void setParam(uint32_t editIndex);
+
 private:
+	uint32_t m_editIndex;
 	Semaphore m_sleep;
 	std::atomic<bool> m_exit;
 };

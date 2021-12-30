@@ -88,6 +88,8 @@ xyls::Point g_heroHeadShowPoint = { 230, 220 };
 int32_t g_showSide = 40;
 int32_t g_heroHeadSpace = 20;
 
+int32_t g_heroHeadTime = 1500;
+
 #define SPACE 32
 #define ALT 164
 #define CTRL 162
@@ -669,17 +671,17 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			{
 				std::string text = str;
 				text += keyText;
-				if (text.size() > 2)
-				{
-					text = text.substr(text.size() - 2, 2);
-				}
-				::SetWindowTextA(g_editWnd, text.c_str());
+				//if (text.size() > 2)
+				//{
+				//	text = text.substr(text.size() - 2, 2);
+				//}
+				//::SetWindowTextA(g_editWnd, text.c_str());
 			}
 
-			if (strlen(str) >= 2)
-			{
-				g_checkHero = false;
-			}
+			//if (strlen(str) >= 2)
+			//{
+			//	g_checkHero = false;
+			//}
 
 			if (keyDown[KEY + '6'])
 			{
@@ -772,6 +774,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				{
 					stopWatch.SetWatchTime(0);
 					std::shared_ptr<Cwq2Task> spTask(new Cwq2Task);
+					spTask->setParam(2);
 					taskThread->PostTask(spTask, 1);
 				}
 				else if (keyWatch['R'].GetWatchTime() < 5000)
@@ -785,11 +788,29 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			else if (g_qKey && keyDown['2'] && stopWatch.GetWatchTime() > 300)
 			{
 				//taskThread->StopAllTask();
-				if (keyWatch['Q'].GetWatchTime() < 3500)
+				if (!g_keyHasDown[CTRL] && keyWatch['Q'].GetWatchTime() < 3500)
 				{
 					stopWatch.SetWatchTime(0);
-					std::shared_ptr<CwqAllTask> spTask(new CwqAllTask);
-					spTask->setParam(false);
+					std::shared_ptr<Cwq2Task> spTask(new Cwq2Task);
+					spTask->setParam(1);
+					taskThread->PostTask(spTask, 1);
+				}
+				else if (g_qKey && g_keyHasDown[CTRL])
+				{
+					stopWatch.SetWatchTime(0);
+					std::shared_ptr<Cwq2Task> spTask(new Cwq2Task);
+					spTask->setParam(3);
+					taskThread->PostTask(spTask, 1);
+				}
+			}
+			else if (g_qKey && keyDown['1'] && stopWatch.GetWatchTime() > 300)
+			{
+				//taskThread->StopAllTask();
+				if (!g_keyHasDown[CTRL] && keyWatch['Q'].GetWatchTime() < 3500)
+				{
+					stopWatch.SetWatchTime(0);
+					std::shared_ptr<Cwq2Task> spTask(new Cwq2Task);
+					spTask->setParam(4);
 					taskThread->PostTask(spTask, 1);
 				}
 			}
@@ -1153,6 +1174,10 @@ void COneKeyDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	//CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->StopCurTask();
+	if (type == 10)
+	{
+		CSystem::OpenFolder(CSystem::GetCurrentExePath() + "HeroHead\\");
+	}
 }
 
 
@@ -1280,10 +1305,10 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 
 	static int times = -1;
 	++times;
-	if (g_checkHero && (times % 60 == 0))
+	if (g_checkHero && (times % (g_heroHeadTime / 5 / 10) == 0))
 	{
-		int32_t heroIndex = times / 60 % 5;
-		int32_t heroName = times / 300 % 100;
+		int32_t heroIndex = times / (g_heroHeadTime / 5 / 10) % 5;
+		int32_t heroName = times / (g_heroHeadTime / 10) % 100;
 
 		xyls::Rect heroHead = xyls::Rect(g_heroHeadPoint[heroIndex], g_side, g_side);
 

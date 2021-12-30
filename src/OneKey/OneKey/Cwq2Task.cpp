@@ -11,6 +11,7 @@ extern bool rightDown;
 extern HWND g_editWnd;
 
 Cwq2Task::Cwq2Task():
+m_editIndex(0),
 m_exit(false)
 {
 
@@ -23,7 +24,7 @@ void Cwq2Task::DoTask()
 
 	std::string text = str;
 
-	if (text.size() <= 1)
+	if (text.size() <= m_editIndex)
 	{
 		KeyPressE();
 		if (Sleep(80))
@@ -45,92 +46,71 @@ void Cwq2Task::DoTask()
 	}
 	else
 	{
-		CKeyboard::KeyPress(text[1] + 48, 0);
-		if (Sleep(50))
-		{
-			return;
-		}
+		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		Sleep(50);
+		//KeyPressE();
+		//Sleep(100);
+		//KeyPressF();
 		CKeyboard::KeyPress('F', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-
 		CKeyboard::KeyPress('W', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-
 		CKeyboard::KeyPress('W', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-
 		CKeyboard::KeyPress('W', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-
 		CKeyboard::KeyPress('W', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-
 		CKeyboard::KeyPress('W', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-
-		ClickHero(text[1]);
-		//CKeyboard::KeyPress(text[1] + 48, 0);
+		//ClickHero(m_editIndex + 48 + 1);
+		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		//KeyPressE();
+		CKeyboard::KeyPress('W', 0);
 		Sleep(50);
-
-		CKeyboard::KeyPress('W', 0);
-		if (Sleep(50))
-		{
-			return;
-		}
-		ClickHero(text[1]);
+		//ClickHero(m_editIndex + 48 + 1);
+		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		//KeyPressE();
 		Sleep(50);
-		CKeyboard::KeyPress('F', 0);
+		//ClickHero(m_editIndex + 48 + 1);
+		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		//KeyPressE();
 		Sleep(50);
-
-		CKeyboard::KeyPress('W', 0);
-		if (Sleep(50))
-		{
-			return;
-		}
-		ClickHero(text[1]);
-		Sleep(50);
-		CKeyboard::KeyPress('F', 0);
-		Sleep(50);
-
-		CKeyboard::KeyPress('W', 0);
-		if (Sleep(50))
-		{
-			return;
-		}
-		ClickHero(text[1]);
-		Sleep(50);
-		CKeyboard::KeyPress('F', 0);
-		Sleep(50);
+		//ClickHero(m_editIndex + 48 + 1);
+		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		//KeyPressE();
 	}
 }
 
 void Cwq2Task::StopTask()
 {
+	RCSend("stop");
 	m_exit = true;
 	m_sleep.signal();
 }
 
 bool Cwq2Task::Sleep(int32_t sleepTime)
 {
-	return m_sleep.wait(sleepTime);
+	::Sleep(sleepTime);
+	return false;
 }
 
 void Cwq2Task::KeyPressE()
@@ -180,4 +160,9 @@ void Cwq2Task::ClickHero(char heroNum)
 	CMouse::MoveAbsolute(point, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
+}
+
+void Cwq2Task::setParam(uint32_t editIndex)
+{
+	m_editIndex = editIndex;
 }
