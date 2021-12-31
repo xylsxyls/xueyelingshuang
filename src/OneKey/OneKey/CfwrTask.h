@@ -15,8 +15,8 @@ public:
 
 	void KeyPressR();
 
-	void setParam(int32_t editIndex);
+	void setParam(uint32_t editIndex);
 
 private:
-	int32_t m_editIndex;
+	uint32_t m_editIndex;
 };

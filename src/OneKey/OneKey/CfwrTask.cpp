@@ -34,20 +34,43 @@ void CfwrTask::DoTask()
 	}
 	Sleep(100);
 	CMouse::RightClick(0);
-	Sleep(150);
-	CKeyboard::KeyPress('W', 0);
-	Sleep(100);
+	Sleep(50);
+	//CKeyboard::KeyPress('F', 0);
 	KeyPressF();
-	Sleep(135);
+	Sleep(100);
+	CKeyboard::KeyPress('W', 0);
+	Sleep(10);
+	CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+	Sleep(10);
+	CMouse::RightClick(0);
+	Sleep(50);
+	CMouse::RightClick(0);
+	Sleep(50);
+	CMouse::RightClick(0);
+	Sleep(50);
+	//CKeyboard::KeyPress('F', 0);
+	//KeyPressF();
+	//Sleep(55);
+	//CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+	//CMouse::RightClick(0);
+	//Sleep(50);
 	KeyPressR();
 	Sleep(50);
+	//CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+	CMouse::RightClick(0);
+	//Sleep(50);
 	KeyPressR();
 	Sleep(50);
+	//CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+	CMouse::RightClick(0);
+	//Sleep(50);
 	KeyPressR();
 	Sleep(50);
+	//CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+	CMouse::RightClick(0);
+	//Sleep(50);
 	KeyPressR();
-	Sleep(50);
-	KeyPressR();
+
 }
 
 void CfwrTask::KeyPressE()
@@ -78,7 +101,7 @@ void CfwrTask::KeyPressR()
 	CMouse::MoveAbsolute(currentPos, 0);
 }
 
-void CfwrTask::setParam(int32_t editIndex)
+void CfwrTask::setParam(uint32_t editIndex)
 {
 	m_editIndex = editIndex;
 }

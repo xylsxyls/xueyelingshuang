@@ -772,20 +772,20 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				}
 				if (editIndex != -1)
 				{
-					if (editIndex == 0)
+					if (g_keyHasDown[CTRL])
 					{
 						stopWatch.SetWatchTime(0);
-						std::shared_ptr<CwqAllTask> spTask(new CwqAllTask);
-						spTask->setParam(true);
+						std::shared_ptr<CfwrTask> spTask(new CfwrTask);
+						spTask->setParam(editIndex);
 						taskThread->PostTask(spTask, 1);
 					}
 					else
 					{
-						if (g_keyHasDown[CTRL])
+						if (editIndex == 0)
 						{
 							stopWatch.SetWatchTime(0);
-							std::shared_ptr<CfwrTask> spTask(new CfwrTask);
-							spTask->setParam(editIndex);
+							std::shared_ptr<CwqAllTask> spTask(new CwqAllTask);
+							spTask->setParam(true);
 							taskThread->PostTask(spTask, 1);
 						}
 						else
