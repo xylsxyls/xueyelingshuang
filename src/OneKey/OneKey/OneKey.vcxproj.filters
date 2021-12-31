@@ -138,6 +138,9 @@
     <ClInclude Include="Cwq2nofTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="HeroHeadDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -250,6 +253,9 @@
     </ClCompile>
     <ClCompile Include="Cwq2nofTask.cpp">
       <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="HeroHeadDlg.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

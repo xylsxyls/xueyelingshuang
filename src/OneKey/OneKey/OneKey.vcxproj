@@ -144,6 +144,7 @@
     <ClInclude Include="CwqTask.h" />
     <ClInclude Include="CwrqTask.h" />
     <ClInclude Include="CwrTask.h" />
+    <ClInclude Include="HeroHeadDlg.h" />
     <ClInclude Include="IntoGameTask.h" />
     <ClInclude Include="MoveTask.h" />
     <ClInclude Include="OneKey.h" />
@@ -185,6 +186,7 @@
     <ClCompile Include="CwqTask.cpp" />
     <ClCompile Include="CwrqTask.h.cpp" />
     <ClCompile Include="CwrTask.cpp" />
+    <ClCompile Include="HeroHeadDlg.cpp" />
     <ClCompile Include="IntoGameTask.cpp" />
     <ClCompile Include="MoveTask.cpp" />
     <ClCompile Include="OneKey.cpp" />

@@ -47,11 +47,13 @@
 #include "Cwq2Task.h"
 #include "Cwq2nofTask.h"
 #include "CSystem/CSystemAPI.h"
+#include "HeroHeadDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+HWND g_hWnd = nullptr;
 HWND g_editWnd = nullptr;
 
 CStopWatch leftWatch;
@@ -170,6 +172,10 @@ BEGIN_MESSAGE_MAP(COneKeyDlg, CDialogEx)
 	ON_WM_DESTROY()
 	ON_CBN_SELCHANGE(IDC_COMBO1, &COneKeyDlg::OnSelchangeCombo1)
 	ON_WM_TIMER()
+	ON_WM_DROPFILES()
+	ON_MESSAGE(WM_DESTROY_HERO_HEAD, &COneKeyDlg::OnDestroyHeroHead)
+	ON_MESSAGE(WM_RESET_HERO_HEAD, &COneKeyDlg::OnResetHeroHead)
+	ON_MESSAGE(WM_UPDATE_HERO_HEAD, &COneKeyDlg::OnUpdateHeroHead)
 END_MESSAGE_MAP()
 
 LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
@@ -685,7 +691,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 
 			if (keyDown[KEY + '6'])
 			{
-				::SetWindowTextA(g_editWnd, "");
+				::SetWindowTextA(g_editWnd, "88888");
 				std::string path = CSystem::GetCurrentExePath() + "HeroHead\\";
 				
 				if (CSystem::DirOrFileExist(path))
@@ -698,6 +704,8 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				}
 
 				g_checkHero = true;
+
+				::PostMessage(g_hWnd, WM_DESTROY_HERO_HEAD, 0, 0);
 			}
 			else if (keyDown[KEY + '7'])
 			{
@@ -709,6 +717,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				text[0] = text[2];
 				text[2] = 0;
 				::SetWindowTextA(g_editWnd, text.c_str());
+			}
+			else if (keyDown[KEY + '9'])
+			{
+				::PostMessage(g_hWnd, WM_RESET_HERO_HEAD, 0, 0);
 			}
 
 			if (keyDown['Q'])
@@ -899,7 +911,10 @@ BOOL COneKeyDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+
+	DragAcceptFiles();
 	
+	g_hWnd = m_hWnd;
 	g_editWnd = m_edit.m_hWnd;
 	m_type.AddString("刀锋");
 	m_type.AddString("劫");
@@ -962,7 +977,7 @@ void COneKeyDlg::OnSysCommand(UINT nID, LPARAM lParam)
 //  来绘制该图标。对于使用文档/视图模型的 MFC 应用程序，
 //  这将由框架自动完成。
 
-HBITMAP JPEGByteArrayToHBITMAP(const std::string& jpgFrame, IPicture** pIPicture)
+static HBITMAP JPEGByteArrayToHBITMAP(const std::string& jpgFrame, IPicture** pIPicture)
 {
 	if (jpgFrame.empty())
 	{
@@ -989,7 +1004,7 @@ HBITMAP JPEGByteArrayToHBITMAP(const std::string& jpgFrame, IPicture** pIPicture
 	return result;
 }
 
-RECT ShowRect(const RECT& srcRect, const RECT& backgroundRect)
+static RECT ShowRect(const RECT& srcRect, const RECT& backgroundRect)
 {
 	auto srcWidth = srcRect.right - srcRect.left;
 	auto srcHeight = srcRect.bottom - srcRect.top;
@@ -1011,7 +1026,7 @@ RECT ShowRect(const RECT& srcRect, const RECT& backgroundRect)
 	}
 }
 
-void DrawHBitmapToHdc(HDC hDC, RECT drawRect, HBITMAP hBitmap, COLORREF backgroundColor, int32_t blendPercent)
+static void DrawHBitmapToHdc(HDC hDC, RECT drawRect, HBITMAP hBitmap, COLORREF backgroundColor, int32_t blendPercent)
 {
 	int32_t width = drawRect.right - drawRect.left;
 	int32_t height = drawRect.bottom - drawRect.top;
@@ -1079,7 +1094,7 @@ void DrawHBitmapToHdc(HDC hDC, RECT drawRect, HBITMAP hBitmap, COLORREF backgrou
 	::DeleteDC(hMemDC);
 }
 
-HBITMAP GetDCImageToHBitmap(HDC hDC, RECT dcRect)
+static HBITMAP GetDCImageToHBitmap(HDC hDC, RECT dcRect)
 {
 	HDC hMemDC = ::CreateCompatibleDC(hDC);
 	int32_t imgWidth = dcRect.right - dcRect.left;
@@ -1092,7 +1107,7 @@ HBITMAP GetDCImageToHBitmap(HDC hDC, RECT dcRect)
 	return hBitmap;
 }
 
-void DrawJpgToHdc(HDC hDC, RECT drawRect, const std::string& jpgFrame, COLORREF backgroundColor, int32_t blendPercent)
+static void DrawJpgToHdc(HDC hDC, RECT drawRect, const std::string& jpgFrame, COLORREF backgroundColor, int32_t blendPercent)
 {
 	IPicture* pIPicture = nullptr;
 	HBITMAP hBitmap = JPEGByteArrayToHBITMAP(jpgFrame, &pIPicture);
@@ -1270,6 +1285,7 @@ void COneKeyDlg::OnSelchangeCombo1()
 		code2 = 'C';
 		CSystem::CreateDir(path);
 		g_checkHero = true;
+		::SetWindowText(g_editWnd, "88888");
 	}
 }
 
@@ -1316,4 +1332,108 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 	}
 
 	CDialogEx::OnTimer(nIDEvent);
+}
+
+LRESULT COneKeyDlg::OnDestroyHeroHead(WPARAM wParam, LPARAM lParam)
+{
+	if (wParam == 0)
+	{
+		for (auto it = m_vecHeroHeadDlg.begin(); it != m_vecHeroHeadDlg.end(); ++it)
+		{
+			(*it)->DestroyWindow();
+			delete (*it);
+		}
+		m_vecHeroHeadDlg.clear();
+	}
+	else
+	{
+		for (auto it = m_vecHeroHeadDlg.begin(); it != m_vecHeroHeadDlg.end(); ++it)
+		{
+			if (*it == (CHeroHeadDlg*)wParam)
+			{
+				(*it)->DestroyWindow();
+				delete (*it);
+				m_vecHeroHeadDlg.erase(it);
+				break;
+			}
+		}
+	}
+	return 0;
+}
+
+LRESULT COneKeyDlg::OnResetHeroHead(WPARAM wParam, LPARAM lParam)
+{
+	int32_t index = -1;
+	while (index++ != m_vecHeroHeadDlg.size() - 1)
+	{
+		m_vecHeroHeadDlg[index]->resetEdit();
+	}
+	return 0;
+}
+
+LRESULT COneKeyDlg::OnUpdateHeroHead(WPARAM wParam, LPARAM lParam)
+{
+	char text[1024] = {};
+	::GetWindowText(m_edit.m_hWnd, text, 1024);
+	int32_t index = -1;
+	if (wParam == '3')
+	{
+		index = 0;
+	}
+	else if (wParam == '2')
+	{
+		index = 1;
+	}
+	else if (wParam == '4')
+	{
+		index = 2;
+	}
+	else if (wParam == '5')
+	{
+		index = 3;
+	}
+	else if (wParam == '1')
+	{
+		index = 4;
+	}
+	text[index] = (char)lParam;
+	::SetWindowText(m_edit.m_hWnd, text);
+	return 0;
+}
+
+std::vector<std::string> DropFiles(HDROP hDropInfo)
+{
+	std::vector<std::string> result;
+	int32_t nFileCount = ::DragQueryFile(hDropInfo, 0xFFFFFFFF, NULL, 1024);
+	char filePath[1024] = {};
+	for (int32_t i = 0; i < nFileCount; i++)
+	{
+		UINT nChars = ::DragQueryFile(hDropInfo, i, filePath, 1024);
+		result.push_back(std::string(filePath, nChars));
+	}
+	::DragFinish(hDropInfo);
+	return result;
+}
+
+void COneKeyDlg::OnDropFiles(HDROP hDropInfo)
+{
+	// TODO:  在此添加消息处理程序代码和/或调用默认值
+
+	int32_t showLeft = 1000;
+	int32_t showTop = 500;
+
+	std::vector<std::string> result = DropFiles(hDropInfo);
+	int32_t index = -1;
+	while (index++ != result.size() - 1)
+	{
+		CHeroHeadDlg* dlg = new CHeroHeadDlg;
+		dlg->m_hOneKeyWnd = m_hWnd;
+		dlg->m_backgroundPicPath = result[index];
+		dlg->m_windowRect = RECT{ showLeft, showTop, showLeft + g_side, showTop + g_side };
+		dlg->Create(CHeroHeadDlg::IDD, nullptr);
+		dlg->ShowWindow(SW_SHOW);
+		m_vecHeroHeadDlg.push_back(dlg);
+	}
+
+	CDialogEx::OnDropFiles(hDropInfo);
 }

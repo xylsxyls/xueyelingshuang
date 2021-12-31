@@ -23,6 +23,11 @@ void CfwrTask::DoTask()
 	::GetWindowTextA(g_editWnd, str, 1024);
 
 	std::string text = str;
+	char e = text[m_editIndex];
+	if (e == '8')
+	{
+		e = 'C';
+	}
 
 	if (text.size() <= m_editIndex)
 	{
@@ -30,7 +35,7 @@ void CfwrTask::DoTask()
 	}
 	else
 	{
-		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		CKeyboard::KeyPress(e + 48, 0);
 	}
 	Sleep(100);
 	CMouse::RightClick(0);
@@ -40,7 +45,7 @@ void CfwrTask::DoTask()
 	Sleep(100);
 	CKeyboard::KeyPress('W', 0);
 	Sleep(10);
-	CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+	CKeyboard::KeyPress(e + 48, 0);
 	Sleep(10);
 	CMouse::RightClick(0);
 	Sleep(50);

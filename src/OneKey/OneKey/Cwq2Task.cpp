@@ -46,7 +46,12 @@ void Cwq2Task::DoTask()
 	}
 	else
 	{
-		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		char e = text[m_editIndex];
+		if (e == '8')
+		{
+			e = 'C';
+		}
+		CKeyboard::KeyPress(e + 48, 0);
 		Sleep(50);
 		//KeyPressE();
 		//Sleep(100);
@@ -82,20 +87,20 @@ void Cwq2Task::DoTask()
 			return;
 		}
 		//ClickHero(m_editIndex + 48 + 1);
-		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();
 		CKeyboard::KeyPress('W', 0);
 		Sleep(50);
 		//ClickHero(m_editIndex + 48 + 1);
-		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();
 		Sleep(50);
 		//ClickHero(m_editIndex + 48 + 1);
-		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();
 		Sleep(50);
 		//ClickHero(m_editIndex + 48 + 1);
-		CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
+		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();
 	}
 }

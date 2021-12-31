@@ -6,6 +6,11 @@
 #include "afxwin.h"
 #include <vector>
 
+#define WM_DESTROY_HERO_HEAD 10001
+#define WM_RESET_HERO_HEAD 10002
+#define WM_UPDATE_HERO_HEAD 10003
+
+class CHeroHeadDlg;
 // COneKeyDlg ¶Ô»°¿ò
 class COneKeyDlg : public CDialogEx
 {
@@ -38,9 +43,16 @@ public:
 	afx_msg void OnSelchangeCombo1();
 	CEdit m_edit;
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg LRESULT OnDestroyHeroHead(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnResetHeroHead(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnUpdateHeroHead(WPARAM wParam, LPARAM lParam);
 
 	//std::vector<std::vector<xyls::Color>> m_vecCheckColor;
 	CWnd* m_deskWnd;
 	CDC* m_deskCDC;
 	HDC m_deskHDC;
+	afx_msg void OnDropFiles(HDROP hDropInfo);
+
+private:
+	std::vector<CHeroHeadDlg*> m_vecHeroHeadDlg;
 };
