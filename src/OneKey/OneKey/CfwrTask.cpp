@@ -26,7 +26,7 @@ void CfwrTask::DoTask()
 	char e = text[m_editIndex];
 	if (e == '8')
 	{
-		e = 'C';
+		e = 'C' - 48;
 	}
 
 	if (text.size() <= m_editIndex)

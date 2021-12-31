@@ -9,6 +9,7 @@
 #define WM_DESTROY_HERO_HEAD 10001
 #define WM_RESET_HERO_HEAD 10002
 #define WM_UPDATE_HERO_HEAD 10003
+#define WM_MOVE_HERO_HEAD 10004
 
 class CHeroHeadDlg;
 // COneKeyDlg ¶Ô»°¿ò
@@ -46,6 +47,7 @@ public:
 	afx_msg LRESULT OnDestroyHeroHead(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnResetHeroHead(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnUpdateHeroHead(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMoveHeroHead(WPARAM wParam, LPARAM lParam);
 
 	//std::vector<std::vector<xyls::Color>> m_vecCheckColor;
 	CWnd* m_deskWnd;

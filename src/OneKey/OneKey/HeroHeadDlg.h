@@ -39,4 +39,5 @@ public:
 	HWND m_hOneKeyWnd;
 	afx_msg void OnPaint();
 	afx_msg LRESULT OnNcHitTest(CPoint point);
+	afx_msg void OnChangeEdit2();
 };

@@ -176,6 +176,7 @@ BEGIN_MESSAGE_MAP(COneKeyDlg, CDialogEx)
 	ON_MESSAGE(WM_DESTROY_HERO_HEAD, &COneKeyDlg::OnDestroyHeroHead)
 	ON_MESSAGE(WM_RESET_HERO_HEAD, &COneKeyDlg::OnResetHeroHead)
 	ON_MESSAGE(WM_UPDATE_HERO_HEAD, &COneKeyDlg::OnUpdateHeroHead)
+	ON_MESSAGE(WM_MOVE_HERO_HEAD, &COneKeyDlg::OnMoveHeroHead)
 END_MESSAGE_MAP()
 
 LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
@@ -555,7 +556,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			{
 				static int x = 0;
 				++x;
-				if (x % 3 == 0)
+				if (x % 3 == 0 && code1 != 'G')
 				{
 					{
 						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
@@ -1401,6 +1402,26 @@ LRESULT COneKeyDlg::OnUpdateHeroHead(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+LRESULT COneKeyDlg::OnMoveHeroHead(WPARAM wParam, LPARAM lParam)
+{
+	CHeroHeadDlg* dlg = (CHeroHeadDlg*)wParam;
+	RECT windowRect;
+	::GetWindowRect(dlg->m_hWnd, &windowRect);
+	if (windowRect.top == 140)
+	{
+		return 0;
+	}
+	int32_t width = windowRect.right - windowRect.left;
+	int32_t space = 10;
+	::MoveWindow(dlg->m_hWnd,
+		355 + (m_vecHeroHeadDlg.size() - 1) * (width + g_heroHeadSpace),
+		140,
+		width,
+		windowRect.bottom - windowRect.top,
+		FALSE);
+	return 0;
+}
+
 std::vector<std::string> DropFiles(HDROP hDropInfo)
 {
 	std::vector<std::string> result;
@@ -1429,7 +1450,7 @@ void COneKeyDlg::OnDropFiles(HDROP hDropInfo)
 		CHeroHeadDlg* dlg = new CHeroHeadDlg;
 		dlg->m_hOneKeyWnd = m_hWnd;
 		dlg->m_backgroundPicPath = result[index];
-		dlg->m_windowRect = RECT{ showLeft, showTop, showLeft + g_side, showTop + g_side };
+		dlg->m_windowRect = RECT{ showLeft, showTop, showLeft + g_side / 2, showTop + g_side / 2 };
 		dlg->Create(CHeroHeadDlg::IDD, nullptr);
 		dlg->ShowWindow(SW_SHOW);
 		m_vecHeroHeadDlg.push_back(dlg);

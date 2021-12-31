@@ -49,7 +49,7 @@ void Cwq2Task::DoTask()
 		char e = text[m_editIndex];
 		if (e == '8')
 		{
-			e = 'C';
+			e = 'C' - 48;
 		}
 		CKeyboard::KeyPress(e + 48, 0);
 		Sleep(50);

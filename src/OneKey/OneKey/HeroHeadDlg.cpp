@@ -107,7 +107,7 @@ BOOL CHeroHeadDlg::OnInitDialog()
 void CHeroHeadDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_EDIT1, m_edit);
+	DDX_Control(pDX, IDC_EDIT2, m_edit);
 }
 
 
@@ -116,6 +116,7 @@ BEGIN_MESSAGE_MAP(CHeroHeadDlg, CDialogEx)
 	ON_WM_RBUTTONUP()
 	ON_WM_PAINT()
 	ON_WM_NCHITTEST()
+	ON_EN_CHANGE(IDC_EDIT2, &CHeroHeadDlg::OnChangeEdit2)
 END_MESSAGE_MAP()
 
 
@@ -141,7 +142,7 @@ void CHeroHeadDlg::OnLButtonDblClk(UINT nFlags, CPoint point)
 		pFun = (MYFUNC)GetProcAddress(hInst, "SetLayeredWindowAttributes");
 		if (pFun != nullptr)
 		{
-			pFun(m_hWnd, 0, 150, LWA_ALPHA);
+			pFun(m_hWnd, 0, 250, LWA_ALPHA);
 		}
 		FreeLibrary(hInst);
 	}
@@ -236,14 +237,18 @@ static void DrawHBitmapToHdc(HDC hDC, RECT drawRect, HBITMAP hBitmap, COLORREF b
 			if (!text.empty())
 			{
 				CFont font;
-				VERIFY(font.CreateFont(imgHeight, imgWidth, 0, 0, FW_THIN, FALSE, FALSE, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, _T("宋体")));  //创建新的字体               
+				VERIFY(font.CreateFont(imgHeight / 4, imgWidth / 4, 0, 0, FW_THIN, FALSE, FALSE, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, _T("宋体")));  //创建新的字体               
 				//选上新的字体
 				CFont* oldfont = (CFont*)(SelectObject(hMemDC, font));
 
 				SetTextColor(hMemDC, RGB(255, 0, 0));
 
 				::SetBkMode(hMemDC, TRANSPARENT);
-				::DrawText(hMemDC, text.c_str(), text.size(), &imgRect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+				RECT writeRect = {0,
+					imgHeight / 4,
+					imgRect.left + imgWidth / 4 + imgWidth / 4,
+					imgRect.top + imgHeight / 4 + imgHeight / 4 };
+				::DrawText(hMemDC, text.c_str(), text.size(), &writeRect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 
 				::SelectObject(hMemDC, oldfont);
 				::DeleteObject(font);
@@ -317,4 +322,37 @@ LRESULT CHeroHeadDlg::OnNcHitTest(CPoint point)
 	{
 		return CDialogEx::OnNcHitTest(point);
 	}
+}
+
+void CHeroHeadDlg::OnChangeEdit2()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CDialogEx::OnInitDialog()
+	// 函数并调用 CRichEditCtrl().SetEventMask()，
+	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+	m_edit.ShowWindow(SW_HIDE);
+
+	//透明加穿透，WS_EX_TRANSPARENT是穿透
+	SetWindowLong(m_hWnd, GWL_EXSTYLE, GetWindowLong(m_hWnd, GWL_EXSTYLE) ^ (WS_EX_LAYERED | WS_EX_TRANSPARENT));
+	HINSTANCE hInst = LoadLibrary("User32.DLL");
+	if (hInst != nullptr)
+	{
+		typedef BOOL(WINAPI *MYFUNC)(HWND, COLORREF, BYTE, DWORD);
+		MYFUNC pFun = nullptr;
+		//取得SetLayeredWindowAttributes函数指针
+		pFun = (MYFUNC)GetProcAddress(hInst, "SetLayeredWindowAttributes");
+		if (pFun != nullptr)
+		{
+			pFun(m_hWnd, 0, 250, LWA_ALPHA);
+		}
+		FreeLibrary(hInst);
+	}
+
+	char text[1024] = {};
+	::GetWindowText(m_edit.m_hWnd, text, 1024);
+	::PostMessage(m_hOneKeyWnd, WM_UPDATE_HERO_HEAD, text[0], (LPARAM)CSystem::GetName(m_backgroundPicPath, 3)[0]);
+	::PostMessage(m_hOneKeyWnd, WM_MOVE_HERO_HEAD, (WPARAM)this, 0);
+	Invalidate();
 }
