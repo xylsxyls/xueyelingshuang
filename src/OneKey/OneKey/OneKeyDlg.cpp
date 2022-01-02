@@ -48,6 +48,7 @@
 #include "Cwq2nofTask.h"
 #include "CSystem/CSystemAPI.h"
 #include "HeroHeadDlg.h"
+#include "MoveClickTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -1440,6 +1441,8 @@ void COneKeyDlg::OnDropFiles(HDROP hDropInfo)
 {
 	// TODO:  在此添加消息处理程序代码和/或调用默认值
 
+	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(g_threadId);
+
 	int32_t showLeft = 1000;
 	int32_t showTop = 500;
 
@@ -1455,6 +1458,10 @@ void COneKeyDlg::OnDropFiles(HDROP hDropInfo)
 		dlg->ShowWindow(SW_SHOW);
 		m_vecHeroHeadDlg.push_back(dlg);
 	}
+
+	std::shared_ptr<MoveClickTask> spTask(new MoveClickTask);
+	spTask->setParam(xyls::Point(1005, 505), 20);
+	taskThread->PostTask(spTask);
 
 	CDialogEx::OnDropFiles(hDropInfo);
 }
