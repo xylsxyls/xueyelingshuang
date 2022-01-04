@@ -104,8 +104,9 @@ int32_t g_heroHeadTime = 1500;
 
 bool g_keyHasDown[256] = {};
 
-bool clickMap = false;
+bool g_clickMap = false;
 bool g_moveUse = false;
+bool g_fullLast = false;
 
 int32_t code1 = 'H';
 int32_t code2 = 'C';
@@ -706,6 +707,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				}
 
 				g_checkHero = true;
+				g_fullLast = true;
 
 				::PostMessage(g_hWnd, WM_DESTROY_HERO_HEAD, 0, 0);
 			}
@@ -722,6 +724,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			}
 			else if (keyDown[KEY + '9'])
 			{
+				g_fullLast = false;
 				::PostMessage(g_hWnd, WM_RESET_HERO_HEAD, 0, 0);
 			}
 
@@ -837,9 +840,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			}
 			else if (keyUp['T'])
 			{
-				if (clickMap)
+				if (g_clickMap)
 				{
-					clickMap = false;
+					g_clickMap = false;
 					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 					spTask->setParam('M', false);
 					taskThread->PostTask(spTask, 1);
@@ -1287,6 +1290,7 @@ void COneKeyDlg::OnSelchangeCombo1()
 		code2 = 'C';
 		CSystem::CreateDir(path);
 		g_checkHero = true;
+		g_fullLast = true;
 		::SetWindowText(g_editWnd, "88888");
 	}
 }
@@ -1306,9 +1310,9 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 	{
 		if (type == 10)
 		{
-			if (!clickMap && g_keyHasDown['T'] && keyWatch['T'].GetWatchTime() > 200)
+			if (!g_clickMap && g_keyHasDown['T'] && keyWatch['T'].GetWatchTime() > 200)
 			{
-				clickMap = true;
+				g_clickMap = true;
 				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 				spTask->setParam('M', true);
 				taskThread->PostTask(spTask, 1);
@@ -1399,6 +1403,35 @@ LRESULT COneKeyDlg::OnUpdateHeroHead(WPARAM wParam, LPARAM lParam)
 		index = 4;
 	}
 	text[index] = (char)lParam;
+
+	if (g_fullLast)
+	{
+		int32_t lastIndex = -1;
+		int32_t check[9] = {};
+		index = -1;
+		while (index++ != 5 - 1)
+		{
+			++check[text[index] - 48];
+			if (text[index] - 48 == 8)
+			{
+				lastIndex = index;
+			}
+		}
+
+		if (check[8] == 1)
+		{
+			index = 0;
+			while (index++ != 6 - 1)
+			{
+				if (check[index] == 0)
+				{
+					text[lastIndex] = index + 48;
+				}
+			}
+			g_fullLast = false;
+		}
+	}
+
 	::SetWindowText(m_edit.m_hWnd, text);
 	return 0;
 }

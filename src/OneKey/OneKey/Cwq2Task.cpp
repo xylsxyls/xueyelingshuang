@@ -52,15 +52,25 @@ void Cwq2Task::DoTask()
 			e = 'C' - 48;
 		}
 		CKeyboard::KeyPress(e + 48, 0);
-		Sleep(50);
+		Sleep(100);
 		//KeyPressE();
 		//Sleep(100);
 		//KeyPressF();
 		CKeyboard::KeyPress('F', 0);
-		if (Sleep(50))
+		if (Sleep(100))
 		{
 			return;
 		}
+		//CKeyboard::KeyPress('W', 0);
+		//if (Sleep(50))
+		//{
+		//	return;
+		//}
+		//CKeyboard::KeyPress('W', 0);
+		//if (Sleep(50))
+		//{
+		//	return;
+		//}
 		CKeyboard::KeyPress('W', 0);
 		if (Sleep(50))
 		{
@@ -89,7 +99,6 @@ void Cwq2Task::DoTask()
 		//ClickHero(m_editIndex + 48 + 1);
 		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();
-		CKeyboard::KeyPress('W', 0);
 		Sleep(50);
 		//ClickHero(m_editIndex + 48 + 1);
 		CKeyboard::KeyPress(e + 48, 0);
