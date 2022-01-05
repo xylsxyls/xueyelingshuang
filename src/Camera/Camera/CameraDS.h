@@ -14,7 +14,6 @@
 //      …Ë÷√Œ™ DirectShow/Lib
 //////////////////////////////////////////////////////////////////////
 
-#ifdef CAMERA_USE_DIRECTSHOW
 #pragma once
 #define WIN32_LEAN_AND_MEAN
 #include <atlbase.h>
@@ -91,7 +90,7 @@ public:
 	static int CameraName(int nCamID, char* sName, int nBufferSize);
 
 private:
-	bool BindFilter(int nCamIDX, IBaseFilter **pFilter);
+	bool BindFilter(int nCamIDX, IBaseFilter** pFilter);
 
 	void SetCrossBar();
 
@@ -105,7 +104,7 @@ private:
 
 	long m_nBufferSize;
 
-	IplImage *m_pFrame;
+	IplImage* m_pFrame;
 
 	ATL::CComPtr<IGraphBuilder> m_pGraph;
 
@@ -125,4 +124,3 @@ private:
 	ATL::CComPtr<IPin> m_pNullInputPin;
 
 };
-#endif
