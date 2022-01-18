@@ -126,9 +126,6 @@
     <ClInclude Include="CfwrTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
-    <ClInclude Include="CClickR.h">
-      <Filter>CTask</Filter>
-    </ClInclude>
     <ClInclude Include="CwqAllTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
@@ -142,6 +139,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MoveClickTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CrspaceTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CEscapeR.h">
       <Filter>CTask</Filter>
     </ClInclude>
   </ItemGroup>
@@ -245,9 +248,6 @@
     <ClCompile Include="CfwrTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
-    <ClCompile Include="CClickR.cpp">
-      <Filter>CTask</Filter>
-    </ClCompile>
     <ClCompile Include="CwqAllTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
@@ -261,6 +261,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="MoveClickTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CrspaceTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CEscapeR.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

@@ -42,13 +42,14 @@
 #include "CwrTask.h"
 #include "CqfwrTask.h"
 #include "CfwrTask.h"
-#include "CClickR.h"
+#include "CEscapeR.h"
 #include "CwqAllTask.h"
 #include "Cwq2Task.h"
 #include "Cwq2nofTask.h"
 #include "CSystem/CSystemAPI.h"
 #include "HeroHeadDlg.h"
 #include "MoveClickTask.h"
+#include "CrspaceTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -107,6 +108,7 @@ bool g_keyHasDown[256] = {};
 bool g_clickMap = false;
 bool g_moveUse = false;
 bool g_fullLast = false;
+bool g_holdR = false;
 
 int32_t code1 = 'H';
 int32_t code2 = 'C';
@@ -243,13 +245,16 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask->setParam('V', true);
 			taskThread->PostTask(spTask);
 		}
-		else if (rightUp && g_hasMove)
+		else if (rightUp)
 		{
 			g_moveUse = false;
-			g_hasMove = false;
-			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-			spTask->setParam('V', false);
-			taskThread->PostTask(spTask);
+			if (g_hasMove)
+			{
+				g_hasMove = false;
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('V', false);
+				taskThread->PostTask(spTask);
+			}
 		}
 
 		if (type == 10)
@@ -586,7 +591,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			std::shared_ptr<SpeakTask> spTask(new SpeakTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		if (type != 9)
+		if (type != 9 && type != 10)
 		{
 			if (keyDown['R'])
 			{
@@ -838,6 +843,22 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				std::shared_ptr<CwrTask> spTask(new CwrTask);
 				taskThread->PostTask(spTask, 1);
 			}
+			else if (keyUp['R'])
+			{
+				if (g_holdR)
+				{
+					g_holdR = false;
+					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+					spTask->setParam('X', false);
+					taskThread->PostTask(spTask, 1);
+				}
+				else
+				{
+					stopWatch.SetWatchTime(0);
+					std::shared_ptr<CrspaceTask> spTask(new CrspaceTask);
+					taskThread->PostTask(spTask, 1);
+				}
+			}
 			else if (keyUp['T'])
 			{
 				if (g_clickMap)
@@ -872,7 +893,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 							taskThread->PostTask(spTask, 1);
 						}
 					}
-					std::shared_ptr<CClickR> spTask(new CClickR);
+					std::shared_ptr<CEscapeR> spTask(new CEscapeR);
 					taskThread->PostTask(spTask);
 				}
 			}
@@ -1315,6 +1336,13 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 				g_clickMap = true;
 				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 				spTask->setParam('M', true);
+				taskThread->PostTask(spTask, 1);
+			}
+			if (!g_holdR && g_keyHasDown['R'] && keyWatch['R'].GetWatchTime() > 200)
+			{
+				g_holdR = true;
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('X', true);
 				taskThread->PostTask(spTask, 1);
 			}
 		}

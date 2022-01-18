@@ -1,7 +1,7 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
-class CClickR : public CTask
+class CEscapeR : public CTask
 {
 public:
 	void DoTask();
