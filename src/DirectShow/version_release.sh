@@ -1,0 +1,13 @@
+"$CLOUD_REBUILD" CStringManager 32 lib release only
+"$CLOUD_REBUILD" CSystem 32 lib release only
+"$CLOUD_REBUILD" CBase64 32 lib release same
+"$CLOUD_REBUILD" CDump 32 lib release same
+"$CLOUD_REBUILD" CEncodeDecode 32 lib release same
+"$CLOUD_REBUILD" Cini 32 lib release same
+"$CLOUD_REBUILD" CTaskThreadManager 32 lib release same
+"$CLOUD_REBUILD" IntDateTime 32 lib release only
+"$CLOUD_REBUILD" ReadWriteMutex 32 lib release only
+"$CLOUD_REBUILD" LogManager 32 lib release only
+"$CLOUD_REBUILD" WebSocketWork 32 lib release same
+"$CLOUD_REBUILD" ThreadWindow 32 lib release same
+"$CLOUD_REBUILD" RapidJson 32 lib release same

@@ -1,5 +1,6 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include <windows.h>
 
 class ThreadWindowCallback;
 

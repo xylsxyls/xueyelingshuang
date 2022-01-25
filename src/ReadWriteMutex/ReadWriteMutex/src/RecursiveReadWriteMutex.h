@@ -1,6 +1,8 @@
 #pragma once
 #include "ReadWriteMutexBase.h"
-#ifdef __unix__
+#ifdef _MSC_VER
+#include <windows.h>
+#elif __unix__
 #include <pthread.h>
 #endif
 #include <atomic>

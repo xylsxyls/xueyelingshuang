@@ -160,7 +160,7 @@ public:
 		{
 			try
 			{
-				m_logFile << s;
+				m_logFile << s.c_str();
 			}
 			catch (...)
 			{

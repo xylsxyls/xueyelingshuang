@@ -1,0 +1,332 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{c99e1316-4fc2-499d-9bce-3ab83335428b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{c322e52b-93ce-49a0-bbf8-6da63c529c35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CStringManager">
+      <UniqueIdentifier>{f8629513-e987-475a-8804-0e9c25e2cb1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CSystem">
+      <UniqueIdentifier>{57455c33-5224-4d6e-bc6d-3c676f9042bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CBase64">
+      <UniqueIdentifier>{9f6465c1-d575-4ea0-872d-bdf308208412}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CDump">
+      <UniqueIdentifier>{aaaba010-ea6c-4798-a351-db149c2431c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CEncodeDecode">
+      <UniqueIdentifier>{a51a315b-d0eb-4190-ba53-3bd8131dc0f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Cini">
+      <UniqueIdentifier>{44ab8ecc-565b-48c4-9b3d-a1a078e2189a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CTaskThreadManager">
+      <UniqueIdentifier>{0e573822-fa55-44ba-8d52-85078fb198ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IntDateTime">
+      <UniqueIdentifier>{fef5e43f-7765-4878-86a5-1d3e03e37cb2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="LogManager">
+      <UniqueIdentifier>{f6936357-9f37-486d-af59-404c77da0782}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RapidJson">
+      <UniqueIdentifier>{2a0ca61b-dd35-424d-88f8-71bbd911a026}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ReadWriteMutex">
+      <UniqueIdentifier>{6acc70f4-5a59-411a-a2cc-dfad025b0db1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Semaphore">
+      <UniqueIdentifier>{04996d37-8b5e-422a-bd0e-c0e833706641}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThreadWindow">
+      <UniqueIdentifier>{9128719c-714f-4b26-b8b6-a403a06e9773}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WebSocketWork">
+      <UniqueIdentifier>{1f3555ce-f4af-47a3-9a9c-b5db23da77aa}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\CStringManager\CStringManager\src\CStringManager.cpp">
+      <Filter>CStringManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CSystem\CSystem\src\CSystem.cpp">
+      <Filter>CSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CBase64\CBase64\src\CBase64.cpp">
+      <Filter>CBase64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CDump\CDump\src\CDump.cpp">
+      <Filter>CDump</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CDump\CDump\src\mdump.cpp">
+      <Filter>CDump</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CEncodeDecode\CEncodeDecode\src\AES.cpp">
+      <Filter>CEncodeDecode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CEncodeDecode\CEncodeDecode\src\aes_encryptor.cpp">
+      <Filter>CEncodeDecode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CEncodeDecode\CEncodeDecode\src\CEncodeDecode.cpp">
+      <Filter>CEncodeDecode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CEncodeDecode\CEncodeDecode\src\MD5.cpp">
+      <Filter>CEncodeDecode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CEncodeDecode\CEncodeDecode\src\RsaAlgorithm.cpp">
+      <Filter>CEncodeDecode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CEncodeDecode\CEncodeDecode\src\sm2_create_key_pair.c">
+      <Filter>CEncodeDecode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CEncodeDecode\CEncodeDecode\src\sm2_encrypt_and_decrypt.c">
+      <Filter>CEncodeDecode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CEncodeDecode\CEncodeDecode\src\sm4.c">
+      <Filter>CEncodeDecode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Cini\Cini\src\Cini.cpp">
+      <Filter>Cini</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Cini\Cini\src\ConvertUTF.c">
+      <Filter>Cini</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CTaskThreadManager\CTaskThreadManager\src\CTask.cpp">
+      <Filter>CTaskThreadManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CTaskThreadManager\CTaskThreadManager\src\CTaskThread.cpp">
+      <Filter>CTaskThreadManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\CTaskThreadManager\CTaskThreadManager\src\CTaskThreadManager.cpp">
+      <Filter>CTaskThreadManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\IntDateTime\IntDateTime\src\IntDateTime.cpp">
+      <Filter>IntDateTime</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\LogManager\LogManager\src\LogManager.cpp">
+      <Filter>LogManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\RapidJson\RapidJson\src\RapidJson.cpp">
+      <Filter>RapidJson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\FileReadWriteMutex.cpp">
+      <Filter>ReadWriteMutex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ProcessReadWriteMutex.cpp">
+      <Filter>ReadWriteMutex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ReadLock.cpp">
+      <Filter>ReadWriteMutex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ReadWriteMutex.cpp">
+      <Filter>ReadWriteMutex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ReadWriteMutexBase.cpp">
+      <Filter>ReadWriteMutex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\RecursiveReadWriteMutex.cpp">
+      <Filter>ReadWriteMutex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\WriteLock.cpp">
+      <Filter>ReadWriteMutex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Semaphore\Semaphore\src\Semaphore.cpp">
+      <Filter>Semaphore</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ThreadWindow\ThreadWindow\src\ThreadWindow.cpp">
+      <Filter>ThreadWindow</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\ThreadWindow\ThreadWindow\src\WindowTask.cpp">
+      <Filter>ThreadWindow</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketClient.cpp">
+      <Filter>WebSocketWork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketClientLoopTask.cpp">
+      <Filter>WebSocketWork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketClientParam.cpp">
+      <Filter>WebSocketWork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketServer.cpp">
+      <Filter>WebSocketWork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketServerLoopTask.cpp">
+      <Filter>WebSocketWork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketServerParam.cpp">
+      <Filter>WebSocketWork</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\CStringManager\CStringManager\src\CStringManager.h">
+      <Filter>CStringManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CStringManager\CStringManager\src\CStringManagerMacro.h">
+      <Filter>CStringManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CSystem\CSystem\src\CSystem.h">
+      <Filter>CSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CSystem\CSystem\src\CSystemMacro.h">
+      <Filter>CSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CBase64\CBase64\src\CBase64.h">
+      <Filter>CBase64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CBase64\CBase64\src\CBase64Macro.h">
+      <Filter>CBase64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CDump\CDump\src\CDump.h">
+      <Filter>CDump</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CDump\CDump\src\CDumpMacro.h">
+      <Filter>CDump</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CDump\CDump\src\mdump.h">
+      <Filter>CDump</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\AES.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\aes_encryptor.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\CEncodeDecode.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\CEncodeDecodeMacro.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\MD5.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\RsaAlgorithm.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\sm2_cipher_error_codes.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\sm2_create_key_pair.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\sm2_encrypt_and_decrypt.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CEncodeDecode\CEncodeDecode\src\sm4.h">
+      <Filter>CEncodeDecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Cini\Cini\src\Cini.h">
+      <Filter>Cini</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Cini\Cini\src\CiniMacro.h">
+      <Filter>Cini</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Cini\Cini\src\ConvertUTF.h">
+      <Filter>Cini</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Cini\Cini\src\SimpleIni.h">
+      <Filter>Cini</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CTaskThreadManager\CTaskThreadManager\src\CTask.h">
+      <Filter>CTaskThreadManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CTaskThreadManager\CTaskThreadManager\src\CTaskThread.h">
+      <Filter>CTaskThreadManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CTaskThreadManager\CTaskThreadManager\src\CTaskThreadManager.h">
+      <Filter>CTaskThreadManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\CTaskThreadManager\CTaskThreadManager\src\CTaskThreadManagerMacro.h">
+      <Filter>CTaskThreadManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\IntDateTime\IntDateTime\src\IntDateTime.h">
+      <Filter>IntDateTime</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\IntDateTime\IntDateTime\src\IntDateTimeMacro.h">
+      <Filter>IntDateTime</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\LogManager\LogManager\src\LogManager.h">
+      <Filter>LogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\LogManager\LogManager\src\LogManagerMacro.h">
+      <Filter>LogManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\RapidJson\RapidJson\src\RapidJson.h">
+      <Filter>RapidJson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\RapidJson\RapidJson\src\RapidJsonMacro.h">
+      <Filter>RapidJson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\FileReadWriteMutex.h">
+      <Filter>ReadWriteMutex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ProcessReadWriteMutex.h">
+      <Filter>ReadWriteMutex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ReadLock.h">
+      <Filter>ReadWriteMutex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ReadWriteMutex.h">
+      <Filter>ReadWriteMutex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ReadWriteMutexBase.h">
+      <Filter>ReadWriteMutex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ReadWriteMutexMacro.h">
+      <Filter>ReadWriteMutex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\RecursiveReadWriteMutex.h">
+      <Filter>ReadWriteMutex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\WriteLock.h">
+      <Filter>ReadWriteMutex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Semaphore\Semaphore\src\Semaphore.h">
+      <Filter>Semaphore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Semaphore\Semaphore\src\SemaphoreMacro.h">
+      <Filter>Semaphore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ThreadWindow\ThreadWindow\src\ThreadWindow.h">
+      <Filter>ThreadWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ThreadWindow\ThreadWindow\src\ThreadWindowMacro.h">
+      <Filter>ThreadWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\ThreadWindow\ThreadWindow\src\WindowTask.h">
+      <Filter>ThreadWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketClient.h">
+      <Filter>WebSocketWork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketClientLoopTask.h">
+      <Filter>WebSocketWork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketClientParam.h">
+      <Filter>WebSocketWork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketServer.h">
+      <Filter>WebSocketWork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketServerLoopTask.h">
+      <Filter>WebSocketWork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketServerParam.h">
+      <Filter>WebSocketWork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketWorkMacro.h">
+      <Filter>WebSocketWork</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\CSystem\CSystem\src\CSystem.inl">
+      <Filter>CSystem</Filter>
+    </None>
+  </ItemGroup>
+</Project>

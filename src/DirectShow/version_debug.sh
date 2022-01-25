@@ -1,0 +1,13 @@
+"$CLOUD_REBUILD" CStringManager 32 dll debug only
+"$CLOUD_REBUILD" CSystem 32 dll debug only
+"$CLOUD_REBUILD" CBase64 32 dll debug same
+"$CLOUD_REBUILD" CDump 32 dll debug same
+"$CLOUD_REBUILD" CEncodeDecode 32 dll debug same
+"$CLOUD_REBUILD" Cini 32 dll debug same
+"$CLOUD_REBUILD" CTaskThreadManager 32 dll debug same
+"$CLOUD_REBUILD" IntDateTime 32 dll debug only
+"$CLOUD_REBUILD" ReadWriteMutex 32 dll debug only
+"$CLOUD_REBUILD" LogManager 32 dll debug only
+"$CLOUD_REBUILD" WebSocketWork 32 dll debug same
+"$CLOUD_REBUILD" ThreadWindow 32 dll debug same
+"$CLOUD_REBUILD" RapidJson 32 dll debug same

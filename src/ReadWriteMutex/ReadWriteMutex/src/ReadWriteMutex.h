@@ -5,6 +5,7 @@
 //#define __SUPPORT_XP__
 
 #ifdef _MSC_VER
+#include <windows.h>
 #ifdef __SUPPORT_XP__
 #include <atomic>
 #include <condition_variable>
