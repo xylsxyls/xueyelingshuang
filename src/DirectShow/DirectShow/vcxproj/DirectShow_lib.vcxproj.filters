@@ -49,6 +49,9 @@
     <Filter Include="WebSocketWork">
       <UniqueIdentifier>{1f3555ce-f4af-47a3-9a9c-b5db23da77aa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MxmlCpp">
+      <UniqueIdentifier>{5928ef54-1bef-4b21-aee9-c348338aa415}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\CStringManager\CStringManager\src\CStringManager.cpp">
@@ -161,6 +164,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketServerParam.cpp">
       <Filter>WebSocketWork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\MxmlCpp\MxmlCpp\src\MxmlCpp.cpp">
+      <Filter>MxmlCpp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -322,6 +328,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\WebSocketWork\WebSocketWork\src\WebSocketWorkMacro.h">
       <Filter>WebSocketWork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\MxmlCpp\MxmlCpp\src\MxmlCpp.h">
+      <Filter>MxmlCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\MxmlCpp\MxmlCpp\src\MxmlCppMacro.h">
+      <Filter>MxmlCpp</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

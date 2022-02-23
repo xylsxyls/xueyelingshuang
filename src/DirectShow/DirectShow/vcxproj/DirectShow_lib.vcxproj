@@ -39,6 +39,7 @@
     <ClCompile Include="..\..\..\CTaskThreadManager\CTaskThreadManager\src\CTaskThreadManager.cpp" />
     <ClCompile Include="..\..\..\IntDateTime\IntDateTime\src\IntDateTime.cpp" />
     <ClCompile Include="..\..\..\LogManager\LogManager\src\LogManager.cpp" />
+    <ClCompile Include="..\..\..\MxmlCpp\MxmlCpp\src\MxmlCpp.cpp" />
     <ClCompile Include="..\..\..\RapidJson\RapidJson\src\RapidJson.cpp" />
     <ClCompile Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\FileReadWriteMutex.cpp" />
     <ClCompile Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\ProcessReadWriteMutex.cpp" />
@@ -89,6 +90,8 @@
     <ClInclude Include="..\..\..\IntDateTime\IntDateTime\src\IntDateTimeMacro.h" />
     <ClInclude Include="..\..\..\LogManager\LogManager\src\LogManager.h" />
     <ClInclude Include="..\..\..\LogManager\LogManager\src\LogManagerMacro.h" />
+    <ClInclude Include="..\..\..\MxmlCpp\MxmlCpp\src\MxmlCpp.h" />
+    <ClInclude Include="..\..\..\MxmlCpp\MxmlCpp\src\MxmlCppMacro.h" />
     <ClInclude Include="..\..\..\RapidJson\RapidJson\src\RapidJson.h" />
     <ClInclude Include="..\..\..\RapidJson\RapidJson\src\RapidJsonMacro.h" />
     <ClInclude Include="..\..\..\ReadWriteMutex\ReadWriteMutex\src\FileReadWriteMutex.h" />
