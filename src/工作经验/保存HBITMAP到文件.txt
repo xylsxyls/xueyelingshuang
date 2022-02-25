@@ -1,0 +1,9 @@
+void SaveBitmap(CString strFilePath, HBITMAP hBitmap)
+{
+	if (hBitmap)
+	{
+		CImage imgTemp;
+		imgTemp.Attach(hBitmap);
+		imgTemp.Save(strFilePath);
+	}
+}
