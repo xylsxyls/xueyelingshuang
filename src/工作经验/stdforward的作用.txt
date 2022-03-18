@@ -1,0 +1,18 @@
+void fun1(int&& x)
+{
+	printf("2\n");
+}
+
+void fun1(int& x)
+{
+	printf("3\n");
+}
+
+int&& x = 3;
+	fun1(std::forward<int>(x));
+
+不加forward则一定调第二个版本，加了调第一个，forward按照变量原本的属性进行转发
+用std::move(x)也可以调第一个版本，但是意义不同，在move之后，x在理论上就不给用了
+
+forward主要为了解决右值作为参数传递的时候被默认当成左值处理的情况
+x在过了int&& x = 3;这句之后会被当成左值

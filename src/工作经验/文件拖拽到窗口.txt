@@ -1,0 +1,13 @@
+std::vector<std::string> DropFiles(HDROP hDropInfo)
+{
+	std::vector<std::string> result;
+	int32_t nFileCount = ::DragQueryFile(hDropInfo, 0xFFFFFFFF, NULL, 1024);
+	char filePath[1024] = {};
+	for (int32_t i = 0; i < nFileCount; i++)
+	{
+		UINT nChars = ::DragQueryFile(hDropInfo, i, filePath, 1024);
+		result.push_back(std::string(filePath, nChars));
+	}
+	::DragFinish(hDropInfo);
+	return result;
+}
