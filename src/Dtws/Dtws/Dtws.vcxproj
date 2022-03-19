@@ -300,6 +300,7 @@
     <ClInclude Include="AttackTask.h" />
     <ClInclude Include="ClientReceive.h" />
     <ClInclude Include="ConvoyTask.h" />
+    <ClInclude Include="DtwsParam.h" />
     <ClInclude Include="FindTask.h" />
     <ClInclude Include="FiveTask.h" />
     <ClInclude Include="FollowTask.h" />

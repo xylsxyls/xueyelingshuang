@@ -2,6 +2,7 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
 #include "CSystem/CSystemAPI.h"
+#include "DtwsParam.h"
 
 extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
@@ -46,7 +47,7 @@ void AccountTask::DoTask()
 	}
 	else if (g_accountCount == 1)
 	{
-		if (CSystem::getComputerName() == "SC-202007261854")
+		if (CSystem::getComputerName() == FIRST_COMPUTER)
 		{
 			accountName.push_back("dtws2shaolin");
 		}

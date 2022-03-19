@@ -2,6 +2,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
+#include "DtwsParam.h"
 
 extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
@@ -14,7 +15,7 @@ m_exit(false)
 
 void WaterTask::DoTask()
 {
-	if (CSystem::getComputerName() == "QQJJQPZPPWSYCVN")
+	if (CSystem::getComputerName() == THIRD_COMPUTER)
 	{
 		//µã»÷ÈÎÎñÀ¸
 		CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);

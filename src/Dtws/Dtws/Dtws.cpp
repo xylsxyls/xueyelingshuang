@@ -22,8 +22,7 @@
 #include "ConvoyTask.h"
 #include "GoFindClickTask.h"
 #include "SubmitTask.h"
-
-#define DTWS_SERVER_VERSION "1.0"
+#include "DtwsParam.h"
 
 xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
 xyls::Rect g_rightTopRect[3] = { { 1534, 169, 1654, 262 }, { 1211, 477, 1340, 569 }, { 1854, 486, 1920, 561 } };
@@ -365,11 +364,11 @@ void Dtws::init()
 	m_threadId = CTaskThreadManager::Instance().Init();
 	g_threadId = &m_threadId;
 
-	if (computerName == "SC-202202051826" || computerName == "CN0614001185W")
+	if (computerName == FIRST_COMPUTER || computerName == WORK_COMPUTER)
 	{
 		CHook::Init(WH_KEYBOARD_LL, HookFun);
 	}
-	else if (computerName == "QQJJQPZPPWSYCVN")
+	else if (computerName == THIRD_COMPUTER)
 	{
 		g_accountCount = 3;
 	}
@@ -561,7 +560,7 @@ void Dtws::onJidiButtonClicked()
 	}
 	spAssignThreadTask->setParam(vecSpDoTask);
 	CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
-	if (CSystem::getComputerName() == "SC-202007261854")
+	if (CSystem::getComputerName() == FIRST_COMPUTER)
 	{
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_JIDI));
 	}
@@ -585,7 +584,7 @@ void Dtws::onChangshougongButtonClicked()
 	}
 	spAssignThreadTask->setParam(vecSpDoTask);
 	CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
-	if (CSystem::getComputerName() == "SC-202007261854")
+	if (CSystem::getComputerName() == FIRST_COMPUTER)
 	{
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_CHANGSHOUGONG));
 	}
@@ -593,7 +592,7 @@ void Dtws::onChangshougongButtonClicked()
 
 void Dtws::onLacheButtonClicked()
 {
-	if (CSystem::getComputerName() == "SC-202007261854")
+	if (CSystem::getComputerName() == FIRST_COMPUTER)
 	{
 		g_isBigLache = !g_isBigLache;
 		m_lache->setText(g_isBigLache ? QStringLiteral("大车") : QStringLiteral("小车"));
