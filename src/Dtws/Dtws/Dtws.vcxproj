@@ -166,6 +166,7 @@
     <ClCompile Include="ATask.cpp" />
     <ClCompile Include="AttackTask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
+    <ClCompile Include="CloseBeginTask.cpp" />
     <ClCompile Include="ConvoyTask.cpp" />
     <ClCompile Include="FindTask.cpp" />
     <ClCompile Include="FiveTask.cpp" />
@@ -195,7 +196,10 @@
     <ClCompile Include="Dtws.cpp" />
     <ClCompile Include="RiseTask.cpp" />
     <ClCompile Include="SkillTask.cpp" />
+    <ClCompile Include="SleepBaseTask.cpp" />
+    <ClCompile Include="SleepTask.cpp" />
     <ClCompile Include="SmallTask.cpp" />
+    <ClCompile Include="StartTask.cpp" />
     <ClCompile Include="SubmitTask.cpp" />
     <ClCompile Include="WaitTask.cpp" />
     <ClCompile Include="WaterTask.cpp" />
@@ -299,6 +303,7 @@
     <ClInclude Include="ATask.h" />
     <ClInclude Include="AttackTask.h" />
     <ClInclude Include="ClientReceive.h" />
+    <ClInclude Include="CloseBeginTask.h" />
     <ClInclude Include="ConvoyTask.h" />
     <ClInclude Include="DtwsParam.h" />
     <ClInclude Include="FindTask.h" />
@@ -309,7 +314,10 @@
     <ClInclude Include="HealTask.h" />
     <ClInclude Include="RiseTask.h" />
     <ClInclude Include="SkillTask.h" />
+    <ClInclude Include="SleepBaseTask.h" />
+    <ClInclude Include="SleepTask.h" />
     <ClInclude Include="SmallTask.h" />
+    <ClInclude Include="StartTask.h" />
     <ClInclude Include="SubmitTask.h" />
     <ClInclude Include="WaitTask.h" />
     <ClInclude Include="WaterTask.h" />

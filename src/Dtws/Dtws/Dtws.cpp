@@ -23,14 +23,20 @@
 #include "GoFindClickTask.h"
 #include "SubmitTask.h"
 #include "DtwsParam.h"
+#include "StartTask.h"
+#include "SleepTask.h"
+#include "CloseBeginTask.h"
 
 xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
 xyls::Rect g_rightTopRect[3] = { { 1534, 169, 1654, 262 }, { 1211, 477, 1340, 569 }, { 1854, 486, 1920, 561 } };
 xyls::Point g_clickTop[3] = { { 455, 11 }, { 123, 321 }, { 1738, 322 } };
+xyls::Point g_talkPoint[3] = { { 902, 139 }, { 590, 450 }, { 1223, 450 } };
 xyls::Rect g_talkheadRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, { 992, 325, 1333, 757 } };
 xyls::Rect g_chatRect[3] = { { 324, 465, 670, 677 }, { 0, 774, 350, 984 }, { 632, 772, 984, 988 } };
 xyls::Rect g_bloodRect[3] = { { 571, 61, 1156, 149 }, { 566, 377, 827, 470 }, { 1202, 384, 1464, 460 } };
 xyls::Point g_taskPoint[3] = { { 1398, 288 }, { 1072, 595 }, { 1708, 597 } };
+xyls::Point g_beginGamePoint[3] = { { 1385, 655 }, { 1160, 971 }, { 1719, 973 } };
+xyls::Point g_intoGamePoint[3] = { { 1024, 634 }, { 681, 943 }, { 1311, 940 } };
 xyls::Point g_accept = { 63, 418 };
 xyls::Point g_get = { 64, 326 };
 int32_t g_accountCount = 1;
@@ -330,7 +336,9 @@ Dtws::Dtws(QWidget* parent):
 	m_muqing(nullptr),
 	m_jidi(nullptr),
 	m_lache(nullptr),
-	m_clientReceive(nullptr)
+	m_clientReceive(nullptr),
+	m_account2(nullptr),
+	m_account3(nullptr)
 {
 	ui.setupUi(this);
 	init();
@@ -377,6 +385,16 @@ void Dtws::init()
 	m_account->setText(QStringLiteral("账号"));
 	m_account->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_account, &COriginalButton::clicked, this, &Dtws::onAccountButtonClicked);
+
+	m_account2 = new COriginalButton(this);
+	m_account2->setText(QStringLiteral("第二批"));
+	m_account2->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_account2, &COriginalButton::clicked, this, &Dtws::onAccount2ButtonClicked);
+
+	m_account3 = new COriginalButton(this);
+	m_account3->setText(QStringLiteral("第三批"));
+	m_account3->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_account3, &COriginalButton::clicked, this, &Dtws::onAccount3ButtonClicked);
 
 	m_follow = new COriginalButton(this);
 	m_follow->setText(QStringLiteral("跟随"));
@@ -428,6 +446,7 @@ void Dtws::init()
 	m_lache->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_lache, &COriginalButton::clicked, this, &Dtws::onLacheButtonClicked);
 	QObject::connect(this, &Dtws::changeLacheText, this, &Dtws::onChangeLacheText, Qt::QueuedConnection);
+
 	g_dtws = this;
 }
 
@@ -446,6 +465,8 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	}
 	std::vector<COriginalButton*> vecButton;
 	vecButton.push_back(m_account);
+	vecButton.push_back(m_account2);
+	vecButton.push_back(m_account3);
 	vecButton.push_back(m_follow);
 	vecButton.push_back(m_heal);
 	vecButton.push_back(m_followHeal);
@@ -485,10 +506,106 @@ void Dtws::closeEvent(QCloseEvent* eve)
 void Dtws::onAccountButtonClicked()
 {
 	showMinimized();
-	std::shared_ptr<AccountTask> spAccountTask(new AccountTask);
-	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spAccountTask);
+	std::shared_ptr<SleepTask> spSleepTask1(new SleepTask);
+	spSleepTask1->setParam(1500);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask1);
+
+	std::shared_ptr<StartTask> spStartTask(new StartTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spStartTask);
+
+	std::shared_ptr<SleepTask> spSleepTask2(new SleepTask);
+	spSleepTask2->setParam(g_accountCount == 1 ? 22000 : 25000);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask2);
+
 	std::shared_ptr<SmallTask> spSmallTask(new SmallTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSmallTask);
+
+	std::vector<std::pair<std::string, std::string>> vecAccount;
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2shaolin", "yangnan"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2hanbingmen", "yangnan"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2xiayindao", "yangnan"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2baihuaguxi", "yangnan"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2baihuayixi", "yangnan"));
+	std::shared_ptr<AccountTask> spAccountTask(new AccountTask);
+	spAccountTask->setParam(vecAccount);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spAccountTask);
+
+	std::shared_ptr<SleepTask> spSleepTask3(new SleepTask);
+	spSleepTask3->setParam(g_accountCount == 1 ? 20000 : 30000);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask3);
+
+	std::shared_ptr<CloseBeginTask> spCloseBeginTask(new CloseBeginTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCloseBeginTask);
+}
+
+void Dtws::onAccount2ButtonClicked()
+{
+	showMinimized();
+	std::shared_ptr<SleepTask> spSleepTask1(new SleepTask);
+	spSleepTask1->setParam(1500);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask1);
+
+	std::shared_ptr<StartTask> spStartTask(new StartTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spStartTask);
+
+	std::shared_ptr<SleepTask> spSleepTask2(new SleepTask);
+	spSleepTask2->setParam(g_accountCount == 1 ? 22000 : 25000);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask2);
+
+	std::shared_ptr<SmallTask> spSmallTask(new SmallTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSmallTask);
+
+	std::vector<std::pair<std::string, std::string>> vecAccount;
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2shaolin22", "Yangnan8"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2hanbingmen22", "Yangnan8"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2xiayindao22", "Yangnan8"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2baihuaguxi22", "Yangnan8"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2baihuayixi22", "Yangnan8"));
+	std::shared_ptr<AccountTask> spAccountTask(new AccountTask);
+	spAccountTask->setParam(vecAccount);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spAccountTask);
+
+	std::shared_ptr<SleepTask> spSleepTask3(new SleepTask);
+	spSleepTask3->setParam(g_accountCount == 1 ? 20000 : 30000);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask3);
+
+	std::shared_ptr<CloseBeginTask> spCloseBeginTask(new CloseBeginTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCloseBeginTask);
+}
+
+void Dtws::onAccount3ButtonClicked()
+{
+	showMinimized();
+	std::shared_ptr<SleepTask> spSleepTask1(new SleepTask);
+	spSleepTask1->setParam(1500);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask1);
+
+	std::shared_ptr<StartTask> spStartTask(new StartTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spStartTask);
+
+	std::shared_ptr<SleepTask> spSleepTask2(new SleepTask);
+	spSleepTask2->setParam(g_accountCount == 1 ? 22000 : 25000);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask2);
+
+	std::shared_ptr<SmallTask> spSmallTask(new SmallTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSmallTask);
+
+	std::vector<std::pair<std::string, std::string>> vecAccount;
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2shaolin33", "Yangnan8"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2tianshameng", "yangnan"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2xiayindao33", "Yangnan8"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2baihuaguxi33", "Yangnan8"));
+	vecAccount.push_back(std::pair<std::string, std::string>("dtws2baihuayixi33", "Yangnan8"));
+	std::shared_ptr<AccountTask> spAccountTask(new AccountTask);
+	spAccountTask->setParam(vecAccount);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spAccountTask);
+
+	std::shared_ptr<SleepTask> spSleepTask3(new SleepTask);
+	spSleepTask3->setParam(g_accountCount == 1 ? 20000 : 30000);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask3);
+
+	std::shared_ptr<CloseBeginTask> spCloseBeginTask(new CloseBeginTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCloseBeginTask);
 }
 
 void Dtws::onFollowButtonClicked()

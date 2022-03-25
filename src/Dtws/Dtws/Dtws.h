@@ -27,6 +27,8 @@ Q_SIGNALS:
 
 private slots:
 	void onAccountButtonClicked();
+	void onAccount2ButtonClicked();
+	void onAccount3ButtonClicked();
 	void onFollowButtonClicked();
 	void onHealButtonClicked();
 	void onFollowHealButtonClicked();
@@ -42,6 +44,8 @@ private slots:
 private:
 	Ui::DtwsClass ui;
 	COriginalButton* m_account;
+	COriginalButton* m_account2;
+	COriginalButton* m_account3;
 	COriginalButton* m_follow;
 	COriginalButton* m_heal;
 	COriginalButton* m_followHeal;

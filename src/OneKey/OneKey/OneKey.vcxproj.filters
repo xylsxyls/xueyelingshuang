@@ -147,6 +147,12 @@
     <ClInclude Include="CEscapeR.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="CerTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CfwqTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -267,6 +273,12 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CEscapeR.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CerTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CfwqTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

@@ -50,6 +50,8 @@
 #include "HeroHeadDlg.h"
 #include "MoveClickTask.h"
 #include "CrspaceTask.h"
+#include "CerTask.h"
+#include "CfwqTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -898,6 +900,22 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				}
 			}
 		}
+		else if (type == 11)
+		{
+			if (g_lastKey == 'W' && keyDown['3'] && stopWatch.GetWatchTime() > 2000)
+			{
+				std::shared_ptr<CerTask> spTask(new CerTask);
+				taskThread->PostTask(spTask);
+			}
+		}
+		else if (type == 12)
+		{
+			if (keyDown['3'] && stopWatch.GetWatchTime() > 2000)
+			{
+				std::shared_ptr<CfwqTask> spTask(new CfwqTask);
+				taskThread->PostTask(spTask);
+			}
+		}
 	}
 
 	Exit:
@@ -952,6 +970,8 @@ BOOL COneKeyDlg::OnInitDialog()
 	m_type.AddString("Öî¸ğÁÁ");
 	m_type.AddString("ÖÓØ¸");
 	m_type.AddString("Ë¾ÂíÜ²");
+	m_type.AddString("ËïÎò¿Õ");
+	m_type.AddString("À¼ÁêÍõ");
 	m_type.SelectString(7, "Öî¸ğÁÁ");
 	type = 8;
 	m_button.SetFocus();
@@ -1313,6 +1333,22 @@ void COneKeyDlg::OnSelchangeCombo1()
 		g_checkHero = true;
 		g_fullLast = true;
 		::SetWindowText(g_editWnd, "88888");
+	}
+	else if (str == "ËïÎò¿Õ")
+	{
+		type = 11;
+		code1 = 0;
+		code2 = 'C';
+		CSystem::CreateDir(path);
+		g_checkHero = true;
+		g_fullLast = true;
+		::SetWindowText(g_editWnd, "88888");
+	}
+	else if (str == "À¼ÁêÍõ")
+	{
+		type = 12;
+		code1 = 0;
+		code2 = 'C';
 	}
 }
 

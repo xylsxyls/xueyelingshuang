@@ -1,7 +1,6 @@
-#pragma once
 #include "SleepBaseTask.h"
 
-class SmallTask : public SleepBaseTask
+class CloseBeginTask : public SleepBaseTask
 {
 public:
 	void DoTask();

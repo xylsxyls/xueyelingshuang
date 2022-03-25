@@ -114,11 +114,13 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CerTask.h" />
     <ClInclude Include="CEscapeR.h" />
     <ClInclude Include="CClickTask.h" />
     <ClInclude Include="CDwqrTask.h" />
     <ClInclude Include="CEwqr1Task.h" />
     <ClInclude Include="CFlashTask.h" />
+    <ClInclude Include="CfwqTask.h" />
     <ClInclude Include="CfwrTask.h" />
     <ClInclude Include="CKeyTask.h" />
     <ClInclude Include="CNoFlashTask.h" />
@@ -158,11 +160,13 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CerTask.cpp" />
     <ClCompile Include="CEscapeR.cpp" />
     <ClCompile Include="CClickTask.cpp" />
     <ClCompile Include="CDwqrTask.cpp" />
     <ClCompile Include="CEwqr1Task.cpp" />
     <ClCompile Include="CFlashTask.cpp" />
+    <ClCompile Include="CfwqTask.cpp" />
     <ClCompile Include="CfwrTask.cpp" />
     <ClCompile Include="CKeyTask.cpp" />
     <ClCompile Include="CNoFlashTask.cpp" />

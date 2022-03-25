@@ -1,17 +1,7 @@
-#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "SleepBaseTask.h"
 
-class WaterTask : public CTask
+class WaterTask : public SleepBaseTask
 {
 public:
-	WaterTask();
-
-public:
 	void DoTask();
-
-	void StopTask();
-
-	void Sleep(int32_t time);
-
-private:
-	std::atomic<bool> m_exit;
 };

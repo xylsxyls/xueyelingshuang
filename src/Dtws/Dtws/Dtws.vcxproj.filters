@@ -5,10 +5,6 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;cxx;c;def</Extensions>
     </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h</Extensions>
-    </Filter>
     <Filter Include="Form Files">
       <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
       <Extensions>ui</Extensions>
@@ -39,6 +35,10 @@
     <Filter Include="receive">
       <UniqueIdentifier>{8e04ff27-092b-4e80-8a91-6d2f00aabf65}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -52,9 +52,6 @@
     </ClCompile>
     <ClCompile Include="GeneratedFiles\qrc_Dtws.cpp">
       <Filter>Generated Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Dtws.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AccountTask.cpp">
       <Filter>Task</Filter>
@@ -112,6 +109,21 @@
     </ClCompile>
     <ClCompile Include="SubmitTask.cpp">
       <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="SleepTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="StartTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="SleepBaseTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="CloseBeginTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="Dtws.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -188,6 +200,18 @@
     </ClInclude>
     <ClInclude Include="DtwsParam.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SleepTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="StartTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="SleepBaseTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="CloseBeginTask.h">
+      <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
