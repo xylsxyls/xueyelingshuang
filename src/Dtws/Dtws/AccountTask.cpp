@@ -41,14 +41,17 @@ void AccountTask::DoTask()
 		CMouse::MoveAbsolute(g_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
-		CMouse::LeftDoubleClick();
-		sleep(1500);
+		if (g_accountCount == 3)
+		{
+			CMouse::LeftDoubleClick();
+			sleep(1500);
+		}
 
 		//点击账户框
 		CMouse::MoveAbsolute(xyls::Point(585, 131), 50);
 		CMouse::LeftClick();
 		CKeyboard::InputString("\t");
-		sleep(500);
+		sleep(200);
 		CKeyboard::KeyPress(CKeyboard::Shift);
 		sleep(100);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
@@ -57,17 +60,16 @@ void AccountTask::DoTask()
 		CKeyboard::KeyUp('A');
 		CKeyboard::InputString(vecAccount[accountIndex].first);
 		CKeyboard::KeyPress(CKeyboard::Shift);
-		CKeyboard::InputString("\t");
-		sleep(500);
-		CKeyboard::InputString(vecAccount[accountIndex].second, 200);
-		sleep(500);
-		CKeyboard::InputString("\n");
+		CKeyboard::InputString("\t" + vecAccount[accountIndex].second + "\n", 200);
 
 		CMouse::MoveAbsolute(g_clickTop[0], 50);
 		CMouse::MiddleClick();
 
-		CMouse::LeftDoubleClick();
-		sleep(1500);
+		if (g_accountCount == 3)
+		{
+			CMouse::LeftDoubleClick();
+			sleep(1500);
+		}
 	}
 
 	sleep(1500);
@@ -78,8 +80,11 @@ void AccountTask::DoTask()
 		CMouse::MoveAbsolute(g_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
-		CMouse::LeftDoubleClick();
-		sleep(1500);
+		if (g_accountCount == 3)
+		{
+			CMouse::LeftDoubleClick();
+			sleep(1500);
+		}
 
 		//点击大区
 		//CMouse::MoveAbsolute(xyls::Point(405, 732), 50);
@@ -97,8 +102,11 @@ void AccountTask::DoTask()
 		CMouse::MoveAbsolute(g_clickTop[0], 50);
 		CMouse::MiddleClick();
 
-		CMouse::LeftDoubleClick();
-		sleep(1500);
+		if (g_accountCount == 3)
+		{
+			CMouse::LeftDoubleClick();
+			sleep(1500);
+		}
 	}
 
 	sleep(3000);
