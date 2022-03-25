@@ -35,7 +35,6 @@ xyls::Rect g_talkheadRect[3] = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 }, {
 xyls::Rect g_chatRect[3] = { { 324, 465, 670, 677 }, { 0, 774, 350, 984 }, { 632, 772, 984, 988 } };
 xyls::Rect g_bloodRect[3] = { { 571, 61, 1156, 149 }, { 566, 377, 827, 470 }, { 1202, 384, 1464, 460 } };
 xyls::Point g_taskPoint[3] = { { 1398, 288 }, { 1072, 595 }, { 1708, 597 } };
-xyls::Point g_beginGamePoint[3] = { { 1385, 655 }, { 1160, 971 }, { 1719, 973 } };
 xyls::Point g_intoGamePoint[3] = { { 1024, 634 }, { 681, 943 }, { 1311, 940 } };
 xyls::Point g_accept = { 63, 418 };
 xyls::Point g_get = { 64, 326 };

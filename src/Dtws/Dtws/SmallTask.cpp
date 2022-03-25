@@ -11,13 +11,16 @@ void SmallTask::DoTask()
 		return;
 	}
 	sleep(1500);
-	//µã»÷ÈÎÎñÀ¸
+
+	CMouse::MoveAbsolute(xyls::Point(402, 10), 0);
+	CMouse::MiddleClick();
+
 	int32_t count = 3;
 	while (count-- != 0)
 	{
 		CMouse::MoveAbsolute(xyls::Point(402, 10), 0);
-		CMouse::LeftDoubleClick(0);
-		sleep(50);
+		CMouse::LeftDoubleClick();
+		sleep(100);
 	}
 	
 	count = 3;
@@ -27,12 +30,9 @@ void SmallTask::DoTask()
 		CMouse::LeftDown();
 		CMouse::MoveAbsolute(xyls::Point(897, 557));
 		CMouse::LeftUp();
-		sleep(50);
+		sleep(100);
 	}
 
-	CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
-	CMouse::LeftClick(0);
-	sleep(800);
 	CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
 	CMouse::LeftClick(0);
 	sleep(800);
@@ -42,7 +42,7 @@ void SmallTask::DoTask()
 	{
 		CMouse::MoveAbsolute(g_accountPoint[index], 0);
 		CMouse::LeftClick(0);
-		sleep(100);
+		sleep(500);
 
 		if (index == 0)
 		{

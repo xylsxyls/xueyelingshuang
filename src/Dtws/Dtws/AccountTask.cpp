@@ -3,11 +3,11 @@
 #include "CMouse/CMouseAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "DtwsParam.h"
+#include "ScreenScript/ScreenScriptAPI.h"
 
 extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
 extern xyls::Point g_clickTop[3];
-extern xyls::Point g_beginGamePoint[3];
 extern xyls::Point g_intoGamePoint[3];
 extern bool g_hook;
 
@@ -41,17 +41,33 @@ void AccountTask::DoTask()
 		CMouse::MoveAbsolute(g_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
+		CMouse::LeftDoubleClick();
+		sleep(1500);
+
 		//点击账户框
-		//CMouse::MoveAbsolute(xyls::Point(1004, 473), 50);
-		//CMouse::LeftClick();
+		CMouse::MoveAbsolute(xyls::Point(585, 131), 50);
+		CMouse::LeftClick();
+		CKeyboard::InputString("\t");
+		sleep(500);
 		CKeyboard::KeyPress(CKeyboard::Shift);
+		sleep(100);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('A');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
 		CKeyboard::KeyUp('A');
 		CKeyboard::InputString(vecAccount[accountIndex].first);
 		CKeyboard::KeyPress(CKeyboard::Shift);
-		CKeyboard::InputString("\t" + vecAccount[accountIndex].second + "\n");
+		CKeyboard::InputString("\t");
+		sleep(500);
+		CKeyboard::InputString(vecAccount[accountIndex].second, 200);
+		sleep(500);
+		CKeyboard::InputString("\n");
+
+		CMouse::MoveAbsolute(g_clickTop[0], 50);
+		CMouse::MiddleClick();
+
+		CMouse::LeftDoubleClick();
+		sleep(1500);
 	}
 
 	sleep(1500);
@@ -62,16 +78,27 @@ void AccountTask::DoTask()
 		CMouse::MoveAbsolute(g_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
+		CMouse::LeftDoubleClick();
+		sleep(1500);
+
 		//点击大区
 		//CMouse::MoveAbsolute(xyls::Point(405, 732), 50);
 		//CMouse::LeftClick();
 		////点击小区
 		//CMouse::MoveAbsolute(xyls::Point(1381, 350), 50);
 		//CMouse::LeftClick();
-		sleep(500);
+		//sleep(500);
 		//开始
-		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(1411, 807) : g_beginGamePoint[accountIndex], 50);
-		CMouse::LeftClick();
+		//CMouse::MoveAbsolute(xyls::Point(1411, 800), 50);
+
+		ScreenScript::FindClick("res\\BeginGame.png");
+		//CMouse::LeftClick();
+
+		CMouse::MoveAbsolute(g_clickTop[0], 50);
+		CMouse::MiddleClick();
+
+		CMouse::LeftDoubleClick();
+		sleep(1500);
 	}
 
 	sleep(3000);
@@ -83,7 +110,7 @@ void AccountTask::DoTask()
 		CMouse::MiddleClick();
 
 		//点击进入
-		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(1004, 942) : g_intoGamePoint[accountIndex], 50);
+		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(995, 938) : g_intoGamePoint[accountIndex], 50);
 		CMouse::LeftClick();
 	}
 
