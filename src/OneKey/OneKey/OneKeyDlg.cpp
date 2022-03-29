@@ -586,13 +586,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					}
 				}
 			}
-			++g_codetimes;
-			if (g_codetimes % 3 == 0)
-			{
-				std::shared_ptr<HeroTask> spTask(new HeroTask);
-				spTask->setParam(code1, code2);
-				taskThread->PostTask(spTask, 2);
-			}
+			std::shared_ptr<HeroTask> spTask(new HeroTask);
+			spTask->setParam(code1, code2);
+			taskThread->PostTask(spTask, 2);
 		}
 		else if (keyDown[KEY + '0'])
 		{
