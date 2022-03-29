@@ -95,6 +95,7 @@ int32_t g_showSide = 40;
 int32_t g_heroHeadSpace = 20;
 
 int32_t g_heroHeadTime = 1500;
+int32_t g_codetimes = 0;
 
 #define SPACE 32
 #define ALT 164
@@ -548,6 +549,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			if (code1 != 'G')
 			{
+				g_codetimes = 2;
 				code1 = 'G';
 			}
 			else if (type == 10)
@@ -584,9 +586,13 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					}
 				}
 			}
-			std::shared_ptr<HeroTask> spTask(new HeroTask);
-			spTask->setParam(code1, code2);
-			taskThread->PostTask(spTask, 2);
+			++g_codetimes;
+			if (g_codetimes % 3 == 0)
+			{
+				std::shared_ptr<HeroTask> spTask(new HeroTask);
+				spTask->setParam(code1, code2);
+				taskThread->PostTask(spTask, 2);
+			}
 		}
 		else if (keyDown[KEY + '0'])
 		{
