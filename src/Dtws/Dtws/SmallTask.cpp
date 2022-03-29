@@ -28,7 +28,7 @@ void SmallTask::DoTask()
 	{
 		CMouse::MoveAbsolute(xyls::Point(872, 32), 0);
 		CMouse::LeftDown();
-		CMouse::MoveAbsolute(xyls::Point(897, 557));
+		CMouse::MoveAbsolute(xyls::Point(897, 557), 50);
 		CMouse::LeftUp();
 		sleep(100);
 	}
@@ -49,7 +49,7 @@ void SmallTask::DoTask()
 			CMouse::MoveAbsolute(xyls::Point(817, 300), 0);
 			CMouse::LeftDown();
 			sleep(100);
-			CMouse::MoveAbsolute(xyls::Point(817, 13));
+			CMouse::MoveAbsolute(xyls::Point(817, 13), 50);
 			CMouse::LeftUp();
 			sleep(100);
 		}
@@ -58,7 +58,7 @@ void SmallTask::DoTask()
 			CMouse::MoveAbsolute(xyls::Point(817, 296), 0);
 			CMouse::LeftDown();
 			sleep(100);
-			CMouse::MoveAbsolute(xyls::Point(495, 322));
+			CMouse::MoveAbsolute(xyls::Point(495, 322), 50);
 			CMouse::LeftUp();
 			sleep(100);
 		}
@@ -67,7 +67,7 @@ void SmallTask::DoTask()
 			CMouse::MoveAbsolute(xyls::Point(817, 296), 0);
 			CMouse::LeftDown();
 			sleep(100);
-			CMouse::MoveAbsolute(xyls::Point(1131, 322));
+			CMouse::MoveAbsolute(xyls::Point(1131, 322), 50);
 			CMouse::LeftUp();
 			sleep(100);
 		}

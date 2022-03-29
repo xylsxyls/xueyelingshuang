@@ -46,7 +46,7 @@ void AccountTask::DoTask()
 			CMouse::LeftDoubleClick();
 			sleep(1500);
 		}
-
+		
 		//µã»÷ÕË»§¿ò
 		CMouse::MoveAbsolute(xyls::Point(585, 131), 50);
 		CMouse::LeftClick();

@@ -125,6 +125,9 @@
     <ClCompile Include="Dtws.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ClickLoginTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -211,6 +214,9 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="CloseBeginTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="ClickLoginTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

@@ -26,6 +26,7 @@
 #include "StartTask.h"
 #include "SleepTask.h"
 #include "CloseBeginTask.h"
+#include "ClickLoginTask.h"
 
 xyls::Point g_accountPoint[3] = { { 537, 1057 }, { 599, 1058 }, { 659, 1059 } };
 xyls::Rect g_rightTopRect[3] = { { 1534, 169, 1654, 262 }, { 1211, 477, 1340, 569 }, { 1854, 486, 1920, 561 } };
@@ -516,6 +517,9 @@ void Dtws::onAccountButtonClicked()
 	spSleepTask2->setParam(g_accountCount == 1 ? 22000 : 25000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask2);
 
+	std::shared_ptr<ClickLoginTask> spClickLoginTask(new ClickLoginTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spClickLoginTask);
+
 	std::shared_ptr<SmallTask> spSmallTask(new SmallTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSmallTask);
 
@@ -551,6 +555,9 @@ void Dtws::onAccount2ButtonClicked()
 	spSleepTask2->setParam(g_accountCount == 1 ? 22000 : 25000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask2);
 
+	std::shared_ptr<ClickLoginTask> spClickLoginTask(new ClickLoginTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spClickLoginTask);
+
 	std::shared_ptr<SmallTask> spSmallTask(new SmallTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSmallTask);
 
@@ -585,6 +592,9 @@ void Dtws::onAccount3ButtonClicked()
 	std::shared_ptr<SleepTask> spSleepTask2(new SleepTask);
 	spSleepTask2->setParam(g_accountCount == 1 ? 22000 : 25000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask2);
+
+	std::shared_ptr<ClickLoginTask> spClickLoginTask(new ClickLoginTask);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spClickLoginTask);
 
 	std::shared_ptr<SmallTask> spSmallTask(new SmallTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSmallTask);
