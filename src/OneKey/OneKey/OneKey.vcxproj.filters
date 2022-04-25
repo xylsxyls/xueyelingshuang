@@ -153,6 +153,21 @@
     <ClInclude Include="CfwqTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="CtrlATask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CtrlDTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CtrlFTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CtrlSTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CForceMoveTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -279,6 +294,21 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CfwqTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CtrlATask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CtrlDTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CtrlFTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CtrlSTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CForceMoveTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

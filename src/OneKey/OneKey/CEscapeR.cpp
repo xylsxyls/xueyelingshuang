@@ -14,27 +14,27 @@ void CEscapeR::DoTask()
 	xyls::Point currentPos = CMouse::GetCurrentPos();
 	if (currentPos.x() < (1920 / 2) && currentPos.y() > 618)
 	{
-		s_rWidth = 462;
-		s_rUpHeight = 134;
-		s_rHeight = 390;
+		s_rWidth = 162 * 5;
+		s_rUpHeight = 134 * 5;
+		s_rHeight = 190 * 5;
 	}
 	else if (currentPos.x() < (1920 / 2) && currentPos.y() <= 618)
 	{
-		s_rWidth = 445;
-		s_rUpHeight = 318;
-		s_rHeight = 390;
+		s_rWidth = 245 * 5;
+		s_rUpHeight = 118 * 5;
+		s_rHeight = 190 * 5;
 	}
 	else if (currentPos.x() >= (1920 / 2) && currentPos.y() <= 618)
 	{
-		s_rWidth = 445;
-		s_rUpHeight = 318;
-		s_rHeight = 390;
+		s_rWidth = 245 * 5;
+		s_rUpHeight = 118 * 5;
+		s_rHeight = 190 * 5;
 	}
 	else if (currentPos.x() >= (1920 / 2) && currentPos.y() > 618)
 	{
-		s_rWidth = 462;
-		s_rUpHeight = 134;
-		s_rHeight = 390;
+		s_rWidth = 162 * 5;
+		s_rUpHeight = 134 * 5;
+		s_rHeight = 190 * 5;
 	}
 
 	int32_t x = (int32_t)((currentPos.x() - 1920 / 2) / (1920 / 2.0) * (s_rWidth / 2) + s_rCenterPoint.x());

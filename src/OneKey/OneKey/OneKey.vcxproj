@@ -114,6 +114,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CForceMoveTask.h" />
     <ClInclude Include="CerTask.h" />
     <ClInclude Include="CEscapeR.h" />
     <ClInclude Include="CClickTask.h" />
@@ -139,6 +140,10 @@
     <ClInclude Include="CrTask.h" />
     <ClInclude Include="CSleepTask.h" />
     <ClInclude Include="CSmallFlashTask.h" />
+    <ClInclude Include="CtrlATask.h" />
+    <ClInclude Include="CtrlDTask.h" />
+    <ClInclude Include="CtrlFTask.h" />
+    <ClInclude Include="CtrlSTask.h" />
     <ClInclude Include="CWeqTask.h" />
     <ClInclude Include="CWewTask.h" />
     <ClInclude Include="Cwq2nofTask.h" />
@@ -160,6 +165,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CForceMoveTask.cpp" />
     <ClCompile Include="CerTask.cpp" />
     <ClCompile Include="CEscapeR.cpp" />
     <ClCompile Include="CClickTask.cpp" />
@@ -185,6 +191,10 @@
     <ClCompile Include="CrTask.cpp" />
     <ClCompile Include="CSleepTask.cpp" />
     <ClCompile Include="CSmallFlashTask.cpp" />
+    <ClCompile Include="CtrlATask.cpp" />
+    <ClCompile Include="CtrlDTask.cpp" />
+    <ClCompile Include="CtrlFTask.cpp" />
+    <ClCompile Include="CtrlSTask.cpp" />
     <ClCompile Include="CWeqTask.cpp" />
     <ClCompile Include="CWewTask.cpp" />
     <ClCompile Include="Cwq2nofTask.cpp" />

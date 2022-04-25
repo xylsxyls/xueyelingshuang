@@ -52,6 +52,10 @@
 #include "CrspaceTask.h"
 #include "CerTask.h"
 #include "CfwqTask.h"
+#include "CtrlATask.h"
+#include "CtrlSTask.h"
+#include "CtrlDTask.h"
+#include "CtrlFTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -65,6 +69,7 @@ CStopWatch rightWatch;
 CStopWatch stopWatch;
 CStopWatch textWatch;
 CStopWatch moveWatch;
+CStopWatch equipWatch;
 
 CStopWatch keyWatch[256] = {};
 
@@ -835,7 +840,45 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				}
 			}
 
-			if (g_keyHasDown[CTRL] && keyDown['R'] && stopWatch.GetWatchTime() > 500)
+			if (keyDown['A'] && equipWatch.GetWatchTime() > 1000)
+			{
+				equipWatch.SetWatchTime(0);
+				std::shared_ptr<CtrlATask> spTask(new CtrlATask);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (g_keyHasDown[CTRL] && keyDown['S'] && equipWatch.GetWatchTime() > 1000)
+			{
+				equipWatch.SetWatchTime(0);
+				std::shared_ptr<CtrlSTask> spTask(new CtrlSTask);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (keyDown['S'] && equipWatch.GetWatchTime() > 1000)
+			{
+				equipWatch.SetWatchTime(0);
+				std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
+				spTask1->setParam('L', true);
+				taskThread->PostTask(spTask1, 1);
+				std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+				spTask2->setParam('L', false);
+				taskThread->PostTask(spTask2, 1);
+			}
+			else if (((keyWatch['S'].GetWatchTime() < 3500) || (keyWatch['A'].GetWatchTime() < 3500) || g_keyHasDown[CTRL]) &&
+				keyDown['D'] &&
+				equipWatch.GetWatchTime() > 1000)
+			{
+				equipWatch.SetWatchTime(0);
+				std::shared_ptr<CtrlDTask> spTask(new CtrlDTask);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (((keyWatch['S'].GetWatchTime() < 3500) || (keyWatch['A'].GetWatchTime() < 3500) || g_keyHasDown[CTRL]) &&
+				keyDown['F'] &&
+				equipWatch.GetWatchTime() > 1000)
+			{
+				equipWatch.SetWatchTime(0);
+				std::shared_ptr<CtrlFTask> spTask(new CtrlFTask);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (g_keyHasDown[CTRL] && keyDown['R'] && stopWatch.GetWatchTime() > 500)
 			{
 				stopWatch.SetWatchTime(0);
 				std::shared_ptr<CrTask> spTask(new CrTask);
@@ -1382,6 +1425,27 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 				spTask->setParam('X', true);
 				taskThread->PostTask(spTask, 1);
+			}
+			//if (g_keyHasDown['S'] && keyWatch['S'].GetWatchTime() > 200)
+			//{
+			//	std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
+			//	spTask1->setParam('L', true);
+			//	taskThread->PostTask(spTask1, 1);
+			//	std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+			//	spTask2->setParam('L', false);
+			//	taskThread->PostTask(spTask2, 1);
+			//}
+			if (g_keyHasDown['Q'] && keyWatch['Q'].GetWatchTime() > 200)
+			{
+				std::shared_ptr<CKeyTask> spTask0(new CKeyTask);
+				spTask0->setParam('Q', false);
+				taskThread->PostTask(spTask0, 1);
+				std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
+				spTask1->setParam('K', true);
+				taskThread->PostTask(spTask1, 1);
+				std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+				spTask2->setParam('K', false);
+				taskThread->PostTask(spTask2, 1);
 			}
 		}
 	}
