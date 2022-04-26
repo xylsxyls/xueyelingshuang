@@ -1,0 +1,91 @@
+sudo find / -name lib*.so
+sudo find / -name grpc_cpp_plugin
+
+sudo ln -s /usr/local/lib64/libssl.so.1.1 /usr/local/lib64/libssl.so
+
+zookeeper
+ls /sensecrowd
+./zkCli.sh -server 10.5.6.52
+
+nvidia-smi 查看机器状态
+
+./run_watch.sh restart
+或者start stop status
+
+cd release/sensecrowd3.0/analysis/crowd_analysis_service/bin4
+cd /data/release/zookeeper-cluster/zookeeper-node1/bin/
+./zkCli.sh -server 10.5.6.52
+
+cmake -DCMAKE_BUILD_TYPE=Debug ../
+b stream_ingress_call_data.cpp:191
+r ../config/local.json
+l
+n
+
+ulimit -c
+如果结果是0说明关闭core dump
+ulimit -c unlimited
+一个终端执行一次就行
+这个是不限制大小，限制大小则把unlimited改为kb单位的数字
+gdb 程序名 core文件
+bt看堆栈
+
+qt中增加库文件引用，静态引用重定义出错
+动态链接
+LIBS += -L/usr/local/lib\
+              -lprotobuf -lgrpc++ -lgrpc
+
+export LD_LIBRARY_PATH=/usr/local/mysql/lib:$LD_LIBRARY_PATH
+
+tcpdump udp port 50600
+sudo tcpdump -i enp129s0f0 udp port 50600 and host 10.11.198.86
+
+-x 1280 -probesize 32
+-max_delay 100
+
+yum list | grep -i mariadb
+
+resources\cardbinSrc下最后4个文件拷贝到build目录下再执行
+cmake -DENABLE_EXTEND_CAPABILITY=on -A x64 -G "Visual Studio 14 2015" ..
+cmake -DINCLUDE_CAPABILITIES="ocr;ocr_stream;dewatermark;cardbin" -A x64 -G "Visual Studio 14 2015" ..
+cmake -DEXCLUDE_CAPABILITIES="ocr;ocr_stream;dewatermark;cardbin;gray;blurry" -A x64 -G "Visual Studio 14 2015" ..
+cmake -DEXCLUDE_CAPABILITIES="ocr;ocr_stream;dewatermark;cardbin;gray;blurry" -D TARGET_ARCH=x86 -G "Visual Studio 14 2015" ..
+cmake -DINCLUDE_CAPABILITIES="detect;align;feature;attribute;headpose;quality;eyestatus;eyestate;occlusion;gray;blurry;imcomplete;verify;track;antispoofing;binocular_antispoofing;depth_antispoofing;frame_select;motion;interactive_liveness;silent_liveness;framesel_liveness;binocular_liveness" -D TARGET_ARCH=x86 -G "Visual Studio 14 2015" ..
+cmake -DINCLUDE_CAPABILITIES="detect;align;feature;attribute;headpose;quality;eyestatus;eyestate;occlusion;gray;blurry;imcomplete;verify;track;antispoofing;binocular_antispoofing;depth_antispoofing;frame_select;motion;interactive_liveness;silent_liveness;framesel_liveness;binocular_liveness" -A x64 -G "Visual Studio 14 2015" ..
+cmake -DENABLE_EXTEND_CAPABILITY=on -A x64 -G "Visual Studio 14 2015" -DBUILD_TYPE=debug ..
+kspark
+cmake -A x64 -G "Visual Studio 14 2015" ..
+
+cmake -A x64 -DKSPARK_BUILTIN_PLUGINS="hunter;aligner;august;headpose;pageant;live2i;feature;eyestate;kestrel_ppl" -G "Visual Studio 14 2015" ..
+
+"C:/Users/yangnan/AppData/Local/Programs/Python/Python39/Scripts/conan.exe" install D:/gitlab.sh/ocx/kspark_binocular_liveness/submodules/liveness_common/submodules/kspark_core/conanfile.py -s os=Windows -s os_target=Windows -s os_build=Windows -s arch=AMD64 -s arch_target=AMD64 -s arch_build=AMD64 -s build_type=Release -s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MT -g=cmake --update
+
+"C:/Users/yangnan/AppData/Local/Programs/Python/Python39/Scripts/conan.exe" install D:/gitlab.sh/kspark/conanfile.py -s os=Windows -s os_target=Windows -s os_build=Windows -s arch=AMD64 -s arch_target=AMD64 -s arch_build=AMD64 -s build_type=Release -s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MT -g=visual_studio --update
+
+cmake -DKSPARK_BUILTIN_PLUGINS="hunter;aligner;august;headpose;pageant;live2i;feature;eyestate;kestrel_ppl" -G "Visual Studio 14 2015" -DKESTREL_CMAKE_SYSTEM_PROCESSOR=x86 ..
+
+cmake -DKSPARK_BUILTIN_PLUGINS="hunter;aligner;august;headpose;pageant;live2i;feature;eyestate;kestrel_ppl" -G "Visual Studio 14 2015" -DKESTREL_CMAKE_SYSTEM_PROCESSOR=x86 -DKSPARK_BUILD_STATIC=ON ..
+cmake -A x64 -DKSPARK_BUILTIN_PLUGINS="hunter;aligner;august;headpose;pageant;live2i;feature;eyestate;kestrel_ppl" -G "Visual Studio 14 2015" -DKSPARK_BUILD_STATIC=ON ..
+
+cmake -A Win32 -G "Visual Studio 14 2015" -DOS_TARGET=Windows -DARCH_TARGET=Win32 -DKSPARK_BUILD_STATIC=On ..
+cmake -A x64 -G "Visual Studio 14 2015" -DKSPARK_BUILD_STATIC=On ..
+
+"C:/Users/yangnan/AppData/Local/Programs/Python/Python39/Scripts/conan.exe" install D:/gitlab.sh/kspark/conanfile.py -s os=Windows -s os_target=Windows -s os_build=Windows -s arch=x86 -s arch_target=x86 -s arch_build=AMD64 -s build_type=Release -s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MT -g=visual_studio --update
+
+新版kspark代码
+git clone git@gitlab.sh.sensetime.com:SenseBA/SenseSpark/kspark_binocular_liveness.git
+cd kspark_binocular_liveness/
+git checkout -b develop --track origin/develop
+git submodule update --rebase --recursive --init --remote
+
+cmake --build . --target spark --config Release
+linux下card最后4个文件拷贝到空文件夹build内再cmake ..
+cmake --install .
+Debug
+预定义宏
+_ITERATOR_DEBUG_LEVEL=0
+C++->代码生成->运行库
+MT
+32位
+CMakeList.txt中修改注释掉
+#include(${CMAKE_SOURCE_DIR}/toolchains/${TARGET_OS}-${TARGET_ARCH}.cmake)

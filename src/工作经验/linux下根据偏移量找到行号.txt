@@ -1,0 +1,8 @@
+addr2line 0xf64 -e ConsoleTestd -f
+
+bracktrace会输出两个地址，相对地址和绝对地址，使用相对地址
+如果有函数名+相对地址，则需要用gdb调试先看到该函数的地址，再加上相对地址
+
+gdb调试
+break 文件名:定位的函数名行号
+info breakpoints

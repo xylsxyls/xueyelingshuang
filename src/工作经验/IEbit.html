@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>IEBit</title>
+</head>
+<body>
+<button id="btn_IEbit" onclick="btn_IEbit()">查看IE位数</button>	
+<script type="text/javascript">
+	function btn_IEbit()
+	{
+		if(window.navigator.platform == "Win32")
+			alert("IE是32位的！");
+		else
+			alert("IE是64位的！");
+	}
+</script>
+</body>
+</html>
