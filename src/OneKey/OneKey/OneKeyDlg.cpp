@@ -102,6 +102,8 @@ int32_t g_heroHeadSpace = 20;
 int32_t g_heroHeadTime = 1500;
 int32_t g_codetimes = 0;
 
+xyls::Point equipPoint[6] = { { 612, 952 }, { 772, 948 }, { 936, 951 }, { 1090, 947 }, { 1266, 941 }, { 1419, 949 } };
+
 #define SPACE 32
 #define ALT 164
 #define CTRL 162
@@ -846,11 +848,25 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				std::shared_ptr<CtrlATask> spTask(new CtrlATask);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if (g_keyHasDown[CTRL] && keyDown['S'] && equipWatch.GetWatchTime() > 1000)
+			else if (keyDown['S'] && equipWatch.GetWatchTime() > 1000)
 			{
 				equipWatch.SetWatchTime(0);
-				std::shared_ptr<CtrlSTask> spTask(new CtrlSTask);
+				std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
+				spTask1->setParam('L', true);
+				taskThread->PostTask(spTask1, 1);
+				std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+				spTask2->setParam('L', false);
+				taskThread->PostTask(spTask2, 1);
+				
+				std::shared_ptr<CtrlDTask> spTask(new CtrlDTask);
 				taskThread->PostTask(spTask, 1);
+				//equipWatch.SetWatchTime(0);
+				//std::shared_ptr<CtrlSTask> spTask(new CtrlSTask);
+				//taskThread->PostTask(spTask, 1);
+				//std::shared_ptr<CtrlDTask> spTask2(new CtrlDTask);
+				//taskThread->PostTask(spTask2, 1);
+				//std::shared_ptr<CtrlATask> spTask3(new CtrlATask);
+				//taskThread->PostTask(spTask3, 1);
 			}
 			else if (keyDown['S'] && equipWatch.GetWatchTime() > 1000)
 			{

@@ -3,8 +3,22 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
 
+extern xyls::Point equipPoint[6];
+extern HWND g_editWnd;
+
 void CtrlFTask::DoTask()
 {
+	char str[1024] = {};
+	::GetWindowTextA(g_editWnd, str, 1024);
+
+	std::string text = str;
+	if (text.size() <= 5)
+	{
+		return;
+	}
+
+	char equipIndex = text[5] - 48 - 1;
+
 	xyls::Point currentPos = CMouse::GetCurrentPos();
 	CMouse::RightUp();
 	CMouse::LeftUp();
@@ -16,7 +30,7 @@ void CtrlFTask::DoTask()
 	CMouse::LeftClick(0);
 	Sleep(50);
 
-	moveAbsolute(xyls::Point(772, 948), 0);
+	moveAbsolute(equipPoint[equipIndex], 0);
 	CMouse::LeftClick(0);
 	Sleep(50);
 
