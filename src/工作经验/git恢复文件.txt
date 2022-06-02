@@ -1,0 +1,1 @@
+git checkout 文件1.txt

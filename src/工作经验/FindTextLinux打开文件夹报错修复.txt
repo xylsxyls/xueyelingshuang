@@ -1,0 +1,7 @@
+sudo killall nautilus
+sudo apt-get purge nautilus
+sudo apt-get update
+sudo apt-get install nautilus
+
+sudo apt install samba-common-bin
+sudo mkdir /var/lib/samba/usershares

@@ -1,0 +1,1 @@
+cmake版本升级的时候需要把cmake文件覆盖/usr/local/bin下的cmake

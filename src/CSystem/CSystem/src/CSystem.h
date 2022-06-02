@@ -38,12 +38,6 @@ public:
 	static void RecoveryRedir(void* oldValue);
 	//获取去除任务栏及软件最大化时软件内任务栏后屏幕高度
 	static int GetVisibleHeight();
-	//打开系统文件夹
-	static void OpenFolder(const std::string& folder);
-	//打开系统文件夹并选择文件
-	static void OpenFolderAndSelectFile(const std::string& file);
-	//外部打开文件
-	static void OpenFile(const std::string& file);
 	//外部打开网页
 	static void OpenWebPage(const std::string& webPage);
 	//判断当前鼠标左键是否按下
@@ -87,6 +81,12 @@ public:
 	static bool DestroyDir(const std::string& dir);
 	//检测目录或文件是否存在，检测目录带不带\都可以，同一目录原本就不可能出现文件夹和文件重名的情况
 	static bool DirOrFileExist(const std::string& dir);
+    //打开系统文件夹
+	static void OpenFolder(const std::string& folder);
+    //打开系统文件夹并选择文件
+	static void OpenFolderAndSelectFile(const std::string& file);
+    //外部打开文件，linux下如果是调用外部程序打开需要加程序名，例如gedit
+	static void OpenFile(const std::string& file);
 	//创建动态的二维数组，返回空代表失败，不为空则全部成功创建
 	template <typename TypeClass>
 	static TypeClass** CreateDyadicArray(int32_t row, int32_t column);

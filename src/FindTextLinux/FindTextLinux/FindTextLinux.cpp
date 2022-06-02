@@ -3,11 +3,13 @@
 #include "QtControls/Label.h"
 #include "QtControls/LineEdit.h"
 #include "QtControls/CheckBox.h"
-#include "QtControls/TextEdit.h"
 #include "QtControls/ComboBox.h"
+#include "SearchEdit.h"
 #include "SearchPathTask.h"
 #include "CSystem/CSystemAPI.h"
 #include <QApplication>
+#include "QtControls/Menu.h"
+#include <QTextBlock>
 
 uint32_t* g_searchPathThreadId = nullptr;
 
@@ -135,12 +137,17 @@ void FindTextLinux::init()
 	m_charset->setListOrigin(21);
 	QObject::connect(m_charset, SIGNAL(currentIndexChanged(int)), this, SLOT(onCurrentIndexChanged(int)));
 
-	m_searchText = new TextEdit(this);
+	m_searchEditMenu = new Menu(this);
+	m_searchEditMenu->addAction(QStringLiteral("打开文件位置"));
+
+	m_searchText = new SearchEdit(this);
 	m_searchText->move(26, 139);
 	m_searchText->setFontSize(12);
 	m_searchText->setReadOnly(true);
 	m_searchText->setBorderColor(QColor(23, 23, 23));
 	m_searchText->setBackgroundColor(QColor(240, 240, 240));
+	m_searchText->setContextMenuPolicy(Qt::CustomContextMenu);
+	QObject::connect(m_searchText, &QTextEdit::customContextMenuRequested, this, &FindTextLinux::onShowSearchEditMenu);
 
 	m_searchPathThreadId = CTaskThreadManager::Instance().Init();
 	g_searchPathThreadId = &m_searchPathThreadId;
@@ -234,4 +241,21 @@ void FindTextLinux::onSearchEnd()
 	m_searchText->setText(m_text);
 	m_searchButton->setText(QStringLiteral("搜索"));
 	m_searchButton->setEnabled(true);
+}
+
+void FindTextLinux::onShowSearchEditMenu()
+{
+	QPoint currentPos = cursor().pos();
+	m_searchEditMenu->move(currentPos);
+	QAction* selectAction = m_searchEditMenu->exec(currentPos);
+	if (selectAction == nullptr)
+	{
+		return;
+	}
+
+	QString str = m_searchText->document()->findBlockByLineNumber(m_searchText->rightClickRow()).text();
+	if (!str.isEmpty() && str[0] == '/')
+	{
+		CSystem::OpenFolderAndSelectFile(str.toStdString());
+	}
 }

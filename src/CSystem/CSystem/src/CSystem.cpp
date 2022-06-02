@@ -262,21 +262,6 @@ int CSystem::GetVisibleHeight()
 	return GetSystemMetrics(SM_CYFULLSCREEN);
 }
 
-void CSystem::OpenFolder(const std::string& folder)
-{
-	ShellExecuteA(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
-}
-
-void CSystem::OpenFolderAndSelectFile(const std::string& file)
-{
-	ShellExecuteA(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
-}
-
-void CSystem::OpenFile(const std::string& file)
-{
-	ShellExecuteA(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
-}
-
 void CSystem::OpenWebPage(const std::string& webPage)
 {
 	ShellExecuteA(NULL, "open", webPage.c_str(), NULL, NULL, SW_SHOWNORMAL);
@@ -1425,6 +1410,48 @@ bool CSystem::DirOrFileExist(const std::string& dir)
 	return _access(dir.c_str(), 0) == 0;
 #elif __unix__
 	return access(dir.c_str(), 0) == 0;
+#endif
+}
+
+void CSystem::OpenFolder(const std::string& folder)
+{
+#ifdef _WIN32
+	ShellExecuteA(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
+#elif __unix__
+    if (fork() == 0)
+    {
+        std::string result;
+        SystemCommand("nautilus " + folder, result);
+        exit(0);
+    }
+#endif
+}
+
+void CSystem::OpenFolderAndSelectFile(const std::string& file)
+{
+#ifdef _WIN32
+	ShellExecuteA(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
+#elif __unix__
+    if (fork() == 0)
+    {
+        std::string result;
+        SystemCommand("nautilus " + file, result);
+        exit(0);
+    }
+#endif
+}
+
+void CSystem::OpenFile(const std::string& file)
+{
+#ifdef _WIN32
+	ShellExecuteA(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
+#elif __unix__
+    if (fork() == 0)
+    {
+        std::string result;
+        SystemCommand(file, result);
+        exit(0);
+    }
 #endif
 }
 
