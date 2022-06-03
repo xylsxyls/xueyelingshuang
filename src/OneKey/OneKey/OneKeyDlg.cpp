@@ -983,7 +983,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			if (keyUp['R'] && keyWatch['R'].GetWatchTime() < 200)
 			{
-				std::shared_ptr<CrTask> spTask(new CrTask);
+				std::shared_ptr<CRMoveTask> spTask(new CRMoveTask);
 				taskThread->PostTask(spTask);
 			}
 			else if (g_clickMap && keyUp['T'])
@@ -995,7 +995,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			}
 			else if (!g_clickMap && keyUp['T'])
 			{
-				std::shared_ptr<CRMoveTask> spTask(new CRMoveTask);
+				std::shared_ptr<CrTask> spTask(new CrTask);
 				taskThread->PostTask(spTask);
 			}
 		}
