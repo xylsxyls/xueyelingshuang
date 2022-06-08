@@ -1,11 +1,12 @@
 sudo apt-get install xdotool -y
 
-sudo gedit BackToDesktop.desktop
-
+sudo gedit /usr/share/applications/BackToDesktop.desktop
 
 [Desktop Entry]
 Name = BackToDesktop
 Type = Application
 Exec = xdotool key ctrl+super+d
-Icon = unity://desktop-icon
 Terminal = False
+
+进入开始菜单拖到任务栏
+Icon = unity://desktop-icon

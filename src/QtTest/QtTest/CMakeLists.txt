@@ -49,13 +49,15 @@ SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 #添加QT库
 SET(CMAKE_AUTOMOC ON)
+SET(CMAKE_AUTORCC ON)
+SET(CMAKE_AUTOUIC ON)
 
 SET(Qt5_DIR "${QT5_GCC}/lib/cmake/Qt5")
 
 INCLUDE_DIRECTORIES("${QT5_GCC}/include/")
 
 #添加Qt依赖库
-SET(QTRELY Widgets;Core;Gui)
+SET(QTRELY Widgets;Core;Gui;Qml;Quick)
 
 list(APPEND QTRELYLIST ${QTRELY})
 foreach (EVERYQTRELY ${QTRELYLIST})
@@ -67,7 +69,7 @@ endforeach ()
 #查找当前文件夹中的所有源代码文件，也可以通过Set命令将所有文件设置为一个变量
 AUX_SOURCE_DIRECTORY("${PROJECT_SOURCE_DIR}/" DIR_SRCS)
 #查找当前文件夹中所有的ui文件
-FILE(GLOB UI_FILES "${PROJECT_SOURCE_DIR}/*.ui") 
+FILE(GLOB UI_FILES "${PROJECT_SOURCE_DIR}/*.ui")
 #转换UI文件
 QT5_WRAP_UI(WRAP_FILES ${UI_FILES})
 #设置qrc

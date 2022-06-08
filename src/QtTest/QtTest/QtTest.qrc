@@ -1,4 +1,5 @@
 <RCC>
-    <qresource prefix="QtTest">
+    <qresource prefix="/">
+        <file>QtTest.qml</file>
     </qresource>
 </RCC>

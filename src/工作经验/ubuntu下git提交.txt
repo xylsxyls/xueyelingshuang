@@ -1,0 +1,26 @@
+安装beyond compare
+
+sudo wget https://www.scootersoftware.com/bcompare-4.4.1.26165_amd64.deb
+sudo apt update
+sudo apt install ./bcompare-4.4.1.26165_amd64.deb
+
+cd common/linux
+./gitdiff.sh
+
+查看版本变化文件和新填文件
+git status --ignored
+查看变化
+git diff
+
+指定新增
+git add 文件1 文件2
+包含修改和新增，点表示当前路径
+git add .
+包含修改和删除
+git add -u
+包含修改新增和删除
+git add -A .
+提交到本地
+git commit -m '注释'
+推送到服务器
+git push
