@@ -1,9 +1,18 @@
 sudo gedit /etc/profile
-export XUEYELINGSHUANG=/home/xylsxyls/xueyelingshuang/
-export CLOUD_REBUILD=/home/xylsxyls/xueyelingshuang/common/CloudRebuild/CloudRebuild1.2
-export FILE_REPLACE=/home/xylsxyls/xueyelingshuang/common/FileReplace/FileReplace1.1
-export QT5GCC32=/home/xylsxyls/Qt5.5.1_32/5.5/gcc/
-export QT5GCC64=/home/xylsxyls/Qt5.5.1_64/5.5/gcc_64/
-export BOOST_ROOT=/home/xylsxyls/boost/boost_1_58_0/
+export XUEYELINGSHUANG=$HOME/xueyelingshuang/
+export CLOUD_REBUILD=$HOME/xueyelingshuang/common/CloudRebuild/CloudRebuild1.2
+export FILE_REPLACE=$HOME/xueyelingshuang/common/FileReplace/FileReplace1.1
+export QT5GCC32=$HOME/Qt5.5.1_32/5.5/gcc/
+export QT5GCC64=$HOME/Qt5.5.1_64/5.5/gcc_64/
+export BOOST_ROOT=$HOME/boost/boost_1_58_0/
+
+export PATH=$QT5GCC32/bin/:$PATH
+export PATH=$QT5GCC64/bin/:$PATH
+export LD_LIBRARY_PATH=$QT5GCC32/lib/:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$QT5GCC64/lib/:$LD_LIBRARY_PATH
+
+export QT5152GCC64=$HOME/Qt5.15.2_64/5.15.2/gcc_64/
+export PATH=$QT5152GCC64/bin/:$PATH
+export LD_LIBRARY_PATH=$QT5152GCC64/lib/:$LD_LIBRARY_PATH
 关闭文件
 source /etc/profile

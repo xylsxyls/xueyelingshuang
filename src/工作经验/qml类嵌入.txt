@@ -1,0 +1,7 @@
+qmlRegisterSingletonInstance("WorkClass", 1, 0, "CUIDataHandle", SingletonCUIDataHandle::getInstance());
+
+WorkClass为import类名
+
+import WorkClass 1.0
+CUIDataHandle qml中调用对象
+SingletonCUIDataHandle::getInstance()关联的代码指针
