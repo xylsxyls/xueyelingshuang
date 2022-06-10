@@ -1,0 +1,198 @@
+{
+    "workbench.colorTheme": "Visual Studio Dark - C++",
+    "editor.fontFamily": "'monospace'",
+    "editor.fontSize": 18,
+    "editor.insertSpaces": false,
+    "cmake.configureOnOpen": true,
+    "editor.codeActionsOnSave": {
+        
+    },
+    "workbench.colorCustomizations": {
+        "editorBracketHighlight.foreground1": "#B4B4B4",
+        "editorBracketHighlight.foreground2": "#B4B4B4",
+        "editorBracketHighlight.foreground3": "#B4B4B4",
+        "editorBracketHighlight.foreground4": "#B4B4B4",
+        "editorBracketHighlight.foreground5": "#B4B4B4",
+        "editorBracketHighlight.foreground6": "#B4B4B4"
+    },
+    "editor.tokenColorCustomizations": {
+        //"comments": "#aa00ee", // 注释
+        //"keywords": "#0a0", // 关键字
+        //"variables": "#918d6a", // 变量名
+        //"variables": "#204000", // 变量名
+        //"strings": "#e2d75dbd", // 字符串
+        //"functions": "#008080", // 函数名
+        //"numbers": "#ff819c" // 数字
+        //文本匹配规则
+        "textMateRules": [
+            //entity.name.function",                    //直接调用的函数
+            //entity.name.type",                        //typedef定义的变量
+            //keyword.control",                         //if switch break return
+            //keyword.operator.assignment",             // =等号/赋值号 |= &=
+            //"keyword.operator.logical",               //逻辑符号 && || !
+            //"constant.character.escape",              //"\r\n"\
+            //constant.other.placeholder",              //"%s %c"
+            //punctuation.definition.comment",          // // /*注释开头
+            //constant.numeric",                        //数字:50 10  0x20的20部分
+            //keyword.operator.word                     //and or not
+            //"scope":"meta",                           //括号 函数声明的括号 调用的括号...
+            //punctuation.separator",                   //冒号 逗号
+            //punctuation.terminator",                  //分号
+            //storage.modifier",                        //static const
+            //string.quoted.single",                    //单引号字符串
+            //string.quoted.double",                    //双引号字符串
+            //string.quoted.triple",                    //三引号字符串
+            //"storage.type",                           //void int char 
+            //"punctuation.definition.string.begin",    //左双引号
+            //"punctuation.definition.string.end",      //右双引号
+            //##########################################################################
+            //系统内置的函数名称的颜色 如：print len 
+            //{
+            //    "scope": "support.function",
+            //    "settings": {
+            //        "foreground": "#ffbb00",
+            //    }
+            //},
+            {
+                "scope": "keyword.operator",
+                "settings": {
+                    "foreground": "#B4B4B4",
+                }
+            },
+            {
+                "scope": "meta",
+                "settings": {
+                    "foreground": "#B4B4B4",
+                }
+            },
+            //
+            //成员函数
+            {
+                "scope": "entity.name.function.member",
+                "settings": {
+                    "foreground": "#008080",
+                }
+            },
+            //变量
+            {
+                "scope": "variable.other",
+                "settings": {
+                    "foreground": "#C8C8C8",
+                }
+            },
+            //成员变量
+            {
+                "scope": "variable.other.property",
+                "settings": {
+                    "foreground": "#804000",
+                }
+            },
+            //分号
+            //{
+            //    "scope": "meta",
+            //    "settings": {
+            //        "foreground": "#d61233",
+            //    }
+            //},
+            //类的名称颜色 如class abc() 中的abc
+            {
+                "scope": "entity.name.type", //函数和类的名称颜色
+                "settings": {
+                    "foreground": "#4EC9B0",
+                }
+            },
+            //类和函数的定义单词颜色 def class
+            //{
+            //    "scope": "storage.type", //void int char 
+            //    "settings": {
+            //        "foreground": "#ff00c8",
+            //    }
+            //},
+            //不知道是什么
+            //{
+            //    "scope": "storage.modifier", //static const
+            //    "settings": {
+            //        "foreground": "#ffe600de",
+            //    }
+            //},
+            //运算符号，如 +-*/=
+            //{
+            //    "scope": "keyword.operator", //=等号/赋值号 |= &=
+            //    "settings": {
+            //        "foreground": "#a71433",
+            //    }
+            //},
+            // 系统的控制关键词：如 if pass return f
+            //{
+            //    "scope": "keyword.control", //if switch break return
+            //    "settings": {
+            //        "foreground": "#ff00c8",
+            //        "fontStyle": ""
+            //    }
+            //},
+            //逻辑符号：如 and  or 
+            //{
+            //    "scope": "keyword.operator.logical", //逻辑符号 && || !
+            //    "settings": {
+            //        "foreground": "#ff00c8",
+            //        "fontStyle": ""
+            //    }
+            //},
+            //换行符、转义符等如 ：\r \n
+            //{
+            //    "scope": "constant.character.escape", //"\r\n"
+            //    "settings": {
+            //        "foreground": "#ee5050",
+            //        "fontStyle": ""
+            //    }
+            //},
+            //不知道是什么
+            //{
+            //    "scope": "variable.other", //结构体对象和成员等
+            //    "settings": { //VSCode使用C的颜色限制，这一点比较坑
+            //        "foreground": "#52a4b3", //比如Public.Delay(),颜色是一起变得
+            //        "fontStyle": "" //不能单独设置Public和Delay的显示颜色
+            //    } //可能因为VS Code主要用于前端，对C的支持不够完善
+            //},
+            //函数的参数名称
+            {
+                "scope": "variable.parameter", //函数参数-定义阶段
+                "settings": {
+                    "foreground": "#7F7F7F",
+                    "fontStyle": ""
+                }
+            }
+            //{
+            //    "scope": "entity.name.section", //函数参数-调用阶段
+            //    "settings": {
+            //        "foreground": "#ff0000",
+            //        "fontStyle": ""
+            //    }
+            //},
+            // 左单双引号
+            //{
+            //    "scope": "punctuation.definition.string.begin",
+            //    "settings": {
+            //        "foreground": "#00ff7f",
+            //        "fontStyle": "bold"
+            //    }
+            //},
+            //右单双引号
+            //{
+            //    "scope": "punctuation.definition.string.end",
+            //    "settings": {
+            //        "foreground": "#00ff7f",
+            //        "fontStyle": "bold" //加粗
+            //    }
+            //},
+            //{
+            //    "scope": [
+            //        "constant.other.symbol",
+            //    ],
+            //    "settings": {
+            //        "foreground": "#ff0000"
+            //    }
+            //}
+        ]
+    }
+}
