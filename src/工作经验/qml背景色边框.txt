@@ -1,0 +1,23 @@
+Rectangle {
+        id: card1_mian_id
+        width: 20
+        height: 12
+        radius: 1
+        anchors.bottom: card1_communication_id.bottom
+        anchors.right: card1_communication_id.left
+        anchors.rightMargin: 4
+        color: "#00000000"
+        border.color: "#75D8D8D8"
+        Text {
+            x: 0
+            y: 0
+            width: 20
+            height: 12
+            text: qsTr("主号")
+            font.styleName: "Regular"
+            color: "#FFFFFF"
+            font.pixelSize: 9
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+        }
+    }

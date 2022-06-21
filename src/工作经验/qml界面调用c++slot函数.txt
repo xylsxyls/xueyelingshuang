@@ -1,0 +1,28 @@
+qmlRegisterSingletonInstance("WorkClass", 1, 0, "CUIDataHandle", SingletonCUIDataHandle::getInstance());
+
+    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
+    if (engine.rootObjects().isEmpty())
+    {
+        return -1;
+    }
+
+loadLocalData()需要为public slots
+
+import WorkClass 1.0
+
+Window {
+    id: window
+    signal qmlSignalLoadLocalData()
+
+    Connections {
+        target: window
+        function onQmlSignalLoadLocalData()
+        {
+            //CUIDataHandle.loadLocalData()
+        }
+    }
+
+    Component.onCompleted: {
+        window.qmlSignalLoadLocalData();
+    }
+}

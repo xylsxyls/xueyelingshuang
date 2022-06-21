@@ -1,0 +1,6 @@
+git branch branchName
+查看当前自己所在的分支
+git branch
+查看服务器的所有分支以及自己当前所在的分支
+git branch -a
+git push origin branchName

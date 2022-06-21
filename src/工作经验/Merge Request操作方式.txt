@@ -1,0 +1,2 @@
+切换到自己的工程到master点击顶部的Create merge request
+进到下一个页面点击Submit merge request
