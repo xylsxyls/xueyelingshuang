@@ -1,1 +1,1 @@
-"$CLOUD_REBUILD" LevelDBManager 64 dll release same
+"$CLOUD_REBUILD" LevelDBManager 32 dll release same
