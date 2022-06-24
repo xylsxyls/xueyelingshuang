@@ -1,1 +1,1 @@
-"$CLOUD_REBUILD" LevelDBManager 32 lib debug same
+"$CLOUD_REBUILD" LevelDBManager 32 dll debug same
