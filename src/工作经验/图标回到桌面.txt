@@ -10,3 +10,5 @@ Terminal = False
 
 进入开始菜单拖到任务栏
 Icon = unity://desktop-icon
+
+tweaks->扩展->Dash to Panel->左侧设置->行为->显示桌面按钮

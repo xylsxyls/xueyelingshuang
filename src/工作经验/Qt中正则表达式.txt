@@ -1,0 +1,7 @@
+https://blog.csdn.net/qq_45147279/article/details/121831125
+https://www.cnblogs.com/Lijcyy/p/8940134.html
+
+字母数字符号去掉空格
+validator: RegExpValidator{regExp: /^[0-9A-Za-z`~!@#$%^&*()\-\+_=|\{\}':;"",\\\[\].<>/?]+$/ }
+第一位是字母或下划线，后面是数字字母或下划线
+validator: RegExpValidator{regExp: /^[a-zA-Z_][0-9A-Za-z_]+$/ }

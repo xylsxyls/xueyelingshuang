@@ -1,0 +1,20 @@
+https://www.csdn.net/tags/NtTacgxsNDI0MjgtYmxvZwO0O0OO0O0O.html
+
+function onAddWaitVehicle(xPos, number)
+    {
+        var component = Qt.createComponent("qrc:///resource/qml/vehicle_number.qml")
+        if (component.status === Component.Ready)
+        {
+            var obj = component.createObject(parent, 
+            {
+                "x": xPos,
+                "y": 12,
+                "vehicle_number_text": number
+            })
+        }
+    }
+
+    Component.onCompleted: {
+        onAddWaitVehicle(222, "1234")
+        onAddWaitVehicle(422, "3456")
+    }
