@@ -1,0 +1,18 @@
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+
+搜索所有CMakeLists.txt加上上面两句，64位换 -m64
+
+git checkout 1.23
+git submodule init
+git submodule update
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=release ..
+
+32位的demo有些编译不过，拷贝出libleveldb.a即可
+
+头文件为include中的leveldb文件夹

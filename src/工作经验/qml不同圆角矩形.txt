@@ -1,0 +1,58 @@
+Shape {
+        id: __rectangle
+        width: parent.width
+        height: 56
+        layer.enabled: true
+        layer.samples: 1
+        property real leftTopRadius: 12
+        property real rightTopRadius: 12
+        property real rightBottomRadius: 0
+        property real leftBottomRadius: 0
+        property color color: "#8CA2AA"
+        ShapePath {
+            fillColor: __rectangle.color
+            fillRule: ShapePath.WindingFill
+            startX: __rectangle.leftBottomRadius
+            startY: 0
+            PathLine {
+                x: __rectangle.width - __rectangle.rightTopRadius
+                y: 0
+            }
+            PathArc {
+                x: __rectangle.width
+                y: __rectangle.rightTopRadius
+                radiusX: __rectangle.rightTopRadius
+                radiusY: __rectangle.rightTopRadius
+            }
+            PathLine {
+                x: __rectangle.width
+                y: __rectangle.height - __rectangle.rightBottomRadius
+            }
+            PathArc {
+                x: __rectangle.width - __rectangle.rightBottomRadius
+                y: __rectangle.height
+                radiusX: __rectangle.rightBottomRadius
+                radiusY: __rectangle.rightBottomRadius
+            }
+            PathLine {
+                x: __rectangle.leftBottomRadius
+                y: __rectangle.height
+            }
+            PathArc {
+                x: 0
+                y: __rectangle.height - __rectangle.leftBottomRadius
+                radiusX: __rectangle.leftBottomRadius
+                radiusY: __rectangle.leftBottomRadius
+            }
+            PathLine {
+                x: 0
+                y: __rectangle.leftTopRadius
+            }
+            PathArc {
+                x: __rectangle.leftTopRadius
+                y: 0
+                radiusX: __rectangle.leftTopRadius
+                radiusY: __rectangle.leftTopRadius
+            }
+        }
+    }

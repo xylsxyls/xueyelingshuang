@@ -1,0 +1,39 @@
+发送
+Window
+{
+    id: window_id
+    width: 1920
+    height: 1080
+    visible: true
+    //visibility: Window.FullScreen
+    color: "#1d1d1d"
+
+    signal qmlSignalAppCompleted()
+    signal qmlActiveChanged()
+onActiveChanged:
+    {
+        window_id.qmlActiveChanged()
+        console.log("检测到index发生了改变：" ,window_id.activeFocusItem, window_id.active)
+        //main_page_id.main_page_loader_id.home_page_id.create_project_window_id.color = (main_page_id.main_page_loader_id.home_page_id.create_project_window_id.focus ? "#232133" : "#334533")
+    }
+}
+
+接收
+Item
+{
+    id: home_page_id
+Connections
+    {
+        target: window_id
+        function onQmlActiveChanged()
+        {
+            create_project_window_id.color = (home_page_id.parent.parent.focus ? "#232133" : "#334533")
+            //CUIDataHandle.loadLocalData()
+            console.log("检测到index发生了改变222：" ,window_id.activeFocusItem, window_id.active)
+        }
+    }
+}
+
+父窗口分发信号，子窗口接
+子窗口可以直接调用父窗口函数
+子窗口发父窗口信号，父窗口自己接自己信号

@@ -1,0 +1,14 @@
+var arr = [1,2,3,4,5,6,7];
+             var m = {"zh":1,"en":2,"zh":4,"zh":3}
+
+            var ar = arr.find(function(elem){
+                return elem==8;
+            });
+            console.log("find:", m["zh1"]===undefined? true:false )
+            // for (var key in m)
+            // {
+            //     console.log("key",key   ,"value", m[key])
+            // }
+            console.log("arr:" ,ar,"hfghdjks:" , m["zh"] )
+
+delete canvas.elementArrayIndex[-1]

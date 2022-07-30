@@ -1,2 +1,4 @@
 进入到需要添加子模块的文件夹右键Git Bash Here
 git submodule add git@gitlab.sh.sensetime.com:sensecrowd/analyzer/base_components/core.git
+git commit -m ''
+git push

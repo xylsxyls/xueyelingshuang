@@ -1,0 +1,68 @@
+void SimulatorControl::onRecvMap(std::shared_ptr<HdMap> hdmap) {
+  if (hdmap == nullptr) {
+    return;
+  }
+
+  ui_map_model_->onRecvMap(hdmap);
+
+  QDateTime current_date_time =QDateTime::currentDateTime();
+  QString current_date =current_date_time.toString("yyyy.MM.dd hh:mm:ss.zzz ddd");
+  printf("c++ 0.0 %s\n", current_date.toStdString().c_str());
+
+  auto beginTime = Util::GetHighTickCount();
+
+  double xmapmin = ui_map_model_->getXmin();
+  double ymapmin = ui_map_model_->getYmin();
+
+  QJsonArray leftLane;
+  QJsonArray midLane;
+  QJsonArray rightLane;
+
+  QList<Lane*> lanes = ui_map_model_->getLanes();
+  for (auto it = lanes.begin(); it != lanes.end(); ++it)
+  {
+    QJsonArray leftArray;
+    QList<Point2D*> left = (*it)->getLeft();
+    for (auto itPoint = left.begin(); itPoint != left.end(); ++itPoint)
+    {
+      QPoint&& noScaleContextPoint = realMapPointToNoScaleContext(
+        QPoint(std::move((*itPoint)->getX()), std::move((*itPoint)->getY())), xmapmin, ymapmin);
+      QJsonObject point;
+      point["x"] = noScaleContextPoint.x();
+      point["y"] = noScaleContextPoint.y();
+      leftArray.push_back(std::move(point));
+    }
+    leftLane.push_back(std::move(leftArray));
+
+    QJsonArray midArray;
+    QList<Point2D*> mid = (*it)->getMid();
+    for (auto itPoint = mid.begin(); itPoint != mid.end(); ++itPoint)
+    {
+      QPoint&& noScaleContextPoint = realMapPointToNoScaleContext(
+        QPoint(std::move((*itPoint)->getX()), std::move((*itPoint)->getY())), xmapmin, ymapmin);
+      QJsonObject point;
+      point["x"] = noScaleContextPoint.x();
+      point["y"] = noScaleContextPoint.y();
+      midArray.push_back(std::move(point));
+    }
+    midLane.push_back(std::move(midArray));
+
+    QJsonArray rightArray;
+    QList<Point2D*> right = (*it)->getRight();
+    for (auto itPoint = right.begin(); itPoint != right.end(); ++itPoint)
+    {
+      QPoint&& noScaleContextPoint = realMapPointToNoScaleContext(
+        QPoint(std::move((*itPoint)->getX()), std::move((*itPoint)->getY())), xmapmin, ymapmin);
+      QJsonObject point;
+      point["x"] = noScaleContextPoint.x();
+      point["y"] = noScaleContextPoint.y();
+      rightArray.push_back(std::move(point));
+    }
+    rightLane.push_back(std::move(rightArray));
+  }
+
+  printf("time = %.2lfms\n", Util::GetHighTickCountMicroRunTime(beginTime) / 1000.0);
+
+  Q_EMIT notifyMap(leftLane, midLane, rightLane, xmapmin, ymapmin);
+  is_map_loaded = true;
+}
