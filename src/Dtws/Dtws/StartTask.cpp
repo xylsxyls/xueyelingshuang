@@ -24,7 +24,7 @@ void StartTask::DoTask()
 			CMouse::LeftClick();
 		}
 
-		CMouse::MoveAbsolute(xyls::Point(907, 754), 50);
+		CMouse::MoveAbsolute(xyls::Point(968, 812), 50);
 		int32_t count = 3;
 		while (count-- != 0)
 		{
