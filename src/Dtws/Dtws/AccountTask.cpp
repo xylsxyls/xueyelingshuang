@@ -43,6 +43,7 @@ void AccountTask::DoTask()
 
 		if (g_accountCount == 3)
 		{
+			sleep(500);
 			CMouse::LeftDoubleClick();
 			sleep(1500);
 		}

@@ -15,14 +15,14 @@ void StartTask::DoTask()
 		CMouse::LeftClick();
 
 		sleep(3000);
-		if (g_accountCount != 1)
-		{
-			CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
-			CMouse::LeftClick();
-			sleep(1000);
-			CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
-			CMouse::LeftClick();
-		}
+		//if (g_accountCount != 1)
+		//{
+		//	CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
+		//	CMouse::LeftClick();
+		//	sleep(1000);
+		//	CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
+		//	CMouse::LeftClick();
+		//}
 
 		CMouse::MoveAbsolute(xyls::Point(968, 812), 50);
 		int32_t count = 3;
