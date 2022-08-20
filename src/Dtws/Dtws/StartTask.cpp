@@ -17,6 +17,10 @@ void StartTask::DoTask()
 		CMouse::LeftClick();
 
 		sleep(3000);
+		if (CSystem::getComputerName() == SECOND_COMPUTER)
+		{
+			sleep(5000);
+		}
 		//if (g_accountCount != 1)
 		//{
 		//	CMouse::MoveAbsolute(xyls::Point(984, 651), 50);
