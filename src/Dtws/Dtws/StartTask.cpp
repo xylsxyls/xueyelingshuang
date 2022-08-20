@@ -1,5 +1,7 @@
 #include "StartTask.h"
 #include "CMouse/CMouseAPI.h"
+#include "DtwsParam.h"
+#include "CSystem/CSystemAPI.h"
 
 extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
@@ -24,7 +26,8 @@ void StartTask::DoTask()
 		//	CMouse::LeftClick();
 		//}
 
-		CMouse::MoveAbsolute(xyls::Point(968, 812), 50);
+		CMouse::MoveAbsolute(CSystem::getComputerName() == SECOND_COMPUTER ?
+			xyls::Point(785, 725) : xyls::Point(968, 812), 50);
 		int32_t count = 3;
 		while (count-- != 0)
 		{

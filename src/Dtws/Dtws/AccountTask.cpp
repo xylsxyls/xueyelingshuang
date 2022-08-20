@@ -112,6 +112,11 @@ void AccountTask::DoTask()
 
 	sleep(3000);
 
+	if (CSystem::getComputerName() == SECOND_COMPUTER)
+	{
+		sleep(5000);
+	}
+
 	accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
 	{
@@ -119,7 +124,9 @@ void AccountTask::DoTask()
 		CMouse::MiddleClick();
 
 		//µã»÷½øÈë
-		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(995, 938) : g_intoGamePoint[accountIndex], 50);
+		CMouse::MoveAbsolute(g_accountCount == 1 ?
+			(CSystem::getComputerName() == SECOND_COMPUTER ?
+			xyls::Point(717, 628) : xyls::Point(995, 938)) : g_intoGamePoint[accountIndex], 50);
 		CMouse::LeftClick();
 	}
 
