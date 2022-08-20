@@ -493,6 +493,10 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 void Dtws::closeEvent(QCloseEvent* eve)
 {
 	CHook::Uninit();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+	CTaskThreadManager::Instance().Uninit(m_threadId);
+	m_threadId = 0;
 	CTaskThreadManager::Instance().Uninit(m_taskThreadId);
 	m_taskThreadId = 0;
 	CTaskThreadManager::Instance().Uninit(m_threadId);
@@ -516,7 +520,7 @@ void Dtws::onAccountButtonClicked()
 	int32_t sleepTime = 18000;
 	if (CSystem::getComputerName() == SECOND_COMPUTER)
 	{
-		sleepTime = 120000;
+		sleepTime = 220000;
 	}
 	else if (g_accountCount == 3)
 	{

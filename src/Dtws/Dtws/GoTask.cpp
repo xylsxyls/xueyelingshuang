@@ -17,19 +17,28 @@ void GoTask::DoTask()
 {
 	CMouse::MoveAbsolute(m_click, 0);
 	CMouse::MiddleClick();
-	Sleep(50);
+	sleep(50);
 
 	std::string currentExePath = CSystem::GetCurrentExePath();
 	ScreenScript::FindClick(currentExePath + "res\\go.png", true, false, m_placeRect, 0);
 	int32_t findTimes = 0;
-	while (ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900)).empty())
+	while (!m_exit && ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900)).empty())
 	{
 		++findTimes;
-		Sleep(50);
+		sleep(50);
 		if (findTimes % 10 == 0)
 		{
+			if (m_exit)
+			{
+				return;
+			}
 			ScreenScript::FindClick(currentExePath + "res\\go.png", true, false, m_placeRect, 0);
 		}
+	}
+
+	if (m_exit)
+	{
+		return;
 	}
 
 	xyls::Point picPoint = ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900), true, 0);
@@ -44,9 +53,9 @@ void GoTask::DoTask()
 	//CKeyboard::KeyDown('V');
 	//CKeyboard::KeyUp(CKeyboard::Ctrl);
 	//CKeyboard::KeyUp('V');
-	Sleep(200);
+	sleep(200);
 	CKeyboard::InputString(m_placeName + " ", 0);
-	Sleep(50);
+	sleep(50);
 	CMouse::MoveAbsolute(picPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveOpposite(xyls::Point(0, -305 + m_clickIndex * 45), 0);
@@ -58,9 +67,9 @@ void GoTask::DoTask()
 		{
 			break;
 		}
-		Sleep(50);
+		sleep(50);
 		CMouse::LeftDoubleClick(0);
-		Sleep(200);
+		sleep(200);
 	} while (!ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900)).empty());
 }
 

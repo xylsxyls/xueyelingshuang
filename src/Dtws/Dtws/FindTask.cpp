@@ -51,6 +51,7 @@ void FindTask::StopTask()
 {
 	m_exit = true;
 	m_sleep.signal();
+	m_findEnd->signal();
 }
 
 bool FindTask::ReExecute()
