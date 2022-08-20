@@ -39,6 +39,10 @@ void FindTask::DoTask()
 	int32_t count = 3;
 	while (count-- != 0)
 	{
+		if (m_exit)
+		{
+			return;
+		}
 		if (!ScreenScript::FindPic(m_findPic, m_findPicRect).empty())
 		{
 			*m_isFind = true;
@@ -51,7 +55,6 @@ void FindTask::StopTask()
 {
 	m_exit = true;
 	m_sleep.signal();
-	m_findEnd->signal();
 }
 
 bool FindTask::ReExecute()

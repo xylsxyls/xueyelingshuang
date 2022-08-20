@@ -19,7 +19,7 @@ void StartTask::DoTask()
 		sleep(3000);
 		if (CSystem::getComputerName() == SECOND_COMPUTER)
 		{
-			sleep(5000);
+			sleep(3000);
 		}
 		//if (g_accountCount != 1)
 		//{
