@@ -1,0 +1,38 @@
+https://blog.csdn.net/weixin_44543463/article/details/113846220
+
+sudo apt-get install x11vnc -y
+选择lightdm
+sudo apt-get install lightdm -y
+sudo mkdir -pv /home/xylsxyls/.vnc
+sudo x11vnc -storepasswd yangnan /home/xylsxyls/.vnc/passwd
+cat>x11vnc.service<<EOF
+
+[Unit] 
+
+Description=Start x11vnc at startup. 
+
+After=multi-user.target 
+
+ 
+
+[Service] 
+
+Type=simple 
+
+ExecStart=/usr/bin/x11vnc -auth guess -forever -loop -noxdamage -repeat -rfbauth /home/xylsxyls/.vnc/passwd -rfbport 5900 -shared 
+
+ 
+
+[Install] 
+
+WantedBy=multi-user.target
+
+EOF
+
+sudo mv x11vnc.service /lib/systemd/system/x11vnc.service
+sudo chown root:root /lib/systemd/system/x11vnc.service
+sudo systemctl daemon-reload
+sudo systemctl enable x11vnc.service
+sudo reboot
+
+windows端输入ip:port连接
