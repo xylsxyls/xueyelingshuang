@@ -3,6 +3,7 @@
 #include "ScreenScript/ScreenScriptAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
+#include "DtwsParam.h"
 
 extern xyls::Rect g_rightTopRect[3];
 extern int32_t g_accountCount;
@@ -53,9 +54,15 @@ void GoTask::DoTask()
 	//CKeyboard::KeyDown('V');
 	//CKeyboard::KeyUp(CKeyboard::Ctrl);
 	//CKeyboard::KeyUp('V');
+	sleep(1000);
+	bool isSecond = false;
+	if (CSystem::getComputerName() == SECOND_COMPUTER)
+	{
+		isSecond = true;
+		sleep(2000);
+	}
+	CKeyboard::InputString(m_placeName + " ", isSecond ? 50 : 20);
 	sleep(200);
-	CKeyboard::InputString(m_placeName + " ", 0);
-	sleep(50);
 	CMouse::MoveAbsolute(picPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveOpposite(xyls::Point(0, -305 + m_clickIndex * 45), 0);
