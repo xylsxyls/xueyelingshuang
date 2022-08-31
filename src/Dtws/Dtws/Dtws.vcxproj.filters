@@ -128,6 +128,12 @@
     <ClCompile Include="ClickLoginTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="PlantTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="EscTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -217,6 +223,12 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="ClickLoginTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="EscTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="PlantTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

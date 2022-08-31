@@ -554,6 +554,19 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				g_moveUse = true;
 			}
 		}
+		if (keyUp[CTRL] && g_currentKey == CTRL)
+		{
+			{
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('P', true);
+				taskThread->PostTask(spTask, 1);
+			}
+			{
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('P', false);
+				taskThread->PostTask(spTask, 1);
+			}
+		}
 		if (g_keyHasDown[CTRL] && keyDown['E'])
 		{
 			if (code1 != 'G')

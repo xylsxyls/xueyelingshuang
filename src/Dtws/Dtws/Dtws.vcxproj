@@ -169,6 +169,7 @@
     <ClCompile Include="ClientReceive.cpp" />
     <ClCompile Include="CloseBeginTask.cpp" />
     <ClCompile Include="ConvoyTask.cpp" />
+    <ClCompile Include="EscTask.cpp" />
     <ClCompile Include="FindTask.cpp" />
     <ClCompile Include="FiveTask.cpp" />
     <ClCompile Include="FollowTask.cpp" />
@@ -195,6 +196,7 @@
     <ClCompile Include="HealTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Dtws.cpp" />
+    <ClCompile Include="PlantTask.cpp" />
     <ClCompile Include="RiseTask.cpp" />
     <ClCompile Include="SkillTask.cpp" />
     <ClCompile Include="SleepBaseTask.cpp" />
@@ -308,12 +310,14 @@
     <ClInclude Include="CloseBeginTask.h" />
     <ClInclude Include="ConvoyTask.h" />
     <ClInclude Include="DtwsParam.h" />
+    <ClInclude Include="EscTask.h" />
     <ClInclude Include="FindTask.h" />
     <ClInclude Include="FiveTask.h" />
     <ClInclude Include="FollowTask.h" />
     <ClInclude Include="GoFindClickTask.h" />
     <ClInclude Include="GoTask.h" />
     <ClInclude Include="HealTask.h" />
+    <ClInclude Include="PlantTask.h" />
     <ClInclude Include="RiseTask.h" />
     <ClInclude Include="SkillTask.h" />
     <ClInclude Include="SleepBaseTask.h" />

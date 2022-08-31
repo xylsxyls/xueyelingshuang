@@ -9,6 +9,8 @@
 #include "Dtws.h"
 #include "GoFindClickTask.h"
 #include "SubmitTask.h"
+#include "EscTask.h"
+#include "PlantTask.h"
 
 extern uint32_t* g_taskThreadId;
 extern uint32_t* g_threadId;
@@ -265,6 +267,22 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		}
 		spAssignThreadTask->setParam(vecSpDoTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->PostTask(spAssignThreadTask);
+	}
+	break;
+	case DTWS_ESC:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+		std::shared_ptr<EscTask> spEscTask(new EscTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spEscTask);
+	}
+	break;
+	case DTWS_PLANT:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->StopAllTask();
+		std::shared_ptr<PlantTask> spPlantTask(new PlantTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_threadId)->PostTask(spPlantTask);
 	}
 	break;
 	default:

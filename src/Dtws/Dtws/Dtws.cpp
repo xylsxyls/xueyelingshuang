@@ -84,6 +84,14 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			g_ctrlDown = true;
 		}
 		break;
+		case '1':
+		{
+			if (g_altDown)
+			{
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_ESC));
+			}
+		}
+		break;
 		case '2':
 		{
 			if (g_altDown)
@@ -93,6 +101,14 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			if (g_ctrlDown)
 			{
 				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_ATTACK));
+			}
+		}
+		break;
+		case '3':
+		{
+			if (g_altDown)
+			{
+				NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_PLANT));
 			}
 		}
 		break;
