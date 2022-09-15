@@ -50,6 +50,8 @@ void CEscapeR::DoTask()
 
 	xyls::Point movePoint = { x, y };
 
+	CMouse::RightClick(5);
+
 	CMouse::MoveAbsolute(s_rCenterPoint, 0);
 	CMouse::LeftDown();
 	Sleep(10);

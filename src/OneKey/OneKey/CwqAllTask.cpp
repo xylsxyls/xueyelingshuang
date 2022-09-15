@@ -35,24 +35,24 @@ void CwqAllTask::DoTask()
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		Sleep(50);
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
@@ -72,24 +72,24 @@ void CwqAllTask::DoTask()
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		Sleep(50);
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
@@ -115,24 +115,24 @@ void CwqAllTask::DoTask()
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		Sleep(50);
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();

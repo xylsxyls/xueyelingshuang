@@ -47,6 +47,8 @@ void CrspaceTask::DoTask()
 	{
 		y = (int32_t)(g_rCenterPoint.y() + (currentPos.y() - g_heroCenterPoint.y()) / (double)(1080 - g_heroCenterPoint.y()) * (g_rHeight - g_rUpHeight));
 	}
+
+	CMouse::RightClick(5);
 	
 	xyls::Point movePoint = { x, y }; 
 

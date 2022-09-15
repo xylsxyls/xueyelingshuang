@@ -30,7 +30,7 @@ void CwqTask::DoTask()
 		//{
 		//	return;
 		//}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		Sleep(150);
 		KeyPressE();
 		Sleep(100);

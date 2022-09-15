@@ -46,7 +46,7 @@ void CtrlFTask::DoTask()
 	CMouse::LeftDoubleClick(20);
 	Sleep(50);
 
-	CKeyboard::KeyPress('Z', 0);
+	CKeyboard::KeyPress('O', 0);
 	Sleep(50);
 
 	moveAbsolute(xyls::Point(198, 429), 0);

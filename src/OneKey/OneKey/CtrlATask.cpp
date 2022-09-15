@@ -22,7 +22,7 @@ void CtrlATask::DoTask()
 	xyls::Point currentPos = CMouse::GetCurrentPos();
 	CMouse::RightUp();
 	CMouse::LeftUp();
-	CKeyboard::KeyDown('Z');
+	CKeyboard::KeyDown('O');
 	Sleep(100);
 
 	disableMouse();
@@ -43,7 +43,7 @@ void CtrlATask::DoTask()
 	CMouse::LeftDoubleClick(20);
 	Sleep(100);
 
-	CKeyboard::KeyUp('Z');
+	CKeyboard::KeyUp('O');
 	Sleep(100);
 
 	moveAbsolute(xyls::Point(198, 429), 0);

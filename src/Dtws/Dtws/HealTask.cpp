@@ -19,7 +19,7 @@ void HealTask::DoTask()
 		if (g_muqing)
 		{
 			CKeyboard::KeyPress(CKeyboard::Right, 20);
-			Sleep(2300);
+			Sleep(300);
 			while (!m_exit)
 			{
 				//²¹³ä
@@ -27,20 +27,20 @@ void HealTask::DoTask()
 				//Sleep(20);
 				//CKeyboard::InputString("6");
 				//Sleep(800);
-				CKeyboard::InputString("5");
-				Sleep(3700);
 				CKeyboard::KeyPress(CKeyboard::F2);
-				Sleep(50);
+				Sleep(150);
 				CKeyboard::InputString("6");
-				Sleep(800);
+				Sleep(2300);
 				CKeyboard::InputString("8");
-				Sleep(1500);
+				Sleep(4500);
+				CKeyboard::InputString("5");
+				Sleep(6500);
 			}
 		}
 		else
 		{
 			CKeyboard::KeyPress(CKeyboard::Right, 20);
-			Sleep(2300);
+			Sleep(300);
 			CKeyboard::KeyDown('8');
 			Sleep(800);
 			CKeyboard::KeyUp('8');
@@ -71,7 +71,7 @@ void HealTask::DoTask()
 		CKeyboard::KeyPress(CKeyboard::Right, 20);
 	}
 
-	Sleep(2300);
+	Sleep(300);
 
 	while (!m_exit)
 	{

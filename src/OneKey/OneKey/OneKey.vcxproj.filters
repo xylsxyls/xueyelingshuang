@@ -171,6 +171,9 @@
     <ClInclude Include="CRMoveTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="ChxwTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -315,6 +318,9 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="CRMoveTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="ChxwTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

@@ -57,6 +57,7 @@
 #include "CtrlDTask.h"
 #include "CtrlFTask.h"
 #include "CRMoveTask.h"
+#include "ChxwTask.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -271,13 +272,13 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 
 		if (type == 10)
 		{
-			if (g_qKey && keyWatch['Q'].GetWatchTime() < 3500 && leftUp && stopWatch.GetWatchTime() > 2000)
-			{
-				stopWatch.SetWatchTime(0);
-				//taskThread->StopAllTask();
-				std::shared_ptr<Cwq2nofTask> spTask(new Cwq2nofTask);
-				taskThread->PostTask(spTask, 1);
-			}
+			//if (g_qKey && keyWatch['Q'].GetWatchTime() < 3500 && leftUp && stopWatch.GetWatchTime() > 2000)
+			//{
+			//	stopWatch.SetWatchTime(0);
+			//	//taskThread->StopAllTask();
+			//	std::shared_ptr<Cwq2nofTask> spTask(new Cwq2nofTask);
+			//	taskThread->PostTask(spTask, 1);
+			//}
 		}
 	}
 
@@ -617,6 +618,21 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			std::shared_ptr<SpeakTask> spTask(new SpeakTask);
 			taskThread->PostTask(spTask, 1);
 		}
+		if (type != 10 && type != 14)
+		{
+			if (keyDown['W'])
+			{
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('J', true);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (keyUp['W'])
+			{
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('J', false);
+				taskThread->PostTask(spTask, 1);
+			}
+		}
 		if (type != 9 && type != 10 && type != 13)
 		{
 			if (keyDown['R'])
@@ -921,6 +937,38 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				std::shared_ptr<CwrTask> spTask(new CwrTask);
 				taskThread->PostTask(spTask, 1);
 			}
+			else if (keyDown['W'])
+			{
+				int32_t wCount = 3;
+				while (wCount-- != 0)
+				{
+					{
+						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+						spTask->setParam('J', true);
+						taskThread->PostTask(spTask, 1);
+					}
+					{
+						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+						spTask->setParam('J', false);
+						taskThread->PostTask(spTask, 1);
+					}
+					//{
+					//	std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+					//	spTask->setParam('C', true);
+					//	taskThread->PostTask(spTask, 1);
+					//}
+					//{
+					//	std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+					//	spTask->setParam('C', false);
+					//	taskThread->PostTask(spTask, 1);
+					//}
+					{
+						std::shared_ptr<CSleepTask> spTask(new CSleepTask);
+						spTask->setParam(100);
+						taskThread->PostTask(spTask);
+					}
+				}
+			}
 			else if (keyUp['R'])
 			{
 				if (g_holdR)
@@ -1012,6 +1060,14 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				taskThread->PostTask(spTask);
 			}
 		}
+		else if (type == 14)
+		{
+			if (keyDown['W'] && keyWatch['W'].GetWatchTime() < 200)
+			{
+				std::shared_ptr<ChxwTask> spTask(new ChxwTask);
+				taskThread->PostTask(spTask);
+			}
+		}
 	}
 
 	Exit:
@@ -1069,6 +1125,7 @@ BOOL COneKeyDlg::OnInitDialog()
 	m_type.AddString("孙悟空");
 	m_type.AddString("兰陵王");
 	m_type.AddString("百里守约");
+	m_type.AddString("韩信");
 	m_type.SelectString(7, "诸葛亮");
 	type = 8;
 	m_button.SetFocus();
@@ -1450,6 +1507,12 @@ void COneKeyDlg::OnSelchangeCombo1()
 	else if (str == "百里守约")
 	{
 		type = 13;
+		code1 = 0;
+		code2 = 'C';
+	}
+	else if (str == "韩信")
+	{
+		type = 14;
 		code1 = 0;
 		code2 = 'C';
 	}

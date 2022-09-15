@@ -43,7 +43,7 @@ void CfwrTask::DoTask()
 	//CKeyboard::KeyPress('F', 0);
 	KeyPressF();
 	Sleep(100);
-	CKeyboard::KeyPress('W', 0);
+	CKeyboard::KeyPress('J', 0);
 	Sleep(10);
 	CKeyboard::KeyPress(e + 48, 0);
 	Sleep(10);

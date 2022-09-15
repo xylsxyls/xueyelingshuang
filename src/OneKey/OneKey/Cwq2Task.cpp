@@ -37,7 +37,7 @@ void Cwq2Task::DoTask()
 			return;
 		}
 
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(150))
 		{
 			return;
@@ -71,27 +71,27 @@ void Cwq2Task::DoTask()
 		//{
 		//	return;
 		//}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('W', 0);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(50))
 		{
 			return;
