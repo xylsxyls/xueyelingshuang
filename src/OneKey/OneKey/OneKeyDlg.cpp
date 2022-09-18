@@ -939,7 +939,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			}
 			else if (keyDown['W'])
 			{
-				int32_t wCount = 3;
+				int32_t wCount = 2;
 				while (wCount-- != 0)
 				{
 					{
