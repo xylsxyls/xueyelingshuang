@@ -533,17 +533,8 @@ void Dtws::onAccountButtonClicked()
 	std::shared_ptr<StartTask> spStartTask(new StartTask);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spStartTask);
 
-	int32_t sleepTime = 18000;
-	if (CSystem::getComputerName() == SECOND_COMPUTER)
-	{
-		sleepTime = 220000;
-	}
-	else if (g_accountCount == 3)
-	{
-		sleepTime = 25000;
-	}
 	std::shared_ptr<SleepTask> spSleepTask2(new SleepTask);
-	spSleepTask2->setParam(sleepTime);
+	spSleepTask2->setParam(g_accountCount == 3 ? 25000 : 1000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask2);
 
 	std::shared_ptr<ClickLoginTask> spClickLoginTask(new ClickLoginTask);
@@ -582,7 +573,7 @@ void Dtws::onAccount2ButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spStartTask);
 
 	std::shared_ptr<SleepTask> spSleepTask2(new SleepTask);
-	spSleepTask2->setParam(g_accountCount == 1 ? 22000 : 25000);
+	spSleepTask2->setParam(g_accountCount == 3 ? 25000 : 1000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask2);
 
 	std::shared_ptr<ClickLoginTask> spClickLoginTask(new ClickLoginTask);
@@ -620,7 +611,7 @@ void Dtws::onAccount3ButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spStartTask);
 
 	std::shared_ptr<SleepTask> spSleepTask2(new SleepTask);
-	spSleepTask2->setParam(g_accountCount == 1 ? 22000 : 25000);
+	spSleepTask2->setParam(g_accountCount == 3 ? 25000 : 1000);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spSleepTask2);
 
 	std::shared_ptr<ClickLoginTask> spClickLoginTask(new ClickLoginTask);

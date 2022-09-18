@@ -2,6 +2,7 @@
 #include "CMouse/CMouseAPI.h"
 #include "DtwsParam.h"
 #include "CSystem/CSystemAPI.h"
+#include "ScreenScript/ScreenScriptAPI.h"
 
 extern xyls::Point g_accountPoint[3];
 extern int32_t g_accountCount;
@@ -35,6 +36,22 @@ void StartTask::DoTask()
 		int32_t count = 3;
 		while (count-- != 0)
 		{
+			CMouse::LeftClick();
+		}
+	}
+
+	if (CSystem::getComputerName() == FIRST_COMPUTER)
+	{
+		std::string currentExePath = CSystem::GetCurrentExePath();
+		ScreenScript::WaitForPic(currentExePath + "res\\titlepic.png", xyls::Rect(0, 0, 50, 50), 18000, 300);
+	}
+
+	if (CSystem::getComputerName() == SECOND_COMPUTER)
+	{
+		std::string currentExePath = CSystem::GetCurrentExePath();
+		if (!ScreenScript::WaitForPic(currentExePath + "res\\titlepic.png", xyls::Rect(0, 0, 50, 50), 220000, 300))
+		{
+			CMouse::MoveAbsolute(xyls::Point(666, 388));
 			CMouse::LeftClick();
 		}
 	}
