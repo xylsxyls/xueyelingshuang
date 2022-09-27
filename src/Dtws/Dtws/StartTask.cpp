@@ -38,7 +38,7 @@ void StartTask::DoTask()
 		}
 
 		CMouse::MoveAbsolute(CSystem::getComputerName() == SECOND_COMPUTER ?
-			xyls::Point(785, 725) : xyls::Point(968, 812), 50);
+			xyls::Point(785, 740) : xyls::Point(968, 812), 50);
 		int32_t count = 3;
 		while (count-- != 0)
 		{
@@ -55,7 +55,7 @@ void StartTask::DoTask()
 	if (CSystem::getComputerName() == SECOND_COMPUTER)
 	{
 		std::string currentExePath = CSystem::GetCurrentExePath();
-		if (!ScreenScript::WaitForPic(currentExePath + "res\\titlepic.png", xyls::Rect(0, 0, 50, 50), 220000, 300))
+		if (!ScreenScript::WaitForPic(currentExePath + "res\\titlepic2.png", xyls::Rect(0, 0, 50, 50), 220000, 300))
 		{
 			CMouse::MoveAbsolute(xyls::Point(666, 388));
 			CMouse::LeftClick();
