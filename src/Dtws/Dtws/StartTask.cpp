@@ -31,6 +31,12 @@ void StartTask::DoTask()
 		//	CMouse::LeftClick();
 		//}
 
+		std::string currentExePath = CSystem::GetCurrentExePath();
+		while (!ScreenScript::FindPic(currentExePath + "res\\update.png", xyls::Rect(647, 342, 1107, 579)).empty())
+		{
+			sleep(300);
+		}
+
 		CMouse::MoveAbsolute(CSystem::getComputerName() == SECOND_COMPUTER ?
 			xyls::Point(785, 725) : xyls::Point(968, 812), 50);
 		int32_t count = 3;
