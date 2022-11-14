@@ -49,13 +49,13 @@ void StartTask::DoTask()
 	if (CSystem::getComputerName() == FIRST_COMPUTER)
 	{
 		std::string currentExePath = CSystem::GetCurrentExePath();
-		ScreenScript::WaitForPic(currentExePath + "res\\titlepic.png", xyls::Rect(0, 0, 50, 50), 18000, 300);
+		ScreenScript::WaitForPic(currentExePath + "res\\titlepic.png", xyls::Rect(0, 0, 50, 50), 0.7, 18000, 300);
 	}
 
 	if (CSystem::getComputerName() == SECOND_COMPUTER)
 	{
 		std::string currentExePath = CSystem::GetCurrentExePath();
-		if (!ScreenScript::WaitForPic(currentExePath + "res\\titlepic2.png", xyls::Rect(0, 0, 50, 50), 220000, 300))
+		if (!ScreenScript::WaitForPic(currentExePath + "res\\titlepic2.png", xyls::Rect(0, 0, 50, 50), 0.7, 220000, 300))
 		{
 			CMouse::MoveAbsolute(xyls::Point(666, 388));
 			CMouse::LeftClick();

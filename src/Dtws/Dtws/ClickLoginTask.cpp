@@ -27,8 +27,8 @@ void ClickLoginTask::DoTask()
 			sleep(500);
 		}
 
-		xyls::Point clickPoint = CSystem::getComputerName() == SECOND_COMPUTER ? xyls::Point(807, 238) :
-			xyls::Point(1085, 389);
+		xyls::Point clickPoint = CSystem::getComputerName() == SECOND_COMPUTER ? xyls::Point(810, 206) :
+			xyls::Point(1085, 520);
 		//µã»÷ÕËºÅµÇÂ¼
 		CMouse::MoveAbsolute(clickPoint);
 		CMouse::LeftClick(200);

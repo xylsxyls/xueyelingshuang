@@ -5,7 +5,8 @@
 #include <atlimage.h>
 #include "CSystem/CSystemAPI.h"
 
-bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubleClick, const xyls::Rect& rect, int32_t sleepTime, const xyls::Rect& move)
+bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubleClick, const xyls::Rect& rect,
+	double sim, int32_t sleepTime, const xyls::Rect& move)
 {
 	xyls::Rect findRect;
 	if (rect.empty())
@@ -25,7 +26,7 @@ bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubl
 
 	int32_t x = 0;
 	int32_t y = 0;
-	if (!CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), 0.7))
+	if (!CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), sim))
 	{
 		return false;
 	}
@@ -63,7 +64,8 @@ bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubl
 	return true;
 }
 
-xyls::Point ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect, bool isMove, int32_t sleepTime)
+xyls::Point ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect, double sim,
+	bool isMove, int32_t sleepTime)
 {
 	xyls::Rect findRect;
 	if (rect.empty())
@@ -83,7 +85,7 @@ xyls::Point ScreenScript::FindPic(const std::string& path, const xyls::Rect& rec
 
 	int32_t x = 0;
 	int32_t y = 0;
-	if (!CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), 0.7))
+	if (!CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), sim))
 	{
 		return xyls::Point(0, 0);
 	}
@@ -109,13 +111,14 @@ xyls::Point ScreenScript::FindPic(const std::string& path, const xyls::Rect& rec
 
 bool ScreenScript::WaitForPic(const std::string& path,
 							  const xyls::Rect& rect,
+							  double sim,
 							  int32_t timeOut,
 							  int32_t searchIntervalTime)
 {
 	int32_t beginTime = ::GetTickCount();
 	while ((int32_t)(::GetTickCount() - beginTime) <= timeOut)
 	{
-		if (!FindPic(path, rect, false).empty())
+		if (!FindPic(path, rect, sim, false).empty())
 		{
 			return true;
 		}
@@ -128,12 +131,13 @@ bool ScreenScript::WaitClickPic(const std::string& path,
 								bool leftClick,
 								bool doubleClick,
 								const xyls::Rect& rect,
+								double sim,
 								int32_t timeOut,
 								int32_t searchIntervalTime,
 								const xyls::Rect& move)
 {
-	WaitForPic(path, rect, timeOut, searchIntervalTime);
-    return FindClick(path, leftClick, doubleClick, rect, -1, move);
+	WaitForPic(path, rect, sim, timeOut, searchIntervalTime);
+    return FindClick(path, leftClick, doubleClick, rect, sim, -1, move);
 }
 
 std::string ScreenScript::GetBmpPath(const std::string& path)
@@ -151,6 +155,7 @@ std::string ScreenScript::GetBmpPath(const std::string& path)
 	{
 		if (!CScreen::ChangeToBmp(bmpPath, path))
 		{
+			RCSend("error");
 			return "";
 		}
 	}

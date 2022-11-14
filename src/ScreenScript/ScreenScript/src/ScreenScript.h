@@ -18,6 +18,7 @@ public:
 						  bool leftClick = true,
 						  bool doubleClick = false,
 						  const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
+						  double sim = 0.7,
 						  int32_t sleepTime = -1,
 						  const xyls::Rect& move = xyls::Rect(100, 100, 110, 110));
 
@@ -28,6 +29,7 @@ public:
 	*/
 	static xyls::Point FindPic(const std::string& path,
 						const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
+						double sim = 0.7,
 						bool isMove = false,
 						int32_t sleepTime = -1);
 
@@ -40,6 +42,7 @@ public:
 	*/
 	static bool WaitForPic(const std::string& path,
 						   const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
+						   double sim = 0.7,
 						   int32_t timeOut = 30000,
 						   int32_t searchIntervalTime = 300);
 
@@ -57,6 +60,7 @@ public:
 							 bool leftClick = true,
 							 bool doubleClick = false,
 							 const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
+							 double sim = 0.7,
 							 int32_t timeOut = 30000,
 							 int32_t searchIntervalTime = 300,
 							 const xyls::Rect& move = xyls::Rect(100, 100, 110, 110));

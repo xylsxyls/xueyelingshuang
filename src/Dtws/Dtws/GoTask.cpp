@@ -21,7 +21,7 @@ void GoTask::DoTask()
 	sleep(50);
 
 	std::string currentExePath = CSystem::GetCurrentExePath();
-	ScreenScript::FindClick(currentExePath + "res\\go.png", true, false, m_placeRect, 0);
+	ScreenScript::FindClick(currentExePath + "res\\go.png", true, false, m_placeRect, 0.7, 0);
 	int32_t findTimes = 0;
 	while (!m_exit && ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900)).empty())
 	{
@@ -33,7 +33,7 @@ void GoTask::DoTask()
 			{
 				return;
 			}
-			ScreenScript::FindClick(currentExePath + "res\\go.png", true, false, m_placeRect, 0);
+			ScreenScript::FindClick(currentExePath + "res\\go.png", true, false, m_placeRect, 0.7, 0);
 		}
 	}
 
@@ -42,7 +42,7 @@ void GoTask::DoTask()
 		return;
 	}
 
-	xyls::Point picPoint = ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900), true, 0);
+	xyls::Point picPoint = ScreenScript::FindPic(currentExePath + "res\\xun.png", xyls::Rect(385, 257, 1647, 900), 0.7, true, 0);
 	CMouse::MoveOpposite(xyls::Point(-100, 0), 0);
 	CMouse::LeftClick(0);
 	//CSystem::setClipboardData(nullptr, m_placeName);
