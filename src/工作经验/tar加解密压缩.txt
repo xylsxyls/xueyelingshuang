@@ -1,0 +1,4 @@
+加密压缩
+tar -czvf - [infilepath] | openssl des3 -salt -k password -out [outfilepath.tar.gz]
+解密压缩
+openssl des3 -d -k password -salt -in [outfilepath.tar.gz] | tar xzf -
