@@ -1,0 +1,26 @@
+https://blog.csdn.net/gaiyonghuming110/article/details/103329514
+
+关于Ubuntu下OpenGL相关错误解决1
+咸鱼躺在沙滩上
+于 2019-11-30 21:34:29 发布 561
+收藏 1
+版权
+错误解决 同时被 2 个专栏收录
+10 篇文章 0 订阅
+订阅专栏
+OpenGL
+6 篇文章 0 订阅
+订阅专栏
+1、make编译时出现
+/usr/bin/ld: CMakeFiles/unit_test.dir/__/src/OpenGLModule.cpp.o: undefined reference to symbol ‘glEnable’
+//usr/lib/x86_64-linux-gnu/libGL.so.1: 无法添加符号: DSO missing from command line
+
+解决方案 参考
+在相应的CMakeLists.txt中添加“/usr/lib/x86_64-linux-gnu/libGL.so.1”
+2、/usr/bin/ld: 找不到 -lGL
+
+解决方案 参考
+确认安装了所有的依赖库
+
+locate libGL
+sudo ln -s /usr/lib/x86_64-linux-gnu/mesa/libGL.so.1 /usr/lib/libGL.so

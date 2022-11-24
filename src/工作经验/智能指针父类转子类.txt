@@ -1,2 +1,4 @@
+类中需要有虚函数
+
 const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::dynamic_pointer_cast<SarRiseBackInfo>(strategyInfo);
 const std::shared_ptr<SarRiseBackInfo>& sarRiseBackInfo = std::static_pointer_cast<SarRiseBackInfo>(strategyInfo);

@@ -1,0 +1,69 @@
+export XUEYELINGSHUANG=$HOME/xueyelingshuang/
+export CLOUD_REBUILD=$HOME/xueyelingshuang/common/CloudRebuild/CloudRebuild1.2
+export FILE_REPLACE=$HOME/xueyelingshuang/common/FileReplace/FileReplace1.1
+export QT5GCC32=$HOME/Qt5.5.1_32/5.5/gcc/
+export QT5GCC64=$HOME/Qt5.5.1_64/5.5/gcc_64/
+export BOOST_ROOT=$HOME/boost/boost_1_58_0/
+
+export PATH=$QT5GCC32/bin/:$PATH
+export PATH=$QT5GCC64/bin/:$PATH
+export LD_LIBRARY_PATH=$QT5GCC32/lib/:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$QT5GCC64/lib/:$LD_LIBRARY_PATH
+
+export QT5152GCC64=$HOME/Qt5.15.2_64/5.15.2/gcc_64/
+export PATH=$QT5152GCC64/bin/:$PATH
+export LD_LIBRARY_PATH=$QT5152GCC64/lib/:$LD_LIBRARY_PATH
+
+export PATH=$HOME/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/bin/:$PATH
+
+export PATH=${HOME}/.local/bin:${PATH}
+export OUT_LIB_DIR=${HOME}/cowa/tboxhmi/tboxhmi-common/sdk/host/outlib
+export LD_LIBRARY_PATH=${OUT_LIB_DIR}/protobuf/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${OUT_LIB_DIR}/zmqIF/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${OUT_LIB_DIR}/libzmq/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=/usr/lib:${LD_LIBRARY_PATH}
+
+export PATH=${HOME}/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/bin:${PATH}
+export QT5152DIR=${HOME}/Qt5.15.2_64
+
+
+1.
+
+export XUEYELINGSHUANG=${HOME}/xueyelingshuang/
+export CLOUD_REBUILD=${HOME}/xueyelingshuang/common/CloudRebuild/CloudRebuild1.2
+export FILE_REPLACE=${HOME}/xueyelingshuang/common/FileReplace/FileReplace1.1
+export QT5GCC32=${HOME}/Qt5.5.1_32/5.5/gcc/
+export QT5GCC64=${HOME}/Qt5.5.1_64/5.5/gcc_64/
+export BOOST_ROOT=${HOME}/boost/boost_1_58_0/
+
+export PATH=${QT5GCC32}/bin/:${PATH}
+export PATH=${QT5GCC64}/bin/:${PATH}
+export LD_LIBRARY_PATH=${QT5GCC32}/lib/:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${QT5GCC64}/lib/:${LD_LIBRARY_PATH}
+
+export QT5152GCC64=${HOME}/Qt5.15.2_64/5.15.2/gcc_64/
+export PATH=${QT5152GCC64}/bin/:${PATH}
+export LD_LIBRARY_PATH=${QT5152GCC64}/lib/:${LD_LIBRARY_PATH}
+
+export LD_LIBRARY_PATH=${HOME}/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/lib/:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${HOME}/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/bin/:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=/home/xylsxyls/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/lib/:${LD_LIBRARY_PATH}
+
+export PATH=${HOME}/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/lib/:${PATH}
+export PATH=${HOME}/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/bin/:${PATH}
+
+
+2.
+
+export PATH=${HOME}/.local/bin:${PATH}
+export OUT_LIB_DIR=${HOME}/cowa/tboxhmi/tboxhmi-common/sdk/host/outlib
+export LD_LIBRARY_PATH=${OUT_LIB_DIR}/protobuf/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${OUT_LIB_DIR}/zmqIF/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${OUT_LIB_DIR}/libzmq/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=/usr/lib:${LD_LIBRARY_PATH}
+
+export PATH=${HOME}/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/bin:${PATH}
+export LD_LIBRARY_PATH=${HOME}/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/lib/:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${HOME}/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/bin/:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=/home/xylsxyls/.conan/data/protobuf/3.3.0/_/_/package/0ab9fcf606068d4347207cc29edd400ceccbc944/lib/:${LD_LIBRARY_PATH}
+export QT5152DIR=${HOME}/Qt5.15.2_64

@@ -1,0 +1,1 @@
+glxinfo | grep "OpenGL version"

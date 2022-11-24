@@ -1,0 +1,2 @@
+double z_min_ = std::numeric_limits<double>::max();
+  double z_max_ = -std::numeric_limits<double>::max();

@@ -1,0 +1,18 @@
+https://blog.csdn.net/jiang_huixin/article/details/123414527
+
+sudo apt install build-essential gawk bison
+
+tar -xJf glibc-2.28.tar.xz
+cd glibc-2.28/
+mkdir build
+cd build
+../configure --prefix=/usr
+make
+
+进到系统盘
+sudo apt update
+sudo apt install build-essential gawk bison
+
+sudo make install DESTDIR=xxx
+xxx为系统盘里原系统的根目录
+然后把/lib64下的所有内容拷贝到/lib/x86_64-linux-gnu下

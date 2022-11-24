@@ -1,0 +1,21 @@
+void CUIBarHandle::onInitWindow()
+{
+  
+  //window->setTitle("test window");
+  QQuickItem* item = findFirstItem("autodriveItem");
+  item->setWidth(100);
+  item->setHeight(100);
+  QQuickWindow* win = item->window();
+  //QWindow* itemWindow = qobject_cast<QWindow *>(win);
+  //RCSend("%p", itemWindow);
+  win->setColor(QColor(255,255,0));
+
+  QWindow* window = new QWindow;
+  window->setGeometry(0,0,50,50);
+  window->setParent(win);
+  window->show();
+  
+  //win->setWidth(100);
+ // win->setHeight(100);
+  RCSend("123123");
+}

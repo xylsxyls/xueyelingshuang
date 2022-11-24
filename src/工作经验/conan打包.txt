@@ -1,0 +1,25 @@
+#做包
+conan new protobuf/3.3.0 --bare
+# 编辑文件 conanfile.py, 添加一段python代码, 如下图:
+# 这个是为了 兼容性
+
+#导出,  注意后面的-s参数,  要参考本机的配置文件 ~/.conan/profiles/default
+conan export-pkg ./conanfile.py
+# 查看一下, 此时本地就有了 protobuf/3.3.0
+conan search
+#上传 到服务器
+conan upload protobuf/3.3.0 --all -r=cowasoft
+
+
+    def package_id(self):
+        v = str(self.settings.compiler.version)
+        print(self.settings.compiler, self.settings.arch,
+              self.settings.build_type, self.settings.os)
+
+        if self.settings.compiler == "gcc":
+            for version in ("6", "7", "8", "9", "10", "11"):
+                for libcxx in ("libstdc++11", "libstdc++"):
+                    compatible_pkg = self.info.clone()
+                    compatible_pkg.settings.compiler.version = version
+                    compatible_pkg.settings.compiler.libcxx = libcxx
+                    self.compatible_packages.append(compatible_pkg)

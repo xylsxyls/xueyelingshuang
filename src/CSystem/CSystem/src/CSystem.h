@@ -81,11 +81,11 @@ public:
 	static bool DestroyDir(const std::string& dir);
 	//检测目录或文件是否存在，检测目录带不带\都可以，同一目录原本就不可能出现文件夹和文件重名的情况
 	static bool DirOrFileExist(const std::string& dir);
-    //打开系统文件夹
+	//打开系统文件夹
 	static void OpenFolder(const std::string& folder);
-    //打开系统文件夹并选择文件
+	//打开系统文件夹并选择文件
 	static void OpenFolderAndSelectFile(const std::string& file);
-    //外部打开文件，linux下如果是调用外部程序打开需要加程序名，例如gedit
+	//外部打开文件，linux下如果是调用外部程序打开需要加程序名，例如gedit
 	static void OpenFile(const std::string& file);
 	//创建动态的二维数组，返回空代表失败，不为空则全部成功创建
 	template <typename TypeClass>
@@ -99,12 +99,12 @@ public:
 	//将QRect中4个点中小于0的点换成0
 	template <typename TQRect>
 	static TQRect qrectValid(const TQRect& rect);
-    //打印map
+	//打印map
 	static void OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path = "");
-    //打印vector
+	//打印vector
 	static void OutputVector(const std::vector<std::string>& stringVector, const std::string& path = "");
-    //清空scanf缓存区
-    static void ClearScanf();
+	//清空scanf缓存区
+	static void ClearScanf();
 	//获取执行参数列表，windows下不会读取参数，linux下会读取，第一个是可执行文件的绝对路径
 	static std::vector<std::string> exeParam(int argc = 0, char** argv = nullptr);
 	//获取密码
