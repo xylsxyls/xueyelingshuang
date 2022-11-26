@@ -1373,11 +1373,21 @@ std::string CSystem::GetSysUserName()
     ::GetUserNameA(szName, &size);
     return szName;
 #elif __unix__
-	uid_t userid;
-    struct passwd* pwd;
+	uid_t userid = 0;
+    struct passwd* pwd = nullptr;
     userid = getuid();
     pwd = getpwuid(userid);
-    return pwd->pw_name;
+	std::string name;
+	if (pwd != nullptr)
+	{
+		return pwd->pw_name;
+	}
+	SystemCommand("whoami", name);
+	if (!name.empty() && name.back() == '\n')
+	{
+		name.pop_back();
+	}
+	return name;
 #endif
 }
 
