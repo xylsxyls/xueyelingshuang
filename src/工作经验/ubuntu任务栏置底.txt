@@ -1,1 +1,3 @@
 https://www.linuxidc.com/Linux/2018-09/153973.htm
+
+sudo apt install gnome-shell-extensions gnome-shell-extension-dash-to-panel gnome-tweaks adwaita-icon-theme-full
