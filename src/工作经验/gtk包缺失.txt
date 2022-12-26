@@ -1,0 +1,1 @@
+sudo apt-get install gtk2-engines* gtk2-engines*:i386
