@@ -172,19 +172,19 @@ struct PrintEntry
 				m_printStr.append("line = " + sizeStr);
 			}
 			
-			if (m_size != -1)
+			if (m_size != std::size_t(-1))
 			{
 				appendEntry();
 				m_printStr.append("size = " + sizeStr);
 			}
 			
-			if (m_totalSize != -1)
+			if (m_totalSize != std::size_t(-1))
 			{
 				appendEntry();
 				m_printStr.append("totalSize = " + sizeStr);
 			}
 			
-			if (m_entrySize != -1)
+			if (m_entrySize != std::size_t(-1))
 			{
 				appendEntry();
 				m_printStr.append("entrySize = " + sizeStr);
@@ -622,6 +622,12 @@ public:
 		std::string result = "stack traceback, threadId = " + std::to_string((uint32_t)(*(__gthread_t*)(char*)(&threadId))) + "\n";
 		void* buffer[1024] = {};
 		int32_t nptrs = backtrace(buffer, 1024);
+		//printf("nptrs = %d\n", nptrs);
+		//if (nptrs == 9 || nptrs == 10 || nptrs == 6)
+		//{
+		//	result = "error backtrace\n";
+		//	return result;
+		//}
 		char** strings = backtrace_symbols(buffer, nptrs);
 		if (strings == nullptr)
 		{
@@ -635,6 +641,7 @@ public:
 			result += ("[" + std::to_string(index) + "] " + stack + "\n");
 		}
 		free(strings);
+		return result;
 #endif
 	}
 
@@ -644,7 +651,10 @@ public:
 #ifdef _WIN32
 		::GetModuleFileNameA(NULL, szFilePath, 1024);
 #elif __unix__
-		::readlink("/proc/self/exe", szFilePath, 1024);
+		if (::readlink("/proc/self/exe", szFilePath, 1024) == (ssize_t)-1)
+		{
+			printf("readlink /proc/self/exe error\n");
+		}
 #endif
 		return GetName(szFilePath, 4);
 	}
@@ -655,7 +665,10 @@ public:
 #ifdef _WIN32
 		::GetModuleFileNameA(NULL, szFilePath, 1024);
 #elif __unix__
-		::readlink("/proc/self/exe", szFilePath, 1024);
+		if (::readlink("/proc/self/exe", szFilePath, 1024) == (ssize_t)-1)
+		{
+			printf("readlink /proc/self/exe error\n");
+		}
 #endif
 		return GetName(szFilePath, 3);
 	}
