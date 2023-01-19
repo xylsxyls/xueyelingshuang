@@ -1,0 +1,2 @@
+tar -zcvf DIR.tar.gz DIR && split -b 500M -d -a 2 DIR.tar.gz DIR.tar.gz.
+cat DIR.tar.gz.* | tar -zxv
