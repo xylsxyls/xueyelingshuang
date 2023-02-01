@@ -23,7 +23,7 @@ Point::Point(const POINT& point)
 }
 #endif
 
-void Point::SetPoint(int32_t x, int32_t y)
+void Point::setPoint(int32_t x, int32_t y)
 {
     m_x = x;
     m_y = y;
@@ -44,14 +44,34 @@ bool Point::empty() const
 	return (m_x == 0) && (m_y == 0);
 }
 
-void Point::SetX(int32_t x)
+void Point::setX(int32_t x)
 {
     m_x = x;
 }
 
-void Point::SetY(int32_t y)
+void Point::setY(int32_t y)
 {
     m_y = y;
+}
+
+Point Point::add(const Point& a, const Point& b)
+{
+	return { a.m_x + b.m_x, a.m_y + b.m_y };
+}
+
+Point Point::sub(const Point& a, const Point& b)
+{
+	return{ a.m_x - b.m_x, a.m_y - b.m_y };
+}
+
+bool Point::equal(const Point& a, const Point& b)
+{
+	return (a.m_x == b.m_x) && (a.m_y == b.m_y);
+}
+
+bool Point::notEqual(const Point& a, const Point& b)
+{
+	return (a.m_x != b.m_x) || (a.m_y != b.m_y);
 }
 
 }

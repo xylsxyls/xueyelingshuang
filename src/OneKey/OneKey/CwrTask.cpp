@@ -3,6 +3,9 @@
 #include "CMouse/CMouseAPI.h"
 #include "CKeyBoard/CKeyboardAPI.h"
 
+extern xyls::Point rCenterPoint;
+extern xyls::Point fCenterPoint;
+
 void CwrTask::DoTask()
 {
 	CKeyboard::KeyPress('H', 0);
@@ -23,7 +26,7 @@ void CwrTask::DoTask()
 void CwrTask::KeyPressF()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
-	CMouse::MoveAbsolute(xyls::Point(1224, 957), 0);
+	CMouse::MoveAbsolute(fCenterPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
 }
@@ -31,7 +34,7 @@ void CwrTask::KeyPressF()
 void CwrTask::KeyPressR()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
-	CMouse::MoveAbsolute(xyls::Point(1714, 598), 0);
+	CMouse::MoveAbsolute(rCenterPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
 }

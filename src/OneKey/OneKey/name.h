@@ -1,0 +1,17 @@
+#pragma once
+
+#define DF "刀锋"
+#define JIE "劫"
+#define YJ "妖姬"
+#define KSD "卡萨丁"
+#define KTLN "卡特琳娜"
+#define JYX "进游戏"
+#define WZ "王者"
+#define ZGL "诸葛亮"
+#define ZK "钟馗"
+#define SMY "司马懿"
+#define SWK "孙悟空"
+#define LLW "兰陵王"
+#define BLSY "百里守约"
+#define HX "韩信"
+#define NKLL "娜可露露"

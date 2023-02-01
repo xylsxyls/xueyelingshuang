@@ -59,7 +59,8 @@ void CwqAllTask::DoTask()
 		Sleep(50);
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		Sleep(50); CKeyboard::KeyPress(text[0] + 48, 0);
+		Sleep(50);
+		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
 	}
 	else if (text.size() == 1)

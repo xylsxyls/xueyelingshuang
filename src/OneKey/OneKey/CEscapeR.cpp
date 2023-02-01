@@ -2,9 +2,10 @@
 #include "CEscapeR.h"
 #include "CMouse/CMouseAPI.h"
 #include "CKeyBoard/CKeyboardAPI.h"
+#include "CMouseConfig.h"
 
 static xyls::Point s_heroCenterPoint = { 1920 / 2, 618 };
-static xyls::Point s_rCenterPoint = { 1742, 634 };
+static xyls::Point s_rCenterPoint = { 1664, 609 };
 static int32_t s_rWidth = 222;
 static int32_t s_rUpHeight = 134;
 static int32_t s_rHeight = 190;
@@ -50,7 +51,13 @@ void CEscapeR::DoTask()
 
 	xyls::Point movePoint = { x, y };
 
-	CMouse::RightClick(5);
+	//CMouse::RightClick(5);
+	bool rightHasDown = g_mouse.m_rightHasDown;
+	if (rightHasDown)
+	{
+		CMouse::RightUp();
+		Sleep(5);
+	}
 
 	CMouse::MoveAbsolute(s_rCenterPoint, 0);
 	CMouse::LeftDown();
@@ -61,4 +68,9 @@ void CEscapeR::DoTask()
 	Sleep(20);
 	CMouse::LeftUp();
 	CMouse::MoveAbsolute(currentPos, 0);
+
+	if (rightHasDown)
+	{
+		CMouse::RightDown();
+	}
 }

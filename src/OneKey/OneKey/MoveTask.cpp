@@ -2,12 +2,19 @@
 #include "MoveTask.h"
 #include "CMouse/CMouseAPI.h"
 
-void MoveTask::DoTask()
+MoveTask::MoveTask():
+m_time(0)
 {
-	CMouse::MoveAbsolute(m_pos, 0);
+
 }
 
-void MoveTask::setParam(const xyls::Point& pos)
+void MoveTask::DoTask()
+{
+	CMouse::MoveAbsolute(m_pos, m_time);
+}
+
+void MoveTask::setParam(const xyls::Point& pos, int32_t time)
 {
 	m_pos = pos;
+	m_time = time;
 }

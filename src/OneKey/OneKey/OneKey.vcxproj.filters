@@ -16,6 +16,9 @@
     <Filter Include="CTask">
       <UniqueIdentifier>{9df822df-2f04-4c93-a6ef-a722ce559223}</UniqueIdentifier>
     </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{3ae797b9-9cfa-4ef0-a5b6-0b605a1035a1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -174,6 +177,33 @@
     <ClInclude Include="ChxwTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="CLeftClickTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="SkillTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CHoldRTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CTabRTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CRqwTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CFindSkillTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
+    <ClInclude Include="name.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="OneKeyTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CMouseConfig.h">
+      <Filter>common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -322,6 +352,27 @@
     </ClCompile>
     <ClCompile Include="ChxwTask.cpp">
       <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CLeftClickTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="SkillTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CHoldRTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CTabRTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CRqwTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CFindSkillTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CMouseConfig.cpp">
+      <Filter>common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

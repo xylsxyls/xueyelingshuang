@@ -114,6 +114,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CFindSkillTask.h" />
     <ClInclude Include="CForceMoveTask.h" />
     <ClInclude Include="CerTask.h" />
     <ClInclude Include="CEscapeR.h" />
@@ -123,8 +124,11 @@
     <ClInclude Include="CFlashTask.h" />
     <ClInclude Include="CfwqTask.h" />
     <ClInclude Include="CfwrTask.h" />
+    <ClInclude Include="CHoldRTask.h" />
     <ClInclude Include="ChxwTask.h" />
     <ClInclude Include="CKeyTask.h" />
+    <ClInclude Include="CLeftClickTask.h" />
+    <ClInclude Include="CMouseConfig.h" />
     <ClInclude Include="CNoFlashTask.h" />
     <ClInclude Include="Cqdrw3Task.h" />
     <ClInclude Include="CqfwrTask.h" />
@@ -137,11 +141,13 @@
     <ClInclude Include="CrfTask.h" />
     <ClInclude Include="CRightClickTask.h" />
     <ClInclude Include="CrqTask.h" />
+    <ClInclude Include="CRqwTask.h" />
     <ClInclude Include="CrspaceTask.h" />
     <ClInclude Include="CRMoveTask.h" />
     <ClInclude Include="CrTask.h" />
     <ClInclude Include="CSleepTask.h" />
     <ClInclude Include="CSmallFlashTask.h" />
+    <ClInclude Include="CTabRTask.h" />
     <ClInclude Include="CtrlATask.h" />
     <ClInclude Include="CtrlDTask.h" />
     <ClInclude Include="CtrlFTask.h" />
@@ -158,15 +164,19 @@
     <ClInclude Include="IntoGameTask.h" />
     <ClInclude Include="MoveClickTask.h" />
     <ClInclude Include="MoveTask.h" />
+    <ClInclude Include="name.h" />
     <ClInclude Include="OneKey.h" />
     <ClInclude Include="OneKeyDlg.h" />
+    <ClInclude Include="OneKeyTask.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="HeroTask.h" />
+    <ClInclude Include="SkillTask.h" />
     <ClInclude Include="SpeakTask.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CFindSkillTask.cpp" />
     <ClCompile Include="CForceMoveTask.cpp" />
     <ClCompile Include="CerTask.cpp" />
     <ClCompile Include="CEscapeR.cpp" />
@@ -176,8 +186,11 @@
     <ClCompile Include="CFlashTask.cpp" />
     <ClCompile Include="CfwqTask.cpp" />
     <ClCompile Include="CfwrTask.cpp" />
+    <ClCompile Include="CHoldRTask.cpp" />
     <ClCompile Include="ChxwTask.cpp" />
     <ClCompile Include="CKeyTask.cpp" />
+    <ClCompile Include="CLeftClickTask.cpp" />
+    <ClCompile Include="CMouseConfig.cpp" />
     <ClCompile Include="CNoFlashTask.cpp" />
     <ClCompile Include="Cqdrw3Task.cpp" />
     <ClCompile Include="CqfwrTask.cpp" />
@@ -190,11 +203,13 @@
     <ClCompile Include="CrfTask.cpp" />
     <ClCompile Include="CRightClickTask.cpp" />
     <ClCompile Include="CrqTask.cpp" />
+    <ClCompile Include="CRqwTask.cpp" />
     <ClCompile Include="CrspaceTask.cpp" />
     <ClCompile Include="CRMoveTask.cpp" />
     <ClCompile Include="CrTask.cpp" />
     <ClCompile Include="CSleepTask.cpp" />
     <ClCompile Include="CSmallFlashTask.cpp" />
+    <ClCompile Include="CTabRTask.cpp" />
     <ClCompile Include="CtrlATask.cpp" />
     <ClCompile Include="CtrlDTask.cpp" />
     <ClCompile Include="CtrlFTask.cpp" />
@@ -214,6 +229,7 @@
     <ClCompile Include="OneKey.cpp" />
     <ClCompile Include="OneKeyDlg.cpp" />
     <ClCompile Include="HeroTask.cpp" />
+    <ClCompile Include="SkillTask.cpp" />
     <ClCompile Include="SpeakTask.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

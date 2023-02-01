@@ -4,6 +4,7 @@
 #include "D:\\SendToMessageTest.h"
 
 extern int32_t g_codetimes;
+extern bool isMain;
 
 HeroTask::HeroTask():
 m_code1(0),
@@ -25,6 +26,10 @@ void HeroTask::DoTask()
 	if (m_code2 != 0)
 	{
 		CKeyboard::KeyPress(m_code2, 0);
+		if (isMain)
+		{
+			CKeyboard::KeyPress('C', 0);
+		}
 	}
 }
 

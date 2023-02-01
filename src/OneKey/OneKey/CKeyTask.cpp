@@ -4,25 +4,43 @@
 
 CKeyTask::CKeyTask():
 m_vkCode(0),
-m_isDown(false)
+m_type(0)
 {
 
 }
 
 void CKeyTask::DoTask()
 {
-	if (m_isDown)
+	switch (m_type)
+	{
+	case 0:
+	{
+		CKeyboard::KeyUp(m_vkCode);
+	}
+	break;
+	case 1:
 	{
 		CKeyboard::KeyDown(m_vkCode);
 	}
-	else
+	break;
+	case 2:
 	{
-		CKeyboard::KeyUp(m_vkCode);
+		CKeyboard::KeyPress(m_vkCode, 0);
+	}
+	break;
+	default:
+		break;
 	}
 }
 
 void CKeyTask::setParam(int32_t vkCode, bool isDown)
 {
 	m_vkCode = vkCode;
-	m_isDown = isDown;
+	m_type = (int32_t)isDown;
+}
+
+void CKeyTask::setParam(int32_t vkCode)
+{
+	m_vkCode = vkCode;
+	m_type = 2;
 }

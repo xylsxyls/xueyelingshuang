@@ -11,7 +11,9 @@ public:
 
 	void setParam(int32_t vkCode, bool isDown);
 
+	void setParam(int32_t vkCode);
+
 private:
 	int32_t m_vkCode;
-	bool m_isDown;
+	int32_t m_type;
 };

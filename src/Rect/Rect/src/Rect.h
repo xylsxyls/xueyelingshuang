@@ -25,23 +25,23 @@ public:
     Rect(const Point& point, int32_t margin);
 
 public:
-    void SetRect(int32_t left, int32_t top, int32_t right, int32_t bottom);
-	void SetRect(const Point& point);
-	int GetWidth()const;
-	int GetHeight()const;
+    void setRect(int32_t left, int32_t top, int32_t right, int32_t bottom);
+	void setRect(const Point& point);
+	int width()const;
+	int height()const;
 	bool isPoint()const;
 	bool isLine()const;
 	bool empty()const;
 
-    int32_t Left() const;
-    int32_t Top() const;
-    int32_t Right() const;
-    int32_t Bottom() const;
+    int32_t left() const;
+    int32_t top() const;
+    int32_t right() const;
+    int32_t bottom() const;
 
-    void SetLeft(int32_t left);
-    void SetTop(int32_t top);
-    void SetRight(int32_t right);
-    void SetBottom(int32_t bottom);
+    void setLeft(int32_t left);
+    void setTop(int32_t top);
+    void setRight(int32_t right);
+    void setBottom(int32_t bottom);
 
 	//包含边
 	bool contain(const xyls::Point& point);
@@ -56,27 +56,39 @@ public:
 	//? 居中适应放入背景bkRect中
 	//? param [in] bkRect 背景矩形
 	//? return 返回适应之后的矩形，如果过小会放大适应
-	Rect Adapt(const Rect& bkRect);
+	Rect adapt(const Rect& bkRect);
 
 	//? 居中放入背景bkRect中
 	//? param [in] bkRect 背景矩形
 	//? return 返回之后的矩形，如果过小不会放大
-	Rect SetIn(const Rect& bkRect);
+	Rect setIn(const Rect& bkRect);
 
 #ifdef _MSC_VER
 	//? 获取重叠矩形
 	//? param [in] bkRect 背景矩形
 	//? return 返回重叠部分的矩形
-	Rect Over(const Rect& bkRect);
+	Rect over(const Rect& bkRect);
 #endif
 
 	//? 获取tan角，高/宽
 	//? 返回tan角
-	double Gettan() const;
+	double tanHeightWidth() const;
 
 #ifdef _MSC_VER
 	operator RECT() const;
 #endif
+
+	friend inline bool operator == (const Rect& a, const Rect& b)
+	{
+		return Rect::equal(a, b);
+	}
+	friend inline bool operator != (const Rect& a, const Rect& b)
+	{
+		return Rect::notEqual(a, b);
+	}
+
+	static bool equal(const Rect& a, const Rect& b);
+	static bool notEqual(const Rect& a, const Rect& b);
 
 private:
     int32_t m_left;

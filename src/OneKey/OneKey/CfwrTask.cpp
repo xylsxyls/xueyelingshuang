@@ -11,6 +11,9 @@ extern int32_t code2;
 extern HWND g_editWnd;
 extern CStopWatch keyWatch[256];
 
+extern xyls::Point rCenterPoint;
+extern xyls::Point fCenterPoint;
+
 CfwrTask::CfwrTask():
 m_editIndex(0)
 {
@@ -93,7 +96,7 @@ void CfwrTask::KeyPressE()
 void CfwrTask::KeyPressF()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
-	CMouse::MoveAbsolute(xyls::Point(1224, 957), 0);
+	CMouse::MoveAbsolute(fCenterPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
 }
@@ -101,7 +104,7 @@ void CfwrTask::KeyPressF()
 void CfwrTask::KeyPressR()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
-	CMouse::MoveAbsolute(xyls::Point(1714, 598), 0);
+	CMouse::MoveAbsolute(rCenterPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
 }

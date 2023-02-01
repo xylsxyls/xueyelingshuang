@@ -332,6 +332,14 @@ void CHeroHeadDlg::OnChangeEdit2()
 	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
 
 	// TODO:  在此添加控件通知处理程序代码
+
+	char text2[1024] = {};
+	::GetWindowText(m_edit.m_hWnd, text2, 1024);
+
+	if (atoi(text2) > 5)
+	{
+		return;
+	}
 	m_edit.ShowWindow(SW_HIDE);
 
 	//透明加穿透，WS_EX_TRANSPARENT是穿透

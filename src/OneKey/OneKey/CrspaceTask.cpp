@@ -2,9 +2,10 @@
 #include "CrspaceTask.h"
 #include "CMouse/CMouseAPI.h"
 #include "D:\\SendToMessageTest.h"
+#include "CMouseConfig.h"
 
 xyls::Point g_heroCenterPoint = { 1920 / 2, 618 };
-xyls::Point g_rCenterPoint = { 1742, 634 };
+xyls::Point g_rCenterPoint = { 1664, 609 };
 int32_t g_rWidth = 222;
 int32_t g_rUpHeight = 134;
 int32_t g_rHeight = 190;
@@ -48,7 +49,13 @@ void CrspaceTask::DoTask()
 		y = (int32_t)(g_rCenterPoint.y() + (currentPos.y() - g_heroCenterPoint.y()) / (double)(1080 - g_heroCenterPoint.y()) * (g_rHeight - g_rUpHeight));
 	}
 
-	CMouse::RightClick(5);
+	//CMouse::RightClick(5);
+	bool rightHasDown = g_mouse.m_rightHasDown;
+	if (rightHasDown)
+	{
+		CMouse::RightUp();
+		Sleep(5);
+	}
 	
 	xyls::Point movePoint = { x, y }; 
 
@@ -61,4 +68,10 @@ void CrspaceTask::DoTask()
 	Sleep(20);
 	CMouse::LeftUp();
 	CMouse::MoveAbsolute(currentPos, 0);
+
+	if (rightHasDown)
+	{
+		CMouse::RightDown();
+	}
+	
 }

@@ -9,55 +9,13 @@
 #include "CHook/CHookAPI.h"
 #include "CStopWatch/CStopWatchAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "CFlashTask.h"
-#include "CNoFlashTask.h"
-#include "CqNoFlashTask.h"
-#include "CSmallFlashTask.h"
-#include "CWeqTask.h"
-#include "CRightClickTask.h"
-#include "IntoGameTask.h"
-#include "D:\\SendToMessageTest.h"
-#include "CqTask.h"
-#include "CQreTask.h"
-#include "CrFlashTask.h"
-#include "CEwqr1Task.h"
-#include "CWewTask.h"
-#include "CDwqrTask.h"
-#include "Cqrw3Task.h"
-#include "Cqdrw3Task.h"
-#include "CwrqTask.h"
-#include "CrqTask.h"
-#include "HeroTask.h"
-#include "SpeakTask.h"
-#include "CrfTask.h"
-#include "CClickTask.h"
 #include "CKeyBoard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
-#include "MoveTask.h"
-#include "CqMoreTask.h"
-#include "CwqTask.h"
-#include "CKeyTask.h"
-#include "CSleepTask.h"
-#include "CrTask.h"
-#include "CwrTask.h"
-#include "CqfwrTask.h"
-#include "CfwrTask.h"
-#include "CEscapeR.h"
-#include "CwqAllTask.h"
-#include "Cwq2Task.h"
-#include "Cwq2nofTask.h"
 #include "CSystem/CSystemAPI.h"
 #include "HeroHeadDlg.h"
-#include "MoveClickTask.h"
-#include "CrspaceTask.h"
-#include "CerTask.h"
-#include "CfwqTask.h"
-#include "CtrlATask.h"
-#include "CtrlSTask.h"
-#include "CtrlDTask.h"
-#include "CtrlFTask.h"
-#include "CRMoveTask.h"
-#include "ChxwTask.h"
+#include "OnekeyTask.h"
+#include "name.h"
+#include "CMouseConfig.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -66,8 +24,6 @@
 HWND g_hWnd = nullptr;
 HWND g_editWnd = nullptr;
 
-CStopWatch leftWatch;
-CStopWatch rightWatch;
 CStopWatch stopWatch;
 CStopWatch textWatch;
 CStopWatch moveWatch;
@@ -81,14 +37,13 @@ unsigned char g_preKey = 0;
 unsigned char g_lastKey = 0;
 unsigned char g_currentKey = 0;
 
-bool g_leftHasDown = false;
-bool g_rightHasDown = false;
 bool g_hasMove = false;
 bool g_qKey = false;
 bool g_checkHero = false;
 
-xyls::Point g_heroHeadPoint[5] = { { 1151, 739 }, { 1192, 620 }, { 1266, 514 }, { 1367, 437 }, { 1483, 383 } };
-int32_t g_side = 96;
+xyls::Point g_heroHeadPoint[5] = { { 1215, 696 }, { 1243, 603 }, { 1298, 525 }, { 1376, 465 }, { 1465, 422 } };
+//xyls::Point g_heroHeadPoint[5] = { { 1151, 739 }, { 1192, 620 }, { 1266, 514 }, { 1367, 437 }, { 1483, 383 } };
+int32_t g_side = 75;
 const int32_t g_checkSize = 2;
 xyls::Point g_heroHeadCheck[g_checkSize] = { { 63, 5 }, { 15, 15 } };
 int32_t g_checkSide = 3;
@@ -106,6 +61,10 @@ int32_t g_codetimes = 0;
 
 xyls::Point equipPoint[6] = { { 612, 952 }, { 772, 948 }, { 936, 951 }, { 1090, 947 }, { 1266, 941 }, { 1419, 949 } };
 
+xyls::Point rCenterPoint = { 1663, 609 };
+xyls::Point fCenterPoint = { 1292, 869 };
+xyls::Point bCenterPoint = { 1061, 860 };
+
 #define SPACE 32
 #define ALT 164
 #define CTRL 162
@@ -114,6 +73,7 @@ xyls::Point equipPoint[6] = { { 612, 952 }, { 772, 948 }, { 936, 951 }, { 1090, 
 #define ENTER 13
 #define PLUS 107
 #define MINUS 109
+#define TILDE 192
 
 bool g_keyHasDown[256] = {};
 
@@ -122,9 +82,16 @@ bool g_moveUse = false;
 bool g_fullLast = false;
 bool g_holdW = false;
 bool g_holdR = false;
+bool g_info = false;
+
+bool g_hasF = false;
+bool g_hasS = false;
 
 int32_t code1 = 'H';
 int32_t code2 = 'C';
+bool isMain = false;
+
+CStopWatch code2Watch;
 
 std::atomic<bool> rightMouse = true;
 
@@ -201,56 +168,20 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
     // 请在这里添加消息处理代码
 	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(g_threadId);
 
-	bool leftDown = false;
-	bool leftUp = false;
-	bool rightDown = false;
-	bool rightUp = false;
-	
-	if (wParam == 513)
-	{
-		if (!g_leftHasDown)
-		{
-			leftDown = true;
-			g_leftHasDown = true;
-			leftWatch.SetWatchTime(0);
-		}
-	}
-	else if (wParam == 514)
-	{
-		if (g_leftHasDown)
-		{
-			leftUp = true;
-			g_leftHasDown = false;
-		}
-	}
-	else if (wParam == 516)
-	{
-		if (!g_rightHasDown)
-		{
-			rightDown = true;
-			g_rightHasDown = true;
-			rightWatch.SetWatchTime(0);
-		}
-	}
-	else if (wParam == 517)
-	{
-		if (g_rightHasDown)
-		{
-			rightUp = true;
-			g_rightHasDown = false;
-		}
-	}
+	g_mouse.acceptParam(wParam, lParam);
 
 	if (textWatch.GetWatchTime() < 10000)
 	{
 		return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
 	}
 
-	xyls::Point currentPos = CMouse::GetCurrentPos();
 	if (type >= 7)
 	{
 		if (g_moveUse &&
-			(currentPos.x() < 2 || currentPos.x() > 1918 || currentPos.y() < 2 || currentPos.y() > 1078) &&
+			(g_mouse.m_currentPos.x() < 2 ||
+			g_mouse.m_currentPos.x() > 1918 ||
+			g_mouse.m_currentPos.y() < 2 ||
+			g_mouse.m_currentPos.y() > 1078) &&
 			!g_hasMove)
 		{
 			g_hasMove = true;
@@ -258,7 +189,7 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			spTask->setParam('V', true);
 			taskThread->PostTask(spTask);
 		}
-		else if (rightUp)
+		else if (g_mouse.m_rightUp)
 		{
 			g_moveUse = false;
 			if (g_hasMove)
@@ -270,7 +201,7 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		if (type == 10)
+		if (type == 10 || type == 15)
 		{
 			//if (g_qKey && keyWatch['Q'].GetWatchTime() < 3500 && leftUp && stopWatch.GetWatchTime() > 2000)
 			//{
@@ -279,6 +210,25 @@ LRESULT WINAPI MouseHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			//	std::shared_ptr<Cwq2nofTask> spTask(new Cwq2nofTask);
 			//	taskThread->PostTask(spTask, 1);
 			//}
+
+			if (g_mouse.m_rightWatch.GetWatchTime() < 2000 || g_mouse.m_rightHasDown)
+			{
+				xyls::Point point = CMouse::GetCurrentPos();
+				if (point.y() > 950)
+				{
+					point.setY(950);
+					std::shared_ptr<MoveTask> spTask(new MoveTask);
+					spTask->setParam(point);
+					taskThread->PostTask(spTask);
+				}
+				else if (point.y() < 130)
+				{
+					point.setY(130);
+					std::shared_ptr<MoveTask> spTask(new MoveTask);
+					spTask->setParam(point);
+					taskThread->PostTask(spTask);
+				}
+			}
 		}
 	}
 
@@ -290,6 +240,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	// 请在这里添加消息处理代码
 	const DWORD& vkCode = CHook::GetVkCode(lParam);
+	//RCSend("%d", vkCode);
 
 	bool keyDown[256] = {};
 	bool keyUp[256] = {};
@@ -557,16 +508,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		if (keyUp[CTRL] && g_currentKey == CTRL)
 		{
-			{
-				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-				spTask->setParam('P', true);
-				taskThread->PostTask(spTask, 1);
-			}
-			{
-				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-				spTask->setParam('P', false);
-				taskThread->PostTask(spTask, 1);
-			}
+			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			spTask->setParam('P');
+			taskThread->PostTask(spTask, 1);
 		}
 		if (g_keyHasDown[CTRL] && keyDown['E'])
 		{
@@ -586,29 +530,29 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		else if (keyDown['E'])
 		{
-			if (type == 10)
-			{
-				static int x = 0;
-				++x;
-				if (x % 3 == 0 && code1 != 'G')
-				{
-					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('H', true);
-						taskThread->PostTask(spTask, 1);
-					}
-					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('H', false);
-						taskThread->PostTask(spTask, 1);
-					}
-					{
-						std::shared_ptr<CSleepTask> spTask(new CSleepTask);
-						spTask->setParam(100);
-						taskThread->PostTask(spTask, 1);
-					}
-				}
-			}
+			//if (type == 10)
+			//{
+			//	static int x = 0;
+			//	++x;
+			//	if (x % 3 == 0 && code1 != 'G')
+			//	{
+			//		{
+			//			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			//			spTask->setParam('H', true);
+			//			taskThread->PostTask(spTask, 1);
+			//		}
+			//		{
+			//			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			//			spTask->setParam('H', false);
+			//			taskThread->PostTask(spTask, 1);
+			//		}
+			//		{
+			//			std::shared_ptr<CSleepTask> spTask(new CSleepTask);
+			//			spTask->setParam(100);
+			//			taskThread->PostTask(spTask, 1);
+			//		}
+			//	}
+			//}
 			std::shared_ptr<HeroTask> spTask(new HeroTask);
 			spTask->setParam(code1, code2);
 			taskThread->PostTask(spTask, 2);
@@ -618,7 +562,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			std::shared_ptr<SpeakTask> spTask(new SpeakTask);
 			taskThread->PostTask(spTask, 1);
 		}
-		if (type != 10 && type != 14)
+		if (type != 10 && type != 14 && type != 15)
 		{
 			if (keyDown['W'])
 			{
@@ -788,28 +732,14 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			{
 				if (keyWatch['Q'].GetWatchTime() > 3000)
 				{
-					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('H', true);
-						taskThread->PostTask(spTask, 1);
-					}
-					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('H', false);
-						taskThread->PostTask(spTask, 1);
-					}
+					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+					spTask->setParam('H');
+					taskThread->PostTask(spTask, 1);
 				}
 				code1 = 0;
 				code2 = 'C';
 				taskThread->StopAllTask();
 			}
-			//else if (g_lastKey == 'X' && keyUp['Q'] && stopWatch.GetWatchTime() > 300)
-			//{
-			//	stopWatch.SetWatchTime(0);
-			//	std::shared_ptr<CqTask> spTask(new CqTask);
-			//	spTask->setParam(60, 500);
-			//	taskThread->PostTask(spTask, 1);
-			//}
 
 			if (g_qKey && keyWatch['Q'].GetWatchTime() < 3500)
 			{
@@ -825,6 +755,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				else if (keyDown['3'])
 				{
 					editIndex = 0;
+					isMain = true;
 				}
 				else if (keyDown['4'])
 				{
@@ -834,6 +765,22 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				{
 					editIndex = 3;
 				}
+
+				char str[1024] = {};
+				::GetWindowTextA(g_editWnd, str, 1024);
+				std::string text = str;
+
+				char realPress = (editIndex == -1 ? '8' : text[editIndex]);
+
+				if (realPress != '8')
+				{
+					if (code2 == 'C')
+					{
+						code2Watch.SetWatchTime(0);
+					}
+					code2 = 48 + realPress;
+				}
+
 				if (editIndex != -1)
 				{
 					if (g_keyHasDown[CTRL])
@@ -864,13 +811,20 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			}
 			else if (keyWatch['R'].GetWatchTime() < 5000)
 			{
-				if (keyDown['3'])
+				if (keyDown['3'] || keyDown['2'])
 				{
 					stopWatch.SetWatchTime(0);
 					std::shared_ptr<CwqTask> spTask(new CwqTask);
 					spTask->setParam(true, true, 3, false);
 					taskThread->PostTask(spTask, 1);
 				}
+			}
+			else if (keyDown['2'] && keyWatch['E'].GetWatchTime() < 5000 && stopWatch.GetWatchTime() > 500)
+			{
+				stopWatch.SetWatchTime(0);
+				std::shared_ptr<CwqTask> spTask(new CwqTask);
+				spTask->setParam(true, true, 3, false);
+				taskThread->PostTask(spTask, 1);
 			}
 
 			if (keyDown['A'] && equipWatch.GetWatchTime() > 1000)
@@ -902,12 +856,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			else if (keyDown['S'] && equipWatch.GetWatchTime() > 1000)
 			{
 				equipWatch.SetWatchTime(0);
-				std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
-				spTask1->setParam('L', true);
-				taskThread->PostTask(spTask1, 1);
-				std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
-				spTask2->setParam('L', false);
-				taskThread->PostTask(spTask2, 1);
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('L');
+				taskThread->PostTask(spTask, 1);
 			}
 			else if (((keyWatch['S'].GetWatchTime() < 3500) || (keyWatch['A'].GetWatchTime() < 3500) || g_keyHasDown[CTRL]) &&
 				keyDown['D'] &&
@@ -925,12 +876,6 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				std::shared_ptr<CtrlFTask> spTask(new CtrlFTask);
 				taskThread->PostTask(spTask, 1);
 			}
-			else if (g_keyHasDown[CTRL] && keyDown['R'] && stopWatch.GetWatchTime() > 500)
-			{
-				stopWatch.SetWatchTime(0);
-				std::shared_ptr<CrTask> spTask(new CrTask);
-				taskThread->PostTask(spTask, 1);
-			}
 			else if ((g_keyHasDown[CTRL] && keyDown['W']) && stopWatch.GetWatchTime() > 500)
 			{
 				stopWatch.SetWatchTime(0);
@@ -942,36 +887,17 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				int32_t wCount = 2;
 				while (wCount-- != 0)
 				{
-					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('J', true);
-						taskThread->PostTask(spTask, 1);
-					}
-					{
-						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-						spTask->setParam('J', false);
-						taskThread->PostTask(spTask, 1);
-					}
-					//{
-					//	std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					//	spTask->setParam('C', true);
-					//	taskThread->PostTask(spTask, 1);
-					//}
-					//{
-					//	std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-					//	spTask->setParam('C', false);
-					//	taskThread->PostTask(spTask, 1);
-					//}
-					{
-						std::shared_ptr<CSleepTask> spTask(new CSleepTask);
-						spTask->setParam(100);
-						taskThread->PostTask(spTask);
-					}
+					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+					spTask->setParam('J');
+					taskThread->PostTask(spTask, 1);
+					std::shared_ptr<CSleepTask> spSleepTask(new CSleepTask);
+					spSleepTask->setParam(100);
+					taskThread->PostTask(spSleepTask);
 				}
 			}
 			else if (keyUp['R'])
 			{
-				if (g_holdR)
+				if (g_holdR && keyWatch->GetWatchTime() > 500)
 				{
 					g_holdR = false;
 					std::shared_ptr<CKeyTask> spTask(new CKeyTask);
@@ -984,6 +910,26 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 					std::shared_ptr<CrspaceTask> spTask(new CrspaceTask);
 					taskThread->PostTask(spTask, 1);
 				}
+			}
+			else if (keyDown[TAB] && g_keyHasDown['R'] && g_holdR)
+			{
+				g_holdR = false;
+				std::shared_ptr<CTabRTask> spTask(new CTabRTask);
+				taskThread->PostTask(spTask, 3);
+			}
+			else if (keyDown[TILDE] && !g_info)
+			{
+				g_info = true;
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('I');
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (keyUp[TILDE] && g_info)
+			{
+				g_info = false;
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('I');
+				taskThread->PostTask(spTask, 1);
 			}
 			else if (keyUp['T'])
 			{
@@ -1003,21 +949,12 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 						keyWatch['4'].GetWatchTime() > 5000 &&
 						keyWatch['5'].GetWatchTime() > 5000)
 					{
-						{
-							std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-							spTask->setParam('H', true);
-							taskThread->PostTask(spTask, 1);
-						}
-						{
-							std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-							spTask->setParam('H', false);
-							taskThread->PostTask(spTask, 1);
-						}
-						{
-							std::shared_ptr<CSleepTask> spTask(new CSleepTask);
-							spTask->setParam(100);
-							taskThread->PostTask(spTask, 1);
-						}
+						std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+						spTask->setParam('H');
+						taskThread->PostTask(spTask, 1);
+						std::shared_ptr<CSleepTask> spSleepTask(new CSleepTask);
+						spSleepTask->setParam(100);
+						taskThread->PostTask(spSleepTask, 1);
 					}
 					std::shared_ptr<CEscapeR> spTask(new CEscapeR);
 					taskThread->PostTask(spTask);
@@ -1068,6 +1005,83 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 				taskThread->PostTask(spTask);
 			}
 		}
+		else if (type == 15)
+		{
+			if (keyWatch['R'].GetWatchTime() < 8000)
+			{
+				char press = 0;
+				if (keyDown['1'])
+				{
+					press = '1';
+				}
+				else if (keyDown['2'])
+				{
+					press = '2';
+				}
+				else if (keyDown['3'])
+				{
+					press = '3';
+				}
+				else if (keyDown['4'])
+				{
+					press = '4';
+				}
+				else if (keyDown['5'])
+				{
+					press = '5';
+				}
+				else if (keyDown['W'])
+				{
+					press = 'W';
+				}
+				else if (keyDown['E'])
+				{
+					press = 'E';
+				}
+				else if (keyDown['Q'])
+				{
+					keyWatch['R'].SetWatchTime(9000);
+				}
+				if (press != 0)
+				{
+					keyWatch['R'].SetWatchTime(9000);
+					std::shared_ptr<CRqwTask> spTask(new CRqwTask);
+					spTask->setParam(press, g_hasS);
+					taskThread->PostTask(spTask);
+				}
+			}
+			else if (keyDown['W'])
+			{
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('J', true);
+				taskThread->PostTask(spTask, 1);
+			}
+			else if (keyUp['W'])
+			{
+				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+				spTask->setParam('J', false);
+				taskThread->PostTask(spTask, 1);
+			}
+			if (keyDown[KEY + '6'])
+			{
+				::SetWindowTextA(g_editWnd, "88888");
+				std::string path = CSystem::GetCurrentExePath() + "HeroHead\\";
+
+				if (CSystem::DirOrFileExist(path))
+				{
+					int32_t index = 99;
+					while (index++ != 600 - 1)
+					{
+						CSystem::deleteFile((path + std::to_string(index) + ".jpg").c_str());
+					}
+				}
+
+				g_checkHero = true;
+				g_fullLast = true;
+
+				::PostMessage(g_hWnd, WM_DESTROY_HERO_HEAD, 0, 0);
+			}
+		}
 	}
 
 	Exit:
@@ -1112,21 +1126,22 @@ BOOL COneKeyDlg::OnInitDialog()
 	
 	g_hWnd = m_hWnd;
 	g_editWnd = m_edit.m_hWnd;
-	m_type.AddString("刀锋");
-	m_type.AddString("劫");
-	m_type.AddString("妖姬");
-	m_type.AddString("卡萨丁");
-	m_type.AddString("卡特琳娜");
-	m_type.AddString("进游戏");
-	m_type.AddString("王者");
-	m_type.AddString("诸葛亮");
-	m_type.AddString("钟馗");
-	m_type.AddString("司马懿");
-	m_type.AddString("孙悟空");
-	m_type.AddString("兰陵王");
-	m_type.AddString("百里守约");
-	m_type.AddString("韩信");
-	m_type.SelectString(7, "诸葛亮");
+	m_type.AddString(DF);
+	m_type.AddString(JIE);
+	m_type.AddString(YJ);
+	m_type.AddString(KSD);
+	m_type.AddString(KTLN);
+	m_type.AddString(JYX);
+	m_type.AddString(WZ);
+	m_type.AddString(ZGL);
+	m_type.AddString(ZK);
+	m_type.AddString(SMY);
+	m_type.AddString(SWK);
+	m_type.AddString(LLW);
+	m_type.AddString(BLSY);
+	m_type.AddString(HX);
+	m_type.AddString(NKLL);
+	m_type.SelectString(7, ZGL);
 	type = 8;
 	m_button.SetFocus();
 	textWatch.SetWatchTime(10000);
@@ -1384,7 +1399,7 @@ void COneKeyDlg::OnBnClickedButton1()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	//CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->StopCurTask();
-	if (type == 10)
+	if (type == 10 || type == 15)
 	{
 		CSystem::OpenFolder(CSystem::GetCurrentExePath() + "HeroHead\\");
 	}
@@ -1429,27 +1444,27 @@ void COneKeyDlg::OnSelchangeCombo1()
 	}
 	CString str;
 	m_type.GetWindowText(str);
-	if (str == "刀锋")
+	if (str == DF)
 	{
 		type = 1;
 	}
-	else if (str == "劫")
+	else if (str == JIE)
 	{
 		type = 2;
 	}
-	else if (str == "妖姬")
+	else if (str == YJ)
 	{
 		type = 3;
 	}
-	else if (str == "卡萨丁")
+	else if (str == KSD)
 	{
 		type = 4;
 	}
-	else if (str == "卡特琳娜")
+	else if (str == KTLN)
 	{
 		type = 5;
 	}
-	else if (str == "进游戏")
+	else if (str == JYX)
 	{
 		type = 6;
 		CString strTime;
@@ -1460,25 +1475,25 @@ void COneKeyDlg::OnSelchangeCombo1()
 		spIntoGameTask->setParam(time);
 		CTaskThreadManager::Instance().GetThreadInterface(g_threadId)->PostTask(spIntoGameTask);
 	}
-	else if (str == "王者")
+	else if (str == WZ)
 	{
 		type = 7;
 		code1 = 'H';
 		code2 = 'C';
 	}
-	else if (str == "诸葛亮")
+	else if (str == ZGL)
 	{
 		type = 8;
 		code1 = 'H';
 		code2 = 'C';
 	}
-	else if (str == "钟馗")
+	else if (str == ZK)
 	{
 		type = 9;
 		code1 = 'H';
 		code2 = 'C';
 	}
-	else if (str == "司马懿")
+	else if (str == SMY)
 	{
 		type = 10;
 		code1 = 0;
@@ -1488,7 +1503,7 @@ void COneKeyDlg::OnSelchangeCombo1()
 		g_fullLast = true;
 		::SetWindowText(g_editWnd, "88888");
 	}
-	else if (str == "孙悟空")
+	else if (str == SWK)
 	{
 		type = 11;
 		code1 = 0;
@@ -1498,23 +1513,33 @@ void COneKeyDlg::OnSelchangeCombo1()
 		g_fullLast = true;
 		::SetWindowText(g_editWnd, "88888");
 	}
-	else if (str == "兰陵王")
+	else if (str == LLW)
 	{
 		type = 12;
 		code1 = 0;
 		code2 = 'C';
 	}
-	else if (str == "百里守约")
+	else if (str == BLSY)
 	{
 		type = 13;
 		code1 = 0;
 		code2 = 'C';
 	}
-	else if (str == "韩信")
+	else if (str == HX)
 	{
 		type = 14;
 		code1 = 0;
 		code2 = 'C';
+	}
+	else if (str == NKLL)
+	{
+		type = 15;
+		code1 = 0;
+		code2 = 'C';
+		CSystem::CreateDir(path);
+		g_checkHero = true;
+		g_fullLast = true;
+		::SetWindowText(g_editWnd, "88888");
 	}
 }
 
@@ -1562,11 +1587,38 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 				spTask0->setParam('Q', false);
 				taskThread->PostTask(spTask0, 1);
 				std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
-				spTask1->setParam('K', true);
+				spTask1->setParam('K');
 				taskThread->PostTask(spTask1, 1);
-				std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
-				spTask2->setParam('K', false);
-				taskThread->PostTask(spTask2, 1);
+			}
+
+			if (g_mouse.m_rightHasDown/* && !g_keyHasDown['R']*/)
+			{
+				static int x = 0;
+				++x;
+				if (x % 10 == 0 &&
+					(keyWatch['R'].GetWatchTime() < 5000 ||
+					keyWatch['W'].GetWatchTime() < 2000 ||
+					keyWatch['Q'].GetWatchTime() < 2000))
+				{
+					std::shared_ptr<CRightClickTask> spTask(new CRightClickTask);
+					//spTask->setParam(!g_keyHasDown['R']);
+					taskThread->PostTask(spTask);
+				}
+			}
+
+			static int32_t skillCount = 0;
+			++skillCount;
+			if (skillCount % 50 == 0 && code1 == 0 && !g_keyHasDown['T'] && !g_keyHasDown[TILDE])
+			{
+				std::shared_ptr<SkillTask> spSkillTask(new SkillTask);
+				spSkillTask->setParam('9', '8', '7');
+				taskThread->PostTask(spSkillTask, 1);
+			}
+
+			if (code2 != 'C' && code2Watch.GetWatchTime() > 3000)
+			{
+				code2 = 'C';
+				isMain = false;
 			}
 		}
 		else if (type == 13)
@@ -1577,6 +1629,25 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 				spTask->setParam('M', true);
 				taskThread->PostTask(spTask, 1);
+			}
+		}
+		else if (type == 15)
+		{
+			static int32_t skillCount = 0;
+			++skillCount;
+			if (skillCount % 50 == 0 && !g_keyHasDown['T'] && !g_keyHasDown[TILDE])
+			{
+				std::shared_ptr<SkillTask> spSkillTask(new SkillTask);
+				spSkillTask->setParam('9', '7', '8');
+				taskThread->PostTask(spSkillTask, 1);
+
+				std::shared_ptr<CFindSkillTask> spCFindSkillTask(new CFindSkillTask);
+				taskThread->PostTask(spCFindSkillTask, 1);
+			}
+
+			if (code2 != 'C' && code2Watch.GetWatchTime() > 3000)
+			{
+				code2 = 'C';
 			}
 		}
 	}
@@ -1709,8 +1780,8 @@ LRESULT COneKeyDlg::OnMoveHeroHead(WPARAM wParam, LPARAM lParam)
 	int32_t width = windowRect.right - windowRect.left;
 	int32_t space = 10;
 	::MoveWindow(dlg->m_hWnd,
-		355 + (m_vecHeroHeadDlg.size() - 1) * (width + g_heroHeadSpace),
-		140,
+		407 + (m_vecHeroHeadDlg.size() - 1) * (width + g_heroHeadSpace),
+		232,
 		width,
 		windowRect.bottom - windowRect.top,
 		FALSE);

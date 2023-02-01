@@ -15,22 +15,22 @@ bool CScreen::initDict(const std::map<int32_t, std::string>& mapDict, int32_t us
 
 bool CScreen::SaveBmp(const xyls::Rect& rect, const std::string& path)
 {
-	return DmSoft::Capture(rect.Left(), rect.Top(), rect.Right(), rect.Bottom(), path.c_str()) == 1;
+	return DmSoft::Capture(rect.left(), rect.top(), rect.right(), rect.bottom(), path.c_str()) == 1;
 }
 
 bool CScreen::SaveGif(const xyls::Rect& rect, int32_t delay, int32_t time, const std::string& path)
 {
-	return DmSoft::CaptureGif(rect.Left(), rect.Top(), rect.Right(), rect.Bottom(), path.c_str(), delay, time) == 1;
+	return DmSoft::CaptureGif(rect.left(), rect.top(), rect.right(), rect.bottom(), path.c_str(), delay, time) == 1;
 }
 
 bool CScreen::SaveJpg(const xyls::Rect& rect, int32_t quality, const std::string& path)
 {
-	return DmSoft::CaptureJpg(rect.Left(), rect.Top(), rect.Right(), rect.Bottom(), path.c_str(), quality) == 1;
+	return DmSoft::CaptureJpg(rect.left(), rect.top(), rect.right(), rect.bottom(), path.c_str(), quality) == 1;
 }
 
 bool CScreen::SavePng(const xyls::Rect& rect, const std::string& path)
 {
-	return DmSoft::CapturePng(rect.Left(), rect.Top(), rect.Right(), rect.Bottom(), path.c_str()) == 1;
+	return DmSoft::CapturePng(rect.left(), rect.top(), rect.right(), rect.bottom(), path.c_str()) == 1;
 }
 
 bool CScreen::ComparePointColor(const xyls::Point& point, const xyls::Color& color, double sim)
@@ -52,10 +52,10 @@ bool CScreen::ComparePointColor(const xyls::Point& point, const std::vector<xyls
 
 bool CScreen::FindColor(const xyls::Rect& rect, const xyls::Color& color, int32_t& x, int32_t& y, double sim, int32_t dir)
 {
-	std::string result = DmSoft::FindColorE(rect.Left(),
-											rect.Top(),
-											rect.Right(),
-											rect.Bottom(),
+	std::string result = DmSoft::FindColorE(rect.left(),
+											rect.top(),
+											rect.right(),
+											rect.bottom(),
 											color.toReserveCastString().c_str(),
 											sim,
 											dir);
@@ -79,10 +79,10 @@ bool CScreen::FindColor(const xyls::Rect& rect,
 		strColor = strColor + vecColor.at(i).toReserveCastString() + "|";
 	}
 	CStringManager::Delete(strColor, strColor.length() - 1, 1);
-	std::string result = DmSoft::FindColorE(rect.Left(),
-											rect.Top(),
-											rect.Right(),
-											rect.Bottom(),
+	std::string result = DmSoft::FindColorE(rect.left(),
+											rect.top(),
+											rect.right(),
+											rect.bottom(),
 											strColor.c_str(),
 											sim,
 											dir);
@@ -102,10 +102,10 @@ bool CScreen::FindPic(const xyls::Rect& rect,
 {
 	VARIANT vx;
 	VARIANT vy;
-	bool result = (DmSoft::FindPic(rect.Left(),
-								   rect.Top(),
-								   rect.Right(),
-								   rect.Bottom(),
+	bool result = (DmSoft::FindPic(rect.left(),
+								   rect.top(),
+								   rect.right(),
+								   rect.bottom(),
 								   picPath.c_str(),
 								   colorCast.toString().c_str(),
 								   sim,
@@ -137,10 +137,10 @@ bool CScreen::FindPic(const xyls::Rect& rect,
 		strPicPath = strPicPath + vecPicPath.at(i) + "|";
 	}
 	CStringManager::Delete(strPicPath, strPicPath.length() - 1, 1);
-	bool result = (DmSoft::FindPic(rect.Left(),
-								   rect.Top(),
-								   rect.Right(),
-								   rect.Bottom(),
+	bool result = (DmSoft::FindPic(rect.left(),
+								   rect.top(),
+								   rect.right(),
+								   rect.bottom(),
 								   strPicPath.c_str(),
 								   colorCast.toString().c_str(),
 								   sim,
@@ -162,8 +162,8 @@ xyls::Rect CScreen::GetPicSize(const std::string& picPath)
 	std::vector<std::string>vecWidthHeight = CStringManager::split(strWidthHeight, ",");
 	if (vecWidthHeight.size() == 2)
 	{
-		rect.SetRight(atoi(vecWidthHeight.at(0).c_str()));
-        rect.SetBottom(atoi(vecWidthHeight.at(1).c_str()));
+		rect.setRight(atoi(vecWidthHeight.at(0).c_str()));
+		rect.setBottom(atoi(vecWidthHeight.at(1).c_str()));
 	}
 	return rect;
 }
@@ -187,10 +187,10 @@ bool CScreen::FindStr(const xyls::Rect& rect,
 {
 	VARIANT vx;
 	VARIANT vy;
-	bool result = (DmSoft::FindStrFast(rect.Left(),
-									   rect.Top(),
-									   rect.Right(),
-									   rect.Bottom(),
+	bool result = (DmSoft::FindStrFast(rect.left(),
+									   rect.top(),
+									   rect.right(),
+									   rect.bottom(),
 									   str.c_str(),
 									   color.toCastString().c_str(),
 									   sim,

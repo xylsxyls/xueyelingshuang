@@ -4,7 +4,7 @@
 
 void SpeakTask::DoTask()
 {
-	CMouse::MoveClick(xyls::Point(1856, 410), 0);
+	CMouse::MoveClick(xyls::Point(1742, 447), 0);
 	Sleep(50);
-	CMouse::MoveClick(xyls::Point(1585, 834), 0);
+	CMouse::MoveClick(xyls::Point(1523, 765), 0);
 }

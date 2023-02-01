@@ -53,7 +53,7 @@ Rect::Rect(const Point& point, int32_t margin)
     m_bottom = point.y() + margin;
 }
 
-void Rect::SetRect(int32_t left, int32_t top, int32_t right, int32_t bottom)
+void Rect::setRect(int32_t left, int32_t top, int32_t right, int32_t bottom)
 {
     m_left = left;
     m_top = top;
@@ -61,7 +61,7 @@ void Rect::SetRect(int32_t left, int32_t top, int32_t right, int32_t bottom)
     m_bottom = bottom;
 }
 
-void Rect::SetRect(const Point& point)
+void Rect::setRect(const Point& point)
 {
 	m_left = point.x();
     m_top = point.y();
@@ -69,12 +69,12 @@ void Rect::SetRect(const Point& point)
     m_bottom = point.y();
 }
 
-int32_t Rect::GetWidth() const
+int32_t Rect::width() const
 {
 	return m_right - m_left;
 }
 
-int32_t Rect::GetHeight() const
+int32_t Rect::height() const
 {
 	return m_bottom - m_top;
 }
@@ -94,42 +94,42 @@ bool Rect::empty() const
 	return (m_left == 0) && (m_top == 0) && (m_right == 0) && (m_bottom == 0);
 }
 
-int32_t Rect::Left() const
+int32_t Rect::left() const
 {
     return m_left;
 }
 
-int32_t Rect::Top() const
+int32_t Rect::top() const
 {
     return m_top;
 }
 
-int32_t Rect::Right() const
+int32_t Rect::right() const
 {
     return m_right;
 }
 
-int32_t Rect::Bottom() const
+int32_t Rect::bottom() const
 {
     return m_bottom;
 }
 
-void Rect::SetLeft(int32_t left)
+void Rect::setLeft(int32_t left)
 {
     m_left = left;
 }
 
-void Rect::SetTop(int32_t top)
+void Rect::setTop(int32_t top)
 {
     m_top = top;
 }
 
-void Rect::SetRight(int32_t right)
+void Rect::setRight(int32_t right)
 {
     m_right = right;
 }
 
-void Rect::SetBottom(int32_t bottom)
+void Rect::setBottom(int32_t bottom)
 {
     m_bottom = bottom;
 }
@@ -154,7 +154,7 @@ bool Rect::isVerticalLine()const
     return (m_left == m_right) && (m_top != m_bottom);
 }
 
-Rect Rect::Adapt(const Rect& bkRect)
+Rect Rect::adapt(const Rect& bkRect)
 {
 	if (isPoint() == true)
 	{
@@ -207,23 +207,23 @@ Rect Rect::Adapt(const Rect& bkRect)
 		}
 		else
 		{
-			if (Gettan() < bkRect.Gettan())
+			if (tanHeightWidth() < bkRect.tanHeightWidth())
 			{
-				int height = (int)(GetHeight() * (double)bkRect.GetWidth() / GetWidth());
-                int heightChange = (int)((bkRect.GetHeight() - height) / 2.0);
+				int height = (int)(this->height() * (double)bkRect.width() / width());
+                int heightChange = (int)((bkRect.height() - height) / 2.0);
 				return Rect(bkRect.m_left, bkRect.m_top + heightChange, bkRect.m_right, bkRect.m_bottom - heightChange);
 			}
 			else
 			{
-                int width = (int)(GetWidth() * (double)bkRect.GetHeight() / GetHeight());
-                int widthChange = (int)((bkRect.GetWidth() - width) / 2.0);
+				int width = (int)(this->width() * (double)bkRect.height() / height());
+                int widthChange = (int)((bkRect.width() - width) / 2.0);
 				return Rect(bkRect.m_left + widthChange, bkRect.m_top, bkRect.m_right - widthChange, bkRect.m_bottom);
 			}
 		}
 	}
 }
 
-Rect Rect::SetIn(const Rect& bkRect)
+Rect Rect::setIn(const Rect& bkRect)
 {
 	if (isPoint() == true)
 	{
@@ -265,9 +265,9 @@ Rect Rect::SetIn(const Rect& bkRect)
             {
                 if (bkRect.isVerticalLine())
                 {
-                    if (GetHeight() < bkRect.GetHeight())
+                    if (height() < bkRect.height())
                     {
-                        int offset = (int)((bkRect.GetHeight() - GetHeight()) / 2.0);
+                        int offset = (int)((bkRect.height() - height()) / 2.0);
                         return Rect(bkRect.m_left, bkRect.m_top + offset, bkRect.m_right, bkRect.m_bottom - offset);
                     }
                     else
@@ -288,9 +288,9 @@ Rect Rect::SetIn(const Rect& bkRect)
                 }
                 else
                 {
-                    if (GetWidth() < bkRect.GetWidth())
+                    if (width() < bkRect.width())
                     {
-                        int offset = (int)((bkRect.GetWidth() - GetWidth()) / 2.0);
+                        int offset = (int)((bkRect.width() - width()) / 2.0);
                         return Rect(bkRect.m_left + offset, bkRect.m_top, bkRect.m_right - offset, bkRect.m_bottom);
                     }
                     else
@@ -304,10 +304,10 @@ Rect Rect::SetIn(const Rect& bkRect)
 		{
 			if (isVerticalLine())
 			{
-                if (GetHeight() < bkRect.GetHeight())
+                if (height() < bkRect.height())
                 {
                     int leftright = (bkRect.m_left + bkRect.m_right) / 2;
-                    int offset = (int)((bkRect.GetHeight() - GetHeight()) / 2.0);
+                    int offset = (int)((bkRect.height() - height()) / 2.0);
                     return Rect(leftright, bkRect.m_top + offset, leftright, bkRect.m_bottom - offset);
                 }
                 else
@@ -318,10 +318,10 @@ Rect Rect::SetIn(const Rect& bkRect)
 			}
 			else
 			{
-                if (GetWidth() < bkRect.GetWidth())
+                if (width() < bkRect.width())
                 {
                     int topbottom = (bkRect.m_top + bkRect.m_bottom) / 2;
-                    int offset = (int)((bkRect.GetWidth() - GetWidth()) / 2.0);
+                    int offset = (int)((bkRect.width() - width()) / 2.0);
                     return Rect(bkRect.m_left + offset, topbottom, bkRect.m_right - offset, topbottom);
                 }
                 else
@@ -342,9 +342,9 @@ Rect Rect::SetIn(const Rect& bkRect)
 		{
             if (bkRect.isVerticalLine())
             {
-                if (GetHeight() < bkRect.GetHeight())
+                if (height() < bkRect.height())
                 {
-                    int offset = (int)((bkRect.GetHeight() - GetHeight()) / 2.0);
+                    int offset = (int)((bkRect.height() - height()) / 2.0);
                     return Rect(bkRect.m_left, bkRect.m_top + offset, bkRect.m_right, bkRect.m_bottom - offset);
                 }
                 else
@@ -354,9 +354,9 @@ Rect Rect::SetIn(const Rect& bkRect)
             }
             else
             {
-                if (GetWidth() < bkRect.GetWidth())
+                if (width() < bkRect.width())
                 {
-                    int offset = (int)((bkRect.GetWidth() - GetWidth()) / 2.0);
+                    int offset = (int)((bkRect.width() - width()) / 2.0);
                     return Rect(bkRect.m_left + offset, bkRect.m_top, bkRect.m_right - offset, bkRect.m_bottom);
                 }
                 else
@@ -367,25 +367,25 @@ Rect Rect::SetIn(const Rect& bkRect)
 		}
         else
         {
-            if (GetWidth() >= bkRect.GetWidth() || GetHeight() >= bkRect.GetHeight())
+            if (width() >= bkRect.width() || height() >= bkRect.height())
             {
-                if (Gettan() < bkRect.Gettan())
+                if (tanHeightWidth() < bkRect.tanHeightWidth())
                 {
-                    int height = (int)(GetHeight() * (double)bkRect.GetWidth() / GetWidth());
-                    int heightChange = (int)((bkRect.GetHeight() - height) / 2.0);
+					int height = (int)(this->height() * (double)bkRect.width() / width());
+                    int heightChange = (int)((bkRect.height() - height) / 2.0);
                     return Rect(bkRect.m_left, bkRect.m_top + heightChange, bkRect.m_right, bkRect.m_bottom - heightChange);
                 }
                 else
                 {
-                    int width = (int)(GetWidth() * (double)bkRect.GetHeight() / GetHeight());
-                    int widthChange = (int)((bkRect.GetWidth() - width) / 2.0);
+					int width = (int)(this->width() * (double)bkRect.height() / height());
+                    int widthChange = (int)((bkRect.width() - width) / 2.0);
                     return Rect(bkRect.m_left + widthChange, bkRect.m_top, bkRect.m_right - widthChange, bkRect.m_bottom);
                 }
             }
             else
             {
-                int widthoffset = (int)((bkRect.GetWidth() - GetWidth()) / 2.0);
-                int heightoffset = (int)((bkRect.GetHeight() - GetHeight()) / 2.0);
+                int widthoffset = (int)((bkRect.width() - width()) / 2.0);
+                int heightoffset = (int)((bkRect.height() - height()) / 2.0);
                 return Rect(bkRect.m_left + widthoffset, bkRect.m_top + heightoffset, bkRect.m_right - widthoffset, bkRect.m_bottom - heightoffset);
             }
 		}
@@ -393,7 +393,7 @@ Rect Rect::SetIn(const Rect& bkRect)
 }
 
 #ifdef _MSC_VER
-Rect Rect::Over(const Rect& otherRect)
+Rect Rect::over(const Rect& otherRect)
 {
     RECT rect;
     ::IntersectRect(&rect, &(RECT(*this)), &(RECT(otherRect)));
@@ -401,9 +401,9 @@ Rect Rect::Over(const Rect& otherRect)
 }
 #endif
 
-double Rect::Gettan() const
+double Rect::tanHeightWidth() const
 {
-	return GetHeight() / (double)GetWidth();
+	return height() / (double)width();
 }
 
 #ifdef _MSC_VER
@@ -416,6 +416,17 @@ Rect::operator RECT() const
     rect.bottom = m_bottom;
     return rect;
 }
+
+bool Rect::equal(const Rect& a, const Rect& b)
+{
+	return (a.m_left == b.m_left) && (a.m_top == b.m_top) && (a.m_right == b.m_right) && (a.m_bottom == b.m_bottom);
+}
+
+bool Rect::notEqual(const Rect& a, const Rect& b)
+{
+	return (a.m_left != b.m_left) || (a.m_top != b.m_top) || (a.m_right != b.m_right) || (a.m_bottom != b.m_bottom);
+}
+
 #endif
 
 }

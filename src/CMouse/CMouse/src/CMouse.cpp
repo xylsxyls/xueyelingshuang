@@ -125,7 +125,7 @@ bool CMouse::MoveAbsolute(const xyls::Rect& rect, int sleepTime)
         sleepTime = CRandom::Int(MoveTimeMin, MoveTimeMax);
     }
 	//?生成一个点
-	xyls::Point pointResult(CRandom::Int(rect.Left(), rect.Right()), CRandom::Int(rect.Top(), rect.Bottom()));
+	xyls::Point pointResult(CRandom::Int(rect.left(), rect.right()), CRandom::Int(rect.top(), rect.bottom()));
 	//?是否立即到达
     if (sleepTime == 0)
     {
@@ -177,7 +177,10 @@ bool CMouse::MoveAbsolute(const xyls::Rect& rect, int sleepTime)
 bool CMouse::MoveOpposite(const xyls::Rect& rect, int32_t sleepTime)
 {
 	xyls::Point currentPoint = GetCurrentPos();
-    xyls::Rect rectAbsolute(currentPoint.x() + rect.Left(), currentPoint.y() + rect.Top(), currentPoint.x() + rect.Right(), currentPoint.y() + rect.Bottom());
+    xyls::Rect rectAbsolute(currentPoint.x() + rect.left(),
+		currentPoint.y() + rect.top(),
+		currentPoint.x() + rect.right(),
+		currentPoint.y() + rect.bottom());
 	return MoveAbsolute(rectAbsolute, sleepTime);
 }
 
