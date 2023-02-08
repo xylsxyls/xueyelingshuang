@@ -114,6 +114,9 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ATask.h" />
+    <ClInclude Include="Blsy.h" />
+    <ClInclude Include="Blxc.h" />
     <ClInclude Include="CFindSkillTask.h" />
     <ClInclude Include="CForceMoveTask.h" />
     <ClInclude Include="CerTask.h" />
@@ -126,10 +129,13 @@
     <ClInclude Include="CfwrTask.h" />
     <ClInclude Include="CHoldRTask.h" />
     <ClInclude Include="ChxwTask.h" />
+    <ClInclude Include="CKeyboardConfig.h" />
     <ClInclude Include="CKeyTask.h" />
     <ClInclude Include="CLeftClickTask.h" />
     <ClInclude Include="CMouseConfig.h" />
     <ClInclude Include="CNoFlashTask.h" />
+    <ClInclude Include="Common.h" />
+    <ClInclude Include="Config.h" />
     <ClInclude Include="Cqdrw3Task.h" />
     <ClInclude Include="CqfwrTask.h" />
     <ClInclude Include="CqMoreTask.h" />
@@ -160,22 +166,36 @@
     <ClInclude Include="CwqTask.h" />
     <ClInclude Include="CwrqTask.h" />
     <ClInclude Include="CwrTask.h" />
+    <ClInclude Include="HBITMAPToPaint.h" />
     <ClInclude Include="HeroHeadDlg.h" />
+    <ClInclude Include="HeroHeadMsgType.h" />
+    <ClInclude Include="Hx.h" />
     <ClInclude Include="IntoGameTask.h" />
+    <ClInclude Include="Llw.h" />
     <ClInclude Include="MoveClickTask.h" />
     <ClInclude Include="MoveTask.h" />
     <ClInclude Include="name.h" />
+    <ClInclude Include="Nkll.h" />
     <ClInclude Include="OneKey.h" />
     <ClInclude Include="OneKeyDlg.h" />
     <ClInclude Include="OneKeyTask.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="HeroTask.h" />
     <ClInclude Include="SkillTask.h" />
+    <ClInclude Include="Smy.h" />
     <ClInclude Include="SpeakTask.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Swk.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="WzCommon.h" />
+    <ClInclude Include="Yxlm.h" />
+    <ClInclude Include="Zgl.h" />
+    <ClInclude Include="Zk.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ATask.cpp" />
+    <ClCompile Include="Blsy.cpp" />
+    <ClCompile Include="Blxc.cpp" />
     <ClCompile Include="CFindSkillTask.cpp" />
     <ClCompile Include="CForceMoveTask.cpp" />
     <ClCompile Include="CerTask.cpp" />
@@ -188,10 +208,13 @@
     <ClCompile Include="CfwrTask.cpp" />
     <ClCompile Include="CHoldRTask.cpp" />
     <ClCompile Include="ChxwTask.cpp" />
+    <ClCompile Include="CKeyboardConfig.cpp" />
     <ClCompile Include="CKeyTask.cpp" />
     <ClCompile Include="CLeftClickTask.cpp" />
     <ClCompile Include="CMouseConfig.cpp" />
     <ClCompile Include="CNoFlashTask.cpp" />
+    <ClCompile Include="Common.cpp" />
+    <ClCompile Include="Config.cpp" />
     <ClCompile Include="Cqdrw3Task.cpp" />
     <ClCompile Include="CqfwrTask.cpp" />
     <ClCompile Include="CqMoreTask.cpp" />
@@ -222,19 +245,29 @@
     <ClCompile Include="CwqTask.cpp" />
     <ClCompile Include="CwrqTask.h.cpp" />
     <ClCompile Include="CwrTask.cpp" />
+    <ClCompile Include="HBITMAPToPaint.cpp" />
     <ClCompile Include="HeroHeadDlg.cpp" />
+    <ClCompile Include="Hx.cpp" />
     <ClCompile Include="IntoGameTask.cpp" />
+    <ClCompile Include="Llw.cpp" />
     <ClCompile Include="MoveClickTask.cpp" />
     <ClCompile Include="MoveTask.cpp" />
+    <ClCompile Include="Nkll.cpp" />
     <ClCompile Include="OneKey.cpp" />
     <ClCompile Include="OneKeyDlg.cpp" />
     <ClCompile Include="HeroTask.cpp" />
     <ClCompile Include="SkillTask.cpp" />
+    <ClCompile Include="Smy.cpp" />
     <ClCompile Include="SpeakTask.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Swk.cpp" />
+    <ClCompile Include="WzCommon.cpp" />
+    <ClCompile Include="Yxlm.cpp" />
+    <ClCompile Include="Zgl.cpp" />
+    <ClCompile Include="Zk.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="OneKey.rc" />

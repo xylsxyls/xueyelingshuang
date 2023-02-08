@@ -2,8 +2,7 @@
 #include "CqNoFlashTask.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
-
-extern std::atomic<bool> rightMouse;
+#include "Config.h"
 
 CqNoFlashTask::CqNoFlashTask():
 m_sleepTime(false)
@@ -13,14 +12,14 @@ m_sleepTime(false)
 
 void CqNoFlashTask::DoTask()
 {
-    rightMouse = false;
+	g_config.m_rightMouse = false;
 
-    /*CKeyboard::KeyDown('N');
-    CKeyboard::KeyDown('Q');
-    CKeyboard::KeyUp('N');
-    CKeyboard::KeyUp('Q');
-    Sleep(250);*/
-    //Sleep(100);
+	/*CKeyboard::KeyDown('N');
+	CKeyboard::KeyDown('Q');
+	CKeyboard::KeyUp('N');
+	CKeyboard::KeyUp('Q');
+	Sleep(250);*/
+	//Sleep(100);
 
 	//CKeyboard::KeyDown('N');
 	//CKeyboard::KeyDown('Q');
@@ -60,7 +59,7 @@ void CqNoFlashTask::DoTask()
 	
 	//Sleep(m_sleepTime);
 	//Sleep(50);
-    CKeyboard::InputString("rq", 0);
+	CKeyboard::InputString("rq", 0);
 	Sleep(150);
 	CMouse::RightClick(0);
 	Sleep(50);
@@ -86,13 +85,13 @@ void CqNoFlashTask::DoTask()
 	CKeyboard::InputString("q", 0);
 	CMouse::RightManyClick(6, 200);
 
-    rightMouse = true;
+	g_config.m_rightMouse = true;
 }
 
 //老版250毫秒闪现
 void CqNoFlashTask::oldDoTask()
 {
-	rightMouse = false;
+	g_config.m_rightMouse = false;
 
 	/*CKeyboard::KeyDown('N');
 	CKeyboard::KeyDown('Q');
@@ -156,7 +155,7 @@ void CqNoFlashTask::oldDoTask()
 	CKeyboard::InputString("q", 0);
 	CMouse::RightManyClick(6, 200);
 
-	rightMouse = true;
+	g_config.m_rightMouse = true;
 }
 
 void CqNoFlashTask::setParam(int32_t sleepTime)

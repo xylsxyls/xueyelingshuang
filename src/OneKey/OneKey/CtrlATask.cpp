@@ -2,14 +2,12 @@
 #include "CtrlATask.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
-
-extern xyls::Point equipPoint[6];
-extern HWND g_editWnd;
+#include "Config.h"
 
 void CtrlATask::DoTask()
 {
 	char str[1024] = {};
-	::GetWindowTextA(g_editWnd, str, 1024);
+	::GetWindowTextA(g_config.m_editWnd, str, 1024);
 
 	std::string text = str;
 	if (text.size() <= 5)
@@ -27,7 +25,7 @@ void CtrlATask::DoTask()
 
 	disableMouse();
 
-	moveAbsolute(equipPoint[equipIndex], 0);
+	moveAbsolute(g_config.m_equipPoint[equipIndex], 0);
 	CMouse::LeftClick(0);
 	Sleep(100);
 

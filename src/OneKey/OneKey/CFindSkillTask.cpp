@@ -3,9 +3,7 @@
 #include "ScreenScript/ScreenScriptAPI.h"
 #include "CSystem/CSystemAPI.h"
 //#include "D:\\SendToMessageTest.h"
-
-extern bool g_hasF;
-extern bool g_hasS;
+#include "Config.h"
 
 CFindSkillTask::CFindSkillTask()
 {
@@ -19,6 +17,6 @@ void CFindSkillTask::DoTask()
 	xyls::Point sPoint = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "res\\bingjia.png",
 		xyls::Rect(1656, 340, 1818, 497), 0.7);
 
-	g_hasF = !fPoint.empty();
-	g_hasS = !sPoint.empty();
+	g_config.m_hasF = !fPoint.empty();
+	g_config.m_hasS = !sPoint.empty();
 }

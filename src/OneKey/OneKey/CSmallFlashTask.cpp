@@ -2,12 +2,11 @@
 #include "CSmallFlashTask.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
-
-extern std::atomic<bool> rightMouse;
+#include "Config.h"
 
 void CSmallFlashTask::DoTask()
 {
-    rightMouse = false;
+	g_config.m_rightMouse = false;
 
 	//Sleep(20);
 	CMouse::RightClick(0);
@@ -27,5 +26,5 @@ void CSmallFlashTask::DoTask()
 	CMouse::RightClick(20);
 	CMouse::RightClick(20);
 	CMouse::RightClick(20);
-    rightMouse = true;
+	g_config.m_rightMouse = true;
 }

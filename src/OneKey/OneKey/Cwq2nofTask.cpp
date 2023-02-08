@@ -3,12 +3,7 @@
 #include "CMouse/CMouseAPI.h"
 #include "CKeyBoard/CKeyboardAPI.h"
 #include "D:\\SendToMessageTest.h"
-
-extern uint32_t g_threadId;
-extern int32_t code1;
-extern int32_t code2;
-extern bool rightDown;
-extern HWND g_editWnd;
+#include "Config.h"
 
 Cwq2nofTask::Cwq2nofTask():
 m_exit(false)
@@ -45,11 +40,11 @@ bool Cwq2nofTask::Sleep(int32_t sleepTime)
 
 void Cwq2nofTask::KeyPressE()
 {
-	if (code1 != 0)
+	if (g_config.m_code1 != 0)
 	{
 		//CKeyboard::KeyPress(code1, 0);
 	}
-	if (code2 != 0)
+	if (g_config.m_code2 != 0)
 	{
 		CKeyboard::KeyPress('C', 0);
 	}

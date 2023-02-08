@@ -19,6 +19,9 @@
     <Filter Include="common">
       <UniqueIdentifier>{3ae797b9-9cfa-4ef0-a5b6-0b605a1035a1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="OneKeyHero">
+      <UniqueIdentifier>{6ca2206f-dfab-4065-9a76-0700c2b0c871}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -204,6 +207,57 @@
     <ClInclude Include="CMouseConfig.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="CKeyboardConfig.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="WzCommon.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="Yxlm.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="HBITMAPToPaint.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="Zgl.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="Zk.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="Smy.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="Swk.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="Llw.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="Blsy.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="Nkll.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="Hx.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="HeroHeadMsgType.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="Blxc.h">
+      <Filter>OneKeyHero</Filter>
+    </ClInclude>
+    <ClInclude Include="ATask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -373,6 +427,54 @@
     </ClCompile>
     <ClCompile Include="CMouseConfig.cpp">
       <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="CKeyboardConfig.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="WzCommon.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="Yxlm.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="HBITMAPToPaint.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="Zgl.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="Zk.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="Smy.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="Swk.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="Llw.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="Blsy.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="Hx.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="Nkll.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="Common.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="Blxc.cpp">
+      <Filter>OneKeyHero</Filter>
+    </ClCompile>
+    <ClCompile Include="ATask.cpp">
+      <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

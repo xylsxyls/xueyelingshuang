@@ -23,6 +23,9 @@ CMouseConfig& CMouseConfig::instance()
 
 void CMouseConfig::acceptParam(WPARAM wParam, LPARAM lParam)
 {
+	m_wParam = wParam;
+	m_lParam = lParam;
+
 	m_leftDown = false;
 	m_leftUp = false;
 	m_rightDown = false;
@@ -69,4 +72,3 @@ void CMouseConfig::acceptParam(WPARAM wParam, LPARAM lParam)
 
 	m_currentPos = CMouse::GetCurrentPos();
 }
-

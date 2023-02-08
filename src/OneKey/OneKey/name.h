@@ -15,3 +15,4 @@
 #define BLSY "百里守约"
 #define HX "韩信"
 #define NKLL "娜可露露"
+#define BLXC "百里玄策"

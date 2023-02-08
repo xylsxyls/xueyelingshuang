@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "D:\\SendToMessageTest.h"
 #include "CSystem/CSystemAPI.h"
+#include "HeroHeadMsgType.h"
 
 // CHeroHeadDlg ¶Ô»°¿ò
 

@@ -5,14 +5,8 @@
 #include "CStopWatch/CStopWatchAPI.h"
 #include "OneKey.h"
 #include "D:\\SendToMessageTest.h"
-
-extern int32_t code1;
-extern int32_t code2;
-extern HWND g_editWnd;
-extern CStopWatch keyWatch[256];
-
-extern xyls::Point rCenterPoint;
-extern xyls::Point fCenterPoint;
+#include "CKeyboardConfig.h"
+#include "Config.h"
 
 CfwrTask::CfwrTask():
 m_editIndex(0)
@@ -23,7 +17,7 @@ m_editIndex(0)
 void CfwrTask::DoTask()
 {
 	char str[1024] = {};
-	::GetWindowTextA(g_editWnd, str, 1024);
+	::GetWindowTextA(g_config.m_editWnd, str, 1024);
 
 	std::string text = str;
 	char e = text[m_editIndex];
@@ -96,7 +90,7 @@ void CfwrTask::KeyPressE()
 void CfwrTask::KeyPressF()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
-	CMouse::MoveAbsolute(fCenterPoint, 0);
+	CMouse::MoveAbsolute(g_config.m_fCenterPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
 }
@@ -104,7 +98,7 @@ void CfwrTask::KeyPressF()
 void CfwrTask::KeyPressR()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
-	CMouse::MoveAbsolute(rCenterPoint, 0);
+	CMouse::MoveAbsolute(g_config.m_rCenterPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
 }

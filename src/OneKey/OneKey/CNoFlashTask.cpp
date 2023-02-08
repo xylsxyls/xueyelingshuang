@@ -2,12 +2,11 @@
 #include "CNoFlashTask.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
-
-extern std::atomic<bool> rightMouse;
+#include "Config.h"
 
 void CNoFlashTask::DoTask()
 {
-    rightMouse = false;
+	g_config.m_rightMouse = false;
 
 	CKeyboard::KeyDown('W');
 	CKeyboard::KeyUp('W');
@@ -46,11 +45,11 @@ void CNoFlashTask::DoTask()
 	////CKeyboard::InputString("q", 0);
 	//CMouse::RightClick(150);
 	//CMouse::RightManyClick(2, 100);
-    //Sleep(50);
-   //// CKeyboard::InputString("3", 0);
+	//Sleep(50);
+	//// CKeyboard::InputString("3", 0);
 	//Sleep(500);
 	////CKeyboard::InputString("q", 0);
 	//CMouse::RightManyClick(6, 200);
 
-    rightMouse = true;
+	g_config.m_rightMouse = true;
 }

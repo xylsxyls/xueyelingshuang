@@ -6,11 +6,6 @@
 #include "afxwin.h"
 #include <vector>
 
-#define WM_DESTROY_HERO_HEAD 10001
-#define WM_RESET_HERO_HEAD 10002
-#define WM_UPDATE_HERO_HEAD 10003
-#define WM_MOVE_HERO_HEAD 10004
-
 class CHeroHeadDlg;
 // COneKeyDlg ¶Ô»°¿ò
 class COneKeyDlg : public CDialogEx

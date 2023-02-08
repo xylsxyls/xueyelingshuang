@@ -6,12 +6,7 @@
 #include "CSleepTask.h"
 #include "CMouse/CMouseAPI.h"
 #include "CStopWatch/CStopWatchAPI.h"
-
-extern uint32_t g_threadId;
-extern int32_t code1;
-extern int32_t code2;
-extern bool rightDown;
-extern HWND g_editWnd;
+#include "Config.h"
 
 CwqTask::CwqTask():
 m_isR(false),
@@ -123,11 +118,11 @@ bool CwqTask::Sleep(int32_t sleepTime)
 
 void CwqTask::KeyPressE()
 {
-	if (code1 != 0)
+	if (g_config.m_code1 != 0)
 	{
 		//CKeyboard::KeyPress(code1, 0);
 	}
-	if (code2 != 0)
+	if (g_config.m_code2 != 0)
 	{
 		CKeyboard::KeyPress('C', 0);
 	}
@@ -164,7 +159,7 @@ bool CwqTask::LockHero()
 		if (!m_isR)
 		{
 			char text[1024] = {};
-			::GetWindowTextA(g_editWnd, text, 1024);
+			::GetWindowTextA(g_config.m_editWnd, text, 1024);
 			std::string str = text;
 			if (str.size() == 1)
 			{

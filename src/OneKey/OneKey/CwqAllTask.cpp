@@ -3,12 +3,7 @@
 #include "CMouse/CMouseAPI.h"
 #include "CKeyBoard/CKeyboardAPI.h"
 #include "D:\\SendToMessageTest.h"
-
-extern uint32_t g_threadId;
-extern int32_t code1;
-extern int32_t code2;
-extern bool rightDown;
-extern HWND g_editWnd;
+#include "Config.h"
 
 CwqAllTask::CwqAllTask():
 m_isEdit(false),
@@ -20,7 +15,7 @@ m_exit(false)
 void CwqAllTask::DoTask()
 {
 	char str[1024] = {};
-	::GetWindowTextA(g_editWnd, str, 1024);
+	::GetWindowTextA(g_config.m_editWnd, str, 1024);
 	
 	std::string text = (m_isEdit ? str : "");
 
@@ -208,11 +203,11 @@ bool CwqAllTask::Sleep(int32_t sleepTime)
 
 void CwqAllTask::KeyPressE()
 {
-	if (code1 != 0)
+	if (g_config.m_code1 != 0)
 	{
 		//CKeyboard::KeyPress(code1, 0);
 	}
-	if (code2 != 0)
+	if (g_config.m_code2 != 0)
 	{
 		CKeyboard::KeyPress('C', 0);
 	}

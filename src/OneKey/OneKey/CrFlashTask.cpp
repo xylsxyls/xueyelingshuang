@@ -3,8 +3,6 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
 
-extern std::atomic<bool> rightMouse;
-
 CrFlashTask::CrFlashTask():
 m_isFlash(false)
 {

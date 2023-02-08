@@ -4,12 +4,8 @@
 #include "CMouse/CMouseAPI.h"
 #include "D:\\SendToMessageTest.h"
 #include "CStopWatch/CStopWatchAPI.h"
-
-extern HWND g_editWnd;
-extern xyls::Point g_heroHeadPoint[5];
-extern int32_t g_side;
-extern int32_t code2;
-extern CStopWatch code2Watch;
+#include "CKeyboardConfig.h"
+#include "Config.h"
 
 CRqwTask::CRqwTask():
 m_press(0),
@@ -21,7 +17,7 @@ m_hasS(false)
 void CRqwTask::DoTask()
 {
 	char str[1024] = {};
-	::GetWindowTextA(g_editWnd, str, 1024);
+	::GetWindowTextA(g_config.m_editWnd, str, 1024);
 	std::string text = str;
 
 	int32_t editIndex = -1;
@@ -50,11 +46,11 @@ void CRqwTask::DoTask()
 
 	if (realPress != '8')
 	{
-		if (code2 == 'C')
+		if (g_config.m_code2 == 'C')
 		{
-			code2Watch.SetWatchTime(0);
+			g_config.m_code2Watch.SetWatchTime(0);
 		}
-		code2 = 48 + realPress;
+		g_config.m_code2 = 48 + realPress;
 	}
 	
 	if (m_press == 'E')
@@ -127,8 +123,9 @@ void CRqwTask::pressK(char realPress)
 		xyls::Point currentPos = CMouse::GetCurrentPos();
 		CMouse::MoveAbsolute(xyls::Point(1419, 941), 0);
 		CMouse::LeftDown();
-		xyls::Point heroHeadPoint = g_heroHeadPoint[realPress - 49];
-		CMouse::MoveAbsolute(xyls::Point(heroHeadPoint.x() + g_side / 2, heroHeadPoint.y() + g_side / 2), 0);
+		xyls::Point heroHeadPoint = g_config.m_heroHeadPoint[realPress - 49];
+		CMouse::MoveAbsolute(xyls::Point(heroHeadPoint.x() + g_config.m_side / 2,
+			heroHeadPoint.y() + g_config.m_side / 2), 0);
 		CMouse::LeftUp();
 		CMouse::MoveAbsolute(currentPos, 0);
 	}

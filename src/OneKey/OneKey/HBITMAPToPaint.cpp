@@ -1,0 +1,153 @@
+#include "stdafx.h"
+#include "HBITMAPToPaint.h"
+
+HBITMAP HBITMAPToPaint::JPEGByteArrayToHBITMAP(const std::string& jpgFrame, IPicture** pIPicture)
+{
+	if (jpgFrame.empty())
+	{
+		return nullptr;
+	}
+	size_t nSize = jpgFrame.size();
+	HGLOBAL hMem = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE | GMEM_NODISCARD, nSize);
+	IStream* pStream = nullptr;
+	//用全局内存初使化IStream接口指针
+	CreateStreamOnHGlobal(hMem, false, &pStream);
+	pStream->Write(jpgFrame.c_str(), (ULONG)nSize, nullptr);
+	ULARGE_INTEGER pos;
+	LARGE_INTEGER iMove;
+	iMove.QuadPart = 0;
+	pStream->Seek(iMove, STREAM_SEEK_SET, &pos);
+	//用OleLoadPicture获得IPicture接口指针
+	OleLoadPicture(pStream, 0, false, IID_IPicture, (LPVOID*)pIPicture);
+	HBITMAP result = nullptr;
+	(*pIPicture)->get_Handle((OLE_HANDLE*)&result);
+	//释放pIStream
+	pStream->Release();
+	//释放可移动缓冲区资源
+	GlobalFree(hMem);
+	return result;
+}
+
+RECT HBITMAPToPaint::ShowRect(const RECT& srcRect, const RECT& backgroundRect)
+{
+	auto srcWidth = srcRect.right - srcRect.left;
+	auto srcHeight = srcRect.bottom - srcRect.top;
+	auto backgroundWidth = backgroundRect.right - backgroundRect.left;
+	auto backgroundHeight = backgroundRect.bottom - backgroundRect.top;
+	double srcTan = srcHeight / (double)srcWidth;
+	double backgroundTan = backgroundHeight / (double)backgroundWidth;
+	if (srcTan < backgroundTan)
+	{
+		int height = (int)(srcHeight * (double)backgroundWidth / srcWidth);
+		int heightChange = (int)((backgroundHeight - height) / 2.0);
+		return RECT{ backgroundRect.left, backgroundRect.top + heightChange, backgroundRect.right, backgroundRect.bottom - heightChange };
+	}
+	else
+	{
+		int width = (int)(srcWidth * (double)backgroundHeight / srcHeight);
+		int widthChange = (int)((backgroundWidth - width) / 2.0);
+		return RECT{ backgroundRect.left + widthChange, backgroundRect.top, backgroundRect.right - widthChange, backgroundRect.bottom };
+	}
+}
+
+void HBITMAPToPaint::DrawHBitmapToHdc(HDC hDC, RECT drawRect, HBITMAP hBitmap, COLORREF backgroundColor, int32_t blendPercent)
+{
+	int32_t width = drawRect.right - drawRect.left;
+	int32_t height = drawRect.bottom - drawRect.top;
+
+	//首先定义一个与屏幕显示兼容的内存显示设备
+	HDC hMemDC = ::CreateCompatibleDC(nullptr);
+	//定义一个与屏幕显示兼容的位图对象
+	HBITMAP hMemBitmap = ::CreateCompatibleBitmap(hDC, width, height);
+	//这时还不能绘图，因为没有地方画
+	//将位图选入到内存显示设备中
+	//只有选入了位图的内存显示设备才有地方绘图，画到指定的位图上
+	auto oldHBITMAP = ::SelectObject(hMemDC, hMemBitmap);
+
+	//先用背景色将位图清除干净
+	HBRUSH hBrush = ::CreateSolidBrush(backgroundColor);
+	RECT memRect = { 0, 0, width, height };
+	::FillRect(hMemDC, &memRect, hBrush);
+	::DeleteObject(hBrush);
+
+	if (hBitmap != nullptr)
+	{
+		BITMAP bitmap;
+		//获取位图尺寸	
+		GetObject(hBitmap, sizeof(BITMAP), &bitmap);
+		//位图大小
+		int32_t imgWidth = bitmap.bmWidth;
+		int32_t imgHeight = bitmap.bmHeight;
+
+		if (imgWidth != 0 && imgHeight != 0)
+		{
+			HDC hImgDC = CreateCompatibleDC(nullptr);
+			auto oldImgHBITMAP = ::SelectObject(hImgDC, hBitmap);
+
+			RECT srcRect = { 0, 0, imgWidth, imgHeight };
+			RECT imgRect = ShowRect(srcRect, RECT{ 0, 0, width, height });
+			int oldMode = ::SetStretchBltMode(hMemDC, HALFTONE);
+			::StretchBlt(hMemDC, imgRect.left, imgRect.top, imgRect.right - imgRect.left, imgRect.bottom - imgRect.top,
+				hImgDC, srcRect.left, srcRect.top, srcRect.right - srcRect.left, srcRect.bottom - srcRect.top, SRCCOPY);
+			::SetStretchBltMode(hMemDC, oldMode);
+
+			::SelectObject(hImgDC, oldImgHBITMAP);
+			::DeleteDC(hImgDC);
+		}
+	}
+
+	if (blendPercent == 100)
+	{
+		//将内存中的图拷贝到屏幕上进行显示
+		::BitBlt(hDC, drawRect.left, drawRect.top, width, height, hMemDC, 0, 0, SRCCOPY);
+	}
+	else
+	{
+		BLENDFUNCTION blend = { 0 };
+		blend.BlendOp = AC_SRC_OVER;
+		blend.BlendFlags = 0;
+		blend.AlphaFormat = 0;
+		blend.SourceConstantAlpha = blendPercent;
+		//将内存中的图拷贝到屏幕上进行显示
+		::AlphaBlend(hDC, drawRect.left, drawRect.top, width, height, hMemDC, 0, 0, width, height, blend);
+	}
+
+	//绘图完成后的清理
+	::SelectObject(hMemDC, oldHBITMAP);
+	::DeleteObject(hMemBitmap);
+	::DeleteDC(hMemDC);
+}
+
+HBITMAP HBITMAPToPaint::GetDCImageToHBitmap(HDC hDC, RECT dcRect)
+{
+	HDC hMemDC = ::CreateCompatibleDC(hDC);
+	int32_t imgWidth = dcRect.right - dcRect.left;
+	int32_t imgHeight = dcRect.bottom - dcRect.top;
+	HBITMAP hBitmap = ::CreateCompatibleBitmap(hDC, imgWidth, imgHeight);
+	HBITMAP hOldBitmap = (HBITMAP)::SelectObject(hMemDC, hBitmap);
+	::BitBlt(hMemDC, 0, 0, imgWidth, imgHeight, hDC, dcRect.left, dcRect.top, SRCCOPY);
+	hBitmap = (HBITMAP)::SelectObject(hMemDC, hOldBitmap);
+	::DeleteDC(hMemDC);
+	return hBitmap;
+}
+
+void HBITMAPToPaint::DrawJpgToHdc(HDC hDC, RECT drawRect, const std::string& jpgFrame, COLORREF backgroundColor, int32_t blendPercent)
+{
+	IPicture* pIPicture = nullptr;
+	HBITMAP hBitmap = JPEGByteArrayToHBITMAP(jpgFrame, &pIPicture);
+	DrawHBitmapToHdc(hDC, drawRect, hBitmap, backgroundColor, blendPercent);
+	if (hBitmap != nullptr)
+	{
+		pIPicture->Release();
+	}
+}
+
+void HBITMAPToPaint::SaveBitmap(CString strFilePath, HBITMAP hBitmap)
+{
+	if (hBitmap)
+	{
+		CImage imgTemp;
+		imgTemp.Attach(hBitmap);
+		imgTemp.Save(strFilePath);
+	}
+}
