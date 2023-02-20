@@ -9,8 +9,11 @@ public:
 public:
 	void DoTask();
 
+	void StopTask();
+
 	void setParam(bool isHeal);
 
 private:
 	bool m_isHeal;
+	std::atomic<bool> m_exit;
 };

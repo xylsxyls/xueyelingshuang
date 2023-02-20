@@ -10,7 +10,8 @@ extern xyls::Rect g_bloodRect[3];
 extern xyls::Point g_clickTop[3];
 
 FollowTask::FollowTask():
-m_isHeal(false)
+m_isHeal(false),
+m_exit(false)
 {
 
 }
@@ -28,6 +29,10 @@ void FollowTask::DoTask()
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
 	{
+		if (m_exit)
+		{
+			return;
+		}
 		if (g_accountCount != 1)
 		{
 			//点击任务栏
@@ -42,6 +47,10 @@ void FollowTask::DoTask()
 		//跟随
 		do 
 		{
+			if (m_exit)
+			{
+				return;
+			}
 			++f2Count;
 			if (f2Count > 20)
 			{
@@ -56,6 +65,10 @@ void FollowTask::DoTask()
 	accountIndex = -1;
 	while (accountIndex++ != g_accountCount - 1)
 	{
+		if (m_exit)
+		{
+			return;
+		}
 		if (g_accountCount != 1)
 		{
 			//点击任务栏
@@ -71,6 +84,11 @@ void FollowTask::DoTask()
 		CMouse::MoveAbsolute(xyls::Point(396, 1056), 0);
 		CMouse::LeftClick();
 	}
+}
+
+void FollowTask::StopTask()
+{
+	m_exit = true;
 }
 
 void FollowTask::setParam(bool isHeal)

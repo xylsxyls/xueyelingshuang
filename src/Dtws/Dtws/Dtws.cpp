@@ -144,6 +144,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		break;
 		case 100:
 		{
+			break;
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
 				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
@@ -171,6 +172,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		break;
 		case 101:
 		{
+			break;
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
 				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
@@ -201,6 +203,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		break;
 		case 102:
 		{
+			break;
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
 				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
@@ -231,6 +234,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		break;
 		case 103:
 		{
+			break;
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
 				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
@@ -261,6 +265,7 @@ LRESULT WINAPI HookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		break;
 		case 104:
 		{
+			break;
 			if (g_stopWatch.GetWatchTime() > 5000)
 			{
 				CTaskThreadManager::Instance().GetThreadInterface(*g_taskThreadId)->StopAllTask();
