@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "SpeakTask.h"
 #include "CMouse/CMouseAPI.h"
+#include "Config.h"
 
 void SpeakTask::DoTask()
 {
-	CMouse::MoveClick(xyls::Point(1742, 447), 0);
+	CMouse::MoveClick(g_config.m_speakBeginPoint, 0);
 	Sleep(50);
-	CMouse::MoveClick(xyls::Point(1523, 765), 0);
+	CMouse::MoveClick(g_config.m_speakEndPoint, 0);
 }

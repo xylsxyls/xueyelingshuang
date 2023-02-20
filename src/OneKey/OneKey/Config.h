@@ -84,6 +84,9 @@ struct CConfig
 
 	uint32_t m_rightClickTime = 2000;
 
+	xyls::Point m_speakBeginPoint = { 1740, 448 };
+	xyls::Point m_speakEndPoint = { 1517, 764 };
+
 protected:
 	CConfig();
 
