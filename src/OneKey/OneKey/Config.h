@@ -41,9 +41,12 @@ struct CConfig
 
 	xyls::Point m_equipPoint[6];
 
+	xyls::Point m_wCenterPoint = { 1542, 749 };
 	xyls::Point m_rCenterPoint = { 1663, 609 };
 	xyls::Point m_fCenterPoint = { 1292, 869 };
 	xyls::Point m_bCenterPoint = { 1061, 860 };
+
+	xyls::Point m_heroCenterPoint = { 1920 / 2, 618 };
 
 	bool m_clickMap = false;
 	bool m_moveUse = false;
@@ -78,6 +81,8 @@ struct CConfig
 
 	bool m_blxca = false;
 	bool m_blxcRight = false;
+
+	uint32_t m_rightClickTime = 2000;
 
 protected:
 	CConfig();

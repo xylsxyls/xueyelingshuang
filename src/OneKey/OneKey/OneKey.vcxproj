@@ -142,6 +142,7 @@
     <ClInclude Include="CqNoFlashTask.h" />
     <ClInclude Include="CQreTask.h" />
     <ClInclude Include="Cqrw3Task.h" />
+    <ClInclude Include="CqrwTask.h" />
     <ClInclude Include="CqTask.h" />
     <ClInclude Include="CrFlashTask.h" />
     <ClInclude Include="CrfTask.h" />
@@ -191,6 +192,7 @@
     <ClInclude Include="Yxlm.h" />
     <ClInclude Include="Zgl.h" />
     <ClInclude Include="Zk.h" />
+    <ClInclude Include="Zy.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ATask.cpp" />
@@ -221,6 +223,7 @@
     <ClCompile Include="CqNoFlashTask.cpp" />
     <ClCompile Include="CQreTask.cpp" />
     <ClCompile Include="Cqrw3Task.cpp" />
+    <ClCompile Include="CqrwTask.cpp" />
     <ClCompile Include="CqTask.cpp" />
     <ClCompile Include="CrFlashTask.cpp" />
     <ClCompile Include="CrfTask.cpp" />
@@ -268,6 +271,7 @@
     <ClCompile Include="Yxlm.cpp" />
     <ClCompile Include="Zgl.cpp" />
     <ClCompile Include="Zk.cpp" />
+    <ClCompile Include="Zy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="OneKey.rc" />

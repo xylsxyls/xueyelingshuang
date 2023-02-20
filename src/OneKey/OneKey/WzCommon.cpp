@@ -35,33 +35,24 @@ void WzCommon::mouse()
 		}
 	}
 
-	if (g_config.m_type == 10 || g_config.m_type == 15)
+	if (g_mouse.m_rightWatch.GetWatchTime() < g_config.m_rightClickTime || g_mouse.m_rightHasDown)
 	{
-		//if (g_qKey && keyWatch['Q'].GetWatchTime() < 3500 && leftUp && stopWatch.GetWatchTime() > 2000)
-		//{
-		//	stopWatch.SetWatchTime(0);
-		//	//taskThread->StopAllTask();
-		//	std::shared_ptr<Cwq2nofTask> spTask(new Cwq2nofTask);
-		//	taskThread->PostTask(spTask, 1);
-		//}
-
-		if (g_mouse.m_rightWatch.GetWatchTime() < 2000 || g_mouse.m_rightHasDown)
+		int32_t yTop = 130 + 10;
+		int32_t yBottom = 950 - 10;
+		xyls::Point point = CMouse::GetCurrentPos();
+		if (point.y() > yBottom)
 		{
-			xyls::Point point = CMouse::GetCurrentPos();
-			if (point.y() > 950)
-			{
-				point.setY(950);
-				std::shared_ptr<MoveTask> spTask(new MoveTask);
-				spTask->setParam(point);
-				g_config.m_taskThread->PostTask(spTask);
-			}
-			else if (point.y() < 130)
-			{
-				point.setY(130);
-				std::shared_ptr<MoveTask> spTask(new MoveTask);
-				spTask->setParam(point);
-				g_config.m_taskThread->PostTask(spTask);
-			}
+			point.setY(yBottom);
+			std::shared_ptr<MoveTask> spTask(new MoveTask);
+			spTask->setParam(point);
+			g_config.m_taskThread->PostTask(spTask);
+		}
+		else if (point.y() < yTop)
+		{
+			point.setY(yTop);
+			std::shared_ptr<MoveTask> spTask(new MoveTask);
+			spTask->setParam(point);
+			g_config.m_taskThread->PostTask(spTask);
 		}
 	}
 }

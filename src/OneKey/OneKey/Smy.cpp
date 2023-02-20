@@ -53,15 +53,24 @@ void Smy::keyboard()
 
 	if (g_keyboard.m_keyUp[SPACE])
 	{
+		g_config.m_taskThread->StopAllTask();
+		g_config.m_code1 = 0;
+		g_config.m_code2 = 'C';
 		if (g_keyboard.m_keyWatch['Q'].GetWatchTime() > 3000)
 		{
 			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 			spTask->setParam('H');
 			g_config.m_taskThread->PostTask(spTask, 1);
+
+			std::shared_ptr<CSleepTask> spTask1(new CSleepTask);
+			spTask1->setParam(50);
+			g_config.m_taskThread->PostTask(spTask1, 1);
+
+			std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+			spTask2->setParam(TAB);
+			g_config.m_taskThread->PostTask(spTask2, 1);
 		}
-		g_config.m_code1 = 0;
-		g_config.m_code2 = 'C';
-		g_config.m_taskThread->StopAllTask();
+		g_mouse.m_rightWatch.SetWatchTime(g_config.m_rightClickTime + 10);
 	}
 
 	if (g_config.m_qKey && g_keyboard.m_keyWatch['Q'].GetWatchTime() < 3500)
@@ -315,8 +324,8 @@ void Smy::timer(int32_t timerId)
 			++times;
 			if (g_config.timerMs(100, times) &&
 				(g_keyboard.m_keyWatch['R'].GetWatchTime() < 5000 ||
-				g_keyboard.m_keyWatch['W'].GetWatchTime() < 2000 ||
-				g_keyboard.m_keyWatch['Q'].GetWatchTime() < 2000))
+				g_keyboard.m_keyWatch['W'].GetWatchTime() < 3000 ||
+				g_keyboard.m_keyWatch['Q'].GetWatchTime() < 5000))
 			{
 				std::shared_ptr<CRightClickTask> spTask(new CRightClickTask);
 				//spTask->setParam(!g_keyHasDown['R']);

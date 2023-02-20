@@ -30,6 +30,7 @@
 #include "Hx.h"
 #include "Nkll.h"
 #include "Blxc.h"
+#include "Zy.h"
 #include "HeroHeadMsgType.h"
 #include "Common.h"
 
@@ -184,6 +185,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (g_config.m_type == 16)
 		{
 			Blxc::keyboard();
+		}
+		else if (g_config.m_type == 17)
+		{
+			Zy::keyboard();
 		}
 	}
 

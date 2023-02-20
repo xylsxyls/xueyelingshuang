@@ -33,7 +33,7 @@ CConfig::CConfig()
 	m_heroName.push_back(HX);
 	m_heroName.push_back(NKLL);
 	m_heroName.push_back(BLXC);
-
+	m_heroName.push_back(ZY);
 }
 
 CConfig& CConfig::instance()
