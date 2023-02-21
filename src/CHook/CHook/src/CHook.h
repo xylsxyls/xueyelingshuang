@@ -24,6 +24,8 @@ public:
 	static void Init(int32_t hookId, HOOKPROC hookFun);
 	static void Uninit();
 
+	static POINT GetMousePosition(LPARAM lParam);
+
 	static const DWORD& GetVkCode(LPARAM lParam);
 	static bool IsKeyUp(WPARAM wParam);
 	static bool IsKeyDown(WPARAM wParam);

@@ -204,12 +204,6 @@
     <ClInclude Include="OneKeyTask.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="CMouseConfig.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="CKeyboardConfig.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="Config.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -430,12 +424,6 @@
     </ClCompile>
     <ClCompile Include="CFindSkillTask.cpp">
       <Filter>CTask</Filter>
-    </ClCompile>
-    <ClCompile Include="CMouseConfig.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="CKeyboardConfig.cpp">
-      <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="Config.cpp">
       <Filter>common</Filter>

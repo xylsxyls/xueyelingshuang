@@ -1,8 +1,5 @@
-#include "stdafx.h"
 #include "CKeyboardConfig.h"
 #include "CHook/CHookAPI.h"
-#include "Config.h"
-#include "D:\\SendToMessageTest.h"
 
 CKeyboardConfig::CKeyboardConfig():
 m_wParam(0),
@@ -28,10 +25,6 @@ void CKeyboardConfig::acceptParam(WPARAM wParam, LPARAM lParam)
 	m_lParam = lParam;
 
 	const DWORD& vkCode = CHook::GetVkCode(lParam);
-	if (g_config.m_isPrintVkCode)
-	{
-		RCSend("vkCode = %d", (int32_t)vkCode);
-	}
 
 	::memset(m_keyDown, 0, sizeof(m_keyDown));
 	::memset(m_keyUp, 0, sizeof(m_keyUp));

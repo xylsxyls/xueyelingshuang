@@ -117,6 +117,8 @@ rmdir /q /s "%~dp0src\CloudRebuild\CloudRebuild\Release\"
 
 ::-------------------删除临时图片-----------------------------
 rmdir /q /s "%~dp0common\AutoPlayGame\ScreenScriptTemp\"
+rmdir /q /s "%~dp0common\Dtws\ScreenScriptTemp\"
+rmdir /q /s "%~dp0common\一键连招\ScreenScriptTemp\"
 
 ::-------------------删除临时代码-----------------------------
 del "%~dp0src\ProtoMessage\ProtoMessage\src\ProtoMessage.pb.h"

@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "CqrwTask.h"
 #include "CKeyboard/CKeyboardAPI.h"
-#include "CMouseConfig.h"
-#include "CKeyboardConfig.h"
+#include "CMouseConfig/CMouseConfigAPI.h"
+#include "CKeyboardConfig/CKeyboardConfigAPI.h"
 #include "CMouse/CMouseAPI.h"
 #include "Config.h"
 

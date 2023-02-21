@@ -155,7 +155,7 @@ std::string ScreenScript::GetBmpPath(const std::string& path)
 	{
 		if (!CScreen::ChangeToBmp(bmpPath, path))
 		{
-			RCSend("error");
+			RCSend("error change to bmp");
 			return "";
 		}
 	}

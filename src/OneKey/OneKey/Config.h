@@ -70,7 +70,7 @@ struct CConfig
 
 	std::shared_ptr<CTaskThread> m_taskThread;
 
-	bool m_isPrintVkCode = false;
+	bool m_isPrintVkCode = true;
 
 	uint32_t m_textWatchTime = 10000;
 

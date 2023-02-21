@@ -21,9 +21,15 @@ void CHook::Uninit()
 	UnhookWindowsHookEx(CHook::s_hHook);
 }
 
+POINT CHook::GetMousePosition(LPARAM lParam)
+{
+	MSLLHOOKSTRUCT* pmshs = (MSLLHOOKSTRUCT*)lParam;
+	return { pmshs->pt.x, pmshs->pt.y };
+}
+
 const DWORD& CHook::GetVkCode(LPARAM lParam)
 {
-	KBDLLHOOKSTRUCT *pkbhs = (KBDLLHOOKSTRUCT *)lParam;
+	KBDLLHOOKSTRUCT* pkbhs = (KBDLLHOOKSTRUCT*)lParam;
 	return pkbhs->vkCode;
 }
 

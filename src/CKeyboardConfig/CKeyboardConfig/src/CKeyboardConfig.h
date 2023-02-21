@@ -2,21 +2,32 @@
 #include <stdint.h>
 #include <windows.h>
 #include "CStopWatch/CStopWatchAPI.h"
-#include "Point/PointAPI.h"
+#include "CKeyboardConfigMacro.h"
 
+//空格
 #define SPACE 32
+//alt
 #define ALT 164
+//ctrl
 #define CTRL 162
+//tab
 #define TAB 9
+//小键盘启始
 #define KEY 48
+//回车
 #define ENTER 13
+//小键盘+号
 #define PLUS 107
+//小键盘-号
 #define MINUS 109
+//波浪号
 #define TILDE 192
+//delete键
+#define DEL 46
 
 #define g_keyboard CKeyboardConfig::instance()
 
-struct CKeyboardConfig
+struct CKeyboardConfigAPI CKeyboardConfig
 {
 	int32_t m_wParam;
 	int32_t m_lParam;

@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Zy.h"
-#include "CKeyboardConfig.h"
+#include "CKeyboardConfig/CKeyboardConfigAPI.h"
 #include "Config.h"
 #include "CqrwTask.h"
 

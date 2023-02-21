@@ -2,7 +2,7 @@
 #include "CrspaceTask.h"
 #include "CMouse/CMouseAPI.h"
 #include "D:\\SendToMessageTest.h"
-#include "CMouseConfig.h"
+#include "CMouseConfig/CMouseConfigAPI.h"
 #include "Config.h"
 
 int32_t g_rWidth = 222;

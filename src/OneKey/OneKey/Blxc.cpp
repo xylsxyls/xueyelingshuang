@@ -1,12 +1,12 @@
 #include "stdafx.h"
 #include "Blxc.h"
-#include "CKeyboardConfig.h"
+#include "CKeyboardConfig/CKeyboardConfigAPI.h"
 #include "Config.h"
 #include "ATask.h"
 #include "CKeyTask.h"
 #include "SkillTask.h"
 #include "CRightClickTask.h"
-#include "CMouseConfig.h"
+#include "CMouseConfig/CMouseConfigAPI.h"
 
 void Blxc::mouse()
 {

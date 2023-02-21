@@ -129,10 +129,8 @@
     <ClInclude Include="CfwrTask.h" />
     <ClInclude Include="CHoldRTask.h" />
     <ClInclude Include="ChxwTask.h" />
-    <ClInclude Include="CKeyboardConfig.h" />
     <ClInclude Include="CKeyTask.h" />
     <ClInclude Include="CLeftClickTask.h" />
-    <ClInclude Include="CMouseConfig.h" />
     <ClInclude Include="CNoFlashTask.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Config.h" />
@@ -210,10 +208,8 @@
     <ClCompile Include="CfwrTask.cpp" />
     <ClCompile Include="CHoldRTask.cpp" />
     <ClCompile Include="ChxwTask.cpp" />
-    <ClCompile Include="CKeyboardConfig.cpp" />
     <ClCompile Include="CKeyTask.cpp" />
     <ClCompile Include="CLeftClickTask.cpp" />
-    <ClCompile Include="CMouseConfig.cpp" />
     <ClCompile Include="CNoFlashTask.cpp" />
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="Config.cpp" />

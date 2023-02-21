@@ -1,6 +1,5 @@
-#include "stdafx.h"
 #include "CMouseConfig.h"
-#include "CMouse/CMouseAPI.h"
+#include "CHook/CHookAPI.h"
 
 CMouseConfig::CMouseConfig() :
 m_wParam(0),
@@ -9,8 +8,11 @@ m_leftDown(false),
 m_leftUp(false),
 m_rightDown(false),
 m_rightUp(false),
+m_midDown(false),
+m_midUp(false),
 m_leftHasDown(false),
-m_rightHasDown(false)
+m_rightHasDown(false),
+m_midHasDown(false)
 {
 
 }
@@ -30,8 +32,11 @@ void CMouseConfig::acceptParam(WPARAM wParam, LPARAM lParam)
 	m_leftUp = false;
 	m_rightDown = false;
 	m_rightUp = false;
+	m_midDown = false;
+	m_midUp = false;
+	m_isMove = false;
 
-	if (wParam == 513)
+	if (wParam == WM_LBUTTONDOWN)
 	{
 		if (!m_leftHasDown)
 		{
@@ -40,7 +45,7 @@ void CMouseConfig::acceptParam(WPARAM wParam, LPARAM lParam)
 			m_leftWatch.SetWatchTime(0);
 		}
 	}
-	else if (wParam == 514)
+	else if (wParam == WM_LBUTTONUP)
 	{
 		if (m_leftHasDown)
 		{
@@ -48,7 +53,7 @@ void CMouseConfig::acceptParam(WPARAM wParam, LPARAM lParam)
 			m_leftHasDown = false;
 		}
 	}
-	else if (wParam == 516)
+	else if (wParam == WM_RBUTTONDOWN)
 	{
 		if (!m_rightHasDown)
 		{
@@ -57,7 +62,7 @@ void CMouseConfig::acceptParam(WPARAM wParam, LPARAM lParam)
 			m_rightWatch.SetWatchTime(0);
 		}
 	}
-	else if (wParam == 517)
+	else if (wParam == WM_RBUTTONUP)
 	{
 		if (m_rightHasDown)
 		{
@@ -65,10 +70,27 @@ void CMouseConfig::acceptParam(WPARAM wParam, LPARAM lParam)
 			m_rightHasDown = false;
 		}
 	}
-	else if (wParam == 512)
+	else if (wParam == WM_MBUTTONDOWN)
+	{
+		if (!m_midHasDown)
+		{
+			m_midDown = true;
+			m_midHasDown = true;
+			m_midWatch.SetWatchTime(0);
+		}
+	}
+	else if (wParam == WM_MBUTTONUP)
+	{
+		if (m_midHasDown)
+		{
+			m_midUp = true;
+			m_midHasDown = false;
+		}
+	}
+	else if (wParam == WM_MOUSEMOVE)
 	{
 		m_isMove = true;
 	}
 
-	m_currentPos = CMouse::GetCurrentPos();
+	m_currentPos = CHook::GetMousePosition(lParam);
 }

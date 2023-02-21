@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Llw.h"
-#include "CKeyboardConfig.h"
+#include "CKeyboardConfig/CKeyboardConfigAPI.h"
 #include "Config.h"
 #include "CfwqTask.h"
 

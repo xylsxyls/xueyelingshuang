@@ -4,7 +4,7 @@
 #include "CMouse/CMouseAPI.h"
 #include "D:\\SendToMessageTest.h"
 #include "CStopWatch/CStopWatchAPI.h"
-#include "CKeyboardConfig.h"
+#include "CKeyboardConfig/CKeyboardConfigAPI.h"
 #include "Config.h"
 
 CRqwTask::CRqwTask():

@@ -2,7 +2,7 @@
 #include "CEscapeR.h"
 #include "CMouse/CMouseAPI.h"
 #include "CKeyBoard/CKeyboardAPI.h"
-#include "CMouseConfig.h"
+#include "CMouseConfig/CMouseConfigAPI.h"
 #include "Config.h"
 
 static int32_t s_rWidth = 222;

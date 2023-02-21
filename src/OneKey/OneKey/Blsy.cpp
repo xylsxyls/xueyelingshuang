@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Blsy.h"
-#include "CKeyboardConfig.h"
+#include "CKeyboardConfig/CKeyboardConfigAPI.h"
 #include "CRMoveTask.h"
 #include "CKeyTask.h"
 #include "Config.h"

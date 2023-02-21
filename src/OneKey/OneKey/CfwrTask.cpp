@@ -5,7 +5,7 @@
 #include "CStopWatch/CStopWatchAPI.h"
 #include "OneKey.h"
 #include "D:\\SendToMessageTest.h"
-#include "CKeyboardConfig.h"
+#include "CKeyboardConfig/CKeyboardConfigAPI.h"
 #include "Config.h"
 
 CfwrTask::CfwrTask():
