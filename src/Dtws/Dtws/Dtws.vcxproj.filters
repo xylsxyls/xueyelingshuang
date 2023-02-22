@@ -39,6 +39,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h</Extensions>
     </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{1d7838ed-fd2a-4e8d-bde3-15318b072f5f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -133,6 +136,9 @@
     </ClCompile>
     <ClCompile Include="EscTask.cpp">
       <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -230,6 +236,9 @@
     </ClInclude>
     <ClInclude Include="PlantTask.h">
       <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

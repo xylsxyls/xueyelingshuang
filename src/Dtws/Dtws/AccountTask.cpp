@@ -4,25 +4,20 @@
 #include "CSystem/CSystemAPI.h"
 #include "DtwsParam.h"
 #include "ScreenScript/ScreenScriptAPI.h"
-
-extern xyls::Point g_accountPoint[3];
-extern int32_t g_accountCount;
-extern xyls::Point g_clickTop[3];
-extern xyls::Point g_intoGamePoint[3];
-extern bool g_hook;
+#include "Config.h"
 
 void AccountTask::DoTask()
 {
-	g_hook = false;
+	g_config.m_hook = false;
 
 	std::vector<std::pair<std::string, std::string>> vecAccount;
-	if (g_accountCount == 3)
+	if (g_config.m_accountCount == 3)
 	{
 		vecAccount.push_back(m_vecAccount[2]);
 		vecAccount.push_back(m_vecAccount[3]);
 		vecAccount.push_back(m_vecAccount[4]);
 	}
-	else if (g_accountCount == 1)
+	else if (g_config.m_accountCount == 1)
 	{
 		if (CSystem::getComputerName() == FIRST_COMPUTER)
 		{
@@ -35,13 +30,13 @@ void AccountTask::DoTask()
 	}
 	
 	int32_t accountIndex = -1;
-	while (accountIndex++ != g_accountCount - 1)
+	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
 		//点击任务栏
-		CMouse::MoveAbsolute(g_clickTop[accountIndex], 50);
+		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
-		if (g_accountCount == 3)
+		if (g_config.m_accountCount == 3)
 		{
 			sleep(500);
 			CMouse::LeftDoubleClick();
@@ -63,10 +58,10 @@ void AccountTask::DoTask()
 		CKeyboard::KeyPress(CKeyboard::Shift);
 		CKeyboard::InputString("\t" + vecAccount[accountIndex].second + "\n", 200);
 
-		CMouse::MoveAbsolute(g_clickTop[0], 50);
+		CMouse::MoveAbsolute(g_config.m_clickTop[0], 50);
 		CMouse::MiddleClick();
 
-		if (g_accountCount == 3)
+		if (g_config.m_accountCount == 3)
 		{
 			CMouse::LeftDoubleClick();
 			sleep(1500);
@@ -76,12 +71,12 @@ void AccountTask::DoTask()
 	sleep(1500);
 
 	accountIndex = -1;
-	while (accountIndex++ != g_accountCount - 1)
+	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
-		CMouse::MoveAbsolute(g_clickTop[accountIndex], 50);
+		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
-		if (g_accountCount == 3)
+		if (g_config.m_accountCount == 3)
 		{
 			CMouse::LeftDoubleClick();
 			sleep(1500);
@@ -100,10 +95,10 @@ void AccountTask::DoTask()
 		ScreenScript::FindClick("res\\BeginGame.png");
 		//CMouse::LeftClick();
 
-		CMouse::MoveAbsolute(g_clickTop[0], 50);
+		CMouse::MoveAbsolute(g_config.m_clickTop[0], 50);
 		CMouse::MiddleClick();
 
-		if (g_accountCount == 3)
+		if (g_config.m_accountCount == 3)
 		{
 			CMouse::LeftDoubleClick();
 			sleep(1500);
@@ -118,19 +113,19 @@ void AccountTask::DoTask()
 	}
 
 	accountIndex = -1;
-	while (accountIndex++ != g_accountCount - 1)
+	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
-		CMouse::MoveAbsolute(g_clickTop[accountIndex], 50);
+		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
 		//点击进入
-		CMouse::MoveAbsolute(g_accountCount == 1 ?
+		CMouse::MoveAbsolute(g_config.m_accountCount == 1 ?
 			(CSystem::getComputerName() == SECOND_COMPUTER ?
-			xyls::Point(717, 628) : xyls::Point(995, 938)) : g_intoGamePoint[accountIndex], 50);
+			xyls::Point(717, 628) : xyls::Point(995, 938)) : g_config.m_intoGamePoint[accountIndex], 50);
 		CMouse::LeftClick();
 	}
 
-	g_hook = true;
+	g_config.m_hook = true;
 }
 
 void AccountTask::setParam(const std::vector<std::pair<std::string, std::string>>& vecAccount)

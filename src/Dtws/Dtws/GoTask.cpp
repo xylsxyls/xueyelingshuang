@@ -5,8 +5,8 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "DtwsParam.h"
 
-extern xyls::Rect g_rightTopRect[3];
-extern int32_t g_accountCount;
+extern xyls::Rect m_rightTopRect[3];
+extern int32_t m_accountCount;
 
 GoTask::GoTask():
 m_clickIndex(0)

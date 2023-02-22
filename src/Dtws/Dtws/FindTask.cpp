@@ -1,9 +1,7 @@
 #include "FindTask.h"
 #include "ScreenScript/ScreenScriptAPI.h"
 #include "CMouse/CMouseAPI.h"
-
-extern int32_t g_accountCount;
-extern xyls::Point g_clickTop[3];
+#include "Config.h"
 
 FindTask::FindTask():
 m_isFind(nullptr),
@@ -25,7 +23,7 @@ void FindTask::DoTask()
 		return;
 	}
 	*m_isFind = false;
-	if (g_accountCount != 1)
+	if (g_config.m_accountCount != 1)
 	{
 		CMouse::MoveAbsolute(m_click, 0);
 		CMouse::MiddleClick();

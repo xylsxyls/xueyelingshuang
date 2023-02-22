@@ -1,9 +1,7 @@
 #include "AttackTask.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
-
-extern int32_t g_accountCount;
-extern xyls::Point g_clickTop[3];
+#include "Config.h"
 
 AttackTask::AttackTask():
 m_exit(false)
@@ -13,7 +11,7 @@ m_exit(false)
 
 void AttackTask::DoTask()
 {
-	if (g_accountCount == 1)
+	if (g_config.m_accountCount == 1)
 	{
 		while (!m_exit)
 		{
@@ -57,12 +55,12 @@ void AttackTask::DoTask()
 		while (skillIndex++ != vecSkill.size() - 1)
 		{
 			int32_t accountIndex = -1;
-			while (accountIndex++ != g_accountCount - 1)
+			while (accountIndex++ != g_config.m_accountCount - 1)
 			{
-				if (g_accountCount != 1)
+				if (g_config.m_accountCount != 1)
 				{
 					//µã»÷ÈÎÎñÀ¸
-					CMouse::MoveAbsolute(g_clickTop[accountIndex], 0);
+					CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
 					CMouse::MiddleClick();
 				}
 				Sleep(50);

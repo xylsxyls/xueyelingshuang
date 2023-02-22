@@ -4,13 +4,11 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "DtwsParam.h"
-
-extern xyls::Point g_accountPoint[3];
-extern int32_t g_accountCount;
+#include "Config.h"
 
 void ClickLoginTask::DoTask()
 {
-	if (g_accountCount == 3)
+	if (g_config.m_accountCount == 3)
 	{
 		CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
 		CMouse::LeftClick(0);
@@ -18,11 +16,11 @@ void ClickLoginTask::DoTask()
 	}
 
 	int32_t index = -1;
-	while (index++ != g_accountCount - 1)
+	while (index++ != g_config.m_accountCount - 1)
 	{
-		if (g_accountCount == 3)
+		if (g_config.m_accountCount == 3)
 		{
-			CMouse::MoveAbsolute(g_accountPoint[index], 0);
+			CMouse::MoveAbsolute(g_config.m_accountPoint[index], 0);
 			CMouse::LeftClick(0);
 			sleep(500);
 		}

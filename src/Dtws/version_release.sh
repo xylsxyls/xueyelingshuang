@@ -7,3 +7,5 @@
 "$CLOUD_REBUILD" CScreen 32 dll release librely
 "$CLOUD_REBUILD" ScreenScript 32 dll release only
 "$CLOUD_REBUILD" CKeyboard 32 dll release only
+"$CLOUD_REBUILD" CMouseConfig 32 lib release only
+"$CLOUD_REBUILD" CKeyboardConfig 32 lib release only

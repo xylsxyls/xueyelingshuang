@@ -2,13 +2,11 @@
 #include "CKeyboard/CKeyboardAPI.h"
 #include "Point/PointAPI.h"
 #include "CMouse/CMouseAPI.h"
-
-extern int32_t g_accountCount;
-extern xyls::Point g_clickTop[3];
+#include "Config.h"
 
 void EscTask::DoTask()
 {
-	if (g_accountCount == 1)
+	if (g_config.m_accountCount == 1)
 	{
 		CKeyboard::KeyDown(CKeyboard::Esc);
 		CKeyboard::KeyUp(CKeyboard::Esc);
@@ -21,10 +19,10 @@ void EscTask::DoTask()
 
 	//Sleep(100);
 	int32_t accountIndex = -1;
-	while (accountIndex++ != g_accountCount - 1)
+	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
 		//µã»÷ÈÎÎñÀ¸
-		CMouse::MoveAbsolute(g_clickTop[accountIndex], 0);
+		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
 		CMouse::MiddleClick();
 		sleep(100);
 		CKeyboard::KeyDown(CKeyboard::Esc);

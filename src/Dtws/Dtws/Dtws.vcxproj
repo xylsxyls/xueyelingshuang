@@ -168,6 +168,7 @@
     <ClCompile Include="ClickLoginTask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
     <ClCompile Include="CloseBeginTask.cpp" />
+    <ClCompile Include="Config.cpp" />
     <ClCompile Include="ConvoyTask.cpp" />
     <ClCompile Include="EscTask.cpp" />
     <ClCompile Include="FindTask.cpp" />
@@ -308,6 +309,7 @@
     <ClInclude Include="ClickLoginTask.h" />
     <ClInclude Include="ClientReceive.h" />
     <ClInclude Include="CloseBeginTask.h" />
+    <ClInclude Include="Config.h" />
     <ClInclude Include="ConvoyTask.h" />
     <ClInclude Include="DtwsParam.h" />
     <ClInclude Include="EscTask.h" />

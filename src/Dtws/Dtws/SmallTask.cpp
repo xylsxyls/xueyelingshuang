@@ -1,12 +1,10 @@
 #include "SmallTask.h"
 #include "CMouse/CMouseAPI.h"
-
-extern xyls::Point g_accountPoint[3];
-extern int32_t g_accountCount;
+#include "Config.h"
 
 void SmallTask::DoTask()
 {
-	if (g_accountCount != 3)
+	if (g_config.m_accountCount != 3)
 	{
 		return;
 	}
@@ -38,9 +36,9 @@ void SmallTask::DoTask()
 	sleep(800);
 
 	int32_t index = -1;
-	while (index++ != g_accountCount - 1)
+	while (index++ != g_config.m_accountCount - 1)
 	{
-		CMouse::MoveAbsolute(g_accountPoint[index], 0);
+		CMouse::MoveAbsolute(g_config.m_accountPoint[index], 0);
 		CMouse::LeftClick(0);
 		sleep(500);
 

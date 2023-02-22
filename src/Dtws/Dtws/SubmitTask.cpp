@@ -2,10 +2,7 @@
 #include "CMouse/CMouseAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "DtwsParam.h"
-
-extern int32_t g_accountCount;
-extern xyls::Point g_clickTop[3];
-extern xyls::Point g_taskPoint[3];
+#include "Config.h"
 
 SubmitTask::SubmitTask():
 m_sleepTime(0)
@@ -21,14 +18,14 @@ void SubmitTask::DoTask()
 	}
 
 	int32_t accountIndex = -1;
-	while (accountIndex++ != g_accountCount - 1)
+	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
-		CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(149, 9) : g_clickTop[accountIndex], 0);
+		CMouse::MoveAbsolute(g_config.m_accountCount == 1 ? xyls::Point(149, 9) : g_config.m_clickTop[accountIndex], 0);
 		CMouse::MiddleClick();
 		Sleep(200);
-		CMouse::MoveAbsolute(g_accountCount == 1 ?
+		CMouse::MoveAbsolute(g_config.m_accountCount == 1 ?
 			(CSystem::getComputerName() == SECOND_COMPUTER ? xyls::Point(1152, 285) : xyls::Point(1713, 287)) :
-			g_taskPoint[accountIndex], 0);
+			g_config.m_taskPoint[accountIndex], 0);
 		CMouse::LeftClick(50);
 		//xyls::Point downPoint = g_taskPoint[accountIndex];
 		//downPoint.SetY(downPoint.y() + 15);

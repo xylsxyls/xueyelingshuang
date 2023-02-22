@@ -1,10 +1,7 @@
 #include "HealTask.h"
 #include "CKeyboard/CKeyboardAPI.h"
 #include "CMouse/CMouseAPI.h"
-
-extern int32_t g_accountCount;
-extern bool g_muqing;
-extern xyls::Point g_clickTop[3];
+#include "Config.h"
 
 HealTask::HealTask():
 m_exit(false)
@@ -14,9 +11,9 @@ m_exit(false)
 
 void HealTask::DoTask()
 {
-	if (g_accountCount == 1)
+	if (g_config.m_accountCount == 1)
 	{
-		if (g_muqing)
+		if (g_config.m_muqing)
 		{
 			CKeyboard::KeyPress(CKeyboard::Right, 20);
 			Sleep(300);
@@ -62,10 +59,10 @@ void HealTask::DoTask()
 	//Sleep(100);
 	
 	int32_t accountIndex = -1;
-	while (accountIndex++ != g_accountCount - 1)
+	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
 		//点击任务栏
-		CMouse::MoveAbsolute(g_clickTop[accountIndex], 0);
+		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
 		CMouse::MiddleClick();
 		Sleep(100);
 		CKeyboard::KeyPress(CKeyboard::Right, 20);
@@ -77,10 +74,10 @@ void HealTask::DoTask()
 	{
 		//补充
 		int32_t accountIndex = -1;
-		while (accountIndex++ != g_accountCount - 1)
+		while (accountIndex++ != g_config.m_accountCount - 1)
 		{
 			//点击任务栏
-			CMouse::MoveAbsolute(g_clickTop[accountIndex], 0);
+			CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
 			CMouse::MiddleClick();
 			Sleep(20);
 			CKeyboard::InputString("5");
@@ -95,10 +92,10 @@ void HealTask::DoTask()
 		}
 
 		accountIndex = -1;
-		while (accountIndex++ != g_accountCount - 1)
+		while (accountIndex++ != g_config.m_accountCount - 1)
 		{
 			//点击任务栏
-			CMouse::MoveAbsolute(g_clickTop[accountIndex], 0);
+			CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
 			CMouse::MiddleClick();
 			Sleep(50);
 			CKeyboard::InputString("6", 0);

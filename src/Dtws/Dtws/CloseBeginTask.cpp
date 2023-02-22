@@ -1,16 +1,14 @@
 #include "CloseBeginTask.h"
 #include "CMouse/CMouseAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
-
-extern int32_t g_accountCount;
-extern xyls::Point g_clickTop[3];
+#include "Config.h"
 
 void CloseBeginTask::DoTask()
 {
 	int32_t accountIndex = -1;
-	while (accountIndex++ != g_accountCount - 1)
+	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
-		CMouse::MoveAbsolute(g_clickTop[accountIndex], 0);
+		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
 		CMouse::MiddleClick();
 		//µã»÷¹Ø±Õ¶¥²¿
 		//CMouse::MoveAbsolute(xyls::Point(921, 47), 50);

@@ -1,7 +1,8 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "SleepBaseTask.h"
 
-class FollowTask : public CTask
+class FollowTask : public SleepBaseTask
 {
 public:
 	FollowTask();
