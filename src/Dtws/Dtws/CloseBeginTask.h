@@ -1,4 +1,5 @@
-#include "SleepBaseTask.h"
+#pragma once
+#include "CommonTask/CommonTaskAPI.h"
 
 class CloseBeginTask : public SleepBaseTask
 {

@@ -42,6 +42,15 @@
     <Filter Include="common">
       <UniqueIdentifier>{1d7838ed-fd2a-4e8d-bde3-15318b072f5f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Task\BaseTask">
+      <UniqueIdentifier>{ecec2cb9-5ac6-4e7a-9806-dae3f617003e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Task\AtomicTask">
+      <UniqueIdentifier>{e140e42c-3f13-4b89-8c38-d8dde7a4c9d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Task\AssignTask">
+      <UniqueIdentifier>{336413f2-8e83-4b35-ba23-16b2b41da839}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -59,9 +68,6 @@
     <ClCompile Include="AccountTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="FollowTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
     <ClCompile Include="HealTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
@@ -75,12 +81,6 @@
       <Filter>Task</Filter>
     </ClCompile>
     <ClCompile Include="ATask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="RiseTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="WaterTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
     <ClCompile Include="SmallTask.cpp">
@@ -110,16 +110,7 @@
     <ClCompile Include="WaitTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="SubmitTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="SleepTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
     <ClCompile Include="StartTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="SleepBaseTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
     <ClCompile Include="CloseBeginTask.cpp">
@@ -131,14 +122,56 @@
     <ClCompile Include="ClickLoginTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="PlantTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
-    <ClCompile Include="EscTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
     <ClCompile Include="Config.cpp">
       <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="AssignThreadHelper.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="AssignTask.cpp">
+      <Filter>Task\BaseTask</Filter>
+    </ClCompile>
+    <ClCompile Include="SelectTeamerAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="RiseAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="ClickAtomicTask.cpp">
+      <Filter>Task\BaseTask</Filter>
+    </ClCompile>
+    <ClCompile Include="ClickCommonAtomicTask.cpp">
+      <Filter>Task\BaseTask</Filter>
+    </ClCompile>
+    <ClCompile Include="FollowTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
+    <ClCompile Include="RiseTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
+    <ClCompile Include="SubmitTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
+    <ClCompile Include="SubmitAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="EscTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
+    <ClCompile Include="EscAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="PlantTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
+    <ClCompile Include="PlantAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="TalkHeroAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="WaterTask.cpp">
+      <Filter>Task\AssignTask</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -159,9 +192,6 @@
     <ClInclude Include="AccountTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="FollowTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
     <ClInclude Include="HealTask.h">
       <Filter>Task</Filter>
     </ClInclude>
@@ -175,12 +205,6 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="ATask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="RiseTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="WaterTask.h">
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="SmallTask.h">
@@ -210,19 +234,10 @@
     <ClInclude Include="WaitTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="SubmitTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
     <ClInclude Include="DtwsParam.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SleepTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
     <ClInclude Include="StartTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="SleepBaseTask.h">
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="CloseBeginTask.h">
@@ -231,14 +246,56 @@
     <ClInclude Include="ClickLoginTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="EscTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
-    <ClInclude Include="PlantTask.h">
-      <Filter>Task</Filter>
-    </ClInclude>
     <ClInclude Include="Config.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="AssignThreadHelper.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="AssignTask.h">
+      <Filter>Task\BaseTask</Filter>
+    </ClInclude>
+    <ClInclude Include="SelectTeamerAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="RiseAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="ClickAtomicTask.h">
+      <Filter>Task\BaseTask</Filter>
+    </ClInclude>
+    <ClInclude Include="ClickCommonAtomicTask.h">
+      <Filter>Task\BaseTask</Filter>
+    </ClInclude>
+    <ClInclude Include="FollowTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="RiseTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="SubmitTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="SubmitAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="EscTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="EscAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="PlantTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="PlantAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="TalkHeroAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="WaterTask.h">
+      <Filter>Task\AssignTask</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

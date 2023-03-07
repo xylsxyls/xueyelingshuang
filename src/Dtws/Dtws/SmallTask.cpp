@@ -8,7 +8,7 @@ void SmallTask::DoTask()
 	{
 		return;
 	}
-	sleep(1500);
+	Sleep(1500);
 
 	CMouse::MoveAbsolute(xyls::Point(402, 10), 0);
 	CMouse::MiddleClick();
@@ -18,7 +18,7 @@ void SmallTask::DoTask()
 	{
 		CMouse::MoveAbsolute(xyls::Point(402, 10), 0);
 		CMouse::LeftDoubleClick();
-		sleep(100);
+		Sleep(100);
 	}
 	
 	count = 3;
@@ -28,46 +28,46 @@ void SmallTask::DoTask()
 		CMouse::LeftDown();
 		CMouse::MoveAbsolute(xyls::Point(897, 557), 50);
 		CMouse::LeftUp();
-		sleep(100);
+		Sleep(100);
 	}
 
 	CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
 	CMouse::LeftClick(0);
-	sleep(800);
+	Sleep(800);
 
 	int32_t index = -1;
 	while (index++ != g_config.m_accountCount - 1)
 	{
-		CMouse::MoveAbsolute(g_config.m_accountPoint[index], 0);
+		CMouse::MoveAbsolute(g_screen.m_accountPoint[index], 0);
 		CMouse::LeftClick(0);
-		sleep(500);
+		Sleep(500);
 
 		if (index == 0)
 		{
 			CMouse::MoveAbsolute(xyls::Point(817, 300), 0);
 			CMouse::LeftDown();
-			sleep(100);
+			Sleep(100);
 			CMouse::MoveAbsolute(xyls::Point(817, 13), 50);
 			CMouse::LeftUp();
-			sleep(100);
+			Sleep(100);
 		}
 		else if (index == 1)
 		{
 			CMouse::MoveAbsolute(xyls::Point(817, 296), 0);
 			CMouse::LeftDown();
-			sleep(100);
+			Sleep(100);
 			CMouse::MoveAbsolute(xyls::Point(495, 322), 50);
 			CMouse::LeftUp();
-			sleep(100);
+			Sleep(100);
 		}
 		else if (index == 2)
 		{
 			CMouse::MoveAbsolute(xyls::Point(817, 296), 0);
 			CMouse::LeftDown();
-			sleep(100);
+			Sleep(100);
 			CMouse::MoveAbsolute(xyls::Point(1131, 322), 50);
 			CMouse::LeftUp();
-			sleep(100);
+			Sleep(100);
 		}
 	}
 }

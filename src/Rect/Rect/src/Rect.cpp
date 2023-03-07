@@ -406,6 +406,11 @@ double Rect::tanHeightWidth() const
 	return height() / (double)width();
 }
 
+xyls::Point Rect::center()
+{
+	return { (m_left + m_right) / 2, (m_top + m_bottom) / 2 };
+}
+
 #ifdef _MSC_VER
 Rect::operator RECT() const
 {

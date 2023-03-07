@@ -1,8 +1,10 @@
 #pragma once
-#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "AssignTask.h"
 
-class RiseTask : public CTask
+class RiseTask : public AssignTask
 {
 public:
 	void DoTask();
+
+	AssignTask* copy();
 };

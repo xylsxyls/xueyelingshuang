@@ -1,20 +1,11 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
-#include "SleepBaseTask.h"
+#include "AssignTask.h"
 
-class FollowTask : public SleepBaseTask
+class FollowTask : public AssignTask
 {
-public:
-	FollowTask();
-
 public:
 	void DoTask();
 
-	void StopTask();
-
-	void setParam(bool isHeal);
-
-private:
-	bool m_isHeal;
-	std::atomic<bool> m_exit;
+	AssignTask* copy();
 };

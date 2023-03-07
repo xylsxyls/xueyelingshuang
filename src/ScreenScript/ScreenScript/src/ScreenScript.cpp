@@ -64,8 +64,7 @@ bool ScreenScript::FindClick(const std::string& path, bool leftClick, bool doubl
 	return true;
 }
 
-xyls::Point ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect, double sim,
-	bool isMove, int32_t sleepTime)
+xyls::Rect ScreenScript::FindPic(const std::string& path, const xyls::Rect& rect, double sim)
 {
 	xyls::Rect findRect;
 	if (rect.empty())
@@ -80,33 +79,27 @@ xyls::Point ScreenScript::FindPic(const std::string& path, const xyls::Rect& rec
 	std::string bmpPath = GetBmpPath(path);
 	if (bmpPath.empty())
 	{
-		return xyls::Point(0, 0);
+		return { xyls::Point(0, 0), 0, 0 };
 	}
 
 	int32_t x = 0;
 	int32_t y = 0;
 	if (!CScreen::FindPic(findRect, bmpPath, x, y, xyls::Color(0, 0, 0), sim))
 	{
-		return xyls::Point(0, 0);
+		return { xyls::Point(0, 0), 0, 0 };
 	}
 	CImage img;
 	HRESULT res = img.Load(path.c_str());
 	if (res != S_OK)
 	{
-		return xyls::Point(0, 0);
+		return { xyls::Point(0, 0), 0, 0 };
 	}
 
 	int32_t imgWidth = img.GetWidth();
 	int32_t imgHeight = img.GetHeight();
 	img.Destroy();
 
-	xyls::Point result = xyls::Point(x + imgWidth / 2, y + imgHeight / 2);
-	if (isMove)
-	{
-		CMouse::MoveAbsolute(result, sleepTime);
-	}
-
-	return result;
+	return { xyls::Point{ x, y }, imgWidth, imgHeight };
 }
 
 bool ScreenScript::WaitForPic(const std::string& path,
@@ -118,7 +111,7 @@ bool ScreenScript::WaitForPic(const std::string& path,
 	int32_t beginTime = ::GetTickCount();
 	while ((int32_t)(::GetTickCount() - beginTime) <= timeOut)
 	{
-		if (!FindPic(path, rect, sim, false).empty())
+		if (!FindPic(path, rect, sim).empty())
 		{
 			return true;
 		}

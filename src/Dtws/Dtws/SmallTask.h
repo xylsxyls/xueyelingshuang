@@ -1,5 +1,5 @@
 #pragma once
-#include "SleepBaseTask.h"
+#include "CommonTask/CommonTaskAPI.h"
 
 class SmallTask : public SleepBaseTask
 {

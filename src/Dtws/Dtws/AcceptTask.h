@@ -1,7 +1,7 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "Rect/RectAPI.h"
-#include "SleepBaseTask.h"
+#include "CommonTask/CommonTaskAPI.h"
 
 class AcceptTask : public SleepBaseTask
 {

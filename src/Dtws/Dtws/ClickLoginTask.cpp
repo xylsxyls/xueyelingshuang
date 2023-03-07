@@ -12,7 +12,7 @@ void ClickLoginTask::DoTask()
 	{
 		CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
 		CMouse::LeftClick(0);
-		sleep(800);
+		Sleep(800);
 	}
 
 	int32_t index = -1;
@@ -20,9 +20,9 @@ void ClickLoginTask::DoTask()
 	{
 		if (g_config.m_accountCount == 3)
 		{
-			CMouse::MoveAbsolute(g_config.m_accountPoint[index], 0);
+			CMouse::MoveAbsolute(g_screen.m_accountPoint[index], 0);
 			CMouse::LeftClick(0);
-			sleep(500);
+			Sleep(500);
 		}
 
 		xyls::Point clickPoint = CSystem::getComputerName() == SECOND_COMPUTER ? xyls::Point(810, 206) :
@@ -30,9 +30,9 @@ void ClickLoginTask::DoTask()
 		//µã»÷ÕËºÅµÇÂ¼
 		CMouse::MoveAbsolute(clickPoint);
 		CMouse::LeftClick(200);
-		sleep(500);
+		Sleep(500);
 		CMouse::MoveAbsolute(clickPoint);
 		CMouse::LeftClick(200);
-		sleep(500);
+		Sleep(500);
 	}
 }

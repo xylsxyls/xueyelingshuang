@@ -3,29 +3,17 @@
 #include "Point/PointAPI.h"
 #include "CMouse/CMouseAPI.h"
 #include "Config.h"
+#include "EscAtomicTask.h"
+#include "AssignThreadManager/AssignThreadManagerAPI.h"
 
 void EscTask::DoTask()
 {
-	if (g_config.m_accountCount == 1)
-	{
-		CKeyboard::KeyDown(CKeyboard::Esc);
-		CKeyboard::KeyUp(CKeyboard::Esc);
-		return;
-	}
+	std::shared_ptr<EscAtomicTask> spTask(new EscAtomicTask);
+	spTask->setAccountIndex(m_accountIndex);
+	AssignThreadManager::instance().postTask(spTask);
+}
 
-	//点击任务栏
-	//CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
-	//CMouse::LeftClick(0);
-
-	//Sleep(100);
-	int32_t accountIndex = -1;
-	while (accountIndex++ != g_config.m_accountCount - 1)
-	{
-		//点击任务栏
-		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
-		CMouse::MiddleClick();
-		sleep(100);
-		CKeyboard::KeyDown(CKeyboard::Esc);
-		CKeyboard::KeyUp(CKeyboard::Esc);
-	}
+AssignTask* EscTask::copy()
+{
+	return new EscTask;
 }

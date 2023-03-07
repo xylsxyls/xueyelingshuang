@@ -10,15 +10,14 @@ void StartTask::DoTask()
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
-		sleep(500);
+		Sleep(500);
 		CMouse::MoveAbsolute(xyls::Point(39, 38), 50);
-		CMouse::LeftClick();
-		CMouse::LeftClick();
+		CMouse::LeftManyClick(3);
 
-		sleep(3000);
+		Sleep(3000);
 		if (CSystem::getComputerName() == SECOND_COMPUTER)
 		{
-			sleep(3000);
+			Sleep(3000);
 		}
 		//if (g_accountCount != 1)
 		//{
@@ -32,7 +31,7 @@ void StartTask::DoTask()
 		std::string currentExePath = CSystem::GetCurrentExePath();
 		while (!ScreenScript::FindPic(currentExePath + "res\\update.png", xyls::Rect(647, 342, 1107, 579)).empty())
 		{
-			sleep(300);
+			Sleep(300);
 		}
 
 		CMouse::MoveAbsolute(CSystem::getComputerName() == SECOND_COMPUTER ?

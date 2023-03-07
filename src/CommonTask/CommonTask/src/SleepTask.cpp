@@ -8,7 +8,7 @@ m_time(0)
 
 void SleepTask::DoTask()
 {
-	sleep(m_time);
+	Sleep(m_time);
 }
 
 void SleepTask::setParam(int32_t time)

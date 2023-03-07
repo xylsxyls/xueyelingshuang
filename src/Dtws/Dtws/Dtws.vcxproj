@@ -162,14 +162,19 @@
   <ItemGroup>
     <ClCompile Include="AcceptTask.cpp" />
     <ClCompile Include="AccountTask.cpp" />
+    <ClCompile Include="AssignTask.cpp" />
+    <ClCompile Include="AssignThreadHelper.cpp" />
     <ClCompile Include="AssignThreadTask.cpp" />
     <ClCompile Include="ATask.cpp" />
     <ClCompile Include="AttackTask.cpp" />
+    <ClCompile Include="ClickCommonAtomicTask.cpp" />
+    <ClCompile Include="ClickAtomicTask.cpp" />
     <ClCompile Include="ClickLoginTask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
     <ClCompile Include="CloseBeginTask.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ConvoyTask.cpp" />
+    <ClCompile Include="EscAtomicTask.cpp" />
     <ClCompile Include="EscTask.cpp" />
     <ClCompile Include="FindTask.cpp" />
     <ClCompile Include="FiveTask.cpp" />
@@ -197,14 +202,17 @@
     <ClCompile Include="HealTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Dtws.cpp" />
+    <ClCompile Include="PlantAtomicTask.cpp" />
     <ClCompile Include="PlantTask.cpp" />
+    <ClCompile Include="RiseAtomicTask.cpp" />
     <ClCompile Include="RiseTask.cpp" />
+    <ClCompile Include="SelectTeamerAtomicTask.cpp" />
     <ClCompile Include="SkillTask.cpp" />
-    <ClCompile Include="SleepBaseTask.cpp" />
-    <ClCompile Include="SleepTask.cpp" />
     <ClCompile Include="SmallTask.cpp" />
     <ClCompile Include="StartTask.cpp" />
+    <ClCompile Include="SubmitAtomicTask.cpp" />
     <ClCompile Include="SubmitTask.cpp" />
+    <ClCompile Include="TalkHeroAtomicTask.cpp" />
     <ClCompile Include="WaitTask.cpp" />
     <ClCompile Include="WaterTask.cpp" />
   </ItemGroup>
@@ -303,15 +311,20 @@
   <ItemGroup>
     <ClInclude Include="AcceptTask.h" />
     <ClInclude Include="AccountTask.h" />
+    <ClInclude Include="AssignTask.h" />
+    <ClInclude Include="AssignThreadHelper.h" />
     <ClInclude Include="AssignThreadTask.h" />
     <ClInclude Include="ATask.h" />
     <ClInclude Include="AttackTask.h" />
+    <ClInclude Include="ClickCommonAtomicTask.h" />
+    <ClInclude Include="ClickAtomicTask.h" />
     <ClInclude Include="ClickLoginTask.h" />
     <ClInclude Include="ClientReceive.h" />
     <ClInclude Include="CloseBeginTask.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ConvoyTask.h" />
     <ClInclude Include="DtwsParam.h" />
+    <ClInclude Include="EscAtomicTask.h" />
     <ClInclude Include="EscTask.h" />
     <ClInclude Include="FindTask.h" />
     <ClInclude Include="FiveTask.h" />
@@ -319,14 +332,17 @@
     <ClInclude Include="GoFindClickTask.h" />
     <ClInclude Include="GoTask.h" />
     <ClInclude Include="HealTask.h" />
+    <ClInclude Include="PlantAtomicTask.h" />
     <ClInclude Include="PlantTask.h" />
+    <ClInclude Include="RiseAtomicTask.h" />
     <ClInclude Include="RiseTask.h" />
+    <ClInclude Include="SelectTeamerAtomicTask.h" />
     <ClInclude Include="SkillTask.h" />
-    <ClInclude Include="SleepBaseTask.h" />
-    <ClInclude Include="SleepTask.h" />
     <ClInclude Include="SmallTask.h" />
     <ClInclude Include="StartTask.h" />
+    <ClInclude Include="SubmitAtomicTask.h" />
     <ClInclude Include="SubmitTask.h" />
+    <ClInclude Include="TalkHeroAtomicTask.h" />
     <ClInclude Include="WaitTask.h" />
     <ClInclude Include="WaterTask.h" />
   </ItemGroup>

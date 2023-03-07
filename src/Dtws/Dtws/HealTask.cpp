@@ -62,13 +62,13 @@ void HealTask::DoTask()
 	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
 		//点击任务栏
-		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
+		CMouse::MoveAbsolute(g_screen.m_clickTop[accountIndex], 0);
 		CMouse::MiddleClick();
 		Sleep(100);
 		CKeyboard::KeyPress(CKeyboard::Right, 20);
 	}
 
-	Sleep(300);
+	Sleep(300);	
 
 	while (!m_exit)
 	{
@@ -77,7 +77,7 @@ void HealTask::DoTask()
 		while (accountIndex++ != g_config.m_accountCount - 1)
 		{
 			//点击任务栏
-			CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
+			CMouse::MoveAbsolute(g_screen.m_clickTop[accountIndex], 0);
 			CMouse::MiddleClick();
 			Sleep(20);
 			CKeyboard::InputString("5");
@@ -95,7 +95,7 @@ void HealTask::DoTask()
 		while (accountIndex++ != g_config.m_accountCount - 1)
 		{
 			//点击任务栏
-			CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
+			CMouse::MoveAbsolute(g_screen.m_clickTop[accountIndex], 0);
 			CMouse::MiddleClick();
 			Sleep(50);
 			CKeyboard::InputString("6", 0);

@@ -4,36 +4,22 @@
 #include "CMouse/CMouseAPI.h"
 #include "DtwsParam.h"
 #include "Config.h"
+#include "TalkHeroAtomicTask.h"
+#include "AssignThreadManager/AssignThreadManagerAPI.h"
 
 void WaterTask::DoTask()
 {
-	Sleep(1500);
-
-	if (CSystem::getComputerName() == THIRD_COMPUTER)
-	{
-		while (!m_exit)
-		{
-			int32_t accountIndex = -1;
-			while (accountIndex++ != g_config.m_accountCount - 1)
-			{
-				//µã»÷ÈÎÎñÀ¸
-				CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
-				CMouse::MiddleClick();
-				Sleep(500);
-				CMouse::MoveAbsolute(g_config.m_talkPoint[accountIndex], 0);
-				CMouse::LeftClick(0);
-				Sleep(500);
-			}
-			Sleep(5000);
-		}
-		
-		return;
-	}
-
+	Sleep(1000);
 	while (!m_exit)
 	{
-		CMouse::MoveAbsolute(xyls::Point(585, 131), 0);
-		CMouse::LeftClick(0);
-		Sleep(5000);
+		std::shared_ptr<TalkHeroAtomicTask> spTask(new TalkHeroAtomicTask);
+		spTask->setAccountIndex(m_accountIndex);
+		AssignThreadManager::instance().postTask(spTask);
+		Sleep(8000);
 	}
+}
+
+AssignTask* WaterTask::copy()
+{
+	return new WaterTask;
 }

@@ -27,11 +27,9 @@ public:
 	@param [in] rect 图片可能存在的区域，不填则在全屏幕内查找
 	@return 返回图片中心点，只找一次，找不到坐标为0
 	*/
-	static xyls::Point FindPic(const std::string& path,
+	static xyls::Rect FindPic(const std::string& path,
 						const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
-						double sim = 0.7,
-						bool isMove = false,
-						int32_t sleepTime = -1);
+						double sim = 0.7);
 
 	/** 等待屏幕中图片出现，阻塞线程
 	@param [in] path 图片路径，支持bmp，jpg，png三种格式

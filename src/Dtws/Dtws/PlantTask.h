@@ -1,8 +1,10 @@
 #pragma once
-#include "SleepBaseTask.h"
+#include "AssignTask.h"
 
-class PlantTask : public SleepBaseTask
+class PlantTask : public AssignTask
 {
 public:
 	void DoTask();
+
+	AssignTask* copy();
 };

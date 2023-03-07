@@ -1,7 +1,10 @@
-#include "SleepBaseTask.h"
+#pragma once
+#include "AssignTask.h"
 
-class WaterTask : public SleepBaseTask
+class WaterTask : public AssignTask
 {
 public:
 	void DoTask();
+
+	AssignTask* copy();
 };

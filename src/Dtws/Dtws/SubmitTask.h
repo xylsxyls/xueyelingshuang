@@ -1,16 +1,10 @@
 #pragma once
-#include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "AssignTask.h"
 
-class SubmitTask : public CTask
+class SubmitTask : public AssignTask
 {
-public:
-	SubmitTask();
-
 public:
 	void DoTask();
 
-	void setParam(int32_t sleepTime);
-
-private:
-	int32_t m_sleepTime;
+	AssignTask* copy();
 };

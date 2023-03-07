@@ -1,6 +1,4 @@
 #include "Dtws.h"
-//#include "11Controls/controls/COriginalButton.h"
-//#include "11Controls/controls/DialogManager.h"
 #include "QtControls/COriginalButton.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "AccountTask.h"
@@ -24,11 +22,12 @@
 #include "SubmitTask.h"
 #include "DtwsParam.h"
 #include "StartTask.h"
-#include "SleepTask.h"
 #include "CloseBeginTask.h"
 #include "ClickLoginTask.h"
 #include "Config.h"
 #include "CKeyboardConfig/CKeyboardConfigAPI.h"
+#include "AssignThreadManager/AssignThreadManagerAPI.h"
+#include "AssignThreadHelper.h"
 
 LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -66,19 +65,9 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_SUBMIT));
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
-
-		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-		int32_t clientIndex = -1;
-		while (clientIndex++ != g_config.m_accountCount - 1)
-		{
-			SubmitTask* submitTask = new SubmitTask;
-			submitTask->setParam(500);
-			std::shared_ptr<CTask> spSubmitTask(submitTask);
-			vecSpDoTask.push_back(spSubmitTask);
-		}
-		spAssignThreadTask->setParam(vecSpDoTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<SubmitTask> spTask(new SubmitTask);
+		AssignThreadHelper::postEveryAssignTask(spTask);
 	}
 
 	if (g_keyboard.m_keyHasDown[CTRL])
@@ -244,9 +233,6 @@ Dtws::Dtws(QWidget* parent):
 	QMainWindow(parent),
 	m_threadId(0),
 	m_account(nullptr),
-	m_follow(nullptr),
-	m_heal(nullptr),
-	m_followHeal(nullptr),
 	m_skill(nullptr),
 	m_water(nullptr),
 	m_small(nullptr),
@@ -300,6 +286,13 @@ void Dtws::init()
 		g_config.m_accountCount = 3;
 	}
 
+	if (computerName == SECOND_COMPUTER)
+	{
+		g_config.m_screenPixel = 1366 * 768;
+	}
+
+	AssignThreadManager::instance().init(g_config.m_accountCount);
+
 	m_account = new COriginalButton(this);
 	m_account->setText(QStringLiteral("ÕËºÅ"));
 	m_account->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
@@ -314,21 +307,6 @@ void Dtws::init()
 	m_account3->setText(QStringLiteral("µÚÈýÅú"));
 	m_account3->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_account3, &COriginalButton::clicked, this, &Dtws::onAccount3ButtonClicked);
-
-	m_follow = new COriginalButton(this);
-	m_follow->setText(QStringLiteral("¸úËæ"));
-	m_follow->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
-	QObject::connect(m_follow, &COriginalButton::clicked, this, &Dtws::onFollowButtonClicked);
-
-	m_heal = new COriginalButton(this);
-	m_heal->setText(QStringLiteral("²¹³ä"));
-	m_heal->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
-	QObject::connect(m_heal, &COriginalButton::clicked, this, &Dtws::onHealButtonClicked);
-
-	m_followHeal = new COriginalButton(this);
-	m_followHeal->setText(QStringLiteral("¸úËæ²¹³ä"));
-	m_followHeal->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
-	QObject::connect(m_followHeal, &COriginalButton::clicked, this, &Dtws::onFollowHealButtonClicked);
 
 	m_skill = new COriginalButton(this);
 	m_skill->setText(QStringLiteral("¼¼ÄÜ"));
@@ -386,9 +364,6 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_account);
 	vecButton.push_back(m_account2);
 	vecButton.push_back(m_account3);
-	vecButton.push_back(m_follow);
-	vecButton.push_back(m_heal);
-	vecButton.push_back(m_followHeal);
 	vecButton.push_back(m_skill);
 	vecButton.push_back(m_water);
 	vecButton.push_back(m_small);
@@ -412,6 +387,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 void Dtws::closeEvent(QCloseEvent* eve)
 {
 	CHook::Uninit();
+	AssignThreadManager::instance().uninit();
 	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
 	CTaskThreadManager::Instance().Uninit(m_threadId);
@@ -541,28 +517,6 @@ void Dtws::onAccount3ButtonClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCloseBeginTask);
 }
 
-void Dtws::onFollowButtonClicked()
-{
-	showMinimized();
-	std::shared_ptr<FollowTask> spFollowTask(new FollowTask);
-	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spFollowTask);
-}
-
-void Dtws::onHealButtonClicked()
-{
-	showMinimized();
-	std::shared_ptr<HealTask> spHealTask(new HealTask);
-	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spHealTask);
-}
-
-void Dtws::onFollowHealButtonClicked()
-{
-	showMinimized();
-	std::shared_ptr<FollowTask> spFollowTask(new FollowTask);
-	spFollowTask->setParam(true);
-	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spFollowTask);
-}
-
 void Dtws::onSkillButtonClicked()
 {
 	showMinimized();
@@ -573,8 +527,11 @@ void Dtws::onSkillButtonClicked()
 void Dtws::onWaterButtonClicked()
 {
 	showMinimized();
-	std::shared_ptr<WaterTask> spWaterTask(new WaterTask);
-	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spWaterTask);
+	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+	AssignThreadManager::instance().stopAllTask();
+	std::shared_ptr<WaterTask> spTask(new WaterTask);
+	AssignThreadHelper::postEveryAssignTask(spTask);
 }
 
 void Dtws::onSmallButtonClicked()

@@ -60,7 +60,7 @@ void AttackTask::DoTask()
 				if (g_config.m_accountCount != 1)
 				{
 					//µã»÷ÈÎÎñÀ¸
-					CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
+					CMouse::MoveAbsolute(g_screen.m_clickTop[accountIndex], 0);
 					CMouse::MiddleClick();
 				}
 				Sleep(50);

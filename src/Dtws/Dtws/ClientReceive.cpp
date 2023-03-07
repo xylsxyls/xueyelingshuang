@@ -12,6 +12,8 @@
 #include "EscTask.h"
 #include "PlantTask.h"
 #include "Config.h"
+#include "AssignThreadManager/AssignThreadManagerAPI.h"
+#include "AssignThreadHelper.h"
 
 ClientReceive::ClientReceive()
 {
@@ -32,15 +34,17 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
 	}
 	break;
 	case DTWS_FOLLOW:
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
-		std::shared_ptr<FollowTask> spFollowTask(new FollowTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spFollowTask);
-	}
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<FollowTask> spTask(new FollowTask);
+		AssignThreadHelper::postEveryAssignTask(spTask);
+	}	
 	break;
 	case DTWS_HEAL:
 	{
@@ -54,8 +58,9 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
 		std::shared_ptr<RiseTask> spRiseTask(new RiseTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spRiseTask);
+		AssignThreadHelper::postEveryAssignTask(spRiseTask);
 	}
 	break;
 	case DTWS_ATTACK:
@@ -249,33 +254,27 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
-
-		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-		int32_t clientIndex = -1;
-		while (clientIndex++ != g_config.m_accountCount - 1)
-		{
-			std::shared_ptr<CTask> spSubmitTask(new SubmitTask);
-			vecSpDoTask.push_back(spSubmitTask);
-		}
-		spAssignThreadTask->setParam(vecSpDoTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<SubmitTask> spTask(new SubmitTask);
+		AssignThreadHelper::postEveryAssignTask(spTask);
 	}
 	break;
 	case DTWS_ESC:
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
-		std::shared_ptr<EscTask> spEscTask(new EscTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spEscTask);
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<EscTask> spTask(new EscTask);
+		AssignThreadHelper::postEveryAssignTask(spTask);
 	}
 	break;
 	case DTWS_PLANT:
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
-		std::shared_ptr<PlantTask> spPlantTask(new PlantTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spPlantTask);
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<PlantTask> spTask(new PlantTask);
+		AssignThreadHelper::postEveryAssignTask(spTask);
 	}
 	break;
 	default:

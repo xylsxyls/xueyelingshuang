@@ -1,6 +1,7 @@
 #include "SleepBaseTask.h"
+#include "CommonTaskMacro.h"
 
-class SleepTask : public SleepBaseTask
+class CommonTaskAPI SleepTask : public SleepBaseTask
 {
 public:
 	SleepTask();

@@ -3,38 +3,17 @@
 #include "CSystem/CSystemAPI.h"
 #include "DtwsParam.h"
 #include "Config.h"
-
-SubmitTask::SubmitTask():
-m_sleepTime(0)
-{
-
-}
+#include "SubmitAtomicTask.h"
+#include "AssignThreadManager/AssignThreadManagerAPI.h"
 
 void SubmitTask::DoTask()
 {
-	if (m_sleepTime != 0)
-	{
-		Sleep(m_sleepTime);
-	}
-
-	int32_t accountIndex = -1;
-	while (accountIndex++ != g_config.m_accountCount - 1)
-	{
-		CMouse::MoveAbsolute(g_config.m_accountCount == 1 ? xyls::Point(149, 9) : g_config.m_clickTop[accountIndex], 0);
-		CMouse::MiddleClick();
-		Sleep(200);
-		CMouse::MoveAbsolute(g_config.m_accountCount == 1 ?
-			(CSystem::getComputerName() == SECOND_COMPUTER ? xyls::Point(1152, 285) : xyls::Point(1713, 287)) :
-			g_config.m_taskPoint[accountIndex], 0);
-		CMouse::LeftClick(50);
-		//xyls::Point downPoint = g_taskPoint[accountIndex];
-		//downPoint.SetY(downPoint.y() + 15);
-		//CMouse::MoveAbsolute(g_accountCount == 1 ? xyls::Point(1713, 302) : downPoint, 0);
-		//CMouse::LeftClick(50);
-	}
+	std::shared_ptr<SubmitAtomicTask> spTask(new SubmitAtomicTask);
+	spTask->setAccountIndex(m_accountIndex);
+	AssignThreadManager::instance().postTask(spTask);
 }
 
-void SubmitTask::setParam(int32_t sleepTime)
+AssignTask* SubmitTask::copy()
 {
-	m_sleepTime = sleepTime;
+	return new SubmitTask;
 }

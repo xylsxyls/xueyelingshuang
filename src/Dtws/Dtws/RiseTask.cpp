@@ -3,33 +3,17 @@
 #include "Point/PointAPI.h"
 #include "CMouse/CMouseAPI.h"
 #include "Config.h"
+#include "RiseAtomicTask.h"
+#include "AssignThreadManager/AssignThreadManagerAPI.h"
 
 void RiseTask::DoTask()
 {
-	if (g_config.m_accountCount == 1)
-	{
-		CKeyboard::KeyDown(CKeyboard::Alt);
-		CKeyboard::KeyDown('2');
-		CKeyboard::KeyUp(CKeyboard::Alt);
-		CKeyboard::KeyUp('2');
-		return;
-	}
+	std::shared_ptr<RiseAtomicTask> spTask(new RiseAtomicTask);
+	spTask->setAccountIndex(m_accountIndex);
+	AssignThreadManager::instance().postTask(spTask);
+}
 
-	//点击任务栏
-	//CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
-	//CMouse::LeftClick(0);
-
-	//Sleep(100);
-	int32_t accountIndex = -1;
-	while (accountIndex++ != g_config.m_accountCount - 1)
-	{
-		//点击任务栏
-		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
-		CMouse::MiddleClick();
-		Sleep(100);
-		CKeyboard::KeyDown(CKeyboard::Alt);
-		CKeyboard::KeyDown('2');
-		CKeyboard::KeyUp(CKeyboard::Alt);
-		CKeyboard::KeyUp('2');
-	}
+AssignTask* RiseTask::copy()
+{
+	return new RiseTask;
 }

@@ -33,23 +33,23 @@ void AccountTask::DoTask()
 	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
 		//点击任务栏
-		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 50);
+		CMouse::MoveAbsolute(g_screen.m_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
 		if (g_config.m_accountCount == 3)
 		{
-			sleep(500);
+			Sleep(500);
 			CMouse::LeftDoubleClick();
-			sleep(1500);
+			Sleep(1500);
 		}
 		
 		//点击账户框
 		CMouse::MoveAbsolute(xyls::Point(585, 131), 50);
 		CMouse::LeftClick();
 		CKeyboard::InputString("\t");
-		sleep(200);
+		Sleep(200);
 		CKeyboard::KeyPress(CKeyboard::Shift);
-		sleep(100);
+		Sleep(100);
 		CKeyboard::KeyDown(CKeyboard::Ctrl);
 		CKeyboard::KeyDown('A');
 		CKeyboard::KeyUp(CKeyboard::Ctrl);
@@ -58,28 +58,28 @@ void AccountTask::DoTask()
 		CKeyboard::KeyPress(CKeyboard::Shift);
 		CKeyboard::InputString("\t" + vecAccount[accountIndex].second + "\n", 200);
 
-		CMouse::MoveAbsolute(g_config.m_clickTop[0], 50);
+		CMouse::MoveAbsolute(g_screen.m_clickTop[0], 50);
 		CMouse::MiddleClick();
 
 		if (g_config.m_accountCount == 3)
 		{
 			CMouse::LeftDoubleClick();
-			sleep(1500);
+			Sleep(1500);
 		}
 	}
 
-	sleep(1500);
+	Sleep(1500);
 
 	accountIndex = -1;
 	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
-		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 50);
+		CMouse::MoveAbsolute(g_screen.m_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
 		if (g_config.m_accountCount == 3)
 		{
 			CMouse::LeftDoubleClick();
-			sleep(1500);
+			Sleep(1500);
 		}
 
 		//点击大区
@@ -95,33 +95,33 @@ void AccountTask::DoTask()
 		ScreenScript::FindClick("res\\BeginGame.png");
 		//CMouse::LeftClick();
 
-		CMouse::MoveAbsolute(g_config.m_clickTop[0], 50);
+		CMouse::MoveAbsolute(g_screen.m_clickTop[0], 50);
 		CMouse::MiddleClick();
 
 		if (g_config.m_accountCount == 3)
 		{
 			CMouse::LeftDoubleClick();
-			sleep(1500);
+			Sleep(1500);
 		}
 	}
 
-	sleep(3000);
+	Sleep(3000);
 
 	if (CSystem::getComputerName() == SECOND_COMPUTER)
 	{
-		sleep(5000);
+		Sleep(5000);
 	}
 
 	accountIndex = -1;
 	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
-		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 50);
+		CMouse::MoveAbsolute(g_screen.m_clickTop[accountIndex], 50);
 		CMouse::MiddleClick();
 
 		//点击进入
 		CMouse::MoveAbsolute(g_config.m_accountCount == 1 ?
 			(CSystem::getComputerName() == SECOND_COMPUTER ?
-			xyls::Point(717, 628) : xyls::Point(995, 938)) : g_config.m_intoGamePoint[accountIndex], 50);
+			xyls::Point(717, 628) : xyls::Point(995, 938)) : g_screen.m_intoGamePoint[accountIndex], 50);
 		CMouse::LeftClick();
 	}
 

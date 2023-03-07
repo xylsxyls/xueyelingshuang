@@ -12,7 +12,7 @@ void SleepBaseTask::StopTask()
 	m_sleep.signal();
 }
 
-void SleepBaseTask::sleep(int32_t time)
+void SleepBaseTask::Sleep(int32_t time)
 {
 	if (m_exit)
 	{

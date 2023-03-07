@@ -74,6 +74,10 @@ public:
 	//? 返回tan角
 	double tanHeightWidth() const;
 
+	//? 获取矩形的中心点
+	//? 返回矩形的中心点
+	xyls::Point center();
+
 #ifdef _MSC_VER
 	operator RECT() const;
 #endif

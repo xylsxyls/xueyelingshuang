@@ -1,8 +1,9 @@
 #pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
+#include "CommonTaskMacro.h"
 
-class SleepBaseTask : public CTask
+class CommonTaskAPI SleepBaseTask : public CTask
 {
 public:
 	SleepBaseTask();
@@ -10,9 +11,16 @@ public:
 public:
 	void StopTask();
 
-	void sleep(int32_t time);
+	void Sleep(int32_t time);
 
 protected:
 	Semaphore m_sleep;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
 	std::atomic<bool> m_exit;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 };

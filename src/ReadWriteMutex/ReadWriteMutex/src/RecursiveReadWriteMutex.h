@@ -29,5 +29,12 @@ private:
 	pthread_mutex_t m_lock;
 	pthread_mutexattr_t m_attr;
 #endif
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
 	std::atomic<int> m_lockCount;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 };

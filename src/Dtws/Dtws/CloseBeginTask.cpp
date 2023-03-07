@@ -8,7 +8,7 @@ void CloseBeginTask::DoTask()
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_config.m_accountCount - 1)
 	{
-		CMouse::MoveAbsolute(g_config.m_clickTop[accountIndex], 0);
+		CMouse::MoveAbsolute(g_screen.m_clickTop[accountIndex], 0);
 		CMouse::MiddleClick();
 		//µã»÷¹Ø±Õ¶¥²¿
 		//CMouse::MoveAbsolute(xyls::Point(921, 47), 50);

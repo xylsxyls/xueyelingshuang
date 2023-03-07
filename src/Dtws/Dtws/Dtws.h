@@ -29,9 +29,6 @@ private slots:
 	void onAccountButtonClicked();
 	void onAccount2ButtonClicked();
 	void onAccount3ButtonClicked();
-	void onFollowButtonClicked();
-	void onHealButtonClicked();
-	void onFollowHealButtonClicked();
 	void onSkillButtonClicked();
 	void onWaterButtonClicked();
 	void onSmallButtonClicked();
@@ -46,9 +43,6 @@ private:
 	COriginalButton* m_account;
 	COriginalButton* m_account2;
 	COriginalButton* m_account3;
-	COriginalButton* m_follow;
-	COriginalButton* m_heal;
-	COriginalButton* m_followHeal;
 	COriginalButton* m_skill;
 	COriginalButton* m_water;
 	COriginalButton* m_small;
