@@ -28,6 +28,7 @@
 #include "CKeyboardConfig/CKeyboardConfigAPI.h"
 #include "AssignThreadManager/AssignThreadManagerAPI.h"
 #include "AssignThreadHelper.h"
+#include "GoDestTask.h"
 
 LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -49,6 +50,7 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_STOP));
 	}
 	else if (g_keyboard.m_keyDown['4'])
@@ -82,23 +84,20 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_BINGJIANCUN));
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+			AssignThreadManager::instance().stopAllTask();
 
-			std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-			std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-			int32_t clientIndex = -1;
-			while (clientIndex++ != g_config.m_accountCount - 1)
+			std::shared_ptr<GoDestTask> spTask(new GoDestTask);
+			std::vector<std::shared_ptr<CTask>> vecTask;
+			int32_t accountIndex = -1;
+			while (accountIndex++ != g_config.m_accountCount - 1)
 			{
-				GoFindClickTask* goFindClickTask = new GoFindClickTask;
-				goFindClickTask->setParam(600,
-					clientIndex,
-					g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
-					g_config.m_isBigLache ? 3 : 2,
-					std::vector<xyls::Point>());
-				std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
-				vecSpDoTask.push_back(spGoFindClickTask);
+				std::shared_ptr<GoDestTask> spAssignTask(new GoDestTask);
+				spAssignTask->setAccountIndex(accountIndex);
+				spAssignTask->setParam(g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
+					g_config.m_isBigLache ? 3 : 2, false);
+				vecTask.push_back(spAssignTask);
 			}
-			spAssignThreadTask->setParam(vecSpDoTask);
-			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+			AssignThreadManager::instance().postAssignTask(vecTask);
 		}
 		else if (g_keyboard.m_keyDown[KEY + '5'])
 		{
@@ -552,25 +551,24 @@ void Dtws::onJidiButtonClicked()
 	showMinimized();
 	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+	AssignThreadManager::instance().stopAllTask();
 
-	std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-	std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-	int32_t clientIndex = -1;
-	while (clientIndex++ != g_config.m_accountCount - 1)
-	{
-		GoFindClickTask* goFindClickTask = new GoFindClickTask;
-		std::vector<xyls::Point> vecAcceptPoint;
-		vecAcceptPoint.push_back(g_config.m_accept);
-		goFindClickTask->setParam(1000, clientIndex, "ganquangujieyinren", 0, vecAcceptPoint);
-		std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
-		vecSpDoTask.push_back(spGoFindClickTask);
-	}
-	spAssignThreadTask->setParam(vecSpDoTask);
-	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
 	if (CSystem::getComputerName() == FIRST_COMPUTER)
 	{
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_JIDI));
 	}
+
+	std::shared_ptr<GoDestTask> spTask(new GoDestTask);
+	std::vector<std::shared_ptr<CTask>> vecTask;
+	int32_t accountIndex = -1;
+	while (accountIndex++ != g_config.m_accountCount - 1)
+	{
+		std::shared_ptr<GoDestTask> spAssignTask(new GoDestTask);
+		spAssignTask->setAccountIndex(accountIndex);
+		spAssignTask->setParam("ganquangujieyinren", 0, true);
+		vecTask.push_back(spAssignTask);
+	}
+	AssignThreadManager::instance().postAssignTask(vecTask);
 }
 
 void Dtws::onChangshougongButtonClicked()
@@ -578,23 +576,24 @@ void Dtws::onChangshougongButtonClicked()
 	showMinimized();
 	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+	AssignThreadManager::instance().stopAllTask();
 
-	std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-	std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-	int32_t clientIndex = -1;
-	while (clientIndex++ != g_config.m_accountCount - 1)
-	{
-		GoFindClickTask* goFindClickTask = new GoFindClickTask;
-		goFindClickTask->setParam(1000, clientIndex, "pingkouzhenren", 0, std::vector<xyls::Point>());
-		std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
-		vecSpDoTask.push_back(spGoFindClickTask);
-	}
-	spAssignThreadTask->setParam(vecSpDoTask);
-	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
 	if (CSystem::getComputerName() == FIRST_COMPUTER)
 	{
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_CHANGSHOUGONG));
 	}
+
+	std::shared_ptr<GoDestTask> spTask(new GoDestTask);
+	std::vector<std::shared_ptr<CTask>> vecTask;
+	int32_t accountIndex = -1;
+	while (accountIndex++ != g_config.m_accountCount - 1)
+	{
+		std::shared_ptr<GoDestTask> spAssignTask(new GoDestTask);
+		spAssignTask->setAccountIndex(accountIndex);
+		spAssignTask->setParam("pingkouzhenren", 0, false);
+		vecTask.push_back(spAssignTask);
+	}
+	AssignThreadManager::instance().postAssignTask(vecTask);
 }
 
 void Dtws::onLacheButtonClicked()

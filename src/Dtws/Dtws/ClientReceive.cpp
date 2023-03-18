@@ -14,6 +14,7 @@
 #include "Config.h"
 #include "AssignThreadManager/AssignThreadManagerAPI.h"
 #include "AssignThreadHelper.h"
+#include "GoDestTask.h"
 
 ClientReceive::ClientReceive()
 {
@@ -75,40 +76,38 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
 
-		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-		int32_t clientIndex = -1;
-		while (clientIndex++ != g_config.m_accountCount - 1)
+		std::shared_ptr<GoDestTask> spTask(new GoDestTask);
+		std::vector<std::shared_ptr<CTask>> vecTask;
+		int32_t accountIndex = -1;
+		while (accountIndex++ != g_config.m_accountCount - 1)
 		{
-			GoFindClickTask* goFindClickTask = new GoFindClickTask;
-			std::vector<xyls::Point> vecAcceptPoint;
-			vecAcceptPoint.push_back(g_config.m_accept);
-			goFindClickTask->setParam(0, clientIndex, "ganquangujieyinren", 0, vecAcceptPoint);
-			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
-			vecSpDoTask.push_back(spGoFindClickTask);
+			std::shared_ptr<GoDestTask> spAssignTask(new GoDestTask);
+			spAssignTask->setAccountIndex(accountIndex);
+			spAssignTask->setParam("ganquangujieyinren", 0, true);
+			vecTask.push_back(spAssignTask);
 		}
-		spAssignThreadTask->setParam(vecSpDoTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+		AssignThreadManager::instance().postAssignTask(vecTask);
 	}
 	break;
 	case DTWS_CHANGSHOUGONG:
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
 
-		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-		int32_t clientIndex = -1;
-		while (clientIndex++ != g_config.m_accountCount - 1)
+		std::shared_ptr<GoDestTask> spTask(new GoDestTask);
+		std::vector<std::shared_ptr<CTask>> vecTask;
+		int32_t accountIndex = -1;
+		while (accountIndex++ != g_config.m_accountCount - 1)
 		{
-			GoFindClickTask* goFindClickTask = new GoFindClickTask;
-			goFindClickTask->setParam(0, clientIndex, "pingkouzhenren", 0, std::vector<xyls::Point>());
-			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
-			vecSpDoTask.push_back(spGoFindClickTask);
+			std::shared_ptr<GoDestTask> spAssignTask(new GoDestTask);
+			spAssignTask->setAccountIndex(accountIndex);
+			spAssignTask->setParam("pingkouzhenren", 0, false);
+			vecTask.push_back(spAssignTask);
 		}
-		spAssignThreadTask->setParam(vecSpDoTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+		AssignThreadManager::instance().postAssignTask(vecTask);
 	}
 	break;
 	case DTWS_DACHE:
@@ -127,23 +126,20 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
 
-		std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-		std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-		int32_t clientIndex = -1;
-		while (clientIndex++ != g_config.m_accountCount - 1)
+		std::shared_ptr<GoDestTask> spTask(new GoDestTask);
+		std::vector<std::shared_ptr<CTask>> vecTask;
+		int32_t accountIndex = -1;
+		while (accountIndex++ != g_config.m_accountCount - 1)
 		{
-			GoFindClickTask* goFindClickTask = new GoFindClickTask;
-			goFindClickTask->setParam(0,
-				clientIndex,
-				g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
-				g_config.m_isBigLache ? 3 : 2,
-				std::vector<xyls::Point>());
-			std::shared_ptr<CTask> spGoFindClickTask(goFindClickTask);
-			vecSpDoTask.push_back(spGoFindClickTask);
+			std::shared_ptr<GoDestTask> spAssignTask(new GoDestTask);
+			spAssignTask->setAccountIndex(accountIndex);
+			spAssignTask->setParam(g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
+				g_config.m_isBigLache ? 3 : 2, false);
+			vecTask.push_back(spAssignTask);
 		}
-		spAssignThreadTask->setParam(vecSpDoTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+		AssignThreadManager::instance().postAssignTask(vecTask);
 	}
 	break;
 	case DTWS_MUFENGLIN:

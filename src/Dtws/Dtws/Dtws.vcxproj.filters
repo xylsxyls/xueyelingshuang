@@ -173,6 +173,18 @@
     <ClCompile Include="WaterTask.cpp">
       <Filter>Task\AssignTask</Filter>
     </ClCompile>
+    <ClCompile Include="GoOpenAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="GoWriteDestAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="AcceptAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="GoDestTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -295,6 +307,18 @@
       <Filter>Task\AtomicTask</Filter>
     </ClInclude>
     <ClInclude Include="WaterTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="GoOpenAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="GoWriteDestAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="AcceptAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="GoDestTask.h">
       <Filter>Task\AssignTask</Filter>
     </ClInclude>
   </ItemGroup>

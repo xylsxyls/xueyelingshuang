@@ -2,6 +2,8 @@
 #include "Config.h"
 #include "CMouse/CMouseAPI.h"
 #include "ScreenScript/ScreenScriptAPI.h"
+#include "CSystem/CSystemAPI.h"
+#include "DtwsParam.h"
 
 ClickAtomicTask::ClickAtomicTask():
 m_isStartWithFindPic(false),
@@ -14,9 +16,12 @@ m_accountIndex(0)
 
 void ClickAtomicTask::DoTask()
 {
-	CMouse::MoveAbsolute(g_screen.m_clickTop[m_accountIndex], 0);
-	CMouse::MiddleClick();
-	Sleep(50);
+	if (CSystem::getComputerName() != FIRST_COMPUTER)
+	{
+		CMouse::MoveAbsolute(g_screen.m_clickTop[m_accountIndex], 0);
+		CMouse::MiddleClick();
+		Sleep(50);
+	}
 	
 	std::vector<std::pair<std::string, xyls::Rect>> vecPic;
 	vecPic = findPic(m_isStartWithFindPic ? m_vecStartFindPic : m_vecStartNotFindPic);

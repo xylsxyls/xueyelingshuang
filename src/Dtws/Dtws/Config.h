@@ -21,11 +21,14 @@ struct AccountConfig
 	std::vector<xyls::Point> m_clickTop;
 	std::vector<xyls::Point> m_talkHeroHeadPoint;
 	std::vector<xyls::Rect> m_talkWindowHeadRect;
+	std::string m_talkWindowHeadPath;
+	std::string m_goWindowHeadPath;
 	std::vector<xyls::Rect> m_chatRect;
-	std::vector<xyls::Rect> m_bloodRect;
 	std::string m_bloodPath;
+	std::vector<xyls::Rect> m_bloodRect;
 	std::vector<xyls::Point> m_submitPoint;
 	std::vector<xyls::Point> m_intoGamePoint;
+	std::vector<xyls::Point> m_goPoint;
 };
 
 struct CConfig
@@ -52,6 +55,14 @@ struct CConfig
 	std::string m_currentExePath;
 	
 	int32_t m_secondFindTime = 50;
+
+	xyls::Point m_destEditOppositePoint = { 22, 429 };
+	xyls::Point m_xunOppositePoint = { 132, 433 };
+	xyls::Point m_destOppositePoint = { 230, 130 };
+	xyls::Point m_acceptOppositePoint = { 146, 428 };
+
+	int32_t m_destHeight = 45;
+	int32_t m_goFirstSleepTime = 500;
 
 protected:
 	CConfig();

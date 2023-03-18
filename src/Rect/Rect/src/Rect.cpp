@@ -406,7 +406,17 @@ double Rect::tanHeightWidth() const
 	return height() / (double)width();
 }
 
-xyls::Point Rect::center()
+xyls::Point Rect::leftTop() const
+{
+	return { m_left, m_top };
+}
+
+xyls::Point Rect::rightBottom() const
+{
+	return{ m_right, m_bottom };
+}
+
+xyls::Point Rect::center() const
 {
 	return { (m_left + m_right) / 2, (m_top + m_bottom) / 2 };
 }

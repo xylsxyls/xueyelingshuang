@@ -20,10 +20,18 @@ CConfig::CConfig()
 	m_accountConfig[1920 * 1080][1].m_talkHeroHeadPoint = { { 585, 131 } };
 	m_accountConfig[1920 * 1080][3].m_talkHeroHeadPoint = { { 902, 139 }, { 590, 450 }, { 1223, 450 } };
 
-	m_accountConfig[1366 * 768][1].m_talkWindowHeadRect = { { 650, 77, 998, 552 } };
+	m_accountConfig[1366 * 768][1].m_talkWindowHeadRect = { { 354, 50, 990, 342 } };
 	m_accountConfig[1920 * 1080][1].m_talkWindowHeadRect = { { 650, 77, 998, 552 } };
 	m_accountConfig[1920 * 1080][3].m_talkWindowHeadRect = { { 650, 9, 998, 496 }, { 326, 318, 694, 719 },
 		{ 992, 325, 1333, 757 } };
+
+	m_accountConfig[1366 * 768][1].m_talkWindowHeadPath = "res\\talkhead.png";
+	m_accountConfig[1920 * 1080][1].m_talkWindowHeadPath = "res\\talkhead.png";
+	m_accountConfig[1920 * 1080][3].m_talkWindowHeadPath = "res\\talkhead.png";
+
+	m_accountConfig[1366 * 768][1].m_goWindowHeadPath = "res\\gowindowhead2.png";
+	m_accountConfig[1920 * 1080][1].m_goWindowHeadPath = "res\\gowindowhead.png";
+	m_accountConfig[1920 * 1080][3].m_goWindowHeadPath = "res\\gowindowhead.png";
 
 	m_accountConfig[1366 * 768][1].m_chatRect = { { 0, 770, 348, 1009 } };
 	m_accountConfig[1920 * 1080][1].m_chatRect = { { 0, 770, 348, 1009 } };
@@ -46,6 +54,10 @@ CConfig::CConfig()
 	m_accountConfig[1366 * 768][1].m_intoGamePoint = { { 717, 628 } };
 	m_accountConfig[1920 * 1080][1].m_intoGamePoint = { { 995, 938 } };
 	m_accountConfig[1920 * 1080][3].m_intoGamePoint = { { 1024, 634 }, { 681, 943 }, { 1311, 940 } };
+
+	m_accountConfig[1366 * 768][1].m_goPoint = { { 1355, 219 } };
+	m_accountConfig[1920 * 1080][1].m_goPoint = { { 1910, 222 } };
+	m_accountConfig[1920 * 1080][3].m_goPoint = { { 1592, 225 }, { 1274, 528 }, { 1902, 526 } };
 
 	m_currentExePath = CSystem::GetCurrentExePath();
 }

@@ -6,6 +6,18 @@ void ClickCommonAtomicTask::heroBlood(bool isStart, bool isFind)
 	pic(isStart, isFind, g_config.m_currentExePath + g_screen.m_bloodPath, g_screen.m_bloodRect[m_accountIndex], 0.7);
 }
 
+void ClickCommonAtomicTask::go(bool isStart, bool isFind)
+{
+	pic(isStart, isFind, g_config.m_currentExePath + g_screen.m_goWindowHeadPath,
+		g_screen.m_talkWindowHeadRect[m_accountIndex], 0.7);
+}
+
+void ClickCommonAtomicTask::accept(bool isStart, bool isFind)
+{
+	pic(isStart, isFind, g_config.m_currentExePath + g_screen.m_talkWindowHeadPath,
+		g_screen.m_talkWindowHeadRect[m_accountIndex], 0.7);
+}
+
 void ClickCommonAtomicTask::pic(bool isStart, bool isFind, const std::string& path, const xyls::Rect& rect, double sim)
 {
 	if (isStart)
