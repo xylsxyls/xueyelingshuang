@@ -18,6 +18,12 @@ void ClickCommonAtomicTask::accept(bool isStart, bool isFind)
 		g_screen.m_talkWindowHeadRect[m_accountIndex], 0.7);
 }
 
+void ClickCommonAtomicTask::jiaohumaer(bool isStart, bool isFind)
+{
+	pic(isStart, isFind, g_config.m_currentExePath + g_screen.m_chatPath,
+		g_screen.m_chatRect[m_accountIndex], 0.7);
+}
+
 void ClickCommonAtomicTask::pic(bool isStart, bool isFind, const std::string& path, const xyls::Rect& rect, double sim)
 {
 	if (isStart)

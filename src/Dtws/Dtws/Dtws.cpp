@@ -29,6 +29,7 @@
 #include "AssignThreadManager/AssignThreadManagerAPI.h"
 #include "AssignThreadHelper.h"
 #include "GoDestTask.h"
+#include "ConvoyDestTask.h"
 
 LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -105,26 +106,19 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_MUFENGLIN));
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+			AssignThreadManager::instance().stopAllTask();
 
-			std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-			std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-			int32_t clientIndex = -1;
-			while (clientIndex++ != g_config.m_accountCount - 1)
+			std::vector<std::shared_ptr<CTask>> vecTask;
+			int32_t accountIndex = -1;
+			while (accountIndex++ != g_config.m_accountCount - 1)
 			{
-				ConvoyTask* convoyTask = new ConvoyTask;
-				std::vector<xyls::Point> vecAcceptPoint;
-				vecAcceptPoint.push_back(g_config.m_get);
-				vecAcceptPoint.push_back(g_config.m_accept);
-				convoyTask->setParam(600,
-					clientIndex,
-					g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
-					g_config.m_isBigLache ? 0 : 0,
-					vecAcceptPoint);
-				std::shared_ptr<CTask> spConvoyTask(convoyTask);
-				vecSpDoTask.push_back(spConvoyTask);
+				std::shared_ptr<ConvoyDestTask> spAssignTask(new ConvoyDestTask);
+				spAssignTask->setAccountIndex(accountIndex);
+				spAssignTask->setParam(g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
+					g_config.m_isBigLache ? 0 : 0);
+				vecTask.push_back(spAssignTask);
 			}
-			spAssignThreadTask->setParam(vecSpDoTask);
-			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+			AssignThreadManager::instance().postAssignTask(vecTask);
 		}
 		else if (g_keyboard.m_keyDown[KEY + '6'])
 		{
@@ -132,26 +126,19 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_HUILUODAO));
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+			AssignThreadManager::instance().stopAllTask();
 
-			std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-			std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-			int32_t clientIndex = -1;
-			while (clientIndex++ != g_config.m_accountCount - 1)
+			std::vector<std::shared_ptr<CTask>> vecTask;
+			int32_t accountIndex = -1;
+			while (accountIndex++ != g_config.m_accountCount - 1)
 			{
-				ConvoyTask* convoyTask = new ConvoyTask;
-				std::vector<xyls::Point> vecAcceptPoint;
-				vecAcceptPoint.push_back(g_config.m_get);
-				vecAcceptPoint.push_back(g_config.m_accept);
-				convoyTask->setParam(600,
-					clientIndex,
-					g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
-					g_config.m_isBigLache ? 1 : 1,
-					vecAcceptPoint);
-				std::shared_ptr<CTask> spConvoyTask(convoyTask);
-				vecSpDoTask.push_back(spConvoyTask);
+				std::shared_ptr<ConvoyDestTask> spAssignTask(new ConvoyDestTask);
+				spAssignTask->setAccountIndex(accountIndex);
+				spAssignTask->setParam(g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
+					g_config.m_isBigLache ? 1 : 1);
+				vecTask.push_back(spAssignTask);
 			}
-			spAssignThreadTask->setParam(vecSpDoTask);
-			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+			AssignThreadManager::instance().postAssignTask(vecTask);
 		}
 		else if (g_keyboard.m_keyDown[KEY + '7'])
 		{
@@ -159,26 +146,19 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_LONGMENSHIKU));
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+			AssignThreadManager::instance().stopAllTask();
 
-			std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-			std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-			int32_t clientIndex = -1;
-			while (clientIndex++ != g_config.m_accountCount - 1)
+			std::vector<std::shared_ptr<CTask>> vecTask;
+			int32_t accountIndex = -1;
+			while (accountIndex++ != g_config.m_accountCount - 1)
 			{
-				ConvoyTask* convoyTask = new ConvoyTask;
-				std::vector<xyls::Point> vecAcceptPoint;
-				vecAcceptPoint.push_back(g_config.m_get);
-				vecAcceptPoint.push_back(g_config.m_accept);
-				convoyTask->setParam(600,
-					clientIndex,
-					g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
-					g_config.m_isBigLache ? 4 : 3,
-					vecAcceptPoint);
-				std::shared_ptr<CTask> spConvoyTask(convoyTask);
-				vecSpDoTask.push_back(spConvoyTask);
+				std::shared_ptr<ConvoyDestTask> spAssignTask(new ConvoyDestTask);
+				spAssignTask->setAccountIndex(accountIndex);
+				spAssignTask->setParam(g_config.m_isBigLache ? "dongbeiyijun" : "bingleibiaojv",
+					g_config.m_isBigLache ? 4 : 3);
+				vecTask.push_back(spAssignTask);
 			}
-			spAssignThreadTask->setParam(vecSpDoTask);
-			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+			AssignThreadManager::instance().postAssignTask(vecTask);
 		}
 		else if (g_keyboard.m_keyDown[KEY + '8'])
 		{
@@ -186,26 +166,19 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_DALEIGONG));
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+			AssignThreadManager::instance().stopAllTask();
 
-			std::shared_ptr<AssignThreadTask> spAssignThreadTask(new AssignThreadTask);
-			std::vector<std::shared_ptr<CTask>> vecSpDoTask;
-			int32_t clientIndex = -1;
-			while (clientIndex++ != g_config.m_accountCount - 1)
+			std::vector<std::shared_ptr<CTask>> vecTask;
+			int32_t accountIndex = -1;
+			while (accountIndex++ != g_config.m_accountCount - 1)
 			{
-				ConvoyTask* convoyTask = new ConvoyTask;
-				std::vector<xyls::Point> vecAcceptPoint;
-				vecAcceptPoint.push_back(g_config.m_accept);
-				vecAcceptPoint.push_back(g_config.m_accept);
-				convoyTask->setParam(600,
-					clientIndex,
-					g_config.m_isBigLache ? "dongbeiyijun" : "pihuoshang",
-					g_config.m_isBigLache ? 2 : 0,
-					vecAcceptPoint);
-				std::shared_ptr<CTask> spConvoyTask(convoyTask);
-				vecSpDoTask.push_back(spConvoyTask);
+				std::shared_ptr<ConvoyDestTask> spAssignTask(new ConvoyDestTask);
+				spAssignTask->setAccountIndex(accountIndex);
+				spAssignTask->setParam(g_config.m_isBigLache ? "dongbeiyijun" : "pihuoshang",
+					g_config.m_isBigLache ? 2 : 0);
+				vecTask.push_back(spAssignTask);
 			}
-			spAssignThreadTask->setParam(vecSpDoTask);
-			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->PostTask(spAssignThreadTask);
+			AssignThreadManager::instance().postAssignTask(vecTask);
 		}
 	}
 	if (g_keyboard.m_keyHasDown[ALT])
@@ -558,7 +531,6 @@ void Dtws::onJidiButtonClicked()
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_JIDI));
 	}
 
-	std::shared_ptr<GoDestTask> spTask(new GoDestTask);
 	std::vector<std::shared_ptr<CTask>> vecTask;
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_config.m_accountCount - 1)
@@ -583,7 +555,6 @@ void Dtws::onChangshougongButtonClicked()
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_CHANGSHOUGONG));
 	}
 
-	std::shared_ptr<GoDestTask> spTask(new GoDestTask);
 	std::vector<std::shared_ptr<CTask>> vecTask;
 	int32_t accountIndex = -1;
 	while (accountIndex++ != g_config.m_accountCount - 1)

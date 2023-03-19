@@ -23,6 +23,7 @@ struct AccountConfig
 	std::vector<xyls::Rect> m_talkWindowHeadRect;
 	std::string m_talkWindowHeadPath;
 	std::string m_goWindowHeadPath;
+	std::string m_chatPath;
 	std::vector<xyls::Rect> m_chatRect;
 	std::string m_bloodPath;
 	std::vector<xyls::Rect> m_bloodRect;
@@ -59,6 +60,7 @@ struct CConfig
 	xyls::Point m_destEditOppositePoint = { 22, 429 };
 	xyls::Point m_xunOppositePoint = { 132, 433 };
 	xyls::Point m_destOppositePoint = { 230, 130 };
+	xyls::Point m_getOppositePoint = { 146, 336 };
 	xyls::Point m_acceptOppositePoint = { 146, 428 };
 
 	int32_t m_destHeight = 45;

@@ -185,6 +185,15 @@
     <ClCompile Include="GoDestTask.cpp">
       <Filter>Task\AssignTask</Filter>
     </ClCompile>
+    <ClCompile Include="JiaohumaerAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="ConvoyDestTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
+    <ClCompile Include="AcceptTwiceAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -320,6 +329,15 @@
     </ClInclude>
     <ClInclude Include="GoDestTask.h">
       <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="JiaohumaerAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvoyDestTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="AcceptTwiceAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

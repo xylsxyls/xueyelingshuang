@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClCompile Include="AcceptAtomicTask.cpp" />
     <ClCompile Include="AcceptTask.cpp" />
+    <ClCompile Include="AcceptTwiceAtomicTask.cpp" />
     <ClCompile Include="AccountTask.cpp" />
     <ClCompile Include="AssignTask.cpp" />
     <ClCompile Include="AssignThreadHelper.cpp" />
@@ -174,6 +175,7 @@
     <ClCompile Include="ClientReceive.cpp" />
     <ClCompile Include="CloseBeginTask.cpp" />
     <ClCompile Include="Config.cpp" />
+    <ClCompile Include="ConvoyDestTask.cpp" />
     <ClCompile Include="ConvoyTask.cpp" />
     <ClCompile Include="EscAtomicTask.cpp" />
     <ClCompile Include="EscTask.cpp" />
@@ -204,6 +206,7 @@
     <ClCompile Include="GoTask.cpp" />
     <ClCompile Include="GoWriteDestAtomicTask.cpp" />
     <ClCompile Include="HealTask.cpp" />
+    <ClCompile Include="JiaohumaerAtomicTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Dtws.cpp" />
     <ClCompile Include="PlantAtomicTask.cpp" />
@@ -315,6 +318,7 @@
   <ItemGroup>
     <ClInclude Include="AcceptAtomicTask.h" />
     <ClInclude Include="AcceptTask.h" />
+    <ClInclude Include="AcceptTwiceAtomicTask.h" />
     <ClInclude Include="AccountTask.h" />
     <ClInclude Include="AssignTask.h" />
     <ClInclude Include="AssignThreadHelper.h" />
@@ -327,6 +331,7 @@
     <ClInclude Include="ClientReceive.h" />
     <ClInclude Include="CloseBeginTask.h" />
     <ClInclude Include="Config.h" />
+    <ClInclude Include="ConvoyDestTask.h" />
     <ClInclude Include="ConvoyTask.h" />
     <ClInclude Include="DtwsParam.h" />
     <ClInclude Include="EscAtomicTask.h" />
@@ -340,6 +345,7 @@
     <ClInclude Include="GoTask.h" />
     <ClInclude Include="GoWriteDestAtomicTask.h" />
     <ClInclude Include="HealTask.h" />
+    <ClInclude Include="JiaohumaerAtomicTask.h" />
     <ClInclude Include="PlantAtomicTask.h" />
     <ClInclude Include="PlantTask.h" />
     <ClInclude Include="RiseAtomicTask.h" />

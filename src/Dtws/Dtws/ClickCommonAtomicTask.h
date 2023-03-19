@@ -10,6 +10,8 @@ public:
 
 	void accept(bool isStart, bool isFind);
 
+	void jiaohumaer(bool isStart, bool isFind);
+
 public:
 	void pic(bool isStart, bool isFind, const std::string& path, const xyls::Rect& rect, double sim);
 };
