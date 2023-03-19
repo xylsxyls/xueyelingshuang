@@ -10,7 +10,7 @@ bool AcceptTwiceAtomicTask::DoFun(const std::vector<std::pair<std::string, xyls:
 	}
 	CMouse::MoveAbsolute(vecPic[0].second.leftTop() + g_config.m_getOppositePoint, 0);
 	CMouse::LeftClick(0);
-	Sleep(500);
+	Sleep(1500);
 	CMouse::MoveAbsolute(vecPic[0].second.leftTop() + g_config.m_acceptOppositePoint, 0);
 	CMouse::LeftClick(0);
 	Sleep(500);
