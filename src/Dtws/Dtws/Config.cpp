@@ -37,7 +37,7 @@ CConfig::CConfig()
 	m_accountConfig[1920 * 1080][1].m_chatPath = "res\\jiaohumaer.png";
 	m_accountConfig[1920 * 1080][3].m_chatPath = "res\\jiaohumaer.png";
 
-	m_accountConfig[1366 * 768][1].m_chatRect = { { 0, 770, 348, 1009 } };
+	m_accountConfig[1366 * 768][1].m_chatRect = { { 8, 462, 353, 668 } };
 	m_accountConfig[1920 * 1080][1].m_chatRect = { { 0, 770, 348, 1009 } };
 	m_accountConfig[1920 * 1080][3].m_chatRect = { { 324, 465, 670, 677 }, { 0, 774, 350, 984 },
 		{ 632, 772, 984, 988 } };
