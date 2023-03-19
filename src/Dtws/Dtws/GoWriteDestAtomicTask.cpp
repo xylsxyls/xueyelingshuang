@@ -17,8 +17,8 @@ bool GoWriteDestAtomicTask::DoFun(const std::vector<std::pair<std::string, xyls:
 	}
 	CMouse::MoveAbsolute(vecPic[0].second.leftTop() + g_config.m_destEditOppositePoint, 0);
 	CMouse::LeftDoubleClick(10);
-	Sleep(50);
-	CKeyboard::InputString(" " + m_dest + " ");
+	Sleep(1500);
+	CKeyboard::InputString(" " + m_dest + " ", 50);
 	CMouse::MoveAbsolute(vecPic[0].second.leftTop() + g_config.m_xunOppositePoint, 0);
 	CMouse::LeftClick(0);
 	Sleep(10);
