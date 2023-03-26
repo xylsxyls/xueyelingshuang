@@ -33,6 +33,8 @@ void CwrTask::KeyPressR()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
 	CMouse::MoveAbsolute(g_config.m_rCenterPoint, 0);
-	CMouse::LeftClick(0);
+	CMouse::LeftDown();
+	Sleep(50);
+	CMouse::LeftUp();
 	CMouse::MoveAbsolute(currentPos, 0);
 }

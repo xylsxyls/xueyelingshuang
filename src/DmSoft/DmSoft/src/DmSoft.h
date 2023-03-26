@@ -33,6 +33,7 @@ public:
 	static long RightDown();
 	static long RightUp();
 	static long MoveTo(long x, long y);
+	//¸Ãº¯ÊýÓÐbug
 	static long MoveR(long rx, long ry);
 	static string GetColor(long x, long y);
 	static string GetColorBGR(long x, long y);

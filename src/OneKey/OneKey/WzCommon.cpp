@@ -13,9 +13,9 @@ void WzCommon::mouse()
 {
 	if (g_config.m_moveUse &&
 		(g_mouse.m_currentPos.x() < 2 ||
-		g_mouse.m_currentPos.x() > 1918 ||
+		g_mouse.m_currentPos.x() > g_config.m_screenHeight - 2 ||
 		g_mouse.m_currentPos.y() < 2 ||
-		g_mouse.m_currentPos.y() > 1078) &&
+		g_mouse.m_currentPos.y() > g_config.m_screenHeight - 2) &&
 		!g_config.m_hasMove)
 	{
 		g_config.m_hasMove = true;
@@ -37,8 +37,8 @@ void WzCommon::mouse()
 
 	if (g_mouse.m_rightWatch.GetWatchTime() < g_config.m_rightClickTime || g_mouse.m_rightHasDown)
 	{
-		int32_t yTop = 130 + 10;
-		int32_t yBottom = 950 - 10;
+		int32_t yTop = (g_config.m_screenHeight - g_config.m_gameScreenHeight) / 2 + g_config.m_gameScreenMargin;
+		int32_t yBottom = (g_config.m_screenHeight - g_config.m_gameScreenHeight) / 2 + g_config.m_gameScreenHeight - g_config.m_gameScreenMargin;
 		xyls::Point point = CMouse::GetCurrentPos();
 		if (point.y() > yBottom)
 		{

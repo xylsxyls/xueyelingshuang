@@ -127,7 +127,7 @@ bool CMouse::MoveAbsolute(const xyls::Rect& rect, int sleepTime)
 	//?生成一个点
 	xyls::Point pointResult(CRandom::Int(rect.left(), rect.right()), CRandom::Int(rect.top(), rect.bottom()));
 	//?是否立即到达
-    if (sleepTime == 0)
+	if (sleepTime == 0)
     {
         return DmSoft::MoveTo(pointResult.x(), pointResult.y()) == 1;
     }
@@ -147,28 +147,27 @@ bool CMouse::MoveAbsolute(const xyls::Rect& rect, int sleepTime)
 		bool result = true;
 		int i = -1;
 		while (i++ != vecRoad.size() - 1)
-        {
-            if (vecRoad.at(i) == "1,0")
-            {
-                result = result && (DmSoft::MoveR(1, 0) == 1);
-            }
-            else if (vecRoad.at(i) == "-1,0")
-            {
-                result = result && (DmSoft::MoveR(-1, 0) == 1);
-            }
-            else if (vecRoad.at(i) == "0,1")
-            {
-                result = result && (DmSoft::MoveR(0, 1) == 1);
-            }
-            else if (vecRoad.at(i) == "0,-1")
-            {
-                result = result && (DmSoft::MoveR(0, -1) == 1);
-            }
-            if (i == vecRoad.size() - 1)
-            {
-                break;
-            }
+		{
 			Sleep(vecSleepTime.at(i));
+			xyls::Point moveRPoint;
+			if (vecRoad.at(i) == "1,0")
+			{
+				moveRPoint.setX(1);
+			}
+			else if (vecRoad.at(i) == "-1,0")
+			{
+				moveRPoint.setX(-1);
+			}
+			else if (vecRoad.at(i) == "0,1")
+			{
+				moveRPoint.setY(1);
+			}
+			else if (vecRoad.at(i) == "0,-1")
+			{
+				moveRPoint.setY(-1);
+			}
+			currentPoint = currentPoint + moveRPoint;
+			result = result && (DmSoft::MoveTo(currentPoint.x(), currentPoint.y()) == 1);
 		}
 		return result;
 	}

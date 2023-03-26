@@ -72,7 +72,6 @@ void CfwrTask::DoTask()
 	CMouse::RightClick(0);
 	//Sleep(50);
 	KeyPressR();
-
 }
 
 void CfwrTask::KeyPressE()
@@ -99,7 +98,9 @@ void CfwrTask::KeyPressR()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
 	CMouse::MoveAbsolute(g_config.m_rCenterPoint, 0);
-	CMouse::LeftClick(0);
+	CMouse::LeftDown();
+	Sleep(50);
+	CMouse::LeftUp();
 	CMouse::MoveAbsolute(currentPos, 0);
 }
 

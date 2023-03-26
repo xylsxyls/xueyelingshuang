@@ -3,8 +3,8 @@
 #include "ScreenScript/ScreenScriptAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CKeyboard/CKeyboardAPI.h"
-#include "D:\\SendToMessageTest.h"
 #include "CScreen/CScreenAPI.h"
+#include "Config.h"
 
 SkillTask::SkillTask():
 m_skill1(0),
@@ -16,10 +16,10 @@ m_skill3(0)
 
 void SkillTask::DoTask()
 {
-	xyls::Point addPoint = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "res\\add.png",
-		xyls::Rect(1920 / 2, 1080 / 2, 1920, 1080), 0.9);
-	xyls::Point addPoint3 = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "res\\add3.png",
-		xyls::Rect(1920 / 2, 1080 / 2, 1920, 1080), 0.9);
+	xyls::Rect addPoint = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "res\\add_" + std::to_string(g_config.m_screenWidth) + ".png",
+		xyls::Rect(g_config.m_screenWidth / 2, g_config.m_screenHeight / 2, g_config.m_screenWidth, g_config.m_screenHeight), 0.9);
+	xyls::Rect addPoint3 = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "res\\add3_" + std::to_string(g_config.m_screenWidth) + ".png",
+		xyls::Rect(g_config.m_screenWidth / 2, g_config.m_screenHeight / 2, g_config.m_screenWidth, g_config.m_screenHeight), 0.9);
 	if (addPoint.empty() && addPoint3.empty())
 	{
 		return;

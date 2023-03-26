@@ -25,7 +25,7 @@ void CtrlDTask::DoTask()
 
 	disableMouse();
 
-	moveAbsolute(g_config.m_equipPoint[equipIndex], 0);
+	moveAbsolute(g_config.m_equipBeginPoint + xyls::Point(equipIndex * g_config.m_equipWidth, 0), 0);
 	CMouse::LeftClick(0);
 	Sleep(50);
 

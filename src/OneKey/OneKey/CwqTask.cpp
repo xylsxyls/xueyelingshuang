@@ -32,7 +32,7 @@ void CwqTask::DoTask()
 		Sleep(100);
 		//KeyPressF();
 		Sleep(100);
-		CKeyboard::KeyPress('Q', 0);
+		CKeyboard::KeyPress('K', 0);
 		Sleep(350);
 		KeyPressE();
 	}
@@ -131,7 +131,7 @@ void CwqTask::KeyPressE()
 void CwqTask::KeyPressF()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
-	CMouse::MoveAbsolute(xyls::Point(1224, 957), 0);
+	CMouse::MoveAbsolute(g_config.m_fCenterPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
 }

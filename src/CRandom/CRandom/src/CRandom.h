@@ -20,7 +20,7 @@ public:
 	static std::string String(int minSize, int maxSize, const std::vector<std::pair<unsigned char, unsigned char>>& vecCharacter);
 	//?随机选出一个字符串
 	static std::string String(const std::vector<std::string>& vecString);
-	//?洗牌
+	//?洗牌，string为牌面，int为该牌面的个数，得到一副乱序的牌
 	static std::vector<std::string> Deal(const std::map<std::string, int>& mapCard);
 	//?散列，可用于发牌
 	static std::vector<int> Hash(int hashNumber, int size);

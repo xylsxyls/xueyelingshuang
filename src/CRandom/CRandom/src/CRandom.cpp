@@ -106,7 +106,7 @@ std::vector<int> CRandom::Hash(int hashNumber, int size)
 	{
 		while (hashNumber-- != 0)
 		{
-			vecResult.at(Int(0, size - 1))++;
+			++vecResult.at(Int(0, size - 1));
 		}
 	}
 	return vecResult;

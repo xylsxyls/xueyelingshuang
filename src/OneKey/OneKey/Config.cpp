@@ -4,18 +4,25 @@
 
 CConfig::CConfig()
 {
-	m_heroHeadPoint[0] = { 1215, 696 };
-	m_heroHeadPoint[1] = { 1243, 603 };
-	m_heroHeadPoint[2] = { 1298, 525 };
-	m_heroHeadPoint[3] = { 1376, 465 };
-	m_heroHeadPoint[4] = { 1465, 422 };
+	m_heroHeadPoint[0] = { 2427, 1386 };
+	m_heroHeadPoint[1] = { 2488, 1203 };
+	m_heroHeadPoint[2] = { 2598, 1040 };
+	m_heroHeadPoint[3] = { 2757, 923 };
+	m_heroHeadPoint[4] = { 2929, 842 };
 
-	m_equipPoint[0] = { 612, 952 };
-	m_equipPoint[1] = { 772, 948 };
-	m_equipPoint[2] = { 936, 951 };
-	m_equipPoint[3] = { 1090, 947 };
-	m_equipPoint[4] = { 1266, 941 };
-	m_equipPoint[5] = { 1419, 949 };
+	//1920 * 1080
+	//m_heroHeadPoint[0] = { 1215, 696 };
+	//m_heroHeadPoint[1] = { 1243, 603 };
+	//m_heroHeadPoint[2] = { 1298, 525 };
+	//m_heroHeadPoint[3] = { 1376, 465 };
+	//m_heroHeadPoint[4] = { 1465, 422 };
+	//
+	//m_equipPoint[0] = { 612, 952 };
+	//m_equipPoint[1] = { 772, 948 };
+	//m_equipPoint[2] = { 936, 951 };
+	//m_equipPoint[3] = { 1090, 947 };
+	//m_equipPoint[4] = { 1266, 941 };
+	//m_equipPoint[5] = { 1419, 949 };
 
 	m_heroName.push_back(DF);
 	m_heroName.push_back(JIE);

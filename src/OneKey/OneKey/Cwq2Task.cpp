@@ -137,34 +137,19 @@ void Cwq2Task::KeyPressE()
 void Cwq2Task::KeyPressF()
 {
 	xyls::Point currentPos = CMouse::GetCurrentPos();
-	CMouse::MoveAbsolute(xyls::Point(1224, 957), 0);
+	CMouse::MoveAbsolute(g_config.m_fCenterPoint, 0);
 	CMouse::LeftClick(0);
 	CMouse::MoveAbsolute(currentPos, 0);
 }
 
 void Cwq2Task::ClickHero(char heroNum)
 {
-	xyls::Rect point;
-	if (heroNum == '1')
+	if (heroNum < '1' || heroNum > '5')
 	{
-		point = xyls::Point(1164 + 40, 748 + 40);
+		KeyPressE();
+		return;
 	}
-	else if (heroNum == '2')
-	{
-		point = xyls::Point(1202 + 40, 631 + 40);
-	}
-	else if (heroNum == '3')
-	{
-		point = xyls::Point(1276 + 40, 523 + 40);
-	}
-	else if (heroNum == '4')
-	{
-		point = xyls::Point(1376 + 40, 444 + 40);
-	}
-	else if (heroNum == '5')
-	{
-		point = xyls::Point(1489 + 40, 389 + 40);
-	}
+	xyls::Rect point = g_config.m_heroHeadPoint[heroNum - 49] + xyls::Point(g_config.m_side / 2, g_config.m_side / 2);
 	xyls::Point currentPos = CMouse::GetCurrentPos();
 	CMouse::MoveAbsolute(point, 0);
 	CMouse::LeftClick(0);
