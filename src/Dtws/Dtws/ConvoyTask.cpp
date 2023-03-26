@@ -25,8 +25,8 @@ void ConvoyTask::DoTask()
 	std::string currentExePath = CSystem::GetCurrentExePath();
 
 	std::shared_ptr<GoTask> spGoTask(new GoTask);
-	spGoTask->setParam(g_config.m_accountCount == 1 ? xyls::Point(149, 9) : g_screen.m_clickTop[m_clientIndex],
-		g_config.m_accountCount == 1 ? xyls::Rect(1869, 189, 1920, 249) : g_screen.m_rightTopRect[m_clientIndex],
+	spGoTask->setParam(g_screen.m_clickTop[m_clientIndex],
+		g_screen.m_rightTopRect[m_clientIndex],
 		m_placeName,
 		m_clickIndex);
 	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spGoTask);
@@ -38,7 +38,7 @@ void ConvoyTask::DoTask()
 		Semaphore findSemaphore;
 		std::shared_ptr<FindTask> spFindTask(new FindTask);
 		spFindTask->setParam(g_screen.m_clickTop[m_clientIndex],
-			g_config.m_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_screen.m_talkWindowHeadRect[m_clientIndex],
+			g_screen.m_talkWindowHeadRect[m_clientIndex],
 			currentExePath + "res\\talkhead.png",
 			&isFind,
 			&findSemaphore);
@@ -51,7 +51,7 @@ void ConvoyTask::DoTask()
 		Semaphore findErrorSemaphore;
 		std::shared_ptr<FindTask> spFindErrorTask(new FindTask);
 		spFindErrorTask->setParam(g_screen.m_clickTop[m_clientIndex],
-			g_config.m_accountCount == 1 ? xyls::Rect(0, 770, 348, 1009) : g_screen.m_chatRect[m_clientIndex],
+			g_screen.m_chatRect[m_clientIndex],
 			currentExePath + "res\\jiaohumaer.png",
 			&isFindError,
 			&findErrorSemaphore);
@@ -60,12 +60,12 @@ void ConvoyTask::DoTask()
 		if (isFindError)
 		{
 			std::shared_ptr<WaitTask> spWaitTask(new WaitTask);
-			spWaitTask->setParam(g_config.m_accountCount == 1 ? xyls::Point(149, 9) : g_screen.m_clickTop[m_clientIndex]);
+			spWaitTask->setParam(g_screen.m_clickTop[m_clientIndex]);
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spWaitTask, 2);
 			Sleep(15000);
 			std::shared_ptr<GoTask> spGoTask(new GoTask);
-			spGoTask->setParam(g_config.m_accountCount == 1 ? xyls::Point(149, 9) : g_screen.m_clickTop[m_clientIndex],
-				g_config.m_accountCount == 1 ? xyls::Rect(1869, 189, 1920, 249) : g_screen.m_rightTopRect[m_clientIndex],
+			spGoTask->setParam(g_screen.m_clickTop[m_clientIndex],
+				g_screen.m_rightTopRect[m_clientIndex],
 				m_placeName,
 				m_clickIndex);
 			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spGoTask, 2);
@@ -76,8 +76,8 @@ void ConvoyTask::DoTask()
 	if (isFind)
 	{
 		std::shared_ptr<AcceptTask> spAcceptTask(new AcceptTask);
-		spAcceptTask->setParam(g_config.m_accountCount == 1 ? xyls::Point(149, 9) : g_screen.m_clickTop[m_clientIndex],
-			g_config.m_accountCount == 1 ? xyls::Rect(611, 146, 1336, 552) : g_screen.m_talkWindowHeadRect[m_clientIndex],
+		spAcceptTask->setParam(g_screen.m_clickTop[m_clientIndex],
+			g_screen.m_talkWindowHeadRect[m_clientIndex],
 			m_acceptPoint);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spAcceptTask, 2);
 	}

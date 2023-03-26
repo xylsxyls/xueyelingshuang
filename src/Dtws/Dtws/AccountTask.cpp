@@ -92,7 +92,15 @@ void AccountTask::DoTask()
 		//开始
 		//CMouse::MoveAbsolute(xyls::Point(1411, 800), 50);
 
-		ScreenScript::FindClick("res\\BeginGame.png");
+		if (g_config.m_screenPixel == 3840 * 2160)
+		{
+			CMouse::MoveAbsolute(xyls::Point(2375, 1346), 50);
+			CMouse::LeftClick();
+		}
+		else
+		{
+			ScreenScript::FindClick("res\\BeginGame.png");
+		}
 		//CMouse::LeftClick();
 
 		CMouse::MoveAbsolute(g_screen.m_clickTop[0], 50);
@@ -119,9 +127,7 @@ void AccountTask::DoTask()
 		CMouse::MiddleClick();
 
 		//点击进入
-		CMouse::MoveAbsolute(g_config.m_accountCount == 1 ?
-			(CSystem::getComputerName() == SECOND_COMPUTER ?
-			xyls::Point(717, 628) : xyls::Point(995, 938)) : g_screen.m_intoGamePoint[accountIndex], 50);
+		CMouse::MoveAbsolute(g_screen.m_intoGamePoint[accountIndex], 50);
 		CMouse::LeftClick();
 	}
 

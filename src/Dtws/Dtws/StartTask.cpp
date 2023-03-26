@@ -35,7 +35,7 @@ void StartTask::DoTask()
 		}
 
 		CMouse::MoveAbsolute(CSystem::getComputerName() == SECOND_COMPUTER ?
-			xyls::Point(785, 740) : xyls::Point(968, 812), 50);
+			xyls::Point(785, 740) : (CSystem::getComputerName() == FIRST_COMPUTER && g_config.m_screenPixel == 3840 * 2160) ? xyls::Point(1916, 1354) : xyls::Point(968, 812), 50);
 		int32_t count = 3;
 		while (count-- != 0)
 		{
