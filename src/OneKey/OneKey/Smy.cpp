@@ -335,7 +335,7 @@ void Smy::timer(int32_t timerId)
 
 		static int32_t skillCount = 0;
 		++skillCount;
-		if (g_config.timerMs(500, skillCount) &&
+		if (g_config.timerMs(300, skillCount) &&
 			g_config.m_code1 == 0 &&
 			!g_keyboard.m_keyHasDown['T'] &&
 			!g_keyboard.m_keyHasDown[TILDE])
