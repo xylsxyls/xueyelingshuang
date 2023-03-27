@@ -77,7 +77,7 @@ CConfig::CConfig()
 	m_accountConfig[3840 * 2160][1].m_goPoint = { { 3831, 214 } };
 	m_accountConfig[1920 * 1080][3].m_goPoint = { { 1592, 225 }, { 1274, 528 }, { 1902, 526 } };
 
-	m_accountConfig[1366 * 768][1].m_goSleepTime = { 1200 };
+	m_accountConfig[1366 * 768][1].m_goSleepTime = { 1500 };
 	m_accountConfig[1920 * 1080][1].m_goSleepTime = { 200 };
 	m_accountConfig[3840 * 2160][1].m_goSleepTime = { 200 };
 	m_accountConfig[1920 * 1080][3].m_goSleepTime = { { 500, 500, 500 } };
