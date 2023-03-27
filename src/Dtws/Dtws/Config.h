@@ -30,6 +30,7 @@ struct AccountConfig
 	std::vector<xyls::Point> m_submitPoint;
 	std::vector<xyls::Point> m_intoGamePoint;
 	std::vector<xyls::Point> m_goPoint;
+	std::vector<int32_t> m_goSleepTime;
 };
 
 struct CConfig
