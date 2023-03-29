@@ -31,9 +31,9 @@ void CwqTask::DoTask()
 		KeyPressE();
 		Sleep(100);
 		//KeyPressF();
-		Sleep(100);
+		Sleep(150);
 		CKeyboard::KeyPress('K', 0);
-		Sleep(350);
+		Sleep(300);
 		KeyPressE();
 	}
 	else

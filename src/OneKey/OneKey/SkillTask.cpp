@@ -24,9 +24,9 @@ void SkillTask::DoTask()
 	}
 
 	xyls::Rect addPoint = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "res\\add_" + std::to_string(g_config.m_screenWidth) + ".png",
-		xyls::Rect(g_config.m_screenWidth / 2, g_config.m_screenHeight / 2, g_config.m_screenWidth, g_config.m_screenHeight), 0.7);
+		xyls::Rect(g_config.m_screenWidth / 2, g_config.m_screenHeight / 2, g_config.m_screenWidth, g_config.m_screenHeight), 0.9);
 	xyls::Rect addPoint3 = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "res\\add3_" + std::to_string(g_config.m_screenWidth) + ".png",
-		xyls::Rect(g_config.m_screenWidth / 2, g_config.m_screenHeight / 2, g_config.m_screenWidth, g_config.m_screenHeight), 0.7);
+		xyls::Rect(g_config.m_screenWidth / 2, g_config.m_screenHeight / 2, g_config.m_screenWidth, g_config.m_screenHeight), 0.9);
 	if (addPoint.empty() && addPoint3.empty())
 	{
 		return;
