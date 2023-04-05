@@ -192,6 +192,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 	}
 
+	if (g_config.m_type == 10 && (g_keyboard.m_keyDown[TAB] || g_keyboard.m_keyUp[TAB]))
+	{
+		return true;
+	}
+
 	// 将事件传递到下一个钩子
 	return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
 }

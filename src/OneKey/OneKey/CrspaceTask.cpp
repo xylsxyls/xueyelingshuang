@@ -90,9 +90,9 @@ void CrspaceTask::DoTask()
 
 	//CMouse::RightClick(5);
 	bool rightHasDown = g_mouse.m_rightHasDown;
+	CMouse::RightUp();
 	if (rightHasDown)
 	{
-		CMouse::RightUp();
 		Sleep(5);
 	}
 	

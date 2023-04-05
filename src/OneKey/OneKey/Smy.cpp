@@ -20,6 +20,7 @@
 #include "CRightClickTask.h"
 #include "SkillTask.h"
 #include "Common.h"
+#include "SmySpaceTask.h"
 
 void Smy::mouse()
 {
@@ -58,17 +59,8 @@ void Smy::keyboard()
 		g_config.m_code2 = 'C';
 		if (g_keyboard.m_keyWatch['Q'].GetWatchTime() > 3000)
 		{
-			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-			spTask->setParam('H');
+			std::shared_ptr<SmySpaceTask> spTask(new SmySpaceTask);
 			g_config.m_taskThread->PostTask(spTask, 1);
-
-			std::shared_ptr<CSleepTask> spTask1(new CSleepTask);
-			spTask1->setParam(50);
-			g_config.m_taskThread->PostTask(spTask1, 1);
-
-			std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
-			spTask2->setParam(TAB);
-			g_config.m_taskThread->PostTask(spTask2, 1);
 		}
 		g_mouse.m_rightWatch.SetWatchTime(g_config.m_rightClickTime + 10);
 	}

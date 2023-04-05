@@ -146,9 +146,10 @@ std::string ScreenScript::GetBmpPath(const std::string& path)
 	std::string bmpPath = curExePath + "ScreenScriptTemp\\" + CSystem::GetName(path, 3) + ".bmp";
 	if (CSystem::DirOrFileExist(bmpPath) == false)
 	{
+		RCSend("file not exist, bmpPath = %s", bmpPath.c_str());
 		if (!CScreen::ChangeToBmp(bmpPath, path))
 		{
-			RCSend("error change to bmp");
+			RCSend("error change to bmp, bmpPath = %s, path = %s", bmpPath.c_str(), path.c_str());
 			return "";
 		}
 	}

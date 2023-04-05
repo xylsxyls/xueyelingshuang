@@ -258,6 +258,9 @@
     <ClInclude Include="CqrwTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="SmySpaceTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -474,6 +477,9 @@
       <Filter>OneKeyHero</Filter>
     </ClCompile>
     <ClCompile Include="CqrwTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="SmySpaceTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

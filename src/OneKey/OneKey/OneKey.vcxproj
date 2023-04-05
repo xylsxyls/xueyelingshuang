@@ -182,6 +182,7 @@
     <ClInclude Include="HeroTask.h" />
     <ClInclude Include="SkillTask.h" />
     <ClInclude Include="Smy.h" />
+    <ClInclude Include="SmySpaceTask.h" />
     <ClInclude Include="SpeakTask.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Swk.h" />
@@ -257,6 +258,7 @@
     <ClCompile Include="HeroTask.cpp" />
     <ClCompile Include="SkillTask.cpp" />
     <ClCompile Include="Smy.cpp" />
+    <ClCompile Include="SmySpaceTask.cpp" />
     <ClCompile Include="SpeakTask.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

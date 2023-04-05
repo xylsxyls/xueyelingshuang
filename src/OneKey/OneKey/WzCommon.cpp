@@ -21,7 +21,7 @@ void WzCommon::mouse()
 		g_config.m_hasMove = true;
 		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 		spTask->setParam('V', true);
-		g_config.m_taskThread->PostTask(spTask);
+		//g_config.m_taskThread->PostTask(spTask);
 	}
 	else if (g_mouse.m_rightUp)
 	{
@@ -31,7 +31,7 @@ void WzCommon::mouse()
 			g_config.m_hasMove = false;
 			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 			spTask->setParam('V', false);
-			g_config.m_taskThread->PostTask(spTask);
+			//g_config.m_taskThread->PostTask(spTask);
 		}
 	}
 
