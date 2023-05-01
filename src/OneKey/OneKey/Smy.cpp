@@ -21,6 +21,7 @@
 #include "SkillTask.h"
 #include "Common.h"
 #include "SmySpaceTask.h"
+#include "CMouse/CMouseAPI.h"
 
 void Smy::mouse()
 {
@@ -50,6 +51,10 @@ void Smy::keyboard()
 	else if (g_keyboard.m_keyDown['E'])
 	{
 		g_config.m_qKey = false;
+		//CMouse::RightDown();
+		std::shared_ptr<CRightClickTask> spTask(new CRightClickTask);
+		spTask->setParam(false);
+		g_config.m_taskThread->PostTask(spTask);
 	}
 
 	if (g_keyboard.m_keyUp[SPACE])
@@ -315,9 +320,9 @@ void Smy::timer(int32_t timerId)
 			static int times = 0;
 			++times;
 			if (g_config.timerMs(100, times) &&
-				(g_keyboard.m_keyWatch['R'].GetWatchTime() < 5000 ||
-				g_keyboard.m_keyWatch['W'].GetWatchTime() < 3000 ||
-				g_keyboard.m_keyWatch['Q'].GetWatchTime() < 5000))
+				(/*g_keyboard.m_keyWatch['R'].GetWatchTime() < 5000 ||
+				g_keyboard.m_keyWatch['W'].GetWatchTime() < 3000 ||*/
+				g_keyboard.m_keyWatch['Q'].GetWatchTime() < 2000))
 			{
 				std::shared_ptr<CRightClickTask> spTask(new CRightClickTask);
 				//spTask->setParam(!g_keyHasDown['R']);
