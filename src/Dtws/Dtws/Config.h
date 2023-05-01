@@ -67,6 +67,8 @@ struct CConfig
 	int32_t m_destHeight = 45;
 	int32_t m_goFirstSleepTime = 500;
 
+	int32_t m_textLineHeight = 15;
+
 protected:
 	CConfig();
 

@@ -37,6 +37,7 @@ private slots:
 	void onChangshougongButtonClicked();
 	void onLacheButtonClicked();
 	void onChangeLacheText();
+	void onRaffleButtonClicked();
 
 private:
 	Ui::DtwsClass ui;
@@ -50,6 +51,7 @@ private:
 	COriginalButton* m_jidi;
 	COriginalButton* m_changshougong;
 	COriginalButton* m_lache;
+	COriginalButton* m_raffle;
 	uint32_t m_threadId;
 	uint32_t m_taskThreadId;
 	ClientReceive* m_clientReceive;

@@ -194,6 +194,12 @@
     <ClCompile Include="AcceptTwiceAtomicTask.cpp">
       <Filter>Task\AtomicTask</Filter>
     </ClCompile>
+    <ClCompile Include="RaffleTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
+    <ClCompile Include="ClickWindowAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -337,6 +343,12 @@
       <Filter>Task\AssignTask</Filter>
     </ClInclude>
     <ClInclude Include="AcceptTwiceAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="RaffleTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="ClickWindowAtomicTask.h">
       <Filter>Task\AtomicTask</Filter>
     </ClInclude>
   </ItemGroup>

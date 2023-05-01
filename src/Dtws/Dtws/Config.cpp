@@ -65,7 +65,7 @@ CConfig::CConfig()
 	m_accountConfig[1366 * 768][1].m_submitPoint = { { 1152, 285 } };
 	m_accountConfig[1920 * 1080][1].m_submitPoint = { { 1713, 287 } };
 	m_accountConfig[3840 * 2160][1].m_submitPoint = { { 3636, 289 } };
-	m_accountConfig[1920 * 1080][3].m_submitPoint = { { 1398, 288 }, { 1072, 595 }, { 1708, 597 } };
+	m_accountConfig[1920 * 1080][3].m_submitPoint = { { 1398, 288 }, { 1067, 602 }, { 1708, 597 } };
 
 	m_accountConfig[1366 * 768][1].m_intoGamePoint = { { 717, 628 } };
 	m_accountConfig[1920 * 1080][1].m_intoGamePoint = { { 995, 938 } };

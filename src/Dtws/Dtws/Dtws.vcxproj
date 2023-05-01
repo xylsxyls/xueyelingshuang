@@ -172,6 +172,7 @@
     <ClCompile Include="ClickCommonAtomicTask.cpp" />
     <ClCompile Include="ClickAtomicTask.cpp" />
     <ClCompile Include="ClickLoginTask.cpp" />
+    <ClCompile Include="ClickWindowAtomicTask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
     <ClCompile Include="CloseBeginTask.cpp" />
     <ClCompile Include="Config.cpp" />
@@ -211,6 +212,7 @@
     <ClCompile Include="Dtws.cpp" />
     <ClCompile Include="PlantAtomicTask.cpp" />
     <ClCompile Include="PlantTask.cpp" />
+    <ClCompile Include="RaffleTask.cpp" />
     <ClCompile Include="RiseAtomicTask.cpp" />
     <ClCompile Include="RiseTask.cpp" />
     <ClCompile Include="SelectTeamerAtomicTask.cpp" />
@@ -328,6 +330,7 @@
     <ClInclude Include="ClickCommonAtomicTask.h" />
     <ClInclude Include="ClickAtomicTask.h" />
     <ClInclude Include="ClickLoginTask.h" />
+    <ClInclude Include="ClickWindowAtomicTask.h" />
     <ClInclude Include="ClientReceive.h" />
     <ClInclude Include="CloseBeginTask.h" />
     <ClInclude Include="Config.h" />
@@ -348,6 +351,7 @@
     <ClInclude Include="JiaohumaerAtomicTask.h" />
     <ClInclude Include="PlantAtomicTask.h" />
     <ClInclude Include="PlantTask.h" />
+    <ClInclude Include="RaffleTask.h" />
     <ClInclude Include="RiseAtomicTask.h" />
     <ClInclude Include="RiseTask.h" />
     <ClInclude Include="SelectTeamerAtomicTask.h" />

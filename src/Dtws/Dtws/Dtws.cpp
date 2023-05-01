@@ -30,6 +30,7 @@
 #include "AssignThreadHelper.h"
 #include "GoDestTask.h"
 #include "ConvoyDestTask.h"
+#include "RaffleTask.h"
 
 LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -61,6 +62,17 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	else if (g_keyboard.m_keyDown['T'])
 	{
 		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_HEAL));
+	}
+	else if (g_keyboard.m_keyHasDown[CTRL] && g_keyboard.m_keyDown[MINUS])
+	{
+		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_STOP));
+		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_SUBMIT_PLUS));
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<SubmitTask> spTask(new SubmitTask);
+		spTask->setParam(1);
+		AssignThreadHelper::postEveryAssignTask(spTask);
 	}
 	else if (g_keyboard.m_keyDown[MINUS])
 	{
@@ -213,7 +225,8 @@ Dtws::Dtws(QWidget* parent):
 	m_lache(nullptr),
 	m_clientReceive(nullptr),
 	m_account2(nullptr),
-	m_account3(nullptr)
+	m_account3(nullptr),
+	m_raffle(nullptr)
 {
 	ui.setupUi(this);
 	init();
@@ -321,6 +334,11 @@ void Dtws::init()
 	QObject::connect(m_lache, &COriginalButton::clicked, this, &Dtws::onLacheButtonClicked);
 	QObject::connect(this, &Dtws::changeLacheText, this, &Dtws::onChangeLacheText, Qt::QueuedConnection);
 
+	m_raffle = new COriginalButton(this);
+	m_raffle->setText(QStringLiteral("抽奖"));
+	m_raffle->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_raffle, &COriginalButton::clicked, this, &Dtws::onRaffleButtonClicked);
+
 	g_config.m_dtws = this;
 }
 
@@ -348,6 +366,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_jidi);
 	vecButton.push_back(m_changshougong);
 	vecButton.push_back(m_lache);
+	vecButton.push_back(m_raffle);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -585,4 +604,20 @@ void Dtws::onLacheButtonClicked()
 void Dtws::onChangeLacheText()
 {
 	m_lache->setText(g_config.m_isBigLache ? QStringLiteral("大车") : QStringLiteral("小车"));
+}
+
+void Dtws::onRaffleButtonClicked()
+{
+	showMinimized();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+	AssignThreadManager::instance().stopAllTask();
+
+	if (CSystem::getComputerName() == FIRST_COMPUTER)
+	{
+		NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_RAFFLE));
+	}
+
+	std::shared_ptr<RaffleTask> spTask(new RaffleTask);
+	AssignThreadHelper::postEveryAssignTask(spTask);
 }

@@ -16,6 +16,7 @@
 #include "AssignThreadHelper.h"
 #include "GoDestTask.h"
 #include "ConvoyDestTask.h"
+#include "RaffleTask.h"
 
 ClientReceive::ClientReceive()
 {
@@ -225,6 +226,16 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		AssignThreadHelper::postEveryAssignTask(spTask);
 	}
 	break;
+	case DTWS_SUBMIT_PLUS:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<SubmitTask> spTask(new SubmitTask);
+		spTask->setParam(1);
+		AssignThreadHelper::postEveryAssignTask(spTask);
+	}
+	break;
 	case DTWS_ESC:
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
@@ -240,6 +251,15 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
 		AssignThreadManager::instance().stopAllTask();
 		std::shared_ptr<PlantTask> spTask(new PlantTask);
+		AssignThreadHelper::postEveryAssignTask(spTask);
+	}
+	break;
+	case DTWS_RAFFLE:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<RaffleTask> spTask(new RaffleTask);
 		AssignThreadHelper::postEveryAssignTask(spTask);
 	}
 	break;
