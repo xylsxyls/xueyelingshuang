@@ -27,5 +27,7 @@ void SubmitTask::setParam(int32_t lineIndex)
 
 AssignTask* SubmitTask::copy()
 {
-	return new SubmitTask;
+	SubmitTask* submitTask = new SubmitTask;
+	submitTask->setParam(m_lineIndex);
+	return submitTask;
 }
