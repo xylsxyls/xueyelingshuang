@@ -12,6 +12,8 @@ public:
 
 	void jiaohumaer(bool isStart, bool isFind);
 
+	void lowSleep(int32_t sleepTime);
+
 public:
 	void pic(bool isStart, bool isFind, const std::string& path, const xyls::Rect& rect, double sim);
 };

@@ -1,6 +1,5 @@
 #include "ClickWindowAtomicTask.h"
 #include "CMouse/CMouseAPI.h"
-#include "Config.h"
 
 bool ClickWindowAtomicTask::DoFun(const std::vector<std::pair<std::string, xyls::Rect>>& vecPic)
 {
@@ -8,9 +7,11 @@ bool ClickWindowAtomicTask::DoFun(const std::vector<std::pair<std::string, xyls:
 	{
 		return true;
 	}
+	lowSleep(100);
 	CMouse::MoveAbsolute(vecPic[0].second.leftTop() + m_oppositePoint, 0);
-	CMouse::LeftClick(0);
-	Sleep(500);
+	lowSleep(100);
+	CMouse::LeftClick(50);
+	lowSleep(100);
 	return false;
 }
 
