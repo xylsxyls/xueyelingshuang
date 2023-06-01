@@ -1,0 +1,42 @@
+class MyKey {
+public:
+	MyKey(int value) : value_(value) {}
+	//解决hash碰撞
+	bool operator==(const MyKey& other) const {
+		return value_ == other.value_;
+	}
+
+	//移动构造，增加拷贝效率
+	MyKey(MyKey&& other)
+	{
+		value_ = other.value_;
+	}
+public:
+	int value_;
+};
+
+//哈希函数
+namespace std {
+	template <>
+	struct hash < MyKey > {
+		size_t operator()(const MyKey& key) const {
+			return std::hash<int>()(key.value_);
+		}
+	};
+}
+
+int main()
+{
+	std::unordered_map<MyKey, std::string> my_map;
+	my_map.emplace(MyKey(2), "world");
+	my_map.emplace(MyKey(1), "hello");
+
+	for (auto it = my_map.begin(); it != my_map.end(); ++it)
+	{
+		std::cout << it->first.value_ << ": " << it->second << std::endl;
+	}
+
+	getchar();
+
+	return 0;
+}

@@ -1,0 +1,46 @@
+https://github.com/camenduru/stable-diffusion-webui-colab
+https://civitai.com/
+
+python装3.10以上
+如果装过先卸载
+pip uninstall -y jupyter
+pip uninstall -y jupyter_core
+
+pip uninstall -y jupyter-client
+
+pip uninstall -y jupyter-console
+
+pip uninstall -y notebook
+
+pip uninstall -y qtconsole
+
+pip uninstall -y nbconvert
+
+pip uninstall -y nbformat
+
+升级python
+python -m pip install --upgrade pip
+
+重新安装
+pip3 install --user  jupyter -i http://pypi.douban.com/simple/ --trusted-host pypi.douban.com
+pip install jupyterthemes -i http://pypi.douban.com/simple/ --trusted-host pypi.douban.com
+jupyter notebook --generate-config
+pip install jupyter_http_over_ws -i http://pypi.douban.com/simple/ --trusted-host pypi.douban.com
+jupyter serverextension enable --py jupyter_http_over_ws
+
+修改配置文件jupyter_notebook_config.py
+#  Takes precedence over allow_origin_pat.
+c.NotebookApp.allow_origin = 'https://colab.research.google.com'
+
+## The port the notebook server will listen on.
+c.NotebookApp.port = 8888
+
+## The number of additional ports to try if the specified port is not available.
+c.NotebookApp.port_retries = 0
+
+启动服务
+jupyter notebook
+
+复制
+http://localhost:8888/?token=afd9b93664...
+连接本地运行时

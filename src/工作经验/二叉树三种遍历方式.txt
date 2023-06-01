@@ -1,0 +1,141 @@
+#include <iostream>
+#include <vector>
+#include <stack>
+
+using namespace std;
+
+// 二叉树节点结构体定义
+struct TreeNode {
+    int val;
+    TreeNode* left;
+    TreeNode* right;
+    TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+};
+
+// 前序遍历（栈）
+vector<int> preorderTraversal(TreeNode* root) {
+    vector<int> result;
+    if (root == NULL) return result;
+
+    stack<TreeNode*> nodeStack;
+    nodeStack.push(root);
+
+    while (!nodeStack.empty()) {
+        TreeNode* node = nodeStack.top();
+        nodeStack.pop();
+        result.push_back(node->val);
+
+        if (node->right != NULL) {
+            nodeStack.push(node->right);
+        }
+        if (node->left != NULL) {
+            nodeStack.push(node->left);
+        }
+    }
+
+    return result;
+}
+
+// 中序遍历（栈）
+vector<int> inorderTraversal(TreeNode* root) {
+    vector<int> result;
+    if (root == NULL) return result;
+
+    stack<TreeNode*> nodeStack;
+    TreeNode* node = root;
+
+    while (node != NULL || !nodeStack.empty()) {
+        while (node != NULL) {
+            nodeStack.push(node);
+            node = node->left;
+        }
+
+        node = nodeStack.top();
+        nodeStack.pop();
+        result.push_back(node->val);
+
+        node = node->right;
+    }
+
+    return result;
+}
+
+// 前序遍历
+void preorderTraversal(TreeNode* root, vector<int>& result) {
+    if (root == NULL) return;
+    result.push_back(root->val);
+    preorderTraversal(root->left, result);
+    preorderTraversal(root->right, result);
+}
+
+// 中序遍历
+void inorderTraversal(TreeNode* root, vector<int>& result) {
+    if (root == NULL) return;
+    inorderTraversal(root->left, result);
+    result.push_back(root->val);
+    inorderTraversal(root->right, result);
+}
+
+// 后序遍历二叉树（递归实现）
+void postorderTraversal(TreeNode* root) {
+    if (root == NULL) {
+        return;
+    }
+    postorderTraversal(root->left);    // 遍历左子树
+    postorderTraversal(root->right);   // 遍历右子树
+    cout << root->val << " ";          // 访问根节点
+}
+
+// 后序遍历二叉树（迭代实现）
+void postorderTraversalIter(TreeNode* root) {
+    if (root == NULL) {
+        return;
+    }
+    stack<TreeNode*> s1, s2;    // 定义两个栈 s1 和 s2
+    s1.push(root);             // 根节点入栈 s1
+    while (!s1.empty()) {
+        TreeNode* node = s1.top();    // 取出栈顶元素
+        s1.pop();                     // 弹出栈顶元素
+        s2.push(node);                // 将栈顶元素压入 s2
+        if (node->left != NULL) {
+            s1.push(node->left);      // 左子节点入栈 s1
+        }
+        if (node->right != NULL) {
+            s1.push(node->right);     // 右子节点入栈 s1
+        }
+    }
+    while (!s2.empty()) {        // 访问 s2 中的元素
+        TreeNode* node = s2.top();
+        s2.pop();
+        cout << node->val << " "; // 访问节点
+    }
+}
+
+int main() {
+    // 构造二叉树
+    TreeNode* root = new TreeNode(4);
+    root->left = new TreeNode(2);
+    root->right = new TreeNode(6);
+    root->left->left = new TreeNode(1);
+    root->left->right = new TreeNode(3);
+    root->right->left = new TreeNode(5);
+    root->right->right = new TreeNode(7);
+
+    // 前序遍历
+    vector<int> preOrderResult = preorderTraversal(root);
+    cout << "前序遍历结果：";
+    for (int i = 0; i < preOrderResult.size(); ++i) {
+        cout << preOrderResult[i] << " ";
+    }
+    cout << endl;
+
+    // 中序遍历
+    vector<int> inOrderResult = inorderTraversal(root);
+    cout << "中序遍历结果：";
+    for (int i = 0; i < inOrderResult.size(); ++i) {
+        cout << inOrderResult[i] << " ";
+    }
+    cout << endl;
+
+    return 0;
+}

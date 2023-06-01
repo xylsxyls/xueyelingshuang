@@ -1,0 +1,131 @@
+#include "ConsoleTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		exit(0);
+	}	
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+#include <stdio.h>
+#include <vector>
+#include <stdint.h>
+
+void printmn(int m, int n)
+{
+	std::vector<std::vector<int>> vecArray;
+	std::vector<int> vecLine;
+	vecLine.resize(n);
+	for (int i = 0; i < m; ++i)
+	{
+		vecArray.push_back(vecLine);
+	}
+
+	int currentLine = 0;
+	int currentCol = n - 1;
+	bool isToLeft = true;
+	bool isDown = false;
+	bool isToDown = false;
+
+	for (int i = 0; i < m * n; ++i)
+	{
+		vecArray[currentLine][currentCol] = i;
+		if (isToLeft)
+		{
+			--currentCol;
+			isToLeft = false;
+			isDown = !isDown;
+			continue;
+		}
+		if (isToDown)
+		{
+			++currentLine;
+			isToDown = false;
+			isDown = !isDown;
+			continue;
+		}
+		if (isDown)
+		{
+			++currentLine;
+			++currentCol;
+			if (currentLine == m - 1)
+			{
+				isToLeft = true;
+			}
+			else if (currentCol == n - 1 || currentCol == 0)
+			{
+				isToDown = true;
+			}
+		}
+		else
+		{
+			--currentLine;
+			--currentCol;
+			if (currentCol == 0)
+			{
+				isToDown = true;
+			}
+			else if (currentLine == 0 || currentLine == m - 1)
+			{
+				isToLeft = true;
+			}
+		}
+	}
+
+	for (int i = 0; i < m; ++i)
+	{
+		for (int j = 0; j < n; ++j)
+		{
+			printf("%d\t", vecArray[i][j]);
+		}
+		printf("\n");
+	}
+}
+
+int32_t main()
+{
+	int m = 8;
+	int n = 5;
+	printmn(m, n);
+	getchar();
+	return 0;
+}
