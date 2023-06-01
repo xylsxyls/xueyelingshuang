@@ -1,0 +1,3 @@
+find . -name "文件名" | xargs rm -rf
+find . -type d -name "目录名" | xargs rm -rf
+可以带*和?

@@ -1,0 +1,1 @@
+std::vector<std::vector<int32_t>> vecMaxNum(width, std::vector<int32_t>(height, int32_t(0)));

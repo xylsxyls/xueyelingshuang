@@ -117,6 +117,7 @@ void CTaskThread::WorkThread()
 			m_taskMap.clear();
 			break;
 		}
+
 		//取任务，有任务执行，没有任务阻塞
 		PopToCurTask();
 
@@ -141,6 +142,7 @@ void CTaskThread::WorkThread()
 		{
 			break;
 		}
+		
 		//任务执行完之后清空指针执行task析构
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);

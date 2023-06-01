@@ -4,7 +4,7 @@
 #include <Windows.h>
 #elif __unix__
 #include <xcb/xcb.h>
-#include <xcb/xfixes.h>
+//#include <xcb/xfixes.h>
 #include <X11/Xlib.h>
 #include <QX11Info>
 #endif

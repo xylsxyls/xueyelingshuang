@@ -10,4 +10,4 @@ LANG=en_US.UTF-8
 
 [root@localhost fep-irp]# init 6
 
-再切换回zh_CN.UTF-8，不用创建文件，执行两次init 6
+localectl set-locale LANG="zh_CN.UTF-8"

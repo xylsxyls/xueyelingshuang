@@ -1,3 +1,7 @@
 https://www.linuxidc.com/Linux/2018-09/153973.htm
 
 sudo apt install gnome-shell-extensions gnome-shell-extension-dash-to-panel gnome-tweaks adwaita-icon-theme-full
+
+ubuntu2204
+sudo apt install -y gnome-shell-extension-manager
+打开扩展管理器，再Browse中搜索dash to panel并安装

@@ -1,0 +1,97 @@
+#include <iostream>
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/message.h>
+#include "ProtoMessage/ProtoMessage.pb.h"
+
+void TraverseMessage(const google::protobuf::Message& message, const std::string& prefix = "") {
+	const google::protobuf::Descriptor* descriptor = message.GetDescriptor();
+	const google::protobuf::Reflection* reflection = message.GetReflection();
+
+	for (int i = 0; i < descriptor->field_count(); ++i) {
+		const google::protobuf::FieldDescriptor* field = descriptor->field(i);
+		std::string fieldName = prefix + field->name();
+
+		if (field->is_repeated()) {
+			for (int j = 0; j < reflection->FieldSize(message, field); ++j) {
+				if (field->cpp_type() == google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE) {
+					const google::protobuf::Message& subMessage = reflection->GetRepeatedMessage(message, field, j);
+					TraverseMessage(subMessage, fieldName + "[" + std::to_string(j) + "].");
+				}
+				else {
+					switch (field->cpp_type()) {
+					case google::protobuf::FieldDescriptor::CPPTYPE_INT32:
+						std::cout << fieldName << "[" << j << "]: " << reflection->GetRepeatedInt32(message, field, j) << std::endl;
+						break;
+					case google::protobuf::FieldDescriptor::CPPTYPE_INT64:
+						std::cout << fieldName << "[" << j << "]: " << reflection->GetRepeatedInt64(message, field, j) << std::endl;
+						break;
+					case google::protobuf::FieldDescriptor::CPPTYPE_UINT32:
+						std::cout << fieldName << "[" << j << "]: " << reflection->GetRepeatedUInt32(message, field, j) << std::endl;
+						break;
+					case google::protobuf::FieldDescriptor::CPPTYPE_UINT64:
+						std::cout << fieldName << "[" << j << "]: " << reflection->GetRepeatedUInt64(message, field, j) << std::endl;
+						break;
+					case google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE:
+						std::cout << fieldName << "[" << j << "]: " << reflection->GetRepeatedDouble(message, field, j) << std::endl;
+						break;
+					case google::protobuf::FieldDescriptor::CPPTYPE_FLOAT:
+						std::cout << fieldName << "[" << j << "]: " << reflection->GetRepeatedFloat(message, field, j) << std::endl;
+						break;
+					case google::protobuf::FieldDescriptor::CPPTYPE_BOOL:
+						std::cout << fieldName << "[" << j << "]: " << (reflection->GetRepeatedBool(message, field, j) ? "true" : "false") << std::endl;
+						break;
+					case google::protobuf::FieldDescriptor::CPPTYPE_ENUM:
+						std::cout << fieldName << "[" << j << "]: " << reflection->GetRepeatedEnumValue(message, field, j) << std::endl;
+						break;
+					case google::protobuf::FieldDescriptor::CPPTYPE_STRING:
+						std::cout << fieldName << "[" << j << "]: " << reflection->GetRepeatedString(message, field, j) << std::endl;
+						break;
+					default:
+						std::cout << "Unsupported field type" << std::endl;
+						break;
+					}
+				}
+			}
+		}
+		else {
+			if (field->cpp_type() == google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE) {
+				const google::protobuf::Message& subMessage = reflection->GetMessage(message, field);
+				TraverseMessage(subMessage, fieldName + ".");
+			}
+			else {
+				switch (field->cpp_type()) {
+				case google::protobuf::FieldDescriptor::CPPTYPE_INT32:
+					std::cout << fieldName << ": " << reflection->GetInt32(message, field) << std::endl;
+					break;
+				case google::protobuf::FieldDescriptor::CPPTYPE_INT64:
+					std::cout << fieldName << ": " << reflection->GetInt64(message, field) << std::endl;
+					break;
+				case google::protobuf::FieldDescriptor::CPPTYPE_UINT32:
+					std::cout << fieldName << ": " << reflection->GetUInt32(message, field) << std::endl;
+					break;
+				case google::protobuf::FieldDescriptor::CPPTYPE_UINT64:
+					std::cout << fieldName << ": " << reflection->GetUInt64(message, field) << std::endl;
+					break;
+				case google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE:
+					std::cout << fieldName << ": " << reflection->GetDouble(message, field) << std::endl;
+					break;
+				case google::protobuf::FieldDescriptor::CPPTYPE_FLOAT:
+					std::cout << fieldName << ": " << reflection->GetFloat(message, field) << std::endl;
+					break;
+				case google::protobuf::FieldDescriptor::CPPTYPE_BOOL:
+					std::cout << fieldName << ": " << (reflection->GetBool(message, field) ? "true" : "false") << std::endl;
+					break;
+				case google::protobuf::FieldDescriptor::CPPTYPE_ENUM:
+					std::cout << fieldName << ": " << reflection->GetEnumValue(message, field) << std::endl;
+					break;
+				case google::protobuf::FieldDescriptor::CPPTYPE_STRING:
+					std::cout << fieldName << ": " << reflection->GetString(message, field) << std::endl;
+					break;
+				default:
+					std::cout << "Unsupported field type" << std::endl;
+					break;
+				}
+			}
+		}
+	}
+}
