@@ -180,6 +180,7 @@
     <ClCompile Include="ConvoyTask.cpp" />
     <ClCompile Include="EscAtomicTask.cpp" />
     <ClCompile Include="EscTask.cpp" />
+    <ClCompile Include="ExecTask.cpp" />
     <ClCompile Include="FindTask.cpp" />
     <ClCompile Include="FiveTask.cpp" />
     <ClCompile Include="FollowTask.cpp" />
@@ -210,6 +211,7 @@
     <ClCompile Include="JiaohumaerAtomicTask.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Dtws.cpp" />
+    <ClCompile Include="PeopleTask.cpp" />
     <ClCompile Include="PlantAtomicTask.cpp" />
     <ClCompile Include="PlantTask.cpp" />
     <ClCompile Include="RaffleTask.cpp" />
@@ -339,6 +341,7 @@
     <ClInclude Include="DtwsParam.h" />
     <ClInclude Include="EscAtomicTask.h" />
     <ClInclude Include="EscTask.h" />
+    <ClInclude Include="ExecTask.h" />
     <ClInclude Include="FindTask.h" />
     <ClInclude Include="FiveTask.h" />
     <ClInclude Include="FollowTask.h" />
@@ -349,6 +352,7 @@
     <ClInclude Include="GoWriteDestAtomicTask.h" />
     <ClInclude Include="HealTask.h" />
     <ClInclude Include="JiaohumaerAtomicTask.h" />
+    <ClInclude Include="PeopleTask.h" />
     <ClInclude Include="PlantAtomicTask.h" />
     <ClInclude Include="PlantTask.h" />
     <ClInclude Include="RaffleTask.h" />

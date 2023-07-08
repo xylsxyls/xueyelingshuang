@@ -200,6 +200,12 @@
     <ClCompile Include="ClickWindowAtomicTask.cpp">
       <Filter>Task\AtomicTask</Filter>
     </ClCompile>
+    <ClCompile Include="ExecTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
+    <ClCompile Include="PeopleTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -350,6 +356,12 @@
     </ClInclude>
     <ClInclude Include="ClickWindowAtomicTask.h">
       <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="ExecTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="PeopleTask.h">
+      <Filter>Task\AssignTask</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

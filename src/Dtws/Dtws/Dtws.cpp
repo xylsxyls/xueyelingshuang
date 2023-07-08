@@ -31,6 +31,7 @@
 #include "GoDestTask.h"
 #include "ConvoyDestTask.h"
 #include "RaffleTask.h"
+#include "PeopleTask.h"
 
 LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -226,7 +227,8 @@ Dtws::Dtws(QWidget* parent):
 	m_clientReceive(nullptr),
 	m_account2(nullptr),
 	m_account3(nullptr),
-	m_raffle(nullptr)
+	m_raffle(nullptr),
+	m_people(nullptr)
 {
 	ui.setupUi(this);
 	init();
@@ -339,6 +341,11 @@ void Dtws::init()
 	m_raffle->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_raffle, &COriginalButton::clicked, this, &Dtws::onRaffleButtonClicked);
 
+	m_people = new COriginalButton(this);
+	m_people->setText(QStringLiteral("¼ÓÈË"));
+	m_people->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_people, &COriginalButton::clicked, this, &Dtws::onPeopleButtonClicked);
+
 	g_config.m_dtws = this;
 }
 
@@ -367,6 +374,7 @@ void Dtws::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_changshougong);
 	vecButton.push_back(m_lache);
 	vecButton.push_back(m_raffle);
+	vecButton.push_back(m_people);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -619,5 +627,16 @@ void Dtws::onRaffleButtonClicked()
 	}
 
 	std::shared_ptr<RaffleTask> spTask(new RaffleTask);
+	AssignThreadHelper::postEveryAssignTask(spTask);
+}
+
+void Dtws::onPeopleButtonClicked()
+{
+	showMinimized();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+	CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+	AssignThreadManager::instance().stopAllTask();
+
+	std::shared_ptr<PeopleTask> spTask(new PeopleTask);
 	AssignThreadHelper::postEveryAssignTask(spTask);
 }
