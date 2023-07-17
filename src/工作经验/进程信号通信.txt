@@ -1,0 +1,51 @@
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		g_adasContext = nullptr;
+		exit(0);
+	}
+}
+
+//新的信号处理函数多了两个参数，其中signfo_t里面携带了我们想要的数据
+void signal_handle_new(int num, siginfo_t *info, void *d)
+{
+	Printf("num = %d, connect %d", num, info->si_int);
+	g_adasContext->connect(info->si_int);
+}
+
+//新的信号处理函数多了两个参数，其中signfo_t里面携带了我们想要的数据
+void signal_handle_new2(int num, siginfo_t *info, void *d)
+{
+	Printf("num = %d, disconnect %d", num, info->si_int);
+	g_adasContext->disconnect(info->si_int);
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+
+		//安装信号先于发送信号
+		struct sigaction sig_act;//新建信号安装结构体
+		sig_act.sa_sigaction = signal_handle_new;//指定信号关联函数
+		sig_act.sa_flags = SA_SIGINFO;//声明信号是携带数据的
+		//将信号和安装信号结构体关联
+		sigaction(SIGUSR1, &sig_act, NULL);//信号num，新信号结构体指针，旧信号结构体指针
+
+		struct sigaction sig_act2;//新建信号安装结构体
+		sig_act2.sa_sigaction = signal_handle_new2;//指定信号关联函数
+		sig_act2.sa_flags = SA_SIGINFO;//声明信号是携带数据的
+		sigaction(SIGUSR2, &sig_act2, NULL);//信号num，新信号结构体指针，旧信号结构体指针
+	}
+};
+
+CtrlC g_ctrlc;
