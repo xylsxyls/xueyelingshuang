@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <deque>
+#include <stddef.h>
 
 /** 有限队列
 */
