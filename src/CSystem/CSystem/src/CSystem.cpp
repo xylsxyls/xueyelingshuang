@@ -914,9 +914,9 @@ int32_t CSystem::SystemCommand(const std::string& command, std::string& result, 
 	char buffer[4096] = {};
 	std::string fresult;
 #ifdef _WIN32
-	FILE* pin = _popen(command.c_str(), "r");
+	FILE* pin = _popen((command + " &").c_str(), "r");
 #elif __unix__
-	FILE* pin = popen(command.c_str(), "r");
+	FILE* pin = popen((command + " &").c_str(), "r");
 #endif
 	if (!pin)
 	{

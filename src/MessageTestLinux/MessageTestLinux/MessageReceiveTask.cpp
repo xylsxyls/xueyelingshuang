@@ -37,7 +37,7 @@ void MessageReceiveTask::DoTask()
         printf("pid begin = %s\n", pid.c_str());
         uint32_t newPid = (uint32_t)atoi(pid.c_str());
         {
-            std::unique_lock<std::mutex> lock(m_client->m_pidMutex);
+            WriteLock lock(m_client->m_pidMutex);
             if (m_client->m_pid.find(newPid) != m_client->m_pid.end())
             {
                 continue;

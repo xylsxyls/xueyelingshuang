@@ -32,6 +32,11 @@ public:
 	*/
 	void setFinite(size_t num, FiniteType finiteType = FLOW);
 
+	/** 获取限制个数
+	@return 返回限制个数
+	*/
+	size_t finite();
+
 	/** 追加
 	@param [in] element 元素
 	@return 返回是否被限制或流动

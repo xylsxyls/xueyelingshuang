@@ -14,7 +14,7 @@ void MessageRecoverTask::DoTask()
     while (!m_exit)
     {
         CSystem::Sleep(100);
-        std::unique_lock<std::mutex> lock(m_client->m_pidMutex);
+        WriteLock lock(m_client->m_pidMutex);
         for (auto it = m_client->m_pid.begin(); it != m_client->m_pid.end();)
         {
             if (CSystem::processName(*it).empty())

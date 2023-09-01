@@ -17,6 +17,12 @@ void FiniteDeque<Type>::setFinite(size_t num, FiniteType finiteType)
 }
 
 template <class Type>
+inline size_t FiniteDeque<Type>::finite()
+{
+	return m_finite;
+}
+
+template <class Type>
 bool FiniteDeque<Type>::push_back(const Type& element)
 {
 	bool result = false;

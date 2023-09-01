@@ -2,6 +2,8 @@
 #include "MessageTestLinux.h"
 #include "MsgLinux/MsgLinuxAPI.h"
 #include "AddStringTask.h"
+#include "TextMessage.h"
+#include "TypeManager.h"
 
 MessagePidTask::MessagePidTask():
     m_pid(0),
@@ -13,16 +15,22 @@ MessagePidTask::MessagePidTask():
 
 void MessagePidTask::DoTask()
 {
-    std::string message;
     while (!m_exit)
     {
-        m_client->m_msg->recv(message, m_pid);
-        if (message == "-1" && m_exit)
+        std::shared_ptr<TextMessage> lineMessage(new TextMessage);
+        m_client->m_msg->recv(lineMessage->m_text, m_pid);
+        if (lineMessage->m_text == "-1" && m_exit)
         {
             printf("exit pid = %d\n", m_pid);
+            lineMessage->m_pid = m_pid;
+            lineMessage->m_peopleId = -1;
+            m_client->m_listReceiveStr.push(lineMessage);
             break;
         }
-        m_client->m_listReceiveStr.push(message);
+        lineMessage->m_pid = m_pid;
+        lineMessage->m_id = ++m_client->m_id;
+        ++m_client->m_areaCount;
+        m_client->m_listReceiveStr.push(lineMessage);
     }
 }
 

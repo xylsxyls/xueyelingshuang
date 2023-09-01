@@ -13,13 +13,13 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset='gb2312'")
 
 if(${DEBUGRELEASE} STREQUAL "debug")
 #设置项目名称
-SET(PROJECT_NAME MessageTestLinuxd)
+SET(PROJECT_NAME MessageTest1.1)
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Wl,-rpath=. -O0 -g -ggdb ")
 SET(CMAKE_BUILD_TYPE "Debug")
 elseif(${DEBUGRELEASE} STREQUAL "release")
 #设置项目名称
-SET(PROJECT_NAME MessageTest1.0)
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O0")
+SET(PROJECT_NAME MessageTest1.1)
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wl,-rpath=. -O3")
 SET(CMAKE_BUILD_TYPE "Release")
 endif()
 

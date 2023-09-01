@@ -109,7 +109,7 @@ public:
 	static std::vector<std::string> exeParam(int argc = 0, char** argv = nullptr);
 	//获取密码
 	static std::string PasswordScanf();
-	//获取系统命令执行结果，如果是false则只能执行一句，如果是true可以|findstr
+	//获取系统命令执行结果，如果是false则只能执行一句，如果是true可以|findstr，linux下频繁信号可能会导致该函数中的pclose后台卡死出现僵尸进程，该函数不会因此卡死
 	static int32_t SystemCommand(const std::string& command, std::string& result, bool isShowCmd = false);
 	//获取线程ID号
 	static uint32_t SystemThreadId();
