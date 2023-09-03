@@ -25,11 +25,11 @@ void ClickLoginTask::DoTask()
 			Sleep(500);
 		}
 
-		xyls::Point clickPoint = CSystem::getComputerName() == SECOND_COMPUTER ? xyls::Point(810, 206) :
-			xyls::Point(1085, 520);
+		xyls::Point clickPoint = CSystem::getComputerName() == SECOND_COMPUTER ? xyls::Point(808, 238) :
+			xyls::Point(1085, 395);
 		if (CSystem::getComputerName() == FIRST_COMPUTER && g_config.m_screenPixel == 3840 * 2160)
 		{
-			clickPoint = xyls::Point(2045, 1597);
+			clickPoint = xyls::Point(2046, 934);
 		}
 		//µã»÷ÕËºÅµÇÂ¼
 		CMouse::MoveAbsolute(clickPoint);
