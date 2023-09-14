@@ -584,7 +584,7 @@ void MessageTestLinux::onReceivePid(int32_t pid)
 	std::string processName = CSystem::processName(pid);
 	box->setText((std::string(1, ++m_processNameId) + "*  | " + processName).c_str());
 	box->setUserData(Qt::UserRole, (QObjectUserData*)pid);
-	box->setToolTip(processName.empty() ? std::to_string(pid).c_str() : processName.c_str());
+	box->setToolTip(std::to_string(pid).c_str());
 	box->setFontSize(12);
 	box->resize(180, 20);
 	box->setBackgroundColor(QColor(0, 0, 0, 0));
@@ -601,7 +601,7 @@ void MessageTestLinux::onReceivePidThreadId(int32_t pid, int32_t threadId)
 	box->setText((std::to_string(++m_assignThreadId) + "*").c_str());
 	box->setFontSize(12);
 	box->setToolTip(std::to_string(threadId).c_str());
-	box->resize(45, 20);
+	box->resize(50, 20);
 	box->setBackgroundColor(QColor(0, 0, 0, 0));
 	box->repaint();
 	QObject::connect(box, &CheckBox::stateChanged, this, &MessageTestLinux::onStateChanged);
