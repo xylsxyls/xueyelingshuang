@@ -15,6 +15,7 @@
 #include <QtCore>
 #include "SendToMessageTest.h"
 #include <fstream>
+#include <QTimer>
 
 MessageTestLinux::MessageTestLinux(QWidget* parent):
 	QDialog(parent),
@@ -48,9 +49,8 @@ MessageTestLinux::MessageTestLinux(QWidget* parent):
 	m_processNameId(m_processNameIdInit),
 	m_assignThreadId(0),
 	m_showTextParam(nullptr),
-	m_isChangeFilter(true),
 	m_filterText(nullptr),
-	m_filter(nullptr)
+	m_filterTimer(nullptr)
 {
 	init();
 }
@@ -166,14 +166,10 @@ void MessageTestLinux::init()
 	QObject::connect(m_showTextParam, &CheckBox::stateChanged, this, &MessageTestLinux::onShowTextParamStateChanged);
 
 	m_filterText = new LineEdit(this);
-	m_filterText->resize(120, 20);
+	m_filterText->resize(192, 20);
 	m_filterText->setFontSize(12);
-
-	m_filter = new PushButton(this);
-	m_filter->setText(QStringLiteral("完成"));
-	m_filter->resize(50, 20);
-	m_filter->setFontSize(12);
-	QObject::connect(m_filter, &PushButton::clicked, this, &MessageTestLinux::onFilterChanged);
+	m_filterText->setPlaceholderText(QStringLiteral("输入部分匹配文本"));
+	QObject::connect(m_filterText, &LineEdit::textChanged, this, &MessageTestLinux::onFilterChanged);
 
 	QObject::connect(&TypeManager::instance(), &TypeManager::receivePeopleId, this, &MessageTestLinux::onReceivePeopleId, Qt::QueuedConnection);
 	QObject::connect(&TypeManager::instance(), &TypeManager::receivePid, this, &MessageTestLinux::onReceivePid, Qt::QueuedConnection);
@@ -331,8 +327,6 @@ void MessageTestLinux::resizeEvent(QResizeEvent* eve)
 	m_showTextParam->setVisible(m_externWidth != 0);
 	m_filterText->move(windowWidth - 220 + 16, 0 + 12);
 	m_filterText->setVisible(m_externWidth != 0);
-	m_filter->move(windowWidth - 83 + 16, 0 + 12);
-	m_filter->setVisible(m_externWidth != 0);
 
 	int32_t index = -1;
 	for (auto itPeopleId = m_allPeopleIdCheckBox.begin(); itPeopleId != m_allPeopleIdCheckBox.end(); ++itPeopleId)
@@ -590,7 +584,7 @@ void MessageTestLinux::onReceivePid(int32_t pid)
 	std::string processName = CSystem::processName(pid);
 	box->setText((std::string(1, ++m_processNameId) + "*  | " + processName).c_str());
 	box->setUserData(Qt::UserRole, (QObjectUserData*)pid);
-	box->setToolTip(processName.empty() ? std::to_string(pid).c_str() : processName.c_str());
+	box->setToolTip(std::to_string(pid).c_str());
 	box->setFontSize(12);
 	box->resize(180, 20);
 	box->setBackgroundColor(QColor(0, 0, 0, 0));
@@ -607,7 +601,7 @@ void MessageTestLinux::onReceivePidThreadId(int32_t pid, int32_t threadId)
 	box->setText((std::to_string(++m_assignThreadId) + "*").c_str());
 	box->setFontSize(12);
 	box->setToolTip(std::to_string(threadId).c_str());
-	box->resize(45, 20);
+	box->resize(50, 20);
 	box->setBackgroundColor(QColor(0, 0, 0, 0));
 	box->repaint();
 	QObject::connect(box, &CheckBox::stateChanged, this, &MessageTestLinux::onStateChanged);
@@ -737,9 +731,9 @@ void MessageTestLinux::onStateChanged(int32_t state)
 	{
 		ReadLock lock1(m_showMutex);
 		ReadLock lock2(m_allStringMutex);
-		auto beginTime = CSystem::GetHighTickCount();
+		//auto beginTime = CSystem::GetHighTickCount();
 		m_screenCount = allToShow();
-		printf("time = %d\n", CSystem::GetHighTickCountMilliRunTime(beginTime));
+		//printf("time = %d\n", CSystem::GetHighTickCountMilliRunTime(beginTime));
 		m_isChangeState = true;
 		m_update = true;
 	}
@@ -750,35 +744,34 @@ void MessageTestLinux::onShowTextParamStateChanged(int32_t state)
 	m_update = true;
 }
 
-void MessageTestLinux::onFilterChanged()
+void MessageTestLinux::onFilterChanged(const QString& text)
 {
-	m_isChangeFilter = !m_isChangeFilter;
-
-	m_filter->setText(m_isChangeFilter ? QStringLiteral("完成") : QStringLiteral("更改"));
-	m_filter->repaint();
-
-	m_filterText->setReadOnly(!m_isChangeFilter);
-	m_filterText->setEnabled(m_isChangeFilter);
-	m_filterText->setBorderColor(m_isChangeFilter ? QColor(23, 23, 23) : QColor(204, 204, 204));
-	m_filterText->setBackgroundColor(m_isChangeFilter ? QColor(255, 255, 255) : QColor(240, 240, 240));
-	m_filterText->ControlBorderForNormalHoverDisabled::setTextColor(m_isChangeFilter ? QColor(12, 12, 12) : QColor(100, 100, 100));
-	m_filterText->repaint();
-
-	if (!m_isChangeFilter)
+	if (m_filterTimer != nullptr)
 	{
-		{
-			WriteLock lock(m_filterMutex);
-			m_filterStr = m_filterText->text().toStdString();
-		}
-
-		{
-			ReadLock lock1(m_showMutex);
-			ReadLock lock2(m_allStringMutex);
-			m_screenCount = allToShow();
-			m_isChangeState = true;
-			m_update = true;
-		}
+		delete m_filterTimer;
 	}
+	m_filterTimer = new QTimer(this);
+	QObject::connect(m_filterTimer, SIGNAL(timeout()), this, SLOT(onFilterTimer()));
+	m_filterTimer->start(500);
+}
+
+void MessageTestLinux::onFilterTimer()
+{
+	{
+		WriteLock lock(m_filterMutex);
+		m_filterStr = m_filterText->text().toStdString();
+	}
+
+	{
+		ReadLock lock1(m_showMutex);
+		ReadLock lock2(m_allStringMutex);
+		m_screenCount = allToShow();
+		m_isChangeState = true;
+		m_update = true;
+	}
+
+	delete m_filterTimer;
+	m_filterTimer = nullptr;
 }
 
 void MessageTestLinux::onButtonClicked()

@@ -22,8 +22,9 @@ class TextEdit;
 class COriginalButton;
 class LineEdit;
 class QFocusEvent;
-class MsgLinux;
+class MsgLinux; 
 class CheckBox;
+class QTimer;
 
 class MessageTestLinux : public QDialog
 {
@@ -69,7 +70,8 @@ private slots:
 	void onReceiveLostPid(int32_t pid);
 	void onStateChanged(int32_t state);
 	void onShowTextParamStateChanged(int32_t state);
-	void onFilterChanged();
+	void onFilterChanged(const QString& text);
+	void onFilterTimer();
 
 private:
 	COriginalButton* m_button;
@@ -128,10 +130,9 @@ private:
 	std::map<int32_t, std::pair<char, std::map<int32_t, int32_t>>> m_pidThreadIdMap;
 	CheckBox* m_showTextParam;
 	LineEdit* m_filterText;
-	PushButton* m_filter;
-	bool m_isChangeFilter;
 	std::string m_filterStr;
 	ReadWriteMutex m_filterMutex;
+	QTimer* m_filterTimer;
 };
 
 #endif // QTTEST_H
