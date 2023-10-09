@@ -1,0 +1,4 @@
+扩展中安装Switcher
+Ctrl+Shift+p
+switcher
+改为alt+q
