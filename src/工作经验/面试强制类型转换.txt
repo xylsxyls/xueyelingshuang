@@ -1,0 +1,35 @@
+强制类型转换
+静态强制类型转换（static_cast）：
+
+语法：static_cast<目标类型>(表达式)
+用途：用于常规类型转换，如数值类型之间的转换、基类指针/引用到派生类指针/引用的转换等。它在编译时进行类型检查，但不提供运行时检查。
+cpp
+Copy code
+int x = 10;
+double y = static_cast<double>(x);
+动态强制类型转换（dynamic_cast）：
+
+语法：dynamic_cast<目标类型>(表达式)
+用途：主要用于多态类型的转换，比如基类指针/引用到派生类指针/引用的转换。它会在运行时进行类型检查，如果转换不合法，返回空指针（对指针）或抛出 std::bad_cast 异常（对引用）。
+cpp
+Copy code
+Base* basePtr = new Derived;
+Derived* derivedPtr = dynamic_cast<Derived*>(basePtr);
+常量强制类型转换（const_cast）：
+
+语法：const_cast<目标类型>(表达式)
+用途：用于去除或增加变量的 const 修饰符。通常用于允许修改原本被声明为 const 的变量。
+cpp
+Copy code
+const int x = 5;
+int* y = const_cast<int*>(&x);
+*y = 10; // 此时修改 x 的值
+重新解释强制类型转换（reinterpret_cast）：
+
+语法：reinterpret_cast<目标类型>(表达式)
+用途：用于低级别的类型转换，通常用于将指针或引用从一种类型转换为另一种类型，这可能会导致不安全的操作。它是最不安全的类型转换，应慎用。
+cpp
+Copy code
+int x = 42;
+double* y = reinterpret_cast<double*>(&x);
+每种类型强制转换都有不同的安全性和适用性。程序员应谨慎使用这些强制类型转换，确保其正确性和安全性，避免可能导致未定义行为的情况。通常情况下，应尽量避免使用 reinterpret_cast，而优先选择其他类型的强制转换方式。

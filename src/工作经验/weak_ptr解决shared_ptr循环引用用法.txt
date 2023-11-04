@@ -31,3 +31,5 @@ int main() {
 
     return 0;
 }
+
+//通过std::weak_ptr::lock()获取std::shared_ptr
