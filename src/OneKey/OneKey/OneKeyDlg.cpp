@@ -134,6 +134,14 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	// 请在这里添加消息处理代码
 	
 	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(g_config.m_threadId);
+
+	g_keyboard.acceptParam(wParam, lParam);
+
+	if (g_keyboard.m_keyUp[MINUS])
+	{
+		g_config.m_textWatch.SetWatchTime(g_config.m_textWatchTime + 1000);
+	}
+
 	if (taskThread == nullptr || g_config.m_textWatch.GetWatchTime() < g_config.m_textWatchTime)
 	{
 		return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
@@ -143,7 +151,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		g_config.m_taskThread = taskThread;
 	}
 
-	g_keyboard.acceptParam(wParam, lParam);
+	if (g_keyboard.m_keyUp[PLUS])
+	{
+		g_config.m_textWatch.SetWatchTime(0);
+	}
 
 	Yxlm::keyboard();
 

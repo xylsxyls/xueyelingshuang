@@ -59,15 +59,6 @@ void WzCommon::mouse()
 
 void WzCommon::keyboard()
 {
-	if (g_keyboard.m_keyUp[PLUS])
-	{
-		g_config.m_textWatch.SetWatchTime(0);
-	}
-	else if (g_keyboard.m_keyUp[MINUS])
-	{
-		g_config.m_textWatch.SetWatchTime(g_config.m_textWatchTime + 1000);
-	}
-
 	if (g_keyboard.m_keyUp[SPACE])
 	{
 		if (!(g_config.m_type == 10 && g_keyboard.m_lastKey == 'Q'))

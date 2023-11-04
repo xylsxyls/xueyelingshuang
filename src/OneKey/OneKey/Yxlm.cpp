@@ -8,6 +8,9 @@
 #include "CMouse/CMouseAPI.h"
 #include "CNoFlashTask.h"
 #include "CwrqTask.h"
+#include "CDwqrTask.h"
+#include "Cqdrw3Task.h"
+#include "CqNoFlashTask.h"
 
 void Yxlm::mouse()
 {
@@ -87,10 +90,10 @@ void Yxlm::keyboard()
 		//}
 		else if (g_keyboard.m_keyDown['A'] && g_config.m_stopWatch.GetWatchTime() > 500)
 		{
-			g_config.m_stopWatch.SetWatchTime(0);
-			std::shared_ptr<CwrqTask> spTask;
-			spTask.reset(new CwrqTask);
-			g_config.m_taskThread->PostTask(spTask, 1);
+			//g_config.m_stopWatch.SetWatchTime(0);
+			//std::shared_ptr<CwrqTask> spTask;
+			//spTask.reset(new CwrqTask);
+			//g_config.m_taskThread->PostTask(spTask, 1);
 			//aDown = false;
 			//stopWatch.SetWatchTime(0);
 			//std::shared_ptr<Cqrw3Task> spTask;
@@ -116,28 +119,28 @@ void Yxlm::keyboard()
 			//	}
 			//	else
 			//	{
-			//		stopWatch.SetWatchTime(0);
-			//		std::shared_ptr<Cqdrw3Task> spTask;
-			//		spTask.reset(new Cqdrw3Task);
-			//		taskThread->PostTask(spTask, 2);
+			//g_config.m_stopWatch.SetWatchTime(0);
+			//std::shared_ptr<Cqdrw3Task> spTask;
+			//spTask.reset(new Cqdrw3Task);
+			//g_config.m_taskThread->PostTask(spTask, 2);
 			//	}
 			//}
 			//else
 			//{
 			//	if (openWatch.GetWatchTime() < 500)
 			//	{
-			//		stopWatch.SetWatchTime(0);
-			//		std::shared_ptr<CDwqrTask> spTask;
-			//		spTask.reset(new CDwqrTask);
-			//		taskThread->PostTask(spTask, 1);
+			//g_config.m_stopWatch.SetWatchTime(0);
+			//std::shared_ptr<CDwqrTask> spTask;
+			//spTask.reset(new CDwqrTask);
+			//g_config.m_taskThread->PostTask(spTask, 1);
 			//	}
 			//	else
 			//	{
 			//		stopWatch.SetWatchTime(0);
-			//		std::shared_ptr<CqNoFlashTask> spTask;
-			//		spTask.reset(new CqNoFlashTask);
-			//		spTask->setParam(400);
-			//		taskThread->PostTask(spTask, 2);
+			std::shared_ptr<CqNoFlashTask> spTask;
+			spTask.reset(new CqNoFlashTask);
+			spTask->setParam(400);
+			g_config.m_taskThread->PostTask(spTask, 2);
 			//	}
 			//}
 		}
