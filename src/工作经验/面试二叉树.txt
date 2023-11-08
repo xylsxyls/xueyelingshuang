@@ -1,0 +1,202 @@
+二叉树的三种基本遍历方式，分别是前序遍历（preorder traversal）、中序遍历（inorder traversal）和后序遍历（postorder traversal）。
+
+前序遍历是从根节点开始，先遍历根节点，再遍历左子树，最后遍历右子树，因此是“根左右”的顺序。
+
+中序遍历是从根节点开始，先遍历左子树，再遍历根节点，最后遍历右子树，因此是“左根右”的顺序。
+
+后序遍历是从根节点开始，先遍历左子树，再遍历右子树，最后遍历根节点，因此是“左右根”的顺序。
+
+#include <iostream>
+#include <vector>
+#include <stack>
+
+// 二叉树节点的定义
+struct TreeNode
+{
+	int m_value;
+	TreeNode* m_left;
+	TreeNode* m_right;
+
+	TreeNode(int value) : m_value(value), m_left(nullptr), m_right(nullptr) {}
+};
+
+// 递归前序遍历
+void recursivePreorder(TreeNode* root, std::vector<int>& result)
+{
+	if (root == nullptr)
+	{
+		return;
+	}
+	result.push_back(root->m_value);
+	recursivePreorder(root->m_left, result);
+	recursivePreorder(root->m_right, result);
+}
+
+// 递归中序遍历
+void recursiveInorder(TreeNode* root, std::vector<int>& result)
+{
+	if (root == nullptr)
+	{
+		return;
+	}
+	recursiveInorder(root->m_left, result);
+	result.push_back(root->m_value);
+	recursiveInorder(root->m_right, result);
+}
+
+// 递归后序遍历
+void recursivePostorder(TreeNode* root, std::vector<int>& result)
+{
+	if (root == nullptr)
+	{
+		return;
+	}
+	recursivePostorder(root->m_left, result);
+	recursivePostorder(root->m_right, result);
+	result.push_back(root->m_value);
+}
+
+// 非递归前序遍历
+void iterativePreorder(TreeNode* root, std::vector<int>& result)
+{
+	std::stack<TreeNode*> stackTreeNode;
+	while (root || !stackTreeNode.empty())
+	{
+		while (root)
+		{
+			result.push_back(root->m_value);
+			stackTreeNode.push(root);
+			root = root->m_left;
+		}
+		if (!stackTreeNode.empty())
+		{
+			root = stackTreeNode.top();
+			stackTreeNode.pop();
+			root = root->m_right;
+		}
+	}
+}
+
+// 非递归中序遍历
+void iterativeInorder(TreeNode* root, std::vector<int>& result)
+{
+	std::stack<TreeNode*> stackTreeNode;
+	while (root || !stackTreeNode.empty())
+	{
+		while (root)
+		{
+			stackTreeNode.push(root);
+			root = root->m_left;
+		}
+		if (!stackTreeNode.empty())
+		{
+			root = stackTreeNode.top();
+			stackTreeNode.pop();
+			result.push_back(root->m_value);
+			root = root->m_right;
+		}
+	}
+}
+
+// 非递归后序遍历
+void iterativePostorder(TreeNode* root, std::vector<int>& result)
+{
+	if (root == nullptr)
+	{
+		return;
+	}
+
+	std::stack<TreeNode*> stack1, stack2;
+	stack1.push(root);
+
+	while (!stack1.empty())
+	{
+		root = stack1.top();
+		stack1.pop();
+		stack2.push(root);
+
+		if (root->m_left)
+			stack1.push(root->m_left);
+		if (root->m_right)
+			stack1.push(root->m_right);
+	}
+
+	while (!stack2.empty())
+	{
+		root = stack2.top();
+		result.push_back(root->m_value);
+		stack2.pop();
+	}
+}
+
+int main()
+{
+	// 创建示例二叉树
+	TreeNode* root = new TreeNode(1);
+	root->m_left = new TreeNode(2);
+	root->m_right = new TreeNode(3);
+	root->m_left->m_left = new TreeNode(4);
+	root->m_left->m_right = new TreeNode(5);
+	root->m_right->m_left = new TreeNode(6);
+	root->m_right->m_right = new TreeNode(7);
+
+	std::vector<int> result;
+
+	// 测试不同遍历方式并将结果存储在 vector 中
+	recursivePreorder(root, result);
+	printf("递归前序遍历结果: ");
+	for (size_t i = 0; i < result.size(); ++i)
+	{
+		printf("%d ", result[i]);
+	}
+	printf("\n");
+
+	result.clear();
+	iterativePreorder(root, result);
+	printf("非递归前序遍历结果: ");
+	for (size_t i = 0; i < result.size(); ++i)
+	{
+		printf("%d ", result[i]);
+	}
+	printf("\n");
+
+	result.clear();
+	recursiveInorder(root, result);
+	printf("递归中序遍历结果: ");
+	for (size_t i = 0; i < result.size(); ++i)
+	{
+		printf("%d ", result[i]);
+	}
+	printf("\n");
+
+	result.clear();
+	iterativeInorder(root, result);
+	printf("非递归中序遍历结果: ");
+	for (size_t i = 0; i < result.size(); ++i)
+	{
+		printf("%d ", result[i]);
+	}
+	printf("\n");
+
+	result.clear();
+	recursivePostorder(root, result);
+	printf("递归后序遍历结果: ");
+	for (size_t i = 0; i < result.size(); ++i)
+	{
+		printf("%d ", result[i]);
+	}
+	printf("\n");
+
+	result.clear();
+	iterativePostorder(root, result);
+	printf("非递归后序遍历结果: ");
+	for (size_t i = 0; i < result.size(); ++i)
+	{
+		printf("%d ", result[i]);
+	}
+	printf("\n");
+
+	getchar();
+
+	return 0;
+}

@@ -1,0 +1,248 @@
+排序
+冒泡排序（Bubble Sort）:
+
+时间复杂度：O(n^2)
+实现原理：比较相邻的元素，如果顺序错误，则交换它们，一轮比较会将最大的元素“冒泡”到最后。重复这个过程直到整个数组有序。
+选择排序（Selection Sort）:
+
+时间复杂度：O(n^2)
+实现原理：每次从未排序的部分中选择最小的元素，将其与未排序部分的第一个元素交换，重复这个过程直到整个数组有序。
+插入排序（Insertion Sort）:
+
+时间复杂度：O(n^2)
+实现原理：将数组分为已排序和未排序两部分，依次将未排序部分的元素插入到已排序部分的正确位置，直到整个数组有序。
+快速排序（Quick Sort）:
+
+时间复杂度：O(n log n) 平均情况，最坏情况为O(n^2)
+实现原理：选择一个基准元素，将数组分为两部分，小于基准的放在左边，大于基准的放在右边。然后递归地对左右两部分进行排序。
+归并排序（Merge Sort）:
+
+时间复杂度：O(n log n)
+实现原理：将数组递归地分成两半，分别排序，然后合并两个有序的子数组以获得完整的有序数组。
+堆排序（Heap Sort）:
+
+时间复杂度：O(n log n)
+实现原理：将数组视为一个二叉堆，首先将其建立为最大堆，然后逐步将堆顶元素与堆的最后一个元素交换，缩小堆的范围并重新调整堆以获得有序数组。
+
+
+快速排序 (Quick Sort)：
+
+核心思想：快速排序是一种分治算法，它选择一个元素作为"基准"，将数组分为两个子数组，一个子数组的元素小于基准，另一个子数组的元素大于基准。然后，递归地对这两个子数组进行排序。
+实现原理：
+选择一个基准元素，通常是数组的第一个元素。
+使用两个指针，一个从数组的起始位置向右移动，另一个从数组的末尾位置向左移动，找到一个比基准大的元素和一个比基准小的元素，然后交换它们。
+重复步骤 2 直到两个指针相遇，将基准元素与相遇位置的元素交换，这样基准元素的位置就确定了。
+递归地对左子数组和右子数组执行上述步骤，直到整个数组有序。
+最后，将所有子数组合并在一起。
+归并排序 (Merge Sort)：
+
+核心思想：归并排序也是一种分治算法，它将数组分成两个子数组，分别排序，然后将这两个子数组合并成一个有序数组。
+实现原理：
+将数组分成两个子数组，通常是将数组分成相等大小的两半。
+递归地对这两个子数组执行归并排序。
+合并两个有序的子数组：
+创建两个指针，一个指向第一个子数组的开头，另一个指向第二个子数组的开头。
+比较两个指针指向的元素，将较小的元素添加到新的有序数组中。
+移动指向较小元素的指针，重复上述步骤，直到一个子数组的所有元素都被合并。
+将剩余的元素添加到新数组的末尾。
+堆排序 (Heap Sort)：
+
+核心思想：堆排序使用二叉堆数据结构，它将数组视为一颗二叉树，通过构建最大堆（或最小堆）来排序数组。
+实现原理：
+建立一个最大堆（或最小堆）：
+从数组的中间位置开始，向左依次调整每个子树，确保每个子树都满足堆的性质。
+这个过程使得数组变成一个最大堆，其中每个父节点的值大于或等于其子节点的值。
+交换根节点（最大值）与数组的最后一个元素，然后将最后一个元素从堆中移除。
+通过将根节点下沉，恢复堆的性质。重复这个过程直到整个数组有序。
+最终，数组中的元素会按升序（或降序）排列。
+这些排序算法的实现原理在理解它们的性能和应用时非常重要。快速排序通常在平均情况下性能良好，归并排序保证了稳定的 O(n log n) 时间复杂度，而堆排序适用于外部排序等特殊情况。
+
+#include <cstdio>
+#include <vector>
+
+// 交换两个元素的辅助函数
+void swap(int& a, int& b)
+{
+	int temp = a;
+	a = b;
+	b = temp;
+}
+
+// 快速排序
+void quickSort(std::vector<int>& arr, int low, int high)
+{
+	if (low < high)
+	{
+		int pivot = arr[low];
+		int i = low;
+		int j = high;
+
+		while (i < j)
+		{
+			while (i < high && arr[i] <= pivot)
+			{
+				i++;
+			}
+			while (j > low && arr[j] > pivot)
+			{
+				j--;
+			}
+			if (i < j)
+			{
+				swap(arr[i], arr[j]);
+			}
+		}
+
+		swap(arr[low], arr[j]);
+
+		quickSort(arr, low, j - 1);
+		quickSort(arr, j + 1, high);
+	}
+}
+
+// 归并排序
+void merge(std::vector<int>& arr, int left, int mid, int right)
+{
+	int n1 = mid - left + 1;
+	int n2 = right - mid;
+
+	std::vector<int> leftArr(n1);
+	std::vector<int> rightArr(n2);
+
+	for (int i = 0; i < n1; i++)
+	{
+		leftArr[i] = arr[left + i];
+	}
+	for (int i = 0; i < n2; i++)
+	{
+		rightArr[i] = arr[mid + 1 + i];
+	}
+
+	int i = 0;
+	int j = 0;
+	int k = left;
+	while (i < n1 && j < n2)
+	{
+		if (leftArr[i] <= rightArr[j])
+		{
+			arr[k] = leftArr[i];
+			i++;
+		}
+		else
+		{
+			arr[k] = rightArr[j];
+			j++;
+		}
+		k++;
+	}
+
+	while (i < n1)
+	{
+		arr[k] = leftArr[i];
+		i++;
+		k++;
+	}
+
+	while (j < n2)
+	{
+		arr[k] = rightArr[j];
+		j++;
+		k++;
+	}
+}
+
+void mergeSort(std::vector<int>& arr, int left, int right)
+{
+	if (left < right)
+	{
+		int mid = left + (right - left) / 2;
+		mergeSort(arr, left, mid);
+		mergeSort(arr, mid + 1, right);
+		merge(arr, left, mid, right);
+	}
+}
+
+// 堆排序
+void heapify(std::vector<int>& arr, int n, int i)
+{
+	int largest = i;
+	int left = 2 * i + 1;
+	int right = 2 * i + 2;
+
+	if (left < n && arr[left] > arr[largest])
+	{
+		largest = left;
+	}
+	if (right < n && arr[right] > arr[largest])
+	{
+		largest = right;
+	}
+
+	if (largest != i)
+	{
+		swap(arr[i], arr[largest]);
+		heapify(arr, n, largest);
+	}
+}
+
+void heapSort(std::vector<int>& arr)
+{
+	int n = arr.size();
+
+	for (int i = n / 2 - 1; i >= 0; i--)
+	{
+		heapify(arr, n, i);
+	}
+
+	for (int i = n - 1; i > 0; i--)
+	{
+		swap(arr[0], arr[i]);
+		heapify(arr, i, 0);
+	}
+}
+
+int main()
+{
+	std::vector<int> arr = { 12, 11, 13, 5, 6, 7 };
+
+	printf("原始数组: ");
+	for (int i = 0; i < arr.size(); i++)
+	{
+		printf("%d ", arr[i]);
+	}
+	printf("\n");
+
+	// 快速排序
+	std::vector<int> quickSortArr = arr;
+	quickSort(quickSortArr, 0, quickSortArr.size() - 1);
+	printf("快速排序结果: ");
+	for (int i = 0; i < quickSortArr.size(); i++)
+	{
+		printf("%d ", quickSortArr[i]);
+	}
+	printf("\n");
+
+	// 归并排序
+	std::vector<int> mergeSortArr = arr;
+	mergeSort(mergeSortArr, 0, mergeSortArr.size() - 1);
+	printf("归并排序结果: ");
+	for (int i = 0; i < mergeSortArr.size(); i++)
+	{
+		printf("%d ", mergeSortArr[i]);
+	}
+	printf("\n");
+
+	// 堆排序
+	std::vector<int> heapSortArr = arr;
+	heapSort(heapSortArr);
+	printf("堆排序结果: ");
+	for (int i = 0; i < heapSortArr.size(); i++)
+	{
+		printf("%d ", heapSortArr[i]);
+	}
+	printf("\n");
+
+	getchar();
+
+	return 0;
+}

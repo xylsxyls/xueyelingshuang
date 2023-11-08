@@ -1,0 +1,196 @@
+//前中还原
+
+前序遍历（Preorder Traversal）的顺序是：根节点，左子树，右子树。
+中序遍历（Inorder Traversal）的顺序是：左子树，根节点，右子树。
+根据这两种遍历顺序，我们可以使用递归的方法来构建二叉树：
+
+从前序遍历中获取根节点的值，并创建一个根节点。
+在中序遍历中找到根节点的位置，该位置左侧的元素构成左子树的中序遍历，右侧的元素构成右子树的中序遍历。
+根据中序遍历中的根节点位置，可以确定左子树和右子树的大小。
+递归构建左子树和右子树。
+返回根节点。
+这个算法的关键点是在中序遍历中找到根节点的位置，以确定左子树和右子树的边界。一旦我们知道了这些边界，就可以递归构建整个二叉树。
+
+这种方法可以应用于具有唯一元素值的二叉树。如果树中存在重复值，可能需要更多的信息来确定根节点位置。如果每个元素都是唯一的，那么这个方法是有效的，可以根据给定的前序遍历和中序遍历结果构建出完整的二叉树。
+
+
+#include <cstdio>
+#include <vector>
+#include <unordered_map>
+
+// 二叉树节点的定义
+struct TreeNode
+{
+	int m_value;
+	TreeNode* m_left;
+	TreeNode* m_right;
+
+	TreeNode(int value) : m_value(value), m_left(nullptr), m_right(nullptr)
+	{
+	}
+};
+
+TreeNode* buildTreeHelper(std::vector<int>& preorder, std::vector<int>& inorder, std::unordered_map<int, int>& inorder_index_map, int& pre_idx, int in_start, int in_end)
+{
+	if (pre_idx >= preorder.size() || in_start > in_end)
+	{
+		return nullptr;
+	}
+
+	int root_val = preorder[pre_idx];
+	TreeNode* root = new TreeNode(root_val);
+
+	int in_idx = inorder_index_map[root_val];
+
+	++pre_idx;
+
+	root->m_left = buildTreeHelper(preorder, inorder, inorder_index_map, pre_idx, in_start, in_idx - 1);
+	root->m_right = buildTreeHelper(preorder, inorder, inorder_index_map, pre_idx, in_idx + 1, in_end);
+
+	return root;
+}
+
+// 根据前序遍历和中序遍历结果构建二叉树
+TreeNode* buildTree(std::vector<int>& preorder, std::vector<int>& inorder)
+{
+	if (preorder.empty() || inorder.empty() || preorder.size() != inorder.size())
+	{
+		return nullptr;
+	}
+
+	std::unordered_map<int, int> inorder_index_map;
+	for (int i = 0; i < inorder.size(); i++)
+	{
+		inorder_index_map[inorder[i]] = i;
+	}
+
+	int pre_idx = 0;
+	return buildTreeHelper(preorder, inorder, inorder_index_map, pre_idx, 0, inorder.size() - 1);
+}
+
+// 前序遍历以验证结果
+void preorderTraversal(TreeNode* root)
+{
+	if (root)
+	{
+		printf("%d ", root->m_value);
+		preorderTraversal(root->m_left);
+		preorderTraversal(root->m_right);
+	}
+}
+
+int main()
+{
+	std::vector<int> preorder = { 3, 9, 20, 15, 7 };
+	std::vector<int> inorder = { 9, 3, 15, 20, 7 };
+
+	TreeNode* root = buildTree(preorder, inorder);
+
+	printf("前序遍历结果: ");
+	preorderTraversal(root);
+	printf("\n");
+
+	getchar();
+
+	return 0;
+}
+
+
+
+
+//中后还原
+
+后序遍历（Postorder Traversal）的顺序是：左子树，右子树，根节点。
+中序遍历（Inorder Traversal）的顺序是：左子树，根节点，右子树。
+根据这两种遍历顺序，我们可以使用递归的方法来构建二叉树：
+
+从后序遍历中获取根节点的值，并创建一个根节点。
+在中序遍历中找到根节点的位置，该位置左侧的元素构成左子树的中序遍历，右侧的元素构成右子树的中序遍历。
+根据中序遍历中的根节点位置，可以确定左子树和右子树的大小。
+递归构建右子树，然后递归构建左子树。
+返回根节点。
+这个算法的关键点是在中序遍历中找到根节点的位置，以确定左子树和右子树的范围。一旦我们知道了这些范围，就可以递归构建整个二叉树。
+
+这种方法可以应用于具有唯一元素值的二叉树。如果树中存在重复值，可能需要更多的信息来确定根节点位置。如果每个元素都是唯一的，那么这个方法是有效的，可以根据给定的中序遍历和后序遍历结果构建出完整的二叉树。
+
+
+#include <cstdio>
+#include <vector>
+#include <unordered_map>
+
+// 二叉树节点的定义
+struct TreeNode
+{
+	int m_value;
+	TreeNode* m_left;
+	TreeNode* m_right;
+
+	TreeNode(int value) : m_value(value), m_left(nullptr), m_right(nullptr)
+	{
+	}
+};
+
+TreeNode* buildTreeHelper(std::vector<int>& inorder, std::vector<int>& postorder, std::unordered_map<int, int>& inorder_index_map, int& post_idx, int in_start, int in_end)
+{
+	if (post_idx < 0 || in_start > in_end)
+	{
+		return nullptr;
+	}
+
+	int root_val = postorder[post_idx];
+	TreeNode* root = new TreeNode(root_val);
+
+	int in_idx = inorder_index_map[root_val];
+
+	post_idx--;
+
+	root->m_right = buildTreeHelper(inorder, postorder, inorder_index_map, post_idx, in_idx + 1, in_end);
+	root->m_left = buildTreeHelper(inorder, postorder, inorder_index_map, post_idx, in_start, in_idx - 1);
+
+	return root;
+}
+
+// 根据中序遍历和后序遍历结果构建整个树
+TreeNode* buildTree(std::vector<int>& inorder, std::vector<int>& postorder)
+{
+	if (inorder.empty() || postorder.empty() || inorder.size() != postorder.size())
+	{
+		return nullptr;
+	}
+
+	std::unordered_map<int, int> inorder_index_map;
+	for (int i = 0; i < inorder.size(); i++)
+	{
+		inorder_index_map[inorder[i]] = i;
+	}
+
+	int post_idx = postorder.size() - 1;
+	return buildTreeHelper(inorder, postorder, inorder_index_map, post_idx, 0, inorder.size() - 1);
+}
+
+// 前序遍历以验证结果
+void preorderTraversal(TreeNode* root)
+{
+	if (root)
+	{
+		printf("%d ", root->m_value);
+		preorderTraversal(root->m_left);
+		preorderTraversal(root->m_right);
+	}
+}
+
+int main()
+{
+	std::vector<int> inorder = { 9, 3, 15, 20, 7 };
+	std::vector<int> postorder = { 9, 15, 7, 20, 3 };
+
+	TreeNode* root = buildTree(inorder, postorder);
+
+	printf("前序遍历结果: ");
+	preorderTraversal(root);
+	printf("\n");
+
+	getchar();
+
+	return 0;
+}
