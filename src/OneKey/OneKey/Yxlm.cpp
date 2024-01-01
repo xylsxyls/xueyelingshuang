@@ -75,10 +75,10 @@ void Yxlm::keyboard()
 	{
 		if (g_keyboard.m_keyHasDown['W'] && g_keyboard.m_keyDown['E'] && g_config.m_stopWatch.GetWatchTime() > 3000)
 		{
-			g_config.m_stopWatch.SetWatchTime(0);
-			std::shared_ptr<CNoFlashTask> spTask;
-			spTask.reset(new CNoFlashTask);
-			g_config.m_taskThread->PostTask(spTask, 1);
+			//g_config.m_stopWatch.SetWatchTime(0);
+			//std::shared_ptr<CNoFlashTask> spTask;
+			//spTask.reset(new CNoFlashTask);
+			//g_config.m_taskThread->PostTask(spTask, 1);
 		}
 		//if (tDown && stopWatch.GetWatchTime() > 500)
 		//{
