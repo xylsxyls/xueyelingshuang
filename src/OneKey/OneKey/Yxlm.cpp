@@ -11,6 +11,7 @@
 #include "CDwqrTask.h"
 #include "Cqdrw3Task.h"
 #include "CqNoFlashTask.h"
+#include "CWeaTask.h"
 
 void Yxlm::mouse()
 {
@@ -80,6 +81,20 @@ void Yxlm::keyboard()
 			//spTask.reset(new CNoFlashTask);
 			//g_config.m_taskThread->PostTask(spTask, 1);
 		}
+		else if (g_keyboard.m_keyDown['E'] && g_config.m_stopWatch.GetWatchTime() > 3000)
+		{
+			//static CStopWatch lastE;
+			//if (lastE.GetWatchTime() < 500)
+			//{
+			//	std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
+			//	spTask1->setParam('7', true);
+			//	g_config.m_taskThread->PostTask(spTask1);
+			//	std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+			//	spTask2->setParam('7', false);
+			//	g_config.m_taskThread->PostTask(spTask2);
+			//}
+			//lastE.SetWatchTime(0);
+		}
 		//if (tDown && stopWatch.GetWatchTime() > 500)
 		//{
 		//	tDown = false;
@@ -88,12 +103,12 @@ void Yxlm::keyboard()
 		//	spTask.reset(new CFlashTask);
 		//	taskThread->PostTask(spTask, 1);
 		//}
-		else if (g_keyboard.m_keyDown['A'] && g_config.m_stopWatch.GetWatchTime() > 500)
+		else if (!g_keyboard.m_keyHasDown[CTRL] && g_keyboard.m_keyDown['3'] && g_config.m_stopWatch.GetWatchTime() > 500)
 		{
-			//g_config.m_stopWatch.SetWatchTime(0);
-			//std::shared_ptr<CwrqTask> spTask;
-			//spTask.reset(new CwrqTask);
-			//g_config.m_taskThread->PostTask(spTask, 1);
+			g_config.m_stopWatch.SetWatchTime(0);
+			std::shared_ptr<CwrqTask> spTask;
+			spTask.reset(new CwrqTask);
+			g_config.m_taskThread->PostTask(spTask, 1);
 			//aDown = false;
 			//stopWatch.SetWatchTime(0);
 			//std::shared_ptr<Cqrw3Task> spTask;
@@ -227,6 +242,42 @@ void Yxlm::keyboard()
 	}
 	else if (g_config.m_type == 3)
 	{
+		if (g_keyboard.m_keyDown['W'] && g_config.m_stopWatch.GetWatchTime() > 2000)
+		{
+			g_config.m_stopWatch.SetWatchTime(0);
+			g_config.m_taskThread->StopAllTask();
+			g_config.m_taskThread->StopCurTask();
+			std::shared_ptr<CWeaTask> spTask(new CWeaTask);
+			spTask->setParam('W');
+			g_config.m_taskThread->PostTask(spTask, 1);
+		}
+		else if (g_keyboard.m_keyDown['E'] && g_config.m_stopWatch.GetWatchTime() > 2000)
+		{
+			g_config.m_stopWatch.SetWatchTime(0);
+			g_config.m_taskThread->StopAllTask();
+			g_config.m_taskThread->StopCurTask();
+			std::shared_ptr<CWeaTask> spTask(new CWeaTask);
+			spTask->setParam('E');
+			g_config.m_taskThread->PostTask(spTask, 1);
+		}
+		else if (g_keyboard.m_keyDown['A'] && g_config.m_stopWatch.GetWatchTime() > 2000)
+		{
+			g_config.m_stopWatch.SetWatchTime(0);
+			g_config.m_taskThread->StopAllTask();
+			g_config.m_taskThread->StopCurTask();
+			std::shared_ptr<CWeaTask> spTask(new CWeaTask);
+			spTask->setParam('A');
+			g_config.m_taskThread->PostTask(spTask, 1);
+		}
+		else if (g_keyboard.m_keyDown['R'] && g_config.m_stopWatch.GetWatchTime() > 2000)
+		{
+			g_config.m_stopWatch.SetWatchTime(0);
+			g_config.m_taskThread->StopAllTask();
+			g_config.m_taskThread->StopCurTask();
+			std::shared_ptr<CWeaTask> spTask(new CWeaTask);
+			spTask->setParam('R');
+			g_config.m_taskThread->PostTask(spTask, 1);
+		}
 		//if (threeDown && stopWatch.GetWatchTime() > 500)
 		//{
 		//	stopWatch.SetWatchTime(0);

@@ -388,7 +388,7 @@ void COneKeyDlg::OnSelchangeCombo1()
 		int32_t time = atoi(strTime.GetBuffer());
 		strTime.ReleaseBuffer();
 		std::shared_ptr<IntoGameTask> spIntoGameTask(new IntoGameTask);
-		spIntoGameTask->setParam(time);
+		spIntoGameTask->setParam(150);
 		CTaskThreadManager::Instance().GetThreadInterface(g_config.m_threadId)->PostTask(spIntoGameTask);
 	}
 	else if (str == WZ || str == ZGL || str == ZK)

@@ -261,6 +261,9 @@
     <ClInclude Include="SmySpaceTask.h">
       <Filter>CTask</Filter>
     </ClInclude>
+    <ClInclude Include="CWeaTask.h">
+      <Filter>CTask</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OneKey.cpp">
@@ -480,6 +483,9 @@
       <Filter>CTask</Filter>
     </ClCompile>
     <ClCompile Include="SmySpaceTask.cpp">
+      <Filter>CTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CWeaTask.cpp">
       <Filter>CTask</Filter>
     </ClCompile>
   </ItemGroup>

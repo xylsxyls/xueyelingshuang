@@ -2,7 +2,7 @@
 
 #define DF "µ¶·æ"
 #define JIE "½Ù"
-#define YJ "Ñı¼§"
+#define YJ "¿¨ÅÆ"
 #define KSD "¿¨Èø¶¡"
 #define KTLN "¿¨ÌØÁÕÄÈ"
 #define JYX "½øÓÎÏ·"
