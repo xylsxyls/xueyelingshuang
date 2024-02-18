@@ -15,7 +15,7 @@ void WaterTask::DoTask()
 		std::shared_ptr<TalkHeroAtomicTask> spTask(new TalkHeroAtomicTask);
 		spTask->setAccountIndex(m_accountIndex);
 		AssignThreadManager::instance().postTask(spTask);
-		Sleep(8000);
+		Sleep(10500);
 	}
 }
 
