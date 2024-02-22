@@ -19,6 +19,10 @@ void CWeaTask::DoTask()
 		{
 			continue;
 		}
+		if (m_exit)
+		{
+			return;
+		}
 		CKeyboard::InputString("www", 0);
 	}
 	else if (m_vkCode == 'E')
@@ -27,6 +31,10 @@ void CWeaTask::DoTask()
 		while (!m_exit && ScreenScript::FindPic(path + "res\\blue.png", xyls::Rect(788, 938, 860, 1010)).center().empty())
 		{
 			continue;
+		}
+		if (m_exit)
+		{
+			return;
 		}
 		CKeyboard::InputString("www", 0);
 	}
@@ -37,6 +45,10 @@ void CWeaTask::DoTask()
 		{
 			continue;
 		}
+		if (m_exit)
+		{
+			return;
+		}
 		CKeyboard::InputString("www", 0);
 	}
 	else if (m_vkCode == 'R')
@@ -45,6 +57,10 @@ void CWeaTask::DoTask()
 		while (!m_exit && ScreenScript::FindPic(path + "res\\yellow.png", xyls::Rect(788, 938, 860, 1010)).center().empty())
 		{
 			continue;
+		}
+		if (m_exit)
+		{
+			return;
 		}
 		CKeyboard::InputString("www", 0);
 	}

@@ -135,6 +135,8 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 	
 	auto& taskThread = CTaskThreadManager::Instance().GetThreadInterface(g_config.m_threadId);
 
+	uint32_t lastEnterWatchTime = g_keyboard.m_keyWatch[ENTER].GetWatchTime();
+
 	g_keyboard.acceptParam(wParam, lParam);
 
 	if (g_keyboard.m_keyUp[MINUS])
@@ -142,6 +144,22 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		g_config.m_textWatch.SetWatchTime(g_config.m_textWatchTime + 1000);
 	}
 
+	if (g_keyboard.m_keyDown[ENTER])
+	{
+		if (lastEnterWatchTime > g_config.m_textWatchTime)
+		{
+			g_keyboard.m_keyWatch[ENTER].SetWatchTime(0);
+			g_config.m_writeTime = true;
+			g_config.m_textWatch.SetWatchTime(0);
+		}
+		else
+		{
+			g_keyboard.m_keyWatch[ENTER].SetWatchTime(g_config.m_textWatchTime + 1000);
+			g_config.m_writeTime = false;
+			g_config.m_textWatch.SetWatchTime(g_config.m_textWatchTime + 1000);
+		}
+	}
+	
 	if (taskThread == nullptr || g_config.m_textWatch.GetWatchTime() < g_config.m_textWatchTime)
 	{
 		return CallNextHookEx(CHook::s_hHook, nCode, wParam, lParam);
