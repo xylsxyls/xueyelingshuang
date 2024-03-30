@@ -1,0 +1,3 @@
+sudo mkdir repo
+$ sudo chown $USER /home/yangn6/repo
+$ sudo chmod 755 /home/yangn6/repo

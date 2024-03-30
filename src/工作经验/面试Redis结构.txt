@@ -1,0 +1,64 @@
+字符串（String）：
+Redis中最简单的数据结构就是字符串，它可以存储文本、整数、浮点数等任意数据。字符串可以进行各种操作，如设置值、获取值、递增、递减等。这使得字符串在缓存、计数器、分布式锁等方面非常有用。
+SET mykey "Hello, Redis"
+GET mykey
+# 存储一个带有过期时间的字符串，过期时间为60秒
+SET mykey_with_ttl "This will expire in 60 seconds" EX 60
+# 仅在键不存在时才存储值
+SETNX mykey "This will only be set if mykey does not exist"
+
+哈希（Hash）：
+哈希是一种键值对的集合，其中每个键都对应一个值。在Redis中，哈希适用于存储一些结构化的数据，如用户信息、产品属性等。你可以用一个键存储多个字段和值，然后对字段进行单独的读写操作。
+HSET myhash field1 "value1"
+HMSET myhash field1 "value1" field2 "value2" field3 "value3"
+HGET myhash field1
+HGETALL myhash
+HDEL myhash field1 field2
+
+列表（List）：
+列表是一个有序的字符串元素集合，可以进行头部和尾部的插入、删除等操作。这使得列表非常适用于队列、栈以及需要保持元素顺序的场景。
+LPUSH mylist "element1"
+RPUSH mylist "element2"
+LPOP mylist
+RPOP mylist
+# 获取列表中的所有元素
+LRANGE mylist 0 -1
+# 获取列表的长度
+LLEN mylist
+
+无序集合（Set）：
+集合是无序的字符串元素的集合，它支持添加、删除、交集、并集等操作。集合常用于存储无重复元素的数据，如用户标签、好友列表等。
+# 添加单个成员到集合
+SADD myset "member1"
+# 添加多个成员到集合
+SADD myset "member2" "member3" "member4"
+# 获取集合中的所有成员
+SMEMBERS myset
+# 从集合中移除成员
+SREM myset "member1"
+
+有序集合（Sorted Set）：
+有序集合与集合类似，但每个元素都有一个分数，可以根据分数进行排序。分数可以为任意浮点数，可以为0，这使得有序集合非常适合实现排行榜、按分数排序的数据存储等。
+ZADD mysortedset 1 "member1"
+ZADD mysortedset 2 "member2" 3 "member3" 4 "member4"
+# 获取集合中的所有成员，并按分数升序排序
+ZRANGE mysortedset 0 -1
+# 按分数范围获取成员，左闭右开，加(2 (4表示包含2和4
+ZRANGEBYSCORE mysortedset 2 4
+# 从有序集合中移除成员
+ZREM mysortedset "member1"
+
+地理空间索引（Geospatial Index）：
+Redis还提供了地理空间数据的存储和查询功能，可以用于存储地理位置坐标信息，并进行附近位置的搜索。这对于构建位置服务和地理信息系统非常有用。
+# 添加地理位置数据到有序集合，经度，纬度，值
+GEOADD mylocations 13.361389 38.115556 "Paris"
+GEOADD mylocations 15.087269 37.502669 "Rome"
+GEOADD mylocations -74.006 40.714 "New York"
+# 计算两个地理位置之间的距离
+GEODIST mylocations "Paris" "Rome" 
+# 查找在指定半径内的地理位置点
+GEORADIUS mylocations -74.006 40.714 100 km
+# 查找在指定地理位置点附近的其他点
+GEORADIUSBYMEMBER mylocations "Paris" 200 km
+
+这些是Redis中常用的数据存储方式，每种方式都有自己的适用场景，你可以根据具体需求选择合适的数据结构。此外，Redis还支持多种高级数据结构和操作，如位图、HyperLogLog、发布订阅等，可以根据具体业务需求选择合适的功能和数据结构。

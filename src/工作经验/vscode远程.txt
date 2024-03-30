@@ -1,0 +1,7 @@
+vscode-server-linux-x64.tar.gz拷贝到服务器，解压放在~/.vscode-server/bin/{commit_id}下 863d2581ecda6849923a2118d93a088b0745d9d6
+vscode中下载插件Remote-SSH和Remote Development
+重启后在左侧电脑图标里选择ssh连接，配置里配
+Host 10.68.64.6
+  HostName 10.68.64.6
+  User yangn6
+连接后会自动启动服务端和初始化连接

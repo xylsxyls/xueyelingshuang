@@ -1,0 +1,1 @@
+rsync -a --info=progress2 /home/yangn6/repo/ ./
