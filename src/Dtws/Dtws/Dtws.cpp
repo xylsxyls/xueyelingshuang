@@ -280,7 +280,7 @@ void Dtws::init()
 
 	if (computerName == SECOND_COMPUTER)
 	{
-		g_config.m_screenPixel = 1366 * 768;
+		g_config.m_screenPixel = 1920 * 1080;
 	}
 
 	AssignThreadManager::instance().init(g_config.m_accountCount);
