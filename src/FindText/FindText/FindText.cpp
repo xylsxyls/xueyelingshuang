@@ -51,7 +51,7 @@ BOOL CFindTextApp::InitInstance()
 	InitCommonControlsEx(&InitCtrls);
 
 	CWinApp::InitInstance();
-    dump.DeclareDumpFile();
+	CDump::declareDumpFile();
 
 	AfxEnableControlContainer();
 

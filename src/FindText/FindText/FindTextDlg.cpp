@@ -15,6 +15,9 @@
 #include "CFindTextTask.h"
 #include "CEndTask.h"
 #include <Winuser.h>
+#include "D:\\SendToMessageTest.h"
+
+#pragma comment(linker, "/NODEFAULTLIB:nafxcw.lib")
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -122,13 +125,14 @@ BOOL CFindTextDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 
-	m_cpuCount = CSystem::GetCPUCount();
+	m_cpuCount = CSystem::GetCPUCoreCount();
 	szEnd = new atomic<bool>[m_cpuCount * 2];
 	//根据CPU个数开双倍线程
 	int i = 0;
 	while (i++ != m_cpuCount * 2)
 	{
-		CTaskThreadManager::Instance().Init(i);
+		//兼容老版CTaskThreadManager代码，线程号从1开始
+		CTaskThreadManager::Instance().Init();
 	}
 
     strLineFlag = "-------------------------------------------------"
@@ -244,9 +248,7 @@ void CFindTextDlg::GetInfoFromWindow()
 void CFindTextDlg::Search()
 {
     vector<string> vecOutFormat = CStringManager::split(m_strOutFormat, ".");
-	//不可访问的文件集合
-    vector<string> vecUnVisitPath;
-    vector<string> vecPath = CGetPath::FindFilePath("", m_strPath, 3, &vecUnVisitPath);
+    vector<string> vecPath = CSystem::findFilePath(m_strPath);
 	int i = -1;
 	while (i++ != m_cpuCount * 2 - 1)
 	{
@@ -277,8 +279,8 @@ void CFindTextDlg::Search()
 		std::shared_ptr<CEndTask> spTask;
 		spTask.reset(new CEndTask(i, this));
 		taskThread->PostTask(spTask, 1);
-		std::map<int32_t, int32_t> taskCountMap;
-		taskThread->GetWaitTaskCount(taskCountMap);
+		//std::map<int32_t, int32_t> taskCountMap;
+		//taskThread->GetWaitTaskCount(taskCountMap);
 	}
 }
 

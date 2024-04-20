@@ -2,6 +2,7 @@
 #include "CFindTextTask.h"
 #include "FindTextDlg.h"
 #include "CGetPath/CGetPathAPI.h"
+#include "CSystem/CSystemAPI.h"
 #include "Ctxt/CtxtAPI.h"
 #include "CCharset/CCharsetAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
@@ -66,7 +67,7 @@ void CFindTextTask::FindFromPath(const std::string& path, const std::string& key
 void CFindTextTask::FindFromFileName(const std::string& path, const std::string& key, bool& bAddFileName)
 {
 	//先看文件名
-	string strName = CGetPath::GetName(path, m_pFindTextDlg->bsuffixCheck == true ? 1 : 3);
+	string strName = CSystem::GetName(path, m_pFindTextDlg->bsuffixCheck == true ? 1 : 3);
 	//如果不区分大小写
 	if (m_pFindTextDlg->bBigSmallCheck == false)
 	{
@@ -83,7 +84,7 @@ void CFindTextTask::FindFromFileName(const std::string& path, const std::string&
 void CFindTextTask::OpenFileFind(const string& path, const string& key, bool& bAddFileName)
 {
 	Ctxt txt(path);
-	txt.LoadTxt(3, "");
+	txt.LoadTxt(Ctxt::ONE_LINE);
 
 	int line = -1;
 	while (line++ != txt.m_vectxt.size() - 1)
