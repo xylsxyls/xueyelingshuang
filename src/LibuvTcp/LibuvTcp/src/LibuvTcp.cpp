@@ -9,6 +9,8 @@
 #include "LibuvServer.h"
 #include <algorithm>
 
+#pragma comment(lib, "Dbghelp.lib")
+
 LibuvTcp::LibuvTcp():
 m_libuv(nullptr)
 {
