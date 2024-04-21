@@ -31,7 +31,7 @@ void SmallTask::DoTask()
 		Sleep(100);
 	}
 
-	CMouse::MoveAbsolute(xyls::Point(463, 1061), 0);
+	CMouse::MoveAbsolute(xyls::Point(582, 1060), 0);
 	CMouse::LeftClick(0);
 	Sleep(800);
 
