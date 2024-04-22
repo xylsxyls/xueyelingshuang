@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "DllTestMacro.h"
 
 class DllTestAPI DllTest
