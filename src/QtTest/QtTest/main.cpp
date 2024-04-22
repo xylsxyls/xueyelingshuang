@@ -1,4 +1,4 @@
-#include "QtTest.h"
+﻿#include "QtTest.h"
 #include <QtWidgets/QApplication>
 #include <stdint.h>
 

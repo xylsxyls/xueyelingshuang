@@ -1,4 +1,4 @@
-<UI version="4.0" >
+﻿<UI version="4.0" >
  <class>QtTestClass</class>
  <widget class="QMainWindow" name="QtTestClass" >
   <property name="objectName" >

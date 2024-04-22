@@ -1,4 +1,4 @@
-#include "QtTest1.h"
+﻿#include "QtTest1.h"
 //#include "11Controls/controls/COriginalButton.h"
 //#include "11Controls/controls/DialogManager.h"
 

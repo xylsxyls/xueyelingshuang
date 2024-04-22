@@ -1,4 +1,4 @@
-#ifndef QTTEST_H
+﻿#ifndef QTTEST_H
 #define QTTEST_H
 
 #include <QtWidgets/QMainWindow>
