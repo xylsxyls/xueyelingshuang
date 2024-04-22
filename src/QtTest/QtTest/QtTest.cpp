@@ -48,7 +48,7 @@ void QtTest::resizeEvent(QResizeEvent* eve)
 void QtTest::onButtonClicked()
 {
 	//TipDialogParam tipDialogParam;
-	//tipDialogParam.m_tip = QStringLiteral("µã»÷");
+	//tipDialogParam.m_tip = QStringLiteral("ç‚¹å‡»");
 	//tipDialogParam.m_parent = windowHandle();
 	//DialogManager::instance().makeDialog(tipDialogParam);
 }

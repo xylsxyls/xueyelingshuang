@@ -1,12 +1,12 @@
 #include "QtTest1.h"
-#include "11Controls/controls/COriginalButton.h"
-#include "11Controls/controls/DialogManager.h"
+//#include "11Controls/controls/COriginalButton.h"
+//#include "11Controls/controls/DialogManager.h"
 
 QtTest1::QtTest1(QWidget* parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
-	m_button = new COriginalButton(this);
+	//m_button = new COriginalButton(this);
 	init();
 }
 
@@ -24,8 +24,8 @@ void QtTest1::init()
 	QPalette pattle;
 	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
 	setPalette(pattle);
-	m_button->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
-	QObject::connect(m_button, &COriginalButton::clicked, this, &QtTest1::onButtonClicked);
+	//m_button->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	//QObject::connect(m_button, &COriginalButton::clicked, this, &QtTest1::onButtonClicked);
 }
 
 bool QtTest1::check()
@@ -41,13 +41,13 @@ void QtTest1::resizeEvent(QResizeEvent* eve)
 	{
 		return;
 	}
-	m_button->setGeometry(360, 120, 160, 80);
+	//m_button->setGeometry(360, 120, 160, 80);
 }
 
 void QtTest1::onButtonClicked()
 {
-	TipDialogParam tipDialogParam;
-	tipDialogParam.m_tip = QStringLiteral("µã»÷");
-	tipDialogParam.m_parent = windowHandle();
-	DialogManager::instance().makeDialog(tipDialogParam);
+	//TipDialogParam tipDialogParam;
+	//tipDialogParam.m_tip = QStringLiteral("ç‚¹å‡»");
+	//tipDialogParam.m_parent = windowHandle();
+	//DialogManager::instance().makeDialog(tipDialogParam);
 }

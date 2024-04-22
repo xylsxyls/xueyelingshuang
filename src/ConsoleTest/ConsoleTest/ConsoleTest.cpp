@@ -11,7 +11,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
 	if (eve == CTRL_CLOSE_EVENT)
 	{
-		//¹Ø±ÕÍË³öÊÂ¼ş
+		//å…³é—­é€€å‡ºäº‹ä»¶
 		//RCSend("close ConsoleTest");
 	}
 	return FALSE;
@@ -20,12 +20,12 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 #elif __unix__
-//ctrl+cÏûÏ¢²¶»ñº¯Êı
+//ctrl+cæ¶ˆæ¯æ•è·å‡½æ•°
 void CtrlCMessage(int eve)
 {
 	if (eve == 2)
 	{
-		//¹Ø±ÕÍË³öÊÂ¼ş
+		//å…³é—­é€€å‡ºäº‹ä»¶
 		//RCSend("close ConsoleTest");
 		exit(0);
 	}	

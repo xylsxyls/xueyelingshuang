@@ -6,12 +6,12 @@
 #include <signal.h>
 #include <stdlib.h>
 
-//ctrl+cÏûÏ¢²¶»ñº¯Êı
+//ctrl+cæ¶ˆæ¯æ•è·å‡½æ•°
 void CtrlCMessage(int eve)
 {
 	if (eve == 2)
 	{
-		//¹Ø±ÕÍË³öÊÂ¼ş
+		//å…³é—­é€€å‡ºäº‹ä»¶
 		//RCSend("close ConsoleTest");
 		exit(0);
 	}	
