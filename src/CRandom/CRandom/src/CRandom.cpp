@@ -2,12 +2,12 @@
 #include <time.h>
 #include <random>
 
-std::default_random_engine random((unsigned int)time(nullptr));
+std::default_random_engine randomSeed((unsigned int)time(nullptr));
 
 int CRandom::Int(int min, int max)
 {
 	std::uniform_int_distribution<int> dis(min, max);
-	return dis(random);
+	return dis(randomSeed);
 }
 
 int CRandom::Int(const std::vector<int>& vecInt)
@@ -18,7 +18,7 @@ int CRandom::Int(const std::vector<int>& vecInt)
 double CRandom::Double(double min, double max)
 {
 	std::uniform_real_distribution<double> dis(min, max);
-	return dis(random);
+	return dis(randomSeed);
 }
 
 double CRandom::Double(const std::vector<double>& vecDouble)

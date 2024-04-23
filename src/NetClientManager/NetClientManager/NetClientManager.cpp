@@ -68,7 +68,7 @@ CtrlC g_ctrlc;
 std::string g_ip = "127.0.0.1";//106.12.204.167
 int32_t g_port = 5203;
 
-int32_t main(char** argv, int32_t argc)
+int main(int argc, char** argv)
 {
 	std::vector<std::string> vecParam = CSystem::exeParam(argc, argv);
 	if (vecParam.size() >= 2)
