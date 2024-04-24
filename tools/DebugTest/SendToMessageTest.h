@@ -241,7 +241,7 @@ private:
 
 const SendToMessage messageTest;
 
-#elif __linux__
+#elif __unix__
 
 #include <iconv.h>
 #include <string.h>
@@ -250,6 +250,7 @@ const SendToMessage messageTest;
 #include <sys/msg.h>
 #include <sys/stat.h>
 #include <thread>
+#include <set>
 
 #define MSG_BUFFER_SIZE_FOR_MESSAGETEST 10240
 #define __SEND_THREADID__ 1
@@ -399,14 +400,14 @@ public:
 	    int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
 	    //?resize分配后string类会自动在最后分配\0，resize(5)则总长6
-	    str.resize(size);
+	    str.resize(size + 8);
 	    if (size != 0)
 	    {
 #ifdef _WIN32
 		    //?即便分配了足够内存，长度必须加1，否则会崩溃
-		    vsprintf_s(&str[0], size + 1, fmt, args);
+		    vsprintf_s(&str[8], size + 1, fmt, args);
 #elif __linux__
-		    vsnprintf(&str[0], size + 1, fmt, args);
+		    vsnprintf(&str[8], size + 1, fmt, args);
 #endif
 	    }
 	    va_end(args);
@@ -420,17 +421,15 @@ public:
             m_msg->send(std::to_string(currentPid), 1);
         }
         
-        std::string pre;
-        pre.resize(8);
-        *(int32_t*)&pre[0] = 0;
+        *(int32_t*)&str[0] = 0;
 #ifdef __SEND_THREADID__
         std::thread::id threadId = std::this_thread::get_id();
-        *(int32_t*)&pre[4] = (int32_t)(*(__gthread_t*)(char*)(&threadId));
+        *(int32_t*)&str[4] = (int32_t)(*(__gthread_t*)(char*)(&threadId));
 #else
-        *(int32_t*)&pre[4] = 0;
+        *(int32_t*)&str[4] = 0;
 #endif
 
-        bool result = m_msg->send(pre + str, currentPid);
+        bool result = m_msg->send(str, currentPid);
         if (!result)
         {
             delete m_msg;
@@ -463,14 +462,14 @@ public:
 	    int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
 	    //?resize分配后string类会自动在最后分配\0，resize(5)则总长6
-	    str.resize(size);
+	    str.resize(size + 8);
 	    if (size != 0)
 	    {
 #ifdef _WIN32
 		    //?即便分配了足够内存，长度必须加1，否则会崩溃
-		    vsprintf_s(&str[0], size + 1, fmt, args);
+		    vsprintf_s(&str[8], size + 1, fmt, args);
 #elif __linux__
-		    vsnprintf(&str[0], size + 1, fmt, args);
+		    vsnprintf(&str[8], size + 1, fmt, args);
 #endif
 	    }
 	    va_end(args);
@@ -484,17 +483,140 @@ public:
             m_msg->send(std::to_string(currentPid), 1);
         }
 
-        std::string pre;
-        pre.resize(8);
-        *(int32_t*)&pre[0] = peopleId;
+        *(int32_t*)&str[0] = peopleId;
 #ifdef __SEND_THREADID__
         std::thread::id threadId = std::this_thread::get_id();
-        *(int32_t*)&pre[4] = (int32_t)(*(__gthread_t*)(char*)(&threadId));
+        *(int32_t*)&str[4] = (int32_t)(*(__gthread_t*)(char*)(&threadId));
 #else
-        *(int32_t*)&pre[4] = 0;
+        *(int32_t*)&str[4] = 0;
 #endif
         
-        bool result = m_msg->send(pre + str, currentPid);
+        bool result = m_msg->send(str, currentPid);
+        if (!result)
+        {
+            delete m_msg;
+            m_msg = nullptr;
+        }
+        return result;
+    }
+
+    static bool SendToMessageTest(int32_t peopleId, uint32_t threadId, const char* fmt, ...)
+    {
+        static MsgLinuxForMessageTest* m_msg = nullptr;
+        if (access("/tmp/MessageTestLinux.file", 0) != 0)
+        {
+            if (m_msg != nullptr)
+            {
+                delete m_msg;
+                m_msg = nullptr;
+            }
+            return false;
+        }
+
+        std::string str;
+        va_list args;
+	    va_start(args, fmt);
+#ifdef _WIN32
+	    int size = _vscprintf(fmt, args);
+#elif __linux__
+	    va_list argcopy;
+	    va_copy(argcopy, args);
+	    int size = vsnprintf(nullptr, 0, fmt, argcopy);
+#endif
+	    //?resize分配后string类会自动在最后分配\0，resize(5)则总长6
+	    str.resize(size + 8);
+	    if (size != 0)
+	    {
+#ifdef _WIN32
+		    //?即便分配了足够内存，长度必须加1，否则会崩溃
+		    vsprintf_s(&str[8], size + 1, fmt, args);
+#elif __linux__
+		    vsnprintf(&str[8], size + 1, fmt, args);
+#endif
+	    }
+	    va_end(args);
+
+        static uint32_t currentPid = 0;
+
+        if (m_msg == nullptr)
+        {
+            m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
+            currentPid = getpid();
+            m_msg->send(std::to_string(currentPid), 1);
+        }
+
+        *(int32_t*)&str[0] = peopleId;
+#ifdef __SEND_THREADID__
+        *(int32_t*)&str[4] = threadId;
+#else
+        *(int32_t*)&str[4] = 0;
+#endif
+        
+        bool result = m_msg->send(str, currentPid);
+        if (!result)
+        {
+            delete m_msg;
+            m_msg = nullptr;
+        }
+        return result;
+    }
+
+    static bool SendToMessageTest(int32_t peopleId, uint32_t threadId, uint32_t processPid, const char* fmt, ...)
+    {
+        static MsgLinuxForMessageTest* m_msg = nullptr;
+        if (access("/tmp/MessageTestLinux.file", 0) != 0)
+        {
+            if (m_msg != nullptr)
+            {
+                delete m_msg;
+                m_msg = nullptr;
+            }
+            return false;
+        }
+
+        std::string str;
+        va_list args;
+	    va_start(args, fmt);
+#ifdef _WIN32
+	    int size = _vscprintf(fmt, args);
+#elif __linux__
+	    va_list argcopy;
+	    va_copy(argcopy, args);
+	    int size = vsnprintf(nullptr, 0, fmt, argcopy);
+#endif
+	    //?resize分配后string类会自动在最后分配\0，resize(5)则总长6
+	    str.resize(size + 8);
+	    if (size != 0)
+	    {
+#ifdef _WIN32
+		    //?即便分配了足够内存，长度必须加1，否则会崩溃
+		    vsprintf_s(&str[8], size + 1, fmt, args);
+#elif __linux__
+		    vsnprintf(&str[8], size + 1, fmt, args);
+#endif
+	    }
+	    va_end(args);
+
+        if (m_msg == nullptr)
+        {
+            m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
+        }
+
+        static std::set<uint32_t> processIdSet;
+        if (processIdSet.find(processPid) == processIdSet.end())
+        {
+            processIdSet.insert(processPid);
+            m_msg->send(std::to_string(processPid), 1);
+        }
+
+        *(int32_t*)&str[0] = peopleId;
+#ifdef __SEND_THREADID__
+        *(int32_t*)&str[4] = threadId;
+#else
+        *(int32_t*)&str[4] = 0;
+#endif
+        
+        bool result = m_msg->send(str, processPid);
         if (!result)
         {
             delete m_msg;
