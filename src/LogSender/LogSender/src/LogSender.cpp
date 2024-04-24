@@ -16,6 +16,7 @@ LogSenderAPI LogSenderInterface& logInstance()
 
 LogSender::LogSender()
 {
+	m_processPid = CSystem::currentProcessPid();
 	m_processName = CSystem::GetCurrentExeFullName();
 	m_loginName = CSystem::getComputerName();
 }
@@ -100,6 +101,8 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	bool isLocal = false;
 	logtest::LogTestMessage message;
 	message.set_logintdatetime(time);
+	message.set_logpeopleid(package.m_peopleId);
+	message.set_logprocesspid(m_processPid);
 	message.set_loglevel(package.m_logLevel);
 	message.set_logthreadid(CSystem::SystemThreadId());
 	message.set_logname(package.m_logName);
@@ -124,7 +127,7 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 		isLocal = true;
 	}
 	
-	send(strMessage, isSend ? LOGTEST_SEND_MESSAGE : isLocal ? LOGTEST_LOCAL_MESSAGE : LOGTEST_ONLY_MESSAGE);
+	send(strMessage, isSend ? LOGTEST_SEND_MESSAGE : isLocal ? LOGTEST_LOCAL_MESSAGE : LOGTEST_FILE_MESSAGE);
 }
 
 void LogSender::logTestClose()

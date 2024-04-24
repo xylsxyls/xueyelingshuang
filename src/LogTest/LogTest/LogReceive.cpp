@@ -72,7 +72,7 @@ void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, Me
 		*m_lastLogTime = CSystem::GetTickCount();
 	}
 	break;
-	case LOGTEST_ONLY_MESSAGE:
+	case LOGTEST_FILE_MESSAGE:
 	{
 		m_logQueue->push(strBuffer);
 		m_logSemaphore->signal();

@@ -1,4 +1,4 @@
-syntax = "proto3";
+﻿syntax = "proto3";
 package logtest;
 option optimize_for = LITE_RUNTIME;
 
@@ -7,12 +7,14 @@ option optimize_for = LITE_RUNTIME;
 message LogTestMessage
 {
 	uint64 logIntDateTime = 1;
-	int32 logLevel = 2;
-	uint32 logThreadId = 3;
-	string logName = 4;
-	string logFileName = 5;
-	string logFunName = 6;
-	string logProcessName = 7;
-	string logLoginName = 8;
-	string logBuffer = 9;
+	int32 logPeopleId = 2;
+	uint32 logProcessPid = 3;
+	int32 logLevel = 4;
+	uint32 logThreadId = 5;
+	string logName = 6;
+	string logFileName = 7;
+	string logFunName = 8;
+	string logProcessName = 9;
+	string logLoginName = 10;
+	string logBuffer = 11;
 }

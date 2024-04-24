@@ -121,6 +121,7 @@ private:
 	std::atomic<bool> m_isChange;
 	std::atomic<bool> m_update;
 	int32_t m_textContentCount;
+	QString m_lineHeight;
 	std::atomic<bool> m_isClear;
 	std::atomic<bool> m_isChangeState;
 	char m_processNameIdInit;

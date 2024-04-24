@@ -32,13 +32,21 @@ void ScreenTask::DoTask()
 			m_buffer.pop_back();
 			if (m_message.ParseFromString(m_buffer))
 			{
-				RCSend("NET %s %s", m_message.logloginname().c_str(), m_message.logbuffer().c_str());
+#ifdef _MSC_VER
+				RCSend("NET %s %s %s", m_message.logloginname().c_str(), m_message.logprocessname().c_str(), m_message.logbuffer().c_str());
+#elif __unix__
+				RCSend(m_message.logpeopleid(), m_message.logthreadid(), "NET %s %s %s", m_message.logloginname().c_str(), m_message.logprocessname().c_str(), m_message.logbuffer().c_str());
+#endif
 			}
 			continue;
 		}
 		if (m_message.ParseFromString(m_buffer))
 		{
-			RCSend("%s", m_message.logbuffer().c_str());
+#ifdef _MSC_VER
+			RCSend("LOG %s", m_message.logbuffer().c_str());
+#elif __unix__
+			RCSend(m_message.logpeopleid(), m_message.logthreadid(), m_message.logprocesspid(), "LOG %s", m_message.logbuffer().c_str());
+#endif
 		}
 	}
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 
 #ifdef _MSC_VER
 struct __declspec(novtable) LogPackage
@@ -16,6 +17,8 @@ public:
 		LOG_FATAL = 0x00010000,
 	};
 
+	//人员ID
+	int32_t m_peopleId;
 	//日志等级
 	LogLevel m_logLevel;
 	//是否向网络发送
@@ -33,7 +36,8 @@ public:
 
 	/** 构造函数
 	*/
-	LogPackage(LogLevel logLevel,
+	LogPackage(int32_t peopleId,
+		LogLevel logLevel,
 		bool isSendNet,
 		bool isSendScreen,
 		bool isWriteLog,
@@ -41,6 +45,7 @@ public:
 		const char* funName,
 		const char* logName)
 	{
+		m_peopleId = peopleId;
 		m_logLevel = logLevel;
 		m_isSendNet = isSendNet;
 		m_isSendScreen = isSendScreen;

@@ -62,6 +62,7 @@ private:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
+	uint32_t m_processPid;
 	std::string m_processName;
 	std::string m_loginName;
 #ifdef _MSC_VER

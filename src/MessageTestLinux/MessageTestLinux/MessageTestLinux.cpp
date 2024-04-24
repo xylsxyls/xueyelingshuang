@@ -42,7 +42,8 @@ MessageTestLinux::MessageTestLinux(QWidget* parent):
 	m_msg(nullptr),
 	m_isChange(false),
 	m_update(false),
-	m_textContentCount(32),
+	m_textContentCount(41),
+	m_lineHeight("14.093"),
 	m_isClear(false),
 	m_isChangeState(false),
 	m_processNameIdInit(64),
@@ -89,7 +90,7 @@ void MessageTestLinux::init()
 	m_textEdit->setBorderColor(QColor(204, 204, 204));
 	m_textEdit->setBackgroundColor(QColor(240, 240, 240));
 	m_textEdit->setFontSize(12);
-	m_textEdit->setFontFamily(QStringLiteral("Calibri"));
+	//m_textEdit->setFontFamily(QStringLiteral("Calibri"));
 	m_textEdit->ControlBorderForNormalHoverDisabled::setTextColor(QColor(100, 100, 100));
 
 	m_area = new Label(this);
@@ -540,7 +541,8 @@ void MessageTestLinux::onUpdateWindow()
 		{
 			allText.chop(1);
 		}
-		m_textEdit->setText(allText);
+		m_textEdit->setText("<html><head/><body><p style='line-height:" + m_lineHeight + "px;'>" + allText.toHtmlEscaped().replace("\n", "<br>") + "</p></body></html>");
+		//m_textEdit->setText(allText);
 	}
 	else
 	{
@@ -558,7 +560,8 @@ void MessageTestLinux::onUpdateWindow()
 		{
 			showText.chop(1);
 		}
-		m_textEdit->setText(showText);
+		m_textEdit->setText("<html><head/><body><p style='line-height:" + m_lineHeight + "px;'>" + showText.toHtmlEscaped().replace("\n", "<br>") + "</p></body></html>");
+		//m_textEdit->setText(showText);
 	}
 	m_area->setText(QStringLiteral("当前缓冲区剩余展示量：") + QString::fromStdString(std::to_string(m_areaCount - m_allCount)));
 	m_screen->setText(QStringLiteral("当前屏幕容量：") + QString::fromStdString(std::to_string(m_screenCount)));
