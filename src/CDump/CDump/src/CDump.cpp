@@ -47,7 +47,7 @@ static std::string GetCurrentExePath()
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
 #elif __unix__
-	(void)::readlink("/proc/self/exe", szFilePath, 1024);
+	int ignore __attribute__((unused)) = ::readlink("/proc/self/exe", szFilePath, 1024);
 #endif
 	return GetName(szFilePath, 4);
 }
@@ -59,16 +59,16 @@ static std::string GetCurrentExeName()
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
 	return GetName(szFilePath, 3);
 #elif __unix__
-	(void)::readlink("/proc/self/exe", szFilePath, 1024);
+	int ignore __attribute__((unused)) = ::readlink("/proc/self/exe", szFilePath, 1024);
 	return GetName(szFilePath, 1);
 #endif
 }
 
 #ifdef __unix__
 
-static std::string s_dumpFileName;
-static std::string s_currentExeName;
-static std::map<std::string, std::string> s_exeMaps;
+static char s_dumpFileDir[512] = {};
+static char s_currentExeName[128] = {};
+static char s_currentExePath[512] = {};
 
 static std::vector<std::string> Split(const std::string& splitString, const std::string& separate_character)
 {
@@ -186,10 +186,6 @@ static std::map<std::string, std::string> ParseProcMaps(const std::string& procM
 		{
 			std::string addr = match[1];
 			std::string lib = match[2];
-			if (GetName(lib, 1) == s_currentExeName)
-			{
-				lib = s_currentExeName;
-			}
 			if (HexSubtraction(addr, sizeof(&g_init) == 8 ? "100000000" : "10000").empty())
 			{
 				addr = "0";
@@ -237,12 +233,29 @@ static std::string GetAddr2lineOutput(const std::string& command)
 
 static void DumpFun(int signalNum)
 {
-	std::ofstream dumpFile(s_dumpFileName, std::ios::app | std::ios::binary);
+	std::string dumpFileDir = s_dumpFileDir;
+	std::map<std::string, std::string> exeMaps = ParseProcMaps(GetCurrentExeMap());
+	
+	char szBaseName[128] = {};
+	strncpy(szBaseName, (dumpFileDir.empty() ? (std::string(s_currentExePath) + "core-file_" + s_currentExeName).c_str() : (dumpFileDir + "core-file_" + s_currentExeName).c_str()), 128 - 1);
+	size_t uBaseNameLen = strlen(szBaseName);
+
+	time_t tNow = time(nullptr);
+	strftime(szBaseName + uBaseNameLen, 128 - uBaseNameLen, "_%Y%m%d_%H%M%S.log", localtime(&tNow));
+
+	std::string dumpFileName = szBaseName;
+
+	std::ofstream dumpFile(dumpFileName, std::ios::app | std::ios::binary);
+
+	for (auto it = exeMaps.begin(); it != exeMaps.end(); ++it)
+	{
+		dumpFile << "reference addr : " << it->first << " " << it->second << std::endl;
+	}
 
 	dumpFile << "signalNum = " << signalNum << std::endl;
 
-	void* buffer[1024] = {};
-	int32_t nptrs = backtrace(buffer, 1024);
+	void* buffer[128] = {};
+	int32_t nptrs = backtrace(buffer, 128);
 	dumpFile << "backtrace() returned " << nptrs << " addresses" << std::endl;
 
 	//backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO);
@@ -266,9 +279,9 @@ static void DumpFun(int signalNum)
 			continue;
 		}
 		std::string realPath = GetRealPath(vecStack[0]);
-		if (GetName(realPath, 1) == s_currentExeName)
+		if (GetName(realPath, 1) == std::string(s_currentExeName))
 		{
-			realPath = s_currentExeName;
+			//realPath = s_currentExeName;
 			vecStack[0] = s_currentExeName;
 		}
 		bool isFindPath = true;
@@ -289,11 +302,17 @@ static void DumpFun(int signalNum)
 
 		std::string offsetAddr = "0";
 		std::string function;
-		auto it = s_exeMaps.find(realPath);
-		if (it == s_exeMaps.end())
+		auto it = exeMaps.find(realPath);
+		if (it == exeMaps.end())
 		{
 			//dumpFile << "find realPath failed, realPath: " << GetRealPath(vecStack[0]) << " stackPath: " << vecStack[0] << "[1]: " << vecStack[1] << std::endl;
+			isFindPath = false;
 			function = vecStack[1];
+			size_t pos = function.find('+');
+			if (pos != std::string::npos)
+			{
+    			function.insert(pos + 1, "0x");
+			}
 		}
 		else
 		{
@@ -337,7 +356,7 @@ static void DumpFun(int signalNum)
 		{
 			dumpFile << " function: " << function;
 		}
-		if (!funOffsetAddr.empty())
+		if (!funOffsetAddr.empty() && isFindPath)
 		{
 			dumpFile << "+" << funOffsetAddr;
 		}
@@ -350,11 +369,11 @@ static void DumpFun(int signalNum)
 			dumpFile << " line: " << line;
 		}
 		dumpFile << " from ";
-		if (vecStack[0] != realPath)
+		if (vecStack[0] != realPath && GetName(realPath, 1) != std::string(s_currentExeName))
 		{
 			dumpFile << vecStack[0] << " => ";
 		}
-		dumpFile << realPath << std::endl;
+		dumpFile << (GetName(realPath, 1) == std::string(s_currentExeName) ? s_currentExeName : realPath) << std::endl;
 	}
 	
 	free(strings);
@@ -372,18 +391,12 @@ bool CDump::declareDumpFile(const std::string& dumpFileDir)
 #ifdef _MSC_VER
 	WIN32DUMP::CMiniDumper::Enable(GetCurrentExeName().c_str(), false, (dumpFileDir.empty() ? GetCurrentExePath().c_str() : dumpFileDir.c_str()));
 #elif __unix__
-	s_currentExeName = GetCurrentExeName();
-
-	s_exeMaps = ParseProcMaps(GetCurrentExeMap());
-	
-	char szBaseName[1024] = {};
-	strncpy(szBaseName, (dumpFileDir.empty() ? (GetCurrentExePath() + s_currentExeName).c_str() : (dumpFileDir + s_currentExeName).c_str()), 1024 - 1);
-	size_t uBaseNameLen = strlen(szBaseName);
-
-	time_t tNow = time(nullptr);
-	strftime(szBaseName + uBaseNameLen, 1024 - uBaseNameLen, "_%Y%m%d_%H%M%S.log", localtime(&tNow));
-
-	s_dumpFileName = szBaseName;
+	//在进入signal回调函数时，有些系统会自动清空容器全局变量
+	::memcpy(s_dumpFileDir, dumpFileDir.c_str(), dumpFileDir.size());
+	std::string currentExeName = GetCurrentExeName();
+	::memcpy(s_currentExeName, currentExeName.c_str(), currentExeName.size());
+	std::string currentExePath = GetCurrentExePath();
+	::memcpy(s_currentExePath, currentExePath.c_str(), currentExePath.size());
 
 	signal(SIGSEGV, DumpFun);
 	signal(SIGABRT, DumpFun);

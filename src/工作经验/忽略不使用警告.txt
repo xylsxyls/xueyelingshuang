@@ -1,0 +1,1 @@
+int ignore __attribute__((unused)) = 
