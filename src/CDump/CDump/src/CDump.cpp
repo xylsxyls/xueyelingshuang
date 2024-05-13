@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <regex>
 #include <iomanip>
+#include <unistd.h>
 #endif
 
 static bool g_init = false;

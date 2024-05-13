@@ -109,7 +109,7 @@
 #define LOG_SEND_PEOPLE_FILE_ERROR_EX(logName, peopleId, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(peopleId, LogPackage::LOG_ERROR, false, false, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
 #define LOG_SEND_PEOPLE_FILE_FATAL_EX(logName, peopleId, format, ...) if (LogSenderManager::instance().getInterface() != nullptr){LogSenderManager::instance().getInterface()->logSend(LogPackage(peopleId, LogPackage::LOG_FATAL, false, false, true, __FILE__, __FUNCTION__, logName), format, ##__VA_ARGS__);}
 
-typedef LogSenderInterface&(*LogSenderInstance)();
+typedef LogSenderInterface*(*LogSenderInstance)();
 
 class LogSenderManager
 {
@@ -231,7 +231,7 @@ public:
 		{
 			return nullptr;
 		}
-		m_interface = &(m_logInstance());
+		m_interface = m_logInstance();
 		return m_interface;
 	}
 

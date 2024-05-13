@@ -1,6 +1,6 @@
-"$CLOUD_REBUILD" NetSender 32 lib release same
-"$CLOUD_REBUILD" CDump 32 lib release same
-"$CLOUD_REBUILD" LogManager 32 lib release same
+"$CLOUD_REBUILD" NetSender 64 lib release same
+"$CLOUD_REBUILD" CDump 64 lib release same
+"$CLOUD_REBUILD" LogManager 64 lib release same
 
 #--------------------------------------------------------------------
 SHELL_FOLDER=$(cd $(dirname $0); pwd)

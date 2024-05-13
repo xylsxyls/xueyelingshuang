@@ -1,8 +1,8 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/LogTest/",
     "cmake.configureArgs": [
-        "-DLIBRARIESRELY=libCDump.a;libCorrespondParam.a;libLogManager.a;libIntDateTime.a;libNetSender.a;libProcessWork.a;libLockFreeQueue.a;libProtoMessage.a;libprotobuf-litestatic32.a;libReadWriteMutex.a;libCTaskThreadManager.a;libSemaphore.a;libSharedMemory.a;libCSystem.a;libCStringManager.a;libVariant.a;libAtomicMath.a",
-        "-DBIT=32",
+        "-DLIBRARIESRELY=libCDump.a;libCorrespondParam.a;libLogManager.a;libIntDateTime.a;libNetSender.a;libProcessWork.a;libLockFreeQueue.a;libProtoMessage.a;libprotobuf-litestatic64.a;libReadWriteMutex.a;libCTaskThreadManager.a;libSemaphore.a;libSharedMemory.a;libCSystem.a;libCStringManager.a;libVariant.a;libAtomicMath.a",
+        "-DBIT=64",
         "-DDEBUGRELEASE=release"
     ]
 }
