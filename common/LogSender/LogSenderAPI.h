@@ -168,7 +168,7 @@ public:
 #ifdef _MSC_VER
 			::GetModuleFileNameA(NULL, szFilePath, 1024);
 #elif __unix__
-			::readlink("/proc/self/exe", szFilePath, 1024);
+			int ignore __attribute__((unused)) = ::readlink("/proc/self/exe", szFilePath, 1024);
 #endif
 			std::string path = szFilePath;
 			int32_t left = (int32_t)path.find_last_of("/\\");
