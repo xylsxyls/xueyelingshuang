@@ -28,7 +28,7 @@ public:
 
 extern "C"
 {
-	LogSenderAPI LogSenderInterface& logInstance();
+	LogSenderAPI LogSenderInterface* logInstance();
 }
 
 class LogSenderAPI LogSender : public LogSenderInterface

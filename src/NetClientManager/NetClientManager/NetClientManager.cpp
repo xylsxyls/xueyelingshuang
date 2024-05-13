@@ -65,7 +65,7 @@ struct CtrlC
 CtrlC g_ctrlc;
 #endif
 
-std::string g_ip = "127.0.0.1";//106.12.204.167 49.235.147.184
+std::string g_ip = "49.235.147.184";//106.12.204.167 49.235.147.184
 int32_t g_port = 5203;
 
 int main(int argc, char** argv)

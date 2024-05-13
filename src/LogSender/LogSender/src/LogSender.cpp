@@ -9,9 +9,9 @@
 #endif
 #include "LogTestMessage.pb.h"
 
-LogSenderAPI LogSenderInterface& logInstance()
+LogSenderAPI LogSenderInterface* logInstance()
 {
-	return LogSender::instance();
+	return &LogSender::instance();
 }
 
 LogSender::LogSender()
