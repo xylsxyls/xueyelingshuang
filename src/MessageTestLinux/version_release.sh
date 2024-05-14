@@ -4,3 +4,4 @@
 "$CLOUD_REBUILD" LockFreeQueue 32 lib release same
 "$CLOUD_REBUILD" FiniteDeque 32 lib release same
 "$CLOUD_REBUILD" ReadWriteMutex 32 lib release same
+"$CLOUD_REBUILD" CDump 32 lib release same

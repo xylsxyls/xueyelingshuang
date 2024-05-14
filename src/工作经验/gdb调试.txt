@@ -2,3 +2,4 @@
 (gdb) info registers  # 查看寄存器值
 (gdb) info variables  # 查看当前作用域内的变量
 (gdb) info frame      # 查看当前帧信息
+thread apply all bt

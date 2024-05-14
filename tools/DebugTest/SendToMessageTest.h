@@ -432,8 +432,18 @@ public:
         bool result = m_msg->send(str, currentPid);
         if (!result)
         {
+			//因MessageTest关闭，导致内部msgId失效，重新创建
             delete m_msg;
-            m_msg = nullptr;
+			m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
+            m_msg->send(std::to_string(currentPid), 1);
+			//创建后重新发送一次
+			bool resendResult = m_msg->send(str, currentPid);
+			if (!resendResult)
+			{
+				printf("resend error = %d\n", (int)resendResult);
+				delete m_msg;
+				m_msg = nullptr;
+			}
         }
         return result;
     }
@@ -494,8 +504,18 @@ public:
         bool result = m_msg->send(str, currentPid);
         if (!result)
         {
+			//因MessageTest关闭，导致内部msgId失效，重新创建
             delete m_msg;
-            m_msg = nullptr;
+			m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
+            m_msg->send(std::to_string(currentPid), 1);
+			//创建后重新发送一次
+			bool resendResult = m_msg->send(str, currentPid);
+			if (!resendResult)
+			{
+				printf("resend error = %d\n", (int)resendResult);
+				delete m_msg;
+				m_msg = nullptr;
+			}
         }
         return result;
     }
@@ -555,8 +575,18 @@ public:
         bool result = m_msg->send(str, currentPid);
         if (!result)
         {
+			//因MessageTest关闭，导致内部msgId失效，重新创建
             delete m_msg;
-            m_msg = nullptr;
+			m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
+            m_msg->send(std::to_string(currentPid), 1);
+			//创建后重新发送一次
+			bool resendResult = m_msg->send(str, currentPid);
+			if (!resendResult)
+			{
+				printf("resend error = %d\n", (int)resendResult);
+				delete m_msg;
+				m_msg = nullptr;
+			}
         }
         return result;
     }
@@ -619,8 +649,18 @@ public:
         bool result = m_msg->send(str, processPid);
         if (!result)
         {
+			//因MessageTest关闭，导致内部msgId失效，重新创建
             delete m_msg;
-            m_msg = nullptr;
+			m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
+            m_msg->send(std::to_string(processPid), 1);
+			//创建后重新发送一次
+			bool resendResult = m_msg->send(str, processPid);
+			if (!resendResult)
+			{
+				printf("resend error = %d\n", (int)resendResult);
+				delete m_msg;
+				m_msg = nullptr;
+			}
         }
         return result;
     }

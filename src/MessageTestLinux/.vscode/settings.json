@@ -1,7 +1,7 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/MessageTestLinux/",
     "cmake.configureArgs": [
-        "-DLIBRARIESRELY=libQtControls.a;libCTaskThreadManager.a;libMsgLinux.a;libQssString.a;libCStringManager.a;libCSystem.a;libSemaphore.a;libEO_XmlSax2Parser.a;libAtomicMath.a;libReadWriteMutex.a",
+        "-DLIBRARIESRELY=libQtControls.a;libCTaskThreadManager.a;libMsgLinux.a;libQssString.a;libCStringManager.a;libCSystem.a;libSemaphore.a;libEO_XmlSax2Parser.a;libAtomicMath.a;libReadWriteMutex.a;libCDump.a",
         "-DBIT=32",
         "-DDEBUGRELEASE=release"
     ]

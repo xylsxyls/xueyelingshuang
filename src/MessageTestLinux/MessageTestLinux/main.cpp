@@ -6,6 +6,7 @@
 #include <signal.h>
 #include "CSystem/CSystemAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include "CDump/CDumpAPI.h"
 
 //ctrl+c消息捕获函数
 void CtrlCMessage(int eve)
@@ -36,6 +37,7 @@ CtrlC g_ctrlc;
 
 int32_t main(int argc, char* argv[])
 {
+	CDump::declareDumpFile();
 	QApplication app(argc, argv);
 	MessageTestLinux window;
 	window.show();
