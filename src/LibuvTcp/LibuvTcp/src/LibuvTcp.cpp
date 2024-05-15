@@ -37,7 +37,7 @@ void onRead(uv_stream_t* sender, ssize_t nread, const uv_buf_t* buf)
 		}
 		else
 		{
-			printf("Read error %s, nread = %d\n", uv_err_name(nread), nread);
+			printf("Read error %s, nread = %zd\n", uv_err_name(nread), nread);
 		}
 		delete[] buf->base;
 		
@@ -243,18 +243,8 @@ void onAsyncCloseCallback(uv_async_t* handle)
 		uv_close((uv_handle_t*)libuvServer->m_server, onTcpClosed);
 	}
 
+	//执行这句后loop中的uv_run阻塞函数会返回
 	uv_close((uv_handle_t*)libuv->m_asyncCloseHandle, onAsyncClosed);
-
-	if (libuv->m_isClient)
-	{
-		LibuvClient* libuvClient = (LibuvClient*)libuv;
-		delete libuvClient;
-	}
-	else
-	{
-		LibuvServer* libuvServer = (LibuvServer*)libuv;
-		delete libuvServer;
-	}
 }
 
 bool LibuvTcp::initClient(const char* ip, int32_t port)
@@ -357,6 +347,17 @@ void LibuvTcp::loop()
 	libuv->m_queue = nullptr;
 	delete libuv->m_loop;
 	libuv->m_loop = nullptr;
+
+	if (libuv->m_isClient)
+	{
+		LibuvClient* libuvClient = (LibuvClient*)libuv;
+		delete libuvClient;
+	}
+	else
+	{
+		LibuvServer* libuvServer = (LibuvServer*)libuv;
+		delete libuvServer;
+	}
 }
 
 void LibuvTcp::stop()
