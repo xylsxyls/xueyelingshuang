@@ -89,6 +89,8 @@ struct CConfig
 	bool m_blxca = false;
 	bool m_blxcRight = false;
 
+	bool m_writeTime = false;
+
 	uint32_t m_rightClickTime = 2000;
 
 	xyls::Point m_speakBeginPoint = { 3479, 910 };

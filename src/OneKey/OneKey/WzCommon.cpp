@@ -65,6 +65,18 @@ void WzCommon::keyboard()
 		{
 			g_config.m_moveUse = true;
 		}
+		else if (g_config.m_type == 10)
+		{
+			std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
+			spTask1->setParam('9');
+			g_config.m_taskThread->PostTask(spTask1, 1);
+			std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+			spTask2->setParam('8');
+			g_config.m_taskThread->PostTask(spTask2, 1);
+			std::shared_ptr<CKeyTask> spTask3(new CKeyTask);
+			spTask3->setParam('7');
+			g_config.m_taskThread->PostTask(spTask3, 1);
+		}
 	}
 	if (g_keyboard.m_keyUp[CTRL] && g_keyboard.m_currentKey == CTRL)
 	{
