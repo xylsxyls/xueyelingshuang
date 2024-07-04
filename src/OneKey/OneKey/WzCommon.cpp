@@ -65,7 +65,7 @@ void WzCommon::keyboard()
 		{
 			g_config.m_moveUse = true;
 		}
-		else if (g_config.m_type == 10)
+		if (g_config.m_type == 10)
 		{
 			std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
 			spTask1->setParam('9');
