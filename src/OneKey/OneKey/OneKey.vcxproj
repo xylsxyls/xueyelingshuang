@@ -152,6 +152,7 @@
     <ClInclude Include="CrspaceTask.h" />
     <ClInclude Include="CRMoveTask.h" />
     <ClInclude Include="CrTask.h" />
+    <ClInclude Include="SleepTask.h" />
     <ClInclude Include="CSleepTask.h" />
     <ClInclude Include="CSmallFlashTask.h" />
     <ClInclude Include="CTabRTask.h" />
@@ -233,6 +234,7 @@
     <ClCompile Include="CrspaceTask.cpp" />
     <ClCompile Include="CRMoveTask.cpp" />
     <ClCompile Include="CrTask.cpp" />
+    <ClCompile Include="SleepTask.cpp" />
     <ClCompile Include="CSleepTask.cpp" />
     <ClCompile Include="CSmallFlashTask.cpp" />
     <ClCompile Include="CTabRTask.cpp" />

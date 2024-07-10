@@ -8,6 +8,7 @@
 #include "CMouse/CMouseAPI.h"
 #include "HeroTask.h"
 #include "SpeakTask.h"
+#include "SleepTask.h"
 
 void WzCommon::mouse()
 {
@@ -69,13 +70,22 @@ void WzCommon::keyboard()
 		{
 			std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
 			spTask1->setParam('9');
-			g_config.m_taskThread->PostTask(spTask1, 1);
+			g_config.m_taskThread->PostTask(spTask1);
 			std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
 			spTask2->setParam('8');
-			g_config.m_taskThread->PostTask(spTask2, 1);
+			g_config.m_taskThread->PostTask(spTask2);
 			std::shared_ptr<CKeyTask> spTask3(new CKeyTask);
 			spTask3->setParam('7');
-			g_config.m_taskThread->PostTask(spTask3, 1);
+			g_config.m_taskThread->PostTask(spTask3);
+			std::shared_ptr<CKeyTask> spTask4(new CKeyTask);
+			spTask4->setParam(VK_LWIN);
+			g_config.m_taskThread->PostTask(spTask4);
+			std::shared_ptr<SleepTask> spTask5(new SleepTask);
+			spTask5->setParam(10);
+			g_config.m_taskThread->PostTask(spTask5);
+			std::shared_ptr<CKeyTask> spTask6(new CKeyTask);
+			spTask6->setParam(VK_LWIN);
+			g_config.m_taskThread->PostTask(spTask6);
 		}
 	}
 	if (g_keyboard.m_keyUp[CTRL] && g_keyboard.m_currentKey == CTRL)
