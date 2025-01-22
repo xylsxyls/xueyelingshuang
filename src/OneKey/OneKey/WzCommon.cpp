@@ -77,15 +77,15 @@ void WzCommon::keyboard()
 			std::shared_ptr<CKeyTask> spTask3(new CKeyTask);
 			spTask3->setParam('7');
 			g_config.m_taskThread->PostTask(spTask3);
-			std::shared_ptr<CKeyTask> spTask4(new CKeyTask);
-			spTask4->setParam(VK_LWIN);
-			g_config.m_taskThread->PostTask(spTask4);
-			std::shared_ptr<SleepTask> spTask5(new SleepTask);
-			spTask5->setParam(20);
-			g_config.m_taskThread->PostTask(spTask5);
-			std::shared_ptr<CKeyTask> spTask6(new CKeyTask);
-			spTask6->setParam(VK_LWIN);
-			g_config.m_taskThread->PostTask(spTask6);
+			//std::shared_ptr<CKeyTask> spTask4(new CKeyTask);
+			//spTask4->setParam(VK_F11);
+			//g_config.m_taskThread->PostTask(spTask4);
+			//std::shared_ptr<SleepTask> spTask5(new SleepTask);
+			//spTask5->setParam(20);
+			//g_config.m_taskThread->PostTask(spTask5);
+			//std::shared_ptr<CKeyTask> spTask6(new CKeyTask);
+			//spTask6->setParam(VK_F11);
+			//g_config.m_taskThread->PostTask(spTask6);
 		}
 	}
 	if (g_keyboard.m_keyUp[CTRL] && g_keyboard.m_currentKey == CTRL)

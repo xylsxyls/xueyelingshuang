@@ -2,6 +2,7 @@
 #include "CTabRTask.h"
 #include "CMouse/CMouseAPI.h"
 #include "Config.h"
+#include "CKeyboard/CKeyboardAPI.h"
 
 void CTabRTask::DoTask()
 {
@@ -12,4 +13,8 @@ void CTabRTask::DoTask()
 	CMouse::LeftClick(0);
 	//Sleep(50);
 	CMouse::MoveAbsolute(currentPos, 0);
+	Sleep(50);
+	CKeyboard::KeyPress(VK_LWIN, 0);
+	Sleep(20);
+	CKeyboard::KeyPress(VK_LWIN, 0);
 }
