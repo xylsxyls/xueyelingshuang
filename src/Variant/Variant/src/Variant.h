@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "VariantMacro.h"
 #include <stdint.h>
 #include <string>
@@ -8,7 +8,7 @@ class VariantAPI Variant
 public:
 	enum VariantType
 	{
-		/** ³õÊ¼»¯
+		/** åˆå§‹åŒ–
 		*/
 		INIT,
 
@@ -28,7 +28,7 @@ public:
 		*/
 		STRING,
 
-		/** ¶ş½øÖÆº¬\0
+		/** äºŒè¿›åˆ¶å«\0
 		*/
 		BLOB
 	};
@@ -55,7 +55,7 @@ public:
 	Variant operator=(const char* value);
 	Variant operator=(const std::string& value);
 
-	//Ö»±È½ÏÄÚ´æ
+	//åªæ¯”è¾ƒå†…å­˜
 	bool operator==(const Variant& value);
 	bool operator!=(const Variant& value);
 
@@ -68,16 +68,16 @@ public:
 
 	void clear();
 
-	//ÒÔ×Ö·û´®ĞÎÊ½Êä³ö
+	//ä»¥å­—ç¬¦ä¸²å½¢å¼è¾“å‡º
 	std::string toString() const;
 
-	//ÒÔÄÚ²¿µÄ¶ş½øÖÆ´æ´¢Êä³ö
+	//ä»¥å†…éƒ¨çš„äºŒè¿›åˆ¶å­˜å‚¨è¾“å‡º
 	std::string toBlob() const;
 
-	//ÒÔ×Ö·û´®ĞÎÊ½Êä³ö
+	//ä»¥å­—ç¬¦ä¸²å½¢å¼è¾“å‡º
 	void toString(std::string& result) const;
 
-	//ÒÔÄÚ²¿µÄ¶ş½øÖÆ´æ´¢Êä³ö
+	//ä»¥å†…éƒ¨çš„äºŒè¿›åˆ¶å­˜å‚¨è¾“å‡º
 	void toBlob(std::string& result) const;
 
 protected:

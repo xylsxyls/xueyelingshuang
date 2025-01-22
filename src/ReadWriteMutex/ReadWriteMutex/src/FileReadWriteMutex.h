@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "ReadWriteMutexBase.h"
 #include <string>
 
@@ -9,12 +9,12 @@ typedef void* HANDLE;
 class ReadWriteMutexAPI FileReadWriteMutex : public ReadWriteMutexBase
 {
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] filePath ÎÄ¼şÂ·¾¶£¬Èç¹ûÊÇÃû×Ö»áÔÚÁÙÊ±Â·¾¶ÏÂ´´½¨ÎÄ¼ş£¬windowsÏÂ»áÉ¾³ıÁÙÊ±ÎÄ¼ş£¬Èç¹û´«Èë¾ø¶ÔÂ·¾¶Ôò²»É¾³ı
+	/** æ„é€ å‡½æ•°
+	@param [in] filePath æ–‡ä»¶è·¯å¾„ï¼Œå¦‚æœæ˜¯åå­—ä¼šåœ¨ä¸´æ—¶è·¯å¾„ä¸‹åˆ›å»ºæ–‡ä»¶ï¼Œwindowsä¸‹ä¼šåˆ é™¤ä¸´æ—¶æ–‡ä»¶ï¼Œå¦‚æœä¼ å…¥ç»å¯¹è·¯å¾„åˆ™ä¸åˆ é™¤
 	*/
 	FileReadWriteMutex(const std::string& filePath);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~FileReadWriteMutex();
 

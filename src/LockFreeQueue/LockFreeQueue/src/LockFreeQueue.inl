@@ -1,4 +1,4 @@
-#ifndef _LOCK_FREE_QUEUE_H__
+﻿#ifndef _LOCK_FREE_QUEUE_H__
 #define _LOCK_FREE_QUEUE_H__
 #include "LockFreeQueue.h"
 #include "AtomicMath/AtomicMathAPI.h"

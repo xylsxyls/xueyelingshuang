@@ -1,4 +1,4 @@
-#include "ReadWriteMutex.h"
+ï»¿#include "ReadWriteMutex.h"
 
 ReadWriteMutex::ReadWriteMutex()
 #ifdef __SUPPORT_XP__
@@ -58,7 +58,7 @@ void ReadWriteMutex::unread()
 	std::unique_lock<std::mutex> lock(m_writeMutex);
 	if (--m_readCount == 0)
 	{
-		//½ĞĞÑÒ»¸öµÈ´ıµÄĞ´²Ù×÷
+		//å«é†’ä¸€ä¸ªç­‰å¾…çš„å†™æ“ä½œ
 		m_condition.notify_one();
 	}
 #else
@@ -101,7 +101,7 @@ void ReadWriteMutex::unwrite()
 #ifdef __SUPPORT_XP__
 	std::unique_lock<std::mutex> lock(m_writeMutex);
 	m_readCount = 0;
-	//½ĞĞÑËùÓĞµÈ´ıµÄ¶ÁºÍĞ´²Ù×÷
+	//å«é†’æ‰€æœ‰ç­‰å¾…çš„è¯»å’Œå†™æ“ä½œ
 	m_condition.notify_all();
 #else
 	ReleaseSRWLockExclusive(&m_writeMutex);

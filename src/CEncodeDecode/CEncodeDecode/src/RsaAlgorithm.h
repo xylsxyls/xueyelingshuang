@@ -1,142 +1,142 @@
-#ifndef RSA_H
+ï»¿#ifndef RSA_H
 #define RSA_H
 
 #include <string>
 
-//! MAXÊÇÊı×éµÄ×î´ó¸öÊı£¬LENÎª½á¹¹ÌåslinkµÄÕ¼ÓÃÄÚ´æ¿Õ¼ä´óĞ¡ */
+//! MAXæ˜¯æ•°ç»„çš„æœ€å¤§ä¸ªæ•°ï¼ŒLENä¸ºç»“æ„ä½“slinkçš„å ç”¨å†…å­˜ç©ºé—´å¤§å° */
 #define RSA_ALGORITHM_MAX 100
 #define RSA_ALGORITHM_LEN sizeof(struct RsaAlgorithm::slink)
-//! ÄÜ¹»½øĞĞ¶¯Ì¬Á´½Ó¿â±àÒëµÄRSAÀà
+//! èƒ½å¤Ÿè¿›è¡ŒåŠ¨æ€é“¾æ¥åº“ç¼–è¯‘çš„RSAç±»
 /*!
 @see class _declspec(dllexport) RSA
-½«RSAËã·¨Ğ´³É¶¯Ì¬Á´½Ó¿âµÄĞÎÊ½·½±ãµ÷ÓÃ£¬ÆäÖĞÓĞ¹«Ô¿£¬Ë½Ô¿ºÍÃ÷ÎÄ
-¾Í¿ÉÒÔ½øĞĞÃ÷ÎÄµÄ¼ÓÃÜºÍ½âÃÜ
+å°†RSAç®—æ³•å†™æˆåŠ¨æ€é“¾æ¥åº“çš„å½¢å¼æ–¹ä¾¿è°ƒç”¨ï¼Œå…¶ä¸­æœ‰å…¬é’¥ï¼Œç§é’¥å’Œæ˜æ–‡
+å°±å¯ä»¥è¿›è¡Œæ˜æ–‡çš„åŠ å¯†å’Œè§£å¯†
 */
 class RsaAlgorithm
 {
 public:
-	//! ĞÂ¶¨ÒåµÄÊı¾İ½á¹¹slink
+	//! æ–°å®šä¹‰çš„æ•°æ®ç»“æ„slink
 	/*!
 	@see struct slink
-	Êı¾İ½á¹¹ÖĞ£¬bignum´æ´¢µÄÊÇËæ»úÉú³ÉµÄ´óÊı£¬nextÊÇÖ¸ÏòºóÃæµÄÖ¸Õë
+	æ•°æ®ç»“æ„ä¸­ï¼Œbignumå­˜å‚¨çš„æ˜¯éšæœºç”Ÿæˆçš„å¤§æ•°ï¼Œnextæ˜¯æŒ‡å‘åé¢çš„æŒ‡é’ˆ
 	@see int bignum[MAX]
 	*/
 	typedef struct slink
 	{
-		int bignum[RSA_ALGORITHM_MAX];/*!< bignum[98]ÓÃÀ´±ê¼ÇÕı¸ººÅ£¬1Õı£¬0¸ºbignum[99]À´±ê¼ÇÊµ¼Ê³¤¶È*/
+		int bignum[RSA_ALGORITHM_MAX];/*!< bignum[98]ç”¨æ¥æ ‡è®°æ­£è´Ÿå·ï¼Œ1æ­£ï¼Œ0è´Ÿbignum[99]æ¥æ ‡è®°å®é™…é•¿åº¦*/
 		struct slink* next;
 	}slink;
 
 public:
-	//! RSA µÄ¹¹Ôìº¯Êı
+	//! RSA çš„æ„é€ å‡½æ•°
 	/*!
 	@see RSA()
-	ÆäÖĞÓ¦¸Ã¶ÔRSAÀàÖĞµÄÒ»Ğ©±äÁ¿½øĞĞÏàÓ¦µÄ³õÊ¼»¯
+	å…¶ä¸­åº”è¯¥å¯¹RSAç±»ä¸­çš„ä¸€äº›å˜é‡è¿›è¡Œç›¸åº”çš„åˆå§‹åŒ–
 	*/
 	RsaAlgorithm();
-	//! RSAµÄÎö¹¹º¯Êı
+	//! RSAçš„ææ„å‡½æ•°
 	/*!
 	@see ~RSA()
-	ÊÍ·ÅÄÚ´æ
+	é‡Šæ”¾å†…å­˜
 	*/
 	~RsaAlgorithm();
 
 public:
-	//! RSAµÄ´óÊıÔËËãº¯Êı¿â
-	/** @´óÊı±È½Ïº¯Êı
+	//! RSAçš„å¤§æ•°è¿ç®—å‡½æ•°åº“
+	/** @å¤§æ•°æ¯”è¾ƒå‡½æ•°
 	@see int cmp(int, int)
 	*/
 	int cmp(int a1[RSA_ALGORITHM_MAX], int a2[RSA_ALGORITHM_MAX]);
-	/** @´óÊıÀàĞÍ×ª»»º¯Êı
+	/** @å¤§æ•°ç±»å‹è½¬æ¢å‡½æ•°
 	@see void mov(int a[MAX],int *b);
 	*/
 	void mov(int a[RSA_ALGORITHM_MAX], int *b);
-	/** @´óÊı³Ë»ıº¯Êı
+	/** @å¤§æ•°ä¹˜ç§¯å‡½æ•°
 	@see void mul(int a1[MAX],int a2[MAX],int *c);
 	*/
 	void mul(int a1[RSA_ALGORITHM_MAX], int a2[RSA_ALGORITHM_MAX], int *c);
-	/** @´óÊıÏà¼Óº¯Êı
+	/** @å¤§æ•°ç›¸åŠ å‡½æ•°
 	@see void add(int a1[MAX],int a2[MAX],int *c);
 	*/
 	void add(int a1[RSA_ALGORITHM_MAX], int a2[RSA_ALGORITHM_MAX], int *c);
-	/** @´óÊı´óÊıÏà¼õº¯Êı
+	/** @å¤§æ•°å¤§æ•°ç›¸å‡å‡½æ•°
 	@see  void sub(int a1[MAX],int a2[MAX],int *c);
 	*/
 	void sub(int a1[RSA_ALGORITHM_MAX], int a2[RSA_ALGORITHM_MAX], int *c);
-	/*! @´óÊıÈ¡Ä£º¯Êı
+	/*! @å¤§æ•°å–æ¨¡å‡½æ•°
 	@see void mod(int a[MAX],int b[MAX],int  *c);
-	@attention /c=a mod b//×¢Òâ£º¾­¼ìÑéÖªµÀ´Ë´¦AºÍCµÄÊı×é¶¼¸Ä±äÁË¡£
+	@attention /c=a mod b//æ³¨æ„ï¼šç»æ£€éªŒçŸ¥é“æ­¤å¤„Aå’ŒCçš„æ•°ç»„éƒ½æ”¹å˜äº†ã€‚
 	*/
 	void mod(int a[RSA_ALGORITHM_MAX], int b[RSA_ALGORITHM_MAX], int  *c);
-	/*! @´óÊıÏà³ıº¯Êı
+	/*! @å¤§æ•°ç›¸é™¤å‡½æ•°
 	@see void divt(int t[MAX],int b[MAX],int  *c ,int *w);
-	@attention //ÊÔÉÌ·¨//µ÷ÓÃÒÔºówÎªa mod b, CÎªa  div b;
+	@attention //è¯•å•†æ³•//è°ƒç”¨ä»¥åwä¸ºa mod b, Cä¸ºa  div b;
 	*/
 	void divt(int t[RSA_ALGORITHM_MAX], int b[RSA_ALGORITHM_MAX], int  *c, int *w);
-	/*! @½â¾ö ÁË m=a*b mod n;
+	/*! @è§£å†³ äº† m=a*b mod n;
 	/*!
 	@see void mulmod(int a[MAX] ,int b[MAX] ,int n[MAX],int *m);
 	*/
 	void mulmod(int a[RSA_ALGORITHM_MAX], int b[RSA_ALGORITHM_MAX], int n[RSA_ALGORITHM_MAX], int *m);
-	/*! @½â¾ö m=a^p  mod nµÄº¯ÊıÎÊÌâ
+	/*! @è§£å†³ m=a^p  mod nçš„å‡½æ•°é—®é¢˜
 	/*!
 	@see void expmod(int a[MAX] ,int p[MAX] ,int n[MAX],int *m);
 	*/
 	void expmod(int a[RSA_ALGORITHM_MAX], int p[RSA_ALGORITHM_MAX], int n[RSA_ALGORITHM_MAX], int *m);
-	/*!  @ÅĞ¶ÏÊÇ·ñÎªËØÊı
+	/*!  @åˆ¤æ–­æ˜¯å¦ä¸ºç´ æ•°
 	@see int   is_prime_san(int p[MAX] );
 	*/
 	int is_prime_san(int p[RSA_ALGORITHM_MAX]);
-	/*! @ÅĞ¶ÏÁ½¸ö´óÊıÖ®¼äÊÇ·ñ»¥ÖÊ
+	/*! @åˆ¤æ–­ä¸¤ä¸ªå¤§æ•°ä¹‹é—´æ˜¯å¦äº’è´¨
 	@see int coprime(int e[MAX],int s[MAX]);
 	*/
 	int coprime(int e[RSA_ALGORITHM_MAX], int s[RSA_ALGORITHM_MAX]);
-	/*!  @Ëæ»ú²úÉúËØÊı
+	/*!  @éšæœºäº§ç”Ÿç´ æ•°
 	@see void prime_random(int *p,int *q);
 	*/
 	void prime_random(int *p, int *q);
-	/*! @²úÉúËØÊıe
+	/*! @äº§ç”Ÿç´ æ•°e
 	@see void erand(int e[MAX],int m[MAX]);
 	*/
 	void erand(int e[RSA_ALGORITHM_MAX], int m[RSA_ALGORITHM_MAX]);
-	/*! @¸ù¾İ¹æÔò²úÉúÆäËûµÄÊı
+	/*! @æ ¹æ®è§„åˆ™äº§ç”Ÿå…¶ä»–çš„æ•°
 	@see void rsad(int e[MAX],int g[MAX],int *d);
 	*/
 	void rsad(int e[RSA_ALGORITHM_MAX], int g[RSA_ALGORITHM_MAX], int *d);
-	/*! @Çó½âÃÜÃÜÔ¿dµÄº¯Êı(¸ù¾İEuclidËã·¨)
+	/*! @æ±‚è§£å¯†å¯†é’¥dçš„å‡½æ•°(æ ¹æ®Euclidç®—æ³•)
 	@see unsigned long  rsa(unsigned long p,unsigned long q,unsigned long e);
 	*/
 	unsigned long rsa(unsigned long p, unsigned long q, unsigned long e);
 
-	//! RSAµÄ²úÉú´óÊıµÄ¹«Ô¿ºÍË½Ô¿µÄº¯Êı
+	//! RSAçš„äº§ç”Ÿå¤§æ•°çš„å…¬é’¥å’Œç§é’¥çš„å‡½æ•°
 	/*!
 	@see bool RSAKey();
-	@param Ã»ÓĞÈÎºÎÊäÈë£¬
-	@param Ëæ»ú²úÉúe£¬d£¬nµÄº¯Êı£¬ÆäÔËĞĞÊ±¼ä±È½Ï³¤£¬ĞèÒªµÈ´ı
-	@return[bool] ³É¹¦·µ»Øtrue£¬Ê§°Ü·µ»Øfalse
+	@param æ²¡æœ‰ä»»ä½•è¾“å…¥ï¼Œ
+	@param éšæœºäº§ç”Ÿeï¼Œdï¼Œnçš„å‡½æ•°ï¼Œå…¶è¿è¡Œæ—¶é—´æ¯”è¾ƒé•¿ï¼Œéœ€è¦ç­‰å¾…
+	@return[bool] æˆåŠŸè¿”å›trueï¼Œå¤±è´¥è¿”å›false
 	*/
 	bool RSAKey();
 
-	//! RSAµÄ½øĞĞÎÄ¼ş¼ÓÃÜµÄº¯Êı
+	//! RSAçš„è¿›è¡Œæ–‡ä»¶åŠ å¯†çš„å‡½æ•°
 	/*!
 	@see string tencrypto(int e[MAX], int n[MAX], char* text);
-	@param[int[] e£¬nÎªËæ»ú²úÉúµÄ¹«Ô¿£¬ÀûÓÃ¹«Ô¿½øĞĞ¼ÓÃÜ
-	@param[char* textÎªÃ÷ÎÄ£¬Ã÷ÎÄÒÔchar*µÄ¸ñÊ½´æ´¢
-	@return[string] ·µ»ØÖµÎª¼ÓÃÜ³É¹¦Ö®ºóµÄÃÜÎÄ£¬²ÉÓÃstringÀàĞÍ½øĞĞ´æ´¢
+	@param[int[] eï¼Œnä¸ºéšæœºäº§ç”Ÿçš„å…¬é’¥ï¼Œåˆ©ç”¨å…¬é’¥è¿›è¡ŒåŠ å¯†
+	@param[char* textä¸ºæ˜æ–‡ï¼Œæ˜æ–‡ä»¥char*çš„æ ¼å¼å­˜å‚¨
+	@return[string] è¿”å›å€¼ä¸ºåŠ å¯†æˆåŠŸä¹‹åçš„å¯†æ–‡ï¼Œé‡‡ç”¨stringç±»å‹è¿›è¡Œå­˜å‚¨
 	*/
 	std::string tencrypto(int e[RSA_ALGORITHM_MAX], int n[RSA_ALGORITHM_MAX], const char* text);
 
-	//! RSAµÄ½øĞĞÎÄ¼ş½âÃÜµÄº¯Êı
+	//! RSAçš„è¿›è¡Œæ–‡ä»¶è§£å¯†çš„å‡½æ•°
 	/*!
 	@see string tdecrypto(int d[MAX], int n[MAX], string text);
-	@param[int[] d,nÎªË½Ô¿£¬ÓÉº¯ÊıRSAKey()²úÉú
-	@param[string textÎªÃÜÎÄ£¬¶ÔÓ¦¼ÓÃÜº¯Êı£¬ÃÜÎÄµÄ¸ñÊ½Îªstring
-	@return[string] ½âÃÜÖ®ºóµÄÃ÷ÎÄ²ÉÓÃstring½øĞĞ´æ´¢
+	@param[int[] d,nä¸ºç§é’¥ï¼Œç”±å‡½æ•°RSAKey()äº§ç”Ÿ
+	@param[string textä¸ºå¯†æ–‡ï¼Œå¯¹åº”åŠ å¯†å‡½æ•°ï¼Œå¯†æ–‡çš„æ ¼å¼ä¸ºstring
+	@return[string] è§£å¯†ä¹‹åçš„æ˜æ–‡é‡‡ç”¨stringè¿›è¡Œå­˜å‚¨
 	*/
 	std::string tdecrypto(int d[RSA_ALGORITHM_MAX], int n[RSA_ALGORITHM_MAX], const std::string& text);
 
 public:
-	/** @brief ¶¨ÒåµÄÈ«¾Ö±äÁ¿£¬´æ´¢ÃÜÔ¿ */
+	/** @brief å®šä¹‰çš„å…¨å±€å˜é‡ï¼Œå­˜å‚¨å¯†é’¥ */
 	int p[RSA_ALGORITHM_MAX], q[RSA_ALGORITHM_MAX], n[RSA_ALGORITHM_MAX], d[RSA_ALGORITHM_MAX], e[RSA_ALGORITHM_MAX], m[RSA_ALGORITHM_MAX], p1[RSA_ALGORITHM_MAX], q1[RSA_ALGORITHM_MAX];
 
 private:

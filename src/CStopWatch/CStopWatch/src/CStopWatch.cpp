@@ -1,4 +1,4 @@
-#include "CStopWatch.h"
+ï»¿#include "CStopWatch.h"
 #ifdef _WIN32
 #include <windows.h>
 #elif __unix__
@@ -31,12 +31,12 @@ double CStopWatch::GetSeconds()
 std::string CStopWatch::GetWatchStrTime()
 {
 	int32_t hour = GetHour();
-	std::string strHour = (hour != 0) ? (std::to_string(hour) + "Ê±") : "";
+	std::string strHour = (hour != 0) ? (std::to_string(hour) + "æ—¶") : "";
 	int32_t minute = GetMinute();
-	std::string strMinute = (minute != 0) ? (std::to_string(minute) + "·Ö") : "";
+	std::string strMinute = (minute != 0) ? (std::to_string(minute) + "åˆ†") : "";
 	double seconds = GetSeconds();
 	char szSecond[32] = {};
-	sprintf(szSecond, "%.3lfÃë", seconds);
+	sprintf(szSecond, "%.3lfç§’", seconds);
 	return strHour + strMinute + szSecond;
 }
 

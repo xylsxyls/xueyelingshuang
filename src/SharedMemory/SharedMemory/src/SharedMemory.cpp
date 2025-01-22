@@ -1,4 +1,4 @@
-#include "SharedMemory.h"
+ï»¿#include "SharedMemory.h"
 #ifdef __unix__
 #include <string.h>
 #include <sys/shm.h>
@@ -103,7 +103,7 @@ uint32_t SharedMemory::realSize()
 		return 0;
 	}
 	struct shmid_ds shmbuffer;
-	//¶Á¹²ÏíÄÚ´æ½á¹¹struct shmid_ds
+	//è¯»å…±äº«å†…å­˜ç»“æž„struct shmid_ds
 	shmctl(m_shmid, IPC_STAT, &shmbuffer);
 	return shmbuffer.shm_segsz;
 #endif
@@ -340,7 +340,7 @@ void SharedMemory::open(bool bReadOnly)
 #endif
 }
 
-////Ð´
+////å†™
 //int32_t main()
 //{
 //	SharedMemory mem("mmsa", 4095);
@@ -354,7 +354,7 @@ void SharedMemory::open(bool bReadOnly)
 //	return 0;
 //}
 //
-////¶Á
+////è¯»
 //int32_t main()
 //{
 //	SharedMemory mem("mmsa");

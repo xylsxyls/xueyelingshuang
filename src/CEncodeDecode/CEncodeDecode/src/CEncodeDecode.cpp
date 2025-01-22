@@ -1,4 +1,4 @@
-#include "CEncodeDecode.h"
+ï»¿#include "CEncodeDecode.h"
 #include "MD5.h"
 #include "aes_encryptor.h"
 #include <vector>
@@ -340,18 +340,18 @@ X509* CEncodeDecode::getCert(const std::string& path)
 	{
 		return nullptr;
 	}
-	//X509Ö¤Êé½á¹¹Ìå£¬±£´æÓÃ»§Ö¤Êé
+	//X509è¯ä¹¦ç»“æ„ä½“ï¼Œä¿å­˜ç”¨æˆ·è¯ä¹¦
 	X509* cert = nullptr;
 	size_t certlen = fread(certData, 1, 4096, fp);
 	fclose(fp);
-	//ÅĞ¶ÏÊÇ·ñÎªDER±àÂëµÄÓÃ»§Ö¤Êé£¬²¢×ª»¯ÎªX509½á¹¹Ìå
+	//åˆ¤æ–­æ˜¯å¦ä¸ºDERç¼–ç çš„ç”¨æˆ·è¯ä¹¦ï¼Œå¹¶è½¬åŒ–ä¸ºX509ç»“æ„ä½“
 	pTmp = certData;
 	cert = d2i_X509(nullptr, (const unsigned char **)&pTmp, (long)certlen);
 	if (cert != nullptr)
 	{
 		return cert;
 	}
-	//ÅĞ¶ÏÊÇ·ñÎªPEM¸ñÊ½µÄÊı×ÖÖ¤Êé
+	//åˆ¤æ–­æ˜¯å¦ä¸ºPEMæ ¼å¼çš„æ•°å­—è¯ä¹¦
 	BIO* b = BIO_new_file(path.c_str(), "r");
 	PEM_read_bio_X509(b, &cert, nullptr, nullptr);
 	BIO_free(b);
@@ -379,11 +379,11 @@ std::string CEncodeDecode::getPublicKey(X509* cert)
 	{
 		return "";
 	}
-	//±£´æÖ¤Êé¹«Ô¿
+	//ä¿å­˜è¯ä¹¦å…¬é’¥
 	EVP_PKEY* pubKeytemp = nullptr;
 	unsigned char* pTmp = nullptr;
 	nullptr;
-	//»ñÈ¡Ö¤Êé¹«Ô¿
+	//è·å–è¯ä¹¦å…¬é’¥
 	pubKeytemp = X509_get_pubkey(cert);
 	if (pubKeytemp == nullptr)
 	{

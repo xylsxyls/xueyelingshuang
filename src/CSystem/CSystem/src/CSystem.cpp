@@ -1,4 +1,4 @@
-#include "CSystem.h"
+ï»¿#include "CSystem.h"
 #if (_MSC_VER >= 1800 || __unix__)
 #include <thread>
 #endif
@@ -49,7 +49,7 @@ static void Split(std::vector<std::string>& result, const std::string& splitStri
 static void Split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
 {
 	result.clear();
-	//?·Ö¸î×Ö·û´®µÄ³¤¶È,ÕâÑù¾Í¿ÉÒÔÖ§³ÖÈç¡°,,¡±¶à×Ö·û´®µÄ·Ö¸ô·û
+	//?åˆ†å‰²å­—ç¬¦ä¸²çš„é•¿åº¦,è¿™æ ·å°±å¯ä»¥æ”¯æŒå¦‚â€œ,,â€å¤šå­—ç¬¦ä¸²çš„åˆ†éš”ç¬¦
 	size_t separate_characterLen = separate_character.length();
 	size_t lastPosition = 0;
 	int32_t index = -1;
@@ -58,8 +58,8 @@ static void Split(std::vector<std::string>& result, const std::string& splitStri
 		result.push_back(splitString.substr(lastPosition, index - lastPosition));
 		lastPosition = index + separate_characterLen;
 	}
-	//?½ØÈ¡×îºóÒ»¸ö·Ö¸ô·ûºóµÄÄÚÈİ
-	//?if (!lastString.empty()) //Èç¹û×îºóÒ»¸ö·Ö¸ô·ûºó»¹ÓĞÄÚÈİ¾ÍÈë¶Ó
+	//?æˆªå–æœ€åä¸€ä¸ªåˆ†éš”ç¬¦åçš„å†…å®¹
+	//?if (!lastString.empty()) //å¦‚æœæœ€åä¸€ä¸ªåˆ†éš”ç¬¦åè¿˜æœ‰å†…å®¹å°±å…¥é˜Ÿ
 	result.push_back(splitString.substr(lastPosition));
 }
 
@@ -90,20 +90,20 @@ POINT CSystem::taskbarRightBottomPoint()
 	::GetWindowRect(::FindWindowA("Shell_TrayWnd", ""), &rect);
 	RECT screenRect = { 0, 0, ::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN) };
 
-	//·Ö4ÖÖÇé¿ö£¬ÈÎÎñÀ¸¿ÉÄÜ³öÏÖÔÚ×ó²àÉÏ²àÓÒ²àµ×²à
-	//ÓÒ²à
+	//åˆ†4ç§æƒ…å†µï¼Œä»»åŠ¡æ å¯èƒ½å‡ºç°åœ¨å·¦ä¾§ä¸Šä¾§å³ä¾§åº•ä¾§
+	//å³ä¾§
 	if (rect.left != screenRect.left)
 	{
 		POINT point = { rect.left, screenRect.bottom };
 		return point;
 	}
-	//µ×²à
+	//åº•ä¾§
 	else if (rect.top != screenRect.top)
 	{
 		POINT point = { screenRect.right, rect.top };
 		return point;
 	}
-	//ÉÏ²à×ó²àºÍÆäÓàÇé¿öÒ»ÂÉ´ÓÓÒÏÂ½Çµ¯³ö
+	//ä¸Šä¾§å·¦ä¾§å’Œå…¶ä½™æƒ…å†µä¸€å¾‹ä»å³ä¸‹è§’å¼¹å‡º
 	else
 	{
 		POINT point = { screenRect.right, screenRect.bottom };
@@ -121,24 +121,24 @@ POINT CSystem::screenCenterPoint()
 
 void CSystem::setClipboardData(HWND hWnd, const std::string& str)
 {
-	//´ò¿ª¼ôÌù°å
+	//æ‰“å¼€å‰ªè´´æ¿
 	if (::OpenClipboard(hWnd))
 	{
 		HANDLE hClip;
 		char* pBuf;
-		//Çå¿Õ¼ôÌù°å
+		//æ¸…ç©ºå‰ªè´´æ¿
 		::EmptyClipboard();
 
-		//Ğ´ÈëÊı¾İ
+		//å†™å…¥æ•°æ®
 		hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
 		pBuf = (char*)::GlobalLock(hClip);
 		::strcpy(pBuf, str.c_str());
-		//½âËø
+		//è§£é”
 		::GlobalUnlock(hClip);
-		//ÉèÖÃ¸ñÊ½
+		//è®¾ç½®æ ¼å¼
 		::SetClipboardData(CF_TEXT, hClip);
 
-		//¹Ø±Õ¼ôÌù°å
+		//å…³é—­å‰ªè´´æ¿
 		::CloseClipboard();
 	}
 }
@@ -146,14 +146,14 @@ void CSystem::setClipboardData(HWND hWnd, const std::string& str)
 std::string CSystem::GetClipboardData(HWND hWnd)
 {
 	char* pBuf = nullptr;
-	//´ò¿ª¼ôÌù°å
+	//æ‰“å¼€å‰ªè´´æ¿
 	if (::OpenClipboard(hWnd))
 	{
-		//ÅĞ¶Ï¸ñÊ½ÊÇ·ñÊÇÎÒÃÇËùĞèÒª
+		//åˆ¤æ–­æ ¼å¼æ˜¯å¦æ˜¯æˆ‘ä»¬æ‰€éœ€è¦
 		if (::IsClipboardFormatAvailable(CF_TEXT))
 		{
 			HANDLE hClip;
-			//¶ÁÈ¡Êı¾İ  
+			//è¯»å–æ•°æ®  
 			hClip = ::GetClipboardData(CF_TEXT);
 			pBuf = (char*)::GlobalLock(hClip);
 			::GlobalUnlock(hClip);
@@ -434,7 +434,7 @@ static void DisplayDeviceInformation(IEnumMoniker *pEnum, std::vector<std::strin
 		if (SUCCEEDED(hr))
 		{
 			std::string name = _com_util::ConvertBSTRToString(var.bstrVal);
-			//            printf("%s\n", name.c_str());//Éè±¸Ãû³Æ
+			//            printf("%s\n", name.c_str());//è®¾å¤‡åç§°
 			list.push_back(name);
 			::VariantClear(&var);
 		}
@@ -443,7 +443,7 @@ static void DisplayDeviceInformation(IEnumMoniker *pEnum, std::vector<std::strin
 		hr = pPropBag->Read(L"WaveInID", &var, nullptr);
 		if (SUCCEEDED(hr))
 		{
-			//            printf("WaveIn ID: %d\n", var.lVal);////Éè±¸ID
+			//            printf("WaveIn ID: %d\n", var.lVal);////è®¾å¤‡ID
 			::VariantClear(&var);
 		}
 		hr = pPropBag->Read(L"DevicePath", &var, nullptr);
@@ -470,7 +470,7 @@ std::vector<std::string> CSystem::allCameraName()
 			DisplayDeviceInformation(pEnum, result);
 			pEnum->Release();
 		}
-		//Âó¿Ë·ç...........
+		//éº¦å…‹é£...........
 		//        hr = EnumerateDevices(CLSID_AudioInputDeviceCategory, &pEnum);
 		//        if (SUCCEEDED(hr)){
 		//            DisplayDeviceInformation(pEnum,list);
@@ -532,35 +532,35 @@ static inline uint64_t get_cycle_count()
 double CSystem::GetCPUSpeedGHz()
 {
 #ifdef _WIN64
-	//VC++Ä¬ÈÏÖ»Ö§³Ö32Î»µÄÄÚÁª»ã±à£¬ÈôÒªÖ§³Ö64Î»£¬ĞèÒª°²×°Intel C++ Compiler XE
+	//VC++é»˜è®¤åªæ”¯æŒ32ä½çš„å†…è”æ±‡ç¼–ï¼Œè‹¥è¦æ”¯æŒ64ä½ï¼Œéœ€è¦å®‰è£…Intel C++ Compiler XE
 	return 0;
 #elif _WIN32
-	//ÏÈÊÇ´æ·Å¼ÆÊ±´ÎÊı£¬ºó´æ·Å¹Ì¶¨Ê±¼ä¼ä¸ôÖµ
+	//å…ˆæ˜¯å­˜æ”¾è®¡æ—¶æ¬¡æ•°ï¼Œåå­˜æ”¾å›ºå®šæ—¶é—´é—´éš”å€¼
 	unsigned long int       ticks;
-	//´æ·ÅÁ½¹Ì¶¨Ê±¿ÌµÄCPUÄÚÖÃÊ±ÖÓÖµ£¬ÖµµÄº¬ÒâÎª¼ÆÊı
+	//å­˜æ”¾ä¸¤å›ºå®šæ—¶åˆ»çš„CPUå†…ç½®æ—¶é’Ÿå€¼ï¼Œå€¼çš„å«æ„ä¸ºè®¡æ•°
 	unsigned long int       stock0, stock1;
-	//´æ·ÅÄÚÖÃÊ±ÖÓÖµÖ®²î£¬ºÃ¹Ì¶¨Ê±¶ÎµÄ¼ÆÊıÖµ 
+	//å­˜æ”¾å†…ç½®æ—¶é’Ÿå€¼ä¹‹å·®ï¼Œå¥½å›ºå®šæ—¶æ®µçš„è®¡æ•°å€¼ 
 	unsigned long int       cycles;
-	//´æ·ÅÆµÂÊ£¬ÎªÁËÌá¸ß¾«¶È£¬²ÉÓÃÁËÏàÁÚµÄ²âµÄ5¸öÆµÂÊµÄÆ½¾ùÖµ
+	//å­˜æ”¾é¢‘ç‡ï¼Œä¸ºäº†æé«˜ç²¾åº¦ï¼Œé‡‡ç”¨äº†ç›¸é‚»çš„æµ‹çš„5ä¸ªé¢‘ç‡çš„å¹³å‡å€¼
 	unsigned long int       freq[5] = { 0, 0, 0, 0, 0 };
-	//Ñ­»·´ÎÊı
+	//å¾ªç¯æ¬¡æ•°
 	unsigned long int       nums = 0;
-	//´æ·ÅÆµÂÊÖ®ºÍ
+	//å­˜æ”¾é¢‘ç‡ä¹‹å’Œ
 	unsigned long int       total = 0;
 	LARGE_INTEGER       t0, t1;
 	LARGE_INTEGER       countfreq;
-	//·µ»Ø¸ß¾«¶ÈµÄ¼ÆÊıÆµÂÊ£¬¼´Ã¿Ãë¶àÉÙ´Î;
+	//è¿”å›é«˜ç²¾åº¦çš„è®¡æ•°é¢‘ç‡ï¼Œå³æ¯ç§’å¤šå°‘æ¬¡;
 	if (!QueryPerformanceFrequency(&countfreq))
 	{
 		return 0.0f;
 	}
-	//·µ»ØÌØ¶¨½ø³ÌµÄÓÅÏÈ¼¶;
+	//è¿”å›ç‰¹å®šè¿›ç¨‹çš„ä¼˜å…ˆçº§;
 	DWORD priority_class = GetPriorityClass(GetCurrentProcess());
-	//·µ»ØÌØ¶¨Ïß³ÌµÄÓÅÏÈ¼¶;
+	//è¿”å›ç‰¹å®šçº¿ç¨‹çš„ä¼˜å…ˆçº§;
 	int   thread_priority = GetThreadPriority(GetCurrentThread());
-	//½«µ±Ç°½ø³ÌÉè³ÉÊµÊ±½ø³Ì;
+	//å°†å½“å‰è¿›ç¨‹è®¾æˆå®æ—¶è¿›ç¨‹;
 	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
-	//Éè¶¨Ïß³ÌÓÅÏÈ¼¶;
+	//è®¾å®šçº¿ç¨‹ä¼˜å…ˆçº§;
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 	do
 	{
@@ -569,24 +569,24 @@ double CSystem::GetCPUSpeedGHz()
 		freq[3] = freq[2];
 		freq[2] = freq[1];
 		freq[1] = freq[0];
-		//·µ»Ø¸ß¾«¶È¼ÆÊıµÄÖµ;
+		//è¿”å›é«˜ç²¾åº¦è®¡æ•°çš„å€¼;
 		QueryPerformanceCounter(&t0);
 		t1.LowPart = t0.LowPart;
 		t1.HighPart = t0.HighPart;
-		//Õâ¾äÖĞµÄ50ºÍºóÃæÏàÍ¬Óï¾äÖĞµÄ1000ÊÇÒ»¸ö¾­ÑéÖµ£¬ÆğµÄ×÷ÓÃÊÇ¿ØÖÆÊ±¼ä¼ä¸ô£¬¿ÉÒÔ
-		//µ÷½ÚÕâÁ½¸öÖµÀ´ÊµÏÖ×î¼ÑÊ±¼ä¼ä¸ô¡£
+		//è¿™å¥ä¸­çš„50å’Œåé¢ç›¸åŒè¯­å¥ä¸­çš„1000æ˜¯ä¸€ä¸ªç»éªŒå€¼ï¼Œèµ·çš„ä½œç”¨æ˜¯æ§åˆ¶æ—¶é—´é—´éš”ï¼Œå¯ä»¥
+		//è°ƒèŠ‚è¿™ä¸¤ä¸ªå€¼æ¥å®ç°æœ€ä½³æ—¶é—´é—´éš”ã€‚
 		while ((unsigned long int)t1.LowPart - (unsigned long int)t0.LowPart < 10)
 		{
 			QueryPerformanceCounter(&t1);
 		}
 		_asm
 		{
-			//Æô¶¯¶ÁÈ¡CPUµÄÄÚÖÃÊ±ÖÓ£¬Æä·µ»ØÖµÊÇ¸ö64Î»µÄÕûÊı£¬¸ß32µ½EDX£¬µÍ32µ½EAXÀï
+			//å¯åŠ¨è¯»å–CPUçš„å†…ç½®æ—¶é’Ÿï¼Œå…¶è¿”å›å€¼æ˜¯ä¸ª64ä½çš„æ•´æ•°ï¼Œé«˜32åˆ°EDXï¼Œä½32åˆ°EAXé‡Œ
 			rdtsc
-				//¸ßÎ»²¿·İÔÚ¶ÌÔİÊ±¼äÄÚÊÇ²»»áÓĞ±ä»¯µÄ£¬¹ÊÎŞĞè¶Á³ö¶Ô±È
+				//é«˜ä½éƒ¨ä»½åœ¨çŸ­æš‚æ—¶é—´å†…æ˜¯ä¸ä¼šæœ‰å˜åŒ–çš„ï¼Œæ•…æ— éœ€è¯»å‡ºå¯¹æ¯”
 				mov stock0, EAX
 		}
-		// ÖØÖÃ³õÊ¼Ê±¿Ì
+		// é‡ç½®åˆå§‹æ—¶åˆ»
 		t0.LowPart = t1.LowPart;
 		t0.HighPart = t1.HighPart;
 		while ((unsigned long int)t1.LowPart - (unsigned long int)t0.LowPart < 1000)
@@ -604,14 +604,14 @@ double CSystem::GetCPUSpeedGHz()
 		ticks = ticks / countfreq.LowPart;
 		if (ticks % countfreq.LowPart > countfreq.LowPart / 2)
 		{
-			// Ê¹Êı¾İÊÕÁ²
+			// ä½¿æ•°æ®æ”¶æ•›
 			ticks++;
 		}
-		// Çó³öÆµÂÊ£¬µ¥Î»£ºMHz
+		// æ±‚å‡ºé¢‘ç‡ï¼Œå•ä½ï¼šMHz
 		freq[0] = cycles / ticks;
 		if (cycles%ticks > ticks / 2)
 		{
-			// Ê¹Êı¾İÊÕÁ²
+			// ä½¿æ•°æ®æ”¶æ•›
 			freq[0]++;
 		}
 		total = (freq[0] + freq[1] + freq[2] + freq[3] + freq[4]);
@@ -619,13 +619,13 @@ double CSystem::GetCPUSpeedGHz()
 		|| (abs(5 * (long)freq[1] - (long)total) < 5) || (abs(5 * (long)freq[2] - (long)total) < 5)
 		|| (abs(5 * (long)freq[3] - (long)total) < 5) || (abs(5 * (long)freq[4] - (long)total) < 5)
 		));
-	//Ìõ¼şÑ­»·£¬ÒÔÈ·±£Ñ­»·²»ÉÙÓÚ5´Î£¬ÔÚ´óÓÚ5´ÎºóÈ·±£´ïµ½Ò»¶¨µÄ¾«¶ÈºóÍË³ö
+	//æ¡ä»¶å¾ªç¯ï¼Œä»¥ç¡®ä¿å¾ªç¯ä¸å°‘äº5æ¬¡ï¼Œåœ¨å¤§äº5æ¬¡åç¡®ä¿è¾¾åˆ°ä¸€å®šçš„ç²¾åº¦åé€€å‡º
 	if (total / 5 != (total + 1) / 5)
 	{
-		// Ê¹Êı¾İÊÕÁ²
+		// ä½¿æ•°æ®æ”¶æ•›
 		total++;
 	}
-	// »Ö¸´½ø³Ì¼°Ïß³ÌµÄÓÅÏÈ¼¶±ğ;
+	// æ¢å¤è¿›ç¨‹åŠçº¿ç¨‹çš„ä¼˜å…ˆçº§åˆ«;
 	SetPriorityClass(GetCurrentProcess(), priority_class);
 	SetThreadPriority(GetCurrentThread(), thread_priority);
 	return double(total) / 5.0 / 1000.0;
@@ -703,7 +703,7 @@ void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFil
 }
 
 #ifdef _WIN32
-//°²È«µÄÈ¡µÃÕæÊµÏµÍ³ĞÅÏ¢  
+//å®‰å…¨çš„å–å¾—çœŸå®ç³»ç»Ÿä¿¡æ¯  
 VOID SafeGetNativeSystemInfo(__out LPSYSTEM_INFO lpSystemInfo)
 {
     if (NULL == lpSystemInfo)
@@ -835,20 +835,20 @@ std::string CSystem::PasswordScanf()
 	char ch;
 	while ((ch = ::_getch()) != returnCode)
 	{
-		//²»ÊÇBackspace¾ÍÂ¼Èë
+		//ä¸æ˜¯Backspaceå°±å½•å…¥
 		if (ch != backspace)
 		{
 			password.push_back(ch);
-			//²¢ÇÒÊä³ö*ºÅ
+			//å¹¶ä¸”è¾“å‡º*å·
 			putchar('*');
 		}
 		else
 		{
-			//ÕâÀïÊÇÉ¾³ıÒ»¸ö£¬ÎÒÃÇÍ¨¹ıÊä³ö»Ø³··û /b£¬»Ø³·Ò»¸ñ£¬
+			//è¿™é‡Œæ˜¯åˆ é™¤ä¸€ä¸ªï¼Œæˆ‘ä»¬é€šè¿‡è¾“å‡ºå›æ’¤ç¬¦ /bï¼Œå›æ’¤ä¸€æ ¼ï¼Œ
 			putchar('\b');
-			//ÔÙÏÔÊ¾¿Õ¸ñ·û°Ñ¸Õ²ÅµÄ*¸ø¸Ç×¡£¬
+			//å†æ˜¾ç¤ºç©ºæ ¼ç¬¦æŠŠåˆšæ‰çš„*ç»™ç›–ä½ï¼Œ
 			putchar(' ');
-			//È»ºóÔÙ »Ø³·Ò»¸ñµÈ´ıÂ¼Èë¡£
+			//ç„¶åå† å›æ’¤ä¸€æ ¼ç­‰å¾…å½•å…¥ã€‚
 			putchar('\b');
 			if (!password.empty())
 			{
@@ -889,7 +889,7 @@ int32_t CSystem::SystemCommand(const std::string& command, std::string& result, 
 		si.hStdOutput = hWrite;
 		si.wShowWindow = SW_HIDE;
 		si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
-		//¹Ø¼ü²½Öè£¬CreateProcessº¯Êı²ÎÊıÒâÒåÇë²éÔÄMSDN   
+		//å…³é”®æ­¥éª¤ï¼ŒCreateProcesså‡½æ•°å‚æ•°æ„ä¹‰è¯·æŸ¥é˜…MSDN   
 		if (!CreateProcessA(NULL, (char*)command.c_str(), NULL, NULL, TRUE, NULL, NULL, NULL, &si, &pi))
 		{
 			return -1;
@@ -904,7 +904,7 @@ int32_t CSystem::SystemCommand(const std::string& command, std::string& result, 
 			{
 				break;
 			}
-			//bufferÖĞ¾ÍÊÇÖ´ĞĞµÄ½á¹û£¬¿ÉÒÔ±£´æµ½ÎÄ±¾£¬Ò²¿ÉÒÔÖ±½ÓÊä³ö   
+			//bufferä¸­å°±æ˜¯æ‰§è¡Œçš„ç»“æœï¼Œå¯ä»¥ä¿å­˜åˆ°æ–‡æœ¬ï¼Œä¹Ÿå¯ä»¥ç›´æ¥è¾“å‡º   
 			result += buffer;
 			Sleep(10);
 		}
@@ -1471,7 +1471,7 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
 	buf[19] = 0;
 	if (isLocal)
 	{
-		//×ªÎª±¾µØÊ±¼ä
+		//è½¬ä¸ºæœ¬åœ°æ—¶é—´
 		tm* local = localtime(&timet);
 		sprintf(buf,
 			"%04d-%02d-%d %02d:%02d:%02d",
@@ -1484,7 +1484,7 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
 	}
 	else
 	{
-		//×ªÎª¸ñÁÖÍşÖÎÊ±¼ä
+		//è½¬ä¸ºæ ¼æ—å¨æ²»æ—¶é—´
 		strftime(buf, 64, "%Y-%m-%d %H:%M:%S", gmtime(&timet));
 	}
 	return buf;
@@ -1600,7 +1600,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	struct dirent *pDirent = nullptr;
 #endif
 
-	//ÓÃ¶ÓÁĞÊµÏÖµİ¹é
+	//ç”¨é˜Ÿåˆ—å®ç°é€’å½’
 	std::queue<std::string> queue_dir;
 	queue_dir.push(std::string(dir));
 
@@ -1614,7 +1614,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 		DIR* pDir = opendir(curDir.c_str());
 #endif
 
-		//Èç¹ûÊÇ-1±íÊ¾¸ÃÎÄ¼ş¼Ğ²»¿É·ÃÎÊ
+		//å¦‚æœæ˜¯-1è¡¨ç¤ºè¯¥æ–‡ä»¶å¤¹ä¸å¯è®¿é—®
 #ifdef _WIN32
 		if (lfDir == -1)
 #elif __unix__
@@ -1648,25 +1648,25 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 #elif __unix__
 			std::string strName = pDirent->d_name;
 #endif
-			//ÊÇÄ¿Â¼£¬¼ÓÈë¶ÓÁĞ
+			//æ˜¯ç›®å½•ï¼ŒåŠ å…¥é˜Ÿåˆ—
 #ifdef _WIN32
 			if ((fileDir.attrib >= 16 && fileDir.attrib <= 23) || (fileDir.attrib >= 48 && fileDir.attrib <= 55))
 #elif __unix__
 			if (pDirent->d_type == DT_DIR)
 #endif
 			{
-				//È¥µôµ±Ç°Ä¿Â¼ºÍÉÏÒ»¼¶Ä¿Â¼
+				//å»æ‰å½“å‰ç›®å½•å’Œä¸Šä¸€çº§ç›®å½•
 				if (strName == "." || strName == "..")
 				{
 					continue;
 				}
-				//¼õÈ¥×îºóÒ»¸ö*ºÅ
+				//å‡å»æœ€åä¸€ä¸ª*å·
 				std::string tmpstr = curDir;
 #ifdef _WIN32
 				tmpstr.pop_back();
 #endif
 				tmpstr.append(strName);
-				//°Ñµ±Ç°Ä¿Â¼·Åµ½¶ÓÁĞÖĞÒÔ±ãÏÂÒ»´Î±éÀú
+				//æŠŠå½“å‰ç›®å½•æ”¾åˆ°é˜Ÿåˆ—ä¸­ä»¥ä¾¿ä¸‹ä¸€æ¬¡éå†
 				tmpstr.push_back(level);
 #ifdef _WIN32
 				tmpstr.push_back('*');
@@ -1681,7 +1681,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 #endif
 			switch (flag)
 			{
-			//1±íÊ¾ÕÒÎÄ¼şÈ«Ãû£¬´øºó×ºÃû
+			//1è¡¨ç¤ºæ‰¾æ–‡ä»¶å…¨åï¼Œå¸¦åç¼€å
 			case 1:
 			{
 				if (strName == fileStr)
@@ -1695,7 +1695,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 				}
 			}
 			break;
-			//2±íÊ¾ÕÒÎÄ¼şºó×ºÃû
+			//2è¡¨ç¤ºæ‰¾æ–‡ä»¶åç¼€å
 			case 2:
 			{
 				std::string nameSuffix = CSystem::GetName(strName, 2);
@@ -1713,7 +1713,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 				}
 			}
 			break;
-			//3±íÊ¾²éÕÒËùÓĞÎÄ¼ş£¬²»×ö¹ıÂËÈ«²¿Ìí¼Ó½øÀ´
+			//3è¡¨ç¤ºæŸ¥æ‰¾æ‰€æœ‰æ–‡ä»¶ï¼Œä¸åšè¿‡æ»¤å…¨éƒ¨æ·»åŠ è¿›æ¥
 			case 3:
 			{
 				tmpfilename.append(strName);
@@ -1753,7 +1753,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 //	int sss = CSystem::GetVisibleHeight();
 //	int screenwidth=GetSystemMetrics(SM_CXFULLSCREEN);
 //	int screenheight=GetSystemMetrics(SM_CYFULLSCREEN);
-//	//ÒÔÏÂÁ½¸öº¯Êı»ñÈ¡µÄÊÇÕæÕıÆÁÄ»µÄ´óĞ¡£¬¼´Êµ¼ÊµÄ´óĞ¡
+//	//ä»¥ä¸‹ä¸¤ä¸ªå‡½æ•°è·å–çš„æ˜¯çœŸæ­£å±å¹•çš„å¤§å°ï¼Œå³å®é™…çš„å¤§å°
 //	int screenwidth_real=GetSystemMetrics(SM_CXSCREEN);
 //	int screenheight_real=GetSystemMetrics(SM_CYSCREEN);
 //	CSystem::Sleep(1000);

@@ -1,82 +1,82 @@
-#pragma once
+ï»¿#pragma once
 #include "ConfigManagerMacro.h"
 #include <string>
 #include <stdint.h>
 #include <memory>
 
 /********************************************************************************
-@ºê¶¨ÒåÊ¹ÓÃËµÃ÷
-1.keyÖµºÍsectionÖµ±ØĞëÊ¹ÓÃÃ¶¾ÙÖµ£¬sectionÖµÎ¨Ò»£¬keyÖµÔÚsectionÖµÏÂÎ¨Ò»£¬Ã¶¾ÙÖµ¶¨ÒåÎÄ¼şÔÚcommonÎÄ¼ş¼ĞÏÂ
-2.³õÊ¼»¯º¯Êı
+@å®å®šä¹‰ä½¿ç”¨è¯´æ˜
+1.keyå€¼å’Œsectionå€¼å¿…é¡»ä½¿ç”¨æšä¸¾å€¼ï¼Œsectionå€¼å”¯ä¸€ï¼Œkeyå€¼åœ¨sectionå€¼ä¸‹å”¯ä¸€ï¼Œæšä¸¾å€¼å®šä¹‰æ–‡ä»¶åœ¨commonæ–‡ä»¶å¤¹ä¸‹
+2.åˆå§‹åŒ–å‡½æ•°
 INIT_CONFIG(dbPath);
-Èç¹ûÃ»ÓĞµ÷ÓÃ¸Ãº¯Êı¾ÍÖ´ĞĞ´æ´¢ÔòÔÚexeÍ¬¼¶Ä¿Â¼ÏÂ×Ô¶¯´´½¨Ò»¸öºÍexeÍ¬ÃûµÄdbÎÄ¼ş
-3.´æ´¢È«¾Ö£¬Ê¹ÓÃºêGLOBAL_CONFIG
-GLOBAL_CONFIG[keyÖµ] = value;
-GLOBAL_CONFIG[sectionÖµ][keyÖµ] = value;
-ÆäÖĞvalue°üÀ¨int32_t,uint64_t,double,std::string
-¶ş½øÖÆ×Ö·û´®Ò²¿ÉÒÔ£¬ÀıÈç
+å¦‚æœæ²¡æœ‰è°ƒç”¨è¯¥å‡½æ•°å°±æ‰§è¡Œå­˜å‚¨åˆ™åœ¨exeåŒçº§ç›®å½•ä¸‹è‡ªåŠ¨åˆ›å»ºä¸€ä¸ªå’ŒexeåŒåçš„dbæ–‡ä»¶
+3.å­˜å‚¨å…¨å±€ï¼Œä½¿ç”¨å®GLOBAL_CONFIG
+GLOBAL_CONFIG[keyå€¼] = value;
+GLOBAL_CONFIG[sectionå€¼][keyå€¼] = value;
+å…¶ä¸­valueåŒ…æ‹¬int32_t,uint64_t,double,std::string
+äºŒè¿›åˆ¶å­—ç¬¦ä¸²ä¹Ÿå¯ä»¥ï¼Œä¾‹å¦‚
 std::string str = "1234567";
 str[3] = 0;
-GLOBAL_CONFIG[sectionÖµ][keyÖµ] = str;
-ÖØ¸´´æ´¢»á¸²¸Ç
-4.´æ´¢ÓÃ»§Ïà¹Ø£¬Ê¹ÓÃºêUSER_CONFIG
-Ê×ÏÈÒªÉèÖÃÓÃ»§µÄuserId
-SET_CONFIG_USERID(userIdÖµ);
-Ö´ĞĞÍêÕâ¾ä»°£¬Ö®ºóµÄÓÃ»§Ïà¹Ø´æ´¢¶¼ÔÚ¸ÃuserIdÖµÏÂ
-USER_CONFIG[keyÖµ] = value;
-USER_CONFIG[sectionÖµ][keyÖµ] = value;
-ÓÃ·¨Í¬ÉÏ
-userIdÖµ¿ÉÒÔÖĞÍ¾¸Ä±ä£¬µ«¸Ä±äÖ®ºóµÄ´æ´¢¶¼ºÍ¸Ä±äÖ®ºóµÄuserIdÖµÏà¹Ø
-ÀıÈç
+GLOBAL_CONFIG[sectionå€¼][keyå€¼] = str;
+é‡å¤å­˜å‚¨ä¼šè¦†ç›–
+4.å­˜å‚¨ç”¨æˆ·ç›¸å…³ï¼Œä½¿ç”¨å®USER_CONFIG
+é¦–å…ˆè¦è®¾ç½®ç”¨æˆ·çš„userId
+SET_CONFIG_USERID(userIdå€¼);
+æ‰§è¡Œå®Œè¿™å¥è¯ï¼Œä¹‹åçš„ç”¨æˆ·ç›¸å…³å­˜å‚¨éƒ½åœ¨è¯¥userIdå€¼ä¸‹
+USER_CONFIG[keyå€¼] = value;
+USER_CONFIG[sectionå€¼][keyå€¼] = value;
+ç”¨æ³•åŒä¸Š
+userIdå€¼å¯ä»¥ä¸­é€”æ”¹å˜ï¼Œä½†æ”¹å˜ä¹‹åçš„å­˜å‚¨éƒ½å’Œæ”¹å˜ä¹‹åçš„userIdå€¼ç›¸å…³
+ä¾‹å¦‚
 SET_CONFIG_USERID(1000001);
-USER_CONFIG[keyÖµ] = value1;
+USER_CONFIG[keyå€¼] = value1;
 SET_CONFIG_USERID(1000002);
-USER_CONFIG[keyÖµ] = value2;
-Èç¹ûÏëÄÃµ½value1µÄÖµ±ØĞëÖØĞÂÉè»Ø1000001²ÅĞĞ
-5.»ñÈ¡´æ´¢ÄÚÈİ
-¿ÉÒÔ×ª»»Îª4ÖÖÀàĞÍ£¬int32_t,uint64_t,double,std::string
-double result = GLOBAL_CONFIG[sectionÖµ][keyÖµ].toDouble();
-double result = USER_CONFIG[sectionÖµ][keyÖµ].toDouble();
-resultÎªÅäÖÃÎÄ¼şÖĞµÄÖµ
-Èç¹û²»¼ÇµÃ´æÈëµÄÀàĞÍ£¬¿ÉÒÔÏÈ½øĞĞ²é¿´
-std::string type = USER_CONFIG[sectionÖµ][keyÖµ].type();
-int32_t¶ÔÓ¦TYPE_INT32
-uint64_t¶ÔÓ¦TYPE_UINT64
-double¶ÔÓ¦TYPE_DOUBLE
-std::string¶ÔÓ¦TYPE_BLOB
-6.É¾³ıÅäÖÃ
-DELETE_GLOBAL_CONFIG(keyÖµ);
-DELETE_GLOBAL_CONFIG(sectionÖµ, keyÖµ);
-DELETE_USER_CONFIG(keyÖµ);
-DELETE_USER_CONFIG(sectionÖµ, keyÖµ);
-×¢ÒâÔÚÉ¾³ıÓÃ»§Ïà¹ØÅäÖÃÊ±userIdÊÇÕıÈ·µÄ
-7.×¢Òâ
-ËùÓĞ²Ù×÷±ØĞëÁ¬Ğø£¬²»ÔÊĞíÕâÑùĞ´
-GLOBAL_CONFIG[keyÖµ];
-GLOBAL_CONFIG[keyÖµ] = value;
-ÕâÑùĞ´ÊÇÔÊĞíµÄ
-Fun(GLOBAL_CONFIG[keyÖµ].toInt32());
-8.ĞÔÄÜ
-Ä¿Ç°Ò»Ãë²åÈë430ÌõÅäÖÃÊı¾İ£¬²éÑ¯¼¸ºõ²»ºÄÊ±¼ä
-Èç¹ûÔÚÕâ¸ö»ù´¡ÉÏÏëÌá¸ßËÙ¶È¿ÉÒÔÔÚÖ´ĞĞ´æ´¢Ç°¼ÓÉÏCONFIG_BEGIN£¬Ö´ĞĞ¶àÌõ´æ´¢Óï¾äºóÖ´ĞĞCONFIG_END
-ÀıÈç
+USER_CONFIG[keyå€¼] = value2;
+å¦‚æœæƒ³æ‹¿åˆ°value1çš„å€¼å¿…é¡»é‡æ–°è®¾å›1000001æ‰è¡Œ
+5.è·å–å­˜å‚¨å†…å®¹
+å¯ä»¥è½¬æ¢ä¸º4ç§ç±»å‹ï¼Œint32_t,uint64_t,double,std::string
+double result = GLOBAL_CONFIG[sectionå€¼][keyå€¼].toDouble();
+double result = USER_CONFIG[sectionå€¼][keyå€¼].toDouble();
+resultä¸ºé…ç½®æ–‡ä»¶ä¸­çš„å€¼
+å¦‚æœä¸è®°å¾—å­˜å…¥çš„ç±»å‹ï¼Œå¯ä»¥å…ˆè¿›è¡ŒæŸ¥çœ‹
+std::string type = USER_CONFIG[sectionå€¼][keyå€¼].type();
+int32_tå¯¹åº”TYPE_INT32
+uint64_tå¯¹åº”TYPE_UINT64
+doubleå¯¹åº”TYPE_DOUBLE
+std::stringå¯¹åº”TYPE_BLOB
+6.åˆ é™¤é…ç½®
+DELETE_GLOBAL_CONFIG(keyå€¼);
+DELETE_GLOBAL_CONFIG(sectionå€¼, keyå€¼);
+DELETE_USER_CONFIG(keyå€¼);
+DELETE_USER_CONFIG(sectionå€¼, keyå€¼);
+æ³¨æ„åœ¨åˆ é™¤ç”¨æˆ·ç›¸å…³é…ç½®æ—¶userIdæ˜¯æ­£ç¡®çš„
+7.æ³¨æ„
+æ‰€æœ‰æ“ä½œå¿…é¡»è¿ç»­ï¼Œä¸å…è®¸è¿™æ ·å†™
+GLOBAL_CONFIG[keyå€¼];
+GLOBAL_CONFIG[keyå€¼] = value;
+è¿™æ ·å†™æ˜¯å…è®¸çš„
+Fun(GLOBAL_CONFIG[keyå€¼].toInt32());
+8.æ€§èƒ½
+ç›®å‰ä¸€ç§’æ’å…¥430æ¡é…ç½®æ•°æ®ï¼ŒæŸ¥è¯¢å‡ ä¹ä¸è€—æ—¶é—´
+å¦‚æœåœ¨è¿™ä¸ªåŸºç¡€ä¸Šæƒ³æé«˜é€Ÿåº¦å¯ä»¥åœ¨æ‰§è¡Œå­˜å‚¨å‰åŠ ä¸ŠCONFIG_BEGINï¼Œæ‰§è¡Œå¤šæ¡å­˜å‚¨è¯­å¥åæ‰§è¡ŒCONFIG_END
+ä¾‹å¦‚
 CONFIG_BEGIN;
 for(int32_t index = 0; index < 10000; ++index)
 {
 	GLOBAL_CONFIG[index] = index;
 }
 CONFIG_END;
-9.´æ´¢³¤¶È
-Ä¿Ç°´æ´¢³¤¶ÈÎªSAVE_LENGTH£¬(4G - 1)´óĞ¡£¬uint32_tÉÏÏŞ
-10.¶àÏß³Ì¶à½ø³Ì
-Ö§³Ö¶àÏß³Ì¶à½ø³ÌÍ¬Ê±Ê¹ÓÃ£¬Ö§³Ö´æÈëÍ¬Ò»¸öÊı¾İ¿âÎÄ¼ş
-11.ÓÃ·¨ÊµÀı
-´æ´¢ÓÃ»§µÇÂ¼ÕËºÅÁĞ±í
-GLOBAL_CONFIG[µÇÂ¼ÕËºÅÁĞ±íÅäÖÃÃ¶¾ÙÖµ][¸´Ñ¡¿òÖĞÕËºÅÎ»ÖÃµÄĞòÁĞºÅ] = ¶ş½øÖÆ×Ö·û´®(µÇÂ¼ÕËºÅ\0µÇÂ¼ÃÜÂë\0ÓÃ»§Í·ÏñÂ·¾¶);
-´æ´¢ºÍÉ¾³ıµ±Ç°ÕËºÅ×î½üÔÚÍæÓÎÏ·Ãû
-SET_CONFIG_USERID(Æô¶¯Ê±ÓÃ»§µÄIDÖµ);
-USER_CONFIG[×î½üÔÚÍæÓÎÏ·ÃûÅäÖÃÃ¶¾ÙÖµ] = ×î½üÔÚÍæµÄÓÎÏ·Ãû;
-DELETE_USER_CONFIG(×î½üÔÚÍæÓÎÏ·ÃûÅäÖÃÃ¶¾ÙÖµ);
+9.å­˜å‚¨é•¿åº¦
+ç›®å‰å­˜å‚¨é•¿åº¦ä¸ºSAVE_LENGTHï¼Œ(4G - 1)å¤§å°ï¼Œuint32_tä¸Šé™
+10.å¤šçº¿ç¨‹å¤šè¿›ç¨‹
+æ”¯æŒå¤šçº¿ç¨‹å¤šè¿›ç¨‹åŒæ—¶ä½¿ç”¨ï¼Œæ”¯æŒå­˜å…¥åŒä¸€ä¸ªæ•°æ®åº“æ–‡ä»¶
+11.ç”¨æ³•å®ä¾‹
+å­˜å‚¨ç”¨æˆ·ç™»å½•è´¦å·åˆ—è¡¨
+GLOBAL_CONFIG[ç™»å½•è´¦å·åˆ—è¡¨é…ç½®æšä¸¾å€¼][å¤é€‰æ¡†ä¸­è´¦å·ä½ç½®çš„åºåˆ—å·] = äºŒè¿›åˆ¶å­—ç¬¦ä¸²(ç™»å½•è´¦å·\0ç™»å½•å¯†ç \0ç”¨æˆ·å¤´åƒè·¯å¾„);
+å­˜å‚¨å’Œåˆ é™¤å½“å‰è´¦å·æœ€è¿‘åœ¨ç©æ¸¸æˆå
+SET_CONFIG_USERID(å¯åŠ¨æ—¶ç”¨æˆ·çš„IDå€¼);
+USER_CONFIG[æœ€è¿‘åœ¨ç©æ¸¸æˆåé…ç½®æšä¸¾å€¼] = æœ€è¿‘åœ¨ç©çš„æ¸¸æˆå;
+DELETE_USER_CONFIG(æœ€è¿‘åœ¨ç©æ¸¸æˆåé…ç½®æšä¸¾å€¼);
 ********************************************************************************/
 
 #define TYPE_BLOB "blob"
@@ -86,7 +86,7 @@ DELETE_USER_CONFIG(×î½üÔÚÍæÓÎÏ·ÃûÅäÖÃÃ¶¾ÙÖµ);
 
 #define SAVE_LENGTH 104857600 //4294967295
 
-//USER¿ÉÒÔºÍGLOBAL´©²å»ìÓÃ
+//USERå¯ä»¥å’ŒGLOBALç©¿æ’æ··ç”¨
 
 #define GET_MACRO(_1, _2, NAME,...) NAME
 
@@ -103,7 +103,7 @@ DELETE_USER_CONFIG(×î½üÔÚÍæÓÎÏ·ÃûÅäÖÃÃ¶¾ÙÖµ);
 #define USER_CONFIG (*ConfigManager::instance().getUserConfigManager())
 #define SET_CONFIG_USERID(userId) ConfigManager::instance().getUserConfigManager()->setUserId(userId)
 
-//ÔİÊ±²»¿ÉÓÃ
+//æš‚æ—¶ä¸å¯ç”¨
 //#define CONFIG_BEGIN ConfigManager::instance().transaction()
 //#define CONFIG_END ConfigManager::instance().commit()
 
@@ -112,182 +112,182 @@ class UserConfigManager;
 class SQLiteResultSet;
 class FileReadWriteMutex;
 
-/** ÅäÖÃ¹ÜÀíÀà
+/** é…ç½®ç®¡ç†ç±»
 */
 class ConfigManagerAPI ConfigManager
 {
 protected:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ConfigManager();
 
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static ConfigManager& instance();
 
 public:
-	/** ´æÈësection»òkey
-	@param [in] sectionOrKey section»òkeyÖµ
-	@return ·µ»Ø¹ÜÀíÀà
+	/** å­˜å…¥sectionæˆ–key
+	@param [in] sectionOrKey sectionæˆ–keyå€¼
+	@return è¿”å›ç®¡ç†ç±»
 	*/
 	ConfigManager& operator[] (int32_t sectionOrKey);
 
-	/** ´æÈëint32_tÖµ
-	@param [in] value int32_tÖµ
-	@return ·µ»Ø¹ÜÀíÀà
+	/** å­˜å…¥int32_tå€¼
+	@param [in] value int32_tå€¼
+	@return è¿”å›ç®¡ç†ç±»
 	*/
 	ConfigManager operator = (int32_t value);
 
-	/** ´æÈëuint64_tÖµ
-	@param [in] value uint64_tÖµ
-	@return ·µ»Ø¹ÜÀíÀà
+	/** å­˜å…¥uint64_tå€¼
+	@param [in] value uint64_tå€¼
+	@return è¿”å›ç®¡ç†ç±»
 	*/
 	ConfigManager operator = (uint64_t value);
 
-	/** ´æÈëdoubleÖµ
-	@param [in] value doubleÖµ
-	@return ·µ»Ø¹ÜÀíÀà
+	/** å­˜å…¥doubleå€¼
+	@param [in] value doubleå€¼
+	@return è¿”å›ç®¡ç†ç±»
 	*/
 	ConfigManager operator = (double value);
 
-	/** ´æÈë×Ö·û´®»ò¶ş½øÖÆ×Ö·û´®
-	@param [in] value ×Ö·û´®»ò¶ş½øÖÆ×Ö·û´®
-	@return ·µ»Ø¹ÜÀíÀà
+	/** å­˜å…¥å­—ç¬¦ä¸²æˆ–äºŒè¿›åˆ¶å­—ç¬¦ä¸²
+	@param [in] value å­—ç¬¦ä¸²æˆ–äºŒè¿›åˆ¶å­—ç¬¦ä¸²
+	@return è¿”å›ç®¡ç†ç±»
 	*/
 	ConfigManager operator = (const std::string& value);
 
-	/** »ñÈ¡´æ´¢ÀàĞÍ
-	@return ·µ»Ø´æ´¢ÀàĞÍ
+	/** è·å–å­˜å‚¨ç±»å‹
+	@return è¿”å›å­˜å‚¨ç±»å‹
 	*/
 	std::string type();
 
-	/** ×ª»»Îªint32_tÀàĞÍ
-	@return ·µ»Øint32_tÀàĞÍ
+	/** è½¬æ¢ä¸ºint32_tç±»å‹
+	@return è¿”å›int32_tç±»å‹
 	*/
 	int32_t toInt32();
 
-	/** ×ª»»Îªuint64_tÀàĞÍ
-	@return ·µ»Øuint64_tÀàĞÍ
+	/** è½¬æ¢ä¸ºuint64_tç±»å‹
+	@return è¿”å›uint64_tç±»å‹
 	*/
 	uint64_t toUint64();
 
-	/** ×ª»»ÎªdoubleÀàĞÍ
-	@return ·µ»ØdoubleÀàĞÍ
+	/** è½¬æ¢ä¸ºdoubleç±»å‹
+	@return è¿”å›doubleç±»å‹
 	*/
 	double toDouble();
 
-	/** ×ª»»Îªstd::stringÀàĞÍ£¬°üº¬ÆÕÍ¨×Ö·û´®ºÍ¶ş½øÖÆ×Ö·û´®
-	@return ·µ»Østd::stringÀàĞÍ
+	/** è½¬æ¢ä¸ºstd::stringç±»å‹ï¼ŒåŒ…å«æ™®é€šå­—ç¬¦ä¸²å’ŒäºŒè¿›åˆ¶å­—ç¬¦ä¸²
+	@return è¿”å›std::stringç±»å‹
 	*/
 	std::string toString();
 
 public:
-	/** ³õÊ¼»¯ÅäÖÃÎÄ¼şÂ·¾¶£¬Èç¹û²»µ÷ÓÃ¸Ãº¯ÊıÔò×Ô¶¯ÔÚÔËĞĞÄ¿Â¼ÏÂºÍÖ´ĞĞÎÄ¼şÍ¬ÃûµÄdbÎÄ¼ş
-	@param [in] configPath ÅäÖÃÎÄ¼şÂ·¾¶
+	/** åˆå§‹åŒ–é…ç½®æ–‡ä»¶è·¯å¾„ï¼Œå¦‚æœä¸è°ƒç”¨è¯¥å‡½æ•°åˆ™è‡ªåŠ¨åœ¨è¿è¡Œç›®å½•ä¸‹å’Œæ‰§è¡Œæ–‡ä»¶åŒåçš„dbæ–‡ä»¶
+	@param [in] configPath é…ç½®æ–‡ä»¶è·¯å¾„
 	*/
 	void init(const std::string& configPath = "");
 
-	/** ¹¹½¨Êı¾İ¿â
+	/** æ„å»ºæ•°æ®åº“
 	*/
 	void initSQLite();
 
-	/** ÉèÖÃÓÃ»§ID
-	@param [in] userId ÓÃ»§ID
+	/** è®¾ç½®ç”¨æˆ·ID
+	@param [in] userId ç”¨æˆ·ID
 	*/
 	void setUserId(uint64_t userId);
 
-	/** »ñÈ¡ÓÃ»§Ïà¹ØÅäÖÃ¹ÜÀíÀà
-	@return ·µ»ØÓÃ»§Ïà¹ØÅäÖÃ¹ÜÀíÀà
+	/** è·å–ç”¨æˆ·ç›¸å…³é…ç½®ç®¡ç†ç±»
+	@return è¿”å›ç”¨æˆ·ç›¸å…³é…ç½®ç®¡ç†ç±»
 	*/
 	UserConfigManager* getUserConfigManager();
 
-	/** »ñÈ¡È«¾ÖÀà
-	@return ·µ»ØÈ«¾ÖÀà
+	/** è·å–å…¨å±€ç±»
+	@return è¿”å›å…¨å±€ç±»
 	*/
 	ConfigManager& getGlobalConfig();
 
-	/** É¾³ıÅäÖÃ
-	@param [in] key keyÖµ
+	/** åˆ é™¤é…ç½®
+	@param [in] key keyå€¼
 	*/
 	void deleteConfig(int32_t key);
 
-	/** É¾³ıÅäÖÃ
-	@param [in] key keyÖµ
-	@param [in] section ½ÚµãÖµ
+	/** åˆ é™¤é…ç½®
+	@param [in] key keyå€¼
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void deleteConfig(int32_t section, int32_t key);
 
-	/** ¿ªÆôÊÂÎñ
+	/** å¼€å¯äº‹åŠ¡
 	*/
 	void transaction();
 
-	/** Ìá½»
+	/** æäº¤
 	*/
 	void commit();
 
 protected:
-	/** Ìí¼ÓÅäÖÃ£¨¶ş½øÖÆ×Ö·û´®£©
-	@param [in] key keyÖµ
-	@param [in] value ¶ş½øÖÆ×Ö·û´®
-	@param [in] section ½ÚµãÖµ
+	/** æ·»åŠ é…ç½®ï¼ˆäºŒè¿›åˆ¶å­—ç¬¦ä¸²ï¼‰
+	@param [in] key keyå€¼
+	@param [in] value äºŒè¿›åˆ¶å­—ç¬¦ä¸²
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void addConfig(int32_t key, const std::string& value, int32_t section = 0);
 
-	/** »ñÈ¡ÅäÖÃ£¨¶ş½øÖÆ×Ö·û´®£©
-	@param [in] key keyÖµ
-	@param [out] value ¶ş½øÖÆ×Ö·û´®
-	@param [in] section ½ÚµãÖµ
+	/** è·å–é…ç½®ï¼ˆäºŒè¿›åˆ¶å­—ç¬¦ä¸²ï¼‰
+	@param [in] key keyå€¼
+	@param [out] value äºŒè¿›åˆ¶å­—ç¬¦ä¸²
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void getConfig(int32_t key, std::string& value, int32_t section = 0);
 
-	/** Ìí¼ÓÅäÖÃ£¨ÕûĞÎ£©
-	@param [in] key keyÖµ
-	@param [in] value ÕûĞÎ
-	@param [in] section ½ÚµãÖµ
+	/** æ·»åŠ é…ç½®ï¼ˆæ•´å½¢ï¼‰
+	@param [in] key keyå€¼
+	@param [in] value æ•´å½¢
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void addConfig(int32_t key, int32_t value, int32_t section = 0);
 
-	/** Ìí¼ÓÅäÖÃ£¨ÕûĞÎ£©
-	@param [in] key keyÖµ
-	@param [out] value ÕûĞÎ
-	@param [in] section ½ÚµãÖµ
+	/** æ·»åŠ é…ç½®ï¼ˆæ•´å½¢ï¼‰
+	@param [in] key keyå€¼
+	@param [out] value æ•´å½¢
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void getConfig(int32_t key, int32_t& value, int32_t section = 0);
 
-	/** Ìí¼ÓÅäÖÃ£¨ÎŞ·ûºÅ³¤ÕûĞÍ£©
-	@param [in] key keyÖµ
-	@param [in] value ÎŞ·ûºÅ³¤ÕûĞÍ
-	@param [in] section ½ÚµãÖµ
+	/** æ·»åŠ é…ç½®ï¼ˆæ— ç¬¦å·é•¿æ•´å‹ï¼‰
+	@param [in] key keyå€¼
+	@param [in] value æ— ç¬¦å·é•¿æ•´å‹
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void addConfig(int32_t key, uint64_t value, int32_t section = 0);
 
-	/** Ìí¼ÓÅäÖÃ£¨ÎŞ·ûºÅ³¤ÕûĞÍ£©
-	@param [in] key keyÖµ
-	@param [out] value ÎŞ·ûºÅ³¤ÕûĞÍ
-	@param [in] section ½ÚµãÖµ
+	/** æ·»åŠ é…ç½®ï¼ˆæ— ç¬¦å·é•¿æ•´å‹ï¼‰
+	@param [in] key keyå€¼
+	@param [out] value æ— ç¬¦å·é•¿æ•´å‹
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void getConfig(int32_t key, uint64_t& value, int32_t section = 0);
 
-	/** Ìí¼ÓÅäÖÃ£¨Ë«¾«¶È¸¡µãĞÍ£©
-	@param [in] key keyÖµ
-	@param [in] value Ë«¾«¶È¸¡µãĞÍ
-	@param [in] section ½ÚµãÖµ
+	/** æ·»åŠ é…ç½®ï¼ˆåŒç²¾åº¦æµ®ç‚¹å‹ï¼‰
+	@param [in] key keyå€¼
+	@param [in] value åŒç²¾åº¦æµ®ç‚¹å‹
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void addConfig(int32_t key, double value, int32_t section = 0);
 
-	/** Ìí¼ÓÅäÖÃ£¨Ë«¾«¶È¸¡µãĞÍ£©
-	@param [in] key keyÖµ
-	@param [out] value Ë«¾«¶È¸¡µãĞÍ
-	@param [in] section ½ÚµãÖµ
+	/** æ·»åŠ é…ç½®ï¼ˆåŒç²¾åº¦æµ®ç‚¹å‹ï¼‰
+	@param [in] key keyå€¼
+	@param [out] value åŒç²¾åº¦æµ®ç‚¹å‹
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void getConfig(int32_t key, double& value, int32_t section = 0);
 
-	/** »ñÈ¡ÅäÖÃÀàĞÍ
-	@param [in] key keyÖµ
-	@param [in] section ½ÚµãÖµ
-	@return ·µ»ØÅäÖÃÀàĞÍ
+	/** è·å–é…ç½®ç±»å‹
+	@param [in] key keyå€¼
+	@param [in] section èŠ‚ç‚¹å€¼
+	@return è¿”å›é…ç½®ç±»å‹
 	*/
 	std::string getConfigType(int32_t key, int32_t section = 0);
 

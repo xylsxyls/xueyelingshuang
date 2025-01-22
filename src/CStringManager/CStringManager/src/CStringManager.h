@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <vector>
 #include <string>
 #include <stdint.h>
@@ -7,18 +7,18 @@
 class CStringManagerAPI CStringManager
 {
 public:
-	//?´Ó0¿ªÊ¼¼ÆÊı£¬¸ù¾İµ±Ç°Ñ¡Ôñ·µ»ØÁíÒ»²à·ûºÅµÄÎ»ÖÃ£¬Èç¹û¸ø¶¨×óÓÒÁ½²à²»´æÔÚ»òÑ¡ÔñµÄÎ»ÖÃ²»ÊÇÁ½²àÖ®Ò»Ôò·µ»Ø-1
-	//?Á½²à¸öÊı²»Æ¥ÅäµÄÊ±ºò»á¸ù¾İ×ó²à¿ªÊ¼·µ»Ø¶ÔÓ¦µÄÓÒ²à
+	//?ä»0å¼€å§‹è®¡æ•°ï¼Œæ ¹æ®å½“å‰é€‰æ‹©è¿”å›å¦ä¸€ä¾§ç¬¦å·çš„ä½ç½®ï¼Œå¦‚æœç»™å®šå·¦å³ä¸¤ä¾§ä¸å­˜åœ¨æˆ–é€‰æ‹©çš„ä½ç½®ä¸æ˜¯ä¸¤ä¾§ä¹‹ä¸€åˆ™è¿”å›-1
+	//?ä¸¤ä¾§ä¸ªæ•°ä¸åŒ¹é…çš„æ—¶å€™ä¼šæ ¹æ®å·¦ä¾§å¼€å§‹è¿”å›å¯¹åº”çš„å³ä¾§
 	static size_t FindOther(const std::string& str, char cLeft, char cRight, size_t nSelect);
-	//?·Ö¸î×Ö·û´®
+	//?åˆ†å‰²å­—ç¬¦ä¸²
 	static std::vector<std::string> split(const std::string& splitString, const std::string& separate_character);
 	static void split(std::vector<std::string>& result, const std::string& splitString, char separate_character);
-	//?vector<CString> vec = split("123,234,345,456,",","); //µÃµ½5¸ö×Ö·û´®
-	//?vector<CString> vec2 = split("123,,234,,345,,456",",,"); //µÃµ½4¸ö×Ö·û´®
+	//?vector<CString> vec = split("123,234,345,456,",","); //å¾—åˆ°5ä¸ªå­—ç¬¦ä¸²
+	//?vector<CString> vec2 = split("123,,234,,345,,456",",,"); //å¾—åˆ°4ä¸ªå­—ç¬¦ä¸²
 
 	static std::vector<std::wstring> split(const std::wstring& splitString, const std::wstring& separate_character);
 
-	//?Ìæ»»×Ö·û´®£¬Ñ­»·Ìæ»»ËùÓĞ×Ö·û´®£¬±£Ö¤½á¹ûÖĞ²»´æÔÚÔ­À´µÄ×Ö·û´®
+	//?æ›¿æ¢å­—ç¬¦ä¸²ï¼Œå¾ªç¯æ›¿æ¢æ‰€æœ‰å­—ç¬¦ä¸²ï¼Œä¿è¯ç»“æœä¸­ä¸å­˜åœ¨åŸæ¥çš„å­—ç¬¦ä¸²
 	static void ReplaceAll(std::string& str, const std::string& old_value, const std::string& new_value);
 
 	static std::string Mid(const std::string& str, size_t offset, size_t count);
@@ -55,7 +55,7 @@ public:
 
 	static std::string Format(const char* fmt, ...);
 
-	//linuxÏÂµÄCStringManager::Format(L"%s", "´úÂë");Ïàµ±ÓÚwindowsµÄCStringManager::Format(L"%s", L"´úÂë");
+	//linuxä¸‹çš„CStringManager::Format(L"%s", "ä»£ç ");ç›¸å½“äºwindowsçš„CStringManager::Format(L"%s", L"ä»£ç ");
 	static void Format(std::wstring& str, const wchar_t* fmt, ...);
 
 	static std::wstring Format(const wchar_t* fmt, ...);
@@ -70,10 +70,10 @@ public:
 
 	static std::wstring MakeLower(const std::wstring& src);
 
-	//È¡³öÁ½¸ö×Ö·û´®ÖĞ¼äµÄ×Ö·û´®£¬²»°üÀ¨Í·Î²
+	//å–å‡ºä¸¤ä¸ªå­—ç¬¦ä¸²ä¸­é—´çš„å­—ç¬¦ä¸²ï¼Œä¸åŒ…æ‹¬å¤´å°¾
 	static std::string GetMidString(const std::string& src, const std::string& leftString, const std::string& rightString);
 
-	//?×Ö·û´®×ªÎŞ·ûºÅ³¤ÕûĞÍ
+	//?å­—ç¬¦ä¸²è½¬æ— ç¬¦å·é•¿æ•´å‹
 	static uint64_t atoui64(const char* str);
 
 	static int64_t atoi64(const char* str);

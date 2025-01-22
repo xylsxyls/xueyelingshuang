@@ -1,4 +1,4 @@
-#include "FileReadWriteMutex.h"
+ï»¿#include "FileReadWriteMutex.h"
 #ifdef _MSC_VER
 #include <windows.h>
 #include <thread>
@@ -56,7 +56,7 @@ void FileReadWriteMutex::write()
 			break;
 		}
 		CloseHandle(m_file);
-		//windowsÏÂ²»Ó¦¸Ã´òÓ¡Õâ¾ä
+		//windowsä¸‹ä¸åº”è¯¥æ‰“å°è¿™å¥
 		printf("lock file error, lastError = %d\n", (int32_t)::GetLastError());
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}

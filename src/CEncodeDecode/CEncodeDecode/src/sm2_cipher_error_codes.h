@@ -1,4 +1,4 @@
-/**************************************************
+﻿/**************************************************
 * File name: sm2_cipher_error_codes.h
 * Author: HAN Wei
 * Author's blog: https://blog.csdn.net/henter/

@@ -1,4 +1,4 @@
-#include "ReplaceNameTask.h"
+﻿#include "ReplaceNameTask.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 

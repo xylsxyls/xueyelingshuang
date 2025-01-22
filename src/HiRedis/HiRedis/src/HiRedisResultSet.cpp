@@ -1,4 +1,4 @@
-#include "HiRedisResultSet.h"
+﻿#include "HiRedisResultSet.h"
 #include "hiredisinclude/hiredis.h"
 #include "CStringManager/CStringManagerAPI.h"
 

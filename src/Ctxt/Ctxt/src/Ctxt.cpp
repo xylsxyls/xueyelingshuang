@@ -1,4 +1,4 @@
-#include "Ctxt.h"
+ï»¿#include "Ctxt.h"
 #include <fstream>
 #include <stdarg.h>
 
@@ -16,7 +16,7 @@ Ctxt::~Ctxt()
 static void Split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
 {
 	result.clear();
-	//?·Ö¸î×Ö·û´®µÄ³¤¶È,ÕâÑù¾Í¿ÉÒÔÖ§³ÖÈç¡°,,¡±¶à×Ö·û´®µÄ·Ö¸ô·û
+	//?åˆ†å‰²å­—ç¬¦ä¸²çš„é•¿åº¦,è¿™æ ·å°±å¯ä»¥æ”¯æŒå¦‚â€œ,,â€å¤šå­—ç¬¦ä¸²çš„åˆ†éš”ç¬¦
 	size_t separate_characterLen = separate_character.length();
 	size_t lastPosition = 0;
 	int32_t index = -1;
@@ -25,8 +25,8 @@ static void Split(std::vector<std::string>& result, const std::string& splitStri
 		result.push_back(splitString.substr(lastPosition, index - lastPosition));
 		lastPosition = index + separate_characterLen;
 	}
-	//?½ØÈ¡×îºóÒ»¸ö·Ö¸ô·ûºóµÄÄÚÈİ
-	//?if (!lastString.empty()) //Èç¹û×îºóÒ»¸ö·Ö¸ô·ûºó»¹ÓĞÄÚÈİ¾ÍÈë¶Ó
+	//?æˆªå–æœ€åä¸€ä¸ªåˆ†éš”ç¬¦åçš„å†…å®¹
+	//?if (!lastString.empty()) //å¦‚æœæœ€åä¸€ä¸ªåˆ†éš”ç¬¦åè¿˜æœ‰å†…å®¹å°±å…¥é˜Ÿ
 	result.push_back(splitString.substr(lastPosition));
 }
 
@@ -97,12 +97,12 @@ void Ctxt::Write(FILE* pFile, const char* fmt, ...)
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-	//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	//?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	result.resize(size);
 	if (size != 0)
 	{
 #ifdef _MSC_VER
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vsprintf_s(&result[0], size + 1, fmt, args);
 #elif __unix__
 		vsnprintf(&result[0], size + 1, fmt, args);
@@ -124,12 +124,12 @@ void Ctxt::AddLineWithoutOpenFile(const char* fmt, ...)
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-	//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	//?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	result.resize(size);
 	if (size != 0)
 	{
 #ifdef _MSC_VER
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vsprintf_s(&result[0], size + 1, fmt, args);
 #elif __unix__
 		vsnprintf(&result[0], size + 1, fmt, args);
@@ -197,7 +197,7 @@ void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
 	Split(vecPoint1ToPoint2, strSplit, ",");
 	std::vector<int32_t> vecPointInt;
 	std::vector<std::string> vecPoint;
-	//·Ö³öµÃµ½µÚÒ»¶Ô½ØÈ¡µã£¬µÚ0¸öºÍµÚ2¸ö¾ÍÊÇÊ×ºÍÎ²
+	//åˆ†å‡ºå¾—åˆ°ç¬¬ä¸€å¯¹æˆªå–ç‚¹ï¼Œç¬¬0ä¸ªå’Œç¬¬2ä¸ªå°±æ˜¯é¦–å’Œå°¾
 	int32_t iPart1 = -1;
 	while (iPart1++ != (int32_t)vecPoint1ToPoint2.size() - 1)
 	{
@@ -228,7 +228,7 @@ void Ctxt::LoadTxtWithPointToPoint(const std::string& strSplit)
 		}
 #endif
 		vecLine.clear();
-		//·Ö³öµÃµ½µÚÒ»¶Ô½ØÈ¡µã£¬µÚ0¸öºÍµÚ2¸ö¾ÍÊÇÊ×ºÍÎ²
+		//åˆ†å‡ºå¾—åˆ°ç¬¬ä¸€å¯¹æˆªå–ç‚¹ï¼Œç¬¬0ä¸ªå’Œç¬¬2ä¸ªå°±æ˜¯é¦–å’Œå°¾
 		pointToPointIndex = -1;
 		while (pointToPointIndex++ != vecSplitSize - 1)
 		{

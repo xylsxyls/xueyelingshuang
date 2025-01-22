@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <map>
 #include <string>
 #include <qglobal.h>
@@ -33,7 +33,7 @@ struct Key
 	std::vector<KeyString> m_vecKeyString;
 };
 
-/** ÉèÖÃQSSÊ¹ÓÃµÄÀà£¬¸ÃÀàÖ»ÓÃÓÚÄÚ²¿µ÷ÓÃ
+/** è®¾ç½®QSSä½¿ç”¨çš„ç±»ï¼Œè¯¥ç±»åªç”¨äºå†…éƒ¨è°ƒç”¨
 */
 class QssStringAPI QssString
 {
@@ -45,9 +45,9 @@ public:
 	QssString& addClassName();
 	QssString& operator()(qint32 enumFlag, const std::wstring& itemClassName);
 	QssString& operator()(const std::wstring& str, std::wstring* name);
-	/** ÅĞ¶ÏÊ½Ìí¼Ó½ÚµãÃû
-	@param [in] hasItemName ÊÇ·ñÓĞ½ÚµãÃû
-	@param [in] itemName ½ÚµãÃû
+	/** åˆ¤æ–­å¼æ·»åŠ èŠ‚ç‚¹å
+	@param [in] hasItemName æ˜¯å¦æœ‰èŠ‚ç‚¹å
+	@param [in] itemName èŠ‚ç‚¹å
 	*/
 	QssString& operator()(bool hasItemName, const std::wstring& itemName);
 	QssString& operator()(const std::wstring& state);

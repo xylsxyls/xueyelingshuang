@@ -1,25 +1,25 @@
-#pragma once
+ï»¿#pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "ReplaceType.h"
 
 class ReplaceNameTask : public CTask
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ReplaceNameTask();
 
 public:
-	/** Ö´ĞĞÈÎÎñ
+	/** æ‰§è¡Œä»»åŠ¡
 	*/
 	void DoTask();
 
-	/** ÉèÖÃ²ÎÊı
-	@param [in] replaceNameParam Ìæ»»ÎÄ¼şÃûÈÎÎñ²ÎÊı
+	/** è®¾ç½®å‚æ•°
+	@param [in] replaceNameParam æ›¿æ¢æ–‡ä»¶åä»»åŠ¡å‚æ•°
 	*/
 	void setParam(const ReplaceNameParam& replaceNameParam);
 
 protected:
-	//Ìæ»»ÎÄ¼şÃûÈÎÎñ²ÎÊı
+	//æ›¿æ¢æ–‡ä»¶åä»»åŠ¡å‚æ•°
 	ReplaceNameParam m_replaceNameParam;
 };

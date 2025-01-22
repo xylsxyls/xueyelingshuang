@@ -1,4 +1,4 @@
-#include "WriteLock.h"
+﻿#include "WriteLock.h"
 #include "ReadWriteMutexBase.h"
 
 WriteLock::WriteLock(ReadWriteMutexBase& mutex)

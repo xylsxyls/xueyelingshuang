@@ -1,4 +1,4 @@
-#include "Cini.h"
+ï»¿#include "Cini.h"
 #ifdef _MSC_VER
 #include <windows.h>
 #endif
@@ -100,14 +100,14 @@ std::vector<std::string> Cini::getAllSection() const
 	std::vector<std::string> vecSection;
 	int32_t iLength = 0;
 	int32_t iPos = 0;
-	//×Ü³¤¶È
+	//æ€»é•¿åº¦
 	uint32_t maxSectionLength = (uint32_t)m_sectionNum * (uint32_t)m_length;
-	//×ÜµÄÌá³öÀ´µÄ×Ö·û´®
+	//æ€»çš„æå‡ºæ¥çš„å­—ç¬¦ä¸²
 	CHAR* chSectionNames = new CHAR[maxSectionLength];
-	//´æ·ÅÒ»¸ö¶ÎÃû
+	//å­˜æ”¾ä¸€ä¸ªæ®µå
 	CHAR* chSection = new CHAR[m_length];
 	DWORD nChar = GetPrivateProfileSectionNamesA(chSectionNames, maxSectionLength, m_iniPath.c_str());
-	//ÒÔÏÂÑ­»·£¬½Ø¶Ïµ½Á½¸öÁ¬ĞøµÄ0
+	//ä»¥ä¸‹å¾ªç¯ï¼Œæˆªæ–­åˆ°ä¸¤ä¸ªè¿ç»­çš„0
 	for (int32_t i = 0; (DWORD)i < nChar; i++)
 	{
 		if (chSectionNames[i] == 0)

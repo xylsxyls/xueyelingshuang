@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CtxtMacro.h"
 #include <string>
 #include <vector>
@@ -7,7 +7,7 @@
 class CtxtAPI Ctxt
 {
 public:
-	//ÒÔ\r\nÎªĞĞ½áÊø·û
+	//ä»¥\r\nä¸ºè¡Œç»“æŸç¬¦
 	enum Load
 	{
 		POINT_TO_POINT = 1,
@@ -20,25 +20,25 @@ public:
 	~Ctxt();
 
 public:
-	//?ÄÚ²¿Ê¹ÓÃifstreamºÍgetline£¬ÎÄ¼şÄ©Î²µÄ¶àÓà¿ÕĞĞ²»»á±»¼ÓÔØ£¬txtµ¼Èë·ÖÎªÁ½ÖÖ£¬µÚÒ»ÖÖ£¬Ã¿ĞĞÖ»È¡¹Ì¶¨¸ñ×ÓµÄ¶«Î÷£¬Èç"1-3,4-6"£¬¶¥¸ñ¾ÍÊÇ1£¬1-3¾ÍÊÇÈ¡123¸ñ£¬µÚ¶şÖÖ£¬Ã¿ĞĞÒÔÒ»¸ö±êÖ¾·Ö¸ô£¬Ã¿ĞĞÊäÈëµÄ×î´ó³¤¶ÈÄ¬ÈÏÒ»ÒÚ£¬µÚÈıÖÖ£¬Ò»ĞĞÒ»¼ÓÔØ
+	//?å†…éƒ¨ä½¿ç”¨ifstreamå’Œgetlineï¼Œæ–‡ä»¶æœ«å°¾çš„å¤šä½™ç©ºè¡Œä¸ä¼šè¢«åŠ è½½ï¼Œtxtå¯¼å…¥åˆ†ä¸ºä¸¤ç§ï¼Œç¬¬ä¸€ç§ï¼Œæ¯è¡Œåªå–å›ºå®šæ ¼å­çš„ä¸œè¥¿ï¼Œå¦‚"1-3,4-6"ï¼Œé¡¶æ ¼å°±æ˜¯1ï¼Œ1-3å°±æ˜¯å–123æ ¼ï¼Œç¬¬äºŒç§ï¼Œæ¯è¡Œä»¥ä¸€ä¸ªæ ‡å¿—åˆ†éš”ï¼Œæ¯è¡Œè¾“å…¥çš„æœ€å¤§é•¿åº¦é»˜è®¤ä¸€äº¿ï¼Œç¬¬ä¸‰ç§ï¼Œä¸€è¡Œä¸€åŠ è½½
 	void LoadTxt(Load flag, const std::string& strSplit = "");
-	//?°ÑÄÚ´æÖĞµÄ±£´æµ½ÎÄ¼şÀï
+	//?æŠŠå†…å­˜ä¸­çš„ä¿å­˜åˆ°æ–‡ä»¶é‡Œ
 	bool Save();
-	//?Áí´æ
+	//?å¦å­˜
 	bool SaveAs(const std::string& path);
-	//?ÎÄ¼şÄÚÈºÌå»»
+	//?æ–‡ä»¶å†…ç¾¤ä½“æ¢
 	int32_t Replace(const std::string& oldstr, const std::string& newstr);
-	//?×·¼ÓĞ´ÈëÒ»ĞĞ²»´ò¿ªÎÄ¼ş£¬º¬ÓĞ»»ĞĞ·û
+	//?è¿½åŠ å†™å…¥ä¸€è¡Œä¸æ‰“å¼€æ–‡ä»¶ï¼Œå«æœ‰æ¢è¡Œç¬¦
 	void AddLineWithoutOpenFile(const char* fmt, ...);
 
 private:
-	//?ÓÃµãµ½µãµÄ·½Ê½¼ÓÔØ
+	//?ç”¨ç‚¹åˆ°ç‚¹çš„æ–¹å¼åŠ è½½
 	void LoadTxtWithPointToPoint(const std::string& strSplit);
-	//?ÓÃ·Ö¸ôµÄ·½Ê½¼ÓÔØ
+	//?ç”¨åˆ†éš”çš„æ–¹å¼åŠ è½½
 	void LoadTxtWithSplit(const std::string& strSplit);
-	//?ÕûĞĞ¼ÓÔØ
+	//?æ•´è¡ŒåŠ è½½
 	void LoadTxtWithOneLine();
-	//?Ğ´Èë£¬²»º¬ÓĞ»»ĞĞ·û
+	//?å†™å…¥ï¼Œä¸å«æœ‰æ¢è¡Œç¬¦
 	void Write(FILE* pFile, const char* fmt, ...);
 
 public:

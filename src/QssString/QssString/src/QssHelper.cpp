@@ -1,4 +1,4 @@
-#include "QssHelper.h"
+﻿#include "QssHelper.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <QPixmap>
 

@@ -1,4 +1,4 @@
-#ifndef SRC_UTILS_AES_ENCRYPTOR_H
+﻿#ifndef SRC_UTILS_AES_ENCRYPTOR_H
 #define SRC_UTILS_AES_ENCRYPTOR_H
 
 #include <string>

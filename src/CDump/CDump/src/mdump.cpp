@@ -1,4 +1,4 @@
-#include "mdump.h"
+ï»¿#include "mdump.h"
 
 #ifdef _MSC_VER
 
@@ -14,7 +14,7 @@
 #include <time.h>
 #include <fstream>
 #include <stdint.h>
-//ÓÃboost¿â¿ÉÒÔÔÚÈÕÖ¾ÖÐ²é¿´´ÅÅÌÊ£Óà¿Õ¼ä
+//ç”¨booståº“å¯ä»¥åœ¨æ—¥å¿—ä¸­æŸ¥çœ‹ç£ç›˜å‰©ä½™ç©ºé—´
 #ifdef USE_BOOST
 #include "boost/filesystem.hpp"
 #include "boost/filesystem/fstream.hpp"
@@ -33,12 +33,12 @@ static std::string Format(const char* fmt, ...)
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-	//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	//?resizeåˆ†é…åŽstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€åŽåˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	result.resize(size);
 	if (size != 0)
 	{
 #ifdef _WIN32
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØÐë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vsprintf_s(&result[0], size + 1, fmt, args);
 #elif __unix__
 		vsnprintf(&result[0], size + 1, fmt, args);
@@ -184,7 +184,7 @@ public:
 		append("System Information:\n");
 
 		{
-			//ÄÚ´æ
+			//å†…å­˜
 			MEMORYSTATUSEX memoryStatus;
 			memset(&memoryStatus, sizeof(memoryStatus), 0);
 			memoryStatus.dwLength = sizeof(memoryStatus);
@@ -196,7 +196,7 @@ public:
 
 #ifdef USE_BOOST
 		{
-			// ´ÅÅÌ¿Õ¼ä
+			// ç£ç›˜ç©ºé—´
 			TCHAR szWinDir[_MAX_PATH] = { 0 };
 			boost::filesystem::path sysPath;
 			boost::system::error_code ec;
@@ -333,7 +333,7 @@ public:
 #else
 			pFrame = (PDWORD)pContext->Ebp;
 #endif
-			// Can two DWORDs be read from the supposed frame address?          
+			// Can two DWORDs be read from the supposed frame address?
 			while (pc != 0 && !IsBadWritePtr(pFrame, sizeof(PVOID) * 2))
 			{
 				TCHAR szModule[MAX_PATH] = { 0 };
@@ -369,7 +369,7 @@ public:
 #else
 				pFrame = (PDWORD)pFrame[0]; // precede to next higher frame on stack
 
-				if ((DWORD)pFrame & 3)    // Frame pointer must be aligned on a
+				if ((DWORD)pFrame & 3)      // Frame pointer must be aligned on a
 					break;                  // DWORD boundary.  Bail if not so.
 #endif
 

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CStopWatchMacro.h"
 #include <stdint.h>
 #include <string>
@@ -6,45 +6,45 @@
 class CStopWatchAPI CStopWatch
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	CStopWatch();
 
 public:
-	//Ê±·ÖÃëÊÇÁ¬Ò»ÆğµÄ£¬Èç¹ûÊÇ1Ğ¡Ê±1·Ö1ÃëµÄÊ±¼ä£¬ÃëÊı·µ»ØµÄ¾ÍÊÇ1Ãë£¬²»ÊÇ×ÜÃëÊı
-	//²é¿´×ßµÄĞ¡Ê±Êı
+	//æ—¶åˆ†ç§’æ˜¯è¿ä¸€èµ·çš„ï¼Œå¦‚æœæ˜¯1å°æ—¶1åˆ†1ç§’çš„æ—¶é—´ï¼Œç§’æ•°è¿”å›çš„å°±æ˜¯1ç§’ï¼Œä¸æ˜¯æ€»ç§’æ•°
+	//æŸ¥çœ‹èµ°çš„å°æ—¶æ•°
 	int32_t GetHour();
 
-	//²é¿´×ßµÄ·ÖÖÓÊı
+	//æŸ¥çœ‹èµ°çš„åˆ†é’Ÿæ•°
 	int32_t GetMinute();
 
-	//²é¿´×ßµÄÃëÊı
+	//æŸ¥çœ‹èµ°çš„ç§’æ•°
 	double GetSeconds();
 
-	//²é¿´×ßµÄ×ÜÊ±¼ä
+	//æŸ¥çœ‹èµ°çš„æ€»æ—¶é—´
 	std::string GetWatchStrTime();
 
-	//²é¿´×ßµÄºÁÃëÊı£¬×ÜºÁÃëÊı
+	//æŸ¥çœ‹èµ°çš„æ¯«ç§’æ•°ï¼Œæ€»æ¯«ç§’æ•°
 	unsigned long GetWatchTime();
 
-	//ÉèÖÃÃë±í×ßµÄÆğÊ¼Ê±¼ä£¬´«ÈëµÄÊÇ×ÜºÁÃëÊı
+	//è®¾ç½®ç§’è¡¨èµ°çš„èµ·å§‹æ—¶é—´ï¼Œä¼ å…¥çš„æ˜¯æ€»æ¯«ç§’æ•°
 	void SetWatchTime(unsigned long SetTime);
 
-	//¼ÌĞø×ßÊ±¼ä
+	//ç»§ç»­èµ°æ—¶é—´
 	void Run();
 
-	//Í£Ö¹×ßÊ±¼ä
+	//åœæ­¢èµ°æ—¶é—´
 	void Stop();
 
 protected:
-	//»ñÈ¡¿ª»úÒÔÀ´µÄÊ±¼ä
+	//è·å–å¼€æœºä»¥æ¥çš„æ—¶é—´
 	unsigned long GetOpenTime();
 
 private:
-	//·²ÊÇunsigned longµÄ¶¼ÊÇºÁÃëÎªµ¥Î»£¬intµÄÊÇ·ÖÖÓ»òÕßĞ¡Ê±µÄÕûĞÎ£¬doubleÊÇÃëÎªµ¥Î»
+	//å‡¡æ˜¯unsigned longçš„éƒ½æ˜¯æ¯«ç§’ä¸ºå•ä½ï¼Œintçš„æ˜¯åˆ†é’Ÿæˆ–è€…å°æ—¶çš„æ•´å½¢ï¼Œdoubleæ˜¯ç§’ä¸ºå•ä½
 	unsigned long m_time;
 	unsigned long m_stopTime;
 	unsigned long m_runTime;
-	//Ãë±íÊÇ·ñÔÚ×ß
+	//ç§’è¡¨æ˜¯å¦åœ¨èµ°
 	bool m_stopOrRun;
 };

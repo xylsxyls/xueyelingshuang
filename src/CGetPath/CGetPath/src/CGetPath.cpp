@@ -1,4 +1,4 @@
-#include <SDKDDKVer.h>
+ï»¿#include <SDKDDKVer.h>
 #include <afxdisp.h>
 #include "CGetPath.h"
 
@@ -8,7 +8,7 @@ std::string CGetPath::GetFolderFromWindow(HWND hWnd)
 	BROWSEINFO stBrowseInfo;
 	memset(&stBrowseInfo, 0, sizeof(stBrowseInfo));
 	stBrowseInfo.hwndOwner = hWnd;
-	stBrowseInfo.lpszTitle = "ÇëÑ¡ÔñÎÄ¼ş¼Ğ";
+	stBrowseInfo.lpszTitle = "è¯·é€‰æ‹©æ–‡ä»¶å¤¹";
 	stBrowseInfo.ulFlags = BIF_NEWDIALOGSTYLE;
 	LPITEMIDLIST pidl = SHBrowseForFolder(&stBrowseInfo);
 	if(pidl)
@@ -36,15 +36,15 @@ std::string CGetPath::GetFileFromWindow(HWND hwnd)
 	OPENFILENAME ofn = { 0 };
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = hwnd;
-    //"ExeÎÄ¼ş(*.exe)*.exeËùÓĞÎÄ¼ş(*.*)*.*"
-	ofn.lpstrFilter = "ËùÓĞÎÄ¼ş(*.*)*.*";
-    //Ä¬ÈÏµÄÎÄ¼şÂ·¾¶ 
+    //"Exeæ–‡ä»¶(*.exe)*.exeæ‰€æœ‰æ–‡ä»¶(*.*)*.*"
+	ofn.lpstrFilter = "æ‰€æœ‰æ–‡ä»¶(*.*)*.*";
+    //é»˜è®¤çš„æ–‡ä»¶è·¯å¾„ 
 	ofn.lpstrInitialDir = "";
-    //´æ·ÅÎÄ¼şµÄ»º³åÇø 
+    //å­˜æ”¾æ–‡ä»¶çš„ç¼“å†²åŒº 
 	ofn.lpstrFile = szBuffer;
 	ofn.nMaxFile = sizeof(szBuffer) / sizeof(*szBuffer);
 	ofn.nFilterIndex = 0;
-    //±êÖ¾Èç¹ûÊÇ¶àÑ¡Òª¼ÓÉÏOFN_ALLOWMULTISELECT
+    //æ ‡å¿—å¦‚æœæ˜¯å¤šé€‰è¦åŠ ä¸ŠOFN_ALLOWMULTISELECT
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER;
 	GetOpenFileName(&ofn);
 	return std::string(szBuffer);

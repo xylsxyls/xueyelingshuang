@@ -1,4 +1,4 @@
-#include "ReplaceContentTask.h"
+﻿#include "ReplaceContentTask.h"
 #include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CSystem/CSystemAPI.h"

@@ -1,20 +1,20 @@
-#pragma once
+ï»¿#pragma once
 #include "ConfigManagerMacro.h"
 #include "ConfigManager.h"
 
-/** ÅäÖÃ¹ÜÀíÀà
+/** é…ç½®ç®¡ç†ç±»
 */
 class ConfigManagerAPI UserConfigManager : public ConfigManager
 {
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static UserConfigManager& instance();
 
 public:
-	/** ÉèÖÃÓÃ»§ID
-	@param [in] userId ÓÃ»§ID
+	/** è®¾ç½®ç”¨æˆ·ID
+	@param [in] userId ç”¨æˆ·ID
 	*/
 	void setUserId(uint64_t userId);
 };

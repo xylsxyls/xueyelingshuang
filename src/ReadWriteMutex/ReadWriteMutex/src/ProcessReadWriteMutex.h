@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "ReadWriteMutexMacro.h"
 #include <string>
 #include "ReadWriteMutexBase.h"

@@ -1,4 +1,4 @@
-#include "MsgLinux.h"
+﻿#include "MsgLinux.h"
 #include <string.h>
 #include <sys/msg.h>
 #include <sys/stat.h>

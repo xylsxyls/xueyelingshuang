@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "HiRedisMacro.h"
 #include <memory>
 #include <map>

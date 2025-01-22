@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CompressMacro.h"
 #include <stdint.h>
 #include <string>
@@ -6,19 +6,19 @@
 class CompressAPI Compress
 {
 public:
-	//´«ÈëµÄdestLength±ØĞëÊÇÔ¤¹À³¤¶È£¬Í¬Ê±¿ÉÒÔ´«³ö¾ßÌå³¤¶È
+	//ä¼ å…¥çš„destLengthå¿…é¡»æ˜¯é¢„ä¼°é•¿åº¦ï¼ŒåŒæ—¶å¯ä»¥ä¼ å‡ºå…·ä½“é•¿åº¦
 	static void zlibCompress(char* dest, uint32_t& destLength, const char* src, uint32_t srcLength, int32_t level = 7);
 	static uint32_t zlibCompressBound(uint32_t srcLength);
 	
 	static uint32_t zlibUnCompressBound(const char* src);
-	//´«Èë½âÑ¹Ô¤¹À³¤¶È
+	//ä¼ å…¥è§£å‹é¢„ä¼°é•¿åº¦
 	static void zlibUnCompress(char* dest, uint32_t& destLength, const char* src, uint32_t srcLength);
 
-	//srcµÄ³¤¶È²»ÄÜ³¬¹ıuint32_tÉÏÏŞ
+	//srcçš„é•¿åº¦ä¸èƒ½è¶…è¿‡uint32_tä¸Šé™
 	static std::string zlibCompress(const std::string& src, int32_t level = 7);
 	static std::string zlibUnCompress(const std::string& src);
 
-	//srcµÄ³¤¶È²»ÄÜ³¬¹ıuint32_tÉÏÏŞ
+	//srcçš„é•¿åº¦ä¸èƒ½è¶…è¿‡uint32_tä¸Šé™
 	static void zlibCompress(std::string& dest, const std::string& src, int32_t level = 7);
 	static void zlibUnCompress(std::string& dest, const std::string& src);
 };

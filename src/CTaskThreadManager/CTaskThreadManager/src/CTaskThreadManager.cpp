@@ -1,4 +1,4 @@
-#include "CTaskThreadManager.h"
+ï»¿#include "CTaskThreadManager.h"
 #include <assert.h>
 
 CTaskThreadManager::CTaskThreadManager():
@@ -14,8 +14,8 @@ CTaskThreadManager::~CTaskThreadManager()
 
 CTaskThreadManager& CTaskThreadManager::Instance()
 {
-    static CTaskThreadManager taskManager;
-    return taskManager;
+	static CTaskThreadManager taskManager;
+	return taskManager;
 }
 
 uint32_t CTaskThreadManager::Init()
@@ -34,7 +34,7 @@ uint32_t CTaskThreadManager::Init()
 		m_spThreadMap[threadId] = spTaskThread;
 		return threadId;
 	}
-    return 0;
+	return 0;
 }
 
 void CTaskThreadManager::WaitForEnd(uint32_t threadId)
@@ -61,10 +61,10 @@ void CTaskThreadManager::WaitForEnd(uint32_t threadId)
 
 void CTaskThreadManager::Uninit(uint32_t threadId)
 {
-    if (threadId == 0)
-    {
-        return;
-    }
+	if (threadId == 0)
+	{
+		return;
+	}
 	m_mutex.lock();
 	auto itThread = m_spThreadMap.find(threadId);
 	if (itThread != m_spThreadMap.end())
@@ -83,7 +83,7 @@ void CTaskThreadManager::Uninit(uint32_t threadId)
 
 void CTaskThreadManager::UninitAll()
 {
-    //¸ÃmapÑ­»·Á½´Î£¬µÚÒ»´ÎÍ£µôËùÓĞÈÎÎñ£¬µÚ¶ş´ÎµÈ´ıÏß³Ì½áÊø
+	//è¯¥mapå¾ªç¯ä¸¤æ¬¡ï¼Œç¬¬ä¸€æ¬¡åœæ‰æ‰€æœ‰ä»»åŠ¡ï¼Œç¬¬äºŒæ¬¡ç­‰å¾…çº¿ç¨‹ç»“æŸ
 	m_mutex.lock();
 	for (auto itThread = m_spThreadMap.begin(); itThread != m_spThreadMap.end(); ++itThread)
 	{
@@ -111,16 +111,16 @@ void CTaskThreadManager::UninitAll()
 
 std::shared_ptr<CTaskThread> CTaskThreadManager::GetThreadInterface(uint32_t threadId)
 {
-    if (threadId == 0)
-    {
-        return std::shared_ptr<CTaskThread>();
-    }
-    std::unique_lock<std::mutex> lock(m_mutex);
-    auto itThread = m_spThreadMap.find(threadId);
-    if (itThread == m_spThreadMap.end())
-    {
+	if (threadId == 0)
+	{
 		return std::shared_ptr<CTaskThread>();
-    }
+	}
+	std::unique_lock<std::mutex> lock(m_mutex);
+	auto itThread = m_spThreadMap.find(threadId);
+	if (itThread == m_spThreadMap.end())
+	{
+		return std::shared_ptr<CTaskThread>();
+	}
 	return itThread->second;
 }
 
@@ -138,57 +138,57 @@ uint32_t CTaskThreadManager::GetThreadId()
 //class CPrintTask : public CTask
 //{
 //public:
-//    CPrintTask(int32_t taskId) :
-//        CTask(taskId)
-//    {
+//	CPrintTask(int32_t taskId) :
+//		CTask(taskId)
+//	{
 //
-//    }
-//    virtual void DoTask()
-//    {
-//        printf("DoTaskBegin\n");
-//        std::chrono::milliseconds dura(5000);
-//        std::this_thread::sleep_for(dura);
-//        printf("DoTaskEnd\n");
-//    }
-//    virtual void StopTask(bool ifChoke)
-//    {
-//        ifChoke = ifChoke;
-//        printf("StopTask\n");
-//        return;
-//    }
-//    virtual bool ReExecute()
-//    {
-//        printf("ReExecute\n");
-//        return true;
-//    }
+//	}
+//	virtual void DoTask()
+//	{
+//		printf("DoTaskBegin\n");
+//		std::chrono::milliseconds dura(5000);
+//		std::this_thread::sleep_for(dura);
+//		printf("DoTaskEnd\n");
+//	}
+//	virtual void StopTask(bool ifChoke)
+//	{
+//		ifChoke = ifChoke;
+//		printf("StopTask\n");
+//		return;
+//	}
+//	virtual bool ReExecute()
+//	{
+//		printf("ReExecute\n");
+//		return true;
+//	}
 //};
 //
 //class CPrintTask2 : public CTask
 //{
 //public:
-//    CPrintTask2(int32_t taskId) :
-//        CTask(taskId)
-//    {
+//	CPrintTask2(int32_t taskId) :
+//		CTask(taskId)
+//	{
 //
-//    }
-//    virtual void DoTask()
-//    {
-//        printf("DoTaskBegin2\n");
-//        std::chrono::milliseconds dura(5000);
-//        std::this_thread::sleep_for(dura);
-//        printf("DoTaskEnd2\n");
-//    }
-//    virtual void StopTask(bool ifChoke)
-//    {
-//        ifChoke = ifChoke;
-//        printf("StopTask2\n");
-//        return;
-//    }
-//    virtual bool ReExecute()
-//    {
-//        printf("ReExecute2\n");
-//        return true;
-//    }
+//	}
+//	virtual void DoTask()
+//	{
+//		printf("DoTaskBegin2\n");
+//		std::chrono::milliseconds dura(5000);
+//		std::this_thread::sleep_for(dura);
+//		printf("DoTaskEnd2\n");
+//	}
+//	virtual void StopTask(bool ifChoke)
+//	{
+//		ifChoke = ifChoke;
+//		printf("StopTask2\n");
+//		return;
+//	}
+//	virtual bool ReExecute()
+//	{
+//		printf("ReExecute2\n");
+//		return true;
+//	}
 //};
 //
 //int main(){
@@ -202,8 +202,8 @@ uint32_t CTaskThreadManager::GetThreadId()
 //	{
 //		printTask.reset(pPrintTask);
 //		printTask2.reset(pPrintTask2);
-//        std::chrono::milliseconds dura(2000);
-//        std::this_thread::sleep_for(dura);
+//		std::chrono::milliseconds dura(2000);
+//		std::this_thread::sleep_for(dura);
 //	}
 //	getchar();
 //	return 0;

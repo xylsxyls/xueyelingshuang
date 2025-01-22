@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <time.h>
 #include <stdint.h>
@@ -10,7 +10,7 @@ public:
 	int32_t m_date;
 	int32_t m_time;
 
-	//Ĭ�ϻ�ȡ���ص�ǰʱ��
+	//默认获取本地当前时间
 	IntDateTime();
 	IntDateTime(const IntDateTime& intDateTime);
 	IntDateTime(int32_t date, int32_t time);

@@ -1,4 +1,4 @@
-#include "CBase64.h"
+﻿#include "CBase64.h"
 #include <string>
 
 std::string CBase64::encode(const char* str, int32_t bytes, Base64Options options /*= Base64Encoding*/)

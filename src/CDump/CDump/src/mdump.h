@@ -1,4 +1,4 @@
-#ifndef __MDUMP_H__
+﻿#ifndef __MDUMP_H__
 #define __MDUMP_H__
 
 #ifdef _MSC_VER

@@ -1,4 +1,4 @@
-/**************************************************
+﻿/**************************************************
 * File name: sm2_create_key_pair.c
 * Author: HAN Wei
 * Author's blog: https://blog.csdn.net/henter/

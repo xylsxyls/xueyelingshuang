@@ -1,44 +1,44 @@
-#pragma once
+ï»¿#pragma once
 #include "MsgLinuxMacro.h"
 #include <string>
 
-/** ×¨ÃÅÓÃÓÚlinuxÏÂµÄ½ø³ÌÍ¨ĞÅ£¬Èç¹û¶à¶Ô¶à£¬µ¥ÌõĞÅÏ¢×î¶à10240×Ö½Ú£¬1¶Ô1Ã»ÓĞÉÏÏŞ
+/** ä¸“é—¨ç”¨äºlinuxä¸‹çš„è¿›ç¨‹é€šä¿¡ï¼Œå¦‚æœå¤šå¯¹å¤šï¼Œå•æ¡ä¿¡æ¯æœ€å¤š10240å­—èŠ‚ï¼Œ1å¯¹1æ²¡æœ‰ä¸Šé™
 */
 class MsgLinuxAPI MsgLinux
 {
 public:
-    /** ¹¹Ôìº¯Êı
-    @param [in] path ´æÔÚµÄÎÄ¼şÂ·¾¶£¬Á½±ß½ø³ÌÒªÏàÍ¬
-    @param [in] isCreate ÊÇ·ñÊÇ´´½¨Õß
+    /** æ„é€ å‡½æ•°
+    @param [in] path å­˜åœ¨çš„æ–‡ä»¶è·¯å¾„ï¼Œä¸¤è¾¹è¿›ç¨‹è¦ç›¸åŒ
+    @param [in] isCreate æ˜¯å¦æ˜¯åˆ›å»ºè€…
     */
 	MsgLinux(const std::string& path, bool isCreate);
 
-    /** Îö¹¹º¯Êı
+    /** ææ„å‡½æ•°
     */
     ~MsgLinux();
 
 public:
-    /** ·¢ËÍ
-    @param [in] src ·¢ËÍµÄÄÚÈİ
-    @param [in] type ·¢ËÍµÄÀàĞÍ
-    @return ·µ»ØÊÇ·ñ·¢ËÍ³É¹¦
+    /** å‘é€
+    @param [in] src å‘é€çš„å†…å®¹
+    @param [in] type å‘é€çš„ç±»å‹
+    @return è¿”å›æ˜¯å¦å‘é€æˆåŠŸ
     */
     bool send(const std::string& src, long type = 1);
 
-    /** ½ÓÊÕ
-    @param [in] receive ½ÓÊÕµÄÄÚÈİ
-    @param [in] type ½ÓÊÕµÄÀàĞÍ
-    @return ·µ»ØÊÇ·ñ½ÓÊÕ³É¹¦£¬·µ»Øfalse±íÊ¾¸Ã¶ÓÁĞÒÑ±»É¾³ı
+    /** æ¥æ”¶
+    @param [in] receive æ¥æ”¶çš„å†…å®¹
+    @param [in] type æ¥æ”¶çš„ç±»å‹
+    @return è¿”å›æ˜¯å¦æ¥æ”¶æˆåŠŸï¼Œè¿”å›falseè¡¨ç¤ºè¯¥é˜Ÿåˆ—å·²è¢«åˆ é™¤
     */
     bool recv(std::string& receive, long type = 1);
 
-    /** Ïú»Ù¶ÓÁĞ£¬ÓÃÓÚ½ÓÊÕ¶ËÍË³örecvº¯Êı£¬¶àÏß³Ìµ÷ÓÃ
+    /** é”€æ¯é˜Ÿåˆ—ï¼Œç”¨äºæ¥æ”¶ç«¯é€€å‡ºrecvå‡½æ•°ï¼Œå¤šçº¿ç¨‹è°ƒç”¨
     */
     void destroy();
 
 protected:
-    //ÏûÏ¢¶ÓÁĞID£¬²»´æÔÚÔòÎª-1
+    //æ¶ˆæ¯é˜Ÿåˆ—IDï¼Œä¸å­˜åœ¨åˆ™ä¸º-1
     int m_msgid;
-    //ÊÇ·ñÊÇ¶ÓÁĞ´´½¨Õß
+    //æ˜¯å¦æ˜¯é˜Ÿåˆ—åˆ›å»ºè€…
     bool m_isCreate;
 };

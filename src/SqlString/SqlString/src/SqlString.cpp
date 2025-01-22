@@ -1,4 +1,4 @@
-#include "SqlString.h"
+﻿#include "SqlString.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <stdint.h>
 

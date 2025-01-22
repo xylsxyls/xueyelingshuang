@@ -1,60 +1,60 @@
-#pragma once
+ï»¿#pragma once
 #include "AssignThreadManagerMacro.h"
 #include <stdint.h>
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 
-/** ¶àÈË·Ö·¢ÈÎÎñµÄÏß³Ì¹ÜÀíÕß
+/** å¤šäººåˆ†å‘ä»»åŠ¡çš„çº¿ç¨‹ç®¡ç†è€…
 */
 class AssignThreadManagerAPI AssignThreadManager
 {
 protected:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	AssignThreadManager();
 
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static AssignThreadManager& instance();
 
 public:
-	/** ³õÊ¼»¯
-	@param [in] ·Ö·¢Õß¸öÊı
+	/** åˆå§‹åŒ–
+	@param [in] åˆ†å‘è€…ä¸ªæ•°
 	*/
 	void init(int32_t assignCount);
 
-	/** ÏòÈë¿ÚÏß³Ì´«Èë·Ö·¢ÈÎÎñ
-	@param [in] vecAssignTask ·Ö·¢ÈÎÎñ
+	/** å‘å…¥å£çº¿ç¨‹ä¼ å…¥åˆ†å‘ä»»åŠ¡
+	@param [in] vecAssignTask åˆ†å‘ä»»åŠ¡
 	*/
 	void postAssignTask(const std::vector<std::shared_ptr<CTask>>& vecAssignTask);
 	
-	/** ÏòÖ´ĞĞÏß³Ì´«ÈëÖ´ĞĞÈÎÎñ
-	@param [in] spTask Ö´ĞĞÈÎÎñ
-	@param [in] taskLevel ÈÎÎñÓÅÏÈ¼¶
+	/** å‘æ‰§è¡Œçº¿ç¨‹ä¼ å…¥æ‰§è¡Œä»»åŠ¡
+	@param [in] spTask æ‰§è¡Œä»»åŠ¡
+	@param [in] taskLevel ä»»åŠ¡ä¼˜å…ˆçº§
 	*/
 	void postTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
 
-	/** Í£Ö¹ËùÓĞÈÎÎñ
+	/** åœæ­¢æ‰€æœ‰ä»»åŠ¡
 	*/
 	void stopAllTask();
 
-	/** ·´³õÊ¼»¯
+	/** ååˆå§‹åŒ–
 	*/
 	void uninit();
 
 protected:
-	//Èë¿ÚÏß³Ì
+	//å…¥å£çº¿ç¨‹
 	uint32_t m_enterThreadId;
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-	//·ÖÅäÏß³Ì¼¯ºÏ
+	//åˆ†é…çº¿ç¨‹é›†åˆ
 	std::vector<uint32_t> m_vecAssignThreadId;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-	//Ö´ĞĞÏß³Ì
+	//æ‰§è¡Œçº¿ç¨‹
 	uint32_t m_threadId;
 };

@@ -1,4 +1,4 @@
-#ifndef __CSYSTEM_H__
+﻿#ifndef __CSYSTEM_H__
 #define __CSYSTEM_H__
 
 template <typename TypeClass>

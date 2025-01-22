@@ -1,4 +1,4 @@
-#include "RecursiveReadWriteMutex.h"
+﻿#include "RecursiveReadWriteMutex.h"
 
 RecursiveReadWriteMutex::RecursiveReadWriteMutex():
 m_lockCount(0)

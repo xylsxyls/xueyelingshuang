@@ -1,4 +1,4 @@
-/**************************************************
+﻿/**************************************************
 * File name: sm2_encrypt_and_decrypt.c
 * Author: HAN Wei
 * Author's blog: https://blog.csdn.net/henter/

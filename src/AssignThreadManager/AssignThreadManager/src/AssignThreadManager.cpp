@@ -1,4 +1,4 @@
-#include "AssignThreadManager.h"
+﻿#include "AssignThreadManager.h"
 
 AssignThreadManager::AssignThreadManager():
 m_enterThreadId(0),

@@ -1,15 +1,15 @@
-#pragma once
+ï»¿#pragma once
 #include "CDumpMacro.h"
 #include <string>
 
-/** »áÍ¬Ê±Êä³ödumpÎÄ¼şºÍ±ÀÀ£Ç°¶ÑÕ»ĞÅÏ¢¼ÇÂ¼ÎÄ¼ş
+/** ä¼šåŒæ—¶è¾“å‡ºdumpæ–‡ä»¶å’Œå´©æºƒå‰å †æ ˆä¿¡æ¯è®°å½•æ–‡ä»¶
 */
 class CDumpAPI CDump
 {
 public:
-	/** ³ÌĞò±ÀÀ£Éú³ÉdumpÎÄ¼ş
-	@param [in] dumpFileDir Éú³ÉdumpµÄÄ¿Â¼£¬´ø\·ûºÅ£¬´«¿ÕÔòÔÚexeÍ¬¼¶Ä¿Â¼ÏÂ´´½¨
-	@return ·µ»ØÊÇ·ñÖ´ĞĞ³É¹¦£¬Ö»ÓĞµÚÒ»´ÎÖ´ĞĞ»á³É¹¦
+	/** ç¨‹åºå´©æºƒç”Ÿæˆdumpæ–‡ä»¶
+	@param [in] dumpFileDir ç”Ÿæˆdumpçš„ç›®å½•ï¼Œå¸¦\ç¬¦å·ï¼Œä¼ ç©ºåˆ™åœ¨exeåŒçº§ç›®å½•ä¸‹åˆ›å»º
+	@return è¿”å›æ˜¯å¦æ‰§è¡ŒæˆåŠŸï¼Œåªæœ‰ç¬¬ä¸€æ¬¡æ‰§è¡Œä¼šæˆåŠŸ
 	*/
 	static bool declareDumpFile(const std::string& dumpFileDir = "");
 };

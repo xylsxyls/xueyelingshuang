@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SM4 Encryption alogrithm (SMS4 algorithm)
  * GM/T 0002-2012 Chinese National Standard ref:http://www.oscca.gov.cn/ 
  * thanks to Xyssl

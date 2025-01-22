@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <vector>
 #include <map>
 #include "CRandomMacro.h"
@@ -6,22 +6,22 @@
 class CRandomAPI CRandom
 {
 public:
-	//?´ÓÒÔÏÂ·¶Î§ÖĞ²úÉúÒ»¸öËæ»úÊı£¬°üº¬Í·Î²£¬²úÉú²»³ö·µ»Ø-1£¬·¶Î§ÉÏÏŞ21ÒÚ
+	//?ä»ä»¥ä¸‹èŒƒå›´ä¸­äº§ç”Ÿä¸€ä¸ªéšæœºæ•°ï¼ŒåŒ…å«å¤´å°¾ï¼Œäº§ç”Ÿä¸å‡ºè¿”å›-1ï¼ŒèŒƒå›´ä¸Šé™21äº¿
 	static int Int(int min, int max);
-	//?´ÓÒÔÏÂÊıÖĞËæ»ú²úÉúÒ»¸öÊı
+	//?ä»ä»¥ä¸‹æ•°ä¸­éšæœºäº§ç”Ÿä¸€ä¸ªæ•°
 	static int Int(const std::vector<int>& vecInt);
-	//?²úÉúÒ»¸ö¸¡µãÊı£¬×ó±ÕÓÒ¿ª
+	//?äº§ç”Ÿä¸€ä¸ªæµ®ç‚¹æ•°ï¼Œå·¦é—­å³å¼€
 	static double Double(double min, double max);
-	//?´ÓÒÔÏÂÊıÖĞ²úÉúÒ»¸öËæ»úĞ¡Êı
+	//?ä»ä»¥ä¸‹æ•°ä¸­äº§ç”Ÿä¸€ä¸ªéšæœºå°æ•°
 	static double Double(const std::vector<double>& vecDouble);
-	//?Éú³É¹Ì¶¨³¤¶ÈµÄ×Ö·û´®£¬Èç¹û²»´ø0ÔòÎª1, 255
+	//?ç”Ÿæˆå›ºå®šé•¿åº¦çš„å­—ç¬¦ä¸²ï¼Œå¦‚æœä¸å¸¦0åˆ™ä¸º1, 255
 	static std::string String(int size, unsigned char min, unsigned char max);
-	//?²úÉúÒ»¸öËæ»ú×Ö·û´®£¬×îĞ¡³¤¶È£¬×î´ó³¤¶È£¬×Ö·û´®ÖĞ¿ÉÄÜ³öÏÖµÄ×Ö·û£¬×óĞ¡ÓÒ´ó
+	//?äº§ç”Ÿä¸€ä¸ªéšæœºå­—ç¬¦ä¸²ï¼Œæœ€å°é•¿åº¦ï¼Œæœ€å¤§é•¿åº¦ï¼Œå­—ç¬¦ä¸²ä¸­å¯èƒ½å‡ºç°çš„å­—ç¬¦ï¼Œå·¦å°å³å¤§
 	static std::string String(int minSize, int maxSize, const std::vector<std::pair<unsigned char, unsigned char>>& vecCharacter);
-	//?Ëæ»úÑ¡³öÒ»¸ö×Ö·û´®
+	//?éšæœºé€‰å‡ºä¸€ä¸ªå­—ç¬¦ä¸²
 	static std::string String(const std::vector<std::string>& vecString);
-	//?Ï´ÅÆ£¬stringÎªÅÆÃæ£¬intÎª¸ÃÅÆÃæµÄ¸öÊı£¬µÃµ½Ò»¸±ÂÒĞòµÄÅÆ
+	//?æ´—ç‰Œï¼Œstringä¸ºç‰Œé¢ï¼Œintä¸ºè¯¥ç‰Œé¢çš„ä¸ªæ•°ï¼Œå¾—åˆ°ä¸€å‰¯ä¹±åºçš„ç‰Œ
 	static std::vector<std::string> Deal(const std::map<std::string, int>& mapCard);
-	//?É¢ÁĞ£¬¿ÉÓÃÓÚ·¢ÅÆ
+	//?æ•£åˆ—ï¼Œå¯ç”¨äºå‘ç‰Œ
 	static std::vector<int> Hash(int hashNumber, int size);
 };

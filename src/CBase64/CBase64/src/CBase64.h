@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <stdint.h>
 #include "CBase64Macro.h"
@@ -18,7 +18,7 @@ public:
 		OmitTrailingEquals = 2
 	};
 public:
-	//ÕâÀï±ØĞëÊÇunsignedÀàĞÍ£¬·ñÔò±àÂëÖĞÎÄµÄÊ±ºò³ö´í
+	//è¿™é‡Œå¿…é¡»æ˜¯unsignedç±»å‹ï¼Œå¦åˆ™ç¼–ç ä¸­æ–‡çš„æ—¶å€™å‡ºé”™
 	static std::string encode(const char* str, int32_t bytes, Base64Options options = Base64Encoding);
 	static std::string decode(const char* str, int32_t bytes, Base64Options options = Base64Encoding);
 };

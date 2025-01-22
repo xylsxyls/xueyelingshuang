@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "SharedMemoryMacro.h"
 #include <stdint.h>
 #include <string>
@@ -8,60 +8,60 @@ typedef void* HANDLE;
 class SharedMemoryAPI SharedMemory
 {
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] name ¹²ÏíÄÚ´æÃû
-	@param [in] size ¹²ÏíÄÚ´æ´óĞ¡£¬Èç¹ûÊÇ0±íÊ¾´ò¿ª
-	@param [in] isAllowExist ÊÇ·ñÔÊĞíÉêÇëÖ®Ç°´æÔÚ£¬windowsÏÂÉêÇë·½Ò»¶¨ÊÇfalse£¬linuxÏÂ¿ÉÄÜ³öÏÖ²»Í¬×Ö·û´®¶ÔÓ¦Í¬Ò»¸öÊı×ÖµÄÇé¿ö£¬ÉêÇëÊ§°Ü²»Ò»¶¨±íÊ¾Ö®Ç°´æÔÚ
+	/** æ„é€ å‡½æ•°
+	@param [in] name å…±äº«å†…å­˜å
+	@param [in] size å…±äº«å†…å­˜å¤§å°ï¼Œå¦‚æœæ˜¯0è¡¨ç¤ºæ‰“å¼€
+	@param [in] isAllowExist æ˜¯å¦å…è®¸ç”³è¯·ä¹‹å‰å­˜åœ¨ï¼Œwindowsä¸‹ç”³è¯·æ–¹ä¸€å®šæ˜¯falseï¼Œlinuxä¸‹å¯èƒ½å‡ºç°ä¸åŒå­—ç¬¦ä¸²å¯¹åº”åŒä¸€ä¸ªæ•°å­—çš„æƒ…å†µï¼Œç”³è¯·å¤±è´¥ä¸ä¸€å®šè¡¨ç¤ºä¹‹å‰å­˜åœ¨
 	*/
 	SharedMemory(const std::string& name, uint32_t size = 0, bool isAllowExist = true);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~SharedMemory();
 
 private:
-	/** ¿½±´¹¹Ôìº¯Êı
+	/** æ‹·è´æ„é€ å‡½æ•°
 	*/
 	SharedMemory(const SharedMemory& other);
 
-	/** ¸³Öµº¯Êı
+	/** èµ‹å€¼å‡½æ•°
 	*/
 	SharedMemory operator = (const SharedMemory& other);
 
 public:
-	/** ÊÇ·ñ´´½¨Ê§°Ü
+	/** æ˜¯å¦åˆ›å»ºå¤±è´¥
 	*/
 	bool isFailed();
 
-	/** ´´½¨´óĞ¡
+	/** åˆ›å»ºå¤§å°
 	*/
 	uint32_t size();
 
-	/** ÕæÊµ´óĞ¡
+	/** çœŸå®å¤§å°
 	*/
 	uint32_t realSize();
 
-	/** ¹²ÏíÄÚ´æÃû
+	/** å…±äº«å†…å­˜å
 	*/
 	std::string mapName();
 
-	/** ¹²ÏíÄÚ´æµØÖ·
+	/** å…±äº«å†…å­˜åœ°å€
 	*/
 	void* memory();
 
-	/** ¹²ÏíÄÚ´æ¶ÁÈ¡µØÖ·
+	/** å…±äº«å†…å­˜è¯»å–åœ°å€
 	*/
 	void* readWithoutLock();
 
-	/** ¹²ÏíÄÚ´æĞ´ÈëµØÖ·
+	/** å…±äº«å†…å­˜å†™å…¥åœ°å€
 	*/
 	void* writeWithoutLock();
 
-	/** ¹Ø±Õ¹²ÏíÄÚ´æ
+	/** å…³é—­å…±äº«å†…å­˜
 	*/
 	void close();
 
-	/** Çå¿Õ¹²ÏíÄÚ´æ
+	/** æ¸…ç©ºå…±äº«å†…å­˜
 	*/
 	void clear();
 

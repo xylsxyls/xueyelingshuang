@@ -1,4 +1,4 @@
-#include "CTask.h"
+﻿#include "CTask.h"
 
 CTask::CTask() :
 m_taskId(1),
@@ -36,7 +36,7 @@ CTask* CTask::Clone()
 
 int32_t CTask::GetTaskId()
 {
-    return m_taskId;
+	return m_taskId;
 }
 
 void CTask::SetWaitForSendHandle(Semaphore* waitForSend)

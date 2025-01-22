@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "LockFreeQueueMacro.h"
 #include <stdint.h>
 #include <atomic>

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <QColor>
 #include <vector>
@@ -7,7 +7,7 @@
 #define GetQColor QssHelper::GetQColorWithDefault
 #define GetInt QssHelper::GetIntWithDefault
 
-/** ÉèÖÃQSSÊ¹ÓÃµÄÀà£¬¸ÃÀàÖ»ÓÃÓÚÄÚ²¿µ÷ÓÃ
+/** è®¾ç½®QSSä½¿ç”¨çš„ç±»ï¼Œè¯¥ç±»åªç”¨äºå†…éƒ¨è°ƒç”¨
 */
 class QssStringAPI QssHelper
 {

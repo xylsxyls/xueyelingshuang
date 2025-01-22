@@ -1,9 +1,9 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include <deque>
 #include <stddef.h>
 
-/** ÓĞÏŞ¶ÓÁĞ
+/** æœ‰é™é˜Ÿåˆ—
 */
 template <class Type>
 class FiniteDeque : public std::deque < Type >
@@ -11,60 +11,60 @@ class FiniteDeque : public std::deque < Type >
 public:
 	enum FiniteType
 	{
-		/** µ±¶ÓÁĞÂúÁËÖ®ºóºóĞøÌí¼ÓÊ§°Ü
+		/** å½“é˜Ÿåˆ—æ»¡äº†ä¹‹ååç»­æ·»åŠ å¤±è´¥
 		*/
 		FINITE,
 
-		/** µ±¶ÓÁĞÂúÁËÖ®ºóºóĞøÌí¼Ó¶¥µô×îÔçÌí¼ÓµÄ
+		/** å½“é˜Ÿåˆ—æ»¡äº†ä¹‹ååç»­æ·»åŠ é¡¶æ‰æœ€æ—©æ·»åŠ çš„
 		*/
 		FLOW
 	};
 
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	FiniteDeque();
 
 public:
-	/** ÉèÖÃÓĞÏŞ¸öÊı
-	@param [in] num ¸öÊı
-	@param [in] finiteType ÏŞÖÆÀàĞÍ
+	/** è®¾ç½®æœ‰é™ä¸ªæ•°
+	@param [in] num ä¸ªæ•°
+	@param [in] finiteType é™åˆ¶ç±»å‹
 	*/
 	void setFinite(size_t num, FiniteType finiteType = FLOW);
 
-	/** »ñÈ¡ÏŞÖÆ¸öÊı
-	@return ·µ»ØÏŞÖÆ¸öÊı
+	/** è·å–é™åˆ¶ä¸ªæ•°
+	@return è¿”å›é™åˆ¶ä¸ªæ•°
 	*/
 	size_t finite();
 
-	/** ×·¼Ó
-	@param [in] element ÔªËØ
-	@return ·µ»ØÊÇ·ñ±»ÏŞÖÆ»òÁ÷¶¯
+	/** è¿½åŠ 
+	@param [in] element å…ƒç´ 
+	@return è¿”å›æ˜¯å¦è¢«é™åˆ¶æˆ–æµåŠ¨
 	*/
 	bool push_back(const Type& element);
 
-	/** ¶ÓÁĞÍ·Ìí¼Ó
-	@param [in] element ÔªËØ
-	@return ·µ»ØÊÇ·ñ±»ÏŞÖÆ»òÁ÷¶¯
+	/** é˜Ÿåˆ—å¤´æ·»åŠ 
+	@param [in] element å…ƒç´ 
+	@return è¿”å›æ˜¯å¦è¢«é™åˆ¶æˆ–æµåŠ¨
 	*/
 	bool push_front(const Type& element);
 
-	/** ×·¼Ó£¬ÏûºÄÌí¼ÓÔªËØ
-	@param [in] element ÔªËØ
-	@return ·µ»ØÊÇ·ñ±»ÏŞÖÆ»òÁ÷¶¯
+	/** è¿½åŠ ï¼Œæ¶ˆè€—æ·»åŠ å…ƒç´ 
+	@param [in] element å…ƒç´ 
+	@return è¿”å›æ˜¯å¦è¢«é™åˆ¶æˆ–æµåŠ¨
 	*/
 	bool emplace_back(const Type& element);
 
-	/** ¶ÓÁĞÍ·Ìí¼Ó£¬ÏûºÄÌí¼ÓÔªËØ
-	@param [in] element ÔªËØ
-	@return ·µ»ØÊÇ·ñ±»ÏŞÖÆ»òÁ÷¶¯
+	/** é˜Ÿåˆ—å¤´æ·»åŠ ï¼Œæ¶ˆè€—æ·»åŠ å…ƒç´ 
+	@param [in] element å…ƒç´ 
+	@return è¿”å›æ˜¯å¦è¢«é™åˆ¶æˆ–æµåŠ¨
 	*/
 	bool emplace_front(const Type& element);
 
 protected:
-	//ÏŞÖÆ¸öÊı
+	//é™åˆ¶ä¸ªæ•°
 	size_t m_finite;
-	//ÏŞÖÆÀàĞÍ
+	//é™åˆ¶ç±»å‹
 	FiniteType m_finiteType;
 };
 

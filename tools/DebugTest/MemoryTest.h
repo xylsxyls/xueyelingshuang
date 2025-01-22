@@ -721,12 +721,42 @@ public:
 
 const MemoryGlobal g_memoryGlobal;
 
+inline void* operator new(size_t size, const char* file)
+{
+	void* p = malloc(size);
+	if (MemoryReady::instance().isReady())
+	{
+		MemoryTestTrace::instance().add(p, file, 0, size);
+	}
+	return p;
+}
+
 inline void* operator new(size_t size, const char* file, int line)
 {
 	void* p = malloc(size);
 	if (MemoryReady::instance().isReady())
 	{
 		MemoryTestTrace::instance().add(p, file, line, size);
+	}
+	return p;
+}
+
+inline void* operator new(size_t size, const std::nothrow_t&) noexcept
+{
+    void* p = malloc(size);
+	if (MemoryReady::instance().isReady())
+	{
+		MemoryTestTrace::instance().add(p, size);
+	}
+    return p;
+}
+
+inline void* operator new[](size_t size, const char* file)
+{
+	void* p = malloc(size);
+	if (MemoryReady::instance().isReady())
+	{
+		MemoryTestTrace::instance().add(p, file, 0, size);
 	}
 	return p;
 }
@@ -843,6 +873,7 @@ inline void* DebugRealloc(void* memory, size_t newSize, const char* file, int li
 	return p;
 }
 
+//some not need
 #define new new(__FILE__, __LINE__)
 #define malloc(size) DebugMalloc(size, __FILE__, __LINE__)
 #define calloc(count, size) DebugCalloc(count, size, __FILE__, __LINE__)

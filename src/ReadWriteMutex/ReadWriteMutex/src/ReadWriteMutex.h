@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "ReadWriteMutexBase.h"
 #include <mutex>
 
@@ -38,7 +38,7 @@ private:
 #endif
 
 #ifdef __SUPPORT_XP__
-	//ÒÑ¼Ó¶ÁËø¸öÊı
+	//å·²åŠ è¯»é”ä¸ªæ•°
 	std::atomic<int32_t> m_readCount;
 	std::mutex m_writeMutex;
 	std::condition_variable m_condition;

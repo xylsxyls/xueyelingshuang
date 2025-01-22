@@ -1,4 +1,4 @@
-#include "QssString.h"
+﻿#include "QssString.h"
 
 QssString::QssString()
 {

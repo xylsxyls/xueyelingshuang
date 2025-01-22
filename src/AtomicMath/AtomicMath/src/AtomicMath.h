@@ -1,77 +1,77 @@
-#pragma once
+ï»¿#pragma once
 #include "AtomicMathMacro.h"
 #include <stdint.h>
 
-/** Ô­×Ó¼ÆËãÀà
+/** åŸå­è®¡ç®—ç±»
 */
 class AtomicMathAPI AtomicMath
 {
 public:
-	/** ×Ô¼Ó
-	@param [in] ptr 4×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@return ·µ»Ø×Ô¼ÓÖ®ºóµÄÖµ
+	/** è‡ªåŠ 
+	@param [in] ptr 4å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@return è¿”å›è‡ªåŠ ä¹‹åçš„å€¼
 	*/
 	static int32_t selfAddOne(int32_t* ptr);
 
-	/** ×Ô¼Ó
-	@param [in] ptr 8×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@return ·µ»Ø×Ô¼ÓÖ®ºóµÄÖµ
+	/** è‡ªåŠ 
+	@param [in] ptr 8å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@return è¿”å›è‡ªåŠ ä¹‹åçš„å€¼
 	*/
 	static int64_t selfAddOne(int64_t* ptr);
 
-	/** ×Ô¼õ
-	@param [in] ptr 4×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@return ·µ»Ø×Ô¼õÖ®ºóµÄÖµ
+	/** è‡ªå‡
+	@param [in] ptr 4å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@return è¿”å›è‡ªå‡ä¹‹åçš„å€¼
 	*/
 	static int32_t selfSubOne(int32_t* ptr);
 
-	/** ×Ô¼õ
-	@param [in] ptr 8×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@return ·µ»Ø×Ô¼õÖ®ºóµÄÖµ
+	/** è‡ªå‡
+	@param [in] ptr 8å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@return è¿”å›è‡ªå‡ä¹‹åçš„å€¼
 	*/
 	static int64_t selfSubOne(int64_t* ptr);
 
-	/** ¼Ó
-	@param [in] ptr 4×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@param [in] value ¼ÆËãÖµ
-	@return ·µ»Ø¼ÓÖ®ºóµÄÖµ
+	/** åŠ 
+	@param [in] ptr 4å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@param [in] value è®¡ç®—å€¼
+	@return è¿”å›åŠ ä¹‹åçš„å€¼
 	*/
 	static int32_t selfAdd(int32_t* ptr, int32_t value);
 
-	/** ¼Ó
-	@param [in] ptr 8×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@param [in] value ¼ÆËãÖµ
-	@return ·µ»Ø¼ÓÖ®ºóµÄÖµ
+	/** åŠ 
+	@param [in] ptr 8å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@param [in] value è®¡ç®—å€¼
+	@return è¿”å›åŠ ä¹‹åçš„å€¼
 	*/
 	static int64_t selfAdd(int64_t* ptr, int64_t value);
 
-	/** ¼õ
-	@param [in] ptr 4×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@param [in] value ¼ÆËãÖµ
-	@return ·µ»Ø¼õÖ®ºóµÄÖµ
+	/** å‡
+	@param [in] ptr 4å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@param [in] value è®¡ç®—å€¼
+	@return è¿”å›å‡ä¹‹åçš„å€¼
 	*/
 	static int32_t selfSub(int32_t* ptr, int32_t value);
 
-	/** ¼õ
-	@param [in] ptr 8×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@param [in] value ¼ÆËãÖµ
-	@return ·µ»Ø¼õÖ®ºóµÄÖµ
+	/** å‡
+	@param [in] ptr 8å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@param [in] value è®¡ç®—å€¼
+	@return è¿”å›å‡ä¹‹åçš„å€¼
 	*/
 	static int64_t selfSub(int64_t* ptr, int64_t value);
 
-	/** ±È½ÏÖ®ºó½»»»
-	@param [in] ptr 4×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@param [in] oldValue ÊÇ·ñºÍÄÚ´æÖĞÔ­±¾µÄÖµÒ»ÖÂ
-	@param [in] newValue Èç¹ûÒ»ÖÂÔòĞŞ¸ÄÎªĞÂµÄÖµ
-	@return ³É¹¦¸ü»»Öµ·µ»Øtrue
+	/** æ¯”è¾ƒä¹‹åäº¤æ¢
+	@param [in] ptr 4å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@param [in] oldValue æ˜¯å¦å’Œå†…å­˜ä¸­åŸæœ¬çš„å€¼ä¸€è‡´
+	@param [in] newValue å¦‚æœä¸€è‡´åˆ™ä¿®æ”¹ä¸ºæ–°çš„å€¼
+	@return æˆåŠŸæ›´æ¢å€¼è¿”å›true
 	*/
 	static bool compareAndSwap(int32_t* ptr, int32_t oldValue, int32_t newValue);
 
-	/** ±È½ÏÖ®ºó½»»»
-	@param [in] ptr 8×Ö½ÚÄÚ´æµØÖ·£¬¿ÉÒÔÓÃÓÚ¹²ÏíÄÚ´æ
-	@param [in] oldValue ÊÇ·ñºÍÄÚ´æÖĞÔ­±¾µÄÖµÒ»ÖÂ
-	@param [in] newValue Èç¹ûÒ»ÖÂÔòĞŞ¸ÄÎªĞÂµÄÖµ
-	@return ³É¹¦¸ü»»Öµ·µ»Øtrue
+	/** æ¯”è¾ƒä¹‹åäº¤æ¢
+	@param [in] ptr 8å­—èŠ‚å†…å­˜åœ°å€ï¼Œå¯ä»¥ç”¨äºå…±äº«å†…å­˜
+	@param [in] oldValue æ˜¯å¦å’Œå†…å­˜ä¸­åŸæœ¬çš„å€¼ä¸€è‡´
+	@param [in] newValue å¦‚æœä¸€è‡´åˆ™ä¿®æ”¹ä¸ºæ–°çš„å€¼
+	@return æˆåŠŸæ›´æ¢å€¼è¿”å›true
 	*/
 	static bool compareAndSwap(int64_t* ptr, int64_t oldValue, int64_t newValue);
 };

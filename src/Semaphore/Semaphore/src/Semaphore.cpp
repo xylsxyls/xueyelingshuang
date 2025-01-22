@@ -1,4 +1,4 @@
-#include "Semaphore.h"
+ï»¿#include "Semaphore.h"
 #ifdef __unix__
 #include <sys/sem.h>
 #include <thread>
@@ -127,7 +127,7 @@ void Semaphore::closeProcessSemaphore()
 	{
 		return;
 	}
-	//É¾³ıĞÅºÅÁ¿
+	//åˆ é™¤ä¿¡å·é‡
 	union semun sem_union;
 	if(semctl(m_processSemaphoreId, 0, IPC_RMID, sem_union) == -1)
 	{
@@ -224,12 +224,12 @@ bool Semaphore::processWait(int32_t timeout)
 	ts.tv_nsec = (timeout % 1000) * 1000 * 1000;
 	int32_t result = 0;
 	while ((result = semtimedop(m_processSemaphoreId, &sem, 1, &ts)) == -1 && errno == EINTR);
-	//errnoÖ»ÓĞÔÚ´íÎóÊ±²Å»á¸üĞÂ
+	//errnoåªæœ‰åœ¨é”™è¯¯æ—¶æ‰ä¼šæ›´æ–°
 	if (result == 0)
 	{
 		return true;
 	}
-	//³¬Ê±
+	//è¶…æ—¶
 	else if (result == -1 && errno == EAGAIN)
 	{
 		return false;

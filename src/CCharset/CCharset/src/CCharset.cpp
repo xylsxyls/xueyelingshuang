@@ -1,4 +1,4 @@
-#include "CCharset.h"
+ï»¿#include "CCharset.h"
 #include <windows.h>
 
 #define  STR_BUFFER_SIZE	512
@@ -112,7 +112,7 @@ std::string CCharset::HexToStr(const std::string &strData)
 
 std::wstring CCharset::Utf8ToUnicode ( const std::string& strSrc )
 {
-	// ·ÖÅäÄ¿±ê¿Õ¼ä 
+	// åˆ†é…ç›®æ ‡ç©ºé—´ 
 	int iAllocSize = static_cast<int>( strSrc.size() + 10 );
 	WCHAR* pwszBuffer = new WCHAR[ iAllocSize ];
 	if ( NULL == pwszBuffer )
@@ -122,14 +122,14 @@ std::wstring CCharset::Utf8ToUnicode ( const std::string& strSrc )
 	int iCharsRet = MultiByteToWideChar( CP_UTF8, 0, strSrc.c_str(), 
 		static_cast<int>( strSrc.size() ),
 		pwszBuffer, iAllocSize );
-	// ³É¹¦
+	// æˆåŠŸ
 	std::wstring wstrRet;
 	if ( 0 < iCharsRet  )
 	{
 		wstrRet.assign ( pwszBuffer, static_cast<size_t>( iCharsRet ) );
 	}
 
-	// ÊÍ·ÅÄÚ´æ
+	// é‡Šæ”¾å†…å­˜
 	delete[] pwszBuffer;
 
 	return wstrRet;
@@ -137,7 +137,7 @@ std::wstring CCharset::Utf8ToUnicode ( const std::string& strSrc )
 
 std::string CCharset::UnicodeToUtf8 ( const std::wstring& wstrSrc )
 {	
-	// ·ÖÅäÄ¿±ê¿Õ¼ä, Ò»¸ö16Î»Unicode×Ö·û×î¶à¿ÉÒÔ×ªÎª4¸ö×Ö½Ú
+	// åˆ†é…ç›®æ ‡ç©ºé—´, ä¸€ä¸ª16ä½Unicodeå­—ç¬¦æœ€å¤šå¯ä»¥è½¬ä¸º4ä¸ªå­—èŠ‚
 	int iAllocSize = static_cast<int>( wstrSrc.size() * 4 + 10 );
 	char* pszBuffer = new char[ iAllocSize ];
 	if ( NULL == pszBuffer )
@@ -147,14 +147,14 @@ std::string CCharset::UnicodeToUtf8 ( const std::wstring& wstrSrc )
 	int iCharsRet = WideCharToMultiByte( CP_UTF8, 0, wstrSrc.c_str(), 
 		static_cast<int>( wstrSrc.size() ),
 		pszBuffer, iAllocSize, NULL, NULL );
-	// ³É¹¦
+	// æˆåŠŸ
 	std::string strRet;
 	if ( 0 < iCharsRet )
 	{
 		strRet.assign ( pszBuffer, static_cast<size_t>( iCharsRet ) );
 	}
 
-	// ÊÍ·ÅÄÚ´æ
+	// é‡Šæ”¾å†…å­˜
 	delete[] pszBuffer;
 
 	return strRet;
@@ -164,7 +164,7 @@ std::string CCharset::Utf8ToAnsi( const std::string& strSrc )
 {
 	std::wstring wstrTemp = Utf8ToUnicode ( strSrc );
 
-	// ·ÖÅäÄ¿±ê¿Õ¼ä, ³¤¶ÈÎª Ansi ±àÂëµÄÁ½±¶
+	// åˆ†é…ç›®æ ‡ç©ºé—´, é•¿åº¦ä¸º Ansi ç¼–ç çš„ä¸¤å€
 	int iAllocSize = static_cast<int>( strSrc.size() * 2 + 10 );
 	char* pszBuffer = new char[ iAllocSize ];
 	if ( NULL == pszBuffer )
@@ -174,14 +174,14 @@ std::string CCharset::Utf8ToAnsi( const std::string& strSrc )
 	int iCharsRet = WideCharToMultiByte( CP_ACP, 0, wstrTemp.c_str(), 
 		static_cast<int>( wstrTemp.size() ),
 		pszBuffer, iAllocSize, NULL, NULL );
-	// ³É¹¦
+	// æˆåŠŸ
 	std::string strRet;
 	if ( 0 < iCharsRet )
 	{
 		strRet.assign ( pszBuffer, static_cast<size_t>( iCharsRet ) );
 	}
 
-	// ÊÍ·ÅÄÚ´æ
+	// é‡Šæ”¾å†…å­˜
 	delete[] pszBuffer;
 
 	return strRet;
@@ -189,7 +189,7 @@ std::string CCharset::Utf8ToAnsi( const std::string& strSrc )
 
 std::string CCharset::AnsiToUtf8 ( const std::string& strSrc )
 {
-	// ·ÖÅäÄ¿±ê¿Õ¼ä, ³¤¶ÈÎª Ansi ±àÂëµÄÁ½±¶
+	// åˆ†é…ç›®æ ‡ç©ºé—´, é•¿åº¦ä¸º Ansi ç¼–ç çš„ä¸¤å€
 	int iAllocSize = static_cast<int>( strSrc.size() * 2 + 10 );
 	WCHAR* pwszBuffer = new WCHAR[ iAllocSize ];
 	if ( NULL == pwszBuffer )
@@ -199,14 +199,14 @@ std::string CCharset::AnsiToUtf8 ( const std::string& strSrc )
 	int iCharsRet = MultiByteToWideChar( CP_ACP, 0, strSrc.c_str(),
 		static_cast<int>( strSrc.size() ),
 		pwszBuffer, iAllocSize );
-	//³É¹¦
+	//æˆåŠŸ
 	std::wstring wstrTemp;
 	if ( 0 < iCharsRet )
 	{
 		wstrTemp.assign ( pwszBuffer, static_cast<size_t>( iCharsRet ) );
 	}
 
-	// ÊÍ·ÅÄÚ´æ
+	// é‡Šæ”¾å†…å­˜
 	delete[] pwszBuffer;
 
 	return UnicodeToUtf8( wstrTemp );
@@ -214,7 +214,7 @@ std::string CCharset::AnsiToUtf8 ( const std::string& strSrc )
 
 std::wstring CCharset::AnsiToUnicode (const std::string& strSrc )
 {
-	// ·ÖÅäÄ¿±ê¿Õ¼ä
+	// åˆ†é…ç›®æ ‡ç©ºé—´
 	int iAllocSize = static_cast<int>( strSrc.size() + 10 );
 	WCHAR* pwszBuffer = new WCHAR[ iAllocSize ];
 	if ( NULL == pwszBuffer )
@@ -237,7 +237,7 @@ std::wstring CCharset::AnsiToUnicode (const std::string& strSrc )
 
 std::string CCharset::UnicodeToAnsi ( const std::wstring& wstrSrc )
 {
-	// ·ÖÅäÄ¿±ê¿Õ¼ä, Ò»¸ö16Î»Unicode×Ö·û×î¶à¿ÉÒÔ×ªÎª4¸ö×Ö½Ú
+	// åˆ†é…ç›®æ ‡ç©ºé—´, ä¸€ä¸ª16ä½Unicodeå­—ç¬¦æœ€å¤šå¯ä»¥è½¬ä¸º4ä¸ªå­—èŠ‚
 	int iAllocSize = static_cast<int>( wstrSrc.size() * 4 + 10 );
 	char* pwszBuffer = new char[ iAllocSize ];
 	if ( NULL == pwszBuffer )
@@ -262,7 +262,7 @@ std::string CCharset::UnicodeToAnsi ( const std::wstring& wstrSrc )
 //{
 //	BSTR strRet = NULL;
 //
-//	//»ñµÃÄ¿±ê¿Õ¼äµÄ´óĞ¡
+//	//è·å¾—ç›®æ ‡ç©ºé—´çš„å¤§å°
 //	int iSize = static_cast<int>( strSrc.size() );
 //	int iAllocSize = MultiByteToWideChar ( CP_UTF8, 0, strSrc.c_str(), iSize, NULL, NULL );
 //	if ( 0 < iAllocSize )
@@ -290,7 +290,7 @@ std::string CCharset::UnicodeToAnsi ( const std::wstring& wstrSrc )
 
 //std::string CCharset::BSTRToUtf8 ( const BSTR& bstrSrc )
 //{
-//	// »ñµÃÄ¿±ê¿Õ¼äµÄ´óĞ¡
+//	// è·å¾—ç›®æ ‡ç©ºé—´çš„å¤§å°
 //	int iAllocSize = WideCharToMultiByte ( CP_UTF8, 0, bstrSrc, -1, NULL, NULL, NULL, FALSE ) - 1;
 //	if ( 0 >= iAllocSize )
 //	{
@@ -299,7 +299,7 @@ std::string CCharset::UnicodeToAnsi ( const std::wstring& wstrSrc )
 //
 //	std::string strRet( iAllocSize, '\0' );
 //
-//	// ½øĞĞ×ª»»
+//	// è¿›è¡Œè½¬æ¢
 //	int nResult = WideCharToMultiByte ( CP_UTF8, 0, bstrSrc, -1, const_cast<char*>( strRet.c_str() ),
 //										iAllocSize, NULL, FALSE );
 //

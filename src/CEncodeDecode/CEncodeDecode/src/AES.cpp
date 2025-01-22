@@ -1,4 +1,4 @@
-#include "AES.h"
+ï»¿#include "AES.h"
 #include <string.h>
 
 AES::AES(unsigned char* key)
@@ -128,7 +128,7 @@ void* AES::Cipher(void* input, int length)
 {
 	unsigned char* in = (unsigned char*)input;
 	int i;
-	if (!length) //Èç¹ûÊÇ0Ôòµ±×ö×Ö·û´®´¦Àí
+	if (!length) //å¦‚æœæ˜¯0åˆ™å½“åšå­—ç¬¦ä¸²å¤„ç†
 	{
 		while (*(in + length++));
 		in = (unsigned char*)input;

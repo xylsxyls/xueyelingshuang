@@ -1,4 +1,4 @@
-#include "ConfigManager.h"
+﻿#include "ConfigManager.h"
 #include "SQLite/SQLiteAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "UserConfigManager.h"

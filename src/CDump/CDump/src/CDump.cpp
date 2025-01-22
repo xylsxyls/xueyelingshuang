@@ -1,4 +1,4 @@
-#include "CDump.h"
+ï»¿#include "CDump.h"
 #include <stdint.h>
 #ifdef _MSC_VER
 #include "mdump.h"
@@ -138,7 +138,7 @@ static std::string GetRealPath(const std::string& symlinkPath)
 
 static std::string HexSubtraction(const std::string& hex1, const std::string& hex2)
 {
-	// È¥³ı×Ö·û´®Ç°ÃæµÄ¿Õ¸ñºÍ0
+	// å»é™¤å­—ç¬¦ä¸²å‰é¢çš„ç©ºæ ¼å’Œ0
 	auto trimLeft = [](const std::string& str)
 	{
 		size_t startpos = str.find_first_not_of(" 0");
@@ -208,9 +208,9 @@ static std::vector<std::string> ParseBacktrace(const std::string& backtrace)
 
 	if (std::regex_search(backtrace, match, re))
 	{
-		result.push_back(match[1]); // Â·¾¶
-		result.push_back(match[2]); // º¯ÊıÃû
-		result.push_back(match[4]); // µØÖ·Öµ£¬È¥µô0x
+		result.push_back(match[1]); // è·¯å¾„
+		result.push_back(match[2]); // å‡½æ•°å
+		result.push_back(match[4]); // åœ°å€å€¼ï¼Œå»æ‰0x
 	}
 
 	return result;
@@ -312,7 +312,7 @@ static void DumpFun(int signalNum)
 			size_t pos = function.find('+');
 			if (pos != std::string::npos)
 			{
-    			function.insert(pos + 1, "0x");
+				function.insert(pos + 1, "0x");
 			}
 		}
 		else
@@ -392,7 +392,7 @@ bool CDump::declareDumpFile(const std::string& dumpFileDir)
 #ifdef _MSC_VER
 	WIN32DUMP::CMiniDumper::Enable(GetCurrentExeName().c_str(), false, (dumpFileDir.empty() ? GetCurrentExePath().c_str() : dumpFileDir.c_str()));
 #elif __unix__
-	//ÔÚ½øÈësignal»Øµ÷º¯ÊıÊ±£¬ÓĞĞ©ÏµÍ³»á×Ô¶¯Çå¿ÕÈİÆ÷È«¾Ö±äÁ¿
+	//åœ¨è¿›å…¥signalå›è°ƒå‡½æ•°æ—¶ï¼Œæœ‰äº›ç³»ç»Ÿä¼šè‡ªåŠ¨æ¸…ç©ºå®¹å™¨å…¨å±€å˜é‡
 	::memcpy(s_dumpFileDir, dumpFileDir.c_str(), dumpFileDir.size());
 	std::string currentExeName = GetCurrentExeName();
 	::memcpy(s_currentExeName, currentExeName.c_str(), currentExeName.size());

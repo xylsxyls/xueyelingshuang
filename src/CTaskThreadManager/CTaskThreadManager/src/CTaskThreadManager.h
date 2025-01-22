@@ -1,55 +1,55 @@
-#pragma once
+ï»¿#pragma once
 #include "CTask.h"
 #include "CTaskThread.h"
 #include <map>
 #include <memory>
 #include <atomic>
 
-/* Ïß³Ì¹ÜÀíÀà
+/* çº¿ç¨‹ç®¡ç†ç±»
 */
 class CTaskThreadManagerAPI CTaskThreadManager
 {
 private:
-	/* ¹¹Ôìº¯Êı
+	/* æ„é€ å‡½æ•°
 	*/
 	CTaskThreadManager();
 	
-	/* Îö¹¹º¯Êı
+	/* ææ„å‡½æ•°
 	*/
 	~CTaskThreadManager();
 	
 public:
-	/* µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/* å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static CTaskThreadManager& Instance();
 
-	//·µ»ØÏß³ÌID
-	//windowsÏÂ²»ÒªÔÚ¶¯Ì¬¿âµÄÈ«¾Ö±äÁ¿°üº¬È«¾Ö±äÁ¿µÄ¹¹Ôìº¯ÊıÖĞÖ´ĞĞ£¬»áÔÚstd::thread´´½¨´¦¿¨ËÀ£¬ÔÚlinuxÏÂ£¬»»³ÉCreateThread£¬exeÖĞ´´½¨£¬±àÒë³É¾²Ì¬¿â£¬¶¼²»»áÓĞÎÊÌâ
+	//è¿”å›çº¿ç¨‹ID
+	//windowsä¸‹ä¸è¦åœ¨åŠ¨æ€åº“çš„å…¨å±€å˜é‡åŒ…å«å…¨å±€å˜é‡çš„æ„é€ å‡½æ•°ä¸­æ‰§è¡Œï¼Œä¼šåœ¨std::threadåˆ›å»ºå¤„å¡æ­»ï¼Œåœ¨linuxä¸‹ï¼Œæ¢æˆCreateThreadï¼Œexeä¸­åˆ›å»ºï¼Œç¼–è¯‘æˆé™æ€åº“ï¼Œéƒ½ä¸ä¼šæœ‰é—®é¢˜
 	uint32_t Init();
 
-	/* ×èÈûµÈ´ıÏß³Ì½áÊø
-	@param [in] threadId Ïß³ÌID
+	/* é˜»å¡ç­‰å¾…çº¿ç¨‹ç»“æŸ
+	@param [in] threadId çº¿ç¨‹ID
 	*/
 	void WaitForEnd(uint32_t threadId);
 
-	/* ·´³õÊ¼»¯
-	@param [in] threadId Ïß³ÌID
+	/* ååˆå§‹åŒ–
+	@param [in] threadId çº¿ç¨‹ID
 	*/
 	void Uninit(uint32_t threadId);
 
-	/* ·´³õÊ¼»¯ËùÓĞÏß³Ì
+	/* ååˆå§‹åŒ–æ‰€æœ‰çº¿ç¨‹
 	*/
 	void UninitAll();
 
-	/* ÔÚÕâÀïÈ¡³öÏß³Ì²Ù×÷Ö¸Õë£¬²»Òª³¤¾Ã±£´æ¸ÃÖ¸Õë£¬·ñÔò¼´±ãÏß³ÌÍ£Ö¹Ò²²»»áÊÍ·Å×ÊÔ´
-	@param [in] threadId Ïß³ÌID
-	@return ·µ»ØÏß³Ì²Ù×÷Ö¸Õë
+	/* åœ¨è¿™é‡Œå–å‡ºçº¿ç¨‹æ“ä½œæŒ‡é’ˆï¼Œä¸è¦é•¿ä¹…ä¿å­˜è¯¥æŒ‡é’ˆï¼Œå¦åˆ™å³ä¾¿çº¿ç¨‹åœæ­¢ä¹Ÿä¸ä¼šé‡Šæ”¾èµ„æº
+	@param [in] threadId çº¿ç¨‹ID
+	@return è¿”å›çº¿ç¨‹æ“ä½œæŒ‡é’ˆ
 	*/
 	std::shared_ptr<CTaskThread> GetThreadInterface(uint32_t threadId);
 
-	/* Ïß³ÌÊıÁ¿
-	@return ·µ»ØÏß³ÌÊıÁ¿
+	/* çº¿ç¨‹æ•°é‡
+	@return è¿”å›çº¿ç¨‹æ•°é‡
 	*/
 	int32_t Count();
 
@@ -62,7 +62,7 @@ private:
 #pragma warning(disable:4251)
 #endif
 	std::map<uint32_t, std::shared_ptr<CTaskThread>> m_spThreadMap;
-	/* Ïß³Ì³ØËø
+	/* çº¿ç¨‹æ± é”
 	*/
 	std::mutex m_mutex;
 	std::atomic<uint32_t> m_threadId;

@@ -1,4 +1,4 @@
-#include "UserConfigManager.h"
+﻿#include "UserConfigManager.h"
 #include "CStringManager/CStringManagerAPI.h"
 
 UserConfigManager& UserConfigManager::instance()

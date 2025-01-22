@@ -1,4 +1,4 @@
-#include "CStringManager.h"
+ï»¿#include "CStringManager.h"
 #include <algorithm>
 #ifdef _WIN32
 #include <windows.h>
@@ -23,7 +23,7 @@ size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight
 		if (str[index] == cLeft)
 		{
 			vecn.push_back(index);
-			//?nSelectÔÚ×ó£¬¼ÇÏÂÏÖÔÚµÄnSelectSize
+			//?nSelectåœ¨å·¦ï¼Œè®°ä¸‹ç°åœ¨çš„nSelectSize
 			if (nSelect == index)
 			{
 				nSelectSize = vecn.size();
@@ -39,7 +39,7 @@ size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight
 				}
 				return vecn.at(vecn.size() - 1);
 			}
-			//?Èç¹ûµ¯³öÖ®Ç°·¢ÏÖsize´óĞ¡µÈÓÚÖ®Ç°¼ÇÂ¼µÄ£¬ËµÃ÷ÕÒµ½ÁË¶ÔÓ¦µÄÓÒ²à
+			//?å¦‚æœå¼¹å‡ºä¹‹å‰å‘ç°sizeå¤§å°ç­‰äºä¹‹å‰è®°å½•çš„ï¼Œè¯´æ˜æ‰¾åˆ°äº†å¯¹åº”çš„å³ä¾§
 			if(vecn.size() == nSelectSize && nSelectSize > 0)
 			{
 				return index;
@@ -57,7 +57,7 @@ size_t CStringManager::FindOther(const std::string& str, char cLeft, char cRight
 std::vector<std::string> CStringManager::split(const std::string& splitString, const std::string& separate_character)
 {
 	std::vector<std::string> strs;
-	//?·Ö¸î×Ö·û´®µÄ³¤¶È,ÕâÑù¾Í¿ÉÒÔÖ§³ÖÈç¡°,,¡±¶à×Ö·û´®µÄ·Ö¸ô·û
+	//?åˆ†å‰²å­—ç¬¦ä¸²çš„é•¿åº¦,è¿™æ ·å°±å¯ä»¥æ”¯æŒå¦‚â€œ,,â€å¤šå­—ç¬¦ä¸²çš„åˆ†éš”ç¬¦
 	size_t separate_characterLen = separate_character.length();
 	size_t lastPosition = 0;
 	int32_t index = -1;
@@ -66,8 +66,8 @@ std::vector<std::string> CStringManager::split(const std::string& splitString, c
 		strs.push_back(splitString.substr(lastPosition, index - lastPosition));
 		lastPosition = index + separate_characterLen;   
 	}
-	//?½ØÈ¡×îºóÒ»¸ö·Ö¸ô·ûºóµÄÄÚÈİ
-	//?if (!lastString.empty()) //Èç¹û×îºóÒ»¸ö·Ö¸ô·ûºó»¹ÓĞÄÚÈİ¾ÍÈë¶Ó
+	//?æˆªå–æœ€åä¸€ä¸ªåˆ†éš”ç¬¦åçš„å†…å®¹
+	//?if (!lastString.empty()) //å¦‚æœæœ€åä¸€ä¸ªåˆ†éš”ç¬¦åè¿˜æœ‰å†…å®¹å°±å…¥é˜Ÿ
 	strs.push_back(splitString.substr(lastPosition));
 	return strs;
 }
@@ -75,7 +75,7 @@ std::vector<std::string> CStringManager::split(const std::string& splitString, c
 std::vector<std::wstring> CStringManager::split(const std::wstring& splitString, const std::wstring& separate_character)
 {
 	std::vector<std::wstring> strs;
-	//?·Ö¸î×Ö·û´®µÄ³¤¶È,ÕâÑù¾Í¿ÉÒÔÖ§³ÖÈç¡°,,¡±¶à×Ö·û´®µÄ·Ö¸ô·û
+	//?åˆ†å‰²å­—ç¬¦ä¸²çš„é•¿åº¦,è¿™æ ·å°±å¯ä»¥æ”¯æŒå¦‚â€œ,,â€å¤šå­—ç¬¦ä¸²çš„åˆ†éš”ç¬¦
 	size_t separate_characterLen = separate_character.length();
 	size_t lastPosition = 0;
 	int32_t index = -1;
@@ -84,8 +84,8 @@ std::vector<std::wstring> CStringManager::split(const std::wstring& splitString,
 		strs.push_back(splitString.substr(lastPosition, index - lastPosition));
 		lastPosition = index + separate_characterLen;
 	}
-	//?½ØÈ¡×îºóÒ»¸ö·Ö¸ô·ûºóµÄÄÚÈİ
-	//?if (!lastString.empty()) //Èç¹û×îºóÒ»¸ö·Ö¸ô·ûºó»¹ÓĞÄÚÈİ¾ÍÈë¶Ó
+	//?æˆªå–æœ€åä¸€ä¸ªåˆ†éš”ç¬¦åçš„å†…å®¹
+	//?if (!lastString.empty()) //å¦‚æœæœ€åä¸€ä¸ªåˆ†éš”ç¬¦åè¿˜æœ‰å†…å®¹å°±å…¥é˜Ÿ
 	strs.push_back(splitString.substr(lastPosition));
 	return strs;
 }
@@ -243,12 +243,12 @@ void CStringManager::Format(std::string& str, const char* fmt, ...)
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-	//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	//?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	str.resize(size);
 	if (size != 0)
 	{
 #ifdef _WIN32
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vsprintf_s(&str[0], size + 1, fmt, args);
 #elif __unix__
 		vsnprintf(&str[0], size + 1, fmt, args);
@@ -269,12 +269,12 @@ std::string CStringManager::Format(const char* fmt, ...)
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-	//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	//?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	result.resize(size);
 	if (size != 0)
 	{
 #ifdef _WIN32
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vsprintf_s(&result[0], size + 1, fmt, args);
 #elif __unix__
 		vsnprintf(&result[0], size + 1, fmt, args);
@@ -290,17 +290,17 @@ void CStringManager::Format(std::wstring& wstr, const wchar_t* wfmt, ...)
 	va_list args;
 	va_start(args, wfmt);
 	int size = _vscwprintf(wfmt, args);
-	//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	//?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	wstr.resize(size);
 	if (size != 0)
 	{
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vswprintf_s(&wstr[0], size + 1, wfmt, args);
 	}
 	va_end(args);
 #elif __unix__
-	//linuxÏÂunicode²ÎÊı´«ÈëÁËvswprintfÒ²ÎŞ·¨Ê¶±ğ£¬´«Èëansi²ÎÊıÔÚvswprintfÏÂÒ²»á×Ô¶¯×ª³Éunicode£¬ËùÒÔ¿ÉÒÔÕûÌå×ª»»
-	//vswprintfº¯ÊıÎŞ·¨ÔÚ²»Ìá¹©³¤¶ÈÊ±»ñÈ¡»º³åÇø³¤¶È
+	//linuxä¸‹unicodeå‚æ•°ä¼ å…¥äº†vswprintfä¹Ÿæ— æ³•è¯†åˆ«ï¼Œä¼ å…¥ansiå‚æ•°åœ¨vswprintfä¸‹ä¹Ÿä¼šè‡ªåŠ¨è½¬æˆunicodeï¼Œæ‰€ä»¥å¯ä»¥æ•´ä½“è½¬æ¢
+	//vswprintfå‡½æ•°æ— æ³•åœ¨ä¸æä¾›é•¿åº¦æ—¶è·å–ç¼“å†²åŒºé•¿åº¦
 	std::string strFmt = UnicodeToAnsi(wfmt);
 	std::string str;
 	va_list args;
@@ -325,18 +325,18 @@ std::wstring CStringManager::Format(const wchar_t* wfmt, ...)
 	va_list args;
 	va_start(args, wfmt);
 	int size = _vscwprintf(wfmt, args);
-	//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	//?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	result.resize(size);
 	if (size != 0)
 	{
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vswprintf_s(&result[0], size + 1, wfmt, args);
 	}
 	va_end(args);
 	return result;
 #elif __unix__
-	//linuxÏÂunicode²ÎÊı´«ÈëÁËvswprintfÒ²ÎŞ·¨Ê¶±ğ£¬´«Èëansi²ÎÊıÔÚvswprintfÏÂÒ²»á×Ô¶¯×ª³Éunicode£¬ËùÒÔ¿ÉÒÔÕûÌå×ª»»
-	//vswprintfº¯ÊıÎŞ·¨ÔÚ²»Ìá¹©³¤¶ÈÊ±»ñÈ¡»º³åÇø³¤¶È
+	//linuxä¸‹unicodeå‚æ•°ä¼ å…¥äº†vswprintfä¹Ÿæ— æ³•è¯†åˆ«ï¼Œä¼ å…¥ansiå‚æ•°åœ¨vswprintfä¸‹ä¹Ÿä¼šè‡ªåŠ¨è½¬æˆunicodeï¼Œæ‰€ä»¥å¯ä»¥æ•´ä½“è½¬æ¢
+	//vswprintfå‡½æ•°æ— æ³•åœ¨ä¸æä¾›é•¿åº¦æ—¶è·å–ç¼“å†²åŒºé•¿åº¦
 	std::string strFmt = UnicodeToAnsi(wfmt);
 	std::string str;
 	va_list args;
@@ -365,7 +365,7 @@ std::string CStringManager::MakeUpper(const std::string& src)
 #if defined _MSC_VER && (_MSC_VER < 1800)
 	return dst;
 #endif
-	//Èç¹ûdstÊÇÓĞÖµµÄ»°ÔòµÚÈı¸ö²ÎÊı´«dst.begin()£¬´ÓÍ·¿ªÊ¼¸²¸Ç
+	//å¦‚æœdstæ˜¯æœ‰å€¼çš„è¯åˆ™ç¬¬ä¸‰ä¸ªå‚æ•°ä¼ dst.begin()ï¼Œä»å¤´å¼€å§‹è¦†ç›–
 	std::transform(src.begin(), src.end(), std::back_inserter(dst), ::toupper);
 	return dst;
 }
@@ -474,7 +474,7 @@ static std::string code_convert_string(const char* from_charset, const char* to_
 std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 {
 #ifdef _WIN32
-	// ·ÖÅäÄ¿±ê¿Õ¼ä, Ò»¸ö16Î»Unicode×Ö·û×î¶à¿ÉÒÔ×ªÎª4¸ö×Ö½Ú
+	// åˆ†é…ç›®æ ‡ç©ºé—´, ä¸€ä¸ª16ä½Unicodeå­—ç¬¦æœ€å¤šå¯ä»¥è½¬ä¸º4ä¸ªå­—èŠ‚
 	int iAllocSize = static_cast<int>(wstrSrc.size() * 4 + 10);
 	char* pwszBuffer = new char[iAllocSize];
 	if (NULL == pwszBuffer)
@@ -511,7 +511,7 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 {
 #ifdef _WIN32
-	// ·ÖÅäÄ¿±ê¿Õ¼ä
+	// åˆ†é…ç›®æ ‡ç©ºé—´
 	int iAllocSize = static_cast<int>(strSrc.size() + 10);
 	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
 	if (NULL == pwszBuffer)
@@ -548,7 +548,7 @@ std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 std::string CStringManager::AnsiToUtf8(const std::string& strSrc)
 {
 #ifdef _WIN32
-	// ·ÖÅäÄ¿±ê¿Õ¼ä, ³¤¶ÈÎª Ansi ±àÂëµÄÁ½±¶
+	// åˆ†é…ç›®æ ‡ç©ºé—´, é•¿åº¦ä¸º Ansi ç¼–ç çš„ä¸¤å€
 	int iAllocSize = static_cast<int>(strSrc.size() * 2 + 10);
 	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
 	if (NULL == pwszBuffer)
@@ -558,14 +558,14 @@ std::string CStringManager::AnsiToUtf8(const std::string& strSrc)
 	int iCharsRet = MultiByteToWideChar(CP_ACP, 0, strSrc.c_str(),
 		static_cast<int>(strSrc.size()),
 		pwszBuffer, iAllocSize);
-	//³É¹¦
+	//æˆåŠŸ
 	std::wstring wstrTemp;
 	if (0 < iCharsRet)
 	{
 		wstrTemp.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
 	}
 
-	// ÊÍ·ÅÄÚ´æ
+	// é‡Šæ”¾å†…å­˜
 	delete[] pwszBuffer;
 	return UnicodeToUtf8(wstrTemp);
 #elif __unix__
@@ -579,7 +579,7 @@ std::string CStringManager::Utf8ToAnsi(const std::string& strSrc)
 #ifdef _WIN32
 	std::wstring wstrTemp = Utf8ToUnicode(strSrc);
 
-	// ·ÖÅäÄ¿±ê¿Õ¼ä, ³¤¶ÈÎª Ansi ±àÂëµÄÁ½±¶
+	// åˆ†é…ç›®æ ‡ç©ºé—´, é•¿åº¦ä¸º Ansi ç¼–ç çš„ä¸¤å€
 	int iAllocSize = static_cast<int>(strSrc.size() * 2 + 10);
 	char* pszBuffer = new char[iAllocSize];
 	if (NULL == pszBuffer)
@@ -589,14 +589,14 @@ std::string CStringManager::Utf8ToAnsi(const std::string& strSrc)
 	int iCharsRet = WideCharToMultiByte(CP_ACP, 0, wstrTemp.c_str(),
 		static_cast<int>(wstrTemp.size()),
 		pszBuffer, iAllocSize, NULL, NULL);
-	// ³É¹¦
+	// æˆåŠŸ
 	std::string strRet;
 	if (0 < iCharsRet)
 	{
 		strRet.assign(pszBuffer, static_cast<size_t>(iCharsRet));
 	}
 
-	// ÊÍ·ÅÄÚ´æ
+	// é‡Šæ”¾å†…å­˜
 	delete[] pszBuffer;
 	return strRet;
 #elif __unix__
@@ -608,7 +608,7 @@ std::string CStringManager::Utf8ToAnsi(const std::string& strSrc)
 std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
 {
 #ifdef _WIN32
-	// ·ÖÅäÄ¿±ê¿Õ¼ä, Ò»¸ö16Î»Unicode×Ö·û×î¶à¿ÉÒÔ×ªÎª4¸ö×Ö½Ú
+	// åˆ†é…ç›®æ ‡ç©ºé—´, ä¸€ä¸ª16ä½Unicodeå­—ç¬¦æœ€å¤šå¯ä»¥è½¬ä¸º4ä¸ªå­—èŠ‚
 	int iAllocSize = static_cast<int>(wstrSrc.size() * 4 + 10);
 	char* pszBuffer = new char[iAllocSize];
 	if (NULL == pszBuffer)
@@ -618,14 +618,14 @@ std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
 	int iCharsRet = WideCharToMultiByte(CP_UTF8, 0, wstrSrc.c_str(),
 		static_cast<int>(wstrSrc.size()),
 		pszBuffer, iAllocSize, NULL, NULL);
-	// ³É¹¦
+	// æˆåŠŸ
 	std::string strRet;
 	if (0 < iCharsRet)
 	{
 		strRet.assign(pszBuffer, static_cast<size_t>(iCharsRet));
 	}
 
-	// ÊÍ·ÅÄÚ´æ
+	// é‡Šæ”¾å†…å­˜
 	delete[] pszBuffer;
 	return strRet;
 #elif __unix__
@@ -648,7 +648,7 @@ std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
 std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 {
 #ifdef _WIN32
-	// ·ÖÅäÄ¿±ê¿Õ¼ä 
+	// åˆ†é…ç›®æ ‡ç©ºé—´ 
 	int iAllocSize = static_cast<int>(strSrc.size() + 10);
 	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
 	if (NULL == pwszBuffer)
@@ -658,14 +658,14 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 	int iCharsRet = MultiByteToWideChar(CP_UTF8, 0, strSrc.c_str(),
 		static_cast<int>(strSrc.size()),
 		pwszBuffer, iAllocSize);
-	// ³É¹¦
+	// æˆåŠŸ
 	std::wstring wstrRet;
 	if (0 < iCharsRet)
 	{
 		wstrRet.assign(pwszBuffer, static_cast<size_t>(iCharsRet));
 	}
 
-	// ÊÍ·ÅÄÚ´æ
+	// é‡Šæ”¾å†…å­˜
 	delete[] pwszBuffer;
 	return wstrRet;
 #elif __unix__
@@ -706,7 +706,7 @@ std::string CStringManager::UrlEncode(const std::string& sIn)
 		{
 			buf[0] = sIn[ix];
 		}
-		//else if ( isspace( (BYTE)sIn[ix] ) ) //Ã²ËÆ°Ñ¿Õ¸ñ±àÂë³É%20»òÕß+¶¼¿ÉÒÔ
+		//else if ( isspace( (BYTE)sIn[ix] ) ) //è²Œä¼¼æŠŠç©ºæ ¼ç¼–ç æˆ%20æˆ–è€…+éƒ½å¯ä»¥
 		//{
 		//	buf[0] = '+';
 		//}

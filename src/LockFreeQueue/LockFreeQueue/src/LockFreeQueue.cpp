@@ -1,4 +1,4 @@
-#include "LockFreeQueue.h"
+﻿#include "LockFreeQueue.h"
 
 //int main()
 //{

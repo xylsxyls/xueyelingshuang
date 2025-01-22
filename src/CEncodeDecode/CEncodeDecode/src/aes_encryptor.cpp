@@ -1,4 +1,4 @@
-#include "AES.h"
+ï»¿#include "AES.h"
 #include "aes_encryptor.h"
 #include <string.h>
 #include <fstream>
@@ -62,7 +62,7 @@ std::string AesEncryptor::EncryptString(const std::string& strInfor)
 	memcpy(pBuffer, strInfor.c_str(), nLength);
 	m_pEncryptor->Cipher(pBuffer, nLength + spaceLength);
 
-	// ÕâÀïĞèÒª°ÑµÃµ½µÄ×Ö·ûÊı×é×ª»»³ÉÊ®Áù½øÖÆ×Ö·û´® 
+	// è¿™é‡Œéœ€è¦æŠŠå¾—åˆ°çš„å­—ç¬¦æ•°ç»„è½¬æ¢æˆåå…­è¿›åˆ¶å­—ç¬¦ä¸² 
 	char* pOut = new char[2 * (nLength + spaceLength) + 1];
 	pOut[2 * (nLength + spaceLength)] = 0;
 	memset(pOut, '\0', 2 * (nLength + spaceLength));

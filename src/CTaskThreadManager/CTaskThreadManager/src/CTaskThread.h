@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CTask.h"
 #include <list>
 #include <map>
@@ -9,106 +9,106 @@
 
 class Semaphore;
 
-/* Ïß³Ì²Ù×÷Ö¸Õë
+/* çº¿ç¨‹æ“ä½œæŒ‡é’ˆ
 */
 class CTaskThreadManagerAPI CTaskThread
 {
 	friend class CTaskThreadManager;
 private:
-	/* ¹¹Ôìº¯Êı
-	@param [in] threadId Ïß³ÌID
+	/* æ„é€ å‡½æ•°
+	@param [in] threadId çº¿ç¨‹ID
 	*/
 	CTaskThread(int32_t threadId);
 	
 public:
-	/* Îö¹¹º¯Êı
+	/* ææ„å‡½æ•°
 	*/
 	~CTaskThread();
 	
 public:
-	/* Ìí¼ÓÈÎÎñ£¬ÈÎÎñÓÅÏÈ¼¶±ØĞë´Ó1¿ªÊ¼
-	@param [in] spTask ÈÎÎñ
-	@param [in] taskLevel ÈÎÎñÓÅÏÈ¼¶
+	/* æ·»åŠ ä»»åŠ¡ï¼Œä»»åŠ¡ä¼˜å…ˆçº§å¿…é¡»ä»1å¼€å§‹
+	@param [in] spTask ä»»åŠ¡
+	@param [in] taskLevel ä»»åŠ¡ä¼˜å…ˆçº§
 	*/
 	void PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
 
-	/* ³¢ÊÔÌí¼ÓÈÎÎñ£¬ÈÎÎñÓÅÏÈ¼¶±ØĞë´Ó1¿ªÊ¼£¬ºÍtry_lockÏàËÆ
-	@param [in] spTask ÈÎÎñ
-	@param [in] taskLevel ÈÎÎñÓÅÏÈ¼¶
-	@return ·µ»ØÊÇ·ñÌí¼Ó³É¹¦
+	/* å°è¯•æ·»åŠ ä»»åŠ¡ï¼Œä»»åŠ¡ä¼˜å…ˆçº§å¿…é¡»ä»1å¼€å§‹ï¼Œå’Œtry_lockç›¸ä¼¼
+	@param [in] spTask ä»»åŠ¡
+	@param [in] taskLevel ä»»åŠ¡ä¼˜å…ˆçº§
+	@return è¿”å›æ˜¯å¦æ·»åŠ æˆåŠŸ
 	*/
 	bool TryPostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
 
-	/* Í¬²½Ö´ĞĞÈÎÎñ£¬µ±ÈÎÎñÃ»½áÊøÊÇ·¢ËÍÏß³Ì¿¨×¡£¬µ«ÊÇÈÎÎñÈÔÈ»ÊÇÔÚÏß³ÌÖĞÖ´ĞĞ
-	@param [in] spTask ÈÎÎñ
-	@param [in] taskLevel ÈÎÎñÓÅÏÈ¼¶
+	/* åŒæ­¥æ‰§è¡Œä»»åŠ¡ï¼Œå½“ä»»åŠ¡æ²¡ç»“æŸæ˜¯å‘é€çº¿ç¨‹å¡ä½ï¼Œä½†æ˜¯ä»»åŠ¡ä»ç„¶æ˜¯åœ¨çº¿ç¨‹ä¸­æ‰§è¡Œ
+	@param [in] spTask ä»»åŠ¡
+	@param [in] taskLevel ä»»åŠ¡ä¼˜å…ˆçº§
 	*/
 	void SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel = 1);
 
-	/* ÅĞ¶ÏÈÎÎñ¶ÓÁĞÀïÊÇ·ñÓĞÈÎÎñ
-	@return ·µ»ØÈÎÎñ¶ÓÁĞÀïÊÇ·ñÓĞÈÎÎñ
+	/* åˆ¤æ–­ä»»åŠ¡é˜Ÿåˆ—é‡Œæ˜¯å¦æœ‰ä»»åŠ¡
+	@return è¿”å›ä»»åŠ¡é˜Ÿåˆ—é‡Œæ˜¯å¦æœ‰ä»»åŠ¡
 	*/
 	bool HasTask();
 
-	/* Í£Ö¹Ö´ĞĞµ±Ç°ÈÎÎñ
+	/* åœæ­¢æ‰§è¡Œå½“å‰ä»»åŠ¡
 	*/
 	void StopCurTask();
 
-	/* Í£Ö¹Ö´ĞĞ¸ÃÈÎÎñIDµÄÈÎÎñ¼¯
-	@param [in] taskId ÈÎÎñID
-	@param [in] taskLevel ÈÎÎñÓÅÏÈ¼¶£¬0±íÊ¾ËùÓĞÈÎÎñ·¶Î§
+	/* åœæ­¢æ‰§è¡Œè¯¥ä»»åŠ¡IDçš„ä»»åŠ¡é›†
+	@param [in] taskId ä»»åŠ¡ID
+	@param [in] taskLevel ä»»åŠ¡ä¼˜å…ˆçº§ï¼Œ0è¡¨ç¤ºæ‰€æœ‰ä»»åŠ¡èŒƒå›´
 	*/
 	void StopTask(int32_t taskId, int32_t taskLevel = 0);
 
-	/* Í£Ö¹ËùÓĞÈÎÎñ
+	/* åœæ­¢æ‰€æœ‰ä»»åŠ¡
 	*/
 	void StopAllTask();
 
-	/* »ñÈ¡µ±Ç°mapÖĞÈÎÎñ¸öÊı£¬¸Ãº¯Êı»áÇå¿Õ´«ÈëµÄmap
-	@param [out] taskCountMap ×ó±ßÊÇÈÎÎñÓÅÏÈ¼¶£¬ÓÒ±ßÊÇµ±Ç°ÓÅÏÈ¼¶µÄÈÎÎñ¸öÊı
+	/* è·å–å½“å‰mapä¸­ä»»åŠ¡ä¸ªæ•°ï¼Œè¯¥å‡½æ•°ä¼šæ¸…ç©ºä¼ å…¥çš„map
+	@param [out] taskCountMap å·¦è¾¹æ˜¯ä»»åŠ¡ä¼˜å…ˆçº§ï¼Œå³è¾¹æ˜¯å½“å‰ä¼˜å…ˆçº§çš„ä»»åŠ¡ä¸ªæ•°
 	*/
 	void GetWaitTaskInfo(std::map<int32_t, int32_t>& taskCountMap);
 
-	/** »ñÈ¡µ±Ç°ÈÎÎñ¸öÊı
-	@return ·µ»ØµÈ´ıÈÎÎñ¸öÊı
+	/** è·å–å½“å‰ä»»åŠ¡ä¸ªæ•°
+	@return è¿”å›ç­‰å¾…ä»»åŠ¡ä¸ªæ•°
 	*/
 	int32_t GetWaitTaskCount();
 
-	/** »ñÈ¡ÕıÔÚÖ´ĞĞµÄÈÎÎñÓÅÏÈ¼¶
-	@return ·µ»ØÕıÔÚÖ´ĞĞµÄÈÎÎñÓÅÏÈ¼¶
+	/** è·å–æ­£åœ¨æ‰§è¡Œçš„ä»»åŠ¡ä¼˜å…ˆçº§
+	@return è¿”å›æ­£åœ¨æ‰§è¡Œçš„ä»»åŠ¡ä¼˜å…ˆçº§
 	*/
 	int32_t GetCurTaskLevel();
 
-	/** µÈ´ıËùÓĞÈÎÎñÖ´ĞĞÍê³ÉºóÍË³öÏß³Ì
+	/** ç­‰å¾…æ‰€æœ‰ä»»åŠ¡æ‰§è¡Œå®Œæˆåé€€å‡ºçº¿ç¨‹
 	*/
 	void WaitForEnd();
 
 private:
-	/** ´´½¨Ïß³Ì
-	@return ·µ»ØÊÇ·ñ´´½¨³É¹¦
+	/** åˆ›å»ºçº¿ç¨‹
+	@return è¿”å›æ˜¯å¦åˆ›å»ºæˆåŠŸ
 	*/
 	bool CreateThread();
 
-	/** Ïú»ÙÏß³Ì
+	/** é”€æ¯çº¿ç¨‹
 	*/
 	void DestroyThread();
 
-	/** ÉèÖÃÍË³öĞÅºÅ
+	/** è®¾ç½®é€€å‡ºä¿¡å·
 	*/
 	void SetExitSignal();
 
-	/** Ïú»ÙÏß³ÌµÄÊ±ºòµÈ´ıÏß³ÌÍË³ö
+	/** é”€æ¯çº¿ç¨‹çš„æ—¶å€™ç­‰å¾…çº¿ç¨‹é€€å‡º
 	*/
 	void WaitForExit();
 
-	/** »ñÈ¡×î¸ßÓÅÏÈ¼¶ÈÎÎñ
-	* Èç¹ûÈÎÎñ¶ÓÁĞÀïÓĞÈÎÎñÔòÌá³ö×î¸ßÓÅÏÈ¼¶ÈÎÎñ£¬Í¬Ê±¼ì²éÌá¹ıÈÎÎñÖ®ºóÊÇ·ñĞèÒªÉ¾³ı¸Ã¼¶±ğ¶ÓÁĞ
+	/** è·å–æœ€é«˜ä¼˜å…ˆçº§ä»»åŠ¡
+	* å¦‚æœä»»åŠ¡é˜Ÿåˆ—é‡Œæœ‰ä»»åŠ¡åˆ™æå‡ºæœ€é«˜ä¼˜å…ˆçº§ä»»åŠ¡ï¼ŒåŒæ—¶æ£€æŸ¥æè¿‡ä»»åŠ¡ä¹‹åæ˜¯å¦éœ€è¦åˆ é™¤è¯¥çº§åˆ«é˜Ÿåˆ—
 	*/
 	void PopToCurTask();
 
 	void StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId);
 
-	//¹¤×÷Ïß³Ì×öÈı¼şÊÂ£¬Ö´ĞĞµ±Ç°ÈÎÎñ£¬Ö´ĞĞÍêºó¿´ÈÎÎñ¶ÓÁĞÀïÊÇ·ñÓĞÈÎÎñ£¬Èç¹ûÓĞÔòÌá³ö·Åµ½µ±Ç°ÈÎÎñÖĞ£¬Èç¹ûµ±Ç°ÈÎÎñÃ»ÓĞÔòÌø¹ı
+	//å·¥ä½œçº¿ç¨‹åšä¸‰ä»¶äº‹ï¼Œæ‰§è¡Œå½“å‰ä»»åŠ¡ï¼Œæ‰§è¡Œå®Œåçœ‹ä»»åŠ¡é˜Ÿåˆ—é‡Œæ˜¯å¦æœ‰ä»»åŠ¡ï¼Œå¦‚æœæœ‰åˆ™æå‡ºæ”¾åˆ°å½“å‰ä»»åŠ¡ä¸­ï¼Œå¦‚æœå½“å‰ä»»åŠ¡æ²¡æœ‰åˆ™è·³è¿‡
 	void WorkThread();
 
 	void StopAllTaskUnlock();
@@ -122,46 +122,46 @@ private:
 #pragma warning(disable:4251)
 #endif
 	/*
-	int32_t ÈÎÎñÓÅÏÈ¼¶
+	int32_t ä»»åŠ¡ä¼˜å…ˆçº§
 	*/
 	std::map<int32_t, std::list<std::shared_ptr<CTask>>> m_taskMap;
 
-	/* ÕıÔÚÖ´ĞĞµÄÈÎÎñ
+	/* æ­£åœ¨æ‰§è¡Œçš„ä»»åŠ¡
 	*/
 	std::shared_ptr<CTask> m_spCurTask;
 
-	/* ÕıÔÚÖ´ĞĞÈÎÎñµÄ±¸·İ£¬ÓÃÓÚ±»¶¥µôºóÖØ×öÊ±µ÷ÓÃ
+	/* æ­£åœ¨æ‰§è¡Œä»»åŠ¡çš„å¤‡ä»½ï¼Œç”¨äºè¢«é¡¶æ‰åé‡åšæ—¶è°ƒç”¨
 	*/
 	std::shared_ptr<CTask> m_spCurTaskBk;
 
-	/* ¹¤×÷Ïß³ÌÖ¸Õë
+	/* å·¥ä½œçº¿ç¨‹æŒ‡é’ˆ
 	*/
 	std::unique_ptr<std::thread> m_spWorkThread;
 
-	/* Ïß³ÌËø
+	/* çº¿ç¨‹é”
 	*/
 	std::mutex m_mutex;
 
-	/* Ïß³ÌÊÇ·ñÓĞÍË³öĞÅºÅ
+	/* çº¿ç¨‹æ˜¯å¦æœ‰é€€å‡ºä¿¡å·
 	*/
 	std::atomic<bool> m_hasExitSignal;
 
-	/** µÈ´ıËùÓĞÈÎÎñÖ´ĞĞÍêµÄÍË³öĞÅºÅ
+	/** ç­‰å¾…æ‰€æœ‰ä»»åŠ¡æ‰§è¡Œå®Œçš„é€€å‡ºä¿¡å·
 	*/
 	std::atomic<bool> m_waitForEndSignal;
 
-	/* ÕıÔÚÖ´ĞĞÈÎÎñµÄÓÅÏÈ¼¶
+	/* æ­£åœ¨æ‰§è¡Œä»»åŠ¡çš„ä¼˜å…ˆçº§
 	*/
 	std::atomic<int32_t> m_curTaskLevel;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    
-	/* Ïß³ÌID
+
+	/* çº¿ç¨‹ID
 	*/
 	int32_t m_threadId;
 
-	/* µÈ´ıÊÂ¼ş
+	/* ç­‰å¾…äº‹ä»¶
 	*/
 	Semaphore* m_semaphore;
 };

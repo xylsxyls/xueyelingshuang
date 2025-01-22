@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "ReadWriteMutexBase.h"
 #ifdef _MSC_VER
 #include <windows.h>

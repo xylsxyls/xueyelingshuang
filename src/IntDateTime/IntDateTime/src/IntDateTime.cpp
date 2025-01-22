@@ -1,4 +1,4 @@
-#include "IntDateTime.h"
+ï»¿#include "IntDateTime.h"
 #include "CStringManager/CStringManagerAPI.h"
 
 IntDateTime::IntDateTime()
@@ -6,7 +6,7 @@ IntDateTime::IntDateTime()
 	time_t timep;
 	struct tm *p;
 	time(&timep);
-	//?È¡µÃµ±µØÊ±¼ä
+	//?å–å¾—å½“åœ°æ—¶é—´
 	p = localtime(&timep);
 	int32_t year = 1900 + p->tm_year;
 	int32_t month = 1 + p->tm_mon;
@@ -39,7 +39,7 @@ IntDateTime::IntDateTime(const std::string& time)
 	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
 	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
 	{
-		printf("½âÎöÊ±¼ä³ö´í");
+		printf("è§£ææ—¶é—´å‡ºé”™");
 		return;
 	}
 	std::string strDate = vecDateTime.at(0);
@@ -53,7 +53,7 @@ IntDateTime::IntDateTime(const std::string& time)
 IntDateTime::IntDateTime(time_t time)
 {
 	struct tm *p;
-	//?È¡µÃµ±µØÊ±¼ä
+	//?å–å¾—å½“åœ°æ—¶é—´
 	p = localtime(&time);
 	int32_t year = 1900 + p->tm_year;
 	int32_t month = 1 + p->tm_mon;
@@ -74,7 +74,7 @@ IntDateTime::IntDateTime(const char* time)
 	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
 	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
 	{
-		printf("½âÎöÊ±¼ä³ö´í");
+		printf("è§£ææ—¶é—´å‡ºé”™");
 		return;
 	}
 	std::string strDate = vecDateTime.at(0);
@@ -97,7 +97,7 @@ IntDateTime IntDateTime::operator=(const std::string& intDateTime)
 	std::vector<std::string> vecDateTime = CStringManager::split(intDateTime, " ");
 	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
 	{
-		printf("½âÎöÊ±¼ä³ö´í");
+		printf("è§£ææ—¶é—´å‡ºé”™");
 		return *this;
 	}
 	std::string strDate = vecDateTime.at(0);
@@ -112,7 +112,7 @@ IntDateTime IntDateTime::operator=(const std::string& intDateTime)
 IntDateTime IntDateTime::operator=(const time_t& time)
 {
 	struct tm *p;
-	//?È¡µÃµ±µØÊ±¼ä
+	//?å–å¾—å½“åœ°æ—¶é—´
 	p = localtime(&time);
 	int32_t year = 1900 + p->tm_year;
 	int32_t month = 1 + p->tm_mon;
@@ -151,7 +151,7 @@ void IntDateTime::setTime(const std::string& time)
 	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
 	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
 	{
-		printf("½âÎöÊ±¼ä³ö´í");
+		printf("è§£ææ—¶é—´å‡ºé”™");
 		return;
 	}
 	std::string strDate = vecDateTime.at(0);
@@ -165,7 +165,7 @@ void IntDateTime::setTime(const std::string& time)
 void IntDateTime::setTime(time_t time)
 {
 	struct tm *p;
-	//?È¡µÃµ±µØÊ±¼ä
+	//?å–å¾—å½“åœ°æ—¶é—´
 	p = localtime(&time);
 	int32_t year = 1900 + p->tm_year;
 	int32_t month = 1 + p->tm_mon;

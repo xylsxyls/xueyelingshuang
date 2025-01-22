@@ -1,65 +1,65 @@
-#pragma once
+﻿#pragma once
 
 enum ReplaceTypeEnum
 {
-	//�滻�����ļ���һ���������ļ�·��
+	//替换单个文件，一个参数，文件路径
 	REPLACE_FILE,
-	//�滻Ŀ¼�������ļ���һ��������Ŀ¼
+	//替换目录下所有文件，一个参数，目录
 	REPLACE_DIR,
-	//�滻Ŀ¼��ƥ�䲿���ļ����������ļ���3��������Ŀ¼��ƥ����ļ������Ƿ����ִ�Сд��1��ʾ���֣�0��ʾ������
+	//替换目录下匹配部分文件名的所有文件，3个参数，目录，匹配的文件名，是否区分大小写，1表示区分，0表示不区分
 	REPLACE_FILES,
 };
 
 enum ReplaceCommandEnum
 {
-	//ƥ���滻������������ƥ���ַ������滻�ַ��������ִ�Сд
+	//匹配替换，两个参数，匹配字符串和替换字符串，区分大小写
 	REPLACE,
-	//�в���ƥ�������滻�������������в���ƥ���ַ����������ַ��������ִ�Сд
+	//行部分匹配整行替换，两个参数，行部分匹配字符串，整行字符串，区分大小写
 	LINE,
-	//�ļ���������3��������ƥ��Ĳ����ļ������滻�����ļ������ַ�����ƥ��Ĳ����ļ����Ƿ����ִ�Сд��1��ʾ���֣�0��ʾ������
+	//文件重命名，3个参数，匹配的部分文件名，替换部分文件名的字符串，匹配的部分文件名是否区分大小写，1表示区分，0表示不区分
 	NAME,
-	//�в���ƥ�䣬����ƥ���滻��3������������ƥ������ݣ�����ƥ����ַ������滻���ַ���
+	//行部分匹配，行内匹配替换，3个参数，部分匹配的内容，行内匹配的字符串，替换的字符串
 	PART,
-	//ȫ�ļ����з��滻��һ��������1��ʾ��\n����\r\n��1��ʾwindowsͨ�÷�ʽ��0��ʾ��\r\n����\n��0��ʾlinuxͨ�÷�ʽ
+	//全文件换行符替换，一个参数，1表示把\n换成\r\n，1表示windows通用方式，0表示把\r\n换成\n，0表示linux通用方式
 	ENTER
 };
 
 struct ReplaceParam
 {
-	//�滻����
+	//替换类型
 	ReplaceTypeEnum m_replaceType;
-	//�滻��ʽ
+	//替换方式
 	ReplaceCommandEnum m_replaceCommand;
-	//�����ļ�·��
+	//单个文件路径
 	std::string m_filePath;
-	//Ŀ¼
+	//目录
 	std::string m_folder;
-	//����ƥ����ļ���
+	//部分匹配的文件名
 	std::string m_fileName;
-	//Ŀ¼����Ҫ�޸ĵ�ƥ���ļ����Ƿ����ִ�Сд��true��ʾ����
+	//目录下需要修改的匹配文件名是否区分大小写，true表示区分
 	bool m_isMatchCase;
-	//ƥ����ַ���
+	//匹配的字符串
 	std::string m_oldStr;
-	//�滻���ַ���
+	//替换的字符串
 	std::string m_newStr;
-	//�滻�������ַ���
+	//替换的整行字符串
 	std::string m_newLine;
-	//ƥ����ļ���
+	//匹配的文件名
 	std::string m_oldName;
-	//�滻�ļ���ƥ�䲿�ֵ��ַ���
+	//替换文件名匹配部分的字符串
 	std::string m_newName;
-	//�滻ʱƥ����ļ����Ƿ����ִ�Сд��true��ʾ����
+	//替换时匹配的文件名是否区分大小写，true表示区分
 	bool m_isNameMatchCase;
-	//���ڲ���ƥ������
+	//行内部分匹配内容
 	std::string m_oldPart;
-	//���з���1��ʾ\r\n��0��ʾ\n
+	//换行符，1表示\r\n，0表示\n
 	int32_t m_enter;
-	//��ʼ�滻������ţ���1��ʼ
+	//开始替换的行序号，从1开始
 	int32_t m_beginLine;
-	//�����滻������ţ���1��ʼ
+	//结束替换的行序号，从1开始
 	int32_t m_endLine;
 
-	/** ���캯��
+	/** 构造函数
 	*/
 	ReplaceParam()
 	{
@@ -75,16 +75,16 @@ struct ReplaceParam
 
 struct ReplaceNameParam
 {
-	//�����ļ�·��
+	//单个文件路径
 	std::string m_filePath;
-	//ƥ����ļ���
+	//匹配的文件名
 	std::string m_oldName;
-	//�滻�ļ���ƥ�䲿�ֵ��ַ���
+	//替换文件名匹配部分的字符串
 	std::string m_newName;
-	//�滻ʱƥ����ļ����Ƿ����ִ�Сд��true��ʾ����
+	//替换时匹配的文件名是否区分大小写，true表示区分
 	bool m_isNameMatchCase;
 
-	/** ���캯��
+	/** 构造函数
 	*/
 	ReplaceNameParam()
 	{
@@ -94,26 +94,26 @@ struct ReplaceNameParam
 
 struct ReplaceContentParam
 {
-	//�滻��ʽ
+	//替换方式
 	ReplaceCommandEnum m_replaceCommand;
-	//�����ļ�·��
+	//单个文件路径
 	std::string m_filePath;
-	//ƥ����ַ���
+	//匹配的字符串
 	std::string m_oldStr;
-	//�滻���ַ���
+	//替换的字符串
 	std::string m_newStr;
-	//�滻�������ַ���
+	//替换的整行字符串
 	std::string m_newLine;
-	//���ڲ���ƥ������
+	//行内部分匹配内容
 	std::string m_oldPart;
-	//���з���1��ʾ\r\n��0��ʾ\n
+	//换行符，1表示\r\n，0表示\n
 	int32_t m_enter;
-	//��ʼ�滻������ţ���1��ʼ
+	//开始替换的行序号，从1开始
 	int32_t m_beginLine;
-	//�����滻������ţ���1��ʼ
+	//结束替换的行序号，从1开始
 	int32_t m_endLine;
 
-	/** ���캯��
+	/** 构造函数
 	*/
 	ReplaceContentParam()
 	{

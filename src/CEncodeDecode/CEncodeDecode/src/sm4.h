@@ -1,4 +1,4 @@
-/**
+﻿/**
  * \file sm4.h
  */
 #ifndef XYSSL_SM4_H

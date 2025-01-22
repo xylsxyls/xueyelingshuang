@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -14,176 +14,176 @@ class CSystemAPI CSystem
 {
 public:
 #ifdef _WIN32
-	//»ñÈ¡ÏµÍ³ÈÎÎñÀ¸¾ØĞÎ´óĞ¡
+	//è·å–ç³»ç»Ÿä»»åŠ¡æ çŸ©å½¢å¤§å°
 	static RECT GetTaskbarRect();
-	//»ñÈ¡ÆÁÄ»·Ö±æÂÊ
+	//è·å–å±å¹•åˆ†è¾¨ç‡
 	static RECT GetWindowResolution();
-	//·µ»ØÆÁÄ»ÓÒÏÂ½Ç×ø±ê£¬²»°üº¬ÈÎÎñÀ¸
+	//è¿”å›å±å¹•å³ä¸‹è§’åæ ‡ï¼Œä¸åŒ…å«ä»»åŠ¡æ 
 	static POINT taskbarRightBottomPoint();
-	//·µ»ØÆÁÄ»ÖĞÑëµã
+	//è¿”å›å±å¹•ä¸­å¤®ç‚¹
 	static POINT screenCenterPoint();
-	//½«×Ö·û´®Ğ´Èëµ½¼ôÌù°å
+	//å°†å­—ç¬¦ä¸²å†™å…¥åˆ°å‰ªè´´æ¿
 	static void setClipboardData(HWND hWnd, const std::string& str);
-	//»ñÈ¡¼ôÌù°åÄÚÈİ
+	//è·å–å‰ªè´´æ¿å†…å®¹
 	static std::string GetClipboardData(HWND hWnd);
-	//»ñÈ¡¿ØÖÆÌ¨¾ä±ú
+	//è·å–æ§åˆ¶å°å¥æŸ„
 	static HWND GetConsoleHwnd();
-	//¸ù¾İpid»ñÈ¡´°¿Ú¾ä±ú
+	//æ ¹æ®pidè·å–çª—å£å¥æŸ„
 	static HWND GetHwndByProcessId(uint32_t dwProcessId);
-	//·µ»ØocxËùÔÚÂ·¾¶£¬´ø\·ûºÅ
+	//è¿”å›ocxæ‰€åœ¨è·¯å¾„ï¼Œå¸¦\ç¬¦å·
 	static std::string GetRegOcxPath(const std::string& classid);
-	//½ûÓÃÖØ¶¨Ïò£¬64Î»ÏµÍ³·ÃÎÊSystem32Ê±»á½øÈëµ½SysWOW64ÖĞ
+	//ç¦ç”¨é‡å®šå‘ï¼Œ64ä½ç³»ç»Ÿè®¿é—®System32æ—¶ä¼šè¿›å…¥åˆ°SysWOW64ä¸­
 	static void* ForbidRedir();
-	//»Ö¸´ÖØ¶¨Ïò
+	//æ¢å¤é‡å®šå‘
 	static void RecoveryRedir(void* oldValue);
-	//»ñÈ¡È¥³ıÈÎÎñÀ¸¼°Èí¼ş×î´ó»¯Ê±Èí¼şÄÚÈÎÎñÀ¸ºóÆÁÄ»¸ß¶È
+	//è·å–å»é™¤ä»»åŠ¡æ åŠè½¯ä»¶æœ€å¤§åŒ–æ—¶è½¯ä»¶å†…ä»»åŠ¡æ åå±å¹•é«˜åº¦
 	static int GetVisibleHeight();
-	//Íâ²¿´ò¿ªÍøÒ³
+	//å¤–éƒ¨æ‰“å¼€ç½‘é¡µ
 	static void OpenWebPage(const std::string& webPage);
-	//ÅĞ¶Ïµ±Ç°Êó±ê×ó¼üÊÇ·ñ°´ÏÂ
+	//åˆ¤æ–­å½“å‰é¼ æ ‡å·¦é”®æ˜¯å¦æŒ‰ä¸‹
 	static bool isMouseLeftDown();
-	//ÅĞ¶Ïµ±Ç°Êó±êÓÒ¼üÊÇ·ñ°´ÏÂ
+	//åˆ¤æ–­å½“å‰é¼ æ ‡å³é”®æ˜¯å¦æŒ‰ä¸‹
 	static bool isMouseRightDown();
-	//ÅĞ¶Ïµ±Ç°Êó±êÖĞ¼üÊÇ·ñ°´ÏÂ
+	//åˆ¤æ–­å½“å‰é¼ æ ‡ä¸­é”®æ˜¯å¦æŒ‰ä¸‹
 	static bool isMouseMidDown();
-	//°üº¬Ä¿Â¼µÄ¿½±´£¬¿ÉÒÔ×Ô¶¯´´½¨ÎÄ¼ş¼Ğ£¬Í¬²½º¯Êı
+	//åŒ…å«ç›®å½•çš„æ‹·è´ï¼Œå¯ä»¥è‡ªåŠ¨åˆ›å»ºæ–‡ä»¶å¤¹ï¼ŒåŒæ­¥å‡½æ•°
 	static bool ShellCopy(const char* from, const char* dest);
-	//»ñÈ¡µÚÒ»¸öºÍÃû×ÖÆ¥ÅäµÄ½ø³Ìpid
+	//è·å–ç¬¬ä¸€ä¸ªå’Œåå­—åŒ¹é…çš„è¿›ç¨‹pid
 	static uint32_t processFirstPid(const std::wstring& processNameW);
-	//»ñÈ¡½ø³ÌPID£¬ºÄÊ±10ºÁÃë×óÓÒ
+	//è·å–è¿›ç¨‹PIDï¼Œè€—æ—¶10æ¯«ç§’å·¦å³
 	static std::vector<uint32_t> processPid(const std::wstring& processNameW);
-	//»ñÈ¡½ø³ÌÃû£¬ºÄÊ±10ºÁÃë×óÓÒ
+	//è·å–è¿›ç¨‹åï¼Œè€—æ—¶10æ¯«ç§’å·¦å³
 	static std::wstring processNameW(uint32_t pid);
-	//»ñÈ¡Ö¸¶¨pid½ø³ÌËùÓĞ¹ÒÔØµÄ¶¯Ì¬¿â£¬µÚÒ»¸ö¹Ì¶¨Îªexe½ø³ÌÃû£¬Èç¹ûÎª¿ÕËµÃ÷»ñÈ¡Ê§°Ü
+	//è·å–æŒ‡å®špidè¿›ç¨‹æ‰€æœ‰æŒ‚è½½çš„åŠ¨æ€åº“ï¼Œç¬¬ä¸€ä¸ªå›ºå®šä¸ºexeè¿›ç¨‹åï¼Œå¦‚æœä¸ºç©ºè¯´æ˜è·å–å¤±è´¥
 	static std::vector<std::string> processMountDll(uint32_t pid);
-	//»ñÈ¡ËùÓĞÉãÏñÍ·Ãû£¬ÄÚ²¿»áµ÷ÓÃCoUninitialize
+	//è·å–æ‰€æœ‰æ‘„åƒå¤´åï¼Œå†…éƒ¨ä¼šè°ƒç”¨CoUninitialize
 	static std::vector<std::string> allCameraName();
-	//»ñÈ¡ËùÓĞÉè±¸ĞÅÏ¢£¬×ó±ßÎªÉè±¸ÀàĞÍ£¬ÓÒ±ßÎªÖ¸¶¨ÀàĞÍµÄËùÓĞÉè±¸ĞÅÏ¢
+	//è·å–æ‰€æœ‰è®¾å¤‡ä¿¡æ¯ï¼Œå·¦è¾¹ä¸ºè®¾å¤‡ç±»å‹ï¼Œå³è¾¹ä¸ºæŒ‡å®šç±»å‹çš„æ‰€æœ‰è®¾å¤‡ä¿¡æ¯
 	static std::map<std::string, std::vector<std::string>> allDeviceInfo();
 #endif
-	//Êµ²âCPUÖ÷Æµ£¬GHzÎ»µ¥Î»
+	//å®æµ‹CPUä¸»é¢‘ï¼ŒGHzä½å•ä½
 	static double GetCPUSpeedGHz();
-	//¿çÆ½Ì¨Sleep£¬ºÁÃë
+	//è·¨å¹³å°Sleepï¼Œæ¯«ç§’
 	static void Sleep(long long milliseconds);
-	//Éú³ÉUUID£¬´«Èë1±íÊ¾´ø-£¬´«0±íÊ¾²»´ø£¬Ğ¡Ğ´
+	//ç”ŸæˆUUIDï¼Œä¼ å…¥1è¡¨ç¤ºå¸¦-ï¼Œä¼ 0è¡¨ç¤ºä¸å¸¦ï¼Œå°å†™
 	static std::string uuid(int flag = 1);
-	//¸´ÖÆÎÄ¼ş
+	//å¤åˆ¶æ–‡ä»¶
 	static void CopyFileOver(const std::string& dstFile, const std::string& srcFile, bool over);
-	//»ñÈ¡µ±Ç°²Ù×÷ÏµÍ³Î»Êı
+	//è·å–å½“å‰æ“ä½œç³»ç»Ÿä½æ•°
 	static int GetSystemBits();
-	//»ñÈ¡µ±Ç°ÏµÍ³ÓÃ»§Ãû£¬ÀàËÆAdministrator
+	//è·å–å½“å‰ç³»ç»Ÿç”¨æˆ·åï¼Œç±»ä¼¼Administrator
 	static std::string GetSysUserName();
-	//»ñÈ¡»·¾³±äÁ¿Öµ
+	//è·å–ç¯å¢ƒå˜é‡å€¼
 	static std::string GetEnvironment(const char* name);
-	//´´½¨Ä¿Â¼£¬Ä¿Â¼´æÔÚ»òÕß´´½¨¶à¼¶²»´æÔÚµÄÄ¿Â¼»á·µ»Øfalse£¬´ø²»´ø\¶¼¿ÉÒÔ
+	//åˆ›å»ºç›®å½•ï¼Œç›®å½•å­˜åœ¨æˆ–è€…åˆ›å»ºå¤šçº§ä¸å­˜åœ¨çš„ç›®å½•ä¼šè¿”å›falseï¼Œå¸¦ä¸å¸¦\éƒ½å¯ä»¥
 	static bool CreateDir(const std::string& dir);
-	//Ïú»ÙÄ¿Â¼£¬Ö»ÄÜÉ¾³ı¿ÕÎÄ¼ş¼Ğ£¬´ø²»´ø\¶¼¿ÉÒÔ
+	//é”€æ¯ç›®å½•ï¼Œåªèƒ½åˆ é™¤ç©ºæ–‡ä»¶å¤¹ï¼Œå¸¦ä¸å¸¦\éƒ½å¯ä»¥
 	static bool DestroyDir(const std::string& dir);
-	//¼ì²âÄ¿Â¼»òÎÄ¼şÊÇ·ñ´æÔÚ£¬¼ì²âÄ¿Â¼´ø²»´ø\¶¼¿ÉÒÔ£¬Í¬Ò»Ä¿Â¼Ô­±¾¾Í²»¿ÉÄÜ³öÏÖÎÄ¼ş¼ĞºÍÎÄ¼şÖØÃûµÄÇé¿ö
+	//æ£€æµ‹ç›®å½•æˆ–æ–‡ä»¶æ˜¯å¦å­˜åœ¨ï¼Œæ£€æµ‹ç›®å½•å¸¦ä¸å¸¦\éƒ½å¯ä»¥ï¼ŒåŒä¸€ç›®å½•åŸæœ¬å°±ä¸å¯èƒ½å‡ºç°æ–‡ä»¶å¤¹å’Œæ–‡ä»¶é‡åçš„æƒ…å†µ
 	static bool DirOrFileExist(const std::string& dir);
-	//´ò¿ªÏµÍ³ÎÄ¼ş¼Ğ
+	//æ‰“å¼€ç³»ç»Ÿæ–‡ä»¶å¤¹
 	static void OpenFolder(const std::string& folder);
-	//´ò¿ªÏµÍ³ÎÄ¼ş¼Ğ²¢Ñ¡ÔñÎÄ¼ş
+	//æ‰“å¼€ç³»ç»Ÿæ–‡ä»¶å¤¹å¹¶é€‰æ‹©æ–‡ä»¶
 	static void OpenFolderAndSelectFile(const std::string& file);
-	//Íâ²¿´ò¿ªÎÄ¼ş£¬linuxÏÂÈç¹ûÊÇµ÷ÓÃÍâ²¿³ÌĞò´ò¿ªĞèÒª¼Ó³ÌĞòÃû£¬ÀıÈçgedit
+	//å¤–éƒ¨æ‰“å¼€æ–‡ä»¶ï¼Œlinuxä¸‹å¦‚æœæ˜¯è°ƒç”¨å¤–éƒ¨ç¨‹åºæ‰“å¼€éœ€è¦åŠ ç¨‹åºåï¼Œä¾‹å¦‚gedit
 	static void OpenFile(const std::string& file);
-	//´´½¨¶¯Ì¬µÄ¶şÎ¬Êı×é£¬·µ»Ø¿Õ´ú±íÊ§°Ü£¬²»Îª¿ÕÔòÈ«²¿³É¹¦´´½¨
+	//åˆ›å»ºåŠ¨æ€çš„äºŒç»´æ•°ç»„ï¼Œè¿”å›ç©ºä»£è¡¨å¤±è´¥ï¼Œä¸ä¸ºç©ºåˆ™å…¨éƒ¨æˆåŠŸåˆ›å»º
 	template <typename TypeClass>
 	static TypeClass** CreateDyadicArray(int32_t row, int32_t column);
-	//Ïú»Ù¶¯Ì¬µÄ¶şÎ»Êı×é£¬ÄÚ²¿ÓĞÅĞ¿Õ
+	//é”€æ¯åŠ¨æ€çš„äºŒä½æ•°ç»„ï¼Œå†…éƒ¨æœ‰åˆ¤ç©º
 	template <typename TypeClass>
 	static void DestroyDyadicArray(TypeClass** classPtr, int32_t row);
-	//½«RECTÖĞ4¸öµãÖĞĞ¡ÓÚ0µÄµã»»³É0
+	//å°†RECTä¸­4ä¸ªç‚¹ä¸­å°äº0çš„ç‚¹æ¢æˆ0
 	template <typename TRECT>
 	static TRECT rectValid(const TRECT& rect);
-	//½«QRectÖĞ4¸öµãÖĞĞ¡ÓÚ0µÄµã»»³É0
+	//å°†QRectä¸­4ä¸ªç‚¹ä¸­å°äº0çš„ç‚¹æ¢æˆ0
 	template <typename TQRect>
 	static TQRect qrectValid(const TQRect& rect);
-	//´òÓ¡map
+	//æ‰“å°map
 	static void OutputMap(const std::map<std::string, std::string>& stringMap, const std::string& path = "");
-	//´òÓ¡vector
+	//æ‰“å°vector
 	static void OutputVector(const std::vector<std::string>& stringVector, const std::string& path = "");
-	//Çå¿Õscanf»º´æÇø
+	//æ¸…ç©ºscanfç¼“å­˜åŒº
 	static void ClearScanf();
-	//»ñÈ¡Ö´ĞĞ²ÎÊıÁĞ±í£¬windowsÏÂ²»»á¶ÁÈ¡²ÎÊı£¬linuxÏÂ»á¶ÁÈ¡£¬µÚÒ»¸öÊÇ¿ÉÖ´ĞĞÎÄ¼şµÄ¾ø¶ÔÂ·¾¶
+	//è·å–æ‰§è¡Œå‚æ•°åˆ—è¡¨ï¼Œwindowsä¸‹ä¸ä¼šè¯»å–å‚æ•°ï¼Œlinuxä¸‹ä¼šè¯»å–ï¼Œç¬¬ä¸€ä¸ªæ˜¯å¯æ‰§è¡Œæ–‡ä»¶çš„ç»å¯¹è·¯å¾„
 	static std::vector<std::string> exeParam(int argc = 0, char** argv = nullptr);
-	//»ñÈ¡ÃÜÂë
+	//è·å–å¯†ç 
 	static std::string PasswordScanf();
-	//»ñÈ¡ÏµÍ³ÃüÁîÖ´ĞĞ½á¹û£¬Èç¹ûÊÇfalseÔòÖ»ÄÜÖ´ĞĞÒ»¾ä£¬Èç¹ûÊÇtrue¿ÉÒÔ|findstr£¬linuxÏÂÆµ·±ĞÅºÅ¿ÉÄÜ»áµ¼ÖÂ¸Ãº¯ÊıÖĞµÄpcloseºóÌ¨¿¨ËÀ³öÏÖ½©Ê¬½ø³Ì£¬¸Ãº¯Êı²»»áÒò´Ë¿¨ËÀ
+	//è·å–ç³»ç»Ÿå‘½ä»¤æ‰§è¡Œç»“æœï¼Œå¦‚æœæ˜¯falseåˆ™åªèƒ½æ‰§è¡Œä¸€å¥ï¼Œå¦‚æœæ˜¯trueå¯ä»¥|findstrï¼Œlinuxä¸‹é¢‘ç¹ä¿¡å·å¯èƒ½ä¼šå¯¼è‡´è¯¥å‡½æ•°ä¸­çš„pcloseåå°å¡æ­»å‡ºç°åƒµå°¸è¿›ç¨‹ï¼Œè¯¥å‡½æ•°ä¸ä¼šå› æ­¤å¡æ­»
 	static int32_t SystemCommand(const std::string& command, std::string& result, bool isShowCmd = false);
-	//»ñÈ¡Ïß³ÌIDºÅ
+	//è·å–çº¿ç¨‹IDå·
 	static uint32_t SystemThreadId();
-	//»ñÈ¡CPUÏß³ÌÊı£¬Ë«ºËËÄÏß³Ì¼´»ñÈ¡µ½4£¬ËÄºËËÄÏß³Ì»ñÈ¡µ½4£¬ºÍÉè±¸¹ÜÀíÆ÷ÖĞCPUÊıÁ¿Ò»ÖÂ
-	//Ïß³Ì³ØÊıÁ¿Èç¹ûÊÇ´¿¼ÆËãÔòÖ±½ÓÊ¹ÓÃÏß³ÌÊı£¬Èç¹ûº¬ÓĞÊı¾İ¿âÊı¾İ½»»¥¡¢ÎÄ¼şÉÏ´«ÏÂÔØ¡¢ÍøÂçÊı¾İ´«ÊäÕâĞ©IO×èÈûÔò³ËÒÔÒ»¸öÏµÊı£¬Ò»°ãÊÇ2
+	//è·å–CPUçº¿ç¨‹æ•°ï¼ŒåŒæ ¸å››çº¿ç¨‹å³è·å–åˆ°4ï¼Œå››æ ¸å››çº¿ç¨‹è·å–åˆ°4ï¼Œå’Œè®¾å¤‡ç®¡ç†å™¨ä¸­CPUæ•°é‡ä¸€è‡´
+	//çº¿ç¨‹æ± æ•°é‡å¦‚æœæ˜¯çº¯è®¡ç®—åˆ™ç›´æ¥ä½¿ç”¨çº¿ç¨‹æ•°ï¼Œå¦‚æœå«æœ‰æ•°æ®åº“æ•°æ®äº¤äº’ã€æ–‡ä»¶ä¸Šä¼ ä¸‹è½½ã€ç½‘ç»œæ•°æ®ä¼ è¾“è¿™äº›IOé˜»å¡åˆ™ä¹˜ä»¥ä¸€ä¸ªç³»æ•°ï¼Œä¸€èˆ¬æ˜¯2
 	static int32_t GetCPUCoreCount();
-	//»ñÈ¡²Ù×÷ÏµÍ³°æ±¾ºÅ£¬linuxÏÂÎª1604£¬1804...
+	//è·å–æ“ä½œç³»ç»Ÿç‰ˆæœ¬å·ï¼Œlinuxä¸‹ä¸º1604ï¼Œ1804...
 	static int32_t GetSystemVersionNum();
-	//»ñÈ¡±¾½ø³Ìpid
+	//è·å–æœ¬è¿›ç¨‹pid
 	static uint32_t currentProcessPid();
-	//»ñÈ¡µÚÒ»¸öºÍÃû×ÖÆ¥ÅäµÄ½ø³Ìpid£¬linuxÏÂÎª×îºóÒ»¸ö´ò¿ªµÄ¸ÃÃû×ÖµÄ½ø³Ì
+	//è·å–ç¬¬ä¸€ä¸ªå’Œåå­—åŒ¹é…çš„è¿›ç¨‹pidï¼Œlinuxä¸‹ä¸ºæœ€åä¸€ä¸ªæ‰“å¼€çš„è¯¥åå­—çš„è¿›ç¨‹
 	static uint32_t processFirstPid(const std::string& processName);
-	//»ñÈ¡½ø³ÌPID£¬ºÄÊ±10ºÁÃë×óÓÒ£¬linuxÏÂºó´ò¿ªµÄ½ø³ÌºÅÔÚÇ°Ãæ
+	//è·å–è¿›ç¨‹PIDï¼Œè€—æ—¶10æ¯«ç§’å·¦å³ï¼Œlinuxä¸‹åæ‰“å¼€çš„è¿›ç¨‹å·åœ¨å‰é¢
 	static std::vector<uint32_t> processPid(const std::string& processName);
-	//»ñÈ¡½ø³ÌÈ«Ãû£¬ºÄÊ±10ºÁÃë×óÓÒ
+	//è·å–è¿›ç¨‹å…¨åï¼Œè€—æ—¶10æ¯«ç§’å·¦å³
 	static std::string processName(uint32_t pid);
-	//»ñÈ¡±¾½ø³ÌËùÕ¼ÄÚ´æ£¬µ¥Î»×Ö½Ú£¬linuxÏÂÖ»×¼È·µ½kb
+	//è·å–æœ¬è¿›ç¨‹æ‰€å å†…å­˜ï¼Œå•ä½å­—èŠ‚ï¼Œlinuxä¸‹åªå‡†ç¡®åˆ°kb
 	static uint64_t currentMemory();
-	//»ñÈ¡Ê±¼ä
+	//è·å–æ—¶é—´
 	static uint32_t GetTickCount();
-	//»ñÈ¡¸ß¾«¶ÈÊ±¼ä
+	//è·å–é«˜ç²¾åº¦æ—¶é—´
 	static std::chrono::high_resolution_clock::time_point GetHighTickCount();
-	//»ñÈ¡Ö´ĞĞÊ±¼ä£¬ºÁÃë£¬°üº¬int64_tµ½int32_tµÄÇ¿×ª
+	//è·å–æ‰§è¡Œæ—¶é—´ï¼Œæ¯«ç§’ï¼ŒåŒ…å«int64_tåˆ°int32_tçš„å¼ºè½¬
 	static int32_t GetHighTickCountMilliRunTime(const std::chrono::high_resolution_clock::time_point& beginTime);
-	//»ñÈ¡Ö´ĞĞÊ±¼ä£¬Î¢Ãë£¬°üº¬int64_tµ½int32_tµÄÇ¿×ª
+	//è·å–æ‰§è¡Œæ—¶é—´ï¼Œå¾®ç§’ï¼ŒåŒ…å«int64_tåˆ°int32_tçš„å¼ºè½¬
 	static int32_t GetHighTickCountMicroRunTime(const std::chrono::high_resolution_clock::time_point& beginTime);
-	//»ñÈ¡Ö´ĞĞÊ±¼ä£¬ÄÉÃë
+	//è·å–æ‰§è¡Œæ—¶é—´ï¼Œçº³ç§’
 	static int64_t GetHighTickCountNanoRunTime(const std::chrono::high_resolution_clock::time_point& beginTime);
-	//»ñÈ¡Ö´ĞĞÊ±¼ä£¬ºÁÃë£¬°üº¬int64_tµ½int32_tµÄÇ¿×ª
+	//è·å–æ‰§è¡Œæ—¶é—´ï¼Œæ¯«ç§’ï¼ŒåŒ…å«int64_tåˆ°int32_tçš„å¼ºè½¬
 	static int32_t GetMilliRunTime(const std::chrono::high_resolution_clock::time_point& endTime, const std::chrono::high_resolution_clock::time_point& beginTime);
-	//»ñÈ¡Ö´ĞĞÊ±¼ä£¬Î¢Ãë£¬°üº¬int64_tµ½int32_tµÄÇ¿×ª
+	//è·å–æ‰§è¡Œæ—¶é—´ï¼Œå¾®ç§’ï¼ŒåŒ…å«int64_tåˆ°int32_tçš„å¼ºè½¬
 	static int32_t GetMicroRunTime(const std::chrono::high_resolution_clock::time_point& endTime, const std::chrono::high_resolution_clock::time_point& beginTime);
-	//»ñÈ¡Ö´ĞĞÊ±¼ä£¬ÄÉÃë
+	//è·å–æ‰§è¡Œæ—¶é—´ï¼Œçº³ç§’
 	static int64_t GetNanoRunTime(const std::chrono::high_resolution_clock::time_point& endTime, const std::chrono::high_resolution_clock::time_point& beginTime);
-	//»ñÈ¡µçÄÔÃû
+	//è·å–ç”µè„‘å
 	static std::string getComputerName();
-	//»ñÈ¡¶¯Ì¬¿âËùÔÚÂ·¾¶
+	//è·å–åŠ¨æ€åº“æ‰€åœ¨è·¯å¾„
 	static std::string GetCurrentDllPath();
-	//·µ»Ø±¾½ø³ÌËùÔÚÂ·¾¶£¬´ø\·ûºÅ
+	//è¿”å›æœ¬è¿›ç¨‹æ‰€åœ¨è·¯å¾„ï¼Œå¸¦\ç¬¦å·
 	static std::string GetCurrentExePath();
-	//·µ»Ø½ø³ÌÃû£¬Ã»ÓĞºó×ºÃû
+	//è¿”å›è¿›ç¨‹åï¼Œæ²¡æœ‰åç¼€å
 	static std::string GetCurrentExeName();
-	//·µ»Ø½ø³ÌÃû£¬´øºó×ºÃû
+	//è¿”å›è¿›ç¨‹åï¼Œå¸¦åç¼€å
 	static std::string GetCurrentExeFullName();
-	//»ñÈ¡ÁÙÊ±Ä¿Â¼£¬´ø\·ûºÅ
+	//è·å–ä¸´æ—¶ç›®å½•ï¼Œå¸¦\ç¬¦å·
 	static std::string GetSystemTempPath();
-	//»ñÈ¡ÎÄ¼şÏà¹ØĞÅÏ¢
-	//flag1±íÊ¾»ñÈ¡ÎÄ¼şÈ«Ãû£¬flag2±íÊ¾»ñÈ¡ÎÄ¼şºó×ºÃû£¬Èç¹ûÎÄ¼şÃûÃ»ÓĞµã£¬Ôòºó×ºÃûÎª¿Õ
-	//flag3±íÊ¾»ñÈ¡ÎÄ¼şÃû£¬flag4±íÊ¾»ñÈ¡Ç°ÃæµÄÂ·¾¶´ø\\·ûºÅ
+	//è·å–æ–‡ä»¶ç›¸å…³ä¿¡æ¯
+	//flag1è¡¨ç¤ºè·å–æ–‡ä»¶å…¨åï¼Œflag2è¡¨ç¤ºè·å–æ–‡ä»¶åç¼€åï¼Œå¦‚æœæ–‡ä»¶åæ²¡æœ‰ç‚¹ï¼Œåˆ™åç¼€åä¸ºç©º
+	//flag3è¡¨ç¤ºè·å–æ–‡ä»¶åï¼Œflag4è¡¨ç¤ºè·å–å‰é¢çš„è·¯å¾„å¸¦\\ç¬¦å·
 	static std::string GetName(const std::string& path, int32_t flag);
-	//É¾³ıÎÄ¼ş£¬windowsÏÂÖ»ÄÜÉ¾³ıÎÄ¼ş²»ÄÜÉ¾³ıÎÄ¼ş¼Ğ£¬linuxÏÂ¿ÉÒÔÉ¾³ıÎÄ¼ş»ò¿ÕÎÄ¼ş¼Ğ£¬´ø²»´ø\¶¼¿ÉÒÔ
+	//åˆ é™¤æ–‡ä»¶ï¼Œwindowsä¸‹åªèƒ½åˆ é™¤æ–‡ä»¶ä¸èƒ½åˆ é™¤æ–‡ä»¶å¤¹ï¼Œlinuxä¸‹å¯ä»¥åˆ é™¤æ–‡ä»¶æˆ–ç©ºæ–‡ä»¶å¤¹ï¼Œå¸¦ä¸å¸¦\éƒ½å¯ä»¥
 	static bool deleteFile(const char* path);
-	//¿ØÖÆÌ¨´øÌáÊ¾ÊäÈë
+	//æ§åˆ¶å°å¸¦æç¤ºè¾“å…¥
 	static std::string inputString(const std::string& tip);
-	//¹Ø±Õ½ø³Ì
+	//å…³é—­è¿›ç¨‹
 	static void killProcess(int32_t pid);
-	//ÖØÃüÃû£¬´«Ä¿Â¼ÔòÖØÃüÃûÄ¿Â¼£¬´«ÎÄ¼şÖØÃüÃûÎÄ¼ş£¬ĞÂÎÄ¼ş»ò¿ÕÄ¿Â¼ÈôÒÑ´æÔÚÔòÏÈÉ¾³ı£¬ĞÂÄ¿Â¼²»¿ÉÒÔÊÇÀÏÄ¿Â¼µÄ×ÓÄ¿Â¼£¬ĞÂÄ¿Â¼Èô²»ÊÇ¿ÕÄ¿Â¼ÖØÃüÃû²»³É¹¦
-	//ĞÂÄ¿Â¼¿ÉÒÔÊÇ²»´æÔÚµÄÄ¿Â¼£¬µ«²»¿ÉÒÔ¶à¼¶²»´æÔÚ£¬ÀÏÄ¿Â¼ÄÚ²¿¿ÉÒÔÓĞÎÄ¼şºÍÎÄ¼ş¼Ğ£¬ĞÂÎÄ¼ş¿ÉÒÔ²»´æÔÚ£¬ÀÏÄ¿Â¼»òÀÏÎÄ¼şÔÚÖØÃüÃû³É¹¦ºó»á±»É¾³ı
+	//é‡å‘½åï¼Œä¼ ç›®å½•åˆ™é‡å‘½åç›®å½•ï¼Œä¼ æ–‡ä»¶é‡å‘½åæ–‡ä»¶ï¼Œæ–°æ–‡ä»¶æˆ–ç©ºç›®å½•è‹¥å·²å­˜åœ¨åˆ™å…ˆåˆ é™¤ï¼Œæ–°ç›®å½•ä¸å¯ä»¥æ˜¯è€ç›®å½•çš„å­ç›®å½•ï¼Œæ–°ç›®å½•è‹¥ä¸æ˜¯ç©ºç›®å½•é‡å‘½åä¸æˆåŠŸ
+	//æ–°ç›®å½•å¯ä»¥æ˜¯ä¸å­˜åœ¨çš„ç›®å½•ï¼Œä½†ä¸å¯ä»¥å¤šçº§ä¸å­˜åœ¨ï¼Œè€ç›®å½•å†…éƒ¨å¯ä»¥æœ‰æ–‡ä»¶å’Œæ–‡ä»¶å¤¹ï¼Œæ–°æ–‡ä»¶å¯ä»¥ä¸å­˜åœ¨ï¼Œè€ç›®å½•æˆ–è€æ–‡ä»¶åœ¨é‡å‘½åæˆåŠŸåä¼šè¢«åˆ é™¤
 	static bool rename(const std::string& oldPath, const std::string& newPath);
-	//time_t×ª»¯Îª×Ö·û´®Ê±¼ä£¬Èç¹û²»ÊÇ±¾µØÊ±¼ä¾ÍÊÇ¸ñÁÖÍşÖÎÊ±¼ä
+	//time_tè½¬åŒ–ä¸ºå­—ç¬¦ä¸²æ—¶é—´ï¼Œå¦‚æœä¸æ˜¯æœ¬åœ°æ—¶é—´å°±æ˜¯æ ¼æ—å¨æ²»æ—¶é—´
 	static std::string timetToStr(time_t timet, bool isLocal = true);
-	//»ñÈ¡commonÖĞµÄÎÄ¼şÃûÂ·¾¶
+	//è·å–commonä¸­çš„æ–‡ä»¶åè·¯å¾„
 	static std::string commonFile(const std::string& name);
-	//¶ÁÈ¡ÎÄ¼ş
+	//è¯»å–æ–‡ä»¶
 	static std::string readFile(const std::string& path);
-	//±£´æÎÄ¼ş
+	//ä¿å­˜æ–‡ä»¶
 	static void saveFile(const std::string& content, const std::string& path);
-	/** ²éÕÒÎÄ¼ş£¬ÄÚ²¿Ã»ÓĞ½ûÖ¹Â·¾¶ÖØ¶¨Ïò
-	@param [in] strPath ±ØĞë´«ÎÄ¼ş¼ĞÂ·¾¶£¬Ñ°ÕÒÎÄ¼ş¼ĞÒÔÏÂ£¬Èç¹û´«¿Õ×Ö·û´®Ôò²éÕÒexeËùÔÚÂ·¾¶£¬´ø²»´ø\¶¼¿ÉÒÔ
-	@param [in] flag 1±íÊ¾²éÕÒÎÄ¼ş£¬2±íÊ¾²éÕÒÎÄ¼şºó×ºÃû£¬3±íÊ¾²éÕÒËùÓĞÎÄ¼ş£¬fileStr²»Æğ×÷ÓÃ
-	@param [in] fileStr ´«ÎÄ¼şÃû´øºó×ºÃû»òºó×ºÃû²»´øµã£¬¶à¸öºó×ºÃûµã·Ö¸ô£¬Èç¹ûÌî2´«¿Õ»ò·Ö¸ôºóÓĞ¿Õ×Ö·û´®Ôò»áËÑË÷²»º¬ºó×ºÃûµÄÎÄ¼ş£¬²»²éÕÒÎÄ¼ş¼Ğ
-	@param [in] EveryFilePath ÔÚÃ¿Ìí¼ÓÒ»¸öÎÄ¼şÂ·¾¶Ö®Ç°µ÷ÓÃ´Ëº¯Êı£¬·µ»Øtrue±íÊ¾ÖĞ¶ÏËÑË÷£¬¼ÌĞøËÑË÷·µ»Øfalse
-	@param [in] unVisitPath °Ñµ±Ç°ÎÄ¼ş¼ĞÏÂ²»¿É·ÃÎÊµÄÎÄ¼ş¼ĞÁĞ³öÀ´£¬´«¿Õ´ú±í²»´æ´¢£¬ËùÓĞÎÄ¼ş¼ĞÂ·¾¶´ø\·ûºÅ
-	@return ·µ»ØËùÓĞ²éÕÒµ½ÎÄ¼şµÄ¾ø¶ÔÂ·¾¶
+	/** æŸ¥æ‰¾æ–‡ä»¶ï¼Œå†…éƒ¨æ²¡æœ‰ç¦æ­¢è·¯å¾„é‡å®šå‘
+	@param [in] strPath å¿…é¡»ä¼ æ–‡ä»¶å¤¹è·¯å¾„ï¼Œå¯»æ‰¾æ–‡ä»¶å¤¹ä»¥ä¸‹ï¼Œå¦‚æœä¼ ç©ºå­—ç¬¦ä¸²åˆ™æŸ¥æ‰¾exeæ‰€åœ¨è·¯å¾„ï¼Œå¸¦ä¸å¸¦\éƒ½å¯ä»¥
+	@param [in] flag 1è¡¨ç¤ºæŸ¥æ‰¾æ–‡ä»¶ï¼Œ2è¡¨ç¤ºæŸ¥æ‰¾æ–‡ä»¶åç¼€åï¼Œ3è¡¨ç¤ºæŸ¥æ‰¾æ‰€æœ‰æ–‡ä»¶ï¼ŒfileSträ¸èµ·ä½œç”¨
+	@param [in] fileStr ä¼ æ–‡ä»¶åå¸¦åç¼€åæˆ–åç¼€åä¸å¸¦ç‚¹ï¼Œå¤šä¸ªåç¼€åç‚¹åˆ†éš”ï¼Œå¦‚æœå¡«2ä¼ ç©ºæˆ–åˆ†éš”åæœ‰ç©ºå­—ç¬¦ä¸²åˆ™ä¼šæœç´¢ä¸å«åç¼€åçš„æ–‡ä»¶ï¼Œä¸æŸ¥æ‰¾æ–‡ä»¶å¤¹
+	@param [in] EveryFilePath åœ¨æ¯æ·»åŠ ä¸€ä¸ªæ–‡ä»¶è·¯å¾„ä¹‹å‰è°ƒç”¨æ­¤å‡½æ•°ï¼Œè¿”å›trueè¡¨ç¤ºä¸­æ–­æœç´¢ï¼Œç»§ç»­æœç´¢è¿”å›false
+	@param [in] unVisitPath æŠŠå½“å‰æ–‡ä»¶å¤¹ä¸‹ä¸å¯è®¿é—®çš„æ–‡ä»¶å¤¹åˆ—å‡ºæ¥ï¼Œä¼ ç©ºä»£è¡¨ä¸å­˜å‚¨ï¼Œæ‰€æœ‰æ–‡ä»¶å¤¹è·¯å¾„å¸¦\ç¬¦å·
+	@return è¿”å›æ‰€æœ‰æŸ¥æ‰¾åˆ°æ–‡ä»¶çš„ç»å¯¹è·¯å¾„
 	*/
 	static std::vector<std::string> findFilePath(const std::string& strPath,
 		int32_t flag = 3,

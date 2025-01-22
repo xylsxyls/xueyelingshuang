@@ -1,4 +1,4 @@
-#include "CTaskThread.h"
+ï»¿#include "CTaskThread.h"
 #include <functional>
 #include "Semaphore/SemaphoreAPI.h"
 
@@ -20,50 +20,50 @@ CTaskThread::~CTaskThread()
 
 bool CTaskThread::CreateThread()
 {
-    //±ØĞëÏÈ½«m_hasExitSignalÉèÎªfalse£¬·ñÔòÒ»½øÈëÏß³Ìº¯Êı¾ÍÍË³öÁË
-    std::thread* pThread = new std::thread(std::bind(&CTaskThread::WorkThread, this));
-    if (pThread == nullptr)
-    {
-        m_hasExitSignal = true;
-        return false;
-    }
-    m_spWorkThread.reset(pThread);
+	//å¿…é¡»å…ˆå°†m_hasExitSignalè®¾ä¸ºfalseï¼Œå¦åˆ™ä¸€è¿›å…¥çº¿ç¨‹å‡½æ•°å°±é€€å‡ºäº†
+	std::thread* pThread = new std::thread(std::bind(&CTaskThread::WorkThread, this));
+	if (pThread == nullptr)
+	{
+		m_hasExitSignal = true;
+		return false;
+	}
+	m_spWorkThread.reset(pThread);
 	
-    return true;
+	return true;
 }
 
 void CTaskThread::DestroyThread()
 {
-    SetExitSignal();
-    WaitForExit();
+	SetExitSignal();
+	WaitForExit();
 }
 
 void CTaskThread::SetExitSignal()
 {
-    m_hasExitSignal = true;
-    //ÉèÖÃÁËÍË³öĞÅºÅ¾ÍÁ¢¼´°Ñµ±Ç°ÈÎÎñÍ£Ö¹
+	m_hasExitSignal = true;
+	//è®¾ç½®äº†é€€å‡ºä¿¡å·å°±ç«‹å³æŠŠå½“å‰ä»»åŠ¡åœæ­¢
 	StopCurTask();
 	m_semaphore->signal();
 }
 
 void CTaskThread::WaitForExit()
 {
-    //Èç¹ûÏß³ÌÕı³£Æô¶¯
-    if (m_spWorkThread != nullptr)
-    {
-        m_spWorkThread->join();
-        m_spWorkThread.reset(nullptr);
+	//å¦‚æœçº¿ç¨‹æ­£å¸¸å¯åŠ¨
+	if (m_spWorkThread != nullptr)
+	{
+		m_spWorkThread->join();
+		m_spWorkThread.reset(nullptr);
 		//::CloseHandle(m_semaphore);
-    }
+	}
 }
 
 void CTaskThread::PostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
 {
-    if (spTask == nullptr || taskLevel < 1 || m_hasExitSignal)
-    {
-        return;
-    }
-    std::unique_lock<std::mutex> lock(m_mutex);
+	if (spTask == nullptr || taskLevel < 1 || m_hasExitSignal)
+	{
+		return;
+	}
+	std::unique_lock<std::mutex> lock(m_mutex);
 	HandlePostTask(spTask, taskLevel);
 }
 
@@ -84,33 +84,33 @@ bool CTaskThread::TryPostTask(const std::shared_ptr<CTask>& spTask, int32_t task
 
 void CTaskThread::SendTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
 {
-    if (spTask == nullptr || taskLevel < 1 || m_hasExitSignal)
-    {
-        return;
-    }
+	if (spTask == nullptr || taskLevel < 1 || m_hasExitSignal)
+	{
+		return;
+	}
 
 	Semaphore wairForSendSemaphore;
 	spTask->SetWaitForSendHandle(&wairForSendSemaphore);
-    PostTask(spTask, taskLevel);
-    
-    bool inWhile = true;
-    while (inWhile)
-    {
-        if (spTask.use_count() == 1)
-        {
-            break;
-        }
+	PostTask(spTask, taskLevel);
+	
+	bool inWhile = true;
+	while (inWhile)
+	{
+		if (spTask.use_count() == 1)
+		{
+			break;
+		}
 		wairForSendSemaphore.eventWait(50);
-    }
+	}
 	//::CloseHandle(waitForSend);
 	spTask->SetWaitForSendHandle(nullptr);
 }
 
 void CTaskThread::WorkThread()
 {
-    //ÓĞÍË³öĞÅºÅ£¬µ«ÊÇ¶ÓÁĞÖĞÓĞµÈ´ıÈÎÎñÊ±ÈÔÈ»½øÈëÑ­»·£¬ÔÚÑ­»·ÄÚ´¦Àí¶àÓàÈÎÎñ
+	//æœ‰é€€å‡ºä¿¡å·ï¼Œä½†æ˜¯é˜Ÿåˆ—ä¸­æœ‰ç­‰å¾…ä»»åŠ¡æ—¶ä»ç„¶è¿›å…¥å¾ªç¯ï¼Œåœ¨å¾ªç¯å†…å¤„ç†å¤šä½™ä»»åŠ¡
 	while (true)
-    {
+	{
 		if (m_hasExitSignal)
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
@@ -118,10 +118,10 @@ void CTaskThread::WorkThread()
 			break;
 		}
 
-		//È¡ÈÎÎñ£¬ÓĞÈÎÎñÖ´ĞĞ£¬Ã»ÓĞÈÎÎñ×èÈû
+		//å–ä»»åŠ¡ï¼Œæœ‰ä»»åŠ¡æ‰§è¡Œï¼Œæ²¡æœ‰ä»»åŠ¡é˜»å¡
 		PopToCurTask();
 
-		//Èç¹ûµ±Ç°ÓĞÍË³öĞÅºÅ£¬ÔòÇå¿ÕµÈ´ı¶ÓÁĞÍ¬Ê±°Ñµ±Ç°ÈÎÎñÍ£Ö¹
+		//å¦‚æœå½“å‰æœ‰é€€å‡ºä¿¡å·ï¼Œåˆ™æ¸…ç©ºç­‰å¾…é˜Ÿåˆ—åŒæ—¶æŠŠå½“å‰ä»»åŠ¡åœæ­¢
 		if (m_hasExitSignal)
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
@@ -129,21 +129,21 @@ void CTaskThread::WorkThread()
 			break;
 		}
 
-        if (m_spCurTask != nullptr)
-        {
-            m_spCurTask->DoTask();
+		if (m_spCurTask != nullptr)
+		{
+			m_spCurTask->DoTask();
 			Semaphore* waitForSend = m_spCurTask->GetWaitForSendHandle();
 			if (waitForSend != nullptr)
 			{
 				waitForSend->event();
 			}
-        }
+		}
 		else if (m_waitForEndSignal)
 		{
 			break;
 		}
 		
-		//ÈÎÎñÖ´ĞĞÍêÖ®ºóÇå¿ÕÖ¸ÕëÖ´ĞĞtaskÎö¹¹
+		//ä»»åŠ¡æ‰§è¡Œå®Œä¹‹åæ¸…ç©ºæŒ‡é’ˆæ‰§è¡Œtaskææ„
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
 			m_spCurTask = nullptr;
@@ -151,30 +151,30 @@ void CTaskThread::WorkThread()
 			m_curTaskLevel = 0;
 		}
 		m_semaphore->wait();
-    }
+	}
 }
 
 void CTaskThread::StopAllTaskUnlock()
 {
-    for (auto itListTask = m_taskMap.begin(); itListTask != m_taskMap.end(); ++itListTask)
-    {
-        auto listTask = itListTask->second;
-        for (auto itTask = listTask.begin(); itTask != listTask.end(); ++itTask)
-        {
-            (*itTask)->StopTask();
-        }
-    }
-    //Èç¹ûÓĞ»¹Î´Ö´ĞĞÍê±ÏµÄÈÎÎñ
+	for (auto itListTask = m_taskMap.begin(); itListTask != m_taskMap.end(); ++itListTask)
+	{
+		auto listTask = itListTask->second;
+		for (auto itTask = listTask.begin(); itTask != listTask.end(); ++itTask)
+		{
+			(*itTask)->StopTask();
+		}
+	}
+	//å¦‚æœæœ‰è¿˜æœªæ‰§è¡Œå®Œæ¯•çš„ä»»åŠ¡
 	StopCurTask();
 }
 
 void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t taskLevel)
 {
 	m_taskMap[taskLevel].push_back(spTask);
-	//Èç¹ûÌí¼ÓÈÎÎñµÄÓÅÏÈ¼¶¸ßÓÚµ±Ç°ÈÎÎñÔòµ±Ç°ÈÎÎñÍ£Ö¹
+	//å¦‚æœæ·»åŠ ä»»åŠ¡çš„ä¼˜å…ˆçº§é«˜äºå½“å‰ä»»åŠ¡åˆ™å½“å‰ä»»åŠ¡åœæ­¢
 	if (m_spCurTask != nullptr && taskLevel > m_curTaskLevel)
 	{
-		//Èç¹û¸ÃÈÎÎñµÄÊôĞÔÊÇ±»¶¥µôºóÖØ×ö£¬ÔòÏÈÌí¼Ó´ËÈÎÎñ£¬ÅĞ¿ÕÊÇ·ÀÖ¹µ±Ç°ÈÎÎñ»¹Ã»À´µÃ¼°ÍË³ö¾ÍÌí¼ÓÁË¶à¸öÓÅÏÈ¼¶¸ü¸ßµÄÈÎÎñ
+		//å¦‚æœè¯¥ä»»åŠ¡çš„å±æ€§æ˜¯è¢«é¡¶æ‰åé‡åšï¼Œåˆ™å…ˆæ·»åŠ æ­¤ä»»åŠ¡ï¼Œåˆ¤ç©ºæ˜¯é˜²æ­¢å½“å‰ä»»åŠ¡è¿˜æ²¡æ¥å¾—åŠé€€å‡ºå°±æ·»åŠ äº†å¤šä¸ªä¼˜å…ˆçº§æ›´é«˜çš„ä»»åŠ¡
 		if (m_spCurTaskBk != nullptr && m_spCurTask->ReExecute())
 		{
 			m_taskMap[m_curTaskLevel].push_front(m_spCurTaskBk);
@@ -188,7 +188,7 @@ void CTaskThread::HandlePostTask(const std::shared_ptr<CTask>& spTask, int32_t t
 
 bool CTaskThread::HasTask()
 {
-    std::unique_lock<std::mutex> lock(m_mutex);
+	std::unique_lock<std::mutex> lock(m_mutex);
 	return !m_taskMap.empty();
 }
 
@@ -210,16 +210,16 @@ void CTaskThread::PopToCurTask()
 		//::ResetEvent(m_semaphore);
 		return;
 	}
-	//Èç¹ûÓĞÈÎÎñ£¬È¡³ö×îºóÒ»¸öÓÅÏÈ¼¶µÄ¶ÓÁĞÈÎÎñ¼¯ºÏ
+	//å¦‚æœæœ‰ä»»åŠ¡ï¼Œå–å‡ºæœ€åä¸€ä¸ªä¼˜å…ˆçº§çš„é˜Ÿåˆ—ä»»åŠ¡é›†åˆ
 	std::unique_lock<std::mutex> lock(m_mutex);
 	auto itTaskList = --(m_taskMap.end());
 	std::list<std::shared_ptr<CTask>>& listTask = itTaskList->second;
-	//½«×îºóÒ»¸öÓÅÏÈ¼¶¶ÓÁĞµÄÊ×¸öÈÎÎñÈ¡³ö£¬Ö»ÒªÓĞ¼¯ºÏ¾Í±ØĞëÓĞÈÎÎñ
+	//å°†æœ€åä¸€ä¸ªä¼˜å…ˆçº§é˜Ÿåˆ—çš„é¦–ä¸ªä»»åŠ¡å–å‡ºï¼Œåªè¦æœ‰é›†åˆå°±å¿…é¡»æœ‰ä»»åŠ¡
 	m_spCurTask = listTask.front();
 	m_spCurTaskBk.reset(m_spCurTask->Clone());
 	m_curTaskLevel = itTaskList->first;
 	listTask.pop_front();
-	//Èç¹û¸Ã¼¶±ğ¶ÓÁĞÖĞÃ»ÓĞÈÎÎñÔòÉ¾³ı¸Ã¼¶±ğÔÚmapÖĞµÄ½Úµã
+	//å¦‚æœè¯¥çº§åˆ«é˜Ÿåˆ—ä¸­æ²¡æœ‰ä»»åŠ¡åˆ™åˆ é™¤è¯¥çº§åˆ«åœ¨mapä¸­çš„èŠ‚ç‚¹
 	if (listTask.empty())
 	{
 		m_taskMap.erase(itTaskList);
@@ -232,52 +232,52 @@ void CTaskThread::StopTask(int32_t taskId, int32_t taskLevel)
 	{
 		StopCurTask();
 	}
-    if (taskLevel != 0)
-    {
-        std::unique_lock<std::mutex> lock(m_mutex);
-        auto itListTask = m_taskMap.find(taskLevel);
-        if (itListTask != m_taskMap.end())
-        {
-            StopTaskInList(itListTask->second, taskId);
-        }
-    }
-    else
-    {
-        std::unique_lock<std::mutex> lock(m_mutex);
-        for (auto itListTask = m_taskMap.begin(); itListTask != m_taskMap.end(); ++itListTask)
-        {
-            StopTaskInList(itListTask->second, taskId);
-        }
-    }
+	if (taskLevel != 0)
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		auto itListTask = m_taskMap.find(taskLevel);
+		if (itListTask != m_taskMap.end())
+		{
+			StopTaskInList(itListTask->second, taskId);
+		}
+	}
+	else
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		for (auto itListTask = m_taskMap.begin(); itListTask != m_taskMap.end(); ++itListTask)
+		{
+			StopTaskInList(itListTask->second, taskId);
+		}
+	}
 }
 
 void CTaskThread::StopTaskInList(const std::list<std::shared_ptr<CTask>>& taskList, int32_t taskId)
 {
-    for (auto itTask = taskList.begin(); itTask != taskList.end(); ++itTask)
-    {
-        if ((*itTask)->GetTaskId() == taskId)
-        {
-            (*itTask)->StopTask();
-        }
-    }
+	for (auto itTask = taskList.begin(); itTask != taskList.end(); ++itTask)
+	{
+		if ((*itTask)->GetTaskId() == taskId)
+		{
+			(*itTask)->StopTask();
+		}
+	}
 }
 
 void CTaskThread::StopAllTask()
 {
-    std::unique_lock<std::mutex> lock(m_mutex);
-    StopAllTaskUnlock();
+	std::unique_lock<std::mutex> lock(m_mutex);
+	StopAllTaskUnlock();
 }
 
 void CTaskThread::GetWaitTaskInfo(std::map<int32_t, int32_t>& taskCountMap)
 {
-    taskCountMap.clear();
-    {
-        std::unique_lock<std::mutex> lock(m_mutex);
-        for (auto itTaskList = m_taskMap.begin(); itTaskList != m_taskMap.end(); ++itTaskList)
-        {
-            taskCountMap[itTaskList->first] = (int32_t)itTaskList->second.size();
-        }
-    }
+	taskCountMap.clear();
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		for (auto itTaskList = m_taskMap.begin(); itTaskList != m_taskMap.end(); ++itTaskList)
+		{
+			taskCountMap[itTaskList->first] = (int32_t)itTaskList->second.size();
+		}
+	}
 }
 
 int32_t CTaskThread::GetWaitTaskCount()

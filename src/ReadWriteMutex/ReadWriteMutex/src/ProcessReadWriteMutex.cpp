@@ -1,4 +1,4 @@
-#include "ProcessReadWriteMutex.h"
+ï»¿#include "ProcessReadWriteMutex.h"
 #ifdef _MSC_VER
 #include <windows.h>
 #endif
@@ -7,7 +7,7 @@
 ProcessReadWriteMutex::ProcessReadWriteMutex(const std::string& name) :
 m_hLock(nullptr)
 {
-	//³õÊ¼»¯µÄÊ±ºò²»±»ÈÎºÎÏß³ÌÕ¼ÓÃ
+	//åˆå§‹åŒ–çš„æ—¶å€™ä¸è¢«ä»»ä½•çº¿ç¨‹å ç”¨
 	m_hLock = ::CreateMutexA(NULL, FALSE, name.c_str());
 }
 

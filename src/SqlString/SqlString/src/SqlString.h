@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include "SqlStringMacro.h"
@@ -8,17 +8,17 @@ class SqlStringAPI SqlString
 public:
 	static std::string insertString(const std::string& tableName, const std::string& fields);
 
-	//fields¶ººÅ·Ö¸ô£¬Éú³ÉµÄ×Ö·û´®ÓĞÕ¼Î»·ûĞèÒªÌî³ä
+	//fieldsé€—å·åˆ†éš”ï¼Œç”Ÿæˆçš„å­—ç¬¦ä¸²æœ‰å ä½ç¬¦éœ€è¦å¡«å……
 	static std::string updateString(const std::string& tableName, const std::string& fields, const std::string& whereString = "");
 
 	static std::string deleteString(const std::string& tableName, const std::string& whereString);
 
 	static std::string selectString(const std::string& tableName, const std::string& selectFields = "*", const std::string& whereString = "");
 
-	//fieldsÖĞname varchar(20)
+	//fieldsä¸­name varchar(20)
 	static std::string createTableString(const std::string& tableName, const std::vector<std::string>& fields);
 
-	//fieldsÖĞname varchar(20)
+	//fieldsä¸­name varchar(20)
 	static std::string createTableIfNotExistString(const std::string& tableName, const std::vector<std::string>& fields);
 
 	static std::string createDatabaseString(const std::string& databaseName);

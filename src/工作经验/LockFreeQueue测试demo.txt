@@ -177,3 +177,298 @@ int32_t main()
 	getchar();
 	return 0;
 }
+
+//第二个测试
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <algorithm>
+#include <condition_variable>
+#include "LockFreeQueue.hpp"
+#include "CSystem/CSystemAPI.h"
+#include "TraceDataMap/TraceDataMapAPI.h"
+
+TraceDataMap<double> g_traceDataMap;
+
+class RunTime
+{
+public:
+	RunTime(const std::string& tip):
+		m_start(CSystem::GetHighTickCount()),
+		m_tip(tip)
+	{
+
+	}
+
+	~RunTime()
+	{
+		g_traceDataMap.addValue(m_tip, CSystem::GetHighTickCountMilliRunTime(m_start));
+		printf("RunTime %s = %.2fms\n", m_tip.c_str(), g_traceDataMap.average(m_tip));
+	}
+
+	std::chrono::high_resolution_clock::time_point m_start;
+	std::string m_tip;
+};
+
+class Semaphore {
+public:
+    Semaphore(int count = 0) : m_count(count) {}
+
+    void signal() {
+        std::unique_lock<std::mutex> lock(m_mtx);
+        ++m_count;
+        m_cv.notify_one();
+    }
+
+    void wait() {
+        std::unique_lock<std::mutex> lock(m_mtx);
+        while (m_count == 0) {
+            m_cv.wait(lock);
+        }
+        --m_count;
+    }
+
+private:
+    std::mutex m_mtx;
+    std::condition_variable m_cv;
+    int m_count;
+};
+
+// 全局原子计数器
+std::atomic<int> global_counter(-1);
+
+// 函数声明
+void push_elements(LockFreeQueue<int>& queue, int num_elements);
+void pop_elements(LockFreeQueue<int>& queue, int num_elements, std::vector<int>& output);
+void perform_push_operations(LockFreeQueue<int>& queue, int num_threads, int num_elements_per_thread);
+std::vector<int> perform_pop_operations(LockFreeQueue<int>& queue, int num_threads, int num_elements_per_thread);
+bool validate_queue_size(LockFreeQueue<int>& queue, const std::string& message, int expected_size);
+bool validate_popped_values(const std::vector<int>& values, int expected_size);
+void perform_parallel_operations(LockFreeQueue<int>& queue, int num_threads, int num_elements_per_thread);
+
+bool test()
+{
+	LockFreeQueue<int> queue;
+    const int num_threads = 200;
+    const int num_elements_per_thread = 10000;
+    int expect_all_elements = num_threads * num_elements_per_thread;
+    bool test_passed = true;
+
+	global_counter.store(-1);
+
+    // 执行push操作
+    perform_push_operations(queue, num_threads, num_elements_per_thread);
+
+    // 验证队列大小
+    test_passed = test_passed && validate_queue_size(queue, "Queue size after push", expect_all_elements);
+
+    // 执行pop操作并获取所有弹出元素
+    std::vector<int> all_popped_values = perform_pop_operations(queue, num_threads, num_elements_per_thread);
+
+    // 验证队列大小
+    test_passed = test_passed && validate_queue_size(queue, "Queue size after pop", 0);
+
+    // 清空队列
+    //queue.clear();
+
+    // 验证清空之后的队列大小
+    test_passed = test_passed && validate_queue_size(queue, "Queue size after clear", 0);
+
+    // 验证弹出元素的准确性
+    test_passed = test_passed && validate_popped_values(all_popped_values, expect_all_elements);
+
+	global_counter.store(-1);
+
+    // 执行push操作
+    perform_push_operations(queue, num_threads, num_elements_per_thread);
+
+	// 验证push之后的队列大小
+    test_passed = test_passed && validate_queue_size(queue, "Queue size after push", expect_all_elements);
+
+	// 并行执行push和pop操作
+	perform_parallel_operations(queue, num_threads, num_elements_per_thread);
+
+	// 验证并行之后的队列大小
+    test_passed = test_passed && validate_queue_size(queue, "Queue size after mixed", expect_all_elements);
+
+	// 执行pop操作并获取所有弹出元素
+    all_popped_values = perform_pop_operations(queue, num_threads, num_elements_per_thread);
+
+    // 验证队列大小
+    test_passed = test_passed && validate_queue_size(queue, "Queue size after mixed pop", 0);
+
+	// 验证弹出元素的准确性
+    test_passed = test_passed && validate_popped_values(all_popped_values, expect_all_elements);
+
+	if (test_passed) {
+        std::cout << "Test passed!" << std::endl;
+    } else {
+        std::cout << "Test failed!" << std::endl;
+    }
+	return test_passed;
+}
+
+int main() {
+    int32_t count = 20;
+	while (count-- != 0)
+	{
+		printf("count = %d\n", 20 - count);
+		if (!test())
+		{
+			break;
+		}
+	}
+    return 0;
+}
+
+// 每个单元的pop线程函数
+void pop_thread_func(LockFreeQueue<int>& queue, LockFreeQueue<int>& unit_queue, Semaphore& sem, int num_elements_per_thread) {
+    for (int i = 0; i < num_elements_per_thread; ++i) {
+        int value;
+        if (queue.pop(&value)) {
+            unit_queue.push(value);
+            sem.signal();
+        } else {
+            printf("pop empty2\n");
+            exit(-1);
+        }
+    }
+}
+
+// 每个单元的push线程函数
+void push_thread_func(LockFreeQueue<int>& queue, LockFreeQueue<int>& unit_queue, Semaphore& sem) {
+    while (true) {
+        sem.wait();
+        int value;
+        if (unit_queue.pop(&value)) {
+            queue.push(value);
+        } else {
+            break;
+        }
+    }
+}
+
+void perform_parallel_operations(LockFreeQueue<int>& queue, int num_threads, int num_elements_per_thread) {
+	RunTime runTime("mixed");
+    std::vector<LockFreeQueue<int>> unit_queues(num_threads);
+    std::vector<Semaphore> semaphores(num_threads);
+    std::vector<std::thread> pop_threads;
+    std::vector<std::thread> push_threads;
+
+    // 创建每个单元的pop和push线程
+    for (int i = 0; i < num_threads; ++i) {
+        pop_threads.emplace_back(pop_thread_func, std::ref(queue), std::ref(unit_queues[i]), std::ref(semaphores[i]), num_elements_per_thread);
+        push_threads.emplace_back(push_thread_func, std::ref(queue), std::ref(unit_queues[i]), std::ref(semaphores[i]));
+    }
+
+    // 等待所有pop线程完成
+    for (auto& t : pop_threads) {
+        t.join();
+    }
+
+    // 通知所有push线程可以退出
+    for (int i = 0; i < num_threads; ++i) {
+        semaphores[i].signal();
+    }
+
+    // 等待所有push线程完成
+    for (auto& t : push_threads) {
+        t.join();
+    }
+}
+
+void push_elements(LockFreeQueue<int>& queue, int num_elements) {
+    for (int i = 0; i < num_elements; ++i) {
+        queue.push(++global_counter);
+    }
+}
+
+void perform_push_operations(LockFreeQueue<int>& queue, int num_threads, int num_elements_per_thread) {
+	RunTime runTime("push");
+    std::vector<std::thread> threads;
+
+    // 创建num_threads个线程，每个线程向队列中push num_elements_per_thread次
+    for (int i = 0; i < num_threads; ++i) {
+        threads.emplace_back(push_elements, std::ref(queue), num_elements_per_thread);
+    }
+
+    // 等待所有线程完成
+    for (auto& t : threads) {
+        t.join();
+    }
+}
+
+void pop_elements(LockFreeQueue<int>& queue, int num_elements, std::vector<int>& output) {
+    for (int i = 0; i < num_elements; ++i) {
+        int value;
+        if (queue.pop(&value)) {
+            output.push_back(value);
+        } else {
+            printf("pop empty\n");
+            exit(-1);
+        }
+    }
+}
+
+std::vector<int> perform_pop_operations(LockFreeQueue<int>& queue, int num_threads, int num_elements_per_thread) {
+	RunTime runTime("pop");
+    std::vector<std::thread> threads;
+    std::vector<std::vector<int>> results(num_threads);
+
+    // 创建num_threads个线程，每个线程从队列中pop num_elements_per_thread次
+    for (int i = 0; i < num_threads; ++i) {
+        threads.emplace_back(pop_elements, std::ref(queue), num_elements_per_thread, std::ref(results[i]));
+    }
+
+    // 等待所有线程完成
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    // 合并所有线程的结果
+    std::vector<int> final_result;
+    for (const auto& result : results) {
+        final_result.insert(final_result.end(), result.begin(), result.end());
+    }
+
+    // 排序最终结果
+    std::sort(final_result.begin(), final_result.end());
+
+    return final_result;
+}
+
+bool validate_queue_size(LockFreeQueue<int>& queue, const std::string& message, int expected_size) {
+    int actual_size = queue.size();
+    bool result = (actual_size == expected_size);
+    std::cout << (result ? "passed" : "failed") << ": " << message << ": actual size = " << actual_size << ", expected size = " << expected_size << std::endl;
+    return result;
+}
+
+bool validate_popped_values(const std::vector<int>& values, int expected_size) {
+    bool result = true;
+
+    if (values.size() != expected_size) {
+        std::cout << "failed: Popped values size mismatch: expected " << expected_size << ", got " << values.size() << std::endl;
+        result = false;
+    } else {
+        for (size_t i = 0; i < values.size(); ++i) {
+            if (values[i] != static_cast<int>(i)) {
+                std::cout << "failed: Value mismatch at index " << i << ": expected " << i << ", got " << values[i] << std::endl;
+                result = false;
+				break;
+            }
+        }
+    }
+
+    if (result) {
+        std::cout << "passed: All popped values are correct." << std::endl;
+    }
+	else {
+		std::ofstream txt("err.log", std::ios::trunc);
+		for (size_t i = 0; i < values.size(); ++i) {
+			txt << "values[" << i << "] = " << values[i] << std::endl;
+        }
+	}
+
+    return result;
+}

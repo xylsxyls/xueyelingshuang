@@ -1,4 +1,4 @@
-#include "LogManager.h"
+ï»¿#include "LogManager.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -164,12 +164,12 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, format, argcopy);
 #endif
-	//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	//?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	str.resize(size);
 	if (size != 0)
 	{
 #ifdef _WIN32
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vsprintf_s(&str[0], size + 1, format, args);
 #elif __unix__
 		vsnprintf(&str[0], size + 1, format, args);
@@ -198,7 +198,7 @@ void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMac
 		}
 	}
 	std::string beginEnd;
-	//?ÕâÀïstr¾ÍÊÇÒª´òÓ¡µÄÈÕÖ¾
+	//?è¿™é‡Œstrå°±æ˜¯è¦æ‰“å°çš„æ—¥å¿—
 	*logFile << "[" + (intDateTime.empty() ? IntDateTime().timeToString() : intDateTime) + "][" + strFlag + "][ThreadId:" << (threadId == 0 ? CSystem::SystemThreadId() : threadId) << "][" << (exeName.empty() ? m_exeName : exeName) << "][" << fileMacroTemp << "][" << funName.c_str() << "]" << ((flag == LOG_BEGIN || flag == LOG_END) ? beginEnd : beginEnd = " : " + str) << std::endl;
 }
 

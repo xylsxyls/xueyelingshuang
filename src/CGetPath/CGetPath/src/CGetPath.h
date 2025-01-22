@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CGetPathMacro.h"
 #include <string>
 #include <Windef.h>
@@ -6,9 +6,9 @@
 class CGetPathAPI CGetPath
 {
 public:
-	//Í¨¹ı´°¿Ú»ñÈ¡ÎÄ¼ş¼ĞÂ·¾¶£¬²»ÄÜ»ñÈ¡ÎÄ¼şÂ·¾¶£¬´ø\·ûºÅ£¬´«ÈëMFC¾ä±ú
+	//é€šè¿‡çª—å£è·å–æ–‡ä»¶å¤¹è·¯å¾„ï¼Œä¸èƒ½è·å–æ–‡ä»¶è·¯å¾„ï¼Œå¸¦\ç¬¦å·ï¼Œä¼ å…¥MFCå¥æŸ„
     static std::string GetFolderFromWindow(HWND hWnd);
-	//ä¯ÀÀ´°¿ÚÑ¡È¡ÎÄ¼ş»ñÈ¡ÎÄ¼şÂ·¾¶£¬³É¹¦·µ»Ø¾ø¶ÔÂ·¾¶£¬Ê§°Ü·µ»ØCString×Ö·û´®-1
+	//æµè§ˆçª—å£é€‰å–æ–‡ä»¶è·å–æ–‡ä»¶è·¯å¾„ï¼ŒæˆåŠŸè¿”å›ç»å¯¹è·¯å¾„ï¼Œå¤±è´¥è¿”å›CStringå­—ç¬¦ä¸²-1
 	static std::string GetFileFromWindow(HWND hwnd);
 #ifdef WTL
     static std::string GetFileFromWTLWindow(HWND hwnd);

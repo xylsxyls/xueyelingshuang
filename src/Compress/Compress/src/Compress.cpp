@@ -1,4 +1,4 @@
-#include "Compress.h"
+ï»¿#include "Compress.h"
 extern "C"
 {
 #include "zlib.h"
@@ -80,8 +80,8 @@ std::string Compress::zlibUnCompress(const std::string& src)
 
 //int main()
 //{
-//	/*Ô­Ê¼Êı¾İ*/
-//	unsigned char strsrc[] = "ÕâĞ©ÊÇ²âÊÔÊı¾İ¡£123456789 abcdefghigklmnopqrstuvwxyz\n\t\0abcdefghijklmnopqrstuvwxyz\n"; //°üº¬\0×Ö·û
+//	/*åŸå§‹æ•°æ®*/
+//	unsigned char strsrc[] = "è¿™äº›æ˜¯æµ‹è¯•æ•°æ®ã€‚123456789 abcdefghigklmnopqrstuvwxyz\n\t\0abcdefghijklmnopqrstuvwxyz\n"; //åŒ…å«\0å­—ç¬¦
 //	unsigned char buf[1024] = { 0 };
 //	unsigned char strdst[1024] = { 0 };
 //	unsigned long srclen = sizeof(strsrc);
@@ -90,22 +90,22 @@ std::string Compress::zlibUnCompress(const std::string& src)
 //	int i;
 //	FILE * fp;
 //
-//	printf("Ô´´®:");
+//	printf("æºä¸²:");
 //	for (i = 0; i < srclen; ++i)
 //	{
 //		printf("%c", strsrc[i]);
 //	}
-//	printf("Ô­´®³¤¶ÈÎª:%ld\n", srclen);
+//	printf("åŸä¸²é•¿åº¦ä¸º:%ld\n", srclen);
 //
-//	printf("×Ö·û´®Ô¤¼ÆËã³¤¶ÈÎª:%ld\n", compressBound(srclen));
-//	//Ñ¹Ëõ
+//	printf("å­—ç¬¦ä¸²é¢„è®¡ç®—é•¿åº¦ä¸º:%ld\n", compressBound(srclen));
+//	//å‹ç¼©
 //	compress(buf, &buflen, strsrc, srclen);
-//	printf("Ñ¹ËõºóÊµ¼Ê³¤¶ÈÎª:%ld\n", buflen);
+//	printf("å‹ç¼©åå®é™…é•¿åº¦ä¸º:%ld\n", buflen);
 //	dstlen = 1024;
-//	//½âÑ¹Ëõ
+//	//è§£å‹ç¼©
 //	uncompress(strdst, &dstlen, buf, buflen);
 //
-//	printf("Ä¿µÄ´®:");
+//	printf("ç›®çš„ä¸²:");
 //	for (i = 0; i < dstlen; ++i)
 //	{
 //		printf("%c", strdst[i]);

@@ -1,4 +1,4 @@
-#ifndef _FINITE_DEQUE_H__
+﻿#ifndef _FINITE_DEQUE_H__
 #define _FINITE_DEQUE_H__
 #include "FiniteDeque.h"
 

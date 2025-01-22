@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <stdint.h>
 #include "CCharsetMacro.h"
@@ -7,154 +7,154 @@ class CCharsetAPI CCharset{
 public:
 	/***********************************************************************************
 	* name       : StrFormat
-	* description: ¸ù¾İ´«ÈëµÄ¸ñÊ½½øĞĞ×Ö·û´®µÄ¸ñÊ½»¯;¸Ã½Ó¿ÚÖ»ÄÜ¸ñÊ½»¯ºó³¤¶ÈÎª512µÄ×Ö·û´®
-	* input      : szFormat:×Ö·û´®µÄ¸ñÊ½; ...:¿É±ä²ÎÊı;
+	* description: æ ¹æ®ä¼ å…¥çš„æ ¼å¼è¿›è¡Œå­—ç¬¦ä¸²çš„æ ¼å¼åŒ–;è¯¥æ¥å£åªèƒ½æ ¼å¼åŒ–åé•¿åº¦ä¸º512çš„å­—ç¬¦ä¸²
+	* input      : szFormat:å­—ç¬¦ä¸²çš„æ ¼å¼; ...:å¯å˜å‚æ•°;
 	* output     : NA
-	* return     : ×ª»¯ºóµÄ×Ö·û´®
+	* return     : è½¬åŒ–åçš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
     static std::string StrFormat (  const char* szFormat, ... );
 
 	/***********************************************************************************
 	* name       : IntToStr
-	* description: ½«ÕûÊı×ª»¯Îª×Ö·û´®
-	* input      : nValue:Òª×ª»¯µÄÕûĞÍÊıÖµ; bHex:ÊÇ·ñÊÇÊ®Áù½øÖÆÕûĞÍÊı
+	* description: å°†æ•´æ•°è½¬åŒ–ä¸ºå­—ç¬¦ä¸²
+	* input      : nValue:è¦è½¬åŒ–çš„æ•´å‹æ•°å€¼; bHex:æ˜¯å¦æ˜¯åå…­è¿›åˆ¶æ•´å‹æ•°
 	* output     : NA
-	* return     : ×ª»¯ºóµÄ×Ö·û´®
+	* return     : è½¬åŒ–åçš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
     static std::string IntToStr ( int nValue, bool bHex = false );
 
 	/***********************************************************************************
 	* name       : StrToInt
-	* description: ½«ÕûÊı×ª»¯Îª×Ö·û´®
-	* input      : strSrc:Òª×ª»¯µÄ×Ö·û´®; bHex:ÊÇ·ñÊÇÊ®Áù½øÖÆÕûĞÍÊı
+	* description: å°†æ•´æ•°è½¬åŒ–ä¸ºå­—ç¬¦ä¸²
+	* input      : strSrc:è¦è½¬åŒ–çš„å­—ç¬¦ä¸²; bHex:æ˜¯å¦æ˜¯åå…­è¿›åˆ¶æ•´å‹æ•°
 	* output     : NA
-	* return     : ×ª»¯ºóµÄÕûĞÍÊı
+	* return     : è½¬åŒ–åçš„æ•´å‹æ•°
 	* remark     : NA
 	***********************************************************************************/
 	static int StrToInt ( const std::string& strSrc, bool bHex = false );
 
 	/***********************************************************************************
 	* name       : CharToHex
-	* description: ½«×Ö·û×ª»¯Îª16½øÖÆ±àÂë
-	* input      : szChar:Òª×ª»¯µÄ×Ö·û;
+	* description: å°†å­—ç¬¦è½¬åŒ–ä¸º16è¿›åˆ¶ç¼–ç 
+	* input      : szChar:è¦è½¬åŒ–çš„å­—ç¬¦;
 	* output     : NA
-	* return     : ·µ»ØµÄÊ®Áù½øÖÆ±àÂë
+	* return     : è¿”å›çš„åå…­è¿›åˆ¶ç¼–ç 
 	* remark     : NA
 	***********************************************************************************/
 	static int CharToHex( const char szChar );
 
 	/***********************************************************************************
 	* name       : StrToHex
-	* description: ½«Ò»°ã×Ö·û´®×ª»»ÎªÊ®Áù½øÖÆ×Ö·û´®±àÂë
-	* input      : strSrc:Òª×ª»¯µÄ×Ö·û´®;
+	* description: å°†ä¸€èˆ¬å­—ç¬¦ä¸²è½¬æ¢ä¸ºåå…­è¿›åˆ¶å­—ç¬¦ä¸²ç¼–ç 
+	* input      : strSrc:è¦è½¬åŒ–çš„å­—ç¬¦ä¸²;
 	* output     : NA
-	* return     : ·µ»ØµÄÊ®Áù½øÖÆ±àÂëµÄ×Ö·û´®
+	* return     : è¿”å›çš„åå…­è¿›åˆ¶ç¼–ç çš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
 	static std::string StrToHex ( const std::string& strSrc );
 
 	/***********************************************************************************
 	* name       : HexToStr
-	* description: ½«Ê®Áù½øÖÆµÄ×Ö·û´®×ª»¯ÎªÒ»°ã×Ö·û´®
-	* input      : strSrc:Òª×ª»¯µÄ×Ö·û´®;
+	* description: å°†åå…­è¿›åˆ¶çš„å­—ç¬¦ä¸²è½¬åŒ–ä¸ºä¸€èˆ¬å­—ç¬¦ä¸²
+	* input      : strSrc:è¦è½¬åŒ–çš„å­—ç¬¦ä¸²;
 	* output     : NA
-	* return     : ×ª»¯ºóµÄ×Ö·û´®
+	* return     : è½¬åŒ–åçš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
 	static std::string HexToStr ( const std::string& strSrc );
 
 	/***********************************************************************************
 	* name       : Utf8ToUnicode
-	* description: ×Ö·û¼¯×ª»»: UTF8 - Unicode	
-	* input      : strSrc:Òª×ª»¯µÄUtf8×Ö·û¼¯±àÂëµÄ×Ö·û´®;
+	* description: å­—ç¬¦é›†è½¬æ¢: UTF8 - Unicode	
+	* input      : strSrc:è¦è½¬åŒ–çš„Utf8å­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²;
 	* output     : NA
-	* return     : ×ª»¯ºóµÄUnicode×Ö·û¼¯±àÂëµÄ×Ö·û´®
+	* return     : è½¬åŒ–åçš„Unicodeå­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
 	static std::wstring Utf8ToUnicode ( const std::string& strSrc );
 
 	/***********************************************************************************
 	* name       : UnicodeToUtf8
-	* description: ×Ö·û¼¯×ª»»: Unicode - UTF8	
-	* input      : wstrSrc:Òª×ª»¯µÄUnicode×Ö·û¼¯±àÂëµÄ×Ö·û´®;
+	* description: å­—ç¬¦é›†è½¬æ¢: Unicode - UTF8	
+	* input      : wstrSrc:è¦è½¬åŒ–çš„Unicodeå­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²;
 	* output     : NA
-	* return     : ×ª»¯ºóµÄUTF8×Ö·û¼¯±àÂëµÄ×Ö·û´®
+	* return     : è½¬åŒ–åçš„UTF8å­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
 	static std::string UnicodeToUtf8 ( const std::wstring& wstrSrc );
 
 	/***********************************************************************************
 	* name       : Utf8ToAnsi
-	* description: ×Ö·û¼¯×ª»»: UTF8 - Ansi
-	* input      : strSrc:Òª×ª»¯µÄUTF8×Ö·û¼¯±àÂëµÄ×Ö·û´®;
+	* description: å­—ç¬¦é›†è½¬æ¢: UTF8 - Ansi
+	* input      : strSrc:è¦è½¬åŒ–çš„UTF8å­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²;
 	* output     : NA
-	* return     : ×ª»¯ºóµÄAnsi×Ö·û¼¯±àÂëµÄ×Ö·û´®
+	* return     : è½¬åŒ–åçš„Ansiå­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
 	static std::string Utf8ToAnsi( const std::string& strSrc );
 
 	/***********************************************************************************
 	* name       : AnsiToUtf8
-	* description: ×Ö·û¼¯×ª»»: Ansi - UTF8
-	* input      : strSrc:Òª×ª»¯µÄAnsi×Ö·û¼¯±àÂëµÄ×Ö·û´®;
+	* description: å­—ç¬¦é›†è½¬æ¢: Ansi - UTF8
+	* input      : strSrc:è¦è½¬åŒ–çš„Ansiå­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²;
 	* output     : NA
-	* return     : ×ª»¯ºóµÄUTF8×Ö·û¼¯±àÂëµÄ×Ö·û´®
+	* return     : è½¬åŒ–åçš„UTF8å­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
 	static std::string AnsiToUtf8 ( const std::string& strSrc );
 
 	/***********************************************************************************
 	* name       : AnsiToUnicode
-	* description: ×Ö·û¼¯×ª»»: Ansi - Unicode
-	* input      : strSrc:Òª×ª»¯µÄAnsi×Ö·û¼¯±àÂëµÄ×Ö·û´®;
+	* description: å­—ç¬¦é›†è½¬æ¢: Ansi - Unicode
+	* input      : strSrc:è¦è½¬åŒ–çš„Ansiå­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²;
 	* output     : NA
-	* return     : ×ª»¯ºóµÄUnicode×Ö·û¼¯±àÂëµÄ×Ö·û´®
+	* return     : è½¬åŒ–åçš„Unicodeå­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
 	static std::wstring AnsiToUnicode (const std::string& strSrc );
 
 	/***********************************************************************************
 	* name       : UnicodeToAnsi
-	* description: ×Ö·û¼¯×ª»»: Unicode - Ansi
-	* input      : strSrc:Òª×ª»¯µÄUnicode×Ö·û¼¯±àÂëµÄ×Ö·û´®;
+	* description: å­—ç¬¦é›†è½¬æ¢: Unicode - Ansi
+	* input      : strSrc:è¦è½¬åŒ–çš„Unicodeå­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²;
 	* output     : NA
-	* return     : ×ª»¯ºóµÄAnsi×Ö·û¼¯±àÂëµÄ×Ö·û´®
+	* return     : è½¬åŒ–åçš„Ansiå­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²
 	* remark     : NA
 	***********************************************************************************/
 	static std::string UnicodeToAnsi ( const std::wstring& wstrSrc );
 
 	///***********************************************************************************
 	//* name       : Utf8ToBSTR
-	//* description: ×Ö·û¼¯×ª»»: UTF8 - BSTR
-	//* input      : strSrc:Òª×ª»¯µÄUTF8×Ö·û¼¯±àÂëµÄ×Ö·û´®;
+	//* description: å­—ç¬¦é›†è½¬æ¢: UTF8 - BSTR
+	//* input      : strSrc:è¦è½¬åŒ–çš„UTF8å­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²;
 	//* output     : NA
-	//* return     : ×ª»¯ºóµÄµÄBSTR×Ö·û´®
+	//* return     : è½¬åŒ–åçš„çš„BSTRå­—ç¬¦ä¸²
 	//* remark     : NA
 	//***********************************************************************************/
 	//static BSTR Utf8ToBSTR( const std::string& strSrc );
 
 	///***********************************************************************************
 	//* name       : BSTRToUtf8
-	//* description: ×Ö·û¼¯×ª»»: BSTR - UTF8
-	//* input      : bstrSrc:Òª×ª»¯µÄBSTR×Ö·û´®;
+	//* description: å­—ç¬¦é›†è½¬æ¢: BSTR - UTF8
+	//* input      : bstrSrc:è¦è½¬åŒ–çš„BSTRå­—ç¬¦ä¸²;
 	//* output     : NA
-	//* return     : ×ª»¯ºóµÄUTF8×Ö·û¼¯±àÂëµÄ×Ö·û´®
+	//* return     : è½¬åŒ–åçš„UTF8å­—ç¬¦é›†ç¼–ç çš„å­—ç¬¦ä¸²
 	//* remark     : NA
 	//***********************************************************************************/
 	//static std::string BSTRToUtf8 ( const BSTR& bstrSrc );
 
-    /** URLÂ·¾¶×ªÂë£¬Ö»ÄÜ×ªÂëËÑË÷¹Ø¼ü´Ê²¿·Ö£¬±ÈÈçÖĞÎÄ£¬¸Ã×ªÂë»áÌæ»»ÎÊºÅÖ®ÀàµÄ·ûºÅ£¬²»ÄÜ´«Ò»Õû´®URL
-    @param [in, out] unicodeUrl ĞèÒª½øĞĞ×ªÂëµÄ²¿·Öurl
+    /** URLè·¯å¾„è½¬ç ï¼Œåªèƒ½è½¬ç æœç´¢å…³é”®è¯éƒ¨åˆ†ï¼Œæ¯”å¦‚ä¸­æ–‡ï¼Œè¯¥è½¬ç ä¼šæ›¿æ¢é—®å·ä¹‹ç±»çš„ç¬¦å·ï¼Œä¸èƒ½ä¼ ä¸€æ•´ä¸²URL
+    @param [in, out] unicodeUrl éœ€è¦è¿›è¡Œè½¬ç çš„éƒ¨åˆ†url
     */
     static void EncodeUnicodeUrl(std::wstring& unicodeUrl);
 
-    /** URLEncode±àÂë
+    /** URLEncodeç¼–ç 
     */
     static std::string UrlEncode(const std::string& str);
 
-    /** ×Ö·û×ª»»Îª16½øÖÆ
+    /** å­—ç¬¦è½¬æ¢ä¸º16è¿›åˆ¶
     */
     static std::string Char2Hex(unsigned char c);
 };

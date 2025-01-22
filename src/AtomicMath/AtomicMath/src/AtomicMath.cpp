@@ -1,4 +1,4 @@
-#include "AtomicMath.h"
+﻿#include "AtomicMath.h"
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif

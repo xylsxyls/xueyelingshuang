@@ -1,11 +1,11 @@
-#pragma once
+ï»¿#pragma once
 #include "LogManagerMacro.h"
 #include <string>
 #include <stdint.h>
 #include <map>
 #include <atomic>
 
-//LOGDEBUGÔÚreleaseÏÂ²»»áÊä½øÈÕÖ¾ÎÄ¼ş
+//LOGDEBUGåœ¨releaseä¸‹ä¸ä¼šè¾“è¿›æ—¥å¿—æ–‡ä»¶
 #define LOGDEBUG(format, ...) LogManager::instance().print(0, LogManager::LOG_DEBUG, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
 #define LOGINFO(format, ...) LogManager::instance().print(0, LogManager::LOG_INFO, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
 #define LOGWARNING(format, ...) LogManager::instance().print(0, LogManager::LOG_WARNING, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
@@ -18,7 +18,7 @@
 #define LOGERROR_EX(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_ERROR, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
 #define LOGFATAL_EX(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_FATAL, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
 
-//beginºÍendÊÇÄÚ²¿Ê¹ÓÃ
+//beginå’Œendæ˜¯å†…éƒ¨ä½¿ç”¨
 #define LOGBEGIN(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_BEGIN, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
 #define LOGEND(fildId, format, ...) LogManager::instance().print(fildId, LogManager::LOG_END, __FILE__, __FUNCTION__, "", "", 0, format, ##__VA_ARGS__)
 
@@ -50,10 +50,10 @@ public:
 	static LogManager& instance();
 
 public:
-	//³õÊ¼»¯ºÍ·´³õÊ¼»¯²»ÄÜºÍprintf²¢ĞĞ
+	//åˆå§‹åŒ–å’Œååˆå§‹åŒ–ä¸èƒ½å’Œprintfå¹¶è¡Œ
 	void init(int32_t fileId = 0, const std::string& path = "");
 
-	//¸Ã½Ó¿Ú»á¶¯Ì¬Ó¦ÓÃµ½ËùÓĞÈÕÖ¾ÎÄ¼ş
+	//è¯¥æ¥å£ä¼šåŠ¨æ€åº”ç”¨åˆ°æ‰€æœ‰æ—¥å¿—æ–‡ä»¶
 	void set(bool writeLog, bool writeBeginEnd);
 
 	void changeMutex(bool isProcessMutex);

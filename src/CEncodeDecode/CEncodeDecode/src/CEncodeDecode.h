@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include "CEncodeDecodeMacro.h"
 
@@ -7,22 +7,22 @@ typedef struct x509_st X509;
 class CEncodeDecodeAPI CEncodeDecode
 {
 public:
-	//·µ»Ø¾­¹ıMD5×ª»»ºóµÄ×Ö·û´®
+	//è¿”å›ç»è¿‡MD5è½¬æ¢åçš„å­—ç¬¦ä¸²
 	static std::string MD5Encode(const std::string& src);
 
-	//¼ÓÃÜ½âÃÜµÄkey±ØĞëÒ»Ñù£¬·µ»Ø¼ÓÃÜ½âÃÜºóµÄ×Ö·û´®£¬ĞèÒª¼ÓÃÜµÄ×Ö·û´®Àï²»ÄÜÓĞ\0£¬¼ÓÃÜ³¤¶È²»¿ÉÒÔ³¬¹ıint32_tÉÏÏŞ
+	//åŠ å¯†è§£å¯†çš„keyå¿…é¡»ä¸€æ ·ï¼Œè¿”å›åŠ å¯†è§£å¯†åçš„å­—ç¬¦ä¸²ï¼Œéœ€è¦åŠ å¯†çš„å­—ç¬¦ä¸²é‡Œä¸èƒ½æœ‰\0ï¼ŒåŠ å¯†é•¿åº¦ä¸å¯ä»¥è¶…è¿‡int32_tä¸Šé™
 	static std::string AESEncode(const std::string& key, const std::string& src);
 	static std::string AESDecode(const std::string& key, const std::string& src);
 
-	//rsa¼ÓÃÜ
+	//rsaåŠ å¯†
 	static bool RSAKey(std::string& publicKey, std::string& privateKey);
 	static std::string RSAEncode(const std::string& publicKey, const char* src);
 	static std::string RSADecode(const std::string& privateKey, const std::string& src);
 
-	//´Ë½Ó¿ÚĞèÒªÓÃµ½openssl£¬±àÒëµÄÊ±ºòĞèÒª¼ÓÔ¤¶¨ÒåºêUSE_OPENSSL
-	//sm2¼ÓÃÜ£¬Ç°×ºÎª0x04£¬publicKeyXºÍc1¿ÉÄÜÓĞÇ°×º£¬³¤¶ÈÎª33ºÍ65£¬ÃÜÎÄĞÂ°æÅÅĞòÎªC1C3C2£¬¾É°æÎªC1C2C3
-	//publicKeyX´øÇ°×º0x04£¬Ôò¼ÓÃÜ³öµÄc1»á´ø£¬publicKeyX²»´ø£¬Ôòc1²»´ø£¬½âÃÜÊ±c1´ø²»´ø¶¼¿ÉÒÔ
-	//¼ÓÃÜ³¤¶È²»¿ÉÒÔ³¬¹ıint32_tÉÏÏŞ
+	//æ­¤æ¥å£éœ€è¦ç”¨åˆ°opensslï¼Œç¼–è¯‘çš„æ—¶å€™éœ€è¦åŠ é¢„å®šä¹‰å®USE_OPENSSL
+	//sm2åŠ å¯†ï¼Œå‰ç¼€ä¸º0x04ï¼ŒpublicKeyXå’Œc1å¯èƒ½æœ‰å‰ç¼€ï¼Œé•¿åº¦ä¸º33å’Œ65ï¼Œå¯†æ–‡æ–°ç‰ˆæ’åºä¸ºC1C3C2ï¼Œæ—§ç‰ˆä¸ºC1C2C3
+	//publicKeyXå¸¦å‰ç¼€0x04ï¼Œåˆ™åŠ å¯†å‡ºçš„c1ä¼šå¸¦ï¼ŒpublicKeyXä¸å¸¦ï¼Œåˆ™c1ä¸å¸¦ï¼Œè§£å¯†æ—¶c1å¸¦ä¸å¸¦éƒ½å¯ä»¥
+	//åŠ å¯†é•¿åº¦ä¸å¯ä»¥è¶…è¿‡int32_tä¸Šé™
 	static bool SM2Key(std::string& publicKeyX,
 		std::string& publicKeyY,
 		std::string& privateKey,
@@ -38,12 +38,12 @@ public:
 		const std::string& c2,
 		const std::string& c3);
 
-	//sm4¼ÓÃÜ£¬key×Ô¶¨Òå£¬key±ØĞëÊÇ16×Ö½Ú£¬src±ØĞëÊÇ16µÄÕûÊı±¶£¬ÄÚ²¿¶¼¿ÉÒÔº¬ÓĞ\0
+	//sm4åŠ å¯†ï¼Œkeyè‡ªå®šä¹‰ï¼Œkeyå¿…é¡»æ˜¯16å­—èŠ‚ï¼Œsrcå¿…é¡»æ˜¯16çš„æ•´æ•°å€ï¼Œå†…éƒ¨éƒ½å¯ä»¥å«æœ‰\0
 	static std::string SM4Encode(const std::string& key, const std::string& src);
 	static std::string SM4Decode(const std::string& key, const std::string& ciphertext);
 
-	//´Ë½Ó¿ÚĞèÒªÓÃµ½openssl£¬±àÒëµÄÊ±ºòĞèÒª¼ÓÔ¤¶¨ÒåºêUSE_OPENSSL
-	//cerÖ¤ÊéÏà¹Ø
+	//æ­¤æ¥å£éœ€è¦ç”¨åˆ°opensslï¼Œç¼–è¯‘çš„æ—¶å€™éœ€è¦åŠ é¢„å®šä¹‰å®USE_OPENSSL
+	//cerè¯ä¹¦ç›¸å…³
 	static X509* getCert(const std::string& path);
 	static void releaseCert(X509* cert);
 	static std::string getPublicKey(X509* cert);

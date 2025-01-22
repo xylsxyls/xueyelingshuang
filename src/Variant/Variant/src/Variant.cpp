@@ -1,4 +1,4 @@
-#include "Variant.h"
+﻿#include "Variant.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <string.h>
 

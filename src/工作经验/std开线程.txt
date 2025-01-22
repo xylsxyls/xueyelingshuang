@@ -12,3 +12,8 @@ void ThreadFun(int& n)
 	
 }
 std::thread thread(ThreadFun, std::ref(n));
+
+int n = 10;
+std::thread thread([n]() {
+    
+});

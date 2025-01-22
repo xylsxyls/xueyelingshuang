@@ -1,72 +1,72 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include <stdint.h>
 #include "CiniMacro.h"
 
-/** ini²Ù×÷Àà
+/** iniæ“ä½œç±»
 */
 class CiniAPI Cini
 {
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] iniPath ÎÄ¼şÂ·¾¶£¬windowsÏÂÊ¹ÓÃansi»òutf-8£¬linuxÏÂÖ»ÄÜÊ¹ÓÃutf-8£¬¶¼ÊÇÎŞBOM
-	@param [in] useSimpleIni ÊÇ·ñÊ¹ÓÃSimpleIni¿ªÔ´¿â£¬linuxÏÂÒ»¶¨Ê¹ÓÃ¿ªÔ´¿â
+	/** æ„é€ å‡½æ•°
+	@param [in] iniPath æ–‡ä»¶è·¯å¾„ï¼Œwindowsä¸‹ä½¿ç”¨ansiæˆ–utf-8ï¼Œlinuxä¸‹åªèƒ½ä½¿ç”¨utf-8ï¼Œéƒ½æ˜¯æ— BOM
+	@param [in] useSimpleIni æ˜¯å¦ä½¿ç”¨SimpleIniå¼€æºåº“ï¼Œlinuxä¸‹ä¸€å®šä½¿ç”¨å¼€æºåº“
 	*/
 	Cini(const std::string& iniPath, bool useSimpleIni = false);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~Cini();
 
 public:
-	/** ÉèÖÃWindowsÏµÍ³API¶ÁÈ¡Ê±»º³åÇø×î´ó³Ì¶È£¬Ä¬ÈÏÊÇ1024
-	@param [in] length ×î´ó³¤¶È
+	/** è®¾ç½®Windowsç³»ç»ŸAPIè¯»å–æ—¶ç¼“å†²åŒºæœ€å¤§ç¨‹åº¦ï¼Œé»˜è®¤æ˜¯1024
+	@param [in] length æœ€å¤§é•¿åº¦
 	*/
 	void setMaxLength(int32_t length);
 
-	/** ÉèÖÃWindowsÏµÍ³API¶ÁÈ¡Ê±½Úµã×î¶à¸öÊı£¬Ä¬ÈÏÊÇ1024
-	@param [in] sectionNum ×î´ó½Úµã¸öÊı
+	/** è®¾ç½®Windowsç³»ç»ŸAPIè¯»å–æ—¶èŠ‚ç‚¹æœ€å¤šä¸ªæ•°ï¼Œé»˜è®¤æ˜¯1024
+	@param [in] sectionNum æœ€å¤§èŠ‚ç‚¹ä¸ªæ•°
 	*/
 	void setMaxSection(int32_t sectionNum);
 
-	/** ¶ÁÈ¡Êı¾İ£¬windowsÏÂÏß³Ì£¬½ø³Ì°²È«
-	@param [in] key ¼üÖµ
-	@param [in] section ½ÚµãÖµ
+	/** è¯»å–æ•°æ®ï¼Œwindowsä¸‹çº¿ç¨‹ï¼Œè¿›ç¨‹å®‰å…¨
+	@param [in] key é”®å€¼
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	std::string readIni(const std::string& key, const std::string& section = "Section") const;
 
-	/** Ğ´ÈëÊı¾İ£¬windowsÏÂÏß³Ì£¬½ø³Ì°²È«
-	@param [in] key ¼üÖµ£¬²»´æÔÚÔò´´½¨£¬´æÔÚÔòĞŞ¸Ä
-	@param [in] value Êı¾İ
-	@param [in] section ½ÚµãÖµ
+	/** å†™å…¥æ•°æ®ï¼Œwindowsä¸‹çº¿ç¨‹ï¼Œè¿›ç¨‹å®‰å…¨
+	@param [in] key é”®å€¼ï¼Œä¸å­˜åœ¨åˆ™åˆ›å»ºï¼Œå­˜åœ¨åˆ™ä¿®æ”¹
+	@param [in] value æ•°æ®
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void writeIni(const std::string& key, const std::string& value, const std::string& section = "Section") const;
 
-	/** »ñÈ¡ËùÓĞ½Úµã£¨¸Ã½Ó¿ÚÖ»ÔÚSimpleIniÏÂÓĞĞ§£©
-	@return ·µ»ØËùÓĞ½Úµã
+	/** è·å–æ‰€æœ‰èŠ‚ç‚¹ï¼ˆè¯¥æ¥å£åªåœ¨SimpleIniä¸‹æœ‰æ•ˆï¼‰
+	@return è¿”å›æ‰€æœ‰èŠ‚ç‚¹
 	*/
 	std::vector<std::string> getAllSection() const;
 
-	/** »ñÈ¡ËùÓĞ½ÚµãÏÂµÄ¼üÖµÃû£¨¸Ã½Ó¿ÚÖ»ÔÚSimpleIniÏÂÓĞĞ§£©
-	@return ·µ»ØËùÓĞ½ÚµãÏÂµÄ¼üÖµÃû
+	/** è·å–æ‰€æœ‰èŠ‚ç‚¹ä¸‹çš„é”®å€¼åï¼ˆè¯¥æ¥å£åªåœ¨SimpleIniä¸‹æœ‰æ•ˆï¼‰
+	@return è¿”å›æ‰€æœ‰èŠ‚ç‚¹ä¸‹çš„é”®å€¼å
 	*/
 	std::vector<std::string> getAllKey(const std::string& section = "Section") const;
 
-	/** »ñÈ¡¸Ã½ÚµãÏÂµÚÒ»¸ö¼üÖµÃû
-	@param [in] section ½ÚµãÖµ
-	@return ·µ»Ø¸Ã½ÚµãÏÂµÚÒ»¸ö¼üÖµÃû
+	/** è·å–è¯¥èŠ‚ç‚¹ä¸‹ç¬¬ä¸€ä¸ªé”®å€¼å
+	@param [in] section èŠ‚ç‚¹å€¼
+	@return è¿”å›è¯¥èŠ‚ç‚¹ä¸‹ç¬¬ä¸€ä¸ªé”®å€¼å
 	*/
 	std::string getFirstKey(const std::string& section = "Section") const;
 
-	/** É¾³ıÊı¾İ
-	@param [in] key ¼üÖµ
-	@param [in] section ½ÚµãÖµ
+	/** åˆ é™¤æ•°æ®
+	@param [in] key é”®å€¼
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void deleteKey(const std::string& key, const std::string& section = "Section") const;
 
-	/** É¾³ı½Úµã
-	@param [in] section ½ÚµãÖµ
+	/** åˆ é™¤èŠ‚ç‚¹
+	@param [in] section èŠ‚ç‚¹å€¼
 	*/
 	void deleteSection(const std::string& section = "Section") const;
 
