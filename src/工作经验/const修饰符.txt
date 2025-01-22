@@ -1,0 +1,3 @@
+const char* 和char const*等价
+const char*和char* const不等价，前者指针可以重定向，但是不可更改指向内容，后者指针不可重定向，但是可以更改指向内容
+char* const和char *const等价，*所在位置不影响语义
