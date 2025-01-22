@@ -1,4 +1,4 @@
-﻿#include "ConsoleTest1.h"
+#include "ConsoleTest1.h"
 #include <stdint.h>
 #include <stdio.h>
 #ifdef __unix__
