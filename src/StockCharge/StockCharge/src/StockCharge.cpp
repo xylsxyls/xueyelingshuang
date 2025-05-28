@@ -2,8 +2,8 @@
 
 StockCharge::StockCharge()
 {
-	m_rate = 25;
-	m_rate = m_rate / 100000.0;
+	m_rate = 1.6;
+	m_rate = m_rate  / 10000.0;
 	m_minimum = 5;
 }
 
@@ -21,22 +21,22 @@ void StockCharge::init(const BigNumber& rate, const BigNumber& minimum)
 
 BigNumber StockCharge::buyFee(const std::string& stock, const BigNumber& price, const BigNumber& position)
 {
-	return (stock[0] == '6' ? transferFee(price, position) : 0) + commission(price, position);
+	return transferFee(price, position) + commission(price, position);
 }
 
 BigNumber StockCharge::sellFee(const std::string& stock, const BigNumber& price, const BigNumber& position)
 {
-	return (stock[0] == '6' ? transferFee(price, position) : 0) + commission(price, position) + stampDuty(price, position);
+	return transferFee(price, position) + commission(price, position) + stampDuty(price, position);
 }
 
 BigNumber StockCharge::stampDuty(const BigNumber& price, const BigNumber& position)
 {
-	return (price * position / 1000.0).toPrec(2);
+	return (price * position / 2000.0).toPrec(2);
 }
 
 BigNumber StockCharge::transferFee(const BigNumber& price, const BigNumber& position)
 {
-	return (price * position * 2 / 100000.0).toPrec(2);
+	return (price * position / 100000.0).toPrec(2);
 }
 
 BigNumber StockCharge::commission(const BigNumber& price, const BigNumber& position)
@@ -47,4 +47,14 @@ BigNumber StockCharge::commission(const BigNumber& price, const BigNumber& posit
 		return m_minimum;
 	}
 	return commissionFee.toPrec(2);
+}
+
+BigNumber StockCharge::brokerage(const BigNumber& price, const BigNumber& position)
+{
+	return (price * position * 0.341 / 10000.0).toPrec(2);
+}
+
+BigNumber StockCharge::Custody(const BigNumber& price, const BigNumber& position)
+{
+	return (price * position / 50000.0).toPrec(2);
 }

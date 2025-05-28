@@ -32,6 +32,7 @@ void ReceiveNetTask::DoTask()
 		if (buffer == nullptr)
 		{
 			printf("receive buffer empty\n");
+			continue;
 		}
 
 		uv_tcp_t* sender = *(uv_tcp_t**)buffer;

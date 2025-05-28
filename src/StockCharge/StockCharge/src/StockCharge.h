@@ -18,7 +18,7 @@ public:
 	static StockCharge& instance();
 
 public:
-	/** 初始化佣金，默认万2.5，最低5元
+	/** 初始化佣金，默认万1.6，最低5元
 	@param [in] rate 佣金比例
 	@param [in] minimum 最低佣金
 	*/
@@ -48,7 +48,7 @@ protected:
 	*/
 	BigNumber stampDuty(const BigNumber& price, const BigNumber& position);
 
-	/** 过户费，沪市股票双向收取，四舍五入到分
+	/** 过户费，双向收取，四舍五入到分
 	@param [in] price 股票价格
 	@param [in] position 卖出仓位
 	@return 返回需要交的过户费
@@ -61,6 +61,20 @@ protected:
 	@return 返回需要交的佣金
 	*/
 	BigNumber commission(const BigNumber& price, const BigNumber& position);
+
+	/** 经手费，双向收取，四舍五入到分
+	@param [in] price 股票价格
+	@param [in] position 卖出仓位
+	@return 返回需要交的经手费
+	*/
+	BigNumber brokerage(const BigNumber& price, const BigNumber& position);
+
+	/** 证管费，双向收取，四舍五入到分
+	@param [in] price 股票价格
+	@param [in] position 卖出仓位
+	@return 返回需要交的证管费
+	*/
+	BigNumber Custody(const BigNumber& price, const BigNumber& position);
 
 protected:
 	//佣金比例

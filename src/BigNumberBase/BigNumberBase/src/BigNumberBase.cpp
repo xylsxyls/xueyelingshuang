@@ -311,8 +311,8 @@ std::string BigNumberBase::toString() const
 		return result;
 	}
 	bool isMinus = (result[0] == '-');
-	auto countValid = result.size() - (isMinus ? 1 : 0);
-	auto insertCount = m_prec - countValid + 1;
+	int countValid = result.size() - (isMinus ? 1 : 0);
+	int insertCount = m_prec - countValid + 1;
 	if (insertCount > 0)
 	{
 		result.insert(isMinus ? 1 : 0, insertCount, '0');
