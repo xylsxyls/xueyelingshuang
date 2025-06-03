@@ -26,34 +26,34 @@ struct CConfig
 	bool m_qKey = false;
 	bool m_checkHero = false;
 
-	int32_t m_screenWidth = 3840;
-	int32_t m_screenHeight = 2160;
+	int32_t m_screenWidth = 0;
+	int32_t m_screenHeight = 0;
 
-	int32_t m_gameScreenHeight = 1646;
+	int32_t m_gameScreenHeight = 0;
 	int32_t m_gameScreenMargin = 10;
 
 	xyls::Point m_heroHeadPoint[5];
 	//xyls::Point g_heroHeadPoint[5] = { { 1151, 739 }, { 1192, 620 }, { 1266, 514 }, { 1367, 437 }, { 1483, 383 } };
-	int32_t m_side = 150;
+	int32_t m_side = 0;
 
-	xyls::Point m_heroHeadShowPoint = { 817, 468 };
-	int32_t m_showSide = 75;
-	int32_t m_heroHeadSpace = 40;
+	xyls::Point m_heroHeadShowPoint;
+	int32_t m_showSide = 0;
+	int32_t m_heroHeadSpace = 0;
 
-	xyls::Point m_editHeroPoint = { 2000, 1000 };
+	xyls::Point m_editHeroPoint;
 
 	int32_t m_heroHeadTime = 1500;
 	int32_t m_codetimes = 0;
 
-	xyls::Point m_equipBeginPoint = { 1384, 1699 };
-	int32_t m_equipWidth = 238;
+	xyls::Point m_equipBeginPoint;
+	int32_t m_equipWidth;
 
-	xyls::Point m_wCenterPoint = { 3020, 1398 };
-	xyls::Point m_rCenterPoint = { 3323, 1219 };
-	xyls::Point m_fCenterPoint = { 2584, 1736 };
-	xyls::Point m_bCenterPoint = { 2136, 1735 };
+	xyls::Point m_wCenterPoint;
+	xyls::Point m_rCenterPoint;
+	xyls::Point m_fCenterPoint;
+	xyls::Point m_bCenterPoint;
 
-	xyls::Point m_heroCenterPoint = { 3840 / 2, 1236 };
+	xyls::Point m_heroCenterPoint;
 
 	bool m_clickMap = false;
 	bool m_moveUse = false;
@@ -93,8 +93,10 @@ struct CConfig
 
 	uint32_t m_rightClickTime = 2000;
 
-	xyls::Point m_speakBeginPoint = { 3479, 910 };
-	xyls::Point m_speakEndPoint = { 3046, 1535 };
+	xyls::Point m_speakBeginPoint;
+	xyls::Point m_speakEndPoint;
+
+	int32_t m_screenType = 0;
 
 protected:
 	CConfig();

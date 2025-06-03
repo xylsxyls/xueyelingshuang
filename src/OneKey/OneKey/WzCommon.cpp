@@ -157,6 +157,9 @@ void WzCommon::keyboard()
 		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 		spTask->setParam('I');
 		g_config.m_taskThread->PostTask(spTask, 1);
+		std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+		spTask2->setParam('U');
+		g_config.m_taskThread->PostTask(spTask2, 1);
 	}
 
 	if (g_config.m_type != 10 && g_config.m_type != 14 && g_config.m_type != 15)

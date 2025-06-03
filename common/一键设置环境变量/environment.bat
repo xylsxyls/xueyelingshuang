@@ -5,3 +5,4 @@ setx FILE_REPLACE "D:\xueyelingshuang\common\FileReplace\FileReplace1.1.exe" /m
 setx XUEYELINGSHUANG "D:\xueyelingshuang\\" /m
 setx BOOST_ROOT "D:\boost\boost_1_58_0\\" /m
 setx MYSQL_ROOT "C:\mysql-5.6.24-win32\\" /m
+reg add "HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Explorer" /v "Max Cached Icons" /t REG_SZ /d "2000" /f
