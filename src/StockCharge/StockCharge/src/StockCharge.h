@@ -1,84 +1,84 @@
-#pragma once
+ï»¿#pragma once
 #include "StockChargeMacro.h"
 #include "BigNumber/BigNumberAPI.h"
 
-/** ¹ÉÆ±½»Ò×Ê±Ë°ÊÕ¼ÆËãÀà
+/** è‚¡ç¥¨äº¤æ˜“æ—¶ç¨æ”¶è®¡ç®—ç±»
 */
 class StockChargeAPI StockCharge
 {
 protected:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	StockCharge();
 
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static StockCharge& instance();
 
 public:
-	/** ³õÊ¼»¯Ó¶½ğ£¬Ä¬ÈÏÍò1.6£¬×îµÍ5Ôª
-	@param [in] rate Ó¶½ğ±ÈÀı
-	@param [in] minimum ×îµÍÓ¶½ğ
+	/** åˆå§‹åŒ–ä½£é‡‘ï¼Œé»˜è®¤ä¸‡1.6ï¼Œæœ€ä½5å…ƒ
+	@param [in] rate ä½£é‡‘æ¯”ä¾‹
+	@param [in] minimum æœ€ä½ä½£é‡‘
 	*/
 	void init(const BigNumber& rate, const BigNumber& minimum);
 
-	/** »ñÈ¡ÂòÈëÊ±ºòĞèÒª½»µÄË°
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] price ¹ÉÆ±¼Û¸ñ
-	@param [in] position Âô³ö²ÖÎ»
-	@return ·µ»ØÂòÈëÊ±ºòĞèÒª½»µÄË°
+	/** è·å–ä¹°å…¥æ—¶å€™éœ€è¦äº¤çš„ç¨
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] price è‚¡ç¥¨ä»·æ ¼
+	@param [in] position å–å‡ºä»“ä½
+	@return è¿”å›ä¹°å…¥æ—¶å€™éœ€è¦äº¤çš„ç¨
 	*/
 	BigNumber buyFee(const std::string& stock, const BigNumber& price, const BigNumber& position);
 
-	/** »ñÈ¡Âô³öÊ±ºòĞèÒª½»µÄË°
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] price ¹ÉÆ±¼Û¸ñ
-	@param [in] position Âô³ö²ÖÎ»
-	@return ·µ»ØÂô³öÊ±ºòĞèÒª½»µÄË°
+	/** è·å–å–å‡ºæ—¶å€™éœ€è¦äº¤çš„ç¨
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] price è‚¡ç¥¨ä»·æ ¼
+	@param [in] position å–å‡ºä»“ä½
+	@return è¿”å›å–å‡ºæ—¶å€™éœ€è¦äº¤çš„ç¨
 	*/
 	BigNumber sellFee(const std::string& stock, const BigNumber& price, const BigNumber& position);
 
 protected:
-	/** »ñÈ¡Âô³öÊ±ĞèÒªµÄÓ¡»¨Ë°£¬ËÄÉáÎåÈëµ½·Ö
-	@param [in] price ¹ÉÆ±¼Û¸ñ
-	@param [in] position Âô³ö²ÖÎ»
-	@return ·µ»ØĞèÒª½»µÄÓ¡»¨Ë°
+	/** è·å–å–å‡ºæ—¶éœ€è¦çš„å°èŠ±ç¨ï¼Œå››èˆäº”å…¥åˆ°åˆ†
+	@param [in] price è‚¡ç¥¨ä»·æ ¼
+	@param [in] position å–å‡ºä»“ä½
+	@return è¿”å›éœ€è¦äº¤çš„å°èŠ±ç¨
 	*/
 	BigNumber stampDuty(const BigNumber& price, const BigNumber& position);
 
-	/** ¹ı»§·Ñ£¬Ë«ÏòÊÕÈ¡£¬ËÄÉáÎåÈëµ½·Ö
-	@param [in] price ¹ÉÆ±¼Û¸ñ
-	@param [in] position Âô³ö²ÖÎ»
-	@return ·µ»ØĞèÒª½»µÄ¹ı»§·Ñ
+	/** è¿‡æˆ·è´¹ï¼ŒåŒå‘æ”¶å–ï¼Œå››èˆäº”å…¥åˆ°åˆ†
+	@param [in] price è‚¡ç¥¨ä»·æ ¼
+	@param [in] position å–å‡ºä»“ä½
+	@return è¿”å›éœ€è¦äº¤çš„è¿‡æˆ·è´¹
 	*/
 	BigNumber transferFee(const BigNumber& price, const BigNumber& position);
 
-	/** Ó¶½ğ£¬Ë«ÏòÊÕÈ¡£¬ËÄÉáÎåÈëµ½·Ö
-	@param [in] price ¹ÉÆ±¼Û¸ñ
-	@param [in] position Âô³ö²ÖÎ»
-	@return ·µ»ØĞèÒª½»µÄÓ¶½ğ
+	/** ä½£é‡‘ï¼ŒåŒå‘æ”¶å–ï¼Œå››èˆäº”å…¥åˆ°åˆ†
+	@param [in] price è‚¡ç¥¨ä»·æ ¼
+	@param [in] position å–å‡ºä»“ä½
+	@return è¿”å›éœ€è¦äº¤çš„ä½£é‡‘
 	*/
 	BigNumber commission(const BigNumber& price, const BigNumber& position);
 
-	/** ¾­ÊÖ·Ñ£¬Ë«ÏòÊÕÈ¡£¬ËÄÉáÎåÈëµ½·Ö
-	@param [in] price ¹ÉÆ±¼Û¸ñ
-	@param [in] position Âô³ö²ÖÎ»
-	@return ·µ»ØĞèÒª½»µÄ¾­ÊÖ·Ñ
+	/** ç»æ‰‹è´¹ï¼ŒåŒå‘æ”¶å–ï¼Œå››èˆäº”å…¥åˆ°åˆ†
+	@param [in] price è‚¡ç¥¨ä»·æ ¼
+	@param [in] position å–å‡ºä»“ä½
+	@return è¿”å›éœ€è¦äº¤çš„ç»æ‰‹è´¹
 	*/
 	BigNumber brokerage(const BigNumber& price, const BigNumber& position);
 
-	/** Ö¤¹Ü·Ñ£¬Ë«ÏòÊÕÈ¡£¬ËÄÉáÎåÈëµ½·Ö
-	@param [in] price ¹ÉÆ±¼Û¸ñ
-	@param [in] position Âô³ö²ÖÎ»
-	@return ·µ»ØĞèÒª½»µÄÖ¤¹Ü·Ñ
+	/** è¯ç®¡è´¹ï¼ŒåŒå‘æ”¶å–ï¼Œå››èˆäº”å…¥åˆ°åˆ†
+	@param [in] price è‚¡ç¥¨ä»·æ ¼
+	@param [in] position å–å‡ºä»“ä½
+	@return è¿”å›éœ€è¦äº¤çš„è¯ç®¡è´¹
 	*/
 	BigNumber Custody(const BigNumber& price, const BigNumber& position);
 
 protected:
-	//Ó¶½ğ±ÈÀı
+	//ä½£é‡‘æ¯”ä¾‹
 	BigNumber m_rate;
-	//×îµÍÓ¶½ğ
+	//æœ€ä½ä½£é‡‘
 	BigNumber m_minimum;
 };

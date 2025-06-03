@@ -1,4 +1,4 @@
-#include "StockCharge.h"
+﻿#include "StockCharge.h"
 
 StockCharge::StockCharge()
 {
