@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "BigNumberBaseMacro.h"
 #include <stdint.h>
 #include <string>
@@ -9,33 +9,33 @@ class BigNumberBaseAPI BigNumberBase
 public:
 	enum BigNumberCompare
 	{
-		/** µÚÒ»¸ö±ÈµÚ¶ş¸ö´ó
+		/** ç¬¬ä¸€ä¸ªæ¯”ç¬¬äºŒä¸ªå¤§
 		*/
 		BIG,
 
-		/** µÚÒ»¸ö±ÈµÚ¶ş¸öĞ¡
+		/** ç¬¬ä¸€ä¸ªæ¯”ç¬¬äºŒä¸ªå°
 		*/
 		SMALL,
 
-		/** ÏàµÈ
+		/** ç›¸ç­‰
 		*/
 		EQUAL
 	};
 	enum PrecFlag
 	{
-		/** È¥Î²
+		/** å»å°¾
 		*/
 		ROUND_OFF,
 
-		/** ËÄÉáÎåÈë
+		/** å››èˆäº”å…¥
 		*/
 		HALF_ADJUST,
 
-		/** ×ÜÊÇÏòÉÏÒ»Î»
+		/** æ€»æ˜¯å‘ä¸Šä¸€ä½
 		*/
 		ROUND_UP,
 
-		/** ×ÜÊÇÏòÏÂÒ»Î»
+		/** æ€»æ˜¯å‘ä¸‹ä¸€ä½
 		*/
 		ROUND_DOWN
 	};
@@ -44,27 +44,27 @@ public:
 		PRECISE = 16
 	};
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	BigNumberBase();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~BigNumberBase();
 
-	/** ¹¹Ôìº¯Êı
-	@param [in] num ÊıÖµ×Ö·û´®
+	/** æ„é€ å‡½æ•°
+	@param [in] num æ•°å€¼å­—ç¬¦ä¸²
 	*/
 	BigNumberBase(const char* num);
 
-	/** ¿½±´¹¹Ôìº¯Êı
-	@param [in] num ¸³ÖµÀà
+	/** æ‹·è´æ„é€ å‡½æ•°
+	@param [in] num èµ‹å€¼ç±»
 	*/
 	BigNumberBase(const BigNumberBase& num);
 
-	/** ¸³Öµ²Ù×÷
-	@param [in] num ¸³ÖµÀà
-	@return ·µ»Ø¸³ÖµºóµÄÀà
+	/** èµ‹å€¼æ“ä½œ
+	@param [in] num èµ‹å€¼ç±»
+	@return è¿”å›èµ‹å€¼åçš„ç±»
 	*/
 	BigNumberBase operator = (const BigNumberBase& num);
 
@@ -77,11 +77,11 @@ public:
 
 	BigNumberBase div(const BigNumberBase& divisor, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
-	/** ³Ë·½£¬Ö¸Êı±ØĞëÔÚÁ½±¶intµÄ·¶Î§Ö®ÄÚ
+	/** ä¹˜æ–¹ï¼ŒæŒ‡æ•°å¿…é¡»åœ¨ä¸¤å€intçš„èŒƒå›´ä¹‹å†…
 	*/
 	BigNumberBase pow(const BigNumberBase& powNum, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
-	//Ö»±È½Ï´óĞ¡²»±È½Ï¾«¶È
+	//åªæ¯”è¾ƒå¤§å°ä¸æ¯”è¾ƒç²¾åº¦
 	static BigNumberCompare Compare(const BigNumberBase& x, const BigNumberBase& y);
 
 	std::string toString() const;

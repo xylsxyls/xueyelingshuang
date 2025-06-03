@@ -1,4 +1,4 @@
-#include "BigNumberBase.h"
+ï»¿#include "BigNumberBase.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <math.h>
 #include "gmp.h"
@@ -68,7 +68,7 @@ BigNumberBase BigNumberBase::operator = (const BigNumberBase& num)
 	return *this;
 }
 
-//num*10µÄexp´Î·½
+//num*10çš„expæ¬¡æ–¹
 void GmpInt::TenExp(mpz_t& num, int32_t exp)
 {
 	if (exp == 0)
@@ -226,7 +226,7 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 	bool isMinus = (BigNumberBase::Compare(*this, "0") == SMALL);
 	if (isMinus)
 	{
-		//ÏÈÅĞ¶ÏÊÇ·ñÓĞĞ§
+		//å…ˆåˆ¤æ–­æ˜¯å¦æœ‰æ•ˆ
 		unsigned long int indexBk = index;
 		unsigned long int indexNumBk = indexNum;
 		while (indexBk % 2 == 0 && indexNumBk % 2 == 0)

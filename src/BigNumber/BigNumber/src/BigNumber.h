@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include "BigNumberMacro.h"
 #include <string>
@@ -9,19 +9,19 @@ class BigNumberAPI BigNumber
 public:
 	enum PrecFlag
 	{
-		/** È¥Î²
+		/** å»å°¾
 		*/
 		ROUND_OFF,
 
-		/** ËÄÉáÎåÈë
+		/** å››èˆäº”å…¥
 		*/
 		HALF_ADJUST,
 
-		/** ×ÜÊÇÏòÉÏÒ»Î»
+		/** æ€»æ˜¯å‘ä¸Šä¸€ä½
 		*/
 		ROUND_UP,
 
-		/** ×ÜÊÇÏòÏÂÒ»Î»
+		/** æ€»æ˜¯å‘ä¸‹ä¸€ä½
 		*/
 		ROUND_DOWN
 	};
@@ -52,7 +52,7 @@ public:
 	{
 		return BigNumber::mul(x, y);
 	}
-	//³ı·¨Ğ¡ÊıÎ»ÊıºÍÎ²Êı´¦Àí¹æÔòºÍxÄÚµÄ³ı·¨¹æÔòÒ»ÖÂ
+	//é™¤æ³•å°æ•°ä½æ•°å’Œå°¾æ•°å¤„ç†è§„åˆ™å’Œxå†…çš„é™¤æ³•è§„åˆ™ä¸€è‡´
 	friend inline BigNumber operator / (const BigNumber& x, const BigNumber& y)
 	{
 		return BigNumber::div(x, y);
@@ -87,16 +87,16 @@ public:
 		return BigNumber::smallEqual(x, y);
 	}
 
-	BigNumber operator ++ ();//Ç°++
-	BigNumber operator -- ();//Ç°--
-	BigNumber operator ++ (int);//ºó++
-	BigNumber operator -- (int);//ºó--
+	BigNumber operator ++ ();//å‰++
+	BigNumber operator -- ();//å‰--
+	BigNumber operator ++ (int);//å++
+	BigNumber operator -- (int);//å--
 
 	BigNumber pow(const BigNumber& powNum, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
 	std::string toString() const;
 
-	/** ·µ»ØÊıÈôÎª³ıÊı£¬ÇÒÎª0Ê±²»±ÀÀ££¬³ıºó·µ»Ø0£¬º¬ÓĞ¾«¶È
+	/** è¿”å›æ•°è‹¥ä¸ºé™¤æ•°ï¼Œä¸”ä¸º0æ—¶ä¸å´©æºƒï¼Œé™¤åè¿”å›0ï¼Œå«æœ‰ç²¾åº¦
 	*/
 	BigNumber zero() const;
 
@@ -104,12 +104,12 @@ public:
 
 	BigNumber toPrec(int32_t prec, PrecFlag flag = HALF_ADJUST) const;
 
-	//ÒÔÏÂ3º¯Êı¶¼ÊÇ·µ»Ø±¾Éí
+	//ä»¥ä¸‹3å‡½æ•°éƒ½æ˜¯è¿”å›æœ¬èº«
 	BigNumber& setPrec(int32_t prec, PrecFlag flag = HALF_ADJUST);
 
 	BigNumber& setFixedPrec(int32_t fixedPrec, PrecFlag fixedPrecFlag = HALF_ADJUST);
 
-	//³ı·¨¹æÔò
+	//é™¤æ³•è§„åˆ™
 	BigNumber& setDivParam(int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
 	static BigNumber minNumber(const BigNumber& x, const BigNumber& y);

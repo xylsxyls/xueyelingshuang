@@ -1,4 +1,4 @@
-#include "BigNumber.h"
+﻿#include "BigNumber.h"
 #include "BigNumberBase/BigNumberBaseAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 
