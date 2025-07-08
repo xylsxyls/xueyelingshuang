@@ -58,14 +58,16 @@ fi
 
 if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
 then
-    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/MD/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 elif [[ $1 == '32' ]] && [[ $3 == 'release' ]]
 then
-    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/MT/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'debug' ]]
 then
-    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/MD/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
 elif [[ $1 == '64' ]] && [[ $3 == 'release' ]]
 then
-    cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/MT/"$lib64$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
+    cp -rf $xueyelingshuang"/tools/"$libname"/lib/MT/libgcc.a" "$xueyelingshuang/lib/"
+
 fi
