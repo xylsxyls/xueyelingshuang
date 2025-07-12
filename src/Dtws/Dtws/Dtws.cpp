@@ -88,7 +88,11 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 
 	if (g_keyboard.m_keyHasDown[CTRL])
 	{
-		if (g_keyboard.m_keyDown['2'])
+		if (g_keyboard.m_keyDown['1'])
+		{
+			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_CONFIRM));
+		}
+		else if (g_keyboard.m_keyDown['2'])
 		{
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_ATTACK));
 		}
@@ -207,6 +211,10 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (g_keyboard.m_keyDown['3'])
 		{
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_PLANT));
+		}
+		else if (g_keyboard.m_keyDown['4'])
+		{
+			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_TEAM));
 		}
 	}
 

@@ -17,6 +17,7 @@
 #include "GoDestTask.h"
 #include "ConvoyDestTask.h"
 #include "RaffleTask.h"
+#include "ConfirmTask.h"
 
 ClientReceive::ClientReceive()
 {
@@ -260,6 +261,26 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
 		AssignThreadManager::instance().stopAllTask();
 		std::shared_ptr<RaffleTask> spTask(new RaffleTask);
+		AssignThreadHelper::postEveryAssignTask(spTask);
+	}
+	break;
+	case DTWS_CONFIRM:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<ConfirmTask> spTask(new ConfirmTask);
+		spTask->setConfirmParam({ { 946, 542 }, { 950, 396 }, { 627, 704 }, { 1262, 703 } });
+		AssignThreadHelper::postEveryAssignTask(spTask);
+	}
+	break;
+	case DTWS_TEAM:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		AssignThreadManager::instance().stopAllTask();
+		std::shared_ptr<ConfirmTask> spTask(new ConfirmTask);
+		spTask->setConfirmParam({ { 979, 682 }, { 982, 530 }, { 664, 839 }, { 1296, 837 } });
 		AssignThreadHelper::postEveryAssignTask(spTask);
 	}
 	break;

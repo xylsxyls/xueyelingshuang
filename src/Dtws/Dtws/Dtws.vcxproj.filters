@@ -206,6 +206,12 @@
     <ClCompile Include="PeopleTask.cpp">
       <Filter>Task\AssignTask</Filter>
     </ClCompile>
+    <ClCompile Include="ConfirmAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfirmTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -361,6 +367,12 @@
       <Filter>Task\AssignTask</Filter>
     </ClInclude>
     <ClInclude Include="PeopleTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfirmAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfirmTask.h">
       <Filter>Task\AssignTask</Filter>
     </ClInclude>
   </ItemGroup>

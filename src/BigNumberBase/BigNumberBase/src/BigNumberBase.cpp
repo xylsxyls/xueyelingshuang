@@ -4,6 +4,12 @@
 #include "gmp.h"
 #include <string.h>
 
+#if defined(_MSC_VER) && defined(_WIN64)
+extern "C" {
+	__declspec(dllexport) FILE* __imp___acrt_iob_func[3] = { stdin, stdout, stderr };
+}
+#endif
+
 class GmpInt
 {
 public:
@@ -311,7 +317,7 @@ std::string BigNumberBase::toString() const
 		return result;
 	}
 	bool isMinus = (result[0] == '-');
-	int countValid = result.size() - (isMinus ? 1 : 0);
+	int countValid = (int)result.size() - (isMinus ? 1 : 0);
 	int insertCount = m_prec - countValid + 1;
 	if (insertCount > 0)
 	{
