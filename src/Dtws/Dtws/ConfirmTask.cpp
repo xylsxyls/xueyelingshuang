@@ -17,7 +17,9 @@ void ConfirmTask::DoTask()
 
 AssignTask* ConfirmTask::copy()
 {
-	return new ConfirmTask;
+	ConfirmTask* assignTask = new ConfirmTask;
+	assignTask->setConfirmParam(m_vecConfirm);
+	return assignTask;
 }
 
 void ConfirmTask::setConfirmParam(const std::vector<xyls::Point>& vecConfirm)
