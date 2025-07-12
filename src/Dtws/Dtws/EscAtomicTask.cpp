@@ -4,7 +4,7 @@
 
 bool EscAtomicTask::DoFun(const std::vector<std::pair<std::string, xyls::Rect>>& vecPic)
 {
-	Sleep(g_config.m_goFirstSleepTime);
+	Sleep(50);
 	CKeyboard::KeyDown(CKeyboard::Esc);
 	CKeyboard::KeyUp(CKeyboard::Esc);
 	return false;
