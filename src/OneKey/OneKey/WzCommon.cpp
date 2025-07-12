@@ -96,6 +96,9 @@ void WzCommon::keyboard()
 	}
 	if (g_keyboard.m_keyHasDown[CTRL] && g_keyboard.m_keyDown['E'])
 	{
+		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+		spTask->setParam('G');
+		g_config.m_taskThread->PostTask(spTask, 1);
 		if (g_config.m_code1 != 'G')
 		{
 			g_config.m_codetimes = 2;
