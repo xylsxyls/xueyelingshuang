@@ -5,6 +5,10 @@
 
 bool ConfirmAtomicTask::DoFun(const std::vector<std::pair<std::string, xyls::Rect>>& vecPic)
 {
+	if (m_vecConfirm.size() < 4)
+	{
+		return false;
+	}
 	CMouse::MoveClick(m_vecConfirm[g_config.m_accountCount == 3 ? (m_accountIndex + 1) : 0], 0);
 	return false;
 }
