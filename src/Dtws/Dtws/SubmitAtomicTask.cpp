@@ -10,11 +10,11 @@ m_lineIndex(0)
 
 bool SubmitAtomicTask::DoFun(const std::vector<std::pair<std::string, xyls::Rect>>& vecPic)
 {
-	lowSleep(100);
+	lowSleep(20);
 	CMouse::MoveAbsolute(g_screen.m_submitPoint[m_accountIndex] + xyls::Point(0, m_lineIndex * g_config.m_textLineHeight), 0);
-	lowSleep(100);
-	CMouse::LeftClick(50);
-	lowSleep(100);
+	lowSleep(20);
+	CMouse::LeftClick(0);
+	lowSleep(20);
 	return false;
 }
 

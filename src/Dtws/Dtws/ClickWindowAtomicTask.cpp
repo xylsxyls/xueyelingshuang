@@ -7,11 +7,11 @@ bool ClickWindowAtomicTask::DoFun(const std::vector<std::pair<std::string, xyls:
 	{
 		return true;
 	}
-	lowSleep(200);
+	lowSleep(20);
 	CMouse::MoveAbsolute(vecPic[0].second.leftTop() + m_oppositePoint, 10);
-	lowSleep(200);
-	CMouse::LeftClick(100);
-	lowSleep(200);
+	lowSleep(20);
+	CMouse::LeftClick(0);
+	lowSleep(20);
 	return false;
 }
 
