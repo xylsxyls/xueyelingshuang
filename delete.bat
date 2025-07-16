@@ -99,8 +99,11 @@ rmdir /q /s "%~dp0src\QtClient\.vs\"
 rmdir /q /s "%~dp0src\StockClient\StockClient\GeneratedFiles\"
 del "%~dp0src\StockClient\StockClient\StockClient.vcxproj.user"
 ::------------------------------------------------------------
-rmdir /q /s "%~dp0src\dtws\dtws\GeneratedFiles\"
-del "%~dp0src\dtws\dtws\dtws.vcxproj.user"
+rmdir /q /s "%~dp0src\Dtws\Dtws\GeneratedFiles\"
+del "%~dp0src\Dtws\Dtws\Dtws.vcxproj.user"
+::------------------------------------------------------------
+rmdir /q /s "%~dp0src\Quant\Quant\GeneratedFiles\"
+del "%~dp0src\Quant\Quant\Quant.vcxproj.user"
 ::------------------------------------------------------------
 
 

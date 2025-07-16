@@ -50,6 +50,8 @@ enum
 	DTWS_RAFFLE,
 	DTWS_TEAM,
 	DTWS_CONFIRM,
+
+	QUANT_PRINT = 30000,
 };
 
 enum StockEnum
@@ -94,7 +96,8 @@ enum MessageType
 enum
 {
 	PROJECT_LOGTEST = 1,
-	PROJECT_DTWS
+	PROJECT_DTWS,
+	PROJECT_QUANT
 };
 
 class CorrespondParamAPI CorrespondParam

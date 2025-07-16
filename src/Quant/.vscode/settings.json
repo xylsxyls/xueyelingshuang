@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/Quant/",
+    "cmake.configureArgs": [
+        "-DLIBRARIESRELY=",
+        "-DBIT=32",
+        "-DDEBUGRELEASE=debug"
+    ]
+}
