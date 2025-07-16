@@ -33,6 +33,9 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="receive">
+      <UniqueIdentifier>{4432bfbc-8626-498a-86b4-346ee09b4155}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -50,6 +53,9 @@
     <ClCompile Include="Quant.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ClientReceive.cpp">
+      <Filter>receive</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Quant.qrc">
@@ -64,5 +70,13 @@
     <CustomBuild Include="Quant.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="QuantParam.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientReceive.h">
+      <Filter>receive</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

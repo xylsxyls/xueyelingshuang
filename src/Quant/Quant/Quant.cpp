@@ -1,12 +1,16 @@
 ﻿#include "Quant.h"
-//#include "11Controls/controls/COriginalButton.h"
+#include "QuantParam.h"
+#include "CSystem/CSystemAPI.h"
+#include "NetSender/NetSenderAPI.h"
+#include "ClientReceive.h"
+#include "QtControls/COriginalButton.h"
 //#include "11Controls/controls/DialogManager.h"
 
 Quant::Quant(QWidget* parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
-	//m_button = new COriginalButton(this);
+	m_button = new COriginalButton(this);
 	init();
 }
 
@@ -21,11 +25,18 @@ void Quant::init()
 	{
 		return;
 	}
+
+	std::string computerName = CSystem::getComputerName();
+	m_clientReceive = new ClientReceive;
+	NetSender::instance().initClientReceive(m_clientReceive);
+	ProcessWork::instance().initReceive();
+	NetSender::instance().initClient(PROJECT_DTWS, std::string("QuantServer") + QUANT_SERVER_VERSION, computerName);
+
 	QPalette pattle;
 	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
 	setPalette(pattle);
-	//m_button->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
-	//QObject::connect(m_button, &COriginalButton::clicked, this, &Quant::onButtonClicked);
+	m_button->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_button, &COriginalButton::clicked, this, &Quant::onButtonClicked);
 }
 
 bool Quant::check()
@@ -42,13 +53,10 @@ void Quant::resizeEvent(QResizeEvent* eve)
 	{
 		return;
 	}
-	//m_button->setGeometry(360, 120, 160, 80);
+	m_button->setGeometry(360, 120, 160, 80);
 }
 
 void Quant::onButtonClicked()
 {
-	//TipDialogParam tipDialogParam;
-	//tipDialogParam.m_tip = QStringLiteral("点击");
-	//tipDialogParam.m_parent = windowHandle();
-	//DialogManager::instance().makeDialog(tipDialogParam);
+	NetSender::instance().sendServer(PROJECT_QUANT, std::to_string(QUANT_PRINT));
 }

@@ -5,6 +5,7 @@
 #include "ui_Quant.h"
 
 class COriginalButton;
+class ClientReceive;
 
 class Quant : public QMainWindow
 {
@@ -26,6 +27,7 @@ private slots:
 private:
 	Ui::QuantClass ui;
 	COriginalButton* m_button;
+	ClientReceive* m_clientReceive;
 };
 
 #endif // QTTEST_H
