@@ -30,7 +30,7 @@ void Quant::init()
 	m_clientReceive = new ClientReceive;
 	NetSender::instance().initClientReceive(m_clientReceive);
 	ProcessWork::instance().initReceive();
-	NetSender::instance().initClient(PROJECT_DTWS, std::string("QuantServer") + QUANT_SERVER_VERSION, computerName);
+	NetSender::instance().initClient(PROJECT_QUANT, std::string("QuantServer") + QUANT_SERVER_VERSION, computerName);
 
 	QPalette pattle;
 	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
