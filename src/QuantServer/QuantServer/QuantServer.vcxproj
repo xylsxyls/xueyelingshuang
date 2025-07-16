@@ -160,10 +160,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ClientLineManager.h" />
     <ClInclude Include="QuantServer.h" />
+    <ClInclude Include="ServerReceive.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ClientLineManager.cpp" />
     <ClCompile Include="QuantServer.cpp" />
+    <ClCompile Include="ServerReceive.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -6,6 +6,12 @@
 #include <stdlib.h>
 #endif
 
+#include "NetSender/NetSenderAPI.h"
+#include "ServerReceive.h"
+#include "CSystem/CSystemAPI.h"
+
+bool g_exit = false;
+
 #ifdef _MSC_VER
 BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
@@ -13,6 +19,8 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 	{
 		//关闭退出事件
 		//RCSend("close QuantServer");
+		ProcessWork::instance().uninitReceive();
+		g_exit = true;
 	}
 	return FALSE;
 }
@@ -27,6 +35,8 @@ void CtrlCMessage(int eve)
 	{
 		//关闭退出事件
 		//RCSend("close ConsoleTest");
+		ProcessWork::instance().uninitReceive();
+		g_exit = true;
 		exit(0);
 	}
 }
@@ -46,9 +56,18 @@ struct CtrlC
 CtrlC g_ctrlc;
 #endif
 
+#define QUANT_SERVER_VERSION "1.0"
+
 int32_t main()
 {
-	
-	getchar();
+	ServerReceive receive;
+	NetSender::instance().initServerReceive(&receive);
+	ProcessWork::instance().initReceive();
+	NetSender::instance().initServer(std::string("QuantServer") + QUANT_SERVER_VERSION + " init");
+
+	while (!g_exit)
+	{
+		CSystem::Sleep(1);
+	}
 	return 0;
 }
