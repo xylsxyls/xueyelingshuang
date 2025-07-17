@@ -976,7 +976,7 @@ struct DialogParam
         m_dialogId = 0;
         m_userId = 0;
 		m_userResult = -1;
-        m_title = QStringLiteral("商汤科技");
+        m_title = QStringLiteral("消息提示");
         m_result = ERROR_RESULT;
         m_parent = nullptr;
         m_timeOut = -1;

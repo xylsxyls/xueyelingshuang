@@ -36,6 +36,9 @@
     <Filter Include="receive">
       <UniqueIdentifier>{4432bfbc-8626-498a-86b4-346ee09b4155}</UniqueIdentifier>
     </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{2f866242-e0a8-4bee-9834-bcb755d57838}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -55,6 +58,9 @@
     </ClCompile>
     <ClCompile Include="ClientReceive.cpp">
       <Filter>receive</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -77,6 +83,9 @@
     </ClInclude>
     <ClInclude Include="ClientReceive.h">
       <Filter>receive</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
