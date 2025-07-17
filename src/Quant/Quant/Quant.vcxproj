@@ -157,6 +157,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ClientReceive.cpp" />
+    <ClCompile Include="Config.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_Quant.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -272,6 +273,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ClientReceive.h" />
+    <ClInclude Include="Config.h" />
     <ClInclude Include="QuantParam.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

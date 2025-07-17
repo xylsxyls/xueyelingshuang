@@ -20,14 +20,17 @@ protected:
 
 protected:
 	void resizeEvent(QResizeEvent* eve);
+	void closeEvent(QCloseEvent* eve);
 
 private slots:
 	void onButtonClicked();
+	void onCalcClicked();
 
 private:
 	Ui::QuantClass ui;
-	COriginalButton* m_button;
 	ClientReceive* m_clientReceive;
+	COriginalButton* m_button;
+	COriginalButton* m_calc;
 };
 
 #endif // QTTEST_H
