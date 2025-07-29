@@ -40,14 +40,14 @@ void ClickAtomicTask::DoTask()
 void ClickAtomicTask::startWithFindPic(
 	const std::vector<std::pair<std::string, std::pair<xyls::Rect, double>>>& vecStartFindPic)
 {
-	m_vecStartFindPic = vecStartFindPic;
+	m_vecStartFindPic.insert(m_vecStartFindPic.end(), vecStartFindPic.begin(), vecStartFindPic.end());
 	m_isStartWithFindPic = true;
 }
 
 void ClickAtomicTask::startWithNotFindPic(
 	const std::vector<std::pair<std::string, std::pair<xyls::Rect, double>>>& vecStartNotFindPic)
 {
-	m_vecStartNotFindPic = vecStartNotFindPic;
+	m_vecStartNotFindPic.insert(m_vecStartNotFindPic.end(), vecStartNotFindPic.begin(), vecStartNotFindPic.end());
 	m_isStartWithFindPic = false;
 }
 

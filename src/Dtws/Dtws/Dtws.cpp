@@ -281,15 +281,7 @@ void Dtws::init()
 		g_config.m_accountCount = 3;
 	}
 
-	if (computerName == FIRST_COMPUTER)
-	{
-		g_config.m_screenPixel = 3840 * 2160;
-	}
-
-	if (computerName == SECOND_COMPUTER)
-	{
-		g_config.m_screenPixel = 1920 * 1080;
-	}
+	g_config.m_screenPixel = GetSystemMetrics(SM_CXSCREEN) * GetSystemMetrics(SM_CYSCREEN);
 
 	AssignThreadManager::instance().init(g_config.m_accountCount);
 

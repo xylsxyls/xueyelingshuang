@@ -17,6 +17,7 @@ void FollowTask::DoTask()
 		spTask.reset(new SelectTeamerAtomicTask);
 		spTask->setAccountIndex(m_accountIndex);
 		spTask->heroBlood(true, false);
+		spTask->esc(true, false);
 		spTask->heroBlood(false, true);
 		AssignThreadManager::instance().postTask(spTask);
 		spTask->waitForEnd();

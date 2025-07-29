@@ -44,13 +44,24 @@ CConfig::CConfig()
 	m_accountConfig[1920 * 1080][1].m_chatPath = "res\\jiaohumaer.png";
 	m_accountConfig[3840 * 2160][1].m_chatPath = "res\\jiaohumaer.png";
 	m_accountConfig[1920 * 1080][3].m_chatPath = "res\\jiaohumaer.png";
-	
+
 	m_accountConfig[1366 * 768][1].m_chatRect = { { 8, 462, 353, 668 } };
 	m_accountConfig[1920 * 1080][1].m_chatRect = { { 0, 770, 348, 1009 } };
 	m_accountConfig[3840 * 2160][1].m_chatRect = { { 35, 1856, 354, 2055 } };
 	m_accountConfig[1920 * 1080][3].m_chatRect = { { 324, 465, 670, 677 }, { 0, 774, 350, 984 },
 		{ 632, 772, 984, 988 } };
-	
+
+	m_accountConfig[1366 * 768][1].m_escPath = "res\\esc.png";
+	m_accountConfig[1920 * 1080][1].m_escPath = "res\\esc.png";
+	m_accountConfig[3840 * 2160][1].m_escPath = "res\\esc.png";
+	m_accountConfig[1920 * 1080][3].m_escPath = "res\\esc.png";
+
+	m_accountConfig[1366 * 768][1].m_escRect = { { 506, 300, 893, 511 } };
+	m_accountConfig[1920 * 1080][1].m_escRect = { { 828, 347, 1133, 422 } };
+	m_accountConfig[3840 * 2160][1].m_escRect = { { 1770, 875, 2131, 988 } };
+	m_accountConfig[1920 * 1080][3].m_escRect = { { 844, 202, 1120, 269 }, { 522, 504, 809, 575 },
+	{ 1152, 509, 1436, 571 } };
+
 	m_accountConfig[1366 * 768][1].m_bloodRect = { { 571, 61, 826, 135 } };
 	m_accountConfig[1920 * 1080][1].m_bloodRect = { { 571, 61, 826, 135 } };
 	m_accountConfig[3840 * 2160][1].m_bloodRect = { { 571, 61, 826, 135 } };

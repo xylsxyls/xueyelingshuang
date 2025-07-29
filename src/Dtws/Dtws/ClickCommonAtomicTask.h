@@ -12,6 +12,8 @@ public:
 
 	void jiaohumaer(bool isStart, bool isFind);
 
+	void esc(bool isStart, bool isFind);
+
 	void lowSleep(int32_t sleepTime);
 
 public:
