@@ -4,5 +4,5 @@
 "$CLOUD_REBUILD" ScreenScript 32 dll release same
 "$CLOUD_REBUILD" CKeyboard 32 dll release only
 "$CLOUD_REBUILD" CMouseConfig 32 dll release same
-"$CLOUD_REBUILD" CKeyboardConfig 32 dll release same
+"$CLOUD_REBUILD" CKeyboardConfig 32 dll release only
 "$CLOUD_REBUILD" StockCharge 32 dll release same
