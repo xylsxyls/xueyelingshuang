@@ -25,6 +25,8 @@ struct AccountConfig
 	std::string m_goWindowHeadPath;
 	std::string m_chatPath;
 	std::vector<xyls::Rect> m_chatRect;
+	std::string m_escPath;
+	std::vector<xyls::Rect> m_escRect;
 	std::string m_bloodPath;
 	std::vector<xyls::Rect> m_bloodRect;
 	std::vector<xyls::Point> m_submitPoint;

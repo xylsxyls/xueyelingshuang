@@ -26,6 +26,12 @@ void ClickCommonAtomicTask::jiaohumaer(bool isStart, bool isFind)
 		g_screen.m_chatRect[m_accountIndex], 0.7);
 }
 
+void ClickCommonAtomicTask::esc(bool isStart, bool isFind)
+{
+	pic(isStart, isFind, g_config.m_currentExePath + g_screen.m_escPath,
+		g_screen.m_escRect[m_accountIndex], 0.7);
+}
+
 void ClickCommonAtomicTask::lowSleep(int32_t sleepTime)
 {
 	if (CSystem::getComputerName() != FIRST_COMPUTER)
