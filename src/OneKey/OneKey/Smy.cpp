@@ -99,6 +99,8 @@ void Smy::keyboard()
 		::GetWindowTextA(g_config.m_editWnd, str, 1024);
 		std::string text = str;
 
+		g_config.m_code1 = 0;
+
 		char realPress = (editIndex == -1 ? '8' : text[editIndex]);
 
 		if (realPress != '8')

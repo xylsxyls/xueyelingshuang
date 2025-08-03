@@ -411,7 +411,7 @@ void COneKeyDlg::OnSelchangeCombo1()
 	}
 	else if (str == WZ || str == ZGL || str == ZK)
 	{
-		g_config.m_code1 = 'H';
+		g_config.m_code1 = 'C';
 		g_config.m_code2 = 'C';
 	}
 	else if (str == SMY || str == SWK || str == NKLL)

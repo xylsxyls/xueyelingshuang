@@ -98,12 +98,8 @@ void WzCommon::keyboard()
 	}
 	if (g_keyboard.m_keyHasDown[CTRL] && g_keyboard.m_keyDown['E'])
 	{
-		std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-		spTask->setParam('G');
-		g_config.m_taskThread->PostTask(spTask, 1);
 		if (g_config.m_code1 != 'G')
 		{
-			g_config.m_codetimes = 2;
 			g_config.m_code1 = 'G';
 		}
 		else if (g_config.m_type == 10)
@@ -112,7 +108,7 @@ void WzCommon::keyboard()
 		}
 		else
 		{
-			g_config.m_code1 = 'H';
+			g_config.m_code1 = 'C';
 		}
 	}
 	else if (g_keyboard.m_keyDown['E'])

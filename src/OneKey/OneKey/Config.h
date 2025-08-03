@@ -65,7 +65,7 @@ struct CConfig
 	bool m_hasF = false;
 	bool m_hasS = false;
 
-	int32_t m_code1 = 'H';
+	int32_t m_code1 = 'C';
 	int32_t m_code2 = 'C';
 	bool m_isMain = false;
 
@@ -158,7 +158,7 @@ public:
 //	bool m_hasF = false;
 //	bool m_hasS = false;
 //
-//	int32_t m_code1 = 'H';
+//	int32_t m_code1 = 'C';
 //	int32_t m_code2 = 'C';
 //	bool m_isMain = false;
 //

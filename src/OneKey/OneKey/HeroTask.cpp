@@ -15,13 +15,9 @@ void HeroTask::DoTask()
 {
 	if (m_code1 != 0)
 	{
-		++g_config.m_codetimes;
-		if (g_config.m_codetimes % 3 == 0 && m_code1 == 'G')
-		{
-			CKeyboard::KeyPress(m_code1, 0);
-		}
+		CKeyboard::KeyPress(m_code1, 0);
 	}
-	if (m_code2 != 0)
+	else if (m_code2 != 0)
 	{
 		CKeyboard::KeyPress(m_code2, 0);
 		if (g_config.m_isMain)
