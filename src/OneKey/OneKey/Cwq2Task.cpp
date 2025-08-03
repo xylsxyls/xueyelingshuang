@@ -86,11 +86,11 @@ void Cwq2Task::DoTask()
 		{
 			return;
 		}
-		CKeyboard::KeyPress('J', 0);
-		if (Sleep(50))
-		{
-			return;
-		}
+		//CKeyboard::KeyPress('J', 0);
+		//if (Sleep(50))
+		//{
+		//	return;
+		//}
 		//ClickHero(m_editIndex + 48 + 1);
 		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();

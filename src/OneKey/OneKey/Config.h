@@ -91,7 +91,7 @@ struct CConfig
 
 	bool m_writeTime = false;
 
-	uint32_t m_rightClickTime = 2000;
+	uint32_t m_rightClickTime = 1000;
 
 	xyls::Point m_speakBeginPoint;
 	xyls::Point m_speakEndPoint;

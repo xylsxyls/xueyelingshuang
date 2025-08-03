@@ -36,7 +36,9 @@ void WzCommon::mouse()
 		}
 	}
 
-	if (g_mouse.m_rightWatch.GetWatchTime() < g_config.m_rightClickTime || g_mouse.m_rightHasDown)
+	if (g_mouse.m_rightWatch.GetWatchTime() < g_config.m_rightClickTime ||
+		g_mouse.m_rightHasDown ||
+		(g_config.m_type == 10 && g_keyboard.m_keyHasDown['R']))
 	{
 		int32_t yTop = (g_config.m_screenHeight - g_config.m_gameScreenHeight) / 2 + g_config.m_gameScreenMargin;
 		int32_t yBottom = (g_config.m_screenHeight - g_config.m_gameScreenHeight) / 2 + g_config.m_gameScreenHeight - g_config.m_gameScreenMargin;

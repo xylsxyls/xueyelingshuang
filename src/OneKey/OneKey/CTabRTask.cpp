@@ -6,6 +6,7 @@
 
 void CTabRTask::DoTask()
 {
+	return;
 	//CMouse::RightUp();
 	xyls::Point currentPos = CMouse::GetCurrentPos();
 	CMouse::MoveAbsolute(g_config.m_bCenterPoint, 0);
