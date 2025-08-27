@@ -26,7 +26,7 @@ void Cwq2Task::DoTask()
 		{
 			return;
 		}
-		CKeyboard::KeyPress('F', 0);
+		CKeyboard::KeyPress('Z', 0);
 		if (Sleep(100))
 		{
 			return;
@@ -51,7 +51,7 @@ void Cwq2Task::DoTask()
 		//KeyPressE();
 		//Sleep(100);
 		//KeyPressF();
-		CKeyboard::KeyPress('F', 0);
+		CKeyboard::KeyPress('Z', 0);
 		if (Sleep(100))
 		{
 			return;
@@ -94,15 +94,24 @@ void Cwq2Task::DoTask()
 		//ClickHero(m_editIndex + 48 + 1);
 		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		//ClickHero(m_editIndex + 48 + 1);
 		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		//ClickHero(m_editIndex + 48 + 1);
 		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		//ClickHero(m_editIndex + 48 + 1);
 		CKeyboard::KeyPress(e + 48, 0);
 		//KeyPressE();
@@ -118,8 +127,8 @@ void Cwq2Task::StopTask()
 
 bool Cwq2Task::Sleep(int32_t sleepTime)
 {
-	::Sleep(sleepTime);
-	return false;
+	std::this_thread::sleep_for(std::chrono::microseconds(sleepTime * 1000));
+	return m_exit;
 }
 
 void Cwq2Task::KeyPressE()

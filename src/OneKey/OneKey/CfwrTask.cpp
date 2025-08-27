@@ -9,7 +9,8 @@
 #include "Config.h"
 
 CfwrTask::CfwrTask():
-m_editIndex(0)
+m_editIndex(0),
+m_exit(false)
 {
 
 }
@@ -34,22 +35,46 @@ void CfwrTask::DoTask()
 	{
 		CKeyboard::KeyPress(e + 48, 0);
 	}
-	Sleep(100);
+	if (Sleep(100))
+	{
+		return;
+	}
 	CMouse::RightClick(0);
-	Sleep(50);
+	if (Sleep(50))
+	{
+		return;
+	}
 	//CKeyboard::KeyPress('F', 0);
 	KeyPressF();
-	Sleep(100);
+	if (Sleep(100))
+	{
+		return;
+	}
 	CKeyboard::KeyPress('J', 0);
-	Sleep(10);
+	if (Sleep(10))
+	{
+		return;
+	}
 	CKeyboard::KeyPress(e + 48, 0);
-	Sleep(10);
+	if (Sleep(10))
+	{
+		return;
+	}
 	CMouse::RightClick(0);
-	Sleep(50);
+	if (Sleep(50))
+	{
+		return;
+	}
 	CMouse::RightClick(0);
-	Sleep(50);
+	if (Sleep(50))
+	{
+		return;
+	}
 	CMouse::RightClick(0);
-	Sleep(50);
+	if (Sleep(50))
+	{
+		return;
+	}
 	//CKeyboard::KeyPress('F', 0);
 	//KeyPressF();
 	//Sleep(55);
@@ -57,21 +82,35 @@ void CfwrTask::DoTask()
 	//CMouse::RightClick(0);
 	//Sleep(50);
 	KeyPressR();
-	Sleep(50);
+	if (Sleep(50))
+	{
+		return;
+	}
 	//CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
 	CMouse::RightClick(0);
 	//Sleep(50);
 	KeyPressR();
-	Sleep(50);
+	if (Sleep(50))
+	{
+		return;
+	}
 	//CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
 	CMouse::RightClick(0);
 	//Sleep(50);
 	KeyPressR();
-	Sleep(50);
+	if (Sleep(50))
+	{
+		return;
+	}
 	//CKeyboard::KeyPress(text[m_editIndex] + 48, 0);
 	CMouse::RightClick(0);
 	//Sleep(50);
 	KeyPressR();
+}
+
+void CfwrTask::StopTask()
+{
+	m_exit = true;
 }
 
 void CfwrTask::KeyPressE()
@@ -102,6 +141,13 @@ void CfwrTask::KeyPressR()
 	Sleep(50);
 	CMouse::LeftUp();
 	CMouse::MoveAbsolute(currentPos, 0);
+}
+
+bool CfwrTask::Sleep(int32_t sleepTime)
+{
+	std::this_thread::sleep_for(std::chrono::microseconds(sleepTime * 1000));
+	return m_exit;
+	//return m_sleep.wait(sleepTime);
 }
 
 void CfwrTask::setParam(uint32_t editIndex)

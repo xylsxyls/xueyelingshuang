@@ -9,6 +9,7 @@
 #include "HeroTask.h"
 #include "SpeakTask.h"
 #include "SleepTask.h"
+#include "name.h"
 
 void WzCommon::mouse()
 {
@@ -64,11 +65,11 @@ void WzCommon::keyboard()
 {
 	if (g_keyboard.m_keyUp[SPACE])
 	{
-		if (!(g_config.m_type == 10 && g_keyboard.m_lastKey == 'Q'))
+		if (!(g_config.m_type == g_config.nameType(SMY) && g_keyboard.m_lastKey == 'Q'))
 		{
 			g_config.m_moveUse = true;
 		}
-		if (g_config.m_type == 10)
+		if (g_config.m_type == g_config.nameType(SMY))
 		{
 			std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
 			spTask1->setParam('9');
@@ -79,15 +80,42 @@ void WzCommon::keyboard()
 			std::shared_ptr<CKeyTask> spTask3(new CKeyTask);
 			spTask3->setParam('7');
 			g_config.m_taskThread->PostTask(spTask3);
-			//std::shared_ptr<CKeyTask> spTask4(new CKeyTask);
-			//spTask4->setParam(VK_F11);
-			//g_config.m_taskThread->PostTask(spTask4);
-			//std::shared_ptr<SleepTask> spTask5(new SleepTask);
-			//spTask5->setParam(20);
-			//g_config.m_taskThread->PostTask(spTask5);
-			//std::shared_ptr<CKeyTask> spTask6(new CKeyTask);
-			//spTask6->setParam(VK_F11);
-			//g_config.m_taskThread->PostTask(spTask6);
+		}
+		else if (g_config.m_type == g_config.nameType(ZGL))
+		{
+			std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
+			spTask1->setParam('9');
+			g_config.m_taskThread->PostTask(spTask1);
+			std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+			spTask2->setParam('7');
+			g_config.m_taskThread->PostTask(spTask2);
+			std::shared_ptr<CKeyTask> spTask3(new CKeyTask);
+			spTask3->setParam('8');
+			g_config.m_taskThread->PostTask(spTask3);
+		}
+		else if (g_config.m_type == g_config.nameType(LLW))
+		{
+			std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
+			spTask1->setParam('9');
+			g_config.m_taskThread->PostTask(spTask1);
+			std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+			spTask2->setParam('7');
+			g_config.m_taskThread->PostTask(spTask2);
+			std::shared_ptr<CKeyTask> spTask3(new CKeyTask);
+			spTask3->setParam('8');
+			g_config.m_taskThread->PostTask(spTask3);
+		}
+		else if (g_config.m_type == g_config.nameType(ZK))
+		{
+			std::shared_ptr<CKeyTask> spTask1(new CKeyTask);
+			spTask1->setParam('9');
+			g_config.m_taskThread->PostTask(spTask1);
+			std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
+			spTask2->setParam('8');
+			g_config.m_taskThread->PostTask(spTask2);
+			std::shared_ptr<CKeyTask> spTask3(new CKeyTask);
+			spTask3->setParam('7');
+			g_config.m_taskThread->PostTask(spTask3);
 		}
 	}
 	if (g_keyboard.m_keyUp[CTRL] && g_keyboard.m_currentKey == CTRL)
@@ -102,7 +130,7 @@ void WzCommon::keyboard()
 		{
 			g_config.m_code1 = 'G';
 		}
-		else if (g_config.m_type == 10)
+		else if (g_config.m_type == g_config.nameType(SMY))
 		{
 			g_config.m_code1 = 0;
 		}
@@ -163,7 +191,9 @@ void WzCommon::keyboard()
 		g_config.m_taskThread->PostTask(spTask2, 1);
 	}
 
-	if (g_config.m_type != 10 && g_config.m_type != 14 && g_config.m_type != 15)
+	if (g_config.m_type != g_config.nameType(SMY) &&
+		g_config.m_type != g_config.nameType(HX) &&
+		g_config.m_type != g_config.nameType(NKLL))
 	{
 		if (g_keyboard.m_keyDown['W'])
 		{
@@ -178,7 +208,9 @@ void WzCommon::keyboard()
 			g_config.m_taskThread->PostTask(spTask, 1);
 		}
 	}
-	if (g_config.m_type != 9 && g_config.m_type != 10 && g_config.m_type != 13)
+	if (g_config.m_type != g_config.nameType(ZK) &&
+		g_config.m_type != g_config.nameType(SMY) &&
+		g_config.m_type != g_config.nameType(BLSY))
 	{
 		if (g_keyboard.m_keyDown['R'])
 		{
@@ -193,7 +225,8 @@ void WzCommon::keyboard()
 			g_config.m_taskThread->PostTask(spTask, 1);
 		}
 	}
-	if (g_config.m_type != 10 && g_config.m_type != 13)
+	if (g_config.m_type != g_config.nameType(SMY) &&
+		g_config.m_type != g_config.nameType(BLSY))
 	{
 		if (g_keyboard.m_keyDown['T'] && g_config.m_stopWatch.GetWatchTime() > 500)
 		{

@@ -48,13 +48,22 @@ void CwqAllTask::DoTask()
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
 		CKeyboard::KeyPress('J', 0);
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
 	}
@@ -62,7 +71,10 @@ void CwqAllTask::DoTask()
 	{
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		Sleep(100);
+		if (Sleep(100))
+		{
+			return;
+		}
 		KeyPressF();
 		if (Sleep(50))
 		{
@@ -86,13 +98,23 @@ void CwqAllTask::DoTask()
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
 		CKeyboard::KeyPress('J', 0);
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		Sleep(50); CKeyboard::KeyPress(text[0] + 48, 0);
+		if (Sleep(50))
+		{
+			return;
+		}
+		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
 	}
 	else
@@ -105,8 +127,12 @@ void CwqAllTask::DoTask()
 		CKeyboard::KeyPress(text[1] + 48, 0);
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		Sleep(100);
-		KeyPressF();
+		if (Sleep(100))
+		{
+			return;
+		}
+		//KeyPressF();
+		CKeyboard::KeyPress('Z', 0);
 		if (Sleep(50))
 		{
 			return;
@@ -116,12 +142,12 @@ void CwqAllTask::DoTask()
 		{
 			return;
 		}
-		CKeyboard::KeyPress('J', 0);
+		CKeyboard::KeyPress('Z', 0);
 		if (Sleep(50))
 		{
 			return;
 		}
-		CKeyboard::KeyPress('J', 0);
+		CKeyboard::KeyPress('Z', 0);
 		if (Sleep(50))
 		{
 			return;
@@ -129,13 +155,23 @@ void CwqAllTask::DoTask()
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
 		CKeyboard::KeyPress('J', 0);
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		Sleep(50);
+		if (Sleep(50))
+		{
+			return;
+		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		Sleep(50); CKeyboard::KeyPress(text[0] + 48, 0);
+		if (Sleep(50))
+		{
+			return;
+		}
+		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
 	}
 }
@@ -180,8 +216,8 @@ void CwqAllTask::ClickHero(char heroNum)
 
 bool CwqAllTask::Sleep(int32_t sleepTime)
 {
-	::Sleep(sleepTime);
-	return false;
+	std::this_thread::sleep_for(std::chrono::microseconds(sleepTime * 1000));
+	return m_exit;
 	//return m_sleep.wait(sleepTime);
 }
 

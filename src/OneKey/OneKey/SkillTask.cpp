@@ -17,6 +17,7 @@ m_skill3(0)
 
 void SkillTask::DoTask()
 {
+	return;
 	xyls::Rect shopPoint = ScreenScript::FindPic(CSystem::GetCurrentExePath() + "res\\shop_" + std::to_string(g_config.m_screenWidth) + ".png",
 		xyls::Rect(0, 0, g_config.m_screenWidth / 5, g_config.m_screenHeight), 0.6);
 	if (shopPoint.empty())

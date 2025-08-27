@@ -458,6 +458,10 @@ void COneKeyDlg::OnTimer(UINT_PTR nIDEvent)
 		{
 			Blxc::timer(nIDEvent);
 		}
+		else if (g_config.m_type == g_config.nameType(ZGL))
+		{
+			Zgl::timer(nIDEvent);
+		}
 	}
 
 	static int times = -1;

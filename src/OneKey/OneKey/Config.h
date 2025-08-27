@@ -24,6 +24,7 @@ struct CConfig
 
 	bool m_hasMove = false;
 	bool m_qKey = false;
+	bool m_superQ = false;
 	bool m_checkHero = false;
 
 	int32_t m_screenWidth = 0;

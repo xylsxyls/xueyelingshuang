@@ -143,6 +143,7 @@
     <ClInclude Include="CQreTask.h" />
     <ClInclude Include="Cqrw3Task.h" />
     <ClInclude Include="CqrwTask.h" />
+    <ClInclude Include="CqswrTask.h" />
     <ClInclude Include="CqTask.h" />
     <ClInclude Include="CrFlashTask.h" />
     <ClInclude Include="CrfTask.h" />
@@ -225,6 +226,7 @@
     <ClCompile Include="CQreTask.cpp" />
     <ClCompile Include="Cqrw3Task.cpp" />
     <ClCompile Include="CqrwTask.cpp" />
+    <ClCompile Include="CqswrTask.cpp" />
     <ClCompile Include="CqTask.cpp" />
     <ClCompile Include="CrFlashTask.cpp" />
     <ClCompile Include="CrfTask.cpp" />

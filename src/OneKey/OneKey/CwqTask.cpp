@@ -27,13 +27,25 @@ void CwqTask::DoTask()
 		//}
 		//Sleep(150);
 		CKeyboard::KeyPress('J', 0);
-		Sleep(150);
+		if (Sleep(150))
+		{
+			return;
+		}
 		KeyPressE();
-		Sleep(100);
+		if (Sleep(100))
+		{
+			return;
+		}
 		//KeyPressF();
-		Sleep(150);
+		if (Sleep(150))
+		{
+			return;
+		}
 		CKeyboard::KeyPress('K', 0);
-		Sleep(300);
+		if (Sleep(150))
+		{
+			return;
+		}
 		KeyPressE();
 	}
 	else
@@ -113,7 +125,9 @@ void CwqTask::setParam(bool isR, bool isF, int32_t key, bool isLast)
 
 bool CwqTask::Sleep(int32_t sleepTime)
 {
-	return m_sleep.wait(sleepTime);
+	std::this_thread::sleep_for(std::chrono::microseconds(sleepTime * 1000));
+	return m_exit;
+	//return m_sleep.wait(sleepTime);
 }
 
 void CwqTask::KeyPressE()

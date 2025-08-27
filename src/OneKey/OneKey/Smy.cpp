@@ -22,6 +22,8 @@
 #include "Common.h"
 #include "SmySpaceTask.h"
 #include "CMouse/CMouseAPI.h"
+#include "CqswrTask.h"
+#include "D:\\SendToMessageTest.h"
 
 void Smy::mouse()
 {
@@ -44,13 +46,20 @@ void Smy::keyboard()
 		::PostMessage(g_config.m_hWnd, WM_DESTROY_HERO_HEAD, 0, 0);
 	}
 
+	bool superQ = false;
+
 	if (g_keyboard.m_keyDown['Q'])
 	{
+		if (g_keyboard.m_keyHasDown[CTRL])
+		{
+			g_config.m_superQ = true;
+		}
 		g_config.m_qKey = true;
 	}
 	else if (g_keyboard.m_keyDown['E'])
 	{
 		g_config.m_qKey = false;
+		g_config.m_superQ = false;
 		//CMouse::RightDown();
 		std::shared_ptr<CRightClickTask> spTask(new CRightClickTask);
 		spTask->setParam(false);
@@ -60,9 +69,11 @@ void Smy::keyboard()
 	if (g_keyboard.m_keyUp[SPACE])
 	{
 		g_config.m_taskThread->StopAllTask();
+		std::map<int32_t, int32_t> taskCountMap;
+		g_config.m_taskThread->GetWaitTaskInfo(taskCountMap);
 		g_config.m_code1 = 0;
 		g_config.m_code2 = 'C';
-		if (g_keyboard.m_keyWatch['Q'].GetWatchTime() > 3000)
+		if (g_keyboard.m_keyWatch['Q'].GetWatchTime() > 3000 && taskCountMap.size() == 1 && taskCountMap[1] == 3)
 		{
 			std::shared_ptr<SmySpaceTask> spTask(new SmySpaceTask);
 			g_config.m_taskThread->PostTask(spTask, 1);
@@ -114,7 +125,14 @@ void Smy::keyboard()
 
 		if (editIndex != -1)
 		{
-			if (g_keyboard.m_keyHasDown[CTRL])
+			if (g_config.m_superQ)
+			{
+				g_config.m_stopWatch.SetWatchTime(0);
+				std::shared_ptr<CqswrTask> spTask(new CqswrTask);
+				spTask->setParam(editIndex);
+				g_config.m_taskThread->PostTask(spTask, 1);
+			}
+			else if (g_keyboard.m_keyHasDown[CTRL])
 			{
 				g_config.m_stopWatch.SetWatchTime(0);
 				std::shared_ptr<CfwrTask> spTask(new CfwrTask);
