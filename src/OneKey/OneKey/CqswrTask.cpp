@@ -56,27 +56,43 @@ void CqswrTask::DoTask()
 			e = 'C' - 48;
 		}
 		CKeyboard::KeyPress(e + 48, 0);
-		if (Sleep(140))
+		if (g_config.m_isMain)
+		{
+			if (Sleep(10))
+			{
+				return;
+			}
+			CKeyboard::KeyPress('C', 0);
+		}
+		if (Sleep(150))
 		{
 			return;
 		}
 		CKeyboard::KeyPress('Z', 0);
-		if (Sleep(140))
+		if (Sleep(150))
 		{
 			return;
 		}
 		CKeyboard::KeyPress('J', 0);
-		if (Sleep(140))
+		if (Sleep(150))
 		{
 			return;
 		}
 		CKeyboard::KeyPress(e + 48, 0);
-		if (Sleep(190))
+		if (g_config.m_isMain)
+		{
+			if (Sleep(10))
+			{
+				return;
+			}
+			CKeyboard::KeyPress('C', 0);
+		}
+		if (Sleep(200))
 		{
 			return;
 		}
 		CKeyboard::KeyPress('L', 0);
-		if (Sleep(30))
+		if (Sleep(50))
 		{
 			return;
 		}
