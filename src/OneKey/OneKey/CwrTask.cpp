@@ -6,6 +6,7 @@
 
 void CwrTask::DoTask()
 {
+	return;
 	CKeyboard::KeyPress('H', 0);
 	Sleep(50);
 	CKeyboard::KeyDown('J');

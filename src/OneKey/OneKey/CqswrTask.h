@@ -22,6 +22,14 @@ public:
 
 	void setParam(uint32_t editIndex);
 
+	void V1();
+
+	void V2();
+
+	void V3();
+
+	void V4();
+
 private:
 	uint32_t m_editIndex;
 	Semaphore m_sleep;
