@@ -5,8 +5,18 @@
 #include "CMouseConfig/CMouseConfigAPI.h"
 #include "Config.h"
 
+CEscapeR::CEscapeR():
+m_exit(false)
+{
+
+}
+
 void CEscapeR::DoTask()
 {
+	if (m_exit)
+	{
+		return;
+	}
 	int32_t rWidth = 0;
 	int32_t rHeight = 0;
 	int32_t rUpHeight = 0;
@@ -116,4 +126,9 @@ void CEscapeR::DoTask()
 	{
 		CMouse::RightDown();
 	}
+}
+
+void CEscapeR::StopTask()
+{
+	m_exit = true;
 }

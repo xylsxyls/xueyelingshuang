@@ -75,12 +75,14 @@ void CqswrTask::V4()
 			return;
 		}
 		CMouse::RightUp();
-		CKeyboard::KeyPress('J', 0);
-		if (Sleep(10))
+		for (int index = 0; index < 6; ++index)
 		{
-			return;
+			if (Sleep(10))
+			{
+				return;
+			}
+			CKeyboard::KeyPress('J', 0);
 		}
-		CKeyboard::KeyPress('J', 0);
 		for (int index = 0; index < 10; ++index)
 		{
 			if (Sleep(10))
@@ -122,7 +124,7 @@ void CqswrTask::V4()
 			return;
 		}
 		CKeyboard::KeyDown('N');
-		if (Sleep(140))
+		if (Sleep(10))
 		{
 			return;
 		}

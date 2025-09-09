@@ -61,9 +61,9 @@ void Smy::keyboard()
 		g_config.m_qKey = false;
 		g_config.m_superQ = false;
 		//CMouse::RightDown();
-		std::shared_ptr<CRightClickTask> spTask(new CRightClickTask);
-		spTask->setParam(false);
-		g_config.m_taskThread->PostTask(spTask);
+		//std::shared_ptr<CRightClickTask> spTask(new CRightClickTask);
+		//spTask->setParam(false);
+		//g_config.m_taskThread->PostTask(spTask);
 	}
 
 	if (g_keyboard.m_keyUp[SPACE])
