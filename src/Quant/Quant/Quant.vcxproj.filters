@@ -62,6 +62,12 @@
     <ClCompile Include="Config.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="Util.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="RedisManager.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Quant.qrc">
@@ -85,6 +91,12 @@
       <Filter>receive</Filter>
     </ClInclude>
     <ClInclude Include="Config.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="Util.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="RedisManager.h">
       <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>

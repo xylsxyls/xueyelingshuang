@@ -21,6 +21,8 @@ CConfig::CConfig()
 #endif
 	m_currentExePath = CSystem::GetCurrentExePath();
 	m_computerName = CSystem::getComputerName();
+	m_iniDbPath = m_currentExePath;
+	m_dbPath = m_currentExePath;
 }
 
 CConfig& CConfig::instance()
