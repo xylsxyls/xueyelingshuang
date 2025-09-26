@@ -83,7 +83,7 @@ void CqswrTask::V4()
 			}
 			CKeyboard::KeyPress('Z', 0);
 		}
-		for (int index = 0; index < 8; ++index)
+		for (int index = 0; index < 9; ++index)
 		{
 			if (Sleep(10))
 			{
@@ -91,7 +91,7 @@ void CqswrTask::V4()
 			}
 			CKeyboard::KeyPress('J', 0);
 		}
-		if (Sleep(80))
+		if (Sleep(100))
 		{
 			return;
 		}
@@ -128,7 +128,7 @@ void CqswrTask::V4()
 			return;
 		}
 		CKeyboard::KeyDown('N');
-		if (Sleep(100))
+		if (Sleep(120))
 		{
 			return;
 		}
