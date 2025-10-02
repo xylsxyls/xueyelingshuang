@@ -94,7 +94,13 @@ public:
 
 	BigNumber pow(const BigNumber& powNum, int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
 
+	BigNumber sqrt(int32_t prec = 16, PrecFlag flag = HALF_ADJUST);
+
 	std::string toString() const;
+
+	int32_t toInt(PrecFlag flag = HALF_ADJUST) const;
+
+	double toDouble(PrecFlag flag = HALF_ADJUST) const;
 
 	/** 返回数若为除数，且为0时不崩溃，除后返回0，含有精度
 	*/

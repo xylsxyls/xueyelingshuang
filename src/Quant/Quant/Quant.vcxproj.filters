@@ -39,6 +39,18 @@
     <Filter Include="common">
       <UniqueIdentifier>{2f866242-e0a8-4bee-9834-bcb755d57838}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Quant">
+      <UniqueIdentifier>{b1abe1f5-3d5f-4776-bf86-b5345c7c3ddb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Strategy">
+      <UniqueIdentifier>{35fbd6da-22eb-4ef9-9069-bcedf3d81495}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Task">
+      <UniqueIdentifier>{fffb494f-f247-4353-83ba-6e1854479c78}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widget">
+      <UniqueIdentifier>{b4403149-c03c-4dc1-9d30-edf3a2cabaa7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -68,6 +80,48 @@
     <ClCompile Include="RedisManager.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="Market.cpp">
+      <Filter>Quant</Filter>
+    </ClCompile>
+    <ClCompile Include="Strategy.cpp">
+      <Filter>Quant</Filter>
+    </ClCompile>
+    <ClCompile Include="CompetitionManager.cpp">
+      <Filter>Quant</Filter>
+    </ClCompile>
+    <ClCompile Include="Fund.cpp">
+      <Filter>Quant</Filter>
+    </ClCompile>
+    <ClCompile Include="QuantStrategyManager.cpp">
+      <Filter>Quant</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_Display.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_Display.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_StrategyWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_StrategyWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="S1100B1400Strategy.cpp">
+      <Filter>Strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="StrategyTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="StrategyWidget.cpp">
+      <Filter>Widget</Filter>
+    </ClCompile>
+    <ClCompile Include="Display.cpp">
+      <Filter>Widget</Filter>
+    </ClCompile>
+    <ClCompile Include="AnalyzeTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Quant.qrc">
@@ -81,6 +135,12 @@
     </CustomBuild>
     <CustomBuild Include="Quant.h">
       <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="StrategyWidget.h">
+      <Filter>Widget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Display.h">
+      <Filter>Widget</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -98,6 +158,30 @@
     </ClInclude>
     <ClInclude Include="RedisManager.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="Market.h">
+      <Filter>Quant</Filter>
+    </ClInclude>
+    <ClInclude Include="Strategy.h">
+      <Filter>Quant</Filter>
+    </ClInclude>
+    <ClInclude Include="QuantStrategyManager.h">
+      <Filter>Quant</Filter>
+    </ClInclude>
+    <ClInclude Include="CompetitionManager.h">
+      <Filter>Quant</Filter>
+    </ClInclude>
+    <ClInclude Include="Fund.h">
+      <Filter>Quant</Filter>
+    </ClInclude>
+    <ClInclude Include="S1100B1400Strategy.h">
+      <Filter>Strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="StrategyTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="AnalyzeTask.h">
+      <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

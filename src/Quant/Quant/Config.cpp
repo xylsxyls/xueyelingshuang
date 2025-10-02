@@ -23,6 +23,7 @@ CConfig::CConfig()
 	m_computerName = CSystem::getComputerName();
 	m_iniDbPath = m_currentExePath;
 	m_dbPath = m_currentExePath;
+	m_cpuCoreCount = CSystem::GetCPUCoreCount();
 }
 
 CConfig& CConfig::instance()

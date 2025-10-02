@@ -7,6 +7,8 @@
 
 class COriginalButton;
 class ClientReceive;
+class Display;
+class CompetitionManager;
 
 class Quant : public QMainWindow
 {
@@ -30,6 +32,19 @@ private slots:
 	void onSaveFileClicked();
 	void onInitRedisClicked();
 	void onProfitClicked();
+	void onDisplayResultClicked();
+	void onAnalyzeClicked();
+
+private:
+	/** 初始化展示相关组件
+	*/
+	void initDisplay();
+
+	/** 显示所有策略结果
+	*/
+	void displayAllStrategies();
+
+	void startProgressMonitoring();
 
 private:
 	Ui::QuantClass ui;
@@ -40,8 +55,12 @@ private:
 	COriginalButton* m_saveFile;
 	COriginalButton* m_initRedis;
 	COriginalButton* m_profit;
+	COriginalButton* m_displayResult;
+	COriginalButton* m_analyze;
 	uint32_t m_allBeginTime;
 	uint32_t m_allEndTime;
+	// 新增：竞赛和展示相关成员
+	std::shared_ptr<Display> m_display;
 };
 
 #endif // QTTEST_H

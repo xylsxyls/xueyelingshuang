@@ -164,9 +164,34 @@ BigNumber BigNumber::pow(const BigNumber& powNum, int32_t prec, PrecFlag flag)
 	return result;
 }
 
+BigNumber BigNumber::sqrt(int32_t prec, PrecFlag flag)
+{
+	BigNumber result;
+	*result.m_base = m_base->pow(*((BigNumber(1) / 2).m_base), prec, (BigNumberBase::PrecFlag)flag);
+#ifdef _DEBUG
+	m_num = toString();
+#endif
+	return result;
+}
+
 std::string BigNumber::toString() const
 {
 	return m_base->toString();
+}
+
+int32_t BigNumber::toInt(PrecFlag flag) const
+{
+	BigNumber result = *this;
+	result.setPrec(0, flag);
+	return atoi(result.toString().c_str());
+}
+
+double BigNumber::toDouble(PrecFlag flag) const
+{
+	BigNumber result = *this;
+	result.setPrec(16, flag);
+	char* end = nullptr;
+	return strtod(result.toString().c_str(), &end);
 }
 
 BigNumber BigNumber::zero() const

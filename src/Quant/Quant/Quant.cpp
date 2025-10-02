@@ -15,6 +15,22 @@
 #include "Util.h"
 #include "Cini/CiniAPI.h"
 #include "RedisManager.h"
+#include "Market.h"
+#include "CompetitionManager.h"
+#include "QuantStrategyManager.h"
+#include "Strategy.h"
+#include "Fund.h"
+#include <QMessageBox>
+#include <QScrollArea>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QGridLayout>
+#include <QLabel>
+#include <QMessageBox>
+#include "Display.h"
+#include "CSystem/CSystemAPI.h"
+#include "Ctxt/CtxtAPI.h"
+#include "AnalyzeTask.h"
 
 Quant::Quant(QWidget* parent):
 	QMainWindow(parent),
@@ -28,12 +44,15 @@ Quant::Quant(QWidget* parent):
 	m_saveFile = new COriginalButton(this);
 	m_initRedis = new COriginalButton(this);
 	m_profit = new COriginalButton(this);
+	m_displayResult = new COriginalButton(this);
+	m_analyze = new COriginalButton(this);
 	init();
 }
 
 Quant::~Quant()
 {
-
+	// 清理资源
+	CompetitionManager::instance().uninit();
 }
 
 void Quant::init()
@@ -90,6 +109,26 @@ void Quant::init()
 	m_profit->setText(QStringLiteral("profit"));
 	m_profit->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	QObject::connect(m_profit, &COriginalButton::clicked, this, &Quant::onProfitClicked);
+
+	m_displayResult->setText(QStringLiteral("display_result"));
+	m_displayResult->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_displayResult, &COriginalButton::clicked, this, &Quant::onDisplayResultClicked);
+
+	m_analyze->setText(QStringLiteral("analyze"));
+	m_analyze->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	QObject::connect(m_analyze, &COriginalButton::clicked, this, &Quant::onAnalyzeClicked);
+
+	// 初始化竞赛管理器
+	if (!CompetitionManager::instance().init(8)) // 使用8个线程
+	{
+		RCSend("竞赛管理器初始化失败");
+		return;
+	}
+
+	// 初始化展示类
+	m_display = std::make_shared<Display>();
+
+	RCSend("量化回测系统初始化完成");
 }
 
 bool Quant::check()
@@ -114,6 +153,8 @@ void Quant::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_saveFile);
 	vecButton.push_back(m_initRedis);
 	vecButton.push_back(m_profit);
+	vecButton.push_back(m_displayResult);
+	vecButton.push_back(m_analyze);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -398,8 +439,296 @@ void Quant::onInitRedisClicked()
 
 void Quant::onProfitClicked()
 {
-	std::string stock = "600975";
-	std::vector<std::vector<int32_t>> vecData = Util::getAllStockData(stock, m_allBeginTime, m_allEndTime);
+	RCSend("开始策略竞赛...");
+
+	// 创建市场数据
+	auto marketData = std::make_shared<Market>();
+	marketData->init(20250501, 20250701);
+	marketData->addStock("600975");
+
+	// 创建竞赛配置
+	CompetitionConfig config;
+	config.beginTime = 20250501;
+	config.endTime = 20250701;
+	config.stocks = { "600975" };
+	config.marketData = marketData;
+	config.initialFund = 1000000; // 100万初始资金
+
+	// 生成策略参数组合
+	std::vector<std::vector<int32_t>> allParams;
+
+	// 卖出时间点：0=10:40, 1=10:50, 2=11:00
+	// 买入时间点：0=13:40, 1=13:50, 2=14:00  
+	// 反追参数：7,8,9
+	// 降价参数：1,2,3
+	for (int sellTime = 0; sellTime < 3; ++sellTime)
+	{
+		for (int buyTime = 0; buyTime < 3; ++buyTime)
+		{
+			for (int chaseParam = 7; chaseParam <= 9; ++chaseParam)
+			{
+				for (int discountParam = 1; discountParam <= 3; ++discountParam)
+				{
+					std::vector<int32_t> params = {
+						sellTime,      // 卖出时间点索引
+						buyTime,       // 买入时间点索引  
+						chaseParam,    // 反追参数
+						discountParam  // 降价参数
+					};
+					allParams.push_back(params);
+				}
+			}
+		}
+	}
+
+	RCSend("生成了 %d 种策略参数组合", allParams.size());
+
+	// 开始竞赛
+	if (CompetitionManager::instance().startCompetition(config, StrategyMode::S1100B1400, allParams))
+	{
+		RCSend("策略竞赛已开始，正在多线程执行 %d 个小策略", allParams.size());
+
+		// 启动进度监控
+		startProgressMonitoring();
+	}
+	else
+	{
+		RCSend("策略竞赛启动失败");
+	}
+}
+
+void Quant::onDisplayResultClicked()
+{
+	if (!CompetitionManager::instance().isCompleted())
+	{
+		RCSend("竞赛尚未完成，请等待竞赛结束后再查看结果");
+		return;
+	}
+
+	if (!m_display)
+	{
+		RCSend("展示组件未初始化");
+		return;
+	}
+
+	RCSend("开始展示竞赛结果...");
+
+	displayAllStrategies();
+
+	RCSend("竞赛结果展示完成");
+}
+
+void Quant::onAnalyzeClicked()
+{
+	//std::map<std::string, std::map<int, std::vector<PriceInfo>>> analyzeInfo;
+	std::vector<uint32_t> vecThreadIds;
+	int32_t threadIdIndex = -1;
+	while (threadIdIndex++ != g_config.m_cpuCoreCount * 2 - 1)
+	{
+		vecThreadIds.push_back(CTaskThreadManager::Instance().Init());
+	}
+	threadIdIndex = -1;
+	
+	std::vector<std::string> vecStock = { "600975" };
+	for (size_t stockIndex = 0; stockIndex < vecStock.size(); ++stockIndex)
+	{
+		const std::string& stock = vecStock[stockIndex];
+		std::vector<std::string> vecFilePath = CSystem::findFilePath("D:\\stock\\" + stock, 2, "txt");
+		for (size_t index = 0; index < vecFilePath.size(); ++index)
+		{
+			RCSend("index = %d", index);
+			const std::string& filePath = vecFilePath[index];
+			std::shared_ptr<AnalyzeTask> spTask(new AnalyzeTask);
+			spTask->setParam(filePath);
+			++threadIdIndex;
+			uint32_t threadId = vecThreadIds[threadIdIndex % (g_config.m_cpuCoreCount * 2)];
+			CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spTask);
+		}
+	}
+	threadIdIndex = -1;
+	while (threadIdIndex++ != g_config.m_cpuCoreCount * 2 - 1)
+	{
+		CTaskThreadManager::Instance().WaitForEnd(vecThreadIds[threadIdIndex]);
+	}
 	
 	int x = 3;
+}
+
+void Quant::startProgressMonitoring()
+{
+	// 创建一个定时器来监控竞赛进度
+	QTimer* progressTimer = new QTimer(this);
+	connect(progressTimer, &QTimer::timeout, this, [this, progressTimer]() {
+		int progress = CompetitionManager::instance().getProgress();
+		RCSend("竞赛进度: %d%%", progress);
+
+		// 更新进度条或其他UI元素
+		// ui.progressBar->setValue(progress);
+
+		if (progress >= 100 || !CompetitionManager::instance().isRunning())
+		{
+			progressTimer->stop();
+			progressTimer->deleteLater();
+
+			if (CompetitionManager::instance().isCompleted())
+			{
+				RCSend("策略竞赛已完成");
+
+				// 自动显示结果（可选）
+				// onDisplayResultClicked();
+			}
+			else
+			{
+				RCSend("策略竞赛被中断");
+			}
+		}
+	});
+
+	progressTimer->start(1000); // 每秒更新一次进度
+}
+
+void Quant::displayAllStrategies()
+{
+	if (!m_display)
+	{
+		QMessageBox::warning(this, "错误", "展示组件未正确初始化");
+		return;
+	}
+
+	// 获取竞赛结果
+	CompetitionFinalResult result = CompetitionManager::instance().getFinalResult();
+
+	// 设置结果到展示类
+	m_display->setCompetitionResult(result);
+
+	// 创建展示窗口
+	QWidget* displayWindow = new QWidget(this);
+	displayWindow->setWindowTitle("量化策略回测结果");
+	displayWindow->resize(1000, 700);
+
+	// 创建滚动区域
+	QScrollArea* scrollArea = new QScrollArea(displayWindow);
+	scrollArea->setWidgetResizable(true);
+
+	// 创建滚动内容
+	QWidget* scrollContent = new QWidget(scrollArea);
+	QVBoxLayout* mainLayout = new QVBoxLayout(scrollContent);
+
+	// 添加标题
+	QLabel* titleLabel = new QLabel("策略竞赛结果汇总", scrollContent);
+	titleLabel->setStyleSheet("font-size: 20px; font-weight: bold; margin: 10px;");
+	mainLayout->addWidget(titleLabel);
+
+	// 添加统计信息
+	QLabel* statsLabel = new QLabel(
+		QString("总策略数: %1, 完成策略数: %2, 最佳收益率: %3%, 平均收益率: %4%")
+		.arg(result.totalStrategies)
+		.arg(result.completedStrategies)
+		.arg(result.bestReturn.toDouble() * 100, 0, 'f', 2)
+		.arg(result.averageReturn.toDouble() * 100, 0, 'f', 2),
+		scrollContent);
+	statsLabel->setStyleSheet("font-size: 14px; margin: 10px;");
+	mainLayout->addWidget(statsLabel);
+
+	// 创建策略展示网格
+	QGridLayout* gridLayout = new QGridLayout();
+	int columns = 2; // 每行2个策略窗口
+
+	// 为每个策略创建展示部件
+	for (size_t i = 0; i < result.rankedResults.size(); ++i)
+	{
+		// 创建策略展示框架
+		QFrame* strategyFrame = new QFrame(scrollContent);
+		strategyFrame->setFrameStyle(QFrame::Box);
+		strategyFrame->setLineWidth(1);
+		strategyFrame->setFixedSize(480, 200);
+
+		QVBoxLayout* frameLayout = new QVBoxLayout(strategyFrame);
+
+		// 排名和参数
+		QLabel* rankLabel = new QLabel(
+			QString("排名: %1").arg(i + 1), strategyFrame);
+		rankLabel->setStyleSheet("font-weight: bold; font-size: 16px;");
+		frameLayout->addWidget(rankLabel);
+
+		QString paramsText = "参数: ";
+		for (size_t j = 0; j < result.rankedResults[i].params.size(); ++j)
+		{
+			paramsText += QString::number(result.rankedResults[i].params[j]);
+			if (j < result.rankedResults[i].params.size() - 1)
+			{
+				paramsText += ", ";
+			}
+		}
+		QLabel* paramsLabel = new QLabel(paramsText, strategyFrame);
+		frameLayout->addWidget(paramsLabel);
+
+		// 关键指标
+		QGridLayout* metricsLayout = new QGridLayout();
+
+		QLabel* returnLabel = new QLabel(
+			QString("收益率: %1%").arg(result.rankedResults[i].totalReturn.toDouble() * 100, 0, 'f', 2),
+			strategyFrame);
+		QLabel* annualLabel = new QLabel(
+			QString("年化: %1%").arg(result.rankedResults[i].annualReturn.toDouble() * 100, 0, 'f', 2),
+			strategyFrame);
+		QLabel* drawdownLabel = new QLabel(
+			QString("回撤: %1%").arg(result.rankedResults[i].maxDrawdown.toDouble() * 100, 0, 'f', 2),
+			strategyFrame);
+		QLabel* winRateLabel = new QLabel(
+			QString("胜率: %1%").arg(result.rankedResults[i].winRate.toDouble() * 100, 0, 'f', 2),
+			strategyFrame);
+		QLabel* healthLabel = new QLabel(
+			QString("健康值: %1").arg(result.rankedResults[i].healthScore.toDouble(), 0, 'f', 1),
+			strategyFrame);
+
+		// 设置颜色
+		if (result.rankedResults[i].totalReturn.toDouble() >= 0)
+		{
+			returnLabel->setStyleSheet("color: green; font-weight: bold;");
+		}
+		else
+		{
+			returnLabel->setStyleSheet("color: red; font-weight: bold;");
+		}
+
+		if (result.rankedResults[i].healthScore.toDouble() >= 80)
+		{
+			healthLabel->setStyleSheet("color: green; font-weight: bold;");
+		}
+		else if (result.rankedResults[i].healthScore.toDouble() >= 60)
+		{
+			healthLabel->setStyleSheet("color: orange; font-weight: bold;");
+		}
+		else
+		{
+			healthLabel->setStyleSheet("color: red; font-weight: bold;");
+		}
+
+		metricsLayout->addWidget(returnLabel, 0, 0);
+		metricsLayout->addWidget(annualLabel, 0, 1);
+		metricsLayout->addWidget(drawdownLabel, 1, 0);
+		metricsLayout->addWidget(winRateLabel, 1, 1);
+		metricsLayout->addWidget(healthLabel, 2, 0, 1, 2);
+
+		frameLayout->addLayout(metricsLayout);
+
+		// 添加到网格布局
+		int row = i / columns;
+		int col = i % columns;
+		gridLayout->addWidget(strategyFrame, row, col);
+	}
+
+	mainLayout->addLayout(gridLayout);
+	mainLayout->addStretch();
+
+	// 设置滚动内容
+	scrollArea->setWidget(scrollContent);
+
+	// 设置主布局
+	QVBoxLayout* windowLayout = new QVBoxLayout(displayWindow);
+	windowLayout->addWidget(scrollArea);
+
+	// 显示窗口
+	displayWindow->show();
 }

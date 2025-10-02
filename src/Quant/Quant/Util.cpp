@@ -117,3 +117,86 @@ std::vector<std::vector<int32_t>> Util::getAllStockData(const std::string& stock
 	}
 	return vecResult;
 }
+
+int32_t Util::getOverallIndex(Overall overall)
+{
+	return static_cast<int32_t>(overall);
+}
+
+Overall Util::getOverallFromIndex(int32_t index)
+{
+	if (index >= 0 && index < static_cast<int32_t>(Overall::COUNT))
+	{
+		return static_cast<Overall>(index);
+	}
+	return Overall::COUNT;
+}
+
+int32_t Util::getObserveTimeIndex(ObserveTime observeTime)
+{
+	return static_cast<int32_t>(observeTime);
+}
+
+ObserveTime Util::getObserveTimeFromIndex(int32_t index)
+{
+	if (index >= 0 && index < static_cast<int32_t>(ObserveTime::COUNT))
+	{
+		return static_cast<ObserveTime>(index);
+	}
+	return ObserveTime::COUNT;
+}
+
+int32_t Util::getPriceMatrixIndex(ObserveTime observeTime, RangeTime rangeTime, TransType transType)
+{
+	int32_t observeIndex = static_cast<int32_t>(observeTime);
+	int32_t rangeIndex = static_cast<int32_t>(rangeTime);
+	int32_t transIndex = static_cast<int32_t>(transType);
+
+	// 三维展平公式: index = observeIndex * (RangeTime::COUNT * TransType::COUNT) + 
+	//                  rangeIndex * TransType::COUNT + transIndex
+	return observeIndex * (static_cast<int32_t>(RangeTime::COUNT) * static_cast<int32_t>(TransType::COUNT)) +
+		rangeIndex * static_cast<int32_t>(TransType::COUNT) +
+		transIndex;
+}
+
+bool Util::getEnumsFromPriceIndex(int32_t index, ObserveTime& observeTime, RangeTime& rangeTime, TransType& transType)
+{
+	int32_t totalPriceElements = static_cast<int32_t>(ObserveTime::COUNT) *
+		static_cast<int32_t>(RangeTime::COUNT) *
+		static_cast<int32_t>(TransType::COUNT);
+
+	if (index < 0 || index >= totalPriceElements)
+	{
+		observeTime = ObserveTime::COUNT;
+		rangeTime = RangeTime::COUNT;
+		transType = TransType::COUNT;
+		return false;
+	}
+
+	int32_t transCount = static_cast<int32_t>(TransType::COUNT);
+	int32_t rangeCount = static_cast<int32_t>(RangeTime::COUNT);
+
+	// 反向计算三维坐标
+	int32_t observeIndex = index / (rangeCount * transCount);
+	int32_t remainder = index % (rangeCount * transCount);
+	int32_t rangeIndex = remainder / transCount;
+	int32_t transIndex = remainder % transCount;
+
+	observeTime = static_cast<ObserveTime>(observeIndex);
+	rangeTime = static_cast<RangeTime>(rangeIndex);
+	transType = static_cast<TransType>(transIndex);
+
+	return (observeTime != ObserveTime::COUNT) &&
+		(rangeTime != RangeTime::COUNT) &&
+		(transType != TransType::COUNT);
+}
+
+int32_t Util::getTotalFieldCount()
+{
+	// 总字段数 = Overall数量 + ObserveTime数量 + 三维矩阵数量
+	return static_cast<int32_t>(Overall::COUNT) +
+		static_cast<int32_t>(ObserveTime::COUNT) +
+		(static_cast<int32_t>(ObserveTime::COUNT) *
+		static_cast<int32_t>(RangeTime::COUNT) *
+		static_cast<int32_t>(TransType::COUNT));
+}

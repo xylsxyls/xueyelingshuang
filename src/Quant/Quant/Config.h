@@ -11,6 +11,7 @@ struct CConfig
 	std::string m_computerName;
 	std::string m_iniDbPath;
 	std::string m_dbPath;
+	int32_t m_cpuCoreCount;
 
 protected:
 	CConfig();
@@ -32,7 +33,7 @@ enum class RangeTime
 	RANGE10,
 	RANGE20,
 	RANGE30,
-	RANGEEND,
+	RANGENEXT,
 	COUNT
 };
 
@@ -55,5 +56,11 @@ enum class Overall
 	DATE,
 	OPEN,
 	CLOSE,
+	COUNT
+};
+
+enum class StrategyMode
+{
+	S1100B1400,
 	COUNT
 };

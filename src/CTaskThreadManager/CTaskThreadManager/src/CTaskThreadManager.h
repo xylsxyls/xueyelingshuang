@@ -28,7 +28,7 @@ public:
 	//windows下不要在动态库的全局变量包含全局变量的构造函数中执行，会在std::thread创建处卡死，在linux下，换成CreateThread，exe中创建，编译成静态库，都不会有问题
 	uint32_t Init();
 
-	/* 阻塞等待线程结束
+	/* 阻塞等待线程结束，放入的线程在执行完任务后会自动销毁
 	@param [in] threadId 线程ID
 	*/
 	void WaitForEnd(uint32_t threadId);
