@@ -210,7 +210,8 @@ void WzCommon::keyboard()
 	}
 	if (g_config.m_type != g_config.nameType(ZK) &&
 		g_config.m_type != g_config.nameType(SMY) &&
-		g_config.m_type != g_config.nameType(BLSY))
+		g_config.m_type != g_config.nameType(BLSY) &&
+		g_config.m_type != g_config.nameType(ZGL))
 	{
 		if (g_keyboard.m_keyDown['R'])
 		{
