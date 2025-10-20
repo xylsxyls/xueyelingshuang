@@ -118,6 +118,78 @@ std::vector<std::vector<int32_t>> Util::getAllStockData(const std::string& stock
 	return vecResult;
 }
 
+std::string Util::observeTimeToString(ObserveTime time)
+{
+	switch (time)
+	{
+	case ObserveTime::TIME0930:
+		return "time0930";
+	case ObserveTime::TIME1040:
+		return "time1040";
+	case ObserveTime::TIME1050:
+		return "time1050";
+	case ObserveTime::TIME1100:
+		return "time1100";
+	case ObserveTime::TIME1110:
+		return "time1110";
+	case ObserveTime::TIME1340:
+		return "time1340";
+	case ObserveTime::TIME1350:
+		return "time1350";
+	case ObserveTime::TIME1400:
+		return "time1400";
+	case ObserveTime::TIME1410:
+		return "time1410";
+	default:
+		break;
+	}
+	return "";
+}
+
+int32_t Util::getTimeValue(ObserveTime time)
+{
+	switch (time)
+	{
+	case ObserveTime::TIME0930:
+		return 930;
+	case ObserveTime::TIME1040:
+		return 1040;
+	case ObserveTime::TIME1050:
+		return 1050;
+	case ObserveTime::TIME1100:
+		return 1100;
+	case ObserveTime::TIME1110:
+		return 1110;
+	case ObserveTime::TIME1340:
+		return 1340;
+	case ObserveTime::TIME1350:
+		return 1350;
+	case ObserveTime::TIME1400:
+		return 1400;
+	case ObserveTime::TIME1410:
+		return 1410;
+	case ObserveTime::COUNT:
+		return 1500;
+	default:
+		return -1;  // 无效时间
+	}
+}
+
+int32_t Util::getRangeValue(RangeTime range)
+{
+	switch (range)
+	{
+	case RangeTime::RANGE10:
+		return 10;
+	case RangeTime::RANGE20:
+		return 20;
+	case RangeTime::RANGE30:
+		return 30;
+	default:
+		return -1;  // 无效时间
+	}
+}
+
 int32_t Util::getOverallIndex(Overall overall)
 {
 	return static_cast<int32_t>(overall);

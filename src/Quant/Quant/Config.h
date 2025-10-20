@@ -12,6 +12,8 @@ struct CConfig
 	std::string m_iniDbPath;
 	std::string m_dbPath;
 	int32_t m_cpuCoreCount;
+	int32_t m_normalShares;
+	int32_t m_ignoreTrans;
 
 protected:
 	CConfig();

@@ -14,6 +14,12 @@ public:
 
 	static std::vector<std::vector<int32_t>> getAllStockData(const std::string& stock, uint32_t beginTime, uint32_t endTime);
 
+	static std::string observeTimeToString(ObserveTime time);
+
+	static int32_t getTimeValue(ObserveTime time);
+
+	static int32_t getRangeValue(RangeTime range);
+
 	/** 根据Overall枚举值获取对应的行情数组下标值
 	@param [in] overall Overall枚举值
 	@return 返回对应的数组下标值

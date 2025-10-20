@@ -24,6 +24,8 @@ CConfig::CConfig()
 	m_iniDbPath = m_currentExePath;
 	m_dbPath = m_currentExePath;
 	m_cpuCoreCount = CSystem::GetCPUCoreCount();
+	m_normalShares = 1000;
+	m_ignoreTrans = 2;
 }
 
 CConfig& CConfig::instance()

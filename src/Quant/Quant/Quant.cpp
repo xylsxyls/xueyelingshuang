@@ -521,17 +521,19 @@ void Quant::onDisplayResultClicked()
 void Quant::onAnalyzeClicked()
 {
 	//std::map<std::string, std::map<int, std::vector<PriceInfo>>> analyzeInfo;
-	std::vector<uint32_t> vecThreadIds;
-	int32_t threadIdIndex = -1;
-	while (threadIdIndex++ != g_config.m_cpuCoreCount * 2 - 1)
-	{
-		vecThreadIds.push_back(CTaskThreadManager::Instance().Init());
-	}
-	threadIdIndex = -1;
 	
 	std::vector<std::string> vecStock = { "600975" };
 	for (size_t stockIndex = 0; stockIndex < vecStock.size(); ++stockIndex)
 	{
+		std::vector<uint32_t> vecThreadIds;
+		int32_t threadIdIndex = -1;
+		while (threadIdIndex++ != g_config.m_cpuCoreCount * 2 - 1)
+		{
+			vecThreadIds.push_back(CTaskThreadManager::Instance().Init());
+		}
+		threadIdIndex = -1;
+		LockFreeQueue<std::vector<int>> queue;
+
 		const std::string& stock = vecStock[stockIndex];
 		std::vector<std::string> vecFilePath = CSystem::findFilePath("D:\\stock\\" + stock, 2, "txt");
 		for (size_t index = 0; index < vecFilePath.size(); ++index)
@@ -539,16 +541,63 @@ void Quant::onAnalyzeClicked()
 			RCSend("index = %d", index);
 			const std::string& filePath = vecFilePath[index];
 			std::shared_ptr<AnalyzeTask> spTask(new AnalyzeTask);
-			spTask->setParam(filePath);
+			spTask->setParam(filePath, &queue);
 			++threadIdIndex;
 			uint32_t threadId = vecThreadIds[threadIdIndex % (g_config.m_cpuCoreCount * 2)];
 			CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spTask);
 		}
-	}
-	threadIdIndex = -1;
-	while (threadIdIndex++ != g_config.m_cpuCoreCount * 2 - 1)
-	{
-		CTaskThreadManager::Instance().WaitForEnd(vecThreadIds[threadIdIndex]);
+
+		threadIdIndex = -1;
+		while (threadIdIndex++ != g_config.m_cpuCoreCount * 2 - 1)
+		{
+			CTaskThreadManager::Instance().WaitForEnd(vecThreadIds[threadIdIndex]);
+		}
+
+		Cini ini(g_config.m_currentExePath + stock + ".ini", true);
+		std::vector<std::string> strAllDay = ini.getAllSection();
+		std::vector<int> allDay = Util::groupToInt(strAllDay);
+		std::map<int, std::vector<int>> dayMap;
+		std::vector<int> dayInfo;
+		while (queue.pop(&dayInfo))
+		{
+			if (dayInfo.empty())
+			{
+				continue;
+			}
+			dayMap[dayInfo[0]] = dayInfo;
+		}
+		for (auto itDay = dayMap.begin(); itDay != dayMap.end(); ++itDay)
+		{
+			int32_t day = itDay->first;
+			std::string sectionDay = "date" + std::to_string(day);
+			auto it = std::find(allDay.begin(), allDay.end(), day);
+			if (it != allDay.end())
+			{
+				ini.deleteSection(sectionDay);
+			}
+			ini.writeIni("open", std::to_string(dayInfo[1]), sectionDay);
+			ini.writeIni("close", std::to_string(dayInfo[2]), sectionDay);
+			std::string observeStr;
+			
+			int32_t count = (int32_t)ObserveTime::COUNT * (int32_t)RangeTime::COUNT * (int32_t)TransType::COUNT;
+			for (int32_t timeIndex = (int32_t)ObserveTime::TIME0930; timeIndex < (int32_t)ObserveTime::COUNT; ++timeIndex)
+			{
+				observeStr += std::to_string(dayInfo[(int32_t)Overall::COUNT + timeIndex]) + ",";
+				int32_t index = -1;
+				while (index++ != count - 1)
+				{
+					observeStr += std::to_string(dayInfo[(int32_t)Overall::COUNT + (int32_t)ObserveTime::COUNT + index]) + ",";
+				}
+				std::string timeStr = Util::observeTimeToString((ObserveTime)timeIndex);
+				
+				if (timeStr.empty() || observeStr.empty())
+				{
+					continue;
+				}
+				observeStr.pop_back();
+				ini.writeIni(timeStr, observeStr, sectionDay);
+			}
+		}
 	}
 	
 	int x = 3;
