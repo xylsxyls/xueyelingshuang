@@ -18,8 +18,8 @@ m_isCompleted(false)
 
 CompetitionManager& CompetitionManager::instance()
 {
-	static CompetitionManager manager;
-	return manager;
+	static CompetitionManager s_competitionManager;
+	return s_competitionManager;
 }
 
 CompetitionManager::~CompetitionManager()

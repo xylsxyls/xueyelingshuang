@@ -26,19 +26,36 @@ void Util::getAllIndex(uint32_t allIndex, uint32_t& observeIndex, uint32_t& rang
 	transIndex = remainder % transStep;
 }
 
-std::vector<int32_t> Util::groupToInt(const std::vector<std::string>& vecGroup)
+std::vector<int32_t> Util::groupToInt(const std::vector<std::string>& vecGroup, int32_t origin)
 {
 	std::vector<int32_t> result;
 	result.reserve(vecGroup.size());
-	std::transform(vecGroup.begin(), vecGroup.end(), std::back_inserter(result), [](const std::string& str)
+	std::transform(vecGroup.begin(), vecGroup.end(), std::back_inserter(result), [origin](const std::string& str)
 	{
-		if (str.size() <= 8)
+		if (str.size() <= (size_t)origin)
 		{
 			return 0;
 		}
-		return std::atoi(str.substr(8, str.length() - 8).c_str());
+		return std::atoi(str.substr((size_t)origin, str.length() - (size_t)origin).c_str());
 	});
 	return result;
+}
+
+std::string Util::transYuan(int32_t amount)
+{
+	if (amount < 0) {
+		return "0";
+	}
+
+	std::string amountStr = std::to_string(amount);
+
+	if (amountStr.length() < 3) {
+		amountStr.insert(0, 3 - amountStr.length(), '0');
+	}
+
+	amountStr.insert(amountStr.length() - 2, 1, '.');
+
+	return amountStr;
 }
 
 std::vector<std::string> Util::allField(bool isCreate)
@@ -77,14 +94,14 @@ std::vector<std::vector<int32_t>> Util::getAllStockData(const std::string& stock
 	{
 		std::string groupName = stock + ":overall_" + std::to_string(overallIndex);
 		std::vector<std::string> group = redis.getOrderGroupByScore(groupName, beginTime, endTime)->toGroup();
-		std::vector<int32_t> vecGroup = Util::groupToInt(group);
+		std::vector<int32_t> vecGroup = Util::groupToInt(group, 8);
 		stockPrice.push_back(vecGroup);
 	}
 	for (uint32_t observeIndex = 0; observeIndex < (uint32_t)ObserveTime::COUNT; ++observeIndex)
 	{
 		std::string groupName = stock + ":observe_" + std::to_string(observeIndex);
 		std::vector<std::string> group = redis.getOrderGroupByScore(groupName, beginTime, endTime)->toGroup();
-		std::vector<int32_t> vecGroup = Util::groupToInt(group);
+		std::vector<int32_t> vecGroup = Util::groupToInt(group, 8);
 		stockPrice.push_back(vecGroup);
 	}
 	for (uint32_t observeIndex = 0; observeIndex < (uint32_t)ObserveTime::COUNT; ++observeIndex)
@@ -96,7 +113,7 @@ std::vector<std::vector<int32_t>> Util::getAllStockData(const std::string& stock
 				std::string groupName = CStringManager::Format("%s:price_%d_%d_%d",
 					stock.c_str(), observeIndex, rangeIndex, transIndex);
 				std::vector<std::string> group = redis.getOrderGroupByScore(groupName, beginTime, endTime)->toGroup();
-				std::vector<int32_t> vecGroup = Util::groupToInt(group);
+				std::vector<int32_t> vecGroup = Util::groupToInt(group, 8);
 				stockPrice.push_back(vecGroup);
 			}
 		}
@@ -144,6 +161,50 @@ std::string Util::observeTimeToString(ObserveTime time)
 		break;
 	}
 	return "";
+}
+
+ObserveTime Util::observeStringToTime(const std::string& strTime)
+{
+	if (strTime == "time0930")
+	{
+		return ObserveTime::TIME0930;
+	}
+	else if (strTime == "time1040")
+	{
+		return ObserveTime::TIME1040;
+	}
+	else if (strTime == "time1050")
+	{
+		return ObserveTime::TIME1050;
+	}
+	else if (strTime == "time1100")
+	{
+		return ObserveTime::TIME1100;
+	}
+	else if (strTime == "time1110")
+	{
+		return ObserveTime::TIME1110;
+	}
+	else if (strTime == "time1340")
+	{
+		return ObserveTime::TIME1340;
+	}
+	else if (strTime == "time1350")
+	{
+		return ObserveTime::TIME1350;
+	}
+	else if (strTime == "time1400")
+	{
+		return ObserveTime::TIME1400;
+	}
+	else if (strTime == "time1410")
+	{
+		return ObserveTime::TIME1410;
+	}
+	else
+	{
+		return ObserveTime::COUNT;
+	}
 }
 
 int32_t Util::getTimeValue(ObserveTime time)

@@ -283,58 +283,23 @@ void Quant::onSaveFileClicked()
 				}
 				else
 				{
-					ObserveTime observeTime;
-					if (key == "time0930")
-					{
-						observeTime = ObserveTime::TIME0930;
-					}
-					else if (key == "time1040")
-					{
-						observeTime = ObserveTime::TIME1040;
-					}
-					else if (key == "time1050")
-					{
-						observeTime = ObserveTime::TIME1050;
-					}
-					else if (key == "time1100")
-					{
-						observeTime = ObserveTime::TIME1100;
-					}
-					else if (key == "time1110")
-					{
-						observeTime = ObserveTime::TIME1110;
-					}
-					else if (key == "time1340")
-					{
-						observeTime = ObserveTime::TIME1340;
-					}
-					else if (key == "time1350")
-					{
-						observeTime = ObserveTime::TIME1350;
-					}
-					else if (key == "time1400")
-					{
-						observeTime = ObserveTime::TIME1400;
-					}
-					else if (key == "time1410")
-					{
-						observeTime = ObserveTime::TIME1410;
-					}
-					else
+					ObserveTime observeTime = Util::observeStringToTime(key);
+					if (observeTime == ObserveTime::COUNT)
 					{
 						continue;
 					}
-					std::vector<std::string> vecPrice = CStringManager::split(ini.readIni(key, section), ",");
+					std::vector<std::string> vecPrice = CStringManager::split(
+						CStringManager::Replace(ini.readIni(key, section).c_str(), ".", ""), ",");
 					if (vecPrice.empty())
 					{
 						continue;
 					}
-					dateInfo[(uint32_t)Overall::COUNT + (uint32_t)observeTime] = (int32_t)(atof(vecPrice[0].c_str()) * 100);
+					dateInfo[(uint32_t)Overall::COUNT + (uint32_t)observeTime] = atoi(vecPrice[0].c_str());
 					for (uint32_t priceIndex = 1; priceIndex < vecPrice.size(); ++priceIndex)
 					{
 						dateInfo[(uint32_t)Overall::COUNT + (uint32_t)ObserveTime::COUNT +
 							(uint32_t)observeTime * (uint32_t)RangeTime::COUNT * (uint32_t)TransType::COUNT +
-							priceIndex - 1] = (int32_t)(atof(vecPrice[priceIndex].c_str()) * 100);
+							priceIndex - 1] = atoi(vecPrice[priceIndex].c_str());
 					}
 				}
 			}
@@ -435,15 +400,18 @@ void Quant::onInitRedisClicked()
 			}
 		}
 	}
+	RCSend("init redis success");
 }
 
 void Quant::onProfitClicked()
 {
 	RCSend("开始策略竞赛...");
 
+	std::vector<std::vector<int32_t>> result = Util::getAllStockData("600975", 20250501, 20251010);
+
 	// 创建市场数据
 	auto marketData = std::make_shared<Market>();
-	marketData->init(20250501, 20250701);
+	marketData->init(20250701, 20250930);
 	marketData->addStock("600975");
 
 	// 创建竞赛配置
@@ -520,8 +488,6 @@ void Quant::onDisplayResultClicked()
 
 void Quant::onAnalyzeClicked()
 {
-	//std::map<std::string, std::map<int, std::vector<PriceInfo>>> analyzeInfo;
-	
 	std::vector<std::string> vecStock = { "600975" };
 	for (size_t stockIndex = 0; stockIndex < vecStock.size(); ++stockIndex)
 	{
@@ -555,9 +521,9 @@ void Quant::onAnalyzeClicked()
 
 		Cini ini(g_config.m_currentExePath + stock + ".ini", true);
 		std::vector<std::string> strAllDay = ini.getAllSection();
-		std::vector<int> allDay = Util::groupToInt(strAllDay);
-		std::map<int, std::vector<int>> dayMap;
-		std::vector<int> dayInfo;
+		std::vector<int32_t> allDay = Util::groupToInt(strAllDay, 4);
+		std::map<int32_t, std::vector<int32_t>> dayMap;
+		std::vector<int32_t> dayInfo;
 		while (queue.pop(&dayInfo))
 		{
 			if (dayInfo.empty())
@@ -569,27 +535,30 @@ void Quant::onAnalyzeClicked()
 		for (auto itDay = dayMap.begin(); itDay != dayMap.end(); ++itDay)
 		{
 			int32_t day = itDay->first;
+			dayInfo = itDay->second;
 			std::string sectionDay = "date" + std::to_string(day);
 			auto it = std::find(allDay.begin(), allDay.end(), day);
 			if (it != allDay.end())
 			{
 				ini.deleteSection(sectionDay);
 			}
-			ini.writeIni("open", std::to_string(dayInfo[1]), sectionDay);
-			ini.writeIni("close", std::to_string(dayInfo[2]), sectionDay);
-			std::string observeStr;
-			
-			int32_t count = (int32_t)ObserveTime::COUNT * (int32_t)RangeTime::COUNT * (int32_t)TransType::COUNT;
+			ini.writeIni("open", Util::transYuan(dayInfo[1]), sectionDay);
+			ini.writeIni("close", Util::transYuan(dayInfo[2]), sectionDay);
+
+			int32_t count = (int32_t)RangeTime::COUNT * (int32_t)TransType::COUNT;
 			for (int32_t timeIndex = (int32_t)ObserveTime::TIME0930; timeIndex < (int32_t)ObserveTime::COUNT; ++timeIndex)
 			{
-				observeStr += std::to_string(dayInfo[(int32_t)Overall::COUNT + timeIndex]) + ",";
+				std::string observeStr;
+				observeStr += Util::transYuan(dayInfo[(int32_t)Overall::COUNT + timeIndex]) + ",";
 				int32_t index = -1;
 				while (index++ != count - 1)
 				{
-					observeStr += std::to_string(dayInfo[(int32_t)Overall::COUNT + (int32_t)ObserveTime::COUNT + index]) + ",";
+					observeStr += Util::transYuan(dayInfo[(int32_t)Overall::COUNT +
+						(int32_t)ObserveTime::COUNT +
+						timeIndex * count +
+						index]) + ",";
 				}
 				std::string timeStr = Util::observeTimeToString((ObserveTime)timeIndex);
-				
 				if (timeStr.empty() || observeStr.empty())
 				{
 					continue;
@@ -599,8 +568,7 @@ void Quant::onAnalyzeClicked()
 			}
 		}
 	}
-	
-	int x = 3;
+	RCSend("analyze success");
 }
 
 void Quant::startProgressMonitoring()

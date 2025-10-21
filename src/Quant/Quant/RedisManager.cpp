@@ -7,8 +7,8 @@ RedisManager::RedisManager()
 
 RedisManager& RedisManager::instance()
 {
-	static RedisManager s_redisMaanger;
-	return s_redisMaanger;
+	static RedisManager s_redisManager;
+	return s_redisManager;
 }
 
 bool RedisManager::init()
