@@ -85,7 +85,7 @@ void CompetitionManager::uninit()
 		m_stopFlag = true;
 		// 发送一个空结果来唤醒结果线程
 		StrategyResult emptyResult;
-		emptyResult.strategyId = -2; // 特殊ID表示停止信号
+		//emptyResult.strategyId = -2; // 特殊ID表示停止信号
 		m_pResultQueue->push(emptyResult);
 
 		m_resultThread.join();
@@ -222,14 +222,14 @@ void CompetitionManager::resultProcessingThread()
 		StrategyResult result;
 		if (m_pResultQueue->pop(&result))
 		{
-			if (result.strategyId == -1)
+			if (result.strategyMode == StrategyMode::COUNT)
 			{
 				// 完成信号
 				finalSignalReceived = true;
 				std::cout << "Received completion signal" << std::endl;
 				break;
 			}
-			else if (result.strategyId == -2)
+			else if (result.strategyMode == StrategyMode::COUNT)
 			{
 				// 停止信号
 				std::cout << "Received stop signal" << std::endl;
@@ -260,7 +260,7 @@ void CompetitionManager::resultProcessingThread()
 		StrategyResult result;
 		while (m_pResultQueue->pop(&result))
 		{
-			if (result.strategyId >= 0)
+			if ((int32_t)result.strategyMode >= 0)
 			{
 				processStrategyResult(result);
 				processedCount++;
@@ -395,7 +395,7 @@ void CompetitionManager::distributeTasks()
 			}
 
 			// 设置策略参数
-			spStrategy->setStrategyParams(m_allParams[j]);
+			spStrategy->setStrategyParam(m_allParams[j]);
 
 			// 添加股票
 			for (const auto& stock : m_currentConfig.stocks)
@@ -411,14 +411,10 @@ void CompetitionManager::distributeTasks()
 
 			// 创建任务
 			int32_t taskId = static_cast<int32_t>(j + 1);
-			auto task = std::make_shared<StrategyTask>(
-				taskId, spStrategy, m_currentConfig.marketData,
-				m_currentConfig.beginTime, m_currentConfig.endTime,
-				m_currentConfig.stocks, m_currentConfig.initialFund,
-				m_pResultQueue, &m_completedCount,
-				m_totalTasks, &m_stopFlag);
-
-			threadInterface->PostTask(task, 1);
+			std::shared_ptr<StrategyTask> spStrategyTask(new StrategyTask);
+			spStrategyTask->setParam(m_currentConfig.beginTime, m_currentConfig.endTime, m_currentConfig.stocks,
+				spStrategy, m_currentConfig.marketData, m_currentConfig.initialFund, m_pResultQueue);
+			threadInterface->PostTask(spStrategyTask, 1);
 
 			if (j % 10 == 0)
 			{

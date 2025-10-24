@@ -15,6 +15,20 @@ public:
 	static void getAllIndex(uint32_t allIndex, uint32_t& observeIndex, uint32_t& rangeIndex, uint32_t& transIndex,
 		uint32_t offset);
 
+	/** 计算当前索引对应的时间
+	@param [in] dayInfoIndex 当前索引值
+	@return 返回对应时间
+	*/
+	static ObserveTime indexToTime(uint32_t dayInfoIndex);
+
+	/** 计算最佳价格索引值
+	@param [in] time 当前时间
+	@param [in] range 范围
+	@param [in] trans 交易方式
+	@return 返回最佳价格索引值
+	*/
+	static int32_t bestPrice(ObserveTime time, RangeTime range, TransType trans);
+
 	/** 将字符串组转换为整数组
 	@param [in] vecGroup 输入字符串组，格式为"prefix_number"
 	@param [in] origin 从0开始的偏移量
@@ -65,6 +79,13 @@ public:
 	@return 对应的整数值
 	*/
 	static int32_t getRangeValue(RangeTime range);
+
+	/** 计算范围结束时间
+	@param [in] startTime 开始时间
+	@param [in] addMinutes 增加的时间（分钟）
+	@return 结束时间
+	*/
+	static int32_t rangeEndTime(int32_t startTime, int32_t addMinutes);
 
 	/** 根据Overall枚举值获取对应的行情数组下标值
 	@param [in] overall Overall枚举值

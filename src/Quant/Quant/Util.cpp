@@ -26,6 +26,32 @@ void Util::getAllIndex(uint32_t allIndex, uint32_t& observeIndex, uint32_t& rang
 	transIndex = remainder % transStep;
 }
 
+ObserveTime Util::indexToTime(uint32_t dayInfoIndex)
+{
+	if (dayInfoIndex < (int32_t)Overall::COUNT)
+	{
+		return ObserveTime::COUNT;
+	}
+	else if (dayInfoIndex >= (int32_t)Overall::COUNT &&
+		dayInfoIndex < (int32_t)Overall::COUNT + (int32_t)ObserveTime::COUNT)
+	{
+		return (ObserveTime)(dayInfoIndex - (int32_t)Overall::COUNT);
+	}
+	else
+	{
+		return (ObserveTime)(((int32_t)dayInfoIndex - (int32_t)Overall::COUNT - (int32_t)ObserveTime::COUNT) /
+			((int32_t)RangeTime::COUNT * (int32_t)TransType::COUNT));
+	}
+}
+
+int32_t Util::bestPrice(ObserveTime time, RangeTime range, TransType trans)
+{
+	return (int32_t)Overall::COUNT + (int32_t)ObserveTime::COUNT +
+		(int32_t)time * (int32_t)RangeTime::COUNT * (int32_t)TransType::COUNT +
+		(int32_t)range * (int32_t)TransType::COUNT +
+		(int32_t)trans;
+}
+
 std::vector<int32_t> Util::groupToInt(const std::vector<std::string>& vecGroup, int32_t origin)
 {
 	std::vector<int32_t> result;
@@ -249,6 +275,65 @@ int32_t Util::getRangeValue(RangeTime range)
 	default:
 		return -1;  // 无效时间
 	}
+}
+
+int32_t Util::rangeEndTime(int32_t startTime, int32_t addMinutes)
+{
+	// 1. 输入合法性检查：开始时间必须≥930
+	if (startTime < 930) {
+		return 0;
+	}
+
+	// 2. 解析开始时间为小时和分钟
+	int32_t startHour = startTime / 100;
+	int32_t startMinute = startTime % 100;
+
+	// 检查开始时间格式合法性（分钟≤59）
+	if (startMinute >= 60) {
+		return 0;
+	}
+
+	// 3. 计算未考虑休市的原始结束时间（分钟总数）
+	int32_t totalStartMinutes = startHour * 60 + startMinute;
+	int32_t totalEndMinutes = totalStartMinutes + addMinutes;
+
+	// 4. 定义关键时间节点（分钟数）
+	const int32_t MORNING_OPEN = 9 * 60 + 30;    // 9:30 = 570分钟
+	const int32_t MORNING_CLOSE = 11 * 60 + 30;  // 11:30 = 690分钟
+	const int32_t AFTERNOON_OPEN = 13 * 60 + 0;  // 13:00 = 780分钟
+	const int32_t MARKET_CLOSE = 15 * 60 + 0;    // 15:00 = 900分钟
+
+	// 5. 处理中午休市时间（11:30-13:00）
+	if (totalEndMinutes > MORNING_CLOSE) {
+		// 计算上午未休市前剩余的可交易时间
+		if (totalStartMinutes < MORNING_CLOSE) {
+			int32_t timeUsedInMorning = MORNING_CLOSE - totalStartMinutes;
+			if (addMinutes <= timeUsedInMorning) {
+				// 未超过上午闭市时间，直接计算
+				totalEndMinutes = totalStartMinutes + addMinutes;
+			}
+			else {
+				// 扣除上午已用时间和休市时间（90分钟），剩余时间从下午开始算
+				int32_t remainingTime = addMinutes - timeUsedInMorning - 90;
+				totalEndMinutes = AFTERNOON_OPEN + remainingTime;
+			}
+		}
+		else if (totalStartMinutes < AFTERNOON_OPEN) {
+			// 开始时间在休市期间，直接从下午开盘开始计算
+			totalEndMinutes = AFTERNOON_OPEN + addMinutes;
+		}
+		// 开始时间在下午时段则直接累加（无需处理休市）
+	}
+
+	// 6. 处理超过闭市时间的情况
+	if (totalEndMinutes >= MARKET_CLOSE) {
+		return 1500; // 超过15:00统一返回1500
+	}
+
+	// 7. 转换分钟数为目标时间格式（如10:00 → 1000）
+	int32_t endHour = totalEndMinutes / 60;
+	int32_t endMinute = totalEndMinutes % 60;
+	return endHour * 100 + endMinute;
 }
 
 int32_t Util::getOverallIndex(Overall overall)

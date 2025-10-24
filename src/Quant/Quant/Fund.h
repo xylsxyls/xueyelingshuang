@@ -140,10 +140,10 @@ public:
 
 	/** 获取账户总资产（现金+股票市值）
 	@param [in] date 当前日期
-	@param [in] time 当前时间点
+	@param [in] time 当前时间点，传入默认值则表示当前收盘价
 	@return 返回总资产金额（单位：分）
 	*/
-	int32_t getTotalValue(uint32_t date, ObserveTime time = ObserveTime::TIME1410);
+	int32_t getTotalValue(uint32_t date, ObserveTime time = ObserveTime::COUNT);
 
 	/** 获取可用资金
 	@return 返回可用资金金额（单位：分）
@@ -179,7 +179,7 @@ public:
 	@param [in] date 关闭日期
 	@param [in] time 关闭时间点
 	*/
-	void closeAllTrades(uint32_t date, ObserveTime time);
+	void closeAllTrades(uint32_t date, ObserveTime time = ObserveTime::COUNT);
 
 private:
 	/** 计算指定价格下最大可买入股数（考虑手续费）

@@ -1,172 +1,240 @@
 #include "S1100B1400Strategy.h"
 #include <algorithm>
 #include <iostream>
+#include "Util.h"
 
 S1100B1400Strategy::S1100B1400Strategy()
 {
+	m_mode = StrategyMode::S1100B1400;
+	m_modeName = "S1100B1400Strategy";
+}
+
+S1100B1400Strategy::~S1100B1400Strategy()
+{
+
 }
 
 bool S1100B1400Strategy::onTradingDay(uint32_t date)
 {
-	// 检查参数有效性
-	if (m_strategyParams.size() != 4)
+	if (!isStrategyParamValid())
 	{
-		std::cerr << "Error: Strategy parameters size is not 4" << std::endl;
-		return false;
-	}
-
-	// 检查市场数据和资金账户
-	if (!m_spMarket || !m_spFund)
-	{
-		std::cerr << "Error: Market or Fund is not set" << std::endl;
-		return false;
-	}
-
-	// 检查股票列表
-	if (m_vecStock.empty())
-	{
-		std::cerr << "Error: No stocks in strategy" << std::endl;
 		return false;
 	}
 
 	// 只处理第一只股票（可根据需要扩展为多股票）
 	const std::string& stock = m_vecStock[0];
 
-	// 检查股票是否存在市场数据中
-	if (!m_spMarket->hasStock(stock))
+	// 解析策略参数
+	int32_t sellTimeIndex = m_strategyParam[0]; // 0,1,2 对应 10:40,10:50,11:00
+	int32_t forceBuyTimeIndex = m_strategyParam[1];  // 0,1,2 对应 13:40,13:50,14:00
+	int32_t chaseParam = m_strategyParam[2];    // 7,8,9 分
+	int32_t discountParam = m_strategyParam[3]; // 1,2,3 分
+
+	const std::vector<int32_t>& dayInfo = m_spMarket->getStockData(stock, date);
+	if (dayInfo.empty())
 	{
-		std::cerr << "Error: Stock " << stock << " not found in market data" << std::endl;
-		return false;
+		return 0;
 	}
 
-	// 解析策略参数
-	int32_t sellTimeIndex = m_strategyParams[0]; // 0,1,2 对应 10:40,10:50,11:00
-	int32_t buyTimeIndex = m_strategyParams[1];  // 0,1,2 对应 13:40,13:50,14:00
-	int32_t chaseParam = m_strategyParams[2];    // 7,8,9 分
-	int32_t discountParam = m_strategyParams[3]; // 1,2,3 分
-
-	// 转换为具体的时间点
-	ObserveTime sellTime = ObserveTime::TIME1040;
-	if (sellTimeIndex == 1) sellTime = ObserveTime::TIME1050;
-	else if (sellTimeIndex == 2) sellTime = ObserveTime::TIME1100;
-
-	ObserveTime buyTime = ObserveTime::TIME1340;
-	if (buyTimeIndex == 1) buyTime = ObserveTime::TIME1350;
-	else if (buyTimeIndex == 2) buyTime = ObserveTime::TIME1400;
+	int32_t sellPrice = dayInfo[sellTimeIndex];
+	int32_t forceBuyPrice = dayInfo[forceBuyTimeIndex];
+	int32_t buyPrice = sellPrice - discountParam;
+	int32_t chaseBuyPrice = sellPrice + chaseParam;
+	ObserveTime sellTime = Util::indexToTime(sellTimeIndex);
+	ObserveTime forceBuyTime = Util::indexToTime(forceBuyTimeIndex);
 
 	// 检查当前是否持有该股票
 	bool hasPosition = (m_spFund->getPosition(stock) != nullptr);
-
-	// 卖出逻辑
-	int32_t sellPrice = 0;
-	if (hasPosition)
+	if (!hasPosition)
 	{
-		sellPrice = getBestSellPrice(stock, date, sellTime);
-		if (sellPrice > 0)
+		return false;
+	}
+
+	m_spFund->sellForT(stock, sellPrice, date, sellTime);
+
+	bool isBuy = false;
+	for (int32_t timeIndex = (int32_t)sellTime; timeIndex <= (int32_t)forceBuyTime; ++timeIndex)
+	{
+		int32_t bestSellIndex = Util::bestPrice((ObserveTime)timeIndex, RangeTime::RANGENEXT, TransType::BEST_SELL);
+		int32_t bestSellPrice = dayInfo[bestSellIndex];
+		if (bestSellPrice >= chaseBuyPrice)
 		{
-			if (!executeSell(stock, date, sellTime))
-			{
-				std::cerr << "Error: Failed to execute sell for stock " << stock << " on date " << date << std::endl;
-				return false;
-			}
+			m_spFund->buyFullPosition(stock, chaseBuyPrice, date, (ObserveTime)timeIndex);
+			isBuy = true;
+			break;
 		}
-		else
+		int32_t bestBuyIndex = Util::bestPrice((ObserveTime)timeIndex, RangeTime::RANGENEXT, TransType::BEST_BUY);
+		int32_t bestBuyPrice = dayInfo[bestBuyIndex];
+		if (bestBuyPrice <= buyPrice)
 		{
-			std::cerr << "Warning: Cannot get sell price for stock " << stock << " on date " << date << std::endl;
+			m_spFund->buyFullPosition(stock, buyPrice, date, (ObserveTime)timeIndex);
+			isBuy = true;
+			break;
 		}
 	}
 
-	// 买入逻辑
-	int32_t buyPrice = 0;
-	bool bought = false;
-
-	// 检查反追条件
-	if (sellPrice > 0 && shouldChaseBuy(stock, date, sellPrice, chaseParam, sellTime, buyTime))
+	if (!isBuy)
 	{
-		buyPrice = sellPrice + chaseParam;
-		if (executeBuy(stock, date, buyTime, buyPrice))
-		{
-			bought = true;
-			std::cout << "Chase buy executed for stock " << stock << " on date " << date
-				<< " at price " << buyPrice << std::endl;
-		}
-		else
-		{
-			std::cerr << "Error: Failed to execute chase buy for stock " << stock << " on date " << date << std::endl;
-		}
-	}
-
-	// 检查条件买入
-	if (!bought && sellPrice > 0 && shouldConditionBuy(stock, date, sellPrice, discountParam, sellTime, buyTime))
-	{
-		int32_t conditionBuyPrice = getRangeNextBestBuyPrice(stock, date, sellTime, buyTime);
-		if (conditionBuyPrice > 0 && conditionBuyPrice <= sellPrice - discountParam)
-		{
-			if (executeBuy(stock, date, buyTime, conditionBuyPrice))
-			{
-				bought = true;
-				std::cout << "Condition buy executed for stock " << stock << " on date " << date
-					<< " at price " << conditionBuyPrice << std::endl;
-			}
-			else
-			{
-				std::cerr << "Error: Failed to execute condition buy for stock " << stock << " on date " << date << std::endl;
-			}
-		}
-	}
-
-	// 默认买入
-	if (!bought && sellPrice > 0)
-	{
-		buyPrice = getBestBuyPrice(stock, date, buyTime);
-		if (buyPrice > 0)
-		{
-			if (executeBuy(stock, date, buyTime, buyPrice))
-			{
-				std::cout << "Default buy executed for stock " << stock << " on date " << date
-					<< " at price " << buyPrice << std::endl;
-			}
-			else
-			{
-				std::cerr << "Error: Failed to execute default buy for stock " << stock << " on date " << date << std::endl;
-			}
-		}
-		else
-		{
-			std::cerr << "Warning: Cannot get buy price for stock " << stock << " on date " << date << std::endl;
-		}
-	}
-
-	// 记录交易
-	if (sellPrice > 0)
-	{
-		TradeRecord record;
-		record.date = date;
-		record.stock = stock;
-		record.sellPrice = sellPrice;
-		record.buyPrice = buyPrice;
-		record.sellTime = sellTime;
-		record.buyTime = buyTime;
-		record.chased = (buyPrice == sellPrice + chaseParam);
-		record.conditioned = (buyPrice != sellPrice + chaseParam && buyPrice != getBestBuyPrice(stock, date, buyTime));
-		m_tradeRecords.push_back(record);
-
-		std::cout << "Trade recorded for stock " << stock << " on date " << date
-			<< ": sell=" << sellPrice << ", buy=" << buyPrice
-			<< ", chased=" << record.chased << ", conditioned=" << record.conditioned << std::endl;
+		m_spFund->buyFullPosition(stock, forceBuyPrice, date, (ObserveTime)forceBuyTime);
 	}
 
 	return true;
+
+	//TradeRecord record;
+	//record.date = date;
+	//record.stock = stock;
+	//record.sellPrice = sellPrice;
+	//record.buyPrice = buyPrice;
+	//record.sellTime = sellTime;
+	//record.buyTime = buyTime;
+	//record.chased = (buyPrice == sellPrice + chaseParam);
+	//record.conditioned = (buyPrice != sellPrice + chaseParam && buyPrice != getBestBuyPrice(stock, date, buyTime));
+	//m_tradeRecords.push_back(record);
+
+
+
+	// 转换为具体的时间点
+	//ObserveTime sellTime = ObserveTime::TIME1040;
+	//if (sellTimeIndex == 1) sellTime = ObserveTime::TIME1050;
+	//else if (sellTimeIndex == 2) sellTime = ObserveTime::TIME1100;
+	//
+	//ObserveTime buyTime = ObserveTime::TIME1340;
+	//if (buyTimeIndex == 1) buyTime = ObserveTime::TIME1350;
+	//else if (buyTimeIndex == 2) buyTime = ObserveTime::TIME1400;
+
+	
+
+	// 卖出逻辑
+//	int32_t sellPrice = 0;
+//	if (hasPosition)
+//	{
+//		sellPrice = getBestSellPrice(stock, date, sellTime);
+//		if (sellPrice > 0)
+//		{
+//			if (!executeSell(stock, date, sellTime))
+//			{
+//				std::cerr << "Error: Failed to execute sell for stock " << stock << " on date " << date << std::endl;
+//				return false;
+//			}
+//		}
+//		else
+//		{
+//			std::cerr << "Warning: Cannot get sell price for stock " << stock << " on date " << date << std::endl;
+//		}
+//	}
+//
+//	// 买入逻辑
+//	int32_t buyPrice = 0;
+//	bool bought = false;
+//
+//	// 检查反追条件
+//	if (sellPrice > 0 && shouldChaseBuy(stock, date, sellPrice, chaseParam, sellTime, buyTime))
+//	{
+//		buyPrice = sellPrice + chaseParam;
+//		if (executeBuy(stock, date, buyTime, buyPrice))
+//		{
+//			bought = true;
+//			std::cout << "Chase buy executed for stock " << stock << " on date " << date
+//				<< " at price " << buyPrice << std::endl;
+//		}
+//		else
+//		{
+//			std::cerr << "Error: Failed to execute chase buy for stock " << stock << " on date " << date << std::endl;
+//		}
+//	}
+//
+//	// 检查条件买入
+//	if (!bought && sellPrice > 0 && shouldConditionBuy(stock, date, sellPrice, discountParam, sellTime, buyTime))
+//	{
+//		int32_t conditionBuyPrice = getRangeNextBestBuyPrice(stock, date, sellTime, buyTime);
+//		if (conditionBuyPrice > 0 && conditionBuyPrice <= sellPrice - discountParam)
+//		{
+//			if (executeBuy(stock, date, buyTime, conditionBuyPrice))
+//			{
+//				bought = true;
+//				std::cout << "Condition buy executed for stock " << stock << " on date " << date
+//					<< " at price " << conditionBuyPrice << std::endl;
+//			}
+//			else
+//			{
+//				std::cerr << "Error: Failed to execute condition buy for stock " << stock << " on date " << date << std::endl;
+//			}
+//		}
+//	}
+//
+//	// 默认买入
+//	if (!bought && sellPrice > 0)
+//	{
+//		buyPrice = getBestBuyPrice(stock, date, buyTime);
+//		if (buyPrice > 0)
+//		{
+//			if (executeBuy(stock, date, buyTime, buyPrice))
+//			{
+//				std::cout << "Default buy executed for stock " << stock << " on date " << date
+//					<< " at price " << buyPrice << std::endl;
+//			}
+//			else
+//			{
+//				std::cerr << "Error: Failed to execute default buy for stock " << stock << " on date " << date << std::endl;
+//			}
+//		}
+//		else
+//		{
+//			std::cerr << "Warning: Cannot get buy price for stock " << stock << " on date " << date << std::endl;
+//		}
+//	}
+//
+//	// 记录交易
+//	if (sellPrice > 0)
+//	{
+//		TradeRecord record;
+//		record.date = date;
+//		record.stock = stock;
+//		record.sellPrice = sellPrice;
+//		record.buyPrice = buyPrice;
+//		record.sellTime = sellTime;
+//		record.buyTime = buyTime;
+//		record.chased = (buyPrice == sellPrice + chaseParam);
+//		record.conditioned = (buyPrice != sellPrice + chaseParam && buyPrice != getBestBuyPrice(stock, date, buyTime));
+//		m_tradeRecords.push_back(record);
+//
+//		std::cout << "Trade recorded for stock " << stock << " on date " << date
+//			<< ": sell=" << sellPrice << ", buy=" << buyPrice
+//			<< ", chased=" << record.chased << ", conditioned=" << record.conditioned << std::endl;
+//	}
+//
+//	return true;
 }
 
-StrategyMode S1100B1400Strategy::getStrategyMode() const
+bool S1100B1400Strategy::isStrategyParamValid() const
 {
-	return StrategyMode::S1100B1400;
-}
-
-std::string S1100B1400Strategy::getStrategyName() const
-{
-	return "S1100B1400Strategy";
+	// 检查参数有效性
+	if (m_strategyParam.size() != 4)
+	{
+		RCSend("Error: Strategy:%s parameters size is not 4", m_modeName.c_str());
+		return false;
+	}
+	// 检查市场数据和资金账户
+	if (!m_spMarket || !m_spFund)
+	{
+		RCSend("Error: Strategy:%s Market or Fund is not set", m_modeName.c_str());
+		return false;
+	}
+	// 检查股票列表
+	if (m_vecStock.empty())
+	{
+		RCSend("Error: Strategy:%s No stocks in strategy", m_modeName.c_str());
+		return false;
+	}
+	// 只处理第一只股票（可根据需要扩展为多股票）
+	const std::string& stock = m_vecStock[0];
+	// 检查股票是否存在市场数据中
+	if (!m_spMarket->hasStock(stock))
+	{
+		RCSend("Error: Strategy:%s Stock %s not found in market data", m_modeName.c_str(), stock.c_str());
+		return false;
+	}
+	return true;
 }
 
 int32_t S1100B1400Strategy::getBestSellPrice(const std::string& stock, uint32_t date, ObserveTime time) const

@@ -26,6 +26,8 @@ CConfig::CConfig()
 	m_cpuCoreCount = CSystem::GetCPUCoreCount();
 	m_normalShares = 1000;
 	m_ignoreTrans = 2;
+	m_allBeginTime = 20250201;
+	m_allEndTime = 30250101;
 }
 
 CConfig& CConfig::instance()

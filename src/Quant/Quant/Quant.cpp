@@ -33,9 +33,7 @@
 #include "AnalyzeTask.h"
 
 Quant::Quant(QWidget* parent):
-	QMainWindow(parent),
-	m_allBeginTime(20250201),
-	m_allEndTime(30250101)
+	QMainWindow(parent)
 {
 	ui.setupUi(this);
 	m_button = new COriginalButton(this);
@@ -334,13 +332,13 @@ void Quant::onInitRedisClicked()
 		{
 			std::string fieldName = "overall_" + std::to_string(overallIndex);
 			field += fieldName + ",";
-			redis.deleteOrderGroupElementsByScore(dbName + ":" + fieldName, m_allBeginTime, m_allEndTime);
+			redis.deleteOrderGroupElementsByScore(dbName + ":" + fieldName, g_config.m_allBeginTime, g_config.m_allEndTime);
 		}
 		for (uint32_t observeIndex = 0; observeIndex < (uint32_t)ObserveTime::COUNT; ++observeIndex)
 		{
 			std::string fieldName = "observe_" + std::to_string(observeIndex);
 			field += "observe_" + std::to_string(observeIndex) + ",";
-			redis.deleteOrderGroupElementsByScore(dbName + ":" + fieldName, m_allBeginTime, m_allEndTime);
+			redis.deleteOrderGroupElementsByScore(dbName + ":" + fieldName, g_config.m_allBeginTime, g_config.m_allEndTime);
 		}
 		for (uint32_t observeIndex = 0; observeIndex < (uint32_t)ObserveTime::COUNT; ++observeIndex)
 		{
@@ -350,12 +348,12 @@ void Quant::onInitRedisClicked()
 				{
 					std::string fieldName = CStringManager::Format("price_%d_%d_%d", observeIndex, rangeIndex, transIndex);
 					field += fieldName + ",";
-					redis.deleteOrderGroupElementsByScore(dbName + ":" + fieldName, m_allBeginTime, m_allEndTime);
+					redis.deleteOrderGroupElementsByScore(dbName + ":" + fieldName, g_config.m_allBeginTime, g_config.m_allEndTime);
 				}
 			}
 		}
 		field.pop_back();
-		std::string sqlString = SqlString::selectString(dbName, field, "overall_0>" + std::to_string(m_allBeginTime));
+		std::string sqlString = SqlString::selectString(dbName, field, "overall_0>" + std::to_string(g_config.m_allBeginTime));
 		auto prepare = lite.preparedCreator(sqlString);
 		SQLiteResultSet result = lite.execute(prepare);
 		if (result.empty())

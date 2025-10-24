@@ -15,23 +15,18 @@ public:
 
 	/** 析构函数
 	*/
-	virtual ~S1100B1400Strategy() = default;
+	virtual ~S1100B1400Strategy();
 
-	/** 每个交易日的策略执行入口
+	/** 每个交易日的策略执行入口，从开始到结束依次循环
 	@param [in] date 当前交易日
 	@return 返回是否执行成功
 	*/
-	bool onTradingDay(uint32_t date) override;
+	bool onTradingDay(uint32_t date);
 
-	/** 获取策略模式枚举
-	@return 返回策略模式枚举值
+	/** 获取策略参数是否有效
+	@return 返回策略参数是否有效
 	*/
-	StrategyMode getStrategyMode() const override;
-
-	/** 获取策略名称
-	@return 返回策略名称字符串
-	*/
-	std::string getStrategyName() const override;
+	virtual bool isStrategyParamValid() const;
 
 private:
 	/** 获取指定时间点的最佳卖价（RANGE0）

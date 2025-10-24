@@ -100,7 +100,8 @@ std::vector<int> AnalyzeTask::toDayInfo(const std::string& path, const std::map<
 		for (int32_t range = (int32_t)RangeTime::RANGE10; range < (int32_t)RangeTime::RANGENEXT; ++range)
 		{
 			int32_t rangeTime = Util::getRangeValue((RangeTime)range);
-			std::pair<int32_t, int32_t> best = bestPrice(calcTimeInfo(realTime, realTime + rangeTime, priceInfo));
+			std::pair<int32_t, int32_t> best = bestPrice(calcTimeInfo(realTime,
+				Util::rangeEndTime(realTime, rangeTime), priceInfo));
 			result.push_back(best.first);
 			result.push_back(best.second);
 		}

@@ -4,12 +4,13 @@
 #include <memory>
 #include "Market.h"
 #include "Fund.h"
+#include "Config.h"
 
 /** 策略运行结果结构体
 */
 struct StrategyResult
 {
-	int32_t strategyId;           // 策略ID
+	StrategyMode strategyMode;    // 策略模式
 	std::vector<int32_t> params;  // 策略参数
 	BigNumber totalReturn;        // 总收益率
 	BigNumber annualReturn;       // 年化收益率
@@ -22,7 +23,7 @@ struct StrategyResult
 
 	// 默认构造函数
 	StrategyResult() :
-		strategyId(0),
+		strategyMode(StrategyMode::COUNT),
 		totalReturn(0),
 		annualReturn(0),
 		maxDrawdown(0),
@@ -48,7 +49,13 @@ public:
 
 	/** 虚析构函数
 	*/
-	virtual ~Strategy() = default;
+	virtual ~Strategy();
+
+	/** 每个交易日的策略执行入口
+	@param [in] date 当前交易日
+	@return 返回是否执行成功
+	*/
+	virtual bool onTradingDay(uint32_t date) = 0;
 
 	/** 初始化策略
 	@param [in] beginTime 回测开始时间
@@ -60,6 +67,11 @@ public:
 	@param [in] stock 股票代码
 	*/
 	virtual void addStock(const std::string& stock);
+
+	/** 获取策略监控的股票列表
+	@return 返回股票代码列表
+	*/
+	std::vector<std::string> getStock() const;
 
 	/** 设置市场数据源
 	@param [in] spMarket 市场数据共享指针
@@ -74,33 +86,27 @@ public:
 	/** 设置策略参数向量
 	@param [in] params 策略参数下标向量
 	*/
-	void setStrategyParams(const std::vector<int32_t>& params);
+	void setStrategyParam(const std::vector<int32_t>& param);
 
 	/** 获取策略参数向量
 	@return 返回策略参数的下标向量
 	*/
-	std::vector<int32_t> getStrategyParams() const;
+	std::vector<int32_t> getStrategyParam() const;
 
-	/** 每个交易日的策略执行入口
-	@param [in] date 当前交易日
-	@return 返回是否执行成功
+	/** 获取策略参数是否有效
+	@return 返回策略参数是否有效
 	*/
-	virtual bool onTradingDay(uint32_t date) = 0;
+	virtual bool isStrategyParamValid() const;
 
 	/** 获取策略模式枚举
 	@return 返回策略模式枚举值
 	*/
-	virtual StrategyMode getStrategyMode() const = 0;
+	StrategyMode getStrategyMode() const;
 
-	/** 获取策略名称（用于日志和显示）
+	/** 获取策略名称
 	@return 返回策略名称字符串
 	*/
-	virtual std::string getStrategyName() const = 0;
-
-	/** 获取策略监控的股票列表
-	@return 返回股票代码列表
-	*/
-	const std::vector<std::string>& getStocks() const;
+	std::string getStrategyName() const;
 
 protected:
 	// 回测开始时间
@@ -119,5 +125,11 @@ protected:
 	std::shared_ptr<Fund> m_spFund;
 
 	// 策略参数向量
-	std::vector<int32_t> m_strategyParams;
+	std::vector<int32_t> m_strategyParam;
+
+	// 策略类型
+	StrategyMode m_mode;
+
+	// 策略名称
+	std::string m_modeName;
 };

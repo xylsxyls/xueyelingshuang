@@ -57,8 +57,6 @@ private:
 	COriginalButton* m_profit;
 	COriginalButton* m_displayResult;
 	COriginalButton* m_analyze;
-	uint32_t m_allBeginTime;
-	uint32_t m_allEndTime;
 	// 新增：竞赛和展示相关成员
 	std::shared_ptr<Display> m_display;
 };

@@ -14,6 +14,8 @@ struct CConfig
 	int32_t m_cpuCoreCount;
 	int32_t m_normalShares;
 	int32_t m_ignoreTrans;
+	uint32_t m_allBeginTime;
+	uint32_t m_allEndTime;
 
 protected:
 	CConfig();

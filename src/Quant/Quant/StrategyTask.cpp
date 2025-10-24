@@ -3,97 +3,37 @@
 #include <algorithm>
 #include <cmath>
 
-StrategyTask::StrategyTask(int32_t taskId,
-	const std::shared_ptr<Strategy>& spStrategy,
-	const std::shared_ptr<Market>& spMarket,
-	uint32_t beginTime,
-	uint32_t endTime,
-	const std::vector<std::string>& stocks,
-	int32_t initialFund,
-	LockFreeQueue<StrategyResult>* pResultQueue,
-	std::atomic<uint32_t>* pCompletedCount,
-	uint32_t totalTasks,
-	std::atomic<bool>* pStopFlag) :
-	CTask(taskId),
-	m_spStrategy(spStrategy),
-	m_spMarket(spMarket),
-	m_beginTime(beginTime),
-	m_endTime(endTime),
-	m_stocks(stocks),
-	m_initialFund(initialFund),
-	m_pResultQueue(pResultQueue),
-	m_pCompletedCount(pCompletedCount),
-	m_totalTasks(totalTasks),
-	m_pStopFlag(pStopFlag),
-	m_exit(false)
+StrategyTask::StrategyTask():
+m_beginTime(0),
+m_endTime(0),
+m_spStrategy(nullptr),
+m_spMarket(nullptr),
+m_initialFund(0),
+m_resultQueue(nullptr),
+m_exit(false)
+{
+
+}
+
+StrategyTask::~StrategyTask()
 {
 
 }
 
 void StrategyTask::DoTask()
 {
-	if (m_exit || (m_pStopFlag && m_pStopFlag->load()))
+	if (!isParamValid())
 	{
+		RCSend("StrategyTask param is not valid");
 		return;
 	}
 
-	try
-	{
-		if (!m_spStrategy || !m_spMarket)
-		{
-			std::cerr << "Error: Strategy or Market is null" << std::endl;
-			return;
-		}
+	std::shared_ptr<Fund> spFund(new Fund);
+	spFund->init(m_initialFund);
+	spFund->setMarket(m_spMarket);
 
-		// 初始化资金账户
-		Fund fund;
-		fund.init(m_initialFund);
-		fund.setMarket(m_spMarket);
+	m_spStrategy->setFund(spFund);
 
-		// 设置策略的资金账户
-		m_spStrategy->setFund(std::make_shared<Fund>(fund));
-
-		// 运行策略回测
-		StrategyResult result = runStrategy(fund);
-
-		// 设置策略ID和参数
-		result.strategyId = GetTaskId();
-		result.params = m_spStrategy->getStrategyParams();
-
-		// 将结果放入无锁队列
-		if (m_pResultQueue && !m_exit)
-		{
-			m_pResultQueue->push(result);
-		}
-
-		// 更新完成计数（只在最后一次执行）
-		if (m_pCompletedCount)
-		{
-			uint32_t completed = ++(*m_pCompletedCount);
-
-			// 检查是否是最后一个任务
-			if (completed == m_totalTasks && m_pResultQueue)
-			{
-				// 发送完成信号（通过一个特殊的结果）
-				StrategyResult finalSignal;
-				finalSignal.strategyId = -1;
-				m_pResultQueue->push(finalSignal);
-			}
-		}
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << "Exception in StrategyTask::DoTask: " << e.what() << std::endl;
-	}
-}
-
-void StrategyTask::StopTask()
-{
-	m_exit = true;
-}
-
-StrategyResult StrategyTask::runStrategy(Fund& fund)
-{
 	uint32_t actualDays = 0;
 	uint32_t totalDays = 0;
 
@@ -111,38 +51,19 @@ StrategyResult StrategyTask::runStrategy(Fund& fund)
 	// 遍历所有交易日
 	for (uint32_t i = 0; i < tradingDays.size(); ++i)
 	{
-		uint32_t date = tradingDays[i];
-
-		if (m_exit || (m_pStopFlag && m_pStopFlag->load()))
+		if (m_exit)
 		{
 			break;
 		}
-
-		// 检查该日期是否有有效的市场数据
-		bool hasValidData = false;
-		for (const auto& stock : m_stocks)
-		{
-			const auto& dayData = m_spMarket->getStockData(stock, date);
-			if (!dayData.empty() && dayData[0] > 0) // 第一个元素是日期，且不为0表示有数据
-			{
-				hasValidData = true;
-				break;
-			}
-		}
-
-		if (!hasValidData)
-		{
-			continue; // 跳过无效交易日（如停牌）
-		}
-
+		uint32_t date = tradingDays[i];
 		// 执行策略
 		if (!m_spStrategy->onTradingDay(date))
 		{
-			std::cerr << "Strategy execution failed for date: " << date << std::endl;
+			RCSend("Strategy execution failed for date: %u", date);
 		}
 
 		// 记录当日资产
-		int32_t currentValue = fund.getTotalValue(date, ObserveTime::TIME1410);
+		int32_t currentValue = spFund->getTotalValue(date);
 		dailyValues.push_back(currentValue);
 
 		// 更新峰值和最大回撤
@@ -169,30 +90,69 @@ StrategyResult StrategyTask::runStrategy(Fund& fund)
 		totalDays++;
 	}
 
-	// 如果是被中断的，计算实际交易天数
-	if (m_exit || (m_pStopFlag && m_pStopFlag->load()))
+	// 中断退出
+	if (m_exit)
 	{
-		// 重新计算实际交易天数
-		actualDays = static_cast<uint32_t>(dailyValues.size());
+		return;
 	}
 
 	// 强制平仓所有未完成交易
 	if (!tradingDays.empty())
 	{
 		uint32_t lastDate = tradingDays.back();
-		fund.closeAllTrades(lastDate, ObserveTime::TIME1410);
+		spFund->closeAllTrades(lastDate);
 	}
 
 	// 计算策略指标
-	return calculateStrategyMetrics(fund, actualDays, totalDays, maxDrawdown, totalProfitArea, dailyValues);
+	StrategyResult result = calculateStrategyMetrics(actualDays, totalDays, maxDrawdown, totalProfitArea, dailyValues);
+	
+	// 设置策略ID和参数
+	result.strategyMode = m_spStrategy->getStrategyMode();
+	result.params = m_spStrategy->getStrategyParam();
+	m_resultQueue->push(result);
 }
 
-StrategyResult StrategyTask::calculateStrategyMetrics(Fund& fund, uint32_t actualDays, uint32_t totalDays,
+void StrategyTask::StopTask()
+{
+	m_exit = true;
+}
+
+void StrategyTask::setParam(uint32_t beginTime, uint32_t endTime, const std::vector<std::string>& vecStock,
+	const std::shared_ptr<Strategy>& spStrategy, const std::shared_ptr<Market>& spMarket, int32_t initialFund,
+	LockFreeQueue<StrategyResult>* resultQueue)
+{
+	m_beginTime = beginTime;
+	m_endTime = endTime;
+	m_vecStock = vecStock;
+	m_spStrategy = spStrategy;
+	m_spMarket = spMarket;
+	m_initialFund = initialFund;
+	m_resultQueue = resultQueue;
+}
+
+bool StrategyTask::isParamValid()
+{
+	if (m_beginTime < g_config.m_allBeginTime ||
+		m_endTime < g_config.m_allBeginTime ||
+		m_beginTime > m_endTime ||
+		m_vecStock.empty() ||
+		m_spStrategy == nullptr ||
+		m_spMarket == nullptr ||
+		!m_spMarket->hasStock(m_vecStock[0]) ||
+		m_initialFund < 0 ||
+		m_resultQueue == nullptr)
+	{
+		return false;
+	}
+	return true;
+}
+
+StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint32_t totalDays,
 	BigNumber maxDrawdown, BigNumber totalProfitArea, const std::vector<int32_t>& dailyValues)
 {
 	StrategyResult result;
 
-	if (actualDays == 0 || dailyValues.empty())
+	if (actualDays <= 0 || dailyValues.empty())
 	{
 		// 没有有效交易数据，返回默认值
 		result.totalReturn = 0;
@@ -212,19 +172,9 @@ StrategyResult StrategyTask::calculateStrategyMetrics(Fund& fund, uint32_t actua
 	result.totalReturn = (BigNumber(finalValue - initialValue) / BigNumber(initialValue));
 
 	// 计算年化收益率（按实际交易天数调整）
-	if (actualDays > 0)
-	{
-		// 假设一年有250个交易日
-		BigNumber years = BigNumber((int32_t)actualDays) / 250;
-		if (years > 0)
-		{
-			result.annualReturn = ((BigNumber(1) + result.totalReturn).pow(BigNumber(1) / years)) - 1;
-		}
-		else
-		{
-			result.annualReturn = result.totalReturn;
-		}
-	}
+	// 假设一年有250个交易日
+	BigNumber years = BigNumber((int32_t)actualDays) / 250;
+	result.annualReturn = ((BigNumber(1) + result.totalReturn).pow(BigNumber((int32_t)actualDays) / years)) - 1;
 
 	// 设置最大回撤
 	result.maxDrawdown = maxDrawdown;
@@ -238,21 +188,13 @@ StrategyResult StrategyTask::calculateStrategyMetrics(Fund& fund, uint32_t actua
 			winningDays++;
 		}
 	}
-
-	if (dailyValues.size() > 1)
-	{
-		result.winRate = BigNumber(winningDays) / (int32_t)(dailyValues.size() - 1);
-	}
-	else
-	{
-		result.winRate = 0;
-	}
+	result.winRate = BigNumber(winningDays) / (BigNumber((int32_t)dailyValues.size()) - 1).zero();
 
 	// 设置收益面积
 	result.profitArea = totalProfitArea;
 
 	// 计算健康值（基于收益稳定性和回撤）
-	result.healthScore = calculateHealthScore(fund, result.totalReturn, maxDrawdown, result.winRate, dailyValues);
+	result.healthScore = calculateHealthScore(result.totalReturn, maxDrawdown, result.winRate, dailyValues);
 
 	result.tradeDays = actualDays;
 	result.totalDays = totalDays;
@@ -282,7 +224,7 @@ std::vector<uint32_t> StrategyTask::getTradingDays()
 	return tradingDays;
 }
 
-BigNumber StrategyTask::calculateHealthScore(Fund& fund, BigNumber totalReturn, BigNumber maxDrawdown,
+BigNumber StrategyTask::calculateHealthScore(BigNumber totalReturn, BigNumber maxDrawdown,
 	BigNumber winRate, const std::vector<int32_t>& dailyValues)
 {
 	BigNumber baseScore = 100;
