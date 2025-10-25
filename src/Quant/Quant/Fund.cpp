@@ -146,13 +146,11 @@ void Fund::reset()
 void Fund::closeAllTrades(uint32_t date, ObserveTime time)
 {
 	// 强制卖出所有持仓，完成未结束的交易
-	for (const auto& position : m_positions)
+	while (!m_positions.empty())
 	{
+		const Position& position = m_positions[0];
 		int32_t price = getStockPriceFromMarket(position.stock, date, time);
-		if (price > 0)
-		{
-			executeSell(position.stock, price, position.shares, date, time, false);
-		}
+		executeSell(std::string(position.stock), price, position.shares, date, time, false);
 	}
 }
 
@@ -184,7 +182,7 @@ int32_t Fund::calculateMaxShares(const std::string& stock, int32_t price) const
 		int32_t mid = ((low + high) / (MIN_LOT * 2)) * MIN_LOT; // 取整手数
 
 		int32_t cost = mid * price;
-		BigNumber fee = StockCharge::instance().buyFee(stock, BigNumber(price), BigNumber(mid));
+		BigNumber fee = (StockCharge::instance().buyFee(stock, BigNumber(price), BigNumber(mid)) * 100).toInt();
 		BigNumber totalCost = BigNumber(cost) + fee;
 
 		if (totalCost <= m_availableFund)
@@ -286,7 +284,7 @@ bool Fund::executeSell(const std::string& stock, int32_t price, int32_t shares, 
 	}
 
 	int32_t income = shares * price;
-	int32_t fee = StockCharge::instance().sellFee(stock, BigNumber(price), BigNumber(shares)).toInt();
+	int32_t fee = (StockCharge::instance().sellFee(stock, BigNumber(price), BigNumber(shares)) * 100).toInt();
 	int32_t netIncome = income - fee;
 
 	// 增加资金
@@ -317,11 +315,11 @@ bool Fund::executeSell(const std::string& stock, int32_t price, int32_t shares, 
 	if (!isTOperation && position->shares == 0)
 	{
 		// 删除零持仓
-		m_positions.erase(
-			std::remove_if(m_positions.begin(), m_positions.end(),
-			[&stock](const Position& p) { return p.stock == stock; }),
-			m_positions.end()
-			);
+		m_positions.erase(std::remove_if(m_positions.begin(), m_positions.end(), [&stock](const Position& p)
+		{
+			return p.stock == stock;
+		}
+		), m_positions.end());
 
 		// 标记交易为已完成
 		if (!m_completeTrades[stock].empty())
@@ -394,12 +392,23 @@ void Fund::processTOperations(const std::string& stock, const SimpleTradeRecord&
 
 int32_t Fund::getStockPriceFromMarket(const std::string& stock, uint32_t date, ObserveTime time) const
 {
-	if (!m_spMarket)
+	if (m_spMarket == nullptr)
 	{
 		return 0;
 	}
 
-	// 这里需要根据Market类的实际接口实现价格查询
-	// 暂时返回0，需要根据实际Market接口实现
-	return 0;
+	const std::vector<int32_t>& dayInfo = m_spMarket->getStockData(stock, date);
+	if (dayInfo.size() != (int32_t)Overall::COUNT + (int32_t)ObserveTime::COUNT +
+		(int32_t)ObserveTime::COUNT * (int32_t)RangeTime::COUNT * (int32_t)TransType::COUNT)
+	{
+		return 0;
+	}
+	if (time == ObserveTime::COUNT)
+	{
+		return dayInfo[(int32_t)Overall::CLOSE];
+	}
+	else
+	{
+		return dayInfo[(int32_t)Overall::COUNT + (int32_t)time];
+	}
 }

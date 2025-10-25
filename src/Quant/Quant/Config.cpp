@@ -28,6 +28,7 @@ CConfig::CConfig()
 	m_ignoreTrans = 2;
 	m_allBeginTime = 20250201;
 	m_allEndTime = 30250101;
+	m_initialFund = 1000000 * 100;
 }
 
 CConfig& CConfig::instance()

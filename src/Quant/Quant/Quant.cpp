@@ -117,11 +117,7 @@ void Quant::init()
 	QObject::connect(m_analyze, &COriginalButton::clicked, this, &Quant::onAnalyzeClicked);
 
 	// 初始化竞赛管理器
-	if (!CompetitionManager::instance().init(8)) // 使用8个线程
-	{
-		RCSend("竞赛管理器初始化失败");
-		return;
-	}
+	CompetitionManager::instance().init();
 
 	// 初始化展示类
 	m_display = std::make_shared<Display>();
@@ -409,53 +405,38 @@ void Quant::onProfitClicked()
 
 	// 创建市场数据
 	auto marketData = std::make_shared<Market>();
-	marketData->init(20250701, 20250930);
+	marketData->init(20250701, 20250929);
 	marketData->addStock("600975");
 
 	// 创建竞赛配置
 	CompetitionConfig config;
-	config.beginTime = 20250501;
-	config.endTime = 20250701;
+	config.beginTime = 20250701;
+	config.endTime = 20250929;
 	config.stocks = { "600975" };
 	config.marketData = marketData;
-	config.initialFund = 1000000; // 100万初始资金
+	config.initialFund = g_config.m_initialFund; // 100万初始资金
 
 	// 生成策略参数组合
-	std::vector<std::vector<int32_t>> allParams;
-
 	// 卖出时间点：0=10:40, 1=10:50, 2=11:00
 	// 买入时间点：0=13:40, 1=13:50, 2=14:00  
 	// 反追参数：7,8,9
 	// 降价参数：1,2,3
-	for (int sellTime = 0; sellTime < 3; ++sellTime)
+	config.allParam =
 	{
-		for (int buyTime = 0; buyTime < 3; ++buyTime)
-		{
-			for (int chaseParam = 7; chaseParam <= 9; ++chaseParam)
-			{
-				for (int discountParam = 1; discountParam <= 3; ++discountParam)
-				{
-					std::vector<int32_t> params = {
-						sellTime,      // 卖出时间点索引
-						buyTime,       // 买入时间点索引  
-						chaseParam,    // 反追参数
-						discountParam  // 降价参数
-					};
-					allParams.push_back(params);
-				}
-			}
-		}
-	}
+		{ (int32_t)ObserveTime::TIME1040, (int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100 },
+		{ (int32_t)ObserveTime::TIME1340, (int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400 },
+		{ 7, 8, 9 },
+		{ 1, 2, 3 }
+	};
 
-	RCSend("生成了 %d 种策略参数组合", allParams.size());
-
+	CompetitionManager::instance().addCompetition(StrategyMode::S1100B1400, config);
 	// 开始竞赛
-	if (CompetitionManager::instance().startCompetition(config, StrategyMode::S1100B1400, allParams))
+	if (CompetitionManager::instance().startCompetition())
 	{
-		RCSend("策略竞赛已开始，正在多线程执行 %d 个小策略", allParams.size());
+		RCSend("策略竞赛已开始");
 
 		// 启动进度监控
-		startProgressMonitoring();
+		//startProgressMonitoring();
 	}
 	else
 	{
@@ -465,12 +446,6 @@ void Quant::onProfitClicked()
 
 void Quant::onDisplayResultClicked()
 {
-	if (!CompetitionManager::instance().isCompleted())
-	{
-		RCSend("竞赛尚未完成，请等待竞赛结束后再查看结果");
-		return;
-	}
-
 	if (!m_display)
 	{
 		RCSend("展示组件未初始化");
@@ -574,28 +549,28 @@ void Quant::startProgressMonitoring()
 	// 创建一个定时器来监控竞赛进度
 	QTimer* progressTimer = new QTimer(this);
 	connect(progressTimer, &QTimer::timeout, this, [this, progressTimer]() {
-		int progress = CompetitionManager::instance().getProgress();
+		int progress = 100;// CompetitionManager::instance().getProgress();
 		RCSend("竞赛进度: %d%%", progress);
 
 		// 更新进度条或其他UI元素
 		// ui.progressBar->setValue(progress);
 
-		if (progress >= 100 || !CompetitionManager::instance().isRunning())
+		if (progress >= 100)
 		{
 			progressTimer->stop();
 			progressTimer->deleteLater();
 
-			if (CompetitionManager::instance().isCompleted())
-			{
-				RCSend("策略竞赛已完成");
-
-				// 自动显示结果（可选）
-				// onDisplayResultClicked();
-			}
-			else
-			{
-				RCSend("策略竞赛被中断");
-			}
+			//if (CompetitionManager::instance().isCompleted())
+			//{
+			//	RCSend("策略竞赛已完成");
+			//
+			//	// 自动显示结果（可选）
+			//	// onDisplayResultClicked();
+			//}
+			//else
+			//{
+			//	RCSend("策略竞赛被中断");
+			//}
 		}
 	});
 
@@ -611,7 +586,7 @@ void Quant::displayAllStrategies()
 	}
 
 	// 获取竞赛结果
-	CompetitionFinalResult result = CompetitionManager::instance().getFinalResult();
+	CompetitionFinalResult result;// = CompetitionManager::instance().getFinalResult();
 
 	// 设置结果到展示类
 	m_display->setCompetitionResult(result);

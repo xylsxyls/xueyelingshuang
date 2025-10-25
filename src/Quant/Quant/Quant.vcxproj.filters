@@ -122,6 +122,9 @@
     <ClCompile Include="AnalyzeTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="CompetitionTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Quant.qrc">
@@ -181,6 +184,9 @@
       <Filter>Task</Filter>
     </ClInclude>
     <ClInclude Include="AnalyzeTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="CompetitionTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

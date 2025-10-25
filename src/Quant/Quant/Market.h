@@ -60,4 +60,6 @@ private:
 
 	uint32_t m_beginTime;
 	uint32_t m_endTime;
+	std::vector<int32_t> m_emptyDayInfo;
+	std::vector<std::vector<int32_t>> m_emptyStockData;
 };

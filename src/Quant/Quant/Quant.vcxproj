@@ -161,6 +161,7 @@
     <ClCompile Include="AnalyzeTask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
     <ClCompile Include="CompetitionManager.cpp" />
+    <ClCompile Include="CompetitionTask.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Fund.cpp" />
@@ -305,6 +306,7 @@
     <ClInclude Include="AnalyzeTask.h" />
     <ClInclude Include="ClientReceive.h" />
     <ClInclude Include="CompetitionManager.h" />
+    <ClInclude Include="CompetitionTask.h" />
     <ClInclude Include="Config.h" />
     <CustomBuild Include="Display.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

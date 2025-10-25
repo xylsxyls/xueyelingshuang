@@ -71,7 +71,7 @@ private:
 	/** 获取交易日列表
 	@return 返回交易日列表
 	*/
-	std::vector<uint32_t> getTradingDays();
+	std::vector<int32_t> getTradingDays();
 
 	/** 计算健康值
 	@param [in] totalReturn 总收益率

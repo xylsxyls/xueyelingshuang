@@ -16,6 +16,7 @@ struct CConfig
 	int32_t m_ignoreTrans;
 	uint32_t m_allBeginTime;
 	uint32_t m_allEndTime;
+	uint32_t m_initialFund;
 
 protected:
 	CConfig();

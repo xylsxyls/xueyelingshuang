@@ -2,10 +2,11 @@
 #include "Util.h"
 #include <algorithm>
 
-Market::Market()
-	: m_beginTime(0)
-	, m_endTime(0)
+Market::Market() :
+m_beginTime(0),
+m_endTime(0)
 {
+
 }
 
 void Market::init(uint32_t beginTime, uint32_t endTime)
@@ -43,24 +44,22 @@ void Market::addStock(const std::string& stock)
 
 const std::vector<int32_t>& Market::getStockData(const std::string& stock, uint32_t date) const
 {
-	static std::vector<int32_t> emptyVector;
-
 	auto stockIt = m_stockData.find(stock);
 	if (stockIt == m_stockData.end())
 	{
-		return emptyVector;
+		return m_emptyDayInfo;
 	}
 
 	auto dateIt = m_dateIndex.find(stock);
 	if (dateIt == m_dateIndex.end())
 	{
-		return emptyVector;
+		return m_emptyDayInfo;
 	}
 
 	auto indexIt = dateIt->second.find(date);
 	if (indexIt == dateIt->second.end())
 	{
-		return emptyVector;
+		return m_emptyDayInfo;
 	}
 
 	if (indexIt->second < stockIt->second.size())
@@ -68,19 +67,17 @@ const std::vector<int32_t>& Market::getStockData(const std::string& stock, uint3
 		return stockIt->second[indexIt->second];
 	}
 
-	return emptyVector;
+	return m_emptyDayInfo;
 }
 
 const std::vector<std::vector<int32_t>>& Market::getAllStockData(const std::string& stock) const
 {
-	static std::vector<std::vector<int32_t>> emptyVector;
-
 	auto it = m_stockData.find(stock);
 	if (it != m_stockData.end())
 	{
 		return it->second;
 	}
-	return emptyVector;
+	return m_emptyStockData;
 }
 
 uint32_t Market::getBeginTime() const

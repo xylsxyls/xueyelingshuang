@@ -2,6 +2,8 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include "Cini/CiniAPI.h"
+#include "Util.h"
 
 StrategyTask::StrategyTask():
 m_beginTime(0),
@@ -38,7 +40,7 @@ void StrategyTask::DoTask()
 	uint32_t totalDays = 0;
 
 	// 获取所有交易日列表
-	std::vector<uint32_t> tradingDays = getTradingDays();
+	std::vector<int32_t> tradingDays = getTradingDays();
 
 	// 记录每日资产值用于计算指标
 	std::vector<int32_t> dailyValues;
@@ -55,7 +57,7 @@ void StrategyTask::DoTask()
 		{
 			break;
 		}
-		uint32_t date = tradingDays[i];
+		uint32_t date = (uint32_t)tradingDays[i];
 		// 执行策略
 		if (!m_spStrategy->onTradingDay(date))
 		{
@@ -169,12 +171,12 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 	// 计算总收益率
 	int32_t finalValue = dailyValues.back();
 	int32_t initialValue = m_initialFund;
-	result.totalReturn = (BigNumber(finalValue - initialValue) / BigNumber(initialValue));
+	result.totalReturn = (BigNumber(finalValue - initialValue).toPrec(16) / BigNumber(initialValue));
 
 	// 计算年化收益率（按实际交易天数调整）
 	// 假设一年有250个交易日
-	BigNumber years = BigNumber((int32_t)actualDays) / 250;
-	result.annualReturn = ((BigNumber(1) + result.totalReturn).pow(BigNumber((int32_t)actualDays) / years)) - 1;
+	BigNumber years = (BigNumber(250).toPrec(2) / BigNumber((int32_t)actualDays));
+	result.annualReturn = ((BigNumber(1) + result.totalReturn).pow(years.toPrec(4))) - 1;
 
 	// 设置最大回撤
 	result.maxDrawdown = maxDrawdown;
@@ -202,26 +204,21 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 	return result;
 }
 
-std::vector<uint32_t> StrategyTask::getTradingDays()
+std::vector<int32_t> StrategyTask::getTradingDays()
 {
-	std::vector<uint32_t> tradingDays;
-
-	// 简单的实现：假设从开始日期到结束日期的每一天都是交易日
-	// 实际应用中应该根据实际的交易日历来实现
-
-	for (uint32_t date = m_beginTime; date <= m_endTime; ++date)
+	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	std::vector<std::string> allSection = ini.getAllSection();
+	std::vector<int32_t> result;
+	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
+	for (size_t i = 0; i < tradingDays.size(); ++i)
 	{
-		// 这里可以添加更复杂的逻辑来检查是否是交易日
-		// 比如检查周末、节假日等
-
-		// 简单的检查：只添加有效日期
-		if (date >= m_beginTime && date <= m_endTime)
+		if (tradingDays[i] < (int32_t)m_beginTime || tradingDays[i] > (int32_t)m_endTime)
 		{
-			tradingDays.push_back(date);
+			continue;
 		}
+		result.push_back(tradingDays[i]);
 	}
-
-	return tradingDays;
+	return result;
 }
 
 BigNumber StrategyTask::calculateHealthScore(BigNumber totalReturn, BigNumber maxDrawdown,
