@@ -28,7 +28,7 @@ struct TOperation
 	int32_t shares;             // 做T股数
 	int32_t priceDiff;          // 价格差价（卖出-买入，单位：分）
 	int32_t totalFee;           // 总手续费（买入+卖出，单位：分）
-	int32_t netProfit;          // 净收益（差价收益-手续费，单位：分）
+	int32_t totalProfit;        // 净收益（差价收益-手续费，单位：分）
 };
 
 /** 完整交易记录结构体
@@ -109,7 +109,7 @@ public:
 	@param [in] time 交易时间点
 	@return 返回买入是否成功
 	*/
-	bool buyFullPosition(const std::string& stock, int32_t price, uint32_t date, ObserveTime time);
+	bool buyAll(const std::string& stock, int32_t price, uint32_t date, ObserveTime time);
 
 	/** 卖出指定股票的全部持仓（结束交易）
 	@param [in] stock 股票代码
@@ -127,20 +127,11 @@ public:
 	@param [in] time 交易时间点
 	@return 返回卖出是否成功
 	*/
-	bool sellForT(const std::string& stock, int32_t price, uint32_t date, ObserveTime time);
-
-	/** 做T买入：使用全部可用资金买入
-	@param [in] stock 股票代码
-	@param [in] price 买入价格（单位：分）
-	@param [in] date 交易日期
-	@param [in] time 交易时间点
-	@return 返回买入是否成功
-	*/
-	bool buyForT(const std::string& stock, int32_t price, uint32_t date, ObserveTime time);
+	bool sellAllForT(const std::string& stock, int32_t price, uint32_t date, ObserveTime time);
 
 	/** 获取账户总资产（现金+股票市值）
 	@param [in] date 当前日期
-	@param [in] time 当前时间点，传入默认值则表示当前收盘价
+	@param [in] time 当前时间点，传入默认值则表示当天收盘价
 	@return 返回总资产金额（单位：分）
 	*/
 	int32_t getTotalValue(uint32_t date, ObserveTime time = ObserveTime::COUNT);

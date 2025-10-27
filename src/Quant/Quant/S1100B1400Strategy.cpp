@@ -38,7 +38,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 
 	if (date == m_beginTime)
 	{
-		m_spFund->buyFullPosition(stock, dayInfo[(int32_t)Overall::CLOSE], date, ObserveTime::COUNT);
+		m_spFund->buyAll(stock, dayInfo[(int32_t)Overall::CLOSE], date, ObserveTime::COUNT);
 		return true;
 	}
 
@@ -56,7 +56,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 		return false;
 	}
 
-	m_spFund->sellForT(stock, sellPrice, date, sellTime);
+	m_spFund->sellAllForT(stock, sellPrice, date, sellTime);
 
 	bool isBuy = false;
 	for (int32_t timeIndex = (int32_t)sellTime; timeIndex <= (int32_t)forceBuyTime; ++timeIndex)
@@ -65,7 +65,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 		int32_t bestSellPrice = dayInfo[bestSellIndex];
 		if (bestSellPrice >= chaseBuyPrice)
 		{
-			m_spFund->buyFullPosition(stock, chaseBuyPrice, date, (ObserveTime)timeIndex);
+			m_spFund->buyAll(stock, chaseBuyPrice, date, (ObserveTime)timeIndex);
 			isBuy = true;
 			break;
 		}
@@ -73,7 +73,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 		int32_t bestBuyPrice = dayInfo[bestBuyIndex];
 		if (bestBuyPrice <= buyPrice)
 		{
-			m_spFund->buyFullPosition(stock, buyPrice, date, (ObserveTime)timeIndex);
+			m_spFund->buyAll(stock, buyPrice, date, (ObserveTime)timeIndex);
 			isBuy = true;
 			break;
 		}
@@ -81,7 +81,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 
 	if (!isBuy)
 	{
-		m_spFund->buyFullPosition(stock, forceBuyPrice, date, (ObserveTime)forceBuyTime);
+		m_spFund->buyAll(stock, forceBuyPrice, date, (ObserveTime)forceBuyTime);
 	}
 
 	return true;
@@ -310,7 +310,7 @@ bool S1100B1400Strategy::executeBuy(const std::string& stock, uint32_t date, Obs
 {
 	if (price > 0)
 	{
-		return m_spFund->buyFullPosition(stock, price, date, buyTime);
+		return m_spFund->buyAll(stock, price, date, buyTime);
 	}
 	return false;
 }

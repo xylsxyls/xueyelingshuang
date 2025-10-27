@@ -30,7 +30,7 @@ void Fund::setMarket(const std::shared_ptr<Market>& spMarket)
 	m_spMarket = spMarket;
 }
 
-bool Fund::buyFullPosition(const std::string& stock, int32_t price, uint32_t date, ObserveTime time)
+bool Fund::buyAll(const std::string& stock, int32_t price, uint32_t date, ObserveTime time)
 {
 	if (price <= 0)
 	{
@@ -57,7 +57,7 @@ bool Fund::sellAll(const std::string& stock, int32_t price, uint32_t date, Obser
 	return executeSell(stock, price, position->shares, date, time, false);
 }
 
-bool Fund::sellForT(const std::string& stock, int32_t price, uint32_t date, ObserveTime time)
+bool Fund::sellAllForT(const std::string& stock, int32_t price, uint32_t date, ObserveTime time)
 {
 	auto position = getPosition(stock);
 	if (!position)
@@ -79,11 +79,6 @@ bool Fund::sellForT(const std::string& stock, int32_t price, uint32_t date, Obse
 	sellShares = (sellShares / MIN_LOT) * MIN_LOT;
 
 	return executeSell(stock, price, sellShares, date, time, true);
-}
-
-bool Fund::buyForT(const std::string& stock, int32_t price, uint32_t date, ObserveTime time)
-{
-	return buyFullPosition(stock, price, date, time);
 }
 
 int32_t Fund::getTotalValue(uint32_t date, ObserveTime time)
@@ -373,7 +368,7 @@ void Fund::processTOperations(const std::string& stock, const SimpleTradeRecord&
 			tOp.shares = (std::min)(sellRecord.shares, it->shares);
 			tOp.priceDiff = sellRecord.price - it->price;
 			tOp.totalFee = sellRecord.fee + it->fee;
-			tOp.netProfit = (tOp.priceDiff * tOp.shares) - tOp.totalFee;
+			tOp.totalProfit = (tOp.priceDiff * tOp.shares) - tOp.totalFee;
 
 			// 添加到对应交易的做T记录
 			if (!m_completeTrades[stock].empty())
@@ -382,7 +377,7 @@ void Fund::processTOperations(const std::string& stock, const SimpleTradeRecord&
 				trade.tOperations.push_back(tOp);
 				trade.totalTDiff += tOp.priceDiff * tOp.shares;
 				trade.totalTFee += tOp.totalFee;
-				trade.totalTProfit += tOp.netProfit;
+				trade.totalTProfit += tOp.totalProfit;
 			}
 
 			break;
