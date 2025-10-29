@@ -10,17 +10,19 @@
 */
 struct StrategyResult
 {
-	StrategyMode strategyMode;    // 策略模式
-	std::vector<int32_t> params;  // 策略参数
-	BigNumber totalReturn;        // 总收益率
-	BigNumber annualReturn;       // 年化收益率
-	BigNumber maxDrawdown;        // 最大回撤
-	BigNumber winRate;            // 胜率
-	BigNumber profitArea;         // 收益面积
-	BigNumber healthScore;        // 健康值
-	uint32_t tradeDays;           // 实际交易天数
-	uint32_t totalDays;           // 总天数（用于调整）
-
+	StrategyMode strategyMode;         // 策略模式
+	std::vector<int32_t> params;       // 策略参数
+	BigNumber totalReturn;             // 总收益率
+	BigNumber tReturn;                 // 做T总收益率
+	BigNumber annualReturn;            // 年化收益率
+	BigNumber maxDrawdown;             // 最大回撤
+	BigNumber winRate;                 // 胜率
+	BigNumber profitArea;              // 收益面积
+	BigNumber healthScore;             // 健康值
+	uint32_t tradeDays;                // 实际交易天数
+	uint32_t totalDays;                // 总天数（用于调整）
+	std::vector<std::string> tradeLog; // 交易日志
+		
 	// 默认构造函数
 	StrategyResult() :
 		strategyMode(StrategyMode::COUNT),
@@ -82,6 +84,11 @@ public:
 	@param [in] spFund 资金账户共享指针
 	*/
 	virtual void setFund(const std::shared_ptr<Fund>& spFund);
+
+	/** 获取资金账户
+	@return 返回资金账户共享指针
+	*/
+	virtual std::shared_ptr<Fund> getFund();
 
 	/** 设置策略参数向量
 	@param [in] params 策略参数下标向量

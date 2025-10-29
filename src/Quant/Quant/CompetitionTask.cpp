@@ -85,7 +85,7 @@ void CompetitionTask::DoTask()
 	// 按总收益率排序
 	std::sort(m_intermediateResults.begin(), m_intermediateResults.end(),
 		[](const StrategyResult& a, const StrategyResult& b) {
-		return a.totalReturn > b.totalReturn;
+		return a.tReturn > b.tReturn;
 	});
 
 	// 填充最终结果

@@ -111,6 +111,8 @@ void StrategyTask::DoTask()
 	// 设置策略ID和参数
 	result.strategyMode = m_spStrategy->getStrategyMode();
 	result.params = m_spStrategy->getStrategyParam();
+	result.tReturn = m_spStrategy->getFund()->allTProfit();
+	result.tradeLog = m_spStrategy->getFund()->exportTradeRecords();
 	m_resultQueue->push(result);
 }
 

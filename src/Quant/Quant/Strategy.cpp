@@ -41,6 +41,11 @@ void Strategy::setFund(const std::shared_ptr<Fund>& spFund)
 	m_spFund = spFund;
 }
 
+std::shared_ptr<Fund> Strategy::getFund()
+{
+	return m_spFund;
+}
+
 void Strategy::setStrategyParam(const std::vector<int32_t>& param)
 {
 	m_strategyParam = param;

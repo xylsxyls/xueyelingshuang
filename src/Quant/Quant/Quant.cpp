@@ -405,13 +405,13 @@ void Quant::onProfitClicked()
 
 	// 创建市场数据
 	auto marketData = std::make_shared<Market>();
-	marketData->init(20250701, 20250929);
+	marketData->init(20250710, 20250905);
 	marketData->addStock("600975");
 
 	// 创建竞赛配置
 	CompetitionConfig config;
-	config.beginTime = 20250701;
-	config.endTime = 20250929;
+	config.beginTime = 20250710;
+	config.endTime = 20250905;
 	config.stocks = { "600975" };
 	config.marketData = marketData;
 	config.initialFund = g_config.m_initialFund; // 100万初始资金
