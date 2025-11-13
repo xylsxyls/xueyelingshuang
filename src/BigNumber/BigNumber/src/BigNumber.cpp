@@ -2,6 +2,8 @@
 #include "BigNumberBase/BigNumberBaseAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 
+#define USE_STD_POW
+
 BigNumber::BigNumber():
 m_divPrec(16),
 m_divFlag(HALF_ADJUST),
@@ -156,22 +158,40 @@ BigNumber BigNumber::operator -- (int)
 
 BigNumber BigNumber::pow(const BigNumber& powNum, int32_t prec, PrecFlag flag)
 {
+#ifdef USE_STD_POW
+	BigNumber result = std::pow(this->toDouble(flag), powNum.toDouble(flag));
+	result.setPrec(prec, flag);
+#ifdef _DEBUG
+	m_num = toString();
+#endif
+	return result;
+#else
 	BigNumber result;
 	*result.m_base = m_base->pow(*powNum.m_base, prec, (BigNumberBase::PrecFlag)flag);
 #ifdef _DEBUG
 	m_num = toString();
 #endif
 	return result;
+#endif
 }
 
 BigNumber BigNumber::sqrt(int32_t prec, PrecFlag flag)
 {
+#ifdef USE_STD_POW
+	BigNumber result = std::pow(this->toDouble(flag), 0.5);
+	result.setPrec(prec, flag);
+#ifdef _DEBUG
+	m_num = toString();
+#endif
+	return result;
+#else
 	BigNumber result;
 	*result.m_base = m_base->pow(*(BigNumber(0.5).m_base), prec, (BigNumberBase::PrecFlag)flag);
 #ifdef _DEBUG
 	m_num = toString();
 #endif
 	return result;
+#endif
 }
 
 std::string BigNumber::toString() const

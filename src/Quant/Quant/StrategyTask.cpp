@@ -183,9 +183,9 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 
 	// 计算年化收益率（按实际交易天数调整）
 	// 假设一年有250个交易日
-	BigNumber years = (BigNumber(250).toPrec(2) / BigNumber((int32_t)actualDays - 1));
-	result.annualReturn = ((BigNumber(1) + result.totalReturn.toPrec(16) / initialValue).pow(years.toPrec(2), 4)) - 1;
-	result.annualTReturn = ((BigNumber(1) + result.tReturn.toPrec(16) / initialValue).pow(years.toPrec(2), 4)) - 1;
+	BigNumber yearsProport = (BigNumber(250).toPrec(16) / BigNumber((int32_t)actualDays - 1));
+	result.annualReturn = (BigNumber(1) + result.totalReturn.toPrec(16) / initialValue).pow(yearsProport) - 1;
+	result.annualTReturn = (BigNumber(1) + result.tReturn.toPrec(16) / initialValue).pow(yearsProport) - 1;
 
 	// 设置最大回撤
 	result.maxDrawdown = maxDrawdown;

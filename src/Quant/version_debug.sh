@@ -12,3 +12,4 @@
 "$CLOUD_REBUILD" IntDateTime 32 dll debug same
 "$CLOUD_REBUILD" Cini 32 dll debug same
 "$CLOUD_REBUILD" Ctxt 32 dll debug same
+"$CLOUD_REBUILD" CStopWatch 32 dll debug same

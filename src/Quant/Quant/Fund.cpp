@@ -3,24 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
-
-// 辅助函数：将ObserveTime转换为字符串
-std::string getTimeString(ObserveTime time)
-{
-	switch (time)
-	{
-	case ObserveTime::TIME0930: return "09:30";
-	case ObserveTime::TIME1040: return "10:40";
-	case ObserveTime::TIME1050: return "10:50";
-	case ObserveTime::TIME1100: return "11:00";
-	case ObserveTime::TIME1110: return "11:10";
-	case ObserveTime::TIME1340: return "13:40";
-	case ObserveTime::TIME1350: return "13:50";
-	case ObserveTime::TIME1400: return "14:00";
-	case ObserveTime::TIME1410: return "14:10";
-	default: return "收盘";
-	}
-}
+#include "Util.h"
 
 Position::Position() :
 m_price(0),
@@ -226,7 +209,7 @@ std::vector<std::string> Fund::exportTradeRecords() const
 			// 详细输出初始全仓买入
 			oss.str("");
 			oss << "  初始全仓买入: " << trade.m_buyTrade.m_date << "日 ";
-			oss << getTimeString(trade.m_buyTrade.m_time) << " ";
+			oss << Util::observeTimeToWatchString(trade.m_buyTrade.m_time) << " ";
 			oss << trade.m_buyTrade.m_shares << "股 @ " << (trade.m_buyTrade.m_price / 100.0) << "元";
 			oss << "，手续费: " << (trade.m_buyTrade.m_fee / 100.0) << "元";
 			oss << "，总成本: " << (BigNumber(trade.m_buyTrade.m_shares * trade.m_buyTrade.m_price +
@@ -252,7 +235,7 @@ std::vector<std::string> Fund::exportTradeRecords() const
 					{
 						oss.str("");
 						oss << "      卖出: " << sellIt->m_date << "日 ";
-						oss << getTimeString(sellIt->m_time) << " ";
+						oss << Util::observeTimeToWatchString(sellIt->m_time) << " ";
 						oss << sellIt->m_shares << "股 @ " << (sellIt->m_price / 100.0) << "元";
 						oss << "，手续费: " << (sellIt->m_fee / 100.0) << "元";
 						records.push_back(oss.str());
@@ -263,7 +246,7 @@ std::vector<std::string> Fund::exportTradeRecords() const
 					{
 						oss.str("");
 						oss << "      买入: " << buyIt->m_date << "日 ";
-						oss << getTimeString(buyIt->m_time) << " ";
+						oss << Util::observeTimeToWatchString(buyIt->m_time) << " ";
 						oss << buyIt->m_shares << "股 @ " << (buyIt->m_price / 100.0) << "元";
 						oss << "，手续费: " << (buyIt->m_fee / 100.0) << "元";
 						records.push_back(oss.str());
@@ -294,7 +277,7 @@ std::vector<std::string> Fund::exportTradeRecords() const
 				{
 					oss.str("");
 					oss << "      卖出: " << sellIt->m_date << "日 ";
-					oss << getTimeString(sellIt->m_time) << " ";
+					oss << Util::observeTimeToWatchString(sellIt->m_time) << " ";
 					oss << sellIt->m_shares << "股 @ " << (sellIt->m_price / 100.0) << "元";
 					oss << "，手续费: " << (sellIt->m_fee / 100.0) << "元";
 					records.push_back(oss.str());
@@ -305,7 +288,7 @@ std::vector<std::string> Fund::exportTradeRecords() const
 				{
 					oss.str("");
 					oss << "      买入: " << buyIt->m_date << "日 ";
-					oss << getTimeString(buyIt->m_time) << " ";
+					oss << Util::observeTimeToWatchString(buyIt->m_time) << " ";
 					oss << buyIt->m_shares << "股 @ " << (buyIt->m_price / 100.0) << "元";
 					oss << "，手续费: " << (buyIt->m_fee / 100.0) << "元";
 					records.push_back(oss.str());
@@ -317,7 +300,7 @@ std::vector<std::string> Fund::exportTradeRecords() const
 			{
 				oss.str("");
 				oss << "  最终全仓卖出: " << trade.m_sellTrade.m_date << "日 ";
-				oss << getTimeString(trade.m_sellTrade.m_time) << " ";
+				oss << Util::observeTimeToWatchString(trade.m_sellTrade.m_time) << " ";
 				oss << trade.m_sellTrade.m_shares << "股 @ " << (trade.m_sellTrade.m_price / 100.0) << "元";
 				oss << "，手续费: " << (trade.m_sellTrade.m_fee / 100.0) << "元";
 				oss << "，总收入: " << (BigNumber(trade.m_sellTrade.m_shares * trade.m_sellTrade.m_price -
@@ -348,7 +331,7 @@ std::vector<std::string> Fund::exportTradeRecords() const
 			oss << "  " << it->first << ": " << it->second->m_shares << "股 @ "
 				<< (it->second->m_price / 100.0) << "元";
 			oss << "，买入日期: " << it->second->m_date;
-			oss << "，买入时间: " << getTimeString(it->second->m_time);
+			oss << "，买入时间: " << Util::observeTimeToWatchString(it->second->m_time);
 			records.push_back(oss.str());
 		}
 		records.push_back("");

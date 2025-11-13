@@ -35,9 +35,13 @@ void CompetitionManager::init()
 
 void CompetitionManager::uninit()
 {
-	stopCompetition();
-	CTaskThreadManager::Instance().Uninit(m_competitionThreadId);
-	RCSend("CompetitionManager uninitialized");
+	if (m_competitionThreadId != 0)
+	{
+		stopCompetition();
+		CTaskThreadManager::Instance().Uninit(m_competitionThreadId);
+		m_competitionThreadId = 0;
+		RCSend("CompetitionManager uninitialized");
+	}
 }
 
 void CompetitionManager::addCompetition(StrategyMode strategyMode, const CompetitionConfig& config)

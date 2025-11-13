@@ -167,6 +167,16 @@ std::string Util::observeTimeToString(ObserveTime time)
 	{
 	case ObserveTime::TIME0930:
 		return "time0930";
+	case ObserveTime::TIME0950:
+		return "time0950";
+	case ObserveTime::TIME1000:
+		return "time1000";
+	case ObserveTime::TIME1010:
+		return "time1010";
+	case ObserveTime::TIME1020:
+		return "time1020";
+	case ObserveTime::TIME1030:
+		return "time1030";
 	case ObserveTime::TIME1040:
 		return "time1040";
 	case ObserveTime::TIME1050:
@@ -175,6 +185,10 @@ std::string Util::observeTimeToString(ObserveTime time)
 		return "time1100";
 	case ObserveTime::TIME1110:
 		return "time1110";
+	case ObserveTime::TIME1320:
+		return "time1320";
+	case ObserveTime::TIME1330:
+		return "time1330";
 	case ObserveTime::TIME1340:
 		return "time1340";
 	case ObserveTime::TIME1350:
@@ -183,6 +197,12 @@ std::string Util::observeTimeToString(ObserveTime time)
 		return "time1400";
 	case ObserveTime::TIME1410:
 		return "time1410";
+	case ObserveTime::TIME1420:
+		return "time1420";
+	case ObserveTime::TIME1430:
+		return "time1430";
+	case ObserveTime::TIME1440:
+		return "time1440";
 	default:
 		break;
 	}
@@ -194,6 +214,26 @@ ObserveTime Util::observeStringToTime(const std::string& strTime)
 	if (strTime == "time0930")
 	{
 		return ObserveTime::TIME0930;
+	}
+	else if (strTime == "time0950")
+	{
+		return ObserveTime::TIME0950;
+	}
+	else if (strTime == "time1000")
+	{
+		return ObserveTime::TIME1000;
+	}
+	else if (strTime == "time1010")
+	{
+		return ObserveTime::TIME1010;
+	}
+	else if (strTime == "time1020")
+	{
+		return ObserveTime::TIME1020;
+	}
+	else if (strTime == "time1030")
+	{
+		return ObserveTime::TIME1030;
 	}
 	else if (strTime == "time1040")
 	{
@@ -211,6 +251,14 @@ ObserveTime Util::observeStringToTime(const std::string& strTime)
 	{
 		return ObserveTime::TIME1110;
 	}
+	else if (strTime == "time1320")
+	{
+		return ObserveTime::TIME1320;
+	}
+	else if (strTime == "time1330")
+	{
+		return ObserveTime::TIME1330;
+	}
 	else if (strTime == "time1340")
 	{
 		return ObserveTime::TIME1340;
@@ -227,9 +275,48 @@ ObserveTime Util::observeStringToTime(const std::string& strTime)
 	{
 		return ObserveTime::TIME1410;
 	}
+	else if (strTime == "time1420")
+	{
+		return ObserveTime::TIME1420;
+	}
+	else if (strTime == "time1430")
+	{
+		return ObserveTime::TIME1430;
+	}
+	else if (strTime == "time1440")
+	{
+		return ObserveTime::TIME1440;
+	}
 	else
 	{
 		return ObserveTime::COUNT;
+	}
+}
+
+std::string Util::observeTimeToWatchString(ObserveTime time)
+{
+	switch (time)
+	{
+	case ObserveTime::TIME0930: return "09:30";
+	case ObserveTime::TIME0950: return "09:50";
+	case ObserveTime::TIME1000: return "10:00";
+	case ObserveTime::TIME1010: return "10:10";
+	case ObserveTime::TIME1020: return "10:20";
+	case ObserveTime::TIME1030: return "10:30";
+	case ObserveTime::TIME1040: return "10:40";
+	case ObserveTime::TIME1050: return "10:50";
+	case ObserveTime::TIME1100: return "11:00";
+	case ObserveTime::TIME1110: return "11:10";
+	case ObserveTime::TIME1320: return "13:20";
+	case ObserveTime::TIME1330: return "13:30";
+	case ObserveTime::TIME1340: return "13:40";
+	case ObserveTime::TIME1350: return "13:50";
+	case ObserveTime::TIME1400: return "14:00";
+	case ObserveTime::TIME1410: return "14:10";
+	case ObserveTime::TIME1420: return "14:20";
+	case ObserveTime::TIME1430: return "14:30";
+	case ObserveTime::TIME1440: return "14:40";
+	default: return " ’≈Ã";
 	}
 }
 
@@ -239,6 +326,16 @@ int32_t Util::getTimeValue(ObserveTime time)
 	{
 	case ObserveTime::TIME0930:
 		return 930;
+	case ObserveTime::TIME0950:
+		return 950;
+	case ObserveTime::TIME1000:
+		return 1000;
+	case ObserveTime::TIME1010:
+		return 1010;
+	case ObserveTime::TIME1020:
+		return 1020;
+	case ObserveTime::TIME1030:
+		return 1030;
 	case ObserveTime::TIME1040:
 		return 1040;
 	case ObserveTime::TIME1050:
@@ -247,6 +344,10 @@ int32_t Util::getTimeValue(ObserveTime time)
 		return 1100;
 	case ObserveTime::TIME1110:
 		return 1110;
+	case ObserveTime::TIME1320:
+		return 1320;
+	case ObserveTime::TIME1330:
+		return 1330;
 	case ObserveTime::TIME1340:
 		return 1340;
 	case ObserveTime::TIME1350:
@@ -255,6 +356,12 @@ int32_t Util::getTimeValue(ObserveTime time)
 		return 1400;
 	case ObserveTime::TIME1410:
 		return 1410;
+	case ObserveTime::TIME1420:
+		return 1420;
+	case ObserveTime::TIME1430:
+		return 1430;
+	case ObserveTime::TIME1440:
+		return 1440;
 	case ObserveTime::COUNT:
 		return 1500;
 	default:

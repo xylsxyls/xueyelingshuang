@@ -400,9 +400,10 @@ void Quant::onInitRedisClicked()
 void Quant::onProfitClicked()
 {
 	RCSend("开始策略竞赛...");
+	g_config.m_time.SetWatchTime(0);
 
-	int32_t profitBeginTime = 20250707;
-	int32_t profitEndTime = 20250716;
+	int32_t profitBeginTime = 20250630;
+	int32_t profitEndTime = 20250929;
 	std::string stock = "600975";
 
 	std::vector<std::vector<int32_t>> result =
@@ -428,10 +429,18 @@ void Quant::onProfitClicked()
 	// 降价参数：1,2,3
 	config.allParam =
 	{
-		{ (int32_t)ObserveTime::TIME1040, (int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100 },
-		{ (int32_t)ObserveTime::TIME1340, (int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400 },
-		{ 7, 8, 9 },
-		{ 1, 2, 3 }
+		{ 
+			(int32_t)ObserveTime::TIME0950, (int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+		},
+		{ 
+			(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+			(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+			(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+		},
+		{ 7, 8, 9, 10, 11, 12, 13 },
+		{ 1, 2, 3, 4, 5, 6 }
 	};
 
 	CompetitionManager::instance().addCompetition(StrategyMode::S1100B1400, config);

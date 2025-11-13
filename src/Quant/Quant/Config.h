@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <string>
+#include "CStopWatch/CStopWatchAPI.h"
 
 #define g_config CConfig::instance()
 
@@ -17,6 +18,7 @@ struct CConfig
 	uint32_t m_allBeginTime;
 	uint32_t m_allEndTime;
 	uint32_t m_initialFund;
+	CStopWatch m_time;
 
 protected:
 	CConfig();
@@ -45,14 +47,24 @@ enum class RangeTime
 enum class ObserveTime
 {
 	TIME0930,
+	TIME0950,
+	TIME1000,
+	TIME1010,
+	TIME1020,
+	TIME1030,
 	TIME1040,
 	TIME1050,
 	TIME1100,
 	TIME1110,
+	TIME1320,
+	TIME1330,
 	TIME1340,
 	TIME1350,
 	TIME1400,
 	TIME1410,
+	TIME1420,
+	TIME1430,
+	TIME1440,
 	COUNT
 };
 

@@ -68,6 +68,12 @@ public:
 	*/
 	static ObserveTime observeStringToTime(const std::string& strTime);
 
+	/** 将观察时间枚举转换为钟表字符串表示
+	@param [in] time 观察时间枚举值
+	@return 对应的钟表字符串名称
+	*/
+	static std::string observeTimeToWatchString(ObserveTime time);
+
 	/** 获取观察时间的数值表示
 	@param [in] time 观察时间枚举值
 	@return 对应的整数值

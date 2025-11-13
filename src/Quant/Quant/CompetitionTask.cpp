@@ -2,6 +2,7 @@
 #include "QuantStrategyManager.h"
 #include "StrategyTask.h"
 #include <algorithm>
+#include "Util.h"
 
 CompetitionTask::CompetitionTask()
 {
@@ -87,6 +88,31 @@ void CompetitionTask::DoTask()
 		[](const StrategyResult& a, const StrategyResult& b) {
 		return a.tReturn > b.tReturn;
 	});
+
+	RCSend("time = %.2lfmin\n", (int32_t)g_config.m_time.GetWatchTime() / 1000.0 / 60.0);
+	for (size_t resultIndex = 0; (resultIndex < 10) && (resultIndex < m_intermediateResults.size()); ++resultIndex)
+	{
+		const StrategyResult& result = m_intermediateResults[resultIndex];
+		std::string param;
+		for (size_t index = 0; index < result.params.size(); ++index)
+		{
+			param += (index <= 1 ?
+				(Util::observeTimeToWatchString((ObserveTime)result.params[index]) + ", ") :
+				std::to_string(result.params[index]) + ", ");
+		}
+		if (!param.empty())
+		{
+			param.pop_back();
+			param.pop_back();
+		}
+
+		RCSend("第%d名, param = %s, tProfit = %s元, trade = %s元, tAnnual = %s%%",
+			(int32_t)(resultIndex + 1),
+			param.c_str(),
+			(m_intermediateResults[resultIndex].tReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+			(m_intermediateResults[resultIndex].totalReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+			(m_intermediateResults[resultIndex].annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
+	}
 
 	// 填充最终结果
 	m_finalResult.rankedResults = m_intermediateResults;

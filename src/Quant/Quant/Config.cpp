@@ -24,7 +24,7 @@ CConfig::CConfig()
 	m_iniDbPath = m_currentExePath;
 	m_dbPath = m_currentExePath;
 	m_cpuCoreCount = CSystem::GetCPUCoreCount();
-	m_normalShares = 1000;
+	m_normalShares = 800;
 	m_ignoreTrans = 2;
 	m_allBeginTime = 20250201;
 	m_allEndTime = 30250101;
@@ -33,6 +33,6 @@ CConfig::CConfig()
 
 CConfig& CConfig::instance()
 {
-	static CConfig s_cconfig;
-	return s_cconfig;
+	static CConfig s_config;
+	return s_config;
 }
