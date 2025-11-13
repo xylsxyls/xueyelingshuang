@@ -167,7 +167,7 @@ BigNumber BigNumber::pow(const BigNumber& powNum, int32_t prec, PrecFlag flag)
 BigNumber BigNumber::sqrt(int32_t prec, PrecFlag flag)
 {
 	BigNumber result;
-	*result.m_base = m_base->pow(*((BigNumber(1) / 2).m_base), prec, (BigNumberBase::PrecFlag)flag);
+	*result.m_base = m_base->pow(*(BigNumber(0.5).m_base), prec, (BigNumberBase::PrecFlag)flag);
 #ifdef _DEBUG
 	m_num = toString();
 #endif

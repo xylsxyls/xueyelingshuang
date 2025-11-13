@@ -93,7 +93,7 @@ public:
 private:
 	// 线程ID列表
 	std::vector<uint32_t> m_vecThreadId;
-	// 配置信息
+	// 配置信息，策略模式，配置信息
 	std::map<int32_t, CompetitionConfig> m_competitionConfigMap;
 	// 无锁队列用于结果收集
 	LockFreeQueue<StrategyResult> m_resultQueue;

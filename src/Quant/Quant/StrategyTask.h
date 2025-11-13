@@ -63,10 +63,11 @@ private:
 	@param [in] maxDrawdown 最大回撤
 	@param [in] totalProfitArea 总收益面积
 	@param [in] dailyValues 每日资产值
+	@param [in] lastDate 最后一天日期
 	@return 返回策略结果
 	*/
 	StrategyResult calculateStrategyMetrics(uint32_t actualDays, uint32_t totalDays,
-		BigNumber maxDrawdown, BigNumber totalProfitArea, const std::vector<int32_t>& dailyValues);
+		BigNumber maxDrawdown, BigNumber totalProfitArea, const std::vector<int32_t>& dailyValues, uint32_t lastDate);
 
 	/** 获取交易日列表
 	@return 返回交易日列表

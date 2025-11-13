@@ -38,13 +38,14 @@ struct Trade : public Position
 */
 struct TOperation
 {
-	std::vector<Trade> m_sellTrade;   // 卖出交易记录
-	std::vector<Trade> m_buyTrade;    // 买入交易记录
+	std::vector<Trade> m_sellTrade;                   // 卖出交易记录
+	std::vector<Trade> m_buyTrade;                    // 买入交易记录
 
-	int32_t shares() const;           // 做T股数
-	int32_t diff() const;             // 价格差价（卖出-买入，单位：分）
-	int32_t totalFee() const;         // 总手续费（买入+卖出，单位：分）
-	int32_t totalProfit() const;      // 净收益（差价收益-手续费，单位：分）   
+	int32_t sellShares() const;                       // 卖出股数
+	int32_t buyShares() const;                        // 买入股数
+	int32_t diff() const;                             // 价格差价（卖出-买入，单位：分）
+	int32_t totalFee() const;                         // 总手续费（买入+卖出，单位：分）
+	int32_t totalProfit(int32_t endPrice) const;      // 净收益（差价收益-手续费，单位：分）
 };
 
 /** 完整交易记录结构体
@@ -56,10 +57,11 @@ struct CompleteTrade
 	std::vector<TOperation> m_vecTOperations;     // 做T操作记录
 	TOperation m_incompleteTOperation;            // 最后一次不完整的T操作记录
 
-	int32_t allTDiff() const;          // 做T价格差价总和（单位：分）
-	int32_t allTFee() const;           // 做T总手续费（单位：分）
-	int32_t allTProfit() const;        // 做T总净收益（单位：分）     
-	int32_t tradeProfit() const;       // 交易总净收益（单位：分）
+	int32_t allTDiff() const;                          // 做T价格差价总和（单位：分）
+	int32_t allTFee() const;                           // 做T总手续费（单位：分）
+	int32_t allTProfit(int32_t endPrice) const;        // 做T总净收益（单位：分）     
+	int32_t tradeProfit() const;                       // 交易总净收益（单位：分）
+	int32_t beginEndFee() const;                       // 开始结束交易手续费（单位：分）
 };
 
 /** 资金账户类
@@ -170,14 +172,20 @@ public:
 	int32_t allTFee() const;
 
 	/** 获取所有交易的做T总净收益
+	@param [in] 最后一天日期
 	@return 返回做T总净收益（单位：分）
 	*/
-	int32_t allTProfit() const;
+	int32_t allTProfit(uint32_t lastDate) const;
 
 	/** 获取所有交易的交易总净收益
 	@return 返回交易总净收益（单位：分）
 	*/
 	int32_t tradeProfit() const;
+
+	/** 获取最开始和最后一笔结束交易的总手续费
+	@return 返回手续费（单位：分）
+	*/
+	int32_t allBeginEndFee() const;
 
 private:
 	/** 计算指定价格下最大可买入股数（考虑手续费）

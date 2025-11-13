@@ -210,6 +210,12 @@ BigNumberBase BigNumberBase::pow(const BigNumberBase& powNum, int32_t prec, Prec
 		prec = Calc::PRECISE;
 	}
 	BigNumberBase result;
+	if (BigNumberBase::Compare(*this, "0") == EQUAL)
+	{
+		result = "0";
+		result.setPrec(prec, flag);
+		return result;
+	}
 	if (BigNumberBase::Compare(powNum, "0") == EQUAL)
 	{
 		result = "1";

@@ -401,18 +401,23 @@ void Quant::onProfitClicked()
 {
 	RCSend("开始策略竞赛...");
 
-	std::vector<std::vector<int32_t>> result = Util::getAllStockData("600975", 20250501, 20251010);
+	int32_t profitBeginTime = 20250707;
+	int32_t profitEndTime = 20250716;
+	std::string stock = "600975";
+
+	std::vector<std::vector<int32_t>> result =
+		Util::getAllStockData(stock, g_config.m_allBeginTime, g_config.m_allEndTime);
 
 	// 创建市场数据
 	auto marketData = std::make_shared<Market>();
-	marketData->init(20250710, 20250905);
-	marketData->addStock("600975");
+	marketData->init(profitBeginTime, profitEndTime);
+	marketData->addStock(stock);
 
 	// 创建竞赛配置
 	CompetitionConfig config;
-	config.beginTime = 20250710;
-	config.endTime = 20250905;
-	config.stocks = { "600975" };
+	config.beginTime = profitBeginTime;
+	config.endTime = profitEndTime;
+	config.stocks = { stock };
 	config.marketData = marketData;
 	config.initialFund = g_config.m_initialFund; // 100万初始资金
 

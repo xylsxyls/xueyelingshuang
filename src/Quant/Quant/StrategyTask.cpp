@@ -50,6 +50,7 @@ void StrategyTask::DoTask()
 	BigNumber maxDrawdown = 0; // 最大回撤
 	BigNumber totalProfitArea = 0; // 总收益面积
 
+	uint32_t date = 0;
 	// 遍历所有交易日
 	for (uint32_t i = 0; i < tradingDays.size(); ++i)
 	{
@@ -57,7 +58,7 @@ void StrategyTask::DoTask()
 		{
 			break;
 		}
-		uint32_t date = (uint32_t)tradingDays[i];
+		date = (uint32_t)tradingDays[i];
 		// 执行策略
 		if (!m_spStrategy->onTradingDay(date))
 		{
@@ -101,17 +102,19 @@ void StrategyTask::DoTask()
 	// 强制平仓所有未完成交易
 	if (!tradingDays.empty())
 	{
-		uint32_t lastDate = tradingDays.back();
-		spFund->closeAllTrades(lastDate);
+		spFund->closeAllTrades(date);
+		int32_t currentValue = spFund->getTotalValue((uint32_t)tradingDays.back());
+		dailyValues.pop_back();
+		dailyValues.push_back(currentValue);
 	}
 
 	// 计算策略指标
-	StrategyResult result = calculateStrategyMetrics(actualDays, totalDays, maxDrawdown, totalProfitArea, dailyValues);
+	StrategyResult result = calculateStrategyMetrics(actualDays, totalDays, maxDrawdown,
+		totalProfitArea, dailyValues, date);
 	
 	// 设置策略ID和参数
 	result.strategyMode = m_spStrategy->getStrategyMode();
 	result.params = m_spStrategy->getStrategyParam();
-	result.tReturn = m_spStrategy->getFund()->allTProfit();
 	result.tradeLog = m_spStrategy->getFund()->exportTradeRecords();
 	m_resultQueue->push(result);
 }
@@ -152,7 +155,7 @@ bool StrategyTask::isParamValid()
 }
 
 StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint32_t totalDays,
-	BigNumber maxDrawdown, BigNumber totalProfitArea, const std::vector<int32_t>& dailyValues)
+	BigNumber maxDrawdown, BigNumber totalProfitArea, const std::vector<int32_t>& dailyValues, uint32_t lastDate)
 {
 	StrategyResult result;
 
@@ -170,15 +173,19 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 		return result;
 	}
 
-	// 计算总收益率
+	// 计算总收益 
 	int32_t finalValue = dailyValues.back();
 	int32_t initialValue = m_initialFund;
-	result.totalReturn = (BigNumber(finalValue - initialValue).toPrec(16) / BigNumber(initialValue));
+	result.totalReturn = finalValue - initialValue;
+
+	// 做T总收益
+	result.tReturn = m_spStrategy->getFund()->allTProfit(lastDate);
 
 	// 计算年化收益率（按实际交易天数调整）
 	// 假设一年有250个交易日
-	BigNumber years = (BigNumber(250).toPrec(2) / BigNumber((int32_t)actualDays));
-	result.annualReturn = ((BigNumber(1) + result.totalReturn).pow(years.toPrec(4))) - 1;
+	BigNumber years = (BigNumber(250).toPrec(2) / BigNumber((int32_t)actualDays - 1));
+	result.annualReturn = ((BigNumber(1) + result.totalReturn.toPrec(16) / initialValue).pow(years.toPrec(2), 4)) - 1;
+	result.annualTReturn = ((BigNumber(1) + result.tReturn.toPrec(16) / initialValue).pow(years.toPrec(2), 4)) - 1;
 
 	// 设置最大回撤
 	result.maxDrawdown = maxDrawdown;

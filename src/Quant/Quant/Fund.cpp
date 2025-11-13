@@ -196,11 +196,11 @@ std::vector<std::string> Fund::exportTradeRecords() const
 
 	// 添加账户基本信息
 	std::ostringstream oss;
-	oss << "账户初始资金: " << (m_initialFund / 100.0) << "元";
+	oss << "账户初始资金: " << (BigNumber(m_initialFund).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
 	records.push_back(oss.str());
 
 	oss.str("");
-	oss << "当前可用资金: " << (m_availableFund / 100.0) << "元";
+	oss << "当前可用资金: " << (BigNumber(m_availableFund).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
 	records.push_back(oss.str());
 
 	records.push_back("");
@@ -215,6 +215,9 @@ std::vector<std::string> Fund::exportTradeRecords() const
 		{
 			const CompleteTrade& trade = trades[i];
 
+			//最终收盘价
+			int32_t endPrice = getStockPriceFromMarket(stock, trade.m_sellTrade.m_date, ObserveTime::COUNT);
+
 			// 交易基本信息
 			oss.str("");
 			oss << "股票 " << stock << " 第 " << (i + 1) << " 笔完整交易:";
@@ -226,7 +229,8 @@ std::vector<std::string> Fund::exportTradeRecords() const
 			oss << getTimeString(trade.m_buyTrade.m_time) << " ";
 			oss << trade.m_buyTrade.m_shares << "股 @ " << (trade.m_buyTrade.m_price / 100.0) << "元";
 			oss << "，手续费: " << (trade.m_buyTrade.m_fee / 100.0) << "元";
-			oss << "，总成本: " << ((trade.m_buyTrade.m_shares * trade.m_buyTrade.m_price + trade.m_buyTrade.m_fee) / 100.0) << "元";
+			oss << "，总成本: " << (BigNumber(trade.m_buyTrade.m_shares * trade.m_buyTrade.m_price +
+				trade.m_buyTrade.m_fee).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
 			records.push_back(oss.str());
 
 			// 输出做T操作
@@ -267,23 +271,25 @@ std::vector<std::string> Fund::exportTradeRecords() const
 
 					// 输出做T收益
 					oss.str("");
-					oss << "      做T收益: " << (tOp.totalProfit() / 100.0) << "元";
+					oss << "      做T收益: " << (tOp.totalProfit(endPrice) / 100.0) << "元";
 					records.push_back(oss.str());
 				}
 
 				oss.str("");
-				oss << "  做T总收益: " << (trade.allTProfit() / 100.0) << "元";
+				oss << "  做T总收益: " << (trade.allTProfit(endPrice) / 100.0) << "元";
 				records.push_back(oss.str());
 			}
 
 			// 输出不完整做T操作
-			if (!trade.m_incompleteTOperation.m_sellTrade.empty())
+			if (!trade.m_incompleteTOperation.m_sellTrade.empty() || !trade.m_incompleteTOperation.m_buyTrade.empty())
 			{
 				oss.str("");
 				oss << "  不完整做T操作:";
 				records.push_back(oss.str());
 
 				const TOperation& incompleteOp = trade.m_incompleteTOperation;
+
+				// 输出不完整做T卖出记录
 				for (auto sellIt = incompleteOp.m_sellTrade.begin(); sellIt != incompleteOp.m_sellTrade.end(); ++sellIt)
 				{
 					oss.str("");
@@ -294,9 +300,16 @@ std::vector<std::string> Fund::exportTradeRecords() const
 					records.push_back(oss.str());
 				}
 
-				oss.str("");
-				oss << "      不完整做T收益: " << (incompleteOp.totalProfit() / 100.0) << "元";
-				records.push_back(oss.str());
+				// 输出不完整做T买入记录
+				for (auto buyIt = incompleteOp.m_buyTrade.begin(); buyIt != incompleteOp.m_buyTrade.end(); ++buyIt)
+				{
+					oss.str("");
+					oss << "      买入: " << buyIt->m_date << "日 ";
+					oss << getTimeString(buyIt->m_time) << " ";
+					oss << buyIt->m_shares << "股 @ " << (buyIt->m_price / 100.0) << "元";
+					oss << "，手续费: " << (buyIt->m_fee / 100.0) << "元";
+					records.push_back(oss.str());
+				}
 			}
 
 			// 输出最终卖出信息
@@ -307,11 +320,13 @@ std::vector<std::string> Fund::exportTradeRecords() const
 				oss << getTimeString(trade.m_sellTrade.m_time) << " ";
 				oss << trade.m_sellTrade.m_shares << "股 @ " << (trade.m_sellTrade.m_price / 100.0) << "元";
 				oss << "，手续费: " << (trade.m_sellTrade.m_fee / 100.0) << "元";
-				oss << "，总收入: " << ((trade.m_sellTrade.m_shares * trade.m_sellTrade.m_price - trade.m_sellTrade.m_fee) / 100.0) << "元";
+				oss << "，总收入: " << (BigNumber(trade.m_sellTrade.m_shares * trade.m_sellTrade.m_price -
+					trade.m_sellTrade.m_fee).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
 				records.push_back(oss.str());
 
 				oss.str("");
-				oss << "  交易总收益: " << (trade.tradeProfit() / 100.0) << "元";
+				oss << "  交易总收益: " <<
+					(BigNumber(trade.tradeProfit()).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
 				records.push_back(oss.str());
 			}
 			else
@@ -617,15 +632,16 @@ int32_t Fund::allTFee() const
 	return total;
 }
 
-int32_t Fund::allTProfit() const
+int32_t Fund::allTProfit(uint32_t lastDate) const
 {
 	int32_t total = 0;
 	for (auto stockIt = m_completeTrades.begin(); stockIt != m_completeTrades.end(); ++stockIt)
 	{
+		int32_t endPrice = getStockPriceFromMarket(stockIt->first, lastDate, ObserveTime::COUNT);
 		const std::vector<CompleteTrade>& trades = stockIt->second;
 		for (auto tradeIt = trades.begin(); tradeIt != trades.end(); ++tradeIt)
 		{
-			total += tradeIt->allTProfit();
+			total += tradeIt->allTProfit(endPrice);
 		}
 	}
 	return total;
@@ -645,7 +661,21 @@ int32_t Fund::tradeProfit() const
 	return total;
 }
 
-int32_t TOperation::shares() const
+int32_t Fund::allBeginEndFee() const
+{
+	int32_t total = 0;
+	for (auto stockIt = m_completeTrades.begin(); stockIt != m_completeTrades.end(); ++stockIt)
+	{
+		const std::vector<CompleteTrade>& trades = stockIt->second;
+		for (auto tradeIt = trades.begin(); tradeIt != trades.end(); ++tradeIt)
+		{
+			total += tradeIt->beginEndFee();
+		}
+	}
+	return total;
+}
+
+int32_t TOperation::sellShares() const
 {
 	int32_t totalSellShares = 0;
 	for (auto it = m_sellTrade.begin(); it != m_sellTrade.end(); ++it)
@@ -653,6 +683,16 @@ int32_t TOperation::shares() const
 		totalSellShares += it->m_shares;
 	}
 	return totalSellShares;
+}
+
+int32_t TOperation::buyShares() const
+{
+	int32_t totalBuyShares = 0;
+	for (auto it = m_buyTrade.begin(); it != m_buyTrade.end(); ++it)
+	{
+		totalBuyShares += it->m_shares;
+	}
+	return totalBuyShares;
 }
 
 int32_t TOperation::diff() const
@@ -697,10 +737,19 @@ int32_t TOperation::totalFee() const
 	return total;
 }
 
-int32_t TOperation::totalProfit() const
+int32_t TOperation::totalProfit(int32_t endPrice) const
 {
-	int32_t priceDiffProfit = diff() * shares();
-	return priceDiffProfit - totalFee();
+	int32_t totalSellValue = 0;
+	for (auto it = m_sellTrade.begin(); it != m_sellTrade.end(); ++it)
+	{
+		totalSellValue += (it->m_price - endPrice) * it->m_shares;
+	}
+	int32_t totalBuyValue = 0;
+	for (auto it = m_buyTrade.begin(); it != m_buyTrade.end(); ++it)
+	{
+		totalBuyValue += (endPrice - it->m_price) * it->m_shares;
+	}
+	return totalSellValue + totalBuyValue - totalFee();
 }
 
 int32_t CompleteTrade::allTDiff() const
@@ -708,7 +757,7 @@ int32_t CompleteTrade::allTDiff() const
 	int32_t total = 0;
 	for (auto it = m_vecTOperations.begin(); it != m_vecTOperations.end(); ++it)
 	{
-		total += it->diff() * it->shares();
+		total += it->diff();
 	}
 	return total;
 }
@@ -723,13 +772,14 @@ int32_t CompleteTrade::allTFee() const
 	return total;
 }
 
-int32_t CompleteTrade::allTProfit() const
+int32_t CompleteTrade::allTProfit(int32_t endPrice) const
 {
 	int32_t total = 0;
 	for (auto it = m_vecTOperations.begin(); it != m_vecTOperations.end(); ++it)
 	{
-		total += it->totalProfit();
+		total += it->totalProfit(endPrice);
 	}
+	total += m_incompleteTOperation.totalProfit(endPrice);
 	return total;
 }
 
@@ -739,22 +789,11 @@ int32_t CompleteTrade::tradeProfit() const
 	{
 		return 0;
 	}
+	return (m_sellTrade.m_price - m_buyTrade.m_price) * m_buyTrade.m_shares +
+		allTProfit(m_sellTrade.m_price) - m_sellTrade.m_fee - m_buyTrade.m_fee;
+}
 
-	// 计算总卖出收入（最终卖出 + 不完整做T卖出）
-	int32_t totalSellIncome = m_sellTrade.m_shares * m_sellTrade.m_price - m_sellTrade.m_fee;
-	for (auto sellIt = m_incompleteTOperation.m_sellTrade.begin(); sellIt != m_incompleteTOperation.m_sellTrade.end(); ++sellIt)
-	{
-		totalSellIncome += sellIt->m_shares * sellIt->m_price - sellIt->m_fee;
-	}
-
-	// 计算总买入成本（初始买入 + 不完整做T买入）
-	int32_t totalBuyCost = m_buyTrade.m_shares * m_buyTrade.m_price + m_buyTrade.m_fee;
-	for (auto buyIt = m_incompleteTOperation.m_buyTrade.begin(); buyIt != m_incompleteTOperation.m_buyTrade.end(); ++buyIt)
-	{
-		totalBuyCost += buyIt->m_shares * buyIt->m_price + buyIt->m_fee;
-	}
-
-	// 总收益 = 总卖出收入 - 总买入成本
-	// 中间的完整T操作收益已经通过增加持仓股数体现在最终卖出收入中
-	return totalSellIncome - totalBuyCost;
+int32_t CompleteTrade::beginEndFee() const
+{
+	return m_buyTrade.m_fee + m_sellTrade.m_fee;
 }
