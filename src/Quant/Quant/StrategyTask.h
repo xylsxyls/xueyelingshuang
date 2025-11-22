@@ -57,7 +57,7 @@ private:
 	*/
 	StrategyResult runStrategy(Fund& fund);
 
-	/** 计算策略指标
+	/** 计算策略指标（耗时）
 	@param [in] actualDays 实际交易天数
 	@param [in] totalDays 总天数
 	@param [in] maxDrawdown 最大回撤
@@ -69,11 +69,6 @@ private:
 	StrategyResult calculateStrategyMetrics(uint32_t actualDays, uint32_t totalDays,
 		BigNumber maxDrawdown, BigNumber totalProfitArea, const std::vector<int32_t>& dailyValues, uint32_t lastDate);
 
-	/** 获取交易日列表
-	@return 返回交易日列表
-	*/
-	std::vector<int32_t> getTradingDays();
-
 	/** 计算健康值
 	@param [in] totalReturn 总收益率
 	@param [in] maxDrawdown 最大回撤
@@ -83,6 +78,12 @@ private:
 	*/
 	BigNumber calculateHealthScore(BigNumber totalReturn, BigNumber maxDrawdown,
 		BigNumber winRate, const std::vector<int32_t>& dailyValues);
+
+	/** 获取有效交易日
+	@param [in] allTradingDays 所有交易日
+	@return 返回有效交易日
+	*/
+	std::vector<int32_t> getTradingDays(const std::vector<int32_t>& allTradingDays);
 
 private:
 	// 开始时间

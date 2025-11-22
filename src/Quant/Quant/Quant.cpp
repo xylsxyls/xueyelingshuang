@@ -31,6 +31,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "Ctxt/CtxtAPI.h"
 #include "AnalyzeTask.h"
+#include "StockManager.h"
 
 Quant::Quant(QWidget* parent):
 	QMainWindow(parent)
@@ -81,43 +82,51 @@ void Quant::init()
 	redis.selectDbIndex(0);
 
 	QPalette pattle;
-	pattle.setColor(QPalette::Background, QColor(100, 0, 0, 255));
+	pattle.setColor(QPalette::Background, QColor(50, 0, 0, 255));
 	setPalette(pattle);
 
+	QColor normal(180, 0, 0, 255);
+	QColor hover(0, 180, 0, 255);
+	QColor passed(0, 0, 180, 255);
+	QColor disable(100, 0, 0, 255);
+
 	m_button->setText(QStringLiteral("send_test"));
-	m_button->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_button->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_button, &COriginalButton::clicked, this, &Quant::onButtonClicked);
 
 	m_calc->setText(QStringLiteral("calc"));
-	m_calc->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_calc->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_calc, &COriginalButton::clicked, this, &Quant::onCalcClicked);
 
 	m_createFile->setText(QStringLiteral("create_file"));
-	m_createFile->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_createFile->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_createFile, &COriginalButton::clicked, this, &Quant::onCreateFileClicked);
 
 	m_saveFile->setText(QStringLiteral("save_file"));
-	m_saveFile->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_saveFile->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_saveFile, &COriginalButton::clicked, this, &Quant::onSaveFileClicked);
 
 	m_initRedis->setText(QStringLiteral("init_redis"));
-	m_initRedis->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_initRedis->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_initRedis, &COriginalButton::clicked, this, &Quant::onInitRedisClicked);
 
 	m_profit->setText(QStringLiteral("profit"));
-	m_profit->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_profit->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_profit, &COriginalButton::clicked, this, &Quant::onProfitClicked);
 
 	m_displayResult->setText(QStringLiteral("display_result"));
-	m_displayResult->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_displayResult->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_displayResult, &COriginalButton::clicked, this, &Quant::onDisplayResultClicked);
 
 	m_analyze->setText(QStringLiteral("analyze"));
-	m_analyze->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
+	m_analyze->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_analyze, &COriginalButton::clicked, this, &Quant::onAnalyzeClicked);
 
 	// 初始化竞赛管理器
 	CompetitionManager::instance().init();
+
+	// 初始化股票管理器
+	StockManager::instance().init();
 
 	// 初始化展示类
 	m_display = std::make_shared<Display>();
@@ -402,8 +411,8 @@ void Quant::onProfitClicked()
 	RCSend("开始策略竞赛...");
 	g_config.m_time.SetWatchTime(0);
 
-	int32_t profitBeginTime = 20250630;
-	int32_t profitEndTime = 20250929;
+	int32_t profitBeginTime = 20250715;
+	int32_t profitEndTime = 20250716;
 	std::string stock = "600975";
 
 	std::vector<std::vector<int32_t>> result =
@@ -430,14 +439,14 @@ void Quant::onProfitClicked()
 	config.allParam =
 	{
 		{ 
-			(int32_t)ObserveTime::TIME0950, (int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+			//(int32_t)ObserveTime::TIME0950, (int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
 			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
-			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+			//(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
 		},
 		{ 
-			(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+			//(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
 			(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
-			(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+			//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
 		},
 		{ 7, 8, 9, 10, 11, 12, 13 },
 		{ 1, 2, 3, 4, 5, 6 }
@@ -496,12 +505,12 @@ void Quant::onAnalyzeClicked()
 			std::shared_ptr<AnalyzeTask> spTask(new AnalyzeTask);
 			spTask->setParam(filePath, &queue);
 			++threadIdIndex;
-			uint32_t threadId = vecThreadIds[threadIdIndex % (g_config.m_cpuCoreCount * 2)];
+			uint32_t threadId = vecThreadIds[threadIdIndex % vecThreadIds.size()];
 			CTaskThreadManager::Instance().GetThreadInterface(threadId)->PostTask(spTask);
 		}
 
 		threadIdIndex = -1;
-		while (threadIdIndex++ != g_config.m_cpuCoreCount * 2 - 1)
+		while (threadIdIndex++ != vecThreadIds.size() - 1)
 		{
 			CTaskThreadManager::Instance().WaitForEnd(vecThreadIds[threadIdIndex]);
 		}

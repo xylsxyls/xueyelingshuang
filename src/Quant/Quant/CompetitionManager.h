@@ -64,6 +64,11 @@ public:
 	*/
 	void stopCompetition();
 
+	/** 检测竞赛配置是否正确
+	@param [in] strategyMode 策略模式
+	@param [in] config 竞赛配置
+	@return 返回竞赛配置是否正确
+	*/
 	bool isCompetitionParamValid(StrategyMode strategyMode, const CompetitionConfig& config);
 
 private:
@@ -71,5 +76,6 @@ private:
 	uint32_t m_competitionThreadId;
 	// 所有竞赛任务参数
 	std::map<int32_t, CompetitionConfig> m_competitionConfigMap;
+	// 是否已经初始化
 	std::atomic<bool> m_isInit;
 };

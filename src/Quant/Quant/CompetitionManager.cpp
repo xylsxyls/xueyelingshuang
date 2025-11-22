@@ -5,6 +5,8 @@
 #include <iostream>
 #include <cmath>
 #include "CompetitionTask.h"
+#include "Cini/CiniAPI.h"
+#include "Util.h"
 
 CompetitionManager::CompetitionManager() :
 m_competitionThreadId(0),

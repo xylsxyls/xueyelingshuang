@@ -3,6 +3,7 @@
 #include "StrategyTask.h"
 #include <algorithm>
 #include "Util.h"
+#include "Timer/TimerAPI.h"
 
 CompetitionTask::CompetitionTask()
 {
@@ -12,11 +13,12 @@ CompetitionTask::CompetitionTask()
 void CompetitionTask::DoTask()
 {
 	// 初始化线程池
-	for (uint32_t i = 0; i < (uint32_t)g_config.m_cpuCoreCount; ++i)
+	for (uint32_t i = 0; i < (uint32_t)g_config.m_cpuCoreCount * 2; ++i)
 	{
 		m_vecThreadId.push_back(CTaskThreadManager::Instance().Init());
 	}
 
+	std::vector<std::shared_ptr<StrategyTask>> vecStrategyTask;
 	int32_t strategyCount = -1;
 	for (auto itStrategy = m_competitionConfigMap.begin(); itStrategy != m_competitionConfigMap.end(); ++itStrategy)
 	{
@@ -57,14 +59,33 @@ void CompetitionTask::DoTask()
 			std::shared_ptr<StrategyTask> spStrategyTask(new StrategyTask);
 			spStrategyTask->setParam(currentConfig.beginTime, currentConfig.endTime, currentConfig.stocks,
 				spStrategy, currentConfig.marketData, currentConfig.initialFund, &m_resultQueue);
+			vecStrategyTask.push_back(spStrategyTask);
 			++strategyCount;
-			uint32_t threadIndex = strategyCount % m_vecThreadId.size();
-			CTaskThreadManager::Instance().GetThreadInterface(m_vecThreadId[threadIndex])->PostTask(spStrategyTask);
+			
 		}
 	}
 	++strategyCount;
-
 	RCSend("正在多线程执行 %d 个小策略", strategyCount);
+
+	std::atomic<int> lambda_count(0);
+	Timer lambda_timer([&lambda_count, &strategyCount]()
+	{
+		if (g_config.m_completeTaskCount == 0)
+		{
+			RCSend("complete = 0");
+			return;
+		}
+		++lambda_count;
+		RCSend("complete = %u, remain = %.1lfs", g_config.m_completeTaskCount,
+			(strategyCount - g_config.m_completeTaskCount) / (double)(g_config.m_completeTaskCount / lambda_count));
+	}, 1000);
+	lambda_timer.start();
+
+	for (size_t index = 0; index < vecStrategyTask.size(); ++index)
+	{
+		uint32_t threadIndex = index % m_vecThreadId.size();
+		CTaskThreadManager::Instance().GetThreadInterface(m_vecThreadId[threadIndex])->PostTask(vecStrategyTask[index]);
+	}
 
 	for (uint32_t i = 0; i < m_vecThreadId.size(); ++i)
 	{

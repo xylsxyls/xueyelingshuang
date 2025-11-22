@@ -205,6 +205,7 @@
     <ClCompile Include="QuantStrategyManager.cpp" />
     <ClCompile Include="RedisManager.cpp" />
     <ClCompile Include="S1100B1400Strategy.cpp" />
+    <ClCompile Include="StockManager.cpp" />
     <ClCompile Include="Strategy.cpp" />
     <ClCompile Include="StrategyTask.cpp" />
     <ClCompile Include="StrategyWidget.cpp" />
@@ -332,6 +333,7 @@
     <ClInclude Include="QuantStrategyManager.h" />
     <ClInclude Include="RedisManager.h" />
     <ClInclude Include="S1100B1400Strategy.h" />
+    <ClInclude Include="StockManager.h" />
     <ClInclude Include="Strategy.h" />
     <ClInclude Include="StrategyTask.h" />
     <CustomBuild Include="StrategyWidget.h">

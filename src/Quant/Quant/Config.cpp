@@ -29,6 +29,7 @@ CConfig::CConfig()
 	m_allBeginTime = 20250201;
 	m_allEndTime = 30250101;
 	m_initialFund = 1000000 * 100;
+	m_completeTaskCount = 0;
 }
 
 CConfig& CConfig::instance()

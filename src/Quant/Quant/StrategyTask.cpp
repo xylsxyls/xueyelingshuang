@@ -4,6 +4,7 @@
 #include <cmath>
 #include "Cini/CiniAPI.h"
 #include "Util.h"
+#include "StockManager.h"
 
 StrategyTask::StrategyTask():
 m_beginTime(0),
@@ -40,8 +41,7 @@ void StrategyTask::DoTask()
 	uint32_t totalDays = 0;
 
 	// 获取所有交易日列表
-	std::vector<int32_t> tradingDays = getTradingDays();
-
+	std::vector<int32_t> tradingDays = getTradingDays(StockManager::instance().getAllTradingDays());
 	// 记录每日资产值用于计算指标
 	std::vector<int32_t> dailyValues;
 	dailyValues.reserve(tradingDays.size());
@@ -117,6 +117,8 @@ void StrategyTask::DoTask()
 	result.params = m_spStrategy->getStrategyParam();
 	result.tradeLog = m_spStrategy->getFund()->exportTradeRecords();
 	m_resultQueue->push(result);
+
+	++g_config.m_completeTaskCount;
 }
 
 void StrategyTask::StopTask()
@@ -213,23 +215,6 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 	return result;
 }
 
-std::vector<int32_t> StrategyTask::getTradingDays()
-{
-	Cini ini(g_config.m_currentExePath + "600975.ini", true);
-	std::vector<std::string> allSection = ini.getAllSection();
-	std::vector<int32_t> result;
-	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
-	for (size_t i = 0; i < tradingDays.size(); ++i)
-	{
-		if (tradingDays[i] < (int32_t)m_beginTime || tradingDays[i] > (int32_t)m_endTime)
-		{
-			continue;
-		}
-		result.push_back(tradingDays[i]);
-	}
-	return result;
-}
-
 BigNumber StrategyTask::calculateHealthScore(BigNumber totalReturn, BigNumber maxDrawdown,
 	BigNumber winRate, const std::vector<int32_t>& dailyValues)
 {
@@ -292,4 +277,18 @@ BigNumber StrategyTask::calculateHealthScore(BigNumber totalReturn, BigNumber ma
 
 	// 确保分数在合理范围内
 	return (std::max)(BigNumber(0), (std::min)(BigNumber(100), healthScore));
+}
+
+std::vector<int32_t> StrategyTask::getTradingDays(const std::vector<int32_t>& allTradingDays)
+{
+	std::vector<int32_t> tradingDays;
+	for (size_t index = 0; index < allTradingDays.size(); ++index)
+	{
+		uint32_t date = allTradingDays[index];
+		if (date >= m_beginTime && date <= m_endTime)
+		{
+			tradingDays.push_back(date);
+		}
+	}
+	return tradingDays;
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <string>
+#include <atomic>
 #include "CStopWatch/CStopWatchAPI.h"
 
 #define g_config CConfig::instance()
@@ -19,6 +20,7 @@ struct CConfig
 	uint32_t m_allEndTime;
 	uint32_t m_initialFund;
 	CStopWatch m_time;
+	std::atomic<uint32_t> m_completeTaskCount;
 
 protected:
 	CConfig();
