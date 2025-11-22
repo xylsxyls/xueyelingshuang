@@ -13,3 +13,4 @@
 "$CLOUD_REBUILD" Cini 32 dll release same
 "$CLOUD_REBUILD" Ctxt 32 dll release same
 "$CLOUD_REBUILD" CStopWatch 32 dll release same
+"$CLOUD_REBUILD" Timer 32 dll release same
