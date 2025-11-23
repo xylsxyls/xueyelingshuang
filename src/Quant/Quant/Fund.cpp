@@ -386,6 +386,7 @@ int32_t Fund::calculateMaxShares(const std::string& stock, int32_t price) const
 	int32_t low = MIN_LOT;
 	int32_t high = estimatedShares;
 	int32_t result = 0;
+	BigNumber priceYuan = BigNumber(price).toPrec(2) / 100;
 
 	while (low <= high)
 	{
@@ -393,7 +394,6 @@ int32_t Fund::calculateMaxShares(const std::string& stock, int32_t price) const
 
 		int32_t cost = mid * price;
 		// 计算手续费：价格转换为元，手续费结果转换为分
-		BigNumber priceYuan = BigNumber(price).toPrec(2) / 100;
 		int32_t fee = (StockCharge::instance().buyFee(stock, priceYuan, BigNumber(mid)) * 100).toInt();
 		int32_t totalCost = cost + fee;
 

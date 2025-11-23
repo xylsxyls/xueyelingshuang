@@ -18,7 +18,7 @@ public:
 	static StockCharge& instance();
 
 public:
-	/** 初始化佣金，默认万1.6，最低5元
+	/** 初始化佣金，默认万1.6，最低5元，必须在初始化函数里先执行一下
 	@param [in] rate 佣金比例
 	@param [in] minimum 最低佣金
 	*/

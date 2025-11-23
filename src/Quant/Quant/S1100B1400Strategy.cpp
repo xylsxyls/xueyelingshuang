@@ -3,7 +3,8 @@
 #include <iostream>
 #include "Util.h"
 
-S1100B1400Strategy::S1100B1400Strategy()
+S1100B1400Strategy::S1100B1400Strategy():
+m_hasFirstBuy(false)
 {
 	m_mode = StrategyMode::S1100B1400;
 	m_modeName = "S1100B1400Strategy";
@@ -18,6 +19,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 {
 	if (!isStrategyParamValid())
 	{
+		RCSend("isStrategyParamValid");
 		return false;
 	}
 
@@ -33,12 +35,14 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 	const std::vector<int32_t>& dayInfo = m_spMarket->getStockData(stock, date);
 	if (dayInfo.empty())
 	{
+		RCSend("dayInfo empty");
 		return false;
 	}
 
-	if (date == m_beginTime)
+	if (!m_hasFirstBuy)
 	{
 		m_spFund->buyAll(stock, dayInfo[(int32_t)Overall::CLOSE], date, ObserveTime::COUNT);
+		m_hasFirstBuy = true;
 		return true;
 	}
 
@@ -53,6 +57,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 	bool hasPosition = (m_spFund->getPosition(stock) != nullptr);
 	if (!hasPosition)
 	{
+		RCSend("hasPosition false");
 		return false;
 	}
 
@@ -131,13 +136,8 @@ int32_t S1100B1400Strategy::getBestSellPrice(const std::string& stock, uint32_t 
 		return 0;
 	}
 
-	// 计算索引：3(Overall) + 9(ObserveTime) + timeIndex * 10 + rangeIndex * 2 + transType
-	size_t timeOffset = getObserveTimeOffset(time);
-	size_t rangeOffset = getRangeTimeOffset(RangeTime::RANGE0);
-	size_t transOffset = getTransTypeOffset(TransType::BEST_SELL);
-
-	size_t index = 3 + 9 + timeOffset * 10 + rangeOffset * 2 + transOffset;
-
+	// 计算索引：(Overall) + (ObserveTime) + 三维坐标
+	size_t index = Util::getPriceMatrixIndex(time, RangeTime::RANGE0, TransType::BEST_SELL);
 	if (index < dayData.size())
 	{
 		return dayData[index];
@@ -159,12 +159,7 @@ int32_t S1100B1400Strategy::getBestBuyPrice(const std::string& stock, uint32_t d
 		return 0;
 	}
 
-	size_t timeOffset = getObserveTimeOffset(time);
-	size_t rangeOffset = getRangeTimeOffset(RangeTime::RANGE0);
-	size_t transOffset = getTransTypeOffset(TransType::BEST_BUY);
-
-	size_t index = 3 + 9 + timeOffset * 10 + rangeOffset * 2 + transOffset;
-
+	size_t index = Util::getPriceMatrixIndex(time, RangeTime::RANGE0, TransType::BEST_BUY);
 	if (index < dayData.size())
 	{
 		return dayData[index];
@@ -199,12 +194,7 @@ int32_t S1100B1400Strategy::getRangeNextBestBuyPrice(const std::string& stock, u
 		}
 
 		// 获取RANGENEXT的最佳买价
-		size_t timeOffset = getObserveTimeOffset(currentTime);
-		size_t rangeOffset = getRangeTimeOffset(RangeTime::RANGENEXT);
-		size_t transOffset = getTransTypeOffset(TransType::BEST_BUY);
-
-		size_t index = 3 + 9 + timeOffset * 10 + rangeOffset * 2 + transOffset;
-
+		size_t index = Util::getPriceMatrixIndex(currentTime, RangeTime::RANGENEXT, TransType::BEST_BUY);
 		if (index < dayData.size() && dayData[index] > 0)
 		{
 			if (bestPrice == 0 || dayData[index] < bestPrice)
@@ -245,12 +235,7 @@ int32_t S1100B1400Strategy::getRangeNextBestSellPrice(const std::string& stock, 
 		}
 
 		// 获取RANGENEXT的最佳卖价
-		size_t timeOffset = getObserveTimeOffset(currentTime);
-		size_t rangeOffset = getRangeTimeOffset(RangeTime::RANGENEXT);
-		size_t transOffset = getTransTypeOffset(TransType::BEST_SELL);
-
-		size_t index = 3 + 9 + timeOffset * 10 + rangeOffset * 2 + transOffset;
-
+		size_t index = Util::getPriceMatrixIndex(currentTime, RangeTime::RANGENEXT, TransType::BEST_SELL);
 		if (index < dayData.size() && dayData[index] > 0)
 		{
 			if (dayData[index] > bestPrice)

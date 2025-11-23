@@ -77,7 +77,7 @@ void CompetitionTask::DoTask()
 		}
 		++lambda_count;
 		RCSend("complete = %u, remain = %.1lfs", g_config.m_completeTaskCount,
-			(strategyCount - g_config.m_completeTaskCount) / (double)(g_config.m_completeTaskCount / lambda_count));
+			(strategyCount - g_config.m_completeTaskCount) / (g_config.m_completeTaskCount / (double)lambda_count));
 	}, 1000);
 	lambda_timer.start();
 

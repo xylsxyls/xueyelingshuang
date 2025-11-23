@@ -145,4 +145,5 @@ private:
 	};
 
 	std::vector<TradeRecord> m_tradeRecords;
+	bool m_hasFirstBuy;
 };

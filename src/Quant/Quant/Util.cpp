@@ -479,24 +479,27 @@ int32_t Util::getPriceMatrixIndex(ObserveTime observeTime, RangeTime rangeTime, 
 
 	// 三维展平公式: index = observeIndex * (RangeTime::COUNT * TransType::COUNT) + 
 	//                  rangeIndex * TransType::COUNT + transIndex
-	return observeIndex * (static_cast<int32_t>(RangeTime::COUNT) * static_cast<int32_t>(TransType::COUNT)) +
+	return static_cast<int32_t>(Overall::COUNT) + static_cast<int32_t>(ObserveTime::COUNT) +
+		observeIndex * (static_cast<int32_t>(RangeTime::COUNT) * static_cast<int32_t>(TransType::COUNT)) +
 		rangeIndex * static_cast<int32_t>(TransType::COUNT) +
 		transIndex;
 }
 
 bool Util::getEnumsFromPriceIndex(int32_t index, ObserveTime& observeTime, RangeTime& rangeTime, TransType& transType)
 {
-	int32_t totalPriceElements = static_cast<int32_t>(ObserveTime::COUNT) *
-		static_cast<int32_t>(RangeTime::COUNT) *
-		static_cast<int32_t>(TransType::COUNT);
+	int32_t totalPriceElements = getTotalFieldCount();
 
-	if (index < 0 || index >= totalPriceElements)
+	int32_t origin = static_cast<int32_t>(Overall::COUNT) + static_cast<int32_t>(ObserveTime::COUNT);
+
+	if (index < origin || index >= totalPriceElements)
 	{
 		observeTime = ObserveTime::COUNT;
 		rangeTime = RangeTime::COUNT;
 		transType = TransType::COUNT;
 		return false;
 	}
+
+	index = index - origin;
 
 	int32_t transCount = static_cast<int32_t>(TransType::COUNT);
 	int32_t rangeCount = static_cast<int32_t>(RangeTime::COUNT);
