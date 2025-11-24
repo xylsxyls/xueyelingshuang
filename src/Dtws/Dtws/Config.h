@@ -33,6 +33,7 @@ struct AccountConfig
 	std::vector<xyls::Point> m_intoGamePoint;
 	std::vector<xyls::Point> m_goPoint;
 	std::vector<int32_t> m_goSleepTime;
+	std::vector<xyls::Point> m_competitionPoint;
 };
 
 struct CConfig
@@ -65,6 +66,9 @@ struct CConfig
 	xyls::Point m_destOppositePoint = { 230, 130 };
 	xyls::Point m_getOppositePoint = { 146, 336 };
 	xyls::Point m_acceptOppositePoint = { 146, 428 };
+
+	xyls::Rect m_competitionRect = { 845, 511, 1091, 568 };
+	std::string m_competitionPath;
 
 	int32_t m_destHeight = 45;
 	int32_t m_goFirstSleepTime = 500;

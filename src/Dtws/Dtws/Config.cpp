@@ -93,6 +93,13 @@ CConfig::CConfig()
 	m_accountConfig[3840 * 2160][1].m_goSleepTime = { 200 };
 	m_accountConfig[1920 * 1080][3].m_goSleepTime = { { 500, 500, 500 } };
 
+	m_accountConfig[1366 * 768][1].m_competitionPoint = { { 1355, 214 } };
+	m_accountConfig[1920 * 1080][1].m_competitionPoint = { { 956, 543 } };
+	m_accountConfig[3840 * 2160][1].m_competitionPoint = { { 3831, 214 } };
+	m_accountConfig[1920 * 1080][3].m_competitionPoint = { { 956, 395 }, { 633, 702 }, { 1273, 703 } };
+
+	m_competitionPath = "res\\competition.png";
+
 	m_currentExePath = CSystem::GetCurrentExePath();
 }
 

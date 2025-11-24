@@ -175,6 +175,9 @@
     <ClCompile Include="ClickWindowAtomicTask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
     <ClCompile Include="CloseBeginTask.cpp" />
+    <ClCompile Include="CompetitionAtomicTask.cpp" />
+    <ClCompile Include="CompetitionPrepareTask.cpp" />
+    <ClCompile Include="CompetitionTask.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ConfirmAtomicTask.cpp" />
     <ClCompile Include="ConfirmTask.cpp" />
@@ -337,6 +340,9 @@
     <ClInclude Include="ClickWindowAtomicTask.h" />
     <ClInclude Include="ClientReceive.h" />
     <ClInclude Include="CloseBeginTask.h" />
+    <ClInclude Include="CompetitionAtomicTask.h" />
+    <ClInclude Include="CompetitionPrepareTask.h" />
+    <ClInclude Include="CompetitionTask.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ConfirmAtomicTask.h" />
     <ClInclude Include="ConfirmTask.h" />

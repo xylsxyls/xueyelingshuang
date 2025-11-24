@@ -32,6 +32,7 @@
 #include "ConvoyDestTask.h"
 #include "RaffleTask.h"
 #include "PeopleTask.h"
+#include "CompetitionPrepareTask.h"
 
 LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -95,6 +96,14 @@ LRESULT WINAPI KeyboardHookFun(int nCode, WPARAM wParam, LPARAM lParam)
 		else if (g_keyboard.m_keyDown['2'])
 		{
 			NetSender::instance().sendServer(PROJECT_DTWS, std::to_string(DTWS_ATTACK));
+		}
+		else if (g_keyboard.m_keyDown[KEY + '3'])
+		{
+			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+			AssignThreadManager::instance().stopAllTask();
+			std::shared_ptr<CompetitionPrepareTask> spCompetitionPrepareTask(new CompetitionPrepareTask);
+			CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spCompetitionPrepareTask);
 		}
 		else if (g_keyboard.m_keyDown[KEY + '4'])
 		{

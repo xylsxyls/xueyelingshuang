@@ -18,6 +18,7 @@
 #include "ConvoyDestTask.h"
 #include "RaffleTask.h"
 #include "ConfirmTask.h"
+#include "CompetitionTask.h"
 
 ClientReceive::ClientReceive()
 {
@@ -73,6 +74,14 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
 		std::shared_ptr<AttackTask> spAttackTask(new AttackTask);
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spAttackTask);
+	}
+	break;
+	case DTWS_COMPETITION:
+	{
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
+		std::shared_ptr<CompetitionTask> spCompetitionTask(new CompetitionTask);
+		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spCompetitionTask);
 	}
 	break;
 	case DTWS_JIDI:

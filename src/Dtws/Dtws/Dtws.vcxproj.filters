@@ -212,6 +212,15 @@
     <ClCompile Include="ConfirmTask.cpp">
       <Filter>Task\AssignTask</Filter>
     </ClCompile>
+    <ClCompile Include="CompetitionTask.cpp">
+      <Filter>Task\AssignTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CompetitionAtomicTask.cpp">
+      <Filter>Task\AtomicTask</Filter>
+    </ClCompile>
+    <ClCompile Include="CompetitionPrepareTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Dtws.qrc">
@@ -374,6 +383,15 @@
     </ClInclude>
     <ClInclude Include="ConfirmTask.h">
       <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CompetitionTask.h">
+      <Filter>Task\AssignTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CompetitionAtomicTask.h">
+      <Filter>Task\AtomicTask</Filter>
+    </ClInclude>
+    <ClInclude Include="CompetitionPrepareTask.h">
+      <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
