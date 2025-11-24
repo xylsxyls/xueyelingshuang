@@ -70,12 +70,12 @@ void CompetitionTask::DoTask()
 	std::atomic<int> lambda_count(0);
 	Timer lambda_timer([&lambda_count, &strategyCount]()
 	{
+		++lambda_count;
 		if (g_config.m_completeTaskCount == 0)
 		{
 			RCSend("complete = 0");
 			return;
 		}
-		++lambda_count;
 		RCSend("complete = %u, remain = %.1lfs", g_config.m_completeTaskCount,
 			(strategyCount - g_config.m_completeTaskCount) / (g_config.m_completeTaskCount / (double)lambda_count));
 	}, 1000);
