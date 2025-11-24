@@ -14,7 +14,7 @@ m_exit(false)
 void CompetitionPrepareTask::DoTask()
 {
 	if (!ScreenScript::WaitClickPic(g_config.m_currentExePath + g_config.m_competitionPath,
-		true, false, g_config.m_competitionRect, 0.7, 600000))
+		true, false, g_config.m_competitionRect, 0.7, 600000, 300, 0))
 	{
 		return;
 	}

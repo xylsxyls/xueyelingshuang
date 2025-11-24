@@ -81,7 +81,7 @@ void ClientReceive::ServerMessage(int32_t serverId, const char* buffer, int32_t 
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_taskThreadId)->StopAllTask();
 		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->StopAllTask();
 		std::shared_ptr<CompetitionTask> spCompetitionTask(new CompetitionTask);
-		CTaskThreadManager::Instance().GetThreadInterface(*g_config.m_threadId)->PostTask(spCompetitionTask);
+		AssignThreadHelper::postEveryAssignTask(spCompetitionTask);
 	}
 	break;
 	case DTWS_JIDI:

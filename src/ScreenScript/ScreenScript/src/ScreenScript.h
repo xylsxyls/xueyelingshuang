@@ -51,6 +51,7 @@ public:
 	@param [in] rect 图片可能存在的区域，不填则在全屏幕内查找
 	@param [in] timeOut 总毫秒数
 	@param [in] searchIntervalTime 循环搜索间隔时间
+	@param [in] sleepTime 鼠标移动间隔时间
 	@param [in] move 在搜图前鼠标移动到的区域
 	@return 当找到时跳出循环返回true，超时返回false
 	*/
@@ -61,6 +62,7 @@ public:
 							 double sim = 0.7,
 							 int32_t timeOut = 30000,
 							 int32_t searchIntervalTime = 300,
+							 int32_t sleepTime = -1,
 							 const xyls::Rect& move = xyls::Rect(100, 100, 110, 110));
 
 private:

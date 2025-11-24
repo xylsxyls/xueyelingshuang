@@ -127,10 +127,11 @@ bool ScreenScript::WaitClickPic(const std::string& path,
 								double sim,
 								int32_t timeOut,
 								int32_t searchIntervalTime,
+								int32_t sleepTime,
 								const xyls::Rect& move)
 {
 	WaitForPic(path, rect, sim, timeOut, searchIntervalTime);
-    return FindClick(path, leftClick, doubleClick, rect, sim, -1, move);
+	return FindClick(path, leftClick, doubleClick, rect, sim, sleepTime, move);
 }
 
 std::string ScreenScript::GetBmpPath(const std::string& path)
