@@ -106,6 +106,7 @@ bool ScreenScript::WaitForPic(const std::string& path,
 							  const xyls::Rect& rect,
 							  double sim,
 							  int32_t timeOut,
+							  std::atomic<bool>* isExit,
 							  int32_t searchIntervalTime)
 {
 	int32_t beginTime = ::GetTickCount();
@@ -114,6 +115,10 @@ bool ScreenScript::WaitForPic(const std::string& path,
 		if (!FindPic(path, rect, sim).empty())
 		{
 			return true;
+		}
+		if (isExit != nullptr && *isExit)
+		{
+			return false;
 		}
 		CSystem::Sleep(searchIntervalTime);
 	}
@@ -126,11 +131,12 @@ bool ScreenScript::WaitClickPic(const std::string& path,
 								const xyls::Rect& rect,
 								double sim,
 								int32_t timeOut,
+								std::atomic<bool>* isExit,
 								int32_t searchIntervalTime,
 								int32_t sleepTime,
 								const xyls::Rect& move)
 {
-	WaitForPic(path, rect, sim, timeOut, searchIntervalTime);
+	WaitForPic(path, rect, sim, timeOut, isExit, searchIntervalTime);
 	return FindClick(path, leftClick, doubleClick, rect, sim, sleepTime, move);
 }
 

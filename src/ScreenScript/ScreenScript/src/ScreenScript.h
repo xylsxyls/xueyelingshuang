@@ -2,6 +2,7 @@
 #include "ScreenScriptMacro.h"
 #include <string>
 #include <stdint.h>
+#include <atomic>
 #include "Rect/RectAPI.h"
 
 class ScreenScriptAPI ScreenScript
@@ -35,6 +36,7 @@ public:
 	@param [in] path 图片路径，支持bmp，jpg，png三种格式
 	@param [in] rect 图片可能存在的区域，不填则在全屏幕内查找
 	@param [in] timeOut 总毫秒数
+	@param [in] is_exit 是否中途退出
 	@param [in] searchIntervalTime 循环搜索间隔时间
 	@return 当找到时跳出循环返回true，超时返回false
 	*/
@@ -42,6 +44,7 @@ public:
 						   const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
 						   double sim = 0.7,
 						   int32_t timeOut = 30000,
+						   std::atomic<bool>* isExit = nullptr,
 						   int32_t searchIntervalTime = 300);
 
 	/** 等待屏幕中图片出现并点击，阻塞线程
@@ -50,6 +53,7 @@ public:
 	@param [in] doubleClick 是否双击
 	@param [in] rect 图片可能存在的区域，不填则在全屏幕内查找
 	@param [in] timeOut 总毫秒数
+	@param [in] isExit 是否中途退出
 	@param [in] searchIntervalTime 循环搜索间隔时间
 	@param [in] sleepTime 鼠标移动间隔时间
 	@param [in] move 在搜图前鼠标移动到的区域
@@ -61,6 +65,7 @@ public:
 							 const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
 							 double sim = 0.7,
 							 int32_t timeOut = 30000,
+							 std::atomic<bool>* isExit = nullptr,
 							 int32_t searchIntervalTime = 300,
 							 int32_t sleepTime = -1,
 							 const xyls::Rect& move = xyls::Rect(100, 100, 110, 110));
