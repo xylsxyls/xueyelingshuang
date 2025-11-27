@@ -27,8 +27,10 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 	const std::string& stock = m_vecStock[0];
 	
 	// 解析策略参数
-	int32_t sellTimeIndex = m_strategyParam[0] + (int32_t)Overall::COUNT; // 0,1,2 对应 10:40,10:50,11:00
-	int32_t forceBuyTimeIndex = m_strategyParam[1] + (int32_t)Overall::COUNT;  // 0,1,2 对应 13:40,13:50,14:00
+	int32_t sellTimeIndex = Util::getPriceMatrixIndex((ObserveTime)m_strategyParam[0],
+		RangeTime::RANGE0, TransType::BEST_SELL); // 卖出时间点 对应 10:40,10:50,11:00
+	int32_t forceBuyTimeIndex = Util::getPriceMatrixIndex((ObserveTime)m_strategyParam[1],
+		RangeTime::RANGE0, TransType::BEST_BUY); // 买入时间点 对应 13:40,13:50,14:00
 	int32_t chaseParam = m_strategyParam[2];    // 7,8,9 分
 	int32_t discountParam = m_strategyParam[3]; // 1,2,3 分
 
@@ -64,21 +66,21 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 	m_spFund->sellAllForT(stock, sellPrice, date, sellTime);
 
 	bool isBuy = false;
-	for (int32_t timeIndex = (int32_t)sellTime; timeIndex <= (int32_t)forceBuyTime; ++timeIndex)
+	for (int32_t timeIndex = (int32_t)sellTime; timeIndex < (int32_t)forceBuyTime; ++timeIndex)
 	{
-		int32_t bestSellIndex = Util::bestPrice((ObserveTime)timeIndex, RangeTime::RANGENEXT, TransType::BEST_SELL);
-		int32_t bestSellPrice = dayInfo[bestSellIndex];
-		if (bestSellPrice >= chaseBuyPrice)
-		{
-			m_spFund->buyAll(stock, chaseBuyPrice, date, (ObserveTime)timeIndex);
-			isBuy = true;
-			break;
-		}
 		int32_t bestBuyIndex = Util::bestPrice((ObserveTime)timeIndex, RangeTime::RANGENEXT, TransType::BEST_BUY);
 		int32_t bestBuyPrice = dayInfo[bestBuyIndex];
 		if (bestBuyPrice <= buyPrice)
 		{
 			m_spFund->buyAll(stock, buyPrice, date, (ObserveTime)timeIndex);
+			isBuy = true;
+			break;
+		}
+		int32_t bestSellIndex = Util::bestPrice((ObserveTime)timeIndex, RangeTime::RANGENEXT, TransType::BEST_SELL);
+		int32_t bestSellPrice = dayInfo[bestSellIndex];
+		if (bestSellPrice >= chaseBuyPrice)
+		{
+			m_spFund->buyAll(stock, chaseBuyPrice, date, (ObserveTime)timeIndex);
 			isBuy = true;
 			break;
 		}
