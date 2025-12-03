@@ -89,7 +89,6 @@ int32_t Strategy::getDirectSellPrice(const std::vector<int32_t>& dayInfo, Observ
 
 int32_t Strategy::getMinPrice(const std::vector<int32_t>& dayInfo, ObserveTime timeBegin, ObserveTime timeEnd)
 {
-	auto ss = Util::rangeEndTime(Util::getTimeValue(ObserveTime::TIME1110), 40);
 	if (timeBegin == timeEnd)
 	{
 		RCSend("range time error");
