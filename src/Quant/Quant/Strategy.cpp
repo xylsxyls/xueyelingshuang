@@ -1,6 +1,7 @@
 #include "Strategy.h"
 #include <functional>
 #include <unordered_map>
+#include "Util.h"
 
 Strategy::Strategy() :
 m_beginTime(0),
@@ -69,4 +70,148 @@ StrategyMode Strategy::getStrategyMode() const
 std::string Strategy::getStrategyName() const
 {
 	return m_modeName;
+}
+
+int32_t Strategy::getCurrentPrice(const std::vector<int32_t>& dayInfo, ObserveTime time)
+{
+	return dayInfo[(int32_t)Overall::COUNT + (int32_t)time];
+}
+
+int32_t Strategy::getDirectBuyPrice(const std::vector<int32_t>& dayInfo, ObserveTime time)
+{
+	return dayInfo[Util::getPriceMatrixIndex(time, RangeTime::RANGE0, TransType::BEST_BUY)];
+}
+
+int32_t Strategy::getDirectSellPrice(const std::vector<int32_t>& dayInfo, ObserveTime time)
+{
+	return dayInfo[Util::getPriceMatrixIndex(time, RangeTime::RANGE0, TransType::BEST_SELL)];
+}
+
+int32_t Strategy::getMinPrice(const std::vector<int32_t>& dayInfo, ObserveTime timeBegin, ObserveTime timeEnd)
+{
+	auto ss = Util::rangeEndTime(Util::getTimeValue(ObserveTime::TIME1110), 40);
+	if (timeBegin == timeEnd)
+	{
+		RCSend("range time error");
+		return 0;
+	}
+	int32_t endTimeValue = Util::getTimeValue(timeEnd);
+	int32_t rangeEndTimeValue30 = Util::rangeEndTime(Util::getTimeValue(timeBegin), 30);
+	if (rangeEndTimeValue30 == endTimeValue)
+	{
+		return dayInfo[Util::getPriceMatrixIndex(timeBegin, RangeTime::RANGE30, TransType::BEST_BUY)];
+	}
+	else if (rangeEndTimeValue30 > endTimeValue)
+	{
+		int32_t rangeEndTimeValue20 = Util::rangeEndTime(Util::getTimeValue(timeBegin), 20);
+		if (rangeEndTimeValue20 == endTimeValue)
+		{
+			return dayInfo[Util::getPriceMatrixIndex(timeBegin, RangeTime::RANGE20, TransType::BEST_BUY)];
+		}
+		int32_t rangeEndTimeValue10 = Util::rangeEndTime(Util::getTimeValue(timeBegin), 10);
+		if (rangeEndTimeValue10 == endTimeValue)
+		{
+			return dayInfo[Util::getPriceMatrixIndex(timeBegin, RangeTime::RANGE10, TransType::BEST_BUY)];
+		}
+		RCSend("range time error");
+		return 0;
+	}
+	else
+	{
+		int32_t minPrice = dayInfo[Util::getPriceMatrixIndex(timeBegin, RangeTime::RANGE30, TransType::BEST_BUY)];
+		for (int32_t timeIndex = (int32_t)timeBegin + 1; timeIndex < (int32_t)timeEnd; ++timeIndex)
+		{
+			int32_t currentMinPrice = dayInfo[Util::getPriceMatrixIndex((ObserveTime)timeIndex,
+				RangeTime::RANGE30, TransType::BEST_BUY)];
+			if (currentMinPrice < minPrice)
+			{
+				minPrice = currentMinPrice;
+			}
+			int32_t currentRangeEndTimeValue30 = Util::rangeEndTime(Util::getTimeValue((ObserveTime)timeIndex), 30);
+			if (currentRangeEndTimeValue30 == endTimeValue)
+			{
+				return minPrice;
+			}
+			else if (currentRangeEndTimeValue30 > endTimeValue)
+			{
+				int32_t currentMinPrice20 = dayInfo[Util::getPriceMatrixIndex((ObserveTime)timeIndex,
+					RangeTime::RANGE20, TransType::BEST_BUY)];
+				if (currentMinPrice20 < minPrice)
+				{
+					minPrice = currentMinPrice20;
+				}
+				int32_t currentRangeEndTimeValue20 = Util::rangeEndTime(Util::getTimeValue((ObserveTime)timeIndex), 20);
+				if (currentRangeEndTimeValue20 != endTimeValue)
+				{
+					RCSend("range time error");
+				}
+				return minPrice;
+			}
+		}
+		return minPrice;
+	}
+}
+
+int32_t Strategy::getMaxPrice(const std::vector<int32_t>& dayInfo, ObserveTime timeBegin, ObserveTime timeEnd)
+{
+	if (timeBegin == timeEnd)
+	{
+		RCSend("range time error");
+		return 0;
+	}
+	int32_t endTimeValue = Util::getTimeValue(timeEnd);
+	int32_t rangeEndTimeValue30 = Util::rangeEndTime(Util::getTimeValue(timeBegin), 30);
+	if (rangeEndTimeValue30 == endTimeValue)
+	{
+		return dayInfo[Util::getPriceMatrixIndex(timeBegin, RangeTime::RANGE30, TransType::BEST_SELL)];
+	}
+	else if (rangeEndTimeValue30 > endTimeValue)
+	{
+		int32_t rangeEndTimeValue20 = Util::rangeEndTime(Util::getTimeValue(timeBegin), 20);
+		if (rangeEndTimeValue20 == endTimeValue)
+		{
+			return dayInfo[Util::getPriceMatrixIndex(timeBegin, RangeTime::RANGE20, TransType::BEST_SELL)];
+		}
+		int32_t rangeEndTimeValue10 = Util::rangeEndTime(Util::getTimeValue(timeBegin), 10);
+		if (rangeEndTimeValue10 == endTimeValue)
+		{
+			return dayInfo[Util::getPriceMatrixIndex(timeBegin, RangeTime::RANGE10, TransType::BEST_SELL)];
+		}
+		RCSend("range time error");
+		return 0;
+	}
+	else
+	{
+		int32_t maxPrice = dayInfo[Util::getPriceMatrixIndex(timeBegin, RangeTime::RANGE30, TransType::BEST_SELL)];
+		for (int32_t timeIndex = (int32_t)timeBegin + 1; timeIndex < (int32_t)timeEnd; ++timeIndex)
+		{
+			int32_t currentMaxPrice = dayInfo[Util::getPriceMatrixIndex((ObserveTime)timeIndex,
+				RangeTime::RANGE30, TransType::BEST_SELL)];
+			if (currentMaxPrice > maxPrice)
+			{
+				maxPrice = currentMaxPrice;
+			}
+			int32_t currentRangeEndTimeValue30 = Util::rangeEndTime(Util::getTimeValue((ObserveTime)timeIndex), 30);
+			if (currentRangeEndTimeValue30 == endTimeValue)
+			{
+				return maxPrice;
+			}
+			else if (currentRangeEndTimeValue30 > endTimeValue)
+			{
+				int32_t currentMaxPrice20 = dayInfo[Util::getPriceMatrixIndex((ObserveTime)timeIndex,
+					RangeTime::RANGE20, TransType::BEST_SELL)];
+				if (currentMaxPrice20 > maxPrice)
+				{
+					maxPrice = currentMaxPrice20;
+				}
+				int32_t currentRangeEndTimeValue20 = Util::rangeEndTime(Util::getTimeValue((ObserveTime)timeIndex), 20);
+				if (currentRangeEndTimeValue20 != endTimeValue)
+				{
+					RCSend("range time error");
+				}
+				return maxPrice;
+			}
+		}
+		return maxPrice;
+	}
 }

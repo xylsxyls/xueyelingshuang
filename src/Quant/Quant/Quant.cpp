@@ -248,6 +248,7 @@ void Quant::onCreateFileClicked()
 		SQLiteResultSet result = lite.execute(prepare);
 		lite.close();
 	}
+	RCSend("create success");
 }
 
 void Quant::onSaveFileClicked()
@@ -328,6 +329,7 @@ void Quant::onSaveFileClicked()
 		}
 		lite.close();
 	}
+	RCSend("save db success");
 }
 
 void Quant::onInitRedisClicked()
@@ -449,14 +451,18 @@ void Quant::onProfitClicked()
 	config.allParam =
 	{
 		{ 
+			(int32_t)ObserveTime::TIME0940,
 			(int32_t)ObserveTime::TIME0950, (int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
 			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
 			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+			(int32_t)ObserveTime::TIME1120,
 		},
 		{ 
+			(int32_t)ObserveTime::TIME1310,
 			(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
 			(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
 			(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+			(int32_t)ObserveTime::TIME1450,
 		},
 		{ 7,8,9,10,11,12,13 },
 		{ 1,2,3,4,5,6 }

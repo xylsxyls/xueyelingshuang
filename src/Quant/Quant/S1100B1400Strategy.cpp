@@ -27,10 +27,8 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 	const std::string& stock = m_vecStock[0];
 	
 	// 解析策略参数
-	int32_t sellTimeIndex = Util::getPriceMatrixIndex((ObserveTime)m_strategyParam[0],
-		RangeTime::RANGE0, TransType::BEST_SELL); // 卖出时间点 对应 10:40,10:50,11:00
-	int32_t forceBuyTimeIndex = Util::getPriceMatrixIndex((ObserveTime)m_strategyParam[1],
-		RangeTime::RANGE0, TransType::BEST_BUY); // 买入时间点 对应 13:40,13:50,14:00
+	ObserveTime sellObserveTime = (ObserveTime)m_strategyParam[0]; // 卖出时间点 对应 10:40,10:50,11:00
+	ObserveTime forceBuyObserveTime = (ObserveTime)m_strategyParam[1]; // 买入时间点 对应 13:40,13:50,14:00
 	int32_t chaseParam = m_strategyParam[2];    // 7,8,9 分
 	int32_t discountParam = m_strategyParam[3]; // 1,2,3 分
 
@@ -48,12 +46,10 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 		return true;
 	}
 
-	int32_t sellPrice = dayInfo[sellTimeIndex];
-	int32_t forceBuyPrice = dayInfo[forceBuyTimeIndex];
-	int32_t buyPrice = sellPrice - discountParam;
+	int32_t sellPrice = getDirectSellPrice(dayInfo, sellObserveTime);
+	int32_t forceBuyPrice = getDirectBuyPrice(dayInfo, forceBuyObserveTime);
+	int32_t tBuyPrice = sellPrice - discountParam;
 	int32_t chaseBuyPrice = sellPrice + chaseParam;
-	ObserveTime sellTime = Util::indexToTime(sellTimeIndex);
-	ObserveTime forceBuyTime = Util::indexToTime(forceBuyTimeIndex);
 
 	// 检查当前是否持有该股票
 	bool hasPosition = (m_spFund->getPosition(stock) != nullptr);
@@ -63,24 +59,24 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 		return false;
 	}
 
-	m_spFund->sellAllForT(stock, sellPrice, date, sellTime);
+	m_spFund->sellAllForT(stock, sellPrice, date, sellObserveTime);
 
 	bool isBuy = false;
-	for (int32_t timeIndex = (int32_t)sellTime; timeIndex < (int32_t)forceBuyTime; ++timeIndex)
+	for (int32_t endTimeIndex = (int32_t)sellObserveTime + 1;
+		endTimeIndex <= (int32_t)forceBuyObserveTime; ++endTimeIndex)
 	{
-		int32_t bestBuyIndex = Util::bestPrice((ObserveTime)timeIndex, RangeTime::RANGENEXT, TransType::BEST_BUY);
-		int32_t bestBuyPrice = dayInfo[bestBuyIndex];
-		if (bestBuyPrice <= buyPrice)
+		ObserveTime endObserveTime = (ObserveTime)endTimeIndex;
+		int32_t bestBuyPrice = getMinPrice(dayInfo, sellObserveTime, endObserveTime);
+		if (bestBuyPrice <= tBuyPrice)
 		{
-			m_spFund->buyAll(stock, buyPrice, date, (ObserveTime)timeIndex);
+			m_spFund->buyAll(stock, tBuyPrice, date, endObserveTime);
 			isBuy = true;
 			break;
 		}
-		int32_t bestSellIndex = Util::bestPrice((ObserveTime)timeIndex, RangeTime::RANGENEXT, TransType::BEST_SELL);
-		int32_t bestSellPrice = dayInfo[bestSellIndex];
+		int32_t bestSellPrice = getMaxPrice(dayInfo, sellObserveTime, endObserveTime);
 		if (bestSellPrice >= chaseBuyPrice)
 		{
-			m_spFund->buyAll(stock, chaseBuyPrice, date, (ObserveTime)timeIndex);
+			m_spFund->buyAll(stock, chaseBuyPrice, date, endObserveTime);
 			isBuy = true;
 			break;
 		}
@@ -88,7 +84,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 
 	if (!isBuy)
 	{
-		m_spFund->buyAll(stock, forceBuyPrice, date, (ObserveTime)forceBuyTime);
+		m_spFund->buyAll(stock, forceBuyPrice, date, forceBuyObserveTime);
 	}
 
 	return true;

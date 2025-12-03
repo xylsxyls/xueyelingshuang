@@ -116,6 +116,43 @@ public:
 	*/
 	std::string getStrategyName() const;
 
+	/** 获取当前价格，卖一价
+	@param [in] dayInfo 当天分时数据
+	@param [in] time 获取时间点
+	@return 返回价格
+	*/
+	int32_t getCurrentPrice(const std::vector<int32_t>& dayInfo, ObserveTime time);
+
+	/** 获取当前直买价格
+	@param [in] dayInfo 当天分时数据
+	@param [in] time 获取时间点
+	@return 返回价格
+	*/
+	int32_t getDirectBuyPrice(const std::vector<int32_t>& dayInfo, ObserveTime time);
+
+	/** 获取当前直卖价格
+	@param [in] dayInfo 当天分时数据
+	@param [in] time 获取时间点
+	@return 返回价格
+	*/
+	int32_t getDirectSellPrice(const std::vector<int32_t>& dayInfo, ObserveTime time);
+
+	/** 获取区间最小有效价格
+	@param [in] dayInfo 当天分时数据
+	@param [in] timeBegin 开始时间点
+	@param [in] timeEnd 结束时间点
+	@return 返回价格
+	*/
+	int32_t getMinPrice(const std::vector<int32_t>& dayInfo, ObserveTime timeBegin, ObserveTime timeEnd);
+
+	/** 获取区间最大有效价格
+	@param [in] dayInfo 当天分时数据
+	@param [in] timeBegin 开始时间点
+	@param [in] timeEnd 结束时间点
+	@return 返回价格
+	*/
+	int32_t getMaxPrice(const std::vector<int32_t>& dayInfo, ObserveTime timeBegin, ObserveTime timeEnd);
+
 protected:
 	// 回测开始时间
 	uint32_t m_beginTime;

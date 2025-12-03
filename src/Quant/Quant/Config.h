@@ -49,6 +49,7 @@ enum class RangeTime
 enum class ObserveTime
 {
 	TIME0930,
+	TIME0940,
 	TIME0950,
 	TIME1000,
 	TIME1010,
@@ -58,6 +59,8 @@ enum class ObserveTime
 	TIME1050,
 	TIME1100,
 	TIME1110,
+	TIME1120,
+	TIME1310,
 	TIME1320,
 	TIME1330,
 	TIME1340,
@@ -67,6 +70,7 @@ enum class ObserveTime
 	TIME1420,
 	TIME1430,
 	TIME1440,
+	TIME1450,
 	COUNT
 };
 

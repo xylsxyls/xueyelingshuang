@@ -80,6 +80,12 @@ public:
 	*/
 	static int32_t getTimeValue(ObserveTime time);
 
+	/** 获取时间枚举值
+	@param [in] timeValue 实际时间值
+	@return 返回时间枚举值
+	*/
+	static ObserveTime getObserveTime(int32_t timeValue);
+
 	/** 获取时间范围的数值表示
 	@param [in] range 时间范围枚举值
 	@return 对应的整数值

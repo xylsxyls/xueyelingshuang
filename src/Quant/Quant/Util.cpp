@@ -163,161 +163,47 @@ std::vector<std::vector<int32_t>> Util::getAllStockData(const std::string& stock
 
 std::string Util::observeTimeToString(ObserveTime time)
 {
-	switch (time)
+	int32_t timeValue = Util::getTimeValue(time);
+	if (timeValue == 0)
 	{
-	case ObserveTime::TIME0930:
-		return "time0930";
-	case ObserveTime::TIME0950:
-		return "time0950";
-	case ObserveTime::TIME1000:
-		return "time1000";
-	case ObserveTime::TIME1010:
-		return "time1010";
-	case ObserveTime::TIME1020:
-		return "time1020";
-	case ObserveTime::TIME1030:
-		return "time1030";
-	case ObserveTime::TIME1040:
-		return "time1040";
-	case ObserveTime::TIME1050:
-		return "time1050";
-	case ObserveTime::TIME1100:
-		return "time1100";
-	case ObserveTime::TIME1110:
-		return "time1110";
-	case ObserveTime::TIME1320:
-		return "time1320";
-	case ObserveTime::TIME1330:
-		return "time1330";
-	case ObserveTime::TIME1340:
-		return "time1340";
-	case ObserveTime::TIME1350:
-		return "time1350";
-	case ObserveTime::TIME1400:
-		return "time1400";
-	case ObserveTime::TIME1410:
-		return "time1410";
-	case ObserveTime::TIME1420:
-		return "time1420";
-	case ObserveTime::TIME1430:
-		return "time1430";
-	case ObserveTime::TIME1440:
-		return "time1440";
-	default:
-		break;
+		return "";
 	}
-	return "";
+	std::string strTimeValue = std::to_string(timeValue);
+	if (strTimeValue.size() == 3)
+	{
+		strTimeValue = "0" + strTimeValue;
+	}
+	return "time" + strTimeValue;
 }
 
 ObserveTime Util::observeStringToTime(const std::string& strTime)
 {
-	if (strTime == "time0930")
-	{
-		return ObserveTime::TIME0930;
-	}
-	else if (strTime == "time0950")
-	{
-		return ObserveTime::TIME0950;
-	}
-	else if (strTime == "time1000")
-	{
-		return ObserveTime::TIME1000;
-	}
-	else if (strTime == "time1010")
-	{
-		return ObserveTime::TIME1010;
-	}
-	else if (strTime == "time1020")
-	{
-		return ObserveTime::TIME1020;
-	}
-	else if (strTime == "time1030")
-	{
-		return ObserveTime::TIME1030;
-	}
-	else if (strTime == "time1040")
-	{
-		return ObserveTime::TIME1040;
-	}
-	else if (strTime == "time1050")
-	{
-		return ObserveTime::TIME1050;
-	}
-	else if (strTime == "time1100")
-	{
-		return ObserveTime::TIME1100;
-	}
-	else if (strTime == "time1110")
-	{
-		return ObserveTime::TIME1110;
-	}
-	else if (strTime == "time1320")
-	{
-		return ObserveTime::TIME1320;
-	}
-	else if (strTime == "time1330")
-	{
-		return ObserveTime::TIME1330;
-	}
-	else if (strTime == "time1340")
-	{
-		return ObserveTime::TIME1340;
-	}
-	else if (strTime == "time1350")
-	{
-		return ObserveTime::TIME1350;
-	}
-	else if (strTime == "time1400")
-	{
-		return ObserveTime::TIME1400;
-	}
-	else if (strTime == "time1410")
-	{
-		return ObserveTime::TIME1410;
-	}
-	else if (strTime == "time1420")
-	{
-		return ObserveTime::TIME1420;
-	}
-	else if (strTime == "time1430")
-	{
-		return ObserveTime::TIME1430;
-	}
-	else if (strTime == "time1440")
-	{
-		return ObserveTime::TIME1440;
-	}
-	else
+	if (strTime.size() != 8)
 	{
 		return ObserveTime::COUNT;
 	}
+	std::string strTimeValue = strTime.substr(4, 4);
+	if (strTimeValue[0] == '0')
+	{
+		strTimeValue = strTimeValue.substr(1, 3);
+	}
+	return Util::getObserveTime(atoi(strTimeValue.c_str()));
 }
 
 std::string Util::observeTimeToWatchString(ObserveTime time)
 {
-	switch (time)
+	int32_t timeValue = Util::getTimeValue(time);
+	if (timeValue == 0)
 	{
-	case ObserveTime::TIME0930: return "09:30";
-	case ObserveTime::TIME0950: return "09:50";
-	case ObserveTime::TIME1000: return "10:00";
-	case ObserveTime::TIME1010: return "10:10";
-	case ObserveTime::TIME1020: return "10:20";
-	case ObserveTime::TIME1030: return "10:30";
-	case ObserveTime::TIME1040: return "10:40";
-	case ObserveTime::TIME1050: return "10:50";
-	case ObserveTime::TIME1100: return "11:00";
-	case ObserveTime::TIME1110: return "11:10";
-	case ObserveTime::TIME1320: return "13:20";
-	case ObserveTime::TIME1330: return "13:30";
-	case ObserveTime::TIME1340: return "13:40";
-	case ObserveTime::TIME1350: return "13:50";
-	case ObserveTime::TIME1400: return "14:00";
-	case ObserveTime::TIME1410: return "14:10";
-	case ObserveTime::TIME1420: return "14:20";
-	case ObserveTime::TIME1430: return "14:30";
-	case ObserveTime::TIME1440: return "14:40";
-	default: return "收盘";
+		return "异常时间点";
 	}
+	std::string strTimeValue = std::to_string(timeValue);
+	if (strTimeValue.size() == 3)
+	{
+		strTimeValue = "0" + strTimeValue;
+	}
+	strTimeValue.insert(2, 1, ':');
+	return strTimeValue;
 }
 
 int32_t Util::getTimeValue(ObserveTime time)
@@ -326,6 +212,8 @@ int32_t Util::getTimeValue(ObserveTime time)
 	{
 	case ObserveTime::TIME0930:
 		return 930;
+	case ObserveTime::TIME0940:
+		return 940;
 	case ObserveTime::TIME0950:
 		return 950;
 	case ObserveTime::TIME1000:
@@ -344,6 +232,10 @@ int32_t Util::getTimeValue(ObserveTime time)
 		return 1100;
 	case ObserveTime::TIME1110:
 		return 1110;
+	case ObserveTime::TIME1120:
+		return 1120;
+	case ObserveTime::TIME1310:
+		return 1310;
 	case ObserveTime::TIME1320:
 		return 1320;
 	case ObserveTime::TIME1330:
@@ -362,10 +254,69 @@ int32_t Util::getTimeValue(ObserveTime time)
 		return 1430;
 	case ObserveTime::TIME1440:
 		return 1440;
+	case ObserveTime::TIME1450:
+		return 1450;
 	case ObserveTime::COUNT:
 		return 1500;
 	default:
-		return -1;  // 无效时间
+		return 0;  // 无效时间
+	}
+}
+
+ObserveTime Util::getObserveTime(int32_t timeValue)
+{
+	switch (timeValue)
+	{
+	case 930:
+		return ObserveTime::TIME0930;
+	case 940:
+		return ObserveTime::TIME0940;
+	case 950:
+		return ObserveTime::TIME0950;
+	case 1000:
+		return ObserveTime::TIME1000;
+	case 1010:
+		return ObserveTime::TIME1010;
+	case 1020:
+		return ObserveTime::TIME1020;
+	case 1030:
+		return ObserveTime::TIME1030;
+	case 1040:
+		return ObserveTime::TIME1040;
+	case 1050:
+		return ObserveTime::TIME1050;
+	case 1100:
+		return ObserveTime::TIME1100;
+	case 1110:
+		return ObserveTime::TIME1110;
+	case 1120:
+		return ObserveTime::TIME1120;
+	case 1310:
+		return ObserveTime::TIME1310;
+	case 1320:
+		return ObserveTime::TIME1320;
+	case 1330:
+		return ObserveTime::TIME1330;
+	case 1340:
+		return ObserveTime::TIME1340;
+	case 1350:
+		return ObserveTime::TIME1350;
+	case 1400:
+		return ObserveTime::TIME1400;
+	case 1410:
+		return ObserveTime::TIME1410;
+	case 1420:
+		return ObserveTime::TIME1420;
+	case 1430:
+		return ObserveTime::TIME1430;
+	case 1440:
+		return ObserveTime::TIME1440;
+	case 1450:
+		return ObserveTime::TIME1450;
+	case 1500:
+		return ObserveTime::COUNT;
+	default:
+		return ObserveTime::COUNT;  // 无效时间
 	}
 }
 
@@ -384,63 +335,137 @@ int32_t Util::getRangeValue(RangeTime range)
 	}
 }
 
-int32_t Util::rangeEndTime(int32_t startTime, int32_t addMinutes)
-{
-	// 1. 输入合法性检查：开始时间必须≥930
-	if (startTime < 930) {
-		return 0;
+int32_t Util::rangeEndTime(int32_t startTime, int32_t addMinutes) {
+	// ========== 输入验证 ==========
+
+	// 验证起始时间是否为10的整数倍
+	if (startTime % 10 != 0) {
+		RCSend("错误：起始时间%d不是10的整数倍", startTime);
+		return -1;
 	}
 
-	// 2. 解析开始时间为小时和分钟
-	int32_t startHour = startTime / 100;
-	int32_t startMinute = startTime % 100;
-
-	// 检查开始时间格式合法性（分钟≤59）
-	if (startMinute >= 60) {
-		return 0;
+	// 验证起始时间是否在930-1500范围内
+	if (startTime < 930 || startTime > 1500) {
+		RCSend("错误：起始时间%d不在930-1500范围内", startTime);
+		return -1;
 	}
 
-	// 3. 计算未考虑休市的原始结束时间（分钟总数）
-	int32_t totalStartMinutes = startHour * 60 + startMinute;
-	int32_t totalEndMinutes = totalStartMinutes + addMinutes;
+	// 验证小时和分钟是否有效
+	int hour = startTime / 100;
+	int minute = startTime % 100;
 
-	// 4. 定义关键时间节点（分钟数）
-	const int32_t MORNING_OPEN = 9 * 60 + 30;    // 9:30 = 570分钟
-	const int32_t MORNING_CLOSE = 11 * 60 + 30;  // 11:30 = 690分钟
-	const int32_t AFTERNOON_OPEN = 13 * 60 + 0;  // 13:00 = 780分钟
-	const int32_t MARKET_CLOSE = 15 * 60 + 0;    // 15:00 = 900分钟
+	if (hour < 9 || hour > 15) {
+		RCSend("错误：起始时间%d的小时部分%d无效", startTime, hour);
+		return -1;
+	}
 
-	// 5. 处理中午休市时间（11:30-13:00）
-	if (totalEndMinutes > MORNING_CLOSE) {
-		// 计算上午未休市前剩余的可交易时间
-		if (totalStartMinutes < MORNING_CLOSE) {
-			int32_t timeUsedInMorning = MORNING_CLOSE - totalStartMinutes;
-			if (addMinutes <= timeUsedInMorning) {
-				// 未超过上午闭市时间，直接计算
-				totalEndMinutes = totalStartMinutes + addMinutes;
+	if (minute % 10 != 0 || minute >= 60) {
+		RCSend("错误：起始时间%d的分钟部分%d无效", startTime, minute);
+		return -1;
+	}
+
+	// 验证是否为异常时间值（1130-1300之间只有1130是有效的）
+	if (startTime > 1130 && startTime < 1300) {
+		RCSend("错误：起始时间%d是异常值（应在1130-1300之间跳过）", startTime);
+		return -1;
+	}
+
+	// 验证午休时间后的异常值
+	if (startTime > 1300 && startTime < 1310) {
+		RCSend("错误：起始时间%d是异常值（午休后应从1300开始）", startTime);
+		return -1;
+	}
+
+	// 验证增加时间是否合法
+	if (addMinutes < 0) {
+		RCSend("错误：增加时间%d不能为负数", addMinutes);
+		return -1;
+	}
+
+	if (addMinutes % 10 != 0) {
+		RCSend("错误：增加时间%d不是10的整数倍", addMinutes);
+		return -1;
+	}
+
+	// 特殊处理：如果起始时间已经是1500，直接返回1500
+	if (startTime == 1500) {
+		return 1500;
+	}
+
+	// ========== 时间转换逻辑（内联实现） ==========
+
+	// 将时间值转换为分钟数的内联函数
+	int startHour = startTime / 100;
+	int startMinute = startTime % 100;
+	int currentMinutes = startHour * 60 + startMinute;
+	int remainingMinutes = addMinutes;
+
+	// 定义交易时间段（分钟数表示）
+	const int MORNING_START = 570;   // 9:30
+	const int MORNING_END = 690;     // 11:30
+	const int AFTERNOON_START = 780; // 13:00
+	const int AFTERNOON_END = 900;   // 15:00
+
+	// ========== 时间计算逻辑 ==========
+
+	// 逐步增加时间，考虑午休
+	while (remainingMinutes > 0) {
+		// 确定当前所在的时间段
+		if (currentMinutes < MORNING_END) {
+			// 上午段
+			int minutesToMorningEnd = MORNING_END - currentMinutes;
+
+			if (remainingMinutes <= minutesToMorningEnd) {
+				// 剩余时间在上午段内完成
+				currentMinutes += remainingMinutes;
+				remainingMinutes = 0;
 			}
 			else {
-				// 扣除上午已用时间和休市时间（90分钟），剩余时间从下午开始算
-				int32_t remainingTime = addMinutes - timeUsedInMorning - 90;
-				totalEndMinutes = AFTERNOON_OPEN + remainingTime;
+				// 跳过午休，进入下午段
+				currentMinutes = AFTERNOON_START;
+				remainingMinutes -= minutesToMorningEnd;
 			}
 		}
-		else if (totalStartMinutes < AFTERNOON_OPEN) {
-			// 开始时间在休市期间，直接从下午开盘开始计算
-			totalEndMinutes = AFTERNOON_OPEN + addMinutes;
+		else if (currentMinutes < AFTERNOON_START) {
+			// 在午休期间（理论上不会进入这里，因为起始时间是有效的交易时间）
+			// 直接跳到下午开盘
+			currentMinutes = AFTERNOON_START;
 		}
-		// 开始时间在下午时段则直接累加（无需处理休市）
+		else {
+			// 下午段
+			int minutesToAfternoonEnd = AFTERNOON_END - currentMinutes;
+
+			if (remainingMinutes <= minutesToAfternoonEnd) {
+				// 剩余时间在下午段内完成
+				currentMinutes += remainingMinutes;
+				remainingMinutes = 0;
+			}
+			else {
+				// 超过下午交易时间，返回1500
+				return 1500;
+			}
+		}
 	}
 
-	// 6. 处理超过闭市时间的情况
-	if (totalEndMinutes >= MARKET_CLOSE) {
-		return 1500; // 超过15:00统一返回1500
+	// ========== 结果转换和验证 ==========
+
+	// 将分钟数转换回时间值
+	int endHour = currentMinutes / 60;
+	int endMinute = currentMinutes % 60;
+	int endTime = endHour * 100 + endMinute;
+
+	// 确保不超过1500
+	if (endTime > 1500) {
+		return 1500;
 	}
 
-	// 7. 转换分钟数为目标时间格式（如10:00 → 1000）
-	int32_t endHour = totalEndMinutes / 60;
-	int32_t endMinute = totalEndMinutes % 60;
-	return endHour * 100 + endMinute;
+	// 确保结果是10的整数倍（理论上应该总是满足）
+	if (endTime % 10 != 0) {
+		RCSend("警告：计算结果%d不是10的整数倍，进行修正", endTime);
+		endTime = (endTime / 10) * 10;
+	}
+
+	return endTime;
 }
 
 int32_t Util::getOverallIndex(Overall overall)
