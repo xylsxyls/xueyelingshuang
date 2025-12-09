@@ -30,6 +30,10 @@ public:
 
 	void V4();
 
+	void V5();
+
+	void Q5();
+
 private:
 	uint32_t m_editIndex;
 	Semaphore m_sleep;

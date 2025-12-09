@@ -14,7 +14,237 @@ m_exit(false)
 
 void CqswrTask::DoTask()
 {
-	V4();
+	V5();
+}
+
+void CqswrTask::V5()
+{
+	char str[1024] = {};
+	::GetWindowTextA(g_config.m_editWnd, str, 1024);
+
+	std::string text = str;
+
+	if (text.size() <= m_editIndex)
+	{
+		KeyPressE();
+		if (Sleep(80))
+		{
+			return;
+		}
+
+		CKeyboard::KeyPress('J', 0);
+		if (Sleep(150))
+		{
+			return;
+		}
+		KeyPressE();
+		if (Sleep(50))
+		{
+			return;
+		}
+		CKeyboard::KeyPress('L', 0);
+		if (Sleep(10))
+		{
+			return;
+		}
+		CKeyboard::KeyPress('X', 0);
+	}
+	else
+	{
+		char e = text[m_editIndex];
+		if (e == '8')
+		{
+			e = 'C' - 48;
+		}
+		CKeyboard::KeyPress(e + 48, 0);
+		if (g_config.m_isMain && text[m_editIndex] != '8')
+		{
+			if (Sleep(20))
+			{
+				return;
+			}
+			CKeyboard::KeyPress('C', 0);
+		}
+		//if (Sleep(10))
+		//{
+		//	return;
+		//}
+		//CMouse::RightUp();
+		if (Sleep(50))
+		{
+			return;
+		}
+		CMouse::RightUp();
+		if (Sleep(110))
+		{
+			return;
+		}
+		for (int index = 0; index < 2; ++index)
+		{
+			if (Sleep(10))
+			{
+				return;
+			}
+			CKeyboard::KeyPress('J', 0);
+		}
+		if (Sleep(180))
+		{
+			return;
+		}
+		for (int index = 0; index < 5; ++index)
+		{
+			if (Sleep(10))
+			{
+				return;
+			}
+			CKeyboard::KeyPress(e + 48, 0);
+		}
+		if (g_config.m_isMain && text[m_editIndex] != '8')
+		{
+			if (Sleep(20))
+			{
+				return;
+			}
+			CKeyboard::KeyPress('C', 0);
+		}
+		//if (Sleep(10))
+		//{
+		//	return;
+		//}
+		for (int index = 0; index < 1; ++index)
+		{
+			//if (Sleep(10))
+			//{
+			//	return;
+			//}
+			CKeyboard::KeyPress('L', 0);
+		}
+		if (Sleep(40))
+		{
+			return;
+		}
+		CKeyboard::KeyDown('N');
+		if (Sleep(150))
+		{
+			return;
+		}
+		CKeyboard::KeyUp('N');
+	}
+}
+
+void CqswrTask::Q5()
+{
+	char str[1024] = {};
+	::GetWindowTextA(g_config.m_editWnd, str, 1024);
+
+	std::string text = str;
+
+	if (text.size() <= m_editIndex)
+	{
+		KeyPressE();
+		if (Sleep(80))
+		{
+			return;
+		}
+
+		CKeyboard::KeyPress('J', 0);
+		if (Sleep(150))
+		{
+			return;
+		}
+		KeyPressE();
+		if (Sleep(50))
+		{
+			return;
+		}
+		CKeyboard::KeyPress('L', 0);
+		if (Sleep(10))
+		{
+			return;
+		}
+		CKeyboard::KeyPress('X', 0);
+	}
+	else
+	{
+		char e = text[m_editIndex];
+		if (e == '8')
+		{
+			e = 'C' - 48;
+		}
+		CKeyboard::KeyPress(e + 48, 0);
+		if (g_config.m_isMain && text[m_editIndex] != '8')
+		{
+			if (Sleep(20))
+			{
+				return;
+			}
+			CKeyboard::KeyPress('C', 0);
+		}
+		//if (Sleep(10))
+		//{
+		//	return;
+		//}
+		//CMouse::RightUp();
+		if (Sleep(50))
+		{
+			return;
+		}
+		CMouse::RightUp();
+		if (Sleep(110))
+		{
+			return;
+		}
+		for (int index = 0; index < 2; ++index)
+		{
+			if (Sleep(10))
+			{
+				return;
+			}
+			CKeyboard::KeyPress('J', 0);
+		}
+		if (Sleep(180))
+		{
+			return;
+		}
+		for (int index = 0; index < 5; ++index)
+		{
+			if (Sleep(10))
+			{
+				return;
+			}
+			CKeyboard::KeyPress(e + 48, 0);
+		}
+		if (g_config.m_isMain && text[m_editIndex] != '8')
+		{
+			if (Sleep(20))
+			{
+				return;
+			}
+			CKeyboard::KeyPress('C', 0);
+		}
+		//if (Sleep(10))
+		//{
+		//	return;
+		//}
+		for (int index = 0; index < 1; ++index)
+		{
+			//if (Sleep(10))
+			//{
+			//	return;
+			//}
+			CKeyboard::KeyPress('L', 0);
+		}
+		if (Sleep(60))
+		{
+			return;
+		}
+		CKeyboard::KeyDown('N');
+		if (Sleep(170))
+		{
+			return;
+		}
+		CKeyboard::KeyUp('N');
+	}
 }
 
 void CqswrTask::V4()

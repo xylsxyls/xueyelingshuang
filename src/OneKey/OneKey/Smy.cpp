@@ -66,7 +66,7 @@ void Smy::keyboard()
 		//g_config.m_taskThread->PostTask(spTask);
 	}
 
-	if (g_keyboard.m_keyUp[SPACE])
+	if (g_keyboard.m_keyUp[SPACE] && g_keyboard.m_lastKey == '7')
 	{
 		g_config.m_taskThread->StopAllTask();
 		std::map<int32_t, int32_t> taskCountMap;

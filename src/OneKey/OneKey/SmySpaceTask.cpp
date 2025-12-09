@@ -8,7 +8,7 @@
 void SmySpaceTask::DoTask()
 {
 	CKeyboard::KeyPress('H', 0);
-	Sleep(50);
+	Sleep(10);
 
 	//xyls::Point currentPos = CMouse::GetCurrentPos();
 	//CMouse::MoveAbsolute(g_config.m_bCenterPoint, 0);
@@ -17,5 +17,5 @@ void SmySpaceTask::DoTask()
 
 	//CKeyboard::KeyUp(TAB);
 
-	CMouse::RightUp();
+	//CMouse::RightUp();
 }
