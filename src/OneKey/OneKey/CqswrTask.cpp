@@ -65,17 +65,12 @@ void CqswrTask::V5()
 			}
 			CKeyboard::KeyPress('C', 0);
 		}
-		//if (Sleep(10))
-		//{
-		//	return;
-		//}
-		//CMouse::RightUp();
 		if (Sleep(50))
 		{
 			return;
 		}
 		CMouse::RightUp();
-		if (Sleep(110))
+		if (Sleep(100))
 		{
 			return;
 		}
@@ -87,7 +82,7 @@ void CqswrTask::V5()
 			}
 			CKeyboard::KeyPress('J', 0);
 		}
-		if (Sleep(180))
+		if (Sleep(200))
 		{
 			return;
 		}
@@ -107,19 +102,8 @@ void CqswrTask::V5()
 			}
 			CKeyboard::KeyPress('C', 0);
 		}
-		//if (Sleep(10))
-		//{
-		//	return;
-		//}
-		for (int index = 0; index < 1; ++index)
-		{
-			//if (Sleep(10))
-			//{
-			//	return;
-			//}
-			CKeyboard::KeyPress('L', 0);
-		}
-		if (Sleep(40))
+		CKeyboard::KeyPress('L', 0);
+		if (Sleep(60))
 		{
 			return;
 		}
@@ -180,11 +164,6 @@ void CqswrTask::Q5()
 			}
 			CKeyboard::KeyPress('C', 0);
 		}
-		//if (Sleep(10))
-		//{
-		//	return;
-		//}
-		//CMouse::RightUp();
 		if (Sleep(50))
 		{
 			return;
@@ -222,18 +201,7 @@ void CqswrTask::Q5()
 			}
 			CKeyboard::KeyPress('C', 0);
 		}
-		//if (Sleep(10))
-		//{
-		//	return;
-		//}
-		for (int index = 0; index < 1; ++index)
-		{
-			//if (Sleep(10))
-			//{
-			//	return;
-			//}
-			CKeyboard::KeyPress('L', 0);
-		}
+		CKeyboard::KeyPress('L', 0);
 		if (Sleep(60))
 		{
 			return;
