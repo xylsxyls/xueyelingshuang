@@ -16,6 +16,11 @@ Strategy::~Strategy()
 
 }
 
+std::string Strategy::describeParam(const std::vector<int32_t>& param)
+{
+	return "";
+}
+
 void Strategy::init(uint32_t beginTime, uint32_t endTime)
 {
 	m_beginTime = beginTime;

@@ -60,6 +60,12 @@ public:
 	*/
 	virtual bool onTradingDay(uint32_t date) = 0;
 
+	/** 描述参数
+	@param [in] params 参数组
+	@return 返回参数含义
+	*/
+	virtual std::string describeParam(const std::vector<int32_t>& params);
+
 	/** 初始化策略
 	@param [in] beginTime 回测开始时间
 	@param [in] endTime 回测结束时间

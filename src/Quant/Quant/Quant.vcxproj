@@ -210,6 +210,7 @@
     <ClCompile Include="StrategyTask.cpp" />
     <ClCompile Include="StrategyWidget.cpp" />
     <ClCompile Include="Util.cpp" />
+    <ClCompile Include="WaveStrategy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Quant.h">
@@ -309,6 +310,7 @@
     <ClInclude Include="CompetitionManager.h" />
     <ClInclude Include="CompetitionTask.h" />
     <ClInclude Include="Config.h" />
+    <ClInclude Include="WaveStrategy.h" />
     <CustomBuild Include="Display.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing Display.h...</Message>

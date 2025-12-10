@@ -125,7 +125,7 @@ int32_t AnalyzeTask::currentPrice(int32_t time, const std::map<int, std::vector<
 		if (!vec.empty())
 		{
 			// 取vector最后一个有效记录（buy_sell为'S'）
-			int32_t vecCount = vec.size();
+			int32_t vecCount = (int32_t)vec.size();
 			while (vecCount-- != 0)
 			{
 				const auto& lastInfo = vec[vecCount];
@@ -146,7 +146,7 @@ int32_t AnalyzeTask::currentPrice(int32_t time, const std::map<int, std::vector<
 		if (!vec.empty())
 		{
 			// 取vector第一个有效记录（buy_sell为'S'）
-			int32_t vecIndex = vec.size();
+			int32_t vecIndex = -1;
 			while (vecIndex++ != vec.size() - 1)
 			{
 				const auto& firstInfo = vec[vecIndex];
@@ -159,6 +159,7 @@ int32_t AnalyzeTask::currentPrice(int32_t time, const std::map<int, std::vector<
 	}
 
 	// 3. 无任何有效记录，返回0
+	RCSend("analyze error");
 	return 0;
 }
 
@@ -299,6 +300,7 @@ std::pair<int32_t, int32_t> AnalyzeTask::bestPrice(const std::map<int32_t, std::
 {
 	if (timeInfo.empty())
 	{
+		RCSend("bid ask empty");
 		return{ 0, 0 }; // 空数据返回默认值，可根据实际需求调整
 	}
 
@@ -316,13 +318,13 @@ std::pair<int32_t, int32_t> AnalyzeTask::bestPrice(const std::map<int32_t, std::
 			break;
 		}
 	}
-	//// 若总和不足，根据最高价的买卖标识调整
-	//if (totalBuySum < g_config.m_normalShares)
-    //{
-	//	auto highestIt = timeInfo.rbegin();
-	//	// 最高价有卖单（S），最佳买价为最高价+1；否则为最高价（仅买单B）
-	//	bestBid = (highestIt->second.second > 0) ? (highestIt->first + 1) : highestIt->first;
-	//}
+	// 若总和不足，根据最高价的买卖标识调整
+	if (totalBuySum < g_config.m_normalShares)
+    {
+		auto highestIt = timeInfo.rbegin();
+		// 最高价为买价
+		bestBid = highestIt->first;
+	}
 
 	// 计算最佳卖价：从最高价（高到低）累加（使用反向迭代器）
 	int32_t bestAsk = 0;
@@ -338,14 +340,18 @@ std::pair<int32_t, int32_t> AnalyzeTask::bestPrice(const std::map<int32_t, std::
 			break;
 		}
 	}
-	//// 若总和不足，根据最低价的买卖标识调整
-	//if (totalSellSum < g_config.m_normalShares)
-    //{
-	//	auto lowestIt = timeInfo.begin();
-	//	// 最低价有买单（B），最佳卖价为最低价-1；否则为最低价（仅卖单S）
-	//	bestAsk = (lowestIt->second.first > 0) ? (lowestIt->first - 1) : lowestIt->first;
-	//}
+	// 若总和不足，根据最低价的买卖标识调整
+	if (totalSellSum < g_config.m_normalShares)
+	{
+		auto lowestIt = timeInfo.begin();
+		// 最低价为卖价
+		bestAsk = lowestIt->first;
+	}
 
+	if (bestBid == 0 || bestAsk == 0)
+	{
+		RCSend("bid ask 0");
+	}
 	return{ bestBid, bestAsk };
 }
 

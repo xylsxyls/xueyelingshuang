@@ -50,6 +50,7 @@ void StrategyTask::DoTask()
 	BigNumber maxDrawdown = 0; // 最大回撤
 	BigNumber totalProfitArea = 0; // 总收益面积
 
+	bool isParamPass = true;
 	uint32_t date = 0;
 	// 遍历所有交易日
 	for (uint32_t i = 0; i < tradingDays.size(); ++i)
@@ -62,7 +63,8 @@ void StrategyTask::DoTask()
 		// 执行策略
 		if (!m_spStrategy->onTradingDay(date))
 		{
-			RCSend("Strategy execution failed for date: %u", date);
+			isParamPass = false;
+			break;
 		}
 
 		// 记录当日资产
@@ -99,24 +101,27 @@ void StrategyTask::DoTask()
 		return;
 	}
 
-	// 强制平仓所有未完成交易
-	if (!tradingDays.empty())
+	if (isParamPass)
 	{
-		spFund->closeAllTrades(date);
-		int32_t currentValue = spFund->getTotalValue((uint32_t)tradingDays.back());
-		dailyValues.pop_back();
-		dailyValues.push_back(currentValue);
-	}
+		// 强制平仓所有未完成交易
+		if (!tradingDays.empty())
+		{
+			spFund->closeAllTrades(date);
+			int32_t currentValue = spFund->getTotalValue((uint32_t)tradingDays.back());
+			dailyValues.pop_back();
+			dailyValues.push_back(currentValue);
+		}
 
-	// 计算策略指标
-	StrategyResult result = calculateStrategyMetrics(actualDays, totalDays, maxDrawdown,
-		totalProfitArea, dailyValues, date);
-	
-	// 设置策略ID和参数
-	result.strategyMode = m_spStrategy->getStrategyMode();
-	result.params = m_spStrategy->getStrategyParam();
-	result.tradeLog = m_spStrategy->getFund()->exportTradeRecords();
-	m_resultQueue->push(result);
+		// 计算策略指标
+		StrategyResult result = calculateStrategyMetrics(actualDays, totalDays, maxDrawdown,
+			totalProfitArea, dailyValues, date);
+
+		// 设置策略ID和参数
+		result.strategyMode = m_spStrategy->getStrategyMode();
+		result.params = m_spStrategy->getStrategyParam();
+		result.tradeLog = m_spStrategy->getFund()->exportTradeRecords();
+		m_resultQueue->push(result);
+	}
 
 	++g_config.m_completeTaskCount;
 }

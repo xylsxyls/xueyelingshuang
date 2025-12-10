@@ -424,7 +424,7 @@ void Quant::onProfitClicked()
 	g_config.m_completeTaskCount = 0;
 
 	int32_t profitBeginTime = 20250630;
-	int32_t profitEndTime = 20250929;
+	int32_t profitEndTime = 20251209;
 	std::string stock = "600975";
 
 	std::vector<std::vector<int32_t>> result =
@@ -468,7 +468,83 @@ void Quant::onProfitClicked()
 		{ 1,2,3,4,5,6 }
 	};
 
-	CompetitionManager::instance().addCompetition(StrategyMode::S1100B1400, config);
+	//CompetitionManager::instance().addCompetition(StrategyMode::S1100B1400, config);
+
+	{
+		CompetitionConfig config;
+		config.beginTime = profitBeginTime;
+		config.endTime = profitEndTime;
+		config.stocks = { stock };
+		config.marketData = marketData;
+		config.initialFund = g_config.m_initialFund; // 100万初始资金
+
+		// 挂卖价时间点
+		// 直卖价时间点
+		// 挂买价时间点
+		// 直买价时间点
+		// 观察价A时间点
+		// 观察价B时间点
+		// 观察价B-A大于等于多少时当天直买，第二天早上不卖
+		// 观察价B-A小于等于多少时当天不买，剩余的部分，当天直买，第二天早上卖
+		// 当天早上卖出后反追差价
+		config.allParam =
+		{
+			{
+				//(int32_t)ObserveTime::TIME1040
+				//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
+				(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+				(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+				(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+				(int32_t)ObserveTime::TIME1120,
+			},
+			{
+				//(int32_t)ObserveTime::TIME1110
+				//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
+				(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+				(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+				(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+				(int32_t)ObserveTime::TIME1120,
+			},
+			{
+				//(int32_t)ObserveTime::TIME1340
+				//(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
+				(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+				(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+				(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+				//(int32_t)ObserveTime::TIME1450,
+			},
+			{
+				//(int32_t)ObserveTime::TIME1340
+				//(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
+				(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+				(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+				(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+				//(int32_t)ObserveTime::TIME1450,
+			},
+			{
+				//(int32_t)ObserveTime::TIME1000
+				(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
+				(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+				(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+				(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+				(int32_t)ObserveTime::TIME1120,
+			},
+			{
+				//(int32_t)ObserveTime::TIME1410
+				(int32_t)ObserveTime::TIME1310,
+				(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+				(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+				(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+				(int32_t)ObserveTime::TIME1450,
+			},
+			{ 0 },
+			{ -1 },
+			{ 8 }
+		};
+
+		CompetitionManager::instance().addCompetition(StrategyMode::WAVE, config);
+	}
+
 	// 开始竞赛
 	if (CompetitionManager::instance().startCompetition())
 	{
@@ -743,8 +819,8 @@ void Quant::displayAllStrategies()
 		frameLayout->addLayout(metricsLayout);
 
 		// 添加到网格布局
-		int row = i / columns;
-		int col = i % columns;
+		int row = (int32_t)i / columns;
+		int col = (int32_t)i % columns;
 		gridLayout->addWidget(strategyFrame, row, col);
 	}
 

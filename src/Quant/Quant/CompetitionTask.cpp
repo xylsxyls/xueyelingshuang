@@ -83,7 +83,7 @@ void CompetitionTask::DoTask()
 
 	for (size_t index = 0; index < vecStrategyTask.size(); ++index)
 	{
-		uint32_t threadIndex = index % m_vecThreadId.size();
+		uint32_t threadIndex = index % (int32_t)m_vecThreadId.size();
 		CTaskThreadManager::Instance().GetThreadInterface(m_vecThreadId[threadIndex])->PostTask(vecStrategyTask[index]);
 	}
 
@@ -107,38 +107,31 @@ void CompetitionTask::DoTask()
 	// 按总收益率排序
 	std::sort(m_intermediateResults.begin(), m_intermediateResults.end(),
 		[](const StrategyResult& a, const StrategyResult& b) {
-		return a.tReturn > b.tReturn;
+		//return a.tReturn > b.tReturn;
+		return a.totalReturn > b.totalReturn;
 	});
 
 	RCSend("time = %.2lfmin\n", (int32_t)g_config.m_time.GetWatchTime() / 1000.0 / 60.0);
 	for (size_t resultIndex = 0; (resultIndex < 10) && (resultIndex < m_intermediateResults.size()); ++resultIndex)
 	{
 		const StrategyResult& result = m_intermediateResults[resultIndex];
-		std::string param;
-		for (size_t index = 0; index < result.params.size(); ++index)
-		{
-			param += (index <= 1 ?
-				(Util::observeTimeToWatchString((ObserveTime)result.params[index]) + ", ") :
-				std::to_string(result.params[index]) + ", ");
-		}
-		if (!param.empty())
-		{
-			param.pop_back();
-			param.pop_back();
-		}
-
-		RCSend("第%d名, param = %s, tProfit = %s元, trade = %s元, tAnnual = %s%%",
+		std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result.strategyMode);
+		std::string describe = spStrategy->describeParam(result.params);
+		std::string modeName = spStrategy->getStrategyName();
+		RCSend("第%d名, %s, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
 			(int32_t)(resultIndex + 1),
-			param.c_str(),
+			modeName.c_str(),
 			(m_intermediateResults[resultIndex].tReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
 			(m_intermediateResults[resultIndex].totalReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-			(m_intermediateResults[resultIndex].annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
+			(m_intermediateResults[resultIndex].annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
+			(m_intermediateResults[resultIndex].annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
+		RCSend("第%d名, param = %s", (int32_t)(resultIndex + 1), describe.c_str());
 	}
 
 	// 填充最终结果
 	m_finalResult.rankedResults = m_intermediateResults;
 	m_finalResult.totalStrategies = strategyCount;
-	m_finalResult.completedStrategies = m_intermediateResults.size();
+	m_finalResult.completedStrategies = (uint32_t)m_intermediateResults.size();
 
 	// 计算统计指标
 	if (!m_intermediateResults.empty())

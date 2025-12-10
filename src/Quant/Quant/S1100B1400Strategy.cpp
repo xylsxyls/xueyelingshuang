@@ -7,7 +7,7 @@ S1100B1400Strategy::S1100B1400Strategy():
 m_hasFirstBuy(false)
 {
 	m_mode = StrategyMode::S1100B1400;
-	m_modeName = "S1100B1400Strategy";
+	m_modeName = "S1100B1400";
 }
 
 S1100B1400Strategy::~S1100B1400Strategy()
@@ -25,19 +25,18 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 
 	// 只处理第一只股票（可根据需要扩展为多股票）
 	const std::string& stock = m_vecStock[0];
-	
-	// 解析策略参数
-	ObserveTime sellObserveTime = (ObserveTime)m_strategyParam[0]; // 卖出时间点 对应 10:40,10:50,11:00
-	ObserveTime forceBuyObserveTime = (ObserveTime)m_strategyParam[1]; // 买入时间点 对应 13:40,13:50,14:00
-	int32_t chaseParam = m_strategyParam[2];    // 7,8,9 分
-	int32_t discountParam = m_strategyParam[3]; // 1,2,3 分
-
 	const std::vector<int32_t>& dayInfo = m_spMarket->getStockData(stock, date);
 	if (dayInfo.empty())
 	{
 		RCSend("dayInfo empty");
 		return false;
 	}
+
+	// 解析策略参数
+	ObserveTime sellObserveTime = (ObserveTime)m_strategyParam[0]; // 卖出时间点 对应 10:40,10:50,11:00
+	ObserveTime forceBuyObserveTime = (ObserveTime)m_strategyParam[1]; // 买入时间点 对应 13:40,13:50,14:00
+	int32_t chaseParam = m_strategyParam[2];    // 7,8,9 分
+	int32_t discountParam = m_strategyParam[3]; // 1,2,3 分
 
 	if (!m_hasFirstBuy)
 	{
@@ -46,6 +45,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 		return true;
 	}
 
+	// 需要的价格指标
 	int32_t sellPrice = getDirectSellPrice(dayInfo, sellObserveTime);
 	int32_t forceBuyPrice = getDirectBuyPrice(dayInfo, forceBuyObserveTime);
 	int32_t tBuyPrice = sellPrice - discountParam;
@@ -88,6 +88,23 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 	}
 
 	return true;
+}
+
+std::string S1100B1400Strategy::describeParam(const std::vector<int32_t>& params)
+{
+	std::string describe;
+	for (size_t index = 0; index < params.size(); ++index)
+	{
+		describe += (index <= 1 ?
+			(Util::observeTimeToWatchString((ObserveTime)params[index]) + ", ") :
+			std::to_string(params[index]) + ", ");
+	}
+	if (!describe.empty())
+	{
+		describe.pop_back();
+		describe.pop_back();
+	}
+	return describe;
 }
 
 bool S1100B1400Strategy::isStrategyParamValid() const

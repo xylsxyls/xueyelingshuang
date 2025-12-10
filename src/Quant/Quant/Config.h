@@ -85,5 +85,6 @@ enum class Overall
 enum class StrategyMode
 {
 	S1100B1400,
+	WAVE,
 	COUNT
 };
