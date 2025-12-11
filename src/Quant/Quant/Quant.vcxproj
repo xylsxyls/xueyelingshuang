@@ -160,6 +160,7 @@
   <ItemGroup>
     <ClCompile Include="AnalyzeTask.cpp" />
     <ClCompile Include="ClientReceive.cpp" />
+    <ClCompile Include="CollectTask.cpp" />
     <ClCompile Include="CompetitionManager.cpp" />
     <ClCompile Include="CompetitionTask.cpp" />
     <ClCompile Include="Config.cpp" />
@@ -307,6 +308,7 @@
   <ItemGroup>
     <ClInclude Include="AnalyzeTask.h" />
     <ClInclude Include="ClientReceive.h" />
+    <ClInclude Include="CollectTask.h" />
     <ClInclude Include="CompetitionManager.h" />
     <ClInclude Include="CompetitionTask.h" />
     <ClInclude Include="Config.h" />

@@ -104,27 +104,34 @@ void CompetitionTask::DoTask()
 		return;
 	}
 
+	std::vector<StrategyResult> topResults;
+	int32_t n = (std::min)(10, (int32_t)m_intermediateResults.size());
+
+	// 预留空间避免重新分配
+	topResults.resize(n);
+
 	// 按总收益率排序
-	std::sort(m_intermediateResults.begin(), m_intermediateResults.end(),
+	std::partial_sort_copy(m_intermediateResults.begin(), m_intermediateResults.end(),
+		topResults.begin(), topResults.end(),
 		[](const StrategyResult& a, const StrategyResult& b) {
 		//return a.tReturn > b.tReturn;
 		return a.totalReturn > b.totalReturn;
 	});
 
 	RCSend("time = %.2lfmin\n", (int32_t)g_config.m_time.GetWatchTime() / 1000.0 / 60.0);
-	for (size_t resultIndex = 0; (resultIndex < 10) && (resultIndex < m_intermediateResults.size()); ++resultIndex)
+	for (size_t resultIndex = 0; (resultIndex < 10) && (resultIndex < topResults.size()); ++resultIndex)
 	{
-		const StrategyResult& result = m_intermediateResults[resultIndex];
+		const StrategyResult& result = topResults[resultIndex];
 		std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result.strategyMode);
 		std::string describe = spStrategy->describeParam(result.params);
 		std::string modeName = spStrategy->getStrategyName();
 		RCSend("第%d名, %s, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
 			(int32_t)(resultIndex + 1),
 			modeName.c_str(),
-			(m_intermediateResults[resultIndex].tReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-			(m_intermediateResults[resultIndex].totalReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-			(m_intermediateResults[resultIndex].annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
-			(m_intermediateResults[resultIndex].annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
+			(topResults[resultIndex].tReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+			(topResults[resultIndex].totalReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+			(topResults[resultIndex].annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
+			(topResults[resultIndex].annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
 		RCSend("第%d名, param = %s", (int32_t)(resultIndex + 1), describe.c_str());
 	}
 

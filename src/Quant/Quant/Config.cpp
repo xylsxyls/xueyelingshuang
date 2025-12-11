@@ -26,7 +26,7 @@ CConfig::CConfig()
 	m_cpuCoreCount = CSystem::GetCPUCoreCount();
 	m_normalShares = 800;
 	m_ignoreTrans = 2;
-	m_allBeginTime = 20250201;
+	m_allBeginTime = 20200201;
 	m_allEndTime = 30250101;
 	m_initialFund = 1000000 * 100;
 	m_completeTaskCount = 0;

@@ -33,9 +33,11 @@
 #include "AnalyzeTask.h"
 #include "StockManager.h"
 #include "StockCharge/StockChargeAPI.h"
+#include "CollectTask.h"
 
 Quant::Quant(QWidget* parent):
-	QMainWindow(parent)
+	QMainWindow(parent),
+	m_threadId(0)
 {
 	ui.setupUi(this);
 	m_button = new COriginalButton(this);
@@ -46,6 +48,7 @@ Quant::Quant(QWidget* parent):
 	m_profit = new COriginalButton(this);
 	m_displayResult = new COriginalButton(this);
 	m_analyze = new COriginalButton(this);
+	m_collect = new COriginalButton(this);
 	init();
 }
 
@@ -53,6 +56,7 @@ Quant::~Quant()
 {
 	// 清理资源
 	CompetitionManager::instance().uninit();
+	CTaskThreadManager::Instance().Uninit(m_threadId);
 }
 
 void Quant::init()
@@ -61,6 +65,8 @@ void Quant::init()
 	{
 		return;
 	}
+
+	m_threadId = CTaskThreadManager::Instance().Init();
 
 	m_clientReceive = new ClientReceive;
 	NetSender::instance().initClientReceive(m_clientReceive);
@@ -129,6 +135,10 @@ void Quant::init()
 	m_analyze->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_analyze, &COriginalButton::clicked, this, &Quant::onAnalyzeClicked);
 
+	m_collect->setText(QStringLiteral("collect"));
+	m_collect->setBkgColor(normal, hover, passed, disable);
+	QObject::connect(m_collect, &COriginalButton::clicked, this, &Quant::onCollectClicked);
+
 	StockCharge::instance().init("0.00016", 5);
 
 	// 初始化竞赛管理器
@@ -167,6 +177,7 @@ void Quant::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_profit);
 	vecButton.push_back(m_displayResult);
 	vecButton.push_back(m_analyze);
+	vecButton.push_back(m_collect);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -423,7 +434,7 @@ void Quant::onProfitClicked()
 	g_config.m_time.SetWatchTime(0);
 	g_config.m_completeTaskCount = 0;
 
-	int32_t profitBeginTime = 20250630;
+	int32_t profitBeginTime = 20250102;
 	int32_t profitEndTime = 20251209;
 	std::string stock = "600975";
 
@@ -468,7 +479,7 @@ void Quant::onProfitClicked()
 		{ 1,2,3,4,5,6 }
 	};
 
-	//CompetitionManager::instance().addCompetition(StrategyMode::S1100B1400, config);
+	CompetitionManager::instance().addCompetition(StrategyMode::S1100B1400, config);
 
 	{
 		CompetitionConfig config;
@@ -538,7 +549,7 @@ void Quant::onProfitClicked()
 				(int32_t)ObserveTime::TIME1450,
 			},
 			{ 0 },
-			{ -1 },
+			{ -1, -2 },
 			{ 8 }
 		};
 
@@ -657,6 +668,14 @@ void Quant::onAnalyzeClicked()
 		}
 	}
 	RCSend("analyze success");
+}
+
+void Quant::onCollectClicked()
+{
+	showMinimized();
+	std::shared_ptr<CollectTask> spCollectTask(new CollectTask);
+	spCollectTask->setParam(10);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCollectTask);
 }
 
 void Quant::startProgressMonitoring()

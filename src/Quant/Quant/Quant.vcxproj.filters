@@ -131,6 +131,9 @@
     <ClCompile Include="WaveStrategy.cpp">
       <Filter>Strategy</Filter>
     </ClCompile>
+    <ClCompile Include="CollectTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Quant.qrc">
@@ -200,6 +203,9 @@
     </ClInclude>
     <ClInclude Include="WaveStrategy.h">
       <Filter>Strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="CollectTask.h">
+      <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
