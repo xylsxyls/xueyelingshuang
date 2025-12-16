@@ -75,10 +75,10 @@ void WzCommon::keyboard()
 			spTask1->setParam('9');
 			g_config.m_taskThread->PostTask(spTask1);
 			std::shared_ptr<CKeyTask> spTask2(new CKeyTask);
-			spTask2->setParam('8');
+			spTask2->setParam('7');
 			g_config.m_taskThread->PostTask(spTask2);
 			std::shared_ptr<CKeyTask> spTask3(new CKeyTask);
-			spTask3->setParam('7');
+			spTask3->setParam('8');
 			g_config.m_taskThread->PostTask(spTask3);
 		}
 		else if (g_config.m_type == g_config.nameType(ZGL))
