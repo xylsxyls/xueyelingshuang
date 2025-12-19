@@ -434,7 +434,7 @@ void Quant::onProfitClicked()
 	g_config.m_time.SetWatchTime(0);
 	g_config.m_completeTaskCount = 0;
 
-	int32_t profitBeginTime = 20250102;
+	int32_t profitBeginTime = 20250930;
 	int32_t profitEndTime = 20251209;
 	std::string stock = "600975";
 
@@ -461,23 +461,34 @@ void Quant::onProfitClicked()
 	// 降价参数：1,2,3
 	config.allParam =
 	{
-		{ 
-			(int32_t)ObserveTime::TIME0940,
-			(int32_t)ObserveTime::TIME0950, (int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
-			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
-			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
-			(int32_t)ObserveTime::TIME1120,
-		},
-		{ 
-			(int32_t)ObserveTime::TIME1310,
-			(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
-			(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
-			(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
-			(int32_t)ObserveTime::TIME1450,
-		},
-		{ 7,8,9,10,11,12,13 },
-		{ 1,2,3,4,5,6 }
+		{(int32_t)ObserveTime::TIME1100},
+		{(int32_t)ObserveTime::TIME1400},
+		{ 8 },
+		{ 1 }
 	};
+
+	if (0)
+	{
+		config.allParam =
+		{
+			{
+				(int32_t)ObserveTime::TIME0940,
+				(int32_t)ObserveTime::TIME0950, (int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+				(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+				(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+				(int32_t)ObserveTime::TIME1120,
+			},
+			{
+				(int32_t)ObserveTime::TIME1310,
+				(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+				(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+				(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+				(int32_t)ObserveTime::TIME1450,
+			},
+			{ 7, 8, 9, 10, 11, 12, 13 },
+			{ 1, 2, 3, 4, 5, 6 }
+		};
+	}
 
 	//CompetitionManager::instance().addCompetition(StrategyMode::S1100B1400, config);
 
@@ -498,60 +509,85 @@ void Quant::onProfitClicked()
 		// 观察价B-A大于等于多少时当天直买，第二天早上不卖
 		// 观察价B-A小于等于多少时当天不买，剩余的部分，当天直买，第二天早上卖
 		// 当天早上卖出后反追差价
+
+		//第5名, param = 10:00, 11 : 00, 14 : 40, 14 : 40, 09 : 50, 14 : 40, 0, -1, 8
+		//第5名, Wave, tProfit = 65304.24元, trade = 8176.96元, tAnnual = 321.12%, annual = 20.33%
+		//第4名, param = 10 : 30, 10 : 30, 14 : 40, 14 : 40, 09 : 50, 14 : 40, 0, -1, 8
+		//第4名, Wave, tProfit = 65304.24元, trade = 8176.96元, tAnnual = 321.12%, annual = 20.33%
+		//第3名, param = 10 : 00, 10 : 30, 14 : 40, 14 : 40, 09 : 50, 14 : 40, 0, -1, 8
+		//第3名, Wave, tProfit = 65304.24元, trade = 8176.96元, tAnnual = 321.12%, annual = 20.33%
+		//第2名, param = 10 : 10, 11 : 10, 14 : 40, 14 : 40, 09 : 50, 14 : 40, 0, -1, 8
+		//第2名, Wave, tProfit = 65304.24元, trade = 8176.96元, tAnnual = 321.12%, annual = 20.33%
+		//第1名, param = 10 : 10, 11 : 00, 14 : 40, 14 : 40, 09 : 50, 14 : 40, 0, -1, 8
+		//第1名, Wave, tProfit = 65304.24元, trade = 8176.96元, tAnnual = 321.12%, annual = 20.33%
+		//param = 10:10, 10:20, 14:00, 14:40, 10:40, 13:40, 0, -1, 8, 0
 		config.allParam =
 		{
-			{
-				(int32_t)ObserveTime::TIME1040
-				//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
-				//(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
-				//(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
-				//(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
-				//(int32_t)ObserveTime::TIME1120,
-			},
-			{
-				(int32_t)ObserveTime::TIME1100
-				//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
-				//(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
-				//(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
-				//(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
-				//(int32_t)ObserveTime::TIME1120,
-			},
-			{
-				(int32_t)ObserveTime::TIME1340
-				//(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
-				//(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
-				//(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
-				//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
-				//(int32_t)ObserveTime::TIME1450,
-			},
-			{
-				(int32_t)ObserveTime::TIME1400
-				//(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
-				//(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
-				//(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
-				//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
-				//(int32_t)ObserveTime::TIME1450,
-			},
-			{
-				(int32_t)ObserveTime::TIME1100
-				//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
-				//(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
-				//(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
-				//(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
-				//(int32_t)ObserveTime::TIME1120,
-			},
-			{
-				(int32_t)ObserveTime::TIME1400
-				//(int32_t)ObserveTime::TIME1310,
-				//(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
-				//(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
-				//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
-				//(int32_t)ObserveTime::TIME1450,
-			},
+			{ (int32_t)ObserveTime::TIME1010 },
+			{ (int32_t)ObserveTime::TIME1020 },
+			{ (int32_t)ObserveTime::TIME1400 },
+			{ (int32_t)ObserveTime::TIME1440 },
+			{ (int32_t)ObserveTime::TIME1040 },
+			{ (int32_t)ObserveTime::TIME1340 },
 			{ 0 },
-			{ -2 },
-			{ 8 }
+			{ -1 },
+			{ 8 },
+			{ 0 }
 		};
+
+		if (1)
+		{
+			config.allParam =
+			{
+				{
+					//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
+					(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+					(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+					(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100//, (int32_t)ObserveTime::TIME1110,
+					//(int32_t)ObserveTime::TIME1120,
+				},
+				{
+					//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
+					//(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+					(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+					(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+					(int32_t)ObserveTime::TIME1120,
+				},
+				{
+					//(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
+					(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+					(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+					//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+					//(int32_t)ObserveTime::TIME1450,
+				},
+				{
+					//(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
+					(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+					(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+					(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+					//(int32_t)ObserveTime::TIME1450,
+				},
+				{
+					//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
+					//(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+					(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+					(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+					(int32_t)ObserveTime::TIME1120,
+				},
+				{
+					//(int32_t)ObserveTime::TIME1310,
+					(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+					(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+					//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+					//(int32_t)ObserveTime::TIME1450,
+				},
+				{ 0 },
+				{ -2 },
+				{ 5,6,7,8 },
+				{ 5,6,7,8,9,38 },
+				{ 0, 1 }
+			};
+		}
 
 		CompetitionManager::instance().addCompetition(StrategyMode::WAVE, config);
 	}

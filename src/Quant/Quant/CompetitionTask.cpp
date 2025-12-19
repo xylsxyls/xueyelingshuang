@@ -105,7 +105,7 @@ void CompetitionTask::DoTask()
 	}
 
 	std::vector<StrategyResult> topResults;
-	int32_t n = (std::min)(10, (int32_t)m_intermediateResults.size());
+	size_t n = (std::min)((size_t)g_config.m_showCount, m_intermediateResults.size());
 
 	// 预留空间避免重新分配
 	topResults.resize(n);
@@ -119,7 +119,8 @@ void CompetitionTask::DoTask()
 	});
 
 	RCSend("time = %.2lfmin\n", (int32_t)g_config.m_time.GetWatchTime() / 1000.0 / 60.0);
-	for (size_t resultIndex = 0; (resultIndex < 10) && (resultIndex < topResults.size()); ++resultIndex)
+	for (size_t resultIndex = 0; (resultIndex < g_config.m_showCount) && (resultIndex < topResults.size());
+		++resultIndex)
 	{
 		const StrategyResult& result = topResults[resultIndex];
 		std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result.strategyMode);
