@@ -5,6 +5,7 @@
 #include "Strategy.h"
 #include "BigNumber/BigNumberAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
+#include "Semaphore/SemaphoreAPI.h"
 
 /** 竞赛配置结构体
 */
@@ -88,15 +89,24 @@ public:
 
 	void addParam(StrategyMode strategyMode, const CompetitionConfig& config);
 
-	std::vector<std::vector<int32_t>> getAllParam(const std::vector<std::vector<int32_t>>& allParam);
+	const std::map<int32_t, std::vector<std::shared_ptr<StrategyResult>>>& getResultMap();
+
+	void printResultMap(uint32_t showCount = -1);
+
+	void setParam(bool isShowResult);
 
 private:
 	// 线程ID列表
 	std::vector<uint32_t> m_vecThreadId;
+	// 计算最终结果线程
+	uint32_t m_resultThreadId;
 	// 配置信息，策略模式，配置信息
 	std::map<int32_t, CompetitionConfig> m_competitionConfigMap;
 	// 无锁队列用于结果收集
-	LockFreeQueue<StrategyResult> m_resultQueue;
-	std::vector<StrategyResult> m_intermediateResults;
+	LockFreeQueue<std::shared_ptr<StrategyResult>> m_resultQueue;
+	Semaphore m_resultSemaphore;
+	std::map<int32_t, std::vector<std::shared_ptr<StrategyResult>>> m_resultMap;
+	//std::vector<StrategyResult> m_intermediateResults;
 	CompetitionFinalResult m_finalResult;
+	bool m_isShowResult;
 };

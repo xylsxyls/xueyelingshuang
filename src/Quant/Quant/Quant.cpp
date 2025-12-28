@@ -34,6 +34,9 @@
 #include "StockManager.h"
 #include "StockCharge/StockChargeAPI.h"
 #include "CollectTask.h"
+#include "RunTask.h"
+#include "RunManager.h"
+#include "StrategyPlotWidget.h"
 
 Quant::Quant(QWidget* parent):
 	QMainWindow(parent),
@@ -49,6 +52,7 @@ Quant::Quant(QWidget* parent):
 	m_displayResult = new COriginalButton(this);
 	m_analyze = new COriginalButton(this);
 	m_collect = new COriginalButton(this);
+	m_run = new COriginalButton(this);
 	init();
 }
 
@@ -139,6 +143,12 @@ void Quant::init()
 	m_collect->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_collect, &COriginalButton::clicked, this, &Quant::onCollectClicked);
 
+	m_run->setText(QStringLiteral("run"));
+	m_run->setBkgColor(normal, hover, passed, disable);
+	QObject::connect(m_run, &COriginalButton::clicked, this, &Quant::onRunClicked);
+
+	QObject::connect(this, &Quant::historyFutureSignal, this, &Quant::onHistoryFutureSignal, Qt::QueuedConnection);
+
 	StockCharge::instance().init("0.00016", 5);
 
 	// 初始化竞赛管理器
@@ -178,6 +188,7 @@ void Quant::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_displayResult);
 	vecButton.push_back(m_analyze);
 	vecButton.push_back(m_collect);
+	vecButton.push_back(m_run);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -459,17 +470,18 @@ void Quant::onProfitClicked()
 	// 买入时间点：0=13:40, 1=13:50, 2=14:00  
 	// 反追参数：7,8,9
 	// 降价参数：1,2,3
-	config.allParam =
+	std::vector<std::vector<int32_t>> params =
 	{
 		{(int32_t)ObserveTime::TIME1100},
 		{(int32_t)ObserveTime::TIME1400},
 		{ 8 },
 		{ 1 }
 	};
+	config.allParam = Util::combinatoricsToAllParam(params);
 
 	if (0)
 	{
-		config.allParam =
+		std::vector<std::vector<int32_t>> params =
 		{
 			{
 				(int32_t)ObserveTime::TIME0940,
@@ -488,6 +500,7 @@ void Quant::onProfitClicked()
 			{ 7, 8, 9, 10, 11, 12, 13 },
 			{ 1, 2, 3, 4, 5, 6 }
 		};
+		config.allParam = Util::combinatoricsToAllParam(params);
 	}
 
 	//CompetitionManager::instance().addCompetition(StrategyMode::S1100B1400, config);
@@ -521,7 +534,7 @@ void Quant::onProfitClicked()
 		//第1名, param = 10 : 10, 11 : 00, 14 : 40, 14 : 40, 09 : 50, 14 : 40, 0, -1, 8
 		//第1名, Wave, tProfit = 65304.24元, trade = 8176.96元, tAnnual = 321.12%, annual = 20.33%
 		//param = 10:10, 10:20, 14:00, 14:40, 10:40, 13:40, 0, -1, 8, 0
-		config.allParam =
+		std::vector<std::vector<int32_t>> params =
 		{
 			{ (int32_t)ObserveTime::TIME1010 },
 			{ (int32_t)ObserveTime::TIME1020 },
@@ -534,10 +547,11 @@ void Quant::onProfitClicked()
 			{ 8 },
 			{ 0 }
 		};
+		config.allParam = Util::combinatoricsToAllParam(params);
 
 		if (1)
 		{
-			config.allParam =
+			std::vector<std::vector<int32_t>> params =
 			{
 				{
 					//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
@@ -583,27 +597,24 @@ void Quant::onProfitClicked()
 				},
 				{ 0 },
 				{ -2 },
-				{ 5,6,7,8 },
-				{ 5,6,7,8,9,38 },
+				{ 5, 6, 7, 8 },
+				{ 5, 6, 7, 8, 9, 10, 100 },
 				{ 0, 1 }
 			};
+			config.allParam = Util::combinatoricsToAllParam(params);
 		}
 
 		CompetitionManager::instance().addCompetition(StrategyMode::WAVE, config);
 	}
+	CompetitionManager::instance().setParam(true);
 
 	// 开始竞赛
-	if (CompetitionManager::instance().startCompetition())
-	{
-		RCSend("策略竞赛已开始");
-
-		// 启动进度监控
-		//startProgressMonitoring();
-	}
-	else
+	if (!CompetitionManager::instance().startCompetition())
 	{
 		RCSend("策略竞赛启动失败");
+		return;
 	}
+	RCSend("策略竞赛已开始");
 }
 
 void Quant::onDisplayResultClicked()
@@ -712,6 +723,100 @@ void Quant::onCollectClicked()
 	std::shared_ptr<CollectTask> spCollectTask(new CollectTask);
 	spCollectTask->setParam(10);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCollectTask);
+}
+
+void Quant::onRunClicked()
+{
+	int32_t profitBeginTime = 20250704;
+	int32_t profitEndTime = 20250718;
+	std::string stock = "600975";
+
+	// 创建市场数据
+	auto marketData = std::make_shared<Market>();
+	marketData->init(g_config.m_allBeginTime, g_config.m_allEndTime);
+	marketData->addStock(stock);
+
+	// 创建竞赛配置
+	CompetitionConfig config;
+	config.beginTime = profitBeginTime;
+	config.endTime = profitEndTime;
+	config.stocks = { stock };
+	config.marketData = marketData;
+	config.initialFund = g_config.m_initialFund; // 100万初始资金
+
+	// 挂卖价时间点
+	// 直卖价时间点
+	// 挂买价时间点
+	// 直买价时间点
+	// 观察价A时间点
+	// 观察价B时间点
+	// 观察价B-A大于等于多少时当天直买，第二天早上不卖
+	// 观察价B-A小于等于多少时当天不买，剩余的部分，当天直买，第二天早上卖
+	// 当天早上卖出后反追差价
+	std::vector<std::vector<int32_t>> params =
+	{
+		{
+			//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
+			(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100//, (int32_t)ObserveTime::TIME1110,
+			//(int32_t)ObserveTime::TIME1120,
+		},
+		{
+			//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
+			//(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+			(int32_t)ObserveTime::TIME1120,
+		},
+		{
+			//(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
+			(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+			(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+			//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+			//(int32_t)ObserveTime::TIME1450,
+		},
+		{
+			//(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
+			(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+			(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+			(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+			//(int32_t)ObserveTime::TIME1450,
+		},
+		{
+			//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
+			//(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
+			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
+			(int32_t)ObserveTime::TIME1120,
+		},
+		{
+			//(int32_t)ObserveTime::TIME1310,
+			(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+			(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
+			//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+			//(int32_t)ObserveTime::TIME1450,
+		},
+		{ 0 },
+		{ -2 },
+		{ 7, 8 },
+		{ 7, 8, 100 },
+		{ 0, 1 }
+	};
+	config.allParam = Util::combinatoricsToAllParam(params);
+
+	std::shared_ptr<RunTask> spRunTask(new RunTask);
+	spRunTask->setParam(this, profitBeginTime, profitEndTime, 2, 1, StrategyMode::WAVE, config);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spRunTask);
+}
+
+void Quant::onHistoryFutureSignal()
+{
+	RCSend("onHistoryFutureSignal");
+	auto detectMap = RunManager::instance().getResult();
+	StrategyPlotWidget* widget = new StrategyPlotWidget(nullptr);
+	widget->setStrategyData(detectMap);
+	widget->show();
 }
 
 void Quant::startProgressMonitoring()
@@ -827,7 +932,7 @@ void Quant::displayAllStrategies()
 		QGridLayout* metricsLayout = new QGridLayout();
 
 		QLabel* returnLabel = new QLabel(
-			QString("收益率: %1%").arg(result.rankedResults[i].totalReturn.toDouble() * 100, 0, 'f', 2),
+			QString("收益率: %1%").arg((double)result.rankedResults[i].totalReturn * 100, 0, 'f', 2),
 			strategyFrame);
 		QLabel* annualLabel = new QLabel(
 			QString("年化: %1%").arg(result.rankedResults[i].annualReturn.toDouble() * 100, 0, 'f', 2),
@@ -843,7 +948,7 @@ void Quant::displayAllStrategies()
 			strategyFrame);
 
 		// 设置颜色
-		if (result.rankedResults[i].totalReturn.toDouble() >= 0)
+		if (result.rankedResults[i].totalReturn >= 0)
 		{
 			returnLabel->setStyleSheet("color: green; font-weight: bold;");
 		}

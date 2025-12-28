@@ -134,6 +134,33 @@
     <ClCompile Include="CollectTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="StrategyResultTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="RunManager.cpp">
+      <Filter>Quant</Filter>
+    </ClCompile>
+    <ClCompile Include="RunTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="StrategyPlotWidget.cpp">
+      <Filter>Widget</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_StrategyPlotWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_StrategyPlotWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CustomPlotWidget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CustomPlotWidget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomPlotWidget.cpp">
+      <Filter>Widget</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Quant.qrc">
@@ -152,6 +179,12 @@
       <Filter>Widget</Filter>
     </CustomBuild>
     <CustomBuild Include="Display.h">
+      <Filter>Widget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="StrategyPlotWidget.h">
+      <Filter>Widget</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CustomPlotWidget.h">
       <Filter>Widget</Filter>
     </CustomBuild>
   </ItemGroup>
@@ -205,6 +238,15 @@
       <Filter>Strategy</Filter>
     </ClInclude>
     <ClInclude Include="CollectTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="StrategyResultTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="RunManager.h">
+      <Filter>Quant</Filter>
+    </ClInclude>
+    <ClInclude Include="RunTask.h">
       <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>

@@ -10,6 +10,8 @@
 
 CompetitionManager::CompetitionManager() :
 m_competitionThreadId(0),
+m_isShowResult(false),
+m_spCompetitionTask(nullptr),
 m_isInit(false)
 {
 
@@ -51,10 +53,19 @@ void CompetitionManager::addCompetition(StrategyMode strategyMode, const Competi
 	m_competitionConfigMap[(int32_t)strategyMode] = config;
 }
 
+void CompetitionManager::setParam(bool isShowResult)
+{
+	m_isShowResult = isShowResult;
+}
+
 bool CompetitionManager::startCompetition()
 {
+	if (m_competitionThreadId == 0)
+	{
+		m_competitionThreadId = CTaskThreadManager::Instance().Init();
+	}
 	int32_t allStrategyCount = 0;
-	std::shared_ptr<CompetitionTask> spCompetitionTask(new CompetitionTask);
+	m_spCompetitionTask.reset(new CompetitionTask);
 	for (auto it = m_competitionConfigMap.begin(); it != m_competitionConfigMap.end(); ++it)
 	{
 		if (!isCompetitionParamValid((StrategyMode)it->first, it->second))
@@ -62,11 +73,11 @@ bool CompetitionManager::startCompetition()
 			RCSend("StrategyMode %d error", it->first);
 			return false;
 		}
-		spCompetitionTask->addParam((StrategyMode)it->first, it->second);
+		m_spCompetitionTask->addParam((StrategyMode)it->first, it->second);
 		++allStrategyCount;
 	}
-	CTaskThreadManager::Instance().GetThreadInterface(m_competitionThreadId)->PostTask(spCompetitionTask);
-	
+	m_spCompetitionTask->setParam(m_isShowResult);
+	CTaskThreadManager::Instance().GetThreadInterface(m_competitionThreadId)->PostTask(m_spCompetitionTask);
 
 	RCSend("Competition started with %d strategies", allStrategyCount);
 	return true;
@@ -75,6 +86,13 @@ bool CompetitionManager::startCompetition()
 void CompetitionManager::stopCompetition()
 {
 	CTaskThreadManager::Instance().GetThreadInterface(m_competitionThreadId)->StopAllTask();
+}
+
+std::shared_ptr<CompetitionTask> CompetitionManager::waitForEnd()
+{
+	CTaskThreadManager::Instance().GetThreadInterface(m_competitionThreadId)->WaitForEnd();
+	m_competitionThreadId = 0;
+	return m_spCompetitionTask;
 }
 
 bool CompetitionManager::isCompetitionParamValid(StrategyMode strategyMode, const CompetitionConfig& config)

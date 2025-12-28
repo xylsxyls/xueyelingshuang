@@ -5,6 +5,7 @@
 #include "Cini/CiniAPI.h"
 #include "Util.h"
 #include "StockManager.h"
+#include "Semaphore/SemaphoreAPI.h"
 
 StrategyTask::StrategyTask():
 m_beginTime(0),
@@ -13,6 +14,7 @@ m_spStrategy(nullptr),
 m_spMarket(nullptr),
 m_initialFund(0),
 m_resultQueue(nullptr),
+m_resultSemaphore(nullptr),
 m_exit(false)
 {
 
@@ -120,10 +122,18 @@ void StrategyTask::DoTask()
 		result.strategyMode = m_spStrategy->getStrategyMode();
 		result.params = m_spStrategy->getStrategyParam();
 		result.tradeLog = m_spStrategy->getFund()->exportTradeRecords();
-		m_resultQueue->push(result);
+		m_resultQueue->push(std::make_shared<StrategyResult>(result));
 	}
 
-	++g_config.m_completeTaskCount;
+	if (isParamPass)
+	{
+		++g_config.m_completeTaskCount;
+		m_resultSemaphore->signal();
+	}
+	else
+	{
+		++g_config.m_ignoreTaskCount;
+	}
 }
 
 void StrategyTask::StopTask()
@@ -133,7 +143,7 @@ void StrategyTask::StopTask()
 
 void StrategyTask::setParam(uint32_t beginTime, uint32_t endTime, const std::vector<std::string>& vecStock,
 	const std::shared_ptr<Strategy>& spStrategy, const std::shared_ptr<Market>& spMarket, int32_t initialFund,
-	LockFreeQueue<StrategyResult>* resultQueue)
+	LockFreeQueue<std::shared_ptr<StrategyResult>>* resultQueue, Semaphore* resultSemaphore)
 {
 	m_beginTime = beginTime;
 	m_endTime = endTime;
@@ -142,6 +152,7 @@ void StrategyTask::setParam(uint32_t beginTime, uint32_t endTime, const std::vec
 	m_spMarket = spMarket;
 	m_initialFund = initialFund;
 	m_resultQueue = resultQueue;
+	m_resultSemaphore = resultSemaphore;
 }
 
 bool StrategyTask::isParamValid()
@@ -191,8 +202,8 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 	// 计算年化收益率（按实际交易天数调整）
 	// 假设一年有250个交易日
 	BigNumber yearsProport = (BigNumber(250).toPrec(16) / BigNumber((int32_t)actualDays - 1));
-	result.annualReturn = (BigNumber(1) + result.totalReturn.toPrec(16) / initialValue).pow(yearsProport) - 1;
-	result.annualTReturn = (BigNumber(1) + result.tReturn.toPrec(16) / initialValue).pow(yearsProport) - 1;
+	result.annualReturn = (BigNumber(1) + BigNumber(result.totalReturn).toPrec(16) / initialValue).pow(yearsProport) - 1;
+	result.annualTReturn = (BigNumber(1) + BigNumber(result.tReturn).toPrec(16) / initialValue).pow(yearsProport) - 1;
 
 	// 设置最大回撤
 	result.maxDrawdown = maxDrawdown;
@@ -220,7 +231,7 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 	return result;
 }
 
-BigNumber StrategyTask::calculateHealthScore(BigNumber totalReturn, BigNumber maxDrawdown,
+BigNumber StrategyTask::calculateHealthScore(int32_t totalReturn, BigNumber maxDrawdown,
 	BigNumber winRate, const std::vector<int32_t>& dailyValues)
 {
 	BigNumber baseScore = 100;
@@ -229,7 +240,7 @@ BigNumber StrategyTask::calculateHealthScore(BigNumber totalReturn, BigNumber ma
 	BigNumber returnScore = 0;
 	if (totalReturn > 0)
 	{
-		returnScore = (std::min)(BigNumber(40), totalReturn * 100); // 每1%收益得1分，最高40分
+		returnScore = (std::min)(40, totalReturn); // 每1%收益得1分，最高40分
 	}
 
 	// 2. 基于最大回撤的扣分（30%权重）

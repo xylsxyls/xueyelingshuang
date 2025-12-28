@@ -25,6 +25,9 @@ protected:
 	void resizeEvent(QResizeEvent* eve);
 	void closeEvent(QCloseEvent* eve);
 
+Q_SIGNALS:
+	void historyFutureSignal();
+
 private slots:
 	void onButtonClicked();
 	void onCalcClicked();
@@ -35,6 +38,8 @@ private slots:
 	void onDisplayResultClicked();
 	void onAnalyzeClicked();
 	void onCollectClicked();
+	void onRunClicked();
+	void onHistoryFutureSignal();
 
 private:
 	/** 初始化展示相关组件
@@ -59,6 +64,7 @@ private:
 	COriginalButton* m_displayResult;
 	COriginalButton* m_analyze;
 	COriginalButton* m_collect;
+	COriginalButton* m_run;
 	// 新增：竞赛和展示相关成员
 	std::shared_ptr<Display> m_display;
 	uint32_t m_threadId;

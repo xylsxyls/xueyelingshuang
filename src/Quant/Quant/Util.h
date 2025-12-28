@@ -1,6 +1,11 @@
 #pragma once
 #include <stdint.h>
 #include "Config.h"
+#include <map>
+#include <vector>
+#include <memory>
+
+struct StrategyResult;
 
 class Util
 {
@@ -144,4 +149,33 @@ public:
 	@return 返回总字段数量
 	*/
 	static int32_t getTotalFieldCount();
+
+	/** 计算下一个未来周期的结束时间
+	@param [in] beginTime 本周期开始时间
+	@param [in] beginTime 本周期结束时间
+	@return 下一个未来周期的结束时间
+	*/
+	static uint32_t calcFutureEndTime(uint32_t beginTime, uint32_t endTime);
+
+	/** 计算上一个历史周期的开始时间
+	@param [in] beginTime 本周期开始时间
+	@param [in] beginTime 本周期结束时间
+	@return 上一个历史周期的开始时间
+	*/
+	static uint32_t calcHistoryBeginTime(uint32_t beginTime, uint32_t endTime);
+
+	/** 排列组合出所有参数组合
+	@param [in] allParam 每个参数可能出现的值
+	@return 返回所有参数组合
+	*/
+	static std::vector<std::vector<int32_t>> combinatoricsToAllParam(const std::vector<std::vector<int32_t>>& allParam);
+
+	/** 让原始检测数据和验证数据合成一个map
+	@param [in] detectMap 原始检测数据
+	@param [in] verifyMap 验证数据
+	@return 返回合成map
+	*/
+	static std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> synthesisMap(
+		const std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>>& detectMap,
+		const std::map<int32_t, std::vector<std::shared_ptr<StrategyResult>>>& verifyMap);
 };

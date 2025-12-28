@@ -52,6 +52,11 @@ public:
 	*/
 	void addCompetition(StrategyMode strategyMode, const CompetitionConfig& config);
 
+	/** 是否显示结果
+	@param [in] isShowResult 是否显示结果
+	*/
+	void setParam(bool isShowResult);
+
 	/** 开始竞赛
 	@param [in] config 竞赛配置
 	@param [in] strategyMode 策略模式
@@ -64,6 +69,11 @@ public:
 	*/
 	void stopCompetition();
 
+	/** 等待处理好的竞赛类
+	@return 返回运行好的竞赛类
+	*/
+	std::shared_ptr<CompetitionTask> waitForEnd();
+
 	/** 检测竞赛配置是否正确
 	@param [in] strategyMode 策略模式
 	@param [in] config 竞赛配置
@@ -74,8 +84,12 @@ public:
 private:
 	// 处理竞赛任务线程
 	uint32_t m_competitionThreadId;
+	// 是否显示结果
+	bool m_isShowResult;
 	// 所有竞赛任务参数
 	std::map<int32_t, CompetitionConfig> m_competitionConfigMap;
+	// 竞赛类
+	std::shared_ptr<CompetitionTask> m_spCompetitionTask;
 	// 是否已经初始化
 	std::atomic<bool> m_isInit;
 };

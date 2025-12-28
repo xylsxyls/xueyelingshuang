@@ -33,17 +33,18 @@ public:
 	virtual void StopTask();
 
 	/** 设置参数
-	@param [in] 开始时间
-	@param [in] 结束时间
-	@param [in] 股票列表
-	@param [in] 策略实例
-	@param [in] 市场数据
-	@param [in] 初始资金
-	@param [in] 结果队列
+	@param [in] beginTime 开始时间
+	@param [in] endTime 结束时间
+	@param [in] vecStock 股票列表
+	@param [in] spStrategy 策略实例
+	@param [in] spMarket 市场数据
+	@param [in] initialFund 初始资金
+	@param [in] resultQueue 结果队列
+	@param [in] resultSemaphore 收到结果发送的信号
 	*/
 	void setParam(uint32_t beginTime, uint32_t endTime, const std::vector<std::string>& vecStock,
 		const std::shared_ptr<Strategy>& spStrategy, const std::shared_ptr<Market>& spMarket, int32_t initialFund,
-		LockFreeQueue<StrategyResult>* resultQueue);
+		LockFreeQueue<std::shared_ptr<StrategyResult>>* resultQueue, Semaphore* resultSemaphore);
 
 	/** 参数是否有效
 	@return 返回参数是否有效
@@ -76,7 +77,7 @@ private:
 	@param [in] dailyValues 每日资产值
 	@return 返回健康值
 	*/
-	BigNumber calculateHealthScore(BigNumber totalReturn, BigNumber maxDrawdown,
+	BigNumber calculateHealthScore(int32_t totalReturn, BigNumber maxDrawdown,
 		BigNumber winRate, const std::vector<int32_t>& dailyValues);
 
 	/** 获取有效交易日
@@ -99,7 +100,9 @@ private:
 	// 初始资金
 	int32_t m_initialFund;
 	// 结果队列
-	LockFreeQueue<StrategyResult>* m_resultQueue;
+	LockFreeQueue<std::shared_ptr<StrategyResult>>* m_resultQueue;
+	// 收到结果发送的信号
+	Semaphore* m_resultSemaphore;
 	// 退出标志
 	std::atomic<bool> m_exit;
 };

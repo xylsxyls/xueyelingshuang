@@ -3,6 +3,8 @@
 #include <algorithm>
 #include "CStringManager/CStringManagerAPI.h"
 #include "RedisManager.h"
+#include "Cini/CiniAPI.h"
+#include "Strategy.h"
 
 void Util::getAllIndex(uint32_t allIndex, uint32_t& observeIndex, uint32_t& rangeIndex, uint32_t& transIndex, uint32_t offset)
 {
@@ -552,4 +554,135 @@ int32_t Util::getTotalFieldCount()
 		(static_cast<int32_t>(ObserveTime::COUNT) *
 		static_cast<int32_t>(RangeTime::COUNT) *
 		static_cast<int32_t>(TransType::COUNT));
+}
+
+uint32_t Util::calcFutureEndTime(uint32_t beginTime, uint32_t endTime)
+{
+	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	std::vector<std::string> allSection = ini.getAllSection();
+	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
+	auto itBegin = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)beginTime);
+	auto itEnd = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)endTime);
+	if (itBegin == tradingDays.end() || itEnd == tradingDays.end())
+	{
+		return endTime;
+	}
+	uint32_t beginIndex = (uint32_t)(itBegin - tradingDays.begin());
+	uint32_t endIndex = (uint32_t)(itEnd - tradingDays.begin());
+	uint32_t nextEndIndex = endIndex + (endIndex - beginIndex);
+	if (nextEndIndex >= tradingDays.size())
+	{
+		return endTime;
+	}
+	return (uint32_t)(tradingDays[nextEndIndex]);
+}
+
+uint32_t Util::calcHistoryBeginTime(uint32_t beginTime, uint32_t endTime)
+{
+	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	std::vector<std::string> allSection = ini.getAllSection();
+	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
+	auto itBegin = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)beginTime);
+	auto itEnd = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)endTime);
+	if (itBegin == tradingDays.end() || itEnd == tradingDays.end())
+	{
+		return endTime;
+	}
+	uint32_t beginIndex = (uint32_t)(itBegin - tradingDays.begin());
+	uint32_t endIndex = (uint32_t)(itEnd - tradingDays.begin());
+	uint32_t preBeginIndex = beginIndex - (endIndex - beginIndex);
+	if (preBeginIndex < 0)
+	{
+		return beginTime;
+	}
+	return (uint32_t)(tradingDays[preBeginIndex]);
+}
+
+std::vector<std::vector<int32_t>> Util::combinatoricsToAllParam(const std::vector<std::vector<int32_t>>& allParam)
+{
+	std::vector<std::vector<int32_t>> result;
+
+	// 处理空输入的情况
+	if (allParam.empty())
+	{
+		return result;
+	}
+
+	// 计算总组合数：各层元素数量的乘积
+	size_t total = 1;
+	for (size_t i = 0; i < allParam.size(); ++i)
+	{
+		// 如果任何一层为空，总组合数为0
+		if (allParam[i].empty())
+		{
+			return result;
+		}
+		total *= allParam[i].size();
+	}
+
+	// 生成所有组合
+	for (size_t i = 0; i < total; ++i)
+	{
+		std::vector<int32_t> combination;
+		size_t remainder = i;
+
+		// 为每层选择一个元素
+		for (size_t j = 0; j < allParam.size(); ++j)
+		{
+			const std::vector<int32_t>& layer = allParam[j];
+			size_t layerSize = layer.size();
+			// 计算当前层的索引
+			size_t index = remainder % layerSize;
+			// 更新余数用于计算下一层
+			remainder = remainder / layerSize;
+			// 添加当前层选中的元素
+			combination.push_back(layer[index]);
+		}
+
+		result.push_back(combination);
+	}
+
+	return result;
+}
+
+std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Util::synthesisMap(
+	const std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>>& detectMap,
+	const std::map<int32_t, std::vector<std::shared_ptr<StrategyResult>>>& verifyMap)
+{
+	std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> result = detectMap;
+	for (auto itMap = result.begin(); itMap != result.end(); ++itMap)
+	{
+		std::vector<std::vector<std::shared_ptr<StrategyResult>>>& resultTable = itMap->second;
+		for (size_t strategyIndex = 0; strategyIndex < resultTable.size(); ++strategyIndex)
+		{
+			std::vector<std::shared_ptr<StrategyResult>>& strategyTable = resultTable[strategyIndex];
+			if (strategyTable.empty())
+			{
+				RCSend("strategyTable empty");
+				return result;
+			}
+			std::shared_ptr<StrategyResult> spTargetStrategyResult;
+			for (auto itVerify = verifyMap.begin(); itVerify != verifyMap.end(); ++itVerify)
+			{
+				const std::vector<std::shared_ptr<StrategyResult>>& vecVerifyStrategyResult = itVerify->second;
+				size_t verifyStrategyIndex = -1;
+				while (verifyStrategyIndex++ != vecVerifyStrategyResult.size() - 1)
+				{
+					std::shared_ptr<StrategyResult> spVerifyStrategyResult = vecVerifyStrategyResult[verifyStrategyIndex];
+					if (spVerifyStrategyResult->params == strategyTable[0]->params)
+					{
+						spTargetStrategyResult = spVerifyStrategyResult;
+						break;
+					}
+				}
+			}
+			if (spTargetStrategyResult == nullptr)
+			{
+				RCSend("can not find verify strategy result");
+				return result;
+			}
+			strategyTable.push_back(spTargetStrategyResult);
+		}
+	}
+	return result;
 }

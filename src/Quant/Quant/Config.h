@@ -21,7 +21,10 @@ struct CConfig
 	uint32_t m_initialFund;
 	CStopWatch m_time;
 	std::atomic<uint32_t> m_completeTaskCount;
+	std::atomic<uint32_t> m_ignoreTaskCount;
 	uint32_t m_showCount;
+	// ÈëÎ§Ãû´Î
+	uint32_t m_selectCount;
 
 protected:
 	CConfig();

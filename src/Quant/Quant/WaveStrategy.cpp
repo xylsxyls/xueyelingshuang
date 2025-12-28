@@ -49,7 +49,7 @@ bool WaveStrategy::onTradingDay(uint32_t date)
 	const std::vector<int32_t>& dayInfo = m_spMarket->getStockData(stock, date);
 	if (dayInfo.empty())
 	{
-		RCSend("当天分时数据为空: dayInfo empty");
+		RCSend("当天分时数据为空: dayInfo empty, date = %u", date);
 		return false;
 	}
 

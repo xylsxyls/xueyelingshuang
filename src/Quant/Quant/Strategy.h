@@ -12,8 +12,8 @@ struct StrategyResult
 {
 	StrategyMode strategyMode;         // 策略模式
 	std::vector<int32_t> params;       // 策略参数
-	BigNumber totalReturn;             // 总收益
-	BigNumber tReturn;                 // 做T总收益
+	int32_t totalReturn;               // 总收益
+	int32_t tReturn;                   // 做T总收益
 	BigNumber annualReturn;            // 年化收益率
 	BigNumber annualTReturn;           // 做T年化收益率
 	BigNumber maxDrawdown;             // 最大回撤

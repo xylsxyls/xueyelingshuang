@@ -4,8 +4,10 @@
 #include <algorithm>
 #include "Util.h"
 #include "Timer/TimerAPI.h"
+#include "StrategyResultTask.h"
 
-CompetitionTask::CompetitionTask()
+CompetitionTask::CompetitionTask() :
+m_isShowResult(false)
 {
 
 }
@@ -18,15 +20,16 @@ void CompetitionTask::DoTask()
 		m_vecThreadId.push_back(CTaskThreadManager::Instance().Init());
 	}
 
+	m_resultThreadId = CTaskThreadManager::Instance().Init();
+
 	std::vector<std::shared_ptr<StrategyTask>> vecStrategyTask;
 	int32_t strategyCount = -1;
 	for (auto itStrategy = m_competitionConfigMap.begin(); itStrategy != m_competitionConfigMap.end(); ++itStrategy)
 	{
 		StrategyMode currentStrategyMode = (StrategyMode)itStrategy->first;
 		const CompetitionConfig& currentConfig = itStrategy->second;
-		std::vector<std::vector<int32_t>> allVecParam = getAllParam(currentConfig.allParam);
 		int32_t paramIndex = -1;
-		while (paramIndex++ != allVecParam.size() - 1)
+		while (paramIndex++ != currentConfig.allParam.size() - 1)
 		{
 			// 创建策略实例
 			auto spStrategy = QuantStrategyManager::instance().createStrategy(currentStrategyMode);
@@ -49,7 +52,7 @@ void CompetitionTask::DoTask()
 			}
 
 			// 设置策略参数
-			spStrategy->setStrategyParam(allVecParam[paramIndex]);
+			spStrategy->setStrategyParam(currentConfig.allParam[paramIndex]);
 
 			// 设置账户
 			std::shared_ptr<Fund> spFund(new Fund);
@@ -58,10 +61,9 @@ void CompetitionTask::DoTask()
 			// 创建任务
 			std::shared_ptr<StrategyTask> spStrategyTask(new StrategyTask);
 			spStrategyTask->setParam(currentConfig.beginTime, currentConfig.endTime, currentConfig.stocks,
-				spStrategy, currentConfig.marketData, currentConfig.initialFund, &m_resultQueue);
+				spStrategy, currentConfig.marketData, currentConfig.initialFund, &m_resultQueue, &m_resultSemaphore);
 			vecStrategyTask.push_back(spStrategyTask);
 			++strategyCount;
-			
 		}
 	}
 	++strategyCount;
@@ -76,8 +78,9 @@ void CompetitionTask::DoTask()
 			RCSend("complete = 0");
 			return;
 		}
-		RCSend("complete = %u, remain = %.1lfs", g_config.m_completeTaskCount,
-			(strategyCount - g_config.m_completeTaskCount) / (g_config.m_completeTaskCount / (double)lambda_count));
+		RCSend("complete = %u, remain = %.1lfs", g_config.m_completeTaskCount + g_config.m_ignoreTaskCount,
+			(strategyCount - g_config.m_ignoreTaskCount - g_config.m_completeTaskCount) /
+			(g_config.m_completeTaskCount / (double)lambda_count));
 	}, 1000);
 	lambda_timer.start();
 
@@ -87,56 +90,27 @@ void CompetitionTask::DoTask()
 		CTaskThreadManager::Instance().GetThreadInterface(m_vecThreadId[threadIndex])->PostTask(vecStrategyTask[index]);
 	}
 
+	std::atomic<bool> isComplete = false;
+	std::shared_ptr<StrategyResultTask> spResultTask(new StrategyResultTask);
+	spResultTask->setParam(&m_resultQueue, &m_resultSemaphore, &m_resultMap, &isComplete);
+	CTaskThreadManager::Instance().GetThreadInterface(m_resultThreadId)->PostTask(spResultTask);
+
 	for (uint32_t i = 0; i < m_vecThreadId.size(); ++i)
 	{
 		CTaskThreadManager::Instance().GetThreadInterface(m_vecThreadId[i])->WaitForEnd();
 	}
 
-	StrategyResult result;
-	while (m_resultQueue.pop(&result))
-	{
-		m_intermediateResults.push_back(result);
-	}
+	isComplete = true;
+	m_resultSemaphore.signal();
+	CTaskThreadManager::Instance().GetThreadInterface(m_resultThreadId)->WaitForEnd();
 
-	if (m_intermediateResults.empty())
-	{
-		RCSend("No results to rank");
-		return;
-	}
+	RCSend("time = %.2lfmin, allTaskCount = %u\n", (int32_t)g_config.m_time.GetWatchTime() / 1000.0 / 60.0,
+		(uint32_t)(g_config.m_completeTaskCount + g_config.m_ignoreTaskCount));
 
-	std::vector<StrategyResult> topResults;
-	size_t n = (std::min)((size_t)g_config.m_showCount, m_intermediateResults.size());
-
-	// 预留空间避免重新分配
-	topResults.resize(n);
-
-	// 按总收益率排序
-	std::partial_sort_copy(m_intermediateResults.begin(), m_intermediateResults.end(),
-		topResults.begin(), topResults.end(),
-		[](const StrategyResult& a, const StrategyResult& b) {
-		//return a.tReturn > b.tReturn;
-		return a.totalReturn > b.totalReturn;
-	});
-
-	RCSend("time = %.2lfmin\n", (int32_t)g_config.m_time.GetWatchTime() / 1000.0 / 60.0);
-	for (size_t resultIndex = 0; (resultIndex < g_config.m_showCount) && (resultIndex < topResults.size());
-		++resultIndex)
-	{
-		const StrategyResult& result = topResults[resultIndex];
-		std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result.strategyMode);
-		std::string describe = spStrategy->describeParam(result.params);
-		std::string modeName = spStrategy->getStrategyName();
-		RCSend("第%d名, %s, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
-			(int32_t)(resultIndex + 1),
-			modeName.c_str(),
-			(topResults[resultIndex].tReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-			(topResults[resultIndex].totalReturn.toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-			(topResults[resultIndex].annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
-			(topResults[resultIndex].annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
-		RCSend("第%d名, param = %s", (int32_t)(resultIndex + 1), describe.c_str());
-	}
+	return;
 
 	// 填充最终结果
+	std::vector<StrategyResult> m_intermediateResults;
 	m_finalResult.rankedResults = m_intermediateResults;
 	m_finalResult.totalStrategies = strategyCount;
 	m_finalResult.completedStrategies = (uint32_t)m_intermediateResults.size();
@@ -228,49 +202,36 @@ void CompetitionTask::addParam(StrategyMode strategyMode, const CompetitionConfi
 	m_competitionConfigMap[(int32_t)strategyMode] = config;
 }
 
-std::vector<std::vector<int32_t>> CompetitionTask::getAllParam(const std::vector<std::vector<int32_t>>& allParam)
+const std::map<int32_t, std::vector<std::shared_ptr<StrategyResult>>>& CompetitionTask::getResultMap()
 {
-	std::vector<std::vector<int32_t>> result;
+	return m_resultMap;
+}
 
-	// 处理空输入的情况
-	if (allParam.empty())
+void CompetitionTask::printResultMap(uint32_t showCount)
+{
+	uint32_t rank = 0;
+	for (auto it = m_resultMap.rbegin(); it != m_resultMap.rend() && (showCount == -1 ? true : (rank < showCount)); ++it)
 	{
-		return result;
-	}
-
-	// 计算总组合数：各层元素数量的乘积
-	size_t total = 1;
-	for (size_t i = 0; i < allParam.size(); ++i)
-	{
-		// 如果任何一层为空，总组合数为0
-		if (allParam[i].empty())
+		++rank;
+		for (size_t index = 0; index < it->second.size(); ++index)
 		{
-			return result;
+			const std::shared_ptr<StrategyResult>& result = it->second[index];
+			std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result->strategyMode);
+			std::string describe = spStrategy->describeParam(result->params);
+			std::string modeName = spStrategy->getStrategyName();
+			RCSend("第%u名, %s, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
+				rank,
+				modeName.c_str(),
+				(BigNumber(result->tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+				(BigNumber(result->totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+				(result->annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
+				(result->annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
+			RCSend("第%u名, param = %s", rank, describe.c_str());
 		}
-		total *= allParam[i].size();
 	}
+}
 
-	// 生成所有组合
-	for (size_t i = 0; i < total; ++i)
-	{
-		std::vector<int32_t> combination;
-		size_t remainder = i;
-
-		// 为每层选择一个元素
-		for (size_t j = 0; j < allParam.size(); ++j)
-		{
-			const std::vector<int32_t>& layer = allParam[j];
-			size_t layerSize = layer.size();
-			// 计算当前层的索引
-			size_t index = remainder % layerSize;
-			// 更新余数用于计算下一层
-			remainder = remainder / layerSize;
-			// 添加当前层选中的元素
-			combination.push_back(layer[index]);
-		}
-
-		result.push_back(combination);
-	}
-
-	return result;
+void CompetitionTask::setParam(bool isShowResult)
+{
+	m_isShowResult = isShowResult;
 }

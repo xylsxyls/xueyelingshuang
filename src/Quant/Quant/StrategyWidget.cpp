@@ -78,7 +78,7 @@ void StrategyWidget::initUI()
     QGridLayout* metricsLayout = new QGridLayout();
     
     m_returnLabel = new QLabel(
-        QString("总收益率: %1%").arg(m_displayData.strategyResult.totalReturn.toDouble() * 100, 0, 'f', 2), 
+        QString("总收益率: %1%").arg((double)m_displayData.strategyResult.totalReturn * 100, 0, 'f', 2), 
         this);
     m_annualReturnLabel = new QLabel(
         QString("年化收益率: %1%").arg(m_displayData.strategyResult.annualReturn.toDouble() * 100, 0, 'f', 2), 
@@ -97,7 +97,7 @@ void StrategyWidget::initUI()
         this);
     
     // 设置颜色
-    if (m_displayData.strategyResult.totalReturn.toDouble() >= 0)
+    if ((double)m_displayData.strategyResult.totalReturn >= 0)
     {
         m_returnLabel->setStyleSheet("color: green; font-weight: bold;");
     }
