@@ -32,7 +32,7 @@ CConfig::CConfig()
 	m_completeTaskCount = 0;
 	m_ignoreTaskCount = 0;
 	m_showCount = 10;
-	m_selectCount = 10;
+	m_selectCount = 100;
 }
 
 CConfig& CConfig::instance()
