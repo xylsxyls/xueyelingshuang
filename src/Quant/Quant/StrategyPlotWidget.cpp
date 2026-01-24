@@ -6,13 +6,15 @@
 #include <QFontMetrics>
 #include <cmath>
 #include <QPainter>
-#include <QDebug>
+#include <QElapsedTimer>
+#include <QDateTime>
 
 ColorBar::ColorBar(QWidget* parent)
 	: QWidget(parent)
 	, m_totalStrategies(0)
 	, m_hoveredStrategyIndex(-1)
 	, m_lastWidth(0)
+	, m_lastMouseMoveTime(0)
 {
 	setMouseTracking(true);
 	setMinimumHeight(COLOR_BAR_HEIGHT);
@@ -57,6 +59,16 @@ void ColorBar::clear()
 	m_lastWidth = 0;
 
 	update();
+}
+
+void ColorBar::throttleMouseMove()
+{
+	// 限制鼠标移动事件的处理频率
+	qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+	if (currentTime - m_lastMouseMoveTime < MOUSE_MOVE_THROTTLE_MS) {
+		return;
+	}
+	m_lastMouseMoveTime = currentTime;
 }
 
 int ColorBar::calculateStrategyIndex(const QPoint& mousePos)
@@ -258,6 +270,9 @@ void ColorBar::paintEvent(QPaintEvent* event)
 
 void ColorBar::mouseMoveEvent(QMouseEvent* event)
 {
+	// 性能优化：限制事件处理频率
+	throttleMouseMove();
+
 	// 计算鼠标位置对应的策略索引
 	int strategyIndex = calculateStrategyIndex(event->pos());
 
@@ -628,7 +643,7 @@ QString StrategyPlotWidget::generateMultiLineHoverInfo(int seriesIndex) const
 
 	// 显示未来周期（从周期1开始）
 	for (int i = 1; i <= DISPLAY_POSITIVE_CYCLES; i++) {
-		if (i < detailInfo.futureResults.size()) {
+		if (i < (int)detailInfo.futureResults.size()) {
 			auto result = detailInfo.futureResults[i];
 			if (result) {
 				QString annualReturnStr = formatRate(result->annualReturn.toDouble());
@@ -653,7 +668,7 @@ QString StrategyPlotWidget::generateMultiLineHoverInfo(int seriesIndex) const
 
 	// 显示历史周期（从周期-1开始）
 	for (int i = 1; i <= DISPLAY_NEGATIVE_CYCLES; i++) {
-		if (i < detailInfo.historyResults.size()) {
+		if (i < (int)detailInfo.historyResults.size()) {
 			auto result = detailInfo.historyResults[i];
 			if (result) {
 				QString annualReturnStr = formatRate(result->annualReturn.toDouble());
@@ -901,14 +916,14 @@ void StrategyPlotWidget::plotAllStrategies()
 		{
 			// 获取历史周期数据
 			std::vector<std::shared_ptr<StrategyResult>> historyGroup;
-			if (strategyIndexInRank < historyStrategyGroups.size())
+			if (strategyIndexInRank < (int)historyStrategyGroups.size())
 			{
 				historyGroup = historyStrategyGroups[strategyIndexInRank];
 			}
 
 			// 获取未来周期数据
 			std::vector<std::shared_ptr<StrategyResult>> futureGroup;
-			if (strategyIndexInRank < futureStrategyGroups.size())
+			if (strategyIndexInRank < (int)futureStrategyGroups.size())
 			{
 				futureGroup = futureStrategyGroups[strategyIndexInRank];
 			}
@@ -1039,6 +1054,86 @@ void StrategyPlotWidget::plotAllStrategies()
 	m_annualTReturnPlot->autoRange();
 }
 
+void StrategyPlotWidget::updateSeriesVisibilityBatch()
+{
+	// 获取排名范围
+	int startRank = 1;
+	int endRank = m_totalRankCount;
+
+	if (!m_rankStartEdit->text().isEmpty())
+	{
+		startRank = m_rankStartEdit->text().toInt();
+	}
+
+	if (!m_rankEndEdit->text().isEmpty())
+	{
+		endRank = m_rankEndEdit->text().toInt();
+	}
+
+	// 确保范围有效
+	if (startRank < 1) startRank = 1;
+	if (endRank > m_totalRankCount) endRank = m_totalRankCount;
+	if (startRank > endRank) std::swap(startRank, endRank);
+
+	// 计算可见策略的总数
+	int visibleStrategyCount = 0;
+	for (int rank = startRank; rank <= endRank; rank++)
+	{
+		// 计算该排名在m_rankStrategyCounts中的索引
+		int rankIndex = m_totalRankCount - rank;
+		if (rankIndex >= 0 && rankIndex < m_rankStrategyCounts.size())
+		{
+			visibleStrategyCount += m_rankStrategyCounts[rankIndex];
+		}
+	}
+
+	// 更新信息标签
+	m_infoLabel->setText(QStringLiteral("共发现 %1 个策略，显示排名 %2-%3 (%4 个策略)")
+		.arg(m_totalStrategyCount)
+		.arg(startRank)
+		.arg(endRank)
+		.arg(visibleStrategyCount));
+
+	// 批量更新可见性
+	QVector<bool> annualVisible(m_strategyDetails.size(), false);
+	QVector<bool> annualTVisible(m_strategyDetails.size(), false);
+
+	for (int strategyIndex = 0; strategyIndex < m_strategyDetails.size(); strategyIndex++)
+	{
+		// 获取该策略的排名
+		const auto& detail = m_strategyDetails[strategyIndex];
+		int rank = detail.rank;
+
+		// 判断该策略是否在可见范围内
+		bool isVisible = (rank >= startRank && rank <= endRank);
+
+		if (m_showAnnualReturn) {
+			annualVisible[strategyIndex] = isVisible;
+		}
+
+		if (m_showAnnualTReturn) {
+			annualTVisible[strategyIndex] = isVisible;
+		}
+	}
+
+	// 批量设置可见性
+	m_annualReturnPlot->setSeriesVisibleBatch(annualVisible);
+	m_annualTReturnPlot->setSeriesVisibleBatch(annualTVisible);
+
+	// 强制重绘
+	m_annualReturnPlot->update();
+	m_annualTReturnPlot->update();
+
+	// 更新颜色条
+	updateColorBar();
+}
+
+void StrategyPlotWidget::updateStrategyVisibility()
+{
+	// 使用批量更新方法
+	updateSeriesVisibilityBatch();
+}
+
 void StrategyPlotWidget::updateColorBar()
 {
 	// 获取排名范围
@@ -1100,85 +1195,6 @@ void StrategyPlotWidget::setStrategyData(const std::pair <
 
 	// 更新颜色条宽度
 	updateColorBarWidth();
-}
-
-void StrategyPlotWidget::updateStrategyVisibility()
-{
-	// 获取排名范围
-	int startRank = 1;
-	int endRank = m_totalRankCount;
-
-	if (!m_rankStartEdit->text().isEmpty())
-	{
-		startRank = m_rankStartEdit->text().toInt();
-	}
-
-	if (!m_rankEndEdit->text().isEmpty())
-	{
-		endRank = m_rankEndEdit->text().toInt();
-	}
-
-	// 确保范围有效
-	if (startRank < 1) startRank = 1;
-	if (endRank > m_totalRankCount) endRank = m_totalRankCount;
-	if (startRank > endRank) std::swap(startRank, endRank);
-
-	// 计算可见策略的总数
-	int visibleStrategyCount = 0;
-	for (int rank = startRank; rank <= endRank; rank++)
-	{
-		// 计算该排名在m_rankStrategyCounts中的索引
-		int rankIndex = m_totalRankCount - rank;
-		if (rankIndex >= 0 && rankIndex < m_rankStrategyCounts.size())
-		{
-			visibleStrategyCount += m_rankStrategyCounts[rankIndex];
-		}
-	}
-
-	// 更新信息标签
-	m_infoLabel->setText(QStringLiteral("共发现 %1 个策略，显示排名 %2-%3 (%4 个策略)")
-		.arg(m_totalStrategyCount)
-		.arg(startRank)
-		.arg(endRank)
-		.arg(visibleStrategyCount));
-
-	// 更新图表中的策略可见性
-	// 注意：m_strategyDetails中的策略索引顺序是从收益低到高
-	// 我们需要设置每个策略的可见性
-	for (int strategyIndex = 0; strategyIndex < m_strategyDetails.size(); strategyIndex++)
-	{
-		// 获取该策略的排名
-		const auto& detail = m_strategyDetails[strategyIndex];
-		int rank = detail.rank;
-
-		// 判断该策略是否在可见范围内
-		bool isVisible = (rank >= startRank && rank <= endRank);
-
-		if (m_showAnnualReturn)
-		{
-			m_annualReturnPlot->setSeriesVisible(strategyIndex, isVisible);
-		}
-		else
-		{
-			m_annualReturnPlot->setSeriesVisible(strategyIndex, false);
-		}
-
-		if (m_showAnnualTReturn)
-		{
-			m_annualTReturnPlot->setSeriesVisible(strategyIndex, isVisible);
-		}
-		else
-		{
-			m_annualTReturnPlot->setSeriesVisible(strategyIndex, false);
-		}
-	}
-
-	// 强制重绘
-	m_annualReturnPlot->update();
-	m_annualTReturnPlot->update();
-
-	// 更新颜色条
-	updateColorBar();
 }
 
 void StrategyPlotWidget::updateLayout()

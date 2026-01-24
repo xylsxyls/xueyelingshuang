@@ -75,10 +75,10 @@ void CompetitionTask::DoTask()
 		++lambda_count;
 		if (g_config.m_completeTaskCount == 0)
 		{
-			RCSend("complete = 0");
+			RCSend("complete + ignore = 0");
 			return;
 		}
-		RCSend("complete = %u, remain = %.1lfs", g_config.m_completeTaskCount + g_config.m_ignoreTaskCount,
+		RCSend("execute = %u, remain = %.1lfs", g_config.m_completeTaskCount + g_config.m_ignoreTaskCount,
 			(strategyCount - g_config.m_ignoreTaskCount - g_config.m_completeTaskCount) /
 			(g_config.m_completeTaskCount / (double)lambda_count));
 	}, 1000);
@@ -104,8 +104,15 @@ void CompetitionTask::DoTask()
 	m_resultSemaphore.signal();
 	CTaskThreadManager::Instance().GetThreadInterface(m_resultThreadId)->WaitForEnd();
 
-	RCSend("time = %.2lfmin, allTaskCount = %u\n", (int32_t)g_config.m_time.GetWatchTime() / 1000.0 / 60.0,
-		(uint32_t)(g_config.m_completeTaskCount + g_config.m_ignoreTaskCount));
+	RCSend("time = %.2lfmin, allTaskCount = %u, completeTaskCount = %u\n",
+		(int32_t)g_config.m_time.GetWatchTime() / 1000.0 / 60.0,
+		(uint32_t)(g_config.m_completeTaskCount + g_config.m_ignoreTaskCount),
+		(uint32_t)g_config.m_completeTaskCount);
+
+	if (m_isShowResult)
+	{
+		printResultMap(g_config.m_showCount);
+	}
 
 	return;
 

@@ -41,7 +41,7 @@ public:
 		int totalStrategies);
 
 	/** 设置悬停策略索引
-	*  @param [in] strategyIndex 策略索引（在m_strategyDetails中的索引）
+	*  @param [in] strategyIndex 策略索引（在总策略中的全局索引，从高到低）
 	*/
 	void setHoveredStrategy(int strategyIndex);
 
@@ -51,7 +51,7 @@ public:
 
 signals:
 	/** 鼠标悬停时发出的信号，包含策略索引
-	*  @param [in] strategyIndex 策略索引（在m_strategyDetails中的索引）
+	*  @param [in] strategyIndex 策略索引（在总策略中的全局索引，从高到低）
 	*/
 	void hoverStrategyChanged(int strategyIndex);
 
@@ -79,9 +79,13 @@ protected:
 private:
 	/** 根据鼠标位置计算策略索引
 	*  @param [in] mousePos 鼠标位置
-	*  @return 策略索引（在总策略中的全局索引，从高到低排序），如果位置无效返回-1
+	*  @return 策略索引（在总策略中的全局索引，从高到低），如果位置无效返回-1
 	*/
 	int calculateStrategyIndex(const QPoint& mousePos);
+
+	/** 优化性能：限制频繁的鼠标移动事件处理
+	*/
+	void throttleMouseMove();
 
 	QVector<int> m_rankCounts;              // 每个排名的策略数量（排名从高到低）
 	QVector<QColor> m_rankColors;           // 每个排名的颜色（与rankCounts对应）
@@ -96,6 +100,7 @@ private:
 	QVector<double> m_strategyPositions;
 
 	int m_lastWidth;                        // 上次绘制的宽度
+	qint64 m_lastMouseMoveTime;             // 上次处理鼠标移动的时间（毫秒）
 };
 
 /** 策略结果可视化控件
@@ -176,6 +181,10 @@ private:
 	/** 更新策略显示
 	*/
 	void updateStrategyVisibility();
+
+	/** 优化性能：批量更新系列可见性
+	*/
+	void updateSeriesVisibilityBatch();
 
 	/** 更新布局
 	*/
@@ -326,3 +335,6 @@ const int COLOR_BAR_HEIGHT = 40;
 
 // QLabel固定高度（根据行数计算）
 const int LABEL_FIXED_HEIGHT = 150;  // 预留给5行文字加上边框的高度
+
+// 鼠标移动事件限制间隔（毫秒），用于颜色条性能优化
+const int MOUSE_MOVE_THROTTLE_MS = 10;

@@ -4,16 +4,16 @@
 
 class Quant;
 
-class RunTask : public CTask
+class VerifyTask : public CTask
 {
 public:
-	RunTask();
+	VerifyTask();
 
 public:
 	void DoTask();
 
 	void setParam(Quant* client, uint32_t beginTime, uint32_t endTime, uint32_t historyTimes, uint32_t futureTimes,
-		StrategyMode mode, const CompetitionConfig& config);
+		StrategyMode mode, const CompetitionConfig& config, bool showRank, bool showAvg, bool showChart);
 
 private:
 	Quant* m_client;
@@ -23,4 +23,7 @@ private:
 	uint32_t m_futureTimes;
 	StrategyMode m_mode;
 	CompetitionConfig m_config;
+	bool m_showRank;
+	bool m_showAvg;
+	bool m_showChart;
 };

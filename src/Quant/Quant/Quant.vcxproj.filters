@@ -137,12 +137,6 @@
     <ClCompile Include="StrategyResultTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
-    <ClCompile Include="RunManager.cpp">
-      <Filter>Quant</Filter>
-    </ClCompile>
-    <ClCompile Include="RunTask.cpp">
-      <Filter>Task</Filter>
-    </ClCompile>
     <ClCompile Include="StrategyPlotWidget.cpp">
       <Filter>Widget</Filter>
     </ClCompile>
@@ -160,6 +154,12 @@
     </ClCompile>
     <ClCompile Include="CustomPlotWidget.cpp">
       <Filter>Widget</Filter>
+    </ClCompile>
+    <ClCompile Include="VerifyTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="VerifyManager.cpp">
+      <Filter>Quant</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -243,11 +243,11 @@
     <ClInclude Include="StrategyResultTask.h">
       <Filter>Task</Filter>
     </ClInclude>
-    <ClInclude Include="RunManager.h">
-      <Filter>Quant</Filter>
-    </ClInclude>
-    <ClInclude Include="RunTask.h">
+    <ClInclude Include="VerifyTask.h">
       <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="VerifyManager.h">
+      <Filter>Quant</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

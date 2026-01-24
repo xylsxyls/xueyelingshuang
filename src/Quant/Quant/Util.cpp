@@ -5,6 +5,8 @@
 #include "RedisManager.h"
 #include "Cini/CiniAPI.h"
 #include "Strategy.h"
+#include <unordered_map>
+#include "QuantStrategyManager.h"
 
 void Util::getAllIndex(uint32_t allIndex, uint32_t& observeIndex, uint32_t& rangeIndex, uint32_t& transIndex, uint32_t offset)
 {
@@ -649,6 +651,21 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Uti
 	const std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>>& detectMap,
 	const std::map<int32_t, std::vector<std::shared_ptr<StrategyResult>>>& verifyMap)
 {
+	std::unordered_map<std::string, std::shared_ptr<StrategyResult>> paramVerifyMap;
+	for (auto itVerify = verifyMap.begin(); itVerify != verifyMap.end(); ++itVerify)
+	{
+		const std::vector<std::shared_ptr<StrategyResult>>& vecVerifyStrategyResult = itVerify->second;
+		size_t verifyStrategyIndex = -1;
+		while (verifyStrategyIndex++ != vecVerifyStrategyResult.size() - 1)
+		{
+			std::shared_ptr<StrategyResult> spVerifyStrategyResult = vecVerifyStrategyResult[verifyStrategyIndex];
+			std::shared_ptr<Strategy> spStrategy =
+				QuantStrategyManager::instance().createStrategy(spVerifyStrategyResult->strategyMode);
+			std::string paramStr = spStrategy->describeParam(spVerifyStrategyResult->params);
+			paramVerifyMap[paramStr] = spVerifyStrategyResult;
+		}
+	}
+
 	std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> result = detectMap;
 	for (auto itMap = result.begin(); itMap != result.end(); ++itMap)
 	{
@@ -661,27 +678,41 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Uti
 				RCSend("strategyTable empty");
 				return result;
 			}
-			std::shared_ptr<StrategyResult> spTargetStrategyResult;
-			for (auto itVerify = verifyMap.begin(); itVerify != verifyMap.end(); ++itVerify)
-			{
-				const std::vector<std::shared_ptr<StrategyResult>>& vecVerifyStrategyResult = itVerify->second;
-				size_t verifyStrategyIndex = -1;
-				while (verifyStrategyIndex++ != vecVerifyStrategyResult.size() - 1)
-				{
-					std::shared_ptr<StrategyResult> spVerifyStrategyResult = vecVerifyStrategyResult[verifyStrategyIndex];
-					if (spVerifyStrategyResult->params == strategyTable[0]->params)
-					{
-						spTargetStrategyResult = spVerifyStrategyResult;
-						break;
-					}
-				}
-			}
-			if (spTargetStrategyResult == nullptr)
+
+			std::shared_ptr<Strategy> spStrategy =
+				QuantStrategyManager::instance().createStrategy(strategyTable[0]->strategyMode);
+			std::string targetParamStr = spStrategy->describeParam(strategyTable[0]->params);
+
+			auto itVerify = paramVerifyMap.find(targetParamStr);
+			if (itVerify == paramVerifyMap.end())
 			{
 				RCSend("can not find verify strategy result");
 				return result;
 			}
-			strategyTable.push_back(spTargetStrategyResult);
+
+			strategyTable.push_back(itVerify->second);
+
+			//std::shared_ptr<StrategyResult> spTargetStrategyResult;
+			//for (auto itVerify = verifyMap.begin(); itVerify != verifyMap.end(); ++itVerify)
+			//{
+			//	const std::vector<std::shared_ptr<StrategyResult>>& vecVerifyStrategyResult = itVerify->second;
+			//	size_t verifyStrategyIndex = -1;
+			//	while (verifyStrategyIndex++ != vecVerifyStrategyResult.size() - 1)
+			//	{
+			//		std::shared_ptr<StrategyResult> spVerifyStrategyResult = vecVerifyStrategyResult[verifyStrategyIndex];
+			//		if (spVerifyStrategyResult->params == strategyTable[0]->params)
+			//		{
+			//			spTargetStrategyResult = spVerifyStrategyResult;
+			//			break;
+			//		}
+			//	}
+			//}
+			//if (spTargetStrategyResult == nullptr)
+			//{
+			//	RCSend("can not find verify strategy result");
+			//	return result;
+			//}
+			//strategyTable.push_back(spTargetStrategyResult);
 		}
 	}
 	return result;

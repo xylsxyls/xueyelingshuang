@@ -80,6 +80,11 @@ public:
 	*/
 	void setSeriesVisible(int seriesIndex, bool visible);
 
+	/** 批量设置系列可见性
+	*  @param [in] visibleList 可见性列表
+	*/
+	void setSeriesVisibleBatch(const QVector<bool>& visibleList);
+
 	/** 重置Y轴位置，使Y=0在图表中间
 	*/
 	void resetYAxis();
@@ -148,6 +153,11 @@ protected:
 	*/
 	void wheelEvent(QWheelEvent* event) override;
 
+	/** 鼠标离开事件处理函数
+	*  @param [in] event 鼠标事件
+	*/
+	void leaveEvent(QEvent* event) override;
+
 	private slots:
 	/** 重置按钮点击槽函数
 	*/
@@ -186,12 +196,12 @@ private:
 	*/
 	QPointF widgetToData(const QPoint& widgetPoint) const;
 
-	/** 查找最近的系列（通过折线）
+	/** 查找最近的系列（通过折线）- 优化版本
 	*  @param [in] mousePos 鼠标位置
 	*  @param [out] seriesIndex 系列索引
 	*  @return 是否找到最近的系列
 	*/
-	bool findNearestSeries(const QPoint& mousePos, int& seriesIndex) const;
+	bool findNearestSeriesOptimized(const QPoint& mousePos, int& seriesIndex) const;
 
 	/** 计算点到线段的距离
 	*  @param [in] point 点坐标
@@ -222,9 +232,20 @@ private:
 		QVector<QPointF> data;              // 数据点集合
 		QColor color;                       // 折线颜色
 		bool visible;                       // 是否可见
+		QRectF boundingBox;                 // 数据点的边界框（数据坐标系）
 	};
 
 	QVector<Series> m_series;               // 所有折线系列
+
+	// 绘图缓存结构
+	struct CachedLine
+	{
+		QVector<QPointF> screenPoints;      // 屏幕坐标点
+		QRectF screenBoundingBox;           // 屏幕坐标系下的边界框
+	};
+
+	QVector<CachedLine> m_cachedLines;      // 缓存的屏幕坐标
+	bool m_cacheDirty;                      // 缓存是否需要更新
 
 	QString m_title;                        // 图表标题
 	QString m_xLabel;                       // X轴标签
@@ -254,7 +275,11 @@ private:
 
 	// 悬停信息
 	int m_hoveredSeries;                    // 当前悬停的系列索引
+	int m_lastHoveredSeries;                // 上次悬停的系列索引（用于避免重复更新）
 
 	// 重置按钮
 	QPushButton* m_resetButton;
+
+	// 更新缓存
+	void updateCache();
 };

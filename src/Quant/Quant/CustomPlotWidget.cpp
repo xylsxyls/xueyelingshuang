@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QFontMetrics>
 #include <cmath>
+#include <algorithm>
 
 // 全局颜色变量定义（初始值为红色最高，绿色最低，蓝色悬停）
 unsigned char g_initHighColor[3] = { 255, 0, 0 };   // 红色
@@ -66,6 +67,8 @@ CustomPlotWidget::CustomPlotWidget(QWidget* parent)
 	, m_bottomMargin(80)
 	, m_isDragging(false)
 	, m_hoveredSeries(-1)
+	, m_lastHoveredSeries(-1)
+	, m_cacheDirty(true)
 {
 	// 验证颜色变量
 	if (!validateColorVariables()) {
@@ -87,6 +90,48 @@ CustomPlotWidget::CustomPlotWidget(QWidget* parent)
 	connect(m_resetButton, &QPushButton::clicked, this, &CustomPlotWidget::onResetButtonClicked);
 }
 
+void CustomPlotWidget::updateCache()
+{
+	m_cachedLines.clear();
+
+	// 预计算所有系列的屏幕坐标
+	for (int i = 0; i < m_series.size(); i++) {
+		const Series& series = m_series[i];
+		if (!series.visible || series.data.isEmpty()) {
+			m_cachedLines.append(CachedLine());
+			continue;
+		}
+
+		CachedLine cached;
+
+		// 转换所有点到屏幕坐标
+		for (const QPointF& dataPoint : series.data) {
+			cached.screenPoints.append(dataToWidget(dataPoint));
+		}
+
+		// 计算屏幕边界框
+		if (!cached.screenPoints.isEmpty()) {
+			double minX = cached.screenPoints[0].x();
+			double maxX = cached.screenPoints[0].x();
+			double minY = cached.screenPoints[0].y();
+			double maxY = cached.screenPoints[0].y();
+
+			for (const QPointF& point : cached.screenPoints) {
+				if (point.x() < minX) minX = point.x();
+				if (point.x() > maxX) maxX = point.x();
+				if (point.y() < minY) minY = point.y();
+				if (point.y() > maxY) maxY = point.y();
+			}
+
+			cached.screenBoundingBox = QRectF(minX, minY, maxX - minX, maxY - minY);
+		}
+
+		m_cachedLines.append(cached);
+	}
+
+	m_cacheDirty = false;
+}
+
 void CustomPlotWidget::addSeries(const QString& name, const QVector<QPointF>& points, const QColor& color)
 {
 	Series series;
@@ -95,7 +140,25 @@ void CustomPlotWidget::addSeries(const QString& name, const QVector<QPointF>& po
 	series.color = color;
 	series.visible = true;
 
+	// 计算数据边界框
+	if (!points.isEmpty()) {
+		double minX = points[0].x();
+		double maxX = points[0].x();
+		double minY = points[0].y();
+		double maxY = points[0].y();
+
+		for (const QPointF& point : points) {
+			if (point.x() < minX) minX = point.x();
+			if (point.x() > maxX) maxX = point.x();
+			if (point.y() < minY) minY = point.y();
+			if (point.y() > maxY) maxY = point.y();
+		}
+
+		series.boundingBox = QRectF(minX, minY, maxX - minX, maxY - minY);
+	}
+
 	m_series.append(series);
+	m_cacheDirty = true;
 
 	// 更新坐标轴范围
 	autoRange();
@@ -118,6 +181,7 @@ void CustomPlotWidget::setTitle(const QString& title)
 void CustomPlotWidget::clear()
 {
 	m_series.clear();
+	m_cachedLines.clear();
 	m_xMin = -3.0;
 	m_xMax = 3.0;
 	m_yMin = -0.1;
@@ -125,6 +189,8 @@ void CustomPlotWidget::clear()
 	m_originalYMin = -0.1;
 	m_originalYMax = 0.1;
 	m_hoveredSeries = -1;
+	m_lastHoveredSeries = -1;
+	m_cacheDirty = true;
 	update();
 }
 
@@ -195,6 +261,8 @@ void CustomPlotWidget::autoRange()
 	m_yMax += yRange * 0.05;
 	m_originalYMin = m_yMin;
 	m_originalYMax = m_yMax;
+
+	m_cacheDirty = true;
 }
 
 void CustomPlotWidget::adjustYRange()
@@ -210,6 +278,7 @@ void CustomPlotWidget::setXRange(int min, int max)
 {
 	m_xMin = static_cast<double>(min);
 	m_xMax = static_cast<double>(max);
+	m_cacheDirty = true;
 	update();
 }
 
@@ -217,7 +286,26 @@ void CustomPlotWidget::setSeriesVisible(int seriesIndex, bool visible)
 {
 	if (seriesIndex >= 0 && seriesIndex < m_series.size())
 	{
-		m_series[seriesIndex].visible = visible;
+		if (m_series[seriesIndex].visible != visible) {
+			m_series[seriesIndex].visible = visible;
+			m_cacheDirty = true;
+			update();
+		}
+	}
+}
+
+void CustomPlotWidget::setSeriesVisibleBatch(const QVector<bool>& visibleList)
+{
+	bool changed = false;
+	for (int i = 0; i < qMin(m_series.size(), visibleList.size()); i++) {
+		if (m_series[i].visible != visibleList[i]) {
+			m_series[i].visible = visibleList[i];
+			changed = true;
+		}
+	}
+
+	if (changed) {
+		m_cacheDirty = true;
 		update();
 	}
 }
@@ -226,6 +314,7 @@ void CustomPlotWidget::setHoveredSeries(int seriesIndex)
 {
 	if (m_hoveredSeries != seriesIndex)
 	{
+		m_lastHoveredSeries = m_hoveredSeries;
 		m_hoveredSeries = seriesIndex;
 		update();
 	}
@@ -254,6 +343,7 @@ void CustomPlotWidget::resetYAxis()
 	m_yMax = center + yRange / 2.0;
 	// 调整Y轴范围，使刻度为0.1的整数倍
 	adjustYRange();
+	m_cacheDirty = true;
 	update();
 }
 
@@ -279,44 +369,112 @@ double CustomPlotWidget::pointToLineDistance(const QPointF& point, const QPointF
 	return QLineF(point, projection).length();
 }
 
-bool CustomPlotWidget::findNearestSeries(const QPoint& mousePos, int& seriesIndex) const
+bool CustomPlotWidget::findNearestSeriesOptimized(const QPoint& mousePos, int& seriesIndex) const
 {
-	double minDistance = 15.0;  // 像素距离阈值
-	bool found = false;
+	// 当系列很多时，使用优化算法
+	if (m_series.size() > 500) {
+		// 方法1：只检查鼠标附近的系列
+		const int MAX_CHECK = 100;  // 最多检查100个系列
+		double minDistance = 15.0;  // 像素距离阈值
+		bool found = false;
 
-	// 遍历所有系列
-	for (int i = 0; i < m_series.size(); i++)
-	{
-		const Series& series = m_series[i];
-		if (!series.visible || series.data.size() < 2)
-		{
-			continue;
+		// 先检查缓存是否有效
+		if (m_cacheDirty) {
+			// 缓存无效，只能使用简化的方法
+			const_cast<CustomPlotWidget*>(this)->updateCache();
 		}
 
-		// 检查每个线段
-		for (int j = 0; j < series.data.size() - 1; j++)
-		{
-			QPointF p1 = dataToWidget(series.data[j]);
-			QPointF p2 = dataToWidget(series.data[j + 1]);
-
-			// 跳过无效点
-			if (qIsNaN(p1.x()) || qIsNaN(p1.y()) || qIsNaN(p2.x()) || qIsNaN(p2.y()))
-			{
+		// 使用边界框快速筛选
+		QVector<int> candidates;
+		for (int i = 0; i < m_series.size(); i++) {
+			if (!m_series[i].visible || m_cachedLines[i].screenPoints.size() < 2) {
 				continue;
 			}
 
-			// 计算鼠标点到线段的距离
-			double distance = pointToLineDistance(mousePos, p1, p2);
-			if (distance < minDistance)
-			{
-				minDistance = distance;
-				seriesIndex = i;
-				found = true;
+			// 检查鼠标是否在边界框附近（扩大边界框以增加容错）
+			QRectF expandedBox = m_cachedLines[i].screenBoundingBox.adjusted(-15, -15, 15, 15);
+			if (expandedBox.contains(mousePos)) {
+				candidates.append(i);
+				if (candidates.size() > MAX_CHECK) {
+					break;
+				}
 			}
 		}
-	}
 
-	return found;
+		// 如果没有候选，快速返回
+		if (candidates.isEmpty()) {
+			return false;
+		}
+
+		// 检查候选系列
+		for (int i : candidates) {
+			const CachedLine& cached = m_cachedLines[i];
+
+			// 检查每个线段
+			for (int j = 0; j < cached.screenPoints.size() - 1; j++) {
+				const QPointF& p1 = cached.screenPoints[j];
+				const QPointF& p2 = cached.screenPoints[j + 1];
+
+				// 跳过无效点
+				if (qIsNaN(p1.x()) || qIsNaN(p1.y()) || qIsNaN(p2.x()) || qIsNaN(p2.y())) {
+					continue;
+				}
+
+				// 计算鼠标点到线段的距离
+				double distance = pointToLineDistance(mousePos, p1, p2);
+				if (distance < minDistance) {
+					minDistance = distance;
+					seriesIndex = i;
+					found = true;
+				}
+			}
+		}
+
+		return found;
+	}
+	else {
+		// 系列数量不多，使用原始方法
+		double minDistance = 15.0;  // 像素距离阈值
+		bool found = false;
+
+		for (int i = 0; i < m_series.size(); i++) {
+			const Series& series = m_series[i];
+			if (!series.visible || series.data.size() < 2) {
+				continue;
+			}
+
+			// 检查每个线段
+			for (int j = 0; j < series.data.size() - 1; j++) {
+				QPointF p1 = dataToWidget(series.data[j]);
+				QPointF p2 = dataToWidget(series.data[j + 1]);
+
+				// 跳过无效点
+				if (qIsNaN(p1.x()) || qIsNaN(p1.y()) || qIsNaN(p2.x()) || qIsNaN(p2.y())) {
+					continue;
+				}
+
+				// 快速拒绝：检查鼠标是否在线段包围盒附近
+				QRectF bbox(qMin(p1.x(), p2.x()) - minDistance,
+					qMin(p1.y(), p2.y()) - minDistance,
+					fabs(p2.x() - p1.x()) + 2 * minDistance,
+					fabs(p2.y() - p1.y()) + 2 * minDistance);
+
+				if (!bbox.contains(mousePos)) {
+					continue;
+				}
+
+				// 计算鼠标点到线段的距离
+				double distance = pointToLineDistance(mousePos, p1, p2);
+				if (distance < minDistance) {
+					minDistance = distance;
+					seriesIndex = i;
+					found = true;
+				}
+			}
+		}
+
+		return found;
+	}
 }
 
 void CustomPlotWidget::paintEvent(QPaintEvent* event)
@@ -331,6 +489,11 @@ void CustomPlotWidget::paintEvent(QPaintEvent* event)
 
 	// 计算绘图区域
 	m_plotRect = rect().adjusted(m_leftMargin, m_topMargin, -m_rightMargin, -m_bottomMargin);
+
+	// 如果缓存需要更新，先更新缓存
+	if (m_cacheDirty) {
+		updateCache();
+	}
 
 	// 绘制标题
 	painter.setPen(QColor(50, 50, 50));
@@ -559,15 +722,21 @@ void CustomPlotWidget::drawSeries(QPainter& painter)
 			continue;
 		}
 
+		// 使用缓存绘制
+		const CachedLine& cached = m_cachedLines[seriesIndex];
+		if (cached.screenPoints.size() < 2) {
+			continue;
+		}
+
 		// 绘制折线（线条粗细使用全局变量）
 		QPen linePen(series.color, g_normalLineWidth);
 		painter.setPen(linePen);
 
 		// 连接点绘制折线
-		for (int i = 0; i < series.data.size() - 1; i++)
+		for (int i = 0; i < cached.screenPoints.size() - 1; i++)
 		{
-			QPointF p1 = dataToWidget(series.data[i]);
-			QPointF p2 = dataToWidget(series.data[i + 1]);
+			const QPointF& p1 = cached.screenPoints[i];
+			const QPointF& p2 = cached.screenPoints[i + 1];
 
 			// 只在有效点之间绘制线
 			if (!qIsNaN(p1.x()) && !qIsNaN(p1.y()) && !qIsNaN(p2.x()) && !qIsNaN(p2.y()))
@@ -578,9 +747,9 @@ void CustomPlotWidget::drawSeries(QPainter& painter)
 
 		// 绘制数据点（小圆点）
 		painter.setBrush(series.color);
-		for (int i = 0; i < series.data.size(); i++)
+		for (int i = 0; i < cached.screenPoints.size(); i++)
 		{
-			QPointF p = dataToWidget(series.data[i]);
+			const QPointF& p = cached.screenPoints[i];
 
 			// 跳过无效点
 			if (qIsNaN(p.x()) || qIsNaN(p.y()))
@@ -612,11 +781,14 @@ void CustomPlotWidget::drawHoverSeries(QPainter& painter)
 			QPen linePen(hoverColor, g_hoverLineWidth); // 悬停时线更粗
 			painter.setPen(linePen);
 
+			// 使用缓存的屏幕坐标绘制
+			const CachedLine& cached = m_cachedLines[m_hoveredSeries];
+
 			// 绘制折线
-			for (int i = 0; i < series.data.size() - 1; i++)
+			for (int i = 0; i < cached.screenPoints.size() - 1; i++)
 			{
-				QPointF p1 = dataToWidget(series.data[i]);
-				QPointF p2 = dataToWidget(series.data[i + 1]);
+				const QPointF& p1 = cached.screenPoints[i];
+				const QPointF& p2 = cached.screenPoints[i + 1];
 
 				if (!qIsNaN(p1.x()) && !qIsNaN(p1.y()) && !qIsNaN(p2.x()) && !qIsNaN(p2.y()))
 				{
@@ -626,9 +798,9 @@ void CustomPlotWidget::drawHoverSeries(QPainter& painter)
 
 			// 绘制数据点
 			painter.setBrush(hoverColor);
-			for (int i = 0; i < series.data.size(); i++)
+			for (int i = 0; i < cached.screenPoints.size(); i++)
 			{
-				QPointF p = dataToWidget(series.data[i]);
+				const QPointF& p = cached.screenPoints[i];
 				if (!qIsNaN(p.x()) && !qIsNaN(p.y()))
 				{
 					double radius = g_hoverLineWidth * 1.1; // 悬停时点更大
@@ -673,6 +845,7 @@ void CustomPlotWidget::mouseMoveEvent(QMouseEvent* event)
 
 		m_yMin -= dataDeltaY;
 		m_yMax -= dataDeltaY;
+		m_cacheDirty = true;
 
 		m_lastMousePos = event->pos();
 		update();
@@ -680,32 +853,35 @@ void CustomPlotWidget::mouseMoveEvent(QMouseEvent* event)
 	else
 	{
 		// 悬停检测
-		int oldSeries = m_hoveredSeries;
-
-		int seriesIndex = -1;
-		if (findNearestSeries(event->pos(), seriesIndex))
+		if (m_plotRect.contains(event->pos()))
 		{
-			if (m_hoveredSeries != seriesIndex)
+			int seriesIndex = -1;
+			if (findNearestSeriesOptimized(event->pos(), seriesIndex))
 			{
-				m_hoveredSeries = seriesIndex;
+				if (m_hoveredSeries != seriesIndex)
+				{
+					m_lastHoveredSeries = m_hoveredSeries;
+					m_hoveredSeries = seriesIndex;
 
-				// 生成悬停信息
-				const Series& series = m_series[m_hoveredSeries];
-				QString hoverInfo = series.name; // 只传递策略名称，详细信息在StrategyPlotWidget中生成
+					// 生成悬停信息
+					const Series& series = m_series[m_hoveredSeries];
+					QString hoverInfo = series.name;
 
-				// 发射信号，包含系列索引
-				emit hoverInfoChanged(m_hoveredSeries, hoverInfo);
-				update();
+					// 发射信号，包含系列索引
+					emit hoverInfoChanged(m_hoveredSeries, hoverInfo);
+					update();
+				}
 			}
-		}
-		else
-		{
-			if (m_hoveredSeries != -1)
+			else
 			{
-				m_hoveredSeries = -1;
-				// 发射空信息
-				emit hoverInfoChanged(-1, QStringLiteral(""));
-				update();
+				if (m_hoveredSeries != -1)
+				{
+					m_lastHoveredSeries = m_hoveredSeries;
+					m_hoveredSeries = -1;
+					// 发射空信息
+					emit hoverInfoChanged(-1, QStringLiteral(""));
+					update();
+				}
 			}
 		}
 	}
@@ -752,6 +928,7 @@ void CustomPlotWidget::wheelEvent(QWheelEvent* event)
 
 	m_yMin = mouseDataPos.y() - (mouseDataPos.y() - m_yMin) * scaleFactor;
 	m_yMax = m_yMin + newYRange;
+	m_cacheDirty = true;
 
 	// 调整Y轴范围，使刻度为0.1的整数倍（只在缩放时调整）
 	adjustYRange();
@@ -763,7 +940,22 @@ void CustomPlotWidget::wheelEvent(QWheelEvent* event)
 void CustomPlotWidget::resizeEvent(QResizeEvent* event)
 {
 	QWidget::resizeEvent(event);
+	m_cacheDirty = true;
 	update();
+}
+
+void CustomPlotWidget::leaveEvent(QEvent* event)
+{
+	Q_UNUSED(event);
+
+	// 清除悬停状态
+	if (m_hoveredSeries != -1)
+	{
+		m_lastHoveredSeries = m_hoveredSeries;
+		m_hoveredSeries = -1;
+		emit hoverInfoChanged(-1, QStringLiteral(""));
+		update();
+	}
 }
 
 void CustomPlotWidget::onResetButtonClicked()

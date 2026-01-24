@@ -34,8 +34,8 @@
 #include "StockManager.h"
 #include "StockCharge/StockChargeAPI.h"
 #include "CollectTask.h"
-#include "RunTask.h"
-#include "RunManager.h"
+#include "VerifyTask.h"
+#include "VerifyManager.h"
 #include "StrategyPlotWidget.h"
 
 Quant::Quant(QWidget* parent):
@@ -52,7 +52,7 @@ Quant::Quant(QWidget* parent):
 	m_displayResult = new COriginalButton(this);
 	m_analyze = new COriginalButton(this);
 	m_collect = new COriginalButton(this);
-	m_run = new COriginalButton(this);
+	m_verify = new COriginalButton(this);
 	init();
 }
 
@@ -143,9 +143,9 @@ void Quant::init()
 	m_collect->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_collect, &COriginalButton::clicked, this, &Quant::onCollectClicked);
 
-	m_run->setText(QStringLiteral("run"));
-	m_run->setBkgColor(normal, hover, passed, disable);
-	QObject::connect(m_run, &COriginalButton::clicked, this, &Quant::onRunClicked);
+	m_verify->setText(QStringLiteral("verify"));
+	m_verify->setBkgColor(normal, hover, passed, disable);
+	QObject::connect(m_verify, &COriginalButton::clicked, this, &Quant::onVerifyClicked);
 
 	QObject::connect(this, &Quant::historyFutureSignal, this, &Quant::onHistoryFutureSignal, Qt::QueuedConnection);
 
@@ -188,7 +188,7 @@ void Quant::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_displayResult);
 	vecButton.push_back(m_analyze);
 	vecButton.push_back(m_collect);
-	vecButton.push_back(m_run);
+	vecButton.push_back(m_verify);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -444,9 +444,10 @@ void Quant::onProfitClicked()
 	RCSend("开始策略竞赛...");
 	g_config.m_time.SetWatchTime(0);
 	g_config.m_completeTaskCount = 0;
+	g_config.m_ignoreTaskCount = 0;
 
-	int32_t profitBeginTime = 20250930;
-	int32_t profitEndTime = 20251209;
+	int32_t profitBeginTime = 20250815;
+	int32_t profitEndTime = 20250829;
 	std::string stock = "600975";
 
 	std::vector<std::vector<int32_t>> result =
@@ -536,20 +537,22 @@ void Quant::onProfitClicked()
 		//param = 10:10, 10:20, 14:00, 14:40, 10:40, 13:40, 0, -1, 8, 0
 		std::vector<std::vector<int32_t>> params =
 		{
-			{ (int32_t)ObserveTime::TIME1010 },
-			{ (int32_t)ObserveTime::TIME1020 },
+			//10:00, 11:20, 14:00, 14:10, 10:50, 14:00, 0, -2, 7, 7, 1
+			{ (int32_t)ObserveTime::TIME1000 },
+			{ (int32_t)ObserveTime::TIME1120 },
 			{ (int32_t)ObserveTime::TIME1400 },
-			{ (int32_t)ObserveTime::TIME1440 },
-			{ (int32_t)ObserveTime::TIME1040 },
-			{ (int32_t)ObserveTime::TIME1340 },
+			{ (int32_t)ObserveTime::TIME1410 },
+			{ (int32_t)ObserveTime::TIME1050 },
+			{ (int32_t)ObserveTime::TIME1400 },
 			{ 0 },
-			{ -1 },
-			{ 8 },
-			{ 0 }
+			{ -2 },
+			{ 7 },
+			{ 7 },
+			{ 1 }
 		};
 		config.allParam = Util::combinatoricsToAllParam(params);
 
-		if (1)
+		if (0)
 		{
 			std::vector<std::vector<int32_t>> params =
 			{
@@ -725,10 +728,10 @@ void Quant::onCollectClicked()
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCollectTask);
 }
 
-void Quant::onRunClicked()
+void Quant::onVerifyClicked()
 {
-	int32_t profitBeginTime = 20250704;
-	int32_t profitEndTime = 20250718;
+	int32_t profitBeginTime = 20250321;
+	int32_t profitEndTime = 20250407;
 	std::string stock = "600975";
 
 	// 创建市场数据
@@ -805,15 +808,15 @@ void Quant::onRunClicked()
 	};
 	config.allParam = Util::combinatoricsToAllParam(params);
 
-	std::shared_ptr<RunTask> spRunTask(new RunTask);
-	spRunTask->setParam(this, profitBeginTime, profitEndTime, 2, 1, StrategyMode::WAVE, config);
-	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spRunTask);
+	std::shared_ptr<VerifyTask> spVerifyTask(new VerifyTask);
+	spVerifyTask->setParam(this, profitBeginTime, profitEndTime, 2, 1, StrategyMode::WAVE, config, false, true, true);
+	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spVerifyTask);
 }
 
 void Quant::onHistoryFutureSignal()
 {
 	RCSend("onHistoryFutureSignal");
-	auto detectMap = RunManager::instance().getResult();
+	auto detectMap = VerifyManager::instance().getResult();
 	StrategyPlotWidget* widget = new StrategyPlotWidget(nullptr);
 	widget->setStrategyData(detectMap);
 	widget->show();

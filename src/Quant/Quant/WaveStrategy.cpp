@@ -70,7 +70,9 @@ bool WaveStrategy::onTradingDay(uint32_t date)
 
 	// 第五步：验证时间点顺序和参数逻辑，如果无效则返回false
 	if ((int32_t)directSellObserveTime < (int32_t)hangSellObserveTime ||
+		(int32_t)directSellObserveTime - (int32_t)hangSellObserveTime > 3 ||
 		(int32_t)directBuyObserveTime < (int32_t)hangBuyObserveTime ||
+		(int32_t)directBuyObserveTime - (int32_t)hangBuyObserveTime > 3 ||
 		(int32_t)hangBuyObserveTime <= ((int32_t)directSellObserveTime + 1) ||
 		bObserveTime <= aObserveTime ||
 		(int32_t)bObserveTime > (int32_t)hangBuyObserveTime ||

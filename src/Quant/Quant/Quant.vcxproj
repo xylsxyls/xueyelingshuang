@@ -222,8 +222,8 @@
     <ClCompile Include="Quant.cpp" />
     <ClCompile Include="QuantStrategyManager.cpp" />
     <ClCompile Include="RedisManager.cpp" />
-    <ClCompile Include="RunManager.cpp" />
-    <ClCompile Include="RunTask.cpp" />
+    <ClCompile Include="VerifyManager.cpp" />
+    <ClCompile Include="VerifyTask.cpp" />
     <ClCompile Include="StrategyPlotWidget.cpp" />
     <ClCompile Include="StrategyResultTask.cpp" />
     <ClCompile Include="S1100B1400Strategy.cpp" />
@@ -351,8 +351,8 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(ProjectDir)..\..\..\include"</Command>
     </CustomBuild>
-    <ClInclude Include="RunManager.h" />
-    <ClInclude Include="RunTask.h" />
+    <ClInclude Include="VerifyManager.h" />
+    <ClInclude Include="VerifyTask.h" />
     <CustomBuild Include="StrategyPlotWidget.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing StrategyPlotWidget.h...</Message>
