@@ -27,6 +27,8 @@ struct CConfig
 	uint32_t m_selectCount;
 	// 切割平均总个数
 	uint32_t m_avgCount;
+	// 模拟执行天数
+	uint32_t m_runDayCount;
 
 protected:
 	CConfig();

@@ -161,6 +161,15 @@
     <ClCompile Include="VerifyManager.cpp">
       <Filter>Quant</Filter>
     </ClCompile>
+    <ClCompile Include="ScoreManager.cpp">
+      <Filter>Quant</Filter>
+    </ClCompile>
+    <ClCompile Include="RunManager.cpp">
+      <Filter>Quant</Filter>
+    </ClCompile>
+    <ClCompile Include="RunTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Quant.qrc">
@@ -248,6 +257,15 @@
     </ClInclude>
     <ClInclude Include="VerifyManager.h">
       <Filter>Quant</Filter>
+    </ClInclude>
+    <ClInclude Include="ScoreManager.h">
+      <Filter>Quant</Filter>
+    </ClInclude>
+    <ClInclude Include="RunManager.h">
+      <Filter>Quant</Filter>
+    </ClInclude>
+    <ClInclude Include="RunTask.h">
+      <Filter>Task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

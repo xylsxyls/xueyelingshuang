@@ -3,9 +3,45 @@
 #include <unordered_map>
 #include "Util.h"
 
+StrategyResult::StrategyResult() :
+m_strategyMode(StrategyMode::COUNT),
+m_totalReturn(0),
+m_annualReturn(0),
+m_maxDrawdown(0),
+m_winRate(0),
+m_profitArea(0),
+m_healthScore(0),
+m_tradeDays(0),
+m_totalDays(0)
+{
+
+}
+
+ImportParam::ImportParam() :
+m_operate(0),
+m_virtualSellPrice(0),
+m_virtualSellObserveTime(ObserveTime::COUNT),
+m_virtualBuyPrice(0),
+m_virtualBuyObserveTime(ObserveTime::COUNT),
+m_realSellPrice(0),
+m_realBuyPrice(0),
+m_isFull(false)
+{
+
+}
+
+bool ImportParam::empty()
+{
+	return m_virtualSellPrice == 0 &&
+		m_virtualSellObserveTime == ObserveTime::COUNT &&
+		m_virtualBuyPrice == 0 &&
+		m_virtualBuyObserveTime == ObserveTime::COUNT &&
+		m_realSellPrice == 0 &&
+		m_realBuyPrice == 0 &&
+		m_isFull == false;
+}
+
 Strategy::Strategy() :
-m_beginTime(0),
-m_endTime(0),
 m_mode(StrategyMode::COUNT)
 {
 
@@ -19,12 +55,6 @@ Strategy::~Strategy()
 std::string Strategy::describeParam(const std::vector<int32_t>& param)
 {
 	return "";
-}
-
-void Strategy::init(uint32_t beginTime, uint32_t endTime)
-{
-	m_beginTime = beginTime;
-	m_endTime = endTime;
 }
 
 void Strategy::addStock(const std::string& stock)
@@ -50,6 +80,11 @@ void Strategy::setFund(const std::shared_ptr<Fund>& spFund)
 std::shared_ptr<Fund> Strategy::getFund()
 {
 	return m_spFund;
+}
+
+bool Strategy::fillCheckParam()
+{
+	return true;
 }
 
 void Strategy::setStrategyParam(const std::vector<int32_t>& param)
@@ -218,4 +253,24 @@ int32_t Strategy::getMaxPrice(const std::vector<int32_t>& dayInfo, ObserveTime t
 		}
 		return maxPrice;
 	}
+}
+
+void Strategy::setImportParam(const ImportParam& import)
+{
+	m_import = import;
+}
+
+ImportParam Strategy::getImportParam()
+{
+	return m_import;
+}
+
+std::vector<std::string> Strategy::strategyLog()
+{
+	return m_strategyLog;
+}
+
+std::vector<uint32_t> Strategy::tradeCount()
+{
+	return m_tradeCount;
 }

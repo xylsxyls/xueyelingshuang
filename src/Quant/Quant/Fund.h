@@ -86,6 +86,11 @@ public:
 	*/
 	void setMarket(const std::shared_ptr<Market>& spMarket);
 
+	/** 获取设置的行情数据
+	@return 返回设置的行情数据
+	*/
+	std::shared_ptr<Market> getMarket();
+
 	/** 全仓买入指定股票
 	@param [in] stock 股票代码
 	@param [in] price 买入价格（单位：分）
@@ -157,9 +162,10 @@ public:
 
 	/** 强制关闭所有未完成交易（用于回测结束）
 	@param [in] date 关闭日期
+	@param [in] isAccountSell 是否是为了记账的卖出
 	@param [in] time 关闭时间点
 	*/
-	void closeAllTrades(uint32_t date, ObserveTime time = ObserveTime::COUNT);
+	void closeAllTrades(uint32_t date, bool isAccountSell = false, ObserveTime time = ObserveTime::COUNT);
 
 	/** 获取所有交易的做T价格差价总和
 	@return 返回做T价格差价总和（单位：分）
@@ -264,4 +270,6 @@ private:
 	std::map<std::string, std::vector<CompleteTrade>> m_completeTrades;
 	// 待匹配的做T操作记录
 	std::map<std::string, TOperation> m_pendingTOperations;
+	// 记账卖出
+	std::map<std::string, Trade> m_accountSell;
 };

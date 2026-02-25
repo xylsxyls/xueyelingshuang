@@ -82,9 +82,9 @@ DisplayData Display::generateDisplayData(const StrategyResult& result)
     // 调整最终值以匹配实际结果
     if (dataPoints > 0)
     {
-        data.healthHistory[dataPoints - 1] = result.healthScore;
-        data.profitHistory[dataPoints - 1] = result.totalReturn * 100; // 转换为百分比
-        data.drawdownHistory[dataPoints - 1] = result.maxDrawdown * 100; // 转换为百分比
+        data.healthHistory[dataPoints - 1] = result.m_healthScore;
+        data.profitHistory[dataPoints - 1] = result.m_totalReturn * 100; // 转换为百分比
+        data.drawdownHistory[dataPoints - 1] = result.m_maxDrawdown * 100; // 转换为百分比
     }
     
     return data;

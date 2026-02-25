@@ -37,7 +37,7 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 
 	CompetitionManager::instance().addCompetition(mode, config);
 
-	CompetitionManager::instance().setParam(true);
+	CompetitionManager::instance().setParam(true, false);
 
 	// 开始竞赛
 	if (!CompetitionManager::instance().startCompetition())
@@ -62,7 +62,7 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 			const std::shared_ptr<StrategyResult>& spStrategyResult = it->second[index];
 			vecTimes.push_back(spStrategyResult);
 			detectMap[it->first].push_back(vecTimes);
-			paramMap[spStrategyResult->strategyMode].push_back(spStrategyResult->params);
+			paramMap[spStrategyResult->m_strategyMode].push_back(spStrategyResult->m_params);
 		}
 	}
 
@@ -78,7 +78,7 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 			config.allParam = itParam->second;
 			CompetitionManager::instance().addCompetition(itParam->first, config);
 		}
-		CompetitionManager::instance().setParam(false);
+		CompetitionManager::instance().setParam(false, false);
 		
 		if (!CompetitionManager::instance().startCompetition())
 		{
@@ -118,7 +118,7 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 
 	CompetitionManager::instance().addCompetition(mode, config);
 
-	CompetitionManager::instance().setParam(true);
+	CompetitionManager::instance().setParam(true, false);
 
 	// 开始竞赛
 	if (!CompetitionManager::instance().startCompetition())
@@ -143,7 +143,7 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 			const std::shared_ptr<StrategyResult>& spStrategyResult = it->second[index];
 			vecTimes.push_back(spStrategyResult);
 			detectMap[it->first].push_back(vecTimes);
-			paramMap[spStrategyResult->strategyMode].push_back(spStrategyResult->params);
+			paramMap[spStrategyResult->m_strategyMode].push_back(spStrategyResult->m_params);
 		}
 	}
 
@@ -159,7 +159,7 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 			config.allParam = itParam->second;
 			CompetitionManager::instance().addCompetition(itParam->first, config);
 		}
-		CompetitionManager::instance().setParam(false);
+		CompetitionManager::instance().setParam(false, false);
 
 		if (!CompetitionManager::instance().startCompetition())
 		{
@@ -200,7 +200,7 @@ std::pair<std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResu
 
 	CompetitionManager::instance().addCompetition(mode, config);
 
-	CompetitionManager::instance().setParam(false);
+	CompetitionManager::instance().setParam(false, false);
 
 	std::pair<std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>>,
 		std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>>> result;
@@ -228,7 +228,7 @@ std::pair<std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResu
 			vecTimes.push_back(spStrategyResult);
 			result.first[it->first].push_back(vecTimes);
 			result.second[it->first].push_back(vecTimes);
-			paramMap[spStrategyResult->strategyMode].push_back(spStrategyResult->params);
+			paramMap[spStrategyResult->m_strategyMode].push_back(spStrategyResult->m_params);
 		}
 	}
 
@@ -247,7 +247,7 @@ std::pair<std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResu
 			config.allParam = itParam->second;
 			CompetitionManager::instance().addCompetition(itParam->first, config);
 		}
-		CompetitionManager::instance().setParam(false);
+		CompetitionManager::instance().setParam(false, false);
 
 		if (!CompetitionManager::instance().startCompetition())
 		{
@@ -277,7 +277,7 @@ std::pair<std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResu
 			config.allParam = itParam->second;
 			CompetitionManager::instance().addCompetition(itParam->first, config);
 		}
-		CompetitionManager::instance().setParam(false);
+		CompetitionManager::instance().setParam(false, false);
 
 		if (!CompetitionManager::instance().startCompetition())
 		{
@@ -324,8 +324,8 @@ void VerifyManager::printDetectMap(
 			while (timeIndex++ != vecTimes.size() - 1)
 			{
 				const std::shared_ptr<StrategyResult>& result = vecTimes[timeIndex];
-				std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result->strategyMode);
-				std::string describe = spStrategy->describeParam(result->params);
+				std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result->m_strategyMode);
+				std::string describe = spStrategy->describeParam(result->m_params);
 				std::string modeName = spStrategy->getStrategyName();
 				if (timeIndex == 0)
 				{
@@ -334,29 +334,29 @@ void VerifyManager::printDetectMap(
 						RCSend("第%u名, %s, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
 							rank,
 							modeName.c_str(),
-							(BigNumber(result->tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-							(BigNumber(result->totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-							(result->annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
-							(result->annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
+							(BigNumber(result->m_tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+							(BigNumber(result->m_totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+							(result->m_annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
+							(result->m_annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
 						RCSend("第%u名, param = %s", rank, describe.c_str());
 					}
 				}
 				else
 				{
 					vecAvgAnnualTReturn[timeIndex - 1].first =
-						vecAvgAnnualTReturn[timeIndex - 1].first + result->annualTReturn;
+						vecAvgAnnualTReturn[timeIndex - 1].first + result->m_annualTReturn;
 					++(vecAvgAnnualTReturn[timeIndex - 1].second);
 					vecAvgAnnualReturn[timeIndex - 1].first =
-						vecAvgAnnualReturn[timeIndex - 1].first + result->annualReturn;
+						vecAvgAnnualReturn[timeIndex - 1].first + result->m_annualReturn;
 					++(vecAvgAnnualReturn[timeIndex - 1].second);
 					if (showRank)
 					{
 						RCSend("第%d次验证, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
 							(int32_t)timeIndex,
-							(BigNumber(result->tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-							(BigNumber(result->totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-							(result->annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
-							(result->annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
+							(BigNumber(result->m_tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+							(BigNumber(result->m_totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+							(result->m_annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
+							(result->m_annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
 					}
 				}
 			}

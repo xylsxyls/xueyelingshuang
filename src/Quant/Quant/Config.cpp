@@ -34,6 +34,7 @@ CConfig::CConfig()
 	m_showCount = 10;
 	m_selectCount = 100000;
 	m_avgCount = 10;
+	m_runDayCount = 10;
 }
 
 CConfig& CConfig::instance()

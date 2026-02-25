@@ -93,7 +93,7 @@ public:
 
 	void printResultMap(uint32_t showCount = -1);
 
-	void setParam(bool isShowResult);
+	void setParam(bool isShowResult, bool isShowTradeLog);
 
 private:
 	// 线程ID列表
@@ -109,4 +109,6 @@ private:
 	//std::vector<StrategyResult> m_intermediateResults;
 	CompetitionFinalResult m_finalResult;
 	bool m_isShowResult;
+	// 是否展示交易记录日志
+	bool m_isShowTradeLog;
 };

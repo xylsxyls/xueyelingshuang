@@ -60,10 +60,10 @@ void StrategyWidget::initUI()
     headerLayout->addWidget(m_rankLabel);
     
     QString paramsText = "参数: ";
-    for (size_t i = 0; i < m_displayData.strategyResult.params.size(); ++i)
+    for (size_t i = 0; i < m_displayData.strategyResult.m_params.size(); ++i)
     {
-        paramsText += QString::number(m_displayData.strategyResult.params[i]);
-        if (i < m_displayData.strategyResult.params.size() - 1)
+        paramsText += QString::number(m_displayData.strategyResult.m_params[i]);
+        if (i < m_displayData.strategyResult.m_params.size() - 1)
         {
             paramsText += ", ";
         }
@@ -78,26 +78,26 @@ void StrategyWidget::initUI()
     QGridLayout* metricsLayout = new QGridLayout();
     
     m_returnLabel = new QLabel(
-        QString("总收益率: %1%").arg((double)m_displayData.strategyResult.totalReturn * 100, 0, 'f', 2), 
+        QString("总收益率: %1%").arg((double)m_displayData.strategyResult.m_totalReturn * 100, 0, 'f', 2), 
         this);
     m_annualReturnLabel = new QLabel(
-        QString("年化收益率: %1%").arg(m_displayData.strategyResult.annualReturn.toDouble() * 100, 0, 'f', 2), 
+        QString("年化收益率: %1%").arg(m_displayData.strategyResult.m_annualReturn.toDouble() * 100, 0, 'f', 2), 
         this);
     m_drawdownLabel = new QLabel(
-        QString("最大回撤: %1%").arg(m_displayData.strategyResult.maxDrawdown.toDouble() * 100, 0, 'f', 2), 
+        QString("最大回撤: %1%").arg(m_displayData.strategyResult.m_maxDrawdown.toDouble() * 100, 0, 'f', 2), 
         this);
     m_winRateLabel = new QLabel(
-        QString("胜率: %1%").arg(m_displayData.strategyResult.winRate.toDouble() * 100, 0, 'f', 2), 
+        QString("胜率: %1%").arg(m_displayData.strategyResult.m_winRate.toDouble() * 100, 0, 'f', 2), 
         this);
     m_profitAreaLabel = new QLabel(
-        QString("收益面积: %1").arg(m_displayData.strategyResult.profitArea.toDouble(), 0, 'f', 2), 
+        QString("收益面积: %1").arg(m_displayData.strategyResult.m_profitArea.toDouble(), 0, 'f', 2), 
         this);
     m_healthScoreLabel = new QLabel(
-        QString("健康值: %1").arg(m_displayData.strategyResult.healthScore.toDouble(), 0, 'f', 1), 
+        QString("健康值: %1").arg(m_displayData.strategyResult.m_healthScore.toDouble(), 0, 'f', 1), 
         this);
     
     // 设置颜色
-    if ((double)m_displayData.strategyResult.totalReturn >= 0)
+    if ((double)m_displayData.strategyResult.m_totalReturn >= 0)
     {
         m_returnLabel->setStyleSheet("color: green; font-weight: bold;");
     }
@@ -106,11 +106,11 @@ void StrategyWidget::initUI()
         m_returnLabel->setStyleSheet("color: red; font-weight: bold;");
     }
     
-    if (m_displayData.strategyResult.healthScore.toDouble() >= 80)
+    if (m_displayData.strategyResult.m_healthScore.toDouble() >= 80)
     {
         m_healthScoreLabel->setStyleSheet("color: green; font-weight: bold;");
     }
-    else if (m_displayData.strategyResult.healthScore.toDouble() >= 60)
+    else if (m_displayData.strategyResult.m_healthScore.toDouble() >= 60)
     {
         m_healthScoreLabel->setStyleSheet("color: orange; font-weight: bold;");
     }

@@ -40,6 +40,7 @@ private slots:
 	void onCollectClicked();
 	void onVerifyClicked();
 	void onHistoryFutureSignal();
+	void onRunClicked();
 
 private:
 	/** 初始化展示相关组件
@@ -65,6 +66,7 @@ private:
 	COriginalButton* m_analyze;
 	COriginalButton* m_collect;
 	COriginalButton* m_verify;
+	COriginalButton* m_run;
 	// 新增：竞赛和展示相关成员
 	std::shared_ptr<Display> m_display;
 	uint32_t m_threadId;

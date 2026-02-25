@@ -11,6 +11,7 @@
 CompetitionManager::CompetitionManager() :
 m_competitionThreadId(0),
 m_isShowResult(false),
+m_isShowTradeLog(false),
 m_spCompetitionTask(nullptr),
 m_isInit(false)
 {
@@ -53,9 +54,10 @@ void CompetitionManager::addCompetition(StrategyMode strategyMode, const Competi
 	m_competitionConfigMap[(int32_t)strategyMode] = config;
 }
 
-void CompetitionManager::setParam(bool isShowResult)
+void CompetitionManager::setParam(bool isShowResult, bool isShowTradeLog)
 {
 	m_isShowResult = isShowResult;
+	m_isShowTradeLog = isShowTradeLog;
 }
 
 bool CompetitionManager::startCompetition()
@@ -76,7 +78,7 @@ bool CompetitionManager::startCompetition()
 		m_spCompetitionTask->addParam((StrategyMode)it->first, it->second);
 		++allStrategyCount;
 	}
-	m_spCompetitionTask->setParam(m_isShowResult);
+	m_spCompetitionTask->setParam(m_isShowResult, m_isShowTradeLog);
 	CTaskThreadManager::Instance().GetThreadInterface(m_competitionThreadId)->PostTask(m_spCompetitionTask);
 
 	RCSend("Competition started with %d strategies", allStrategyCount);

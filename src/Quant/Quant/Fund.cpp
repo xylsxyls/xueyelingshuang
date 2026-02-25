@@ -52,6 +52,11 @@ void Fund::setMarket(const std::shared_ptr<Market>& spMarket)
 	m_spMarket = spMarket;
 }
 
+std::shared_ptr<Market> Fund::getMarket()
+{
+	return m_spMarket;
+}
+
 bool Fund::buyAll(const std::string& stock, int32_t price, uint32_t date, ObserveTime time)
 {
 	if (price <= 0)
@@ -198,8 +203,18 @@ std::vector<std::string> Fund::exportTradeRecords() const
 		{
 			const CompleteTrade& trade = trades[i];
 
+			uint32_t endDate = trade.m_sellTrade.m_date;
+			if (endDate == 0)
+			{
+				auto it = m_accountSell.find(stock);
+				if (it != m_accountSell.end())
+				{
+					endDate = it->second.m_date;
+				}
+			}
+
 			//最终收盘价
-			int32_t endPrice = getStockPriceFromMarket(stock, trade.m_sellTrade.m_date, ObserveTime::COUNT);
+			int32_t endPrice = getStockPriceFromMarket(stock, endDate, ObserveTime::COUNT);
 
 			// 交易基本信息
 			oss.str("");
@@ -348,8 +363,18 @@ void Fund::reset()
 	m_pendingTOperations.clear();
 }
 
-void Fund::closeAllTrades(uint32_t date, ObserveTime time)
+void Fund::closeAllTrades(uint32_t date, bool isAccountSell, ObserveTime time)
 {
+	if (isAccountSell)
+	{
+		for (auto it = m_positions.begin(); it != m_positions.end(); ++it)
+		{
+			m_accountSell[it->first].m_date = date;
+			m_accountSell[it->first].m_time = time;
+			m_accountSell[it->first].m_price = getStockPriceFromMarket(it->first, date, time);
+		}
+		return;
+	}
 	for (auto it = m_positions.begin(); it != m_positions.end();)
 	{
 		std::string stock = it->first;

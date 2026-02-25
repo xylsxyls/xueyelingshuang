@@ -164,6 +164,20 @@ public:
 	*/
 	static uint32_t calcHistoryBeginTime(uint32_t beginTime, uint32_t endTime);
 
+	/** 计算未来时间
+	@param [in] time 当前时间
+	@param [in] dayCount 天数
+	@return 未来时间
+	*/
+	static uint32_t calcFutureTime(uint32_t time, uint32_t dayCount);
+
+	/** 计算历史时间
+	@param [in] time 当前时间
+	@param [in] dayCount 天数
+	@return 历史时间
+	*/
+	static uint32_t calcHistoryTime(uint32_t time, uint32_t dayCount);
+
 	/** 排列组合出所有参数组合
 	@param [in] allParam 每个参数可能出现的值
 	@return 返回所有参数组合

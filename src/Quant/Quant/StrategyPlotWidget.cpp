@@ -619,7 +619,7 @@ QString StrategyPlotWidget::generateMultiLineHoverInfo(int seriesIndex) const
 	}
 
 	// 使用QuantStrategyManager获取参数描述
-	QString paramStr = getParamDescription(detailInfo.result->strategyMode, detailInfo.result->params);
+	QString paramStr = getParamDescription(detailInfo.result->m_strategyMode, detailInfo.result->m_params);
 	// 不再截断参数字符串，让QLabel自动换行显示
 
 	// 生成多行信息
@@ -633,8 +633,8 @@ QString StrategyPlotWidget::generateMultiLineHoverInfo(int seriesIndex) const
 
 	// 第二行：周期0对应的年化收益率和做T年化收益率
 	if (detailInfo.result) {
-		QString annualReturnStr = formatRate(detailInfo.result->annualReturn.toDouble());
-		QString annualTReturnStr = formatRate(detailInfo.result->annualTReturn.toDouble());
+		QString annualReturnStr = formatRate(detailInfo.result->m_annualReturn.toDouble());
+		QString annualTReturnStr = formatRate(detailInfo.result->m_annualTReturn.toDouble());
 		lines.append(QStringLiteral("%1年化收益率 %2  做T年化收益率 %3")
 			.arg(formatCycleLabel(0))
 			.arg(annualReturnStr)
@@ -646,8 +646,8 @@ QString StrategyPlotWidget::generateMultiLineHoverInfo(int seriesIndex) const
 		if (i < (int)detailInfo.futureResults.size()) {
 			auto result = detailInfo.futureResults[i];
 			if (result) {
-				QString annualReturnStr = formatRate(result->annualReturn.toDouble());
-				QString annualTReturnStr = formatRate(result->annualTReturn.toDouble());
+				QString annualReturnStr = formatRate(result->m_annualReturn.toDouble());
+				QString annualTReturnStr = formatRate(result->m_annualTReturn.toDouble());
 				lines.append(QStringLiteral("%1年化收益率 %2  做T年化收益率 %3")
 					.arg(formatCycleLabel(i))
 					.arg(annualReturnStr)
@@ -671,8 +671,8 @@ QString StrategyPlotWidget::generateMultiLineHoverInfo(int seriesIndex) const
 		if (i < (int)detailInfo.historyResults.size()) {
 			auto result = detailInfo.historyResults[i];
 			if (result) {
-				QString annualReturnStr = formatRate(result->annualReturn.toDouble());
-				QString annualTReturnStr = formatRate(result->annualTReturn.toDouble());
+				QString annualReturnStr = formatRate(result->m_annualReturn.toDouble());
+				QString annualTReturnStr = formatRate(result->m_annualTReturn.toDouble());
 				lines.append(QStringLiteral("%1年化收益率 %2  做T年化收益率 %3")
 					.arg(formatCycleLabel(-i))
 					.arg(annualReturnStr)
@@ -980,8 +980,8 @@ void StrategyPlotWidget::plotAllStrategies()
 				// 当i=historyCount-1时，xValue=-(historyCount-1)
 				// 当i=0时，xValue=0
 				double xValue = -static_cast<double>(i);
-				double yValueAnnual = result->annualReturn.toDouble();
-				double yValueAnnualT = result->annualTReturn.toDouble();
+				double yValueAnnual = result->m_annualReturn.toDouble();
+				double yValueAnnualT = result->m_annualTReturn.toDouble();
 
 				annualReturnPoints.append(QPointF(xValue, yValueAnnual));
 				annualTReturnPoints.append(QPointF(xValue, yValueAnnualT));
@@ -999,8 +999,8 @@ void StrategyPlotWidget::plotAllStrategies()
 
 				// X坐标：1, 2, 3, ..., (futureCount-1)
 				double xValue = static_cast<double>(i);
-				double yValueAnnual = result->annualReturn.toDouble();
-				double yValueAnnualT = result->annualTReturn.toDouble();
+				double yValueAnnual = result->m_annualReturn.toDouble();
+				double yValueAnnualT = result->m_annualTReturn.toDouble();
 
 				annualReturnPoints.append(QPointF(xValue, yValueAnnual));
 				annualTReturnPoints.append(QPointF(xValue, yValueAnnualT));

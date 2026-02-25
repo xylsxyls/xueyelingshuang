@@ -7,7 +7,8 @@
 #include "StrategyResultTask.h"
 
 CompetitionTask::CompetitionTask() :
-m_isShowResult(false)
+m_isShowResult(false),
+m_isShowTradeLog(false)
 {
 
 }
@@ -32,15 +33,12 @@ void CompetitionTask::DoTask()
 		while (paramIndex++ != currentConfig.allParam.size() - 1)
 		{
 			// 创建策略实例
-			auto spStrategy = QuantStrategyManager::instance().createStrategy(currentStrategyMode);
+			std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(currentStrategyMode);
 			if (spStrategy == nullptr)
 			{
 				RCSend("Failed to create strategy for parameters");
 				continue;
 			}
-
-			// 初始化策略
-			spStrategy->init(currentConfig.beginTime, currentConfig.endTime);
 
 			// 设置市场数据
 			spStrategy->setMarket(currentConfig.marketData);
@@ -51,17 +49,24 @@ void CompetitionTask::DoTask()
 				spStrategy->addStock(stock);
 			}
 
-			// 设置策略参数
-			spStrategy->setStrategyParam(currentConfig.allParam[paramIndex]);
-
 			// 设置账户
 			std::shared_ptr<Fund> spFund(new Fund);
-			spStrategy->setFund(spFund);
+			spFund->init(currentConfig.initialFund);
+			spFund->setMarket(currentConfig.marketData);
+
+			// 设置策略参数
+			spStrategy->setStrategyParam(currentConfig.allParam[paramIndex]);
+			
+			// 填入参数并检查是否合理
+			if (!spStrategy->fillCheckParam())
+			{
+				continue;
+			}
 
 			// 创建任务
 			std::shared_ptr<StrategyTask> spStrategyTask(new StrategyTask);
 			spStrategyTask->setParam(currentConfig.beginTime, currentConfig.endTime, currentConfig.stocks,
-				spStrategy, currentConfig.marketData, currentConfig.initialFund, &m_resultQueue, &m_resultSemaphore);
+				spStrategy, spFund, true, &m_resultQueue, &m_resultSemaphore);
 			vecStrategyTask.push_back(spStrategyTask);
 			++strategyCount;
 		}
@@ -109,6 +114,25 @@ void CompetitionTask::DoTask()
 		(uint32_t)(g_config.m_completeTaskCount + g_config.m_ignoreTaskCount),
 		(uint32_t)g_config.m_completeTaskCount);
 
+	if (m_isShowTradeLog && m_resultMap.size() == 1)
+	{
+		std::vector<std::shared_ptr<StrategyResult>> vecStrategyResult = m_resultMap.begin()->second;
+		if (vecStrategyResult.size() == 1)
+		{
+			std::shared_ptr<StrategyResult> spStrategyResult = vecStrategyResult[0];
+			for (size_t lineIndex = 0; lineIndex < spStrategyResult->m_strategyLog.size(); ++lineIndex)
+			{
+				RCSend("%s", spStrategyResult->m_strategyLog[lineIndex].c_str());
+			}
+			for (size_t lineIndex = 0; lineIndex < spStrategyResult->m_tradeLog.size(); ++lineIndex)
+			{
+				RCSend("%s", spStrategyResult->m_tradeLog[lineIndex].c_str());
+			}
+			RCSend("tradeCount = %d,%d,%d,%d", spStrategyResult->m_tradeCount[0], spStrategyResult->m_tradeCount[1],
+				spStrategyResult->m_tradeCount[2], spStrategyResult->m_tradeCount[3]);
+		}
+	}
+
 	if (m_isShowResult)
 	{
 		printResultMap(g_config.m_showCount);
@@ -125,8 +149,8 @@ void CompetitionTask::DoTask()
 	// 计算统计指标
 	if (!m_intermediateResults.empty())
 	{
-		m_finalResult.bestReturn = m_intermediateResults.front().totalReturn;
-		m_finalResult.worstReturn = m_intermediateResults.back().totalReturn;
+		m_finalResult.bestReturn = m_intermediateResults.front().m_totalReturn;
+		m_finalResult.worstReturn = m_intermediateResults.back().m_totalReturn;
 
 		BigNumber sumReturn = 0;
 		BigNumber sumAnnualReturn = 0;
@@ -137,12 +161,12 @@ void CompetitionTask::DoTask()
 
 		for (const auto& result : m_intermediateResults)
 		{
-			sumReturn = sumReturn + result.totalReturn;
-			sumAnnualReturn = sumAnnualReturn + result.annualReturn;
-			sumMaxDrawdown = sumMaxDrawdown + result.maxDrawdown;
-			sumWinRate = sumWinRate + result.winRate;
-			sumProfitArea = sumProfitArea + result.profitArea;
-			sumHealthScore = sumHealthScore + result.healthScore;
+			sumReturn = sumReturn + result.m_totalReturn;
+			sumAnnualReturn = sumAnnualReturn + result.m_annualReturn;
+			sumMaxDrawdown = sumMaxDrawdown + result.m_maxDrawdown;
+			sumWinRate = sumWinRate + result.m_winRate;
+			sumProfitArea = sumProfitArea + result.m_profitArea;
+			sumHealthScore = sumHealthScore + result.m_healthScore;
 		}
 
 		BigNumber count = (int32_t)m_intermediateResults.size();
@@ -157,19 +181,19 @@ void CompetitionTask::DoTask()
 		size_t midIndex = m_intermediateResults.size() / 2;
 		if (m_intermediateResults.size() % 2 == 0)
 		{
-			m_finalResult.medianReturn = (m_intermediateResults[midIndex - 1].totalReturn +
-				m_intermediateResults[midIndex].totalReturn) / 2;
+			m_finalResult.medianReturn = (m_intermediateResults[midIndex - 1].m_totalReturn +
+				m_intermediateResults[midIndex].m_totalReturn) / 2;
 		}
 		else
 		{
-			m_finalResult.medianReturn = m_intermediateResults[midIndex].totalReturn;
+			m_finalResult.medianReturn = m_intermediateResults[midIndex].m_totalReturn;
 		}
 
 		// 计算标准差
 		BigNumber variance = 0;
 		for (const auto& result : m_intermediateResults)
 		{
-			BigNumber diff = result.totalReturn - m_finalResult.averageReturn;
+			BigNumber diff = result.m_totalReturn - m_finalResult.averageReturn;
 			variance = variance + (diff * diff);
 		}
 		variance = variance / count;
@@ -223,22 +247,23 @@ void CompetitionTask::printResultMap(uint32_t showCount)
 		for (size_t index = 0; index < it->second.size(); ++index)
 		{
 			const std::shared_ptr<StrategyResult>& result = it->second[index];
-			std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result->strategyMode);
-			std::string describe = spStrategy->describeParam(result->params);
+			std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result->m_strategyMode);
+			std::string describe = spStrategy->describeParam(result->m_params);
 			std::string modeName = spStrategy->getStrategyName();
 			RCSend("第%u名, %s, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
 				rank,
 				modeName.c_str(),
-				(BigNumber(result->tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-				(BigNumber(result->totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-				(result->annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
-				(result->annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
+				(BigNumber(result->m_tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+				(BigNumber(result->m_totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+				(result->m_annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
+				(result->m_annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
 			RCSend("第%u名, param = %s", rank, describe.c_str());
 		}
 	}
 }
 
-void CompetitionTask::setParam(bool isShowResult)
+void CompetitionTask::setParam(bool isShowResult, bool isShowTradeLog)
 {
 	m_isShowResult = isShowResult;
+	m_isShowTradeLog = isShowTradeLog;
 }

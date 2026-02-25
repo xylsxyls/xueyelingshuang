@@ -37,13 +37,13 @@ public:
 	@param [in] endTime 结束时间
 	@param [in] vecStock 股票列表
 	@param [in] spStrategy 策略实例
-	@param [in] spMarket 市场数据
-	@param [in] initialFund 初始资金
+	@param [in] spFund 账户信息
+	@param [in] forceEnd 是否强制平仓未完成交易
 	@param [in] resultQueue 结果队列
 	@param [in] resultSemaphore 收到结果发送的信号
 	*/
 	void setParam(uint32_t beginTime, uint32_t endTime, const std::vector<std::string>& vecStock,
-		const std::shared_ptr<Strategy>& spStrategy, const std::shared_ptr<Market>& spMarket, int32_t initialFund,
+		const std::shared_ptr<Strategy>& spStrategy, const std::shared_ptr<Fund>& spFund, bool forceEnd,
 		LockFreeQueue<std::shared_ptr<StrategyResult>>* resultQueue, Semaphore* resultSemaphore);
 
 	/** 参数是否有效
@@ -95,10 +95,10 @@ private:
 	std::vector<std::string> m_vecStock;
 	// 策略实例
 	std::shared_ptr<Strategy> m_spStrategy;
-	// 市场数据
-	std::shared_ptr<Market> m_spMarket;
-	// 初始资金
-	int32_t m_initialFund;
+	// 账户信息
+	std::shared_ptr<Fund> m_spFund;
+	// 是否强制平仓未完成交易
+	bool m_forceEnd;
 	// 结果队列
 	LockFreeQueue<std::shared_ptr<StrategyResult>>* m_resultQueue;
 	// 收到结果发送的信号

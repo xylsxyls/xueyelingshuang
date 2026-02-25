@@ -10,34 +10,56 @@
 */
 struct StrategyResult
 {
-	StrategyMode strategyMode;         // 策略模式
-	std::vector<int32_t> params;       // 策略参数
-	int32_t totalReturn;               // 总收益
-	int32_t tReturn;                   // 做T总收益
-	BigNumber annualReturn;            // 年化收益率
-	BigNumber annualTReturn;           // 做T年化收益率
-	BigNumber maxDrawdown;             // 最大回撤
-	BigNumber winRate;                 // 胜率
-	BigNumber profitArea;              // 收益面积
-	BigNumber healthScore;             // 健康值
-	uint32_t tradeDays;                // 实际交易天数
-	uint32_t totalDays;                // 总天数（用于调整）
-	std::vector<std::string> tradeLog; // 交易日志
-		
-	// 默认构造函数
-	StrategyResult() :
-		strategyMode(StrategyMode::COUNT),
-		totalReturn(0),
-		annualReturn(0),
-		maxDrawdown(0),
-		winRate(0),
-		profitArea(0),
-		healthScore(0),
-		tradeDays(0),
-		totalDays(0)
-	{
+	StrategyMode m_strategyMode;            // 策略模式
+	std::vector<int32_t> m_params;          // 策略参数
+	int32_t m_totalReturn;                  // 总收益
+	int32_t m_tReturn;                      // 做T总收益
+	BigNumber m_annualReturn;               // 年化收益率
+	BigNumber m_annualTReturn;              // 做T年化收益率
+	BigNumber m_maxDrawdown;                // 最大回撤
+	BigNumber m_winRate;                    // 胜率
+	BigNumber m_profitArea;                 // 收益面积
+	BigNumber m_healthScore;                // 健康值
+	uint32_t m_tradeDays;                   // 实际交易天数
+	uint32_t m_totalDays;                   // 总天数（用于调整）
+	std::vector<std::string> m_tradeLog;    // 交易日志
+	std::vector<std::string> m_strategyLog; // 策略日志
+	std::vector<uint32_t> m_tradeCount;     // 交易次数，正常交易的买卖和反追割肉
 
-	}
+	/** 构造函数
+	*/
+	StrategyResult();
+};
+
+/** 导入参数
+*/
+struct ImportParam
+{
+	// 操作模式: OPERATE, HOLD, GIVE_UP
+	int32_t m_operate;
+	// 虚拟卖出价格（每天计算的参考卖价）
+	int32_t m_virtualSellPrice;
+	// 虚拟卖出时间点
+	ObserveTime m_virtualSellObserveTime;
+	// 虚拟买入价格（每天计算的参考买价）
+	int32_t m_virtualBuyPrice;
+	// 虚拟买入时间点
+	ObserveTime m_virtualBuyObserveTime;
+	// 实际/更新后的卖出起点（用于chase）
+	int32_t m_realSellPrice;
+	// 实际/更新后的买入起点（用于cut）
+	int32_t m_realBuyPrice;
+	// 是否满仓
+	bool m_isFull;
+
+	/** 构造函数
+	*/
+	ImportParam();
+
+	/** 是否为空
+	@return 返回是否为空
+	*/
+	bool empty();
 };
 
 /** 策略基类
@@ -66,12 +88,6 @@ public:
 	*/
 	virtual std::string describeParam(const std::vector<int32_t>& params);
 
-	/** 初始化策略
-	@param [in] beginTime 回测开始时间
-	@param [in] endTime 回测结束时间
-	*/
-	virtual void init(uint32_t beginTime, uint32_t endTime);
-
 	/** 添加股票代码到策略监控列表
 	@param [in] stock 股票代码
 	*/
@@ -96,6 +112,11 @@ public:
 	@return 返回资金账户共享指针
 	*/
 	virtual std::shared_ptr<Fund> getFund();
+
+	/** 填入并检测参数是否合理
+	@return 返回是否合理
+	*/
+	virtual bool fillCheckParam();
 
 	/** 设置策略参数向量
 	@param [in] params 策略参数下标向量
@@ -159,13 +180,27 @@ public:
 	*/
 	int32_t getMaxPrice(const std::vector<int32_t>& dayInfo, ObserveTime timeBegin, ObserveTime timeEnd);
 
+	/** 设置导入参数
+	@param [in] import 导入参数
+	*/
+	void setImportParam(const ImportParam& import);
+
+	/** 获取导入参数
+	@return 返回导入参数
+	*/
+	ImportParam getImportParam();
+
+	/** 策略日志
+	@return 返回策略日志
+	*/
+	std::vector<std::string> strategyLog();
+
+	/** 交易次数
+	@return 返回交易次数
+	*/
+	std::vector<uint32_t> tradeCount();
+
 protected:
-	// 回测开始时间
-	uint32_t m_beginTime;
-
-	// 回测结束时间
-	uint32_t m_endTime;
-
 	// 策略监控的股票列表
 	std::vector<std::string> m_vecStock;
 
@@ -183,4 +218,13 @@ protected:
 
 	// 策略名称
 	std::string m_modeName;
+
+	// 导入参数
+	ImportParam m_import;
+
+	// 策略日志
+	std::vector<std::string> m_strategyLog;
+
+	// 交易次数
+	std::vector<uint32_t> m_tradeCount;
 };

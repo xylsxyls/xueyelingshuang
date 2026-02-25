@@ -2,26 +2,44 @@
 #include <algorithm>
 #include <iostream>
 #include "Util.h"
+#include "CStringManager/CStringManagerAPI.h"
 
 // 操作类型枚举定义
 enum
 {
-	OPERATE, ///< 操作模式：上午卖出下午买入
-	HOLD,    ///< 持有模式：上午不卖，下午买入
-	GIVE_UP  ///< 放弃模式：如果当前空仓：当天不买入；如果当前满仓：当天下午卖出（已经买入则第二天早晨卖出）
+	OPERATE, // 操作模式：上午卖出下午买入
+	HOLD,    // 持有模式：上午不卖，下午买入
+	GIVE_UP  // 放弃模式：如果当前空仓：当天不买入；如果当前满仓：当天下午卖出（已经买入则第二天早晨卖出）
 };
 
 WaveStrategy::WaveStrategy() :
-	m_operate(OPERATE),
-	m_virtualSellPrice(0),
-	m_virtualSellObserveTime(ObserveTime::COUNT),
-	m_virtualBuyPrice(0),
-	m_virtualBuyObserveTime(ObserveTime::COUNT),
-	m_realSellPrice(0),
-	m_realBuyPrice(0),
-	m_isFull(false),
-	m_isCurrentDayBuy(false),
-	m_hasFirstBuy(false)
+	m_openPrice(0),
+	m_closePrice(0),
+	m_hangSellPrice(0),
+	m_hangSellObserveTime(ObserveTime::COUNT),
+	m_directSellPrice(0),
+	m_directSellObserveTime(ObserveTime::COUNT),
+	m_hangBuyPrice(0),
+	m_hangBuyObserveTime(ObserveTime::COUNT),
+	m_directBuyPrice(0),
+	m_directBuyObserveTime(ObserveTime::COUNT),
+	m_giveUpHangSellPrice(0),
+	m_giveUpHangSellObserveTime(ObserveTime::COUNT),
+	m_giveUpDirectSellPrice(0),
+	m_giveUpDirectSellObserveTime(ObserveTime::COUNT),
+	m_aObserveTime(ObserveTime::COUNT),
+	m_bObserveTime(ObserveTime::COUNT),
+	m_holdCent(0),
+	m_giveUpCent(0),
+	m_aPrice(0),
+	m_bPrice(0),
+	m_chaseCent(0),
+	m_cutCent(0),
+	m_isNormal(false),
+	m_canTrade(false),
+	m_hasFirstBuy(false),
+	m_isUpdateBuyParam(false),
+	m_isUpdateSellParam(false)
 {
 	// 初始化策略模式和名称
 	m_mode = StrategyMode::WAVE;
@@ -31,6 +49,44 @@ WaveStrategy::WaveStrategy() :
 WaveStrategy::~WaveStrategy()
 {
 	// 析构函数，无需特殊清理
+}
+
+bool WaveStrategy::fillCheckParam()
+{
+	// 第四步：解析策略参数，包括各种时间点和差价阈值
+	m_hangSellObserveTime = (ObserveTime)m_strategyParam[0]; // 挂卖价时间点
+	m_directSellObserveTime = (ObserveTime)m_strategyParam[1]; // 直卖价时间点
+	m_hangBuyObserveTime = (ObserveTime)m_strategyParam[2]; // 挂买价时间点
+	m_directBuyObserveTime = (ObserveTime)m_strategyParam[3]; // 直买价时间点
+	m_giveUpHangSellObserveTime = m_hangBuyObserveTime; // 放弃挂卖价时间点
+	m_giveUpDirectSellObserveTime = m_directBuyObserveTime; // 放弃直卖价时间点
+	m_aObserveTime = (ObserveTime)m_strategyParam[4]; // 观察价A时间点
+	m_bObserveTime = (ObserveTime)m_strategyParam[5]; // 观察价B时间点
+	m_holdCent = m_strategyParam[6]; // 观察价B-A大于等于多少时当天直买，第二天早上不卖
+	m_giveUpCent = m_strategyParam[7]; // 观察价B-A小于等于多少时，当天不买，如果当前持有则当天下午卖出，如果已经买入则第二天早晨卖出
+	m_chaseCent = m_strategyParam[8]; // 当天早上卖出后反追差价
+	m_cutCent = m_strategyParam[9]; // 割肉差价
+	m_isNormal = (m_strategyParam[10] == 1); // 是否为常规走势
+	m_tradeCount.resize(4);
+	m_tradeCount[0] = 0;
+	m_tradeCount[1] = 0;
+	m_tradeCount[2] = 0;
+	m_tradeCount[3] = 0;
+
+	// 第五步：验证时间点顺序和参数逻辑，如果无效则返回false
+	if ((int32_t)m_directSellObserveTime < (int32_t)m_hangSellObserveTime ||
+		(int32_t)m_directSellObserveTime - (int32_t)m_hangSellObserveTime > 3 ||
+		(int32_t)m_directBuyObserveTime < (int32_t)m_hangBuyObserveTime ||
+		(int32_t)m_directBuyObserveTime - (int32_t)m_hangBuyObserveTime > 3 ||
+		(int32_t)m_hangBuyObserveTime <= ((int32_t)m_directSellObserveTime + 1) ||
+		m_bObserveTime <= m_aObserveTime ||
+		(int32_t)m_bObserveTime > (int32_t)m_hangBuyObserveTime ||
+		m_giveUpCent >= m_holdCent)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 bool WaveStrategy::onTradingDay(uint32_t date)
@@ -44,66 +100,49 @@ bool WaveStrategy::onTradingDay(uint32_t date)
 
 	// 第二步：获取第一只股票代码（目前只支持单股票，未来可扩展）
 	const std::string& stock = m_vecStock[0];
+	// 更新当天日期
+	m_date = date;
 
 	// 第三步：获取当天分时数据，如果为空则记录错误并返回false
-	const std::vector<int32_t>& dayInfo = m_spMarket->getStockData(stock, date);
+	const std::vector<int32_t>& dayInfo = m_spMarket->getStockData(stock, m_date);
 	if (dayInfo.empty())
 	{
-		RCSend("当天分时数据为空: dayInfo empty, date = %u", date);
-		return false;
-	}
-
-	// 第四步：解析策略参数，包括各种时间点和差价阈值
-	ObserveTime hangSellObserveTime = (ObserveTime)m_strategyParam[0]; // 挂卖价时间点
-	ObserveTime directSellObserveTime = (ObserveTime)m_strategyParam[1]; // 直卖价时间点
-	ObserveTime hangBuyObserveTime = (ObserveTime)m_strategyParam[2]; // 挂买价时间点
-	ObserveTime directBuyObserveTime = (ObserveTime)m_strategyParam[3]; // 直买价时间点
-	ObserveTime giveUpHangSellObserveTime = hangBuyObserveTime; // 放弃挂卖价时间点
-	ObserveTime giveUpDirectSellObserveTime = directBuyObserveTime; // 放弃直卖价时间点
-	ObserveTime aObserveTime = (ObserveTime)m_strategyParam[4]; // 观察价A时间点
-	ObserveTime bObserveTime = (ObserveTime)m_strategyParam[5]; // 观察价B时间点
-	int32_t holdCent = m_strategyParam[6]; // 观察价B-A大于等于多少时当天直买，第二天早上不卖
-	int32_t giveUpCent = m_strategyParam[7]; // 观察价B-A小于等于多少时，当天不买，如果当前持有则当天下午卖出，如果已经买入则第二天早晨卖出
-	int32_t chaseCent = m_strategyParam[8]; // 当天早上卖出后反追差价
-	int32_t cutCent = m_strategyParam[9]; // 割肉差价
-	bool isNormal = (m_strategyParam[10] == 1); // 是否为常规走势
-
-	// 第五步：验证时间点顺序和参数逻辑，如果无效则返回false
-	if ((int32_t)directSellObserveTime < (int32_t)hangSellObserveTime ||
-		(int32_t)directSellObserveTime - (int32_t)hangSellObserveTime > 3 ||
-		(int32_t)directBuyObserveTime < (int32_t)hangBuyObserveTime ||
-		(int32_t)directBuyObserveTime - (int32_t)hangBuyObserveTime > 3 ||
-		(int32_t)hangBuyObserveTime <= ((int32_t)directSellObserveTime + 1) ||
-		bObserveTime <= aObserveTime ||
-		(int32_t)bObserveTime > (int32_t)hangBuyObserveTime ||
-		giveUpCent >= holdCent)
-	{
+		RCSend("当天分时数据为空: dayInfo empty, date = %u", m_date);
 		return false;
 	}
 
 	// 第六步：获取各种价格指标，包括开盘价和收盘价
-	int32_t openPrice = dayInfo[(int32_t)Overall::OPEN]; // 开盘价（9:25数据）
-	int32_t closePrice = dayInfo[(int32_t)Overall::CLOSE]; // 收盘价
-	int32_t hangSellPrice = getCurrentPrice(dayInfo, hangSellObserveTime);
-	int32_t directSellPrice = getDirectSellPrice(dayInfo, directSellObserveTime);
-	int32_t hangBuyPrice = getCurrentPrice(dayInfo, hangBuyObserveTime) - 1; // 根据描述-1
-	int32_t directBuyPrice = getDirectBuyPrice(dayInfo, directBuyObserveTime);
-	int32_t giveUpHangSellPrice = getCurrentPrice(dayInfo, giveUpHangSellObserveTime);
-	int32_t giveUpDirectSellPrice = getDirectSellPrice(dayInfo, giveUpDirectSellObserveTime);
-	int32_t aPrice = getCurrentPrice(dayInfo, aObserveTime);
-	int32_t bPrice = getCurrentPrice(dayInfo, bObserveTime);
+	m_openPrice = dayInfo[(int32_t)Overall::OPEN]; // 开盘价（9:25数据）
+	m_closePrice = dayInfo[(int32_t)Overall::CLOSE]; // 收盘价
+	m_hangSellPrice = getCurrentPrice(dayInfo, m_hangSellObserveTime);
+	m_directSellPrice = getDirectSellPrice(dayInfo, m_directSellObserveTime);
+	m_hangBuyPrice = getCurrentPrice(dayInfo, m_hangBuyObserveTime) - 1; // 根据描述-1
+	m_directBuyPrice = getDirectBuyPrice(dayInfo, m_directBuyObserveTime);
+	m_giveUpHangSellPrice = getCurrentPrice(dayInfo, m_giveUpHangSellObserveTime);
+	m_giveUpDirectSellPrice = getDirectSellPrice(dayInfo, m_giveUpDirectSellObserveTime);
+	m_aPrice = getCurrentPrice(dayInfo, m_aObserveTime);
+	m_bPrice = getCurrentPrice(dayInfo, m_bObserveTime);
 
-	// 第七步：处理首次买入逻辑，如果是第一天则买入并设置标志
+	// 第七步：重置当天买入标志
+	m_canTrade = true;
+	m_isUpdateBuyParam = false;
+	m_isUpdateSellParam = false;
+
+	// 第八步：处理首次买入逻辑，如果是第一天则买入并设置标志
 	if (!m_hasFirstBuy)
 	{
-		updateOperate(aPrice, bPrice);
-		m_spFund->buyAll(stock, closePrice, date, ObserveTime::COUNT); // 收盘买入
-		updateBuyParam(closePrice, ObserveTime::COUNT, true);
+		if (m_import.empty())
+		{
+			updateOperate();
+			// 收盘买入
+			m_spFund->buyAll(stock, m_closePrice, m_date, ObserveTime::COUNT);
+			updateBuyParam(m_closePrice, ObserveTime::COUNT, true);
+		}
 		m_hasFirstBuy = true;
 		return true;
 	}
 
-	// 第八步：检查持仓，如果无持仓则记录错误并返回false
+	// 第九步：检查持仓，如果无持仓则记录错误并返回false
 	std::shared_ptr<Position> spPosition = m_spFund->getPosition(stock);
 	if (spPosition == nullptr)
 	{
@@ -111,48 +150,41 @@ bool WaveStrategy::onTradingDay(uint32_t date)
 		return false;
 	}
 
-	// 第九步：重置当天买入标志
-	m_isCurrentDayBuy = false;
-
 	// 第十步：开盘检查（割肉或反追）
-	openCheck(stock, date, dayInfo, chaseCent, cutCent);
+	openCheck(stock);
 
 	// 第十一步：上午从0930到挂卖时间监控割肉或反追
-	// 注意：不使用canRealTrade变量缓存，因为m_isCurrentDayBuy会在执行过程中改变
-	timeCheck(ObserveTime::TIME0930, hangSellObserveTime, stock, date, dayInfo, chaseCent, cutCent, !m_isCurrentDayBuy);
+	// 注意：不使用cancanTrade变量缓存，因为m_isCurrentDayBuy会在执行过程中改变
+	timeCheck(ObserveTime::TIME0930, m_hangSellObserveTime, stock, dayInfo);
 
 	// 第十二步：执行挂卖到直卖（真实或模拟交易）
-	ObserveTime operateEndTime = hangToDirectSell(stock, date, dayInfo, chaseCent, cutCent,
-		hangSellObserveTime, hangSellPrice,
-		directSellObserveTime, directSellPrice, !m_isCurrentDayBuy);
+	ObserveTime operateEndTime = m_hangSellObserveTime;
+	if (m_import.m_operate == GIVE_UP || m_import.m_operate == OPERATE)
+	{
+		operateEndTime = hangToDirectSell(stock, dayInfo);
+	}
 
 	// 第十三步：上午从卖出时间到B点监控割肉或反追
-	timeCheck(operateEndTime, bObserveTime,
-		stock, date, dayInfo, chaseCent, cutCent, !m_isCurrentDayBuy);
+	timeCheck(operateEndTime, m_bObserveTime, stock, dayInfo);
 
 	// 第十四步：B点出来后更新操作类型
-	updateOperate(aPrice, bPrice);
+	updateOperate();
 
 	// 第十五步：从B点到挂买时间监控割肉或反追
-	timeCheck(bObserveTime, hangBuyObserveTime,
-		stock, date, dayInfo, chaseCent, cutCent, !m_isCurrentDayBuy);
+	timeCheck(m_bObserveTime, m_hangBuyObserveTime, stock, dayInfo);
 
 	// 第十六步：根据操作模式执行买入或放弃卖出
-	if (m_operate == HOLD || m_operate == OPERATE)
+	if (m_import.m_operate == HOLD || m_import.m_operate == OPERATE)
 	{
-		operateEndTime = hangToDirectBuy(stock, date, dayInfo, chaseCent, cutCent,
-			hangBuyObserveTime, hangBuyPrice,
-			directBuyObserveTime, directBuyPrice, !m_isCurrentDayBuy);
+		operateEndTime = hangToDirectBuy(stock, dayInfo);
 	}
 	else // GIVE_UP模式
 	{
-		operateEndTime = hangToDirectSell(stock, date, dayInfo, chaseCent, cutCent,
-			giveUpHangSellObserveTime, giveUpHangSellPrice,
-			giveUpDirectSellObserveTime, giveUpDirectSellPrice, !m_isCurrentDayBuy);
+		operateEndTime = hangToDirectSell(stock, dayInfo);
 	}
 
 	// 第十七步：下午从操作结束时间到收盘监控割肉或反追
-	timeCheck(operateEndTime, ObserveTime::COUNT, stock, date, dayInfo, chaseCent, cutCent, !m_isCurrentDayBuy);
+	timeCheck(operateEndTime, ObserveTime::COUNT, stock, dayInfo);
 
 	return true;
 }
@@ -221,7 +253,7 @@ bool WaveStrategy::isStrategyParamValid() const
 	return true;
 }
 
-void WaveStrategy::updateOperate(int32_t sellPrice, int32_t buyPrice)
+void WaveStrategy::updateOperate()
 {
 	// 第一步：获取持仓和放弃阈值参数
 	int32_t holdCent = m_strategyParam[6];
@@ -229,53 +261,48 @@ void WaveStrategy::updateOperate(int32_t sellPrice, int32_t buyPrice)
 	bool isNormal = (m_strategyParam[10] == 1);
 
 	// 第二步：计算价格差
-	int32_t tPrice = buyPrice - sellPrice;
+	int32_t tPrice = m_bPrice - m_aPrice;
 
 	// 第三步：根据价格差和isNormal更新操作模式
 	if (tPrice >= holdCent)
 	{
-		m_operate = isNormal ? HOLD : GIVE_UP;
+		m_import.m_operate = isNormal ? HOLD : GIVE_UP;
 	}
 	else if (tPrice <= giveUpCent)
 	{
-		m_operate = isNormal ? GIVE_UP : HOLD;
+		m_import.m_operate = isNormal ? GIVE_UP : HOLD;
 	}
 	else
 	{
-		m_operate = OPERATE;
+		m_import.m_operate = OPERATE;
 	}
+
+	m_isUpdateBuyParam = false;
+	m_isUpdateSellParam = false;
 }
 
-bool WaveStrategy::openCheck(const std::string& stock, uint32_t date, const std::vector<int32_t>& dayInfo,
-							 int32_t chaseCent, int32_t cutCent)
+bool WaveStrategy::openCheck(const std::string& stock)
 {
-	// 第一步：获取开盘价
-	int32_t openPrice = dayInfo[(int32_t)Overall::OPEN];
-
 	// 第二步：如果满仓，检查是否触发割肉
-	if (m_isFull)
+	if (m_import.m_isFull)
 	{
-		int32_t cutPrice = m_virtualBuyPrice - cutCent;
 		// 使用开盘价判断是否触发割肉
-		if (openPrice <= cutPrice)
+		if (m_openPrice <= cutPrice())
 		{
 			// 第三步：执行割肉卖出，使用开盘价交易（因为开盘时可能跳空，只有开盘价可交易）
-			m_spFund->sellAllForT(stock, openPrice, date, ObserveTime::TIME0930);
-			updateSellParam(openPrice, ObserveTime::TIME0930, true);
-			m_operate = GIVE_UP;
+			m_spFund->sellAllForT(stock, m_openPrice, m_date, ObserveTime::TIME0930);
+			updateSellParam(m_openPrice, ObserveTime::TIME0930, true);
 			return true;
 		}
 	}
 	// 第四步：如果空仓，检查是否触发反追
 	else
 	{
-		int32_t chasePrice = m_virtualSellPrice + chaseCent;
-		if (openPrice >= chasePrice)
+		if (m_openPrice >= chasePrice())
 		{
 			// 第五步：执行反追买入
-			m_spFund->buyAll(stock, openPrice, date, ObserveTime::TIME0930);
-			updateBuyParam(openPrice, ObserveTime::TIME0930, true);
-			m_operate = HOLD;
+			m_spFund->buyAll(stock, m_openPrice, m_date, ObserveTime::TIME0930);
+			updateBuyParam(m_openPrice, ObserveTime::TIME0930, true);
 			return true;
 		}
 	}
@@ -285,9 +312,12 @@ bool WaveStrategy::openCheck(const std::string& stock, uint32_t date, const std:
 }
 
 bool WaveStrategy::timeCheck(ObserveTime beginTime, ObserveTime endTime,
-							 const std::string& stock, uint32_t date, const std::vector<int32_t>& dayInfo,
-							 int32_t chaseCent, int32_t cutCent, bool realTrade)
+							 const std::string& stock, const std::vector<int32_t>& dayInfo)
 {
+	if (!m_canTrade)
+	{
+		return false;
+	}
 	// 第一步：初始化当前检查时间点
 	ObserveTime current = beginTime;
 
@@ -302,44 +332,28 @@ bool WaveStrategy::timeCheck(ObserveTime beginTime, ObserveTime endTime,
 		int32_t minPrice = getMinPrice(dayInfo, beginTime, next);
 
 		// 第五步：计算割肉价和反追价
-		int32_t cutPrice = m_virtualBuyPrice - cutCent;
-		int32_t chasePrice = m_virtualSellPrice + chaseCent;
 
 		// 第六步：判断是否触发割肉（满仓时）
-		if (minPrice <= cutPrice && m_isFull)
+		if (minPrice <= cutPrice() && m_import.m_isFull)
 		{
-			if (realTrade)
-			{
-				m_spFund->sellAllForT(stock, cutPrice, date, next);
-				updateSellParam(cutPrice, next, realTrade);
-			}
-			m_operate = GIVE_UP;
+			updateSellParam(cutPrice(), next, true);
+			m_spFund->sellAllForT(stock, cutPrice(), m_date, next);
 			
 			// 第七步：割肉后检查是否需要反追
-			// 重新计算反追价（使用更新后的卖出价格）
-			int32_t newChasePrice = m_virtualSellPrice + chaseCent;
 			// 需要检查下一个时间点的当前价是否达到反追价
 			int32_t nextPrice = getCurrentPrice(dayInfo, next);
-			if (nextPrice >= newChasePrice && maxPrice >= newChasePrice)
+			if (nextPrice >= chasePrice() && maxPrice >= chasePrice())
 			{
-				if (realTrade)
-				{
-					m_spFund->buyAll(stock, newChasePrice, date, next);
-					updateBuyParam(newChasePrice, next, realTrade);
-				}
-				m_operate = HOLD;
+				updateBuyParam(chasePrice(), next, true);
+				m_spFund->buyAll(stock, chasePrice(), m_date, next);
 				return true;
 			}
 		}
 		// 第八步：判断是否触发反追（空仓时）
-		else if (maxPrice >= chasePrice && !m_isFull)
+		else if (maxPrice >= chasePrice() && !m_import.m_isFull)
 		{
-			if (realTrade)
-			{
-				m_spFund->buyAll(stock, chasePrice, date, next);
-				updateBuyParam(chasePrice, next, realTrade);
-			}
-			m_operate = HOLD;
+			updateBuyParam(chasePrice(), next, true);
+			m_spFund->buyAll(stock, chasePrice(), m_date, next);
 			return true;
 		}
 
@@ -351,316 +365,513 @@ bool WaveStrategy::timeCheck(ObserveTime beginTime, ObserveTime endTime,
 	return false;
 }
 
-ObserveTime WaveStrategy::hangToDirectSell(const std::string& stock, uint32_t date, const std::vector<int32_t>& dayInfo,
-	int32_t chaseCent, int32_t cutCent,
-	ObserveTime hangSellObserveTime, int32_t hangSellPrice,
-	ObserveTime directSellObserveTime, int32_t directSellPrice,
-	bool realTrade)
+ObserveTime WaveStrategy::hangToDirectSell(const std::string& stock, const std::vector<int32_t>& dayInfo)
 {
-	// 第一步：如果不是满仓或者操作模式为HOLD，不执行卖出
-	if (!m_isFull || m_operate == HOLD)
+	if (!m_canTrade)
 	{
-		return hangSellObserveTime;
+		return ObserveTime::COUNT;
 	}
-	
-	// 第二步：提前计算割肉价（基于当前虚拟买价，在卖出前不会变）
-	int32_t cutPrice = m_virtualBuyPrice - cutCent;
-
 	// 第三步：如果挂卖时间等于直卖时间，直接执行直卖
-	if (hangSellObserveTime == directSellObserveTime)
+	if (m_hangSellObserveTime == m_directSellObserveTime)
 	{
-		if (realTrade)
+		// 如果是满仓
+		if (m_import.m_isFull)
 		{
-			m_spFund->sellAllForT(stock, directSellPrice, date, directSellObserveTime);
+			updateSellParam(m_directSellPrice, m_directSellObserveTime, true);
+			m_spFund->sellAllForT(stock, m_directSellPrice, m_date, m_directSellObserveTime);
 		}
-		updateSellParam(directSellPrice, directSellObserveTime, realTrade);
-
-		// 第四步：直卖后检查卖出价格是否低于割肉价，如果低于则改变操作模式为GIVE_UP
-		if (directSellPrice <= cutPrice)
+		// 空仓
+		else
 		{
-			m_operate = GIVE_UP;
+			// 当前价已经到了反追价
+			if (m_directSellPrice >= chasePrice())
+			{
+				updateBuyParam(chasePrice(), m_directSellObserveTime, true);
+				m_spFund->buyAll(stock, chasePrice(), m_date, m_directSellObserveTime);
+			}
+			else
+			{
+				updateSellParam(m_directSellPrice, m_directSellObserveTime, false);
+			}
+			//updateSellParam(m_directSellPrice, m_directSellObserveTime, false);
 		}
-		return directSellObserveTime;
+		return m_directSellObserveTime;
 	}
+
+	ObserveTime trade = ObserveTime::COUNT;
 
 	// 第五步：从挂卖时间开始逐段检查
-	ObserveTime current = hangSellObserveTime;
+	ObserveTime current = m_hangSellObserveTime;
 
-	while ((int32_t)current < (int32_t)directSellObserveTime)
+	while ((int32_t)current < (int32_t)m_directSellObserveTime)
 	{
 		// 第六步：计算下一个时间点
 		ObserveTime next = (ObserveTime)((int32_t)current + 1);
 
-		// 第七步：获取从挂卖时间到next的最高价和最低价（累积检查）
-		int32_t maxPrice = getMaxPrice(dayInfo, hangSellObserveTime, next);
-		int32_t minPrice = getMinPrice(dayInfo, hangSellObserveTime, next);
-
-		// 第八步：判断是否触发挂卖或割肉
-		bool hitSell = (maxPrice >= hangSellPrice);
-		bool hitCut = (minPrice <= cutPrice);
-
-		// 第九步：处理割肉+挂卖同时触发
-		if (hitCut && hitSell)
+		// 检查并卖出
+		ObserveTime check = checkSell(stock, dayInfo, current);
+		if (check != ObserveTime::COUNT)
 		{
-			int32_t currentPrice = getCurrentPrice(dayInfo, current);
-			int32_t nextPrice = getCurrentPrice(dayInfo, next);
-
-			if (nextPrice >= currentPrice) // 先降再升：优先割肉
-			{
-				if (realTrade)
-				{
-					m_spFund->sellAllForT(stock, cutPrice, date, next);
-				}
-				updateSellParam(cutPrice, next, realTrade);
-				m_operate = GIVE_UP;
-				
-				// 第十步：割肉后检查是否需要反追
-				int32_t newChasePrice = m_virtualSellPrice + chaseCent;
-				// 需要检查下一个时间点的当前价是否达到反追价
-				if (nextPrice >= newChasePrice && maxPrice >= newChasePrice)
-				{
-					if (realTrade)
-					{
-						m_spFund->buyAll(stock, newChasePrice, date, next); 
-					}
-					updateBuyParam(newChasePrice, next, realTrade);
-					m_operate = HOLD;
-				}
-			}
-			else // 先升再降：优先挂卖
-			{
-				if (realTrade)
-				{
-					m_spFund->sellAllForT(stock, hangSellPrice, date, next);
-				}
-				updateSellParam(hangSellPrice, next, realTrade);
-
-				// 第十一步：挂卖后检查是否需要反追
-				int32_t chasePrice = m_virtualSellPrice + chaseCent;
-				if (maxPrice >= chasePrice)
-				{
-					if (realTrade)
-					{
-						m_spFund->buyAll(stock, chasePrice, date, next);
-					}
-					updateBuyParam(chasePrice, next, realTrade);
-					m_operate = HOLD;
-				}
-			}
-			return next;
-		}
-		// 第十二步：仅触发割肉
-		else if (hitCut)
-		{
-			if (realTrade)
-			{
-				m_spFund->sellAllForT(stock, cutPrice, date, next);
-			}
-			updateSellParam(cutPrice, next, realTrade);
-			m_operate = GIVE_UP;
-
-			// 第十三步：割肉后检查是否需要反追
-			int32_t newChasePrice = m_virtualSellPrice + chaseCent;
-			int32_t nextPrice = getCurrentPrice(dayInfo, next);
-			if (nextPrice >= newChasePrice && maxPrice >= newChasePrice)
-			{
-				if (realTrade)
-				{
-					m_spFund->buyAll(stock, newChasePrice, date, next);
-				}
-				updateBuyParam(newChasePrice, next, realTrade);
-				m_operate = HOLD;
-			}
-			return next;
-		}
-		// 第十四步：仅触发挂卖
-		else if (hitSell)
-		{
-			if (realTrade)
-			{
-				m_spFund->sellAllForT(stock, hangSellPrice, date, next);
-			}
-			updateSellParam(hangSellPrice, next, realTrade);
-			
-			// 第十五步：挂卖后检查是否需要反追
-			int32_t chasePrice = m_virtualSellPrice + chaseCent;
-			if (maxPrice >= chasePrice)
-			{
-				if (realTrade)
-				{
-					m_spFund->buyAll(stock, chasePrice, date, next);
-					updateBuyParam(chasePrice, next, realTrade);
-					m_operate = HOLD;
-				}
-			}
-			return next;
+			trade = check;
 		}
 
 		// 第十六步：未触发任何操作，继续检查下一段
 		current = next;
 	}
 
-	// 第十七步：未在挂卖期间卖出，使用直卖价强制卖出
-	if (realTrade)
+	// 第十七步：未在挂卖期间卖出，之前出现了反追
+	if (m_import.m_operate == HOLD)
 	{
-		m_spFund->sellAllForT(stock, directSellPrice, date, directSellObserveTime);
+		return trade;
 	}
-	updateSellParam(directSellPrice, directSellObserveTime, realTrade);
-
-	// 第十八步：直卖后检查卖出价格是否低于割肉价，如果低于则改变操作模式为GIVE_UP
-	if (directSellPrice <= cutPrice)
+	// OPERATE或GIVE_UP
+	else
 	{
-		m_operate = GIVE_UP;
+		// 当前是满仓
+		if (m_import.m_isFull)
+		{
+			updateSellParam(m_directSellPrice, m_directSellObserveTime, true);
+			m_spFund->sellAllForT(stock, m_directSellPrice, m_date, m_directSellObserveTime);
+		}
+		// 当前是空仓
+		else
+		{
+			// 说明之前更新过，用之前的时间
+			if (m_isUpdateSellParam)
+			{
+				return trade;
+			}
+			// 当前价已经到了反追价
+			if (m_directSellPrice >= chasePrice())
+			{
+				updateBuyParam(chasePrice(), m_directSellObserveTime, true);
+				m_spFund->buyAll(stock, chasePrice(), m_date, m_directSellObserveTime);
+			}
+			else
+			{
+				updateSellParam(m_directSellPrice, m_directSellObserveTime, false);
+			}
+			//updateSellParam(m_directSellPrice, m_directSellObserveTime, false);
+		}
+		return m_directSellObserveTime;
 	}
-
-	return directSellObserveTime;
 }
 
-ObserveTime WaveStrategy::hangToDirectBuy(const std::string& stock, uint32_t date, const std::vector<int32_t>& dayInfo,
-	int32_t chaseCent, int32_t cutCent,
-	ObserveTime hangBuyObserveTime, int32_t hangBuyPrice,
-	ObserveTime directBuyObserveTime, int32_t directBuyPrice,
-	bool realTrade)
+ObserveTime WaveStrategy::checkSell(const std::string& stock, const std::vector<int32_t>& dayInfo, ObserveTime current)
 {
-	// 第一步：定义反追价变量，增加可读性
-	int32_t chasePrice = m_virtualSellPrice + chaseCent;
-	
-	// 第二步：如果挂买时间等于直买时间，直接执行直买
-	if (hangBuyObserveTime == directBuyObserveTime)
+	if (!m_canTrade)
 	{
-		if (realTrade)
-		{
-			m_spFund->buyAll(stock, directBuyPrice, date, directBuyObserveTime);
-		}
-		updateBuyParam(directBuyPrice, directBuyObserveTime, realTrade);
-		// 第三步：直买后检查是否触发反追条件
-		if (directBuyPrice >= chasePrice)
-		{
-			m_operate = HOLD;
-		}
-		return directBuyObserveTime;
+		return ObserveTime::COUNT;
 	}
 
-	// 第四步：从挂买时间开始逐段检查
-	ObserveTime current = hangBuyObserveTime;
+	// 第五步：计算下一个时间点
+	ObserveTime next = (ObserveTime)((int32_t)current + 1);
 
-	while ((int32_t)current < (int32_t)directBuyObserveTime)
+	// 第七步：获取从挂卖时间到next的最高价和最低价（累积检查）
+	int32_t minPrice = getMinPrice(dayInfo, m_hangSellObserveTime, next);
+	int32_t maxPrice = getMaxPrice(dayInfo, m_hangSellObserveTime, next);
+	int32_t currentPrice = getCurrentPrice(dayInfo, current);
+	int32_t nextPrice = getCurrentPrice(dayInfo, next);
+
+	// 第八步：判断是否触发挂卖或割肉
+	bool hitSell = (maxPrice >= m_hangSellPrice);
+	bool hitCut = (minPrice <= cutPrice());
+
+	// 说明在上一轮出现了反追操作
+	if (m_import.m_operate == HOLD)
+	{
+		RCSend("checkSell HOLD");
+		return ObserveTime::COUNT;
+	}
+
+	// OPERATE或者GIVE_UP，今天还可以交易
+	if (m_import.m_isFull)
+	{
+		// 挂卖割肉同时触发
+		if (hitCut && hitSell)
+		{
+			// 先割肉，后反追
+			if (nextPrice > currentPrice)
+			{
+				updateSellParam(cutPrice(), next, true);
+				m_spFund->sellAllForT(stock, cutPrice(), m_date, next);
+				// 第十一步：挂卖后检查是否需要反追
+				if (nextPrice >= chasePrice() && maxPrice >= chasePrice())
+				{
+					updateBuyParam(chasePrice(), next, true);
+					m_spFund->buyAll(stock, chasePrice(), m_date, next);
+				}
+			}
+			else
+			{
+				updateSellParam(m_hangSellPrice, next, true);
+				m_spFund->sellAllForT(stock, m_hangSellPrice, m_date, next);
+			}
+			return next;
+		}
+		// 第十四步：仅触发挂卖
+		else if (hitSell)
+		{
+			updateSellParam(m_hangSellPrice, next, true);
+			m_spFund->sellAllForT(stock, m_hangSellPrice, m_date, next);
+			if (maxPrice >= chasePrice())
+			{
+				updateBuyParam(chasePrice(), next, true);
+				m_spFund->buyAll(stock, chasePrice(), m_date, next);
+			}
+			return next;
+		}
+		// 仅触发了割肉
+		else if (hitCut)
+		{
+			// 先割肉，后反追
+			if (nextPrice > currentPrice)
+			{
+				updateSellParam(cutPrice(), next, true);
+				m_spFund->sellAllForT(stock, cutPrice(), m_date, next);
+				// 第十一步：挂卖后检查是否需要反追
+				if (nextPrice >= chasePrice() && maxPrice >= chasePrice())
+				{
+					updateBuyParam(chasePrice(), next, true);
+					m_spFund->buyAll(stock, chasePrice(), m_date, next);
+				}
+			}
+			else
+			{
+				updateSellParam(cutPrice(), next, true);
+				m_spFund->sellAllForT(stock, cutPrice(), m_date, next);
+			}
+			return next;
+		}
+		return ObserveTime::COUNT;
+	}
+	// 目前是空仓
+	else
+	{
+		// 只有到达反追线才买入
+		if (maxPrice >= chasePrice())
+		{
+			updateBuyParam(chasePrice(), next, true);
+			m_spFund->buyAll(stock, chasePrice(), m_date, next);
+			return next;
+		}
+		else
+		{
+			// 说明在上一个循环里更新过
+			if (m_isUpdateSellParam)
+			{
+				return ObserveTime::COUNT;
+			}
+			updateSellParam(m_hangSellPrice, next, false);
+			return next;
+		}
+	}
+}
+
+ObserveTime WaveStrategy::hangToDirectBuy(const std::string& stock, const std::vector<int32_t>& dayInfo)
+{
+	// 第一步：定义反追价变量，增加可读性
+	if (!m_canTrade)
+	{
+		return ObserveTime::COUNT;
+	}
+	
+	// 第二步：如果挂买时间等于直买时间，直接执行直买
+	if (m_hangBuyObserveTime == m_directBuyObserveTime)
+	{
+		// 如果当前是满仓
+		if (m_import.m_isFull)
+		{
+			// 当前价已经到了割肉价
+			if (m_directBuyPrice <= cutPrice())
+			{
+				updateSellParam(cutPrice(), m_directBuyObserveTime, true);
+				m_spFund->sellAllForT(stock, cutPrice(), m_date, m_directBuyObserveTime);
+			}
+			else
+			{
+				updateBuyParam(m_directBuyPrice, m_directBuyObserveTime, false);
+			}
+			//updateBuyParam(m_directBuyPrice, m_directBuyObserveTime, false);
+		}
+		// 当前是空仓
+		else
+		{
+			updateBuyParam(m_directBuyPrice, m_directBuyObserveTime, true);
+			m_spFund->buyAll(stock, m_directBuyPrice, m_date, m_directBuyObserveTime);
+		}
+		return m_directBuyObserveTime;
+	}
+
+	ObserveTime trade = ObserveTime::COUNT;
+
+	// 第四步：从挂买时间开始逐段检查
+	ObserveTime current = m_hangBuyObserveTime;
+
+	while ((int32_t)current < (int32_t)m_directBuyObserveTime)
 	{
 		// 第五步：计算下一个时间点
 		ObserveTime next = (ObserveTime)((int32_t)current + 1);
 
-		// 第六步：获取从挂买时间到next的最低价和最高价（累积检查）
-		int32_t minPrice = getMinPrice(dayInfo, hangBuyObserveTime, next);
-		int32_t maxPrice = getMaxPrice(dayInfo, hangBuyObserveTime, next);
-
-		// 第七步：判断是否触发挂买或反追
-		bool hitBuy = (minPrice <= hangBuyPrice);
-		bool hitChase = (maxPrice >= chasePrice);
-
-		// 第八步：处理反追+挂买同时触发
-		if (hitChase && hitBuy)
+		// 检查并买入
+		ObserveTime check = checkBuy(stock, dayInfo, current);
+		if (check != ObserveTime::COUNT)
 		{
-			int32_t currentPrice = getCurrentPrice(dayInfo, current);
-			int32_t nextPrice = getCurrentPrice(dayInfo, next);
-
-			if (nextPrice > currentPrice) // 先降再升：优先挂买
-			{
-				if (realTrade)
-				{
-					m_spFund->buyAll(stock, hangBuyPrice, date, next);
-				}
-				updateBuyParam(hangBuyPrice, next, realTrade);
-			}
-			else // 先升再降：优先反追
-			{
-				if (realTrade)
-				{
-					m_spFund->buyAll(stock, chasePrice, date, next);
-				}
-				updateBuyParam(chasePrice, next, realTrade);
-				m_operate = HOLD;
-			}
-			return next;
-		}
-		// 第九步：仅触发反追
-		else if (hitChase)
-		{
-			if (realTrade)
-			{
-				m_spFund->buyAll(stock, chasePrice, date, next);
-			}
-			updateBuyParam(chasePrice, next, realTrade);
-			m_operate = HOLD;
-			return next;
-		}
-		// 第十步：仅触发挂买
-		else if (hitBuy)
-		{
-			if (realTrade)
-			{
-				m_spFund->buyAll(stock, hangBuyPrice, date, next);
-			}
-			updateBuyParam(hangBuyPrice, next, realTrade);
-			return next;
+			trade = check;
 		}
 
 		// 第十一步：未触发任何操作，继续检查下一段
 		current = next;
 	}
 
-	// 第十二步：未在挂买期间买入，使用直买价强制买入
-	if (realTrade)
+	// 第十二步：未在挂买期间买入，之前出现了割肉
+	if (m_import.m_operate == GIVE_UP)
 	{
-		m_spFund->buyAll(stock, directBuyPrice, date, directBuyObserveTime);
+		//目前是满仓，不可能出现
+		if (m_import.m_isFull)
+		{
+			RCSend("hangToDirectBuy GIVE_UP");
+			return trade;
+		}
+		// 目前是空仓
+		else
+		{
+			// 只有直买价触发反追条件才会重新购买
+			if (m_directBuyPrice >= chasePrice())
+			{
+				updateBuyParam(m_directBuyPrice, m_directBuyObserveTime, true);
+				m_spFund->buyAll(stock, m_directBuyPrice, m_date, m_directBuyObserveTime);
+				return m_directBuyObserveTime;
+			}
+			// 直买价达不到新的反追价则还是按照原本的交易时间返回
+			return trade;
+		}
 	}
-	updateBuyParam(directBuyPrice, directBuyObserveTime, realTrade);
-	// 第十三步：直买后检查是否触发反追条件
-	if (directBuyPrice >= chasePrice)
+	// OPERATE或者HOLD
+	else
 	{
-		m_operate = HOLD;
+		// 目前是满仓
+		if (m_import.m_isFull)
+		{
+			// 已经在之前更新过了，要以之前的为准，不会在这里继续更新
+			if (m_isUpdateBuyParam)
+			{
+				return trade;
+			}
+			// 当前价已经到了割肉价
+			if (m_directBuyPrice <= cutPrice())
+			{
+				updateSellParam(cutPrice(), m_directBuyObserveTime, true);
+				m_spFund->sellAllForT(stock, cutPrice(), m_date, m_directBuyObserveTime);
+			}
+			else
+			{
+				// 之前没有更新过，说明挂买价没达到
+				updateBuyParam(m_directBuyPrice, m_directBuyObserveTime, false);
+			}
+			//updateBuyParam(m_directBuyPrice, m_directBuyObserveTime, false);
+		}
+		// 目前是空仓
+		else
+		{
+			updateBuyParam(m_directBuyPrice, m_directBuyObserveTime, true);
+			m_spFund->buyAll(stock, m_directBuyPrice, m_date, m_directBuyObserveTime);
+		}
+		return m_directBuyObserveTime;
 	}
-
-	return directBuyObserveTime;
 }
 
-void WaveStrategy::updateSellParam(int32_t price, ObserveTime time, bool realTrade)
+ObserveTime WaveStrategy::checkBuy(const std::string& stock, const std::vector<int32_t>& dayInfo, ObserveTime current)
 {
-	if (realTrade)
+	if (!m_canTrade)
 	{
-		m_virtualSellPrice = price;
-		m_virtualSellObserveTime = time;
-		m_realSellPrice = price;
-		m_isFull = false;
-		// 注意：不重置m_isCurrentDayBuy，因为A股当天买入后不能卖出
+		return ObserveTime::COUNT;
 	}
-	else if (price < m_virtualSellPrice)
+
+	// 第五步：计算下一个时间点
+	ObserveTime next = (ObserveTime)((int32_t)current + 1);
+
+	// 第六步：获取从挂买时间到next的最低价和最高价（累积检查）
+	int32_t minPrice = getMinPrice(dayInfo, m_hangBuyObserveTime, next);
+	int32_t maxPrice = getMaxPrice(dayInfo, m_hangBuyObserveTime, next);
+	int32_t currentPrice = getCurrentPrice(dayInfo, current);
+	int32_t nextPrice = getCurrentPrice(dayInfo, next);
+
+	// 第七步：判断是否触发挂买或反追
+	bool hitBuy = (minPrice <= m_hangBuyPrice);
+	bool hitChase = (maxPrice >= chasePrice());
+
+	// 说明在上一轮出现了割肉操作
+	if (m_import.m_operate == GIVE_UP)
 	{
-		if (m_virtualSellPrice == 0)
+		// 除非达到反追线否则不买入
+		if (hitChase)
+		{
+			updateBuyParam(chasePrice(), next, true);
+			m_spFund->buyAll(stock, chasePrice(), m_date, next);
+			return next;
+		}
+		return ObserveTime::COUNT;
+	}
+
+	// OPERATE或者HOLD
+	if (m_import.m_isFull)
+	{
+		// 触发割肉
+		if (minPrice <= cutPrice())
+		{
+			updateSellParam(cutPrice(), next, true);
+			m_spFund->sellAllForT(stock, cutPrice(), m_date, next);
+
+			// 先降再升：割肉后反追
+			if (nextPrice > currentPrice)
+			{
+				// 需要检查下一个时间点的当前价是否达到反追价
+				if (nextPrice >= chasePrice() && maxPrice >= chasePrice())
+				{
+					updateBuyParam(chasePrice(), next, true);
+					m_spFund->buyAll(stock, chasePrice(), m_date, next);
+				}
+			}
+			return next;
+		}
+		else if (hitBuy)
+		{
+			updateBuyParam(m_hangBuyPrice, next, false);
+			return next;
+		}
+	}
+	// 目前是空仓
+	else
+	{
+		// 第八步：处理反追+挂买同时触发
+		if (hitChase && hitBuy)
+		{
+			// 先降再升：优先挂买
+			if (nextPrice > currentPrice)
+			{
+				updateBuyParam(m_hangBuyPrice, next, true);
+				m_spFund->buyAll(stock, m_hangBuyPrice, m_date, next);
+			}
+			// 先升再降：优先反追
+			else
+			{
+				updateBuyParam(chasePrice(), next, true);
+				m_spFund->buyAll(stock, chasePrice(), m_date, next);
+			}
+			return next;
+		}
+		// 第九步：仅触发反追
+		else if (hitChase)
+		{
+			updateBuyParam(chasePrice(), next, true);
+			m_spFund->buyAll(stock, chasePrice(), m_date, next);
+			return next;
+		}
+		// 第十步：仅触发挂买
+		else if (hitBuy)
+		{
+			updateBuyParam(m_hangBuyPrice, next, true);
+			m_spFund->buyAll(stock, m_hangBuyPrice, m_date, next);
+			return next;
+		}
+	}
+	return ObserveTime::COUNT;
+}
+
+void WaveStrategy::updateSellParam(int32_t price, ObserveTime time, bool isRealTrade)
+{
+	if (m_isUpdateSellParam)
+	{
+		return;
+	}
+	m_isUpdateSellParam = true;
+	if (isRealTrade)
+	{
+		m_import.m_virtualSellPrice = price;
+		m_import.m_virtualSellObserveTime = time;
+		m_import.m_realSellPrice = price;
+		m_import.m_isFull = false;
+		m_strategyLog.push_back(CStringManager::Format("在%d %s 执行%s卖出，卖出价：%s", m_date,
+			Util::observeTimeToWatchString(time), (price <= cutPrice() ? "割肉" : ""),
+			(BigNumber(price) / 100.0).toPrec(2).toString().c_str()));
+		if (price <= cutPrice())
+		{
+			++m_tradeCount[3];
+		}
+		else
+		{
+			++m_tradeCount[1];
+		}
+	}
+	else if (price < m_import.m_virtualSellPrice)
+	{
+		if (m_import.m_virtualSellPrice == 0)
 		{
 			RCSend("警告: 虚拟卖出价格为0，可能未初始化");
 		}
-		m_virtualSellPrice = price;
-		m_virtualSellObserveTime = time;
+		m_import.m_virtualSellPrice = price;
+		m_import.m_virtualSellObserveTime = time;
+		m_strategyLog.push_back(CStringManager::Format("在%d %s 更新虚拟卖价，卖出价：%s", m_date,
+			Util::observeTimeToWatchString(time),
+			(BigNumber(price) / 100.0).toPrec(2).toString().c_str()));
+	}
+	if (price <= cutPrice())
+	{
+		m_import.m_operate = GIVE_UP;
 	}
 }
 
-void WaveStrategy::updateBuyParam(int32_t price, ObserveTime time, bool realTrade)
+void WaveStrategy::updateBuyParam(int32_t price, ObserveTime time, bool isRealTrade)
 {
-	if (realTrade)
+	if (m_isUpdateBuyParam)
 	{
-		m_virtualBuyPrice = price;
-		m_virtualBuyObserveTime = time;
-		m_realBuyPrice = price;
-		m_isFull = true;
-		m_isCurrentDayBuy = true;
+		return;
 	}
-	else if (price > m_virtualBuyPrice)
+	m_isUpdateBuyParam = true;
+	if (isRealTrade)
 	{
-		if (m_virtualBuyPrice == 0)
+		m_import.m_virtualBuyPrice = price;
+		m_import.m_virtualBuyObserveTime = time;
+		m_import.m_realBuyPrice = price;
+		m_import.m_isFull = true;
+		m_canTrade = false;
+		m_strategyLog.push_back(CStringManager::Format("在%d %s 执行%s买入，买入价：%s", m_date,
+			Util::observeTimeToWatchString(time), (price >= chasePrice() ? "反追" : ""),
+			(BigNumber(price) / 100.0).toPrec(2).toString().c_str()));
+		if (price >= chasePrice())
+		{
+			++m_tradeCount[2];
+		}
+		else
+		{
+			++m_tradeCount[0];
+		}
+	}
+	else if (price > m_import.m_virtualBuyPrice)
+	{
+		if (m_import.m_virtualBuyPrice == 0)
 		{
 			RCSend("警告: 虚拟买入价格为0，可能未初始化");
 		}
-		m_virtualBuyPrice = price;
-		m_virtualBuyObserveTime = time;
+		m_import.m_virtualBuyPrice = price;
+		m_import.m_virtualBuyObserveTime = time;
+		m_strategyLog.push_back(CStringManager::Format("在%d %s 更新虚拟买价，买入价：%s", m_date,
+			Util::observeTimeToWatchString(time),
+			(BigNumber(price) / 100.0).toPrec(2).toString().c_str()));
 	}
+	if (price >= chasePrice())
+	{
+		m_import.m_operate = HOLD;
+	}
+}
+
+int32_t WaveStrategy::chasePrice()
+{
+	return m_import.m_virtualSellPrice + m_chaseCent;
+}
+
+int32_t WaveStrategy::cutPrice()
+{
+	return m_import.m_virtualBuyPrice - m_cutCent;
 }

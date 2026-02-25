@@ -54,8 +54,9 @@ public:
 
 	/** 是否显示结果
 	@param [in] isShowResult 是否显示结果
+	@param [in] isShowTradeLog 是否展示交易记录日志
 	*/
-	void setParam(bool isShowResult);
+	void setParam(bool isShowResult, bool isShowTradeLog);
 
 	/** 开始竞赛
 	@param [in] config 竞赛配置
@@ -86,6 +87,8 @@ private:
 	uint32_t m_competitionThreadId;
 	// 是否显示结果
 	bool m_isShowResult;
+	// 是否展示交易记录日志
+	bool m_isShowTradeLog;
 	// 所有竞赛任务参数
 	std::map<int32_t, CompetitionConfig> m_competitionConfigMap;
 	// 竞赛类

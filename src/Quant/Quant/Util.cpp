@@ -563,6 +563,10 @@ uint32_t Util::calcFutureEndTime(uint32_t beginTime, uint32_t endTime)
 	Cini ini(g_config.m_currentExePath + "600975.ini", true);
 	std::vector<std::string> allSection = ini.getAllSection();
 	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
+	if (tradingDays.empty())
+	{
+		return endTime;
+	}
 	auto itBegin = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)beginTime);
 	auto itEnd = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)endTime);
 	if (itBegin == tradingDays.end() || itEnd == tradingDays.end())
@@ -584,6 +588,10 @@ uint32_t Util::calcHistoryBeginTime(uint32_t beginTime, uint32_t endTime)
 	Cini ini(g_config.m_currentExePath + "600975.ini", true);
 	std::vector<std::string> allSection = ini.getAllSection();
 	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
+	if (tradingDays.empty())
+	{
+		return beginTime;
+	}
 	auto itBegin = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)beginTime);
 	auto itEnd = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)endTime);
 	if (itBegin == tradingDays.end() || itEnd == tradingDays.end())
@@ -598,6 +606,56 @@ uint32_t Util::calcHistoryBeginTime(uint32_t beginTime, uint32_t endTime)
 		return beginTime;
 	}
 	return (uint32_t)(tradingDays[preBeginIndex]);
+}
+
+uint32_t Util::calcFutureTime(uint32_t time, uint32_t dayCount)
+{
+	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	std::vector<std::string> allSection = ini.getAllSection();
+	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
+	if (tradingDays.empty())
+	{
+		return time;
+	}
+	auto itTime = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)time);
+	if (itTime == tradingDays.end())
+	{
+		return tradingDays[tradingDays.size() - 1];
+	}
+	while (dayCount-- != 0)
+	{
+		++itTime;
+		if (itTime == tradingDays.end())
+		{
+			return tradingDays[tradingDays.size() - 1];
+		}
+	}
+	return *itTime;
+}
+
+uint32_t Util::calcHistoryTime(uint32_t time, uint32_t dayCount)
+{
+	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	std::vector<std::string> allSection = ini.getAllSection();
+	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
+	if (tradingDays.empty())
+	{
+		return time;
+	}
+	auto itTime = std::find(tradingDays.begin(), tradingDays.end(), (int32_t)time);
+	if (itTime == tradingDays.end())
+	{
+		return tradingDays[0];
+	}
+	while (dayCount-- != 0)
+	{
+		--itTime;
+		if (itTime == tradingDays.begin())
+		{
+			return tradingDays[0];
+		}
+	}
+	return *itTime;
 }
 
 std::vector<std::vector<int32_t>> Util::combinatoricsToAllParam(const std::vector<std::vector<int32_t>>& allParam)
@@ -660,8 +718,8 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Uti
 		{
 			std::shared_ptr<StrategyResult> spVerifyStrategyResult = vecVerifyStrategyResult[verifyStrategyIndex];
 			std::shared_ptr<Strategy> spStrategy =
-				QuantStrategyManager::instance().createStrategy(spVerifyStrategyResult->strategyMode);
-			std::string paramStr = spStrategy->describeParam(spVerifyStrategyResult->params);
+				QuantStrategyManager::instance().createStrategy(spVerifyStrategyResult->m_strategyMode);
+			std::string paramStr = spStrategy->describeParam(spVerifyStrategyResult->m_params);
 			paramVerifyMap[paramStr] = spVerifyStrategyResult;
 		}
 	}
@@ -680,8 +738,8 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Uti
 			}
 
 			std::shared_ptr<Strategy> spStrategy =
-				QuantStrategyManager::instance().createStrategy(strategyTable[0]->strategyMode);
-			std::string targetParamStr = spStrategy->describeParam(strategyTable[0]->params);
+				QuantStrategyManager::instance().createStrategy(strategyTable[0]->m_strategyMode);
+			std::string targetParamStr = spStrategy->describeParam(strategyTable[0]->m_params);
 
 			auto itVerify = paramVerifyMap.find(targetParamStr);
 			if (itVerify == paramVerifyMap.end())

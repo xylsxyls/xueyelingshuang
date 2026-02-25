@@ -18,7 +18,7 @@ void StrategyResultTask::DoTask()
 		{
 			std::shared_ptr<StrategyResult> strategyResult;
 			m_resultQueue->pop(&strategyResult);
-			(*m_resultMap)[strategyResult->totalReturn].push_back(strategyResult);
+			(*m_resultMap)[strategyResult->m_totalReturn].push_back(strategyResult);
 		}
 	}
 }

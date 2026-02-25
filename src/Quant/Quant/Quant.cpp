@@ -37,6 +37,7 @@
 #include "VerifyTask.h"
 #include "VerifyManager.h"
 #include "StrategyPlotWidget.h"
+#include "RunManager.h"
 
 Quant::Quant(QWidget* parent):
 	QMainWindow(parent),
@@ -53,6 +54,7 @@ Quant::Quant(QWidget* parent):
 	m_analyze = new COriginalButton(this);
 	m_collect = new COriginalButton(this);
 	m_verify = new COriginalButton(this);
+	m_run = new COriginalButton(this);
 	init();
 }
 
@@ -147,6 +149,10 @@ void Quant::init()
 	m_verify->setBkgColor(normal, hover, passed, disable);
 	QObject::connect(m_verify, &COriginalButton::clicked, this, &Quant::onVerifyClicked);
 
+	m_run->setText(QStringLiteral("run"));
+	m_run->setBkgColor(normal, hover, passed, disable);
+	QObject::connect(m_run, &COriginalButton::clicked, this, &Quant::onRunClicked);
+
 	QObject::connect(this, &Quant::historyFutureSignal, this, &Quant::onHistoryFutureSignal, Qt::QueuedConnection);
 
 	StockCharge::instance().init("0.00016", 5);
@@ -156,6 +162,9 @@ void Quant::init()
 
 	// 初始化股票管理器
 	StockManager::instance().init();
+
+	// 初始化实测模拟器
+	RunManager::instance().init();
 
 	// 初始化展示类
 	m_display = std::make_shared<Display>();
@@ -189,6 +198,7 @@ void Quant::resizeEvent(QResizeEvent* eve)
 	vecButton.push_back(m_analyze);
 	vecButton.push_back(m_collect);
 	vecButton.push_back(m_verify);
+	vecButton.push_back(m_run);
 
 	int32_t cowCount = 4;
 	int32_t width = 140;
@@ -446,8 +456,8 @@ void Quant::onProfitClicked()
 	g_config.m_completeTaskCount = 0;
 	g_config.m_ignoreTaskCount = 0;
 
-	int32_t profitBeginTime = 20250815;
-	int32_t profitEndTime = 20250829;
+	int32_t profitBeginTime = 20250321;
+	int32_t profitEndTime = 20250821;
 	std::string stock = "600975";
 
 	std::vector<std::vector<int32_t>> result =
@@ -538,12 +548,12 @@ void Quant::onProfitClicked()
 		std::vector<std::vector<int32_t>> params =
 		{
 			//10:00, 11:20, 14:00, 14:10, 10:50, 14:00, 0, -2, 7, 7, 1
-			{ (int32_t)ObserveTime::TIME1000 },
-			{ (int32_t)ObserveTime::TIME1120 },
+			{ (int32_t)ObserveTime::TIME1040 },
+			{ (int32_t)ObserveTime::TIME1100 },
+			{ (int32_t)ObserveTime::TIME1350 },
 			{ (int32_t)ObserveTime::TIME1400 },
-			{ (int32_t)ObserveTime::TIME1410 },
-			{ (int32_t)ObserveTime::TIME1050 },
-			{ (int32_t)ObserveTime::TIME1400 },
+			{ (int32_t)ObserveTime::TIME1100 },
+			{ (int32_t)ObserveTime::TIME1350 },
 			{ 0 },
 			{ -2 },
 			{ 7 },
@@ -609,7 +619,7 @@ void Quant::onProfitClicked()
 
 		CompetitionManager::instance().addCompetition(StrategyMode::WAVE, config);
 	}
-	CompetitionManager::instance().setParam(true);
+	CompetitionManager::instance().setParam(true, true);
 
 	// 开始竞赛
 	if (!CompetitionManager::instance().startCompetition())
@@ -822,6 +832,14 @@ void Quant::onHistoryFutureSignal()
 	widget->show();
 }
 
+void Quant::onRunClicked()
+{
+	int32_t profitBeginTime = 20250321;
+	int32_t profitEndTime = 20250821;
+	std::vector<std::string> stocks = { "600975" };
+	RunManager::instance().simulateRun(profitBeginTime, profitEndTime, stocks, g_config.m_initialFund);
+}
+
 void Quant::startProgressMonitoring()
 {
 	// 创建一个定时器来监控竞赛进度
@@ -920,10 +938,10 @@ void Quant::displayAllStrategies()
 		frameLayout->addWidget(rankLabel);
 
 		QString paramsText = "参数: ";
-		for (size_t j = 0; j < result.rankedResults[i].params.size(); ++j)
+		for (size_t j = 0; j < result.rankedResults[i].m_params.size(); ++j)
 		{
-			paramsText += QString::number(result.rankedResults[i].params[j]);
-			if (j < result.rankedResults[i].params.size() - 1)
+			paramsText += QString::number(result.rankedResults[i].m_params[j]);
+			if (j < result.rankedResults[i].m_params.size() - 1)
 			{
 				paramsText += ", ";
 			}
@@ -935,23 +953,23 @@ void Quant::displayAllStrategies()
 		QGridLayout* metricsLayout = new QGridLayout();
 
 		QLabel* returnLabel = new QLabel(
-			QString("收益率: %1%").arg((double)result.rankedResults[i].totalReturn * 100, 0, 'f', 2),
+			QString("收益率: %1%").arg((double)result.rankedResults[i].m_totalReturn * 100, 0, 'f', 2),
 			strategyFrame);
 		QLabel* annualLabel = new QLabel(
-			QString("年化: %1%").arg(result.rankedResults[i].annualReturn.toDouble() * 100, 0, 'f', 2),
+			QString("年化: %1%").arg(result.rankedResults[i].m_annualReturn.toDouble() * 100, 0, 'f', 2),
 			strategyFrame);
 		QLabel* drawdownLabel = new QLabel(
-			QString("回撤: %1%").arg(result.rankedResults[i].maxDrawdown.toDouble() * 100, 0, 'f', 2),
+			QString("回撤: %1%").arg(result.rankedResults[i].m_maxDrawdown.toDouble() * 100, 0, 'f', 2),
 			strategyFrame);
 		QLabel* winRateLabel = new QLabel(
-			QString("胜率: %1%").arg(result.rankedResults[i].winRate.toDouble() * 100, 0, 'f', 2),
+			QString("胜率: %1%").arg(result.rankedResults[i].m_winRate.toDouble() * 100, 0, 'f', 2),
 			strategyFrame);
 		QLabel* healthLabel = new QLabel(
-			QString("健康值: %1").arg(result.rankedResults[i].healthScore.toDouble(), 0, 'f', 1),
+			QString("健康值: %1").arg(result.rankedResults[i].m_healthScore.toDouble(), 0, 'f', 1),
 			strategyFrame);
 
 		// 设置颜色
-		if (result.rankedResults[i].totalReturn >= 0)
+		if (result.rankedResults[i].m_totalReturn >= 0)
 		{
 			returnLabel->setStyleSheet("color: green; font-weight: bold;");
 		}
@@ -960,11 +978,11 @@ void Quant::displayAllStrategies()
 			returnLabel->setStyleSheet("color: red; font-weight: bold;");
 		}
 
-		if (result.rankedResults[i].healthScore.toDouble() >= 80)
+		if (result.rankedResults[i].m_healthScore.toDouble() >= 80)
 		{
 			healthLabel->setStyleSheet("color: green; font-weight: bold;");
 		}
-		else if (result.rankedResults[i].healthScore.toDouble() >= 60)
+		else if (result.rankedResults[i].m_healthScore.toDouble() >= 60)
 		{
 			healthLabel->setStyleSheet("color: orange; font-weight: bold;");
 		}
