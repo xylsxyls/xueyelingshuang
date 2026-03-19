@@ -1,4 +1,4 @@
-#include "ChooseComboBox.h"
+﻿#include "ChooseComboBox.h"
 #include "ListWidget.h"
 #include "Label.h"
 #include <QStylePainter>

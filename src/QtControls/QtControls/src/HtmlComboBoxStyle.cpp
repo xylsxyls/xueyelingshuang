@@ -1,4 +1,4 @@
-#include "HtmlComboBoxStyle.h"
+﻿#include "HtmlComboBoxStyle.h"
 #include <QPainter>
 #include "HtmlComboBox.h"
 #include "CGeneralStyle.h"

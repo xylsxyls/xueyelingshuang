@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QtWidgets/QLabel>
 #include "ControlShow.h"
 #include "ControlFont.h"
@@ -7,7 +7,7 @@
 #include "ControlBackground.h"
 #include "QtControlsMacro.h"
 
-/** ×ÖÌõ»òÍ¼Æ¬¿Ø¼ş£¬¸Ã¿Ø¼şµÄsetBackgroundÏà¹Øº¯ÊıÃ»ÓĞ·Ö¸îĞ§¹û£¬±ØĞëÊ¹ÓÃsetBorderÏà¹Øº¯Êı
+/** å­—æ¡æˆ–å›¾ç‰‡æ§ä»¶ï¼Œè¯¥æ§ä»¶çš„setBackgroundç›¸å…³å‡½æ•°æ²¡æœ‰åˆ†å‰²æ•ˆæœï¼Œå¿…é¡»ä½¿ç”¨setBorderç›¸å…³å‡½æ•°
 */
 class QtControlsAPI Label :
 	public ControlShow < QLabel >,
@@ -18,40 +18,40 @@ class QtControlsAPI Label :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	Label(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~Label();
 
 public:
-	/** ÉèÖÃĞĞ¾à
-	@param [in] lineHeight ĞĞ¾à
+	/** è®¾ç½®è¡Œè·
+	@param [in] lineHeight è¡Œè·
 	*/
 	void setLineHeight(qint32 lineHeight);
 
-	/** ÉèÖÃË«»÷È«ÆÁ£¬Ò»µ©ÉèÖÃ²»¿ÉÍË»Ø
+	/** è®¾ç½®åŒå‡»å…¨å±ï¼Œä¸€æ—¦è®¾ç½®ä¸å¯é€€å›
 	*/
 	void setDoubleClickFullScreen();
 
 Q_SIGNALS:
-	/** ×ó¼üµ¥»÷·¢ËÍĞÅºÅ
+	/** å·¦é”®å•å‡»å‘é€ä¿¡å·
 	*/
 	void leftClicked();
 
-	/** ÓÒ¼üµ¥»÷·¢ËÍĞÅºÅ
+	/** å³é”®å•å‡»å‘é€ä¿¡å·
 	*/
 	void rightClicked();
 
-	/** Ë«»÷Ö®ºó·¢ËÍĞÅºÅ
+	/** åŒå‡»ä¹‹åå‘é€ä¿¡å·
 	*/
 	void doubleClicked();
 
-	/** Êó±êÒÆ¶¯ĞÅºÅ
-	@param [in] Ïà¶ÔÓÚ¸¸´°¿ÚµÄÊó±êÎ»ÖÃ
+	/** é¼ æ ‡ç§»åŠ¨ä¿¡å·
+	@param [in] ç›¸å¯¹äºçˆ¶çª—å£çš„é¼ æ ‡ä½ç½®
 	*/
 	void mouseMoved(QPoint point);
 
@@ -63,10 +63,10 @@ protected:
 	void onDoubleClicked();
 
 private:
-	//µ±Ç°ÊÇ·ñÈ«ÆÁ
+	//å½“å‰æ˜¯å¦å…¨å±
 	bool m_full;
-	//ÊÇ·ñÒÑ¾­ÉèÖÃ¹ıº¬ÓĞË«»÷È«ÆÁ¹¦ÄÜ
+	//æ˜¯å¦å·²ç»è®¾ç½®è¿‡å«æœ‰åŒå‡»å…¨å±åŠŸèƒ½
 	bool m_hasSetFullScreen;
-	//È«ÆÁÖ®Ç°µÄÎ»ÖÃ
+	//å…¨å±ä¹‹å‰çš„ä½ç½®
 	QRect m_rect;
 };

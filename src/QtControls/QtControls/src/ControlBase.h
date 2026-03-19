@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QColor>
 #include "QtControlsMacro.h"
 
@@ -6,71 +6,71 @@ class QShowEvent;
 class QWidget;
 template <class QBase>
 class ControlShow;
-/** ¿Ø¼şÍ¨ÓÃÉèÖÃÏà¹Ø¹¦ÄÜ
+/** æ§ä»¶é€šç”¨è®¾ç½®ç›¸å…³åŠŸèƒ½
 */
 template <class QBase>
 class ControlBase
 {
 protected:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBase();
 
 protected:
-	/** ÉèÖÃÏÔÊ¾ÀàÖ¸Õë
-	@param [in] show ÏÔÊ¾ÀàÖ¸Õë
+	/** è®¾ç½®æ˜¾ç¤ºç±»æŒ‡é’ˆ
+	@param [in] show æ˜¾ç¤ºç±»æŒ‡é’ˆ
 	*/
 	void setControlShow(ControlShow<QBase>* show);
 
-	/** ÉèÖÃ×ÖÌå
-	@param [in] fontName ×ÖÌåÃû
-	@param [in] isItem ¸ÃÏîÊÇ·ñÎª½Úµã
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å­—ä½“
+	@param [in] fontName å­—ä½“å
+	@param [in] isItem è¯¥é¡¹æ˜¯å¦ä¸ºèŠ‚ç‚¹
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setFontFace(const std::wstring& fontName, bool isItem, bool rePaint);
 
-	/** ÉèÖÃÕûĞÎ¶ÔÓ¦Öµ
-	@param [in] keyWord ¹Ø¼ü´Ê
-	@param [in] valuePx ÕûĞÎÖµ£¬ºóÃæ»á¼ÓÉÏpx
-	@param [in] isItem ¸ÃÏîÊÇ·ñÎª½Úµã
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ•´å½¢å¯¹åº”å€¼
+	@param [in] keyWord å…³é”®è¯
+	@param [in] valuePx æ•´å½¢å€¼ï¼Œåé¢ä¼šåŠ ä¸Špx
+	@param [in] isItem è¯¥é¡¹æ˜¯å¦ä¸ºèŠ‚ç‚¹
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setPxValue(const std::wstring& keyWord, qint32 valuePx, bool isItem, bool rePaint);
 
-	/** ÉèÖÃÏßÌõ¶ÔÓ¦Öµ¼Ósolid
-	@param [in] keyWord ¹Ø¼ü´Ê
-	@param [in] valuePx ÕûĞÎÖµ£¬ºóÃæ»á¼ÓÉÏpx
-	@param [in] isItem ¸ÃÏîÊÇ·ñÎª½Úµã
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®çº¿æ¡å¯¹åº”å€¼åŠ solid
+	@param [in] keyWord å…³é”®è¯
+	@param [in] valuePx æ•´å½¢å€¼ï¼Œåé¢ä¼šåŠ ä¸Špx
+	@param [in] isItem è¯¥é¡¹æ˜¯å¦ä¸ºèŠ‚ç‚¹
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setPxSolidValue(const std::wstring& keyWord, qint32 valuePxSolid, bool isItem, bool rePaint);
 
-	/** ÉèÖÃ¶ÔÓ¦Öµ
-	@param [in] keyWord ¹Ø¼ü´Ê
-	@param [in] value Öµ
-	@param [in] isItem ¸ÃÏîÊÇ·ñÎª½Úµã
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å¯¹åº”å€¼
+	@param [in] keyWord å…³é”®è¯
+	@param [in] value å€¼
+	@param [in] isItem è¯¥é¡¹æ˜¯å¦ä¸ºèŠ‚ç‚¹
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setKeyValue(const std::wstring& keyWord, const std::wstring& value, bool isItem, bool rePaint);
 
-	/** ÉèÖÃÑÕÉ«
-	@param [in] colorStateMap ÑÕÉ«¼¯ºÏ
-	@param [in] keyWord ¹Ø¼ü´Ê
-	@param [in] isItem ¸ÃÏîÊÇ·ñÎª½Úµã
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®é¢œè‰²
+	@param [in] colorStateMap é¢œè‰²é›†åˆ
+	@param [in] keyWord å…³é”®è¯
+	@param [in] isItem è¯¥é¡¹æ˜¯å¦ä¸ºèŠ‚ç‚¹
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setColorStateMap(const std::map<qint32, std::map<qint32, QColor>>& colorStateMap,
 						  const std::wstring& keyWord,
 						  bool isItem,
 						  bool rePaint);
 
-	/** ÉèÖÃÍ¼Æ¬
-	@param [in] imageStateMap Í¼Æ¬¼¯ºÏ
-	@param [in] imagePath Â·¾¶
-	@param [in] stateCount ×´Ì¬¸öÊı
-	@param [in] keyWord ¹Ø¼ü´Ê
-	@param [in] isItem ¸ÃÏîÊÇ·ñÎª½Úµã
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å›¾ç‰‡
+	@param [in] imageStateMap å›¾ç‰‡é›†åˆ
+	@param [in] imagePath è·¯å¾„
+	@param [in] stateCount çŠ¶æ€ä¸ªæ•°
+	@param [in] keyWord å…³é”®è¯
+	@param [in] isItem è¯¥é¡¹æ˜¯å¦ä¸ºèŠ‚ç‚¹
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setImageStateMap(const std::map<qint32, std::map<qint32, qint32>>& imageStateMap,
 						  const std::wstring& imagePath,
@@ -79,13 +79,13 @@ protected:
 						  bool isItem,
 						  bool rePaint);
 
-	/** ÉèÖÃÍ¼Æ¬
-	@param [in] imageStateMap Í¼Æ¬¼¯ºÏ
-	@param [in] imagePath Â·¾¶
-	@param [in] stateCount ×´Ì¬¸öÊı
-	@param [in] keyWord ¹Ø¼ü´Ê
-	@param [in] itemName ½ÚµãÃû
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å›¾ç‰‡
+	@param [in] imageStateMap å›¾ç‰‡é›†åˆ
+	@param [in] imagePath è·¯å¾„
+	@param [in] stateCount çŠ¶æ€ä¸ªæ•°
+	@param [in] keyWord å…³é”®è¯
+	@param [in] itemName èŠ‚ç‚¹å
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setImageStateMap(const std::map<qint32, std::map<qint32, qint32>>& imageStateMap,
 						  const std::wstring& imagePath,

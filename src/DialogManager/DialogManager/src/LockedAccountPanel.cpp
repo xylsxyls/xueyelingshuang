@@ -1,4 +1,4 @@
-#include "LockedAccountPanel.h"
+ï»¿#include "LockedAccountPanel.h"
 #include <QPainter>
 #include "QtControls/CGeneralStyle.h"
 #include "QtControls/CTreeViewEx.h"
@@ -7,7 +7,7 @@
 
 LockedAccountPanel::LockedAccountPanel(QWidget *parent)
     :QWidget(parent)
-    ,mName(QStringLiteral("±»·â½ûÕËºÅÁÐ±í"))
+    ,mName(QStringLiteral("è¢«å°ç¦è´¦å·åˆ—è¡¨"))
     ,mTreeView(new CTreeViewEx(this))
     ,mModel(new QStandardItemModel(this))
 {
@@ -18,10 +18,10 @@ LockedAccountPanel::LockedAccountPanel(QWidget *parent)
     mTreeView->setItemDelegate(tDelegate);
     mTreeView->header()->setDefaultAlignment(Qt::AlignCenter);
     mTreeView->header()->setStyleSheet(QStringLiteral("QHeaderView{border-top:1px solid #4a5980;}") +
-                                       QStringLiteral("QHeaderView::section{background-color:#36415f;height:28px; border:none; text-align: center;font-style: 14px 'Î¢ÈíÑÅºÚ'; color:#899ac7}"));
+                                       QStringLiteral("QHeaderView::section{background-color:#36415f;height:28px; border:none; text-align: center;font-style: 14px 'å¾®è½¯é›…é»‘'; color:#899ac7}"));
 
     QStringList labels;
-    labels << QStringLiteral("·âºÅÊ±¼ä") << QStringLiteral("·âºÅÔ­Òò") << QStringLiteral("·âºÅÌìÊý");
+    labels << QStringLiteral("å°å·æ—¶é—´") << QStringLiteral("å°å·åŽŸå› ") << QStringLiteral("å°å·å¤©æ•°");
     mModel->setHorizontalHeaderLabels(labels);
 
     LockedAccountItemList li;
@@ -29,7 +29,7 @@ LockedAccountPanel::LockedAccountPanel(QWidget *parent)
     {
         LockedAccountItem* litem = new LockedAccountItem;
         litem->setStartDate("2019-03-07 11:11:11");
-        litem->setReasion  (QStringLiteral("×Ô¼º±¬Õ¨ÁË"));
+        litem->setReasion  (QStringLiteral("è‡ªå·±çˆ†ç‚¸äº†"));
         litem->setDayCount (365);
         li << litem;
     }
@@ -81,7 +81,7 @@ void LockedAccountPanel::setLockedAccountItemList(const LockedAccountItemList &l
 {
     mModel->clear();
     QStringList labels;
-    labels << QStringLiteral("·âºÅÊ±¼ä") << QStringLiteral("·âºÅÔ­Òò") << QStringLiteral("·âºÅÌìÊý");
+    labels << QStringLiteral("å°å·æ—¶é—´") << QStringLiteral("å°å·åŽŸå› ") << QStringLiteral("å°å·å¤©æ•°");
     mModel->setHorizontalHeaderLabels(labels);
 
     for(int i = 0; i < li.count(); i++)
@@ -104,7 +104,7 @@ void LockedAccountPanel::clearLockedAccountItem()
 	mModel->clear();
 
 	QStringList labels;
-	labels << QStringLiteral("·âºÅÊ±¼ä") << QStringLiteral("·âºÅÔ­Òò") << QStringLiteral("·âºÅÌìÊý");
+	labels << QStringLiteral("å°å·æ—¶é—´") << QStringLiteral("å°å·åŽŸå› ") << QStringLiteral("å°å·å¤©æ•°");
 	mModel->setHorizontalHeaderLabels(labels);
 	
 	mTreeView->header()->resizeSection(0,170);

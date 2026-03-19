@@ -1,27 +1,27 @@
-#pragma once
+ï»¿#pragma once
 #include "ControlBase.h"
 #include "QtControlsMacro.h"
 
-/**************¸ÃÎÄ¼şµÄÀàÖ÷Òª¹ÜÀí±³¾°ÑÕÉ«Ïà¹Ø²¿·Ö**************/
+/**************è¯¥æ–‡ä»¶çš„ç±»ä¸»è¦ç®¡ç†èƒŒæ™¯é¢œè‰²ç›¸å…³éƒ¨åˆ†**************/
 
 template <class QBase>
 class ControlBackgroundForNormal : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBackgroundForNormal();
 
 public:
-	/** ÉèÖÃ±ß¿òÑÕÉ«
-	@param [in] color ³£Ì¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®è¾¹æ¡†é¢œè‰²
+	@param [in] color å¸¸æ€
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundColor(const QColor& color, bool rePaint = false);
 
-	/** ÉèÖÃ±ß¿òÍ¼Æ¬
-	@param [in] backgroundImgPath Í¼Æ¬Â·¾¶
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®è¾¹æ¡†å›¾ç‰‡
+	@param [in] backgroundImgPath å›¾ç‰‡è·¯å¾„
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath, bool rePaint = false);
 };
@@ -31,29 +31,29 @@ class ControlBackgroundForNormalHoverDisabled : virtual public ControlBase < QBa
 {
 
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBackgroundForNormalHoverDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundColor(const QColor& normalColor,
 							const QColor& hoverColor = QColor(0, 0, 0, 0),
 							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] backgroundImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] backgroundImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] backgroundImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] backgroundImgHover ĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] backgroundImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] backgroundImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] backgroundImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] backgroundImgHover æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath,
 							qint32 backgroundImgStateCount = 4,
@@ -67,29 +67,29 @@ template <class QBase>
 class ControlBackgroundForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBackgroundForNormalSelectedDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] selectedColor ĞüÍ£ÑÕÉ«£¨ÓÃÓÚlist£©
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] selectedColor æ‚¬åœé¢œè‰²ï¼ˆç”¨äºlistï¼‰
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundColor(const QColor& normalColor,
 							const QColor& selectedColor = QColor(0, 0, 0, 0),
 							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] backgroundImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] backgroundImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] backgroundImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] backgroundImgSelected ĞüÍ£Í¼Æ¬£¨ÓÃÓÚlist£©
-	@param [in] backgroundImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] backgroundImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] backgroundImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] backgroundImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] backgroundImgSelected æ‚¬åœå›¾ç‰‡ï¼ˆç”¨äºlistï¼‰
+	@param [in] backgroundImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath,
 							qint32 backgroundImgStateCount = 4,
@@ -103,17 +103,17 @@ template <class QBase>
 class ControlBackgroundForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBackgroundForNormalHoverPressedDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] pressedColor °´ÏÂÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] pressedColor æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundColor(const QColor& normalColor,
 							const QColor& hoverColor = QColor(0, 0, 0, 0),
@@ -121,14 +121,14 @@ public:
 							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] backgroundImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] backgroundImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] backgroundImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] backgroundImgHover ĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgPressed °´ÏÂÍ¼Æ¬
-	@param [in] backgroundImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] backgroundImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] backgroundImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] backgroundImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] backgroundImgHover æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgPressed æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] backgroundImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath,
 							qint32 backgroundImgStateCount = 4,
@@ -143,21 +143,21 @@ template <class QBase>
 class ControlBackgroundForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBackgroundForNormalHoverPressedDisabledAndCheck();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ·ÇÑ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ·ÇÑ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] pressedColor ·ÇÑ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] disabledColor ·ÇÑ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] normalCkColor Ñ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] hoverCkColor Ñ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] pressedCkColor Ñ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] disabledCkColor Ñ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor éé€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] hoverColor éé€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] pressedColor éé€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledColor éé€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] normalCkColor é€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] hoverCkColor é€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] pressedCkColor é€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledCkColor é€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundColor(const QColor& normalColor,
 							const QColor& hoverColor = QColor(0, 0, 0, 0),
@@ -169,18 +169,18 @@ public:
 							const QColor& disabledCkColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
-	/** ÉèÖÃ±³¾°Í¼Æ¬
-	@param [in] backgroundImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] backgroundImgStateCount Í¼Æ¬×İÏòÇĞ¸î¸öÊı
-	@param [in] backgroundImgNormal ·ÇÑ¡ÖĞ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾½«Í¼Æ¬×İÏò·Ö¸î4·İ»ò8·İ£¬Ñ¡×îÉÏÃæµÄµÚÒ»·İ
-	@param [in] backgroundImgHover ·ÇÑ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgPressed ·ÇÑ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] backgroundImgDisabled ·ÇÑ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] backgroundImgCkNormal Ñ¡ÖĞ³£Ì¬Í¼Æ¬
-	@param [in] backgroundImgCkHover Ñ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgCkPressed Ñ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] backgroundImgCkDisabled Ñ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯å›¾ç‰‡
+	@param [in] backgroundImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] backgroundImgStateCount å›¾ç‰‡çºµå‘åˆ‡å‰²ä¸ªæ•°
+	@param [in] backgroundImgNormal éé€‰ä¸­å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºå°†å›¾ç‰‡çºµå‘åˆ†å‰²4ä»½æˆ–8ä»½ï¼Œé€‰æœ€ä¸Šé¢çš„ç¬¬ä¸€ä»½
+	@param [in] backgroundImgHover éé€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgPressed éé€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] backgroundImgDisabled éé€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] backgroundImgCkNormal é€‰ä¸­å¸¸æ€å›¾ç‰‡
+	@param [in] backgroundImgCkHover é€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgCkPressed é€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] backgroundImgCkDisabled é€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBackgroundImage(const QString& backgroundImgPath,
 							qint32 backgroundImgStateCount = 8,
@@ -199,20 +199,20 @@ template <class QBase>
 class ControlItemBackgroundForNormal : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBackgroundForNormal();
 
 public:
-	/** ÉèÖÃ±ß¿òÑÕÉ«
-	@param [in] color ³£Ì¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®è¾¹æ¡†é¢œè‰²
+	@param [in] color å¸¸æ€
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundColor(const QColor& color, bool rePaint = false);
 
-	/** ÉèÖÃ±ß¿òÍ¼Æ¬
-	@param [in] backgroundImgPath Í¼Æ¬Â·¾¶
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®è¾¹æ¡†å›¾ç‰‡
+	@param [in] backgroundImgPath å›¾ç‰‡è·¯å¾„
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath, bool rePaint = false);
 };
@@ -221,29 +221,29 @@ template <class QBase>
 class ControlItemBackgroundForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBackgroundForNormalHoverDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundColor(const QColor& normalColor,
 								const QColor& hoverColor = QColor(0, 0, 0, 0),
 								const QColor& disabledColor = QColor(0, 0, 0, 0),
 								bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] backgroundImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] backgroundImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] backgroundImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] backgroundImgHover ĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] backgroundImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] backgroundImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] backgroundImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] backgroundImgHover æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath,
 								qint32 backgroundImgStateCount = 4,
@@ -257,29 +257,29 @@ template <class QBase>
 class ControlItemBackgroundForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBackgroundForNormalSelectedDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] selectedColor ĞüÍ£ÑÕÉ«£¨ÓÃÓÚlist£©
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] selectedColor æ‚¬åœé¢œè‰²ï¼ˆç”¨äºlistï¼‰
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundColor(const QColor& normalColor,
 								const QColor& selectedColor = QColor(0, 0, 0, 0),
 								const QColor& disabledColor = QColor(0, 0, 0, 0),
 								bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] backgroundImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] backgroundImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] backgroundImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] backgroundImgSelected ĞüÍ£Í¼Æ¬£¨ÓÃÓÚlist£©
-	@param [in] backgroundImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] backgroundImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] backgroundImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] backgroundImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] backgroundImgSelected æ‚¬åœå›¾ç‰‡ï¼ˆç”¨äºlistï¼‰
+	@param [in] backgroundImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath,
 								qint32 backgroundImgStateCount = 4,
@@ -293,17 +293,17 @@ template <class QBase>
 class ControlItemBackgroundForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBackgroundForNormalHoverPressedDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] pressedColor °´ÏÂÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] pressedColor æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundColor(const QColor& normalColor,
 								const QColor& hoverColor = QColor(0, 0, 0, 0),
@@ -311,14 +311,14 @@ public:
 								const QColor& disabledColor = QColor(0, 0, 0, 0),
 								bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] backgroundImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] backgroundImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] backgroundImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] backgroundImgHover ĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgPressed °´ÏÂÍ¼Æ¬
-	@param [in] backgroundImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] backgroundImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] backgroundImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] backgroundImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] backgroundImgHover æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgPressed æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] backgroundImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath,
 								qint32 backgroundImgStateCount = 4,
@@ -333,21 +333,21 @@ template <class QBase>
 class ControlItemBackgroundForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBackgroundForNormalHoverPressedDisabledAndCheck();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ·ÇÑ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ·ÇÑ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] pressedColor ·ÇÑ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] disabledColor ·ÇÑ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] normalCkColor Ñ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] hoverCkColor Ñ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] pressedCkColor Ñ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] disabledCkColor Ñ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor éé€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] hoverColor éé€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] pressedColor éé€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledColor éé€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] normalCkColor é€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] hoverCkColor é€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] pressedCkColor é€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledCkColor é€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundColor(const QColor& normalColor,
 								const QColor& hoverColor = QColor(0, 0, 0, 0),
@@ -359,18 +359,18 @@ public:
 								const QColor& disabledCkColor = QColor(0, 0, 0, 0),
 								bool rePaint = false);
 
-	/** ÉèÖÃ±³¾°Í¼Æ¬
-	@param [in] backgroundImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] backgroundImgStateCount Í¼Æ¬×İÏòÇĞ¸î¸öÊı
-	@param [in] backgroundImgNormal ·ÇÑ¡ÖĞ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾½«Í¼Æ¬×İÏò·Ö¸î4·İ»ò8·İ£¬Ñ¡×îÉÏÃæµÄµÚÒ»·İ
-	@param [in] backgroundImgHover ·ÇÑ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgPressed ·ÇÑ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] backgroundImgDisabled ·ÇÑ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] backgroundImgCkNormal Ñ¡ÖĞ³£Ì¬Í¼Æ¬
-	@param [in] backgroundImgCkHover Ñ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgCkPressed Ñ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] backgroundImgCkDisabled Ñ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯å›¾ç‰‡
+	@param [in] backgroundImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] backgroundImgStateCount å›¾ç‰‡çºµå‘åˆ‡å‰²ä¸ªæ•°
+	@param [in] backgroundImgNormal éé€‰ä¸­å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºå°†å›¾ç‰‡çºµå‘åˆ†å‰²4ä»½æˆ–8ä»½ï¼Œé€‰æœ€ä¸Šé¢çš„ç¬¬ä¸€ä»½
+	@param [in] backgroundImgHover éé€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgPressed éé€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] backgroundImgDisabled éé€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] backgroundImgCkNormal é€‰ä¸­å¸¸æ€å›¾ç‰‡
+	@param [in] backgroundImgCkHover é€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgCkPressed é€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] backgroundImgCkDisabled é€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBackgroundImage(const QString& backgroundImgPath,
 								qint32 backgroundImgStateCount = 8,

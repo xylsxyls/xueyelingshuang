@@ -1,4 +1,4 @@
-#include "TipLabelManager.h"
+ï»¿#include "TipLabelManager.h"
 #include "TipLabel.h"
 #include "CSystem/CSystemAPI.h"
 
@@ -24,7 +24,7 @@ void TipLabelManager::popTip(const QPoint& pos, const QString& text, qint32 maxW
 	m_tipLabel->setMaxWidth(maxWidth);
 	m_tipLabel->setExistTime(timeOut);
 	m_tipLabel->setHasFocus(hasFocus);
-	m_tipLabel->setFontFace(QStringLiteral("Î¢ÈíÑÅºÚ"));
+	m_tipLabel->setFontFace(QStringLiteral("å¾®è½¯é›…é»‘"));
 	m_tipLabel->show();
 }
 

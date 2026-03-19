@@ -1,4 +1,4 @@
-#include "Dialog.h"
+﻿#include "Dialog.h"
 
 Dialog::Dialog(QWidget* parent) :
 ControlShow(parent)

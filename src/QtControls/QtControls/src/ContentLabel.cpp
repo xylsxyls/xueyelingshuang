@@ -1,4 +1,4 @@
-#include "ContentLabel.h"
+﻿#include "ContentLabel.h"
 
 ContentLabel::ContentLabel(QWidget* parent) :
 m_up(nullptr),

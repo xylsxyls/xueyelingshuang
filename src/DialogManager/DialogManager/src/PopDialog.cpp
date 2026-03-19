@@ -1,4 +1,4 @@
-#include "PopDialog.h"
+﻿#include "PopDialog.h"
 #include "QtControls/COriginalButton.h"
 #include "QtControls/CGeneralStyle.h"
 #include <QPainter>

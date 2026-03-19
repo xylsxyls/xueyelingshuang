@@ -1,4 +1,4 @@
-#include "TipLabel.h"
+ï»¿#include "TipLabel.h"
 #ifdef _MSC_VER
 #include <Windows.h>
 #elif __unix__
@@ -50,7 +50,7 @@ void TipLabel::showEvent(QShowEvent* eve)
 	qint32 margin = 3;
 	QFontMetrics fontMetrics(font());
 	QString strShow = text();
-	//»ñÈ¡Ö®Ç°ÉèÖÃµÄ×Ö·û´®µÄÏñËØ´óÐ¡
+	//èŽ·å–ä¹‹å‰è®¾ç½®çš„å­—ç¬¦ä¸²çš„åƒç´ å¤§å°
 	qint32 textWidth = fontMetrics.width(strShow);
 	qint32 textHeight = fontMetrics.height();
 	qint32 tipWidth = textWidth + margin * 2;
@@ -111,7 +111,7 @@ bool TipLabel::nativeEvent(const QByteArray& eventType, void* message, long* res
 		//	printf("%d\n", (int32_t)msg->response_type);
 		//}
 		
-		//¼¤»îÊÇ9£¬ºóÌ¨ÊÇ10£¬Êó±êÀë¿ªÊÇ8£¬Êó±ê½øÈëÊÇ7,18ÊÇ¹Ø±Õ
+		//æ¿€æ´»æ˜¯9ï¼ŒåŽå°æ˜¯10ï¼Œé¼ æ ‡ç¦»å¼€æ˜¯8ï¼Œé¼ æ ‡è¿›å…¥æ˜¯7,18æ˜¯å…³é—­
 		switch (msg->response_type)
 		{
 		case XCB_FOCUS_IN:

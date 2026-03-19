@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QtWidgets/QProgressBar>
 #include "ControlShow.h"
 #include "ControlFont.h"
@@ -20,12 +20,12 @@ class QtControlsAPI ProgressBar :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	ProgressBar(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ProgressBar();
 };

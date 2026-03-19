@@ -1,4 +1,4 @@
-#include "CExpressionDialog.h"
+ï»¿#include "CExpressionDialog.h"
 #include <QStandardItemModel>
 #include "EO_XmlSax2Parser/EO_XmlSax2ParserAPI.h"
 #include <QDebug>
@@ -181,7 +181,7 @@ bool CExpressionDialog::loadExpressions(const QString& emotionPath)
             continue;
         }
 
-        //µ½ÁËÕâÀïemotionNode²ÅÊÇÓĞĞ§µÄÍ¼±ê
+        //åˆ°äº†è¿™é‡ŒemotionNodeæ‰æ˜¯æœ‰æ•ˆçš„å›¾æ ‡
         CExpressionPicker::Expression expression;
 
         //groupid

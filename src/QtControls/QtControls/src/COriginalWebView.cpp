@@ -1,4 +1,4 @@
-#include "COriginalWebView.h"
+ï»¿#include "COriginalWebView.h"
 
 #include <qglobal.h>
 #if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
@@ -56,7 +56,7 @@ void COriginalWebView::paintEvent(QPaintEvent *e)
 void COriginalWebView::contextMenuEvent(QContextMenuEvent* e)
 {
 	QMenu menu;
-	QAction* ac = menu.addAction(QStringLiteral("ÖØÐÂ¼ÓÔØ"));
+	QAction* ac = menu.addAction(QStringLiteral("é‡æ–°åŠ è½½"));
 	if(ac == menu.exec(e->globalPos()))
 	{
 		this->reload();

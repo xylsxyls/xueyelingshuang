@@ -1,4 +1,4 @@
-#include "RapidJson.h"
+﻿#include "RapidJson.h"
 #include "rapid_json/writer.h"
 
 RapidJson::RapidJson():

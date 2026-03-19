@@ -1,4 +1,4 @@
-#include "CPasswordInputBox.h"
+﻿#include "CPasswordInputBox.h"
 #include "CGeneralStyle.h"
 #include "COriginalButton.h"
 #include <QRegExpValidator>

@@ -1,4 +1,4 @@
-#include "MessageTestLinux.h"
+ï»¿#include "MessageTestLinux.h"
 #include <QtWidgets/QApplication>
 #include <stdint.h>
 #include "MessageTestLinux.h"
@@ -8,12 +8,12 @@
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "CDump/CDumpAPI.h"
 
-//ctrl+cÏûÏ¢²¶»ñº¯Êı
+//ctrl+cæ¶ˆæ¯æ•è·å‡½æ•°
 void CtrlCMessage(int eve)
 {
 	if (eve == 2)
 	{
-		//¹Ø±ÕÍË³öÊÂ¼ş
+		//å…³é—­é€€å‡ºäº‹ä»¶
 		//RCSend("close ConsoleTest");
 		CSystem::deleteFile("/tmp/MessageTestLinux.file");
 		CTaskThreadManager::Instance().UninitAll();

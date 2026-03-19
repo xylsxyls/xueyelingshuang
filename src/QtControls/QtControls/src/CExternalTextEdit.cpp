@@ -1,4 +1,4 @@
-#include "CExternalTextEdit.h"
+ï»¿#include "CExternalTextEdit.h"
 
 #include "EO_XmlSax2Parser/EO_XmlSax2ParserAPI.h"
 #include <QDebug>
@@ -52,26 +52,26 @@ void CExternalTextEdit::hideEvent(QHideEvent *e)
 
 void CExternalTextEdit::keyPressEvent(QKeyEvent *e)
 {
-    // Ö÷¼üÅÌ Enter
+    // ä¸»é”®ç›˜ Enter
     if ((e->key() == Qt::Key_Return) && (e->modifiers() == Qt::NoModifier))
     {
         emit enterPressed();
         return ;
     }
-    // Ğ¡¼üÅÌ Enter
+    // å°é”®ç›˜ Enter
     else if ((e->key() == Qt::Key_Enter) && (e->modifiers() == Qt::KeypadModifier))
     {
         emit enterPressed();
         return ;
     }
 
-    // Ö÷¼üÅÌ Ctrl + Enter
+    // ä¸»é”®ç›˜ Ctrl + Enter
     else if((e->key() == Qt::Key_Return) && (e->modifiers() == Qt::ControlModifier))
     {
         emit ctrlEnterPressed();
         return ;
     }
-    // Ğ¡¼üÅÌ Ctrl + Enter
+    // å°é”®ç›˜ Ctrl + Enter
     else if((e->key() == Qt::Key_Enter) && (e->modifiers() == (Qt::KeypadModifier|Qt::ControlModifier)))
     {
         emit ctrlEnterPressed();
@@ -131,14 +131,14 @@ void CExternalTextEdit::insertFromMimeData(const QMimeData *source)
 
         text = source->html();
 
-        //½«imgÌæ»»³Éshortcut
+        //å°†imgæ›¿æ¢æˆshortcut
         text = filterExpressionToShortcut(text);
 
-        ////TODO:ÏÈ³ıÈ¥style
+        ////TODO:å…ˆé™¤å»style
         //QRegExp ex("<[sS][tT][yY][lL][eE].*[sS][tT][yY][lL][eE]>");
         //text.replace(ex, "");
         //
-        ////TODO:½«htmlÔªËØÈ¥³ı
+        ////TODO:å°†htmlå…ƒç´ å»é™¤
         //ex.setPattern("<[^<]*>");
         //text.replace(ex, "");
         QTextDocument doc;
@@ -147,7 +147,7 @@ void CExternalTextEdit::insertFromMimeData(const QMimeData *source)
         text = text.toHtmlEscaped();
         text = text.replace("\n", "<br/>");
 
-        //TODO:½«shortcut»»³Éimg
+        //TODO:å°†shortcutæ¢æˆimg
         text = parseShortcutToExpression(text);
         n_source->setHtml(text);
 
@@ -160,7 +160,7 @@ void CExternalTextEdit::insertFromMimeData(const QMimeData *source)
         text = text.replace("\n","<br/>");
 
 
-        //TODO:½«shortcut»»³Éimg
+        //TODO:å°†shortcutæ¢æˆimg
         text = parseShortcutToExpression(text);
         n_source->removeFormat("text/plain");
 
@@ -192,17 +192,17 @@ QMimeData *CExternalTextEdit::createMimeDataFromSelection() const
         //QRegExp ex("<!--.*StartFragment.*-->.*<!--.*EndFragment.*-->");
         //if(ex.indexIn(text) != -1)
         //{
-        //	//µÃµ½ÕæÕıµÄÄÚÈİ
+        //	//å¾—åˆ°çœŸæ­£çš„å†…å®¹
         //	text = ex.cap(0);
         //
-        //	//TODO:½«ÆäÖĞµÄimgÔªËØÌæ»»³Éshortcut£¬Ìæ»»²»ÁËµÄÖ±½ÓÏû³ı
+        //	//TODO:å°†å…¶ä¸­çš„imgå…ƒç´ æ›¿æ¢æˆshortcutï¼Œæ›¿æ¢ä¸äº†çš„ç›´æ¥æ¶ˆé™¤
         //	text = imgToText(text);
         //
-        //	////TODO:ÏÈ³ıÈ¥style
+        //	////TODO:å…ˆé™¤å»style
         //	//QRegExp ex("<[sS][tT][yY][lL][eE].*[sS][tT][yY][lL][eE]>");
         //	//text.replace(ex, "");
         //	//
-        //	////TODO:Ïû³ıhtmlÔªËØ
+        //	////TODO:æ¶ˆé™¤htmlå…ƒç´ 
         //	//ex.setPattern("<[^<]*>");
         //	//text.replace(ex, "");
         //	QTextDocument doc;
@@ -273,7 +273,7 @@ void CExternalTextEdit::loadExpressions(const QString& emotionPath)
             continue;
         }
 
-        //µ½ÁËÕâÀïemotionNode²ÅÊÇÓĞĞ§µÄÍ¼±ê
+        //åˆ°äº†è¿™é‡ŒemotionNodeæ‰æ˜¯æœ‰æ•ˆçš„å›¾æ ‡
 
         QString tFilename;
         //file
@@ -337,11 +337,11 @@ void CExternalTextEdit::clear()
 
 QString CExternalTextEdit::message()
 {
-    //ÊÇÓĞ¸ñÊ½µÄÊı¾İ
+    //æ˜¯æœ‰æ ¼å¼çš„æ•°æ®
     QString msg = this->toHtml();
     QString t_msg = filterExpressionToShortcut(msg);
 
-    ////³öÈ¥htmlÔªËØ
+    ////å‡ºå»htmlå…ƒç´ 
     QTextDocument doc;
     doc.setHtml(t_msg.trimmed());
 
@@ -391,7 +391,7 @@ int CExternalTextEdit::testWordCount(QString msg)
         pos += exp.matchedLength();
     }
 
-    //ÏÖ½«±íÇéÌŞ³ı
+    //ç°å°†è¡¨æƒ…å‰”é™¤
     for(int i = 0; i < mMapedExpression.keys().count(); i++)
     {
         QString shortcut = mMapedExpression.keys()[i];
@@ -412,7 +412,7 @@ QString CExternalTextEdit::removeExpressionShortcut(QString msg)
 {
     QString t_text = msg;
 
-    //add by Eosin, ÔÚÕâÀï½«±íÇé×ª»»Ò»ÏÂ£¡
+    //add by Eosin, åœ¨è¿™é‡Œå°†è¡¨æƒ…è½¬æ¢ä¸€ä¸‹ï¼
     QRegExp exp("/[a-zA-Z_]*");
     QStringList imgShortcutList;
     int pos = 0;
@@ -441,7 +441,7 @@ QString CExternalTextEdit::removeExpressionShortcut(QString msg)
 
 QString CExternalTextEdit::filterExpressionToShortcut(QString html) const
 {
-    //½«±íÇéÌæ»»³Éshortcut
+    //å°†è¡¨æƒ…æ›¿æ¢æˆshortcut
     QString expString = "<img[^<]*/>";
     QRegExp exp(expString);
     exp.setMinimal(true);
@@ -456,7 +456,7 @@ QString CExternalTextEdit::filterExpressionToShortcut(QString html) const
             QString imgElement = imgList[i];
             if(imgElement == "")
                 continue;
-            //ÕÒµ½imgElementµÄsrc
+            //æ‰¾åˆ°imgElementçš„src
 
             QRegExp imgExp("\".*\"");
             imgExp.indexIn(imgElement);
@@ -467,7 +467,7 @@ QString CExternalTextEdit::filterExpressionToShortcut(QString html) const
             src = src.mid(1, src.length() - 2);
             QString imgUri = src;
 
-            //ÅĞ¶ÏimgElementÖĞÊÇ·ñÄÜÕÒµ½¶ÔÓ¦µÄshortcut£¬ÕÒµ½¾ÍÌæ»»
+            //åˆ¤æ–­imgElementä¸­æ˜¯å¦èƒ½æ‰¾åˆ°å¯¹åº”çš„shortcutï¼Œæ‰¾åˆ°å°±æ›¿æ¢
             bool isReplaced = false;
             for(int j = 0; j < mMapedExpression.keys().count(); j++)
             {
@@ -481,10 +481,10 @@ QString CExternalTextEdit::filterExpressionToShortcut(QString html) const
                 }
             }
 
-            if(!isReplaced) //* ²»Ö§³ÖµÄimg¸ñÊ½£¬Ö±½ÓÉ¾³ı<ÒÔºó¿ÉÒÔÔÚÕâÀïÌí¼ÓºöÂÔ¹ıÈ¥²»É¾³ı>
+            if(!isReplaced) //* ä¸æ”¯æŒçš„imgæ ¼å¼ï¼Œç›´æ¥åˆ é™¤<ä»¥åå¯ä»¥åœ¨è¿™é‡Œæ·»åŠ å¿½ç•¥è¿‡å»ä¸åˆ é™¤>
             {
                 text.replace(imgElement, "");
-                qDebug() << "ºöÂÔ" << imgElement;
+                qDebug() << "å¿½ç•¥" << imgElement;
             }
         }
         imgList.clear();
@@ -499,7 +499,7 @@ QString CExternalTextEdit::parseShortcutToExpression(QString text) const
 {
     QString t_text = text;
 
-    //ÔÚÕâÀï½«±íÇé×ª»»Ò»ÏÂ£¡
+    //åœ¨è¿™é‡Œå°†è¡¨æƒ…è½¬æ¢ä¸€ä¸‹ï¼
     QRegExp exp("/[a-zA-Z_]*");
     QStringList imgShortcutList;
     int pos = 0;
@@ -511,14 +511,14 @@ QString CExternalTextEdit::parseShortcutToExpression(QString text) const
     }
 
 
-    //ÕÒµ½ËùÓĞ¿ÉÄÜµÄshortcut
+    //æ‰¾åˆ°æ‰€æœ‰å¯èƒ½çš„shortcut
     QMap<QString, int> shortcutMap;
     for(int  i = 0; i < imgShortcutList.count(); i++)
     {
         shortcutMap[imgShortcutList[i]] ++;
     }
 
-    //¶Ô±ÈÏÖÓĞÄÜÊ¶±ğµÄshortcut
+    //å¯¹æ¯”ç°æœ‰èƒ½è¯†åˆ«çš„shortcut
     QMap<QString, int> findedShortcutMap;
     for(int i = 0; i < shortcutMap.keys().count(); i++)
     {
@@ -528,7 +528,7 @@ QString CExternalTextEdit::parseShortcutToExpression(QString text) const
             continue;
         }
 
-        //²éÕÒÊÇ·ñÓĞshortcut(ÄÜÆ¥Åäµ½µÄ×î´óshortcut)
+        //æŸ¥æ‰¾æ˜¯å¦æœ‰shortcut(èƒ½åŒ¹é…åˆ°çš„æœ€å¤§shortcut)
         QString findedShortcut;
         for(int i = 0; i < mMapedExpression.keys().count(); i++)
         {
@@ -566,7 +566,7 @@ QString CExternalTextEdit::parseShortcutToHTMLExpression(QString text) const
 {
 	QString t_text = text;
 
-    //add by Eosin, ÔÚÕâÀï½«±íÇé×ª»»Ò»ÏÂ£¡
+    //add by Eosin, åœ¨è¿™é‡Œå°†è¡¨æƒ…è½¬æ¢ä¸€ä¸‹ï¼
     QRegExp exp("/[a-zA-Z_]*");
     QStringList imgShortcutList;
     int pos = 0;
@@ -593,7 +593,7 @@ QString CExternalTextEdit::parseShortcutToHTMLExpression(QString text) const
             continue;
         }
 
-        //²éÕÒÊÇ·ñÓĞshortcut(ÄÜÆ¥Åäµ½µÄ×î´óshortcut)
+        //æŸ¥æ‰¾æ˜¯å¦æœ‰shortcut(èƒ½åŒ¹é…åˆ°çš„æœ€å¤§shortcut)
         QString findedShortcut;
         for(int ii = 0; ii < mMapedExpression.keys().count(); ii++)
         {

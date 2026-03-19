@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "ControlShow.h"
 #include "ControlSelf.h"
 #include "ControlFont.h"
@@ -16,12 +16,12 @@ class QtControlsAPI LineEdit :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	LineEdit(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~LineEdit();
 
@@ -29,7 +29,7 @@ private slots:
 	void currentTextChanged(const QString& str);
 
 private:
-	/** ³£ÓÃ³õÊ¼»¯
+	/** å¸¸ç”¨åˆå§‹åŒ–
 	*/
 	void setDefault();
 };

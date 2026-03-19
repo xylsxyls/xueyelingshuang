@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QRegExp>
 #include <QRegExpValidator>
 #include "RegExpAttri.h"
@@ -6,40 +6,40 @@
 
 class QComboBox;
 
-/** ¶ÔQComboBoxÉèÖÃÕıÔò±í´ïÊ½
-Ê¹ÓÃ·½·¨
-setRegularExpression½øĞĞÉèÖÃ£¬¸¸´°¿ÚÒªinstall£¬ÒªÁ´½ÓQComboBoxµÄÁ½¸öĞÅºÅ
+/** å¯¹QComboBoxè®¾ç½®æ­£åˆ™è¡¨è¾¾å¼
+ä½¿ç”¨æ–¹æ³•
+setRegularExpressionè¿›è¡Œè®¾ç½®ï¼Œçˆ¶çª—å£è¦installï¼Œè¦é“¾æ¥QComboBoxçš„ä¸¤ä¸ªä¿¡å·
 QObject::connect(htmlComboBox, &QComboBox::currentTextChanged, this, &InviteBattleDialog::onGameNetTextChanged);
 QObject::connect(htmlComboBox->lineEdit(), &QLineEdit::editingFinished, this, &InviteBattleDialog::onNetEditTextFinish);
-ÄÚ²¿µ÷ÓÃº¯Êı
+å†…éƒ¨è°ƒç”¨å‡½æ•°
 onSetTextChanged((QComboBox*)sender(), text);
 onSetEditTextFinish((QComboBox*)sender());
-¼Ì³ĞeventFilter£¬ÄÚ²¿µ÷ÓÃRegExpEventFilter
+ç»§æ‰¿eventFilterï¼Œå†…éƒ¨è°ƒç”¨RegExpEventFilter
 */
 class QtControlsAPI RegExpBase
 {
 protected:
-	/** ÉèÖÃÕıÔò±í´ïÊ½
-	@param [in] comboBox ÏÂÀ­¿ò
-	@param [in] regularStr ÕıÔò±í´ïÊ½
-	@param [in] preText ½ÚµãÄÚÈİÇ°×º
+	/** è®¾ç½®æ­£åˆ™è¡¨è¾¾å¼
+	@param [in] comboBox ä¸‹æ‹‰æ¡†
+	@param [in] regularStr æ­£åˆ™è¡¨è¾¾å¼
+	@param [in] preText èŠ‚ç‚¹å†…å®¹å‰ç¼€
 	*/
 	void setRegularExpression(QComboBox* comboBox, const QString& regularStr, const QString& preText);
 
-	/** ´¦ÀíeventFilterº¯Êı
-	@param [in] target ±»Ó°ÏìµÄÀà
-	@param [in] eve ÊÂ¼ş
+	/** å¤„ç†eventFilterå‡½æ•°
+	@param [in] target è¢«å½±å“çš„ç±»
+	@param [in] eve äº‹ä»¶
 	*/
 	void RegExpEventFilter(QObject* target, QEvent* eve);
 
-	/** ´¦ÀíComboBoxÄÚÈİ¸Ä±äÍê³ÉºóµÄº¯Êı
-	@param [in] comboBox ÏÂÀ­¿ò
+	/** å¤„ç†ComboBoxå†…å®¹æ”¹å˜å®Œæˆåçš„å‡½æ•°
+	@param [in] comboBox ä¸‹æ‹‰æ¡†
 	*/
 	void onSetEditTextFinish(QComboBox* comboBox);
 
-	/** ´¦ÀíComboBoxÄÚÈİ¸Ä±äºóµÄº¯Êı
-	@param [in] comboBox ÏÂÀ­¿ò
-	@param [in] µ±Ç°±à¼­ÄÚÈİ
+	/** å¤„ç†ComboBoxå†…å®¹æ”¹å˜åçš„å‡½æ•°
+	@param [in] comboBox ä¸‹æ‹‰æ¡†
+	@param [in] å½“å‰ç¼–è¾‘å†…å®¹
 	*/
 	void onSetTextChanged(QComboBox* comboBox, const QString& text);
 

@@ -1,54 +1,54 @@
-#pragma once
+ï»¿#pragma once
 #include "ControlBase.h"
 #include "QtControlsMacro.h"
 
-/** ¹ÜÀí½ÚµãÏà¹Ø¹¦ÄÜ
+/** ç®¡ç†èŠ‚ç‚¹ç›¸å…³åŠŸèƒ½
 */
 template <class QBase>
 class ControlItem : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItem();
 
 public:
-	/** ÉèÖÃ½Úµã±ß¿ò´Ö¶È
-	@param [in] width ±ß¿ò´Ö¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹è¾¹æ¡†ç²—åº¦
+	@param [in] width è¾¹æ¡†ç²—åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderWidth(qint32 width, bool rePaint = false);
 
-	/** ½«½ÚµãÉèÎªÔ²½Ç£¬ÊäÈëÔ²½Ç°ë¾¶£¬Ö»ÓĞ¼ÓÈë±ß¿ò²Å»áÓĞÔ²½Ç
-	@param [in] radius Ô²½Ç°ë¾¶
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** å°†èŠ‚ç‚¹è®¾ä¸ºåœ†è§’ï¼Œè¾“å…¥åœ†è§’åŠå¾„ï¼Œåªæœ‰åŠ å…¥è¾¹æ¡†æ‰ä¼šæœ‰åœ†è§’
+	@param [in] radius åœ†è§’åŠå¾„
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderRadius(qint32 radius, bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã¿í¶È
-	@param [in] width ½Úµã¿í¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹å®½åº¦
+	@param [in] width èŠ‚ç‚¹å®½åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemWidth(qint32 width, bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã¸ß¶È
-	@param [in] height ½Úµã¸ß¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹é«˜åº¦
+	@param [in] height èŠ‚ç‚¹é«˜åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemHeight(qint32 height, bool rePaint = false);
 
-	/** ÉèÖÃ½ÚµãÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] origin ½ÚµãÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹æ–‡æœ¬åç§»é‡
+	@param [in] origin èŠ‚ç‚¹æ–‡æœ¬åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemTextOrigin(qint32 origin, bool rePaint = false);
 
-	/** ½Úµãµ½´°¿ÚµÄËÄ¸öÍâ±ß¾à
-	@param [in] leftOrigin ×ó²àÆ«ÒÆÁ¿
-	@param [in] topOrigin ÉÏ²àÆ«ÒÆÁ¿
-	@param [in] rightOrigin ÓÒ²àÆ«ÒÆÁ¿
-	@param [in] bottomOrigin ÏÂ²àÆ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** èŠ‚ç‚¹åˆ°çª—å£çš„å››ä¸ªå¤–è¾¹è·
+	@param [in] leftOrigin å·¦ä¾§åç§»é‡
+	@param [in] topOrigin ä¸Šä¾§åç§»é‡
+	@param [in] rightOrigin å³ä¾§åç§»é‡
+	@param [in] bottomOrigin ä¸‹ä¾§åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemAroundOrigin(qint32 leftOrigin,
 						     qint32 topOrigin = -1,

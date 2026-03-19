@@ -1,4 +1,4 @@
-#include "TipDialog.h"
+﻿#include "TipDialog.h"
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
 #include "DialogManager.h"

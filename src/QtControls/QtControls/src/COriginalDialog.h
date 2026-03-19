@@ -1,4 +1,4 @@
-#ifndef CORIGINALDIALOG_H
+ï»¿#ifndef CORIGINALDIALOG_H
 #define CORIGINALDIALOG_H
 
 #include <QDialog>
@@ -34,9 +34,9 @@ public:
     bool altF4Enable();
 
 signals:
-	//Ê¹ÓÃQt::QueuedConnection
+	//ä½¿ç”¨Qt::QueuedConnection
 	void ncActiveChanged(bool ncActive);
-	//Ê¹ÓÃQt::QueuedConnection Êó±ê¼¤»îÊÇ2£¬¼üÅÌ¼¤»îÊÇ1£¬·Ç¼¤»îÎª0£¬Ö»¿ÉÔÚwindowsÏÂÊ¹ÓÃ
+	//ä½¿ç”¨Qt::QueuedConnection é¼ æ ‡æ¿€æ´»æ˜¯2ï¼Œé”®ç›˜æ¿€æ´»æ˜¯1ï¼Œéæ¿€æ´»ä¸º0ï¼Œåªå¯åœ¨windowsä¸‹ä½¿ç”¨
 	void activeChanged(int activeType);
 
 protected:

@@ -1,4 +1,4 @@
-#include "DialogManager.h"
+ï»¿#include "DialogManager.h"
 #include "QtControls/DialogShow.h"
 #include "PopDialogManager.h"
 #include "NotifyDialogManager.h"
@@ -27,7 +27,7 @@ void DialogManager::makeDialog(DialogParam& param)
 		QObject::connect(&NotifyDialogManager::instance(), &NotifyDialogManager::dialogSignal, &DialogManager::instance(), &DialogManager::dialogSignal);
 		QObject::connect(&StaticDialogManager::instance(), &StaticDialogManager::dialogSignal, &DialogManager::instance(), &DialogManager::dialogSignal);
 	}
-	//Èç¹ûÓĞÏàÍ¬µÄuserIdÏÈ¹ØµôÉÏÒ»¸öµÄ
+	//å¦‚æœæœ‰ç›¸åŒçš„userIdå…ˆå…³æ‰ä¸Šä¸€ä¸ªçš„
 	if (param.m_userId != 0)
 	{
 		quint64 dialogId = AllocManager::instance().findDialogId(param.m_userId);

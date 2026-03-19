@@ -1,22 +1,22 @@
-#pragma once
+ï»¿#pragma once
 #include <QRegExp>
 #include <QRegExpValidator>
 
 namespace RE
 {
-	/** ÕıÔò±í´ïÊ½Ïà¹ØÊôĞÔ
+	/** æ­£åˆ™è¡¨è¾¾å¼ç›¸å…³å±æ€§
 	*/
 	struct RegExpAttri
 	{
-		//ÊÇ·ñĞŞ¸ÄÍê±Ï
+		//æ˜¯å¦ä¿®æ”¹å®Œæ¯•
 		bool m_finished;
-		//ÕıÔò±í´ïÊ½¹ÜÀíÀà
+		//æ­£åˆ™è¡¨è¾¾å¼ç®¡ç†ç±»
 		QRegExp m_regExp;
-		//ÕıÔò±í´ïÊ½´úÀíÀà
+		//æ­£åˆ™è¡¨è¾¾å¼ä»£ç†ç±»
 		QRegExpValidator m_validator;
-		//µ±Ç°ÏÂÀ­¿òÖĞÎÄ±¾¿òÄÚÄÚÈİ
+		//å½“å‰ä¸‹æ‹‰æ¡†ä¸­æ–‡æœ¬æ¡†å†…å†…å®¹
 		QString m_currentText;
-		//ÏÂÀ­¿ò½ÚµãÄÚÈİÇ°×º
+		//ä¸‹æ‹‰æ¡†èŠ‚ç‚¹å†…å®¹å‰ç¼€
 		QString m_preText;
 
 		RegExpAttri()

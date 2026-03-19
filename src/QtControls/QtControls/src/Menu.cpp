@@ -1,4 +1,4 @@
-#include "Menu.h"
+ï»¿#include "Menu.h"
 #include <QtWidgets/QWidgetAction>
 #include "MenuCustomStyle.h"
 #include <qglobal.h>
@@ -19,7 +19,7 @@ m_pCustomStyle(nullptr)
 	setMouseTracking(true);
 
 	setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
-	//±³¾°Í¸Ã÷
+	//èƒŒæ™¯é€æ˜
 	setAttribute(Qt::WA_TranslucentBackground);
 }
 
@@ -119,7 +119,7 @@ QAction* Menu::exec(const QPoint& point)
 
 QIcon Menu::ChangeIcon(QAction* action, const QIcon& icon)
 {
-	//ÏÈÑ°ÕÒÊÇ·ñÔÚ±¾Éí½ÚµãÖĞ
+	//å…ˆå¯»æ‰¾æ˜¯å¦åœ¨æœ¬èº«èŠ‚ç‚¹ä¸­
 	auto itIcon = m_mapIconData.find(action);
 	if (itIcon != m_mapIconData.end())
 	{
@@ -127,7 +127,7 @@ QIcon Menu::ChangeIcon(QAction* action, const QIcon& icon)
 		m_mapIconData[action] = icon;
 		return result;
 	}
-	//Èç¹û±¾½ÚµãÃ»ÓĞ¾ÍÕÒ×Ó½Úµã
+	//å¦‚æœæœ¬èŠ‚ç‚¹æ²¡æœ‰å°±æ‰¾å­èŠ‚ç‚¹
 	qint32 index = -1;
 	while (index++ != m_vecMenu.size() - 1)
 	{

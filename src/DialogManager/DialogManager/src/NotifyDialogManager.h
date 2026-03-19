@@ -1,9 +1,9 @@
-#pragma once
+ï»¿#pragma once
 #include <QObject>
 #include "DialogType.h"
 #include "ManagerBase/ManagerBaseAPI.h"
 
-/** Í¨Öª¿òµÄ¹ÜÀíÀà
+/** é€šçŸ¥æ¡†çš„ç®¡ç†ç±»
 */
 class NotifyDialogManager :
     public QObject,
@@ -11,16 +11,16 @@ class NotifyDialogManager :
 {
     Q_OBJECT
 public:
-    /** ÏÔÊ¾´°¿Ú
-    @param [in] type µ¯´°ÀàĞÍ
-    @param [in] param µ¯´°²ÎÊı
+    /** æ˜¾ç¤ºçª—å£
+    @param [in] type å¼¹çª—ç±»å‹
+    @param [in] param å¼¹çª—å‚æ•°
     */
 	void showDialog(DialogParam& param);
 
 Q_SIGNALS:
-	/** ´°¿Ú·¢³öĞÅºÅ
-	@param [in] type ĞÅºÅÀàĞÍ
-	@param [in] param ĞÅºÅ²ÎÊı
+	/** çª—å£å‘å‡ºä¿¡å·
+	@param [in] type ä¿¡å·ç±»å‹
+	@param [in] param ä¿¡å·å‚æ•°
 	*/
 	void dialogSignal(const SignalParam& param);
 

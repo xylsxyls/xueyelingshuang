@@ -1,4 +1,4 @@
-#ifndef CORIGINALWEBVIEW_H
+﻿#ifndef CORIGINALWEBVIEW_H
 #define CORIGINALWEBVIEW_H
 
 #include <qglobal.h>

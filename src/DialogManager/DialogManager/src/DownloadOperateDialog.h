@@ -1,79 +1,79 @@
-#pragma once
+ï»¿#pragma once
 #include "DialogManagerMacro.h"
 #include "PopDialog.h"
 
 class ProgressBar;
 class LineEdit;
-/** ÏÂÔØ¿ò
+/** ä¸‹è½½æ¡†
 */
 class DialogManagerAPI DownloadOperateDialog : public PopDialog
 {
 	Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
     DownloadOperateDialog();
 
 public:
-    /** ÉèÖÃÎÄ¼şÃû
-    @param [in] fileName ÎÄ¼şÃû
+    /** è®¾ç½®æ–‡ä»¶å
+    @param [in] fileName æ–‡ä»¶å
     */
     void setFileName(const QString& fileName);
 
-	/** ÉèÖÃËÙ¶È£¨Ö§³Ö¶àÏß³Ì£©
-	@param [in] speed ËÙ¶È
+	/** è®¾ç½®é€Ÿåº¦ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
+	@param [in] speed é€Ÿåº¦
 	*/
 	void setDownloadSpeed(const QString& speed);
 
-	/** ÉèÖÃÒÑÏÂÔØÁ¿£¨Ö§³Ö¶àÏß³Ì£©
-	@param [in] downloaded ÒÑÏÂÔØÁ¿
+	/** è®¾ç½®å·²ä¸‹è½½é‡ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
+	@param [in] downloaded å·²ä¸‹è½½é‡
 	*/
 	void setDownloaded(const QString& download);
 
-	/** ÉèÖÃÊ±¼ä£¨Ö§³Ö¶àÏß³Ì£©
-	@param [in] time Ê±¼ä
+	/** è®¾ç½®æ—¶é—´ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
+	@param [in] time æ—¶é—´
 	*/
 	void setDownloadTime(const QString& time);
 
-	/** ÉèÖÃ±ÈÀı£¨Ö§³Ö¶àÏß³Ì£©
-	@param [in] persent °Ù·Ö±È
+	/** è®¾ç½®æ¯”ä¾‹ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
+	@param [in] persent ç™¾åˆ†æ¯”
 	*/
 	void setRate(qint32 persent);
 
-	/** ÉèÖÃ±à¼­¿òÄÚµÄÏÂÔØµØÖ·£¨Ö§³Ö¶àÏß³Ì£©
-	@param [in] addr ÏÂÔØµØÖ·
+	/** è®¾ç½®ç¼–è¾‘æ¡†å†…çš„ä¸‹è½½åœ°å€ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
+	@param [in] addr ä¸‹è½½åœ°å€
 	*/
 	void setEditDownloadAddr(const QString& addr);
 
-	/** ÉèÖÃ±à¼­¿òÄÚµÄ±¾µØÂ·¾¶£¨Ö§³Ö¶àÏß³Ì£©
-	@param [in] path ±¾µØÂ·¾¶
+	/** è®¾ç½®ç¼–è¾‘æ¡†å†…çš„æœ¬åœ°è·¯å¾„ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
+	@param [in] path æœ¬åœ°è·¯å¾„
 	*/
 	void setEditPath(const QString& path);
 
-	/** ÉèÖÃ×ªµ½ºóÌ¨ÏÂÔØ°´Å¥ÊÇ·ñ¿ÉÓÃ£¨Ö§³Ö¶àÏß³Ì£©
-	@param [in] enable ÊÇ·ñ¿ÉÓÃ
+	/** è®¾ç½®è½¬åˆ°åå°ä¸‹è½½æŒ‰é’®æ˜¯å¦å¯ç”¨ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
+	@param [in] enable æ˜¯å¦å¯ç”¨
 	*/
 	void setBackEnable(bool enable);
 
-	/** µ±ÏÂÔØ³ö´íÊ±ÏÔÊ¾ÏÂÔØ¿òµÄ³ö´í×´Ì¬£¨Ö§³Ö¶àÏß³Ì£©
+	/** å½“ä¸‹è½½å‡ºé”™æ—¶æ˜¾ç¤ºä¸‹è½½æ¡†çš„å‡ºé”™çŠ¶æ€ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 	*/
 	void downloadError();
 
-	/** ´ÓerrorÇĞ»»µ½³£Ì¬£¨Ö§³Ö¶àÏß³Ì£©
+	/** ä»erroråˆ‡æ¢åˆ°å¸¸æ€ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 	*/
 	void downloadNormal();
 
-	/** ÉèÖÃ´íÎóÀàĞÍ£¨Ö§³Ö¶àÏß³Ì£©
-	@param [in] errorText ´íÎóÄÚÈİ
+	/** è®¾ç½®é”™è¯¯ç±»å‹ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
+	@param [in] errorText é”™è¯¯å†…å®¹
 	*/
 	void setErrorType(const QString& errorText);
 
 public slots:
-	/** ¸Ä±äµ½ÏÂÔØÊ§°Ü×´Ì¬
+	/** æ”¹å˜åˆ°ä¸‹è½½å¤±è´¥çŠ¶æ€
 	*/
 	void onChangeErrorStatus();
 
-	/** ´ÓÊ§°ÜÏÂÔØ×´Ì¬ÇĞ»»µ½³£Ì¬
+	/** ä»å¤±è´¥ä¸‹è½½çŠ¶æ€åˆ‡æ¢åˆ°å¸¸æ€
 	*/
 	void onChangeNormalStatus();
 

@@ -1,94 +1,94 @@
-#pragma once
+ï»¿#pragma once
 #include "QtControlsMacro.h"
 #include "COriginalDialog.h"
 
 class Label;
-/** µ¯³ö¿ò»ùÀà£¬Ôö¼Óµ¹¼ÆÊ±ºÍEscºÍAlt+F4ÆÁ±Î¹¦ÄÜ£¬execÔö¼Ó¶ÂÈûÄ£Ê½
+/** å¼¹å‡ºæ¡†åŸºç±»ï¼Œå¢åŠ å€’è®¡æ—¶å’ŒEscå’ŒAlt+F4å±è”½åŠŸèƒ½ï¼Œexecå¢åŠ å µå¡æ¨¡å¼
 */
 class QtControlsAPI DialogBase : public COriginalDialog
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DialogBase();
 
-    /** Îö¹¹º¯Êı
+    /** ææ„å‡½æ•°
     */
     virtual ~DialogBase();
 
 public:
-	/** ÉèÖÃ´°¿Úº¬ÓĞ¾ä±ú
-    @param [in] hasHandle ÊÇ·ñº¬ÓĞ¾ä±ú
+	/** è®¾ç½®çª—å£å«æœ‰å¥æŸ„
+    @param [in] hasHandle æ˜¯å¦å«æœ‰å¥æŸ„
 	*/
 	void setNativeWindow(bool hasHandle);
 
-    /** ÉèÖÃµ¹¼ÆÊ±£¬ÒÔÃëÎªµ¥Î»
-    @param [in] timeOut µ¹¼ÆÊ±
+    /** è®¾ç½®å€’è®¡æ—¶ï¼Œä»¥ç§’ä¸ºå•ä½
+    @param [in] timeOut å€’è®¡æ—¶
     */
     void setTimeRest(qint32 timeOut);
 
-    /** ÉèÖÃEscÊÇ·ñ¿ÉÓÃ£¬EscÔ­±¾×÷ÓÃÊÇÒş²Ø
-    @param [in] enable ÊÇ·ñ¿ÉÓÃ
+    /** è®¾ç½®Escæ˜¯å¦å¯ç”¨ï¼ŒEscåŸæœ¬ä½œç”¨æ˜¯éšè—
+    @param [in] enable æ˜¯å¦å¯ç”¨
     */
     void setEscEnable(bool enable);
 
-    /** »ñÈ¡EscÊÇ·ñ¿ÉÓÃ
-    @return ·µ»ØEscÊÇ·ñ¿ÉÓÃ
+    /** è·å–Escæ˜¯å¦å¯ç”¨
+    @return è¿”å›Escæ˜¯å¦å¯ç”¨
     */
     bool escEnable();
 
-    /** ÉèÖÃEscºÍAlt+F4ÊÇ·ñ¿ÉÓÃ
-    @param [in] enable ÊÇ·ñ¿ÉÓÃ
+    /** è®¾ç½®Escå’ŒAlt+F4æ˜¯å¦å¯ç”¨
+    @param [in] enable æ˜¯å¦å¯ç”¨
     */
     void setEscAltF4Enable(bool enable);
 
-	/** Õ¹Ê¾´°¿Ú£¬Èç¹ûµ¹¼ÆÊ±ÉèÎª0Ôò´Ëº¯ÊıÎŞĞ§£¬»á¸ù¾İÁÙÊ±¸¸´°¿ÚÉèÖÃWindowModal»òApplicationModal
-	@return ¹Ø±Õ´°¿ÚÊ±¸øµÄ·µ»ØÖµ
+	/** å±•ç¤ºçª—å£ï¼Œå¦‚æœå€’è®¡æ—¶è®¾ä¸º0åˆ™æ­¤å‡½æ•°æ— æ•ˆï¼Œä¼šæ ¹æ®ä¸´æ—¶çˆ¶çª—å£è®¾ç½®WindowModalæˆ–ApplicationModal
+	@return å…³é—­çª—å£æ—¶ç»™çš„è¿”å›å€¼
 	*/
 	qint32 exec();
 
-    /** ÏÔÊ¾´°¿Ú
+    /** æ˜¾ç¤ºçª—å£
     */
     void show();
 
-    /** ¼àÌıµ±Ç°¼üÊÇ·ñ±»°´ÏÂ£¬°´ÏÂÔò·¢ËÍĞÅºÅkeyboardAccept
-    @param [in] key ¼üÅÌÂë
+    /** ç›‘å¬å½“å‰é”®æ˜¯å¦è¢«æŒ‰ä¸‹ï¼ŒæŒ‰ä¸‹åˆ™å‘é€ä¿¡å·keyboardAccept
+    @param [in] key é”®ç›˜ç 
     */
     void addListenKey(Qt::Key key);
 
-    /** ÉèÖÃ´°¿Ú±êÌâ
-    @param [in] title ´°¿Ú±êÌâ
-    @param [in] color ´°¿Ú±êÌâÑÕÉ«
-    @param [in] fontSize ×ÖÌå´óĞ¡
-    @param [in] align ¶ÔÆë·½Ê½
-    @param [in] origin µ±×ó¶ÔÆëÊ±´°¿Ú±êÌâµÄÆ«ÒÆÁ¿
-    @param [in] fontName ×ÖÌåÃû
+    /** è®¾ç½®çª—å£æ ‡é¢˜
+    @param [in] title çª—å£æ ‡é¢˜
+    @param [in] color çª—å£æ ‡é¢˜é¢œè‰²
+    @param [in] fontSize å­—ä½“å¤§å°
+    @param [in] align å¯¹é½æ–¹å¼
+    @param [in] origin å½“å·¦å¯¹é½æ—¶çª—å£æ ‡é¢˜çš„åç§»é‡
+    @param [in] fontName å­—ä½“å
     */
     void setWindowTitle(const QString& title,
                         const QColor& color = QColor(255, 255, 255, 255),
                         qint32 fontSize = 12,
                         Qt::Alignment align = Qt::AlignCenter,
                         qint32 origin = 0,
-                        const QString& fontName = QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
+                        const QString& fontName = QString::fromStdWString(L"å¾®è½¯é›…é»‘"));
 
 Q_SIGNALS:
-    /** µ¹¼ÆÊ±Ê±¼äÊ£Óà£¬Ã¿Ãë·¢ËÍÒ»´Î
-    @param [in] seconds µ±Ç°»¹Ê£¶àÉÙÃë
+    /** å€’è®¡æ—¶æ—¶é—´å‰©ä½™ï¼Œæ¯ç§’å‘é€ä¸€æ¬¡
+    @param [in] seconds å½“å‰è¿˜å‰©å¤šå°‘ç§’
     */
 	void timeRest(qint32 seconds);
 
-    /** µ¹¼ÆÊ±½áÊø£¬Õâ¸öĞÅºÅÔÚtimeRest(0)Ö®ºó·¢
+    /** å€’è®¡æ—¶ç»“æŸï¼Œè¿™ä¸ªä¿¡å·åœ¨timeRest(0)ä¹‹åå‘
     */
     void timeUp();
 
-    /** °´ÏÂ»Ø³µºÍ¿Õ¸ñ¶¼±íÊ¾accept£¬ĞèÒªÊ¹ÓÃQt::QueuedConnection
-    @param [in] tar µ±Ç°½¹µãËùÔÚµÄ¿Ø¼şÖ¸Õë
-    @param [in] key °´ÏÂ¼üµÄÖµ
+    /** æŒ‰ä¸‹å›è½¦å’Œç©ºæ ¼éƒ½è¡¨ç¤ºacceptï¼Œéœ€è¦ä½¿ç”¨Qt::QueuedConnection
+    @param [in] tar å½“å‰ç„¦ç‚¹æ‰€åœ¨çš„æ§ä»¶æŒ‡é’ˆ
+    @param [in] key æŒ‰ä¸‹é”®çš„å€¼
     */
     void keyboardAccept(QObject* tar, Qt::Key key);
 
-	/** ´°¿ÚÒÑ¾­Ö´ĞĞ¹ıÏÔÊ¾²Ù×÷·¢ËÍĞÅºÅ£¬Ê¹ÓÃ¶ÓÁĞ·½Ê½Á¬½ÓÔòÊÇÔÚÏÔÊ¾½çÃæÖ®ºóÖ´ĞĞ
+	/** çª—å£å·²ç»æ‰§è¡Œè¿‡æ˜¾ç¤ºæ“ä½œå‘é€ä¿¡å·ï¼Œä½¿ç”¨é˜Ÿåˆ—æ–¹å¼è¿æ¥åˆ™æ˜¯åœ¨æ˜¾ç¤ºç•Œé¢ä¹‹åæ‰§è¡Œ
 	*/
 	void alreadyShown();
 

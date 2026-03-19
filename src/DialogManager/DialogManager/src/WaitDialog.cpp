@@ -1,4 +1,4 @@
-#include "WaitDialog.h"
+﻿#include "WaitDialog.h"
 #include "QtControls/Label.h"
 #include "DialogManager.h"
 #include "DialogHelper.h"

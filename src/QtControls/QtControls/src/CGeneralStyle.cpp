@@ -1,4 +1,4 @@
-#include "CGeneralStyle.h"
+ï»¿#include "CGeneralStyle.h"
 #include "Label.h"
 #include <QDir>
 #include <QApplication>
@@ -89,7 +89,7 @@ CGeneralStyle::CGeneralStyle()
 {
 	
 	//TODO: init resoucre
-    mFont.setFamily(QStringLiteral("Î¢ÈíÑÅºÚ"));
+    mFont.setFamily(QStringLiteral("å¾®è½¯é›…é»‘"));
     mFont.setPixelSize(14);
     mFontColr = "#abb3d3";
 

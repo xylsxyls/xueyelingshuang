@@ -1,4 +1,4 @@
-#include "FindTextLinux.h"
+ï»¿#include "FindTextLinux.h"
 #include <QtWidgets/QApplication>
 #include <stdint.h>
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
@@ -9,12 +9,12 @@ extern uint32_t* g_searchPathThreadId;
 #include <signal.h>
 #include <stdlib.h>
 
-//ctrl+cÏûÏ¢²¶»ñº¯Êı
+//ctrl+cæ¶ˆæ¯æ•è·å‡½æ•°
 void CtrlCMessage(int eve)
 {
 	if (eve == 2)
 	{
-		//¹Ø±ÕÍË³öÊÂ¼ş
+		//å…³é—­é€€å‡ºäº‹ä»¶
 		//RCSend("close ConsoleTest");
 		CTaskThreadManager::Instance().Uninit(*g_searchPathThreadId);
 		*g_searchPathThreadId = 0;

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QtWidgets/QTreeWidget>
 #include "ControlFont.h"
 #include "ControlItem.h"
@@ -9,7 +9,7 @@
 #include "QtControlsMacro.h"
 
 class QContextMenuEvent;
-/** Ê÷ĞÎ¿Ø¼ş
+/** æ ‘å½¢æ§ä»¶
 */
 class QtControlsAPI TreeWidget :
 	public ControlShow < QTreeWidget >,
@@ -23,59 +23,59 @@ class QtControlsAPI TreeWidget :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	TreeWidget(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~TreeWidget();
 
 public:
-	/** ÉèÖÃ×î´ó¸ß¶È
-	@param [in] maxHeight ×î´ó¸ß¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æœ€å¤§é«˜åº¦
+	@param [in] maxHeight æœ€å¤§é«˜åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setMaxHeight(qint32 maxHeight, bool rePaint = false);
 
-	/** ³õÊ¼»¯¹ö¶¯ÌõÑùÊ½
+	/** åˆå§‹åŒ–æ»šåŠ¨æ¡æ ·å¼
 	*/
 	void initScrollBar();
 
-	/** Ìí¼ÓÒ»¸ö½Úµã£¬Èç¹û¸¸½ÚµãÎª¿ÕÔòÌí¼Ó×é
-	@param [in] itemHeight ½Úµã¸ß¶È
-	@param [in] widget ½ÚµãÖ¸Õë
-	@param [in] parent ¸¸½ÚµãÖ¸Õë
-	@param [in] column µÚ¼¸ÁĞ
+	/** æ·»åŠ ä¸€ä¸ªèŠ‚ç‚¹ï¼Œå¦‚æœçˆ¶èŠ‚ç‚¹ä¸ºç©ºåˆ™æ·»åŠ ç»„
+	@param [in] itemHeight èŠ‚ç‚¹é«˜åº¦
+	@param [in] widget èŠ‚ç‚¹æŒ‡é’ˆ
+	@param [in] parent çˆ¶èŠ‚ç‚¹æŒ‡é’ˆ
+	@param [in] column ç¬¬å‡ åˆ—
 	*/
 	void addWidget(qint32 itemHeight, QWidget* widget, QWidget* parent = nullptr, qint32 column = 0);
 
-	/** ÒÆ³ıÒ»¸ö½Úµã£¬¸ÃAPI¿ÉÄÜÓĞ´í£¬ĞèÒª²âÊÔ£¬ÈºÉ¾³ıºÍÄÚ´æĞ¹Â©
-	@param [in] widget ½ÚµãÖ¸Õë
-	@param [in] column µÚ¼¸ÁĞ
+	/** ç§»é™¤ä¸€ä¸ªèŠ‚ç‚¹ï¼Œè¯¥APIå¯èƒ½æœ‰é”™ï¼Œéœ€è¦æµ‹è¯•ï¼Œç¾¤åˆ é™¤å’Œå†…å­˜æ³„æ¼
+	@param [in] widget èŠ‚ç‚¹æŒ‡é’ˆ
+	@param [in] column ç¬¬å‡ åˆ—
 	*/
 	void removeWidget(QWidget* widget, qint32 column = 0);
 
-	/** ¸ù¾İÄÚÖÃ½Úµã»ñÈ¡´«ÈëµÄwidgetÖ¸Õë
-	@param [in] item ÄÚÖÃ½ÚµãÖ¸Õë
-	@return ·µ»Ø´«ÈëµÄwidgetÖ¸Õë
+	/** æ ¹æ®å†…ç½®èŠ‚ç‚¹è·å–ä¼ å…¥çš„widgetæŒ‡é’ˆ
+	@param [in] item å†…ç½®èŠ‚ç‚¹æŒ‡é’ˆ
+	@return è¿”å›ä¼ å…¥çš„widgetæŒ‡é’ˆ
 	*/
 	QWidget* findWidget(QTreeWidgetItem* item);
 
-	/** ¸ù¾İ´«ÈëµÄwidgetÖ¸Õë»ñÈ¡ÄÚÖÃ½Úµã
-	@param [in] widget ´«ÈëµÄwidgetÖ¸Õë
-	@return ·µ»ØÄÚÖÃ½ÚµãÖ¸Õë
+	/** æ ¹æ®ä¼ å…¥çš„widgetæŒ‡é’ˆè·å–å†…ç½®èŠ‚ç‚¹
+	@param [in] widget ä¼ å…¥çš„widgetæŒ‡é’ˆ
+	@return è¿”å›å†…ç½®èŠ‚ç‚¹æŒ‡é’ˆ
 	*/
 	QTreeWidgetItem* findTreeWidgetItem(QWidget* widget);
 
-	/** Çå¿ÕËùÓĞ½Úµã
+	/** æ¸…ç©ºæ‰€æœ‰èŠ‚ç‚¹
 	*/
 	void clear();
 
 Q_SIGNALS:
-	/** ½Úµã±»ÓÒ¼üµ¥»÷
-	@param [in] item ½ÚµãÖ¸Õë
+	/** èŠ‚ç‚¹è¢«å³é”®å•å‡»
+	@param [in] item èŠ‚ç‚¹æŒ‡é’ˆ
 	*/
 	void itemRightClicked(QTreeWidgetItem* item);
 

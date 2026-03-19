@@ -1,4 +1,4 @@
-#include "TreeViewDelegate.h"
+﻿#include "TreeViewDelegate.h"
 #include <QPainter>
 #include "TreeView.h"
 #include <QTextOption>

@@ -1,4 +1,4 @@
-#include "ListWidgetIdItem.h"
+﻿#include "ListWidgetIdItem.h"
 
 ListWidgetIdItem::ListWidgetIdItem(QListWidget* view)
 {

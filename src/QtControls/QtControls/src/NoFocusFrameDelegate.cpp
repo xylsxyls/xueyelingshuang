@@ -1,4 +1,4 @@
-#include "NoFocusFrameDelegate.h"
+﻿#include "NoFocusFrameDelegate.h"
 
 NoFocusFrameDelegate::NoFocusFrameDelegate(QWidget* parent) :
 QStyledItemDelegate(parent)

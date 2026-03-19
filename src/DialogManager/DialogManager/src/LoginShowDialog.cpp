@@ -1,4 +1,4 @@
-#include "LoginShowDialog.h"
+ï»¿#include "LoginShowDialog.h"
 
 #if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
@@ -77,22 +77,22 @@ m_preLoginTime(nullptr)
 
 	m_preLoginLabel->setBackgroundColor("#272e41");
 
-	m_preLoginText->setText(QStringLiteral("ÉÏ´ÎµÇÂ¼£º"));
+	m_preLoginText->setText(QStringLiteral("ä¸Šæ¬¡ç™»å½•ï¼š"));
 	m_preLoginText->setTextColor("#8ab3da");
 	m_preLoginText->setAlignment(Qt::AlignVCenter);
 	m_preLoginText->setFontSize(11);
-	m_preLoginText->setFontFace(QStringLiteral("Î¢ÈíÑÅºÚ"));
+	m_preLoginText->setFontFace(QStringLiteral("å¾®è½¯é›…é»‘"));
 	m_changePassword->setBkgImage(CGeneralStyle::instance()->platformResourcePath() + "/image/change_password.png", 2, 1, 2, 1, 1);
-	m_changePassword->setToolTip(QStringLiteral("ÐÞ¸ÄÃÜÂë"));
+	m_changePassword->setToolTip(QStringLiteral("ä¿®æ”¹å¯†ç "));
 	QObject::connect(m_changePassword, &COriginalButton::clicked, this, &LoginShowDialog::onChangePasswordClicked);
 	m_preLoginAddr->setTextColor("#ebebeb");
 	m_preLoginAddr->setAlignment(Qt::AlignVCenter);
 	m_preLoginAddr->setFontSize(11);
-	m_preLoginAddr->setFontFace(QStringLiteral("Î¢ÈíÑÅºÚ"));
+	m_preLoginAddr->setFontFace(QStringLiteral("å¾®è½¯é›…é»‘"));
 	m_preLoginTime->setTextColor("#ebebeb");
 	m_preLoginTime->setAlignment(Qt::AlignVCenter);
 	m_preLoginTime->setFontSize(11);
-	m_preLoginTime->setFontFace(QStringLiteral("Î¢ÈíÑÅºÚ"));
+	m_preLoginTime->setFontFace(QStringLiteral("å¾®è½¯é›…é»‘"));
 	
 	resize(252, 193);
 }

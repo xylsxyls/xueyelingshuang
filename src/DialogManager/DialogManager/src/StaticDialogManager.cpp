@@ -1,4 +1,4 @@
-#include "StaticDialogManager.h"
+﻿#include "StaticDialogManager.h"
 #include "AllocManager.h"
 #include "AccountManagerDialog.h"
 

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QtWidgets/QCheckBox>
 #include "ControlShow.h"
 #include "ControlFont.h"
@@ -14,28 +14,28 @@ class QtControlsAPI CheckBox :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	CheckBox(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~CheckBox();
 
 public:
-	/** ÉèÖÃCheckBoxÖ¸Ê¾Æ÷Í¼Æ¬
-	@param [in] indicatorImg ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] indicatorImgStateCount Ö»ÄÜÌî4»ò8£¬±íÊ¾4Ì¬°´Å¥»ò8Ì¬°´Å¥
-	@param [in] indicatorImgNormal ·ÇÑ¡ÖĞ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾½«Í¼Æ¬×İÏò·Ö¸î4·İ»ò8·İ£¬Ñ¡×îÉÏÃæµÄµÚÒ»·İ
-	@param [in] indicatorImgHover ·ÇÑ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] indicatorImgPressed ·ÇÑ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] indicatorImgDisabled ·ÇÑ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] indicatorImgCKNormal Ñ¡ÖĞ³£Ì¬Í¼Æ¬
-	@param [in] indicatorImgCKHover Ñ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] indicatorImgCKPressed Ñ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] indicatorImgCKDisabled Ñ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®CheckBoxæŒ‡ç¤ºå™¨å›¾ç‰‡
+	@param [in] indicatorImg èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] indicatorImgStateCount åªèƒ½å¡«4æˆ–8ï¼Œè¡¨ç¤º4æ€æŒ‰é’®æˆ–8æ€æŒ‰é’®
+	@param [in] indicatorImgNormal éé€‰ä¸­å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºå°†å›¾ç‰‡çºµå‘åˆ†å‰²4ä»½æˆ–8ä»½ï¼Œé€‰æœ€ä¸Šé¢çš„ç¬¬ä¸€ä»½
+	@param [in] indicatorImgHover éé€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] indicatorImgPressed éé€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] indicatorImgDisabled éé€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] indicatorImgCKNormal é€‰ä¸­å¸¸æ€å›¾ç‰‡
+	@param [in] indicatorImgCKHover é€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] indicatorImgCKPressed é€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] indicatorImgCKDisabled é€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setIndicatorImage(const QString& indicatorImg,
 			   			   qint32 indicatorImgStateCount = 4,
@@ -49,16 +49,16 @@ public:
 						   qint32 indicatorImgCKDisabled = 4,
 						   bool rePaint = false);
 
-	/** ÉèÖÃÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] origin ÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡æœ¬åç§»é‡
+	@param [in] origin æ–‡æœ¬åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setTextOrigin(qint32 origin, bool rePaint = false);
 
-	/** ÉèÖÃÖ¸Ê¾Æ÷´óĞ¡
-	@param [in] width ¿í¶È
-	@param [in] height ¸ß¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æŒ‡ç¤ºå™¨å¤§å°
+	@param [in] width å®½åº¦
+	@param [in] height é«˜åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setIndicatorSize(qint32 width, qint32 height = -1, bool rePaint = false);
 };

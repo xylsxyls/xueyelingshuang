@@ -1,4 +1,4 @@
-#include "SearchFileTask.h"
+ï»¿#include "SearchFileTask.h"
 #include "Ctxt/CtxtAPI.h"
 #include "SearchPathTask.h"
 #include "CStringManager/CStringManagerAPI.h"
@@ -145,7 +145,7 @@ void SearchFileTask::DoTask()
             result += "-------------------------------------------------------------------------------------------------------------------------------------------------------\n";
             result += (m_path + "\n\n");
         }
-        result += ("line:" + std::to_string(index + 1) + "£¬" + charset + "£º" + line.c_str() + "\n");
+        result += ("line:" + std::to_string(index + 1) + "ï¼Œ" + charset + "ï¼š" + line.c_str() + "\n");
     }
     if (result.empty())
     {

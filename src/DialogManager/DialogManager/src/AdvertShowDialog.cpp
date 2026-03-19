@@ -1,4 +1,4 @@
-#include "AdvertShowDialog.h"
+﻿#include "AdvertShowDialog.h"
 
 #include <qglobal.h>
 #if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))

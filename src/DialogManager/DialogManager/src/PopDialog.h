@@ -1,41 +1,41 @@
-#pragma once
+ï»¿#pragma once
 #include "QtControls/DialogShow.h"
 
-/** µ¯¿ò»ùÀà
+/** å¼¹æ¡†åŸºç±»
 */
 class PopDialog : public DialogShow
 {
     Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
     PopDialog();
 
-    /** ÉèÖÃ´°¿Ú±êÌâ
-    @param [in] title ´°¿Ú±êÌâ
-    @param [in] color ´°¿Ú±êÌâÑÕÉ«
-    @param [in] fontSize ×ÖÌå´óĞ¡
-    @param [in] align ¶ÔÆë·½Ê½
-    @param [in] origin µ±×ó¶ÔÆëÊ±´°¿Ú±êÌâµÄÆ«ÒÆÁ¿
-    @param [in] fontName ×ÖÌåÃû
+    /** è®¾ç½®çª—å£æ ‡é¢˜
+    @param [in] title çª—å£æ ‡é¢˜
+    @param [in] color çª—å£æ ‡é¢˜é¢œè‰²
+    @param [in] fontSize å­—ä½“å¤§å°
+    @param [in] align å¯¹é½æ–¹å¼
+    @param [in] origin å½“å·¦å¯¹é½æ—¶çª—å£æ ‡é¢˜çš„åç§»é‡
+    @param [in] fontName å­—ä½“å
     */
     void setWindowTitle(const QString& title,
                         const QColor& color = QColor(163, 175, 191, 255),
                         qint32 fontSize = 12,
                         Qt::Alignment align = Qt::AlignCenter,
                         qint32 origin = 0,
-                        const QString& fontName = QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
+                        const QString& fontName = QString::fromStdWString(L"å¾®è½¯é›…é»‘"));
 
     
 
-    /** ÉèÖÃ³£Ì¬ºÍ¸ßÁÁ±ß¿òÑÕÉ«£¬×ÓÀàÔÚpaintEventº¯ÊıÄÚ²»¿ÉÒÔ»­µ½±ß¿òÉÏ
-    @param [in] normalColor ³£Ì¬ÑÕÉ«
-    @param [in] highLightColor ¸ßÁÁÑÕÉ«
+    /** è®¾ç½®å¸¸æ€å’Œé«˜äº®è¾¹æ¡†é¢œè‰²ï¼Œå­ç±»åœ¨paintEventå‡½æ•°å†…ä¸å¯ä»¥ç”»åˆ°è¾¹æ¡†ä¸Š
+    @param [in] normalColor å¸¸æ€é¢œè‰²
+    @param [in] highLightColor é«˜äº®é¢œè‰²
     */
     void setBorderNormalHighLightColor(const QColor& normalColor, const QColor& highLightColor = QColor(0, 0, 0, 0));
 
 public slots:
-	/** °´Å¥µã»÷Ö®ºó´°¿Ú¹Ø±Õ
+	/** æŒ‰é’®ç‚¹å‡»ä¹‹åçª—å£å…³é—­
 	*/
     void endDialog();
 

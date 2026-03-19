@@ -1,4 +1,4 @@
-#include "Separator.h"
+﻿#include "Separator.h"
 
 Separator::Separator(QWidget* parent):
 Label(parent),

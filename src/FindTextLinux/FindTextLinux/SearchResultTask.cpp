@@ -1,4 +1,4 @@
-#include "SearchResultTask.h"
+﻿#include "SearchResultTask.h"
 #include "SearchPathTask.h"
 #include "FindTextLinux.h"
 

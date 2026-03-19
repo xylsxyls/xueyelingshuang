@@ -1,33 +1,33 @@
-#pragma once
+ï»¿#pragma once
 #include "ControlBase.h"
 #include "QtControlsMacro.h"
 
-/**************¸ÃÎÄ¼şµÄÀàÖ÷Òª¹ÜÀí±³¾°ÑÕÉ«Ïà¹Ø²¿·Ö**************/
+/**************è¯¥æ–‡ä»¶çš„ç±»ä¸»è¦ç®¡ç†èƒŒæ™¯é¢œè‰²ç›¸å…³éƒ¨åˆ†**************/
 
 template <class QBase>
 class ControlBorderForNormal : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBorderForNormal();
 
 public:
-	/** ÉèÖÃ±ß¿òÑÕÉ«
-	@param [in] color ³£Ì¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®è¾¹æ¡†é¢œè‰²
+	@param [in] color å¸¸æ€
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderColor(const QColor& color, bool rePaint = false);
 
-	/** ÉèÖÃ±ß¿òÍ¼Æ¬
-	@param [in] borderImgPath Í¼Æ¬Â·¾¶
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®è¾¹æ¡†å›¾ç‰‡
+	@param [in] borderImgPath å›¾ç‰‡è·¯å¾„
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderImage(const QString& borderImgPath, bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÑÕÉ«
-	@param [in] textColor ³£Ì¬ÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—é¢œè‰²
+	@param [in] textColor å¸¸æ€é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setTextColor(const QColor& textColor, bool rePaint = false);
 };
@@ -37,29 +37,29 @@ class ControlBorderForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
 
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBorderForNormalHoverDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderColor(const QColor& normalColor,
 						const QColor& hoverColor = QColor(0, 0, 0, 0),
 						const QColor& disabledColor = QColor(0, 0, 0, 0),
 						bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] borderImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] borderImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] borderImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] borderImgHover ĞüÍ£Í¼Æ¬
-	@param [in] borderImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] borderImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] borderImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] borderImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] borderImgHover æ‚¬åœå›¾ç‰‡
+	@param [in] borderImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderImage(const QString& borderImgPath,
 						qint32 borderImgStateCount = 4,
@@ -68,11 +68,11 @@ public:
 						qint32 borderImgDisabled = 4,
 						bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÑÕÉ«
-	@param [in] textNormalColor ³£Ì¬ÑÕÉ«
-	@param [in] textHoverColor ĞüÍ£ÑÕÉ«
-	@param [in] textDisabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—é¢œè‰²
+	@param [in] textNormalColor å¸¸æ€é¢œè‰²
+	@param [in] textHoverColor æ‚¬åœé¢œè‰²
+	@param [in] textDisabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setTextColor(const QColor& textNormalColor,
 					  const QColor& textHoverColor = QColor(0, 0, 0, 0),
@@ -84,29 +84,29 @@ template <class QBase>
 class ControlBorderForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBorderForNormalSelectedDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] selectedColor ĞüÍ£ÑÕÉ«£¨ÓÃÓÚlist£©
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] selectedColor æ‚¬åœé¢œè‰²ï¼ˆç”¨äºlistï¼‰
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderColor(const QColor& normalColor,
 						const QColor& selectedColor = QColor(0, 0, 0, 0),
 						const QColor& disabledColor = QColor(0, 0, 0, 0),
 						bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] borderImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] borderImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] borderImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] borderImgSelected ĞüÍ£Í¼Æ¬£¨ÓÃÓÚlist£©
-	@param [in] borderImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] borderImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] borderImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] borderImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] borderImgSelected æ‚¬åœå›¾ç‰‡ï¼ˆç”¨äºlistï¼‰
+	@param [in] borderImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderImage(const QString& borderImgPath,
 						qint32 borderImgStateCount = 4,
@@ -115,11 +115,11 @@ public:
 						qint32 borderImgDisabled = 4,
 						bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÑÕÉ«
-	@param [in] textNormalColor ³£Ì¬ÑÕÉ«
-	@param [in] textSelectedColor ĞüÍ£ÑÕÉ«£¨ÓÃÓÚlist£©
-	@param [in] textDisabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—é¢œè‰²
+	@param [in] textNormalColor å¸¸æ€é¢œè‰²
+	@param [in] textSelectedColor æ‚¬åœé¢œè‰²ï¼ˆç”¨äºlistï¼‰
+	@param [in] textDisabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setTextColor(const QColor& textNormalColor,
 					  const QColor& textSelectedColor = QColor(0, 0, 0, 0),
@@ -131,17 +131,17 @@ template <class QBase>
 class ControlBorderForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBorderForNormalHoverPressedDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] pressedColor °´ÏÂÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] pressedColor æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderColor(const QColor& normalColor,
 						const QColor& hoverColor = QColor(0, 0, 0, 0),
@@ -149,14 +149,14 @@ public:
 						const QColor& disabledColor = QColor(0, 0, 0, 0),
 						bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] borderImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] borderImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] borderImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] borderImgHover ĞüÍ£Í¼Æ¬
-	@param [in] borderImgPressed °´ÏÂÍ¼Æ¬
-	@param [in] borderImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] borderImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] borderImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] borderImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] borderImgHover æ‚¬åœå›¾ç‰‡
+	@param [in] borderImgPressed æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] borderImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderImage(const QString& borderImgPath,
 						qint32 borderImgStateCount = 4,
@@ -166,12 +166,12 @@ public:
 						qint32 borderImgDisabled = 4,
 						bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÑÕÉ«
-	@param [in] textNormalColor ³£Ì¬ÑÕÉ«
-	@param [in] textHoverColor ĞüÍ£ÑÕÉ«
-	@param [in] textPressedColor °´ÏÂÑÕÉ«
-	@param [in] textDisabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—é¢œè‰²
+	@param [in] textNormalColor å¸¸æ€é¢œè‰²
+	@param [in] textHoverColor æ‚¬åœé¢œè‰²
+	@param [in] textPressedColor æŒ‰ä¸‹é¢œè‰²
+	@param [in] textDisabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setTextColor(const QColor& textNormalColor,
 					  const QColor& textHoverColor = QColor(0, 0, 0, 0),
@@ -184,21 +184,21 @@ template <class QBase>
 class ControlBorderForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlBorderForNormalHoverPressedDisabledAndCheck();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ·ÇÑ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ·ÇÑ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] pressedColor ·ÇÑ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] disabledColor ·ÇÑ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] normalCkColor Ñ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] hoverCkColor Ñ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] pressedCkColor Ñ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] disabledCkColor Ñ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor éé€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] hoverColor éé€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] pressedColor éé€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledColor éé€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] normalCkColor é€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] hoverCkColor é€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] pressedCkColor é€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledCkColor é€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderColor(const QColor& normalColor,
 						const QColor& hoverColor = QColor(0, 0, 0, 0),
@@ -210,18 +210,18 @@ public:
 						const QColor& disabledCkColor = QColor(0, 0, 0, 0),
 						bool rePaint = false);
 
-	/** ÉèÖÃ±³¾°Í¼Æ¬
-	@param [in] borderImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] borderImgStateCount Í¼Æ¬×İÏòÇĞ¸î¸öÊı
-	@param [in] borderImgNormal ·ÇÑ¡ÖĞ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾½«Í¼Æ¬×İÏò·Ö¸î4·İ»ò8·İ£¬Ñ¡×îÉÏÃæµÄµÚÒ»·İ
-	@param [in] borderImgHover ·ÇÑ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] borderImgPressed ·ÇÑ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] borderImgDisabled ·ÇÑ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] borderImgCkNormal Ñ¡ÖĞ³£Ì¬Í¼Æ¬
-	@param [in] borderImgCkHover Ñ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] borderImgCkPressed Ñ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] borderImgCkDisabled Ñ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯å›¾ç‰‡
+	@param [in] borderImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] borderImgStateCount å›¾ç‰‡çºµå‘åˆ‡å‰²ä¸ªæ•°
+	@param [in] borderImgNormal éé€‰ä¸­å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºå°†å›¾ç‰‡çºµå‘åˆ†å‰²4ä»½æˆ–8ä»½ï¼Œé€‰æœ€ä¸Šé¢çš„ç¬¬ä¸€ä»½
+	@param [in] borderImgHover éé€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] borderImgPressed éé€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] borderImgDisabled éé€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] borderImgCkNormal é€‰ä¸­å¸¸æ€å›¾ç‰‡
+	@param [in] borderImgCkHover é€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] borderImgCkPressed é€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] borderImgCkDisabled é€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderImage(const QString& borderImgPath,
 						qint32 borderImgStateCount = 8,
@@ -235,16 +235,16 @@ public:
 						qint32 borderImgCkDisabled = 8,
 						bool rePaint = false);
 
-	/** ÉèÖÃ×ÖÌåÑÕÉ«
-	@param [in] textNormalColor ·ÇÑ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] textHoverColor ·ÇÑ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] textPressedColor ·ÇÑ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] textDisabledColor ·ÇÑ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] textCkNormalColor Ñ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] textCkHoverColor Ñ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] textCkPressedColor Ñ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] textCkDisabledColor Ñ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å­—ä½“é¢œè‰²
+	@param [in] textNormalColor éé€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] textHoverColor éé€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] textPressedColor éé€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] textDisabledColor éé€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] textCkNormalColor é€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] textCkHoverColor é€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] textCkPressedColor é€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] textCkDisabledColor é€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setTextColor(const QColor& textNormalColor,
 	 	 		 	  const QColor& textHoverColor = QColor(0, 0, 0, 0),
@@ -261,26 +261,26 @@ template <class QBase>
 class ControlItemBorderForNormal : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBorderForNormal();
 
 public:
-	/** ÉèÖÃ±ß¿òÑÕÉ«
-	@param [in] color ³£Ì¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®è¾¹æ¡†é¢œè‰²
+	@param [in] color å¸¸æ€
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderColor(const QColor& color, bool rePaint = false);
 
-	/** ÉèÖÃ±ß¿òÍ¼Æ¬
-	@param [in] borderImgPath Í¼Æ¬Â·¾¶
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®è¾¹æ¡†å›¾ç‰‡
+	@param [in] borderImgPath å›¾ç‰‡è·¯å¾„
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderImage(const QString& borderImgPath, bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÑÕÉ«
-	@param [in] textColor ³£Ì¬ÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—é¢œè‰²
+	@param [in] textColor å¸¸æ€é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemTextColor(const QColor& textColor, bool rePaint = false);
 };
@@ -289,29 +289,29 @@ template <class QBase>
 class ControlItemBorderForNormalHoverDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBorderForNormalHoverDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderColor(const QColor& normalColor,
 							const QColor& hoverColor = QColor(0, 0, 0, 0),
 							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] borderImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] borderImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] borderImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] borderImgHover ĞüÍ£Í¼Æ¬
-	@param [in] borderImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] borderImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] borderImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] borderImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] borderImgHover æ‚¬åœå›¾ç‰‡
+	@param [in] borderImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
 							qint32 borderImgStateCount = 4,
@@ -320,11 +320,11 @@ public:
 							qint32 borderImgDisabled = 4,
 							bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÑÕÉ«
-	@param [in] textNormalColor ³£Ì¬ÑÕÉ«
-	@param [in] textHoverColor ĞüÍ£ÑÕÉ«
-	@param [in] textDisabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—é¢œè‰²
+	@param [in] textNormalColor å¸¸æ€é¢œè‰²
+	@param [in] textHoverColor æ‚¬åœé¢œè‰²
+	@param [in] textDisabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemTextColor(const QColor& textNormalColor,
 						  const QColor& textHoverColor = QColor(0, 0, 0, 0),
@@ -336,29 +336,29 @@ template <class QBase>
 class ControlItemBorderForNormalSelectedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBorderForNormalSelectedDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] selectedColor ĞüÍ£ÑÕÉ«£¨ÓÃÓÚlist£©
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] selectedColor æ‚¬åœé¢œè‰²ï¼ˆç”¨äºlistï¼‰
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderColor(const QColor& normalColor,
 							const QColor& selectedColor = QColor(0, 0, 0, 0),
 							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] borderImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] borderImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] borderImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] borderImgSelected ĞüÍ£Í¼Æ¬£¨ÓÃÓÚlist£©
-	@param [in] borderImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] borderImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] borderImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] borderImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] borderImgSelected æ‚¬åœå›¾ç‰‡ï¼ˆç”¨äºlistï¼‰
+	@param [in] borderImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
 							qint32 borderImgStateCount = 4,
@@ -367,11 +367,11 @@ public:
 							qint32 borderImgDisabled = 4,
 							bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÑÕÉ«
-	@param [in] textNormalColor ³£Ì¬ÑÕÉ«
-	@param [in] textSelectedColor ĞüÍ£ÑÕÉ«£¨ÓÃÓÚlist£©
-	@param [in] textDisabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—é¢œè‰²
+	@param [in] textNormalColor å¸¸æ€é¢œè‰²
+	@param [in] textSelectedColor æ‚¬åœé¢œè‰²ï¼ˆç”¨äºlistï¼‰
+	@param [in] textDisabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemTextColor(const QColor& textNormalColor,
 						  const QColor& textSelectedColor = QColor(0, 0, 0, 0),
@@ -383,17 +383,17 @@ template <class QBase>
 class ControlItemBorderForNormalHoverPressedDisabled : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBorderForNormalHoverPressedDisabled();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] pressedColor °´ÏÂÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] pressedColor æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderColor(const QColor& normalColor,
 							const QColor& hoverColor = QColor(0, 0, 0, 0),
@@ -401,14 +401,14 @@ public:
 							const QColor& disabledColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
-	/** ÉèÖÃ½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] borderImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] borderImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] borderImgNormal ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾Ñ¡×îÉÏÃæµÄÒ»·İ
-	@param [in] borderImgHover ĞüÍ£Í¼Æ¬
-	@param [in] borderImgPressed °´ÏÂÍ¼Æ¬
-	@param [in] borderImgDisabled ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] borderImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] borderImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] borderImgNormal å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºé€‰æœ€ä¸Šé¢çš„ä¸€ä»½
+	@param [in] borderImgHover æ‚¬åœå›¾ç‰‡
+	@param [in] borderImgPressed æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] borderImgDisabled ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
 							qint32 borderImgStateCount = 4,
@@ -418,12 +418,12 @@ public:
 							qint32 borderImgDisabled = 4,
 							bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÑÕÉ«
-	@param [in] textNormalColor ³£Ì¬ÑÕÉ«
-	@param [in] textHoverColor ĞüÍ£ÑÕÉ«
-	@param [in] textPressedColor °´ÏÂÑÕÉ«
-	@param [in] textDisabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—é¢œè‰²
+	@param [in] textNormalColor å¸¸æ€é¢œè‰²
+	@param [in] textHoverColor æ‚¬åœé¢œè‰²
+	@param [in] textPressedColor æŒ‰ä¸‹é¢œè‰²
+	@param [in] textDisabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemTextColor(const QColor& textNormalColor,
 						  const QColor& textHoverColor = QColor(0, 0, 0, 0),
@@ -436,21 +436,21 @@ template <class QBase>
 class ControlItemBorderForNormalHoverPressedDisabledAndCheck : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlItemBorderForNormalHoverPressedDisabledAndCheck();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ·ÇÑ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ·ÇÑ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] pressedColor ·ÇÑ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] disabledColor ·ÇÑ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] normalCkColor Ñ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] hoverCkColor Ñ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] pressedCkColor Ñ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] disabledCkColor Ñ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor éé€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] hoverColor éé€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] pressedColor éé€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledColor éé€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] normalCkColor é€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] hoverCkColor é€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] pressedCkColor é€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledCkColor é€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderColor(const QColor& normalColor,
 							const QColor& hoverColor = QColor(0, 0, 0, 0),
@@ -462,18 +462,18 @@ public:
 							const QColor& disabledCkColor = QColor(0, 0, 0, 0),
 							bool rePaint = false);
 
-	/** ÉèÖÃ±³¾°Í¼Æ¬
-	@param [in] borderImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] borderImgStateCount Í¼Æ¬×İÏòÇĞ¸î¸öÊı
-	@param [in] borderImgNormal ·ÇÑ¡ÖĞ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾½«Í¼Æ¬×İÏò·Ö¸î4·İ»ò8·İ£¬Ñ¡×îÉÏÃæµÄµÚÒ»·İ
-	@param [in] borderImgHover ·ÇÑ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] borderImgPressed ·ÇÑ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] borderImgDisabled ·ÇÑ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] borderImgCkNormal Ñ¡ÖĞ³£Ì¬Í¼Æ¬
-	@param [in] borderImgCkHover Ñ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] borderImgCkPressed Ñ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] borderImgCkDisabled Ñ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯å›¾ç‰‡
+	@param [in] borderImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] borderImgStateCount å›¾ç‰‡çºµå‘åˆ‡å‰²ä¸ªæ•°
+	@param [in] borderImgNormal éé€‰ä¸­å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºå°†å›¾ç‰‡çºµå‘åˆ†å‰²4ä»½æˆ–8ä»½ï¼Œé€‰æœ€ä¸Šé¢çš„ç¬¬ä¸€ä»½
+	@param [in] borderImgHover éé€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] borderImgPressed éé€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] borderImgDisabled éé€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] borderImgCkNormal é€‰ä¸­å¸¸æ€å›¾ç‰‡
+	@param [in] borderImgCkHover é€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] borderImgCkPressed é€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] borderImgCkDisabled é€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderImage(const QString& borderImgPath,
 							qint32 borderImgStateCount = 8,
@@ -487,16 +487,16 @@ public:
 							qint32 borderImgCkDisabled = 8,
 							bool rePaint = false);
 
-	/** ÉèÖÃ×ÖÌåÑÕÉ«
-	@param [in] textNormalColor ·ÇÑ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] textHoverColor ·ÇÑ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] textPressedColor ·ÇÑ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] textDisabledColor ·ÇÑ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] textCkNormalColor Ñ¡ÖĞ³£Ì¬ÑÕÉ«
-	@param [in] textCkHoverColor Ñ¡ÖĞĞüÍ£ÑÕÉ«
-	@param [in] textCkPressedColor Ñ¡ÖĞ°´ÏÂÑÕÉ«
-	@param [in] textCkDisabledColor Ñ¡ÖĞ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å­—ä½“é¢œè‰²
+	@param [in] textNormalColor éé€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] textHoverColor éé€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] textPressedColor éé€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] textDisabledColor éé€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] textCkNormalColor é€‰ä¸­å¸¸æ€é¢œè‰²
+	@param [in] textCkHoverColor é€‰ä¸­æ‚¬åœé¢œè‰²
+	@param [in] textCkPressedColor é€‰ä¸­æŒ‰ä¸‹é¢œè‰²
+	@param [in] textCkDisabledColor é€‰ä¸­ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemTextColor(const QColor& textNormalColor,
 	 	 		 		  const QColor& textHoverColor = QColor(0, 0, 0, 0),

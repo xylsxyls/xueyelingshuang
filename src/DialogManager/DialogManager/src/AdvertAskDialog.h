@@ -1,46 +1,46 @@
-#pragma once
+ï»¿#pragma once
 #include "PopDialog.h"
 
 #include <qglobal.h>
 #if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
 
 class CWebViewEx;
-/** °üº¬¹ã¸æÎ»µÄÑ¯ÎÊµ¯³ö¿ò
+/** åŒ…å«å¹¿å‘Šä½çš„è¯¢é—®å¼¹å‡ºæ¡†
 */
 class AdvertAskDialog : public PopDialog
 {
 	Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êý
+    /** æž„é€ å‡½æ•°
     */
 	AdvertAskDialog();
 
 public:
-    /** ÉèÖÃÌáÊ¾
-    @param [in] tip ÌáÊ¾ÄÚÈÝ
+    /** è®¾ç½®æç¤º
+    @param [in] tip æç¤ºå†…å®¹
     */
     void setTip(const QString& tip);
 
-    /** ÉèÖÃÈ·¶¨°´Å¥ÎÄ×ÖÄÚÈÝºÍ°´ÏÂµÄ·µ»ØÖµ
-    @param [in] acceptText °´Å¥ÎÄ×ÖÄÚÈÝ
-    @param [in] acceptDone °´ÏÂµÄ·µ»ØÖµ
+    /** è®¾ç½®ç¡®å®šæŒ‰é’®æ–‡å­—å†…å®¹å’ŒæŒ‰ä¸‹çš„è¿”å›žå€¼
+    @param [in] acceptText æŒ‰é’®æ–‡å­—å†…å®¹
+    @param [in] acceptDone æŒ‰ä¸‹çš„è¿”å›žå€¼
     */
     void setAcceptButton(const QString& acceptText, DialogResult acceptDone);
 
-    /** ÉèÖÃÈ¡Ïû°´Å¥ÎÄ×ÖÄÚÈÝºÍ°´ÏÂµÄ·µ»ØÖµ
-    @param [in] ignoreText °´Å¥ÎÄ×ÖÄÚÈÝ
-    @param [in] ignoreDone °´ÏÂµÄ·µ»ØÖµ
+    /** è®¾ç½®å–æ¶ˆæŒ‰é’®æ–‡å­—å†…å®¹å’ŒæŒ‰ä¸‹çš„è¿”å›žå€¼
+    @param [in] ignoreText æŒ‰é’®æ–‡å­—å†…å®¹
+    @param [in] ignoreDone æŒ‰ä¸‹çš„è¿”å›žå€¼
     */
     void setIgnoreButton(const QString& ignoreText, DialogResult ignoreDone);
 
-    /** ³õÊ¼»¯¹ã¸æ
-    @param [in] advertUrl ¹ã¸æµØÖ·
+    /** åˆå§‹åŒ–å¹¿å‘Š
+    @param [in] advertUrl å¹¿å‘Šåœ°å€
     */
     void initAdvertUrl(const QString& advertUrl);
 
 Q_SIGNALS:
-    /** ¹ã¸æ±»µã»÷·¢ËÍÐÅºÅ
-    @param [in] url ¹ã¸æÁ´½ÓµØÖ·
+    /** å¹¿å‘Šè¢«ç‚¹å‡»å‘é€ä¿¡å·
+    @param [in] url å¹¿å‘Šé“¾æŽ¥åœ°å€
     */
 	void advertClicked(const QString& url);
 

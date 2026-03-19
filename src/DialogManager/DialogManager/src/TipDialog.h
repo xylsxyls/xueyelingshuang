@@ -1,25 +1,25 @@
-#pragma once
+ï»¿#pragma once
 #include "PopDialog.h"
 
-/** ÌáÊ¾µ¯³ö¿ò
+/** æç¤ºå¼¹å‡ºæ¡†
 */
 class TipDialog : public PopDialog
 {
 	Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
 	TipDialog();
 
 public:
-    /** ÉèÖÃÌáÊ¾
-    @param [in] tip ÌáÊ¾ÄÚÈİ
+    /** è®¾ç½®æç¤º
+    @param [in] tip æç¤ºå†…å®¹
     */
     void setTip(const QString& tip);
 
-    /** ÉèÖÃÈ·¶¨°´Å¥ÄÚÈİ
-    @param [in] acceptText È·¶¨°´Å¥ÎÄ×ÖÄÚÈİ
-    @param [in] acceptDone È·¶¨°´Å¥°´ÏÂ·µ»ØÖµ
+    /** è®¾ç½®ç¡®å®šæŒ‰é’®å†…å®¹
+    @param [in] acceptText ç¡®å®šæŒ‰é’®æ–‡å­—å†…å®¹
+    @param [in] acceptDone ç¡®å®šæŒ‰é’®æŒ‰ä¸‹è¿”å›å€¼
     */
     void setAcceptButton(const QString& acceptText, DialogResult acceptDone);
 

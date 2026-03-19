@@ -1,19 +1,19 @@
-#pragma once
+ï»¿#pragma once
 #include "DialogManagerMacro.h"
 #include "PopDialog.h"
 
-/** µÈ´ıµ¯³ö¿ò
+/** ç­‰å¾…å¼¹å‡ºæ¡†
 */
 class WaitDialog : public PopDialog
 {
 	Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
     WaitDialog();
 
-    /** ÉèÖÃÌáÊ¾ÄÚÈİ
-    @param [in] tip ÌáÊ¾ÄÚÈİ
+    /** è®¾ç½®æç¤ºå†…å®¹
+    @param [in] tip æç¤ºå†…å®¹
     */
     void setTip(const QString& tip);
 

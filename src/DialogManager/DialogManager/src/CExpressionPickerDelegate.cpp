@@ -1,4 +1,4 @@
-#include "CExpressionPickerDelegate.h"
+﻿#include "CExpressionPickerDelegate.h"
 #include <QPainter>
 #include <QDebug>
 #include "CExpressionPicker.h"

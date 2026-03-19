@@ -1,10 +1,10 @@
-#pragma once
+ï»¿#pragma once
 #include <QProxyStyle>
 #include "QtControlsMacro.h"
 
-// ²Î¿¼QtÔ´Âë, qfunsionstyle
+// å‚è€ƒQtæºç , qfunsionstyle
 
-/**@brief ¶¨ÖÆ²Ëµ¥style
+/**@brief å®šåˆ¶èœå•style
 @author  lwh
 */
 class MenuCustomStyle : public QProxyStyle

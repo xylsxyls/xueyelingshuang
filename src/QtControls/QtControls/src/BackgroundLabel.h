@@ -1,19 +1,19 @@
-#pragma once
+ï»¿#pragma once
 #include "Label.h"
 #include "QtControlsMacro.h"
 
-/** Í¸Ã÷´°¿Ú±³¾°¿Ø¼ş
+/** é€æ˜çª—å£èƒŒæ™¯æ§ä»¶
 */
 class QtControlsAPI BackgroundLabel : public Label
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	BackgroundLabel(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~BackgroundLabel();
 };

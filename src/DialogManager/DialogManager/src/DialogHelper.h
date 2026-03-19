@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QString>
 #include <QRect>
 #include <QColor>
@@ -17,39 +17,39 @@ class CPasswordInputBox;
 class DialogShow;
 class QWindow;
 class Separator;
-/** °ïÖú´°¿Ú´´½¨¿Ø¼ş
+/** å¸®åŠ©çª—å£åˆ›å»ºæ§ä»¶
 */
 class DialogManagerAPI DialogHelper
 {
 public:
-    /** ĞÂÔö±êÇ©ÎÄ×Ö²¢ÉèÖÃ
-    @param [in] label ¿Ø¼şÖ¸Õë
-    @param [in] text ÎÄ±¾ÄÚÈİ
-    @param [in] textColor ×ÖÌåÑÕÉ«
-    @param [in] fontSize ×ÖÌå´óĞ¡
-    @return ·µ»Ø±êÇ©Ö¸Õë
+    /** æ–°å¢æ ‡ç­¾æ–‡å­—å¹¶è®¾ç½®
+    @param [in] label æ§ä»¶æŒ‡é’ˆ
+    @param [in] text æ–‡æœ¬å†…å®¹
+    @param [in] textColor å­—ä½“é¢œè‰²
+    @param [in] fontSize å­—ä½“å¤§å°
+    @return è¿”å›æ ‡ç­¾æŒ‡é’ˆ
     */
     static void setLabel(Label* label, const QString& text, const QColor& textColor, qint32 fontSize);
 
-    /** ĞÂÔöÌáÊ¾ÎÄ×Ö²¢ÉèÖÃ£¨¶àĞĞ£©
-    @param [in] tip ¿Ø¼şÖ¸Õë
-    @param [in] text ÎÄ±¾ÄÚÈİ
-    @param [in] textColor ×ÖÌåÑÕÉ«
-    @param [in] fontSize ×ÖÌå´óĞ¡
+    /** æ–°å¢æç¤ºæ–‡å­—å¹¶è®¾ç½®ï¼ˆå¤šè¡Œï¼‰
+    @param [in] tip æ§ä»¶æŒ‡é’ˆ
+    @param [in] text æ–‡æœ¬å†…å®¹
+    @param [in] textColor å­—ä½“é¢œè‰²
+    @param [in] fontSize å­—ä½“å¤§å°
     */
     static void setTip(Label* tip, const QString& text, const QColor& textColor, qint32 fontSize);
 
-    /** ĞÂÔö°´Å¥²¢ÉèÖÃ£¬°´Å¥µã»÷ºó»á¹Ø±Õ´°¿Ú
-    @param [in] dialog ´°¿ÚÖ¸Õë
-    @param [in] button °´Å¥Ö¸Õë
-    @param [in] text °´Å¥ÎÄ±¾ÄÚÈİ
-    @param [in] textColor °´Å¥ÎÄ×ÖÑÕÉ«
-    @param [in] backgroundImage °´Å¥±³¾°Í¼Æ¬Â·¾¶
-    @param [in] result °´ÏÂºóµÄ·µ»ØÖµ
-    @param [in] fontSize ×ÖÌå´óĞ¡
-    @param [in] mapResult °´Å¥·µ»ØÖµµÄ´æ´¢ÈİÆ÷
-    @param [in] imageMargin Í¼Æ¬ÆğÊ¼Î»ÖÃ
-    @param [in] isPop ÊÇ·ñÊÇµ¯´°µÄ°´Å¥
+    /** æ–°å¢æŒ‰é’®å¹¶è®¾ç½®ï¼ŒæŒ‰é’®ç‚¹å‡»åä¼šå…³é—­çª—å£
+    @param [in] dialog çª—å£æŒ‡é’ˆ
+    @param [in] button æŒ‰é’®æŒ‡é’ˆ
+    @param [in] text æŒ‰é’®æ–‡æœ¬å†…å®¹
+    @param [in] textColor æŒ‰é’®æ–‡å­—é¢œè‰²
+    @param [in] backgroundImage æŒ‰é’®èƒŒæ™¯å›¾ç‰‡è·¯å¾„
+    @param [in] result æŒ‰ä¸‹åçš„è¿”å›å€¼
+    @param [in] fontSize å­—ä½“å¤§å°
+    @param [in] mapResult æŒ‰é’®è¿”å›å€¼çš„å­˜å‚¨å®¹å™¨
+    @param [in] imageMargin å›¾ç‰‡èµ·å§‹ä½ç½®
+    @param [in] isPop æ˜¯å¦æ˜¯å¼¹çª—çš„æŒ‰é’®
     */
     static void setButton(DialogShow* dialog,
                           COriginalButton* button,
@@ -62,51 +62,51 @@ public:
                           qint32 imageMargin,
                           bool isPop);
 
-    /** Ìí¼Ó·Ö¸îÏß
-    @param [in] separator ·Ö¸îÏß¿Ø¼şÖ¸Õë
-    @param [in] isHorizon ÊÇ·ñË®Æ½
-    @param [in] upColor ÉÏ²ãÑÕÉ«
-    @param [in] downColor ÏÂ²ãÑÕÉ«
+    /** æ·»åŠ åˆ†å‰²çº¿
+    @param [in] separator åˆ†å‰²çº¿æ§ä»¶æŒ‡é’ˆ
+    @param [in] isHorizon æ˜¯å¦æ°´å¹³
+    @param [in] upColor ä¸Šå±‚é¢œè‰²
+    @param [in] downColor ä¸‹å±‚é¢œè‰²
     */
     static void setSeparator(Separator* separator, bool isHorizon, const QColor& upColor, const QColor& downColor);
 
-    /** Ìí¼Óµ¥ĞĞÎÄ±¾¿ò
-    @param [in] lineEdit µ¥ĞĞÎÄ±¾¿òÖ¸Õë
-    @param [in] defaultText Ä¬ÈÏÊäÈëÄÚÈİ
-    @param [in] maxLength ÎÄ±¾¿ò¿ÉÊäÈëµÄ×î´ó³¤¶È
+    /** æ·»åŠ å•è¡Œæ–‡æœ¬æ¡†
+    @param [in] lineEdit å•è¡Œæ–‡æœ¬æ¡†æŒ‡é’ˆ
+    @param [in] defaultText é»˜è®¤è¾“å…¥å†…å®¹
+    @param [in] maxLength æ–‡æœ¬æ¡†å¯è¾“å…¥çš„æœ€å¤§é•¿åº¦
     */
     static void setLineEdit(LineEdit* lineEdit, const QString& defaultText = "", qint32 maxLength = -1);
 
-    /** Ìí¼ÓÃÜÂë¿ò
-    @param [in] passwordInputBox ÃÜÂë¿òÖ¸Õë
-    @param [in] defaultText Ä¬ÈÏÊäÈëÄÚÈİ
-    @param [in] maxLength ÎÄ±¾¿ò¿ÉÊäÈëµÄ×î´ó³¤¶È
+    /** æ·»åŠ å¯†ç æ¡†
+    @param [in] passwordInputBox å¯†ç æ¡†æŒ‡é’ˆ
+    @param [in] defaultText é»˜è®¤è¾“å…¥å†…å®¹
+    @param [in] maxLength æ–‡æœ¬æ¡†å¯è¾“å…¥çš„æœ€å¤§é•¿åº¦
     */
     static void setPasswordInputBox(CPasswordInputBox* passwordInputBox, const QString& defaultText = "", qint32 maxLength = -1);
 
-    /** ¼¤»îÁÙÊ±¸¸´°¿Ú
-    @param [in] ĞèÒª¼¤»î´°¿ÚµÄ×Ó´°¿Ú¾ä±ú
+    /** æ¿€æ´»ä¸´æ—¶çˆ¶çª—å£
+    @param [in] éœ€è¦æ¿€æ´»çª—å£çš„å­çª—å£å¥æŸ„
     */
 	static void activeTransientParentWindow(QWindow* window);
 
-	/** ÉèÖÃÈÕÖ¾Â·¾¶
-	@param [in] path ÈÕÖ¾Â·¾¶
+	/** è®¾ç½®æ—¥å¿—è·¯å¾„
+	@param [in] path æ—¥å¿—è·¯å¾„
 	*/
 	static void setLogPathFrom11Client(const std::string& path);
 
-	/** ÉèÖÃÈÕÖ¾Â·¾¶
-	@param [in] path ÈÕÖ¾Â·¾¶
+	/** è®¾ç½®æ—¥å¿—è·¯å¾„
+	@param [in] path æ—¥å¿—è·¯å¾„
 	*/
 	static void setLogPathFromWar3(const std::string& path);
 
-	/** »ñÈ¡ÈÕÖ¾ÎÄ¼ş
-	@return »ñÈ¡ÈÕÖ¾ÎÄ¼ş
+	/** è·å–æ—¥å¿—æ–‡ä»¶
+	@return è·å–æ—¥å¿—æ–‡ä»¶
 	*/
 	static std::ofstream& logFile();
 
-	/** ¾ØĞÎ×ª»»£¬½«Ğ¡ÓÚ0µÄµã×ª»»Îª0
-	@param [in] rect Ô­¾ØĞÎ
-	@return ·µ»Ø×ª»»ºóµÄ¾ØĞÎ
+	/** çŸ©å½¢è½¬æ¢ï¼Œå°†å°äº0çš„ç‚¹è½¬æ¢ä¸º0
+	@param [in] rect åŸçŸ©å½¢
+	@return è¿”å›è½¬æ¢åçš„çŸ©å½¢
 	*/
 	static QRect rectValid(const QRect& rect);
 };

@@ -1,56 +1,56 @@
-#pragma once
+ï»¿#pragma once
 #include <QStyledItemDelegate>
 #include "QtControlsMacro.h"
 
-/** TreeViewDelegate²Ù×÷Àà
+/** TreeViewDelegateæ“ä½œç±»
 */
 class QtControlsAPI TreeViewDelegate : public QStyledItemDelegate
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	TreeViewDelegate();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~TreeViewDelegate();
 
 public:
-	/** »­Í¼
-	@param [in] painter »æ»­Ö¸Õë
-	@param [in] option »æ»­²ÎÊı
-	@param [in] index ½Úµã°ü
+	/** ç”»å›¾
+	@param [in] painter ç»˜ç”»æŒ‡é’ˆ
+	@param [in] option ç»˜ç”»å‚æ•°
+	@param [in] index èŠ‚ç‚¹åŒ…
 	*/
 	void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
 
-	/** ´æ·ÅQWdiget
-	@param [in] parentPtr ¸¸Ö¸ÕëÎªTreeViewÖ¸Õë
-	@param [in] option »æ»­²ÎÊı
-	@param [in] index ½Úµã°ü
-	@return ·µ»Ø´´½¨µÄQWidget
+	/** å­˜æ”¾QWdiget
+	@param [in] parentPtr çˆ¶æŒ‡é’ˆä¸ºTreeViewæŒ‡é’ˆ
+	@param [in] option ç»˜ç”»å‚æ•°
+	@param [in] index èŠ‚ç‚¹åŒ…
+	@return è¿”å›åˆ›å»ºçš„QWidget
 	*/
 	QWidget* createEditor(QWidget* parentPtr, const QStyleOptionViewItem& option, const QModelIndex& index) const;
 
-	/** Ë«»÷ºóÉèÖÃÊı¾İµ½QWidget
-	@param [in] editor ´´½¨µÄQWidgetÖ¸Õë
-	@param [in] index ½Úµã°ü
+	/** åŒå‡»åè®¾ç½®æ•°æ®åˆ°QWidget
+	@param [in] editor åˆ›å»ºçš„QWidgetæŒ‡é’ˆ
+	@param [in] index èŠ‚ç‚¹åŒ…
 	*/
 	void setEditorData(QWidget* editor, const QModelIndex& index) const;
 
-	/** »Ö¸´±à¼­Êı¾İµ½TreeView
-	@param [in] editor ´´½¨µÄQWidgetÖ¸Õë
-	@param [in] model Ä£ĞÍÖ¸Õë
-	@param [in] index ½Úµã°ü
+	/** æ¢å¤ç¼–è¾‘æ•°æ®åˆ°TreeView
+	@param [in] editor åˆ›å»ºçš„QWidgetæŒ‡é’ˆ
+	@param [in] model æ¨¡å‹æŒ‡é’ˆ
+	@param [in] index èŠ‚ç‚¹åŒ…
 	*/
 	void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index);
 
 protected:
-	/** ³õÊ¼»¯
+	/** åˆå§‹åŒ–
 	*/
 	void init();
 
-	/** ¼ì²âÄÚ²¿Ö¸ÕëÊÇ·ñÓĞĞ§
-	@return ·µ»ØÄÚ²¿Ö¸ÕëÊÇ·ñÓĞĞ§
+	/** æ£€æµ‹å†…éƒ¨æŒ‡é’ˆæ˜¯å¦æœ‰æ•ˆ
+	@return è¿”å›å†…éƒ¨æŒ‡é’ˆæ˜¯å¦æœ‰æ•ˆ
 	*/
 	bool check();
 

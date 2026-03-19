@@ -1,4 +1,4 @@
-#include "TreeView.h"
+ï»¿#include "TreeView.h"
 #include "TreeViewDelegate.h"
 #include "TreeViewHeader.h"
 #include <QStandardItemModel>
@@ -37,7 +37,7 @@ void TreeView::init()
 	setAttribute(Qt::WA_TranslucentBackground);
 	setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
 	setFrameStyle(QFrame::NoFrame);
-	//È¥µô×ó²à¿Õ°×
+	//åŽ»æŽ‰å·¦ä¾§ç©ºç™½
 	setIndentation(0);
 	setEditTriggers(TreeView::NoEditTriggers);
 }

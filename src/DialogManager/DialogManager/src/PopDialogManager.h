@@ -1,10 +1,10 @@
-#pragma once
+ï»¿#pragma once
 #include <QObject>
 #include "DialogType.h"
 #include "ManagerBase/ManagerBaseAPI.h"
 
 class DownloadOperateDialog;
-/** µ¯´°µÄ¹ÜÀíÀà
+/** å¼¹çª—çš„ç®¡ç†ç±»
 */
 class PopDialogManager :
     public QObject,
@@ -12,23 +12,23 @@ class PopDialogManager :
 {
     Q_OBJECT
 public:
-    /** µ¯³öµ¯¿ò
-    @param [in] type µ¯´°ÀàĞÍ
-    @param [in] param µ¯´°²ÎÊı
+    /** å¼¹å‡ºå¼¹æ¡†
+    @param [in] type å¼¹çª—ç±»å‹
+    @param [in] param å¼¹çª—å‚æ•°
     */
 	void popDialog(DialogParam& param);
 
 public:
-	/** ²Ù×÷´°¿Ú
-	@param [in] type ²Ù×÷ÀàĞÍ
-	@param [in] param ²Ù×÷²ÎÊı
+	/** æ“ä½œçª—å£
+	@param [in] type æ“ä½œç±»å‹
+	@param [in] param æ“ä½œå‚æ•°
 	*/
 	void operateDialog(OperateParam& param);
 
 Q_SIGNALS:
-	/** ´°¿Ú·¢³öĞÅºÅ
-	@param [in] type ĞÅºÅÀàĞÍ
-	@param [in] param ĞÅºÅ²ÎÊı
+	/** çª—å£å‘å‡ºä¿¡å·
+	@param [in] type ä¿¡å·ç±»å‹
+	@param [in] param ä¿¡å·å‚æ•°
 	*/
 	void dialogSignal(const SignalParam& param);
 

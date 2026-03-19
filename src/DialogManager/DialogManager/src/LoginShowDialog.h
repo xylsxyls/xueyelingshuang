@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "DialogManagerMacro.h"
 #include "NotifyDialog.h"
 
@@ -7,41 +7,41 @@
 class QWebView;
 class COriginalButton;
 class Separator;
-/** ÏÔÊ¾ÌáÊ¾¿ò
+/** æ˜¾ç¤ºæç¤ºæ¡†
 */
 class LoginShowDialog : public NotifyDialog
 {
 	Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
 	LoginShowDialog();
 
 public:
-    /** ÉèÖÃÌáÊ¾
-    @param [in] tip ÌáÊ¾ÄÚÈİ
+    /** è®¾ç½®æç¤º
+    @param [in] tip æç¤ºå†…å®¹
     */
     void setTip(const QString& tip);
 
-    /** ÉèÖÃÕĞºôÄÚÈİ
-    @param [in] greeting ÕĞºôÄÚÈİ
+    /** è®¾ç½®æ‹›å‘¼å†…å®¹
+    @param [in] greeting æ‹›å‘¼å†…å®¹
     */
     void setGreeting(const QString& greeting);
 
-    /** ÉèÖÃ¸ü¶à°´Å¥Ïà¹ØĞÅÏ¢
-    @param [in] buttonText °´Å¥ÎÄ×ÖÄÚÈİ
-    @param [in] linkUrl ¸ü¶à°´Å¥Á´½ÓµØÖ·
-    @param [in] isUrlButtonVisible ÉèÖÃ¸ü¶à°´Å¥ÊÇ·ñÏÔÊ¾
+    /** è®¾ç½®æ›´å¤šæŒ‰é’®ç›¸å…³ä¿¡æ¯
+    @param [in] buttonText æŒ‰é’®æ–‡å­—å†…å®¹
+    @param [in] linkUrl æ›´å¤šæŒ‰é’®é“¾æ¥åœ°å€
+    @param [in] isUrlButtonVisible è®¾ç½®æ›´å¤šæŒ‰é’®æ˜¯å¦æ˜¾ç¤º
     */
     void setMoreButton(const QString& buttonText, const QString& linkUrl, bool isUrlButtonVisible);
 
-	/** ÉèÖÃÉÏ´ÎµÇÂ¼µØÖ·
-	@param [in] preLoginAddr ÉÏ´ÎµÇÂ¼µØÖ·
+	/** è®¾ç½®ä¸Šæ¬¡ç™»å½•åœ°å€
+	@param [in] preLoginAddr ä¸Šæ¬¡ç™»å½•åœ°å€
 	*/
 	void setPreLoginAddr(const QString& preLoginAddr);
 
-	/** ÉèÖÃÉÏ´ÎµÇÂ¼Ê±¼ä
-	@param [in] preLoginTime ÉÏ´ÎµÇÂ¼Ê±¼ä
+	/** è®¾ç½®ä¸Šæ¬¡ç™»å½•æ—¶é—´
+	@param [in] preLoginTime ä¸Šæ¬¡ç™»å½•æ—¶é—´
 	*/
 	void setPreLoginTime(const QString& preLoginTime);
 

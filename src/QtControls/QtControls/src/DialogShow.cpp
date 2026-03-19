@@ -1,4 +1,4 @@
-#include "DialogShow.h"
+ï»¿#include "DialogShow.h"
 #include "Label.h"
 #include "COriginalButton.h"
 
@@ -97,7 +97,7 @@ void DialogShow::onTimeUpdate(qint32 timeOut)
     {
         return;
     }
-    m_time->setText(QString::fromStdWString(CStringManager::Format(L"»¹ÓÐ%dÃë×Ô¶¯¹Ø±Õ", timeOut)));
+    m_time->setText(QString::fromStdWString(CStringManager::Format(L"è¿˜æœ‰%dç§’è‡ªåŠ¨å…³é—­", timeOut)));
 }
 
 void DialogShow::onKeyboardAccept(QObject* tar, Qt::Key key)

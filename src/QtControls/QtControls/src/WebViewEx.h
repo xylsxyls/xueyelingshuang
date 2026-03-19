@@ -1,4 +1,4 @@
-#ifndef WEBVIEWEX_H
+﻿#ifndef WEBVIEWEX_H
 #define WEBVIEWEX_H
 
 #include <qglobal.h>

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QMenu>
 #include "ControlShow.h"
 #include "ControlFont.h"
@@ -23,32 +23,32 @@ class QtControlsAPI Menu :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	Menu(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~Menu();
 
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] title ²Ëµ¥±êÌâ
-	@param [in] icon ²Ëµ¥Í¼±ê
-	@param [in] size ²Ëµ¥Í¼±ê´óĞ¡
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] title èœå•æ ‡é¢˜
+	@param [in] icon èœå•å›¾æ ‡
+	@param [in] size èœå•å›¾æ ‡å¤§å°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	Menu(const QString& title, const QString& icon = QString(), const QSize& size = QSize(), QWidget* parent = nullptr);
 
 public:
-	/** Ìí¼Ó½Úµã
-	@param [in] text ÎÄ±¾
-	@param [in] uncheckIcon Î´Ñ¡ÔñÊ±µÄÍ¼Æ¬
-	@param [in] uncheckIconSize Î´Ñ¡ÔñÊ±µÄÍ¼Æ¬´óĞ¡
-	@param [in] checkIcon Ñ¡ÔñÊ±µÄÍ¼Æ¬
-	@param [in] checkIconSize Ñ¡ÔñÊ±µÄÍ¼Æ¬´óĞ¡
-	@return ·µ»ØÌí¼ÓµÄ½ÚµãÖ¸Õë
+	/** æ·»åŠ èŠ‚ç‚¹
+	@param [in] text æ–‡æœ¬
+	@param [in] uncheckIcon æœªé€‰æ‹©æ—¶çš„å›¾ç‰‡
+	@param [in] uncheckIconSize æœªé€‰æ‹©æ—¶çš„å›¾ç‰‡å¤§å°
+	@param [in] checkIcon é€‰æ‹©æ—¶çš„å›¾ç‰‡
+	@param [in] checkIconSize é€‰æ‹©æ—¶çš„å›¾ç‰‡å¤§å°
+	@return è¿”å›æ·»åŠ çš„èŠ‚ç‚¹æŒ‡é’ˆ
 	*/
 	QAction* addAction(const QString& text,
 					   const QString& uncheckIcon = QString(),
@@ -56,40 +56,40 @@ public:
 					   const QString& checkIcon = QString(),
 					   const QSize& checkIconSize = QSize(0, 0));
 
-	/** Ìí¼Ó²Ëµ¥
-	@param [in] menu ²Ëµ¥Ö¸Õë
+	/** æ·»åŠ èœå•
+	@param [in] menu èœå•æŒ‡é’ˆ
 	*/
 	void addMenu(Menu* menu);
 
-	/** ÉèÖÃ·Ö¸îÏß´Ö¶È
-	@param [in] height ·Ö¸îÏß¸ß¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®åˆ†å‰²çº¿ç²—åº¦
+	@param [in] height åˆ†å‰²çº¿é«˜åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setSeparatorHeight(qint32 height, bool rePaint = false);
 
-	/** ÉèÖÃ·Ö¸îÏßÑÕÉ«
-	@param [in] color ·Ö¸îÏßÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®åˆ†å‰²çº¿é¢œè‰²
+	@param [in] color åˆ†å‰²çº¿é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setSeparatorColor(const QColor& color, bool rePaint = false);
 
-	/** ÉèÖÃÍ¼±êÆ«ÒÆÁ¿
-	@param [in] leftOrigin Í¼±êÆ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å›¾æ ‡åç§»é‡
+	@param [in] leftOrigin å›¾æ ‡åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemIconOrigin(qint32 leftOrigin, bool rePaint = false);
 
-	/** µ¯³ö²Ëµ¥
-	@param [in] point µ¯³öÎ»ÖÃ
-	@return ÔÚÑ¡ÔñÁËÒ»¸ö²Ëµ¥ºó·µ»Ø¸Ã²Ëµ¥Ö¸Õë£¬Èç¹ûµã»÷ÆäËûÇøÓòÔò·µ»Ø¿Õ
+	/** å¼¹å‡ºèœå•
+	@param [in] point å¼¹å‡ºä½ç½®
+	@return åœ¨é€‰æ‹©äº†ä¸€ä¸ªèœå•åè¿”å›è¯¥èœå•æŒ‡é’ˆï¼Œå¦‚æœç‚¹å‡»å…¶ä»–åŒºåŸŸåˆ™è¿”å›ç©º
 	*/
 	QAction* exec(const QPoint& point);
 
 private:
-	/** ¸Ä±äÍ¼±ê
-	@param [in] action Ñ¡ÖĞµÄ²Ëµ¥Ïî
-	@param [in] icon µ±Ç°Í¼±ê
-	@return ·µ»Ø¸Ä±äºóµÄÍ¼±ê
+	/** æ”¹å˜å›¾æ ‡
+	@param [in] action é€‰ä¸­çš„èœå•é¡¹
+	@param [in] icon å½“å‰å›¾æ ‡
+	@return è¿”å›æ”¹å˜åçš„å›¾æ ‡
 	*/
 	QIcon ChangeIcon(QAction* action, const QIcon& icon);
 	

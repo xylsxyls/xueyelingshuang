@@ -1,19 +1,19 @@
-#pragma once
+ï»¿#pragma once
 #include "BoxDialogBase.h"
 #include "DialogManagerMacro.h"
 
 class LockedAccountPanel;
-/** ·âºÅ¿ò
+/** å°å·æ¡†
 */
 class DialogManagerAPI ClosureDialog : public BoxDialogBase
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ClosureDialog();
 
-    /** »ñÈ¡ÄÚ²¿½çÃæÖ¸Õë
-    @return ·µ»ØÄÚ²¿½çÃæÖ¸Õë
+    /** è·å–å†…éƒ¨ç•Œé¢æŒ‡é’ˆ
+    @return è¿”å›å†…éƒ¨ç•Œé¢æŒ‡é’ˆ
     */
     LockedAccountPanel* lockedAccountPanel();
 

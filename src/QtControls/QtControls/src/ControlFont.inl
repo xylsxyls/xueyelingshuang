@@ -1,4 +1,4 @@
-#ifndef CONTROLFONT_INL__
+﻿#ifndef CONTROLFONT_INL__
 #define CONTROLFONT_INL__
 //#pragma once
 #include "ControlFont.h"

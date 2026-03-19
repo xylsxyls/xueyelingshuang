@@ -1,4 +1,4 @@
-#include "NotifyDialog.h"
+ï»¿#include "NotifyDialog.h"
 #include "DialogHelper.h"
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
@@ -19,7 +19,7 @@ m_isShow(false)
         return;
     }
 
-	//Ê¹ÓÃQt::ToolÖ®ºóshow³öÀ´µÄ´°¿Ú²»ÇÀ½¹µã
+	//ä½¿ç”¨Qt::Toolä¹‹åshowå‡ºæ¥çš„çª—å£ä¸æŠ¢ç„¦ç‚¹
 	setWindowFlags(windowFlags() | Qt::Tool);//Qt::WindowDoesNotAcceptFocus
 
 	setAttribute(Qt::WA_ShowWithoutActivating);
@@ -67,14 +67,14 @@ void NotifyDialog::prepareExit()
 
 void NotifyDialog::beginExitAnimation()
 {
-    //È¥µô¶¨Ê±Æ÷
+    //å»æ‰å®šæ—¶å™¨
     if (m_timeId != -1)
     {
         killTimer(m_timeId);
         m_timeId = -1;
     }
 
-    //ÏÈ½«ËùÓĞ¿Ø¼şÉèÎª½ûÓÃ
+    //å…ˆå°†æ‰€æœ‰æ§ä»¶è®¾ä¸ºç¦ç”¨
     auto childs = children();
     for (auto itChild = childs.begin(); itChild != childs.end(); ++itChild)
     {
@@ -139,7 +139,7 @@ void NotifyDialog::resizeEvent(QResizeEvent* eve)
 
 void NotifyDialog::end()
 {
-    //µ±¹Ø±ÕµÄÊ±ºò¶¯»­½áÊø²Å¹Ø±Õ´°¿Ú
+    //å½“å…³é—­çš„æ—¶å€™åŠ¨ç”»ç»“æŸæ‰å…³é—­çª—å£
     if (m_isShow == false)
     {
         close();

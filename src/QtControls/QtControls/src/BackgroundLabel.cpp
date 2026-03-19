@@ -1,4 +1,4 @@
-#include "BackgroundLabel.h"
+﻿#include "BackgroundLabel.h"
 
 BackgroundLabel::BackgroundLabel(QWidget* parent):
 Label(parent)

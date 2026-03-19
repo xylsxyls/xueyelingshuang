@@ -1,4 +1,4 @@
-#include "BoxDialogBase.h"
+﻿#include "BoxDialogBase.h"
 #include "QtControls/Label.h"
 #include <QPainter>
 #include "QtControls/COriginalButton.h"

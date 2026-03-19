@@ -1,4 +1,4 @@
-#include "CExpressionPicker.h"
+﻿#include "CExpressionPicker.h"
 #include <QHeaderView>
 #include <QMouseEvent>
 #include "CExpressionPickerDelegate.h"

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <map>
 #include <QMutex>
 #include "DialogType.h"
@@ -8,7 +8,7 @@
 
 class AccountManagerDialog;
 class COriginalDialog;
-/** ´°¿ÚÄÚ´æ¹ÜÀíÆ÷
+/** çª—å£å†…å­˜ç®¡ç†å™¨
 */
 class AllocManager :
 	public QObject,
@@ -16,120 +16,120 @@ class AllocManager :
 {
     Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
     AllocManager();
 
-    /** Îö¹¹º¯Êı
+    /** ææ„å‡½æ•°
     */
     ~AllocManager();
 
 public:
-    /** ´´½¨Ò»¸ö´°¿Ú£¬Ö§³Ö¶àÏß³Ì
-    @param [out] dialogId ´°¿ÚID
-    @param [in] userId ÓÃ»§×Ô¶¨ÒåID
-    @param [in] type ´°¿ÚÀàĞÍ
-    @return ·µ»Ø´´½¨µÄ´°¿ÚÖ¸Õë
+    /** åˆ›å»ºä¸€ä¸ªçª—å£ï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @param [out] dialogId çª—å£ID
+    @param [in] userId ç”¨æˆ·è‡ªå®šä¹‰ID
+    @param [in] type çª—å£ç±»å‹
+    @return è¿”å›åˆ›å»ºçš„çª—å£æŒ‡é’ˆ
     */
     COriginalDialog* createDialog(quint64& dialogId, quint64 userId, DialogType type);
 
-    /** ÒÆ³ı²¢Çå³ıÄÚ´æ£¬Ö§³Ö¶àÏß³Ì
-    @param [in] dialogId ´°¿ÚID
+    /** ç§»é™¤å¹¶æ¸…é™¤å†…å­˜ï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @param [in] dialogId çª—å£ID
     */
     void removeByDialogId(quint64 dialogId);
 
-    /** ÒÆ³ı²¢Çå³ıÄÚ´æ£¬Ö§³Ö¶àÏß³Ì
-    @param [in] userId ÓÃ»§×Ô¶¨ÒåID
+    /** ç§»é™¤å¹¶æ¸…é™¤å†…å­˜ï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @param [in] userId ç”¨æˆ·è‡ªå®šä¹‰ID
     */
     void removeByUserId(quint64 userId);
 
-    /** ¸ù¾İ´°¿ÚÖ¸Õë²éÕÒ´°¿ÚID£¬Ö§³Ö¶àÏß³Ì
-    @param [in] dialogPtr ´°¿ÚÖ¸Õë
-    @return ·µ»Ø´°¿ÚID
+    /** æ ¹æ®çª—å£æŒ‡é’ˆæŸ¥æ‰¾çª—å£IDï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @param [in] dialogPtr çª—å£æŒ‡é’ˆ
+    @return è¿”å›çª—å£ID
     */
     quint64 findDialogId(COriginalDialog* dialogPtr);
 
-    /** ¸ù¾İ´°¿ÚID²éÕÒ¶ÔÓ¦µÄ´°¿ÚÖ¸Õë£¬Ö§³Ö¶àÏß³Ì
-    @param [in] dialogId ´°¿ÚID
-    @return ·µ»Ø´°¿ÚÖ¸Õë
+    /** æ ¹æ®çª—å£IDæŸ¥æ‰¾å¯¹åº”çš„çª—å£æŒ‡é’ˆï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @param [in] dialogId çª—å£ID
+    @return è¿”å›çª—å£æŒ‡é’ˆ
     */
     COriginalDialog* findDialogPtr(quint64 dialogId);
 
-	/** ¸ù¾İ´°¿ÚÀàĞÍ²éÕÒ¶ÔÓ¦µÄ´°¿ÚÖ¸Õë£¬Ö»Ö§³Ö¾²Ì¬´°¿Ú£¬Ö§³Ö¶àÏß³Ì
-	@param [in] dialogId ´°¿ÚID
-	@return ·µ»Ø´°¿ÚÖ¸Õë
+	/** æ ¹æ®çª—å£ç±»å‹æŸ¥æ‰¾å¯¹åº”çš„çª—å£æŒ‡é’ˆï¼Œåªæ”¯æŒé™æ€çª—å£ï¼Œæ”¯æŒå¤šçº¿ç¨‹
+	@param [in] dialogId çª—å£ID
+	@return è¿”å›çª—å£æŒ‡é’ˆ
 	*/
 	COriginalDialog* findDialogPtr(DialogType type);
 
-    /** ¸ù¾İÓÃ»§×Ô¶¨ÒåID²éÕÒ´°¿ÚID£¬Ö§³Ö¶àÏß³Ì
-    @param [in] userId ÓÃ»§×Ô¶¨ÒåID
-    @return ·µ»Ø´°¿ÚID
+    /** æ ¹æ®ç”¨æˆ·è‡ªå®šä¹‰IDæŸ¥æ‰¾çª—å£IDï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @param [in] userId ç”¨æˆ·è‡ªå®šä¹‰ID
+    @return è¿”å›çª—å£ID
     */
     quint64 findDialogId(quint64 userId);
 
-    /** ¸ù¾İ´°¿ÚID²éÕÒÓÃ»§×Ô¶¨ÒåID£¬Ö§³Ö¶àÏß³Ì
-    @param [in] dialogId ´°¿ÚID
-    @return ·µ»ØÓÃ»§×Ô¶¨ÒåID
+    /** æ ¹æ®çª—å£IDæŸ¥æ‰¾ç”¨æˆ·è‡ªå®šä¹‰IDï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @param [in] dialogId çª—å£ID
+    @return è¿”å›ç”¨æˆ·è‡ªå®šä¹‰ID
     */
     quint64 findUserId(quint64 dialogId);
 
-    /** ¸ù¾İ´°¿ÚID²éÕÒ´°¿ÚÀàĞÍ£¬Ö§³Ö¶àÏß³Ì
-    @param [in] dialogId ´°¿ÚID
-    @return ·µ»Ø´°¿ÚÀàĞÍ
+    /** æ ¹æ®çª—å£IDæŸ¥æ‰¾çª—å£ç±»å‹ï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @param [in] dialogId çª—å£ID
+    @return è¿”å›çª—å£ç±»å‹
     */
     DialogType findDialogType(quint64 dialogId);
 
-    /** ²éÕÒ×îºóÒ»¸ö´´½¨µÄ´°¿ÚID£¬Ö§³Ö¶àÏß³Ì
-    @return ·µ»Ø×îºóÒ»¸ö´´½¨µÄ´°¿ÚID
+    /** æŸ¥æ‰¾æœ€åä¸€ä¸ªåˆ›å»ºçš„çª—å£IDï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @return è¿”å›æœ€åä¸€ä¸ªåˆ›å»ºçš„çª—å£ID
     */
     quint64 findLastDialogId();
 
-	/** ÊÇ·ñÊÇ¾²Ì¬´°¿Ú
-	@param [in] dialogId ´°¿ÚID
-	@return ·µ»ØÊÇ·ñÊÇ¾²Ì¬´°¿Ú
+	/** æ˜¯å¦æ˜¯é™æ€çª—å£
+	@param [in] dialogId çª—å£ID
+	@return è¿”å›æ˜¯å¦æ˜¯é™æ€çª—å£
 	*/
 	bool isStatic(quint64 dialogId);
 
-    /** »ñÈ¡Î´ÊÍ·ÅµÄ´°¿Ú¸öÊı
-    @return ·µ»ØÎ´ÊÍ·ÅµÄ´°¿Ú¸öÊı
+    /** è·å–æœªé‡Šæ”¾çš„çª—å£ä¸ªæ•°
+    @return è¿”å›æœªé‡Šæ”¾çš„çª—å£ä¸ªæ•°
     */
     quint64 dialogCount();
 
-	/** »ñÈ¡Ä³ÖÖÀàĞÍµÄ´°¿ÚÊıÁ¿
-	@param [in] type ´°¿ÚÀàĞÍ
-	@return ·µ»ØÄ³ÖÖÀàĞÍµÄ´°¿ÚÊıÁ¿
+	/** è·å–æŸç§ç±»å‹çš„çª—å£æ•°é‡
+	@param [in] type çª—å£ç±»å‹
+	@return è¿”å›æŸç§ç±»å‹çš„çª—å£æ•°é‡
 	*/
 	quint64 dialogTypeCount(DialogType type);
 
-    /** »ñÈ¡ËùÓĞ´°¿ÚID
-    @return ·µ»ØËùÓĞ´°¿ÚID
+    /** è·å–æ‰€æœ‰çª—å£ID
+    @return è¿”å›æ‰€æœ‰çª—å£ID
     */
     std::vector<quint64> allDialogId();
 
 private:
-    /** Ìí¼ÓÒ»¸ö´°¿Ú£¬Ö§³Ö¶àÏß³Ì
-    @param [in] base ´°¿ÚÖ¸Õë£¬±ØĞëÊÇÎ¨Ò»Öµ£¬²»¿ÉÒÔ³öÏÖ²»Í¬userId¶ÔÓ¦Í¬Ò»¸ö´°¿ÚÖ¸ÕëµÄÇé¿ö
-    @param [in] type ´°¿ÚÀàĞÍ
-    @param [in] userId ÓÃ»§×Ô¶¨ÒåID£¬Èç¹û³öÏÖÖØ¸´£¬Ôò²»¸Ä±äÏÖÓĞµÄÖ±½Ó·µ»Ø0
-    @return ·µ»Ø´°¿ÚID
+    /** æ·»åŠ ä¸€ä¸ªçª—å£ï¼Œæ”¯æŒå¤šçº¿ç¨‹
+    @param [in] base çª—å£æŒ‡é’ˆï¼Œå¿…é¡»æ˜¯å”¯ä¸€å€¼ï¼Œä¸å¯ä»¥å‡ºç°ä¸åŒuserIdå¯¹åº”åŒä¸€ä¸ªçª—å£æŒ‡é’ˆçš„æƒ…å†µ
+    @param [in] type çª—å£ç±»å‹
+    @param [in] userId ç”¨æˆ·è‡ªå®šä¹‰IDï¼Œå¦‚æœå‡ºç°é‡å¤ï¼Œåˆ™ä¸æ”¹å˜ç°æœ‰çš„ç›´æ¥è¿”å›0
+    @return è¿”å›çª—å£ID
     */
     quint64 add(COriginalDialog* base, DialogType type, quint64 userId = 0);
 
-    /** »ñÈ¡´°¿ÚID£¬´Ó1¿ªÊ¼
-    @return ·µ»Ø´°¿ÚID
+    /** è·å–çª—å£IDï¼Œä»1å¼€å§‹
+    @return è¿”å›çª—å£ID
     */
     quint64 getDialogId();
 
 private:
-    //´°¿ÚÖ¸Õë£¬´°¿ÚID
+    //çª—å£æŒ‡é’ˆï¼Œçª—å£ID
     std::map<COriginalDialog*, quint64> m_mapDialogPtrToDialogId;
-    //´°¿ÚID£¬´°¿ÚÖ¸Õë
+    //çª—å£IDï¼Œçª—å£æŒ‡é’ˆ
     std::map<quint64, COriginalDialog*> m_mapDialogIdToDialogPtr;
-    //ÓÃ»§ID£¬´°¿ÚID
+    //ç”¨æˆ·IDï¼Œçª—å£ID
     std::map<quint64, quint64> m_mapUserIdToDialogId;
-    //´°¿ÚID£¬ÓÃ»§ID
+    //çª—å£IDï¼Œç”¨æˆ·ID
     std::map<quint64, quint64> m_mapDialogIdToUserId;
-    //´°¿ÚID£¬´°¿ÚÀàĞÍ
+    //çª—å£IDï¼Œçª—å£ç±»å‹
     std::map<quint64, DialogType> m_mapDialogIdToDialogType;
 
     QMutex m_mutex;

@@ -1,4 +1,4 @@
-#include "MessageTestLinux.h"
+Ôªø#include "MessageTestLinux.h"
 //#include "11Controls/controls/COriginalButton.h"
 //#include "11Controls/controls/DialogManager.h"
 #include "QtControls/TextEdit.h"
@@ -94,39 +94,39 @@ void MessageTestLinux::init()
 	m_textEdit->ControlBorderForNormalHoverDisabled::setTextColor(QColor(100, 100, 100));
 
 	m_area = new Label(this);
-	m_area->setText(QStringLiteral("µ±«∞ª∫≥Â«¯ £”‡’π æ¡ø£∫") + QString::fromStdString(std::to_string(m_areaCount - m_allCount)));
+	m_area->setText(QStringLiteral("ÂΩìÂâçÁºìÂÜ≤Âå∫Ââ©‰ΩôÂ±ïÁ§∫ÈáèÔºö") + QString::fromStdString(std::to_string(m_areaCount - m_allCount)));
 	m_area->resize(213, 18);
 	m_area->setFontSize(12);
 	m_area->setTextColor(QColor(0, 0, 0));
 
 	m_screen = new Label(this);
-	m_screen->setText(QStringLiteral("µ±«∞∆¡ƒª»›¡ø£∫") + QString::fromStdString(std::to_string(m_screenCount)));
+	m_screen->setText(QStringLiteral("ÂΩìÂâçÂ±èÂπïÂÆπÈáèÔºö") + QString::fromStdString(std::to_string(m_screenCount)));
 	m_screen->resize(213, 18);
 	m_screen->setFontSize(12);
 	m_screen->setTextColor(QColor(0, 0, 0));
 
 	m_all = new Label(this);
-	m_all->setText(QStringLiteral("◊‹»›¡ø£∫") + QString::fromStdString(std::to_string(m_allCount)));
+	m_all->setText(QStringLiteral("ÊÄªÂÆπÈáèÔºö") + QString::fromStdString(std::to_string(m_allCount)));
 	m_all->resize(213, 18);
 	m_all->setFontSize(12);
 	m_all->setTextColor(QColor(0, 0, 0));
 
 	m_change = new PushButton(this);
-	m_change->setText(QStringLiteral("∏¸∏ƒ∆¡ƒª"));
+	m_change->setText(QStringLiteral("Êõ¥ÊîπÂ±èÂπï"));
 	m_change->resize(84, 33);
 	m_change->setFontSize(12);
 	m_change->setFocusPolicy(Qt::NoFocus);
 	QObject::connect(m_change, &PushButton::clicked, this, &MessageTestLinux::onChangeClicked);
 
 	m_refresh = new PushButton(this);
-	m_refresh->setText(QStringLiteral("À¢–¬"));
+	m_refresh->setText(QStringLiteral("Âà∑Êñ∞"));
 	m_refresh->resize(84, 33);
 	m_refresh->setFontSize(12);
 	m_refresh->setFocusPolicy(Qt::NoFocus);
 	QObject::connect(m_change, &PushButton::clicked, this, &MessageTestLinux::onRefreshClicked);
 
 	m_clear = new PushButton(this);
-	m_clear->setText(QStringLiteral("«Âø’"));
+	m_clear->setText(QStringLiteral("Ê∏ÖÁ©∫"));
 	m_clear->resize(182, 49);
 	m_clear->setFontSize(12);
 	m_clear->setFocus();
@@ -134,21 +134,21 @@ void MessageTestLinux::init()
 	QObject::connect(m_clear, &PushButton::clicked, this, &MessageTestLinux::onClearClicked);
 
 	m_toFile = new PushButton(this);
-	m_toFile->setText(QStringLiteral("◊™Œ™–¥»Îπ§◊˜¬∑æ∂œ¬ƒ¨»œ…˙≥…Œƒ\nº˛MessageTestFile.txt"));
+	m_toFile->setText(QStringLiteral("ËΩ¨‰∏∫ÂÜôÂÖ•Â∑•‰ΩúË∑ØÂæÑ‰∏ãÈªòËÆ§ÁîüÊàêÊñá\n‰ª∂MessageTestFile.txt"));
 	m_toFile->resize(182, 49);
 	m_toFile->setFontSize(12);
 	m_toFile->setFocusPolicy(Qt::NoFocus);
 	QObject::connect(m_toFile, &PushButton::clicked, this, &MessageTestLinux::onToFileClicked);
 
 	m_toAppointFile = new PushButton(this);
-	m_toAppointFile->setText(QStringLiteral("Ω´∆¡ƒª÷–µƒƒ⁄»›–¥»Î÷∏∂®Œƒº˛"));
+	m_toAppointFile->setText(QStringLiteral("Â∞ÜÂ±èÂπï‰∏≠ÁöÑÂÜÖÂÆπÂÜôÂÖ•ÊåáÂÆöÊñá‰ª∂"));
 	m_toAppointFile->resize(182, 30);
 	m_toAppointFile->setFontSize(12);
 	m_toAppointFile->setFocusPolicy(Qt::NoFocus);
 	QObject::connect(m_toAppointFile, &PushButton::clicked, this, &MessageTestLinux::onToAppointFileClicked);
 
 	m_extern = new PushButton(this);
-	m_extern->setText(QStringLiteral("°∑"));
+	m_extern->setText(QStringLiteral("„Äã"));
 	m_extern->resize(13, 30);
 	m_extern->setFontSize(12);
 	m_extern->setFocusPolicy(Qt::NoFocus);
@@ -160,7 +160,7 @@ void MessageTestLinux::init()
 	m_appointFilePath->setFontSize(12);
 
 	m_showTextParam = new CheckBox(this);
-	m_showTextParam->setText(QStringLiteral("œ‘ æ≤Œ ˝"));
+	m_showTextParam->setText(QStringLiteral("ÊòæÁ§∫ÂèÇÊï∞"));
 	m_showTextParam->resize(100, 20);
 	m_showTextParam->setFontSize(12);
 	m_showTextParam->setBackgroundColor(QColor(0, 0, 0, 0));
@@ -169,7 +169,7 @@ void MessageTestLinux::init()
 	m_filterText = new LineEdit(this);
 	m_filterText->resize(192, 20);
 	m_filterText->setFontSize(12);
-	m_filterText->setPlaceholderText(QStringLiteral(" ‰»Î≤ø∑÷∆•≈‰Œƒ±æ"));
+	m_filterText->setPlaceholderText(QStringLiteral("ËæìÂÖ•ÈÉ®ÂàÜÂåπÈÖçÊñáÊú¨"));
 	QObject::connect(m_filterText, &LineEdit::textChanged, this, &MessageTestLinux::onFilterChanged);
 
 	QObject::connect(&TypeManager::instance(), &TypeManager::receivePeopleId, this, &MessageTestLinux::onReceivePeopleId, Qt::QueuedConnection);
@@ -197,7 +197,7 @@ void MessageTestLinux::init()
 	spMessageReceiveTask->setParam(this);
 	CTaskThreadManager::Instance().GetThreadInterface(m_receiveThreadId)->PostTask(spMessageReceiveTask);
 
-	//int iTitleBarHeight = style()->pixelMetric(QStyle::PM_TitleBarHeight); // ªÒ»°±ÍÃ‚¿∏∏ﬂ∂»
+	//int iTitleBarHeight = style()->pixelMetric(QStyle::PM_TitleBarHeight); // Ëé∑ÂèñÊ†áÈ¢òÊ†èÈ´òÂ∫¶
 	
 	//m_button->setBkgColor(QColor(255, 0, 0, 255), QColor(0, 255, 0, 255), QColor(0, 0, 255, 255), QColor(255, 0, 0, 255));
 	//QObject::connect(m_button, &COriginalButton::clicked, this, &MessageTestLinux::onButtonClicked);
@@ -391,7 +391,7 @@ void MessageTestLinux::closeEvent(QCloseEvent* eve)
 void MessageTestLinux::onChangeClicked()
 {
 	m_isChange = !m_isChange;
-	m_change->setText(m_isChange ? QStringLiteral("∏¸∏ƒÕÍ±œ") : QStringLiteral("∏¸∏ƒ∆¡ƒª"));
+	m_change->setText(m_isChange ? QStringLiteral("Êõ¥ÊîπÂÆåÊØï") : QStringLiteral("Êõ¥ÊîπÂ±èÂπï"));
 	m_textEdit->setEnabled(m_isChange);
 	m_textEdit->setBorderColor(m_isChange ? QColor(23, 23, 23) : QColor(204, 204, 204));
 	m_textEdit->setBackgroundColor(m_isChange ? QColor(255, 255, 255) : QColor(240, 240, 240));
@@ -499,13 +499,13 @@ void MessageTestLinux::onExternClicked()
 	{
 		m_externWidth = 300;
 		setFixedSize(QSize(width() + 300, height()));
-		m_extern->setText(QStringLiteral("°∂"));
+		m_extern->setText(QStringLiteral("„Ää"));
 	}
 	else
 	{
 		m_externWidth = 0;
 		setFixedSize(QSize(width() - 300, height()));
-		m_extern->setText(QStringLiteral("°∑"));
+		m_extern->setText(QStringLiteral("„Äã"));
 	}
 }
 
@@ -563,9 +563,9 @@ void MessageTestLinux::onUpdateWindow()
 		m_textEdit->setText("<html><head/><body><p style='line-height:" + m_lineHeight + "px;'>" + showText.toHtmlEscaped().replace("\n", "<br>") + "</p></body></html>");
 		//m_textEdit->setText(showText);
 	}
-	m_area->setText(QStringLiteral("µ±«∞ª∫≥Â«¯ £”‡’π æ¡ø£∫") + QString::fromStdString(std::to_string(m_areaCount - m_allCount)));
-	m_screen->setText(QStringLiteral("µ±«∞∆¡ƒª»›¡ø£∫") + QString::fromStdString(std::to_string(m_screenCount)));
-	m_all->setText(QStringLiteral("◊‹»›¡ø£∫") + QString::fromStdString(std::to_string(m_allCount)));
+	m_area->setText(QStringLiteral("ÂΩìÂâçÁºìÂÜ≤Âå∫Ââ©‰ΩôÂ±ïÁ§∫ÈáèÔºö") + QString::fromStdString(std::to_string(m_areaCount - m_allCount)));
+	m_screen->setText(QStringLiteral("ÂΩìÂâçÂ±èÂπïÂÆπÈáèÔºö") + QString::fromStdString(std::to_string(m_screenCount)));
+	m_all->setText(QStringLiteral("ÊÄªÂÆπÈáèÔºö") + QString::fromStdString(std::to_string(m_allCount)));
 }
 
 void MessageTestLinux::onReceivePeopleId(int32_t peopleId)
@@ -780,7 +780,7 @@ void MessageTestLinux::onFilterTimer()
 void MessageTestLinux::onButtonClicked()
 {
 	//TipDialogParam tipDialogParam;
-	//tipDialogParam.m_tip = QStringLiteral("µ„ª˜");
+	//tipDialogParam.m_tip = QStringLiteral("ÁÇπÂáª");
 	//tipDialogParam.m_parent = windowHandle();
 	//DialogManager::instance().makeDialog(tipDialogParam);
 }

@@ -1,4 +1,4 @@
-#include "DialogBase.h"
+﻿#include "DialogBase.h"
 #include "Label.h"
 #include <QWindow>
 #include <QKeyEvent>

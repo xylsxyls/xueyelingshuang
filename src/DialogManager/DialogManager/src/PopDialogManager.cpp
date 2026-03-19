@@ -1,4 +1,4 @@
-#include "PopDialogManager.h"
+﻿#include "PopDialogManager.h"
 #include "AskDialog.h"
 #include "TipDialog.h"
 #include "WaitDialog.h"

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "DialogBase.h"
 #include <QPropertyAnimation>
 #include "QtControlsMacro.h"
@@ -7,69 +7,69 @@
 class Label;
 class COriginalButton;
 class Separator;
-/** ´°¿Ú»ù±¾Ä£ĞÍ£¬ÊµÏÖÍ¨ÓÃ²¿·Ö
+/** çª—å£åŸºæœ¬æ¨¡å‹ï¼Œå®ç°é€šç”¨éƒ¨åˆ†
 */
 class QtControlsAPI DialogShow : public DialogBase
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DialogShow();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~DialogShow();
 
 public:
-    /** ÉèÖÃÊ£ÓàÊ±¼äÊÇ·ñÏÔÊ¾
-    @param [in] visible ÊÇ·ñÏÔÊ¾
+    /** è®¾ç½®å‰©ä½™æ—¶é—´æ˜¯å¦æ˜¾ç¤º
+    @param [in] visible æ˜¯å¦æ˜¾ç¤º
     */
     void setTimeRestVisible(bool visible);
 
-    /** ÉèÖÃÓÃ»§×Ô¶¨Òå²ÎÊı
-    @param [in] userResult ÓÃ»§×Ô¶¨Òå²ÎÊı
+    /** è®¾ç½®ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
+    @param [in] userResult ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
     */
     void setUserResult(qint32 userResult);
 
-    /** »ñÈ¡ÓÃ»§×Ô¶¨Òå²ÎÊı
-    @return ·µ»ØÓÃ»§×Ô¶¨Òå²ÎÊı
+    /** è·å–ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
+    @return è¿”å›ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
     */
     qint32 userResult();
 
-	/** ÉèÖÃÓÃ»§×Ô¶¨Òå²ÎÊıÖ¸Õë
-	@param [in] userResult ÓÃ»§×Ô¶¨Òå²ÎÊı
+	/** è®¾ç½®ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°æŒ‡é’ˆ
+	@param [in] userResult ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
 	*/
 	void setUserResultPtr(qint32* userResult);
 
-	/** »ñÈ¡´æ´¢ÓÃ»§×Ô¶¨ÒåÖµµÄÖ¸Õë
-	@return ·µ»Ø´æ´¢ÓÃ»§×Ô¶¨ÒåÖµµÄÖ¸Õë
+	/** è·å–å­˜å‚¨ç”¨æˆ·è‡ªå®šä¹‰å€¼çš„æŒ‡é’ˆ
+	@return è¿”å›å­˜å‚¨ç”¨æˆ·è‡ªå®šä¹‰å€¼çš„æŒ‡é’ˆ
 	*/
 	qint32* userResultPtr();
 
-    /** ÉèÖÃµ±°´ÏÂ¿Õ¸ñºÍ»Ø³µºó´°¿ÚÄ¬ÈÏµã»÷µÄ°´Å¥
-    @param [in] button Ä¬ÈÏµã»÷µÄ°´Å¥Ö¸Õë
+    /** è®¾ç½®å½“æŒ‰ä¸‹ç©ºæ ¼å’Œå›è½¦åçª—å£é»˜è®¤ç‚¹å‡»çš„æŒ‰é’®
+    @param [in] button é»˜è®¤ç‚¹å‡»çš„æŒ‰é’®æŒ‡é’ˆ
     */
     void initAcceptButton(COriginalButton* button);
 
-    /** ÉèÖÃ·µ»ØÖµ´æ´¢Çø
-    @param [in] result Íâ²¿´æ´¢ÇøÖ¸Õë
+    /** è®¾ç½®è¿”å›å€¼å­˜å‚¨åŒº
+    @param [in] result å¤–éƒ¨å­˜å‚¨åŒºæŒ‡é’ˆ
     */
     void setWindowResultAddr(DialogResult* result);
 
-    /** ÉèÖÃ·µ»ØÖµ
-    @param [in] result ·µ»ØÖµ£¬´æÈëÍâ²¿´æ´¢Çø
+    /** è®¾ç½®è¿”å›å€¼
+    @param [in] result è¿”å›å€¼ï¼Œå­˜å…¥å¤–éƒ¨å­˜å‚¨åŒº
     */
     void setWindowResult(DialogResult result);
 
-	/** ÉèÖÃ¹Ø±Õ°´Å¥ÊÇ·ñÏÔÊ¾
-	@param [in] visible ÊÇ·ñÏÔÊ¾
+	/** è®¾ç½®å…³é—­æŒ‰é’®æ˜¯å¦æ˜¾ç¤º
+	@param [in] visible æ˜¯å¦æ˜¾ç¤º
 	*/
 	void setExitVisible(bool visible);
 
 Q_SIGNALS:
-    /** ÔÚ´°¿Ú¹Ø±ÕÖ®ºó·¢ËÍĞÅºÅ
-    @param [in] result ´°¿Ú¹Ø±ÕÊ±Ëù¸øµÄ·µ»ØÖµ
+    /** åœ¨çª—å£å…³é—­ä¹‹åå‘é€ä¿¡å·
+    @param [in] result çª—å£å…³é—­æ—¶æ‰€ç»™çš„è¿”å›å€¼
     */
     void closedSignal(DialogResult* result);
 
@@ -92,6 +92,6 @@ protected:
     Label* m_time;
 	DialogResult* m_result;
     std::map<QWidget*, DialogResult> m_mapResult;
-	//»òÕßºÍ¿Õ¸ñÄ¬ÈÏÖ´ĞĞµÄ°´Å¥£¬×ÓÀà´«ËÍÖ¸Õë
+	//æˆ–è€…å’Œç©ºæ ¼é»˜è®¤æ‰§è¡Œçš„æŒ‰é’®ï¼Œå­ç±»ä¼ é€æŒ‡é’ˆ
     COriginalButton* m_acceptButton;
 };

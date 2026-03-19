@@ -1,4 +1,4 @@
-#ifndef CONTROLSHOW_INL__
+﻿#ifndef CONTROLSHOW_INL__
 #define CONTROLSHOW_INL__
 
 #include "ControlShow.h"

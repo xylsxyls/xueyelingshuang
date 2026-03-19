@@ -1,4 +1,4 @@
-#ifndef CEXPRESSIONDIALOG_H
+ï»¿#ifndef CEXPRESSIONDIALOG_H
 #define CEXPRESSIONDIALOG_H
 
 #include <QDialog>
@@ -31,7 +31,7 @@ private slots:
     void selectGroup(const CExpressionPicker::Expression& group);
 
 public :
-    bool loadExpressions(const QString &emotionPath); //´«ÈëEmotionsÎÄ¼þ¼ÐËùÔÚÄ¿Â¼
+    bool loadExpressions(const QString &emotionPath); //ä¼ å…¥Emotionsæ–‡ä»¶å¤¹æ‰€åœ¨ç›®å½•
 };
 
 #endif // CEXPRESSIONDIALOG_H

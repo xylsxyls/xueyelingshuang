@@ -1,4 +1,4 @@
-#include "InputDialog.h"
+﻿#include "InputDialog.h"
 #include "QtControls/Label.h"
 #include "QtControls/LineEdit.h"
 #include "QtControls/COriginalButton.h"

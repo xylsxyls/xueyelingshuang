@@ -1,36 +1,36 @@
-#pragma once
+ï»¿#pragma once
 #include "Label.h"
 #include "QtControlsMacro.h"
 
-/** ¶¨×öÀà£¬¿Ø¼şÎÄ×Ö¹ı³¤Ê±ÏÔÊ¾Ê¡ÂÔºÅ
+/** å®šåšç±»ï¼Œæ§ä»¶æ–‡å­—è¿‡é•¿æ—¶æ˜¾ç¤ºçœç•¥å·
 */
 class QtControlsAPI PointLabel : public Label
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	PointLabel(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~PointLabel();
 
 public:
-	/** ÉèÖÃÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] origin ÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡æœ¬åç§»é‡
+	@param [in] origin æ–‡æœ¬åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setTextOrigin(qint32 origin, bool rePaint = false);
 
-	/** ²åÈëÎÄ±¾£¬¹ı³¤ÏÔÊ¾Ê¡ÂÔºÅ
-	@param [in] str ×Ö·û´®
+	/** æ’å…¥æ–‡æœ¬ï¼Œè¿‡é•¿æ˜¾ç¤ºçœç•¥å·
+	@param [in] str å­—ç¬¦ä¸²
 	*/
 	void setText(const QString& str);
 
-	/** »ñÈ¡ÎÄ±¾
-	@return ·µ»ØÎÄ±¾
+	/** è·å–æ–‡æœ¬
+	@return è¿”å›æ–‡æœ¬
 	*/
 	QString text();
 

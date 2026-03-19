@@ -1,33 +1,33 @@
-#pragma once
+ï»¿#pragma once
 #include "DialogManagerMacro.h"
 #include "NotifyDialog.h"
 
 class COriginalButton;
-/** ÏÔÊ¾ÌáÊ¾¿ò
+/** æ˜¾ç¤ºæç¤ºæ¡†
 */
 class AskShowDialog : public NotifyDialog
 {
 	Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
 	AskShowDialog();
 
 public:
-    /** ÉèÖÃÌáÊ¾
-    @param [in] tip ÌáÊ¾ÄÚÈİ
+    /** è®¾ç½®æç¤º
+    @param [in] tip æç¤ºå†…å®¹
     */
     void setTip(const QString& tip);
 
-    /** ÉèÖÃÈ·¶¨°´Å¥ÎÄ×ÖÄÚÈİºÍ°´ÏÂµÄ·µ»ØÖµ
-    @param [in] acceptText °´Å¥ÎÄ×ÖÄÚÈİ
-    @param [in] acceptDone °´ÏÂµÄ·µ»ØÖµ
+    /** è®¾ç½®ç¡®å®šæŒ‰é’®æ–‡å­—å†…å®¹å’ŒæŒ‰ä¸‹çš„è¿”å›å€¼
+    @param [in] acceptText æŒ‰é’®æ–‡å­—å†…å®¹
+    @param [in] acceptDone æŒ‰ä¸‹çš„è¿”å›å€¼
     */
     void setAcceptButton(const QString& acceptText, DialogResult acceptDone);
 
-    /** ÉèÖÃÈ¡Ïû°´Å¥ÎÄ×ÖÄÚÈİºÍ°´ÏÂµÄ·µ»ØÖµ
-    @param [in] ignoreText °´Å¥ÎÄ×ÖÄÚÈİ
-    @param [in] ignoreDone °´ÏÂµÄ·µ»ØÖµ
+    /** è®¾ç½®å–æ¶ˆæŒ‰é’®æ–‡å­—å†…å®¹å’ŒæŒ‰ä¸‹çš„è¿”å›å€¼
+    @param [in] ignoreText æŒ‰é’®æ–‡å­—å†…å®¹
+    @param [in] ignoreDone æŒ‰ä¸‹çš„è¿”å›å€¼
     */
     void setIgnoreButton(const QString& ignoreText, DialogResult ignoreDone);
 

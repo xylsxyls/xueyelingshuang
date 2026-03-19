@@ -1,36 +1,36 @@
-#pragma once
+ï»¿#pragma once
 #include <QProxyStyle>
 #include "QtControlsMacro.h"
 
 class HtmlComboBox;
-/** ×¨ÃÅ¸øHtmlComboBoxÊ¹ÓÃµÄStyle
+/** ä¸“é—¨ç»™HtmlComboBoxä½¿ç”¨çš„Style
 */
 class HtmlComboBoxStyle : public QProxyStyle
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	HtmlComboBoxStyle(HtmlComboBox* htmlComboBox);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~HtmlComboBoxStyle();
 
 public:
-	/** ÉèÖÃÌáÊ¾¿ò±³¾°É«
-	@param [in] color ±³¾°ÑÕÉ«
+	/** è®¾ç½®æç¤ºæ¡†èƒŒæ™¯è‰²
+	@param [in] color èƒŒæ™¯é¢œè‰²
 	*/
 	void setToolTipBackgroundColor(const QColor& color);
 
 private:
-	/** »­½ÚµãÄÚÈİ£¬QProxyStyleÖĞµÄĞéº¯Êı
-	@param [in] painter »æ»­Ö¸Õë
-	@param [in] rect ÎÄ×ÖËù»­ÇøÓò
-	@param [in] flags ÎÄ×Ö¶ÔÆë·½Ê½
-	@param [in] pal ÑÕÉ«¼¯ºÏÀà
-	@param [in] enabled ½ÚµãÊÇ·ñ¿ÉÓÃ
-	@param [in] text ½ÚµãÎÄ×Ö
-	@param [in] textRole ÑÕÉ«ÀàĞÍ
+	/** ç”»èŠ‚ç‚¹å†…å®¹ï¼ŒQProxyStyleä¸­çš„è™šå‡½æ•°
+	@param [in] painter ç»˜ç”»æŒ‡é’ˆ
+	@param [in] rect æ–‡å­—æ‰€ç”»åŒºåŸŸ
+	@param [in] flags æ–‡å­—å¯¹é½æ–¹å¼
+	@param [in] pal é¢œè‰²é›†åˆç±»
+	@param [in] enabled èŠ‚ç‚¹æ˜¯å¦å¯ç”¨
+	@param [in] text èŠ‚ç‚¹æ–‡å­—
+	@param [in] textRole é¢œè‰²ç±»å‹
 	*/
 	virtual void drawItemText(QPainter* painter,
 							  const QRect& rect,
@@ -40,11 +40,11 @@ private:
 							  const QString& text,
 							  QPalette::ColorRole textRole) const;
 
-	/** »æÖÆ¿Ø¼şÏà¹ØÄÚÈİº¯Êı
-	@param [in] pe »æÖÆÀàĞÍ
-	@param [in] opt »æÖÆ²ÎÊı
-	@param [in] painter »æÖÆÀà
-	@param [in] widget ¸¸´°¿ÚÖ¸Õë
+	/** ç»˜åˆ¶æ§ä»¶ç›¸å…³å†…å®¹å‡½æ•°
+	@param [in] pe ç»˜åˆ¶ç±»å‹
+	@param [in] opt ç»˜åˆ¶å‚æ•°
+	@param [in] painter ç»˜åˆ¶ç±»
+	@param [in] widget çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	void drawPrimitive(PrimitiveElement pe, const QStyleOption* opt, QPainter* painter, const QWidget* widget = nullptr) const;
 	

@@ -1,4 +1,4 @@
-#include "ClearTask.h"
+﻿#include "ClearTask.h"
 #include "Semaphore/SemaphoreAPI.h"
 
 ClearTask::ClearTask():

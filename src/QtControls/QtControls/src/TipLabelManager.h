@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QString>
 #include <QPoint>
 #include <QObject>
@@ -9,22 +9,22 @@ class QtControlsAPI TipLabelManager : public QObject
 {
 	Q_OBJECT
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static TipLabelManager& instance();
 
 public:
-	/** µ¯³öÌáÊ¾
-	@param [in] pos ´°¿ÚÓÒÏÂ½Ç
-	@param [in] text ÎÄ×Ö
-	@param [in] maxWidth ×î´ó¿í¶È
-	@param [in] timeOut ×î³¤ÏÔÊ¾Ê±¼ä£¬µ¥Î»Ãë
-	@param [in] hasFocus µ¯³öÊ±ÊÇ·ñÇÀ½¹µã£¬Èç¹ûÇÀ½¹µã£¬ÔòÔÚÊ§È¥½¹µãÊ±×Ô¶¯ÏûÊ§
+	/** å¼¹å‡ºæç¤º
+	@param [in] pos çª—å£å³ä¸‹è§’
+	@param [in] text æ–‡å­—
+	@param [in] maxWidth æœ€å¤§å®½åº¦
+	@param [in] timeOut æœ€é•¿æ˜¾ç¤ºæ—¶é—´ï¼Œå•ä½ç§’
+	@param [in] hasFocus å¼¹å‡ºæ—¶æ˜¯å¦æŠ¢ç„¦ç‚¹ï¼Œå¦‚æœæŠ¢ç„¦ç‚¹ï¼Œåˆ™åœ¨å¤±å»ç„¦ç‚¹æ—¶è‡ªåŠ¨æ¶ˆå¤±
 	*/
 	void popTip(const QPoint& pos, const QString& text, qint32 maxWidth = 500, qint32 timeOut = 10, bool hasFocus = true);
 
-	/** ¹Ø±ÕÌáÊ¾¿ò£¨Ö§³Ö¶àÏß³Ì£©
+	/** å…³é—­æç¤ºæ¡†ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 	*/
 	void close();
 

@@ -1,4 +1,4 @@
-#include "CollapseMenu.h"
+﻿#include "CollapseMenu.h"
 #include <QPaintEvent>
 #include "Label.h"
 

@@ -1,4 +1,4 @@
-#ifndef CGENERALSTYLE_H
+ï»¿#ifndef CGENERALSTYLE_H
 #define CGENERALSTYLE_H
 
 #include <QObject>
@@ -43,18 +43,18 @@ public:
         PingLevel_Bad     = 3,
     };
 
-	//ÇàÍ­I   0~1000
-	//ÇàÍ­II  1001~1050
-	//ÇàÍ­III 1051~1100
-	//°×ÒøI   1101~1150
-	//°×ÒøII  1151~1200
-	//°×ÒøIII 1201~1300
-	//»Æ½ğI   1301~1400
-	//»Æ½ğII  1401~1500
-	//»Æ½ğIII 1501~1600
-	//×êÊ¯    1601~2000
-	//ÍõÕß    2001+
-	//ÍõÕß    top10
+	//é’é“œI   0~1000
+	//é’é“œII  1001~1050
+	//é’é“œIII 1051~1100
+	//ç™½é“¶I   1101~1150
+	//ç™½é“¶II  1151~1200
+	//ç™½é“¶III 1201~1300
+	//é»„é‡‘I   1301~1400
+	//é»„é‡‘II  1401~1500
+	//é»„é‡‘III 1501~1600
+	//é’»çŸ³    1601~2000
+	//ç‹è€…    2001+
+	//ç‹è€…    top10
 	enum BattleLevel
 	{
 		BattleLevel_Bronze01 ,
@@ -77,34 +77,34 @@ public:
     QString war3lobbyResourcePath();
 	QString platformResourcePath();
 
-   PingLevel getPingLevel(quint64 ping); //* »ñÈ¡pingµÈ¼¶
-	QColor    getPingColor(quint64 ping); //* »ñÈ¡pingµÄÑÕÉ«
+   PingLevel getPingLevel(quint64 ping); //* è·å–pingç­‰çº§
+	QColor    getPingColor(quint64 ping); //* è·å–pingçš„é¢œè‰²
 
-	BattleLevel getBattleLevel(quint64 score); //* »ñÈ¡¾º¼¼³¡»ı·ÖµÈ¼¶
+	BattleLevel getBattleLevel(quint64 score); //* è·å–ç«æŠ€åœºç§¯åˆ†ç­‰çº§
 
     QColor  fontColor();
     QFont   font();
 
 	void initSystemAvatarDirectory();
 	void initCustomAvatarDirectory();
-	QString getUserAvatar(quint64 userid, quint64 imgid); //* »ñÈ¡id
+	QString getUserAvatar(quint64 userid, quint64 imgid); //* è·å–id
 
 
-	/** »­htmlÎÄ±¾£¬Ê¹ÓÃLabel¿Ø¼ş£¬×ÖÌå£¬×ÖÌå´óĞ¡µÈÍ¨¹ıpainter»ñÈ¡
-	@param [in] painter »æ»­Ö¸Õë
-	@param [in] rect »æ»­ÇøÓò
-	@param [in] text ÎÄ±¾
-	@param [in] flag ¶ÔÆë·½Ê½
+	/** ç”»htmlæ–‡æœ¬ï¼Œä½¿ç”¨Labelæ§ä»¶ï¼Œå­—ä½“ï¼Œå­—ä½“å¤§å°ç­‰é€šè¿‡painterè·å–
+	@param [in] painter ç»˜ç”»æŒ‡é’ˆ
+	@param [in] rect ç»˜ç”»åŒºåŸŸ
+	@param [in] text æ–‡æœ¬
+	@param [in] flag å¯¹é½æ–¹å¼
 	*/
 	void drawHtmlTextByLabel(QPainter* painter,
 							 const QRect& rect,
 							 const QString& html,
 							 Qt::Alignment flag = Qt::AlignLeft | Qt::AlignTop);
 
-	/** »­htmlÎÄ±¾£¬Ê¹ÓÃLabel¿Ø¼ş£¬×ÖÌå£¬×ÖÌå´óĞ¡µÈÍ¨¹ıpainter»ñÈ¡
-	@param [in] painter »æ»­Ö¸Õë
-	@param [in] rect »æ»­ÇøÓò
-	@param [in] text ÎÄ±¾
+	/** ç”»htmlæ–‡æœ¬ï¼Œä½¿ç”¨Labelæ§ä»¶ï¼Œå­—ä½“ï¼Œå­—ä½“å¤§å°ç­‰é€šè¿‡painterè·å–
+	@param [in] painter ç»˜ç”»æŒ‡é’ˆ
+	@param [in] rect ç»˜ç”»åŒºåŸŸ
+	@param [in] text æ–‡æœ¬
 	*/
 	void drawHtmlTextByQTextDocument(QPainter* painter,
 									 const QRect& rect,

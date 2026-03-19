@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "QssString/QssStringAPI.h"
 #include <string>
 #include <QColor>
@@ -6,39 +6,39 @@
 
 class QShowEvent;
 class QWidget;
-/** ¿Ø¼şÍ¨ÓÃÑùÊ½Ä£°å
+/** æ§ä»¶é€šç”¨æ ·å¼æ¨¡æ¿
 */
 template <class QBase>
 class ControlShow : public QBase
 {
 public:
-	/** ÖØ»­
+	/** é‡ç”»
 	*/
 	virtual void repaint();
 
 protected:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	ControlShow(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlShow();
 
 public:
-	/** ³õÊ¼»¯ÀàÃû
+	/** åˆå§‹åŒ–ç±»å
 	*/
 	void initClassName();
 
-	/** ÉèÖÃ×Ó½ÚµãÃû
-	@param [in] itemName ×Ó½ÚµãÃû
+	/** è®¾ç½®å­èŠ‚ç‚¹å
+	@param [in] itemName å­èŠ‚ç‚¹å
 	*/
 	void setItemName(const std::wstring& itemName);
 
 protected:
-	/** »ñÈ¡ÀàÃû
-	@return ·µ»ØÀàÃû
+	/** è·å–ç±»å
+	@return è¿”å›ç±»å
 	*/
 	std::wstring className();
 
@@ -46,9 +46,9 @@ protected:
 	virtual void showEvent(QShowEvent* eve);
 
 public:
-	//style×Ö·û´®¹ÜÀí¶ÔÏó
+	//styleå­—ç¬¦ä¸²ç®¡ç†å¯¹è±¡
 	QssString m_controlStyle;
-	//½ÚµãÃû×Ö·û´®
+	//èŠ‚ç‚¹åå­—ç¬¦ä¸²
 	std::wstring m_itemName;
 };
 

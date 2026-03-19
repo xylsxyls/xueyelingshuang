@@ -1,4 +1,4 @@
-#include "AllocManager.h"
+ï»¿#include "AllocManager.h"
 #include "AdvertAskDialog.h"
 #include "AskDialog.h"
 #include "DownloadOperateDialog.h"
@@ -148,7 +148,7 @@ quint64 AllocManager::findLastDialogId()
     {
         return 0;
     }
-    //·´Ïò±éÀú
+    //åå‘éå†
     return m_mapDialogIdToDialogPtr.rbegin()->first;
 }
 

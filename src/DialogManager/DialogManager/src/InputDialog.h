@@ -1,47 +1,47 @@
-#pragma once
+ï»¿#pragma once
 #include "PopDialog.h"
 #include "DialogType.h"
 
 class LineEdit;
 class CPasswordInputBox;
-/** ÊäÈëµ¯³ö¿ò
+/** è¾“å…¥å¼¹å‡ºæ¡†
 */
 class InputDialog : public PopDialog
 {
 	Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
 	InputDialog();
 
 public:
-    /** ÉèÖÃÊäÈë¿òÄÚÈİ
-    @param [in] defaultText ÊäÈë¿òÄ¬ÈÏÌîÈëÄÚÈİ
-    @param [out] editText µ¯¿ò¹Ø±ÕÊ±Í¨¹ı¸ÃÖ¸Õë¸ø³öÊäÈë¿òÄÚÈİ
-    @param [in] maxLength ÊäÈë¿ò¿ÉÊäÈëµÄ×î´ó³¤¶È
+    /** è®¾ç½®è¾“å…¥æ¡†å†…å®¹
+    @param [in] defaultText è¾“å…¥æ¡†é»˜è®¤å¡«å…¥å†…å®¹
+    @param [out] editText å¼¹æ¡†å…³é—­æ—¶é€šè¿‡è¯¥æŒ‡é’ˆç»™å‡ºè¾“å…¥æ¡†å†…å®¹
+    @param [in] maxLength è¾“å…¥æ¡†å¯è¾“å…¥çš„æœ€å¤§é•¿åº¦
     */
     void setLineEdit(const QString& defaultText, QString* editText, qint32 maxLength = -1);
 
-    /** ÉèÖÃÃÜÂë¿ò£¨ÓëÊäÈë¿ò²»¹²´æ£©
-    @param [in] defaultText ÊäÈë¿òÄ¬ÈÏÌîÈëÄÚÈİ
-    @param [out] editText µ¯¿ò¹Ø±ÕÊ±Í¨¹ı¸ÃÖ¸Õë¸ø³öÊäÈë¿òÄÚÈİ
-    @param [in] maxLength ÊäÈë¿ò¿ÉÊäÈëµÄ×î´ó³¤¶È
+    /** è®¾ç½®å¯†ç æ¡†ï¼ˆä¸è¾“å…¥æ¡†ä¸å…±å­˜ï¼‰
+    @param [in] defaultText è¾“å…¥æ¡†é»˜è®¤å¡«å…¥å†…å®¹
+    @param [out] editText å¼¹æ¡†å…³é—­æ—¶é€šè¿‡è¯¥æŒ‡é’ˆç»™å‡ºè¾“å…¥æ¡†å†…å®¹
+    @param [in] maxLength è¾“å…¥æ¡†å¯è¾“å…¥çš„æœ€å¤§é•¿åº¦
     */
     void setPasswordInputBox(const QString& defaultText, QString* editText, qint32 maxLength = -1);
 
-    /** ÉèÖÃÌáÊ¾
-    @param [in] tip ÌáÊ¾ÄÚÈİ
+    /** è®¾ç½®æç¤º
+    @param [in] tip æç¤ºå†…å®¹
     */
     void setTip(const QString& tip);
 
-    /** ÉèÖÃÈ·¶¨°´Å¥ÄÚÈİ
-    @param [in] acceptText È·¶¨°´Å¥ÎÄ×ÖÄÚÈİ
-    @param [in] acceptDone È·¶¨°´Å¥°´ÏÂ·µ»ØÖµ
+    /** è®¾ç½®ç¡®å®šæŒ‰é’®å†…å®¹
+    @param [in] acceptText ç¡®å®šæŒ‰é’®æ–‡å­—å†…å®¹
+    @param [in] acceptDone ç¡®å®šæŒ‰é’®æŒ‰ä¸‹è¿”å›å€¼
     */
     void setAcceptButton(const QString& acceptText, DialogResult acceptDone);
 
-	/** ÉèÖÃÀ©Õ¹ÄÚÈİ
-	@param [in] inputEx À©Õ¹ÄÚÈİ
+	/** è®¾ç½®æ‰©å±•å†…å®¹
+	@param [in] inputEx æ‰©å±•å†…å®¹
 	*/
 	void setInputEx(std::vector<InputEx>* inputEx);
 

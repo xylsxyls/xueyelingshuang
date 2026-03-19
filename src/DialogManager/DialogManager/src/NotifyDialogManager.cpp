@@ -1,4 +1,4 @@
-#include "NotifyDialogManager.h"
+﻿#include "NotifyDialogManager.h"
 #include "AskShowDialog.h"
 #include "TipShowDialog.h"
 #include "LoginShowDialog.h"

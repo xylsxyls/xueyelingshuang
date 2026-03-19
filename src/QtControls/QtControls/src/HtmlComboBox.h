@@ -1,48 +1,48 @@
-#pragma once
+ï»¿#pragma once
 #include "IdItemComboBox.h"
 #include "QtControlsMacro.h"
 
 class HtmlComboBoxStyle;
 class QListWidgetItem;
-/** ¶¨×öÀà£¬Ö§³ÖÔÚaddItemµÄÊ±ºòÊäÈëhtml¸ñÊ½µÄÎÄ±¾
+/** å®šåšç±»ï¼Œæ”¯æŒåœ¨addItemçš„æ—¶å€™è¾“å…¥htmlæ ¼å¼çš„æ–‡æœ¬
 */
 class QtControlsAPI HtmlComboBox : public IdItemComboBox
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	HtmlComboBox(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~HtmlComboBox();
 
 public:
-	/** ÉèÖÃÏÂÀ­¿òÎÄ×ÖÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†æ–‡å­—é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListTextColor(const QColor& normalColor,
 						  const QColor& hoverColor = QColor(0, 0, 0, 0),
 						  const QColor& disabledColor = QColor(0, 0, 0, 0),
 						  bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿òÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] origin ÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†æ–‡æœ¬åç§»é‡
+	@param [in] origin æ–‡æœ¬åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListTextOrigin(qint32 origin, bool rePaint = false);
 
-	/** ½Úµãµ½ÏÂÀ­¿ò´°¿ÚµÄËÄ¸öÍâ±ß¾à
-	@param [in] leftOrigin ×ó²àÆ«ÒÆÁ¿
-	@param [in] topOrigin ÉÏ²àÆ«ÒÆÁ¿
-	@param [in] rightOrigin ÓÒ²àÆ«ÒÆÁ¿
-	@param [in] bottomOrigin ÏÂ²àÆ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** èŠ‚ç‚¹åˆ°ä¸‹æ‹‰æ¡†çª—å£çš„å››ä¸ªå¤–è¾¹è·
+	@param [in] leftOrigin å·¦ä¾§åç§»é‡
+	@param [in] topOrigin ä¸Šä¾§åç§»é‡
+	@param [in] rightOrigin å³ä¾§åç§»é‡
+	@param [in] bottomOrigin ä¸‹ä¾§åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListItemAroundOrigin(qint32 leftOrigin,
 								 qint32 topOrigin = -1,
@@ -50,14 +50,14 @@ public:
 								 qint32 bottomOrigin = -1,
 								 bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò½Úµã±ß¿ò´Ö¶È
-	@param [in] width ±ß¿ò´Ö¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†èŠ‚ç‚¹è¾¹æ¡†ç²—åº¦
+	@param [in] width è¾¹æ¡†ç²—åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListItemBorderWidth(qint32 width, bool rePaint = false);
 
-	/** ÉèÖÃÌáÊ¾¿ò±³¾°É«
-	@param [in] color ±³¾°ÑÕÉ«
+	/** è®¾ç½®æç¤ºæ¡†èƒŒæ™¯è‰²
+	@param [in] color èƒŒæ™¯é¢œè‰²
 	*/
 	void setToolTipBackgroundColor(const QColor& color);
 

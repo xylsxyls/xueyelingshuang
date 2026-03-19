@@ -1,4 +1,4 @@
-#ifndef CEXPRESSIONPICKER_H
+﻿#ifndef CEXPRESSIONPICKER_H
 #define CEXPRESSIONPICKER_H
 
 #include <QLabel>

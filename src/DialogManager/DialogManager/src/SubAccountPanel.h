@@ -1,4 +1,4 @@
-#ifndef SUBACCOUNTPANEL_H
+ï»¿#ifndef SUBACCOUNTPANEL_H
 #define SUBACCOUNTPANEL_H
 
 #include <QWidget>
@@ -138,14 +138,14 @@ public:
 	CExternalTextEdit* helpTip();
 	
 	quint64 canCreateCount();
-    void setCanCreateCount(quint64 v); //* ÉèÖÃ¿É´´½¨µÄ×ÓÕËºÅ¸öÊı
-    void setSubAccountList(const SubAccountItemList& li); //* ÉèÖÃ×ÓÕËºÅÁĞ±í
-	SubAccountItemList subAccountList(); //* ×ÓÕËºÅÁĞ±í
+    void setCanCreateCount(quint64 v); //* è®¾ç½®å¯åˆ›å»ºçš„å­è´¦å·ä¸ªæ•°
+    void setSubAccountList(const SubAccountItemList& li); //* è®¾ç½®å­è´¦å·åˆ—è¡¨
+	SubAccountItemList subAccountList(); //* å­è´¦å·åˆ—è¡¨
 	 
-	void appendSubAccount(SubAccountItem* item); //* Ìí¼Ó×ÓÕËºÅ
+	void appendSubAccount(SubAccountItem* item); //* æ·»åŠ å­è´¦å·
 	
-	SubAccountItem* getSubAccountItemById(quint64 id); //* ¸ù¾İid»ñÈ¡×ÓÕËºÅ
-	void removeSubAccountItem(quint64 id); //* ¸ù¾İidÉ¾³ı×ÓÕËºÅ
+	SubAccountItem* getSubAccountItemById(quint64 id); //* æ ¹æ®idè·å–å­è´¦å·
+	void removeSubAccountItem(quint64 id); //* æ ¹æ®idåˆ é™¤å­è´¦å·
 };
 
 #endif // SUBACCOUNTPANEL_H

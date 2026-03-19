@@ -1,45 +1,45 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include <QColor>
 
 struct TreeText
 {
-	//×ÖÌå´óĞ¡
+	//å­—ä½“å¤§å°
 	int32_t m_fontSize;
-	//ÎÄ×ÖÑÕÉ«
+	//æ–‡å­—é¢œè‰²
 	QColor m_textColor;
-	//×ÖÌå
+	//å­—ä½“
 	QString m_fontFace;
-	//ÎÄ×ÖÄÚÈİ
+	//æ–‡å­—å†…å®¹
 	QString m_text;
-	//¶ÔÆä·½Ê½
+	//å¯¹å…¶æ–¹å¼
 	Qt::Alignment m_align;
-	//×ó²àÆ«ÒÆÁ¿
+	//å·¦ä¾§åç§»é‡
 	int32_t m_origin;
-	//±³¾°ÑÕÉ«
+	//èƒŒæ™¯é¢œè‰²
 	QColor m_backgroundColor;
-	//ĞüÍ£ÑÕÉ«
+	//æ‚¬åœé¢œè‰²
 	QColor m_hoverColor;
-	//°´ÏÂÑÕÉ«
+	//æŒ‰ä¸‹é¢œè‰²
 	QColor m_selectedColor;
-	//½ûÓÃÑÕÉ«
+	//ç¦ç”¨é¢œè‰²
 	QColor m_disabledColor;
-	//Ç¶ÈëµÄÍ¼Æ¬£¬imageÎª¿Õ²»»á»­Í¼
+	//åµŒå…¥çš„å›¾ç‰‡ï¼Œimageä¸ºç©ºä¸ä¼šç”»å›¾
 	QImage m_image;
-	//ºÍµ±Ç°¸ñ×Ó×óÉÏ½ÇµÄÏà¶ÔÎ»ÖÃ
+	//å’Œå½“å‰æ ¼å­å·¦ä¸Šè§’çš„ç›¸å¯¹ä½ç½®
 	QPoint m_imageLeftTop;
-	//widgetÎª¿ÕÊ±²»»áÇ¶Èë
+	//widgetä¸ºç©ºæ—¶ä¸ä¼šåµŒå…¥
 	QWidget* m_widget;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	TreeText()
 	{
 		init();
 	}
 
-	/** ¹¹Ôìº¯Êı
-	@param [in] text ÎÄ×ÖÄÚÈİ
+	/** æ„é€ å‡½æ•°
+	@param [in] text æ–‡å­—å†…å®¹
 	*/
 	TreeText(const QString& text)
 	{
@@ -47,8 +47,8 @@ struct TreeText
 		m_text = text;
 	}
 
-	/** ¹¹Ôìº¯Êı
-	@param [in] text ÎÄ×ÖÄÚÈİ
+	/** æ„é€ å‡½æ•°
+	@param [in] text æ–‡å­—å†…å®¹
 	*/
 	TreeText(const char* text)
 	{
@@ -56,13 +56,13 @@ struct TreeText
 		m_text = text;
 	}
 
-	/** ³õÊ¼»¯
+	/** åˆå§‹åŒ–
 	*/
 	void init()
 	{
 		m_fontSize = 12;
 		m_textColor = QColor(255, 255, 255, 255);
-		m_fontFace = QStringLiteral("Î¢ÈíÑÅºÚ");
+		m_fontFace = QStringLiteral("å¾®è½¯é›…é»‘");
 		m_align = Qt::AlignCenter;
 		m_origin = 0;
 		m_backgroundColor = QColor(0, 0, 0, 0);

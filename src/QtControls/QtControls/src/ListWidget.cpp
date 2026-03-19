@@ -1,4 +1,4 @@
-#include "ListWidget.h"
+﻿#include "ListWidget.h"
 #include <QMouseEvent>
 
 ListWidget::ListWidget(QWidget* parent) :

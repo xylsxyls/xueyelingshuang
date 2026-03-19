@@ -1,4 +1,4 @@
-#ifndef CORIGINALBUTTON_H
+﻿#ifndef CORIGINALBUTTON_H
 #define CORIGINALBUTTON_H
 
 #include <QPushButton>

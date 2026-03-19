@@ -1,4 +1,4 @@
-#include "DownloadOperateDialog.h"
+ï»¿#include "DownloadOperateDialog.h"
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
 #include "QtControls/CGeneralStyle.h"
@@ -65,7 +65,7 @@ m_error(nullptr)
     DialogHelper::setLabel(m_downloadTime, "", QColor("#8592bf"), 12);
 	m_downloadTime->setAlignment(Qt::AlignLeft);
 
-    DialogHelper::setLabel(m_error, QString::fromStdWString(L"ÏÂÔØ³ö´í£¡"), QColor("#ff4747"), 12);
+    DialogHelper::setLabel(m_error, QString::fromStdWString(L"ä¸‹è½½å‡ºé”™ï¼"), QColor("#ff4747"), 12);
 	m_error->setVisible(false);
 	QObject::connect(this, &DownloadOperateDialog::errorType, m_error, &Label::setText);
 
@@ -76,7 +76,7 @@ m_error(nullptr)
 	m_back->setFontFace(CGeneralStyle::instance()->font().family());
 	m_back->setFontSize(12);
 	m_back->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
-	m_back->setText(QString::fromStdWString(L"×ªµ½ºóÌ¨ÏÂÔØ"));
+	m_back->setText(QString::fromStdWString(L"è½¬åˆ°åŽå°ä¸‹è½½"));
 	m_back->setBorderRadius(3);
 	m_back->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_back->setEnabled(true);
@@ -84,7 +84,7 @@ m_error(nullptr)
 	m_again->setFontFace(CGeneralStyle::instance()->font().family());
 	m_again->setFontSize(12);
 	m_again->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
-	m_again->setText(QString::fromStdWString(L"ÖØÊÔ"));
+	m_again->setText(QString::fromStdWString(L"é‡è¯•"));
 	m_again->setBorderRadius(3);
 	m_again->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_again->setVisible(false);
@@ -92,12 +92,12 @@ m_error(nullptr)
 	m_cancel->setFontFace(CGeneralStyle::instance()->font().family());
 	m_cancel->setFontSize(12);
 	m_cancel->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
-	m_cancel->setText(QString::fromStdWString(L"È¡ÏûÏÂÔØ"));
+	m_cancel->setText(QString::fromStdWString(L"å–æ¶ˆä¸‹è½½"));
 	m_cancel->setBorderRadius(3);
 	m_cancel->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 
 	m_progressBar->setOrientation(Qt::Horizontal);
-	//µ±Ç°½ø¶È
+	//å½“å‰è¿›åº¦
 	setRate(0);
 	m_progressBar->setRange(0, 100);
 	m_progressBar->setBorderWidth(0);
@@ -108,19 +108,19 @@ m_error(nullptr)
 	m_progressBar->setItemBackgroundColor(QColor(150, 171, 255, 255));
 	m_progressBar->setFormat("");
 
-    DialogHelper::setLabel(m_downloadSlow, QStringLiteral("Èç¹ûÏÂÔØÊ§°Ü¡£Äú¿ÉÒÔ³¢ÊÔÊÖ¶¯ÏÂÔØÎÄ¼þ£¬»òÕß"), QColor("#8491bd"), 12);
+    DialogHelper::setLabel(m_downloadSlow, QStringLiteral("å¦‚æžœä¸‹è½½å¤±è´¥ã€‚æ‚¨å¯ä»¥å°è¯•æ‰‹åŠ¨ä¸‹è½½æ–‡ä»¶ï¼Œæˆ–è€…"), QColor("#8491bd"), 12);
 
 	m_hand->installEventFilter(this);
 	m_hand->setGeometry(258, 179, 120, 18);
 	m_hand->setFontFace(CGeneralStyle::instance()->font().family());
 	m_hand->setFontSize(12);
 	m_hand->setFontColor(QColor("#4a6fff"));
-    m_hand->setText(QStringLiteral("Ê¹ÓÃÆäËûÏÂÔØÇþµÀ"));
+    m_hand->setText(QStringLiteral("ä½¿ç”¨å…¶ä»–ä¸‹è½½æ¸ é“"));
 	m_hand->setUnderline(true);
 
 	m_time->move(width() - 139, height() - 36);
 
-    DialogHelper::setLabel(m_downloadAddr, QString::fromStdWString(L"ÏÂÔØµØÖ·"), QColor("#8d8e91"), 12);
+    DialogHelper::setLabel(m_downloadAddr, QString::fromStdWString(L"ä¸‹è½½åœ°å€"), QColor("#8d8e91"), 12);
 	m_downloadAddr->setAlignment(Qt::AlignLeft);
 
 	m_downloadAddrEdit->setBackgroundColor(QColor("#0b0d15"));
@@ -134,11 +134,11 @@ m_error(nullptr)
 
 	m_downloadButton->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_downloadButton->setFontSize(12);
-	m_downloadButton->setText(QString::fromStdWString(L"¸´ÖÆµØÖ·"));
+	m_downloadButton->setText(QString::fromStdWString(L"å¤åˆ¶åœ°å€"));
 	m_downloadButton->setBorderRadius(2);
 	m_downloadButton->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
 
-    DialogHelper::setLabel(m_path, QString::fromStdWString(L"±¾µØÂ·¾¶"), QColor("#8d8e91"), 12);
+    DialogHelper::setLabel(m_path, QString::fromStdWString(L"æœ¬åœ°è·¯å¾„"), QColor("#8d8e91"), 12);
 	m_path->setAlignment(Qt::AlignLeft);
 
 	m_pathEdit->setBackgroundColor(QColor("#0b0d15"));
@@ -152,7 +152,7 @@ m_error(nullptr)
 
 	m_pathButton->setBkgColor(QColor("#5a5ea2"), QColor("#4a6fff"), QColor("#5a5ea2"), QColor("#888994"));
 	m_pathButton->setFontSize(12);
-	m_pathButton->setText(QString::fromStdWString(L"¸´ÖÆµØÖ·"));
+	m_pathButton->setText(QString::fromStdWString(L"å¤åˆ¶åœ°å€"));
 	m_pathButton->setBorderRadius(2);
 	m_pathButton->setFontColor(QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#b5c2f3"), QColor("#545566"));
 
@@ -188,7 +188,7 @@ void DownloadOperateDialog::setFileName(const QString& fileName)
     {
         return;
     }
-    QString file = QString::fromStdWString(CStringManager::Format(L"ÎÄ¼þÃû£º%s", fileName.toStdWString().c_str()));
+    QString file = QString::fromStdWString(CStringManager::Format(L"æ–‡ä»¶åï¼š%s", fileName.toStdWString().c_str()));
     DialogHelper::setLabel(m_file, file, QColor("#8592bf"), 12);
     m_file->setAlignment(Qt::AlignLeft);
 }
@@ -223,24 +223,24 @@ void DownloadOperateDialog::resizeEvent(QResizeEvent* eve)
 #ifdef _MSC_VER
 void DownloadOperateDialog::setClipboardData(HWND hWnd, const std::string& str)
 {
-	//´ò¿ª¼ôÌù°å
+	//æ‰“å¼€å‰ªè´´æ¿
 	if (::OpenClipboard(hWnd))
 	{
 		HANDLE hClip;
 		char* pBuf;
-		//Çå¿Õ¼ôÌù°å
+		//æ¸…ç©ºå‰ªè´´æ¿
 		::EmptyClipboard();
 
-		//Ð´ÈëÊý¾Ý
+		//å†™å…¥æ•°æ®
 		hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
 		pBuf = (char*)::GlobalLock(hClip);
 		::strcpy(pBuf, str.c_str());
-		//½âËø
+		//è§£é”
 		::GlobalUnlock(hClip);
-		//ÉèÖÃ¸ñÊ½
+		//è®¾ç½®æ ¼å¼
 		::SetClipboardData(CF_TEXT, hClip);
 
-		//¹Ø±Õ¼ôÌù°å
+		//å…³é—­å‰ªè´´æ¿
 		::CloseClipboard();
 	}
 }
@@ -333,7 +333,7 @@ void DownloadOperateDialog::onChangeErrorStatus()
 	m_downloaded->setVisible(false);
 	m_downloadTime->setVisible(false);
 	m_error->setVisible(true);
-	m_back->setText(QString::fromStdWString(L"ÖØÊÔ"));
+	m_back->setText(QString::fromStdWString(L"é‡è¯•"));
 	m_back->setVisible(false);
 	m_again->setVisible(true);
 	return;
@@ -350,7 +350,7 @@ void DownloadOperateDialog::onChangeNormalStatus()
 	m_downloaded->setVisible(true);
 	m_downloadTime->setVisible(true);
 	m_error->setVisible(false);
-	m_back->setText(QString::fromStdWString(L"×ªµ½ºóÌ¨ÏÂÔØ"));
+	m_back->setText(QString::fromStdWString(L"è½¬åˆ°åŽå°ä¸‹è½½"));
 	m_back->setVisible(true);
 	m_again->setVisible(false);
 	return;

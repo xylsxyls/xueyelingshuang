@@ -1,4 +1,4 @@
-#ifndef CONTROLBACKGROUND_INL__
+﻿#ifndef CONTROLBACKGROUND_INL__
 #define CONTROLBACKGROUND_INL__
 //#pragma once
 #include "ControlBackground.h"

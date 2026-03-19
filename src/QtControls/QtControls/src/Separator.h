@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Label.h"
 #include "QtControlsMacro.h"
 
@@ -6,12 +6,12 @@ class QtControlsAPI Separator : public Label
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
     Separator(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
     virtual ~Separator();
 

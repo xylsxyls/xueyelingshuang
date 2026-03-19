@@ -1,42 +1,42 @@
-#pragma once
+﻿#pragma once
 
-/** ���ڷ���ֵ
+/** 窗口返回值
 */
 enum DialogResult
 {
-    /** ����ֵ�����ڳ�ʼ��
+    /** 错误值，用于初始化
     */
     ERROR_RESULT = 1000,
 
-    /** ȷ�ϰ�ť
+    /** 确认按钮
     */
     ACCEPT_BUTTON,
 
-    /** ȡ����ť
+    /** 取消按钮
     */
     IGNORE_BUTTON,
 
-    /** ��ʱ
+    /** 超时
     */
     TIME_OUT,
 
-    /** Esc�˳�
+    /** Esc退出
     */
     ESC_EXIT,
 
-    /** Alt+F4�˳�
+    /** Alt+F4退出
     */
     ALT_F4_EXIT,
 
-    /** ���ϽǵĹر�
+    /** 右上角的关闭
     */
     RIGHT_TOP_EXIT,
 
-    /** ��������
+    /** 代码销毁
     */
     CODE_DESTROY = -1,
 
-    /** ������ΪUserId�ظ����ر�
+    /** 弹框因为UserId重复而关闭
     */
     BUSY = -2
 };

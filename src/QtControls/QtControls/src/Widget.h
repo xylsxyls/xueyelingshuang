@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QWidget>
 #include "ControlShow.h"
 #include "ControlFont.h"
@@ -7,7 +7,7 @@
 #include "ControlBackground.h"
 #include "QtControlsMacro.h"
 
-/** ´°¿Ú¿Ø¼ş£¬¸Ã¿Ø¼şµÄsetBorderÏà¹Øº¯ÊıÃ»ÓĞĞ§¹û£¬setBackgroundº¯ÊıÖ»ÄÜÉèÖÃÑÕÉ«
+/** çª—å£æ§ä»¶ï¼Œè¯¥æ§ä»¶çš„setBorderç›¸å…³å‡½æ•°æ²¡æœ‰æ•ˆæœï¼ŒsetBackgroundå‡½æ•°åªèƒ½è®¾ç½®é¢œè‰²
 */
 class QtControlsAPI Widget :
 	public ControlShow < QWidget >,
@@ -17,12 +17,12 @@ class QtControlsAPI Widget :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	Widget(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~Widget();
 };

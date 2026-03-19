@@ -1,12 +1,12 @@
-#pragma once
+ï»¿#pragma once
 #include "PopDialog.h"
 
-/** ÕËºÅ¿ò»ùÀà
+/** è´¦å·æ¡†åŸºç±»
 */
 class BoxDialogBase : public PopDialog
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	BoxDialogBase();
 

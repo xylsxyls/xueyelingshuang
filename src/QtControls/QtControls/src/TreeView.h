@@ -1,38 +1,38 @@
-#pragma once
+ï»¿#pragma once
 #include <QTreeView>
 #include "TreeViewModel.h"
 #include "QtControlsMacro.h"
 
 class TreeViewDelegate;
 class TreeViewHeader;
-/** TreeView²Ù×÷Àà
+/** TreeViewæ“ä½œç±»
 */
 class QtControlsAPI TreeView : public QTreeView
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	TreeView(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~TreeView();
 
 public:
-	/** »ñÈ¡Ä£ĞÍ½Ó¿ÚÖ¸Õë
-	@return ·µ»ØÄ£ĞÍ½Ó¿ÚÖ¸Õë
+	/** è·å–æ¨¡å‹æ¥å£æŒ‡é’ˆ
+	@return è¿”å›æ¨¡å‹æ¥å£æŒ‡é’ˆ
 	*/
 	TreeViewModel* model();
 
 protected:
-	/** ³õÊ¼»¯
+	/** åˆå§‹åŒ–
 	*/
 	void init();
 
-	/** ¼ì²âÄÚ²¿Ö¸ÕëÊÇ·ñÓĞĞ§
-	@return ·µ»ØÄÚ²¿Ö¸ÕëÊÇ·ñÓĞĞ§
+	/** æ£€æµ‹å†…éƒ¨æŒ‡é’ˆæ˜¯å¦æœ‰æ•ˆ
+	@return è¿”å›å†…éƒ¨æŒ‡é’ˆæ˜¯å¦æœ‰æ•ˆ
 	*/
 	bool check();
 

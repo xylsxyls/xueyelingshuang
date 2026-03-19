@@ -1,37 +1,37 @@
-#pragma once
+ï»¿#pragma once
 #include "Menu.h"
 #include "QtControlsMacro.h"
 
 class Label;
-/** ¶¨×öÀà£¬ÕÛµşÊ½±ß¿ò²Ëµ¥
+/** å®šåšç±»ï¼ŒæŠ˜å å¼è¾¹æ¡†èœå•
 */
 class QtControlsAPI CollapseMenu : public Menu
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	CollapseMenu(QWidget* parent = nullptr);
 
-	/** ¹¹Ôìº¯Êı
-	@param [in] title ²Ëµ¥±êÌâ
-	@param [in] icon ²Ëµ¥Í¼±ê
-	@param [in] size ²Ëµ¥Í¼±ê´óĞ¡
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] title èœå•æ ‡é¢˜
+	@param [in] icon èœå•å›¾æ ‡
+	@param [in] size èœå•å›¾æ ‡å¤§å°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	CollapseMenu(const QString& title, const QString& icon = QString(), const QSize& size = QSize(), QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~CollapseMenu();
 
 public:
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] selectedColor ĞüÍ£ÑÕÉ«£¨ÓÃÓÚlist£©
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] selectedColor æ‚¬åœé¢œè‰²ï¼ˆç”¨äºlistï¼‰
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setItemBorderColor(const QColor& normalColor,
 							const QColor& selectedColor = QColor(0, 0, 0, 0),
@@ -39,7 +39,7 @@ public:
 							bool rePaint = false);
 
 private:
-	/** ½«±ß¿òÉèÖÃÎªÕÛµşÊ½£¬¸ÃÀàÎª¶¨×öÀà£¬Ä¬ÈÏÉèÎªÕÛµşÊ½£¬²»ÓÃÊÖ¶¯ÔÙ´Îµ÷ÓÃ
+	/** å°†è¾¹æ¡†è®¾ç½®ä¸ºæŠ˜å å¼ï¼Œè¯¥ç±»ä¸ºå®šåšç±»ï¼Œé»˜è®¤è®¾ä¸ºæŠ˜å å¼ï¼Œä¸ç”¨æ‰‹åŠ¨å†æ¬¡è°ƒç”¨
 	*/
 	void setBorderCollapse();
 

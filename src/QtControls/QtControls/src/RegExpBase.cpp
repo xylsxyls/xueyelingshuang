@@ -1,4 +1,4 @@
-#include "RegExpBase.h"
+﻿#include "RegExpBase.h"
 #include <QComboBox>
 #include <QLineEdit>
 #include <stdint.h>

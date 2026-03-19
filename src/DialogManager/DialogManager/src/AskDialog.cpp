@@ -1,4 +1,4 @@
-#include "AskDialog.h"
+﻿#include "AskDialog.h"
 #include "QtControls/Label.h"
 #include "QtControls/COriginalButton.h"
 #include "DialogManager.h"

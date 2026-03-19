@@ -1,4 +1,4 @@
-#ifndef CONTROLBASE_INL__
+О╩©#ifndef CONTROLBASE_INL__
 #define CONTROLBASE_INL__
 
 #include "ControlBase.h"
@@ -15,7 +15,7 @@ ControlBase<QBase>::~ControlBase()
 template<class QBase>
 void ControlBase<QBase>::setControlShow(ControlShow<QBase>* show)
 {
-	//юМбшио╡╩╦цЁЖож╢╚©у╣дожоСё╛╣╚сисзртоб╨╞йЩжпц╩спеп©уё╛кЫрттзуБюОмЁр╩еп╤ор╩об
+	//Г░├Х╝╨Д╦┼Д╦█Х╞╔Е┤╨Г▌╟Д╪═Г╘╨Г └Г▌╟Х╠║О╪▄Д╫├Г■╠Д╨▌Д╩╔Д╦▀Е┤╫Ф∙╟Д╦╜Ф╡║Ф°┴Е┬╓Г╘╨О╪▄Ф┴─Д╩╔Е°╗Х©≥И┤▄Г╩÷Д╦─Е┬╓Ф√╜Д╦─Д╦▀
 	if (show == nullptr)
 	{
 		abort();

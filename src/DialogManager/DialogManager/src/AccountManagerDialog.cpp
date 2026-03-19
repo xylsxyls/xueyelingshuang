@@ -1,4 +1,4 @@
-#include "AccountManagerDialog.h"
+﻿#include "AccountManagerDialog.h"
 #include "QtControls/Label.h"
 #include "AccountDialog.h"
 #include "QtControls/COriginalButton.h"

@@ -1,67 +1,67 @@
-#pragma once
+ï»¿#pragma once
 #include "ComboBox.h"
 #include "QtControlsMacro.h"
 
-/** ¶¨×öÀà£¬½Úµã¶ÔÓ¦ID±àºÅ£¬µ±µã»÷¿òÄÚÈİ¸Ä±äÊ±·¢ÉäĞÅºÅ£¬Qt::UserRole + 777²»¿ÉÊ¹ÓÃ
+/** å®šåšç±»ï¼ŒèŠ‚ç‚¹å¯¹åº”IDç¼–å·ï¼Œå½“ç‚¹å‡»æ¡†å†…å®¹æ”¹å˜æ—¶å‘å°„ä¿¡å·ï¼ŒQt::UserRole + 777ä¸å¯ä½¿ç”¨
 */
 class QtControlsAPI IdItemComboBox : public ComboBox
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	IdItemComboBox(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~IdItemComboBox();
 
 public:
-	/** Ìí¼Ó´øÓĞIDµÄ½Úµã
-	@param [in] id ½ÚµãID£¨ID²»Î¨Ò»£¬¿ÉÒÔÌí¼ÓÁ½¸öÏàÍ¬IDµÄ½Úµã£©
-	@param [in] text ½ÚµãÄÚÈİ
+	/** æ·»åŠ å¸¦æœ‰IDçš„èŠ‚ç‚¹
+	@param [in] id èŠ‚ç‚¹IDï¼ˆIDä¸å”¯ä¸€ï¼Œå¯ä»¥æ·»åŠ ä¸¤ä¸ªç›¸åŒIDçš„èŠ‚ç‚¹ï¼‰
+	@param [in] text èŠ‚ç‚¹å†…å®¹
 	*/
 	void addItem(const QString& text, qint64 id = 0);
 
-	/** Ìí¼ÓÒ»×é´øÓĞIDµÄ½Úµã£¨»á¼ì²âÁ½¸ölistµÄsizeÊÇ·ñÒ»Ñù£¬²»Ò»Ñù²»Ìí¼Ó£¬ºÍÔ­ÉúaddItemsÏàËÆ²»¾ß±¸¸²¸ÇĞ§¹û£©
-	@param [in] idList ½ÚµãIDÁĞ±í
-	@param [in] textList ½ÚµãÎÄ×ÖÁĞ±í
+	/** æ·»åŠ ä¸€ç»„å¸¦æœ‰IDçš„èŠ‚ç‚¹ï¼ˆä¼šæ£€æµ‹ä¸¤ä¸ªlistçš„sizeæ˜¯å¦ä¸€æ ·ï¼Œä¸ä¸€æ ·ä¸æ·»åŠ ï¼Œå’ŒåŸç”ŸaddItemsç›¸ä¼¼ä¸å…·å¤‡è¦†ç›–æ•ˆæœï¼‰
+	@param [in] idList èŠ‚ç‚¹IDåˆ—è¡¨
+	@param [in] textList èŠ‚ç‚¹æ–‡å­—åˆ—è¡¨
 	*/
 	void addItems(const QStringList& textList, const QList<qint64>& idList = QList<qint64>());
 
-	/** ÉèÖÃµÚÒ»¸öID¶ÔÓ¦µÄindexµ½µã»÷¿ò
-	@param [in] id IDÖµ
+	/** è®¾ç½®ç¬¬ä¸€ä¸ªIDå¯¹åº”çš„indexåˆ°ç‚¹å‡»æ¡†
+	@param [in] id IDå€¼
 	*/
 	void setCurrentItemByFirstId(qint64 id);
 
-	/** »ñÈ¡µÚÒ»¸öID¶ÔÓ¦Ë÷ÒıÖµ
-	@param [in] id IDÖµ
-	@return ·µ»ØË÷ÒıÖµ
+	/** è·å–ç¬¬ä¸€ä¸ªIDå¯¹åº”ç´¢å¼•å€¼
+	@param [in] id IDå€¼
+	@return è¿”å›ç´¢å¼•å€¼
 	*/
 	qint32 itemIndexByFirstId(qint64 id);
 
-	/** »ñÈ¡µ±Ç°Ñ¡Ôñ½ÚµãID
-	@return ·µ»Øµ±Ç°Ñ¡Ôñ½ÚµãID
+	/** è·å–å½“å‰é€‰æ‹©èŠ‚ç‚¹ID
+	@return è¿”å›å½“å‰é€‰æ‹©èŠ‚ç‚¹ID
 	*/
 	qint64 currentItemId();
 
-	/** »ñÈ¡Ö¸¶¨½ÚµãID
-	@param [in] index ½ÚµãË÷ÒıÖµ
-	@return ·µ»ØÖ¸¶¨½ÚµãID
+	/** è·å–æŒ‡å®šèŠ‚ç‚¹ID
+	@param [in] index èŠ‚ç‚¹ç´¢å¼•å€¼
+	@return è¿”å›æŒ‡å®šèŠ‚ç‚¹ID
 	*/
 	qint64 itemId(qint32 index);
 
 Q_SIGNALS:
-	/** µ±Ñ¡ÔñÁËÁíÒ»¸öidµÄÏÂÀ­½ÚµãÊ±·¢ËÍĞÅºÅ£¨µã»÷¿òÉèÎª¿É±à¼­£¬ÊÖ¶¯ÊäÈëÎÄ×ÖÊ±²»·¢ËÍĞÅºÅ£©
-	@param [in] id ½ÚµãID
-	@param [in] text µ±Ç°µã»÷¿òÄÚÎÄ±¾ÄÚÈİ
+	/** å½“é€‰æ‹©äº†å¦ä¸€ä¸ªidçš„ä¸‹æ‹‰èŠ‚ç‚¹æ—¶å‘é€ä¿¡å·ï¼ˆç‚¹å‡»æ¡†è®¾ä¸ºå¯ç¼–è¾‘ï¼Œæ‰‹åŠ¨è¾“å…¥æ–‡å­—æ—¶ä¸å‘é€ä¿¡å·ï¼‰
+	@param [in] id èŠ‚ç‚¹ID
+	@param [in] text å½“å‰ç‚¹å‡»æ¡†å†…æ–‡æœ¬å†…å®¹
 	*/
 	void currentItemChanged(qint64 id, const QString& text);
 
-	/** °´ÏÂÊ±·¢ËÍĞÅºÅ
-	@param [in] id ½ÚµãID
-	@param [in] text µ±Ç°µã»÷¿òÄÚÎÄ±¾ÄÚÈİ
+	/** æŒ‰ä¸‹æ—¶å‘é€ä¿¡å·
+	@param [in] id èŠ‚ç‚¹ID
+	@param [in] text å½“å‰ç‚¹å‡»æ¡†å†…æ–‡æœ¬å†…å®¹
 	*/
 	void idItemPressed(qint64 id, const QString& text);
 

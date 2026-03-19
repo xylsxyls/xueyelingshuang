@@ -1,4 +1,4 @@
-#include "StringTask.h"
+﻿#include "StringTask.h"
 #include "MessageTestLinux.h"
 #include "TextStorage.h"
 

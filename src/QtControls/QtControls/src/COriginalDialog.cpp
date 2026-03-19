@@ -1,4 +1,4 @@
-#include "COriginalDialog.h"
+ï»¿#include "COriginalDialog.h"
 #include <QWindow>
 #ifdef _MSC_VER
 #include <Windows.h>
@@ -74,7 +74,7 @@ COriginalDialog::COriginalDialog(QWidget* parent)
 
 COriginalDialog::~COriginalDialog()
 {
-	//²»ÄÜÔÚcloseEventÀï×öÕâ¶Î²Ù×÷£¬ÒòÎªµ±ÁÙÊ±¸¸´°¿Ú¸Ä±äÖ®ºó¾²Ì¬¿òÎŞ·¨ÔÙ´ÎÏÔÊ¾
+	//ä¸èƒ½åœ¨closeEventé‡Œåšè¿™æ®µæ“ä½œï¼Œå› ä¸ºå½“ä¸´æ—¶çˆ¶çª—å£æ”¹å˜ä¹‹åé™æ€æ¡†æ— æ³•å†æ¬¡æ˜¾ç¤º
 	//QWindow* handle = windowHandle();
 	//if (handle != nullptr && handle->transientParent() != nullptr)
 	//{
@@ -260,7 +260,7 @@ long COriginalDialog::onNcHitTest(const QPoint& pt)
 			if(!w->isEnabled())
 				continue;
 
-			//* label²»Ó°ÏìÍÏ¶¯
+			//* labelä¸å½±å“æ‹–åŠ¨
 			QLabel* isLabel = qobject_cast<QLabel*>(w);
 			if (isLabel && IS_KEY_DOWN(MOUSE_MOVED))
 				continue;
@@ -314,11 +314,11 @@ bool COriginalDialog::nativeEvent(const QByteArray& eventType, void* message, lo
 			break;
 		case WM_SIZE:
 			{
-				// ×î´ó»¯Ê±£¬´°¿Ú¸²¸ÇÁËwindowsÈÎÎñÀ¸£¬ËùÒÔÔö¼Ó´úÂë×öÏÂµ÷Õû
-				//static BOOL s_bChangeFromHere = false; // ±ÜÃâÑ­»·½øÈë
+				// æœ€å¤§åŒ–æ—¶ï¼Œçª—å£è¦†ç›–äº†windowsä»»åŠ¡æ ï¼Œæ‰€ä»¥å¢åŠ ä»£ç åšä¸‹è°ƒæ•´
+				//static BOOL s_bChangeFromHere = false; // é¿å…å¾ªç¯è¿›å…¥
 				//if( msg->wParam == SIZE_MAXIMIZED && !s_bChangeFromHere )
 				//{
-				//	HWND hwndTrayWnd=::FindWindow(L"Shell_TrayWnd",NULL);//ÈÎÎñÀ¸
+				//	HWND hwndTrayWnd=::FindWindow(L"Shell_TrayWnd",NULL);//ä»»åŠ¡æ 
 				//	HMONITOR hMon = MonitorFromWindow(msg->hwnd, MONITOR_DEFAULTTONEAREST);
 				//	// HMONITOR hMonTrayWnd = (hwndTrayWnd ? MonitorFromWindow(hwndTrayWnd, NULL) : NULL);
 				//
@@ -393,8 +393,8 @@ bool COriginalDialog::nativeEvent(const QByteArray& eventType, void* message, lo
 				//    if( 0 == (dwOldStyle & WS_THICKFRAME) )
 				//    {
 				//        SetWindowLong(HWND(this->winId()), GWL_STYLE, dwOldStyle
-				//            | WS_THICKFRAME   // HTLEFT, HTRIGHT, ... »áÔÊĞí¸Ä±ä´óĞ¡
-				//            | WS_MAXIMIZEBOX // Ë«»÷ HTCAPTION ²¿·Ö£¬»á×Ô¶¯×î´ó»¯
+				//            | WS_THICKFRAME   // HTLEFT, HTRIGHT, ... ä¼šå…è®¸æ”¹å˜å¤§å°
+				//            | WS_MAXIMIZEBOX // åŒå‡» HTCAPTION éƒ¨åˆ†ï¼Œä¼šè‡ªåŠ¨æœ€å¤§åŒ–
 				//            | WS_MINIMIZEBOX //
 				//            );
 				//    }
@@ -431,7 +431,7 @@ bool COriginalDialog::nativeEvent(const QByteArray& eventType, void* message, lo
 		//	printf("%d\n", (int32_t)msg->response_type);
 		//}
 		
-		//¼¤»îÊÇ9£¬ºóÌ¨ÊÇ10£¬Êó±êÀë¿ªÊÇ8£¬Êó±ê½øÈëÊÇ7,18ÊÇ¹Ø±Õ
+		//æ¿€æ´»æ˜¯9ï¼Œåå°æ˜¯10ï¼Œé¼ æ ‡ç¦»å¼€æ˜¯8ï¼Œé¼ æ ‡è¿›å…¥æ˜¯7,18æ˜¯å…³é—­
 		switch (msg->response_type)
 		{
 		case XCB_KEY_PRESS:
@@ -610,7 +610,7 @@ bool COriginalDialog::nativeEvent(const QByteArray& eventType, void* message, lo
 							if(!w->isEnabled())
 								continue;
 
-							//* label²»Ó°ÏìÍÏ¶¯
+							//* labelä¸å½±å“æ‹–åŠ¨
 							QLabel* isLabel = qobject_cast<QLabel*>(w);
 							if (isLabel)
 								continue;
@@ -632,7 +632,7 @@ bool COriginalDialog::nativeEvent(const QByteArray& eventType, void* message, lo
         					event.xclient.type = ClientMessage;
         					event.xclient.message_type = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
         					event.xclient.display = display;
-        					//wid ÊÇµ±Ç°³ÌĞòµÄ window id£¬¿ÉÒÔÍ¨¹ı QWidget->wId()»ñµÃ£¬QWidget ±ØĞëÊµÀı»¯
+        					//wid æ˜¯å½“å‰ç¨‹åºçš„ window idï¼Œå¯ä»¥é€šè¿‡ QWidget->wId()è·å¾—ï¼ŒQWidget å¿…é¡»å®ä¾‹åŒ–
         					event.xclient.window = (XID)(this->winId());
         					event.xclient.format = 32;
         					event.xclient.data.l[0] = globalPos.x();
@@ -909,7 +909,7 @@ QWindow* COriginalDialog::getAncestorHandle(QWindow* window)
             }
         }
     }
-    //Èç¹ûÊÇ²»Í¬½ø³Ì
+    //å¦‚æœæ˜¯ä¸åŒè¿›ç¨‹
 #ifdef _MSC_VER
     if ((realTransientWindow == nullptr) && (::IsWindow(HWND(ancetorId)) == TRUE))
     {

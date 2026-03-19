@@ -1,36 +1,36 @@
-#pragma once
+ï»¿#pragma once
 #include "HtmlComboBox.h"
 #include "QtControlsMacro.h"
 
 class Label;
-/** ¶¨×öÀà£¬ÏÂÀ­Ñ¡Ôñ¿Ø¼ş
+/** å®šåšç±»ï¼Œä¸‹æ‹‰é€‰æ‹©æ§ä»¶
 */
 class QtControlsAPI ChooseComboBox : public HtmlComboBox
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	ChooseComboBox(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~ChooseComboBox();
 
 public:
-	/** ³õÊ¼»¯Ñ¡Ôñ¿Ø¼ş´°¿ÚÎÄ×Ö£¬±ØĞëµÚÒ»²½Ö´ĞĞ
-	@param [in] text ÎÄ×ÖÄÚÈİ
+	/** åˆå§‹åŒ–é€‰æ‹©æ§ä»¶çª—å£æ–‡å­—ï¼Œå¿…é¡»ç¬¬ä¸€æ­¥æ‰§è¡Œ
+	@param [in] text æ–‡å­—å†…å®¹
 	*/
 	void setComboBoxText(const QString& text);
 
-	/** ÉèÖÃÑ¡ÔñÍ¼±êÍ¼Æ¬
-	@param [in] borderImgPath Í¼Æ¬Â·¾¶
-	@param [in] borderImgStateCount Í¼Æ¬×´Ì¬¸öÊı
-	@param [in] borderImgNormal ³£Ì¬
-	@param [in] borderImgHover ĞüÍ£×´Ì¬
-	@param [in] borderImgDisabled ½ûÓÃ×´Ì¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´»æÖÆ
+	/** è®¾ç½®é€‰æ‹©å›¾æ ‡å›¾ç‰‡
+	@param [in] borderImgPath å›¾ç‰‡è·¯å¾„
+	@param [in] borderImgStateCount å›¾ç‰‡çŠ¶æ€ä¸ªæ•°
+	@param [in] borderImgNormal å¸¸æ€
+	@param [in] borderImgHover æ‚¬åœçŠ¶æ€
+	@param [in] borderImgDisabled ç¦ç”¨çŠ¶æ€
+	@param [in] rePaint æ˜¯å¦ç«‹å³ç»˜åˆ¶
 	*/
 	void setChooseImage(const QString& borderImgPath,
 						qint32 borderImgStateCount = 4,
@@ -39,53 +39,53 @@ public:
 						qint32 borderImgDisabled = 4,
 						bool rePaint = false);
 
-	/** ÉèÖÃÑ¡ÔñÍ¼±êµÄÆ«ÒÆÁ¿
-	@param [in] origin Æ«ÒÆÁ¿
+	/** è®¾ç½®é€‰æ‹©å›¾æ ‡çš„åç§»é‡
+	@param [in] origin åç§»é‡
 	*/
 	void setChooseOrigin(qint32 origin);
 
-	/** ÉèÖÃÑ¡ÔñµÄË÷ÒıÖµ£¬´Ó1¿ªÊ¼
-	@param [in] index Ë÷ÒıÖµ
+	/** è®¾ç½®é€‰æ‹©çš„ç´¢å¼•å€¼ï¼Œä»1å¼€å§‹
+	@param [in] index ç´¢å¼•å€¼
 	*/
 	void setChooseByIndex(qint32 index);
 
-	/** ÉèÖÃÑ¡Ôñ
-	@param [in] id Ñ¡ÏîID
+	/** è®¾ç½®é€‰æ‹©
+	@param [in] id é€‰é¡¹ID
 	*/
 	void setChooseById(qint64 id);
 
-	/** ÉèÖÃÑ¡ÔñÍ¼±ê´óĞ¡
-	@param [in] width ¿í¶È
-	@param [in] height ¸ß¶È
+	/** è®¾ç½®é€‰æ‹©å›¾æ ‡å¤§å°
+	@param [in] width å®½åº¦
+	@param [in] height é«˜åº¦
 	*/
 	void setChooseSize(qint32 width, qint32 height);
 
-	/** ÉèÖÃÏÂÀ­¿ò½Úµã¸ß¶È
-	@param [in] height ½Úµã¸ß¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†èŠ‚ç‚¹é«˜åº¦
+	@param [in] height èŠ‚ç‚¹é«˜åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListItemHeight(qint32 height, bool rePaint = false);
 
-	/** Çå¿Õ
+	/** æ¸…ç©º
 	*/
 	void clear();
 
-	/** »ñÈ¡Ñ¡ÖĞÏîË÷ÒıÖµ
-	@return ·µ»ØÑ¡ÖĞÏîË÷ÒıÖµ
+	/** è·å–é€‰ä¸­é¡¹ç´¢å¼•å€¼
+	@return è¿”å›é€‰ä¸­é¡¹ç´¢å¼•å€¼
 	*/
 	qint32 currentChoosedIndex();
 
-	/** »ñÈ¡Ñ¡ÖĞÏîµÄID
-	@return ·µ»ØÑ¡ÖĞÏîID
+	/** è·å–é€‰ä¸­é¡¹çš„ID
+	@return è¿”å›é€‰ä¸­é¡¹ID
 	*/
 	qint64 currentChoosedId();
 
-	/** »ñÈ¡Ñ¡ÖĞÏîÄÚÈİ
-	@return ·µ»ØÑ¡ÖĞÏîÄÚÈİ
+	/** è·å–é€‰ä¸­é¡¹å†…å®¹
+	@return è¿”å›é€‰ä¸­é¡¹å†…å®¹
 	*/
 	QString currentChoosedText();
 
-	/** È¥³ıÑ¡ÔñÏîµÄÑ¡ÔñÍ¼±ê
+	/** å»é™¤é€‰æ‹©é¡¹çš„é€‰æ‹©å›¾æ ‡
 	*/
 	void clearChoose();
 

@@ -1,4 +1,4 @@
-#include "CheckBox.h"
+﻿#include "CheckBox.h"
 
 CheckBox::CheckBox(QWidget* parent) :
 ControlShow(parent)

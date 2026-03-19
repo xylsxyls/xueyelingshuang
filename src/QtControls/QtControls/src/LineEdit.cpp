@@ -1,4 +1,4 @@
-#include "LineEdit.h"
+﻿#include "LineEdit.h"
 
 LineEdit::LineEdit(QWidget* parent) :
 ControlShow(parent)

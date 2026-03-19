@@ -1,4 +1,4 @@
-#include "Widget.h"
+﻿#include "Widget.h"
 
 Widget::Widget(QWidget* parent) :
 ControlShow(parent)

@@ -1,4 +1,4 @@
-#include "Label.h"
+﻿#include "Label.h"
 #include <QEvent>
 #include <QApplication>
 #include <QMouseEvent>

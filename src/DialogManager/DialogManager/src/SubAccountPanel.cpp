@@ -1,4 +1,4 @@
-#include "SubAccountPanel.h"
+ï»¿#include "SubAccountPanel.h"
 #include <QEvent>
 #include <QHeaderView>
 #include <QPainter>
@@ -35,7 +35,7 @@ SubAccountPanel::SubAccountPanel(QWidget *parent)
 
     mHelpButton->setUnderline(true);
     mHelpButton->setFixedSize(80,21);
-    mHelpButton->setText(QStringLiteral("[ÈçºÎÔö¼Ó]"));
+    mHelpButton->setText(QStringLiteral("[å¦‚ä½•å¢åŠ ]"));
     mHelpButton->setFontColor(QColor(255,180,120),"white", "white",QColor(255,180,120),
                               QColor(255,180,120),"white", "white",QColor(255,180,120));
 
@@ -48,22 +48,22 @@ SubAccountPanel::SubAccountPanel(QWidget *parent)
     
     
 
-    mHelpTip->setStyleSheet(QStringLiteral("background-color:rgba(29,29,47);border: 1px solid rgba(132,142,168); font-size:14px; font-family:'Î¢ÈíÑÅºÚ';color:#abb3d3;"));
-    mHelpTip->setText(QStringLiteral("1. ĞÂ½¨ÕË»§Ä¬ÈÏÓĞÒ»¸öÕËºÅ<br><br>"                              )+
-                      QStringLiteral("2. ÔÊĞíÁ¢¼´´´½¨µÚ¶ş¸ö×ÓÕËºÅ<br><br>"                            )+
-                      QStringLiteral("3. Æ½Ì¨µÈ¼¶´ïµ½5¼¶£¬ÔÊĞí´´½¨µÚÈı¸ö×ÓÕËºÅ<br><br>"                 )+
-                      QStringLiteral("4. Æ½Ì¨µÈ¼¶´ïµ½10¼¶£¬ÔÊĞí´´½¨µÚËÄ¸ö×ÓÕËºÅ<br><br>"                )+
-                      QStringLiteral("5. Æ½Ì¨µÈ¼¶´ïµ½12¼¶£¬ÔÊĞí´´½¨µÚÎå¸ö×ÓÕËºÅ<br><br>"                )+
-                      QStringLiteral("6. <font color='#f33838'>Æ½Ì¨VIP</font>¿ÉËæÊ±¶îÍâ´´½¨Ò»¸ö×ÓÕËºÅ"));
+    mHelpTip->setStyleSheet(QStringLiteral("background-color:rgba(29,29,47);border: 1px solid rgba(132,142,168); font-size:14px; font-family:'å¾®è½¯é›…é»‘';color:#abb3d3;"));
+    mHelpTip->setText(QStringLiteral("1. æ–°å»ºè´¦æˆ·é»˜è®¤æœ‰ä¸€ä¸ªè´¦å·<br><br>"                              )+
+                      QStringLiteral("2. å…è®¸ç«‹å³åˆ›å»ºç¬¬äºŒä¸ªå­è´¦å·<br><br>"                            )+
+                      QStringLiteral("3. å¹³å°ç­‰çº§è¾¾åˆ°5çº§ï¼Œå…è®¸åˆ›å»ºç¬¬ä¸‰ä¸ªå­è´¦å·<br><br>"                 )+
+                      QStringLiteral("4. å¹³å°ç­‰çº§è¾¾åˆ°10çº§ï¼Œå…è®¸åˆ›å»ºç¬¬å››ä¸ªå­è´¦å·<br><br>"                )+
+                      QStringLiteral("5. å¹³å°ç­‰çº§è¾¾åˆ°12çº§ï¼Œå…è®¸åˆ›å»ºç¬¬äº”ä¸ªå­è´¦å·<br><br>"                )+
+                      QStringLiteral("6. <font color='#f33838'>å¹³å°VIP</font>å¯éšæ—¶é¢å¤–åˆ›å»ºä¸€ä¸ªå­è´¦å·"));
 
 
     SubAccountItemList li;
     for(int i = 0; i < 5; i++)
     {
         SubAccountItem* sitem = new SubAccountItem;
-        sitem->setName(QStringLiteral("Ò»¶şÈıËÄÎåÁùÆß"));
-        sitem->setDate(QStringLiteral("µÇÂ¼Ê±¼ä:2018.03.07"));
-        sitem->setDesc(QStringLiteral("DotaAÌìÌİ:68%Ê¤ÂÊ"));
+        sitem->setName(QStringLiteral("ä¸€äºŒä¸‰å››äº”å…­ä¸ƒ"));
+        sitem->setDate(QStringLiteral("ç™»å½•æ—¶é—´:2018.03.07"));
+        sitem->setDesc(QStringLiteral("DotaAå¤©æ¢¯:68%èƒœç‡"));
         sitem->setId(i);
         li << sitem;
 		if(i == 0 )
@@ -120,7 +120,7 @@ void SubAccountPanel::paintEvent(QPaintEvent *e)
     QFont tf = CGeneralStyle::instance()->font();
     p.setPen(QColor(192,200,218));
     p.setFont(tf);
-    p.drawText(DialogHelper::rectValid(fucRect.adjusted(21, 0, 0, 0)), Qt::AlignVCenter | Qt::AlignLeft, QStringLiteral("¿É´´½¨µÄ×ÓÕËºÅÊı£º"));
+    p.drawText(DialogHelper::rectValid(fucRect.adjusted(21, 0, 0, 0)), Qt::AlignVCenter | Qt::AlignLeft, QStringLiteral("å¯åˆ›å»ºçš„å­è´¦å·æ•°ï¼š"));
 
 
     QRect descRect(29,0,this->width(),45);
@@ -129,7 +129,7 @@ void SubAccountPanel::paintEvent(QPaintEvent *e)
     tf1.setPixelSize(16);
     p.setFont(tf1);
 
-    p.drawText(DialogHelper::rectValid(descRect), Qt::AlignVCenter | Qt::AlignLeft, QStringLiteral("×ÓÕËºÅ¹ÜÀí"));
+    p.drawText(DialogHelper::rectValid(descRect), Qt::AlignVCenter | Qt::AlignLeft, QStringLiteral("å­è´¦å·ç®¡ç†"));
 
     QRect countRect = fucRect;
     countRect.setRight(mHelpButton->geometry().left() - 10);
@@ -287,7 +287,7 @@ SubAccountItemView::SubAccountItemView(QWidget *parent)
 
 	connect(mHelpButton, &COriginalButton::clicked, this, &SubAccountItemView::helpButtonClicked);
 
-	mChangeNameButton->setText(QStringLiteral("¸ÄÃû"));
+	mChangeNameButton->setText(QStringLiteral("æ”¹å"));
 	mChangeNameButton->resize(51,21);
 	mChangeNameButton->setBorderWidth(1);
 	mChangeNameButton->setBorderStyle("solid");

@@ -1,4 +1,4 @@
-#include "COriginalButton.h"
+ï»¿#include "COriginalButton.h"
 #include <QDebug>
 #include <QPainter>
 #include <QEvent>
@@ -41,7 +41,7 @@ COriginalButton::COriginalButton(QWidget *parent)
     this->setBold(false);
     this->setItalic(false);
     this->setUnderline(false);
-    this->setFontFace(QStringLiteral("Î¢ÈíÑÅºÚ"));
+    this->setFontFace(QStringLiteral("å¾®è½¯é›…é»‘"));
 
     this->setBkgColor();
     this->setFontColor();

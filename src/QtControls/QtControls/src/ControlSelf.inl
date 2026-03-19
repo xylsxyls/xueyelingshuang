@@ -1,4 +1,4 @@
-#ifndef CONTROLSELF_INL__
+﻿#ifndef CONTROLSELF_INL__
 #define CONTROLSELF_INL__
 
 #include "ControlSelf.h"

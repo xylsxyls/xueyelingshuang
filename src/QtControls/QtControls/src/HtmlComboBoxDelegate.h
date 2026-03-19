@@ -1,27 +1,27 @@
-#pragma once
+ï»¿#pragma once
 #include <QStyledItemDelegate>
 #include "QtControlsMacro.h"
 
 class HtmlComboBox;
-/** ×¨ÃÅ¸øHtmlComboBoxÊ¹ÓÃµÄDelegate
+/** ä¸“é—¨ç»™HtmlComboBoxä½¿ç”¨çš„Delegate
 */
 class HtmlComboBoxDelegate : public QStyledItemDelegate
 {
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] htmlComboBox HtmlComboBoxÀàÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] htmlComboBox HtmlComboBoxç±»æŒ‡é’ˆ
 	*/
 	HtmlComboBoxDelegate(HtmlComboBox* htmlComboBox);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~HtmlComboBoxDelegate();
 
 private:
-	/** »æ»­º¯Êı£¬QStyledItemDelegateµÄĞéº¯Êı
-	@param [in] painter »æ»­Ö¸Õë
-	@param [in] option ½ÚµãÏà¹ØĞÅÏ¢´æ´¢Àà
-	@param [in] index ÎÄ×ÖÏà¹ØĞÅÏ¢´æ´¢Àà
+	/** ç»˜ç”»å‡½æ•°ï¼ŒQStyledItemDelegateçš„è™šå‡½æ•°
+	@param [in] painter ç»˜ç”»æŒ‡é’ˆ
+	@param [in] option èŠ‚ç‚¹ç›¸å…³ä¿¡æ¯å­˜å‚¨ç±»
+	@param [in] index æ–‡å­—ç›¸å…³ä¿¡æ¯å­˜å‚¨ç±»
 	*/
 	virtual void paint(QPainter* painter,
 					   const QStyleOptionViewItem& option,

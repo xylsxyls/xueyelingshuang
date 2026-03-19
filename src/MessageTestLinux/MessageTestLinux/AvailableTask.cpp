@@ -1,4 +1,4 @@
-#include "AvailableTask.h"
+﻿#include "AvailableTask.h"
 #include "MessageTestLinux.h"
 #include "Semaphore/SemaphoreAPI.h"
 

@@ -1,4 +1,4 @@
-#include "ClosureDialog.h"
+﻿#include "ClosureDialog.h"
 #include "LockedAccountPanel.h"
 #include "DialogHelper.h"
 

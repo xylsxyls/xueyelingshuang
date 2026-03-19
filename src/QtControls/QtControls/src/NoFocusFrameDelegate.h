@@ -1,19 +1,19 @@
-#pragma once
+ï»¿#pragma once
 #include <QStyledItemDelegate>
 #include "QtControlsMacro.h"
 
-/** È¥³ıĞéÏß¿ò
+/** å»é™¤è™šçº¿æ¡†
 */
 class QtControlsAPI NoFocusFrameDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	NoFocusFrameDelegate(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~NoFocusFrameDelegate();
 

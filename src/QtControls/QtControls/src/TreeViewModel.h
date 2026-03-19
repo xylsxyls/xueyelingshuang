@@ -1,81 +1,81 @@
-#pragma once
+ï»¿#pragma once
 #include <QStandardItemModel>
 #include <stdint.h>
 #include "TreeText.h"
 #include "QtControlsMacro.h"
 
-/** TreeViewModel²Ù×÷Àà
+/** TreeViewModelæ“ä½œç±»
 */
 class QtControlsAPI TreeViewModel : public QStandardItemModel
 {
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	TreeViewModel(QObject* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~TreeViewModel();
 
 public:
-	/** »ñÈ¡½Úµã£¬Ã»ÓĞÔò´´½¨
-	@param [in] row ËùÔÚĞĞ
-	@param [in] column ËùÔÚÁĞ
-	@return ·µ»Ø½ÚµãÖ¸Õë
+	/** è·å–èŠ‚ç‚¹ï¼Œæ²¡æœ‰åˆ™åˆ›å»º
+	@param [in] row æ‰€åœ¨è¡Œ
+	@param [in] column æ‰€åœ¨åˆ—
+	@return è¿”å›èŠ‚ç‚¹æŒ‡é’ˆ
 	*/
 	QStandardItem* getItem(int32_t row, int32_t column);
 
-	/** ÉèÖÃÊ÷¿Ø¼şÍ·²¿Êı¾İ
-	@param [in] index ¿Ø¼şË÷ÒıÖµ
-	@param [in] text ÎÄ×ÖÏà¹Ø²ÎÊı
+	/** è®¾ç½®æ ‘æ§ä»¶å¤´éƒ¨æ•°æ®
+	@param [in] index æ§ä»¶ç´¢å¼•å€¼
+	@param [in] text æ–‡å­—ç›¸å…³å‚æ•°
 	*/
 	void setHeaderText(int32_t index, const TreeText& text = TreeText());
 
-	/** »ñÈ¡Í·²¿ÎÄ×Ö²ÎÊıÖ¸Õë
-	@return ·µ»ØÍ·²¿ÎÄ×Ö²ÎÊıÖ¸Õë
+	/** è·å–å¤´éƒ¨æ–‡å­—å‚æ•°æŒ‡é’ˆ
+	@return è¿”å›å¤´éƒ¨æ–‡å­—å‚æ•°æŒ‡é’ˆ
 	*/
 	std::map<int32_t, TreeText>* headerText();
 
-	/** ÉèÖÃÊ÷¿Ø¼şÄÚ²¿Êı¾İ
-	@param [in] row ĞĞË÷ÒıÖµ
-	@param [in] column ÁĞË÷ÒıÖµ
-	@param [in] text ÎÄ×ÖÏà¹Ø²ÎÊı
+	/** è®¾ç½®æ ‘æ§ä»¶å†…éƒ¨æ•°æ®
+	@param [in] row è¡Œç´¢å¼•å€¼
+	@param [in] column åˆ—ç´¢å¼•å€¼
+	@param [in] text æ–‡å­—ç›¸å…³å‚æ•°
 	*/
 	void setBodyText(int32_t row, int32_t column, const TreeText& text = TreeText());
 
-	/** »ñÈ¡ÄÚ²¿ÎÄ×Ö²ÎÊıÖ¸Õë
-	@return ·µ»ØÄÚ²¿ÎÄ×Ö²ÎÊıÖ¸Õë
+	/** è·å–å†…éƒ¨æ–‡å­—å‚æ•°æŒ‡é’ˆ
+	@return è¿”å›å†…éƒ¨æ–‡å­—å‚æ•°æŒ‡é’ˆ
 	*/
 	std::map<int32_t, std::map<int32_t, TreeText>>* bodyText();
 
-	/** »ñÈ¡½ÚµãĞĞ±³¾°ÑÕÉ«
-	@return ·µ»Ø½ÚµãĞĞ±³¾°ÑÕÉ«
+	/** è·å–èŠ‚ç‚¹è¡ŒèƒŒæ™¯é¢œè‰²
+	@return è¿”å›èŠ‚ç‚¹è¡ŒèƒŒæ™¯é¢œè‰²
 	*/
 	std::map<int32_t, std::vector<QColor>>* itemBackgroundColor();
 
-	/** ÉèÖÃ±íÍ·¸ß¶È
-	@param [in] height ±íÍ·¸ß¶È
+	/** è®¾ç½®è¡¨å¤´é«˜åº¦
+	@param [in] height è¡¨å¤´é«˜åº¦
 	*/
 	void setHeaderHeight(int32_t height);
 
-	/** ÉèÖÃĞĞ¸ß
-	@param [in] height ĞĞ¸ß
-	@param [in] row ĞĞË÷ÒıÖµ£¬-1Ôò±íÊ¾ËùÓĞĞĞ
+	/** è®¾ç½®è¡Œé«˜
+	@param [in] height è¡Œé«˜
+	@param [in] row è¡Œç´¢å¼•å€¼ï¼Œ-1åˆ™è¡¨ç¤ºæ‰€æœ‰è¡Œ
 	*/
 	void setRowHeight(int32_t height, int32_t row = -1);
 
-	/** ÉèÖÃÁĞ¿í
-	@param [in] width ÁĞ¿í
-	@param [in] row ÁĞË÷ÒıÖµ£¬-1Ôò±íÊ¾ËùÓĞÁĞ
+	/** è®¾ç½®åˆ—å®½
+	@param [in] width åˆ—å®½
+	@param [in] row åˆ—ç´¢å¼•å€¼ï¼Œ-1åˆ™è¡¨ç¤ºæ‰€æœ‰åˆ—
 	*/
 	void setColumnWidth(int32_t width, int32_t column = -1);
 
-	/** ÉèÖÃÁĞ±í½Úµã±³¾°ÑÕÉ«£¨Ò»ĞĞ£©£¬Èç¹ûĞ¡½ÚµãÖĞÃ»ÓĞÉèÖÃÑÕÉ«²Å»áÊ¹ÓÃÕâÀïµÄÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] selectedColor °´ÏÂÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
+	/** è®¾ç½®åˆ—è¡¨èŠ‚ç‚¹èƒŒæ™¯é¢œè‰²ï¼ˆä¸€è¡Œï¼‰ï¼Œå¦‚æœå°èŠ‚ç‚¹ä¸­æ²¡æœ‰è®¾ç½®é¢œè‰²æ‰ä¼šä½¿ç”¨è¿™é‡Œçš„é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] selectedColor æŒ‰ä¸‹é¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
 	*/
 	void setListItemColor(const QColor& normalColor,
 						  const QColor& hoverColor = QColor(0, 0, 0, 0),
@@ -83,25 +83,25 @@ public:
 						  const QColor& disabledColor = QColor(0, 0, 0, 0),
 						  int32_t row = -1);
 
-	/** ÉèÖÃËùÓĞÁĞ¿í¶ÈÎŞ·¨¸Ä±ä´óĞ¡
+	/** è®¾ç½®æ‰€æœ‰åˆ—å®½åº¦æ— æ³•æ”¹å˜å¤§å°
 	*/
 	void setColumnWidthFixedMode();
 
 protected:
-	/** ³õÊ¼»¯
+	/** åˆå§‹åŒ–
 	*/
 	void init();
 
-	/** ¼ì²âÄÚ²¿Ö¸ÕëÊÇ·ñÓĞĞ§
-	@return ·µ»ØÄÚ²¿Ö¸ÕëÊÇ·ñÓĞĞ§
+	/** æ£€æµ‹å†…éƒ¨æŒ‡é’ˆæ˜¯å¦æœ‰æ•ˆ
+	@return è¿”å›å†…éƒ¨æŒ‡é’ˆæ˜¯å¦æœ‰æ•ˆ
 	*/
 	bool check();
 
 private:
-	//Í·²¿ÎÄ×Ö²ÎÊı
+	//å¤´éƒ¨æ–‡å­—å‚æ•°
 	std::map<int32_t, TreeText> m_headerTextMap;
-	//ÄÚ²¿ÎÄ×Ö²ÎÊı
+	//å†…éƒ¨æ–‡å­—å‚æ•°
 	std::map<int32_t, std::map<int32_t, TreeText>> m_bodyTextMap;
-	//±³¾°ÑÕÉ«
+	//èƒŒæ™¯é¢œè‰²
 	std::map<int32_t, std::vector<QColor>> m_itemBackgroundColorMap;
 };

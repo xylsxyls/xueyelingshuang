@@ -1,27 +1,27 @@
-#pragma once
+ï»¿#pragma once
 #include "ControlBase.h"
 #include "QtControlsMacro.h"
 
-/** ¹ÜÀí¿Ø¼ş±¾ÉíÉèÖÃÏà¹Ø¹¦ÄÜ
+/** ç®¡ç†æ§ä»¶æœ¬èº«è®¾ç½®ç›¸å…³åŠŸèƒ½
 */
 template <class QBase>
 class ControlSelf : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlSelf();
 
 public:
-	/** ½«µã»÷¿òÉèÎªÔ²½Ç£¬ÊäÈëÔ²½Ç°ë¾¶£¬Ö»ÓĞ¼ÓÈë±ß¿ò²Å»áÓĞÔ²½Ç
-	@param [in] radius Ô²½Ç°ë¾¶
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** å°†ç‚¹å‡»æ¡†è®¾ä¸ºåœ†è§’ï¼Œè¾“å…¥åœ†è§’åŠå¾„ï¼Œåªæœ‰åŠ å…¥è¾¹æ¡†æ‰ä¼šæœ‰åœ†è§’
+	@param [in] radius åœ†è§’åŠå¾„
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderRadius(qint32 radius, bool rePaint = false);
 
-	/** ÉèÖÃ±ß¿ò´Ö¶È
-	@param [in] width ±ß¿ò´Ö¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®è¾¹æ¡†ç²—åº¦
+	@param [in] width è¾¹æ¡†ç²—åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setBorderWidth(qint32 width, bool rePaint = false);
 };

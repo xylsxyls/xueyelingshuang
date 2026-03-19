@@ -1,4 +1,4 @@
-#include "WebViewEx.h"
+ï»¿#include "WebViewEx.h"
 
 #include <qglobal.h>
 #if (QT_VERSION <= QT_VERSION_CHECK(5,5,1))
@@ -49,27 +49,27 @@ CWebViewEx::CWebViewEx(QWidget *parent, bool allowWebCache)
 	QWebSettings* settings = QWebView::settings();
 	if (settings != NULL)
 	{
-		// ·ÀÖ¹qmlÀïÃæµÄÍøÒ³ºÍÕâÀïÓĞ³åÍ»£¬loadfinish Ê±·¢Éú¶ÏÑÔ
-		// ÔÚº¯Êı IconDatabase::setClient{ ...  ASSERT(!m_syncThreadRunning); ... }
+		// é˜²æ­¢qmlé‡Œé¢çš„ç½‘é¡µå’Œè¿™é‡Œæœ‰å†²çªï¼Œloadfinish æ—¶å‘ç”Ÿæ–­è¨€
+		// åœ¨å‡½æ•° IconDatabase::setClient{ ...  ASSERT(!m_syncThreadRunning); ... }
  		settings->setIconDatabasePath(""); 
 		settings->setAttribute(QWebSettings::PluginsEnabled,true);
 		settings->setAttribute(QWebSettings::JavascriptEnabled, true);
 		settings->setAttribute(QWebSettings::JavascriptCanCloseWindows, false);
 		
-		// html5 local storage feature£¬³ÖĞø´æ´¢£¬Óë cookie ÓĞÇø±ğ
-		settings->setAttribute(QWebSettings::LocalStorageEnabled, true); // ´úÌæÁË LocalStorageDatabaseEnabled
+		// html5 local storage featureï¼ŒæŒç»­å­˜å‚¨ï¼Œä¸ cookie æœ‰åŒºåˆ«
+		settings->setAttribute(QWebSettings::LocalStorageEnabled, true); // ä»£æ›¿äº† LocalStorageDatabaseEnabled
 #ifdef _DEBUG
-		// ÔÊĞí¿ª·¢ÕßÄ£Ê½
+		// å…è®¸å¼€å‘è€…æ¨¡å¼
 		settings->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
 #else
 		settings->setAttribute(QWebSettings::DeveloperExtrasEnabled, false);
-		QWebView::setContextMenuPolicy(Qt::NoContextMenu);// ÆÁ±ÎÓÒ¼ü²Ëµ¥
+		QWebView::setContextMenuPolicy(Qt::NoContextMenu);// å±è”½å³é”®èœå•
 #endif
 
-		//ÒòÎªµ±ÍøÒ³ÖĞÊ¹ÓÃÁË canvas ÔªËØµÄ3d¹¦ÄÜÊ±»áµ¼ÖÂ±ÀÀ££¬ËùÒÔ½ûÖ¹Web OpenGL¹¦ÄÜ
+		//å› ä¸ºå½“ç½‘é¡µä¸­ä½¿ç”¨äº† canvas å…ƒç´ çš„3dåŠŸèƒ½æ—¶ä¼šå¯¼è‡´å´©æºƒï¼Œæ‰€ä»¥ç¦æ­¢Web OpenGLåŠŸèƒ½
 		settings->setAttribute(QWebSettings::WebGLEnabled, false);
 
-		// ÔÊĞí cookie£¬È±Ê¡¾ÍÊÇÕâÑùµÄ£¬¿ÉÒÔ²»µ÷ÓÃ
+		// å…è®¸ cookieï¼Œç¼ºçœå°±æ˜¯è¿™æ ·çš„ï¼Œå¯ä»¥ä¸è°ƒç”¨
 		settings->setThirdPartyCookiePolicy(QWebSettings::AlwaysAllowThirdPartyCookies);
 	}
 	if( allowWebCache )
@@ -92,7 +92,7 @@ CWebViewEx::~CWebViewEx()
 	m_bDestroying = false;
 }
 
-// ÊÇ·ñÔÊĞí½Å±¾¹Ø±Õ´°¿Ú
+// æ˜¯å¦å…è®¸è„šæœ¬å…³é—­çª—å£
 void CWebViewEx::setSetting_JavaScriptCanCloseWnd(bool enable)
 {
 	QWebSettings* settings = QWebView::settings();
@@ -102,7 +102,7 @@ void CWebViewEx::setSetting_JavaScriptCanCloseWnd(bool enable)
 	}
 }
 
-// ÊÇ·ñÔÊĞíµ÷ÊÔÄ£Ê½£¨¿ª·¢ÕßÄ£Ê½£©
+// æ˜¯å¦å…è®¸è°ƒè¯•æ¨¡å¼ï¼ˆå¼€å‘è€…æ¨¡å¼ï¼‰
 void CWebViewEx::setSetting_EnableDebug(bool enable)
 {
 	QWebSettings* settings = QWebView::settings();
@@ -115,7 +115,7 @@ void CWebViewEx::setSetting_EnableDebug(bool enable)
 
 void CWebViewEx::initWebCache(const QString& cache_dir)
 {
-	{ // È·±£Ö»µ÷ÓÃÒ»´Î
+	{ // ç¡®ä¿åªè°ƒç”¨ä¸€æ¬¡
 		static bool s_bFirstCall = true;
 		if( s_bFirstCall )
 			s_bFirstCall = false;

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QObject>
 #include "DialogType.h"
 #include "ManagerBase/ManagerBaseAPI.h"
@@ -8,7 +8,7 @@ class SubAccountPanel;
 class AccountDialog;
 class ClosureDialog;
 class AccountManagerDialog;
-/** ¾²Ì¬´°¿Ú¹ÜÀíÀà
+/** é™æ€çª—å£ç®¡ç†ç±»
 */
 class DialogManagerAPI StaticDialogManager :
     public QObject,
@@ -16,31 +16,31 @@ class DialogManagerAPI StaticDialogManager :
 {
     Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
     StaticDialogManager();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~StaticDialogManager();
 
 public:
-    /** µ¯³ö¾²Ì¬¿ò
-    @param [in] type ¾²Ì¬¿òÀàĞÍ
-    @param [in] param ²ÎÊı
+    /** å¼¹å‡ºé™æ€æ¡†
+    @param [in] type é™æ€æ¡†ç±»å‹
+    @param [in] param å‚æ•°
     */
 	void popStaticDialog(DialogParam& param);
 
-	/** ²Ù×÷´°¿Ú
-	@param [in] type ²Ù×÷ÀàĞÍ
-	@param [in] param ²Ù×÷²ÎÊı
+	/** æ“ä½œçª—å£
+	@param [in] type æ“ä½œç±»å‹
+	@param [in] param æ“ä½œå‚æ•°
 	*/
 	void operateDialog(OperateParam& param);
 
 Q_SIGNALS:
-	/** ´°¿Ú·¢³öĞÅºÅ
-	@param [in] type ĞÅºÅÀàĞÍ
-	@param [in] param ĞÅºÅ²ÎÊı
+	/** çª—å£å‘å‡ºä¿¡å·
+	@param [in] type ä¿¡å·ç±»å‹
+	@param [in] param ä¿¡å·å‚æ•°
 	*/
 	void dialogSignal(const SignalParam& param);
 
@@ -49,14 +49,14 @@ private slots:
 	void onAlreadyShown();
 
 private:
-	/** ¹Ø±Õ¾²Ì¬¿ò
-	@param [in] type ¾²Ì¬¿òÀàĞÍ
+	/** å…³é—­é™æ€æ¡†
+	@param [in] type é™æ€æ¡†ç±»å‹
 	*/
 	void closeStaticDialog(DialogType type);
 
-	/** »ñÈ¡¾²Ì¬¿òID
-	@param [in] type ¾²Ì¬¿òÀàĞÍ
-	@return ·µ»Ø¾²Ì¬¿òID
+	/** è·å–é™æ€æ¡†ID
+	@param [in] type é™æ€æ¡†ç±»å‹
+	@return è¿”å›é™æ€æ¡†ID
 	*/
 	quint64 staticDialogDialogId(DialogType type);
 

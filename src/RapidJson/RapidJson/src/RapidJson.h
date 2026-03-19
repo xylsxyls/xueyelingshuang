@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "RapidJsonMacro.h"
 #include "rapid_json/document.h"
 #include <vector>
@@ -6,45 +6,45 @@
 class RapidJsonAPI RapidJson
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	RapidJson();
 
-	/** ¿½±´¹¹Ôìº¯Êı
+	/** æ‹·è´æ„é€ å‡½æ•°
 	@param [in] rapidJson json
 	*/
 	RapidJson(const RapidJson& rapidJson);
 
-	/** ¿½±´¹¹Ôìº¯Êı
-	@param [in] value Öµ
+	/** æ‹·è´æ„é€ å‡½æ•°
+	@param [in] value å€¼
 	*/
 	RapidJson(const rapidjson::Value& value);
 
 public:
-	/** ½âÎöjson
-	@param [in] json json×Ö·û´®
-	@return ·µ»ØÊÇ·ñ½âÎö³É¹¦
+	/** è§£æjson
+	@param [in] json jsonå­—ç¬¦ä¸²
+	@return è¿”å›æ˜¯å¦è§£ææˆåŠŸ
 	*/
 	bool parse(const std::string& json);
 
-	/** ÊÇ·ñÓĞ¸Ã³ÉÔ±
-	@param [in] key ¹Ø¼ü×Ö
-	@return ·µ»ØÊÇ·ñÓĞ¹Ø¼ü×Ö³ÉÔ±
+	/** æ˜¯å¦æœ‰è¯¥æˆå‘˜
+	@param [in] key å…³é”®å­—
+	@return è¿”å›æ˜¯å¦æœ‰å…³é”®å­—æˆå‘˜
 	*/
 	bool hasMember(const std::string& key);
 
-	/** ×ª»¯Îª×Ö·û´®
-	@return ·µ»Ø×ª»¯µÄ×Ö·û´®
+	/** è½¬åŒ–ä¸ºå­—ç¬¦ä¸²
+	@return è¿”å›è½¬åŒ–çš„å­—ç¬¦ä¸²
 	*/
 	std::string toString();
 
-	/** ×ª»¯Îª¾ßÌåµÄÖµ£¬ÖµÔÚÀàÄÚÖ»ÓĞÒ»·İ£¬Èç¹ûÒª±£´æ±ØĞëÓÃÊµÌå½Ó£¬ÓÃÒıÓÃ½Ó±ØĞëÖ±½ÓÊ¹ÓÃ£¬²»ÄÜ¶à¸öÍ¬Ê±´«Èë±ä³¤²ÎÊı
-	@return ·µ»Ø×ª»¯µÄ¾ßÌåµÄÖµ
+	/** è½¬åŒ–ä¸ºå…·ä½“çš„å€¼ï¼Œå€¼åœ¨ç±»å†…åªæœ‰ä¸€ä»½ï¼Œå¦‚æœè¦ä¿å­˜å¿…é¡»ç”¨å®ä½“æ¥ï¼Œç”¨å¼•ç”¨æ¥å¿…é¡»ç›´æ¥ä½¿ç”¨ï¼Œä¸èƒ½å¤šä¸ªåŒæ—¶ä¼ å…¥å˜é•¿å‚æ•°
+	@return è¿”å›è½¬åŒ–çš„å…·ä½“çš„å€¼
 	*/
 	const rapidjson::Value& toValue();
 
-	/** ×ª»¯ÎªÊı×é
-	@return ·µ»Ø×ª»¯µÄÊı×é
+	/** è½¬åŒ–ä¸ºæ•°ç»„
+	@return è¿”å›è½¬åŒ–çš„æ•°ç»„
 	*/
 	std::vector<RapidJson> toArray();
 

@@ -1,4 +1,4 @@
-#include "TypeManager.h"
+﻿#include "TypeManager.h"
 #include "CSystem/CSystemAPI.h"
 
 TypeManager& TypeManager::instance()

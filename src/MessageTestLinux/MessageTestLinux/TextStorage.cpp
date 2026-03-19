@@ -1,4 +1,4 @@
-#include "TextStorage.h"
+﻿#include "TextStorage.h"
 #include "CSystem/CSystemAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "MessageTestLinux.h"

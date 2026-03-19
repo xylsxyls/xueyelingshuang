@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QtWidgets/QSlider>
 #include "ControlShow.h"
 #include "ControlFont.h"
@@ -8,7 +8,7 @@
 #include "ControlBackground.h"
 #include "QtControlsMacro.h"
 
-/** ×ÖÌõ»òÍ¼Æ¬¿Ø¼ş£¬¸Ã¿Ø¼şµÄsetBackgroundÏà¹Øº¯ÊıÃ»ÓĞ·Ö¸îĞ§¹û£¬±ØĞëÊ¹ÓÃsetBorderÏà¹Øº¯Êı
+/** å­—æ¡æˆ–å›¾ç‰‡æ§ä»¶ï¼Œè¯¥æ§ä»¶çš„setBackgroundç›¸å…³å‡½æ•°æ²¡æœ‰åˆ†å‰²æ•ˆæœï¼Œå¿…é¡»ä½¿ç”¨setBorderç›¸å…³å‡½æ•°
 */
 class QtControlsAPI Slider :
 	public ControlShow < QSlider >,
@@ -22,12 +22,12 @@ class QtControlsAPI Slider :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	Slider(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~Slider();
 };

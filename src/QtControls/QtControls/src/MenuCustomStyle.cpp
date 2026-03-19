@@ -1,4 +1,4 @@
-#include "MenuCustomStyle.h"
+﻿#include "MenuCustomStyle.h"
 
 MenuCustomStyle::MenuCustomStyle(QStyle *style):
 QProxyStyle(style),

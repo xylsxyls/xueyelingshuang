@@ -1,47 +1,47 @@
-#pragma once
+ï»¿#pragma once
 #include "BoxDialogBase.h"
 #include "DialogManagerMacro.h"
 
 class Label;
 class ComboBox;
 class LineEdit;
-/** Ìí¼ÓÕËºÅ¿ò
+/** æ·»åŠ è´¦å·æ¡†
 */
 class DialogManagerAPI AccountDialog : public BoxDialogBase
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	AccountDialog();
 
-	/** ÉèÖÃÕËºÅ´íÎóÌáÊ¾ÊÇ·ñÏÔÊ¾
-	@param [in] visible ÊÇ·ñÏÔÊ¾
+	/** è®¾ç½®è´¦å·é”™è¯¯æç¤ºæ˜¯å¦æ˜¾ç¤º
+	@param [in] visible æ˜¯å¦æ˜¾ç¤º
 	*/
 	void setErrorVisible(bool visible);
 
-	/** Çå¿ÕÊäÈë¿ò
+	/** æ¸…ç©ºè¾“å…¥æ¡†
 	*/
 	void clearAccountEdit();
 
-	/** »ñÈ¡ÊäÈë¿òÄÚÈİ
-	@return ·µ»ØÊäÈë¿òÄÚÈİ
+	/** è·å–è¾“å…¥æ¡†å†…å®¹
+	@return è¿”å›è¾“å…¥æ¡†å†…å®¹
 	*/
 	QString accountEditText();
 
-    /** ÉèÖÃÈ·¶¨°´Å¥°´ÏÂµÄ·µ»ØÖµ
-    @param [in] result È·¶¨°´Å¥°´ÏÂµÄ·µ»ØÖµ
+    /** è®¾ç½®ç¡®å®šæŒ‰é’®æŒ‰ä¸‹çš„è¿”å›å€¼
+    @param [in] result ç¡®å®šæŒ‰é’®æŒ‰ä¸‹çš„è¿”å›å€¼
     */
     void setAcceptDown(DialogResult result);
 
-    /** ÉèÖÃÈ¡Ïû°´Å¥°´ÏÂµÄ·µ»ØÖµ
-    @param [in] result È¡Ïû°´Å¥°´ÏÂµÄ·µ»ØÖµ
+    /** è®¾ç½®å–æ¶ˆæŒ‰é’®æŒ‰ä¸‹çš„è¿”å›å€¼
+    @param [in] result å–æ¶ˆæŒ‰é’®æŒ‰ä¸‹çš„è¿”å›å€¼
     */
     void setIgnoreDown(DialogResult result);
 
 Q_SIGNALS:
-    /** ´íÎóÌáÊ¾ÊÇ·ñÏÔÊ¾
-    @param [in] visible ÊÇ·ñÏÔÊ¾
+    /** é”™è¯¯æç¤ºæ˜¯å¦æ˜¾ç¤º
+    @param [in] visible æ˜¯å¦æ˜¾ç¤º
     */
 	void errorVisible(bool visible);
 

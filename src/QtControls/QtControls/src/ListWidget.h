@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QtWidgets/QListWidget>
 #include "ControlFont.h"
 #include "ControlItem.h"
@@ -20,24 +20,24 @@ class QtControlsAPI ListWidget :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	ListWidget(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ListWidget();
 
 public:
-	/** ÉèÖÃ×î´ó¸ß¶È
-	@param [in] maxHeight ×î´ó¸ß¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æœ€å¤§é«˜åº¦
+	@param [in] maxHeight æœ€å¤§é«˜åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setMaxHeight(qint32 maxHeight, bool rePaint = false);
 
-	/** ÊÇ·ñÊ¹µã»÷Ê§Ğ§
-	@param [in] enable ÊÇ·ñÓĞĞ§
+	/** æ˜¯å¦ä½¿ç‚¹å‡»å¤±æ•ˆ
+	@param [in] enable æ˜¯å¦æœ‰æ•ˆ
 	*/
 	void setClickEnable(bool enable);
 

@@ -1,4 +1,4 @@
-#include "DialogHelper.h"
+ï»¿#include "DialogHelper.h"
 #include "QtControls/Label.h"
 #include "QtControls/CGeneralStyle.h"
 #include "QtControls/COriginalButton.h"
@@ -93,7 +93,7 @@ void DialogHelper::setLineEdit(LineEdit* lineEdit, const QString& defaultText, q
     lineEdit->setBorderColor(QColor(31, 36, 51, 255));
     lineEdit->setBorderRadius(4);
     lineEdit->setFontSize(16);
-    lineEdit->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
+    lineEdit->setFontFace(QString::fromStdWString(L"å¾®è½¯é›…é»‘"));
     lineEdit->setAlignment(Qt::AlignVCenter);
     lineEdit->setTextOrigin(3);
     lineEdit->setBackgroundImage(CGeneralStyle::instance()->platformResourcePath() + "res/Dialog/PopupInputBox.png", 1, 1, 1, 1);

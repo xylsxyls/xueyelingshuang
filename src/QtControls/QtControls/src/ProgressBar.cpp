@@ -1,4 +1,4 @@
-#include "ProgressBar.h"
+﻿#include "ProgressBar.h"
 
 ProgressBar::ProgressBar(QWidget* parent) :
 ControlShow(parent)

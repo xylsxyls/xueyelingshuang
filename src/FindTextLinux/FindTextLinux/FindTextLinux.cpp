@@ -1,4 +1,4 @@
-#include "FindTextLinux.h"
+ï»¿#include "FindTextLinux.h"
 #include "QtControls/PushButton.h"
 #include "QtControls/Label.h"
 #include "QtControls/LineEdit.h"
@@ -56,7 +56,7 @@ void FindTextLinux::init()
 	//QObject::connect(m_button, &COriginalButton::clicked, this, &FindTextLinux::onButtonClicked);
 
 	m_pathLabel = new Label(this);
-	m_pathLabel->setText(QStringLiteral("Ö¸¶¨Â·¾¶"));
+	m_pathLabel->setText(QStringLiteral("æŒ‡å®šè·¯å¾„"));
 	m_pathLabel->move(31, 28);
 	m_pathLabel->setFontSize(12);
 
@@ -66,7 +66,7 @@ void FindTextLinux::init()
 
 	m_formatButton = new PushButton(this);
 	m_formatButton->setGeometry(18, 75, 93, 23);
-	m_formatButton->setText(QStringLiteral("²»ËÑË÷µÄ¸ñÊ½£º"));
+	m_formatButton->setText(QStringLiteral("ä¸æœç´¢çš„æ ¼å¼ï¼š"));
 	m_formatButton->setFontSize(12);
 	m_formatButton->setFocusPolicy(Qt::NoFocus);
 	QObject::connect(m_formatButton, &PushButton::clicked, this, &FindTextLinux::onFormatButtonClicked);
@@ -77,7 +77,7 @@ void FindTextLinux::init()
 	m_format->setText(QStringLiteral(".exe"));
 
 	m_searchLabel = new Label(this);
-	m_searchLabel->setText(QStringLiteral("ËÑË÷ÄÚÈİ"));
+	m_searchLabel->setText(QStringLiteral("æœç´¢å†…å®¹"));
 	m_searchLabel->move(309, 75);
 	m_searchLabel->setFontSize(12);
 
@@ -87,7 +87,7 @@ void FindTextLinux::init()
 	m_search->setFocus();
 
 	m_suffix = new CheckBox(this);
-	m_suffix->setText(QStringLiteral("ËÑË÷Ê±ÊÇ·ñ´øÉÏºó×º"));
+	m_suffix->setText(QStringLiteral("æœç´¢æ—¶æ˜¯å¦å¸¦ä¸Šåç¼€"));
 	m_suffix->setFontSize(12);
 	m_suffix->move(258, 101);
 	m_suffix->setBackgroundColor(QColor(0, 0, 0, 0));
@@ -95,27 +95,27 @@ void FindTextLinux::init()
 	m_suffix->setChecked(true);
 
 	m_matchCase = new CheckBox(this);
-	m_matchCase->setText(QStringLiteral("Çø·Ö´óĞ¡Ğ´"));
+	m_matchCase->setText(QStringLiteral("åŒºåˆ†å¤§å°å†™"));
 	m_matchCase->setFontSize(12);
 	m_matchCase->move(601, 74);
 	m_matchCase->setBackgroundColor(QColor(0, 0, 0, 0));
 	m_matchCase->setFocusPolicy(Qt::NoFocus);
 
 	m_searchName = new CheckBox(this);
-	m_searchName->setText(QStringLiteral("Ö»ËÑË÷ÎÄ¼şÃû"));
+	m_searchName->setText(QStringLiteral("åªæœç´¢æ–‡ä»¶å"));
 	m_searchName->setFontSize(12);
 	m_searchName->move(601, 100);
 	m_searchName->setBackgroundColor(QColor(0, 0, 0, 0));
 	m_searchName->setFocusPolicy(Qt::NoFocus);
 
 	m_searchButton = new PushButton(this);
-	m_searchButton->setText(QStringLiteral("ËÑË÷"));
+	m_searchButton->setText(QStringLiteral("æœç´¢"));
 	m_searchButton->setFontSize(12);
 	m_searchButton->setGeometry(706, 73, 94, 27);
 	QObject::connect(m_searchButton, &PushButton::clicked, this, &FindTextLinux::onSearchButtonClicked);
 
 	m_charsetLabel = new Label(this);
-	m_charsetLabel->setText(QStringLiteral("Í¬Ò»Î»ÖÃÔÚ²»Í¬×Ö·û¼¯\nÏÂ¶à´ÎÕÒµ½Ê±Ö»ÏÔÊ¾"));
+	m_charsetLabel->setText(QStringLiteral("åŒä¸€ä½ç½®åœ¨ä¸åŒå­—ç¬¦é›†\nä¸‹å¤šæ¬¡æ‰¾åˆ°æ—¶åªæ˜¾ç¤º"));
 	m_charsetLabel->setFontSize(12);
 	m_charsetLabel->setGeometry(401, 101, 121, 29);
 
@@ -126,11 +126,11 @@ void FindTextLinux::init()
 	m_charset->setFontSize(12);
 	m_charset->setGeometry(524, 104, 68, 22);
 	m_charset->setTextOrigin(3);
-	m_charset->setFontFace(QStringLiteral("ËÎÌå"));
+	m_charset->setFontFace(QStringLiteral("å®‹ä½“"));
 	m_charset->setBackgroundColor(QColor(225, 225, 225));
 	m_charset->setBorderColor(QColor(173, 173, 173));
 	m_charset->setListTextOrigin(3);
-	m_charset->setListFontFace(QStringLiteral("ËÎÌå"));
+	m_charset->setListFontFace(QStringLiteral("å®‹ä½“"));
 	m_charset->setListFontSize(12);
 	m_charset->setListBorderColor(QColor(173, 173, 173));
 	m_charset->setListBorderWidth(1);
@@ -138,7 +138,7 @@ void FindTextLinux::init()
 	QObject::connect(m_charset, SIGNAL(currentIndexChanged(int)), this, SLOT(onCurrentIndexChanged(int)));
 
 	m_searchEditMenu = new Menu(this);
-	m_searchEditMenu->addAction(QStringLiteral("´ò¿ªÎÄ¼şÎ»ÖÃ"));
+	m_searchEditMenu->addAction(QStringLiteral("æ‰“å¼€æ–‡ä»¶ä½ç½®"));
 
 	m_searchText = new SearchEdit(this);
 	m_searchText->move(26, 139);
@@ -205,12 +205,12 @@ void FindTextLinux::onFormatButtonClicked()
 	m_searchFormat = !m_searchFormat;
 	if (m_searchFormat)
 	{
-		m_formatButton->setText(QStringLiteral("Ö»ËÑË÷µÄ¸ñÊ½£º"));
+		m_formatButton->setText(QStringLiteral("åªæœç´¢çš„æ ¼å¼ï¼š"));
 		m_format->setText(QStringLiteral(".h.cpp.cc.hcc.c.hpp.hh.inl.java"));
 	}
 	else
 	{
-		m_formatButton->setText(QStringLiteral("²»ËÑË÷µÄ¸ñÊ½£º"));
+		m_formatButton->setText(QStringLiteral("ä¸æœç´¢çš„æ ¼å¼ï¼š"));
 		m_format->setText(QStringLiteral(".exe"));
 	}
 }
@@ -221,7 +221,7 @@ void FindTextLinux::onSearchButtonClicked()
 	std::string path = m_path->text().toStdString();
 	if (path.empty())
 	{
-		path = "/home/" + CSystem::GetSysUserName() + "/xueyelingshuang/src/¹¤×÷¾­Ñé/";
+		path = "/home/" + CSystem::GetSysUserName() + "/xueyelingshuang/src/å·¥ä½œç»éªŒ/";
 	}
 	std::string format = m_format->text().toStdString();
 	std::string search = m_search->text().toStdString();
@@ -236,10 +236,10 @@ void FindTextLinux::onSearchButtonClicked()
 
 void FindTextLinux::onSearchEnd()
 {
-	m_searchButton->setText(QStringLiteral("µÈ´ıÏÔÊ¾"));
+	m_searchButton->setText(QStringLiteral("ç­‰å¾…æ˜¾ç¤º"));
 	qApp->processEvents();
 	m_searchText->setText(m_text);
-	m_searchButton->setText(QStringLiteral("ËÑË÷"));
+	m_searchButton->setText(QStringLiteral("æœç´¢"));
 	m_searchButton->setEnabled(true);
 }
 

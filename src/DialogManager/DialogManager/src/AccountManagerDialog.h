@@ -1,40 +1,40 @@
-#pragma once
+ï»¿#pragma once
 #include "BoxDialogBase.h"
 #include "DialogManagerMacro.h"
 
 class AccountDialog;
 class ClosureDialog;
 class SubAccountPanel;
-/** ÕËºÅ¹ÜÀí¿ò
+/** è´¦å·ç®¡ç†æ¡†
 */
 class DialogManagerAPI AccountManagerDialog : public BoxDialogBase
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	AccountManagerDialog();
 
-	/** µ¯³ö×¢²áÕËºÅ´°¿Ú
-	@return ·µ»ØÊäÈëµÄ×ÓÕËºÅÃû£¬Èç¹ûµã»÷È¡ÏûÔò·µ»Ø¿Õ×Ö·û´®
+	/** å¼¹å‡ºæ³¨å†Œè´¦å·çª—å£
+	@return è¿”å›è¾“å…¥çš„å­è´¦å·åï¼Œå¦‚æœç‚¹å‡»å–æ¶ˆåˆ™è¿”å›ç©ºå­—ç¬¦ä¸²
 	*/
 	QString popAccountDialog();
 
-	/** µ¯³ö·âºÅ´°¿Ú
+	/** å¼¹å‡ºå°å·çª—å£
 	*/
 	void popClosureDialog();
 
-    /** »ñÈ¡ÄÚ²¿½çÃæÖ¸Õë
-    @return ·µ»ØÄÚ²¿½çÃæÖ¸Õë
+    /** è·å–å†…éƒ¨ç•Œé¢æŒ‡é’ˆ
+    @return è¿”å›å†…éƒ¨ç•Œé¢æŒ‡é’ˆ
     */
     SubAccountPanel* subAccountPanelPtr();
 
-    /** »ñÈ¡ÕËºÅ¿òÖ¸Õë
-    @return ·µ»ØÕËºÅ¿òÖ¸Õë
+    /** è·å–è´¦å·æ¡†æŒ‡é’ˆ
+    @return è¿”å›è´¦å·æ¡†æŒ‡é’ˆ
     */
     AccountDialog* accountDialogPtr();
 
-    /** »ñÈ¡·âºÅ´°¿ÚÖ¸Õë
-    @return ·µ»Ø·âºÅ´°¿ÚÖ¸Õë
+    /** è·å–å°å·çª—å£æŒ‡é’ˆ
+    @return è¿”å›å°å·çª—å£æŒ‡é’ˆ
     */
     ClosureDialog* closureDialogPtr();
 

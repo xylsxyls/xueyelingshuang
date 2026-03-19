@@ -1,22 +1,22 @@
-#pragma once
+ï»¿#pragma once
 #include <QListWidgetItem>
 #include "QtControlsMacro.h"
 
 class QtControlsAPI ListWidgetIdItem : public QListWidgetItem
 {
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] view ÁĞ±í¿Ø¼şÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] view åˆ—è¡¨æ§ä»¶æŒ‡é’ˆ
 	*/
 	ListWidgetIdItem(QListWidget* view = nullptr);
 
-	/** ÉèÖÃIDÖµ
-	@param [in] id IDÖµ
+	/** è®¾ç½®IDå€¼
+	@param [in] id IDå€¼
 	*/
 	void setId(qint64 id);
 
-	/** »ñÈ¡IDÖµ
-	@return ·µ»ØIDÖµ
+	/** è·å–IDå€¼
+	@return è¿”å›IDå€¼
 	*/
 	qint64 getId();
 

@@ -1,4 +1,4 @@
-#include "ComboBox.h"
+ï»¿#include "ComboBox.h"
 #include "NoFocusFrameDelegate.h"
 #include "ListWidget.h"
 #include <QtWidgets/QScrollBar>
@@ -33,7 +33,7 @@ ComboBox::~ComboBox()
 
 void ComboBox::setDefault()
 {
-	//ÏÂÀ­±ß¿ò´Ö¶ÈÉèÎª0£¬ÒòÎªQListWidgetÒÑÓĞ±ß¿ò£¬´ËÊôĞÔpxÎŞĞ§
+	//ä¸‹æ‹‰è¾¹æ¡†ç²—åº¦è®¾ä¸º0ï¼Œå› ä¸ºQListWidgetå·²æœ‰è¾¹æ¡†ï¼Œæ­¤å±æ€§pxæ— æ•ˆ
 	m_controlStyle.addClassName()(SPACE, L"QAbstractItemView").AddKeyValue(L"border", L"none");
 	setBorderWidth(1);
 	setTextOrigin(0);
@@ -334,7 +334,7 @@ void ComboBox::setSelectEnable(bool enable)
 
 void ComboBox::showEvent(QShowEvent* eve)
 {
-	//ÕâÀïÖØĞ´repaintÎªÁËË¢ĞÂÏÂÀ­ÁĞ±í¿Ø¼ş
+	//è¿™é‡Œé‡å†™repaintä¸ºäº†åˆ·æ–°ä¸‹æ‹‰åˆ—è¡¨æ§ä»¶
 	repaint();
 	QComboBox::showEvent(eve);
 }

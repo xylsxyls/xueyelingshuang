@@ -1,4 +1,4 @@
-#include "MessagePidTask.h"
+﻿#include "MessagePidTask.h"
 #include "MessageTestLinux.h"
 #include "MsgLinux/MsgLinuxAPI.h"
 #include "AddStringTask.h"

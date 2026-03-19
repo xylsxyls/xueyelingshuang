@@ -1,4 +1,4 @@
-#ifndef CTREEVIEWEX_H
+﻿#ifndef CTREEVIEWEX_H
 #define CTREEVIEWEX_H
 
 #include <QTreeView>

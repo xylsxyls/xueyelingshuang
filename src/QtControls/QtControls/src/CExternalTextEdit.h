@@ -1,4 +1,4 @@
-#ifndef CEXTERNALTEXTEDIT_H
+ï»¿#ifndef CEXTERNALTEXTEDIT_H
 #define CEXTERNALTEXTEDIT_H
 
 #include <QTextEdit>
@@ -15,7 +15,7 @@ public:
 private:
     QMap<QString, QMovie*> mGifResourceMapForExpression;   //[url,  movie]
     QMap<QString, QString> mMapedExpression;               //[shortcut , url]
-    QString mExpressionTag;                                //url : expression/yun ÀàËÆÕâÑùµÄ¾ÍÊÇ±íÇé[/yun]
+    QString mExpressionTag;                                //url : expression/yun ç±»ä¼¼è¿™æ ·çš„å°±æ˜¯è¡¨æƒ…[/yun]
 	int     mExpressionSize;
     QTimer mRefresgGifTimer;
 
@@ -37,19 +37,19 @@ private slots:
     QMimeData* createMimeDataFromSelection() const;
 
 public :
-    void loadExpressions(const QString &emotionPath);       //* ´«ÈëEmotionsÎÄ¼ş¼ĞËùÔÚÄ¿Â¼
+    void loadExpressions(const QString &emotionPath);       //* ä¼ å…¥Emotionsæ–‡ä»¶å¤¹æ‰€åœ¨ç›®å½•
 
-    void insertExpressionShortcut(const QString& shortcut); //* ´«Èë±íÇéshortcutÀ´ÏÔÊ¾±íÇé
-    void appendText(const QString& text);                   //* ²åÈë²»´ø¸ñÊ½µÄÊı¾İ£¬Èç¹ûÓĞ±íÇéshortcut»á×ö×ª»»
-    void clear();                                           //* Çå¿ÕÊı¾İ
+    void insertExpressionShortcut(const QString& shortcut); //* ä¼ å…¥è¡¨æƒ…shortcutæ¥æ˜¾ç¤ºè¡¨æƒ…
+    void appendText(const QString& text);                   //* æ’å…¥ä¸å¸¦æ ¼å¼çš„æ•°æ®ï¼Œå¦‚æœæœ‰è¡¨æƒ…shortcutä¼šåšè½¬æ¢
+    void clear();                                           //* æ¸…ç©ºæ•°æ®
 
 	QString filterExpressionToShortcut(QString html) const ;
 	QString parseShortcutToExpression(QString text) const;
 	QString parseShortcutToHTMLExpression(QString text) const; 
-    QString message();                             //* »ñÈ¡ÊäÈëµÄÄÚÈİ£¬²»´ø¸ñÊ½
-    int     testExpressionCount(QString msg);      //* »ñÈ¡±íÇé¸öÊı
-    int     testWordCount(QString msg);            //* »ñÈ¡±íÇé³ıÍâµÄ×ÖÊı
-    QString removeExpressionShortcut(QString msg); //* ³ıÈ¥±íÇéshortcut
+    QString message();                             //* è·å–è¾“å…¥çš„å†…å®¹ï¼Œä¸å¸¦æ ¼å¼
+    int     testExpressionCount(QString msg);      //* è·å–è¡¨æƒ…ä¸ªæ•°
+    int     testWordCount(QString msg);            //* è·å–è¡¨æƒ…é™¤å¤–çš„å­—æ•°
+    QString removeExpressionShortcut(QString msg); //* é™¤å»è¡¨æƒ…shortcut
 };
 
 #endif // CEXTERNALTEXTEDIT_H

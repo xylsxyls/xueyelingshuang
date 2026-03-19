@@ -1,45 +1,45 @@
-#pragma once
+ï»¿#pragma once
 #include "ControlBase.h"
 #include "QtControlsMacro.h"
 
-/** ¹ÜÀí×ÖÌåÏà¹Ø¹¦ÄÜ
+/** ç®¡ç†å­—ä½“ç›¸å…³åŠŸèƒ½
 */
 template <class QBase>
 class ControlFont : virtual public ControlBase < QBase >
 {
 public:
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ControlFont();
 
 public:
-	/** ÉèÖÃ×ÖÌå
-	@param [in] fontName ×ÖÌåÃû
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å­—ä½“
+	@param [in] fontName å­—ä½“å
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setFontFace(const QString& fontName, bool rePaint = false);
 
-	/** ÉèÖÃ×ÖÌå´óĞ¡
-	@param [in] fontSize ×ÖÌå´óĞ¡
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å­—ä½“å¤§å°
+	@param [in] fontSize å­—ä½“å¤§å°
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setFontSize(qint32 fontSize, bool rePaint = false);
 
-	/** ÉèÖÃ×ÖÌå´ÖÌå
-	@param [in] bold ÊÇ·ñÎª´ÖÌå
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®å­—ä½“ç²—ä½“
+	@param [in] bold æ˜¯å¦ä¸ºç²—ä½“
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setFontBold(bool bold, bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÆ«ÒÆÁ¿
-	@param [in] origin ÎÄ×ÖÆ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—åç§»é‡
+	@param [in] origin æ–‡å­—åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setTextOrigin(qint32 origin, bool rePaint = false);
 
-	/** ÉèÖÃÎÄ×ÖÓÒ²àÆ«ÒÆÁ¿
-	@param [in] origin ÎÄ×ÖÆ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®æ–‡å­—å³ä¾§åç§»é‡
+	@param [in] origin æ–‡å­—åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setTextRightOrigin(qint32 origin, bool rePaint = false);
 };

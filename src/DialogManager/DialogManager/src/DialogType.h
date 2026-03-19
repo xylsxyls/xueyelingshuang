@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QString>
 #include <QTime>
 #include <QMetaType>
@@ -9,194 +9,194 @@ class QWindow;
 
 enum DialogType
 {
-    /** ´íÎóÀàĞÍ
+    /** é”™è¯¯ç±»å‹
     */
     ERROR_DIALOG_TYPE,
 
-    /** Ñ¯ÎÊ¿ò
+    /** è¯¢é—®æ¡†
     */
     ASK_DIALOG,
 
-    /** °üº¬¹ã¸æÎ»µÄÑ¯ÎÊ¿ò
+    /** åŒ…å«å¹¿å‘Šä½çš„è¯¢é—®æ¡†
     */
     ADVERT_ASK_DIALOG,
 
-    /** Êä³ö¿ò
+    /** è¾“å‡ºæ¡†
     */
     INPUT_DIALOG,
 
-    /** ÌáÊ¾¿ò
+    /** æç¤ºæ¡†
     */
     TIP_DIALOG,
 
-    /** µÈ´ı¿ò
+    /** ç­‰å¾…æ¡†
     */
     WAIT_DIALOG,
 
-    /** ÏÂÔØ¿ò£¨ÀÏ°æ£©
+    /** ä¸‹è½½æ¡†ï¼ˆè€ç‰ˆï¼‰
     */
     DOWNLOAD_DIALOG,
 
-    /** ÏÂÔØ´íÎó¿ò£¨ÀÏ°æ£©
+    /** ä¸‹è½½é”™è¯¯æ¡†ï¼ˆè€ç‰ˆï¼‰
     */
     DOWNLOAD_ERROR_DIALOG,
 
-    /** ÏÂÔØ¿ò£¨ĞÂ°æ£©
+    /** ä¸‹è½½æ¡†ï¼ˆæ–°ç‰ˆï¼‰
     */
     DOWNLOAD_OPERATE_DIALOG,
 
-    /** ÏÂÔØºĞ×Ó
+    /** ä¸‹è½½ç›’å­
     */
     ACCOUNT_MANAGER_DIALOG,
 
-    /** Ñ¯ÎÊÍ¨Öª¿ò
+    /** è¯¢é—®é€šçŸ¥æ¡†
     */
     ASK_SHOW_DIALOG,
 
-    /** ÌáÊ¾Í¨Öª¿ò
+    /** æç¤ºé€šçŸ¥æ¡†
     */
     TIP_SHOW_DIALOG,
 
-    /** µÇÂ¼Í¨Öª¿ò
+    /** ç™»å½•é€šçŸ¥æ¡†
     */
     LOGIN_SHOW_DIALOG,
 
-	/** ¹ã¸æÍ¨Öª¿ò
+	/** å¹¿å‘Šé€šçŸ¥æ¡†
 	*/
 	ADVERT_SHOW_DIALOG
 };
 
 enum OperateType
 {
-	/** Ô¤Éè´íÎóÖµ
+	/** é¢„è®¾é”™è¯¯å€¼
 	*/
 	ERROR_OPERATE_TYPE,
 
-	/** ÉèÖÃÏÂÔØËÙ¶È
+	/** è®¾ç½®ä¸‹è½½é€Ÿåº¦
 	*/
 	SET_DOWNLOAD_SPEED_OPERATE,
 
-	/** ÉèÖÃÒÑÏÂÔØÁ¿
+	/** è®¾ç½®å·²ä¸‹è½½é‡
 	*/
 	SET_DOWNLOADED_OPERATE,
 
-	/** ÉèÖÃÏÂÔØÊ±¼ä
+	/** è®¾ç½®ä¸‹è½½æ—¶é—´
 	*/
 	SET_DOWNLOAD_TIME_OPERATE,
 
-	/** ÉèÖÃÏÂÔØ½ø¶È
+	/** è®¾ç½®ä¸‹è½½è¿›åº¦
 	*/
 	SET_RATE_OPERATE,
 
-	/** ÉèÖÃÏÂÔØµØÖ·ÎÄ±¾¿òÄÚÈİ
+	/** è®¾ç½®ä¸‹è½½åœ°å€æ–‡æœ¬æ¡†å†…å®¹
 	*/
 	SET_EDIT_DOWNLOAD_ADDR_OPERATE,
 
-	/** ÉèÖÃ±¾µØÂ·¾¶ÎÄ±¾¿òÄÚÈİ
+	/** è®¾ç½®æœ¬åœ°è·¯å¾„æ–‡æœ¬æ¡†å†…å®¹
 	*/
 	SET_EDIT_PATH_OPERATE,
 
-	/** ÉèÖÃ×ªµ½ºóÌ¨ÏÂÔØ°´Å¥ÊÇ·ñ¿ÉÓÃ
+	/** è®¾ç½®è½¬åˆ°åå°ä¸‹è½½æŒ‰é’®æ˜¯å¦å¯ç”¨
 	*/
 	SET_BACK_ENABLE_OPERATE,
 
-	/** ÉèÖÃÏÂÔØ¿òÎª´íÎó×´Ì¬
+	/** è®¾ç½®ä¸‹è½½æ¡†ä¸ºé”™è¯¯çŠ¶æ€
 	*/
 	DOWNLOAD_ERROR_OPERATE,
 
-	/** ÉèÖÃÏÂÔØ¿òÎª³£Ì¬
+	/** è®¾ç½®ä¸‹è½½æ¡†ä¸ºå¸¸æ€
 	*/
 	DOWNLOAD_NORMAL_OPERATE,
 
-	/** ÉèÖÃ´íÎóÀàĞÍ
+	/** è®¾ç½®é”™è¯¯ç±»å‹
 	*/
 	SET_ERROR_TYPE_OPERATE,
 
-	/** »ñÈ¡¾²Ì¬¿ò´°¿ÚID
+	/** è·å–é™æ€æ¡†çª—å£ID
 	*/
 	STATIC_DIALOG_DIALOG_ID_OPERATE,
 
-	/** µ¯³ö´´½¨ÕËºÅ¿ò
+	/** å¼¹å‡ºåˆ›å»ºè´¦å·æ¡†
 	*/
 	POP_ACCOUNT_DIALOG_OPERATE,
 
-	/** µ¯³ö·âºÅ¿ò
+	/** å¼¹å‡ºå°å·æ¡†
 	*/
 	POP_CLOSURE_DIALOG_OPERATE,
 
-	/** »ñÈ¡ÄÚ²¿´°¿ÚÖ¸Õë
+	/** è·å–å†…éƒ¨çª—å£æŒ‡é’ˆ
 	*/
 	SUB_ACCOUNT_PANEL_PTR_OPERATE,
 
-	/** »ñÈ¡´´½¨ÕËºÅ¿òÖ¸Õë
+	/** è·å–åˆ›å»ºè´¦å·æ¡†æŒ‡é’ˆ
 	*/
 	ACCOUNT_DIALOG_PTR_OPERATE,
 
-	/** »ñÈ¡·âºÅ¿òÖ¸Õë
+	/** è·å–å°å·æ¡†æŒ‡é’ˆ
 	*/
 	CLOSURE_DIALOG_PTR_OPERATE,
 
-	/** ¹Ø±Õ¾²Ì¬¿ò
+	/** å…³é—­é™æ€æ¡†
 	*/
 	CLOSE_STATIC_DIALOG_OPERATE,
 
-	/** Í¨¹ı´°¿ÚIDÅĞ¶Ï´°¿ÚÊÇ·ñ´æÔÚ
+	/** é€šè¿‡çª—å£IDåˆ¤æ–­çª—å£æ˜¯å¦å­˜åœ¨
 	*/
 	DIALOG_EXIST_BY_DIALOG_ID_OPERATE,
 
-	/** Í¨¹ıÓÃ»§×Ô¶¨ÒåIDÅĞ¶Ï´°¿ÚÊÇ·ñ´æÔÚ
+	/** é€šè¿‡ç”¨æˆ·è‡ªå®šä¹‰IDåˆ¤æ–­çª—å£æ˜¯å¦å­˜åœ¨
 	*/
 	DIALOG_EXIST_BY_USER_ID_OPERATE,
 
-	/** Í¨¹ıDialogId¸Ä±äÓÃ»§×Ô¶¨Òå²ÎÊı
+	/** é€šè¿‡DialogIdæ”¹å˜ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
 	*/
 	CHANGE_USER_RESULT_BY_DIALOG_ID_OPERATE,
 
-	/** Í¨¹ıUserId¸Ä±äÓÃ»§×Ô¶¨Òå²ÎÊı
+	/** é€šè¿‡UserIdæ”¹å˜ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
 	*/
 	CHANGE_USER_RESULT_BY_USER_ID_OPERATE,
 
-	/** Ïú»Ù´°¿Ú
+	/** é”€æ¯çª—å£
 	*/
 	DESTROY_DIALOG_BY_DIALOG_ID_OPERATE,
 
-	/** Í¨¹ıÓÃ»§×Ô¶¨ÒåIDÏú»Ù´°¿Ú
+	/** é€šè¿‡ç”¨æˆ·è‡ªå®šä¹‰IDé”€æ¯çª—å£
 	*/
 	DESTROY_DIALOG_BY_USER_ID_OPERATE,
 
-	/** Ïú»Ù×îºóÒ»¸öÉú³ÉµÄ´°¿Ú
+	/** é”€æ¯æœ€åä¸€ä¸ªç”Ÿæˆçš„çª—å£
 	*/
 	DESTROY_LAST_DIALOG_OPERATE,
 
-	/** Ïú»ÙËùÓĞ´°¿Ú
+	/** é”€æ¯æ‰€æœ‰çª—å£
 	*/
 	DESTROY_ALL_OPERATE,
 
-	/** »ñÈ¡´°¿Ú¾ä±ú
+	/** è·å–çª—å£å¥æŸ„
 	*/
 	DIALOG_HANDLE_OPERATE,
 
-	/** »ñÈ¡´°¿Ú¸öÊı
+	/** è·å–çª—å£ä¸ªæ•°
 	*/
 	DIALOG_COUNT_OPERATE,
 
-	/** »ñÈ¡¾²Ì¬¿ò´°¿Ú¾ä±ú
+	/** è·å–é™æ€æ¡†çª—å£å¥æŸ„
 	*/
 	STATIC_DIALOG_HANDLE_OPERATE
 };
 
-/** ²Ù×÷²ÎÊı
+/** æ“ä½œå‚æ•°
 */
 struct OperateParam
 {
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	OperateParam()
 	{
 		m_operateType = ERROR_OPERATE_TYPE;
 	}
 
-	/** »ñÈ¡²Ù×÷ÀàĞÍ
+	/** è·å–æ“ä½œç±»å‹
 	*/
 	OperateType operateType()
 	{
@@ -206,16 +206,16 @@ protected:
 	OperateType m_operateType;
 };
 
-/** ÉèÖÃËÙ¶È£¨Ö§³Ö¶àÏß³Ì£©
+/** è®¾ç½®é€Ÿåº¦ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct SetDownloadSpeedOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//ËÙ¶È
+	//é€Ÿåº¦
 	QString m_speed;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SetDownloadSpeedOperateParam()
 	{
@@ -224,16 +224,16 @@ struct SetDownloadSpeedOperateParam : public OperateParam
 	}
 };
 
-/** ÉèÖÃÒÑÏÂÔØÁ¿£¨Ö§³Ö¶àÏß³Ì£©
+/** è®¾ç½®å·²ä¸‹è½½é‡ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct SetDownloadedOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//ÒÑÏÂÔØÁ¿
+	//å·²ä¸‹è½½é‡
 	QString m_downloaded;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SetDownloadedOperateParam()
 	{
@@ -242,16 +242,16 @@ struct SetDownloadedOperateParam : public OperateParam
 	}
 };
 
-/** ÉèÖÃÊ±¼ä£¨Ö§³Ö¶àÏß³Ì£©
+/** è®¾ç½®æ—¶é—´ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct SetDownloadTimeOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//ÒÑÏÂÔØÁ¿
+	//å·²ä¸‹è½½é‡
 	QString m_time;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SetDownloadTimeOperateParam()
 	{
@@ -260,16 +260,16 @@ struct SetDownloadTimeOperateParam : public OperateParam
 	}
 };
 
-/** ÉèÖÃ±ÈÀı£¨Ö§³Ö¶àÏß³Ì£©
+/** è®¾ç½®æ¯”ä¾‹ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct SetRateOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//ÏÂÔØ°Ù·Ö±È
+	//ä¸‹è½½ç™¾åˆ†æ¯”
 	qint32 m_persent;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SetRateOperateParam()
 	{
@@ -279,16 +279,16 @@ struct SetRateOperateParam : public OperateParam
 	}
 };
 
-/** ÉèÖÃ±à¼­¿òÄÚµÄÏÂÔØµØÖ·£¨Ö§³Ö¶àÏß³Ì£©
+/** è®¾ç½®ç¼–è¾‘æ¡†å†…çš„ä¸‹è½½åœ°å€ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct SetEditDownloadAddrOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//ÏÂÔØµØÖ·
+	//ä¸‹è½½åœ°å€
 	QString m_addr;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SetEditDownloadAddrOperateParam()
 	{
@@ -297,16 +297,16 @@ struct SetEditDownloadAddrOperateParam : public OperateParam
 	}
 };
 
-/** ÉèÖÃ±à¼­¿òÄÚµÄ±¾µØÂ·¾¶£¨Ö§³Ö¶àÏß³Ì£©
+/** è®¾ç½®ç¼–è¾‘æ¡†å†…çš„æœ¬åœ°è·¯å¾„ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct SetEditPathOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//±¾µØÂ·¾¶
+	//æœ¬åœ°è·¯å¾„
 	QString m_path;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SetEditPathOperateParam()
 	{
@@ -315,16 +315,16 @@ struct SetEditPathOperateParam : public OperateParam
 	}
 };
 
-/** ÉèÖÃ×ªµ½ºóÌ¨ÏÂÔØ°´Å¥ÊÇ·ñ¿ÉÓÃ£¨Ö§³Ö¶àÏß³Ì£©
+/** è®¾ç½®è½¬åˆ°åå°ä¸‹è½½æŒ‰é’®æ˜¯å¦å¯ç”¨ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct SetBackEnableOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//ÊÇ·ñ¿ÉÓÃ
+	//æ˜¯å¦å¯ç”¨
 	bool m_enable;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SetBackEnableOperateParam()
 	{
@@ -334,14 +334,14 @@ struct SetBackEnableOperateParam : public OperateParam
 	}
 };
 
-/** µ±ÏÂÔØ³ö´íÊ±ÏÔÊ¾ÏÂÔØ¿òµÄ³ö´í×´Ì¬£¨Ö§³Ö¶àÏß³Ì£©
+/** å½“ä¸‹è½½å‡ºé”™æ—¶æ˜¾ç¤ºä¸‹è½½æ¡†çš„å‡ºé”™çŠ¶æ€ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct DownloadErrorOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DownloadErrorOperateParam()
 	{
@@ -350,14 +350,14 @@ struct DownloadErrorOperateParam : public OperateParam
 	}
 };
 
-/** ´ÓÏÂÔØ´íÎó×´Ì¬ÇĞ»»µ½³£Ì¬£¨Ö§³Ö¶àÏß³Ì£©
+/** ä»ä¸‹è½½é”™è¯¯çŠ¶æ€åˆ‡æ¢åˆ°å¸¸æ€ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct DownloadNormalOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DownloadNormalOperateParam()
 	{
@@ -366,16 +366,16 @@ struct DownloadNormalOperateParam : public OperateParam
 	}
 };
 
-/** ´ÓÏÂÔØ´íÎó×´Ì¬ÇĞ»»µ½³£Ì¬£¨Ö§³Ö¶àÏß³Ì£©
+/** ä»ä¸‹è½½é”™è¯¯çŠ¶æ€åˆ‡æ¢åˆ°å¸¸æ€ï¼ˆæ”¯æŒå¤šçº¿ç¨‹ï¼‰
 */
 struct SetErrorTypeOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//´íÎóÄÚÈİ
+	//é”™è¯¯å†…å®¹
 	QString m_errorText;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SetErrorTypeOperateParam()
 	{
@@ -384,16 +384,16 @@ struct SetErrorTypeOperateParam : public OperateParam
 	}
 };
 
-/** »ñÈ¡¾²Ì¬¿òID
+/** è·å–é™æ€æ¡†ID
 */
 struct StaticDialogDialogIdOperateParam : public OperateParam
 {
-	//´°¿ÚÀàĞÍ
+	//çª—å£ç±»å‹
 	DialogType m_dialogType;
-	//¾²Ì¬¿òID£¬out
+	//é™æ€æ¡†IDï¼Œout
 	quint64 m_dialogId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	StaticDialogDialogIdOperateParam()
 	{
@@ -403,14 +403,14 @@ struct StaticDialogDialogIdOperateParam : public OperateParam
 	}
 };
 
-/** µ¯³ö×¢²áÕËºÅ´°¿Ú£¨µ±ÕËºÅ¿ò´æÔÚÊ±²ÅÄÜµ¯³ö£©
+/** å¼¹å‡ºæ³¨å†Œè´¦å·çª—å£ï¼ˆå½“è´¦å·æ¡†å­˜åœ¨æ—¶æ‰èƒ½å¼¹å‡ºï¼‰
 */
 struct PopAccountDialogOperateParam : public OperateParam
 {
-	//ÊäÈëµÄÕËºÅÃû£¬out
+	//è¾“å…¥çš„è´¦å·åï¼Œout
 	QString m_accountName;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	PopAccountDialogOperateParam()
 	{
@@ -418,11 +418,11 @@ struct PopAccountDialogOperateParam : public OperateParam
 	}
 };
 
-/** µ¯³ö·âºÅ´°¿Ú£¨µ±ÕËºÅ¿ò´æÔÚÊ±²ÅÄÜµ¯³ö£©
+/** å¼¹å‡ºå°å·çª—å£ï¼ˆå½“è´¦å·æ¡†å­˜åœ¨æ—¶æ‰èƒ½å¼¹å‡ºï¼‰
 */
 struct PopClosureDialogOperateParam : public OperateParam
 {
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	PopClosureDialogOperateParam()
 	{
@@ -431,14 +431,14 @@ struct PopClosureDialogOperateParam : public OperateParam
 };
 
 class SubAccountPanel;
-/** »ñÈ¡ÄÚ²¿½çÃæÖ¸Õë
+/** è·å–å†…éƒ¨ç•Œé¢æŒ‡é’ˆ
 */
 struct SubAccountPanelPtrOperateParam : public OperateParam
 {
-	//ÄÚ²¿½çÃæÖ¸Õë£¬out
+	//å†…éƒ¨ç•Œé¢æŒ‡é’ˆï¼Œout
 	SubAccountPanel* m_subAccountPanel;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SubAccountPanelPtrOperateParam()
 	{
@@ -448,14 +448,14 @@ struct SubAccountPanelPtrOperateParam : public OperateParam
 };
 
 class AccountDialog;
-/** »ñÈ¡ÕËºÅ¿òÖ¸Õë
+/** è·å–è´¦å·æ¡†æŒ‡é’ˆ
 */
 struct AccountDialogPtrOperateParam : public OperateParam
 {
-	//ÕËºÅ¿òÖ¸Õë£¬out
+	//è´¦å·æ¡†æŒ‡é’ˆï¼Œout
 	AccountDialog* m_accountDialog;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	AccountDialogPtrOperateParam()
 	{
@@ -465,14 +465,14 @@ struct AccountDialogPtrOperateParam : public OperateParam
 };
 
 class ClosureDialog;
-/** »ñÈ¡ÕËºÅ¿òÖ¸Õë
+/** è·å–è´¦å·æ¡†æŒ‡é’ˆ
 */
 struct ClosureDialogPtrOperateParam : public OperateParam
 {
-	//·âºÅ´°¿ÚÖ¸Õë£¬out
+	//å°å·çª—å£æŒ‡é’ˆï¼Œout
 	ClosureDialog* m_closureDialog;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ClosureDialogPtrOperateParam()
 	{
@@ -481,14 +481,14 @@ struct ClosureDialogPtrOperateParam : public OperateParam
 	}
 };
 
-/** ¹Ø±Õ¾²Ì¬´°
+/** å…³é—­é™æ€çª—
 */
 struct CloseStaticDialogOperateParam : public OperateParam
 {
-	//´°¿ÚÀàĞÍ
+	//çª—å£ç±»å‹
 	DialogType m_dialogType;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	CloseStaticDialogOperateParam()
 	{
@@ -497,16 +497,16 @@ struct CloseStaticDialogOperateParam : public OperateParam
 	}
 };
 
-/** ¸ù¾İ´°¿ÚIDÅĞ¶Ï´°¿ÚÊÇ·ñ´æÔÚ
+/** æ ¹æ®çª—å£IDåˆ¤æ–­çª—å£æ˜¯å¦å­˜åœ¨
 */
 struct DialogExistByDialogIdOperateParam : public OperateParam
 {
-	//´°¿ÚÀàĞÍ
+	//çª—å£ç±»å‹
 	quint64 m_dialogId;
-	//´°¿ÚÊÇ·ñ´æÔÚ£¬out
+	//çª—å£æ˜¯å¦å­˜åœ¨ï¼Œout
 	bool m_isExist;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DialogExistByDialogIdOperateParam()
 	{
@@ -516,16 +516,16 @@ struct DialogExistByDialogIdOperateParam : public OperateParam
 	}
 };
 
-/** ¸ù¾İÓÃ»§×Ô¶¨ÒåIDÅĞ¶Ï´°¿ÚÊÇ·ñ´æÔÚ
+/** æ ¹æ®ç”¨æˆ·è‡ªå®šä¹‰IDåˆ¤æ–­çª—å£æ˜¯å¦å­˜åœ¨
 */
 struct DialogExistByUserIdOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//´°¿ÚÊÇ·ñ´æÔÚ£¬out
+	//çª—å£æ˜¯å¦å­˜åœ¨ï¼Œout
 	bool m_isExist;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DialogExistByUserIdOperateParam()
 	{
@@ -535,16 +535,16 @@ struct DialogExistByUserIdOperateParam : public OperateParam
 	}
 };
 
-/** ĞŞ¸ÄÓÃ»§×Ô¶¨Òå²ÎÊı
+/** ä¿®æ”¹ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
 */
 struct ChangeUserResultByDialogIdOperateParam : public OperateParam
 {
-	//´°¿ÚID
+	//çª—å£ID
 	quint64 m_dialogId;
-	//ÓÃ»§×Ô¶¨Òå²ÎÊı
+	//ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
 	qint32 m_userResult;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ChangeUserResultByDialogIdOperateParam()
 	{
@@ -554,16 +554,16 @@ struct ChangeUserResultByDialogIdOperateParam : public OperateParam
 	}
 };
 
-/** ĞŞ¸ÄÓÃ»§×Ô¶¨Òå²ÎÊı
+/** ä¿®æ”¹ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
 */
 struct ChangeUserResultByUserIdOperateParam : public OperateParam
 {
-	//´°¿ÚID
+	//çª—å£ID
 	quint64 m_userId;
-	//ÓÃ»§×Ô¶¨Òå²ÎÊı
+	//ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
 	qint32 m_userResult;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ChangeUserResultByUserIdOperateParam()
 	{
@@ -573,14 +573,14 @@ struct ChangeUserResultByUserIdOperateParam : public OperateParam
 	}
 };
 
-/** ¸ù¾İIDºÅ¹Ø±Õ´°¿Ú£¨ÎŞ¶¯»­Ğ§¹û£©
+/** æ ¹æ®IDå·å…³é—­çª—å£ï¼ˆæ— åŠ¨ç”»æ•ˆæœï¼‰
 */
 struct DestroyDialogByDialogIdOperateParam : public OperateParam
 {
-	//´°¿ÚIDºÅ
+	//çª—å£IDå·
 	quint64 m_dialogId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DestroyDialogByDialogIdOperateParam()
 	{
@@ -589,14 +589,14 @@ struct DestroyDialogByDialogIdOperateParam : public OperateParam
 	}
 };
 
-/** ¸ù¾İÓÃ»§×Ô¶¨ÒåID¹Ø±Õ´°¿Ú£¨ÎŞ¶¯»­Ğ§¹û£©
+/** æ ¹æ®ç”¨æˆ·è‡ªå®šä¹‰IDå…³é—­çª—å£ï¼ˆæ— åŠ¨ç”»æ•ˆæœï¼‰
 */
 struct DestroyDialogByUserIdOperateParam : public OperateParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DestroyDialogByUserIdOperateParam()
 	{
@@ -605,11 +605,11 @@ struct DestroyDialogByUserIdOperateParam : public OperateParam
 	}
 };
 
-/** Ïú»Ù×îºóÒ»¸öµ¯³öµÄ´°¿Ú£¨ÎŞ¶¯»­Ğ§¹û£©
+/** é”€æ¯æœ€åä¸€ä¸ªå¼¹å‡ºçš„çª—å£ï¼ˆæ— åŠ¨ç”»æ•ˆæœï¼‰
 */
 struct DestroyLastDialogOperateParam : public OperateParam
 {
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DestroyLastDialogOperateParam()
 	{
@@ -617,11 +617,11 @@ struct DestroyLastDialogOperateParam : public OperateParam
 	}
 };
 
-/** Ïú»ÙËùÓĞ´°¿Ú£¨ÎŞ¶¯»­Ğ§¹û£©
+/** é”€æ¯æ‰€æœ‰çª—å£ï¼ˆæ— åŠ¨ç”»æ•ˆæœï¼‰
 */
 struct DestroyAllOperateParam : public OperateParam
 {
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DestroyAllOperateParam()
 	{
@@ -629,16 +629,16 @@ struct DestroyAllOperateParam : public OperateParam
 	}
 };
 
-/** »ñÈ¡´°¿Ú¾ä±ú
+/** è·å–çª—å£å¥æŸ„
 */
 struct DialogHandleOperateParam : public OperateParam
 {
-	//´°¿ÚIDºÅ
+	//çª—å£IDå·
 	quint64 m_dialogId;
-	//´°¿Ú¾ä±ú
+	//çª—å£å¥æŸ„
 	QWindow* m_windowHandle;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DialogHandleOperateParam()
 	{
@@ -648,16 +648,16 @@ struct DialogHandleOperateParam : public OperateParam
 	}
 };
 
-/** µ±Ç°µ¯¿òÊıÁ¿
+/** å½“å‰å¼¹æ¡†æ•°é‡
 */
 struct DialogCountOperateParam : public OperateParam
 {
-	//´°¿Ú¸öÊı£¬out
+	//çª—å£ä¸ªæ•°ï¼Œout
 	quint64 m_count;
-	//´°¿ÚÀàĞÍ£¬´«ÈëĞèÒªÍ³¼ÆµÄµ¯¿òÀàĞÍ£¬Èç¹ûÕâ¸ö²ÎÊı²»ÉèÖÃ¾Í·µ»Øµ¯¿ò×ÜÊı
+	//çª—å£ç±»å‹ï¼Œä¼ å…¥éœ€è¦ç»Ÿè®¡çš„å¼¹æ¡†ç±»å‹ï¼Œå¦‚æœè¿™ä¸ªå‚æ•°ä¸è®¾ç½®å°±è¿”å›å¼¹æ¡†æ€»æ•°
 	std::vector<DialogType> m_vecOperateType;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DialogCountOperateParam()
 	{
@@ -666,16 +666,16 @@ struct DialogCountOperateParam : public OperateParam
 	}
 };
 
-/** »ñÈ¡¾²Ì¬´°¿Ú¾ä±ú
+/** è·å–é™æ€çª—å£å¥æŸ„
 */
 struct StaticDialogHandleOperateParam : public OperateParam
 {
-	//´°¿ÚÀàĞÍ
+	//çª—å£ç±»å‹
 	DialogType m_dialogType;
-	//´°¿Ú¾ä±ú£¬out
+	//çª—å£å¥æŸ„ï¼Œout
 	QWindow* m_windowHandle;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	StaticDialogHandleOperateParam()
 	{
@@ -687,63 +687,63 @@ struct StaticDialogHandleOperateParam : public OperateParam
 
 enum SignalType
 {
-	/** Ô¤Éè´íÎóÖµ
+	/** é¢„è®¾é”™è¯¯å€¼
 	*/
 	ERROR_SIGNAL_TYPE,
 
-	/** µã»÷ÏÂÔØ¿òµÄ×ªµ½ºóÌ¨ÏÂÔØ°´Å¥·¢ËÍĞÅºÅ
+	/** ç‚¹å‡»ä¸‹è½½æ¡†çš„è½¬åˆ°åå°ä¸‹è½½æŒ‰é’®å‘é€ä¿¡å·
 	*/
 	CHANGE_TO_BACK_SIGNAL,
 
-	/** µã»÷ÏÂÔØ¿òµÄÖØÊÔ°´Å¥·¢ËÍĞÅºÅ
+	/** ç‚¹å‡»ä¸‹è½½æ¡†çš„é‡è¯•æŒ‰é’®å‘é€ä¿¡å·
 	*/
 	DOWNLOAD_AGAIN_SIGNAL,
 
-	/** µã»÷ÏÂÔØ¿òµÄÈ¡ÏûÏÂÔØ°´Å¥·¢ËÍĞÅºÅ
+	/** ç‚¹å‡»ä¸‹è½½æ¡†çš„å–æ¶ˆä¸‹è½½æŒ‰é’®å‘é€ä¿¡å·
 	*/
 	CANCEL_DOWNLOAD_SIGNAL,
 
-	/** µã»÷ÏÂÔØ¿òµÄÊ¹ÓÃÆäËûÏÂÔØÇşµÀ°´Å¥·¢ËÍĞÅºÅ
+	/** ç‚¹å‡»ä¸‹è½½æ¡†çš„ä½¿ç”¨å…¶ä»–ä¸‹è½½æ¸ é“æŒ‰é’®å‘é€ä¿¡å·
 	*/
 	USE_OTHER_DOWNLOAD_SIGNAL,
 
-	/** µã»÷ÏÂÔØ¿òµÄÏÂÔØµØÖ·°´Å¥·¢ËÍĞÅºÅ
+	/** ç‚¹å‡»ä¸‹è½½æ¡†çš„ä¸‹è½½åœ°å€æŒ‰é’®å‘é€ä¿¡å·
 	*/
 	COPY_DOWNLOAD_ADDR_SIGNAL,
 
-	/** µã»÷ÏÂÔØ¿òµÄ¸´ÖÆÂ·¾¶°´Å¥·¢ËÍĞÅºÅ
+	/** ç‚¹å‡»ä¸‹è½½æ¡†çš„å¤åˆ¶è·¯å¾„æŒ‰é’®å‘é€ä¿¡å·
 	*/
 	COPY_PATH_SIGNAL,
 
-	/** µ¯´°¹Ø±Õ·¢ËÍĞÅºÅ
+	/** å¼¹çª—å…³é—­å‘é€ä¿¡å·
 	*/
 	POP_DIALOG_DONE_SIGNAL,
 
-	/** Í¨Öª¿ò¹Ø±Õ·¢ËÍĞÅºÅ
+	/** é€šçŸ¥æ¡†å…³é—­å‘é€ä¿¡å·
 	*/
 	NOTIFY_DIALOG_DONE_SIGNAL,
 
-	/** ¾²Ì¬¿ò¹Ø±Õ·¢ËÍĞÅºÅ
+	/** é™æ€æ¡†å…³é—­å‘é€ä¿¡å·
 	*/
 	STATIC_DIALOG_DONE_SIGNAL,
 
-	/** ´°¿ÚÒÑ¾­Ö´ĞĞÏÔÊ¾²Ù×÷·¢ËÍĞÅºÅ
+	/** çª—å£å·²ç»æ‰§è¡Œæ˜¾ç¤ºæ“ä½œå‘é€ä¿¡å·
 	*/
 	ALREADY_SHOWN_SIGNAL
 };
 
-/** ĞÅºÅ²ÎÊı
+/** ä¿¡å·å‚æ•°
 */
 struct SignalParam
 {
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SignalParam()
 	{
 		m_signalType = ERROR_SIGNAL_TYPE;
 	}
 
-	/** »ñÈ¡ĞÅºÅÀàĞÍ
+	/** è·å–ä¿¡å·ç±»å‹
 	*/
 	SignalType signalType() const
 	{
@@ -754,16 +754,16 @@ protected:
 };
 Q_DECLARE_METATYPE(SignalParam)
 
-/** ´°¿ÚÏÔÊ¾Íê±ÏĞÅºÅ
+/** çª—å£æ˜¾ç¤ºå®Œæ¯•ä¿¡å·
 */
 struct AlreadyShownSignalParam : public SignalParam
 {
-	//´°¿ÚID£¬out
+	//çª—å£IDï¼Œout
 	quint64 m_dialog;
-	//ÓÃ»§×Ô¶¨ÒåID£¬out
+	//ç”¨æˆ·è‡ªå®šä¹‰IDï¼Œout
 	quint64 m_userId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	AlreadyShownSignalParam()
 	{
@@ -774,14 +774,14 @@ struct AlreadyShownSignalParam : public SignalParam
 };
 Q_DECLARE_METATYPE(AlreadyShownSignalParam)
 
-/** ×ªµ½ºóÌ¨ÏÂÔØĞÅºÅ
+/** è½¬åˆ°åå°ä¸‹è½½ä¿¡å·
 */
 struct ChangeToBackSignalParam : public SignalParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ChangeToBackSignalParam()
 	{
@@ -791,14 +791,14 @@ struct ChangeToBackSignalParam : public SignalParam
 };
 Q_DECLARE_METATYPE(ChangeToBackSignalParam)
 
-/** ÖØÊÔĞÅºÅ
+/** é‡è¯•ä¿¡å·
 */
 struct DownloadAgainSignalParam : public SignalParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DownloadAgainSignalParam()
 	{
@@ -808,14 +808,14 @@ struct DownloadAgainSignalParam : public SignalParam
 };
 Q_DECLARE_METATYPE(DownloadAgainSignalParam)
 
-/** È¡ÏûÏÂÔØĞÅºÅ
+/** å–æ¶ˆä¸‹è½½ä¿¡å·
 */
 struct CancelDownloadSignalParam : public SignalParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	CancelDownloadSignalParam()
 	{
@@ -825,14 +825,14 @@ struct CancelDownloadSignalParam : public SignalParam
 };
 Q_DECLARE_METATYPE(CancelDownloadSignalParam)
 
-/** Ê¹ÓÃÆäËûÏÂÔØÇşµÀĞÅºÅ
+/** ä½¿ç”¨å…¶ä»–ä¸‹è½½æ¸ é“ä¿¡å·
 */
 struct UseOtherDownloadSignalParam : public SignalParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	UseOtherDownloadSignalParam()
 	{
@@ -842,16 +842,16 @@ struct UseOtherDownloadSignalParam : public SignalParam
 };
 Q_DECLARE_METATYPE(UseOtherDownloadSignalParam)
 
-/** ÏÂÔØµØÖ·µÄ¸´ÖÆ°´Å¥
+/** ä¸‹è½½åœ°å€çš„å¤åˆ¶æŒ‰é’®
 */
 struct CopyDownloadAddrSignalParam : public SignalParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//ÏÂÔØµØÖ·
+	//ä¸‹è½½åœ°å€
 	QString m_addr;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	CopyDownloadAddrSignalParam()
 	{
@@ -861,16 +861,16 @@ struct CopyDownloadAddrSignalParam : public SignalParam
 };
 Q_DECLARE_METATYPE(CopyDownloadAddrSignalParam)
 
-/** ±¾µØÂ·¾¶µÄ¸´ÖÆ°´Å¥
+/** æœ¬åœ°è·¯å¾„çš„å¤åˆ¶æŒ‰é’®
 */
 struct CopyPathSignalParam : public SignalParam
 {
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//±¾µØÂ·¾¶
+	//æœ¬åœ°è·¯å¾„
 	QString m_path;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	CopyPathSignalParam()
 	{
@@ -880,22 +880,22 @@ struct CopyPathSignalParam : public SignalParam
 };
 Q_DECLARE_METATYPE(CopyPathSignalParam)
 
-/** ´°¿Ú¹Ø±ÕĞÅºÅ²ÎÊı
+/** çª—å£å…³é—­ä¿¡å·å‚æ•°
 */
 struct DialogDoneSignalParam : public SignalParam
 {
-	//´°¿ÚID
+	//çª—å£ID
 	quint64 m_dialogId;
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
 	quint64 m_userId;
-	//´°¿ÚÀàĞÍ
+	//çª—å£ç±»å‹
 	DialogType m_dialogType;
-	//´°¿Ú·µ»ØÖµ
+	//çª—å£è¿”å›å€¼
 	DialogResult m_result;
-	//ÓÃ»§×Ô¶¨Òå²ÎÊı
+	//ç”¨æˆ·è‡ªå®šä¹‰å‚æ•°
 	qint32 m_userResult;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	DialogDoneSignalParam()
 	{
@@ -908,11 +908,11 @@ struct DialogDoneSignalParam : public SignalParam
 };
 Q_DECLARE_METATYPE(DialogDoneSignalParam)
 
-/** µ¯¿ò¹Ø±ÕĞÅºÅ²ÎÊı£¨´°¿Ú±»É¾Ö®Ç°£©
+/** å¼¹æ¡†å…³é—­ä¿¡å·å‚æ•°ï¼ˆçª—å£è¢«åˆ ä¹‹å‰ï¼‰
 */
 struct PopDialogDoneSignalParam : public DialogDoneSignalParam
 {
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	PopDialogDoneSignalParam()
 	{
@@ -921,11 +921,11 @@ struct PopDialogDoneSignalParam : public DialogDoneSignalParam
 };
 Q_DECLARE_METATYPE(PopDialogDoneSignalParam)
 
-/** Í¨Öª¿ò¹Ø±ÕĞÅºÅ²ÎÊı
+/** é€šçŸ¥æ¡†å…³é—­ä¿¡å·å‚æ•°
 */
 struct NotifyDialogDoneSignalParam : public DialogDoneSignalParam
 {
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	NotifyDialogDoneSignalParam()
 	{
@@ -934,11 +934,11 @@ struct NotifyDialogDoneSignalParam : public DialogDoneSignalParam
 };
 Q_DECLARE_METATYPE(NotifyDialogDoneSignalParam)
 
-/** ¾²Ì¬¿ò¹Ø±ÕĞÅºÅ²ÎÊı
+/** é™æ€æ¡†å…³é—­ä¿¡å·å‚æ•°
 */
 struct StaticDialogDoneSignalParam : public DialogDoneSignalParam
 {
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	StaticDialogDoneSignalParam()
 	{
@@ -947,28 +947,28 @@ struct StaticDialogDoneSignalParam : public DialogDoneSignalParam
 };
 Q_DECLARE_METATYPE(StaticDialogDoneSignalParam)
 
-/** ´°¿Ú²ÎÊı
+/** çª—å£å‚æ•°
 */
 struct DialogParam
 {
-	//´°¿ÚID
+	//çª—å£ID
     quint64 m_dialogId;
-	//ÓÃ»§×Ô¶¨ÒåID
+	//ç”¨æˆ·è‡ªå®šä¹‰ID
     quint64 m_userId;
-	//ÓÃ»§×Ô¶¨ÒåÖµ
+	//ç”¨æˆ·è‡ªå®šä¹‰å€¼
     qint32 m_userResult;
-	//´°¿Ú±êÌâ
+	//çª—å£æ ‡é¢˜
     QString m_title;
-	//´°¿Ú·µ»ØÖµ
+	//çª—å£è¿”å›å€¼
     DialogResult m_result;
-	//ÁÙÊ±¸¸´°¿Ú
+	//ä¸´æ—¶çˆ¶çª—å£
     QWindow* m_parent;
-	//µ¹¼ÆÊ±¹Ø±ÕÊ±¼ä
+	//å€’è®¡æ—¶å…³é—­æ—¶é—´
     qint32 m_timeOut;
-	//µ¹¼ÆÊ±ÊÇ·ñÏÔÊ¾
+	//å€’è®¡æ—¶æ˜¯å¦æ˜¾ç¤º
     bool m_isCountDownVisible;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     DialogParam()
     {
@@ -976,14 +976,14 @@ struct DialogParam
         m_dialogId = 0;
         m_userId = 0;
 		m_userResult = -1;
-        m_title = QStringLiteral("ÏûÏ¢ÌáÊ¾");
+        m_title = QStringLiteral("æ¶ˆæ¯æç¤º");
         m_result = ERROR_RESULT;
         m_parent = nullptr;
         m_timeOut = -1;
         m_isCountDownVisible = false;
     }
 
-	/** »ñÈ¡´°¿ÚÀàĞÍ
+	/** è·å–çª—å£ç±»å‹
 	*/
 	DialogType dialogType()
 	{
@@ -994,63 +994,63 @@ protected:
 	DialogType m_dialogType;
 };
 
-/** Ñ¯ÎÊ¿ò
+/** è¯¢é—®æ¡†
 */
 struct AskDialogParam : public DialogParam
 {
-	//ÌáÊ¾ÄÚÈİ
+	//æç¤ºå†…å®¹
     QString m_tip;
-	//È·ÈÏ°´Å¥ÎÄ×ÖÄÚÈİ
+	//ç¡®è®¤æŒ‰é’®æ–‡å­—å†…å®¹
     QString m_acceptText;
-	//È¡Ïû°´Å¥ÎÄ×ÖÄÚÈİ
+	//å–æ¶ˆæŒ‰é’®æ–‡å­—å†…å®¹
     QString m_ignoreText;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     AskDialogParam()
     {
 		m_dialogType = ASK_DIALOG;
-        m_tip = QStringLiteral("Ñ¯ÎÊµ¯¿òÌáÊ¾ĞÅÏ¢");
-        m_acceptText = QStringLiteral("È·ÈÏ");
-        m_ignoreText = QStringLiteral("È¡Ïû");
+        m_tip = QStringLiteral("è¯¢é—®å¼¹æ¡†æç¤ºä¿¡æ¯");
+        m_acceptText = QStringLiteral("ç¡®è®¤");
+        m_ignoreText = QStringLiteral("å–æ¶ˆ");
     }
 };
 
-/** ÌáÊ¾¿ò
+/** æç¤ºæ¡†
 */
 struct TipDialogParam : public DialogParam
 {
-	//ÌáÊ¾ÄÚÈİ
+	//æç¤ºå†…å®¹
     QString m_tip;
-	//È·ÈÏ°´Å¥ÌáÊ¾ÄÚÈİ
+	//ç¡®è®¤æŒ‰é’®æç¤ºå†…å®¹
     QString m_buttonText;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     TipDialogParam()
     {
 		m_dialogType = TIP_DIALOG;
-        m_tip = QStringLiteral("Ñ¯ÎÊµ¯¿òÌáÊ¾ĞÅÏ¢");
-        m_buttonText = QStringLiteral("È·ÈÏ");
+        m_tip = QStringLiteral("è¯¢é—®å¼¹æ¡†æç¤ºä¿¡æ¯");
+        m_buttonText = QStringLiteral("ç¡®è®¤");
     }
 };
 
-/** À©Õ¹ÊäÈë
+/** æ‰©å±•è¾“å…¥
 */
 struct InputEx
 {
-	//×ó²àÌáÊ¾
+	//å·¦ä¾§æç¤º
 	QString m_tip;
-	//ÊäÈë¿òÄÚÄ¬ÈÏÄÚÈİ
+	//è¾“å…¥æ¡†å†…é»˜è®¤å†…å®¹
 	QString m_defaultText;
-	//´°¿Ú¹Ø±ÕÊ±´«³öÊäÈë¿òÄÚµÄÄÚÈİ£¬out
+	//çª—å£å…³é—­æ—¶ä¼ å‡ºè¾“å…¥æ¡†å†…çš„å†…å®¹ï¼Œout
 	QString m_editText;
-	//ÊÇ·ñÊÇÃÜÂë¿ò
+	//æ˜¯å¦æ˜¯å¯†ç æ¡†
 	bool m_isPassword;
-	//×î´ó³¤¶È£¬Èç¹ûÃ»ÓĞ×î´ó³¤¶ÈÎª-1
+	//æœ€å¤§é•¿åº¦ï¼Œå¦‚æœæ²¡æœ‰æœ€å¤§é•¿åº¦ä¸º-1
 	qint32 m_maxLength;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	InputEx()
 	{
@@ -1059,130 +1059,130 @@ struct InputEx
 	}
 };
 
-/** ÊäÈë¿ò
+/** è¾“å…¥æ¡†
 */
 struct InputDialogParam : public DialogParam
 {
-	//ÊäÈëÌáÊ¾ÄÚÈİ
+	//è¾“å…¥æç¤ºå†…å®¹
     QString m_editTip;
-	//È·ÈÏ°´Å¥ÎÄ×ÖÄÚÈİ
+	//ç¡®è®¤æŒ‰é’®æ–‡å­—å†…å®¹
     QString m_buttonText;
-	//ÊäÈë¿òÄÚÄ¬ÈÏÄÚÈİ
+	//è¾“å…¥æ¡†å†…é»˜è®¤å†…å®¹
     QString m_defaultText;
-    //´°¿Ú¹Ø±ÕÊ±´«³öÊäÈë¿òÄÚµÄÄÚÈİ£¬out
+    //çª—å£å…³é—­æ—¶ä¼ å‡ºè¾“å…¥æ¡†å†…çš„å†…å®¹ï¼Œout
     QString m_editText;
-	//ÊÇ·ñÊÇÃÜÂë¿ò
+	//æ˜¯å¦æ˜¯å¯†ç æ¡†
     bool m_isPassword;
-	//×î´ó³¤¶È£¬Èç¹ûÃ»ÓĞ×î´ó³¤¶ÈÎª-1
+	//æœ€å¤§é•¿åº¦ï¼Œå¦‚æœæ²¡æœ‰æœ€å¤§é•¿åº¦ä¸º-1
     qint32 m_maxLength;
-	//À©Õ¹ÊäÈë£¬Èç¹ûÕâÀïÓĞÖµÔòÎª¶à¸öÊäÈëÀàĞÍ
+	//æ‰©å±•è¾“å…¥ï¼Œå¦‚æœè¿™é‡Œæœ‰å€¼åˆ™ä¸ºå¤šä¸ªè¾“å…¥ç±»å‹
 	std::vector<InputEx> m_vecInputEx;
-	//ÊÇ·ñ¿ÉÒÔÖ÷¶¯¹Ø±Õ
+	//æ˜¯å¦å¯ä»¥ä¸»åŠ¨å…³é—­
 	bool m_enableExit;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     InputDialogParam()
     {
 		m_dialogType = INPUT_DIALOG;
-        m_editTip = QStringLiteral("ÊäÈë¿òÌáÊ¾");
-        m_buttonText = QStringLiteral("È·ÈÏ");
+        m_editTip = QStringLiteral("è¾“å…¥æ¡†æç¤º");
+        m_buttonText = QStringLiteral("ç¡®è®¤");
         m_isPassword = false;
         m_maxLength = -1;
 		m_enableExit = true;
     }
 };
 
-/** µÈ´ı¿ò
+/** ç­‰å¾…æ¡†
 */
 struct WaitDialogParam : public DialogParam
 {
-	//ÌáÊ¾ÄÚÈİ
+	//æç¤ºå†…å®¹
     QString m_tip;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     WaitDialogParam()
     {
 		m_dialogType = WAIT_DIALOG;
-        m_tip = QStringLiteral("µÈ´ı¿òÌáÊ¾");
+        m_tip = QStringLiteral("ç­‰å¾…æ¡†æç¤º");
     }
 };
 
-/** º¬¹ã¸æµÄÑ¯ÎÊ¿ò
+/** å«å¹¿å‘Šçš„è¯¢é—®æ¡†
 */
 struct AdvertAskDialogParam : public DialogParam
 {
-	//¹ã¸æÁ´½Ó
+	//å¹¿å‘Šé“¾æ¥
     QString m_advertUrl;
-	//ÌáÊ¾ÄÚÈİ
+	//æç¤ºå†…å®¹
     QString m_tip;
-	//È·ÈÏ°´Å¥ÎÄ×ÖÄÚÈİ
+	//ç¡®è®¤æŒ‰é’®æ–‡å­—å†…å®¹
     QString m_acceptText;
-	//È¡Ïû°´Å¥ÎÄ×ÖÄÚÈİ
+	//å–æ¶ˆæŒ‰é’®æ–‡å­—å†…å®¹
     QString m_ignoreText;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     AdvertAskDialogParam()
     {
 		m_advertUrl = "http://www.baidu.com/";
 		m_dialogType = ADVERT_ASK_DIALOG;
-        m_tip = QStringLiteral("°üº¬¹ã¸æµÄÑ¯ÎÊ¿òÌáÊ¾");
-        m_acceptText = QStringLiteral("È·ÈÏ");
-        m_ignoreText = QStringLiteral("È¡Ïû");
+        m_tip = QStringLiteral("åŒ…å«å¹¿å‘Šçš„è¯¢é—®æ¡†æç¤º");
+        m_acceptText = QStringLiteral("ç¡®è®¤");
+        m_ignoreText = QStringLiteral("å–æ¶ˆ");
     }
 };
 
-/** ÀÏ°æÏÂÔØ¿ò
+/** è€ç‰ˆä¸‹è½½æ¡†
 */
 struct DownloadDialogParam : public DialogParam
 {
-	//ÎÄ¼şÃû
+	//æ–‡ä»¶å
     QString m_fileName;
-	//ÌáÊ¾ÄÚÈİ
+	//æç¤ºå†…å®¹
     QString m_tip;
-	//È·ÈÏ°´Å¥ÎÄ×ÖÄÚÈİ
+	//ç¡®è®¤æŒ‰é’®æ–‡å­—å†…å®¹
     QString m_buttonText;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     DownloadDialogParam()
     {
 		m_dialogType = DOWNLOAD_DIALOG;
-        m_fileName = QStringLiteral("ÎÄ¼şÃû");
-        m_tip = QStringLiteral("ÏÂÔØ¿òÌáÊ¾");
-        m_buttonText = QStringLiteral("È·ÈÏ");
+        m_fileName = QStringLiteral("æ–‡ä»¶å");
+        m_tip = QStringLiteral("ä¸‹è½½æ¡†æç¤º");
+        m_buttonText = QStringLiteral("ç¡®è®¤");
     }
 };
 
-/** ÏÂÔØ¿ò
+/** ä¸‹è½½æ¡†
 */
 struct DownloadOperateDialogParam : public DialogParam
 {
-	//ÎÄ¼şÃû
+	//æ–‡ä»¶å
     QString m_fileName;
-	//ÏÂÔØËÙ¶È
+	//ä¸‹è½½é€Ÿåº¦
     QString m_downloadSpeed;
-	//ÒÑÏÂÔØÁ¿
+	//å·²ä¸‹è½½é‡
     QString m_hasDownloaded;
-	//ÏÂÔØÊ±¼ä
+	//ä¸‹è½½æ—¶é—´
     QString m_downloadTime;
-	//³õÊ¼»¯±ÈÀı
+	//åˆå§‹åŒ–æ¯”ä¾‹
     qint32 m_rate;
-	//×ªµ½ºóÌ¨ÏÂÔØÊÇ·ñ¿ÉÓÃ
+	//è½¬åˆ°åå°ä¸‹è½½æ˜¯å¦å¯ç”¨
     bool m_backEnable;
-	//ÏÂÔØµØÖ·
+	//ä¸‹è½½åœ°å€
     QString m_downloadAddr;
-	//±¾µØÂ·¾¶
+	//æœ¬åœ°è·¯å¾„
     QString m_path;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     DownloadOperateDialogParam()
     {
 		m_dialogType = DOWNLOAD_OPERATE_DIALOG;
-        m_fileName = QStringLiteral("ÎÄ¼şÃû");
+        m_fileName = QStringLiteral("æ–‡ä»¶å");
         m_downloadSpeed = QStringLiteral("0k/s");
         m_hasDownloaded = QStringLiteral("0M/0M");
         m_downloadTime = QStringLiteral("0s");
@@ -1193,67 +1193,67 @@ struct DownloadOperateDialogParam : public DialogParam
     }
 };
 
-/** ÌáÊ¾Í¨Öª¿ò
+/** æç¤ºé€šçŸ¥æ¡†
 */
 struct TipShowDialogParam : public DialogParam
 {
-	//ÌáÊ¾ÄÚÈİ
+	//æç¤ºå†…å®¹
     QString m_tip;
-	//È·ÈÏ°´Å¥ÎÄ×ÖÄÚÈİ
+	//ç¡®è®¤æŒ‰é’®æ–‡å­—å†…å®¹
     QString m_buttonText;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     TipShowDialogParam()
     {
 		m_dialogType = TIP_SHOW_DIALOG;
-        m_tip = QStringLiteral("ÌáÊ¾Í¨Öª¿òÌáÊ¾");
-        m_buttonText = QString::fromStdWString(L"ÖªµÀÁË");
+        m_tip = QStringLiteral("æç¤ºé€šçŸ¥æ¡†æç¤º");
+        m_buttonText = QString::fromStdWString(L"çŸ¥é“äº†");
     }
 };
 
-/** Ñ¯ÎÊÍ¨Öª¿ò
+/** è¯¢é—®é€šçŸ¥æ¡†
 */
 struct AskShowDialogParam : public DialogParam
 {
-	//ÌáÊ¾ÄÚÈİ
+	//æç¤ºå†…å®¹
     QString m_tip;
-	//È·ÈÏ°´Å¥ÎÄ×ÖÄÚÈİ
+	//ç¡®è®¤æŒ‰é’®æ–‡å­—å†…å®¹
     QString m_acceptText;
-	//È¡Ïû°´Å¥ÎÄ×ÖÄÚÈİ
+	//å–æ¶ˆæŒ‰é’®æ–‡å­—å†…å®¹
     QString m_ignoreText;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     AskShowDialogParam()
     {
 		m_dialogType = ASK_SHOW_DIALOG;
-        m_tip = QStringLiteral("Ñ¯ÎÊÍ¨Öª¿òÌáÊ¾");
-        m_acceptText = QStringLiteral("Í¬Òâ");
-        m_ignoreText = QStringLiteral("¾Ü¾ø");
+        m_tip = QStringLiteral("è¯¢é—®é€šçŸ¥æ¡†æç¤º");
+        m_acceptText = QStringLiteral("åŒæ„");
+        m_ignoreText = QStringLiteral("æ‹’ç»");
     }
 };
 
-/** µÇÂ¼¿ò
+/** ç™»å½•æ¡†
 */
 struct LoginShowDialogParam : public DialogParam
 {
-	//ÌáÊ¾ÄÚÈİ
+	//æç¤ºå†…å®¹
     QString m_tip;
-	//ÕĞºôÄÚÈİ
+	//æ‹›å‘¼å†…å®¹
     QString m_greeting;
-	//ÁË½â¸ü¶à°´Å¥ÎÄ×ÖÄÚÈİ
+	//äº†è§£æ›´å¤šæŒ‰é’®æ–‡å­—å†…å®¹
     QString m_urlButtonText;
-	//ÁË½â¸ü¶à°´Å¥Á´½ÓµØÖ·
+	//äº†è§£æ›´å¤šæŒ‰é’®é“¾æ¥åœ°å€
     QString m_linkUrl;
-	//ÁË½â¸ü¶à°´Å¥ÊÇ·ñÏÔÊ¾
+	//äº†è§£æ›´å¤šæŒ‰é’®æ˜¯å¦æ˜¾ç¤º
     bool m_isUrlButtonVisible;
-	//ÉÏ´ÎµÇÂ¼µØÖ·
+	//ä¸Šæ¬¡ç™»å½•åœ°å€
 	QString m_preLoginAddr;
-	//ÉÏ´ÎµÇÂ¼Ê±¼ä
+	//ä¸Šæ¬¡ç™»å½•æ—¶é—´
 	QString m_preLoginTime;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     LoginShowDialogParam()
     {
@@ -1262,54 +1262,54 @@ struct LoginShowDialogParam : public DialogParam
         int hour = tm.hour();
         if ((hour > 0) && (hour <= 9))
         {
-            m_greeting = QString::fromStdWString(L"Hi~Ôç³¿ºÃ£¡");
+            m_greeting = QString::fromStdWString(L"Hi~æ—©æ™¨å¥½ï¼");
         }
         else if ((hour > 9) && (hour <= 12))
         {
-            m_greeting = QString::fromStdWString(L"Hi~ÔçÉÏºÃ£¡");
+            m_greeting = QString::fromStdWString(L"Hi~æ—©ä¸Šå¥½ï¼");
         }
         else if ((hour > 12) && (hour <= 18))
         {
-            m_greeting = QString::fromStdWString(L"Hi~ÏÂÎçºÃ£¡");
+            m_greeting = QString::fromStdWString(L"Hi~ä¸‹åˆå¥½ï¼");
         }
         else
         {
-            m_greeting = QString::fromStdWString(L"Hi~ÍíÉÏºÃ£¡");
+            m_greeting = QString::fromStdWString(L"Hi~æ™šä¸Šå¥½ï¼");
         }
 
-        m_tip = QStringLiteral("µÇÂ¼Í¨Öª¿òÌáÊ¾");
-        m_urlButtonText = QStringLiteral(">>ÁË½â¸ü¶à");
+        m_tip = QStringLiteral("ç™»å½•é€šçŸ¥æ¡†æç¤º");
+        m_urlButtonText = QStringLiteral(">>äº†è§£æ›´å¤š");
         m_linkUrl = "http://www.baidu.com/";
         m_isUrlButtonVisible = true;
     }
 };
 
-/** ¹ã¸æÍ¨Öª¿ò²ÎÊı
+/** å¹¿å‘Šé€šçŸ¥æ¡†å‚æ•°
 */
 struct AdvertShowDialogParam : public DialogParam
 {
-	//¹ã¸æÁ´½Ó
+	//å¹¿å‘Šé“¾æ¥
 	QString m_advertUrl;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	AdvertShowDialogParam()
 	{
 		m_dialogType = ADVERT_SHOW_DIALOG;
-		m_title = QStringLiteral("11ÈÈµãÍÆ¼ö");
+		m_title = QStringLiteral("11çƒ­ç‚¹æ¨è");
 		m_advertUrl = QStringLiteral("http://www.baidu.com/");
 	}
 };
 
-/** ÕËºÅ¿ò
+/** è´¦å·æ¡†
 */
 struct AccountManagerDialogParam : public DialogParam
 {
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
     AccountManagerDialogParam()
     {
 		m_dialogType = ACCOUNT_MANAGER_DIALOG;
-        m_title = QStringLiteral("11¶ÔÕ½Æ½Ì¨ - ÕËºÅ¹ÜÀíÒ³Ãæ");
+        m_title = QStringLiteral("11å¯¹æˆ˜å¹³å° - è´¦å·ç®¡ç†é¡µé¢");
     }
 };

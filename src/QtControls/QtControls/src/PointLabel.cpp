@@ -1,4 +1,4 @@
-#include "PointLabel.h"
+ï»¿#include "PointLabel.h"
 
 PointLabel::PointLabel(QWidget* parent) :
 Label(parent),
@@ -34,11 +34,11 @@ void PointLabel::showEvent(QShowEvent* eve)
 	Label::repaint();
 	QFontMetrics fontMetrics(font());
 	QString strShow = Label::text();
-	//»ñÈ¡Ö®Ç°ÉèÖÃµÄ×Ö·û´®µÄÏñËØ´óĞ¡
+	//è·å–ä¹‹å‰è®¾ç½®çš„å­—ç¬¦ä¸²çš„åƒç´ å¤§å°
 	qint32 fontSize = fontMetrics.width(strShow);
 	if (fontSize > width() - m_leftOrigin)
 	{
-		//·µ»ØÒ»¸ö´øÓĞÊ¡ÂÔºÅµÄ×Ö·û´®
+		//è¿”å›ä¸€ä¸ªå¸¦æœ‰çœç•¥å·çš„å­—ç¬¦ä¸²
 		strShow = fontMetrics.elidedText(strShow, Qt::ElideRight, width() - m_leftOrigin);
 	}
 	Label::setText(strShow);

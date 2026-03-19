@@ -1,4 +1,4 @@
-#include "SearchEdit.h"
+﻿#include "SearchEdit.h"
 #include "SendToMessageTest.h"
 #include <QTextBlock>
 #include <QMouseEvent>

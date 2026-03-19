@@ -1,10 +1,10 @@
-#pragma once
+ï»¿#pragma once
 #include <QObject>
 #include "DialogManagerMacro.h"
 #include "DialogType.h"
 #include "ManagerBase/ManagerBaseAPI.h"
 
-/** µ¥Ò»ÊµÀı£¬ÓÃÓÚÍ³Ò»¹ÜÀí´°¿Ú´´½¨¹Ø±Õ£¬¸ÃÀàÎª¶ÔÍâ½Ó¿Ú
+/** å•ä¸€å®ä¾‹ï¼Œç”¨äºç»Ÿä¸€ç®¡ç†çª—å£åˆ›å»ºå…³é—­ï¼Œè¯¥ç±»ä¸ºå¯¹å¤–æ¥å£
 */
 class DialogManagerAPI DialogManager :
     public QObject,
@@ -12,31 +12,31 @@ class DialogManagerAPI DialogManager :
 {
 	Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
     DialogManager();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~DialogManager();
 
 public:
-    /** ´´½¨´°¿Ú
-    @param [in] type ´°¿ÚÀàĞÍ
-    @param [in,out] param ´°¿Ú²ÎÊı½á¹¹ÌåÖ¸Õë£¬½á¹¹ÌåÖĞ¿ÉÄÜÓĞ´«³ö²ÎÊı
+    /** åˆ›å»ºçª—å£
+    @param [in] type çª—å£ç±»å‹
+    @param [in,out] param çª—å£å‚æ•°ç»“æ„ä½“æŒ‡é’ˆï¼Œç»“æ„ä½“ä¸­å¯èƒ½æœ‰ä¼ å‡ºå‚æ•°
     */
     void makeDialog(DialogParam& param);
 
 public:
-	/** ²Ù×÷´°¿Ú
-	@param [in,out] param ²Ù×÷²ÎÊı
+	/** æ“ä½œçª—å£
+	@param [in,out] param æ“ä½œå‚æ•°
 	*/
 	void operateDialog(OperateParam& param);
 
 Q_SIGNALS:
-	/** ´°¿Ú·¢³öĞÅºÅ
-	@param [in] type ĞÅºÅÀàĞÍ
-	@param [in] param ĞÅºÅ²ÎÊı
+	/** çª—å£å‘å‡ºä¿¡å·
+	@param [in] type ä¿¡å·ç±»å‹
+	@param [in] param ä¿¡å·å‚æ•°
 	*/
 	void dialogSignal(const SignalParam& param);
 };

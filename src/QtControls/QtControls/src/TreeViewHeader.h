@@ -1,38 +1,38 @@
-#pragma once
+ï»¿#pragma once
 #include <QHeaderView>
 #include "QtControlsMacro.h"
 
 class TreeViewModel;
-/** TreeViewHeader²Ù×÷Àà
+/** TreeViewHeaderæ“ä½œç±»
 */
 class QtControlsAPI TreeViewHeader : public QHeaderView
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	TreeViewHeader(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~TreeViewHeader();
 
 public:
-	/** »ñÈ¡Ä£ĞÍ½Ó¿ÚÖ¸Õë
-	@return ·µ»ØÄ£ĞÍ½Ó¿ÚÖ¸Õë
+	/** è·å–æ¨¡å‹æ¥å£æŒ‡é’ˆ
+	@return è¿”å›æ¨¡å‹æ¥å£æŒ‡é’ˆ
 	*/
 	TreeViewModel* model() const;
 
 	void paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const;
 
 protected:
-	/** ³õÊ¼»¯
+	/** åˆå§‹åŒ–
 	*/
 	void init();
 
-	/** ¼ì²âÄÚ²¿Ö¸ÕëÊÇ·ñÓĞĞ§
-	@return ·µ»ØÄÚ²¿Ö¸ÕëÊÇ·ñÓĞĞ§
+	/** æ£€æµ‹å†…éƒ¨æŒ‡é’ˆæ˜¯å¦æœ‰æ•ˆ
+	@return è¿”å›å†…éƒ¨æŒ‡é’ˆæ˜¯å¦æœ‰æ•ˆ
 	*/
 	bool check();
 

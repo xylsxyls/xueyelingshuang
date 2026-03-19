@@ -1,4 +1,4 @@
-#include "SearchPathTask.h"
+﻿#include "SearchPathTask.h"
 #include "CSystem/CSystemAPI.h"
 #include "FindTextLinux.h"
 #include "CStringManager/CStringManagerAPI.h"

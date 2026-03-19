@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QtWidgets/QComboBox>
 #include "ControlFont.h"
 #include "ControlSelf.h"
@@ -17,42 +17,42 @@ class QtControlsAPI ComboBox :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	ComboBox(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~ComboBox();
 
 public:
-	/** ÉèÖÃÄ¬ÈÏÖµ
+	/** è®¾ç½®é»˜è®¤å€¼
 	*/
 	void setDefault();
 
-	/** ÉèÖÃÏÂÀ­¼ıÍ·µÄ³ß´ç
-	@param [in] width ÏÂÀ­¼ıÍ·¿í¶È
-	@param [in] height ÏÂÀ­¼ıÍ·¸ß¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰ç®­å¤´çš„å°ºå¯¸
+	@param [in] width ä¸‹æ‹‰ç®­å¤´å®½åº¦
+	@param [in] height ä¸‹æ‹‰ç®­å¤´é«˜åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setDropDownSize(qint32 width, qint32 height = -1, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¼ıÍ·µÄ±ß¿ò¿í¶È
-	@param [in] width ÏÂÀ­¼ıÍ·¿í¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰ç®­å¤´çš„è¾¹æ¡†å®½åº¦
+	@param [in] width ä¸‹æ‹‰ç®­å¤´å®½åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setDropDownBorderWidth(qint32 width, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¼ıÍ·µÄÍ¼Æ¬
-	@param [in] dropDownImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] dropDownImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] dropDownImgNormal ·ÇÑ¡ÖĞ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾½«Í¼Æ¬×İÏò·Ö¸î4·İ»ò8·İ£¬Ñ¡×îÉÏÃæµÄµÚÒ»·İ
-	@param [in] dropDownImgHover ·ÇÑ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] dropDownImgDisabled ·ÇÑ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] dropDownImgCkNormal Ñ¡ÖĞ³£Ì¬Í¼Æ¬
-	@param [in] dropDownImgCkDisabled Ñ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰ç®­å¤´çš„å›¾ç‰‡
+	@param [in] dropDownImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] dropDownImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] dropDownImgNormal éé€‰ä¸­å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºå°†å›¾ç‰‡çºµå‘åˆ†å‰²4ä»½æˆ–8ä»½ï¼Œé€‰æœ€ä¸Šé¢çš„ç¬¬ä¸€ä»½
+	@param [in] dropDownImgHover éé€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] dropDownImgDisabled éé€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] dropDownImgCkNormal é€‰ä¸­å¸¸æ€å›¾ç‰‡
+	@param [in] dropDownImgCkDisabled é€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setDropDownImage(const QString& dropDownImgPath,
 						  qint32 dropDownImgStateCount = 8,
@@ -63,87 +63,87 @@ public:
 						  qint32 dropDownImgExpandDisabled = 8,
 						  bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¼ıÍ·¾àÀëÓÒÉÏ½ÇµÄ±ß¾à
-	@param [in] topOrigin ÉÏ²àÆ«ÒÆÁ¿
-	@param [in] rightOrigin ÓÒ²àÆ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰ç®­å¤´è·ç¦»å³ä¸Šè§’çš„è¾¹è·
+	@param [in] topOrigin ä¸Šä¾§åç§»é‡
+	@param [in] rightOrigin å³ä¾§åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setDropDownTopRightOrigin(qint32 topOrigin, qint32 rightOrigin = -1, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿òµ¯³öÊ±¾àÀëµã»÷¿òµÄ×İÏòÆ«ÒÆÁ¿
-	@param [in] origin ×İÏòÆ«ÒÆÁ¿
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†å¼¹å‡ºæ—¶è·ç¦»ç‚¹å‡»æ¡†çš„çºµå‘åç§»é‡
+	@param [in] origin çºµå‘åç§»é‡
 	*/
 	void setListOrigin(qint32 origin);
 
-	/** Ôö¼ÓÒ»ĞĞ
-	@param [in] text ÎÄ±¾
+	/** å¢åŠ ä¸€è¡Œ
+	@param [in] text æ–‡æœ¬
 	*/
 	void addItem(const QString& text);
 
-	/** Ôö¼ÓÕû´®
-	@param [in] textList ÎÄ±¾ÁĞ±í
+	/** å¢åŠ æ•´ä¸²
+	@param [in] textList æ–‡æœ¬åˆ—è¡¨
 	*/
 	void addItems(const QStringList& textList);
 
-	/** ÉèÖÃÖ¸¶¨½ÚµãÎÄ×Ö
-	@param [in] index Ë÷ÒıÖµ
-	@param [in] text ÎÄ±¾
+	/** è®¾ç½®æŒ‡å®šèŠ‚ç‚¹æ–‡å­—
+	@param [in] index ç´¢å¼•å€¼
+	@param [in] text æ–‡æœ¬
 	*/
 	void setItemText(qint32 index, const QString& text);
 
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] color ±³¾°ÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] color èƒŒæ™¯é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListBackgroundColor(const QColor& color, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò±ß¿ò´Ö¶È
-	@param [in] width ±ß¿ò´Ö¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†è¾¹æ¡†ç²—åº¦
+	@param [in] width è¾¹æ¡†ç²—åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListBorderWidth(qint32 width, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò±ß¿òÑÕÉ«
-	@param [in] color ³£Ì¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†è¾¹æ¡†é¢œè‰²
+	@param [in] color å¸¸æ€
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListBorderColor(const QColor& color, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò½Úµã±ß¿òÑÕÉ«£¨list¿Ø¼şÃ»ÓĞ°´ÏÂÊôĞÔ£©
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†èŠ‚ç‚¹è¾¹æ¡†é¢œè‰²ï¼ˆlistæ§ä»¶æ²¡æœ‰æŒ‰ä¸‹å±æ€§ï¼‰
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListItemBorderColor(const QColor& normalColor,
 								const QColor& hoverColor = QColor(0, 0, 0, 0),
 								const QColor& disabledColor = QColor(0, 0, 0, 0),
 								bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò½Úµã±³¾°ÑÕÉ«£¨list¿Ø¼şÃ»ÓĞ°´ÏÂÊôĞÔ£©
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†èŠ‚ç‚¹èƒŒæ™¯é¢œè‰²ï¼ˆlistæ§ä»¶æ²¡æœ‰æŒ‰ä¸‹å±æ€§ï¼‰
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListItemBackgroundColor(const QColor& normalColor,
 									const QColor& hoverColor = QColor(0, 0, 0, 0),
 									const QColor& disabledColor = QColor(0, 0, 0, 0),
 									bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò½Úµã±ß¿ò´Ö¶È
-	@param [in] width ±ß¿ò´Ö¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†èŠ‚ç‚¹è¾¹æ¡†ç²—åº¦
+	@param [in] width è¾¹æ¡†ç²—åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListItemBorderWidth(qint32 width, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò½Úµã±³¾°Í¼Æ¬£¬ºÍ±ß¿òÑÕÉ«²»ÓÃ´æ
-	@param [in] borderImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] borderImgStateCount ÉÏÏÂÆ½·Ö¼¸·İ
-	@param [in] borderImgNormal ·ÇÑ¡ÖĞ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾½«Í¼Æ¬×İÏò·Ö¸î4·İ»ò8·İ£¬Ñ¡×îÉÏÃæµÄµÚÒ»·İ
-	@param [in] borderImgHover ·ÇÑ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] borderImgDisabled ·ÇÑ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†èŠ‚ç‚¹èƒŒæ™¯å›¾ç‰‡ï¼Œå’Œè¾¹æ¡†é¢œè‰²ä¸ç”¨å­˜
+	@param [in] borderImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] borderImgStateCount ä¸Šä¸‹å¹³åˆ†å‡ ä»½
+	@param [in] borderImgNormal éé€‰ä¸­å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºå°†å›¾ç‰‡çºµå‘åˆ†å‰²4ä»½æˆ–8ä»½ï¼Œé€‰æœ€ä¸Šé¢çš„ç¬¬ä¸€ä»½
+	@param [in] borderImgHover éé€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] borderImgDisabled éé€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListItemBorderImage(const QString& borderImgPath,
 								qint32 borderImgStateCount = 4,
@@ -152,47 +152,47 @@ public:
 								qint32 borderImgDisabled = 4,
 								bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò½Úµã¸ß¶È
-	@param [in] height ½Úµã¸ß¶È
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†èŠ‚ç‚¹é«˜åº¦
+	@param [in] height èŠ‚ç‚¹é«˜åº¦
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListItemHeight(qint32 height, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿òÎÄ×ÖÑÕÉ«
-	@param [in] normalColor ³£Ì¬ÑÕÉ«
-	@param [in] hoverColor ĞüÍ£ÑÕÉ«
-	@param [in] disabledColor ½ûÓÃÑÕÉ«
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†æ–‡å­—é¢œè‰²
+	@param [in] normalColor å¸¸æ€é¢œè‰²
+	@param [in] hoverColor æ‚¬åœé¢œè‰²
+	@param [in] disabledColor ç¦ç”¨é¢œè‰²
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListTextColor(const QColor& normalColor,
 						  const QColor& hoverColor = QColor(0, 0, 0, 0),
 						  const QColor& disabledColor = QColor(0, 0, 0, 0),
 						  bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò×ÖÌå
-	@param [in] fontName ×ÖÌåÃû
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†å­—ä½“
+	@param [in] fontName å­—ä½“å
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListFontFace(const QString& fontName, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò×ÖÌå´óĞ¡
-	@param [in] fontSize ×ÖÌå´óĞ¡
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†å­—ä½“å¤§å°
+	@param [in] fontSize å­—ä½“å¤§å°
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListFontSize(qint32 fontSize, bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿òÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] origin ÎÄ±¾Æ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†æ–‡æœ¬åç§»é‡
+	@param [in] origin æ–‡æœ¬åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListTextOrigin(qint32 origin, bool rePaint = false);
 
-	/** ½Úµãµ½ÏÂÀ­¿ò´°¿ÚµÄËÄ¸öÍâ±ß¾à
-	@param [in] leftOrigin ×ó²àÆ«ÒÆÁ¿
-	@param [in] topOrigin ÉÏ²àÆ«ÒÆÁ¿
-	@param [in] rightOrigin ÓÒ²àÆ«ÒÆÁ¿
-	@param [in] bottomOrigin ÏÂ²àÆ«ÒÆÁ¿
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** èŠ‚ç‚¹åˆ°ä¸‹æ‹‰æ¡†çª—å£çš„å››ä¸ªå¤–è¾¹è·
+	@param [in] leftOrigin å·¦ä¾§åç§»é‡
+	@param [in] topOrigin ä¸Šä¾§åç§»é‡
+	@param [in] rightOrigin å³ä¾§åç§»é‡
+	@param [in] bottomOrigin ä¸‹ä¾§åç§»é‡
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setListItemAroundOrigin(qint32 leftOrigin,
 								 qint32 topOrigin = -1,
@@ -200,29 +200,29 @@ public:
 								 qint32 bottomOrigin = -1,
 								 bool rePaint = false);
 
-	/** ÉèÖÃÏÂÀ­¿ò×î´ó¸ß¶È
-	@param [in] maxHeight ×î´ó¸ß¶È
+	/** è®¾ç½®ä¸‹æ‹‰æ¡†æœ€å¤§é«˜åº¦
+	@param [in] maxHeight æœ€å¤§é«˜åº¦
 	*/
 	void setListMaxHeight(qint32 maxHeight);
 
-	/** ÉèÖÃÏÂÀ­¼ıÍ·ÊÇ·ñÒş²Ø
-	@param [in] enable ÊÇ·ñÒş²Ø
-	@param [in] rePaint ÊÇ·ñÁ¢¼´ÖØ»­
+	/** è®¾ç½®ä¸‹æ‹‰ç®­å¤´æ˜¯å¦éšè—
+	@param [in] enable æ˜¯å¦éšè—
+	@param [in] rePaint æ˜¯å¦ç«‹å³é‡ç”»
 	*/
 	void setDropDownVisible(bool enable, bool rePaint = false);
 
-	/** ÉèÖÃµã»÷ÏÂÀ­¿òÊÇ·ñÓĞĞ§
-	@param [in] enable ÊÇ·ñÓĞĞ§
+	/** è®¾ç½®ç‚¹å‡»ä¸‹æ‹‰æ¡†æ˜¯å¦æœ‰æ•ˆ
+	@param [in] enable æ˜¯å¦æœ‰æ•ˆ
 	*/
 	void setSelectEnable(bool enable);
 
-	/** ÖØ»­
+	/** é‡ç”»
 	*/
 	virtual void repaint();
 
 Q_SIGNALS:
-	/** ½Úµã±»°´ÏÂÖ®ºó·¢ËÍĞÅºÅ
-	@param [in] index ½ÚµãË÷ÒıÖµ
+	/** èŠ‚ç‚¹è¢«æŒ‰ä¸‹ä¹‹åå‘é€ä¿¡å·
+	@param [in] index èŠ‚ç‚¹ç´¢å¼•å€¼
 	*/
 	void itemPressed(qint32 index);
 
@@ -235,7 +235,7 @@ protected:
 
 protected:
 	bool check();
-	/** ¿Ø¼ş³õÊ¼»¯
+	/** æ§ä»¶åˆå§‹åŒ–
 	*/
 	void init();
 

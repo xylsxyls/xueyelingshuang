@@ -1,35 +1,35 @@
-#pragma once
+ï»¿#pragma once
 #include "Label.h"
 #include "QtControlsMacro.h"
 
-/** ¶¨×öÀà£¬ÓÃÓÚ½çÃæÌáÊ¾
+/** å®šåšç±»ï¼Œç”¨äºç•Œé¢æç¤º
 */
 class QtControlsAPI TipLabel : public Label
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	TipLabel(QWidget* parent = nullptr);
 
-	/** ÉèÖÃ´æÔÚÊ±¼ä£¨µ¥Î»Ãë£©
-	@param [in] time Ê±¼ä
+	/** è®¾ç½®å­˜åœ¨æ—¶é—´ï¼ˆå•ä½ç§’ï¼‰
+	@param [in] time æ—¶é—´
 	*/
 	void setExistTime(qint32 time);
 
-	/** ÉèÖÃ×î´ó¿í¶È
-	@param [in] maxWidth ×î´ó¿í¶È
+	/** è®¾ç½®æœ€å¤§å®½åº¦
+	@param [in] maxWidth æœ€å¤§å®½åº¦
 	*/
 	void setMaxWidth(qint32 maxWidth);
 
-	/** ÉèÖÃÊÇ·ñÓĞ½¹µã
-	@param [in] hasFocus µ¯³öÊ±ÊÇ·ñÇÀ½¹µã
+	/** è®¾ç½®æ˜¯å¦æœ‰ç„¦ç‚¹
+	@param [in] hasFocus å¼¹å‡ºæ—¶æ˜¯å¦æŠ¢ç„¦ç‚¹
 	*/
 	void setHasFocus(bool hasFocus);
 
-	/** ÉèÖÃ´°¿ÚËùÔÚÎ»ÖÃ£¨ÓÒÏÂ½Ç£©
-	@param [in] bottomRight ÓÒÏÂ½Ç×ø±ê
+	/** è®¾ç½®çª—å£æ‰€åœ¨ä½ç½®ï¼ˆå³ä¸‹è§’ï¼‰
+	@param [in] bottomRight å³ä¸‹è§’åæ ‡
 	*/
 	void setBottomRight(const QPoint& bottomRight);
 

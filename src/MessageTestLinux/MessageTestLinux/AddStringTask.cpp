@@ -1,4 +1,4 @@
-#include "AddStringTask.h"
+﻿#include "AddStringTask.h"
 #include "MessageTestLinux.h"
 #include "CSystem/CSystemAPI.h"
 #include "TypeManager.h"

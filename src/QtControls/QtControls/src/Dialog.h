@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <QDialog>
 #include "ControlShow.h"
 #include "ControlFont.h"
@@ -7,7 +7,7 @@
 #include "ControlBackground.h"
 #include "QtControlsMacro.h"
 
-/** ´°¿Ú¿Ø¼ş£¬¸Ã¿Ø¼şµÄsetBackgroundImageº¯ÊıÎŞ·¨×öµ½hoverĞ§¹û£¬setBorderImage¿ÉÒÔ
+/** çª—å£æ§ä»¶ï¼Œè¯¥æ§ä»¶çš„setBackgroundImageå‡½æ•°æ— æ³•åšåˆ°hoveræ•ˆæœï¼ŒsetBorderImageå¯ä»¥
 */
 class QtControlsAPI Dialog :
 	public ControlShow < QDialog >,
@@ -18,12 +18,12 @@ class QtControlsAPI Dialog :
 {
 	Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	Dialog(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~Dialog();
 };

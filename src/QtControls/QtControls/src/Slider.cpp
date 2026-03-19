@@ -1,4 +1,4 @@
-#include "Slider.h"
+﻿#include "Slider.h"
 #include <QEvent>
 #include <QApplication>
 #include <QMouseEvent>

@@ -1,4 +1,4 @@
-#ifndef LOCKEDACCOUNTPANEL_H
+﻿#ifndef LOCKEDACCOUNTPANEL_H
 #define LOCKEDACCOUNTPANEL_H
 
 #include <QWidget>

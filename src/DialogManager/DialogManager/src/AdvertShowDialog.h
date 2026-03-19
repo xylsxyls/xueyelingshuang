@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "DialogManagerMacro.h"
 #include "NotifyDialog.h"
 
@@ -8,19 +8,19 @@
 class CWebViewEx;
 class COriginalButton;
 class Separator;
-/** ÏÔÊ¾ÌáÊ¾¿ò
+/** æ˜¾ç¤ºæç¤ºæ¡†
 */
 class AdvertShowDialog : public NotifyDialog
 {
 	Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
 	AdvertShowDialog();
 
 public:
-    /** ÉèÖÃ¹ã¸æ
-    @param [in] advertUrl ¹ã¸æÁ´½Ó
+    /** è®¾ç½®å¹¿å‘Š
+    @param [in] advertUrl å¹¿å‘Šé“¾æ¥
     */
     void setAdvertUrl(const QString& advertUrl);
 

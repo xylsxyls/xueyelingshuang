@@ -1,52 +1,52 @@
-#pragma once
+ï»¿#pragma once
 #include "LineEdit.h"
 #include "QtControlsMacro.h"
 
 #define MASK_BUTTON_PNG QString::fromStdWString(L"/Image/Common/Setting/SettingPasswordIcon.png")
 
 class COriginalButton;
-/** ÃÜÂëÊäÈë¿ò
+/** å¯†ç è¾“å…¥æ¡†
 */
 class QtControlsAPI CPasswordInputBox : public LineEdit
 {
     Q_OBJECT
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
     CPasswordInputBox(QWidget* parent = nullptr);
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
     virtual ~CPasswordInputBox();
 
 public:
-	/** ÉèÖÃÄ¬ÈÏÖµ
+	/** è®¾ç½®é»˜è®¤å€¼
 	*/
 	void setDefault();
 
-	/** ÉèÖÃ°´Å¥Í¼±ê´óĞ¡
-	@param [in] width Í¼±ê¿í¶È
-	@param [in] height Í¼±ê¸ß¶È
+	/** è®¾ç½®æŒ‰é’®å›¾æ ‡å¤§å°
+	@param [in] width å›¾æ ‡å®½åº¦
+	@param [in] height å›¾æ ‡é«˜åº¦
 	*/
 	void setMaskSize(qint32 width, qint32 height = -1);
 
-	/** ÉèÖÃ°´Å¥Í¼±ê´óĞ¡
-	@param [in] rightOrigin ¾àÀëÓÒ²à¿í¶È
+	/** è®¾ç½®æŒ‰é’®å›¾æ ‡å¤§å°
+	@param [in] rightOrigin è·ç¦»å³ä¾§å®½åº¦
 	*/
 	void setMaskRightOrigin(qint32 rightOrigin);
 
-	/** ÉèÖÃ±êÖ¾°´Å¥±³¾°ÑÕÉ«
-	@param [in] backgroundImgPath ±³¾°Í¼Æ¬Â·¾¶£¬Èç¹ûÂ·¾¶ÖĞ±ØĞëÊ¹ÓÃÕıĞ±¸Ü
-	@param [in] backgroundImgStateCount Í¼Æ¬×İÏòÇĞ¸î¸öÊı
-	@param [in] backgroundImgNormal ·ÇÑ¡ÖĞ³£Ì¬Í¼Æ¬£¬Èç¹ûÌî1±íÊ¾½«Í¼Æ¬×İÏò·Ö¸î4·İ»ò8·İ£¬Ñ¡×îÉÏÃæµÄµÚÒ»·İ
-	@param [in] backgroundImgHover ·ÇÑ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgPressed ·ÇÑ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] backgroundImgDisabled ·ÇÑ¡ÖĞ½ûÓÃÍ¼Æ¬
-	@param [in] backgroundImgCkNormal Ñ¡ÖĞ³£Ì¬Í¼Æ¬
-	@param [in] backgroundImgCkHover Ñ¡ÖĞĞüÍ£Í¼Æ¬
-	@param [in] backgroundImgCkPressed Ñ¡ÖĞ°´ÏÂÍ¼Æ¬
-	@param [in] backgroundImgCkDisabled Ñ¡ÖĞ½ûÓÃÍ¼Æ¬
+	/** è®¾ç½®æ ‡å¿—æŒ‰é’®èƒŒæ™¯é¢œè‰²
+	@param [in] backgroundImgPath èƒŒæ™¯å›¾ç‰‡è·¯å¾„ï¼Œå¦‚æœè·¯å¾„ä¸­å¿…é¡»ä½¿ç”¨æ­£æ–œæ 
+	@param [in] backgroundImgStateCount å›¾ç‰‡çºµå‘åˆ‡å‰²ä¸ªæ•°
+	@param [in] backgroundImgNormal éé€‰ä¸­å¸¸æ€å›¾ç‰‡ï¼Œå¦‚æœå¡«1è¡¨ç¤ºå°†å›¾ç‰‡çºµå‘åˆ†å‰²4ä»½æˆ–8ä»½ï¼Œé€‰æœ€ä¸Šé¢çš„ç¬¬ä¸€ä»½
+	@param [in] backgroundImgHover éé€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgPressed éé€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] backgroundImgDisabled éé€‰ä¸­ç¦ç”¨å›¾ç‰‡
+	@param [in] backgroundImgCkNormal é€‰ä¸­å¸¸æ€å›¾ç‰‡
+	@param [in] backgroundImgCkHover é€‰ä¸­æ‚¬åœå›¾ç‰‡
+	@param [in] backgroundImgCkPressed é€‰ä¸­æŒ‰ä¸‹å›¾ç‰‡
+	@param [in] backgroundImgCkDisabled é€‰ä¸­ç¦ç”¨å›¾ç‰‡
 	*/
 	void setMaskBackgroundImage(const QString& backgroundImgPath,
 								qint32 backgroundImgStateCount = 8,
@@ -59,8 +59,8 @@ public:
 								qint32 backgroundImgCkPressed = 7,
 								qint32 backgroundImgCkDisabled = 8);
 
-	/** ÉèÖÃ°´Å¥ÊÇ·ñÒş²Ø
-	@param [in] enable ÊÇ·ñÒş²Ø
+	/** è®¾ç½®æŒ‰é’®æ˜¯å¦éšè—
+	@param [in] enable æ˜¯å¦éšè—
 	*/
 	void setMaskVisible(bool enable);
 

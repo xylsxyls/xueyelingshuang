@@ -1,4 +1,4 @@
-#include "AccountDialog.h"
+ï»¿#include "AccountDialog.h"
 #include "QtControls/Label.h"
 #include "QtControls/LineEdit.h"
 #include "QtControls/COriginalButton.h"
@@ -27,29 +27,29 @@ m_ignore(nullptr)
 	
 	m_sep->setBackgroundColor(QColor(74, 89, 128, 255));
 
-    DialogHelper::setLabel(m_registerAlt, QString::fromStdWString(L"×¢²áÐ¡ºÅ"), QColor(255, 255, 255, 255), 18);
+    DialogHelper::setLabel(m_registerAlt, QString::fromStdWString(L"æ³¨å†Œå°å·"), QColor(255, 255, 255, 255), 18);
 
-	m_account->setPlaceholderText(QString::fromStdWString(L"ÊäÈëÕËºÅÃû"));
+	m_account->setPlaceholderText(QString::fromStdWString(L"è¾“å…¥è´¦å·å"));
     m_account->setAlignment(Qt::AlignCenter);
 	m_account->setFontSize(18);
 	m_account->setTextColor(QColor("#5d6a8d"));//QColor("#acc0f5")
-	m_account->setFontFace(QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
+	m_account->setFontFace(QString::fromStdWString(L"å¾®è½¯é›…é»‘"));
 	m_account->setBackgroundColor(QColor(31, 36, 51, 255));
 	m_account->setBorderRadius(4);
 	m_account->setBorderColor(QColor(67, 81, 117, 255));
 
-    DialogHelper::setLabel(m_errorAccount, QString::fromStdWString(L"ÄúÊäÈëµÄÕËºÅÓÐÎó"), QColor("#e2361f"), 18);
+    DialogHelper::setLabel(m_errorAccount, QString::fromStdWString(L"æ‚¨è¾“å…¥çš„è´¦å·æœ‰è¯¯"), QColor("#e2361f"), 18);
 	m_errorAccount->setVisible(false);
 	QObject::connect(this, &AccountDialog::errorVisible, m_errorAccount, &Label::setEnabled);
 
-    setPopButtonConfig(m_accept, QStringLiteral("È·¶¨"), QColor(166, 183, 249, 255), ACCEPT_BUTTON, 13);
+    setPopButtonConfig(m_accept, QStringLiteral("ç¡®å®š"), QColor(166, 183, 249, 255), ACCEPT_BUTTON, 13);
     m_accept->setBkgImage("");
     m_accept->setBkgColor();
     m_accept->setBorderWidth(1);
     m_accept->setBorderStyle("solid");
     m_accept->setBorderColor(QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255), QColor(166, 183, 249, 255));
 
-    setPopButtonConfig(m_ignore, QStringLiteral("È¡Ïû"), QColor(166, 183, 249, 255), IGNORE_BUTTON, 13);
+    setPopButtonConfig(m_ignore, QStringLiteral("å–æ¶ˆ"), QColor(166, 183, 249, 255), IGNORE_BUTTON, 13);
     m_ignore->setBkgImage("");
     m_ignore->setBkgColor();
     m_ignore->setBorderWidth(1);
@@ -91,7 +91,7 @@ void AccountDialog::setAcceptDown(DialogResult result)
     {
         return;
     }
-    setPopButtonConfig(m_accept, QString::fromStdWString(L"È·¶¨"), QColor(), result, 13);
+    setPopButtonConfig(m_accept, QString::fromStdWString(L"ç¡®å®š"), QColor(), result, 13);
     m_accept->setBkgImage("");
     m_accept->setBkgColor();
     m_accept->setBorderWidth(1);
@@ -107,7 +107,7 @@ void AccountDialog::setIgnoreDown(DialogResult result)
     {
         return;
     }
-    setPopButtonConfig(m_ignore, QString::fromStdWString(L"È¡Ïû"), QColor(), result, 13);
+    setPopButtonConfig(m_ignore, QString::fromStdWString(L"å–æ¶ˆ"), QColor(), result, 13);
     m_ignore->setBkgImage("");
     m_ignore->setBkgColor();
     m_ignore->setBorderWidth(1);
@@ -136,7 +136,7 @@ bool AccountDialog::eventFilter(QObject* tar, QEvent* eve)
 		}
 		else if (eve->type() == QEvent::FocusOut && m_account->text() == "")
 		{
-			m_account->setPlaceholderText(QString::fromStdWString(L"ÊäÈëÕËºÅÃû"));
+			m_account->setPlaceholderText(QString::fromStdWString(L"è¾“å…¥è´¦å·å"));
 			m_account->setAlignment(Qt::AlignCenter);
 			m_account->setTextOrigin(0);
 			m_account->setTextColor(QColor("#5d6a8d"));

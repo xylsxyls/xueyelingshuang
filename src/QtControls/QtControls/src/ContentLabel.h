@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Label.h"
 #include "QtControlsMacro.h"
 
@@ -6,71 +6,71 @@ class Label;
 class QtControlsAPI ContentLabel
 {
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] parent ¸¸´°¿ÚÖ¸Õë
+	/** æ„é€ å‡½æ•°
+	@param [in] parent çˆ¶çª—å£æŒ‡é’ˆ
 	*/
 	ContentLabel(QWidget* parent = nullptr);
 
 public:
-	/** ÉèÖÃÉÏÃæµÄÑÕÉ«
-	@param [in] color ÎÄ×ÖÑÕÉ«
+	/** è®¾ç½®ä¸Šé¢çš„é¢œè‰²
+	@param [in] color æ–‡å­—é¢œè‰²
 	*/
 	void setUpColor(const QColor& color);
 
-	/** ÉèÖÃÏÂÃæÒ»ĞĞµÄÑÕÉ«
-	@param [in] color ÎÄ×ÖÑÕÉ«
+	/** è®¾ç½®ä¸‹é¢ä¸€è¡Œçš„é¢œè‰²
+	@param [in] color æ–‡å­—é¢œè‰²
 	*/
 	void setDownColor(const QColor& color);
 
-	/** ÉèÖÃÎªÒ»ĞĞÄ£Ê½
+	/** è®¾ç½®ä¸ºä¸€è¡Œæ¨¡å¼
 	*/
 	void setOneLine();
 
-	/** ÉèÖÃÎªÁ½ĞĞÄ£Ê½
+	/** è®¾ç½®ä¸ºä¸¤è¡Œæ¨¡å¼
 	*/
 	void setTwoLine();
 
-	/** ÉèÖÃÉÏÃæÒ»ĞĞµÄÎÄ×Ö
-	@param [in] text ÎÄ×ÖÄÚÈİ
+	/** è®¾ç½®ä¸Šé¢ä¸€è¡Œçš„æ–‡å­—
+	@param [in] text æ–‡å­—å†…å®¹
 	*/
 	void setUpText(const QString& text);
 
-	/** ÉèÖÃÏÂÃæÒ»ĞĞµÄÎÄ×Ö
-	@param [in] text ÎÄ×ÖÄÚÈİ
+	/** è®¾ç½®ä¸‹é¢ä¸€è¡Œçš„æ–‡å­—
+	@param [in] text æ–‡å­—å†…å®¹
 	*/
 	void setDownText(const QString& text);
 
-	/** ÉèÖÃ´óĞ¡
-	@param [in] rect ¿Ø¼ş´óĞ¡
+	/** è®¾ç½®å¤§å°
+	@param [in] rect æ§ä»¶å¤§å°
 	*/
 	void setGeometry(const QRect& rect);
 
-	/** ÉèÖÃ±³¾°ÑÕÉ«
-	@param [in] color ±³¾°ÑÕÉ«
+	/** è®¾ç½®èƒŒæ™¯é¢œè‰²
+	@param [in] color èƒŒæ™¯é¢œè‰²
 	*/
 	void setBackgroundColor(const QColor& color);
 
-	/** ÉèÖÃ×ÖÌå
-	@param [in] fontFace ×ÖÌåÃû
+	/** è®¾ç½®å­—ä½“
+	@param [in] fontFace å­—ä½“å
 	*/
 	void setFontFace(const QString& fontFace);
 
-	/** ÉèÖÃ×ÖÌå´óĞ¡
-	@param [in] size ×ÖÌå´óĞ¡
+	/** è®¾ç½®å­—ä½“å¤§å°
+	@param [in] size å­—ä½“å¤§å°
 	*/
 	void setFontSize(qint32 size);
 
 private:
-	/** ¸üĞÂ
+	/** æ›´æ–°
 	*/
 	void update();
 
-	/**	¼ì²â
-	@return ·µ»Ø³ÉÔ±±äÁ¿ÊÇ·ñÎª¿Õ
+	/**	æ£€æµ‹
+	@return è¿”å›æˆå‘˜å˜é‡æ˜¯å¦ä¸ºç©º
 	*/
 	bool check();
 
-	/** ³õÊ¼»¯
+	/** åˆå§‹åŒ–
 	*/
 	void init();
 

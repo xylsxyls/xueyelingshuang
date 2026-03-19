@@ -1,4 +1,4 @@
-#ifndef CONTROLBORDER_INL__
+﻿#ifndef CONTROLBORDER_INL__
 #define CONTROLBORDER_INL__
 //#pragma once
 #include "ControlBorder.h"

@@ -1,39 +1,39 @@
-#pragma once
+ï»¿#pragma once
 #include "QtControls/DialogShow.h"
 
-/** Í¨Öª¿ò»ùÀà
+/** é€šçŸ¥æ¡†åŸºç±»
 */
 class NotifyDialog : public DialogShow
 {
     Q_OBJECT
 public:
-    /** ¹¹Ôìº¯Êı
+    /** æ„é€ å‡½æ•°
     */
     NotifyDialog();
 
-    /** ÉèÖÃÄ¬ÈÏ¿Ø¼ş£¬º¬ÓĞ±êÌâÀ¸
-    @param [in] typeName ÀàĞÍÃû
+    /** è®¾ç½®é»˜è®¤æ§ä»¶ï¼Œå«æœ‰æ ‡é¢˜æ 
+    @param [in] typeName ç±»å‹å
     */
     void init(const std::string& typeName);
 
-    /** ¿ªÊ¼×¼±¸¹Ø±Õ
+    /** å¼€å§‹å‡†å¤‡å…³é—­
     */
     void prepareExit();
 
-    /** ÉèÖÃ´°¿Ú±êÌâ
-    @param [in] title ´°¿Ú±êÌâ
-    @param [in] color ´°¿Ú±êÌâÑÕÉ«
-    @param [in] fontSize ×ÖÌå´óĞ¡
-    @param [in] align ¶ÔÆë·½Ê½
-    @param [in] origin µ±×ó¶ÔÆëÊ±´°¿Ú±êÌâµÄÆ«ÒÆÁ¿
-    @param [in] fontName ×ÖÌåÃû
+    /** è®¾ç½®çª—å£æ ‡é¢˜
+    @param [in] title çª—å£æ ‡é¢˜
+    @param [in] color çª—å£æ ‡é¢˜é¢œè‰²
+    @param [in] fontSize å­—ä½“å¤§å°
+    @param [in] align å¯¹é½æ–¹å¼
+    @param [in] origin å½“å·¦å¯¹é½æ—¶çª—å£æ ‡é¢˜çš„åç§»é‡
+    @param [in] fontName å­—ä½“å
     */
     void setWindowTitle(const QString& title,
                         const QColor& color = QColor(221, 213, 198, 255),
                         qint32 fontSize = 12,
                         Qt::Alignment align = Qt::AlignVCenter | Qt::AlignLeft,
                         qint32 origin = 0,
-                        const QString& fontName = QString::fromStdWString(L"Î¢ÈíÑÅºÚ"));
+                        const QString& fontName = QString::fromStdWString(L"å¾®è½¯é›…é»‘"));
 
 protected:
     void showEvent(QShowEvent* eve);
@@ -44,7 +44,7 @@ protected:
 private:
     DialogResult buttonResult(COriginalButton* button);
 
-    /** ¿ªÊ¼Ö´ĞĞ¹Ø±Õ¶¯»­
+    /** å¼€å§‹æ‰§è¡Œå…³é—­åŠ¨ç”»
     */
     void beginExitAnimation();
 
