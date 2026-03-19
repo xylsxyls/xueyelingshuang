@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
+#include <string>
 
 class SearchPathTask;
 

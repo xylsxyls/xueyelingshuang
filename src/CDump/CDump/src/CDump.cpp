@@ -10,6 +10,8 @@
 #include <regex>
 #include <iomanip>
 #include <unistd.h>
+#include <array>
+#include <cstring>
 #endif
 
 static bool g_init = false;
@@ -220,7 +222,8 @@ static std::string GetAddr2lineOutput(const std::string& command)
 {
 	std::array<char, 128> buffer;
 	std::string result;
-	std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
+	using PipeClose = int(*)(FILE*);
+	std::unique_ptr<FILE, PipeClose> pipe(popen(command.c_str(), "r"), pclose);
 	if (!pipe)
 	{
 		throw std::runtime_error("popen() failed!");

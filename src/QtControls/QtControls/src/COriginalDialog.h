@@ -49,7 +49,9 @@ protected:
 	bool eventFilter(QObject* tar, QEvent* eve);
 #ifdef __unix__
 	void closeEvent(QCloseEvent* eve);
+public:
 	void close();
+protected:
 	enum TouchType
 	{
 		NORMAL,

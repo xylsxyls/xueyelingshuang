@@ -3,6 +3,7 @@
 
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QDialog>
+#include <stdint.h>
 
 class COriginalButton;
 class PushButton;

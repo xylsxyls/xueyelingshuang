@@ -1467,20 +1467,25 @@ void CSystem::OpenFile(const std::string& file)
 
 std::string CSystem::timetToStr(time_t timet, bool isLocal)
 {
-	char buf[20];
-	buf[19] = 0;
+	char buf[20] = {};
 	if (isLocal)
 	{
 		//转为本地时间
 		tm* local = localtime(&timet);
-		sprintf(buf,
-			"%04d-%02d-%d %02d:%02d:%02d",
-			local->tm_year + 1900,
-			local->tm_mon + 1,
-			local->tm_mday,
-			local->tm_hour,
-			local->tm_min,
-			local->tm_sec);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+#pragma GCC diagnostic ignored "-Wformat-overflow"
+		snprintf(buf, 20,
+			"%04d-%02d-%02d %02d:%02d:%02d",
+			(uint16_t)(local->tm_year + 1900),
+			(uint8_t)(local->tm_mon + 1),
+			(uint8_t)local->tm_mday,
+			(uint8_t)local->tm_hour,
+			(uint8_t)local->tm_min,
+			(uint8_t)local->tm_sec
+		);
+// 恢复警告
+#pragma GCC diagnostic pop
 	}
 	else
 	{

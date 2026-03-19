@@ -1,4 +1,5 @@
 ﻿#include "ReadWriteMutex.h"
+#include <stdio.h>
 
 ReadWriteMutex::ReadWriteMutex()
 #ifdef __SUPPORT_XP__
