@@ -184,11 +184,11 @@ std::vector<std::string> Fund::exportTradeRecords() const
 
 	// 添加账户基本信息
 	std::ostringstream oss;
-	oss << "账户初始资金: " << (BigNumber(m_initialFund).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
+	oss << "账户初始资金: " << (BigNumber(m_initialFund) / 100.0).toPrec(2).toString() << "元";
 	records.push_back(oss.str());
 
 	oss.str("");
-	oss << "当前可用资金: " << (BigNumber(m_availableFund).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
+	oss << "当前可用资金: " << (BigNumber(m_availableFund) / 100.0).toPrec(2).toString() << "元";
 	records.push_back(oss.str());
 
 	records.push_back("");
@@ -228,7 +228,7 @@ std::vector<std::string> Fund::exportTradeRecords() const
 			oss << trade.m_buyTrade.m_shares << "股 @ " << (trade.m_buyTrade.m_price / 100.0) << "元";
 			oss << "，手续费: " << (trade.m_buyTrade.m_fee / 100.0) << "元";
 			oss << "，总成本: " << (BigNumber(trade.m_buyTrade.m_shares * trade.m_buyTrade.m_price +
-				trade.m_buyTrade.m_fee).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
+				trade.m_buyTrade.m_fee) / 100.0).toPrec(2).toString() << "元";
 			records.push_back(oss.str());
 
 			// 输出做T操作
@@ -319,12 +319,12 @@ std::vector<std::string> Fund::exportTradeRecords() const
 				oss << trade.m_sellTrade.m_shares << "股 @ " << (trade.m_sellTrade.m_price / 100.0) << "元";
 				oss << "，手续费: " << (trade.m_sellTrade.m_fee / 100.0) << "元";
 				oss << "，总收入: " << (BigNumber(trade.m_sellTrade.m_shares * trade.m_sellTrade.m_price -
-					trade.m_sellTrade.m_fee).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
+					trade.m_sellTrade.m_fee) / 100.0).toPrec(2).toString() << "元";
 				records.push_back(oss.str());
 
 				oss.str("");
 				oss << "  交易总收益: " <<
-					(BigNumber(trade.tradeProfit()).toPrec(2).setDivParam(2) / 100.0).toString() << "元";
+					(BigNumber(trade.tradeProfit()) / 100.0).toPrec(2).toString() << "元";
 				records.push_back(oss.str());
 			}
 			else

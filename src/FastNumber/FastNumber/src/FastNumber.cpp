@@ -183,6 +183,16 @@ FastNumber FastNumber::pow(const FastNumber& num)
 	return ::pow(atof(toString().c_str()), atof(num.toString().c_str()));
 }
 
+FastNumber FastNumber::sqrt(int32_t prec, PrecFlag flag)
+{
+	FastNumber result = std::pow(this->toDouble(flag), 0.5);
+	result.setPrec(prec, flag);
+#ifdef _DEBUG
+	m_num = toString();
+#endif
+	return result;
+}
+
 FastNumber FastNumber::operator ++ (int)
 {
 	FastNumber result = *this;
@@ -224,6 +234,21 @@ std::string FastNumber::toString() const
 	}
 	result.insert(result.size() - m_prec, 1, '.');
 	return result;
+}
+
+int32_t FastNumber::toInt(PrecFlag flag) const
+{
+	FastNumber result = *this;
+	result.setPrec(0, flag);
+	return atoi(result.toString().c_str());
+}
+
+double FastNumber::toDouble(PrecFlag flag) const
+{
+	FastNumber result = *this;
+	result.setPrec(16, flag);
+	char* end = nullptr;
+	return strtod(result.toString().c_str(), &end);
 }
 
 FastNumber FastNumber::zero() const

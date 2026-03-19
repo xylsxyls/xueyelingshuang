@@ -64,7 +64,7 @@ bool WaveStrategy::fillCheckParam()
 	m_bObserveTime = (ObserveTime)m_strategyParam[5]; // 观察价B时间点
 	m_holdCent = m_strategyParam[6]; // 观察价B-A大于等于多少时当天直买，第二天早上不卖
 	m_giveUpCent = m_strategyParam[7]; // 观察价B-A小于等于多少时，当天不买，如果当前持有则当天下午卖出，如果已经买入则第二天早晨卖出
-	m_chaseCent = m_strategyParam[8]; // 当天早上卖出后反追差价
+	m_chaseCent = m_strategyParam[8]; // 反追差价
 	m_cutCent = m_strategyParam[9]; // 割肉差价
 	m_isNormal = (m_strategyParam[10] == 1); // 是否为常规走势
 	m_tradeCount.resize(4);
@@ -81,7 +81,8 @@ bool WaveStrategy::fillCheckParam()
 		(int32_t)m_hangBuyObserveTime <= ((int32_t)m_directSellObserveTime + 1) ||
 		m_bObserveTime <= m_aObserveTime ||
 		(int32_t)m_bObserveTime > (int32_t)m_hangBuyObserveTime ||
-		m_giveUpCent >= m_holdCent)
+		m_giveUpCent >= m_holdCent ||
+		m_chaseCent != m_cutCent)
 	{
 		return false;
 	}
@@ -781,6 +782,10 @@ ObserveTime WaveStrategy::checkBuy(const std::string& stock, const std::vector<i
 
 void WaveStrategy::updateSellParam(int32_t price, ObserveTime time, bool isRealTrade)
 {
+	//if (!isRealTrade)
+	//{
+	//	return;
+	//}
 	if (m_isUpdateSellParam)
 	{
 		return;
@@ -798,6 +803,7 @@ void WaveStrategy::updateSellParam(int32_t price, ObserveTime time, bool isRealT
 		if (price <= cutPrice())
 		{
 			++m_tradeCount[3];
+			//m_import.m_virtualSellPrice += 1;
 		}
 		else
 		{
@@ -824,6 +830,10 @@ void WaveStrategy::updateSellParam(int32_t price, ObserveTime time, bool isRealT
 
 void WaveStrategy::updateBuyParam(int32_t price, ObserveTime time, bool isRealTrade)
 {
+	//if (!isRealTrade)
+	//{
+	//	return;
+	//}
 	if (m_isUpdateBuyParam)
 	{
 		return;
@@ -842,6 +852,7 @@ void WaveStrategy::updateBuyParam(int32_t price, ObserveTime time, bool isRealTr
 		if (price >= chasePrice())
 		{
 			++m_tradeCount[2];
+			//m_import.m_virtualBuyPrice -= 1;
 		}
 		else
 		{

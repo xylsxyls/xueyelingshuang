@@ -456,8 +456,8 @@ void Quant::onProfitClicked()
 	g_config.m_completeTaskCount = 0;
 	g_config.m_ignoreTaskCount = 0;
 
-	int32_t profitBeginTime = 20250321;
-	int32_t profitEndTime = 20250821;
+	int32_t profitBeginTime = 20250307;
+	int32_t profitEndTime = 20250321;
 	std::string stock = "600975";
 
 	std::vector<std::vector<int32_t>> result =
@@ -548,16 +548,17 @@ void Quant::onProfitClicked()
 		std::vector<std::vector<int32_t>> params =
 		{
 			//10:00, 11:20, 14:00, 14:10, 10:50, 14:00, 0, -2, 7, 7, 1
-			{ (int32_t)ObserveTime::TIME1040 },
+			//11:00, 11:00, 14:10, 14:40, 11:20, 13:40, 0, -2, 12, 12, 1
 			{ (int32_t)ObserveTime::TIME1100 },
-			{ (int32_t)ObserveTime::TIME1350 },
-			{ (int32_t)ObserveTime::TIME1400 },
 			{ (int32_t)ObserveTime::TIME1100 },
-			{ (int32_t)ObserveTime::TIME1350 },
+			{ (int32_t)ObserveTime::TIME1410 },
+			{ (int32_t)ObserveTime::TIME1440 },
+			{ (int32_t)ObserveTime::TIME1120 },
+			{ (int32_t)ObserveTime::TIME1340 },
 			{ 0 },
 			{ -2 },
-			{ 7 },
-			{ 7 },
+			{ 12 },
+			{ 12 },
 			{ 1 }
 		};
 		config.allParam = Util::combinatoricsToAllParam(params);
@@ -734,14 +735,14 @@ void Quant::onCollectClicked()
 {
 	showMinimized();
 	std::shared_ptr<CollectTask> spCollectTask(new CollectTask);
-	spCollectTask->setParam(10);
+	spCollectTask->setParam(250);
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCollectTask);
 }
 
 void Quant::onVerifyClicked()
 {
-	int32_t profitBeginTime = 20250321;
-	int32_t profitEndTime = 20250407;
+	int32_t profitBeginTime = 20250221;
+	int32_t profitEndTime = 20250307;
 	std::string stock = "600975";
 
 	// 创建市场数据
@@ -772,21 +773,21 @@ void Quant::onVerifyClicked()
 			//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
 			(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
 			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
-			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100//, (int32_t)ObserveTime::TIME1110,
+			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
 			//(int32_t)ObserveTime::TIME1120,
 		},
 		{
 			//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
-			//(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+			(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
 			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
 			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
-			(int32_t)ObserveTime::TIME1120,
+			//(int32_t)ObserveTime::TIME1120,
 		},
 		{
 			//(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
 			(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
 			(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
-			//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
+			(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
 			//(int32_t)ObserveTime::TIME1450,
 		},
 		{
@@ -798,22 +799,22 @@ void Quant::onVerifyClicked()
 		},
 		{
 			//(int32_t)ObserveTime::TIME0940, (int32_t)ObserveTime::TIME0950,
-			//(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
+			(int32_t)ObserveTime::TIME1000, (int32_t)ObserveTime::TIME1010,
 			(int32_t)ObserveTime::TIME1020, (int32_t)ObserveTime::TIME1030, (int32_t)ObserveTime::TIME1040,
 			(int32_t)ObserveTime::TIME1050, (int32_t)ObserveTime::TIME1100, (int32_t)ObserveTime::TIME1110,
 			(int32_t)ObserveTime::TIME1120,
 		},
 		{
-			//(int32_t)ObserveTime::TIME1310,
-			(int32_t)ObserveTime::TIME1320, (int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
+			(int32_t)ObserveTime::TIME1310, (int32_t)ObserveTime::TIME1320,
+			(int32_t)ObserveTime::TIME1330, (int32_t)ObserveTime::TIME1340,
 			(int32_t)ObserveTime::TIME1350, (int32_t)ObserveTime::TIME1400, (int32_t)ObserveTime::TIME1410,
 			//(int32_t)ObserveTime::TIME1420, (int32_t)ObserveTime::TIME1430, (int32_t)ObserveTime::TIME1440,
 			//(int32_t)ObserveTime::TIME1450,
 		},
 		{ 0 },
 		{ -2 },
-		{ 7, 8 },
-		{ 7, 8, 100 },
+		{ 12 },
+		{ 12 },
 		{ 0, 1 }
 	};
 	config.allParam = Util::combinatoricsToAllParam(params);
@@ -834,8 +835,9 @@ void Quant::onHistoryFutureSignal()
 
 void Quant::onRunClicked()
 {
-	int32_t profitBeginTime = 20250321;
-	int32_t profitEndTime = 20250821;
+	int32_t profitBeginTime = 20240801;
+	//int32_t profitEndTime = 20250307;
+	int32_t profitEndTime = 20260226;
 	std::vector<std::string> stocks = { "600975" };
 	RunManager::instance().simulateRun(profitBeginTime, profitEndTime, stocks, g_config.m_initialFund);
 }

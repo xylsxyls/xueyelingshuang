@@ -17,27 +17,15 @@ VerifyManager& VerifyManager::instance()
 }
 
 std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> VerifyManager::verifyHistory(
-	uint32_t beginTime, uint32_t endTime, uint32_t times,
-	StrategyMode mode, const CompetitionConfig& originalConfig)
+	StrategyMode mode, uint32_t times, const CompetitionConfig& originalConfig)
 {
 	RCSend("开始策略竞赛...");
 	g_config.m_completeTaskCount = 0;
 	g_config.m_ignoreTaskCount = 0;
 
 	CompetitionConfig config = originalConfig;
-
-	int32_t profitBeginTime = beginTime;
-	int32_t profitEndTime = endTime;
-	std::string stock = "600975";
-
-	// 创建市场数据
-	auto marketData = std::make_shared<Market>();
-	marketData->init(profitBeginTime, profitEndTime);
-	marketData->addStock(stock);
-
 	CompetitionManager::instance().addCompetition(mode, config);
-
-	CompetitionManager::instance().setParam(true, false);
+	CompetitionManager::instance().setParam(false, false);
 
 	// 开始竞赛
 	if (!CompetitionManager::instance().startCompetition())
@@ -66,11 +54,9 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 		}
 	}
 
-	config.beginTime = beginTime;
-	config.endTime = endTime;
 	for (uint32_t timesIndex = 0; timesIndex < times; ++timesIndex)
 	{
-		int32_t historyBeginTime = Util::calcHistoryBeginTime(config.beginTime, config.endTime);
+		uint32_t historyBeginTime = Util::calcHistoryBeginTime(config.beginTime, config.endTime);
 		config.endTime = config.beginTime;
 		config.beginTime = historyBeginTime;
 		for (auto itParam = paramMap.begin(); itParam != paramMap.end(); ++itParam)
@@ -98,26 +84,14 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 }
 
 std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> VerifyManager::verifyFuture(
-	uint32_t beginTime, uint32_t endTime, uint32_t times,
-	StrategyMode mode, const CompetitionConfig& originalConfig)
+	StrategyMode mode, uint32_t times, const CompetitionConfig& originalConfig)
 {
 	RCSend("开始策略竞赛...");
 	g_config.m_completeTaskCount = 0;
 	g_config.m_ignoreTaskCount = 0;
 
 	CompetitionConfig config = originalConfig;
-
-	int32_t profitBeginTime = beginTime;
-	int32_t profitEndTime = endTime;
-	std::string stock = "600975";
-
-	// 创建市场数据
-	auto marketData = std::make_shared<Market>();
-	marketData->init(profitBeginTime, profitEndTime);
-	marketData->addStock(stock);
-
 	CompetitionManager::instance().addCompetition(mode, config);
-
 	CompetitionManager::instance().setParam(true, false);
 
 	// 开始竞赛
@@ -147,8 +121,6 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 		}
 	}
 
-	config.beginTime = beginTime;
-	config.endTime = endTime;
 	for (uint32_t timesIndex = 0; timesIndex < times; ++timesIndex)
 	{
 		int32_t futureEndTime = Util::calcFutureEndTime(config.beginTime, config.endTime);
@@ -180,26 +152,16 @@ std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> Ver
 
 std::pair<std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>>,
 	std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>>> VerifyManager::verifyHistoryFuture(
-	uint32_t beginTime, uint32_t endTime, uint32_t historyTimes, uint32_t futureTimes,
-	StrategyMode mode, const CompetitionConfig& originalConfig)
+	StrategyMode mode, uint32_t historyTimes, uint32_t futureTimes, const CompetitionConfig& originalConfig)
 {
 	RCSend("开始策略竞赛...");
 	g_config.m_completeTaskCount = 0;
 	g_config.m_ignoreTaskCount = 0;
 
 	CompetitionConfig config = originalConfig;
-
-	int32_t profitBeginTime = beginTime;
-	int32_t profitEndTime = endTime;
-	std::string stock = "600975";
-
-	// 创建市场数据
-	auto marketData = std::make_shared<Market>();
-	marketData->init(profitBeginTime, profitEndTime);
-	marketData->addStock(stock);
-
+	int32_t profitBeginTime = config.beginTime;
+	int32_t profitEndTime = config.endTime;
 	CompetitionManager::instance().addCompetition(mode, config);
-
 	CompetitionManager::instance().setParam(false, false);
 
 	std::pair<std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>>,
@@ -232,8 +194,6 @@ std::pair<std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResu
 		}
 	}
 
-	config.beginTime = beginTime;
-	config.endTime = endTime;
 	for (uint32_t timesIndex = 0; timesIndex < historyTimes; ++timesIndex)
 	{
 		g_config.m_completeTaskCount = 0;
@@ -262,8 +222,8 @@ std::pair<std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResu
 		RCSend("第%u轮历史验证结束，合并map完成", timesIndex + 1);
 	}
 
-	config.beginTime = beginTime;
-	config.endTime = endTime;
+	config.beginTime = profitBeginTime;
+	config.endTime = profitEndTime;
 	for (uint32_t timesIndex = 0; timesIndex < futureTimes; ++timesIndex)
 	{
 		g_config.m_completeTaskCount = 0;
@@ -334,8 +294,8 @@ void VerifyManager::printDetectMap(
 						RCSend("第%u名, %s, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
 							rank,
 							modeName.c_str(),
-							(BigNumber(result->m_tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-							(BigNumber(result->m_totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+							(BigNumber(result->m_tReturn) / 100.0).toPrec(2).toString().c_str(),
+							(BigNumber(result->m_totalReturn) / 100.0).toPrec(2).toString().c_str(),
 							(result->m_annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
 							(result->m_annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
 						RCSend("第%u名, param = %s", rank, describe.c_str());
@@ -353,8 +313,8 @@ void VerifyManager::printDetectMap(
 					{
 						RCSend("第%d次验证, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
 							(int32_t)timeIndex,
-							(BigNumber(result->m_tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-							(BigNumber(result->m_totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+							(BigNumber(result->m_tReturn) / 100.0).toPrec(2).toString().c_str(),
+							(BigNumber(result->m_totalReturn) / 100.0).toPrec(2).toString().c_str(),
 							(result->m_annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
 							(result->m_annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
 					}
@@ -375,8 +335,8 @@ void VerifyManager::printDetectMap(
 			{
 				std::vector<std::pair<BigNumber, uint32_t>>& vecRankAvgT = vecAllTReturn[rankIndex];
 				std::vector<std::pair<BigNumber, uint32_t>>& vecRankAvg = vecAllReturn[rankIndex];
-				BigNumber avgTReturn = vecRankAvgT[timeIndex].first.setDivParam() / (int)vecRankAvgT[timeIndex].second;
-				BigNumber avgReturn = vecRankAvg[timeIndex].first.setDivParam() / (int)vecRankAvg[timeIndex].second;
+				BigNumber avgTReturn = vecRankAvgT[timeIndex].first / (double)vecRankAvgT[timeIndex].second;
+				BigNumber avgReturn = vecRankAvg[timeIndex].first / (double)vecRankAvg[timeIndex].second;
 				RCSend("第%d名-第%d名，avgTAnnual = %s%%, avgAnnual = %s%%",
 					(int32_t)(rankIndex * avgSize + 1),
 					(std::min)((int32_t)((rankIndex + 1) * avgSize), (int32_t)avgAnnualTReturnMap.size()),
@@ -397,7 +357,7 @@ std::vector<std::vector<std::pair<BigNumber, uint32_t>>> VerifyManager::calcAvgM
 	const std::map<uint32_t, std::vector<std::pair<BigNumber, uint32_t>>>& avgAnnualReturnMap)
 {
 	std::vector<std::vector<std::pair<BigNumber, uint32_t>>> vecAllReturn;
-	std::vector<std::pair<BigNumber, uint32_t>> vecTReturn;
+	std::vector<std::pair<BigNumber, uint32_t>> vecReturn;
 	uint32_t timeSize = 0;
 	uint32_t avgSize = (uint32_t)avgAnnualReturnMap.size() / g_config.m_avgCount;
 	uint32_t currentSize = 0;
@@ -405,29 +365,29 @@ std::vector<std::vector<std::pair<BigNumber, uint32_t>>> VerifyManager::calcAvgM
 	{
 		++currentSize;
 		uint32_t currentIndex = currentSize / avgSize;
-		const std::vector<std::pair<BigNumber, uint32_t>>& vecAvgAnnualTReturn = it->second;
+		const std::vector<std::pair<BigNumber, uint32_t>>& vecAvgAnnualReturn = it->second;
 		if (currentSize == 1)
 		{
-			vecTReturn.resize(vecAvgAnnualTReturn.size());
-			timeSize = (uint32_t)vecAvgAnnualTReturn.size();
+			vecReturn.resize(vecAvgAnnualReturn.size());
+			timeSize = (uint32_t)vecAvgAnnualReturn.size();
 		}
 
-		for (size_t timeIndex = 0; timeIndex < vecAvgAnnualTReturn.size(); ++timeIndex)
+		for (size_t timeIndex = 0; timeIndex < vecAvgAnnualReturn.size(); ++timeIndex)
 		{
-			vecTReturn[timeIndex].first = vecTReturn[timeIndex].first + vecAvgAnnualTReturn[timeIndex].first;
-			vecTReturn[timeIndex].second = vecTReturn[timeIndex].second + vecAvgAnnualTReturn[timeIndex].second;
+			vecReturn[timeIndex].first = vecReturn[timeIndex].first + vecAvgAnnualReturn[timeIndex].first;
+			vecReturn[timeIndex].second = vecReturn[timeIndex].second + vecAvgAnnualReturn[timeIndex].second;
 		}
 		if (currentSize == avgSize)
 		{
-			vecAllReturn.push_back(vecTReturn);
-			vecTReturn.clear();
+			vecAllReturn.push_back(vecReturn);
+			vecReturn.clear();
 			currentSize = 0;
 		}
 	}
-	if (!vecTReturn.empty())
+	if (!vecReturn.empty())
 	{
-		vecAllReturn.push_back(vecTReturn);
-		vecTReturn.clear();
+		vecAllReturn.push_back(vecReturn);
+		vecReturn.clear();
 		currentSize = 0;
 	}
 

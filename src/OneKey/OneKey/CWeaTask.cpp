@@ -15,7 +15,7 @@ void CWeaTask::DoTask()
 	std::string path = CSystem::GetCurrentExePath();
 	if (m_vkCode == 'W')
 	{
-		while (!m_exit && ScreenScript::FindPic(path + "res\\yellow.png", xyls::Rect(788, 938, 860, 1010)).center().empty())
+		while (!m_exit && ScreenScript::FindPic(path + "res\\yellow.png", xyls::Rect(800, 950, 850, 1000)).center().empty())
 		{
 			continue;
 		}
@@ -28,7 +28,7 @@ void CWeaTask::DoTask()
 	else if (m_vkCode == 'E')
 	{
 		CKeyboard::InputString("w", 0);
-		while (!m_exit && ScreenScript::FindPic(path + "res\\blue.png", xyls::Rect(788, 938, 860, 1010)).center().empty())
+		while (!m_exit && ScreenScript::FindPic(path + "res\\blue.png", xyls::Rect(800, 950, 850, 1000)).center().empty())
 		{
 			continue;
 		}
@@ -41,7 +41,7 @@ void CWeaTask::DoTask()
 	else if (m_vkCode == 'A')
 	{
 		CKeyboard::InputString("w", 0);
-		while (!m_exit && ScreenScript::FindPic(path + "res\\red.png", xyls::Rect(788, 938, 860, 1010)).center().empty())
+		while (!m_exit && ScreenScript::FindPic(path + "res\\red.png", xyls::Rect(800, 950, 850, 1000)).center().empty())
 		{
 			continue;
 		}
@@ -54,7 +54,7 @@ void CWeaTask::DoTask()
 	else if (m_vkCode == 'R')
 	{
 		CKeyboard::InputString("w", 0);
-		while (!m_exit && ScreenScript::FindPic(path + "res\\yellow.png", xyls::Rect(788, 938, 860, 1010)).center().empty())
+		while (!m_exit && ScreenScript::FindPic(path + "res\\yellow.png", xyls::Rect(800, 950, 850, 1000)).center().empty())
 		{
 			continue;
 		}

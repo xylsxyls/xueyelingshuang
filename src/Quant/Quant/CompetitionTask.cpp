@@ -113,6 +113,8 @@ void CompetitionTask::DoTask()
 		(int32_t)g_config.m_time.GetWatchTime() / 1000.0 / 60.0,
 		(uint32_t)(g_config.m_completeTaskCount + g_config.m_ignoreTaskCount),
 		(uint32_t)g_config.m_completeTaskCount);
+	g_config.m_completeTaskCount = 0;
+	g_config.m_ignoreTaskCount = 0;
 
 	if (m_isShowTradeLog && m_resultMap.size() == 1)
 	{
@@ -253,8 +255,8 @@ void CompetitionTask::printResultMap(uint32_t showCount)
 			RCSend("第%u名, %s, tProfit = %s元, trade = %s元, tAnnual = %s%%, annual = %s%%",
 				rank,
 				modeName.c_str(),
-				(BigNumber(result->m_tReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
-				(BigNumber(result->m_totalReturn).toPrec(2).setDivParam(2) / 100.0).toString().c_str(),
+				(BigNumber(result->m_tReturn) / 100.0).toPrec(2).toString().c_str(),
+				(BigNumber(result->m_totalReturn) / 100.0).toPrec(2).toString().c_str(),
 				(result->m_annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
 				(result->m_annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
 			RCSend("第%u名, param = %s", rank, describe.c_str());

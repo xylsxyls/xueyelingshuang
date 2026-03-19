@@ -15,7 +15,7 @@ void VerifyTask::DoTask()
 {
 	if (m_historyTimes != -1 && m_futureTimes == -1)
 	{
-		auto detectMap = VerifyManager::instance().verifyHistory(m_beginTime, m_endTime, m_historyTimes, m_mode, m_config);
+		auto detectMap = VerifyManager::instance().verifyHistory(m_mode, m_historyTimes, m_config);
 		if (m_showRank || m_showAvg)
 		{
 			VerifyManager::instance().printDetectMap(detectMap, m_showRank, m_showAvg);
@@ -23,7 +23,7 @@ void VerifyTask::DoTask()
 	}
 	else if (m_historyTimes == -1 && m_futureTimes != -1)
 	{
-		auto detectMap = VerifyManager::instance().verifyFuture(m_beginTime, m_endTime, m_futureTimes, m_mode, m_config);
+		auto detectMap = VerifyManager::instance().verifyFuture(m_mode, m_futureTimes, m_config);
 		if (m_showRank || m_showAvg)
 		{
 			VerifyManager::instance().printDetectMap(detectMap, m_showRank, m_showAvg);
@@ -31,8 +31,7 @@ void VerifyTask::DoTask()
 	}
 	else if (m_historyTimes != -1 && m_futureTimes != -1)
 	{
-		auto detectMap = VerifyManager::instance().verifyHistoryFuture(m_beginTime, m_endTime,
-			m_historyTimes, m_futureTimes, m_mode, m_config);
+		auto detectMap = VerifyManager::instance().verifyHistoryFuture(m_mode, m_historyTimes, m_futureTimes, m_config);
 		if (m_showRank || m_showAvg)
 		{
 			RCSend("开始打印历史验证");
