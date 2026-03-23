@@ -1472,10 +1472,12 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
 	{
 		//转为本地时间
 		tm* local = localtime(&timet);
+#ifdef __unix__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-truncation"
 #pragma GCC diagnostic ignored "-Wformat-overflow"
-		snprintf(buf, 20,
+#endif
+		sprintf(buf,
 			"%04d-%02d-%02d %02d:%02d:%02d",
 			(uint16_t)(local->tm_year + 1900),
 			(uint8_t)(local->tm_mon + 1),
@@ -1484,8 +1486,10 @@ std::string CSystem::timetToStr(time_t timet, bool isLocal)
 			(uint8_t)local->tm_min,
 			(uint8_t)local->tm_sec
 		);
+#ifdef __unix__
 // 恢复警告
 #pragma GCC diagnostic pop
+#endif
 	}
 	else
 	{
