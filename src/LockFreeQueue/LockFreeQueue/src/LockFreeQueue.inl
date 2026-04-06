@@ -26,16 +26,10 @@ LockFreeQueue<QueueElmentType>::~LockFreeQueue()
 }
 
 template<class QueueElmentType>
-bool LockFreeQueue<QueueElmentType>::init()
+void LockFreeQueue<QueueElmentType>::init()
 {
 	m_front = m_rear = new QueueNode<QueueElmentType>;
-	if (m_front == nullptr)
-	{
-		return false;
-	}
-
 	m_front->m_next = nullptr;
-	return true;
 }
 
 template<class QueueElmentType>
@@ -54,10 +48,6 @@ template<class QueueElmentType>
 bool LockFreeQueue<QueueElmentType>::push(const QueueElmentType& e)
 {
 	struct QueueNode<QueueElmentType>* p = new QueueNode<QueueElmentType>;
-	if (p == nullptr)
-	{
-		return false;
-	}
 	while (true)
 	{
 #if defined _WIN64 || defined __x86_64__
@@ -67,8 +57,8 @@ bool LockFreeQueue<QueueElmentType>::push(const QueueElmentType& e)
 #endif
 		{
 			m_rear->m_data = e;
-			m_rear = p;
 			++m_count;
+			m_rear = p;
 			break;
 		}
 	}

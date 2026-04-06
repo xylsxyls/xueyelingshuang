@@ -19,7 +19,7 @@ public:
 	~LockFreeQueue();
 
 public:
-	bool init();
+	void init();
 	void destroy();
 	bool push(const QueueElmentType& e);
 	bool pop(QueueElmentType* e);
