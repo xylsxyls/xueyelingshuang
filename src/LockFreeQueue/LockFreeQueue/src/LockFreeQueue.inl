@@ -33,6 +33,18 @@ void LockFreeQueue<QueueElmentType>::init()
 }
 
 template<class QueueElmentType>
+void LockFreeQueue<QueueElmentType>::clear()
+{
+	while (m_front != m_rear)
+	{
+		struct QueueNode<QueueElmentType>* tmp = m_front->m_next;
+		delete m_front;
+		m_front = tmp;
+		--m_count;
+	}
+}
+
+template<class QueueElmentType>
 void LockFreeQueue<QueueElmentType>::destroy()
 {
 	while (m_front != nullptr)
@@ -87,7 +99,6 @@ bool LockFreeQueue<QueueElmentType>::pop(QueueElmentType* e)
 			break;
 		}
 	}
-	
 	return true;
 }
 

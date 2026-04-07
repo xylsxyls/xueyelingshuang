@@ -20,6 +20,7 @@ public:
 
 public:
 	void init();
+	void clear();
 	void destroy();
 	bool push(const QueueElmentType& e);
 	bool pop(QueueElmentType* e);
