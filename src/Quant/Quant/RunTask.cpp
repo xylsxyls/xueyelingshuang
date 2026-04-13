@@ -36,7 +36,7 @@ void RunTask::DoTask()
 	{
 		std::pair<StrategyMode, std::vector<int32_t>> best = ScoreManager::instance().bestStrategy(currentTime);
 
-		uint32_t endTime = Util::calcFutureTime(currentTime, g_config.m_runDayCount);
+		uint32_t endTime = Util::calcFutureTime(currentTime, g_config.m_runDayCount / 2);
 		if (endTime > m_endTime)
 		{
 			endTime = m_endTime;

@@ -38,6 +38,7 @@
 #include "VerifyManager.h"
 #include "StrategyPlotWidget.h"
 #include "RunManager.h"
+#include "DialogManager/InputDialog.h"
 
 Quant::Quant(QWidget* parent):
 	QMainWindow(parent),
@@ -458,7 +459,7 @@ void Quant::onProfitClicked()
 
 	int32_t profitBeginTime = 20250307;
 	int32_t profitEndTime = 20250321;
-	std::string stock = "600975";
+	std::string stock = g_config.m_stock;
 
 	std::vector<std::vector<int32_t>> result =
 		Util::getAllStockData(stock, g_config.m_allBeginTime, g_config.m_allEndTime);
@@ -648,7 +649,7 @@ void Quant::onDisplayResultClicked()
 
 void Quant::onAnalyzeClicked()
 {
-	std::vector<std::string> vecStock = { "600975" };
+	std::vector<std::string> vecStock = g_config.m_allStock;
 	for (size_t stockIndex = 0; stockIndex < vecStock.size(); ++stockIndex)
 	{
 		std::vector<uint32_t> vecThreadIds;
@@ -733,9 +734,12 @@ void Quant::onAnalyzeClicked()
 
 void Quant::onCollectClicked()
 {
+	InputDialogParam input;
+	input.m_editTip = QStringLiteral("请输入循环次数");
+	DialogManager::instance().makeDialog(input);
 	showMinimized();
 	std::shared_ptr<CollectTask> spCollectTask(new CollectTask);
-	spCollectTask->setParam(250);
+	spCollectTask->setParam(std::atoi(input.m_editText.toStdString().c_str()));
 	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCollectTask);
 }
 
@@ -743,7 +747,7 @@ void Quant::onVerifyClicked()
 {
 	int32_t profitBeginTime = 20250221;
 	int32_t profitEndTime = 20250307;
-	std::string stock = "600975";
+	std::string stock = g_config.m_stock;
 
 	// 创建市场数据
 	auto marketData = std::make_shared<Market>();
@@ -835,10 +839,13 @@ void Quant::onHistoryFutureSignal()
 
 void Quant::onRunClicked()
 {
-	int32_t profitBeginTime = 20240801;
+	int32_t profitBeginTime = 20241018;
 	//int32_t profitEndTime = 20250307;
-	int32_t profitEndTime = 20260226;
-	std::vector<std::string> stocks = { "600975" };
+	int32_t profitEndTime = 20260320;
+	//int32_t profitBeginTime = 20240801;
+	////int32_t profitEndTime = 20250307;
+	//int32_t profitEndTime = 20260226;
+	std::vector<std::string> stocks = { g_config.m_stock };
 	RunManager::instance().simulateRun(profitBeginTime, profitEndTime, stocks, g_config.m_initialFund);
 }
 

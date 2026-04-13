@@ -560,7 +560,7 @@ int32_t Util::getTotalFieldCount()
 
 uint32_t Util::calcFutureEndTime(uint32_t beginTime, uint32_t endTime)
 {
-	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	Cini ini(g_config.m_currentExePath + g_config.m_stock + ".ini", true);
 	std::vector<std::string> allSection = ini.getAllSection();
 	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
 	if (tradingDays.empty())
@@ -585,7 +585,7 @@ uint32_t Util::calcFutureEndTime(uint32_t beginTime, uint32_t endTime)
 
 uint32_t Util::calcHistoryBeginTime(uint32_t beginTime, uint32_t endTime)
 {
-	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	Cini ini(g_config.m_currentExePath + g_config.m_stock + ".ini", true);
 	std::vector<std::string> allSection = ini.getAllSection();
 	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
 	if (tradingDays.empty())
@@ -610,7 +610,7 @@ uint32_t Util::calcHistoryBeginTime(uint32_t beginTime, uint32_t endTime)
 
 uint32_t Util::calcFutureTime(uint32_t time, uint32_t dayCount)
 {
-	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	Cini ini(g_config.m_currentExePath + g_config.m_stock + ".ini", true);
 	std::vector<std::string> allSection = ini.getAllSection();
 	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
 	if (tradingDays.empty())
@@ -635,7 +635,7 @@ uint32_t Util::calcFutureTime(uint32_t time, uint32_t dayCount)
 
 uint32_t Util::calcHistoryTime(uint32_t time, uint32_t dayCount)
 {
-	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	Cini ini(g_config.m_currentExePath + g_config.m_stock + ".ini", true);
 	std::vector<std::string> allSection = ini.getAllSection();
 	std::vector<int32_t> tradingDays = Util::groupToInt(allSection, 4);
 	if (tradingDays.empty())

@@ -1,19 +1,40 @@
 ﻿#ifndef _LOCK_FREE_QUEUE_H__
 #define _LOCK_FREE_QUEUE_H__
 #include "LockFreeQueue.h"
-#include "AtomicMath/AtomicMathAPI.h"
 
+// ==================== QueueNode 实现 ====================
 template<class QueueElmentType>
-QueueNode<QueueElmentType>::QueueNode():
+QueueNode<QueueElmentType>::QueueNode() :
 m_next(nullptr)
 {
 
 }
 
+// ==================== VersionPtr 实现 ====================
 template<class QueueElmentType>
-LockFreeQueue<QueueElmentType>::LockFreeQueue():
-m_front(nullptr),
-m_rear(nullptr),
+VersionPtr<QueueElmentType>::VersionPtr() :
+m_ptr(nullptr),
+m_version(0)
+{
+
+}
+
+template<class QueueElmentType>
+bool VersionPtr<QueueElmentType>::operator==(const VersionPtr& o) const
+{
+	return m_ptr == o.m_ptr && m_version == o.m_version;
+}
+
+template<class QueueElmentType>
+bool VersionPtr<QueueElmentType>::operator!=(const VersionPtr& o) const
+{
+	return !(*this == o);
+}
+
+// ==================== LockFreeQueue 实现 ====================
+template<class QueueElmentType>
+LockFreeQueue<QueueElmentType>::LockFreeQueue() :
+m_tag(0),
 m_count(0)
 {
 	init();
@@ -23,58 +44,102 @@ template<class QueueElmentType>
 LockFreeQueue<QueueElmentType>::~LockFreeQueue()
 {
 	destroy();
+	// 清理待删除列表中的节点
+	for (auto node : m_retired)
+	{
+		delete node;
+	}
 }
 
 template<class QueueElmentType>
 void LockFreeQueue<QueueElmentType>::init()
 {
-	m_front = m_rear = new QueueNode<QueueElmentType>;
-	m_front->m_next = nullptr;
-}
+	// 该函数假设调用时无并发（构造函数或 clear_unsafe 后调用）
+	auto dummy = new QueueNode < QueueElmentType > ;
+	dummy->m_next.store(nullptr, std::memory_order_seq_cst);
 
-template<class QueueElmentType>
-void LockFreeQueue<QueueElmentType>::clear()
-{
-	while (m_front != m_rear)
-	{
-		struct QueueNode<QueueElmentType>* tmp = m_front->m_next;
-		delete m_front;
-		m_front = tmp;
-		--m_count;
-	}
+	VersionPtr<QueueElmentType> vp;
+	vp.m_ptr = dummy;
+	vp.m_version = 1;
+	m_front.store(vp, std::memory_order_seq_cst);
+	m_rear.store(vp, std::memory_order_seq_cst);
+	m_tag.store(0, std::memory_order_seq_cst);
+	m_count.store(0, std::memory_order_seq_cst);
 }
 
 template<class QueueElmentType>
 void LockFreeQueue<QueueElmentType>::destroy()
 {
-	while (m_front != nullptr)
+	// 非线程安全，仅应在无并发时调用
+	clear_unsafe();
+	// 清理待删除列表（实际上 clear_unsafe 已处理所有节点，此处仅为防御）
+	for (auto node : m_retired)
 	{
-		m_rear = m_front->m_next;
-		delete m_front;
-		m_front = m_rear;
+		delete node;
 	}
-	m_count = 0;
+	m_retired.clear();
 }
 
 template<class QueueElmentType>
-bool LockFreeQueue<QueueElmentType>::push(const QueueElmentType& e)
+void LockFreeQueue<QueueElmentType>::retire_node(QueueNode<QueueElmentType>* node)
 {
-	struct QueueNode<QueueElmentType>* p = new QueueNode<QueueElmentType>;
+	// 仅由单消费者线程调用，无竞争
+	m_retired.push_back(node);
+}
+
+template<class QueueElmentType>
+void LockFreeQueue<QueueElmentType>::gc()
+{
+	// 仅由单消费者线程调用，释放所有待删除节点
+	for (auto node : m_retired)
+	{
+		delete node;
+	}
+	m_retired.clear();
+}
+
+template<class QueueElmentType>
+void LockFreeQueue<QueueElmentType>::push(const QueueElmentType& e)
+{
+	auto newNode = new QueueNode < QueueElmentType > ;
+	newNode->m_data = e;
+	newNode->m_next.store(nullptr, std::memory_order_seq_cst);
+
 	while (true)
 	{
-#if defined _WIN64 || defined __x86_64__
-		if (AtomicMath::compareAndSwap((int64_t*)&m_rear->m_next, 0, (int64_t)p))
-#else
-		if (AtomicMath::compareAndSwap((int32_t*)&m_rear->m_next, 0, (int32_t)p))
-#endif
+		VersionPtr<QueueElmentType> tail = m_rear.load(std::memory_order_seq_cst);
+		QueueNode<QueueElmentType>* next = tail.m_ptr->m_next.load(std::memory_order_seq_cst);
+
+		if (tail != m_rear.load(std::memory_order_seq_cst))
 		{
-			m_rear->m_data = e;
-			++m_count;
-			m_rear = p;
-			break;
+			continue;
+		}
+
+		if (next == nullptr)
+		{
+			if (tail.m_ptr->m_next.compare_exchange_weak(next, newNode, std::memory_order_seq_cst, std::memory_order_seq_cst))
+			{
+				// 链接成功，尝试推进 rear（即使失败也认为有其他线程会推进）
+				size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
+				VersionPtr<QueueElmentType> newTail;
+				newTail.m_ptr = newNode;
+				newTail.m_version = newVer;
+				m_rear.compare_exchange_weak(tail, newTail, std::memory_order_seq_cst, std::memory_order_seq_cst);
+				m_count.fetch_add(1, std::memory_order_seq_cst);
+				return;
+			}
+		}
+		else
+		{
+			// 协助推进落后的 rear，并持续尝试直到 rear 更新或 next 变化
+			size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
+			VersionPtr<QueueElmentType> newTail;
+			newTail.m_ptr = next;
+			newTail.m_version = newVer;
+			m_rear.compare_exchange_weak(tail, newTail, std::memory_order_seq_cst, std::memory_order_seq_cst);
+			// 不立即 continue，让循环再次检查，以便继续推进或插入
 		}
 	}
-	return true;
 }
 
 template<class QueueElmentType>
@@ -82,36 +147,117 @@ bool LockFreeQueue<QueueElmentType>::pop(QueueElmentType* e)
 {
 	while (true)
 	{
-		if (m_front == m_rear)
+		VersionPtr<QueueElmentType> head = m_front.load(std::memory_order_seq_cst);
+		VersionPtr<QueueElmentType> tail = m_rear.load(std::memory_order_seq_cst);
+		QueueNode<QueueElmentType>* next = head.m_ptr->m_next.load(std::memory_order_seq_cst);
+
+		if (head != m_front.load(std::memory_order_seq_cst))
+			continue;
+
+		if (head.m_ptr == tail.m_ptr)
 		{
-			return false;
+			if (next == nullptr)
+			{
+				// 队列空
+				return false;
+			}
+			// 协助推进 rear，循环直到 rear 更新（防止活锁）
+			while (head.m_ptr == tail.m_ptr && next != nullptr)
+			{
+				size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
+				VersionPtr<QueueElmentType> newTail;
+				newTail.m_ptr = next;
+				newTail.m_version = newVer;
+				if (m_rear.compare_exchange_weak(tail, newTail, std::memory_order_seq_cst, std::memory_order_seq_cst))
+				{
+					// 成功推进，退出内层循环，继续外层 pop 尝试
+					break;
+				}
+				// 重新加载 tail 和 next，以防其他线程已修改
+				tail = m_rear.load(std::memory_order_seq_cst);
+				if (head.m_ptr != tail.m_ptr)
+				{
+					break;
+				}
+				next = tail.m_ptr->m_next.load(std::memory_order_seq_cst);
+			}
+			// 重试 pop
+			continue;
 		}
-		struct QueueNode<QueueElmentType>* p = m_front;
-#if defined _WIN64 || defined __x86_64__
-		if (AtomicMath::compareAndSwap((int64_t*)&m_front, (int64_t)p, (int64_t)m_front->m_next))
-#else
-		if (AtomicMath::compareAndSwap((int32_t*)&m_front, (int32_t)p, (int32_t)m_front->m_next))
-#endif
+		else
 		{
-			*e = p->m_data;
-			delete p;
-			--m_count;
-			break;
+			if (next == nullptr)
+			{
+				continue;
+			}
+
+			size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
+			VersionPtr<QueueElmentType> newHead;
+			newHead.m_ptr = next;
+			newHead.m_version = newVer;
+
+			if (m_front.compare_exchange_weak(head, newHead, std::memory_order_seq_cst, std::memory_order_seq_cst))
+			{
+				*e = next->m_data;
+				m_count.fetch_sub(1, std::memory_order_seq_cst);
+
+				if (head.m_version > 1)
+				{
+					retire_node(head.m_ptr);
+				}
+				if (m_retired.size() >= 100)
+				{
+					gc();
+				}
+				return true;
+			}
 		}
 	}
-	return true;
 }
 
 template<class QueueElmentType>
-bool LockFreeQueue<QueueElmentType>::empty()
+bool LockFreeQueue<QueueElmentType>::empty() const
 {
-	return m_front == m_rear;
+	VersionPtr<QueueElmentType> f = m_front.load(std::memory_order_seq_cst);
+	VersionPtr<QueueElmentType> r = m_rear.load(std::memory_order_seq_cst);
+	return f.m_ptr == r.m_ptr;
 }
 
 template<class QueueElmentType>
-int32_t LockFreeQueue<QueueElmentType>::size()
+int32_t LockFreeQueue<QueueElmentType>::size() const
 {
-	return m_count;
+	return m_count.load(std::memory_order_seq_cst);
 }
 
-#endif
+template<class QueueElmentType>
+void LockFreeQueue<QueueElmentType>::clear()
+{
+	// 线程安全清空：反复 pop 直到空（适用于单消费者线程）
+	QueueElmentType dummy;
+	while (pop(&dummy))
+	{
+		// 丢弃数据
+	}
+	// 清空后主动回收内存
+	gc();
+}
+
+template<class QueueElmentType>
+void LockFreeQueue<QueueElmentType>::clear_unsafe()
+{
+	// 非线程安全：直接释放链表（仅应在无并发时调用）
+	VersionPtr<QueueElmentType> front = m_front.exchange(VersionPtr<QueueElmentType>(), std::memory_order_seq_cst);
+	VersionPtr<QueueElmentType> rear = m_rear.exchange(VersionPtr<QueueElmentType>(), std::memory_order_seq_cst);
+	m_count.store(0, std::memory_order_seq_cst);
+	m_tag.store(0, std::memory_order_seq_cst);
+
+	QueueNode<QueueElmentType>* curr = front.m_ptr;
+	while (curr)
+	{
+		QueueNode<QueueElmentType>* next = curr->m_next.load(std::memory_order_seq_cst);
+		delete curr;
+		curr = next;
+	}
+}
+
+#endif // _LOCK_FREE_QUEUE_H__

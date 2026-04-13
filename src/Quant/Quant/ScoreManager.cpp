@@ -20,7 +20,7 @@ std::pair<StrategyMode, std::vector<int32_t>> ScoreManager::bestStrategy(uint32_
 {
 	uint32_t profitBeginTime = Util::calcHistoryTime(time, g_config.m_runDayCount);
 	int32_t profitEndTime = time;
-	std::string stock = "600975";
+	std::string stock = g_config.m_stock;
 
 	// 创建市场数据
 	auto marketData = std::make_shared<Market>();
@@ -89,9 +89,9 @@ std::pair<StrategyMode, std::vector<int32_t>> ScoreManager::bestStrategy(uint32_
 			//(int32_t)ObserveTime::TIME1450,
 		},
 		{ 0 },
-		{ -2 },
-		{ 12 },
-		{ 12 },
+		{ -2, -3 },
+		{ 12, 14, 16 },
+		{ 12, 14, 16 },
 		{ 0, 1 }
 	};
 	config.allParam = Util::combinatoricsToAllParam(params);
@@ -142,7 +142,7 @@ std::pair<StrategyMode, std::vector<int32_t>> ScoreManager::bestStrategy(uint32_
 	RCSend("开始打分");
 	
 	// 前两次历史收益年化率差值小于5%，得10分，5%-10%得9分，超过50%不得分
-	annualT(vecFrontStrategyResult, 3, 100);
+	annualT(vecFrontStrategyResult, 2, 100);
 	//annualT(vecBackStrategyResult, 2, 50);
 	//annualTDiff(vecBackStrategyResult, 6.18);
 

@@ -25,7 +25,7 @@ std::vector<int32_t> StockManager::getAllTradingDays()
 	{
 		return m_tradingDays;
 	}
-	Cini ini(g_config.m_currentExePath + "600975.ini", true);
+	Cini ini(g_config.m_currentExePath + g_config.m_stock + ".ini", true);
 	std::vector<std::string> allSection = ini.getAllSection();
 	m_tradingDays = Util::groupToInt(allSection, 4);
 	return m_tradingDays;

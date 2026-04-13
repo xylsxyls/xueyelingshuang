@@ -16,6 +16,8 @@ struct CConfig
 	int32_t m_cpuCoreCount;
 	int32_t m_normalShares;
 	int32_t m_ignoreTrans;
+	std::string m_stock;
+	std::vector<std::string> m_allStock;
 	uint32_t m_allBeginTime;
 	uint32_t m_allEndTime;
 	uint32_t m_initialFund;
