@@ -151,43 +151,35 @@ bool LockFreeQueue<QueueElmentType>::pop(QueueElmentType* e)
 		VersionPtr<QueueElmentType> tail = m_rear.load(std::memory_order_seq_cst);
 		QueueNode<QueueElmentType>* next = head.m_ptr->m_next.load(std::memory_order_seq_cst);
 
+		// 二次确认 head 未被修改（确保 next 的有效性）
 		if (head != m_front.load(std::memory_order_seq_cst))
+		{
 			continue;
+		}
 
 		if (head.m_ptr == tail.m_ptr)
 		{
 			if (next == nullptr)
 			{
-				// 队列空
+				// 队列确实为空
 				return false;
 			}
-			// 协助推进 rear，循环直到 rear 更新（防止活锁）
-			while (head.m_ptr == tail.m_ptr && next != nullptr)
-			{
-				size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
-				VersionPtr<QueueElmentType> newTail;
-				newTail.m_ptr = next;
-				newTail.m_version = newVer;
-				if (m_rear.compare_exchange_weak(tail, newTail, std::memory_order_seq_cst, std::memory_order_seq_cst))
-				{
-					// 成功推进，退出内层循环，继续外层 pop 尝试
-					break;
-				}
-				// 重新加载 tail 和 next，以防其他线程已修改
-				tail = m_rear.load(std::memory_order_seq_cst);
-				if (head.m_ptr != tail.m_ptr)
-				{
-					break;
-				}
-				next = tail.m_ptr->m_next.load(std::memory_order_seq_cst);
-			}
-			// 重试 pop
+
+			// 协助推进落后的 rear（仅尝试一次，避免复杂循环）
+			size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
+			VersionPtr<QueueElmentType> newTail;
+			newTail.m_ptr = next;
+			newTail.m_version = newVer;
+			m_rear.compare_exchange_weak(tail, newTail, std::memory_order_seq_cst, std::memory_order_seq_cst);
+			// 无论是否成功，重新开始 pop 流程
 			continue;
 		}
 		else
 		{
+			// head != tail，尝试出队
 			if (next == nullptr)
 			{
+				// 防御
 				continue;
 			}
 
@@ -211,6 +203,7 @@ bool LockFreeQueue<QueueElmentType>::pop(QueueElmentType* e)
 				}
 				return true;
 			}
+			// CAS 失败，重试
 		}
 	}
 }
