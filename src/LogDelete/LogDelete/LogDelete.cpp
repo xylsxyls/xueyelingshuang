@@ -1,4 +1,4 @@
-#include "LogDelete.h"
+ï»¿#include "LogDelete.h"
 #include <stdint.h>
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "ProcessWork/ProcessWorkAPI.h"
@@ -9,7 +9,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
 	if (eve == CTRL_CLOSE_EVENT)
 	{
-		//¹Ø±ÕÍË³öÊÂ¼þ
+		//å…³é—­é€€å‡ºäº‹ä»¶
 	}
 	return FALSE;
 }
@@ -20,7 +20,7 @@ int32_t main()
 {
 	CDump::declareDumpFile();
 
-	if (CSystem::deleteFile("LogTest1.0.exe.log"))
+	if (CSystem::deleteFile("LogTest1.2.exe.log"))
 	{
 		return 0;
 	}
@@ -28,6 +28,6 @@ int32_t main()
 	ProtoMessage message;
 	message[LOG_UNINIT] = (int32_t)true;
 	std::string strMessage = message.toString();
-	ProcessWork::instance().send("LogTest1.0", strMessage.c_str(), strMessage.length());
+	ProcessWork::instance().send("LogTest1.2", strMessage.c_str(), strMessage.length());
 	return 0;
 }
