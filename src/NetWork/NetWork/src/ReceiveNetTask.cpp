@@ -15,7 +15,7 @@ m_exit(false)
 
 void ReceiveNetTask::DoTask()
 {
-#if defined _WIN64 || defined __x86_64__
+#if defined _WIN64 || defined __x86_64__ || __aarch64__
 	int32_t ptrSize = 8;
 #else
 	int32_t ptrSize = 4;

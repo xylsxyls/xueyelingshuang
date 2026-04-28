@@ -176,7 +176,7 @@ void onAsyncCallback(uv_async_t* handle)
 	while (queue->pop(&text))
 	{
 		//RCSend("exe = %s, text = %s", CSystem::GetCurrentExeName().c_str(), text);
-#if defined _WIN64 || defined __x86_64__
+#if defined _WIN64 || defined __x86_64__ || __aarch64__
 		uv_tcp_t* dest = (uv_tcp_t*)(*(int64_t*)text);
 		int32_t ptrSize = 8;
 #else

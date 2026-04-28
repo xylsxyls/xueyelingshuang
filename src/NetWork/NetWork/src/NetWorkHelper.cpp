@@ -12,13 +12,13 @@
 
 char* NetWorkHelper::send(LibuvTcp* libuvTcp, uv_tcp_t* dest, const char* buffer, int32_t length, int32_t type, int32_t head)
 {
-#if defined _WIN64 || defined __x86_64__
+#if defined _WIN64 || defined __x86_64__ || __aarch64__
 	int32_t ptrSize = 8;
 #else
 	int32_t ptrSize = 4;
 #endif // _WIN64
 	char* text = libuvTcp->memoryForSend(ptrSize + (head == -1 ? 8 : 12) + length);
-#if defined _WIN64 || defined __x86_64__
+#if defined _WIN64 || defined __x86_64__ || __aarch64__
 	*(int64_t*)text = (int64_t)dest;
 #else
 	*(int32_t*)text = (int32_t)dest;
@@ -56,7 +56,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 	int32_t tagLength = 0;
 	MessageType type = INIT;
 	int32_t head = 0;
-#if defined _WIN64 || defined __x86_64__
+#if defined _WIN64 || defined __x86_64__ || __aarch64__
 	int32_t ptrSize = 8;
 #else
 	int32_t ptrSize = 4;
