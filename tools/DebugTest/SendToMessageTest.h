@@ -1,4 +1,4 @@
-#ifndef __SEND_TO_MESSAGE_TEST_H__
+ï»¿#ifndef __SEND_TO_MESSAGE_TEST_H__
 #define __SEND_TO_MESSAGE_TEST_H__
 #include <string>
 
@@ -15,7 +15,7 @@
 #include <tchar.h>
 #pragma comment(lib, "User32.lib")
 
-//ÔÚcaseºó¼ÓÈëÅÐ¿ÕºÍ´æ´¢£¬ÅÐ¿ÕÔÚImageSaveÀàÖÐÊµÏÖ
+//åœ¨caseåŽåŠ å…¥åˆ¤ç©ºå’Œå­˜å‚¨ï¼Œåˆ¤ç©ºåœ¨ImageSaveç±»ä¸­å®žçŽ°
 #define ImageSaveTest(pic, name, saveFlag) \
     {\
         if (pic == nullptr)\
@@ -75,14 +75,14 @@ public:
 
 #if (_MSC_VER >= 1500)
 		int size = _vscprintf(fmt, args);
-		//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+		//?resizeåˆ†é…åŽstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€åŽåˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 		result.resize(size);
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØÐë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vsprintf_s(&result[0], size + 1, fmt, args);
 #else
 		result.resize(10240);
 		::memset(&result[0], 0, 10240);
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØÐë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		_vsnprintf(&result[0], 10240, fmt, args);
 		result.resize(strlen(&result[0]));
 #endif
@@ -119,8 +119,8 @@ public:
 #define RCSend SendToMessage::SendToMessageTest
 #define RCOnce SendToMessage::OnceToMessageTest
 #define RCPage const bool pageTest = RCSend("%s %d", __FILE__, __LINE__)
-#define RCFunIn RCSend("%s ½øÈë%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
-#define RCFunOut RCSend("%s Àë¿ª%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
+#define RCFunIn RCSend("%s è¿›å…¥%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
+#define RCFunOut RCSend("%s ç¦»å¼€%s %d", __FILE__, SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str(), __LINE__)
 #ifdef _UNICODE
 #define RCFun FunLog SendToMessageLog(SendToMessage::TCHAR2STRING(__FUNCTIONW__).c_str())
 #else
@@ -225,16 +225,16 @@ public:
     FunLog(const std::string& funName):
         strFun(funName)
     {
-        RCSend("½øÈë%s", strFun.c_str());
+        RCSend("è¿›å…¥%s", strFun.c_str());
     }
 
     ~FunLog()
     {
-        RCSend("Àë¿ª%s", strFun.c_str());
+        RCSend("ç¦»å¼€%s", strFun.c_str());
     }
 
 private:
-    /* ´æ´¢º¯ÊýÃû£¬ÕâÀï²»ÄÜÓÃconst&£¬ÒòÎª½øÈëÎö¹¹Ö®ºó£¬__FUNCTION__»á±ä³É¿Õ
+    /* å­˜å‚¨å‡½æ•°åï¼Œè¿™é‡Œä¸èƒ½ç”¨const&ï¼Œå› ä¸ºè¿›å…¥æžæž„ä¹‹åŽï¼Œ__FUNCTION__ä¼šå˜æˆç©º
     */
     std::string strFun;
 };
@@ -261,14 +261,14 @@ struct msgtypeformessagetest
     char m_buffer[MSG_BUFFER_SIZE_FOR_MESSAGETEST];
 };
 
-/** ×¨ÃÅÓÃÓÚlinuxÏÂµÄ½ø³ÌÍ¨ÐÅ£¬Èç¹û¶à¶Ô¶à£¬µ¥ÌõÐÅÏ¢×î¶à10240×Ö½Ú£¬1¶Ô1Ã»ÓÐÉÏÏÞ
+/** ä¸“é—¨ç”¨äºŽlinuxä¸‹çš„è¿›ç¨‹é€šä¿¡ï¼Œå¦‚æžœå¤šå¯¹å¤šï¼Œå•æ¡ä¿¡æ¯æœ€å¤š10240å­—èŠ‚ï¼Œ1å¯¹1æ²¡æœ‰ä¸Šé™
 */
 class MsgLinuxForMessageTest
 {
 public:
-    /** ¹¹Ôìº¯Êý
-    @param [in] path ´æÔÚµÄÎÄ¼þÂ·¾¶£¬Á½±ß½ø³ÌÒªÏàÍ¬
-    @param [in] isCreate ÊÇ·ñÊÇ´´½¨Õß
+    /** æž„é€ å‡½æ•°
+    @param [in] path å­˜åœ¨çš„æ–‡ä»¶è·¯å¾„ï¼Œä¸¤è¾¹è¿›ç¨‹è¦ç›¸åŒ
+    @param [in] isCreate æ˜¯å¦æ˜¯åˆ›å»ºè€…
     */
 	MsgLinuxForMessageTest(const std::string& path, bool isCreate):
     m_msgid(-1),
@@ -289,7 +289,7 @@ public:
         }
     }
 
-    /** Îö¹¹º¯Êý
+    /** æžæž„å‡½æ•°
     */
     ~MsgLinuxForMessageTest()
     {
@@ -297,10 +297,10 @@ public:
     }
 
 public:
-    /** ·¢ËÍ
-    @param [in] src ·¢ËÍµÄÄÚÈÝ
-    @param [in] type ·¢ËÍµÄÀàÐÍ
-    @return ·µ»ØÊÇ·ñ·¢ËÍ³É¹¦
+    /** å‘é€
+    @param [in] src å‘é€çš„å†…å®¹
+    @param [in] type å‘é€çš„ç±»åž‹
+    @return è¿”å›žæ˜¯å¦å‘é€æˆåŠŸ
     */
     bool send(const std::string& src, long type = 1)
     {
@@ -342,7 +342,7 @@ public:
         return true;
     }
 
-    /** Ïú»Ù¶ÓÁÐ£¬ÓÃÓÚ½ÓÊÕ¶ËÍË³örecvº¯Êý£¬¶àÏß³Ìµ÷ÓÃ
+    /** é”€æ¯é˜Ÿåˆ—ï¼Œç”¨äºŽæŽ¥æ”¶ç«¯é€€å‡ºrecvå‡½æ•°ï¼Œå¤šçº¿ç¨‹è°ƒç”¨
     */
     void destroy()
     {
@@ -359,9 +359,9 @@ public:
     }
 
 protected:
-    //ÏûÏ¢¶ÓÁÐID£¬²»´æÔÚÔòÎª-1
+    //æ¶ˆæ¯é˜Ÿåˆ—IDï¼Œä¸å­˜åœ¨åˆ™ä¸º-1
     int m_msgid;
-    //ÊÇ·ñÊÇ¶ÓÁÐ´´½¨Õß
+    //æ˜¯å¦æ˜¯é˜Ÿåˆ—åˆ›å»ºè€…
     bool m_isCreate;
 };
 
@@ -399,12 +399,12 @@ public:
 	    va_copy(argcopy, args);
 	    int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-	    //?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	    //?resizeåˆ†é…åŽstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€åŽåˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	    str.resize(size + 8);
 	    if (size != 0)
 	    {
 #ifdef _WIN32
-		    //?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØÐë¼Ó1£¬·ñÔò»á±ÀÀ£
+		    //?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		    vsprintf_s(&str[8], size + 1, fmt, args);
 #elif __linux__
 		    vsnprintf(&str[8], size + 1, fmt, args);
@@ -432,11 +432,11 @@ public:
         bool result = m_msg->send(str, currentPid);
         if (!result)
         {
-			//ÒòMessageTest¹Ø±Õ£¬µ¼ÖÂÄÚ²¿msgIdÊ§Ð§£¬ÖØÐÂ´´½¨
+			//å› MessageTestå…³é—­ï¼Œå¯¼è‡´å†…éƒ¨msgIdå¤±æ•ˆï¼Œé‡æ–°åˆ›å»º
             delete m_msg;
 			m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
             m_msg->send(std::to_string(currentPid), 1);
-			//´´½¨ºóÖØÐÂ·¢ËÍÒ»´Î
+			//åˆ›å»ºåŽé‡æ–°å‘é€ä¸€æ¬¡
 			bool resendResult = m_msg->send(str, currentPid);
 			if (!resendResult)
 			{
@@ -471,12 +471,12 @@ public:
 	    va_copy(argcopy, args);
 	    int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-	    //?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	    //?resizeåˆ†é…åŽstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€åŽåˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	    str.resize(size + 8);
 	    if (size != 0)
 	    {
 #ifdef _WIN32
-		    //?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØÐë¼Ó1£¬·ñÔò»á±ÀÀ£
+		    //?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		    vsprintf_s(&str[8], size + 1, fmt, args);
 #elif __linux__
 		    vsnprintf(&str[8], size + 1, fmt, args);
@@ -504,11 +504,11 @@ public:
         bool result = m_msg->send(str, currentPid);
         if (!result)
         {
-			//ÒòMessageTest¹Ø±Õ£¬µ¼ÖÂÄÚ²¿msgIdÊ§Ð§£¬ÖØÐÂ´´½¨
+			//å› MessageTestå…³é—­ï¼Œå¯¼è‡´å†…éƒ¨msgIdå¤±æ•ˆï¼Œé‡æ–°åˆ›å»º
             delete m_msg;
 			m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
             m_msg->send(std::to_string(currentPid), 1);
-			//´´½¨ºóÖØÐÂ·¢ËÍÒ»´Î
+			//åˆ›å»ºåŽé‡æ–°å‘é€ä¸€æ¬¡
 			bool resendResult = m_msg->send(str, currentPid);
 			if (!resendResult)
 			{
@@ -543,12 +543,12 @@ public:
 	    va_copy(argcopy, args);
 	    int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-	    //?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	    //?resizeåˆ†é…åŽstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€åŽåˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	    str.resize(size + 8);
 	    if (size != 0)
 	    {
 #ifdef _WIN32
-		    //?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØÐë¼Ó1£¬·ñÔò»á±ÀÀ£
+		    //?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		    vsprintf_s(&str[8], size + 1, fmt, args);
 #elif __linux__
 		    vsnprintf(&str[8], size + 1, fmt, args);
@@ -575,11 +575,11 @@ public:
         bool result = m_msg->send(str, currentPid);
         if (!result)
         {
-			//ÒòMessageTest¹Ø±Õ£¬µ¼ÖÂÄÚ²¿msgIdÊ§Ð§£¬ÖØÐÂ´´½¨
+			//å› MessageTestå…³é—­ï¼Œå¯¼è‡´å†…éƒ¨msgIdå¤±æ•ˆï¼Œé‡æ–°åˆ›å»º
             delete m_msg;
 			m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
             m_msg->send(std::to_string(currentPid), 1);
-			//´´½¨ºóÖØÐÂ·¢ËÍÒ»´Î
+			//åˆ›å»ºåŽé‡æ–°å‘é€ä¸€æ¬¡
 			bool resendResult = m_msg->send(str, currentPid);
 			if (!resendResult)
 			{
@@ -614,12 +614,12 @@ public:
 	    va_copy(argcopy, args);
 	    int size = vsnprintf(nullptr, 0, fmt, argcopy);
 #endif
-	    //?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	    //?resizeåˆ†é…åŽstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€åŽåˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	    str.resize(size + 8);
 	    if (size != 0)
 	    {
 #ifdef _WIN32
-		    //?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØÐë¼Ó1£¬·ñÔò»á±ÀÀ£
+		    //?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		    vsprintf_s(&str[8], size + 1, fmt, args);
 #elif __linux__
 		    vsnprintf(&str[8], size + 1, fmt, args);
@@ -649,11 +649,11 @@ public:
         bool result = m_msg->send(str, processPid);
         if (!result)
         {
-			//ÒòMessageTest¹Ø±Õ£¬µ¼ÖÂÄÚ²¿msgIdÊ§Ð§£¬ÖØÐÂ´´½¨
+			//å› MessageTestå…³é—­ï¼Œå¯¼è‡´å†…éƒ¨msgIdå¤±æ•ˆï¼Œé‡æ–°åˆ›å»º
             delete m_msg;
 			m_msg = new MsgLinuxForMessageTest("/tmp/MessageTestLinux.file", false);
             m_msg->send(std::to_string(processPid), 1);
-			//´´½¨ºóÖØÐÂ·¢ËÍÒ»´Î
+			//åˆ›å»ºåŽé‡æ–°å‘é€ä¸€æ¬¡
 			bool resendResult = m_msg->send(str, processPid);
 			if (!resendResult)
 			{
