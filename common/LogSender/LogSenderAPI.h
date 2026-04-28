@@ -1,8 +1,147 @@
-#pragma once
+ï»¿#pragma once
 #ifdef _WIN32
 #define _LogSenderAPI
 #endif
-#include "LogSender.h"
+
+#ifdef _MSC_VER
+    #ifdef _LogSenderAPI
+        #define LogSenderAPI _declspec(dllimport)
+    #else
+        #define LogSenderAPI _declspec(dllexport)
+    #endif
+#else
+    #if defined(__GNUC__) && __GNUC__ >= 4
+        #define LogSenderAPI __attribute__ ((visibility("default")))
+    #else
+        #define LogSenderAPI
+    #endif
+#endif
+
+#include <stdint.h>
+#include <mutex>
+#include <string>
+
+#ifdef _MSC_VER
+struct __declspec(novtable) LogPackage
+#elif __unix__
+struct LogPackage
+#endif
+{
+public:
+	enum LogLevel
+	{
+		LOG_DEBUG = 0x00000001,
+		LOG_INFO = 0x00000010,
+		LOG_WARNING = 0x00000100,
+		LOG_ERROR = 0x00001000,
+		LOG_FATAL = 0x00010000,
+	};
+
+	//äººå‘˜ID
+	int32_t m_peopleId;
+	//æ—¥å¿—ç­‰çº§
+	LogLevel m_logLevel;
+	//æ˜¯å¦å‘ç½‘ç»œå‘é€
+	bool m_isSendNet;
+	//æ˜¯å¦å‘å±å¹•å‘é€
+	bool m_isSendScreen;
+	//æ˜¯å¦å†™å…¥æ—¥å¿—
+	bool m_isWriteLog;
+	//è¾“å‡ºæ—¥å¿—çš„æ–‡ä»¶å
+	const char* m_fileName;
+	//è¾“å‡ºæ—¥å¿—çš„å‡½æ•°å
+	const char* m_funName;
+	//æ—¥å¿—æ–‡ä»¶çš„æ–‡ä»¶å
+	const char* m_logName;
+
+	/** æ„é€ å‡½æ•°
+	*/
+	LogPackage(int32_t peopleId,
+		LogLevel logLevel,
+		bool isSendNet,
+		bool isSendScreen,
+		bool isWriteLog,
+		const char* fileName,
+		const char* funName,
+		const char* logName)
+	{
+		m_peopleId = peopleId;
+		m_logLevel = logLevel;
+		m_isSendNet = isSendNet;
+		m_isSendScreen = isSendScreen;
+		m_isWriteLog = isWriteLog;
+		m_fileName = fileName;
+		m_funName = funName;
+		m_logName = logName;
+	}
+};
+
+class ProtoMessage;
+
+const std::string LOGTEST_CLIENT_VERSION = "1.2";
+
+class LogSenderAPI LogSenderInterface
+{
+public:
+	virtual void logTestUniqueOpen() = 0;
+
+	virtual void logTestUniqueClose() = 0;
+
+	virtual bool logTestExist() = 0;
+
+	virtual void logTestOpen() = 0;
+
+	virtual void logSend(const LogPackage& package, const char* format, ...) = 0;
+
+	virtual void logTestClose() = 0;
+
+	virtual void set(bool dealLog) = 0;
+};
+
+extern "C"
+{
+	LogSenderAPI LogSenderInterface* logInstance();
+}
+
+class LogSenderAPI LogSender : public LogSenderInterface
+{
+protected:
+	LogSender();
+
+public:
+	static LogSender& instance();
+
+public:
+	void logTestUniqueOpen();
+
+	void logTestUniqueClose();
+
+	bool logTestExist();
+
+	void logTestOpen();
+
+	void logSend(const LogPackage& package, const char* format, ...);
+
+	void logTestClose();
+
+	void set(bool dealLog);
+
+protected:
+	void send(const std::string& message, int32_t type);
+
+private:
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+	uint32_t m_processPid;
+	std::string m_processName;
+	std::string m_loginName;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+};
+
 #ifdef __unix__
 #include <unistd.h>
 #include <dlfcn.h>
@@ -16,13 +155,13 @@
 #define LOG_TEST_EXIST if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestExist
 #define LOG_TEST_OPEN if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestOpen
 #define LOG_TEST_CLOSE if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestClose
-//ÊÇ·ñ´¦ÀíÈÕÖ¾
+//æ˜¯å¦å¤„ç†æ—¥å¿—
 #define LOG_TEST_SET(dealLog) if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->set(dealLog)
 
 #define LOG_NAME_SET(name) LogSenderManager::instance().setLogName(name)
 
-//µÚÒ»´Î·¢ËÍÈÕÖ¾±ØĞëµ¥Ïß³ÌÍê³É£¬·¢ËÍÄ£¿éµ¥Ò»ÊµÀıµÄ³õÊ¼»¯±ØĞëµ¥Ïß³ÌÍê³É
-//LogTestÎÄ¼ş¼ÇÂ¼£¬MessageTestÏÔÊ¾£¬·¢ËÍÍøÂç
+//ç¬¬ä¸€æ¬¡å‘é€æ—¥å¿—å¿…é¡»å•çº¿ç¨‹å®Œæˆï¼Œå‘é€æ¨¡å—å•ä¸€å®ä¾‹çš„åˆå§‹åŒ–å¿…é¡»å•çº¿ç¨‹å®Œæˆ
+//LogTestæ–‡ä»¶è®°å½•ï¼ŒMessageTestæ˜¾ç¤ºï¼Œå‘é€ç½‘ç»œ
 #define LOG_SEND(format, ...) LOG_SEND_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_DEBUG(format, ...) LOG_SEND_DEBUG_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_INFO(format, ...) LOG_SEND_INFO_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
@@ -37,7 +176,7 @@
 #define LOG_SEND_PEOPLE_ERROR(peopleId, format, ...) LOG_SEND_PEOPLE_ERROR_EX(LogSenderManager::instance().logName().c_str(), peopleId, format, ##__VA_ARGS__)
 #define LOG_SEND_PEOPLE_FATAL(peopleId, format, ...) LOG_SEND_PEOPLE_FATAL_EX(LogSenderManager::instance().logName().c_str(), peopleId, format, ##__VA_ARGS__)
 
-//LogTestÎÄ¼ş¼ÇÂ¼£¬MessageTestÏÔÊ¾£¬²»·¢ËÍÍøÂç
+//LogTestæ–‡ä»¶è®°å½•ï¼ŒMessageTestæ˜¾ç¤ºï¼Œä¸å‘é€ç½‘ç»œ
 #define LOG_SEND_LOCAL(format, ...) LOG_SEND_LOCAL_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_LOCAL_DEBUG(format, ...) LOG_SEND_LOCAL_DEBUG_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_LOCAL_INFO(format, ...) LOG_SEND_LOCAL_INFO_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
@@ -52,7 +191,7 @@
 #define LOG_SEND_PEOPLE_LOCAL_ERROR(peopleId, format, ...) LOG_SEND_PEOPLE_LOCAL_ERROR_EX(LogSenderManager::instance().logName().c_str(), peopleId, format, ##__VA_ARGS__)
 #define LOG_SEND_PEOPLE_LOCAL_FATAL(peopleId, format, ...) LOG_SEND_PEOPLE_LOCAL_FATAL_EX(LogSenderManager::instance().logName().c_str(), peopleId, format, ##__VA_ARGS__)
 
-//Ö»Í¨¹ıLogTest¼ÇÂ¼µ½ÎÄ¼ş
+//åªé€šè¿‡LogTestè®°å½•åˆ°æ–‡ä»¶
 #define LOG_SEND_FILE(format, ...) LOG_SEND_FILE_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_FILE_DEBUG(format, ...) LOG_SEND_FILE_DEBUG_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_FILE_INFO(format, ...) LOG_SEND_FILE_INFO_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
@@ -114,7 +253,7 @@ typedef LogSenderInterface*(*LogSenderInstance)();
 class LogSenderManager
 {
 protected:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	LogSenderManager():
 		m_interface(nullptr)
@@ -122,7 +261,7 @@ protected:
 
 	}
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~LogSenderManager()
 	{
@@ -135,8 +274,8 @@ protected:
 
 
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static LogSenderManager& instance()
 	{
@@ -182,11 +321,12 @@ public:
 #else
 #ifdef __x86_64__
 			dllName.append("_64.so");
-			dllName = "lib" + dllName;
+#elif __aarch64__
+			dllName.append("_arm64.so");
 #elif __i386__
 			dllName.append(".so");
-			dllName = "lib" + dllName;
 #endif
+			dllName = "lib" + dllName;
 #endif
 #ifdef _MSC_VER
 			std::string exeDllPath = path.substr(0, left + 1) + dllName;

@@ -2,6 +2,7 @@
 #include "LogSenderMacro.h"
 #include <stdint.h>
 #include <mutex>
+#include <string>
 #include "LogPackage.h"
 
 class ProtoMessage;

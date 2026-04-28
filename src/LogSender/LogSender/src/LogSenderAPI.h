@@ -182,11 +182,12 @@ public:
 #else
 #ifdef __x86_64__
 			dllName.append("_64.so");
-			dllName = "lib" + dllName;
+#elif __aarch64__
+			dllName.append("_arm64.so");
 #elif __i386__
 			dllName.append(".so");
-			dllName = "lib" + dllName;
 #endif
+			dllName = "lib" + dllName;
 #endif
 #ifdef _MSC_VER
 			std::string exeDllPath = path.substr(0, left + 1) + dllName;
