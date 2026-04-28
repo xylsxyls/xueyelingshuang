@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "NetWork/NetWorkAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "Variant/VariantAPI.h"

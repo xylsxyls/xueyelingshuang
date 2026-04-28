@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include "LibuvTcpMacro.h"
 
@@ -23,10 +23,10 @@ public:
 
 	void stop();
 
-	//ÉêÇësend¿Õ¼ä
+	//ç”³è¯·sendç©ºé—´
 	char* memoryForSend(int32_t length);
 
-	//Ğè±£Ö¤uv_tcp_t*ÎªµÚÒ»¸ö£¬lengthÎªµÚ¶ş¸ö£¬ºóÃæÊÇ°üÌå£¬lengthÖ¸µÄÊÇºóÃæ°üÌåµÄ³¤¶È£¬²»°üÀ¨length±¾Éí³¤¶È
+	//éœ€ä¿è¯uv_tcp_t*ä¸ºç¬¬ä¸€ä¸ªï¼Œlengthä¸ºç¬¬äºŒä¸ªï¼Œåé¢æ˜¯åŒ…ä½“ï¼ŒlengthæŒ‡çš„æ˜¯åé¢åŒ…ä½“çš„é•¿åº¦ï¼Œä¸åŒ…æ‹¬lengthæœ¬èº«é•¿åº¦
 	void send(const char* buffer);
 
 	uv_loop_t* loopPtr();
@@ -39,7 +39,7 @@ public:
 
 	virtual void uvClientConnected(uv_tcp_t* client);
 
-	//Ö´ĞĞÍê¸Ãº¯ÊıÖ®ºó»á¹Ø±ÕÁ¬½Ó
+	//æ‰§è¡Œå®Œè¯¥å‡½æ•°ä¹‹åä¼šå…³é—­è¿æ¥
 	virtual void uvClientDisconnected(uv_tcp_t* client);
 
 	virtual void uvServerConnected(uv_tcp_t* server);
@@ -48,7 +48,7 @@ public:
 
 	virtual void uvServerNotFindClear();
 
-	//ÍøÂç¶Ï¿ª10Ãëºó»áÌáÊ¾¶Ï¿ª
+	//ç½‘ç»œæ–­å¼€10ç§’åä¼šæç¤ºæ–­å¼€
 	virtual void uvServerDisconnected(uv_tcp_t* server);
 
 	virtual void uvDisconnectedClear(uv_tcp_t* tcp);

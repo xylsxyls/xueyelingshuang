@@ -1,4 +1,4 @@
-#include "ClientReceiveCallback.h"
+﻿#include "ClientReceiveCallback.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 
 void ClientReceiveCallback::NetClientMessage(const char* buffer, int32_t length)

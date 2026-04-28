@@ -1,4 +1,4 @@
-#include "Area.h"
+﻿#include "Area.h"
 
 Area::Area():
 m_isReceiveFirst(false),

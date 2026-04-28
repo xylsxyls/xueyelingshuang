@@ -1,4 +1,4 @@
-#include "NetClientManager.h"
+ï»¿#include "NetClientManager.h"
 #include <stdint.h>
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ProcessReceive.h"
@@ -18,7 +18,7 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 {
 	if (eve == CTRL_CLOSE_EVENT)
 	{
-		//¹Ø±ÕÍË³öÊÂ¼ş
+		//å…³é—­é€€å‡ºäº‹ä»¶
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninitReceive();
 		if (g_client != nullptr)
@@ -33,12 +33,12 @@ BOOL CALLBACK ConsoleHandler(DWORD eve)
 int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
 #elif __unix__
-//ctrl+cÏûÏ¢²¶»ñº¯Êı
+//ctrl+cæ¶ˆæ¯æ•è·å‡½æ•°
 void CtrlCMessage(int eve)
 {
 	if (eve == 2)
 	{
-		//¹Ø±ÕÍË³öÊÂ¼ş
+		//å…³é—­é€€å‡ºäº‹ä»¶
 		//RCSend("close ConsoleTest");
 		ProcessWork::instance().uninitReceive();
 		if (g_client != nullptr)

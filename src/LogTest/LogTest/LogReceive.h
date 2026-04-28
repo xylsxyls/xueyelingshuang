@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
@@ -10,23 +10,23 @@ class Semaphore;
 class LogReceive : public ProcessReceiveCallback
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	LogReceive();
 
 public:
-	/** ½ÓÊÕĞéº¯Êı
-	@param [in] sendPid ·¢ËÍ½ø³ÌID
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
-	@param [in] type Êı¾İÀàĞÍ
+	/** æ¥æ”¶è™šå‡½æ•°
+	@param [in] sendPid å‘é€è¿›ç¨‹ID
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
+	@param [in] type æ•°æ®ç±»å‹
 	*/
 	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type);
 
-	/** ÉèÖÃ·¢ËÍÏß³Ì
-	@param [in] spScreenThread ÆÁÄ»Õ¹Ê¾Ïß³Ì
-	@param [in] spLogThread ÈÕÖ¾Ïß³Ì
-	@param [in] spLogThread ÈÕÖ¾Ïß³Ì
+	/** è®¾ç½®å‘é€çº¿ç¨‹
+	@param [in] spScreenThread å±å¹•å±•ç¤ºçº¿ç¨‹
+	@param [in] spLogThread æ—¥å¿—çº¿ç¨‹
+	@param [in] spLogThread æ—¥å¿—çº¿ç¨‹
 	*/
 	void setArea(Semaphore* screenSemaphore,
 		LockFreeQueue<std::string>* screenQueue,
@@ -35,8 +35,8 @@ public:
 		Semaphore* netSemaphore,
 		LockFreeQueue<std::string>* netQueue);
 
-	/** ÉèÖÃ×îºóÒ»´ÎÈÕÖ¾Ê±¼ä½ÓÊÕÖµ
-	@param [in] lastLogTime ×îºóÒ»´ÎÈÕÖ¾Ê±¼ä½ÓÊÕÖµ
+	/** è®¾ç½®æœ€åä¸€æ¬¡æ—¥å¿—æ—¶é—´æ¥æ”¶å€¼
+	@param [in] lastLogTime æœ€åä¸€æ¬¡æ—¥å¿—æ—¶é—´æ¥æ”¶å€¼
 	*/
 	void setLastLogTime(std::atomic<int32_t>* lastLogTime);
 

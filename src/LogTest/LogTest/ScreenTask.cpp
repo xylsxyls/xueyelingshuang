@@ -1,4 +1,4 @@
-#include "ScreenTask.h"
+﻿#include "ScreenTask.h"
 #ifdef __unix__
 #include "SendToMessageTest.h"
 #endif

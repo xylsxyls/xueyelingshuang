@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "NetSender/NetSenderAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 
@@ -7,41 +7,41 @@ class Semaphore;
 class NetReceive : public ClientReceiveCallback
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	NetReceive();
 
 public:
-	/** ³õÊ¼»¯ÏìÓ¦º¯Êı
-	@param [in] serverId ·şÎñ½ø³Ì´úºÅ
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** åˆå§‹åŒ–å“åº”å‡½æ•°
+	@param [in] serverId æœåŠ¡è¿›ç¨‹ä»£å·
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void clientInitResponse(int32_t serverId, const char* buffer, int32_t length);
 
-	/** ·şÎñÆ÷ÏûÏ¢
-	@param [in] serverId ·şÎñ½ø³Ì´úºÅ
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** æœåŠ¡å™¨æ¶ˆæ¯
+	@param [in] serverId æœåŠ¡è¿›ç¨‹ä»£å·
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void ServerMessage(int32_t serverId, const char* buffer, int32_t length);
 
-	/** ÉèÖÃ³õÊ¼»¯ĞÅºÅÁ¿½ÓÊÕÀà
-	@param [in] semaphore ³õÊ¼»¯ĞÅºÅÁ¿½ÓÊÕÀà
+	/** è®¾ç½®åˆå§‹åŒ–ä¿¡å·é‡æ¥æ”¶ç±»
+	@param [in] semaphore åˆå§‹åŒ–ä¿¡å·é‡æ¥æ”¶ç±»
 	*/
 	void setInitResponseSemaphore(Semaphore* initResponseSemaphore);
 
-	/** ÉèÖÃ»º³åÇø
-	@param [in] spScreenThread ÆÁÄ»Õ¹Ê¾Ïß³Ì
-	@param [in] spScreenThread ÈÕÖ¾Ïß³Ì
+	/** è®¾ç½®ç¼“å†²åŒº
+	@param [in] spScreenThread å±å¹•å±•ç¤ºçº¿ç¨‹
+	@param [in] spScreenThread æ—¥å¿—çº¿ç¨‹
 	*/
 	void setArea(Semaphore* screenSemaphore,
 		LockFreeQueue<std::string>* screenQueue,
 		Semaphore* logSemaphore,
 		LockFreeQueue<std::string>* logQueue);
 
-	/** ÉèÖÃ×îºóÒ»´ÎÈÕÖ¾Ê±¼ä½ÓÊÕÖµ
-	@param [in] lastLogTime ×îºóÒ»´ÎÈÕÖ¾Ê±¼ä½ÓÊÕÖµ
+	/** è®¾ç½®æœ€åä¸€æ¬¡æ—¥å¿—æ—¶é—´æ¥æ”¶å€¼
+	@param [in] lastLogTime æœ€åä¸€æ¬¡æ—¥å¿—æ—¶é—´æ¥æ”¶å€¼
 	*/
 	void setLastLogTime(std::atomic<int32_t>* lastLogTime);
 

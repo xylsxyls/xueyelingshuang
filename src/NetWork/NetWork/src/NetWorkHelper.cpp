@@ -1,4 +1,4 @@
-#include "NetWorkHelper.h"
+ï»¿#include "NetWorkHelper.h"
 #include "ReceiveNetTask.h"
 #ifdef __unix__
 #include <string.h>
@@ -45,7 +45,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 	Semaphore* receiveSemaphore,
 	LibuvTcp* libuvTcp)
 {
-	//Èç¹ûÒÑ¾­½ÓÊÕµ½µÚÒ»¸ö°üµ«ÊÇÃ»Í¨¹ýÔò·µ»Ø
+	//å¦‚æžœå·²ç»æŽ¥æ”¶åˆ°ç¬¬ä¸€ä¸ªåŒ…ä½†æ˜¯æ²¡é€šè¿‡åˆ™è¿”å›ž
 	if (receiveArea.m_isReceiveFirst && !receiveArea.m_isFirstPass)
 	{
 		return;
@@ -73,17 +73,17 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 		netServer = (NetServer*)libuvTcp;
 	}
 
-	//Èç¹û»¹Î´ÊÕµ½µÚÒ»¸ö°ü
+	//å¦‚æžœè¿˜æœªæ”¶åˆ°ç¬¬ä¸€ä¸ªåŒ…
 	if (!receiveArea.m_isReceiveFirst)
 	{
-		//ÏÈÊÕµ½8¸ö×Ö½Ú
+		//å…ˆæ”¶åˆ°8ä¸ªå­—èŠ‚
 		if (!necessaryReceive(buffer, length, 8, vernier, receiveArea.m_area))
 		{
 			return;
 		}
 
-		//»º³åÇøÖÐÒÑ¾­ÓÐ8¸ö×Ö½ÚÁË
-		//¼ÆËã°ü´óÐ¡£¬tagLength±íÊ¾type+°üÌå×Ü´óÐ¡
+		//ç¼“å†²åŒºä¸­å·²ç»æœ‰8ä¸ªå­—èŠ‚äº†
+		//è®¡ç®—åŒ…å¤§å°ï¼ŒtagLengthè¡¨ç¤ºtype+åŒ…ä½“æ€»å¤§å°
 		tagLength = *(int32_t*)(&receiveArea.m_area[0]);
 		int32_t firstMessageLength = tagLength - 4;
 		type = (MessageType)*(int32_t*)(&receiveArea.m_area[4]);
@@ -105,13 +105,13 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			return;
 		}
 
-		//ÏÈÊÕµ½Ò»¸öÍêÕû°ü
+		//å…ˆæ”¶åˆ°ä¸€ä¸ªå®Œæ•´åŒ…
 		if (!necessaryReceive(buffer, length, tagLength + 4, vernier, receiveArea.m_area))
 		{
 			return;
 		}
 
-		//»º³åÇøÖÐÒÑ¾­ÓÐÒ»¸öÍêÕû°ü
+		//ç¼“å†²åŒºä¸­å·²ç»æœ‰ä¸€ä¸ªå®Œæ•´åŒ…
 		receiveArea.m_isReceiveFirst = true;
 		if (libuvTcp->isClient())
 		{
@@ -146,18 +146,18 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 
 	while (true)
 	{
-		//ÏÈÊÕµ½12¸ö×Ö½Ú
+		//å…ˆæ”¶åˆ°12ä¸ªå­—èŠ‚
 		if (!necessaryReceive(buffer, length, 12, vernier, receiveArea.m_area))
 		{
 			return;
 		}
 
-		//»º³åÇøÒÑ¾­ÓÐ12¸ö×Ö½ÚÁË
-		//¼ÆËã°ü´óÐ¡£¬tagLength±íÊ¾type+head+°üÌå×Ü´óÐ¡
+		//ç¼“å†²åŒºå·²ç»æœ‰12ä¸ªå­—èŠ‚äº†
+		//è®¡ç®—åŒ…å¤§å°ï¼ŒtagLengthè¡¨ç¤ºtype+head+åŒ…ä½“æ€»å¤§å°
 		tagLength = *(int32_t*)(&receiveArea.m_area[0]);
 		type = (MessageType)(*(int32_t*)(&receiveArea.m_area[4]));
 		head = *(int32_t*)(&receiveArea.m_area[8]);
-		//³öÏÖ¿ÉÐÅÁ¬½ÓµÄ°üÍ·Òì³£Çé¿öÔòµ±Ç°ËùÓÐ½ÓÊÕÄÚÈÝÈ«²¿¶ªµô£¬ÔÚÕâÀï»á·¢Éú¶ª°üÏÖÏó
+		//å‡ºçŽ°å¯ä¿¡è¿žæŽ¥çš„åŒ…å¤´å¼‚å¸¸æƒ…å†µåˆ™å½“å‰æ‰€æœ‰æŽ¥æ”¶å†…å®¹å…¨éƒ¨ä¸¢æŽ‰ï¼Œåœ¨è¿™é‡Œä¼šå‘ç”Ÿä¸¢åŒ…çŽ°è±¡
 		int32_t head0 = 0;
 		int32_t head1 = 0;
 		if (netServer != nullptr)
@@ -190,8 +190,8 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 			return;
 		}
 
-		//°üÍ·Í¨¹ý
-		//ÏÈÊÕµ½Ò»¸öÍêÕû°ü
+		//åŒ…å¤´é€šè¿‡
+		//å…ˆæ”¶åˆ°ä¸€ä¸ªå®Œæ•´åŒ…
 		if (!necessaryReceive(buffer, length, tagLength + 4, vernier, receiveArea.m_area))
 		{
 			return;
@@ -200,10 +200,10 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 		{
 			((NetClient*)libuvTcp)->m_head[1] = ((NetClient*)libuvTcp)->m_head[0];
 			((NetClient*)libuvTcp)->m_head[0] = *(int32_t*)(&receiveArea.m_area[12]);
-			//Èç¹û²»ÊÇµÚÒ»¸ö
+			//å¦‚æžœä¸æ˜¯ç¬¬ä¸€ä¸ª
 			if (head0 != 0)
 			{
-				//Çå¿Õ»º³åÇø
+				//æ¸…ç©ºç¼“å†²åŒº
 				receiveArea.m_area.clear();
 				continue;
 			}
@@ -218,7 +218,7 @@ void NetWorkHelper::receive(uv_tcp_t* sender,
 		}
 		receiveQueue->push(allocBuffer);
 		receiveSemaphore->signal();
-		//Çå¿Õ»º³åÇø
+		//æ¸…ç©ºç¼“å†²åŒº
 		receiveArea.m_area.clear();
 	}
 }

@@ -1,4 +1,4 @@
-#include "NetLineManager.h"
+﻿#include "NetLineManager.h"
 
 NetLineManager::NetLineManager():
 m_connectId(0)

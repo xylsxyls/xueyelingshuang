@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include <map>
 #include <string>
@@ -17,7 +17,7 @@ public:
 
 	void addServerPid(int32_t serverPid, const std::string& serverName);
 
-	//ÕÒ²»µ½·µ»Ø-1
+	//æ‰¾ä¸åˆ°è¿”å›-1
 	int32_t findServerId(const std::string& serverName);
 
 	int32_t findServerId(int32_t serverPid);

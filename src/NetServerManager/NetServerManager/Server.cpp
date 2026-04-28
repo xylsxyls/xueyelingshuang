@@ -1,4 +1,4 @@
-#include "Server.h"
+ï»¿#include "Server.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "Compress/CompressAPI.h"
@@ -27,14 +27,14 @@ bool Server::onFirstReceive(uv_tcp_t* client, const char* buffer, int32_t length
 	return true;
 }
 
-//´ÓÍøÂç¶Ë½ÓÊÕ
+//ä»ç½‘ç»œç«¯æ¥æ”¶
 void Server::onReceive(uv_tcp_t* client, const char* buffer, int32_t length, MessageType type)
 {
-	//½âÑ¹
+	//è§£å‹
 	std::string strMessage;
 	Compress::zlibUnCompress(strMessage, std::string(buffer, length));
 
-	//»ñÈ¡¿Í»§¶Ëpid
+	//è·å–å®¢æˆ·ç«¯pid
 	int32_t serverPid = 0;
 
 	switch (type)
@@ -42,8 +42,8 @@ void Server::onReceive(uv_tcp_t* client, const char* buffer, int32_t length, Mes
 	case MessageType::CLIENT_INIT:
 	{
 		printf("CLIENT_INIT, client = %p, length = %d\n", client, length);
-		//½«Á¬½ÓIDºÍ¿Í»§¶Ë½ø³ÌºÅ´æÈëmap£¬ÒÀ¾İÁ½¸öintÖµÇø·ÖËùÓĞ¿Í»§¶Ë
-		//¸ù¾İ³õÊ¼»¯¹ıµÄserverName³õÊ¼»¯ÏûÏ¢ÖĞµÄSERVER_PID×Ö¶Î¹©¿Í»§¶ËÊ¹ÓÃserver´úºÅ
+		//å°†è¿æ¥IDå’Œå®¢æˆ·ç«¯è¿›ç¨‹å·å­˜å…¥mapï¼Œä¾æ®ä¸¤ä¸ªintå€¼åŒºåˆ†æ‰€æœ‰å®¢æˆ·ç«¯
+		//æ ¹æ®åˆå§‹åŒ–è¿‡çš„serverNameåˆå§‹åŒ–æ¶ˆæ¯ä¸­çš„SERVER_PIDå­—æ®µä¾›å®¢æˆ·ç«¯ä½¿ç”¨serverä»£å·
 		ProtoMessage message;
 		message.from(strMessage);
 		int32_t clientPid = message.getMap()[CLIENT_PID];

@@ -1,4 +1,4 @@
-#include "LogReceive.h"
+ï»¿#include "LogReceive.h"
 #include "CSystem/CSystemAPI.h"
 #include "ScreenTask.h"
 #include "LogTask.h"
@@ -26,7 +26,7 @@ void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, Me
 
 	switch (type)
 	{
-	//¹¤³ÌÏûÏ¢
+	//å·¥ç¨‹æ¶ˆæ¯
 	case LOGTEST_MESSAGE:
 	{
 		m_message.clear();
@@ -46,7 +46,7 @@ void LogReceive::receive(int32_t sendPid, const char* buffer, int32_t length, Me
 		}
 	}
 	break;
-	//·¢ËÍ¸øÍøÂç¶Ë
+	//å‘é€ç»™ç½‘ç»œç«¯
 	case LOGTEST_SEND_MESSAGE:
 	{
 		m_screenQueue->push(strBuffer);

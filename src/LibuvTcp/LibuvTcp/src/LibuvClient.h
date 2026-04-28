@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "LibuvBase.h"
 
 struct LibuvClient : public LibuvBase

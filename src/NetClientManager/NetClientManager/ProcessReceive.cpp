@@ -1,4 +1,4 @@
-#include "ProcessReceive.h"
+ï»¿#include "ProcessReceive.h"
 #include "Client.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
@@ -10,7 +10,7 @@ m_client(nullptr)
 	m_computerName = CSystem::getComputerName();
 }
 
-//´Ó±¾µØ½ø³Ì½ÓÊÕ
+//ä»æœ¬åœ°è¿›ç¨‹æ¥æ”¶
 void ProcessReceive::receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
 {
 	std::string strBuffer(buffer, length);
@@ -25,10 +25,10 @@ void ProcessReceive::receive(int32_t sendPid, const char* buffer, int32_t length
 		break;
 	}
 	
-	//Ñ¹Ëõ
+	//å‹ç¼©
 	std::string compressMessage;
 	Compress::zlibCompress(compressMessage, strBuffer, 9);
-	//·¢ËÍ
+	//å‘é€
 	m_client->send(compressMessage.c_str(), compressMessage.length(), type);
 }
 

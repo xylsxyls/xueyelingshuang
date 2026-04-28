@@ -1,42 +1,42 @@
-#pragma once
+ï»¿#pragma once
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "NetSenderMacro.h"
 
 class NetSenderAPI ClientReceiveCallback : public ProcessReceiveCallback
 {
 public:
-	/** ³õÊ¼»¯ÏìÓ¦º¯Êı
-	@param [in] serverId ·şÎñ½ø³Ì´úºÅ
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** åˆå§‹åŒ–å“åº”å‡½æ•°
+	@param [in] serverId æœåŠ¡è¿›ç¨‹ä»£å·
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void clientInitResponse(int32_t serverId, const char* buffer, int32_t length) = 0;
 
-	/** ¿Í»§¶ËÍøÂç¹ÜÀí½ø³ÌÏûÏ¢
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** å®¢æˆ·ç«¯ç½‘ç»œç®¡ç†è¿›ç¨‹æ¶ˆæ¯
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void NetClientMessage(const char* buffer, int32_t length);
 
-	/** ·şÎñ¶ËÍøÂç¹ÜÀí½ø³ÌÏûÏ¢
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** æœåŠ¡ç«¯ç½‘ç»œç®¡ç†è¿›ç¨‹æ¶ˆæ¯
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void NetServerMessage(const char* buffer, int32_t length);
 
-	/** ·şÎñÆ÷ÏûÏ¢
-	@param [in] serverId ·şÎñ½ø³Ì´úºÅ
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** æœåŠ¡å™¨æ¶ˆæ¯
+	@param [in] serverId æœåŠ¡è¿›ç¨‹ä»£å·
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void ServerMessage(int32_t serverId, const char* buffer, int32_t length) = 0;
 
 protected:
-	/** ½ÓÊÕĞéº¯Êı
-	@param [in] sendPid ·¢ËÍ½ø³ÌID
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
-	@param [in] type Êı¾İÀàĞÍ
+	/** æ¥æ”¶è™šå‡½æ•°
+	@param [in] sendPid å‘é€è¿›ç¨‹ID
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
+	@param [in] type æ•°æ®ç±»å‹
 	*/
 	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type);
 };

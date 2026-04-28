@@ -1,4 +1,4 @@
-#include "LogTestServerReceive.h"
+ï»¿#include "LogTestServerReceive.h"
 #include "NetSender/NetSenderAPI.h"
 #include "NetLineManager.h"
 #include "Cini/CiniAPI.h"
@@ -36,7 +36,7 @@ void LogTestServerReceive::ClientMessage(int32_t connectId, int32_t clientPid, c
 	{
 		auto& computerName = vecComputerName[index];
 		std::vector<std::pair<int32_t, int32_t>> vecClient = NetLineManager::instance().findConnect(computerName);
-		//ÒòÎªÃ»ÓĞ¶ÏÏß»úÖÆ£¬Ö»·¢ËÍ×îºóÒ»¸öÍ¬µÇÂ¼ÃûÓÃ»§
+		//å› ä¸ºæ²¡æœ‰æ–­çº¿æœºåˆ¶ï¼Œåªå‘é€æœ€åä¸€ä¸ªåŒç™»å½•åç”¨æˆ·
 		if (vecClient.empty())
 		{
 			continue;

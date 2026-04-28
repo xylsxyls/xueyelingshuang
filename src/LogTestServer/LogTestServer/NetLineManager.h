@@ -1,42 +1,42 @@
-#pragma once
+ï»¿#pragma once
 #include <map>
 #include <stdint.h>
 #include <mutex>
 #include <vector>
 
 typedef struct uv_tcp_s uv_tcp_t;
-/** ÍøÂçÁ¬½Ó¹ÜÀí
+/** ç½‘ç»œè¿æ¥ç®¡ç†
 */
 class NetLineManager
 {
 protected:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	NetLineManager();
 
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static NetLineManager& instance();
 
-	/** Ìí¼ÓÁ¬½Ó
-	@param [in] loginName ¿Í»§¶ËµÇÂ¼Ãû
-	@param [in] connectId ·şÎñÆ÷¶ËµÄ¿Í»§¶ËID
-	@param [in] clientPid ¿Í»§¶ËPID
+	/** æ·»åŠ è¿æ¥
+	@param [in] loginName å®¢æˆ·ç«¯ç™»å½•å
+	@param [in] connectId æœåŠ¡å™¨ç«¯çš„å®¢æˆ·ç«¯ID
+	@param [in] clientPid å®¢æˆ·ç«¯PID
 	*/
 	void addConnect(const std::string& loginName, int32_t connectId, int32_t clientPid);
 
-	/** ²éÑ¯Á¬½Ó
-	@param [in] loginName ¿Í»§¶ËµÇÂ¼Ãû
-	@return ·µ»ØÁ¬½ÓÖ¸ÕëÊı×é
+	/** æŸ¥è¯¢è¿æ¥
+	@param [in] loginName å®¢æˆ·ç«¯ç™»å½•å
+	@return è¿”å›è¿æ¥æŒ‡é’ˆæ•°ç»„
 	*/
 	std::vector<std::pair<int32_t, int32_t>> findConnect(const std::string& loginName);
 
-	/** ²éÑ¯µÇÂ½Ãû
-	@param [in] connectId ·şÎñÆ÷¶ËµÄ¿Í»§¶ËID
-	@param [in] clientPid ¿Í»§¶ËPID
-	@return ·µ»ØµÇÂ½Ãû
+	/** æŸ¥è¯¢ç™»é™†å
+	@param [in] connectId æœåŠ¡å™¨ç«¯çš„å®¢æˆ·ç«¯ID
+	@param [in] clientPid å®¢æˆ·ç«¯PID
+	@return è¿”å›ç™»é™†å
 	*/
 	std::string findLoginName(int32_t connectId, int32_t clientPid);
 

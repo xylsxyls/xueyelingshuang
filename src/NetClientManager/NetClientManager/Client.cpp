@@ -1,4 +1,4 @@
-#include "Client.h"
+ï»¿#include "Client.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -30,10 +30,10 @@ void Client::onFirstHead()
 	printf("first head receive\n");
 }
 
-//´ÓÍøÂç¶Ë½ÓÊÕ
+//ä»ç½‘ç»œç«¯æ¥æ”¶
 void Client::onReceive(const char* buffer, int32_t length, MessageType type)
 {
-	//½âÑ¹
+	//è§£å‹
 	std::string strMessage;
 	Compress::zlibUnCompress(strMessage, std::string(buffer, length));
 

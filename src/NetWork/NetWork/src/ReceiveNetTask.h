@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "NetWorkMacro.h"
 #include <stdint.h>
 #include <string>

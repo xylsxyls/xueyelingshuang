@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "NetSender/NetSenderAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
@@ -9,30 +9,30 @@ class CTaskThread;
 class LogTestServerReceive : public ServerReceiveCallback
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	LogTestServerReceive();
 
 public:
-	/** ¿Í»§¶Ë³õÊ¼»¯º¯Êı
-	@param [in] connectId Á¬½ÓID
-	@param [in] clientPid ¿Í»§¶Ë½ø³ÌºÅ
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** å®¢æˆ·ç«¯åˆå§‹åŒ–å‡½æ•°
+	@param [in] connectId è¿æ¥ID
+	@param [in] clientPid å®¢æˆ·ç«¯è¿›ç¨‹å·
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void clientInit(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length);
 
-	/** ·şÎñ¶Ë³õÊ¼»¯ÏìÓ¦º¯Êı
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** æœåŠ¡ç«¯åˆå§‹åŒ–å“åº”å‡½æ•°
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void serverInitResponse(const char* buffer, int32_t length);
 
-	/** ¿Í»§¶ËÏûÏ¢
-	@param [in] connectId Á¬½ÓID
-	@param [in] clientPid ¿Í»§¶Ë½ø³ÌºÅ
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** å®¢æˆ·ç«¯æ¶ˆæ¯
+	@param [in] connectId è¿æ¥ID
+	@param [in] clientPid å®¢æˆ·ç«¯è¿›ç¨‹å·
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void ClientMessage(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length);
 

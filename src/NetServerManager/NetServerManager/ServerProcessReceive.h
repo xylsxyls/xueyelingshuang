@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
 
@@ -8,21 +8,21 @@ class Server;
 class ServerProcessReceive : public ProcessReceiveCallback
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ServerProcessReceive();
 
 public:
-	/** ½ÓÊÕº¯Êı
-	@param [in] sendPid ·¢ËÍ½ø³ÌID
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
-	@param [in] type Êı¾İÀàĞÍ
+	/** æ¥æ”¶å‡½æ•°
+	@param [in] sendPid å‘é€è¿›ç¨‹ID
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
+	@param [in] type æ•°æ®ç±»å‹
 	*/
 	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type);
 
-	/** ÉèÖÃ·şÎñ¶ËÖ¸Õë
-	@param [in] server ·şÎñ¶ËÖ¸Õë
+	/** è®¾ç½®æœåŠ¡ç«¯æŒ‡é’ˆ
+	@param [in] server æœåŠ¡ç«¯æŒ‡é’ˆ
 	*/
 	void setServer(Server* server);
 

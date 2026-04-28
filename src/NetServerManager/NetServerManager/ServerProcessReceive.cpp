@@ -1,4 +1,4 @@
-#include "ServerProcessReceive.h"
+ï»¿#include "ServerProcessReceive.h"
 #include "Server.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "Compress/CompressAPI.h"
@@ -12,7 +12,7 @@ m_server(nullptr)
 
 }
 
-//´Ó±¾µØ·şÎñÆ÷½ÓÊÕ
+//ä»æœ¬åœ°æœåŠ¡å™¨æ¥æ”¶
 void ServerProcessReceive::receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type)
 {
 	switch (type)

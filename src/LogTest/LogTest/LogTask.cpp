@@ -1,4 +1,4 @@
-#include "LogTask.h"
+﻿#include "LogTask.h"
 #include "LogManager/LogManagerAPI.h"
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "Semaphore/SemaphoreAPI.h"

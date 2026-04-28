@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include <map>
 #include <mutex>
@@ -14,7 +14,7 @@ public:
 	static NetLineManager& instance();
 
 public:
-	//Ìí¼ÓÒ»¸öclient£¬·µ»ØConnectId
+	//æ·»åŠ ä¸€ä¸ªclientï¼Œè¿”å›žConnectId
 	int32_t addConnect(uv_tcp_t* client);
 
 	uv_tcp_t* findClient(int32_t connectId);

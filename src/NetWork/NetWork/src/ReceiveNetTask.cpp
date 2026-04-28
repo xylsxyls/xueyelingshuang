@@ -1,4 +1,4 @@
-#include "ReceiveNetTask.h"
+ï»¿#include "ReceiveNetTask.h"
 #include "LibuvTcp/LibuvTcpAPI.h"
 #include "NetClient.h"
 #include "NetServer.h"
@@ -47,7 +47,7 @@ void ReceiveNetTask::DoTask()
 			}
 			else if (type == MessageType::HEAD)
 			{
-				//Ö»ÓĞµÚÒ»¸ö»á·Å½øÀ´
+				//åªæœ‰ç¬¬ä¸€ä¸ªä¼šæ”¾è¿›æ¥
 				((NetClient*)m_libuvTcp)->onFirstHead();
 			}
 			else
@@ -69,7 +69,7 @@ void ReceiveNetTask::DoTask()
 
 		if (buffer == nullptr)
 		{
-			//¼ÓÁËtypeÖ®ºó°ü´óĞ¡²»¿ÉÄÜÎª0
+			//åŠ äº†typeä¹‹ååŒ…å¤§å°ä¸å¯èƒ½ä¸º0
 			continue;
 		}
 		delete[] buffer;

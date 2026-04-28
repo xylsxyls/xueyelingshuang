@@ -1,4 +1,4 @@
-#include "NetServer.h"
+ï»¿#include "NetServer.h"
 #include "NetWorkHelper.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "RunLoopTask.h"
@@ -218,7 +218,7 @@ void NetServer::asyncClose()
 //{
 //	if (eve == CTRL_CLOSE_EVENT)
 //	{
-//		//¹Ø±ÕÍË³öÊÂ¼þ
+//		//å…³é—­é€€å‡ºäº‹ä»¶
 //		//RCSend("close ConsoleTest1");
 //	}
 //	return FALSE;

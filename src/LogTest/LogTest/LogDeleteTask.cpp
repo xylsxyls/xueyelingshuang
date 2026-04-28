@@ -1,4 +1,4 @@
-#include "LogDeleteTask.h"
+﻿#include "LogDeleteTask.h"
 #include "CSystem/CSystemAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
 

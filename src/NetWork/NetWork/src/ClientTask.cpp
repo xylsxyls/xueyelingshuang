@@ -1,4 +1,4 @@
-#include "ClientTask.h"
+﻿#include "ClientTask.h"
 #include "NetClient.h"
 #include "ReceiveNetTask.h"
 

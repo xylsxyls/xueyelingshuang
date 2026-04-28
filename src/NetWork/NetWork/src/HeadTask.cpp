@@ -1,4 +1,4 @@
-#include "HeadTask.h"
+ï»¿#include "HeadTask.h"
 #include "NetServer.h"
 
 HeadTask::HeadTask():
@@ -20,7 +20,7 @@ void HeadTask::DoTask()
 			while (index++ != m_netServer->m_allClient.size() - 1)
 			{
 				uv_tcp_t* client = m_netServer->m_allClient[index];
-				//Èç¹ûÃ»ÓÐfirstMessageÔò²»»áÓÐ»º³åÇø
+				//å¦‚æžœæ²¡æœ‰firstMessageåˆ™ä¸ä¼šæœ‰ç¼“å†²åŒº
 				auto itClient = m_netServer->m_receiveAreaMap.find(client);
 				if (itClient != m_netServer->m_receiveAreaMap.end() && itClient->second.m_isFirstPass)
 				{

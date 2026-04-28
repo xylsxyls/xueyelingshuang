@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "NetSenderMacro.h"
 #include <stdint.h>
 #include "CorrespondParam/CorrespondParamAPI.h"
@@ -7,7 +7,7 @@
 #include "ClientReceiveCallback.h"
 #include "ServerReceiveCallback.h"
 
-/** ÍøÂç·¢ËÍ½ÓÊÕÀà
+/** ç½‘ç»œå‘é€æ¥æ”¶ç±»
 */
 class NetSenderAPI NetSender
 {
@@ -18,13 +18,13 @@ public:
 	static NetSender& instance();
 
 public:
-	//·´³õÊ¼»¯ĞèÒªµ÷ÓÃProcessWorkÖĞµÄ·´³õÊ¼»¯º¯Êı
-	//³õÊ¼»¯ĞèÒªµ÷ÓÃProcessWorkÖĞµÄinitReceiveº¯Êı
+	//ååˆå§‹åŒ–éœ€è¦è°ƒç”¨ProcessWorkä¸­çš„ååˆå§‹åŒ–å‡½æ•°
+	//åˆå§‹åŒ–éœ€è¦è°ƒç”¨ProcessWorkä¸­çš„initReceiveå‡½æ•°
 	void initClientReceive(ClientReceiveCallback* callback);
 
 	void initServerReceive(ServerReceiveCallback* callback);
 
-	//windows¶Ë²»´øºó×º£¬linux¶ËÈ«Ãû
+	//windowsç«¯ä¸å¸¦åç¼€ï¼Œlinuxç«¯å…¨å
 	void initClient(int32_t serverId, const std::string& serverName, const std::string& initInfo);
 
 	void sendClientInitResponse(int32_t connectId, int32_t clientPid, const std::string& responseInfo);
@@ -39,7 +39,7 @@ public:
 
 	void sendClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length);
 
-	//ÈçÊ¹ÓÃpostĞèÏÈ³õÊ¼»¯ProcessWorkÖĞµÄpostThread
+	//å¦‚ä½¿ç”¨postéœ€å…ˆåˆå§‹åŒ–ProcessWorkä¸­çš„postThread
 	void postServer(int32_t serverId, const std::string& message);
 
 	void postServer(int32_t serverId, const char* buffer, int32_t length);
@@ -48,12 +48,12 @@ public:
 
 	void postClient(int32_t connectId, int32_t clientPid, const char* buffer, int32_t length);
 
-	//·şÎñ¶Ë¹ÜÀí½ø³ÌÖ÷¶¯·¢ËÍÏûÏ¢£¬Èç¹ûclientPidÎª0±íÊ¾·¢¸ø¿Í»§¶Ë¹ÜÀí½ø³Ì£¬¸Ãº¯ÊıÎªÏûÏ¢×é×°
+	//æœåŠ¡ç«¯ç®¡ç†è¿›ç¨‹ä¸»åŠ¨å‘é€æ¶ˆæ¯ï¼Œå¦‚æœclientPidä¸º0è¡¨ç¤ºå‘ç»™å®¢æˆ·ç«¯ç®¡ç†è¿›ç¨‹ï¼Œè¯¥å‡½æ•°ä¸ºæ¶ˆæ¯ç»„è£…
 	std::string netServerMessage(int32_t clientPid, const std::string& message);
 
 	std::string netServerMessage(int32_t clientPid, const char* buffer, int32_t length);
 
-	//¿Í»§¶Ë¹ÜÀí½ø³ÌÖ÷¶¯·¢ËÍÏûÏ¢£¬Èç¹ûclientPidÎª0±íÊ¾·¢¸ø·şÎñ¶Ë¹ÜÀí½ø³Ì£¬¸Ãº¯ÊıÎªÏûÏ¢×é×°
+	//å®¢æˆ·ç«¯ç®¡ç†è¿›ç¨‹ä¸»åŠ¨å‘é€æ¶ˆæ¯ï¼Œå¦‚æœclientPidä¸º0è¡¨ç¤ºå‘ç»™æœåŠ¡ç«¯ç®¡ç†è¿›ç¨‹ï¼Œè¯¥å‡½æ•°ä¸ºæ¶ˆæ¯ç»„è£…
 	std::string netClientMessage(int32_t serverId, const std::string& message);
 
 	std::string netClientMessage(int32_t serverId, const char* buffer, int32_t length);

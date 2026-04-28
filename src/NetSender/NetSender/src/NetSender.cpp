@@ -1,11 +1,11 @@
-#include "NetSender.h"
+ï»¿#include "NetSender.h"
 #include "CSystem/CSystemAPI.h"
 #include <string.h>
 
 #define NET_CLIENT_VERSION "1.1"
 #define NET_SERVER_VERSION "1.1"
 
-//·¢ËÍÀàĞÍÓÉ·¢ËÍ·½¾ö¶¨
+//å‘é€ç±»å‹ç”±å‘é€æ–¹å†³å®š
 NetSender::NetSender():
 m_currentProcessPid(0)
 {
@@ -135,7 +135,7 @@ void NetSender::initServerReceive(ServerReceiveCallback* callback)
 
 void NetSender::initClient(int32_t serverId, const std::string& serverName, const std::string& initInfo)
 {
-	//¿Í»§¶Ë½«×Ô¼ºµÄ½ø³ÌºÅÃû×Ö¼°Òª·¢µÄ·şÎñ½ø³ÌÃûºÍ³õÊ¼»¯¸½´øĞÅÏ¢·¢ËÍ¸ø·şÎñ¶Ë
+	//å®¢æˆ·ç«¯å°†è‡ªå·±çš„è¿›ç¨‹å·åå­—åŠè¦å‘çš„æœåŠ¡è¿›ç¨‹åå’Œåˆå§‹åŒ–é™„å¸¦ä¿¡æ¯å‘é€ç»™æœåŠ¡ç«¯
 	ProtoMessage message;
 	message[CLIENT_PID] = m_currentProcessPid;
 	message[CLIENT_NAME] = m_currentExeFullName;

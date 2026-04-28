@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "CorrespondParam/CorrespondParamAPI.h"
@@ -11,16 +11,16 @@ public:
 	ProcessReceive();
 
 public:
-	/** ½ÓÊÕº¯Êı
-	@param [in] sendPid ·¢ËÍ½ø³ÌID
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
-	@param [in] type Êı¾İÀàĞÍ
+	/** æ¥æ”¶å‡½æ•°
+	@param [in] sendPid å‘é€è¿›ç¨‹ID
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
+	@param [in] type æ•°æ®ç±»å‹
 	*/
 	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type);
 
-	/** ÉèÖÃ¿Í»§¶Ë
-	@param [in] client ¿Í»§¶Ë
+	/** è®¾ç½®å®¢æˆ·ç«¯
+	@param [in] client å®¢æˆ·ç«¯
 	*/
 	void setClient(Client* client);
 

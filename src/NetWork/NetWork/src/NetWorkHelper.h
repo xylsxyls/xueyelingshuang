@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include <memory>
 #include <string>
@@ -23,7 +23,7 @@ public:
 		Semaphore* receiveSemaphore,
 		LibuvTcp* libuvTcp);
 
-	//·µ»Øfalse±íÊ¾È«²¿ÊÕÈ¡µ½»º³åÇøµ«ÊÇ»¹Î´´ïµ½¹æ¶¨¸öÊı
+	//è¿”å›falseè¡¨ç¤ºå…¨éƒ¨æ”¶å–åˆ°ç¼“å†²åŒºä½†æ˜¯è¿˜æœªè¾¾åˆ°è§„å®šä¸ªæ•°
 	static bool necessaryReceive(const char* buffer,
 		int32_t length,
 		int32_t receiveCount,

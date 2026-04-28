@@ -1,13 +1,13 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 
 struct Area
 {
-	//ÊÇ·ñÒÑ¾­½ÓÊÕµ½ÁËµÚÒ»¸ö°ü
+	//æ˜¯å¦å·²ç»æ¥æ”¶åˆ°äº†ç¬¬ä¸€ä¸ªåŒ…
 	bool m_isReceiveFirst;
-	//µÚÒ»¸ö°üÊÇ·ñÍ¨¹ıÑéÖ¤
+	//ç¬¬ä¸€ä¸ªåŒ…æ˜¯å¦é€šè¿‡éªŒè¯
 	bool m_isFirstPass;
-	//»º³åÇø
+	//ç¼“å†²åŒº
 	std::string m_area;
 
 	Area();

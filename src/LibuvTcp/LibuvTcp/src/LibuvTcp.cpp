@@ -1,4 +1,4 @@
-#include "LibuvTcp.h"
+ï»¿#include "LibuvTcp.h"
 #include "uv.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include <mutex>
@@ -27,10 +27,10 @@ void onRead(uv_stream_t* sender, ssize_t nread, const uv_buf_t* buf)
 	//RCSend("receive, threadId = %d",CSystem::SystemThreadId());
 	LibuvBase* libuv = (LibuvBase*)sender->data;
 	LibuvTcp* libuvTcp = libuv->m_libuvTcp;
-	//·ÖÅäºÃµÄ»º´æÔÚÕâÀïÊ¹ÓÃ£¬Ê¹ÓÃÍêºó×îºó»ØÊÍ·Å£¬=0Îª¶ÁÈ¡³É¹¦£¬µ«ÊÇÃ»ÓĞ¶ÁÈ¡µ½ÈÎºÎÊı¾İ¶øÒÑ 
+	//åˆ†é…å¥½çš„ç¼“å­˜åœ¨è¿™é‡Œä½¿ç”¨ï¼Œä½¿ç”¨å®Œåæœ€åå›é‡Šæ”¾ï¼Œ=0ä¸ºè¯»å–æˆåŠŸï¼Œä½†æ˜¯æ²¡æœ‰è¯»å–åˆ°ä»»ä½•æ•°æ®è€Œå·² 
 	if (nread < 0)
 	{
-		//¶ÁÈ¡µ½µÄÊı¾İ´óĞ¡Ğ¡ÓÚÁã£¬±íÊ¾¶ÁÈ¡³ö´í 
+		//è¯»å–åˆ°çš„æ•°æ®å¤§å°å°äºé›¶ï¼Œè¡¨ç¤ºè¯»å–å‡ºé”™ 
 		if (nread == uv_errno_t::UV_EOF || nread == uv_errno_t::UV_ECONNRESET)
 		{
 			printf("tcp disconnected\n");
@@ -60,9 +60,9 @@ void onRead(uv_stream_t* sender, ssize_t nread, const uv_buf_t* buf)
 		}
 		return;
 	}
-	//Êµ¼Ê¶ÁÈ¡µ½ÁËÄÚÈİ
+	//å®é™…è¯»å–åˆ°äº†å†…å®¹
 	libuvTcp->receive((uv_tcp_t*)sender, buf->base, nread);
-	//È·±£Õâ¾ä´úÂëÒ»¶¨»áÔÚ×îºóÃæÖ´ĞĞ£¬²»ÒªÔÚÖĞ¼äÍ»È»ÍË³öº¯Êı£¬·ñÔò¾ÍÄÚ´æĞ¹Â¶ÁË 
+	//ç¡®ä¿è¿™å¥ä»£ç ä¸€å®šä¼šåœ¨æœ€åé¢æ‰§è¡Œï¼Œä¸è¦åœ¨ä¸­é—´çªç„¶é€€å‡ºå‡½æ•°ï¼Œå¦åˆ™å°±å†…å­˜æ³„éœ²äº† 
 	delete[] buf->base;
 }
 
@@ -71,7 +71,7 @@ void StartRead(uv_tcp_t* sender)
 	int32_t res = uv_read_start((uv_stream_t*)sender,
 		[](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 	{
-		//·ÖÅä½ÓÊÕ»º´æÄÚ´æºÍÉèÖÃ½¨Òé´óĞ¡£¬Ğ¡ÓÚµÈÓÚÊµ¼Ê´óĞ¡ 
+		//åˆ†é…æ¥æ”¶ç¼“å­˜å†…å­˜å’Œè®¾ç½®å»ºè®®å¤§å°ï¼Œå°äºç­‰äºå®é™…å¤§å° 
 		buf->base = new char[suggested_size];
 		buf->len = suggested_size;
 	}, onRead);
@@ -98,7 +98,7 @@ void onClientClosed(uv_handle_t* handle)
 	delete (uv_tcp_t*)handle;
 }
 
-//¿Í»§¶ËÁ¬ÉÏ·şÎñ¶ËµÄ»Øµ÷£¨¿Í»§¶Ëº¯Êı£©
+//å®¢æˆ·ç«¯è¿ä¸ŠæœåŠ¡ç«¯çš„å›è°ƒï¼ˆå®¢æˆ·ç«¯å‡½æ•°ï¼‰
 void onServerConnected(uv_connect_t* connect, int status)
 {
 	LibuvClient* libuv = (LibuvClient*)connect->data;
@@ -117,21 +117,21 @@ void onServerConnected(uv_connect_t* connect, int status)
 		printf("dest error\n");
 	}
 
-	//Êµ¼ÊÊ±¼äÎª10Ãë
+	//å®é™…æ—¶é—´ä¸º10ç§’
 	uv_tcp_keepalive(libuv->m_dest, 1, 5);
 
 	libuvTcp->uvServerConnected(libuv->m_dest);
 
-	//¿ªÊ¼¶ÁÈ¡¿Í»§¶Ë·¢ËÍµÄÊı¾İ£¬²¢ÉèÖÃºÃ½ÓÊÕ»º´æ·ÖÅäµÄº¯Êıalloc_bufferºÍ¶ÁÈ¡Íê±ÏºóµÄ»Øµ÷º¯Êıecho_read 
+	//å¼€å§‹è¯»å–å®¢æˆ·ç«¯å‘é€çš„æ•°æ®ï¼Œå¹¶è®¾ç½®å¥½æ¥æ”¶ç¼“å­˜åˆ†é…çš„å‡½æ•°alloc_bufferå’Œè¯»å–å®Œæ¯•åçš„å›è°ƒå‡½æ•°echo_read 
 	StartRead(libuv->m_dest);
 }
 
-//¿Í»§¶ËÁ¬ÉÏ·şÎñ¶ËµÄ»Øµ÷£¨·şÎñ¶Ëº¯Êı£©
+//å®¢æˆ·ç«¯è¿ä¸ŠæœåŠ¡ç«¯çš„å›è°ƒï¼ˆæœåŠ¡ç«¯å‡½æ•°ï¼‰
 void onClientConnected(uv_stream_t* server, int status)
 {
 	if (status < 0)
 	{
-		//ĞÂ½¨Á¬½Ó³ö´í
+		//æ–°å»ºè¿æ¥å‡ºé”™
 		printf("New connection error %s\n", uv_strerror(status));
 		return;
 	}
@@ -139,28 +139,28 @@ void onClientConnected(uv_stream_t* server, int status)
 	LibuvServer* libuv = (LibuvServer*)server->data;
 	LibuvTcp* libuvTcp = (LibuvTcp*)libuv->m_libuvTcp;
 
-	//·ÖÅäÄÚ´æ
+	//åˆ†é…å†…å­˜
 	uv_tcp_t* client = new uv_tcp_t;
 
-	//½«È«¾ÖµÄÖ÷Ñ­»·ºÍ´¦ÀíÁ¬½ÓµÄ¶ÔÏó¹ØÁªÆğÀ´
+	//å°†å…¨å±€çš„ä¸»å¾ªç¯å’Œå¤„ç†è¿æ¥çš„å¯¹è±¡å…³è”èµ·æ¥
 	uv_tcp_init(libuv->m_loop, client);
 
-	//´æÈëÀàµØÖ·
+	//å­˜å…¥ç±»åœ°å€
 	client->data = libuv;
 
-	//½ÓÊÕ·şÎñ¶Ë¶ÔÏó
+	//æ¥æ”¶æœåŠ¡ç«¯å¯¹è±¡
 	if (uv_accept((uv_stream_t*)server, (uv_stream_t*)client) != 0)
 	{
-		//¶ÁÈ¡Ê§°Ü£¬ÊÍ·Å´¦Àí¶ÔÏó
+		//è¯»å–å¤±è´¥ï¼Œé‡Šæ”¾å¤„ç†å¯¹è±¡
 		printf("accept error\n");
 		uv_close((uv_handle_t*)client, onTcpClosed);
 		return;
 	}
 
-	//±ØĞëÔÚacceptÖ®ºóÖ´ĞĞ£¬·ñÔòÎŞĞ§
+	//å¿…é¡»åœ¨acceptä¹‹åæ‰§è¡Œï¼Œå¦åˆ™æ— æ•ˆ
 	uv_tcp_keepalive(client, 1, 5);
 
-	//¿ªÊ¼¶ÁÈ¡¿Í»§¶Ë·¢ËÍµÄÊı¾İ£¬²¢ÉèÖÃºÃ½ÓÊÕ»º´æ·ÖÅäµÄº¯Êıalloc_bufferºÍ¶ÁÈ¡Íê±ÏºóµÄ»Øµ÷º¯Êıecho_read
+	//å¼€å§‹è¯»å–å®¢æˆ·ç«¯å‘é€çš„æ•°æ®ï¼Œå¹¶è®¾ç½®å¥½æ¥æ”¶ç¼“å­˜åˆ†é…çš„å‡½æ•°alloc_bufferå’Œè¯»å–å®Œæ¯•åçš„å›è°ƒå‡½æ•°echo_read
 	StartRead(client);
 
 	libuv->m_vecClient.push_back(client);
@@ -187,27 +187,27 @@ void onAsyncCallback(uv_async_t* handle)
 		int32_t length = *(int32_t*)(text + ptrSize);
 		char* buffer = text + ptrSize + 4;
 
-		//Îª»Ø¸´¿Í»§¶ËÊı¾İ´´½¨Ò»¸öĞ´Êı¾İ¶ÔÏóuv_write_t£¬Ğ´Êı¾İ¶ÔÏóÄÚ´æ½«»áÔÚĞ´ÍêºóµÄ»Øµ÷º¯ÊıÖĞÊÍ·Å 
-		//ÒòÎª·¢ËÍÍêµÄÊı¾İÔÚ·¢ËÍÍê±ÏºóÎŞÂÛ³É¹¦Óë·ñ£¬¶¼»áÊÍ·ÅÄÚ´æ¡£Èç¹ûÒ»¶¨ÒªÈ·±£·¢ËÍ³öÈ¥£¬ÄÇÃ´Çë×Ô¼º´æ´¢ºÃ·¢ËÍµÄÊı¾İ£¬Ö±µ½echo_writeÖ´ĞĞÍêÔÙÊÍ·Å¡£ 
+		//ä¸ºå›å¤å®¢æˆ·ç«¯æ•°æ®åˆ›å»ºä¸€ä¸ªå†™æ•°æ®å¯¹è±¡uv_write_tï¼Œå†™æ•°æ®å¯¹è±¡å†…å­˜å°†ä¼šåœ¨å†™å®Œåçš„å›è°ƒå‡½æ•°ä¸­é‡Šæ”¾ 
+		//å› ä¸ºå‘é€å®Œçš„æ•°æ®åœ¨å‘é€å®Œæ¯•åæ— è®ºæˆåŠŸä¸å¦ï¼Œéƒ½ä¼šé‡Šæ”¾å†…å­˜ã€‚å¦‚æœä¸€å®šè¦ç¡®ä¿å‘é€å‡ºå»ï¼Œé‚£ä¹ˆè¯·è‡ªå·±å­˜å‚¨å¥½å‘é€çš„æ•°æ®ï¼Œç›´åˆ°echo_writeæ‰§è¡Œå®Œå†é‡Šæ”¾ã€‚ 
 		uv_write_t* req = new uv_write_t;
 		//char* bufferAlloc = new char[length];
 		//memcpy(bufferAlloc, buffer, length);
-		//ÓÃ»º´æÖĞµÄÆğÊ¼µØÖ·ºÍ´óĞ¡³õÊ¼»¯Ğ´Êı¾İ¶ÔÏó
+		//ç”¨ç¼“å­˜ä¸­çš„èµ·å§‹åœ°å€å’Œå¤§å°åˆå§‹åŒ–å†™æ•°æ®å¯¹è±¡
 		req->data = text;
 		uv_buf_t send_buf;
 		send_buf.base = text + ptrSize;
 		send_buf.len = length + 4;
 
-		//Ğ´Êı¾İ£¬²¢½«Ğ´Êı¾İ¶ÔÏóuv_write_tºÍ¿Í»§¶Ë¡¢»º´æ¡¢»Øµ÷º¯Êı¹ØÁª£¬µÚËÄ¸ö²ÎÊı±íÊ¾´´½¨Ò»¸öuv_buf_t»º´æ£¬²»ÊÇ1¸ö×Ö½Ú 
+		//å†™æ•°æ®ï¼Œå¹¶å°†å†™æ•°æ®å¯¹è±¡uv_write_tå’Œå®¢æˆ·ç«¯ã€ç¼“å­˜ã€å›è°ƒå‡½æ•°å…³è”ï¼Œç¬¬å››ä¸ªå‚æ•°è¡¨ç¤ºåˆ›å»ºä¸€ä¸ªuv_buf_tç¼“å­˜ï¼Œä¸æ˜¯1ä¸ªå­—èŠ‚ 
 		uv_write((uv_write_t*)req, (uv_stream_t*)dest, &send_buf, 1, [](uv_write_t *req, int status)
 		{
 			if (status != 0)
 			{
-				//×´Ì¬Öµstatus²»Îª0±íÊ¾·¢ËÍÊı¾İÊ§°Ü¡£
-				//µ±Òª·¢ËÍÊ±·şÎñ¶Ë±ÀÀ£ÁË»á·¢ËÍÊ§°Ü£¬ÔÚÖ´ĞĞÍêÊ§°Ü·µ»Øºó»áÓĞ¶Ï¿ªÍ¨Öª
+				//çŠ¶æ€å€¼statusä¸ä¸º0è¡¨ç¤ºå‘é€æ•°æ®å¤±è´¥ã€‚
+				//å½“è¦å‘é€æ—¶æœåŠ¡ç«¯å´©æºƒäº†ä¼šå‘é€å¤±è´¥ï¼Œåœ¨æ‰§è¡Œå®Œå¤±è´¥è¿”å›åä¼šæœ‰æ–­å¼€é€šçŸ¥
 				//printf("Write error %s\n", uv_strerror(status));
 			}
-			//²»¹Ü·¢ËÍÊı¾İ³É¹¦Óë·ñ£¬¶¼ÒªÖ´ĞĞÏÂÃæµÄº¯ÊıÊÍ·Å×ÊÔ´£¬ÒÔÃâÄÚ´æĞ¹Â¶
+			//ä¸ç®¡å‘é€æ•°æ®æˆåŠŸä¸å¦ï¼Œéƒ½è¦æ‰§è¡Œä¸‹é¢çš„å‡½æ•°é‡Šæ”¾èµ„æºï¼Œä»¥å…å†…å­˜æ³„éœ²
 			delete[] (char*)req->data;
 			delete req;
 		});
@@ -243,7 +243,7 @@ void onAsyncCloseCallback(uv_async_t* handle)
 		uv_close((uv_handle_t*)libuvServer->m_server, onTcpClosed);
 	}
 
-	//Ö´ĞĞÕâ¾äºóloopÖĞµÄuv_run×èÈûº¯Êı»á·µ»Ø
+	//æ‰§è¡Œè¿™å¥åloopä¸­çš„uv_runé˜»å¡å‡½æ•°ä¼šè¿”å›
 	uv_close((uv_handle_t*)libuv->m_asyncCloseHandle, onAsyncClosed);
 }
 
@@ -299,17 +299,17 @@ bool LibuvTcp::initServer(int32_t port, int32_t backlog)
 	libuv->m_asyncCloseHandle->data = libuv;
 	uv_async_init(libuv->m_loop, libuv->m_asyncCloseHandle, onAsyncCloseCallback);
 	
-	//´æÈëÀàµØÖ·
+	//å­˜å…¥ç±»åœ°å€
 	libuv->m_server->data = libuv;
-	//³õÊ¼»¯£¬½«TCP·şÎñ¶Ë¶ÔÏóºÍÖ÷Ñ­»·°ó¶¨ÔÚÒ»Æğ
+	//åˆå§‹åŒ–ï¼Œå°†TCPæœåŠ¡ç«¯å¯¹è±¡å’Œä¸»å¾ªç¯ç»‘å®šåœ¨ä¸€èµ·
 	uv_tcp_init(libuv->m_loop, libuv->m_server);
 
 	struct sockaddr_in addr;
-	//´´½¨IPµØÖ·ºÍ¶Ë¿Ú£¬·şÎñÆ÷Ê¹ÓÃ0.0.0.0´ú±íÈÎÒâµØÖ·£¬¹«Íø·şÎñÆ÷Ê¹ÓÃ£¬¿Í»§¶Ë¿ÉÒÔÍ¨¹ı¹«ÍøIPÁ¬½Ó¡£Èç¹ûÊÇ¾ÖÓòÍø£¬ÔòÌîĞ´¾ÖÓòÍøIP¡£ 
+	//åˆ›å»ºIPåœ°å€å’Œç«¯å£ï¼ŒæœåŠ¡å™¨ä½¿ç”¨0.0.0.0ä»£è¡¨ä»»æ„åœ°å€ï¼Œå…¬ç½‘æœåŠ¡å™¨ä½¿ç”¨ï¼Œå®¢æˆ·ç«¯å¯ä»¥é€šè¿‡å…¬ç½‘IPè¿æ¥ã€‚å¦‚æœæ˜¯å±€åŸŸç½‘ï¼Œåˆ™å¡«å†™å±€åŸŸç½‘IPã€‚ 
 	uv_ip4_addr("0.0.0.0", port, &addr);
-	//½«·şÎñ¶Ë¶ÔÏóºÍµØÖ·°ó¶¨£¬¹©ºóĞø¼àÌı¶Ë¿ÚÊ¹ÓÃ¡£ 
+	//å°†æœåŠ¡ç«¯å¯¹è±¡å’Œåœ°å€ç»‘å®šï¼Œä¾›åç»­ç›‘å¬ç«¯å£ä½¿ç”¨ã€‚ 
 	uv_tcp_bind(libuv->m_server, (const struct sockaddr*)&addr, 0);
-	//½øĞĞ¶Ë¿Ú¼àÌı£¬Í¬Ê±¹ØÁª¼àÌıºó½øÀ´µÄÁ¬½ÓµÄ»Øµ÷º¯Êı
+	//è¿›è¡Œç«¯å£ç›‘å¬ï¼ŒåŒæ—¶å…³è”ç›‘å¬åè¿›æ¥çš„è¿æ¥çš„å›è°ƒå‡½æ•°
 	int res = uv_listen((uv_stream_t*)libuv->m_server, backlog, onClientConnected);
 	if (res != 0)
 	{

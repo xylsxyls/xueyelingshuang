@@ -31,7 +31,7 @@ windowslibname="uv"
 linuxlibname="libuv"
 includecreatedir=0
 
-#该写法支持目录下含有子目录和空格
+#璇ュ啓娉曟敮鎸佺洰褰曚笅鍚湁瀛愮洰褰曞拰绌烘牸
 includepath=$xueyelingshuang"/tools/"$libname"/include/"
 copyincludepath=$xueyelingshuang"/include/"
 if [[ $includecreatedir == 1 ]]; then
