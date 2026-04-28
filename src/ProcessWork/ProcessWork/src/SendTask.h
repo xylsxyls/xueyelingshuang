@@ -1,30 +1,30 @@
-#pragma once
+ï»¿#pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 
 class Semaphore;
-/** ·¢ËÍÈÎÎñ
+/** å‘é€ä»»åŠ¡
 */
 class SendTask : public CTask
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	SendTask();
 
 public:
-	/** Ö´ĞĞÈÎÎñ
+	/** æ‰§è¡Œä»»åŠ¡
 	*/
 	void DoTask();
 
-	/** ÖĞ¶ÏÈÎÎñ
+	/** ä¸­æ–­ä»»åŠ¡
 	*/
 	void StopTask();
 
-	/** ÉèÖÃ²ÎÊı
-	@param [in] waitEndPost ·¢ËÍ½áÊøºóÊÇ·ñÍË³öÑ­»·
-	@param [in] postQueue ·¢ËÍÊı¾İ¶ÓÁĞ
-	@param [in] postSemaphore ·¢ËÍĞÅºÅÁ¿
+	/** è®¾ç½®å‚æ•°
+	@param [in] waitEndPost å‘é€ç»“æŸåæ˜¯å¦é€€å‡ºå¾ªç¯
+	@param [in] postQueue å‘é€æ•°æ®é˜Ÿåˆ—
+	@param [in] postSemaphore å‘é€ä¿¡å·é‡
 	*/
 	void setParam(std::atomic<bool>* waitEndPost, LockFreeQueue<char*>* postQueue, Semaphore* postSemaphore);
 

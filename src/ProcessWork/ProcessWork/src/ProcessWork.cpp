@@ -1,4 +1,4 @@
-#include "ProcessWork.h"
+﻿#include "ProcessWork.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
@@ -215,17 +215,17 @@ void ProcessWork::clearUseless()
 			int32_t destPid = *(int32_t*)pid;
 			if (destPid != oldDestPid)
 			{
-				//�Ѿɵ�pid�ŵ���ն���
+				//把旧的pid放到清空队列
 				vecClearPid.push_back(oldDestPid);
-				//���µ�pid�ŵ�map��
+				//把新的pid放到map中
 				itSendName->second.first = destPid;
 			}
-			//����µ�pidҲ������
+			//如果新的pid也不存在
 			if (CSystem::processName(destPid).empty())
 			{
-				//���µ�pid�ŵ���ն���
+				//把新的pid放到清空队列
 				vecClearPid.push_back(destPid);
-				//�ѵ�ǰ�ڵ�����ַŵ���ն���
+				//把当前节点的名字放到清空队列
 				vecClearName.push_back(itSendName->first);
 			}
 		}
@@ -321,8 +321,8 @@ void ProcessWork::uninitPostThread()
 	}
 }
 
-//���Խ�����Ļ������Ÿ�Ϊ�ȷ����һ���÷����������ã�Ȼ���ٰ�д�õķ���ŷ��������ȡ��������Ч�ʣ���ȡ�˽��ź�����Ϊ�¼��������������һ���Զ�ȡ
-//Ч�ʿ����Ż���һ��25������
+//可以将申请的缓冲区号改为先分配号一组让发送者有序拿，然后再把写好的分配号放入申请读取组中增加效率，读取端将信号量改为事件，拷贝出分配号一次性读取
+//效率可以优化到一秒25万左右
 void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, MessageType type)
 {
 	if (destPid <= 0 || (buffer == nullptr && length != 0) || (int32_t)type < 0)
@@ -393,7 +393,7 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 
 	int32_t areaCount = *(int32_t*)areaAssign;
 	int32_t assign = 0;
-	//���뻺������
+	//申请缓存区号
 	{
 		int32_t searchCount = 0;
 		while (true)
@@ -403,7 +403,7 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 			{
 				if (AtomicMath::compareAndSwap((int32_t*)areaAssign + 1 + index * 2 + 1, 0, m_thisProcessPid))
 				{
-					//��ȡ����Ļ�������
+					//读取申请的缓存区号
 					assign = *((int32_t*)areaAssign + 1 + index * 2);
 					break;
 				}
@@ -459,7 +459,7 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 		::memcpy((char*)memory + 12, buffer, length);
 	}
 
-	//����Ŀ���ȡ
+	//申请目标读取
 	{
 		int32_t& write = *(int32_t*)areaRead;
 		int32_t* beginReadPtr = (int32_t*)areaRead + 2;
@@ -470,15 +470,15 @@ void ProcessWork::send(int32_t destPid, const char* buffer, int32_t length, Mess
 		}
 		while (true)
 		{
-			//ǰ4�ֽ�Ϊ0����4�ֽ��õ�1
+			//前4字节为0，后4字节拿到1
 			if ((*(beginReadPtr + writeIndex * 2) == 0) && (AtomicMath::compareAndSwap(beginReadPtr + writeIndex * 2 + 1, 0, m_thisProcessPid)))
 			{
-				//��д�õĻ�������д��ȥ
+				//把写好的缓存区号写进去
 				*(beginReadPtr + writeIndex * 2) = assign;
-				//�ֲ������writeֵ����ֵ���ǣ��������µ�send�������д����ȷ��ֵ��Ϊ�˷�ֹ��ռ��֮�����
-				//������дwrite = writeIndex + 1;��Ϊ�����ǰ��ĺ�д�룬���´洢˳�����
-				//0 0  0 0  0 0  0 0  0 2145  0 7896  0 5468  12 5489�����������д��֪ͨ�����ǵ�����д��
-				//һ������������޷���֤����������֮�ڵ�˳���һ������֪ͨ���һ���������
+				//局部会出现write值被旧值覆盖，但出现新的send后会重新写入正确的值，为了防止抢占到之后崩溃
+				//不可以写write = writeIndex + 1;因为会出现前面的后写入，导致存储顺序出错
+				//0 0  0 0  0 0  0 0  0 2145  0 7896  0 5468  12 5489，第五第六格写入通知，但是第五格后写入
+				//一旦在这里崩溃无法保证后续几个包之内的顺序，且会出现少通知最后一个包的情况
 				int32_t currentWrite = AtomicMath::selfAddOne(&write);
 				if (currentWrite >= areaCount)
 				{

@@ -1,4 +1,4 @@
-#include "ScanTask.h"
+ï»¿#include "ScanTask.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "AtomicMath/AtomicMathAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -44,7 +44,7 @@ void ScanTask::DoTask()
 			{
 				continue;
 			}
-			//¹ıÁËÒ»Ãëºó·¢ÏÖÁ½¸öPointÏàµÈÔò»³ÒÉ·¢ËÍ½ø³ÌÊÇ·ñ±ÀÀ£ÁË
+			//è¿‡äº†ä¸€ç§’åå‘ç°ä¸¤ä¸ªPointç›¸ç­‰åˆ™æ€€ç–‘å‘é€è¿›ç¨‹æ˜¯å¦å´©æºƒäº†
 			Sleep(5000);
 			if (m_exit)
 			{
@@ -55,13 +55,13 @@ void ScanTask::DoTask()
 			{
 				continue;
 			}
-			//Èç¹û¹ıÁË5Ãë·¢ÏÖÁ½¸öPointÈÔÈ»ÏàµÈ£¬Ôò¼ì²â·¢ËÍ½ø³ÌÊÇ·ñ±ÀÀ£ÁË
+			//å¦‚æœè¿‡äº†5ç§’å‘ç°ä¸¤ä¸ªPointä»ç„¶ç›¸ç­‰ï¼Œåˆ™æ£€æµ‹å‘é€è¿›ç¨‹æ˜¯å¦å´©æºƒäº†
 			if (!CSystem::processName(assignPoint).empty())
 			{
 				continue;
 			}
-			//»Ö¸´»µÇø
-			//RCSend("»Ö¸´»µÇø£¬index = %d", index);
+			//æ¢å¤ååŒº
+			//RCSend("æ¢å¤ååŒºï¼Œindex = %d", index);
 			*((int32_t*)areaAssign + 1 + index * 2 + 1) = 0;
 		}
 	}

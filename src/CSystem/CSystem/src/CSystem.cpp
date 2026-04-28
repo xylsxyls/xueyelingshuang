@@ -523,9 +523,20 @@ std::map<std::string, std::vector<std::string>> CSystem::allDeviceInfo()
 #ifdef __unix__
 static inline uint64_t get_cycle_count()
 {
-	unsigned int lo,hi;
+#ifdef __x86_64__
+	// x86/x86_64 平台
+	unsigned int lo, hi;
 	__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
 	return ((uint64_t)hi << 32) | lo;
+#elif __aarch64__
+	// ARM64 平台（地平线/X3派）
+	uint64_t val;
+	__asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r" (val));
+	return val;
+#else
+	// 其他平台 fallback
+	return 0;
+#endif
 }
 #endif
 

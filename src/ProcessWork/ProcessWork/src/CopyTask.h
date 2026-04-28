@@ -1,35 +1,35 @@
-#pragma once
+ï»¿#pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 
 class Semaphore;
 class SharedMemory;
 
-/** ¿½±´ÈÎÎñ
+/** æ‹·è´ä»»åŠ¡
 */
 class CopyTask : public CTask
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	CopyTask();
 
 public:
-	/** Ö´ĞĞÈÎÎñ
+	/** æ‰§è¡Œä»»åŠ¡
 	*/
 	void DoTask();
 
-	/** ÖĞ¶ÏÈÎÎñ
+	/** ä¸­æ–­ä»»åŠ¡
 	*/
 	void StopTask();
 
-	/** ÉèÖÃ²ÎÊı
-	@param [in] areaAssign »º³åÇøºÅ·ÖÅä¶ÓÁĞ
-	@param [in] memoryMap ¹²ÏíÄÚ´æ×é
-	@param [in] assignQueue ·ÖÅäºÅ¶ÓÁĞ
-	@param [in] assignSemaphore ·ÖÅäºÅĞÅºÅÁ¿
-	@param [in] receiveQueue ½ÓÊÕ¶ÓÁĞ
-	@param [in] receiveSemaphore ½ÓÊÕĞÅºÅÁ¿
+	/** è®¾ç½®å‚æ•°
+	@param [in] areaAssign ç¼“å†²åŒºå·åˆ†é…é˜Ÿåˆ—
+	@param [in] memoryMap å…±äº«å†…å­˜ç»„
+	@param [in] assignQueue åˆ†é…å·é˜Ÿåˆ—
+	@param [in] assignSemaphore åˆ†é…å·ä¿¡å·é‡
+	@param [in] receiveQueue æ¥æ”¶é˜Ÿåˆ—
+	@param [in] receiveSemaphore æ¥æ”¶ä¿¡å·é‡
 	*/
 	void setParam(SharedMemory* areaAssign,
 		std::map<int32_t, std::shared_ptr<SharedMemory>>* memoryMap,

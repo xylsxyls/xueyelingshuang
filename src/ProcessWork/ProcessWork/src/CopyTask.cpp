@@ -1,4 +1,4 @@
-#include "CopyTask.h"
+﻿#include "CopyTask.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
 #include <string.h>

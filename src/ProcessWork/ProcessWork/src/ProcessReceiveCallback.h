@@ -1,17 +1,17 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include "ProcessWorkMacro.h"
 
-/** ½ÓÊÕ»Øµ÷Àà
+/** æ¥æ”¶å›è°ƒç±»
 */
 class ProcessWorkAPI ProcessReceiveCallback
 {
 public:
-	/** ½ÓÊÕĞéº¯Êı
-	@param [in] sendPid ·¢ËÍ½ø³ÌID
-	@param [in] buffer Êı¾İÄÚ´æ£¬¿Õ°üÎªnullptr
-	@param [in] length Êı¾İ³¤¶È
-	@param [in] type Êı¾İÀàĞÍ
+	/** æ¥æ”¶è™šå‡½æ•°
+	@param [in] sendPid å‘é€è¿›ç¨‹ID
+	@param [in] buffer æ•°æ®å†…å­˜ï¼Œç©ºåŒ…ä¸ºnullptr
+	@param [in] length æ•°æ®é•¿åº¦
+	@param [in] type æ•°æ®ç±»å‹
 	*/
 	virtual void receive(int32_t sendPid, const char* buffer, int32_t length, MessageType type) = 0;
 };

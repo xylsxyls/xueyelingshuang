@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include <vector>
 #include "LockFreeQueue/LockFreeQueueAPI.h"
@@ -6,28 +6,28 @@
 class ProcessReceiveCallback;
 class Semaphore;
 
-/** ½ÓÊÕÈÎÎñ
+/** æ¥æ”¶ä»»åŠ¡
 */
 class ReceiveTask : public CTask
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ReceiveTask();
 
 public:
-	/** Ö´ĞĞÈÎÎñ
+	/** æ‰§è¡Œä»»åŠ¡
 	*/
 	void DoTask();
 
-	/** ÖĞ¶ÏÈÎÎñ
+	/** ä¸­æ–­ä»»åŠ¡
 	*/
 	void StopTask();
 
-	/** ÉèÖÃ²ÎÊı
-	@param [in] callback ½ÓÊÕ»Øµ÷Àà
-	@param [in] receiveQueue ½ÓÊÕ¶ÓÁĞ
-	@param [in] receiveSemaphore ½ÓÊÕĞÅºÅÁ¿
+	/** è®¾ç½®å‚æ•°
+	@param [in] callback æ¥æ”¶å›è°ƒç±»
+	@param [in] receiveQueue æ¥æ”¶é˜Ÿåˆ—
+	@param [in] receiveSemaphore æ¥æ”¶ä¿¡å·é‡
 	*/
 	void setParam(std::vector<ProcessReceiveCallback*>* callback,
 		LockFreeQueue<char*>* receiveQueue,

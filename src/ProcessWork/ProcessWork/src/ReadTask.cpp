@@ -1,4 +1,4 @@
-#include "ReadTask.h"
+ï»¿#include "ReadTask.h"
 #include "Semaphore/SemaphoreAPI.h"
 #include "SharedMemory/SharedMemoryAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -48,7 +48,7 @@ void ReadTask::DoTask()
 			}
 			else if (readCount > 10)
 			{
-				//³¬¹ý2000ºÁÃëÈÔÈ»¶Á²»µ½Õý³£Êý¾ÝÊ±ÐèÒª¼ì²â·¢ËÍ³ÌÐòÊÇ·ñ±ÀÀ£ÁË
+				//è¶…è¿‡2000æ¯«ç§’ä»ç„¶è¯»ä¸åˆ°æ­£å¸¸æ•°æ®æ—¶éœ€è¦æ£€æµ‹å‘é€ç¨‹åºæ˜¯å¦å´©æºƒäº†
 				if (CSystem::GetTickCount() - beginReadTime > 2000)
 				{
 					if (!CSystem::processName(readPoint).empty())
@@ -56,7 +56,7 @@ void ReadTask::DoTask()
 						readCount = 0;
 						continue;
 					}
-					//µ½ÕâÀïËµÃ÷·¢ËÍ³ÌÐòÇÀÕ¼µ½½Úµãºó±ÀÀ£ÁË£¬´ËÊ±µÄÍ¨ÖªÊÇÏÂÒ»¸ö°üµÄÍ¨Öª£¬ËùÒÔÐèÒªÔÚÕâÀï²¹Ò»´Î
+					//åˆ°è¿™é‡Œè¯´æ˜Žå‘é€ç¨‹åºæŠ¢å åˆ°èŠ‚ç‚¹åŽå´©æºƒäº†ï¼Œæ­¤æ—¶çš„é€šçŸ¥æ˜¯ä¸‹ä¸€ä¸ªåŒ…çš„é€šçŸ¥ï¼Œæ‰€ä»¥éœ€è¦åœ¨è¿™é‡Œè¡¥ä¸€æ¬¡
 					AtomicMath::selfAddOne(write);
 					m_readSemaphore->processSignal();
 					read += 1;

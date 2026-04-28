@@ -1,34 +1,34 @@
-#pragma once
+ï»¿#pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 
 class Semaphore;
 class SharedMemory;
 
-/** ½ÓÊÕÈÎÎñ
+/** æ¥æ”¶ä»»åŠ¡
 */
 class ReadTask : public CTask
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ReadTask();
 
 public:
-	/** Ö´ĞĞÈÎÎñ
+	/** æ‰§è¡Œä»»åŠ¡
 	*/
 	void DoTask();
 
-	/** Í£Ö¹ÈÎÎñ
+	/** åœæ­¢ä»»åŠ¡
 	*/
 	void StopTask();
 
-	/** ÉèÖÃ²ÎÊı
-	@param [in] readSemaphore ¶ÁÈ¡ĞÅºÅ
-	@param [in] areaCount »º´æÇø¸öÊı
-	@param [in] areaRead »º´æÇøºÅ¶ÁÈ¡»º´æ¶ÓÁĞ
-	@param [in] assignQueue ·ÖÅäºÅ¶ÓÁĞ
-	@param [in] assignSemaphore ·ÖÅäºÅĞÅºÅÁ¿
+	/** è®¾ç½®å‚æ•°
+	@param [in] readSemaphore è¯»å–ä¿¡å·
+	@param [in] areaCount ç¼“å­˜åŒºä¸ªæ•°
+	@param [in] areaRead ç¼“å­˜åŒºå·è¯»å–ç¼“å­˜é˜Ÿåˆ—
+	@param [in] assignQueue åˆ†é…å·é˜Ÿåˆ—
+	@param [in] assignSemaphore åˆ†é…å·ä¿¡å·é‡
 	*/
 	void setParam(Semaphore* readSemaphore,
 		int32_t areaCount,

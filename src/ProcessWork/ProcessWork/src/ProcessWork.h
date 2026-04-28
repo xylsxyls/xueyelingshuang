@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CorrespondParam/CorrespondParamAPI.h"
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
@@ -13,123 +13,123 @@
 class SharedMemory;
 class ProcessReceiveCallback;
 
-/** ½ø³ÌÍ¨ĞÅÀà
+/** è¿›ç¨‹é€šä¿¡ç±»
 */
 class ProcessWorkAPI ProcessWork
 {
 protected:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ProcessWork();
 
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static ProcessWork& instance();
 
 public:
-	/** Ôö¼Ó½ÓÊÕ»Øµ÷Àà£¬°´ÏÈÈëÏÈÖ´ĞĞ»Øµ÷Ë³Ğò
-	@param [in] callback ½ÓÊÕ»Øµ÷Àà
+	/** å¢åŠ æ¥æ”¶å›è°ƒç±»ï¼ŒæŒ‰å…ˆå…¥å…ˆæ‰§è¡Œå›è°ƒé¡ºåº
+	@param [in] callback æ¥æ”¶å›è°ƒç±»
 	*/
 	void addProcessReceiveCallback(ProcessReceiveCallback* callback);
 
-	/** ³õÊ¼»¯½ÓÊÕÄ£¿é
-	@param [in] receiveSize µ¥¸ö¹²ÏíÄÚ´æ½ÓÊÕÇø´óĞ¡£¬500K
-	@param [in] areaCount »º´æ¿é¸öÊı
-	@return ·µ»ØÊÇ·ñ³õÊ¼»¯³É¹¦
+	/** åˆå§‹åŒ–æ¥æ”¶æ¨¡å—
+	@param [in] receiveSize å•ä¸ªå…±äº«å†…å­˜æ¥æ”¶åŒºå¤§å°ï¼Œ500K
+	@param [in] areaCount ç¼“å­˜å—ä¸ªæ•°
+	@return è¿”å›æ˜¯å¦åˆå§‹åŒ–æˆåŠŸ
 	*/
 	bool initReceive(int32_t receiveSize = 500 * 1024, int32_t areaCount = 100);
 
-	/** Ïú»Ù½ÓÊÕÄ£¿é×ÊÔ´
+	/** é”€æ¯æ¥æ”¶æ¨¡å—èµ„æº
 	*/
 	void uninitReceive();
 
-	/** Çå¿Õ·¢ËÍÄ£¿éÖ¸¶¨pidµÄ×ÊÔ´£¬²»Éæ¼°´æ´¢pidµÄ»º³åÇømap
-	@param [in] destPid Ö¸¶¨pid
+	/** æ¸…ç©ºå‘é€æ¨¡å—æŒ‡å®špidçš„èµ„æºï¼Œä¸æ¶‰åŠå­˜å‚¨pidçš„ç¼“å†²åŒºmap
+	@param [in] destPid æŒ‡å®špid
 	*/
 	void clearDestPid(int32_t destPid);
 
-	/** Çå¿Õ·¢ËÍÄ£¿é²»ÓÃµÄ»º´æ×ÊÔ´
+	/** æ¸…ç©ºå‘é€æ¨¡å—ä¸ç”¨çš„ç¼“å­˜èµ„æº
 	*/
 	void clearUseless();
 
-	/** Çå¿Õ·¢ËÍÄ£¿éµÄËùÓĞ»º´æ×ÊÔ´
+	/** æ¸…ç©ºå‘é€æ¨¡å—çš„æ‰€æœ‰ç¼“å­˜èµ„æº
 	*/
 	void clear();
 
-	/** ³õÊ¼»¯·¢ËÍÏß³Ì£¬²»¿É²¢ĞĞ
+	/** åˆå§‹åŒ–å‘é€çº¿ç¨‹ï¼Œä¸å¯å¹¶è¡Œ
 	*/
 	void initPostThread();
 
-	/** Ïú»Ù·¢ËÍÏß³Ì
+	/** é”€æ¯å‘é€çº¿ç¨‹
 	*/
 	void uninitPostThread();
 	
-	/** Ïò·şÎñ¶Ë·¢ËÍ×Ö·û´®£¬µ¥½ø³ÌÓĞĞò£¬¶à½ø³ÌÎŞĞò£¬ÓĞÏÈ·¢ºóµ½µÄÇé¿ö£¬¸Ãº¯ÊıÖ´ĞĞÍêÔò±íÊ¾Êı¾İÒÑĞ´Èë¹²ÏíÄÚ´æ²¢Í¨Öª¶Ô·½£¬ĞèÒµÎñ±£Ö¤¶Ô·½½ø³Ì´æÔÚ
-	windowsÏÂ·¢ËÍËÙ¶È71.0Íò/s£¬½ÓÊÕËÙ¶È71.0Íò/s£¬linuxÏÂ·¢ËÍËÙ¶È45.9Íò°ü/s£¬½ÓÊÕËÙ¶È45.9Íò°ü/s
-	@param [in] destPid Ä¿±ê½ø³Ìpid
-	@param [in] buffer ×Ö·û´®µØÖ·£¬¿Õ°üÌînullptr
-	@param [in] length ³¤¶È
-	@param [in] type ·¢ËÍÊı¾İÀàĞÍ
+	/** å‘æœåŠ¡ç«¯å‘é€å­—ç¬¦ä¸²ï¼Œå•è¿›ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æ— åºï¼Œæœ‰å…ˆå‘ååˆ°çš„æƒ…å†µï¼Œè¯¥å‡½æ•°æ‰§è¡Œå®Œåˆ™è¡¨ç¤ºæ•°æ®å·²å†™å…¥å…±äº«å†…å­˜å¹¶é€šçŸ¥å¯¹æ–¹ï¼Œéœ€ä¸šåŠ¡ä¿è¯å¯¹æ–¹è¿›ç¨‹å­˜åœ¨
+	windowsä¸‹å‘é€é€Ÿåº¦71.0ä¸‡/sï¼Œæ¥æ”¶é€Ÿåº¦71.0ä¸‡/sï¼Œlinuxä¸‹å‘é€é€Ÿåº¦45.9ä¸‡åŒ…/sï¼Œæ¥æ”¶é€Ÿåº¦45.9ä¸‡åŒ…/s
+	@param [in] destPid ç›®æ ‡è¿›ç¨‹pid
+	@param [in] buffer å­—ç¬¦ä¸²åœ°å€ï¼Œç©ºåŒ…å¡«nullptr
+	@param [in] length é•¿åº¦
+	@param [in] type å‘é€æ•°æ®ç±»å‹
 	*/
 	void send(int32_t destPid, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
 
-	/** Ïò·şÎñ¶Ë·¢ËÍÊı¾İ
-	@param [in] destPid Ä¿±ê½ø³Ìpid
-	@param [in] message ·¢ËÍÄÚÈİ£¬¿ÉÒÔÎª¿Õ×Ö·û´®£¬µÈÍ¬ÓÚnullptr
-	@param [in] type ·¢ËÍÊı¾İÀàĞÍ
+	/** å‘æœåŠ¡ç«¯å‘é€æ•°æ®
+	@param [in] destPid ç›®æ ‡è¿›ç¨‹pid
+	@param [in] message å‘é€å†…å®¹ï¼Œå¯ä»¥ä¸ºç©ºå­—ç¬¦ä¸²ï¼Œç­‰åŒäºnullptr
+	@param [in] type å‘é€æ•°æ®ç±»å‹
 	*/
 	void send(int32_t destPid, const std::string& message, MessageType type = MessageType::MESSAGE);
 
-	/** Ïò·şÎñ¶Ë·¢ËÍ×Ö·û´®£¬µ¥½ø³ÌÓĞĞò£¬¶à½ø³ÌÎŞĞò£¬ÓĞÏÈ·¢ºóµ½µÄÇé¿ö£¬¸Ãº¯ÊıÖ´ĞĞÍêÔò±íÊ¾Êı¾İÒÑĞ´Èë¹²ÏíÄÚ´æ²¢Í¨Öª¶Ô·½
-	windowsÏÂ·¢ËÍËÙ¶È67.7Íò°ü/s£¬½ÓÊÕËÙ¶È67.7Íò°ü/s£¬xp·½°¸Îª51Íò°ü/s£¬¶à½ø³Ì£¬5½ø³Ì43.9Íò°ü/s£¬10½ø³Ì£¬36.7Íò°ü/s£¬20½ø³Ì57.2Íò°ü/s£¬linuxÏÂ·¢ËÍËÙ¶È38.4Íò°ü/s£¬½ÓÊÕËÙ¶È38.4Íò°ü/s
-	@param [in] processName Ä¿±ê½ø³ÌÃû£¬windowsÏÂ²»´øºó×ºÃû£¬linuxÏÂÈ«Ãû
-	@param [in] buffer ×Ö·û´®µØÖ·
-	@param [in] length ³¤¶È
-	@param [in] type ·¢ËÍÊı¾İÀàĞÍ
+	/** å‘æœåŠ¡ç«¯å‘é€å­—ç¬¦ä¸²ï¼Œå•è¿›ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æ— åºï¼Œæœ‰å…ˆå‘ååˆ°çš„æƒ…å†µï¼Œè¯¥å‡½æ•°æ‰§è¡Œå®Œåˆ™è¡¨ç¤ºæ•°æ®å·²å†™å…¥å…±äº«å†…å­˜å¹¶é€šçŸ¥å¯¹æ–¹
+	windowsä¸‹å‘é€é€Ÿåº¦67.7ä¸‡åŒ…/sï¼Œæ¥æ”¶é€Ÿåº¦67.7ä¸‡åŒ…/sï¼Œxpæ–¹æ¡ˆä¸º51ä¸‡åŒ…/sï¼Œå¤šè¿›ç¨‹ï¼Œ5è¿›ç¨‹43.9ä¸‡åŒ…/sï¼Œ10è¿›ç¨‹ï¼Œ36.7ä¸‡åŒ…/sï¼Œ20è¿›ç¨‹57.2ä¸‡åŒ…/sï¼Œlinuxä¸‹å‘é€é€Ÿåº¦38.4ä¸‡åŒ…/sï¼Œæ¥æ”¶é€Ÿåº¦38.4ä¸‡åŒ…/s
+	@param [in] processName ç›®æ ‡è¿›ç¨‹åï¼Œwindowsä¸‹ä¸å¸¦åç¼€åï¼Œlinuxä¸‹å…¨å
+	@param [in] buffer å­—ç¬¦ä¸²åœ°å€
+	@param [in] length é•¿åº¦
+	@param [in] type å‘é€æ•°æ®ç±»å‹
 	*/
 	void send(const std::string& processName, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
 
-	/** Ïò·şÎñ¶Ë·¢ËÍÊı¾İ
-	@param [in] processName Ä¿±ê½ø³ÌÃû£¬windowsÏÂ²»´øºó×ºÃû£¬linuxÏÂÈ«Ãû
-	@param [in] message ·¢ËÍÄÚÈİ
-	@param [in] type ·¢ËÍÊı¾İÀàĞÍ
+	/** å‘æœåŠ¡ç«¯å‘é€æ•°æ®
+	@param [in] processName ç›®æ ‡è¿›ç¨‹åï¼Œwindowsä¸‹ä¸å¸¦åç¼€åï¼Œlinuxä¸‹å…¨å
+	@param [in] message å‘é€å†…å®¹
+	@param [in] type å‘é€æ•°æ®ç±»å‹
 	*/
 	void send(const std::string& processName, const std::string& message, MessageType type = MessageType::MESSAGE);
 
-	/** Ïò·şÎñ¶Ë·¢ËÍ×Ö·û´®£¬µ¥½ø³ÌÓĞĞò£¬¶à½ø³ÌÎŞĞò£¬µ¥½ø³Ìµ¥Ïß³ÌÓĞĞò£¬¶à½ø³Ì»ò¶àÏß³Ì¿ÉÄÜ³öÏÖÏÈ·¢ºóµ½
-	@param [in] destPid Ä¿±ê½ø³Ìpid
-	@param [in] buffer ×Ö·û´®µØÖ·
-	@param [in] length ³¤¶È
-	@param [in] type ·¢ËÍÊı¾İÀàĞÍ
+	/** å‘æœåŠ¡ç«¯å‘é€å­—ç¬¦ä¸²ï¼Œå•è¿›ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æ— åºï¼Œå•è¿›ç¨‹å•çº¿ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æˆ–å¤šçº¿ç¨‹å¯èƒ½å‡ºç°å…ˆå‘ååˆ°
+	@param [in] destPid ç›®æ ‡è¿›ç¨‹pid
+	@param [in] buffer å­—ç¬¦ä¸²åœ°å€
+	@param [in] length é•¿åº¦
+	@param [in] type å‘é€æ•°æ®ç±»å‹
 	*/
 	void post(int32_t destPid, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
 
-	/** Ïò·şÎñ¶Ë·¢ËÍ×Ö·û´®£¬µ¥½ø³ÌÓĞĞò£¬¶à½ø³ÌÎŞĞò£¬µ¥½ø³Ìµ¥Ïß³ÌÓĞĞò£¬¶à½ø³Ì»ò¶àÏß³Ì¿ÉÄÜ³öÏÖÏÈ·¢ºóµ½
-	@param [in] destPid Ä¿±ê½ø³Ìpid
-	@param [in] message ·¢ËÍÄÚÈİ
-	@param [in] type ·¢ËÍÊı¾İÀàĞÍ
+	/** å‘æœåŠ¡ç«¯å‘é€å­—ç¬¦ä¸²ï¼Œå•è¿›ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æ— åºï¼Œå•è¿›ç¨‹å•çº¿ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æˆ–å¤šçº¿ç¨‹å¯èƒ½å‡ºç°å…ˆå‘ååˆ°
+	@param [in] destPid ç›®æ ‡è¿›ç¨‹pid
+	@param [in] message å‘é€å†…å®¹
+	@param [in] type å‘é€æ•°æ®ç±»å‹
 	*/
 	void post(int32_t destPid, const std::string& message, MessageType type = MessageType::MESSAGE);
 
-	/** Ïò·şÎñ¶Ë·¢ËÍ×Ö·û´®£¬µ¥½ø³ÌÓĞĞò£¬¶à½ø³ÌÎŞĞò£¬µ¥½ø³Ìµ¥Ïß³ÌÓĞĞò£¬¶à½ø³Ì»ò¶àÏß³Ì¿ÉÄÜ³öÏÖÏÈ·¢ºóµ½
-	µ±ÓĞ11ÌõÏß³ÌÍ¬Ê±µ÷ÓÃÊ±£¬ÊÇsendµÄ3±¶ËÙ¶È£¬12ÌõÏß³ÌÊÇsendµÄ3·ÖÖ®1ËÙ¶È£¬³¬¹ı11ÌõĞÔÄÜ´ó·ùÏÂ½µ£¬1ÌõÏß³Ì·¢ËÍËÙ¶È410.2Íò°ü/s
-	@param [in] processName Ä¿±ê½ø³ÌÃû£¬´øºó×º
-	@param [in] buffer ×Ö·û´®µØÖ·
-	@param [in] length ³¤¶È
-	@param [in] type ·¢ËÍÊı¾İÀàĞÍ
+	/** å‘æœåŠ¡ç«¯å‘é€å­—ç¬¦ä¸²ï¼Œå•è¿›ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æ— åºï¼Œå•è¿›ç¨‹å•çº¿ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æˆ–å¤šçº¿ç¨‹å¯èƒ½å‡ºç°å…ˆå‘ååˆ°
+	å½“æœ‰11æ¡çº¿ç¨‹åŒæ—¶è°ƒç”¨æ—¶ï¼Œæ˜¯sendçš„3å€é€Ÿåº¦ï¼Œ12æ¡çº¿ç¨‹æ˜¯sendçš„3åˆ†ä¹‹1é€Ÿåº¦ï¼Œè¶…è¿‡11æ¡æ€§èƒ½å¤§å¹…ä¸‹é™ï¼Œ1æ¡çº¿ç¨‹å‘é€é€Ÿåº¦410.2ä¸‡åŒ…/s
+	@param [in] processName ç›®æ ‡è¿›ç¨‹åï¼Œå¸¦åç¼€
+	@param [in] buffer å­—ç¬¦ä¸²åœ°å€
+	@param [in] length é•¿åº¦
+	@param [in] type å‘é€æ•°æ®ç±»å‹
 	*/
 	void post(const std::string& processName, const char* buffer, int32_t length, MessageType type = MessageType::MESSAGE);
 
-	/** Ïò·şÎñ¶Ë·¢ËÍ×Ö·û´®£¬µ¥½ø³ÌÓĞĞò£¬¶à½ø³ÌÎŞĞò£¬µ¥½ø³Ìµ¥Ïß³ÌÓĞĞò£¬¶à½ø³Ì»ò¶àÏß³Ì¿ÉÄÜ³öÏÖÏÈ·¢ºóµ½
-	@param [in] processName Ä¿±ê½ø³ÌÃû£¬´øºó×º
-	@param [in] message ·¢ËÍÄÚÈİ
-	@param [in] type ·¢ËÍÊı¾İÀàĞÍ
+	/** å‘æœåŠ¡ç«¯å‘é€å­—ç¬¦ä¸²ï¼Œå•è¿›ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æ— åºï¼Œå•è¿›ç¨‹å•çº¿ç¨‹æœ‰åºï¼Œå¤šè¿›ç¨‹æˆ–å¤šçº¿ç¨‹å¯èƒ½å‡ºç°å…ˆå‘ååˆ°
+	@param [in] processName ç›®æ ‡è¿›ç¨‹åï¼Œå¸¦åç¼€
+	@param [in] message å‘é€å†…å®¹
+	@param [in] type å‘é€æ•°æ®ç±»å‹
 	*/
 	void post(const std::string& processName, const std::string& message, MessageType type = MessageType::MESSAGE);
 
-	/** ×èÈûº¯Êı£¬µÈ´ı·¢ËÍÈÎÎñÈ«²¿Ö´ĞĞºó·µ»Ø£¬¸Ãº¯Êı·µ»ØÔò±íÊ¾ÒÑ½«Êı¾İÈ«²¿Ğ´Èë¹²ÏíÄÚ´æ²¢ÒÑÍ¨Öª¶Ô·½½ø³Ì£¬½áÊøºó»á¸ü»»Ïß³ÌºÅ
+	/** é˜»å¡å‡½æ•°ï¼Œç­‰å¾…å‘é€ä»»åŠ¡å…¨éƒ¨æ‰§è¡Œåè¿”å›ï¼Œè¯¥å‡½æ•°è¿”å›åˆ™è¡¨ç¤ºå·²å°†æ•°æ®å…¨éƒ¨å†™å…¥å…±äº«å†…å­˜å¹¶å·²é€šçŸ¥å¯¹æ–¹è¿›ç¨‹ï¼Œç»“æŸåä¼šæ›´æ¢çº¿ç¨‹å·
 	*/
 	void waitForPostEnd();
 
