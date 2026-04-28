@@ -1,4 +1,4 @@
-#include "ProtoMessage.h"
+﻿#include "ProtoMessage.h"
 #include "ProtoMessage.pb.h"
 #if defined _WIN64 && defined _DEBUG
 #pragma comment(lib, "libprotobuf-litestatic64d.lib")

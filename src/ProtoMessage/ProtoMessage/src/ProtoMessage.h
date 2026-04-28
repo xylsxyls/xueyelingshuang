@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "ProtoMessageMacro.h"
 #include <map>
 #include <list>
@@ -29,7 +29,7 @@ public:
 	~ProtoMessage();
 
 public:
-	/** �÷�
+	/** 用法
 	msg["global"]["time"] = "12:05";
 	msg["date"] = "180810";
 	msg["global"].push_back(12345);
