@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <vector>
 #include <map>
+#include <string>
 #include "CRandomMacro.h"
 
 class CRandomAPI CRandom
