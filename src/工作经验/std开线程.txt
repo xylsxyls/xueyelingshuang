@@ -17,3 +17,4 @@ int n = 10;
 std::thread thread([n]() {
     
 });
+thread.detach();
