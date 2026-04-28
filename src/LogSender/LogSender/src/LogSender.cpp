@@ -1,4 +1,4 @@
-#include "LogSender.h"
+ï»¿#include "LogSender.h"
 #include "ProcessWork/ProcessWorkAPI.h"
 #include "ProtoMessage/ProtoMessageAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -78,12 +78,12 @@ void LogSender::logSend(const LogPackage& package, const char* format, ...)
 	va_copy(argcopy, args);
 	int size = vsnprintf(nullptr, 0, format, argcopy);
 #endif
-	//?resize·ÖÅäºóstringÀà»á×Ô¶¯ÔÚ×îºó·ÖÅä\0£¬resize(5)Ôò×Ü³¤6
+	//?resizeåˆ†é…åstringç±»ä¼šè‡ªåŠ¨åœ¨æœ€ååˆ†é…\0ï¼Œresize(5)åˆ™æ€»é•¿6
 	str.resize(size);
 	if (size != 0)
 	{
 #ifdef _WIN32
-		//?¼´±ã·ÖÅäÁË×ã¹»ÄÚ´æ£¬³¤¶È±ØĞë¼Ó1£¬·ñÔò»á±ÀÀ£
+		//?å³ä¾¿åˆ†é…äº†è¶³å¤Ÿå†…å­˜ï¼Œé•¿åº¦å¿…é¡»åŠ 1ï¼Œå¦åˆ™ä¼šå´©æºƒ
 		vsprintf_s(&str[0], size + 1, format, args);
 #elif __unix__
 		vsnprintf(&str[0], size + 1, format, args);

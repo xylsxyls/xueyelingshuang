@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "LogSenderMacro.h"
 #include <stdint.h>
 #include <mutex>

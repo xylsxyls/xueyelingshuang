@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #ifdef _WIN32
 #define _LogSenderAPI
 #endif
@@ -16,13 +16,13 @@
 #define LOG_TEST_EXIST if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestExist
 #define LOG_TEST_OPEN if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestOpen
 #define LOG_TEST_CLOSE if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->logTestClose
-//ÊÇ·ñ´¦ÀíÈÕÖ¾
+//æ˜¯å¦å¤„ç†æ—¥å¿—
 #define LOG_TEST_SET(dealLog) if (LogSenderManager::instance().getInterface() != nullptr) LogSenderManager::instance().getInterface()->set(dealLog)
 
 #define LOG_NAME_SET(name) LogSenderManager::instance().setLogName(name)
 
-//µÚÒ»´Î·¢ËÍÈÕÖ¾±ØĞëµ¥Ïß³ÌÍê³É£¬·¢ËÍÄ£¿éµ¥Ò»ÊµÀıµÄ³õÊ¼»¯±ØĞëµ¥Ïß³ÌÍê³É
-//LogTestÎÄ¼ş¼ÇÂ¼£¬MessageTestÏÔÊ¾£¬·¢ËÍÍøÂç
+//ç¬¬ä¸€æ¬¡å‘é€æ—¥å¿—å¿…é¡»å•çº¿ç¨‹å®Œæˆï¼Œå‘é€æ¨¡å—å•ä¸€å®ä¾‹çš„åˆå§‹åŒ–å¿…é¡»å•çº¿ç¨‹å®Œæˆ
+//LogTestæ–‡ä»¶è®°å½•ï¼ŒMessageTestæ˜¾ç¤ºï¼Œå‘é€ç½‘ç»œ
 #define LOG_SEND(format, ...) LOG_SEND_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_DEBUG(format, ...) LOG_SEND_DEBUG_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_INFO(format, ...) LOG_SEND_INFO_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
@@ -37,7 +37,7 @@
 #define LOG_SEND_PEOPLE_ERROR(peopleId, format, ...) LOG_SEND_PEOPLE_ERROR_EX(LogSenderManager::instance().logName().c_str(), peopleId, format, ##__VA_ARGS__)
 #define LOG_SEND_PEOPLE_FATAL(peopleId, format, ...) LOG_SEND_PEOPLE_FATAL_EX(LogSenderManager::instance().logName().c_str(), peopleId, format, ##__VA_ARGS__)
 
-//LogTestÎÄ¼ş¼ÇÂ¼£¬MessageTestÏÔÊ¾£¬²»·¢ËÍÍøÂç
+//LogTestæ–‡ä»¶è®°å½•ï¼ŒMessageTestæ˜¾ç¤ºï¼Œä¸å‘é€ç½‘ç»œ
 #define LOG_SEND_LOCAL(format, ...) LOG_SEND_LOCAL_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_LOCAL_DEBUG(format, ...) LOG_SEND_LOCAL_DEBUG_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_LOCAL_INFO(format, ...) LOG_SEND_LOCAL_INFO_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
@@ -52,7 +52,7 @@
 #define LOG_SEND_PEOPLE_LOCAL_ERROR(peopleId, format, ...) LOG_SEND_PEOPLE_LOCAL_ERROR_EX(LogSenderManager::instance().logName().c_str(), peopleId, format, ##__VA_ARGS__)
 #define LOG_SEND_PEOPLE_LOCAL_FATAL(peopleId, format, ...) LOG_SEND_PEOPLE_LOCAL_FATAL_EX(LogSenderManager::instance().logName().c_str(), peopleId, format, ##__VA_ARGS__)
 
-//Ö»Í¨¹ıLogTest¼ÇÂ¼µ½ÎÄ¼ş
+//åªé€šè¿‡LogTestè®°å½•åˆ°æ–‡ä»¶
 #define LOG_SEND_FILE(format, ...) LOG_SEND_FILE_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_FILE_DEBUG(format, ...) LOG_SEND_FILE_DEBUG_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
 #define LOG_SEND_FILE_INFO(format, ...) LOG_SEND_FILE_INFO_EX(LogSenderManager::instance().logName().c_str(), format, ##__VA_ARGS__)
@@ -114,7 +114,7 @@ typedef LogSenderInterface*(*LogSenderInstance)();
 class LogSenderManager
 {
 protected:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	LogSenderManager():
 		m_interface(nullptr)
@@ -122,7 +122,7 @@ protected:
 
 	}
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~LogSenderManager()
 	{
@@ -135,8 +135,8 @@ protected:
 
 
 public:
-	/** µ¥Ò»ÊµÀı
-	@return ·µ»Øµ¥Ò»ÊµÀı
+	/** å•ä¸€å®ä¾‹
+	@return è¿”å›å•ä¸€å®ä¾‹
 	*/
 	static LogSenderManager& instance()
 	{

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 
 #ifdef _MSC_VER
@@ -17,24 +17,24 @@ public:
 		LOG_FATAL = 0x00010000,
 	};
 
-	//ÈËÔ±ID
+	//äººå‘˜ID
 	int32_t m_peopleId;
-	//ÈÕÖ¾µÈ¼¶
+	//æ—¥å¿—ç­‰çº§
 	LogLevel m_logLevel;
-	//ÊÇ·ñÏòÍøÂç·¢ËÍ
+	//æ˜¯å¦å‘ç½‘ç»œå‘é€
 	bool m_isSendNet;
-	//ÊÇ·ñÏòÆÁÄ»·¢ËÍ
+	//æ˜¯å¦å‘å±å¹•å‘é€
 	bool m_isSendScreen;
-	//ÊÇ·ñĞ´ÈëÈÕÖ¾
+	//æ˜¯å¦å†™å…¥æ—¥å¿—
 	bool m_isWriteLog;
-	//Êä³öÈÕÖ¾µÄÎÄ¼şÃû
+	//è¾“å‡ºæ—¥å¿—çš„æ–‡ä»¶å
 	const char* m_fileName;
-	//Êä³öÈÕÖ¾µÄº¯ÊıÃû
+	//è¾“å‡ºæ—¥å¿—çš„å‡½æ•°å
 	const char* m_funName;
-	//ÈÕÖ¾ÎÄ¼şµÄÎÄ¼şÃû
+	//æ—¥å¿—æ–‡ä»¶çš„æ–‡ä»¶å
 	const char* m_logName;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	LogPackage(int32_t peopleId,
 		LogLevel logLevel,
