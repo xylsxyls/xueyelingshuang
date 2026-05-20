@@ -1,0 +1,94 @@
+#include "ConsoleTest.h"
+#include <stdint.h>
+#include <stdio.h>
+#ifdef __unix__
+#include <signal.h>
+#include <stdlib.h>
+#endif
+#include <string.h>
+#include "StockCharge/StockChargeAPI.h"
+
+#ifdef _MSC_VER
+BOOL CALLBACK ConsoleHandler(DWORD eve)
+{
+	if (eve == CTRL_CLOSE_EVENT)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+	}
+	return FALSE;
+}
+
+int32_t consoleCloseResult = ::SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+#elif __unix__
+//ctrl+c消息捕获函数
+void CtrlCMessage(int eve)
+{
+	if (eve == 2)
+	{
+		//关闭退出事件
+		//RCSend("close ConsoleTest");
+		exit(0);
+	}	
+}
+
+struct CtrlC
+{
+	CtrlC()
+	{
+		struct sigaction sigIntHandler;
+		sigIntHandler.sa_handler = CtrlCMessage;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, nullptr);
+	}
+};
+
+CtrlC g_ctrlc;
+#endif
+
+int32_t main()
+{
+	char price[16] = {};
+	printf("price = ");
+	scanf("%s", price);
+	BigNumber buyPrice = price;
+	int position = 0;
+	printf("position = ");
+	scanf("%d", &position);
+	while(getchar() != '\n');
+	printf("sell = ");
+	char sell[16] = {};
+	fgets(sell, sizeof(sell), stdin);
+	sell[strcspn(sell, "\n")] = 0;
+	StockCharge::instance().init("0.00016", 5);
+	BigNumber buyFee = StockCharge::instance().buyFee("000000", buyPrice, position);
+	if (std::string(sell) == "none" || std::string(sell).empty())
+	{
+		int delta = 0;
+		while (true)
+		{
+			++delta;
+			BigNumber sellPrice = buyPrice + delta / 100.0;
+			BigNumber sellFee = StockCharge::instance().sellFee("000000", sellPrice, position);
+			BigNumber profit = BigNumber(delta / 100.0 * position) - buyFee - sellFee;
+			if (profit > 0)
+			{
+				sellPrice.setFixedPrec(2);
+				profit.setFixedPrec(2);
+				printf("sell = %s, profit = %s\n", sellPrice.toPrec(2).toString().c_str(), profit.toPrec(2).toString().c_str());
+				break;
+			}
+		}
+	}
+	else
+	{
+		BigNumber sellPrice = sell;
+		BigNumber sellFee = StockCharge::instance().sellFee("000000", sellPrice, position);
+		BigNumber profit = BigNumber((sellPrice - buyPrice) * position) - buyFee - sellFee;
+		profit.setFixedPrec(2);
+		printf("profit = %s\n", profit.toPrec(2).toString().c_str());
+	}
+	return 0;
+}

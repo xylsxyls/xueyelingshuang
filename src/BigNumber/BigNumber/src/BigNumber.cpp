@@ -1,6 +1,7 @@
 ﻿#include "BigNumber.h"
 #include "BigNumberBase/BigNumberBaseAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include <cmath>
 
 #define USE_STD_POW
 
