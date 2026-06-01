@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "ColorMacro.h"
 #include <string>
 
@@ -8,41 +8,41 @@ namespace xyls
 class ColorAPI Color
 {
 public:
-	/** ¹¹Ôìº¯Êı
-	@param [in] r ÑÕÉ«rÖµ
-	@param [in] g ÑÕÉ«gÖµ
-	@param [in] b ÑÕÉ«bÖµ
+	/** æ„é€ å‡½æ•°
+	@param [in] r é¢œè‰²rå€¼
+	@param [in] g é¢œè‰²gå€¼
+	@param [in] b é¢œè‰²bå€¼
 	*/
 	Color(unsigned char r, unsigned char g, unsigned char b);
 
-	/** ¹¹Ôìº¯Êı
-	@param [in] r ÑÕÉ«rÖµ
-	@param [in] g ÑÕÉ«gÖµ
-	@param [in] b ÑÕÉ«bÖµ
-	@param [in] r Æ«É«rÖµ
-	@param [in] g Æ«É«gÖµ
-	@param [in] b Æ«É«bÖµ
+	/** æ„é€ å‡½æ•°
+	@param [in] r é¢œè‰²rå€¼
+	@param [in] g é¢œè‰²gå€¼
+	@param [in] b é¢œè‰²bå€¼
+	@param [in] r åè‰²rå€¼
+	@param [in] g åè‰²gå€¼
+	@param [in] b åè‰²bå€¼
 	*/
 	Color(unsigned char r, unsigned char g, unsigned char b, unsigned char rc, unsigned char gc, unsigned char bc);
 
 public:
-	/** Êä³öÑÕÉ«×Ö·û´®£¬×ÖÄ¸Ğ¡Ğ´
-	@return ·µ»ØÑÕÉ«×Ö·û´®£¬×ÖÄ¸Ğ¡Ğ´
+	/** è¾“å‡ºé¢œè‰²å­—ç¬¦ä¸²ï¼Œå­—æ¯å°å†™
+	@return è¿”å›é¢œè‰²å­—ç¬¦ä¸²ï¼Œå­—æ¯å°å†™
 	*/
 	std::string toString() const;
 
-	/** Êä³ö·´ÏòÑÕÉ«×Ö·û´®£¬×ÖÄ¸Ğ¡Ğ´
-	@return ·µ»Ø·´ÏòÑÕÉ«×Ö·û´®£¬×ÖÄ¸Ğ¡Ğ´
+	/** è¾“å‡ºåå‘é¢œè‰²å­—ç¬¦ä¸²ï¼Œå­—æ¯å°å†™
+	@return è¿”å›åå‘é¢œè‰²å­—ç¬¦ä¸²ï¼Œå­—æ¯å°å†™
 	*/
 	std::string toReserveString() const;
 
-	/** Êä³öÑÕÉ«×Ö·û´®´øÆ«É«£¬×ÖÄ¸Ğ¡Ğ´
-	@return ·µ»ØÑÕÉ«×Ö·û´®´øÆ«É«£¬×ÖÄ¸Ğ¡Ğ´
+	/** è¾“å‡ºé¢œè‰²å­—ç¬¦ä¸²å¸¦åè‰²ï¼Œå­—æ¯å°å†™
+	@return è¿”å›é¢œè‰²å­—ç¬¦ä¸²å¸¦åè‰²ï¼Œå­—æ¯å°å†™
 	*/
 	std::string toCastString() const;
 
-	/** Êä³ö·´ÏòÑÕÉ«×Ö·û´®´øÆ«É«£¬×ÖÄ¸Ğ¡Ğ´
-	@return ·µ»Ø·´ÏòÑÕÉ«×Ö·û´®´øÆ«É«£¬×ÖÄ¸Ğ¡Ğ´
+	/** è¾“å‡ºåå‘é¢œè‰²å­—ç¬¦ä¸²å¸¦åè‰²ï¼Œå­—æ¯å°å†™
+	@return è¿”å›åå‘é¢œè‰²å­—ç¬¦ä¸²å¸¦åè‰²ï¼Œå­—æ¯å°å†™
 	*/
 	std::string toReserveCastString() const;
 

@@ -1,4 +1,4 @@
-#include "ScreenScript.h"
+﻿#include "ScreenScript.h"
 #include "CScreen/CScreenAPI.h"
 #include "CMouse/CMouseAPI.h"
 #include "CSystem/CSystemAPI.h"

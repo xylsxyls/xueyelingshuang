@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "PointMacro.h"
 #include <stdint.h>
 

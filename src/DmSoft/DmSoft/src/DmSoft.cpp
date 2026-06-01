@@ -1,4 +1,4 @@
-#include <SDKDDKVer.h>
+ï»¿#include <SDKDDKVer.h>
 #include "Cdmsoft.h"
 #include "DmSoft.h"
 #include <stdint.h>
@@ -14,10 +14,10 @@ DmSoft::DmSoft(){
 	if (::_access(dmPath.c_str(), 0) == 0)
 	{
 		WinExec(("regsvr32 /s " + dmPath).c_str(), SW_HIDE);
-		//?×¢²á
+		//?æ³¨å†Œ
 		CoInitialize(NULL);
 		CLSID clsid;
-		//?ÀûÓÃ¡°¸ùÃû³Æ.ÀàÃû¡±»ñÈ¡CLSID£¬&¾ÍÊÇ°ÑÖ¸Õë¸øº¯Êı£¬Ò²¾ÍÊÇ´«Ö·
+		//?åˆ©ç”¨â€œæ ¹åç§°.ç±»åâ€è·å–CLSIDï¼Œ&å°±æ˜¯æŠŠæŒ‡é’ˆç»™å‡½æ•°ï¼Œä¹Ÿå°±æ˜¯ä¼ å€
 		HRESULT hr = CLSIDFromProgID(OLESTR("dm.dmsoft"), &clsid);
 		dmSoft.CreateDispatch(clsid);
 	}

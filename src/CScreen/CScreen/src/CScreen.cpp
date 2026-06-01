@@ -1,4 +1,4 @@
-#include "CScreen.h"
+﻿#include "CScreen.h"
 #include "DmSoft/DmSoftAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 

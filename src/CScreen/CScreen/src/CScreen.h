@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <map>
 #include <vector>
@@ -9,33 +9,33 @@
 class CScreenAPI CScreen
 {
 public:
-	//?ÉèÖÃ×Ö¿âºÍÊ¹ÓÃ×Ö¿â£¬×Ö¿â±àºÅºÍ×Ö¿âÂ·¾¶£¬ÉèÖÃÊ¹ÓÃµÄ×Ö¿â±àºÅ
+	//?è®¾ç½®å­—åº“å’Œä½¿ç”¨å­—åº“ï¼Œå­—åº“ç¼–å·å’Œå­—åº“è·¯å¾„ï¼Œè®¾ç½®ä½¿ç”¨çš„å­—åº“ç¼–å·
 	static bool initDict(const std::map<int32_t, std::string>& mapDict, int32_t use);
-	//?ÆÁÄ»ÇøÓò½ØÍ¼ÎªBMP
+	//?å±å¹•åŒºåŸŸæˆªå›¾ä¸ºBMP
 	static bool SaveBmp(const xyls::Rect& rect, const std::string& path);
-	//?ÆÁÄ»ÇøÓò½ØÍ¼ÎªGIF£¬¶¯»­¼ä¸ô£¬×ÜÊ±¼ä£¬µ¥Î»¶¼ÊÇºÁÃë£¬Êµ¼ÊÉÏ¾ÍÊÇ°Ñ¶àÕÅÍ¼Æ¬±£´æÔÚÒ»¸öGIF¶¯»­ÖĞ
+	//?å±å¹•åŒºåŸŸæˆªå›¾ä¸ºGIFï¼ŒåŠ¨ç”»é—´éš”ï¼Œæ€»æ—¶é—´ï¼Œå•ä½éƒ½æ˜¯æ¯«ç§’ï¼Œå®é™…ä¸Šå°±æ˜¯æŠŠå¤šå¼ å›¾ç‰‡ä¿å­˜åœ¨ä¸€ä¸ªGIFåŠ¨ç”»ä¸­
 	static bool SaveGif(const xyls::Rect& rect, int32_t delay, int32_t time, const std::string& path);
-	//?ÆÁÄ»ÇøÓò½ØÍ¼ÎªJPG£¬Ñ¹Ëõ±ÈÀı1-100£¬1Îª×î´óÑ¹Ëõ³Ì¶È
+	//?å±å¹•åŒºåŸŸæˆªå›¾ä¸ºJPGï¼Œå‹ç¼©æ¯”ä¾‹1-100ï¼Œ1ä¸ºæœ€å¤§å‹ç¼©ç¨‹åº¦
 	static bool SaveJpg(const xyls::Rect& rect, int32_t quality, const std::string& path);
-	//?ÆÁÄ»ÇøÓò½ØÍ¼ÎªPNG
+	//?å±å¹•åŒºåŸŸæˆªå›¾ä¸ºPNG
 	static bool SavePng(const xyls::Rect& rect, const std::string& path);
-	//?±È½Ï¾ø¶Ô×ø±êÑÕÉ«£¬ÑÕÉ«¼¯ºÏ×î¶à10¸ö£¬ÏàËÆ¶È0.1-1.0
+	//?æ¯”è¾ƒç»å¯¹åæ ‡é¢œè‰²ï¼Œé¢œè‰²é›†åˆæœ€å¤š10ä¸ªï¼Œç›¸ä¼¼åº¦0.1-1.0
 	static bool ComparePointColor(const xyls::Point& point, const xyls::Color& color, double sim = 1.0);
 	static bool ComparePointColor(const xyls::Point& point, const std::vector<xyls::Color>& color, double sim = 1.0);
-	//?ÔÚÖ¸¶¨ÇøÓòÄÚ²éÕÒÖ¸¶¨ÑÕÉ«£¬ÕÒµ½·µ»Øx£¬yÖµ
-	//?dir£¬0£º×óÓÒÉÏÏÂ£¬1£º×óÓÒÏÂÉÏ£¬2£ºÓÒ×óÉÏÏÂ£¬3£ºÓÒ×óÏÂÉÏ£¬4£ºÖĞĞÄÏòÍâ£¬5£ºÉÏÏÂ×óÓÒ£¬6£ºÉÏÏÂÓÒ×ó£¬7£ºÏÂÉÏ×óÓÒ£¬8£ºÏÂÉÏÓÒ×ó
+	//?åœ¨æŒ‡å®šåŒºåŸŸå†…æŸ¥æ‰¾æŒ‡å®šé¢œè‰²ï¼Œæ‰¾åˆ°è¿”å›xï¼Œyå€¼
+	//?dirï¼Œ0ï¼šå·¦å³ä¸Šä¸‹ï¼Œ1ï¼šå·¦å³ä¸‹ä¸Šï¼Œ2ï¼šå³å·¦ä¸Šä¸‹ï¼Œ3ï¼šå³å·¦ä¸‹ä¸Šï¼Œ4ï¼šä¸­å¿ƒå‘å¤–ï¼Œ5ï¼šä¸Šä¸‹å·¦å³ï¼Œ6ï¼šä¸Šä¸‹å³å·¦ï¼Œ7ï¼šä¸‹ä¸Šå·¦å³ï¼Œ8ï¼šä¸‹ä¸Šå³å·¦
 	static bool FindColor(const xyls::Rect& rect, const xyls::Color& color, int32_t& x, int32_t& y, double sim = 1.0, int32_t dir = 0);
 	static bool FindColor(const xyls::Rect& rect, const std::vector<xyls::Color>& vecColor, int32_t& x, int32_t& y, double sim = 1.0, int32_t dir = 0);
-	//?¼ì²âµ±Ç°ÇøÓòÊÇ·ñÓĞ±¾µØÍ¼Æ¬£¬Í¼Æ¬¸ñÊ½Îªbmp£¬Í¼Æ¬ÉÏÏÂ×óÓÒ4¸öµãÑÕÉ«Ò»ÑùµÄ»°Ôò¸ÃÍ¼Æ¬Ä¬ÈÏ´¦ÀíÎªÍ¸Ã÷É«
-	//?dir£¬0£º×óÓÒÉÏÏÂ£¬1£º×óÓÒÏÂÉÏ£¬2£ºÓÒ×óÉÏÏÂ£¬3£ºÓÒ×óÏÂÉÏ
+	//?æ£€æµ‹å½“å‰åŒºåŸŸæ˜¯å¦æœ‰æœ¬åœ°å›¾ç‰‡ï¼Œå›¾ç‰‡æ ¼å¼ä¸ºbmpï¼Œå›¾ç‰‡ä¸Šä¸‹å·¦å³4ä¸ªç‚¹é¢œè‰²ä¸€æ ·çš„è¯åˆ™è¯¥å›¾ç‰‡é»˜è®¤å¤„ç†ä¸ºé€æ˜è‰²
+	//?dirï¼Œ0ï¼šå·¦å³ä¸Šä¸‹ï¼Œ1ï¼šå·¦å³ä¸‹ä¸Šï¼Œ2ï¼šå³å·¦ä¸Šä¸‹ï¼Œ3ï¼šå³å·¦ä¸‹ä¸Š
 	static bool FindPic(const xyls::Rect& rect, const std::string& picPath, int32_t& x, int32_t& y, const xyls::Color& colorCast = xyls::Color(0, 0, 0), double sim = 1.0, int32_t dir = 0);
 	static bool FindPic(const xyls::Rect& rect, const std::vector<std::string>& vecPicPath, int32_t& x, int32_t& y, const xyls::Color& colorCast = xyls::Color(0, 0, 0), double sim = 1.0, int32_t dir = 0);
-	//?»ñÈ¡Í¼Æ¬´óĞ¡£¬Ê¹ÓÃGetWidthºÍGetHeightÀ´»ñÈ¡³¤¿í
+	//?è·å–å›¾ç‰‡å¤§å°ï¼Œä½¿ç”¨GetWidthå’ŒGetHeightæ¥è·å–é•¿å®½
 	static xyls::Rect GetPicSize(const std::string& picPath);
-	//?×ª»»Í¼Æ¬¸ñÊ½
+	//?è½¬æ¢å›¾ç‰‡æ ¼å¼
 	static bool ChangeToBmp(const std::string& picPathDst, const std::string& picPathSrc);
-	//?²éÕÒÍ¼Æ¬Â·¾¶£¬·µ»ØÏà¶ÔÂ·¾¶
+	//?æŸ¥æ‰¾å›¾ç‰‡è·¯å¾„ï¼Œè¿”å›ç›¸å¯¹è·¯å¾„
 	static std::vector<std::string> MatchPicName(const std::string& picPath);
-	//?¼ì²âµ±Ç°ÇøÓòÊÇ·ñÓĞÎÄ×Ö£¬ÏàËÆ¶È£¬Èç¹ûÓĞÔòÔÚx£¬yÖĞ·µ»Ø×ø±ê
+	//?æ£€æµ‹å½“å‰åŒºåŸŸæ˜¯å¦æœ‰æ–‡å­—ï¼Œç›¸ä¼¼åº¦ï¼Œå¦‚æœæœ‰åˆ™åœ¨xï¼Œyä¸­è¿”å›åæ ‡
 	static bool FindStr(const xyls::Rect& rect, const std::string& str, const xyls::Color& color, int32_t& x, int32_t& y, double sim = 1.0);
 };

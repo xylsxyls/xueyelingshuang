@@ -25,24 +25,38 @@ void CwqTask::DoTask()
 		//{
 		//	return;
 		//}
-		//Sleep(150);
+		Sleep(50);
 		CKeyboard::KeyPress('J', 0);
-		if (Sleep(150))
-		{
-			return;
-		}
-		KeyPressE();
+		Sleep(50);
+		CKeyboard::KeyPress('J', 0);
+		Sleep(60);
+		CKeyboard::KeyPress('J', 0);
 		if (Sleep(100))
 		{
 			return;
 		}
+		KeyPressE();
+		//if (Sleep(100))
+		//{
+		//	return;
+		//}
 		//KeyPressF();
-		if (Sleep(150))
+		if (Sleep(180))
 		{
 			return;
 		}
 		CKeyboard::KeyPress('K', 0);
 		if (Sleep(150))
+		{
+			return;
+		}
+		KeyPressE();
+		if (Sleep(10))
+		{
+			return;
+		}
+		KeyPressE();
+		if (Sleep(10))
 		{
 			return;
 		}

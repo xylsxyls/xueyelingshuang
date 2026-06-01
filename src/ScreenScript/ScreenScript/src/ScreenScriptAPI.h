@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifdef _WIN32
 #define _ScreenScriptAPI
 #endif

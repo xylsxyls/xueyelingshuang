@@ -81,7 +81,7 @@ void Smy::keyboard()
 		g_mouse.m_rightWatch.SetWatchTime(g_config.m_rightClickTime + 10);
 	}
 
-	if (g_config.m_qKey && g_keyboard.m_keyWatch['Q'].GetWatchTime() < 3500)
+	if (g_config.m_qKey && g_keyboard.m_keyWatch['Q'].GetWatchTime() < 4500)
 	{
 		int32_t editIndex = -1;
 		if (g_keyboard.m_keyDown['1'])
@@ -208,8 +208,8 @@ void Smy::keyboard()
 		spTask->setParam('L');
 		g_config.m_taskThread->PostTask(spTask, 1);
 	}
-	else if (((g_keyboard.m_keyWatch['S'].GetWatchTime() < 3500) ||
-		(g_keyboard.m_keyWatch['A'].GetWatchTime() < 3500) || g_keyboard.m_keyHasDown[CTRL]) &&
+	else if (((g_keyboard.m_keyWatch['S'].GetWatchTime() < 4500) ||
+		(g_keyboard.m_keyWatch['A'].GetWatchTime() < 4500) || g_keyboard.m_keyHasDown[CTRL]) &&
 		g_keyboard.m_keyDown['D'] &&
 		g_config.m_equipWatch.GetWatchTime() > 1000)
 	{
@@ -217,8 +217,8 @@ void Smy::keyboard()
 		std::shared_ptr<CtrlDTask> spTask(new CtrlDTask);
 		g_config.m_taskThread->PostTask(spTask, 1);
 	}
-	else if (((g_keyboard.m_keyWatch['S'].GetWatchTime() < 3500) ||
-		(g_keyboard.m_keyWatch['A'].GetWatchTime() < 3500) || g_keyboard.m_keyHasDown[CTRL]) &&
+	else if (((g_keyboard.m_keyWatch['S'].GetWatchTime() < 4500) ||
+		(g_keyboard.m_keyWatch['A'].GetWatchTime() < 4500) || g_keyboard.m_keyHasDown[CTRL]) &&
 		g_keyboard.m_keyDown['F'] &&
 		g_config.m_equipWatch.GetWatchTime() > 1000)
 	{
@@ -342,7 +342,7 @@ void Smy::timer(int32_t timerId)
 			if (g_config.timerMs(100, times) &&
 				(/*g_keyboard.m_keyWatch['R'].GetWatchTime() < 5000 ||*/
 				g_keyboard.m_keyWatch['W'].GetWatchTime() < 2500 ||
-				g_keyboard.m_keyWatch['Q'].GetWatchTime() < 3500))
+				g_keyboard.m_keyWatch['Q'].GetWatchTime() < 4500))
 			{
 				std::shared_ptr<CRightClickTask> spTask(new CRightClickTask);
 				//spTask->setParam(!g_keyHasDown['R']);

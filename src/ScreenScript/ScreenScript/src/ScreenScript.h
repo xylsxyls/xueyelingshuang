@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "ScreenScriptMacro.h"
 #include <string>
 #include <stdint.h>
@@ -8,12 +8,12 @@
 class ScreenScriptAPI ScreenScript
 {
 public:
-	/** ÔÚÖ¸¶¨ÇøÓòÄÚËÑË÷Í¼Æ¬²¢µ¥»÷»òË«»÷Í¼Æ¬ÖĞĞÄÎ»ÖÃ
-	@param [in] path Í¼Æ¬Â·¾¶£¬Ö§³Öbmp£¬jpg£¬pngÈıÖÖ¸ñÊ½
-	@param [in] leftClick ÊÇ·ñÊÇ×ó¼ü
-	@param [in] doubleClick ÊÇ·ñË«»÷
-	@param [in] rect Í¼Æ¬¿ÉÄÜ´æÔÚµÄÇøÓò£¬²»ÌîÔòÔÚÈ«ÆÁÄ»ÄÚ²éÕÒ
-	@param [in] move µã»÷Ö®ºóÊó±êÒÆ¶¯µ½µÄÇøÓò
+	/** åœ¨æŒ‡å®šåŒºåŸŸå†…æœç´¢å›¾ç‰‡å¹¶å•å‡»æˆ–åŒå‡»å›¾ç‰‡ä¸­å¿ƒä½ç½®
+	@param [in] path å›¾ç‰‡è·¯å¾„ï¼Œæ”¯æŒbmpï¼Œjpgï¼Œpngä¸‰ç§æ ¼å¼
+	@param [in] leftClick æ˜¯å¦æ˜¯å·¦é”®
+	@param [in] doubleClick æ˜¯å¦åŒå‡»
+	@param [in] rect å›¾ç‰‡å¯èƒ½å­˜åœ¨çš„åŒºåŸŸï¼Œä¸å¡«åˆ™åœ¨å…¨å±å¹•å†…æŸ¥æ‰¾
+	@param [in] move ç‚¹å‡»ä¹‹åé¼ æ ‡ç§»åŠ¨åˆ°çš„åŒºåŸŸ
 	*/
 	static bool FindClick(const std::string& path,
 						  bool leftClick = true,
@@ -23,22 +23,22 @@ public:
 						  int32_t sleepTime = -1,
 						  const xyls::Rect& move = xyls::Rect(100, 100, 110, 110));
 
-	/** ÔÚÖ¸¶¨ÇøÓòÄÚËÑÍ¼
-	@param [in] path Í¼Æ¬Â·¾¶£¬Ö§³Öbmp£¬jpg£¬pngÈıÖÖ¸ñÊ½
-	@param [in] rect Í¼Æ¬¿ÉÄÜ´æÔÚµÄÇøÓò£¬²»ÌîÔòÔÚÈ«ÆÁÄ»ÄÚ²éÕÒ
-	@return ·µ»ØÍ¼Æ¬ÖĞĞÄµã£¬Ö»ÕÒÒ»´Î£¬ÕÒ²»µ½×ø±êÎª0
+	/** åœ¨æŒ‡å®šåŒºåŸŸå†…æœå›¾
+	@param [in] path å›¾ç‰‡è·¯å¾„ï¼Œæ”¯æŒbmpï¼Œjpgï¼Œpngä¸‰ç§æ ¼å¼
+	@param [in] rect å›¾ç‰‡å¯èƒ½å­˜åœ¨çš„åŒºåŸŸï¼Œä¸å¡«åˆ™åœ¨å…¨å±å¹•å†…æŸ¥æ‰¾
+	@return è¿”å›å›¾ç‰‡ä¸­å¿ƒç‚¹ï¼Œåªæ‰¾ä¸€æ¬¡ï¼Œæ‰¾ä¸åˆ°åæ ‡ä¸º0
 	*/
 	static xyls::Rect FindPic(const std::string& path,
 						const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
 						double sim = 0.7);
 
-	/** µÈ´ıÆÁÄ»ÖĞÍ¼Æ¬³öÏÖ£¬×èÈûÏß³Ì
-	@param [in] path Í¼Æ¬Â·¾¶£¬Ö§³Öbmp£¬jpg£¬pngÈıÖÖ¸ñÊ½
-	@param [in] rect Í¼Æ¬¿ÉÄÜ´æÔÚµÄÇøÓò£¬²»ÌîÔòÔÚÈ«ÆÁÄ»ÄÚ²éÕÒ
-	@param [in] timeOut ×ÜºÁÃëÊı
-	@param [in] is_exit ÊÇ·ñÖĞÍ¾ÍË³ö
-	@param [in] searchIntervalTime Ñ­»·ËÑË÷¼ä¸ôÊ±¼ä
-	@return µ±ÕÒµ½Ê±Ìø³öÑ­»··µ»Øtrue£¬³¬Ê±·µ»Øfalse
+	/** ç­‰å¾…å±å¹•ä¸­å›¾ç‰‡å‡ºç°ï¼Œé˜»å¡çº¿ç¨‹
+	@param [in] path å›¾ç‰‡è·¯å¾„ï¼Œæ”¯æŒbmpï¼Œjpgï¼Œpngä¸‰ç§æ ¼å¼
+	@param [in] rect å›¾ç‰‡å¯èƒ½å­˜åœ¨çš„åŒºåŸŸï¼Œä¸å¡«åˆ™åœ¨å…¨å±å¹•å†…æŸ¥æ‰¾
+	@param [in] timeOut æ€»æ¯«ç§’æ•°
+	@param [in] is_exit æ˜¯å¦ä¸­é€”é€€å‡º
+	@param [in] searchIntervalTime å¾ªç¯æœç´¢é—´éš”æ—¶é—´
+	@return å½“æ‰¾åˆ°æ—¶è·³å‡ºå¾ªç¯è¿”å›trueï¼Œè¶…æ—¶è¿”å›false
 	*/
 	static bool WaitForPic(const std::string& path,
 						   const xyls::Rect& rect = xyls::Rect(0, 0, 0, 0),
@@ -47,17 +47,17 @@ public:
 						   std::atomic<bool>* isExit = nullptr,
 						   int32_t searchIntervalTime = 300);
 
-	/** µÈ´ıÆÁÄ»ÖĞÍ¼Æ¬³öÏÖ²¢µã»÷£¬×èÈûÏß³Ì
-	@param [in] path Í¼Æ¬Â·¾¶£¬Ö§³Öbmp£¬jpg£¬pngÈıÖÖ¸ñÊ½
-	@param [in] leftClick ÊÇ·ñÊÇ×ó¼ü
-	@param [in] doubleClick ÊÇ·ñË«»÷
-	@param [in] rect Í¼Æ¬¿ÉÄÜ´æÔÚµÄÇøÓò£¬²»ÌîÔòÔÚÈ«ÆÁÄ»ÄÚ²éÕÒ
-	@param [in] timeOut ×ÜºÁÃëÊı
-	@param [in] isExit ÊÇ·ñÖĞÍ¾ÍË³ö
-	@param [in] searchIntervalTime Ñ­»·ËÑË÷¼ä¸ôÊ±¼ä
-	@param [in] sleepTime Êó±êÒÆ¶¯¼ä¸ôÊ±¼ä
-	@param [in] move ÔÚËÑÍ¼Ç°Êó±êÒÆ¶¯µ½µÄÇøÓò
-	@return µ±ÕÒµ½Ê±Ìø³öÑ­»··µ»Øtrue£¬³¬Ê±·µ»Øfalse
+	/** ç­‰å¾…å±å¹•ä¸­å›¾ç‰‡å‡ºç°å¹¶ç‚¹å‡»ï¼Œé˜»å¡çº¿ç¨‹
+	@param [in] path å›¾ç‰‡è·¯å¾„ï¼Œæ”¯æŒbmpï¼Œjpgï¼Œpngä¸‰ç§æ ¼å¼
+	@param [in] leftClick æ˜¯å¦æ˜¯å·¦é”®
+	@param [in] doubleClick æ˜¯å¦åŒå‡»
+	@param [in] rect å›¾ç‰‡å¯èƒ½å­˜åœ¨çš„åŒºåŸŸï¼Œä¸å¡«åˆ™åœ¨å…¨å±å¹•å†…æŸ¥æ‰¾
+	@param [in] timeOut æ€»æ¯«ç§’æ•°
+	@param [in] isExit æ˜¯å¦ä¸­é€”é€€å‡º
+	@param [in] searchIntervalTime å¾ªç¯æœç´¢é—´éš”æ—¶é—´
+	@param [in] sleepTime é¼ æ ‡ç§»åŠ¨é—´éš”æ—¶é—´
+	@param [in] move åœ¨æœå›¾å‰é¼ æ ‡ç§»åŠ¨åˆ°çš„åŒºåŸŸ
+	@return å½“æ‰¾åˆ°æ—¶è·³å‡ºå¾ªç¯è¿”å›trueï¼Œè¶…æ—¶è¿”å›false
 	*/
 	static bool WaitClickPic(const std::string& path,
 							 bool leftClick = true,

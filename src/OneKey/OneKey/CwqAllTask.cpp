@@ -41,7 +41,7 @@ void CwqAllTask::DoTask()
 			return;
 		}
 		CKeyboard::KeyPress('J', 0);
-		if (Sleep(50))
+		if (Sleep(70))
 		{
 			return;
 		}
@@ -110,7 +110,7 @@ void CwqAllTask::DoTask()
 		}
 		CKeyboard::KeyPress(text[0] + 48, 0);
 		KeyPressE();
-		if (Sleep(50))
+		if (Sleep(70))
 		{
 			return;
 		}
@@ -133,7 +133,7 @@ void CwqAllTask::DoTask()
 		}
 		//KeyPressF();
 		CKeyboard::KeyPress('Z', 0);
-		if (Sleep(50))
+		if (Sleep(60))
 		{
 			return;
 		}

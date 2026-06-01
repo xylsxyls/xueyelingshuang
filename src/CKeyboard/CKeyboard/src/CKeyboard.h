@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include <stdint.h>
@@ -48,18 +48,18 @@ public:
 		ENTER = VK_RETURN
 	};
 public:
-	//?°´ÏÂ¼üÅÌ
+	//?æŒ‰ä¸‹é”®ç›˜
 	static bool KeyDown(int32_t code);
-	//?µ¯Æğ¼üÅÌ
+	//?å¼¹èµ·é”®ç›˜
 	static bool KeyUp(int32_t code);
-	//?°´ÏÂµ¯Æğ£¬Íê³ÉÊ±¼ä£¬Ä¬ÈÏ100-300ºÁÃë
+	//?æŒ‰ä¸‹å¼¹èµ·ï¼Œå®Œæˆæ—¶é—´ï¼Œé»˜è®¤100-300æ¯«ç§’
 	static bool KeyPress(int32_t code, int32_t sleepTime = -1);
-	//?ÊäÈë×Ö·û´®£¬¼ä¸ôÊ±¼ä£¬Ö§³ÖËùÓĞµ¥¸ö×Ö·ûÊäÈë£¬°üÀ¨!@Ö®Àà£¬µ«ÊÇ¶¼ÊÇÓ¢ÎÄ×Ö·û
+	//?è¾“å…¥å­—ç¬¦ä¸²ï¼Œé—´éš”æ—¶é—´ï¼Œæ”¯æŒæ‰€æœ‰å•ä¸ªå­—ç¬¦è¾“å…¥ï¼ŒåŒ…æ‹¬!@ä¹‹ç±»ï¼Œä½†æ˜¯éƒ½æ˜¯è‹±æ–‡å­—ç¬¦
 	static bool InputString(const std::string& str, int32_t sleepTime = -1);
-	//?°´ÏÂ×éºÏ¼ü£¬Íê³ÉÊ±¼ä£¬Ctrl+Alt+DeleteÎŞ·¨Ä£Äâ£¬Èç¹ûÏëµ÷³öÈÎÎñ¹ÜÀíÆ÷¿ÉÒÔÊ¹ÓÃCtrl+Shift+Esc
+	//?æŒ‰ä¸‹ç»„åˆé”®ï¼Œå®Œæˆæ—¶é—´ï¼ŒCtrl+Alt+Deleteæ— æ³•æ¨¡æ‹Ÿï¼Œå¦‚æœæƒ³è°ƒå‡ºä»»åŠ¡ç®¡ç†å™¨å¯ä»¥ä½¿ç”¨Ctrl+Shift+Esc
 	static bool KeyManyPress(const std::vector<int32_t>& vecCode, int32_t sleepTime = -1);
-	//?ÊäÈëÖĞÎÄ×Ö·û´®
+	//?è¾“å…¥ä¸­æ–‡å­—ç¬¦ä¸²
 
-	//?»ñÈ¡¼üÂë£¬Óöµ½²»ÊÇÓ¢ÎÄ×Ö·ûµÄ·µ»Ø-1
+	//?è·å–é”®ç ï¼Œé‡åˆ°ä¸æ˜¯è‹±æ–‡å­—ç¬¦çš„è¿”å›-1
 	static std::vector<int32_t> GetCode(char c);
 };

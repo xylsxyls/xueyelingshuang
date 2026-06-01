@@ -1,49 +1,49 @@
-#pragma once
+ï»¿#pragma once
 #include "Rect/RectAPI.h"
 #include "CMouseMacro.h"
 
 class CMouseAPI CMouse
 {
-	//? sleepTime 0±íÊ¾Á¢¿Ìµ½´ï£¬ - 1±íÊ¾Ëæ»úÊ±¼ä£¬Ä¬ÈÏËæ»ú£¬µ¥Î»ÊÇºÁÃë
+	//? sleepTime 0è¡¨ç¤ºç«‹åˆ»åˆ°è¾¾ï¼Œ - 1è¡¨ç¤ºéšæœºæ—¶é—´ï¼Œé»˜è®¤éšæœºï¼Œå•ä½æ˜¯æ¯«ç§’
 public:
-	//?°´ÏÂÊó±ê×ó¼ü
+	//?æŒ‰ä¸‹é¼ æ ‡å·¦é”®
 	static bool LeftDown();
-	//?°´ÏÂÊó±êÓÒ¼ü
+	//?æŒ‰ä¸‹é¼ æ ‡å³é”®
 	static bool RightDown();
-	//?°´ÏÂÊó±êÖĞ¼ü
-	//?µ¯ÆğÊó±ê×ó¼ü
+	//?æŒ‰ä¸‹é¼ æ ‡ä¸­é”®
+	//?å¼¹èµ·é¼ æ ‡å·¦é”®
 	static bool LeftUp();
-	//?µ¯ÆğÊó±êÓÒ¼ü
+	//?å¼¹èµ·é¼ æ ‡å³é”®
 	static bool RightUp();
-	//?µ¯ÆğÊó±êÖĞ¼ü
-	//?µ¥»÷×ó¼ü£¬Ëæ»ú·¶Î§100-300ºÁÃë
+	//?å¼¹èµ·é¼ æ ‡ä¸­é”®
+	//?å•å‡»å·¦é”®ï¼ŒéšæœºèŒƒå›´100-300æ¯«ç§’
 	static bool LeftClick(int32_t sleepTime = -1);
-	//?µ¥»÷ÓÒ¼ü
+	//?å•å‡»å³é”®
     static bool RightClick(int32_t sleepTime = -1);
-	//?µ¥»÷ÖĞ¼ü
+	//?å•å‡»ä¸­é”®
 	static bool MiddleClick();
-	//?Ë«»÷×ó¼ü£¬¼ä¸ôÊ±¼ä·¶Î§Îª100 - 300ºÁÃë
+	//?åŒå‡»å·¦é”®ï¼Œé—´éš”æ—¶é—´èŒƒå›´ä¸º100 - 300æ¯«ç§’
     static bool LeftDoubleClick(int32_t sleepTime = -1);
-	//?Ë«»÷ÓÒ¼ü
+	//?åŒå‡»å³é”®
     static bool RightDoubleClick(int32_t sleepTime = -1);
-	//?Ë«»÷ÖĞ¼ü
-	//?¶à»÷×ó¼ü
+	//?åŒå‡»ä¸­é”®
+	//?å¤šå‡»å·¦é”®
     static bool LeftManyClick(int32_t times, int32_t sleepTime = -1);
-	//?¶à»÷ÓÒ¼ü
+	//?å¤šå‡»å³é”®
     static bool RightManyClick(int32_t times, int32_t sleepTime = -1);
-	//?¶à»÷ÖĞ¼ü
-	//?ÒÆ¶¯Êó±ê´Óµãµ½µã£¬¾ø¶Ô×ø±ê£¬Íê³ÉÊ±¼ä£¬ÓĞ¹ì¼££¬·¶Î§Îª50 - 1000ºÁÃëÖĞµÄÒ»ÖÖ£¬Èç¹ûÓĞ³öÈë£¬Êµ¼ÊÍê³ÉÊ±¼ä´óÓÚÔ¤ÉèÍê³ÉÊ±¼ä
+	//?å¤šå‡»ä¸­é”®
+	//?ç§»åŠ¨é¼ æ ‡ä»ç‚¹åˆ°ç‚¹ï¼Œç»å¯¹åæ ‡ï¼Œå®Œæˆæ—¶é—´ï¼Œæœ‰è½¨è¿¹ï¼ŒèŒƒå›´ä¸º50 - 1000æ¯«ç§’ä¸­çš„ä¸€ç§ï¼Œå¦‚æœæœ‰å‡ºå…¥ï¼Œå®é™…å®Œæˆæ—¶é—´å¤§äºé¢„è®¾å®Œæˆæ—¶é—´
 	static bool MoveAbsolute(const xyls::Rect& rect, int32_t sleepTime = -1);
-	//?ÒÆ¶¯Êó±ê´Óµãµ½µã£¬Ïà¶Ô×ø±ê£¬Íê³ÉÊ±¼ä£¬ÓĞ¹ì¼£
+	//?ç§»åŠ¨é¼ æ ‡ä»ç‚¹åˆ°ç‚¹ï¼Œç›¸å¯¹åæ ‡ï¼Œå®Œæˆæ—¶é—´ï¼Œæœ‰è½¨è¿¹
 	static bool MoveOpposite(const xyls::Rect& rect, int32_t sleepTime = -1);
-	//?Êó±êÖĞ¼üÏòÏÂ¹ö¶¯£¬¹ö¶¯ÖĞ¼üÒ»¸ñ
+	//?é¼ æ ‡ä¸­é”®å‘ä¸‹æ»šåŠ¨ï¼Œæ»šåŠ¨ä¸­é”®ä¸€æ ¼
 	static bool MidWheelDown();
-	//?Êó±êÖĞ¼üÏòÉÏ¹ö¶¯
+	//?é¼ æ ‡ä¸­é”®å‘ä¸Šæ»šåŠ¨
 	static bool MidWheelUp();
-	//?»ñÈ¡Êó±êµ±Ç°Î»ÖÃ£¬¾ø¶Ô×ø±ê
+	//?è·å–é¼ æ ‡å½“å‰ä½ç½®ï¼Œç»å¯¹åæ ‡
 	static xyls::Point GetCurrentPos();
-	//?ÒÆ¶¯µ½Ö¸¶¨Î»ÖÃµ¥»÷
+	//?ç§»åŠ¨åˆ°æŒ‡å®šä½ç½®å•å‡»
 	static void MoveClick(const xyls::Rect& rect, int32_t sleepTime = -1);
-	//?ÒÆ¶¯µ½Ö¸¶¨Î»ÖÃµ¥»÷
+	//?ç§»åŠ¨åˆ°æŒ‡å®šä½ç½®å•å‡»
 	static void MoveDoubleClick(const xyls::Rect& rect, int32_t sleepTime = -1);
 };

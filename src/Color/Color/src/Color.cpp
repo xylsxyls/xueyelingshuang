@@ -1,4 +1,4 @@
-#include "Color.h"
+﻿#include "Color.h"
 #include "CStringManager/CStringManagerAPI.h"
 
 xyls::Color::Color(unsigned char r, unsigned char g, unsigned char b)

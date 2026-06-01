@@ -1,7 +1,7 @@
-// ´ÓÀàĞÍ¿âÏòµ¼ÖĞÓÃ¡°Ìí¼ÓÀà¡±´´½¨µÄ¼ÆËã»úÉú³ÉµÄ IDispatch °ü×°Æ÷Àà
+ï»¿// ä»ç±»å‹åº“å‘å¯¼ä¸­ç”¨â€œæ·»åŠ ç±»â€åˆ›å»ºçš„è®¡ç®—æœºç”Ÿæˆçš„ IDispatch åŒ…è£…å™¨ç±»
 
 #include <afxctl.h>
-//#import "D:\\°²×°°ü\\dtws\\dm\\dm.dll" no_namespace \
+//#import "D:\\å®‰è£…åŒ…\\dtws\\dm\\dm.dll" no_namespace \
 //	rename("StrStr","DmStrStr")\
 //	rename("SetWindowText","DmSetWindowText")\
 //	rename("FindWindow","DmFindWindow")\
@@ -9,23 +9,23 @@
 //	rename("CopyFile","DmCopyFile")\
 //	rename("DeleteFile","DmDeleteFile")\
 //	rename("MoveFile","DmMoveFile")
-// Cdmsoft °ü×°Æ÷Àà
+// Cdmsoft åŒ…è£…å™¨ç±»
 
 class Cdmsoft : public COleDispatchDriver
 {
 public:
-	Cdmsoft(){} // µ÷ÓÃ COleDispatchDriver Ä¬ÈÏ¹¹Ôìº¯Êı
+	Cdmsoft(){} // è°ƒç”¨ COleDispatchDriver é»˜è®¤æ„é€ å‡½æ•°
 	Cdmsoft(LPDISPATCH pDispatch) : COleDispatchDriver(pDispatch) {}
 	Cdmsoft(const Cdmsoft& dispatchSrc) : COleDispatchDriver(dispatchSrc) {}
 
-	// ÌØĞÔ
+	// ç‰¹æ€§
 public:
 
-	// ²Ù×÷
+	// æ“ä½œ
 public:
 
 
-	// Idmsoft ·½·¨
+	// Idmsoft æ–¹æ³•
 public:
 	CString Ver()
 	{
@@ -2178,7 +2178,7 @@ public:
 		return result;
 	}
 
-	// Idmsoft ÊôĞÔ
+	// Idmsoft å±æ€§
 public:
 
 };

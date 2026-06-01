@@ -1,4 +1,4 @@
-#include "CKeyboard.h"
+﻿#include "CKeyboard.h"
 #include "DmSoft/DmSoftAPI.h"
 #include "CRandom/CRandomAPI.h"
 

@@ -1,4 +1,4 @@
-#include "CMouse.h"
+ï»¿#include "CMouse.h"
 #include "DmSoft/DmSoftAPI.h"
 #include "CRandom/CRandomAPI.h"
 #include <math.h>
@@ -59,7 +59,7 @@ bool CMouse::MiddleClick()
 
 bool CMouse::LeftDoubleClick(int32_t sleepTime)
 {
-	//?»ñÈ¡É¢ÁĞ
+	//?è·å–æ•£åˆ—
 	if (sleepTime == -1) sleepTime = CRandom::Int(ClickTimeMin, ClickTimeMax);
 	vector<int> vecSleepTime = CRandom::Hash(sleepTime, 3);
 	bool result = true;
@@ -124,25 +124,25 @@ bool CMouse::MoveAbsolute(const xyls::Rect& rect, int sleepTime)
     {
         sleepTime = CRandom::Int(MoveTimeMin, MoveTimeMax);
     }
-	//?Éú³ÉÒ»¸öµã
+	//?ç”Ÿæˆä¸€ä¸ªç‚¹
 	xyls::Point pointResult(CRandom::Int(rect.left(), rect.right()), CRandom::Int(rect.top(), rect.bottom()));
-	//?ÊÇ·ñÁ¢¼´µ½´ï
+	//?æ˜¯å¦ç«‹å³åˆ°è¾¾
 	if (sleepTime == 0)
     {
         return DmSoft::MoveTo(pointResult.x(), pointResult.y()) == 1;
     }
-	//?²»ÊÇÁ¢¼´µ½´ï
+	//?ä¸æ˜¯ç«‹å³åˆ°è¾¾
 	else
     {
-		//?µ±Ç°Î»ÖÃ
+		//?å½“å‰ä½ç½®
 		xyls::Point currentPoint = GetCurrentPos();
         int step = abs(currentPoint.x() - pointResult.x()) + abs(currentPoint.y() - pointResult.y());
 		map<string, int> mapCard;
         mapCard[currentPoint.x() < pointResult.x() ? "1,0" : "-1,0"] = abs(currentPoint.x() - pointResult.x());
         mapCard[currentPoint.y() < pointResult.y() ? "0,1" : "0,-1"] = abs(currentPoint.y() - pointResult.y());
-		//?Éú³ÉËæ»úÂ·¾¶
+		//?ç”Ÿæˆéšæœºè·¯å¾„
 		vector<string> vecRoad = CRandom::Deal(mapCard);
-		//?Éú³ÉËæ»ú¼ä¸ôÊ±¼ä
+		//?ç”Ÿæˆéšæœºé—´éš”æ—¶é—´
 		vector<int> vecSleepTime = CRandom::Hash(sleepTime, step);
 		bool result = true;
 		int i = -1;

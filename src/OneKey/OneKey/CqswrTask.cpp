@@ -27,7 +27,7 @@ void CqswrTask::V5()
 	if (text.size() <= m_editIndex)
 	{
 		KeyPressE();
-		if (Sleep(80))
+		if (Sleep(90))
 		{
 			return;
 		}
@@ -38,7 +38,7 @@ void CqswrTask::V5()
 			return;
 		}
 		KeyPressE();
-		if (Sleep(50))
+		if (Sleep(90))
 		{
 			return;
 		}

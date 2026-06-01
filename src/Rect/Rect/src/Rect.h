@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "RectMacro.h"
 #include "Point/PointAPI.h"
 #include <stdint.h>
@@ -21,7 +21,7 @@ public:
     Rect(int32_t left, int32_t top, int32_t right, int32_t bottom);
     Rect(const Point& origin, int32_t width, int32_t height);
 	Rect(const Point& point);
-    //ÖĞĞÄµ½ËÄÖÜ¾àÀë
+    //ä¸­å¿ƒåˆ°å››å‘¨è·ç¦»
     Rect(const Point& point, int32_t margin);
 
 public:
@@ -43,47 +43,47 @@ public:
     void setRight(int32_t right);
     void setBottom(int32_t bottom);
 
-	//°üº¬±ß
+	//åŒ…å«è¾¹
 	bool contain(const xyls::Point& point);
 
 	bool operator==(const Rect& rect) const;
 
-	//?ÊÇ·ñÊÇË®Æ½Ïß
+	//?æ˜¯å¦æ˜¯æ°´å¹³çº¿
 	bool isHorizontalLine() const;
-	//?ÊÇ·ñÊÇ´¹Ö±Ïß
+	//?æ˜¯å¦æ˜¯å‚ç›´çº¿
 	bool isVerticalLine() const;
 
-	//? ¾ÓÖĞÊÊÓ¦·ÅÈë±³¾°bkRectÖĞ
-	//? param [in] bkRect ±³¾°¾ØĞÎ
-	//? return ·µ»ØÊÊÓ¦Ö®ºóµÄ¾ØĞÎ£¬Èç¹û¹ıĞ¡»á·Å´óÊÊÓ¦
+	//? å±…ä¸­é€‚åº”æ”¾å…¥èƒŒæ™¯bkRectä¸­
+	//? param [in] bkRect èƒŒæ™¯çŸ©å½¢
+	//? return è¿”å›é€‚åº”ä¹‹åçš„çŸ©å½¢ï¼Œå¦‚æœè¿‡å°ä¼šæ”¾å¤§é€‚åº”
 	Rect adapt(const Rect& bkRect);
 
-	//? ¾ÓÖĞ·ÅÈë±³¾°bkRectÖĞ
-	//? param [in] bkRect ±³¾°¾ØĞÎ
-	//? return ·µ»ØÖ®ºóµÄ¾ØĞÎ£¬Èç¹û¹ıĞ¡²»»á·Å´ó
+	//? å±…ä¸­æ”¾å…¥èƒŒæ™¯bkRectä¸­
+	//? param [in] bkRect èƒŒæ™¯çŸ©å½¢
+	//? return è¿”å›ä¹‹åçš„çŸ©å½¢ï¼Œå¦‚æœè¿‡å°ä¸ä¼šæ”¾å¤§
 	Rect setIn(const Rect& bkRect);
 
 #ifdef _MSC_VER
-	//? »ñÈ¡ÖØµş¾ØĞÎ
-	//? param [in] bkRect ±³¾°¾ØĞÎ
-	//? return ·µ»ØÖØµş²¿·ÖµÄ¾ØĞÎ
+	//? è·å–é‡å çŸ©å½¢
+	//? param [in] bkRect èƒŒæ™¯çŸ©å½¢
+	//? return è¿”å›é‡å éƒ¨åˆ†çš„çŸ©å½¢
 	Rect over(const Rect& bkRect);
 #endif
 
-	//? »ñÈ¡tan½Ç£¬¸ß/¿í
-	//? ·µ»Øtan½Ç
+	//? è·å–tanè§’ï¼Œé«˜/å®½
+	//? è¿”å›tanè§’
 	double tanHeightWidth() const;
 
-	//? »ñÈ¡¾ØĞÎµÄ×óÉÏ½Çµã
-	//? ·µ»Ø¾ØĞÎµÄ×óÉÏ½Çµã
+	//? è·å–çŸ©å½¢çš„å·¦ä¸Šè§’ç‚¹
+	//? è¿”å›çŸ©å½¢çš„å·¦ä¸Šè§’ç‚¹
 	xyls::Point leftTop() const;
 
-	//? »ñÈ¡¾ØĞÎµÄÓÒÏÂ½Çµã
-	//? ·µ»Ø¾ØĞÎµÄÓÒÏÂ½Çµã
+	//? è·å–çŸ©å½¢çš„å³ä¸‹è§’ç‚¹
+	//? è¿”å›çŸ©å½¢çš„å³ä¸‹è§’ç‚¹
 	xyls::Point rightBottom() const;
 
-	//? »ñÈ¡¾ØĞÎµÄÖĞĞÄµã
-	//? ·µ»Ø¾ØĞÎµÄÖĞĞÄµã
+	//? è·å–çŸ©å½¢çš„ä¸­å¿ƒç‚¹
+	//? è¿”å›çŸ©å½¢çš„ä¸­å¿ƒç‚¹
 	xyls::Point center() const;
 
 #ifdef _MSC_VER
