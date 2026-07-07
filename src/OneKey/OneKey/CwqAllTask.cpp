@@ -119,21 +119,25 @@ void CwqAllTask::DoTask()
 	}
 	else
 	{
-		CKeyboard::KeyPress(text[0] + 48, 0);
-		if (Sleep(100))
+		if (text[0] == '8')
 		{
-			return;
+			KeyPressE();
+			if (Sleep(100))
+			{
+				return;
+			}
 		}
-		CKeyboard::KeyPress(text[1] + 48, 0);
-		CKeyboard::KeyPress(text[0] + 48, 0);
-		KeyPressE();
-		if (Sleep(100))
+		else
 		{
-			return;
+			CKeyboard::KeyPress(text[0] + 48, 0);
+			if (Sleep(100))
+			{
+				return;
+			}
+			CKeyboard::KeyPress(text[0] + 48, 0);
 		}
-		//KeyPressF();
 		CKeyboard::KeyPress('Z', 0);
-		if (Sleep(60))
+		if (Sleep(80))
 		{
 			return;
 		}

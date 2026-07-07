@@ -26,8 +26,8 @@ CConfig::CConfig()
 	m_cpuCoreCount = CSystem::GetCPUCoreCount();
 	m_normalShares = 800;
 	m_ignoreTrans = 2;
-	m_stock = "600867";
-	m_allStock = { "600975", "600348", "600867" };
+	m_stock = "300059";
+	m_allStock = { "600975", "600348", "600867", "300059" };
 	m_allBeginTime = 20200201;
 	m_allEndTime = 30250101;
 	m_initialFund = 1000000 * 100;
