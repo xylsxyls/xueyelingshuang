@@ -1,4 +1,4 @@
-#include "Util.h"
+ï»¿#include "Util.h"
 #include "Config.h"
 #include <algorithm>
 #include "CStringManager/CStringManagerAPI.h"
@@ -10,19 +10,19 @@
 
 void Util::getAllIndex(uint32_t allIndex, uint32_t& observeIndex, uint32_t& rangeIndex, uint32_t& transIndex, uint32_t offset)
 {
-	// ¼õÈ¥Æ«ÒÆÁ¿
+	// å‡å»åç§»é‡
 	uint32_t index = allIndex - offset;
 
-	// »ñÈ¡¸÷¸öÎ¬¶ÈµÄÊıÁ¿£¨¼ÙÉèÕâĞ©Ã¶¾ÙÖµÒÑ¾­¶¨Òå£©
+	// è·å–å„ä¸ªç»´åº¦çš„æ•°é‡ï¼ˆå‡è®¾è¿™äº›æšä¸¾å€¼å·²ç»å®šä¹‰ï¼‰
 	const uint32_t observeCount = (uint32_t)ObserveTime::COUNT;
 	const uint32_t rangeCount = (uint32_t)RangeTime::COUNT;
 	const uint32_t transCount = (uint32_t)TransType::COUNT;
 
-	// ¼ÆËãÃ¿¸öÎ¬¶ÈµÄ²½³¤
+	// è®¡ç®—æ¯ä¸ªç»´åº¦çš„æ­¥é•¿
 	const uint32_t rangeTransStep = rangeCount * transCount;
 	const uint32_t transStep = transCount;
 
-	// ·´Çó¸÷¸öË÷Òı
+	// åæ±‚å„ä¸ªç´¢å¼•
 	observeIndex = index / rangeTransStep;
 	uint32_t remainder = index % rangeTransStep;
 
@@ -199,7 +199,7 @@ std::string Util::observeTimeToWatchString(ObserveTime time)
 	int32_t timeValue = Util::getTimeValue(time);
 	if (timeValue == 0)
 	{
-		return "Òì³£Ê±¼äµã";
+		return "å¼‚å¸¸æ—¶é—´ç‚¹";
 	}
 	std::string strTimeValue = std::to_string(timeValue);
 	if (strTimeValue.size() == 3)
@@ -263,7 +263,7 @@ int32_t Util::getTimeValue(ObserveTime time)
 	case ObserveTime::COUNT:
 		return 1500;
 	default:
-		return 0;  // ÎŞĞ§Ê±¼ä
+		return 0;  // æ— æ•ˆæ—¶é—´
 	}
 }
 
@@ -320,7 +320,7 @@ ObserveTime Util::getObserveTime(int32_t timeValue)
 	case 1500:
 		return ObserveTime::COUNT;
 	default:
-		return ObserveTime::COUNT;  // ÎŞĞ§Ê±¼ä
+		return ObserveTime::COUNT;  // æ— æ•ˆæ—¶é—´
 	}
 }
 
@@ -335,137 +335,137 @@ int32_t Util::getRangeValue(RangeTime range)
 	case RangeTime::RANGE30:
 		return 30;
 	default:
-		return -1;  // ÎŞĞ§Ê±¼ä
+		return -1;  // æ— æ•ˆæ—¶é—´
 	}
 }
 
 int32_t Util::rangeEndTime(int32_t startTime, int32_t addMinutes) {
-	// ========== ÊäÈëÑéÖ¤ ==========
+	// ========== è¾“å…¥éªŒè¯ ==========
 
-	// ÑéÖ¤ÆğÊ¼Ê±¼äÊÇ·ñÎª10µÄÕûÊı±¶
+	// éªŒè¯èµ·å§‹æ—¶é—´æ˜¯å¦ä¸º10çš„æ•´æ•°å€
 	if (startTime % 10 != 0) {
-		RCSend("´íÎó£ºÆğÊ¼Ê±¼ä%d²»ÊÇ10µÄÕûÊı±¶", startTime);
+		RCSend("é”™è¯¯ï¼šèµ·å§‹æ—¶é—´%dä¸æ˜¯10çš„æ•´æ•°å€", startTime);
 		return -1;
 	}
 
-	// ÑéÖ¤ÆğÊ¼Ê±¼äÊÇ·ñÔÚ930-1500·¶Î§ÄÚ
+	// éªŒè¯èµ·å§‹æ—¶é—´æ˜¯å¦åœ¨930-1500èŒƒå›´å†…
 	if (startTime < 930 || startTime > 1500) {
-		RCSend("´íÎó£ºÆğÊ¼Ê±¼ä%d²»ÔÚ930-1500·¶Î§ÄÚ", startTime);
+		RCSend("é”™è¯¯ï¼šèµ·å§‹æ—¶é—´%dä¸åœ¨930-1500èŒƒå›´å†…", startTime);
 		return -1;
 	}
 
-	// ÑéÖ¤Ğ¡Ê±ºÍ·ÖÖÓÊÇ·ñÓĞĞ§
+	// éªŒè¯å°æ—¶å’Œåˆ†é’Ÿæ˜¯å¦æœ‰æ•ˆ
 	int hour = startTime / 100;
 	int minute = startTime % 100;
 
 	if (hour < 9 || hour > 15) {
-		RCSend("´íÎó£ºÆğÊ¼Ê±¼ä%dµÄĞ¡Ê±²¿·Ö%dÎŞĞ§", startTime, hour);
+		RCSend("é”™è¯¯ï¼šèµ·å§‹æ—¶é—´%dçš„å°æ—¶éƒ¨åˆ†%dæ— æ•ˆ", startTime, hour);
 		return -1;
 	}
 
 	if (minute % 10 != 0 || minute >= 60) {
-		RCSend("´íÎó£ºÆğÊ¼Ê±¼ä%dµÄ·ÖÖÓ²¿·Ö%dÎŞĞ§", startTime, minute);
+		RCSend("é”™è¯¯ï¼šèµ·å§‹æ—¶é—´%dçš„åˆ†é’Ÿéƒ¨åˆ†%dæ— æ•ˆ", startTime, minute);
 		return -1;
 	}
 
-	// ÑéÖ¤ÊÇ·ñÎªÒì³£Ê±¼äÖµ£¨1130-1300Ö®¼äÖ»ÓĞ1130ÊÇÓĞĞ§µÄ£©
+	// éªŒè¯æ˜¯å¦ä¸ºå¼‚å¸¸æ—¶é—´å€¼ï¼ˆ1130-1300ä¹‹é—´åªæœ‰1130æ˜¯æœ‰æ•ˆçš„ï¼‰
 	if (startTime > 1130 && startTime < 1300) {
-		RCSend("´íÎó£ºÆğÊ¼Ê±¼ä%dÊÇÒì³£Öµ£¨Ó¦ÔÚ1130-1300Ö®¼äÌø¹ı£©", startTime);
+		RCSend("é”™è¯¯ï¼šèµ·å§‹æ—¶é—´%dæ˜¯å¼‚å¸¸å€¼ï¼ˆåº”åœ¨1130-1300ä¹‹é—´è·³è¿‡ï¼‰", startTime);
 		return -1;
 	}
 
-	// ÑéÖ¤ÎçĞİÊ±¼äºóµÄÒì³£Öµ
+	// éªŒè¯åˆä¼‘æ—¶é—´åçš„å¼‚å¸¸å€¼
 	if (startTime > 1300 && startTime < 1310) {
-		RCSend("´íÎó£ºÆğÊ¼Ê±¼ä%dÊÇÒì³£Öµ£¨ÎçĞİºóÓ¦´Ó1300¿ªÊ¼£©", startTime);
+		RCSend("é”™è¯¯ï¼šèµ·å§‹æ—¶é—´%dæ˜¯å¼‚å¸¸å€¼ï¼ˆåˆä¼‘ååº”ä»1300å¼€å§‹ï¼‰", startTime);
 		return -1;
 	}
 
-	// ÑéÖ¤Ôö¼ÓÊ±¼äÊÇ·ñºÏ·¨
+	// éªŒè¯å¢åŠ æ—¶é—´æ˜¯å¦åˆæ³•
 	if (addMinutes < 0) {
-		RCSend("´íÎó£ºÔö¼ÓÊ±¼ä%d²»ÄÜÎª¸ºÊı", addMinutes);
+		RCSend("é”™è¯¯ï¼šå¢åŠ æ—¶é—´%dä¸èƒ½ä¸ºè´Ÿæ•°", addMinutes);
 		return -1;
 	}
 
 	if (addMinutes % 10 != 0) {
-		RCSend("´íÎó£ºÔö¼ÓÊ±¼ä%d²»ÊÇ10µÄÕûÊı±¶", addMinutes);
+		RCSend("é”™è¯¯ï¼šå¢åŠ æ—¶é—´%dä¸æ˜¯10çš„æ•´æ•°å€", addMinutes);
 		return -1;
 	}
 
-	// ÌØÊâ´¦Àí£ºÈç¹ûÆğÊ¼Ê±¼äÒÑ¾­ÊÇ1500£¬Ö±½Ó·µ»Ø1500
+	// ç‰¹æ®Šå¤„ç†ï¼šå¦‚æœèµ·å§‹æ—¶é—´å·²ç»æ˜¯1500ï¼Œç›´æ¥è¿”å›1500
 	if (startTime == 1500) {
 		return 1500;
 	}
 
-	// ========== Ê±¼ä×ª»»Âß¼­£¨ÄÚÁªÊµÏÖ£© ==========
+	// ========== æ—¶é—´è½¬æ¢é€»è¾‘ï¼ˆå†…è”å®ç°ï¼‰ ==========
 
-	// ½«Ê±¼äÖµ×ª»»Îª·ÖÖÓÊıµÄÄÚÁªº¯Êı
+	// å°†æ—¶é—´å€¼è½¬æ¢ä¸ºåˆ†é’Ÿæ•°çš„å†…è”å‡½æ•°
 	int startHour = startTime / 100;
 	int startMinute = startTime % 100;
 	int currentMinutes = startHour * 60 + startMinute;
 	int remainingMinutes = addMinutes;
 
-	// ¶¨Òå½»Ò×Ê±¼ä¶Î£¨·ÖÖÓÊı±íÊ¾£©
+	// å®šä¹‰äº¤æ˜“æ—¶é—´æ®µï¼ˆåˆ†é’Ÿæ•°è¡¨ç¤ºï¼‰
 	const int MORNING_START = 570;   // 9:30
 	const int MORNING_END = 690;     // 11:30
 	const int AFTERNOON_START = 780; // 13:00
 	const int AFTERNOON_END = 900;   // 15:00
 
-	// ========== Ê±¼ä¼ÆËãÂß¼­ ==========
+	// ========== æ—¶é—´è®¡ç®—é€»è¾‘ ==========
 
-	// Öğ²½Ôö¼ÓÊ±¼ä£¬¿¼ÂÇÎçĞİ
+	// é€æ­¥å¢åŠ æ—¶é—´ï¼Œè€ƒè™‘åˆä¼‘
 	while (remainingMinutes > 0) {
-		// È·¶¨µ±Ç°ËùÔÚµÄÊ±¼ä¶Î
+		// ç¡®å®šå½“å‰æ‰€åœ¨çš„æ—¶é—´æ®µ
 		if (currentMinutes < MORNING_END) {
-			// ÉÏÎç¶Î
+			// ä¸Šåˆæ®µ
 			int minutesToMorningEnd = MORNING_END - currentMinutes;
 
 			if (remainingMinutes <= minutesToMorningEnd) {
-				// Ê£ÓàÊ±¼äÔÚÉÏÎç¶ÎÄÚÍê³É
+				// å‰©ä½™æ—¶é—´åœ¨ä¸Šåˆæ®µå†…å®Œæˆ
 				currentMinutes += remainingMinutes;
 				remainingMinutes = 0;
 			}
 			else {
-				// Ìø¹ıÎçĞİ£¬½øÈëÏÂÎç¶Î
+				// è·³è¿‡åˆä¼‘ï¼Œè¿›å…¥ä¸‹åˆæ®µ
 				currentMinutes = AFTERNOON_START;
 				remainingMinutes -= minutesToMorningEnd;
 			}
 		}
 		else if (currentMinutes < AFTERNOON_START) {
-			// ÔÚÎçĞİÆÚ¼ä£¨ÀíÂÛÉÏ²»»á½øÈëÕâÀï£¬ÒòÎªÆğÊ¼Ê±¼äÊÇÓĞĞ§µÄ½»Ò×Ê±¼ä£©
-			// Ö±½ÓÌøµ½ÏÂÎç¿ªÅÌ
+			// åœ¨åˆä¼‘æœŸé—´ï¼ˆç†è®ºä¸Šä¸ä¼šè¿›å…¥è¿™é‡Œï¼Œå› ä¸ºèµ·å§‹æ—¶é—´æ˜¯æœ‰æ•ˆçš„äº¤æ˜“æ—¶é—´ï¼‰
+			// ç›´æ¥è·³åˆ°ä¸‹åˆå¼€ç›˜
 			currentMinutes = AFTERNOON_START;
 		}
 		else {
-			// ÏÂÎç¶Î
+			// ä¸‹åˆæ®µ
 			int minutesToAfternoonEnd = AFTERNOON_END - currentMinutes;
 
 			if (remainingMinutes <= minutesToAfternoonEnd) {
-				// Ê£ÓàÊ±¼äÔÚÏÂÎç¶ÎÄÚÍê³É
+				// å‰©ä½™æ—¶é—´åœ¨ä¸‹åˆæ®µå†…å®Œæˆ
 				currentMinutes += remainingMinutes;
 				remainingMinutes = 0;
 			}
 			else {
-				// ³¬¹ıÏÂÎç½»Ò×Ê±¼ä£¬·µ»Ø1500
+				// è¶…è¿‡ä¸‹åˆäº¤æ˜“æ—¶é—´ï¼Œè¿”å›1500
 				return 1500;
 			}
 		}
 	}
 
-	// ========== ½á¹û×ª»»ºÍÑéÖ¤ ==========
+	// ========== ç»“æœè½¬æ¢å’ŒéªŒè¯ ==========
 
-	// ½«·ÖÖÓÊı×ª»»»ØÊ±¼äÖµ
+	// å°†åˆ†é’Ÿæ•°è½¬æ¢å›æ—¶é—´å€¼
 	int endHour = currentMinutes / 60;
 	int endMinute = currentMinutes % 60;
 	int endTime = endHour * 100 + endMinute;
 
-	// È·±£²»³¬¹ı1500
+	// ç¡®ä¿ä¸è¶…è¿‡1500
 	if (endTime > 1500) {
 		return 1500;
 	}
 
-	// È·±£½á¹ûÊÇ10µÄÕûÊı±¶£¨ÀíÂÛÉÏÓ¦¸Ã×ÜÊÇÂú×ã£©
+	// ç¡®ä¿ç»“æœæ˜¯10çš„æ•´æ•°å€ï¼ˆç†è®ºä¸Šåº”è¯¥æ€»æ˜¯æ»¡è¶³ï¼‰
 	if (endTime % 10 != 0) {
-		RCSend("¾¯¸æ£º¼ÆËã½á¹û%d²»ÊÇ10µÄÕûÊı±¶£¬½øĞĞĞŞÕı", endTime);
+		RCSend("è­¦å‘Šï¼šè®¡ç®—ç»“æœ%dä¸æ˜¯10çš„æ•´æ•°å€ï¼Œè¿›è¡Œä¿®æ­£", endTime);
 		endTime = (endTime / 10) * 10;
 	}
 
@@ -506,7 +506,7 @@ int32_t Util::getPriceMatrixIndex(ObserveTime observeTime, RangeTime rangeTime, 
 	int32_t rangeIndex = static_cast<int32_t>(rangeTime);
 	int32_t transIndex = static_cast<int32_t>(transType);
 
-	// ÈıÎ¬Õ¹Æ½¹«Ê½: index = observeIndex * (RangeTime::COUNT * TransType::COUNT) + 
+	// ä¸‰ç»´å±•å¹³å…¬å¼: index = observeIndex * (RangeTime::COUNT * TransType::COUNT) + 
 	//                  rangeIndex * TransType::COUNT + transIndex
 	return static_cast<int32_t>(Overall::COUNT) + static_cast<int32_t>(ObserveTime::COUNT) +
 		observeIndex * (static_cast<int32_t>(RangeTime::COUNT) * static_cast<int32_t>(TransType::COUNT)) +
@@ -533,7 +533,7 @@ bool Util::getEnumsFromPriceIndex(int32_t index, ObserveTime& observeTime, Range
 	int32_t transCount = static_cast<int32_t>(TransType::COUNT);
 	int32_t rangeCount = static_cast<int32_t>(RangeTime::COUNT);
 
-	// ·´Ïò¼ÆËãÈıÎ¬×ø±ê
+	// åå‘è®¡ç®—ä¸‰ç»´åæ ‡
 	int32_t observeIndex = index / (rangeCount * transCount);
 	int32_t remainder = index % (rangeCount * transCount);
 	int32_t rangeIndex = remainder / transCount;
@@ -550,7 +550,7 @@ bool Util::getEnumsFromPriceIndex(int32_t index, ObserveTime& observeTime, Range
 
 int32_t Util::getTotalFieldCount()
 {
-	// ×Ü×Ö¶ÎÊı = OverallÊıÁ¿ + ObserveTimeÊıÁ¿ + ÈıÎ¬¾ØÕóÊıÁ¿
+	// æ€»å­—æ®µæ•° = Overallæ•°é‡ + ObserveTimeæ•°é‡ + ä¸‰ç»´çŸ©é˜µæ•°é‡
 	return static_cast<int32_t>(Overall::COUNT) +
 		static_cast<int32_t>(ObserveTime::COUNT) +
 		(static_cast<int32_t>(ObserveTime::COUNT) *
@@ -662,17 +662,17 @@ std::vector<std::vector<int32_t>> Util::combinatoricsToAllParam(const std::vecto
 {
 	std::vector<std::vector<int32_t>> result;
 
-	// ´¦Àí¿ÕÊäÈëµÄÇé¿ö
+	// å¤„ç†ç©ºè¾“å…¥çš„æƒ…å†µ
 	if (allParam.empty())
 	{
 		return result;
 	}
 
-	// ¼ÆËã×Ü×éºÏÊı£º¸÷²ãÔªËØÊıÁ¿µÄ³Ë»ı
+	// è®¡ç®—æ€»ç»„åˆæ•°ï¼šå„å±‚å…ƒç´ æ•°é‡çš„ä¹˜ç§¯
 	size_t total = 1;
 	for (size_t i = 0; i < allParam.size(); ++i)
 	{
-		// Èç¹ûÈÎºÎÒ»²ãÎª¿Õ£¬×Ü×éºÏÊıÎª0
+		// å¦‚æœä»»ä½•ä¸€å±‚ä¸ºç©ºï¼Œæ€»ç»„åˆæ•°ä¸º0
 		if (allParam[i].empty())
 		{
 			return result;
@@ -680,22 +680,22 @@ std::vector<std::vector<int32_t>> Util::combinatoricsToAllParam(const std::vecto
 		total *= allParam[i].size();
 	}
 
-	// Éú³ÉËùÓĞ×éºÏ
+	// ç”Ÿæˆæ‰€æœ‰ç»„åˆ
 	for (size_t i = 0; i < total; ++i)
 	{
 		std::vector<int32_t> combination;
 		size_t remainder = i;
 
-		// ÎªÃ¿²ãÑ¡ÔñÒ»¸öÔªËØ
+		// ä¸ºæ¯å±‚é€‰æ‹©ä¸€ä¸ªå…ƒç´ 
 		for (size_t j = 0; j < allParam.size(); ++j)
 		{
 			const std::vector<int32_t>& layer = allParam[j];
 			size_t layerSize = layer.size();
-			// ¼ÆËãµ±Ç°²ãµÄË÷Òı
+			// è®¡ç®—å½“å‰å±‚çš„ç´¢å¼•
 			size_t index = remainder % layerSize;
-			// ¸üĞÂÓàÊıÓÃÓÚ¼ÆËãÏÂÒ»²ã
+			// æ›´æ–°ä½™æ•°ç”¨äºè®¡ç®—ä¸‹ä¸€å±‚
 			remainder = remainder / layerSize;
-			// Ìí¼Óµ±Ç°²ãÑ¡ÖĞµÄÔªËØ
+			// æ·»åŠ å½“å‰å±‚é€‰ä¸­çš„å…ƒç´ 
 			combination.push_back(layer[index]);
 		}
 

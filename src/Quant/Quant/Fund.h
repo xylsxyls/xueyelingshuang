@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include <map>
@@ -9,267 +9,267 @@
 #include "Market.h"
 #include "Config.h"
 
-// Ç°ÖÃÉùÃ÷
+// å‰ç½®å£°æ˜
 class Market;
 
-/** ³Ö²ÖĞÅÏ¢½á¹¹Ìå
+/** æŒä»“ä¿¡æ¯ç»“æ„ä½“
 */
 struct Position
 {
-	int32_t m_price;      // ½»Ò×¼Û¸ñ£¨µ¥Î»£º·Ö£©
-	int32_t m_shares;     // ½»Ò×¹ÉÊı
-	uint32_t m_date;      // ½»Ò×ÈÕÆÚ
-	ObserveTime m_time;   // ½»Ò×Ê±¼äµã
+	int32_t m_price;      // äº¤æ˜“ä»·æ ¼ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	int32_t m_shares;     // äº¤æ˜“è‚¡æ•°
+	uint32_t m_date;      // äº¤æ˜“æ—¥æœŸ
+	ObserveTime m_time;   // äº¤æ˜“æ—¶é—´ç‚¹
 
 	Position();
 };
 
-/** ½»Ò×ĞÅÏ¢½á¹¹Ìå
+/** äº¤æ˜“ä¿¡æ¯ç»“æ„ä½“
 */
 struct Trade : public Position
 {
-	int32_t m_fee;        // ½»Ò×ÊÖĞø·Ñ£¨µ¥Î»£º·Ö£©
+	int32_t m_fee;        // äº¤æ˜“æ‰‹ç»­è´¹ï¼ˆå•ä½ï¼šåˆ†ï¼‰
 
 	Trade();
 	bool empty() const;
 };
 
-/** ×öT²Ù×÷¼ÇÂ¼½á¹¹Ìå£¨Ö»°üº¬ÍêÕûµÄT½»Ò×£©
+/** åšTæ“ä½œè®°å½•ç»“æ„ä½“ï¼ˆåªåŒ…å«å®Œæ•´çš„Täº¤æ˜“ï¼‰
 */
 struct TOperation
 {
-	std::vector<Trade> m_sellTrade;                   // Âô³ö½»Ò×¼ÇÂ¼
-	std::vector<Trade> m_buyTrade;                    // ÂòÈë½»Ò×¼ÇÂ¼
+	std::vector<Trade> m_sellTrade;                   // å–å‡ºäº¤æ˜“è®°å½•
+	std::vector<Trade> m_buyTrade;                    // ä¹°å…¥äº¤æ˜“è®°å½•
 
-	int32_t sellShares() const;                       // Âô³ö¹ÉÊı
-	int32_t buyShares() const;                        // ÂòÈë¹ÉÊı
-	int32_t diff() const;                             // ¼Û¸ñ²î¼Û£¨Âô³ö-ÂòÈë£¬µ¥Î»£º·Ö£©
-	int32_t totalFee() const;                         // ×ÜÊÖĞø·Ñ£¨ÂòÈë+Âô³ö£¬µ¥Î»£º·Ö£©
-	int32_t totalProfit(int32_t endPrice) const;      // ¾»ÊÕÒæ£¨²î¼ÛÊÕÒæ-ÊÖĞø·Ñ£¬µ¥Î»£º·Ö£©
+	int32_t sellShares() const;                       // å–å‡ºè‚¡æ•°
+	int32_t buyShares() const;                        // ä¹°å…¥è‚¡æ•°
+	int32_t diff() const;                             // ä»·æ ¼å·®ä»·ï¼ˆå–å‡º-ä¹°å…¥ï¼Œå•ä½ï¼šåˆ†ï¼‰
+	int32_t totalFee() const;                         // æ€»æ‰‹ç»­è´¹ï¼ˆä¹°å…¥+å–å‡ºï¼Œå•ä½ï¼šåˆ†ï¼‰
+	int32_t totalProfit(int32_t endPrice) const;      // å‡€æ”¶ç›Šï¼ˆå·®ä»·æ”¶ç›Š-æ‰‹ç»­è´¹ï¼Œå•ä½ï¼šåˆ†ï¼‰
 };
 
-/** ÍêÕû½»Ò×¼ÇÂ¼½á¹¹Ìå
+/** å®Œæ•´äº¤æ˜“è®°å½•ç»“æ„ä½“
 */
 struct CompleteTrade
 {
-	Trade m_buyTrade;                             // ÂòÈë½»Ò×¼ÇÂ¼
-	Trade m_sellTrade;                            // Âô³ö½»Ò×¼ÇÂ¼
-	std::vector<TOperation> m_vecTOperations;     // ×öT²Ù×÷¼ÇÂ¼
-	TOperation m_incompleteTOperation;            // ×îºóÒ»´Î²»ÍêÕûµÄT²Ù×÷¼ÇÂ¼
+	Trade m_buyTrade;                             // ä¹°å…¥äº¤æ˜“è®°å½•
+	Trade m_sellTrade;                            // å–å‡ºäº¤æ˜“è®°å½•
+	std::vector<TOperation> m_vecTOperations;     // åšTæ“ä½œè®°å½•
+	TOperation m_incompleteTOperation;            // æœ€åä¸€æ¬¡ä¸å®Œæ•´çš„Tæ“ä½œè®°å½•
 
-	int32_t allTDiff() const;                          // ×öT¼Û¸ñ²î¼Û×ÜºÍ£¨µ¥Î»£º·Ö£©
-	int32_t allTFee() const;                           // ×öT×ÜÊÖĞø·Ñ£¨µ¥Î»£º·Ö£©
-	int32_t allTProfit(int32_t endPrice) const;        // ×öT×Ü¾»ÊÕÒæ£¨µ¥Î»£º·Ö£©     
-	int32_t tradeProfit() const;                       // ½»Ò××Ü¾»ÊÕÒæ£¨µ¥Î»£º·Ö£©
-	int32_t beginEndFee() const;                       // ¿ªÊ¼½áÊø½»Ò×ÊÖĞø·Ñ£¨µ¥Î»£º·Ö£©
+	int32_t allTDiff() const;                          // åšTä»·æ ¼å·®ä»·æ€»å’Œï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	int32_t allTFee() const;                           // åšTæ€»æ‰‹ç»­è´¹ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	int32_t allTProfit(int32_t endPrice) const;        // åšTæ€»å‡€æ”¶ç›Šï¼ˆå•ä½ï¼šåˆ†ï¼‰     
+	int32_t tradeProfit() const;                       // äº¤æ˜“æ€»å‡€æ”¶ç›Šï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	int32_t beginEndFee() const;                       // å¼€å§‹ç»“æŸäº¤æ˜“æ‰‹ç»­è´¹ï¼ˆå•ä½ï¼šåˆ†ï¼‰
 };
 
-/** ×Ê½ğÕË»§Àà
-- ¹ÜÀí½»Ò××Ê½ğ¡¢³Ö²Ö×´Ì¬£¬Ö´ĞĞÂòÂô²Ù×÷£¬¼ÆËãÕË»§¾»Öµ
-- Í¨¹ı½»Ò×ÊÖÊıÇø·Ö×öT²Ù×÷ºÍ½áÊø½»Ò×
+/** èµ„é‡‘è´¦æˆ·ç±»
+- ç®¡ç†äº¤æ˜“èµ„é‡‘ã€æŒä»“çŠ¶æ€ï¼Œæ‰§è¡Œä¹°å–æ“ä½œï¼Œè®¡ç®—è´¦æˆ·å‡€å€¼
+- é€šè¿‡äº¤æ˜“æ‰‹æ•°åŒºåˆ†åšTæ“ä½œå’Œç»“æŸäº¤æ˜“
 */
 class Fund
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	Fund();
 
-	/** ³õÊ¼»¯×Ê½ğÕË»§
-	@param [in] fund ³õÊ¼×Ê½ğ½ğ¶î£¨µ¥Î»£º·Ö£©
-	@return ·µ»Ø³õÊ¼»¯ÊÇ·ñ³É¹¦
+	/** åˆå§‹åŒ–èµ„é‡‘è´¦æˆ·
+	@param [in] fund åˆå§‹èµ„é‡‘é‡‘é¢ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	@return è¿”å›åˆå§‹åŒ–æ˜¯å¦æˆåŠŸ
 	*/
 	bool init(int32_t fund);
 
-	/** ÉèÖÃÊĞ³¡ĞĞÇéÊı¾İ
-	@param [in] spMarket ÊĞ³¡Êı¾İ¹²ÏíÖ¸Õë
+	/** è®¾ç½®å¸‚åœºè¡Œæƒ…æ•°æ®
+	@param [in] spMarket å¸‚åœºæ•°æ®å…±äº«æŒ‡é’ˆ
 	*/
 	void setMarket(const std::shared_ptr<Market>& spMarket);
 
-	/** »ñÈ¡ÉèÖÃµÄĞĞÇéÊı¾İ
-	@return ·µ»ØÉèÖÃµÄĞĞÇéÊı¾İ
+	/** è·å–è®¾ç½®çš„è¡Œæƒ…æ•°æ®
+	@return è¿”å›è®¾ç½®çš„è¡Œæƒ…æ•°æ®
 	*/
 	std::shared_ptr<Market> getMarket();
 
-	/** È«²ÖÂòÈëÖ¸¶¨¹ÉÆ±
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] price ÂòÈë¼Û¸ñ£¨µ¥Î»£º·Ö£©
-	@param [in] date ½»Ò×ÈÕÆÚ
-	@param [in] time ½»Ò×Ê±¼äµã
-	@return ·µ»ØÂòÈëÊÇ·ñ³É¹¦
+	/** å…¨ä»“ä¹°å…¥æŒ‡å®šè‚¡ç¥¨
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] price ä¹°å…¥ä»·æ ¼ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	@param [in] date äº¤æ˜“æ—¥æœŸ
+	@param [in] time äº¤æ˜“æ—¶é—´ç‚¹
+	@return è¿”å›ä¹°å…¥æ˜¯å¦æˆåŠŸ
 	*/
 	bool buyAll(const std::string& stock, int32_t price, uint32_t date, ObserveTime time);
 
-	/** Âô³öÖ¸¶¨¹ÉÆ±µÄÈ«²¿³Ö²Ö£¨½áÊø½»Ò×£©
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] price Âô³ö¼Û¸ñ£¨µ¥Î»£º·Ö£©
-	@param [in] date ½»Ò×ÈÕÆÚ
-	@param [in] time ½»Ò×Ê±¼äµã
-	@return ·µ»ØÂô³öÊÇ·ñ³É¹¦
+	/** å–å‡ºæŒ‡å®šè‚¡ç¥¨çš„å…¨éƒ¨æŒä»“ï¼ˆç»“æŸäº¤æ˜“ï¼‰
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] price å–å‡ºä»·æ ¼ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	@param [in] date äº¤æ˜“æ—¥æœŸ
+	@param [in] time äº¤æ˜“æ—¶é—´ç‚¹
+	@return è¿”å›å–å‡ºæ˜¯å¦æˆåŠŸ
 	*/
 	bool sellAll(const std::string& stock, int32_t price, uint32_t date, ObserveTime time);
 
-	/** ×öTÂô³ö£ºÂô³öËùÓĞÊÖÊı¼õ1ÊÖ£¨±£Áôµ×²Ö£©
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] price Âô³ö¼Û¸ñ£¨µ¥Î»£º·Ö£©
-	@param [in] date ½»Ò×ÈÕÆÚ
-	@param [in] time ½»Ò×Ê±¼äµã
-	@return ·µ»ØÂô³öÊÇ·ñ³É¹¦
+	/** åšTå–å‡ºï¼šå–å‡ºæ‰€æœ‰æ‰‹æ•°å‡1æ‰‹ï¼ˆä¿ç•™åº•ä»“ï¼‰
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] price å–å‡ºä»·æ ¼ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	@param [in] date äº¤æ˜“æ—¥æœŸ
+	@param [in] time äº¤æ˜“æ—¶é—´ç‚¹
+	@return è¿”å›å–å‡ºæ˜¯å¦æˆåŠŸ
 	*/
 	bool sellAllForT(const std::string& stock, int32_t price, uint32_t date, ObserveTime time);
 
-	/** »ñÈ¡ÕË»§×Ü×Ê²ú£¨ÏÖ½ğ+¹ÉÆ±ÊĞÖµ£©
-	@param [in] date µ±Ç°ÈÕÆÚ
-	@param [in] time µ±Ç°Ê±¼äµã£¬´«ÈëÄ¬ÈÏÖµÔò±íÊ¾µ±ÌìÊÕÅÌ¼Û
-	@return ·µ»Ø×Ü×Ê²ú½ğ¶î£¨µ¥Î»£º·Ö£©
+	/** è·å–è´¦æˆ·æ€»èµ„äº§ï¼ˆç°é‡‘+è‚¡ç¥¨å¸‚å€¼ï¼‰
+	@param [in] date å½“å‰æ—¥æœŸ
+	@param [in] time å½“å‰æ—¶é—´ç‚¹ï¼Œä¼ å…¥é»˜è®¤å€¼åˆ™è¡¨ç¤ºå½“å¤©æ”¶ç›˜ä»·
+	@return è¿”å›æ€»èµ„äº§é‡‘é¢ï¼ˆå•ä½ï¼šåˆ†ï¼‰
 	*/
 	int32_t getTotalValue(uint32_t date, ObserveTime time = ObserveTime::COUNT);
 
-	/** »ñÈ¡¿ÉÓÃ×Ê½ğ
-	@return ·µ»Ø¿ÉÓÃ×Ê½ğ½ğ¶î£¨µ¥Î»£º·Ö£©
+	/** è·å–å¯ç”¨èµ„é‡‘
+	@return è¿”å›å¯ç”¨èµ„é‡‘é‡‘é¢ï¼ˆå•ä½ï¼šåˆ†ï¼‰
 	*/
 	int32_t getAvailableFund() const;
 
-	/** »ñÈ¡³õÊ¼×Ê½ğ
-	@return ·µ»Ø³õÊ¼×Ê½ğ½ğ¶î£¨µ¥Î»£º·Ö£©
+	/** è·å–åˆå§‹èµ„é‡‘
+	@return è¿”å›åˆå§‹èµ„é‡‘é‡‘é¢ï¼ˆå•ä½ï¼šåˆ†ï¼‰
 	*/
 	int32_t getInitialFund() const;
 
-	/** »ñÈ¡Ö¸¶¨¹ÉÆ±µÄ³Ö²ÖĞÅÏ¢
-	@param [in] stock ¹ÉÆ±´úÂë
-	@return ·µ»Ø³Ö²ÖĞÅÏ¢Ö¸Õë£¬Èç¹ûÎ´³ÖÓĞ·µ»Ønullptr
+	/** è·å–æŒ‡å®šè‚¡ç¥¨çš„æŒä»“ä¿¡æ¯
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@return è¿”å›æŒä»“ä¿¡æ¯æŒ‡é’ˆï¼Œå¦‚æœæœªæŒæœ‰è¿”å›nullptr
 	*/
 	std::shared_ptr<Position> getPosition(const std::string& stock) const;
 
-	/** »ñÈ¡ËùÓĞ³Ö²ÖĞÅÏ¢
-	@return ·µ»Ø³Ö²ÖÁĞ±í
+	/** è·å–æ‰€æœ‰æŒä»“ä¿¡æ¯
+	@return è¿”å›æŒä»“åˆ—è¡¨
 	*/
 	const std::map<std::string, std::shared_ptr<Position>>& getAllPositions() const;
 
-	/** »ñÈ¡ÍêÕû½»Ò×¼ÇÂ¼
-	@return ·µ»ØÍêÕû½»Ò×¼ÇÂ¼Ó³Éä£¨¹ÉÆ±´úÂë->½»Ò×¼ÇÂ¼ÁĞ±í£©
+	/** è·å–å®Œæ•´äº¤æ˜“è®°å½•
+	@return è¿”å›å®Œæ•´äº¤æ˜“è®°å½•æ˜ å°„ï¼ˆè‚¡ç¥¨ä»£ç ->äº¤æ˜“è®°å½•åˆ—è¡¨ï¼‰
 	*/
 	const std::map<std::string, std::vector<CompleteTrade>>& getCompleteTrades() const;
 
-	/** Êä³öµ±Ç°ÕË»§µÄËùÓĞ²Ù×÷¼ÇÂ¼
-	@return ·µ»Ø²Ù×÷¼ÇÂ¼ÃèÊö×Ö·û´®ÏòÁ¿
+	/** è¾“å‡ºå½“å‰è´¦æˆ·çš„æ‰€æœ‰æ“ä½œè®°å½•
+	@return è¿”å›æ“ä½œè®°å½•æè¿°å­—ç¬¦ä¸²å‘é‡
 	*/
 	std::vector<std::string> exportTradeRecords() const;
 
-	/** Çå¿ÕËùÓĞ³Ö²ÖºÍÖØÖÃ×Ê½ğ
+	/** æ¸…ç©ºæ‰€æœ‰æŒä»“å’Œé‡ç½®èµ„é‡‘
 	*/
 	void reset();
 
-	/** Ç¿ÖÆ¹Ø±ÕËùÓĞÎ´Íê³É½»Ò×£¨ÓÃÓÚ»Ø²â½áÊø£©
-	@param [in] date ¹Ø±ÕÈÕÆÚ
-	@param [in] isAccountSell ÊÇ·ñÊÇÎªÁË¼ÇÕËµÄÂô³ö
-	@param [in] time ¹Ø±ÕÊ±¼äµã
+	/** å¼ºåˆ¶å…³é—­æ‰€æœ‰æœªå®Œæˆäº¤æ˜“ï¼ˆç”¨äºå›æµ‹ç»“æŸï¼‰
+	@param [in] date å…³é—­æ—¥æœŸ
+	@param [in] isAccountSell æ˜¯å¦æ˜¯ä¸ºäº†è®°è´¦çš„å–å‡º
+	@param [in] time å…³é—­æ—¶é—´ç‚¹
 	*/
 	void closeAllTrades(uint32_t date, bool isAccountSell = false, ObserveTime time = ObserveTime::COUNT);
 
-	/** »ñÈ¡ËùÓĞ½»Ò×µÄ×öT¼Û¸ñ²î¼Û×ÜºÍ
-	@return ·µ»Ø×öT¼Û¸ñ²î¼Û×ÜºÍ£¨µ¥Î»£º·Ö£©
+	/** è·å–æ‰€æœ‰äº¤æ˜“çš„åšTä»·æ ¼å·®ä»·æ€»å’Œ
+	@return è¿”å›åšTä»·æ ¼å·®ä»·æ€»å’Œï¼ˆå•ä½ï¼šåˆ†ï¼‰
 	*/
 	int32_t allTDiff() const;
 
-	/** »ñÈ¡ËùÓĞ½»Ò×µÄ×öT×ÜÊÖĞø·Ñ
-	@return ·µ»Ø×öT×ÜÊÖĞø·Ñ£¨µ¥Î»£º·Ö£©
+	/** è·å–æ‰€æœ‰äº¤æ˜“çš„åšTæ€»æ‰‹ç»­è´¹
+	@return è¿”å›åšTæ€»æ‰‹ç»­è´¹ï¼ˆå•ä½ï¼šåˆ†ï¼‰
 	*/
 	int32_t allTFee() const;
 
-	/** »ñÈ¡ËùÓĞ½»Ò×µÄ×öT×Ü¾»ÊÕÒæ
-	@param [in] ×îºóÒ»ÌìÈÕÆÚ
-	@return ·µ»Ø×öT×Ü¾»ÊÕÒæ£¨µ¥Î»£º·Ö£©
+	/** è·å–æ‰€æœ‰äº¤æ˜“çš„åšTæ€»å‡€æ”¶ç›Š
+	@param [in] æœ€åä¸€å¤©æ—¥æœŸ
+	@return è¿”å›åšTæ€»å‡€æ”¶ç›Šï¼ˆå•ä½ï¼šåˆ†ï¼‰
 	*/
 	int32_t allTProfit(uint32_t lastDate) const;
 
-	/** »ñÈ¡ËùÓĞ½»Ò×µÄ½»Ò××Ü¾»ÊÕÒæ
-	@return ·µ»Ø½»Ò××Ü¾»ÊÕÒæ£¨µ¥Î»£º·Ö£©
+	/** è·å–æ‰€æœ‰äº¤æ˜“çš„äº¤æ˜“æ€»å‡€æ”¶ç›Š
+	@return è¿”å›äº¤æ˜“æ€»å‡€æ”¶ç›Šï¼ˆå•ä½ï¼šåˆ†ï¼‰
 	*/
 	int32_t tradeProfit() const;
 
-	/** »ñÈ¡×î¿ªÊ¼ºÍ×îºóÒ»±Ê½áÊø½»Ò×µÄ×ÜÊÖĞø·Ñ
-	@return ·µ»ØÊÖĞø·Ñ£¨µ¥Î»£º·Ö£©
+	/** è·å–æœ€å¼€å§‹å’Œæœ€åä¸€ç¬”ç»“æŸäº¤æ˜“çš„æ€»æ‰‹ç»­è´¹
+	@return è¿”å›æ‰‹ç»­è´¹ï¼ˆå•ä½ï¼šåˆ†ï¼‰
 	*/
 	int32_t allBeginEndFee() const;
 
 private:
-	/** ¼ÆËãÖ¸¶¨¼Û¸ñÏÂ×î´ó¿ÉÂòÈë¹ÉÊı£¨¿¼ÂÇÊÖĞø·Ñ£©
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] price ÂòÈë¼Û¸ñ£¨µ¥Î»£º·Ö£©
-	@return ·µ»Ø×î´ó¿ÉÂòÈë¹ÉÊı
+	/** è®¡ç®—æŒ‡å®šä»·æ ¼ä¸‹æœ€å¤§å¯ä¹°å…¥è‚¡æ•°ï¼ˆè€ƒè™‘æ‰‹ç»­è´¹ï¼‰
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] price ä¹°å…¥ä»·æ ¼ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	@return è¿”å›æœ€å¤§å¯ä¹°å…¥è‚¡æ•°
 	*/
 	int32_t calculateMaxShares(const std::string& stock, int32_t price) const;
 
-	/** Ö´ĞĞÂòÈë²Ù×÷
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] price ÂòÈë¼Û¸ñ£¨µ¥Î»£º·Ö£©
-	@param [in] shares ÂòÈë¹ÉÊı
-	@param [in] date ½»Ò×ÈÕÆÚ
-	@param [in] time ½»Ò×Ê±¼äµã
-	@param [in] fee ½»Ò×ÊÖĞø·Ñ£¨µ¥Î»£º·Ö£©
-	@param [in] isFullPosition ÊÇ·ñÎªÈ«²ÖÂòÈë
-	@return ·µ»ØÂòÈëÊÇ·ñ³É¹¦
+	/** æ‰§è¡Œä¹°å…¥æ“ä½œ
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] price ä¹°å…¥ä»·æ ¼ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	@param [in] shares ä¹°å…¥è‚¡æ•°
+	@param [in] date äº¤æ˜“æ—¥æœŸ
+	@param [in] time äº¤æ˜“æ—¶é—´ç‚¹
+	@param [in] fee äº¤æ˜“æ‰‹ç»­è´¹ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	@param [in] isFullPosition æ˜¯å¦ä¸ºå…¨ä»“ä¹°å…¥
+	@return è¿”å›ä¹°å…¥æ˜¯å¦æˆåŠŸ
 	*/
 	bool executeBuy(const std::string& stock, int32_t price, int32_t shares, uint32_t date, ObserveTime time, int32_t fee, bool isFullPosition = true);
 
-	/** Ö´ĞĞÂô³ö²Ù×÷
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] price Âô³ö¼Û¸ñ£¨µ¥Î»£º·Ö£©
-	@param [in] shares Âô³ö¹ÉÊı
-	@param [in] date ½»Ò×ÈÕÆÚ
-	@param [in] time ½»Ò×Ê±¼äµã
-	@param [in] fee ½»Ò×ÊÖĞø·Ñ£¨µ¥Î»£º·Ö£©
-	@param [in] isTOperation ÊÇ·ñÎª×öT²Ù×÷
-	@return ·µ»ØÂô³öÊÇ·ñ³É¹¦
+	/** æ‰§è¡Œå–å‡ºæ“ä½œ
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] price å–å‡ºä»·æ ¼ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	@param [in] shares å–å‡ºè‚¡æ•°
+	@param [in] date äº¤æ˜“æ—¥æœŸ
+	@param [in] time äº¤æ˜“æ—¶é—´ç‚¹
+	@param [in] fee äº¤æ˜“æ‰‹ç»­è´¹ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	@param [in] isTOperation æ˜¯å¦ä¸ºåšTæ“ä½œ
+	@return è¿”å›å–å‡ºæ˜¯å¦æˆåŠŸ
 	*/
 	bool executeSell(const std::string& stock, int32_t price, int32_t shares, uint32_t date, ObserveTime time, int32_t fee, bool isTOperation = false);
 
-	/** ´¦Àí×öT²Ù×÷
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] sellTrade Âô³ö½»Ò×¼ÇÂ¼
+	/** å¤„ç†åšTæ“ä½œ
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] sellTrade å–å‡ºäº¤æ˜“è®°å½•
 	*/
 	void processTOperations(const std::string& stock, const Trade& sellTrade);
 
-	/** ´¦ÀíÈ«²ÖÂòÈë²Ù×÷
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] buyTrade ÂòÈë½»Ò×¼ÇÂ¼
+	/** å¤„ç†å…¨ä»“ä¹°å…¥æ“ä½œ
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] buyTrade ä¹°å…¥äº¤æ˜“è®°å½•
 	*/
 	void processFullBuy(const std::string& stock, const Trade& buyTrade);
 
-	/** ´¦Àí½áÊø½»Ò×²Ù×÷
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] sellTrade Âô³ö½»Ò×¼ÇÂ¼
+	/** å¤„ç†ç»“æŸäº¤æ˜“æ“ä½œ
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] sellTrade å–å‡ºäº¤æ˜“è®°å½•
 	*/
 	void processCompleteTrade(const std::string& stock, const Trade& sellTrade);
 
-	/** ´ÓÊĞ³¡Êı¾İ»ñÈ¡¹ÉÆ±¼Û¸ñ
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] date ÈÕÆÚ
-	@param [in] time Ê±¼äµã
-	@return ·µ»Ø¹ÉÆ±¼Û¸ñ£¬Èç¹ûÕÒ²»µ½·µ»Ø0
+	/** ä»å¸‚åœºæ•°æ®è·å–è‚¡ç¥¨ä»·æ ¼
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] date æ—¥æœŸ
+	@param [in] time æ—¶é—´ç‚¹
+	@return è¿”å›è‚¡ç¥¨ä»·æ ¼ï¼Œå¦‚æœæ‰¾ä¸åˆ°è¿”å›0
 	*/
 	int32_t getStockPriceFromMarket(const std::string& stock, uint32_t date, ObserveTime time) const;
 
-	/** »ñÈ¡µ±Ç°½øĞĞÖĞµÄ½»Ò×£¨Î´Íê³ÉµÄ½»Ò×£©
-	@param [in] stock ¹ÉÆ±´úÂë
-	@return ·µ»Ø½»Ò×¼ÇÂ¼Ö¸Õë£¬Èç¹û²»´æÔÚ·µ»Ønullptr
+	/** è·å–å½“å‰è¿›è¡Œä¸­çš„äº¤æ˜“ï¼ˆæœªå®Œæˆçš„äº¤æ˜“ï¼‰
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@return è¿”å›äº¤æ˜“è®°å½•æŒ‡é’ˆï¼Œå¦‚æœä¸å­˜åœ¨è¿”å›nullptr
 	*/
 	CompleteTrade* getCurrentTrade(const std::string& stock);
 
 private:
-	// ³õÊ¼×Ê½ğ£¨µ¥Î»£º·Ö£©£¬½öÓÃÓÚ¼ÇÂ¼ºÍ¼ÆËãÊÕÒæÂÊ
+	// åˆå§‹èµ„é‡‘ï¼ˆå•ä½ï¼šåˆ†ï¼‰ï¼Œä»…ç”¨äºè®°å½•å’Œè®¡ç®—æ”¶ç›Šç‡
 	int32_t m_initialFund;
-	// ¿ÉÓÃ×Ê½ğ£¨µ¥Î»£º·Ö£©£¬µ±Ç°¿ÉÓÃµÄÏÖ½ğ
+	// å¯ç”¨èµ„é‡‘ï¼ˆå•ä½ï¼šåˆ†ï¼‰ï¼Œå½“å‰å¯ç”¨çš„ç°é‡‘
 	int32_t m_availableFund;
-	// ³Ö²ÖÓ³Éä£¬¼ÇÂ¼µ±Ç°³ÖÓĞµÄ¹ÉÆ±
+	// æŒä»“æ˜ å°„ï¼Œè®°å½•å½“å‰æŒæœ‰çš„è‚¡ç¥¨
 	std::map<std::string, std::shared_ptr<Position>> m_positions;
-	// ÊĞ³¡Êı¾İ£¬ÓÃÓÚ»ñÈ¡¹ÉÆ±¼Û¸ñ
+	// å¸‚åœºæ•°æ®ï¼Œç”¨äºè·å–è‚¡ç¥¨ä»·æ ¼
 	std::shared_ptr<Market> m_spMarket;
-	// ÍêÕû½»Ò×¼ÇÂ¼Ó³Éä£¨¹ÉÆ±´úÂë->½»Ò×¼ÇÂ¼ÁĞ±í£©
+	// å®Œæ•´äº¤æ˜“è®°å½•æ˜ å°„ï¼ˆè‚¡ç¥¨ä»£ç ->äº¤æ˜“è®°å½•åˆ—è¡¨ï¼‰
 	std::map<std::string, std::vector<CompleteTrade>> m_completeTrades;
-	// ´ıÆ¥ÅäµÄ×öT²Ù×÷¼ÇÂ¼
+	// å¾…åŒ¹é…çš„åšTæ“ä½œè®°å½•
 	std::map<std::string, TOperation> m_pendingTOperations;
-	// ¼ÇÕËÂô³ö
+	// è®°è´¦å–å‡º
 	std::map<std::string, Trade> m_accountSell;
 };

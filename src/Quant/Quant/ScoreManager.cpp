@@ -1,4 +1,4 @@
-#include "ScoreManager.h"
+ï»¿#include "ScoreManager.h"
 #include "Util.h"
 #include "CompetitionManager.h"
 #include "VerifyManager.h"
@@ -22,28 +22,28 @@ std::pair<StrategyMode, std::vector<int32_t>> ScoreManager::bestStrategy(uint32_
 	int32_t profitEndTime = time;
 	std::string stock = g_config.m_stock;
 
-	// ´´½¨ÊĞ³¡Êı¾İ
+	// åˆ›å»ºå¸‚åœºæ•°æ®
 	auto marketData = std::make_shared<Market>();
 	marketData->init(g_config.m_allBeginTime, g_config.m_allEndTime);
 	marketData->addStock(stock);
 
-	// ´´½¨¾ºÈüÅäÖÃ
+	// åˆ›å»ºç«èµ›é…ç½®
 	CompetitionConfig config;
 	config.beginTime = profitBeginTime;
 	config.endTime = profitEndTime;
 	config.stocks = { stock };
 	config.marketData = marketData;
-	config.initialFund = g_config.m_initialFund; // 100Íò³õÊ¼×Ê½ğ
+	config.initialFund = g_config.m_initialFund; // 100ä¸‡åˆå§‹èµ„é‡‘
 
-	// ¹ÒÂô¼ÛÊ±¼äµã
-	// Ö±Âô¼ÛÊ±¼äµã
-	// ¹ÒÂò¼ÛÊ±¼äµã
-	// Ö±Âò¼ÛÊ±¼äµã
-	// ¹Û²ì¼ÛAÊ±¼äµã
-	// ¹Û²ì¼ÛBÊ±¼äµã
-	// ¹Û²ì¼ÛB-A´óÓÚµÈÓÚ¶àÉÙÊ±µ±ÌìÖ±Âò£¬µÚ¶şÌìÔçÉÏ²»Âô
-	// ¹Û²ì¼ÛB-AĞ¡ÓÚµÈÓÚ¶àÉÙÊ±µ±Ìì²»Âò£¬Ê£ÓàµÄ²¿·Ö£¬µ±ÌìÖ±Âò£¬µÚ¶şÌìÔçÉÏÂô
-	// µ±ÌìÔçÉÏÂô³öºó·´×·²î¼Û
+	// æŒ‚å–ä»·æ—¶é—´ç‚¹
+	// ç›´å–ä»·æ—¶é—´ç‚¹
+	// æŒ‚ä¹°ä»·æ—¶é—´ç‚¹
+	// ç›´ä¹°ä»·æ—¶é—´ç‚¹
+	// è§‚å¯Ÿä»·Aæ—¶é—´ç‚¹
+	// è§‚å¯Ÿä»·Bæ—¶é—´ç‚¹
+	// è§‚å¯Ÿä»·B-Aå¤§äºç­‰äºå¤šå°‘æ—¶å½“å¤©ç›´ä¹°ï¼Œç¬¬äºŒå¤©æ—©ä¸Šä¸å–
+	// è§‚å¯Ÿä»·B-Aå°äºç­‰äºå¤šå°‘æ—¶å½“å¤©ä¸ä¹°ï¼Œå‰©ä½™çš„éƒ¨åˆ†ï¼Œå½“å¤©ç›´ä¹°ï¼Œç¬¬äºŒå¤©æ—©ä¸Šå–
+	// å½“å¤©æ—©ä¸Šå–å‡ºååè¿½å·®ä»·
 	std::vector<std::vector<int32_t>> params =
 	{
 		{
@@ -99,9 +99,9 @@ std::pair<StrategyMode, std::vector<int32_t>> ScoreManager::bestStrategy(uint32_
 	std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> historyMap =
 		VerifyManager::instance().verifyHistory(StrategyMode::WAVE, 2, config);
 
-	RCSend("¿ªÊ¼É¸Ñ¡ÈëÎ§Ãûµ¥...");
+	RCSend("å¼€å§‹ç­›é€‰å…¥å›´åå•...");
 
-	// È¡³öÇ°30%×÷ÎªÈëÎ§Ãûµ¥
+	// å–å‡ºå‰30%ä½œä¸ºå…¥å›´åå•
 	std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>> vecFrontStrategyResult;
 	size_t useCount = historyMap.size() - historyMap.size() / 100 * 70;
 	for (auto it = historyMap.rbegin(); useCount != 0; ++it, --useCount)
@@ -138,10 +138,10 @@ std::pair<StrategyMode, std::vector<int32_t>> ScoreManager::bestStrategy(uint32_
 		}
 	}
 
-	RCSend("ÈëÎ§Ãûµ¥É¸Ñ¡Íê³É");
-	RCSend("¿ªÊ¼´ò·Ö");
+	RCSend("å…¥å›´åå•ç­›é€‰å®Œæˆ");
+	RCSend("å¼€å§‹æ‰“åˆ†");
 	
-	// Ç°Á½´ÎÀúÊ·ÊÕÒæÄê»¯ÂÊ²îÖµĞ¡ÓÚ5%£¬µÃ10·Ö£¬5%-10%µÃ9·Ö£¬³¬¹ı50%²»µÃ·Ö
+	// å‰ä¸¤æ¬¡å†å²æ”¶ç›Šå¹´åŒ–ç‡å·®å€¼å°äº5%ï¼Œå¾—10åˆ†ï¼Œ5%-10%å¾—9åˆ†ï¼Œè¶…è¿‡50%ä¸å¾—åˆ†
 	annualT(vecFrontStrategyResult, 2, 100);
 	//annualT(vecBackStrategyResult, 2, 50);
 	//annualTDiff(vecBackStrategyResult, 6.18);
@@ -153,7 +153,7 @@ std::pair<StrategyMode, std::vector<int32_t>> ScoreManager::bestStrategy(uint32_
 
 	//print(vecStrategyResult);
 
-	//Òì³£½»Ò×ÆÀ·Ö£¬Ğ¡ÓÚ5%£¬µÃ10·Ö£¬5%-10%µÃ9·Ö£¬³¬¹ı50%²»µÃ·Ö
+	//å¼‚å¸¸äº¤æ˜“è¯„åˆ†ï¼Œå°äº5%ï¼Œå¾—10åˆ†ï¼Œ5%-10%å¾—9åˆ†ï¼Œè¶…è¿‡50%ä¸å¾—åˆ†
 	//abnormal(vecStrategyResult);
 
 	//11:00, 11:00, 14:10, 14:40, 11:20, 13:40, 0, -2, 12, 12, 1
@@ -176,34 +176,34 @@ std::pair<StrategyMode, std::vector<int32_t>> ScoreManager::bestStrategy(uint32_
 		vecStrategyResult.empty() ? std::vector<int32_t>() : vecStrategyResult[0].first[0]->m_params);
 }
 
-// ==================== Äê»¯ÊÕÒæÂÊ²îÖµÆÀ·Ö ====================
+// ==================== å¹´åŒ–æ”¶ç›Šç‡å·®å€¼è¯„åˆ† ====================
 void ScoreManager::annualTDiff(
 	std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult, double highScore)
 {
-	RCSend("¿ªÊ¼ÆÀ¼ÛÄê»¯T²îÖµ...");
+	RCSend("å¼€å§‹è¯„ä»·å¹´åŒ–Tå·®å€¼...");
 	double maxScore = 0;
 	std::vector<double> tmpScore;
 	tmpScore.resize(vecStrategyResult.size(), 0);
 	std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>> tmpResult = vecStrategyResult;
-	// ÎªÃ¿¸ö²ßÂÔ¼ÆËã·ÖÊı
+	// ä¸ºæ¯ä¸ªç­–ç•¥è®¡ç®—åˆ†æ•°
 	for (size_t index = 0; index < vecStrategyResult.size(); ++index)
 	{
-		const auto& results = vecStrategyResult[index].first;   // ¸÷ÖÜÆÚ½á¹û£¬Ë÷Òı0=µ±Ç°£¬1=ÉÏÖÜÆÚ£¬2=ÉÏÉÏÖÜÆÚ...
+		const auto& results = vecStrategyResult[index].first;   // å„å‘¨æœŸç»“æœï¼Œç´¢å¼•0=å½“å‰ï¼Œ1=ä¸Šå‘¨æœŸï¼Œ2=ä¸Šä¸Šå‘¨æœŸ...
 		double score = 0;
 
-		// ÖÁÉÙĞèÒªÈı¸öÖÜÆÚ²ÅÄÜ¼ÆËãÇ°Á½´ÎÀúÊ·ÊÕÒæ²îÖµ
+		// è‡³å°‘éœ€è¦ä¸‰ä¸ªå‘¨æœŸæ‰èƒ½è®¡ç®—å‰ä¸¤æ¬¡å†å²æ”¶ç›Šå·®å€¼
 		if (results.size() >= 3)
 		{
-			// »ñÈ¡ÉÏÖÜÆÚºÍÉÏÉÏÖÜÆÚµÄÄê»¯ÊÕÒæÂÊ
-			const BigNumber& prev0 = results[0]->m_annualTReturn;   // ±¾ÖÜÆÚ
-			const BigNumber& prev1 = results[1]->m_annualTReturn;   // ÉÏÖÜÆÚ
-			const BigNumber& prev2 = results[2]->m_annualTReturn;   // ÉÏÉÏÖÜÆÚ
+			// è·å–ä¸Šå‘¨æœŸå’Œä¸Šä¸Šå‘¨æœŸçš„å¹´åŒ–æ”¶ç›Šç‡
+			const BigNumber& prev0 = results[0]->m_annualTReturn;   // æœ¬å‘¨æœŸ
+			const BigNumber& prev1 = results[1]->m_annualTReturn;   // ä¸Šå‘¨æœŸ
+			const BigNumber& prev2 = results[2]->m_annualTReturn;   // ä¸Šä¸Šå‘¨æœŸ
 
-			// ¼ÆËã¾ø¶ÔÖµ²îÖµ
+			// è®¡ç®—ç»å¯¹å€¼å·®å€¼
 			BigNumber diff1 = prev0 - prev1;
 			if (diff1 < 0)
 			{
-				diff1 = diff1 * -1;   // È¡¾ø¶ÔÖµ
+				diff1 = diff1 * -1;   // å–ç»å¯¹å€¼
 			}
 			if (diff1 == 0)
 			{
@@ -214,11 +214,11 @@ void ScoreManager::annualTDiff(
 		}
 		else
 		{
-			// ÀúÊ·ÖÜÆÚ²»×ã£¬·ÖÊıÎª0
+			// å†å²å‘¨æœŸä¸è¶³ï¼Œåˆ†æ•°ä¸º0
 			score = 0;
 		}
 
-		// ½«·ÖÊı¸³¸øµ±Ç°pairµÄsecond
+		// å°†åˆ†æ•°èµ‹ç»™å½“å‰pairçš„second
 		tmpScore[index] = score;
 	}
 
@@ -240,37 +240,37 @@ void ScoreManager::annualTDiff(
 	}
 
 	desc(vecStrategyResult);
-	RCSend("Äê»¯T²îÖµÆÀ¼ÛÍê³É");
+	RCSend("å¹´åŒ–Tå·®å€¼è¯„ä»·å®Œæˆ");
 }
 
 void ScoreManager::annualT(
 	std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult,
 	uint32_t count, double highScore)
 {
-	RCSend("¿ªÊ¼ÆÀ¼ÛÄê»¯T×ÜºÍ%u...", count);
+	RCSend("å¼€å§‹è¯„ä»·å¹´åŒ–Tæ€»å’Œ%u...", count);
 	if (vecStrategyResult.empty())
 	{
-		RCSend("Äê»¯T×ÜºÍ%uÊıÁ¿Îª0", count);
+		RCSend("å¹´åŒ–Tæ€»å’Œ%uæ•°é‡ä¸º0", count);
 		return;
 	}
 	std::vector<double> vecMaxScore;
 	vecMaxScore.resize(count, 0);
 	std::vector<std::vector<double>> vecTmpScore;
 	//tmpScore.resize(vecStrategyResult.size(), 0);
-	// ÎªÃ¿¸ö²ßÂÔ¼ÆËã·ÖÊı
+	// ä¸ºæ¯ä¸ªç­–ç•¥è®¡ç®—åˆ†æ•°
 	for (size_t index = 0; index < vecStrategyResult.size(); ++index)
 	{
-		const auto& results = vecStrategyResult[index].first;   // ¸÷ÖÜÆÚ½á¹û£¬Ë÷Òı0=µ±Ç°£¬1=ÉÏÖÜÆÚ£¬2=ÉÏÉÏÖÜÆÚ...
+		const auto& results = vecStrategyResult[index].first;   // å„å‘¨æœŸç»“æœï¼Œç´¢å¼•0=å½“å‰ï¼Œ1=ä¸Šå‘¨æœŸï¼Œ2=ä¸Šä¸Šå‘¨æœŸ...
 		std::vector<double> score;
 		score.resize(count, 0);
 
-		// ÖÁÉÙĞèÒªÈı¸öÖÜÆÚ²ÅÄÜ¼ÆËãÇ°Á½´ÎÀúÊ·ÊÕÒæ²îÖµ
+		// è‡³å°‘éœ€è¦ä¸‰ä¸ªå‘¨æœŸæ‰èƒ½è®¡ç®—å‰ä¸¤æ¬¡å†å²æ”¶ç›Šå·®å€¼
 		if (results.size() < count)
 		{
-			// ÀúÊ·ÖÜÆÚ²»×ã£¬·ÖÊıÎª0
+			// å†å²å‘¨æœŸä¸è¶³ï¼Œåˆ†æ•°ä¸º0
 			continue;
 		}
-		// »ñÈ¡ÉÏÖÜÆÚºÍÉÏÉÏÖÜÆÚµÄÄê»¯ÊÕÒæÂÊ
+		// è·å–ä¸Šå‘¨æœŸå’Œä¸Šä¸Šå‘¨æœŸçš„å¹´åŒ–æ”¶ç›Šç‡
 		uint32_t timeIndex = count;
 		while (timeIndex-- != 0)
 		{
@@ -278,7 +278,7 @@ void ScoreManager::annualT(
 			vecMaxScore[timeIndex] = (std::max)(score[timeIndex], vecMaxScore[timeIndex]);
 		}
 
-		// ½«·ÖÊı¸³¸øµ±Ç°pairµÄsecond
+		// å°†åˆ†æ•°èµ‹ç»™å½“å‰pairçš„second
 		vecTmpScore.push_back(score);
 	}
 
@@ -311,27 +311,27 @@ void ScoreManager::annualT(
 	}
 
 	desc(vecStrategyResult);
-	RCSend("Äê»¯T×ÜºÍ%uÆÀ¼ÛÍê³É", count);
+	RCSend("å¹´åŒ–Tæ€»å’Œ%uè¯„ä»·å®Œæˆ", count);
 }
 
 //void ScoreManager::annualT(
 //	std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult,
 //	uint32_t count, double highScore)
 //{
-//	RCSend("¿ªÊ¼ÆÀ¼ÛÄê»¯T×ÜºÍ%u...", count);
+//	RCSend("å¼€å§‹è¯„ä»·å¹´åŒ–Tæ€»å’Œ%u...", count);
 //	double maxScore = 0;
 //	std::vector<double> tmpScore;
 //	tmpScore.resize(vecStrategyResult.size(), 0);
-//	// ÎªÃ¿¸ö²ßÂÔ¼ÆËã·ÖÊı
+//	// ä¸ºæ¯ä¸ªç­–ç•¥è®¡ç®—åˆ†æ•°
 //	for (size_t index = 0; index < vecStrategyResult.size(); ++index)
 //	{
-//		const auto& results = vecStrategyResult[index].first;   // ¸÷ÖÜÆÚ½á¹û£¬Ë÷Òı0=µ±Ç°£¬1=ÉÏÖÜÆÚ£¬2=ÉÏÉÏÖÜÆÚ...
+//		const auto& results = vecStrategyResult[index].first;   // å„å‘¨æœŸç»“æœï¼Œç´¢å¼•0=å½“å‰ï¼Œ1=ä¸Šå‘¨æœŸï¼Œ2=ä¸Šä¸Šå‘¨æœŸ...
 //		double score = 0;
 //
-//		// ÖÁÉÙĞèÒªÈı¸öÖÜÆÚ²ÅÄÜ¼ÆËãÇ°Á½´ÎÀúÊ·ÊÕÒæ²îÖµ
+//		// è‡³å°‘éœ€è¦ä¸‰ä¸ªå‘¨æœŸæ‰èƒ½è®¡ç®—å‰ä¸¤æ¬¡å†å²æ”¶ç›Šå·®å€¼
 //		if (results.size() >= count)
 //		{
-//			// »ñÈ¡ÉÏÖÜÆÚºÍÉÏÉÏÖÜÆÚµÄÄê»¯ÊÕÒæÂÊ
+//			// è·å–ä¸Šå‘¨æœŸå’Œä¸Šä¸Šå‘¨æœŸçš„å¹´åŒ–æ”¶ç›Šç‡
 //			uint32_t timeIndex = count;
 //			while (timeIndex-- != 0)
 //			{
@@ -341,11 +341,11 @@ void ScoreManager::annualT(
 //		}
 //		else
 //		{
-//			// ÀúÊ·ÖÜÆÚ²»×ã£¬·ÖÊıÎª0
+//			// å†å²å‘¨æœŸä¸è¶³ï¼Œåˆ†æ•°ä¸º0
 //			score = 0;
 //		}
 //
-//		// ½«·ÖÊı¸³¸øµ±Ç°pairµÄsecond
+//		// å°†åˆ†æ•°èµ‹ç»™å½“å‰pairçš„second
 //		tmpScore[index] = score;
 //	}
 //
@@ -360,16 +360,16 @@ void ScoreManager::annualT(
 //	}
 //
 //	desc(vecStrategyResult);
-//	RCSend("Äê»¯T×ÜºÍ%uÆÀ¼ÛÍê³É", count);
+//	RCSend("å¹´åŒ–Tæ€»å’Œ%uè¯„ä»·å®Œæˆ", count);
 //}
 
-// ==================== Òì³£½»Ò×°Ù·Ö±ÈÆÀ·Ö ====================
+// ==================== å¼‚å¸¸äº¤æ˜“ç™¾åˆ†æ¯”è¯„åˆ† ====================
 void ScoreManager::abnormal(
 	std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult,
 	uint32_t count, double highScore)
 {
-	RCSend("¿ªÊ¼ÆÀ¼ÛÒì³£½»Ò×...");
-	// ÎªÃ¿¸ö²ßÂÔ¼ÆËã·ÖÊı
+	RCSend("å¼€å§‹è¯„ä»·å¼‚å¸¸äº¤æ˜“...");
+	// ä¸ºæ¯ä¸ªç­–ç•¥è®¡ç®—åˆ†æ•°
 	for (size_t index = 0; index < vecStrategyResult.size(); ++index)
 	{
 		const std::vector<std::shared_ptr<StrategyResult>>& results = vecStrategyResult[index].first;
@@ -381,15 +381,15 @@ void ScoreManager::abnormal(
 			{
 				continue;
 			}
-			const auto& tradeCount = results[timeIndex]->m_tradeCount;   // ¹Ì¶¨³¤¶ÈÎª4
+			const auto& tradeCount = results[timeIndex]->m_tradeCount;   // å›ºå®šé•¿åº¦ä¸º4
 			if (tradeCount.size() != 4)
 			{
 				continue;
 			}
-			uint32_t buyCount = tradeCount[0];   // Âò
-			uint32_t sellCount = tradeCount[1];   // Âô
-			uint32_t chaseCount = tradeCount[2];   // ·´×·
-			uint32_t cutCount = tradeCount[3];   // ¸îÈâ
+			uint32_t buyCount = tradeCount[0];   // ä¹°
+			uint32_t sellCount = tradeCount[1];   // å–
+			uint32_t chaseCount = tradeCount[2];   // åè¿½
+			uint32_t cutCount = tradeCount[3];   // å‰²è‚‰
 
 			uint32_t totalTrades = buyCount + sellCount + chaseCount + cutCount;
 			if (totalTrades == 0)
@@ -397,7 +397,7 @@ void ScoreManager::abnormal(
 				continue;
 			}
 			uint32_t abnormalTrades = chaseCount + cutCount;
-			// ¼ÆËãÒì³£½»Ò×°Ù·Ö±È
+			// è®¡ç®—å¼‚å¸¸äº¤æ˜“ç™¾åˆ†æ¯”
 			BigNumber percentage = BigNumber(static_cast<double>(abnormalTrades) / totalTrades);
 			score += ((percentage - 1) / BigNumber(-1.0) * highScore).toDouble();
 		}
@@ -405,12 +405,12 @@ void ScoreManager::abnormal(
 	}
 
 	desc(vecStrategyResult);
-	RCSend("Òì³£½»Ò×ÆÀ¼ÛÍê³É");
+	RCSend("å¼‚å¸¸äº¤æ˜“è¯„ä»·å®Œæˆ");
 }
 
 void ScoreManager::desc(std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult)
 {
-	// °´·ÖÊı½µĞòÅÅĞò
+	// æŒ‰åˆ†æ•°é™åºæ’åº
 	std::sort(vecStrategyResult.begin(), vecStrategyResult.end(),
 		[](const std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>& a,
 		const std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>& b)
@@ -425,7 +425,7 @@ void ScoreManager::print(std::vector<std::pair<std::vector<std::shared_ptr<Strat
 	for (size_t index = 0; index < vecStrategyResult.size(); ++index)
 	{
 		const std::vector<std::shared_ptr<StrategyResult>>& vecStrategy = vecStrategyResult[index].first;
-		RCSend("ÆÀ·Ö£º%.2lf", vecStrategyResult[index].second);
+		RCSend("è¯„åˆ†ï¼š%.2lf", vecStrategyResult[index].second);
 		for (size_t strategyIndex = 0; strategyIndex < vecStrategy.size(); ++strategyIndex)
 		{
 			const std::shared_ptr<StrategyResult>& spStrategyResult = vecStrategy[strategyIndex];
@@ -442,7 +442,7 @@ double ScoreManager::smallBestScore(const BigNumber& percentage)
 	{
 		return 0;
 	}
-	// °Ù·Ö±ÈĞ¡ÓÚ5%
+	// ç™¾åˆ†æ¯”å°äº5%
 	if (percentage < 0.05)
 	{
 		return 10;

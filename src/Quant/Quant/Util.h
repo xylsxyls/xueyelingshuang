@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include "Config.h"
 #include <map>
@@ -10,184 +10,184 @@ struct StrategyResult;
 class Util
 {
 public:
-	/** ´Ó×éºÏË÷ÒıÖĞ·Ö½â³ö¸÷¸öÎ¬¶ÈµÄË÷Òı
-	@param [in] allIndex ×éºÏË÷ÒıÖµ
-	@param [out] observeIndex ¹Û²ìÊ±¼äÎ¬¶ÈË÷Òı
-	@param [out] rangeIndex Ê±¼ä·¶Î§Î¬¶ÈË÷Òı
-	@param [out] transIndex ½»Ò×ÀàĞÍÎ¬¶ÈË÷Òı
-	@param [in] offset Ë÷ÒıÆ«ÒÆÁ¿
+	/** ä»ç»„åˆç´¢å¼•ä¸­åˆ†è§£å‡ºå„ä¸ªç»´åº¦çš„ç´¢å¼•
+	@param [in] allIndex ç»„åˆç´¢å¼•å€¼
+	@param [out] observeIndex è§‚å¯Ÿæ—¶é—´ç»´åº¦ç´¢å¼•
+	@param [out] rangeIndex æ—¶é—´èŒƒå›´ç»´åº¦ç´¢å¼•
+	@param [out] transIndex äº¤æ˜“ç±»å‹ç»´åº¦ç´¢å¼•
+	@param [in] offset ç´¢å¼•åç§»é‡
 	*/
 	static void getAllIndex(uint32_t allIndex, uint32_t& observeIndex, uint32_t& rangeIndex, uint32_t& transIndex,
 		uint32_t offset);
 
-	/** ¼ÆËãµ±Ç°Ë÷Òı¶ÔÓ¦µÄÊ±¼ä
-	@param [in] dayInfoIndex µ±Ç°Ë÷ÒıÖµ
-	@return ·µ»Ø¶ÔÓ¦Ê±¼ä
+	/** è®¡ç®—å½“å‰ç´¢å¼•å¯¹åº”çš„æ—¶é—´
+	@param [in] dayInfoIndex å½“å‰ç´¢å¼•å€¼
+	@return è¿”å›å¯¹åº”æ—¶é—´
 	*/
 	static ObserveTime indexToTime(uint32_t dayInfoIndex);
 
-	/** ¼ÆËã×î¼Ñ¼Û¸ñË÷ÒıÖµ
-	@param [in] time µ±Ç°Ê±¼ä
-	@param [in] range ·¶Î§
-	@param [in] trans ½»Ò×·½Ê½
-	@return ·µ»Ø×î¼Ñ¼Û¸ñË÷ÒıÖµ
+	/** è®¡ç®—æœ€ä½³ä»·æ ¼ç´¢å¼•å€¼
+	@param [in] time å½“å‰æ—¶é—´
+	@param [in] range èŒƒå›´
+	@param [in] trans äº¤æ˜“æ–¹å¼
+	@return è¿”å›æœ€ä½³ä»·æ ¼ç´¢å¼•å€¼
 	*/
 	static int32_t bestPrice(ObserveTime time, RangeTime range, TransType trans);
 
-	/** ½«×Ö·û´®×é×ª»»ÎªÕûÊı×é
-	@param [in] vecGroup ÊäÈë×Ö·û´®×é£¬¸ñÊ½Îª"prefix_number"
-	@param [in] origin ´Ó0¿ªÊ¼µÄÆ«ÒÆÁ¿
-	@return ÌáÈ¡µÄÊı×Ö²¿·Ö×é³ÉµÄÕûÊı×é
+	/** å°†å­—ç¬¦ä¸²ç»„è½¬æ¢ä¸ºæ•´æ•°ç»„
+	@param [in] vecGroup è¾“å…¥å­—ç¬¦ä¸²ç»„ï¼Œæ ¼å¼ä¸º"prefix_number"
+	@param [in] origin ä»0å¼€å§‹çš„åç§»é‡
+	@return æå–çš„æ•°å­—éƒ¨åˆ†ç»„æˆçš„æ•´æ•°ç»„
 	*/
 	static std::vector<int32_t> groupToInt(const std::vector<std::string>& vecGroup, int32_t origin);
 
-	/** ½«ÕûÊı½ğ¶î£¨·Ö£©×ª»»Îª´øĞ¡ÊıµãµÄ×Ö·û´®½ğ¶î£¨Ôª£©
-	@param [in] amount ÕûÊı½ğ¶î£¬µ¥Î»Îª·Ö
-	@return ´øĞ¡ÊıµãµÄ×Ö·û´®½ğ¶î£¬µ¥Î»ÎªÔª
+	/** å°†æ•´æ•°é‡‘é¢ï¼ˆåˆ†ï¼‰è½¬æ¢ä¸ºå¸¦å°æ•°ç‚¹çš„å­—ç¬¦ä¸²é‡‘é¢ï¼ˆå…ƒï¼‰
+	@param [in] amount æ•´æ•°é‡‘é¢ï¼Œå•ä½ä¸ºåˆ†
+	@return å¸¦å°æ•°ç‚¹çš„å­—ç¬¦ä¸²é‡‘é¢ï¼Œå•ä½ä¸ºå…ƒ
 	*/
 	static std::string transYuan(int32_t amount);
 
-	/** Éú³ÉËùÓĞ×Ö¶ÎÃû³ÆÁĞ±í
-	@param [in] isCreate ÊÇ·ñÎª´´½¨Ä£Ê½£¬trueÊ±ÔÚ×Ö¶ÎÃûºóÌí¼Ó" integer"ÀàĞÍÉùÃ÷
-	@return ×Ö¶ÎÃû³Æ×Ö·û´®ÁĞ±í
+	/** ç”Ÿæˆæ‰€æœ‰å­—æ®µåç§°åˆ—è¡¨
+	@param [in] isCreate æ˜¯å¦ä¸ºåˆ›å»ºæ¨¡å¼ï¼Œtrueæ—¶åœ¨å­—æ®µååæ·»åŠ " integer"ç±»å‹å£°æ˜
+	@return å­—æ®µåç§°å­—ç¬¦ä¸²åˆ—è¡¨
 	*/
 	static std::vector<std::string> allField(bool isCreate);
 
-	/** »ñÈ¡Ö¸¶¨¹ÉÆ±ÔÚÊ±¼ä·¶Î§ÄÚµÄËùÓĞÊı¾İ
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] beginTime ¿ªÊ¼Ê±¼ä´Á
-	@param [in] endTime ½áÊøÊ±¼ä´Á
-	@return ¶şÎ¬ÕûĞÍÊı×é£¬Íâ²ã°´Ê±¼äµãÅÅĞò£¬ÄÚ²ã°üº¬ËùÓĞ×Ö¶ÎµÄÊıÖµ
+	/** è·å–æŒ‡å®šè‚¡ç¥¨åœ¨æ—¶é—´èŒƒå›´å†…çš„æ‰€æœ‰æ•°æ®
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] beginTime å¼€å§‹æ—¶é—´æˆ³
+	@param [in] endTime ç»“æŸæ—¶é—´æˆ³
+	@return äºŒç»´æ•´å‹æ•°ç»„ï¼Œå¤–å±‚æŒ‰æ—¶é—´ç‚¹æ’åºï¼Œå†…å±‚åŒ…å«æ‰€æœ‰å­—æ®µçš„æ•°å€¼
 	*/
 	static std::vector<std::vector<int32_t>> getAllStockData(const std::string& stock, uint32_t beginTime, uint32_t endTime);
 
-	/** ½«¹Û²ìÊ±¼äÃ¶¾Ù×ª»»Îª×Ö·û´®±íÊ¾
-	@param [in] time ¹Û²ìÊ±¼äÃ¶¾ÙÖµ
-	@return ¶ÔÓ¦µÄ×Ö·û´®Ãû³Æ
+	/** å°†è§‚å¯Ÿæ—¶é—´æšä¸¾è½¬æ¢ä¸ºå­—ç¬¦ä¸²è¡¨ç¤º
+	@param [in] time è§‚å¯Ÿæ—¶é—´æšä¸¾å€¼
+	@return å¯¹åº”çš„å­—ç¬¦ä¸²åç§°
 	*/
 	static std::string observeTimeToString(ObserveTime time);
 
-	/** ½«¹Û²ìÊ±¼ä×Ö·û´®×ª»»ÎªÃ¶¾Ù±íÊ¾
-	@param [in] strTime ¹Û²ìÊ±¼ä×Ö·û´®
-	@return ¶ÔÓ¦µÄÃ¶¾ÙÖµ
+	/** å°†è§‚å¯Ÿæ—¶é—´å­—ç¬¦ä¸²è½¬æ¢ä¸ºæšä¸¾è¡¨ç¤º
+	@param [in] strTime è§‚å¯Ÿæ—¶é—´å­—ç¬¦ä¸²
+	@return å¯¹åº”çš„æšä¸¾å€¼
 	*/
 	static ObserveTime observeStringToTime(const std::string& strTime);
 
-	/** ½«¹Û²ìÊ±¼äÃ¶¾Ù×ª»»ÎªÖÓ±í×Ö·û´®±íÊ¾
-	@param [in] time ¹Û²ìÊ±¼äÃ¶¾ÙÖµ
-	@return ¶ÔÓ¦µÄÖÓ±í×Ö·û´®Ãû³Æ
+	/** å°†è§‚å¯Ÿæ—¶é—´æšä¸¾è½¬æ¢ä¸ºé’Ÿè¡¨å­—ç¬¦ä¸²è¡¨ç¤º
+	@param [in] time è§‚å¯Ÿæ—¶é—´æšä¸¾å€¼
+	@return å¯¹åº”çš„é’Ÿè¡¨å­—ç¬¦ä¸²åç§°
 	*/
 	static std::string observeTimeToWatchString(ObserveTime time);
 
-	/** »ñÈ¡¹Û²ìÊ±¼äµÄÊıÖµ±íÊ¾
-	@param [in] time ¹Û²ìÊ±¼äÃ¶¾ÙÖµ
-	@return ¶ÔÓ¦µÄÕûÊıÖµ
+	/** è·å–è§‚å¯Ÿæ—¶é—´çš„æ•°å€¼è¡¨ç¤º
+	@param [in] time è§‚å¯Ÿæ—¶é—´æšä¸¾å€¼
+	@return å¯¹åº”çš„æ•´æ•°å€¼
 	*/
 	static int32_t getTimeValue(ObserveTime time);
 
-	/** »ñÈ¡Ê±¼äÃ¶¾ÙÖµ
-	@param [in] timeValue Êµ¼ÊÊ±¼äÖµ
-	@return ·µ»ØÊ±¼äÃ¶¾ÙÖµ
+	/** è·å–æ—¶é—´æšä¸¾å€¼
+	@param [in] timeValue å®é™…æ—¶é—´å€¼
+	@return è¿”å›æ—¶é—´æšä¸¾å€¼
 	*/
 	static ObserveTime getObserveTime(int32_t timeValue);
 
-	/** »ñÈ¡Ê±¼ä·¶Î§µÄÊıÖµ±íÊ¾
-	@param [in] range Ê±¼ä·¶Î§Ã¶¾ÙÖµ
-	@return ¶ÔÓ¦µÄÕûÊıÖµ
+	/** è·å–æ—¶é—´èŒƒå›´çš„æ•°å€¼è¡¨ç¤º
+	@param [in] range æ—¶é—´èŒƒå›´æšä¸¾å€¼
+	@return å¯¹åº”çš„æ•´æ•°å€¼
 	*/
 	static int32_t getRangeValue(RangeTime range);
 
-	/** ¼ÆËã·¶Î§½áÊøÊ±¼ä
-	@param [in] startTime ¿ªÊ¼Ê±¼ä
-	@param [in] addMinutes Ôö¼ÓµÄÊ±¼ä£¨·ÖÖÓ£©
-	@return ½áÊøÊ±¼ä
+	/** è®¡ç®—èŒƒå›´ç»“æŸæ—¶é—´
+	@param [in] startTime å¼€å§‹æ—¶é—´
+	@param [in] addMinutes å¢åŠ çš„æ—¶é—´ï¼ˆåˆ†é’Ÿï¼‰
+	@return ç»“æŸæ—¶é—´
 	*/
 	static int32_t rangeEndTime(int32_t startTime, int32_t addMinutes);
 
-	/** ¸ù¾İOverallÃ¶¾ÙÖµ»ñÈ¡¶ÔÓ¦µÄĞĞÇéÊı×éÏÂ±êÖµ
-	@param [in] overall OverallÃ¶¾ÙÖµ
-	@return ·µ»Ø¶ÔÓ¦µÄÊı×éÏÂ±êÖµ
+	/** æ ¹æ®Overallæšä¸¾å€¼è·å–å¯¹åº”çš„è¡Œæƒ…æ•°ç»„ä¸‹æ ‡å€¼
+	@param [in] overall Overallæšä¸¾å€¼
+	@return è¿”å›å¯¹åº”çš„æ•°ç»„ä¸‹æ ‡å€¼
 	*/
 	static int32_t getOverallIndex(Overall overall);
 
-	/** ¸ù¾İĞĞÇéÊı×éÏÂ±êÖµ»ñÈ¡¶ÔÓ¦µÄOverallÃ¶¾ÙÖµ
-	@param [in] index Êı×éÏÂ±êÖµ
-	@return ·µ»Ø¶ÔÓ¦µÄOverallÃ¶¾ÙÖµ£¬Èç¹ûÕÒ²»µ½·µ»ØCOUNT
+	/** æ ¹æ®è¡Œæƒ…æ•°ç»„ä¸‹æ ‡å€¼è·å–å¯¹åº”çš„Overallæšä¸¾å€¼
+	@param [in] index æ•°ç»„ä¸‹æ ‡å€¼
+	@return è¿”å›å¯¹åº”çš„Overallæšä¸¾å€¼ï¼Œå¦‚æœæ‰¾ä¸åˆ°è¿”å›COUNT
 	*/
 	static Overall getOverallFromIndex(int32_t index);
 
-	/** ¸ù¾İObserveTimeÃ¶¾ÙÖµ»ñÈ¡¶ÔÓ¦µÄĞĞÇéÊı×éÏÂ±êÖµ£¨Ïà¶ÔÓÚOverallÖ®ºóµÄÎ»ÖÃ£©
-	@param [in] observeTime ¹Û²ìÊ±¼äµãÃ¶¾Ù
-	@return ·µ»Ø¶ÔÓ¦µÄÊı×éÏÂ±êÖµ
+	/** æ ¹æ®ObserveTimeæšä¸¾å€¼è·å–å¯¹åº”çš„è¡Œæƒ…æ•°ç»„ä¸‹æ ‡å€¼ï¼ˆç›¸å¯¹äºOverallä¹‹åçš„ä½ç½®ï¼‰
+	@param [in] observeTime è§‚å¯Ÿæ—¶é—´ç‚¹æšä¸¾
+	@return è¿”å›å¯¹åº”çš„æ•°ç»„ä¸‹æ ‡å€¼
 	*/
 	static int32_t getObserveTimeIndex(ObserveTime observeTime);
 
-	/** ¸ù¾İĞĞÇéÊı×éÏÂ±êÖµ»ñÈ¡¶ÔÓ¦µÄObserveTimeÃ¶¾ÙÖµ
-	@param [in] index Êı×éÏÂ±êÖµ£¨Ïà¶ÔÓÚOverallÖ®ºóµÄÎ»ÖÃ£©
-	@return ·µ»Ø¶ÔÓ¦µÄObserveTimeÃ¶¾ÙÖµ£¬Èç¹ûÕÒ²»µ½·µ»ØCOUNT
+	/** æ ¹æ®è¡Œæƒ…æ•°ç»„ä¸‹æ ‡å€¼è·å–å¯¹åº”çš„ObserveTimeæšä¸¾å€¼
+	@param [in] index æ•°ç»„ä¸‹æ ‡å€¼ï¼ˆç›¸å¯¹äºOverallä¹‹åçš„ä½ç½®ï¼‰
+	@return è¿”å›å¯¹åº”çš„ObserveTimeæšä¸¾å€¼ï¼Œå¦‚æœæ‰¾ä¸åˆ°è¿”å›COUNT
 	*/
 	static ObserveTime getObserveTimeFromIndex(int32_t index);
 
-	/** ¸ù¾İObserveTime¡¢RangeTimeºÍTransTypeÃ¶¾ÙÖµ»ñÈ¡¶ÔÓ¦µÄÈıÎ¬Êı×éÕ¹Æ½ÏÂ±êÖµ
-	@param [in] observeTime ¹Û²ìÊ±¼äµãÃ¶¾Ù
-	@param [in] rangeTime Ê±¼ä·¶Î§Ã¶¾Ù
-	@param [in] transType ½»Ò×ÀàĞÍÃ¶¾Ù
-	@return ·µ»Ø¶ÔÓ¦µÄÈıÎ¬Êı×éÕ¹Æ½ºóµÄÏÂ±êÖµ
+	/** æ ¹æ®ObserveTimeã€RangeTimeå’ŒTransTypeæšä¸¾å€¼è·å–å¯¹åº”çš„ä¸‰ç»´æ•°ç»„å±•å¹³ä¸‹æ ‡å€¼
+	@param [in] observeTime è§‚å¯Ÿæ—¶é—´ç‚¹æšä¸¾
+	@param [in] rangeTime æ—¶é—´èŒƒå›´æšä¸¾
+	@param [in] transType äº¤æ˜“ç±»å‹æšä¸¾
+	@return è¿”å›å¯¹åº”çš„ä¸‰ç»´æ•°ç»„å±•å¹³åçš„ä¸‹æ ‡å€¼
 	*/
 	static int32_t getPriceMatrixIndex(ObserveTime observeTime, RangeTime rangeTime, TransType transType);
 
-	/** ¸ù¾İÈıÎ¬Êı×éÕ¹Æ½ÏÂ±êÖµ»ñÈ¡¶ÔÓ¦µÄObserveTime¡¢RangeTimeºÍTransTypeÃ¶¾ÙÖµ
-	@param [in] index ÈıÎ¬Êı×éÕ¹Æ½ºóµÄÏÂ±êÖµ
-	@param [out] observeTime ·µ»ØµÄ¹Û²ìÊ±¼äµãÃ¶¾Ù
-	@param [out] rangeTime ·µ»ØµÄÊ±¼ä·¶Î§Ã¶¾Ù
-	@param [out] transType ·µ»ØµÄ½»Ò×ÀàĞÍÃ¶¾Ù
-	@return ·µ»ØÊÇ·ñ³É¹¦ÕÒµ½¶ÔÓ¦µÄÃ¶¾ÙÖµ
+	/** æ ¹æ®ä¸‰ç»´æ•°ç»„å±•å¹³ä¸‹æ ‡å€¼è·å–å¯¹åº”çš„ObserveTimeã€RangeTimeå’ŒTransTypeæšä¸¾å€¼
+	@param [in] index ä¸‰ç»´æ•°ç»„å±•å¹³åçš„ä¸‹æ ‡å€¼
+	@param [out] observeTime è¿”å›çš„è§‚å¯Ÿæ—¶é—´ç‚¹æšä¸¾
+	@param [out] rangeTime è¿”å›çš„æ—¶é—´èŒƒå›´æšä¸¾
+	@param [out] transType è¿”å›çš„äº¤æ˜“ç±»å‹æšä¸¾
+	@return è¿”å›æ˜¯å¦æˆåŠŸæ‰¾åˆ°å¯¹åº”çš„æšä¸¾å€¼
 	*/
 	static bool getEnumsFromPriceIndex(int32_t index, ObserveTime& observeTime, RangeTime& rangeTime, TransType& transType);
 
-	/** »ñÈ¡×Ü×Ö¶ÎÊıÁ¿£¨ÓÃÓÚÑéÖ¤Êı×é´óĞ¡£©
-	@return ·µ»Ø×Ü×Ö¶ÎÊıÁ¿
+	/** è·å–æ€»å­—æ®µæ•°é‡ï¼ˆç”¨äºéªŒè¯æ•°ç»„å¤§å°ï¼‰
+	@return è¿”å›æ€»å­—æ®µæ•°é‡
 	*/
 	static int32_t getTotalFieldCount();
 
-	/** ¼ÆËãÏÂÒ»¸öÎ´À´ÖÜÆÚµÄ½áÊøÊ±¼ä
-	@param [in] beginTime ±¾ÖÜÆÚ¿ªÊ¼Ê±¼ä
-	@param [in] beginTime ±¾ÖÜÆÚ½áÊøÊ±¼ä
-	@return ÏÂÒ»¸öÎ´À´ÖÜÆÚµÄ½áÊøÊ±¼ä
+	/** è®¡ç®—ä¸‹ä¸€ä¸ªæœªæ¥å‘¨æœŸçš„ç»“æŸæ—¶é—´
+	@param [in] beginTime æœ¬å‘¨æœŸå¼€å§‹æ—¶é—´
+	@param [in] beginTime æœ¬å‘¨æœŸç»“æŸæ—¶é—´
+	@return ä¸‹ä¸€ä¸ªæœªæ¥å‘¨æœŸçš„ç»“æŸæ—¶é—´
 	*/
 	static uint32_t calcFutureEndTime(uint32_t beginTime, uint32_t endTime);
 
-	/** ¼ÆËãÉÏÒ»¸öÀúÊ·ÖÜÆÚµÄ¿ªÊ¼Ê±¼ä
-	@param [in] beginTime ±¾ÖÜÆÚ¿ªÊ¼Ê±¼ä
-	@param [in] beginTime ±¾ÖÜÆÚ½áÊøÊ±¼ä
-	@return ÉÏÒ»¸öÀúÊ·ÖÜÆÚµÄ¿ªÊ¼Ê±¼ä
+	/** è®¡ç®—ä¸Šä¸€ä¸ªå†å²å‘¨æœŸçš„å¼€å§‹æ—¶é—´
+	@param [in] beginTime æœ¬å‘¨æœŸå¼€å§‹æ—¶é—´
+	@param [in] beginTime æœ¬å‘¨æœŸç»“æŸæ—¶é—´
+	@return ä¸Šä¸€ä¸ªå†å²å‘¨æœŸçš„å¼€å§‹æ—¶é—´
 	*/
 	static uint32_t calcHistoryBeginTime(uint32_t beginTime, uint32_t endTime);
 
-	/** ¼ÆËãÎ´À´Ê±¼ä
-	@param [in] time µ±Ç°Ê±¼ä
-	@param [in] dayCount ÌìÊı
-	@return Î´À´Ê±¼ä
+	/** è®¡ç®—æœªæ¥æ—¶é—´
+	@param [in] time å½“å‰æ—¶é—´
+	@param [in] dayCount å¤©æ•°
+	@return æœªæ¥æ—¶é—´
 	*/
 	static uint32_t calcFutureTime(uint32_t time, uint32_t dayCount);
 
-	/** ¼ÆËãÀúÊ·Ê±¼ä
-	@param [in] time µ±Ç°Ê±¼ä
-	@param [in] dayCount ÌìÊı
-	@return ÀúÊ·Ê±¼ä
+	/** è®¡ç®—å†å²æ—¶é—´
+	@param [in] time å½“å‰æ—¶é—´
+	@param [in] dayCount å¤©æ•°
+	@return å†å²æ—¶é—´
 	*/
 	static uint32_t calcHistoryTime(uint32_t time, uint32_t dayCount);
 
-	/** ÅÅÁĞ×éºÏ³öËùÓĞ²ÎÊı×éºÏ
-	@param [in] allParam Ã¿¸ö²ÎÊı¿ÉÄÜ³öÏÖµÄÖµ
-	@return ·µ»ØËùÓĞ²ÎÊı×éºÏ
+	/** æ’åˆ—ç»„åˆå‡ºæ‰€æœ‰å‚æ•°ç»„åˆ
+	@param [in] allParam æ¯ä¸ªå‚æ•°å¯èƒ½å‡ºç°çš„å€¼
+	@return è¿”å›æ‰€æœ‰å‚æ•°ç»„åˆ
 	*/
 	static std::vector<std::vector<int32_t>> combinatoricsToAllParam(const std::vector<std::vector<int32_t>>& allParam);
 
-	/** ÈÃÔ­Ê¼¼ì²âÊı¾İºÍÑéÖ¤Êı¾İºÏ³ÉÒ»¸ömap
-	@param [in] detectMap Ô­Ê¼¼ì²âÊı¾İ
-	@param [in] verifyMap ÑéÖ¤Êı¾İ
-	@return ·µ»ØºÏ³Émap
+	/** è®©åŸå§‹æ£€æµ‹æ•°æ®å’ŒéªŒè¯æ•°æ®åˆæˆä¸€ä¸ªmap
+	@param [in] detectMap åŸå§‹æ£€æµ‹æ•°æ®
+	@param [in] verifyMap éªŒè¯æ•°æ®
+	@return è¿”å›åˆæˆmap
 	*/
 	static std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>> synthesisMap(
 		const std::map<int32_t, std::vector<std::vector<std::shared_ptr<StrategyResult>>>>& detectMap,

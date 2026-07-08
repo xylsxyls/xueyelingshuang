@@ -1,4 +1,4 @@
-#include "Strategy.h"
+﻿#include "Strategy.h"
 #include <functional>
 #include <unordered_map>
 #include "Util.h"

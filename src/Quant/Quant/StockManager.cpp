@@ -1,4 +1,4 @@
-#include "StockManager.h"
+﻿#include "StockManager.h"
 #include "Cini/CiniAPI.h"
 #include "Config.h"
 #include "Util.h"

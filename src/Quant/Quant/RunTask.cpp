@@ -1,4 +1,4 @@
-#include "RunTask.h"
+ï»¿#include "RunTask.h"
 #include "ScoreManager.h"
 #include "StrategyTask.h"
 #include "QuantStrategyManager.h"
@@ -14,7 +14,7 @@ RunTask::RunTask()
 
 void RunTask::DoTask()
 {
-	// ´´½¨ÊĞ³¡Êı¾İ
+	// åˆ›å»ºå¸‚åœºæ•°æ®
 	auto marketData = std::make_shared<Market>();
 	marketData->init(g_config.m_allBeginTime, g_config.m_allEndTime);
 	for (size_t index = 0; index < m_stocks.size(); ++index)
@@ -22,7 +22,7 @@ void RunTask::DoTask()
 		marketData->addStock(m_stocks[index]);
 	}
 
-	// ÉèÖÃÕË»§
+	// è®¾ç½®è´¦æˆ·
 	std::shared_ptr<Fund> spFund(new Fund);
 	spFund->init(m_initialFund);
 	spFund->setMarket(marketData);
@@ -44,7 +44,7 @@ void RunTask::DoTask()
 
 		if (!best.second.empty())
 		{
-			// ´´½¨²ßÂÔÊµÀı
+			// åˆ›å»ºç­–ç•¥å®ä¾‹
 			std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(best.first);
 			if (spStrategy == nullptr)
 			{
@@ -56,25 +56,25 @@ void RunTask::DoTask()
 
 			uint32_t threadId = CTaskThreadManager::Instance().Init();
 
-			// ÉèÖÃµ¼Èë²ÎÊı
+			// è®¾ç½®å¯¼å…¥å‚æ•°
 			spStrategy->setImportParam(import);
 
-			// ÉèÖÃÊĞ³¡Êı¾İ
+			// è®¾ç½®å¸‚åœºæ•°æ®
 			spStrategy->setMarket(marketData);
 
-			// Ìí¼Ó¹ÉÆ±
+			// æ·»åŠ è‚¡ç¥¨
 			for (const auto& stock : m_stocks)
 			{
 				spStrategy->addStock(stock);
 			}
 
-			// ÉèÖÃÕË»§
+			// è®¾ç½®è´¦æˆ·
 			spStrategy->setFund(spFund);
 
-			// ÉèÖÃ²ßÂÔ²ÎÊı
+			// è®¾ç½®ç­–ç•¥å‚æ•°
 			spStrategy->setStrategyParam(best.second);
 
-			// ÌîÈë²ÎÊı²¢¼ì²éÊÇ·ñºÏÀí
+			// å¡«å…¥å‚æ•°å¹¶æ£€æŸ¥æ˜¯å¦åˆç†
 			if (!spStrategy->fillCheckParam())
 			{
 				continue;

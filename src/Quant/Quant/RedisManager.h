@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "HiRedis/HiRedisAPI.h"
 
 class RedisManager

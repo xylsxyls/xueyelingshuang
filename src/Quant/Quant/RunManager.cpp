@@ -1,4 +1,4 @@
-#include "RunManager.h"
+﻿#include "RunManager.h"
 #include "RunTask.h"
 
 RunManager::RunManager() :

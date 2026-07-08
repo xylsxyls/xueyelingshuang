@@ -1,4 +1,4 @@
-#include "RedisManager.h"
+﻿#include "RedisManager.h"
 
 RedisManager::RedisManager()
 {

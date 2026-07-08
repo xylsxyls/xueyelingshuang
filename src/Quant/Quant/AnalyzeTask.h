@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 

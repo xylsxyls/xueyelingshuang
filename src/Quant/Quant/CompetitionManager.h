@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include "Strategy.h"
@@ -14,85 +14,85 @@
 #include <string>
 #include "CompetitionTask.h"
 
-// Ç°ÏòÉùÃ÷
+// å‰å‘å£°æ˜
 class StrategyTask;
 
-/** ¾ºÈü¹ÜÀíÆ÷Àà
-* ¸ºÔğ¹ÜÀí²ßÂÔ¾ºÈüµÄÕû¸öÉúÃüÖÜÆÚ£¬µ¥Ò»ÊµÀı
+/** ç«èµ›ç®¡ç†å™¨ç±»
+* è´Ÿè´£ç®¡ç†ç­–ç•¥ç«èµ›çš„æ•´ä¸ªç”Ÿå‘½å‘¨æœŸï¼Œå•ä¸€å®ä¾‹
 */
 class CompetitionManager
 {
 private:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	CompetitionManager();
 
 public:
-	/** »ñÈ¡µ¥Ò»ÊµÀı
-	@return ·µ»Ø¾ºÈü¹ÜÀíÆ÷µ¥Ò»ÊµÀı
+	/** è·å–å•ä¸€å®ä¾‹
+	@return è¿”å›ç«èµ›ç®¡ç†å™¨å•ä¸€å®ä¾‹
 	*/
 	static CompetitionManager& instance();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	~CompetitionManager();
 
-	/** ³õÊ¼»¯¾ºÈü¹ÜÀíÆ÷
+	/** åˆå§‹åŒ–ç«èµ›ç®¡ç†å™¨
 	*/
 	void init();
 
-	/** ·´³õÊ¼»¯¾ºÈü¹ÜÀíÆ÷
+	/** ååˆå§‹åŒ–ç«èµ›ç®¡ç†å™¨
 	*/
 	void uninit();
 
-	/** Ìí¼Ó¾ºÈü
-	@param [in] strategyMode ²ßÂÔÄ£Ê½
-	@param [in] config ¾ºÈüÅäÖÃ
-	@return ·µ»ØÊÇ·ñ¿ªÊ¼³É¹¦
+	/** æ·»åŠ ç«èµ›
+	@param [in] strategyMode ç­–ç•¥æ¨¡å¼
+	@param [in] config ç«èµ›é…ç½®
+	@return è¿”å›æ˜¯å¦å¼€å§‹æˆåŠŸ
 	*/
 	void addCompetition(StrategyMode strategyMode, const CompetitionConfig& config);
 
-	/** ÊÇ·ñÏÔÊ¾½á¹û
-	@param [in] isShowResult ÊÇ·ñÏÔÊ¾½á¹û
-	@param [in] isShowTradeLog ÊÇ·ñÕ¹Ê¾½»Ò×¼ÇÂ¼ÈÕÖ¾
+	/** æ˜¯å¦æ˜¾ç¤ºç»“æœ
+	@param [in] isShowResult æ˜¯å¦æ˜¾ç¤ºç»“æœ
+	@param [in] isShowTradeLog æ˜¯å¦å±•ç¤ºäº¤æ˜“è®°å½•æ—¥å¿—
 	*/
 	void setParam(bool isShowResult, bool isShowTradeLog);
 
-	/** ¿ªÊ¼¾ºÈü
-	@param [in] config ¾ºÈüÅäÖÃ
-	@param [in] strategyMode ²ßÂÔÄ£Ê½
-	@param [in] allParams ËùÓĞ²ßÂÔ²ÎÊı×éºÏ
-	@return ·µ»ØÊÇ·ñ¿ªÊ¼³É¹¦
+	/** å¼€å§‹ç«èµ›
+	@param [in] config ç«èµ›é…ç½®
+	@param [in] strategyMode ç­–ç•¥æ¨¡å¼
+	@param [in] allParams æ‰€æœ‰ç­–ç•¥å‚æ•°ç»„åˆ
+	@return è¿”å›æ˜¯å¦å¼€å§‹æˆåŠŸ
 	*/
 	bool startCompetition();
 
-	/** Í£Ö¹¾ºÈü
+	/** åœæ­¢ç«èµ›
 	*/
 	void stopCompetition();
 
-	/** µÈ´ı´¦ÀíºÃµÄ¾ºÈüÀà
-	@return ·µ»ØÔËĞĞºÃµÄ¾ºÈüÀà
+	/** ç­‰å¾…å¤„ç†å¥½çš„ç«èµ›ç±»
+	@return è¿”å›è¿è¡Œå¥½çš„ç«èµ›ç±»
 	*/
 	std::shared_ptr<CompetitionTask> waitForEnd();
 
-	/** ¼ì²â¾ºÈüÅäÖÃÊÇ·ñÕıÈ·
-	@param [in] strategyMode ²ßÂÔÄ£Ê½
-	@param [in] config ¾ºÈüÅäÖÃ
-	@return ·µ»Ø¾ºÈüÅäÖÃÊÇ·ñÕıÈ·
+	/** æ£€æµ‹ç«èµ›é…ç½®æ˜¯å¦æ­£ç¡®
+	@param [in] strategyMode ç­–ç•¥æ¨¡å¼
+	@param [in] config ç«èµ›é…ç½®
+	@return è¿”å›ç«èµ›é…ç½®æ˜¯å¦æ­£ç¡®
 	*/
 	bool isCompetitionParamValid(StrategyMode strategyMode, const CompetitionConfig& config);
 
 private:
-	// ´¦Àí¾ºÈüÈÎÎñÏß³Ì
+	// å¤„ç†ç«èµ›ä»»åŠ¡çº¿ç¨‹
 	uint32_t m_competitionThreadId;
-	// ÊÇ·ñÏÔÊ¾½á¹û
+	// æ˜¯å¦æ˜¾ç¤ºç»“æœ
 	bool m_isShowResult;
-	// ÊÇ·ñÕ¹Ê¾½»Ò×¼ÇÂ¼ÈÕÖ¾
+	// æ˜¯å¦å±•ç¤ºäº¤æ˜“è®°å½•æ—¥å¿—
 	bool m_isShowTradeLog;
-	// ËùÓĞ¾ºÈüÈÎÎñ²ÎÊı
+	// æ‰€æœ‰ç«èµ›ä»»åŠ¡å‚æ•°
 	std::map<int32_t, CompetitionConfig> m_competitionConfigMap;
-	// ¾ºÈüÀà
+	// ç«èµ›ç±»
 	std::shared_ptr<CompetitionTask> m_spCompetitionTask;
-	// ÊÇ·ñÒÑ¾­³õÊ¼»¯
+	// æ˜¯å¦å·²ç»åˆå§‹åŒ–
 	std::atomic<bool> m_isInit;
 };

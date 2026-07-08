@@ -1,4 +1,4 @@
-#include "ClientReceive.h"
+﻿#include "ClientReceive.h"
 #include "Quant.h"
 
 ClientReceive::ClientReceive()

@@ -1,4 +1,4 @@
-#include "Config.h"
+﻿#include "Config.h"
 #include "CSystem/CSystemAPI.h"
 #ifdef _MSC_VER
 #include <windows.h>

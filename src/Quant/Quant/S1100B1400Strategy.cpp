@@ -1,4 +1,4 @@
-#include "S1100B1400Strategy.h"
+ï»¿#include "S1100B1400Strategy.h"
 #include <algorithm>
 #include <iostream>
 #include "Util.h"
@@ -23,7 +23,7 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 		return false;
 	}
 
-	// Ö»´¦ÀíµÚÒ»Ö»¹ÉÆ±£¨¿É¸ù¾İĞèÒªÀ©Õ¹Îª¶à¹ÉÆ±£©
+	// åªå¤„ç†ç¬¬ä¸€åªè‚¡ç¥¨ï¼ˆå¯æ ¹æ®éœ€è¦æ‰©å±•ä¸ºå¤šè‚¡ç¥¨ï¼‰
 	const std::string& stock = m_vecStock[0];
 	const std::vector<int32_t>& dayInfo = m_spMarket->getStockData(stock, date);
 	if (dayInfo.empty())
@@ -32,11 +32,11 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 		return false;
 	}
 
-	// ½âÎö²ßÂÔ²ÎÊı
-	ObserveTime sellObserveTime = (ObserveTime)m_strategyParam[0]; // Âô³öÊ±¼äµã ¶ÔÓ¦ 10:40,10:50,11:00
-	ObserveTime forceBuyObserveTime = (ObserveTime)m_strategyParam[1]; // ÂòÈëÊ±¼äµã ¶ÔÓ¦ 13:40,13:50,14:00
-	int32_t chaseParam = m_strategyParam[2];    // 7,8,9 ·Ö
-	int32_t discountParam = m_strategyParam[3]; // 1,2,3 ·Ö
+	// è§£æç­–ç•¥å‚æ•°
+	ObserveTime sellObserveTime = (ObserveTime)m_strategyParam[0]; // å–å‡ºæ—¶é—´ç‚¹ å¯¹åº” 10:40,10:50,11:00
+	ObserveTime forceBuyObserveTime = (ObserveTime)m_strategyParam[1]; // ä¹°å…¥æ—¶é—´ç‚¹ å¯¹åº” 13:40,13:50,14:00
+	int32_t chaseParam = m_strategyParam[2];    // 7,8,9 åˆ†
+	int32_t discountParam = m_strategyParam[3]; // 1,2,3 åˆ†
 
 	if (!m_hasFirstBuy)
 	{
@@ -45,13 +45,13 @@ bool S1100B1400Strategy::onTradingDay(uint32_t date)
 		return true;
 	}
 
-	// ĞèÒªµÄ¼Û¸ñÖ¸±ê
+	// éœ€è¦çš„ä»·æ ¼æŒ‡æ ‡
 	int32_t sellPrice = getDirectSellPrice(dayInfo, sellObserveTime);
 	int32_t forceBuyPrice = getDirectBuyPrice(dayInfo, forceBuyObserveTime);
 	int32_t tBuyPrice = sellPrice - discountParam;
 	int32_t chaseBuyPrice = sellPrice + chaseParam;
 
-	// ¼ì²éµ±Ç°ÊÇ·ñ³ÖÓĞ¸Ã¹ÉÆ±
+	// æ£€æŸ¥å½“å‰æ˜¯å¦æŒæœ‰è¯¥è‚¡ç¥¨
 	bool hasPosition = (m_spFund->getPosition(stock) != nullptr);
 	if (!hasPosition)
 	{
@@ -109,27 +109,27 @@ std::string S1100B1400Strategy::describeParam(const std::vector<int32_t>& params
 
 bool S1100B1400Strategy::isStrategyParamValid() const
 {
-	// ¼ì²é²ÎÊıÓĞĞ§ĞÔ
+	// æ£€æŸ¥å‚æ•°æœ‰æ•ˆæ€§
 	if (m_strategyParam.size() != 4)
 	{
 		RCSend("Error: Strategy:%s parameters size is not 4", m_modeName.c_str());
 		return false;
 	}
-	// ¼ì²éÊĞ³¡Êı¾İºÍ×Ê½ğÕË»§
+	// æ£€æŸ¥å¸‚åœºæ•°æ®å’Œèµ„é‡‘è´¦æˆ·
 	if (!m_spMarket || !m_spFund)
 	{
 		RCSend("Error: Strategy:%s Market or Fund is not set", m_modeName.c_str());
 		return false;
 	}
-	// ¼ì²é¹ÉÆ±ÁĞ±í
+	// æ£€æŸ¥è‚¡ç¥¨åˆ—è¡¨
 	if (m_vecStock.empty())
 	{
 		RCSend("Error: Strategy:%s No stocks in strategy", m_modeName.c_str());
 		return false;
 	}
-	// Ö»´¦ÀíµÚÒ»Ö»¹ÉÆ±£¨¿É¸ù¾İĞèÒªÀ©Õ¹Îª¶à¹ÉÆ±£©
+	// åªå¤„ç†ç¬¬ä¸€åªè‚¡ç¥¨ï¼ˆå¯æ ¹æ®éœ€è¦æ‰©å±•ä¸ºå¤šè‚¡ç¥¨ï¼‰
 	const std::string& stock = m_vecStock[0];
-	// ¼ì²é¹ÉÆ±ÊÇ·ñ´æÔÚÊĞ³¡Êı¾İÖĞ
+	// æ£€æŸ¥è‚¡ç¥¨æ˜¯å¦å­˜åœ¨å¸‚åœºæ•°æ®ä¸­
 	if (!m_spMarket->hasStock(stock))
 	{
 		RCSend("Error: Strategy:%s Stock %s not found in market data", m_modeName.c_str(), stock.c_str());

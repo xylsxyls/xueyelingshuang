@@ -1,4 +1,4 @@
-#include "CompetitionTask.h"
+ï»¿#include "CompetitionTask.h"
 #include "QuantStrategyManager.h"
 #include "StrategyTask.h"
 #include <algorithm>
@@ -15,7 +15,7 @@ m_isShowTradeLog(false)
 
 void CompetitionTask::DoTask()
 {
-	// ³õÊ¼»¯Ïß³Ì³Ø
+	// åˆå§‹åŒ–çº¿ç¨‹æ± 
 	for (uint32_t i = 0; i < (uint32_t)g_config.m_cpuCoreCount * 2; ++i)
 	{
 		m_vecThreadId.push_back(CTaskThreadManager::Instance().Init());
@@ -32,7 +32,7 @@ void CompetitionTask::DoTask()
 		int32_t paramIndex = -1;
 		while (paramIndex++ != currentConfig.allParam.size() - 1)
 		{
-			// ´´½¨²ßÂÔÊµÀı
+			// åˆ›å»ºç­–ç•¥å®ä¾‹
 			std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(currentStrategyMode);
 			if (spStrategy == nullptr)
 			{
@@ -40,30 +40,30 @@ void CompetitionTask::DoTask()
 				continue;
 			}
 
-			// ÉèÖÃÊĞ³¡Êı¾İ
+			// è®¾ç½®å¸‚åœºæ•°æ®
 			spStrategy->setMarket(currentConfig.marketData);
 
-			// Ìí¼Ó¹ÉÆ±
+			// æ·»åŠ è‚¡ç¥¨
 			for (const auto& stock : currentConfig.stocks)
 			{
 				spStrategy->addStock(stock);
 			}
 
-			// ÉèÖÃÕË»§
+			// è®¾ç½®è´¦æˆ·
 			std::shared_ptr<Fund> spFund(new Fund);
 			spFund->init(currentConfig.initialFund);
 			spFund->setMarket(currentConfig.marketData);
 
-			// ÉèÖÃ²ßÂÔ²ÎÊı
+			// è®¾ç½®ç­–ç•¥å‚æ•°
 			spStrategy->setStrategyParam(currentConfig.allParam[paramIndex]);
 			
-			// ÌîÈë²ÎÊı²¢¼ì²éÊÇ·ñºÏÀí
+			// å¡«å…¥å‚æ•°å¹¶æ£€æŸ¥æ˜¯å¦åˆç†
 			if (!spStrategy->fillCheckParam())
 			{
 				continue;
 			}
 
-			// ´´½¨ÈÎÎñ
+			// åˆ›å»ºä»»åŠ¡
 			std::shared_ptr<StrategyTask> spStrategyTask(new StrategyTask);
 			spStrategyTask->setParam(currentConfig.beginTime, currentConfig.endTime, currentConfig.stocks,
 				spStrategy, spFund, true, &m_resultQueue, &m_resultSemaphore);
@@ -72,7 +72,7 @@ void CompetitionTask::DoTask()
 		}
 	}
 	++strategyCount;
-	RCSend("ÕıÔÚ¶àÏß³ÌÖ´ĞĞ %d ¸öĞ¡²ßÂÔ", strategyCount);
+	RCSend("æ­£åœ¨å¤šçº¿ç¨‹æ‰§è¡Œ %d ä¸ªå°ç­–ç•¥", strategyCount);
 
 	std::atomic<int> lambda_count(0);
 	Timer lambda_timer([&lambda_count, &strategyCount]()
@@ -142,13 +142,13 @@ void CompetitionTask::DoTask()
 
 	return;
 
-	// Ìî³ä×îÖÕ½á¹û
+	// å¡«å……æœ€ç»ˆç»“æœ
 	std::vector<StrategyResult> m_intermediateResults;
 	m_finalResult.rankedResults = m_intermediateResults;
 	m_finalResult.totalStrategies = strategyCount;
 	m_finalResult.completedStrategies = (uint32_t)m_intermediateResults.size();
 
-	// ¼ÆËãÍ³¼ÆÖ¸±ê
+	// è®¡ç®—ç»Ÿè®¡æŒ‡æ ‡
 	if (!m_intermediateResults.empty())
 	{
 		m_finalResult.bestReturn = m_intermediateResults.front().m_totalReturn;
@@ -179,7 +179,7 @@ void CompetitionTask::DoTask()
 		m_finalResult.averageProfitArea = sumProfitArea / count;
 		m_finalResult.averageHealthScore = sumHealthScore / count;
 
-		// ¼ÆËãÖĞÎ»ÊıÊÕÒæÂÊ
+		// è®¡ç®—ä¸­ä½æ•°æ”¶ç›Šç‡
 		size_t midIndex = m_intermediateResults.size() / 2;
 		if (m_intermediateResults.size() % 2 == 0)
 		{
@@ -191,7 +191,7 @@ void CompetitionTask::DoTask()
 			m_finalResult.medianReturn = m_intermediateResults[midIndex].m_totalReturn;
 		}
 
-		// ¼ÆËã±ê×¼²î
+		// è®¡ç®—æ ‡å‡†å·®
 		BigNumber variance = 0;
 		for (const auto& result : m_intermediateResults)
 		{
@@ -202,18 +202,18 @@ void CompetitionTask::DoTask()
 		m_finalResult.stdDevReturn = variance.sqrt();
 	}
 
-	RCSend("×Ü²ßÂÔÊı: % u\n"
-		"Íê³É²ßÂÔÊı: % u\n"
-		"×î¼ÑÊÕÒæÂÊ: % s\n"
-		"×î²îÊÕÒæÂÊ: % s\n"
-		"Æ½¾ùÊÕÒæÂÊ: % s\n"
-		"Æ½¾ùÄê»¯ÊÕÒæÂÊ: % s\n"
-		"Æ½¾ù×î´ó»Ø³·: % s\n"
-		"Æ½¾ùÊ¤ÂÊ: % s\n"
-		"Æ½¾ùÊÕÒæÃæ»ı: % s\n"
-		"Æ½¾ù½¡¿µÖµ: % s\n"
-		"ÖĞÎ»ÊıÊÕÒæÂÊ: % s\n"
-		"ÊÕÒæÂÊ±ê×¼²î: % s",
+	RCSend("æ€»ç­–ç•¥æ•°: % u\n"
+		"å®Œæˆç­–ç•¥æ•°: % u\n"
+		"æœ€ä½³æ”¶ç›Šç‡: % s\n"
+		"æœ€å·®æ”¶ç›Šç‡: % s\n"
+		"å¹³å‡æ”¶ç›Šç‡: % s\n"
+		"å¹³å‡å¹´åŒ–æ”¶ç›Šç‡: % s\n"
+		"å¹³å‡æœ€å¤§å›æ’¤: % s\n"
+		"å¹³å‡èƒœç‡: % s\n"
+		"å¹³å‡æ”¶ç›Šé¢ç§¯: % s\n"
+		"å¹³å‡å¥åº·å€¼: % s\n"
+		"ä¸­ä½æ•°æ”¶ç›Šç‡: % s\n"
+		"æ”¶ç›Šç‡æ ‡å‡†å·®: % s",
 		m_finalResult.totalStrategies,
 		m_finalResult.completedStrategies,
 		m_finalResult.bestReturn.toPrec(2).toString().c_str(),
@@ -252,14 +252,14 @@ void CompetitionTask::printResultMap(uint32_t showCount)
 			std::shared_ptr<Strategy> spStrategy = QuantStrategyManager::instance().createStrategy(result->m_strategyMode);
 			std::string describe = spStrategy->describeParam(result->m_params);
 			std::string modeName = spStrategy->getStrategyName();
-			RCSend("µÚ%uÃû, %s, tProfit = %sÔª, trade = %sÔª, tAnnual = %s%%, annual = %s%%",
+			RCSend("ç¬¬%uå, %s, tProfit = %så…ƒ, trade = %så…ƒ, tAnnual = %s%%, annual = %s%%",
 				rank,
 				modeName.c_str(),
 				(BigNumber(result->m_tReturn) / 100.0).toPrec(2).toString().c_str(),
 				(BigNumber(result->m_totalReturn) / 100.0).toPrec(2).toString().c_str(),
 				(result->m_annualTReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str(),
 				(result->m_annualReturn.toPrec(16) * 100.0).toPrec(2).toString().c_str());
-			RCSend("µÚ%uÃû, param = %s", rank, describe.c_str());
+			RCSend("ç¬¬%uå, param = %s", rank, describe.c_str());
 		}
 	}
 }

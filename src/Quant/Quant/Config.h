@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <stdint.h>
 #include <string>
 #include <atomic>
@@ -25,11 +25,11 @@ struct CConfig
 	std::atomic<uint32_t> m_completeTaskCount;
 	std::atomic<uint32_t> m_ignoreTaskCount;
 	uint32_t m_showCount;
-	// ÈëÎ§Ãû´Î
+	// å…¥å›´åæ¬¡
 	uint32_t m_selectCount;
-	// ÇĞ¸îÆ½¾ù×Ü¸öÊı
+	// åˆ‡å‰²å¹³å‡æ€»ä¸ªæ•°
 	uint32_t m_avgCount;
-	// Ä£ÄâÖ´ĞĞÌìÊı
+	// æ¨¡æ‹Ÿæ‰§è¡Œå¤©æ•°
 	uint32_t m_runDayCount;
 
 protected:

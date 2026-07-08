@@ -1,36 +1,36 @@
-#pragma once
+ï»¿#pragma once
 #include "Strategy.h"
 #include <vector>
 #include <map>
 
-/** S1100B1400²ßÂÔ
-* ²ÎÊı»¯ÈÕÄÚ½»Ò×²ßÂÔ£¬Ö§³Ö²»Í¬Ê±¼äµãºÍ¼Û¸ñ²ÎÊıµÄ×éºÏ
+/** S1100B1400ç­–ç•¥
+* å‚æ•°åŒ–æ—¥å†…äº¤æ˜“ç­–ç•¥ï¼Œæ”¯æŒä¸åŒæ—¶é—´ç‚¹å’Œä»·æ ¼å‚æ•°çš„ç»„åˆ
 */
 class S1100B1400Strategy : public Strategy
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	S1100B1400Strategy();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~S1100B1400Strategy();
 
-	/** Ã¿¸ö½»Ò×ÈÕµÄ²ßÂÔÖ´ĞĞÈë¿Ú£¬´Ó¿ªÊ¼µ½½áÊøÒÀ´ÎÑ­»·
-	@param [in] date µ±Ç°½»Ò×ÈÕ
-	@return ·µ»ØÊÇ·ñÖ´ĞĞ³É¹¦
+	/** æ¯ä¸ªäº¤æ˜“æ—¥çš„ç­–ç•¥æ‰§è¡Œå…¥å£ï¼Œä»å¼€å§‹åˆ°ç»“æŸä¾æ¬¡å¾ªç¯
+	@param [in] date å½“å‰äº¤æ˜“æ—¥
+	@return è¿”å›æ˜¯å¦æ‰§è¡ŒæˆåŠŸ
 	*/
 	virtual bool onTradingDay(uint32_t date);
 
-	/** ÃèÊö²ÎÊı
-	@param [in] params ²ÎÊı×é
-	@return ·µ»Ø²ÎÊıº¬Òå
+	/** æè¿°å‚æ•°
+	@param [in] params å‚æ•°ç»„
+	@return è¿”å›å‚æ•°å«ä¹‰
 	*/
 	virtual std::string describeParam(const std::vector<int32_t>& params);
 
-	/** »ñÈ¡²ßÂÔ²ÎÊıÊÇ·ñÓĞĞ§
-	@return ·µ»Ø²ßÂÔ²ÎÊıÊÇ·ñÓĞĞ§
+	/** è·å–ç­–ç•¥å‚æ•°æ˜¯å¦æœ‰æ•ˆ
+	@return è¿”å›ç­–ç•¥å‚æ•°æ˜¯å¦æœ‰æ•ˆ
 	*/
 	virtual bool isStrategyParamValid() const;
 

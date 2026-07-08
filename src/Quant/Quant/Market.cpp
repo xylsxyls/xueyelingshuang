@@ -1,4 +1,4 @@
-#include "Market.h"
+ï»¿#include "Market.h"
 #include "Util.h"
 #include <algorithm>
 
@@ -21,21 +21,21 @@ void Market::addStock(const std::string& stock)
 {
 	if (m_stockData.find(stock) != m_stockData.end())
 	{
-		// ¹ÉÆ±ÒÑ´æÔÚ£¬²»ÔÙÖØ¸´Ìí¼Ó
+		// è‚¡ç¥¨å·²å­˜åœ¨ï¼Œä¸å†é‡å¤æ·»åŠ 
 		return;
 	}
 
-	// ´ÓUtil»ñÈ¡¹ÉÆ±Êı¾İ
+	// ä»Utilè·å–è‚¡ç¥¨æ•°æ®
 	auto data = Util::getAllStockData(stock, m_beginTime, m_endTime);
 	m_stockData[stock] = data;
 
-	// ½¨Á¢ÈÕÆÚË÷Òı
+	// å»ºç«‹æ—¥æœŸç´¢å¼•
 	auto& dateIndex = m_dateIndex[stock];
 	for (size_t i = 0; i < data.size(); ++i)
 	{
 		if (!data[i].empty())
 		{
-			// µÚÒ»¸öÔªËØÊÇÈÕÆÚ
+			// ç¬¬ä¸€ä¸ªå…ƒç´ æ˜¯æ—¥æœŸ
 			uint32_t date = static_cast<uint32_t>(data[i][0]);
 			dateIndex[date] = i;
 		}

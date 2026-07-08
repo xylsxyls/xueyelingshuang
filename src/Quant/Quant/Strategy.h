@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include <memory>
@@ -6,225 +6,225 @@
 #include "Fund.h"
 #include "Config.h"
 
-/** ²ßÂÔÔËĞĞ½á¹û½á¹¹Ìå
+/** ç­–ç•¥è¿è¡Œç»“æœç»“æ„ä½“
 */
 struct StrategyResult
 {
-	StrategyMode m_strategyMode;            // ²ßÂÔÄ£Ê½
-	std::vector<int32_t> m_params;          // ²ßÂÔ²ÎÊı
-	int32_t m_totalReturn;                  // ×ÜÊÕÒæ
-	int32_t m_tReturn;                      // ×öT×ÜÊÕÒæ
-	BigNumber m_annualReturn;               // Äê»¯ÊÕÒæÂÊ
-	BigNumber m_annualTReturn;              // ×öTÄê»¯ÊÕÒæÂÊ
-	BigNumber m_maxDrawdown;                // ×î´ó»Ø³·
-	BigNumber m_winRate;                    // Ê¤ÂÊ
-	BigNumber m_profitArea;                 // ÊÕÒæÃæ»ı
-	BigNumber m_healthScore;                // ½¡¿µÖµ
-	uint32_t m_tradeDays;                   // Êµ¼Ê½»Ò×ÌìÊı
-	uint32_t m_totalDays;                   // ×ÜÌìÊı£¨ÓÃÓÚµ÷Õû£©
-	std::vector<std::string> m_tradeLog;    // ½»Ò×ÈÕÖ¾
-	std::vector<std::string> m_strategyLog; // ²ßÂÔÈÕÖ¾
-	std::vector<uint32_t> m_tradeCount;     // ½»Ò×´ÎÊı£¬Õı³£½»Ò×µÄÂòÂôºÍ·´×·¸îÈâ
+	StrategyMode m_strategyMode;            // ç­–ç•¥æ¨¡å¼
+	std::vector<int32_t> m_params;          // ç­–ç•¥å‚æ•°
+	int32_t m_totalReturn;                  // æ€»æ”¶ç›Š
+	int32_t m_tReturn;                      // åšTæ€»æ”¶ç›Š
+	BigNumber m_annualReturn;               // å¹´åŒ–æ”¶ç›Šç‡
+	BigNumber m_annualTReturn;              // åšTå¹´åŒ–æ”¶ç›Šç‡
+	BigNumber m_maxDrawdown;                // æœ€å¤§å›æ’¤
+	BigNumber m_winRate;                    // èƒœç‡
+	BigNumber m_profitArea;                 // æ”¶ç›Šé¢ç§¯
+	BigNumber m_healthScore;                // å¥åº·å€¼
+	uint32_t m_tradeDays;                   // å®é™…äº¤æ˜“å¤©æ•°
+	uint32_t m_totalDays;                   // æ€»å¤©æ•°ï¼ˆç”¨äºè°ƒæ•´ï¼‰
+	std::vector<std::string> m_tradeLog;    // äº¤æ˜“æ—¥å¿—
+	std::vector<std::string> m_strategyLog; // ç­–ç•¥æ—¥å¿—
+	std::vector<uint32_t> m_tradeCount;     // äº¤æ˜“æ¬¡æ•°ï¼Œæ­£å¸¸äº¤æ˜“çš„ä¹°å–å’Œåè¿½å‰²è‚‰
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	StrategyResult();
 };
 
-/** µ¼Èë²ÎÊı
+/** å¯¼å…¥å‚æ•°
 */
 struct ImportParam
 {
-	// ²Ù×÷Ä£Ê½: OPERATE, HOLD, GIVE_UP
+	// æ“ä½œæ¨¡å¼: OPERATE, HOLD, GIVE_UP
 	int32_t m_operate;
-	// ĞéÄâÂô³ö¼Û¸ñ£¨Ã¿Ìì¼ÆËãµÄ²Î¿¼Âô¼Û£©
+	// è™šæ‹Ÿå–å‡ºä»·æ ¼ï¼ˆæ¯å¤©è®¡ç®—çš„å‚è€ƒå–ä»·ï¼‰
 	int32_t m_virtualSellPrice;
-	// ĞéÄâÂô³öÊ±¼äµã
+	// è™šæ‹Ÿå–å‡ºæ—¶é—´ç‚¹
 	ObserveTime m_virtualSellObserveTime;
-	// ĞéÄâÂòÈë¼Û¸ñ£¨Ã¿Ìì¼ÆËãµÄ²Î¿¼Âò¼Û£©
+	// è™šæ‹Ÿä¹°å…¥ä»·æ ¼ï¼ˆæ¯å¤©è®¡ç®—çš„å‚è€ƒä¹°ä»·ï¼‰
 	int32_t m_virtualBuyPrice;
-	// ĞéÄâÂòÈëÊ±¼äµã
+	// è™šæ‹Ÿä¹°å…¥æ—¶é—´ç‚¹
 	ObserveTime m_virtualBuyObserveTime;
-	// Êµ¼Ê/¸üĞÂºóµÄÂô³öÆğµã£¨ÓÃÓÚchase£©
+	// å®é™…/æ›´æ–°åçš„å–å‡ºèµ·ç‚¹ï¼ˆç”¨äºchaseï¼‰
 	int32_t m_realSellPrice;
-	// Êµ¼Ê/¸üĞÂºóµÄÂòÈëÆğµã£¨ÓÃÓÚcut£©
+	// å®é™…/æ›´æ–°åçš„ä¹°å…¥èµ·ç‚¹ï¼ˆç”¨äºcutï¼‰
 	int32_t m_realBuyPrice;
-	// ÊÇ·ñÂú²Ö
+	// æ˜¯å¦æ»¡ä»“
 	bool m_isFull;
 
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	ImportParam();
 
-	/** ÊÇ·ñÎª¿Õ
-	@return ·µ»ØÊÇ·ñÎª¿Õ
+	/** æ˜¯å¦ä¸ºç©º
+	@return è¿”å›æ˜¯å¦ä¸ºç©º
 	*/
 	bool empty();
 };
 
-/** ²ßÂÔ»ùÀà
-* ËùÓĞ¾ßÌå½»Ò×²ßÂÔµÄ³éÏó»ùÀà
+/** ç­–ç•¥åŸºç±»
+* æ‰€æœ‰å…·ä½“äº¤æ˜“ç­–ç•¥çš„æŠ½è±¡åŸºç±»
 */
 class Strategy
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	Strategy();
 
-	/** ĞéÎö¹¹º¯Êı
+	/** è™šææ„å‡½æ•°
 	*/
 	virtual ~Strategy();
 
-	/** Ã¿¸ö½»Ò×ÈÕµÄ²ßÂÔÖ´ĞĞÈë¿Ú
-	@param [in] date µ±Ç°½»Ò×ÈÕ
-	@return ·µ»ØÊÇ·ñÖ´ĞĞ³É¹¦
+	/** æ¯ä¸ªäº¤æ˜“æ—¥çš„ç­–ç•¥æ‰§è¡Œå…¥å£
+	@param [in] date å½“å‰äº¤æ˜“æ—¥
+	@return è¿”å›æ˜¯å¦æ‰§è¡ŒæˆåŠŸ
 	*/
 	virtual bool onTradingDay(uint32_t date) = 0;
 
-	/** ÃèÊö²ÎÊı
-	@param [in] params ²ÎÊı×é
-	@return ·µ»Ø²ÎÊıº¬Òå
+	/** æè¿°å‚æ•°
+	@param [in] params å‚æ•°ç»„
+	@return è¿”å›å‚æ•°å«ä¹‰
 	*/
 	virtual std::string describeParam(const std::vector<int32_t>& params);
 
-	/** Ìí¼Ó¹ÉÆ±´úÂëµ½²ßÂÔ¼à¿ØÁĞ±í
-	@param [in] stock ¹ÉÆ±´úÂë
+	/** æ·»åŠ è‚¡ç¥¨ä»£ç åˆ°ç­–ç•¥ç›‘æ§åˆ—è¡¨
+	@param [in] stock è‚¡ç¥¨ä»£ç 
 	*/
 	virtual void addStock(const std::string& stock);
 
-	/** »ñÈ¡²ßÂÔ¼à¿ØµÄ¹ÉÆ±ÁĞ±í
-	@return ·µ»Ø¹ÉÆ±´úÂëÁĞ±í
+	/** è·å–ç­–ç•¥ç›‘æ§çš„è‚¡ç¥¨åˆ—è¡¨
+	@return è¿”å›è‚¡ç¥¨ä»£ç åˆ—è¡¨
 	*/
 	std::vector<std::string> getStock() const;
 
-	/** ÉèÖÃÊĞ³¡Êı¾İÔ´
-	@param [in] spMarket ÊĞ³¡Êı¾İ¹²ÏíÖ¸Õë
+	/** è®¾ç½®å¸‚åœºæ•°æ®æº
+	@param [in] spMarket å¸‚åœºæ•°æ®å…±äº«æŒ‡é’ˆ
 	*/
 	virtual void setMarket(const std::shared_ptr<Market>& spMarket);
 
-	/** ÉèÖÃ×Ê½ğÕË»§
-	@param [in] spFund ×Ê½ğÕË»§¹²ÏíÖ¸Õë
+	/** è®¾ç½®èµ„é‡‘è´¦æˆ·
+	@param [in] spFund èµ„é‡‘è´¦æˆ·å…±äº«æŒ‡é’ˆ
 	*/
 	virtual void setFund(const std::shared_ptr<Fund>& spFund);
 
-	/** »ñÈ¡×Ê½ğÕË»§
-	@return ·µ»Ø×Ê½ğÕË»§¹²ÏíÖ¸Õë
+	/** è·å–èµ„é‡‘è´¦æˆ·
+	@return è¿”å›èµ„é‡‘è´¦æˆ·å…±äº«æŒ‡é’ˆ
 	*/
 	virtual std::shared_ptr<Fund> getFund();
 
-	/** ÌîÈë²¢¼ì²â²ÎÊıÊÇ·ñºÏÀí
-	@return ·µ»ØÊÇ·ñºÏÀí
+	/** å¡«å…¥å¹¶æ£€æµ‹å‚æ•°æ˜¯å¦åˆç†
+	@return è¿”å›æ˜¯å¦åˆç†
 	*/
 	virtual bool fillCheckParam();
 
-	/** ÉèÖÃ²ßÂÔ²ÎÊıÏòÁ¿
-	@param [in] params ²ßÂÔ²ÎÊıÏÂ±êÏòÁ¿
+	/** è®¾ç½®ç­–ç•¥å‚æ•°å‘é‡
+	@param [in] params ç­–ç•¥å‚æ•°ä¸‹æ ‡å‘é‡
 	*/
 	void setStrategyParam(const std::vector<int32_t>& param);
 
-	/** »ñÈ¡²ßÂÔ²ÎÊıÏòÁ¿
-	@return ·µ»Ø²ßÂÔ²ÎÊıµÄÏÂ±êÏòÁ¿
+	/** è·å–ç­–ç•¥å‚æ•°å‘é‡
+	@return è¿”å›ç­–ç•¥å‚æ•°çš„ä¸‹æ ‡å‘é‡
 	*/
 	std::vector<int32_t> getStrategyParam() const;
 
-	/** »ñÈ¡²ßÂÔ²ÎÊıÊÇ·ñÓĞĞ§
-	@return ·µ»Ø²ßÂÔ²ÎÊıÊÇ·ñÓĞĞ§
+	/** è·å–ç­–ç•¥å‚æ•°æ˜¯å¦æœ‰æ•ˆ
+	@return è¿”å›ç­–ç•¥å‚æ•°æ˜¯å¦æœ‰æ•ˆ
 	*/
 	virtual bool isStrategyParamValid() const;
 
-	/** »ñÈ¡²ßÂÔÄ£Ê½Ã¶¾Ù
-	@return ·µ»Ø²ßÂÔÄ£Ê½Ã¶¾ÙÖµ
+	/** è·å–ç­–ç•¥æ¨¡å¼æšä¸¾
+	@return è¿”å›ç­–ç•¥æ¨¡å¼æšä¸¾å€¼
 	*/
 	StrategyMode getStrategyMode() const;
 
-	/** »ñÈ¡²ßÂÔÃû³Æ
-	@return ·µ»Ø²ßÂÔÃû³Æ×Ö·û´®
+	/** è·å–ç­–ç•¥åç§°
+	@return è¿”å›ç­–ç•¥åç§°å­—ç¬¦ä¸²
 	*/
 	std::string getStrategyName() const;
 
-	/** »ñÈ¡µ±Ç°¼Û¸ñ£¬ÂôÒ»¼Û
-	@param [in] dayInfo µ±Ìì·ÖÊ±Êı¾İ
-	@param [in] time »ñÈ¡Ê±¼äµã
-	@return ·µ»Ø¼Û¸ñ
+	/** è·å–å½“å‰ä»·æ ¼ï¼Œå–ä¸€ä»·
+	@param [in] dayInfo å½“å¤©åˆ†æ—¶æ•°æ®
+	@param [in] time è·å–æ—¶é—´ç‚¹
+	@return è¿”å›ä»·æ ¼
 	*/
 	int32_t getCurrentPrice(const std::vector<int32_t>& dayInfo, ObserveTime time);
 
-	/** »ñÈ¡µ±Ç°Ö±Âò¼Û¸ñ
-	@param [in] dayInfo µ±Ìì·ÖÊ±Êı¾İ
-	@param [in] time »ñÈ¡Ê±¼äµã
-	@return ·µ»Ø¼Û¸ñ
+	/** è·å–å½“å‰ç›´ä¹°ä»·æ ¼
+	@param [in] dayInfo å½“å¤©åˆ†æ—¶æ•°æ®
+	@param [in] time è·å–æ—¶é—´ç‚¹
+	@return è¿”å›ä»·æ ¼
 	*/
 	int32_t getDirectBuyPrice(const std::vector<int32_t>& dayInfo, ObserveTime time);
 
-	/** »ñÈ¡µ±Ç°Ö±Âô¼Û¸ñ
-	@param [in] dayInfo µ±Ìì·ÖÊ±Êı¾İ
-	@param [in] time »ñÈ¡Ê±¼äµã
-	@return ·µ»Ø¼Û¸ñ
+	/** è·å–å½“å‰ç›´å–ä»·æ ¼
+	@param [in] dayInfo å½“å¤©åˆ†æ—¶æ•°æ®
+	@param [in] time è·å–æ—¶é—´ç‚¹
+	@return è¿”å›ä»·æ ¼
 	*/
 	int32_t getDirectSellPrice(const std::vector<int32_t>& dayInfo, ObserveTime time);
 
-	/** »ñÈ¡Çø¼ä×îĞ¡ÓĞĞ§¼Û¸ñ
-	@param [in] dayInfo µ±Ìì·ÖÊ±Êı¾İ
-	@param [in] timeBegin ¿ªÊ¼Ê±¼äµã
-	@param [in] timeEnd ½áÊøÊ±¼äµã
-	@return ·µ»Ø¼Û¸ñ
+	/** è·å–åŒºé—´æœ€å°æœ‰æ•ˆä»·æ ¼
+	@param [in] dayInfo å½“å¤©åˆ†æ—¶æ•°æ®
+	@param [in] timeBegin å¼€å§‹æ—¶é—´ç‚¹
+	@param [in] timeEnd ç»“æŸæ—¶é—´ç‚¹
+	@return è¿”å›ä»·æ ¼
 	*/
 	int32_t getMinPrice(const std::vector<int32_t>& dayInfo, ObserveTime timeBegin, ObserveTime timeEnd);
 
-	/** »ñÈ¡Çø¼ä×î´óÓĞĞ§¼Û¸ñ
-	@param [in] dayInfo µ±Ìì·ÖÊ±Êı¾İ
-	@param [in] timeBegin ¿ªÊ¼Ê±¼äµã
-	@param [in] timeEnd ½áÊøÊ±¼äµã
-	@return ·µ»Ø¼Û¸ñ
+	/** è·å–åŒºé—´æœ€å¤§æœ‰æ•ˆä»·æ ¼
+	@param [in] dayInfo å½“å¤©åˆ†æ—¶æ•°æ®
+	@param [in] timeBegin å¼€å§‹æ—¶é—´ç‚¹
+	@param [in] timeEnd ç»“æŸæ—¶é—´ç‚¹
+	@return è¿”å›ä»·æ ¼
 	*/
 	int32_t getMaxPrice(const std::vector<int32_t>& dayInfo, ObserveTime timeBegin, ObserveTime timeEnd);
 
-	/** ÉèÖÃµ¼Èë²ÎÊı
-	@param [in] import µ¼Èë²ÎÊı
+	/** è®¾ç½®å¯¼å…¥å‚æ•°
+	@param [in] import å¯¼å…¥å‚æ•°
 	*/
 	void setImportParam(const ImportParam& import);
 
-	/** »ñÈ¡µ¼Èë²ÎÊı
-	@return ·µ»Øµ¼Èë²ÎÊı
+	/** è·å–å¯¼å…¥å‚æ•°
+	@return è¿”å›å¯¼å…¥å‚æ•°
 	*/
 	ImportParam getImportParam();
 
-	/** ²ßÂÔÈÕÖ¾
-	@return ·µ»Ø²ßÂÔÈÕÖ¾
+	/** ç­–ç•¥æ—¥å¿—
+	@return è¿”å›ç­–ç•¥æ—¥å¿—
 	*/
 	std::vector<std::string> strategyLog();
 
-	/** ½»Ò×´ÎÊı
-	@return ·µ»Ø½»Ò×´ÎÊı
+	/** äº¤æ˜“æ¬¡æ•°
+	@return è¿”å›äº¤æ˜“æ¬¡æ•°
 	*/
 	std::vector<uint32_t> tradeCount();
 
 protected:
-	// ²ßÂÔ¼à¿ØµÄ¹ÉÆ±ÁĞ±í
+	// ç­–ç•¥ç›‘æ§çš„è‚¡ç¥¨åˆ—è¡¨
 	std::vector<std::string> m_vecStock;
 
-	// ÊĞ³¡Êı¾İÔ´
+	// å¸‚åœºæ•°æ®æº
 	std::shared_ptr<Market> m_spMarket;
 
-	// ×Ê½ğÕË»§
+	// èµ„é‡‘è´¦æˆ·
 	std::shared_ptr<Fund> m_spFund;
 
-	// ²ßÂÔ²ÎÊıÏòÁ¿
+	// ç­–ç•¥å‚æ•°å‘é‡
 	std::vector<int32_t> m_strategyParam;
 
-	// ²ßÂÔÀàĞÍ
+	// ç­–ç•¥ç±»å‹
 	StrategyMode m_mode;
 
-	// ²ßÂÔÃû³Æ
+	// ç­–ç•¥åç§°
 	std::string m_modeName;
 
-	// µ¼Èë²ÎÊı
+	// å¯¼å…¥å‚æ•°
 	ImportParam m_import;
 
-	// ²ßÂÔÈÕÖ¾
+	// ç­–ç•¥æ—¥å¿—
 	std::vector<std::string> m_strategyLog;
 
-	// ½»Ò×´ÎÊı
+	// äº¤æ˜“æ¬¡æ•°
 	std::vector<uint32_t> m_tradeCount;
 };

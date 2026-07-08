@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 class StockManager
 {
@@ -9,16 +9,16 @@ public:
 	static StockManager& instance();
 
 public:
-	/** ³õÊ¼»¯
+	/** åˆå§‹åŒ–
 	*/
 	void init();
 
-	/** »ñÈ¡½»Ò×ÈÕÁĞ±í
-	@return ·µ»Ø½»Ò×ÈÕÁĞ±í
+	/** è·å–äº¤æ˜“æ—¥åˆ—è¡¨
+	@return è¿”å›äº¤æ˜“æ—¥åˆ—è¡¨
 	*/
 	std::vector<int32_t> getAllTradingDays();
 
 private:
-	// ½»Ò×ÈÕÁĞ±í
+	// äº¤æ˜“æ—¥åˆ—è¡¨
 	std::vector<int32_t> m_tradingDays;
 };

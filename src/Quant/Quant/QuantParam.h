@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #define QUANT_SERVER_VERSION "1.0"
 

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "NetSender/NetSenderAPI.h"
 
 class ClientReceive : public ClientReceiveCallback
@@ -7,17 +7,17 @@ public:
 	ClientReceive();
 
 public:
-	/** ³õÊ¼»¯ÏìÓ¦º¯Êı
-	@param [in] serverId ·şÎñ½ø³Ì´úºÅ
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** åˆå§‹åŒ–å“åº”å‡½æ•°
+	@param [in] serverId æœåŠ¡è¿›ç¨‹ä»£å·
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void clientInitResponse(int32_t serverId, const char* buffer, int32_t length);
 
-	/** ·şÎñÆ÷ÏûÏ¢
-	@param [in] serverId ·şÎñ½ø³Ì´úºÅ
-	@param [in] buffer Êı¾İÄÚ´æ
-	@param [in] length Êı¾İ³¤¶È
+	/** æœåŠ¡å™¨æ¶ˆæ¯
+	@param [in] serverId æœåŠ¡è¿›ç¨‹ä»£å·
+	@param [in] buffer æ•°æ®å†…å­˜
+	@param [in] length æ•°æ®é•¿åº¦
 	*/
 	virtual void ServerMessage(int32_t serverId, const char* buffer, int32_t length);
 };

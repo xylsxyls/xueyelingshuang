@@ -1,4 +1,4 @@
-#include "StrategyTask.h"
+ï»¿#include "StrategyTask.h"
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -38,19 +38,19 @@ void StrategyTask::DoTask()
 	uint32_t actualDays = 0;
 	uint32_t totalDays = 0;
 
-	// »ñÈ¡ËùÓĞ½»Ò×ÈÕÁĞ±í
+	// è·å–æ‰€æœ‰äº¤æ˜“æ—¥åˆ—è¡¨
 	std::vector<int32_t> tradingDays = getTradingDays(StockManager::instance().getAllTradingDays());
-	// ¼ÇÂ¼Ã¿ÈÕ×Ê²úÖµÓÃÓÚ¼ÆËãÖ¸±ê
+	// è®°å½•æ¯æ—¥èµ„äº§å€¼ç”¨äºè®¡ç®—æŒ‡æ ‡
 	std::vector<int32_t> dailyValues;
 	dailyValues.reserve(tradingDays.size());
 
-	int32_t peakValue = m_spFund->getInitialFund(); // ·åÖµ×Ê²ú
-	BigNumber maxDrawdown = 0; // ×î´ó»Ø³·
-	BigNumber totalProfitArea = 0; // ×ÜÊÕÒæÃæ»ı
+	int32_t peakValue = m_spFund->getInitialFund(); // å³°å€¼èµ„äº§
+	BigNumber maxDrawdown = 0; // æœ€å¤§å›æ’¤
+	BigNumber totalProfitArea = 0; // æ€»æ”¶ç›Šé¢ç§¯
 
 	bool isParamPass = true;
 	uint32_t date = 0;
-	// ±éÀúËùÓĞ½»Ò×ÈÕ
+	// éå†æ‰€æœ‰äº¤æ˜“æ—¥
 	for (uint32_t i = 0; i < tradingDays.size(); ++i)
 	{
 		if (m_exit)
@@ -58,18 +58,18 @@ void StrategyTask::DoTask()
 			break;
 		}
 		date = (uint32_t)tradingDays[i];
-		// Ö´ĞĞ²ßÂÔ
+		// æ‰§è¡Œç­–ç•¥
 		if (!m_spStrategy->onTradingDay(date))
 		{
 			isParamPass = false;
 			break;
 		}
 
-		// ¼ÇÂ¼µ±ÈÕ×Ê²ú
+		// è®°å½•å½“æ—¥èµ„äº§
 		int32_t currentValue = m_spFund->getTotalValue(date);
 		dailyValues.push_back(currentValue);
 
-		// ¸üĞÂ·åÖµºÍ×î´ó»Ø³·
+		// æ›´æ–°å³°å€¼å’Œæœ€å¤§å›æ’¤
 		if (currentValue > peakValue)
 		{
 			peakValue = currentValue;
@@ -81,7 +81,7 @@ void StrategyTask::DoTask()
 			maxDrawdown = drawdown;
 		}
 
-		// ¼ÆËãµ±ÈÕÊÕÒæÃæ»ı£¨¼ò»¯°æ£ºµ±ÈÕÊÕÒæÂÊ£©
+		// è®¡ç®—å½“æ—¥æ”¶ç›Šé¢ç§¯ï¼ˆç®€åŒ–ç‰ˆï¼šå½“æ—¥æ”¶ç›Šç‡ï¼‰
 		if (i > 0)
 		{
 			int32_t prevValue = dailyValues[i - 1];
@@ -93,7 +93,7 @@ void StrategyTask::DoTask()
 		totalDays++;
 	}
 
-	// ÖĞ¶ÏÍË³ö
+	// ä¸­æ–­é€€å‡º
 	if (m_exit)
 	{
 		return;
@@ -101,7 +101,7 @@ void StrategyTask::DoTask()
 
 	if (isParamPass)
 	{
-		// Ç¿ÖÆÆ½²ÖËùÓĞÎ´Íê³É½»Ò×
+		// å¼ºåˆ¶å¹³ä»“æ‰€æœ‰æœªå®Œæˆäº¤æ˜“
 		m_spFund->closeAllTrades(date, !m_forceEnd);
 		if (!tradingDays.empty() && m_forceEnd)
 		{
@@ -110,11 +110,11 @@ void StrategyTask::DoTask()
 			dailyValues.push_back(currentValue);
 		}
 
-		// ¼ÆËã²ßÂÔÖ¸±ê
+		// è®¡ç®—ç­–ç•¥æŒ‡æ ‡
 		StrategyResult result = calculateStrategyMetrics(actualDays, totalDays, maxDrawdown,
 			totalProfitArea, dailyValues, date);
 
-		// ÉèÖÃ²ßÂÔIDºÍ²ÎÊı
+		// è®¾ç½®ç­–ç•¥IDå’Œå‚æ•°
 		result.m_strategyMode = m_spStrategy->getStrategyMode();
 		result.m_params = m_spStrategy->getStrategyParam();
 		result.m_tradeLog = m_spStrategy->getFund()->exportTradeRecords();
@@ -177,7 +177,7 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 
 	if (actualDays <= 0 || dailyValues.empty())
 	{
-		// Ã»ÓĞÓĞĞ§½»Ò×Êı¾İ£¬·µ»ØÄ¬ÈÏÖµ
+		// æ²¡æœ‰æœ‰æ•ˆäº¤æ˜“æ•°æ®ï¼Œè¿”å›é»˜è®¤å€¼
 		result.m_totalReturn = 0;
 		result.m_annualReturn = 0;
 		result.m_maxDrawdown = 0;
@@ -189,24 +189,24 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 		return result;
 	}
 
-	// ¼ÆËã×ÜÊÕÒæ 
+	// è®¡ç®—æ€»æ”¶ç›Š 
 	int32_t finalValue = dailyValues.back();
 	int32_t initialValue = m_spFund->getInitialFund();
 	result.m_totalReturn = finalValue - initialValue;
 
-	// ×öT×ÜÊÕÒæ
+	// åšTæ€»æ”¶ç›Š
 	result.m_tReturn = m_spStrategy->getFund()->allTProfit(lastDate);
 
-	// ¼ÆËãÄê»¯ÊÕÒæÂÊ£¨°´Êµ¼Ê½»Ò×ÌìÊıµ÷Õû£©
-	// ¼ÙÉèÒ»ÄêÓĞ250¸ö½»Ò×ÈÕ
+	// è®¡ç®—å¹´åŒ–æ”¶ç›Šç‡ï¼ˆæŒ‰å®é™…äº¤æ˜“å¤©æ•°è°ƒæ•´ï¼‰
+	// å‡è®¾ä¸€å¹´æœ‰250ä¸ªäº¤æ˜“æ—¥
 	BigNumber yearsProport = (BigNumber(250).toPrec(16) / BigNumber((int32_t)actualDays - 1));
 	result.m_annualReturn = (BigNumber(1) + BigNumber(result.m_totalReturn).toPrec(16) / initialValue).pow(yearsProport) - 1;
 	result.m_annualTReturn = (BigNumber(1) + BigNumber(result.m_tReturn).toPrec(16) / initialValue).pow(yearsProport) - 1;
 
-	// ÉèÖÃ×î´ó»Ø³·
+	// è®¾ç½®æœ€å¤§å›æ’¤
 	result.m_maxDrawdown = maxDrawdown;
 
-	// ¼ÆËãÊ¤ÂÊ£¨»ùÓÚÃ¿ÈÕÊÕÒæ£©
+	// è®¡ç®—èƒœç‡ï¼ˆåŸºäºæ¯æ—¥æ”¶ç›Šï¼‰
 	int32_t winningDays = 0;
 	for (size_t i = 1; i < dailyValues.size(); ++i)
 	{
@@ -217,10 +217,10 @@ StrategyResult StrategyTask::calculateStrategyMetrics(uint32_t actualDays, uint3
 	}
 	result.m_winRate = BigNumber(winningDays) / (BigNumber((int32_t)dailyValues.size()) - 1).zero();
 
-	// ÉèÖÃÊÕÒæÃæ»ı
+	// è®¾ç½®æ”¶ç›Šé¢ç§¯
 	result.m_profitArea = totalProfitArea;
 
-	// ¼ÆËã½¡¿µÖµ£¨»ùÓÚÊÕÒæÎÈ¶¨ĞÔºÍ»Ø³·£©
+	// è®¡ç®—å¥åº·å€¼ï¼ˆåŸºäºæ”¶ç›Šç¨³å®šæ€§å’Œå›æ’¤ï¼‰
 	result.m_healthScore = calculateHealthScore(result.m_totalReturn, maxDrawdown, result.m_winRate, dailyValues);
 
 	result.m_tradeDays = actualDays;
@@ -234,32 +234,32 @@ BigNumber StrategyTask::calculateHealthScore(int32_t totalReturn, BigNumber maxD
 {
 	BigNumber baseScore = 100;
 
-	// 1. »ùÓÚ×ÜÊÕÒæµÄÆÀ·Ö£¨40%È¨ÖØ£©
+	// 1. åŸºäºæ€»æ”¶ç›Šçš„è¯„åˆ†ï¼ˆ40%æƒé‡ï¼‰
 	BigNumber returnScore = 0;
 	if (totalReturn > 0)
 	{
-		returnScore = (std::min)(40, totalReturn); // Ã¿1%ÊÕÒæµÃ1·Ö£¬×î¸ß40·Ö
+		returnScore = (std::min)(40, totalReturn); // æ¯1%æ”¶ç›Šå¾—1åˆ†ï¼Œæœ€é«˜40åˆ†
 	}
 
-	// 2. »ùÓÚ×î´ó»Ø³·µÄ¿Û·Ö£¨30%È¨ÖØ£©
+	// 2. åŸºäºæœ€å¤§å›æ’¤çš„æ‰£åˆ†ï¼ˆ30%æƒé‡ï¼‰
 	BigNumber drawdownPenalty = 0;
-	if (maxDrawdown > 0.05) // ³¬¹ı5%¿ªÊ¼¿Û·Ö
+	if (maxDrawdown > 0.05) // è¶…è¿‡5%å¼€å§‹æ‰£åˆ†
 	{
-		drawdownPenalty = (std::min)(BigNumber(30), (maxDrawdown - 0.05) * 600); // Ã¿0.1%»Ø³·¿Û0.6·Ö
+		drawdownPenalty = (std::min)(BigNumber(30), (maxDrawdown - 0.05) * 600); // æ¯0.1%å›æ’¤æ‰£0.6åˆ†
 	}
 
-	// 3. »ùÓÚÊ¤ÂÊµÄÆÀ·Ö£¨20%È¨ÖØ£©
+	// 3. åŸºäºèƒœç‡çš„è¯„åˆ†ï¼ˆ20%æƒé‡ï¼‰
 	BigNumber winRateScore = 0;
-	if (winRate > 0.5) // Ê¤ÂÊ³¬¹ı50%¿ªÊ¼¼Ó·Ö
+	if (winRate > 0.5) // èƒœç‡è¶…è¿‡50%å¼€å§‹åŠ åˆ†
 	{
-		winRateScore = (std::min)(BigNumber(20), (winRate - 0.5) * 40); // Ã¿1%Ê¤ÂÊµÃ0.4·Ö
+		winRateScore = (std::min)(BigNumber(20), (winRate - 0.5) * 40); // æ¯1%èƒœç‡å¾—0.4åˆ†
 	}
 
-	// 4. »ùÓÚÊÕÒæÎÈ¶¨ĞÔµÄÆÀ·Ö£¨10%È¨ÖØ£©
+	// 4. åŸºäºæ”¶ç›Šç¨³å®šæ€§çš„è¯„åˆ†ï¼ˆ10%æƒé‡ï¼‰
 	BigNumber stabilityScore = 0;
 	if (dailyValues.size() > 1)
 	{
-		// ¼ÆËãÊÕÒæ²¨¶¯ÂÊ£¨¼ò»¯°æ£©
+		// è®¡ç®—æ”¶ç›Šæ³¢åŠ¨ç‡ï¼ˆç®€åŒ–ç‰ˆï¼‰
 		BigNumber sumReturns = 0;
 		BigNumber sumSquaredReturns = 0;
 
@@ -274,22 +274,22 @@ BigNumber StrategyTask::calculateHealthScore(int32_t totalReturn, BigNumber maxD
 		BigNumber variance = (sumSquaredReturns / (int32_t)(dailyValues.size() - 1)) - (meanReturn * meanReturn);
 		BigNumber volatility = variance.sqrt();
 
-		// ²¨¶¯ÂÊÔ½µÍ£¬ÎÈ¶¨ĞÔµÃ·ÖÔ½¸ß
-		if (volatility < 0.02) // ÈÕ²¨¶¯ÂÊµÍÓÚ2%
+		// æ³¢åŠ¨ç‡è¶Šä½ï¼Œç¨³å®šæ€§å¾—åˆ†è¶Šé«˜
+		if (volatility < 0.02) // æ—¥æ³¢åŠ¨ç‡ä½äº2%
 		{
 			stabilityScore = 10;
 		}
-		else if (volatility < 0.05) // ÈÕ²¨¶¯ÂÊ2%-5%
+		else if (volatility < 0.05) // æ—¥æ³¢åŠ¨ç‡2%-5%
 		{
 			stabilityScore = 5;
 		}
-		// ³¬¹ı5%²»µÃ·Ö
+		// è¶…è¿‡5%ä¸å¾—åˆ†
 	}
 
-	// ¼ÆËã×îÖÕ½¡¿µÖµ
+	// è®¡ç®—æœ€ç»ˆå¥åº·å€¼
 	BigNumber healthScore = baseScore + returnScore - drawdownPenalty + winRateScore + stabilityScore;
 
-	// È·±£·ÖÊıÔÚºÏÀí·¶Î§ÄÚ
+	// ç¡®ä¿åˆ†æ•°åœ¨åˆç†èŒƒå›´å†…
 	return (std::max)(BigNumber(0), (std::min)(BigNumber(100), healthScore));
 }
 

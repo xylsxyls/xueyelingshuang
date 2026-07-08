@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CTaskThreadManager/CTaskThreadManagerAPI.h"
 #include "Config.h"
 #include "Market.h"
@@ -7,18 +7,18 @@
 #include "LockFreeQueue/LockFreeQueueAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
 
-/** ¾ºÈüÅäÖÃ½á¹¹Ìå
+/** ç«èµ›é…ç½®ç»“æ„ä½“
 */
 struct CompetitionConfig
 {
-	uint32_t beginTime;                         // ¿ªÊ¼Ê±¼ä
-	uint32_t endTime;                           // ½áÊøÊ±¼ä
-	std::vector<std::string> stocks;            // ¹ÉÆ±ÁĞ±í
-	std::shared_ptr<Market> marketData;         // ÊĞ³¡Êı¾İ
-	int32_t initialFund;                        // ³õÊ¼×Ê½ğ£¨µ¥Î»£º·Ö£©
-	std::vector<std::vector<int32_t>> allParam; // ËùÓĞ²ÎÊı
+	uint32_t beginTime;                         // å¼€å§‹æ—¶é—´
+	uint32_t endTime;                           // ç»“æŸæ—¶é—´
+	std::vector<std::string> stocks;            // è‚¡ç¥¨åˆ—è¡¨
+	std::shared_ptr<Market> marketData;         // å¸‚åœºæ•°æ®
+	int32_t initialFund;                        // åˆå§‹èµ„é‡‘ï¼ˆå•ä½ï¼šåˆ†ï¼‰
+	std::vector<std::vector<int32_t>> allParam; // æ‰€æœ‰å‚æ•°
 
-	// Ä¬ÈÏ¹¹Ôìº¯Êı
+	// é»˜è®¤æ„é€ å‡½æ•°
 	CompetitionConfig() :
 		beginTime(g_config.m_allBeginTime),
 		endTime(g_config.m_allEndTime),
@@ -27,7 +27,7 @@ struct CompetitionConfig
 
 	}
 
-	// ´ø²ÎÊıµÄ¹¹Ôìº¯Êı
+	// å¸¦å‚æ•°çš„æ„é€ å‡½æ•°
 	CompetitionConfig(uint32_t begin, uint32_t end,
 		const std::vector<std::string>& stockList,
 		const std::shared_ptr<Market>& market,
@@ -42,25 +42,25 @@ struct CompetitionConfig
 	}
 };
 
-/** ¾ºÈü×îÖÕ½á¹û½á¹¹Ìå
+/** ç«èµ›æœ€ç»ˆç»“æœç»“æ„ä½“
 */
 struct CompetitionFinalResult
 {
-	std::vector<StrategyResult> rankedResults; // ÅÅĞòºóµÄ²ßÂÔ½á¹û
-	uint32_t totalStrategies;     // ×Ü²ßÂÔÊı
-	uint32_t completedStrategies; // Íê³É²ßÂÔÊı
-	BigNumber bestReturn;         // ×î¼ÑÊÕÒæÂÊ
-	BigNumber worstReturn;        // ×î²îÊÕÒæÂÊ
-	BigNumber averageReturn;      // Æ½¾ùÊÕÒæÂÊ
-	BigNumber averageAnnualReturn; // Æ½¾ùÄê»¯ÊÕÒæÂÊ
-	BigNumber averageMaxDrawdown; // Æ½¾ù×î´ó»Ø³·
-	BigNumber averageWinRate;     // Æ½¾ùÊ¤ÂÊ
-	BigNumber averageProfitArea;  // Æ½¾ùÊÕÒæÃæ»ı
-	BigNumber averageHealthScore; // Æ½¾ù½¡¿µÖµ
-	BigNumber medianReturn;       // ÖĞÎ»ÊıÊÕÒæÂÊ
-	BigNumber stdDevReturn;       // ÊÕÒæÂÊ±ê×¼²î
+	std::vector<StrategyResult> rankedResults; // æ’åºåçš„ç­–ç•¥ç»“æœ
+	uint32_t totalStrategies;     // æ€»ç­–ç•¥æ•°
+	uint32_t completedStrategies; // å®Œæˆç­–ç•¥æ•°
+	BigNumber bestReturn;         // æœ€ä½³æ”¶ç›Šç‡
+	BigNumber worstReturn;        // æœ€å·®æ”¶ç›Šç‡
+	BigNumber averageReturn;      // å¹³å‡æ”¶ç›Šç‡
+	BigNumber averageAnnualReturn; // å¹³å‡å¹´åŒ–æ”¶ç›Šç‡
+	BigNumber averageMaxDrawdown; // å¹³å‡æœ€å¤§å›æ’¤
+	BigNumber averageWinRate;     // å¹³å‡èƒœç‡
+	BigNumber averageProfitArea;  // å¹³å‡æ”¶ç›Šé¢ç§¯
+	BigNumber averageHealthScore; // å¹³å‡å¥åº·å€¼
+	BigNumber medianReturn;       // ä¸­ä½æ•°æ”¶ç›Šç‡
+	BigNumber stdDevReturn;       // æ”¶ç›Šç‡æ ‡å‡†å·®
 
-	// Ä¬ÈÏ¹¹Ôìº¯Êı
+	// é»˜è®¤æ„é€ å‡½æ•°
 	CompetitionFinalResult() :
 		totalStrategies(0),
 		completedStrategies(0),
@@ -96,19 +96,19 @@ public:
 	void setParam(bool isShowResult, bool isShowTradeLog);
 
 private:
-	// Ïß³ÌIDÁĞ±í
+	// çº¿ç¨‹IDåˆ—è¡¨
 	std::vector<uint32_t> m_vecThreadId;
-	// ¼ÆËã×îÖÕ½á¹ûÏß³Ì
+	// è®¡ç®—æœ€ç»ˆç»“æœçº¿ç¨‹
 	uint32_t m_resultThreadId;
-	// ÅäÖÃĞÅÏ¢£¬²ßÂÔÄ£Ê½£¬ÅäÖÃĞÅÏ¢
+	// é…ç½®ä¿¡æ¯ï¼Œç­–ç•¥æ¨¡å¼ï¼Œé…ç½®ä¿¡æ¯
 	std::map<int32_t, CompetitionConfig> m_competitionConfigMap;
-	// ÎŞËø¶ÓÁĞÓÃÓÚ½á¹ûÊÕ¼¯
+	// æ— é”é˜Ÿåˆ—ç”¨äºç»“æœæ”¶é›†
 	LockFreeQueue<std::shared_ptr<StrategyResult>> m_resultQueue;
 	Semaphore m_resultSemaphore;
 	std::map<int32_t, std::vector<std::shared_ptr<StrategyResult>>> m_resultMap;
 	//std::vector<StrategyResult> m_intermediateResults;
 	CompetitionFinalResult m_finalResult;
 	bool m_isShowResult;
-	// ÊÇ·ñÕ¹Ê¾½»Ò×¼ÇÂ¼ÈÕÖ¾
+	// æ˜¯å¦å±•ç¤ºäº¤æ˜“è®°å½•æ—¥å¿—
 	bool m_isShowTradeLog;
 };

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <vector>
 #include <map>
 #include <string>
@@ -7,55 +7,55 @@
 class Market
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	Market();
 
-	/** ³õÊ¼»¯ÊĞ³¡Êı¾İ
-	@param [in] beginTime ¿ªÊ¼Ê±¼ä
-	@param [in] endTime ½áÊøÊ±¼ä
+	/** åˆå§‹åŒ–å¸‚åœºæ•°æ®
+	@param [in] beginTime å¼€å§‹æ—¶é—´
+	@param [in] endTime ç»“æŸæ—¶é—´
 	*/
 	void init(uint32_t beginTime, uint32_t endTime);
 
-	/** Ìí¼Ó¹ÉÆ±µ½ÊĞ³¡Êı¾İ
-	@param [in] stock ¹ÉÆ±´úÂë
+	/** æ·»åŠ è‚¡ç¥¨åˆ°å¸‚åœºæ•°æ®
+	@param [in] stock è‚¡ç¥¨ä»£ç 
 	*/
 	void addStock(const std::string& stock);
 
-	/** »ñÈ¡¹ÉÆ±ÔÚÖ¸¶¨ÈÕÆÚµÄÊı¾İ
-	@param [in] stock ¹ÉÆ±´úÂë
-	@param [in] date ÈÕÆÚ
-	@return ·µ»Ø¸ÃÈÕÆÚµÄĞĞÇéÊı¾İÏòÁ¿£¬Èç¹ûÕÒ²»µ½·µ»Ø¿ÕÏòÁ¿
+	/** è·å–è‚¡ç¥¨åœ¨æŒ‡å®šæ—¥æœŸçš„æ•°æ®
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@param [in] date æ—¥æœŸ
+	@return è¿”å›è¯¥æ—¥æœŸçš„è¡Œæƒ…æ•°æ®å‘é‡ï¼Œå¦‚æœæ‰¾ä¸åˆ°è¿”å›ç©ºå‘é‡
 	*/
 	const std::vector<int32_t>& getStockData(const std::string& stock, uint32_t date) const;
 
-	/** »ñÈ¡¹ÉÆ±ÔÚËùÓĞÈÕÆÚµÄÊı¾İ
-	@param [in] stock ¹ÉÆ±´úÂë
-	@return ·µ»ØËùÓĞÈÕÆÚµÄĞĞÇéÊı¾İÏòÁ¿£¬Èç¹ûÕÒ²»µ½·µ»Ø¿ÕÏòÁ¿
+	/** è·å–è‚¡ç¥¨åœ¨æ‰€æœ‰æ—¥æœŸçš„æ•°æ®
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@return è¿”å›æ‰€æœ‰æ—¥æœŸçš„è¡Œæƒ…æ•°æ®å‘é‡ï¼Œå¦‚æœæ‰¾ä¸åˆ°è¿”å›ç©ºå‘é‡
 	*/
 	const std::vector<std::vector<int32_t>>& getAllStockData(const std::string& stock) const;
 
-	/** »ñÈ¡¿ªÊ¼Ê±¼ä
-	@return ·µ»Ø¿ªÊ¼Ê±¼ä
+	/** è·å–å¼€å§‹æ—¶é—´
+	@return è¿”å›å¼€å§‹æ—¶é—´
 	*/
 	uint32_t getBeginTime() const;
 
-	/** »ñÈ¡½áÊøÊ±¼ä
-	@return ·µ»Ø½áÊøÊ±¼ä
+	/** è·å–ç»“æŸæ—¶é—´
+	@return è¿”å›ç»“æŸæ—¶é—´
 	*/
 	uint32_t getEndTime() const;
 
-	/** ¼ì²é¹ÉÆ±ÊÇ·ñ´æÔÚ
-	@param [in] stock ¹ÉÆ±´úÂë
-	@return ·µ»ØÊÇ·ñ´æÔÚ
+	/** æ£€æŸ¥è‚¡ç¥¨æ˜¯å¦å­˜åœ¨
+	@param [in] stock è‚¡ç¥¨ä»£ç 
+	@return è¿”å›æ˜¯å¦å­˜åœ¨
 	*/
 	bool hasStock(const std::string& stock) const;
 
 private:
-	// ¹ÉÆ±Êı¾İÓ³Éä£º¹ÉÆ±´úÂë -> ÈÕÆÚÊı¾İÏòÁ¿
+	// è‚¡ç¥¨æ•°æ®æ˜ å°„ï¼šè‚¡ç¥¨ä»£ç  -> æ—¥æœŸæ•°æ®å‘é‡
 	std::map<std::string, std::vector<std::vector<int32_t>>> m_stockData;
 
-	// ÈÕÆÚË÷ÒıÓ³Éä£º¹ÉÆ±´úÂë -> ÈÕÆÚµ½Ë÷ÒıµÄÓ³Éä
+	// æ—¥æœŸç´¢å¼•æ˜ å°„ï¼šè‚¡ç¥¨ä»£ç  -> æ—¥æœŸåˆ°ç´¢å¼•çš„æ˜ å°„
 	std::map<std::string, std::map<uint32_t, size_t>> m_dateIndex;
 
 	uint32_t m_beginTime;

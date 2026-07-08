@@ -1,4 +1,4 @@
-#include "QuantStrategyManager.h"
+﻿#include "QuantStrategyManager.h"
 #include "S1100B1400Strategy.h"
 #include "WaveStrategy.h"
 

@@ -1,26 +1,26 @@
-#pragma once
+ï»¿#pragma once
 #include "Strategy.h"
 #include <memory>
 
-/** ²ßÂÔ¹ÜÀíÆ÷Àà
-* ¸ºÔğ´´½¨½»Ò×²ßÂÔÊµÀı
+/** ç­–ç•¥ç®¡ç†å™¨ç±»
+* è´Ÿè´£åˆ›å»ºäº¤æ˜“ç­–ç•¥å®ä¾‹
 */
 class QuantStrategyManager
 {
 protected:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	QuantStrategyManager();
 
 public:
-	/** »ñÈ¡µ¥Ò»ÊµÀı
-	@return ·µ»Ø²ßÂÔ¹ÜÀíÆ÷µ¥Ò»ÊµÀı
+	/** è·å–å•ä¸€å®ä¾‹
+	@return è¿”å›ç­–ç•¥ç®¡ç†å™¨å•ä¸€å®ä¾‹
 	*/
 	static QuantStrategyManager& instance();
 
-	/** ´´½¨²ßÂÔÊµÀı
-	@param [in] mode ²ßÂÔÄ£Ê½Ã¶¾Ù
-	@return ·µ»Ø²ßÂÔÖ¸Õë
+	/** åˆ›å»ºç­–ç•¥å®ä¾‹
+	@param [in] mode ç­–ç•¥æ¨¡å¼æšä¸¾
+	@return è¿”å›ç­–ç•¥æŒ‡é’ˆ
 	*/
 	std::shared_ptr<Strategy> createStrategy(StrategyMode mode);
 };

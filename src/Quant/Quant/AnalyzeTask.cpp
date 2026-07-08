@@ -1,4 +1,4 @@
-#include "AnalyzeTask.h"
+ï»¿#include "AnalyzeTask.h"
 #include "Ctxt/CtxtAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include "Config.h"
@@ -116,15 +116,15 @@ std::vector<int> AnalyzeTask::toDayInfo(const std::string& path, const std::map<
 
 int32_t AnalyzeTask::currentPrice(int32_t time, const std::map<int, std::vector<PriceInfo>>& priceInfo)
 {
-	// 1. ²éÕÒµ±Ç°Ê±¼ä¶ÔÓ¦µÄ¼ÇÂ¼
+	// 1. æŸ¥æ‰¾å½“å‰æ—¶é—´å¯¹åº”çš„è®°å½•
 	auto it = priceInfo.find(time);
 	if (it != priceInfo.end())
 	{
-		// ´æÔÚµ±Ç°Ê±¼ä½Úµã£¬¼ì²évectorÊÇ·ñ·Ç¿Õ
+		// å­˜åœ¨å½“å‰æ—¶é—´èŠ‚ç‚¹ï¼Œæ£€æŸ¥vectoræ˜¯å¦éç©º
 		const auto& vec = it->second;
 		if (!vec.empty())
 		{
-			// È¡vector×îºóÒ»¸öÓĞĞ§¼ÇÂ¼£¨buy_sellÎª'S'£©
+			// å–vectoræœ€åä¸€ä¸ªæœ‰æ•ˆè®°å½•ï¼ˆbuy_sellä¸º'S'ï¼‰
 			int32_t vecCount = (int32_t)vec.size();
 			while (vecCount-- != 0)
 			{
@@ -137,15 +137,15 @@ int32_t AnalyzeTask::currentPrice(int32_t time, const std::map<int, std::vector<
 		}
 	}
 
-	// 2. µ±Ç°Ê±¼äÎŞ¼ÇÂ¼£¬²éÕÒºóĞø×î½üµÄÊ±¼ä½Úµã£¨Ê±¼ä > µ±Ç°time£©
-	it = priceInfo.upper_bound(time); // upper_bound·µ»ØµÚÒ»¸ö´óÓÚtimeµÄµü´úÆ÷
+	// 2. å½“å‰æ—¶é—´æ— è®°å½•ï¼ŒæŸ¥æ‰¾åç»­æœ€è¿‘çš„æ—¶é—´èŠ‚ç‚¹ï¼ˆæ—¶é—´ > å½“å‰timeï¼‰
+	it = priceInfo.upper_bound(time); // upper_boundè¿”å›ç¬¬ä¸€ä¸ªå¤§äºtimeçš„è¿­ä»£å™¨
 	if (it != priceInfo.end())
 	{
-		// ´æÔÚºóĞøÊ±¼ä½Úµã£¬¼ì²évectorÊÇ·ñ·Ç¿Õ
+		// å­˜åœ¨åç»­æ—¶é—´èŠ‚ç‚¹ï¼Œæ£€æŸ¥vectoræ˜¯å¦éç©º
 		const auto& vec = it->second;
 		if (!vec.empty())
 		{
-			// È¡vectorµÚÒ»¸öÓĞĞ§¼ÇÂ¼£¨buy_sellÎª'S'£©
+			// å–vectorç¬¬ä¸€ä¸ªæœ‰æ•ˆè®°å½•ï¼ˆbuy_sellä¸º'S'ï¼‰
 			int32_t vecIndex = -1;
 			while (vecIndex++ != vec.size() - 1)
 			{
@@ -158,7 +158,7 @@ int32_t AnalyzeTask::currentPrice(int32_t time, const std::map<int, std::vector<
 		}
 	}
 
-	// 3. ÎŞÈÎºÎÓĞĞ§¼ÇÂ¼£¬·µ»Ø0
+	// 3. æ— ä»»ä½•æœ‰æ•ˆè®°å½•ï¼Œè¿”å›0
 	RCSend("analyze error");
 	return 0;
 }
@@ -170,9 +170,9 @@ std::pair<int32_t, int32_t> AnalyzeTask::directPrice(
 	int32_t buyPrice = 0;
 	int32_t sellPrice = 0;
 
-	// ¼ÆËãÂòÈë¼Û¸ñ£¨¹Ø×¢Âôµ¥'S'£©
+	// è®¡ç®—ä¹°å…¥ä»·æ ¼ï¼ˆå…³æ³¨å–å•'S'ï¼‰
 	{
-		// »ù×¼¼Û¸ñ£ºµ±Ç°Âô1¼ÛºÍÂò1¼Û£¨Âô1¼Û-1£©
+		// åŸºå‡†ä»·æ ¼ï¼šå½“å‰å–1ä»·å’Œä¹°1ä»·ï¼ˆå–1ä»·-1ï¼‰
 		int32_t currentAsk = currentPrice(time, priceInfo);
 		int32_t currentBid = currentAsk - 1;
 
@@ -185,26 +185,26 @@ std::pair<int32_t, int32_t> AnalyzeTask::directPrice(
 		{
 			for (const auto& info : timeIt->second)
 			{
-				// ºöÂÔÎŞĞ§¼ÇÂ¼
+				// å¿½ç•¥æ— æ•ˆè®°å½•
 				if (info.buy_sell == '\0')
 				{
 					continue;
 				}
 
-				// Ö»´¦ÀíÂôµ¥
+				// åªå¤„ç†å–å•
 				if (info.buy_sell != 'S')
 				{
 					continue;
 				}
 
-				// ºöÂÔ³õÊ¼½»Ò×
+				// å¿½ç•¥åˆå§‹äº¤æ˜“
 				if (ignored < g_config.m_ignoreTrans)
 				{
 					ignored++;
 					continue;
 				}
 
-				// ¼Û¸ñÀ­ÉıÅĞ¶Ï
+				// ä»·æ ¼æ‹‰å‡åˆ¤æ–­
 				if (info.price >= currentAsk)
 				{
 					accumulatedShares = 0;
@@ -214,12 +214,12 @@ std::pair<int32_t, int32_t> AnalyzeTask::directPrice(
 					continue;
 				}
 
-				// ÀÛ¼ÆÓĞĞ§ÊÖÊı
+				// ç´¯è®¡æœ‰æ•ˆæ‰‹æ•°
 				if (info.price <= currentBid)
 				{
 					accumulatedShares += info.shares;
 
-					// ´ï±êÊ±¼ÇÂ¼¼Û¸ñ²¢ÍË³öÑ­»·
+					// è¾¾æ ‡æ—¶è®°å½•ä»·æ ¼å¹¶é€€å‡ºå¾ªç¯
 					if (accumulatedShares >= g_config.m_normalShares)
 					{
 						buyFound = true;
@@ -231,9 +231,9 @@ std::pair<int32_t, int32_t> AnalyzeTask::directPrice(
 		buyPrice = currentBid;
 	}
 
-	// ¼ÆËãÂô³ö¼Û¸ñ£¨¹Ø×¢Âòµ¥'B'£©
+	// è®¡ç®—å–å‡ºä»·æ ¼ï¼ˆå…³æ³¨ä¹°å•'B'ï¼‰
 	{
-		// »ù×¼¼Û¸ñ£ºµ±Ç°Âô1¼ÛºÍÂò1¼Û£¨Âô1¼Û-1£©
+		// åŸºå‡†ä»·æ ¼ï¼šå½“å‰å–1ä»·å’Œä¹°1ä»·ï¼ˆå–1ä»·-1ï¼‰
 		int32_t currentAsk = currentPrice(time, priceInfo);
 		int32_t currentBid = currentAsk - 1;
 
@@ -247,26 +247,26 @@ std::pair<int32_t, int32_t> AnalyzeTask::directPrice(
 		{
 			for (const auto& info : timeIt->second)
 			{
-				// ºöÂÔÎŞĞ§¼ÇÂ¼
+				// å¿½ç•¥æ— æ•ˆè®°å½•
 				if (info.buy_sell == '\0')
 				{
 					continue;
 				}
 
-				// Ö»´¦ÀíÂòµ¥
+				// åªå¤„ç†ä¹°å•
 				if (info.buy_sell != 'B')
 				{
 					continue;
 				}
 
-				// ºöÂÔ³õÊ¼½»Ò×
+				// å¿½ç•¥åˆå§‹äº¤æ˜“
 				if (ignored < g_config.m_ignoreTrans)
 				{
 					ignored++;
 					continue;
 				}
 
-				// ¼Û¸ñÏÂµøÅĞ¶Ï
+				// ä»·æ ¼ä¸‹è·Œåˆ¤æ–­
 				if (info.price <= currentBid)
 				{
 					accumulatedShares = 0;
@@ -276,12 +276,12 @@ std::pair<int32_t, int32_t> AnalyzeTask::directPrice(
 					continue;
 				}
 
-				// ÀÛ¼ÆÓĞĞ§ÊÖÊı
+				// ç´¯è®¡æœ‰æ•ˆæ‰‹æ•°
 				if (info.price >= currentAsk)
 				{
 					accumulatedShares += info.shares;
 
-					// ´ï±êÊ±¼ÇÂ¼¼Û¸ñ²¢ÍË³öÑ­»·
+					// è¾¾æ ‡æ—¶è®°å½•ä»·æ ¼å¹¶é€€å‡ºå¾ªç¯
 					if (accumulatedShares >= g_config.m_normalShares)
 					{
 						sellFound = true;
@@ -301,16 +301,16 @@ std::pair<int32_t, int32_t> AnalyzeTask::bestPrice(const std::map<int32_t, std::
 	if (timeInfo.empty())
 	{
 		RCSend("bid ask empty");
-		return{ 0, 0 }; // ¿ÕÊı¾İ·µ»ØÄ¬ÈÏÖµ£¬¿É¸ù¾İÊµ¼ÊĞèÇóµ÷Õû
+		return{ 0, 0 }; // ç©ºæ•°æ®è¿”å›é»˜è®¤å€¼ï¼Œå¯æ ¹æ®å®é™…éœ€æ±‚è°ƒæ•´
 	}
 
-	// ¼ÆËã×î¼ÑÂò¼Û£º´Ó×îµÍ¼Û£¨µÍµ½¸ß£©ÀÛ¼Ó
+	// è®¡ç®—æœ€ä½³ä¹°ä»·ï¼šä»æœ€ä½ä»·ï¼ˆä½åˆ°é«˜ï¼‰ç´¯åŠ 
 	int32_t bestBid = 0;
 	int32_t totalBuySum = 0;
 	auto it = timeInfo.begin();
 	for (; it != timeInfo.end(); ++it)
 	{
-		// ÀÛ¼Óµ±Ç°¼Û¸ñµÄÂòÂô×ÜÊÖÊı£¨Âò+Âô£©
+		// ç´¯åŠ å½“å‰ä»·æ ¼çš„ä¹°å–æ€»æ‰‹æ•°ï¼ˆä¹°+å–ï¼‰
 		totalBuySum += it->second.first + it->second.second;
 		if (totalBuySum >= g_config.m_normalShares)
 		{
@@ -318,21 +318,21 @@ std::pair<int32_t, int32_t> AnalyzeTask::bestPrice(const std::map<int32_t, std::
 			break;
 		}
 	}
-	// Èô×ÜºÍ²»×ã£¬¸ù¾İ×î¸ß¼ÛµÄÂòÂô±êÊ¶µ÷Õû
+	// è‹¥æ€»å’Œä¸è¶³ï¼Œæ ¹æ®æœ€é«˜ä»·çš„ä¹°å–æ ‡è¯†è°ƒæ•´
 	if (totalBuySum < g_config.m_normalShares)
     {
 		auto highestIt = timeInfo.rbegin();
-		// ×î¸ß¼ÛÎªÂò¼Û
+		// æœ€é«˜ä»·ä¸ºä¹°ä»·
 		bestBid = highestIt->first;
 	}
 
-	// ¼ÆËã×î¼ÑÂô¼Û£º´Ó×î¸ß¼Û£¨¸ßµ½µÍ£©ÀÛ¼Ó£¨Ê¹ÓÃ·´Ïòµü´úÆ÷£©
+	// è®¡ç®—æœ€ä½³å–ä»·ï¼šä»æœ€é«˜ä»·ï¼ˆé«˜åˆ°ä½ï¼‰ç´¯åŠ ï¼ˆä½¿ç”¨åå‘è¿­ä»£å™¨ï¼‰
 	int32_t bestAsk = 0;
 	int32_t totalSellSum = 0;
 	auto reverseIt = timeInfo.rbegin();
 	for (; reverseIt != timeInfo.rend(); ++reverseIt)
 	{
-		// ÀÛ¼Óµ±Ç°¼Û¸ñµÄÂòÂô×ÜÊÖÊı£¨Âò+Âô£©
+		// ç´¯åŠ å½“å‰ä»·æ ¼çš„ä¹°å–æ€»æ‰‹æ•°ï¼ˆä¹°+å–ï¼‰
 		totalSellSum += reverseIt->second.first + reverseIt->second.second;
 		if (totalSellSum >= g_config.m_normalShares)
 		{
@@ -340,11 +340,11 @@ std::pair<int32_t, int32_t> AnalyzeTask::bestPrice(const std::map<int32_t, std::
 			break;
 		}
 	}
-	// Èô×ÜºÍ²»×ã£¬¸ù¾İ×îµÍ¼ÛµÄÂòÂô±êÊ¶µ÷Õû
+	// è‹¥æ€»å’Œä¸è¶³ï¼Œæ ¹æ®æœ€ä½ä»·çš„ä¹°å–æ ‡è¯†è°ƒæ•´
 	if (totalSellSum < g_config.m_normalShares)
 	{
 		auto lowestIt = timeInfo.begin();
-		// ×îµÍ¼ÛÎªÂô¼Û
+		// æœ€ä½ä»·ä¸ºå–ä»·
 		bestAsk = lowestIt->first;
 	}
 
@@ -363,59 +363,59 @@ std::map<int32_t, std::pair<int32_t, int32_t>> AnalyzeTask::calcTimeInfo(
 {
 	std::map<int32_t, std::pair<int32_t, int32_t>> result;
 
-	// ¿ÕÊı¾İÖ±½Ó·µ»Ø
+	// ç©ºæ•°æ®ç›´æ¥è¿”å›
 	if (priceInfo.empty())
 	{
 		return result;
 	}
 
-	// ÕÒµ½ÆğÊ¼Ê±¼äµÄµü´úÆ÷£¨ÀûÓÃmapÓĞĞòĞÔ£¬´ÓtimeBegin¿ªÊ¼±éÀú£©
+	// æ‰¾åˆ°èµ·å§‹æ—¶é—´çš„è¿­ä»£å™¨ï¼ˆåˆ©ç”¨mapæœ‰åºæ€§ï¼Œä»timeBeginå¼€å§‹éå†ï¼‰
 	auto timeIt = priceInfo.upper_bound(timeBegin);
-	// Èç¹ûÆğÊ¼Ê±¼ä²»´æÔÚ£¬ÕÒµÚÒ»¸ö´óÓÚtimeBeginµÄÎ»ÖÃ
+	// å¦‚æœèµ·å§‹æ—¶é—´ä¸å­˜åœ¨ï¼Œæ‰¾ç¬¬ä¸€ä¸ªå¤§äºtimeBeginçš„ä½ç½®
 	if (timeIt == priceInfo.end())
 	{
 		return result;
 	}
 
-	// ±éÀúÊ±¼ä·¶Î§ÄÚµÄËùÓĞ½Úµã£¨²»°üº¬timeBegin°üº¬timeEnd£©
+	// éå†æ—¶é—´èŒƒå›´å†…çš„æ‰€æœ‰èŠ‚ç‚¹ï¼ˆä¸åŒ…å«timeBeginåŒ…å«timeEndï¼‰
 	while (timeIt != priceInfo.end())
 	{
 		int32_t currentTime = timeIt->first;
-		// ³¬³ö½áÊøÊ±¼äÔòÖÕÖ¹±éÀú
+		// è¶…å‡ºç»“æŸæ—¶é—´åˆ™ç»ˆæ­¢éå†
 		if (currentTime > timeEnd)
 		{
 			break;
 		}
 
-		// ±éÀúµ±Ç°Ê±¼äµãµÄËùÓĞPriceInfo£¨ÓÃµü´úÆ÷£¬²»ÓÃ·¶Î§for£©
+		// éå†å½“å‰æ—¶é—´ç‚¹çš„æ‰€æœ‰PriceInfoï¼ˆç”¨è¿­ä»£å™¨ï¼Œä¸ç”¨èŒƒå›´forï¼‰
 		const std::vector<PriceInfo>& infoList = timeIt->second;
 		auto infoIt = infoList.begin();
 		while (infoIt != infoList.end())
 		{
-			// ºöÂÔbuy_sellÎª0µÄÎŞĞ§Êı¾İ
+			// å¿½ç•¥buy_sellä¸º0çš„æ— æ•ˆæ•°æ®
 			if (infoIt->buy_sell == 0)
 			{
 				++infoIt;
 				continue;
 			}
 
-			// »ñÈ¡µ±Ç°¼Û¸ñµÄÍ³¼ÆÏî£¨²»´æÔÚÔò×Ô¶¯³õÊ¼»¯£©
+			// è·å–å½“å‰ä»·æ ¼çš„ç»Ÿè®¡é¡¹ï¼ˆä¸å­˜åœ¨åˆ™è‡ªåŠ¨åˆå§‹åŒ–ï¼‰
 			auto& priceStat = result[infoIt->price];
 
-			// ÀÛ¼Ó¶ÔÓ¦ÀàĞÍµÄÊÖÊı
+			// ç´¯åŠ å¯¹åº”ç±»å‹çš„æ‰‹æ•°
 			if (infoIt->buy_sell == 'B')
 			{
-				priceStat.first += infoIt->shares;  // BÊÖÊı´æ×ó±ß
+				priceStat.first += infoIt->shares;  // Bæ‰‹æ•°å­˜å·¦è¾¹
 			}
 			else if (infoIt->buy_sell == 'S')
 			{
-				priceStat.second += infoIt->shares;  // SÊÖÊı´æÓÒ±ß
+				priceStat.second += infoIt->shares;  // Sæ‰‹æ•°å­˜å³è¾¹
 			}
 
 			++infoIt;
 		}
 
-		// ÒÆ¶¯µ½ÏÂÒ»¸öÊ±¼äµã
+		// ç§»åŠ¨åˆ°ä¸‹ä¸€ä¸ªæ—¶é—´ç‚¹
 		++timeIt;
 	}
 

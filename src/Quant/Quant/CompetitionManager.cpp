@@ -1,4 +1,4 @@
-#include "CompetitionManager.h"
+﻿#include "CompetitionManager.h"
 #include "StrategyTask.h"
 #include "QuantStrategyManager.h"
 #include <algorithm>

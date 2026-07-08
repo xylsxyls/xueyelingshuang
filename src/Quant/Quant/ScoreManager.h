@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Strategy.h"
 
 class ScoreManager
@@ -10,55 +10,55 @@ public:
 	static ScoreManager& instance();
 
 public:
-	/** »ñÈ¡×î¼Ñ²ßÂÔ
-	@param [in] time Ê±¼äµã
-	@return ×î¼Ñ²ßÂÔÀàĞÍ£¬×î¼Ñ²ßÂÔ²ÎÊı
+	/** è·å–æœ€ä½³ç­–ç•¥
+	@param [in] time æ—¶é—´ç‚¹
+	@return æœ€ä½³ç­–ç•¥ç±»å‹ï¼Œæœ€ä½³ç­–ç•¥å‚æ•°
 	*/
 	std::pair<StrategyMode, std::vector<int32_t>> bestStrategy(uint32_t time);
 
 private:
-	/** Äê»¯TÊÕÒæÂÊ²îÖµ
-	@param [in, out] vecStrategyResult ²ßÂÔ×é£¬pairÖĞµÚ¶ş¸öÎª·ÖÊı£¬ÄÚ²¿vectorÊÇ²»Í¬ÖÜÆÚµÄ²ßÂÔ£¬Íâ²ãvectorÊÇËùÓĞ²ßÂÔ
-	@param [in] highScore ¸ÃÏî×î¸ß·ÖÖµ
+	/** å¹´åŒ–Tæ”¶ç›Šç‡å·®å€¼
+	@param [in, out] vecStrategyResult ç­–ç•¥ç»„ï¼Œpairä¸­ç¬¬äºŒä¸ªä¸ºåˆ†æ•°ï¼Œå†…éƒ¨vectoræ˜¯ä¸åŒå‘¨æœŸçš„ç­–ç•¥ï¼Œå¤–å±‚vectoræ˜¯æ‰€æœ‰ç­–ç•¥
+	@param [in] highScore è¯¥é¡¹æœ€é«˜åˆ†å€¼
 	*/
 	void annualTDiff(std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult,
 		double highScore);
 
-	/** Äê»¯TÊÕÒæÂÊ×ÜºÍ
-	@param [in, out] vecStrategyResult ²ßÂÔ×é
-	@param [in] count ¼ÆËãµÄÖÜÆÚ´ÎÊı£¬´ÓºóÏòÇ°
-	@param [in] highScore ¸ÃÏî×î¸ß·ÖÖµ
+	/** å¹´åŒ–Tæ”¶ç›Šç‡æ€»å’Œ
+	@param [in, out] vecStrategyResult ç­–ç•¥ç»„
+	@param [in] count è®¡ç®—çš„å‘¨æœŸæ¬¡æ•°ï¼Œä»åå‘å‰
+	@param [in] highScore è¯¥é¡¹æœ€é«˜åˆ†å€¼
 	*/
 	void annualT(std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult,
 		uint32_t count, double highScore);
 
-	/** Òì³£½»Ò×
-	@param [in, out] vecStrategyResult ²ßÂÔ×é
-	@param [in] count ¼ÆËãµÄÖÜÆÚ´ÎÊı£¬´ÓÇ°Ïòºó
-	@param [in] highScore ¸ÃÏî×î¸ß·ÖÖµ
+	/** å¼‚å¸¸äº¤æ˜“
+	@param [in, out] vecStrategyResult ç­–ç•¥ç»„
+	@param [in] count è®¡ç®—çš„å‘¨æœŸæ¬¡æ•°ï¼Œä»å‰å‘å
+	@param [in] highScore è¯¥é¡¹æœ€é«˜åˆ†å€¼
 	*/
 	void abnormal(std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult,
 		uint32_t count, double highScore);
 
-	/** ½µĞòÅÅĞò
-	@param [in, out] vecStrategyResult ²ßÂÔ×é
+	/** é™åºæ’åº
+	@param [in, out] vecStrategyResult ç­–ç•¥ç»„
 	*/
 	void desc(std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult);
 
-	/** ´òÓ¡
-	@param [in] vecStrategyResult ²ßÂÔ×é
+	/** æ‰“å°
+	@param [in] vecStrategyResult ç­–ç•¥ç»„
 	*/
 	void print(std::vector<std::pair<std::vector<std::shared_ptr<StrategyResult>>, double>>& vecStrategyResult);
 
-	/** °Ù·Ö±È¶ÔÓ¦·ÖÊı£¬Ô½Ğ¡Ô½ºÃ
-	@param [in] percentage °Ù·Ö±ÈÖ¸±ê
-	@return ÆÀ·Ö
+	/** ç™¾åˆ†æ¯”å¯¹åº”åˆ†æ•°ï¼Œè¶Šå°è¶Šå¥½
+	@param [in] percentage ç™¾åˆ†æ¯”æŒ‡æ ‡
+	@return è¯„åˆ†
 	*/
 	double smallBestScore(const BigNumber& percentage);
 
-	/** °Ù·Ö±È¶ÔÓ¦·ÖÊı£¬Ô½´óÔ½ºÃ
-	@param [in] percentage °Ù·Ö±ÈÖ¸±ê
-	@return ÆÀ·Ö
+	/** ç™¾åˆ†æ¯”å¯¹åº”åˆ†æ•°ï¼Œè¶Šå¤§è¶Šå¥½
+	@param [in] percentage ç™¾åˆ†æ¯”æŒ‡æ ‡
+	@return è¯„åˆ†
 	*/
 	double bigBestScore(const BigNumber& percentage);
 };

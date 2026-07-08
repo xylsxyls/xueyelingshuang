@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Strategy.h"
 #include "Market.h"
 #include "Fund.h"
@@ -10,99 +10,99 @@
 #include <vector>
 #include <string>
 
-/** ²ßÂÔÈÎÎñÀà
-* ¼Ì³ĞCTask£¬ÓÃÓÚÔÚÏß³Ì³ØÖĞÖ´ĞĞ²ßÂÔ»Ø²â
+/** ç­–ç•¥ä»»åŠ¡ç±»
+* ç»§æ‰¿CTaskï¼Œç”¨äºåœ¨çº¿ç¨‹æ± ä¸­æ‰§è¡Œç­–ç•¥å›æµ‹
 */
 class StrategyTask : public CTask
 {
 public:
-	/** ¹¹Ôìº¯Êı
+	/** æ„é€ å‡½æ•°
 	*/
 	StrategyTask();
 
-	/** Îö¹¹º¯Êı
+	/** ææ„å‡½æ•°
 	*/
 	virtual ~StrategyTask();
 
-	/** Ö´ĞĞÈÎÎñ
+	/** æ‰§è¡Œä»»åŠ¡
 	*/
 	virtual void DoTask();
 
-	/** Í£Ö¹ÈÎÎñ
+	/** åœæ­¢ä»»åŠ¡
 	*/
 	virtual void StopTask();
 
-	/** ÉèÖÃ²ÎÊı
-	@param [in] beginTime ¿ªÊ¼Ê±¼ä
-	@param [in] endTime ½áÊøÊ±¼ä
-	@param [in] vecStock ¹ÉÆ±ÁĞ±í
-	@param [in] spStrategy ²ßÂÔÊµÀı
-	@param [in] spFund ÕË»§ĞÅÏ¢
-	@param [in] forceEnd ÊÇ·ñÇ¿ÖÆÆ½²ÖÎ´Íê³É½»Ò×
-	@param [in] resultQueue ½á¹û¶ÓÁĞ
-	@param [in] resultSemaphore ÊÕµ½½á¹û·¢ËÍµÄĞÅºÅ
+	/** è®¾ç½®å‚æ•°
+	@param [in] beginTime å¼€å§‹æ—¶é—´
+	@param [in] endTime ç»“æŸæ—¶é—´
+	@param [in] vecStock è‚¡ç¥¨åˆ—è¡¨
+	@param [in] spStrategy ç­–ç•¥å®ä¾‹
+	@param [in] spFund è´¦æˆ·ä¿¡æ¯
+	@param [in] forceEnd æ˜¯å¦å¼ºåˆ¶å¹³ä»“æœªå®Œæˆäº¤æ˜“
+	@param [in] resultQueue ç»“æœé˜Ÿåˆ—
+	@param [in] resultSemaphore æ”¶åˆ°ç»“æœå‘é€çš„ä¿¡å·
 	*/
 	void setParam(uint32_t beginTime, uint32_t endTime, const std::vector<std::string>& vecStock,
 		const std::shared_ptr<Strategy>& spStrategy, const std::shared_ptr<Fund>& spFund, bool forceEnd,
 		LockFreeQueue<std::shared_ptr<StrategyResult>>* resultQueue, Semaphore* resultSemaphore);
 
-	/** ²ÎÊıÊÇ·ñÓĞĞ§
-	@return ·µ»Ø²ÎÊıÊÇ·ñÓĞĞ§
+	/** å‚æ•°æ˜¯å¦æœ‰æ•ˆ
+	@return è¿”å›å‚æ•°æ˜¯å¦æœ‰æ•ˆ
 	*/
 	bool isParamValid();
 
 private:
-	/** ÔËĞĞ²ßÂÔ»Ø²â
-	@param [in] fund ×Ê½ğÕË»§
-	@return ·µ»Ø²ßÂÔ½á¹û
+	/** è¿è¡Œç­–ç•¥å›æµ‹
+	@param [in] fund èµ„é‡‘è´¦æˆ·
+	@return è¿”å›ç­–ç•¥ç»“æœ
 	*/
 	StrategyResult runStrategy(Fund& fund);
 
-	/** ¼ÆËã²ßÂÔÖ¸±ê£¨ºÄÊ±£©
-	@param [in] actualDays Êµ¼Ê½»Ò×ÌìÊı
-	@param [in] totalDays ×ÜÌìÊı
-	@param [in] maxDrawdown ×î´ó»Ø³·
-	@param [in] totalProfitArea ×ÜÊÕÒæÃæ»ı
-	@param [in] dailyValues Ã¿ÈÕ×Ê²úÖµ
-	@param [in] lastDate ×îºóÒ»ÌìÈÕÆÚ
-	@return ·µ»Ø²ßÂÔ½á¹û
+	/** è®¡ç®—ç­–ç•¥æŒ‡æ ‡ï¼ˆè€—æ—¶ï¼‰
+	@param [in] actualDays å®é™…äº¤æ˜“å¤©æ•°
+	@param [in] totalDays æ€»å¤©æ•°
+	@param [in] maxDrawdown æœ€å¤§å›æ’¤
+	@param [in] totalProfitArea æ€»æ”¶ç›Šé¢ç§¯
+	@param [in] dailyValues æ¯æ—¥èµ„äº§å€¼
+	@param [in] lastDate æœ€åä¸€å¤©æ—¥æœŸ
+	@return è¿”å›ç­–ç•¥ç»“æœ
 	*/
 	StrategyResult calculateStrategyMetrics(uint32_t actualDays, uint32_t totalDays,
 		BigNumber maxDrawdown, BigNumber totalProfitArea, const std::vector<int32_t>& dailyValues, uint32_t lastDate);
 
-	/** ¼ÆËã½¡¿µÖµ
-	@param [in] totalReturn ×ÜÊÕÒæÂÊ
-	@param [in] maxDrawdown ×î´ó»Ø³·
-	@param [in] winRate Ê¤ÂÊ
-	@param [in] dailyValues Ã¿ÈÕ×Ê²úÖµ
-	@return ·µ»Ø½¡¿µÖµ
+	/** è®¡ç®—å¥åº·å€¼
+	@param [in] totalReturn æ€»æ”¶ç›Šç‡
+	@param [in] maxDrawdown æœ€å¤§å›æ’¤
+	@param [in] winRate èƒœç‡
+	@param [in] dailyValues æ¯æ—¥èµ„äº§å€¼
+	@return è¿”å›å¥åº·å€¼
 	*/
 	BigNumber calculateHealthScore(int32_t totalReturn, BigNumber maxDrawdown,
 		BigNumber winRate, const std::vector<int32_t>& dailyValues);
 
-	/** »ñÈ¡ÓĞĞ§½»Ò×ÈÕ
-	@param [in] allTradingDays ËùÓĞ½»Ò×ÈÕ
-	@return ·µ»ØÓĞĞ§½»Ò×ÈÕ
+	/** è·å–æœ‰æ•ˆäº¤æ˜“æ—¥
+	@param [in] allTradingDays æ‰€æœ‰äº¤æ˜“æ—¥
+	@return è¿”å›æœ‰æ•ˆäº¤æ˜“æ—¥
 	*/
 	std::vector<int32_t> getTradingDays(const std::vector<int32_t>& allTradingDays);
 
 private:
-	// ¿ªÊ¼Ê±¼ä
+	// å¼€å§‹æ—¶é—´
 	uint32_t m_beginTime;
-	// ½áÊøÊ±¼ä
+	// ç»“æŸæ—¶é—´
 	uint32_t m_endTime;
-	// ¹ÉÆ±ÁĞ±í
+	// è‚¡ç¥¨åˆ—è¡¨
 	std::vector<std::string> m_vecStock;
-	// ²ßÂÔÊµÀı
+	// ç­–ç•¥å®ä¾‹
 	std::shared_ptr<Strategy> m_spStrategy;
-	// ÕË»§ĞÅÏ¢
+	// è´¦æˆ·ä¿¡æ¯
 	std::shared_ptr<Fund> m_spFund;
-	// ÊÇ·ñÇ¿ÖÆÆ½²ÖÎ´Íê³É½»Ò×
+	// æ˜¯å¦å¼ºåˆ¶å¹³ä»“æœªå®Œæˆäº¤æ˜“
 	bool m_forceEnd;
-	// ½á¹û¶ÓÁĞ
+	// ç»“æœé˜Ÿåˆ—
 	LockFreeQueue<std::shared_ptr<StrategyResult>>* m_resultQueue;
-	// ÊÕµ½½á¹û·¢ËÍµÄĞÅºÅ
+	// æ”¶åˆ°ç»“æœå‘é€çš„ä¿¡å·
 	Semaphore* m_resultSemaphore;
-	// ÍË³ö±êÖ¾
+	// é€€å‡ºæ ‡å¿—
 	std::atomic<bool> m_exit;
 };

@@ -1,4 +1,4 @@
-#include "Fund.h"
+ï»¿#include "Fund.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -70,11 +70,11 @@ bool Fund::buyAll(const std::string& stock, int32_t price, uint32_t date, Observ
 		return false;
 	}
 
-	// ¼ÆËãÊÖĞø·Ñ£º¼Û¸ñ×ª»»ÎªÔª£¬ÊÖĞø·Ñ½á¹û×ª»»Îª·Ö
+	// è®¡ç®—æ‰‹ç»­è´¹ï¼šä»·æ ¼è½¬æ¢ä¸ºå…ƒï¼Œæ‰‹ç»­è´¹ç»“æœè½¬æ¢ä¸ºåˆ†
 	BigNumber priceYuan = BigNumber(price).toPrec(2) / 100;
 	int32_t fee = (StockCharge::instance().buyFee(stock, priceYuan, BigNumber(shares)) * 100).toInt();
 
-	// ¼ÇÂ¼È«²ÖÂòÈë
+	// è®°å½•å…¨ä»“ä¹°å…¥
 	Trade fullBuyTrade;
 	fullBuyTrade.m_price = price;
 	fullBuyTrade.m_shares = shares;
@@ -82,7 +82,7 @@ bool Fund::buyAll(const std::string& stock, int32_t price, uint32_t date, Observ
 	fullBuyTrade.m_time = time;
 	fullBuyTrade.m_fee = fee;
 
-	// ´¦ÀíÈ«²ÖÂòÈë£¬Íê³Éµ±Ç°×öT²Ù×÷
+	// å¤„ç†å…¨ä»“ä¹°å…¥ï¼Œå®Œæˆå½“å‰åšTæ“ä½œ
 	processFullBuy(stock, fullBuyTrade);
 
 	return executeBuy(stock, price, shares, date, time, fee, true);
@@ -96,7 +96,7 @@ bool Fund::sellAll(const std::string& stock, int32_t price, uint32_t date, Obser
 		return false;
 	}
 
-	// ¼ÆËãÊÖĞø·Ñ£º¼Û¸ñ×ª»»ÎªÔª£¬ÊÖĞø·Ñ½á¹û×ª»»Îª·Ö
+	// è®¡ç®—æ‰‹ç»­è´¹ï¼šä»·æ ¼è½¬æ¢ä¸ºå…ƒï¼Œæ‰‹ç»­è´¹ç»“æœè½¬æ¢ä¸ºåˆ†
 	BigNumber priceYuan = BigNumber(price).toPrec(2) / 100;
 	int32_t fee = (StockCharge::instance().sellFee(stock, priceYuan, BigNumber(position->m_shares)) * 100).toInt();
 
@@ -111,20 +111,20 @@ bool Fund::sellAllForT(const std::string& stock, int32_t price, uint32_t date, O
 		return false;
 	}
 
-	// ¼ÆËãÂô³öÊıÁ¿£ºµ±Ç°³Ö²Ö - 1ÊÖ£¨100¹É£©
+	// è®¡ç®—å–å‡ºæ•°é‡ï¼šå½“å‰æŒä»“ - 1æ‰‹ï¼ˆ100è‚¡ï¼‰
 	const int32_t MIN_LOT = 100;
 	int32_t sellShares = position->m_shares - MIN_LOT;
 
 	if (sellShares <= 0)
 	{
-		// ³Ö²Ö²»×ã£¬ÎŞ·¨×öT
+		// æŒä»“ä¸è¶³ï¼Œæ— æ³•åšT
 		return false;
 	}
 
-	// È·±£Âô³öÊıÁ¿ÊÇÕûÊÖÊı
+	// ç¡®ä¿å–å‡ºæ•°é‡æ˜¯æ•´æ‰‹æ•°
 	sellShares = (sellShares / MIN_LOT) * MIN_LOT;
 
-	// ¼ÆËãÊÖĞø·Ñ£º¼Û¸ñ×ª»»ÎªÔª£¬ÊÖĞø·Ñ½á¹û×ª»»Îª·Ö
+	// è®¡ç®—æ‰‹ç»­è´¹ï¼šä»·æ ¼è½¬æ¢ä¸ºå…ƒï¼Œæ‰‹ç»­è´¹ç»“æœè½¬æ¢ä¸ºåˆ†
 	BigNumber priceYuan = BigNumber(price).toPrec(2) / 100;
 	int32_t fee = (StockCharge::instance().sellFee(stock, priceYuan, BigNumber(sellShares)) * 100).toInt();
 
@@ -182,18 +182,18 @@ std::vector<std::string> Fund::exportTradeRecords() const
 {
 	std::vector<std::string> records;
 
-	// Ìí¼ÓÕË»§»ù±¾ĞÅÏ¢
+	// æ·»åŠ è´¦æˆ·åŸºæœ¬ä¿¡æ¯
 	std::ostringstream oss;
-	oss << "ÕË»§³õÊ¼×Ê½ğ: " << (BigNumber(m_initialFund) / 100.0).toPrec(2).toString() << "Ôª";
+	oss << "è´¦æˆ·åˆå§‹èµ„é‡‘: " << (BigNumber(m_initialFund) / 100.0).toPrec(2).toString() << "å…ƒ";
 	records.push_back(oss.str());
 
 	oss.str("");
-	oss << "µ±Ç°¿ÉÓÃ×Ê½ğ: " << (BigNumber(m_availableFund) / 100.0).toPrec(2).toString() << "Ôª";
+	oss << "å½“å‰å¯ç”¨èµ„é‡‘: " << (BigNumber(m_availableFund) / 100.0).toPrec(2).toString() << "å…ƒ";
 	records.push_back(oss.str());
 
 	records.push_back("");
 
-	// Êä³öËùÓĞÒÑÍê³É½»Ò×
+	// è¾“å‡ºæ‰€æœ‰å·²å®Œæˆäº¤æ˜“
 	for (auto stockIt = m_completeTrades.begin(); stockIt != m_completeTrades.end(); ++stockIt)
 	{
 		const std::string& stock = stockIt->first;
@@ -213,140 +213,140 @@ std::vector<std::string> Fund::exportTradeRecords() const
 				}
 			}
 
-			//×îÖÕÊÕÅÌ¼Û
+			//æœ€ç»ˆæ”¶ç›˜ä»·
 			int32_t endPrice = getStockPriceFromMarket(stock, endDate, ObserveTime::COUNT);
 
-			// ½»Ò×»ù±¾ĞÅÏ¢
+			// äº¤æ˜“åŸºæœ¬ä¿¡æ¯
 			oss.str("");
-			oss << "¹ÉÆ± " << stock << " µÚ " << (i + 1) << " ±ÊÍêÕû½»Ò×:";
+			oss << "è‚¡ç¥¨ " << stock << " ç¬¬ " << (i + 1) << " ç¬”å®Œæ•´äº¤æ˜“:";
 			records.push_back(oss.str());
 
-			// ÏêÏ¸Êä³ö³õÊ¼È«²ÖÂòÈë
+			// è¯¦ç»†è¾“å‡ºåˆå§‹å…¨ä»“ä¹°å…¥
 			oss.str("");
-			oss << "  ³õÊ¼È«²ÖÂòÈë: " << trade.m_buyTrade.m_date << "ÈÕ ";
+			oss << "  åˆå§‹å…¨ä»“ä¹°å…¥: " << trade.m_buyTrade.m_date << "æ—¥ ";
 			oss << Util::observeTimeToWatchString(trade.m_buyTrade.m_time) << " ";
-			oss << trade.m_buyTrade.m_shares << "¹É @ " << (trade.m_buyTrade.m_price / 100.0) << "Ôª";
-			oss << "£¬ÊÖĞø·Ñ: " << (trade.m_buyTrade.m_fee / 100.0) << "Ôª";
-			oss << "£¬×Ü³É±¾: " << (BigNumber(trade.m_buyTrade.m_shares * trade.m_buyTrade.m_price +
-				trade.m_buyTrade.m_fee) / 100.0).toPrec(2).toString() << "Ôª";
+			oss << trade.m_buyTrade.m_shares << "è‚¡ @ " << (trade.m_buyTrade.m_price / 100.0) << "å…ƒ";
+			oss << "ï¼Œæ‰‹ç»­è´¹: " << (trade.m_buyTrade.m_fee / 100.0) << "å…ƒ";
+			oss << "ï¼Œæ€»æˆæœ¬: " << (BigNumber(trade.m_buyTrade.m_shares * trade.m_buyTrade.m_price +
+				trade.m_buyTrade.m_fee) / 100.0).toPrec(2).toString() << "å…ƒ";
 			records.push_back(oss.str());
 
-			// Êä³ö×öT²Ù×÷
+			// è¾“å‡ºåšTæ“ä½œ
 			if (!trade.m_vecTOperations.empty())
 			{
 				oss.str("");
-				oss << "  ×öT²Ù×÷ " << trade.m_vecTOperations.size() << " ´Î:";
+				oss << "  åšTæ“ä½œ " << trade.m_vecTOperations.size() << " æ¬¡:";
 				records.push_back(oss.str());
 
 				for (size_t j = 0; j < trade.m_vecTOperations.size(); ++j)
 				{
 					const TOperation& tOp = trade.m_vecTOperations[j];
 					oss.str("");
-					oss << "    µÚ " << (j + 1) << " ´Î×öT:";
+					oss << "    ç¬¬ " << (j + 1) << " æ¬¡åšT:";
 					records.push_back(oss.str());
 
-					// Êä³ö×öTÂô³ö¼ÇÂ¼
+					// è¾“å‡ºåšTå–å‡ºè®°å½•
 					for (auto sellIt = tOp.m_sellTrade.begin(); sellIt != tOp.m_sellTrade.end(); ++sellIt)
 					{
 						oss.str("");
-						oss << "      Âô³ö: " << sellIt->m_date << "ÈÕ ";
+						oss << "      å–å‡º: " << sellIt->m_date << "æ—¥ ";
 						oss << Util::observeTimeToWatchString(sellIt->m_time) << " ";
-						oss << sellIt->m_shares << "¹É @ " << (sellIt->m_price / 100.0) << "Ôª";
-						oss << "£¬ÊÖĞø·Ñ: " << (sellIt->m_fee / 100.0) << "Ôª";
+						oss << sellIt->m_shares << "è‚¡ @ " << (sellIt->m_price / 100.0) << "å…ƒ";
+						oss << "ï¼Œæ‰‹ç»­è´¹: " << (sellIt->m_fee / 100.0) << "å…ƒ";
 						records.push_back(oss.str());
 					}
 
-					// Êä³ö×öTÂòÈë¼ÇÂ¼
+					// è¾“å‡ºåšTä¹°å…¥è®°å½•
 					for (auto buyIt = tOp.m_buyTrade.begin(); buyIt != tOp.m_buyTrade.end(); ++buyIt)
 					{
 						oss.str("");
-						oss << "      ÂòÈë: " << buyIt->m_date << "ÈÕ ";
+						oss << "      ä¹°å…¥: " << buyIt->m_date << "æ—¥ ";
 						oss << Util::observeTimeToWatchString(buyIt->m_time) << " ";
-						oss << buyIt->m_shares << "¹É @ " << (buyIt->m_price / 100.0) << "Ôª";
-						oss << "£¬ÊÖĞø·Ñ: " << (buyIt->m_fee / 100.0) << "Ôª";
+						oss << buyIt->m_shares << "è‚¡ @ " << (buyIt->m_price / 100.0) << "å…ƒ";
+						oss << "ï¼Œæ‰‹ç»­è´¹: " << (buyIt->m_fee / 100.0) << "å…ƒ";
 						records.push_back(oss.str());
 					}
 
-					// Êä³ö×öTÊÕÒæ
+					// è¾“å‡ºåšTæ”¶ç›Š
 					oss.str("");
-					oss << "      ×öTÊÕÒæ: " << (tOp.totalProfit(endPrice) / 100.0) << "Ôª";
+					oss << "      åšTæ”¶ç›Š: " << (tOp.totalProfit(endPrice) / 100.0) << "å…ƒ";
 					records.push_back(oss.str());
 				}
 
 				oss.str("");
-				oss << "  ×öT×ÜÊÕÒæ: " << (trade.allTProfit(endPrice) / 100.0) << "Ôª";
+				oss << "  åšTæ€»æ”¶ç›Š: " << (trade.allTProfit(endPrice) / 100.0) << "å…ƒ";
 				records.push_back(oss.str());
 			}
 
-			// Êä³ö²»ÍêÕû×öT²Ù×÷
+			// è¾“å‡ºä¸å®Œæ•´åšTæ“ä½œ
 			if (!trade.m_incompleteTOperation.m_sellTrade.empty() || !trade.m_incompleteTOperation.m_buyTrade.empty())
 			{
 				oss.str("");
-				oss << "  ²»ÍêÕû×öT²Ù×÷:";
+				oss << "  ä¸å®Œæ•´åšTæ“ä½œ:";
 				records.push_back(oss.str());
 
 				const TOperation& incompleteOp = trade.m_incompleteTOperation;
 
-				// Êä³ö²»ÍêÕû×öTÂô³ö¼ÇÂ¼
+				// è¾“å‡ºä¸å®Œæ•´åšTå–å‡ºè®°å½•
 				for (auto sellIt = incompleteOp.m_sellTrade.begin(); sellIt != incompleteOp.m_sellTrade.end(); ++sellIt)
 				{
 					oss.str("");
-					oss << "      Âô³ö: " << sellIt->m_date << "ÈÕ ";
+					oss << "      å–å‡º: " << sellIt->m_date << "æ—¥ ";
 					oss << Util::observeTimeToWatchString(sellIt->m_time) << " ";
-					oss << sellIt->m_shares << "¹É @ " << (sellIt->m_price / 100.0) << "Ôª";
-					oss << "£¬ÊÖĞø·Ñ: " << (sellIt->m_fee / 100.0) << "Ôª";
+					oss << sellIt->m_shares << "è‚¡ @ " << (sellIt->m_price / 100.0) << "å…ƒ";
+					oss << "ï¼Œæ‰‹ç»­è´¹: " << (sellIt->m_fee / 100.0) << "å…ƒ";
 					records.push_back(oss.str());
 				}
 
-				// Êä³ö²»ÍêÕû×öTÂòÈë¼ÇÂ¼
+				// è¾“å‡ºä¸å®Œæ•´åšTä¹°å…¥è®°å½•
 				for (auto buyIt = incompleteOp.m_buyTrade.begin(); buyIt != incompleteOp.m_buyTrade.end(); ++buyIt)
 				{
 					oss.str("");
-					oss << "      ÂòÈë: " << buyIt->m_date << "ÈÕ ";
+					oss << "      ä¹°å…¥: " << buyIt->m_date << "æ—¥ ";
 					oss << Util::observeTimeToWatchString(buyIt->m_time) << " ";
-					oss << buyIt->m_shares << "¹É @ " << (buyIt->m_price / 100.0) << "Ôª";
-					oss << "£¬ÊÖĞø·Ñ: " << (buyIt->m_fee / 100.0) << "Ôª";
+					oss << buyIt->m_shares << "è‚¡ @ " << (buyIt->m_price / 100.0) << "å…ƒ";
+					oss << "ï¼Œæ‰‹ç»­è´¹: " << (buyIt->m_fee / 100.0) << "å…ƒ";
 					records.push_back(oss.str());
 				}
 			}
 
-			// Êä³ö×îÖÕÂô³öĞÅÏ¢
+			// è¾“å‡ºæœ€ç»ˆå–å‡ºä¿¡æ¯
 			if (!trade.m_sellTrade.empty())
 			{
 				oss.str("");
-				oss << "  ×îÖÕÈ«²ÖÂô³ö: " << trade.m_sellTrade.m_date << "ÈÕ ";
+				oss << "  æœ€ç»ˆå…¨ä»“å–å‡º: " << trade.m_sellTrade.m_date << "æ—¥ ";
 				oss << Util::observeTimeToWatchString(trade.m_sellTrade.m_time) << " ";
-				oss << trade.m_sellTrade.m_shares << "¹É @ " << (trade.m_sellTrade.m_price / 100.0) << "Ôª";
-				oss << "£¬ÊÖĞø·Ñ: " << (trade.m_sellTrade.m_fee / 100.0) << "Ôª";
-				oss << "£¬×ÜÊÕÈë: " << (BigNumber(trade.m_sellTrade.m_shares * trade.m_sellTrade.m_price -
-					trade.m_sellTrade.m_fee) / 100.0).toPrec(2).toString() << "Ôª";
+				oss << trade.m_sellTrade.m_shares << "è‚¡ @ " << (trade.m_sellTrade.m_price / 100.0) << "å…ƒ";
+				oss << "ï¼Œæ‰‹ç»­è´¹: " << (trade.m_sellTrade.m_fee / 100.0) << "å…ƒ";
+				oss << "ï¼Œæ€»æ”¶å…¥: " << (BigNumber(trade.m_sellTrade.m_shares * trade.m_sellTrade.m_price -
+					trade.m_sellTrade.m_fee) / 100.0).toPrec(2).toString() << "å…ƒ";
 				records.push_back(oss.str());
 
 				oss.str("");
-				oss << "  ½»Ò××ÜÊÕÒæ: " <<
-					(BigNumber(trade.tradeProfit()) / 100.0).toPrec(2).toString() << "Ôª";
+				oss << "  äº¤æ˜“æ€»æ”¶ç›Š: " <<
+					(BigNumber(trade.tradeProfit()) / 100.0).toPrec(2).toString() << "å…ƒ";
 				records.push_back(oss.str());
 			}
 			else
 			{
-				records.push_back("  ×´Ì¬: ³ÖÓĞÖĞ");
+				records.push_back("  çŠ¶æ€: æŒæœ‰ä¸­");
 			}
 
-			records.push_back(""); // ¿ÕĞĞ·Ö¸ô
+			records.push_back(""); // ç©ºè¡Œåˆ†éš”
 		}
 	}
 
-	// Ìí¼Óµ±Ç°³Ö²ÖĞÅÏ¢
+	// æ·»åŠ å½“å‰æŒä»“ä¿¡æ¯
 	if (!m_positions.empty())
 	{
-		records.push_back("µ±Ç°³Ö²Ö:");
+		records.push_back("å½“å‰æŒä»“:");
 		for (auto it = m_positions.begin(); it != m_positions.end(); ++it)
 		{
 			oss.str("");
-			oss << "  " << it->first << ": " << it->second->m_shares << "¹É @ "
-				<< (it->second->m_price / 100.0) << "Ôª";
-			oss << "£¬ÂòÈëÈÕÆÚ: " << it->second->m_date;
-			oss << "£¬ÂòÈëÊ±¼ä: " << Util::observeTimeToWatchString(it->second->m_time);
+			oss << "  " << it->first << ": " << it->second->m_shares << "è‚¡ @ "
+				<< (it->second->m_price / 100.0) << "å…ƒ";
+			oss << "ï¼Œä¹°å…¥æ—¥æœŸ: " << it->second->m_date;
+			oss << "ï¼Œä¹°å…¥æ—¶é—´: " << Util::observeTimeToWatchString(it->second->m_time);
 			records.push_back(oss.str());
 		}
 		records.push_back("");
@@ -383,7 +383,7 @@ void Fund::closeAllTrades(uint32_t date, bool isAccountSell, ObserveTime time)
 		int32_t price = getStockPriceFromMarket(stock, date, time);
 		if (price > 0)
 		{
-			// ¼ÆËãÊÖĞø·Ñ£º¼Û¸ñ×ª»»ÎªÔª£¬ÊÖĞø·Ñ½á¹û×ª»»Îª·Ö
+			// è®¡ç®—æ‰‹ç»­è´¹ï¼šä»·æ ¼è½¬æ¢ä¸ºå…ƒï¼Œæ‰‹ç»­è´¹ç»“æœè½¬æ¢ä¸ºåˆ†
 			BigNumber priceYuan = BigNumber(price).toPrec(2) / 100;
 			int32_t fee = (StockCharge::instance().sellFee(stock, priceYuan, BigNumber(position->m_shares)) * 100).toInt();
 			executeSell(stock, price, position->m_shares, date, time, fee, false);
@@ -418,7 +418,7 @@ int32_t Fund::calculateMaxShares(const std::string& stock, int32_t price) const
 		int32_t mid = ((low + high) / (MIN_LOT * 2)) * MIN_LOT;
 
 		int32_t cost = mid * price;
-		// ¼ÆËãÊÖĞø·Ñ£º¼Û¸ñ×ª»»ÎªÔª£¬ÊÖĞø·Ñ½á¹û×ª»»Îª·Ö
+		// è®¡ç®—æ‰‹ç»­è´¹ï¼šä»·æ ¼è½¬æ¢ä¸ºå…ƒï¼Œæ‰‹ç»­è´¹ç»“æœè½¬æ¢ä¸ºåˆ†
 		int32_t fee = (StockCharge::instance().buyFee(stock, priceYuan, BigNumber(mid)) * 100).toInt();
 		int32_t totalCost = cost + fee;
 
@@ -511,7 +511,7 @@ bool Fund::executeSell(const std::string& stock, int32_t price, int32_t shares, 
 	}
 	else
 	{
-		// ·ÇT²Ù×÷£¬½áÊø½»Ò×
+		// éTæ“ä½œï¼Œç»“æŸäº¤æ˜“
 		Trade sellTrade;
 		sellTrade.m_price = price;
 		sellTrade.m_shares = shares;
@@ -534,7 +534,7 @@ bool Fund::executeSell(const std::string& stock, int32_t price, int32_t shares, 
 
 void Fund::processTOperations(const std::string& stock, const Trade& sellTrade)
 {
-	// ½«Âô³ö½»Ò×Ìí¼Óµ½´ıÆ¥Åä¼ÇÂ¼ÖĞ
+	// å°†å–å‡ºäº¤æ˜“æ·»åŠ åˆ°å¾…åŒ¹é…è®°å½•ä¸­
 	m_pendingTOperations[stock].m_sellTrade.push_back(sellTrade);
 }
 
@@ -546,14 +546,14 @@ void Fund::processFullBuy(const std::string& stock, const Trade& buyTrade)
 		CompleteTrade* currentTrade = getCurrentTrade(stock);
 		if (currentTrade != nullptr)
 		{
-			// ½«ÂòÈë½»Ò×Ìí¼Óµ½´ıÆ¥Åä¼ÇÂ¼ÖĞ
+			// å°†ä¹°å…¥äº¤æ˜“æ·»åŠ åˆ°å¾…åŒ¹é…è®°å½•ä¸­
 			pendingIt->second.m_buyTrade.push_back(buyTrade);
 
-			// ½«ÍêÕûµÄ×öT²Ù×÷Ìí¼Óµ½½»Ò×¼ÇÂ¼ÖĞ
+			// å°†å®Œæ•´çš„åšTæ“ä½œæ·»åŠ åˆ°äº¤æ˜“è®°å½•ä¸­
 			currentTrade->m_vecTOperations.push_back(pendingIt->second);
 		}
 
-		// Çå¿Õ´ıÆ¥Åä¼ÇÂ¼
+		// æ¸…ç©ºå¾…åŒ¹é…è®°å½•
 		m_pendingTOperations.erase(stock);
 	}
 }
@@ -565,7 +565,7 @@ void Fund::processCompleteTrade(const std::string& stock, const Trade& sellTrade
 	{
 		currentTrade->m_sellTrade = sellTrade;
 
-		// Èç¹ûÓĞÎ´Íê³ÉµÄ×öT²Ù×÷£¬½«ÆäÉèÖÃÎª²»ÍêÕû×öT²Ù×÷
+		// å¦‚æœæœ‰æœªå®Œæˆçš„åšTæ“ä½œï¼Œå°†å…¶è®¾ç½®ä¸ºä¸å®Œæ•´åšTæ“ä½œ
 		auto pendingIt = m_pendingTOperations.find(stock);
 		if (pendingIt != m_pendingTOperations.end())
 		{
