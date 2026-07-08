@@ -111,14 +111,30 @@ void CEscapeR::DoTask()
 	{
 		Sleep(5);
 	}
+	if (m_exit)
+	{
+		return;
+	}
 
 	CMouse::MoveAbsolute(g_config.m_rCenterPoint, 0);
 	CMouse::LeftDown();
 	Sleep(10);
+	if (m_exit)
+	{
+		return;
+	}
 	CMouse::MoveAbsolute(g_config.m_rCenterPoint + xyls::Point(0, 100), 0);
 	Sleep(10);
+	if (m_exit)
+	{
+		return;
+	}
 	CMouse::MoveAbsolute(movePoint, 1);
 	Sleep(20);
+	if (m_exit)
+	{
+		return;
+	}
 	CMouse::LeftUp();
 	CMouse::MoveAbsolute(currentPos, 0);
 

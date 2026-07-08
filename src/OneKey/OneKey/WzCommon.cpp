@@ -65,6 +65,7 @@ void WzCommon::keyboard()
 {
 	if (g_keyboard.m_keyUp[SPACE])
 	{
+		g_config.m_taskThread->StopAllTask();
 		if (!(g_config.m_type == g_config.nameType(SMY) && g_keyboard.m_lastKey == 'Q'))
 		{
 			g_config.m_moveUse = true;
