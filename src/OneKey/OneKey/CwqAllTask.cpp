@@ -135,6 +135,7 @@ void CwqAllTask::DoTask()
 				return;
 			}
 			CKeyboard::KeyPress(text[0] + 48, 0);
+			KeyPressE();
 		}
 		CKeyboard::KeyPress('Z', 0);
 		if (Sleep(80))
