@@ -1,256 +1,305 @@
-﻿#ifndef _LOCK_FREE_QUEUE_H__
-#define _LOCK_FREE_QUEUE_H__
-#include "LockFreeQueue.h"
+﻿#ifndef __LOCK_FREE_QUEUE_INL__
+#define __LOCK_FREE_QUEUE_INL__
 
 // ==================== QueueNode 实现 ====================
-template<class QueueElmentType>
-QueueNode<QueueElmentType>::QueueNode() :
-m_next(nullptr)
-{
 
+template<class QueueElementType>
+QueueNode<QueueElementType>::QueueNode() :
+m_next(nullptr),
+m_hasData(false)
+{
 }
 
-// ==================== VersionPtr 实现 ====================
-template<class QueueElmentType>
-VersionPtr<QueueElmentType>::VersionPtr() :
-m_ptr(nullptr),
-m_version(0)
+template<class QueueElementType>
+QueueNode<QueueElementType>::QueueNode(const QueueElementType& data) :
+m_next(nullptr),
+m_hasData(false)
 {
-
+	construct_data(data);
 }
 
-template<class QueueElmentType>
-bool VersionPtr<QueueElmentType>::operator==(const VersionPtr& o) const
+template<class QueueElementType>
+QueueNode<QueueElementType>::~QueueNode()
 {
-	return m_ptr == o.m_ptr && m_version == o.m_version;
+	destroy_data();
 }
 
-template<class QueueElmentType>
-bool VersionPtr<QueueElmentType>::operator!=(const VersionPtr& o) const
+template<class QueueElementType>
+QueueElementType* QueueNode<QueueElementType>::data_ptr()
 {
-	return !(*this == o);
+	return reinterpret_cast<QueueElementType*>(&m_storage);
+}
+
+template<class QueueElementType>
+const QueueElementType* QueueNode<QueueElementType>::data_ptr() const
+{
+	return reinterpret_cast<const QueueElementType*>(&m_storage);
+}
+
+template<class QueueElementType>
+void QueueNode<QueueElementType>::construct_data(const QueueElementType& data)
+{
+	new (&m_storage) QueueElementType(data);
+	m_hasData = true;
+}
+
+template<class QueueElementType>
+void QueueNode<QueueElementType>::destroy_data()
+{
+	if (m_hasData)
+	{
+		data_ptr()->~QueueElementType();
+		m_hasData = false;
+	}
 }
 
 // ==================== LockFreeQueue 实现 ====================
-template<class QueueElmentType>
-LockFreeQueue<QueueElmentType>::LockFreeQueue() :
-m_tag(0),
+
+template<class QueueElementType>
+LockFreeQueue<QueueElementType>::LockFreeQueue() :
+m_head(nullptr),
+m_tail(nullptr),
 m_count(0)
 {
 	init();
 }
 
-template<class QueueElmentType>
-LockFreeQueue<QueueElmentType>::~LockFreeQueue()
+template<class QueueElementType>
+LockFreeQueue<QueueElementType>::~LockFreeQueue()
 {
 	destroy();
-	// 清理待删除列表中的节点
-	for (auto node : m_retired)
+}
+
+template<class QueueElementType>
+void LockFreeQueue<QueueElementType>::init()
+{
+	/*
+	init 必须无并发调用。
+	支持：
+	1. 构造函数首次 init；
+	2. destroy 后再次 init；
+	3. 队列已有内容时重新 init。
+	*/
+	destroy();
+
+	QueueNode<QueueElementType>* dummy = new QueueNode<QueueElementType>();
+
+	m_head = dummy;
+	m_tail.store(dummy, std::memory_order_release);
+	m_count.store(0, std::memory_order_relaxed);
+}
+
+template<class QueueElementType>
+void LockFreeQueue<QueueElementType>::destroy()
+{
+	/*
+	destroy 必须无并发调用。
+	destroy 时队列里可以有内容。
+	这里先 clear 掉所有真实数据节点，然后删除最后剩下的哨兵节点。
+	destroy 后：
+	m_head == nullptr
+	m_tail == nullptr
+	m_count == 0
+	之后可以再次 init。
+	*/
+
+	if (m_head == nullptr)
 	{
-		delete node;
+		m_tail.store(nullptr, std::memory_order_release);
+		m_count.store(0, std::memory_order_relaxed);
+		return;
 	}
+
+	// 无并发场景下，clear 会弹出所有真实元素，只剩最后一个哨兵节点。
+	clear();
+
+	QueueNode<QueueElementType>* dummy = m_head;
+	m_head = nullptr;
+
+	m_tail.store(nullptr, std::memory_order_release);
+	m_count.store(0, std::memory_order_relaxed);
+
+	delete dummy;
 }
 
-template<class QueueElmentType>
-void LockFreeQueue<QueueElmentType>::init()
+template<class QueueElementType>
+void LockFreeQueue<QueueElementType>::push(const QueueElementType& e)
 {
-	// 该函数假设调用时无并发（构造函数或 clear_unsafe 后调用）
-	auto dummy = new QueueNode < QueueElmentType > ;
-	dummy->m_next.store(nullptr, std::memory_order_seq_cst);
+	/*
+	这里只 new 一次 QueueNode。
+	QueueElementType 通过 placement new 直接构造在 QueueNode 内部。
+	没有额外：
+	new QueueElementType(e)
+	但由于接口是 push(const T&)，这里仍然会调用一次 T 的拷贝构造。
+	*/
+	QueueNode<QueueElementType>* newNode = new QueueNode<QueueElementType>(e);
 
-	VersionPtr<QueueElmentType> vp;
-	vp.m_ptr = dummy;
-	vp.m_version = 1;
-	m_front.store(vp, std::memory_order_seq_cst);
-	m_rear.store(vp, std::memory_order_seq_cst);
-	m_tag.store(0, std::memory_order_seq_cst);
-	m_count.store(0, std::memory_order_seq_cst);
-}
+	/*
+	count 提前增加。
+	这样即使生产者已经进入 push，但还没来得及 exchange/link，
+	empty()/size() 也会保守地认为队列可能非空。
+	count 不参与数据同步，只做近似统计，所以 relaxed 足够。
+	*/
+	m_count.fetch_add(1, std::memory_order_relaxed);
 
-template<class QueueElmentType>
-void LockFreeQueue<QueueElmentType>::destroy()
-{
-	// 非线程安全，仅应在无并发时调用
-	clear_unsafe();
-	// 清理待删除列表（实际上 clear_unsafe 已处理所有节点，此处仅为防御）
-	for (auto node : m_retired)
+	/*
+	MPSC 多生产者核心：
+	prev = tail.exchange(newNode)
+	prev->next = newNode
+	exchange 不依赖 expected 指针判断，因此这里不需要 VersionPtr。
+	*/
+	QueueNode<QueueElementType>* prev = m_tail.exchange(newNode, std::memory_order_acq_rel);
+
+	assert(prev != nullptr && "LockFreeQueue::push called before init() or after destroy().");
+
+	if (prev == nullptr)
 	{
-		delete node;
+		/*
+		理论上只有违反 init/destroy 无并发约束，或者 destroy 后未重新 init 又 push，
+		才可能发生。
+		这里做 release 版本防御，避免泄漏 newNode。
+		*/
+		m_count.fetch_sub(1, std::memory_order_relaxed);
+		m_tail.store(nullptr, std::memory_order_release);
+		delete newNode;
+		return;
 	}
-	m_retired.clear();
+
+	/*
+	发布链表链接。
+	consumer acquire 读取到 newNode 后，
+	能看到 QueueNode 构造完成以及其中的 QueueElementType 数据。
+	*/
+	prev->m_next.store(newNode, std::memory_order_release);
 }
 
-template<class QueueElmentType>
-void LockFreeQueue<QueueElmentType>::retire_node(QueueNode<QueueElmentType>* node)
+template<class QueueElementType>
+bool LockFreeQueue<QueueElementType>::pop(QueueElementType* e)
 {
-	// 仅由单消费者线程调用，无竞争
-	m_retired.push_back(node);
-}
+	/*
+	只能由单消费者执行流调用。
 
-template<class QueueElmentType>
-void LockFreeQueue<QueueElmentType>::gc()
-{
-	// 仅由单消费者线程调用，释放所有待删除节点
-	for (auto node : m_retired)
-	{
-		delete node;
-	}
-	m_retired.clear();
-}
+	e != nullptr：弹出并返回数据。
+	e == nullptr：弹出并丢弃数据。
 
-template<class QueueElmentType>
-void LockFreeQueue<QueueElmentType>::push(const QueueElmentType& e)
-{
-	auto newNode = new QueueNode < QueueElmentType > ;
-	newNode->m_data = e;
-	newNode->m_next.store(nullptr, std::memory_order_seq_cst);
+	clear() 内部也调用 pop(nullptr)，
+	所以 clear 和 pop 必须串行。
+	*/
 
 	while (true)
 	{
-		VersionPtr<QueueElmentType> tail = m_rear.load(std::memory_order_seq_cst);
-		QueueNode<QueueElmentType>* next = tail.m_ptr->m_next.load(std::memory_order_seq_cst);
+		QueueNode<QueueElementType>* head = m_head;
 
-		if (tail != m_rear.load(std::memory_order_seq_cst))
+		if (head == nullptr)
 		{
-			continue;
+			return false;
 		}
 
-		if (next == nullptr)
+		QueueNode<QueueElementType>* next =
+			head->m_next.load(std::memory_order_acquire);
+
+		if (next != nullptr)
 		{
-			if (tail.m_ptr->m_next.compare_exchange_weak(next, newNode, std::memory_order_seq_cst, std::memory_order_seq_cst))
+			/*
+			next 是真实数据节点。
+			pop 成功后，next 会变成新的哨兵节点。
+			所以：
+			1. 如果 e != nullptr，先把数据交给调用者；
+			2. 再析构 next 内部数据；
+			3. next 作为无数据哨兵继续存在；
+			4. 删除旧哨兵 head。
+			*/
+			if (e != nullptr)
 			{
-				// 链接成功，尝试推进 rear（即使失败也认为有其他线程会推进）
-				size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
-				VersionPtr<QueueElmentType> newTail;
-				newTail.m_ptr = newNode;
-				newTail.m_version = newVer;
-				m_rear.compare_exchange_weak(tail, newTail, std::memory_order_seq_cst, std::memory_order_seq_cst);
-				m_count.fetch_add(1, std::memory_order_seq_cst);
-				return;
+				assert(next->m_hasData && "LockFreeQueue internal error: data node has no data.");
+				/*
+				C++11 下 std::move 可用。
+				对 shared_ptr / string / vector / 大对象：
+				这里会优先走移动赋值；
+				如果类型没有移动赋值但支持拷贝赋值，也会退化为拷贝赋值。
+				*/
+				*e = std::move(*(next->data_ptr()));
 			}
+
+			next->destroy_data();
+			/*
+			推进消费者侧 head。
+			单消费者模型下，只有一个执行流写 m_head，
+			所以不需要 CAS。
+			*/
+			m_head = next;
+
+			m_count.fetch_sub(1, std::memory_order_relaxed);
+
+			/*
+			删除旧哨兵节点。
+			为什么安全：
+			只有看到 head->m_next != nullptr 后才删除 head。
+			这说明负责链接 head 的生产者已经完成：
+			prev->m_next.store(newNode)
+			因此生产者不会再访问这个旧 head。
+			*/
+			delete head;
+
+			return true;
 		}
-		else
+
+		QueueNode<QueueElementType>* tail = m_tail.load(std::memory_order_acquire);
+
+		if (head == tail)
 		{
-			// 协助推进落后的 rear，并持续尝试直到 rear 更新或 next 变化
-			size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
-			VersionPtr<QueueElmentType> newTail;
-			newTail.m_ptr = next;
-			newTail.m_version = newVer;
-			m_rear.compare_exchange_weak(tail, newTail, std::memory_order_seq_cst, std::memory_order_seq_cst);
-			// 不立即 continue，让循环再次检查，以便继续推进或插入
+			/*
+			稳定空队列：
+			head == tail
+			head->next == nullptr
+			*/
+			return false;
 		}
+
+		/*
+		MPSC exchange 队列的中间态：
+		某个生产者已经执行：
+		m_tail.exchange(newNode)
+		但还没执行：
+		prev->m_next.store(newNode)
+		此时 head != tail，但 head->next 仍然是 nullptr。
+		consumer 不能认为队列为空，也不能删除 head。
+		*/
+		std::this_thread::yield();
 	}
 }
 
-template<class QueueElmentType>
-bool LockFreeQueue<QueueElmentType>::pop(QueueElmentType* e)
+template<class QueueElementType>
+void LockFreeQueue<QueueElementType>::clear()
 {
-	while (true)
-	{
-		VersionPtr<QueueElmentType> head = m_front.load(std::memory_order_seq_cst);
-		VersionPtr<QueueElmentType> tail = m_rear.load(std::memory_order_seq_cst);
-		QueueNode<QueueElmentType>* next = head.m_ptr->m_next.load(std::memory_order_seq_cst);
-
-		// 二次确认 head 未被修改（确保 next 的有效性）
-		if (head != m_front.load(std::memory_order_seq_cst))
-		{
-			continue;
-		}
-
-		if (head.m_ptr == tail.m_ptr)
-		{
-			if (next == nullptr)
-			{
-				// 队列确实为空
-				return false;
-			}
-
-			// 协助推进落后的 rear（仅尝试一次，避免复杂循环）
-			size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
-			VersionPtr<QueueElmentType> newTail;
-			newTail.m_ptr = next;
-			newTail.m_version = newVer;
-			m_rear.compare_exchange_weak(tail, newTail, std::memory_order_seq_cst, std::memory_order_seq_cst);
-			// 无论是否成功，重新开始 pop 流程
-			continue;
-		}
-		else
-		{
-			// head != tail，尝试出队
-			if (next == nullptr)
-			{
-				// 防御
-				continue;
-			}
-
-			size_t newVer = m_tag.fetch_add(1, std::memory_order_seq_cst) + 1;
-			VersionPtr<QueueElmentType> newHead;
-			newHead.m_ptr = next;
-			newHead.m_version = newVer;
-
-			if (m_front.compare_exchange_weak(head, newHead, std::memory_order_seq_cst, std::memory_order_seq_cst))
-			{
-				*e = next->m_data;
-				m_count.fetch_sub(1, std::memory_order_seq_cst);
-
-				if (head.m_version > 1)
-				{
-					retire_node(head.m_ptr);
-				}
-				if (m_retired.size() >= 100)
-				{
-					gc();
-				}
-				return true;
-			}
-			// CAS 失败，重试
-		}
-	}
+	/*
+	clear 可以和 push 并发。
+	但 clear 属于消费者侧操作：
+	不能和 pop 并发；
+	不能多个 clear 并发。
+	如果生产者持续不断 push，clear 可能会持续消费新进入的元素，
+	直到某一刻观察到队列为空才返回。
+	*/
+	while (pop(nullptr));
 }
 
-template<class QueueElmentType>
-bool LockFreeQueue<QueueElmentType>::empty() const
+template<class QueueElementType>
+bool LockFreeQueue<QueueElementType>::empty() const
 {
-	VersionPtr<QueueElmentType> f = m_front.load(std::memory_order_seq_cst);
-	VersionPtr<QueueElmentType> r = m_rear.load(std::memory_order_seq_cst);
-	return f.m_ptr == r.m_ptr;
+	/*
+	不通过 m_head->m_next 判断。
+	因为 empty() 可能被其他线程调用，
+	而消费者线程可能正在 pop/clear 并删除旧 head。
+	如果这里解引用 m_head，可能读到已释放节点。
+	所以 empty() 只基于 m_count。
+	*/
+	return m_count.load(std::memory_order_relaxed) <= 0;
 }
 
-template<class QueueElmentType>
-int32_t LockFreeQueue<QueueElmentType>::size() const
+template<class QueueElementType>
+int32_t LockFreeQueue<QueueElementType>::size() const
 {
-	return m_count.load(std::memory_order_seq_cst);
+	return m_count.load(std::memory_order_relaxed);
 }
 
-template<class QueueElmentType>
-void LockFreeQueue<QueueElmentType>::clear()
-{
-	// 线程安全清空：反复 pop 直到空（适用于单消费者线程）
-	QueueElmentType dummy;
-	while (pop(&dummy))
-	{
-		// 丢弃数据
-	}
-	// 清空后主动回收内存
-	gc();
-}
-
-template<class QueueElmentType>
-void LockFreeQueue<QueueElmentType>::clear_unsafe()
-{
-	// 非线程安全：直接释放链表（仅应在无并发时调用）
-	VersionPtr<QueueElmentType> front = m_front.exchange(VersionPtr<QueueElmentType>(), std::memory_order_seq_cst);
-	VersionPtr<QueueElmentType> rear = m_rear.exchange(VersionPtr<QueueElmentType>(), std::memory_order_seq_cst);
-	m_count.store(0, std::memory_order_seq_cst);
-	m_tag.store(0, std::memory_order_seq_cst);
-
-	QueueNode<QueueElmentType>* curr = front.m_ptr;
-	while (curr)
-	{
-		QueueNode<QueueElmentType>* next = curr->m_next.load(std::memory_order_seq_cst);
-		delete curr;
-		curr = next;
-	}
-}
-
-#endif // _LOCK_FREE_QUEUE_H__
+#endif // __LOCK_FREE_QUEUE_INL__
