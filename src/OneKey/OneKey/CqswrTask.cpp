@@ -70,7 +70,7 @@ void CqswrTask::V5()
 			return;
 		}
 		CMouse::RightUp();
-		if (Sleep(100))
+		if (Sleep(110))
 		{
 			return;
 		}
