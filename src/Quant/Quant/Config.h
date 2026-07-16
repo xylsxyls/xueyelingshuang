@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <stdint.h>
 #include <string>
+#include <vector>
 #include <atomic>
 #include "CStopWatch/CStopWatchAPI.h"
 
@@ -13,6 +14,7 @@ struct CConfig
 	std::string m_computerName;
 	std::string m_iniDbPath;
 	std::string m_dbPath;
+	std::string m_customStrategyFileName;
 	int32_t m_cpuCoreCount;
 	int32_t m_normalShares;
 	int32_t m_ignoreTrans;

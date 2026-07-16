@@ -31,6 +31,7 @@
 #include "CSystem/CSystemAPI.h"
 #include "Ctxt/CtxtAPI.h"
 #include "AnalyzeTask.h"
+#include "AnalyzeCustomStrategyTask.h"
 #include "StockManager.h"
 #include "StockCharge/StockChargeAPI.h"
 #include "CollectTask.h"
@@ -39,6 +40,9 @@
 #include "StrategyPlotWidget.h"
 #include "RunManager.h"
 #include "DialogManager/InputDialog.h"
+#include <algorithm>
+#include <map>
+#include <set>
 
 Quant::Quant(QWidget* parent):
 	QMainWindow(parent),
@@ -729,6 +733,24 @@ void Quant::onAnalyzeClicked()
 			}
 		}
 	}
+
+	Cini customStrategyIni(g_config.m_currentExePath + g_config.m_customStrategyFileName, true);
+	std::vector<std::string> vecCustomStrategy = CStringManager::split(customStrategyIni.readIni("strategy"), ",");
+
+	std::vector<uint32_t> vecCustomStrategyThreadIds;
+	for (auto itStrategy = vecCustomStrategy.begin(); itStrategy != vecCustomStrategy.end(); ++itStrategy)
+	{
+		uint32_t customStrategyThreadId = CTaskThreadManager::Instance().Init();
+		std::shared_ptr<AnalyzeCustomStrategyTask> spCustomStrategyTask(new AnalyzeCustomStrategyTask);
+		spCustomStrategyTask->setParam(*itStrategy);
+		CTaskThreadManager::Instance().GetThreadInterface(customStrategyThreadId)->PostTask(spCustomStrategyTask);
+		vecCustomStrategyThreadIds.push_back(customStrategyThreadId);
+	}
+
+	for (uint32_t threadIndex = 0; threadIndex < vecCustomStrategyThreadIds.size(); ++threadIndex)
+	{
+		CTaskThreadManager::Instance().WaitForEnd(vecCustomStrategyThreadIds[threadIndex]);
+	}
 	RCSend("analyze success");
 }
 
@@ -738,9 +760,19 @@ void Quant::onCollectClicked()
 	input.m_editTip = QStringLiteral("请输入循环次数");
 	DialogManager::instance().makeDialog(input);
 	showMinimized();
+
+	std::string strategyName = "rise9097";
+	CollectMode collectMode = CollectMode::STRATEGY_ALL;
+	int32_t count = std::atoi(input.m_editText.toStdString().c_str());
+	auto spThread = CTaskThreadManager::Instance().GetThreadInterface(m_threadId);
+	if (spThread == nullptr)
+	{
+		return;
+	}
 	std::shared_ptr<CollectTask> spCollectTask(new CollectTask);
-	spCollectTask->setParam(std::atoi(input.m_editText.toStdString().c_str()));
-	CTaskThreadManager::Instance().GetThreadInterface(m_threadId)->PostTask(spCollectTask);
+	spCollectTask->setMode(collectMode);
+	spCollectTask->setParam(count, strategyName);
+	spThread->PostTask(spCollectTask);
 }
 
 void Quant::onVerifyClicked()

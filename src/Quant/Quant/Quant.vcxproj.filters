@@ -122,6 +122,9 @@
     <ClCompile Include="AnalyzeTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
+    <ClCompile Include="AnalyzeCustomStrategyTask.cpp">
+      <Filter>Task</Filter>
+    </ClCompile>
     <ClCompile Include="CompetitionTask.cpp">
       <Filter>Task</Filter>
     </ClCompile>
@@ -169,6 +172,9 @@
     </ClCompile>
     <ClCompile Include="RunTask.cpp">
       <Filter>Task</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomStrategyManager.cpp">
+      <Filter>Quant</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -237,6 +243,9 @@
     <ClInclude Include="AnalyzeTask.h">
       <Filter>Task</Filter>
     </ClInclude>
+    <ClInclude Include="AnalyzeCustomStrategyTask.h">
+      <Filter>Task</Filter>
+    </ClInclude>
     <ClInclude Include="CompetitionTask.h">
       <Filter>Task</Filter>
     </ClInclude>
@@ -266,6 +275,9 @@
     </ClInclude>
     <ClInclude Include="RunTask.h">
       <Filter>Task</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomStrategyManager.h">
+      <Filter>Quant</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

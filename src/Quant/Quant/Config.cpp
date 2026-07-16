@@ -23,6 +23,7 @@ CConfig::CConfig()
 	m_computerName = CSystem::getComputerName();
 	m_iniDbPath = m_currentExePath;
 	m_dbPath = m_currentExePath;
+	m_customStrategyFileName = "custom_strategy.ini";
 	m_cpuCoreCount = CSystem::GetCPUCoreCount();
 	m_normalShares = 800;
 	m_ignoreTrans = 2;
