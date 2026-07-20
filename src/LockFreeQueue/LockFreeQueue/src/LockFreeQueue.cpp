@@ -14,9 +14,6 @@
 //#include <fstream>
 //#include <atomic>
 //#include <chrono>
-//#include <random>
-//#include <condition_variable>
-//#include <mutex>
 //#include "LockFreeQueue/LockFreeQueueAPI.h"
 //
 //#ifdef _MSC_VER
@@ -30,34 +27,191 @@
 //
 ////#define DEBUG_PUSH_POP
 //
+//// ========== Test Param Config ==========
+////
+//// 只在 main() 中用宏选择 32/64 位配置；
+//// 其他地方全部只使用这些参数结构体，不再判断 32/64 位。
+////
+//// 当前策略：
+//// 32 位：主压力规模 1000 万 = 200 * 50000
+//// 64 位：主压力规模 2000 万 = 200 * 100000
+//
+//static const int kProgressStep = 100000;
+//
+//struct Test1Param {
+//	int num_threads;
+//	int num_per_thread;
+//	Test1Param(int threads = 0, int per_thread = 0)
+//		: num_threads(threads), num_per_thread(per_thread) {}
+//};
+//
+//struct Test2Param {
+//	int num_threads;
+//	int num_per_thread;
+//	Test2Param(int threads = 0, int per_thread = 0)
+//		: num_threads(threads), num_per_thread(per_thread) {}
+//};
+//
+//struct Test3AParam {
+//	int num_threads;
+//	int num_per_thread;
+//	int rounds;
+//	Test3AParam(int threads = 0, int per_thread = 0, int r = 0)
+//		: num_threads(threads), num_per_thread(per_thread), rounds(r) {}
+//};
+//
+//struct Test3BParam {
+//	int num_threads;
+//	int num_per_thread;
+//	int rounds;
+//	Test3BParam(int threads = 0, int per_thread = 0, int r = 0)
+//		: num_threads(threads), num_per_thread(per_thread), rounds(r) {}
+//};
+//
+//struct Test4Param {
+//	int target_total;
+//	std::vector<int> thread_counts;
+//	Test4Param() : target_total(0), thread_counts() {}
+//};
+//
+//struct Test5Param {
+//	int num_threads;
+//	int num_per_thread;
+//	int runs;
+//	Test5Param(int threads = 0, int per_thread = 0, int r = 0)
+//		: num_threads(threads), num_per_thread(per_thread), runs(r) {}
+//};
+//
+//struct Test6Param {
+//	int num_threads;
+//	int num_per_thread;
+//	Test6Param(int threads = 0, int per_thread = 0)
+//		: num_threads(threads), num_per_thread(per_thread) {}
+//};
+//
+//struct Test7Param {
+//	int num_threads;
+//	int num_per_thread;
+//	int clear_sleep_ms;
+//	int clear_log_interval;
+//	Test7Param(int threads = 0, int per_thread = 0, int sleep_ms = 1, int log_interval = 100)
+//		: num_threads(threads), num_per_thread(per_thread),
+//		  clear_sleep_ms(sleep_ms), clear_log_interval(log_interval) {}
+//};
+//
+//struct Test8Param {
+//	int num_threads;
+//	int num_per_thread;
+//	int cycles;
+//	Test8Param(int threads = 0, int per_thread = 0, int c = 0)
+//		: num_threads(threads), num_per_thread(per_thread), cycles(c) {}
+//};
+//
+//struct Test9Param {
+//	int num_threads;
+//	int num_per_thread;
+//	int clear_thread_count;
+//	int clear_sleep_base_ms;
+//	int clear_log_interval;
+//	int clear_execute_log_interval;
+//	Test9Param(int threads = 0, int per_thread = 0, int clear_threads = 0,
+//		int sleep_base = 5, int request_log = 100, int execute_log = 50)
+//		: num_threads(threads), num_per_thread(per_thread),
+//		  clear_thread_count(clear_threads), clear_sleep_base_ms(sleep_base),
+//		  clear_log_interval(request_log), clear_execute_log_interval(execute_log) {}
+//};
+//
+//struct Test10Param {
+//	int num_threads;
+//	int num_per_thread;
+//	Test10Param(int threads = 0, int per_thread = 0)
+//		: num_threads(threads), num_per_thread(per_thread) {}
+//};
+//
+//struct Test11Param {
+//	int num_threads;
+//	int num_per_thread;
+//	Test11Param(int threads = 0, int per_thread = 0)
+//		: num_threads(threads), num_per_thread(per_thread) {}
+//};
+//
+//// Test12 是空队列边界测试，和次数无关，不定义 Test12Param。
+//
+//struct TestConfig {
+//	int repeat;
+//	Test1Param test1;
+//	Test2Param test2;
+//	Test3AParam test3A;
+//	Test3BParam test3B;
+//	Test4Param test4;
+//	Test5Param test5;
+//	Test6Param test6;
+//	Test7Param test7;
+//	Test8Param test8;
+//	Test9Param test9;
+//	Test10Param test10;
+//	Test11Param test11;
+//
+//	TestConfig() : repeat(0) {}
+//};
+//
+//static TestConfig make_32bit_test_config() {
+//	const int main_threads = 200;
+//	const int main_per_thread = 50000;       // 1000 万
+//	const int target_total = 10000000;       // Test4 固定总量 1000 万
+//
+//	TestConfig cfg;
+//	cfg.repeat = 800;
+//
+//	cfg.test1 = Test1Param(main_threads, main_per_thread);
+//	cfg.test2 = Test2Param(main_threads, main_per_thread);
+//	cfg.test3A = Test3AParam(main_threads, main_per_thread, 10);
+//	cfg.test3B = Test3BParam(main_threads, main_per_thread, 10);
+//
+//	cfg.test4.target_total = target_total;
+//	cfg.test4.thread_counts = std::vector<int>{ 50, 100, 200, 400 };
+//
+//	cfg.test5 = Test5Param(main_threads, main_per_thread, 3);
+//	cfg.test6 = Test6Param(main_threads, main_per_thread);
+//	cfg.test7 = Test7Param(main_threads, main_per_thread, 1, 100);
+//	cfg.test8 = Test8Param(main_threads, main_per_thread, 5);
+//	cfg.test9 = Test9Param(main_threads, main_per_thread, 10, 5, 100, 50);
+//	cfg.test10 = Test10Param(main_threads, main_per_thread);
+//	cfg.test11 = Test11Param(main_threads, main_per_thread);
+//
+//	return cfg;
+//}
+//
+//static TestConfig make_64bit_test_config() {
+//	const int main_threads = 200;
+//	const int main_per_thread = 100000;      // 2000 万
+//	const int target_total = 20000000;       // Test4 固定总量 2000 万
+//
+//	TestConfig cfg;
+//	cfg.repeat = 800;
+//
+//	cfg.test1 = Test1Param(main_threads, main_per_thread);
+//	cfg.test2 = Test2Param(main_threads, main_per_thread);
+//	cfg.test3A = Test3AParam(main_threads, main_per_thread, 10);
+//	cfg.test3B = Test3BParam(main_threads, main_per_thread, 10);
+//
+//	cfg.test4.target_total = target_total;
+//	cfg.test4.thread_counts = std::vector<int>{ 50, 100, 200, 400 };
+//
+//	cfg.test5 = Test5Param(main_threads, main_per_thread, 3);
+//	cfg.test6 = Test6Param(main_threads, main_per_thread);
+//	cfg.test7 = Test7Param(main_threads, main_per_thread, 1, 100);
+//	cfg.test8 = Test8Param(main_threads, main_per_thread, 5);
+//	cfg.test9 = Test9Param(main_threads, main_per_thread, 10, 5, 100, 50);
+//	cfg.test10 = Test10Param(main_threads, main_per_thread);
+//	cfg.test11 = Test11Param(main_threads, main_per_thread);
+//
+//	return cfg;
+//}
+//
 //std::atomic<int> global_counter(-1);
 //
 //void reset_counter() { global_counter.store(-1); }
-//
-//class Semaphore {
-//public:
-//	Semaphore(int count = 0) : m_count(count) {}
-//
-//	void signal() {
-//		std::unique_lock<std::mutex> lock(m_mtx);
-//		++m_count;
-//		m_cv.notify_one();
-//	}
-//
-//	void wait() {
-//		std::unique_lock<std::mutex> lock(m_mtx);
-//		while (m_count == 0) {
-//			m_cv.wait(lock);
-//		}
-//		--m_count;
-//	}
-//
-//private:
-//	std::mutex m_mtx;
-//	std::condition_variable m_cv;
-//	int m_count;
-//};
-//
 //
 //// 辅助函数：输出当前监控计数
 //void print_monitor_count(const std::string& tag) {
@@ -86,7 +240,7 @@
 //			std::this_thread::yield();
 //		}
 //		output.push_back(value);
-//		if ((i + 1) % 100000 == 0) {
+//		if ((i + 1) % kProgressStep == 0) {
 //			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start).count();
 //			std::cout << "[single_thread_pop] Progress: " << (i + 1) << "/" << num_elements
 //#ifdef DEBUG_PUSH_POP
@@ -111,7 +265,7 @@
 //			std::this_thread::yield();
 //		}
 //
-//		if ((i + 1) % 100000 == 0) {
+//		if ((i + 1) % kProgressStep == 0) {
 //			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
 //				std::chrono::steady_clock::now() - start).count();
 //
@@ -203,7 +357,9 @@
 //}
 //
 //// ========== Test 1 ==========
-//bool test1(int num_threads, int num_per_thread) {
+//bool test1(const Test1Param& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
 //	std::cout << "\n=== Test 1: Parallel push, then single-thread pop ===" << std::endl;
 //	reset_monitor_count();
 //	LockFreeQueue<int> queue;
@@ -227,7 +383,9 @@
 //}
 //
 //// ========== Test 2 ==========
-//bool test2(int num_threads, int num_per_thread) {
+//bool test2(const Test2Param& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
 //	std::cout << "\n=== Test 2: Concurrent push and pop (simultaneous) ===" << std::endl;
 //	reset_monitor_count();
 //	LockFreeQueue<int> queue;
@@ -243,7 +401,10 @@
 //}
 //
 //// ========== Test 3A ==========
-//bool test3A(int num_threads, int num_per_thread, int rounds) {
+//bool test3A(const Test3AParam& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
+//	int rounds = param.rounds;
 //	std::cout << "\n=== Test 3A: Multiple rounds (" << rounds << " rounds) ===" << std::endl;
 //	for (int round = 0; round < rounds; ++round) {
 //		std::cout << "--- Round " << round << " starting ---" << std::endl;
@@ -273,7 +434,10 @@
 //}
 //
 //// ========== Test 3B ==========
-//bool test3B(int num_threads, int num_per_thread, int rounds) {
+//bool test3B(const Test3BParam& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
+//	int rounds = param.rounds;
 //	std::cout << "\n=== Test 3B: Multiple rounds with delay (" << rounds << " rounds) ===" << std::endl;
 //	for (int round = 0; round < rounds; ++round) {
 //		std::cout << "--- Round " << round << " starting ---" << std::endl;
@@ -307,14 +471,12 @@
 //}
 //
 //// ========== Test 4 ==========
-//bool test4() {
+//bool test4(const Test4Param& param) {
 //	std::cout << "\n=== Test 4: Different push thread counts ===" << std::endl;
 //
-//	const int target_total = 20000000;
-//	std::vector<int> thread_counts = { 50, 100, 200, 400 };
-//
-//	for (int num_threads : thread_counts) {
-//		int per_thread = target_total / num_threads;
+//	for (size_t i = 0; i < param.thread_counts.size(); ++i) {
+//		int num_threads = param.thread_counts[i];
+//		int per_thread = param.target_total / num_threads;
 //		int total = num_threads * per_thread;
 //
 //		reset_monitor_count();
@@ -353,10 +515,13 @@
 //}
 //
 //// ========== Test 5 ==========
-//bool test5(int num_threads, int num_per_thread) {
+//bool test5(const Test5Param& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
+//	int runs = param.runs;
 //	std::cout << "\n=== Test 5: High pressure test (recreate queue each time) ===" << std::endl;
-//	for (int run = 0; run < 3; ++run) {
-//		std::cout << "  Run " << run + 1 << " of 3" << std::endl;
+//	for (int run = 0; run < runs; ++run) {
+//		std::cout << "  Run " << run + 1 << " of " << runs << std::endl;
 //		reset_monitor_count();
 //		LockFreeQueue<int> queue;
 //		int total = num_threads * num_per_thread;
@@ -387,7 +552,9 @@
 //}
 //
 //// ========== Test 6 ==========
-//bool test6(int num_threads, int num_per_thread) {
+//bool test6(const Test6Param& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
 //	std::cout << "\n=== Test 6: Push all, then single clear ===" << std::endl;
 //	reset_monitor_count();
 //	LockFreeQueue<int> queue;
@@ -419,7 +586,9 @@
 //}
 //
 //// ========== Test 7 ==========
-//bool test7(int num_threads, int num_per_thread) {
+//bool test7(const Test7Param& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
 //	std::cout << "\n=== Test 7: Frequent clear during push ===" << std::endl;
 //	reset_monitor_count();
 //	LockFreeQueue<int> queue;
@@ -444,10 +613,10 @@
 //	// 单线程频繁 clear
 //	std::thread clear_thread([&]() {
 //		while (!push_done.load()) {
-//			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+//			std::this_thread::sleep_for(std::chrono::milliseconds(param.clear_sleep_ms));
 //			queue.clear();
 //			clear_count++;
-//			if (clear_count.load() % 100 == 0) {
+//			if (clear_count.load() % param.clear_log_interval == 0) {
 //				std::cout << "  Clear count: " << clear_count.load()
 //					<< ", queue size: " << queue.size() << std::endl;
 //				print_monitor_count("test7 clear");
@@ -472,9 +641,11 @@
 //}
 //
 //// ========== Test 8 ==========
-//bool test8(int num_threads, int num_per_thread) {
+//bool test8(const Test8Param& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
 //	std::cout << "\n=== Test 8: Clear, then repush multiple times ===" << std::endl;
-//	const int cycles = 5;
+//	int cycles = param.cycles;
 //	int total = num_threads * num_per_thread;
 //
 //	for (int cycle = 0; cycle < cycles; ++cycle) {
@@ -503,7 +674,9 @@
 //}
 //
 //// ========== Test 9 ==========
-//bool test9(int num_threads, int num_per_thread) {
+//bool test9(const Test9Param& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
 //	std::cout << "\n=== Test 9: Multi-thread clear requests, pop thread executes clear ===" << std::endl;
 //	reset_monitor_count();
 //	LockFreeQueue<int> queue;
@@ -528,16 +701,15 @@
 //	}
 //
 //	// 多线程 clear 请求：这里只发请求，不直接 clear
-//	const int clear_thread_count = 10;
 //	std::vector<std::thread> clear_request_threads;
-//	for (int i = 0; i < clear_thread_count; ++i) {
+//	for (int i = 0; i < param.clear_thread_count; ++i) {
 //		clear_request_threads.emplace_back([&, i]() {
 //			while (!push_finished.load()) {
-//				std::this_thread::sleep_for(std::chrono::milliseconds(5 + (i % 10)));
+//				std::this_thread::sleep_for(std::chrono::milliseconds(param.clear_sleep_base_ms + (i % 10)));
 //				clear_request_count++;
 //
 //				int req = clear_request_count.load();
-//				if (req % 100 == 0) {
+//				if (req % param.clear_log_interval == 0) {
 //					std::cout << "  Clear requests: " << req
 //						<< ", executed: " << clear_executed_count.load() << std::endl;
 //				}
@@ -558,7 +730,7 @@
 //				queue.clear();
 //				clear_executed_count++;
 //
-//				if (clear_executed_count.load() % 50 == 0) {
+//				if (clear_executed_count.load() % param.clear_execute_log_interval == 0) {
 //					std::cout << "  Clear executed #" << clear_executed_count.load()
 //						<< ", queue size: " << queue.size()
 //						<< ", requests: " << clear_request_count.load()
@@ -628,7 +800,9 @@
 //	return true;
 //}
 //
-//bool test10(int num_threads, int num_per_thread) {
+//bool test10(const Test10Param& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
 //	std::cout << "\n=== Test 10: Concurrent push and direct pop(nullptr) discard ===" << std::endl;
 //	reset_monitor_count();
 //
@@ -674,7 +848,9 @@
 //	return true;
 //}
 //
-//bool test11(int num_threads, int num_per_thread) {
+//bool test11(const Test11Param& param) {
+//	int num_threads = param.num_threads;
+//	int num_per_thread = param.num_per_thread;
 //	std::cout << "\n=== Test 11: Explicit destroy/init reuse ===" << std::endl;
 //	reset_monitor_count();
 //
@@ -807,25 +983,38 @@
 //	});
 //#endif
 //
-//	const int num_threads = 200;
-//	const int num_per_thread = 100000;
-//	const int repeat = 800;
+//	TestConfig config;
+//
+//#if INTPTR_MAX == INT64_MAX
+//	config = make_64bit_test_config();
+//#else
+//	config = make_32bit_test_config();
+//#endif
+//
+//	std::cout << "[Config] repeat = " << config.repeat << std::endl;
+//	std::cout << "[Config] Test1 main scale = "
+//		<< config.test1.num_threads << " * "
+//		<< config.test1.num_per_thread << " = "
+//		<< (config.test1.num_threads * config.test1.num_per_thread) << std::endl;
+//	std::cout << "[Config] Test4 target_total = "
+//		<< config.test4.target_total << std::endl;
+//
 //	bool all_passed = true;
 //
-//	for (int run = 1; run <= repeat; ++run) {
-//		std::cout << "\n========== Run " << run << " of " << repeat << " ==========" << std::endl;
-//		if (!test1(num_threads, num_per_thread)) { all_passed = false; break; }
-//		if (!test2(num_threads, num_per_thread)) { all_passed = false; break; }
-//		if (!test3A(num_threads, num_per_thread, 10)) { all_passed = false; break; }
-//		if (!test3B(num_threads, num_per_thread, 10)) { all_passed = false; break; }
-//		if (!test4()) { all_passed = false; break; }
-//		if (!test5(num_threads, num_per_thread)) { all_passed = false; break; }
-//		if (!test6(num_threads, num_per_thread)) { all_passed = false; break; }
-//		if (!test7(num_threads, num_per_thread)) { all_passed = false; break; }
-//		if (!test8(num_threads, num_per_thread)) { all_passed = false; break; }
-//		if (!test9(num_threads, num_per_thread)) { all_passed = false; break; }
-//		if (!test10(num_threads, num_per_thread)) { all_passed = false; break; }
-//		if (!test11(num_threads, num_per_thread)) { all_passed = false; break; }
+//	for (int run = 1; run <= config.repeat; ++run) {
+//		std::cout << "\n========== Run " << run << " of " << config.repeat << " ==========" << std::endl;
+//		if (!test1(config.test1)) { all_passed = false; break; }
+//		if (!test2(config.test2)) { all_passed = false; break; }
+//		if (!test3A(config.test3A)) { all_passed = false; break; }
+//		if (!test3B(config.test3B)) { all_passed = false; break; }
+//		if (!test4(config.test4)) { all_passed = false; break; }
+//		if (!test5(config.test5)) { all_passed = false; break; }
+//		if (!test6(config.test6)) { all_passed = false; break; }
+//		if (!test7(config.test7)) { all_passed = false; break; }
+//		if (!test8(config.test8)) { all_passed = false; break; }
+//		if (!test9(config.test9)) { all_passed = false; break; }
+//		if (!test10(config.test10)) { all_passed = false; break; }
+//		if (!test11(config.test11)) { all_passed = false; break; }
 //		if (!test12()) { all_passed = false; break; }
 //	}
 //
