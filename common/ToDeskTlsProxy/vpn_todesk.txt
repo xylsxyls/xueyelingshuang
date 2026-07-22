@@ -1,0 +1,154 @@
+# ToDesk 加密代理工具说明
+
+这个工具是给 ToDesk 使用的加密代理通道，不是全局 VPN，也不会接管整台电脑的网络。
+只是暂时放在 `src/ConsoleTest/ToDeskTlsProxy` 目录下。
+
+请把这个目录里的 Ubuntu `.sh` 脚本、Windows `.bat` 脚本和 Python 文件放在一起使用。
+Ubuntu 初始化脚本会生成私有证书，并生成需要拷贝到 Windows 服务端的
+`windows-server-package/` 目录。
+
+- Windows 服务端地址：`175.24.198.162:52030`
+- Ubuntu 本机给 ToDesk 填的代理地址：`127.0.0.1:52030`
+- Ubuntu 内部 stunnel 监听地址：`127.0.0.1:52031`
+- ToDesk 代理用户名/密码：留空
+- 加密方式：TLS 1.2 或更高版本，并使用客户端/服务端双向证书认证
+
+只在你被允许使用外部代理的网络环境里使用它。
+
+## Ubuntu 首次初始化
+
+```bash
+cd ToDeskTlsProxy
+chmod +x vpn_todesk_init.sh vpn_todesk.sh vpn_todesk_uninit.sh
+./vpn_todesk_init.sh
+```
+
+初始化脚本会安装 Ubuntu 需要的 `stunnel4`、生成私有证书、校验证书和私钥是否匹配、
+安装本机 ToDesk 代理适配器，并生成 `windows-server-package/` 目录。
+
+脚本生成 Windows 包以后，会提示你把 `windows-server-package/` 目录里的全部文件拷贝到
+Windows 服务端的 `C:\ProgramData\ToDeskTlsProxy`，然后在 Windows 服务端以管理员身份
+运行 `vpn_todesk_server_init.bat`。服务端初始化成功以后，回到 Ubuntu 控制台按回车继续。
+
+初始化脚本不会自动启动 Ubuntu 客户端服务，也不会设置开机自启。
+
+如果再次执行初始化脚本，它会复用已有证书，不会偷偷覆盖已有的 `pki-out/`。
+
+如果 Ubuntu 安装依赖时因为 Chrome、Beyond Compare 之类第三方 apt 源缺少 GPG 公钥而失败，
+脚本会先打印几行修复命令。你可以手动执行这些命令，然后重新执行：
+
+```bash
+./vpn_todesk_init.sh
+```
+
+如果 Windows 服务端已经部署过，只想重装 Ubuntu 客户端和本机代理适配器，可以用：
+
+```bash
+./vpn_todesk_init.sh --client-only
+```
+
+## Windows Server 2012 首次初始化
+
+1. 把 Ubuntu 生成的 `windows-server-package/` 目录里的全部文件拷贝到：
+
+```bat
+C:\ProgramData\ToDeskTlsProxy
+```
+
+2. 在 Windows 服务端打开“管理员身份”的 CMD，执行：
+
+```bat
+cd /d C:\ProgramData\ToDeskTlsProxy
+vpn_todesk_server_init.bat
+```
+
+如果服务端还没有安装 stunnel，BAT 脚本会打印官方下载地址和 SHA-256 校验地址，然后暂停。
+你安装完 stunnel 以后，回到暂停的 CMD 窗口按回车继续。
+
+这个初始化脚本只会创建专用 Windows 服务 `vpn-todesk-server`，不会修改或删除系统里已有的
+`stunnel` 服务。它还会创建一个只绑定到本项目 stunnel 程序的 Windows 防火墙入站规则，
+并提示你去腾讯云控制台给 CVM 安全组开放 TCP `52030`。
+
+服务端日常控制命令：
+
+```bat
+vpn_todesk_server.bat start
+vpn_todesk_server.bat stop
+vpn_todesk_server.bat status
+vpn_todesk_server.bat logs
+```
+
+腾讯云安全组如果临时填 `0.0.0.0/0`，表示互联网上都可以连到这个 TCP 端口。
+不过真正能通过代理的客户端仍然必须持有私有 mTLS 客户端证书。以后如果能拿到稳定的出口 IP，
+建议把安全组来源收窄。
+
+服务端是手动启动模式。Windows 重启后不会自动启动这个代理，需要时执行：
+
+```bat
+vpn_todesk_server.bat start
+```
+
+## Ubuntu 日常启动/停止
+
+```bash
+./vpn_todesk.sh start
+./vpn_todesk.sh stop
+./vpn_todesk.sh status
+./vpn_todesk.sh logs
+```
+
+`start` 会先停止之前由本工具管理的客户端服务，然后重新启动一份新的客户端。
+它不会使用 `pkill`、`killall`，也不会杀掉系统里的其他 stunnel 服务。
+
+Ubuntu 客户端也是手动启动模式。Ubuntu 重启后不会自动启动，需要时执行：
+
+```bash
+./vpn_todesk.sh start
+```
+
+ToDesk 代理界面里填写：
+
+- 地址：`127.0.0.1`
+- 端口：`52030`
+- 用户名：留空
+- 密码：留空
+
+如果你的 ToDesk 界面有代理类型选项，HTTP 或 SOCKS 类型都可以；本机适配器两种流量都能接。
+
+## 卸载
+
+Ubuntu 客户端卸载：
+
+```bash
+cd ToDeskTlsProxy
+./vpn_todesk_uninit.sh
+```
+
+这个脚本会先尝试停止 Ubuntu 客户端服务；如果服务本来就是停止状态，也会继续卸载。
+它会删除两个 systemd 服务文件和 `/etc/vpn-todesk`，但不会卸载 `stunnel4`、`python3`、
+`openssl` 等 Ubuntu 软件包，也不会删除当前这个项目目录、`pki-out/` 或
+`windows-server-package/`。
+
+Windows 服务端卸载：
+
+```bat
+cd /d C:\ProgramData\ToDeskTlsProxy
+vpn_todesk_server_uninit.bat
+```
+
+这个脚本会先尝试停止 Windows 服务端服务；如果服务本来就是停止状态，也会继续卸载。
+它只会删除本项目专用的 `vpn-todesk-server` 服务、本项目创建的 Windows 防火墙规则、
+以及 `C:\ProgramData\ToDeskTlsProxy` 目录。
+
+它不会卸载 stunnel 程序本身，也不会自动删除腾讯云安全组里的 TCP `52030` 规则。
+如果你确定不用了，需要自己去腾讯云控制台把安全组规则删掉。
+
+## 私钥和证书注意事项
+
+`pki-out/offline-ca/` 里面是 CA 私钥。不要把它拷贝到 Windows，不要提交到代码仓库，
+不要发邮件，也不要放在共享磁盘上。
+
+Windows 包部署完成后，建议把 `pki-out/offline-ca/` 备份到加密的离线位置。
+
+如果删除整个 `pki-out/` 后重新执行初始化脚本，会生成一套新的信任体系。
+这种情况下 Windows 服务端和 Ubuntu 客户端必须一起重新部署。
