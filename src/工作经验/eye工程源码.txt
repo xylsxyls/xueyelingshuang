@@ -1,0 +1,1367 @@
+// ./eye1.0默认值./eye1.0 1 2 /dev/video0 1920 1080（表示每隔一分钟记录一次，最多记录两小时）
+#include <atomic>
+#include <chrono>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <exception>
+#include <functional>
+#include <linux/videodev2.h>
+#include <limits.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <string>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/select.h>
+#include <sys/stat.h>
+#include <thread>
+#include <time.h>
+#include <unistd.h>
+
+struct Buffer
+{
+    void *start;
+    size_t length;
+};
+
+struct Config
+{
+    long intervalMinutes;
+    long keepHours;
+    long intervalSeconds;
+    long keepSeconds;
+    int width;
+    int height;
+    std::string device;
+    std::string outputDirectory;
+};
+
+struct CaptureMode
+{
+    int width;
+    int height;
+    __u32 pixelFormat;
+};
+
+static int xioctl(int fd, unsigned long request, void *arg)
+{
+    int ret = 0;
+
+    do
+    {
+        ret = ioctl(fd, request, arg);
+    } while (ret == -1 && errno == EINTR);
+
+    return ret;
+}
+
+static void releaseCameraResources(int &fd,
+                                   Buffer *&buffers,
+                                   unsigned int &bufferCount,
+                                   bool &streamStarted,
+                                   enum v4l2_buf_type type)
+{
+    if (streamStarted && fd >= 0)
+    {
+        xioctl(fd, VIDIOC_STREAMOFF, &type);
+        streamStarted = false;
+    }
+
+    if (buffers != nullptr)
+    {
+        for (unsigned int index = 0; index < bufferCount; ++index)
+        {
+            if (buffers[index].start != nullptr)
+            {
+                munmap(buffers[index].start, buffers[index].length);
+            }
+        }
+
+        free(buffers);
+        buffers = nullptr;
+        bufferCount = 0;
+    }
+
+    if (fd >= 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+}
+
+static unsigned char clampRgb(int value)
+{
+    if (value < 0)
+    {
+        return 0;
+    }
+
+    if (value > 255)
+    {
+        return 255;
+    }
+
+    return static_cast<unsigned char>(value);
+}
+
+static void writeRgbPixel(unsigned char *rgb, size_t &offset, int y, int u, int v)
+{
+    int c = y - 16;
+    int d = u - 128;
+    int e = v - 128;
+
+    rgb[offset++] = clampRgb((298 * c + 409 * e + 128) >> 8);
+    rgb[offset++] = clampRgb((298 * c - 100 * d - 208 * e + 128) >> 8);
+    rgb[offset++] = clampRgb((298 * c + 516 * d + 128) >> 8);
+}
+
+static void packedYuv422ToRgb(unsigned char *rgb,
+                              const unsigned char *data,
+                              int width,
+                              int height,
+                              int bytesPerLine,
+                              __u32 pixelFormat)
+{
+    size_t offset = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        const unsigned char *line = data + static_cast<size_t>(row) * bytesPerLine;
+
+        for (int col = 0; col < width; col += 2)
+        {
+            int b0 = line[col * 2 + 0];
+            int b1 = line[col * 2 + 1];
+            int b2 = line[col * 2 + 2];
+            int b3 = line[col * 2 + 3];
+            int y0 = 0;
+            int y1 = 0;
+            int u = 0;
+            int v = 0;
+
+            if (pixelFormat == V4L2_PIX_FMT_YUYV)
+            {
+                y0 = b0;
+                u = b1;
+                y1 = b2;
+                v = b3;
+            }
+            else if (pixelFormat == V4L2_PIX_FMT_YVYU)
+            {
+                y0 = b0;
+                v = b1;
+                y1 = b2;
+                u = b3;
+            }
+            else if (pixelFormat == V4L2_PIX_FMT_UYVY)
+            {
+                u = b0;
+                y0 = b1;
+                v = b2;
+                y1 = b3;
+            }
+            else
+            {
+                v = b0;
+                y0 = b1;
+                u = b2;
+                y1 = b3;
+            }
+
+            writeRgbPixel(rgb, offset, y0, u, v);
+
+            if (col + 1 < width)
+            {
+                writeRgbPixel(rgb, offset, y1, u, v);
+            }
+        }
+    }
+}
+
+static void rgb24ToRgb(unsigned char *rgb,
+                       const unsigned char *data,
+                       int width,
+                       int height,
+                       int bytesPerLine,
+                       bool sourceIsBgr)
+{
+    size_t offset = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        const unsigned char *line = data + static_cast<size_t>(row) * bytesPerLine;
+
+        for (int col = 0; col < width; ++col)
+        {
+            const unsigned char *pixel = line + static_cast<size_t>(col) * 3;
+
+            if (sourceIsBgr)
+            {
+                rgb[offset++] = pixel[2];
+                rgb[offset++] = pixel[1];
+                rgb[offset++] = pixel[0];
+            }
+            else
+            {
+                rgb[offset++] = pixel[0];
+                rgb[offset++] = pixel[1];
+                rgb[offset++] = pixel[2];
+            }
+        }
+    }
+}
+
+static void greyToRgb(unsigned char *rgb,
+                      const unsigned char *data,
+                      int width,
+                      int height,
+                      int bytesPerLine)
+{
+    size_t offset = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        const unsigned char *line = data + static_cast<size_t>(row) * bytesPerLine;
+
+        for (int col = 0; col < width; ++col)
+        {
+            unsigned char value = line[col];
+            rgb[offset++] = value;
+            rgb[offset++] = value;
+            rgb[offset++] = value;
+        }
+    }
+}
+
+static void nv12OrNv21ToRgb(unsigned char *rgb,
+                            const unsigned char *data,
+                            int width,
+                            int height,
+                            int bytesPerLine,
+                            __u32 pixelFormat)
+{
+    size_t offset = 0;
+    const unsigned char *uvPlane = data + static_cast<size_t>(bytesPerLine) * height;
+
+    for (int row = 0; row < height; ++row)
+    {
+        const unsigned char *yLine = data + static_cast<size_t>(row) * bytesPerLine;
+        const unsigned char *uvLine = uvPlane + static_cast<size_t>(row / 2) * bytesPerLine;
+
+        for (int col = 0; col < width; ++col)
+        {
+            int y = yLine[col];
+            int uvIndex = (col / 2) * 2;
+            int first = uvLine[uvIndex + 0];
+            int second = uvLine[uvIndex + 1];
+            int u = pixelFormat == V4L2_PIX_FMT_NV12 ? first : second;
+            int v = pixelFormat == V4L2_PIX_FMT_NV12 ? second : first;
+
+            writeRgbPixel(rgb, offset, y, u, v);
+        }
+    }
+}
+
+static int defaultBytesPerLine(__u32 pixelFormat, int width)
+{
+    if (pixelFormat == V4L2_PIX_FMT_RGB24 || pixelFormat == V4L2_PIX_FMT_BGR24)
+    {
+        return width * 3;
+    }
+
+    if (pixelFormat == V4L2_PIX_FMT_GREY)
+    {
+        return width;
+    }
+
+    if (pixelFormat == V4L2_PIX_FMT_NV12 || pixelFormat == V4L2_PIX_FMT_NV21)
+    {
+        return width;
+    }
+
+    return width * 2;
+}
+
+static size_t requiredImageBytes(__u32 pixelFormat, int width, int height, int bytesPerLine)
+{
+    if (pixelFormat == V4L2_PIX_FMT_NV12 || pixelFormat == V4L2_PIX_FMT_NV21)
+    {
+        return static_cast<size_t>(bytesPerLine) * height +
+               static_cast<size_t>(bytesPerLine) * ((height + 1) / 2);
+    }
+
+    return static_cast<size_t>(bytesPerLine) * height;
+}
+
+static bool convertToRgb(unsigned char *rgb,
+                         const unsigned char *data,
+                         __u32 pixelFormat,
+                         int width,
+                         int height,
+                         int bytesPerLine)
+{
+    if (pixelFormat == V4L2_PIX_FMT_YUYV ||
+        pixelFormat == V4L2_PIX_FMT_YVYU ||
+        pixelFormat == V4L2_PIX_FMT_UYVY ||
+        pixelFormat == V4L2_PIX_FMT_VYUY)
+    {
+        packedYuv422ToRgb(rgb, data, width, height, bytesPerLine, pixelFormat);
+        return true;
+    }
+
+    if (pixelFormat == V4L2_PIX_FMT_RGB24)
+    {
+        rgb24ToRgb(rgb, data, width, height, bytesPerLine, false);
+        return true;
+    }
+
+    if (pixelFormat == V4L2_PIX_FMT_BGR24)
+    {
+        rgb24ToRgb(rgb, data, width, height, bytesPerLine, true);
+        return true;
+    }
+
+    if (pixelFormat == V4L2_PIX_FMT_GREY)
+    {
+        greyToRgb(rgb, data, width, height, bytesPerLine);
+        return true;
+    }
+
+    if (pixelFormat == V4L2_PIX_FMT_NV12 || pixelFormat == V4L2_PIX_FMT_NV21)
+    {
+        nv12OrNv21ToRgb(rgb, data, width, height, bytesPerLine, pixelFormat);
+        return true;
+    }
+
+    return false;
+}
+
+static void trySetFastFrameInterval(int fd)
+{
+    struct v4l2_streamparm parm;
+    memset(&parm, 0, sizeof(parm));
+    parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+    if (xioctl(fd, VIDIOC_G_PARM, &parm) != 0)
+    {
+        return;
+    }
+
+    if ((parm.parm.capture.capability & V4L2_CAP_TIMEPERFRAME) == 0)
+    {
+        return;
+    }
+
+    parm.parm.capture.timeperframe.numerator = 1;
+    parm.parm.capture.timeperframe.denominator = 60;
+    xioctl(fd, VIDIOC_S_PARM, &parm);
+}
+
+static void fourccToString(__u32 pixelFormat, char text[5])
+{
+    text[0] = static_cast<char>(pixelFormat & 0xff);
+    text[1] = static_cast<char>((pixelFormat >> 8) & 0xff);
+    text[2] = static_cast<char>((pixelFormat >> 16) & 0xff);
+    text[3] = static_cast<char>((pixelFormat >> 24) & 0xff);
+    text[4] = '\0';
+}
+
+static bool isPpmConvertibleFormat(__u32 pixelFormat)
+{
+    return pixelFormat == V4L2_PIX_FMT_YUYV ||
+           pixelFormat == V4L2_PIX_FMT_YVYU ||
+           pixelFormat == V4L2_PIX_FMT_UYVY ||
+           pixelFormat == V4L2_PIX_FMT_VYUY ||
+           pixelFormat == V4L2_PIX_FMT_RGB24 ||
+           pixelFormat == V4L2_PIX_FMT_BGR24 ||
+           pixelFormat == V4L2_PIX_FMT_GREY ||
+           pixelFormat == V4L2_PIX_FMT_NV12 ||
+           pixelFormat == V4L2_PIX_FMT_NV21;
+}
+
+static bool isJpegFormat(__u32 pixelFormat)
+{
+    return pixelFormat == V4L2_PIX_FMT_MJPEG ||
+           pixelFormat == V4L2_PIX_FMT_JPEG;
+}
+
+static bool isSupportedOutputFormat(__u32 pixelFormat)
+{
+    return isPpmConvertibleFormat(pixelFormat) || isJpegFormat(pixelFormat);
+}
+
+static bool preferPixelFormat(__u32 candidate, __u32 current)
+{
+    if (current == 0)
+    {
+        return true;
+    }
+
+    if (isPpmConvertibleFormat(candidate) != isPpmConvertibleFormat(current))
+    {
+        return isPpmConvertibleFormat(candidate);
+    }
+
+    return candidate < current;
+}
+
+static bool valueFitsStep(int value, int minValue, int maxValue, int step)
+{
+    if (value < minValue || value > maxValue)
+    {
+        return false;
+    }
+
+    if (step <= 0)
+    {
+        return true;
+    }
+
+    return ((value - minValue) % step) == 0;
+}
+
+static bool tryCaptureMode(int fd,
+                           int requestedWidth,
+                           int requestedHeight,
+                           __u32 requestedPixelFormat,
+                           CaptureMode &actualMode)
+{
+    struct v4l2_format tryFormat;
+    memset(&tryFormat, 0, sizeof(tryFormat));
+    tryFormat.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    tryFormat.fmt.pix.width = static_cast<__u32>(requestedWidth);
+    tryFormat.fmt.pix.height = static_cast<__u32>(requestedHeight);
+    tryFormat.fmt.pix.pixelformat = requestedPixelFormat;
+    tryFormat.fmt.pix.field = V4L2_FIELD_NONE;
+
+    if (xioctl(fd, VIDIOC_TRY_FMT, &tryFormat) != 0)
+    {
+        return false;
+    }
+
+    if (tryFormat.fmt.pix.pixelformat != requestedPixelFormat)
+    {
+        return false;
+    }
+
+    if (!isSupportedOutputFormat(tryFormat.fmt.pix.pixelformat))
+    {
+        return false;
+    }
+
+    actualMode.width = static_cast<int>(tryFormat.fmt.pix.width);
+    actualMode.height = static_cast<int>(tryFormat.fmt.pix.height);
+    actualMode.pixelFormat = tryFormat.fmt.pix.pixelformat;
+    return actualMode.width > 0 && actualMode.height > 0;
+}
+
+static bool isBetterCaptureMode(const CaptureMode &candidate,
+                                const CaptureMode &best)
+{
+    if (best.width <= 0 || best.height <= 0 || best.pixelFormat == 0)
+    {
+        return true;
+    }
+
+    long long candidateArea = static_cast<long long>(candidate.width) * candidate.height;
+    long long bestArea = static_cast<long long>(best.width) * best.height;
+
+    if (candidateArea != bestArea)
+    {
+        return candidateArea > bestArea;
+    }
+
+    if (candidate.width != best.width)
+    {
+        return candidate.width > best.width;
+    }
+
+    if (candidate.height != best.height)
+    {
+        return candidate.height > best.height;
+    }
+
+    return preferPixelFormat(candidate.pixelFormat, best.pixelFormat);
+}
+
+static void considerCaptureMode(int fd,
+                                int width,
+                                int height,
+                                __u32 pixelFormat,
+                                int preferredWidth,
+                                int preferredHeight,
+                                bool &foundPreferred,
+                                CaptureMode &preferred,
+                                CaptureMode &best)
+{
+    if (!isSupportedOutputFormat(pixelFormat))
+    {
+        return;
+    }
+
+    CaptureMode candidate = {0, 0, 0};
+    if (!tryCaptureMode(fd, width, height, pixelFormat, candidate))
+    {
+        return;
+    }
+
+    if (candidate.width == preferredWidth && candidate.height == preferredHeight)
+    {
+        if (!foundPreferred || preferPixelFormat(candidate.pixelFormat, preferred.pixelFormat))
+        {
+            preferred = candidate;
+            foundPreferred = true;
+        }
+
+        return;
+    }
+
+    if (isBetterCaptureMode(candidate, best))
+    {
+        best = candidate;
+    }
+}
+
+static bool chooseCaptureMode(int fd,
+                              int preferredWidth,
+                              int preferredHeight,
+                              CaptureMode &mode)
+{
+    bool foundPreferred = false;
+    bool foundFormat = false;
+    CaptureMode preferred = {0, 0, 0};
+    CaptureMode best = {0, 0, 0};
+
+    for (__u32 formatIndex = 0; formatIndex < 256; ++formatIndex)
+    {
+        struct v4l2_fmtdesc formatDescription;
+        memset(&formatDescription, 0, sizeof(formatDescription));
+        formatDescription.index = formatIndex;
+        formatDescription.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+        if (xioctl(fd, VIDIOC_ENUM_FMT, &formatDescription) != 0)
+        {
+            if (errno != EINVAL)
+            {
+                perror("VIDIOC_ENUM_FMT");
+            }
+
+            break;
+        }
+
+        if (!isSupportedOutputFormat(formatDescription.pixelformat))
+        {
+            continue;
+        }
+
+        foundFormat = true;
+
+        for (__u32 sizeIndex = 0; sizeIndex < 256; ++sizeIndex)
+        {
+            struct v4l2_frmsizeenum frameSize;
+            memset(&frameSize, 0, sizeof(frameSize));
+            frameSize.index = sizeIndex;
+            frameSize.pixel_format = formatDescription.pixelformat;
+
+            if (xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frameSize) != 0)
+            {
+                if (errno == EINVAL && sizeIndex == 0)
+                {
+                    considerCaptureMode(fd,
+                                        preferredWidth,
+                                        preferredHeight,
+                                        formatDescription.pixelformat,
+                                        preferredWidth,
+                                        preferredHeight,
+                                        foundPreferred,
+                                        preferred,
+                                        best);
+                }
+                else if (errno != EINVAL)
+                {
+                    perror("VIDIOC_ENUM_FRAMESIZES");
+                }
+
+                break;
+            }
+
+            if (frameSize.type == V4L2_FRMSIZE_TYPE_DISCRETE)
+            {
+                considerCaptureMode(fd,
+                                    static_cast<int>(frameSize.discrete.width),
+                                    static_cast<int>(frameSize.discrete.height),
+                                    formatDescription.pixelformat,
+                                    preferredWidth,
+                                    preferredHeight,
+                                    foundPreferred,
+                                    preferred,
+                                    best);
+            }
+            else if (frameSize.type == V4L2_FRMSIZE_TYPE_STEPWISE ||
+                     frameSize.type == V4L2_FRMSIZE_TYPE_CONTINUOUS)
+            {
+                int minWidth = static_cast<int>(frameSize.stepwise.min_width);
+                int maxWidth = static_cast<int>(frameSize.stepwise.max_width);
+                int stepWidth = static_cast<int>(frameSize.stepwise.step_width);
+                int minHeight = static_cast<int>(frameSize.stepwise.min_height);
+                int maxHeight = static_cast<int>(frameSize.stepwise.max_height);
+                int stepHeight = static_cast<int>(frameSize.stepwise.step_height);
+
+                if (valueFitsStep(preferredWidth, minWidth, maxWidth, stepWidth) &&
+                    valueFitsStep(preferredHeight, minHeight, maxHeight, stepHeight))
+                {
+                    considerCaptureMode(fd,
+                                        preferredWidth,
+                                        preferredHeight,
+                                        formatDescription.pixelformat,
+                                        preferredWidth,
+                                        preferredHeight,
+                                        foundPreferred,
+                                        preferred,
+                                        best);
+                }
+                else
+                {
+                    considerCaptureMode(fd,
+                                        maxWidth,
+                                        maxHeight,
+                                        formatDescription.pixelformat,
+                                        preferredWidth,
+                                        preferredHeight,
+                                        foundPreferred,
+                                        preferred,
+                                        best);
+                }
+            }
+        }
+    }
+
+    if (foundPreferred)
+    {
+        mode = preferred;
+        return true;
+    }
+
+    if (best.width > 0 && best.height > 0 && best.pixelFormat != 0)
+    {
+        mode = best;
+        return true;
+    }
+
+    if (!foundFormat)
+    {
+        fprintf(stderr, "no supported camera output format found\n");
+    }
+
+    mode.width = preferredWidth;
+    mode.height = preferredHeight;
+    mode.pixelFormat = V4L2_PIX_FMT_YUYV;
+    return false;
+}
+
+static bool getExecutableDirectory(std::string &directory)
+{
+    char path[PATH_MAX] = {0};
+    ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
+
+    if (len < 0)
+    {
+        perror("readlink /proc/self/exe");
+        return false;
+    }
+
+    path[len] = '\0';
+
+    char *slash = strrchr(path, '/');
+    if (slash == nullptr)
+    {
+        fprintf(stderr, "cannot get executable directory\n");
+        return false;
+    }
+
+    *slash = '\0';
+    directory = path;
+    return true;
+}
+
+static bool hasImageExtension(const char *name)
+{
+    size_t len = strlen(name);
+    return (len > 4 && strcasecmp(name + len - 4, ".ppm") == 0) ||
+           (len > 4 && strcasecmp(name + len - 4, ".jpg") == 0) ||
+           (len > 5 && strcasecmp(name + len - 5, ".jpeg") == 0);
+}
+
+static bool isDigitChar(char ch)
+{
+    return ch >= '0' && ch <= '9';
+}
+
+static bool isCapturedImageName(const char *name)
+{
+    size_t len = strlen(name);
+    if (!hasImageExtension(name))
+    {
+        return false;
+    }
+
+    if (!(len == 19 || len == 20))
+    {
+        return false;
+    }
+
+    for (int index = 0; index < 8; ++index)
+    {
+        if (!isDigitChar(name[index]))
+        {
+            return false;
+        }
+    }
+
+    return name[8] == '_' &&
+           name[9] == '_' &&
+           isDigitChar(name[10]) &&
+           isDigitChar(name[11]) &&
+           name[12] == '_' &&
+           isDigitChar(name[13]) &&
+           isDigitChar(name[14]) &&
+           name[15] == '.';
+}
+
+static std::string joinPath(const std::string &directory, const char *name)
+{
+    if (directory.empty() || directory[directory.size() - 1] == '/')
+    {
+        return directory + name;
+    }
+
+    return directory + "/" + name;
+}
+
+static bool makeTimestampFilePath(const std::string &directory,
+                                  const char *extension,
+                                  std::string &filePath)
+{
+    time_t now = time(nullptr);
+    struct tm localTime;
+
+    if (localtime_r(&now, &localTime) == nullptr)
+    {
+        fprintf(stderr, "localtime_r failed\n");
+        return false;
+    }
+
+    char fileName[64] = {0};
+    if (strftime(fileName, sizeof(fileName), "%Y%m%d__%H_%M", &localTime) == 0)
+    {
+        fprintf(stderr, "strftime failed\n");
+        return false;
+    }
+
+    std::string name = fileName;
+    name += extension;
+    filePath = joinPath(directory, name.c_str());
+    return true;
+}
+
+static bool savePpm(const std::string &outputPath,
+                    const unsigned char *rgb,
+                    int width,
+                    int height)
+{
+    FILE *file = fopen(outputPath.c_str(), "wb");
+    if (file == nullptr)
+    {
+        perror("fopen output file");
+        return false;
+    }
+
+    fprintf(file, "P6\n%d %d\n255\n", width, height);
+
+    size_t imageSize = static_cast<size_t>(width) * height * 3;
+    size_t saved = fwrite(rgb, 1, imageSize, file);
+    fclose(file);
+
+    if (saved != imageSize)
+    {
+        fprintf(stderr, "failed to write complete image: %s\n", outputPath.c_str());
+        return false;
+    }
+
+    printf("saved: %s\n", outputPath.c_str());
+    return true;
+}
+
+static bool saveBinaryFile(const std::string &outputPath, const unsigned char *data, size_t dataSize)
+{
+    FILE *file = fopen(outputPath.c_str(), "wb");
+    if (file == nullptr)
+    {
+        perror("fopen output file");
+        return false;
+    }
+
+    size_t saved = fwrite(data, 1, dataSize, file);
+    fclose(file);
+
+    if (saved != dataSize)
+    {
+        fprintf(stderr, "failed to write complete image: %s\n", outputPath.c_str());
+        return false;
+    }
+
+    printf("saved: %s\n", outputPath.c_str());
+    return true;
+}
+
+static void deleteCapturedImageFiles(const std::string &directory, bool deleteAll, long keepSeconds)
+{
+    DIR *dir = opendir(directory.c_str());
+    if (dir == nullptr)
+    {
+        perror("opendir output directory");
+        return;
+    }
+
+    time_t now = time(nullptr);
+    struct dirent *entry = nullptr;
+
+    while ((entry = readdir(dir)) != nullptr)
+    {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        {
+            continue;
+        }
+
+        if (!isCapturedImageName(entry->d_name))
+        {
+            continue;
+        }
+
+        std::string filePath = joinPath(directory, entry->d_name);
+
+        struct stat fileStat;
+        if (stat(filePath.c_str(), &fileStat) != 0)
+        {
+            continue;
+        }
+
+        if (!S_ISREG(fileStat.st_mode))
+        {
+            continue;
+        }
+
+        bool shouldDelete = deleteAll;
+        if (!shouldDelete && keepSeconds > 0)
+        {
+            shouldDelete = difftime(now, fileStat.st_mtime) > keepSeconds;
+        }
+
+        if (shouldDelete)
+        {
+            if (unlink(filePath.c_str()) == 0)
+            {
+                printf("deleted: %s\n", filePath.c_str());
+            }
+            else
+            {
+                perror("unlink image file");
+            }
+        }
+    }
+
+    closedir(dir);
+}
+
+static bool captureOnePhoto(const Config &config, std::atomic<bool> &stopRequested)
+{
+    int fd = open(config.device.c_str(), O_RDWR | O_NONBLOCK);
+    if (fd < 0)
+    {
+        perror("open camera");
+        return false;
+    }
+
+    bool ok = false;
+    Buffer *buffers = nullptr;
+    unsigned int bufferCount = 0;
+    bool streamStarted = false;
+    enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    int bytesPerLine = 0;
+    int width = config.width;
+    int height = config.height;
+    __u32 deviceCaps = 0;
+    CaptureMode selectedMode = {width, height, V4L2_PIX_FMT_YUYV};
+    char fourcc[5] = {0};
+
+    struct v4l2_capability capability;
+    struct v4l2_format format;
+    struct v4l2_requestbuffers requestBuffers;
+
+    memset(&capability, 0, sizeof(capability));
+
+    if (xioctl(fd, VIDIOC_QUERYCAP, &capability) < 0)
+    {
+        perror("VIDIOC_QUERYCAP");
+        goto cleanup;
+    }
+
+    deviceCaps = capability.capabilities;
+    if ((capability.capabilities & V4L2_CAP_DEVICE_CAPS) != 0)
+    {
+        deviceCaps = capability.device_caps;
+    }
+
+    if ((deviceCaps & V4L2_CAP_VIDEO_CAPTURE) == 0)
+    {
+        fprintf(stderr, "%s is not a video capture device\n", config.device.c_str());
+        goto cleanup;
+    }
+
+    if ((deviceCaps & V4L2_CAP_STREAMING) == 0)
+    {
+        fprintf(stderr, "%s does not support streaming mmap capture\n", config.device.c_str());
+        goto cleanup;
+    }
+
+    chooseCaptureMode(fd, width, height, selectedMode);
+    width = selectedMode.width;
+    height = selectedMode.height;
+
+    memset(&format, 0, sizeof(format));
+    format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    format.fmt.pix.width = static_cast<__u32>(width);
+    format.fmt.pix.height = static_cast<__u32>(height);
+    format.fmt.pix.pixelformat = selectedMode.pixelFormat;
+    format.fmt.pix.field = V4L2_FIELD_NONE;
+
+    if (xioctl(fd, VIDIOC_S_FMT, &format) < 0)
+    {
+        perror("VIDIOC_S_FMT");
+        goto cleanup;
+    }
+
+    if (!isSupportedOutputFormat(format.fmt.pix.pixelformat))
+    {
+        fprintf(stderr, "camera returned unsupported image format\n");
+        goto cleanup;
+    }
+
+    width = static_cast<int>(format.fmt.pix.width);
+    height = static_cast<int>(format.fmt.pix.height);
+    selectedMode.pixelFormat = format.fmt.pix.pixelformat;
+    trySetFastFrameInterval(fd);
+
+    fourccToString(selectedMode.pixelFormat, fourcc);
+
+    printf("capture mode selected: %dx%d %s -> %s\n",
+           width,
+           height,
+           fourcc,
+           isJpegFormat(selectedMode.pixelFormat) ? ".jpg" : ".ppm");
+
+    bytesPerLine = static_cast<int>(format.fmt.pix.bytesperline);
+    if (bytesPerLine <= 0)
+    {
+        bytesPerLine = defaultBytesPerLine(selectedMode.pixelFormat, width);
+    }
+
+    memset(&requestBuffers, 0, sizeof(requestBuffers));
+    requestBuffers.count = 1;
+    requestBuffers.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    requestBuffers.memory = V4L2_MEMORY_MMAP;
+
+    if (xioctl(fd, VIDIOC_REQBUFS, &requestBuffers) < 0)
+    {
+        perror("VIDIOC_REQBUFS");
+        goto cleanup;
+    }
+
+    if (requestBuffers.count < 1)
+    {
+        fprintf(stderr, "not enough camera buffers\n");
+        goto cleanup;
+    }
+
+    bufferCount = requestBuffers.count;
+    buffers = static_cast<Buffer *>(calloc(bufferCount, sizeof(Buffer)));
+    if (buffers == nullptr)
+    {
+        fprintf(stderr, "calloc buffers failed\n");
+        goto cleanup;
+    }
+
+    for (unsigned int index = 0; index < bufferCount; ++index)
+    {
+        struct v4l2_buffer buffer;
+        memset(&buffer, 0, sizeof(buffer));
+        buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buffer.memory = V4L2_MEMORY_MMAP;
+        buffer.index = index;
+
+        if (xioctl(fd, VIDIOC_QUERYBUF, &buffer) < 0)
+        {
+            perror("VIDIOC_QUERYBUF");
+            goto cleanup;
+        }
+
+        buffers[index].length = buffer.length;
+        buffers[index].start = mmap(nullptr,
+                                    buffer.length,
+                                    PROT_READ | PROT_WRITE,
+                                    MAP_SHARED,
+                                    fd,
+                                    buffer.m.offset);
+
+        if (buffers[index].start == MAP_FAILED)
+        {
+            buffers[index].start = nullptr;
+            perror("mmap");
+            goto cleanup;
+        }
+
+        if (xioctl(fd, VIDIOC_QBUF, &buffer) < 0)
+        {
+            perror("VIDIOC_QBUF");
+            goto cleanup;
+        }
+    }
+
+    if (xioctl(fd, VIDIOC_STREAMON, &type) < 0)
+    {
+        perror("VIDIOC_STREAMON");
+        goto cleanup;
+    }
+
+    streamStarted = true;
+
+    for (int waitedMs = 0; waitedMs < 3000 && !stopRequested.load(); waitedMs += 100)
+    {
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(fd, &fds);
+
+        struct timeval timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;
+
+        int ready = select(fd + 1, &fds, nullptr, nullptr, &timeout);
+        if (ready < 0)
+        {
+            if (errno == EINTR)
+            {
+                continue;
+            }
+
+            perror("select");
+            goto cleanup;
+        }
+
+        if (ready == 0)
+        {
+            continue;
+        }
+
+        struct v4l2_buffer frame;
+        memset(&frame, 0, sizeof(frame));
+        frame.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        frame.memory = V4L2_MEMORY_MMAP;
+
+        if (xioctl(fd, VIDIOC_DQBUF, &frame) < 0)
+        {
+            if (errno == EAGAIN)
+            {
+                continue;
+            }
+
+            perror("VIDIOC_DQBUF");
+            goto cleanup;
+        }
+
+        if (frame.index >= bufferCount)
+        {
+            fprintf(stderr, "invalid camera buffer index\n");
+            goto cleanup;
+        }
+
+        size_t frameDataSize = 0;
+
+        if (isJpegFormat(selectedMode.pixelFormat))
+        {
+            frameDataSize = frame.bytesused;
+            if (frameDataSize == 0)
+            {
+                fprintf(stderr, "camera returned empty jpeg frame\n");
+                goto cleanup;
+            }
+        }
+        else
+        {
+            frameDataSize = requiredImageBytes(selectedMode.pixelFormat, width, height, bytesPerLine);
+            if (frame.bytesused > 0 && frame.bytesused < frameDataSize)
+            {
+                fprintf(stderr, "camera frame is smaller than expected image size\n");
+                goto cleanup;
+            }
+        }
+
+        if (frameDataSize > buffers[frame.index].length)
+        {
+            fprintf(stderr, "camera buffer is smaller than expected image size\n");
+            goto cleanup;
+        }
+
+        unsigned char *frameCopy = static_cast<unsigned char *>(malloc(frameDataSize));
+        if (frameCopy == nullptr)
+        {
+            fprintf(stderr, "malloc frame image failed\n");
+            goto cleanup;
+        }
+
+        memcpy(frameCopy, buffers[frame.index].start, frameDataSize);
+
+        releaseCameraResources(fd, buffers, bufferCount, streamStarted, type);
+
+        const char *extension = isJpegFormat(selectedMode.pixelFormat) ? ".jpg" : ".ppm";
+        std::string outputPath;
+        if (!makeTimestampFilePath(config.outputDirectory, extension, outputPath))
+        {
+            free(frameCopy);
+            goto cleanup;
+        }
+
+        if (isJpegFormat(selectedMode.pixelFormat))
+        {
+            ok = saveBinaryFile(outputPath, frameCopy, frameDataSize);
+            free(frameCopy);
+            goto cleanup;
+        }
+
+        size_t rgbSize = static_cast<size_t>(width) * height * 3;
+        unsigned char *rgb = static_cast<unsigned char *>(malloc(rgbSize));
+        if (rgb == nullptr)
+        {
+            fprintf(stderr, "malloc rgb image failed\n");
+            free(frameCopy);
+            goto cleanup;
+        }
+
+        if (!convertToRgb(rgb, frameCopy, selectedMode.pixelFormat, width, height, bytesPerLine))
+        {
+            fprintf(stderr, "unsupported image conversion\n");
+            free(rgb);
+            free(frameCopy);
+            goto cleanup;
+        }
+
+        ok = savePpm(outputPath, rgb, width, height);
+        free(rgb);
+        free(frameCopy);
+        goto cleanup;
+    }
+
+    if (!stopRequested.load())
+    {
+        fprintf(stderr, "camera capture timeout\n");
+    }
+
+cleanup:
+    releaseCameraResources(fd, buffers, bufferCount, streamStarted, type);
+    return ok;
+}
+
+static bool parsePositiveLong(const char *text, long &value)
+{
+    char *end = nullptr;
+    errno = 0;
+    long parsed = strtol(text, &end, 10);
+
+    if (errno != 0 || end == text || *end != '\0' || parsed <= 0)
+    {
+        return false;
+    }
+
+    value = parsed;
+    return true;
+}
+
+static void printUsage(const char *program)
+{
+    printf("usage: %s [interval_minutes] [keep_hours] [device] [width] [height]\n", program);
+    printf("example: %s 1 2\n", program);
+    printf("example: %s 1 2 /dev/video0 1920 1080\n", program);
+}
+
+static bool buildConfig(int argc, char **argv, Config &config)
+{
+    config.intervalMinutes = 1;
+    config.keepHours = 2;
+    config.device = "/dev/video0";
+    config.width = 1920;
+    config.height = 1080;
+
+    if (argc >= 2 && !parsePositiveLong(argv[1], config.intervalMinutes))
+    {
+        return false;
+    }
+
+    if (argc >= 3 && !parsePositiveLong(argv[2], config.keepHours))
+    {
+        return false;
+    }
+
+    if (argc >= 4)
+    {
+        config.device = argv[3];
+    }
+
+    long parsedWidth = config.width;
+    long parsedHeight = config.height;
+
+    if (argc >= 5 && !parsePositiveLong(argv[4], parsedWidth))
+    {
+        return false;
+    }
+
+    if (argc >= 6 && !parsePositiveLong(argv[5], parsedHeight))
+    {
+        return false;
+    }
+
+    if (argc > 6)
+    {
+        return false;
+    }
+
+    if (parsedWidth > INT_MAX || parsedHeight > INT_MAX)
+    {
+        return false;
+    }
+
+    if (config.intervalMinutes > LONG_MAX / 60 || config.keepHours > LONG_MAX / 3600)
+    {
+        return false;
+    }
+
+    config.width = static_cast<int>(parsedWidth);
+    config.height = static_cast<int>(parsedHeight);
+    config.intervalSeconds = config.intervalMinutes * 60;
+    config.keepSeconds = config.keepHours * 60 * 60;
+
+    return getExecutableDirectory(config.outputDirectory);
+}
+
+static void sleepInterruptibly(long seconds, std::atomic<bool> &stopRequested)
+{
+    long remainingMs = seconds * 1000;
+
+    while (remainingMs > 0 && !stopRequested.load())
+    {
+        long stepMs = remainingMs < 200 ? remainingMs : 200;
+        std::this_thread::sleep_for(std::chrono::milliseconds(stepMs));
+        remainingMs -= stepMs;
+    }
+}
+
+static void captureLoop(Config config, std::atomic<bool> &stopRequested)
+{
+    try
+    {
+        while (!stopRequested.load())
+        {
+            deleteCapturedImageFiles(config.outputDirectory, false, config.keepSeconds);
+
+            captureOnePhoto(config, stopRequested);
+
+            deleteCapturedImageFiles(config.outputDirectory, false, config.keepSeconds);
+            sleepInterruptibly(config.intervalSeconds, stopRequested);
+        }
+    }
+    catch (const std::exception &ex)
+    {
+        fprintf(stderr, "capture thread failed: %s\n", ex.what());
+        stopRequested.store(true);
+    }
+    catch (...)
+    {
+        fprintf(stderr, "capture thread failed with unknown error\n");
+        stopRequested.store(true);
+    }
+}
+
+int main(int argc, char **argv)
+{
+#ifndef __linux__
+    fprintf(stderr, "this program only supports Linux V4L2 devices\n");
+    return 1;
+#else
+    Config config;
+    if (!buildConfig(argc, argv, config))
+    {
+        printUsage(argv[0]);
+        return 1;
+    }
+
+    sigset_t signalSet;
+    sigemptyset(&signalSet);
+    sigaddset(&signalSet, SIGINT);
+    sigaddset(&signalSet, SIGTERM);
+
+    int maskResult = pthread_sigmask(SIG_BLOCK, &signalSet, nullptr);
+    if (maskResult != 0)
+    {
+        errno = maskResult;
+        perror("pthread_sigmask");
+        return 1;
+    }
+
+    std::atomic<bool> stopRequested(false);
+
+    printf("device: %s\n", config.device.c_str());
+    printf("output directory: %s\n", config.outputDirectory.c_str());
+    printf("interval: %ld minute(s), keep: %ld hour(s), preferred size: %dx%d\n",
+           config.intervalMinutes,
+           config.keepHours,
+           config.width,
+           config.height);
+    printf("press Ctrl+C to stop and delete all captured image files in output directory\n");
+
+    std::thread worker(captureLoop, config, std::ref(stopRequested));
+
+    while (!stopRequested.load())
+    {
+        struct timespec timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_nsec = 200000000;
+
+        int receivedSignal = sigtimedwait(&signalSet, nullptr, &timeout);
+        if (receivedSignal == SIGINT || receivedSignal == SIGTERM)
+        {
+            stopRequested.store(true);
+            break;
+        }
+
+        if (receivedSignal == -1 && errno != EAGAIN && errno != EINTR)
+        {
+            perror("sigtimedwait");
+            stopRequested.store(true);
+            break;
+        }
+    }
+
+    if (worker.joinable())
+    {
+        worker.join();
+    }
+
+    deleteCapturedImageFiles(config.outputDirectory, true, 0);
+    printf("stopped\n");
+    return 0;
+#endif
+}
