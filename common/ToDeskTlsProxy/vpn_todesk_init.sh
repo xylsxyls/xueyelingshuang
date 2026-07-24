@@ -9,6 +9,8 @@ tunnel_local_port='52031'
 client_name='ubuntu-office-01'
 service_name='vpn-todesk-client.service'
 proxy_service_name='vpn-todesk-proxy.service'
+todesk_autostart_service_name='vpn-todesk-autostart.service'
+todesk_autostart_script_name='vpn-todesk-start-tcp.sh'
 service_user='vpn-todesk'
 
 die() {
@@ -60,6 +62,7 @@ proxy_adapter_script="$script_dir/todesk_proxy_adapter.py"
 client_install_dir='/etc/vpn-todesk'
 unit_path="/etc/systemd/system/$service_name"
 proxy_unit_path="/etc/systemd/system/$proxy_service_name"
+todesk_autostart_unit_path="/etc/systemd/system/$todesk_autostart_service_name"
 
 temporary_dirs=()
 cleanup() {
@@ -377,6 +380,83 @@ AmbientCapabilities=
 WantedBy=multi-user.target
 EOF
 
+cat >"$temp_dir/$todesk_autostart_script_name" <<EOF
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+tunnel_service_name='$service_name'
+proxy_service_name='$proxy_service_name'
+local_port='$local_port'
+tunnel_local_port='$tunnel_local_port'
+
+listener_is_ready() {
+    ss -H -ltn 2>/dev/null | grep -Eq "127\\.0\\.0\\.1:\${local_port}([[:space:]]|$)"
+}
+
+tunnel_listener_is_ready() {
+    ss -H -ltn 2>/dev/null | grep -Eq "127\\.0\\.0\\.1:\${tunnel_local_port}([[:space:]]|$)"
+}
+
+show_failure() {
+    systemctl status "\$tunnel_service_name" "\$proxy_service_name" --no-pager || true
+    journalctl -u "\$tunnel_service_name" -u "\$proxy_service_name" -n 120 --no-pager || true
+}
+
+echo 'Stopping any previous managed TCP client instance...'
+systemctl stop "\$proxy_service_name" "\$tunnel_service_name" >/dev/null 2>&1 || true
+systemctl reset-failed "\$proxy_service_name" "\$tunnel_service_name" >/dev/null 2>&1 || true
+
+echo 'Starting the encrypted tunnel...'
+systemctl start "\$tunnel_service_name"
+
+for attempt in {1..80}; do
+    if systemctl is-active --quiet "\$tunnel_service_name" && tunnel_listener_is_ready; then
+        break
+    fi
+    sleep 0.5
+done
+if ! tunnel_listener_is_ready; then
+    echo "Error: the encrypted tunnel did not listen on 127.0.0.1:\${tunnel_local_port}."
+    show_failure
+    exit 1
+fi
+
+echo 'Starting the local ToDesk proxy adapter...'
+systemctl start "\$proxy_service_name"
+
+for attempt in {1..80}; do
+    if systemctl is-active --quiet "\$proxy_service_name" && listener_is_ready; then
+        echo "ToDesk TCP proxy is ready on 127.0.0.1:\${local_port}."
+        exit 0
+    fi
+    sleep 0.5
+done
+
+echo "Error: the local ToDesk proxy adapter did not listen on 127.0.0.1:\${local_port}."
+show_failure
+exit 1
+EOF
+
+cat >"$temp_dir/$todesk_autostart_service_name" <<EOF
+[Unit]
+Description=Start ToDesk TCP proxy after boot
+Wants=network-online.target
+After=network-online.target
+Before=todeskd.service todesk.service
+StartLimitIntervalSec=30
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+ExecStart=$client_install_dir/$todesk_autostart_script_name
+RemainAfterExit=yes
+TimeoutStartSec=90
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 if ((client_only == 0)); then
 package_stage=$(mktemp -d "$script_dir/.vpn-todesk-windows.XXXXXXXX")
 temporary_dirs+=("$package_stage")
@@ -492,6 +572,8 @@ fi
 run_root install -d -m 0750 -o root -g "$service_user" "$client_install_dir"
 run_root install -m 0755 -o root -g root \
     "$proxy_adapter_script" "$client_install_dir/todesk_proxy_adapter.py"
+run_root install -m 0755 -o root -g root \
+    "$temp_dir/$todesk_autostart_script_name" "$client_install_dir/$todesk_autostart_script_name"
 run_root install -m 0640 -o root -g "$service_user" \
     "$pki_dir/ubuntu-client/client-fullchain.pem" "$client_install_dir/client-fullchain.pem"
 run_root install -m 0640 -o root -g "$service_user" \
@@ -502,6 +584,8 @@ run_root install -m 0640 -o root -g "$service_user" \
     "$temp_dir/stunnel-client.conf" "$client_install_dir/stunnel-client.conf"
 run_root install -m 0644 -o root -g root "$temp_dir/$service_name" "$unit_path"
 run_root install -m 0644 -o root -g root "$temp_dir/$proxy_service_name" "$proxy_unit_path"
+run_root install -m 0644 -o root -g root \
+    "$temp_dir/$todesk_autostart_service_name" "$todesk_autostart_unit_path"
 run_root systemctl daemon-reload
 
 printf '\nInitialization completed.\n'

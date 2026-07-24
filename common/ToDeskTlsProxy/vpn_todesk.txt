@@ -32,6 +32,9 @@ Windows 服务端的 `C:\ProgramData\ToDeskTlsProxy`，然后在 Windows 服务�
 
 初始化脚本不会自动启动 Ubuntu 客户端服务，也不会设置开机自启。只有执行
 `./vpn_todesk.sh start` 以后，Ubuntu 客户端才会被设置为开机自启。
+开机自启不是直接启动底层两个服务，而是由 `vpn-todesk-autostart.service` 执行完整的
+TCP 启动流程：停止旧实例、启动加密隧道、等待内部端口就绪、启动本机 ToDesk 代理适配器、
+等待 `127.0.0.1:52030` 真正监听成功。
 
 如果再次执行初始化脚本，它会复用已有证书，不会偷偷覆盖已有的 `pki-out/`。
 
@@ -99,6 +102,13 @@ vpn_todesk_server.bat logs
 启动成功后，它还会设置 Ubuntu 重启后自动启动。`stop` 会停止客户端，并取消重启后的自动启动。
 它不会使用 `pkill`、`killall`，也不会杀掉系统里的其他 stunnel 服务。
 
+如果你的机器刚更新过脚本，请先执行一次：
+
+```bash
+./vpn_todesk_init.sh --client-only
+./vpn_todesk.sh start
+```
+
 ToDesk 代理界面里填写：
 
 - 地址：`127.0.0.1`
@@ -118,7 +128,7 @@ cd ToDeskTlsProxy
 ```
 
 这个脚本会先尝试停止 Ubuntu 客户端服务；如果服务本来就是停止状态，也会继续卸载。
-它会删除两个 systemd 服务文件和 `/etc/vpn-todesk`，但不会卸载 `stunnel4`、`python3`、
+它会删除三个 systemd 服务文件和 `/etc/vpn-todesk`，但不会卸载 `stunnel4`、`python3`、
 `openssl` 等 Ubuntu 软件包，也不会删除当前这个项目目录、`pki-out/` 或
 `windows-server-package/`。
 
