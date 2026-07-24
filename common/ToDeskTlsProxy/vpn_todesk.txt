@@ -1,7 +1,7 @@
 # ToDesk 加密代理工具说明
 
 这个工具是给 ToDesk 使用的加密代理通道，不是全局 VPN，也不会接管整台电脑的网络。
-只是暂时放在 `src/ConsoleTest/ToDeskTlsProxy` 目录下。
+它存放在 `common/ToDeskTlsProxy` 目录下，和 Quant 工程没有关系。
 
 请把这个目录里的 Ubuntu `.sh` 脚本、Windows `.bat` 脚本和 Python 文件放在一起使用。
 Ubuntu 初始化脚本会生成私有证书，并生成需要拷贝到 Windows 服务端的
@@ -30,7 +30,8 @@ chmod +x vpn_todesk_init.sh vpn_todesk.sh vpn_todesk_uninit.sh
 Windows 服务端的 `C:\ProgramData\ToDeskTlsProxy`，然后在 Windows 服务端以管理员身份
 运行 `vpn_todesk_server_init.bat`。服务端初始化成功以后，回到 Ubuntu 控制台按回车继续。
 
-初始化脚本不会自动启动 Ubuntu 客户端服务，也不会设置开机自启。
+初始化脚本不会自动启动 Ubuntu 客户端服务，也不会设置开机自启。只有执行
+`./vpn_todesk.sh start` 以后，Ubuntu 客户端才会被设置为开机自启。
 
 如果再次执行初始化脚本，它会复用已有证书，不会偷偷覆盖已有的 `pki-out/`。
 
@@ -78,15 +79,12 @@ vpn_todesk_server.bat status
 vpn_todesk_server.bat logs
 ```
 
+`start` 会启动 TCP 服务端，并设置 Windows 重启后自动启动。
+`stop` 会停止 TCP 服务端，并取消 Windows 重启后的自动启动。
+
 腾讯云安全组如果临时填 `0.0.0.0/0`，表示互联网上都可以连到这个 TCP 端口。
 不过真正能通过代理的客户端仍然必须持有私有 mTLS 客户端证书。以后如果能拿到稳定的出口 IP，
 建议把安全组来源收窄。
-
-服务端是手动启动模式。Windows 重启后不会自动启动这个代理，需要时执行：
-
-```bat
-vpn_todesk_server.bat start
-```
 
 ## Ubuntu 日常启动/停止
 
@@ -98,13 +96,8 @@ vpn_todesk_server.bat start
 ```
 
 `start` 会先停止之前由本工具管理的客户端服务，然后重新启动一份新的客户端。
+启动成功后，它还会设置 Ubuntu 重启后自动启动。`stop` 会停止客户端，并取消重启后的自动启动。
 它不会使用 `pkill`、`killall`，也不会杀掉系统里的其他 stunnel 服务。
-
-Ubuntu 客户端也是手动启动模式。Ubuntu 重启后不会自动启动，需要时执行：
-
-```bash
-./vpn_todesk.sh start
-```
 
 ToDesk 代理界面里填写：
 

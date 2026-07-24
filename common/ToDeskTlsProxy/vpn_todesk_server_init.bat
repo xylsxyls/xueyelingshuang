@@ -2,7 +2,7 @@
 setlocal EnableExtensions DisableDelayedExpansion
 
 set "SERVICE_NAME=vpn-todesk-server"
-set "SCRIPT_VERSION=2026-07-22-uninit-package-v11"
+set "SCRIPT_VERSION=2026-07-24-autostart-tcp-v12"
 set "ROOT=%~dp0"
 set "ROOT_DIR=%ROOT:~0,-1%"
 set "EXPECTED_ROOT=C:\ProgramData\ToDeskTlsProxy"
@@ -275,7 +275,7 @@ echo Keep C:\ProgramData\ToDeskTlsProxy accessible only to Administrators.
 exit /b 0
 
 :service_identity_is_expected
-powershell.exe -NoProfile -NonInteractive -Command "$ErrorActionPreference='Stop'; $path='Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\'+$env:VPN_TODESK_SERVICE_NAME; $item=Get-ItemProperty -LiteralPath $path; $expected=$env:VPN_TODESK_STUNNEL_EXE+' -service '+$env:VPN_TODESK_CONF; if(-not [string]::Equals([string]$item.ImagePath,$expected,[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected service ImagePath'; exit 1}; if([int]$item.Type -ne 16){Write-Error 'Unexpected service Type'; exit 1}; if(-not [string]::Equals([string]$item.ObjectName,'LocalSystem',[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected service account'; exit 1}; if([int]$item.Start -ne 3){Write-Error 'Unexpected service startup type'; exit 1}; exit 0"
+powershell.exe -NoProfile -NonInteractive -Command "$ErrorActionPreference='Stop'; $path='Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\'+$env:VPN_TODESK_SERVICE_NAME; $item=Get-ItemProperty -LiteralPath $path; $expected=$env:VPN_TODESK_STUNNEL_EXE+' -service '+$env:VPN_TODESK_CONF; if(-not [string]::Equals([string]$item.ImagePath,$expected,[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected service ImagePath'; exit 1}; if([int]$item.Type -ne 16){Write-Error 'Unexpected service Type'; exit 1}; if(-not [string]::Equals([string]$item.ObjectName,'LocalSystem',[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected service account'; exit 1}; if(([int]$item.Start -ne 2) -and ([int]$item.Start -ne 3)){Write-Error 'Unexpected service startup type'; exit 1}; exit 0"
 exit /b %ERRORLEVEL%
 
 :ensure_firewall_rule

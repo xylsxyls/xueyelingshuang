@@ -435,6 +435,9 @@ Daily commands:
    vpn_todesk_server.bat status
    vpn_todesk_server.bat logs
 
+start enables automatic startup after a Windows reboot.
+stop disables automatic startup after a Windows reboot.
+
 Uninstall this project from the server:
 
    vpn_todesk_server_uninit.bat

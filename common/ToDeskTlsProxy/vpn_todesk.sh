@@ -8,12 +8,15 @@ tunnel_local_port='52031'
 
 usage() {
     cat <<'EOF'
-Usage: vpn_todesk.sh start|stop|status|logs
+Usage: vpn_todesk.sh start|stop|status|logs [tcp]
 
-  start   Stop the previously managed client, then start a fresh client.
-  stop    Stop the managed client process.
-  status  Show service state and the local proxy listener.
-  logs    Show the latest client logs.
+  start [tcp]   Stop the previous TCP client, start a fresh one, and enable boot auto-start.
+  stop [tcp]    Stop the TCP client and disable boot auto-start.
+  status [tcp]  Show service state, auto-start state, and the local proxy listener.
+  logs [tcp]    Show the latest TCP client logs.
+
+The mode argument is optional. The default mode is tcp.
+UDP mode is reserved for a future implementation.
 EOF
 }
 
@@ -46,6 +49,22 @@ tunnel_listener_is_ready() {
 show_failure() {
     run_root systemctl status "$tunnel_service_name" "$proxy_service_name" --no-pager || true
     run_root journalctl -u "$tunnel_service_name" -u "$proxy_service_name" -n 120 --no-pager || true
+}
+
+require_mode() {
+    local mode=${1:-tcp}
+
+    case $mode in
+        tcp)
+            return 0
+            ;;
+        udp)
+            die 'UDP mode is not implemented yet; use tcp for now'
+            ;;
+        *)
+            die "unsupported mode: $mode"
+            ;;
+    esac
 }
 
 start_client() {
@@ -87,6 +106,12 @@ start_client() {
             printf 'Local encrypted-proxy client is ready.\n'
             printf 'ToDesk proxy endpoint: 127.0.0.1:%s\n' "$local_port"
             printf 'Leave the ToDesk proxy username and password empty.\n'
+            printf 'Enabling boot auto-start for the TCP client...\n'
+            if ! run_root systemctl enable "$tunnel_service_name" "$proxy_service_name" >/dev/null; then
+                show_failure
+                die 'could not enable boot auto-start for the TCP client'
+            fi
+            printf 'Boot auto-start is enabled. Run ./vpn_todesk.sh stop to disable it.\n'
             return 0
         fi
         sleep 0.25
@@ -109,7 +134,13 @@ stop_client() {
         die 'the managed client is still active'
     fi
 
-    printf 'VPN client stopped.\n'
+    printf 'Disabling boot auto-start for the TCP client...\n'
+    if ! run_root systemctl disable "$proxy_service_name" "$tunnel_service_name" >/dev/null; then
+        show_failure
+        die 'could not disable boot auto-start for the TCP client'
+    fi
+
+    printf 'VPN client stopped and boot auto-start is disabled.\n'
     if listener_is_ready; then
         printf 'Warning: another process still owns 127.0.0.1:%s; it was not killed.\n' \
             "$local_port" >&2
@@ -119,6 +150,8 @@ stop_client() {
 show_status() {
     unit_exists || die 'client is not initialized; run ./vpn_todesk_init.sh first'
     run_root systemctl status "$tunnel_service_name" "$proxy_service_name" --no-pager || true
+    printf '\nBoot auto-start state:\n'
+    systemctl is-enabled "$tunnel_service_name" "$proxy_service_name" 2>/dev/null || true
     printf '\nLocal ToDesk proxy listener:\n'
     ss -ltnp 2>/dev/null | grep -E "127\\.0\\.0\\.1:${local_port}([[:space:]]|$)" || true
     printf '\nInternal stunnel SOCKS listener:\n'
@@ -130,17 +163,28 @@ show_logs() {
     run_root journalctl -u "$tunnel_service_name" -u "$proxy_service_name" -n 160 --no-pager
 }
 
-case ${1:-} in
+action=${1:-}
+mode=${2:-tcp}
+if (($# > 2)); then
+    usage >&2
+    exit 2
+fi
+
+case $action in
     start)
+        require_mode "$mode"
         start_client
         ;;
     stop)
+        require_mode "$mode"
         stop_client
         ;;
     status)
+        require_mode "$mode"
         show_status
         ;;
     logs)
+        require_mode "$mode"
         show_logs
         ;;
     -h|--help|'')

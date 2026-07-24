@@ -15,12 +15,18 @@ set "VPN_TODESK_ROOT_DIR=%ROOT_DIR%"
 set "VPN_TODESK_PORT=%PORT%"
 set "VPN_TODESK_LOG_FILE=%LOG_FILE%"
 
+if /I "%~1"=="-h" goto :help
+if /I "%~1"=="--help" goto :help
+if "%~1"=="" goto :usage_error
+if not "%~3"=="" goto :usage_error
+set "MODE=%~2"
+if "%MODE%"=="" set "MODE=tcp"
+call :require_tcp_mode
+if errorlevel 1 exit /b 2
 if /I "%~1"=="start" goto :start
 if /I "%~1"=="stop" goto :stop
 if /I "%~1"=="status" goto :status
 if /I "%~1"=="logs" goto :logs
-if /I "%~1"=="-h" goto :help
-if /I "%~1"=="--help" goto :help
 goto :usage_error
 
 :start
@@ -82,7 +88,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo Enabling automatic startup for %SERVICE_NAME%...
+call :set_service_start_type auto
+if errorlevel 1 (
+    echo Error: could not enable automatic startup for %SERVICE_NAME%.
+    exit /b 1
+)
+
 echo ToDesk TLS SOCKS server is ready on TCP %PORT%.
+echo Automatic startup is enabled. Run vpn_todesk_server.bat stop to disable it.
 exit /b 0
 
 :stop
@@ -116,7 +130,14 @@ if errorlevel 1 (
     echo The script did not terminate that process.
     call :show_port_owners
 )
-echo ToDesk TLS SOCKS server stopped.
+echo Disabling automatic startup for %SERVICE_NAME%...
+call :set_service_start_type demand
+if errorlevel 1 (
+    echo Error: could not disable automatic startup for %SERVICE_NAME%.
+    exit /b 1
+)
+
+echo ToDesk TLS SOCKS server stopped and automatic startup is disabled.
 exit /b 0
 
 :status
@@ -125,6 +146,8 @@ if errorlevel 1 exit /b 1
 call :require_managed_service
 if errorlevel 1 exit /b 1
 sc.exe queryex "%SERVICE_NAME%"
+echo.
+sc.exe qc "%SERVICE_NAME%" | findstr.exe /I /C:"START_TYPE"
 call :port_is_owned_by_service
 if errorlevel 1 (
     echo Health: not ready - TCP %PORT% is not owned by the project service.
@@ -151,13 +174,25 @@ call :usage
 exit /b 2
 
 :usage
-echo Usage: vpn_todesk_server.bat start^|stop^|status^|logs
+echo Usage: vpn_todesk_server.bat start^|stop^|status^|logs [tcp]
 echo.
-echo   start   Stop the previous project service, then start a fresh one.
-echo   stop    Stop only the dedicated vpn-todesk-server service.
-echo   status  Show service state and verify its ownership of TCP 52030.
-echo   logs    Show the latest project stunnel log entries.
+echo   start [tcp]   Stop the previous TCP service, start a fresh one, and enable automatic startup.
+echo   stop [tcp]    Stop only the dedicated TCP service and disable automatic startup.
+echo   status [tcp]  Show service state, startup type, and TCP 52030 ownership.
+echo   logs [tcp]    Show the latest project stunnel log entries.
+echo.
+echo The mode argument is optional. The default mode is tcp.
+echo UDP mode is reserved for a future implementation.
 exit /b 0
+
+:require_tcp_mode
+if /I "%MODE%"=="tcp" exit /b 0
+if /I "%MODE%"=="udp" (
+    echo Error: UDP mode is not implemented yet; use tcp for now.
+    exit /b 1
+)
+echo Error: unsupported mode: %MODE%
+exit /b 1
 
 :require_admin
 fltmc.exe >nul 2>&1
@@ -239,8 +274,19 @@ if defined STUNNEL_EXE (
 exit /b 0
 
 :service_identity_is_expected
-powershell.exe -NoProfile -NonInteractive -Command "$ErrorActionPreference='Stop'; $path='Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\'+$env:VPN_TODESK_SERVICE_NAME; $item=Get-ItemProperty -LiteralPath $path; $expected=$env:VPN_TODESK_STUNNEL_EXE+' -service '+$env:VPN_TODESK_CONF; if(-not [string]::Equals([string]$item.ImagePath,$expected,[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected service ImagePath'; exit 1}; if([int]$item.Type -ne 16){Write-Error 'Unexpected service Type'; exit 1}; if(-not [string]::Equals([string]$item.ObjectName,'LocalSystem',[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected service account'; exit 1}; if([int]$item.Start -ne 3){Write-Error 'Unexpected service startup type'; exit 1}; exit 0"
+powershell.exe -NoProfile -NonInteractive -Command "$ErrorActionPreference='Stop'; $path='Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\'+$env:VPN_TODESK_SERVICE_NAME; $item=Get-ItemProperty -LiteralPath $path; $expected=$env:VPN_TODESK_STUNNEL_EXE+' -service '+$env:VPN_TODESK_CONF; if(-not [string]::Equals([string]$item.ImagePath,$expected,[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected service ImagePath'; exit 1}; if([int]$item.Type -ne 16){Write-Error 'Unexpected service Type'; exit 1}; if(-not [string]::Equals([string]$item.ObjectName,'LocalSystem',[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected service account'; exit 1}; if(([int]$item.Start -ne 2) -and ([int]$item.Start -ne 3)){Write-Error 'Unexpected service startup type'; exit 1}; exit 0"
 exit /b %ERRORLEVEL%
+
+:set_service_start_type
+if /I "%~1"=="auto" (
+    sc.exe config "%SERVICE_NAME%" start= auto >nul
+    exit /b %ERRORLEVEL%
+)
+if /I "%~1"=="demand" (
+    sc.exe config "%SERVICE_NAME%" start= demand >nul
+    exit /b %ERRORLEVEL%
+)
+exit /b 1
 
 :service_state_is
 powershell.exe -NoProfile -NonInteractive -Command "$s=Get-Service -Name $env:VPN_TODESK_SERVICE_NAME -ErrorAction SilentlyContinue; if($s -and $s.Status.ToString() -eq '%~1'){exit 0}; exit 1"
