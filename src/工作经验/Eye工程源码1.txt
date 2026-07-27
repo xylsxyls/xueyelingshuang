@@ -1,4 +1,4 @@
-// ./eye1.0默认值./eye1.0 1 2 /dev/video0 1920 1080（表示每隔一分钟记录一次，最多记录两小时）
+// ./Eye1.0默认值./Eye1.0 1 2 /dev/video0 1920 1080 156（表示每隔一分钟记录一次，最多记录两小时，156是曝光值，数值越小越暗，范围是2-1250）
 #include <atomic>
 #include <chrono>
 #include <dirent.h>
@@ -38,6 +38,7 @@ struct Config
     long keepSeconds;
     int width;
     int height;
+    int exposureAbsolute;
     std::string device;
     std::string outputDirectory;
 };
@@ -342,7 +343,7 @@ static bool convertToRgb(unsigned char *rgb,
     return false;
 }
 
-static void trySetFastFrameInterval(int fd)
+static void trySetFrameIntervalForExposure(int fd, int exposureAbsolute)
 {
     struct v4l2_streamparm parm;
     memset(&parm, 0, sizeof(parm));
@@ -358,9 +359,231 @@ static void trySetFastFrameInterval(int fd)
         return;
     }
 
+    int targetFps = 60;
+    if (exposureAbsolute > 0)
+    {
+        targetFps = 10000 / exposureAbsolute;
+        if (targetFps < 1)
+        {
+            targetFps = 1;
+        }
+
+        if (targetFps > 60)
+        {
+            targetFps = 60;
+        }
+    }
+
     parm.parm.capture.timeperframe.numerator = 1;
-    parm.parm.capture.timeperframe.denominator = 60;
+    parm.parm.capture.timeperframe.denominator = static_cast<__u32>(targetFps);
     xioctl(fd, VIDIOC_S_PARM, &parm);
+}
+
+static bool queryControl(int fd, __u32 controlId, struct v4l2_queryctrl &query)
+{
+    memset(&query, 0, sizeof(query));
+    query.id = controlId;
+
+    if (xioctl(fd, VIDIOC_QUERYCTRL, &query) != 0)
+    {
+        return false;
+    }
+
+    if ((query.flags & V4L2_CTRL_FLAG_DISABLED) != 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static bool setControlValue(int fd, __u32 controlId, int value, int *appliedValue = nullptr)
+{
+    struct v4l2_queryctrl query;
+    if (!queryControl(fd, controlId, query))
+    {
+        return false;
+    }
+
+    if ((query.flags & V4L2_CTRL_FLAG_READ_ONLY) != 0)
+    {
+        return false;
+    }
+
+    if (value < query.minimum)
+    {
+        value = query.minimum;
+    }
+
+    if (value > query.maximum)
+    {
+        value = query.maximum;
+    }
+
+    if (appliedValue != nullptr)
+    {
+        *appliedValue = value;
+    }
+
+    struct v4l2_control control;
+    memset(&control, 0, sizeof(control));
+    control.id = controlId;
+    control.value = value;
+
+    return xioctl(fd, VIDIOC_S_CTRL, &control) == 0;
+}
+
+static bool getControlValue(int fd, __u32 controlId, int &value)
+{
+    struct v4l2_control control;
+    memset(&control, 0, sizeof(control));
+    control.id = controlId;
+
+    if (xioctl(fd, VIDIOC_G_CTRL, &control) != 0)
+    {
+        return false;
+    }
+
+    value = control.value;
+    return true;
+}
+
+static bool resetControlToDefault(int fd, __u32 controlId)
+{
+    struct v4l2_queryctrl query;
+    if (!queryControl(fd, controlId, query))
+    {
+        return false;
+    }
+
+    return setControlValue(fd, controlId, query.default_value);
+}
+
+static int getControlDefaultValue(int fd, __u32 controlId, int fallbackValue)
+{
+    struct v4l2_queryctrl query;
+    if (!queryControl(fd, controlId, query))
+    {
+        return fallbackValue;
+    }
+
+    return query.default_value;
+}
+
+static int getRequestedExposureAbsolute(int fd, const Config &config)
+{
+    int exposureValue = config.exposureAbsolute;
+    if (exposureValue <= 0)
+    {
+        exposureValue = getControlDefaultValue(fd, V4L2_CID_EXPOSURE_ABSOLUTE, 156);
+    }
+
+    struct v4l2_queryctrl query;
+    if (!queryControl(fd, V4L2_CID_EXPOSURE_ABSOLUTE, query))
+    {
+        return exposureValue;
+    }
+
+    if (exposureValue < query.minimum)
+    {
+        exposureValue = query.minimum;
+    }
+
+    if (exposureValue > query.maximum)
+    {
+        exposureValue = query.maximum;
+    }
+
+    return exposureValue;
+}
+
+static void printControlValueIfAvailable(int fd, const char *name, __u32 controlId)
+{
+    int value = 0;
+    if (getControlValue(fd, controlId, value))
+    {
+        printf("%s=%d ", name, value);
+    }
+}
+
+static void printFrameIntervalIfAvailable(int fd)
+{
+    struct v4l2_streamparm parm;
+    memset(&parm, 0, sizeof(parm));
+    parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+    if (xioctl(fd, VIDIOC_G_PARM, &parm) != 0)
+    {
+        return;
+    }
+
+    if (parm.parm.capture.timeperframe.numerator == 0 ||
+        parm.parm.capture.timeperframe.denominator == 0)
+    {
+        return;
+    }
+
+    double fps = static_cast<double>(parm.parm.capture.timeperframe.denominator) /
+                 static_cast<double>(parm.parm.capture.timeperframe.numerator);
+    printf("frame_interval=%u/%u fps=%.2f ",
+           parm.parm.capture.timeperframe.numerator,
+           parm.parm.capture.timeperframe.denominator,
+           fps);
+}
+
+static void applyStableCameraControls(int fd,
+                                      const Config &config,
+                                      int exposureValue,
+                                      bool printLog)
+{
+    resetControlToDefault(fd, V4L2_CID_BRIGHTNESS);
+    resetControlToDefault(fd, V4L2_CID_CONTRAST);
+    resetControlToDefault(fd, V4L2_CID_SATURATION);
+    resetControlToDefault(fd, V4L2_CID_HUE);
+    resetControlToDefault(fd, V4L2_CID_GAMMA);
+    resetControlToDefault(fd, V4L2_CID_SHARPNESS);
+    resetControlToDefault(fd, V4L2_CID_POWER_LINE_FREQUENCY);
+
+    setControlValue(fd, V4L2_CID_AUTO_WHITE_BALANCE, 1);
+    setControlValue(fd, V4L2_CID_BACKLIGHT_COMPENSATION, 0);
+    setControlValue(fd, V4L2_CID_EXPOSURE_AUTO_PRIORITY, 0);
+
+    bool exposureSet = false;
+    int requestedExposure = config.exposureAbsolute;
+    int clampedExposure = 0;
+
+    if (setControlValue(fd, V4L2_CID_EXPOSURE_AUTO, V4L2_EXPOSURE_MANUAL))
+    {
+        exposureSet = setControlValue(fd, V4L2_CID_EXPOSURE_ABSOLUTE, exposureValue, &clampedExposure);
+    }
+
+    if (!printLog)
+    {
+        return;
+    }
+
+    printf("camera controls: ");
+    printControlValueIfAvailable(fd, "auto_exposure", V4L2_CID_EXPOSURE_AUTO);
+    printControlValueIfAvailable(fd, "exposure_dynamic_framerate", V4L2_CID_EXPOSURE_AUTO_PRIORITY);
+    printControlValueIfAvailable(fd, "exposure_time_absolute", V4L2_CID_EXPOSURE_ABSOLUTE);
+    printControlValueIfAvailable(fd, "backlight_compensation", V4L2_CID_BACKLIGHT_COMPENSATION);
+    printFrameIntervalIfAvailable(fd);
+
+    if (requestedExposure > 0)
+    {
+        printf("requested_exposure=%d clamped_exposure=%d exposure_set=%s",
+               requestedExposure,
+               clampedExposure,
+               exposureSet ? "yes" : "no");
+    }
+    else
+    {
+        printf("requested_exposure=default clamped_exposure=%d exposure_set=%s",
+               clampedExposure,
+               exposureSet ? "yes" : "no");
+    }
+
+    printf("\n");
 }
 
 static void fourccToString(__u32 pixelFormat, char text[5])
@@ -898,6 +1121,7 @@ static bool captureOnePhoto(const Config &config, std::atomic<bool> &stopRequest
     int height = config.height;
     __u32 deviceCaps = 0;
     CaptureMode selectedMode = {width, height, V4L2_PIX_FMT_YUYV};
+    int exposureValue = 0;
     char fourcc[5] = {0};
 
     struct v4l2_capability capability;
@@ -956,7 +1180,10 @@ static bool captureOnePhoto(const Config &config, std::atomic<bool> &stopRequest
     width = static_cast<int>(format.fmt.pix.width);
     height = static_cast<int>(format.fmt.pix.height);
     selectedMode.pixelFormat = format.fmt.pix.pixelformat;
-    trySetFastFrameInterval(fd);
+    exposureValue = getRequestedExposureAbsolute(fd, config);
+    applyStableCameraControls(fd, config, exposureValue, false);
+    trySetFrameIntervalForExposure(fd, exposureValue);
+    applyStableCameraControls(fd, config, exposureValue, true);
 
     fourccToString(selectedMode.pixelFormat, fourcc);
 
@@ -1040,6 +1267,7 @@ static bool captureOnePhoto(const Config &config, std::atomic<bool> &stopRequest
     }
 
     streamStarted = true;
+    applyStableCameraControls(fd, config, exposureValue, false);
 
     for (int waitedMs = 0; waitedMs < 3000 && !stopRequested.load(); waitedMs += 100)
     {
@@ -1193,9 +1421,10 @@ static bool parsePositiveLong(const char *text, long &value)
 
 static void printUsage(const char *program)
 {
-    printf("usage: %s [interval_minutes] [keep_hours] [device] [width] [height]\n", program);
+    printf("usage: %s [interval_minutes] [keep_hours] [device] [width] [height] [exposure_absolute]\n", program);
     printf("example: %s 1 2\n", program);
     printf("example: %s 1 2 /dev/video0 1920 1080\n", program);
+    printf("example: %s 1 2 /dev/video0 1920 1080 156\n", program);
 }
 
 static bool buildConfig(int argc, char **argv, Config &config)
@@ -1205,6 +1434,7 @@ static bool buildConfig(int argc, char **argv, Config &config)
     config.device = "/dev/video0";
     config.width = 1920;
     config.height = 1080;
+    config.exposureAbsolute = 0;
 
     if (argc >= 2 && !parsePositiveLong(argv[1], config.intervalMinutes))
     {
@@ -1223,6 +1453,7 @@ static bool buildConfig(int argc, char **argv, Config &config)
 
     long parsedWidth = config.width;
     long parsedHeight = config.height;
+    long parsedExposure = config.exposureAbsolute;
 
     if (argc >= 5 && !parsePositiveLong(argv[4], parsedWidth))
     {
@@ -1234,12 +1465,17 @@ static bool buildConfig(int argc, char **argv, Config &config)
         return false;
     }
 
-    if (argc > 6)
+    if (argc >= 7 && !parsePositiveLong(argv[6], parsedExposure))
     {
         return false;
     }
 
-    if (parsedWidth > INT_MAX || parsedHeight > INT_MAX)
+    if (argc > 7)
+    {
+        return false;
+    }
+
+    if (parsedWidth > INT_MAX || parsedHeight > INT_MAX || parsedExposure > INT_MAX)
     {
         return false;
     }
@@ -1251,6 +1487,7 @@ static bool buildConfig(int argc, char **argv, Config &config)
 
     config.width = static_cast<int>(parsedWidth);
     config.height = static_cast<int>(parsedHeight);
+    config.exposureAbsolute = static_cast<int>(parsedExposure);
     config.intervalSeconds = config.intervalMinutes * 60;
     config.keepSeconds = config.keepHours * 60 * 60;
 
@@ -1330,6 +1567,14 @@ int main(int argc, char **argv)
            config.keepHours,
            config.width,
            config.height);
+    if (config.exposureAbsolute > 0)
+    {
+        printf("manual exposure: %d\n", config.exposureAbsolute);
+    }
+    else
+    {
+        printf("manual exposure: camera default\n");
+    }
     printf("press Ctrl+C to stop and delete all captured image files in output directory\n");
 
     std::thread worker(captureLoop, config, std::ref(stopRequested));
