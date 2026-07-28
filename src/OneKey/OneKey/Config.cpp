@@ -97,3 +97,8 @@ bool CConfig::timerMs(int32_t timeMs, int32_t msTimes)
 {
 	return msTimes % (timeMs / m_msTime) == 0;
 }
+
+bool CConfig::timerOnceMs(int32_t timeMs, int32_t msTimes)
+{
+	return timeMs == msTimes * m_msTime;
+}

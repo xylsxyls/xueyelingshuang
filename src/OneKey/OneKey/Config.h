@@ -57,6 +57,8 @@ struct CConfig
 	xyls::Point m_heroCenterPoint;
 
 	bool m_clickMap = false;
+	bool m_lastClickMap = false;
+	int32_t m_escapeTimerCount = 0;
 	bool m_moveUse = false;
 	bool m_fullLast = false;
 	bool m_holdW = false;
@@ -108,6 +110,8 @@ public:
 	int32_t nameType(const std::string& name);
 
 	bool timerMs(int32_t timeMs, int32_t msTimes);
+
+	bool timerOnceMs(int32_t timeMs, int32_t msTimes);
 };
 
 //struct CConfig

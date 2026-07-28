@@ -114,28 +114,50 @@ void CEscapeR::DoTask()
 	CMouse::RightUp();
 	if (m_exit)
 	{
+		if (rightHasDown)
+		{
+			CMouse::RightDown();
+		}
 		return;
 	}
 
 	CMouse::MoveAbsolute(g_config.m_rCenterPoint, 0);
 	CMouse::LeftDown();
-	Sleep(20);
+	Sleep(30);
 	if (m_exit)
 	{
+		End(currentPos, rightHasDown);
 		return;
 	}
 	CMouse::MoveAbsolute(g_config.m_rCenterPoint + xyls::Point(0, 100), 0);
-	Sleep(20);
+	Sleep(30);
 	if (m_exit)
 	{
+		End(currentPos, rightHasDown);
 		return;
 	}
 	CMouse::MoveAbsolute(movePoint, 1);
-	Sleep(20);
 	if (m_exit)
 	{
+		End(currentPos, rightHasDown);
 		return;
 	}
+	Sleep(30);
+	if (m_exit)
+	{
+		End(currentPos, rightHasDown);
+		return;
+	}
+	End(currentPos, rightHasDown);
+}
+
+void CEscapeR::StopTask()
+{
+	m_exit = true;
+}
+
+void CEscapeR::End(const xyls::Point& currentPos, bool rightHasDown)
+{
 	CMouse::LeftUp();
 	CMouse::MoveAbsolute(currentPos, 0);
 
@@ -143,9 +165,4 @@ void CEscapeR::DoTask()
 	{
 		CMouse::RightDown();
 	}
-}
-
-void CEscapeR::StopTask()
-{
-	m_exit = true;
 }

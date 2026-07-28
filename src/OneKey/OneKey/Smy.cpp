@@ -68,7 +68,9 @@ void Smy::keyboard()
 
 	if (g_keyboard.m_keyUp[SPACE] && g_keyboard.m_lastKey == '7')
 	{
+		g_config.m_stopWatch.SetWatchTime(0);
 		g_config.m_taskThread->StopAllTask();
+		g_config.m_taskThread->StopCurTask();
 		std::map<int32_t, int32_t> taskCountMap;
 		g_config.m_taskThread->GetWaitTaskInfo(taskCountMap);
 		g_config.m_code1 = 0;
@@ -272,26 +274,29 @@ void Smy::keyboard()
 		if (g_config.m_clickMap)
 		{
 			g_config.m_clickMap = false;
+			g_config.m_lastClickMap = true;
 			std::shared_ptr<CKeyTask> spTask(new CKeyTask);
 			spTask->setParam('M', false);
 			g_config.m_taskThread->PostTask(spTask, 1);
 		}
 		else
 		{
+			g_config.m_lastClickMap = false;
+			g_config.m_escapeTimerCount = 0;
 			g_config.m_stopWatch.SetWatchTime(0);
-			if (g_keyboard.m_keyWatch['1'].GetWatchTime() > 5000 &&
-				g_keyboard.m_keyWatch['2'].GetWatchTime() > 5000 &&
-				g_keyboard.m_keyWatch['3'].GetWatchTime() > 5000 &&
-				g_keyboard.m_keyWatch['4'].GetWatchTime() > 5000 &&
-				g_keyboard.m_keyWatch['5'].GetWatchTime() > 5000)
-			{
-				std::shared_ptr<CKeyTask> spTask(new CKeyTask);
-				spTask->setParam('H');
-				g_config.m_taskThread->PostTask(spTask, 1);
-				std::shared_ptr<CSleepTask> spSleepTask(new CSleepTask);
-				spSleepTask->setParam(100);
-				g_config.m_taskThread->PostTask(spSleepTask, 1);
-			}
+			//if (g_keyboard.m_keyWatch['1'].GetWatchTime() > 5000 &&
+			//	g_keyboard.m_keyWatch['2'].GetWatchTime() > 5000 &&
+			//	g_keyboard.m_keyWatch['3'].GetWatchTime() > 5000 &&
+			//	g_keyboard.m_keyWatch['4'].GetWatchTime() > 5000 &&
+			//	g_keyboard.m_keyWatch['5'].GetWatchTime() > 5000)
+			//{
+			//	std::shared_ptr<CKeyTask> spTask(new CKeyTask);
+			//	spTask->setParam('H');
+			//	g_config.m_taskThread->PostTask(spTask, 1);
+			//	std::shared_ptr<CSleepTask> spSleepTask(new CSleepTask);
+			//	spSleepTask->setParam(100);
+			//	g_config.m_taskThread->PostTask(spSleepTask, 1);
+			//}
 			std::shared_ptr<CEscapeR> spTask(new CEscapeR);
 			g_config.m_taskThread->PostTask(spTask);
 		}
@@ -360,6 +365,16 @@ void Smy::timer(int32_t timerId)
 			std::shared_ptr<SkillTask> spSkillTask(new SkillTask);
 			spSkillTask->setParam('9', '8', '7');
 			g_config.m_taskThread->PostTask(spSkillTask, 1);
+		}
+
+		++g_config.m_escapeTimerCount;
+		if (g_config.timerOnceMs(1000, g_config.m_escapeTimerCount) &&
+			g_keyboard.m_keyUp['T'] &&
+			!g_config.m_lastClickMap)
+		{
+			g_config.m_stopWatch.SetWatchTime(0);
+			g_config.m_taskThread->StopAllTask();
+			g_config.m_taskThread->StopCurTask();
 		}
 
 		if (g_config.m_code2 != 'C' && g_config.m_code2Watch.GetWatchTime() > 3000)
