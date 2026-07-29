@@ -70,7 +70,7 @@ void CqswrTask::V5()
 			return;
 		}
 		CMouse::RightUp();
-		if (Sleep(110))
+		if (Sleep(130))
 		{
 			return;
 		}
@@ -82,11 +82,11 @@ void CqswrTask::V5()
 			}
 			CKeyboard::KeyPress('J', 0);
 		}
-		if (Sleep(200))
+		if (Sleep(230))
 		{
 			return;
 		}
-		for (int index = 0; index < 5; ++index)
+		for (int index = 0; index < 3; ++index)
 		{
 			if (Sleep(10))
 			{
