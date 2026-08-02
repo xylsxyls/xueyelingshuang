@@ -6,7 +6,7 @@ CConfig::CConfig()
 	m_accountConfig[1366 * 768][1].m_accountPoint = { { 537, 20 } };
 	m_accountConfig[1920 * 1080][1].m_accountPoint = { { 537, 20 } };
 	m_accountConfig[3840 * 2160][1].m_accountPoint = { { 537, 20 } };
-	m_accountConfig[1920 * 1080][3].m_accountPoint = { { 746, 1061 }, { 911, 1061 }, { 1059, 1061 } };
+	m_accountConfig[1920 * 1080][3].m_accountPoint = { { 420, 1060 }, { 465, 1060 }, { 510, 1060 } };
 
 	m_accountConfig[1366 * 768][1].m_rightTopRect = { { 1315, 189, 1366, 249 } };
 	m_accountConfig[1920 * 1080][1].m_rightTopRect = { { 1869, 189, 1920, 249 } };
