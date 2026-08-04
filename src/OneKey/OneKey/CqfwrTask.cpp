@@ -5,11 +5,9 @@
 
 void CqfwrTask::DoTask()
 {
-	CKeyboard::KeyPress('Q', 0);
-	::Sleep(200);
-	CKeyboard::KeyPress('F', 0);
-	::Sleep(200);
-	CKeyboard::KeyPress('W', 0);
-	::Sleep(150);
-	CKeyboard::KeyPress('R', 0);
+	CKeyboard::KeyPress('K', 0);
+	::Sleep(20);
+	//CKeyboard::KeyPress('F', 0);
+	//::Sleep(40);
+	CKeyboard::KeyPress('J', 0);
 }

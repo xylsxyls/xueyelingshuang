@@ -123,14 +123,14 @@ void CEscapeR::DoTask()
 
 	CMouse::MoveAbsolute(g_config.m_rCenterPoint, 0);
 	CMouse::LeftDown();
-	Sleep(30);
+	Sleep(20);
 	if (m_exit)
 	{
 		End(currentPos, rightHasDown);
 		return;
 	}
 	CMouse::MoveAbsolute(g_config.m_rCenterPoint + xyls::Point(0, 100), 0);
-	Sleep(30);
+	Sleep(20);
 	if (m_exit)
 	{
 		End(currentPos, rightHasDown);
@@ -142,7 +142,7 @@ void CEscapeR::DoTask()
 		End(currentPos, rightHasDown);
 		return;
 	}
-	Sleep(30);
+	Sleep(20);
 	if (m_exit)
 	{
 		End(currentPos, rightHasDown);

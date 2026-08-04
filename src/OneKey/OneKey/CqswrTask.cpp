@@ -82,7 +82,7 @@ void CqswrTask::V5()
 			}
 			CKeyboard::KeyPress('J', 0);
 		}
-		if (Sleep(230))
+		if (Sleep(100))
 		{
 			return;
 		}
