@@ -51,6 +51,7 @@ void CqswrTask::V5()
 	}
 	else
 	{
+		CMouse::RightUp();
 		char e = text[m_editIndex];
 		if (e == '8')
 		{
@@ -65,16 +66,11 @@ void CqswrTask::V5()
 			}
 			CKeyboard::KeyPress('C', 0);
 		}
-		if (Sleep(50))
-		{
-			return;
-		}
-		CMouse::RightUp();
 		if (Sleep(130))
 		{
 			return;
 		}
-		for (int index = 0; index < 2; ++index)
+		for (int index = 0; index < 3; ++index)
 		{
 			if (Sleep(10))
 			{
@@ -82,7 +78,15 @@ void CqswrTask::V5()
 			}
 			CKeyboard::KeyPress('J', 0);
 		}
-		if (Sleep(100))
+		Sleep(50);
+		CKeyboard::KeyPress('L', 0);
+		Sleep(10);
+		CKeyboard::KeyPress('L', 0);
+		Sleep(10);
+		CKeyboard::KeyPress('L', 0);
+		Sleep(10);
+		CKeyboard::KeyPress('L', 0);
+		if (Sleep(40))
 		{
 			return;
 		}
@@ -102,7 +106,7 @@ void CqswrTask::V5()
 			}
 			CKeyboard::KeyPress('C', 0);
 		}
-		CKeyboard::KeyPress('L', 0);
+		//CKeyboard::KeyPress('L', 0);
 		if (Sleep(60))
 		{
 			return;
