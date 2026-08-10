@@ -15,16 +15,28 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\HiRedis.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\HiRedisAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\HiRedisMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\HiRedis.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HiRedisConnectionPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HiRedisCommand.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HiRedisConfig.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\HiRedisResultSet.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HiRedisHelper.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -32,7 +44,19 @@
     <ClCompile Include="..\src\HiRedis.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\HiRedisConnectionPool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\HiRedisCommand.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\HiRedisConfig.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\HiRedisResultSet.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\HiRedisHelper.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

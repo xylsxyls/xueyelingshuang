@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef HiRedisAPI
-    #define HiRedisAPI 
+    #define HiRedisAPI
 #endif

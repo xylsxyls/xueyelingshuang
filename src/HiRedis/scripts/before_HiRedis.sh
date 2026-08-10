@@ -77,7 +77,7 @@ windowslibname="Win32_Interop"
 lib32=$windowslibname"static32"
 lib64=$windowslibname"static64"
 
-if [[ "$OSTYPE" =~ ^msys ]]; then
+if [[ "$OS" == "Windows_NT" ]] || [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]; then
     if [[ $1 == '32' ]] && [[ $3 == 'debug' ]]
     then
         cp -rf $xueyelingshuang"/tools/"$libname"/lib/"$lib32$libdebugrelease$libsuffix "$xueyelingshuang/lib/"
