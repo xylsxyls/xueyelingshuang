@@ -1,3 +1,3 @@
 ﻿#pragma once
 
-#define CStringManagerAPI 
+#define CStringManagerAPI
