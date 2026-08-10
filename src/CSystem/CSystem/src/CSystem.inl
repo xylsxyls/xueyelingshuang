@@ -4,12 +4,17 @@
 template <typename TypeClass>
 TypeClass** CSystem::CreateDyadicArray(int32_t row, int32_t column)
 {
-	TypeClass** dyadicArrayPtr = new TypeClass*[row];
+	if (row <= 0 || column <= 0)
+	{
+		return nullptr;
+	}
+
+	TypeClass** dyadicArrayPtr = new (std::nothrow) TypeClass*[row];
 	if (dyadicArrayPtr != nullptr)
 	{
 		for (int32_t index = 0; index < row; ++index)
 		{
-			dyadicArrayPtr[index] = new TypeClass[column];
+			dyadicArrayPtr[index] = new (std::nothrow) TypeClass[column];
 			if (dyadicArrayPtr[index] == nullptr)
 			{
 				for (int32_t errorIndex = 0; errorIndex < index; ++errorIndex)
@@ -17,6 +22,7 @@ TypeClass** CSystem::CreateDyadicArray(int32_t row, int32_t column)
 					delete[] dyadicArrayPtr[errorIndex];
 					dyadicArrayPtr[errorIndex] = nullptr;
 				}
+				delete[] dyadicArrayPtr;
 				dyadicArrayPtr = nullptr;
 				break;
 			}

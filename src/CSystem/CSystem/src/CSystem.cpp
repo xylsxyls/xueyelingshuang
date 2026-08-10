@@ -32,43 +32,163 @@
 #include <queue>
 #include <iostream>
 #include <iterator>
+#include <cstring>
+#include <cstdlib>
 
+// 按单字符分隔字符串，函数开始时清空输出数组。
 static void Split(std::vector<std::string>& result, const std::string& splitString, char separate_character)
 {
 	result.clear();
+	size_t splitCount = 1;
 	size_t lastPosition = 0;
-	int32_t index = -1;
-	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
+	size_t index = splitString.find(separate_character, lastPosition);
+	while (index != std::string::npos)
 	{
-		result.push_back(splitString.substr(lastPosition, index - lastPosition));
+		++splitCount;
 		lastPosition = index + 1;
+		index = splitString.find(separate_character, lastPosition);
 	}
-	result.push_back(splitString.substr(lastPosition));
+	result.reserve(splitCount);
+
+	lastPosition = 0;
+	index = splitString.find(separate_character, lastPosition);
+	while (index != std::string::npos)
+	{
+		result.emplace_back(splitString, lastPosition, index - lastPosition);
+		lastPosition = index + 1;
+		index = splitString.find(separate_character, lastPosition);
+	}
+	result.emplace_back(splitString, lastPosition);
 }
 
+// 按字符串分隔字符串，函数开始时清空输出数组。
 static void Split(std::vector<std::string>& result, const std::string& splitString, const std::string& separate_character)
 {
 	result.clear();
-	//?分割字符串的长度,这样就可以支持如“,,”多字符串的分隔符
-	size_t separate_characterLen = separate_character.length();
-	size_t lastPosition = 0;
-	int32_t index = -1;
-	while (-1 != (index = (int32_t)splitString.find(separate_character, lastPosition)))
+	if (separate_character.empty())
 	{
-		result.push_back(splitString.substr(lastPosition, index - lastPosition));
-		lastPosition = index + separate_characterLen;
+		result.push_back(splitString);
+		return;
 	}
-	//?截取最后一个分隔符后的内容
-	//?if (!lastString.empty()) //如果最后一个分隔符后还有内容就入队
-	result.push_back(splitString.substr(lastPosition));
+
+	size_t separate_characterLen = separate_character.length();
+	size_t splitCount = 1;
+	size_t lastPosition = 0;
+	size_t index = splitString.find(separate_character, lastPosition);
+	while (index != std::string::npos)
+	{
+		++splitCount;
+		lastPosition = index + separate_characterLen;
+		index = splitString.find(separate_character, lastPosition);
+	}
+	result.reserve(splitCount);
+
+	lastPosition = 0;
+	index = splitString.find(separate_character, lastPosition);
+	while (index != std::string::npos)
+	{
+		result.emplace_back(splitString, lastPosition, index - lastPosition);
+		lastPosition = index + separate_characterLen;
+		index = splitString.find(separate_character, lastPosition);
+	}
+	result.emplace_back(splitString, lastPosition);
 }
 
 #ifdef _MSC_VER
+// 枚举指定DirectShow设备类别，成功后调用方负责释放返回的枚举器。
+static HRESULT EnumerateDevices(REFGUID category, IEnumMoniker** ppEnum)
+{
+	if (ppEnum == nullptr)
+	{
+		return E_POINTER;
+	}
+
+	*ppEnum = nullptr;
+	ICreateDevEnum* pDevEnum = nullptr;
+	HRESULT hr = ::CoCreateInstance(CLSID_SystemDeviceEnum, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pDevEnum));
+	if (SUCCEEDED(hr))
+	{
+		hr = pDevEnum->CreateClassEnumerator(category, ppEnum, 0);
+		if (hr == S_FALSE)
+		{
+			hr = VFW_E_NOT_FOUND;
+		}
+		pDevEnum->Release();
+	}
+	return hr;
+}
+
+// 从DirectShow设备枚举器读取设备显示名称。
+static void DisplayDeviceInformation(IEnumMoniker* pEnum, std::vector<std::string>& list)
+{
+	if (pEnum == nullptr)
+	{
+		return;
+	}
+
+	IMoniker* pMoniker = nullptr;
+	while (pEnum->Next(1, &pMoniker, nullptr) == S_OK)
+	{
+		IPropertyBag* pPropBag = nullptr;
+		HRESULT hr = pMoniker->BindToStorage(nullptr, nullptr, IID_PPV_ARGS(&pPropBag));
+		if (FAILED(hr))
+		{
+			pMoniker->Release();
+			continue;
+		}
+
+		VARIANT var;
+		::VariantInit(&var);
+		hr = pPropBag->Read(L"Description", &var, nullptr);
+		if (FAILED(hr))
+		{
+			hr = pPropBag->Read(L"FriendlyName", &var, nullptr);
+		}
+		if (SUCCEEDED(hr))
+		{
+			if (var.vt == VT_BSTR && var.bstrVal != nullptr)
+			{
+				char* nameBuffer = _com_util::ConvertBSTRToString(var.bstrVal);
+				if (nameBuffer != nullptr)
+				{
+					list.push_back(nameBuffer);
+					delete[] nameBuffer;
+				}
+			}
+			::VariantClear(&var);
+		}
+		hr = pPropBag->Read(L"WaveInID", &var, nullptr);
+		if (SUCCEEDED(hr))
+		{
+			::VariantClear(&var);
+		}
+		hr = pPropBag->Read(L"DevicePath", &var, nullptr);
+		if (SUCCEEDED(hr))
+		{
+			::VariantClear(&var);
+		}
+
+		pPropBag->Release();
+		pMoniker->Release();
+	}
+}
+
+// 获取当前代码所在模块句柄。
+static HMODULE GetCurrentModule()
+{
+	HMODULE hModule = nullptr;
+	::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)GetCurrentModule, &hModule);
+	return hModule;
+}
+
 RECT CSystem::GetTaskbarRect()
 {
 	HWND h = ::FindWindowA("Shell_TrayWnd", "");
-	RECT r;
-	::GetWindowRect(h, &r);
+	RECT r = { 0, 0, 0, 0 };
+	if (h != nullptr)
+	{
+		::GetWindowRect(h, &r);
+	}
 	return r;
 }
 
@@ -122,49 +242,69 @@ POINT CSystem::screenCenterPoint()
 void CSystem::setClipboardData(HWND hWnd, const std::string& str)
 {
 	//打开剪贴板
-	if (::OpenClipboard(hWnd))
+	if (!::OpenClipboard(hWnd))
 	{
-		HANDLE hClip;
-		char* pBuf;
-		//清空剪贴板
-		::EmptyClipboard();
-
-		//写入数据
-		hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
-		pBuf = (char*)::GlobalLock(hClip);
-		::strcpy(pBuf, str.c_str());
-		//解锁
-		::GlobalUnlock(hClip);
-		//设置格式
-		::SetClipboardData(CF_TEXT, hClip);
-
-		//关闭剪贴板
-		::CloseClipboard();
+		return;
 	}
+
+	//清空剪贴板
+	if (!::EmptyClipboard())
+	{
+		::CloseClipboard();
+		return;
+	}
+
+	//写入数据
+	HGLOBAL hClip = ::GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
+	if (hClip == nullptr)
+	{
+		::CloseClipboard();
+		return;
+	}
+	char* pBuf = static_cast<char*>(::GlobalLock(hClip));
+	if (pBuf == nullptr)
+	{
+		::GlobalFree(hClip);
+		::CloseClipboard();
+		return;
+	}
+	::memcpy(pBuf, str.c_str(), str.size() + 1);
+	//解锁
+	::GlobalUnlock(hClip);
+	//设置格式，成功后剪贴板拥有hClip，失败时需要自己释放。
+	if (::SetClipboardData(CF_TEXT, hClip) == nullptr)
+	{
+		::GlobalFree(hClip);
+	}
+
+	//关闭剪贴板
+	::CloseClipboard();
 }
 
 std::string CSystem::GetClipboardData(HWND hWnd)
 {
-	char* pBuf = nullptr;
+	std::string result;
 	//打开剪贴板
 	if (::OpenClipboard(hWnd))
 	{
 		//判断格式是否是我们所需要
 		if (::IsClipboardFormatAvailable(CF_TEXT))
 		{
-			HANDLE hClip;
-			//读取数据  
-			hClip = ::GetClipboardData(CF_TEXT);
-			pBuf = (char*)::GlobalLock(hClip);
-			::GlobalUnlock(hClip);
-			::CloseClipboard();
+			//读取数据
+			HANDLE hClip = ::GetClipboardData(CF_TEXT);
+			if (hClip != nullptr)
+			{
+				char* pBuf = static_cast<char*>(::GlobalLock(hClip));
+				if (pBuf != nullptr)
+				{
+					result = pBuf;
+					::GlobalUnlock(hClip);
+				}
+			}
 		}
+		::CloseClipboard();
 	}
-	if (pBuf == nullptr)
-	{
-		return std::string();
-	}
-	return pBuf;
+	return result;
 }
 
 HWND CSystem::GetConsoleHwnd()
@@ -223,17 +363,28 @@ HWND CSystem::GetHwndByProcessId(uint32_t dwProcessId)
 
 std::string CSystem::GetRegOcxPath(const std::string& classid)
 {
-	HKEY hKey;
-	RegOpenKeyEx(HKEY_CLASSES_ROOT, ("CLSID\\{" + classid + "}\\InprocServer32").c_str(), 0, KEY_READ, &hKey);
+	HKEY hKey = nullptr;
+	LONG openRet = ::RegOpenKeyExA(HKEY_CLASSES_ROOT, ("CLSID\\{" + classid + "}\\InprocServer32").c_str(), 0, KEY_READ, &hKey);
+	if (openRet != ERROR_SUCCESS)
+	{
+		return "";
+	}
 	DWORD dwType = REG_SZ;
-	LPBYTE lpData = new BYTE[1024];
-	memset(lpData, 0, 1024);
-	DWORD cbData = 1024;
-	RegQueryValueEx(hKey, _T(""), NULL, &dwType, lpData, &cbData);
-	std::string temp;
-	temp = (char*)lpData;
-	std::string result = temp.substr(temp.find_last_of('\\') + 1);
-	delete[] lpData;
+	char data[1024] = {};
+	DWORD cbData = sizeof(data);
+	LONG queryRet = ::RegQueryValueExA(hKey, "", nullptr, &dwType, reinterpret_cast<LPBYTE>(data), &cbData);
+	::RegCloseKey(hKey);
+	if (queryRet != ERROR_SUCCESS || (dwType != REG_SZ && dwType != REG_EXPAND_SZ))
+	{
+		return "";
+	}
+	std::string temp = data;
+	size_t position = temp.find_last_of("\\/");
+	if (position == std::string::npos)
+	{
+		return "";
+	}
+	std::string result = temp.substr(0, position + 1);
 	return result;
 }
 
@@ -284,15 +435,26 @@ bool CSystem::isMouseMidDown()
 
 bool CSystem::ShellCopy(const char* from, const char* dest)
 {
+	if (from == nullptr || dest == nullptr)
+	{
+		return false;
+	}
+	size_t fromLen = ::strlen(from);
+	size_t destLen = ::strlen(dest);
+	if (fromLen + 2 > MAX_PATH || destLen + 2 > MAX_PATH)
+	{
+		return false;
+	}
+
 	SHFILEOPSTRUCTA fileOp = { 0 };
 	fileOp.wFunc = FO_COPY;
-	char newFrom[MAX_PATH];
-	_tcscpy_s(newFrom, from);
-	newFrom[_tcsclen(from) + 1] = 0;
+	char newFrom[MAX_PATH] = {};
+	::memcpy(newFrom, from, fromLen);
+	newFrom[fromLen + 1] = 0;
 	fileOp.pFrom = newFrom;
-	char newTo[MAX_PATH];
-	_tcscpy_s(newTo, dest);
-	newTo[_tcsclen(dest) + 1] = 0;
+	char newTo[MAX_PATH] = {};
+	::memcpy(newTo, dest, destLen);
+	newTo[destLen + 1] = 0;
 	fileOp.pTo = newTo;
 	fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
 	return SHFileOperationA(&fileOp) == 0;
@@ -377,7 +539,7 @@ std::vector<std::string> CSystem::processMountDll(uint32_t pid)
 	{
 		return result;
 	}
-	
+
 	MODULEENTRY32 te = { sizeof(te) };
 	BOOL bRet = ::Module32First(hShot, &te);
 	while (bRet)
@@ -387,76 +549,6 @@ std::vector<std::string> CSystem::processMountDll(uint32_t pid)
 	}
 	::CloseHandle(hShot);
 	return result;
-}
-
-static HRESULT EnumerateDevices(REFGUID category, IEnumMoniker **ppEnum)
-{
-	// Create the System Device Enumerator.
-	ICreateDevEnum* pDevEnum = nullptr;
-	HRESULT hr = ::CoCreateInstance(CLSID_SystemDeviceEnum, nullptr,
-		CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pDevEnum));
-	if (SUCCEEDED(hr))
-	{
-		// Create an enumerator for the category.
-		hr = pDevEnum->CreateClassEnumerator(category, ppEnum, 0);
-		if (hr == S_FALSE)
-		{
-			hr = VFW_E_NOT_FOUND;  // The category is empty. Treat as an error.
-		}
-		pDevEnum->Release();
-	}
-	return hr;
-}
-
-static void DisplayDeviceInformation(IEnumMoniker *pEnum, std::vector<std::string>& list)
-{
-	IMoniker *pMoniker = nullptr;
-
-	while (pEnum->Next(1, &pMoniker, nullptr) == S_OK)
-	{
-		IPropertyBag* pPropBag = nullptr;
-		HRESULT hr = pMoniker->BindToStorage(nullptr, nullptr, IID_PPV_ARGS(&pPropBag));
-		if (FAILED(hr))
-		{
-			pMoniker->Release();
-			continue;
-		}
-
-		VARIANT var;
-		::VariantInit(&var);
-
-		// Get description or friendly name.
-		hr = pPropBag->Read(L"Description", &var, nullptr);
-		if (FAILED(hr))
-		{
-			hr = pPropBag->Read(L"FriendlyName", &var, nullptr);
-		}
-		if (SUCCEEDED(hr))
-		{
-			std::string name = _com_util::ConvertBSTRToString(var.bstrVal);
-			//            printf("%s\n", name.c_str());//设备名称
-			list.push_back(name);
-			::VariantClear(&var);
-		}
-		hr = pPropBag->Write(L"FriendlyName", &var);
-		// WaveInID applies only to audio capture devices.
-		hr = pPropBag->Read(L"WaveInID", &var, nullptr);
-		if (SUCCEEDED(hr))
-		{
-			//            printf("WaveIn ID: %d\n", var.lVal);////设备ID
-			::VariantClear(&var);
-		}
-		hr = pPropBag->Read(L"DevicePath", &var, nullptr);
-		if (SUCCEEDED(hr))
-		{
-			// The device path is not intended for display.
-			//            printf("Device path: %S\n", var.bstrVal);
-			::VariantClear(&var);
-		}
-
-		pPropBag->Release();
-		pMoniker->Release();
-	}
 }
 
 std::vector<std::string> CSystem::allCameraName()
@@ -521,20 +613,19 @@ std::map<std::string, std::vector<std::string>> CSystem::allDeviceInfo()
 #endif
 
 #ifdef __unix__
-static inline uint64_t get_cycle_count()
+// 获取当前CPU周期计数，不支持的平台返回0。
+static uint64_t GetCycleCount()
 {
 #ifdef __x86_64__
-	// x86/x86_64 平台
-	unsigned int lo, hi;
+	uint32_t lo = 0;
+	uint32_t hi = 0;
 	__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
 	return ((uint64_t)hi << 32) | lo;
 #elif __aarch64__
-	// ARM64 平台（地平线/X3派）
-	uint64_t val;
+	uint64_t val = 0;
 	__asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r" (val));
 	return val;
 #else
-	// 其他平台 fallback
 	return 0;
 #endif
 }
@@ -550,7 +641,7 @@ double CSystem::GetCPUSpeedGHz()
 	unsigned long int       ticks;
 	//存放两固定时刻的CPU内置时钟值，值的含意为计数
 	unsigned long int       stock0, stock1;
-	//存放内置时钟值之差，好固定时段的计数值 
+	//存放内置时钟值之差，好固定时段的计数值
 	unsigned long int       cycles;
 	//存放频率，为了提高精度，采用了相邻的测的5个频率的平均值
 	unsigned long int       freq[5] = { 0, 0, 0, 0, 0 };
@@ -642,9 +733,9 @@ double CSystem::GetCPUSpeedGHz()
 	return double(total) / 5.0 / 1000.0;
 #elif __unix__
 	int delayms = 700;
-	uint64_t oldTime = get_cycle_count();
+	uint64_t oldTime = GetCycleCount();
 	usleep(delayms * 1000);
-	uint64_t newTime = get_cycle_count();
+	uint64_t newTime = GetCycleCount();
 	return ((newTime - oldTime) / (delayms * 1000)) / 1000.0;
 #endif
 }
@@ -710,11 +801,11 @@ void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFil
 		return;
 	}
 	system(("cp -f " + srcFile + " " + dstFile).c_str());
-#endif	
+#endif
 }
 
 #ifdef _WIN32
-//安全的取得真实系统信息  
+//安全的取得真实系统信息
 VOID SafeGetNativeSystemInfo(__out LPSYSTEM_INFO lpSystemInfo)
 {
     if (NULL == lpSystemInfo)
@@ -883,42 +974,50 @@ int32_t CSystem::SystemCommand(const std::string& command, std::string& result, 
 #ifdef _WIN32
 		result.clear();
 		SECURITY_ATTRIBUTES sa;
-		HANDLE hRead, hWrite;
+		HANDLE hRead = nullptr;
+		HANDLE hWrite = nullptr;
 		sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-		sa.lpSecurityDescriptor = NULL;
+		sa.lpSecurityDescriptor = nullptr;
 		sa.bInheritHandle = TRUE;
 		if (!CreatePipe(&hRead, &hWrite, &sa, 0))
 		{
 			return -1;
 		}
 
-		STARTUPINFOA si;
-		PROCESS_INFORMATION pi;
-		si.cb = sizeof(STARTUPINFO);
-		GetStartupInfoA(&si);
+		STARTUPINFOA si = { 0 };
+		PROCESS_INFORMATION pi = { 0 };
+		si.cb = sizeof(STARTUPINFOA);
+		si.hStdInput = ::GetStdHandle(STD_INPUT_HANDLE);
 		si.hStdError = hWrite;
 		si.hStdOutput = hWrite;
 		si.wShowWindow = SW_HIDE;
 		si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
-		//关键步骤，CreateProcess函数参数意义请查阅MSDN   
-		if (!CreateProcessA(NULL, (char*)command.c_str(), NULL, NULL, TRUE, NULL, NULL, NULL, &si, &pi))
+		std::vector<char> commandBuffer(command.begin(), command.end());
+		commandBuffer.push_back('\0');
+		//关键步骤，CreateProcess函数参数意义请查阅MSDN
+		if (!CreateProcessA(nullptr, &commandBuffer[0], nullptr, nullptr, TRUE, 0, nullptr, nullptr, &si, &pi))
 		{
+			::CloseHandle(hRead);
+			::CloseHandle(hWrite);
 			return -1;
 		}
-		CloseHandle(hWrite);
+		::CloseHandle(hWrite);
 		char buffer[4096] = { 0 };
-		DWORD bytesRead;
+		DWORD bytesRead = 0;
 		while (true)
 		{
-			memset(buffer, 0, strlen(buffer));
-			if (ReadFile(hRead, buffer, 4095, &bytesRead, NULL) == NULL)
+			if (!::ReadFile(hRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) || bytesRead == 0)
 			{
 				break;
 			}
-			//buffer中就是执行的结果，可以保存到文本，也可以直接输出   
-			result += buffer;
+			//buffer中就是执行的结果，可以保存到文本，也可以直接输出
+			buffer[bytesRead] = '\0';
+			result.append(buffer, bytesRead);
 			Sleep(10);
 		}
+		::CloseHandle(hRead);
+		::CloseHandle(pi.hThread);
+		::CloseHandle(pi.hProcess);
 		return 0;
 #endif
 	}
@@ -1169,8 +1268,15 @@ uint64_t CSystem::currentMemory()
 	return pmc.WorkingSetSize;
 #elif __unix__
 	std::string stat_info = CSystem::readFile("/proc/self/status");
-	int32_t first = stat_info.find("\nVmRSS:", 0);
-	std::string memory = stat_info.substr(first + 7, stat_info.find_first_of('\n', first + 1) - first - 9);
+	const std::string key = "VmRSS:";
+	size_t first = stat_info.find(key);
+	if (first == std::string::npos)
+	{
+		return 0;
+	}
+	size_t valueStart = first + key.size();
+	size_t valueEnd = stat_info.find_first_of('\n', valueStart);
+	std::string memory = stat_info.substr(valueStart, valueEnd == std::string::npos ? std::string::npos : valueEnd - valueStart);
 	return strtoull(memory.c_str(), nullptr, 10) * 1024;
 #endif
 }
@@ -1233,27 +1339,27 @@ std::string CSystem::getComputerName()
 	return computerName;
 }
 
-#ifdef _MSC_VER
-//NB: XP+ solution!
-static HMODULE GetCurrentModule()
-{
-	HMODULE hModule = NULL;
-	GetModuleHandleEx(
-		GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-		(LPCTSTR)GetCurrentModule,
-		&hModule);
-	return hModule;
-}
-#elif __unix__
+#ifdef __unix__
+// 获取当前动态库所在目录，入参为空时返回nullptr。
 static char* GetModuleCurPath(char* sCurPath)
 {
-   	std::string wdir;
-   	Dl_info dl_info;
-   	dladdr((void*)GetModuleCurPath, &dl_info);
-   	std::string path(dl_info.dli_fname);
-   	wdir = path.substr(0, path.find_last_of('/') + 1);
-   	strcpy(sCurPath, wdir.c_str());
-   	return sCurPath;
+	if (sCurPath == nullptr)
+	{
+		return nullptr;
+	}
+	Dl_info dl_info;
+	memset(&dl_info, 0, sizeof(dl_info));
+	if (dladdr((void*)GetModuleCurPath, &dl_info) == 0 || dl_info.dli_fname == nullptr)
+	{
+		sCurPath[0] = '\0';
+		return sCurPath;
+	}
+	std::string path(dl_info.dli_fname);
+	std::string wdir = path.substr(0, path.find_last_of('/') + 1);
+	const size_t maxPathLen = 1024;
+	::strncpy(sCurPath, wdir.c_str(), maxPathLen - 1);
+	sCurPath[maxPathLen - 1] = '\0';
+	return sCurPath;
 }
 #endif
 
@@ -1274,7 +1380,12 @@ std::string CSystem::GetCurrentExePath()
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
 #elif __unix__
-	::readlink("/proc/self/exe", szFilePath, 1024);
+	ssize_t len = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
+	if (len < 0)
+	{
+		return "";
+	}
+	szFilePath[len] = '\0';
 #endif
 	return CSystem::GetName(szFilePath, 4);
 }
@@ -1285,7 +1396,12 @@ std::string CSystem::GetCurrentExeName()
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
 #elif __unix__
-	::readlink("/proc/self/exe", szFilePath, 1024);
+	ssize_t len = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
+	if (len < 0)
+	{
+		return "";
+	}
+	szFilePath[len] = '\0';
 #endif
 	return CSystem::GetName(szFilePath, 3);
 }
@@ -1296,7 +1412,12 @@ std::string CSystem::GetCurrentExeFullName()
 #ifdef _WIN32
 	::GetModuleFileNameA(NULL, szFilePath, 1024);
 #elif __unix__
-	::readlink("/proc/self/exe", szFilePath, 1024);
+	ssize_t len = ::readlink("/proc/self/exe", szFilePath, sizeof(szFilePath) - 1);
+	if (len < 0)
+	{
+		return "";
+	}
+	szFilePath[len] = '\0';
 #endif
 	return CSystem::GetName(szFilePath, 1);
 }
@@ -1404,7 +1525,16 @@ std::string CSystem::GetSysUserName()
 
 std::string CSystem::GetEnvironment(const char* name)
 {
-	return ::getenv(name);
+	if (name == nullptr)
+	{
+		return "";
+	}
+	char* value = ::getenv(name);
+	if (value == nullptr)
+	{
+		return "";
+	}
+	return value;
 }
 
 bool CSystem::CreateDir(const std::string& dir)
@@ -1439,12 +1569,12 @@ void CSystem::OpenFolder(const std::string& folder)
 #ifdef _WIN32
 	ShellExecuteA(NULL, "open", NULL, NULL, folder.c_str(), SW_SHOWNORMAL);
 #elif __unix__
-    if (fork() == 0)
-    {
-        std::string result;
-        SystemCommand("nautilus " + folder, result);
-        exit(0);
-    }
+	if (fork() == 0)
+	{
+		std::string result;
+		SystemCommand("nautilus " + folder, result);
+		childProcessExit(0);
+	}
 #endif
 }
 
@@ -1453,12 +1583,12 @@ void CSystem::OpenFolderAndSelectFile(const std::string& file)
 #ifdef _WIN32
 	ShellExecuteA(NULL, "open", "Explorer.exe", ("/select, " + file).c_str(), NULL, SW_SHOWDEFAULT);
 #elif __unix__
-    if (fork() == 0)
-    {
-        std::string result;
-        SystemCommand("nautilus " + file, result);
-        exit(0);
-    }
+	if (fork() == 0)
+	{
+		std::string result;
+		SystemCommand("nautilus " + file, result);
+		childProcessExit(0);
+	}
 #endif
 }
 
@@ -1467,46 +1597,56 @@ void CSystem::OpenFile(const std::string& file)
 #ifdef _WIN32
 	ShellExecuteA(NULL, "open", file.c_str(), NULL, NULL, SW_SHOWNORMAL);
 #elif __unix__
-    if (fork() == 0)
-    {
-        std::string result;
-        SystemCommand(file, result);
-        exit(0);
-    }
+	if (fork() == 0)
+	{
+		std::string result;
+		SystemCommand(file, result);
+		childProcessExit(0);
+	}
+#endif
+}
+
+void CSystem::childProcessExit(int32_t exitCode)
+{
+#ifdef _MSC_VER
+	::_exit(exitCode);
+#elif __unix__
+	::_exit(exitCode);
+#else
+	std::_Exit(exitCode);
 #endif
 }
 
 std::string CSystem::timetToStr(time_t timet, bool isLocal)
 {
 	char buf[20] = {};
+	tm timeInfo;
+	memset(&timeInfo, 0, sizeof(timeInfo));
 	if (isLocal)
 	{
 		//转为本地时间
-		tm* local = localtime(&timet);
-#ifdef __unix__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-truncation"
-#pragma GCC diagnostic ignored "-Wformat-overflow"
+#ifdef _WIN32
+		if (localtime_s(&timeInfo, &timet) != 0)
+#elif __unix__
+		if (localtime_r(&timet, &timeInfo) == nullptr)
 #endif
-		sprintf(buf,
-			"%04d-%02d-%02d %02d:%02d:%02d",
-			(uint16_t)(local->tm_year + 1900),
-			(uint8_t)(local->tm_mon + 1),
-			(uint8_t)local->tm_mday,
-			(uint8_t)local->tm_hour,
-			(uint8_t)local->tm_min,
-			(uint8_t)local->tm_sec
-		);
-#ifdef __unix__
-// 恢复警告
-#pragma GCC diagnostic pop
-#endif
+		{
+			return "";
+		}
 	}
 	else
 	{
 		//转为格林威治时间
-		strftime(buf, 64, "%Y-%m-%d %H:%M:%S", gmtime(&timet));
+#ifdef _WIN32
+		if (gmtime_s(&timeInfo, &timet) != 0)
+#elif __unix__
+		if (gmtime_r(&timet, &timeInfo) == nullptr)
+#endif
+		{
+			return "";
+		}
 	}
+	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeInfo);
 	return buf;
 }
 
@@ -1562,12 +1702,29 @@ std::string CSystem::readFile(const std::string& path)
 	{
 		return "";
 	}
-	fseek(file, 0, SEEK_END);
+	if (fseek(file, 0, SEEK_END) != 0)
+	{
+		fclose(file);
+		return "";
+	}
 	long length = ftell(file);
-	fseek(file, 0, SEEK_SET);
+	if (length <= 0)
+	{
+		fclose(file);
+		return "";
+	}
+	if (fseek(file, 0, SEEK_SET) != 0)
+	{
+		fclose(file);
+		return "";
+	}
 	std::string result;
-	result.resize(length);
-	fread(&result[0], 1, length, file);
+	result.resize(static_cast<size_t>(length));
+	size_t readLength = fread(&result[0], 1, result.size(), file);
+	if (readLength != result.size())
+	{
+		result.resize(readLength);
+	}
 	fclose(file);
 	return result;
 }
@@ -1590,10 +1747,20 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	const std::function<bool (const std::string&)>& EveryFilePath,
 	std::vector<std::string>* unVisitPath)
 {
+	std::vector<std::string> result;
+	if (unVisitPath != nullptr)
+	{
+		unVisitPath->clear();
+	}
+
 	std::string dir = strPath;
 	if (dir.empty())
 	{
 		dir = CSystem::GetCurrentExePath();
+	}
+	if (dir.empty())
+	{
+		return result;
 	}
 #ifdef _WIN32
 	char level = '\\';
@@ -1608,12 +1775,6 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	dir.push_back('*');
 #endif
 
-	if (unVisitPath != nullptr)
-	{
-		unVisitPath->clear();
-	}
-
-	std::vector<std::string> result;
 #ifdef _WIN32
 	_finddata_t fileDir;
 #elif __unix__
@@ -1658,7 +1819,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 		}
 
 #ifdef _WIN32
-		while (_findnext(lfDir, &fileDir) == 0)
+		do
 #elif __unix__
 		while ((pDirent = readdir(pDir)) != 0)
 #endif
@@ -1670,7 +1831,7 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 #endif
 			//是目录，加入队列
 #ifdef _WIN32
-			if ((fileDir.attrib >= 16 && fileDir.attrib <= 23) || (fileDir.attrib >= 48 && fileDir.attrib <= 55))
+			if ((fileDir.attrib & _A_SUBDIR) != 0)
 #elif __unix__
 			if (pDirent->d_type == DT_DIR)
 #endif
@@ -1745,13 +1906,19 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 			}
 			break;
 			default:
+			{
 				break;
+			}
 			}
 			if (isExit)
 			{
 				break;
 			}
+#ifdef _WIN32
+		} while (_findnext(lfDir, &fileDir) == 0);
+#elif __unix__
 		}
+#endif
 #ifdef _WIN32
 		_findclose(lfDir);
 #elif __unix__
@@ -1761,21 +1928,97 @@ std::vector<std::string> CSystem::findFilePath(const std::string& strPath,
 	return result;
 }
 
+//#include <atomic>
+//#include <functional>
+//#include <iostream>
+//#include <thread>
+//
 //int main()
 //{
-//	auto sss2 = CSystem::commonFile("FileReplace");
-//	CSystem::setClipboardData(CSystem::GetConsoleHwnd(), "12as34");
-//	//CSystem system;
-//	double x = CSystem::GetCPUSpeedGHz();
-//	RECT rect = CSystem::GetWindowResolution();
-//	int xx = rect.right - rect.left;
-//	int y = rect.bottom - rect.top;
-//	int sss = CSystem::GetVisibleHeight();
-//	int screenwidth=GetSystemMetrics(SM_CXFULLSCREEN);
-//	int screenheight=GetSystemMetrics(SM_CYFULLSCREEN);
-//	//以下两个函数获取的是真正屏幕的大小，即实际的大小
-//	int screenwidth_real=GetSystemMetrics(SM_CXSCREEN);
-//	int screenheight_real=GetSystemMetrics(SM_CYSCREEN);
-//	CSystem::Sleep(1000);
-//	return 0;
+//	int32_t totalCount = 0;
+//	int32_t failCount = 0;
+//	std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
+//	{
+//		++totalCount;
+//		std::cout << (ok ? "[PASS] " : "[FAIL] ") << name << std::endl;
+//		if (!ok)
+//		{
+//			++failCount;
+//		}
+//	};
+//
+//	check(CSystem::currentProcessPid() > 0, "CSystem currentProcessPid");
+//	check(CSystem::SystemThreadId() > 0, "CSystem SystemThreadId");
+//	check(!CSystem::GetCurrentExePath().empty(), "CSystem GetCurrentExePath");
+//	check(!CSystem::GetCurrentExeName().empty(), "CSystem GetCurrentExeName");
+//	check(!CSystem::GetCurrentExeFullName().empty(), "CSystem GetCurrentExeFullName");
+//	check(CSystem::GetSystemBits() == 32 || CSystem::GetSystemBits() == 64, "CSystem GetSystemBits");
+//	check(!CSystem::uuid(1).empty() && !CSystem::uuid(0).empty(), "CSystem uuid");
+//	check(!CSystem::timetToStr(0).empty(), "CSystem timetToStr local");
+//	check(!CSystem::timetToStr(0, false).empty(), "CSystem timetToStr utc");
+//	std::string emptyEnvironmentName = "CSYSTEM_EMPTY_ENV_" + CSystem::uuid(0);
+//	check(CSystem::GetEnvironment(nullptr).empty(), "CSystem GetEnvironment null");
+//	check(CSystem::GetEnvironment(emptyEnvironmentName.c_str()).empty(), "CSystem GetEnvironment missing");
+//	int32_t** dyadicArray = CSystem::CreateDyadicArray<int32_t>(2, 3);
+//	check(dyadicArray != nullptr, "CSystem CreateDyadicArray normal");
+//	if (dyadicArray != nullptr)
+//	{
+//		dyadicArray[1][2] = 7;
+//		check(dyadicArray[1][2] == 7, "CSystem CreateDyadicArray write");
+//		CSystem::DestroyDyadicArray(dyadicArray, 2);
+//	}
+//	check(CSystem::CreateDyadicArray<int32_t>(0, 3) == nullptr, "CSystem CreateDyadicArray invalid");
+//
+//	std::chrono::high_resolution_clock::time_point beginTime = CSystem::GetHighTickCount();
+//	CSystem::Sleep(1);
+//	check(CSystem::GetHighTickCountMilliRunTime(beginTime) >= 0, "CSystem Sleep and high tick");
+//
+//#ifdef _WIN32
+//	std::string separator = "\\";
+//#else
+//	std::string separator = "/";
+//#endif
+//	std::string root = CSystem::GetCurrentExePath() + "CSystemTest_" + CSystem::uuid(0);
+//	std::string filePath = root + separator + "data.txt";
+//	std::string emptyFilePath = root + separator + "empty.txt";
+//	std::string renamePath = root + separator + "rename.txt";
+//	check(CSystem::CreateDir(root), "CSystem CreateDir");
+//	check(CSystem::DirOrFileExist(root), "CSystem DirOrFileExist dir");
+//	CSystem::saveFile("hello system", filePath);
+//	check(CSystem::readFile(filePath) == "hello system", "CSystem saveFile readFile");
+//	CSystem::saveFile("", emptyFilePath);
+//	check(CSystem::DirOrFileExist(emptyFilePath) && CSystem::readFile(emptyFilePath).empty(), "CSystem empty readFile");
+//	check(CSystem::rename(filePath, renamePath), "CSystem rename file");
+//	check(CSystem::readFile(renamePath) == "hello system", "CSystem read renamed file");
+//	std::vector<std::string> findFiles = CSystem::findFilePath(root, 1, "rename.txt");
+//	check(!findFiles.empty(), "CSystem findFilePath");
+//	check(CSystem::deleteFile(renamePath.c_str()), "CSystem deleteFile");
+//	check(CSystem::deleteFile(emptyFilePath.c_str()), "CSystem delete empty file");
+//	check(!CSystem::DirOrFileExist(renamePath), "CSystem deleted file missing");
+//	check(CSystem::DestroyDir(root), "CSystem DestroyDir");
+//
+//	std::atomic<int32_t> failedThreadCount(0);
+//	std::vector<std::thread> threads;
+//	for (int32_t threadIndex = 0; threadIndex < 8; ++threadIndex)
+//	{
+//		threads.push_back(std::thread([&failedThreadCount]() -> void
+//		{
+//			for (int32_t loopIndex = 0; loopIndex < 2000; ++loopIndex)
+//			{
+//				if (CSystem::SystemThreadId() == 0 || CSystem::uuid(0).empty())
+//				{
+//					failedThreadCount.fetch_add(1);
+//					return;
+//				}
+//			}
+//		}));
+//	}
+//	for (size_t i = 0; i < threads.size(); ++i)
+//	{
+//		threads[i].join();
+//	}
+//	check(failedThreadCount.load() == 0, "CSystem multithread pressure");
+//
+//	std::cout << "CSystem test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << std::endl;
+//	return failCount == 0 ? 0 : 1;
 //}

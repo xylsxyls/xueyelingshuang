@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef CSystemAPI
-    #define CSystemAPI 
+    #define CSystemAPI
 #endif
