@@ -1,0 +1,802 @@
+AI代码规范文档
+
+本文档用于约束 AI 在本代码库中编写、修改、重构 C++ 代码时的行为。目标不是追求某种通用互联网代码风格，而是尽量贴合当前代码库的长期维护方式、编译环境、工程组织习惯和作者偏好。
+
+一、总体原则
+
+1. 先理解现有代码，再动手修改。
+AI 修改代码前必须先阅读当前工程结构、已有命名方式、已有封装库、已有构建脚本和类似功能的实现方式。不要凭空引入一套新的架构风格。
+
+2. 优先保持跨平台。
+代码需要优先使用 C++11 标准库和跨平台写法。Windows 使用 VS2013 编译，Linux 使用 gcc/g++ 编译，Ubuntu 优先兼容 20.04，其次兼容 22.04。如果某些功能无法跨平台，必须使用条件编译分开实现，例如：
+
+#ifdef _WIN32
+// Windows实现
+#elif __unix__
+// Linux实现
+#endif
+
+3. 业务代码不能一步调用到底层第三方库。
+第三方库必须通过 src 下的二次封装库隔离。业务工程只依赖二次封装库暴露的 API，不直接依赖 tools 目录下的第三方头文件和类型。后续如果更换底层第三方库，业务代码原则上不需要修改。
+
+4. 优先使用已有二次封装库。
+如果已有 CSystem、CStringManager、RapidJson、HttpService、MysqlCpp、HiRedis 等封装库提供了对应功能，业务代码必须优先使用它们。不要在业务工程里重新写一套类似函数。
+
+5. 实现要能真实编译运行。
+不要只写看起来合理但跑不起来的 demo。核心功能要能编译、能启动、能验证。周边复杂功能可以简化，但不能留下明显的编译断点。
+
+6. 控制修改范围。
+只修改和当前任务相关的文件。不要顺手重构大量无关老代码，不要改变用户已有修改。遇到非本次任务的历史问题，可以说明，但不要擅自扩大改动面。
+
+二、语言和编译环境
+
+1. C++ 标准。
+统一使用 C++11。可以使用 C++11 带来的性能和表达力提升，例如 nullptr、std::move、std::unique_ptr、std::shared_ptr、std::atomic、std::thread、std::mutex、std::condition_variable、lambda 等。
+
+2. 不使用 C++14 及以上特性。
+因为 Windows 使用 VS2013，AI 不得使用 VS2013 不支持或支持不稳定的语法，例如 generic lambda、std::make_unique、结构化绑定、if constexpr、std::optional 等。
+
+3. Windows 编译。
+Windows 上使用 VS2013。Debug 通常使用 MDd，Release 通常使用 MT。Release 链接第三方静态库时，必须注意第三方库的运行库选项也要匹配 MT，否则容易出现 MSVCRT 和 LIBCMT 冲突。
+
+4. Linux 编译。
+Linux 使用 gcc/g++，优先保证 Ubuntu 20.04 能编译。CMake 中设置 C++11，不要使用太新的编译器特性。
+
+5. 运行库冲突处理。
+如果出现类似 MSVCRT.lib 和 LIBCMT.lib 多重定义问题，优先检查第三方库和当前工程的运行库选项是否一致。不要优先依赖 /NODEFAULTLIB 掩盖问题，除非已经确认这是正确的链接策略。
+
+三、文件编码和文件尾
+
+1. Windows 代码文件编码。
+Windows 下新增的 .h、.cpp、.vcxproj、.filters 原则上使用 UTF-8 带 BOM。普通 .txt 文档按用户明确要求处理；如果用户要求 UTF-8 不带 BOM，就必须使用 UTF-8 不带 BOM。
+
+2. CMakeLists.txt 编码。
+所有 CMakeLists.txt 使用 UTF-8 不带 BOM。
+
+3. shell 脚本编码。
+.sh 脚本使用 UTF-8。不要随意改动已有脚本编码。
+
+4. 遇到已有文件编码异常。
+如果发现已有文件不是预期编码，AI 需要告知用户，不要擅自整体转码。除非用户明确要求，否则不要把老文件批量转换编码。
+
+5. 文件尾。
+每个文件末尾不能有空白行，也不能保留额外换行符。可执行检查标准：文件最后一个字节必须是最后一行实际内容的最后一个字符，不能是 CR(0x0D)、LF(0x0A)、空格或 Tab。.py、.sh、CMakeLists.txt、.h、.cpp、.txt 都遵守这条规则，不要因为 Python 常见风格习惯给 .py 文件保留末尾换行。批量构建脚本复制头文件后，如果脚本重新生成了文件尾换行，AI 必须再次清理。
+
+四、目录和工程组织
+
+1. src 目录。
+所有工程和二次封装库放在 src 下。典型结构为：
+
+src/LibName/LibName/src
+src/AppName/AppName
+
+2. include 目录。
+二次封装库编译后，会把公开头文件复制到根 include/LibName 下。业务工程包含头文件时，不写 include/...，因为 VS 工程和 CMake 已经把根 include 加进包含路径。
+
+正确示例：
+#include "MysqlCpp/MysqlCppAPI.h"
+#include "RapidJson/RapidJsonAPI.h"
+
+错误示例：
+#include "include/MysqlCpp/MysqlCppAPI.h"
+#include "../../tools/xxx/xxx.h"
+
+3. lib 目录。
+编译后的库文件和可执行文件输出到根 lib 目录。32 位和 64 位不要长期混放，按 version 脚本重新生成所需版本，避免误链。
+
+4. tools 目录。
+第三方库源码、头文件和预编译库可以放在 tools 下，但业务代码不直接包含 tools 下的头文件。二次封装库的 before 脚本负责把必要第三方头文件、库文件同步到 include/lib。
+
+5. 一个类一个文件。
+原则上一个类对应一个 .h 和一个 .cpp。除非结构体之间强关联且确实属于同一个业务模型，否则不要把多个类塞在一个文件里。
+
+6. 业务模型结构体。
+多个强关联的数据结构可以放在类似 XxxModels.h/.cpp 中。但如果结构体包含 int32_t、int64_t、bool 等基础类型成员，必须提供构造函数并在初始化列表里初始化。
+
+7. Helper 文件。
+如果某些辅助逻辑会被多个类复用，但不属于 CSystem 或 CStringManager 这种通用基础库，可以放到当前工程的 XxxHelper.h/.cpp 中。Helper 文件名必须带 Helper。
+
+8. 强业务类不要滥用 Helper 命名。
+如果一个类本身是业务概念，例如 Catalog、Schedule、AccountStore，即使里面全是 static 函数，也应该用业务名称，不要叫 XxxHelper。
+
+9. 不在 cpp 里随意定义类。
+除非是非常局部且确实无须复用的小对象，否则不要在 .cpp 里定义类。需要类就单独建立头文件和源文件。
+
+10. VS filter。
+复杂可执行工程需要在 .vcxproj.filters 里细分清楚模块，例如 HTTP层、API服务、排程算法、账号状态、业务模型、配置、通用辅助等。filter 是 VS 里的逻辑分组，不一定要求物理目录也这样分。
+
+11. 二次封装库 filter。
+二次封装库通常只负责一个功能，文件不多时不需要过度细分 filter。
+
+五、二次封装库规范
+
+1. API.h 统一入口。
+每个二次封装库都应该提供 XxxAPI.h。业务工程包含该库时，优先只包含 XxxAPI.h，不要零散包含库内部多个头文件。
+
+XxxAPI.h 要包含这个库对外常用的公开头文件。例如 RapidJsonAPI.h 中应该包含 RapidJson.h、RapidJsonDocument.h、RapidJsonValue.h 等可能被业务使用的文件。
+
+2. 宏文件。
+二次封装库通常包含 XxxMacro.h、XxxMacroDll.h、XxxMacroLib.h。version 脚本和 CloudRebuild 会根据 dll/lib 编译方式替换最终对外的 XxxMacro.h。
+
+3. 不暴露底层第三方细节。
+头文件中尽量不要包含第三方头文件。能前置声明就前置声明，把第三方头文件包含放到 .cpp 中。
+
+示例：
+namespace sql
+{
+    class Driver;
+    class Connection;
+}
+
+class MysqlCpp
+{
+private:
+    sql::Driver* m_driver;
+    sql::Connection* m_con;
+};
+
+如果头文件里只是保存一个第三方结构指针，不要为了这一个指针额外引入 Impl/Pimpl 类。优先在头文件前置声明第三方结构，在 .cpp 中包含第三方头文件。
+
+正确示例：
+struct mg_context;
+
+class HttpService
+{
+private:
+    mg_context* m_context;
+};
+
+只有当头文件需要隐藏大量私有成员、降低编译依赖、稳定 ABI，且项目已有这种模式时，才考虑 Impl/Pimpl。
+
+4. 封装接口要足够完整。
+如果后续业务可能需要连接池、事务、批量操作、超时、错误信息、健康检查等能力，应尽量在二次封装库中补齐接口。业务代码不能为了临时需求绕过封装直接调用底层第三方库。
+
+5. 替换底层库时业务无感。
+二次封装库的目标是让业务依赖稳定接口。如果未来替换 Mysql Connector、Redis、HTTP 库或 JSON 库，业务代码原则上一行不改。
+
+6. 第三方依赖不要随意新增。
+新增第三方库前必须先确认：VS2013 能编译、Windows Server 2012 能运行、Ubuntu 20.04 能编译、32/64 位库能准备、Debug/Release 运行库选项能匹配、License 和部署方式可接受。能用现有二次封装库补接口解决的，不新增第三方库。
+
+六、可执行工程和库工程的构建脚本
+
+1. 可执行工程不放 scripts 目录。
+能编译出 exe 的工程，例如 CookServer 这种 Application 工程，不维护 scripts/rebuild_xxx.py。它的 version_debug.sh 和 version_release.sh 只负责准备依赖库，exe 自身由 VS 工程或对应 CMake 工程编译。
+
+2. 二次封装库可以有 scripts 目录。
+库工程可以有 scripts/before_xxx.sh、scripts/after_xxx.sh、scripts/rebuild_xxx.py、scripts/CMakeLists.txt。
+
+3. Debug 和 Release 依赖策略。
+Debug 优先使用 dll，Release 优先使用 lib。
+
+示例：
+"$CLOUD_REBUILD" CStringManager 32 dll debug same
+"$CLOUD_REBUILD" CSystem 32 dll debug same
+
+"$CLOUD_REBUILD" CStringManager 32 lib release same
+"$CLOUD_REBUILD" CSystem 32 lib release same
+
+4. same 和 only。
+same 表示正常编译当前库并执行它自己的 before 依赖。
+only 表示只编当前库，跳过它自己的 before 依赖。
+
+如果某个库的 before 脚本还负责复制第三方头文件或库文件，不要随便把它改成 only，否则干净环境下可能缺文件。only 用于确认依赖已经由前面的脚本准备过，且当前库 before 没有其他必须副作用的情况。
+
+5. 节省编译时间。
+version 脚本要尽量避免重复编译大量依赖，但不能为了省时间跳过必要的第三方同步或宏文件替换。
+
+6. CMakeLists.txt。
+CMakeLists.txt 使用 UTF-8 不带 BOM。Linux 下尽量使用 C++11 和跨平台链接方式。不要写死 Windows 路径。
+
+七、命名规范
+
+1. 类名和结构体名。
+使用大驼峰命名。
+
+示例：
+class HttpService;
+struct MysqlCppConfig;
+
+2. 成员函数。
+成员函数使用小写开头的驼峰命名，包括普通成员函数和 static 成员函数。
+
+示例：
+bool init();
+void uninit();
+std::string lastError() const;
+static Config& instance();
+
+3. 全局函数和文件级 static 函数。
+原则上不要新增全局函数或文件级 static 函数。确实必须新增时，函数名使用大写开头的驼峰命名，并在函数定义上方写清楚入参、出参和返回值。只被一个函数使用的逻辑不要抽成文件级 static 函数，优先写成函数内部 lambda。
+
+示例：
+static std::string BuildErrorText(const std::string& message);
+
+4. 成员变量。
+成员变量统一使用 m_ 前缀。
+
+示例：
+int32_t m_port;
+bool m_isInit;
+std::string m_lastError;
+
+5. static 局部变量。
+函数内 static 变量使用 s_ 前缀。
+
+示例：
+static Config s_config;
+
+6. 常量。
+全局常量、编译期常量使用 k 前缀。
+
+示例：
+static const int32_t kHttpStatusOk = 200;
+
+7. 全局实例宏。
+全局单例访问宏可以使用 g_ 前缀。
+
+示例：
+#define g_config Config::instance()
+
+8. 不随意改老库历史命名。
+CStringManager、CSystem 等老库里可能存在大小写不统一的历史函数。除非本次任务明确要求，不要批量改旧接口名，以免影响大量工程。
+
+9. 禁止没有参数名的函数声明。
+函数声明中所有参数都要写名字，即使是 private 禁用函数。
+
+正确示例：
+CookHttpServer(const CookHttpServer& other);
+
+错误示例：
+CookHttpServer(const CookHttpServer&);
+
+八、类型使用规范
+
+1. 不直接使用 int。
+除非第三方接口要求，否则不要直接使用 int。需要明确位宽时使用 int32_t、int64_t、uint32_t、uint64_t。需要跟随平台位数或容器大小时使用 size_t。
+
+2. 容器下标。
+遍历 vector、string、map 等容器时，优先使用 size_t 作为下标类型。如果沿用老代码中 int32_t index = -1 的写法，要确保不会出现 size_t 和有符号类型混用导致的问题。
+
+3. nullptr。
+所有新代码优先使用 nullptr，不使用 NULL。除非编译器或第三方接口确实不支持 nullptr。
+
+4. bool 成员初始化。
+bool 是基础类型，必须在构造函数初始化列表里初始化，不允许依赖默认未定义值。
+
+5. struct/class 参数传递。
+除 int32_t、int64_t、bool、double、指针等基础类型外，自定义 struct/class 入参原则上使用 const 引用。
+
+正确示例：
+void writeResponse(void* conn, const HttpResponse& response);
+
+错误示例：
+void writeResponse(void* conn, HttpResponse response);
+
+6. 出参。
+出参可以使用非 const 引用或指针，并在注释中标明 [out] 或 [in,out]。如果出参可为空，使用指针更清晰。
+
+7. 类成员依赖对象。
+类里长期保存的外部依赖对象不要用引用成员，优先使用指针成员。使用前必须判空。引用可以用于函数入参，但不用于保存跨函数、跨生命周期的依赖关系。
+
+正确示例：
+class CookHttpApiHandler
+{
+private:
+    // 业务接口服务指针，不负责释放
+    CookApiService* m_apiService;
+};
+
+错误示例：
+class CookHttpApiHandler
+{
+private:
+    CookApiService& m_apiService;
+};
+
+8. std::move。
+当对象生命周期明确结束，且移动能减少拷贝成本时，可以使用 std::move。但不要为了“看起来现代”滥用 std::move，尤其不要 move 后继续使用对象。
+
+九、初始化和生命周期
+
+1. 构造函数职责。
+构造函数只做成员变量安全初始化。对于 int32_t、int64_t、bool、指针等基础类型，必须在初始化列表里给确定值。
+
+示例：
+MysqlCpp::MysqlCpp() :
+m_driver(nullptr),
+m_con(nullptr),
+m_isInit(false)
+{
+
+}
+
+2. 初始化列表格式。
+初始化列表顶格写，不额外缩进四个空格。
+
+正确示例：
+HttpService::HttpService() :
+m_context(nullptr),
+m_running(false)
+{
+
+}
+
+3. 空函数体。
+空函数体中间保留一行空行。
+
+示例：
+Config::~Config()
+{
+
+}
+
+4. init/uninit。
+资源型对象、单例、连接池、服务类优先提供 init() 和 uninit()。真正的初始化和反初始化逻辑放在 init/uninit 中，不放在构造/析构中。
+
+5. init 可重复调用。
+init() 应该能安全重复调用。已经初始化时可以直接返回 true。uninit() 后应该允许再次 init()。
+
+6. uninit 重置状态。
+uninit() 不只是释放资源，也要把 m_isInit、指针、配置值、错误信息等重置到可再次 init 的状态。
+
+7. 析构函数。
+长期资源对象的析构函数原则上不做业务清理，调用方应显式调用 uninit()。但非常明确的 RAII 小对象可以例外，例如事务作用域对象析构时回滚未提交事务，这种行为必须在注释中说明清楚。
+
+8. 单例。
+单例 instance() 使用函数内 static 变量，并返回引用。
+
+示例：
+Config& Config::instance()
+{
+    static Config s_config;
+    return s_config;
+}
+
+9. 单例初始化顺序。
+main 函数中需要显式调用各单例的 init()。如果单例很多，可以建立总控单例统一管理 init/uninit 顺序。
+
+十、代码格式
+
+1. 大括号。
+if、for、while、switch、case 即使只有一行，也必须写大括号，并且大括号换行。
+
+示例：
+if (m_apiService == nullptr)
+{
+    return HttpResponse::json("{}", kHttpStatusInternalServerError);
+}
+
+2. switch case。
+case 中即使只有一行也要加大括号。
+
+示例：
+switch (type)
+{
+case kTypeA:
+{
+    handleA();
+    break;
+}
+default:
+{
+    break;
+}
+}
+
+3. 模板右尖括号。
+C++11 支持连续右尖括号，嵌套模板后面不要人为加空格。
+
+正确示例：
+std::vector<std::pair<std::string, HttpHandler*>> m_routes;
+
+错误示例：
+std::vector<std::pair<std::string, HttpHandler*> > m_routes;
+
+4. include 分组。
+本工程头文件优先，其次二次封装库头文件，再是标准库。不要在 #pragma once 和类注释之间插入没必要的空行。头文件和类说明之间可以保留一行空行。
+
+5. 不使用 mutable。
+不要使用 mutable。const 的语义是让调用者和维护者相信该函数不会改变对象可观察状态，不要用 mutable 绕开这种语义。
+
+6. volatile。
+跨线程状态优先使用 std::atomic，不使用 volatile 解决线程同步问题。volatile 不是线程同步工具。
+
+7. namespace。
+不要为了放几个局部辅助函数就使用匿名 namespace。优先使用 XxxHelper。只有非常局部、复用价值低的逻辑，可以放在函数内部 lambda。
+
+8. friend。
+不要为了让一个辅助类访问 private 函数就轻易使用 friend。优先新增一个语义明确的 public 成员函数作为受控入口，内部再调用 private 实现。只有确实需要表达紧密所有权或构造权限时才使用 friend，并且必须在注释里说明原因。
+
+9. C 风格回调适配。
+如果第三方 C 接口要求函数指针回调，可以保留一个极薄的 C 回调适配函数。复杂逻辑不要写在 C 回调函数里，应转发到类成员函数或单独的回调上下文类。回调上下文类如果超过简单 POD，必须单独放 .h/.cpp 文件，不要塞在另一个类内部。
+
+10. 嵌套类和嵌套 struct。
+除非和外层类强绑定且只在外层类内部使用，否则不要把 class/struct 定义在另一个类里面。能单独成文件的类型就单独成文件，文件名和类型名保持一致。
+
+十一、注释规范
+
+1. 类注释。
+每个类都要有说明，说明它负责什么、隐藏什么细节、管理什么生命周期。
+
+示例：
+/** MySQL连接封装，隐藏mysql-connector-cpp底层类型，提供连接、查询、更新和事务操作
+*/
+class MysqlCpp
+{
+};
+
+2. 函数注释。
+头文件里的函数，包括 public、protected、private，都要写注释。注释要说明函数目的、参数、返回值，不要只是简单翻译函数名。
+
+示例：
+/** 按完整配置建立连接，连接成功后会按配置选择数据库和设置自动提交
+@param [in] config 连接配置
+@return 返回是否连接成功
+*/
+bool connect(const MysqlCppConfig& config);
+
+3. private 禁用函数也要注释。
+禁用拷贝构造、赋值函数也要说明为什么禁用。
+
+示例：
+/** 禁止拷贝构造，避免多个HTTP服务对象同时管理同一个监听和处理器
+@param [in] other 另一个HTTP服务对象
+*/
+CookHttpServer(const CookHttpServer& other);
+
+/** 禁止赋值，避免HTTP服务生命周期和底层监听状态被复制
+@param [in] other 另一个HTTP服务对象
+@return 返回当前对象引用
+*/
+CookHttpServer& operator=(const CookHttpServer& other);
+
+4. 成员变量注释。
+成员变量注释放在成员变量上一行，不写在同一行末尾。// 后面必须有一个空格。
+
+正确示例：
+// 当前对象是否已经完成init
+bool m_isInit;
+
+错误示例：
+bool m_isInit; // 当前对象是否已经完成init
+
+5. 4251 警告处理。
+如果 VS 对导出类中的 std::string、std::vector、std::map 等成员报 C4251，不要在整个 struct/class 外面粗暴包 pragma。只在对应成员附近局部 push/pop。连续多个 string 可以放在同一个局部 push/pop 中，但不要为了包 pragma 调整成员变量顺序。
+
+示例：
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+// 最近一次操作失败时的错误信息
+std::string m_lastError;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+6. cpp 中复杂逻辑注释。
+.cpp 中不要给显而易见的代码写废话注释。但复杂算法、调度逻辑、并发释放逻辑、跨平台分支等需要写简洁说明。
+
+7. 局部 lambda 注释。
+如果函数内部定义 lambda，并且这个 lambda 替代了原本的辅助函数，需要在 lambda 前说明入参、出参、返回值。
+
+示例：
+// isQuerySql入参：sql是待判断的SQL文本。
+// isQuerySql出参：无。
+// isQuerySql返回值：返回true表示该SQL会产生结果集，应走query接口。
+auto isQuerySql = [](const std::string& sql) -> bool
+{
+    return true;
+};
+
+8. 复用辅助函数注释。
+如果辅助逻辑复用多次，应放到 XxxHelper 静态成员函数中，并在头文件按正常函数注释格式说明参数和返回值。
+
+十二、Helper 和通用工具归属
+
+1. 字符串相关工具。
+纯字符串转换、split、join、数字转字符串等，优先放到 CStringManager。已有函数必须优先调用已有函数。
+
+示例：
+CStringManager::toStringInt32(value);
+CStringManager::split(result, text, delimiter);
+
+2. 系统相关工具。
+获取 exe 所在目录、休眠、进程判断、路径处理等，优先放到 CSystem。业务代码不要自己写一套平台判断。
+
+3. 业务辅助函数。
+如果逻辑和业务有关，但不强绑定某个类，可以放当前工程的 XxxHelper 中。
+
+4. 强绑定逻辑。
+如果函数和某个类强绑定，即使是辅助逻辑，也优先作为该类 private 成员函数，不要强行挪到 Helper。
+
+5. 少用 static 全局函数。
+原则上不应该出现大量 static 全局函数。复用多次的放 Helper；只用一次的放函数内部 lambda；非常紧密且确实不值得暴露的才考虑 static。
+
+十三、配置和常量
+
+1. 不写魔法数字。
+业务代码中不要直接写 500、16、3000 等含义不明的数字。需要定义枚举、常量或配置项，并写注释说明含义。
+
+2. HTTP 状态码。
+HTTP 状态码应定义枚举或常量，并集中管理状态文本映射。不要在业务里直接写 500。
+
+示例：
+// 服务器内部错误，表示请求处理过程中出现不可恢复异常
+kHttpStatusInternalServerError = 500
+
+3. Config 单例。
+和运行配置相关的值放到 Config.h/Config.cpp 中，由 g_config 访问。Config 要有 init/uninit，构造析构不做业务逻辑。
+
+4. IP 和端口。
+IP、端口、线程数、最大请求体大小等配置不能散落在业务函数中。开发阶段可以写默认值，但必须集中在 Config 或专门配置头文件中。
+
+5. 状态文件路径。
+可执行程序写本地状态文件时，路径必须基于 exe 所在目录，不基于当前工作目录。工作目录可能被 VS 调试设置改变。
+
+正确思路：
+CSystem::GetCurrentExePath() + 文件名
+
+十四、HTTP 服务和业务 API
+
+1. 服务端面向多客户端。
+服务器 API 不能只服务微信小程序，也要能被 Android、iOS 等客户端复用。接口设计尽量保持客户端无关。
+
+2. HTTP JSON API。
+当前阶段 HTTP 足以承载微信小程序、Android、iOS 的普通业务请求。性能瓶颈优先通过线程池、连接池、缓存、负载均衡、数据库优化解决，不要过早换自定义网络协议。
+
+3. 安全关键流程。
+对于做菜计时、关火提醒等安全相关流程，服务器应一次性把完整步骤和时间线返回给客户端。客户端开始执行后，本地定时提醒不能依赖后续网络回包。
+
+4. 分布式准备。
+服务端业务逻辑尽量无状态或状态外置到 MySQL/Redis，方便后续多实例部署。不要把关键业务状态只放单进程内存里。
+
+5. 本地演示状态。
+早期 demo 可以用 exe 同级目录文件保存账号状态，但要明确这是演示存储，后续生产环境应切到 MySQL/Redis。
+
+十五、底层能力和第三方库封装使用
+
+本章是通用规则，不是只针对某几个现有库。RapidJson、MysqlCpp、HiRedis、HttpService 只是当前仓库里的例子。以后新增任何 JSON、数据库、缓存、网络、消息队列、日志、压缩、加密、文件系统、图片视频处理等底层能力，都按这一章执行。
+
+1. 业务代码只依赖二次封装库。
+业务工程不能直接包含第三方底层头文件，不能直接调用第三方底层 API，不能直接保存第三方底层对象。业务工程只能通过 src 下的二次封装库访问底层能力。
+
+正确示例：
+#include "RapidJson/RapidJsonAPI.h"
+#include "MysqlCpp/MysqlCppAPI.h"
+
+错误示例：
+#include "rapid_json/document.h"
+#include "cppconn/connection.h"
+#include "hiredisinclude/hiredis.h"
+#include "civetweb.h"
+
+2. 缺能力时先补封装库。
+如果业务代码需要新的 JSON 操作、数据库操作、Redis 命令、HTTP 能力或其他底层能力，AI 必须先判断对应二次封装库是否已有接口。没有接口时，优先在二次封装库里补接口，再让业务调用封装接口。不要为了临时方便在业务层绕到底层第三方库。
+
+3. 二次封装库要屏蔽底层类型。
+封装库的公开头文件尽量不暴露第三方类型。如果只是需要保存第三方对象指针，用前置声明。第三方头文件放到 .cpp 中包含。只有当第三方类型必须作为公开接口的一部分时，才允许在公开头文件中包含第三方头文件，并且要说明原因。
+
+4. 封装接口要面向业务稳定性。
+封装库接口应表达稳定业务语义，例如 init、uninit、connect、query、execute、beginTransaction、commit、rollback、start、stop、parse、toString 等。不要把底层第三方函数名原样透传成一层薄皮，否则更换底层库时业务仍然会被迫修改。
+
+5. 生命周期由封装库统一管理。
+所有需要打开、连接、启动、关闭、释放的底层资源，都应在封装库中提供明确的 init/uninit 或 start/stop。构造函数只初始化成员变量，析构函数不做复杂业务释放。连接池、服务对象、全局单例都必须能显式初始化和显式反初始化。
+
+6. 错误要在封装层转换。
+第三方异常、错误码、错误对象不要穿透到业务层。封装库内部捕获并转换为 bool、结果对象、lastError 文本或项目统一错误结构。业务层看到的是本项目封装后的错误表达。
+
+7. 第三方文件由脚本准备。
+第三方头文件和库文件通过 before 脚本从 tools 复制到 include/lib。业务工程不写 tools 相对路径。AI 新增或调整第三方依赖时，必须同步维护 before 脚本、VS 包含目录、库目录、Linux CMake 链接和 version 脚本。
+
+8. API.h 是外部入口。
+封装库对业务暴露 XxxAPI.h。业务工程包含该库时优先只包含 XxxAPI.h。XxxAPI.h 应包含业务常用的公开头文件。不要让业务代码为了使用一个功能去猜应该包含库内部哪个具体头文件。
+
+9. 第三方库升级要谨慎。
+升级或新增第三方库前，必须确认 VS2013、Windows Server 2012、Ubuntu 20.04、gcc/g++、C++11、32/64 位、Debug/Release、MT/MD、动态库/静态库、部署文件和 License 都可接受。不要只因为某个库“最新版更强”就升级。
+
+10. 可选能力不要提前引入重依赖。
+例如 HTTPS/TLS 可能需要 OpenSSL 这类依赖。如果当前需求只是 HTTP 内网接口或本地演示，不要提前引入 OpenSSL。只有需求明确需要 TLS、证书、加密算法等能力时，再在对应二次封装库中引入，并把构建脚本、部署文件和跨平台验证一起补齐。
+
+十六、并发和资源安全
+
+1. 原子变量。
+跨线程 bool 状态使用 std::atomic<bool>，不要使用 volatile。
+
+2. 条件变量。
+等待资源归还时可以使用 std::condition_variable。不要用 Sleep 替代 condition_variable，否则可能持锁睡眠导致其他线程无法归还资源。
+
+3. 锁范围。
+锁只保护必要共享状态，不要在持锁期间做慢 IO、网络请求、长时间 sleep。
+
+4. shared_ptr 删除器。
+连接池借出对象可以使用 shared_ptr 自定义删除器归还连接。uninit 后借出的连接归还时应释放，不应重新塞回空闲队列。
+
+5. close 和 uninit。
+如果保留 close 兼容旧接口，close 可以内部调用 uninit。但新代码优先使用 init/uninit 表达完整生命周期。
+
+十七、错误处理
+
+1. 不让异常穿透业务边界。
+二次封装库内部捕获第三方异常，转换为 bool、结果对象或 lastError()。业务代码不应直接依赖第三方异常类型。
+
+2. lastError。
+封装类应提供 lastError() 方便调用方获取失败原因。成功后通常清空错误文本。
+
+3. 返回值表达失败。
+init、connect、start、commit 等可能失败的函数返回 bool。查询和执行可返回结果对象，结果对象中包含 success、affectedRows、lastInsertId、errorMessage 等信息。
+
+4. 不吞关键错误。
+catch (...) 可以用于兜底，但必须设置可读错误信息，不能静默失败。
+
+十八、性能和数据传递
+
+1. 避免不必要拷贝。
+自定义对象入参使用 const 引用。返回值可依赖 C++11 返回值优化和 move。
+
+2. 批量操作。
+数据库批量写入时，尽量使用事务和 prepared statement，避免每条数据单独提交。
+
+3. 字符串构造。
+频繁拼接时注意临时对象开销。已有 CStringManager 或 SqlString 能处理的，优先使用现有封装。
+
+4. JSON 构造。
+高频 JSON 构造应走 RapidJson 封装，避免低效字符串拼接。
+
+5. 配置常量。
+线程数、请求体大小、超时等性能相关值从 Config 读取，便于后续调优。
+
+十九、跨平台条件编译
+
+1. 头文件少暴露平台差异。
+尽量把平台差异放到 cpp。头文件只暴露稳定接口。
+
+2. Windows API。
+业务核心代码不要直接使用 Windows API。如果必须使用，优先封装到 CSystem 或独立平台层。
+
+3. Linux API。
+Linux 特有 API 同理封装到 CSystem 或平台层，不散落在业务中。
+
+4. 第三方路径。
+不要写死绝对路径。使用工程相对路径、环境变量或构建脚本参数。
+
+二十、代码检查和验证
+
+1. 修改后必须编译。
+修改二次封装库后，至少编译对应 Debug 版本。如果修改会影响 Release 链接，也要跑 Release。已知第三方运行库冲突要在结果中说明。
+
+2. 修改可执行工程后。
+先跑依赖 version 脚本，再用 VS2013/MSBuild 或 CMake 编译 exe。
+
+3. 构建后检查 include。
+CloudRebuild 会把头文件复制到 include。修改公开头文件后，构建完成要确认 include 下同步后的文件也符合规范。
+
+4. 检查文件尾。
+构建脚本复制后可能改变文件尾，最后必须重新按字节检查相关文件。判定标准：文件最后一个字节不能是 CR(0x0D)、LF(0x0A)、空格或 Tab；文件末尾不能出现空白行。
+
+5. 不隐藏警告。
+能通过代码规范消除的警告要消除。例如 C4251 局部 pragma。第三方缺 PDB 的 LNK4099 可说明来源，通常需要重编第三方库或提供 PDB，不应通过业务代码乱改。
+
+6. 二次封装库测试 main。
+类似 RapidJson、HiRedis、HttpService、MysqlCpp 这种“一个工程围绕一个核心封装能力”的库，可以在和工程同名的 cpp 文件末尾保留一段测试 main 函数，例如 HttpService 工程写在 HttpService.cpp 中。测试 main 用于新环境验证，内容应覆盖单一接口测试、错误路径测试和多线程压力测试。手动测试时优先把动态库工程临时改成 EXE，不使用静态库工程测试；测试结束后把工程配置改回动态库，并把测试 main 整段注释掉。注释方式是每行开头写 //，不要用 /* */ 包住整段。AI 后续修改代码时不能删除这类已存在的测试 main，也不能因为当前构建暂时不用它就清理掉；只能在接口变更后同步更新测试内容。
+
+手动启用测试 main 或临时执行 cl/MSBuild 命令时，所有临时产物都必须放到 src/temp 下的明确子目录中。日志文件不要输出到 xueyelingshuang 根目录；手动 cl 编译时必须显式指定 /Fo 和 /Fd，避免 .obj、vc120.pdb 等文件落到仓库根目录。测试结束后确认工程配置、测试 main 注释、version 脚本和最终库产物都恢复到正常状态。
+
+二十一、示例：推荐类结构
+
+class XxxService
+{
+public:
+    /** 构造函数，只做成员变量默认值初始化
+    */
+    XxxService();
+
+    /** 析构函数，不做业务反初始化，调用方需要主动调用uninit
+    */
+    ~XxxService();
+
+public:
+    /** 初始化服务
+    @return 返回true表示初始化成功
+    */
+    bool init();
+
+    /** 反初始化服务，释放资源并重置状态
+    */
+    void uninit();
+
+    /** 判断服务是否已经完成初始化
+    @return 返回true表示已经初始化
+    */
+    bool isInit() const;
+
+private:
+    /** 禁止拷贝构造，避免多个服务对象管理同一批资源
+    @param [in] other 另一个服务对象
+    */
+    XxxService(const XxxService& other);
+
+    /** 禁止赋值，避免服务资源所有权被复制
+    @param [in] other 另一个服务对象
+    @return 返回当前对象引用
+    */
+    XxxService& operator=(const XxxService& other);
+
+private:
+    // 当前对象是否已经完成init
+    bool m_isInit;
+    // 最近一次失败原因
+    std::string m_lastError;
+};
+
+XxxService::XxxService() :
+m_isInit(false)
+{
+
+}
+
+XxxService::~XxxService()
+{
+
+}
+
+bool XxxService::init()
+{
+    if (m_isInit)
+    {
+        return true;
+    }
+
+    m_isInit = true;
+    return true;
+}
+
+void XxxService::uninit()
+{
+    m_lastError.clear();
+    m_isInit = false;
+}
+
+bool XxxService::isInit() const
+{
+    return m_isInit;
+}
+
+二十二、AI 修改代码时的工作流程
+
+1. 先读相关工程结构、头文件、源文件、构建脚本。
+2. 确认已有封装库是否已经提供所需能力。
+3. 选择最小改动方案，不绕过二次封装库。
+4. 新增类时按一个类一个文件组织。
+5. 新增函数和成员变量时同步补注释。
+6. 基础类型成员必须初始化。
+7. 构造析构不写业务初始化和反初始化，优先使用 init/uninit。
+8. 处理跨平台逻辑时优先封装到基础库或平台层。
+9. 修改 VS 工程时同步维护 .vcxproj 和 .vcxproj.filters。
+10. 修改公开头文件后运行构建脚本同步 include。
+11. 编译验证。
+12. 如果修改的是二次封装库，检查工程同名 cpp 文件末尾是否已有测试 main；已有则同步维护，不能删除。新增核心封装库时，应补一段可手动启用的测试 main。
+13. 检查文件编码和文件尾。文件尾判定标准是最后一个字节必须是实际内容字符，不能是 CR、LF、空格或 Tab。
+14. 最终向用户说明改了什么、编译结果、剩余风险。
+二十三、工程链接配置规则
+
+1. Windows VS 工程不要手动链接二次封装库。
+业务代码或二次封装库代码只要包含 Xxx/XxxAPI.h，XxxAPI.h 内部就应该通过 #pragma comment(lib, "Xxxd.lib") 或 #pragma comment(lib, "Xxx.lib") 自动链接 Debug/Release 对应库。因此 .vcxproj 的 AdditionalDependencies 不要再手工填写 CStringManager.lib、CSystem.lib、ReadWriteMutex.lib、RapidJson.lib、HttpService.lib、MysqlCpp.lib、HiRedis.lib、LogManager.lib、CDump.lib、IntDateTime.lib 这类二次封装库。
+
+2. VS 工程只配置当前工程直接需要的底层库。
+如果当前工程是某个二次封装库，本工程确实直接使用了底层第三方库，才在本工程 .vcxproj 中配置该第三方库。例如 HiRedis 工程可以链接 hiredisstatic 和 Win32_Interopstatic，HttpService 工程可以链接 civetwebstatic，MysqlCpp 工程可以链接 mysqlcppconnstatic。上层业务工程只使用 HiRedis/HttpService/MysqlCpp 的 API 时，不要再配置这些底层第三方库。
+
+3. 不要配置传递依赖。
+如果 A 工程包含 B/BAPI.h，B 内部又包含 C/CAPI.h，那么 A 不要因为 B 依赖 C 就在 A.vcxproj 里写 C.lib。传递依赖由各自 API.h 的 pragma 和封装库构建方式处理。只有 A 源码直接包含 C/CAPI.h 并直接调用 C 的接口时，A 才算直接依赖 C，但 VS 下仍然只需要包含 API.h，不需要手动写 C.lib。
+
+4. AdditionalLibraryDirectories 也不要指向间接第三方目录。
+上层业务工程通常只需要根 lib 目录。不要因为使用 HttpService 就把 tools/civetweb/lib 加到业务工程里；不要因为使用 HiRedis 就把 tools/hiredis/lib 加到业务工程里。第三方头文件和库文件由对应二次封装库的 before 脚本同步到 include/lib，并由封装库自身负责链接。
+
+5. Linux/CMake 的二次封装库依赖走 before 脚本。
+scripts/CMakeLists.txt 中标准写法是先 list(APPEND LIBRARYLIST ${LIBRARIESRELY})，再 foreach 链接 LIBRARIESRELY。CloudRebuild 会解析 before_工程名.sh 里的 "$CLOUD_REBUILD" 行生成 LIBRARIESRELY。如果当前库源码直接依赖另一个二次封装库，不要在 CMakeLists.txt 里手写 TARGET_LINK_LIBRARIES(... libCStringManager.a)，而是把 CStringManager 写进 before_工程名.sh。
+
+6. CMakeLists.txt 只手写当前封装库直接使用的底层第三方库。
+例如 HiRedis 的 CMakeLists.txt 可以手写 libhiredisstatic32.a/libhiredisstatic64.a，因为这是 HiRedis 自己封装的底层库；HttpService 可以手写 libcivetwebstatic；MysqlCpp 可以手写 libmysqlcppconnstatic 和 libmysqlclient。不要在这里手写 CStringManager、CSystem 这种二次封装库，它们应由 LIBRARIESRELY 进入。
+
+7. 新增或修改依赖时的检查顺序。
+先看源码直接包含了哪些 XxxAPI.h，再看 before_工程名.sh 是否列出了这些二次封装库依赖，然后看 CMakeLists.txt 是否只剩 LIBRARIESRELY 和直接第三方库，最后检查 .vcxproj 的 AdditionalDependencies 是否没有二次封装库残留。
