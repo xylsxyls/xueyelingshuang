@@ -1,79 +1,87 @@
-#include "HttpInterface.h"
-#include "CStringManager/CStringManagerAPI.h"
+﻿#include "HttpInterface.h"
+#include <stdio.h>
 
-bool HttpInterface::HttpGetReceive(const std::string& request)
+HttpInterface::HttpInterface()
 {
-	printf("HttpInterface HttpGetReceive false\n");
-	fflush(stdout);
-	return false;
+
 }
 
-bool HttpInterface::HttpPostReceive(const std::string& request)
+HttpInterface::~HttpInterface()
 {
-	printf("HttpInterface HttpPostReceive false\n");
-	fflush(stdout);
-	return false;
+
 }
 
-void HttpInterface::WriteSuccess()
+bool HttpInterface::httpGetReceive(const std::string& request)
 {
-	mg_printf(conn_, "%s", "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nConnection: close\r\n\r\n");
+    (void)request;
+    printf("HttpInterface httpGetReceive false\n");
+    fflush(stdout);
+    return false;
 }
 
-void HttpInterface::WriteResult(const std::string& result)
+bool HttpInterface::httpPostReceive(const std::string& request)
 {
-	mg_printf(conn_, "%s", result.c_str());
+    (void)request;
+    printf("HttpInterface httpPostReceive false\n");
+    fflush(stdout);
+    return false;
 }
 
-bool HttpInterface::handleGet(CivetServer* server, struct mg_connection* conn)
+HttpResponse HttpInterface::handle(const HttpRequest& request)
 {
-	std::unique_lock<std::mutex> lock(mutex_);
-	conn_ = conn;
-	const struct mg_request_info *req_info = mg_get_request_info(conn);
-	std::string buf;
-	if (req_info->query_string != nullptr)
-	{
-		buf = req_info->query_string;
-		buf = CStringManager::UrlDecode(buf);
-	}
-	return HttpGetReceive(buf);
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_currentRequest = request;
+    m_currentResponse = HttpResponse::json("");
+
+    bool ok = false;
+    if (request.m_method == "GET")
+    {
+        ok = httpGetReceive(request.m_queryString);
+    }
+    else if (request.m_method == "POST")
+    {
+        ok = httpPostReceive(request.m_body);
+    }
+    else
+    {
+        m_currentResponse = HttpResponse::text("Method Not Allowed", kHttpStatusMethodNotAllowed);
+        m_currentResponse.setHeader("Allow", "GET, POST, OPTIONS");
+        return m_currentResponse;
+    }
+
+    if (!ok && m_currentResponse.m_body.empty())
+    {
+        m_currentResponse = HttpResponse::text("Not Found", kHttpStatusNotFound);
+    }
+    return m_currentResponse;
 }
 
-bool HttpInterface::handlePost(CivetServer* server, struct mg_connection* conn)
+void HttpInterface::writeSuccess()
 {
-	std::unique_lock<std::mutex> lock(mutex_);
-	conn_ = conn;
-	const struct mg_request_info* req_info = mg_get_request_info(conn);
-	long long rlen = 0;
-	long long tlen = req_info->content_length;
-	std::string buf;
-	if (tlen > 0)
-	{
-		buf.resize((unsigned int)tlen);
+    m_currentResponse.setStatus(kHttpStatusOk);
+    m_currentResponse.m_contentType = "application/json; charset=utf-8";
+}
 
-		rlen = mg_read(conn, &(buf[0]), (size_t)tlen);
-		if (rlen != tlen || rlen < 0)
-		{
-			printf("handlePost tlen < 0 false\n");
-			fflush(stdout);
-			return false;
-		}
-	}
-	return HttpPostReceive(buf);
+void HttpInterface::writeResult(const std::string& result)
+{
+    m_currentResponse.m_body += result;
+}
 
-	//while (nlen < tlen) {
-	//    rlen = tlen - nlen;
-	//    if (rlen > sizeof(buf)) {
-	//        rlen = sizeof(buf);
-	//    }
-	//    rlen = mg_read(conn, buf, (size_t)rlen);
-	//    if (rlen <= 0) {
-	//        break;
-	//    }
-	//    //wlen = mg_write(conn, buf, (size_t)rlen);
-	//    //if (wlen != rlen) {
-	//    //    break;
-	//    //}
-	//    nlen += wlen;
-	//}
+void HttpInterface::setStatus(int32_t statusCode, const std::string& statusText)
+{
+    m_currentResponse.setStatus(statusCode);
+    if (!statusText.empty())
+    {
+        m_currentResponse.m_statusText = statusText;
+    }
+}
+
+void HttpInterface::setHeader(const std::string& name, const std::string& value)
+{
+    m_currentResponse.setHeader(name, value);
+}
+
+const HttpRequest& HttpInterface::currentRequest() const
+{
+    return m_currentRequest;
 }

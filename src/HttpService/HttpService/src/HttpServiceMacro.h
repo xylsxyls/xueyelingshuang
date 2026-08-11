@@ -1,5 +1,4 @@
-#pragma once
-
+﻿#pragma once
 #ifdef _MSC_VER
     #ifdef _HttpServiceAPI
         #define HttpServiceAPI _declspec(dllimport)
@@ -16,5 +15,5 @@
 
 #if defined(STATIC_LIB)
     #undef HttpServiceAPI
-    #define HttpServiceAPI 
+    #define HttpServiceAPI
 #endif

@@ -1,5 +1,4 @@
-#pragma once
-
+﻿#pragma once
 #ifdef _MSC_VER
     #ifdef _HttpServiceAPI
         #define HttpServiceAPI _declspec(dllimport)

@@ -16,10 +16,17 @@ CStringManager_allSame=$4
 "$CLOUD_REBUILD" CStringManager $CStringManager_bit $CStringManager_dlllib $CStringManager_debugRelease $CStringManager_allSame
 
 #--------------------------------------------------------------------
+CSystem_bit=$1
+CSystem_dlllib=$2
+CSystem_debugRelease=$3
+CSystem_allSame=$4
+"$CLOUD_REBUILD" CSystem $CSystem_bit $CSystem_dlllib $CSystem_debugRelease $CSystem_allSame
+
+#--------------------------------------------------------------------
 SHELL_FOLDER=$(cd $(dirname $0); pwd)
 xueyelingshuang=$SHELL_FOLDER/../../..
 
-#该写法支持目录下含有子目录和空格
+#璇ュ啓娉曟敮鎸佺洰褰曚笅鍚湁瀛愮洰褰曞拰绌烘牸
 httpserviceincludepath="$xueyelingshuang/tools/civetweb/include/"
 if [ ! -d "$xueyelingshuang/include/civetweb/" ]
 then

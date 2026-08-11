@@ -1,3 +1,2 @@
-#pragma once
-
-#define HttpServiceAPI 
+﻿#pragma once
+#define HttpServiceAPI
