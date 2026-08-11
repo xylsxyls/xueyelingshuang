@@ -22,15 +22,27 @@
     <ClInclude Include="..\src\MysqlCppAPI.h" />
     <ClInclude Include="..\src\MysqlCppMacro.h" />
     <ClInclude Include="..\src\MysqlCpp.h" />
+    <ClInclude Include="..\src\MysqlCppConnectionReleaser.h" />
+    <ClInclude Include="..\src\MysqlCppConnectionPool.h" />
+    <ClInclude Include="..\src\MysqlCppTransaction.h" />
+    <ClInclude Include="..\src\MysqlCppExecuteResult.h" />
+    <ClInclude Include="..\src\MysqlCppConfig.h" />
     <ClInclude Include="..\src\MysqlCppPrepareStatement.h" />
     <ClInclude Include="..\src\MysqlCppResultSet.h" />
     <ClInclude Include="..\src\MysqlSqlString.h" />
+    <ClInclude Include="..\src\MysqlCppHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\MysqlCpp.cpp" />
+    <ClCompile Include="..\src\MysqlCppConnectionReleaser.cpp" />
+    <ClCompile Include="..\src\MysqlCppConnectionPool.cpp" />
+    <ClCompile Include="..\src\MysqlCppTransaction.cpp" />
+    <ClCompile Include="..\src\MysqlCppExecuteResult.cpp" />
+    <ClCompile Include="..\src\MysqlCppConfig.cpp" />
     <ClCompile Include="..\src\MysqlCppPrepareStatement.cpp" />
     <ClCompile Include="..\src\MysqlCppResultSet.cpp" />
     <ClCompile Include="..\src\MysqlSqlString.cpp" />
+    <ClCompile Include="..\src\MysqlCppHelper.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A0FCB1E5-988D-498B-9AB2-235430C72171}</ProjectGuid>
@@ -119,6 +131,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>mysqlcppconnstatic32d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -137,6 +150,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>mysqlcppconnstatic64d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

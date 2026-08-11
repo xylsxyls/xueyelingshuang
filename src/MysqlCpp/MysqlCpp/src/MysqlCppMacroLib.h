@@ -1,3 +1,3 @@
-#pragma once
+﻿#pragma once
 
-#define MysqlCppAPI 
+#define MysqlCppAPI

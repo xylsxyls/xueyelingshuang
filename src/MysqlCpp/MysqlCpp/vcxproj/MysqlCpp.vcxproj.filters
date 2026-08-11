@@ -15,13 +15,28 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\MysqlCpp.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\MysqlCppAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\MysqlCppMacro.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MysqlCpp.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MysqlCppConnectionReleaser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MysqlCppConnectionPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MysqlCppTransaction.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MysqlCppExecuteResult.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MysqlCppConfig.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\src\MysqlCppPrepareStatement.h">
@@ -33,9 +48,27 @@
     <ClInclude Include="..\src\MysqlSqlString.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\MysqlCppHelper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\MysqlCpp.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MysqlCppConnectionReleaser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MysqlCppConnectionPool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MysqlCppTransaction.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MysqlCppExecuteResult.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MysqlCppConfig.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\MysqlCppPrepareStatement.cpp">
@@ -45,6 +78,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\MysqlSqlString.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MysqlCppHelper.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

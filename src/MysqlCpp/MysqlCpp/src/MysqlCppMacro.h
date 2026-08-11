@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef _MSC_VER
     #ifdef _MysqlCppAPI
@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef MysqlCppAPI
-    #define MysqlCppAPI 
+    #define MysqlCppAPI
 #endif

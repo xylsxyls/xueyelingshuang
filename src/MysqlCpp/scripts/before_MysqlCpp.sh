@@ -31,23 +31,18 @@ windowslibname="mysqlcppconn"
 linuxlibname="libmysqlcppconn"
 windowsdllname="libmysql.dll"
 linuxdllname="libmysqlclient.so.18"
-includecreatedir=0
-
-#该写法支持目录下含有子目录和空格
-includepath=$xueyelingshuang"/tools/"$libname"/include/"
-copyincludepath=$xueyelingshuang"/include/"
-if [[ $includecreatedir == 1 ]]; then
-    copyincludepath=$xueyelingshuang"/include/"$libname"/"
-fi
-if [ ! -d $copyincludepath ]
+# Copy only Connector/C++ public headers used by MysqlCpp. Root mysql_*.h
+# headers expose vendor-specific classes and should not be exported here.
+includepath=$xueyelingshuang"/tools/"$libname"/include/cppconn/"
+copyincludepath=$xueyelingshuang"/include/cppconn/"
+if [ ! -d "$copyincludepath" ]
 then
-    mkdir -p $copyincludepath
+    mkdir -p "$copyincludepath"
 fi
-for file in $(ls $includepath)
+for file in $(ls "$includepath")
 do
-    cp -rf $includepath$file $copyincludepath
+    cp -rf "$includepath$file" "$copyincludepath"
 done
-
 lib32=$windowslibname"static32"
 lib64=$windowslibname"static64"
 dllname=$windowsdllname

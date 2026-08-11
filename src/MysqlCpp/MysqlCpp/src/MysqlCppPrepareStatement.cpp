@@ -1,4 +1,5 @@
-#include "MysqlCppPrepareStatement.h"
+﻿#include "MysqlCppPrepareStatement.h"
+#include "MysqlCppHelper.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -11,194 +12,260 @@
 #pragma warning(pop)
 #endif
 
-MysqlCppPrepareStatement::MysqlCppPrepareStatement(sql::PreparedStatement* prepareStatement) :
-m_preparedStatement(prepareStatement)
+MysqlCppPrepareStatement::MysqlCppPrepareStatement(sql::PreparedStatement* prepareStatement, const std::string& sqlString) :
+m_preparedStatement(prepareStatement),
+m_sqlString(sqlString)
 {
-	
+
 }
 
 MysqlCppPrepareStatement::~MysqlCppPrepareStatement()
 {
-	delete m_preparedStatement;
+    delete m_preparedStatement;
 }
 
-void MysqlCppPrepareStatement::setBigInt(unsigned int parameterIndex, const std::string& value)
+bool MysqlCppPrepareStatement::isValid() const
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setBigInt(parameterIndex + 1, value);
-	}
-	catch (...)
-	{
-		return;
-	}
+    return m_preparedStatement != nullptr;
 }
 
-void MysqlCppPrepareStatement::setBlob(unsigned int parameterIndex, std::istream * blob)
+std::string MysqlCppPrepareStatement::sql() const
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setBlob(parameterIndex + 1, blob);
-	}
-	catch (...)
-	{
-		return;
-	}
+    return m_sqlString;
 }
 
-void MysqlCppPrepareStatement::setBoolean(unsigned int parameterIndex, bool value)
+void MysqlCppPrepareStatement::setBigInt(uint32_t parameterIndex, const std::string& value)
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setBoolean(parameterIndex + 1, value);
-	}
-	catch (...)
-	{
-		return;
-	}
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setBigInt(driverIndex, value);
+    }
+    catch (...)
+    {
+        return;
+    }
 }
 
-void MysqlCppPrepareStatement::setDateTime(unsigned int parameterIndex, const std::string& value)
+void MysqlCppPrepareStatement::setBlob(uint32_t parameterIndex, std::istream* blob)
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setDateTime(parameterIndex + 1, value);
-	}
-	catch (...)
-	{
-		return;
-	}
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setBlob(driverIndex, blob);
+    }
+    catch (...)
+    {
+        return;
+    }
 }
 
-void MysqlCppPrepareStatement::setDouble(unsigned int parameterIndex, double value)
+void MysqlCppPrepareStatement::setBoolean(uint32_t parameterIndex, bool value)
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setDouble(parameterIndex + 1, value);
-	}
-	catch (...)
-	{
-		return;
-	}
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setBoolean(driverIndex, value);
+    }
+    catch (...)
+    {
+        return;
+    }
 }
 
-void MysqlCppPrepareStatement::setInt(unsigned int parameterIndex, int32_t value)
+void MysqlCppPrepareStatement::setDateTime(uint32_t parameterIndex, const std::string& value)
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setInt(parameterIndex + 1, value);
-	}
-	catch (...)
-	{
-		return;
-	}
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setDateTime(driverIndex, value);
+    }
+    catch (...)
+    {
+        return;
+    }
 }
 
-void MysqlCppPrepareStatement::setUInt(unsigned int parameterIndex, uint32_t value)
+void MysqlCppPrepareStatement::setDouble(uint32_t parameterIndex, double value)
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setUInt(parameterIndex + 1, value);
-	}
-	catch (...)
-	{
-		return;
-	}
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setDouble(driverIndex, value);
+    }
+    catch (...)
+    {
+        return;
+    }
 }
 
-void MysqlCppPrepareStatement::setInt64(unsigned int parameterIndex, int64_t value)
+void MysqlCppPrepareStatement::setInt(uint32_t parameterIndex, int32_t value)
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setInt64(parameterIndex + 1, value);
-	}
-	catch (...)
-	{
-		return;
-	}
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setInt(driverIndex, value);
+    }
+    catch (...)
+    {
+        return;
+    }
 }
 
-void MysqlCppPrepareStatement::setUInt64(unsigned int parameterIndex, uint64_t value)
+void MysqlCppPrepareStatement::setUInt(uint32_t parameterIndex, uint32_t value)
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setUInt64(parameterIndex + 1, value);
-	}
-	catch (...)
-	{
-		return;
-	}
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setUInt(driverIndex, value);
+    }
+    catch (...)
+    {
+        return;
+    }
 }
 
-void MysqlCppPrepareStatement::setNull(unsigned int parameterIndex, int sqlType)
+void MysqlCppPrepareStatement::setInt64(uint32_t parameterIndex, int64_t value)
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setNull(parameterIndex + 1, sqlType);
-	}
-	catch (...)
-	{
-		return;
-	}
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setInt64(driverIndex, value);
+    }
+    catch (...)
+    {
+        return;
+    }
 }
 
-void MysqlCppPrepareStatement::setString(unsigned int parameterIndex, const std::string& value)
+void MysqlCppPrepareStatement::setUInt64(uint32_t parameterIndex, uint64_t value)
 {
-	if (m_preparedStatement == nullptr)
-	{
-		return;
-	}
-	try
-	{
-		m_preparedStatement->setString(parameterIndex + 1, value);
-	}
-	catch (...)
-	{
-		return;
-	}
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setUInt64(driverIndex, value);
+    }
+    catch (...)
+    {
+        return;
+    }
+}
+
+void MysqlCppPrepareStatement::setNull(uint32_t parameterIndex, int32_t sqlType)
+{
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setNull(driverIndex, sqlType);
+    }
+    catch (...)
+    {
+        return;
+    }
+}
+
+void MysqlCppPrepareStatement::setString(uint32_t parameterIndex, const std::string& value)
+{
+    if (m_preparedStatement == nullptr)
+    {
+        return;
+    }
+    uint32_t driverIndex = MysqlCppHelper::toDriverIndex(parameterIndex);
+    if (driverIndex == 0)
+    {
+        return;
+    }
+    try
+    {
+        m_preparedStatement->setString(driverIndex, value);
+    }
+    catch (...)
+    {
+        return;
+    }
 }
 
 sql::PreparedStatement* MysqlCppPrepareStatement::preparedStatement() const
 {
-	return m_preparedStatement;
+    return m_preparedStatement;
 }
