@@ -1,8 +1,10 @@
 ﻿#include "HiRedisConnectionPool.h"
 #include "HiRedis.h"
+#include "HiRedisConnectionReleaser.h"
 #include <chrono>
 
 HiRedisConnectionPool::HiRedisConnectionPool() :
+m_aliveFlag(new std::atomic<bool>(true)),
 m_isInit(false)
 {
 
@@ -10,7 +12,10 @@ m_isInit(false)
 
 HiRedisConnectionPool::~HiRedisConnectionPool()
 {
-
+    if (m_aliveFlag.get() != nullptr)
+    {
+        m_aliveFlag->store(false);
+    }
 }
 
 bool HiRedisConnectionPool::init(const HiRedisConfig& config, size_t connectionCount)
@@ -157,8 +162,7 @@ std::shared_ptr<HiRedis> HiRedisConnectionPool::acquire(int32_t timeoutMs)
         }
     }
 
-    ConnectionReleaser releaser;
-    releaser.m_pool = this;
+    HiRedisConnectionReleaser releaser(this, m_aliveFlag);
     return std::shared_ptr<HiRedis>(connection, releaser);
 }
 
@@ -180,12 +184,9 @@ std::string HiRedisConnectionPool::lastError()
     return m_lastError;
 }
 
-void HiRedisConnectionPool::ConnectionReleaser::operator()(HiRedis* connection) const
+void HiRedisConnectionPool::releaseConnectionFromReleaser(HiRedis* connection)
 {
-    if (m_pool != nullptr)
-    {
-        m_pool->releaseConnection(connection);
-    }
+    releaseConnection(connection);
 }
 
 void HiRedisConnectionPool::releaseConnection(HiRedis* connection)

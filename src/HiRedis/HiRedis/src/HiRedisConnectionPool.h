@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "HiRedisConfig.h"
 #include "HiRedisMacro.h"
+#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -60,19 +61,10 @@ public:
     */
     std::string lastError();
 
-private:
-    /** shared_ptr自定义释放器，用于把连接归还给连接池
+    /** 供HiRedisConnectionReleaser归还连接使用，业务代码不要直接调用
+    @param [in] connection 需要归还的连接
     */
-    struct ConnectionReleaser
-    {
-        // 连接归还的目标连接池
-        HiRedisConnectionPool* m_pool;
-
-        /** 归还连接
-        @param [in] connection 要归还的连接对象
-        */
-        void operator()(HiRedis* connection) const;
-    };
+    void releaseConnectionFromReleaser(HiRedis* connection);
 
 private:
     /** 将连接归还到空闲队列
@@ -106,6 +98,8 @@ private:
     std::vector<HiRedis*> m_availableConnections;
     // 最近一次连接池操作的错误信息
     std::string m_lastError;
+    // 连接池生命周期标记，外借连接的删除器会通过它判断池对象是否仍然存在
+    std::shared_ptr<std::atomic<bool>> m_aliveFlag;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

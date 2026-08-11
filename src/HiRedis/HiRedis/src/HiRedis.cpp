@@ -1083,6 +1083,22 @@ void HiRedis::setLastError(const std::string& error)
 //			check(borrowedPool.totalCount() == 0 && borrowedPool.availableCount() == 0, "HiRedisConnectionPool borrowed release after uninit");
 //		}
 //
+//		HiRedisConnectionPool* destroyPool = new HiRedisConnectionPool;
+//		bool destroyPoolOk = destroyPool->init(config, 1);
+//		check(destroyPoolOk, "HiRedisConnectionPool destroy with borrowed init");
+//		if (destroyPoolOk)
+//		{
+//			std::shared_ptr<HiRedis> borrowedAfterDestroy = destroyPool->acquire(1000);
+//			check(borrowedAfterDestroy.get() != nullptr, "HiRedisConnectionPool acquire before destroy");
+//			delete destroyPool;
+//			borrowedAfterDestroy.reset();
+//			check(true, "HiRedisConnectionPool borrowed release after pool destroy safe");
+//		}
+//		else
+//		{
+//			delete destroyPool;
+//		}
+//
 //		std::atomic<int32_t> threadFailCount(0);
 //		std::vector<std::thread> threads;
 //		for (int32_t threadIndex = 0; threadIndex < 6; ++threadIndex)

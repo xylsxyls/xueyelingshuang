@@ -27,6 +27,9 @@
     <ClInclude Include="..\src\HiRedisConnectionPool.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\HiRedisConnectionReleaser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\HiRedisCommand.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -45,6 +48,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\HiRedisConnectionPool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\HiRedisConnectionReleaser.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\src\HiRedisCommand.cpp">

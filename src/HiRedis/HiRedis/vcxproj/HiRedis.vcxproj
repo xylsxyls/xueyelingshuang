@@ -23,6 +23,7 @@
     <ClInclude Include="..\src\HiRedisMacro.h" />
     <ClInclude Include="..\src\HiRedis.h" />
     <ClInclude Include="..\src\HiRedisConnectionPool.h" />
+    <ClInclude Include="..\src\HiRedisConnectionReleaser.h" />
     <ClInclude Include="..\src\HiRedisCommand.h" />
     <ClInclude Include="..\src\HiRedisConfig.h" />
     <ClInclude Include="..\src\HiRedisResultSet.h" />
@@ -31,6 +32,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\HiRedis.cpp" />
     <ClCompile Include="..\src\HiRedisConnectionPool.cpp" />
+    <ClCompile Include="..\src\HiRedisConnectionReleaser.cpp" />
     <ClCompile Include="..\src\HiRedisCommand.cpp" />
     <ClCompile Include="..\src\HiRedisConfig.cpp" />
     <ClCompile Include="..\src\HiRedisResultSet.cpp" />
@@ -164,6 +166,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>hiredisstatic32.lib;Win32_Interopstatic32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -185,6 +188,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>hiredisstatic64.lib;Win32_Interopstatic64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
