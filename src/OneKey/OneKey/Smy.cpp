@@ -66,24 +66,28 @@ void Smy::keyboard()
 		//g_config.m_taskThread->PostTask(spTask);
 	}
 
-	if (g_keyboard.m_keyUp[SPACE] && g_keyboard.m_lastKey == '7')
+	if (g_keyboard.m_keyUp[SPACE])
 	{
-		g_config.m_stopWatch.SetWatchTime(0);
-		g_config.m_taskThread->StopAllTask();
-		g_config.m_taskThread->StopCurTask();
-		std::map<int32_t, int32_t> taskCountMap;
-		g_config.m_taskThread->GetWaitTaskInfo(taskCountMap);
-		g_config.m_code1 = 0;
-		g_config.m_code2 = 'C';
-		if (g_keyboard.m_keyWatch['Q'].GetWatchTime() > 3000 && taskCountMap.size() == 1 && taskCountMap[1] == 3)
+		g_config.m_superQ = false;
+		if (g_keyboard.m_lastKey == '7')
 		{
-			std::shared_ptr<SmySpaceTask> spTask(new SmySpaceTask);
-			g_config.m_taskThread->PostTask(spTask, 1);
+			g_config.m_stopWatch.SetWatchTime(0);
+			g_config.m_taskThread->StopAllTask();
+			g_config.m_taskThread->StopCurTask();
+			std::map<int32_t, int32_t> taskCountMap;
+			g_config.m_taskThread->GetWaitTaskInfo(taskCountMap);
+			g_config.m_code1 = 0;
+			g_config.m_code2 = 'C';
+			if (g_keyboard.m_keyWatch['Q'].GetWatchTime() > 3000 && taskCountMap.size() == 1 && taskCountMap[1] == 3)
+			{
+				std::shared_ptr<SmySpaceTask> spTask(new SmySpaceTask);
+				g_config.m_taskThread->PostTask(spTask, 1);
+			}
+			g_mouse.m_rightWatch.SetWatchTime(g_config.m_rightClickTime + 10);
 		}
-		g_mouse.m_rightWatch.SetWatchTime(g_config.m_rightClickTime + 10);
 	}
 
-	if (g_config.m_qKey && g_keyboard.m_keyWatch['Q'].GetWatchTime() < 4500)
+	if (g_config.m_qKey && g_keyboard.m_keyWatch['Q'].GetWatchTime() < 4000)
 	{
 		int32_t editIndex = -1;
 		if (g_keyboard.m_keyDown['1'])
@@ -210,8 +214,8 @@ void Smy::keyboard()
 		spTask->setParam('L');
 		g_config.m_taskThread->PostTask(spTask, 1);
 	}
-	else if (((g_keyboard.m_keyWatch['S'].GetWatchTime() < 4500) ||
-		(g_keyboard.m_keyWatch['A'].GetWatchTime() < 4500) || g_keyboard.m_keyHasDown[CTRL]) &&
+	else if (((g_keyboard.m_keyWatch['S'].GetWatchTime() < 4000) ||
+		(g_keyboard.m_keyWatch['A'].GetWatchTime() < 4000) || g_keyboard.m_keyHasDown[CTRL]) &&
 		g_keyboard.m_keyDown['D'] &&
 		g_config.m_equipWatch.GetWatchTime() > 1000)
 	{
@@ -219,8 +223,8 @@ void Smy::keyboard()
 		std::shared_ptr<CtrlDTask> spTask(new CtrlDTask);
 		g_config.m_taskThread->PostTask(spTask, 1);
 	}
-	else if (((g_keyboard.m_keyWatch['S'].GetWatchTime() < 4500) ||
-		(g_keyboard.m_keyWatch['A'].GetWatchTime() < 4500) || g_keyboard.m_keyHasDown[CTRL]) &&
+	else if (((g_keyboard.m_keyWatch['S'].GetWatchTime() < 4000) ||
+		(g_keyboard.m_keyWatch['A'].GetWatchTime() < 4000) || g_keyboard.m_keyHasDown[CTRL]) &&
 		g_keyboard.m_keyDown['F'] &&
 		g_config.m_equipWatch.GetWatchTime() > 1000)
 	{
@@ -347,7 +351,7 @@ void Smy::timer(int32_t timerId)
 			if (g_config.timerMs(100, times) &&
 				(/*g_keyboard.m_keyWatch['R'].GetWatchTime() < 5000 ||*/
 				g_keyboard.m_keyWatch['W'].GetWatchTime() < 2500 ||
-				g_keyboard.m_keyWatch['Q'].GetWatchTime() < 4500))
+				g_keyboard.m_keyWatch['Q'].GetWatchTime() < 4000))
 			{
 				std::shared_ptr<CRightClickTask> spTask(new CRightClickTask);
 				//spTask->setParam(!g_keyHasDown['R']);

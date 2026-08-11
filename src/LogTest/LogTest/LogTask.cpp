@@ -3,6 +3,8 @@
 #include "IntDateTime/IntDateTimeAPI.h"
 #include "Semaphore/SemaphoreAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include "CSystem/CSystemAPI.h"
+#include <map>
 
 LogTask::LogTask():
 m_logSemaphore(nullptr),
@@ -14,6 +16,9 @@ m_exit(false)
 
 void LogTask::DoTask()
 {
+	static int32_t s_newFileId = 0;
+	static std::map<std::string, int32_t> s_logDirFileIdMap;
+
 	while (!m_exit)
 	{
 		m_logSemaphore->wait();
@@ -27,6 +32,8 @@ void LogTask::DoTask()
 		if (m_buffer == "logUninit")
 		{
 			LogManager::instance().uninitAll();
+			s_logDirFileIdMap.clear();
+			s_newFileId = 0;
 			continue;
 		}
 
@@ -56,17 +63,31 @@ void LogTask::DoTask()
 
 		if (m_message.ParseFromString(m_buffer))
 		{
-			static int32_t newFileId = 0;
 			int32_t fileId = 0;
 			std::string logName = m_message.logname();
 			if (!logName.empty())
 			{
-				logName.append(".log");
-				fileId = LogManager::instance().findFileId(logName);
-				if (fileId == -1)
+				std::string logDir = buildLogDir(logName);
+				std::map<std::string, int32_t>::iterator it = s_logDirFileIdMap.find(logDir);
+				if (it == s_logDirFileIdMap.end())
 				{
-					LogManager::instance().init(++newFileId, logName);
-					fileId = newFileId;
+					LogManagerConfig config;
+					config.m_fileId = ++s_newFileId;
+					config.m_path = logDir;
+					LogManager::instance().init(config);
+					fileId = LogManager::instance().findFileId(logDir);
+					if (fileId != -1)
+					{
+						s_logDirFileIdMap[logDir] = fileId;
+					}
+					else
+					{
+						fileId = 0;
+					}
+				}
+				else
+				{
+					fileId = it->second;
 				}
 			}
 			uint64_t time = m_message.logintdatetime();
@@ -83,6 +104,52 @@ void LogTask::DoTask()
 				m_message.logbuffer().c_str());
 		}
 	}
+}
+
+std::string LogTask::buildLogDir(const std::string& logName) const
+{
+	std::string logDir = logName;
+	while (logDir.size() > 1 && (logDir[logDir.size() - 1] == '/' || logDir[logDir.size() - 1] == '\\'))
+	{
+		logDir.erase(logDir.size() - 1);
+	}
+	if (logDir.size() > 4 && CStringManager::Right(logDir, 4) == ".log")
+	{
+		logDir.erase(logDir.size() - 4);
+	}
+	while (logDir.size() > 1 && (logDir[logDir.size() - 1] == '/' || logDir[logDir.size() - 1] == '\\'))
+	{
+		logDir.erase(logDir.size() - 1);
+	}
+	if (!logDir.empty() && !isAbsolutePath(logDir))
+	{
+		logDir = CSystem::GetCurrentExePath() + logDir;
+	}
+	if (!logDir.empty() && logDir[logDir.size() - 1] != '/' && logDir[logDir.size() - 1] != '\\')
+	{
+#ifdef _WIN32
+		logDir.append("\\");
+#else
+		logDir.append("/");
+#endif
+	}
+	return logDir;
+}
+
+bool LogTask::isAbsolutePath(const std::string& path) const
+{
+	if (path.empty())
+	{
+		return false;
+	}
+
+#ifdef _WIN32
+	bool isDriveAbsolute = path.size() > 2 && path[1] == ':' && (path[2] == '\\' || path[2] == '/');
+	bool isUncAbsolute = path.size() > 1 && ((path[0] == '\\' && path[1] == '\\') || (path[0] == '/' && path[1] == '/'));
+	return isDriveAbsolute || isUncAbsolute;
+#else
+	return path[0] == '/';
+#endif
 }
 
 void LogTask::StopTask()

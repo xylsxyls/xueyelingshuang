@@ -248,3 +248,71 @@ std::string IntDateTime::timeToString() const
 	CStringManager::Format(result, "%02d:%02d:%02d", m_time / 10000000, (m_time % 10000000) / 100000, (m_time % 100000) / 1000);
 	return result;
 }
+
+//#include <atomic>
+//#include <functional>
+//#include <iostream>
+//#include <thread>
+//#include <vector>
+//
+//int main()
+//{
+//	int32_t totalCount = 0;
+//	int32_t failCount = 0;
+//	std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
+//	{
+//		++totalCount;
+//		std::cout << (ok ? "[PASS] " : "[FAIL] ") << name << std::endl;
+//		if (!ok)
+//		{
+//			++failCount;
+//		}
+//	};
+//
+//	IntDateTime parseTime("2026-08-09 03:41:22");
+//	check(parseTime.getDate() == 20260809 && parseTime.getTime() == 34122000, "IntDateTime parse datetime");
+//	check(parseTime.getYear() == 2026 && parseTime.getMonth() == 8 && parseTime.getDay() == 9, "IntDateTime date fields");
+//	check(parseTime.getHour() == 3 && parseTime.getMin() == 41 && parseTime.getSeconds() == 22, "IntDateTime time fields");
+//	check(parseTime.toString() == "2026-08-09 03:41:22", "IntDateTime toString");
+//	check(parseTime.dateToString() == "2026-08-09", "IntDateTime dateToString");
+//	check(parseTime.dateNumToString() == "20260809", "IntDateTime dateNumToString");
+//	check(parseTime.timeToString() == "03:41:22", "IntDateTime timeToString");
+//	IntDateTime dateOnly("2026-08-09");
+//	check(dateOnly.getDate() == 20260809 && dateOnly.getTime() == 0, "IntDateTime parse date only");
+//	IntDateTime copied(parseTime);
+//	check(copied == parseTime, "IntDateTime copy constructor");
+//	copied.clear();
+//	check(copied.empty() && copied == 0, "IntDateTime clear empty");
+//	copied.setTime(20260810, 101112000);
+//	check(copied.getDate() == 20260810 && copied.getTime() == 101112000, "IntDateTime setTime int");
+//	copied.setTime("2026-08-11 12:13:14");
+//	check(copied.toString() == "2026-08-11 12:13:14", "IntDateTime setTime string");
+//	check(IntDateTime("2026-08-09 03:41:23") > parseTime, "IntDateTime compare greater");
+//	check(IntDateTime("2026-08-09 03:41:21") < parseTime, "IntDateTime compare less");
+//
+//	std::atomic<int32_t> failedThreadCount(0);
+//	std::vector<std::thread> threads;
+//	for (int32_t threadIndex = 0; threadIndex < 8; ++threadIndex)
+//	{
+//		threads.push_back(std::thread([&failedThreadCount]() -> void
+//		{
+//			for (int32_t loopIndex = 0; loopIndex < 5000; ++loopIndex)
+//			{
+//				IntDateTime value("2026-08-09 03:41:22");
+//				if (value.getDate() != 20260809 || value.timeToString() != "03:41:22")
+//				{
+//					failedThreadCount.fetch_add(1);
+//					return;
+//				}
+//			}
+//		}));
+//	}
+//	for (size_t i = 0; i < threads.size(); ++i)
+//	{
+//		threads[i].join();
+//	}
+//	check(failedThreadCount.load() == 0, "IntDateTime multithread pressure");
+//
+//	std::cout << "IntDateTime test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << std::endl;
+//	return failCount == 0 ? 0 : 1;
+//}

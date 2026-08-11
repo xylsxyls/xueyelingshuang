@@ -66,7 +66,7 @@ void CqswrTask::V5()
 			}
 			CKeyboard::KeyPress('C', 0);
 		}
-		if (Sleep(130))
+		if (Sleep(180))
 		{
 			return;
 		}
