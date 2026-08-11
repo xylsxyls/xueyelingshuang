@@ -2,7 +2,9 @@
 #ifdef _WIN32
 #define _RapidJsonAPI
 #endif
+#include "RapidJsonDocument.h"
 #include "RapidJson.h"
+#include "RapidJsonValue.h"
 
 #ifdef _WIN32
 #if defined _DEBUG

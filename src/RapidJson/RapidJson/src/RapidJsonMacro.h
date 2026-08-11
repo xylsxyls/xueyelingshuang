@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef RapidJsonAPI
-    #define RapidJsonAPI 
+    #define RapidJsonAPI
 #endif

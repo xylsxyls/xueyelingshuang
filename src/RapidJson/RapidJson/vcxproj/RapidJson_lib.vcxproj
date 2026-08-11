@@ -22,9 +22,15 @@
     <ClInclude Include="..\src\RapidJsonAPI.h" />
     <ClInclude Include="..\src\RapidJsonMacro.h" />
     <ClInclude Include="..\src\RapidJson.h" />
+    <ClInclude Include="..\src\RapidJsonDocument.h" />
+    <ClInclude Include="..\src\RapidJsonValue.h" />
+    <ClInclude Include="..\src\RapidJsonHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\RapidJson.cpp" />
+    <ClCompile Include="..\src\RapidJsonDocument.cpp" />
+    <ClCompile Include="..\src\RapidJsonValue.cpp" />
+    <ClCompile Include="..\src\RapidJsonHelper.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{687B15B7-A6CF-4E4C-9B33-946E184EDC4E}</ProjectGuid>
