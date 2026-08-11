@@ -16,5 +16,5 @@
 
 #if defined(STATIC_LIB)
     #undef LogManagerAPI
-    #define LogManagerAPI 
+    #define LogManagerAPI
 #endif

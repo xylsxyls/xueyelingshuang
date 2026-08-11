@@ -2,6 +2,7 @@
 #ifdef _WIN32
 #define _LogManagerAPI
 #endif
+#include "LogManagerConfig.h"
 #include "LogManager.h"
 
 #ifdef _WIN32

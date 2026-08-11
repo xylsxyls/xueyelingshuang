@@ -1,3 +1,3 @@
 ﻿#pragma once
 
-#define LogManagerAPI 
+#define LogManagerAPI
