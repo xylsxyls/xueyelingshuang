@@ -261,7 +261,11 @@ LogManagerFile* LogManager::initNoLock(const LogManagerConfig& config)
 
 	prepareOldLogNoLock(logDir, realConfig.m_archiveOldLog);
 
-	LogManagerFile* logFile = new LogManagerFile;
+	LogManagerFile* logFile = new (std::nothrow) LogManagerFile;
+	if (logFile == nullptr)
+	{
+		return nullptr;
+	}
 	logFile->m_config = realConfig;
 	logFile->m_logDir = logDir;
 	std::string timeName = LogManagerHelper::currentTimeName();
@@ -376,7 +380,7 @@ bool LogManager::openLogFileNoLock(LogManagerFile* logFile, int32_t fileIndex)
 
 	logFile->m_currentIndex = fileIndex;
 	logFile->m_currentEntityPath = LogManagerHelper::buildEntityPath(logFile->m_logDir, logFile->m_baseName, fileIndex);
-	logFile->m_logFile = new std::ofstream(logFile->m_currentEntityPath.c_str(), std::ios::out | std::ios::app);
+	logFile->m_logFile = new (std::nothrow) std::ofstream(logFile->m_currentEntityPath.c_str(), std::ios::out | std::ios::app);
 	if (logFile->m_logFile == nullptr || !logFile->m_logFile->is_open())
 	{
 		if (logFile->m_logFile != nullptr)

@@ -188,6 +188,8 @@ void ReadWriteMutex::unwrite()
 //	recursiveMutex.unwrite();
 //	recursiveMutex.unwrite();
 //	check(recursiveMutex.lockCount() == 0, "RecursiveReadWriteMutex recursive release count");
+//	recursiveMutex.unwrite();
+//	check(recursiveMutex.lockCount() == 0, "RecursiveReadWriteMutex duplicate release safe");
 //
 //	ReadWriteMutex stressMutex;
 //	int32_t value = 0;

@@ -23,6 +23,10 @@ public:
 	int lockCount();
 
 private:
+	RecursiveReadWriteMutex(const RecursiveReadWriteMutex& other);
+	RecursiveReadWriteMutex& operator=(const RecursiveReadWriteMutex& other);
+
+private:
 #ifdef _MSC_VER
 	CRITICAL_SECTION m_lock;
 #elif __unix__

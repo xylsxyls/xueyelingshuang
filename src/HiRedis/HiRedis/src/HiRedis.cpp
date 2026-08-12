@@ -1048,6 +1048,9 @@ void HiRedis::setLastError(const std::string& error)
 //	HiRedisConnectionPool emptyPool;
 //	check(!emptyPool.init(config, 0), "HiRedisConnectionPool init zero false");
 //	check(emptyPool.acquire(1).get() == nullptr, "HiRedisConnectionPool acquire before init false");
+//	emptyPool.uninit();
+//	emptyPool.uninit();
+//	check(true, "HiRedisConnectionPool duplicate uninit without init safe");
 //	HiRedisConnectionPool pool;
 //	bool poolOk = pool.init(config, 8);
 //	check(poolOk, "HiRedisConnectionPool init");

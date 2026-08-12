@@ -11,5 +11,9 @@ public:
 	~ReadLock();
 
 private:
+	ReadLock(const ReadLock& other);
+	ReadLock& operator=(const ReadLock& other);
+
+private:
 	ReadWriteMutexBase* m_mutex;
 };

@@ -10,5 +10,9 @@ public:
 	~WriteLock();
 
 private:
+	WriteLock(const WriteLock& other);
+	WriteLock& operator=(const WriteLock& other);
+
+private:
 	ReadWriteMutexBase* m_mutex;
 };

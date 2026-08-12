@@ -141,4 +141,6 @@ private:
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+	// 是否已经通过operator[]选择了成员，允许空字符串作为合法JSON成员名
+	bool m_hasKey;
 };

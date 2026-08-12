@@ -57,6 +57,10 @@ void ProcessReadWriteMutex::unwrite()
 
 bool ProcessReadWriteMutex::trywrite()
 {
+	if (m_hLock == nullptr)
+	{
+		return false;
+	}
 	return (::WaitForSingleObject(m_hLock, 0) == WAIT_OBJECT_0) ? 1 : 0;
 }
 

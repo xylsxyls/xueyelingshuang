@@ -382,6 +382,7 @@ std::string CSystem::GetRegOcxPath(const std::string& classid)
 	{
 		return "";
 	}
+	data[sizeof(data) - 1] = '\0';
 	std::string temp = data;
 	size_t position = temp.find_last_of("\\/");
 	if (position == std::string::npos)

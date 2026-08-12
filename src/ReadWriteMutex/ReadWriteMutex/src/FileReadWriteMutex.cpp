@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <thread>
 #elif __unix__
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -114,6 +115,11 @@ void FileReadWriteMutex::write()
 		}
 		++times;
 		isFailed = true;
+		if (errno != EINTR)
+		{
+			printf("lockf function failed, errno = %d, result = %d, m_filePath = %s, m_fd = %d\n", errno, result, m_filePath.c_str(), m_fd);
+			return;
+		}
 		if (times % timesCount == 0)
 		{
 			printf("warning lockf function failed times = %d, result = %d, m_filePath = %s, m_fd = %d\n", times, result, m_filePath.c_str(), m_fd);

@@ -3,6 +3,7 @@
 #include "MysqlCppPrepareStatement.h"
 #include "MysqlSqlString.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include <cstdlib>
 #include <memory>
 
 #ifdef _MSC_VER
@@ -446,7 +447,8 @@ void MysqlCpp::importSql(const std::string& sqlPath,
                          const std::string& password,
                          const std::string& database)
 {
-    system(MysqlSqlString::importString(sqlPath, host, user, password, database).c_str());
+    int32_t result = std::system(MysqlSqlString::importString(sqlPath, host, user, password, database).c_str());
+    setLastError(result == 0 ? "" : "mysql import command failed, result=" + CStringManager::toStringInt32(result));
 }
 
 void MysqlCpp::exportSql(const std::string& sqlPath,
@@ -455,7 +457,8 @@ void MysqlCpp::exportSql(const std::string& sqlPath,
                          const std::string& password,
                          const std::string& exportData)
 {
-    system(MysqlSqlString::exportString(sqlPath, host, user, password, exportData).c_str());
+    int32_t result = std::system(MysqlSqlString::exportString(sqlPath, host, user, password, exportData).c_str());
+    setLastError(result == 0 ? "" : "mysql export command failed, result=" + CStringManager::toStringInt32(result));
 }
 
 void MysqlCpp::setAutoCommit(bool autoCommit)

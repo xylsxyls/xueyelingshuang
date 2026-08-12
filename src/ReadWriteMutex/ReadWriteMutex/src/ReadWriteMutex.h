@@ -30,6 +30,10 @@ public:
 	virtual void unwrite();
 
 private:
+	ReadWriteMutex(const ReadWriteMutex& other);
+	ReadWriteMutex& operator=(const ReadWriteMutex& other);
+
+private:
 #ifdef _MSC_VER
 	
 #ifdef _MSC_VER

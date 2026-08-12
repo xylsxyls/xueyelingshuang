@@ -31,6 +31,10 @@ public:
 	static std::string tempDir();
 
 private:
+	FileReadWriteMutex(const FileReadWriteMutex& other);
+	FileReadWriteMutex& operator=(const FileReadWriteMutex& other);
+
+private:
 #ifdef _MSC_VER
 	// Windows文件锁句柄，未加锁时为nullptr。
 	HANDLE m_file;

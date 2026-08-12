@@ -24,6 +24,10 @@ public:
 	bool trywrite();
 	
 private:
+	ProcessReadWriteMutex(const ProcessReadWriteMutex& other);
+	ProcessReadWriteMutex& operator=(const ProcessReadWriteMutex& other);
+
+private:
 	HANDLE m_hLock;
 };
 #elif __unix__
@@ -32,6 +36,10 @@ class ReadWriteMutexAPI ProcessReadWriteMutex : public FileReadWriteMutex
 {
 public:
 	ProcessReadWriteMutex(const std::string& name);
+
+private:
+	ProcessReadWriteMutex(const ProcessReadWriteMutex& other);
+	ProcessReadWriteMutex& operator=(const ProcessReadWriteMutex& other);
 };
 
 #endif

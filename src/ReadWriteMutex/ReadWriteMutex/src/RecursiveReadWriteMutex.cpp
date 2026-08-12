@@ -44,6 +44,10 @@ void RecursiveReadWriteMutex::unread()
 
 void RecursiveReadWriteMutex::unwrite()
 {
+	if (m_lockCount <= 0)
+	{
+		return;
+	}
 	--m_lockCount;
 #ifdef _MSC_VER
 	LeaveCriticalSection(&m_lock);

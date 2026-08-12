@@ -6,7 +6,8 @@
 
 RapidJson::RapidJson() :
 m_document(nullptr),
-m_value(nullptr)
+m_value(nullptr),
+m_hasKey(false)
 {
 	std::unique_ptr<rapidjson::Document> document(new rapidjson::Document());
 	std::unique_ptr<rapidjson::Value> value(new rapidjson::Value());
@@ -18,7 +19,8 @@ m_value(nullptr)
 RapidJson::RapidJson(const RapidJson& rapidJson) :
 m_document(nullptr),
 m_value(nullptr),
-m_key(rapidJson.m_key)
+m_key(rapidJson.m_key),
+m_hasKey(rapidJson.m_hasKey)
 {
 	std::unique_ptr<rapidjson::Document> document(new rapidjson::Document());
 	std::unique_ptr<rapidjson::Value> value(new rapidjson::Value());
@@ -30,7 +32,8 @@ m_key(rapidJson.m_key)
 
 RapidJson::RapidJson(const rapidjson::Value* rapidjson) :
 m_document(nullptr),
-m_value(nullptr)
+m_value(nullptr),
+m_hasKey(false)
 {
 	std::unique_ptr<rapidjson::Document> document(new rapidjson::Document());
 	std::unique_ptr<rapidjson::Value> value(new rapidjson::Value());
@@ -57,6 +60,7 @@ RapidJson::~RapidJson()
 bool RapidJson::parse(const std::string& json)
 {
 	m_key.clear();
+	m_hasKey = false;
 	m_value->SetNull();
 	if (json.empty())
 	{
@@ -149,7 +153,7 @@ RapidJson& RapidJson::operator=(const rapidjson::Value* value)
 	{
 		rapidjsonValue.CopyFrom(*value, m_document->GetAllocator());
 	}
-	if (m_key.empty())
+	if (!m_hasKey)
 	{
 		m_value->CopyFrom(rapidjsonValue, m_document->GetAllocator());
 		m_document->CopyFrom(rapidjsonValue, m_document->GetAllocator());
@@ -175,12 +179,13 @@ RapidJson& RapidJson::operator=(const rapidjson::Value* value)
 		m_document->AddMember(strKey, rapidjsonValue, m_document->GetAllocator());
 	}
 	m_key.clear();
+	m_hasKey = false;
 	return *this;
 }
 
 RapidJson& RapidJson::operator=(int32_t value)
 {
-	if (m_key.empty())
+	if (!m_hasKey)
 	{
 		m_document->SetInt(value);
 		m_value->CopyFrom(*m_document, m_document->GetAllocator());
@@ -206,6 +211,7 @@ RapidJson& RapidJson::operator=(int32_t value)
 		m_document->AddMember(strKey, value, m_document->GetAllocator());
 	}
 	m_key.clear();
+	m_hasKey = false;
 	return *this;
 }
 
@@ -213,7 +219,7 @@ RapidJson& RapidJson::operator=(const std::string& value)
 {
 	rapidjson::Value strValue(rapidjson::kStringType);
 	strValue.SetString(value.c_str(), RapidJsonHelper::jsonSize(value.size()), m_document->GetAllocator());
-	if (m_key.empty())
+	if (!m_hasKey)
 	{
 		m_value->CopyFrom(strValue, m_document->GetAllocator());
 		m_document->CopyFrom(strValue, m_document->GetAllocator());
@@ -239,6 +245,7 @@ RapidJson& RapidJson::operator=(const std::string& value)
 		m_document->AddMember(strKey, strValue, m_document->GetAllocator());
 	}
 	m_key.clear();
+	m_hasKey = false;
 	return *this;
 }
 
@@ -248,7 +255,7 @@ RapidJson& RapidJson::operator=(const char* value)
 	rapidjson::SizeType valueSize = RapidJsonHelper::jsonSize(std::strlen(realValue));
 	rapidjson::Value strValue(rapidjson::kStringType);
 	strValue.SetString(realValue, valueSize, m_document->GetAllocator());
-	if (m_key.empty())
+	if (!m_hasKey)
 	{
 		m_value->CopyFrom(strValue, m_document->GetAllocator());
 		m_document->CopyFrom(strValue, m_document->GetAllocator());
@@ -274,6 +281,7 @@ RapidJson& RapidJson::operator=(const char* value)
 		m_document->AddMember(strKey, strValue, m_document->GetAllocator());
 	}
 	m_key.clear();
+	m_hasKey = false;
 	return *this;
 }
 
@@ -286,7 +294,7 @@ RapidJson& RapidJson::operator=(const std::vector<RapidJson>& value)
 		item.CopyFrom(*value[index].m_document, m_document->GetAllocator());
 		rapidjsonValue.PushBack(item, m_document->GetAllocator());
 	}
-	if (m_key.empty())
+	if (!m_hasKey)
 	{
 		m_document->CopyFrom(rapidjsonValue, m_document->GetAllocator());
 		m_value->CopyFrom(*m_document, m_document->GetAllocator());
@@ -312,18 +320,19 @@ RapidJson& RapidJson::operator=(const std::vector<RapidJson>& value)
 		m_document->AddMember(strKey, rapidjsonValue, m_document->GetAllocator());
 	}
 	m_key.clear();
+	m_hasKey = false;
 	return *this;
 }
 
 RapidJson& RapidJson::operator=(const RapidJson& value)
 {
-	if (this == &value && m_key.empty())
+	if (this == &value && !m_hasKey)
 	{
 		return *this;
 	}
 	rapidjson::Value rapidjsonValue(rapidjson::Type::kObjectType);
 	rapidjsonValue.CopyFrom(*value.m_document, m_document->GetAllocator());
-	if (m_key.empty())
+	if (!m_hasKey)
 	{
 		m_document->CopyFrom(rapidjsonValue, m_document->GetAllocator());
 		m_value->CopyFrom(*m_document, m_document->GetAllocator());
@@ -349,12 +358,14 @@ RapidJson& RapidJson::operator=(const RapidJson& value)
 		m_document->AddMember(strKey, rapidjsonValue, m_document->GetAllocator());
 	}
 	m_key.clear();
+	m_hasKey = false;
 	return *this;
 }
 
 RapidJson& RapidJson::operator[](const std::string& key)
 {
 	m_key = key;
+	m_hasKey = true;
 	if (m_document->IsObject())
 	{
 		rapidjson::Value strKey(rapidjson::kStringType);
@@ -528,6 +539,11 @@ RapidJson& RapidJson::operator[](const std::string& key)
 //	check(legacyDocument.parse(legacy.toString()), "RapidJson legacy serialize parse");
 //	check(legacyDocument.getIntOrDefault("id", 0) == 7, "RapidJson legacy get int");
 //	check(legacyDocument.getStringOrDefault("title", "") == "legacy", "RapidJson legacy get string");
+//	RapidJson legacyEmptyKey;
+//	legacyEmptyKey[""] = "empty";
+//	RapidJsonDocument legacyEmptyKeyDocument;
+//	check(legacyEmptyKeyDocument.parse(legacyEmptyKey.toString()), "RapidJson legacy empty key parse");
+//	check(legacyEmptyKeyDocument.getStringOrDefault("", "missing") == "empty", "RapidJson legacy empty key get string");
 //	check(legacy["missing"].isNull(), "RapidJson legacy missing key null value");
 //	check(legacy["id"].isInt() && legacy.toIntOrDefault(-1) == 7, "RapidJson legacy key cache update");
 //	check(legacy.parse("[{\"v\":1},{\"v\":2}]"), "RapidJson legacy parse root array");
