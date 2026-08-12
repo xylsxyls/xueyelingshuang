@@ -34,6 +34,9 @@
 #include <iterator>
 #include <cstring>
 #include <cstdlib>
+#ifdef __unix__
+#include <signal.h>
+#endif
 
 // 按单字符分隔字符串，函数开始时清空输出数组。
 static void Split(std::vector<std::string>& result, const std::string& splitString, char separate_character)
@@ -321,7 +324,8 @@ HWND CSystem::GetConsoleHwnd()
 	// Fetch current window title.
 	GetConsoleTitleA(pszOldWindowTitle, bufsize);
 	// Format a "unique" NewWindowTitle.
-	sprintf(pszNewWindowTitle, "%d/%d", GetTickCount(), GetCurrentProcessId());
+	_snprintf(pszNewWindowTitle, bufsize, "%lu/%lu", static_cast<unsigned long>(GetTickCount()), static_cast<unsigned long>(GetCurrentProcessId()));
+	pszNewWindowTitle[bufsize - 1] = '\0';
 	// Change current window title.
 	SetConsoleTitleA(pszNewWindowTitle);
 	// Ensure window title has been updated.
@@ -800,7 +804,17 @@ void CSystem::CopyFileOver(const std::string& dstFile, const std::string& srcFil
 	{
 		return;
 	}
-	system(("cp -f " + srcFile + " " + dstFile).c_str());
+	std::ifstream src(srcFile.c_str(), std::ios::binary);
+	if (!src.is_open())
+	{
+		return;
+	}
+	std::ofstream dst(dstFile.c_str(), std::ios::binary | std::ios::trunc);
+	if (!dst.is_open())
+	{
+		return;
+	}
+	dst << src.rdbuf();
 #endif
 }
 
@@ -1466,6 +1480,10 @@ std::string CSystem::GetName(const std::string& path, int32_t flag)
 
 bool CSystem::deleteFile(const char* path)
 {
+	if (path == nullptr || path[0] == '\0')
+	{
+		return false;
+	}
 	return ::remove(path) == 0;
 }
 
@@ -1474,8 +1492,12 @@ std::string CSystem::inputString(const std::string& tip)
 	printf("%s\n", tip.c_str());
 	std::string result;
 	char ch = 0;
-	while ((ch = std::cin.get()) != '\n')
+	while (std::cin.get(ch))
 	{
+		if (ch == '\n')
+		{
+			break;
+		}
 		result += ch;
 	}
 	return result;
@@ -1483,12 +1505,16 @@ std::string CSystem::inputString(const std::string& tip)
 
 void CSystem::killProcess(int32_t pid)
 {
+	if (pid <= 0)
+	{
+		return;
+	}
 #ifdef _WIN32
 	char command[256] = {};
 	::_snprintf(command, 256, "taskkill /f /pid %d", pid);
 	::WinExec(command, SW_HIDE);
 #elif __unix__
-	system(("kill -9 " + std::to_string(pid)).c_str());
+	::kill(static_cast<pid_t>(pid), SIGKILL);
 #endif
 }
 

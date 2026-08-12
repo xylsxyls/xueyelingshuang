@@ -8,7 +8,7 @@ m_pool(nullptr)
 
 }
 
-MysqlCppConnectionReleaser::MysqlCppConnectionReleaser(MysqlCppConnectionPool* pool, const std::shared_ptr<bool>& poolAlive) :
+MysqlCppConnectionReleaser::MysqlCppConnectionReleaser(MysqlCppConnectionPool* pool, const std::shared_ptr<std::atomic<bool>>& poolAlive) :
 m_pool(pool),
 m_poolAlive(poolAlive)
 {
@@ -22,8 +22,8 @@ void MysqlCppConnectionReleaser::operator()(MysqlCpp* connection) const
         return;
     }
 
-    std::shared_ptr<bool> poolAlive = m_poolAlive.lock();
-    if (m_pool != nullptr && poolAlive.get() != nullptr && *poolAlive)
+    std::shared_ptr<std::atomic<bool>> poolAlive = m_poolAlive.lock();
+    if (m_pool != nullptr && poolAlive.get() != nullptr && poolAlive->load())
     {
         m_pool->releaseConnectionFromReleaser(connection);
         return;

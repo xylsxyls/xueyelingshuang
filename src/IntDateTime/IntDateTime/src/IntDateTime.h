@@ -24,13 +24,14 @@ public:
 
     friend IntDateTime operator+(const IntDateTime& intDateTime, int32_t seconds)
 	{
-        struct tm time;
+        struct tm time = {};
         time.tm_year = intDateTime.getYear() - 1900;
         time.tm_mon = intDateTime.getMonth() - 1;
         time.tm_mday = intDateTime.getDay();
         time.tm_hour = intDateTime.getHour();
         time.tm_min = intDateTime.getMin();
         time.tm_sec = intDateTime.getSeconds();
+		time.tm_isdst = -1;
         time_t timeint64 = mktime(&time);
         IntDateTime result;
         result = timeint64 + seconds;
@@ -38,13 +39,14 @@ public:
     }
     friend IntDateTime operator+(int32_t seconds, const IntDateTime& intDateTime)
 	{
-		struct tm time;
+		struct tm time = {};
 		time.tm_year = intDateTime.getYear() - 1900;
 		time.tm_mon = intDateTime.getMonth() - 1;
 		time.tm_mday = intDateTime.getDay();
 		time.tm_hour = intDateTime.getHour();
 		time.tm_min = intDateTime.getMin();
 		time.tm_sec = intDateTime.getSeconds();
+		time.tm_isdst = -1;
         time_t timeint64 = mktime(&time);
         IntDateTime result;
 		result = timeint64 + seconds;
@@ -52,13 +54,14 @@ public:
     }
     friend IntDateTime operator-(const IntDateTime& intDateTime, int32_t seconds)
 	{
-		struct tm time;
+		struct tm time = {};
 		time.tm_year = intDateTime.getYear() - 1900;
 		time.tm_mon = intDateTime.getMonth() - 1;
 		time.tm_mday = intDateTime.getDay();
 		time.tm_hour = intDateTime.getHour();
 		time.tm_min = intDateTime.getMin();
 		time.tm_sec = intDateTime.getSeconds();
+		time.tm_isdst = -1;
         time_t timeint64 = mktime(&time);
         IntDateTime result;
 		result = timeint64 - seconds;
@@ -66,22 +69,24 @@ public:
     }
     friend int32_t operator-(const IntDateTime& intDateTime1, const IntDateTime& intDateTime2)
 	{
-		struct tm time;
+		struct tm time = {};
 		time.tm_year = intDateTime1.getYear() - 1900;
 		time.tm_mon = intDateTime1.getMonth() - 1;
 		time.tm_mday = intDateTime1.getDay();
 		time.tm_hour = intDateTime1.getHour();
 		time.tm_min = intDateTime1.getMin();
 		time.tm_sec = intDateTime1.getSeconds();
+		time.tm_isdst = -1;
         time_t timeint64 = mktime(&time);
 
-        struct tm timeSub;
+        struct tm timeSub = {};
 		timeSub.tm_year = intDateTime2.getYear() - 1900;
 		timeSub.tm_mon = intDateTime2.getMonth() - 1;
 		timeSub.tm_mday = intDateTime2.getDay();
 		timeSub.tm_hour = intDateTime2.getHour();
 		timeSub.tm_min = intDateTime2.getMin();
 		timeSub.tm_sec = intDateTime2.getSeconds();
+		timeSub.tm_isdst = -1;
         time_t timeint64Sub = mktime(&timeSub);
 
 		return (int32_t)difftime(timeint64, timeint64Sub);
@@ -272,4 +277,12 @@ public:
 	std::string dateToString() const;
 	std::string dateNumToString() const;
 	std::string timeToString() const;
+
+private:
+	/** 安全获取本地时间结构，避免localtime静态缓冲区的多线程风险
+	@param [in] time 时间戳
+	@param [out] timeInfo 本地时间结构
+	@return 返回转换是否成功
+	*/
+	static bool localTime(time_t time, struct tm& timeInfo);
 };

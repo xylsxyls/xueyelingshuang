@@ -613,6 +613,10 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //    std::string exportCommand = MysqlSqlString::exportString("D:\\test data\\b.sql", "127.0.0.1", "root", "123456", "cook recipe");
 //    check(importCommand.find("mysql") != std::string::npos && importCommand.find("cook") != std::string::npos, "MysqlSqlString import string");
 //    check(exportCommand.find("mysqldump") != std::string::npos && exportCommand.find("cook recipe") != std::string::npos, "MysqlSqlString export string");
+//    std::string quotedImportCommand = MysqlSqlString::importString("D:\\test data\\a.sql", "127.0.0.1", "root user", "pass word", "cook db");
+//    check(quotedImportCommand.find("root user") != std::string::npos &&
+//        quotedImportCommand.find("pass word") != std::string::npos &&
+//        quotedImportCommand.find("cook db") != std::string::npos, "MysqlSqlString quote command arguments");
 //
 //    MysqlCpp localMysql;
 //    check(!localMysql.isInit(), "MysqlCpp default not init");
@@ -697,6 +701,8 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //    check(emptyPool.totalCount() == 0, "MysqlCppConnectionPool total without init");
 //    emptyPool.close();
 //    emptyPool.uninit();
+//    emptyPool.uninit();
+//    check(true, "MysqlCppConnectionPool duplicate uninit without init safe");
 //
 //    MysqlCppConfig mysqlConfig;
 //    mysqlConfig.m_ip = envString("MYSQLCPP_TEST_IP", "127.0.0.1");
@@ -818,10 +824,14 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //    {
 //        check(pool.totalCount() == 4, "MysqlCppConnectionPool total count");
 //        check(pool.availableCount() == 4, "MysqlCppConnectionPool available count");
+//        check(pool.init(mysqlConfig, 4), "MysqlCppConnectionPool double init no-op");
+//        check(pool.totalCount() == 4 && pool.availableCount() == 4, "MysqlCppConnectionPool double init keep old pool");
 //        {
 //            std::shared_ptr<MysqlCpp> pooledConnection = pool.acquire(1000);
 //            check(pooledConnection.get() != nullptr && pooledConnection->ping(), "MysqlCppConnectionPool acquire");
 //            check(pool.availableCount() == 3, "MysqlCppConnectionPool borrowed count");
+//            check(pool.init(mysqlConfig, 4), "MysqlCppConnectionPool double init with borrowed no-op");
+//            check(pool.totalCount() == 4 && pool.availableCount() == 3, "MysqlCppConnectionPool double init keep borrowed state");
 //        }
 //        check(pool.availableCount() == 4, "MysqlCppConnectionPool release by shared ptr");
 //
@@ -885,6 +895,8 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //        }
 //        check(threadFailures.load() == 0, "MysqlCppConnectionPool multi thread pressure");
 //        pool.uninit();
+//        pool.uninit();
+//        check(pool.totalCount() == 0 && pool.availableCount() == 0, "MysqlCppConnectionPool duplicate uninit safe");
 //    }
 //
 //    std::shared_ptr<MysqlCpp> borrowedAfterPoolDestroy;

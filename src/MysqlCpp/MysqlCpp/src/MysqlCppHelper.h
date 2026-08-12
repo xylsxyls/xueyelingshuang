@@ -50,9 +50,9 @@ public:
     */
     static std::string exceptionText(const sql::SQLException& e);
 
-    /** 给命令行路径或参数补双引号，避免路径中包含空格时执行失败
+    /** 给命令行路径或参数补引号并转义内部引号，避免空格或特殊字符导致执行失败
     @param [in] text 需要补引号的命令行片段
-    @return 返回补双引号后的文本
+    @return 返回补引号并转义后的文本
     */
     static std::string quoteCommandText(const std::string& text);
 

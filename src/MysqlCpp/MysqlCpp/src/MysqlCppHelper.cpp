@@ -118,7 +118,37 @@ std::string MysqlCppHelper::exceptionText(const sql::SQLException& e)
 
 std::string MysqlCppHelper::quoteCommandText(const std::string& text)
 {
-    return "\"" + text + "\"";
+#ifdef _WIN32
+    std::string escaped;
+    escaped.reserve(text.size());
+    for (size_t i = 0; i < text.size(); ++i)
+    {
+        if (text[i] == '"')
+        {
+            escaped += "\\\"";
+        }
+        else
+        {
+            escaped += text[i];
+        }
+    }
+    return "\"" + escaped + "\"";
+#else
+    std::string escaped;
+    escaped.reserve(text.size());
+    for (size_t i = 0; i < text.size(); ++i)
+    {
+        if (text[i] == '\'')
+        {
+            escaped += "'\\''";
+        }
+        else
+        {
+            escaped += text[i];
+        }
+    }
+    return "'" + escaped + "'";
+#endif
 }
 
 std::string MysqlCppHelper::mysqlToolPath(const std::string& toolName)

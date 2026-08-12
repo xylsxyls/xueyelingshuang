@@ -211,8 +211,19 @@ void ReadWriteMutex::unwrite()
 //
 //	FileReadWriteMutex fileMutex("ReadWriteMutexTestFile");
 //	fileMutex.write();
+//	fileMutex.write();
 //	fileMutex.unwrite();
-//	check(true, "FileReadWriteMutex basic write lock");
+//	check(true, "FileReadWriteMutex duplicate write lock safe");
+//	fileMutex.unwrite();
+//	check(true, "FileReadWriteMutex duplicate unlock safe");
+//	fileMutex.write();
+//	fileMutex.unwrite();
+//	check(true, "FileReadWriteMutex relock after unlock safe");
+//	{
+//		FileReadWriteMutex autoUnlockFileMutex("ReadWriteMutexAutoUnlockTestFile");
+//		autoUnlockFileMutex.write();
+//	}
+//	check(true, "FileReadWriteMutex destructor unlock safe");
 //
 //#ifdef _MSC_VER
 //	std::string processMutexName = "ReadWriteMutexProcessTest";

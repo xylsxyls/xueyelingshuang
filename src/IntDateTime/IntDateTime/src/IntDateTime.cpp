@@ -4,16 +4,20 @@
 IntDateTime::IntDateTime()
 {
 	time_t timep;
-	struct tm *p;
+	struct tm timeInfo;
 	time(&timep);
 	//?取得当地时间
-	p = localtime(&timep);
-	int32_t year = 1900 + p->tm_year;
-	int32_t month = 1 + p->tm_mon;
-	int32_t day = p->tm_mday;
-	int32_t hour = p->tm_hour;
-	int32_t min = p->tm_min;
-	int32_t seconds = p->tm_sec;
+	if (!localTime(timep, timeInfo))
+	{
+		clear();
+		return;
+	}
+	int32_t year = 1900 + timeInfo.tm_year;
+	int32_t month = 1 + timeInfo.tm_mon;
+	int32_t day = timeInfo.tm_mday;
+	int32_t hour = timeInfo.tm_hour;
+	int32_t min = timeInfo.tm_min;
+	int32_t seconds = timeInfo.tm_sec;
 	std::string strLocalDate;
 	CStringManager::Format(strLocalDate, "%d%02d%02d", year, month, day);
 	m_date = atoi(strLocalDate.c_str());
@@ -36,6 +40,8 @@ IntDateTime::IntDateTime(int32_t date, int32_t time)
 
 IntDateTime::IntDateTime(const std::string& time)
 {
+	m_date = 0;
+	m_time = 0;
 	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
 	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
 	{
@@ -52,15 +58,19 @@ IntDateTime::IntDateTime(const std::string& time)
 
 IntDateTime::IntDateTime(time_t time)
 {
-	struct tm *p;
+	struct tm timeInfo;
 	//?取得当地时间
-	p = localtime(&time);
-	int32_t year = 1900 + p->tm_year;
-	int32_t month = 1 + p->tm_mon;
-	int32_t day = p->tm_mday;
-	int32_t hour = p->tm_hour;
-	int32_t min = p->tm_min;
-	int32_t seconds = p->tm_sec;
+	if (!localTime(time, timeInfo))
+	{
+		clear();
+		return;
+	}
+	int32_t year = 1900 + timeInfo.tm_year;
+	int32_t month = 1 + timeInfo.tm_mon;
+	int32_t day = timeInfo.tm_mday;
+	int32_t hour = timeInfo.tm_hour;
+	int32_t min = timeInfo.tm_min;
+	int32_t seconds = timeInfo.tm_sec;
 	std::string strLocalDate;
 	CStringManager::Format(strLocalDate, "%d%02d%02d", year, month, day);
 	m_date = atoi(strLocalDate.c_str());
@@ -71,6 +81,12 @@ IntDateTime::IntDateTime(time_t time)
 
 IntDateTime::IntDateTime(const char* time)
 {
+	m_date = 0;
+	m_time = 0;
+	if (time == nullptr)
+	{
+		return;
+	}
 	std::vector<std::string> vecDateTime = CStringManager::split(time, " ");
 	if (vecDateTime.size() != 2 && vecDateTime.size() != 1)
 	{
@@ -111,15 +127,19 @@ IntDateTime IntDateTime::operator=(const std::string& intDateTime)
 
 IntDateTime IntDateTime::operator=(const time_t& time)
 {
-	struct tm *p;
+	struct tm timeInfo;
 	//?取得当地时间
-	p = localtime(&time);
-	int32_t year = 1900 + p->tm_year;
-	int32_t month = 1 + p->tm_mon;
-	int32_t day = p->tm_mday;
-	int32_t hour = p->tm_hour;
-	int32_t min = p->tm_min;
-	int32_t seconds = p->tm_sec;
+	if (!localTime(time, timeInfo))
+	{
+		clear();
+		return *this;
+	}
+	int32_t year = 1900 + timeInfo.tm_year;
+	int32_t month = 1 + timeInfo.tm_mon;
+	int32_t day = timeInfo.tm_mday;
+	int32_t hour = timeInfo.tm_hour;
+	int32_t min = timeInfo.tm_min;
+	int32_t seconds = timeInfo.tm_sec;
 	std::string strLocalDate;
 	CStringManager::Format(strLocalDate, "%d%02d%02d", year, month, day);
 	m_date = atoi(strLocalDate.c_str());
@@ -164,21 +184,38 @@ void IntDateTime::setTime(const std::string& time)
 
 void IntDateTime::setTime(time_t time)
 {
-	struct tm *p;
+	struct tm timeInfo;
 	//?取得当地时间
-	p = localtime(&time);
-	int32_t year = 1900 + p->tm_year;
-	int32_t month = 1 + p->tm_mon;
-	int32_t day = p->tm_mday;
-	int32_t hour = p->tm_hour;
-	int32_t min = p->tm_min;
-	int32_t seconds = p->tm_sec;
+	if (!localTime(time, timeInfo))
+	{
+		clear();
+		return;
+	}
+	int32_t year = 1900 + timeInfo.tm_year;
+	int32_t month = 1 + timeInfo.tm_mon;
+	int32_t day = timeInfo.tm_mday;
+	int32_t hour = timeInfo.tm_hour;
+	int32_t min = timeInfo.tm_min;
+	int32_t seconds = timeInfo.tm_sec;
 	std::string strLocalDate;
 	CStringManager::Format(strLocalDate, "%d%02d%02d", year, month, day);
 	m_date = atoi(strLocalDate.c_str());
 	std::string strLocalTime;
 	CStringManager::Format(strLocalTime, "%02d%02d%02d000", hour, min, seconds);
 	m_time = atoi(strLocalTime.c_str());
+}
+
+bool IntDateTime::localTime(time_t time, struct tm& timeInfo)
+{
+	timeInfo = tm();
+#ifdef _WIN32
+	return localtime_s(&timeInfo, &time) == 0;
+#elif __unix__
+	return localtime_r(&time, &timeInfo) != nullptr;
+#else
+	(void)time;
+	return false;
+#endif
 }
 
 int32_t IntDateTime::getDate() const
@@ -287,6 +324,10 @@ std::string IntDateTime::timeToString() const
 //	check(copied.getDate() == 20260810 && copied.getTime() == 101112000, "IntDateTime setTime int");
 //	copied.setTime("2026-08-11 12:13:14");
 //	check(copied.toString() == "2026-08-11 12:13:14", "IntDateTime setTime string");
+//	IntDateTime nullText(static_cast<const char*>(nullptr));
+//	check(nullText.empty(), "IntDateTime null char pointer safe");
+//	IntDateTime fromEpoch(static_cast<time_t>(0));
+//	check(!fromEpoch.empty(), "IntDateTime time_t constructor safe");
 //	check(IntDateTime("2026-08-09 03:41:23") > parseTime, "IntDateTime compare greater");
 //	check(IntDateTime("2026-08-09 03:41:21") < parseTime, "IntDateTime compare less");
 //

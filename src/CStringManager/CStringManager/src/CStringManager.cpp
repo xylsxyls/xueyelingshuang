@@ -679,7 +679,7 @@ std::string CStringManager::UnicodeToAnsi(const std::wstring& wstrSrc)
 #ifdef _WIN32
 	// 分配目标空间, 一个16位Unicode字符最多可以转为4个字节
 	int iAllocSize = static_cast<int>(wstrSrc.size() * 4 + 10);
-	char* pwszBuffer = new char[iAllocSize];
+	char* pwszBuffer = new (std::nothrow) char[iAllocSize];
 	if (NULL == pwszBuffer)
 	{
 		return "";
@@ -716,7 +716,7 @@ std::wstring CStringManager::AnsiToUnicode(const std::string& strSrc)
 #ifdef _WIN32
 	// 分配目标空间
 	int iAllocSize = static_cast<int>(strSrc.size() + 10);
-	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
+	WCHAR* pwszBuffer = new (std::nothrow) WCHAR[iAllocSize];
 	if (NULL == pwszBuffer)
 	{
 		return L"";
@@ -753,7 +753,7 @@ std::string CStringManager::AnsiToUtf8(const std::string& strSrc)
 #ifdef _WIN32
 	// 分配目标空间, 长度为 Ansi 编码的两倍
 	int iAllocSize = static_cast<int>(strSrc.size() * 2 + 10);
-	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
+	WCHAR* pwszBuffer = new (std::nothrow) WCHAR[iAllocSize];
 	if (NULL == pwszBuffer)
 	{
 		return "";
@@ -784,7 +784,7 @@ std::string CStringManager::Utf8ToAnsi(const std::string& strSrc)
 
 	// 分配目标空间, 长度为 Ansi 编码的两倍
 	int iAllocSize = static_cast<int>(strSrc.size() * 2 + 10);
-	char* pszBuffer = new char[iAllocSize];
+	char* pszBuffer = new (std::nothrow) char[iAllocSize];
 	if (NULL == pszBuffer)
 	{
 		return "";
@@ -813,7 +813,7 @@ std::string CStringManager::UnicodeToUtf8(const std::wstring& wstrSrc)
 #ifdef _WIN32
 	// 分配目标空间, 一个16位Unicode字符最多可以转为4个字节
 	int iAllocSize = static_cast<int>(wstrSrc.size() * 4 + 10);
-	char* pszBuffer = new char[iAllocSize];
+	char* pszBuffer = new (std::nothrow) char[iAllocSize];
 	if (NULL == pszBuffer)
 	{
 		return "";
@@ -853,7 +853,7 @@ std::wstring CStringManager::Utf8ToUnicode(const std::string& strSrc)
 #ifdef _WIN32
 	// 分配目标空间
 	int iAllocSize = static_cast<int>(strSrc.size() + 10);
-	WCHAR* pwszBuffer = new WCHAR[iAllocSize];
+	WCHAR* pwszBuffer = new (std::nothrow) WCHAR[iAllocSize];
 	if (NULL == pwszBuffer)
 	{
 		return L"";

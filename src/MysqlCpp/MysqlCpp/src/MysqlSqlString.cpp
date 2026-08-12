@@ -12,8 +12,9 @@ std::string MysqlSqlString::importString(const std::string& sqlPath,
 #else
     const std::string tool = MysqlCppHelper::mysqlToolPath("mysql");
 #endif
-    return MysqlCppHelper::quoteCommandText(tool) + " -h" + host + " -u" + user + " -p" + password + " " +
-        database + " < " + MysqlCppHelper::quoteCommandText(sqlPath);
+    return MysqlCppHelper::quoteCommandText(tool) + " -h" + MysqlCppHelper::quoteCommandText(host) +
+        " -u" + MysqlCppHelper::quoteCommandText(user) + " -p" + MysqlCppHelper::quoteCommandText(password) + " " +
+        MysqlCppHelper::quoteCommandText(database) + " < " + MysqlCppHelper::quoteCommandText(sqlPath);
 }
 
 std::string MysqlSqlString::exportString(const std::string& sqlPath,
@@ -27,6 +28,7 @@ std::string MysqlSqlString::exportString(const std::string& sqlPath,
 #else
     const std::string tool = MysqlCppHelper::mysqlToolPath("mysqldump");
 #endif
-    return MysqlCppHelper::quoteCommandText(tool) + " -h" + host + " -u" + user + " -p" + password + " " +
-        exportData + " > " + MysqlCppHelper::quoteCommandText(sqlPath);
+    return MysqlCppHelper::quoteCommandText(tool) + " -h" + MysqlCppHelper::quoteCommandText(host) +
+        " -u" + MysqlCppHelper::quoteCommandText(user) + " -p" + MysqlCppHelper::quoteCommandText(password) + " " +
+        MysqlCppHelper::quoteCommandText(exportData) + " > " + MysqlCppHelper::quoteCommandText(sqlPath);
 }

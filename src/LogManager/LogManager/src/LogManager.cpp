@@ -7,6 +7,7 @@
 #include "ReadWriteMutex/ReadWriteMutexAPI.h"
 #include <fstream>
 #include <iostream>
+#include <new>
 #include <sstream>
 #include <stdarg.h>
 #include <vector>
@@ -21,7 +22,7 @@ m_writeLog(true),
 m_isProcessMutex(false),
 m_writeMutex(nullptr)
 {
-	m_writeMutex = new ReadWriteMutex;
+	m_writeMutex = new (std::nothrow) ReadWriteMutex;
 }
 
 LogManager::~LogManager()
@@ -81,20 +82,25 @@ void LogManager::changeMutex(bool isProcessMutex)
 		return;
 	}
 
-	if (m_writeMutex != nullptr)
+	ReadWriteMutexBase* newMutex = nullptr;
+	if (isProcessMutex)
 	{
-		delete m_writeMutex;
-		m_writeMutex = nullptr;
-	}
-	m_isProcessMutex = isProcessMutex;
-	if (m_isProcessMutex)
-	{
-		m_writeMutex = new ProcessReadWriteMutex("LogManager_Mutex");
+		newMutex = new (std::nothrow) ProcessReadWriteMutex("LogManager_Mutex");
 	}
 	else
 	{
-		m_writeMutex = new ReadWriteMutex;
+		newMutex = new (std::nothrow) ReadWriteMutex;
 	}
+	if (newMutex == nullptr)
+	{
+		return;
+	}
+	if (m_writeMutex != nullptr)
+	{
+		delete m_writeMutex;
+	}
+	m_isProcessMutex = isProcessMutex;
+	m_writeMutex = newMutex;
 }
 
 void LogManager::print(int32_t fileId, LogLevel flag, const std::string& fileMacro, const std::string& funName, const std::string& exeName, const std::string& intDateTime, int32_t threadId, const char* format, ...)
