@@ -1,0 +1,29 @@
+﻿.option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx;
+  margin-bottom: 18rpx;
+}
+
+.option.active {
+  border-color: #5f8f70;
+  background: #f1f7ee;
+}
+
+.title {
+  font-size: 34rpx;
+  font-weight: 800;
+  margin-bottom: 8rpx;
+}
+
+.check {
+  color: #5f8f70;
+  font-weight: 700;
+}
+
+.hint {
+  margin-top: 24rpx;
+  color: #7b746a;
+  line-height: 1.5;
+}

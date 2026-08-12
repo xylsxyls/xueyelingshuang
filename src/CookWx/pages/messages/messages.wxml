@@ -1,0 +1,9 @@
+﻿<view class="page messages-page">
+  <view class="msg card" wx:for="{{messages}}" wx:key="id">
+    <view class="icon">{{item.icon}}</view>
+    <view>
+      <view class="title">{{item.title}}</view>
+      <view class="muted">{{item.text}}</view>
+    </view>
+  </view>
+</view>

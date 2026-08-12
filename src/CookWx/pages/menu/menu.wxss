@@ -1,0 +1,190 @@
+﻿.menu-page {
+  min-height: 100vh;
+  padding: 20rpx 20rpx 160rpx;
+  background: #f8f5ef;
+}
+
+.search-wrap {
+  padding-bottom: 18rpx;
+}
+
+.search {
+  height: 76rpx;
+  padding: 0 24rpx;
+  border-radius: 8rpx;
+  background: #fffdf8;
+  border: 1rpx solid #eee6d8;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 170rpx 1fr;
+  gap: 18rpx;
+  height: calc(100vh - 260rpx);
+}
+
+.categories,
+.recipes {
+  height: 100%;
+}
+
+.cat {
+  padding: 24rpx 12rpx;
+  color: #7b746a;
+  border-left: 6rpx solid transparent;
+  font-size: 26rpx;
+}
+
+.cat.active {
+  color: #18231f;
+  background: #fffdf8;
+  border-left-color: #18231f;
+  font-weight: 700;
+}
+
+.recipe-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 118rpx 1fr 76rpx;
+  gap: 16rpx;
+  padding: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.cover {
+  width: 118rpx;
+  height: 118rpx;
+  border-radius: 8rpx;
+}
+
+.recipe-title {
+  max-width: 250rpx;
+  font-size: 30rpx;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.price {
+  color: #8d4b35;
+  font-size: 23rpx;
+}
+
+.recipe-sub {
+  margin-top: 8rpx;
+  color: #6f665b;
+  font-size: 24rpx;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.time-line {
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: #7b746a;
+}
+
+.tags {
+  margin-top: 8rpx;
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+}
+
+.tags text {
+  padding: 4rpx 8rpx;
+  background: #ebe5d9;
+  border-radius: 6rpx;
+  color: #5e5a52;
+  font-size: 20rpx;
+}
+
+.pick {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10rpx;
+}
+
+.minus,
+.plus,
+.buy {
+  width: 60rpx;
+  height: 60rpx;
+  padding: 0;
+  line-height: 60rpx;
+  border-radius: 30rpx;
+  font-size: 32rpx;
+}
+
+.minus {
+  background: #ebe5d9;
+  color: #18231f;
+}
+
+.plus,
+.buy {
+  background: #18231f;
+  color: #fffdf8;
+}
+
+button[disabled] {
+  opacity: 0.35;
+}
+
+.cart {
+  position: fixed;
+  left: 22rpx;
+  right: 22rpx;
+  bottom: 30rpx;
+  display: grid;
+  grid-template-columns: 1fr 210rpx;
+  gap: 16rpx;
+  align-items: center;
+  padding: 18rpx;
+  background: #fffdf8;
+  border: 1rpx solid #eee6d8;
+  border-radius: 8rpx;
+  box-shadow: 0 12rpx 34rpx rgba(24, 35, 31, 0.12);
+}
+
+.cart-info {
+  padding-left: 8rpx;
+}
+
+.cart button {
+  height: 76rpx;
+}
+
+.cart-sheet {
+  position: fixed;
+  left: 22rpx;
+  right: 22rpx;
+  bottom: 138rpx;
+  padding: 20rpx;
+  box-shadow: 0 12rpx 34rpx rgba(24, 35, 31, 0.12);
+}
+
+.sheet-title {
+  margin-bottom: 12rpx;
+  font-weight: 700;
+}
+
+.sheet-title button {
+  width: 120rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  margin: 0;
+  background: #ebe5d9;
+}
+
+.chosen {
+  display: flex;
+  justify-content: space-between;
+  padding: 14rpx 0;
+  border-top: 1rpx solid #eee6d8;
+}

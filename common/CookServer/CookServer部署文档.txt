@@ -1,0 +1,49 @@
+CookServer部署文档
+
+一、部署目标
+本文档面向运维人员，说明如何把已经编译好的 CookServer.exe 部署到服务器并保持进程可运行。当前版本默认监听 TCP 5207，测试环境可直接通过 http://服务器IP:5207 访问。
+
+二、部署目录
+1. 建议为每个服务单独创建目录，例如 D:\CookServer 或 /opt/CookServer。
+2. CookServer.exe 必须放在部署目录根部，启动时也建议把工作目录设置为该目录。
+3. 当前版本会把状态文件、日志文件、dump 文件写到 CookServer.exe 同级目录，因此该目录必须允许运行账号读写和创建文件。
+4. 不要把多个同名 CookServer 进程放在同一个目录同时运行，否则日志、状态文件和端口会互相影响。
+
+三、部署文件
+1. 必须文件：CookServer.exe。
+2. 如果部署的是 Debug/DLL 版本，还需要把同批次生成的依赖 DLL 放到 CookServer.exe 同级目录。Release 静态库版本通常只需要 CookServer.exe，但仍以交付包内实际文件为准。
+3. 当前版本没有独立配置文件，监听端口、监听地址、公网 IP、默认金币、请求体大小等配置仍在程序内部的 Config 中。
+4. CookServerState.txt 是运行时状态文件，不需要首次手动创建。全新部署可以不放该文件；需要保留测试账号金币、购买、收藏状态时，可以随 exe 一起备份和迁移。
+5. 日志文件和 CookServerd_log/CookServer_log 等归档目录由程序运行时自动生成，不需要提前创建。
+
+四、服务器准备
+1. 放通入站 TCP 5207，云服务器还需要在安全组中放通 5207。
+2. 确认同一台机器上没有其他进程占用 5207。
+3. Windows Server 2012 上建议使用专门的低权限运行账号，给部署目录读写权限即可。
+4. 如果要给微信小程序正式环境访问，建议在前面增加 HTTPS 反向代理，由代理监听 443，转发到本机 5207。
+
+五、启动方式
+1. 进入部署目录，直接运行 CookServer.exe。
+2. 程序启动后会在控制台阻塞运行，不要关闭该窗口；需要后台常驻时，用 Windows 服务包装工具、任务计划程序或进程守护工具托管。
+3. 启动后访问 http://127.0.0.1:5207/api/health，确认返回 ok=true。
+4. 在外部机器访问 http://服务器IP:5207/api/health，确认防火墙和安全组配置正确。
+
+六、验收方式
+1. 将 CookServerTest.exe 放到任意可以访问服务器的机器上运行。
+2. 本机验收命令：CookServerTest.exe --host=127.0.0.1 --port=5207。
+3. 远程验收命令：CookServerTest.exe --host=175.24.198.162 --port=5207。
+4. 压力验收命令示例：CookServerTest.exe --host=175.24.198.162 --port=5207 --stressThreads=32 --stressLoops=100。
+5. 测试报告会写到 CookServerTest.exe 同级目录下的 CookServerTestReport.txt。
+
+七、运行时文件说明
+1. CookServerState.txt：简化版账号状态文件，保存金币、购买、收藏等状态。
+2. *.log：运行日志，线上排查优先查看最新日志文件和日志归档目录。
+3. *.dmp：程序崩溃时由 CDump 生成的 dump 文件，用于定位崩溃堆栈。
+4. 旧日志归档目录：程序重启后，LogManager 会按当前日志配置归档或清理旧日志。
+
+八、停止、升级和回滚
+1. 停止服务前先确认没有正在执行的测试或客户端请求；当前版本可以直接关闭进程。
+2. 升级前备份整个部署目录，至少保留 CookServer.exe、CookServerState.txt、日志和 dump。
+3. 替换 CookServer.exe 和同批次依赖文件后重新启动服务。
+4. 升级后必须执行 /api/health 验证和 CookServerTest 黑盒测试。
+5. 回滚时停止当前进程，恢复备份文件，再重新启动旧版本。

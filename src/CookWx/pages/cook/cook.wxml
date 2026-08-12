@@ -1,0 +1,69 @@
+﻿<view class="cook-page" wx:if="{{plan.summary}}">
+  <view class="top-card card">
+    <view class="between">
+      <view>
+        <view class="headline">{{plan.summary.headline}}</view>
+        <view class="muted">自由时间 {{plan.summary.freeMinutes}} 分 · 边角时间 {{plan.summary.edgeMinutes}} 分</view>
+      </view>
+      <button class="voice-btn" bindtap="openVoice">{{voiceLabel}}</button>
+    </view>
+    <view class="progress-track">
+      <view class="progress-bar" style="width: {{progressPercent}}%"></view>
+    </view>
+    <view class="between time-row">
+      <text>{{elapsedText}}</text>
+      <text>{{totalText}}</text>
+    </view>
+  </view>
+
+  <scroll-view class="timeline" scroll-x="true">
+    <view class="line-wrap" style="width: {{timelineWidth}}rpx">
+      <view
+        wx:for="{{timelineBars}}"
+        wx:key="id"
+        class="bar {{item.active ? 'active' : 'wait'}} {{item.safetyLevel}} {{item.done ? 'done' : ''}}"
+        style="left: {{item.left}}rpx; width: {{item.width}}rpx"
+      >
+        <text>{{item.title}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="current card">
+    <view class="muted">当前步骤</view>
+    <view class="current-title">{{currentTask.title || '等待开始'}}</view>
+    <view class="current-recipe">{{currentTask.recipeTitle}}</view>
+    <view class="detail">{{currentTask.detail || '点击开始后，我会按时间线提醒每一步。'}}</view>
+    <view class="badges" wx:if="{{currentTask.id}}">
+      <text>{{currentTask.active ? '需要动手' : '等待计时'}}</text>
+      <text>{{currentTask.canPause ? '可暂停指导' : '不可暂停'}}</text>
+      <text wx:if="{{currentTask.canLeaveKitchen}}">可离开厨房</text>
+      <text wx:else>留意厨房</text>
+    </view>
+  </view>
+
+  <view class="next-list">
+    <view class="section-title">后续步骤</view>
+    <view class="step card" wx:for="{{visibleTasks}}" wx:key="id">
+      <view class="step-time">{{item.startText}}</view>
+      <view class="step-body">
+        <view>{{item.title}}</view>
+        <view class="muted">{{item.recipeTitle}} · {{item.durationText}}</view>
+      </view>
+      <view class="state {{item.done ? 'done' : ''}}">{{item.done ? '完成' : (item.active ? '动手' : '等待')}}</view>
+    </view>
+  </view>
+
+  <view class="control-bar">
+    <button class="ghost-btn" bindtap="markDone">完成当前</button>
+    <button class="primary-btn" bindtap="toggleRunning">{{running ? '暂停指导' : (started ? '继续' : '开始')}}</button>
+    <button class="ghost-btn" bindtap="skipTask">跳过</button>
+  </view>
+</view>
+
+<view class="page" wx:else>
+  <view class="card empty">
+    <view>还没有做菜计划。</view>
+    <button class="primary-btn" bindtap="backMenu">去菜单选菜</button>
+  </view>
+</view>

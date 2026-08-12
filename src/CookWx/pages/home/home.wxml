@@ -1,0 +1,49 @@
+﻿<view class="home-page">
+  <view class="top-tabs">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="*this"
+      class="tab {{activeTab === item ? 'active' : ''}}"
+      data-tab="{{item}}"
+      bindtap="switchTab"
+    >{{item}}</view>
+  </view>
+
+  <swiper class="feed-swiper" vertical="true" circular="true" current="{{currentIndex}}" bindchange="onSwiperChange">
+    <swiper-item wx:for="{{feed}}" wx:key="id">
+      <view class="feed-card" style="background: {{item.coverColor}}">
+        <view class="sample-video">
+          <view class="play-dot">▶</view>
+          <view class="sample-lines">
+            <view>示例短视频</view>
+            <view>{{item.title}}</view>
+          </view>
+        </view>
+
+        <view class="feed-actions">
+          <button class="round-btn" data-id="{{item.recipeIds[0]}}" bindtap="toggleLike">赞</button>
+          <button class="round-btn" bindtap="openComments">评</button>
+          <button class="round-btn" data-id="{{item.recipeIds[0]}}" bindtap="favorite">藏</button>
+        </view>
+
+        <view class="feed-info">
+          <view class="author">@{{item.author}}</view>
+          <view class="title">{{item.title}}</view>
+          <view class="desc">{{item.description}}</view>
+          <view class="metrics">{{item.likes}}赞 · {{item.comments}}评论</view>
+          <view class="recipe-row">
+            <button class="recipe-btn" data-id="{{item.recipeIds[0]}}" bindtap="openRecipe">
+              {{item.owned ? '加入菜谱' : ('购买菜谱 ' + item.priceCoins + '金币')}}
+            </button>
+            <button class="ghost-recipe-btn" data-id="{{item.recipeIds[0]}}" bindtap="addToMenu" wx:if="{{item.owned}}">加入菜单</button>
+          </view>
+        </view>
+      </view>
+    </swiper-item>
+  </swiper>
+
+  <view class="offline" wx:if="{{error}}">
+    <view>{{error}}</view>
+    <button bindtap="loadData">重试</button>
+  </view>
+</view>

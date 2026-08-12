@@ -1,0 +1,122 @@
+﻿#pragma once
+#include "CookModels.h"
+#include "HttpService/HttpServiceAPI.h"
+#include "RapidJson/RapidJsonAPI.h"
+#include <stdint.h>
+#include <set>
+#include <string>
+#include <vector>
+
+/** CookServer通用辅助函数集合，放置跨业务类复用但不属于某个业务类本体的逻辑
+*/
+class CookServerHelper
+{
+public:
+	/** 按单字符分隔字符串，空片段会被忽略
+	@param [in] text 待分隔字符串
+	@param [in] delimiter 分隔符
+	@return 返回分隔后的非空片段
+	*/
+	static std::vector<std::string> split(const std::string& text, char delimiter);
+
+	/** 将字符串集合拼接成一行可持久化文本
+	@param [in] values 待拼接集合
+	@param [in] delimiter 分隔符
+	@return 返回拼接后的字符串
+	*/
+	static std::string joinSet(const std::set<std::string>& values, char delimiter);
+
+	/** 将秒数向上折算成分钟，用于前端展示预估耗时
+	@param [in] seconds 秒数
+	@return 返回向上取整后的分钟数
+	*/
+	static int32_t ceilMinutes(int32_t seconds);
+
+	/** 向JSON对象写入字符串字段
+	@param [in,out] object JSON对象
+	@param [in] key 字段名
+	@param [in] text 字段值
+	*/
+	static void addString(RapidJsonValue& object, const char* key, const std::string& text);
+
+	/** 向JSON根文档写入字符串字段
+	@param [in,out] object JSON文档
+	@param [in] key 字段名
+	@param [in] text 字段值
+	*/
+	static void addString(RapidJsonDocument& object, const char* key, const std::string& text);
+
+	/** 向JSON对象写入整数字段
+	@param [in,out] object JSON对象
+	@param [in] key 字段名
+	@param [in] number 字段值
+	*/
+	static void addInt(RapidJsonValue& object, const char* key, int32_t number);
+
+	/** 向JSON根文档写入整数字段
+	@param [in,out] object JSON文档
+	@param [in] key 字段名
+	@param [in] number 字段值
+	*/
+	static void addInt(RapidJsonDocument& object, const char* key, int32_t number);
+
+	/** 向JSON对象写入布尔字段
+	@param [in,out] object JSON对象
+	@param [in] key 字段名
+	@param [in] value 字段值
+	*/
+	static void addBool(RapidJsonValue& object, const char* key, bool value);
+
+	/** 向JSON根文档写入布尔字段
+	@param [in,out] object JSON文档
+	@param [in] key 字段名
+	@param [in] value 字段值
+	*/
+	static void addBool(RapidJsonDocument& object, const char* key, bool value);
+
+	/** 向JSON对象写入字符串数组字段
+	@param [in,out] object JSON对象
+	@param [in] key 字段名
+	@param [in] values 字符串数组
+	*/
+	static void addStringArray(RapidJsonValue& object, const char* key, const std::vector<std::string>& values);
+
+	/** 将账号状态转换成JSON对象
+	@param [in] account 账号状态
+	@return 返回JSON对象
+	*/
+	static RapidJsonValue accountToJson(const UserAccount& account);
+
+	/** 将菜谱转换成JSON对象
+	@param [in] recipe 菜谱数据
+	@param [in] account 当前账号，可为空
+	@return 返回JSON对象
+	*/
+	static RapidJsonValue recipeToJson(const Recipe& recipe, const UserAccount* account);
+
+	/** 将排程结果转换成JSON对象
+	@param [in] plan 排程结果
+	@param [in] account 当前账号
+	@param [in] includePlanId 是否写入正式开始制作时的planId
+	@return 返回JSON对象
+	*/
+	static RapidJsonValue planToJson(const PlanResult& plan, const UserAccount& account, bool includePlanId);
+
+	/** 构建JSON HTTP响应
+	@param [in] body JSON响应体
+	@param [in] statusCode HTTP状态码
+	@return 返回HttpService响应对象
+	*/
+	static HttpResponse jsonResponse(const std::string& body, int32_t statusCode = kHttpStatusOk);
+
+	/** 按下标获取CookServer注册的API路由
+	@param [in] index 路由下标
+	@return 返回路由字符串，下标越界时返回空字符串
+	*/
+	static const char* routeAt(size_t index);
+
+	/** 获取CookServer需要注册的API路由数量
+	@return 返回路由数量
+	*/
+	static size_t routeCount();
+};

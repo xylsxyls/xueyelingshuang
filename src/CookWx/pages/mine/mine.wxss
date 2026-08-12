@@ -1,0 +1,83 @@
+﻿.profile {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 28rpx;
+}
+
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  text-align: center;
+  border-radius: 48rpx;
+  background: #18231f;
+  color: #fffdf8;
+  font-size: 40rpx;
+  font-weight: 800;
+}
+
+.name {
+  font-size: 34rpx;
+  font-weight: 800;
+  margin-bottom: 8rpx;
+}
+
+.wallet {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx;
+  margin-top: 20rpx;
+}
+
+.wallet-num {
+  font-size: 54rpx;
+  font-weight: 900;
+}
+
+.recharge {
+  display: flex;
+  gap: 10rpx;
+}
+
+.recharge button {
+  width: 104rpx;
+  height: 58rpx;
+  line-height: 58rpx;
+  padding: 0;
+  background: #ebe5d9;
+  font-size: 23rpx;
+}
+
+.section-title {
+  margin: 34rpx 0 16rpx;
+  font-size: 32rpx;
+  font-weight: 800;
+}
+
+.recipe {
+  display: grid;
+  grid-template-columns: 92rpx 1fr;
+  gap: 16rpx;
+  align-items: center;
+  padding: 18rpx;
+  margin-bottom: 12rpx;
+}
+
+.cover {
+  width: 92rpx;
+  height: 92rpx;
+  border-radius: 8rpx;
+}
+
+.recipe-title {
+  font-size: 30rpx;
+  font-weight: 800;
+  margin-bottom: 8rpx;
+}
+
+.empty {
+  padding: 28rpx;
+  color: #7b746a;
+}

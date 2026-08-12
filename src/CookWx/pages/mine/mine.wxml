@@ -1,0 +1,34 @@
+﻿<view class="page mine-page">
+  <view class="profile card">
+    <view class="avatar">厨</view>
+    <view>
+      <view class="name">demo_user</view>
+      <view class="muted">微信小程序 / Android / iOS 共用账户模型</view>
+    </view>
+  </view>
+
+  <view class="wallet card">
+    <view>
+      <view class="wallet-num">{{account.coins || 0}}</view>
+      <view class="muted">金币余额</view>
+    </view>
+    <view class="recharge">
+      <button data-coins="30" bindtap="recharge">充30</button>
+      <button data-coins="50" bindtap="recharge">充50</button>
+      <button data-coins="100" bindtap="recharge">充100</button>
+    </view>
+  </view>
+
+  <view class="section-title">已购菜谱</view>
+  <view class="card empty" wx:if="{{!purchased.length}}">还没有购买付费菜谱。</view>
+  <view class="recipe card" wx:for="{{purchased}}" wx:key="id" data-id="{{item.id}}" bindtap="openRecipe">
+    <view class="cover" style="background: {{item.coverColor}}"></view>
+    <view>
+      <view class="recipe-title">{{item.title}}</view>
+      <view class="muted">{{item.category}} · {{item.estimatedMinutes}} 分钟</view>
+    </view>
+  </view>
+
+  <view class="section-title">我发布的菜谱</view>
+  <view class="card empty">发布流程已可进入，正式上传和审核后续接入。</view>
+</view>

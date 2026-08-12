@@ -13,15 +13,93 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="HTTP层">
+      <UniqueIdentifier>{E0BD6732-3CC5-4E31-8C46-05C2934F44B8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="API服务">
+      <UniqueIdentifier>{6B07109C-997D-429D-9164-13E7D2F2E6D5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="菜谱目录">
+      <UniqueIdentifier>{71F356F3-4C1C-4A4A-9BB9-1B968F47174D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="排程算法">
+      <UniqueIdentifier>{D53A8E1D-2711-409E-89FD-4BECC08D1E02}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="业务模型">
+      <UniqueIdentifier>{F7F9574E-8B8A-40D0-9E7D-8241D256922F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="账号状态">
+      <UniqueIdentifier>{56E68308-9C76-4DBD-8D73-85E239688504}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="配置">
+      <UniqueIdentifier>{64261B2D-A56B-47F0-8E3C-15BF60866EE9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="通用辅助">
+      <UniqueIdentifier>{A4DAD688-7D90-4FD1-B8F1-C6A227B40A71}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AccountStore.h">
+      <Filter>账号状态</Filter>
+    </ClInclude>
+    <ClInclude Include="CookApiService.h">
+      <Filter>API服务</Filter>
+    </ClInclude>
+    <ClInclude Include="CookCatalog.h">
+      <Filter>菜谱目录</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>配置</Filter>
+    </ClInclude>
+    <ClInclude Include="CookHttpApiHandler.h">
+      <Filter>HTTP层</Filter>
+    </ClInclude>
+    <ClInclude Include="CookHttpServer.h">
+      <Filter>HTTP层</Filter>
+    </ClInclude>
+    <ClInclude Include="CookModels.h">
+      <Filter>业务模型</Filter>
+    </ClInclude>
+    <ClInclude Include="CookSchedule.h">
+      <Filter>排程算法</Filter>
+    </ClInclude>
     <ClInclude Include="CookServer.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CookServerHelper.h">
+      <Filter>通用辅助</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AccountStore.cpp">
+      <Filter>账号状态</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>配置</Filter>
+    </ClCompile>
+    <ClCompile Include="CookApiService.cpp">
+      <Filter>API服务</Filter>
+    </ClCompile>
+    <ClCompile Include="CookCatalog.cpp">
+      <Filter>菜谱目录</Filter>
+    </ClCompile>
+    <ClCompile Include="CookHttpApiHandler.cpp">
+      <Filter>HTTP层</Filter>
+    </ClCompile>
+    <ClCompile Include="CookHttpServer.cpp">
+      <Filter>HTTP层</Filter>
+    </ClCompile>
+    <ClCompile Include="CookModels.cpp">
+      <Filter>业务模型</Filter>
+    </ClCompile>
+    <ClCompile Include="CookSchedule.cpp">
+      <Filter>排程算法</Filter>
+    </ClCompile>
     <ClCompile Include="CookServer.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CookServerHelper.cpp">
+      <Filter>通用辅助</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

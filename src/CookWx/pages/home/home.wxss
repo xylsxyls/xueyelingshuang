@@ -1,0 +1,161 @@
+﻿.home-page {
+  height: 100vh;
+  background: #111814;
+  overflow: hidden;
+}
+
+.top-tabs {
+  position: fixed;
+  z-index: 10;
+  top: 18rpx;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 30rpx;
+  color: rgba(255, 253, 248, 0.72);
+  font-size: 29rpx;
+}
+
+.tab {
+  padding: 12rpx 0;
+}
+
+.tab.active {
+  color: #fffdf8;
+  border-bottom: 4rpx solid #fffdf8;
+}
+
+.feed-swiper {
+  height: 100vh;
+}
+
+.feed-card {
+  position: relative;
+  height: 100vh;
+  padding: 96rpx 28rpx 150rpx;
+  color: #fffdf8;
+}
+
+.sample-video {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.play-dot {
+  width: 112rpx;
+  height: 112rpx;
+  line-height: 112rpx;
+  text-align: center;
+  border-radius: 56rpx;
+  background: rgba(255, 253, 248, 0.2);
+  border: 1rpx solid rgba(255, 253, 248, 0.42);
+  font-size: 42rpx;
+  padding-left: 8rpx;
+}
+
+.sample-lines {
+  position: absolute;
+  top: 45%;
+  left: 48rpx;
+  right: 120rpx;
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  text-shadow: 0 2rpx 14rpx rgba(0, 0, 0, 0.28);
+}
+
+.feed-actions {
+  position: absolute;
+  right: 24rpx;
+  bottom: 250rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.round-btn {
+  width: 84rpx;
+  height: 84rpx;
+  padding: 0;
+  border-radius: 42rpx;
+  background: rgba(255, 253, 248, 0.22);
+  color: #fffdf8;
+  font-size: 24rpx;
+}
+
+.feed-info {
+  position: absolute;
+  left: 28rpx;
+  right: 120rpx;
+  bottom: 142rpx;
+  text-shadow: 0 2rpx 14rpx rgba(0, 0, 0, 0.25);
+}
+
+.author {
+  font-size: 27rpx;
+  margin-bottom: 12rpx;
+}
+
+.title {
+  font-size: 42rpx;
+  font-weight: 800;
+  margin-bottom: 10rpx;
+}
+
+.desc {
+  font-size: 28rpx;
+  line-height: 1.45;
+}
+
+.metrics {
+  margin-top: 12rpx;
+  color: rgba(255, 253, 248, 0.8);
+  font-size: 24rpx;
+}
+
+.recipe-row {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.recipe-btn,
+.ghost-recipe-btn {
+  margin: 0;
+  padding: 0 22rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  font-size: 26rpx;
+}
+
+.recipe-btn {
+  background: #fffdf8;
+  color: #18231f;
+}
+
+.ghost-recipe-btn {
+  background: rgba(255, 253, 248, 0.22);
+  color: #fffdf8;
+}
+
+.offline {
+  position: fixed;
+  left: 32rpx;
+  right: 32rpx;
+  top: 160rpx;
+  padding: 24rpx;
+  border-radius: 8rpx;
+  background: #fffdf8;
+  color: #18231f;
+}
+
+.offline button {
+  margin-top: 16rpx;
+  background: #18231f;
+  color: #fffdf8;
+}

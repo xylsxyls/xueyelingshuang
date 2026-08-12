@@ -1,0 +1,24 @@
+﻿.msg {
+  display: grid;
+  grid-template-columns: 76rpx 1fr;
+  gap: 18rpx;
+  align-items: center;
+  padding: 22rpx;
+  margin-bottom: 14rpx;
+}
+
+.icon {
+  width: 76rpx;
+  height: 76rpx;
+  line-height: 76rpx;
+  text-align: center;
+  border-radius: 38rpx;
+  background: #ebe5d9;
+  font-size: 34rpx;
+}
+
+.title {
+  font-size: 30rpx;
+  font-weight: 800;
+  margin-bottom: 8rpx;
+}

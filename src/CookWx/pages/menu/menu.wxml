@@ -1,0 +1,59 @@
+﻿<view class="menu-page">
+  <view class="search-wrap">
+    <input class="search" placeholder="搜索菜谱、食材、分类" value="{{keyword}}" bindinput="onSearch" />
+  </view>
+
+  <view class="content">
+    <scroll-view class="categories" scroll-y="true">
+      <view
+        wx:for="{{categories}}"
+        wx:key="*this"
+        class="cat {{activeCategory === item ? 'active' : ''}}"
+        data-name="{{item}}"
+        bindtap="selectCategory"
+      >{{item}}</view>
+    </scroll-view>
+
+    <scroll-view class="recipes" scroll-y="true">
+      <view class="recipe-card card" wx:for="{{filteredRecipes}}" wx:key="id">
+        <view class="cover" style="background: {{item.coverColor}}"></view>
+        <view class="recipe-main">
+          <view class="between">
+            <view class="recipe-title">{{item.title}}</view>
+            <view class="price">{{item.owned ? '已拥有' : item.priceCoins + '金币'}}</view>
+          </view>
+          <view class="recipe-sub">{{item.subtitle}}</view>
+          <view class="time-line">预计 {{item.estimatedMinutes}} 分 · 动手 {{item.activeMinutes}} 分</view>
+          <view class="tags">
+            <text wx:for="{{item.tags}}" wx:key="*this">{{item}}</text>
+          </view>
+        </view>
+        <view class="pick">
+          <button class="minus" data-id="{{item.id}}" bindtap="removeRecipe" disabled="{{!selectedMap[item.id]}}">-</button>
+          <button wx:if="{{item.owned}}" class="plus" data-id="{{item.id}}" bindtap="addRecipe" disabled="{{selectedMap[item.id]}}">+</button>
+          <button wx:else class="buy" data-id="{{item.id}}" bindtap="openRecipe">买</button>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="cart" wx:if="{{selectedRecipes.length}}">
+    <view class="cart-info" bindtap="toggleCart">
+      <view>{{selectedRecipes.length}} 道菜</view>
+      <view class="muted" wx:if="{{plan.summary}}">总 {{plan.summary.totalMinutes}} 分 · 动手 {{plan.summary.activeMinutes}} 分</view>
+      <view class="muted" wx:else>正在计算时间...</view>
+    </view>
+    <button class="primary-btn" bindtap="openCook">开始做菜</button>
+  </view>
+
+  <view class="cart-sheet card" wx:if="{{cartOpen}}">
+    <view class="between sheet-title">
+      <view>本顿菜单</view>
+      <button bindtap="toggleCart">收起</button>
+    </view>
+    <view class="chosen" wx:for="{{selectedRecipes}}" wx:key="id">
+      <text>{{item.title}}</text>
+      <text class="muted">{{item.estimatedMinutes}}分</text>
+    </view>
+  </view>
+</view>

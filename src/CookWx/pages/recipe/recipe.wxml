@@ -1,0 +1,56 @@
+﻿<view class="page recipe-page" wx:if="{{recipe}}">
+  <view class="hero" style="background: {{recipe.coverColor}}">
+    <view class="hero-title">{{recipe.title}}</view>
+    <view class="hero-subtitle">{{recipe.subtitle}}</view>
+    <view class="tag-row">
+      <view wx:for="{{recipe.tags}}" wx:key="*this" class="tag">{{item}}</view>
+    </view>
+  </view>
+
+  <view class="summary card">
+    <view>
+      <view class="num">{{recipe.estimatedMinutes}}</view>
+      <view class="label">预计分钟</view>
+    </view>
+    <view>
+      <view class="num">{{recipe.activeMinutes}}</view>
+      <view class="label">动手分钟</view>
+    </view>
+    <view>
+      <view class="num">{{recipe.priceCoins || 0}}</view>
+      <view class="label">金币</view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">准备食材</view>
+    <view class="ingredient" wx:for="{{recipe.ingredients}}" wx:key="name">
+      <text>{{item.name}}</text>
+      <text class="muted">{{item.amount}}</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">需要工具</view>
+    <view class="tool-row">
+      <view class="tool" wx:for="{{recipe.tools}}" wx:key="*this">{{item}}</view>
+    </view>
+  </view>
+
+  <view class="purchase card" wx:if="{{!recipe.owned}}">
+    <view>
+      <view class="section-title">购买后解锁详细步骤</view>
+      <view class="muted">购买后会加入菜单，可参与多菜并行排程。</view>
+    </view>
+    <button class="primary-btn" bindtap="purchase">购买 {{recipe.priceCoins}} 金币</button>
+  </view>
+
+  <view class="action-bar">
+    <button class="ghost-btn" bindtap="favorite">{{recipe.favorite ? '取消收藏' : '收藏'}}</button>
+    <button class="primary-btn" bindtap="addToMenu" disabled="{{!recipe.owned}}">{{recipe.owned ? '加入菜单' : '先购买'}}</button>
+  </view>
+</view>
+
+<view class="page" wx:else>
+  <view class="card empty">正在加载菜谱...</view>
+</view>

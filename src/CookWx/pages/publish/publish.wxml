@@ -1,0 +1,26 @@
+﻿<view class="page publish-page">
+  <view class="card media" bindtap="chooseMedia">
+    <view wx:if="{{mediaPath}}">
+      <video wx:if="{{mediaType === 'video'}}" src="{{mediaPath}}" class="preview" controls></video>
+      <image wx:else src="{{mediaPath}}" class="preview" mode="aspectFill"></image>
+    </view>
+    <view wx:else class="placeholder">
+      <view class="plus">+</view>
+      <view>选择示例视频或图片</view>
+    </view>
+  </view>
+
+  <textarea class="caption card" placeholder="写一句今天这顿饭的说明" value="{{caption}}" bindinput="onCaption"></textarea>
+
+  <view class="section-title">挂载菜谱</view>
+  <view class="recipe card" wx:for="{{ownedRecipes}}" wx:key="id" data-id="{{item.id}}" bindtap="toggleRecipe">
+    <view class="cover" style="background: {{item.coverColor}}"></view>
+    <view class="recipe-main">
+      <view>{{item.title}}</view>
+      <view class="muted">{{item.category}} · {{item.estimatedMinutes}} 分</view>
+    </view>
+    <view class="checked">{{selectedMap[item.id] ? '已选' : ''}}</view>
+  </view>
+
+  <button class="primary-btn publish-btn" bindtap="publish">发布示例作品</button>
+</view>

@@ -1,0 +1,17 @@
+﻿<view class="page voice-page">
+  <view class="card option {{voiceGender === 'female' ? 'active' : ''}}" data-value="female" bindtap="choose">
+    <view>
+      <view class="title">女声</view>
+      <view class="muted">温和、提示感更轻</view>
+    </view>
+    <view class="check">{{voiceGender === 'female' ? '已选' : ''}}</view>
+  </view>
+  <view class="card option {{voiceGender === 'male' ? 'active' : ''}}" data-value="male" bindtap="choose">
+    <view>
+      <view class="title">男声</view>
+      <view class="muted">清晰、提示感更强</view>
+    </view>
+    <view class="check">{{voiceGender === 'male' ? '已选' : ''}}</view>
+  </view>
+  <view class="hint">当前版本先使用震动和文字提醒，开通微信语音合成插件后会接入真实播报。</view>
+</view>

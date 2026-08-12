@@ -1,0 +1,111 @@
+﻿.recipe-page {
+  padding-bottom: 150rpx;
+}
+
+.hero {
+  min-height: 360rpx;
+  padding: 48rpx 32rpx;
+  color: #fffdf8;
+  border-radius: 8rpx;
+}
+
+.hero-title {
+  font-size: 52rpx;
+  font-weight: 800;
+  margin-top: 90rpx;
+}
+
+.hero-subtitle {
+  margin-top: 16rpx;
+  font-size: 29rpx;
+  line-height: 1.5;
+}
+
+.tag-row,
+.tool-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 20rpx;
+}
+
+.tag,
+.tool {
+  padding: 10rpx 16rpx;
+  border-radius: 8rpx;
+  background: rgba(255, 253, 248, 0.22);
+  color: #fffdf8;
+  font-size: 24rpx;
+}
+
+.tool {
+  background: #ebe5d9;
+  color: #18231f;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 24rpx;
+  margin-top: 20rpx;
+  text-align: center;
+}
+
+.num {
+  font-size: 42rpx;
+  font-weight: 800;
+}
+
+.label {
+  color: #7b746a;
+  font-size: 23rpx;
+  margin-top: 6rpx;
+}
+
+.section {
+  margin-top: 30rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  margin-bottom: 16rpx;
+}
+
+.ingredient {
+  display: flex;
+  justify-content: space-between;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid #eee6d8;
+}
+
+.purchase {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 24rpx;
+  margin-top: 32rpx;
+}
+
+.purchase button {
+  width: 220rpx;
+  margin: 0;
+}
+
+.action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 220rpx 1fr;
+  gap: 16rpx;
+  padding: 20rpx 24rpx 34rpx;
+  background: #fffdf8;
+  border-top: 1rpx solid #eee6d8;
+}
+
+.empty {
+  padding: 32rpx;
+}

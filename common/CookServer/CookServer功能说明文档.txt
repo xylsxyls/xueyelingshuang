@@ -1,0 +1,41 @@
+CookServer目前功能说明文档
+
+一、服务定位
+CookServer 是做菜小程序/APP 的 HTTP 后端简化版本，当前核心目标是支撑 CookWx 这样的客户端完成刷菜谱、购买菜谱、选择菜单、生成做菜排程和开始做菜流程。
+
+二、当前已实现能力
+1. HTTP JSON 接口服务。
+默认监听端口 5207，返回 JSON 响应，支持 CORS，客户端可以通过 HTTP 调用接口。
+
+2. 健康检查。
+GET /api/health 返回服务名、版本、公网 IP、监听地址和端口，用于部署后确认服务可访问。
+
+3. 菜谱目录。
+GET /api/recipes 返回分类、菜谱列表和账号信息。当前内置菜谱包括糖醋排骨、电饭锅米饭、番茄炒蛋、蒜蓉青菜、豆腐紫菜汤、黑椒牛柳、照烧鸡腿。前五个为免费/系统菜谱，黑椒牛柳和照烧鸡腿为付费示例菜谱。
+
+4. 推荐流。
+GET /api/feed 返回推荐、精选、关注、好友四个 tab，以及可展示在前端信息流中的菜谱卡片数据，包括标题、描述、作者、价格、点赞数、评论数和关联菜谱 ID。
+
+5. 账号金币。
+GET /api/account 获取账号信息。POST /api/account/recharge 进行金币充值模拟。当前账号状态会保存到 CookServer.exe 同级目录下的 CookServerState.txt。
+
+6. 菜谱购买。
+POST /api/recipes/purchase 根据 recipeId 购买付费菜谱。免费菜谱或已拥有菜谱会直接返回已拥有，金币不足会返回失败消息。
+
+7. 收藏切换。
+POST /api/favorites/toggle 根据 recipeId 切换收藏状态，并返回最新账号和菜谱状态。
+
+8. 做菜排程预览。
+POST /api/plan/preview 接收 recipeIds 数组，返回 summary、selectedRecipes、timeline 和 freeBlocks。summary 包含总耗时、操作耗时、自由时间、边角时间等字段。timeline 是按时间线安排好的做菜步骤。
+
+9. 开始做菜。
+POST /api/plan/start 和预览接口类似，但会额外返回 planId，表示客户端可以进入本地按步骤执行和提醒的状态。
+
+10. 日志和崩溃信息。
+CookServer 已接入 LogManager 日志库和 CDump。服务启动、请求开始/结束、充值、购买、收藏、排程等关键流程会输出日志，崩溃时可保留堆栈信息用于定位问题。
+
+三、当前尚未实现或仍是简化版的能力
+1. 当前账号、购买和收藏状态使用本地文本文件保存，尚未接入 MySQL/Redis。
+2. 当前支付、提现、评论、关注、好友、发布视频、上传图片、真实内容审核仍是前后端后续阶段功能。
+3. 当前没有真实微信登录鉴权，接口通过 userId 参数模拟不同用户。
+4. 当前 HTTP 服务还不是完整生产网关形态，正式给微信小程序使用时需要 HTTPS、域名备案/配置、反向代理和更完整的限流鉴权。

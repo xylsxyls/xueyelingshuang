@@ -1,0 +1,186 @@
+﻿.cook-page {
+  min-height: 100vh;
+  padding: 22rpx 22rpx 160rpx;
+}
+
+.top-card {
+  padding: 24rpx;
+}
+
+.headline {
+  font-size: 34rpx;
+  font-weight: 800;
+  margin-bottom: 10rpx;
+}
+
+.voice-btn {
+  width: 132rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  margin: 0;
+  background: #ebe5d9;
+}
+
+.progress-track {
+  height: 14rpx;
+  margin-top: 26rpx;
+  background: #ebe5d9;
+  border-radius: 7rpx;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #5f8f70;
+  transition: width 0.2s linear;
+}
+
+.time-row {
+  margin-top: 12rpx;
+  color: #7b746a;
+  font-size: 24rpx;
+}
+
+.timeline {
+  margin-top: 22rpx;
+  height: 134rpx;
+}
+
+.line-wrap {
+  position: relative;
+  height: 134rpx;
+  min-width: 100%;
+}
+
+.bar {
+  position: absolute;
+  top: 20rpx;
+  height: 80rpx;
+  padding: 12rpx 10rpx;
+  border-radius: 8rpx;
+  color: #fffdf8;
+  font-size: 21rpx;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.bar.active {
+  background: #5f8f70;
+}
+
+.bar.wait {
+  background: #7f8f9a;
+}
+
+.bar.attention {
+  background: #b67939;
+}
+
+.bar.danger {
+  background: #a0342b;
+}
+
+.bar.done {
+  opacity: 0.42;
+}
+
+.current {
+  margin-top: 22rpx;
+  padding: 28rpx;
+}
+
+.current-title {
+  margin-top: 8rpx;
+  font-size: 44rpx;
+  font-weight: 800;
+}
+
+.current-recipe {
+  margin-top: 8rpx;
+  color: #5f8f70;
+  font-weight: 700;
+}
+
+.detail {
+  margin-top: 18rpx;
+  font-size: 30rpx;
+  line-height: 1.55;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 22rpx;
+}
+
+.badges text {
+  padding: 8rpx 12rpx;
+  border-radius: 6rpx;
+  background: #ebe5d9;
+  color: #5e5a52;
+  font-size: 23rpx;
+}
+
+.next-list {
+  margin-top: 28rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 800;
+  margin-bottom: 16rpx;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 92rpx 1fr 76rpx;
+  gap: 16rpx;
+  align-items: center;
+  padding: 18rpx;
+  margin-bottom: 12rpx;
+}
+
+.step-time {
+  color: #7b746a;
+  font-size: 24rpx;
+}
+
+.step-body {
+  line-height: 1.5;
+}
+
+.state {
+  text-align: center;
+  color: #8d4b35;
+  font-size: 23rpx;
+}
+
+.state.done {
+  color: #5f8f70;
+}
+
+.control-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 180rpx 1fr 150rpx;
+  gap: 14rpx;
+  padding: 20rpx 22rpx 34rpx;
+  background: #fffdf8;
+  border-top: 1rpx solid #eee6d8;
+}
+
+.control-bar button {
+  height: 76rpx;
+}
+
+.empty {
+  padding: 30rpx;
+}
+
+.empty button {
+  margin-top: 24rpx;
+}
