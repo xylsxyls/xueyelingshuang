@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "MysqlCppConfig.h"
 #include "MysqlCppMacro.h"
+#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -24,14 +25,14 @@ public:
     ~MysqlCppConnectionPool();
 
 public:
-    /** 初始化连接池
+    /** 初始化连接池，已经初始化时直接返回true，不会重建已有连接
     @param [in] config 每个连接使用的MySQL配置
     @param [in] connectionCount 需要创建的连接数量
     @return 返回是否全部连接创建成功
     */
     bool init(const MysqlCppConfig& config, size_t connectionCount);
 
-    /** 反初始化连接池，关闭并释放池内所有连接
+    /** 反初始化连接池，关闭空闲连接，正在借出的连接会在归还时释放，未初始化时直接返回
     */
     void uninit();
 
@@ -98,7 +99,7 @@ private:
     // 最近一次初始化或获取连接失败原因
     std::string m_lastError;
     // 连接池生命周期标记，外借连接的删除器会通过它判断池对象是否仍然存在
-    std::shared_ptr<bool> m_aliveFlag;
+    std::shared_ptr<std::atomic<bool>> m_aliveFlag;
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

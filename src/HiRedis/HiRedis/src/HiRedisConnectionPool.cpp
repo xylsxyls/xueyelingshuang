@@ -2,9 +2,10 @@
 #include "HiRedis.h"
 #include "HiRedisConnectionReleaser.h"
 #include <chrono>
+#include <new>
 
 HiRedisConnectionPool::HiRedisConnectionPool() :
-m_aliveFlag(new std::atomic<bool>(true)),
+m_aliveFlag(new (std::nothrow) std::atomic<bool>(true)),
 m_isInit(false)
 {
 
@@ -12,6 +13,7 @@ m_isInit(false)
 
 HiRedisConnectionPool::~HiRedisConnectionPool()
 {
+    uninit();
     if (m_aliveFlag.get() != nullptr)
     {
         m_aliveFlag->store(false);
@@ -20,7 +22,19 @@ HiRedisConnectionPool::~HiRedisConnectionPool()
 
 bool HiRedisConnectionPool::init(const HiRedisConfig& config, size_t connectionCount)
 {
-    uninit();
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_isInit)
+        {
+            return true;
+        }
+    }
+    if (m_aliveFlag.get() == nullptr)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_lastError = "redis pool alive flag alloc failed";
+        return false;
+    }
     if (connectionCount == 0)
     {
         std::unique_lock<std::mutex> lock(m_mutex);
@@ -36,21 +50,41 @@ bool HiRedisConnectionPool::init(const HiRedisConfig& config, size_t connectionC
         }
     }
 
+    auto deleteConnection = [](HiRedis* connection)
+    {
+        if (connection == nullptr)
+        {
+            return;
+        }
+        connection->uninit();
+        delete connection;
+    };
+    auto deleteConnections = [&deleteConnection](std::vector<HiRedis*>& connections)
+    {
+        for (size_t i = 0; i < connections.size(); ++i)
+        {
+            deleteConnection(connections[i]);
+        }
+        connections.clear();
+    };
+
     std::vector<HiRedis*> allConnections;
     std::vector<HiRedis*> availableConnections;
     for (size_t i = 0; i < connectionCount; ++i)
     {
-        HiRedis* connection = new HiRedis;
+        HiRedis* connection = new (std::nothrow) HiRedis;
+        if (connection == nullptr)
+        {
+            deleteConnections(allConnections);
+            std::unique_lock<std::mutex> lock(m_mutex);
+            m_lastError = "redis connection alloc failed";
+            return false;
+        }
         if (!connection->init(config))
         {
             std::string error = connection->lastError();
-            connection->uninit();
-            delete connection;
-            for (size_t j = 0; j < allConnections.size(); ++j)
-            {
-                allConnections[j]->uninit();
-                delete allConnections[j];
-            }
+            deleteConnection(connection);
+            deleteConnections(allConnections);
             std::unique_lock<std::mutex> lock(m_mutex);
             m_lastError = error;
             return false;
@@ -60,14 +94,17 @@ bool HiRedisConnectionPool::init(const HiRedisConfig& config, size_t connectionC
     }
 
     std::unique_lock<std::mutex> lock(m_mutex);
+    if (m_isInit)
+    {
+        lock.unlock();
+        deleteConnections(allConnections);
+        return true;
+    }
     if (!m_allConnections.empty())
     {
-        for (size_t i = 0; i < allConnections.size(); ++i)
-        {
-            allConnections[i]->uninit();
-            delete allConnections[i];
-        }
         m_lastError = "redis pool still has borrowed connections";
+        lock.unlock();
+        deleteConnections(allConnections);
         return false;
     }
     m_allConnections = allConnections;
@@ -80,6 +117,10 @@ bool HiRedisConnectionPool::init(const HiRedisConfig& config, size_t connectionC
 void HiRedisConnectionPool::uninit()
 {
     std::unique_lock<std::mutex> lock(m_mutex);
+    if (!m_isInit)
+    {
+        return;
+    }
     std::vector<HiRedis*> borrowedConnections;
     for (size_t i = 0; i < m_allConnections.size(); ++i)
     {

@@ -20,19 +20,19 @@ public:
     */
     HiRedisConnectionPool();
 
-    /** 析构函数，不做反初始化，调用方需要在退出前主动调用uninit
+    /** 析构函数，会兜底关闭连接池，调用方仍应在退出前主动调用uninit
     */
     ~HiRedisConnectionPool();
 
 public:
-    /** 初始化连接池
+    /** 初始化连接池，已经初始化时直接返回true，不会重建已有连接
     @param [in] config Redis连接配置
     @param [in] connectionCount 连接池大小
     @return 返回是否所有连接都创建成功
     */
     bool init(const HiRedisConfig& config, size_t connectionCount);
 
-    /** 反初始化连接池，关闭空闲连接，正在借出的连接会在归还时释放
+    /** 反初始化连接池，关闭空闲连接，正在借出的连接会在归还时释放，未初始化时直接返回
     */
     void uninit();
 

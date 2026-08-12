@@ -2,9 +2,10 @@
 #include "MysqlCpp.h"
 #include "MysqlCppConnectionReleaser.h"
 #include <chrono>
+#include <new>
 
 MysqlCppConnectionPool::MysqlCppConnectionPool() :
-m_aliveFlag(new bool(true)),
+m_aliveFlag(new (std::nothrow) std::atomic<bool>(true)),
 m_isInit(false)
 {
 
@@ -15,14 +16,25 @@ MysqlCppConnectionPool::~MysqlCppConnectionPool()
     uninit();
     if (m_aliveFlag.get() != nullptr)
     {
-        *m_aliveFlag = false;
-        m_aliveFlag.reset();
+        m_aliveFlag->store(false);
     }
 }
 
 bool MysqlCppConnectionPool::init(const MysqlCppConfig& config, size_t connectionCount)
 {
-    uninit();
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_isInit)
+        {
+            return true;
+        }
+    }
+    if (m_aliveFlag.get() == nullptr)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_lastError = "mysql pool alive flag alloc failed";
+        return false;
+    }
     if (connectionCount == 0)
     {
         std::unique_lock<std::mutex> lock(m_mutex);
@@ -38,20 +50,41 @@ bool MysqlCppConnectionPool::init(const MysqlCppConfig& config, size_t connectio
         }
     }
 
+    auto deleteConnection = [](MysqlCpp* connection)
+    {
+        if (connection == nullptr)
+        {
+            return;
+        }
+        connection->uninit();
+        delete connection;
+    };
+    auto deleteConnections = [&deleteConnection](std::vector<MysqlCpp*>& connections)
+    {
+        for (size_t i = 0; i < connections.size(); ++i)
+        {
+            deleteConnection(connections[i]);
+        }
+        connections.clear();
+    };
+
     std::vector<MysqlCpp*> allConnections;
     std::vector<MysqlCpp*> availableConnections;
     for (size_t i = 0; i < connectionCount; ++i)
     {
-        MysqlCpp* connection = new MysqlCpp;
+        MysqlCpp* connection = new (std::nothrow) MysqlCpp;
+        if (connection == nullptr)
+        {
+            deleteConnections(allConnections);
+            std::unique_lock<std::mutex> lock(m_mutex);
+            m_lastError = "mysql connection alloc failed";
+            return false;
+        }
         if (!connection->init())
         {
             std::string error = connection->lastError();
-            delete connection;
-            for (size_t j = 0; j < allConnections.size(); ++j)
-            {
-                allConnections[j]->uninit();
-                delete allConnections[j];
-            }
+            deleteConnection(connection);
+            deleteConnections(allConnections);
             std::unique_lock<std::mutex> lock(m_mutex);
             m_lastError = error;
             return false;
@@ -59,13 +92,8 @@ bool MysqlCppConnectionPool::init(const MysqlCppConfig& config, size_t connectio
         if (!connection->connect(config))
         {
             std::string error = connection->lastError();
-            connection->uninit();
-            delete connection;
-            for (size_t j = 0; j < allConnections.size(); ++j)
-            {
-                allConnections[j]->uninit();
-                delete allConnections[j];
-            }
+            deleteConnection(connection);
+            deleteConnections(allConnections);
             std::unique_lock<std::mutex> lock(m_mutex);
             m_lastError = error;
             return false;
@@ -75,14 +103,17 @@ bool MysqlCppConnectionPool::init(const MysqlCppConfig& config, size_t connectio
     }
 
     std::unique_lock<std::mutex> lock(m_mutex);
+    if (m_isInit)
+    {
+        lock.unlock();
+        deleteConnections(allConnections);
+        return true;
+    }
     if (!m_allConnections.empty())
     {
-        for (size_t i = 0; i < allConnections.size(); ++i)
-        {
-            allConnections[i]->uninit();
-            delete allConnections[i];
-        }
         m_lastError = "mysql pool still has borrowed connections";
+        lock.unlock();
+        deleteConnections(allConnections);
         return false;
     }
     m_allConnections = allConnections;
@@ -95,6 +126,10 @@ bool MysqlCppConnectionPool::init(const MysqlCppConfig& config, size_t connectio
 void MysqlCppConnectionPool::uninit()
 {
     std::unique_lock<std::mutex> lock(m_mutex);
+    if (!m_isInit)
+    {
+        return;
+    }
     std::vector<MysqlCpp*> borrowedConnections;
     for (size_t i = 0; i < m_allConnections.size(); ++i)
     {
@@ -211,6 +246,15 @@ void MysqlCppConnectionPool::releaseConnection(MysqlCpp* connection)
         return;
     }
     std::unique_lock<std::mutex> lock(m_mutex);
+    for (size_t i = 0; i < m_availableConnections.size(); ++i)
+    {
+        if (m_availableConnections[i] == connection)
+        {
+            m_condition.notify_one();
+            return;
+        }
+    }
+
     for (size_t i = 0; i < m_allConnections.size(); ++i)
     {
         if (m_allConnections[i] != connection)
