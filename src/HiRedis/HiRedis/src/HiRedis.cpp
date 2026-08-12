@@ -1053,6 +1053,8 @@ void HiRedis::setLastError(const std::string& error)
 //	check(poolOk, "HiRedisConnectionPool init");
 //	if (poolOk)
 //	{
+//		check(pool.init(config, 8), "HiRedisConnectionPool double init no-op");
+//		check(pool.totalCount() == 8 && pool.availableCount() == 8, "HiRedisConnectionPool double init keep old pool");
 //		std::shared_ptr<HiRedis> poolRedis = pool.acquire(1000);
 //		check(poolRedis.get() != nullptr && poolRedis->ping(), "HiRedisConnectionPool acquire");
 //		poolRedis.reset();
@@ -1076,9 +1078,11 @@ void HiRedis::setLastError(const std::string& error)
 //		if (borrowedPoolOk)
 //		{
 //			std::shared_ptr<HiRedis> borrowedConnection = borrowedPool.acquire(1000);
-//			check(borrowedConnection.get() != nullptr && !borrowedPool.init(config, 1), "HiRedisConnectionPool init with borrowed false");
+//			check(borrowedConnection.get() != nullptr && borrowedPool.init(config, 1), "HiRedisConnectionPool double init with borrowed no-op");
+//			check(borrowedPool.totalCount() == 1 && borrowedPool.availableCount() == 0, "HiRedisConnectionPool double init keep borrowed state");
 //			borrowedPool.uninit();
-//			check(borrowedPool.totalCount() == 1 && borrowedPool.availableCount() == 0, "HiRedisConnectionPool borrowed kept after uninit");
+//			borrowedPool.uninit();
+//			check(borrowedPool.totalCount() == 1 && borrowedPool.availableCount() == 0, "HiRedisConnectionPool double uninit kept borrowed state");
 //			borrowedConnection.reset();
 //			check(borrowedPool.totalCount() == 0 && borrowedPool.availableCount() == 0, "HiRedisConnectionPool borrowed release after uninit");
 //		}
@@ -1098,6 +1102,12 @@ void HiRedis::setLastError(const std::string& error)
 //		{
 //			delete destroyPool;
 //		}
+//
+//		HiRedisConnectionPool* idleDestroyPool = new HiRedisConnectionPool;
+//		bool idleDestroyPoolOk = idleDestroyPool->init(config, 1);
+//		check(idleDestroyPoolOk, "HiRedisConnectionPool destroy with idle init");
+//		delete idleDestroyPool;
+//		check(true, "HiRedisConnectionPool idle destroy safe");
 //
 //		std::atomic<int32_t> threadFailCount(0);
 //		std::vector<std::thread> threads;
