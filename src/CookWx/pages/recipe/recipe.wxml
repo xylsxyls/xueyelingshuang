@@ -42,15 +42,15 @@
       <view class="section-title">购买后解锁详细步骤</view>
       <view class="muted">购买后会加入菜单，可参与多菜并行排程。</view>
     </view>
-    <button class="primary-btn" bindtap="purchase">购买 {{recipe.priceCoins}} 金币</button>
+    <button class="primary-btn" bindtap="purchase" loading="{{buying}}" disabled="{{buying}}">购买 {{recipe.priceCoins}} 金币</button>
   </view>
 
   <view class="action-bar">
-    <button class="ghost-btn" bindtap="favorite">{{recipe.favorite ? '取消收藏' : '收藏'}}</button>
+    <button class="ghost-btn" bindtap="favorite" loading="{{favoriting}}" disabled="{{favoriting}}">{{recipe.favorite ? '取消收藏' : '收藏'}}</button>
     <button class="primary-btn" bindtap="addToMenu" disabled="{{!recipe.owned}}">{{recipe.owned ? '加入菜单' : '先购买'}}</button>
   </view>
 </view>
 
 <view class="page" wx:else>
-  <view class="card empty">正在加载菜谱...</view>
+  <view class="card empty">{{error || (loading ? '正在加载菜谱...' : '菜谱不存在')}}</view>
 </view>

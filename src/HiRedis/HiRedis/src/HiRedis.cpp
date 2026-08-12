@@ -12,7 +12,7 @@ m_isInit(false)
 
 HiRedis::~HiRedis()
 {
-
+    uninit();
 }
 
 bool HiRedis::init(const std::string& ip, int32_t port)
@@ -875,6 +875,11 @@ void HiRedis::setLastError(const std::string& error)
 //			", total=" << totalCount << ", failed=" << failCount << ", skipped=" << skipCount << std::endl;
 //		return failCount == 0 ? 0 : 1;
 //	}
+//	{
+//		HiRedis scopedRedis;
+//		check(scopedRedis.init(config), "HiRedis destructor scoped init");
+//	}
+//	check(true, "HiRedis destructor uninit safe");
 //
 //	std::ostringstream prefixStream;
 //	prefixStream << "hiredis_test_" << static_cast<int64_t>(std::time(nullptr)) << "_" <<
@@ -1185,4 +1190,3 @@ void HiRedis::setLastError(const std::string& error)
 //		", total=" << totalCount << ", failed=" << failCount << ", skipped=" << skipCount << std::endl;
 //	return failCount == 0 ? 0 : 1;
 //}
-//

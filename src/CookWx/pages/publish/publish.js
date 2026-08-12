@@ -21,9 +21,16 @@ Page({
     api.getRecipes()
       .then((res) => {
         if (!res.ok) throw new Error(res.message)
-        this.setData({ ownedRecipes: (res.recipes || []).filter((item) => item.owned) })
+        this.setData({ ownedRecipes: this.decorateRecipes((res.recipes || []).filter((item) => item.owned)) })
       })
       .catch(() => wx.showToast({ title: '菜谱加载失败', icon: 'none' }))
+  },
+
+  decorateRecipes(recipes) {
+    const selectedMap = this.data.selectedMap
+    return recipes.map((item) => Object.assign({}, item, {
+      selected: !!selectedMap[item.id]
+    }))
   },
 
   chooseMedia() {
@@ -38,7 +45,8 @@ Page({
           mediaPath: file.tempFilePath,
           mediaType: file.fileType || (file.tempFilePath.indexOf('.mp4') >= 0 ? 'video' : 'image')
         })
-      }
+      },
+      fail: () => wx.showToast({ title: '未选择素材', icon: 'none' })
     })
   },
 
@@ -51,7 +59,9 @@ Page({
     const selectedMap = Object.assign({}, this.data.selectedMap)
     if (selectedMap[id]) delete selectedMap[id]
     else selectedMap[id] = true
-    this.setData({ selectedMap })
+    this.setData({ selectedMap }, () => {
+      this.setData({ ownedRecipes: this.decorateRecipes(this.data.ownedRecipes) })
+    })
   },
 
   publish() {

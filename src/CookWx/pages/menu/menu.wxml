@@ -20,7 +20,7 @@
         <view class="recipe-main">
           <view class="between">
             <view class="recipe-title">{{item.title}}</view>
-            <view class="price">{{item.owned ? '已拥有' : item.priceCoins + '金币'}}</view>
+            <view class="price">{{item.priceText}}</view>
           </view>
           <view class="recipe-sub">{{item.subtitle}}</view>
           <view class="time-line">预计 {{item.estimatedMinutes}} 分 · 动手 {{item.activeMinutes}} 分</view>
@@ -29,8 +29,8 @@
           </view>
         </view>
         <view class="pick">
-          <button class="minus" data-id="{{item.id}}" bindtap="removeRecipe" disabled="{{!selectedMap[item.id]}}">-</button>
-          <button wx:if="{{item.owned}}" class="plus" data-id="{{item.id}}" bindtap="addRecipe" disabled="{{selectedMap[item.id]}}">+</button>
+          <button class="minus" data-id="{{item.id}}" bindtap="removeRecipe" disabled="{{!item.selected}}">-</button>
+          <button wx:if="{{item.owned}}" class="plus" data-id="{{item.id}}" bindtap="addRecipe" disabled="{{item.selected}}">+</button>
           <button wx:else class="buy" data-id="{{item.id}}" bindtap="openRecipe">买</button>
         </view>
       </view>
@@ -43,7 +43,7 @@
       <view class="muted" wx:if="{{plan.summary}}">总 {{plan.summary.totalMinutes}} 分 · 动手 {{plan.summary.activeMinutes}} 分</view>
       <view class="muted" wx:else>正在计算时间...</view>
     </view>
-    <button class="primary-btn" bindtap="openCook">开始做菜</button>
+    <button class="primary-btn" bindtap="openCook" loading="{{starting}}" disabled="{{starting || previewing || !plan.summary}}">开始做菜</button>
   </view>
 
   <view class="cart-sheet card" wx:if="{{cartOpen}}">

@@ -84,6 +84,11 @@
   opacity: 0.42;
 }
 
+.bar.current {
+  border: 4rpx solid #fffdf8;
+  box-shadow: 0 6rpx 18rpx rgba(24, 35, 31, 0.22);
+}
+
 .current {
   margin-top: 22rpx;
   padding: 28rpx;

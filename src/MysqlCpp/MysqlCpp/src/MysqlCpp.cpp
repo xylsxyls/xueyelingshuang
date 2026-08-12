@@ -32,7 +32,7 @@ m_isInit(false)
 
 MysqlCpp::~MysqlCpp()
 {
-
+    uninit();
 }
 
 bool MysqlCpp::init()
@@ -520,7 +520,10 @@ uint64_t MysqlCpp::queryLastInsertId() const
 }
 
 //#include "MysqlCppConnectionPool.h"
+//#include "MysqlCppHelper.h"
+//#include "MysqlCppPrepareStatement.h"
 //#include "MysqlCppTransaction.h"
+//#include "MysqlSqlString.h"
 //#include <atomic>
 //#include <cstdlib>
 //#include <ctime>
@@ -625,6 +628,11 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //    check(!localMysql.isInit(), "MysqlCpp default not init");
 //    check(localMysql.init(), "MysqlCpp init");
 //    check(localMysql.isInit(), "MysqlCpp is init");
+//    {
+//        MysqlCpp scopedMysql;
+//        check(scopedMysql.init(), "MysqlCpp destructor scoped init");
+//    }
+//    check(true, "MysqlCpp destructor uninit safe");
 //    check(!localMysql.ping(), "MysqlCpp no connection ping false");
 //    check(!localMysql.isConnected(), "MysqlCpp no connection isConnected false");
 //    check(!localMysql.beginTransaction(), "MysqlCpp begin transaction without connection");
@@ -928,4 +936,3 @@ uint64_t MysqlCpp::queryLastInsertId() const
 //    std::cout << "[SUMMARY] total=" << totalCount << " failed=" << failCount << " skipped=" << skipCount << std::endl;
 //    return failCount == 0 ? 0 : 1;
 //}
-//

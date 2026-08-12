@@ -21,9 +21,9 @@
         </view>
 
         <view class="feed-actions">
-          <button class="round-btn" data-id="{{item.recipeIds[0]}}" bindtap="toggleLike">赞</button>
+          <button class="round-btn" bindtap="toggleLike">赞</button>
           <button class="round-btn" bindtap="openComments">评</button>
-          <button class="round-btn" data-id="{{item.recipeIds[0]}}" bindtap="favorite">藏</button>
+          <button class="round-btn" data-index="{{index}}" bindtap="favorite">{{item.favorite ? '已藏' : '藏'}}</button>
         </view>
 
         <view class="feed-info">
@@ -32,10 +32,10 @@
           <view class="desc">{{item.description}}</view>
           <view class="metrics">{{item.likes}}赞 · {{item.comments}}评论</view>
           <view class="recipe-row">
-            <button class="recipe-btn" data-id="{{item.recipeIds[0]}}" bindtap="openRecipe">
-              {{item.owned ? '加入菜谱' : ('购买菜谱 ' + item.priceCoins + '金币')}}
+            <button class="recipe-btn" data-index="{{index}}" bindtap="handleRecipeAction" loading="{{buyingRecipeId === item.primaryRecipeId}}">
+              {{item.actionText}}
             </button>
-            <button class="ghost-recipe-btn" data-id="{{item.recipeIds[0]}}" bindtap="addToMenu" wx:if="{{item.owned}}">加入菜单</button>
+            <button class="ghost-recipe-btn" data-index="{{index}}" bindtap="addToMenu" wx:if="{{item.canAddToMenu}}">{{item.menuText}}</button>
           </view>
         </view>
       </view>

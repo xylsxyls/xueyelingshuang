@@ -78,12 +78,22 @@ std::string CookServerTestConfig::reportPath() const
 
 std::string CookServerTestConfig::cookServerFeatureDocumentPath() const
 {
-	return CSystem::GetCurrentExePath() + m_featureDocumentFileName;
+	return cookServerDocumentDirectoryPath() + m_featureDocumentFileName;
 }
 
 std::string CookServerTestConfig::cookServerDeployDocumentPath() const
 {
-	return CSystem::GetCurrentExePath() + m_deployDocumentFileName;
+	return cookServerDocumentDirectoryPath() + m_deployDocumentFileName;
+}
+
+std::string CookServerTestConfig::cookServerDocumentDirectoryPath() const
+{
+	std::string documentPath = CSystem::GetCurrentExePath() + "../common/CookServer/";
+	if (CSystem::DirOrFileExist(documentPath))
+	{
+		return documentPath;
+	}
+	return CSystem::GetCurrentExePath();
 }
 
 bool CookServerTestConfig::parseArgument(const std::string& argument)

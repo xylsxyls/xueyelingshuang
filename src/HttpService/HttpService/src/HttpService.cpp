@@ -572,6 +572,12 @@ void HttpService::writeResponse(void* connData, const HttpResponse& response)
     }
 }
 
+//#include "HandlerContext.h"
+//#include "HttpHandler.h"
+//#include "HttpInterface.h"
+//#include "CSystem/CSystemAPI.h"
+//#include "CStringManager/CStringManagerAPI.h"
+//#include "civetweb.h"
 //#include <atomic>
 //#include <cstdlib>
 //#include <functional>
@@ -973,4 +979,3 @@ void HttpService::writeResponse(void* connData, const HttpResponse& response)
 //		", total=" << totalCount << ", failed=" << failCount << std::endl;
 //	return failCount == 0 ? 0 : 1;
 //}
-//

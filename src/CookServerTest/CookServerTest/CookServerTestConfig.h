@@ -38,15 +38,20 @@ public:
 	*/
 	std::string reportPath() const;
 
-	/** 获取CookServer功能说明文档完整路径
+	/** 获取CookServer功能说明文档完整路径，优先输出到common/CookServer目录
 	@return 返回CookServer功能说明文档完整路径
 	*/
 	std::string cookServerFeatureDocumentPath() const;
 
-	/** 获取CookServer部署说明文档完整路径
+	/** 获取CookServer部署说明文档完整路径，优先输出到common/CookServer目录
 	@return 返回CookServer部署说明文档完整路径
 	*/
 	std::string cookServerDeployDocumentPath() const;
+
+	/** 获取CookServer文档目录
+	@return 返回CookServer文档目录，目录不存在时返回测试程序所在目录
+	*/
+	std::string cookServerDocumentDirectoryPath() const;
 
 private:
 	/** 从命令行参数中解析--key=value形式的配置项

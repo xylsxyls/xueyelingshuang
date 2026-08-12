@@ -15,10 +15,11 @@ Page({
     Promise.all([api.getAccount(), api.getRecipes()])
       .then(([accountRes, recipeRes]) => {
         if (!accountRes.ok || !recipeRes.ok) throw new Error('load failed')
-        const purchasedIds = accountRes.account.purchasedRecipeIds || []
+        const account = accountRes.account || {}
+        const purchasedIds = Array.isArray(account.purchasedRecipeIds) ? account.purchasedRecipeIds : []
         const purchased = (recipeRes.recipes || []).filter((item) => purchasedIds.indexOf(item.id) >= 0)
         this.setData({
-          account: accountRes.account,
+          account,
           recipes: recipeRes.recipes || [],
           purchased
         })

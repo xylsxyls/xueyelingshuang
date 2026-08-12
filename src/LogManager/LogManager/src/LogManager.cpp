@@ -575,8 +575,11 @@ std::string LogManager::formatLineText(LogLevel flag, const std::string& fileMac
 	return oss.str();
 }
 
+//#include "CSystem/CSystemAPI.h"
+//#include "CStringManager/CStringManagerAPI.h"
 //#include <atomic>
 //#include <cstdlib>
+//#include <fstream>
 //#include <functional>
 //#include <iostream>
 //#include <sstream>

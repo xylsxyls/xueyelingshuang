@@ -23,7 +23,7 @@ public:
     */
     MysqlCpp();
 
-    /** 析构函数，不做反初始化，调用方需要在退出前主动调用uninit
+    /** 析构函数，兜底关闭当前MySQL连接，重复uninit安全
     */
     ~MysqlCpp();
 

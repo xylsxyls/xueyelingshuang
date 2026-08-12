@@ -24,10 +24,18 @@ Page({
   onLoad() {
     const app = getApp()
     const plan = app.globalData.lastPlan || {}
+    this.lastRemindedTaskId = ''
     this.setData({
       plan,
       voiceLabel: app.globalData.voiceGender === 'male' ? '男声' : '女声'
     }, () => this.rebuildView())
+  },
+
+  onShow() {
+    const app = getApp()
+    this.setData({
+      voiceLabel: app.globalData.voiceGender === 'male' ? '男声' : '女声'
+    })
   },
 
   onUnload() {
@@ -180,8 +188,10 @@ Page({
   rebuildBarsOnly() {
     const doneMap = this.data.doneMap
     const elapsed = this.data.elapsedSeconds
+    const currentId = this.data.currentTask ? this.data.currentTask.id : ''
     const bars = (this.data.timelineBars || []).map((bar) => Object.assign({}, bar, {
-      done: !!doneMap[bar.id] || elapsed >= bar.endSeconds
+      done: !!doneMap[bar.id] || elapsed >= bar.endSeconds,
+      current: currentId && currentId === bar.id
     }))
     this.setData({ timelineBars: bars })
   },

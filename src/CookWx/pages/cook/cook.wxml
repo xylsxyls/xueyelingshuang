@@ -21,7 +21,7 @@
       <view
         wx:for="{{timelineBars}}"
         wx:key="id"
-        class="bar {{item.active ? 'active' : 'wait'}} {{item.safetyLevel}} {{item.done ? 'done' : ''}}"
+        class="bar {{item.active ? 'active' : 'wait'}} {{item.safetyLevel}} {{item.done ? 'done' : ''}} {{item.current ? 'current' : ''}}"
         style="left: {{item.left}}rpx; width: {{item.width}}rpx"
       >
         <text>{{item.title}}</text>

@@ -7,8 +7,9 @@ function appState() {
 
 function request(options) {
   const state = appState()
-  const method = options.method || 'GET'
-  const data = Object.assign({}, options.data || {}, {
+  const safeOptions = options || {}
+  const method = safeOptions.method || 'GET'
+  const data = Object.assign({}, safeOptions.data || {}, {
     userId: state.userId || 'demo_user',
     clientType: state.clientType || 'wechat_mini',
     clientVersion: state.clientVersion || '0.1.0'
@@ -16,7 +17,7 @@ function request(options) {
 
   return new Promise((resolve, reject) => {
     wx.request({
-      url: `${config.BASE_URL}${options.url}`,
+      url: `${config.BASE_URL}${safeOptions.url}`,
       method,
       data,
       timeout: 10000,
@@ -24,17 +25,22 @@ function request(options) {
         'content-type': 'application/json'
       },
       success(res) {
-        if (res.statusCode >= 200 && res.statusCode < 300 && res.data) {
-          resolve(res.data)
-        } else {
-          reject(new Error(`HTTP ${res.statusCode}`))
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(res.data || {})
+          return
         }
+        const message = res.data && res.data.message ? res.data.message : `HTTP ${res.statusCode}`
+        reject(new Error(message))
       },
       fail(err) {
-        reject(err)
+        reject(new Error(err && err.errMsg ? err.errMsg : '网络请求失败'))
       }
     })
   })
+}
+
+function healthCheck() {
+  return request({ url: '/api/health' })
 }
 
 function getFeed() {
@@ -70,6 +76,7 @@ function startPlan(recipeIds) {
 }
 
 module.exports = {
+  healthCheck,
   getFeed,
   getRecipes,
   getAccount,
