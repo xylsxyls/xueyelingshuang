@@ -86,8 +86,8 @@ struct Recipe
 	std::vector<CookTask> m_tasks;
 	// 购买所需金币，0表示免费
 	int32_t m_priceCoins;
-	// 示例数据中的默认拥有状态
-	bool m_owned;
+	// 新账号是否默认拥有该菜谱，真正的账号拥有关系仍以UserAccount中的菜谱ID集合为准
+	bool m_defaultOwned;
 	// 是否为系统内置菜谱
 	bool m_systemRecipe;
 };
@@ -156,7 +156,9 @@ struct UserAccount
 	std::string m_userId;
 	// 账户金币余额
 	int32_t m_coins;
-	// 已购买菜谱ID集合
+	// 账号已经拥有的菜谱ID集合，免费默认菜和付费购买菜都放在这里
+	std::set<std::string> m_ownedRecipeIds;
+	// 已付费购买的菜谱ID集合，用于展示购买记录和后续收益统计
 	std::set<std::string> m_purchasedRecipeIds;
 	// 收藏菜谱ID集合
 	std::set<std::string> m_favoriteRecipeIds;

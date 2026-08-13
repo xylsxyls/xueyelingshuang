@@ -1,4 +1,4 @@
-﻿<view class="page messages-page">
+<view class="page messages-page">
   <view class="msg card" wx:for="{{messages}}" wx:key="id">
     <view class="icon">{{item.icon}}</view>
     <view>

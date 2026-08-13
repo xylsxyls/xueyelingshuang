@@ -68,7 +68,13 @@ int32_t main()
 	        g_config.m_httpWorkerThreads,
 	        maxRequestBytesText.c_str());
 
-	CookCatalog::recipeCatalog();
+	if (!CookCatalog::init())
+	{
+		LOGFATAL("CookServer recipe catalog init failed.");
+		LogManager::instance().uninitAll();
+		Config::instance().uninit();
+		return 1;
+	}
 	LOGINFO("CookServer recipe catalog ready recipeCount=%d", static_cast<int32_t>(CookCatalog::recipeCatalog().size()));
 
 	// 注册控制台退出信号，避免服务进程只能被强杀。
@@ -81,6 +87,7 @@ int32_t main()
 	if (!httpServer.start())
 	{
 		LOGFATAL("CookServer http server start failed.");
+		CookCatalog::uninit();
 		LogManager::instance().uninitAll();
 		Config::instance().uninit();
 		return 1;
@@ -95,6 +102,7 @@ int32_t main()
 	}
 	LOGWARNING("CookServer stop signal received.");
 	httpServer.stop();
+	CookCatalog::uninit();
 	LOGINFO("CookServer shutdown complete.");
 	LogManager::instance().uninitAll();
 	Config::instance().uninit();

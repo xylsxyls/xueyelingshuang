@@ -60,7 +60,7 @@ Windows 下新增的 .h、.cpp、.vcxproj、.filters 原则上使用 UTF-8 带 B
 如果发现已有文件不是预期编码，AI 需要告知用户，不要擅自整体转码。除非用户明确要求，否则不要把老文件批量转换编码。
 
 5. 文件尾。
-每个文件末尾不能有空白行，也不能保留额外换行符。可执行检查标准：文件最后一个字节必须是最后一行实际内容的最后一个字符，不能是 CR(0x0D)、LF(0x0A)、空格或 Tab。.py、.sh、CMakeLists.txt、.h、.cpp、.txt 都遵守这条规则，不要因为 Python 常见风格习惯给 .py 文件保留末尾换行。批量构建脚本复制头文件后，如果脚本重新生成了文件尾换行，AI 必须再次清理。
+每个文件末尾不能有空白行，也不能保留额外换行符。可执行检查标准：文件最后一个字节必须是最后一行实际内容的最后一个字符，不能是 CR(0x0D)、LF(0x0A)、空格或 Tab。.sh、CMakeLists.txt、.h、.cpp、.txt 都遵守这条规则。已有 .py 脚本属于构建框架文件，不为了统一文件尾、换行或编码而修改；如果发现 .py 文件格式和本规范其他规则不一致，只记录问题并询问用户，不要直接改。
 
 四、目录和工程组织
 
@@ -165,7 +165,10 @@ private:
 2. 二次封装库可以有 scripts 目录。
 库工程可以有 scripts/before_xxx.sh、scripts/after_xxx.sh、scripts/rebuild_xxx.py、scripts/CMakeLists.txt。
 
-3. Debug 和 Release 依赖策略。
+3. rebuild_*.py 只读不改。
+已有 scripts/rebuild_xxx.py 属于 CloudRebuild 调用的 Windows 构建框架脚本，AI 不要修改它。不要为了复制第三方头文件、复制第三方库、调整依赖、清理文件尾、统一换行或修注释去改 rebuild_*.py。需要准备依赖或第三方文件时，改 scripts/before_xxx.sh、scripts/after_xxx.sh、version_debug.sh、version_release.sh 或工程配置；新建库时优先让 DllProduce/QDllProduce 生成 rebuild_*.py，不要手写修改已有库的 rebuild_*.py。
+
+4. Debug 和 Release 依赖策略。
 Debug 优先使用 dll，Release 优先使用 lib。
 
 示例：
@@ -175,16 +178,16 @@ Debug 优先使用 dll，Release 优先使用 lib。
 "$CLOUD_REBUILD" CStringManager 32 lib release same
 "$CLOUD_REBUILD" CSystem 32 lib release same
 
-4. same 和 only。
+5. same 和 only。
 same 表示正常编译当前库并执行它自己的 before 依赖。
 only 表示只编当前库，跳过它自己的 before 依赖。
 
 如果某个库的 before 脚本还负责复制第三方头文件或库文件，不要随便把它改成 only，否则干净环境下可能缺文件。only 用于确认依赖已经由前面的脚本准备过，且当前库 before 没有其他必须副作用的情况。
 
-5. 节省编译时间。
+6. 节省编译时间。
 version 脚本要尽量避免重复编译大量依赖，但不能为了省时间跳过必要的第三方同步或宏文件替换。
 
-6. CMakeLists.txt。
+7. CMakeLists.txt。
 CMakeLists.txt 使用 UTF-8 不带 BOM。Linux 下尽量使用 C++11 和跨平台链接方式。不要写死 Windows 路径。
 
 七、命名规范
@@ -587,7 +590,7 @@ CSystem::GetCurrentExePath() + 文件名
 第三方异常、错误码、错误对象不要穿透到业务层。封装库内部捕获并转换为 bool、结果对象、lastError 文本或项目统一错误结构。业务层看到的是本项目封装后的错误表达。
 
 7. 第三方文件由脚本准备。
-第三方头文件和库文件通过 before 脚本从 tools 复制到 include/lib。业务工程不写 tools 相对路径。AI 新增或调整第三方依赖时，必须同步维护 before 脚本、VS 包含目录、库目录、Linux CMake 链接和 version 脚本。
+第三方头文件和库文件通过 before 脚本从 tools 复制到 include/lib。业务工程不写 tools 相对路径。AI 新增或调整第三方依赖时，必须同步维护 before 脚本、VS 包含目录、库目录、Linux CMake 链接和 version 脚本。不要把第三方复制逻辑写进 rebuild_*.py。
 
 8. API.h 是外部入口。
 封装库对业务暴露 XxxAPI.h。业务工程包含该库时优先只包含 XxxAPI.h。XxxAPI.h 应包含业务常用的公开头文件。不要让业务代码为了使用一个功能去猜应该包含库内部哪个具体头文件。
@@ -672,7 +675,7 @@ Linux 特有 API 同理封装到 CSystem 或平台层，不散落在业务中。
 CloudRebuild 会把头文件复制到 include。修改公开头文件后，构建完成要确认 include 下同步后的文件也符合规范。
 
 4. 检查文件尾。
-构建脚本复制后可能改变文件尾，最后必须重新按字节检查相关文件。判定标准：文件最后一个字节不能是 CR(0x0D)、LF(0x0A)、空格或 Tab；文件末尾不能出现空白行。
+构建脚本复制后可能改变文件尾，最后必须重新按字节检查本次修改过的非 .py 文件。判定标准：文件最后一个字节不能是 CR(0x0D)、LF(0x0A)、空格或 Tab；文件末尾不能出现空白行。.py 脚本不做自动格式整理。
 
 5. 不隐藏警告。
 能通过代码规范消除的警告要消除。例如 C4251 局部 pragma。第三方缺 PDB 的 LNK4099 可说明来源，通常需要重编第三方库或提供 PDB，不应通过业务代码乱改。

@@ -1,4 +1,4 @@
-﻿<view class="page voice-page">
+<view class="page voice-page">
   <view class="card option {{voiceGender === 'female' ? 'active' : ''}}" data-value="female" bindtap="choose">
     <view>
       <view class="title">女声</view>

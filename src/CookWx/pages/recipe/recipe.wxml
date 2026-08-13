@@ -1,4 +1,4 @@
-﻿<view class="page recipe-page" wx:if="{{recipe}}">
+<view class="page recipe-page" wx:if="{{recipe}}">
   <view class="hero" style="background: {{recipe.coverColor}}">
     <view class="hero-title">{{recipe.title}}</view>
     <view class="hero-subtitle">{{recipe.subtitle}}</view>

@@ -1,0 +1,66 @@
+CookRecipes配置说明文档
+
+一、文件位置
+1. 菜谱配置目录固定为 CookServer.exe 同级目录下的 res/recipes。
+2. 每道菜一个 JSON 文件，不把所有菜合并到同一个 JSON 文件里。
+3. 文件名必须使用菜谱唯一 ID，例如 cook_000001.json。文件名去掉 .json 后必须等于 JSON 内的 id 字段，否则服务端会跳过该文件。
+4. 文件编码必须使用 UTF-8，不要使用 GBK，也不要依赖系统默认编码。
+5. CookServer 启动时扫描 res/recipes 目录的当前层级 JSON 文件，当前版本运行中不会自动热更新。新增、修改或删除菜谱后需要重启 CookServer。
+
+二、版本号
+1. 每个单菜 JSON 根对象都必须包含 schemaVersion 字段。
+2. schemaVersion 描述的是菜谱制作流程 JSON 结构版本，不是菜谱内容版本、APP版本或服务器版本。
+3. 当前支持版本为 "1.0"。
+4. 后续新增字段时优先升级小版本，例如 1.1；结构发生较大变化时升级大版本，例如 2.0。
+5. 服务端解析时先读取 schemaVersion，再进入对应版本解析逻辑。旧版本字段不应该被随意删除，新版本解析需要尽量保留向后兼容。
+
+三、根结构
+根对象表示一道菜，字段如下：
+1. schemaVersion：字符串，菜谱制作流程 JSON 结构版本号。
+2. id：字符串，菜谱唯一 ID。建议使用 cook_000001 这种稳定编号。客户端购买、收藏、排程和账号拥有关系都使用该 ID。
+3. title：字符串，菜名。
+4. category：字符串，菜单左侧分类。
+5. subtitle：字符串，公开页/推荐流里的简介。
+6. difficulty：字符串，难度展示。
+7. coverColor：字符串，当前简化版前端使用的封面渐变色。
+8. author：字符串，作者名。
+9. tags：字符串数组，标签。
+10. ingredients：数组，食材列表。
+11. tools：字符串数组，工具列表。
+12. priceCoins：整数，菜谱价格。0 表示免费。
+13. defaultOwned：布尔值，新账号是否默认拥有该菜谱。免费系统菜谱一般填 true，付费菜谱一般填 false。
+14. systemRecipe：布尔值，是否系统菜谱。
+15. tasks：数组，做菜步骤列表，必须至少有一项。
+
+四、账号与下发关系
+1. 账号状态里保存的是菜谱 ID 集合，例如 ownedRecipeIds、purchasedRecipeIds、favoriteRecipeIds。
+2. 服务端启动时从 res/recipes 加载全部可用菜谱，再根据账号拥有的菜谱 ID 决定每道菜返回给客户端时 owned 字段是 true 还是 false。
+3. defaultOwned 只影响新账号和账号状态补齐，不等同于用户购买记录。
+4. 付费购买成功后，菜谱 ID 会写入 purchasedRecipeIds 和 ownedRecipeIds。
+5. 下发给客户端的数据结构仍由 CookServer API 控制，客户端不直接读取 res/recipes 里的 JSON 文件。
+
+五、食材字段
+每个 ingredients 元素表示一种食材：
+1. name：字符串，食材名。
+2. amount：字符串，用量说明。
+
+六、步骤字段
+每个 tasks 元素表示一个可排程步骤：
+1. id：字符串，菜谱内步骤短 ID，同一道菜内不允许重复。服务端会自动转换成 recipeId.id 的完整 ID。
+2. title：字符串，步骤标题。
+3. detail：字符串，详细操作说明，要写到零基础用户能照做。
+4. resource：字符串，步骤占用资源，例如 sink、board、stove、rice_cooker。相同资源会影响并行排程。
+5. durationSeconds：整数，步骤持续秒数，不能小于 0。
+6. active：布尔值，true 表示用户需要持续操作，false 表示等待、浸泡、炖煮等自动过程。
+7. canPause：布尔值，流程暂停时该步骤是否可以一起暂停。
+8. continuesDuringPause：布尔值，流程暂停时该步骤是否自然继续，例如浸泡、炖煮。
+9. canLeaveKitchen：布尔值，该步骤期间用户是否可以离开厨房。
+10. safetyLevel：字符串，安全提示级别，当前可使用 normal、attention、danger。
+11. dependencies：字符串数组，依赖的步骤短 ID。服务端会校验依赖是否存在。
+12. voiceText：字符串，可选。为空时服务端会用 title + detail 自动生成播报文本。
+
+七、兼容规则
+1. 1.0 解析器会读取当前已定义字段，未知字段会被忽略。
+2. 1.0 解析器兼容旧临时结构 {"schemaVersion":"1.0","recipe":{...}}，但正式资源文件必须使用根对象直接表示一道菜。
+3. 新增可选字段时，不应该影响旧配置文件解析。
+4. 修改字段含义、删除字段、改变 tasks 依赖语义时，应新增解析版本，不要直接修改 1.0 的含义。

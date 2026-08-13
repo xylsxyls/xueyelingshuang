@@ -1,4 +1,4 @@
-﻿.menu-page {
+.menu-page {
   min-height: 100vh;
   padding: 20rpx 20rpx 160rpx;
   background: #f8f5ef;

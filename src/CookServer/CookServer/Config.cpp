@@ -43,6 +43,7 @@ bool Config::init()
 	m_enableCors = true;
 	m_corsAllowOrigin = "*";
 	m_accountStateFileName = "CookServerState.txt";
+	m_recipeResourceDirectoryName = "res/recipes";
 	m_accountDefaultCoins = 60;
 	m_accountMaxRechargeCoins = 10000;
 	m_mainLoopSleepMilliseconds = 500;
@@ -69,6 +70,7 @@ void Config::uninit()
 	m_enableCors = false;
 	m_corsAllowOrigin.clear();
 	m_accountStateFileName.clear();
+	m_recipeResourceDirectoryName.clear();
 	m_accountDefaultCoins = 0;
 	m_accountMaxRechargeCoins = 0;
 	m_mainLoopSleepMilliseconds = 0;

@@ -1,13 +1,11 @@
 ﻿#include "CookServerTestReport.h"
 #include "CookServerTestConfig.h"
+#include "CookServerTestHelper.h"
 #include "CStringManager/CStringManagerAPI.h"
 #include <ctime>
 #include <fstream>
 #include <sstream>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 CookServerTestReport::CookServerTestReport()
 {
@@ -101,7 +99,7 @@ bool CookServerTestReport::writeToFile(const std::string& path, const std::strin
 	{
 		return false;
 	}
-	std::string utf8Text = localTextToUtf8(text);
+	std::string utf8Text = CookServerTestHelper::localTextToUtf8(text);
 	while (!utf8Text.empty() &&
 		(utf8Text[utf8Text.size() - 1] == '\r' ||
 		utf8Text[utf8Text.size() - 1] == '\n' ||
@@ -127,34 +125,4 @@ std::string CookServerTestReport::currentTimeText() const
 	char buffer[20];
 	std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeInfo);
 	return buffer;
-}
-
-std::string CookServerTestReport::localTextToUtf8(const std::string& text) const
-{
-#ifdef _WIN32
-	if (text.empty())
-	{
-		return "";
-	}
-	int32_t wideLength = static_cast<int32_t>(MultiByteToWideChar(CP_ACP, 0, text.data(), static_cast<int32_t>(text.size()), nullptr, 0));
-	if (wideLength <= 0)
-	{
-		return text;
-	}
-	std::wstring wideText;
-	wideText.resize(static_cast<size_t>(wideLength));
-	MultiByteToWideChar(CP_ACP, 0, text.data(), static_cast<int32_t>(text.size()), &wideText[0], wideLength);
-
-	int32_t utf8Length = static_cast<int32_t>(WideCharToMultiByte(CP_UTF8, 0, wideText.data(), wideLength, nullptr, 0, nullptr, nullptr));
-	if (utf8Length <= 0)
-	{
-		return text;
-	}
-	std::string utf8Text;
-	utf8Text.resize(static_cast<size_t>(utf8Length));
-	WideCharToMultiByte(CP_UTF8, 0, wideText.data(), wideLength, &utf8Text[0], utf8Length, nullptr, nullptr);
-	return utf8Text;
-#else
-	return text;
-#endif
 }

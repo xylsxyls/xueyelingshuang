@@ -1,4 +1,4 @@
-﻿<view class="menu-page">
+<view class="menu-page">
   <view class="search-wrap">
     <input class="search" placeholder="搜索菜谱、食材、分类" value="{{keyword}}" bindinput="onSearch" />
   </view>

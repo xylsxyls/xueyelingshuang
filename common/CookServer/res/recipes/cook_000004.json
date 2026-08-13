@@ -1,0 +1,99 @@
+{
+    "schemaVersion":  "1.0",
+    "id":  "cook_000004",
+    "title":  "蒜蓉青菜",
+    "category":  "蔬菜",
+    "subtitle":  "大火快炒，盐最后放，保留青菜脆感。",
+    "difficulty":  "零基础",
+    "coverColor":  "linear-gradient(135deg,#27784f,#b7d968)",
+    "author":  "系统菜谱",
+    "tags":  [
+                 "快手",
+                 "蔬菜",
+                 "最后放盐"
+             ],
+    "ingredients":  [
+                        {
+                            "name":  "青菜",
+                            "amount":  "300g"
+                        },
+                        {
+                            "name":  "蒜",
+                            "amount":  "3瓣"
+                        },
+                        {
+                            "name":  "盐",
+                            "amount":  "少许"
+                        }
+                    ],
+    "tools":  [
+                  "炒锅",
+                  "菜篮",
+                  "砧板"
+              ],
+    "priceCoins":  0,
+    "systemRecipe":  true,
+    "tasks":  [
+                  {
+                      "id":  "wash_greens",
+                      "title":  "洗青菜",
+                      "detail":  "青菜掰开冲洗，根部泥沙要冲掉，沥到不大量滴水。",
+                      "resource":  "sink",
+                      "durationSeconds":  180,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+
+                                       ]
+                  },
+                  {
+                      "id":  "cut_garlic",
+                      "title":  "切蒜末",
+                      "detail":  "蒜拍扁去皮，切成蒜末。",
+                      "resource":  "board",
+                      "durationSeconds":  120,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "wash_greens"
+                                       ]
+                  },
+                  {
+                      "id":  "stir_greens",
+                      "title":  "大火炒青菜",
+                      "detail":  "油热后下蒜末，出香味后下青菜，大火快速翻炒。",
+                      "resource":  "stove",
+                      "durationSeconds":  300,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "danger",
+                      "dependencies":  [
+                                           "cut_garlic"
+                                       ]
+                  },
+                  {
+                      "id":  "season_greens",
+                      "title":  "最后放盐",
+                      "detail":  "青菜变软后再放盐，翻匀马上出锅。",
+                      "resource":  "stove",
+                      "durationSeconds":  60,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "stir_greens"
+                                       ]
+                  }
+              ],
+    "defaultOwned":  true
+}

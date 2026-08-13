@@ -9,7 +9,7 @@
 
 bool AccountStore::isRecipeOwned(const Recipe& recipe, const UserAccount& account)
 {
-	return recipe.m_priceCoins <= 0 || account.m_purchasedRecipeIds.find(recipe.m_id) != account.m_purchasedRecipeIds.end();
+	return account.m_ownedRecipeIds.find(recipe.m_id) != account.m_ownedRecipeIds.end();
 }
 
 AccountStore::AccountStore() :
@@ -26,6 +26,79 @@ std::string AccountStore::normalizeUserId(const std::string& userId) const
 std::string AccountStore::stateFilePath() const
 {
 	return CSystem::GetCurrentExePath() + g_config.m_accountStateFileName;
+}
+
+std::vector<std::string> AccountStore::splitKeepEmptyNoLock(const std::string& text, char delimiter) const
+{
+	std::vector<std::string> result;
+	size_t begin = 0;
+	size_t position = text.find(delimiter, begin);
+	while (position != std::string::npos)
+	{
+		result.push_back(text.substr(begin, position - begin));
+		begin = position + 1;
+		position = text.find(delimiter, begin);
+	}
+	result.push_back(text.substr(begin));
+	return result;
+}
+
+std::string AccountStore::normalizeRecipeIdNoLock(const std::string& recipeId) const
+{
+	if (recipeId == "sweet_sour_ribs")
+	{
+		return "cook_000001";
+	}
+	if (recipeId == "rice")
+	{
+		return "cook_000002";
+	}
+	if (recipeId == "tomato_egg")
+	{
+		return "cook_000003";
+	}
+	if (recipeId == "garlic_greens")
+	{
+		return "cook_000004";
+	}
+	if (recipeId == "miso_tofu_soup")
+	{
+		return "cook_000005";
+	}
+	if (recipeId == "black_pepper_beef")
+	{
+		return "cook_000006";
+	}
+	if (recipeId == "teriyaki_chicken")
+	{
+		return "cook_000007";
+	}
+	return recipeId;
+}
+
+void AccountStore::insertRecipeIdsNoLock(std::set<std::string>& recipeIds, const std::vector<std::string>& sourceRecipeIds) const
+{
+	for (size_t i = 0; i < sourceRecipeIds.size(); ++i)
+	{
+		std::string recipeId = normalizeRecipeIdNoLock(sourceRecipeIds[i]);
+		if (!recipeId.empty())
+		{
+			recipeIds.insert(recipeId);
+		}
+	}
+}
+
+void AccountStore::refreshOwnedRecipesNoLock(UserAccount& account) const
+{
+	const std::vector<Recipe>& recipes = CookCatalog::recipeCatalog();
+	for (size_t i = 0; i < recipes.size(); ++i)
+	{
+		if (recipes[i].m_defaultOwned)
+		{
+			account.m_ownedRecipeIds.insert(recipes[i].m_id);
+		}
+	}
+	account.m_ownedRecipeIds.insert(account.m_purchasedRecipeIds.begin(), account.m_purchasedRecipeIds.end());
 }
 
 void AccountStore::loadIfNeededNoLock()
@@ -47,7 +120,7 @@ void AccountStore::loadIfNeededNoLock()
 	std::string line;
 	while (std::getline(input, line))
 	{
-		std::vector<std::string> parts = CookServerHelper::split(line, '\t');
+		std::vector<std::string> parts = splitKeepEmptyNoLock(line, '\t');
 		if (parts.size() < 4 || parts[0] != "USER")
 		{
 			continue;
@@ -57,17 +130,26 @@ void AccountStore::loadIfNeededNoLock()
 		account.m_userId = parts[1];
 		account.m_coins = static_cast<int32_t>(CStringManager::atoi64(parts[2].c_str()));
 
-		std::vector<std::string> purchased = CookServerHelper::split(parts[3], ',');
-		account.m_purchasedRecipeIds.insert(purchased.begin(), purchased.end());
+		if (parts.size() >= 4)
+		{
+			std::vector<std::string> purchased = CookServerHelper::split(parts[3], ',');
+			insertRecipeIdsNoLock(account.m_purchasedRecipeIds, purchased);
+		}
 
 		if (parts.size() >= 5)
 		{
 			std::vector<std::string> favorites = CookServerHelper::split(parts[4], ',');
-			account.m_favoriteRecipeIds.insert(favorites.begin(), favorites.end());
+			insertRecipeIdsNoLock(account.m_favoriteRecipeIds, favorites);
+		}
+		if (parts.size() >= 6)
+		{
+			std::vector<std::string> owned = CookServerHelper::split(parts[5], ',');
+			insertRecipeIdsNoLock(account.m_ownedRecipeIds, owned);
 		}
 
 		if (!account.m_userId.empty())
 		{
+			refreshOwnedRecipesNoLock(account);
 			m_accounts[account.m_userId] = account;
 		}
 	}
@@ -92,6 +174,7 @@ void AccountStore::saveNoLock()
 			<< "\t" << account.m_coins
 			<< "\t" << CookServerHelper::joinSet(account.m_purchasedRecipeIds, ',')
 			<< "\t" << CookServerHelper::joinSet(account.m_favoriteRecipeIds, ',')
+			<< "\t" << CookServerHelper::joinSet(account.m_ownedRecipeIds, ',')
 			<< "\n";
 	}
 	output.flush();
@@ -115,6 +198,7 @@ UserAccount& AccountStore::ensureNoLock(const std::string& userId)
 		UserAccount account;
 		account.m_userId = id;
 		account.m_coins = g_config.m_accountDefaultCoins;
+		refreshOwnedRecipesNoLock(account);
 		m_accounts[id] = account;
 		saveNoLock();
 		LOGINFO("AccountStore create account userId=%s defaultCoins=%d", id.c_str(), g_config.m_accountDefaultCoins);
@@ -219,6 +303,7 @@ UserAccount AccountStore::purchaseRecipe(const std::string& userId, const std::s
 	}
 	account.m_coins -= recipe->m_priceCoins;
 	account.m_purchasedRecipeIds.insert(recipe->m_id);
+	account.m_ownedRecipeIds.insert(recipe->m_id);
 	saveNoLock();
 	LOGINFO("AccountStore purchase success userId=%s recipeId=%s price=%d balance=%d",
 	        account.m_userId.c_str(),

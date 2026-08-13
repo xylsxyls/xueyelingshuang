@@ -1,4 +1,4 @@
-﻿.msg {
+.msg {
   display: grid;
   grid-template-columns: 76rpx 1fr;
   gap: 18rpx;

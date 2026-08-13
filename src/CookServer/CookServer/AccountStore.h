@@ -2,6 +2,7 @@
 #include "CookModels.h"
 #include <map>
 #include <mutex>
+#include <set>
 
 /** 简易账号仓库，负责本地保存金币、已购买菜谱和收藏菜谱状态
 */
@@ -15,7 +16,7 @@ public:
 	/** 判断账号是否已经拥有指定菜谱
 	@param [in] recipe 待判断的菜谱
 	@param [in] account 待判断的账号
-	@return 返回true表示免费菜谱或账号已购买该菜谱
+	@return 返回true表示账号已经拥有该菜谱
 	*/
 	static bool isRecipeOwned(const Recipe& recipe, const UserAccount& account);
 
@@ -64,6 +65,30 @@ private:
 	@return 返回exe同级目录下的状态文件路径
 	*/
 	std::string stateFilePath() const;
+
+	/** 按分隔符拆分账号状态行，保留空字段，调用方必须已持有锁
+	@param [in] text 待拆分文本
+	@param [in] delimiter 分隔符
+	@return 返回拆分后的字段列表
+	*/
+	std::vector<std::string> splitKeepEmptyNoLock(const std::string& text, char delimiter) const;
+
+	/** 兼容旧版本内置菜谱ID，调用方必须已持有锁
+	@param [in] recipeId 菜谱ID
+	@return 返回当前版本使用的菜谱ID
+	*/
+	std::string normalizeRecipeIdNoLock(const std::string& recipeId) const;
+
+	/** 批量插入菜谱ID，插入前会做旧版本ID兼容，调用方必须已持有锁
+	@param [out] recipeIds 待写入的菜谱ID集合
+	@param [in] sourceRecipeIds 原始菜谱ID列表
+	*/
+	void insertRecipeIdsNoLock(std::set<std::string>& recipeIds, const std::vector<std::string>& sourceRecipeIds) const;
+
+	/** 给账号补齐默认拥有菜谱和历史购买菜谱，调用方必须已持有锁
+	@param [in,out] account 待补齐账号
+	*/
+	void refreshOwnedRecipesNoLock(UserAccount& account) const;
 
 	/** 在未加载时从本地状态文件读取账号数据，调用方必须已持有锁
 	*/

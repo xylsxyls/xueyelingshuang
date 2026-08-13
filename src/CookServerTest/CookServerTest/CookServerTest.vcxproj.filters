@@ -24,6 +24,9 @@
     <ClInclude Include="CookServerTestDocumentWriter.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CookServerTestHelper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="CookServerTestHttpClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -45,6 +48,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CookServerTestDocumentWriter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CookServerTestHelper.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CookServerTestHttpClient.cpp">

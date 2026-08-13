@@ -41,6 +41,21 @@ m_value(nullptr)
 	value.m_value = emptyValue.release();
 }
 
+RapidJsonValue::RapidJsonValue(const rapidjson::Value* value) :
+m_document(nullptr),
+m_value(nullptr)
+{
+	std::unique_ptr<rapidjson::Document> document(new rapidjson::Document());
+	std::unique_ptr<rapidjson::Value> jsonValue(new rapidjson::Value(rapidjson::kObjectType));
+	document->SetObject();
+	if (value != nullptr)
+	{
+		jsonValue->CopyFrom(*value, document->GetAllocator());
+	}
+	m_document = document.release();
+	m_value = jsonValue.release();
+}
+
 RapidJsonValue::~RapidJsonValue()
 {
 	delete m_value;
@@ -342,6 +357,129 @@ void RapidJsonValue::pushValue(const RapidJsonValue& value)
 	rapidjson::Value jsonValue;
 	value.copyToRapidJsonValue(&jsonValue, m_document);
 	m_value->PushBack(jsonValue, m_document->GetAllocator());
+}
+
+std::string RapidJsonValue::getStringOrDefault(const char* key, const std::string& defaultValue) const
+{
+	if (key == nullptr)
+	{
+		return defaultValue;
+	}
+	if (!m_value->IsObject())
+	{
+		return defaultValue;
+	}
+	rapidjson::Value::ConstMemberIterator it = m_value->FindMember(key);
+	if (it == m_value->MemberEnd() || !it->value.IsString())
+	{
+		return defaultValue;
+	}
+	return std::string(it->value.GetString(), it->value.GetStringLength());
+}
+
+int32_t RapidJsonValue::getIntOrDefault(const char* key, int32_t defaultValue) const
+{
+	if (key == nullptr)
+	{
+		return defaultValue;
+	}
+	if (!m_value->IsObject())
+	{
+		return defaultValue;
+	}
+	rapidjson::Value::ConstMemberIterator it = m_value->FindMember(key);
+	if (it == m_value->MemberEnd() || !it->value.IsInt())
+	{
+		return defaultValue;
+	}
+	return it->value.GetInt();
+}
+
+bool RapidJsonValue::getBoolOrDefault(const char* key, bool defaultValue) const
+{
+	if (key == nullptr)
+	{
+		return defaultValue;
+	}
+	if (!m_value->IsObject())
+	{
+		return defaultValue;
+	}
+	rapidjson::Value::ConstMemberIterator it = m_value->FindMember(key);
+	if (it == m_value->MemberEnd() || !it->value.IsBool())
+	{
+		return defaultValue;
+	}
+	return it->value.GetBool();
+}
+
+RapidJsonValue RapidJsonValue::getValue(const char* key) const
+{
+	RapidJsonValue value;
+	if (key == nullptr)
+	{
+		return value;
+	}
+	if (!m_value->IsObject())
+	{
+		return value;
+	}
+	rapidjson::Value::ConstMemberIterator it = m_value->FindMember(key);
+	if (it == m_value->MemberEnd())
+	{
+		return value;
+	}
+	return RapidJsonValue(&it->value);
+}
+
+std::vector<RapidJsonValue> RapidJsonValue::getArrayValueOrEmpty(const char* key) const
+{
+	std::vector<RapidJsonValue> values;
+	if (key == nullptr)
+	{
+		return values;
+	}
+	if (!m_value->IsObject())
+	{
+		return values;
+	}
+	rapidjson::Value::ConstMemberIterator it = m_value->FindMember(key);
+	if (it == m_value->MemberEnd() || !it->value.IsArray())
+	{
+		return values;
+	}
+	values.reserve(static_cast<size_t>(it->value.Size()));
+	for (rapidjson::SizeType i = 0; i < it->value.Size(); ++i)
+	{
+		values.push_back(RapidJsonValue(&it->value[i]));
+	}
+	return values;
+}
+
+std::vector<std::string> RapidJsonValue::getStringArrayOrEmpty(const char* key) const
+{
+	std::vector<std::string> values;
+	if (key == nullptr)
+	{
+		return values;
+	}
+	if (!m_value->IsObject())
+	{
+		return values;
+	}
+	rapidjson::Value::ConstMemberIterator it = m_value->FindMember(key);
+	if (it == m_value->MemberEnd() || !it->value.IsArray())
+	{
+		return values;
+	}
+	for (rapidjson::SizeType i = 0; i < it->value.Size(); ++i)
+	{
+		if (it->value[i].IsString())
+		{
+			values.push_back(std::string(it->value[i].GetString(), it->value[i].GetStringLength()));
+		}
+	}
+	return values;
 }
 
 std::string RapidJsonValue::toString() const

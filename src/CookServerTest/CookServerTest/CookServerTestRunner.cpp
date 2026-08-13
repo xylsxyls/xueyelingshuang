@@ -1,6 +1,7 @@
 ﻿#include "CookServerTestRunner.h"
 #include "CookServerTestConfig.h"
 #include "CookServerTestDocumentWriter.h"
+#include "CookServerTestHelper.h"
 #include "CookServerTestReport.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
@@ -110,8 +111,9 @@ void CookServerTestRunner::runFunctionalTests()
 			expectJsonOk(response, true, message) &&
 			expectBodyContains(response, "\"categories\"", message) &&
 			expectBodyContains(response, "\"recipes\"", message) &&
-			expectBodyContains(response, "sweet_sour_ribs", message) &&
-			expectBodyContains(response, "black_pepper_beef", message);
+			expectBodyContains(response, "\"ownedRecipeIds\"", message) &&
+			expectBodyContains(response, "cook_000001", message) &&
+			expectBodyContains(response, "cook_000006", message);
 	});
 
 	runCase("推荐流接口", [this, &client, baseUserId](std::string& message, int32_t& statusCode) -> bool
@@ -193,18 +195,18 @@ void CookServerTestRunner::runFunctionalTests()
 	runCase("付费菜谱购买", [this, &client, baseUserId](std::string& message, int32_t& statusCode) -> bool
 	{
 		CookServerTestHttpResponse response;
-		client.post("/api/recipes/purchase", recipeBody(baseUserId, "black_pepper_beef"), response);
+		client.post("/api/recipes/purchase", recipeBody(baseUserId, "cook_000006"), response);
 		statusCode = response.m_statusCode;
 		return expectNetworkOk(response, message) &&
 			expectStatus(response, 200, message) &&
 			expectJsonOk(response, true, message) &&
-			expectBodyContains(response, "black_pepper_beef", message);
+			expectBodyContains(response, "cook_000006", message);
 	});
 
 	runCase("收藏切换接口", [this, &client, baseUserId](std::string& message, int32_t& statusCode) -> bool
 	{
 		CookServerTestHttpResponse response;
-		client.post("/api/favorites/toggle", recipeBody(baseUserId, "tomato_egg"), response);
+		client.post("/api/favorites/toggle", recipeBody(baseUserId, "cook_000003"), response);
 		statusCode = response.m_statusCode;
 		return expectNetworkOk(response, message) &&
 			expectStatus(response, 200, message) &&
@@ -238,8 +240,8 @@ void CookServerTestRunner::runFunctionalTests()
 	runCase("免费组合排程预览", [this, &client, baseUserId](std::string& message, int32_t& statusCode) -> bool
 	{
 		std::vector<std::string> recipeIds;
-		recipeIds.push_back("sweet_sour_ribs");
-		recipeIds.push_back("rice");
+		recipeIds.push_back("cook_000001");
+		recipeIds.push_back("cook_000002");
 		CookServerTestHttpResponse response;
 		client.post("/api/plan/preview", planBody(baseUserId, recipeIds), response);
 		statusCode = response.m_statusCode;
@@ -255,7 +257,7 @@ void CookServerTestRunner::runFunctionalTests()
 	{
 		std::string otherUserId = userId("unowned");
 		std::vector<std::string> recipeIds;
-		recipeIds.push_back("teriyaki_chicken");
+		recipeIds.push_back("cook_000007");
 		CookServerTestHttpResponse response;
 		client.post("/api/plan/preview", planBody(otherUserId, recipeIds), response);
 		statusCode = response.m_statusCode;
@@ -268,8 +270,8 @@ void CookServerTestRunner::runFunctionalTests()
 	runCase("开始做菜返回planId", [this, &client, baseUserId](std::string& message, int32_t& statusCode) -> bool
 	{
 		std::vector<std::string> recipeIds;
-		recipeIds.push_back("sweet_sour_ribs");
-		recipeIds.push_back("rice");
+		recipeIds.push_back("cook_000001");
+		recipeIds.push_back("cook_000002");
 		CookServerTestHttpResponse response;
 		client.post("/api/plan/start", planBody(baseUserId, recipeIds), response);
 		statusCode = response.m_statusCode;
@@ -379,16 +381,16 @@ bool CookServerTestRunner::executeStressRequest(CookServerTestHttpClient& client
 	case 4:
 	{
 		std::vector<std::string> recipeIds;
-		recipeIds.push_back("sweet_sour_ribs");
-		recipeIds.push_back("rice");
+		recipeIds.push_back("cook_000001");
+		recipeIds.push_back("cook_000002");
 		requestOk = client.post("/api/plan/preview", planBody(currentUserId, recipeIds), response);
 		break;
 	}
 	case 5:
 	{
 		std::vector<std::string> recipeIds;
-		recipeIds.push_back("tomato_egg");
-		recipeIds.push_back("garlic_greens");
+		recipeIds.push_back("cook_000003");
+		recipeIds.push_back("cook_000004");
 		requestOk = client.post("/api/plan/start", planBody(currentUserId, recipeIds), response);
 		break;
 	}
@@ -399,7 +401,7 @@ bool CookServerTestRunner::executeStressRequest(CookServerTestHttpClient& client
 	}
 	case 7:
 	{
-		requestOk = client.post("/api/favorites/toggle", recipeBody(currentUserId, "rice"), response);
+		requestOk = client.post("/api/favorites/toggle", recipeBody(currentUserId, "cook_000002"), response);
 		break;
 	}
 	default:
@@ -472,7 +474,7 @@ bool CookServerTestRunner::expectStatus(const CookServerTestHttpResponse& respon
 	{
 		message = "status expected=" + CStringManager::toStringInt32(expectedStatus) +
 			" actual=" + CStringManager::toStringInt32(response.m_statusCode) +
-			" body=" + response.m_body;
+			" body=" + CookServerTestHelper::utf8ToLocalText(response.m_body);
 		return false;
 	}
 	return true;
@@ -483,7 +485,7 @@ bool CookServerTestRunner::expectJsonOk(const CookServerTestHttpResponse& respon
 	RapidJsonDocument document;
 	if (!document.parse(response.m_body) || !document.isObject())
 	{
-		message = "response body is not json object body=" + response.m_body;
+		message = "response body is not json object body=" + CookServerTestHelper::utf8ToLocalText(response.m_body);
 		return false;
 	}
 	bool actualOk = document.getBoolOrDefault("ok", !expectedOk);
@@ -491,7 +493,7 @@ bool CookServerTestRunner::expectJsonOk(const CookServerTestHttpResponse& respon
 	{
 		message = "json ok expected=" + std::string(expectedOk ? "true" : "false") +
 			" actual=" + std::string(actualOk ? "true" : "false") +
-			" body=" + response.m_body;
+			" body=" + CookServerTestHelper::utf8ToLocalText(response.m_body);
 		return false;
 	}
 	return true;
@@ -499,9 +501,10 @@ bool CookServerTestRunner::expectJsonOk(const CookServerTestHttpResponse& respon
 
 bool CookServerTestRunner::expectBodyContains(const CookServerTestHttpResponse& response, const std::string& text, std::string& message) const
 {
-	if (response.m_body.find(text) == std::string::npos)
+	std::string utf8Text = CookServerTestHelper::localTextToUtf8(text);
+	if (response.m_body.find(utf8Text) == std::string::npos)
 	{
-		message = "body not contains text=" + text + " body=" + response.m_body;
+		message = "body not contains text=" + text + " body=" + CookServerTestHelper::utf8ToLocalText(response.m_body);
 		return false;
 	}
 	return true;

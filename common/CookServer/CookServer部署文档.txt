@@ -12,9 +12,11 @@ CookServer部署文档
 三、部署文件
 1. 必须文件：CookServer.exe。
 2. 如果部署的是 Debug/DLL 版本，还需要把同批次生成的依赖 DLL 放到 CookServer.exe 同级目录。Release 静态库版本通常只需要 CookServer.exe，但仍以交付包内实际文件为准。
-3. 当前版本没有独立配置文件，监听端口、监听地址、公网 IP、默认金币、请求体大小等配置仍在程序内部的 Config 中。
-4. CookServerState.txt 是运行时状态文件，不需要首次手动创建。全新部署可以不放该文件；需要保留测试账号金币、购买、收藏状态时，可以随 exe 一起备份和迁移。
-5. 日志文件和 CookServerd_log/CookServer_log 等归档目录由程序运行时自动生成，不需要提前创建。
+3. res/recipes 是菜谱资源目录，必须放在 CookServer.exe 同级目录下。目录内每个 JSON 文件表示一道菜，文件名格式为 cook_000001.json，文件根对象必须包含 schemaVersion 字段，当前版本为 "1.0"。
+4. 如果 res/recipes 目录缺失、没有有效 JSON 或 JSON 格式错误，当前版本会写日志并回退到程序内置示例菜谱；正式部署仍建议把 res/recipes 作为必备资源目录管理。
+5. 当前监听端口、监听地址、公网 IP、默认金币、请求体大小等配置仍在程序内部的 Config 中。
+6. CookServerState.txt 是运行时状态文件，不需要首次手动创建。全新部署可以不放该文件；需要保留测试账号金币、购买、收藏状态时，可以随 exe 一起备份和迁移。
+7. 日志文件和 CookServerd_log/CookServer_log 等归档目录由程序运行时自动生成，不需要提前创建。
 
 四、服务器准备
 1. 放通入站 TCP 5207，云服务器还需要在安全组中放通 5207。
@@ -36,14 +38,15 @@ CookServer部署文档
 5. 测试报告会写到 CookServerTest.exe 同级目录下的 CookServerTestReport.txt。
 
 七、运行时文件说明
-1. CookServerState.txt：简化版账号状态文件，保存金币、购买、收藏等状态。
-2. *.log：运行日志，线上排查优先查看最新日志文件和日志归档目录。
-3. *.dmp：程序崩溃时由 CDump 生成的 dump 文件，用于定位崩溃堆栈。
-4. 旧日志归档目录：程序重启后，LogManager 会按当前日志配置归档或清理旧日志。
+1. res/recipes/*.json：单菜菜谱配置文件。每个账号实际拥有哪些菜，只保存菜谱 ID，服务端根据这些 ID 从资源目录加载菜谱并下发。
+2. CookServerState.txt：简化版账号状态文件，保存金币、购买、收藏、拥有菜谱 ID 等状态。
+3. *.log：运行日志，线上排查优先查看最新日志文件和日志归档目录。
+4. *.dmp：程序崩溃时由 CDump 生成的 dump 文件，用于定位崩溃堆栈。
+5. 旧日志归档目录：程序重启后，LogManager 会按当前日志配置归档或清理旧日志。
 
 八、停止、升级和回滚
 1. 停止服务前先确认没有正在执行的测试或客户端请求；当前版本可以直接关闭进程。
-2. 升级前备份整个部署目录，至少保留 CookServer.exe、CookServerState.txt、日志和 dump。
-3. 替换 CookServer.exe 和同批次依赖文件后重新启动服务。
+2. 升级前备份整个部署目录，至少保留 CookServer.exe、res/recipes、CookServerState.txt、日志和 dump。
+3. 替换 CookServer.exe、res/recipes 和同批次依赖文件后重新启动服务。
 4. 升级后必须执行 /api/health 验证和 CookServerTest 黑盒测试。
 5. 回滚时停止当前进程，恢复备份文件，再重新启动旧版本。

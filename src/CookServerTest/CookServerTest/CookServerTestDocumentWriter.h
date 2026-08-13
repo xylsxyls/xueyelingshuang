@@ -37,9 +37,4 @@ private:
 	*/
 	std::string buildDeployDocument() const;
 
-	/** 将当前进程本地代码页文本转换为UTF-8文本
-	@param [in] text 本地代码页文本
-	@return 返回UTF-8文本
-	*/
-	std::string localTextToUtf8(const std::string& text) const;
 };

@@ -60,6 +60,9 @@
     <ClInclude Include="CookModels.h">
       <Filter>业务模型</Filter>
     </ClInclude>
+    <ClInclude Include="CookRecipeConfig.h">
+      <Filter>菜谱目录</Filter>
+    </ClInclude>
     <ClInclude Include="CookSchedule.h">
       <Filter>排程算法</Filter>
     </ClInclude>
@@ -91,6 +94,9 @@
     </ClCompile>
     <ClCompile Include="CookModels.cpp">
       <Filter>业务模型</Filter>
+    </ClCompile>
+    <ClCompile Include="CookRecipeConfig.cpp">
+      <Filter>菜谱目录</Filter>
     </ClCompile>
     <ClCompile Include="CookSchedule.cpp">
       <Filter>排程算法</Filter>

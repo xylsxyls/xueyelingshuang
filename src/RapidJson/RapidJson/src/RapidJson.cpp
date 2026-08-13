@@ -414,6 +414,7 @@ RapidJson& RapidJson::operator[](const std::string& key)
 //	check(document.getIntOrDefault("count", 0) == 3, "RapidJsonDocument get int");
 //	check(document.getBoolOrDefault("ok", false), "RapidJsonDocument get bool");
 //	check(document.getStringArrayOrEmpty("tags").size() == 2, "RapidJsonDocument get string array");
+//	check(document.getValue("tags").isArray(), "RapidJsonDocument get value array");
 //	document.addString("name", "chef");
 //	document.addInt("count", 5);
 //	document.addBool("ok", false);
@@ -428,6 +429,7 @@ RapidJson& RapidJson::operator[](const std::string& key)
 //	check(verify.getStringArrayOrEmpty("tags").size() == 3, "RapidJsonDocument replace array");
 //	check(verify.getStringOrDefault("literal", "") == "char value", "RapidJsonDocument add char string");
 //	check(verify.getStringOrDefault("emptyChar", "default") == "", "RapidJsonDocument add null char string");
+//	check(verify.getArrayValueOrEmpty("tags").size() == 3, "RapidJsonDocument get value array size");
 //	check(!verify.parse(""), "RapidJsonDocument empty parse clears old data");
 //	check(verify.getStringOrDefault("name", "default") == "default", "RapidJsonDocument empty parse no stale string");
 //	check(!verify.parse("{bad json"), "RapidJsonDocument invalid parse clears old data");
@@ -474,6 +476,12 @@ RapidJson& RapidJson::operator[](const std::string& key)
 //	arrayValue.pushValue(child);
 //	check(arrayValue.isArray() && arrayValue.size() == 4, "RapidJsonValue array push");
 //	check(arrayValue.toString().find("childName") != std::string::npos, "RapidJsonValue nested serialize");
+//	RapidJsonValue childRead = parent.getValue("child");
+//	check(childRead.getStringOrDefault("childName", "") == "small", "RapidJsonValue get nested string");
+//	check(childRead.getIntOrDefault("childCount", 0) == 2, "RapidJsonValue get nested int");
+//	check(childRead.getBoolOrDefault("childOk", false), "RapidJsonValue get nested bool");
+//	check(childRead.getStringArrayOrEmpty("childTags").size() == 2, "RapidJsonValue get nested string array");
+//	check(childRead.getArrayValueOrEmpty("childTags").size() == 2, "RapidJsonValue get nested value array");
 //
 //	RapidJsonValue nullKeyValue;
 //	nullKeyValue.addString(nullptr, "bad");

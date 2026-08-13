@@ -1,4 +1,4 @@
-﻿const API_HOST = '175.24.198.162'
+const API_HOST = '175.24.198.162'
 const API_PORT = 5207
 const API_PROTOCOL = 'http'
 

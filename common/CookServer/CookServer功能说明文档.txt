@@ -11,13 +11,13 @@ CookServer 是做菜小程序/APP 的 HTTP 后端简化版本，当前核心目�
 GET /api/health 返回服务名、版本、公网 IP、监听地址和端口，用于部署后确认服务可访问。
 
 3. 菜谱目录。
-GET /api/recipes 返回分类、菜谱列表和账号信息。当前内置菜谱包括糖醋排骨、电饭锅米饭、番茄炒蛋、蒜蓉青菜、豆腐紫菜汤、黑椒牛柳、照烧鸡腿。前五个为免费/系统菜谱，黑椒牛柳和照烧鸡腿为付费示例菜谱。
+GET /api/recipes 返回分类、菜谱列表和账号信息。服务启动时优先读取 CookServer.exe 同级目录下 res/recipes 目录内的单菜 JSON 文件，每个 JSON 文件表示一道菜，文件名必须等于菜谱 ID 加 .json。当前菜谱配置 schemaVersion 为 "1.0"，包括 cook_000001 糖醋排骨、cook_000002 电饭锅米饭、cook_000003 番茄炒蛋、cook_000004 蒜蓉青菜、cook_000005 豆腐紫菜汤、cook_000006 黑椒牛柳、cook_000007 照烧鸡腿。前五个为免费/系统菜谱，后两个为付费示例菜谱。
 
 4. 推荐流。
 GET /api/feed 返回推荐、精选、关注、好友四个 tab，以及可展示在前端信息流中的菜谱卡片数据，包括标题、描述、作者、价格、点赞数、评论数和关联菜谱 ID。
 
 5. 账号金币。
-GET /api/account 获取账号信息。POST /api/account/recharge 进行金币充值模拟。当前账号状态会保存到 CookServer.exe 同级目录下的 CookServerState.txt。
+GET /api/account 获取账号信息。POST /api/account/recharge 进行金币充值模拟。当前账号状态会保存到 CookServer.exe 同级目录下的 CookServerState.txt。账号内保存 ownedRecipeIds、purchasedRecipeIds 和 favoriteRecipeIds，真正下发哪些菜由服务端根据账号持有的菜谱 ID 和菜谱资源目录决定。
 
 6. 菜谱购买。
 POST /api/recipes/purchase 根据 recipeId 购买付费菜谱。免费菜谱或已拥有菜谱会直接返回已拥有，金币不足会返回失败消息。
@@ -35,7 +35,8 @@ POST /api/plan/start 和预览接口类似，但会额外返回 planId，表示�
 CookServer 已接入 LogManager 日志库和 CDump。服务启动、请求开始/结束、充值、购买、收藏、排程等关键流程会输出日志，崩溃时可保留堆栈信息用于定位问题。
 
 三、当前尚未实现或仍是简化版的能力
-1. 当前账号、购买和收藏状态使用本地文本文件保存，尚未接入 MySQL/Redis。
-2. 当前支付、提现、评论、关注、好友、发布视频、上传图片、真实内容审核仍是前后端后续阶段功能。
-3. 当前没有真实微信登录鉴权，接口通过 userId 参数模拟不同用户。
-4. 当前 HTTP 服务还不是完整生产网关形态，正式给微信小程序使用时需要 HTTPS、域名备案/配置、反向代理和更完整的限流鉴权。
+1. 当前菜谱已经配置化为 res/recipes/*.json，但还没有接入后台管理、作者上传、内容审核和版本迁移工具。
+2. 当前账号、购买和收藏状态使用本地文本文件保存，尚未接入 MySQL/Redis。
+3. 当前支付、提现、评论、关注、好友、发布视频、上传图片、真实内容审核仍是前后端后续阶段功能。
+4. 当前没有真实微信登录鉴权，接口通过 userId 参数模拟不同用户。
+5. 当前 HTTP 服务还不是完整生产网关形态，正式给微信小程序使用时需要 HTTPS、域名备案/配置、反向代理和更完整的限流鉴权。

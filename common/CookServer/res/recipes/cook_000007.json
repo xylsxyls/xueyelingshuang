@@ -1,0 +1,118 @@
+{
+    "schemaVersion":  "1.0",
+    "id":  "cook_000007",
+    "title":  "照烧鸡腿",
+    "category":  "小荤",
+    "subtitle":  "付费示例菜谱，煎鸡腿和收汁分开提醒，适合工作日晚餐。",
+    "difficulty":  "新手可做",
+    "coverColor":  "linear-gradient(135deg,#8d4b35,#f0c16c)",
+    "author":  "示例创作者",
+    "tags":  [
+                 "付费",
+                 "便当",
+                 "下饭"
+             ],
+    "ingredients":  [
+                        {
+                            "name":  "鸡腿肉",
+                            "amount":  "1块"
+                        },
+                        {
+                            "name":  "生抽",
+                            "amount":  "2勺"
+                        },
+                        {
+                            "name":  "蜂蜜",
+                            "amount":  "1勺"
+                        },
+                        {
+                            "name":  "料酒",
+                            "amount":  "1勺"
+                        }
+                    ],
+    "tools":  [
+                  "平底锅",
+                  "碗",
+                  "砧板"
+              ],
+    "priceCoins":  22,
+    "systemRecipe":  false,
+    "tasks":  [
+                  {
+                      "id":  "trim_chicken",
+                      "title":  "处理鸡腿肉",
+                      "detail":  "鸡腿肉擦干，厚的地方划两刀，方便受热均匀。",
+                      "resource":  "board",
+                      "durationSeconds":  180,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+
+                                       ]
+                  },
+                  {
+                      "id":  "mix_sauce",
+                      "title":  "调照烧汁",
+                      "detail":  "生抽、料酒、蜂蜜和少量清水调匀。",
+                      "resource":  "board",
+                      "durationSeconds":  120,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "trim_chicken"
+                                       ]
+                  },
+                  {
+                      "id":  "sear_chicken",
+                      "title":  "煎鸡腿",
+                      "detail":  "鸡皮朝下中火煎到金黄，再翻面煎。",
+                      "resource":  "stove",
+                      "durationSeconds":  600,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "mix_sauce"
+                                       ]
+                  },
+                  {
+                      "id":  "reduce_sauce",
+                      "title":  "倒汁收浓",
+                      "detail":  "倒入照烧汁，小火煮到酱汁变稠，中途翻面。",
+                      "resource":  "stove",
+                      "durationSeconds":  420,
+                      "active":  false,
+                      "canPause":  false,
+                      "continuesDuringPause":  true,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "sear_chicken"
+                                       ]
+                  },
+                  {
+                      "id":  "slice_plate",
+                      "title":  "切块装盘",
+                      "detail":  "鸡腿肉稍微放一分钟再切，淋上锅里剩下的酱汁。",
+                      "resource":  "board",
+                      "durationSeconds":  180,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "reduce_sauce"
+                                       ]
+                  }
+              ],
+    "defaultOwned":  false
+}

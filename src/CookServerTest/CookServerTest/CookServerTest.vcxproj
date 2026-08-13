@@ -169,6 +169,7 @@
     <ClInclude Include="CookServerTest.h" />
     <ClInclude Include="CookServerTestConfig.h" />
     <ClInclude Include="CookServerTestDocumentWriter.h" />
+    <ClInclude Include="CookServerTestHelper.h" />
     <ClInclude Include="CookServerTestHttpClient.h" />
     <ClInclude Include="CookServerTestReport.h" />
     <ClInclude Include="CookServerTestResult.h" />
@@ -178,6 +179,7 @@
     <ClCompile Include="CookServerTest.cpp" />
     <ClCompile Include="CookServerTestConfig.cpp" />
     <ClCompile Include="CookServerTestDocumentWriter.cpp" />
+    <ClCompile Include="CookServerTestHelper.cpp" />
     <ClCompile Include="CookServerTestHttpClient.cpp" />
     <ClCompile Include="CookServerTestReport.cpp" />
     <ClCompile Include="CookServerTestResult.cpp" />

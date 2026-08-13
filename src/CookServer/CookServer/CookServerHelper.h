@@ -32,6 +32,33 @@ public:
 	*/
 	static int32_t ceilMinutes(int32_t seconds);
 
+	/** 判断文本是否是合法UTF-8编码
+	@param [in] text 待判断文本
+	@return 合法UTF-8返回true，否则返回false
+	*/
+	static bool isUtf8Text(const std::string& text);
+
+	/** 将业务文本转换成JSON响应使用的UTF-8文本
+	@param [in] text 业务层文本，Windows下通常是本地Ansi编码，Linux下通常是UTF-8
+	@return 返回适合写入JSON响应体的UTF-8文本
+	*/
+	static std::string textToJsonUtf8(const std::string& text);
+
+	/** 拼接两段业务文本并统一转换成JSON响应使用的UTF-8文本
+	@param [in] first 第一段文本
+	@param [in] second 第二段文本
+	@return 返回拼接后的UTF-8文本
+	*/
+	static std::string joinJsonUtf8Text(const std::string& first, const std::string& second);
+
+	/** 拼接三段业务文本并统一转换成JSON响应使用的UTF-8文本
+	@param [in] first 第一段文本
+	@param [in] second 第二段文本
+	@param [in] third 第三段文本
+	@return 返回拼接后的UTF-8文本
+	*/
+	static std::string joinJsonUtf8Text(const std::string& first, const std::string& second, const std::string& third);
+
 	/** 向JSON对象写入字符串字段
 	@param [in,out] object JSON对象
 	@param [in] key 字段名
@@ -73,6 +100,12 @@ public:
 	@param [in] value 字段值
 	*/
 	static void addBool(RapidJsonDocument& object, const char* key, bool value);
+
+	/** 向JSON数组追加字符串元素
+	@param [in,out] array JSON数组
+	@param [in] text 字符串元素值
+	*/
+	static void pushString(RapidJsonValue& array, const std::string& text);
 
 	/** 向JSON对象写入字符串数组字段
 	@param [in,out] object JSON对象

@@ -173,6 +173,7 @@
     <ClInclude Include="CookHttpApiHandler.h" />
     <ClInclude Include="CookHttpServer.h" />
     <ClInclude Include="CookModels.h" />
+    <ClInclude Include="CookRecipeConfig.h" />
     <ClInclude Include="CookSchedule.h" />
     <ClInclude Include="CookServer.h" />
     <ClInclude Include="CookServerHelper.h" />
@@ -185,6 +186,7 @@
     <ClCompile Include="CookHttpApiHandler.cpp" />
     <ClCompile Include="CookHttpServer.cpp" />
     <ClCompile Include="CookModels.cpp" />
+    <ClCompile Include="CookRecipeConfig.cpp" />
     <ClCompile Include="CookSchedule.cpp" />
     <ClCompile Include="CookServer.cpp" />
     <ClCompile Include="CookServerHelper.cpp" />

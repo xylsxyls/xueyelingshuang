@@ -1,0 +1,119 @@
+{
+    "schemaVersion":  "1.0",
+    "id":  "cook_000003",
+    "title":  "番茄炒蛋",
+    "category":  "小荤",
+    "subtitle":  "先炒蛋再炒番茄，盐和糖后放，味道更稳。",
+    "difficulty":  "新手可做",
+    "coverColor":  "linear-gradient(135deg,#f35b3f,#ffd56b)",
+    "author":  "系统菜谱",
+    "tags":  [
+                 "快手",
+                 "下饭",
+                 "少油"
+             ],
+    "ingredients":  [
+                        {
+                            "name":  "番茄",
+                            "amount":  "2个"
+                        },
+                        {
+                            "name":  "鸡蛋",
+                            "amount":  "2个"
+                        },
+                        {
+                            "name":  "盐",
+                            "amount":  "少许"
+                        },
+                        {
+                            "name":  "糖",
+                            "amount":  "半勺"
+                        }
+                    ],
+    "tools":  [
+                  "炒锅",
+                  "碗",
+                  "砧板"
+              ],
+    "priceCoins":  0,
+    "systemRecipe":  true,
+    "tasks":  [
+                  {
+                      "id":  "wash_tomato",
+                      "title":  "洗番茄",
+                      "detail":  "番茄冲洗干净，去掉蒂部。",
+                      "resource":  "sink",
+                      "durationSeconds":  120,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+
+                                       ]
+                  },
+                  {
+                      "id":  "cut_tomato",
+                      "title":  "切番茄",
+                      "detail":  "番茄切滚刀块，汁水尽量留在盘子里。",
+                      "resource":  "board",
+                      "durationSeconds":  120,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "wash_tomato"
+                                       ]
+                  },
+                  {
+                      "id":  "beat_eggs",
+                      "title":  "打散鸡蛋",
+                      "detail":  "鸡蛋打入碗里，加一点盐，搅到没有大块蛋清。",
+                      "resource":  "board",
+                      "durationSeconds":  180,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+
+                                       ]
+                  },
+                  {
+                      "id":  "scramble_eggs",
+                      "title":  "先炒鸡蛋",
+                      "detail":  "热锅热油，倒入蛋液，凝固后推成大块盛出。",
+                      "resource":  "stove",
+                      "durationSeconds":  180,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "beat_eggs"
+                                       ]
+                  },
+                  {
+                      "id":  "cook_tomato",
+                      "title":  "炒番茄回蛋",
+                      "detail":  "番茄下锅炒软出汁，倒回鸡蛋，加盐和少量糖。",
+                      "resource":  "stove",
+                      "durationSeconds":  360,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "cut_tomato",
+                                           "scramble_eggs"
+                                       ]
+                  }
+              ],
+    "defaultOwned":  true
+}

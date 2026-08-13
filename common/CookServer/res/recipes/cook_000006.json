@@ -1,0 +1,119 @@
+{
+    "schemaVersion":  "1.0",
+    "id":  "cook_000006",
+    "title":  "黑椒牛柳",
+    "category":  "荤菜",
+    "subtitle":  "付费示例菜谱，先腌后快炒，适合练习肉类不过老。",
+    "difficulty":  "进阶新手",
+    "coverColor":  "linear-gradient(135deg,#3a2a24,#b49768)",
+    "author":  "示例创作者",
+    "tags":  [
+                 "付费",
+                 "快炒",
+                 "高蛋白"
+             ],
+    "ingredients":  [
+                        {
+                            "name":  "牛里脊",
+                            "amount":  "250g"
+                        },
+                        {
+                            "name":  "青椒",
+                            "amount":  "1个"
+                        },
+                        {
+                            "name":  "洋葱",
+                            "amount":  "半个"
+                        },
+                        {
+                            "name":  "黑胡椒酱",
+                            "amount":  "1勺"
+                        }
+                    ],
+    "tools":  [
+                  "炒锅",
+                  "砧板",
+                  "碗"
+              ],
+    "priceCoins":  18,
+    "systemRecipe":  false,
+    "tasks":  [
+                  {
+                      "id":  "slice_beef",
+                      "title":  "切牛肉",
+                      "detail":  "牛肉逆纹切条，厚薄尽量一致。",
+                      "resource":  "board",
+                      "durationSeconds":  240,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+
+                                       ]
+                  },
+                  {
+                      "id":  "marinate_beef",
+                      "title":  "腌牛肉",
+                      "detail":  "加生抽、淀粉和一点油抓匀，静置入味。",
+                      "resource":  "board",
+                      "durationSeconds":  600,
+                      "active":  false,
+                      "canPause":  false,
+                      "continuesDuringPause":  true,
+                      "canLeaveKitchen":  true,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "slice_beef"
+                                       ]
+                  },
+                  {
+                      "id":  "cut_veg",
+                      "title":  "切青椒洋葱",
+                      "detail":  "青椒去籽切条，洋葱切粗丝。",
+                      "resource":  "board",
+                      "durationSeconds":  300,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "slice_beef"
+                                       ]
+                  },
+                  {
+                      "id":  "fry_beef",
+                      "title":  "滑炒牛肉",
+                      "detail":  "热锅热油，牛肉快速炒到变色立刻盛出。",
+                      "resource":  "stove",
+                      "durationSeconds":  180,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "danger",
+                      "dependencies":  [
+                                           "marinate_beef"
+                                       ]
+                  },
+                  {
+                      "id":  "fry_veg",
+                      "title":  "炒配菜回牛肉",
+                      "detail":  "青椒洋葱炒香，倒回牛肉，加黑椒酱快速翻匀。",
+                      "resource":  "stove",
+                      "durationSeconds":  300,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "cut_veg",
+                                           "fry_beef"
+                                       ]
+                  }
+              ],
+    "defaultOwned":  false
+}

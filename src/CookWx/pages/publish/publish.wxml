@@ -1,4 +1,4 @@
-﻿<view class="page publish-page">
+<view class="page publish-page">
   <view class="card media" bindtap="chooseMedia">
     <view wx:if="{{mediaPath}}">
       <video wx:if="{{mediaType === 'video'}}" src="{{mediaPath}}" class="preview" controls></video>

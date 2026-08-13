@@ -1,0 +1,87 @@
+{
+    "schemaVersion":  "1.0",
+    "id":  "cook_000005",
+    "title":  "豆腐紫菜汤",
+    "category":  "汤饮",
+    "subtitle":  "等菜时顺手煮一锅，最后下紫菜和葱花。",
+    "difficulty":  "零基础",
+    "coverColor":  "linear-gradient(135deg,#6ba4b8,#f1dfb2)",
+    "author":  "系统菜谱",
+    "tags":  [
+                 "汤",
+                 "清淡",
+                 "快手"
+             ],
+    "ingredients":  [
+                        {
+                            "name":  "嫩豆腐",
+                            "amount":  "半盒"
+                        },
+                        {
+                            "name":  "紫菜",
+                            "amount":  "少许"
+                        },
+                        {
+                            "name":  "盐",
+                            "amount":  "少许"
+                        },
+                        {
+                            "name":  "葱花",
+                            "amount":  "少许"
+                        }
+                    ],
+    "tools":  [
+                  "小锅",
+                  "汤勺"
+              ],
+    "priceCoins":  0,
+    "systemRecipe":  true,
+    "tasks":  [
+                  {
+                      "id":  "cut_tofu",
+                      "title":  "切豆腐",
+                      "detail":  "豆腐切成小块，动作轻一点，避免碎成渣。",
+                      "resource":  "board",
+                      "durationSeconds":  120,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+
+                                       ]
+                  },
+                  {
+                      "id":  "boil_water",
+                      "title":  "烧水下豆腐",
+                      "detail":  "小锅加水烧开，下豆腐煮到再次沸腾。",
+                      "resource":  "stove",
+                      "durationSeconds":  480,
+                      "active":  false,
+                      "canPause":  false,
+                      "continuesDuringPause":  true,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "cut_tofu"
+                                       ]
+                  },
+                  {
+                      "id":  "season_soup",
+                      "title":  "调味下紫菜",
+                      "detail":  "放盐，关火前下紫菜和葱花。",
+                      "resource":  "stove",
+                      "durationSeconds":  120,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "boil_water"
+                                       ]
+                  }
+              ],
+    "defaultOwned":  true
+}

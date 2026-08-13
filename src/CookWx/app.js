@@ -1,4 +1,4 @@
-﻿App({
+App({
   globalData: {
     userId: 'demo_user',
     clientType: 'wechat_mini',

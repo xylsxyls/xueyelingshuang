@@ -84,12 +84,12 @@ std::string CookApiService::buildRecipesJson(const std::string& userId)
 	RapidJsonValue categories;
 	categories.setArray();
 	categories.reserve(categorySet.size() + 3);
-	categories.pushString("最喜欢");
-	categories.pushString("购买区");
-	categories.pushString("创作区");
+	CookServerHelper::pushString(categories, "最喜欢");
+	CookServerHelper::pushString(categories, "购买区");
+	CookServerHelper::pushString(categories, "创作区");
 	for (std::set<std::string>::const_iterator it = categorySet.begin(); it != categorySet.end(); ++it)
 	{
-		categories.pushString(*it);
+		CookServerHelper::pushString(categories, *it);
 	}
 	document.addValue("categories", categories);
 
@@ -115,10 +115,10 @@ std::string CookApiService::buildFeedJson(const std::string& userId)
 	RapidJsonValue tabs;
 	tabs.setArray();
 	tabs.reserve(4);
-	tabs.pushString("推荐");
-	tabs.pushString("精选");
-	tabs.pushString("关注");
-	tabs.pushString("好友");
+	CookServerHelper::pushString(tabs, "推荐");
+	CookServerHelper::pushString(tabs, "精选");
+	CookServerHelper::pushString(tabs, "关注");
+	CookServerHelper::pushString(tabs, "好友");
 	document.addValue("tabs", tabs);
 
 	RapidJsonValue feed;
@@ -142,11 +142,11 @@ std::string CookApiService::buildFeedJson(const std::string& userId)
 
 		RapidJsonValue recipeIds;
 		recipeIds.setArray();
-		recipeIds.reserve(recipes[i].m_id == "sweet_sour_ribs" ? 2 : 1);
-		recipeIds.pushString(recipes[i].m_id);
-		if (recipes[i].m_id == "sweet_sour_ribs")
+		recipeIds.reserve(recipes[i].m_id == "cook_000001" ? 2 : 1);
+		CookServerHelper::pushString(recipeIds, recipes[i].m_id);
+		if (recipes[i].m_id == "cook_000001")
 		{
-			recipeIds.pushString("rice");
+			CookServerHelper::pushString(recipeIds, "cook_000002");
 		}
 		item.addValue("recipeIds", recipeIds);
 		feed.pushValue(item);
@@ -288,10 +288,10 @@ std::string CookApiService::buildPlanJson(const std::vector<std::string>& ids, c
 		if (recipe == nullptr)
 		{
 			LOGWARNING("CookApiService plan denied, recipe not found userId=%s recipeId=%s",
-			           userId.c_str(),
-			           ids[i].c_str());
+		           userId.c_str(),
+		           ids[i].c_str());
 			document.addBool("ok", false);
-			CookServerHelper::addString(document, "message", "菜谱不存在：" + ids[i]);
+			CookServerHelper::addString(document, "message", CookServerHelper::joinJsonUtf8Text("菜谱不存在：", ids[i]));
 			return document.toString();
 		}
 		if (!AccountStore::isRecipeOwned(*recipe, account))
@@ -301,7 +301,7 @@ std::string CookApiService::buildPlanJson(const std::vector<std::string>& ids, c
 			           ids[i].c_str(),
 			           recipe->m_title.c_str());
 			document.addBool("ok", false);
-			CookServerHelper::addString(document, "message", "请先购买菜谱：" + recipe->m_title);
+			CookServerHelper::addString(document, "message", CookServerHelper::joinJsonUtf8Text("请先购买菜谱：", recipe->m_title));
 			return document.toString();
 		}
 	}

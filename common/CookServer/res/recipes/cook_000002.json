@@ -1,0 +1,79 @@
+{
+    "schemaVersion":  "1.0",
+    "id":  "cook_000002",
+    "title":  "电饭锅米饭",
+    "category":  "主食",
+    "subtitle":  "淘米后交给电饭锅，适合插入肉类浸泡或炖煮窗口。",
+    "difficulty":  "零基础",
+    "coverColor":  "linear-gradient(135deg,#e4e0ca,#89a36a)",
+    "author":  "系统菜谱",
+    "tags":  [
+                 "主食",
+                 "自由时间",
+                 "电饭锅"
+             ],
+    "ingredients":  [
+                        {
+                            "name":  "大米",
+                            "amount":  "1杯"
+                        },
+                        {
+                            "name":  "清水",
+                            "amount":  "约1.1杯"
+                        }
+                    ],
+    "tools":  [
+                  "电饭锅",
+                  "量杯"
+              ],
+    "priceCoins":  0,
+    "systemRecipe":  true,
+    "tasks":  [
+                  {
+                      "id":  "wash_rice",
+                      "title":  "淘米加水",
+                      "detail":  "米淘洗到水略清，按刻度加水，把内胆放进电饭锅。",
+                      "resource":  "sink",
+                      "durationSeconds":  300,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+
+                                       ]
+                  },
+                  {
+                      "id":  "cook_rice",
+                      "title":  "启动煮饭",
+                      "detail":  "按下煮饭键，等电饭锅完成。",
+                      "resource":  "rice_cooker",
+                      "durationSeconds":  2100,
+                      "active":  false,
+                      "canPause":  false,
+                      "continuesDuringPause":  true,
+                      "canLeaveKitchen":  true,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "wash_rice"
+                                       ]
+                  },
+                  {
+                      "id":  "fluff_rice",
+                      "title":  "翻松米饭",
+                      "detail":  "饭熟后开盖，用饭勺把米饭翻松，避免结块。",
+                      "resource":  "rice_cooker",
+                      "durationSeconds":  60,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "cook_rice"
+                                       ]
+                  }
+              ],
+    "defaultOwned":  true
+}

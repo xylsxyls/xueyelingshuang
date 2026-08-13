@@ -325,6 +325,49 @@ bool RapidJsonDocument::getBoolOrDefault(const char* key, bool defaultValue) con
 	return it->value.GetBool();
 }
 
+RapidJsonValue RapidJsonDocument::getValue(const char* key) const
+{
+	RapidJsonValue value;
+	if (key == nullptr)
+	{
+		return value;
+	}
+	if (!m_document->IsObject())
+	{
+		return value;
+	}
+	rapidjson::Value::ConstMemberIterator it = m_document->FindMember(key);
+	if (it == m_document->MemberEnd())
+	{
+		return value;
+	}
+	return RapidJsonValue(&it->value);
+}
+
+std::vector<RapidJsonValue> RapidJsonDocument::getArrayValueOrEmpty(const char* key) const
+{
+	std::vector<RapidJsonValue> values;
+	if (key == nullptr)
+	{
+		return values;
+	}
+	if (!m_document->IsObject())
+	{
+		return values;
+	}
+	rapidjson::Value::ConstMemberIterator it = m_document->FindMember(key);
+	if (it == m_document->MemberEnd() || !it->value.IsArray())
+	{
+		return values;
+	}
+	values.reserve(static_cast<size_t>(it->value.Size()));
+	for (rapidjson::SizeType i = 0; i < it->value.Size(); ++i)
+	{
+		values.push_back(RapidJsonValue(&it->value[i]));
+	}
+	return values;
+}
+
 std::vector<std::string> RapidJsonDocument::getStringArrayOrEmpty(const char* key) const
 {
 	std::vector<std::string> values;

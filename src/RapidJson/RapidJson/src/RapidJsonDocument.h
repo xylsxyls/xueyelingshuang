@@ -131,6 +131,18 @@ public:
 	*/
 	bool getBoolOrDefault(const char* key, bool defaultValue) const;
 
+	/** 读取对象或数组字段
+	@param [in] key 字段名
+	@return 字段存在时返回字段值拷贝，否则返回空对象值
+	*/
+	RapidJsonValue getValue(const char* key) const;
+
+	/** 读取对象数组字段
+	@param [in] key 字段名
+	@return 返回数组中的对象或值拷贝，字段不存在或类型不匹配时返回空数组
+	*/
+	std::vector<RapidJsonValue> getArrayValueOrEmpty(const char* key) const;
+
 	/** 读取字符串数组字段
 	@param [in] key 字段名
 	@return 返回字符串数组，字段不存在或类型不匹配时返回空数组

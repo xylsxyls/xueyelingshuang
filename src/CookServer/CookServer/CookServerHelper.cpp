@@ -39,14 +39,89 @@ int32_t CookServerHelper::ceilMinutes(int32_t seconds)
 	return (seconds + 59) / 60;
 }
 
+bool CookServerHelper::isUtf8Text(const std::string& text)
+{
+	const unsigned char* data = reinterpret_cast<const unsigned char*>(text.data());
+	size_t index = 0;
+	while (index < text.size())
+	{
+		unsigned char ch = data[index];
+		if (ch <= 0x7F)
+		{
+			++index;
+		}
+		else if ((ch & 0xE0) == 0xC0)
+		{
+			if (index + 1 >= text.size() || (data[index + 1] & 0xC0) != 0x80 || ch < 0xC2)
+			{
+				return false;
+			}
+			index += 2;
+		}
+		else if ((ch & 0xF0) == 0xE0)
+		{
+			if (index + 2 >= text.size() || (data[index + 1] & 0xC0) != 0x80 || (data[index + 2] & 0xC0) != 0x80)
+			{
+				return false;
+			}
+			if ((ch == 0xE0 && data[index + 1] < 0xA0) || (ch == 0xED && data[index + 1] >= 0xA0))
+			{
+				return false;
+			}
+			index += 3;
+		}
+		else if ((ch & 0xF8) == 0xF0)
+		{
+			if (index + 3 >= text.size() || (data[index + 1] & 0xC0) != 0x80 || (data[index + 2] & 0xC0) != 0x80 || (data[index + 3] & 0xC0) != 0x80)
+			{
+				return false;
+			}
+			if ((ch == 0xF0 && data[index + 1] < 0x90) || (ch == 0xF4 && data[index + 1] >= 0x90) || ch > 0xF4)
+			{
+				return false;
+			}
+			index += 4;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+std::string CookServerHelper::textToJsonUtf8(const std::string& text)
+{
+	if (CookServerHelper::isUtf8Text(text))
+	{
+		return text;
+	}
+#ifdef _WIN32
+	std::string utf8Text = CStringManager::AnsiToUtf8(text);
+	return utf8Text.empty() && !text.empty() ? text : utf8Text;
+#else
+	return text;
+#endif
+}
+
+std::string CookServerHelper::joinJsonUtf8Text(const std::string& first, const std::string& second)
+{
+	return CookServerHelper::textToJsonUtf8(first) + CookServerHelper::textToJsonUtf8(second);
+}
+
+std::string CookServerHelper::joinJsonUtf8Text(const std::string& first, const std::string& second, const std::string& third)
+{
+	return CookServerHelper::textToJsonUtf8(first) + CookServerHelper::textToJsonUtf8(second) + CookServerHelper::textToJsonUtf8(third);
+}
+
 void CookServerHelper::addString(RapidJsonValue& object, const char* key, const std::string& text)
 {
-	object.addString(key, text);
+	object.addString(key, CookServerHelper::textToJsonUtf8(text));
 }
 
 void CookServerHelper::addString(RapidJsonDocument& object, const char* key, const std::string& text)
 {
-	object.addString(key, text);
+	object.addString(key, CookServerHelper::textToJsonUtf8(text));
 }
 
 void CookServerHelper::addInt(RapidJsonValue& object, const char* key, int32_t number)
@@ -69,9 +144,21 @@ void CookServerHelper::addBool(RapidJsonDocument& object, const char* key, bool 
 	object.addBool(key, value);
 }
 
+void CookServerHelper::pushString(RapidJsonValue& array, const std::string& text)
+{
+	array.pushString(CookServerHelper::textToJsonUtf8(text));
+}
+
 void CookServerHelper::addStringArray(RapidJsonValue& object, const char* key, const std::vector<std::string>& values)
 {
-	object.addStringArray(key, values);
+	RapidJsonValue array;
+	array.setArray();
+	array.reserve(values.size());
+	for (size_t i = 0; i < values.size(); ++i)
+	{
+		CookServerHelper::pushString(array, values[i]);
+	}
+	object.addValue(key, array);
 }
 
 RapidJsonValue CookServerHelper::accountToJson(const UserAccount& account)
@@ -81,12 +168,21 @@ RapidJsonValue CookServerHelper::accountToJson(const UserAccount& account)
 	CookServerHelper::addString(object, "userId", account.m_userId);
 	CookServerHelper::addInt(object, "coins", account.m_coins);
 
+	RapidJsonValue owned;
+	owned.setArray();
+	owned.reserve(account.m_ownedRecipeIds.size());
+	for (std::set<std::string>::const_iterator it = account.m_ownedRecipeIds.begin(); it != account.m_ownedRecipeIds.end(); ++it)
+	{
+		CookServerHelper::pushString(owned, *it);
+	}
+	object.addValue("ownedRecipeIds", owned);
+
 	RapidJsonValue purchased;
 	purchased.setArray();
 	purchased.reserve(account.m_purchasedRecipeIds.size());
 	for (std::set<std::string>::const_iterator it = account.m_purchasedRecipeIds.begin(); it != account.m_purchasedRecipeIds.end(); ++it)
 	{
-		purchased.pushString(*it);
+		CookServerHelper::pushString(purchased, *it);
 	}
 	object.addValue("purchasedRecipeIds", purchased);
 
@@ -95,7 +191,7 @@ RapidJsonValue CookServerHelper::accountToJson(const UserAccount& account)
 	favorites.reserve(account.m_favoriteRecipeIds.size());
 	for (std::set<std::string>::const_iterator it = account.m_favoriteRecipeIds.begin(); it != account.m_favoriteRecipeIds.end(); ++it)
 	{
-		favorites.pushString(*it);
+		CookServerHelper::pushString(favorites, *it);
 	}
 	object.addValue("favoriteRecipeIds", favorites);
 	return object;
@@ -105,7 +201,7 @@ RapidJsonValue CookServerHelper::recipeToJson(const Recipe& recipe, const UserAc
 {
 	RapidJsonValue object;
 	object.setObject();
-	bool owned = account == nullptr ? recipe.m_owned : AccountStore::isRecipeOwned(recipe, *account);
+	bool owned = account == nullptr ? recipe.m_defaultOwned : AccountStore::isRecipeOwned(recipe, *account);
 	bool favorite = account != nullptr && account->m_favoriteRecipeIds.find(recipe.m_id) != account->m_favoriteRecipeIds.end();
 
 	CookServerHelper::addString(object, "id", recipe.m_id);
@@ -117,6 +213,7 @@ RapidJsonValue CookServerHelper::recipeToJson(const Recipe& recipe, const UserAc
 	CookServerHelper::addString(object, "author", recipe.m_author);
 	CookServerHelper::addInt(object, "priceCoins", recipe.m_priceCoins);
 	CookServerHelper::addBool(object, "owned", owned);
+	CookServerHelper::addBool(object, "defaultOwned", recipe.m_defaultOwned);
 	CookServerHelper::addBool(object, "favorite", favorite);
 	CookServerHelper::addBool(object, "systemRecipe", recipe.m_systemRecipe);
 	CookServerHelper::addStringArray(object, "tags", recipe.m_tags);

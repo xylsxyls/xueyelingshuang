@@ -1,4 +1,4 @@
-﻿.media {
+.media {
   min-height: 420rpx;
   overflow: hidden;
 }

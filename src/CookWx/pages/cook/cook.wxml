@@ -1,4 +1,4 @@
-﻿<view class="cook-page" wx:if="{{plan.summary}}">
+<view class="cook-page" wx:if="{{plan.summary}}">
   <view class="top-card card">
     <view class="between">
       <view>

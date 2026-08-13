@@ -12,7 +12,7 @@ m_canLeaveKitchen(false)
 
 Recipe::Recipe() :
 m_priceCoins(0),
-m_owned(false),
+m_defaultOwned(false),
 m_systemRecipe(false)
 {
 

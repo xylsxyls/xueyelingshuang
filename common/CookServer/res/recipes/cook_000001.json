@@ -1,0 +1,169 @@
+{
+    "schemaVersion":  "1.0",
+    "id":  "cook_000001",
+    "title":  "糖醋排骨",
+    "category":  "荤菜",
+    "subtitle":  "新手版，先浸泡去血水，再小火煮透，最后大火收汁。",
+    "difficulty":  "新手可做",
+    "coverColor":  "linear-gradient(135deg,#b83b2b,#f0a35e)",
+    "author":  "系统菜谱",
+    "tags":  [
+                 "下饭",
+                 "可并行",
+                 "守火"
+             ],
+    "ingredients":  [
+                        {
+                            "name":  "排骨",
+                            "amount":  "500g"
+                        },
+                        {
+                            "name":  "冰糖",
+                            "amount":  "20g"
+                        },
+                        {
+                            "name":  "生抽",
+                            "amount":  "2勺"
+                        },
+                        {
+                            "name":  "香醋",
+                            "amount":  "2勺"
+                        },
+                        {
+                            "name":  "葱",
+                            "amount":  "1根"
+                        }
+                    ],
+    "tools":  [
+                  "炒锅",
+                  "砧板",
+                  "菜刀",
+                  "大碗"
+              ],
+    "priceCoins":  0,
+    "systemRecipe":  true,
+    "tasks":  [
+                  {
+                      "id":  "wash_meat",
+                      "title":  "冲洗排骨",
+                      "detail":  "冷水冲洗排骨，抓洗到表面没有明显血水。",
+                      "resource":  "sink",
+                      "durationSeconds":  120,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+
+                                       ]
+                  },
+                  {
+                      "id":  "soak_meat",
+                      "title":  "浸泡排骨",
+                      "detail":  "排骨放入冷水中浸泡，中途不用动手，结束后倒掉血水。",
+                      "resource":  "",
+                      "durationSeconds":  600,
+                      "active":  false,
+                      "canPause":  false,
+                      "continuesDuringPause":  true,
+                      "canLeaveKitchen":  true,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "wash_meat"
+                                       ]
+                  },
+                  {
+                      "id":  "cut_scallion",
+                      "title":  "洗葱切葱花",
+                      "detail":  "葱洗净，葱白切段，葱绿切葱花，最后收汁时会用到。",
+                      "resource":  "board",
+                      "durationSeconds":  180,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "wash_meat"
+                                       ]
+                  },
+                  {
+                      "id":  "drain_meat",
+                      "title":  "倒水沥干",
+                      "detail":  "倒掉浸泡水，用厨房纸或漏勺把排骨沥到不滴水。",
+                      "resource":  "sink",
+                      "durationSeconds":  60,
+                      "active":  true,
+                      "canPause":  true,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "soak_meat"
+                                       ]
+                  },
+                  {
+                      "id":  "stir_fry",
+                      "title":  "炒排骨上色",
+                      "detail":  "锅热后倒少量油，排骨下锅，中火翻炒到表面微黄。",
+                      "resource":  "stove",
+                      "durationSeconds":  300,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "drain_meat"
+                                       ]
+                  },
+                  {
+                      "id":  "simmer",
+                      "title":  "加调料小火煮",
+                      "detail":  "加入糖、生抽、醋和热水没过排骨，转小火盖盖煮。",
+                      "resource":  "stove",
+                      "durationSeconds":  1500,
+                      "active":  false,
+                      "canPause":  false,
+                      "continuesDuringPause":  true,
+                      "canLeaveKitchen":  true,
+                      "safetyLevel":  "normal",
+                      "dependencies":  [
+                                           "stir_fry"
+                                       ]
+                  },
+                  {
+                      "id":  "high_heat",
+                      "title":  "开大火收汁",
+                      "detail":  "打开锅盖，转大火，让汤汁明显翻滚。",
+                      "resource":  "stove",
+                      "durationSeconds":  300,
+                      "active":  false,
+                      "canPause":  false,
+                      "continuesDuringPause":  true,
+                      "canLeaveKitchen":  true,
+                      "safetyLevel":  "attention",
+                      "dependencies":  [
+                                           "simmer"
+                                       ]
+                  },
+                  {
+                      "id":  "reduce_stir",
+                      "title":  "翻炒收汁",
+                      "detail":  "持续翻炒，让酱汁均匀裹住排骨，撒葱花后关火。",
+                      "resource":  "stove",
+                      "durationSeconds":  300,
+                      "active":  true,
+                      "canPause":  false,
+                      "continuesDuringPause":  false,
+                      "canLeaveKitchen":  false,
+                      "safetyLevel":  "danger",
+                      "dependencies":  [
+                                           "high_heat",
+                                           "cut_scallion"
+                                       ]
+                  }
+              ],
+    "defaultOwned":  true
+}

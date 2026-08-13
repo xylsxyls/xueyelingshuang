@@ -1,4 +1,4 @@
-﻿.cook-page {
+.cook-page {
   min-height: 100vh;
   padding: 22rpx 22rpx 160rpx;
 }

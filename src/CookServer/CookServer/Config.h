@@ -64,6 +64,8 @@ public:
 	std::string m_corsAllowOrigin;
 	// 简易账号状态文件名，实际读写路径固定为exe同级目录
 	std::string m_accountStateFileName;
+	// 菜谱资源目录名，实际读取路径固定为exe同级目录下的相对目录
+	std::string m_recipeResourceDirectoryName;
 	// 新账号默认赠送金币数
 	int32_t m_accountDefaultCoins;
 	// 单次充值允许的最大金币数

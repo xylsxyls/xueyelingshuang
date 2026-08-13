@@ -35,6 +35,11 @@ public:
 	*/
 	RapidJsonValue(RapidJsonValue&& value);
 
+	/** 从底层rapidjson值构造JSON值封装，传入空指针时创建空对象值
+	@param [in] value 底层rapidjson值指针，仅在本次调用期间读取内容，不会保存该指针
+	*/
+	explicit RapidJsonValue(const rapidjson::Value* value);
+
 	/** 析构函数，释放内部rapidjson值对象
 	*/
 	~RapidJsonValue();
@@ -159,6 +164,45 @@ public:
 	@param [in] value 已构造的JSON值
 	*/
 	void pushValue(const RapidJsonValue& value);
+
+	/** 读取字符串字段
+	@param [in] key 字段名
+	@param [in] defaultValue 字段不存在或类型不匹配时返回的默认值
+	@return 返回字段字符串值或默认值
+	*/
+	std::string getStringOrDefault(const char* key, const std::string& defaultValue) const;
+
+	/** 读取整数字段
+	@param [in] key 字段名
+	@param [in] defaultValue 字段不存在或类型不匹配时返回的默认值
+	@return 返回字段整数值或默认值
+	*/
+	int32_t getIntOrDefault(const char* key, int32_t defaultValue) const;
+
+	/** 读取布尔字段
+	@param [in] key 字段名
+	@param [in] defaultValue 字段不存在或类型不匹配时返回的默认值
+	@return 返回字段布尔值或默认值
+	*/
+	bool getBoolOrDefault(const char* key, bool defaultValue) const;
+
+	/** 读取对象或数组字段
+	@param [in] key 字段名
+	@return 字段存在时返回字段值拷贝，否则返回空对象值
+	*/
+	RapidJsonValue getValue(const char* key) const;
+
+	/** 读取对象数组字段
+	@param [in] key 字段名
+	@return 返回数组中的对象或值拷贝，字段不存在或类型不匹配时返回空数组
+	*/
+	std::vector<RapidJsonValue> getArrayValueOrEmpty(const char* key) const;
+
+	/** 读取字符串数组字段
+	@param [in] key 字段名
+	@return 返回字符串数组，字段不存在或类型不匹配时返回空数组
+	*/
+	std::vector<std::string> getStringArrayOrEmpty(const char* key) const;
 
 	/** 将当前JSON值序列化为字符串
 	@return 返回JSON文本

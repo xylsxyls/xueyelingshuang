@@ -1,4 +1,4 @@
-﻿.home-page {
+.home-page {
   height: 100vh;
   background: #111814;
   overflow: hidden;
