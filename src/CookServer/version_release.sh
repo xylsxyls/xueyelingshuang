@@ -6,3 +6,7 @@
 "$CLOUD_REBUILD" HttpService 64 lib release same
 "$CLOUD_REBUILD" LogManager 64 lib release only
 "$CLOUD_REBUILD" CDump 64 lib release same
+"$CLOUD_REBUILD" Cini 64 lib release same
+"$CLOUD_REBUILD" CTaskThreadManager 64 lib release same
+"$CLOUD_REBUILD" HiRedis 64 dll release only
+"$CLOUD_REBUILD" MysqlCpp 64 lib release same

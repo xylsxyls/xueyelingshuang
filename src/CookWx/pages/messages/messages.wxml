@@ -1,4 +1,16 @@
 <view class="page messages-page">
+  <view class="messages-state card" wx:if="{{loading}}">
+    消息加载中...
+  </view>
+
+  <view class="messages-state card warning" wx:elif="{{errorText}}">
+    {{errorText}}
+  </view>
+
+  <view class="messages-state card" wx:elif="{{!messages.length}}">
+    暂时没有消息。
+  </view>
+
   <view class="msg card" wx:for="{{messages}}" wx:key="id">
     <view class="icon">{{item.icon}}</view>
     <view>

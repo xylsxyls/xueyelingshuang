@@ -127,13 +127,30 @@ public:
 	*/
 	static RapidJsonValue recipeToJson(const Recipe& recipe, const UserAccount* account);
 
+	/** 将菜谱转换成菜单列表使用的摘要JSON对象
+	@param [in] recipe 菜谱数据
+	@param [in] account 当前账号，可为空
+	@return 返回不包含食材、工具和步骤明细的JSON对象
+	*/
+	static RapidJsonValue recipeSummaryToJson(const Recipe& recipe, const UserAccount* account);
+
 	/** 将排程结果转换成JSON对象
 	@param [in] plan 排程结果
 	@param [in] account 当前账号
 	@param [in] includePlanId 是否写入正式开始制作时的planId
+	@param [in] planId 已生成的排程ID，为空时内部生成
+	@param [in] lite 是否只返回步骤页启动必需字段
 	@return 返回JSON对象
 	*/
-	static RapidJsonValue planToJson(const PlanResult& plan, const UserAccount& account, bool includePlanId);
+	static RapidJsonValue planToJson(const PlanResult& plan, const UserAccount& account, bool includePlanId, const std::string& planId, bool lite);
+
+	/** 将排程结果转换成菜单预览使用的摘要JSON对象
+	@param [in] plan 排程结果
+	@param [in] includePlanId 是否写入正式开始制作时的planId
+	@param [in] includeTimeBlocks 是否写入计划界面使用的自由、守候和时间条区间
+	@return 返回不包含菜谱明细和步骤明细的JSON对象
+	*/
+	static RapidJsonValue planSummaryToJson(const PlanResult& plan, bool includePlanId, bool includeTimeBlocks);
 
 	/** 构建JSON HTTP响应
 	@param [in] body JSON响应体

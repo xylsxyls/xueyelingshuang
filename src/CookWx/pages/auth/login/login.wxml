@@ -1,0 +1,12 @@
+<view class="auth-page">
+  <view class="brand">会做饭</view>
+  <view class="subtitle">把菜谱、提醒和多菜排程交给程序，厨房里只做该做的下一步。</view>
+
+  <view class="form card">
+    <input class="input" placeholder="账号" value="{{account}}" bindinput="onAccount" />
+    <input class="input" placeholder="密码" password value="{{password}}" bindinput="onPassword" />
+    <input wx:if="{{mode === 'register'}}" class="input" placeholder="昵称" value="{{nickname}}" bindinput="onNickname" />
+    <button class="primary-btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit">{{mode === 'login' ? '登录' : '注册'}}</button>
+    <button class="ghost-btn" bindtap="switchMode">{{mode === 'login' ? '注册新账号' : '已有账号登录'}}</button>
+  </view>
+</view>

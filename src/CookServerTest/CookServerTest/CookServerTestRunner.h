@@ -2,6 +2,7 @@
 #include "CookServerTestHttpClient.h"
 #include "CookServerTestResult.h"
 #include <functional>
+#include <map>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -79,6 +80,12 @@ private:
 	*/
 	bool expectJsonOk(const CookServerTestHttpResponse& response, bool expectedOk, std::string& message) const;
 
+	/** 读取JSON根对象ok字段
+	@param [in] response HTTP响应
+	@return 返回ok字段值，解析失败时返回false
+	*/
+	bool responseJsonOk(const CookServerTestHttpResponse& response) const;
+
 	/** 校验响应体包含关键文本
 	@param [in] response HTTP响应
 	@param [in] text 期望文本
@@ -86,6 +93,46 @@ private:
 	@return 返回是否包含
 	*/
 	bool expectBodyContains(const CookServerTestHttpResponse& response, const std::string& text, std::string& message) const;
+
+	/** 从JSON响应体读取字符串字段
+	@param [in] response HTTP响应
+	@param [in] key 字段名
+	@return 返回字段值，解析失败时返回空字符串
+	*/
+	std::string responseJsonString(const CookServerTestHttpResponse& response, const char* key) const;
+
+	/** 构造Authorization请求头
+	@param [in] token 登录token
+	@return 返回请求头映射
+	*/
+	std::map<std::string, std::string> authHeaders(const std::string& token) const;
+
+	/** 构造账号认证JSON
+	@param [in] account 账号
+	@param [in] password 密码
+	@param [in] nickname 昵称
+	@return 返回JSON文本
+	*/
+	std::string authBody(const std::string& account, const std::string& password, const std::string& nickname) const;
+
+	/** 构造带幂等键的菜谱加入JSON
+	@param [in] recipeId 菜谱ID
+	@param [in] idempotencyKey 幂等键
+	@return 返回JSON文本
+	*/
+	std::string joinRecipeBody(const std::string& recipeId, const std::string& idempotencyKey) const;
+
+	/** 构造自定义菜谱发布JSON
+	@param [in] recipeId 菜谱ID
+	@return 返回JSON文本
+	*/
+	std::string customRecipePublishBody(const std::string& recipeId) const;
+
+	/** 构造个性化配置JSON
+	@param [in] recipeId 菜谱ID
+	@return 返回JSON文本
+	*/
+	std::string personalizationBody(const std::string& recipeId) const;
 
 	/** 构造测试用户ID
 	@param [in] suffix 用户ID后缀

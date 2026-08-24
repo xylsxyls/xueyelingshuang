@@ -100,7 +100,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;Advapi32.lib;User32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;Advapi32.lib;User32.lib;Ole32.lib;Sapi.lib;CTaskThreadManagerd.lib;Semaphored.lib;MysqlCppd.lib;HiRedisd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -118,7 +118,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;Advapi32.lib;User32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;Advapi32.lib;User32.lib;Ole32.lib;Sapi.lib;CTaskThreadManagerd.lib;Semaphored.lib;MysqlCppd.lib;HiRedisd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -140,7 +140,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;Advapi32.lib;User32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;Advapi32.lib;User32.lib;Ole32.lib;Sapi.lib;CTaskThreadManager.lib;Semaphore.lib;MysqlCpp.lib;HiRedis.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -162,7 +162,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Ws2_32.lib;Advapi32.lib;User32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;Advapi32.lib;User32.lib;Ole32.lib;Sapi.lib;CTaskThreadManager.lib;Semaphore.lib;MysqlCpp.lib;HiRedis.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -170,6 +170,8 @@
     <ClInclude Include="CookApiService.h" />
     <ClInclude Include="CookCatalog.h" />
     <ClInclude Include="Config.h" />
+    <ClInclude Include="CookDependencyService.h" />
+    <ClInclude Include="CookHelper.h" />
     <ClInclude Include="CookHttpApiHandler.h" />
     <ClInclude Include="CookHttpServer.h" />
     <ClInclude Include="CookModels.h" />
@@ -177,12 +179,17 @@
     <ClInclude Include="CookSchedule.h" />
     <ClInclude Include="CookServer.h" />
     <ClInclude Include="CookServerHelper.h" />
+    <ClInclude Include="CookStorageService.h" />
+    <ClInclude Include="CookStorageSyncTask.h" />
+    <ClInclude Include="CookVoiceService.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AccountStore.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="CookApiService.cpp" />
     <ClCompile Include="CookCatalog.cpp" />
+    <ClCompile Include="CookDependencyService.cpp" />
+    <ClCompile Include="CookHelper.cpp" />
     <ClCompile Include="CookHttpApiHandler.cpp" />
     <ClCompile Include="CookHttpServer.cpp" />
     <ClCompile Include="CookModels.cpp" />
@@ -190,6 +197,9 @@
     <ClCompile Include="CookSchedule.cpp" />
     <ClCompile Include="CookServer.cpp" />
     <ClCompile Include="CookServerHelper.cpp" />
+    <ClCompile Include="CookStorageService.cpp" />
+    <ClCompile Include="CookStorageSyncTask.cpp" />
+    <ClCompile Include="CookVoiceService.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -35,42 +35,55 @@
   height: 100vh;
   padding: 96rpx 28rpx 150rpx;
   color: #fffdf8;
+  overflow: hidden;
 }
 
-.sample-video {
+.feed-video,
+.feed-poster {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.feed-poster {
+  z-index: 0;
+}
+
+.feed-video {
+  z-index: 1;
+}
+
+.video-shade {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.04) 34%, rgba(0, 0, 0, 0.46));
+}
+
+.pause-overlay {
+  position: absolute;
+  z-index: 5;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.12);
+  pointer-events: none;
 }
 
-.play-dot {
-  width: 112rpx;
-  height: 112rpx;
-  line-height: 112rpx;
-  text-align: center;
-  border-radius: 56rpx;
-  background: rgba(255, 253, 248, 0.2);
-  border: 1rpx solid rgba(255, 253, 248, 0.42);
-  font-size: 42rpx;
-  padding-left: 8rpx;
-}
-
-.sample-lines {
-  position: absolute;
-  top: 45%;
-  left: 48rpx;
-  right: 120rpx;
-  font-size: 44rpx;
-  font-weight: 700;
-  line-height: 1.35;
-  text-shadow: 0 2rpx 14rpx rgba(0, 0, 0, 0.28);
+.pause-triangle {
+  width: 0;
+  height: 0;
+  border-top: 42rpx solid transparent;
+  border-bottom: 42rpx solid transparent;
+  border-left: 68rpx solid rgba(255, 255, 255, 0.62);
+  filter: drop-shadow(0 6rpx 20rpx rgba(0, 0, 0, 0.32));
 }
 
 .feed-actions {
   position: absolute;
+  z-index: 4;
   right: 24rpx;
   bottom: 250rpx;
   display: flex;
@@ -90,6 +103,7 @@
 
 .feed-info {
   position: absolute;
+  z-index: 4;
   left: 28rpx;
   right: 120rpx;
   bottom: 142rpx;
@@ -145,6 +159,7 @@
 
 .offline {
   position: fixed;
+  z-index: 12;
   left: 32rpx;
   right: 32rpx;
   top: 160rpx;
@@ -158,4 +173,73 @@
   margin-top: 16rpx;
   background: #18231f;
   color: #fffdf8;
+}
+
+.video-progress {
+  position: absolute;
+  z-index: 6;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 78rpx;
+  height: 54rpx;
+  display: flex;
+  align-items: center;
+}
+
+.progress-track {
+  position: relative;
+  width: 100%;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: rgba(255, 255, 255, 0.28);
+  overflow: visible;
+}
+
+.progress-time-tip {
+  position: absolute;
+  left: 50%;
+  bottom: 42rpx;
+  transform: translateX(-50%);
+  min-width: 150rpx;
+  max-width: 360rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 6rpx;
+  background: rgba(24, 35, 31, 0.82);
+  color: #fffdf8;
+  font-size: 24rpx;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4rpx;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 24rpx;
+  height: 24rpx;
+  margin-top: -12rpx;
+  margin-left: -12rpx;
+  border-radius: 50%;
+  background: #fffdf8;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.28);
+}
+
+.feed-empty {
+  position: fixed;
+  z-index: 11;
+  left: 32rpx;
+  right: 32rpx;
+  top: 180rpx;
+  padding: 24rpx;
+  border-radius: 8rpx;
+  background: rgba(255, 253, 248, 0.94);
+  color: #18231f;
+  font-size: 27rpx;
+  text-align: center;
 }

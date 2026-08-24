@@ -47,9 +47,19 @@ bool CookServerTestHttpClient::get(const std::string& path, CookServerTestHttpRe
 	return request("GET", path, "", response);
 }
 
+bool CookServerTestHttpClient::get(const std::string& path, const std::map<std::string, std::string>& headers, CookServerTestHttpResponse& response) const
+{
+	return request("GET", path, "", headers, response);
+}
+
 bool CookServerTestHttpClient::post(const std::string& path, const std::string& body, CookServerTestHttpResponse& response) const
 {
 	return request("POST", path, body, response);
+}
+
+bool CookServerTestHttpClient::post(const std::string& path, const std::string& body, const std::map<std::string, std::string>& headers, CookServerTestHttpResponse& response) const
+{
+	return request("POST", path, body, headers, response);
 }
 
 bool CookServerTestHttpClient::options(const std::string& path, CookServerTestHttpResponse& response) const
@@ -58,6 +68,16 @@ bool CookServerTestHttpClient::options(const std::string& path, CookServerTestHt
 }
 
 bool CookServerTestHttpClient::request(const std::string& method, const std::string& path, const std::string& body, CookServerTestHttpResponse& response) const
+{
+	std::map<std::string, std::string> headers;
+	return request(method, path, body, headers, response);
+}
+
+bool CookServerTestHttpClient::request(const std::string& method,
+                                       const std::string& path,
+                                       const std::string& body,
+                                       const std::map<std::string, std::string>& headers,
+                                       CookServerTestHttpResponse& response) const
 {
 	std::chrono::high_resolution_clock::time_point beginTime = CSystem::GetHighTickCount();
 	response = CookServerTestHttpResponse();
@@ -74,7 +94,7 @@ bool CookServerTestHttpClient::request(const std::string& method, const std::str
 	bool ok = false;
 	if (connectServer(socketValue, error))
 	{
-		std::string requestText = buildRequestText(method, path, body);
+		std::string requestText = buildRequestText(method, path, body, headers);
 		std::string rawResponse;
 		if (sendAll(socketValue, requestText, error) && receiveAll(socketValue, rawResponse, error))
 		{
@@ -450,7 +470,10 @@ bool CookServerTestHttpClient::parseResponse(const std::string& rawResponse, Coo
 	return true;
 }
 
-std::string CookServerTestHttpClient::buildRequestText(const std::string& method, const std::string& path, const std::string& body) const
+std::string CookServerTestHttpClient::buildRequestText(const std::string& method,
+                                                       const std::string& path,
+                                                       const std::string& body,
+                                                       const std::map<std::string, std::string>& headers) const
 {
 	std::ostringstream oss;
 	oss << method << " " << path << " HTTP/1.1\r\n";
@@ -460,6 +483,13 @@ std::string CookServerTestHttpClient::buildRequestText(const std::string& method
 	if (!body.empty())
 	{
 		oss << "Content-Type: application/json; charset=utf-8\r\n";
+	}
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
+	{
+		if (!it->first.empty())
+		{
+			oss << it->first << ": " << it->second << "\r\n";
+		}
 	}
 	oss << "Content-Length: " << body.size() << "\r\n";
 	oss << "Connection: close\r\n";

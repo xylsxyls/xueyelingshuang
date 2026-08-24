@@ -1,0 +1,1078 @@
+CookWx第一期微信小程序程序架构设计文档
+
+一、文档说明
+1. 本文档描述 Cook 做菜软件第一期微信小程序端 CookWx 的程序架构设计。
+2. 本文档依据 common/CookServer/Cook做菜软件第一期产品设计文档.txt 最新版本重新整理。
+3. 本次产品文档已经明确：第一期必须有真实登录注册、真实服务端持久化、金币和元宝内测购买、每日签到、模拟广告奖励、真实视频录制上传、菜谱教程发布、菜谱版本管理、关注留言、做菜结果发布。
+4. 本文档只修改程序架构文档，不要求当前立即修改 src/CookWx 代码。
+5. 第一阶段只实现微信小程序客户端，但接口和数据结构必须面向后续 Android APP 和 iOS APP 共用服务端。
+6. 小程序端的核心原则是：开始做菜前从服务端拿到完整 plan 快照，开始做菜后本地执行提醒，避免网络中断导致用户错过关火、收汁、倒水等安全动作。
+
+二、第一期客户端目标
+1. 未登录用户打开小程序时必须先进入登录页。
+2. 用户可以手动注册账号、密码和昵称，注册成功后直接进入首页。
+3. 用户登录后可以浏览真实视频流、精选列表、关注内容和好友占位内容。
+4. 推荐流必须能播放服务端返回的真实视频文件或系统预置真实视频文件。
+5. 视频只有在作者授权并绑定菜谱教程时，左下角才显示小勺子加入菜谱入口。
+6. 用户可以查看公开菜谱信息、已拥有菜谱完整步骤、作者最新版本提示和个人版本状态。
+7. 用户可以用金币或元宝把菜谱加入自己的菜单资产；第一期不出现人民币充值入口。
+8. 用户可以通过每日签到领取 5 金币，通过模拟 30 秒广告领取 30 金币。
+9. 用户可以在菜单页像点外卖一样选择本顿要做的菜，并实时看到总耗时、动手时间和自由时间。
+10. 用户点击开始做菜前先进入计划预览页，查看时间线、自由时间块和安全提醒。
+11. 用户点击开始后进入做菜执行页，客户端本地按 plan 执行倒计时、进度条、语音播报和内部闹铃。
+12. 做菜执行页必须支持暂停、继续、加时、跳过、提前完成。
+13. 单菜完成后可询问是否把本次实际耗时同步成个人版本；多菜完成后不自动同步。
+14. 用户可以创建结构化菜谱教程，服务端生成 recipeId 和 revisionId。
+15. 作者更新已发布菜谱时，每次更新都生成新 revision，不覆盖历史版本。
+16. 购买者默认看到购买时版本；当作者有新版本时，详情页展示“步骤更新”入口。
+17. 用户可以把作者版本同步为自己的个性化版本，也可以保存、重置、分享和应用微调。
+18. 用户可以录制普通视频，真实上传到服务端，发布后进入首页流和我的创作。
+19. 做菜结束后可以选择视频或照片记录本次结果，并发布到我的页创作列表。
+20. 用户可以关注作者、发送基础留言、分享视频，消息提醒模式支持免打扰和互关默认提示音。
+
+三、当前代码现状
+1. 当前代码目录为 src/CookWx。
+2. 当前 app.json 已注册页面：
+   1. pages/home/home：首页。
+   2. pages/menu/menu：菜单选择。
+   3. pages/cook/cook：当前同时承担部分计划和做菜执行能力。
+   4. pages/recipe/recipe：菜谱详情。
+   5. pages/voice/voice：音色选择。
+   6. pages/publish/publish：当前为发布入口骨架。
+   7. pages/messages/messages：消息页骨架。
+   8. pages/mine/mine：我的页骨架。
+3. 当前 app.js 仍默认写死 demo_user，后续需要改为 token session 驱动。
+4. 当前 utils/api.js 仍默认在请求体里附加 demo_user，并包含 recharge、purchaseRecipe 等旧调试接口。
+5. 最新一期不做人民币充值，也不做提现，但保留金币和元宝的内测购买能力，所以旧 recharge 入口必须从页面层移除。
+6. 当前页面骨架可以保留，但要新增登录注册、广告倒计时、视频录制预览、菜谱编辑、版本选择、做菜结果发布等页面。
+
+四、推荐页面结构
+1. 一级 tab 页面保持 5 个：
+   1. pages/home/home：底部第一个“刷新”，页面职责是首页内容流和频道切换。
+   2. pages/menu/menu：底部第二个“菜单”，页面职责是选菜和购物车式本顿菜单。
+   3. pages/publish/publish：底部中间“+”，页面职责改为发布类型选择。
+   4. pages/messages/messages：底部第四个“消息”。
+   5. pages/mine/mine：底部最右“我的”。
+2. 登录注册页面：
+   1. pages/auth/login/login：登录页。
+   2. pages/auth/register/register：注册页。
+3. 菜谱和计划页面：
+   1. pages/recipe/recipe：菜谱详情页。
+   2. pages/plan/plan：计划预览页。
+   3. pages/cook/cook：做菜执行页。
+   4. pages/voice/voice：音色选择页。
+   5. pages/recipeVersion/recipeVersion：菜谱版本选择和更新页。
+   6. pages/personalRecipe/personalRecipe：个性化微调编辑页。
+   7. pages/personalShare/personalShare：微调分享确认页。
+   8. pages/personalApply/personalApply：微调加载确认页。
+4. 金币任务页面：
+   1. pages/adReward/adReward：模拟广告 30 秒倒计时页。
+5. 发布相关页面：
+   1. pages/videoRecord/videoRecord：视频录制页。
+   2. pages/videoPreview/videoPreview：视频预览和发布页。
+   3. pages/recipeEditor/recipeEditor：结构化菜谱教程编辑页。
+   4. pages/cookResultPublish/cookResultPublish：做菜结果视频或照片发布页。
+6. 个人资产页面：
+   1. pages/videoAssets/videoAssets：我的视频资产，包含点赞、收藏、创作、菜单四个分栏。
+   2. pages/myRecipes/myRecipes：我的发布、购买区、创作区和个性化版本列表，可选。
+7. 评论和购物车第一期可以先用页面内弹层，不一定拆独立页面。
+
+五、目录和模块建议
+1. 保留 utils/api.js，改造成所有 HTTP JSON 接口的统一入口。
+2. 保留 utils/config.js，继续管理 BASE_URL、上传地址、客户端版本。
+3. 保留 utils/time.js，补充秒、分钟、时间条行分段、倒计时显示工具。
+4. 新增 utils/auth.js。
+   1. 管理 token 本地读写。
+   2. 管理登录成功后的 session 快照。
+   3. 提供 ensureLogin、clearSession、isTokenExpired 等函数。
+5. 新增 utils/storage.js。
+   1. 统一封装 wx.getStorageSync 和 wx.setStorageSync。
+   2. 屏蔽 JSON parse 异常。
+   3. 管理 selectedRecipeIds、lastPlan、cookRuntime、voiceGender、pendingAdReward、publishDraft。
+6. 新增 utils/planRuntime.js。
+   1. 负责做菜执行页的本地计划推进。
+   2. 负责暂停、继续、加时、跳过、提前完成后的时间线重算。
+   3. 负责 currentTask、nextTask、freeBlockEndAlarm 的判断。
+7. 新增 utils/timelineView.js。
+   1. 负责把单菜时间条按 60 分钟一行切分。
+   2. 负责计算每个步骤在行内的 left、width、label。
+   3. 负责进度指针位置计算。
+8. 新增 utils/recipeEditor.js。
+   1. 负责结构化教程编辑数据生成。
+   2. 负责步骤校验、依赖校验、删除置灰、恢复、上移下移。
+9. 新增 utils/personalization.js。
+   1. 负责原版步骤与个人微调合并后的编辑模型。
+   2. 负责生成 savePersonalization 请求体。
+   3. 负责统计“禁用几个步骤、修改几个时长、新增几个步骤”的摘要。
+10. 新增 utils/wallet.js。
+   1. 负责钱包展示模型。
+   2. 负责金币不足弹窗、元宝不足提示和广告任务返回后的 pending action。
+11. 新增 utils/upload.js。
+   1. 封装 wx.uploadFile。
+   2. 上传时附加 token。
+   3. 统一处理进度、失败重试和 videoId 返回。
+12. 新增 utils/video.js。
+   1. 负责推荐流 video item 标准化。
+   2. 负责 bindRecipeId、canJoinRecipe、spoonVisible 的判断。
+13. 新增 utils/voice.js。
+   1. 第一版可先使用 wx.createInnerAudioContext 播放提示音和简单语音资源。
+   2. 男声、女声先作为文本播报音色偏好保存。
+14. 新增 utils/alarm.js。
+   1. 管理 freeBlock 结束时的小程序内部闹铃。
+   2. 提供 playAlarm、stopAlarm、isAlarmPlaying。
+
+六、全局状态设计
+1. app.globalData 不再默认使用 demo_user 作为正式身份。
+2. app.globalData 建议字段：
+   1. token：服务端登录 token。
+   2. tokenExpireTime：token 过期时间。
+   3. userId：登录后由服务端返回。
+   4. account：登录账号，只用于展示和调试。
+   5. nickname：昵称。
+   6. clientType：固定 wechat_mini。
+   7. clientVersion：例如 0.1.0。
+   8. wallet：coins、yuanbao、checkedInToday。
+   9. selectedRecipeIds：本顿已选菜谱 ID。
+   10. selectedRecipes：本顿已选菜谱快照。
+   11. lastPreviewPlan：最近一次预览排程。
+   12. lastPlan：点击开始做菜后服务端返回的完整计划。
+   13. cookRuntime：做菜执行本地运行态。
+   14. voiceGender：female 或 male。
+   15. personalizationRecordEnabled：个性化记录开关。
+   16. pendingAdReward：广告完成后要继续执行的动作。
+   17. publishDraft：视频或菜谱发布草稿。
+3. token、userId、nickname、wallet 摘要需要写入本地缓存，但不能保存明文密码。
+4. lastPlan 和 cookRuntime 必须写入本地缓存，避免小程序切后台、页面销毁后丢失做菜安全提醒上下文。
+5. selectedRecipeIds 在首页、菜谱详情、菜单页、计划页之间共享。
+6. 点赞、收藏、关注、购买、个性化和视频发布等用户资产状态以服务端 Redis+MySQL 返回结果为准；小程序本地只做页面缓存和失败后的重试上下文，不能把本地缓存当成最终状态。
+
+七、本地存储 key 设计
+1. cook_auth_token：登录 token。
+2. cook_auth_session：userId、account、nickname、tokenExpireTime。
+3. cook_wallet_snapshot：金币、元宝、签到状态快照。
+4. cook_selected_recipe_ids：本顿已选菜谱 ID。
+5. cook_last_preview_plan：最近一次预览计划。
+6. cook_last_plan：已开始做菜的完整 plan 快照。
+7. cook_runtime：做菜执行运行态。
+8. cook_voice_gender：音色选择。
+9. cook_personalization_record_enabled：个性化耗时记录开关缓存。
+10. cook_pending_ad_reward：广告完成后的回跳上下文。
+11. cook_recipe_editor_draft：菜谱教程编辑草稿。
+12. cook_personal_recipe_draft_{recipeId}：个性化编辑草稿。
+13. cook_video_publish_draft：视频发布草稿。
+14. cook_result_publish_draft：做菜结果发布草稿。
+15. 所有缓存读取失败都返回默认值，不能让页面白屏。
+
+八、API 访问层设计
+1. utils/api.js 提供 request(options) 统一封装 wx.request。
+2. request 必须从 auth.js 读取 token，并放入 header。
+3. 推荐 header：
+   1. Authorization: Bearer {token}。
+   2. X-Client-Type: wechat_mini。
+   3. X-Client-Version: 0.1.0。
+4. 除注册、登录、健康检查和公开视频资源读取外，所有接口请求失败为 401 时统一清理登录态并跳转登录页。
+5. request 统一处理 loading 锁由页面层控制，API 层只负责 Promise 成功和失败。
+6. auth API：
+   1. register(account, password, nickname)：POST /api/auth/register。
+   2. login(account, password)：POST /api/auth/login。
+   3. logout()：POST /api/auth/logout。
+   4. getSession()：GET /api/auth/session。
+7. account API：
+   1. getAccount()：GET /api/account。
+   2. updateProfile(nickname)：POST /api/account/profile。
+   3. changePassword(oldPassword, newPassword)：POST /api/account/password。
+   4. getWallet()：GET /api/account/wallet。
+   5. checkin()：POST /api/account/checkin。
+   6. startAdReward(context)：POST /api/account/ad-reward/start。
+   7. finishAdReward(rewardId)：POST /api/account/ad-reward/finish。
+   8. setPersonalizationSetting(enabled)：POST /api/account/personalization/setting。
+8. recipe API：
+   1. getFeed(params)：GET /api/feed。
+   2. getRecipes(params)：GET /api/recipes。
+   3. toggleFavorite(targetType, targetId)：POST /api/favorites/toggle。
+   4. joinRecipe(recipeId, payType)：POST /api/recipes/join。
+   5. saveCustomRecipe(payload)：POST /api/recipes/custom/save。
+   6. publishCustomRecipe(payload)：POST /api/recipes/custom/publish。
+   7. savePersonalization(payload)：POST /api/recipes/personalization/save。
+   8. resetPersonalization(recipeId)：POST /api/recipes/personalization/reset。
+   9. sharePersonalization(payload)：POST /api/recipes/personalization/share。
+   10. applyPersonalization(payload)：POST /api/recipes/personalization/apply。
+   11. publishRecipeVersion(payload)：POST /api/recipes/version/publish。
+   12. updateRecipeToLatest(recipeId)：POST /api/recipes/version/update-to-latest。
+   13. syncRecipePersonalization(payload)：POST /api/recipes/version/sync-personalization。
+9. plan API：
+   1. previewPlan(recipeIds, completedTaskIds)：POST /api/plan/preview。
+   2. startPlan(recipeIds, completedTaskIds)：POST /api/plan/start。
+   3. reportTaskActualTime(payload)：POST /api/cook/task/actual-time。
+10. video API：
+   1. uploadVideo(filePath, meta)：POST /api/videos/upload，使用 wx.uploadFile。
+   2. publishVideo(payload)：POST /api/videos/publish。
+   3. attachRecipeToVideo(videoId, recipeId)：POST /api/videos/attach-recipe。
+   4. publishCookResult(payload)：POST /api/cook/result/publish。
+11. follow 和 message API：
+   1. toggleFollow(targetUserId)：POST /api/follow/toggle。
+   2. getMessages(params)：GET /api/messages，产品文档未单独列出但消息页需要读取。
+   3. sendMessage(payload)：POST /api/messages/send。
+12. comment API：
+   1. listComments(targetType, targetId, cursor)：POST /api/comments/list。
+   2. createComment(payload)：POST /api/comments/create。
+   3. 视频普通评论和购买后菜谱评分评论在数据结构里区分，第一期先保证真实列表和真实提交。
+13. like 和 favorite API：
+   1. toggleLike(targetType, targetId)：POST /api/likes/toggle。
+   2. toggleFavorite(targetType, targetId)：POST /api/favorites/toggle。
+   3. targetType 第一阶段取 video 或 recipe，页面层不能再假设收藏只针对菜谱。
+14. 当前旧接口 recharge 和 purchaseRecipe 可以保留在代码里做过渡，但架构上不再作为正式页面入口；金币和元宝加入菜谱统一走 /api/recipes/join。
+
+九、登录注册流程
+1. app.js onLaunch 读取 cook_auth_token。
+2. 如果没有 token，直接重定向到 pages/auth/login/login。
+3. 如果有 token，调用 /api/auth/session。
+4. session 有效时写入 globalData，继续进入首页并并行拉取钱包、菜谱和推荐流。
+5. session 无效、过期或账号不存在时，调用 auth.clearSession，然后重定向登录页。
+6. 登录页字段包括 account、password、showPassword、loading。
+7. 登录前校验账号和密码非空。
+8. 登录成功后保存 token、userId、account、nickname、tokenExpireTime，重定向首页。
+9. 登录失败统一提示“账号或密码错误”，网络失败提示“网络异常，请稍后重试”。
+10. 注册页字段包括 account、nickname、password、confirmPassword、showPassword、loading。
+11. 注册前校验：
+   1. account 只允许字母、数字、下划线，长度 4 到 32。
+   2. nickname 长度 1 到 24 个中文字符或等效长度。
+   3. password 至少 6 位。
+   4. confirmPassword 必须一致。
+12. 注册成功后按登录成功处理，不要求用户重新登录。
+13. 退出登录时调用 /api/auth/logout，成功或失败都清理本地 session，并回到登录页。
+14. 客户端永远不把密码写入本地缓存，也不在 console 中打印密码、token。
+
+十、首页 home 架构
+1. 页面 data 建议包含 channel、feedTabs、feedItems、currentIndex、loading、refreshing、commentPanel、walletSnapshot。
+2. 首页频道为推荐、精选、关注、好友。
+3. 推荐频道使用 swiper 竖向切换，每个 item 占满一屏。
+4. 每个 feedItem 至少包含：
+   1. videoId。
+   2. videoUrl。
+   3. coverUrl。
+   4. authorUserId。
+   5. authorName。
+   6. authorAvatar。
+   7. followed。
+   8. title。
+   9. subtitle。
+   10. estimatedSeconds。
+   11. activeSeconds。
+   12. bindRecipeId。
+   13. recipeAuthorized。
+   14. owned。
+   15. joinedInCurrentMenu。
+   16. priceType：free、coin、yuanbao、closed。
+   17. priceAmount。
+   18. likeCount、commentCount、favoriteCount。
+5. spoonVisible 判断必须同时满足 bindRecipeId 不为空、recipeAuthorized=true、priceType 不等于 closed。
+6. 没有绑定菜谱的视频不显示小勺子，也不显示“加入菜谱”文字入口。
+7. 点击小勺子：
+   1. 如果 owned=true，直接加入 selectedRecipeIds，toast“已加入菜单”。
+   2. 如果 priceType=coin，先判断钱包金币是否足够。
+   3. 如果金币足够，弹确认框“消耗 X 金币加入菜谱？”。
+   4. 如果金币不足，弹金币不足弹窗，引导进入广告倒计时页。
+   5. 如果 priceType=yuanbao，判断元宝是否足够。
+   6. 如果元宝足够，弹确认框“消耗 X 元宝加入菜谱？”。
+   7. 如果元宝不足，提示“元宝不足，充值功能后续开放”。
+   8. joinRecipe 成功后刷新本地钱包和菜谱拥有状态，停留在当前视频。
+8. 点击头像加号调用 toggleFollow。
+9. 关注成功后当前 feedItem 的 followed 更新，并可在关注频道看到该作者内容。
+10. 评论第一期必须做真实列表和真实提交，评论面板从底部弹出，打开时调用 listComments，提交时调用 createComment。
+11. 精选频道使用固定高度卡片列表，点击进入 recipe 页。
+12. 好友频道第一期可以保留空状态，但如果互关数据存在，可以展示好友做过的菜或分享内容。
+13. 底部“刷新”tab 在首页时刷新当前频道，在其他页面点击时返回首页并刷新推荐。
+
+十一、菜单 menu 架构
+1. 页面 data 建议包含 keyword、categories、activeCategory、recipes、filteredRecipes、selectedRecipeIds、cartOpen、planSummary、planLoading、planError。
+2. 分类顺序：
+   1. 最喜欢。
+   2. 购买区。
+   3. 创作区。
+   4. 蔬菜。
+   5. 荤菜。
+   6. 小荤。
+   7. 饮品。
+   8. 主食。
+   9. 甜品。
+   10. 汤类。
+3. “购买区”展示用户已经用金币或元宝加入的菜谱。
+4. “创作区”展示用户自己创建的菜谱教程。
+5. 已购买菜谱除了出现在购买区，也要按自身 category 展示到蔬菜、荤菜、主食等分类。
+6. “最喜欢”由 favorite=true 的菜谱组成，不改变原分类。
+7. 菜谱卡片字段包括封面、菜名、简介、预计时间、动手时间、标签、价格状态、个人版本、我的创作、星标、加减按钮。
+8. 点击星标调用 toggleFavorite，成功后移动或复制到最喜欢分类。
+9. 对已拥有且未选择菜谱，展示可点击加号。
+10. 对已选择菜谱，加号置灰，减号可点。
+11. 对金币菜谱或元宝菜谱，展示“加入”按钮而不是加号，点击后走 joinRecipe 逻辑。
+12. 对暂未开放菜谱，只能进入公开详情页，不允许加入本顿菜单。
+13. selectedRecipeIds 每次变化后调用 previewPlan。
+14. previewPlan 请求应做防抖，避免用户连续点击导致并发请求乱序。
+15. 购物车横条展示“已选 N 道菜”、“总 X 分钟 · 动手 Y 分钟”和“开始做菜”按钮。
+16. 排程失败时展示失败原因，并禁用开始按钮。
+17. 点击开始做菜进入 pages/plan/plan，不直接进入 cook 页。
+18. 搜索框实时过滤 title、subtitle、category、ingredients 和 tags。
+
+十二、菜谱详情 recipe 架构
+1. 详情页入口包括首页查看菜谱、菜单卡片、我的资产、消息分享、版本更新提示。
+2. 页面加载时按 recipeId 请求详情；如果 getRecipes 已有完整对象，可以先展示缓存再刷新服务端。
+3. 公开区展示封面或视频、菜名、作者、简介、评分、做过人数、预计时间、动手时间、自由时间、食材和工具。
+4. 未拥有菜谱只展示公开信息和加入入口，不展示完整步骤。
+5. 已拥有菜谱展示完整步骤、单菜时间条和版本状态。
+6. 单菜时间条：
+   1. 以 60 分钟为一行。
+   2. 超过 60 分钟换行。
+   3. 每个步骤用黑色竖线分割。
+   4. 标签空间不足时可缩写，但下方步骤列表必须完整展示。
+7. 版本状态区展示：
+   1. purchasedRevisionId：购买时版本。
+   2. currentAuthorRevisionId：作者最新版本。
+   3. activeRevisionId：当前使用作者版本。
+   4. personalizationApplied：是否正在使用个人版本。
+   5. hasAuthorUpdate：是否显示“步骤更新”按钮。
+8. 点击“步骤更新”调用 updateRecipeToLatest，成功后刷新详情。
+9. 点击“同步到个性化”调用 syncRecipePersonalization，成功后后续点菜默认使用个人版本。
+10. 个性化操作区：
+   1. 无个人版本时展示“调整我的做法”。
+   2. 有个人版本时展示“编辑我的版本”、“恢复原版”、“分享微调”。
+   3. 恢复原版调用 resetPersonalization。
+   4. 分享微调进入 personalShare。
+11. 详情页“加入菜单”遵守菜单页同一套 owned、coin、yuanbao、closed 判断。
+12. 详情页“单菜开始”也先进入 plan 页，plan 只包含当前 recipeId。
+
+十三、菜谱版本和个性化编辑
+1. recipeVersion 页面用于作者和购买者查看版本历史。
+2. 作者进入版本页时可以查看所有 revision，并选择基于最新版本继续编辑。
+3. 作者发布更新时调用 publishRecipeVersion，服务端生成新 revisionId。
+4. 购买者进入版本页时只看到：
+   1. 购买时版本。
+   2. 当前已更新到的作者版本。
+   3. 作者最新版本提示。
+   4. 自己的个性化版本。
+5. 购买者点击“更新到作者最新版”调用 updateRecipeToLatest。
+6. 购买者点击“同步到个性化”调用 syncRecipePersonalization。
+7. personalRecipe 编辑页必须区分原始步骤和个人新增步骤。
+8. 原始步骤不能物理删除，只能 disabled=true，卡片置灰并保留恢复按钮。
+9. 个人新增步骤可以删除，删除前确认。
+10. 编辑字段包括步骤名、详细说明、分钟、秒、步骤类型、是否可暂停、是否可离开厨房、安全等级、依赖步骤。
+11. 保存前必须校验：
+   1. 启用步骤 id 不重复。
+   2. 依赖步骤存在且未禁用。
+   3. 依赖不能成环。
+   4. durationSeconds 不能为负。
+   5. active 和 canLeaveKitchen 组合不能违反安全提示。
+12. 保存成功后返回详情页，并显示“正在使用你的个人版本”。
+13. 应用别人分享的微调时，如果当前用户已有个人版本，必须弹覆盖确认。
+14. baseRecipeRevision 不一致时必须提示“该分享基于旧版菜谱，可能存在步骤不一致”。
+
+十四、发布 publish 架构
+1. 底部中间“+”进入 pages/publish/publish，页面只放两个主按钮：
+   1. 蓝色“分享”。
+   2. 红色“创作”。
+2. 点击蓝色“分享”进入 videoRecord。
+3. 点击红色“创作”进入 recipeEditor。
+4. publish 页不直接承担复杂表单，避免页面职责过重。
+
+十五、蓝色分享和视频上传流程
+1. videoRecord 调用微信小程序摄像头能力录制视频。
+2. 录制完成后保存 tempFilePath，跳转 videoPreview。
+3. videoPreview 播放本地刚录制的视频文件。
+4. videoPreview 允许填写标题、简介，选择是否绑定自己已发布的菜谱教程。
+5. 点击发布后先调用 uploadVideo。
+6. uploadVideo 使用 wx.uploadFile 上传真实文件，服务端返回 videoId、videoUrl、coverUrl。
+7. 拿到 videoId 后调用 publishVideo 写入视频发布元数据。
+8. 如果用户选择绑定菜谱，发布成功后调用 attachRecipeToVideo，或在 publishVideo 请求里带 bindRecipeId。
+9. 任何一步失败都提示发布失败，并保留本地发布草稿用于重试。
+10. 发布成功后清理草稿，toast“发布成功”，进入我的视频创作列表或返回首页。
+11. 未绑定菜谱的视频可以进入推荐流，但客户端必须不显示小勺子。
+12. 已绑定菜谱且作者授权的视频显示小勺子。
+
+十六、红色创作和菜谱教程编辑流程
+1. recipeEditor 默认生成步骤模板：
+   1. 选材。
+   2. 清洗。
+   3. 浸泡。
+   4. 开火。
+   5. 下锅。
+   6. 放入调料或者加水。
+   7. 炖煮。
+   8. 收汁。
+   9. 出锅。
+2. 用户可以添加流程。
+3. 用户删除流程时步骤置灰，不直接消失，并提供恢复。
+4. 每个流程必须填写步骤名、详细说明、分钟和秒。
+5. 步骤类型第一期至少包含“动手操作”和“可离开等待”，用单选交互。
+6. 高级字段可以折叠展示：resource、canPause、continuesDuringPause、canLeaveKitchen、safetyLevel、dependencies、voiceText。
+7. 草稿保存到本地，正式发布调用 publishCustomRecipe。
+8. publishCustomRecipe 成功后服务端返回 recipeId 和 revisionId。
+9. 发布成功后菜谱进入菜单页创作区，也能在我的页我的发布中看到。
+10. 如果保存失败，编辑页不得清空用户输入。
+
+十七、钱包、签到和模拟广告
+1. mine 页和金币不足弹窗都通过 getWallet 读取 coins、yuanbao、checkedInToday。
+2. 每日签到入口可放在 mine 页顶部资产区。
+3. 点击签到调用 checkin。
+4. checkin 成功后本地 wallet.coins 加 5，并把按钮状态改为“今日已签到”。
+5. checkin 返回已签到时不再加金币，只展示服务端返回状态。
+6. 金币不足弹窗记录 pendingAdReward：
+   1. sourcePage。
+   2. recipeId。
+   3. priceAmount。
+   4. returnAction。
+7. 点击“观看广告”先调用 startAdReward，拿到 rewardId 后进入 adReward 页面。
+8. adReward 页面倒计时从 30 到 0。
+9. 用户在倒计时未完成前关闭，弹确认框；确认退出不发金币，取消继续倒计时。
+10. 弹确认框期间倒计时暂停。
+11. 小程序 onHide 时倒计时暂停，onShow 时继续。
+12. 倒计时到 0 调用 finishAdReward。
+13. finishAdReward 成功后展示“金币已到账”，刷新钱包，回到原页面继续 pending action。
+14. 第一阶段不接真实广告 SDK，也不展示人民币、充值、提现或兑换承诺。
+
+十八、计划预览 plan 架构
+1. plan 页来源包括菜单页“开始做菜”和菜谱详情“单菜开始”。
+2. onLoad 获取 recipeIds，优先 URL 参数，其次 globalData.selectedRecipeIds。
+3. 页面进入后调用 previewPlan。
+4. previewPlan 返回后展示：
+   1. 总耗时。
+   2. 动手时间。
+   3. 自由时间。
+   4. 边角时间。
+   5. 已选菜列表。
+   6. 时间线流程图。
+   7. freeBlocks。
+   8. 安全提醒。
+   9. personalizationApplied 和 personalizationSummary。
+5. 点击时间线步骤展示步骤详情。
+6. 点击“我已经做了一部分”时展示已完成步骤勾选列表。
+7. 勾选后重新调用 previewPlan，传 completedTaskIds。
+8. 点击“开始”调用 startPlan。
+9. startPlan 成功后保存 lastPlan，清空旧 cookRuntime，跳转 cook 页。
+10. plan 页返回菜单页时保留 selectedRecipeIds。
+
+十九、做菜执行 cook 架构
+1. cook 页只执行已经 start 的本地 plan，不依赖服务端持续返回下一步。
+2. onLoad 先从 globalData.lastPlan 读取，失败再读 cook_last_plan。
+3. cookRuntime 字段：
+   1. planId。
+   2. recipeIds。
+   3. mode：ready、running、paused、completed。
+   4. startedAt。
+   5. pausedAt。
+   6. pausedSeconds。
+   7. elapsedSeconds。
+   8. currentTaskId。
+   9. completedTaskIds。
+   10. skippedTaskIds。
+   11. actualTimeMap。
+   12. extendedSecondsMap。
+   13. finishTypeMap。
+   14. alarmState。
+4. 使用 setInterval 每秒推进 elapsedSeconds；页面卸载或暂停时清理 timer。
+5. 每次 tick 计算 currentTask、nextTask、finishedTasks、freeBlockEnd。
+6. 进入新步骤时立即播报 voiceText。
+7. freeBlock 结束时调用 alarm.playAlarm，并弹出“我知道了”按钮。
+8. 用户点击“我知道了”后调用 alarm.stopAlarm。
+9. 暂停逻辑：
+   1. 当前 active 且 canPause=true 的步骤停止推进。
+   2. continuesDuringPause=true 的等待步骤继续按自然时间推进。
+   3. canPause=false 且不允许暂停的步骤给出安全提示，不进入暂停。
+10. 加时逻辑：
+   1. 当前步骤右侧展示“加时”按钮。
+   2. 选项包括 +30 秒、+1 分钟、+2 分钟、自定义。
+   3. 加时后当前步骤 endSeconds 后移。
+   4. 依赖当前步骤的后续步骤顺延。
+   5. 记录 extendedSecondsMap 和 finishType=extended。
+11. 跳过逻辑：
+   1. 点击跳过必须确认。
+   2. safetyLevel 高的步骤使用更强提示。
+   3. 跳过后当前步骤立即完成并播报下一步。
+   4. 记录 finishType=skipped。
+12. 提前完成逻辑：
+   1. 当前步骤未到计划结束时可以提前完成。
+   2. 点击后当前步骤立即结束，后续依赖步骤可提前。
+   3. 不可暂停等待步骤提前完成时必须二次确认。
+   4. 记录 actualSeconds 和 finishType=early。
+13. 做菜完成后展示计划耗时、实际耗时、提前或延迟时间、跳过步骤、加时步骤。
+14. 单菜场景弹框询问“是否根据本次实际执行时间更新到个性化版本？”。
+15. 用户选择是时调用 reportTaskActualTime 或批量上报接口；如果当前无个人版本，服务端创建个人版本。
+16. 用户选择否时只保存本次 cook_history，不影响下次排程。
+17. 多菜场景不自动同步个性化，只保存历史并允许用户后续手动编辑某道菜。
+18. 做菜结束后弹框询问是否记录本次做菜结果，选择后进入 cookResultPublish。
+
+二十、做菜结果发布
+1. cookResultPublish 支持视频模式和照片模式。
+2. 视频模式复用 videoRecord 和 videoPreview 的上传链路。
+3. 照片模式调用 wx.chooseMedia 或 wx.chooseImage，保存图片文件路径和配文。
+4. 发布前展示本次菜单勾选列表。
+5. 多菜菜单允许逐个选择要附上的菜。
+6. 点击发布调用 /api/cook/result/publish。
+7. 发布成功后内容进入我的页“创作”列表。
+8. 第一阶段照片配乐只保存选择值或占位 ID，不做复杂特效。
+
+二十一、消息和关注
+1. 视频页头像加号调用 toggleFollow。
+2. 已关注后加号消失或变成已关注状态。
+3. 长按头像弹出菜单，提供免打扰设置入口；如果服务端暂未拆 notify 接口，可通过 toggleFollow 或 profile 扩展字段提交。
+4. 默认非互关为免打扰。
+5. 双方互关时默认有提示音。
+6. messages 页分区建议：
+   1. 留言。
+   2. 视频分享。
+   3. 微调分享。
+   4. 系统通知。
+7. 发送留言调用 sendMessage，messageType=comment 或 text。
+8. 分享视频调用 sendMessage，messageType=video_share，contentJson 包含 videoId。
+9. 分享微调调用 sharePersonalization，服务端可同时生成 message。
+10. 点击微调分享消息进入 personalApply。
+11. 第一阶段消息按留言列表轮询刷新，不做强实时聊天。
+
+二十二、我的 mine 架构
+1. mine 页进入时调用 getAccount 和 getWallet。
+2. 顶部账号区展示头像、昵称、account、userId。
+3. 钱包区展示金币、元宝、今日签到状态。
+4. 签到按钮根据 checkedInToday 展示“每日签到”或“今日已签到”。
+5. 资产区展示：
+   1. 点赞。
+   2. 收藏。
+   3. 创作。
+   4. 菜单。
+6. 菜谱资产展示：
+   1. 购买区菜谱数。
+   2. 创作区菜谱数。
+   3. 个性化菜谱数。
+   4. 做菜历史数。
+7. 设置区展示：
+   1. 音色选择。
+   2. 个性化记录开关。
+   3. 修改昵称。
+   4. 修改密码。
+   5. 退出登录。
+8. 个性化记录默认关闭，开启或关闭调用 setPersonalizationSetting。
+9. 我的页不得展示真实充值、提现、收益和人民币兑换入口。
+
+二十三、客户端数据模型
+1. AuthSession：
+   1. token。
+   2. tokenExpireTime。
+   3. userId。
+   4. account。
+   5. nickname。
+2. Wallet：
+   1. coins。
+   2. yuanbao。
+   3. checkedInToday。
+   4. lastCheckinDate。
+3. Recipe：
+   1. recipeId。
+   2. title。
+   3. category。
+   4. subtitle。
+   5. difficulty。
+   6. coverImage。
+   7. coverColor。
+   8. authorUserId。
+   9. authorName。
+   10. tags。
+   11. ingredients。
+   12. tools。
+   13. tasks。
+   14. owned。
+   15. ownedType。
+   16. favorite。
+   17. priceType。
+   18. priceAmount。
+   19. systemRecipe。
+   20. customRecipe。
+   21. currentRevisionId。
+   22. purchasedRevisionId。
+   23. activeRevisionId。
+   24. hasAuthorUpdate。
+   25. personalizationApplied。
+   26. personalizationSummary。
+   27. estimatedSeconds。
+   28. activeSeconds。
+4. Task：
+   1. taskId。
+   2. recipeId。
+   3. title。
+   4. detail。
+   5. resource。
+   6. durationSeconds。
+   7. active。
+   8. canPause。
+   9. continuesDuringPause。
+   10. canLeaveKitchen。
+   11. safetyLevel。
+   12. dependencies。
+   13. voiceText。
+   14. sourceType：base、personal_modified、personal_added、custom。
+   15. disabled。
+   16. baseTaskId。
+5. FeedItem：
+   1. videoId。
+   2. videoUrl。
+   3. coverUrl。
+   4. authorUserId。
+   5. authorName。
+   6. bindRecipeId。
+   7. recipeAuthorized。
+   8. spoonVisible。
+   9. stats。
+6. Plan：
+   1. planId。
+   2. recipeIds。
+   3. summary。
+   4. selectedRecipes。
+   5. timeline。
+   6. freeBlocks。
+   7. warnings。
+   8. personalizationApplied。
+   9. personalizationSummary。
+7. ScheduledTask：
+   1. id。
+   2. recipeId。
+   3. recipeTitle。
+   4. taskId。
+   5. title。
+   6. detail。
+   7. startSeconds。
+   8. endSeconds。
+   9. durationSeconds。
+   10. active。
+   11. canPause。
+   12. continuesDuringPause。
+   13. canLeaveKitchen。
+   14. safetyLevel。
+   15. sourceType。
+
+二十四、错误处理和安全
+1. 所有异步操作必须有 loading 或 disabled 状态。
+2. 所有接口失败必须显示用户可理解的 toast、modal 或错误区。
+3. 不允许只 console.log 错误。
+4. 登录注册不能在日志输出密码、密码摘要或 token。
+5. 401 统一跳转登录页。
+6. joinRecipe、checkin、finishAdReward、publishCustomRecipe、publishVideo、startPlan 必须防重复提交。
+7. 上传视频失败必须允许重试。
+8. 做菜执行页不可因为接口失败阻塞本地倒计时。
+9. 安全等级高的步骤在跳过、提前完成、暂停时必须二次确认。
+10. freeBlock 结束闹铃必须可以手动停止。
+11. 页面底部要留安全区，避免被 tabBar 或手机手势条遮挡。
+12. 时间条和按钮文字不能横向撑破屏幕。
+
+二十五、第一期编码顺序建议
+1. 先改登录注册和 auth.js，让小程序启动变成 token session 流程。
+2. 改 api.js，补齐最新接口，统一 Authorization header。
+3. 新增 storage.js、wallet.js、upload.js、planRuntime.js、timelineView.js。
+4. 改 mine 页，接入账号、钱包、签到、资产和退出登录。
+5. 改 home 页，接真实视频流、小勺子可见性、关注和金币/元宝加入菜谱。
+6. 新增 adReward 页，实现 30 秒倒计时暂停和发奖闭环。
+7. 改 menu 页，接购买区、创作区、最喜欢、搜索和实时 previewPlan。
+8. 新增 plan 页，把计划预览从 cook 页拆出来。
+9. 强化 cook 页，完成本地执行、加时、跳过、提前完成、freeBlock 闹铃和单菜个性化同步。
+10. 新增 recipeEditor，实现红色创作流程和 publishCustomRecipe。
+11. 新增 videoRecord、videoPreview，实现蓝色分享流程和真实上传。
+12. 改 recipe 页，补齐版本更新、同步个性化、个人版本编辑入口。
+13. 新增 recipeVersion、personalRecipe、personalShare、personalApply。
+14. 改 messages 页，接关注留言、视频分享和微调分享。
+15. 新增 cookResultPublish，实现做菜结束后的结果发布。
+16. 最后做真机联调、弱网测试、切后台测试和完整验收。
+
+二十六、第一期验收标准
+1. 未登录启动进入登录页。
+2. 注册账号成功后能进入首页，重复 account 注册失败。
+3. 登录成功后能保存 token，重启小程序后 session 有效可直接进首页。
+4. 首页推荐流能播放真实视频。
+5. 没有绑定菜谱的视频不显示小勺子。
+6. 绑定菜谱且授权的视频显示小勺子。
+7. 金币不足时点击金币菜谱能进入广告引导。
+8. 广告倒计时未满 30 秒退出不发金币。
+9. 广告倒计时切后台暂停，回前台继续。
+10. 广告倒计时满 30 秒后金币到账。
+11. 每日签到一天只能领取一次 5 金币。
+12. 元宝默认 100，元宝菜谱扣减后进入购买区。
+13. 菜单页选择菜谱后能实时显示排程总耗时和动手时间。
+14. 计划预览页能展示 timeline 和 freeBlocks。
+15. 做菜开始后断网不影响本地步骤提醒。
+16. 做菜执行页支持暂停、继续、加时、跳过、提前完成。
+17. freeBlock 结束时能播放内部闹铃，点击“我知道了”停止。
+18. 单菜完成后确认同步，下一次排程使用新的个人耗时。
+19. 多菜完成后不自动同步个性化。
+20. 红色创作能发布菜谱教程，并收到 recipeId 和 revisionId。
+21. 蓝色分享能真实录制视频、上传服务端并收到 videoId。
+22. 作者更新菜谱后，购买者能看到“步骤更新”。
+23. 购买者能更新到作者最新版，也能同步到个性化。
+24. 做菜结束后能发布视频或照片结果，并在我的创作看到。
+25. 视频界面能关注作者，消息页能发送留言。
+26. 页面无明显遮挡、乱码、按钮文字溢出和无法返回。
+
+二十七、最新产品文档强制修正规则
+1. 如果本文前面章节与本章冲突，以本章和后续章节为准。
+2. 评论接口使用 POST /api/comments/list，不使用 GET /api/comments。
+3. 点赞接口使用 POST /api/likes/toggle。
+4. 收藏接口使用 POST /api/favorites/toggle，targetType 支持 video 和 recipe。
+5. 加入菜谱接口必须带 idempotencyKey，避免网络重试导致重复扣金币或元宝。
+6. 客户端所有个人接口只传业务目标 ID，不传当前 userId；当前 userId 由服务端 token 解析。
+7. 小程序可以在全局状态保存 userId 用于展示，但不能把 userId 当鉴权依据。
+8. 视频上传必须带 idempotencyKey、fileSize、durationSeconds、clientFileName、mimeType。
+9. 超过服务端限制的视频上传失败后，客户端必须显示明确原因，并且不能把该视频放进可见创作列表。
+10. 视频、菜谱、评论、留言都要识别 status：draft、published、hidden、deleted。
+11. 首页推荐、关注流、公开详情只展示 published。
+12. 我的页可以展示自己的 draft 和 hidden，但必须显示状态标签。
+13. hidden 内容不可出现在推荐流；如果用户已拥有的菜谱被 hidden，菜单页展示“已隐藏，暂不可公开查看”，是否能继续做菜按服务端 canCook 决定。
+14. 钱包流水不是前端直接计算，前端只展示服务端 wallet 和 walletTransactions 摘要。
+15. 第一阶段不做人民币充值、提现、真实广告 SDK 和作者收益。
+
+二十八、app.json 页面注册和落地顺序
+1. app.json pages 建议最终注册顺序：
+   1. pages/auth/login/login。
+   2. pages/auth/register/register。
+   3. pages/home/home。
+   4. pages/menu/menu。
+   5. pages/publish/publish。
+   6. pages/messages/messages。
+   7. pages/mine/mine。
+   8. pages/recipe/recipe。
+   9. pages/plan/plan。
+   10. pages/cook/cook。
+   11. pages/voice/voice。
+   12. pages/adReward/adReward。
+   13. pages/videoRecord/videoRecord。
+   14. pages/videoPreview/videoPreview。
+   15. pages/recipeEditor/recipeEditor。
+   16. pages/recipeVersion/recipeVersion。
+   17. pages/personalRecipe/personalRecipe。
+   18. pages/personalShare/personalShare。
+   19. pages/personalApply/personalApply。
+   20. pages/cookResultPublish/cookResultPublish。
+   21. pages/videoAssets/videoAssets。
+   22. pages/myRecipes/myRecipes。
+2. tabBar 只保留 home、menu、publish、messages、mine 五项。
+3. 登录页和注册页不放入 tabBar。
+4. app.js onLaunch 必须先执行 auth.restoreSession，再决定跳转：
+   1. token 不存在：wx.reLaunch 到 login。
+   2. token 存在：调用 /api/auth/session。
+   3. session 成功：写 globalData，wx.reLaunch 到 home。
+   4. session 失败：清缓存，wx.reLaunch 到 login。
+5. 为避免冷启动白屏，app.js 可以先打开 home 骨架，但 home onShow 必须 await ensureLogin；第一期更推荐直接 reLaunch 登录页，逻辑更简单。
+
+二十九、utils/api.js 具体实现要求
+1. request(options) 输入字段：
+   1. url。
+   2. method，默认 GET。
+   3. data。
+   4. auth，默认 true。
+   5. timeout，默认 10000。
+   6. idempotencyKey，可选。
+2. request 统一 header：
+   1. content-type: application/json。
+   2. Authorization: Bearer token。
+   3. X-Client-Type: wechat_mini。
+   4. X-Client-Version: app.globalData.clientVersion。
+   5. X-Idempotency-Key: idempotencyKey。
+3. request 伪代码：
+   1. 从 auth.getToken() 读取 token。
+   2. auth=true 且 token 为空时 reject UNAUTHORIZED 并跳登录。
+   3. 调 wx.request。
+   4. HTTP 401 时 auth.clearSession()，wx.reLaunch(login)。
+   5. HTTP 2xx 但 body.ok=false 时 reject ApiError(errorCode, message)。
+   6. HTTP 非 2xx 时 reject ApiError("HTTP_ERROR", message)。
+4. request 伪代码示例：
+   ```js
+   function request({ url, method = 'GET', data = {}, auth = true, idempotencyKey }) {
+     const token = authStore.getToken()
+     if (auth && !token) return Promise.reject(new ApiError('UNAUTHORIZED', '请先登录'))
+     return new Promise((resolve, reject) => {
+       wx.request({
+         url: `${config.BASE_URL}${url}`,
+         method,
+         data,
+         timeout: 10000,
+         header: buildHeader(token, idempotencyKey),
+         success(res) {
+           if (res.statusCode === 401) return handleUnauthorized(reject)
+           if (res.statusCode < 200 || res.statusCode >= 300) return reject(toHttpError(res))
+           const body = res.data || {}
+           if (body.ok === false) return reject(new ApiError(body.errorCode, body.message, body))
+           resolve(body.data || body)
+         },
+         fail(err) { reject(new ApiError('NETWORK_ERROR', err.errMsg || '网络异常')) }
+       })
+     })
+   }
+   ```
+5. uploadVideo(options) 不走 wx.request，必须走 wx.uploadFile。
+6. uploadVideo header 同样带 Authorization、X-Client-Type、X-Client-Version、X-Idempotency-Key。
+7. uploadVideo formData 带：
+   1. durationSeconds。
+   2. fileSize。
+   3. clientFileName。
+   4. mimeType。
+   5. bindRecipeId 可选。
+8. uploadVideo 必须监听 uploadTask.onProgressUpdate，把进度写到 videoPreview 页面 data.uploadProgress。
+9. uploadVideo 失败后不清空 tempFilePath，允许重试同一个 idempotencyKey。
+
+三十、前端幂等键和重复提交策略
+1. 幂等键由客户端生成，格式：{action}_{timestamp}_{random6}。
+2. 需要幂等键的操作：
+   1. joinRecipe。
+   2. checkin。
+   3. finishAdReward。
+   4. publishCustomRecipe。
+   5. publishRecipeVersion。
+   6. uploadVideo。
+   7. publishVideo。
+   8. createComment。
+   9. publishCookResult。
+3. 页面按钮必须同时做 loading 锁和幂等键。
+4. loading 锁只防本页面重复点击，幂等键防网络重试和服务端重复扣款。
+5. joinRecipe 伪代码：
+   ```js
+   async function joinRecipeFromCard(recipe) {
+     if (this.data.joiningMap[recipe.recipeId]) return
+     const key = idempotency.create('join_recipe')
+     this.setData({ [`joiningMap.${recipe.recipeId}`]: true })
+     try {
+       const result = await api.joinRecipe({ recipeId: recipe.recipeId, payType: recipe.priceType }, key)
+       walletStore.update(result.wallet)
+       recipeStore.markOwned(recipe.recipeId, result.userRecipe)
+       selectedStore.add(recipe.recipeId)
+       wx.showToast({ title: '已加入菜单' })
+     } catch (err) {
+       if (err.errorCode === 'COIN_NOT_ENOUGH') return walletUi.openCoinNotEnough(recipe)
+       if (err.errorCode === 'YUANBAO_NOT_ENOUGH') return wx.showToast({ title: '元宝不足，充值功能后续开放', icon: 'none' })
+       showApiError(err)
+     } finally {
+       this.setData({ [`joiningMap.${recipe.recipeId}`]: false })
+     }
+   }
+   ```
+
+三十一、首页性能和视频流实现
+1. 首页推荐流只能让当前视频播放，前后各保留一个 video 组件，其余 item 使用 cover 图，避免同时创建太多播放器。
+2. currentIndex 变化时：
+   1. pause 上一个 videoContext。
+   2. play 当前 videoContext。
+   3. 预加载下一个 item 的 cover，不预加载完整视频。
+   4. currentIndex 距离列表尾部小于 3 时请求下一页。
+3. getFeed 入参：
+   1. channel。
+   2. cursor。
+   3. pageSize，推荐 10。
+4. getFeed 返回：
+   1. items。
+   2. nextCursor。
+   3. hasMore。
+5. setData 性能规则：
+   1. 追加列表时只 setData feedItems 和 cursor。
+   2. 点赞、收藏、关注只 setData 当前 item 的局部字段。
+   3. 评论列表不放进 feedItems，放进 commentPanel.items。
+6. 视频 item 组件化建议：
+   1. components/feedVideoItem。
+   2. properties：item、active、muted。
+   3. methods：play、pause、emitLike、emitComment、emitJoin、emitFollow。
+7. 小勺子显示逻辑必须以服务端 spoonVisible 为准；客户端可二次保护 bindRecipeId 和 recipeAuthorized，但不能自己推断出本不该出现的入口。
+8. 评论面板打开时调用 POST /api/comments/list，pageSize=20。
+9. 评论提交成功后：
+   1. 输入框清空。
+   2. commentCount + 1。
+   3. 新评论插入列表顶部。
+   4. 如果服务端返回 status=hidden，不插入公开列表，只提示“评论已提交，等待展示”。
+10. 点赞调用 /api/likes/toggle，targetType=video。
+11. 收藏视频调用 /api/favorites/toggle，targetType=video。
+12. 点赞、收藏按钮必须等服务端返回成功后再改成“已赞”“已藏”，失败时保持原状态并提示用户；我的页喜欢、收藏、创作列表统一从服务端返回的数据刷新。
+
+三十二、菜单页和排程预览实现
+1. 菜单页本地只缓存菜谱摘要，不缓存所有完整步骤。
+2. getRecipes 返回的 recipe 列表按 category 分组后生成 sections。
+3. 搜索使用前端本地过滤：
+   1. keyword 为空时按 activeCategory 展示。
+   2. keyword 非空时跨分类搜索 title、subtitle、category、ingredientNames、tags。
+   3. 输入防抖 200ms。
+4. selectedRecipeIds 用数组保存，最多建议第一期限制 8 道菜，超过提示“第一期一次最多安排 8 道菜”。
+5. 每次增删菜后调用 previewPlan，但要做请求序号防乱序。
+6. previewPlan 伪代码：
+   ```js
+   async function refreshPlanSummary(recipeIds) {
+     const requestSeq = ++this.planSeq
+     this.setData({ planLoading: true, planError: '' })
+     try {
+       const plan = await api.previewPlan({ recipeIds })
+       if (requestSeq !== this.planSeq) return
+       this.setData({ planSummary: plan.summary, planError: '', planLoading: false })
+     } catch (err) {
+       if (requestSeq !== this.planSeq) return
+       this.setData({ planError: err.message, planLoading: false })
+     }
+   }
+   ```
+7. 菜谱卡片加入按钮状态由 owned、status、priceType、selected 共同决定。
+8. status=hidden 的已拥有菜谱：
+   1. 展示灰色状态标签。
+   2. canCook=true 时允许加入本顿，但不可进入公开详情。
+   3. canCook=false 时不允许加入本顿。
+9. 点击“开始做菜”前必须确认 planSummary 来自当前 selectedRecipeIds；如果 planLoading=true，按钮置灰。
+
+三十三、菜谱编辑器具体数据结构
+1. recipeEditor 页面 data：
+   1. draftId。
+   2. recipeId，可空。
+   3. title。
+   4. category。
+   5. subtitle。
+   6. difficulty。
+   7. coverImage。
+   8. ingredients: [{ localId, name, amount }]。
+   9. tools: [{ localId, name, selected }]。
+   10. tasks: [{ localId, taskId, title, detail, minutes, seconds, resource, active, canPause, continuesDuringPause, canLeaveKitchen, safetyLevel, dependencies, voiceText, deleted }]。
+   11. validationErrors。
+   12. saving。
+2. taskId 生成规则：
+   1. 已发布步骤使用服务端 taskId。
+   2. 新步骤本地先用 local_{uuid}。
+   3. 发布时未保存过的新步骤由客户端转换为 step_001、step_002 这种菜谱内稳定 ID；服务端仍要重新校验唯一性。
+3. 删除规则：
+   1. 已保存步骤点击删除只设置 deleted=true。
+   2. 新增未保存步骤可以从数组移除。
+   3. deleted=true 的步骤不参与发布 payload 的 active tasks，但要放进 editor 展示。
+4. 发布 payload 必须包含完整 recipeJson：
+   1. schemaVersion。
+   2. title。
+   3. category。
+   4. subtitle。
+   5. difficulty。
+   6. ingredients。
+   7. tools。
+   8. tasks。
+5. validateRecipeDraft 伪代码：
+   ```js
+   function validateRecipeDraft(draft, mode) {
+     const errors = []
+     if (mode === 'publish' && !draft.title.trim()) errors.push({ field: 'title', message: '请填写菜名' })
+     const activeTasks = draft.tasks.filter(t => !t.deleted)
+     if (mode === 'publish' && activeTasks.length === 0) errors.push({ field: 'tasks', message: '至少添加一个步骤' })
+     for (const task of activeTasks) {
+       if (!task.title.trim()) errors.push({ field: task.localId, message: '步骤名不能为空' })
+       const seconds = task.minutes * 60 + task.seconds
+       if (seconds <= 0) errors.push({ field: task.localId, message: '步骤时长必须大于 0' })
+       for (const dep of task.dependencies) {
+         if (!activeTasks.some(t => t.localId === dep || t.taskId === dep)) errors.push({ field: task.localId, message: '依赖步骤不存在或已删除' })
+       }
+     }
+     if (hasCycle(activeTasks)) errors.push({ field: 'dependencies', message: '步骤依赖不能成环' })
+     return errors
+   }
+   ```
+
+三十四、做菜执行本地运行时细节
+1. cook 页不能每秒 setData 整个 plan，只能 setData：
+   1. elapsedSeconds。
+   2. currentTask。
+   3. currentProgressPercent。
+   4. timelinePointer。
+   5. remainingText。
+2. timelineRows 在进入页面时由 timelineView.buildRows(plan.timeline) 一次性生成。
+3. 进度指针根据 elapsedSeconds 计算，不修改 timelineRows。
+4. setInterval 建议 1000ms；页面隐藏时记录 hideAt，回来时用 Date.now 计算真实经过时间，不依赖后台 timer。
+5. 暂停状态下：
+   1. active 可暂停步骤不增加 elapsedSeconds。
+   2. continuesDuringPause=true 的等待步骤按自然时间推进。
+   3. freeBlock 闹铃判断仍以自然时间为准。
+6. runtime 每 5 秒写一次本地缓存，关键操作立即写：
+   1. 开始。
+   2. 暂停。
+   3. 继续。
+   4. 加时。
+   5. 跳过。
+   6. 提前完成。
+   7. 完成计划。
+7. 跳到下一步骤时立即调用 voice.speak(nextTask.voiceText || nextTask.title)。
+8. freeBlock 结束时：
+   1. alarm.playAlarm 循环播放内部提示音。
+   2. 页面显示遮罩和“我知道了”。
+   3. 点击后 stopAlarm，并记录 alarmAckMap[freeBlockId]=true。
+9. 做菜完成时先保存 cookRuntime.completed=true，再弹结果发布选择，避免弹窗中断导致状态丢失。
+
+三十五、客户端性能和容量边界
+1. 首页 feed 每页 10 条，最多在内存保留 30 条；超过 30 条时丢弃距离 currentIndex 最远的旧 item，但保留 cursor。
+2. 评论每页 20 条，最多显示最近 100 条，继续下拉再分页。
+3. 菜谱菜单列表第一期预计少于 500 条，可以本地过滤；超过 500 条时改服务端搜索。
+4. plan preview 防抖 300ms，且同一时间只认最后一次请求。
+5. 上传视频最大值以服务端返回配置为准；客户端录制前默认限制 5 分钟，上传前检查 100MB。
+6. 本地缓存大小控制：
+   1. 不缓存视频文件内容。
+   2. lastPlan 只保留最近一个。
+   3. cook_history 列表从服务端分页加载。
+7. 页面 setData 单次数据建议小于 200KB，避免把完整 recipeJson 大对象频繁写入页面。
+8. 复杂校验放在 utils 中同步执行；保存和发布前服务端必须再次校验。
+
+三十六、可扩展和可修改设计规则
+1. 页面层不得直接拼接服务端 URL，所有接口必须经过 utils/api.js。
+2. 页面层不得直接读写 wx storage，所有缓存必须经过 utils/storage.js 或具体 store。
+3. 页面层不得自己判断登录是否有效，只能调用 auth.ensureLogin。
+4. 页面层不得把 userId 当作鉴权字段传给服务端；当前用户只能由 token 决定。
+5. 新增业务接口时只改三处：
+   1. utils/api.js 增加函数。
+   2. 对应页面或 store 调用新函数。
+   3. docs/API 清单补接口定义。
+6. 新增内容类型时只扩展 targetType 枚举，不复制一套点赞、收藏、评论逻辑。
+   1. 当前 targetType：video、recipe。
+   2. 未来可扩展：cook_result、menu、comment。
+   3. toggleLike、toggleFavorite、listComments、createComment 都按 targetType + targetId 调用。
+7. 新增货币或任务奖励时不改页面主流程：
+   1. 钱包页读取 wallet.balances 数组或兼容 coins/yuanbao。
+   2. 加入菜谱只关心 recipe.priceType 和 recipe.priceAmount。
+   3. 支付确认弹窗由 wallet.js 根据 priceType 渲染。
+8. 新增真实支付时新增 payType=wechat_pay，不替换 coin/yuanbao。
+9. 新增内容审核时只扩展 status 和 reason：
+   1. 页面已有 draft、published、hidden、deleted。
+   2. 未来可加 reviewing、rejected。
+   3. 页面统一通过 statusView(status) 显示标签和可操作按钮。
+10. 新增推荐算法时不改 home 页面结构，只改变 /api/feed 返回顺序、cursor 和 reason 字段。
+11. 新增视频云存储或 CDN 时不改页面上传/播放逻辑，只继续使用服务端返回 videoUrl 和 coverUrl。
+12. 新增语音 TTS 时不改 cook 页步骤推进逻辑，只替换 utils/voice.js 的 speak 实现。
+13. 新增提醒方式时不改 planRuntime，只扩展 alarm.js。
+14. 新增菜谱步骤字段时：
+   1. recipeEditor 的 task model 允许 extra 字段。
+   2. 发布 payload 保留 unknownFields。
+   3. timeline 展示只读取已知字段。
+15. 新增排程算法版本时：
+   1. startPlan 返回 scheduleVersion。
+   2. cookRuntime 保存 scheduleVersion。
+   3. planRuntime 按 scheduleVersion 选择兼容解析函数。
+16. 修改页面 UI 时必须保持 data model 和 API payload 不变，除非同时更新服务端文档。
+17. 所有跨页面共享状态必须放到 store 或 globalData，不允许页面之间通过 eventChannel 传大对象。
+18. 页面 URL 参数只传 ID、mode、returnPage，不传完整 recipeJson、planJson、video 对象。
+19. AI 或开发者新增功能时必须先回答：
+   1. 是否需要新页面。
+   2. 是否需要新 API。
+   3. 是否需要新本地缓存 key。
+   4. 是否会影响做菜执行本地安全提醒。
+   5. 是否会影响 MySQL 表结构。
+20. 如果影响做菜安全提醒，优先修改 planRuntime、alarm、voice，不允许只改 UI。
+
+三十七、给后续 AI 开发者的实现说明
+1. 本文档中“必须”表示验收必做，不是建议。
+2. 本文档中“建议”表示可按项目现状微调，但不能破坏对应目标。
+3. 开发时先实现端到端闭环，再美化 UI。
+4. 每个页面都应按以下顺序开发：
+   1. 写 data model。
+   2. 写 onLoad/onShow 的数据加载。
+   3. 写 API 调用。
+   4. 写 loading/error/empty 状态。
+   5. 写主要交互。
+   6. 写本地缓存恢复。
+   7. 写边界状态。
+5. 不要在页面里写复杂算法：
+   1. 排程算法在服务端。
+   2. 做菜本地推进在 planRuntime.js。
+   3. 时间条计算在 timelineView.js。
+   4. 菜谱校验在 recipeEditor.js。
+   5. 钱包动作在 wallet.js。
+6. 如果遇到产品文档没有定义的字段，前端要保守展示：
+   1. 未知 status 按 hidden 处理。
+   2. 未知 priceType 不允许购买。
+   3. 未知 task.safetyLevel 按 caution 处理。
+   4. 未知 targetType 不允许点赞、收藏、评论。
+7. 任何失败都不要让用户停在无响应状态；至少显示 toast 或错误区。
+8. 做菜执行中网络失败不能中断倒计时，只能把需要上报的数据放进 pendingReports，之后重试。

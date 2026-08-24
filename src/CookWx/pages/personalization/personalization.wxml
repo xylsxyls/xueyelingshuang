@@ -1,0 +1,54 @@
+<view class="page personalization-page" wx:if="{{recipe}}">
+  <view class="header" style="background: {{recipe.coverColor}}">
+    <view class="title">{{recipe.title}}</view>
+    <view class="subtitle">{{recipe.subtitle}}</view>
+  </view>
+
+  <view class="toolbar">
+    <button class="ghost-btn" bindtap="addStep">新增</button>
+    <button class="ghost-btn danger" bindtap="reset">重置</button>
+    <button class="primary-btn" bindtap="save" loading="{{saving}}" disabled="{{saving}}">保存</button>
+  </view>
+
+  <view class="hint card">
+    禁用步骤会保留显示但不参与排程；保存后，下次做菜会使用这里的步骤时间。
+  </view>
+
+  <view
+    class="step-card card {{item.disabled ? 'disabled' : ''}}"
+    wx:for="{{steps}}"
+    wx:key="id"
+  >
+    <view class="step-head">
+      <view>
+        <view class="step-title">{{item.index}}. {{item.title}}</view>
+        <view class="muted">{{item.modeText}} · 原始 {{item.originalDurationText}}</view>
+      </view>
+      <button class="toggle-btn {{item.disabled ? 'restore' : ''}}" data-index="{{index}}" bindtap="toggleDisabled">
+        {{item.disabled ? '恢复' : '禁用'}}
+      </button>
+    </view>
+
+    <view class="detail">{{item.detail}}</view>
+
+    <view class="duration-row">
+      <view class="time-field">
+        <input type="number" value="{{item.hours}}" data-index="{{index}}" data-field="hours" bindinput="onDurationInput" disabled="{{item.disabled}}" />
+        <text>时</text>
+      </view>
+      <view class="time-field">
+        <input type="number" value="{{item.minutes}}" data-index="{{index}}" data-field="minutes" bindinput="onDurationInput" disabled="{{item.disabled}}" />
+        <text>分</text>
+      </view>
+      <view class="time-field">
+        <input type="number" value="{{item.seconds}}" data-index="{{index}}" data-field="seconds" bindinput="onDurationInput" disabled="{{item.disabled}}" />
+        <text>秒</text>
+      </view>
+      <view class="duration-text">{{item.disabled ? '不参与排程' : item.durationText}}</view>
+    </view>
+  </view>
+</view>
+
+<view class="page" wx:else>
+  <view class="card empty">{{error || (loading ? '正在加载个性化...' : '个性化不存在')}}</view>
+</view>

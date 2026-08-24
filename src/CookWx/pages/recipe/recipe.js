@@ -1,4 +1,5 @@
 const api = require('../../utils/api')
+const time = require('../../utils/time')
 
 Page({
   data: {
@@ -26,11 +27,11 @@ Page({
     this.loadRequestId = (this.loadRequestId || 0) + 1
     const requestId = this.loadRequestId
     this.setData({ loading: true, error: '' })
-    api.getRecipes()
+    api.getRecipeDetail(this.data.recipeId)
       .then((res) => {
         if (!res.ok) throw new Error(res.message)
         if (requestId !== this.loadRequestId) return
-        const recipe = (res.recipes || []).find((item) => item.id === this.data.recipeId)
+        const recipe = res.recipe
         this.setData({
           recipe: recipe ? this.normalizeRecipe(recipe) : null,
           loading: false,
@@ -45,12 +46,42 @@ Page({
   },
 
   normalizeRecipe(recipe) {
+    const priceCoins = Number(recipe.priceCoins || 0)
+    const priceAmount = Number(recipe.priceAmount || priceCoins || 0)
+    const priceType = recipe.priceType || (priceCoins > 0 ? 'coin' : 'free')
+    const owned = !!recipe.owned
+    const accessible = owned || !!recipe.systemRecipe || priceType === 'free' || priceAmount <= 0
+    let priceLabel = '免费'
+    let priceText = '免费'
+    if (priceType === 'yuanbao' && priceAmount > 0) {
+      priceLabel = '元宝'
+      priceText = `${priceAmount} 元宝`
+    } else if (priceType === 'coin' && priceAmount > 0) {
+      priceLabel = '金币'
+      priceText = `${priceAmount} 金币`
+    }
+    const tasks = Array.isArray(recipe.tasks) ? recipe.tasks.map((task) => {
+      const detail = (task.detail || '').trim()
+      const expectedText = `预计用时${time.formatDurationText(task.durationSeconds)}。`
+      const detailText = detail.indexOf('预计用时') >= 0 ? detail : `${detail}${detail && !/[。！？!?]$/.test(detail) ? '。' : ''}${expectedText}`
+      return Object.assign({}, task, {
+        durationText: time.formatDurationText(task.durationSeconds),
+        detailText
+      })
+    }) : []
     return Object.assign({}, recipe, {
       ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
       tools: Array.isArray(recipe.tools) ? recipe.tools : [],
+      tasks,
       tags: Array.isArray(recipe.tags) ? recipe.tags : [],
-      priceCoins: Number(recipe.priceCoins || 0),
-      owned: !!recipe.owned,
+      priceCoins,
+      priceAmount,
+      priceType,
+      priceLabel,
+      priceText,
+      purchaseText: priceAmount > 0 ? `加入 ${priceText}` : '免费加入',
+      owned,
+      accessible,
       favorite: !!recipe.favorite
     })
   },
@@ -63,7 +94,7 @@ Page({
       return
     }
     this.setData({ buying: true })
-    api.purchaseRecipe(recipe.id)
+    api.joinRecipe(recipe.id)
       .then((res) => {
         wx.showToast({ title: res.message || (res.ok ? '购买成功' : '购买失败'), icon: res.ok ? 'success' : 'none' })
         this.setData({
@@ -94,6 +125,15 @@ Page({
         this.setData({ favoriting: false })
         wx.showToast({ title: err.message || '收藏失败', icon: 'none' })
       })
+  },
+
+  openPersonalization() {
+    const recipe = this.data.recipe
+    if (!recipe || !recipe.owned) {
+      wx.showToast({ title: '请先拥有菜谱', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url: `/pages/personalization/personalization?id=${recipe.id}` })
   },
 
   addToMenu() {

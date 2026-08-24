@@ -47,7 +47,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
 
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "cut_garlic",
@@ -62,7 +64,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "wash_greens"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "stir_greens",
@@ -77,7 +81,9 @@
                       "safetyLevel":  "danger",
                       "dependencies":  [
                                            "cut_garlic"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "season_greens",
@@ -92,7 +98,9 @@
                       "safetyLevel":  "attention",
                       "dependencies":  [
                                            "stir_greens"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   }
               ],
     "defaultOwned":  true

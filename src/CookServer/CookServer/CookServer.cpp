@@ -1,6 +1,9 @@
 ﻿#include "CookApiService.h"
 #include "CookCatalog.h"
+#include "CookDependencyService.h"
 #include "CookHttpServer.h"
+#include "CookStorageService.h"
+#include "CookVoiceService.h"
 #include "Config.h"
 #include "CDump/CDumpAPI.h"
 #include "CSystem/CSystemAPI.h"
@@ -67,6 +70,46 @@ int32_t main()
 	        g_config.m_apiVersion.c_str(),
 	        g_config.m_httpWorkerThreads,
 	        maxRequestBytesText.c_str());
+	LOGINFO("CookServer voice config provider=%s cacheDirectory=%s audioApiPath=%s commandFormat=%s commandUseShell=%d initialRequiredCount=%d initialPromptGroupCount=%d workerThreads=%d clientConcurrency=%d fetchWaitMs=%d fetchMaxAttempts=%d",
+	        g_config.m_voiceTtsProvider.c_str(),
+	        g_config.m_voiceCacheDirectoryName.c_str(),
+	        g_config.m_voiceAudioApiPath.c_str(),
+	        g_config.m_voiceCommandAudioFormat.c_str(),
+	        g_config.m_voiceCommandUseShell ? 1 : 0,
+	        g_config.m_voiceInitialRequiredCount,
+	        g_config.m_voiceInitialPromptGroupCount,
+	        g_config.m_voiceWorkerThreadCount,
+	        g_config.m_voiceClientConcurrency,
+	        g_config.m_voiceFetchWaitMilliseconds,
+	        g_config.m_voiceFetchMaxAttempts);
+	LOGINFO("CookServer storage config backend=%s mysqlHost=%s mysqlPort=%d mysqlDatabase=%s mysqlPoolSize=%d redisHost=%s redisPort=%d redisDb=%d redisPoolSize=%d syncThreads=%d",
+	        g_config.m_storageBackend.c_str(),
+	        g_config.m_mysqlHost.c_str(),
+	        g_config.m_mysqlPort,
+	        g_config.m_mysqlDatabase.c_str(),
+	        g_config.m_mysqlPoolSize,
+	        g_config.m_redisHost.c_str(),
+	        g_config.m_redisPort,
+	        g_config.m_redisDbIndex,
+	        g_config.m_redisPoolSize,
+	        g_config.m_storageSyncThreadCount);
+	LOGINFO("CookServer video config resourceDirectory=%s storageDirectory=%s resourceScanIntervalSeconds=%d feedDefaultCount=%d seenExpireDays=%d streamChunkBytes=%s posterEnabled=%d posterApiPath=%s",
+	        g_config.m_videoResourceDirectoryName.c_str(),
+	        g_config.m_videoStorageDirectoryName.c_str(),
+	        g_config.m_videoResourceScanIntervalSeconds,
+	        g_config.m_videoFeedDefaultCount,
+	        g_config.m_videoSeenExpireDays,
+	        CStringManager::toStringInt64(g_config.m_videoStreamChunkBytes).c_str(),
+	        g_config.m_videoPosterGenerateEnabled ? 1 : 0,
+	        g_config.m_videoPosterApiPath.c_str());
+
+	if (!CookDependencyService::ensureStartupDependencies())
+	{
+		LOGFATAL("CookServer dependency startup failed.");
+		LogManager::instance().uninitAll();
+		Config::instance().uninit();
+		return 1;
+	}
 
 	if (!CookCatalog::init())
 	{
@@ -76,6 +119,14 @@ int32_t main()
 		return 1;
 	}
 	LOGINFO("CookServer recipe catalog ready recipeCount=%d", static_cast<int32_t>(CookCatalog::recipeCatalog().size()));
+	if (!CookStorageService::instance().init())
+	{
+		LOGFATAL("CookServer storage init failed.");
+		CookCatalog::uninit();
+		LogManager::instance().uninitAll();
+		Config::instance().uninit();
+		return 1;
+	}
 
 	// 注册控制台退出信号，避免服务进程只能被强杀。
 	std::signal(SIGINT, OnSignal);
@@ -87,6 +138,7 @@ int32_t main()
 	if (!httpServer.start())
 	{
 		LOGFATAL("CookServer http server start failed.");
+		CookStorageService::instance().shutdown();
 		CookCatalog::uninit();
 		LogManager::instance().uninitAll();
 		Config::instance().uninit();
@@ -102,6 +154,8 @@ int32_t main()
 	}
 	LOGWARNING("CookServer stop signal received.");
 	httpServer.stop();
+	CookVoiceService::instance().shutdown();
+	CookStorageService::instance().shutdown();
 	CookCatalog::uninit();
 	LOGINFO("CookServer shutdown complete.");
 	LogManager::instance().uninitAll();

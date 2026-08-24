@@ -156,6 +156,10 @@ button[disabled] {
   padding-left: 8rpx;
 }
 
+.cart-info .error {
+  color: #b42318;
+}
+
 .cart button {
   height: 76rpx;
 }

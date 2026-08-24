@@ -1,3 +1,19 @@
+.messages-page {
+  background: #f8f5ef;
+}
+
+.messages-state {
+  padding: 28rpx;
+  margin-bottom: 14rpx;
+  color: #7b746a;
+}
+
+.messages-state.warning {
+  color: #8a5a23;
+  background: #fff8ea;
+  border-color: #f0d7ad;
+}
+
 .msg {
   display: grid;
   grid-template-columns: 76rpx 1fr;

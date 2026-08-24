@@ -58,6 +58,14 @@ public:
 	*/
 	bool get(const std::string& path, CookServerTestHttpResponse& response) const;
 
+	/** 发送带附加请求头的GET请求
+	@param [in] path 请求路径，包含查询字符串
+	@param [in] headers 附加请求头
+	@param [out] response 响应结果
+	@return 返回网络层是否成功
+	*/
+	bool get(const std::string& path, const std::map<std::string, std::string>& headers, CookServerTestHttpResponse& response) const;
+
 	/** 发送POST请求
 	@param [in] path 请求路径
 	@param [in] body JSON请求体
@@ -65,6 +73,15 @@ public:
 	@return 返回网络层是否成功
 	*/
 	bool post(const std::string& path, const std::string& body, CookServerTestHttpResponse& response) const;
+
+	/** 发送带附加请求头的POST请求
+	@param [in] path 请求路径
+	@param [in] body JSON请求体
+	@param [in] headers 附加请求头
+	@param [out] response 响应结果
+	@return 返回网络层是否成功
+	*/
+	bool post(const std::string& path, const std::string& body, const std::map<std::string, std::string>& headers, CookServerTestHttpResponse& response) const;
 
 	/** 发送OPTIONS请求
 	@param [in] path 请求路径
@@ -81,6 +98,20 @@ public:
 	@return 返回网络层是否成功
 	*/
 	bool request(const std::string& method, const std::string& path, const std::string& body, CookServerTestHttpResponse& response) const;
+
+	/** 发送带附加请求头的通用HTTP请求
+	@param [in] method HTTP方法
+	@param [in] path 请求路径
+	@param [in] body 请求体
+	@param [in] headers 附加请求头
+	@param [out] response 响应结果
+	@return 返回网络层是否成功
+	*/
+	bool request(const std::string& method,
+	             const std::string& path,
+	             const std::string& body,
+	             const std::map<std::string, std::string>& headers,
+	             CookServerTestHttpResponse& response) const;
 
 private:
 	/** 初始化当前平台socket库
@@ -156,7 +187,10 @@ private:
 	@param [in] body 请求体
 	@return 返回完整HTTP请求文本
 	*/
-	std::string buildRequestText(const std::string& method, const std::string& path, const std::string& body) const;
+	std::string buildRequestText(const std::string& method,
+	                             const std::string& path,
+	                             const std::string& body,
+	                             const std::map<std::string, std::string>& headers) const;
 
 private:
 #ifdef _MSC_VER

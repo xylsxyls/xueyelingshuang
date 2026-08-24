@@ -1,0 +1,1796 @@
+CookServer第一期C++服务器程序架构设计文档
+
+一、文档说明
+1. 本文档描述 Cook 做菜软件第一期 C++ 服务端 CookServer 的程序架构设计。
+2. 本文档依据 common/CookServer/Cook做菜软件第一期产品设计文档.txt 最新版本重新整理。
+3. 最新一期产品已经明确：结构化业务数据必须使用 MySQL 持久化，视频文件保存到服务端文件目录，MySQL 保存视频元数据和文件路径。
+4. txt 文件不再作为第一期正式业务存储，只允许作为系统菜谱种子、导入导出、人工备份或调试报告使用。
+5. 第一阶段服务端需要同时面向微信小程序、后续 Android APP、后续 iOS APP 提供 HTTP JSON 接口。
+6. 第一阶段不做企业级分布式高可用，但架构要避免把状态绑死到单机内存，便于后续多实例、负载均衡、对象存储和 Redis 演进。
+7. 本文档同时记录当前第一期已落地代码结构和后续拆表演进方向。
+
+二、第一期服务端目标
+1. 启动 HTTP 服务，默认监听 0.0.0.0:5207。
+2. 提供 /api/health 健康检查。
+3. 提供真实注册、登录、退出和 session 校验接口。
+4. 使用 MySQL 保存账号、密码摘要、钱包、签到、广告奖励、拥有菜谱、收藏、个性化、视频元数据、关注、留言、做菜历史。
+5. 启动时把 res/recipes/*.json 系统菜谱作为种子导入 MySQL；运行时以 MySQL 为准。
+6. 提供首页 feed，feed 中必须能返回真实视频 URL 或服务端预置真实视频 URL。
+7. feed 中只有绑定菜谱且作者授权的 video 才返回 spoonVisible=true。
+8. 提供菜谱列表、菜谱详情、购买区、创作区、最喜欢等用户资产状态。
+9. 提供金币、元宝、签到、模拟广告奖励和使用金币/元宝加入菜谱。
+10. 提供用户自定义菜谱草稿保存和正式发布，正式发布返回 recipeId 和 revisionId。
+11. 提供作者菜谱版本发布、购买者更新到作者最新版、同步到个性化版本。
+12. 提供个性化微调保存、重置、分享和应用。
+13. 提供排程预览和开始做菜，排程前必须构建当前用户的有效菜谱。
+14. 提供做菜实际耗时上报和做菜历史保存。
+15. 提供视频上传、视频发布、视频绑定菜谱教程。
+16. 提供做菜结果视频或照片发布。
+17. 提供关注和基础留言消息。
+18. CookServerTest 需要覆盖主要接口、MySQL 重启恢复、视频上传元数据、金币元宝扣减、排程和个性化行为。
+
+三、当前代码现状
+1. 当前服务端目录：src/CookServer/CookServer。
+2. 已有主要模块：
+   1. CookServer.cpp：程序入口。
+   2. Config.h/cpp：运行配置。
+   3. CookHttpServer.h/cpp：HTTP 服务生命周期。
+   4. CookHttpApiHandler.h/cpp：HTTP handler。
+   5. CookApiService.h/cpp：接口分发和业务响应。
+   6. CookServerHelper.h/cpp：JSON、UTF-8、HTTP response 辅助。
+   7. CookModels.h/cpp：业务模型。
+   8. CookCatalog.h/cpp：系统菜谱目录。
+   9. CookRecipeConfig.h/cpp：菜谱 JSON 解析。
+   10. CookSchedule.h/cpp：排程算法。
+   11. AccountStore.h/cpp：当前简易账号、金币、购买、收藏状态。
+3. 现有 AccountStore 如果仍以本地文件保存用户资产，已经不符合最新产品文档。
+4. 需要把 AccountStore 演进为 MySQL Repository 或被新的 AccountRepository、WalletRepository、RecipeRepository 替代。
+5. CookSchedule 应继续保留为纯排程算法层，不直接访问 MySQL、HTTP、token 或文件系统。
+6. CookApiService 当前承担较多业务，后续应只做路由、参数解析、鉴权和调用领域服务。
+7. 当前第一期代码新增 CookStorageService 和 CookStorageSyncTask，先承接 Redis+MySQL 存储层，不再让正式业务只依赖本地 txt。
+8. Storage.Backend=redis_mysql 时，CookServer 启动流程为：初始化 MySQL、创建 cook_state_snapshot 表、连接 Redis、把 MySQL 最新快照初始化到 Redis。
+9. 当前 AccountStore 暂时保留为兼容壳，内部状态仍按现有模型组织；保存时先序列化完整账号状态快照写入 Redis，再通过 CTaskThreadManager 后台任务同步到 MySQL。
+10. CookServerState.txt 已不再作为运行时存储或迁移兜底使用；新增点赞、收藏、个性化、视频元数据等状态都会进入 Redis 和 MySQL 快照。
+11. MySQL 当前落地表为 cook_state_snapshot，字段包含 snapshotKey、snapshotValue、updateVersion、updateTime；snapshotValue 使用 LONGBLOB 保存二进制快照，避免历史本地编码文本被 MySQL utf8mb4 拒绝；updateVersion 用于避免低版本后台任务覆盖高版本状态。
+12. 关闭 CookServer 时，必须先等待存储同步线程收尾，再从 Redis 读取最后一版状态补写 MySQL，避免最后一次用户操作只停留在 Redis。
+13. 视频文件第一期继续保存到服务端本地 data/videos/files，业务状态中只保存 videoId、filePath、caption、绑定菜谱等元数据。
+14. 后续多实例主动承载写流量前，应把 cook_state_snapshot 拆成账号、钱包、token、视频、点赞、收藏、个性化等实体表，或者增加分布式锁和实体级版本；当前快照方案更适合第一期单实例稳定落地。
+
+四、总体分层架构
+1. 进程启动层。
+   1. Config 读取端口、MySQL 连接、Redis 连接、视频存储根目录、token 过期时间、默认奖励数值。
+   2. LogManager 初始化。
+   3. CDump 初始化。
+   4. CookCatalog 扫描 res/recipes/*.json，作为系统菜谱种子和排程基础数据。
+   5. CookStorageService 初始化 MySQL 和 Redis；Redis 为空时从 MySQL 恢复状态，MySQL 为空时以空业务状态启动，不再读取旧 CookServerState.txt。
+   6. VideoStorage 确认 data/videos/files 目录存在。
+   7. CookVoiceService 初始化语音缓存和 TTS 工作线程。
+   8. CookHttpServer 启动。
+2. HTTP 接入层。
+   1. CookHttpServer 管理监听、连接和请求生命周期。
+   2. CookHttpApiHandler 把 HTTP 请求转换为 ApiRequest。
+   3. CookHttpApiHandler 支持 JSON 请求和 multipart 文件上传请求。
+3. API 层。
+   1. CookApiService 负责路由分发。
+   2. AuthMiddleware 校验 token。
+   3. RequestParser 解析 query、json body、multipart metadata。
+   4. ResponseWriter 输出统一 JSON。
+4. 领域服务层。
+   1. AuthService：注册、登录、退出、session。
+   2. AccountService：账号资料、密码修改、账号摘要。
+   3. WalletService：钱包、签到、广告奖励、金币元宝扣减。
+   4. RecipeService：菜谱查询、拥有关系、收藏、加入菜谱。
+   5. RecipeVersionService：自定义菜谱发布、作者版本发布、购买者版本更新。
+   6. PersonalizationService：个性化保存、重置、分享、应用、实际耗时同步。
+   7. EffectiveRecipeService：按 userId 和 recipeId 生成当前用户有效菜谱。
+   8. PlanService：排程预览和开始做菜。
+   9. VideoService：视频上传、发布、绑定菜谱、feed 素材。
+   10. FeedService：首页推荐、精选、关注、好友数据。
+   11. FollowService：关注、互关、消息免打扰。
+   12. MessageService：留言、视频分享、微调分享消息。
+   13. CookHistoryService：做菜历史、结果发布。
+5. Repository 层。
+   1. AccountRepository。
+   2. TokenRepository。
+   3. WalletRepository。
+   4. RecipeRepository。
+   5. RecipeRevisionRepository。
+   6. UserRecipeRepository。
+   7. PersonalizationRepository。
+   8. VideoRepository。
+   9. FollowRepository。
+   10. MessageRepository。
+   11. CookHistoryRepository。
+6. 基础设施层。
+   1. CookStorageService：第一期 Redis+MySQL 状态快照服务。
+   2. CookStorageSyncTask：MySQL 后台同步任务，使用 CTaskThreadManager。
+   3. HiRedisConnectionPool。
+   4. MysqlCppConnectionPool。
+   5. MysqlTransaction。
+   6. IdGenerator。
+   7. PasswordHasher。
+   8. VideoStorage。
+   9. JsonCodec。
+   10. TimeProvider。
+7. 算法层。
+   1. CookSchedule 只接收已经合并好的 Recipe 列表。
+   2. CookSchedule 输出 PlanResult、timeline、freeBlocks、warnings。
+   3. 算法层不访问 MySQL 和文件系统。
+
+五、推荐 C++ 文件结构
+1. 保留已有文件：
+   1. CookServer.cpp。
+   2. Config.h/cpp。
+   3. CookHttpServer.h/cpp。
+   4. CookHttpApiHandler.h/cpp。
+   5. CookApiService.h/cpp。
+   6. CookServerHelper.h/cpp。
+   7. CookModels.h/cpp。
+   8. CookCatalog.h/cpp。
+   9. CookRecipeConfig.h/cpp。
+   10. CookSchedule.h/cpp。
+2. 建议新增 infrastructure：
+   1. MysqlConnectionPool.h/cpp。
+   2. MysqlTransaction.h/cpp。
+   3. MysqlStatement.h/cpp。
+   4. IdGenerator.h/cpp。
+   5. PasswordHasher.h/cpp。
+   6. TimeProvider.h/cpp。
+   7. VideoStorage.h/cpp。
+   8. MultipartParser.h/cpp，如果现有 HTTP 库没有内置上传解析。
+3. 建议新增 repository：
+   1. AccountRepository.h/cpp。
+   2. TokenRepository.h/cpp。
+   3. WalletRepository.h/cpp。
+   4. RecipeRepository.h/cpp。
+   5. RecipeRevisionRepository.h/cpp。
+   6. UserRecipeRepository.h/cpp。
+   7. PersonalizationRepository.h/cpp。
+   8. VideoRepository.h/cpp。
+   9. FollowRepository.h/cpp。
+   10. MessageRepository.h/cpp。
+   11. CookHistoryRepository.h/cpp。
+   12. CommentRepository.h/cpp，第一期必须实现，评论需要真实落库。
+4. 建议新增 service：
+   1. AuthService.h/cpp。
+   2. AccountService.h/cpp。
+   3. WalletService.h/cpp。
+   4. RecipeService.h/cpp。
+   5. RecipeVersionService.h/cpp。
+   6. RecipeSeedImporter.h/cpp。
+   7. EffectiveRecipeService.h/cpp。
+   8. PersonalizationService.h/cpp。
+   9. PlanService.h/cpp。
+   10. VideoService.h/cpp。
+   11. FeedService.h/cpp。
+   12. FollowService.h/cpp。
+   13. MessageService.h/cpp。
+   14. CookHistoryService.h/cpp。
+   15. CookValidation.h/cpp。
+5. 如果第一期工期紧，可以先把部分 repository 放在一个 MySqlStore 中，但类边界必须按上述职责设计，避免后续难拆。
+6. AccountStore.h/cpp 可以短期作为兼容壳，内部改为调用 MySQL repository；最终应删除文件存储语义。
+
+六、配置设计
+1. Config 需要支持：
+   1. httpHost，默认 0.0.0.0。
+   2. httpPort，默认 5207。
+   3. mysqlHost。
+   4. mysqlPort。
+   5. mysqlUser。
+   6. mysqlPassword。
+   7. mysqlDatabase。
+   8. mysqlPoolSize。
+   9. tokenExpireSeconds。
+   10. videoRootDir，默认 data/videos/files。
+   11. recipeSeedDir，默认 res/recipes。
+   12. defaultYuanbao，默认 100。
+   13. checkinRewardCoins，默认 5。
+   14. adRewardCoins，默认 30。
+   15. adRequiredSeconds，默认 30。
+   16. freeBlockAlarmThresholdSeconds，建议 300。
+2. 配置来源优先级：
+   1. 命令行参数。
+   2. 环境变量。
+   3. 配置文件。
+   4. 默认值。
+3. 日志中不能打印 mysqlPassword、token、passwordHash、passwordSalt。
+
+七、MySQL 表设计
+1. account 表。
+   1. userId varchar 主键。
+   2. account varchar 唯一索引。
+   3. nickname varchar。
+   4. passwordHash varchar。
+   5. passwordSalt varchar。
+   6. avatarUrl varchar 可空。
+   7. personalizationRecordEnabled tinyint。
+   8. status varchar。
+   9. createTime datetime。
+   10. updateTime datetime。
+2. auth_session 表，产品文档允许第一期使用简单 token 表，但 MySQL 只保存 tokenHash。
+   1. tokenId varchar 主键。
+   2. userId varchar 索引。
+   3. tokenHash varchar 唯一索引。
+   4. expireTime datetime。
+   5. status varchar，active、revoked、expired。
+   6. createTime datetime。
+   7. updateTime datetime。
+3. wallet 表。
+   1. userId varchar 主键。
+   2. coins bigint。
+   3. yuanbao bigint。
+   4. updateTime datetime。
+4. wallet_transaction 表。
+   1. transactionId varchar 主键。
+   2. userId varchar 索引。
+   3. currencyType varchar，coin 或 yuanbao。
+   4. changeAmount bigint。
+   5. beforeAmount bigint。
+   6. afterAmount bigint。
+   7. reason varchar，checkin、ad_reward、join_recipe、register_gift。
+   8. relatedId varchar。
+   9. idempotencyKey varchar。
+   10. createTime datetime。
+   11. userId + idempotencyKey 唯一索引。
+5. checkin 表。
+   1. userId varchar。
+   2. checkinDate date。
+   3. rewardCoins int。
+   4. createTime datetime。
+   5. userId + checkinDate 唯一索引。
+6. ad_reward 表，产品文档没有列字段但接口需要记录。
+   1. rewardId varchar 主键。
+   2. userId varchar 索引。
+   3. requiredSeconds int。
+   4. rewardCoins int。
+   5. status varchar，started、finished、cancelled、expired。
+   6. startTime datetime。
+   7. finishTime datetime 可空。
+   8. clientContextJson json 或 text。
+7. recipe 表。
+   1. recipeId varchar 主键。
+   2. authorUserId varchar。
+   3. title varchar。
+   4. category varchar。
+   5. schemaVersion varchar。
+   6. currentRevisionId varchar。
+   7. defaultOwned tinyint。
+   8. systemRecipe tinyint。
+   9. priceType varchar，free、coin、yuanbao、closed。
+   10. priceAmount bigint。
+   11. status varchar，draft、published、hidden、closed、deleted。
+   12. createTime datetime。
+   13. updateTime datetime。
+8. recipe_revision 表。
+   1. revisionId varchar 主键。
+   2. recipeId varchar 索引。
+   3. revisionNumber int。
+   4. recipeJson json 或 longtext。
+   5. createTime datetime。
+   6. authorUserId varchar。
+   7. changelog varchar 可空。
+   8. recipeId + revisionNumber 唯一索引。
+9. user_recipe 表。
+   1. userId varchar。
+   2. recipeId varchar。
+   3. ownedType varchar，default、coin、yuanbao、author、gift、personalization。
+   4. ownedTime datetime。
+   5. favorite tinyint。
+   6. source varchar。
+   7. purchasedRevisionId varchar。
+   8. activeRevisionId varchar。
+   9. updateTime datetime。
+   10. userId + recipeId 唯一索引。
+10. recipe_personalization 表。
+   1. userId varchar。
+   2. recipeId varchar。
+   3. baseRevisionId varchar。
+   4. personalizationJson json 或 longtext。
+   5. updateTime datetime。
+   6. userId + recipeId 唯一索引。
+11. personalization_share 表，建议新增。
+   1. shareId varchar 主键。
+   2. senderUserId varchar。
+   3. targetUserId varchar 可空。
+   4. recipeId varchar。
+   5. baseRevisionId varchar。
+   6. summaryJson json 或 text。
+   7. personalizationJson json 或 longtext。
+   8. createTime datetime。
+   9. expireTime datetime 可空。
+12. video 表。
+   1. videoId varchar 主键。
+   2. userId varchar 索引。
+   3. filePath varchar。
+   4. fileUrl varchar。
+   5. originalFileName varchar。
+   6. fileSize bigint。
+   7. coverPath varchar。
+   8. coverUrl varchar。
+   9. durationSeconds int。
+   10. bindRecipeId varchar 可空。
+   11. recipeAuthorized tinyint。
+   12. title varchar。
+   13. description varchar。
+   14. status varchar，uploaded、published、hidden、deleted。
+   15. createTime datetime。
+   16. publishTime datetime 可空。
+13. like_state 表。
+   1. targetType varchar，video、recipe。
+   2. targetId varchar。
+   3. userId varchar。
+   4. liked tinyint。
+   5. updateTime datetime。
+   6. targetType + targetId + userId 唯一索引。
+14. favorite_state 表。
+   1. targetType varchar，video、recipe。
+   2. targetId varchar。
+   3. userId varchar。
+   4. favorited tinyint。
+   5. updateTime datetime。
+   6. targetType + targetId + userId 唯一索引。
+15. comment 表，产品文档要求基础真实评论写 MySQL。
+   1. commentId varchar 主键。
+   2. targetType varchar，video 或 recipe。
+   3. targetId varchar。
+   4. userId varchar。
+   5. content varchar。
+   6. score int 可空，购买菜谱评分使用。
+   7. status varchar。
+   8. createTime datetime。
+16. follow 表。
+   1. userId varchar。
+   2. targetUserId varchar。
+   3. notifyMode varchar，silent、sound。
+   4. createTime datetime。
+   5. updateTime datetime。
+   6. userId + targetUserId 唯一索引。
+17. message 表。
+   1. messageId varchar 主键。
+   2. senderUserId varchar。
+   3. receiverUserId varchar。
+   4. messageType varchar，text、video_share、personalization_share、system。
+   5. contentJson json 或 text。
+   6. createTime datetime。
+   7. readState varchar，unread、read。
+   8. status varchar，published、hidden、deleted。
+18. cook_history 表。
+   1. historyId varchar 主键。
+   2. userId varchar 索引。
+   3. planId varchar。
+   4. planJson json 或 longtext。
+   5. resultJson json 或 longtext。
+   6. createTime datetime。
+19. 数据库初始化方式：
+   1. 第一阶段可以在服务端启动时执行 create table if not exists。
+   2. 更推荐单独维护 db/migrations/*.sql，CookServer 启动只检查版本。
+   3. 所有表字符集使用 utf8mb4。
+
+八、账号和鉴权设计
+1. 注册接口 POST /api/auth/register。
+2. 入参 account、password、nickname。
+3. 服务端校验 account 格式和唯一性。
+4. nickname 允许重复。
+5. PasswordHasher 生成随机 salt，并计算 passwordHash。
+6. 注册流程必须在事务中完成：
+   1. 生成 userId。
+   2. 插入 account。
+   3. 插入 wallet，yuanbao 默认 100，coins 默认 0 或配置值。
+   4. 根据 recipe.defaultOwned 初始化 user_recipe。
+   5. 初始化 personalizationRecordEnabled=false。
+6. 创建 auth_session。
+   7. 提交事务。
+7. 登录接口 POST /api/auth/login。
+8. 登录流程：
+   1. 按 account 查询账号。
+   2. 如果不存在或禁用，返回同一类错误“账号或密码错误”。
+   3. 使用 password + salt 计算 hash，与 passwordHash 做恒定时间比较。
+4. 成功后创建 auth_session。
+   5. 返回 token、userId、account、nickname、tokenExpireTime、wallet summary。
+9. session 接口 GET /api/auth/session。
+10. 服务端从 Authorization header 提取 Bearer token。
+11. token 不存在、过期、revoked 或账号不存在时返回 401。
+12. token 有效时返回账号摘要和钱包摘要。
+13. logout 接口 POST /api/auth/logout。
+14. logout 将当前 auth_session.status 设置为 revoked。
+15. 除 /api/auth/register、/api/auth/login、/api/health、公开视频文件读取外，其余用户资产接口必须校验 token。
+16. 日志禁止打印 password、passwordHash、passwordSalt、token。
+
+九、钱包、签到、广告奖励和加入菜谱
+1. WalletService 提供 getWallet、checkin、startAdReward、finishAdReward、joinRecipe。
+2. GET /api/account/wallet 返回 coins、yuanbao、checkedInToday、lastCheckinDate。
+3. POST /api/account/checkin。
+   1. 使用服务器自然日。
+   2. 在 checkin 表插入 userId + checkinDate。
+   3. 唯一索引冲突说明当天已签到，不能重复发金币。
+   4. 第一次签到奖励 5 coins。
+5. 更新 wallet.coins 并写 wallet_transaction。
+4. POST /api/account/ad-reward/start。
+   1. 生成 rewardId。
+   2. 写 ad_reward，status=started，requiredSeconds=30，rewardCoins=30。
+   3. 返回 rewardId 和 requiredSeconds。
+5. POST /api/account/ad-reward/finish。
+   1. 校验 rewardId 属于当前 userId。
+   2. 校验 status=started。
+   3. 校验服务端时间距离 startTime 至少 30 秒。
+   4. 满足条件后把 status 改为 finished。
+   5. wallet.coins 增加 30。
+6. 写 wallet_transaction。
+   7. 同一 rewardId 重复 finish 不得重复发金币。
+6. POST /api/recipes/join。
+   1. 入参 recipeId、payType。
+   2. 查询 recipe 状态和价格。
+   3. 已拥有时直接返回 owned=true，不重复扣费。
+   4. priceType=free 时直接写 user_recipe。
+   5. priceType=coin 时检查 coins >= priceAmount。
+   6. priceType=yuanbao 时检查 yuanbao >= priceAmount。
+   7. 余额不足返回明确错误码，例如 COIN_NOT_ENOUGH 或 YUANBAO_NOT_ENOUGH。
+8. 余额足够时事务扣减 wallet、写 wallet_transaction、写 user_recipe。
+   9. 购买时记录 purchasedRevisionId=currentRevisionId，activeRevisionId=currentRevisionId。
+7. 第一阶段没有人民币充值、元宝充值、提现和作者收益结算接口。
+
+十、菜谱种子导入和运行时查询
+1. res/recipes/*.json 保留作为系统菜谱种子文件。
+2. RecipeSeedImporter 启动时扫描 recipeSeedDir。
+3. 每个 JSON 使用 CookRecipeConfig 解析成 Recipe。
+4. 导入规则：
+   1. 如果 MySQL recipe 表没有该 recipeId，则插入 recipe 和 recipe_revision。
+   2. currentRevisionId 指向首个 revisionId。
+   3. defaultOwned 写入 recipe.defaultOwned。
+   4. 如果 MySQL 已有该 recipeId，默认不覆盖。
+5. 系统菜谱后续更新不直接覆盖 seed，而是走 RecipeVersionService 发布新 revision。
+6. GET /api/recipes 运行时从 MySQL 查询 recipe、recipe_revision、user_recipe、recipe_personalization。
+7. 返回给用户时需要包含：
+   1. owned。
+   2. favorite。
+   3. ownedType。
+   4. priceType。
+   5. priceAmount。
+   6. purchasedRevisionId。
+   7. activeRevisionId。
+   8. currentRevisionId。
+   9. hasAuthorUpdate。
+   10. personalizationApplied。
+   11. personalizationSummary。
+8. 未拥有的付费菜谱只返回公开字段，不返回完整 tasks。
+9. 已拥有菜谱或作者自己的菜谱返回完整有效步骤。
+
+十一、菜谱模型和 JSON 结构
+1. Recipe 基础字段：
+   1. recipeId。
+   2. title。
+   3. category。
+   4. subtitle。
+   5. difficulty。
+   6. coverColor。
+   7. coverImage。
+   8. authorUserId。
+   9. authorName。
+   10. tags。
+   11. ingredients。
+   12. tools。
+   13. defaultOwned。
+   14. systemRecipe。
+   15. priceType。
+   16. priceAmount。
+   17. status。
+2. RecipeRevision 字段：
+   1. revisionId。
+   2. recipeId。
+   3. revisionNumber。
+   4. schemaVersion。
+   5. recipeJson。
+   6. createTime。
+3. CookTask 字段：
+   1. taskId。
+   2. title。
+   3. detail。
+   4. resource。
+   5. durationSeconds。
+   6. active。
+   7. canPause。
+   8. continuesDuringPause。
+   9. canLeaveKitchen。
+   10. safetyLevel。
+   11. dependencies。
+   12. voiceText。
+   13. sourceType。
+   14. baseTaskId。
+   15. disabled。
+4. RecipeJson 中 schemaVersion 第一阶段为 "1.0"。
+5. CookValidation 校验：
+   1. recipeId 非空。
+   2. title 非空。
+   3. category 非空。
+   4. taskId 在菜谱内唯一。
+   5. durationSeconds >= 0。
+   6. dependencies 都存在。
+   7. dependencies 不能成环。
+   8. safetyLevel 在允许枚举内。
+   9. resource 在允许枚举内或是自定义安全字符串。
+6. 短动作如倒调料、撒葱花、加盐如果作者未填耗时，服务端可默认补 5 秒。
+
+十二、用户自定义菜谱和版本管理
+1. POST /api/recipes/custom/save 用于草稿保存。
+2. 草稿可以字段不完整，但必须属于当前 userId。
+3. 草稿 status=draft，不进入公开 feed，不进入别人的列表。
+4. POST /api/recipes/custom/publish 用于正式发布结构化教程。
+5. 正式发布流程必须事务化：
+   1. 校验 token。
+   2. 校验完整 recipeJson。
+   3. 生成 recipeId，建议前缀 user_cook_。
+   4. 生成 revisionId。
+   5. 插入 recipe，status=published。
+   6. 插入 recipe_revision，revisionNumber=1。
+   7. 插入 user_recipe，ownedType=author，favorite=false。
+   8. 提交事务。
+   9. 返回 recipeId 和 revisionId。
+6. POST /api/recipes/version/publish 用于作者更新已发布菜谱。
+7. 作者更新流程：
+   1. 校验当前 userId 是 recipe.authorUserId。
+   2. 校验新 recipeJson。
+   3. 查询当前最大 revisionNumber。
+   4. 生成新 revisionId。
+   5. 插入 recipe_revision。
+   6. 更新 recipe.currentRevisionId。
+   7. 不覆盖历史 revision。
+8. 购买者版本规则：
+   1. user_recipe.purchasedRevisionId 记录购买时版本。
+   2. user_recipe.activeRevisionId 记录当前使用的作者版本。
+   3. recipe.currentRevisionId 是作者最新版本。
+   4. 如果 currentRevisionId != activeRevisionId，则 hasAuthorUpdate=true。
+9. POST /api/recipes/version/update-to-latest。
+   1. 校验用户已拥有该 recipe。
+   2. 把 activeRevisionId 更新为 recipe.currentRevisionId。
+   3. 不修改 purchasedRevisionId。
+10. POST /api/recipes/version/sync-personalization。
+   1. 读取 activeRevisionId 或指定 revisionId。
+   2. 把该 revision 的步骤复制为 personalizationJson 的 base。
+   3. 写入 recipe_personalization。
+   4. 后续排程默认使用 personalization。
+
+十三、个性化微调服务
+1. 个性化配置按 userId + recipeId 保存，不改变 recipe 原始内容。
+2. PersonalizationJson 建议包含：
+   1. baseRevisionId。
+   2. disabledTaskIds。
+   3. taskOverrides。
+   4. addedTasks。
+   5. dependencyOverrides。
+   6. actualTimeOverrides。
+   7. updatedByActualTime。
+3. POST /api/recipes/personalization/save。
+   1. 校验用户已拥有或有权使用该 recipe。
+   2. 校验 baseRevisionId 存在。
+   3. 校验 disabled 后依赖合法。
+   4. 校验 addedTasks 完整。
+   5. 保存 recipe_personalization。
+   6. 返回 effectiveRecipe 和 personalizationSummary。
+4. POST /api/recipes/personalization/reset。
+   1. 删除 userId + recipeId 的 personalization。
+   2. 返回作者版本 effectiveRecipe。
+5. POST /api/recipes/personalization/share。
+   1. 读取当前用户 personalization。
+   2. 生成 shareId。
+   3. 保存 personalization_share。
+   4. 如果 targetUserId 不为空，创建 message。
+   5. 返回 shareId、summary、messageSent。
+6. POST /api/recipes/personalization/apply。
+   1. 校验 shareId 存在。
+   2. 校验 base recipe 存在。
+   3. 如果 baseRevisionId 与当前可用版本不同，返回 warning。
+   4. 如果当前用户已有 personalization 且未 confirm，返回 conflict=true。
+   5. confirm=true 后复制分享配置到当前 userId。
+   6. 返回 effectiveRecipe。
+7. POST /api/account/personalization/setting 修改 personalizationRecordEnabled。
+8. POST /api/cook/task/actual-time。
+   1. 写 cook_history 或实际耗时记录。
+   2. 只有 personalizationRecordEnabled=true 时才写 actualTimeOverrides。
+   3. skipped 不建议直接把默认耗时改为 0。
+   4. early 和 extended 可按最后一次实际耗时覆盖，后续再升级平均值策略。
+9. 单菜自动同步由客户端选择后触发；多菜只记录历史，不自动同步。
+
+十四、有效菜谱构建
+1. EffectiveRecipeService 是排程前的核心服务。
+2. 输入 userId、recipeId、optionalRevisionId。
+3. 输出 EffectiveRecipe：
+   1. recipe。
+   2. revisionId。
+   3. personalizationApplied。
+   4. personalizationSummary。
+   5. warnings。
+4. 构建流程：
+   1. 查询 recipe。
+   2. 校验 recipe.status 可用。
+   3. 查询 user_recipe 判断拥有关系。
+   4. 如果未拥有且不是公开预览，返回无权限。
+   5. 确定基础 revision：优先 user_recipe.activeRevisionId，其次 recipe.currentRevisionId。
+   6. 读取 recipe_revision.recipeJson。
+   7. 如果存在 recipe_personalization，加载 personalizationJson。
+   8. 对原步骤应用 taskOverrides。
+   9. 把 disabledTaskIds 对应步骤标记 disabled，排程列表中移除。
+   10. 追加 addedTasks。
+   11. 应用 dependencyOverrides。
+   12. 应用 actualTimeOverrides。
+   13. 重新校验依赖。
+   14. 设置 sourceType。
+   15. 计算 estimatedSeconds、activeSeconds、freeSeconds。
+5. 展示详情时可以返回 disabled 步骤用于置灰展示。
+6. 排程时不能把 disabled 步骤传给 CookSchedule。
+7. 如果启用步骤依赖 disabled 步骤，保存个性化时应拒绝；如果历史脏数据导致运行时出现，应返回 warnings 并拒绝排程。
+
+十五、排程服务设计
+1. PlanService 负责 POST /api/plan/preview 和 POST /api/plan/start。
+2. 入参：
+   1. recipeIds。
+   2. completedTaskIds 可选，用于中途开始。
+   3. clientType。
+   4. clientVersion。
+3. 处理流程：
+   1. 鉴权得到 userId。
+   2. 校验 recipeIds 非空。
+   3. 对每个 recipeId 调 EffectiveRecipeService。
+   4. 校验所有菜谱可排程。
+   5. 如果 completedTaskIds 非空，把已完成步骤从待排程集合中移除。
+   6. 调 CookSchedule::BuildPlan(effectiveRecipes)。
+   7. 汇总 summary、timeline、freeBlocks、warnings、personalizationSummary。
+   8. preview 不写 cook_history。
+   9. start 生成 planId，保存计划快照到 cook_history 或 plan_session 表。
+   10. 返回完整 plan。
+4. CookSchedule 规则：
+   1. active=true 的步骤同一时刻只安排一个。
+   2. 同 resource 的步骤不能冲突。
+   3. dependencies 未满足不能开始。
+   4. waiting 或 canLeaveKitchen 的步骤可以与 active 操作并行。
+   5. safetyLevel 高且不可离开厨房的步骤不计入自由时间。
+   6. freeBlock 阈值建议 300 秒。
+   7. 边角时间可以按小于 300 秒的等待碎片计算。
+5. PlanResult 输出：
+   1. ok。
+   2. planId。
+   3. summary.totalSeconds。
+   4. summary.activeSeconds。
+   5. summary.freeSeconds。
+   6. summary.fragmentSeconds。
+   7. selectedRecipes。
+   8. timeline。
+   9. freeBlocks。
+   10. warnings。
+   11. personalizationApplied。
+   12. personalizationSummary。
+6. timeline 每项输出：
+   1. scheduledTaskId。
+   2. recipeId。
+   3. recipeTitle。
+   4. taskId。
+   5. title。
+   6. detail。
+   7. voiceText。
+   8. startSeconds。
+   9. endSeconds。
+   10. durationSeconds。
+   11. active。
+   12. canPause。
+   13. continuesDuringPause。
+   14. canLeaveKitchen。
+   15. safetyLevel。
+   16. sourceType。
+   17. baseTaskId。
+
+十六、视频存储和发布
+1. 视频文件不存入 MySQL 大字段。
+2. VideoStorage 根目录默认 CookServer.exe 同级 data/videos/files。
+3. 文件路径按 yyyy/mm/userId 分层。
+4. 文件名使用 videoId 加原扩展名，例如 video_000001.mp4。
+5. POST /api/videos/upload。
+   1. 必须鉴权。
+   2. 接收 multipart 文件。
+   3. 校验文件类型和大小。
+   4. 生成 videoId。
+   5. 保存文件到临时路径。
+   6. 文件落盘成功后移动到正式路径。
+   7. 插入 video 表，status=uploaded。
+   8. 返回 videoId、fileUrl、coverUrl 或 coverPending。
+6. 如果文件保存成功但 MySQL 写入失败：
+   1. 返回失败。
+   2. 记录错误日志。
+   3. 删除临时文件或标记为孤儿文件等待清理。
+7. POST /api/videos/publish。
+   1. 校验 videoId 属于当前用户。
+   2. 更新 title、description、status=published、publishTime。
+   3. 如果请求带 bindRecipeId，校验该 recipe 属于当前作者或作者有权绑定。
+   4. 写 bindRecipeId 和 recipeAuthorized。
+8. POST /api/videos/attach-recipe。
+   1. 校验 videoId 属于当前用户。
+   2. 校验 recipeId 是当前用户创作或有权绑定的教程。
+   3. 更新 video.bindRecipeId 和 recipeAuthorized=true。
+9. feed 查询时只返回 status=published 的视频。
+10. feed item spoonVisible 由服务端计算：
+   1. bindRecipeId 不为空。
+   2. recipeAuthorized=true。
+   3. recipe.status 可加入。
+11. 第一阶段不做转码、多清晰度、断点续传和 CDN，但接口设计保留 fileUrl 字段，后续可切对象存储。
+
+十七、首页 Feed 服务
+1. GET /api/feed 返回推荐、精选、关注、好友四个 tab 数据。
+2. 推荐第一期可以按 publishTime 倒序返回视频。
+3. 系统预置真实视频也写入 video 表，可使用 system userId。
+4. 精选可以按人工标记或默认取高评分菜谱。
+5. 关注频道按 follow 表筛选作者视频。
+6. 好友频道第一期可返回互关作者的视频或空状态。
+7. FeedItem 输出：
+   1. videoId。
+   2. videoUrl。
+   3. coverUrl。
+   4. authorUserId。
+   5. authorName。
+   6. authorAvatar。
+   7. followed。
+   8. title。
+   9. description。
+   10. bindRecipeId。
+   11. recipeAuthorized。
+   12. spoonVisible。
+   13. recipeOwned。
+   14. priceType。
+   15. priceAmount。
+   16. estimatedSeconds。
+   17. activeSeconds。
+   18. likeCount。
+   19. commentCount。
+   20. favoriteCount。
+8. 没有绑定菜谱的视频不能返回 spoonVisible=true。
+9. 点赞、收藏、评论第一期写 MySQL，排序可简化。
+
+十八、关注和消息
+1. POST /api/follow/toggle。
+2. 关注流程：
+   1. userId 不能等于 targetUserId。
+   2. 如果不存在关注关系，插入 follow。
+   3. 插入时判断对方是否已关注当前用户。
+   4. 如果互关，notifyMode 默认 sound。
+   5. 如果非互关，notifyMode 默认 silent。
+   6. 如果已存在关注关系，再次调用可以取消关注或切换状态，第一期建议物理删除关系。
+3. 消息默认不是强实时聊天。
+4. POST /api/messages/send。
+   1. 校验 sender。
+   2. 校验 receiver 存在。
+   3. messageType 支持 text、video_share、personalization_share。
+   4. contentJson 保存留言文本、videoId 或 shareId。
+   5. 写入 message。
+5. GET /api/messages 建议提供，虽然产品新增接口清单只写 send。
+6. GET /api/messages 返回当前用户收件箱，可按 createTime 倒序。
+7. 长按头像免打扰可以扩展 POST /api/follow/notify-mode，第一期也可在 follow toggle 的响应中保留字段，后续补接口。
+
+十九、做菜历史和结果发布
+1. PlanService start 时保存 plan 快照，便于服务端记录用户做了什么。
+2. CookHistoryService 负责 cook_history 表。
+3. POST /api/cook/task/actual-time。
+   1. 保存 task 实际耗时。
+   2. 更新 cook_history.resultJson。
+   3. 根据用户设置决定是否写 recipe_personalization。
+4. POST /api/cook/result/publish。
+   1. 支持 resultType=video 或 photo。
+   2. video 模式可以引用已上传 videoId。
+   3. photo 模式第一期可使用上传文件接口或保存图片路径，数据结构预留 mediaList。
+   4. contentJson 保存配文、配乐 ID、关联 recipeIds、planId。
+   5. 发布成功后该结果进入我的创作列表。
+5. 单菜更新个性化：
+   1. 客户端只在单菜完成并用户确认后调用同步。
+   2. 服务端再次校验 plan 中只有一个 recipeId。
+   3. 如果无 personalization，创建一份。
+   4. 写 actualTimeOverrides。
+6. 多菜历史只记录，不自动写 personalization。
+
+二十、HTTP 接口清单
+1. 公开接口：
+   1. GET /api/health。
+   2. POST /api/auth/register。
+   3. POST /api/auth/login。
+   4. GET /videos/... 或 GET /api/videos/file/{videoId}，读取公开视频文件。
+2. 登录态接口：
+   1. POST /api/auth/logout。
+   2. GET /api/auth/session。
+   3. GET /api/feed。
+   4. GET /api/recipes。
+   5. GET /api/account。
+   6. POST /api/account/profile。
+   7. POST /api/account/password。
+   8. POST /api/favorites/toggle。
+   9. POST /api/recipes/custom/save。
+   10. POST /api/recipes/custom/publish。
+   11. POST /api/recipes/personalization/save。
+   12. POST /api/recipes/personalization/reset。
+   13. POST /api/recipes/personalization/share。
+   14. POST /api/recipes/personalization/apply。
+   15. POST /api/account/personalization/setting。
+   16. POST /api/cook/task/actual-time。
+   17. POST /api/plan/preview。
+   18. POST /api/plan/start。
+   19. GET /api/account/wallet。
+   20. POST /api/account/checkin。
+   21. POST /api/account/ad-reward/start。
+   22. POST /api/account/ad-reward/finish。
+   23. POST /api/recipes/join。
+   24. POST /api/videos/upload。
+   25. POST /api/videos/publish。
+   26. POST /api/videos/attach-recipe。
+   27. POST /api/recipes/version/publish。
+   28. POST /api/recipes/version/update-to-latest。
+   29. POST /api/recipes/version/sync-personalization。
+   30. POST /api/follow/toggle。
+   31. GET /api/messages。
+   32. POST /api/messages/send。
+   33. POST /api/cook/result/publish。
+   34. POST /api/comments/list。
+   35. POST /api/comments/create。
+   36. POST /api/likes/toggle。
+3. 可选接口：
+   1. POST /api/follow/notify-mode。
+4. 废弃接口：
+   1. /api/account/recharge 不属于第一期正式能力。
+   2. /api/recipes/purchase 应由 /api/recipes/join 替代。
+   3. 如果为兼容旧前端短期保留，响应中必须标记 deprecated，页面不得调用。
+
+二十一、统一请求和响应格式
+1. JSON 成功响应：
+   1. ok=true。
+   2. data={...}。
+   3. message=""。
+   4. requestId。
+2. JSON 失败响应：
+   1. ok=false。
+   2. errorCode。
+   3. message。
+   4. requestId。
+3. 常见 errorCode：
+   1. UNAUTHORIZED。
+   2. TOKEN_EXPIRED。
+   3. VALIDATION_ERROR。
+   4. ACCOUNT_EXISTS。
+   5. ACCOUNT_OR_PASSWORD_WRONG。
+   6. COIN_NOT_ENOUGH。
+   7. YUANBAO_NOT_ENOUGH。
+   8. RECIPE_NOT_FOUND。
+   9. RECIPE_NOT_OWNED。
+   10. RECIPE_CLOSED。
+   11. VERSION_CONFLICT。
+   12. UPLOAD_FAILED。
+   13. AD_NOT_FINISHED。
+   14. DUPLICATE_REQUEST。
+4. HTTP 状态建议：
+   1. 200 用于业务成功。
+   2. 400 用于参数错误。
+   3. 401 用于未登录或 token 失效。
+   4. 403 用于无权限。
+   5. 404 用于资源不存在。
+   6. 409 用于版本冲突或重复注册。
+   7. 500 用于服务端异常。
+5. requestId 每次请求生成，日志和响应都带上，方便定位问题。
+
+二十二、安全和一致性
+1. 密码使用带盐哈希，第一期可以使用 PBKDF2、bcrypt、scrypt 或平台可用安全算法，不允许明文。
+2. token 必须有过期时间。
+3. token 建议随机生成，不使用可预测 userId 拼接。
+4. 所有资产写操作必须使用事务：
+   1. 注册初始化。
+   2. 签到发金币。
+   3. 广告发金币。
+   4. 金币/元宝加入菜谱。
+   5. 菜谱发布。
+   6. 视频发布元数据。
+   7. 版本更新。
+5. 金币扣减和拥有关系写入必须同一事务。
+6. 广告奖励同一 rewardId 只能完成一次。
+7. 签到同一 userId + date 只能一次。
+8. 作者更新菜谱不能覆盖历史版本。
+9. 购买者更新到最新版不能修改 purchasedRevisionId。
+10. 用户个性化不能覆盖原菜谱。
+11. 视频上传需要限制扩展名、MIME、文件大小和路径穿越。
+12. 文件保存路径必须由服务端生成，不能使用客户端提交的路径作为最终路径。
+13. 删除视频先改 MySQL status=deleted，物理删除交给清理任务。
+14. 日志脱敏 password、token、mysql password。
+
+二十三、分布式演进边界
+1. 第一阶段可以单实例部署，但业务状态必须落 MySQL。
+2. 多实例部署时，任意实例都能通过 MySQL 读取账号、菜谱、钱包、视频元数据和做菜历史。
+3. 视频文件第一阶段保存在本地目录，这会限制多实例；后续应迁移对象存储或共享文件系统。
+4. 为后续分布式保留 VideoStorage 接口，业务层只依赖 videoId 和 fileUrl。
+5. auth_session 存 MySQL 可支持多实例；后续可迁移 Redis。
+6. IdGenerator 第一阶段可用 MySQL 自增序列表或时间戳加随机数，后续可换雪花 ID。
+7. CookSchedule、EffectiveRecipeService、PlanService 尽量无状态，方便水平扩展。
+8. 不要把用户运行态只存在 C++ 进程内存；plan start 必须保存快照。
+9. 后续生产部署建议：
+   1. Nginx 或网关做 HTTPS 和负载均衡。
+   2. MySQL 主从或云数据库。
+   3. Redis 做 token 和热点缓存。
+   4. 对象存储和 CDN 承载视频。
+   5. 独立审核后台处理视频和评论。
+
+二十四、测试设计
+1. Auth 测试：
+   1. 注册成功返回 token。
+   2. 重复 account 注册失败。
+   3. 登录成功返回 session。
+   4. 错误密码登录失败。
+   5. token 过期或 logout 后 session 失败。
+2. MySQL 持久化测试：
+   1. 注册后重启服务账号仍存在。
+   2. 钱包余额重启后仍存在。
+   3. 已加入菜谱重启后仍在购买区。
+   4. 视频元数据重启后仍可查询。
+   5. 用户创作菜谱重启后仍可查询。
+3. 钱包测试：
+   1. 每日签到一天只能一次。
+   2. 签到奖励 5 金币。
+   3. 广告未满 30 秒 finish 返回失败。
+   4. 广告满 30 秒奖励 30 金币。
+   5. 同一 rewardId 重复 finish 不重复发金币。
+   6. 金币不足加入金币菜谱失败并返回 COIN_NOT_ENOUGH。
+   7. 元宝默认 100，元宝菜谱扣减成功。
+4. 视频测试：
+   1. 上传真实 mp4 返回 videoId。
+   2. 文件保存到 data/videos/files/yyyy/mm/userId。
+   3. MySQL 写入 filePath。
+   4. publish 后 feed 能刷到。
+   5. 无 bindRecipeId 的视频 spoonVisible=false。
+   6. 有 bindRecipeId 且授权的视频 spoonVisible=true。
+5. 菜谱发布和版本测试：
+   1. publishCustomRecipe 返回 recipeId 和 revisionId。
+   2. 作者更新生成新 revision。
+   3. 历史 revision 不被覆盖。
+   4. 购买者看到 hasAuthorUpdate。
+   5. update-to-latest 更新 activeRevisionId。
+   6. sync-personalization 生成个人版本。
+6. 个性化测试：
+   1. 禁用步骤后排程不出现该步骤。
+   2. 禁用步骤详情仍置灰可恢复。
+   3. 修改时长后排程使用新时长。
+   4. 新增个人步骤参与依赖。
+   5. 分享微调后另一个用户可应用。
+   6. 版本不一致时返回 warning。
+7. 排程测试：
+   1. 糖醋排骨加米饭体现并行。
+   2. 浸泡期间安排淘米和切葱。
+   3. 炖煮 25 分钟计入自由时间。
+   4. 小于阈值等待计入边角时间。
+   5. active 步骤不能同时安排两个。
+   6. 同 resource 不能冲突。
+8. 做菜历史测试：
+   1. startPlan 保存 plan 快照。
+   2. 单菜 actual-time 在用户确认后更新 personalization。
+   3. 多菜 actual-time 不自动更新 personalization。
+   4. skipped 不把默认时长改为 0。
+9. 关注消息测试：
+   1. 关注作者成功。
+   2. 互关默认 sound，非互关默认 silent。
+   3. 留言写入 message。
+   4. 视频分享写入 message。
+10. 压力测试：
+   1. 并发 register。
+   2. 并发 login。
+   3. 并发 recipes。
+   4. 并发 plan preview。
+   5. 并发 checkin，验证唯一约束。
+   6. 并发 ad finish，验证只发一次。
+   7. 并发 joinRecipe，验证钱包不扣成负数。
+
+二十五、第一期编码顺序建议
+1. 先补 Config，加入 MySQL、视频目录、奖励数值和 token 配置。
+2. 新增 MysqlConnectionPool、MysqlTransaction，并完成数据库连接健康检查。
+3. 建表或迁移脚本落地，CookServerTest 使用测试库。
+4. 实现 AccountRepository、TokenRepository、PasswordHasher。
+5. 实现 AuthService 和 auth 接口。
+6. 实现 WalletRepository、WalletService、签到和广告奖励。
+7. 实现 RecipeRepository、RecipeRevisionRepository、RecipeSeedImporter，把 res/recipes 导入 MySQL。
+8. 实现 UserRecipeRepository 和 /api/recipes/join。
+9. 改 /api/recipes 和 /api/account 从 MySQL 读用户资产。
+10. 实现 RecipeVersionService 和 custom publish。
+11. 实现 PersonalizationRepository、EffectiveRecipeService、PersonalizationService。
+12. 改 CookSchedule 输入为 effective recipes，PlanService 负责 preview/start。
+13. 实现 VideoStorage、VideoRepository、VideoService 和 multipart 上传。
+14. 实现 FeedService，确保 spoonVisible 规则正确。
+15. 实现 FollowService、MessageService。
+16. 实现 CookHistoryService 和 cook result publish。
+17. 补齐统一错误码、requestId、日志脱敏。
+18. 补 CookServerTest 黑盒测试和压力测试。
+19. 最后再清理旧 AccountStore 文件存储和 deprecated 接口。
+
+二十六、第一期验收标准
+1. /api/health 正常。
+2. /api/auth/register 能创建账号，初始化钱包和默认菜谱。
+3. 密码不明文入库。
+4. /api/auth/login 能返回 token。
+5. /api/auth/session 能校验 token。
+6. 服务端重启后账号、钱包、拥有菜谱能从 MySQL 恢复。
+7. res/recipes 种子能导入 MySQL，重复启动不覆盖已有菜谱。
+8. /api/feed 返回真实可播放视频 URL。
+9. 无绑定教程的视频 spoonVisible=false。
+10. 有绑定教程且授权的视频 spoonVisible=true。
+11. 每日签到一天只能领取一次 5 金币。
+12. 模拟广告满 30 秒才能领取 30 金币。
+13. 金币菜谱和元宝菜谱能通过 /api/recipes/join 加入购买区。
+14. 金币不足和元宝不足返回明确错误码。
+15. 发布菜谱教程返回 recipeId 和 revisionId，并写入 MySQL。
+16. 作者更新菜谱生成新 revision，不覆盖历史版本。
+17. 购买者能更新到作者最新版并同步到个性化。
+18. 个性化禁用、改时长、新增步骤能影响排程。
+19. 排程能体现糖醋排骨和米饭并行，返回自由时间和边角时间。
+20. startPlan 返回完整 plan，客户端可本地执行。
+21. 单菜实际耗时确认后能更新个人版本，多菜不自动同步。
+22. 视频上传保存真实文件，返回 videoId。
+23. 视频元数据服务端重启后仍能查询。
+24. 做菜结果视频或照片能发布到我的创作。
+25. 关注作者和发送留言可用。
+26. 并发签到、广告完成、joinRecipe 不产生重复发放或余额负数。
+
+二十七、最新产品文档强制修正规则
+1. 如果本文前面章节与本章冲突，以本章和后续章节为准。
+2. 服务端必须从 token 解析当前 userId，不能信任客户端 body 或 query 里的 userId。
+3. auth_session 表只保存 tokenHash，不保存明文 token。
+4. 钱包流水表统一叫 wallet_transaction，不使用 wallet_log。
+5. wallet_transaction 必须保存 beforeAmount、afterAmount、idempotencyKey。
+6. 加入菜谱、签到、广告奖励、视频上传、评论提交等写操作必须支持幂等。
+7. 评论列表接口使用 POST /api/comments/list。
+8. 点赞接口使用 POST /api/likes/toggle。
+9. 收藏接口使用 POST /api/favorites/toggle，targetType 支持 video 和 recipe。
+10. 视频、用户菜谱、评论、留言都必须有 status。
+11. status 第一阶段至少包括 draft、published、hidden、deleted。
+12. 推荐流、关注流、公开视频详情只返回 published。
+13. hidden 内容需要能通过管理接口或管理命令设置。
+14. 视频上传必须校验大小、格式、MIME，默认最大 100MB，默认最长 5 分钟。
+15. 文件保存成功但 MySQL 失败时必须删除临时文件或标记 orphan。
+16. MySQL 成功但客户端断线重试时，通过 idempotencyKey 返回已有结果，不重复创建内容。
+17. 所有业务表使用 utf8mb4，时间统一使用服务器时间，存储为 UTC 或服务器固定时区；同一项目必须统一。
+
+二十八、C++ 工程落地框架
+1. 继续使用当前工程已有的 CookHttpServer、CookHttpApiHandler、CookApiService 和 HttpService。
+2. 不把 HTTP 库替换成新框架，避免第一期重构过大。
+3. 新增代码仍按 C++11 编写，兼容当前 CMakeLists.txt 的 SET(CMAKE_CXX_STANDARD 11)。
+4. MySQL 驱动不要直接散落在 Service 里，必须封装到 IMysqlClient。
+5. 推荐新增接口：
+   ```cpp
+   class IMysqlClient
+   {
+   public:
+       virtual ~IMysqlClient() {}
+       virtual DbResult query(const std::string& sql, const DbParams& params) = 0;
+       virtual int execute(const std::string& sql, const DbParams& params) = 0;
+       virtual std::shared_ptr<IDbTransaction> beginTransaction() = 0;
+   };
+   ```
+6. 第一阶段可以用 MySQL C API 或 MySQL Connector/C++ 实现 MysqlClient，但业务层只依赖 IMysqlClient。
+7. 如果当前 lib 目录暂时没有 MySQL 驱动，先新增接口和 FakeMysqlClient 用于 CookServerTest，再接真实驱动。
+8. JSON 继续沿用 CookServerHelper 中现有 JSON 辅助；如果现有 JSON 能力不足，再在 JsonCodec.h/cpp 封装，不让业务层拼字符串。
+9. CookApiService 不直接写 SQL，只调用 Service。
+10. Repository 可以写 SQL，但不能处理 HTTP response。
+11. Service 可以处理事务和业务规则，但不能直接解析 HttpRequest。
+12. CookSchedule 保持纯算法，只接受内存对象，不访问 MySQL、文件和 token。
+
+二十九、推荐类依赖关系
+1. CookServer.cpp 创建对象顺序：
+   1. Config config。
+   2. MysqlConnectionPool mysqlPool(config)。
+   3. RepositoryGroup repositories(mysqlPool)。
+   4. ServiceGroup services(repositories, config)。
+   5. CookApiService apiService(services)。
+   6. CookHttpServer httpServer(&apiService)。
+2. RepositoryGroup 持有：
+   1. AccountRepository。
+   2. AuthSessionRepository。
+   3. WalletRepository。
+   4. RecipeRepository。
+   5. UserRecipeRepository。
+   6. RecipeRevisionRepository。
+   7. PersonalizationRepository。
+   8. VideoRepository。
+   9. CommentRepository。
+   10. LikeRepository。
+   11. FavoriteRepository。
+   12. FollowRepository。
+   13. MessageRepository。
+   14. CookHistoryRepository。
+   15. IdempotencyRepository。
+3. ServiceGroup 持有：
+   1. AuthService。
+   2. AccountService。
+   3. WalletService。
+   4. RecipeService。
+   5. RecipeVersionService。
+   6. EffectiveRecipeService。
+   7. PersonalizationService。
+   8. PlanService。
+   9. VideoService。
+   10. FeedService。
+   11. CommentService。
+   12. LikeService。
+   13. FavoriteService。
+   14. FollowService。
+   15. MessageService。
+   16. CookHistoryService。
+4. 依赖方向只能从 API -> Service -> Repository -> IMysqlClient。
+5. 不允许 Repository 回调 Service。
+6. 不允许 Service 依赖 CookHttpApiHandler。
+7. 这种依赖方向保证后续换 HTTP 框架、换 MySQL 驱动、加 Redis 时只改边缘层。
+
+三十、MySQL DDL 建议
+1. 所有表统一使用：
+   1. ENGINE=InnoDB。
+   2. DEFAULT CHARSET=utf8mb4。
+   3. COLLATE=utf8mb4_unicode_ci。
+2. auth_session：
+   ```sql
+   CREATE TABLE IF NOT EXISTS auth_session (
+     tokenId VARCHAR(64) PRIMARY KEY,
+     userId VARCHAR(64) NOT NULL,
+     tokenHash VARCHAR(128) NOT NULL,
+     expireTime DATETIME NOT NULL,
+     status VARCHAR(16) NOT NULL,
+     createTime DATETIME NOT NULL,
+     updateTime DATETIME NOT NULL,
+     UNIQUE KEY uk_auth_session_token_hash (tokenHash),
+     KEY idx_auth_session_user_status (userId, status),
+     KEY idx_auth_session_expire (expireTime)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+3. account：
+   ```sql
+   CREATE TABLE IF NOT EXISTS account (
+     userId VARCHAR(64) PRIMARY KEY,
+     account VARCHAR(64) NOT NULL,
+     nickname VARCHAR(64) NOT NULL,
+     passwordHash VARCHAR(128) NOT NULL,
+     passwordSalt VARCHAR(64) NOT NULL,
+     avatarUrl VARCHAR(512) DEFAULT '',
+     personalizationRecordEnabled TINYINT NOT NULL DEFAULT 0,
+     status VARCHAR(16) NOT NULL DEFAULT 'active',
+     createTime DATETIME NOT NULL,
+     updateTime DATETIME NOT NULL,
+     UNIQUE KEY uk_account_account (account),
+     KEY idx_account_status (status)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+4. wallet：
+   ```sql
+   CREATE TABLE IF NOT EXISTS wallet (
+     userId VARCHAR(64) PRIMARY KEY,
+     coins BIGINT NOT NULL DEFAULT 0,
+     yuanbao BIGINT NOT NULL DEFAULT 0,
+     updateTime DATETIME NOT NULL
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+5. wallet_transaction：
+   ```sql
+   CREATE TABLE IF NOT EXISTS wallet_transaction (
+     transactionId VARCHAR(64) PRIMARY KEY,
+     userId VARCHAR(64) NOT NULL,
+     currencyType VARCHAR(16) NOT NULL,
+     changeAmount BIGINT NOT NULL,
+     beforeAmount BIGINT NOT NULL,
+     afterAmount BIGINT NOT NULL,
+     reason VARCHAR(32) NOT NULL,
+     relatedId VARCHAR(64) DEFAULT '',
+     idempotencyKey VARCHAR(128) NOT NULL,
+     createTime DATETIME NOT NULL,
+     UNIQUE KEY uk_wallet_tx_idem (userId, idempotencyKey),
+     KEY idx_wallet_tx_user_time (userId, createTime),
+     KEY idx_wallet_tx_related (relatedId)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+6. checkin：
+   ```sql
+   CREATE TABLE IF NOT EXISTS checkin (
+     userId VARCHAR(64) NOT NULL,
+     checkinDate DATE NOT NULL,
+     rewardCoins INT NOT NULL,
+     createTime DATETIME NOT NULL,
+     PRIMARY KEY (userId, checkinDate)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+7. ad_reward：
+   ```sql
+   CREATE TABLE IF NOT EXISTS ad_reward (
+     rewardId VARCHAR(64) PRIMARY KEY,
+     userId VARCHAR(64) NOT NULL,
+     startTime DATETIME NOT NULL,
+     finishTime DATETIME DEFAULT NULL,
+     rewardCoins INT NOT NULL,
+     requiredSeconds INT NOT NULL,
+     status VARCHAR(16) NOT NULL,
+     idempotencyKey VARCHAR(128) NOT NULL,
+     clientContextJson TEXT,
+     KEY idx_ad_reward_user_status (userId, status),
+     UNIQUE KEY uk_ad_reward_idem (userId, idempotencyKey)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+8. recipe：
+   ```sql
+   CREATE TABLE IF NOT EXISTS recipe (
+     recipeId VARCHAR(64) PRIMARY KEY,
+     authorUserId VARCHAR(64) NOT NULL,
+     title VARCHAR(128) NOT NULL,
+     category VARCHAR(32) NOT NULL,
+     schemaVersion VARCHAR(16) NOT NULL,
+     currentRevisionId VARCHAR(64) NOT NULL,
+     defaultOwned TINYINT NOT NULL DEFAULT 0,
+     systemRecipe TINYINT NOT NULL DEFAULT 0,
+     priceType VARCHAR(16) NOT NULL DEFAULT 'free',
+     priceAmount BIGINT NOT NULL DEFAULT 0,
+     status VARCHAR(16) NOT NULL DEFAULT 'published',
+     createTime DATETIME NOT NULL,
+     updateTime DATETIME NOT NULL,
+     KEY idx_recipe_status_category (status, category),
+     KEY idx_recipe_author_status (authorUserId, status),
+     KEY idx_recipe_current_revision (currentRevisionId)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+9. recipe_revision：
+   ```sql
+   CREATE TABLE IF NOT EXISTS recipe_revision (
+     revisionId VARCHAR(64) PRIMARY KEY,
+     recipeId VARCHAR(64) NOT NULL,
+     revisionNumber INT NOT NULL,
+     recipeJson LONGTEXT NOT NULL,
+     createTime DATETIME NOT NULL,
+     authorUserId VARCHAR(64) NOT NULL,
+     changelog VARCHAR(512) DEFAULT '',
+     UNIQUE KEY uk_recipe_revision_num (recipeId, revisionNumber),
+     KEY idx_recipe_revision_recipe_time (recipeId, createTime)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+10. user_recipe：
+   ```sql
+   CREATE TABLE IF NOT EXISTS user_recipe (
+     userId VARCHAR(64) NOT NULL,
+     recipeId VARCHAR(64) NOT NULL,
+     ownedType VARCHAR(32) NOT NULL,
+     ownedTime DATETIME NOT NULL,
+     favorite TINYINT NOT NULL DEFAULT 0,
+     source VARCHAR(32) NOT NULL DEFAULT '',
+     sourceTransactionId VARCHAR(64) DEFAULT '',
+     purchasedRevisionId VARCHAR(64) NOT NULL,
+     activeRevisionId VARCHAR(64) NOT NULL,
+     canCook TINYINT NOT NULL DEFAULT 1,
+     updateTime DATETIME NOT NULL,
+     PRIMARY KEY (userId, recipeId),
+     KEY idx_user_recipe_user_fav (userId, favorite),
+     KEY idx_user_recipe_user_owned (userId, ownedType),
+     KEY idx_user_recipe_recipe (recipeId)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+11. recipe_personalization：
+   ```sql
+   CREATE TABLE IF NOT EXISTS recipe_personalization (
+     userId VARCHAR(64) NOT NULL,
+     recipeId VARCHAR(64) NOT NULL,
+     baseRevisionId VARCHAR(64) NOT NULL,
+     personalizationJson LONGTEXT NOT NULL,
+     updateTime DATETIME NOT NULL,
+     PRIMARY KEY (userId, recipeId),
+     KEY idx_personalization_revision (baseRevisionId)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+12. video：
+   ```sql
+   CREATE TABLE IF NOT EXISTS video (
+     videoId VARCHAR(64) PRIMARY KEY,
+     userId VARCHAR(64) NOT NULL,
+     filePath VARCHAR(512) NOT NULL,
+     fileUrl VARCHAR(512) NOT NULL,
+     originalFileName VARCHAR(255) DEFAULT '',
+     fileSize BIGINT NOT NULL DEFAULT 0,
+     mimeType VARCHAR(64) DEFAULT '',
+     coverPath VARCHAR(512) DEFAULT '',
+     coverUrl VARCHAR(512) DEFAULT '',
+     durationSeconds INT NOT NULL DEFAULT 0,
+     bindRecipeId VARCHAR(64) DEFAULT '',
+     recipeAuthorized TINYINT NOT NULL DEFAULT 0,
+     title VARCHAR(128) DEFAULT '',
+     description VARCHAR(1024) DEFAULT '',
+     status VARCHAR(16) NOT NULL DEFAULT 'uploaded',
+     idempotencyKey VARCHAR(128) NOT NULL,
+     createTime DATETIME NOT NULL,
+     publishTime DATETIME DEFAULT NULL,
+     UNIQUE KEY uk_video_idem (userId, idempotencyKey),
+     KEY idx_video_status_time (status, publishTime),
+     KEY idx_video_user_status_time (userId, status, publishTime),
+     KEY idx_video_bind_recipe (bindRecipeId)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+13. comment：
+   ```sql
+   CREATE TABLE IF NOT EXISTS comment (
+     commentId VARCHAR(64) PRIMARY KEY,
+     targetType VARCHAR(16) NOT NULL,
+     targetId VARCHAR(64) NOT NULL,
+     userId VARCHAR(64) NOT NULL,
+     content VARCHAR(1000) NOT NULL,
+     score INT DEFAULT NULL,
+     status VARCHAR(16) NOT NULL DEFAULT 'published',
+     idempotencyKey VARCHAR(128) NOT NULL,
+     createTime DATETIME NOT NULL,
+     UNIQUE KEY uk_comment_idem (userId, idempotencyKey),
+     KEY idx_comment_target_time (targetType, targetId, status, createTime),
+     KEY idx_comment_user_time (userId, createTime)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+14. like_state：
+   ```sql
+   CREATE TABLE IF NOT EXISTS like_state (
+     targetType VARCHAR(16) NOT NULL,
+     targetId VARCHAR(64) NOT NULL,
+     userId VARCHAR(64) NOT NULL,
+     liked TINYINT NOT NULL DEFAULT 0,
+     updateTime DATETIME NOT NULL,
+     PRIMARY KEY (targetType, targetId, userId),
+     KEY idx_like_user (userId, liked)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+15. favorite_state：
+   ```sql
+   CREATE TABLE IF NOT EXISTS favorite_state (
+     targetType VARCHAR(16) NOT NULL,
+     targetId VARCHAR(64) NOT NULL,
+     userId VARCHAR(64) NOT NULL,
+     favorited TINYINT NOT NULL DEFAULT 0,
+     updateTime DATETIME NOT NULL,
+     PRIMARY KEY (targetType, targetId, userId),
+     KEY idx_favorite_user (userId, favorited)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+16. follow：
+   ```sql
+   CREATE TABLE IF NOT EXISTS follow (
+     userId VARCHAR(64) NOT NULL,
+     targetUserId VARCHAR(64) NOT NULL,
+     notifyMode VARCHAR(16) NOT NULL DEFAULT 'silent',
+     createTime DATETIME NOT NULL,
+     updateTime DATETIME NOT NULL,
+     PRIMARY KEY (userId, targetUserId),
+     KEY idx_follow_target (targetUserId)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+17. message：
+   ```sql
+   CREATE TABLE IF NOT EXISTS message (
+     messageId VARCHAR(64) PRIMARY KEY,
+     senderUserId VARCHAR(64) NOT NULL,
+     receiverUserId VARCHAR(64) NOT NULL,
+     messageType VARCHAR(32) NOT NULL,
+     contentJson TEXT NOT NULL,
+     status VARCHAR(16) NOT NULL DEFAULT 'published',
+     createTime DATETIME NOT NULL,
+     readState VARCHAR(16) NOT NULL DEFAULT 'unread',
+     KEY idx_message_receiver_time (receiverUserId, status, createTime),
+     KEY idx_message_sender_time (senderUserId, createTime)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+18. cook_history：
+   ```sql
+   CREATE TABLE IF NOT EXISTS cook_history (
+     historyId VARCHAR(64) PRIMARY KEY,
+     userId VARCHAR(64) NOT NULL,
+     planId VARCHAR(64) NOT NULL,
+     planJson LONGTEXT NOT NULL,
+     resultJson LONGTEXT,
+     status VARCHAR(16) NOT NULL DEFAULT 'started',
+     createTime DATETIME NOT NULL,
+     updateTime DATETIME NOT NULL,
+     KEY idx_cook_history_user_time (userId, createTime),
+     UNIQUE KEY uk_cook_history_plan (planId)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+19. admin_action_log：
+   ```sql
+   CREATE TABLE IF NOT EXISTS admin_action_log (
+     actionId VARCHAR(64) PRIMARY KEY,
+     operatorId VARCHAR(64) NOT NULL,
+     targetType VARCHAR(32) NOT NULL,
+     targetId VARCHAR(64) NOT NULL,
+     actionType VARCHAR(32) NOT NULL,
+     reason VARCHAR(512) DEFAULT '',
+     createTime DATETIME NOT NULL,
+     KEY idx_admin_action_target (targetType, targetId),
+     KEY idx_admin_action_operator_time (operatorId, createTime)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+
+三十一、Repository 方法规格
+1. AccountRepository：
+   1. bool existsAccount(account)。
+   2. Account findByAccount(account)。
+   3. Account findByUserId(userId)。
+   4. void insert(Account, tx)。
+   5. void updateProfile(userId, nickname)。
+   6. void updatePassword(userId, passwordHash, passwordSalt)。
+   7. void updatePersonalizationSetting(userId, enabled)。
+2. AuthSessionRepository：
+   1. void insert(Session, tx)。
+   2. Session findByTokenHash(tokenHash)。
+   3. void revokeByTokenHash(tokenHash)。
+   4. void revokeAllByUserId(userId)。
+   5. void markExpiredBefore(now)。
+3. WalletRepository：
+   1. Wallet getForUpdate(userId, tx)。
+   2. Wallet get(userId)。
+   3. void insertInitial(userId, coins, yuanbao, tx)。
+   4. void updateBalance(userId, coins, yuanbao, tx)。
+   5. void insertTransaction(WalletTransaction, tx)。
+   6. WalletTransaction findTransactionByIdem(userId, idempotencyKey)。
+4. RecipeRepository：
+   1. Recipe findRecipe(recipeId)。
+   2. vector<Recipe> listPublished(page, pageSize)。
+   3. vector<Recipe> listByAuthor(userId, includeDraft)。
+   4. void insertRecipe(Recipe, tx)。
+   5. void updateCurrentRevision(recipeId, revisionId, tx)。
+   6. void updateStatus(recipeId, status, tx)。
+5. UserRecipeRepository：
+   1. UserRecipe find(userId, recipeId)。
+   2. vector<UserRecipe> listByUser(userId)。
+   3. void upsertOwned(UserRecipe, tx)。
+   4. void updateFavorite(userId, recipeId, favorite)。
+   5. void updateActiveRevision(userId, recipeId, revisionId, tx)。
+6. VideoRepository：
+   1. Video find(videoId)。
+   2. Video findByIdempotencyKey(userId, key)。
+   3. void insertUploaded(Video, tx)。
+   4. void publish(videoId, title, description, bindRecipeId, tx)。
+   5. void updateStatus(videoId, status, tx)。
+   6. vector<Video> listFeed(channel, cursor, pageSize)。
+7. CommentRepository：
+   1. vector<Comment> list(targetType, targetId, cursor, pageSize)。
+   2. Comment findByIdempotencyKey(userId, key)。
+   3. void insert(Comment, tx)。
+   4. void updateStatus(commentId, status, tx)。
+8. LikeRepository 和 FavoriteRepository 使用 targetType + targetId + userId 做 upsert。
+9. Repository 返回结构体，不返回 JSON 字符串；JSON 只在 API 输出层组装。
+
+三十二、鉴权中间件实现
+1. CookHttpApiHandler 收到 request 后生成 ApiRequest。
+2. ApiRequest 字段：
+   1. method。
+   2. path。
+   3. query。
+   4. headers。
+   5. bodyJson。
+   6. fileParts。
+   7. requestId。
+   8. clientType。
+   9. clientVersion。
+   10. idempotencyKey。
+   11. currentUserId，可空。
+3. CookApiService 路由前调用 authMiddleware。
+4. 公开接口白名单：
+   1. GET /api/health。
+   2. POST /api/auth/register。
+   3. POST /api/auth/login。
+   4. GET /videos/。
+5. 鉴权伪代码：
+   ```cpp
+   AuthResult AuthService::authenticate(const std::string& authorization)
+   {
+       std::string token = parseBearer(authorization);
+       if (token.empty()) return AuthResult::unauthorized();
+       std::string tokenHash = m_passwordHasher.sha256(token);
+       AuthSession s = m_sessionRepo.findByTokenHash(tokenHash);
+       if (s.empty() || s.status != "active") return AuthResult::unauthorized();
+       if (s.expireTime <= now()) return AuthResult::expired();
+       Account a = m_accountRepo.findByUserId(s.userId);
+       if (a.status != "active") return AuthResult::forbidden();
+       return AuthResult::ok(a.userId);
+   }
+   ```
+6. token 明文只在返回给客户端时出现一次，之后日志和 MySQL 都只出现 tokenHash。
+
+三十三、事务和幂等实现
+1. 写接口入口处读取 X-Idempotency-Key。
+2. 如果客户端没有传，服务端对必须幂等的接口返回 VALIDATION_ERROR。
+3. 对 joinRecipe、checkin、adRewardFinish、uploadVideo、createComment，先查对应业务表或 wallet_transaction 的 idempotencyKey。
+4. 如果查到已有成功结果，直接返回已有结果。
+5. 如果查到处理中状态，返回 DUPLICATE_REQUEST。
+6. joinRecipe 事务伪代码：
+   ```cpp
+   JoinRecipeResult WalletService::joinRecipe(userId, recipeId, payType, idemKey)
+   {
+       if (m_walletRepo.findTransactionByIdem(userId, idemKey).exists())
+           return buildJoinResultFromExisting(userId, recipeId);
+       Tx tx = m_db.beginTransaction();
+       Recipe recipe = m_recipeRepo.findRecipeForShare(recipeId, tx);
+       UserRecipe owned = m_userRecipeRepo.findForUpdate(userId, recipeId, tx);
+       if (owned.exists()) { tx.commit(); return alreadyOwnedResult(); }
+       Wallet wallet = m_walletRepo.getForUpdate(userId, tx);
+       BalanceChange change = calcCost(recipe.priceType, recipe.priceAmount, wallet);
+       if (!change.enough) throw ApiError(change.errorCode);
+       Wallet after = wallet.apply(change);
+       m_walletRepo.updateBalance(userId, after.coins, after.yuanbao, tx);
+       WalletTransaction wt = makeTransaction(userId, change, recipeId, idemKey);
+       m_walletRepo.insertTransaction(wt, tx);
+       UserRecipe ur = makeUserRecipe(userId, recipe, wt.transactionId);
+       m_userRecipeRepo.upsertOwned(ur, tx);
+       tx.commit();
+       return JoinRecipeResult(after, ur);
+   }
+   ```
+7. 钱包扣减必须 SELECT ... FOR UPDATE 锁住 wallet 行。
+8. 并发 joinRecipe 同一菜谱时，user_recipe 主键会挡住重复拥有；遇到唯一键冲突时重新查询并返回已有拥有状态。
+9. checkin 可以用 checkin 主键防重复，也要用 wallet 行锁保证余额正确。
+10. adRewardFinish 用 ad_reward rewardId 行锁，status 从 started 改 finished 后才能发金币。
+
+三十四、视频上传实现细节
+1. CookHttpApiHandler 必须识别 multipart/form-data。
+2. 如果现有 HttpService 不支持 multipart，新增 MultipartParser：
+   1. 解析 boundary。
+   2. 把普通字段放入 formFields。
+   3. 把文件字段流式写入 temp 文件。
+   4. 超过 maxVideoSizeBytes 立即停止并返回 VIDEO_TOO_LARGE。
+3. 不要把整个视频读入内存。
+4. temp 目录：data/videos/tmp/{requestId}.upload。
+5. 正式目录：data/videos/files/yyyy/mm/{userId}/{videoId}.mp4。
+6. 保存流程：
+   1. 校验 token。
+   2. 校验 idempotencyKey。
+   3. 查询 video 是否已有 userId + idempotencyKey。
+   4. 解析 multipart 并写 temp 文件。
+   5. 校验扩展名、mimeType、fileSize。
+   6. 生成 videoId。
+   7. 创建正式目录。
+   8. rename temp 到正式路径。
+   9. 开启事务写 video 表 status=uploaded。
+   10. 事务成功后返回 videoId。
+   11. 事务失败时删除正式文件或写 orphan 日志。
+7. 第一阶段可以不解析真实视频时长，但必须使用客户端上报 durationSeconds 并校验 <= 300；后续再用 ffprobe 或媒体库校验。
+8. fileUrl 不直接暴露磁盘绝对路径，只返回 /videos/yyyy/mm/userId/videoId.mp4 或 /api/videos/file/{videoId}。
+9. 静态视频读取必须防路径穿越，只能通过 videoId 或规范相对路径映射。
+
+三十五、Feed 查询性能方案
+1. 推荐流 SQL 第一阶段按 publishTime 倒序：
+   ```sql
+   SELECT v.videoId, v.userId, v.fileUrl, v.coverUrl, v.title, v.description,
+          v.bindRecipeId, v.recipeAuthorized, v.publishTime,
+          a.nickname, a.avatarUrl,
+          r.priceType, r.priceAmount, r.status AS recipeStatus,
+          ur.recipeId AS ownedRecipeId
+   FROM video v
+   JOIN account a ON a.userId = v.userId
+   LEFT JOIN recipe r ON r.recipeId = v.bindRecipeId
+   LEFT JOIN user_recipe ur ON ur.userId = ? AND ur.recipeId = v.bindRecipeId
+   WHERE v.status = 'published' AND v.publishTime < ?
+   ORDER BY v.publishTime DESC
+   LIMIT ?;
+   ```
+2. cursor 使用 publishTime + videoId，避免同一秒发布导致翻页重复。
+3. 关注流额外 JOIN follow：
+   ```sql
+   JOIN follow f ON f.targetUserId = v.userId AND f.userId = ?
+   ```
+4. liked/favorited 状态不要逐条查库；批量查询当前页 videoId：
+   1. SELECT targetId FROM like_state WHERE targetType='video' AND userId=? AND targetId IN (...) AND liked=1。
+   2. SELECT targetId FROM favorite_state WHERE targetType='video' AND userId=? AND targetId IN (...) AND favorited=1。
+5. likeCount/commentCount/favoriteCount 第一阶段可以实时 count，但建议 FeedService 做批量 count：
+   1. GROUP BY targetId。
+   2. 不允许每条视频单独 count 一次。
+6. 如果数据量增长，再加 video_stat 表缓存计数；页面和 API 响应不变。
+
+三十六、评论、点赞、收藏实现
+1. POST /api/comments/list 入参：
+   1. targetType。
+   2. targetId。
+   3. cursor。
+   4. pageSize，最大 50。
+2. 只返回 status=published 的评论。
+3. targetType=video 时校验 video.status=published。
+4. targetType=recipe 时校验 recipe 可公开查看；购买后评分评论后续用 score 字段区分。
+5. POST /api/comments/create 入参：
+   1. targetType。
+   2. targetId。
+   3. content。
+   4. score 可空。
+6. content 长度 1 到 500，服务端 trim 后再校验。
+7. createComment 事务：
+   1. 校验幂等键。
+   2. 校验目标存在且可评论。
+   3. 插入 comment status=published。
+   4. 提交。
+8. POST /api/likes/toggle 入参 targetType、targetId。
+9. LikeService 校验目标存在，再 upsert like_state。
+10. POST /api/favorites/toggle 入参 targetType、targetId。
+11. FavoriteService 写 favorite_state；如果 targetType=recipe，也同步 user_recipe.favorite，保证菜单“最喜欢”查询简单。
+
+三十七、内容状态和最小管理能力
+1. 内容状态统一：
+   1. draft：草稿，只作者可见。
+   2. published：公开可见。
+   3. hidden：管理隐藏，公开不可见。
+   4. deleted：用户删除或系统删除，公开不可见。
+2. FeedService 永远过滤 v.status='published'。
+3. RecipeService 对公开详情过滤 recipe.status='published'。
+4. CommentService list 过滤 comment.status='published'。
+5. MessageService 默认返回 status!='deleted' 且 receiverUserId=currentUserId。
+6. 最小管理接口可先不开放公网，只做本地管理命令：
+   1. cook_admin hide video {videoId} {operatorId} {reason}。
+   2. cook_admin hide recipe {recipeId} {operatorId} {reason}。
+   3. cook_admin hide comment {commentId} {operatorId} {reason}。
+7. 管理命令内部调用 AdminService::hideContent。
+8. hideContent 事务：
+   1. 更新目标表 status=hidden。
+   2. 插入 admin_action_log。
+   3. 提交事务。
+9. 后续做管理后台时直接复用 AdminService，不重写业务。
+
+三十八、排程算法可实现伪代码
+1. 输入 EffectiveRecipe 列表，每个 recipe 有 tasks。
+2. 每个 task 包含 dependencies、resource、durationSeconds、active。
+3. 简化排程目标：
+   1. active 步骤不重叠。
+   2. 同 resource 不重叠。
+   3. 等待步骤尽早开始。
+   4. 在等待窗口中插入其他 active 步骤。
+4. 伪代码：
+   ```cpp
+   PlanResult CookSchedule::buildPlan(const vector<Recipe>& recipes)
+   {
+       vector<TaskNode> nodes = flattenAndPrefixTaskIds(recipes);
+       map<string, int> endTimeByTask;
+       map<string, vector<Interval> > busyByResource;
+       vector<ScheduledTask> scheduled;
+       while (!allScheduled(nodes)) {
+           vector<TaskNode*> ready = findReadyNodes(nodes, endTimeByTask);
+           sortReadyNodes(ready); // active 优先、短动作优先、等待尽早
+           bool progressed = false;
+           for (TaskNode* node : ready) {
+               int earliest = maxDependencyEnd(node, endTimeByTask);
+               int start = findEarliestStart(earliest, node, busyByResource, scheduled);
+               int end = start + max(5, node->durationSeconds);
+               reserveResource(node->resource, start, end, busyByResource);
+               if (node->active) reserveResource("user", start, end, busyByResource);
+               scheduled.push_back(makeScheduled(node, start, end));
+               endTimeByTask[node->globalTaskId] = end;
+               node->scheduled = true;
+               progressed = true;
+           }
+           if (!progressed) return fail("依赖成环或资源无法安排");
+       }
+       return buildSummaryAndFreeBlocks(scheduled);
+   }
+   ```
+5. findEarliestStart：
+   1. 从 earliest 开始找时间。
+   2. 如果 node.active=true，检查 user 资源空闲。
+   3. 检查 node.resource 空闲。
+   4. 每次冲突跳到冲突区间 end。
+6. freeBlocks 计算：
+   1. 用户 active 资源空闲区间为候选。
+   2. 候选长度 >= 300 秒记为 freeBlock。
+   3. 候选长度 < 300 秒累计为 fragmentSeconds。
+7. PlanResult 必须稳定排序：startSeconds 升序，start 相同 active 优先。
+8. 后续优化算法时保持输入输出结构不变，新增 scheduleVersion。
+
+三十九、可扩展和可修改设计规则
+1. 新增客户端类型时不新增 API，只通过 X-Client-Type 区分 wechat_mini、android、ios。
+2. 新增支付方式时只扩展 recipe.priceType 和 WalletService，不改 RecipeService 查询。
+3. 新增货币时：
+   1. 第一阶段 wallet 是 coins/yuanbao 列。
+   2. 后续可新增 wallet_balance 表，WalletService 对外仍返回 balances。
+   3. 不让页面直接依赖数据库列名。
+4. 新增内容类型时只扩展 targetType，LikeService、FavoriteService、CommentService 复用。
+5. 新增内容审核状态时只扩展 status 枚举，FeedService 和公开查询继续使用 published 白名单。
+6. 新增视频对象存储时只替换 VideoStorage 实现，不改 VideoService 对外接口。
+7. 新增 Redis 时：
+   1. token 可从 auth_session 迁移到 Redis。
+   2. feed 热点可缓存。
+   3. 但 MySQL 仍是最终一致存储。
+8. 新增推荐算法时只替换 FeedService::listFeed 排序和召回，不改 FeedItem 输出。
+9. 新增排程算法时新增 ScheduleEngine 接口：
+   ```cpp
+   class IScheduleEngine {
+   public:
+       virtual PlanResult build(const std::vector<Recipe>& recipes, const ScheduleOptions& options) = 0;
+   };
+   ```
+10. CookSchedule 实现 IScheduleEngine，后续可加 AdvancedScheduleEngine。
+11. 新增菜谱 JSON 字段时 JsonCodec 要保留 unknownFields，旧客户端忽略未知字段。
+12. 新增数据库字段时使用 nullable 或 default，避免旧代码插入失败。
+13. 新增接口时：
+   1. 先写 ApiRequest/ApiResponse。
+   2. 再写 Service 方法。
+   3. 再写 Repository 方法。
+   4. 最后在 CookApiService 注册路由。
+14. 不允许为了一个页面临时在 CookApiService 里直接写 SQL。
+15. 不允许把业务状态只放内存；任何用户资产、内容、计划开始记录都必须落 MySQL。
+
+四十、给后续 AI 开发者的实现说明
+1. 本文档中“必须”是验收要求。
+2. 开发时不要自行改变接口路径，除非同步修改 CookWx 文档。
+3. 每个接口实现顺序固定：
+   1. 定义 Request/Response 结构体。
+   2. 写参数校验。
+   3. 写鉴权。
+   4. 写幂等检查。
+   5. 写 Service 业务逻辑。
+   6. 写 Repository SQL。
+   7. 写统一 JSON 输出。
+   8. 写 CookServerTest。
+4. 每个 MySQL 写接口必须考虑：
+   1. 是否需要事务。
+   2. 是否需要 SELECT FOR UPDATE。
+   3. 是否需要唯一索引防重。
+   4. 是否需要 idempotencyKey。
+   5. 失败后是否有文件或状态需要清理。
+5. 任何地方遇到客户端传 userId，除 targetUserId 这种明确目标字段外，都应忽略或拒绝。
+6. 如果产品新增需求但不知道放哪里：
+   1. 账号资料放 AccountService。
+   2. 钱包资产放 WalletService。
+   3. 菜谱内容放 RecipeService 或 RecipeVersionService。
+   4. 个人修改放 PersonalizationService。
+   5. 视频文件放 VideoService。
+   6. 首页流放 FeedService。
+   7. 评论点赞收藏放对应通用 Service。
+   8. 做菜排程放 PlanService 和 CookSchedule。
+   9. 做菜执行结果放 CookHistoryService。
+7. 如果一个需求同时影响多个模块，Service 之间通过上层编排，不要互相循环依赖。
+8. 例如发布带菜谱的视频：
+   1. CookApiService 调 VideoService。
+   2. VideoService 校验视频归属。
+   3. VideoService 调 RecipeRepository 校验菜谱归属。
+   4. VideoService 写 video.bindRecipeId。
+   5. 不让 RecipeService 反过来调用 VideoService。
+9. 性能优先级：
+   1. 先保证数据库索引和批量查询。
+   2. 再考虑缓存。
+   3. 不为了缓存牺牲正确性。
+10. 安全优先级：
+   1. token 和密码永远不入日志。
+   2. 文件路径永远由服务端生成。
+   3. 钱包扣减永远事务化。
+   4. 做菜计划 start 后必须保存快照。
+
+四十一、重活处理分期拆分架构规划
+
+1. 重活范围。
+   1. 本文档中的重活包括语音 TTS 生成、视频首帧提取、视频转码压缩、图片/视频派生资源生成，以及后续可能加入的批量推荐、AI 分析等高 CPU/GPU/IO 任务。
+   2. 重活不包括账号登录、钱包扣减、菜谱购买、排程算法、点赞收藏等必须直接由 CookServer 控制的核心业务写操作。
+   3. CookServer 内部业务模块不应直接散落调用 ffmpeg、系统命令、第三方视频库或远程算力接口，统一通过重活调度层调用，便于第二期、第三期迁移。
+
+2. 第一期：所有功能先做在 CookServer 内。
+   1. 第一期不额外部署 CookHeavyServer，也不接入 NetServerManager、NetClientManager。
+   2. CookServer 自己完成 TTS、视频首帧、视频资源读取、排程计算、账号数据、点赞收藏、个性化等第一期功能。
+   3. 即便实际执行仍在 CookServer 内，也要在代码结构上预留重活调度接口，例如 CookHeavyTask、CookHeavyTaskResult、ICookHeavyDispatcher、CookLocalHeavyDispatcher 等同类抽象。
+   4. 业务层只提交任务和读取结果，不关心任务是在本进程执行、同机重活进程执行，还是远程私有算力执行。
+   5. 第一期配置默认 Heavy.Mode=local。短任务可以同步返回，长任务应保存 taskId、taskType、status、retryCount、createdTime、updatedTime 等状态，避免后续拆分时重写业务流程。
+   6. Redis/MySQL 是业务状态和任务状态的事实来源。CookServer 重启后，应能从 Redis/MySQL 恢复账号、菜谱、个性化、视频观看状态和未完成的异步任务状态。
+
+3. 第二期：同机器拆出 CookHeavyServer。
+   1. 第二期新增 CookHeavyServer，和 CookServer 部署在同一台云服务器上，用于隔离 TTS、视频首帧、视频转码等重活。
+   2. CookServer 先把任务参数写入 Redis/MySQL，再通过 ProcessWork 通知 CookHeavyServer，通知消息只携带 taskId、messageId、taskType 等短字段，不传大音频、大图片、大视频二进制。
+   3. CookHeavyServer 收到 ProcessWork 通知后，立即返回业务层 ACK，表示“已收到通知，准备拉取任务”，不要求 ACK 前必须已经从 Redis 读取完整任务参数。
+   4. CookHeavyServer 处理完成后，先把结果写回 Redis/MySQL，再通过 ProcessWork 通知 CookServer 任务完成。
+   5. CookHeavyServer 启动后要扫描 Redis/MySQL 中 pending、running 超租约、success 但未通知等任务，补做积压任务和补发完成通知。
+   6. 任务状态建议统一为 pending、running、success、failed、retrying、cancelled，并带 leaseExpireTime、workerId、resultHash、errorCode、errorMessage。
+   7. ProcessWork 只定位为同机器 IPC 通知层，提供低延迟唤醒和短消息投递；任务真实状态、幂等、重试、恢复不能只依赖 ProcessWork，必须落在 Redis/MySQL 的任务状态里。
+   8. 如果低优先级重活被高优先级任务打断，重做任务时必须保证 Clone 后的任务参数和初始化状态完整，避免只重做 DoTask 而丢失构造参数或预处理状态。
+
+4. 第三期：接入私有算力和跨机器重活。
+   1. 第三期引入云端 CookHeavyServer、云端 NetServerManager、私有算力侧 NetClientManager 和 CookHeavy。
+   2. 家里或办公电脑上的 CookHeavy 通过 NetClientManager 主动连接云端 NetServerManager，避免私有网络/NAT 下需要公网入站端口。
+   3. CookServer 仍只和 CookHeavyServer 交互，不直接感知远程电脑数量、网络连接、GPU 状态或 ffmpeg/x265 等能力差异。
+   4. NetServerManager、NetClientManager 只负责 TCP 长连接、心跳、重连、路由、连接隔离和基础收发，不承载核心业务状态。
+   5. CookHeavyServer 负责远程 worker 注册、能力上报、任务调度、租约、超时重试、失败转移和结果归档。
+   6. 远程协议建议至少包含 worker_register、worker_heartbeat、task_assign、task_accept、task_progress、task_result、task_cancel、ack。
+   7. 跨机器通信不能假设绝对不丢包，必须在业务协议层使用 messageId、taskId、ACK、超时重试、幂等去重和结果校验。
+   8. 大文件传输不要混在普通短消息里。视频、图片、音频等大文件后续可走分片传输加 hash 校验和断点续传，或改成 HTTP/对象存储/COS/OSS/S3/CDN 方式。
+   9. 私有算力侧可以使用 GPU 和更重的视频库。是否使用 LGPL/GPL 相关库，必须在独立重活进程或独立二次开发库里明确边界，避免污染 CookServer 主业务进程的发布形态。
+
+5. ProcessWork、Redis、Kafka、Net 管理进程的定位。
+   1. ProcessWork 只用于同机器 CookServer 和 CookHeavyServer 之间的低延迟 IPC，不做跨机器通信。
+   2. Redis/MySQL 用于任务事实状态、业务数据、恢复和幂等，是必须存在的状态层，不只是通知队列。
+   3. Redis 阻塞队列也可以做同机通知，但底层仍是 socket；如果使用 Redis 通知，也要保留业务 ACK、超时重试和幂等。
+   4. Kafka 第一期到第三期暂不作为核心链路依赖。后续用户行为日志、推荐事件流、离线分析规模变大时，再评估是否引入。
+   5. NetServerManager、NetClientManager 用于第三期跨机器长连接隔离，不能替代 Redis/MySQL 的任务状态，也不应把 CookServer 直接绑死到远程连接细节上。
+
+6. 配置和实现约束。
+   1. 重活模式应可配置，例如 Heavy.Mode=local/process/remote。
+   2. 同机通知超时、任务租约、最大重试次数、后台线程数、远程 worker 心跳间隔都必须放到 ini 或 g_config 中，不写死在业务函数里。
+   3. 建议预留配置项 Heavy.NotifyTimeoutMilliseconds、Heavy.TaskLeaseSeconds、Heavy.MaxRetryCount、Heavy.FileTransferMode。
+   4. 进程边界和网络边界不要直接传 C++ 对象或 STL 容器，统一传稳定的 JSON 或二进制协议字段。
+   5. 第一期开代码时就要避免把重活实现直接写死在 CookApiService 中，至少拆到独立服务类或调度类里。
+   6. 后续拆分时，客户端接口尽量不变；CookWx 仍只请求 CookServer，CookServer 内部再决定本地执行、同机重活进程执行或远程私有算力执行。

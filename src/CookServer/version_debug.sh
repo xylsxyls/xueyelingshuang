@@ -6,3 +6,7 @@
 "$CLOUD_REBUILD" HttpService 64 dll debug same
 "$CLOUD_REBUILD" LogManager 64 dll debug only
 "$CLOUD_REBUILD" CDump 64 dll debug same
+"$CLOUD_REBUILD" Cini 64 dll debug same
+"$CLOUD_REBUILD" CTaskThreadManager 64 lib debug same
+"$CLOUD_REBUILD" HiRedis 64 lib debug same
+"$CLOUD_REBUILD" MysqlCpp 64 lib debug same

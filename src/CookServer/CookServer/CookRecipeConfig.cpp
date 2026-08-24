@@ -27,6 +27,10 @@ bool CookRecipeConfig::loadRecipeFromJson(const std::string& json, Recipe& recip
 	std::string realJson = CookRecipeConfig::removeUtf8Bom(json);
 	if (!CookServerHelper::isUtf8Text(realJson))
 	{
+		realJson = CookServerHelper::textToJsonUtf8(realJson);
+	}
+	if (!CookServerHelper::isUtf8Text(realJson))
+	{
 		return CookRecipeConfig::setError(errorMessage, "recipe json must be UTF-8");
 	}
 	RapidJsonDocument document;
@@ -81,17 +85,44 @@ bool CookRecipeConfig::parseTask(const RapidJsonValue& value, const std::string&
 		return CookRecipeConfig::setError(errorMessage, "task id is empty in recipe: " + recipeId);
 	}
 	task.m_id = recipeId + "." + shortId;
+	task.m_shortId = shortId;
 	task.m_recipeId = recipeId;
 	task.m_title = value.getStringOrDefault("title", "");
 	task.m_detail = value.getStringOrDefault("detail", "");
 	task.m_resource = value.getStringOrDefault("resource", "");
 	task.m_voiceText = value.getStringOrDefault("voiceText", "");
 	task.m_safetyLevel = value.getStringOrDefault("safetyLevel", "normal");
+	task.m_backgroundWaitMode = value.getStringOrDefault("backgroundWaitMode", "");
 	task.m_durationSeconds = value.getIntOrDefault("durationSeconds", -1);
-	task.m_active = value.getBoolOrDefault("active", false);
+	std::string taskMode = value.getStringOrDefault("taskMode", "");
+	if (taskMode == "foreground")
+	{
+		task.m_active = true;
+	}
+	else if (taskMode == "background")
+	{
+		task.m_active = false;
+	}
+	else
+	{
+		task.m_active = value.getBoolOrDefault("active", false);
+	}
+	task.m_manualSkippable = value.getBoolOrDefault("manualSkippable", task.m_active);
 	task.m_canPause = value.getBoolOrDefault("canPause", false);
 	task.m_continuesDuringPause = value.getBoolOrDefault("continuesDuringPause", false);
 	task.m_canLeaveKitchen = value.getBoolOrDefault("canLeaveKitchen", false);
+	if (task.m_active)
+	{
+		task.m_backgroundWaitMode.clear();
+	}
+	else if (task.m_backgroundWaitMode != "free" && task.m_backgroundWaitMode != "watch")
+	{
+		task.m_backgroundWaitMode = task.m_canLeaveKitchen && task.m_safetyLevel != "attention" && task.m_safetyLevel != "danger" ? "free" : "watch";
+	}
+	if (!task.m_active)
+	{
+		task.m_canLeaveKitchen = task.m_backgroundWaitMode == "free";
+	}
 	if (CookRecipeConfig::isMissingString(task.m_title))
 	{
 		return CookRecipeConfig::setError(errorMessage, "task title is empty: " + task.m_id);
@@ -109,7 +140,8 @@ bool CookRecipeConfig::parseTask(const RapidJsonValue& value, const std::string&
 	{
 		if (!dependencies[i].empty())
 		{
-			task.m_dependencies.push_back(recipeId + "." + dependencies[i]);
+			std::string prefix = recipeId + ".";
+			task.m_dependencies.push_back(dependencies[i].find(prefix) == 0 ? dependencies[i] : prefix + dependencies[i]);
 		}
 	}
 	return true;
@@ -149,11 +181,35 @@ bool CookRecipeConfig::parseRecipe(const RapidJsonValue& value, Recipe& recipe, 
 	recipe.m_difficulty = value.getStringOrDefault("difficulty", "");
 	recipe.m_coverColor = value.getStringOrDefault("coverColor", "");
 	recipe.m_author = value.getStringOrDefault("author", "");
+	recipe.m_authorUserId = value.getStringOrDefault("authorUserId", value.getStringOrDefault("authorId", ""));
 	recipe.m_tags = value.getStringArrayOrEmpty("tags");
 	recipe.m_tools = value.getStringArrayOrEmpty("tools");
 	recipe.m_priceCoins = value.getIntOrDefault("priceCoins", 0);
+	recipe.m_priceType = value.getStringOrDefault("priceType", "");
+	recipe.m_priceAmount = value.getIntOrDefault("priceAmount", recipe.m_priceCoins);
+	recipe.m_status = value.getStringOrDefault("status", "published");
+	recipe.m_currentRevisionId = value.getStringOrDefault("currentRevisionId", recipe.m_id + "_r1");
 	recipe.m_defaultOwned = value.getBoolOrDefault("defaultOwned", value.getBoolOrDefault("owned", recipe.m_priceCoins == 0));
 	recipe.m_systemRecipe = value.getBoolOrDefault("systemRecipe", false);
+	recipe.m_customRecipe = value.getBoolOrDefault("customRecipe", !recipe.m_systemRecipe);
+	if (recipe.m_priceType.empty() && recipe.m_id == "cook_000007" && recipe.m_priceAmount > 0)
+	{
+		recipe.m_priceType = "yuanbao";
+	}
+	if (recipe.m_priceType.empty())
+	{
+		recipe.m_priceType = recipe.m_priceAmount > 0 ? "coin" : "free";
+	}
+	if (recipe.m_priceAmount <= 0 && recipe.m_priceCoins > 0)
+	{
+		recipe.m_priceAmount = recipe.m_priceCoins;
+	}
+	if (recipe.m_priceType == "free")
+	{
+		recipe.m_priceAmount = 0;
+		recipe.m_priceCoins = 0;
+	}
+	recipe.m_defaultOwned = value.getBoolOrDefault("defaultOwned", value.getBoolOrDefault("owned", recipe.m_priceType == "free" || recipe.m_priceAmount == 0));
 	if (CookRecipeConfig::isMissingString(recipe.m_id))
 	{
 		return CookRecipeConfig::setError(errorMessage, "recipe id is empty");
@@ -165,6 +221,10 @@ bool CookRecipeConfig::parseRecipe(const RapidJsonValue& value, Recipe& recipe, 
 	if (recipe.m_priceCoins < 0)
 	{
 		return CookRecipeConfig::setError(errorMessage, "recipe priceCoins is invalid: " + recipe.m_id);
+	}
+	if (recipe.m_priceAmount < 0)
+	{
+		return CookRecipeConfig::setError(errorMessage, "recipe priceAmount is invalid: " + recipe.m_id);
 	}
 
 	std::vector<RapidJsonValue> ingredientValues = value.getArrayValueOrEmpty("ingredients");
@@ -206,11 +266,35 @@ bool CookRecipeConfig::parseRecipe(const RapidJsonDocument& document, Recipe& re
 	recipe.m_difficulty = document.getStringOrDefault("difficulty", "");
 	recipe.m_coverColor = document.getStringOrDefault("coverColor", "");
 	recipe.m_author = document.getStringOrDefault("author", "");
+	recipe.m_authorUserId = document.getStringOrDefault("authorUserId", document.getStringOrDefault("authorId", ""));
 	recipe.m_tags = document.getStringArrayOrEmpty("tags");
 	recipe.m_tools = document.getStringArrayOrEmpty("tools");
 	recipe.m_priceCoins = document.getIntOrDefault("priceCoins", 0);
+	recipe.m_priceType = document.getStringOrDefault("priceType", "");
+	recipe.m_priceAmount = document.getIntOrDefault("priceAmount", recipe.m_priceCoins);
+	recipe.m_status = document.getStringOrDefault("status", "published");
+	recipe.m_currentRevisionId = document.getStringOrDefault("currentRevisionId", recipe.m_id + "_r1");
 	recipe.m_defaultOwned = document.getBoolOrDefault("defaultOwned", document.getBoolOrDefault("owned", recipe.m_priceCoins == 0));
 	recipe.m_systemRecipe = document.getBoolOrDefault("systemRecipe", false);
+	recipe.m_customRecipe = document.getBoolOrDefault("customRecipe", !recipe.m_systemRecipe);
+	if (recipe.m_priceType.empty() && recipe.m_id == "cook_000007" && recipe.m_priceAmount > 0)
+	{
+		recipe.m_priceType = "yuanbao";
+	}
+	if (recipe.m_priceType.empty())
+	{
+		recipe.m_priceType = recipe.m_priceAmount > 0 ? "coin" : "free";
+	}
+	if (recipe.m_priceAmount <= 0 && recipe.m_priceCoins > 0)
+	{
+		recipe.m_priceAmount = recipe.m_priceCoins;
+	}
+	if (recipe.m_priceType == "free")
+	{
+		recipe.m_priceAmount = 0;
+		recipe.m_priceCoins = 0;
+	}
+	recipe.m_defaultOwned = document.getBoolOrDefault("defaultOwned", document.getBoolOrDefault("owned", recipe.m_priceType == "free" || recipe.m_priceAmount == 0));
 	if (CookRecipeConfig::isMissingString(recipe.m_id))
 	{
 		return CookRecipeConfig::setError(errorMessage, "recipe id is empty");
@@ -222,6 +306,10 @@ bool CookRecipeConfig::parseRecipe(const RapidJsonDocument& document, Recipe& re
 	if (recipe.m_priceCoins < 0)
 	{
 		return CookRecipeConfig::setError(errorMessage, "recipe priceCoins is invalid: " + recipe.m_id);
+	}
+	if (recipe.m_priceAmount < 0)
+	{
+		return CookRecipeConfig::setError(errorMessage, "recipe priceAmount is invalid: " + recipe.m_id);
 	}
 
 	std::vector<RapidJsonValue> ingredientValues = document.getArrayValueOrEmpty("ingredients");

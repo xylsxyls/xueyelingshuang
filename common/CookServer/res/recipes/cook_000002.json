@@ -42,7 +42,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
 
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "cook_rice",
@@ -54,10 +56,13 @@
                       "canPause":  false,
                       "continuesDuringPause":  true,
                       "canLeaveKitchen":  true,
+                      "backgroundWaitMode":  "free",
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "wash_rice"
-                                       ]
+                                       ],
+                      "taskMode":  "background",
+                      "manualSkippable":  false
                   },
                   {
                       "id":  "fluff_rice",
@@ -72,7 +77,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "cook_rice"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   }
               ],
     "defaultOwned":  true

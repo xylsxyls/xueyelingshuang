@@ -51,7 +51,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
 
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "marinate_beef",
@@ -63,10 +65,13 @@
                       "canPause":  false,
                       "continuesDuringPause":  true,
                       "canLeaveKitchen":  true,
+                      "backgroundWaitMode":  "free",
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "slice_beef"
-                                       ]
+                                       ],
+                      "taskMode":  "background",
+                      "manualSkippable":  false
                   },
                   {
                       "id":  "cut_veg",
@@ -81,7 +86,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "slice_beef"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "fry_beef",
@@ -96,7 +103,9 @@
                       "safetyLevel":  "danger",
                       "dependencies":  [
                                            "marinate_beef"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "fry_veg",
@@ -112,7 +121,9 @@
                       "dependencies":  [
                                            "cut_veg",
                                            "fry_beef"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   }
               ],
     "defaultOwned":  false

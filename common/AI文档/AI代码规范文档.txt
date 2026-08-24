@@ -405,16 +405,19 @@ std::vector<std::pair<std::string, HttpHandler*> > m_routes;
 跨线程状态优先使用 std::atomic，不使用 volatile 解决线程同步问题。volatile 不是线程同步工具。
 
 7. namespace。
-不要为了放几个局部辅助函数就使用匿名 namespace。优先使用 XxxHelper。只有非常局部、复用价值低的逻辑，可以放在函数内部 lambda。
+不要为了放几个局部辅助函数就使用匿名 namespace。CookServer 业务工程内，跨类复用或和业务协议/菜谱/排程/账号/语音相关的辅助函数统一放到 CookHelper 这种只有 static 成员函数的业务辅助类中；已经有明确所属类的逻辑优先放到该类 private 成员函数中；非常通用、以后别的项目也会复用的字符串或系统能力，再考虑沉淀到 CStringManager 或 CSystem。只有非常局部、复用价值低的逻辑，可以放在函数内部 lambda。
 
-8. friend。
+8. CTaskThreadManager任务重做。
+使用 CTaskThreadManager 的 CTask 时，如果 ReExecute 返回 true，必须保证 Clone 完整复制或重新初始化该任务重做所需的全部参数，包括构造参数、setter 参数、DoTask 前依赖的成员状态。需要重新创建的取消标记、系统句柄、临时文件名等运行期资源，不要直接共享旧任务对象的已取消或已关闭状态，应在 Clone 或构造函数里重新创建。ReExecute 只决定是否把已经 Clone 出来的备份任务放回原优先级队列队头，不负责复制参数。
+
+9. friend。
 不要为了让一个辅助类访问 private 函数就轻易使用 friend。优先新增一个语义明确的 public 成员函数作为受控入口，内部再调用 private 实现。只有确实需要表达紧密所有权或构造权限时才使用 friend，并且必须在注释里说明原因。
 
-9. C 风格回调适配。
+10. C 风格回调适配。
 如果第三方 C 接口要求函数指针回调，可以保留一个极薄的 C 回调适配函数。复杂逻辑不要写在 C 回调函数里，应转发到类成员函数或单独的回调上下文类。回调上下文类如果超过简单 POD，必须单独放 .h/.cpp 文件，不要塞在另一个类内部。
 
-10. 嵌套类和嵌套 struct。
-除非和外层类强绑定且只在外层类内部使用，否则不要把 class/struct 定义在另一个类里面。能单独成文件的类型就单独成文件，文件名和类型名保持一致。
+11. 禁止嵌套类和嵌套 struct。
+不要在类里面定义 class 或 struct。需要辅助类型时，按类型名单独新建 .h/.cpp 或 .h/.inl 文件，放在同一命名层级，文件名和类型名保持一致。
 
 十一、注释规范
 
@@ -455,16 +458,64 @@ CookHttpServer& operator=(const CookHttpServer& other);
 
 4. 成员变量注释。
 成员变量注释放在成员变量上一行，不写在同一行末尾。// 后面必须有一个空格。
+成员变量之间不要留空行。成员变量注释和成员变量声明算一组，下一组成员变量紧接着写。
 
 正确示例：
 // 当前对象是否已经完成init
 bool m_isInit;
+// 当前对象是否正在退出
+bool m_isExit;
 
 错误示例：
 bool m_isInit; // 当前对象是否已经完成init
 
-5. 4251 警告处理。
-如果 VS 对导出类中的 std::string、std::vector、std::map 等成员报 C4251，不要在整个 struct/class 外面粗暴包 pragma。只在对应成员附近局部 push/pop。连续多个 string 可以放在同一个局部 push/pop 中，但不要为了包 pragma 调整成员变量顺序。
+5. 函数区和成员变量区分隔。
+函数声明之间保留一个空行。函数区和成员变量区之间必须重新写访问控制标签分隔，即使二者都是 private、protected 或 public。
+struct 虽然默认 public，也必须显式写两个 public:。struct 以数据成员为主时，成员变量区放在函数区前面：第一个 public: 下面写成员变量，第二个 public: 下面写函数声明。成员变量之间不留空行，函数声明之间保留一个空行。
+
+正确示例：
+private:
+    /** 释放所有连接
+    */
+    void releaseConnections();
+
+private:
+    // 连接对象列表
+    std::vector<MysqlCppConnection*> m_connections;
+    // 当前对象是否已经初始化
+    bool m_isInit;
+
+错误示例：
+private:
+    /** 释放所有连接
+    */
+    void releaseConnections();
+
+    // 连接对象列表
+    std::vector<MysqlCppConnection*> m_connections;
+
+struct 正确示例：
+struct MysqlCppConfig
+{
+public:
+    // 服务器地址
+    std::string m_host;
+    // 服务器端口
+    int32_t m_port;
+
+public:
+    /** 构造默认配置
+    */
+    MysqlCppConfig();
+
+    /** 判断配置是否有效
+    @return 有效返回true，否则返回false
+    */
+    bool isValid() const;
+};
+
+6. 4251 警告处理。
+如果 VS 对导出类中的 std::string、std::vector、std::map、std::hash、std::equal_to、std::atomic 等成员报 C4251，不要在整个 struct/class 外面粗暴包 pragma。只在对应成员附近局部 push/pop。连续多个同类成员可以放在同一个局部 push/pop 中，但不要为了包 pragma 调整成员变量顺序。
 
 示例：
 #ifdef _MSC_VER
@@ -477,10 +528,10 @@ std::string m_lastError;
 #pragma warning(pop)
 #endif
 
-6. cpp 中复杂逻辑注释。
+7. cpp 中复杂逻辑注释。
 .cpp 中不要给显而易见的代码写废话注释。但复杂算法、调度逻辑、并发释放逻辑、跨平台分支等需要写简洁说明。
 
-7. 局部 lambda 注释。
+8. 局部 lambda 注释。
 如果函数内部定义 lambda，并且这个 lambda 替代了原本的辅助函数，需要在 lambda 前说明入参、出参、返回值。
 
 示例：
@@ -492,7 +543,7 @@ auto isQuerySql = [](const std::string& sql) -> bool
     return true;
 };
 
-8. 复用辅助函数注释。
+9. 复用辅助函数注释。
 如果辅助逻辑复用多次，应放到 XxxHelper 静态成员函数中，并在头文件按正常函数注释格式说明参数和返回值。
 
 十二、Helper 和通用工具归属

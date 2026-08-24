@@ -31,6 +31,9 @@
     <Filter Include="账号状态">
       <UniqueIdentifier>{56E68308-9C76-4DBD-8D73-85E239688504}</UniqueIdentifier>
     </Filter>
+    <Filter Include="存储层">
+      <UniqueIdentifier>{DE1C63E2-3F51-4F73-978D-1969C197D775}</UniqueIdentifier>
+    </Filter>
     <Filter Include="配置">
       <UniqueIdentifier>{64261B2D-A56B-47F0-8E3C-15BF60866EE9}</UniqueIdentifier>
     </Filter>
@@ -72,6 +75,21 @@
     <ClInclude Include="CookServerHelper.h">
       <Filter>通用辅助</Filter>
     </ClInclude>
+    <ClInclude Include="CookHelper.h">
+      <Filter>通用辅助</Filter>
+    </ClInclude>
+    <ClInclude Include="CookDependencyService.h">
+      <Filter>存储层</Filter>
+    </ClInclude>
+    <ClInclude Include="CookVoiceService.h">
+      <Filter>API服务</Filter>
+    </ClInclude>
+    <ClInclude Include="CookStorageService.h">
+      <Filter>存储层</Filter>
+    </ClInclude>
+    <ClInclude Include="CookStorageSyncTask.h">
+      <Filter>存储层</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AccountStore.cpp">
@@ -106,6 +124,21 @@
     </ClCompile>
     <ClCompile Include="CookServerHelper.cpp">
       <Filter>通用辅助</Filter>
+    </ClCompile>
+    <ClCompile Include="CookHelper.cpp">
+      <Filter>通用辅助</Filter>
+    </ClCompile>
+    <ClCompile Include="CookDependencyService.cpp">
+      <Filter>存储层</Filter>
+    </ClCompile>
+    <ClCompile Include="CookVoiceService.cpp">
+      <Filter>API服务</Filter>
+    </ClCompile>
+    <ClCompile Include="CookStorageService.cpp">
+      <Filter>存储层</Filter>
+    </ClCompile>
+    <ClCompile Include="CookStorageSyncTask.cpp">
+      <Filter>存储层</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -50,7 +50,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
 
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "boil_water",
@@ -62,10 +64,13 @@
                       "canPause":  false,
                       "continuesDuringPause":  true,
                       "canLeaveKitchen":  false,
+                      "backgroundWaitMode":  "watch",
                       "safetyLevel":  "attention",
                       "dependencies":  [
                                            "cut_tofu"
-                                       ]
+                                       ],
+                      "taskMode":  "background",
+                      "manualSkippable":  false
                   },
                   {
                       "id":  "season_soup",
@@ -80,7 +85,9 @@
                       "safetyLevel":  "attention",
                       "dependencies":  [
                                            "boil_water"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   }
               ],
     "defaultOwned":  true

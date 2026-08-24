@@ -1,4 +1,5 @@
 const api = require('../../utils/api')
+const tabBar = require('../../utils/tabBar')
 
 Page({
   data: {
@@ -10,6 +11,8 @@ Page({
   },
 
   onShow() {
+    tabBar.showHome()
+    this.pageActive = true
     const app = getApp()
     const selectedMap = {}
     ;(app.globalData.selectedRecipeIds || []).forEach((id) => { selectedMap[id] = true })
@@ -17,13 +20,30 @@ Page({
     this.loadRecipes()
   },
 
+  onHide() {
+    this.pageActive = false
+    this.loadRecipesRequestId = (this.loadRecipesRequestId || 0) + 1
+  },
+
+  onUnload() {
+    this.pageActive = false
+    this.loadRecipesRequestId = (this.loadRecipesRequestId || 0) + 1
+  },
+
   loadRecipes() {
-    api.getRecipes()
+    this.loadRecipesRequestId = (this.loadRecipesRequestId || 0) + 1
+    const requestId = this.loadRecipesRequestId
+    const isStale = () => requestId !== this.loadRecipesRequestId || this.pageActive === false
+    api.getRecipes({ isStale })
       .then((res) => {
         if (!res.ok) throw new Error(res.message)
+        if (isStale()) return
         this.setData({ ownedRecipes: this.decorateRecipes((res.recipes || []).filter((item) => item.owned)) })
       })
-      .catch(() => wx.showToast({ title: '菜谱加载失败', icon: 'none' }))
+      .catch((err) => {
+        if (api.isStaleError(err) || isStale()) return
+        wx.showToast({ title: '菜谱加载失败', icon: 'none' })
+      })
   },
 
   decorateRecipes(recipes) {
@@ -75,9 +95,30 @@ Page({
       return
     }
     wx.showModal({
-      title: '示例发布成功',
-      content: `已挂载 ${ids.length} 个菜谱。正式版这里会上传到服务器并进入审核。`,
-      showCancel: false
+      title: '确认发布',
+      content: `发布并挂载 ${ids.length} 个菜谱？`,
+      success: (res) => {
+        if (!res.confirm) return
+        api.uploadVideoMeta({
+          mediaType: this.data.mediaType || 'video',
+          filePath: this.data.mediaPath,
+          fileSizeBytes: 0
+        })
+          .then((uploadRes) => {
+            if (!uploadRes.ok) throw new Error(uploadRes.message)
+            return api.publishVideo({
+              videoId: uploadRes.video ? uploadRes.video.id : '',
+              caption: this.data.caption,
+              recipeIds: ids
+            })
+          })
+          .then((publishRes) => {
+            if (!publishRes.ok) throw new Error(publishRes.message)
+            wx.showToast({ title: '发布成功', icon: 'success' })
+            this.setData({ mediaPath: '', mediaType: '', caption: '', selectedMap: {} })
+          })
+          .catch((err) => wx.showToast({ title: err.message || '发布失败', icon: 'none' }))
+      }
     })
   }
 })

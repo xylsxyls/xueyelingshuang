@@ -1,0 +1,139 @@
+.personalization-page {
+  padding-bottom: 140rpx;
+}
+
+.header {
+  min-height: 250rpx;
+  padding: 42rpx 32rpx;
+  border-radius: 8rpx;
+  color: #fffdf8;
+}
+
+.title {
+  margin-top: 70rpx;
+  font-size: 44rpx;
+  font-weight: 900;
+}
+
+.subtitle {
+  margin-top: 12rpx;
+  font-size: 27rpx;
+  line-height: 1.5;
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 150rpx 150rpx 1fr;
+  gap: 14rpx;
+  padding: 20rpx 0;
+  background: #f8f5ef;
+}
+
+.toolbar button {
+  height: 72rpx;
+  line-height: 72rpx;
+  margin: 0;
+}
+
+.danger {
+  color: #9a3d26;
+}
+
+.hint {
+  padding: 22rpx;
+  color: #5d564d;
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
+.step-card {
+  padding: 22rpx;
+  margin-top: 16rpx;
+}
+
+.step-card.disabled {
+  opacity: 0.58;
+  background: #eee9df;
+}
+
+.step-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.step-title {
+  font-size: 30rpx;
+  font-weight: 800;
+  margin-bottom: 8rpx;
+}
+
+.toggle-btn {
+  width: 110rpx;
+  height: 58rpx;
+  line-height: 58rpx;
+  padding: 0;
+  margin: 0;
+  border-radius: 8rpx;
+  background: #ead8cf;
+  color: #8a3d2a;
+  font-size: 24rpx;
+}
+
+.toggle-btn.restore {
+  background: #e4f0d8;
+  color: #2e6f45;
+}
+
+.detail {
+  margin-top: 16rpx;
+  color: #3c362f;
+  font-size: 26rpx;
+  line-height: 1.55;
+}
+
+.duration-row {
+  display: grid;
+  grid-template-columns: 118rpx 118rpx 118rpx 1fr;
+  gap: 10rpx;
+  align-items: center;
+  margin-top: 20rpx;
+}
+
+.time-field {
+  display: flex;
+  align-items: center;
+  height: 66rpx;
+  border-radius: 8rpx;
+  background: #fffdf8;
+  border: 1rpx solid #eee6d8;
+  overflow: hidden;
+}
+
+.time-field input {
+  width: 68rpx;
+  height: 66rpx;
+  min-height: 66rpx;
+  text-align: center;
+  font-size: 26rpx;
+}
+
+.time-field text {
+  color: #7b746a;
+  font-size: 23rpx;
+}
+
+.duration-text {
+  color: #2e6f45;
+  font-size: 24rpx;
+  text-align: right;
+}
+
+.empty {
+  padding: 32rpx;
+  color: #7b746a;
+}

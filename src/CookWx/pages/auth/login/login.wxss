@@ -1,0 +1,34 @@
+.auth-page {
+  min-height: 100vh;
+  padding: 120rpx 36rpx 36rpx;
+  background: #f8f5ef;
+}
+
+.brand {
+  font-size: 58rpx;
+  font-weight: 900;
+  color: #18231f;
+}
+
+.subtitle {
+  margin: 18rpx 0 42rpx;
+  color: #6f665b;
+  line-height: 1.5;
+}
+
+.form {
+  padding: 28rpx;
+}
+
+.input {
+  height: 82rpx;
+  margin-bottom: 18rpx;
+  padding: 0 22rpx;
+  border-radius: 8rpx;
+  background: #fffdf8;
+  border: 1rpx solid #eee6d8;
+}
+
+button {
+  margin-top: 16rpx;
+}

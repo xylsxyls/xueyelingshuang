@@ -56,7 +56,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
 
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "soak_meat",
@@ -68,10 +70,13 @@
                       "canPause":  false,
                       "continuesDuringPause":  true,
                       "canLeaveKitchen":  true,
+                      "backgroundWaitMode":  "free",
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "wash_meat"
-                                       ]
+                                       ],
+                      "taskMode":  "background",
+                      "manualSkippable":  false
                   },
                   {
                       "id":  "cut_scallion",
@@ -86,7 +91,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "wash_meat"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "drain_meat",
@@ -101,7 +108,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "soak_meat"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "stir_fry",
@@ -116,7 +125,9 @@
                       "safetyLevel":  "attention",
                       "dependencies":  [
                                            "drain_meat"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "simmer",
@@ -128,10 +139,13 @@
                       "canPause":  false,
                       "continuesDuringPause":  true,
                       "canLeaveKitchen":  true,
+                      "backgroundWaitMode":  "free",
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "stir_fry"
-                                       ]
+                                       ],
+                      "taskMode":  "background",
+                      "manualSkippable":  false
                   },
                   {
                       "id":  "high_heat",
@@ -142,11 +156,14 @@
                       "active":  false,
                       "canPause":  false,
                       "continuesDuringPause":  true,
-                      "canLeaveKitchen":  true,
+                      "canLeaveKitchen":  false,
+                      "backgroundWaitMode":  "watch",
                       "safetyLevel":  "attention",
                       "dependencies":  [
                                            "simmer"
-                                       ]
+                                       ],
+                      "taskMode":  "background",
+                      "manualSkippable":  false
                   },
                   {
                       "id":  "reduce_stir",
@@ -162,7 +179,9 @@
                       "dependencies":  [
                                            "high_heat",
                                            "cut_scallion"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   }
               ],
     "defaultOwned":  true

@@ -15,7 +15,7 @@
     </scroll-view>
 
     <scroll-view class="recipes" scroll-y="true">
-      <view class="recipe-card card" wx:for="{{filteredRecipes}}" wx:key="id">
+      <view class="recipe-card card" wx:for="{{filteredRecipes}}" wx:key="id" data-id="{{item.id}}" bindtap="openRecipeFromCard">
         <view class="cover" style="background: {{item.coverColor}}"></view>
         <view class="recipe-main">
           <view class="between">
@@ -29,9 +29,9 @@
           </view>
         </view>
         <view class="pick">
-          <button class="minus" data-id="{{item.id}}" bindtap="removeRecipe" disabled="{{!item.selected}}">-</button>
-          <button wx:if="{{item.owned}}" class="plus" data-id="{{item.id}}" bindtap="addRecipe" disabled="{{item.selected}}">+</button>
-          <button wx:else class="buy" data-id="{{item.id}}" bindtap="openRecipe">买</button>
+          <button class="minus" data-id="{{item.id}}" catchtap="removeRecipe" disabled="{{!item.selected}}">-</button>
+          <button wx:if="{{item.owned}}" class="plus" data-id="{{item.id}}" catchtap="addRecipe" disabled="{{item.selected}}">+</button>
+          <button wx:else class="buy" data-id="{{item.id}}" catchtap="openRecipe">买</button>
         </view>
       </view>
     </scroll-view>
@@ -41,6 +41,7 @@
     <view class="cart-info" bindtap="toggleCart">
       <view>{{selectedRecipes.length}} 道菜</view>
       <view class="muted" wx:if="{{plan.summary}}">总 {{plan.summary.totalMinutes}} 分 · 动手 {{plan.summary.activeMinutes}} 分</view>
+      <view class="muted error" wx:elif="{{previewError}}">{{previewError}}</view>
       <view class="muted" wx:else>正在计算时间...</view>
     </view>
     <button class="primary-btn" bindtap="openCook" loading="{{starting}}" disabled="{{starting || previewing || !plan.summary}}">开始做菜</button>

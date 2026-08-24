@@ -519,7 +519,7 @@ void HttpService::writeCorsHeaders(void* connData, const HttpResponse& response)
     }
     if (!HttpServiceHelper::hasHeader(response.m_headers, "Access-Control-Allow-Headers"))
     {
-        mg_printf(conn, "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n");
+        mg_printf(conn, "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Idempotency-Key, X-Cook-Run-Id, X-Cook-Request-Id, X-Cook-Attempt, X-Cook-Trace-Id, X-Cook-Request-Begin-Ms, X-Cook-Queue-Wait-Ms, X-Cook-Purpose\r\n");
     }
     if (!HttpServiceHelper::hasHeader(response.m_headers, "Access-Control-Allow-Methods"))
     {

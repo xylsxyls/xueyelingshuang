@@ -3,6 +3,7 @@
 #include "Config.h"
 #include "LogManager/LogManagerAPI.h"
 #include <algorithm>
+#include <functional>
 #include <map>
 #include <set>
 
@@ -32,6 +33,23 @@ int32_t CookSchedule::dependenciesEnd(const CookTask& task, const std::map<std::
 	return result;
 }
 
+bool CookSchedule::isFreeBackgroundWait(const CookTask& task)
+{
+	if (task.m_active)
+	{
+		return false;
+	}
+	if (task.m_backgroundWaitMode == "free")
+	{
+		return true;
+	}
+	if (task.m_backgroundWaitMode == "watch")
+	{
+		return false;
+	}
+	return task.m_canLeaveKitchen && task.m_safetyLevel != "attention" && task.m_safetyLevel != "danger";
+}
+
 bool CookSchedule::gapCanBeFree(const std::vector<ScheduledTask>& timeline, int32_t gapStart, int32_t gapEnd)
 {
 	bool hasLeaveWindow = false;
@@ -45,7 +63,7 @@ bool CookSchedule::gapCanBeFree(const std::vector<ScheduledTask>& timeline, int3
 		}
 		if (task.m_startSeconds < gapEnd && task.m_endSeconds > gapStart)
 		{
-			if (task.m_canLeaveKitchen)
+			if (CookSchedule::isFreeBackgroundWait(task))
 			{
 				hasLeaveWindow = true;
 			}
@@ -95,7 +113,7 @@ void CookSchedule::addGapToPlan(PlanResult& plan,
 	for (size_t i = 0; i < timeline.size(); ++i)
 	{
 		const ScheduledTask& task = timeline[i];
-		if (task.m_active || task.m_canLeaveKitchen)
+		if (task.m_active || CookSchedule::isFreeBackgroundWait(task))
 		{
 			continue;
 		}
@@ -122,42 +140,106 @@ void CookSchedule::addGapToPlan(PlanResult& plan,
 	CookSchedule::addGapSegment(plan, timeline, cursor, gapEnd);
 }
 
-PlanResult CookSchedule::buildPlan(const std::vector<std::string>& recipeIds)
+void CookSchedule::schedulePreparedPlan(PlanResult& plan, const std::vector<CookTask>& tasks)
 {
-	LOGDEBUG("CookSchedule buildPlan begin recipeCount=%d", static_cast<int32_t>(recipeIds.size()));
-	PlanResult plan;
-	std::vector<CookTask> tasks;
-	std::set<std::string> selected;
-
-	for (size_t i = 0; i < recipeIds.size(); ++i)
-	{
-		if (selected.find(recipeIds[i]) != selected.end())
-		{
-			LOGDEBUG("CookSchedule skip duplicated recipeId=%s", recipeIds[i].c_str());
-			continue;
-		}
-		selected.insert(recipeIds[i]);
-		const Recipe* recipe = CookCatalog::findRecipe(recipeIds[i]);
-		if (recipe == nullptr)
-		{
-			LOGWARNING("CookSchedule skip unknown recipeId=%s", recipeIds[i].c_str());
-			continue;
-		}
-		LOGDEBUG("CookSchedule select recipeId=%s title=%s taskCount=%d",
-		         recipe->m_id.c_str(),
-		         recipe->m_title.c_str(),
-		         static_cast<int32_t>(recipe->m_tasks.size()));
-		plan.m_recipes.push_back(recipe);
-		for (size_t j = 0; j < recipe->m_tasks.size(); ++j)
-		{
-			tasks.push_back(recipe->m_tasks[j]);
-		}
-	}
-
 	std::set<std::string> scheduledIds;
 	std::map<std::string, ScheduledTask> done;
 	std::map<std::string, int32_t> resourceAvailable;
 	int32_t userAvailable = 0;
+
+	std::map<std::string, const CookTask*> taskById;
+	std::map<std::string, std::vector<std::string>> childrenByTaskId;
+	for (size_t i = 0; i < tasks.size(); ++i)
+	{
+		taskById[tasks[i].m_id] = &tasks[i];
+		for (size_t j = 0; j < tasks[i].m_dependencies.size(); ++j)
+		{
+			childrenByTaskId[tasks[i].m_dependencies[j]].push_back(tasks[i].m_id);
+		}
+	}
+
+	std::map<std::string, int32_t> waitScoreCache;
+	std::map<std::string, int32_t> criticalScoreCache;
+	std::set<std::string> waitScoreVisiting;
+	std::set<std::string> criticalScoreVisiting;
+
+	// waitScore入参：taskId是待评分步骤ID。
+	// waitScore出参：无。
+	// waitScore返回值：返回该步骤之后能尽早启动的后台等待链秒数。
+	std::function<int32_t(const std::string&)> waitScore = [&](const std::string& taskId) -> int32_t
+	{
+		std::map<std::string, int32_t>::const_iterator cacheIt = waitScoreCache.find(taskId);
+		if (cacheIt != waitScoreCache.end())
+		{
+			return cacheIt->second;
+		}
+		if (waitScoreVisiting.find(taskId) != waitScoreVisiting.end())
+		{
+			return 0;
+		}
+		std::map<std::string, const CookTask*>::const_iterator taskIt = taskById.find(taskId);
+		if (taskIt == taskById.end() || taskIt->second == nullptr)
+		{
+			return 0;
+		}
+
+		waitScoreVisiting.insert(taskId);
+		const CookTask& task = *taskIt->second;
+		int32_t bestChildScore = 0;
+		std::map<std::string, std::vector<std::string>>::const_iterator childrenIt = childrenByTaskId.find(taskId);
+		if (childrenIt != childrenByTaskId.end())
+		{
+			for (size_t i = 0; i < childrenIt->second.size(); ++i)
+			{
+				bestChildScore = std::max(bestChildScore, waitScore(childrenIt->second[i]));
+			}
+		}
+		int32_t score = bestChildScore;
+		if (!task.m_active && (CookSchedule::isFreeBackgroundWait(task) || task.m_continuesDuringPause))
+		{
+			score += task.m_durationSeconds;
+		}
+		waitScoreVisiting.erase(taskId);
+		waitScoreCache[taskId] = score;
+		return score;
+	};
+
+	// criticalScore入参：taskId是待评分步骤ID。
+	// criticalScore出参：无。
+	// criticalScore返回值：返回从该步骤开始的最长依赖链秒数。
+	std::function<int32_t(const std::string&)> criticalScore = [&](const std::string& taskId) -> int32_t
+	{
+		std::map<std::string, int32_t>::const_iterator cacheIt = criticalScoreCache.find(taskId);
+		if (cacheIt != criticalScoreCache.end())
+		{
+			return cacheIt->second;
+		}
+		if (criticalScoreVisiting.find(taskId) != criticalScoreVisiting.end())
+		{
+			return 0;
+		}
+		std::map<std::string, const CookTask*>::const_iterator taskIt = taskById.find(taskId);
+		if (taskIt == taskById.end() || taskIt->second == nullptr)
+		{
+			return 0;
+		}
+
+		criticalScoreVisiting.insert(taskId);
+		const CookTask& task = *taskIt->second;
+		int32_t bestChildScore = 0;
+		std::map<std::string, std::vector<std::string>>::const_iterator childrenIt = childrenByTaskId.find(taskId);
+		if (childrenIt != childrenByTaskId.end())
+		{
+			for (size_t i = 0; i < childrenIt->second.size(); ++i)
+			{
+				bestChildScore = std::max(bestChildScore, criticalScore(childrenIt->second[i]));
+			}
+		}
+		int32_t score = task.m_durationSeconds + bestChildScore;
+		criticalScoreVisiting.erase(taskId);
+		criticalScoreCache[taskId] = score;
+		return score;
+	};
 
 	while (scheduledIds.size() < tasks.size())
 	{
@@ -197,6 +279,19 @@ PlanResult CookSchedule::buildPlan(const std::vector<std::string>& recipeIds)
 				if (!task.m_active && currentBest.m_active)
 				{
 					choose = true;
+				}
+				else if (task.m_active == currentBest.m_active)
+				{
+					int32_t taskWaitScore = waitScore(task.m_id);
+					int32_t bestWaitScore = waitScore(currentBest.m_id);
+					if (taskWaitScore > bestWaitScore)
+					{
+						choose = true;
+					}
+					else if (taskWaitScore == bestWaitScore && criticalScore(task.m_id) > criticalScore(currentBest.m_id))
+					{
+						choose = true;
+					}
 				}
 			}
 
@@ -285,5 +380,75 @@ PlanResult CookSchedule::buildPlan(const std::vector<std::string>& recipeIds)
 	         plan.m_activeSeconds,
 	         plan.m_freeSeconds,
 	         plan.m_edgeSeconds);
+}
+
+PlanResult CookSchedule::buildPlan(const std::vector<std::string>& recipeIds)
+{
+	LOGDEBUG("CookSchedule buildPlan begin recipeCount=%d", static_cast<int32_t>(recipeIds.size()));
+	PlanResult plan;
+	std::vector<CookTask> tasks;
+	std::set<std::string> selected;
+
+	for (size_t i = 0; i < recipeIds.size(); ++i)
+	{
+		if (selected.find(recipeIds[i]) != selected.end())
+		{
+			LOGDEBUG("CookSchedule skip duplicated recipeId=%s", recipeIds[i].c_str());
+			continue;
+		}
+		selected.insert(recipeIds[i]);
+		const Recipe* recipe = CookCatalog::findRecipe(recipeIds[i]);
+		if (recipe == nullptr)
+		{
+			LOGWARNING("CookSchedule skip unknown recipeId=%s", recipeIds[i].c_str());
+			continue;
+		}
+		LOGDEBUG("CookSchedule select recipeId=%s title=%s taskCount=%d",
+		         recipe->m_id.c_str(),
+		         recipe->m_title.c_str(),
+		         static_cast<int32_t>(recipe->m_tasks.size()));
+		plan.m_recipes.push_back(recipe);
+		for (size_t j = 0; j < recipe->m_tasks.size(); ++j)
+		{
+			tasks.push_back(recipe->m_tasks[j]);
+		}
+	}
+
+	CookSchedule::schedulePreparedPlan(plan, tasks);
+	return plan;
+}
+
+PlanResult CookSchedule::buildPlanFromRecipes(const std::vector<Recipe>& recipes)
+{
+	LOGDEBUG("CookSchedule buildPlanFromRecipes begin recipeCount=%d", static_cast<int32_t>(recipes.size()));
+	PlanResult plan;
+	std::vector<CookTask> tasks;
+	std::set<std::string> selected;
+
+	for (size_t i = 0; i < recipes.size(); ++i)
+	{
+		if (recipes[i].m_id.empty() || selected.find(recipes[i].m_id) != selected.end())
+		{
+			continue;
+		}
+		selected.insert(recipes[i].m_id);
+		plan.m_recipeCopies.push_back(recipes[i]);
+	}
+	plan.m_recipes.reserve(plan.m_recipeCopies.size());
+	for (size_t i = 0; i < plan.m_recipeCopies.size(); ++i)
+	{
+		const Recipe& recipe = plan.m_recipeCopies[i];
+		plan.m_recipes.push_back(&plan.m_recipeCopies[i]);
+		for (size_t j = 0; j < recipe.m_tasks.size(); ++j)
+		{
+			tasks.push_back(recipe.m_tasks[j]);
+		}
+		if (recipe.m_personalizationApplied && !recipe.m_personalizationSummary.empty())
+		{
+			plan.m_warnings.push_back(recipe.m_personalizationSummary);
+		}
+	}
+
+	CookSchedule::schedulePreparedPlan(plan, tasks);
 	return plan;
 }

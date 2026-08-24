@@ -1,8 +1,19 @@
+.mine-loading {
+  padding: 22rpx 28rpx;
+  margin-bottom: 18rpx;
+  color: #7b746a;
+}
+
 .profile {
   display: flex;
   align-items: center;
   gap: 20rpx;
   padding: 28rpx;
+}
+
+.profile-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .avatar {
@@ -24,8 +35,9 @@
 }
 
 .wallet {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18rpx;
   align-items: center;
   padding: 28rpx;
   margin-top: 20rpx;
@@ -36,9 +48,15 @@
   font-weight: 900;
 }
 
+.wallet-num.small {
+  font-size: 42rpx;
+}
+
 .recharge {
+  grid-column: 1 / 3;
   display: flex;
   gap: 10rpx;
+  flex-wrap: wrap;
 }
 
 .recharge button {
@@ -50,34 +68,121 @@
   font-size: 23rpx;
 }
 
-.section-title {
-  margin: 34rpx 0 16rpx;
-  font-size: 32rpx;
-  font-weight: 800;
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10rpx;
+  padding: 24rpx 18rpx;
+  margin-top: 20rpx;
 }
 
-.recipe {
+.stat {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 34rpx;
+  font-weight: 900;
+  color: #18231f;
+}
+
+.asset-section {
+  margin-top: 30rpx;
+}
+
+.asset-tabs {
+  white-space: nowrap;
+  width: 100%;
+  margin-bottom: 18rpx;
+}
+
+.asset-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  height: 62rpx;
+  padding: 0 22rpx;
+  margin-right: 12rpx;
+  border-radius: 31rpx;
+  background: #ebe5d9;
+  color: #5d564d;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.asset-tab.active {
+  background: #18231f;
+  color: #fffdf8;
+}
+
+.asset-count {
+  min-width: 30rpx;
+  height: 30rpx;
+  line-height: 30rpx;
+  text-align: center;
+  border-radius: 15rpx;
+  background: rgba(255, 255, 255, 0.32);
+  font-size: 20rpx;
+}
+
+.asset-card {
   display: grid;
-  grid-template-columns: 92rpx 1fr;
-  gap: 16rpx;
+  grid-template-columns: 108rpx 1fr;
+  gap: 18rpx;
   align-items: center;
   padding: 18rpx;
   margin-bottom: 12rpx;
 }
 
 .cover {
-  width: 92rpx;
-  height: 92rpx;
+  width: 108rpx;
+  height: 108rpx;
   border-radius: 8rpx;
 }
 
+.asset-main {
+  min-width: 0;
+}
+
+.asset-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
+}
+
 .recipe-title {
+  flex: 1;
+  min-width: 0;
   font-size: 30rpx;
   font-weight: 800;
   margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-badge {
+  flex: 0 0 auto;
+  padding: 5rpx 12rpx;
+  border-radius: 6rpx;
+  background: #e5f1dc;
+  color: #2e6f45;
+  font-size: 21rpx;
+  font-weight: 700;
+}
+
+.asset-summary {
+  margin-top: 8rpx;
+  color: #2e6f45;
+  font-size: 23rpx;
 }
 
 .empty {
   padding: 28rpx;
   color: #7b746a;
+}
+
+.logout {
+  margin-top: 24rpx;
 }

@@ -9,38 +9,92 @@
     >{{item}}</view>
   </view>
 
-  <swiper class="feed-swiper" vertical="true" circular="true" current="{{currentIndex}}" bindchange="onSwiperChange">
-    <swiper-item wx:for="{{feed}}" wx:key="id">
-      <view class="feed-card" style="background: {{item.coverColor}}">
-        <view class="sample-video">
-          <view class="play-dot">▶</view>
-          <view class="sample-lines">
-            <view>示例短视频</view>
-            <view>{{item.title}}</view>
-          </view>
+  <swiper class="feed-swiper" vertical="true" circular="{{false}}" current="{{currentIndex}}" bindchange="onSwiperChange" bindtransition="onSwiperTransition" bindanimationfinish="onSwiperAnimationFinish">
+    <swiper-item wx:for="{{feed}}" wx:key="feedKey">
+      <view class="feed-card">
+        <image
+          wx:if="{{item.posterSrc && !item.videoUrl}}"
+          class="feed-poster"
+          data-index="{{index}}"
+          src="{{item.posterSrc}}"
+          mode="aspectFill"
+          bindload="onPosterLoad"
+          binderror="onPosterError"
+        ></image>
+        <video
+          wx:if="{{item.videoUrl}}"
+          id="feedVideo{{index}}"
+          class="feed-video"
+          data-index="{{index}}"
+          src="{{item.videoUrl}}"
+          poster="{{item.posterSrc}}"
+          autoplay="{{index === currentIndex && !videoPaused}}"
+          loop="{{true}}"
+          muted="{{false}}"
+          controls="{{false}}"
+          show-center-play-btn="{{false}}"
+          show-play-btn="{{false}}"
+          show-fullscreen-btn="{{false}}"
+          enable-progress-gesture="{{false}}"
+          enable-play-gesture="{{false}}"
+          preload="{{index === currentIndex ? 'auto' : 'metadata'}}"
+          object-fit="cover"
+          bindtap="onVideoTap"
+          bindplay="onVideoPlay"
+          bindpause="onVideoPause"
+          bindtimeupdate="onVideoTimeUpdate"
+          bindloadedmetadata="onVideoLoadedMetadata"
+          bindcanplay="onVideoCanPlay"
+          bindwaiting="onVideoWaiting"
+          bindseekcomplete="onVideoSeekComplete"
+          binderror="onVideoError"
+        ></video>
+        <view class="video-shade" wx:if="{{item.videoUrl}}"></view>
+        <view class="pause-overlay" wx:if="{{item.videoUrl && index === currentIndex && videoPaused}}">
+          <view class="pause-triangle"></view>
         </view>
 
-        <view class="feed-actions">
-          <button class="round-btn" bindtap="toggleLike">赞</button>
+        <view class="feed-actions" wx:if="{{item.videoUrl}}">
+          <button class="round-btn" data-index="{{index}}" bindtap="toggleLike">{{item.liked ? '已赞' : '赞'}}</button>
           <button class="round-btn" bindtap="openComments">评</button>
           <button class="round-btn" data-index="{{index}}" bindtap="favorite">{{item.favorite ? '已藏' : '藏'}}</button>
         </view>
 
-        <view class="feed-info">
+        <view class="feed-info" wx:if="{{item.videoUrl}}">
           <view class="author">@{{item.author}}</view>
           <view class="title">{{item.title}}</view>
           <view class="desc">{{item.description}}</view>
           <view class="metrics">{{item.likes}}赞 · {{item.comments}}评论</view>
           <view class="recipe-row">
-            <button class="recipe-btn" data-index="{{index}}" bindtap="handleRecipeAction" loading="{{buyingRecipeId === item.primaryRecipeId}}">
+            <button class="recipe-btn" data-index="{{index}}" bindtap="handleRecipeAction" loading="{{buyingRecipeId && buyingRecipeId === item.primaryRecipeId}}">
               {{item.actionText}}
             </button>
             <button class="ghost-recipe-btn" data-index="{{index}}" bindtap="addToMenu" wx:if="{{item.canAddToMenu}}">{{item.menuText}}</button>
           </view>
         </view>
+        <view
+          class="video-progress"
+          wx:if="{{item.videoUrl && index === currentIndex}}"
+          data-index="{{index}}"
+          catchtap="onProgressAreaTap"
+          catchtouchstart="onProgressTouchStart"
+          catchtouchmove="onProgressTouchMove"
+          catchtouchend="onProgressTouchEnd"
+          catchtouchcancel="onProgressTouchCancel"
+        >
+          <view class="progress-time-tip" wx:if="{{showProgressHint}}">{{progressHintText}}</view>
+          <view class="progress-track">
+            <view class="progress-fill" style="width: {{videoProgressPercent}}%;"></view>
+            <view class="progress-thumb" style="left: {{videoProgressPercent}}%;"></view>
+          </view>
+        </view>
       </view>
     </swiper-item>
   </swiper>
+
+  <view class="feed-empty" wx:if="{{!loading && !error && !feed.length}}">
+    当前还没有可播放视频。
+  </view>
 
   <view class="offline" wx:if="{{error}}">
     <view>{{error}}</view>

@@ -6,23 +6,26 @@ CookServer部署文档
 二、部署目录
 1. 建议为每个服务单独创建目录，例如 D:\CookServer 或 /opt/CookServer。
 2. CookServer.exe 必须放在部署目录根部，启动时也建议把工作目录设置为该目录。
-3. 当前版本会把状态文件、日志文件、dump 文件写到 CookServer.exe 同级目录，因此该目录必须允许运行账号读写和创建文件。
-4. 不要把多个同名 CookServer 进程放在同一个目录同时运行，否则日志、状态文件和端口会互相影响。
+3. 当前版本会把日志、dump、语音缓存和视频文件写到 CookServer.exe 同级目录，因此该目录必须允许运行账号读写和创建文件。
+4. 不要把多个同名 CookServer 进程放在同一个目录同时运行，否则日志、缓存、视频文件和端口会互相影响。
 
 三、部署文件
 1. 必须文件：CookServer.exe。
 2. 如果部署的是 Debug/DLL 版本，还需要把同批次生成的依赖 DLL 放到 CookServer.exe 同级目录。Release 静态库版本通常只需要 CookServer.exe，但仍以交付包内实际文件为准。
 3. res/recipes 是菜谱资源目录，必须放在 CookServer.exe 同级目录下。目录内每个 JSON 文件表示一道菜，文件名格式为 cook_000001.json，文件根对象必须包含 schemaVersion 字段，当前版本为 "1.0"。
 4. 如果 res/recipes 目录缺失、没有有效 JSON 或 JSON 格式错误，当前版本会写日志并回退到程序内置示例菜谱；正式部署仍建议把 res/recipes 作为必备资源目录管理。
-5. 当前监听端口、监听地址、公网 IP、默认金币、请求体大小等配置仍在程序内部的 Config 中。
-6. CookServerState.txt 是运行时状态文件，不需要首次手动创建。全新部署可以不放该文件；需要保留测试账号金币、购买、收藏状态时，可以随 exe 一起备份和迁移。
-7. 日志文件和 CookServerd_log/CookServer_log 等归档目录由程序运行时自动生成，不需要提前创建。
+5. CookServer.ini 是推荐部署的运行配置文件，放在 CookServer.exe 同级目录。需要调整端口、公网 IP、MySQL、Redis、日志、语音合成提供方等配置时，参考 common/CookServer/CookServer.ini，并把该文件复制到 exe 同级目录。
+6. CookServerState.txt 已不再作为运行时存储文件。升级前请先确认旧数据已经迁移到 MySQL，之后部署目录可以不放该文件。
+7. data/voice/cache 是服务端语音缓存目录，由程序运行时自动创建。相同文本、性别、provider 和音频格式会复用缓存，减少重复语音合成和下载流量。
+8. data/videos/files 是第一期视频本地文件目录，由程序运行时按配置使用，后续迁移对象存储时只替换 VideoStorage 实现和 fileUrl 生成逻辑。
+9. 日志文件和 CookServerd_log/CookServer_log 等归档目录由程序运行时自动生成，不需要提前创建。
 
 四、服务器准备
 1. 放通入站 TCP 5207，云服务器还需要在安全组中放通 5207。
 2. 确认同一台机器上没有其他进程占用 5207。
-3. Windows Server 2012 上建议使用专门的低权限运行账号，给部署目录读写权限即可。
-4. 如果要给微信小程序正式环境访问，建议在前面增加 HTTPS 反向代理，由代理监听 443，转发到本机 5207。
+3. 启动 CookServer 前先启动 MySQL 和 Redis。MySQL 数据库名、账号和密码写在 CookServer.ini；Redis 启动后允许为空，CookServer 会从 MySQL 初始化热数据。
+4. Windows Server 2012 上建议使用专门的低权限运行账号，给部署目录读写权限即可。
+5. 如果要给微信小程序正式环境访问，建议在前面增加 HTTPS 反向代理，由代理监听 443，转发到本机 5207。
 
 五、启动方式
 1. 进入部署目录，直接运行 CookServer.exe。
@@ -39,14 +42,18 @@ CookServer部署文档
 
 七、运行时文件说明
 1. res/recipes/*.json：单菜菜谱配置文件。每个账号实际拥有哪些菜，只保存菜谱 ID，服务端根据这些 ID 从资源目录加载菜谱并下发。
-2. CookServerState.txt：简化版账号状态文件，保存金币、购买、收藏、拥有菜谱 ID 等状态。
-3. *.log：运行日志，线上排查优先查看最新日志文件和日志归档目录。
-4. *.dmp：程序崩溃时由 CDump 生成的 dump 文件，用于定位崩溃堆栈。
-5. 旧日志归档目录：程序重启后，LogManager 会按当前日志配置归档或清理旧日志。
+2. MySQL cook_state_snapshot 表：第一期账号状态最终落库存储，保存 snapshotKey、snapshotValue、updateVersion、updateTime，其中 snapshotValue 是 LONGBLOB 快照字节。
+3. Redis cook:account_store:*：第一期账号状态热层，启动时从 MySQL 初始化，运行时先写 Redis 再后台同步 MySQL。
+4. CookServer.ini：运行配置文件。Voice.TtsProvider 支持 windows_sapi、command_wav、command_mp3、command、disabled。windows_sapi 使用 Windows 本机语音生成 wav；command_wav/command_mp3 会执行 Voice.CommandTemplate，并通过 {textFile}、{audioFile}、{gender}、{format} 占位符交给外部 TTS 程序生成音频。
+5. data/voice/cache：服务端语音缓存目录。/api/voice/tts 负责合成或命中缓存，/api/voice/audio?key=... 负责给客户端下载音频。
+6. data/videos/files：第一期视频本地文件目录，MySQL/Redis 中只保存元数据和路径。
+7. *.log：运行日志，线上排查优先查看最新日志文件和日志归档目录。
+8. *.dmp：程序崩溃时由 CDump 生成的 dump 文件，用于定位崩溃堆栈。
+9. 旧日志归档目录：程序重启后，LogManager 会按当前日志配置归档或清理旧日志。
 
 八、停止、升级和回滚
-1. 停止服务前先确认没有正在执行的测试或客户端请求；当前版本可以直接关闭进程。
-2. 升级前备份整个部署目录，至少保留 CookServer.exe、res/recipes、CookServerState.txt、日志和 dump。
+1. 停止服务前先确认没有正在执行的测试或客户端请求；正常退出时 CookServer 会等待存储同步线程完成，并把 Redis 最后一版状态补写 MySQL。
+2. 升级前备份整个部署目录和 MySQL cook_server 数据库，至少保留 CookServer.exe、CookServer.ini、res/recipes、日志、dump、data/videos/files；从旧版本升级时，先确认 CookServerState.txt 已迁移到 MySQL。
 3. 替换 CookServer.exe、res/recipes 和同批次依赖文件后重新启动服务。
 4. 升级后必须执行 /api/health 验证和 CookServerTest 黑盒测试。
 5. 回滚时停止当前进程，恢复备份文件，再重新启动旧版本。

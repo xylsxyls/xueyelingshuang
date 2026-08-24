@@ -79,6 +79,16 @@
   border-bottom: 1rpx solid #eee6d8;
 }
 
+.step {
+  padding: 22rpx;
+  margin-bottom: 14rpx;
+}
+
+.step-title {
+  margin-bottom: 10rpx;
+  font-weight: 700;
+}
+
 .purchase {
   display: flex;
   align-items: center;
@@ -99,7 +109,7 @@
   right: 0;
   bottom: 0;
   display: grid;
-  grid-template-columns: 220rpx 1fr;
+  grid-template-columns: 170rpx 170rpx 1fr;
   gap: 16rpx;
   padding: 20rpx 24rpx 34rpx;
   background: #fffdf8;

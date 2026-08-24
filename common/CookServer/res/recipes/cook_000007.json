@@ -51,7 +51,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
 
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "mix_sauce",
@@ -66,7 +68,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "trim_chicken"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "sear_chicken",
@@ -81,7 +85,9 @@
                       "safetyLevel":  "attention",
                       "dependencies":  [
                                            "mix_sauce"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "reduce_sauce",
@@ -93,10 +99,13 @@
                       "canPause":  false,
                       "continuesDuringPause":  true,
                       "canLeaveKitchen":  false,
+                      "backgroundWaitMode":  "watch",
                       "safetyLevel":  "attention",
                       "dependencies":  [
                                            "sear_chicken"
-                                       ]
+                                       ],
+                      "taskMode":  "background",
+                      "manualSkippable":  false
                   },
                   {
                       "id":  "slice_plate",
@@ -111,7 +120,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "reduce_sauce"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   }
               ],
     "defaultOwned":  false

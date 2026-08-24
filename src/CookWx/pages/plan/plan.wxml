@@ -1,0 +1,70 @@
+<view class="page plan-page" wx:if="{{plan && plan.summary}}">
+  <view class="summary card">
+    <view>
+      <view class="num text-num">{{plan.summary.totalText}}</view>
+      <view class="label">多久能吃上</view>
+    </view>
+    <view>
+      <view class="num text-num">{{plan.summary.activeText}}</view>
+      <view class="label">动手操作</view>
+    </view>
+    <view>
+      <view class="num text-num">{{plan.summary.freeText}}</view>
+      <view class="label">可离开休息</view>
+    </view>
+  </view>
+
+  <view class="section-title">本顿菜单</view>
+  <view class="recipe card" wx:for="{{selectedRecipes}}" wx:key="id">
+    <view class="cover" style="background: {{item.coverColor}}"></view>
+    <view>
+      <view class="recipe-title">{{item.title}}</view>
+      <view class="muted">{{item.category}} · {{item.estimatedMinutes}} 分</view>
+    </view>
+  </view>
+
+  <view class="section-title">休息安排</view>
+  <view class="rest-card card">
+    <view class="empty" wx:if="{{timeBlocksLoading}}">正在生成休息安排...</view>
+    <view class="empty" wx:elif="{{!plan.freeBlocks.length}}">没有超过 {{plan.summary.freeBlockMinimumText}} 的可离开厨房休息时间，短等待会按守候时间处理。</view>
+    <view class="rest-row" wx:for="{{plan.freeBlocks}}" wx:key="startSeconds">
+      <text>第 {{item.rangeText}} 可以离开厨房休息</text>
+      <text class="muted">休息 {{item.durationText}}</text>
+    </view>
+    <view class="rest-total" wx:if="{{plan.freeBlocks.length > 1}}">总休息时间 {{plan.summary.freeText}}</view>
+  </view>
+
+  <view class="time-card card">
+    <view class="legend">
+      <text class="dot active-dot"></text><text>动手操作</text>
+      <text class="dot watch-dot"></text><text>厨房守候</text>
+      <text class="dot free-dot"></text><text>离开休息</text>
+    </view>
+    <view class="plan-track">
+      <view
+        wx:for="{{plan.timeSegments}}"
+        wx:key="startSeconds"
+        class="plan-segment {{item.type}}"
+        style="{{item.style}}"
+      ></view>
+    </view>
+  </view>
+
+  <view class="voice-card card">
+    <text class="voice-title">语音</text>
+    <view class="voice-segments">
+      <button class="voice-option {{voiceGender === 'female' ? 'active' : ''}}" data-value="female" bindtap="chooseVoice">女声</button>
+      <button class="voice-option {{voiceGender === 'male' ? 'active' : ''}}" data-value="male" bindtap="chooseVoice">男声</button>
+    </view>
+  </view>
+
+  <view class="actions">
+    <button class="ghost-btn" bindtap="backMenu">返回菜单</button>
+    <button class="primary-btn" loading="{{starting}}" disabled="{{starting}}" bindtap="startCook">{{startButtonText}}</button>
+  </view>
+</view>
+
+<view class="page" wx:else>
+  <view class="card empty">计划还没有生成。</view>
+  <button class="primary-btn" bindtap="backMenu">返回菜单</button>
+</view>

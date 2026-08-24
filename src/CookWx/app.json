@@ -1,9 +1,12 @@
 {
   "pages": [
     "pages/home/home",
+    "pages/auth/login/login",
     "pages/menu/menu",
+    "pages/plan/plan",
     "pages/cook/cook",
     "pages/recipe/recipe",
+    "pages/personalization/personalization",
     "pages/voice/voice",
     "pages/publish/publish",
     "pages/messages/messages",
@@ -43,5 +46,6 @@
       }
     ]
   },
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
 }

@@ -1,9 +1,13 @@
 <view class="page mine-page">
+  <view class="mine-loading card" wx:if="{{loading}}">
+    账户加载中...
+  </view>
+
   <view class="profile card">
     <view class="avatar">厨</view>
-    <view>
-      <view class="name">demo_user</view>
-      <view class="muted">微信小程序 / Android / iOS 共用账户模型</view>
+    <view class="profile-main">
+      <view class="name">{{account.nickname || account.account || '厨友'}}</view>
+      <view class="muted">微信小程序 / Android / iOS 共用账户</view>
     </view>
   </view>
 
@@ -12,23 +16,60 @@
       <view class="wallet-num">{{account.coins || 0}}</view>
       <view class="muted">金币余额</view>
     </view>
-    <view class="recharge">
-      <button data-coins="30" bindtap="recharge">充30</button>
-      <button data-coins="50" bindtap="recharge">充50</button>
-      <button data-coins="100" bindtap="recharge">充100</button>
-    </view>
-  </view>
-
-  <view class="section-title">已购菜谱</view>
-  <view class="card empty" wx:if="{{!purchased.length}}">还没有购买付费菜谱。</view>
-  <view class="recipe card" wx:for="{{purchased}}" wx:key="id" data-id="{{item.id}}" bindtap="openRecipe">
-    <view class="cover" style="background: {{item.coverColor}}"></view>
     <view>
-      <view class="recipe-title">{{item.title}}</view>
-      <view class="muted">{{item.category}} · {{item.estimatedMinutes}} 分钟</view>
+      <view class="wallet-num small">{{account.yuanbao || 0}}</view>
+      <view class="muted">元宝余额</view>
+    </view>
+    <view class="recharge">
+      <button bindtap="checkin">签到</button>
+      <button bindtap="watchAd" loading="{{rewarding}}" disabled="{{rewarding}}">广告</button>
+      <button data-coins="30" bindtap="recharge">充30</button>
     </view>
   </view>
 
-  <view class="section-title">我发布的菜谱</view>
-  <view class="card empty">发布流程已可进入，正式上传和审核后续接入。</view>
+  <view class="stats card">
+    <view class="stat" wx:for="{{stats}}" wx:key="label">
+      <view class="stat-value">{{item.value}}</view>
+      <view class="muted">{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="asset-section">
+    <scroll-view class="asset-tabs" scroll-x="true">
+      <view
+        wx:for="{{assetTabs}}"
+        wx:key="key"
+        class="asset-tab {{activeAssetTab == item.key ? 'active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="switchAssetTab"
+      >
+        <text>{{item.title}}</text>
+        <text class="asset-count">{{item.count || 0}}</text>
+      </view>
+    </scroll-view>
+
+    <view class="card empty" wx:if="{{!assetItems.length}}">
+      当前分区还没有内容。
+    </view>
+
+    <view
+      class="asset-card card"
+      wx:for="{{assetItems}}"
+      wx:key="id"
+      data-index="{{index}}"
+      bindtap="openAsset"
+    >
+      <view class="cover" style="background: {{item.coverColor}}"></view>
+      <view class="asset-main">
+        <view class="asset-title-row">
+          <view class="recipe-title">{{item.title}}</view>
+          <view class="asset-badge" wx:if="{{item.badge}}">{{item.badge}}</view>
+        </view>
+        <view class="muted">{{item.subtitle}}</view>
+        <view class="asset-summary" wx:if="{{item.personalizationSummary}}">{{item.personalizationSummary}}</view>
+      </view>
+    </view>
+  </view>
+
+  <button class="ghost-btn logout" bindtap="logout">退出登录</button>
 </view>

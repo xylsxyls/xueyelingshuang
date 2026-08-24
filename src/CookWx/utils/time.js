@@ -8,9 +8,23 @@ function formatSeconds(seconds) {
   const rest = safeSeconds % 60
   if (minutes >= 60) {
     const hours = Math.floor(minutes / 60)
-    return `${hours}小时${minutes % 60}分`
+    return `${hours}:${pad(minutes % 60)}:${pad(rest)}`
   }
   return `${minutes}:${pad(rest)}`
+}
+
+function formatDurationText(seconds) {
+  const safeSeconds = Math.max(0, Math.floor(seconds || 0))
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+  const rest = safeSeconds % 60
+  if (hours > 0) {
+    return `${hours}小时${minutes}分${rest}秒`
+  }
+  if (minutes > 0) {
+    return `${minutes}分${rest}秒`
+  }
+  return `${rest}秒`
 }
 
 function formatMinutes(seconds) {
@@ -29,6 +43,7 @@ function taskOffset(task, totalSeconds) {
 
 module.exports = {
   formatSeconds,
+  formatDurationText,
   formatMinutes,
   taskWidth,
   taskOffset

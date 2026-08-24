@@ -80,12 +80,17 @@ std::string CookServerTestReport::build(const std::vector<CookServerTestCaseResu
 	oss << "GET /api/health\r\n";
 	oss << "GET /api/recipes\r\n";
 	oss << "GET /api/feed\r\n";
+	oss << "GET /api/videos/file\r\n";
+	oss << "GET /api/videos/poster\r\n";
+	oss << "POST /api/feed/watch\r\n";
 	oss << "GET /api/account\r\n";
 	oss << "POST /api/account/recharge\r\n";
 	oss << "POST /api/recipes/purchase\r\n";
 	oss << "POST /api/favorites/toggle\r\n";
 	oss << "POST /api/plan/preview\r\n";
 	oss << "POST /api/plan/start\r\n";
+	oss << "POST /api/voice/prepare\r\n";
+	oss << "POST /api/voice/fetch\r\n";
 	oss << "OPTIONS /api/health\r\n";
 	oss << "GET /api/not_found\r\n";
 	oss << "大请求体超过服务限制场景\r\n";

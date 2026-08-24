@@ -139,6 +139,7 @@ void CookCatalog::addTask(
 {
 	CookTask task;
 	task.m_id = recipe.m_id + "." + id;
+	task.m_shortId = id;
 	task.m_recipeId = recipe.m_id;
 	task.m_title = title;
 	task.m_detail = detail;
@@ -147,9 +148,15 @@ void CookCatalog::addTask(
 	task.m_safetyLevel = safetyLevel;
 	task.m_durationSeconds = durationSeconds;
 	task.m_active = active;
+	task.m_manualSkippable = active;
 	task.m_canPause = canPause;
 	task.m_continuesDuringPause = continuesDuringPause;
-	task.m_canLeaveKitchen = canLeaveKitchen;
+	task.m_backgroundWaitMode = "";
+	if (!active)
+	{
+		task.m_backgroundWaitMode = canLeaveKitchen && safetyLevel != "attention" && safetyLevel != "danger" ? "free" : "watch";
+	}
+	task.m_canLeaveKitchen = !active && task.m_backgroundWaitMode == "free";
 	for (size_t i = 0; i < dependencies.size(); ++i)
 	{
 		task.m_dependencies.push_back(recipe.m_id + "." + dependencies[i]);
@@ -181,7 +188,7 @@ std::vector<Recipe> CookCatalog::buildBuiltinRecipeCatalog()
 	CookCatalog::addTask(ribs, "drain_meat", "倒水沥干", "倒掉浸泡水，用厨房纸或漏勺把排骨沥到不滴水。", "sink", 60, true, true, false, false, "normal", {"soak_meat"});
 	CookCatalog::addTask(ribs, "stir_fry", "炒排骨上色", "锅热后倒少量油，排骨下锅，中火翻炒到表面微黄。", "stove", 300, true, false, false, false, "attention", {"drain_meat"});
 	CookCatalog::addTask(ribs, "simmer", "加调料小火煮", "加入糖、生抽、醋和热水没过排骨，转小火盖盖煮。", "stove", 1500, false, false, true, true, "normal", {"stir_fry"});
-	CookCatalog::addTask(ribs, "high_heat", "开大火收汁", "打开锅盖，转大火，让汤汁明显翻滚。", "stove", 300, false, false, true, true, "attention", {"simmer"});
+	CookCatalog::addTask(ribs, "high_heat", "开大火收汁", "打开锅盖，转大火，让汤汁明显翻滚。", "stove", 300, false, false, true, false, "attention", {"simmer"});
 	CookCatalog::addTask(ribs, "reduce_stir", "翻炒收汁", "持续翻炒，让酱汁均匀裹住排骨，撒葱花后关火。", "stove", 300, true, false, false, false, "danger", {"high_heat", "cut_scallion"});
 	recipes.push_back(ribs);
 
@@ -296,7 +303,9 @@ std::vector<Recipe> CookCatalog::buildBuiltinRecipeCatalog()
 	chicken.m_tags = {"付费", "便当", "下饭"};
 	chicken.m_ingredients = {{"鸡腿肉", "1块"}, {"生抽", "2勺"}, {"蜂蜜", "1勺"}, {"料酒", "1勺"}};
 	chicken.m_tools = {"平底锅", "碗", "砧板"};
-	chicken.m_priceCoins = 22;
+	chicken.m_priceCoins = 0;
+	chicken.m_priceType = "yuanbao";
+	chicken.m_priceAmount = 22;
 	chicken.m_defaultOwned = false;
 	chicken.m_systemRecipe = false;
 	CookCatalog::addTask(chicken, "trim_chicken", "处理鸡腿肉", "鸡腿肉擦干，厚的地方划两刀，方便受热均匀。", "board", 180, true, true, false, false, "normal", {});
@@ -305,6 +314,36 @@ std::vector<Recipe> CookCatalog::buildBuiltinRecipeCatalog()
 	CookCatalog::addTask(chicken, "reduce_sauce", "倒汁收浓", "倒入照烧汁，小火煮到酱汁变稠，中途翻面。", "stove", 420, false, false, true, false, "attention", {"sear_chicken"});
 	CookCatalog::addTask(chicken, "slice_plate", "切块装盘", "鸡腿肉稍微放一分钟再切，淋上锅里剩下的酱汁。", "board", 180, true, true, false, false, "normal", {"reduce_sauce"});
 	recipes.push_back(chicken);
+
+	for (size_t i = 0; i < recipes.size(); ++i)
+	{
+		if (recipes[i].m_priceType.empty())
+		{
+			recipes[i].m_priceType = recipes[i].m_priceCoins > 0 ? "coin" : "free";
+		}
+		if (recipes[i].m_priceAmount <= 0)
+		{
+			recipes[i].m_priceAmount = recipes[i].m_priceCoins;
+		}
+		if (recipes[i].m_priceType == "free")
+		{
+			recipes[i].m_priceAmount = 0;
+			recipes[i].m_priceCoins = 0;
+		}
+		if (recipes[i].m_status.empty())
+		{
+			recipes[i].m_status = "published";
+		}
+		if (recipes[i].m_currentRevisionId.empty())
+		{
+			recipes[i].m_currentRevisionId = recipes[i].m_id + "_r1";
+		}
+		if (recipes[i].m_authorUserId.empty())
+		{
+			recipes[i].m_authorUserId = recipes[i].m_systemRecipe ? "system" : "creator_demo";
+		}
+		recipes[i].m_customRecipe = false;
+	}
 
 	return recipes;
 }

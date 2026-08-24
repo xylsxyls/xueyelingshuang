@@ -51,7 +51,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
 
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "cut_tomato",
@@ -66,7 +68,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
                                            "wash_tomato"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "beat_eggs",
@@ -81,7 +85,9 @@
                       "safetyLevel":  "normal",
                       "dependencies":  [
 
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "scramble_eggs",
@@ -96,7 +102,9 @@
                       "safetyLevel":  "attention",
                       "dependencies":  [
                                            "beat_eggs"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   },
                   {
                       "id":  "cook_tomato",
@@ -112,7 +120,9 @@
                       "dependencies":  [
                                            "cut_tomato",
                                            "scramble_eggs"
-                                       ]
+                                       ],
+                      "taskMode":  "foreground",
+                      "manualSkippable":  true
                   }
               ],
     "defaultOwned":  true

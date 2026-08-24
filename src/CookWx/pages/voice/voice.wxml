@@ -13,5 +13,5 @@
     </view>
     <view class="check">{{voiceGender === 'male' ? '已选' : ''}}</view>
   </view>
-  <view class="hint">当前版本先使用震动和文字提醒，开通微信语音合成插件后会接入真实播报。</view>
+  <view class="hint">当前语音方案：{{providerLabel}}。后续可在配置中切换前端插件或服务端语音。</view>
 </view>

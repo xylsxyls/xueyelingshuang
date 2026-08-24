@@ -13,11 +13,14 @@
   margin-bottom: 10rpx;
 }
 
-.voice-btn {
+.voice-pill {
   width: 132rpx;
   height: 64rpx;
   line-height: 64rpx;
   margin: 0;
+  text-align: center;
+  border-radius: 8rpx;
+  color: #5e5a52;
   background: #ebe5d9;
 }
 
@@ -43,50 +46,113 @@
 
 .timeline {
   margin-top: 22rpx;
-  height: 134rpx;
+  height: 142rpx;
+  white-space: nowrap;
 }
 
 .line-wrap {
-  position: relative;
-  height: 134rpx;
+  display: flex;
+  align-items: stretch;
+  height: 142rpx;
   min-width: 100%;
 }
 
 .bar {
-  position: absolute;
-  top: 20rpx;
-  height: 80rpx;
-  padding: 12rpx 10rpx;
+  position: relative;
+  flex: 0 0 auto;
+  height: 112rpx;
+  padding: 14rpx;
   border-radius: 8rpx;
   color: #fffdf8;
-  font-size: 21rpx;
   overflow: hidden;
+  background: #d9d2c6;
+  box-sizing: border-box;
+}
+
+.bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  transition: width 0.2s linear;
+}
+
+.bar-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  height: 100%;
+}
+
+.bar-title,
+.bar-sub {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.bar.active {
+.bar-title {
+  font-size: 25rpx;
+  font-weight: 800;
+}
+
+.bar-sub {
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  opacity: 0.86;
+}
+
+.bar.active .bar-fill {
   background: #5f8f70;
 }
 
-.bar.wait {
+.bar.wait .bar-fill {
   background: #7f8f9a;
 }
 
-.bar.attention {
+.bar.attention .bar-fill {
   background: #b67939;
 }
 
-.bar.danger {
+.bar.danger .bar-fill {
   background: #a0342b;
 }
 
 .bar.done {
-  opacity: 0.42;
+  opacity: 0.64;
+}
+
+.bar.skipped .bar-fill {
+  background: #8d4b35;
 }
 
 .bar.current {
   border: 4rpx solid #fffdf8;
   box-shadow: 0 6rpx 18rpx rgba(24, 35, 31, 0.22);
+}
+
+.bar.running-background {
+  border: 4rpx solid #6f9b73;
+  box-shadow: 0 6rpx 16rpx rgba(76, 110, 82, 0.2);
+}
+
+.bar.running-background .bar-fill {
+  background: #466f55;
+}
+
+.bar.current-foreground {
+  border: 4rpx solid #2f8b58;
+  box-shadow: 0 8rpx 22rpx rgba(47, 139, 88, 0.26);
+}
+
+.bar.current-foreground .bar-fill {
+  background: #45a066;
 }
 
 .current {
@@ -112,6 +178,29 @@
   line-height: 1.55;
 }
 
+.current-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 20rpx;
+  color: #7b746a;
+  font-size: 24rpx;
+}
+
+.current-track {
+  height: 18rpx;
+  margin-top: 12rpx;
+  overflow: hidden;
+  background: #ebe5d9;
+  border-radius: 9rpx;
+}
+
+.current-fill {
+  height: 100%;
+  background: #5f8f70;
+  transition: width 0.2s linear;
+}
+
 .badges {
   display: flex;
   flex-wrap: wrap;
@@ -127,6 +216,56 @@
   font-size: 23rpx;
 }
 
+.background-list {
+  margin-top: 22rpx;
+  padding: 16rpx;
+  border-radius: 8rpx;
+  background: #f3efe6;
+}
+
+.background-title {
+  margin-bottom: 10rpx;
+  color: #5f8f70;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.background-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+}
+
+.background-item text {
+  min-width: 0;
+}
+
+.background-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.background-main text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14rpx;
+  margin-top: 22rpx;
+}
+
+.current-actions button {
+  height: 68rpx;
+}
+
 .next-list {
   margin-top: 28rpx;
 }
@@ -139,11 +278,26 @@
 
 .step {
   display: grid;
-  grid-template-columns: 92rpx 1fr 76rpx;
+  grid-template-columns: 92rpx minmax(0, 1fr) 118rpx;
   gap: 16rpx;
   align-items: center;
   padding: 18rpx;
   margin-bottom: 12rpx;
+}
+
+.step.current-step {
+  border-color: #5f8f70;
+  background: #f7fff7;
+  box-shadow: 0 8rpx 22rpx rgba(47, 139, 88, 0.14);
+}
+
+.step.background-step {
+  border-color: #6f9b73;
+  background: #edf5ec;
+}
+
+.step.skipped-step {
+  opacity: 0.7;
 }
 
 .step-time {
@@ -152,17 +306,56 @@
 }
 
 .step-body {
+  min-width: 0;
   line-height: 1.5;
 }
 
-.state {
-  text-align: center;
-  color: #8d4b35;
-  font-size: 23rpx;
+.step-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
 }
 
-.state.done {
-  color: #5f8f70;
+.step-detail {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  word-break: break-all;
+}
+
+.mini-track {
+  height: 10rpx;
+  margin-top: 10rpx;
+  overflow: hidden;
+  background: #ebe5d9;
+  border-radius: 5rpx;
+}
+
+.mini-fill {
+  height: 100%;
+  background: #5f8f70;
+  transition: width 0.2s linear;
+}
+
+.step-actions {
+  display: grid;
+  gap: 8rpx;
+}
+
+.step-btn {
+  width: 100%;
+  height: 46rpx;
+  padding: 0;
+  margin: 0;
+  font-size: 22rpx;
+  line-height: 46rpx;
+  color: #18231f;
+  background: #ebe5d9;
+}
+
+.step-btn[disabled] {
+  color: #aaa196;
+  background: #f0ebe2;
 }
 
 .control-bar {

@@ -13,7 +13,19 @@ public:
 	*/
 	static PlanResult buildPlan(const std::vector<std::string>& recipeIds);
 
+	/** 根据多个菜谱副本计算一整顿饭的并行时间线，用于用户个性化菜谱和自定义菜谱
+	@param [in] recipes 用户本次选择的菜谱副本列表
+	@return 返回包含总耗时、操作时间、自由时间和步骤时间线的排程结果
+	*/
+	static PlanResult buildPlanFromRecipes(const std::vector<Recipe>& recipes);
+
 private:
+	/** 对已经准备好的步骤列表执行排程计算
+	@param [in,out] plan 已写入菜谱指针的排程结果
+	@param [in] tasks 可排程步骤列表
+	*/
+	static void schedulePreparedPlan(PlanResult& plan, const std::vector<CookTask>& tasks);
+
 	/** 判断步骤依赖是否已经全部完成
 	@param [in] task 待判断步骤
 	@param [in] done 已完成步骤表
@@ -35,6 +47,12 @@ private:
 	@return 返回true表示这段时间足够长且用户可以离开厨房
 	*/
 	static bool gapCanBeFree(const std::vector<ScheduledTask>& timeline, int32_t gapStart, int32_t gapEnd);
+
+	/** 判断后台步骤是否属于可离开厨房的自由等待
+	@param [in] task 待判断步骤
+	@return 返回true表示该后台步骤可计入自由时间
+	*/
+	static bool isFreeBackgroundWait(const CookTask& task);
 
 	/** 将空档计入自由时间或边角时间，不可离开厨房的被动步骤会把空档切分成多段
 	@param [in,out] plan 当前排程结果
