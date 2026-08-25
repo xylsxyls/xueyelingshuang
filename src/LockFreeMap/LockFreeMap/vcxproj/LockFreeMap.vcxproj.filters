@@ -15,37 +15,42 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\FFmpegCpp.h">
+    <ClInclude Include="..\src\LockFreeMap.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\FFmpegCppAPI.h">
+    <ClInclude Include="..\src\LockFreeMapAPI.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\FFmpegCppMacro.h">
+    <ClInclude Include="..\src\LockFreeMapMacro.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\FFmpegCppHelper.h">
+    <ClInclude Include="..\src\MapNode.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\FFmpegCppMacroDll.h">
+    <ClInclude Include="..\src\MapValueHolder.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\FFmpegCppMacroLib.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FFmpegCppModels.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FFmpegCppModels.inl">
+    <ClInclude Include="..\src\MapValueProxy.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\FFmpegCpp.cpp">
+    <ClCompile Include="..\src\LockFreeMap.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\FFmpegCppHelper.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\LockFreeMap.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="..\src\MapNode.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="..\src\MapValueHolder.inl">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="..\src\MapValueProxy.inl">
+      <Filter>头文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

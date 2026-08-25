@@ -16,8 +16,16 @@ public:
     ~FFmpegCpp();
 
 private:
-    FFmpegCpp(const FFmpegCpp&);
-    FFmpegCpp& operator=(const FFmpegCpp&);
+    /** 禁止拷贝构造，避免多个对象同时持有同一个ffmpeg上下文
+    @param [in] other 另一个FFmpegCpp对象
+    */
+    FFmpegCpp(const FFmpegCpp& other);
+
+    /** 禁止赋值，避免ffmpeg上下文生命周期被复制
+    @param [in] other 另一个FFmpegCpp对象
+    @return 返回当前对象引用
+    */
+    FFmpegCpp& operator=(const FFmpegCpp& other);
 
 public:
     /** 打开视频文件并读取基础媒体信息
@@ -146,13 +154,29 @@ public:
     bool cancelCurrentTask();
 
 private:
+    // 当前打开的媒体文件路径
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
     std::string m_filePath;
+    // 最近一次失败原因
     std::string m_lastError;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+    // 当前媒体信息缓存
     FFmpegCppMediaInfo m_mediaInfo;
+    // 是否已经打开媒体文件
     bool m_isOpen;
+    // 当前长任务是否被请求取消
     bool m_cancelRequested;
+    // AVFormatContext指针，头文件不暴露ffmpeg类型
     void* m_formatContext;
+    // 预留视频解码上下文指针，close兜底释放
     void* m_videoCodecContext;
+    // 预留音频解码上下文指针，close兜底释放
     void* m_audioCodecContext;
+    // 预留缩放上下文指针，close兜底释放
     void* m_scaleContext;
 };
