@@ -50,6 +50,11 @@ m_videoSeenExpireDays(0),
 m_videoStreamChunkBytes(0),
 m_videoPosterGenerateEnabled(false),
 m_videoPosterCommandUseShell(false),
+m_videoPosterMaxWidth(0),
+m_videoPosterMaxHeight(0),
+m_videoPosterJpegQuality(0),
+m_videoPosterTimeoutMilliseconds(0),
+m_videoPosterApplyRotation(false),
 m_voiceMaxTextBytes(0),
 m_voiceInlineAudioMaxBytes(0),
 m_voiceWorkerThreadCount(0),
@@ -154,8 +159,13 @@ void Config::setDefaults()
 	m_videoStreamChunkBytes = 4LL * 1024LL * 1024LL;
 	m_videoPosterApiPath = "/api/videos/poster";
 	m_videoPosterGenerateEnabled = true;
-	m_videoPosterCommandTemplate = "ffmpeg -hide_banner -loglevel quiet -ss 0 -i {videoFile} -frames:v 1 -f image2pipe -vcodec mjpeg -";
+	m_videoPosterCommandTemplate = "";
 	m_videoPosterCommandUseShell = false;
+	m_videoPosterMaxWidth = 720;
+	m_videoPosterMaxHeight = 1280;
+	m_videoPosterJpegQuality = 82;
+	m_videoPosterTimeoutMilliseconds = 10000;
+	m_videoPosterApplyRotation = true;
 	m_videoPosterPrefetchCount = 5;
 	m_videoPosterMemoryCacheMaxItems = 100;
 	m_voiceTtsProvider = "windows_sapi";
@@ -350,6 +360,31 @@ void Config::loadIniOverrides()
 	m_videoPosterGenerateEnabled = readIniBool(ini, "Feed", "VideoPosterGenerateEnabled", m_videoPosterGenerateEnabled);
 	m_videoPosterCommandTemplate = readIniString(ini, "Feed", "VideoPosterCommandTemplate", m_videoPosterCommandTemplate);
 	m_videoPosterCommandUseShell = readIniBool(ini, "Feed", "VideoPosterCommandUseShell", m_videoPosterCommandUseShell);
+	m_videoPosterMaxWidth = readIniInt32(ini, "Feed", "VideoPosterMaxWidth", m_videoPosterMaxWidth);
+	if (m_videoPosterMaxWidth < 0)
+	{
+		m_videoPosterMaxWidth = 0;
+	}
+	m_videoPosterMaxHeight = readIniInt32(ini, "Feed", "VideoPosterMaxHeight", m_videoPosterMaxHeight);
+	if (m_videoPosterMaxHeight < 0)
+	{
+		m_videoPosterMaxHeight = 0;
+	}
+	m_videoPosterJpegQuality = readIniInt32(ini, "Feed", "VideoPosterJpegQuality", m_videoPosterJpegQuality);
+	if (m_videoPosterJpegQuality < 1)
+	{
+		m_videoPosterJpegQuality = 1;
+	}
+	if (m_videoPosterJpegQuality > 100)
+	{
+		m_videoPosterJpegQuality = 100;
+	}
+	m_videoPosterTimeoutMilliseconds = readIniInt32(ini, "Feed", "VideoPosterTimeoutMilliseconds", m_videoPosterTimeoutMilliseconds);
+	if (m_videoPosterTimeoutMilliseconds < 0)
+	{
+		m_videoPosterTimeoutMilliseconds = 0;
+	}
+	m_videoPosterApplyRotation = readIniBool(ini, "Feed", "VideoPosterApplyRotation", m_videoPosterApplyRotation);
 	m_videoPosterPrefetchCount = readIniInt32(ini, "Feed", "VideoPosterPrefetchCount", m_videoPosterPrefetchCount);
 	if (m_videoPosterPrefetchCount < 0)
 	{
@@ -564,6 +599,11 @@ void Config::uninit()
 	m_videoPosterGenerateEnabled = false;
 	m_videoPosterCommandTemplate.clear();
 	m_videoPosterCommandUseShell = false;
+	m_videoPosterMaxWidth = 0;
+	m_videoPosterMaxHeight = 0;
+	m_videoPosterJpegQuality = 0;
+	m_videoPosterTimeoutMilliseconds = 0;
+	m_videoPosterApplyRotation = false;
 	m_videoPosterPrefetchCount = 0;
 	m_videoPosterMemoryCacheMaxItems = 0;
 	m_voiceTtsProvider.clear();

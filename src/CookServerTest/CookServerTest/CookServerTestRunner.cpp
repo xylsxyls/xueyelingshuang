@@ -665,6 +665,21 @@ void CookServerTestRunner::runFunctionalTests()
 				message = "video poster body is empty";
 				return false;
 			}
+			if (posterResponse.m_headers.find("Content-Type") == posterResponse.m_headers.end() ||
+				posterResponse.m_headers["Content-Type"].find("image/jpeg") == std::string::npos)
+			{
+				message = "video poster content type is not image/jpeg";
+				return false;
+			}
+			if (posterResponse.m_body.size() < 4 ||
+				static_cast<unsigned char>(posterResponse.m_body[0]) != 0xFF ||
+				static_cast<unsigned char>(posterResponse.m_body[1]) != 0xD8 ||
+				static_cast<unsigned char>(posterResponse.m_body[posterResponse.m_body.size() - 2]) != 0xFF ||
+				static_cast<unsigned char>(posterResponse.m_body[posterResponse.m_body.size() - 1]) != 0xD9)
+			{
+				message = "video poster body is not jpeg";
+				return false;
+			}
 		}
 		else if (posterResponse.m_statusCode != 404)
 		{

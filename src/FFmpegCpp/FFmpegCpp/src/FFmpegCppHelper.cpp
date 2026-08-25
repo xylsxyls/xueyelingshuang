@@ -5,6 +5,11 @@
 #include <iomanip>
 #include <sstream>
 
+extern "C"
+{
+#include <ffmpeg/libavcodec/avcodec.h>
+}
+
 static std::string ffmpegCppLowerString(const std::string& value)
 {
     std::string result = value;
@@ -36,6 +41,53 @@ static void ffmpegCppSetErrorText(std::string* errorText, const std::string& val
     {
         *errorText = value;
     }
+}
+
+static AVCodecID ffmpegCppVideoCodecIdFromPublicEnum(FFmpegCppVideoCodec videoCodec)
+{
+    if (videoCodec == FFmpegCppVideoCodecH264)
+    {
+        return AV_CODEC_ID_H264;
+    }
+    if (videoCodec == FFmpegCppVideoCodecH265)
+    {
+        return AV_CODEC_ID_HEVC;
+    }
+    if (videoCodec == FFmpegCppVideoCodecVp9)
+    {
+        return AV_CODEC_ID_VP9;
+    }
+    if (videoCodec == FFmpegCppVideoCodecAv1)
+    {
+        return AV_CODEC_ID_AV1;
+    }
+    return AV_CODEC_ID_NONE;
+}
+
+static AVCodecID ffmpegCppAudioCodecIdFromPublicEnum(FFmpegCppAudioCodec audioCodec)
+{
+    if (audioCodec == FFmpegCppAudioCodecAac)
+    {
+        return AV_CODEC_ID_AAC;
+    }
+    if (audioCodec == FFmpegCppAudioCodecMp3)
+    {
+        return AV_CODEC_ID_MP3;
+    }
+    if (audioCodec == FFmpegCppAudioCodecOpus)
+    {
+        return AV_CODEC_ID_OPUS;
+    }
+    return AV_CODEC_ID_NONE;
+}
+
+static bool ffmpegCppIsEncoderAvailable(const std::string& encoderName, AVCodecID codecId)
+{
+    if (!encoderName.empty() && encoderName != "copy" && avcodec_find_encoder_by_name(encoderName.c_str()) != nullptr)
+    {
+        return true;
+    }
+    return codecId != AV_CODEC_ID_NONE && avcodec_find_encoder(codecId) != nullptr;
 }
 
 bool FFmpegCppHelper::probeMediaInfo(const std::string& filePath,
@@ -254,6 +306,16 @@ std::string FFmpegCppHelper::videoCodecToEncoderName(FFmpegCppVideoCodec videoCo
     return std::string();
 }
 
+bool FFmpegCppHelper::isVideoEncoderAvailable(FFmpegCppVideoCodec videoCodec)
+{
+    if (videoCodec == FFmpegCppVideoCodecCopy)
+    {
+        return true;
+    }
+    return ffmpegCppIsEncoderAvailable(videoCodecToEncoderName(videoCodec),
+                                       ffmpegCppVideoCodecIdFromPublicEnum(videoCodec));
+}
+
 std::string FFmpegCppHelper::audioCodecToEncoderName(FFmpegCppAudioCodec audioCodec)
 {
     if (audioCodec == FFmpegCppAudioCodecCopy)
@@ -273,6 +335,16 @@ std::string FFmpegCppHelper::audioCodecToEncoderName(FFmpegCppAudioCodec audioCo
         return "libopus";
     }
     return std::string();
+}
+
+bool FFmpegCppHelper::isAudioEncoderAvailable(FFmpegCppAudioCodec audioCodec)
+{
+    if (audioCodec == FFmpegCppAudioCodecCopy || audioCodec == FFmpegCppAudioCodecNone)
+    {
+        return true;
+    }
+    return ffmpegCppIsEncoderAvailable(audioCodecToEncoderName(audioCodec),
+                                       ffmpegCppAudioCodecIdFromPublicEnum(audioCodec));
 }
 
 std::string FFmpegCppHelper::formatMilliseconds(int64_t milliseconds)

@@ -119,11 +119,23 @@ public:
     */
     static std::string videoCodecToEncoderName(FFmpegCppVideoCodec videoCodec);
 
+    /** 判断当前ffmpeg包是否启用了指定视频编码器
+    @param [in] videoCodec 视频编码枚举，FFmpegCppVideoCodecCopy始终返回true
+    @return 返回true表示当前运行环境可用该编码器
+    */
+    static bool isVideoEncoderAvailable(FFmpegCppVideoCodec videoCodec);
+
     /** 根据音频编码枚举获取ffmpeg编码器建议名
     @param [in] audioCodec 音频编码枚举
     @return 返回编码器建议名，例如copy、aac、libmp3lame、libopus；未知时返回空字符串
     */
     static std::string audioCodecToEncoderName(FFmpegCppAudioCodec audioCodec);
+
+    /** 判断当前ffmpeg包是否启用了指定音频编码器
+    @param [in] audioCodec 音频编码枚举，FFmpegCppAudioCodecCopy和FFmpegCppAudioCodecNone始终返回true
+    @return 返回true表示当前运行环境可用该编码器
+    */
+    static bool isAudioEncoderAvailable(FFmpegCppAudioCodec audioCodec);
 
     /** 把毫秒格式化成便于日志查看的时间文本
     @param [in] milliseconds 毫秒数，小于0时按0处理

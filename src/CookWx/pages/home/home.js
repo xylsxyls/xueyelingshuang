@@ -61,7 +61,8 @@ Page({
     videoProgressValue: 0,
     videoProgressPercent: 0,
     showProgressHint: false,
-    progressHintText: ''
+    progressHintText: '',
+    posterPreloadList: []
   },
 
   onShow() {
@@ -80,9 +81,9 @@ Page({
     })
     if (!this.data.feed.length) this.loadData()
     else {
+      this.prefetchPosterImages(this.data.currentIndex)
       this.activateCurrentVideoSource(this.data.currentIndex, () => {
         this.syncVideoPlayback({ restorePosition: true })
-        this.prefetchPosterImages(this.data.currentIndex)
       })
     }
   },
@@ -114,7 +115,7 @@ Page({
     this.pendingSeek = null
     this.progressDragging = false
     this.clearPosterPrefetchRequests()
-    this.setData({ loading: false, loadingMore: false, showProgressHint: false, progressHintText: '' })
+    this.setData({ loading: false, loadingMore: false, showProgressHint: false, progressHintText: '', posterPreloadList: [] })
     this.logUserAction('PAGE_HIDE', {
       currentIndex: this.data.currentIndex,
       feedCount: (this.data.feed || []).length,
@@ -135,7 +136,7 @@ Page({
     this.pendingSeek = null
     this.progressDragging = false
     this.clearPosterPrefetchRequests()
-    this.setData({ loading: false, loadingMore: false, showProgressHint: false, progressHintText: '' })
+    this.setData({ loading: false, loadingMore: false, showProgressHint: false, progressHintText: '', posterPreloadList: [] })
     this.logUserAction('PAGE_UNLOAD', {
       currentIndex: this.data.currentIndex,
       feedCount: (this.data.feed || []).length
@@ -243,12 +244,13 @@ Page({
           videoProgressValue: 0,
           videoProgressPercent: 0,
           showProgressHint: false,
-          progressHintText: ''
+          progressHintText: '',
+          posterPreloadList: []
         }, () => {
+          this.prefetchPosterImages(0)
           this.activateCurrentVideoSource(0, () => {
             this.syncVideoPlayback()
             this.scheduleMarkCurrentWatched()
-            this.prefetchPosterImages(0)
             this.ensureFeedAhead(0)
           })
         })
@@ -350,6 +352,7 @@ Page({
         posterLoaded: false,
         posterFailed: false,
         videoUrl: '',
+        videoFrameReady: false,
         recipeIds,
         primaryRecipeId,
         priceCoins,
@@ -405,10 +408,10 @@ Page({
       showProgressHint: false,
       progressHintText: ''
     }, () => {
+      this.prefetchPosterImages(currentIndex)
       this.activateCurrentVideoSource(currentIndex, () => {
         this.syncVideoPlayback()
         this.scheduleMarkCurrentWatched()
-        this.prefetchPosterImages(currentIndex)
         this.ensureFeedAhead(currentIndex)
       })
     })
@@ -464,18 +467,18 @@ Page({
         showProgressHint: false,
         progressHintText: ''
       }, () => {
+        this.prefetchPosterImages(currentIndex)
         this.activateCurrentVideoSource(currentIndex, () => {
           this.syncVideoPlayback()
           this.scheduleMarkCurrentWatched()
-          this.prefetchPosterImages(currentIndex)
           this.ensureFeedAhead(currentIndex)
         })
       })
       return
     }
+    this.prefetchPosterImages(currentIndex)
     this.activateCurrentVideoSource(currentIndex, () => {
       this.syncVideoPlayback()
-      this.prefetchPosterImages(currentIndex)
     })
   },
 
@@ -534,7 +537,9 @@ Page({
 
   onVideoTimeUpdate(e) {
     const index = Number(e.currentTarget.dataset.index)
-    if (index !== this.data.currentIndex || this.progressDragging) return
+    if (index !== this.data.currentIndex) return
+    this.markVideoFrameReady(index, 'timeupdate')
+    if (this.progressDragging) return
     const detail = e.detail || {}
     const duration = Number(detail.duration || this.data.videoDurationSeconds || 0)
     const currentTime = Number(detail.currentTime || 0)
@@ -906,6 +911,23 @@ Page({
     }
   },
 
+  onPosterPreloadLoad(e) {
+    const dataset = e.currentTarget.dataset || {}
+    debugLog.info('HOME', 'VIDEO_POSTER_PRELOAD_IMAGE_OK', {
+      index: Number(dataset.index),
+      videoId: dataset.videoId || ''
+    })
+  },
+
+  onPosterPreloadError(e) {
+    const dataset = e.currentTarget.dataset || {}
+    debugLog.warn('HOME', 'VIDEO_POSTER_PRELOAD_IMAGE_FAIL', {
+      index: Number(dataset.index),
+      videoId: dataset.videoId || '',
+      errMsg: e && e.detail && e.detail.errMsg ? e.detail.errMsg : ''
+    })
+  },
+
   onVideoError(e) {
     const index = Number(e.currentTarget.dataset.index)
     const item = this.data.feed[index] || {}
@@ -937,6 +959,7 @@ Page({
     const feed = this.data.feed || []
     const sideCount = this.firstFrameSideCount()
     const indexes = []
+    if (currentIndex >= 0 && currentIndex < feed.length) indexes.push(currentIndex)
     for (let offset = 1; offset <= sideCount; offset += 1) {
       const nextIndex = currentIndex + offset
       if (nextIndex < feed.length) indexes.push(nextIndex)
@@ -960,6 +983,7 @@ Page({
     this.posterPrefetchTasks = []
     this.posterPrefetchRunning = 0
     this.posterPrefetchRequestedByVideoId = {}
+    this.posterPreloadSignature = ''
   },
 
   enqueuePosterPrefetchRequests(indexes) {
@@ -1036,18 +1060,35 @@ Page({
     const indexes = this.firstFrameIndexes(currentIndex)
     const updates = {}
     let changed = false
+    const preloadList = []
     indexes.forEach((index) => {
       const item = feed[index] || {}
-      if (!item.posterUrl || item.posterFailed || item.posterLoaded || item.posterSrc === item.posterUrl) return
+      if (!item.posterUrl || item.posterFailed) return
+      if (index !== currentIndex) {
+        preloadList.push({
+          index,
+          videoId: item.videoId || item.id || '',
+          feedKey: item.feedKey || '',
+          posterUrl: item.posterUrl
+        })
+      }
+      if (item.posterLoaded || item.posterSrc === item.posterUrl) return
       updates[`feed[${index}].posterSrc`] = item.posterUrl
       updates[`feed[${index}].posterLoaded`] = true
       changed = true
     })
+    const preloadSignature = preloadList.map((item) => `${item.feedKey}:${item.posterUrl}`).join('|')
+    if (config.VIDEO_POSTER_IMAGE_PRELOAD_ENABLED !== false && preloadSignature !== this.posterPreloadSignature) {
+      this.posterPreloadSignature = preloadSignature
+      updates.posterPreloadList = preloadList
+      changed = true
+    }
     if (changed) {
       this.setData(updates)
       debugLog.info('HOME', 'VIDEO_POSTER_URL_READY', {
         currentIndex,
-        preparedIndexes: indexes
+        preparedIndexes: indexes,
+        preloadCount: preloadList.length
       })
     }
     this.enqueuePosterPrefetchRequests(indexes)
@@ -1066,6 +1107,7 @@ Page({
       const targetUrl = activeIndexes[i] ? (feed[i].rawVideoUrl || '') : ''
       if ((feed[i].videoUrl || '') !== targetUrl) {
         updates[`feed[${i}].videoUrl`] = targetUrl
+        if (targetUrl) updates[`feed[${i}].videoFrameReady`] = false
         changed = true
       }
     }
@@ -1083,6 +1125,19 @@ Page({
         disabledVideoSources: Math.max(0, feed.length - Object.keys(activeIndexes).length)
       })
       if (callback) callback()
+    })
+  },
+
+  markVideoFrameReady(index, reason) {
+    const item = (this.data.feed || [])[index] || {}
+    if (!item.videoUrl || item.videoFrameReady) return
+    const updates = {}
+    updates[`feed[${index}].videoFrameReady`] = true
+    this.setData(updates)
+    debugLog.info('HOME', 'VIDEO_FRAME_READY', {
+      index,
+      videoId: item.videoId || '',
+      reason
     })
   },
 

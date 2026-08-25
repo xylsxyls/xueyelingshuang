@@ -93,7 +93,7 @@ int32_t main()
 	        g_config.m_redisDbIndex,
 	        g_config.m_redisPoolSize,
 	        g_config.m_storageSyncThreadCount);
-	LOGINFO("CookServer video config resourceDirectory=%s storageDirectory=%s resourceScanIntervalSeconds=%d feedDefaultCount=%d seenExpireDays=%d streamChunkBytes=%s posterEnabled=%d posterApiPath=%s",
+	LOGINFO("CookServer video config resourceDirectory=%s storageDirectory=%s resourceScanIntervalSeconds=%d feedDefaultCount=%d seenExpireDays=%d streamChunkBytes=%s posterEnabled=%d posterApiPath=%s posterMaxWidth=%d posterMaxHeight=%d posterJpegQuality=%d posterTimeoutMs=%d posterApplyRotation=%d",
 	        g_config.m_videoResourceDirectoryName.c_str(),
 	        g_config.m_videoStorageDirectoryName.c_str(),
 	        g_config.m_videoResourceScanIntervalSeconds,
@@ -101,7 +101,12 @@ int32_t main()
 	        g_config.m_videoSeenExpireDays,
 	        CStringManager::toStringInt64(g_config.m_videoStreamChunkBytes).c_str(),
 	        g_config.m_videoPosterGenerateEnabled ? 1 : 0,
-	        g_config.m_videoPosterApiPath.c_str());
+	        g_config.m_videoPosterApiPath.c_str(),
+	        g_config.m_videoPosterMaxWidth,
+	        g_config.m_videoPosterMaxHeight,
+	        g_config.m_videoPosterJpegQuality,
+	        g_config.m_videoPosterTimeoutMilliseconds,
+	        g_config.m_videoPosterApplyRotation ? 1 : 0);
 
 	if (!CookDependencyService::ensureStartupDependencies())
 	{

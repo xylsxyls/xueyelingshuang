@@ -304,6 +304,8 @@ public:
     int32_t maxHeight;
     // 是否保持宽高比
     bool keepAspectRatio;
+    // 是否按旋转元信息修正输出方向
+    bool applyRotation;
     // 视频码率，单位kbps，小于等于0表示使用编码器默认值
     int32_t videoBitRateKbps;
     // 音频码率，单位kbps
@@ -331,7 +333,7 @@ public:
     int32_t timeoutMilliseconds;
 
 public:
-    /** 构造函数，默认输出微信小程序兼容性较好的mp4/h264/aac组合
+    /** 构造函数，默认输出mp4/h264并复制原音频；需要无声视频时设置removeAudio=true
     */
     FFmpegCppTranscodeOption();
 };

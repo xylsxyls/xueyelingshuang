@@ -229,10 +229,20 @@ public:
 	std::string m_videoPosterApiPath;
 	// 是否在扫描视频资源时生成第一帧图片
 	bool m_videoPosterGenerateEnabled;
-	// 第一帧图片生成命令模板，支持{videoFile}，命令需要把图片二进制写到stdout
+	// 第一帧图片生成命令模板，兼容旧配置，当前默认不再使用命令行生成
 	std::string m_videoPosterCommandTemplate;
-	// 第一帧图片生成命令是否通过系统shell运行
+	// 第一帧图片生成命令是否通过系统shell运行，兼容旧配置，当前默认不再使用命令行生成
 	bool m_videoPosterCommandUseShell;
+	// 第一帧图片最大宽度，小于等于0表示不限制
+	int32_t m_videoPosterMaxWidth;
+	// 第一帧图片最大高度，小于等于0表示不限制
+	int32_t m_videoPosterMaxHeight;
+	// 第一帧JPEG质量，范围1-100
+	int32_t m_videoPosterJpegQuality;
+	// 第一帧生成超时时间，单位毫秒，小于等于0表示不限制
+	int32_t m_videoPosterTimeoutMilliseconds;
+	// 是否按视频旋转元信息修正第一帧方向
+	bool m_videoPosterApplyRotation;
 	// 首页向前预取的视频第一帧数量
 	int32_t m_videoPosterPrefetchCount;
 	// 视频第一帧内存缓存最大条数，0表示不缓存

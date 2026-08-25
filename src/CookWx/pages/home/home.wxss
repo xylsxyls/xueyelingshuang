@@ -47,11 +47,28 @@
 }
 
 .feed-poster {
-  z-index: 0;
+  z-index: 3;
+  pointer-events: none;
 }
 
 .feed-video {
   z-index: 1;
+}
+
+.poster-preload-box {
+  position: fixed;
+  left: -100rpx;
+  top: -100rpx;
+  width: 1rpx;
+  height: 1rpx;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.poster-preload-image {
+  width: 1rpx;
+  height: 1rpx;
 }
 
 .video-shade {

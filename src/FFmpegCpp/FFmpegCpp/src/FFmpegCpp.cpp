@@ -2,6 +2,7 @@
 #include "FFmpegCppHelper.h"
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -11,6 +12,15 @@
 #ifdef _MSC_VER
 #pragma warning(disable:4819)
 #pragma warning(disable:4996)
+#endif
+
+#ifdef FFMPEGCPP_TEST_MAIN
+#include <errno.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 #endif
 
 #ifdef _WIN32
@@ -317,6 +327,10 @@ static AVPixelFormat ffmpegCppImagePixelFormat(FFmpegCppImageFormat imageFormat)
     {
         return AV_PIX_FMT_BGR24;
     }
+    if (imageFormat == FFmpegCppImageFormatPng)
+    {
+        return AV_PIX_FMT_RGB24;
+    }
     return AV_PIX_FMT_YUVJ420P;
 }
 
@@ -333,8 +347,347 @@ static AVCodecID ffmpegCppImageCodecId(FFmpegCppImageFormat imageFormat)
     return AV_CODEC_ID_MJPEG;
 }
 
+static int32_t ffmpegCppNormalizeRotationDegree(int32_t rotationDegree)
+{
+    int32_t normalizedRotationDegree = rotationDegree % 360;
+    if (normalizedRotationDegree < 0)
+    {
+        normalizedRotationDegree += 360;
+    }
+
+    if (normalizedRotationDegree >= 315 || normalizedRotationDegree < 45)
+    {
+        return 0;
+    }
+    if (normalizedRotationDegree >= 45 && normalizedRotationDegree < 135)
+    {
+        return 90;
+    }
+    if (normalizedRotationDegree >= 135 && normalizedRotationDegree < 225)
+    {
+        return 180;
+    }
+    return 270;
+}
+
+static bool ffmpegCppIsQuarterRotation(int32_t rotationDegree)
+{
+    int32_t normalizedRotationDegree = ffmpegCppNormalizeRotationDegree(rotationDegree);
+    return normalizedRotationDegree == 90 || normalizedRotationDegree == 270;
+}
+
+static AVFrame* ffmpegCppAllocFrame(AVPixelFormat pixelFormat,
+                             int32_t width,
+                             int32_t height,
+                             std::string& errorText)
+{
+    if (width <= 0 || height <= 0)
+    {
+        errorText = "invalid frame size";
+        return nullptr;
+    }
+
+    AVFrame* frame = av_frame_alloc();
+    if (frame == nullptr)
+    {
+        errorText = "alloc frame failed";
+        return nullptr;
+    }
+
+    frame->format = pixelFormat;
+    frame->width = width;
+    frame->height = height;
+    int result = av_frame_get_buffer(frame, 32);
+    if (result < 0)
+    {
+        av_frame_free(&frame);
+        errorText = ffmpegCppAppendError("alloc frame buffer failed", result);
+        return nullptr;
+    }
+    return frame;
+}
+
+static bool ffmpegCppScaleFrame(const AVFrame* sourceFrame,
+                         AVPixelFormat sourcePixelFormat,
+                         AVFrame* targetFrame,
+                         AVPixelFormat targetPixelFormat,
+                         std::string& errorText)
+{
+    if (sourceFrame == nullptr || targetFrame == nullptr)
+    {
+        errorText = "invalid scale frame parameter";
+        return false;
+    }
+
+    SwsContext* scaleContext = sws_getContext(sourceFrame->width,
+                                              sourceFrame->height,
+                                              sourcePixelFormat,
+                                              targetFrame->width,
+                                              targetFrame->height,
+                                              targetPixelFormat,
+                                              SWS_BILINEAR,
+                                              nullptr,
+                                              nullptr,
+                                              nullptr);
+    if (scaleContext == nullptr)
+    {
+        errorText = "create scale context failed";
+        return false;
+    }
+
+    int result = av_frame_make_writable(targetFrame);
+    if (result < 0)
+    {
+        sws_freeContext(scaleContext);
+        errorText = ffmpegCppAppendError("make target frame writable failed", result);
+        return false;
+    }
+
+    result = sws_scale(scaleContext,
+                       sourceFrame->data,
+                       sourceFrame->linesize,
+                       0,
+                       sourceFrame->height,
+                       targetFrame->data,
+                       targetFrame->linesize);
+    sws_freeContext(scaleContext);
+    if (result <= 0)
+    {
+        errorText = "scale frame failed";
+        return false;
+    }
+    return true;
+}
+
+static bool ffmpegCppRotateRgb24Frame(const AVFrame* sourceFrame,
+                               AVFrame* targetFrame,
+                               int32_t rotationDegree,
+                               std::string& errorText)
+{
+    if (sourceFrame == nullptr || targetFrame == nullptr)
+    {
+        errorText = "invalid rotate frame parameter";
+        return false;
+    }
+
+    int32_t normalizedRotationDegree = ffmpegCppNormalizeRotationDegree(rotationDegree);
+    int result = av_frame_make_writable(targetFrame);
+    if (result < 0)
+    {
+        errorText = ffmpegCppAppendError("make rotate frame writable failed", result);
+        return false;
+    }
+
+    const int32_t pixelBytes = 3;
+    int32_t sourceWidth = sourceFrame->width;
+    int32_t sourceHeight = sourceFrame->height;
+    int32_t targetWidth = targetFrame->width;
+    int32_t targetHeight = targetFrame->height;
+
+    if (normalizedRotationDegree == 0)
+    {
+        if (sourceWidth != targetWidth || sourceHeight != targetHeight)
+        {
+            errorText = "rotate frame size mismatch";
+            return false;
+        }
+        for (int32_t y = 0; y < sourceHeight; ++y)
+        {
+            std::memcpy(targetFrame->data[0] + y * targetFrame->linesize[0],
+                        sourceFrame->data[0] + y * sourceFrame->linesize[0],
+                        static_cast<size_t>(sourceWidth * pixelBytes));
+        }
+        return true;
+    }
+
+    for (int32_t y = 0; y < sourceHeight; ++y)
+    {
+        for (int32_t x = 0; x < sourceWidth; ++x)
+        {
+            int32_t targetX = x;
+            int32_t targetY = y;
+            if (normalizedRotationDegree == 90)
+            {
+                targetX = sourceHeight - 1 - y;
+                targetY = x;
+            }
+            else if (normalizedRotationDegree == 180)
+            {
+                targetX = sourceWidth - 1 - x;
+                targetY = sourceHeight - 1 - y;
+            }
+            else if (normalizedRotationDegree == 270)
+            {
+                targetX = y;
+                targetY = sourceWidth - 1 - x;
+            }
+
+            if (targetX < 0 || targetX >= targetWidth || targetY < 0 || targetY >= targetHeight)
+            {
+                errorText = "rotate frame target position out of range";
+                return false;
+            }
+
+            const unsigned char* sourcePixel = sourceFrame->data[0] + y * sourceFrame->linesize[0] + x * pixelBytes;
+            unsigned char* targetPixel = targetFrame->data[0] + targetY * targetFrame->linesize[0] + targetX * pixelBytes;
+            targetPixel[0] = sourcePixel[0];
+            targetPixel[1] = sourcePixel[1];
+            targetPixel[2] = sourcePixel[2];
+        }
+    }
+    return true;
+}
+
+static bool ffmpegCppConvertFrameToTarget(const AVFrame* sourceFrame,
+                                   AVPixelFormat sourcePixelFormat,
+                                   int32_t rotationDegree,
+                                   bool applyRotation,
+                                   AVFrame* targetFrame,
+                                   AVPixelFormat targetPixelFormat,
+                                   std::string& errorText)
+{
+    if (sourceFrame == nullptr || targetFrame == nullptr)
+    {
+        errorText = "invalid convert frame parameter";
+        return false;
+    }
+
+    int32_t normalizedRotationDegree = applyRotation ? ffmpegCppNormalizeRotationDegree(rotationDegree) : 0;
+    if (normalizedRotationDegree == 0)
+    {
+        return ffmpegCppScaleFrame(sourceFrame, sourcePixelFormat, targetFrame, targetPixelFormat, errorText);
+    }
+
+    AVFrame* rgbFrame = ffmpegCppAllocFrame(AV_PIX_FMT_RGB24, sourceFrame->width, sourceFrame->height, errorText);
+    if (rgbFrame == nullptr)
+    {
+        return false;
+    }
+
+    if (!ffmpegCppScaleFrame(sourceFrame, sourcePixelFormat, rgbFrame, AV_PIX_FMT_RGB24, errorText))
+    {
+        av_frame_free(&rgbFrame);
+        return false;
+    }
+
+    int32_t rotatedWidth = ffmpegCppIsQuarterRotation(normalizedRotationDegree) ? sourceFrame->height : sourceFrame->width;
+    int32_t rotatedHeight = ffmpegCppIsQuarterRotation(normalizedRotationDegree) ? sourceFrame->width : sourceFrame->height;
+    AVFrame* rotatedFrame = ffmpegCppAllocFrame(AV_PIX_FMT_RGB24, rotatedWidth, rotatedHeight, errorText);
+    if (rotatedFrame == nullptr)
+    {
+        av_frame_free(&rgbFrame);
+        return false;
+    }
+
+    bool result = ffmpegCppRotateRgb24Frame(rgbFrame, rotatedFrame, normalizedRotationDegree, errorText);
+    if (result)
+    {
+        result = ffmpegCppScaleFrame(rotatedFrame, AV_PIX_FMT_RGB24, targetFrame, targetPixelFormat, errorText);
+    }
+
+    av_frame_free(&rotatedFrame);
+    av_frame_free(&rgbFrame);
+    return result;
+}
+
+static void ffmpegCppCalculateTranscodeTargetSize(int32_t sourceWidth,
+                                           int32_t sourceHeight,
+                                           int32_t rotationDegree,
+                                           const FFmpegCppTranscodeOption& option,
+                                           int32_t& targetWidth,
+                                           int32_t& targetHeight)
+{
+    int32_t normalizedRotationDegree = option.applyRotation ? ffmpegCppNormalizeRotationDegree(rotationDegree) : 0;
+    int32_t orientedWidth = ffmpegCppIsQuarterRotation(normalizedRotationDegree) ? sourceHeight : sourceWidth;
+    int32_t orientedHeight = ffmpegCppIsQuarterRotation(normalizedRotationDegree) ? sourceWidth : sourceHeight;
+    FFmpegCppFrameExtractOption sizeOption;
+    sizeOption.maxWidth = option.maxWidth;
+    sizeOption.maxHeight = option.maxHeight;
+    sizeOption.keepAspectRatio = option.keepAspectRatio;
+    ffmpegCppCalculateTargetSize(orientedWidth, orientedHeight, sizeOption, targetWidth, targetHeight);
+    if (targetWidth > 1 && (targetWidth % 2) != 0)
+    {
+        --targetWidth;
+    }
+    if (targetHeight > 1 && (targetHeight % 2) != 0)
+    {
+        --targetHeight;
+    }
+    targetWidth = std::max<int32_t>(1, targetWidth);
+    targetHeight = std::max<int32_t>(1, targetHeight);
+}
+
+static AVCodecID ffmpegCppVideoCodecId(FFmpegCppVideoCodec videoCodec)
+{
+    if (videoCodec == FFmpegCppVideoCodecH264)
+    {
+        return AV_CODEC_ID_H264;
+    }
+    if (videoCodec == FFmpegCppVideoCodecH265)
+    {
+        return AV_CODEC_ID_HEVC;
+    }
+    if (videoCodec == FFmpegCppVideoCodecVp9)
+    {
+        return AV_CODEC_ID_VP9;
+    }
+    if (videoCodec == FFmpegCppVideoCodecAv1)
+    {
+        return AV_CODEC_ID_AV1;
+    }
+    return AV_CODEC_ID_NONE;
+}
+
+static AVCodecID ffmpegCppAudioCodecId(FFmpegCppAudioCodec audioCodec)
+{
+    if (audioCodec == FFmpegCppAudioCodecAac)
+    {
+        return AV_CODEC_ID_AAC;
+    }
+    if (audioCodec == FFmpegCppAudioCodecMp3)
+    {
+        return AV_CODEC_ID_MP3;
+    }
+    if (audioCodec == FFmpegCppAudioCodecOpus)
+    {
+        return AV_CODEC_ID_OPUS;
+    }
+    return AV_CODEC_ID_NONE;
+}
+
+static const AVCodec* ffmpegCppFindVideoEncoder(FFmpegCppVideoCodec videoCodec)
+{
+    std::string encoderName = FFmpegCppHelper::videoCodecToEncoderName(videoCodec);
+    const AVCodec* encoder = !encoderName.empty() ? avcodec_find_encoder_by_name(encoderName.c_str()) : nullptr;
+    if (encoder != nullptr)
+    {
+        return encoder;
+    }
+    AVCodecID codecId = ffmpegCppVideoCodecId(videoCodec);
+    if (codecId == AV_CODEC_ID_NONE)
+    {
+        return nullptr;
+    }
+    return avcodec_find_encoder(codecId);
+}
+
+static bool ffmpegCppCanCopyAudioStream(const AVCodecParameters* codecParameters,
+                                 FFmpegCppAudioCodec requestedAudioCodec)
+{
+    if (codecParameters == nullptr)
+    {
+        return false;
+    }
+    if (requestedAudioCodec == FFmpegCppAudioCodecCopy)
+    {
+        return true;
+    }
+    return codecParameters->codec_id == ffmpegCppAudioCodecId(requestedAudioCodec);
+}
+
 static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
                                  AVCodecContext* decodeContext,
+                                 int32_t rotationDegree,
                                  int64_t timestampMilliseconds,
                                  const FFmpegCppFrameExtractOption& option,
                                  FFmpegCppImageData* imageData,
@@ -345,15 +698,13 @@ static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
         errorText = "invalid frame encode parameter";
         return false;
     }
-    if (option.imageFormat == FFmpegCppImageFormatPng)
-    {
-        errorText = "png image output is not enabled in current ffmpeg package";
-        return false;
-    }
 
+    int32_t normalizedRotationDegree = option.applyRotation ? ffmpegCppNormalizeRotationDegree(rotationDegree) : 0;
+    int32_t orientedWidth = ffmpegCppIsQuarterRotation(normalizedRotationDegree) ? sourceFrame->height : sourceFrame->width;
+    int32_t orientedHeight = ffmpegCppIsQuarterRotation(normalizedRotationDegree) ? sourceFrame->width : sourceFrame->height;
     int32_t targetWidth = 0;
     int32_t targetHeight = 0;
-    ffmpegCppCalculateTargetSize(sourceFrame->width, sourceFrame->height, option, targetWidth, targetHeight);
+    ffmpegCppCalculateTargetSize(orientedWidth, orientedHeight, option, targetWidth, targetHeight);
     if (targetWidth <= 0 || targetHeight <= 0)
     {
         errorText = "invalid frame size";
@@ -367,57 +718,29 @@ static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
     }
 
     AVPixelFormat targetPixelFormat = ffmpegCppImagePixelFormat(option.imageFormat);
-    SwsContext* scaleContext = sws_getContext(sourceFrame->width,
-                                              sourceFrame->height,
-                                              sourcePixelFormat,
-                                              targetWidth,
-                                              targetHeight,
-                                              targetPixelFormat,
-                                              SWS_BILINEAR,
-                                              nullptr,
-                                              nullptr,
-                                              nullptr);
-    if (scaleContext == nullptr)
-    {
-        errorText = "create scale context failed";
-        return false;
-    }
-
-    AVFrame* targetFrame = av_frame_alloc();
+    AVFrame* targetFrame = ffmpegCppAllocFrame(targetPixelFormat, targetWidth, targetHeight, errorText);
     if (targetFrame == nullptr)
     {
-        sws_freeContext(scaleContext);
-        errorText = "alloc target frame failed";
         return false;
     }
 
-    targetFrame->format = targetPixelFormat;
-    targetFrame->width = targetWidth;
-    targetFrame->height = targetHeight;
-    int imageAllocResult = av_image_alloc(targetFrame->data, targetFrame->linesize, targetWidth, targetHeight, targetPixelFormat, 32);
-    if (imageAllocResult < 0)
+    if (!ffmpegCppConvertFrameToTarget(sourceFrame,
+                                       sourcePixelFormat,
+                                       normalizedRotationDegree,
+                                       option.applyRotation,
+                                       targetFrame,
+                                       targetPixelFormat,
+                                       errorText))
     {
         av_frame_free(&targetFrame);
-        sws_freeContext(scaleContext);
-         errorText = ffmpegCppAppendError("alloc image buffer failed", imageAllocResult);
         return false;
     }
-
-    sws_scale(scaleContext,
-              sourceFrame->data,
-              sourceFrame->linesize,
-              0,
-              sourceFrame->height,
-              targetFrame->data,
-              targetFrame->linesize);
 
     AVCodecID imageCodecId = ffmpegCppImageCodecId(option.imageFormat);
     const AVCodec* encoder = avcodec_find_encoder(imageCodecId);
     if (encoder == nullptr)
     {
-        av_freep(&targetFrame->data[0]);
         av_frame_free(&targetFrame);
-        sws_freeContext(scaleContext);
         errorText = "image encoder is not enabled";
         return false;
     }
@@ -425,9 +748,7 @@ static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
     AVCodecContext* encodeContext = avcodec_alloc_context3(encoder);
     if (encodeContext == nullptr)
     {
-        av_freep(&targetFrame->data[0]);
         av_frame_free(&targetFrame);
-        sws_freeContext(scaleContext);
         errorText = "alloc image encoder context failed";
         return false;
     }
@@ -439,8 +760,8 @@ static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
     encodeContext->time_base.den = 1000;
     if (option.imageFormat == FFmpegCppImageFormatJpeg)
     {
-        int jpegQuality = std::max<int32_t>(1, std::min<int32_t>(100, option.jpegQuality));
-        int qscale = 31 - jpegQuality * 29 / 100;
+        int32_t jpegQuality = std::max<int32_t>(1, std::min<int32_t>(100, option.jpegQuality));
+        int32_t qscale = 31 - jpegQuality * 29 / 100;
         qscale = std::max<int32_t>(2, std::min<int32_t>(31, qscale));
         encodeContext->flags |= AV_CODEC_FLAG_QSCALE;
         encodeContext->global_quality = FF_QP2LAMBDA * qscale;
@@ -451,10 +772,8 @@ static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
     if (result < 0)
     {
         avcodec_free_context(&encodeContext);
-        av_freep(&targetFrame->data[0]);
         av_frame_free(&targetFrame);
-        sws_freeContext(scaleContext);
-         errorText = ffmpegCppAppendError("open image encoder failed", result);
+        errorText = ffmpegCppAppendError("open image encoder failed", result);
         return false;
     }
 
@@ -462,9 +781,7 @@ static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
     if (packet == nullptr)
     {
         avcodec_free_context(&encodeContext);
-        av_freep(&targetFrame->data[0]);
         av_frame_free(&targetFrame);
-        sws_freeContext(scaleContext);
         errorText = "alloc image packet failed";
         return false;
     }
@@ -482,12 +799,10 @@ static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
 
     if (result < 0)
     {
-         errorText = ffmpegCppAppendError("encode image failed", result);
+        errorText = ffmpegCppAppendError("encode image failed", result);
         av_packet_free(&packet);
         avcodec_free_context(&encodeContext);
-        av_freep(&targetFrame->data[0]);
         av_frame_free(&targetFrame);
-        sws_freeContext(scaleContext);
         return false;
     }
 
@@ -501,9 +816,7 @@ static bool ffmpegCppEncodeFrameToImage(const AVFrame* sourceFrame,
 
     av_packet_free(&packet);
     avcodec_free_context(&encodeContext);
-    av_freep(&targetFrame->data[0]);
     av_frame_free(&targetFrame);
-    sws_freeContext(scaleContext);
     return true;
 }
 
@@ -519,6 +832,581 @@ static bool ffmpegCppIsMovLikeOutput(const AVOutputFormat* outputFormat)
         || outputName.find("mov") != std::string::npos
         || outputName.find("ipod") != std::string::npos
         || outputName.find("3gp") != std::string::npos;
+}
+
+static bool ffmpegCppWriteEncoderPackets(AVCodecContext* encodeContext,
+                                  AVFormatContext* outputContext,
+                                  AVStream* outputStream,
+                                  std::string& errorText)
+{
+    AVPacket* packet = av_packet_alloc();
+    if (packet == nullptr)
+    {
+        errorText = "alloc encoded packet failed";
+        return false;
+    }
+
+    bool success = true;
+    while (true)
+    {
+        int result = avcodec_receive_packet(encodeContext, packet);
+        if (result == AVERROR(EAGAIN) || result == AVERROR_EOF)
+        {
+            break;
+        }
+        if (result < 0)
+        {
+            errorText = ffmpegCppAppendError("receive encoded packet failed", result);
+            success = false;
+            break;
+        }
+
+        av_packet_rescale_ts(packet, encodeContext->time_base, outputStream->time_base);
+        packet->stream_index = outputStream->index;
+        result = av_interleaved_write_frame(outputContext, packet);
+        av_packet_unref(packet);
+        if (result < 0)
+        {
+            errorText = ffmpegCppAppendError("write encoded packet failed", result);
+            success = false;
+            break;
+        }
+    }
+
+    av_packet_free(&packet);
+    return success;
+}
+
+static bool ffmpegCppEncodeAndWriteVideoFrame(AVCodecContext* encodeContext,
+                                      AVFrame* frame,
+                                      AVFormatContext* outputContext,
+                                      AVStream* outputStream,
+                                      std::string& errorText)
+{
+    int result = avcodec_send_frame(encodeContext, frame);
+    if (result < 0)
+    {
+        errorText = ffmpegCppAppendError("send frame to encoder failed", result);
+        return false;
+    }
+    return ffmpegCppWriteEncoderPackets(encodeContext, outputContext, outputStream, errorText);
+}
+
+static bool ffmpegCppCopyInputPacketToOutput(AVPacket* packet,
+                                      AVStream* inputStream,
+                                      AVStream* outputStream,
+                                      AVFormatContext* outputContext,
+                                      std::string& errorText)
+{
+    if (packet == nullptr || inputStream == nullptr || outputStream == nullptr || outputContext == nullptr)
+    {
+        errorText = "invalid packet copy parameter";
+        return false;
+    }
+
+    av_packet_rescale_ts(packet, inputStream->time_base, outputStream->time_base);
+    packet->pos = -1;
+    packet->stream_index = outputStream->index;
+    int result = av_interleaved_write_frame(outputContext, packet);
+    if (result < 0)
+    {
+        errorText = ffmpegCppAppendError("write copied packet failed", result);
+        return false;
+    }
+    return true;
+}
+
+static bool ffmpegCppNotifyTranscodeProgress(int64_t processedMilliseconds,
+                                      int64_t totalMilliseconds,
+                                      AVFormatContext* outputContext,
+                                      const std::string& message,
+                                      FFmpegCppProgressCallback progressCallback,
+                                      void* userData)
+{
+    if (progressCallback == nullptr)
+    {
+        return true;
+    }
+
+    FFmpegCppProgress progress;
+    progress.processedMilliseconds = processedMilliseconds;
+    progress.totalMilliseconds = totalMilliseconds;
+    progress.outputBytes = outputContext != nullptr && outputContext->pb != nullptr ? avio_tell(outputContext->pb) : 0;
+    progress.percent = totalMilliseconds > 0 ? (std::min)(100.0, processedMilliseconds * 100.0 / totalMilliseconds) : 0.0;
+    progress.message = message;
+    return progressCallback(progress, userData);
+}
+
+static bool ffmpegCppOpenVideoDecoder(AVStream* videoStream,
+                               AVCodecContext** decodeContext,
+                               std::string& errorText)
+{
+    if (videoStream == nullptr || videoStream->codecpar == nullptr || decodeContext == nullptr)
+    {
+        errorText = "invalid decoder parameter";
+        return false;
+    }
+
+    const AVCodec* decoder = avcodec_find_decoder(videoStream->codecpar->codec_id);
+    if (decoder == nullptr)
+    {
+        errorText = "video decoder is not enabled";
+        return false;
+    }
+
+    AVCodecContext* localDecodeContext = avcodec_alloc_context3(decoder);
+    if (localDecodeContext == nullptr)
+    {
+        errorText = "alloc video decoder context failed";
+        return false;
+    }
+
+    int result = avcodec_parameters_to_context(localDecodeContext, videoStream->codecpar);
+    if (result < 0)
+    {
+        avcodec_free_context(&localDecodeContext);
+        errorText = ffmpegCppAppendError("copy video decoder parameter failed", result);
+        return false;
+    }
+
+    result = avcodec_open2(localDecodeContext, decoder, nullptr);
+    if (result < 0)
+    {
+        avcodec_free_context(&localDecodeContext);
+        errorText = ffmpegCppAppendError("open video decoder failed", result);
+        return false;
+    }
+
+    *decodeContext = localDecodeContext;
+    return true;
+}
+
+static bool ffmpegCppOpenVideoEncoder(AVFormatContext* outputContext,
+                               AVCodecContext* decodeContext,
+                               AVStream* inputVideoStream,
+                               int32_t rotationDegree,
+                               const FFmpegCppTranscodeOption& option,
+                               AVCodecContext** encodeContext,
+                               AVStream** outputVideoStream,
+                               std::string& errorText)
+{
+    if (outputContext == nullptr || decodeContext == nullptr || inputVideoStream == nullptr || encodeContext == nullptr || outputVideoStream == nullptr)
+    {
+        errorText = "invalid encoder parameter";
+        return false;
+    }
+
+    const AVCodec* encoder = ffmpegCppFindVideoEncoder(option.videoCodec);
+    if (encoder == nullptr)
+    {
+        errorText = "requested video encoder is not enabled";
+        return false;
+    }
+
+    AVCodecContext* localEncodeContext = avcodec_alloc_context3(encoder);
+    if (localEncodeContext == nullptr)
+    {
+        errorText = "alloc video encoder context failed";
+        return false;
+    }
+
+    int32_t targetWidth = 0;
+    int32_t targetHeight = 0;
+    ffmpegCppCalculateTranscodeTargetSize(decodeContext->width,
+                                          decodeContext->height,
+                                          rotationDegree,
+                                          option,
+                                          targetWidth,
+                                          targetHeight);
+    localEncodeContext->codec_id = encoder->id;
+    localEncodeContext->codec_type = AVMEDIA_TYPE_VIDEO;
+    localEncodeContext->width = targetWidth;
+    localEncodeContext->height = targetHeight;
+    localEncodeContext->pix_fmt = AV_PIX_FMT_YUV420P;
+    localEncodeContext->sample_aspect_ratio = decodeContext->sample_aspect_ratio;
+    localEncodeContext->bit_rate = option.videoBitRateKbps > 0 ? static_cast<int64_t>(option.videoBitRateKbps) * 1000 : 0;
+
+    AVRational frameRate = inputVideoStream->avg_frame_rate.num != 0 && inputVideoStream->avg_frame_rate.den != 0 ? inputVideoStream->avg_frame_rate : inputVideoStream->r_frame_rate;
+    if (frameRate.num > 0 && frameRate.den > 0)
+    {
+        localEncodeContext->framerate = frameRate;
+        localEncodeContext->time_base = av_inv_q(frameRate);
+    }
+    else
+    {
+        localEncodeContext->time_base = inputVideoStream->time_base;
+    }
+    if (localEncodeContext->time_base.num <= 0 || localEncodeContext->time_base.den <= 0)
+    {
+        localEncodeContext->time_base.num = 1;
+        localEncodeContext->time_base.den = 25;
+    }
+
+    if ((outputContext->oformat->flags & AVFMT_GLOBALHEADER) != 0)
+    {
+        localEncodeContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
+    if (!option.preset.empty() && localEncodeContext->priv_data != nullptr)
+    {
+        av_opt_set(localEncodeContext->priv_data, "preset", option.preset.c_str(), 0);
+    }
+    if (option.crf > 0 && localEncodeContext->priv_data != nullptr)
+    {
+        std::ostringstream stream;
+        stream << option.crf;
+        av_opt_set(localEncodeContext->priv_data, "crf", stream.str().c_str(), 0);
+    }
+
+    int result = avcodec_open2(localEncodeContext, encoder, nullptr);
+    if (result < 0)
+    {
+        avcodec_free_context(&localEncodeContext);
+        errorText = ffmpegCppAppendError("open video encoder failed", result);
+        return false;
+    }
+
+    AVStream* localOutputVideoStream = avformat_new_stream(outputContext, nullptr);
+    if (localOutputVideoStream == nullptr)
+    {
+        avcodec_free_context(&localEncodeContext);
+        errorText = "create output video stream failed";
+        return false;
+    }
+
+    localOutputVideoStream->time_base = localEncodeContext->time_base;
+    localOutputVideoStream->sample_aspect_ratio = localEncodeContext->sample_aspect_ratio;
+    result = avcodec_parameters_from_context(localOutputVideoStream->codecpar, localEncodeContext);
+    if (result < 0)
+    {
+        avcodec_free_context(&localEncodeContext);
+        errorText = ffmpegCppAppendError("copy video encoder parameter failed", result);
+        return false;
+    }
+    localOutputVideoStream->codecpar->codec_tag = 0;
+
+    *encodeContext = localEncodeContext;
+    *outputVideoStream = localOutputVideoStream;
+    return true;
+}
+
+static bool ffmpegCppTranscodeWithVideoEncode(AVFormatContext* inputContext,
+                                       int64_t totalMilliseconds,
+                                       const std::string& outputFilePath,
+                                       const FFmpegCppTranscodeOption& option,
+                                       bool* cancelRequested,
+                                       FFmpegCppProgressCallback progressCallback,
+                                       void* userData,
+                                       std::string& errorText)
+{
+    if (inputContext == nullptr)
+    {
+        errorText = "input context is null";
+        return false;
+    }
+
+    int videoStreamIndex = av_find_best_stream(inputContext, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
+    if (videoStreamIndex < 0)
+    {
+        errorText = ffmpegCppAppendError("find video stream failed", videoStreamIndex);
+        return false;
+    }
+
+    AVStream* inputVideoStream = inputContext->streams[videoStreamIndex];
+    int32_t rotationDegree = ffmpegCppStreamRotationDegree(inputVideoStream);
+    AVCodecContext* decodeContext = nullptr;
+    AVCodecContext* encodeContext = nullptr;
+    AVFormatContext* outputContext = nullptr;
+    AVFrame* decodeFrame = nullptr;
+    AVFrame* encodeFrame = nullptr;
+    AVPacket* inputPacket = nullptr;
+    bool success = false;
+    bool cancelled = false;
+    int64_t frameIndex = 0;
+    int64_t lastProgressMilliseconds = -1;
+    std::vector<int> streamMapping;
+    std::chrono::steady_clock::time_point startTime;
+
+    const char* formatName = option.outputContainer.empty() ? nullptr : option.outputContainer.c_str();
+    int result = avformat_alloc_output_context2(&outputContext, nullptr, formatName, outputFilePath.c_str());
+    if (result < 0 || outputContext == nullptr)
+    {
+        errorText = result < 0 ? ffmpegCppAppendError("alloc output context failed", result) : "alloc output context failed";
+        goto cleanup;
+    }
+
+    if (!ffmpegCppOpenVideoDecoder(inputVideoStream, &decodeContext, errorText))
+    {
+        goto cleanup;
+    }
+
+    AVStream* outputVideoStream = nullptr;
+    if (!ffmpegCppOpenVideoEncoder(outputContext,
+                                   decodeContext,
+                                   inputVideoStream,
+                                   rotationDegree,
+                                   option,
+                                   &encodeContext,
+                                   &outputVideoStream,
+                                   errorText))
+    {
+        goto cleanup;
+    }
+
+    streamMapping.assign(inputContext->nb_streams, -1);
+    streamMapping[videoStreamIndex] = outputVideoStream->index;
+    for (unsigned int i = 0; i < inputContext->nb_streams; ++i)
+    {
+        if (static_cast<int>(i) == videoStreamIndex)
+        {
+            continue;
+        }
+
+        AVStream* inputStream = inputContext->streams[i];
+        if (inputStream == nullptr || inputStream->codecpar == nullptr)
+        {
+            continue;
+        }
+
+        if (inputStream->codecpar->codec_type != AVMEDIA_TYPE_AUDIO)
+        {
+            continue;
+        }
+        if (option.removeAudio || option.audioCodec == FFmpegCppAudioCodecNone)
+        {
+            continue;
+        }
+        if (!ffmpegCppCanCopyAudioStream(inputStream->codecpar, option.audioCodec))
+        {
+            errorText = "audio transcode is not implemented; use copy audio or remove audio";
+            goto cleanup;
+        }
+
+        AVStream* outputAudioStream = avformat_new_stream(outputContext, nullptr);
+        if (outputAudioStream == nullptr)
+        {
+            errorText = "create output audio stream failed";
+            goto cleanup;
+        }
+
+        result = avcodec_parameters_copy(outputAudioStream->codecpar, inputStream->codecpar);
+        if (result < 0)
+        {
+            errorText = ffmpegCppAppendError("copy output audio parameter failed", result);
+            goto cleanup;
+        }
+        outputAudioStream->codecpar->codec_tag = 0;
+        outputAudioStream->time_base = inputStream->time_base;
+        streamMapping[i] = outputAudioStream->index;
+    }
+
+    if ((outputContext->oformat->flags & AVFMT_NOFILE) == 0)
+    {
+        result = avio_open(&outputContext->pb, outputFilePath.c_str(), AVIO_FLAG_WRITE);
+        if (result < 0)
+        {
+            errorText = ffmpegCppAppendError("open output file failed", result);
+            goto cleanup;
+        }
+    }
+
+    AVDictionary* muxOptions = nullptr;
+    if (option.fastStart && ffmpegCppIsMovLikeOutput(outputContext->oformat))
+    {
+        av_dict_set(&muxOptions, "movflags", "faststart", 0);
+    }
+    result = avformat_write_header(outputContext, &muxOptions);
+    av_dict_free(&muxOptions);
+    if (result < 0)
+    {
+        errorText = ffmpegCppAppendError("write output header failed", result);
+        goto cleanup;
+    }
+
+    av_seek_frame(inputContext, -1, 0, AVSEEK_FLAG_BACKWARD);
+    avcodec_flush_buffers(decodeContext);
+    decodeFrame = av_frame_alloc();
+    inputPacket = av_packet_alloc();
+    if (decodeFrame == nullptr || inputPacket == nullptr)
+    {
+        errorText = "alloc transcode packet or frame failed";
+        goto cleanup;
+    }
+    encodeFrame = ffmpegCppAllocFrame(encodeContext->pix_fmt, encodeContext->width, encodeContext->height, errorText);
+    if (encodeFrame == nullptr)
+    {
+        goto cleanup;
+    }
+
+    startTime = std::chrono::steady_clock::now();
+    while (true)
+    {
+        if (cancelRequested != nullptr && *cancelRequested)
+        {
+            cancelled = true;
+            errorText = "transcode cancelled";
+            break;
+        }
+        if (ffmpegCppTimeoutReached(startTime, option.timeoutMilliseconds))
+        {
+            cancelled = true;
+            errorText = "transcode timeout";
+            break;
+        }
+
+        result = av_read_frame(inputContext, inputPacket);
+        if (result == AVERROR_EOF)
+        {
+            result = avcodec_send_packet(decodeContext, nullptr);
+            if (result < 0 && result != AVERROR_EOF)
+            {
+                errorText = ffmpegCppAppendError("flush decoder failed", result);
+                break;
+            }
+        }
+        else if (result < 0)
+        {
+            errorText = ffmpegCppAppendError("read input packet failed", result);
+            break;
+        }
+        else if (inputPacket->stream_index == videoStreamIndex)
+        {
+            result = avcodec_send_packet(decodeContext, inputPacket);
+            av_packet_unref(inputPacket);
+            if (result < 0 && result != AVERROR(EAGAIN))
+            {
+                errorText = ffmpegCppAppendError("send packet to decoder failed", result);
+                break;
+            }
+        }
+        else
+        {
+            int inputStreamIndex = inputPacket->stream_index;
+            if (inputStreamIndex >= 0
+                && inputStreamIndex < static_cast<int>(streamMapping.size())
+                && streamMapping[inputStreamIndex] >= 0)
+            {
+                AVStream* inputStream = inputContext->streams[inputStreamIndex];
+                AVStream* outputStream = outputContext->streams[streamMapping[inputStreamIndex]];
+                if (!ffmpegCppCopyInputPacketToOutput(inputPacket, inputStream, outputStream, outputContext, errorText))
+                {
+                    av_packet_unref(inputPacket);
+                    break;
+                }
+            }
+            av_packet_unref(inputPacket);
+            continue;
+        }
+
+        while (true)
+        {
+            result = avcodec_receive_frame(decodeContext, decodeFrame);
+            if (result == AVERROR(EAGAIN))
+            {
+                break;
+            }
+            if (result == AVERROR_EOF)
+            {
+                if (!ffmpegCppEncodeAndWriteVideoFrame(encodeContext, nullptr, outputContext, outputVideoStream, errorText))
+                {
+                    goto cleanup;
+                }
+                success = true;
+                goto cleanup;
+            }
+            if (result < 0)
+            {
+                errorText = ffmpegCppAppendError("receive decoded frame failed", result);
+                goto cleanup;
+            }
+
+            AVPixelFormat sourcePixelFormat = static_cast<AVPixelFormat>(decodeFrame->format);
+            if (sourcePixelFormat == AV_PIX_FMT_NONE)
+            {
+                sourcePixelFormat = decodeContext->pix_fmt;
+            }
+            if (!ffmpegCppConvertFrameToTarget(decodeFrame,
+                                               sourcePixelFormat,
+                                               rotationDegree,
+                                               option.applyRotation,
+                                               encodeFrame,
+                                               encodeContext->pix_fmt,
+                                               errorText))
+            {
+                goto cleanup;
+            }
+
+            int64_t frameTimestamp = decodeFrame->best_effort_timestamp != AV_NOPTS_VALUE ? decodeFrame->best_effort_timestamp : decodeFrame->pts;
+            if (frameTimestamp != AV_NOPTS_VALUE)
+            {
+                encodeFrame->pts = av_rescale_q(frameTimestamp, inputVideoStream->time_base, encodeContext->time_base);
+            }
+            else
+            {
+                encodeFrame->pts = frameIndex;
+            }
+            ++frameIndex;
+
+            int64_t frameMilliseconds = frameTimestamp != AV_NOPTS_VALUE ? ffmpegCppToMilliseconds(frameTimestamp, inputVideoStream->time_base) : 0;
+            if (!ffmpegCppEncodeAndWriteVideoFrame(encodeContext, encodeFrame, outputContext, outputVideoStream, errorText))
+            {
+                goto cleanup;
+            }
+            if (frameMilliseconds != lastProgressMilliseconds)
+            {
+                lastProgressMilliseconds = frameMilliseconds;
+                if (!ffmpegCppNotifyTranscodeProgress(frameMilliseconds, totalMilliseconds, outputContext, "transcoding", progressCallback, userData))
+                {
+                    cancelled = true;
+                    errorText = "transcode cancelled";
+                    goto cleanup;
+                }
+            }
+        }
+
+        if (result == AVERROR_EOF)
+        {
+            break;
+        }
+    }
+
+cleanup:
+    if (success)
+    {
+        result = av_write_trailer(outputContext);
+        if (result < 0)
+        {
+            success = false;
+            errorText = ffmpegCppAppendError("write output trailer failed", result);
+        }
+    }
+
+    if (progressCallback != nullptr)
+    {
+        FFmpegCppProgress progress;
+        progress.processedMilliseconds = success ? totalMilliseconds : lastProgressMilliseconds;
+        progress.totalMilliseconds = totalMilliseconds;
+        progress.outputBytes = outputContext != nullptr && outputContext->pb != nullptr ? avio_tell(outputContext->pb) : ffmpegCppFileSize(outputFilePath);
+        progress.percent = success ? 100.0 : (totalMilliseconds > 0 ? (std::min)(100.0, progress.processedMilliseconds * 100.0 / totalMilliseconds) : 0.0);
+        progress.finished = success;
+        progress.cancelled = cancelled;
+        progress.message = success ? "finished" : errorText;
+        progressCallback(progress, userData);
+    }
+
+    av_packet_free(&inputPacket);
+    av_frame_free(&encodeFrame);
+    av_frame_free(&decodeFrame);
+    avcodec_free_context(&encodeContext);
+    avcodec_free_context(&decodeContext);
+    if (outputContext != nullptr)
+    {
+        if ((outputContext->oformat->flags & AVFMT_NOFILE) == 0 && outputContext->pb != nullptr)
+        {
+            avio_closep(&outputContext->pb);
+        }
+        avformat_free_context(outputContext);
+    }
+    return success;
 }
 
 FFmpegCpp::FFmpegCpp()
@@ -759,6 +1647,7 @@ bool FFmpegCpp::extractFrameToMemory(int64_t timestampMilliseconds,
     }
 
     AVStream* videoStream = formatContext->streams[videoStreamIndex];
+    int32_t rotationDegree = ffmpegCppStreamRotationDegree(videoStream);
     const AVCodec* decoder = avcodec_find_decoder(videoStream->codecpar->codec_id);
     if (decoder == nullptr)
     {
@@ -859,7 +1748,7 @@ bool FFmpegCpp::extractFrameToMemory(int64_t timestampMilliseconds,
             {
                 int64_t frameTimestamp = frame->best_effort_timestamp != AV_NOPTS_VALUE ? frame->best_effort_timestamp : frame->pts;
                 int64_t frameMilliseconds = ffmpegCppToMilliseconds(frameTimestamp, videoStream->time_base);
-                if (ffmpegCppEncodeFrameToImage(frame, decodeContext, frameMilliseconds, option, imageData, encodeError))
+                if (ffmpegCppEncodeFrameToImage(frame, decodeContext, rotationDegree, frameMilliseconds, option, imageData, encodeError))
                 {
                     if (imageData->timestampMilliseconds == 0)
                     {
@@ -970,16 +1859,26 @@ bool FFmpegCpp::transcode(const std::string& outputFilePath,
         m_lastError = "output file already exists";
         return false;
     }
-    if (option.videoCodec != FFmpegCppVideoCodecCopy
-        || (!option.removeAudio && option.audioCodec != FFmpegCppAudioCodecCopy && option.audioCodec != FFmpegCppAudioCodecNone))
-    {
-        m_lastError = "current ffmpeg package supports stream-copy transcode only";
-        return false;
-    }
-
     m_lastError.clear();
     m_cancelRequested = false;
     AVFormatContext* inputContext = static_cast<AVFormatContext*>(m_formatContext);
+    if (option.videoCodec != FFmpegCppVideoCodecCopy)
+    {
+        return ffmpegCppTranscodeWithVideoEncode(inputContext,
+                                                 durationMilliseconds(),
+                                                 outputFilePath,
+                                                 option,
+                                                 &m_cancelRequested,
+                                                 progressCallback,
+                                                 userData,
+                                                 m_lastError);
+    }
+    if (!option.removeAudio && option.audioCodec != FFmpegCppAudioCodecCopy && option.audioCodec != FFmpegCppAudioCodecNone)
+    {
+        m_lastError = "audio transcode is not implemented; use copy audio or remove audio";
+        return false;
+    }
+
     AVFormatContext* outputContext = nullptr;
     const char* formatName = option.outputContainer.empty() ? nullptr : option.outputContainer.c_str();
     int result = avformat_alloc_output_context2(&outputContext, nullptr, formatName, outputFilePath.c_str());
@@ -1192,6 +2091,136 @@ bool FFmpegCpp::cancelCurrentTask()
     m_cancelRequested = true;
     return true;
 }
+
+#ifdef FFMPEGCPP_TEST_MAIN
+static bool ffmpegCppTestCreateDirectory(const std::string& directoryPath)
+{
+    if (directoryPath.empty())
+    {
+        return false;
+    }
+
+#ifdef _WIN32
+    int result = _mkdir(directoryPath.c_str());
+#else
+    int result = mkdir(directoryPath.c_str(), 0755);
+#endif
+    return result == 0 || errno == EEXIST;
+}
+
+static bool ffmpegCppTestFileExistsAndNotEmpty(const std::string& filePath)
+{
+    std::ifstream stream(filePath.c_str(), std::ios::binary | std::ios::ate);
+    if (!stream.good())
+    {
+        return false;
+    }
+    return stream.tellg() > 0;
+}
+
+static bool ffmpegCppTestIsJpeg(const FFmpegCppImageData& imageData)
+{
+    if (imageData.data.size() < 4)
+    {
+        return false;
+    }
+    return imageData.data[0] == 0xFF
+        && imageData.data[1] == 0xD8
+        && imageData.data[imageData.data.size() - 2] == 0xFF
+        && imageData.data[imageData.data.size() - 1] == 0xD9;
+}
+
+int main(int argc, char* argv[])
+{
+    ffmpegCppTestCreateDirectory("src/temp");
+    ffmpegCppTestCreateDirectory("src/temp/FFmpegCppTestMain");
+
+    int32_t totalCount = 0;
+    int32_t failCount = 0;
+    std::function<void(bool, const std::string&)> check = [&totalCount, &failCount](bool ok, const std::string& name) -> void
+    {
+        ++totalCount;
+        std::cout << (ok ? "[PASS] " : "[FAIL] ") << name << std::endl;
+        if (!ok)
+        {
+            ++failCount;
+        }
+    };
+
+    const std::string inputFilePath = argc > 1 ? argv[1] : "common/CookServer/res/video/cook_000005.mp4";
+    const std::string outputCopy = "src/temp/FFmpegCppTestMain/copy_output.mp4";
+    remove(outputCopy.c_str());
+
+    FFmpegCpp emptyObject;
+    check(!emptyObject.open(""), "open empty path");
+    check(!emptyObject.isOpen(), "empty object not open");
+    check(!emptyObject.getMediaInfo(nullptr), "get media info null");
+    check(!emptyObject.extractFirstFrameToMemory(nullptr), "extract null image data");
+    emptyObject.close();
+    emptyObject.close();
+    check(!emptyObject.isOpen(), "repeated close");
+
+    check(FFmpegCppHelper::isCommonVideoFileExtension("test.MP4"), "common video extension true");
+    check(!FFmpegCppHelper::isCommonVideoFileExtension("test.txt"), "common video extension false");
+    check(FFmpegCppHelper::guessVideoMimeTypeByFilePath("a.mkv") == "video/x-matroska", "video mime");
+    check(FFmpegCppHelper::imageFormatToExtension(FFmpegCppImageFormatBmp) == "bmp", "image extension bmp");
+    check(FFmpegCppHelper::imageFormatToMimeType(FFmpegCppImageFormatPng) == "image/png", "image mime png");
+    check(FFmpegCppHelper::videoCodecToEncoderName(FFmpegCppVideoCodecH265) == "libx265", "h265 encoder name");
+    check(FFmpegCppHelper::audioCodecToEncoderName(FFmpegCppAudioCodecNone).empty(), "audio none encoder name");
+    check(FFmpegCppHelper::formatMilliseconds(3723004) == "01:02:03.004", "format milliseconds");
+
+    FFmpegCpp ffmpegCpp;
+    check(ffmpegCpp.open(inputFilePath), "open real video");
+    check(ffmpegCpp.isOpen() && ffmpegCpp.filePath() == inputFilePath, "open state");
+
+    FFmpegCppMediaInfo mediaInfo;
+    check(ffmpegCpp.getMediaInfo(&mediaInfo), "get media info");
+    check(mediaInfo.fileSizeBytes > 0 && mediaInfo.hasVideo, "media info values");
+
+    FFmpegCppStreamInfo videoStream;
+    check(ffmpegCpp.getMainVideoStreamInfo(&videoStream) && videoStream.width > 0 && videoStream.height > 0, "main video stream");
+
+    FFmpegCppFrameExtractOption extractOption;
+    extractOption.maxWidth = 360;
+    extractOption.maxHeight = 640;
+    extractOption.applyRotation = true;
+    extractOption.imageFormat = FFmpegCppImageFormatJpeg;
+    extractOption.jpegQuality = 82;
+    extractOption.timeoutMilliseconds = 10000;
+
+    FFmpegCppImageData imageData;
+    bool extractJpegResult = ffmpegCpp.extractFirstFrameToMemory(&imageData, extractOption);
+    if (!extractJpegResult)
+    {
+        std::cout << "extract jpeg error: " << ffmpegCpp.lastError() << std::endl;
+    }
+    check(extractJpegResult, "extract first frame jpeg");
+    check(!imageData.empty() && imageData.width > 0 && imageData.height > 0 && imageData.mimeType == "image/jpeg", "jpeg image data");
+    check(ffmpegCppTestIsJpeg(imageData), "jpeg magic");
+
+    FFmpegCppTranscodeOption transcodeOption;
+    transcodeOption.videoCodec = FFmpegCppVideoCodecCopy;
+    transcodeOption.audioCodec = FFmpegCppAudioCodecCopy;
+    transcodeOption.outputContainer = "mp4";
+    transcodeOption.overwriteOutput = true;
+    transcodeOption.timeoutMilliseconds = 30000;
+    bool copyResult = ffmpegCpp.transcode(outputCopy, transcodeOption, nullptr, nullptr);
+    if (!copyResult)
+    {
+        std::cout << "copy transcode error: " << ffmpegCpp.lastError() << std::endl;
+    }
+    check(copyResult && ffmpegCppTestFileExistsAndNotEmpty(outputCopy), "stream copy transcode");
+
+    std::cout << "h264 encoder available=" << (FFmpegCppHelper::isVideoEncoderAvailable(FFmpegCppVideoCodecH264) ? "true" : "false") << std::endl;
+    std::cout << "h265 encoder available=" << (FFmpegCppHelper::isVideoEncoderAvailable(FFmpegCppVideoCodecH265) ? "true" : "false") << std::endl;
+
+    ffmpegCpp.close();
+    check(!ffmpegCpp.isOpen(), "close after work");
+
+    std::cout << "FFmpegCpp runtime test " << (failCount == 0 ? "PASS" : "FAIL") << ", total=" << totalCount << ", failed=" << failCount << std::endl;
+    return failCount == 0 ? 0 : 1;
+}
+#endif
 
 //static bool writeVideoPacket(AVFormatContext* formatContext, AVCodecContext* codecContext, AVStream* stream, AVPacket* packet)
 //{

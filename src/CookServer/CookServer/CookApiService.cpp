@@ -8,6 +8,7 @@
 #include "CookVoiceService.h"
 #include "CSystem/CSystemAPI.h"
 #include "CStringManager/CStringManagerAPI.h"
+#include "FFmpegCpp/FFmpegCppAPI.h"
 #include "LogManager/LogManagerAPI.h"
 #include "RapidJson/RapidJsonAPI.h"
 #include <stdint.h>
@@ -1104,7 +1105,7 @@ void CookApiService::writeVideoPosterCache(const std::string& videoId, const std
 HttpResponse CookApiService::buildVideoPosterResponse(const HttpRequest& request)
 {
 	std::chrono::high_resolution_clock::time_point beginTime = CSystem::GetHighTickCount();
-	if (!g_config.m_videoPosterGenerateEnabled || g_config.m_videoPosterCommandTemplate.empty())
+	if (!g_config.m_videoPosterGenerateEnabled)
 	{
 		return errorResponse("video poster disabled", kHttpStatusNotFound, "VIDEO_POSTER_DISABLED");
 	}
@@ -1135,30 +1136,48 @@ HttpResponse CookApiService::buildVideoPosterResponse(const HttpRequest& request
 		return errorResponse("video file not found", kHttpStatusNotFound, "VIDEO_NOT_FOUND");
 	}
 
-	std::string command = g_config.m_videoPosterCommandTemplate;
-	CStringManager::Replace(command, "{videoFile}", CookHelper::quoteCommandArgument(videoFilePath));
+	FFmpegCppFrameExtractOption extractOption;
+	extractOption.maxWidth = g_config.m_videoPosterMaxWidth;
+	extractOption.maxHeight = g_config.m_videoPosterMaxHeight;
+	extractOption.keepAspectRatio = true;
+	extractOption.applyRotation = g_config.m_videoPosterApplyRotation;
+	extractOption.imageFormat = FFmpegCppImageFormatJpeg;
+	extractOption.jpegQuality = g_config.m_videoPosterJpegQuality;
+	extractOption.timeoutMilliseconds = g_config.m_videoPosterTimeoutMilliseconds;
+
+	FFmpegCppImageData imageData;
+	std::string errorText;
+	if (!FFmpegCppHelper::extractFirstFrameToMemory(videoFilePath, &imageData, extractOption, &errorText) || imageData.empty())
+	{
+		LOGWARNING("CookApiService video poster generate failed videoId=%s file=%s error=%s costMs=%d",
+		           video.m_id.c_str(),
+		           videoFilePath.c_str(),
+		           errorText.c_str(),
+		           CSystem::GetHighTickCountMilliRunTime(beginTime));
+		return errorResponse("video poster generate failed", kHttpStatusNotFound, "VIDEO_POSTER_GENERATE_FAILED");
+	}
 
 	std::string output;
-	int32_t commandResult = CSystem::SystemCommand(command, output, g_config.m_videoPosterCommandUseShell);
-	if (commandResult != 0 || !CookHelper::isJpegImageData(output))
+	output.assign(reinterpret_cast<const char*>(&imageData.data[0]), imageData.data.size());
+	if (!CookHelper::isJpegImageData(output))
 	{
-		LOGWARNING("CookApiService video poster pipe failed videoId=%s result=%d command=%s outputBytes=%d outputSample=%s",
+		LOGWARNING("CookApiService video poster invalid jpeg videoId=%s bytes=%d mime=%s",
 		           video.m_id.c_str(),
-		           commandResult,
-		           command.c_str(),
 		           static_cast<int32_t>(output.size()),
-		           CookHelper::shortenCommandOutput(output).c_str());
+		           imageData.mimeType.c_str());
 		return errorResponse("video poster generate failed", kHttpStatusNotFound, "VIDEO_POSTER_GENERATE_FAILED");
 	}
 
 	HttpResponse response = HttpResponse::text(output);
-	response.m_contentType = "image/jpeg";
+	response.m_contentType = imageData.mimeType.empty() ? "image/jpeg" : imageData.mimeType;
 	response.setHeader("Cache-Control", "public, max-age=86400");
 	response.setHeader("Content-Disposition", "inline; filename=\"" + video.m_id + ".jpg\"");
 	writeVideoPosterCache(video.m_id, output, response.m_contentType);
-	LOGINFO("CookApiService video poster response videoId=%s bytes=%d costMs=%d",
+	LOGINFO("CookApiService video poster response videoId=%s bytes=%d width=%d height=%d costMs=%d",
 	        video.m_id.c_str(),
 	        static_cast<int32_t>(output.size()),
+	        imageData.width,
+	        imageData.height,
 	        CSystem::GetHighTickCountMilliRunTime(beginTime));
 	return response;
 }

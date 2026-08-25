@@ -13,7 +13,7 @@
     <swiper-item wx:for="{{feed}}" wx:key="feedKey">
       <view class="feed-card">
         <image
-          wx:if="{{item.posterSrc && !item.videoUrl}}"
+          wx:if="{{item.posterSrc && (!item.videoFrameReady || index !== currentIndex)}}"
           class="feed-poster"
           data-index="{{index}}"
           src="{{item.posterSrc}}"
@@ -91,6 +91,20 @@
       </view>
     </swiper-item>
   </swiper>
+
+  <view class="poster-preload-box" wx:if="{{posterPreloadList.length}}">
+    <image
+      wx:for="{{posterPreloadList}}"
+      wx:key="feedKey"
+      class="poster-preload-image"
+      data-index="{{item.index}}"
+      data-video-id="{{item.videoId}}"
+      src="{{item.posterUrl}}"
+      mode="aspectFill"
+      bindload="onPosterPreloadLoad"
+      binderror="onPosterPreloadError"
+    ></image>
+  </view>
 
   <view class="feed-empty" wx:if="{{!loading && !error && !feed.length}}">
     当前还没有可播放视频。

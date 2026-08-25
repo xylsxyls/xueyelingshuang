@@ -231,7 +231,7 @@ private:
 	*/
 	HttpResponse buildVideoFileResponse(const HttpRequest& request);
 
-	/** 构建视频第一帧图片响应，使用临时文件生成后立即删除
+	/** 构建视频第一帧图片响应，通过FFmpegCpp在内存中生成
 	@param [in] request HTTP请求
 	@return 返回图片二进制响应
 	*/
