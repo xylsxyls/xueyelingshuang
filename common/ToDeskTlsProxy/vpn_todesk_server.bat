@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
 
+set "SCRIPT_VERSION=2026-08-31-servicepid-v15"
 set "TCP_SERVICE_NAME=vpn-todesk-server"
 set "UDP_SERVICE_NAME=vpn-todesk-server-udp"
 set "ROOT=%~dp0"
@@ -29,6 +30,7 @@ set "VPN_TODESK_UDP_LOG_FILE=%UDP_LOG_FILE%"
 
 if /I "%~1"=="-h" goto :help
 if /I "%~1"=="--help" goto :help
+if /I "%~1"=="--version" goto :version
 if "%~1"=="" goto :usage_error
 if not "%~3"=="" goto :usage_error
 
@@ -306,6 +308,7 @@ call :usage
 exit /b 2
 
 :usage
+echo ToDesk TLS Proxy server control version: %SCRIPT_VERSION%
 echo Usage: vpn_todesk_server.bat start^|stop^|status^|logs [tcp^|udp^|all]
 echo.
 echo   start [tcp]   Start TCP/stunnel mode and enable TCP automatic startup.
@@ -318,6 +321,10 @@ echo   status [mode] Show service state, startup type, and port ownership.
 echo   logs [mode]   Show TCP stunnel logs or UDP/Hysteria logs.
 echo.
 echo The mode argument is optional. The default mode is tcp.
+exit /b 0
+
+:version
+echo %SCRIPT_VERSION%
 exit /b 0
 
 :require_mode
@@ -519,7 +526,7 @@ powershell.exe -NoProfile -NonInteractive -Command "$p=[regex]::Escape($env:VPN_
 exit /b %ERRORLEVEL%
 
 :tcp_port_is_owned_by_service
-powershell.exe -NoProfile -NonInteractive -Command "$filter='Name='''+$env:VPN_TODESK_TCP_SERVICE_NAME+''''; $s=Get-WmiObject -Class Win32_Service -Filter $filter -ErrorAction SilentlyContinue; if(-not $s -or $s.State -ne 'Running' -or [uint32]$s.ProcessId -eq 0){exit 1}; $pid=[uint32]$s.ProcessId; $p=[regex]::Escape($env:VPN_TODESK_PORT); foreach($line in netstat -ano -p tcp){ if($line -match ('^\s*TCP\s+\S+:' + $p + '\s+\S+\s+LISTENING\s+(\d+)\s*$') -and [uint32]$matches[1] -eq $pid){exit 0}}; exit 1"
+powershell.exe -NoProfile -NonInteractive -Command "$filter='Name='''+$env:VPN_TODESK_TCP_SERVICE_NAME+''''; $s=Get-WmiObject -Class Win32_Service -Filter $filter -ErrorAction SilentlyContinue; if(-not $s -or $s.State -ne 'Running' -or [uint32]$s.ProcessId -eq 0){exit 1}; $servicePid=[uint32]$s.ProcessId; $p=[regex]::Escape($env:VPN_TODESK_PORT); foreach($line in netstat -ano -p tcp){ if($line -match ('^\s*TCP\s+\S+:' + $p + '\s+\S+\s+LISTENING\s+(\d+)\s*$') -and [uint32]$matches[1] -eq $servicePid){exit 0}}; exit 1"
 exit /b %ERRORLEVEL%
 
 :hysteria_process_is_running
