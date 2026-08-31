@@ -1,0 +1,7 @@
+*.sh text eol=lf
+*.bat text eol=crlf
+*.txt text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+hysteria-linux-amd64 binary
+hysteria-windows-amd64.exe binary

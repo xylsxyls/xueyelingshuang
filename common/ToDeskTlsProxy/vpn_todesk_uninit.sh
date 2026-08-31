@@ -4,10 +4,14 @@ set -Eeuo pipefail
 tunnel_service_name='vpn-todesk-client.service'
 proxy_service_name='vpn-todesk-proxy.service'
 autostart_service_name='vpn-todesk-autostart.service'
+udp_service_name='vpn-todesk-udp-client.service'
+udp_autostart_service_name='vpn-todesk-udp-autostart.service'
 client_install_dir='/etc/vpn-todesk'
 tunnel_unit_path="/etc/systemd/system/$tunnel_service_name"
 proxy_unit_path="/etc/systemd/system/$proxy_service_name"
 autostart_unit_path="/etc/systemd/system/$autostart_service_name"
+udp_unit_path="/etc/systemd/system/$udp_service_name"
+udp_autostart_unit_path="/etc/systemd/system/$udp_autostart_service_name"
 
 usage() {
     cat <<'EOF'
@@ -76,19 +80,23 @@ printf 'Uninstalling the ToDesk VPN client...\n'
 stop_service_if_present "$autostart_service_name"
 stop_service_if_present "$proxy_service_name"
 stop_service_if_present "$tunnel_service_name"
+stop_service_if_present "$udp_autostart_service_name"
+stop_service_if_present "$udp_service_name"
 
 if systemctl is-active --quiet "$autostart_service_name" \
     || systemctl is-active --quiet "$proxy_service_name" \
-    || systemctl is-active --quiet "$tunnel_service_name"; then
-    run_root systemctl status "$autostart_service_name" "$proxy_service_name" "$tunnel_service_name" --no-pager || true
+    || systemctl is-active --quiet "$tunnel_service_name" \
+    || systemctl is-active --quiet "$udp_autostart_service_name" \
+    || systemctl is-active --quiet "$udp_service_name"; then
+    run_root systemctl status "$autostart_service_name" "$proxy_service_name" "$tunnel_service_name" "$udp_autostart_service_name" "$udp_service_name" --no-pager || true
     die 'one of the ToDesk VPN client services is still running'
 fi
 
 printf 'Disabling and removing systemd units...\n'
-run_root systemctl disable "$autostart_service_name" "$proxy_service_name" "$tunnel_service_name" >/dev/null 2>&1 || true
-run_root rm -f -- "$autostart_unit_path" "$proxy_unit_path" "$tunnel_unit_path"
+run_root systemctl disable "$autostart_service_name" "$proxy_service_name" "$tunnel_service_name" "$udp_autostart_service_name" "$udp_service_name" >/dev/null 2>&1 || true
+run_root rm -f -- "$autostart_unit_path" "$proxy_unit_path" "$tunnel_unit_path" "$udp_autostart_unit_path" "$udp_unit_path"
 run_root systemctl daemon-reload
-run_root systemctl reset-failed "$autostart_service_name" "$proxy_service_name" "$tunnel_service_name" >/dev/null 2>&1 || true
+run_root systemctl reset-failed "$autostart_service_name" "$proxy_service_name" "$tunnel_service_name" "$udp_autostart_service_name" "$udp_service_name" >/dev/null 2>&1 || true
 
 case $client_install_dir in
     /etc/vpn-todesk)

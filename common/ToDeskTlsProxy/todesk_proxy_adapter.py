@@ -10,10 +10,35 @@ import urllib.parse
 
 MAX_HEADER_BYTES = 65536
 BUFFER_SIZE = 65536
+VERBOSE = False
 
 
-def log(message):
-    print(message, flush=True)
+def log(message, *, force=False):
+    if force or VERBOSE:
+        print(message, flush=True)
+
+
+def tune_tcp_socket(sock):
+    try:
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    except OSError:
+        pass
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+    except OSError:
+        pass
+    for option_name, value in (
+        ("TCP_KEEPIDLE", 30),
+        ("TCP_KEEPINTVL", 10),
+        ("TCP_KEEPCNT", 3),
+    ):
+        option = getattr(socket, option_name, None)
+        if option is None:
+            continue
+        try:
+            sock.setsockopt(socket.IPPROTO_TCP, option, value)
+        except OSError:
+            pass
 
 
 def recv_exact(sock, size):
@@ -55,6 +80,7 @@ def parse_host_port(value, default_port=None):
 
 def socks5_connect(socks_host, socks_port, target_host, target_port):
     upstream = socket.create_connection((socks_host, socks_port), timeout=15)
+    tune_tcp_socket(upstream)
     try:
         upstream.sendall(b"\x05\x01\x00")
         response = recv_exact(upstream, 2)
@@ -89,6 +115,7 @@ def socks5_connect(socks_host, socks_port, target_host, target_port):
         else:
             raise OSError("invalid SOCKS5 address type")
         recv_exact(upstream, 2)
+        upstream.settimeout(None)
         return upstream
     except Exception:
         upstream.close()
@@ -112,6 +139,10 @@ def pipe(src, dst):
 
 
 def relay(client, upstream, initial_to_upstream=b""):
+    client.settimeout(None)
+    upstream.settimeout(None)
+    tune_tcp_socket(client)
+    tune_tcp_socket(upstream)
     if initial_to_upstream:
         upstream.sendall(initial_to_upstream)
     worker = threading.Thread(target=pipe, args=(client, upstream), daemon=True)
@@ -123,6 +154,7 @@ def relay(client, upstream, initial_to_upstream=b""):
 class ProxyHandler(socketserver.BaseRequestHandler):
     def handle(self):
         client = self.request
+        tune_tcp_socket(client)
         client.settimeout(30)
         first = client.recv(1, socket.MSG_PEEK)
         if not first:
@@ -194,7 +226,7 @@ class ProxyHandler(socketserver.BaseRequestHandler):
                 ).encode("iso-8859-1", errors="replace")
                 relay(client, upstream, request + buffered_body)
         except Exception as exc:
-            log("proxy error: {}".format(exc))
+            log("proxy error: {}".format(exc), force=True)
             self.send_error(client, 502, "Bad Gateway")
         finally:
             try:
@@ -244,12 +276,16 @@ def main():
     parser.add_argument("--listen-port", type=int, default=52030)
     parser.add_argument("--socks-host", default="127.0.0.1")
     parser.add_argument("--socks-port", type=int, default=52031)
+    parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
+
+    global VERBOSE
+    VERBOSE = args.verbose
 
     with ThreadingTCPServer((args.listen_host, args.listen_port), ProxyHandler) as server:
         server.socks_host = args.socks_host
         server.socks_port = args.socks_port
-        log(
+        message = (
             "ToDesk local HTTP/SOCKS proxy listening on "
             "{}:{}, upstream SOCKS {}:{}".format(
                 args.listen_host,
@@ -258,6 +294,7 @@ def main():
                 args.socks_port,
             )
         )
+        log(message, force=True)
         server.serve_forever()
 
 
