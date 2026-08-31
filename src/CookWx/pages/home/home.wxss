@@ -102,20 +102,133 @@
   position: absolute;
   z-index: 4;
   right: 24rpx;
-  bottom: 250rpx;
+  bottom: 230rpx;
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  align-items: center;
+  gap: 26rpx;
 }
 
-.round-btn {
+.creator-action,
+.action-item {
+  width: 88rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.creator-action {
+  position: relative;
+  margin-bottom: 4rpx;
+}
+
+.creator-avatar {
   width: 84rpx;
   height: 84rpx;
-  padding: 0;
+  line-height: 84rpx;
+  text-align: center;
   border-radius: 42rpx;
-  background: rgba(255, 253, 248, 0.22);
+  background: #fffdf8;
+  color: #18231f;
+  font-size: 34rpx;
+  font-weight: 900;
+  box-shadow: 0 6rpx 22rpx rgba(0, 0, 0, 0.22);
+}
+
+.creator-follow {
+  position: absolute;
+  left: 50%;
+  bottom: -16rpx;
+  transform: translateX(-50%);
+  width: 36rpx;
+  height: 36rpx;
+  line-height: 34rpx;
+  text-align: center;
+  border-radius: 18rpx;
+  background: #ff3158;
   color: #fffdf8;
+  font-size: 28rpx;
+  font-weight: 900;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.25);
+}
+
+.creator-follow.followed {
+  background: #26b763;
   font-size: 24rpx;
+}
+
+.check-shape {
+  width: 18rpx;
+  height: 10rpx;
+  margin: 9rpx auto 0;
+  border-left: 5rpx solid #fffdf8;
+  border-bottom: 5rpx solid #fffdf8;
+  transform: rotate(-45deg);
+  box-sizing: border-box;
+}
+
+.action-icon {
+  width: 88rpx;
+  height: 70rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 4rpx 12rpx rgba(0, 0, 0, 0.38));
+}
+
+.heart-shape {
+  width: 62rpx;
+  height: 56rpx;
+  background: #fffdf8;
+  clip-path: polygon(50% 93%, 12% 57%, 5% 45%, 3% 29%, 8% 15%, 20% 6%, 34% 6%, 45% 15%, 50% 24%, 55% 15%, 66% 6%, 80% 6%, 92% 15%, 97% 29%, 95% 45%, 88% 57%);
+}
+
+.action-icon.heart.active .heart-shape {
+  background: #ff3158;
+}
+
+.star-shape {
+  width: 62rpx;
+  height: 62rpx;
+  background: #fffdf8;
+  clip-path: polygon(50% 3%, 61% 35%, 95% 35%, 68% 55%, 79% 90%, 50% 69%, 21% 90%, 32% 55%, 5% 35%, 39% 35%);
+}
+
+.action-icon.star.active .star-shape {
+  background: #ffd34d;
+}
+
+.action-icon.comment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comment-icon-shape {
+  position: relative;
+  width: 56rpx;
+  height: 40rpx;
+  background: #fffdf8;
+  border-radius: 13rpx;
+}
+
+.comment-tail {
+  position: absolute;
+  right: 8rpx;
+  bottom: -7rpx;
+  width: 16rpx;
+  height: 16rpx;
+  background: #fffdf8;
+  transform: rotate(42deg);
+}
+
+.action-label {
+  margin-top: 2rpx;
+  color: #fffdf8;
+  font-size: 22rpx;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 3rpx 12rpx rgba(0, 0, 0, 0.42);
 }
 
 .feed-info {

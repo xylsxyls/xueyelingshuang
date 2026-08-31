@@ -1110,6 +1110,32 @@ UserAccount& AccountStore::ensureNoLock(const std::string& userId)
 	return m_accounts[id];
 }
 
+UserContactInfo AccountStore::makeContactInfoNoLock(const UserAccount& viewer, const UserAccount& target) const
+{
+	UserContactInfo info;
+	info.m_userId = target.m_userId;
+	info.m_account = target.m_account;
+	info.m_nickname = target.m_nickname.empty() ? target.m_account : target.m_nickname;
+	info.m_following = viewer.m_followingUserIds.find(target.m_userId) != viewer.m_followingUserIds.end();
+	info.m_friend = info.m_following && target.m_followingUserIds.find(viewer.m_userId) != target.m_followingUserIds.end();
+	info.m_followingCount = static_cast<int32_t>(target.m_followingUserIds.size());
+	info.m_followerCount = countFollowersNoLock(target.m_userId);
+	return info;
+}
+
+int32_t AccountStore::countFollowersNoLock(const std::string& targetUserId) const
+{
+	int32_t count = 0;
+	for (std::map<std::string, UserAccount>::const_iterator it = m_accounts.begin(); it != m_accounts.end(); ++it)
+	{
+		if (it->second.m_followingUserIds.find(targetUserId) != it->second.m_followingUserIds.end())
+		{
+			++count;
+		}
+	}
+	return count;
+}
+
 void AccountStore::createSessionNoLock(const std::string& userId, std::string& token, int32_t& expireInSeconds)
 {
 	expireInSeconds = g_config.m_authTokenExpireSeconds;
@@ -1802,6 +1828,80 @@ bool AccountStore::toggleFollow(const std::string& userId, const std::string& ta
 		message = "已取消关注";
 	}
 	saveNoLock();
+	return true;
+}
+
+void AccountStore::listSocialUsers(const std::string& userId,
+                                   std::vector<UserContactInfo>& followingUsers,
+                                   std::vector<UserContactInfo>& friendUsers)
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	UserAccount& account = ensureNoLock(userId);
+	followingUsers.clear();
+	friendUsers.clear();
+	for (std::set<std::string>::const_iterator it = account.m_followingUserIds.begin(); it != account.m_followingUserIds.end(); ++it)
+	{
+		std::map<std::string, UserAccount>::const_iterator targetIt = m_accounts.find(*it);
+		if (targetIt == m_accounts.end())
+		{
+			continue;
+		}
+		UserContactInfo info = makeContactInfoNoLock(account, targetIt->second);
+		followingUsers.push_back(info);
+		if (info.m_friend)
+		{
+			friendUsers.push_back(info);
+		}
+	}
+}
+
+bool AccountStore::sendUserMessage(const std::string& userId,
+                                   const std::string& targetUserId,
+                                   const std::string& text,
+                                   MessageInfo& sentMessage,
+                                   std::string& message)
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	UserAccount& account = ensureNoLock(userId);
+	sentMessage = MessageInfo();
+	std::string targetInput = normalizeAccountNameNoLock(targetUserId);
+	std::string messageText = normalizeAccountNameNoLock(text);
+	if (targetInput.empty())
+	{
+		message = "发送目标不能为空";
+		return false;
+	}
+	std::string targetId = normalizeUserId(targetInput);
+	if (targetId.empty() || targetId == account.m_userId)
+	{
+		message = "不能给自己发送消息";
+		return false;
+	}
+	if (messageText.empty())
+	{
+		message = "消息内容不能为空";
+		return false;
+	}
+	if (messageText.size() > 600)
+	{
+		message = "消息内容过长";
+		return false;
+	}
+	std::map<std::string, UserAccount>::const_iterator targetIt = m_accounts.find(targetId);
+	if (targetIt == m_accounts.end())
+	{
+		message = "用户不存在";
+		return false;
+	}
+	if (account.m_followingUserIds.find(targetId) == account.m_followingUserIds.end())
+	{
+		message = "关注后才能发送消息";
+		return false;
+	}
+	addMessageNoLock(account.m_userId, targetId, "chat", "收到一条私信", messageText);
+	sentMessage = m_messages.empty() ? MessageInfo() : m_messages.back();
+	saveNoLock();
+	message = "发送成功";
 	return true;
 }
 

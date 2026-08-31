@@ -59,7 +59,7 @@
       data-index="{{index}}"
       bindtap="openAsset"
     >
-      <view class="cover" style="background: {{item.coverColor}}"></view>
+      <view class="cover {{item.type == 'user' ? 'user-cover' : ''}}" style="background: {{item.coverColor}}">{{item.coverText}}</view>
       <view class="asset-main">
         <view class="asset-title-row">
           <view class="recipe-title">{{item.title}}</view>

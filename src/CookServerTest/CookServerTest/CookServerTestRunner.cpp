@@ -435,11 +435,65 @@ void CookServerTestRunner::runFunctionalTests()
 		followBody.addString("targetUserId", "creator_demo");
 		CookServerTestHttpResponse followResponse;
 		client.post("/api/follows/toggle", followBody.toString(), authHeaders(phase1Token), followResponse);
-		statusCode = followResponse.m_statusCode;
-		return expectNetworkOk(followResponse, message) &&
-			expectStatus(followResponse, 200, message) &&
-			expectJsonOk(followResponse, true, message) &&
-			expectBodyContains(followResponse, "\"following\":true", message);
+		if (!expectNetworkOk(followResponse, message) ||
+			!expectStatus(followResponse, 200, message) ||
+			!expectJsonOk(followResponse, true, message) ||
+			!expectBodyContains(followResponse, "\"following\":true", message))
+		{
+			statusCode = followResponse.m_statusCode;
+			return false;
+		}
+
+		RapidJsonDocument systemFollowBody;
+		systemFollowBody.setObject();
+		systemFollowBody.addString("targetUserId", "system");
+		CookServerTestHttpResponse systemFollowResponse;
+		client.post("/api/follows/toggle", systemFollowBody.toString(), authHeaders(phase1Token), systemFollowResponse);
+		if (!expectNetworkOk(systemFollowResponse, message) ||
+			!expectStatus(systemFollowResponse, 200, message) ||
+			!expectJsonOk(systemFollowResponse, true, message) ||
+			!expectBodyContains(systemFollowResponse, "\"following\":true", message))
+		{
+			statusCode = systemFollowResponse.m_statusCode;
+			return false;
+		}
+
+		CookServerTestHttpResponse accountResponse;
+		client.get("/api/account", authHeaders(phase1Token), accountResponse);
+		if (!expectNetworkOk(accountResponse, message) ||
+			!expectStatus(accountResponse, 200, message) ||
+			!expectJsonOk(accountResponse, true, message) ||
+			!expectBodyContains(accountResponse, "\"followingUsers\"", message) ||
+			!expectBodyContains(accountResponse, "\"friendUsers\"", message) ||
+			!expectBodyContains(accountResponse, "creator_demo", message))
+		{
+			statusCode = accountResponse.m_statusCode;
+			return false;
+		}
+
+		RapidJsonDocument messageBody;
+		messageBody.setObject();
+		messageBody.addString("targetUserId", "creator_demo");
+		messageBody.addString("text", "测试私信");
+		CookServerTestHttpResponse sendResponse;
+		client.post("/api/messages/send", messageBody.toString(), authHeaders(phase1Token), sendResponse);
+		if (!expectNetworkOk(sendResponse, message) ||
+			!expectStatus(sendResponse, 200, message) ||
+			!expectJsonOk(sendResponse, true, message) ||
+			!expectBodyContains(sendResponse, "\"messageItem\"", message) ||
+			!expectBodyContains(sendResponse, "\"type\":\"chat\"", message))
+		{
+			statusCode = sendResponse.m_statusCode;
+			return false;
+		}
+
+		CookServerTestHttpResponse feedResponse;
+		client.get("/api/feed?count=20", authHeaders(phase1Token), feedResponse);
+		statusCode = feedResponse.m_statusCode;
+		return expectNetworkOk(feedResponse, message) &&
+			expectStatus(feedResponse, 200, message) &&
+			expectJsonOk(feedResponse, true, message) &&
+			expectBodyContains(feedResponse, "\"authorFollowing\":true", message);
 	});
 
 	runCase("第一期点赞接口", [this, &client, &phase1Token](std::string& message, int32_t& statusCode) -> bool

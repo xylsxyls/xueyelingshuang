@@ -1,4 +1,16 @@
 <view class="page messages-page">
+  <view class="contact-tabs">
+    <view
+      wx:for="{{contactTabs}}"
+      wx:key="key"
+      class="contact-tab {{activeContactTab == item.key ? 'active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="switchContactTab"
+    >
+      {{item.title}}
+    </view>
+  </view>
+
   <view class="messages-state card" wx:if="{{loading}}">
     消息加载中...
   </view>
@@ -7,15 +19,58 @@
     {{errorText}}
   </view>
 
-  <view class="messages-state card" wx:elif="{{!messages.length}}">
-    暂时没有消息。
-  </view>
-
-  <view class="msg card" wx:for="{{messages}}" wx:key="id">
-    <view class="icon">{{item.icon}}</view>
-    <view>
-      <view class="title">{{item.title}}</view>
-      <view class="muted">{{item.text}}</view>
+  <block wx:elif="{{activeContactTab == 'messages'}}">
+    <view class="messages-state card" wx:if="{{!messages.length}}">
+      暂时没有消息。
     </view>
-  </view>
+
+    <view class="msg card" wx:for="{{messages}}" wx:key="id">
+      <view class="icon">{{item.icon}}</view>
+      <view class="msg-main">
+        <view class="title">{{item.title}}</view>
+        <view class="muted">{{item.text}}</view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="messages-state card" wx:if="{{!contactItems.length}}">
+      当前还没有联系人。
+    </view>
+
+    <view
+      class="contact-card card {{selectedContact.userId == item.userId ? 'active' : ''}}"
+      wx:for="{{contactItems}}"
+      wx:key="id"
+      data-index="{{index}}"
+      bindtap="selectContact"
+    >
+      <view class="contact-avatar">{{item.avatarText}}</view>
+      <view class="contact-main">
+        <view class="title">{{item.name}}</view>
+        <view class="muted">{{item.summary}}</view>
+      </view>
+      <view class="contact-actions">
+        <view class="relation-badge">{{item.relationText}}</view>
+        <button
+          class="unfollow-btn"
+          wx:if="{{activeContactTab == 'following' || activeContactTab == 'friends'}}"
+          data-index="{{index}}"
+          catchtap="unfollowContact"
+          loading="{{unfollowingUserId == item.userId}}"
+          disabled="{{unfollowingUserId}}"
+        >
+          取消关注
+        </button>
+      </view>
+    </view>
+
+    <view class="send-panel card" wx:if="{{selectedContact.userId}}">
+      <view class="send-title">发给 {{selectedContact.name}}</view>
+      <view class="send-row">
+        <input class="send-input" value="{{sendText}}" bindinput="onSendInput" maxlength="200" placeholder="输入消息" />
+        <button class="send-btn" bindtap="sendContactMessage" loading="{{sending}}" disabled="{{sending}}">发送</button>
+      </view>
+    </view>
+  </block>
 </view>

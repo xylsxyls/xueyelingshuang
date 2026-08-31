@@ -191,6 +191,29 @@ public:
 	*/
 	bool toggleFollow(const std::string& userId, const std::string& targetUserId, bool& following, std::string& message);
 
+	/** 查询当前账号关注和好友摘要
+	@param [in] userId 用户ID
+	@param [out] followingUsers 当前账号关注的用户列表
+	@param [out] friendUsers 双向关注的好友列表
+	*/
+	void listSocialUsers(const std::string& userId,
+	                     std::vector<UserContactInfo>& followingUsers,
+	                     std::vector<UserContactInfo>& friendUsers);
+
+	/** 发送站内私信
+	@param [in] userId 发送者用户ID
+	@param [in] targetUserId 接收者用户ID
+	@param [in] text 私信正文
+	@param [out] sentMessage 创建后的消息
+	@param [out] message 结果说明
+	@return 返回发送是否成功
+	*/
+	bool sendUserMessage(const std::string& userId,
+	                     const std::string& targetUserId,
+	                     const std::string& text,
+	                     MessageInfo& sentMessage,
+	                     std::string& message);
+
 	/** 创建评论
 	@param [in] userId 用户ID
 	@param [in] targetType 目标类型
@@ -463,6 +486,19 @@ private:
 	@return 返回可修改的账号引用
 	*/
 	UserAccount& ensureNoLock(const std::string& userId);
+
+	/** 构建用户关系摘要，调用方必须已持有锁
+	@param [in] viewer 当前查看账号
+	@param [in] target 被查看账号
+	@return 返回关系摘要
+	*/
+	UserContactInfo makeContactInfoNoLock(const UserAccount& viewer, const UserAccount& target) const;
+
+	/** 统计目标账号粉丝数，调用方必须已持有锁
+	@param [in] targetUserId 目标用户ID
+	@return 返回粉丝数
+	*/
+	int32_t countFollowersNoLock(const std::string& targetUserId) const;
 
 	/** 查找基础菜谱，优先查用户自定义菜谱，再查系统目录，调用方必须已持有锁
 	@param [in] recipeId 菜谱ID

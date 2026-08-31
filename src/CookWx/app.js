@@ -18,7 +18,11 @@ App({
     currentCookVoiceGender: '',
     pendingCookVoiceTexts: [],
     exitCookFlowToMenu: false,
-    mineInitialTab: ''
+    mineInitialTab: '',
+    messageInitialTab: '',
+    messageTargetUserId: '',
+    followStateChanges: {},
+    socialStateVersion: 0
   },
 
   onLaunch() {

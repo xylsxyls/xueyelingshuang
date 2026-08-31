@@ -8,8 +8,16 @@ const ASSET_TABS = [
   { key: 'favorite', title: '收藏' },
   { key: 'created', title: '创作' },
   { key: 'menu', title: '菜单' },
-  { key: 'personal', title: '个性化' }
+  { key: 'personal', title: '个性化' },
+  { key: 'following', title: '关注' },
+  { key: 'friends', title: '好友' }
 ]
+
+function firstDisplayChar(text, fallback) {
+  const value = text === undefined || text === null ? '' : String(text).trim()
+  if (!value) return fallback || ''
+  return value.charAt(0)
+}
 
 Page({
   data: {
@@ -59,7 +67,10 @@ Page({
       .then(([accountRes, recipeRes, likedFeedRes, favoriteFeedRes]) => {
         if (!accountRes.ok || !recipeRes.ok) throw new Error('load failed')
         if (isStale()) return
-        const account = accountRes.account || {}
+        const account = Object.assign({}, accountRes.account || {}, {
+          followingUsers: accountRes.followingUsers || (accountRes.account || {}).followingUsers || [],
+          friendUsers: accountRes.friendUsers || (accountRes.account || {}).friendUsers || []
+        })
         const recipes = recipeRes.recipes || []
         const purchasedIds = Array.isArray(account.purchasedRecipeIds) ? account.purchasedRecipeIds : []
         const purchased = recipes.filter((item) => purchasedIds.indexOf(item.id) >= 0)
@@ -99,8 +110,8 @@ Page({
   buildStats(account, groups) {
     return [
       { label: '收藏', value: (groups.favorite || []).length },
-      { label: '创作', value: (groups.created || []).length },
-      { label: '个性化', value: (groups.personal || []).length },
+      { label: '关注', value: (groups.following || []).length },
+      { label: '好友', value: (groups.friends || []).length },
       { label: '已购', value: Array.isArray(account.purchasedRecipeIds) ? account.purchasedRecipeIds.length : 0 }
     ]
   },
@@ -115,7 +126,47 @@ Page({
     const created = recipes.filter((item) => customIds.indexOf(item.id) >= 0 || item.authorUserId === account.userId).map((item) => this.recipeToAsset(item, '我的创作'))
     const menu = recipes.filter((item) => !!item.owned).map((item) => this.recipeToAsset(item, item.defaultOwned ? '免费菜谱' : '已拥有'))
     const personal = recipes.filter((item) => !!item.personalizationApplied).map((item) => this.recipeToAsset(item, '已个性化'))
-    return { liked, favorite, created, menu, personal }
+    const following = this.normalizeContactAssets(account.followingUsers || [], account.followingUserIds || [], false)
+    const friends = this.normalizeContactAssets(account.friendUsers || [], [], true)
+    return { liked, favorite, created, menu, personal, following, friends }
+  },
+
+  normalizeContactAssets(users, fallbackIds, friendOnly) {
+    const result = []
+    const used = {}
+    const list = Array.isArray(users) ? users : []
+    for (let i = 0; i < list.length; i += 1) {
+      const item = list[i] || {}
+      const userId = item.userId || ''
+      if (!userId || used[userId]) continue
+      if (friendOnly && !item.friend) continue
+      used[userId] = true
+      result.push(this.contactToAsset(item, item.friend ? '好友' : '已关注'))
+    }
+    const ids = Array.isArray(fallbackIds) ? fallbackIds : []
+    for (let i = 0; i < ids.length; i += 1) {
+      const userId = ids[i] || ''
+      if (!userId || used[userId]) continue
+      used[userId] = true
+      result.push(this.contactToAsset({ userId, nickname: userId, following: true, friend: false }, '已关注'))
+    }
+    return result
+  },
+
+  contactToAsset(contact, badge) {
+    const name = contact.nickname || contact.account || contact.userId || '厨友'
+    const fans = Number(contact.followerCount || 0)
+    const following = Number(contact.followingCount || 0)
+    return {
+      type: 'user',
+      id: `user_${contact.userId || name}`,
+      userId: contact.userId || '',
+      title: name,
+      subtitle: `${contact.friend ? '互相关注' : '已关注'} · 粉丝 ${fans} · 关注 ${following}`,
+      coverText: firstDisplayChar(name, '厨'),
+      coverColor: contact.friend ? '#214c3a' : '#18231f',
+      badge: badge || ''
+    }
   },
 
   feedToAsset(item, badge) {
@@ -224,6 +275,13 @@ Page({
   openAsset(e) {
     const index = Number(e.currentTarget.dataset.index)
     const item = this.data.assetItems[index] || {}
+    if (item.type === 'user') {
+      const app = getApp()
+      app.globalData.messageInitialTab = this.data.activeAssetTab === 'friends' ? 'friends' : 'following'
+      app.globalData.messageTargetUserId = item.userId || ''
+      wx.switchTab({ url: '/pages/messages/messages' })
+      return
+    }
     if (!item.recipeId) {
       wx.showToast({ title: '菜谱不存在', icon: 'none' })
       return

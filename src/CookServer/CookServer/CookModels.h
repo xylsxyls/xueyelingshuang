@@ -225,6 +225,30 @@ struct UserAccount
 	std::set<std::string> m_customRecipeIds;
 };
 
+/** 用户关系摘要，用于前端展示关注和好友列表
+*/
+struct UserContactInfo
+{
+	/** 构造函数
+	*/
+	UserContactInfo();
+
+	// 用户ID
+	std::string m_userId;
+	// 登录账号名
+	std::string m_account;
+	// 昵称
+	std::string m_nickname;
+	// 当前账号是否关注该用户
+	bool m_following;
+	// 双方是否互相关注
+	bool m_friend;
+	// 该用户关注的人数
+	int32_t m_followingCount;
+	// 该用户的粉丝人数
+	int32_t m_followerCount;
+};
+
 /** 登录会话，服务端保存token哈希而不是明文token
 */
 struct AuthSessionInfo
@@ -301,7 +325,7 @@ struct MessageInfo
 	std::string m_fromUserId;
 	// 接收者用户ID
 	std::string m_toUserId;
-	// 消息类型，system/follow/comment/recipe
+	// 消息类型，system/follow/comment/recipe/chat
 	std::string m_type;
 	// 标题
 	std::string m_title;

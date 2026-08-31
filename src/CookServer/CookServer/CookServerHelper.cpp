@@ -41,6 +41,7 @@ static const char* kCookServerRoutes[] =
 	"/api/comments/create",
 	"/api/follows/toggle",
 	"/api/messages/list",
+	"/api/messages/send",
 	"/api/videos/file",
 	"/api/videos/poster",
 	"/api/videos/upload",

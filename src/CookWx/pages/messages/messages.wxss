@@ -1,5 +1,29 @@
 .messages-page {
   background: #f8f5ef;
+  padding-bottom: 36rpx;
+}
+
+.contact-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10rpx;
+  margin-bottom: 18rpx;
+}
+
+.contact-tab {
+  height: 64rpx;
+  line-height: 64rpx;
+  text-align: center;
+  border-radius: 8rpx;
+  background: #ebe5d9;
+  color: #5d564d;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.contact-tab.active {
+  background: #18231f;
+  color: #fffdf8;
 }
 
 .messages-state {
@@ -14,7 +38,8 @@
   border-color: #f0d7ad;
 }
 
-.msg {
+.msg,
+.contact-card {
   display: grid;
   grid-template-columns: 76rpx 1fr;
   gap: 18rpx;
@@ -23,18 +48,116 @@
   margin-bottom: 14rpx;
 }
 
-.icon {
+.contact-card {
+  grid-template-columns: 76rpx minmax(0, 1fr) 132rpx;
+}
+
+.contact-card.active {
+  border-color: #2e6f45;
+  background: #f0f7ec;
+}
+
+.icon,
+.contact-avatar {
   width: 76rpx;
   height: 76rpx;
   line-height: 76rpx;
   text-align: center;
   border-radius: 38rpx;
   background: #ebe5d9;
+  color: #18231f;
   font-size: 34rpx;
+  font-weight: 900;
+}
+
+.contact-avatar {
+  background: #18231f;
+  color: #fffdf8;
+}
+
+.msg-main,
+.contact-main {
+  min-width: 0;
 }
 
 .title {
   font-size: 30rpx;
   font-weight: 800;
   margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relation-badge {
+  padding: 6rpx 12rpx;
+  border-radius: 6rpx;
+  background: #e5f1dc;
+  color: #2e6f45;
+  font-size: 21rpx;
+  font-weight: 800;
+  text-align: center;
+}
+
+.contact-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8rpx;
+}
+
+.unfollow-btn {
+  width: 132rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  margin: 0;
+  padding: 0;
+  border-radius: 8rpx;
+  background: #eadfd2;
+  color: #7d4a31;
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.send-panel {
+  position: sticky;
+  bottom: 18rpx;
+  padding: 18rpx;
+  margin-top: 18rpx;
+  box-shadow: 0 10rpx 32rpx rgba(24, 35, 31, 0.08);
+}
+
+.send-title {
+  margin-bottom: 12rpx;
+  color: #5d564d;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.send-row {
+  display: grid;
+  grid-template-columns: 1fr 116rpx;
+  gap: 12rpx;
+  align-items: center;
+}
+
+.send-input {
+  height: 64rpx;
+  padding: 0 18rpx;
+  border-radius: 8rpx;
+  background: #f8f5ef;
+  color: #18231f;
+  font-size: 26rpx;
+}
+
+.send-btn {
+  width: 116rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0;
+  border-radius: 8rpx;
+  background: #18231f;
+  color: #fffdf8;
+  font-size: 25rpx;
+  font-weight: 800;
 }

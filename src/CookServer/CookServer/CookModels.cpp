@@ -98,6 +98,15 @@ m_personalizationRecordEnabled(true)
 
 }
 
+UserContactInfo::UserContactInfo() :
+m_following(false),
+m_friend(false),
+m_followingCount(0),
+m_followerCount(0)
+{
+
+}
+
 AuthSessionInfo::AuthSessionInfo() :
 m_expireAtSeconds(0)
 {

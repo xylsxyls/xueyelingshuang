@@ -64,13 +64,14 @@ std::string CookServerTestDocumentWriter::buildFeatureDocument() const
 	oss << "GET /api/feed 返回推荐、精选、关注、好友四个 tab，以及可展示在前端信息流中的菜谱卡片数据，包括标题、描述、作者、价格、点赞数、评论数和关联菜谱 ID。\r\n";
 	oss << "\r\n";
 	oss << "5. 账号金币。\r\n";
-	oss << "GET /api/account 获取账号信息。POST /api/account/recharge 进行金币充值模拟。账号、购买、收藏、点赞、个性化和视频元数据会先写入 Redis 热层，再由后台任务同步到 MySQL；当前版本不再读取或写入 CookServerState.txt。账号内保存 ownedRecipeIds、purchasedRecipeIds 和 favoriteRecipeIds，真正下发哪些菜由服务端根据账号持有的菜谱 ID 和菜谱资源目录决定。\r\n";
+	oss << "GET /api/account 获取账号信息、关注列表和好友列表。POST /api/account/recharge 进行金币充值模拟。账号、购买、收藏、点赞、关注、消息、个性化和视频元数据会先写入 Redis 热层，再由后台任务同步到 MySQL；当前版本不再读取或写入 CookServerState.txt。账号内保存 ownedRecipeIds、purchasedRecipeIds、favoriteRecipeIds 和 followingUserIds，好友关系由双方 followingUserIds 动态推导。\r\n";
 	oss << "\r\n";
 	oss << "6. 菜谱购买。\r\n";
 	oss << "POST /api/recipes/purchase 根据 recipeId 购买付费菜谱。免费菜谱或已拥有菜谱会直接返回已拥有，金币不足会返回失败消息。\r\n";
 	oss << "\r\n";
 	oss << "7. 收藏切换。\r\n";
 	oss << "POST /api/favorites/toggle 根据 recipeId 切换收藏状态，并返回最新账号和菜谱状态。\r\n";
+	oss << "POST /api/follows/toggle 根据 targetUserId 切换关注状态。GET /api/messages/list 返回站内消息、关注列表和好友列表。POST /api/messages/send 给已关注用户发送站内私信。\r\n";
 	oss << "\r\n";
 	oss << "8. 做菜排程预览。\r\n";
 	oss << "POST /api/plan/preview 接收 recipeIds 数组，默认返回 summary、selectedRecipes、timeline 和 freeBlocks。菜单实时预览传 summaryOnly=true，只返回 summary、recipeIds 和 warnings；进入计划界面前可再传 includeTimeBlocks=true，额外返回 freeBlocks、watchBlocks 和 timeSegments，用于展示自由时间、守候时间和三色时间条。summary 包含总耗时、操作耗时、自由时间、守候时间、边角时间等字段。timeline 是按时间线安排好的做菜步骤。\r\n";

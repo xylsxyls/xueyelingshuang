@@ -45,6 +45,12 @@ function formatProgressHint(currentSeconds, durationSeconds) {
   return `${formatVideoSeconds(current, clockStyle)}/${formatVideoSeconds(duration, clockStyle)}`
 }
 
+function firstDisplayChar(text, fallback) {
+  const value = text === undefined || text === null ? '' : String(text).trim()
+  if (!value) return fallback || ''
+  return value.charAt(0)
+}
+
 Page({
   data: {
     tabs: ['推荐', '精选', '关注', '好友'],
@@ -79,6 +85,7 @@ Page({
       feedCount: (this.data.feed || []).length,
       restoredFromOtherTab
     })
+    this.applyGlobalFollowState()
     if (!this.data.feed.length) this.loadData()
     else {
       this.prefetchPosterImages(this.data.currentIndex)
@@ -233,6 +240,7 @@ Page({
         if (!res.ok) throw new Error(res.message || '加载失败')
         if (isStale()) return
         if (res.posterPrefetchCount !== undefined) this.posterPrefetchCount = Number(res.posterPrefetchCount)
+        this.feedAccount = res.account || {}
         this.setData({
           tabs: res.tabs || this.data.tabs,
           feed: this.normalizeFeed(res.feed || [], 'init'),
@@ -302,6 +310,7 @@ Page({
         if (!res.ok) throw new Error(res.message || '加载失败')
         if (isStale()) return
         if (res.posterPrefetchCount !== undefined) this.posterPrefetchCount = Number(res.posterPrefetchCount)
+        this.feedAccount = res.account || this.feedAccount || {}
         const nextFeed = this.normalizeFeed(res.feed || [], `more_${Date.now()}`)
         this.setData({
           feed: (this.data.feed || []).concat(nextFeed),
@@ -342,6 +351,11 @@ Page({
       const videoId = normalizeVideoId(item.videoId || item.id || '')
       const rawVideoUrl = item.videoUrl || ''
       const posterUrl = item.posterUrl || ''
+      const account = this.feedAccount || {}
+      const followingUserIds = Array.isArray(account.followingUserIds) ? account.followingUserIds : []
+      const authorUserId = item.authorUserId || ''
+      const authorSelf = !!item.authorSelf || (!!account.userId && authorUserId === account.userId)
+      const authorFollowing = !!item.authorFollowing || followingUserIds.indexOf(authorUserId) >= 0
       return Object.assign({}, item, {
         feedKey: `${videoId || primaryRecipeId || 'feed'}_${batchKey || 'batch'}_${index}_${Math.floor(Math.random() * 100000)}`,
         id: videoId || item.id || '',
@@ -360,6 +374,11 @@ Page({
         priceType,
         priceText,
         owned,
+        authorInitial: firstDisplayChar(item.author || authorUserId, '\u53a8'),
+        authorSelf,
+        authorFollowing,
+        canFollowAuthor: !!authorUserId && !authorSelf && !authorFollowing,
+        followConfirmVisible: false,
         favorite: !!item.favorite,
         liked: !!item.liked,
         actionText: !primaryRecipeId ? '暂无菜谱' : (owned ? '查看菜谱' : (priceAmount > 0 ? `加入菜谱 ${priceText}` : '免费加入菜谱')),
@@ -538,11 +557,12 @@ Page({
   onVideoTimeUpdate(e) {
     const index = Number(e.currentTarget.dataset.index)
     if (index !== this.data.currentIndex) return
-    this.markVideoFrameReady(index, 'timeupdate')
-    if (this.progressDragging) return
     const detail = e.detail || {}
     const duration = Number(detail.duration || this.data.videoDurationSeconds || 0)
     const currentTime = Number(detail.currentTime || 0)
+    this.markVideoFrameReady(index, 'timeupdate')
+    if (!this.progressDragging) this.tryMarkCurrentVideoWatched(index, currentTime)
+    if (this.progressDragging) return
     const progressValue = duration > 0 ? Math.max(0, Math.min(1000, Math.round(currentTime * 1000 / duration))) : 0
     const now = Date.now()
     const intervalMs = Math.max(100, numberOrDefault(config.VIDEO_PROGRESS_UPDATE_INTERVAL_MS, 500))
@@ -931,6 +951,7 @@ Page({
   onVideoError(e) {
     const index = Number(e.currentTarget.dataset.index)
     const item = this.data.feed[index] || {}
+    if (index === this.data.currentIndex) this.clearWatchTimer()
     debugLog.warn('HOME', 'VIDEO_ERROR', {
       index,
       videoId: item.videoId || '',
@@ -1201,36 +1222,42 @@ Page({
 
   scheduleMarkCurrentWatched() {
     this.clearWatchTimer()
-    const index = this.data.currentIndex
+  },
+
+  tryMarkCurrentVideoWatched(index, currentTimeSeconds) {
+    const thresholdSeconds = Math.max(0.5, Number(config.VIDEO_FEED_WATCH_MARK_DELAY_MS || 0) / 1000)
+    if (Number(currentTimeSeconds || 0) < thresholdSeconds) return
     const item = (this.data.feed || [])[index] || {}
-    if (!item.videoId || item.watchMarked) return
+    if (!this.pageActive || index !== this.data.currentIndex || !item.videoId || item.watchMarked) return
+    if (this.isActionRequestPending('watchRequestMap', item.videoId)) return
+    this.setActionRequestPending('watchRequestMap', item.videoId, true)
     const feedKey = item.feedKey
-    this.watchTimer = setTimeout(() => {
-      const current = (this.data.feed || [])[this.data.currentIndex] || {}
-      if (!this.pageActive || current.feedKey !== feedKey || current.watchMarked) return
-      api.markVideoWatched(current.videoId)
-        .then((res) => {
-          if (!res.ok) throw new Error(res.message || '标记失败')
-          const feed = this.data.feed.slice()
-          const latest = feed[this.data.currentIndex] || {}
-          if (latest.feedKey === feedKey) {
-            feed[this.data.currentIndex] = Object.assign({}, latest, { watchMarked: true })
-            this.setData({ feed }, () => this.ensureFeedAhead(this.data.currentIndex))
-          } else {
-            this.ensureFeedAhead(this.data.currentIndex)
-          }
-          debugLog.info('HOME', 'VIDEO_WATCH_MARK_OK', {
-            videoId: current.videoId,
-            watchedAtSeconds: res.watchedAtSeconds || 0
-          })
+    api.markVideoWatched(item.videoId)
+      .then((res) => {
+        this.setActionRequestPending('watchRequestMap', item.videoId, false)
+        if (!res.ok) throw new Error(res.message || '标记失败')
+        const feed = this.data.feed.slice()
+        const latest = feed[index] || {}
+        if (latest.feedKey === feedKey) {
+          feed[index] = Object.assign({}, latest, { watchMarked: true })
+          this.setData({ feed }, () => this.ensureFeedAhead(this.data.currentIndex))
+        } else {
+          this.ensureFeedAhead(this.data.currentIndex)
+        }
+        debugLog.info('HOME', 'VIDEO_WATCH_MARK_OK', {
+          videoId: item.videoId,
+          currentTimeSeconds,
+          watchedAtSeconds: res.watchedAtSeconds || 0
         })
-        .catch((err) => {
-          debugLog.warn('HOME', 'VIDEO_WATCH_MARK_FAIL', {
-            videoId: current.videoId,
-            error: err && err.message ? err.message : String(err)
-          })
+      })
+      .catch((err) => {
+        this.setActionRequestPending('watchRequestMap', item.videoId, false)
+        debugLog.warn('HOME', 'VIDEO_WATCH_MARK_FAIL', {
+          videoId: item.videoId,
+          currentTimeSeconds,
+          error: err && err.message ? err.message : String(err)
         })
-    }, Math.max(0, Number(config.VIDEO_FEED_WATCH_MARK_DELAY_MS || 0)))
+      })
   },
 
   openRecipe(e) {
@@ -1338,6 +1365,138 @@ Page({
     })
   },
 
+  isActionRequestPending(storeName, key) {
+    if (!key) return false
+    const store = this[storeName] || {}
+    return !!store[key]
+  },
+
+  setActionRequestPending(storeName, key, pending) {
+    if (!key) return
+    const store = this[storeName] || {}
+    if (pending) store[key] = true
+    else delete store[key]
+    this[storeName] = store
+  },
+
+  updateFeedByVideoId(videoId, updater) {
+    if (!videoId || typeof updater !== 'function') return []
+    const feed = (this.data.feed || []).map((feedItem) => {
+      const itemVideoId = feedItem.videoId || feedItem.id || ''
+      if (itemVideoId !== videoId) return feedItem
+      return Object.assign({}, feedItem, updater(feedItem) || {})
+    })
+    this.setData({ feed })
+    return feed
+  },
+
+  followAuthor(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    const item = this.data.feed[index] || {}
+    const authorUserId = item.authorUserId || ''
+    this.logUserAction('FOLLOW_AUTHOR_TAP', {
+      index,
+      videoId: item.videoId || item.id || '',
+      authorUserId,
+      authorFollowing: !!item.authorFollowing
+    })
+    if (!authorUserId || item.authorSelf) {
+      wx.showToast({ title: '无法关注该作者', icon: 'none' })
+      return
+    }
+    if (this.isActionRequestPending('followRequestMap', authorUserId)) {
+      debugLog.info('HOME', 'FOLLOW_AUTHOR_IGNORE_PENDING', { authorUserId })
+      return
+    }
+    this.setActionRequestPending('followRequestMap', authorUserId, true)
+    api.toggleFollow(authorUserId)
+      .then((res) => {
+        this.setActionRequestPending('followRequestMap', authorUserId, false)
+        if (!res.ok) throw new Error(res.message)
+        const following = !!res.following
+        this.recordGlobalFollowState(authorUserId, following)
+        const feed = (this.data.feed || []).map((feedItem) => {
+          if ((feedItem.authorUserId || '') !== authorUserId) return feedItem
+          return Object.assign({}, feedItem, {
+            authorFollowing: following,
+            canFollowAuthor: !following && !feedItem.authorSelf,
+            followConfirmVisible: following
+          })
+        })
+        this.setData({ feed })
+        if (following) {
+          setTimeout(() => {
+            const updates = {}
+            const currentFeed = this.data.feed || []
+            for (let i = 0; i < currentFeed.length; i += 1) {
+              if ((currentFeed[i].authorUserId || '') === authorUserId && currentFeed[i].followConfirmVisible) {
+                updates[`feed[${i}].followConfirmVisible`] = false
+              }
+            }
+            if (Object.keys(updates).length) this.setData(updates)
+          }, 900)
+        }
+        debugLog.info('HOME', 'FOLLOW_AUTHOR_OK', {
+          authorUserId,
+          following
+        })
+      })
+      .catch((err) => {
+        this.setActionRequestPending('followRequestMap', authorUserId, false)
+        debugLog.warn('HOME', 'FOLLOW_AUTHOR_FAIL', {
+          authorUserId,
+          error: err && err.message ? err.message : String(err)
+        })
+        wx.showToast({ title: err.message || '关注失败', icon: 'none' })
+      })
+  },
+
+  recordGlobalFollowState(userId, following) {
+    if (!userId) return
+    const app = getApp()
+    if (!app.globalData.followStateChanges) app.globalData.followStateChanges = {}
+    app.globalData.followStateChanges[userId] = !!following
+    app.globalData.socialStateVersion = Number(app.globalData.socialStateVersion || 0) + 1
+  },
+
+  applyGlobalFollowState() {
+    const app = getApp()
+    const version = Number(app.globalData.socialStateVersion || 0)
+    if (this.appliedSocialStateVersion === version) return
+    const changes = app.globalData.followStateChanges || {}
+    const keys = Object.keys(changes)
+    this.appliedSocialStateVersion = version
+    if (!keys.length || !(this.data.feed || []).length) return
+    const updates = {}
+    const feed = this.data.feed || []
+    for (let i = 0; i < feed.length; i += 1) {
+      const authorUserId = feed[i].authorUserId || ''
+      if (!authorUserId || changes[authorUserId] === undefined) continue
+      const following = !!changes[authorUserId]
+      const canFollowAuthor = !following && !feed[i].authorSelf
+      if (feed[i].authorFollowing !== following) updates[`feed[${i}].authorFollowing`] = following
+      if (feed[i].canFollowAuthor !== canFollowAuthor) updates[`feed[${i}].canFollowAuthor`] = canFollowAuthor
+      if (!following && feed[i].followConfirmVisible) updates[`feed[${i}].followConfirmVisible`] = false
+    }
+    if (this.feedAccount && Array.isArray(this.feedAccount.followingUserIds)) {
+      const nextIds = this.feedAccount.followingUserIds.slice()
+      for (let i = 0; i < keys.length; i += 1) {
+        const userId = keys[i]
+        const index = nextIds.indexOf(userId)
+        if (changes[userId] && index < 0) nextIds.push(userId)
+        if (!changes[userId] && index >= 0) nextIds.splice(index, 1)
+      }
+      this.feedAccount = Object.assign({}, this.feedAccount, { followingUserIds: nextIds })
+    }
+    if (Object.keys(updates).length) {
+      debugLog.info('HOME', 'APPLY_GLOBAL_FOLLOW_STATE', {
+        version,
+        updateCount: Object.keys(updates).length
+      })
+      this.setData(updates)
+    }
+  },
+
   favorite(e) {
     const index = Number(e.currentTarget.dataset.index)
     const item = this.data.feed[index] || {}
@@ -1351,19 +1510,24 @@ Page({
       wx.showToast({ title: '视频不存在', icon: 'none' })
       return
     }
+    if (this.isActionRequestPending('favoriteRequestMap', videoId)) {
+      debugLog.info('HOME', 'FAVORITE_IGNORE_PENDING', { videoId })
+      return
+    }
+    this.setActionRequestPending('favoriteRequestMap', videoId, true)
     api.toggleFavorite(videoId, 'video')
       .then((res) => {
+        this.setActionRequestPending('favoriteRequestMap', videoId, false)
         if (!res.ok) throw new Error(res.message)
         wx.showToast({ title: res.favorite ? '已收藏' : '已取消', icon: 'none' })
-        const feed = this.data.feed.slice()
-        feed[index] = Object.assign({}, item, { favorite: !!res.favorite })
-        this.setData({ feed })
+        this.updateFeedByVideoId(videoId, () => ({ favorite: !!res.favorite }))
         debugLog.info('HOME', 'FAVORITE_OK', {
           videoId,
           favorite: !!res.favorite
         })
       })
       .catch((err) => {
+        this.setActionRequestPending('favoriteRequestMap', videoId, false)
         debugLog.warn('HOME', 'FAVORITE_FAIL', {
           videoId,
           error: err && err.message ? err.message : String(err)
@@ -1386,24 +1550,33 @@ Page({
       wx.showToast({ title: '视频不存在', icon: 'none' })
       return
     }
+    if (this.isActionRequestPending('likeRequestMap', videoId)) {
+      debugLog.info('HOME', 'LIKE_IGNORE_PENDING', { videoId })
+      return
+    }
+    this.setActionRequestPending('likeRequestMap', videoId, true)
     api.toggleLike('video', videoId)
       .then((res) => {
+        this.setActionRequestPending('likeRequestMap', videoId, false)
         if (!res.ok) throw new Error(res.message)
-        const feed = this.data.feed.slice()
         const liked = !!res.liked
-        feed[index] = Object.assign({}, item, {
-          liked,
-          likes: Math.max(0, Number(item.likes || 0) + (liked ? 1 : -1))
+        let nextLikes = 0
+        this.updateFeedByVideoId(videoId, (feedItem) => {
+          const oldLiked = !!feedItem.liked
+          const oldLikes = Number(feedItem.likes || 0)
+          const likes = oldLiked === liked ? oldLikes : Math.max(0, oldLikes + (liked ? 1 : -1))
+          nextLikes = likes
+          return { liked, likes }
         })
-        this.setData({ feed })
         wx.showToast({ title: liked ? '已点赞' : '已取消', icon: 'none' })
         debugLog.info('HOME', 'LIKE_OK', {
           videoId,
           liked,
-          likes: feed[index].likes
+          likes: nextLikes
         })
       })
       .catch((err) => {
+        this.setActionRequestPending('likeRequestMap', videoId, false)
         debugLog.warn('HOME', 'LIKE_FAIL', {
           videoId,
           error: err && err.message ? err.message : String(err)

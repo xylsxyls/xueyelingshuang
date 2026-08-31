@@ -315,6 +315,18 @@ private:
 	*/
 	RapidJsonValue messageToJson(const MessageInfo& message) const;
 
+	/** 将用户关系摘要转为JSON
+	@param [in] contact 用户关系摘要
+	@return 返回前端可展示的用户关系对象
+	*/
+	RapidJsonValue userContactToJson(const UserContactInfo& contact) const;
+
+	/** 将用户关系摘要列表转为JSON数组
+	@param [in] contacts 用户关系摘要列表
+	@return 返回前端可展示的用户关系数组
+	*/
+	RapidJsonValue userContactListToJson(const std::vector<UserContactInfo>& contacts) const;
+
 	/** 将视频信息转为JSON
 	@param [in] video 视频信息
 	@return 返回JSON对象

@@ -515,6 +515,10 @@ function listMessages(options) {
   return request(Object.assign({ url: '/api/messages/list' }, options || {}))
 }
 
+function sendMessage(targetUserId, text) {
+  return request({ url: '/api/messages/send', method: 'POST', data: { targetUserId, text } })
+}
+
 function previewPlan(recipeIds, options) {
   const safeOptions = options || {}
   const data = Object.assign({ recipeIds }, safeOptions.data || {})
@@ -675,6 +679,7 @@ module.exports = {
   createComment,
   toggleFollow,
   listMessages,
+  sendMessage,
   previewPlan,
   startPlan,
   publishCustomRecipe,

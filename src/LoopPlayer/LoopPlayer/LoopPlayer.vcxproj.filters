@@ -5,10 +5,58 @@
       <UniqueIdentifier>{AFBD0EC7-69F1-4FCF-83BB-2B91B2F62DD2}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Source Files\Common">
+      <UniqueIdentifier>{6F05F87A-97C2-4B5F-9254-046996BB7D9F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Media">
+      <UniqueIdentifier>{E29A19AE-8F58-41D4-864B-B28F2E5E9D4E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Window">
+      <UniqueIdentifier>{A143DEB6-2B4D-43F9-9837-BB18AA77F168}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{B3AA51F4-D8CA-46EF-A3C2-AF2E846C208D}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc</Extensions>
+    </Filter>
+    <Filter Include="Header Files\Common">
+      <UniqueIdentifier>{2427D18B-DB16-4D68-B9E6-A7C7F1737600}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Media">
+      <UniqueIdentifier>{F5C06405-14E2-4F63-ADDC-7A8F78F259D4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Window">
+      <UniqueIdentifier>{C5498E97-E276-453A-AF2E-4529DD40F187}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="LoopPlayerUtils.cpp">
+      <Filter>Source Files\Common</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PlayerCallback.cpp">
+      <Filter>Source Files\Media</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerWindow.cpp">
+      <Filter>Source Files\Window</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LoopPlayerConstants.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="LoopPlayerPlatform.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="LoopPlayerUtils.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerCallback.h">
+      <Filter>Header Files\Media</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerWindow.h">
+      <Filter>Header Files\Window</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

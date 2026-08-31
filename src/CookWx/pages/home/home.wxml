@@ -55,9 +55,33 @@
         </view>
 
         <view class="feed-actions" wx:if="{{item.videoUrl}}">
-          <button class="round-btn" data-index="{{index}}" bindtap="toggleLike">{{item.liked ? '已赞' : '赞'}}</button>
-          <button class="round-btn" bindtap="openComments">评</button>
-          <button class="round-btn" data-index="{{index}}" bindtap="favorite">{{item.favorite ? '已藏' : '藏'}}</button>
+          <view class="creator-action">
+            <view class="creator-avatar">{{item.authorInitial}}</view>
+            <view class="creator-follow" wx:if="{{item.canFollowAuthor}}" data-index="{{index}}" bindtap="followAuthor">+</view>
+            <view class="creator-follow followed" wx:elif="{{item.followConfirmVisible}}">
+              <view class="check-shape"></view>
+            </view>
+          </view>
+          <view class="action-item" data-index="{{index}}" bindtap="toggleLike">
+            <view class="action-icon heart {{item.liked ? 'active' : ''}}">
+              <view class="heart-shape"></view>
+            </view>
+            <view class="action-label">{{item.likes || 0}}</view>
+          </view>
+          <view class="action-item" bindtap="openComments">
+            <view class="action-icon comment">
+              <view class="comment-icon-shape">
+                <view class="comment-tail"></view>
+              </view>
+            </view>
+            <view class="action-label">{{item.comments || 0}}</view>
+          </view>
+          <view class="action-item" data-index="{{index}}" bindtap="favorite">
+            <view class="action-icon star {{item.favorite ? 'active' : ''}}">
+              <view class="star-shape"></view>
+            </view>
+            <view class="action-label">{{item.favorite ? '已收藏' : '收藏'}}</view>
+          </view>
         </view>
 
         <view class="feed-info" wx:if="{{item.videoUrl}}">
