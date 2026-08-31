@@ -16,6 +16,7 @@ udp_autostart_service_name='vpn-todesk-udp-autostart.service'
 udp_autostart_script_name='vpn-todesk-start-udp.sh'
 hysteria_linux_binary_name='hysteria-linux-amd64'
 hysteria_windows_binary_name='hysteria-windows-amd64.exe'
+nssm_binary_name='nssm.exe'
 service_user='vpn-todesk'
 
 die() {
@@ -66,6 +67,7 @@ server_uninit_script="$script_dir/vpn_todesk_server_uninit.bat"
 proxy_adapter_script="$script_dir/todesk_proxy_adapter.py"
 hysteria_linux_binary="$script_dir/$hysteria_linux_binary_name"
 hysteria_windows_binary="$script_dir/$hysteria_windows_binary_name"
+nssm_binary="$script_dir/$nssm_binary_name"
 client_install_dir='/etc/vpn-todesk'
 unit_path="/etc/systemd/system/$service_name"
 proxy_unit_path="/etc/systemd/system/$proxy_service_name"
@@ -236,6 +238,7 @@ fi
 [[ -f $proxy_adapter_script ]] || die "missing local proxy adapter: $proxy_adapter_script"
 [[ -s $hysteria_linux_binary ]] || die "missing Hysteria Linux binary: $hysteria_linux_binary"
 [[ -s $hysteria_windows_binary ]] || die "missing Hysteria Windows binary: $hysteria_windows_binary"
+[[ -s $nssm_binary ]] || die "missing NSSM service wrapper: $nssm_binary"
 
 required_pki_files=(
     "$pki_dir/windows-server/server-fullchain.pem"
@@ -655,25 +658,6 @@ disableUDP: false
 udpIdleTimeout: 180s
 EOF
 
-cat >"$package_stage/vpn_todesk_hysteria_udp_loop.bat" <<'EOF'
-@echo off
-setlocal EnableExtensions DisableDelayedExpansion
-
-set "ROOT=%~dp0"
-set "HYSTERIA_EXE=%ROOT%hysteria-windows-amd64.exe"
-set "HYSTERIA_CONF=%ROOT%hysteria-server.yaml"
-set "LOG_FILE=%ROOT%logs\hysteria-server.log"
-
-cd /d "%ROOT%" >nul 2>&1
-if not exist "%ROOT%logs\" mkdir "%ROOT%logs" >nul 2>&1
-
-:loop
-echo [%date% %time%] Starting Hysteria UDP server.>>"%LOG_FILE%"
-"%HYSTERIA_EXE%" --disable-update-check server -c "%HYSTERIA_CONF%" >>"%LOG_FILE%" 2>&1
-echo [%date% %time%] Hysteria exited with code %ERRORLEVEL%; restarting in 5 seconds.>>"%LOG_FILE%"
-ping.exe -n 6 127.0.0.1 >nul
-goto loop
-EOF
 install -m 0644 "$pki_dir/windows-server/server-fullchain.pem" \
     "$package_stage/certs/server-fullchain.pem"
 install -m 0644 "$pki_dir/windows-server/client-ca.crt" \
@@ -684,6 +668,7 @@ install -m 0644 "$server_init_script" "$package_stage/vpn_todesk_server_init.bat
 install -m 0644 "$server_control_script" "$package_stage/vpn_todesk_server.bat"
 install -m 0644 "$server_uninit_script" "$package_stage/vpn_todesk_server_uninit.bat"
 install -m 0755 "$hysteria_windows_binary" "$package_stage/$hysteria_windows_binary_name"
+install -m 0755 "$nssm_binary" "$package_stage/$nssm_binary_name"
 
 cat >"$package_stage/WINDOWS_INSTALL.txt" <<'EOF'
 Windows Server 2012 one-time setup (run Command Prompt as Administrator):
@@ -696,8 +681,9 @@ Windows Server 2012 one-time setup (run Command Prompt as Administrator):
    vpn_todesk_server_init.bat
 
 The init BAT detects stunnel for TCP mode. If it is missing, the BAT prints the
-official Win64 installer and SHA-256 URLs, then waits for Enter. Hysteria 2 is
-already included in this package for UDP mode; do not rename the executable.
+official Win64 installer and SHA-256 URLs, then waits for Enter. Hysteria 2 and
+NSSM are already included in this package for UDP mode; do not rename either
+executable.
 
 Server commands:
 
@@ -719,16 +705,15 @@ Uninstall this project from the server:
 
    vpn_todesk_server_uninit.bat
 
-This uninstall script stops/deletes only vpn-todesk-server and the
-vpn-todesk-server-udp scheduled task, removes only this project's firewall
-rules and package directory, and leaves stunnel installed.
+This uninstall script stops/deletes only vpn-todesk-server and
+vpn-todesk-server-udp, removes only this project's firewall rules and package
+directory, and leaves stunnel installed.
 EOF
 
 # Normalize all Windows command/instruction files to CRLF.
 for windows_text in \
     "$package_stage/WINDOWS_INSTALL.txt" \
     "$package_stage/hysteria-server.yaml" \
-    "$package_stage/vpn_todesk_hysteria_udp_loop.bat" \
     "$package_stage/vpn_todesk_server_init.bat" \
     "$package_stage/vpn_todesk_server.bat" \
     "$package_stage/vpn_todesk_server_uninit.bat"; do
@@ -743,7 +728,7 @@ printf 'stunnel writes its Windows service log in this directory.\n' \
 (
     cd -- "$package_stage"
     sha256sum stunnel-server.conf hysteria-server.yaml \
-        vpn_todesk_hysteria_udp_loop.bat "$hysteria_windows_binary_name" \
+        "$hysteria_windows_binary_name" "$nssm_binary_name" \
         certs/server-fullchain.pem certs/client-ca.crt \
         private/server.key vpn_todesk_server_init.bat vpn_todesk_server.bat \
         vpn_todesk_server_uninit.bat WINDOWS_INSTALL.txt PACKAGE_GENERATED.txt \

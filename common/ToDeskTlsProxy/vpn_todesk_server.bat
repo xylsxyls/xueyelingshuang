@@ -2,25 +2,26 @@
 setlocal EnableExtensions DisableDelayedExpansion
 
 set "TCP_SERVICE_NAME=vpn-todesk-server"
-set "UDP_TASK_NAME=vpn-todesk-server-udp"
+set "UDP_SERVICE_NAME=vpn-todesk-server-udp"
 set "ROOT=%~dp0"
 set "ROOT_DIR=%ROOT:~0,-1%"
 set "EXPECTED_ROOT=C:\ProgramData\ToDeskTlsProxy"
 set "TCP_CONF=%ROOT%stunnel-server.conf"
 set "UDP_CONF=%ROOT%hysteria-server.yaml"
-set "UDP_RUNNER=%ROOT%vpn_todesk_hysteria_udp_loop.bat"
 set "HYSTERIA_EXE=%ROOT%hysteria-windows-amd64.exe"
+set "NSSM_EXE=%ROOT%nssm.exe"
 set "MARKER=%ROOT%.vpn-todesk-server-initialized"
 set "TCP_LOG_FILE=%ROOT%logs\stunnel-server.log"
 set "UDP_LOG_FILE=%ROOT%logs\hysteria-server.log"
 set "PORT=52030"
-set "UDP_TASK_COMMAND=cmd.exe /c %UDP_RUNNER%"
+set "UDP_APP_PARAMETERS=--disable-update-check server -c %UDP_CONF%"
 set "VPN_TODESK_TCP_SERVICE_NAME=%TCP_SERVICE_NAME%"
-set "VPN_TODESK_UDP_TASK_NAME=%UDP_TASK_NAME%"
+set "VPN_TODESK_UDP_SERVICE_NAME=%UDP_SERVICE_NAME%"
 set "VPN_TODESK_TCP_CONF=%TCP_CONF%"
 set "VPN_TODESK_UDP_CONF=%UDP_CONF%"
-set "VPN_TODESK_UDP_RUNNER=%UDP_RUNNER%"
 set "VPN_TODESK_HYSTERIA_EXE=%HYSTERIA_EXE%"
+set "VPN_TODESK_NSSM_EXE=%NSSM_EXE%"
+set "VPN_TODESK_UDP_APP_PARAMETERS=%UDP_APP_PARAMETERS%"
 set "VPN_TODESK_ROOT_DIR=%ROOT_DIR%"
 set "VPN_TODESK_PORT=%PORT%"
 set "VPN_TODESK_TCP_LOG_FILE=%TCP_LOG_FILE%"
@@ -160,12 +161,13 @@ echo TCP automatic startup is enabled. Run vpn_todesk_server.bat stop tcp to dis
 exit /b 0
 
 :start_udp
-call :require_managed_udp_task
+call :require_managed_udp_service
 if errorlevel 1 exit /b 1
 
-echo Stopping the previous UDP/Hysteria task, if any...
-call :stop_udp_task_if_running
+echo Stopping the previous UDP/Hysteria service, if any...
+call :stop_service_if_running "%UDP_SERVICE_NAME%"
 if errorlevel 1 exit /b 1
+call :kill_hysteria_processes
 
 call :udp_port_is_free
 if errorlevel 1 (
@@ -175,31 +177,36 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Enabling UDP/Hysteria startup task...
-schtasks.exe /Change /TN "%UDP_TASK_NAME%" /ENABLE >nul
+echo Starting a fresh UDP/Hysteria service...
+sc.exe start "%UDP_SERVICE_NAME%" >nul 2>&1
 if errorlevel 1 (
-    echo Error: could not enable scheduled task %UDP_TASK_NAME%.
+    echo Error: could not start %UDP_SERVICE_NAME%.
+    sc.exe queryex "%UDP_SERVICE_NAME%"
+    call :show_udp_logs
     exit /b 1
 )
-
-echo Starting a fresh UDP/Hysteria task...
-schtasks.exe /Run /TN "%UDP_TASK_NAME%" >nul
+call :wait_service_state "%UDP_SERVICE_NAME%" Running 20
 if errorlevel 1 (
-    echo Error: could not start scheduled task %UDP_TASK_NAME%.
-    schtasks.exe /Query /TN "%UDP_TASK_NAME%" /V /FO LIST
-    exit /b 1
-)
-call :wait_for_hysteria_process 20
-if errorlevel 1 (
-    echo Error: Hysteria process did not start.
-    schtasks.exe /Query /TN "%UDP_TASK_NAME%" /V /FO LIST
+    echo Error: %UDP_SERVICE_NAME% did not enter the Running state.
+    sc.exe queryex "%UDP_SERVICE_NAME%"
+    call :show_udp_logs
     exit /b 1
 )
 call :wait_for_udp_owned_port 15
 if errorlevel 1 (
     echo Error: UDP port %PORT% is not owned by the Hysteria process.
     call :show_udp_port_owners
-    schtasks.exe /End /TN "%UDP_TASK_NAME%" >nul 2>&1
+    call :show_udp_logs
+    sc.exe stop "%UDP_SERVICE_NAME%" >nul 2>&1
+    call :wait_service_state "%UDP_SERVICE_NAME%" Stopped 10 >nul 2>&1
+    call :kill_hysteria_processes
+    exit /b 1
+)
+
+echo Enabling automatic startup for %UDP_SERVICE_NAME%...
+call :set_service_start_type "%UDP_SERVICE_NAME%" auto
+if errorlevel 1 (
+    echo Error: could not enable automatic startup for %UDP_SERVICE_NAME%.
     exit /b 1
 )
 
@@ -227,22 +234,23 @@ echo TCP service stopped and automatic startup is disabled.
 exit /b 0
 
 :stop_udp
-call :require_managed_udp_task
+call :require_managed_udp_service
 if errorlevel 1 exit /b 1
-call :stop_udp_task_if_running
+call :stop_service_if_running "%UDP_SERVICE_NAME%"
 if errorlevel 1 exit /b 1
+call :kill_hysteria_processes
 call :udp_port_is_free
 if errorlevel 1 (
     echo Warning: UDP port %PORT% is still used by another process.
     call :show_udp_port_owners
 )
-echo Disabling UDP/Hysteria startup task...
-schtasks.exe /Change /TN "%UDP_TASK_NAME%" /DISABLE >nul
+echo Disabling automatic startup for %UDP_SERVICE_NAME%...
+call :set_service_start_type "%UDP_SERVICE_NAME%" demand
 if errorlevel 1 (
-    echo Error: could not disable scheduled task %UDP_TASK_NAME%.
+    echo Error: could not disable automatic startup for %UDP_SERVICE_NAME%.
     exit /b 1
 )
-echo UDP task stopped and automatic startup is disabled.
+echo UDP service stopped and automatic startup is disabled.
 exit /b 0
 
 :status_tcp
@@ -262,11 +270,12 @@ echo Health: ready - TCP %PORT% is owned by %TCP_SERVICE_NAME%.
 exit /b 0
 
 :status_udp
-call :require_managed_udp_task
+call :require_managed_udp_service
 if errorlevel 1 exit /b 1
-echo UDP scheduled task:
-schtasks.exe /Query /TN "%UDP_TASK_NAME%" /V /FO LIST
+echo UDP service:
+sc.exe queryex "%UDP_SERVICE_NAME%"
 echo.
+sc.exe qc "%UDP_SERVICE_NAME%" | findstr.exe /I /C:"START_TYPE"
 call :udp_port_is_owned_by_hysteria
 if errorlevel 1 (
     echo Health: not ready - UDP %PORT% is not owned by the Hysteria process.
@@ -283,15 +292,9 @@ call :show_tcp_logs
 exit /b %ERRORLEVEL%
 
 :logs_udp
-call :require_managed_udp_task
+call :require_managed_udp_service
 if errorlevel 1 exit /b 1
-echo UDP/Hysteria is managed by Windows Task Scheduler in this package.
-if not exist "%UDP_LOG_FILE%" (
-    echo No UDP server log exists yet: %UDP_LOG_FILE%
-    echo Use "vpn_todesk_server.bat status udp" for task and UDP-port health.
-    exit /b 0
-)
-powershell.exe -NoProfile -NonInteractive -Command "Get-Content -LiteralPath $env:VPN_TODESK_UDP_LOG_FILE -Tail 100"
+call :show_udp_logs
 exit /b %ERRORLEVEL%
 
 :help
@@ -311,8 +314,8 @@ echo   start all     Start both server modes and enable automatic startup for bo
 echo   stop [tcp]    Stop TCP/stunnel mode and disable TCP automatic startup.
 echo   stop udp      Stop UDP/Hysteria mode and disable UDP automatic startup.
 echo   stop all      Stop both modes and disable automatic startup for both.
-echo   status [mode] Show service/task state and port ownership.
-echo   logs [mode]   Show TCP stunnel logs or UDP/Hysteria wrapper logs.
+echo   status [mode] Show service state, startup type, and port ownership.
+echo   logs [mode]   Show TCP stunnel logs or UDP/Hysteria logs.
 echo.
 echo The mode argument is optional. The default mode is tcp.
 exit /b 0
@@ -342,7 +345,7 @@ if not exist "%MARKER%" (
     echo Error: server is not initialized. Run vpn_todesk_server_init.bat first.
     exit /b 1
 )
-findstr.exe /L /X /C:"ToDeskTlsProxyServerV3" "%MARKER%" >nul 2>&1
+findstr.exe /L /X /C:"ToDeskTlsProxyServerV4" "%MARKER%" >nul 2>&1
 if errorlevel 1 (
     echo Error: the project ownership marker is invalid or too old.
     echo Re-run vpn_todesk_server_init.bat from the new package.
@@ -386,24 +389,29 @@ if errorlevel 1 (
 )
 exit /b 0
 
-:require_managed_udp_task
+:require_managed_udp_service
 call :require_package_root
 if errorlevel 1 exit /b 1
 if not exist "%HYSTERIA_EXE%" (
     echo Error: missing Hysteria executable: %HYSTERIA_EXE%
     exit /b 1
 )
+if not exist "%NSSM_EXE%" (
+    echo Error: missing NSSM executable: %NSSM_EXE%
+    exit /b 1
+)
 if not exist "%UDP_CONF%" (
     echo Error: missing UDP config: %UDP_CONF%
     exit /b 1
 )
-if not exist "%UDP_RUNNER%" (
-    echo Error: missing UDP runner: %UDP_RUNNER%
+findstr.exe /L /X /C:"UDP_SERVICE_NAME=%UDP_SERVICE_NAME%" "%MARKER%" >nul 2>&1
+if errorlevel 1 (
+    echo Error: the ownership marker has a different UDP service name.
     exit /b 1
 )
-findstr.exe /L /X /C:"UDP_TASK_NAME=%UDP_TASK_NAME%" "%MARKER%" >nul 2>&1
+findstr.exe /L /X /C:"NSSM_EXE=%NSSM_EXE%" "%MARKER%" >nul 2>&1
 if errorlevel 1 (
-    echo Error: the ownership marker has a different UDP task name.
+    echo Error: the ownership marker has a different NSSM executable path.
     exit /b 1
 )
 findstr.exe /L /X /C:"HYSTERIA_EXE=%HYSTERIA_EXE%" "%MARKER%" >nul 2>&1
@@ -416,14 +424,14 @@ if errorlevel 1 (
     echo Error: the ownership marker has a different UDP configuration path.
     exit /b 1
 )
-findstr.exe /L /X /C:"UDP_RUNNER=%UDP_RUNNER%" "%MARKER%" >nul 2>&1
+sc.exe query "%UDP_SERVICE_NAME%" >nul 2>&1
 if errorlevel 1 (
-    echo Error: the ownership marker has a different UDP runner path.
+    echo Error: %UDP_SERVICE_NAME% does not exist. Re-run server init.
     exit /b 1
 )
-schtasks.exe /Query /TN "%UDP_TASK_NAME%" >nul 2>&1
+call :udp_service_identity_is_expected
 if errorlevel 1 (
-    echo Error: scheduled task %UDP_TASK_NAME% does not exist. Re-run server init.
+    echo Error: UDP service ownership validation failed.
     exit /b 1
 )
 exit /b 0
@@ -451,6 +459,10 @@ exit /b 0
 
 :tcp_service_identity_is_expected
 powershell.exe -NoProfile -NonInteractive -Command "$ErrorActionPreference='Stop'; $path='Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\'+$env:VPN_TODESK_TCP_SERVICE_NAME; $item=Get-ItemProperty -LiteralPath $path; $expected=$env:VPN_TODESK_STUNNEL_EXE+' -service '+$env:VPN_TODESK_TCP_CONF; if(-not [string]::Equals([string]$item.ImagePath,$expected,[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected TCP service ImagePath'; exit 1}; if([int]$item.Type -ne 16){Write-Error 'Unexpected TCP service Type'; exit 1}; if(-not [string]::Equals([string]$item.ObjectName,'LocalSystem',[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected TCP service account'; exit 1}; if(([int]$item.Start -ne 2) -and ([int]$item.Start -ne 3)){Write-Error 'Unexpected TCP service startup type'; exit 1}; exit 0"
+exit /b %ERRORLEVEL%
+
+:udp_service_identity_is_expected
+powershell.exe -NoProfile -NonInteractive -Command "$ErrorActionPreference='Stop'; $svcPath='Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\'+$env:VPN_TODESK_UDP_SERVICE_NAME; $svc=Get-ItemProperty -LiteralPath $svcPath; if(([string]$svc.ImagePath).IndexOf($env:VPN_TODESK_NSSM_EXE,[StringComparison]::OrdinalIgnoreCase) -lt 0){Write-Error 'Unexpected UDP service wrapper'; exit 1}; if([int]$svc.Type -ne 16){Write-Error 'Unexpected UDP service Type'; exit 1}; if(-not [string]::Equals([string]$svc.ObjectName,'LocalSystem',[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected UDP service account'; exit 1}; $paramPath=$svcPath+'\Parameters'; $p=Get-ItemProperty -LiteralPath $paramPath; if(-not [string]::Equals([string]$p.Application,$env:VPN_TODESK_HYSTERIA_EXE,[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected UDP application'; exit 1}; if(-not [string]::Equals([string]$p.AppParameters,$env:VPN_TODESK_UDP_APP_PARAMETERS,[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected UDP parameters'; exit 1}; if(-not [string]::Equals([string]$p.AppDirectory,$env:VPN_TODESK_ROOT_DIR,[StringComparison]::OrdinalIgnoreCase)){Write-Error 'Unexpected UDP working directory'; exit 1}; exit 0"
 exit /b %ERRORLEVEL%
 
 :set_service_start_type
@@ -498,26 +510,6 @@ if errorlevel 1 (
 )
 exit /b 0
 
-:stop_udp_task_if_running
-call :hysteria_process_is_running
-if errorlevel 1 (
-    echo UDP/Hysteria task is already stopped; continuing.
-    exit /b 0
-)
-schtasks.exe /End /TN "%UDP_TASK_NAME%" >nul 2>&1
-call :wait_for_hysteria_stopped 20
-if errorlevel 1 (
-    echo Warning: Hysteria process did not stop within 20 seconds; terminating only this package's Hysteria process.
-    call :kill_hysteria_processes
-    call :wait_for_hysteria_stopped 10
-)
-if errorlevel 1 (
-    echo Error: Hysteria process is still running after termination attempt.
-    call :show_hysteria_processes
-    exit /b 1
-)
-exit /b 0
-
 :tcp_port_is_free
 powershell.exe -NoProfile -NonInteractive -Command "$p=[regex]::Escape($env:VPN_TODESK_PORT); foreach($line in netstat -ano -p tcp){ if($line -match ('^\s*TCP\s+\S+:' + $p + '\s+\S+\s+LISTENING\s+\d+\s*$')){exit 1}}; exit 0"
 exit /b %ERRORLEVEL%
@@ -543,24 +535,6 @@ set "WAIT_COUNT=%~1"
 for /L %%I in (1,1,%WAIT_COUNT%) do (
     call :tcp_port_is_owned_by_service
     if not errorlevel 1 exit /b 0
-    ping.exe -n 2 127.0.0.1 >nul
-)
-exit /b 1
-
-:wait_for_hysteria_process
-set "WAIT_COUNT=%~1"
-for /L %%I in (1,1,%WAIT_COUNT%) do (
-    call :hysteria_process_is_running
-    if not errorlevel 1 exit /b 0
-    ping.exe -n 2 127.0.0.1 >nul
-)
-exit /b 1
-
-:wait_for_hysteria_stopped
-set "WAIT_COUNT=%~1"
-for /L %%I in (1,1,%WAIT_COUNT%) do (
-    call :hysteria_process_is_running
-    if errorlevel 1 exit /b 0
     ping.exe -n 2 127.0.0.1 >nul
 )
 exit /b 1
@@ -596,4 +570,12 @@ if not exist "%TCP_LOG_FILE%" (
     exit /b 0
 )
 powershell.exe -NoProfile -NonInteractive -Command "Get-Content -LiteralPath $env:VPN_TODESK_TCP_LOG_FILE -Tail 80"
+exit /b %ERRORLEVEL%
+
+:show_udp_logs
+if not exist "%UDP_LOG_FILE%" (
+    echo No UDP server log exists yet: %UDP_LOG_FILE%
+    exit /b 0
+)
+powershell.exe -NoProfile -NonInteractive -Command "Get-Content -LiteralPath $env:VPN_TODESK_UDP_LOG_FILE -Tail 100"
 exit /b %ERRORLEVEL%

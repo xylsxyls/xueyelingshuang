@@ -30,9 +30,9 @@
 - `vpn_todesk_server_init.bat`：Windows Server 2012 初始化脚本。
 - `vpn_todesk_server.bat`：Windows 服务端日常控制脚本。
 - `vpn_todesk_server_uninit.bat`：Windows 服务端卸载脚本。
-- `vpn_todesk_hysteria_udp_loop.bat`：由初始化脚本生成到 Windows 包里，负责运行并自动重启 UDP/Hysteria。
 - `hysteria-linux-amd64`：Ubuntu UDP 模式使用的 Hysteria 2 客户端。
 - `hysteria-windows-amd64.exe`：Windows Server UDP 模式使用的 Hysteria 2 服务端程序。
+- `nssm.exe`：Windows UDP 模式使用的服务包装器，用来把 Hysteria 注册成 Windows 服务。
 
 ## Ubuntu 首次初始化
 
@@ -40,7 +40,7 @@
 
 ```bash
 cd ~/ToDeskTlsProxy
-chmod +x vpn_todesk_init.sh vpn_todesk.sh vpn_todesk_uninit.sh hysteria-linux-amd64
+chmod +x vpn_todesk_init.sh vpn_todesk.sh vpn_todesk_uninit.sh
 ./vpn_todesk_init.sh
 ```
 
@@ -88,7 +88,7 @@ vpn_todesk_server_init.bat
 脚本会检查：
 
 - stunnel 是否已安装。TCP 模式依赖 stunnel；如果没安装，脚本会打印官方下载地址并暂停，等你安装后按回车继续。
-- Hysteria Windows 程序是否能运行。UDP 模式的程序已经放在包里，不需要额外安装。
+- Hysteria Windows 程序是否能运行。UDP 模式的 Hysteria 和 NSSM 都已经放在包里，不需要额外安装。
 - 包校验和是否正确。
 - Windows 防火墙是否已放行 TCP `52030` 和 UDP `52030`。
 
@@ -99,8 +99,8 @@ vpn_todesk_server_init.bat
 
 你说 UDP `52030` 已经开好了，重新部署时只要确认 TCP/UDP 两条规则都在即可。
 
-初始化成功后，Windows 端会同时启动 TCP 和 UDP 服务端能力。TCP 是 Windows 服务 `vpn-todesk-server`，UDP 是 Windows 计划任务 `vpn-todesk-server-udp`。
-UDP 计划任务实际运行一个包装器脚本，Hysteria 如果异常退出，会等待 5 秒后自动重启，并把日志写到 `C:\ProgramData\ToDeskTlsProxy\logs\hysteria-server.log`。
+初始化成功后，Windows 端会同时启动 TCP 和 UDP 服务端能力。TCP 是 Windows 服务 `vpn-todesk-server`，UDP 是由 NSSM 包装的 Windows 服务 `vpn-todesk-server-udp`。
+UDP 服务会把 Hysteria 日志写到 `C:\ProgramData\ToDeskTlsProxy\logs\hysteria-server.log`，Hysteria 异常退出时 NSSM 会自动拉起。
 
 ## Windows 服务端日常命令
 
@@ -131,7 +131,7 @@ vpn_todesk_server.bat logs
 
 `start tcp` 会启动 TCP 服务并设为开机自启；`stop tcp` 会停止 TCP 服务并取消开机自启。
 
-`start udp` 会启动 UDP/Hysteria 计划任务并设为开机自启；`stop udp` 会结束 UDP/Hysteria 任务并取消开机自启。
+`start udp` 会启动 UDP/Hysteria 服务并设为开机自启；`stop udp` 会停止 UDP/Hysteria 服务并取消开机自启。
 
 服务端可以 `start all`，因为 TCP `52030` 和 UDP `52030` 是不同协议，不冲突。
 
@@ -236,7 +236,7 @@ cd /d C:\ProgramData\ToDeskTlsProxy
 vpn_todesk_server_uninit.bat
 ```
 
-它会停止并删除 `vpn-todesk-server` TCP 服务，结束并删除 `vpn-todesk-server-udp` 计划任务，删除本项目创建的 Windows 防火墙规则，并删除 `C:\ProgramData\ToDeskTlsProxy`。它不会卸载 stunnel，也不会自动删除腾讯云安全组里的 TCP/UDP `52030` 规则。
+它会停止并删除 `vpn-todesk-server` TCP 服务，停止并删除 `vpn-todesk-server-udp` UDP 服务，删除本项目创建的 Windows 防火墙规则，并删除 `C:\ProgramData\ToDeskTlsProxy`。它不会卸载 stunnel，也不会自动删除腾讯云安全组里的 TCP/UDP `52030` 规则。
 
 ## 私钥和证书注意事项
 
