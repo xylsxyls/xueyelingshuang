@@ -19,6 +19,12 @@ static const wchar_t kAppVersion[] = L"1.0";
 
 // 缩略图拖拽时自动滚动定时器ID
 static const UINT_PTR kTimerDragScroll = 1;
+// 缩略图长按开始拖拽定时器ID
+static const UINT_PTR kTimerDragStart = 2;
+// 缩略图长按触发拖拽的等待时间
+static const UINT kThumbnailDragHoldMilliseconds = 1000;
+// 缩略图长按检查定时器间隔
+static const UINT kThumbnailDragHoldTimerInterval = 50;
 // 自绘标题栏高度
 static const int kTitleHeight = 32;
 // 标题栏下方工具栏高度
@@ -40,7 +46,7 @@ static const int kToolButtonSize = 24;
 // 标题栏按钮数量
 static const int kTitleButtonCount = 3;
 // 工具栏按钮数量
-static const int kToolbarButtonCount = 3;
+static const int kToolbarButtonCount = 4;
 // 缩略图内容边距
 static const int kThumbPadding = 12;
 // 缩略图条目间距
@@ -73,10 +79,11 @@ enum TopButton
     TOP_BUTTON_NONE = 0,
     TOP_BUTTON_OPEN = 1,
     TOP_BUTTON_SAVE = 2,
-    TOP_BUTTON_MINIMIZE = 3,
-    TOP_BUTTON_MAXIMIZE = 4,
-    TOP_BUTTON_CLOSE = 5,
-    TOP_BUTTON_HELP = 6
+    TOP_BUTTON_SAVE_AS = 3,
+    TOP_BUTTON_MINIMIZE = 4,
+    TOP_BUTTON_MAXIMIZE = 5,
+    TOP_BUTTON_CLOSE = 6,
+    TOP_BUTTON_HELP = 7
 };
 
 /** 左侧缩略图区右键菜单命令ID

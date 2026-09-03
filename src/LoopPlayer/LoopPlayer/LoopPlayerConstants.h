@@ -13,6 +13,7 @@ namespace LoopPlayer
     static const wchar_t kAppTitle[] = L"循环播放器";
 
     static const UINT WM_PLAYBACK_ENGINE_EVENT = WM_APP + 1;
+    static const UINT WM_ASYNC_SEEK_DONE = WM_APP + 2;
     static const UINT_PTR TIMER_POSITION = 1;
     static const UINT_PTR TIMER_VIDEO_CLICK = 2;
     static const UINT_PTR TIMER_TITLE_DRAG = 3;
@@ -26,7 +27,7 @@ namespace LoopPlayer
     static const int LOOP_TRIGGER_EARLY_FRAMES = 3;
     static const int NORMAL_PROGRESS_HEIGHT = 29;
     static const int FULLSCREEN_OVERLAY_HEIGHT = 45;
-    static const int FULLSCREEN_OVERLAY_HOT_ZONE = 12;
+    static const int FULLSCREEN_OVERLAY_HOT_ZONE = 14;
     static const int OVERLAY_ANIMATION_STEP = 8;
     static const int TOP_OVERLAY_HEIGHT = 27;
     static const int TOP_OVERLAY_HOT_ZONE = 12;
@@ -40,6 +41,9 @@ namespace LoopPlayer
     static const int ZOOM_TIP_HEIGHT = 42;
     static const int PROGRESS_TIME_LABEL_WIDTH = 60;
     static const int PROGRESS_TIME_LABEL_GAP = 5;
+    static const DWORD SEEK_DRAG_PREVIEW_INTERVAL_MS = 120;
+    static const size_t SEEK_DRAG_PREVIEW_MAX_READ_COUNT = 120;
+    static const size_t SEEK_FINAL_PREVIEW_MAX_READ_COUNT = 180;
     static const int EMPTY_PLUS_BUTTON_SIZE = 72;
     static const int EMPTY_PLUS_LINE_LENGTH = 18;
     static const int PROGRESS_MARKER_NONE = 0;
@@ -52,6 +56,7 @@ namespace LoopPlayer
     static const int TOP_BUTTON_CLOSE = 4;
     static const int IDM_PROGRESS_SET_A = 40001;
     static const int IDM_PROGRESS_SET_B = 40002;
+    static const int IDM_PROGRESS_CLEAR_AB = 40003;
 
     enum ControlId
     {

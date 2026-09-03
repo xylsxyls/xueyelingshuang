@@ -11,6 +11,103 @@ namespace LoopPlayer
     // LogManager是否已经完成初始化
     static bool gLogManagerInitialized = false;
 
+    static std::wstring GetModuleDirectory();
+
+    /** 判断宽字符字符串是否全部是数字
+    @param [in] text 需要判断的字符串
+    @return 全部是数字返回true，否则返回false
+    */
+    static bool IsWideDigitText(const std::wstring& text)
+    {
+        if (text.empty())
+        {
+            return false;
+        }
+
+        for (size_t i = 0; i < text.size(); ++i)
+        {
+            if (text[i] < L'0' || text[i] > L'9')
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 判断文件名是否是LogManager实体日志文件
+    @param [in] fileName 文件名
+    @return 是base.index.log格式返回true，否则返回false
+    */
+    static bool IsRollingEntityLogFileName(const std::wstring& fileName)
+    {
+        static const wchar_t kLogSuffix[] = L".log";
+        const size_t suffixLength = ARRAYSIZE(kLogSuffix) - 1;
+        if (fileName.size() <= suffixLength ||
+            fileName.compare(fileName.size() - suffixLength, suffixLength, kLogSuffix) != 0)
+        {
+            return false;
+        }
+
+        const size_t indexEnd = fileName.size() - suffixLength;
+        if (indexEnd == 0)
+        {
+            return false;
+        }
+
+        const size_t dotPos = fileName.rfind(L'.', indexEnd - 1);
+        if (dotPos == std::string::npos || dotPos + 1 >= indexEnd)
+        {
+            return false;
+        }
+
+        return IsWideDigitText(fileName.substr(dotPos + 1, indexEnd - dotPos - 1));
+    }
+
+    /** 删除当前进程生成的LogManager当前日志链接，避免base.log和base.0.log同时显示
+    */
+    static void DeleteCurrentProcessLogLinkFiles()
+    {
+        const std::wstring logDir = GetModuleDirectory();
+        const std::wstring findPattern = logDir + L"LoopPlayer*.log";
+
+        wchar_t pidToken[64] = { 0 };
+        StringCchPrintfW(pidToken, ARRAYSIZE(pidToken), L"_%lu_", GetCurrentProcessId());
+
+        WIN32_FIND_DATAW findData = { 0 };
+        HANDLE findHandle = FindFirstFileW(findPattern.c_str(), &findData);
+        if (findHandle == INVALID_HANDLE_VALUE)
+        {
+            return;
+        }
+
+        do
+        {
+            if ((findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+            {
+                continue;
+            }
+
+            const std::wstring fileName = findData.cFileName;
+            if (fileName.find(pidToken) == std::wstring::npos || IsRollingEntityLogFileName(fileName))
+            {
+                continue;
+            }
+
+            ULARGE_INTEGER fileSize = { 0 };
+            fileSize.HighPart = findData.nFileSizeHigh;
+            fileSize.LowPart = findData.nFileSizeLow;
+            if ((findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0 && fileSize.QuadPart != 0)
+            {
+                continue;
+            }
+
+            DeleteFileW((logDir + fileName).c_str());
+        }
+        while (FindNextFileW(findHandle, &findData));
+
+        FindClose(findHandle);
+    }
+
     /** 把宽字符文本转换成指定代码页的多字节文本
     @param [in] text 需要转换的宽字符文本
     @param [in] codePage 目标代码页
@@ -156,6 +253,7 @@ namespace LoopPlayer
         {
             LogManager::instance().uninitAll();
             gLogManagerInitialized = false;
+            DeleteCurrentProcessLogLinkFiles();
         }
     }
 

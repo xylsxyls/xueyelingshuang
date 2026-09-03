@@ -196,7 +196,7 @@ namespace LoopPlayer
             resetClockLocked(0);
         }
 
-        previewVideoFrameAt(0);
+        previewVideoFrameAt(0, kVideoPreviewMaxReadCount);
         Logf(L"MfSourcePlaybackEngine init end: video=%d audio=%d native=%dx%d stride=%ld duration=%s (%I64d), frameDuration=%s (%I64d), offset=%s (%I64d)",
              m_videoAvailable ? 1 : 0,
              m_audioAvailable ? 1 : 0,
@@ -378,7 +378,7 @@ namespace LoopPlayer
         }
 
         Logf(L"Engine stop requested");
-        HRESULT hr = seek(0);
+        HRESULT hr = seek(0, false);
         {
             AutoCriticalSectionLock lock(&m_stateLock);
             resetClockLocked(0);
@@ -388,7 +388,7 @@ namespace LoopPlayer
         return hr;
     }
 
-    HRESULT MfSourcePlaybackEngine::seek(REFERENCE_TIME position)
+    HRESULT MfSourcePlaybackEngine::seek(REFERENCE_TIME position, bool resumeIfPreviousPlaying, size_t previewMaxReadCount)
     {
         if (!m_isInit)
         {
@@ -422,8 +422,23 @@ namespace LoopPlayer
             resetWaveBuffers();
         }
 
-        // SetCurrentPosition使用媒体源呈现时间，样本时间戳再按轨道偏移修正，不能把偏移量加两次。
-        const REFERENCE_TIME videoSeekTime = position;
+        const size_t actualPreviewMaxReadCount = previewMaxReadCount > 0 ? previewMaxReadCount : kVideoPreviewMaxReadCount;
+        REFERENCE_TIME videoPreviewPreroll = 0;
+        if (m_frameDuration > 0 && actualPreviewMaxReadCount > kVideoReorderFrameCount)
+        {
+            videoPreviewPreroll = m_frameDuration * static_cast<REFERENCE_TIME>(actualPreviewMaxReadCount - kVideoReorderFrameCount);
+        }
+
+        const REFERENCE_TIME rawVideoTarget = position + m_videoTimelineOffset;
+        REFERENCE_TIME videoSeekTime = rawVideoTarget > videoPreviewPreroll ? rawVideoTarget - videoPreviewPreroll : 0;
+        if (m_duration > m_frameDuration && videoSeekTime > m_duration - m_frameDuration)
+        {
+            videoSeekTime = m_duration - m_frameDuration;
+        }
+        if (videoSeekTime < 0)
+        {
+            videoSeekTime = 0;
+        }
 
         PROPVARIANT videoPosition;
         PROPVARIANT audioPosition;
@@ -453,11 +468,15 @@ namespace LoopPlayer
         PropVariantClear(&videoPosition);
         PropVariantClear(&audioPosition);
 
-        Logf(L"Engine seek: logical=%s (%I64d), videoSeek=%s (%I64d), videoTimestampOffset=%s (%I64d), audioSeek=%s (%I64d), videoHr=0x%08X, audioHr=0x%08X, previousState=%s, seekSerial=%lu",
+        Logf(L"Engine seek: logical=%s (%I64d), rawVideoTarget=%s (%I64d), videoSeek=%s (%I64d), videoPreroll=%s (%I64d), videoTimestampOffset=%s (%I64d), audioSeek=%s (%I64d), videoHr=0x%08X, audioHr=0x%08X, previousState=%s, resumePrevious=%d, previewMax=%u, seekSerial=%lu",
              FormatTime(position).c_str(),
              position,
+             FormatTime(rawVideoTarget).c_str(),
+             rawVideoTarget,
              FormatTime(videoSeekTime).c_str(),
              videoSeekTime,
+             FormatTime(videoPreviewPreroll).c_str(),
+             videoPreviewPreroll,
              FormatTime(m_videoTimelineOffset).c_str(),
              m_videoTimelineOffset,
              FormatTime(position).c_str(),
@@ -465,9 +484,11 @@ namespace LoopPlayer
              static_cast<unsigned int>(videoHr),
              static_cast<unsigned int>(audioHr),
              PlaybackEngineStateName(previousState),
+             resumeIfPreviousPlaying ? 1 : 0,
+             static_cast<unsigned int>(actualPreviewMaxReadCount),
              seekSerial);
 
-        HRESULT previewHr = previewVideoFrameAt(position);
+        HRESULT previewHr = previewVideoFrameAt(position, actualPreviewMaxReadCount);
         if (FAILED(videoHr))
         {
             setStateLocked(PlaybackEngineStateError, videoHr);
@@ -483,7 +504,7 @@ namespace LoopPlayer
             Logf(L"Video preview after seek failed: 0x%08X", static_cast<unsigned int>(previewHr));
         }
 
-        if (previousState == PlaybackEngineStatePlaying)
+        if (previousState == PlaybackEngineStatePlaying && resumeIfPreviousPlaying)
         {
             play();
         }
@@ -1193,7 +1214,7 @@ namespace LoopPlayer
         return S_OK;
     }
 
-    HRESULT MfSourcePlaybackEngine::readNextVideoFrameFromSourceLocked(PlaybackVideoFrame& frame, bool& endOfStream)
+    HRESULT MfSourcePlaybackEngine::readNextVideoFrameFromSourceLocked(PlaybackVideoFrame& frame, bool& endOfStream, REFERENCE_TIME copyPixelsFromTime)
     {
         endOfStream = false;
         if (!m_videoReader)
@@ -1263,7 +1284,19 @@ namespace LoopPlayer
                 logicalTime = 0;
             }
 
-            HRESULT copyHr = copyVideoSample(sample, logicalTime, sampleDuration, frame);
+            HRESULT copyHr = S_OK;
+            if (copyPixelsFromTime < 0 || logicalTime >= copyPixelsFromTime)
+            {
+                copyHr = copyVideoSample(sample, logicalTime, sampleDuration, frame);
+            }
+            else
+            {
+                frame.m_width = m_videoWidth;
+                frame.m_height = m_videoHeight;
+                frame.m_stride = m_videoWidth * 4;
+                frame.m_time = logicalTime;
+                frame.m_duration = sampleDuration > 0 ? sampleDuration : m_frameDuration;
+            }
             SafeRelease(sample);
             if (FAILED(copyHr))
             {
@@ -1342,11 +1375,16 @@ namespace LoopPlayer
         m_videoSourceEnded = false;
     }
 
-    HRESULT MfSourcePlaybackEngine::previewVideoFrameAt(REFERENCE_TIME position)
+    HRESULT MfSourcePlaybackEngine::previewVideoFrameAt(REFERENCE_TIME position, size_t maxReadCount)
     {
         if (!m_videoReader)
         {
             return S_OK;
+        }
+
+        if (maxReadCount == 0)
+        {
+            maxReadCount = kVideoPreviewMaxReadCount;
         }
 
         PlaybackVideoFrame frame;
@@ -1355,15 +1393,17 @@ namespace LoopPlayer
         size_t readCount = 0;
         size_t queueCount = 0;
         HRESULT hr = S_OK;
+        const REFERENCE_TIME copyMargin = m_frameDuration > 0 ? m_frameDuration * 16 : DEFAULT_FRAME_DURATION * 16;
+        const REFERENCE_TIME copyPixelsFromTime = position > copyMargin ? position - copyMargin : 0;
         {
             AutoCriticalSectionLock readerLock(&m_readerLock);
             clearVideoReorderFramesLocked();
 
-            while (!m_videoSourceEnded && readCount < kVideoPreviewMaxReadCount)
+            while (!m_videoSourceEnded && readCount < maxReadCount)
             {
                 PlaybackVideoFrame current;
                 bool sourceEnded = false;
-                hr = readNextVideoFrameFromSourceLocked(current, sourceEnded);
+                hr = readNextVideoFrameFromSourceLocked(current, sourceEnded, copyPixelsFromTime);
                 if (FAILED(hr))
                 {
                     break;
@@ -1376,6 +1416,10 @@ namespace LoopPlayer
                 }
 
                 ++readCount;
+                if (current.m_pixels.empty())
+                {
+                    continue;
+                }
                 if (!m_videoReorderFrames.empty() && current.m_time < m_videoReorderFrames.back().m_time && m_videoReorderLogCount < 20)
                 {
                     ++m_videoReorderLogCount;
@@ -1428,7 +1472,7 @@ namespace LoopPlayer
             publishVideoFrame(frame);
         }
 
-        Logf(L"Preview video frame after seek: position=%s (%I64d), hr=0x%08X, end=%d, hasFrame=%d, frameTime=%s (%I64d), read=%u, queue=%u",
+        Logf(L"Preview video frame after seek: position=%s (%I64d), hr=0x%08X, end=%d, hasFrame=%d, frameTime=%s (%I64d), read=%u, queue=%u, maxRead=%u, copyFrom=%s (%I64d)",
              FormatTime(position).c_str(),
              position,
              static_cast<unsigned int>(hr),
@@ -1437,7 +1481,10 @@ namespace LoopPlayer
              FormatTime(frame.m_time).c_str(),
              frame.m_time,
              static_cast<unsigned int>(readCount),
-             static_cast<unsigned int>(queueCount));
+             static_cast<unsigned int>(queueCount),
+             static_cast<unsigned int>(maxReadCount),
+             FormatTime(copyPixelsFromTime).c_str(),
+             copyPixelsFromTime);
         return hr;
     }
 

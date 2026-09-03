@@ -309,6 +309,7 @@ m_instance(nullptr),
 m_hwnd(nullptr),
 m_thumbView(nullptr),
 m_documentView(nullptr),
+m_toolTip(nullptr),
 m_engineReady(false),
 m_leftWidth(210),
 m_thumbScalePercent(100),
@@ -319,19 +320,29 @@ m_documentScrollY(0),
 m_selectedPage(-1),
 m_contextPage(-1),
 m_draggingThumb(false),
+m_dragHoldPending(false),
 m_dragSourceIndex(-1),
+m_dragHoldIndex(-1),
+m_dragHoldStartTick(0),
 m_dragInsertIndex(-1),
 m_hotButton(TOP_BUTTON_NONE),
 m_downButton(TOP_BUTTON_NONE)
 {
     m_dragPoint.x = 0;
     m_dragPoint.y = 0;
+    m_dragHoldPoint.x = 0;
+    m_dragHoldPoint.y = 0;
     ZeroMemory(m_topButtons, sizeof(m_topButtons));
     ZeroMemory(m_toolbarButtons, sizeof(m_toolbarButtons));
 }
 
 PdfReaderWindow::~PdfReaderWindow()
 {
+    if (m_toolTip != nullptr && IsWindow(m_toolTip))
+    {
+        DestroyWindow(m_toolTip);
+    }
+    m_toolTip = nullptr;
     clearDocuments();
     m_engine.uninit();
 }
@@ -349,14 +360,28 @@ bool PdfReaderWindow::create(HINSTANCE instance, int showCommand)
         return false;
     }
 
+    RECT windowRect = PdfReaderHelper::GetDefaultMainWindowRect(kTitleHeight + kToolbarHeight,
+                                                                kSplitterWidth,
+                                                                kLeftMinWidth,
+                                                                kRightMinWidth,
+                                                                kWindowMinWidth,
+                                                                kWindowMinHeight,
+                                                                &m_leftWidth);
+    PdfReaderInstance::instance().logInfo("Default main window rect, left=%d, top=%d, width=%d, height=%d, leftWidth=%d",
+                       windowRect.left,
+                       windowRect.top,
+                       PdfReaderHelper::RectWidth(windowRect),
+                       PdfReaderHelper::RectHeight(windowRect),
+                       m_leftWidth);
+
     m_hwnd = CreateWindowExW(WS_EX_APPWINDOW,
                              kWindowClass,
                              kAppTitle,
-                             WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
-                             CW_USEDEFAULT,
-                             CW_USEDEFAULT,
-                             980,
-                             720,
+                             WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN,
+                             windowRect.left,
+                             windowRect.top,
+                             PdfReaderHelper::RectWidth(windowRect),
+                             PdfReaderHelper::RectHeight(windowRect),
                              nullptr,
                              nullptr,
                              instance,
@@ -391,7 +416,7 @@ bool PdfReaderWindow::registerWindowClasses(HINSTANCE instance)
     WNDCLASSEXW windowClass;
     ZeroMemory(&windowClass, sizeof(windowClass));
     windowClass.cbSize = sizeof(windowClass);
-    windowClass.style = CS_HREDRAW | CS_VREDRAW;
+    windowClass.style = 0;
     windowClass.lpfnWndProc = PdfReaderWindow::MainWndProc;
     windowClass.hInstance = instance;
     windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
@@ -545,9 +570,21 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
         }
         createChildViews();
         layoutChildren();
+        createToolTips();
         PdfReaderInstance::instance().logInfo("WM_CREATE end, thumbView=%p, documentView=%p", m_thumbView, m_documentView);
         return 0;
     }
+    case WM_NCPAINT:
+        return 0;
+    case WM_NCACTIVATE:
+        return TRUE;
+    case WM_SYNCPAINT:
+        return 0;
+    case WM_ERASEBKGND:
+        return 1;
+    case WM_ENABLE:
+        PdfReaderHelper::RefreshWindowFrame(hwnd);
+        return 0;
     case WM_SIZE:
         layoutChildren();
         invalidateAll();
@@ -557,6 +594,18 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
         MINMAXINFO* info = reinterpret_cast<MINMAXINFO*>(lParam);
         info->ptMinTrackSize.x = kWindowMinWidth;
         info->ptMinTrackSize.y = kWindowMinHeight;
+
+        RECT monitorRect;
+        RECT workRect;
+        if (PdfReaderHelper::GetWindowMonitorRects(hwnd, &monitorRect, &workRect))
+        {
+            info->ptMaxPosition.x = workRect.left - monitorRect.left;
+            info->ptMaxPosition.y = workRect.top - monitorRect.top;
+            info->ptMaxSize.x = PdfReaderHelper::RectWidth(workRect);
+            info->ptMaxSize.y = PdfReaderHelper::RectHeight(workRect);
+            info->ptMaxTrackSize.x = info->ptMaxSize.x;
+            info->ptMaxTrackSize.y = info->ptMaxSize.y;
+        }
         return 0;
     }
     case WM_NCCALCSIZE:
@@ -564,13 +613,10 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
         if (wParam != FALSE && IsZoomed(hwnd))
         {
             NCCALCSIZE_PARAMS* params = reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam);
-            HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-            MONITORINFO monitorInfo;
-            ZeroMemory(&monitorInfo, sizeof(monitorInfo));
-            monitorInfo.cbSize = sizeof(monitorInfo);
-            if (GetMonitorInfoW(monitor, &monitorInfo))
+            RECT workRect;
+            if (PdfReaderHelper::GetWindowMonitorRects(hwnd, nullptr, &workRect))
             {
-                params->rgrc[0] = monitorInfo.rcWork;
+                params->rgrc[0] = workRect;
             }
         }
         return 0;
@@ -643,7 +689,7 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
         if (hotButton != m_hotButton)
         {
             m_hotButton = hotButton;
-            InvalidateRect(hwnd, nullptr, FALSE);
+            invalidateMainChrome();
             TRACKMOUSEEVENT track;
             ZeroMemory(&track, sizeof(track));
             track.cbSize = sizeof(track);
@@ -655,8 +701,9 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
     }
     case WM_MOUSELEAVE:
         m_hotButton = TOP_BUTTON_NONE;
-        InvalidateRect(hwnd, nullptr, FALSE);
+        invalidateMainChrome();
         return 0;
+    case WM_LBUTTONDBLCLK:
     case WM_LBUTTONDOWN:
     {
         POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
@@ -669,13 +716,32 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
         {
             m_downButton = button;
             SetCapture(hwnd);
-            InvalidateRect(hwnd, nullptr, FALSE);
+            invalidateMainChrome();
             return 0;
         }
         break;
     }
     case WM_LBUTTONUP:
     {
+        if (m_draggingThumb)
+        {
+            finishThumbnailDrag(true);
+            if (GetCapture() == m_thumbView)
+            {
+                ReleaseCapture();
+            }
+            return 0;
+        }
+        if (m_dragHoldPending)
+        {
+            cancelThumbnailDragHold("main left button up before hold timeout");
+            if (GetCapture() == m_thumbView)
+            {
+                ReleaseCapture();
+            }
+            return 0;
+        }
+
         POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
         int button = hitTestTopButton(point);
         if (button == TOP_BUTTON_NONE)
@@ -689,7 +755,7 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
         {
             ReleaseCapture();
         }
-        InvalidateRect(hwnd, nullptr, FALSE);
+        invalidateMainChrome();
 
         if (downButton != TOP_BUTTON_NONE && downButton == button)
         {
@@ -713,6 +779,10 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
             {
                 savePdfCommand();
             }
+            else if (button == TOP_BUTTON_SAVE_AS)
+            {
+                savePdfAsCommand();
+            }
             else if (button == TOP_BUTTON_HELP)
             {
                 showAboutDialog();
@@ -724,7 +794,7 @@ LRESULT PdfReaderWindow::handleMainMessage(HWND hwnd, UINT message, WPARAM wPara
     {
         PAINTSTRUCT paint;
         HDC hdc = BeginPaint(hwnd, &paint);
-        paintMain(hdc);
+        paintBuffered(hwnd, hdc, &PdfReaderWindow::paintMain);
         EndPaint(hwnd, &paint);
         return 0;
     }
@@ -755,10 +825,12 @@ LRESULT PdfReaderWindow::handleThumbMessage(HWND hwnd, UINT message, WPARAM wPar
     {
         PAINTSTRUCT paint;
         HDC hdc = BeginPaint(hwnd, &paint);
-        paintThumbnailView(hdc);
+        paintBuffered(hwnd, hdc, &PdfReaderWindow::paintThumbnailView);
         EndPaint(hwnd, &paint);
         return 0;
     }
+    case WM_ERASEBKGND:
+        return 1;
     case WM_VSCROLL:
         m_thumbScrollY = PdfReaderHelper::ScrollFromCode(hwnd, SB_VERT, wParam, m_thumbScrollY);
         updateThumbScrollbar();
@@ -777,6 +849,7 @@ LRESULT PdfReaderWindow::handleThumbMessage(HWND hwnd, UINT message, WPARAM wPar
         }
         return 0;
     }
+    case WM_LBUTTONDBLCLK:
     case WM_LBUTTONDOWN:
     {
         SetFocus(hwnd);
@@ -785,8 +858,8 @@ LRESULT PdfReaderWindow::handleThumbMessage(HWND hwnd, UINT message, WPARAM wPar
         if (page >= 0)
         {
             m_selectedPage = page;
-            beginThumbnailDrag(page, point);
-            InvalidateRect(m_documentView, nullptr, FALSE);
+            startThumbnailDragHold(page, point);
+            InvalidateRect(m_thumbView, nullptr, FALSE);
         }
         return 0;
     }
@@ -795,6 +868,13 @@ LRESULT PdfReaderWindow::handleThumbMessage(HWND hwnd, UINT message, WPARAM wPar
         {
             POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
             updateThumbnailDrag(point);
+            return 0;
+        }
+        if (m_dragHoldPending)
+        {
+            POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+            updateThumbnailDragHold(point);
+            tryStartThumbnailDragFromHold(point);
             return 0;
         }
         break;
@@ -808,14 +888,46 @@ LRESULT PdfReaderWindow::handleThumbMessage(HWND hwnd, UINT message, WPARAM wPar
             }
             return 0;
         }
+        if (m_dragHoldPending)
+        {
+            cancelThumbnailDragHold("left button up before hold timeout");
+            if (GetCapture() == hwnd)
+            {
+                ReleaseCapture();
+            }
+            InvalidateRect(m_documentView, nullptr, FALSE);
+            return 0;
+        }
         break;
     case WM_CAPTURECHANGED:
         if (m_draggingThumb)
         {
-            finishThumbnailDrag(false);
+            PdfReaderInstance::instance().logInfo("Thumbnail drag capture changed ignored, sourceOrder=%d", m_dragSourceIndex);
+            SetCapture(m_thumbView);
+        }
+        if (m_dragHoldPending)
+        {
+            PdfReaderInstance::instance().logInfo("Thumbnail drag hold capture changed ignored, pageOrder=%d", m_dragHoldIndex);
         }
         return 0;
+    case WM_CANCELMODE:
+        if (m_draggingThumb)
+        {
+            finishThumbnailDrag(false);
+            return 0;
+        }
+        if (m_dragHoldPending)
+        {
+            cancelThumbnailDragHold("cancel mode");
+            return 0;
+        }
+        break;
     case WM_TIMER:
+        if (wParam == kTimerDragStart && m_dragHoldPending)
+        {
+            tryStartThumbnailDragFromHold(m_dragHoldPoint);
+            return 0;
+        }
         if (wParam == kTimerDragScroll && m_draggingThumb)
         {
             autoScrollDrag();
@@ -846,10 +958,12 @@ LRESULT PdfReaderWindow::handleDocumentMessage(HWND hwnd, UINT message, WPARAM w
     {
         PAINTSTRUCT paint;
         HDC hdc = BeginPaint(hwnd, &paint);
-        paintDocumentView(hdc);
+        paintBuffered(hwnd, hdc, &PdfReaderWindow::paintDocumentView);
         EndPaint(hwnd, &paint);
         return 0;
     }
+    case WM_ERASEBKGND:
+        return 1;
     case WM_VSCROLL:
         m_documentScrollY = PdfReaderHelper::ScrollFromCode(hwnd, SB_VERT, wParam, m_documentScrollY);
         updateDocumentScrollbars();
@@ -873,6 +987,26 @@ LRESULT PdfReaderWindow::handleDocumentMessage(HWND hwnd, UINT message, WPARAM w
         }
         return 0;
     }
+    case WM_LBUTTONUP:
+        if (m_draggingThumb)
+        {
+            finishThumbnailDrag(true);
+            if (GetCapture() == m_thumbView)
+            {
+                ReleaseCapture();
+            }
+            return 0;
+        }
+        if (m_dragHoldPending)
+        {
+            cancelThumbnailDragHold("document left button up before hold timeout");
+            if (GetCapture() == m_thumbView)
+            {
+                ReleaseCapture();
+            }
+            return 0;
+        }
+        break;
     case WM_LBUTTONDOWN:
     {
         POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
@@ -898,7 +1032,7 @@ void PdfReaderWindow::createChildViews()
     m_thumbView = CreateWindowExW(0,
                                   kThumbClass,
                                   L"",
-                                  WS_CHILD | WS_VISIBLE | WS_VSCROLL,
+                                  WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_CLIPSIBLINGS,
                                   0,
                                   0,
                                   1,
@@ -915,7 +1049,7 @@ void PdfReaderWindow::createChildViews()
     m_documentView = CreateWindowExW(0,
                                      kDocumentClass,
                                      L"",
-                                     WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL,
+                                     WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | WS_CLIPSIBLINGS,
                                      0,
                                      0,
                                      1,
@@ -929,6 +1063,90 @@ void PdfReaderWindow::createChildViews()
         PdfReaderInstance::instance().logError("Create document view failed, lastError=%lu", GetLastError());
     }
     PdfReaderInstance::instance().logInfo("Create child views end, thumbView=%p, documentView=%p", m_thumbView, m_documentView);
+}
+
+void PdfReaderWindow::createToolTips()
+{
+    if (m_hwnd == nullptr || m_toolTip != nullptr)
+    {
+        return;
+    }
+
+    m_toolTip = CreateWindowExW(WS_EX_TOPMOST,
+                                TOOLTIPS_CLASS,
+                                nullptr,
+                                WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
+                                CW_USEDEFAULT,
+                                CW_USEDEFAULT,
+                                CW_USEDEFAULT,
+                                CW_USEDEFAULT,
+                                m_hwnd,
+                                nullptr,
+                                m_instance,
+                                nullptr);
+    if (m_toolTip == nullptr)
+    {
+        PdfReaderInstance::instance().logError("Create tooltip failed, lastError=%lu", GetLastError());
+        return;
+    }
+
+    addToolTip(m_topButtons[0], L"最小化");
+    addToolTip(m_topButtons[1], L"最大化/还原");
+    addToolTip(m_topButtons[2], L"关闭");
+    addToolTip(m_toolbarButtons[0], L"打开PDF");
+    addToolTip(m_toolbarButtons[1], L"保存");
+    addToolTip(m_toolbarButtons[2], L"另存为");
+    addToolTip(m_toolbarButtons[3], L"功能说明");
+    SetWindowPos(m_toolTip, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    PdfReaderInstance::instance().logInfo("Tooltip created, hwnd=%p", m_toolTip);
+}
+
+void PdfReaderWindow::addToolTip(const TopButtonState& button, const wchar_t* text)
+{
+    if (m_toolTip == nullptr || m_hwnd == nullptr || button.id == TOP_BUTTON_NONE || text == nullptr)
+    {
+        return;
+    }
+
+    TOOLINFOW toolInfo;
+    ZeroMemory(&toolInfo, sizeof(toolInfo));
+    toolInfo.cbSize = sizeof(toolInfo);
+    toolInfo.uFlags = TTF_SUBCLASS;
+    toolInfo.hwnd = m_hwnd;
+    toolInfo.uId = static_cast<UINT_PTR>(button.id);
+    toolInfo.rect = button.rect;
+    toolInfo.lpszText = const_cast<LPWSTR>(text);
+    SendMessageW(m_toolTip, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&toolInfo));
+}
+
+void PdfReaderWindow::updateToolTipRects()
+{
+    if (m_toolTip == nullptr || m_hwnd == nullptr)
+    {
+        return;
+    }
+
+    for (int i = 0; i < kTitleButtonCount; ++i)
+    {
+        TOOLINFOW toolInfo;
+        ZeroMemory(&toolInfo, sizeof(toolInfo));
+        toolInfo.cbSize = sizeof(toolInfo);
+        toolInfo.hwnd = m_hwnd;
+        toolInfo.uId = static_cast<UINT_PTR>(m_topButtons[i].id);
+        toolInfo.rect = m_topButtons[i].rect;
+        SendMessageW(m_toolTip, TTM_NEWTOOLRECTW, 0, reinterpret_cast<LPARAM>(&toolInfo));
+    }
+
+    for (int i = 0; i < kToolbarButtonCount; ++i)
+    {
+        TOOLINFOW toolInfo;
+        ZeroMemory(&toolInfo, sizeof(toolInfo));
+        toolInfo.cbSize = sizeof(toolInfo);
+        toolInfo.hwnd = m_hwnd;
+        toolInfo.uId = static_cast<UINT_PTR>(m_toolbarButtons[i].id);
+        toolInfo.rect = m_toolbarButtons[i].rect;
+        SendMessageW(m_toolTip, TTM_NEWTOOLRECTW, 0, reinterpret_cast<LPARAM>(&toolInfo));
+    }
 }
 
 void PdfReaderWindow::layoutChildren()
@@ -957,6 +1175,7 @@ void PdfReaderWindow::layoutChildren()
     MoveWindow(m_thumbView, 0, contentTop, m_leftWidth, height, TRUE);
     MoveWindow(m_documentView, m_leftWidth + kSplitterWidth, contentTop, std::max(1, width - m_leftWidth - kSplitterWidth), height, TRUE);
     updateScrollbars();
+    updateToolTipRects();
 }
 
 void PdfReaderWindow::updateTitleButtons(const RECT& clientRect)
@@ -988,12 +1207,16 @@ void PdfReaderWindow::updateToolbarButtons(const RECT& clientRect)
     m_toolbarButtons[1].rect = PdfReaderHelper::MakeRect(44, top, 44 + kToolButtonSize, top + kToolButtonSize);
     m_toolbarButtons[1].enabled = !m_pages.empty();
 
-    m_toolbarButtons[2].id = TOP_BUTTON_HELP;
-    m_toolbarButtons[2].rect = PdfReaderHelper::MakeRect(clientRect.right - 12 - kToolButtonSize,
-                                                         top,
-                                                         clientRect.right - 12,
-                                                         top + kToolButtonSize);
-    m_toolbarButtons[2].enabled = true;
+    m_toolbarButtons[2].id = TOP_BUTTON_SAVE_AS;
+    m_toolbarButtons[2].rect = PdfReaderHelper::MakeRect(76, top, 76 + kToolButtonSize, top + kToolButtonSize);
+    m_toolbarButtons[2].enabled = !m_pages.empty();
+
+    m_toolbarButtons[3].id = TOP_BUTTON_HELP;
+    m_toolbarButtons[3].rect = PdfReaderHelper::MakeRect(clientRect.right - 12 - kToolButtonSize,
+                                                          top,
+                                                          clientRect.right - 12,
+                                                          top + kToolButtonSize);
+    m_toolbarButtons[3].enabled = true;
 }
 
 void PdfReaderWindow::updateScrollbars()
@@ -1074,7 +1297,7 @@ void PdfReaderWindow::invalidateAll()
 {
     if (m_hwnd != nullptr)
     {
-        InvalidateRect(m_hwnd, nullptr, FALSE);
+        invalidateMainChrome();
     }
     if (m_thumbView != nullptr)
     {
@@ -1083,6 +1306,34 @@ void PdfReaderWindow::invalidateAll()
     if (m_documentView != nullptr)
     {
         InvalidateRect(m_documentView, nullptr, FALSE);
+    }
+}
+
+void PdfReaderWindow::invalidateMainChrome()
+{
+    if (m_hwnd == nullptr)
+    {
+        return;
+    }
+
+    RECT client;
+    GetClientRect(m_hwnd, &client);
+
+    int chromeBottom = PdfReaderHelper::ClampInt(kTitleHeight + kToolbarHeight,
+                                                 static_cast<int>(client.top),
+                                                 static_cast<int>(client.bottom));
+    if (chromeBottom > client.top)
+    {
+        RECT chromeRect = PdfReaderHelper::MakeRect(client.left, client.top, client.right, chromeBottom);
+        RedrawWindow(m_hwnd, &chromeRect, nullptr, RDW_INVALIDATE | RDW_NOCHILDREN);
+    }
+
+    int splitLeft = PdfReaderHelper::ClampInt(m_leftWidth, client.left, client.right);
+    int splitRight = PdfReaderHelper::ClampInt(m_leftWidth + kSplitterWidth, client.left, client.right);
+    if (splitRight > splitLeft && client.bottom > chromeBottom)
+    {
+        RECT splitRect = PdfReaderHelper::MakeRect(splitLeft, chromeBottom, splitRight, client.bottom);
+        RedrawWindow(m_hwnd, &splitRect, nullptr, RDW_INVALIDATE | RDW_NOCHILDREN);
     }
 }
 
@@ -1188,6 +1439,7 @@ void PdfReaderWindow::drawTopButton(HDC hdc, const TopButtonState& button, bool 
 
     HPEN pen = CreatePen(PS_SOLID, 2, glyph);
     HGDIOBJ oldPen = SelectObject(hdc, pen);
+    HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
     int cx = (button.rect.left + button.rect.right) / 2;
     int cy = (button.rect.top + button.rect.bottom) / 2;
     if (button.id == TOP_BUTTON_MINIMIZE)
@@ -1214,6 +1466,7 @@ void PdfReaderWindow::drawTopButton(HDC hdc, const TopButtonState& button, bool 
         MoveToEx(hdc, cx + 6, cy - 6, nullptr);
         LineTo(hdc, cx - 7, cy + 7);
     }
+    SelectObject(hdc, oldBrush);
     SelectObject(hdc, oldPen);
     DeleteObject(pen);
 }
@@ -1271,7 +1524,7 @@ void PdfReaderWindow::drawToolbarButton(HDC hdc, const TopButtonState& button, b
         MoveToEx(hdc, left + 6, top + 12, nullptr);
         LineTo(hdc, left + 21, top + 12);
     }
-    else if (button.id == TOP_BUTTON_SAVE)
+    else if (button.id == TOP_BUTTON_SAVE || button.id == TOP_BUTTON_SAVE_AS)
     {
         Rectangle(hdc, left + 6, top + 4, left + 19, top + 20);
         MoveToEx(hdc, left + 9, top + 4, nullptr);
@@ -1281,6 +1534,14 @@ void PdfReaderWindow::drawToolbarButton(HDC hdc, const TopButtonState& button, b
         Rectangle(hdc, left + 8, top + 15, left + 17, top + 20);
         MoveToEx(hdc, left + 10, top + 17, nullptr);
         LineTo(hdc, left + 15, top + 17);
+        if (button.id == TOP_BUTTON_SAVE_AS)
+        {
+            MoveToEx(hdc, left + 15, top + 12, nullptr);
+            LineTo(hdc, left + 21, top + 12);
+            LineTo(hdc, left + 18, top + 9);
+            MoveToEx(hdc, left + 21, top + 12, nullptr);
+            LineTo(hdc, left + 18, top + 15);
+        }
     }
     else if (button.id == TOP_BUTTON_HELP)
     {
@@ -1453,6 +1714,45 @@ void PdfReaderWindow::paintDocumentView(HDC hdc)
         }
         PdfReaderHelper::DrawSolidFrame(hdc, pageRect, i == m_selectedPage ? PdfReaderHelper::Color(48, 111, 210) : PdfReaderHelper::Color(128, 134, 145));
     }
+}
+
+void PdfReaderWindow::paintBuffered(HWND hwnd, HDC hdc, void (PdfReaderWindow::*paintHandler)(HDC))
+{
+    if (hwnd == nullptr || hdc == nullptr || paintHandler == nullptr)
+    {
+        return;
+    }
+
+    RECT client;
+    GetClientRect(hwnd, &client);
+    int width = PdfReaderHelper::RectWidth(client);
+    int height = PdfReaderHelper::RectHeight(client);
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    HDC memoryDC = CreateCompatibleDC(hdc);
+    if (memoryDC == nullptr)
+    {
+        (this->*paintHandler)(hdc);
+        return;
+    }
+
+    HBITMAP memoryBitmap = CreateCompatibleBitmap(hdc, width, height);
+    if (memoryBitmap == nullptr)
+    {
+        DeleteDC(memoryDC);
+        (this->*paintHandler)(hdc);
+        return;
+    }
+
+    HGDIOBJ oldBitmap = SelectObject(memoryDC, memoryBitmap);
+    (this->*paintHandler)(memoryDC);
+    BitBlt(hdc, 0, 0, width, height, memoryDC, 0, 0, SRCCOPY);
+    SelectObject(memoryDC, oldBitmap);
+    DeleteObject(memoryBitmap);
+    DeleteDC(memoryDC);
 }
 
 void PdfReaderWindow::drawPageBitmap(HDC hdc, const PdfEngineBitmap& bitmap, const RECT& targetRect, BYTE alpha)
@@ -1728,9 +2028,9 @@ int PdfReaderWindow::hitTestThumbnail(POINT point) const
 {
     for (int i = 0; i < static_cast<int>(m_pages.size()); ++i)
     {
-        int top = getThumbItemTop(i) - m_thumbScrollY;
-        int bottom = top + getThumbItemHeight(i);
-        if (point.y >= top && point.y < bottom)
+        RECT pageRect = getThumbPageRect(i);
+        OffsetRect(&pageRect, 0, -m_thumbScrollY);
+        if (PdfReaderHelper::PtInRectLocal(pageRect, point))
         {
             return i;
         }
@@ -1777,6 +2077,7 @@ int PdfReaderWindow::getInsertIndexForPoint(POINT point) const
 
 void PdfReaderWindow::beginThumbnailDrag(int pageOrder, POINT point)
 {
+    cancelThumbnailDragHold();
     PdfReaderInstance::instance().logInfo("Thumbnail drag begin, sourceOrder=%d, mouse=(%ld,%ld)",
                        pageOrder,
                        point.x,
@@ -1799,6 +2100,7 @@ void PdfReaderWindow::updateThumbnailDrag(POINT point)
 
 void PdfReaderWindow::finishThumbnailDrag(bool applyMove)
 {
+    KillTimer(m_thumbView, kTimerDragStart);
     KillTimer(m_thumbView, kTimerDragScroll);
     int oldSourceIndex = m_dragSourceIndex;
     int oldInsertIndex = m_dragInsertIndex;
@@ -1840,6 +2142,95 @@ void PdfReaderWindow::finishThumbnailDrag(bool applyMove)
     m_dragInsertIndex = -1;
     clampScrollPositions();
     invalidateAll();
+}
+
+void PdfReaderWindow::startThumbnailDragHold(int pageOrder, POINT point)
+{
+    cancelThumbnailDragHold("restart hold");
+    if (pageOrder < 0 || pageOrder >= static_cast<int>(m_pages.size()))
+    {
+        return;
+    }
+
+    m_dragHoldPending = true;
+    m_dragHoldIndex = pageOrder;
+    m_dragHoldStartTick = GetTickCount();
+    m_dragHoldPoint = point;
+    SetCapture(m_thumbView);
+    if (SetTimer(m_thumbView, kTimerDragStart, kThumbnailDragHoldTimerInterval, nullptr) == 0)
+    {
+        PdfReaderInstance::instance().logError("Thumbnail drag hold timer start failed, pageOrder=%d, lastError=%lu",
+                                               pageOrder,
+                                               GetLastError());
+    }
+    PdfReaderInstance::instance().logInfo("Thumbnail drag hold start, pageOrder=%d, mouse=(%ld,%ld)",
+                       pageOrder,
+                       point.x,
+                       point.y);
+}
+
+void PdfReaderWindow::updateThumbnailDragHold(POINT point)
+{
+    if (!m_dragHoldPending)
+    {
+        return;
+    }
+
+    m_dragHoldPoint = point;
+}
+
+bool PdfReaderWindow::tryStartThumbnailDragFromHold(POINT point)
+{
+    if (!m_dragHoldPending)
+    {
+        return false;
+    }
+
+    DWORD elapsed = GetTickCount() - m_dragHoldStartTick;
+    if (elapsed < kThumbnailDragHoldMilliseconds)
+    {
+        return false;
+    }
+
+    int pageOrder = m_dragHoldIndex;
+    KillTimer(m_thumbView, kTimerDragStart);
+    m_dragHoldPending = false;
+    m_dragHoldIndex = -1;
+    m_dragHoldStartTick = 0;
+    m_dragHoldPoint.x = 0;
+    m_dragHoldPoint.y = 0;
+
+    if (pageOrder < 0 || pageOrder >= static_cast<int>(m_pages.size()))
+    {
+        PdfReaderInstance::instance().logInfo("Thumbnail drag hold timeout ignored, invalid pageOrder=%d", pageOrder);
+        return true;
+    }
+
+    PdfReaderInstance::instance().logInfo("Thumbnail drag hold timeout, pageOrder=%d, elapsed=%lu, mouse=(%ld,%ld)",
+                                          pageOrder,
+                                          static_cast<unsigned long>(elapsed),
+                                          point.x,
+                                          point.y);
+    beginThumbnailDrag(pageOrder, point);
+    return true;
+}
+
+void PdfReaderWindow::cancelThumbnailDragHold(const char* reason)
+{
+    if (!m_dragHoldPending)
+    {
+        return;
+    }
+
+    PdfReaderInstance::instance().logInfo("Thumbnail drag hold canceled, pageOrder=%d, reason=%s",
+                                          m_dragHoldIndex,
+                                          reason != nullptr ? reason : "");
+    KillTimer(m_thumbView, kTimerDragStart);
+    m_dragHoldPending = false;
+    m_dragHoldIndex = -1;
+    m_dragHoldStartTick = 0;
+    m_dragHoldPoint.x = 0;
+    m_dragHoldPoint.y = 0;
 }
 
 void PdfReaderWindow::autoScrollDrag()
@@ -1914,7 +2305,7 @@ void PdfReaderWindow::setDocumentZoom(int zoomPercent)
 
 void PdfReaderWindow::showThumbnailContextMenu(POINT clientPoint)
 {
-    if (m_draggingThumb)
+    if (m_draggingThumb || m_dragHoldPending)
     {
         return;
     }
@@ -1933,13 +2324,13 @@ void PdfReaderWindow::showThumbnailContextMenu(POINT clientPoint)
 
     if (m_contextPage >= 0)
     {
-        AppendMenuW(menu, MF_STRING, IDM_THUMB_INSERT_BEFORE, L"Insert PDF Before");
-        AppendMenuW(menu, MF_STRING, IDM_THUMB_INSERT_AFTER, L"Insert PDF After");
+        AppendMenuW(menu, MF_STRING, IDM_THUMB_INSERT_BEFORE, L"向前插入PDF");
+        AppendMenuW(menu, MF_STRING, IDM_THUMB_INSERT_AFTER, L"向后插入PDF");
     }
     else
     {
-        AppendMenuW(menu, MF_STRING | (m_pages.empty() ? MF_GRAYED : 0), IDM_LEFT_SAVE_EACH_PAGE, L"Save Each Page");
-        AppendMenuW(menu, MF_STRING | (m_pages.empty() ? MF_GRAYED : 0), IDM_LEFT_SAVE_PAGE_RANGE, L"Save Page Range");
+        AppendMenuW(menu, MF_STRING | (m_pages.empty() ? MF_GRAYED : 0), IDM_LEFT_SAVE_EACH_PAGE, L"分页保存");
+        AppendMenuW(menu, MF_STRING | (m_pages.empty() ? MF_GRAYED : 0), IDM_LEFT_SAVE_PAGE_RANGE, L"指定页保存");
     }
 
     POINT screenPoint = clientPoint;
@@ -2150,7 +2541,9 @@ bool PdfReaderWindow::showTextPrompt(const std::wstring& title,
     }
 
     EnableWindow(m_hwnd, TRUE);
+    SetActiveWindow(m_hwnd);
     SetForegroundWindow(m_hwnd);
+    PdfReaderHelper::RefreshWindowFrame(m_hwnd);
     if (state.accepted)
     {
         *value = state.value;
@@ -2222,7 +2615,9 @@ void PdfReaderWindow::showAboutDialog()
     }
 
     EnableWindow(m_hwnd, TRUE);
+    SetActiveWindow(m_hwnd);
     SetForegroundWindow(m_hwnd);
+    PdfReaderHelper::RefreshWindowFrame(m_hwnd);
     PdfReaderInstance::instance().logInfo("Show about dialog end");
 }
 
@@ -2433,13 +2828,14 @@ bool PdfReaderWindow::buildPageRefs(const std::vector<int>& pageOrders, std::vec
     return !refs->empty();
 }
 
-void PdfReaderWindow::savePdfCommand()
+bool PdfReaderWindow::saveCurrentPagesToPath(const std::wstring& outputPath, const char* logAction)
 {
-    PdfReaderInstance::instance().logInfo("Save PDF command begin, pageCount=%u", static_cast<unsigned int>(m_pages.size()));
-    if (m_pages.empty())
+    const char* action = logAction != nullptr ? logAction : "Save current pages";
+    if (outputPath.empty())
     {
-        PdfReaderInstance::instance().logWarning("Save PDF command ignored, no pages");
-        return;
+        PdfReaderInstance::instance().logError("%s failed, output path is empty", action);
+        MessageBoxW(m_hwnd, L"输出PDF路径为空。", kAppTitle, MB_OK | MB_ICONERROR);
+        return false;
     }
 
     std::vector<int> pageOrders;
@@ -2451,7 +2847,104 @@ void PdfReaderWindow::savePdfCommand()
     std::vector<PdfEnginePageRef> refs;
     if (!buildPageRefs(pageOrders, &refs))
     {
-        PdfReaderInstance::instance().logError("Save PDF command failed, buildPageRefs returned false");
+        PdfReaderInstance::instance().logError("%s failed, buildPageRefs returned false", action);
+        return false;
+    }
+
+    std::string error;
+    if (!m_engine.savePages(outputPath, refs, &error))
+    {
+        PdfReaderInstance::instance().logError("%s failed, outputPath=%s, refs=%u, error=%s",
+                            action,
+                            PdfReaderHelper::WideToUtf8(outputPath).c_str(),
+                            static_cast<unsigned int>(refs.size()),
+                            error.c_str());
+        MessageBoxW(m_hwnd, PdfReaderHelper::Utf8ToWide(error).c_str(), kAppTitle, MB_OK | MB_ICONERROR);
+        return false;
+    }
+
+    PdfReaderInstance::instance().logInfo("%s succeeded, outputPath=%s, refs=%u",
+                       action,
+                       PdfReaderHelper::WideToUtf8(outputPath).c_str(),
+                       static_cast<unsigned int>(refs.size()));
+    return true;
+}
+
+void PdfReaderWindow::savePdfCommand()
+{
+    PdfReaderInstance::instance().logInfo("Save PDF command begin, pageCount=%u", static_cast<unsigned int>(m_pages.size()));
+    if (m_pages.empty())
+    {
+        PdfReaderInstance::instance().logWarning("Save PDF command ignored, no pages");
+        return;
+    }
+
+    if (m_mainFilePath.empty())
+    {
+        PdfReaderInstance::instance().logWarning("Save PDF command has no source file, fallback to save as");
+        savePdfAsCommand();
+        return;
+    }
+
+    std::wstring message = L"是否覆盖原PDF文件？\r\n\r\n";
+    message += m_mainFilePath;
+    message += L"\r\n\r\n覆盖后原文件内容会被当前页面顺序替换，请确认不是误点。";
+    int confirm = MessageBoxW(m_hwnd, message.c_str(), kAppTitle, MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
+    if (confirm != IDYES)
+    {
+        PdfReaderInstance::instance().logInfo("Save PDF command canceled by overwrite confirmation");
+        return;
+    }
+
+    std::wstring originalPath = m_mainFilePath;
+    std::wstring tempPath = PdfReaderHelper::MakeTempPdfFilePath(originalPath);
+    if (tempPath.empty())
+    {
+        PdfReaderInstance::instance().logError("Save PDF command failed, create temp path failed, originalPath=%s",
+                            PdfReaderHelper::WideToUtf8(originalPath).c_str());
+        MessageBoxW(m_hwnd, L"创建临时PDF路径失败，保存已取消。", kAppTitle, MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    if (!saveCurrentPagesToPath(tempPath, "Save PDF command"))
+    {
+        CSystem::deleteFile(tempPath);
+        return;
+    }
+
+    clearDocuments();
+    if (!MoveFileExW(tempPath.c_str(), originalPath.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
+    {
+        DWORD lastError = GetLastError();
+        PdfReaderInstance::instance().logError("Save PDF command failed, replace original failed, tempPath=%s, originalPath=%s, lastError=%lu",
+                            PdfReaderHelper::WideToUtf8(tempPath).c_str(),
+                            PdfReaderHelper::WideToUtf8(originalPath).c_str(),
+                            lastError);
+        std::wstring errorMessage = L"替换原PDF文件失败，保存的临时文件保留在：\r\n";
+        errorMessage += tempPath;
+        MessageBoxW(m_hwnd, errorMessage.c_str(), kAppTitle, MB_OK | MB_ICONERROR);
+        openPdfFile(originalPath);
+        return;
+    }
+
+    PdfReaderInstance::instance().logInfo("Save PDF command succeeded, originalPath=%s",
+                       PdfReaderHelper::WideToUtf8(originalPath).c_str());
+    if (openPdfFile(originalPath))
+    {
+        MessageBoxW(m_hwnd, L"已保存并覆盖原PDF。", kAppTitle, MB_OK | MB_ICONINFORMATION);
+    }
+    else
+    {
+        MessageBoxW(m_hwnd, L"已保存并覆盖原PDF，但重新打开文件失败。", kAppTitle, MB_OK | MB_ICONWARNING);
+    }
+}
+
+void PdfReaderWindow::savePdfAsCommand()
+{
+    PdfReaderInstance::instance().logInfo("Save as PDF command begin, pageCount=%u", static_cast<unsigned int>(m_pages.size()));
+    if (m_pages.empty())
+    {
+        PdfReaderInstance::instance().logWarning("Save as PDF command ignored, no pages");
         return;
     }
 
@@ -2459,24 +2952,14 @@ void PdfReaderWindow::savePdfCommand()
     std::wstring outputPath;
     if (!showSavePdfDialog(suggestedName, &outputPath))
     {
-        PdfReaderInstance::instance().logInfo("Save PDF command canceled at save dialog");
+        PdfReaderInstance::instance().logInfo("Save as PDF command canceled at save dialog");
         return;
     }
 
-    std::string error;
-    if (!m_engine.savePages(outputPath, refs, &error))
+    if (saveCurrentPagesToPath(outputPath, "Save as PDF command"))
     {
-        PdfReaderInstance::instance().logError("Save PDF command failed, outputPath=%s, refs=%u, error=%s",
-                            PdfReaderHelper::WideToUtf8(outputPath).c_str(),
-                            static_cast<unsigned int>(refs.size()),
-                            error.c_str());
-        MessageBoxW(m_hwnd, PdfReaderHelper::Utf8ToWide(error).c_str(), kAppTitle, MB_OK | MB_ICONERROR);
-        return;
+        MessageBoxW(m_hwnd, L"已另存为PDF。", kAppTitle, MB_OK | MB_ICONINFORMATION);
     }
-    PdfReaderInstance::instance().logInfo("Save PDF command succeeded, outputPath=%s, refs=%u",
-                       PdfReaderHelper::WideToUtf8(outputPath).c_str(),
-                       static_cast<unsigned int>(refs.size()));
-    MessageBoxW(m_hwnd, L"Saved.", kAppTitle, MB_OK | MB_ICONINFORMATION);
 }
 
 void PdfReaderWindow::saveEachPageCommand()

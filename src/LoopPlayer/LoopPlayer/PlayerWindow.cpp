@@ -4,6 +4,20 @@
 
 namespace LoopPlayer
 {
+    /** 后台seek完成后投递给UI线程的结果
+    */
+    struct AsyncSeekResult
+    {
+        DWORD serial;
+        REFERENCE_TIME target;
+        bool keepPlaying;
+        bool logSeek;
+        size_t previewMaxReadCount;
+        HRESULT seekHr;
+        HRESULT playHr;
+        DWORD elapsedMs;
+    };
+
     PlayerWindow::PlayerWindow()
         : hinst_(nullptr),
           hwnd_(nullptr),
@@ -31,6 +45,9 @@ namespace LoopPlayer
           topLoadToolTip_(nullptr),
           uiFont_(nullptr),
           player_(nullptr),
+          seekWorkerThread_(nullptr),
+          seekRequestEvent_(nullptr),
+          seekExitEvent_(nullptr),
           hasMedia_(false),
           mediaItemReady_(false),
           autoPlayWhenMediaReady_(false),
@@ -43,6 +60,8 @@ namespace LoopPlayer
           manualPauseRequest_(false),
           draggingSeek_(false),
           progressMenuActive_(false),
+          asyncSeekPending_(false),
+          asyncSeekBusy_(false),
           wasPlayingBeforeDrag_(false),
           restoreSegmentAfterDrag_(false),
           isFullScreen_(false),
@@ -59,6 +78,7 @@ namespace LoopPlayer
           savedExStyle_(0),
           lastLoopReplayTick_(0),
           markerSeekPendingTick_(0),
+          progressOverlayKeepVisibleUntil_(0),
           topOverlayKeepVisibleUntil_(0),
           lastMouseActivityTick_(0),
           zoomTipHideTick_(0),
@@ -66,6 +86,9 @@ namespace LoopPlayer
           topOverlayDragLastApplyTick_(0),
           lastPositionLogTick_(0),
           lastSeekDragLogTick_(0),
+          seekDragLastPreviewTick_(0),
+          asyncSeekSerial_(0),
+          asyncSeekActiveSerial_(0),
           playbackRateTenths_(10),
           nativeVideoWidth_(0),
           nativeVideoHeight_(0),
@@ -82,11 +105,18 @@ namespace LoopPlayer
           hoveredMarker_(PROGRESS_MARKER_NONE),
           hoverMarkerWindow_(nullptr),
           contextMenuPosition_(0),
+          asyncSeekTarget_(0),
+          seekDragLastPreviewTarget_(-1),
+          seekDragPendingTarget_(-1),
           duration_(0),
           loopA_(-1),
           loopB_(-1),
-          frameDuration_(DEFAULT_FRAME_DURATION)
+          frameDuration_(DEFAULT_FRAME_DURATION),
+          asyncSeekPreviewMaxReadCount_(0),
+          asyncSeekKeepPlaying_(false),
+          asyncSeekLog_(false)
     {
+        InitializeCriticalSection(&seekWorkerLock_);
         player_ = new MfSourcePlaybackEngine();
         ZeroMemory(&savedPlacement_, sizeof(savedPlacement_));
         savedPlacement_.length = sizeof(savedPlacement_);
@@ -99,6 +129,7 @@ namespace LoopPlayer
 
     PlayerWindow::~PlayerWindow()
     {
+        StopSeekWorker();
         ClosePlayer();
         if (player_)
         {
@@ -115,6 +146,54 @@ namespace LoopPlayer
             DeleteObject(uiFont_);
             uiFont_ = nullptr;
         }
+        DeleteCriticalSection(&seekWorkerLock_);
+    }
+
+    void PlayerWindow::GetPrimaryMonitorLayout(MONITORINFO& info) const
+    {
+        ZeroMemory(&info, sizeof(info));
+        info.cbSize = sizeof(info);
+
+        POINT point = { 0, 0 };
+        HMONITOR monitor = MonitorFromPoint(point, MONITOR_DEFAULTTOPRIMARY);
+        if (monitor && GetMonitorInfoW(monitor, &info))
+        {
+            return;
+        }
+
+        const int screenW = max(640, GetSystemMetrics(SM_CXSCREEN));
+        const int screenH = max(360, GetSystemMetrics(SM_CYSCREEN));
+        SetRect(&info.rcMonitor, 0, 0, screenW, screenH);
+
+        RECT workArea = { 0 };
+        if (SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0)
+            && workArea.right > workArea.left
+            && workArea.bottom > workArea.top)
+        {
+            info.rcWork = workArea;
+        }
+        else
+        {
+            info.rcWork = info.rcMonitor;
+        }
+    }
+
+    void PlayerWindow::GetWindowMonitorLayout(MONITORINFO& info) const
+    {
+        ZeroMemory(&info, sizeof(info));
+        info.cbSize = sizeof(info);
+
+        HMONITOR monitor = nullptr;
+        if (hwnd_)
+        {
+            monitor = MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST);
+        }
+        if (monitor && GetMonitorInfoW(monitor, &info))
+        {
+            return;
+        }
+
+        GetPrimaryMonitorLayout(info);
     }
 
     bool PlayerWindow::Create(HINSTANCE hinst, int cmdShow)
@@ -138,14 +217,16 @@ namespace LoopPlayer
             return false;
         }
 
-        RECT workArea = { 0 };
-        SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
-        const int workW = max(640, workArea.right - workArea.left);
-        const int workH = max(360, workArea.bottom - workArea.top);
-        const int initialW = max(320, workW / 2);
-        const int initialH = max(240, workH / 2);
-        const int initialX = workArea.left + (workW - initialW) / 2;
-        const int initialY = workArea.top + (workH - initialH) / 2;
+        MONITORINFO monitorInfo = { 0 };
+        GetPrimaryMonitorLayout(monitorInfo);
+        const int monitorW = max(640, monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left);
+        const int monitorH = max(360, monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top);
+        const int workW = max(320, monitorInfo.rcWork.right - monitorInfo.rcWork.left);
+        const int workH = max(240, monitorInfo.rcWork.bottom - monitorInfo.rcWork.top);
+        const int initialW = max(320, monitorW / 2);
+        const int initialH = max(240, monitorH / 2);
+        const int initialX = monitorInfo.rcWork.left + (workW - initialW) / 2;
+        const int initialY = monitorInfo.rcWork.top + (workH - initialH) / 2;
 
         hwnd_ = CreateWindowExW(
             WS_EX_APPWINDOW,
@@ -167,6 +248,19 @@ namespace LoopPlayer
             return false;
         }
 
+        Logf(L"Initial window layout: monitor=(%ld,%ld)-(%ld,%ld), work=(%ld,%ld)-(%ld,%ld), window=(%d,%d,%d,%d)",
+             monitorInfo.rcMonitor.left,
+             monitorInfo.rcMonitor.top,
+             monitorInfo.rcMonitor.right,
+             monitorInfo.rcMonitor.bottom,
+             monitorInfo.rcWork.left,
+             monitorInfo.rcWork.top,
+             monitorInfo.rcWork.right,
+             monitorInfo.rcWork.bottom,
+             initialX,
+             initialY,
+             initialW,
+             initialH);
         ShowWindow(hwnd_, cmdShow);
         UpdateWindow(hwnd_);
         return true;
@@ -271,9 +365,13 @@ namespace LoopPlayer
         markerSeekPending_ = false;
         manualPauseRequest_ = false;
         markerSeekPendingTick_ = 0;
+        progressOverlayKeepVisibleUntil_ = 0;
         loopReplayCount_ = 0;
         lastPositionLogTick_ = 0;
         lastSeekDragLogTick_ = 0;
+        seekDragLastPreviewTick_ = 0;
+        seekDragLastPreviewTarget_ = -1;
+        seekDragPendingTarget_ = -1;
         playbackRateTenths_ = 10;
 
         uiPosition_ = 0;
@@ -438,6 +536,17 @@ namespace LoopPlayer
         return DefWindowProcW(hwnd, msg, wparam, lparam);
     }
 
+    DWORD WINAPI PlayerWindow::StaticSeekWorkerProc(LPVOID param)
+    {
+        PlayerWindow* self = reinterpret_cast<PlayerWindow*>(param);
+        if (!self)
+        {
+            return 1;
+        }
+
+        return self->SeekWorkerProc();
+    }
+
     LRESULT PlayerWindow::WndProc(UINT msg, WPARAM wparam, LPARAM lparam)
     {
         switch (msg)
@@ -514,6 +623,13 @@ namespace LoopPlayer
             break;
         case WM_PLAYBACK_ENGINE_EVENT:
             OnPlaybackEngineEvent(static_cast<PlaybackEngineEvent>(wparam), static_cast<HRESULT>(lparam));
+            return 0;
+        case WM_ASYNC_SEEK_DONE:
+            OnAsyncSeekDone(lparam);
+            return 0;
+        case WM_CLOSE:
+            Logf(L"WM_CLOSE received");
+            DestroyWindow(hwnd_);
             return 0;
         case WM_KEYDOWN:
             OnKeyDown(wparam);
@@ -1037,6 +1153,7 @@ namespace LoopPlayer
         SetTextColor(hdc, RGB(245, 245, 245));
         HPEN iconPen = CreatePen(PS_SOLID, 1, RGB(245, 245, 245));
         oldPen = SelectObject(hdc, iconPen);
+        HGDIOBJ oldIconBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
         const int cx = (rect.left + rect.right) / 2;
         const int cy = (rect.top + rect.bottom) / 2;
         if (button == TOP_BUTTON_MINIMIZE)
@@ -1048,12 +1165,36 @@ namespace LoopPlayer
         {
             if (IsZoomed(hwnd_) || isFullScreen_)
             {
-                Rectangle(hdc, cx - 5, cy - 2, cx + 3, cy + 6);
-                Rectangle(hdc, cx - 2, cy - 5, cx + 6, cy + 3);
+                POINT backRect[5] =
+                {
+                    { cx - 5, cy - 2 },
+                    { cx + 3, cy - 2 },
+                    { cx + 3, cy + 6 },
+                    { cx - 5, cy + 6 },
+                    { cx - 5, cy - 2 }
+                };
+                POINT frontRect[5] =
+                {
+                    { cx - 2, cy - 5 },
+                    { cx + 6, cy - 5 },
+                    { cx + 6, cy + 3 },
+                    { cx - 2, cy + 3 },
+                    { cx - 2, cy - 5 }
+                };
+                Polyline(hdc, backRect, ARRAYSIZE(backRect));
+                Polyline(hdc, frontRect, ARRAYSIZE(frontRect));
             }
             else
             {
-                Rectangle(hdc, cx - 4, cy - 4, cx + 5, cy + 5);
+                POINT maxRect[5] =
+                {
+                    { cx - 4, cy - 4 },
+                    { cx + 5, cy - 4 },
+                    { cx + 5, cy + 5 },
+                    { cx - 4, cy + 5 },
+                    { cx - 4, cy - 4 }
+                };
+                Polyline(hdc, maxRect, ARRAYSIZE(maxRect));
             }
         }
         else if (button == TOP_BUTTON_CLOSE)
@@ -1063,6 +1204,7 @@ namespace LoopPlayer
             MoveToEx(hdc, cx + 4, cy - 4, nullptr);
             LineTo(hdc, cx - 5, cy + 5);
         }
+        SelectObject(hdc, oldIconBrush);
         SelectObject(hdc, oldPen);
         DeleteObject(iconPen);
     }
@@ -1596,10 +1738,17 @@ namespace LoopPlayer
 
         POINT screenPt = { 0 };
         GetCursorPos(&screenPt);
+        const DWORD now = GetTickCount();
         const HWND cursorWindow = WindowFromPoint(screenPt);
         const HWND foregroundWindow = GetForegroundWindow();
         const bool cursorOverThisInstance = IsWindowFromThisInstance(cursorWindow);
         const bool foregroundThisInstance = IsWindowFromThisInstance(foregroundWindow);
+        const bool keepVisible = progressOverlayKeepVisibleUntil_ != 0 &&
+                                 static_cast<DWORD>(progressOverlayKeepVisibleUntil_ - now) < 0x80000000;
+        if (!keepVisible)
+        {
+            progressOverlayKeepVisibleUntil_ = 0;
+        }
 
         RECT visibleOverlay = { 0 };
         if (overlayVisiblePixels_ > 0 && overlayPanel_)
@@ -1615,6 +1764,7 @@ namespace LoopPlayer
         const bool targetVisible = hasMedia_ &&
                                    (draggingSeek_ ||
                                     progressMenuActive_ ||
+                                    keepVisible ||
                                     (foregroundThisInstance && (mouseInHotZone || mouseInOverlay)));
         const int target = targetVisible ? FULLSCREEN_OVERLAY_HEIGHT : 0;
 
@@ -1879,25 +2029,27 @@ namespace LoopPlayer
             return;
         }
 
-        HMONITOR monitor = MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST);
         MONITORINFO mi = { 0 };
-        mi.cbSize = sizeof(mi);
-        GetMonitorInfoW(monitor, &mi);
+        GetWindowMonitorLayout(mi);
+        const int monitorW = max(320, mi.rcMonitor.right - mi.rcMonitor.left);
+        const int monitorH = max(240, mi.rcMonitor.bottom - mi.rcMonitor.top);
         const int workW = max(320, mi.rcWork.right - mi.rcWork.left);
         const int workH = max(240, mi.rcWork.bottom - mi.rcWork.top);
+        const int halfMonitorW = max(320, monitorW / 2);
+        const int halfMonitorH = max(240, monitorH / 2);
 
         double scale = 1.0;
-        if (nativeVideoWidth_ > workW / 2 || nativeVideoHeight_ > workH / 2)
+        if (nativeVideoWidth_ > halfMonitorW || nativeVideoHeight_ > halfMonitorH)
         {
             scale = 0.5;
         }
 
         int targetW = max(1, static_cast<int>(nativeVideoWidth_ * scale + 0.5));
         int targetH = max(1, static_cast<int>(nativeVideoHeight_ * scale + 0.5));
-        if (targetW > workW || targetH > workH)
+        if (targetW > monitorW || targetH > monitorH)
         {
-            const double sx = static_cast<double>(workW) / targetW;
-            const double sy = static_cast<double>(workH) / targetH;
+            const double sx = static_cast<double>(monitorW) / targetW;
+            const double sy = static_cast<double>(monitorH) / targetH;
             const double fitScale = sx < sy ? sx : sy;
             targetW = max(1, static_cast<int>(targetW * fitScale + 0.5));
             targetH = max(1, static_cast<int>(targetH * fitScale + 0.5));
@@ -1919,9 +2071,18 @@ namespace LoopPlayer
                      SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
         ResetVideoTransform();
         LayoutControls();
-        Logf(L"Window resized for video: native=%dx%d, window=%dx%d",
+        Logf(L"Window resized for video: native=%dx%d, monitor=%dx%d, work=%dx%d, halfMonitor=%dx%d, scale=%0.3f, window=(%d,%d,%d,%d)",
              nativeVideoWidth_,
              nativeVideoHeight_,
+             monitorW,
+             monitorH,
+             workW,
+             workH,
+             halfMonitorW,
+             halfMonitorH,
+             scale,
+             x,
+             y,
              targetW,
              targetH);
     }
@@ -1980,15 +2141,14 @@ namespace LoopPlayer
         savedStyle_ = GetWindowLongW(hwnd_, GWL_STYLE);
         savedExStyle_ = GetWindowLongW(hwnd_, GWL_EXSTYLE);
 
-        HMONITOR monitor = MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST);
         MONITORINFO mi = { 0 };
-        mi.cbSize = sizeof(mi);
-        GetMonitorInfoW(monitor, &mi);
+        GetWindowMonitorLayout(mi);
 
         isFullScreen_ = true;
         overlayVisiblePixels_ = 0;
         overlayTargetVisible_ = false;
         progressMenuActive_ = false;
+        progressOverlayKeepVisibleUntil_ = 0;
         SetWindowLongW(hwnd_, GWL_STYLE, WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN);
         SetWindowLongW(hwnd_, GWL_EXSTYLE, savedExStyle_ & ~WS_EX_WINDOWEDGE);
         SetWindowPos(hwnd_, HWND_TOP,
@@ -2020,6 +2180,7 @@ namespace LoopPlayer
         overlayVisiblePixels_ = 0;
         overlayTargetVisible_ = false;
         progressMenuActive_ = false;
+        progressOverlayKeepVisibleUntil_ = 0;
         ShowWindow(overlayPanel_, SW_HIDE);
         SetWindowLongW(hwnd_, GWL_STYLE, savedStyle_);
         SetWindowLongW(hwnd_, GWL_EXSTYLE, savedExStyle_);
@@ -2218,6 +2379,13 @@ namespace LoopPlayer
             return;
         }
 
+        if (UpdateAsyncSeekPlaybackIntent(true, L"播放请求"))
+        {
+            SetStatus(L"定位后播放");
+            UpdateControls();
+            return;
+        }
+
         suppressReplay_ = false;
         markerSeekPending_ = false;
         if (IsActiveAbLoop())
@@ -2242,6 +2410,7 @@ namespace LoopPlayer
         if (SUCCEEDED(hr))
         {
             isPlaying_ = true;
+            manualPauseRequest_ = false;
             SetStatus(L"正在播放");
             Logf(L"Play succeeded");
         }
@@ -2374,6 +2543,19 @@ namespace LoopPlayer
             return;
         }
 
+        if (UpdateAsyncSeekPlaybackIntent(false, L"暂停请求"))
+        {
+            manualPauseRequest_ = true;
+            isPlaying_ = false;
+            if (player_->state() == PlaybackEngineStatePlaying)
+            {
+                player_->pause();
+            }
+            SetStatus(L"已暂停");
+            UpdateControls();
+            return;
+        }
+
         manualPauseRequest_ = true;
         HRESULT hr = player_->pause();
         if (SUCCEEDED(hr))
@@ -2426,7 +2608,6 @@ namespace LoopPlayer
         HRESULT hr = player_->stop();
         Logf(L"Stop returned 0x%08X", static_cast<unsigned int>(hr));
         isPlaying_ = false;
-        SeekTo(0, false);
         UpdatePositionUi(0);
         SetStatus(L"已停止");
         UpdateControls();
@@ -2938,7 +3119,7 @@ namespace LoopPlayer
             }
         }
 
-        SeekTo(next, !previewFrame);
+        SeekTo(next, !previewFrame && isPlaying_);
         UpdatePositionUi(next);
         SetStatus(isA ? L"A点移动一帧" : L"B点移动一帧");
         Logf(L"%s moved by %d frame(s): %s (%I64d)", isA ? L"A" : L"B", frames, FormatTime(next).c_str(), next);
@@ -2975,11 +3156,15 @@ namespace LoopPlayer
         RECT rc = { 0 };
         GetClientRect(hwnd, &rc);
 
-        const int buttonW = 41;
-        const int buttonH = 15;
+        const int buttonW = 38;
+        const int buttonH = 24;
         RECT button = { 0 };
         button.left = (rc.right - buttonW) / 2;
-        button.top = 24;
+        button.top = rc.bottom - buttonH - 4;
+        if (button.top < 17)
+        {
+            button.top = 17;
+        }
         button.right = button.left + buttonW;
         button.bottom = button.top + buttonH;
         return button;
@@ -3017,11 +3202,17 @@ namespace LoopPlayer
         return ClampMediaPosition(duration_ * (x - track.left) / width);
     }
 
+    REFERENCE_TIME PlayerWindow::ProgressPointToTime(HWND hwnd, bool overlay, int x) const
+    {
+        RECT track = GetProgressTrackRect(hwnd, overlay);
+        return SnapToNearestFrame(ProgressXToTime(x, track));
+    }
+
     bool PlayerWindow::IsPointInProgressArea(HWND hwnd, bool overlay, POINT pt) const
     {
         RECT track = GetProgressTrackRect(hwnd, overlay);
         RECT area = track;
-        InflateRect(&area, 8, overlay ? 11 : 13);
+        InflateRect(&area, 8, overlay ? 13 : 15);
         return PtInRect(&area, pt) != FALSE;
     }
 
@@ -3206,45 +3397,47 @@ namespace LoopPlayer
         PaintProgressTrack(hdc, hwnd, true);
 
         RECT button = GetOverlayPlayRect(hwnd);
-        HBRUSH buttonBrush = CreateSolidBrush(RGB(48, 48, 52));
+        POINT cursor = { 0 };
+        GetCursorPos(&cursor);
+        ScreenToClient(hwnd, &cursor);
+        const bool hovered = PtInRect(&button, cursor) != FALSE;
+        HBRUSH buttonBrush = CreateSolidBrush(hovered ? RGB(66, 66, 70) : RGB(48, 48, 52));
         HPEN buttonPen = CreatePen(PS_SOLID, 1, RGB(120, 120, 125));
         HGDIOBJ oldPen = SelectObject(hdc, buttonPen);
         HGDIOBJ oldBrush = SelectObject(hdc, buttonBrush);
-        RoundRect(hdc, button.left, button.top, button.right, button.bottom, 4, 4);
+        RoundRect(hdc, button.left, button.top, button.right, button.bottom, 6, 6);
         SelectObject(hdc, oldBrush);
         SelectObject(hdc, oldPen);
         DeleteObject(buttonBrush);
         DeleteObject(buttonPen);
 
-        SetTextColor(hdc, RGB(245, 245, 245));
-        HFONT font = CreateFontW(-11,
-                                 0,
-                                 0,
-                                 0,
-                                 FW_NORMAL,
-                                 FALSE,
-                                 FALSE,
-                                 FALSE,
-                                 DEFAULT_CHARSET,
-                                 OUT_DEFAULT_PRECIS,
-                                 CLIP_DEFAULT_PRECIS,
-                                 CLEARTYPE_QUALITY,
-                                 DEFAULT_PITCH | FF_DONTCARE,
-                                 L"楷体");
-        HGDIOBJ oldFont = nullptr;
-        if (font)
+        HPEN iconPen = CreatePen(PS_SOLID, 1, RGB(245, 245, 245));
+        HBRUSH iconBrush = CreateSolidBrush(RGB(245, 245, 245));
+        oldPen = SelectObject(hdc, iconPen);
+        oldBrush = SelectObject(hdc, iconBrush);
+        const int cx = (button.left + button.right) / 2;
+        const int cy = (button.top + button.bottom) / 2;
+        if (isPlaying_)
         {
-            oldFont = SelectObject(hdc, font);
+            RECT leftBar = { cx - 7, cy - 7, cx - 3, cy + 8 };
+            RECT rightBar = { cx + 3, cy - 7, cx + 7, cy + 8 };
+            FillRect(hdc, &leftBar, iconBrush);
+            FillRect(hdc, &rightBar, iconBrush);
         }
-        DrawTextW(hdc, isPlaying_ ? L"暂停" : L"播放", -1, &button, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-        if (oldFont)
+        else
         {
-            SelectObject(hdc, oldFont);
+            POINT points[3] =
+            {
+                { cx - 5, cy - 8 },
+                { cx - 5, cy + 8 },
+                { cx + 8, cy }
+            };
+            Polygon(hdc, points, ARRAYSIZE(points));
         }
-        if (font)
-        {
-            DeleteObject(font);
-        }
+        SelectObject(hdc, oldBrush);
+        SelectObject(hdc, oldPen);
+        DeleteObject(iconBrush);
+        DeleteObject(iconPen);
     }
 
     void PlayerWindow::InvalidateProgressViews()
@@ -3359,7 +3552,7 @@ namespace LoopPlayer
         }
 
         RECT track = GetProgressTrackRect(hwnd, overlay);
-        const REFERENCE_TIME target = ProgressXToTime(x, track);
+        const REFERENCE_TIME target = ProgressPointToTime(hwnd, overlay, x);
         if (logSeek)
         {
             Logf(L"SeekFromProgressPoint overlay=%d x=%d track=(%ld,%ld)-(%ld,%ld) target=%s (%I64d) duration=%s (%I64d)",
@@ -3374,8 +3567,37 @@ namespace LoopPlayer
                  FormatTime(duration_).c_str(),
                  duration_);
         }
-        SeekTo(target, false, logSeek);
+        QueueAsyncSeek(target, isPlaying_, logSeek, SEEK_FINAL_PREVIEW_MAX_READ_COUNT, L"进度条单击定位");
         UpdatePositionUi(target);
+    }
+
+    void PlayerWindow::PreviewSeekDragTarget(REFERENCE_TIME target, bool force)
+    {
+        if (!player_ || !player_->isOpen() || !mediaItemReady_)
+        {
+            return;
+        }
+
+        target = SnapToNearestFrame(target);
+        seekDragPendingTarget_ = target;
+        UpdatePositionUi(target);
+
+        const DWORD now = GetTickCount();
+        if (!force)
+        {
+            if (seekDragLastPreviewTick_ != 0 && (now - seekDragLastPreviewTick_) < SEEK_DRAG_PREVIEW_INTERVAL_MS)
+            {
+                return;
+            }
+            if (seekDragLastPreviewTarget_ == target)
+            {
+                return;
+            }
+        }
+
+        QueueAsyncSeek(target, false, false, SEEK_DRAG_PREVIEW_MAX_READ_COUNT, L"进度条拖动预览");
+        seekDragLastPreviewTick_ = GetTickCount();
+        seekDragLastPreviewTarget_ = target;
     }
 
     void PlayerWindow::BeginSeekDrag(HWND hwnd, bool overlay, POINT pt)
@@ -3394,6 +3616,13 @@ namespace LoopPlayer
         SetFocus(hwnd_);
         SetCapture(hwnd);
         lastSeekDragLogTick_ = GetTickCount();
+        seekDragLastPreviewTick_ = 0;
+        seekDragLastPreviewTarget_ = -1;
+        seekDragPendingTarget_ = ProgressPointToTime(hwnd, overlay, pt.x);
+        progressOverlayKeepVisibleUntil_ = 0;
+        overlayVisiblePixels_ = FULLSCREEN_OVERLAY_HEIGHT;
+        overlayTargetVisible_ = true;
+        LayoutOverlay();
         Logf(L"Seek drag begin overlay=%d pt=(%ld,%ld) wasPlaying=%d restoreSegment=%d duration=%s (%I64d)",
              overlay ? 1 : 0,
              pt.x,
@@ -3406,21 +3635,17 @@ namespace LoopPlayer
 
         if (isPlaying_ && player_ && player_->isOpen())
         {
-            manualPauseRequest_ = true;
             HRESULT hr = player_->pause();
             Logf(L"Seek drag pause returned 0x%08X", static_cast<unsigned int>(hr));
             if (SUCCEEDED(hr))
             {
                 isPlaying_ = false;
             }
-            else
-            {
-                manualPauseRequest_ = false;
-            }
         }
 
         ClearNativePlaybackSegmentForSeek();
-        SeekFromProgressPoint(hwnd, overlay, pt.x, false);
+        isPlaying_ = false;
+        PreviewSeekDragTarget(seekDragPendingTarget_, true);
         UpdateControls();
     }
 
@@ -3431,13 +3656,13 @@ namespace LoopPlayer
             return;
         }
 
-        SeekFromProgressPoint(hwnd, overlay, pt.x, false);
+        const REFERENCE_TIME target = ProgressPointToTime(hwnd, overlay, pt.x);
+        seekDragPendingTarget_ = target;
+        PreviewSeekDragTarget(target, false);
         const DWORD now = GetTickCount();
         if (IsLoggingEnabled() && (now - lastSeekDragLogTick_) >= 200)
         {
             lastSeekDragLogTick_ = now;
-            RECT track = GetProgressTrackRect(hwnd, overlay);
-            const REFERENCE_TIME target = ProgressXToTime(pt.x, track);
             Logf(L"Seek drag continue overlay=%d pt=(%ld,%ld) target=%s (%I64d)",
                  overlay ? 1 : 0,
                  pt.x,
@@ -3450,15 +3675,19 @@ namespace LoopPlayer
 
     void PlayerWindow::EndSeekDrag(HWND hwnd, bool overlay, POINT pt)
     {
-        if (!draggingSeek_ || GetCapture() != hwnd)
+        if (!draggingSeek_)
         {
             return;
         }
 
-        ReleaseCapture();
         draggingSeek_ = false;
-        RECT track = GetProgressTrackRect(hwnd, overlay);
-        const REFERENCE_TIME target = ProgressXToTime(pt.x, track);
+        if (GetCapture() == hwnd)
+        {
+            ReleaseCapture();
+        }
+        const REFERENCE_TIME target = ProgressPointToTime(hwnd, overlay, pt.x);
+        seekDragPendingTarget_ = target;
+        progressOverlayKeepVisibleUntil_ = GetTickCount() + MOUSE_UI_IDLE_HIDE_MS;
         Logf(L"Seek drag end overlay=%d pt=(%ld,%ld) target=%s (%I64d) restoreSegment=%d wasPlaying=%d",
              overlay ? 1 : 0,
              pt.x,
@@ -3467,26 +3696,20 @@ namespace LoopPlayer
              target,
              restoreSegmentAfterDrag_ ? 1 : 0,
              wasPlayingBeforeDrag_ ? 1 : 0);
-        SeekFromProgressPoint(hwnd, overlay, pt.x, true);
+        QueueAsyncSeek(target, wasPlayingBeforeDrag_, true, SEEK_FINAL_PREVIEW_MAX_READ_COUNT, L"进度条拖动结束");
+        UpdatePositionUi(target);
 
         if (restoreSegmentAfterDrag_)
         {
             ApplyPlaybackSegment();
         }
         restoreSegmentAfterDrag_ = false;
-
-        if (wasPlayingBeforeDrag_ && player_ && player_->isOpen())
-        {
-            HRESULT hr = player_->play();
-            Logf(L"Seek drag resume Play returned 0x%08X", static_cast<unsigned int>(hr));
-            isPlaying_ = SUCCEEDED(hr);
-            if (isPlaying_)
-            {
-                SetStatus(L"正在播放");
-            }
-        }
         wasPlayingBeforeDrag_ = false;
+        seekDragLastPreviewTick_ = 0;
+        seekDragLastPreviewTarget_ = -1;
+        seekDragPendingTarget_ = -1;
         UpdateControls();
+        UpdateOverlayState();
         LogPlaybackSnapshot(L"seek-drag-end", target);
     }
 
@@ -3497,8 +3720,8 @@ namespace LoopPlayer
             return;
         }
 
-        RECT track = GetProgressTrackRect(hwnd, overlay);
-        contextMenuPosition_ = ProgressXToTime(pt.x, track);
+        contextMenuPosition_ = ProgressPointToTime(hwnd, overlay, pt.x);
+        const bool resumeAfterMenuSeek = isPlaying_;
 
         HMENU menu = CreatePopupMenu();
         if (!menu)
@@ -3508,26 +3731,33 @@ namespace LoopPlayer
 
         AppendMenuW(menu, MF_STRING, IDM_PROGRESS_SET_A, L"设置A点");
         AppendMenuW(menu, MF_STRING, IDM_PROGRESS_SET_B, L"设置B点");
+        AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(menu, MF_STRING, IDM_PROGRESS_CLEAR_AB, L"取消AB点");
 
         POINT screen = pt;
         ClientToScreen(hwnd, &screen);
-        const bool lockOverlay = overlay && overlayPanel_;
-        HWND menuOwner = lockOverlay ? overlayPanel_ : hwnd_;
-        if (lockOverlay)
+        HWND menuOwner = hwnd_;
+        progressMenuActive_ = true;
+        progressOverlayKeepVisibleUntil_ = 0;
+        overlayVisiblePixels_ = FULLSCREEN_OVERLAY_HEIGHT;
+        overlayTargetVisible_ = true;
+        LayoutOverlay();
+        if (overlayPanel_)
         {
-            progressMenuActive_ = true;
-            overlayVisiblePixels_ = FULLSCREEN_OVERLAY_HEIGHT;
-            overlayTargetVisible_ = true;
-            LayoutOverlay();
-            Logf(L"Progress context menu opened with overlay locked: screen=(%ld,%ld), owner=%p",
-                 screen.x,
-                 screen.y,
-                 menuOwner);
+            SetWindowPos(overlayPanel_, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
         }
+        Logf(L"Progress context menu opened with overlay locked: overlay=%d, screen=(%ld,%ld), owner=%p, target=%s (%I64d), resumeAfterSeek=%d",
+             overlay ? 1 : 0,
+             screen.x,
+             screen.y,
+             menuOwner,
+             FormatTime(contextMenuPosition_).c_str(),
+             contextMenuPosition_,
+             resumeAfterMenuSeek ? 1 : 0);
 
         SetForegroundWindow(hwnd_);
         const int command = TrackPopupMenu(menu,
-                                           TPM_RIGHTBUTTON | TPM_RETURNCMD,
+                                           TPM_RIGHTBUTTON | TPM_RETURNCMD | TPM_NONOTIFY,
                                            screen.x,
                                            screen.y,
                                            0,
@@ -3536,25 +3766,27 @@ namespace LoopPlayer
         PostMessageW(menuOwner, WM_NULL, 0, 0);
         DestroyMenu(menu);
 
-        if (lockOverlay)
-        {
-            progressMenuActive_ = false;
-            Logf(L"Progress context menu closed: command=%d", command);
-            UpdateOverlayState();
-        }
+        progressMenuActive_ = false;
+        progressOverlayKeepVisibleUntil_ = GetTickCount() + MOUSE_UI_IDLE_HIDE_MS;
+        Logf(L"Progress context menu closed: command=%d", command);
 
         if (command == IDM_PROGRESS_SET_A)
         {
             SetLoopAAt(contextMenuPosition_, contextMenuPosition_);
-            SeekTo(contextMenuPosition_, true);
+            QueueAsyncSeek(contextMenuPosition_, resumeAfterMenuSeek, true, SEEK_FINAL_PREVIEW_MAX_READ_COUNT, L"进度条右键设置A点");
             UpdatePositionUi(contextMenuPosition_);
         }
         else if (command == IDM_PROGRESS_SET_B)
         {
             SetLoopBAt(contextMenuPosition_, contextMenuPosition_);
-            SeekTo(contextMenuPosition_, true);
+            QueueAsyncSeek(contextMenuPosition_, resumeAfterMenuSeek, true, SEEK_FINAL_PREVIEW_MAX_READ_COUNT, L"进度条右键设置B点");
             UpdatePositionUi(contextMenuPosition_);
         }
+        else if (command == IDM_PROGRESS_CLEAR_AB)
+        {
+            ClearLoop();
+        }
+        UpdateOverlayState();
     }
 
     POINT PlayerWindow::VideoPointToHost(HWND hwnd, POINT pt) const
@@ -3950,7 +4182,8 @@ namespace LoopPlayer
             }
             else if (button == TOP_BUTTON_CLOSE)
             {
-                PostMessageW(hwnd_, WM_CLOSE, 0, 0);
+                Logf(L"Top overlay close button clicked");
+                DestroyWindow(hwnd_);
             }
             return 0;
         }
@@ -4058,6 +4291,21 @@ namespace LoopPlayer
             EndSeekDrag(hwnd, overlay, pt);
             return 0;
         }
+        case WM_CAPTURECHANGED:
+        {
+            if (draggingSeek_ && reinterpret_cast<HWND>(lparam) != hwnd)
+            {
+                POINT pt = { 0 };
+                GetCursorPos(&pt);
+                ScreenToClient(hwnd, &pt);
+                Logf(L"Seek drag capture changed, finishing drag: newCapture=%p, pt=(%ld,%ld)",
+                     reinterpret_cast<HWND>(lparam),
+                     pt.x,
+                     pt.y);
+                EndSeekDrag(hwnd, overlay, pt);
+            }
+            return 0;
+        }
         case WM_RBUTTONUP:
         {
             TouchMouseActivity(true);
@@ -4083,7 +4331,330 @@ namespace LoopPlayer
         return DefWindowProcW(hwnd, msg, wparam, lparam);
     }
 
-    void PlayerWindow::SeekTo(REFERENCE_TIME pos, bool keepPlaying, bool logSeek)
+    bool PlayerWindow::EnsureSeekWorker()
+    {
+        if (seekWorkerThread_)
+        {
+            return true;
+        }
+
+        seekRequestEvent_ = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        seekExitEvent_ = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        if (!seekRequestEvent_ || !seekExitEvent_)
+        {
+            Logf(L"Create async seek events failed: request=%p, exit=%p, lastError=%lu",
+                 seekRequestEvent_,
+                 seekExitEvent_,
+                 GetLastError());
+            StopSeekWorker();
+            return false;
+        }
+
+        DWORD threadId = 0;
+        seekWorkerThread_ = CreateThread(nullptr, 0, PlayerWindow::StaticSeekWorkerProc, this, 0, &threadId);
+        if (!seekWorkerThread_)
+        {
+            Logf(L"Create async seek thread failed: lastError=%lu", GetLastError());
+            StopSeekWorker();
+            return false;
+        }
+
+        Logf(L"Async seek thread created: threadId=%lu", threadId);
+        return true;
+    }
+
+    void PlayerWindow::StopSeekWorker()
+    {
+        HANDLE thread = nullptr;
+        EnterCriticalSection(&seekWorkerLock_);
+        thread = seekWorkerThread_;
+        asyncSeekPending_ = false;
+        asyncSeekBusy_ = false;
+        ++asyncSeekSerial_;
+        if (seekExitEvent_)
+        {
+            SetEvent(seekExitEvent_);
+        }
+        if (seekRequestEvent_)
+        {
+            SetEvent(seekRequestEvent_);
+        }
+        LeaveCriticalSection(&seekWorkerLock_);
+
+        if (thread)
+        {
+            Logf(L"Stopping async seek thread");
+            WaitForSingleObject(thread, INFINITE);
+        }
+
+        EnterCriticalSection(&seekWorkerLock_);
+        if (seekWorkerThread_)
+        {
+            CloseHandle(seekWorkerThread_);
+            seekWorkerThread_ = nullptr;
+        }
+        if (seekRequestEvent_)
+        {
+            CloseHandle(seekRequestEvent_);
+            seekRequestEvent_ = nullptr;
+        }
+        if (seekExitEvent_)
+        {
+            CloseHandle(seekExitEvent_);
+            seekExitEvent_ = nullptr;
+        }
+        asyncSeekPending_ = false;
+        asyncSeekBusy_ = false;
+        asyncSeekTarget_ = 0;
+        asyncSeekPreviewMaxReadCount_ = 0;
+        asyncSeekKeepPlaying_ = false;
+        asyncSeekLog_ = false;
+        asyncSeekActiveSerial_ = 0;
+        LeaveCriticalSection(&seekWorkerLock_);
+    }
+
+    void PlayerWindow::QueueAsyncSeek(REFERENCE_TIME pos, bool keepPlaying, bool logSeek, size_t previewMaxReadCount, const wchar_t* reason)
+    {
+        if (!player_ || !player_->isOpen() || !mediaItemReady_)
+        {
+            return;
+        }
+
+        pos = ClampMediaPosition(pos);
+        UpdatePositionUi(pos);
+        if (!EnsureSeekWorker())
+        {
+            Logf(L"Async seek unavailable, fallback to sync seek: reason=%s, target=%s (%I64d)",
+                 reason ? reason : L"",
+                 FormatTime(pos).c_str(),
+                 pos);
+            SeekTo(pos, keepPlaying, logSeek, previewMaxReadCount);
+            return;
+        }
+
+        DWORD serial = 0;
+        EnterCriticalSection(&seekWorkerLock_);
+        serial = ++asyncSeekSerial_;
+        asyncSeekPending_ = true;
+        asyncSeekTarget_ = pos;
+        asyncSeekKeepPlaying_ = keepPlaying;
+        asyncSeekLog_ = logSeek;
+        asyncSeekPreviewMaxReadCount_ = previewMaxReadCount;
+        LeaveCriticalSection(&seekWorkerLock_);
+
+        SetEvent(seekRequestEvent_);
+        Logf(L"Async seek queued: serial=%lu, reason=%s, target=%s (%I64d), keepPlaying=%d, log=%d, previewMax=%u",
+             serial,
+             reason ? reason : L"",
+             FormatTime(pos).c_str(),
+             pos,
+             keepPlaying ? 1 : 0,
+             logSeek ? 1 : 0,
+             static_cast<unsigned int>(previewMaxReadCount));
+    }
+
+    bool PlayerWindow::UpdateAsyncSeekPlaybackIntent(bool keepPlaying, const wchar_t* reason)
+    {
+        bool updated = false;
+        DWORD serial = 0;
+        EnterCriticalSection(&seekWorkerLock_);
+        if (asyncSeekPending_ || asyncSeekBusy_)
+        {
+            asyncSeekKeepPlaying_ = keepPlaying;
+            updated = true;
+            serial = asyncSeekSerial_;
+        }
+        LeaveCriticalSection(&seekWorkerLock_);
+
+        if (updated)
+        {
+            Logf(L"Async seek playback intent updated: serial=%lu, keepPlaying=%d, reason=%s",
+                 serial,
+                 keepPlaying ? 1 : 0,
+                 reason ? reason : L"");
+        }
+        return updated;
+    }
+
+    DWORD PlayerWindow::SeekWorkerProc()
+    {
+        const HRESULT coHr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        Logf(L"Async seek thread enter: coHr=0x%08X", static_cast<unsigned int>(coHr));
+
+        HANDLE waitHandles[2] = { seekExitEvent_, seekRequestEvent_ };
+        for (;;)
+        {
+            const DWORD waitResult = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+            if (waitResult == WAIT_OBJECT_0 || waitResult == WAIT_FAILED)
+            {
+                break;
+            }
+
+            DWORD serial = 0;
+            REFERENCE_TIME target = 0;
+            bool keepPlaying = false;
+            bool logSeek = false;
+            size_t previewMaxReadCount = 0;
+            bool haveRequest = false;
+            EnterCriticalSection(&seekWorkerLock_);
+            if (asyncSeekPending_)
+            {
+                serial = asyncSeekSerial_;
+                target = asyncSeekTarget_;
+                keepPlaying = asyncSeekKeepPlaying_;
+                logSeek = asyncSeekLog_;
+                previewMaxReadCount = asyncSeekPreviewMaxReadCount_;
+                asyncSeekPending_ = false;
+                asyncSeekBusy_ = true;
+                asyncSeekActiveSerial_ = serial;
+                haveRequest = true;
+            }
+            ResetEvent(seekRequestEvent_);
+            LeaveCriticalSection(&seekWorkerLock_);
+
+            if (!haveRequest)
+            {
+                continue;
+            }
+
+            const DWORD beginTick = GetTickCount();
+            Logf(L"Async seek begin: serial=%lu, target=%s (%I64d), keepPlaying=%d, previewMax=%u",
+                 serial,
+                 FormatTime(target).c_str(),
+                 target,
+                 keepPlaying ? 1 : 0,
+                 static_cast<unsigned int>(previewMaxReadCount));
+
+            HRESULT seekHr = E_POINTER;
+            HRESULT playHr = S_FALSE;
+            if (player_)
+            {
+                seekHr = player_->seek(target, false, previewMaxReadCount);
+                if (SUCCEEDED(seekHr))
+                {
+                    EnterCriticalSection(&seekWorkerLock_);
+                    if (serial == asyncSeekSerial_)
+                    {
+                        keepPlaying = asyncSeekKeepPlaying_;
+                    }
+                    LeaveCriticalSection(&seekWorkerLock_);
+
+                    if (keepPlaying && WaitForSingleObject(seekExitEvent_, 0) != WAIT_OBJECT_0)
+                    {
+                        playHr = player_->play();
+                    }
+                }
+            }
+
+            const DWORD elapsedMs = GetTickCount() - beginTick;
+            bool shouldPost = WaitForSingleObject(seekExitEvent_, 0) != WAIT_OBJECT_0;
+            EnterCriticalSection(&seekWorkerLock_);
+            asyncSeekBusy_ = false;
+            if (asyncSeekPending_ && asyncSeekSerial_ != serial)
+            {
+                shouldPost = false;
+            }
+            LeaveCriticalSection(&seekWorkerLock_);
+
+            Logf(L"Async seek end: serial=%lu, target=%s (%I64d), seekHr=0x%08X, keepPlaying=%d, playHr=0x%08X, elapsed=%lu, post=%d",
+                 serial,
+                 FormatTime(target).c_str(),
+                 target,
+                 static_cast<unsigned int>(seekHr),
+                 keepPlaying ? 1 : 0,
+                 static_cast<unsigned int>(playHr),
+                 elapsedMs,
+                 shouldPost ? 1 : 0);
+
+            if (shouldPost)
+            {
+                AsyncSeekResult* result = new AsyncSeekResult;
+                result->serial = serial;
+                result->target = target;
+                result->keepPlaying = keepPlaying;
+                result->logSeek = logSeek;
+                result->previewMaxReadCount = previewMaxReadCount;
+                result->seekHr = seekHr;
+                result->playHr = playHr;
+                result->elapsedMs = elapsedMs;
+                if (!PostMessageW(hwnd_, WM_ASYNC_SEEK_DONE, 0, reinterpret_cast<LPARAM>(result)))
+                {
+                    delete result;
+                }
+            }
+        }
+
+        Logf(L"Async seek thread leave");
+        if (SUCCEEDED(coHr))
+        {
+            CoUninitialize();
+        }
+        return 0;
+    }
+
+    void PlayerWindow::OnAsyncSeekDone(LPARAM resultParam)
+    {
+        AsyncSeekResult* result = reinterpret_cast<AsyncSeekResult*>(resultParam);
+        if (!result)
+        {
+            return;
+        }
+
+        bool stale = false;
+        DWORD latestSerial = 0;
+        EnterCriticalSection(&seekWorkerLock_);
+        latestSerial = asyncSeekSerial_;
+        stale = result->serial != latestSerial;
+        LeaveCriticalSection(&seekWorkerLock_);
+        if (stale)
+        {
+            Logf(L"Async seek complete ignored as stale: serial=%lu, latest=%lu, target=%s (%I64d)",
+                 result->serial,
+                 latestSerial,
+                 FormatTime(result->target).c_str(),
+                 result->target);
+            delete result;
+            return;
+        }
+
+        Logf(L"Async seek complete on UI: serial=%lu, target=%s (%I64d), seekHr=0x%08X, keepPlaying=%d, playHr=0x%08X, elapsed=%lu, previewMax=%u",
+             result->serial,
+             FormatTime(result->target).c_str(),
+             result->target,
+             static_cast<unsigned int>(result->seekHr),
+             result->keepPlaying ? 1 : 0,
+             static_cast<unsigned int>(result->playHr),
+             result->elapsedMs,
+             static_cast<unsigned int>(result->previewMaxReadCount));
+
+        if (FAILED(result->seekHr))
+        {
+            isPlaying_ = false;
+            SetStatus((std::wstring(L"定位失败：") + HResultText(result->seekHr)).c_str());
+        }
+        else if (result->keepPlaying)
+        {
+            isPlaying_ = SUCCEEDED(result->playHr);
+            if (isPlaying_)
+            {
+                manualPauseRequest_ = false;
+                SetStatus(L"正在播放");
+            }
+        }
+        else
+        {
+            isPlaying_ = false;
+            SetStatus(L"已暂停");
+        }
+
+        const REFERENCE_TIME uiTarget = draggingSeek_ && seekDragPendingTarget_ >= 0 ? seekDragPendingTarget_ : result->target;
+        UpdatePositionUi(uiTarget);
+        UpdateControls();
+        LogPlaybackSnapshot(L"async-seek-done", uiTarget);
+        delete result;
+    }
+
+    void PlayerWindow::SeekTo(REFERENCE_TIME pos, bool keepPlaying, bool logSeek, size_t previewMaxReadCount)
     {
         if (!player_)
         {
@@ -4101,22 +4672,30 @@ namespace LoopPlayer
 
         pos = ClampMediaPosition(pos);
 
-        HRESULT hr = player_->seek(pos);
+        HRESULT hr = player_->seek(pos, false, previewMaxReadCount);
 
         if (logSeek)
         {
-            Logf(L"SeekTo target=%s (%I64d), hr=0x%08X",
+            Logf(L"SeekTo target=%s (%I64d), keepPlaying=%d, previewMax=%u, hr=0x%08X",
                  FormatTime(pos).c_str(),
                  pos,
+                 keepPlaying ? 1 : 0,
+                 static_cast<unsigned int>(previewMaxReadCount),
                  static_cast<unsigned int>(hr));
         }
 
-        if (keepPlaying && isPlaying_)
+        if (keepPlaying && SUCCEEDED(hr))
         {
             HRESULT playHr = player_->play();
             if (logSeek)
             {
                 Logf(L"SeekTo resume Play returned 0x%08X", static_cast<unsigned int>(playHr));
+            }
+            isPlaying_ = SUCCEEDED(playHr);
+            if (isPlaying_)
+            {
+                manualPauseRequest_ = false;
+                SetStatus(L"正在播放");
             }
         }
     }
@@ -4198,6 +4777,10 @@ namespace LoopPlayer
             loopReplayPending_ = false;
             loopReplayFastAttempt_ = false;
         }
+        else
+        {
+            manualPauseRequest_ = false;
+        }
         UpdatePositionUi(pos);
     }
 
@@ -4272,6 +4855,11 @@ namespace LoopPlayer
 
     void PlayerWindow::OnTimer(bool updateUi)
     {
+        if (draggingSeek_)
+        {
+            return;
+        }
+
         if (!hasMedia_ || !player_ || !player_->isOpen())
         {
             return;
@@ -4621,6 +5209,13 @@ namespace LoopPlayer
     void PlayerWindow::ClosePlayer()
     {
         Logf(L"ClosePlayer begin");
+        if (draggingSeek_ && (GetCapture() == overlayPanel_ || GetCapture() == seekSlider_))
+        {
+            ReleaseCapture();
+        }
+        draggingSeek_ = false;
+        progressMenuActive_ = false;
+        StopSeekWorker();
         if (player_)
         {
             player_->uninit();
@@ -4640,10 +5235,18 @@ namespace LoopPlayer
         loopReplayFastAttempt_ = false;
         markerSeekPending_ = false;
         manualPauseRequest_ = false;
+        draggingSeek_ = false;
+        progressMenuActive_ = false;
+        wasPlayingBeforeDrag_ = false;
+        restoreSegmentAfterDrag_ = false;
         markerSeekPendingTick_ = 0;
+        progressOverlayKeepVisibleUntil_ = 0;
         loopReplayCount_ = 0;
         lastPositionLogTick_ = 0;
         lastSeekDragLogTick_ = 0;
+        seekDragLastPreviewTick_ = 0;
+        seekDragLastPreviewTarget_ = -1;
+        seekDragPendingTarget_ = -1;
         nativeVideoWidth_ = 0;
         nativeVideoHeight_ = 0;
         ResetVideoTransform();

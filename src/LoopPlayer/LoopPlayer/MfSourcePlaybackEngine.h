@@ -47,9 +47,11 @@ namespace LoopPlayer
 
         /** 跳转到指定逻辑时间，视频流会自动映射到原始时间轴
         @param [in] position 目标逻辑时间，单位100ns
+        @param [in] resumeIfPreviousPlaying seek前是播放状态时是否自动恢复播放
+        @param [in] previewMaxReadCount seek后预览最多读取的视频帧数，0表示使用默认精确预览数量
         @return 成功返回S_OK，失败返回底层HRESULT
         */
-        HRESULT seek(REFERENCE_TIME position);
+        HRESULT seek(REFERENCE_TIME position, bool resumeIfPreviousPlaying = true, size_t previewMaxReadCount = 0);
 
         /** 设置播放倍速，视频时钟立即生效，音频会尝试使用waveOut倍速能力
         @param [in] rate 播放倍速
@@ -194,9 +196,10 @@ namespace LoopPlayer
         /** 从视频SourceReader原始读取一个解码样本，调用前必须持有m_readerLock
         @param [out] frame 输出的视频帧
         @param [out] endOfStream 是否到达视频流末尾
+        @param [in] copyPixelsFromTime 早于该逻辑时间的帧只读取时间戳不复制像素，-1表示全部复制
         @return 成功返回S_OK，失败返回底层HRESULT
         */
-        HRESULT readNextVideoFrameFromSourceLocked(PlaybackVideoFrame& frame, bool& endOfStream);
+        HRESULT readNextVideoFrameFromSourceLocked(PlaybackVideoFrame& frame, bool& endOfStream, REFERENCE_TIME copyPixelsFromTime = -1);
 
         /** 填充视频重排队列，调用前必须持有m_readerLock
         @param [in] minCount 期望队列内至少保留的帧数
@@ -216,9 +219,10 @@ namespace LoopPlayer
 
         /** 在当前位置读取一帧视频并立刻发布，供seek后预览使用
         @param [in] position 逻辑时间，单位100ns
+        @param [in] maxReadCount 最多向前读取的视频帧数
         @return 成功返回S_OK，失败返回底层HRESULT
         */
-        HRESULT previewVideoFrameAt(REFERENCE_TIME position);
+        HRESULT previewVideoFrameAt(REFERENCE_TIME position, size_t maxReadCount);
 
         /** 把视频样本复制成可绘制的BGRA像素
         @param [in] sample 视频样本

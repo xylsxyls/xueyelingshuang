@@ -29,6 +29,12 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int showCommand)
         PdfReaderInstance::instance().logInfo("CoInitializeEx succeeded");
     }
 
+    INITCOMMONCONTROLSEX commonControls;
+    ZeroMemory(&commonControls, sizeof(commonControls));
+    commonControls.dwSize = sizeof(commonControls);
+    commonControls.dwICC = ICC_BAR_CLASSES | ICC_STANDARD_CLASSES;
+    InitCommonControlsEx(&commonControls);
+
     PdfReaderWindow window;
     if (!window.create(instance, showCommand))
     {

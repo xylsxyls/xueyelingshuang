@@ -52,6 +52,8 @@ namespace LoopPlayer
 
         static LRESULT CALLBACK StaticWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
+        static DWORD WINAPI StaticSeekWorkerProc(LPVOID param);
+
         LRESULT WndProc(UINT msg, WPARAM wparam, LPARAM lparam);
 
         void RegisterChildClasses();
@@ -130,6 +132,16 @@ namespace LoopPlayer
         void UpdateZoomTipState();
 
         void PaintZoomTip(HDC hdc, HWND hwnd);
+
+        /** 读取主显示器布局，rcMonitor保留完整桌面区域，rcWork排除任务栏
+        @param [out] info 显示器布局信息
+        */
+        void GetPrimaryMonitorLayout(MONITORINFO& info) const;
+
+        /** 读取当前窗口所在显示器布局，失败时回退到主显示器布局
+        @param [out] info 显示器布局信息
+        */
+        void GetWindowMonitorLayout(MONITORINFO& info) const;
 
         void UpdateOverlayState();
 
@@ -243,6 +255,14 @@ namespace LoopPlayer
 
         REFERENCE_TIME ProgressXToTime(int x, const RECT& track) const;
 
+        /** 把进度条横坐标转换为吸附到视频帧附近的媒体时间
+        @param [in] hwnd 进度条窗口
+        @param [in] overlay 是否为底部悬浮进度条
+        @param [in] x 鼠标在进度条窗口内的横坐标
+        @return 媒体时间，单位100ns
+        */
+        REFERENCE_TIME ProgressPointToTime(HWND hwnd, bool overlay, int x) const;
+
         bool IsPointInProgressArea(HWND hwnd, bool overlay, POINT pt) const;
 
         int HitTestProgressMarker(HWND hwnd, bool overlay, POINT pt) const;
@@ -266,6 +286,12 @@ namespace LoopPlayer
         void ClearNativePlaybackSegmentForSeek();
 
         void SeekFromProgressPoint(HWND hwnd, bool overlay, int x, bool logSeek);
+
+        /** 拖动进度条时节流预览目标帧，避免每个鼠标消息都触发重解码
+        @param [in] target 目标媒体时间，单位100ns
+        @param [in] force 是否忽略节流立即预览
+        */
+        void PreviewSeekDragTarget(REFERENCE_TIME target, bool force);
 
         void BeginSeekDrag(HWND hwnd, bool overlay, POINT pt);
 
@@ -293,7 +319,48 @@ namespace LoopPlayer
 
         LRESULT ProgressWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, bool overlay);
 
-        void SeekTo(REFERENCE_TIME pos, bool keepPlaying, bool logSeek = true);
+        /** 确保后台seek线程已经创建
+        @return 创建或已存在返回true，失败返回false
+        */
+        bool EnsureSeekWorker();
+
+        /** 停止后台seek线程，换视频或退出前调用
+        */
+        void StopSeekWorker();
+
+        /** 投递一个后台seek请求，线程只处理最新目标
+        @param [in] pos 目标媒体时间，单位100ns
+        @param [in] keepPlaying seek完成后是否恢复播放
+        @param [in] logSeek 是否写详细seek日志
+        @param [in] previewMaxReadCount seek后预览最多读取的视频帧数
+        @param [in] reason 请求来源说明，供日志排查
+        */
+        void QueueAsyncSeek(REFERENCE_TIME pos, bool keepPlaying, bool logSeek, size_t previewMaxReadCount, const wchar_t* reason);
+
+        /** 修改正在执行或等待执行的后台seek完成后的播放意图
+        @param [in] keepPlaying seek完成后是否播放
+        @param [in] reason 请求来源说明，供日志排查
+        @return 当前存在后台seek请求时返回true，否则返回false
+        */
+        bool UpdateAsyncSeekPlaybackIntent(bool keepPlaying, const wchar_t* reason);
+
+        /** 后台seek线程主循环
+        @return 线程退出码
+        */
+        DWORD SeekWorkerProc();
+
+        /** 处理后台seek完成消息
+        @param [in] resultParam 后台线程投递的完成结果指针
+        */
+        void OnAsyncSeekDone(LPARAM resultParam);
+
+        /** 跳转到指定位置，播放恢复由窗口层统一控制
+        @param [in] pos 目标媒体时间，单位100ns
+        @param [in] keepPlaying seek前窗口处于播放状态时是否恢复播放
+        @param [in] logSeek 是否写详细seek日志
+        @param [in] previewMaxReadCount seek后预览最多读取的视频帧数，0表示使用引擎默认值
+        */
+        void SeekTo(REFERENCE_TIME pos, bool keepPlaying, bool logSeek = true, size_t previewMaxReadCount = 0);
 
         void LogLoopTrigger() const;
 
@@ -354,6 +421,14 @@ namespace LoopPlayer
 
         // 自定义SourceReader播放引擎
         MfSourcePlaybackEngine* player_;
+        // 后台seek线程，避免UI线程被SourceReader补解码阻塞
+        HANDLE seekWorkerThread_;
+        // 后台seek请求事件
+        HANDLE seekRequestEvent_;
+        // 后台seek退出事件
+        HANDLE seekExitEvent_;
+        // 保护后台seek请求状态
+        CRITICAL_SECTION seekWorkerLock_;
 
         bool hasMedia_;
         bool mediaItemReady_;
@@ -367,6 +442,8 @@ namespace LoopPlayer
         bool manualPauseRequest_;
         bool draggingSeek_;
         bool progressMenuActive_;
+        bool asyncSeekPending_;
+        bool asyncSeekBusy_;
         bool wasPlayingBeforeDrag_;
         bool restoreSegmentAfterDrag_;
         bool isFullScreen_;
@@ -383,6 +460,8 @@ namespace LoopPlayer
         LONG savedExStyle_;
         DWORD lastLoopReplayTick_;
         DWORD markerSeekPendingTick_;
+        // 底部进度条右键菜单或拖动结束后保持可见到这个tick
+        DWORD progressOverlayKeepVisibleUntil_;
         DWORD topOverlayKeepVisibleUntil_;
         DWORD lastMouseActivityTick_;
         DWORD zoomTipHideTick_;
@@ -390,6 +469,10 @@ namespace LoopPlayer
         DWORD topOverlayDragLastApplyTick_;
         DWORD lastPositionLogTick_;
         DWORD lastSeekDragLogTick_;
+        // 拖动进度条时上一次真正触发视频预览seek的tick
+        DWORD seekDragLastPreviewTick_;
+        DWORD asyncSeekSerial_;
+        DWORD asyncSeekActiveSerial_;
         int playbackRateTenths_;
         int nativeVideoWidth_;
         int nativeVideoHeight_;
@@ -412,10 +495,18 @@ namespace LoopPlayer
         int hoveredMarker_;
         HWND hoverMarkerWindow_;
         REFERENCE_TIME contextMenuPosition_;
+        REFERENCE_TIME asyncSeekTarget_;
+        // 拖动进度条时上一次真正触发视频预览seek的位置
+        REFERENCE_TIME seekDragLastPreviewTarget_;
+        // 拖动进度条时鼠标最新指向的位置
+        REFERENCE_TIME seekDragPendingTarget_;
         REFERENCE_TIME duration_;
         REFERENCE_TIME loopA_;
         REFERENCE_TIME loopB_;
         REFERENCE_TIME frameDuration_;
+        size_t asyncSeekPreviewMaxReadCount_;
+        bool asyncSeekKeepPlaying_;
+        bool asyncSeekLog_;
         VideoTimelineInfo videoTimeline_;
         std::wstring filePath_;
         std::wstring playbackPath_;

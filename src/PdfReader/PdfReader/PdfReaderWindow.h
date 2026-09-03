@@ -102,6 +102,20 @@ private:
     */
     void createChildViews();
 
+    /** 创建顶部按钮提示控件
+    */
+    void createToolTips();
+
+    /** 给指定按钮增加提示文本
+    @param [in] button 按钮状态
+    @param [in] text 提示文本
+    */
+    void addToolTip(const TopButtonState& button, const wchar_t* text);
+
+    /** 更新顶部按钮提示区域
+    */
+    void updateToolTipRects();
+
     /** 根据主窗口客户区重新布局标题栏、工具栏和内容区
     */
     void layoutChildren();
@@ -136,6 +150,10 @@ private:
     */
     void invalidateAll();
 
+    /** 重绘主窗口自绘标题栏、工具栏和分隔条
+    */
+    void invalidateMainChrome();
+
     /** 关闭并释放当前打开的所有PDF文档
     */
     void clearDocuments();
@@ -158,6 +176,13 @@ private:
     @param [in] hdc 绘图设备上下文
     */
     void paintDocumentView(HDC hdc);
+
+    /** 使用内存位图缓冲绘制指定窗口
+    @param [in] hwnd 被绘制窗口句柄
+    @param [in] hdc 目标绘图设备上下文
+    @param [in] paintHandler 实际绘制函数
+    */
+    void paintBuffered(HWND hwnd, HDC hdc, void (PdfReaderWindow::*paintHandler)(HDC));
 
     /** 绘制标题栏按钮
     @param [in] hdc 绘图设备上下文
@@ -293,6 +318,10 @@ private:
     */
     void savePdfCommand();
 
+    /** 执行另存为命令
+    */
+    void savePdfAsCommand();
+
     /** 显示关于和功能说明模态框
     */
     void showAboutDialog();
@@ -373,6 +402,28 @@ private:
     */
     void finishThumbnailDrag(bool applyMove);
 
+    /** 开始等待缩略图长按拖拽
+    @param [in] pageOrder 被拖拽页面的顺序索引
+    @param [in] point 鼠标在缩略图子窗口中的位置
+    */
+    void startThumbnailDragHold(int pageOrder, POINT point);
+
+    /** 更新缩略图长按等待时的鼠标位置
+    @param [in] point 鼠标在缩略图子窗口中的位置
+    */
+    void updateThumbnailDragHold(POINT point);
+
+    /** 尝试从缩略图长按等待进入拖拽
+    @param [in] point 鼠标在缩略图子窗口中的位置
+    @return 已处理长按状态返回true，否则返回false
+    */
+    bool tryStartThumbnailDragFromHold(POINT point);
+
+    /** 取消缩略图长按等待
+    @param [in] reason 取消原因，可以为空
+    */
+    void cancelThumbnailDragHold(const char* reason = nullptr);
+
     /** 根据拖拽鼠标位置自动滚动缩略图列表
     */
     void autoScrollDrag();
@@ -403,6 +454,13 @@ private:
     */
     void showThumbnailContextMenu(POINT clientPoint);
 
+    /** 保存当前全部页面到指定PDF路径
+    @param [in] outputPath 输出PDF路径
+    @param [in] logAction 日志动作名
+    @return 保存成功返回true，否则返回false
+    */
+    bool saveCurrentPagesToPath(const std::wstring& outputPath, const char* logAction);
+
 private:
     // 应用程序实例句柄
     HINSTANCE m_instance;
@@ -412,6 +470,8 @@ private:
     HWND m_thumbView;
     // 正文子窗口句柄
     HWND m_documentView;
+    // 顶部按钮提示控件句柄
+    HWND m_toolTip;
     // PDF引擎对象
     PdfEngine m_engine;
     // PDF引擎是否初始化成功
@@ -444,12 +504,20 @@ private:
     int m_contextPage;
     // 当前是否正在拖拽缩略图
     bool m_draggingThumb;
+    // 当前是否正在等待长按触发拖拽
+    bool m_dragHoldPending;
     // 被拖拽页面的原始顺序索引
     int m_dragSourceIndex;
+    // 正在等待长按的页面顺序索引
+    int m_dragHoldIndex;
+    // 缩略图长按开始时间
+    DWORD m_dragHoldStartTick;
     // 当前拖拽插入目标索引
     int m_dragInsertIndex;
     // 当前拖拽鼠标位置
     POINT m_dragPoint;
+    // 正在等待长按时的最新鼠标位置
+    POINT m_dragHoldPoint;
     // 标题栏自绘按钮状态列表
     TopButtonState m_topButtons[kTitleButtonCount];
     // 工具栏自绘按钮状态列表

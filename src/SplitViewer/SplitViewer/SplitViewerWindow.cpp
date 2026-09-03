@@ -123,14 +123,41 @@ bool SplitViewerWindow::Create(HINSTANCE hinst, int cmdShow)
 {
     hinst_ = hinst;
 
-    const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    const int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-    defaultStageWidth_ = std::max(320, screenWidth / 2);
-    defaultStageHeight_ = std::max(240, screenHeight / 2);
+    const int screenWidth = std::max(1, GetSystemMetrics(SM_CXSCREEN));
+    const int screenHeight = std::max(1, GetSystemMetrics(SM_CYSCREEN));
+
+    // 使用桌面分辨率确定画板尺寸，使用工作区确定窗口居中位置。
+    RECT workArea = { 0 };
+    if (!SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0))
+    {
+        workArea = SplitViewerMakeRect(0, 0, screenWidth, screenHeight);
+        SplitViewerDebugLogFormat(L"SPI_GETWORKAREA failed error=%u fallback=%d,%d,%d,%d.",
+            static_cast<unsigned int>(GetLastError()),
+            workArea.left,
+            workArea.top,
+            workArea.right,
+            workArea.bottom);
+    }
+
+    const int workWidth = std::max(1, SplitViewerRectWidth(workArea));
+    const int workHeight = std::max(1, SplitViewerRectHeight(workArea));
+    defaultStageWidth_ = std::max(1, screenWidth / 2);
+    defaultStageHeight_ = std::max(1, screenHeight / 2);
     stageAspect_ = static_cast<double>(defaultStageWidth_) / static_cast<double>(defaultStageHeight_);
-    SplitViewerDebugLogFormat(L"Create window begin screen=%dx%d defaultStage=%dx%d aspect=%.6f cmdShow=%d.",
+    DWORD style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+    const int clientWidth = defaultStageWidth_ + kSplitViewerMargin * 2;
+    const int clientHeight = kSplitViewerToolbarHeight + defaultStageHeight_ + kSplitViewerMargin * 2;
+    SplitViewerDebugLogFormat(L"Create window begin screen=%dx%d workArea=%d,%d,%d,%d work=%dx%d client=%dx%d defaultStage=%dx%d aspect=%.6f cmdShow=%d.",
         screenWidth,
         screenHeight,
+        workArea.left,
+        workArea.top,
+        workArea.right,
+        workArea.bottom,
+        workWidth,
+        workHeight,
+        clientWidth,
+        clientHeight,
         defaultStageWidth_,
         defaultStageHeight_,
         stageAspect_,
@@ -158,15 +185,19 @@ bool SplitViewerWindow::Create(HINSTANCE hinst, int cmdShow)
 
     RECT clientRect = SplitViewerMakeRect(0,
         0,
-        defaultStageWidth_ + kSplitViewerMargin * 2,
-        kSplitViewerToolbarHeight + defaultStageHeight_ + kSplitViewerMargin * 2);
-    DWORD style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+        clientWidth,
+        clientHeight);
     AdjustWindowRectEx(&clientRect, style, FALSE, 0);
 
     const int windowWidth = SplitViewerRectWidth(clientRect);
     const int windowHeight = SplitViewerRectHeight(clientRect);
-    const int x = std::max(0, (screenWidth - windowWidth) / 2);
-    const int y = std::max(0, (screenHeight - windowHeight) / 2);
+    const int x = workArea.left + (workWidth - windowWidth) / 2;
+    const int y = workArea.top + (workHeight - windowHeight) / 2;
+    SplitViewerDebugLogFormat(L"Create window calculated window=%dx%d pos=%d,%d.",
+        windowWidth,
+        windowHeight,
+        x,
+        y);
 
     hwnd_ = CreateWindowExW(0,
         kSplitViewerWindowClass,

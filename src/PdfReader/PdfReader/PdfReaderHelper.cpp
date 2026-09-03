@@ -110,6 +110,93 @@ int PdfReaderHelper::ScrollFromCode(HWND hwnd, int bar, WPARAM wParam, int curre
     return position;
 }
 
+RECT PdfReaderHelper::GetPrimaryWorkArea()
+{
+    RECT workArea;
+    if (!SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0))
+    {
+        workArea = MakeRect(0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
+    }
+    return workArea;
+}
+
+bool PdfReaderHelper::GetWindowMonitorRects(HWND hwnd, RECT* monitorRect, RECT* workRect)
+{
+    HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    if (monitor == nullptr)
+    {
+        return false;
+    }
+
+    MONITORINFO monitorInfo;
+    ZeroMemory(&monitorInfo, sizeof(monitorInfo));
+    monitorInfo.cbSize = sizeof(monitorInfo);
+    if (!GetMonitorInfoW(monitor, &monitorInfo))
+    {
+        return false;
+    }
+
+    if (monitorRect != nullptr)
+    {
+        *monitorRect = monitorInfo.rcMonitor;
+    }
+    if (workRect != nullptr)
+    {
+        *workRect = monitorInfo.rcWork;
+    }
+    return true;
+}
+
+RECT PdfReaderHelper::GetDefaultMainWindowRect(int contentTop,
+                                               int splitterWidth,
+                                               int minLeftWidth,
+                                               int minRightWidth,
+                                               int minWindowWidth,
+                                               int minWindowHeight,
+                                               int* leftWidth)
+{
+    RECT workArea = GetPrimaryWorkArea();
+    int workWidth = std::max(1, RectWidth(workArea));
+    int workHeight = std::max(1, RectHeight(workArea));
+    int documentWidth = std::max(minRightWidth, workWidth / 2);
+    int documentHeight = std::max(1, workHeight / 2);
+    int sidebarWidth = std::max(minLeftWidth, documentWidth / 4);
+    int windowWidth = std::max(minWindowWidth, sidebarWidth + splitterWidth + documentWidth);
+    int windowHeight = std::max(minWindowHeight, contentTop + documentHeight);
+    windowWidth = std::min(windowWidth, workWidth);
+    windowHeight = std::min(windowHeight, workHeight);
+
+    if (leftWidth != nullptr)
+    {
+        int maxLeftWidth = std::max(minLeftWidth, windowWidth - minRightWidth - splitterWidth);
+        *leftWidth = ClampInt(sidebarWidth, minLeftWidth, maxLeftWidth);
+    }
+
+    int left = workArea.left + (workWidth - windowWidth) / 2;
+    int top = workArea.top + (workHeight - windowHeight) / 2;
+    return MakeRect(left, top, left + windowWidth, top + windowHeight);
+}
+
+void PdfReaderHelper::RefreshWindowFrame(HWND hwnd)
+{
+    if (hwnd == nullptr)
+    {
+        return;
+    }
+
+    SetWindowPos(hwnd,
+                 nullptr,
+                 0,
+                 0,
+                 0,
+                 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    RedrawWindow(hwnd,
+                 nullptr,
+                 nullptr,
+                 RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW);
+}
+
 HFONT PdfReaderHelper::GetUiFont()
 {
     static HFONT font = nullptr;
@@ -186,6 +273,46 @@ std::wstring PdfReaderHelper::MakePageFileName(const std::wstring& baseName, int
     wchar_t buffer[MAX_PATH] = {0};
     StringCchPrintfW(buffer, MAX_PATH, L"%s_%03d.PDF", baseName.c_str(), pageNumber);
     return std::wstring(buffer);
+}
+
+std::wstring PdfReaderHelper::MakeTempPdfFilePath(const std::wstring& filePath)
+{
+    if (filePath.empty())
+    {
+        return std::wstring();
+    }
+
+    wchar_t folder[MAX_PATH] = {0};
+    StringCchCopyW(folder, MAX_PATH, filePath.c_str());
+    if (!PathRemoveFileSpecW(folder))
+    {
+        return std::wstring();
+    }
+
+    for (int i = 0; i < 100; ++i)
+    {
+        wchar_t fileName[MAX_PATH] = {0};
+        StringCchPrintfW(fileName,
+                         MAX_PATH,
+                         L"PdfReader_%lu_%lu_%d.tmp.pdf",
+                         GetCurrentProcessId(),
+                         GetTickCount(),
+                         i);
+
+        wchar_t tempPath[MAX_PATH] = {0};
+        StringCchCopyW(tempPath, MAX_PATH, folder);
+        if (!PathAppendW(tempPath, fileName))
+        {
+            return std::wstring();
+        }
+
+        if (!PathFileExistsW(tempPath))
+        {
+            return std::wstring(tempPath);
+        }
+    }
+
+    return std::wstring();
 }
 
 bool PdfReaderHelper::IsDebugArgument(const wchar_t* argument)

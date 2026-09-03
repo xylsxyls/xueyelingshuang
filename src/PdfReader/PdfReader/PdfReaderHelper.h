@@ -80,6 +80,42 @@ public:
     */
     static int ScrollFromCode(HWND hwnd, int bar, WPARAM wParam, int current);
 
+    /** 获取主显示器工作区矩形
+    @return 返回已排除任务栏后的工作区矩形
+    */
+    static RECT GetPrimaryWorkArea();
+
+    /** 获取窗口所在显示器的屏幕矩形和工作区矩形
+    @param [in] hwnd 窗口句柄
+    @param [out] monitorRect 返回显示器完整矩形，可以为空
+    @param [out] workRect 返回已排除任务栏后的工作区矩形，可以为空
+    @return 获取成功返回true，否则返回false
+    */
+    static bool GetWindowMonitorRects(HWND hwnd, RECT* monitorRect, RECT* workRect);
+
+    /** 计算默认主窗口矩形和左侧栏宽度
+    @param [in] contentTop 正文内容区顶部高度
+    @param [in] splitterWidth 左右区域分隔条宽度
+    @param [in] minLeftWidth 左侧栏最小宽度
+    @param [in] minRightWidth 正文区最小宽度
+    @param [in] minWindowWidth 主窗口最小宽度
+    @param [in] minWindowHeight 主窗口最小高度
+    @param [out] leftWidth 返回左侧栏默认宽度
+    @return 返回居中后的默认窗口矩形
+    */
+    static RECT GetDefaultMainWindowRect(int contentTop,
+                                         int splitterWidth,
+                                         int minLeftWidth,
+                                         int minRightWidth,
+                                         int minWindowWidth,
+                                         int minWindowHeight,
+                                         int* leftWidth);
+
+    /** 刷新自绘窗口边框区域
+    @param [in] hwnd 窗口句柄
+    */
+    static void RefreshWindowFrame(HWND hwnd);
+
     /** 获取工程统一UI字体
     @return 返回字体句柄
     */
@@ -133,6 +169,12 @@ public:
     @return 返回带页码序号的PDF文件名
     */
     static std::wstring MakePageFileName(const std::wstring& baseName, int pageNumber);
+
+    /** 在目标PDF同目录生成临时PDF文件路径
+    @param [in] filePath 目标PDF文件路径
+    @return 返回可用临时PDF文件路径，失败返回空字符串
+    */
+    static std::wstring MakeTempPdfFilePath(const std::wstring& filePath);
 
     /** 判断命令行参数是否为debug日志开关
     @param [in] argument 命令行参数
